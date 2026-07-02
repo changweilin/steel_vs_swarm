@@ -1,0 +1,15 @@
+{
+  "name": "steel-vs-swarm",
+  "version": "0.1.0",
+  "description": "無人戰略:鋼鐵與蜂群 — 真實世界地圖上的無人機 vs 機器人 DOTA+FPS 對戰",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js --port 8620",
+    "test": "node test/e2e.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

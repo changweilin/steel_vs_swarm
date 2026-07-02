@@ -1,0 +1,299 @@
+// ============ 即時 3D 地形(改自 mapping_elf terrainViewer.js)============
+// 依戰場設定(bbox)即時抓取高程資料建立地形網格,疊上衛星影像貼圖。
+//  - 高程主來源:AWS Terrain Tiles(terrarium PNG,免金鑰、CORS 開放)
+//  - 高程備援:open-meteo elevation API(mapping_elf 原本的來源,批次 100 點)
+//  - 貼圖:Esri World Imagery(與 mapManager 同來源)拼接成 canvas 紋理
+//
+// 世界座標:以戰場中心為原點,x = 東(公尺),z = 南(three.js 慣例;
+// 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
+import * as THREE from 'three';
+
+const R_EARTH = 6371000;
+const GRID_N = 129;            // 地形頂點 129×129
+const ELEV_ZOOM = 12;
+const TERRARIUM = (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
+const IMAGERY = (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+const OPEN_METEO = 'https://api.open-meteo.com/v1/elevation';
+
+// ---- 投影工具 ----
+const d2r = (d) => d * Math.PI / 180;
+function lon2tx(lon, z) { return (lon + 180) / 360 * 2 ** z; }
+function lat2ty(lat, z) {
+  return (1 - Math.log(Math.tan(d2r(lat)) + 1 / Math.cos(d2r(lat))) / Math.PI) / 2 * 2 ** z;
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`載入失敗:${url}`));
+    img.src = url;
+  });
+}
+
+/** 依戰場設定算出涵蓋範圍(正方形戰場 ∪ 三條兵線 ∪ 主堡,外擴 8%) */
+export function battleBBox(cfg) {
+  const pts = [
+    cfg.bases.SWARM, cfg.bases.STEEL,
+    ...cfg.lanes.flat(),
+  ];
+  const half = cfg.sizeM / 2;
+  const dLat = half / R_EARTH * 180 / Math.PI;
+  const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
+  pts.push([cfg.center.lat - dLat, cfg.center.lng - dLng]);
+  pts.push([cfg.center.lat + dLat, cfg.center.lng + dLng]);
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of pts) {
+    if (la < minLat) minLat = la;
+    if (la > maxLat) maxLat = la;
+    if (ln < minLng) minLng = ln;
+    if (ln > maxLng) maxLng = ln;
+  }
+  const padLat = (maxLat - minLat) * 0.08, padLng = (maxLng - minLng) * 0.08;
+  return { minLat: minLat - padLat, maxLat: maxLat + padLat, minLng: minLng - padLng, maxLng: maxLng + padLng };
+}
+
+/** 經緯度 → 世界公尺(x 東、z 南) */
+export function llToWorld(lat, lng, center) {
+  const x = (lng - center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(center.lat));
+  const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH;
+  return [x, -zN];
+}
+
+// ---- 高程來源 1:AWS terrarium tiles ----
+async function fetchElevTerrarium(bbox, onProgress) {
+  const z = ELEV_ZOOM;
+  const tx0 = Math.floor(lon2tx(bbox.minLng, z)), tx1 = Math.floor(lon2tx(bbox.maxLng, z));
+  const ty0 = Math.floor(lat2ty(bbox.maxLat, z)), ty1 = Math.floor(lat2ty(bbox.minLat, z));
+  const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
+  if (cols * rows > 16) throw new Error('高程磚數量異常');
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * 256; canvas.height = rows * 256;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  let done = 0;
+  const total = cols * rows;
+  await Promise.all(
+    Array.from({ length: total }, (_, i) => {
+      const cx = i % cols, cy = Math.floor(i / cols);
+      return loadImage(TERRARIUM(z, tx0 + cx, ty0 + cy)).then((img) => {
+        ctx.drawImage(img, cx * 256, cy * 256);
+        onProgress?.(++done / total);
+      });
+    }),
+  );
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  // 取樣函式:latlng → 高程(雙線性)
+  return (lat, lng) => {
+    const px = (lon2tx(lng, z) - tx0) * 256;
+    const py = (lat2ty(lat, z) - ty0) * 256;
+    const x0 = Math.max(0, Math.min(canvas.width - 2, Math.floor(px)));
+    const y0 = Math.max(0, Math.min(canvas.height - 2, Math.floor(py)));
+    const fx = px - x0, fy = py - y0;
+    const h = (xx, yy) => {
+      const k = (yy * canvas.width + xx) * 4;
+      return (data[k] * 256 + data[k + 1] + data[k + 2] / 256) - 32768;
+    };
+    return h(x0, y0) * (1 - fx) * (1 - fy) + h(x0 + 1, y0) * fx * (1 - fy)
+         + h(x0, y0 + 1) * (1 - fx) * fy + h(x0 + 1, y0 + 1) * fx * fy;
+  };
+}
+
+// ---- 高程來源 2(備援):open-meteo 批次點查詢(mapping_elf 原手法) ----
+async function fetchElevOpenMeteo(bbox, onProgress) {
+  const N = 33;
+  const lats = [], lngs = [];
+  for (let i = 0; i < N; i++) {
+    const lat = bbox.minLat + (bbox.maxLat - bbox.minLat) * i / (N - 1);
+    for (let j = 0; j < N; j++) {
+      lats.push(lat);
+      lngs.push(bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1));
+    }
+  }
+  const elev = [];
+  const batch = 100;
+  for (let s = 0; s < lats.length; s += batch) {
+    const ls = lats.slice(s, s + batch).map((v) => v.toFixed(4)).join(',');
+    const gs = lngs.slice(s, s + batch).map((v) => v.toFixed(4)).join(',');
+    const resp = await fetch(`${OPEN_METEO}?latitude=${ls}&longitude=${gs}`);
+    if (!resp.ok) throw new Error('open-meteo 高程查詢失敗');
+    const d = await resp.json();
+    elev.push(...(d.elevation || []));
+    onProgress?.(Math.min(1, (s + batch) / lats.length));
+  }
+  return (lat, lng) => {
+    const gi = (lat - bbox.minLat) / (bbox.maxLat - bbox.minLat) * (N - 1);
+    const gj = (lng - bbox.minLng) / (bbox.maxLng - bbox.minLng) * (N - 1);
+    const i0 = Math.max(0, Math.min(N - 2, Math.floor(gi)));
+    const j0 = Math.max(0, Math.min(N - 2, Math.floor(gj)));
+    const fi = gi - i0, fj = gj - j0;
+    const at = (i, j) => elev[i * N + j] ?? 0;
+    return at(i0, j0) * (1 - fi) * (1 - fj) + at(i0 + 1, j0) * fi * (1 - fj)
+         + at(i0, j0 + 1) * (1 - fi) * fj + at(i0 + 1, j0 + 1) * fi * fj;
+  };
+}
+
+// ---- 衛星貼圖:拼接 Esri World Imagery ----
+async function fetchImagery(bbox, onProgress) {
+  // 選 zoom 讓貼圖寬 ≈ 1600px
+  let z = 15;
+  for (; z > 10; z--) {
+    if ((lon2tx(bbox.maxLng, z) - lon2tx(bbox.minLng, z)) * 256 <= 2048) break;
+  }
+  const tx0 = Math.floor(lon2tx(bbox.minLng, z)), tx1 = Math.floor(lon2tx(bbox.maxLng, z));
+  const ty0 = Math.floor(lat2ty(bbox.maxLat, z)), ty1 = Math.floor(lat2ty(bbox.minLat, z));
+  const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * 256; canvas.height = rows * 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#20262c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  let done = 0;
+  const total = cols * rows;
+  await Promise.all(
+    Array.from({ length: total }, (_, i) => {
+      const cx = i % cols, cy = Math.floor(i / cols);
+      return loadImage(IMAGERY(z, tx0 + cx, ty0 + cy))
+        .then((img) => ctx.drawImage(img, cx * 256, cy * 256))
+        .catch(() => {})   // 缺磚就留底色
+        .finally(() => onProgress?.(++done / total));
+    }),
+  );
+  return { canvas, z, tx0, ty0 };
+}
+
+/**
+ * 建立戰場地形。回傳:
+ * { group, heightAt(x,z), bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH }
+ */
+export async function buildTerrain(cfg, onProgress) {
+  const bbox = battleBBox(cfg);
+  const center = cfg.center;
+
+  onProgress?.(0.02, '下載高程資料…');
+  let sampleElev;
+  let usedFallback = false;
+  try {
+    sampleElev = await fetchElevTerrarium(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料…'));
+  } catch {
+    usedFallback = true;
+    sampleElev = await fetchElevOpenMeteo(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
+  }
+
+  onProgress?.(0.34, '下載衛星影像…');
+  let imagery = null;
+  try {
+    imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
+  } catch { /* 沒有貼圖就用素色 */ }
+
+  onProgress?.(0.68, '建構地形網格…');
+
+  // 世界範圍(公尺)
+  const [minX, maxZs] = llToWorld(bbox.minLat, bbox.minLng, center); // minLng→minX;minLat→z 南(最大 z)
+  const [maxX, minZs] = llToWorld(bbox.maxLat, bbox.maxLng, center);
+  const minZ = Math.min(minZs, maxZs), maxZ = Math.max(minZs, maxZs);
+  const worldW = maxX - minX, worldH = maxZ - minZ;
+
+  const N = GRID_N;
+  const heights = new Float32Array(N * N);
+  let minH = Infinity, maxH = -Infinity;
+  for (let i = 0; i < N; i++) {           // i:z 方向(北→南 = minZ→maxZ = maxLat→minLat)
+    const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (N - 1);
+    for (let j = 0; j < N; j++) {
+      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1);
+      let h = sampleElev(lat, lng);
+      if (!Number.isFinite(h)) h = 0;
+      heights[i * N + j] = h;
+      if (h < minH) minH = h;
+      if (h > maxH) maxH = h;
+    }
+  }
+  // 輕度 3×3 平滑(terrainViewer 的 hole-aware blur 簡化版)
+  const sm = new Float32Array(heights);
+  for (let i = 1; i < N - 1; i++) {
+    for (let j = 1; j < N - 1; j++) {
+      let s = 0;
+      for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) s += heights[(i + di) * N + j + dj];
+      sm[i * N + j] = s / 9;
+    }
+  }
+  heights.set(sm);
+
+  // ---- BufferGeometry ----
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(N * N * 3);
+  const uv = new Float32Array(N * N * 2);
+  for (let i = 0; i < N; i++) {
+    const z = minZ + (maxZ - minZ) * i / (N - 1);
+    const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (N - 1);
+    for (let j = 0; j < N; j++) {
+      const x = minX + (maxX - minX) * j / (N - 1);
+      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1);
+      const k = i * N + j;
+      pos[k * 3] = x;
+      pos[k * 3 + 1] = heights[k];
+      pos[k * 3 + 2] = z;
+      if (imagery) {
+        // 依 mercator 像素位置取 UV,避免高緯度貼圖歪斜
+        uv[k * 2] = ((lon2tx(lng, imagery.z) - imagery.tx0) * 256) / imagery.canvas.width;
+        uv[k * 2 + 1] = 1 - ((lat2ty(lat, imagery.z) - imagery.ty0) * 256) / imagery.canvas.height;
+      } else {
+        uv[k * 2] = j / (N - 1);
+        uv[k * 2 + 1] = 1 - i / (N - 1);
+      }
+    }
+  }
+  const idx = [];
+  for (let i = 0; i < N - 1; i++) {
+    for (let j = 0; j < N - 1; j++) {
+      const a = i * N + j, b = a + 1, c = a + N, d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+
+  let mat;
+  if (imagery) {
+    const tex = new THREE.CanvasTexture(imagery.canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 });
+  } else {
+    mat = new THREE.MeshStandardMaterial({ color: 0x39424c, roughness: 1 });
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.receiveShadow = true;
+
+  const group = new THREE.Group();
+  group.add(mesh);
+
+  // 水面(有低於海平面的區域才加)
+  if (minH < 0.5) {
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(worldW, worldH),
+      new THREE.MeshStandardMaterial({ color: 0x123a55, transparent: true, opacity: 0.82, roughness: 0.3, metalness: 0.2 }),
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.set((minX + maxX) / 2, 0.3, (minZ + maxZ) / 2);
+    group.add(water);
+  }
+
+  // 世界座標高度取樣(雙線性)
+  function heightAt(x, z) {
+    const gj = (x - minX) / (maxX - minX) * (N - 1);
+    const gi = (z - minZ) / (maxZ - minZ) * (N - 1);
+    const i0 = Math.max(0, Math.min(N - 2, Math.floor(gi)));
+    const j0 = Math.max(0, Math.min(N - 2, Math.floor(gj)));
+    const fi = Math.max(0, Math.min(1, gi - i0));
+    const fj = Math.max(0, Math.min(1, gj - j0));
+    const at = (i, j) => heights[i * N + j];
+    return at(i0, j0) * (1 - fi) * (1 - fj) + at(i0, j0 + 1) * (1 - fi) * fj
+         + at(i0 + 1, j0) * fi * (1 - fj) + at(i0 + 1, j0 + 1) * fi * fj;
+  }
+
+  onProgress?.(1, '地形完成');
+  return { group, heightAt, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
+}

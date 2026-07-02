@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>無人戰略:鋼鐵與蜂群 — Drone Tactics: Steel vs. Swarm</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body data-side="SPEC">
+
+<!-- ========= 大廳 ========= -->
+<div id="connect" class="screen center-screen">
+  <div class="scanlines"></div>
+  <header class="masthead">
+    <div class="mast-tag">TACTICAL UPLINK // v0.1</div>
+    <h1 class="title"><span class="t-steel">鋼鐵</span><span class="t-vs">×</span><span class="t-swarm">蜂群</span></h1>
+    <div class="title-sub">無人戰略 <span class="dim">DRONE TACTICS : STEEL vs. SWARM</span></div>
+    <p class="subtitle">真實世界地圖 ・ 三路兵線 ・ 第一人稱 無人機 vs 機甲</p>
+  </header>
+
+  <div class="panel connect-box">
+    <div class="panel-head">▍指揮官登入</div>
+    <input id="myName" placeholder="你的代號(最多 16 字)" maxlength="16">
+    <div class="row">
+      <input id="roomNameInput" placeholder="戰區名稱(可留白)" maxlength="16">
+      <label class="chk"><input type="checkbox" id="createPublic" checked> 公開</label>
+    </div>
+    <button id="createBtn" class="btn big swarm-btn">⚡ 建立戰區(房主)</button>
+
+    <div class="divider">─── 加入現有戰區 ───</div>
+    <div class="join-mode">
+      <label><input type="radio" name="joinMode" value="player" checked> 🎮 參戰</label>
+      <label><input type="radio" name="joinMode" value="spectator"> 👁️ 觀戰</label>
+    </div>
+    <div id="roomList" class="room-list"></div>
+    <button id="refreshRoomsBtn" class="btn">🔄 重新整理列表</button>
+    <details class="pin-join">
+      <summary>用 PIN 直接加入</summary>
+      <div class="row">
+        <input id="joinPin" placeholder="4 位數 PIN" inputmode="numeric" maxlength="4">
+        <button id="joinBtn" class="btn">🔌 加入</button>
+      </div>
+    </details>
+  </div>
+  <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
+</div>
+
+<!-- ========= 房間(陣營配對)========= -->
+<div id="room" class="screen center-screen" style="display:none">
+  <div class="scanlines"></div>
+  <header class="masthead small">
+    <h2 class="room-title" id="roomTitle">戰區</h2>
+    <div class="room-meta">PIN <b id="roomPin">----</b> ・ 區網 <span id="roomUrls"></span></div>
+  </header>
+
+  <div class="side-cards">
+    <div class="side-card swarm" id="sideSWARM">
+      <div class="side-emblem">🐝</div>
+      <div class="side-name">蜂群兵團 <span class="side-en">THE SWARM</span></div>
+      <div class="side-hero">獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
+      <div class="side-player">—</div>
+      <div class="side-ready"></div>
+    </div>
+    <div class="side-vs">VS</div>
+    <div class="side-card steel" id="sideSTEEL">
+      <div class="side-emblem">🤖</div>
+      <div class="side-name">鋼鐵軍團 <span class="side-en">STEEL LEGION</span></div>
+      <div class="side-hero">執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
+      <div class="side-player">—</div>
+      <div class="side-ready"></div>
+    </div>
+  </div>
+  <div class="spec-list" id="specList"></div>
+  <p class="room-hint" id="roomHint"></p>
+
+  <div class="row room-actions">
+    <button id="readyBtn" class="btn big" disabled>✔ 準備完成</button>
+    <button id="startSetupBtn" class="btn big steel-btn" disabled>🗺️ 前往戰場選址</button>
+    <button id="leaveRoomBtn" class="btn">離開</button>
+  </div>
+  <p class="room-note">小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿三條真實道路兵線推進。</p>
+</div>
+
+<!-- ========= 戰場選址 ========= -->
+<div id="mapselect" class="screen" style="display:none">
+  <div id="mapHostPanel" class="map-panel">
+    <div class="panel-head">▍戰場選址 — 點地圖放置 🐝 蜂群主堡</div>
+    <div class="map-rules">
+      規則:兩主堡距離 ≥ 地圖對角線 80% ・ 三條兵線任兩條重合 &lt; 20%(真實道路)
+    </div>
+    <div id="mapStatus" class="map-status">在地圖上點選蜂群主堡位置。</div>
+    <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
+    <div class="row">
+      <button id="confirmSiteBtn" class="btn big swarm-btn" disabled>⚔️ 鎖定戰場,開戰!</button>
+      <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
+    </div>
+  </div>
+  <div id="mapGuestPanel" class="map-panel" style="display:none">
+    <div class="panel-head">▍房主正在選定戰場…</div>
+    <div id="guestMapStatus" class="map-status">等待房主在真實地圖上選址。</div>
+    <div class="pbar"><div id="guestMapBar" class="pbar-fill"></div></div>
+  </div>
+  <div id="leafletMap"></div>
+</div>
+
+<!-- ========= 載入 ========= -->
+<div id="loading" class="screen center-screen" style="display:none">
+  <div class="scanlines"></div>
+  <div class="panel load-box">
+    <div class="panel-head">▍戰場部署中</div>
+    <div class="load-place" id="loadPlace"></div>
+    <div class="load-stats" id="loadStats"></div>
+    <div class="pbar tall"><div id="loadBar" class="pbar-fill"></div></div>
+    <div id="loadLabel" class="load-label">初始化…</div>
+    <div class="load-tip">正在即時抓取真實地形高程與衛星影像,建構 3D 戰場。</div>
+  </div>
+</div>
+
+<!-- ========= 戰鬥 ========= -->
+<div id="game" class="screen" style="display:none">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div class="hud-top">
+    <div class="base-bar swarm">
+      <span class="base-label">🐝 蜂群主堡</span>
+      <div class="bbar"><div id="baseSWARM" class="bbar-fill swarm"></div></div>
+      <span class="score" id="scoreSWARM"></span>
+    </div>
+    <div class="wave-box" id="waveInfo">— 待命 —</div>
+    <div class="base-bar steel">
+      <span class="score" id="scoreSTEEL"></span>
+      <div class="bbar"><div id="baseSTEEL" class="bbar-fill steel"></div></div>
+      <span class="base-label">鋼鐵主堡 🤖</span>
+    </div>
+  </div>
+
+  <div id="killFeed" class="kill-feed"></div>
+
+  <div class="crosshair"><div id="hitmark" class="hitmark"></div></div>
+
+  <div class="hud-bottom">
+    <div class="hud-self">
+      <div class="hud-side" id="hudSideName"></div>
+      <div class="hpbar"><div id="hpBar" class="hpbar-fill"></div><span id="hpText" class="hp-text"></span></div>
+      <div class="burst-box">右鍵絕招 <span id="burstCd" class="burst-cd">就緒</span></div>
+    </div>
+    <div class="hud-help" id="hudHelp"></div>
+    <canvas id="minimap" width="220" height="220"></canvas>
+  </div>
+
+  <!-- 死亡 -->
+  <div id="deadOverlay" class="overlay" style="display:none">
+    <div class="overlay-box dead-box">
+      <div class="dead-title">💥 你的座機被擊毀</div>
+      <div class="dead-sub">重生倒數 <span id="deadTimer">--</span> 秒</div>
+    </div>
+  </div>
+
+  <!-- 結束 -->
+  <div id="overOverlay" class="overlay" style="display:none">
+    <div class="overlay-box">
+      <div class="over-title" id="overTitle"></div>
+      <div class="over-sub" id="overSub"></div>
+      <div class="over-stats" id="overStats"></div>
+      <div class="row" style="justify-content:center">
+        <button id="backRoomBtn" class="btn big">↩ 返回戰區(再來一場)</button>
+        <button id="leaveGameBtn" class="btn">離開</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
