@@ -1,22 +1,27 @@
 // ============ 無人戰略:鋼鐵與蜂群 — 前端主控 ============
-// 畫面流程:connect(大廳)→ room(配對)→ mapselect(戰場選址)
-//          → loading(地形建構)→ game(戰鬥)→ over
+// 畫面流程:connect(大廳)→ setup(開房前:隊伍規模/場地/環境/選址)
+//          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { Net } from './net.js';
-import { SIDES } from './data.js';
+import { SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO } from './data.js';
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
+import { buildBiomes } from './biomes.js';
+import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
+import { VENUES, venueConfig, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
-const screens = ['connect', 'room', 'mapselect', 'loading', 'game'];
+const screens = ['connect', 'setup', 'room', 'loading', 'game'];
 
 const app = {
   net: null,
   youId: null, isHost: false, token: null,
   lobby: null,          // 伺服器同步的房間狀態
   mySide: null,
-  mapSel: null,         // MapSelect 實例(房主)
+  mapSel: null,         // MapSelect 實例(開房前的設定畫面)
+  teamSize: TEAM.DEFAULT,
+  favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
   battle: null,         // BattleClient
   terrain: null,
   battleCfg: null,
@@ -50,14 +55,17 @@ function renderRooms(list) {
   for (const r of list) {
     const row = document.createElement('div');
     row.className = 'room-row' + (r.phase !== 'room' ? ' started' : '');
-    const sideTags = `${r.sides.SWARM ? `<span class="tag swarm">🐝 ${r.sides.SWARM}</span>` : '<span class="tag open">🐝 空位</span>'}
-                      ${r.sides.STEEL ? `<span class="tag steel">🤖 ${r.sides.STEEL}</span>` : '<span class="tag open">🤖 空位</span>'}`;
+    const n = r.teamSize || 1;
+    const sideTags = `<span class="tag swarm">🐝 ${r.sides.SWARM.length}/${n}</span>
+                      <span class="tag steel">🤖 ${r.sides.STEEL.length}/${n}</span>`;
     row.innerHTML = `
       <div class="room-info">
         <div class="room-name">${r.isPublic ? '🌐' : '🔒'} ${esc(r.name)} <span class="room-host">房主:${esc(r.host)}</span></div>
         <div class="room-tags">${sideTags}
+          <span class="tag dim">${n}v${n}</span>
           <span class="tag dim">${r.phase === 'room' ? '配對中' : r.phase === 'game' ? '交戰中' : '準備中'}</span>
           ${r.place ? `<span class="tag dim">📍 ${esc(r.place)}</span>` : ''}
+          ${r.env ? `<span class="tag dim">${esc(envLabel(r.env))}</span>` : ''}
         </div>
       </div>
       <button class="btn small">${r.phase === 'room' ? '加入' : '觀戰'}</button>`;
@@ -85,26 +93,234 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-// ================= 房間(配對)=================
+// ================= 開房前:戰場設定(隊伍規模/場地/環境/選址)=================
+function enterSetup() {
+  show('setup');
+  app.favCfg = null;
+  $('confirmSiteBtn').disabled = true;
+  $('saveFavBtn').disabled = true;
+
+  if (!app.mapSel) {
+    app.mapSel = new MapSelect('leafletMap', {
+      status: (text, frac) => {
+        $('mapStatus').textContent = text;
+        $('mapProgressBar').style.width = `${Math.round(frac * 100)}%`;
+      },
+      confirmReady: (cfg) => {
+        app.favCfg = null;
+        app.venueSel = null;
+        $('confirmSiteBtn').disabled = !cfg;
+        $('saveFavBtn').disabled = !cfg;
+        if (cfg) {
+          $('mapStatus').innerHTML =
+            `已選定:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
+            `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+        }
+      },
+    });
+    renderTeamSize();
+    renderVenues();
+    renderEnvSelects();
+    setTimeout(() => app.mapSel.map.invalidateSize(), 60);
+  }
+  $('mapStatus').textContent = '選一個預設場地,或在地圖上點選你的蜂群主堡位置。';
+}
+
+function renderTeamSize() {
+  const row = $('tsRow');
+  row.innerHTML = '';
+  for (let n = TEAM.MIN; n <= TEAM.MAX; n++) {
+    const b = document.createElement('button');
+    b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
+    b.textContent = `${n}v${n}`;
+    b.onclick = () => { setTeamSize(n); };
+    row.appendChild(b);
+  }
+  updateTsInfo();
+}
+
+function setTeamSize(n) {
+  app.teamSize = n;
+  app.favCfg = null;
+  app.mapSel?.setTeamSize(n);
+  $('confirmSiteBtn').disabled = true;
+  $('saveFavBtn').disabled = true;
+  for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
+  updateTsInfo();
+  // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
+  if (app.venueSel) selectVenue(app.venueSel);
+}
+
+function updateTsInfo() {
+  const L = lanesFor(app.teamSize);
+  const size = targetDistFor(L) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+}
+
+function renderVenues() {
+  const grid = $('venueGrid');
+  grid.innerHTML = '';
+  for (const v of VENUES) {
+    const b = document.createElement('button');
+    b.className = 'venue-btn';
+    b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
+    b.title = `地貌:${Object.entries(v.mix).map(([k, f]) => `${{ green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' }[k]} ${Math.round(f * 100)}%`).join('・')}`;
+    b.onclick = () => selectVenue(v);
+    grid.appendChild(b);
+  }
+  renderFavs();
+}
+
+/** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
+function selectVenue(v) {
+  const cfg = venueConfig(v, app.teamSize);
+  app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
+  app.venueSel = v;
+  app.favCfg = cfg;
+  $('mapStatus').innerHTML =
+    `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可直接建立戰區。` +
+    `(想用真實道路兵線,可改在地圖上手動點選錨點)`;
+  $('mapProgressBar').style.width = '100%';
+  $('confirmSiteBtn').disabled = false;
+  $('saveFavBtn').disabled = true;
+}
+
+function renderFavs() {
+  const favs = loadFavorites();
+  $('favSection').style.display = favs.length ? '' : 'none';
+  const grid = $('favGrid');
+  grid.innerHTML = '';
+  for (const f of favs) {
+    const b = document.createElement('button');
+    b.className = 'venue-btn fav';
+    b.innerHTML = `⭐ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
+    b.onclick = () => {
+      setTeamSize(f.teamSize);
+      app.mapSel.showConfig(f.cfg);   // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
+      app.venueSel = null;
+      app.favCfg = f.cfg;
+      $('mapStatus').textContent = `⭐ 已載入最愛「${f.name}」(${f.cfg.placeName}),可直接建立戰區。`;
+      $('confirmSiteBtn').disabled = false;
+      $('saveFavBtn').disabled = true;
+    };
+    const del = document.createElement('span');
+    del.className = 'fav-del';
+    del.textContent = '✕';
+    del.title = '移除最愛';
+    del.onclick = (e) => { e.stopPropagation(); removeFavorite(f.name); renderFavs(); };
+    b.appendChild(del);
+    grid.appendChild(b);
+  }
+}
+
+function renderEnvSelects() {
+  const fill = (id, obj, label) => {
+    const sel = $(id);
+    sel.innerHTML = `<option value="random">🎲 隨機${label}</option>`;
+    for (const [k, v] of Object.entries(obj)) {
+      sel.innerHTML += `<option value="${k}">${v.name}</option>`;
+    }
+  };
+  fill('envSeason', ENV.seasons, '季節');
+  fill('envTime', ENV.times, '時段');
+  fill('envWeather', ENV.weathers, '天氣');
+}
+
+$('confirmSiteBtn')?.addEventListener('click', async () => {
+  const fromFav = !!app.favCfg;
+  const cfg = app.favCfg || app.mapSel?.buildConfig();
+  if (!cfg) return;
+  $('confirmSiteBtn').disabled = true;
+  $('mapStatus').textContent = '鎖定戰場並建立戰區…';
+  if (!fromFav) await app.mapSel.fetchPlaceName(cfg);
+  cfg.env = {
+    season: $('envSeason').value,
+    time: $('envTime').value,
+    weather: $('envWeather').value,
+  };
+  app.net.send({
+    t: 'createRoom',
+    name: myName(),
+    roomName: $('roomNameInput').value.trim(),
+    isPublic: $('createPublic').checked,
+    teamSize: app.teamSize,
+    battleConfig: cfg,
+  });
+});
+
+$('saveFavBtn')?.addEventListener('click', async () => {
+  const cfg = app.mapSel?.buildConfig();
+  if (!cfg) return;
+  await app.mapSel.fetchPlaceName(cfg);
+  const name = prompt('最愛場地名稱:', cfg.placeName)?.trim();
+  if (!name) return;
+  saveFavorite(name, app.teamSize, cfg);
+  renderFavs();
+  toast(`⭐ 已存入最愛:${name}`);
+});
+
+$('resetSiteBtn')?.addEventListener('click', () => {
+  app.favCfg = null;
+  app.mapSel?.reset();
+});
+$('backLobbyBtn')?.addEventListener('click', () => {
+  app.favCfg = null;
+  app.mapSel?.reset();
+  show('connect');
+  refreshRooms();
+});
+
+// ================= 房間(配對,每陣營 N 席)=================
 function renderRoom() {
   const lb = app.lobby;
   if (!lb) return;
+  const N = lb.config.teamSize || 1;
   $('roomTitle').textContent = lb.config.roomName || '未命名戰區';
   $('roomPin').textContent = lb.pin;
   $('roomUrls').textContent = (lb.urls || []).join('  ');
+
+  // 戰場資訊(開房時已鎖定)
+  const cfg = lb.battleConfig;
+  $('roomMapInfo').textContent = cfg
+    ? `📍 ${cfg.placeName} ・ ${N}v${N} ・ ${cfg.lanes.length} 條兵線 ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
+    : '';
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
 
   for (const side of ['SWARM', 'STEEL']) {
     const card = $(`side${side}`);
-    const holder = lb.clients.find((c) => c.side === side);
-    const nameEl = card.querySelector('.side-player');
-    const readyEl = card.querySelector('.side-ready');
-    card.classList.toggle('taken', !!holder);
-    card.classList.toggle('mine', holder?.id === app.youId);
-    nameEl.textContent = holder ? `${holder.isHost ? '👑 ' : ''}${holder.name}` : '—— 等待指揮官 ——';
-    readyEl.textContent = holder ? (holder.ready ? '✅ 準備完成' : '⏳ 整備中') : '';
+    const members = lb.clients.filter((c) => c.side === side);
+    card.classList.toggle('taken', members.length >= N);
+    card.classList.toggle('mine', members.some((c) => c.id === app.youId));
+    const slotsEl = card.querySelector('.side-slots');
+    slotsEl.innerHTML = '';
+    for (let i = 0; i < N; i++) {
+      const c = members[i];
+      const div = document.createElement('div');
+      div.className = 'slot' + (c ? ' filled' : '') + (c?.id === app.youId ? ' me' : '') + (c?.isBot ? ' bot' : '');
+      if (c) {
+        div.innerHTML = `${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)} <span class="slot-ready">${c.ready ? '✅' : '⏳'}</span>${c.connected === false ? ' 🔌' : ''}`;
+        if (c.isBot && app.isHost) {
+          const del = document.createElement('span');
+          del.className = 'bot-del';
+          del.textContent = '✕';
+          del.title = '移除電腦玩家';
+          del.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'removeBot', id: c.id }); };
+          div.appendChild(del);
+        }
+      } else if (app.isHost) {
+        div.innerHTML = '—— 空位 ——';
+        const add = document.createElement('button');
+        add.className = 'btn tiny bot-add';
+        add.textContent = '+ 電腦玩家';
+        add.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'addBot', side }); };
+        div.appendChild(add);
+      } else {
+        div.innerHTML = '—— 空位 ——';
+      }
+      slotsEl.appendChild(div);
+    }
   }
 
   const specs = lb.clients.filter((c) => c.mode === 'spectator');
@@ -115,68 +331,25 @@ function renderRoom() {
   readyBtn.textContent = me?.ready ? '取消準備' : '✔ 準備完成';
   readyBtn.classList.toggle('on', !!me?.ready);
 
-  const startBtn = $('startSetupBtn');
+  const startBtn = $('startBattleBtn');
   startBtn.style.display = app.isHost ? '' : 'none';
   const players = lb.clients.filter((c) => c.mode === 'player' && c.side);
   const allReady = players.length > 0 && players.every((c) => c.ready);
   startBtn.disabled = !allReady;
-  startBtn.textContent = players.length < 2 ? '🗺️ 前往選址(單人練習)' : '🗺️ 前往戰場選址';
+  startBtn.textContent = players.length < 2 ? '⚔️ 開戰(單人練習)' : `⚔️ 開戰(${players.length} 位指揮官)`;
   $('roomHint').textContent = app.isHost
-    ? (allReady ? '全員就緒,可以前往戰場選址!' : '雙方選好陣營並按「準備完成」後,由你啟動選址。')
-    : '等待房主啟動戰場選址…';
+    ? (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備完成」後,由你開戰。')
+    : '等待房主開戰…';
 }
-
-// ================= 戰場選址 =================
-function enterMapSelect() {
-  show('mapselect');
-  const isHost = app.isHost;
-  $('mapHostPanel').style.display = isHost ? '' : 'none';
-  $('mapGuestPanel').style.display = isHost ? 'none' : '';
-  $('confirmSiteBtn').disabled = true;
-
-  if (isHost && !app.mapSel) {
-    app.mapSel = new MapSelect('leafletMap', {
-      status: (text, frac) => {
-        $('mapStatus').textContent = text;
-        $('mapProgressBar').style.width = `${Math.round(frac * 100)}%`;
-        app.net.send({ t: 'mapProgress', status: text, frac });
-      },
-      candidates: (list) => {
-        app.net.send({ t: 'mapProgress', status: `已找到 ${list.length} 個推薦點,等待房主選擇…`, frac: 1 });
-      },
-      confirmReady: (cfg) => {
-        $('confirmSiteBtn').disabled = !cfg;
-        if (cfg) {
-          $('mapStatus').innerHTML =
-            `已選定:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(對角線 80% 門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
-            `,三線最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
-        }
-      },
-    });
-    $('mapStatus').textContent = '在地圖上點選你的蜂群主堡位置,演算法會推薦對側的鋼鐵主堡點。';
-    setTimeout(() => app.mapSel.map.invalidateSize(), 60);
-  }
-}
-
-$('confirmSiteBtn')?.addEventListener('click', async () => {
-  const cfg = app.mapSel?.buildConfig();
-  if (!cfg) return;
-  $('confirmSiteBtn').disabled = true;
-  $('mapStatus').textContent = '取得地名並鎖定戰場…';
-  await app.mapSel.fetchPlaceName(cfg);
-  app.net.send({ t: 'battleConfig', config: cfg });
-});
-$('resetSiteBtn')?.addEventListener('click', () => app.mapSel?.reset());
 
 // ================= 載入 + 開戰 =================
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
-  if (app.mapSel) { app.mapSel.destroy(); app.mapSel = null; }
   if (app.battle) { app.battle.dispose(); app.battle = null; }
   show('loading');
-  $('loadPlace').textContent = cfg.placeName || '';
+  $('loadPlace').textContent = `${cfg.placeName || ''} ・ ${envLabel(cfg.env)}`;
   $('loadStats').textContent =
-    `主堡距離 ${(cfg.distM / 1000).toFixed(2)} km ・ 戰場 ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ 三線重合 ≤ ${(cfg.maxOverlap * 100).toFixed(0)}%`;
+    `主堡距離 ${(cfg.distM / 1000).toFixed(2)} km ・ 戰場 ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${cfg.lanes.length} 條兵線(重合 ≤ ${(cfg.maxOverlap * 100).toFixed(0)}%)`;
 
   const setP = (f, label) => {
     $('loadBar').style.width = `${Math.round(f * 100)}%`;
@@ -184,9 +357,12 @@ async function enterLoading(cfg) {
   };
   try {
     setP(0.02, '載入 3D 模型(Quaternius CC0)…');
-    await preloadModels((f) => setP(f * 0.25, '載入 3D 模型(Quaternius CC0)…'));
-    app.terrain = await buildTerrain(cfg, (f, label) => setP(0.25 + f * 0.7, label));
-    setP(0.97, '等待其他指揮官…');
+    await preloadModels((f) => setP(f * 0.18, '載入 3D 模型(Quaternius CC0)…'));
+    app.terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
+    const biomes = await buildBiomes(cfg, app.terrain, (f, label) => setP(0.60 + f * 0.36, label));
+    app.terrain.group.add(biomes);
+    const st = biomes.userData.stats;
+    setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}${st.osm ? '・OSM 圖資' : ''})`);
     app.net.send({ t: 'loaded' });
   } catch (e) {
     console.error(e);
@@ -203,6 +379,7 @@ function enterGame() {
     minimapCanvas: $('minimap'),
     cfg: app.battleCfg,
     side: app.mySide,
+    youId: app.youId,
     net: app.net,
     terrain: app.terrain,
     hud,
@@ -213,7 +390,7 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide ? `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}` : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'WASD 平移 ・ 滑鼠 視角 ・ Space/C 升降 ・ Shift 加速 ・ 左鍵 機砲 ・ 右鍵 空投炸彈 ・ M 大地圖'
+      ? 'W/S 沿視線飛(抬頭爬升)・ A/D 橫移 ・ Space/C 升降 ・ Shift 加速 ・ 左鍵 機砲 ・ 右鍵 空投炸彈 ・ 高飛注意防空飛彈!'
       : 'WASD 移動 ・ 滑鼠 視角 ・ Space 跳躍 ・ Shift 衝刺 ・ 左鍵 重機槍 ・ 右鍵 火箭 ・ M 大地圖')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
@@ -299,10 +476,9 @@ function onSync(m) {
     if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; }
     $('overOverlay').style.display = 'none';
     delete $('overOverlay').dataset.done;
+    if (app.mapSel) { app.mapSel.destroy(); app.mapSel = null; }   // 設定畫面用完即收
     if (app.phaseShown !== 'room') show('room');
     renderRoom();
-  } else if (phase === 'mapselect') {
-    if (app.phaseShown !== 'mapselect') enterMapSelect();
   } else if (phase === 'loading') {
     // battleConfig 訊息會觸發 enterLoading;這裡只更新等待名單
     const waiting = m.lobby.clients.filter((c) => c.mode === 'player' && c.side && !c.loaded).map((c) => c.name);
@@ -320,15 +496,13 @@ window.addEventListener('DOMContentLoaded', () => {
   app.net = new Net({
     sync: onSync,
     rooms: (m) => renderRooms(m.rooms),
-    error: (m) => toast(`⚠️ ${m.msg}`),
+    error: (m) => {
+      toast(`⚠️ ${m.msg}`);
+      // 開房被拒(驗證失敗)→ 解鎖確認鈕讓房主重試
+      if (app.phaseShown === 'setup') $('confirmSiteBtn').disabled = !(app.favCfg || app.mapSel?.chosen);
+    },
     info: (m) => toast(m.msg),
     battleConfig: (m) => enterLoading(m.config),
-    mapProgress: (m) => {
-      if (!app.isHost && app.phaseShown === 'mapselect') {
-        $('guestMapStatus').textContent = m.status || '';
-        $('guestMapBar').style.width = `${Math.round((m.frac || 0) * 100)}%`;
-      }
-    },
     snap: (m) => app.battle?.onSnap(m),
     tracer: (m) => app.battle?.onTracer(m),
     reconnect: () => {
@@ -338,14 +512,7 @@ window.addEventListener('DOMContentLoaded', () => {
     },
   });
 
-  $('createBtn').onclick = () => {
-    app.net.send({
-      t: 'createRoom',
-      name: myName(),
-      roomName: $('roomNameInput').value.trim(),
-      isPublic: $('createPublic').checked,
-    });
-  };
+  $('createBtn').onclick = () => { myName(); enterSetup(); };
   $('refreshRoomsBtn').onclick = refreshRooms;
   $('joinBtn').onclick = () => {
     const pin = $('joinPin').value.trim();
@@ -356,16 +523,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
   for (const side of ['SWARM', 'STEEL']) {
     $(`side${side}`).onclick = () => {
-      const holder = app.lobby?.clients.find((c) => c.side === side);
-      if (holder && holder.id !== app.youId) return;
-      app.net.send({ t: 'pickSide', side: holder?.id === app.youId ? null : side });
+      const me = app.lobby?.clients.find((c) => c.id === app.youId);
+      if (!me || me.mode !== 'player') return;
+      // 已在此陣營 → 離開;否則加入(滿了由伺服器拒絕)
+      app.net.send({ t: 'pickSide', side: me.side === side ? null : side });
     };
   }
   $('readyBtn').onclick = () => {
     const me = app.lobby?.clients.find((c) => c.id === app.youId);
     app.net.send({ t: 'setReady', ready: !me?.ready });
   };
-  $('startSetupBtn').onclick = () => app.net.send({ t: 'startSetup' });
+  $('startBattleBtn').onclick = () => app.net.send({ t: 'startBattle' });
   $('leaveRoomBtn').onclick = () => {
     app.net.send({ t: 'leaveRoom' });
     sessionStorage.removeItem('svs_token');

@@ -6,11 +6,11 @@
 //  1. 房主在真實地圖點一個點 → 作為「蜂群」主堡候選錨點 A。
 //  2. 演算法在 A 周圍(方位角 0~330° 掃描)找出多個推薦點 B:
 //     - |AB| ≥ 地圖對角線 × 80%(地圖 = 以 AB 中點為中心的正方形戰場,
-//       邊長由 |AB| 反推,規模 ≈ DOTA 地圖)
-//     - A、B 之間能建出三條路徑(真實道路,OSRM),
+//       邊長由 |AB| 反推;兩堡距離 = 1600m × 兵線數 L,5v5 = 4800m)
+//     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
-//  3. 房主點選推薦點 → 預覽三條兵線 → 確認後鎖定戰場。
-import { MAPGEO } from './data.js';
+//  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
+import { MAPGEO, lanesFor, targetDistFor, TEAM } from './data.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
 const R_EARTH = 6371000;
@@ -107,11 +107,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 
 /**
- * 為 A→B 建三條兵線:中路 = 直達路線;上/下路 = 經側向中繼點,
- * 與中路重合率過高就加大側移重試;via 全失敗才補合成弧線(synthetic 標記)。
+ * 為 A→B 建 L 條兵線(L=1 中路;L=2 上/下路;L=3 上/中/下路):
+ * 中路 = 直達路線;側翼 = 經側向中繼點,與中路重合率過高就加大側移重試;
+ * via 全失敗才補合成弧線(synthetic 標記)。
  * 直達路線失敗(海面/無路網)回傳 null,由呼叫端淘汰該方位。
  */
-async function buildLanes(A, B, signal, directRoute = null) {
+async function buildLanes(A, B, signal, directRoute = null, L = 3) {
   const d = distM(A, B);
   const [vx, vz] = toMeters(B, A);
   const len = Math.hypot(vx, vz) || 1;
@@ -140,17 +141,26 @@ async function buildLanes(A, B, signal, directRoute = null) {
     }
     return best || { coords: synthLane(A, B, side), dist: d * 1.2, synth: true };
   };
-  const top = await flank(1);
-  const bot = await flank(-1);
-  const synthetic = !!(top.synth || bot.synth);
 
-  const lanes = [top.coords, mid.coords, bot.coords];
+  let lanes, synthetic = false;
+  if (L === 1) {
+    lanes = [mid.coords];
+  } else if (L === 2) {
+    const top = await flank(1);
+    const bot = await flank(-1);
+    synthetic = !!(top.synth || bot.synth);
+    lanes = [top.coords, bot.coords];
+  } else {
+    const top = await flank(1);
+    const bot = await flank(-1);
+    synthetic = !!(top.synth || bot.synth);
+    lanes = [top.coords, mid.coords, bot.coords];
+  }
   // 任兩條重合率
-  const ov = [
-    overlapRatio(lanes[0], lanes[1], A),
-    overlapRatio(lanes[1], lanes[2], A),
-    overlapRatio(lanes[0], lanes[2], A),
-  ];
+  const ov = [0];
+  for (let i = 0; i < lanes.length; i++) {
+    for (let j = i + 1; j < lanes.length; j++) ov.push(overlapRatio(lanes[i], lanes[j], A));
+  }
   return { lanes, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
 }
 
@@ -164,6 +174,8 @@ export class MapSelect {
     this.anchor = null;          // A 點 [lat,lng]
     this.candidates = [];        // {latlng, lanes, maxOverlap, distM, sizeM, diagM, synthetic}
     this.chosen = null;
+    this.venue = null;           // 使用中的預設場地(含 mix),自訂點為 null
+    this.teamSize = TEAM.DEFAULT;
     this._layers = [];
     this._searchAbort = null;
 
@@ -195,7 +207,51 @@ export class MapSelect {
 
   destroy() {
     this._searchAbort?.abort();
+    this.map.stop();          // 中止進行中的 pan/zoom 動畫,避免 remove 後回呼摸到已拆的 DOM
     this.map.remove();
+  }
+
+  /** 兵線數(隨隊伍規模)與兩堡目標距離 */
+  get laneCount() { return lanesFor(this.teamSize); }
+  get targetDist() { return targetDistFor(this.laneCount); }
+
+  /** 改隊伍規模:幾何條件全變,重置目前選點 */
+  setTeamSize(n) {
+    n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
+    if (n === this.teamSize) return;
+    this.teamSize = n;
+    if (this.anchor) this.reset();
+  }
+
+  /** 純預覽已存好的戰場設定(我的最愛):畫主堡/兵線/邊界,不重新搜尋 */
+  showConfig(cfg) {
+    this.reset();
+    this._addLayer(L.circleMarker(cfg.bases.SWARM, {
+      radius: 10, color: '#ffb300', fillColor: '#ffb300', fillOpacity: 0.9, weight: 3,
+    }).bindTooltip('🐝 蜂群主堡', { permanent: true, direction: 'top' }), 'fav');
+    this._addLayer(L.circleMarker(cfg.bases.STEEL, {
+      radius: 10, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
+    }).bindTooltip('🤖 鋼鐵主堡', { permanent: true, direction: 'top' }), 'fav');
+    const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
+    cfg.lanes.forEach((lane, i) => {
+      this._addLayer(L.polyline(lane, { color: colors[i % 3], weight: 4, opacity: 0.85 }), 'fav');
+    });
+    const half = cfg.sizeM / 2;
+    const dLat = half / R_EARTH * 180 / Math.PI;
+    const dLng = half / (R_EARTH * Math.cos(cfg.center.lat * Math.PI / 180)) * 180 / Math.PI;
+    this._addLayer(L.rectangle([
+      [cfg.center.lat - dLat, cfg.center.lng - dLng],
+      [cfg.center.lat + dLat, cfg.center.lng + dLng],
+    ], { color: '#8899aa', weight: 2, dashArray: '8 6', fill: false }), 'fav');
+    this.map.fitBounds(L.latLngBounds([cfg.bases.SWARM, cfg.bases.STEEL]).pad(0.25), { animate: false });
+  }
+
+  /** 預設場地:跳到該地標並自動落錨開始搜尋 */
+  placeAnchor(venue) {
+    this.reset();
+    this._pendingVenue = venue || null;
+    this.map.setView(venue.ll, 13);
+    this._onClick([venue.ll[0], venue.ll[1]]);
   }
 
   _clearLayers(tag) {
@@ -215,6 +271,8 @@ export class MapSelect {
     if (this._searching) return;
     if (this.chosen) return; // 已選定,先按「重新選點」
     this.anchor = latlng;
+    this.venue = this._pendingVenue || null;   // 手動點圖 = 自訂場地(無 mix)
+    this._pendingVenue = null;
     this._clearLayers();
     this.h.confirmReady?.(null);
     this._addLayer(L.circleMarker(latlng, {
@@ -229,7 +287,8 @@ export class MapSelect {
     this._searchAbort = new AbortController();
     const signal = this._searchAbort.signal;
     const A = this.anchor;
-    const D = MAPGEO.TARGET_DIST_M;                       // 兩堡目標距離
+    const L = this.laneCount;
+    const D = this.targetDist;                            // 兩堡目標距離(1600m × L)
     const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2); // 反推地圖邊長
     const diagM = sizeM * Math.SQRT2;
     this.candidates = [];
@@ -247,7 +306,7 @@ export class MapSelect {
       await sleep(130);
       if (!direct) { osrmDead++; continue; }
       if (direct.dist / D > 2.2) continue;
-      const result = await buildLanes(A, B, signal, direct);
+      const result = await buildLanes(A, B, signal, direct, L);
       if (!result) continue;
       const { lanes, maxOverlap, overlaps, synthetic, roadDist } = result;
       const dist = distM(A, B);
@@ -262,18 +321,15 @@ export class MapSelect {
 
     // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開
     if (this.candidates.length === 0 && osrmDead === nB && !signal.aborted) {
+      const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
       for (const bearing of [0, 90, 180, 270]) {
         const B = destPoint(A, bearing, D);
-        const lanes = [synthLane(A, B, 1), synthLane(A, B, 0), synthLane(A, B, -1)];
-        const cand = {
-          latlng: B, lanes, distM: distM(A, B), sizeM, diagM, bearing,
-          maxOverlap: Math.max(
-            overlapRatio(lanes[0], lanes[1], A),
-            overlapRatio(lanes[1], lanes[2], A),
-            overlapRatio(lanes[0], lanes[2], A),
-          ),
-          synthetic: true, roadDist: D,
-        };
+        const lanes = sides.map((s) => synthLane(A, B, s));
+        let maxOverlap = 0;
+        for (let i = 0; i < lanes.length; i++) {
+          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A));
+        }
+        const cand = { latlng: B, lanes, distM: distM(A, B), sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
         this.candidates.push(cand);
         this._drawCandidate(cand, this.candidates.length - 1);
       }
@@ -325,8 +381,9 @@ export class MapSelect {
       radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
     }).bindTooltip('🤖 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
 
-    const colors = ['#e6c34a', '#e05c4a', '#4ac3e6']; // 上/中/下路
-    const names = ['上路', '中路', '下路'];
+    const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
+    const names = cand.lanes.length === 1 ? ['中路']
+      : cand.lanes.length === 2 ? ['上路', '下路'] : ['上路', '中路', '下路'];
     cand.lanes.forEach((lane, i) => {
       this._addLayer(L.polyline(lane, { color: colors[i], weight: 4, opacity: 0.85 })
         .bindTooltip(`${names[i]} 兵線`), 'lanes');
@@ -349,10 +406,11 @@ export class MapSelect {
     this._searching = false;
     this.anchor = null;
     this.chosen = null;
+    this.venue = null;
     this.candidates = [];
     this._clearLayers();
     this.h.confirmReady?.(null);
-    this.h.status?.('在地圖上點選蜂群主堡位置,演算法會推薦對側的鋼鐵主堡點。', 0);
+    this.h.status?.('選一個預設場地,或在地圖上點選蜂群主堡位置。', 0);
   }
 
   /** 組出送給伺服器的戰場設定 */
@@ -363,17 +421,20 @@ export class MapSelect {
       center: { lat: c[0], lng: c[1] },
       bases: { SWARM: this.anchor, STEEL: this.chosen.latlng },
       lanes: this.chosen.lanes,          // 方向:SWARM → STEEL
+      laneCount: this.chosen.lanes.length,
       sizeM: this.chosen.sizeM,
       diagM: this.chosen.diagM,
       distM: this.chosen.distM,
       maxOverlap: this.chosen.maxOverlap,
       synthetic: this.chosen.synthetic,
-      placeName: `${c[0].toFixed(4)}, ${c[1].toFixed(4)}`,
+      venue: this.venue ? { id: this.venue.id, name: this.venue.name, mix: this.venue.mix } : null,
+      placeName: this.venue?.name || `${c[0].toFixed(4)}, ${c[1].toFixed(4)}`,
     };
   }
 
-  /** 反查地名(非必要,失敗就用座標) */
+  /** 反查地名(非必要,失敗就用座標;預設場地已有名稱直接用) */
   async fetchPlaceName(cfg) {
+    if (cfg.venue?.name) return cfg;
     try {
       const resp = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${cfg.center.lat}&lon=${cfg.center.lng}&format=json&zoom=12&accept-language=zh-TW`,

@@ -27,12 +27,21 @@ export const SIDES = {
 };
 export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
+// ---- 隊伍規模 ----
+// 每陣營 N 人(1~5),總人數 2N;兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
+// 地圖邊長正比 L,基準為 5v5(L=3,兩堡 4800m)。
+export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
+export const lanesFor = (n) => Math.ceil(n / 2);
+export const targetDistFor = (L) => MAPGEO.DIST_M_PER_LANE * L;
+
 // ---- 地圖幾何(DOTA 規模)----
 export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 候選主堡搜尋:以 4km 見方(DOTA 約 8km²)為基準 → 兩堡直線距離
+  // 候選主堡搜尋:5v5(3 線)以 4km 見方(DOTA 約 8km²)為基準 → 兩堡 4800m;
+  // 兩堡距離依線數等比:1600m × L
+  DIST_M_PER_LANE: 1600,
   TARGET_DIST_M: 4800,
   // 三條兵線側向偏移(佔兩堡距離比例)
   LANE_OFFSET_FRAC: 0.30,
@@ -49,8 +58,9 @@ export const UNITS = {
   soldier: { name: '步兵',   hp: 90,   dmg: 10, range: 60,  rate: 1.0, speed: 7,  sight: 150, bounty: 1 },
   apc:     { name: '裝甲車', hp: 320,  dmg: 22, range: 100, rate: 0.9, speed: 10, sight: 170, bounty: 2 },
   tank:    { name: '主戰坦克', hp: 750, dmg: 55, range: 150, rate: 0.6, speed: 8,  sight: 200, bounty: 4 },
-  // 建築
-  tower:   { name: '防禦塔', hp: 1400, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190 },
+  // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈)
+  tower:   { name: '防禦塔', hp: 1400, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
+             sam: { name: '防空飛彈', dmg: 45, range: 360, cd: 4, speed: 120 } },
   base:    { name: '主堡',   hp: 4500, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄
   drone: {
@@ -82,6 +92,52 @@ export const GAME = {
   CREEP_AGGRO_HERO_BIAS: 0.7, // 小兵優先打小兵/建築,英雄目標權重
   HERO_HEAL_RADIUS: 160,      // 主堡補血半徑
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
+  AA_MIN_ALT: 40,             // 防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
 };
 
-export const PHASES = ['lobby', 'room', 'mapselect', 'loading', 'game', 'over'];
+// ---- 電腦玩家(單人練習 / 補位)----
+export const BOT_NAMES = ['天網-01', '刺針-02', '寒鴉-03', '掠奪者-04', '哨兵-05', '幽靈-06', '雷霆-07', '毒蛛-08'];
+export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
+
+// ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
+export const ENV = {
+  seasons: {
+    spring: { name: '春', foliage: 0x6fbf58, grass: 0x7cb85a, accent: 0xe8a0c8 },
+    summer: { name: '夏', foliage: 0x3e8f3a, grass: 0x5a9e46, accent: 0xffe08a },
+    autumn: { name: '秋', foliage: 0xc9762b, grass: 0xa9924f, accent: 0xd94f2b },
+    winter: { name: '冬', foliage: 0x9fb3ad, grass: 0x9aa08d, accent: 0xe8f0f4 },
+  },
+  times: {
+    day:   { name: '白天' },
+    dusk:  { name: '黃昏' },
+    night: { name: '夜晚' },
+  },
+  weathers: {
+    clear:  { name: '晴朗' },
+    cloudy: { name: '陰天' },
+    rain:   { name: '降雨' },
+    snow:   { name: '降雪' },
+    fog:    { name: '濃霧' },
+  },
+};
+
+/** env = { season, time, weather };'random'/缺值 → 抽一個具體值 */
+export function resolveEnv(env = {}) {
+  const pick = (obj, v) => (v && obj[v]) ? v : Object.keys(obj)[Math.floor(Math.random() * Object.keys(obj).length)];
+  return {
+    season: pick(ENV.seasons, env.season),
+    time: pick(ENV.times, env.time),
+    weather: pick(ENV.weathers, env.weather),
+  };
+}
+
+// ---- 地貌類型(場地 mix 與地被分類共用鍵)----
+export const BIOMES = {
+  green: { name: '綠地', desc: '竹林/闊葉林/針葉林' },
+  bare:  { name: '裸露地', desc: '芒草/箭竹/灌木/多肉' },
+  urban: { name: '市區', desc: '依圖資建物' },
+  water: { name: '水體', desc: '河/湖/瀑' },
+  wet:   { name: '濕地', desc: '潮間帶/沼澤' },
+};
+
+export const PHASES = ['lobby', 'room', 'loading', 'game', 'over'];

@@ -164,7 +164,9 @@ async function fetchImagery(bbox, onProgress) {
 
 /**
  * 建立戰場地形。回傳:
- * { group, heightAt(x,z), bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH }
+ * { group, heightAt(x,z), sampleColor(x,z)|null, center, bbox,
+ *   worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH }
+ * sampleColor:取衛星影像該點的 [r,g,b],供 biomes.js 做地被分類。
  */
 export async function buildTerrain(cfg, onProgress) {
   const bbox = battleBBox(cfg);
@@ -185,6 +187,23 @@ export async function buildTerrain(cfg, onProgress) {
   try {
     imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
   } catch { /* 沒有貼圖就用素色 */ }
+
+  // 影像取樣(世界公尺 → 經緯度 → mercator 像素):biomes.js 地被分類用
+  let sampleColor = null;
+  if (imagery) {
+    const ictx = imagery.canvas.getContext('2d');
+    const idata = ictx.getImageData(0, 0, imagery.canvas.width, imagery.canvas.height).data;
+    const iw = imagery.canvas.width, ih = imagery.canvas.height;
+    sampleColor = (x, z) => {
+      const lng = center.lng + x / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
+      const lat = center.lat + (-z) / R_EARTH * 180 / Math.PI;
+      const px = Math.round((lon2tx(lng, imagery.z) - imagery.tx0) * 256);
+      const py = Math.round((lat2ty(lat, imagery.z) - imagery.ty0) * 256);
+      if (px < 0 || py < 0 || px >= iw || py >= ih) return null;
+      const k = (py * iw + px) * 4;
+      return [idata[k], idata[k + 1], idata[k + 2]];
+    };
+  }
 
   onProgress?.(0.68, '建構地形網格…');
 
@@ -295,5 +314,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, heightAt, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
+  return { group, mesh, heightAt, sampleColor, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
 }

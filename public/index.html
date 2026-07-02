@@ -38,7 +38,7 @@
       <input id="roomNameInput" placeholder="戰區名稱(可留白)" maxlength="16">
       <label class="chk"><input type="checkbox" id="createPublic" checked> 公開</label>
     </div>
-    <button id="createBtn" class="btn big swarm-btn">⚡ 建立戰區(房主)</button>
+    <button id="createBtn" class="btn big swarm-btn">🗺️ 建立戰區(先建地圖再開房)</button>
 
     <div class="divider">─── 加入現有戰區 ───</div>
     <div class="join-mode">
@@ -58,12 +58,58 @@
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 </div>
 
-<!-- ========= 房間(陣營配對)========= -->
+<!-- ========= 開房前:戰場設定(隊伍規模 / 場地 / 環境 / 選址)========= -->
+<div id="setup" class="screen" style="display:none">
+  <div class="map-panel setup-panel">
+    <div class="panel-head">▍建立戰區 — 先建好地圖再開房</div>
+
+    <div class="setup-sec">
+      <div class="setup-label">隊伍規模(每陣營人數)</div>
+      <div class="row ts-row" id="tsRow"></div>
+      <div class="setup-info" id="tsInfo"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">預設場地(路線/圖資已預先算好,即選即用)或點地圖自訂(真實道路掃描)</div>
+      <div class="venue-grid" id="venueGrid"></div>
+    </div>
+
+    <div class="setup-sec" id="favSection" style="display:none">
+      <div class="setup-label">⭐ 我的最愛</div>
+      <div class="venue-grid" id="favGrid"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">環境(預設隨機,開房時定案)</div>
+      <div class="row env-row">
+        <select id="envSeason" class="env-sel"></select>
+        <select id="envTime" class="env-sel"></select>
+        <select id="envWeather" class="env-sel"></select>
+      </div>
+    </div>
+
+    <div class="map-rules">
+      規則:兩主堡距離 ≥ 地圖對角線 80% ・ 兵線任兩條重合 &lt; 20%(真實道路)・ 兵線寬容 4 台機甲並行
+    </div>
+    <div id="mapStatus" class="map-status">選一個預設場地,或在地圖上點選蜂群主堡位置。</div>
+    <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
+    <div class="row">
+      <button id="confirmSiteBtn" class="btn big swarm-btn" disabled>⚡ 建立戰區(開房)</button>
+      <button id="saveFavBtn" class="btn" disabled>⭐ 存入最愛</button>
+      <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
+      <button id="backLobbyBtn" class="btn">← 返回大廳</button>
+    </div>
+  </div>
+  <div id="leafletMap"></div>
+</div>
+
+<!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
   <header class="masthead small">
     <h2 class="room-title" id="roomTitle">戰區</h2>
     <div class="room-meta">PIN <b id="roomPin">----</b> ・ 區網 <span id="roomUrls"></span></div>
+    <div class="room-map-info" id="roomMapInfo"></div>
   </header>
 
   <div class="side-cards">
@@ -71,16 +117,14 @@
       <div class="side-emblem">🐝</div>
       <div class="side-name">蜂群兵團 <span class="side-en">THE SWARM</span></div>
       <div class="side-hero">獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
-      <div class="side-player">—</div>
-      <div class="side-ready"></div>
+      <div class="side-slots"></div>
     </div>
     <div class="side-vs">VS</div>
     <div class="side-card steel" id="sideSTEEL">
       <div class="side-emblem">🤖</div>
       <div class="side-name">鋼鐵軍團 <span class="side-en">STEEL LEGION</span></div>
       <div class="side-hero">執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
-      <div class="side-player">—</div>
-      <div class="side-ready"></div>
+      <div class="side-slots"></div>
     </div>
   </div>
   <div class="spec-list" id="specList"></div>
@@ -88,32 +132,10 @@
 
   <div class="row room-actions">
     <button id="readyBtn" class="btn big" disabled>✔ 準備完成</button>
-    <button id="startSetupBtn" class="btn big steel-btn" disabled>🗺️ 前往戰場選址</button>
+    <button id="startBattleBtn" class="btn big steel-btn" disabled>⚔️ 開戰</button>
     <button id="leaveRoomBtn" class="btn">離開</button>
   </div>
-  <p class="room-note">小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿三條真實道路兵線推進。</p>
-</div>
-
-<!-- ========= 戰場選址 ========= -->
-<div id="mapselect" class="screen" style="display:none">
-  <div id="mapHostPanel" class="map-panel">
-    <div class="panel-head">▍戰場選址 — 點地圖放置 🐝 蜂群主堡</div>
-    <div class="map-rules">
-      規則:兩主堡距離 ≥ 地圖對角線 80% ・ 三條兵線任兩條重合 &lt; 20%(真實道路)
-    </div>
-    <div id="mapStatus" class="map-status">在地圖上點選蜂群主堡位置。</div>
-    <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
-    <div class="row">
-      <button id="confirmSiteBtn" class="btn big swarm-btn" disabled>⚔️ 鎖定戰場,開戰!</button>
-      <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
-    </div>
-  </div>
-  <div id="mapGuestPanel" class="map-panel" style="display:none">
-    <div class="panel-head">▍房主正在選定戰場…</div>
-    <div id="guestMapStatus" class="map-status">等待房主在真實地圖上選址。</div>
-    <div class="pbar"><div id="guestMapBar" class="pbar-fill"></div></div>
-  </div>
-  <div id="leafletMap"></div>
+  <p class="room-note">點陣營卡片入座/離座;房主可在空位補「電腦玩家」單人開戰。小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿兵線推進。</p>
 </div>
 
 <!-- ========= 載入 ========= -->

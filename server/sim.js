@@ -30,7 +30,8 @@ export class BattleSim {
     this.wave = 0;
     this.nextWaveAt = GAME.FIRST_WAVE_DELAY_S;
     this.ents = new Map();            // id -> entity
-    this.heroes = {};                 // side -> hero entity
+    this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> hero entity
+    this.missiles = [];               // 防空飛彈(伺服器權威 3D 追蹤)
     this.events = [];                 // 快照間累積的事件
     this.over = false;
     this.winner = null;
@@ -76,31 +77,37 @@ export class BattleSim {
     return e;
   }
 
-  // ---------- 英雄 ----------
-  addHero(side) {
-    if (this.heroes[side]) return this.heroes[side];
+  // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵)----------
+  addHero(side, pid) {
+    if (this.heroes.has(pid)) return this.heroes.get(pid);
     const kind = SIDES[side].hero; // drone | robot
-    const [x, z] = this.basePos[side];
+    const idx = [...this.heroes.values()].filter((h) => h.side === side).length;
+    const [bx, bz] = this.basePos[side];
+    // 同陣營多英雄:繞主堡錯開出生點,避免疊在一起
+    const ang = idx * (Math.PI * 2 / 5);
     const h = this._add({
-      kind, side, x, z, y: 0, ry: 0,
+      kind, side, pid,
+      x: bx + Math.cos(ang) * 30 * Math.min(idx, 1),
+      z: bz + Math.sin(ang) * 30 * Math.min(idx, 1),
+      y: 0, ry: 0, spawnIdx: idx,
       hp: UNITS[kind].hp, hero: true,
       dead: false, respawnAt: 0, lastFire: 0, lastBurst: 0,
     });
-    this.heroes[side] = h;
+    this.heroes.set(pid, h);
     return h;
   }
 
-  heroPos(side, x, y, z, ry) {
-    const h = this.heroes[side];
+  heroPos(pid, x, y, z, ry) {
+    const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     h.x = x; h.y = y; h.z = z; h.ry = ry;
   }
 
   /** 英雄射擊命中(客戶端 raycast 回報;傷害查表、射程與射速伺服器把關) */
-  heroHit(side, targetId) {
-    const h = this.heroes[side];
+  heroHit(pid, targetId) {
+    const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
-    if (!h || h.dead || !t || t.side === side || this.over) return;
+    if (!h || h.dead || !t || t.side === h.side || this.over) return;
     const gun = UNITS[h.kind].gun;
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
@@ -112,17 +119,36 @@ export class BattleSim {
     this._damage(t, gun.dmg, h);
   }
 
+  /**
+   * 伺服器端英雄開火(電腦玩家用):射程/射速同 heroHit,
+   * 額外廣播 shot 事件讓客戶端畫彈道(節流:每 3 發畫 1 發)。
+   */
+  botFire(pid, targetId) {
+    const h = this.heroes.get(pid);
+    const t = this.ents.get(targetId);
+    if (!h || h.dead || !t || t.side === h.side || this.over) return false;
+    const gun = UNITS[h.kind].gun;
+    const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
+    if (d3 > gun.range) return false;
+    if (this.t - h.lastFire < 1 / gun.rate) return false;
+    h.lastFire = this.t;
+    h._shotN = (h._shotN || 0) + 1;
+    if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
+    this._damage(t, gun.dmg, h);
+    return true;
+  }
+
   /** 範圍攻擊(無人機空投炸彈 / 機甲火箭):落點由客戶端回報,冷卻伺服器把關 */
-  heroBurst(side, x, z) {
-    const h = this.heroes[side];
+  heroBurst(pid, x, z) {
+    const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     const b = UNITS[h.kind].burst;
     if (this.t - h.lastBurst < b.cd * 0.9) return;
     if (dist2d(h.x, h.z, x, z) > 600) return;
     h.lastBurst = this.t;
-    this.events.push({ e: 'boom', x, z, r: b.r, side });
+    this.events.push({ e: 'boom', x, z, r: b.r, side: h.side });
     for (const t of [...this.ents.values()]) {
-      if (t.side === side) continue;
+      if (t.side === h.side) continue;
       const d = dist2d(x, z, t.x, t.z);
       if (d <= b.r) this._damage(t, b.dmg * (t.kind === 'base' || t.kind === 'tower' ? 0.5 : 1), h);
       else if (d <= b.r * 1.8) this._damage(t, b.dmg * 0.4, h);
@@ -148,7 +174,7 @@ export class BattleSim {
 
   _kill(t, by) {
     const bySide = by?.side || null;
-    this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side });
+    this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero ? { pid: t.pid } : {}) });
     if (t.hero) {
       t.dead = true;
       this.stats[t.side].deaths++;
@@ -179,18 +205,16 @@ export class BattleSim {
     }
 
     // 英雄重生 / 主堡補血
-    for (const side of ['SWARM', 'STEEL']) {
-      const h = this.heroes[side];
-      if (!h) continue;
+    for (const h of this.heroes.values()) {
       if (h.dead && this.t >= h.respawnAt) {
         h.dead = false;
         h.hp = h.maxHp;
-        [h.x, h.z] = this.basePos[side];
+        [h.x, h.z] = this.basePos[h.side];
         h.y = 0;
-        this.events.push({ e: 'respawn', id: h.id, side });
+        this.events.push({ e: 'respawn', id: h.id, side: h.side, pid: h.pid });
       }
       if (!h.dead && h.hp < h.maxHp) {
-        const [bx, bz] = this.basePos[side];
+        const [bx, bz] = this.basePos[h.side];
         if (dist2d(h.x, h.z, bx, bz) < GAME.HERO_HEAL_RADIUS) {
           h.hp = Math.min(h.maxHp, h.hp + UNITS[h.kind].regen * dt);
         }
@@ -202,6 +226,7 @@ export class BattleSim {
       if (e.hero || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
+      if (u.sam) this._tryLaunchSam(e, u.sam, dt);
       const target = this._acquireTarget(e, u);
       if (target) {
         if (e.cd === 0) {
@@ -214,6 +239,51 @@ export class BattleSim {
         continue; // 交戰中不前進
       }
       if (u.speed > 0) this._advance(e, u, dt);
+    }
+
+    this._tickMissiles(dt);
+  }
+
+  // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
+  _tryLaunchSam(e, sam, dt) {
+    e.samCd = Math.max(0, (e.samCd ?? 0) - dt);
+    if (e.samCd > 0) return;
+    let best = null, bestD = Infinity;
+    for (const h of this.heroes.values()) {
+      if (h.side === e.side || h.dead || h.kind !== 'drone') continue;
+      const y = h.y || 0;
+      if (y < GAME.AA_MIN_ALT) continue;                 // 低飛交給塔砲
+      const d = Math.hypot(h.x - e.x, h.z - e.z, y);
+      if (d <= sam.range && d < bestD) { bestD = d; best = h; }
+    }
+    if (!best) return;
+    e.samCd = sam.cd;
+    this.missiles.push({
+      id: nextEntId++, byId: e.id, side: e.side, tpid: best.pid,
+      x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, ttl: 12,
+    });
+    this.events.push({ e: 'sam', from: [e.x, e.z], side: e.side, tpid: best.pid });
+  }
+
+  _tickMissiles(dt) {
+    for (let i = this.missiles.length - 1; i >= 0; i--) {
+      const m = this.missiles[i];
+      const t = this.heroes.get(m.tpid);
+      m.ttl -= dt;
+      if (!t || t.dead || m.ttl <= 0) { this.missiles.splice(i, 1); continue; }  // 目標消失:飛彈自毀
+      const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
+      const d = Math.hypot(dx, dy, dz);
+      const step = m.speed * dt;
+      if (d <= Math.max(12, step)) {
+        // 命中:近炸引信
+        this._damage(t, m.dmg, this.ents.get(m.byId) || { side: m.side });
+        this.events.push({ e: 'boom', x: t.x, z: t.z, y: t.y || 0, r: 14, side: m.side, sam: true });
+        this.missiles.splice(i, 1);
+        continue;
+      }
+      m.x += dx / d * step;
+      m.y += dy / d * step;
+      m.z += dz / d * step;
     }
   }
 
@@ -277,28 +347,31 @@ export class BattleSim {
     const ents = [];
     for (const e of this.ents.values()) {
       const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
-      if (e.hero) { o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100; o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t)); }
+      if (e.hero) { o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100; o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t)); }
       ents.push(o);
     }
     const ev = this.events;
     this.events = [];
+    const sm = this.missiles.map((m) => ({
+      id: m.id, x: Math.round(m.x * 10) / 10, y: Math.round(m.y * 10) / 10, z: Math.round(m.z * 10) / 10,
+    }));
     return {
       t: 'snap', time: Math.round(this.t),
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
-      ents, ev, stats: this.stats, over: this.over, winner: this.winner,
+      ents, ev, sm, stats: this.stats, over: this.over, winner: this.winner,
     };
   }
 }
 
-// ---------- 折線工具 ----------
-function cumLen(pts) {
+// ---------- 折線工具(bots.js 也用)----------
+export function cumLen(pts) {
   const cum = [0];
   for (let i = 1; i < pts.length; i++) {
     cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   }
   return cum;
 }
-function pointAt(pts, cum, d) {
+export function pointAt(pts, cum, d) {
   if (d <= 0) return [...pts[0]];
   const total = cum[cum.length - 1];
   if (d >= total) return [...pts[pts.length - 1]];

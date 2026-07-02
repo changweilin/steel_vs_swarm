@@ -8,7 +8,8 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { BattleSim } from './sim.js';
-import { SIDES, OTHER_SIDE, GAME } from '../public/js/data.js';
+import { BotBrain } from './bots.js';
+import { SIDES, GAME, TEAM, BOT_NAMES, lanesFor, resolveEnv } from '../public/js/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -52,11 +53,13 @@ const httpServer = http.createServer((req, res) => {
 // ---------------- 房間管理 ----------------
 /**
  * room = {
- *   pin, id, hostId, phase: 'room'|'mapselect'|'loading'|'game'|'over',
- *   config: { roomName, isPublic },
+ *   pin, id, hostId, phase: 'room'|'loading'|'game'|'over',
+ *   config: { roomName, isPublic, teamSize },   // 每陣營 teamSize 席(1~5)
  *   clients: Map<clientId, {ws, name, side:'SWARM'|'STEEL'|null, mode:'player'|'spectator',
  *                           ready, loaded, connected, token}>,
- *   battle: BattleSim|null, battleConfig, tickTimer, snapTimer,
+ *   bots: Map<botId('b1'...), {name, side}>,   // 電腦玩家(房主增減,佔正式席位)
+ *   battleConfig,          // 開房時就鎖定(地圖在開房前建立/選好)
+ *   battle: BattleSim|null, botBrains: BotBrain[], tickTimer,
  * }
  */
 const rooms = new Map();
@@ -90,6 +93,11 @@ function hostNameOf(room) {
   const h = room.clients.get(room.hostId);
   return h ? h.name : '—';
 }
+/** 某陣營已佔席位數(真人 + 電腦) */
+function sideCount(room, side) {
+  return [...room.clients.values()].filter((c) => c.side === side).length
+    + [...room.bots.values()].filter((b) => b.side === side).length;
+}
 
 function lanUrls() {
   const urls = [];
@@ -111,20 +119,35 @@ function roomListPayload() {
     const e = {
       id: room.id, isPublic, phase: room.phase,
       name: room.config.roomName || '未命名戰區',
+      teamSize: room.config.teamSize,
       players: players.length,
       spectators: room.clients.size - players.length,
       sides: {
-        SWARM: players.find((c) => c.side === 'SWARM')?.name || null,
-        STEEL: players.find((c) => c.side === 'STEEL')?.name || null,
+        SWARM: players.filter((c) => c.side === 'SWARM').map((c) => c.name)
+          .concat([...room.bots.values()].filter((b) => b.side === 'SWARM').map((b) => `🤖${b.name}`)),
+        STEEL: players.filter((c) => c.side === 'STEEL').map((c) => c.name)
+          .concat([...room.bots.values()].filter((b) => b.side === 'STEEL').map((b) => `🤖${b.name}`)),
       },
       host: hostNameOf(room),
       place: room.battleConfig?.placeName || null,
+      env: room.battleConfig?.env || null,
     };
     if (isPublic) e.pin = room.pin;
     out.push(e);
   }
   out.sort((a, b) => ((a.phase !== 'room') - (b.phase !== 'room')) || (b.isPublic - a.isPublic));
   return out;
+}
+
+/** 開房前的戰場設定驗證:回傳錯誤訊息或 null */
+function validateBattleConfig(cfg, teamSize) {
+  const L = lanesFor(teamSize);
+  if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
+  if (cfg.lanes.length !== L) return `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
+  if (!(cfg.distM >= cfg.diagM * 0.8)) {
+    return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
+  }
+  return null;
 }
 
 /** 廣播房間(大廳/配對)狀態 */
@@ -135,7 +158,10 @@ function broadcast(room) {
       id, name: c.name, side: c.side, mode: c.mode,
       ready: !!c.ready, loaded: !!c.loaded, isHost: id === room.hostId,
       connected: c.connected !== false,
-    })),
+    })).concat([...room.bots.entries()].map(([id, b]) => ({
+      id, name: b.name, side: b.side, mode: 'player',
+      ready: true, loaded: true, isHost: false, connected: true, isBot: true,
+    }))),
     battleConfig: room.battleConfig || null,
   };
   for (const [id, c] of room.clients) {
@@ -163,15 +189,21 @@ function leaveRoom(client, room, clientId) {
 function startBattle(room) {
   if (room.battle || !room.battleConfig) return;
   room.battle = new BattleSim(room.battleConfig);
-  for (const c of room.clients.values()) {
-    if (c.mode === 'player' && c.side) room.battle.addHero(c.side);
+  for (const [id, c] of room.clients) {
+    if (c.mode === 'player' && c.side) room.battle.addHero(c.side, id);
   }
+  // 電腦玩家:伺服器端 AI 操控英雄,兵線輪流指派(NPC 路線 = 房間兵線)
+  room.botBrains = [...room.bots.entries()].map(([bid, b], i) => {
+    room.battle.addHero(b.side, bid);
+    return new BotBrain(room.battle, bid, b.side, i);
+  });
   room.phase = 'game';
   let last = Date.now();
   room.tickTimer = setInterval(() => {
     const now = Date.now();
     const dt = Math.min(0.5, (now - last) / 1000);
     last = now;
+    for (const brain of room.botBrains) brain.update(dt);
     room.battle.tick(dt);
     const snap = room.battle.snapshot();
     for (const c of room.clients.values()) send(c.ws, snap);
@@ -187,6 +219,7 @@ function startBattle(room) {
 
 function stopBattle(room, keepPhase = false) {
   if (room.tickTimer) { clearInterval(room.tickTimer); room.tickTimer = null; }
+  room.botBrains = [];
   if (!keepPhase) room.battle = null;
 }
 
@@ -211,16 +244,24 @@ wss.on('connection', (ws) => {
 
     // ---- 大廳 ----
     if (m.t === 'createRoom') {
+      // 地圖在開房前就要建立/選擇好:createRoom 必須帶合法 battleConfig
+      const teamSize = Math.max(TEAM.MIN, Math.min(TEAM.MAX, Math.round(m.teamSize) || TEAM.DEFAULT));
+      const cfg = m.battleConfig;
+      const err = validateBattleConfig(cfg, teamSize);
+      if (err) { send(ws, { t: 'error', msg: err }); return; }
+      cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
+      cfg.teamSize = teamSize;
       const pin = genPin();
       client = { ws, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
       room = {
         pin, id: genRoomId(), hostId: clientId, phase: 'room',
-        config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false },
+        config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false, teamSize },
         clients: new Map([[clientId, client]]),
-        battle: null, battleConfig: null, tickTimer: null,
+        bots: new Map(), nextBotId: 0, botBrains: [],
+        battle: null, battleConfig: cfg, tickTimer: null,
       };
       rooms.set(pin, room);
-      console.log(`🏠 建立房間 ${pin}(${room.config.roomName})`);
+      console.log(`🏠 建立房間 ${pin}(${room.config.roomName}・${teamSize}v${teamSize}・${cfg.placeName || '未知戰區'})`);
       broadcast(room);
       return;
     }
@@ -229,8 +270,9 @@ wss.on('connection', (ws) => {
       const r = rooms.get(String(m.pin));
       if (!r) { send(ws, { t: 'error', msg: '找不到房間,確認 PIN 是否正確' }); return; }
       const mode = m.mode === 'spectator' ? 'spectator' : 'player';
-      const players = [...r.clients.values()].filter((c) => c.mode === 'player').length;
-      if (mode === 'player' && players >= 2) { send(ws, { t: 'error', msg: '兩個陣營都有指揮官了,可用觀戰模式加入' }); return; }
+      const players = [...r.clients.values()].filter((c) => c.mode === 'player').length + r.bots.size;
+      const cap = r.config.teamSize * 2;
+      if (mode === 'player' && players >= cap) { send(ws, { t: 'error', msg: `參戰席位已滿(${cap} 人),可用觀戰模式加入` }); return; }
       client = { ws, name: sanitizeName(m.name), side: null, mode, ready: false, loaded: false, connected: true, token: genToken() };
       room = r;
       room.clients.set(clientId, client);
@@ -266,9 +308,9 @@ wss.on('connection', (ws) => {
     if (m.t === 'pickSide') {
       const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
       if (client.mode !== 'player') { send(ws, { t: 'error', msg: '觀戰者不能選陣營' }); return; }
-      if (side) {
-        const taken = [...room.clients.values()].some((c) => c !== client && c.side === side);
-        if (taken) { send(ws, { t: 'error', msg: `${SIDES[side].name} 已被選走` }); return; }
+      if (side && side !== client.side) {
+        const n = sideCount(room, side) - (client.side === side ? 1 : 0);
+        if (n >= room.config.teamSize) { send(ws, { t: 'error', msg: `${SIDES[side].name} 已滿(${room.config.teamSize} 席)` }); return; }
       }
       client.side = side;
       client.ready = false;
@@ -276,41 +318,41 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'setReady') { client.ready = !!m.ready; broadcast(room); return; }
+    if (m.t === 'addBot') {
+      // 電腦玩家:房主在房間階段補位(單人練習 / 湊隊)
+      if (clientId !== room.hostId) { send(ws, { t: 'error', msg: '只有房主能增減電腦玩家' }); return; }
+      if (room.phase !== 'room') return;
+      const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
+      if (!side) return;
+      if (sideCount(room, side) >= room.config.teamSize) { send(ws, { t: 'error', msg: `${SIDES[side].name} 已滿(${room.config.teamSize} 席)` }); return; }
+      const id = 'b' + (++room.nextBotId);
+      const used = new Set([...room.bots.values()].map((b) => b.name));
+      const name = BOT_NAMES.find((n) => !used.has(n)) || `AI-${room.nextBotId}`;
+      room.bots.set(id, { name, side });
+      broadcast(room);
+      return;
+    }
+    if (m.t === 'removeBot') {
+      if (clientId !== room.hostId || room.phase !== 'room') return;
+      room.bots.delete(String(m.id));
+      broadcast(room);
+      return;
+    }
     if (m.t === 'setRoomConfig' && clientId === room.hostId) {
       if (m.roomName !== undefined) room.config.roomName = sanitizeName(m.roomName);
       if (m.isPublic !== undefined) room.config.isPublic = !!m.isPublic;
       broadcast(room);
       return;
     }
-    if (m.t === 'startSetup') {
-      // 房主啟動戰場選址:至少 1 位已選陣營並準備(單人=練習模式)
-      if (clientId !== room.hostId) { send(ws, { t: 'error', msg: '只有房主能啟動選址' }); return; }
+    if (m.t === 'startBattle') {
+      // 房主開戰(地圖開房時已鎖定):至少 1 位已選陣營並準備(單人=練習模式)
+      if (clientId !== room.hostId) { send(ws, { t: 'error', msg: '只有房主能開戰' }); return; }
+      if (room.phase !== 'room') return;
       const players = [...room.clients.values()].filter((c) => c.mode === 'player' && c.side);
       if (players.length === 0) { send(ws, { t: 'error', msg: '請先選擇陣營' }); return; }
       if (!players.every((c) => c.ready)) { send(ws, { t: 'error', msg: '還有指揮官未按「準備完成」' }); return; }
-      room.phase = 'mapselect';
-      broadcast(room);
-      return;
-    }
-    if (m.t === 'mapProgress' && clientId === room.hostId) {
-      // 選址進度轉播給其他人(候選點/搜尋進度)
-      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, m);
-      return;
-    }
-    if (m.t === 'battleConfig' && clientId === room.hostId) {
-      // 房主完成選址:驗證幾何條件後鎖定戰場
-      const cfg = m.config;
-      if (!cfg || !cfg.bases || !Array.isArray(cfg.lanes) || cfg.lanes.length !== 3) {
-        send(ws, { t: 'error', msg: '戰場設定不完整' });
-        return;
-      }
-      if (!(cfg.distM >= cfg.diagM * 0.8)) {
-        send(ws, { t: 'error', msg: `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)` });
-        return;
-      }
-      room.battleConfig = cfg;
       room.phase = 'loading';
-      for (const c of room.clients.values()) { c.loaded = false; send(c.ws, { t: 'battleConfig', config: cfg }); }
+      for (const c of room.clients.values()) { c.loaded = false; send(c.ws, { t: 'battleConfig', config: room.battleConfig }); }
       broadcast(room);
       return;
     }
@@ -322,17 +364,18 @@ wss.on('connection', (ws) => {
       if (m.t === 'leaveRoom') { leaveRoom(client, room, clientId); room = null; client = null; }
       return;
     }
-    if (m.t === 'pos' && client.side) { b.heroPos(client.side, m.x, m.y, m.z, m.ry); return; }
-    if (m.t === 'hit' && client.side) { b.heroHit(client.side, m.id); return; }
-    if (m.t === 'burst' && client.side) { b.heroBurst(client.side, m.x, m.z); return; }
+    if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry); return; }
+    if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id); return; }
+    if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }
     if (m.t === 'tracer') {
       // 純視覺:轉播給其他客戶端畫彈道
       for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side });
       return;
     }
     if (m.t === 'backToRoom' && clientId === room.hostId) {
+      // 回到房間再戰:地圖屬於房間(開房前選定),保留 battleConfig
       stopBattle(room);
-      room.battle = null; room.battleConfig = null; room.phase = 'room';
+      room.battle = null; room.phase = 'room';
       for (const c of room.clients.values()) { c.ready = false; c.loaded = false; }
       broadcast(room);
       return;
