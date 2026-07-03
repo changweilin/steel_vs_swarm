@@ -7,6 +7,7 @@
 // 世界座標:以戰場中心為原點,x = 東(公尺),z = 南(three.js 慣例;
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
+import { toonGradient } from './hazards.js';
 
 const R_EARTH = 6371000;
 const GRID_N = 129;            // 地形頂點 129×129
@@ -274,14 +275,15 @@ export async function buildTerrain(cfg, onProgress) {
   geo.setIndex(idx);
   geo.computeVertexNormals();
 
+  // 地形也走日漫賽璐璐(衛星影像 + 4 階光影 = 2.5D 手繪感)
   let mat;
   if (imagery) {
     const tex = new THREE.CanvasTexture(imagery.canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
-    mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, metalness: 0 });
+    mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: toonGradient() });
   } else {
-    mat = new THREE.MeshStandardMaterial({ color: 0x39424c, roughness: 1 });
+    mat = new THREE.MeshToonMaterial({ color: 0x39424c, gradientMap: toonGradient() });
   }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
@@ -293,7 +295,7 @@ export async function buildTerrain(cfg, onProgress) {
   if (minH < 0.5) {
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(worldW, worldH),
-      new THREE.MeshStandardMaterial({ color: 0x123a55, transparent: true, opacity: 0.82, roughness: 0.3, metalness: 0.2 }),
+      new THREE.MeshToonMaterial({ color: 0x1a4a6a, gradientMap: toonGradient(), transparent: true, opacity: 0.82 }),
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, 0.3, (minZ + maxZ) / 2);

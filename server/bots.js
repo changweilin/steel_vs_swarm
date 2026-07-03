@@ -3,7 +3,7 @@
 // 傷害查表、射速/射程/冷卻全由 sim 把關(botFire / heroBurst)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, vsMult } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -67,6 +67,15 @@ export class BotBrain {
     this._face(h, x, z);
     h.x += (x + this.jitter[0] - h.x) * Math.min(1, dt * 2.2);
     h.z += (z + this.jitter[1] - h.z) * Math.min(1, dt * 2.2);
+    // 繞開阻擋型障礙物,不卡在牆前(機甲貼地移動才會撞到,無人機飛越)
+    if (h.kind !== 'drone') {
+      for (const [hx, hz, hr] of this.sim.hazBlockers || []) {
+        const dd = Math.hypot(h.x - hx, h.z - hz);
+        if (dd >= hr || dd === 0) continue;
+        h.x = hx + (h.x - hx) / dd * hr;
+        h.z = hz + (h.z - hz) / dd * hr;
+      }
+    }
     // 掉隊修正:被擊退/重生後 prog 對不上實際位置時,吸附回最近進度
     if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - u.speed * dt * 4);
   }
@@ -92,6 +101,7 @@ export class BotBrain {
         const packed = [...this.sim.ents.values()].filter((e2) =>
           e2.side !== h.side && Math.hypot(e2.x - t.x, e2.z - t.z) <= b.r * 1.5).length;
         if (packed >= 3 || t.kind === 'tower' || t.kind === 'base') {
+          h.aiming = true;   // 熱兵器需瞄準模式,bot 開火前直接切換(無真人輸入)
           this.sim.heroBurst(this.pid, t.x, t.z);
         }
       }
@@ -123,14 +133,16 @@ export class BotBrain {
 
   /** 目標選擇:射程內最近敵人;優先英雄 > 小兵 > 建築(權重折算) */
   _acquire(h, u) {
-    const range = WEAPONS[u.loadout[0]].range;
+    const wd = WEAPONS[u.loadout[0]];
+    const range = wd.range;
     let best = null, bestD = Infinity;
     for (const t of this.sim.ents.values()) {
-      if (t.side === h.side || t.hp <= 0 || (t.hero && t.dead)) continue;
+      if (t.side === h.side || t.neutral || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
       if (t.hero) d *= 0.55;                             // 優先咬英雄
       else if (t.kind === 'tower' || t.kind === 'base') d *= 1.3;
+      d /= vsMult(wd, t.kind);                            // 優先打武器克制的目標類型
       if (d < bestD) { bestD = d; best = t; }
     }
     return best;

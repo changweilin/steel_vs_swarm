@@ -7,14 +7,18 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { SIDES } from './data.js';
+import { toonMat, toonify } from './hazards.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
 export const MODEL_MANIFEST = Object.assign({
   'hero:robot':   'assets/models/quaternius/pawn-mech.glb',     // 執法者機甲
   'hero:drone':   null,                                          // 無人機:程式生成四旋翼
-  'creep:soldier': 'assets/models/quaternius/pawn-casual.glb',  // 人類步兵
+  'creep:soldier': 'assets/models/quaternius/pawn-casual.glb',  // 步槍兵
   'creep:apc':    null,                                          // 裝甲車:程式生成
   'creep:tank':   null,                                          // 坦克:程式生成
+  'creep:rocketeer': null,                                        // 火箭兵:程式生成
+  'creep:howitzer':  null,                                        // 榴彈兵:程式生成
+  'creep:heli':      null,                                        // 攻擊直升機:程式生成
   'tower':        'assets/models/quaternius/silo.glb',          // 防禦塔
   'base:SWARM':   'assets/models/quaternius/dome.glb',          // 蜂群主堡(穹頂)
   'base:STEEL':   'assets/models/quaternius/structure.glb',     // 鋼鐵主堡(工業塔)
@@ -24,6 +28,7 @@ export const MODEL_MANIFEST = Object.assign({
 const TARGET_H = {
   'hero:robot': 6, 'hero:drone': 3,
   'creep:soldier': 3.2, 'creep:apc': 4.5, 'creep:tank': 5,
+  'creep:rocketeer': 3.4, 'creep:howitzer': 4, 'creep:heli': 4.2,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
 };
 
@@ -100,7 +105,8 @@ function teamRing(side, radius) {
 }
 
 function mat(color, opts = {}) {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.35, ...opts });
+  const { metalness, roughness, ...rest } = opts;   // 日漫賽璐璐:PBR 參數不適用 toon
+  return toonMat(color, rest);
 }
 
 // ---------- 程式生成備援模型 ----------
@@ -205,6 +211,80 @@ function buildSoldierFallback() {
   return g;
 }
 
+/** 備援火箭兵(步兵 + 肩扛長管) */
+function buildRocketeerFallback() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.44, 1.15, 4, 8), mat(0x4a5138));
+  body.position.y = 1.35;
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), mat(0xc9a481));
+  head.position.y = 2.35;
+  g.add(head);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x33392c));
+  helmet.position.y = 2.42;
+  g.add(helmet);
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.9, 8), mat(0x1c1f22));
+  tube.rotation.z = Math.PI / 2.4;
+  tube.position.set(0.15, 2.1, -0.25);
+  g.add(tube);
+  return g;
+}
+
+/** 備援榴彈兵(固定式榴彈砲台) */
+function buildHowitzerFallback(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].colorDim);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 0.6, 8), mat(0x3a3f34));
+  base.position.y = 0.3;
+  g.add(base);
+  for (const [sx, sz] of [[-0.9, -1.6], [0.9, -1.6]]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 2.2), mat(0x2c302a));
+    leg.position.set(sx, 0.3, sz);
+    g.add(leg);
+  }
+  const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.7, 8), mat(accent));
+  mount.position.y = 0.95;
+  g.add(mount);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 3.4, 8), mat(0x16191c));
+  barrel.rotation.x = -0.55;
+  barrel.position.set(0, 1.5, -0.8);
+  g.add(barrel);
+  return g;
+}
+
+/** 備援攻擊直升機(機身+尾桁+主旋翼,userData.spin 供每幀轉動) */
+function buildHeliFallback(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.7, 1.6, 4, 8), mat(0x3a4038));
+  body.rotation.z = Math.PI / 2;
+  body.position.y = 1.6;
+  g.add(body);
+  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(accent, { emissive: accent, emissiveIntensity: 0.4 }));
+  cockpit.position.set(1.15, 1.6, 0);
+  g.add(cockpit);
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, 2.6, 8), mat(0x2c322a));
+  tail.rotation.z = Math.PI / 2;
+  tail.position.set(-2.2, 1.75, 0);
+  g.add(tail);
+  const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.12), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
+  tailRotor.position.set(-3.4, 1.75, 0);
+  g.add(tailRotor);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8), mat(0x14171a));
+  hub.position.y = 2.35;
+  g.add(hub);
+  const rotor = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.05, 0.16), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
+  rotor.position.y = 2.42;
+  g.add(rotor);
+  for (const skidX of [-0.9, 0.9]) {
+    const skid = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 2.6), mat(0x1c1f22));
+    skid.position.set(skidX, 0.55, 0);
+    g.add(skid);
+  }
+  g.userData.spin = [rotor, tailRotor];
+  return g;
+}
+
 /** 備援塔 / 主堡 */
 function buildTowerFallback(side) {
   const g = new THREE.Group();
@@ -243,6 +323,9 @@ const FALLBACK = {
   'creep:soldier': () => buildSoldierFallback(),
   'creep:apc': (side) => buildApc(side),
   'creep:tank': (side) => buildTank(side),
+  'creep:rocketeer': () => buildRocketeerFallback(),
+  'creep:howitzer': (side) => buildHowitzerFallback(side),
+  'creep:heli': (side) => buildHeliFallback(side),
   tower: (side) => buildTowerFallback(side),
   'base:SWARM': () => buildBaseFallback('SWARM'),
   'base:STEEL': () => buildBaseFallback('STEEL'),
@@ -269,6 +352,7 @@ export function makeUnit(kind, side, { ring = true } = {}) {
 
   if (entry) {
     const model = SkeletonUtils.clone(entry.scene);
+    toonify(model);   // GLB 也重新渲染成日漫 2.5D(保留貼圖/顏色)
     fitToHeight(model, target);
     // skinned mesh 的包圍球以綁定姿勢計算,經縮放+動畫後會被視錐剔除
     // 導致模型「消失」,一律關閉 frustum culling

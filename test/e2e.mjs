@@ -3,7 +3,7 @@
 //            → 準備 → 開戰載入 → 快照 → 命中 → 經濟購買 → 勝負 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
-import { UNITS, WEAPONS, ECON, GAME } from '../public/js/data.js';
+import { UNITS, WEAPONS, ECON, GAME, FIELD, HAZARDS } from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
@@ -79,6 +79,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(rb.hp < rb.maxHp && sim.mines.length === nMines - 1,
     `機甲踩雷受創(${rb.maxHp} → ${Math.round(rb.hp)},雷被消耗)`);
   assert(sim.events.some((e) => e.e === 'boom' && e.mine && e.tpid === 'p_r'), '地雷爆炸事件帶 tpid');
+  assert(sim.events.some((e) => e.e === 'boom' && e.mine && e.mid != null), '地雷爆炸事件帶 mid(客戶端移除微凸起)');
+  assert(sim.fieldPayload().mines.every((m) => m.length === 3), 'fieldPayload 地雷格式 [x,z,id]');
 
   log('— sim:武器克制(rgun vs 肉體 ×1.3)+ 彈夾上限 —');
   const dummy = sim._add({ kind: 'soldier', side: 'SWARM', x: rb.x + 10, z: rb.z, hp: UNITS.soldier.hp });
@@ -122,9 +124,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(sim.buy('p_r2', 'hull') === null && rb2.maxHp > UNITS.robot.hp,
     `裝甲升級隨處可買(HP 上限 ${UNITS.robot.hp} → ${rb2.maxHp})`);
 
-  log('— sim:非正規路線防空伏擊 + 飛彈可破壞 —');
-  const mid = sim.lanes[0][Math.floor(sim.lanes[0].length / 2)];
-  dr.x = mid[0] + 200; dr.z = mid[1]; dr.y = 10;       // 低空也躲不過伏擊
+  log('— sim:非正規路線防空伏擊(需射程內有存活陣地)+ 飛彈可破壞 —');
+  const site0 = [...sim.ents.values()].find((e) => e.kind === 'aasite');
+  assert(!!site0, '匿蹤防空陣地已生成');
+  dr.x = site0.x; dr.z = site0.z; dr.y = 30;           // 陣地正上方(走廊外);y=30 避開火場
+  dr.hp = dr.maxHp = 99999;                            // 防塔砲/流彈把測試機打下來(只驗伏擊)
   let launched = null;
   for (let i = 0; i < 800 && !launched && !dr.dead; i++) {
     sim.tick(0.125);
@@ -142,6 +146,109 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(!sim.missiles.includes(launched), '來襲飛彈被機槍擊毀');
     assert(dr.money - $0 >= ECON.BOUNTY.missile, `擊落飛彈賞金 +$${ECON.BOUNTY.missile}`);
   }
+}
+
+// ================= sim 直測:霧戰爭(單位類實體限視野,建築/中立物永遠可見)=================
+log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成視野;建築/中立物永遠可見)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  const dr = sim.addHero('SWARM', 'p_fow');
+  dr.x = 0; dr.z = 0; dr.y = 0;
+  const nearSight = UNITS.drone.sight * 0.5;                 // 明確在視野內
+  const farOut = UNITS.drone.sight * 1.5;                    // 明確在視野外(未瞄準)
+  const near = sim._add({ kind: 'soldier', side: 'STEEL', x: nearSight, z: 0, hp: UNITS.soldier.hp });
+  const far = sim._add({ kind: 'soldier', side: 'STEEL', x: farOut, z: 0, hp: UNITS.soldier.hp });
+  const enemyHero = sim.addHero('STEEL', 'p_fow2');
+  enemyHero.x = farOut; enemyHero.z = 50;
+
+  let snap = sim.snapshotFor('SWARM');
+  const ids = new Set(snap.ents.map((e) => e.id));
+  assert(ids.has(near.id), '視野內的敵方小兵有進快照');
+  assert(!ids.has(far.id), '視野外的敵方小兵不進快照');
+  assert(!ids.has(enemyHero.id), '視野外的敵方英雄不進快照');
+  assert(ids.has(dr.id), '己方英雄永遠看得到自己');
+
+  // 塔 / 主堡 / 中立物:不算「單位」,永遠可見(即使在視野外)
+  const farTower = [...sim.ents.values()].find((e) => e.kind === 'tower' && e.side === 'STEEL');
+  const farBase = [...sim.ents.values()].find((e) => e.kind === 'base' && e.side === 'STEEL');
+  const neutral = [...sim.ents.values()].find((e) => e.neutral);
+  assert(ids.has(farTower.id) && ids.has(farBase.id), '敵方塔/主堡不受霧戰爭影響,永遠可見');
+  assert(!neutral || ids.has(neutral.id), '中立實體(障礙/防空陣地)不受霧戰爭影響');
+
+  // 瞄準模式:視野加成應能看到原本在視野外的敵方小兵
+  const aimTarget = sim._add({ kind: 'soldier', side: 'STEEL', x: UNITS.drone.sight * 1.3, z: 0, hp: UNITS.soldier.hp });
+  let idsNoAim = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
+  assert(!idsNoAim.has(aimTarget.id), '瞄準前:1.3 倍視野外看不到');
+  dr.aiming = true;
+  let idsAim = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
+  assert(idsAim.has(aimTarget.id), `瞄準模式視野加成(×${GAME.AIM_SIGHT_MULT})後看得到`);
+
+  // 觀戰者(side=null)無霧,看得到所有東西
+  const specIds = new Set(sim.snapshotFor(null).ents.map((e) => e.id));
+  assert(specIds.has(far.id) && specIds.has(enemyHero.id), '觀戰者(無側別)收到無霧全局快照');
+}
+
+// ================= sim 直測:危險區(Diablo 式隨機生成)=================
+log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
+{
+  const sim = new BattleSim(fakeBattleConfig(2));
+  const haz = [...sim.ents.values()].filter((e) => e.haz);
+  const sites = [...sim.ents.values()].filter((e) => e.kind === 'aasite');
+  assert(haz.length >= FIELD.HAZ_PER_LANE, `障礙物 ${haz.length} 個(目標 ${FIELD.HAZ_PER_LANE}/線)`);
+  assert(haz.every((h) => sim._distToLanes(h.x, h.z) >= FIELD.HAZ_LANE_MIN), '障礙物避開兵線走廊(不擋正規路線)');
+  assert(sites.length >= FIELD.AA_SITES_PER_LANE, `防空陣地 ${sites.length} 座`);
+  const bases = Object.values(sim.basePos);
+  assert(haz.concat(sites).every((h) =>
+    bases.every(([bx, bz]) => Math.hypot(h.x - bx, h.z - bz) >= FIELD.HAZ_BASE_CLEAR)), '主堡周圍淨空');
+  assert(haz.every((h) => h.sc > 0 && HAZARDS[h.kind]), `每個障礙帶隨機尺寸差異(sc)與合法類型`);
+
+  // 擊毀防空陣地:賞金 + die 事件 + 從快照消失
+  const rb = sim.addHero('STEEL', 'hz_r');
+  const site = sites[0];
+  rb.x = site.x + 10; rb.z = site.z;
+  const $0 = rb.money;
+  for (let i = 0; i < 40 && sim.ents.has(site.id); i++) { sim.t += 0.3; sim.heroHit('hz_r', site.id); }
+  assert(!sim.ents.has(site.id), '防空陣地被機槍拆除(= 打出安全空域)');
+  assert(rb.money - $0 >= ECON.BOUNTY.aasite, `拆陣地賞金 +$${ECON.BOUNTY.aasite}`);
+  assert(sim.events.some((e) => e.e === 'die' && e.kind === 'aasite'), 'die 事件帶 aasite(客戶端播報)');
+
+  // 不可摧毀障礙(塌陷/坍方/火場/淹水)打不掉
+  const inv = haz.find((h) => h.inv);
+  if (inv) {
+    sim.t += 1;
+    sim.heroHit('hz_r', inv.id);
+    assert(sim.ents.has(inv.id) && inv.hp === inv.maxHp, `不可摧毀障礙(${HAZARDS[inv.kind].name})免疫傷害`);
+  }
+
+  // 可擊毀障礙 → 掉落隨機物資 → 靠近拾取
+  sim.loots = [];
+  sim._spawnLoot(rb.x + 3, rb.z);
+  const loot = sim.loots[0];
+  const isAmmo = !!loot.ammo;
+  const $1 = rb.money;
+  rb.ammo.rgun = 5;                       // 造一個「半彈夾」狀態驗證補彈
+  rb.x = loot.x; rb.z = loot.z; rb.y = 0;
+  sim.tick(0.05);
+  assert(sim.loots.length === 0, `戰場物資被拾取(${isAmmo ? '彈藥補給' : '現金'})`);
+  if (isAmmo) assert(rb.ammo.rgun == null, '彈藥補給清空計數 = 下次開火滿彈夾');
+  else assert(rb.money > $1, `現金物資入帳 +$${Math.round(rb.money - $1)}`);
+  assert(sim.events.some((e) => e.e === 'loot' && e.pid === 'hz_r'), 'loot 事件帶 pid');
+
+  // 火場 DoT:低空/地面才吃,高空免疫
+  const fire = sim._add({ kind: 'fire', side: null, neutral: true, haz: true, inv: true, x: rb.x + 300, z: rb.z + 300, sc: 1, hp: 1 });
+  sim._fires.push(fire);
+  rb.x = fire.x; rb.z = fire.z;
+  const hpF = rb.hp;
+  for (let i = 0; i < 8; i++) sim.tick(0.125);
+  assert(hpF - rb.hp > HAZARDS.fire.dot * 0.8, `火場灼傷 ${Math.round(hpF - rb.hp)}/秒`);
+  // 高空免疫灼傷(先拔光防空陣地,避免伏擊飛彈干擾判定)
+  for (const s of [...sim.ents.values()]) if (s.kind === 'aasite') sim.ents.delete(s.id);
+  sim.missiles.length = 0;
+  const dr2 = sim.addHero('SWARM', 'hz_d');
+  dr2.x = fire.x; dr2.z = fire.z; dr2.y = HAZARDS.fire.maxY + 20;
+  const hpD = dr2.hp;
+  for (let i = 0; i < 8; i++) sim.tick(0.125);
+  assert(dr2.hp === hpD, '高空飛越火場不受灼傷,且陣地拔光後無伏擊');
 }
 
 // ================= WebSocket 端對端 =================
@@ -171,6 +278,11 @@ assert(host.sync.isHost === true, '建房者是房主');
 const lockedCfg = host.sync.lobby.battleConfig;
 assert(lockedCfg && lockedCfg.lanes.length === 1, '房間已鎖定 1 條兵線的地圖');
 assert(['spring', 'summer', 'autumn', 'winter'].includes(lockedCfg.env?.season), `環境已定案(${lockedCfg.env?.season}/${lockedCfg.env?.time}/${lockedCfg.env?.weather})`);
+
+// 霧戰爭:觀戰者收無霧全局快照,後面凡是要「發現」敵方單位(host 視野外)都改讀這份
+const spec = await client('spec');
+spec.send({ t: 'joinRoom', pin, name: '觀戰者', mode: 'spectator' });
+await spec.wait((c) => c.sync);
 
 log('— 房間列表 —');
 const lurker = await client('lurker');
@@ -214,24 +326,33 @@ log('— 雙方載入完成 → 開戰 —');
 host.send({ t: 'loaded' });
 guest.send({ t: 'loaded' });
 await host.wait((c) => c.snaps.length > 3, 8000);
+await spec.wait((c) => c.snaps.length > 3, 8000);
 const snap = host.snaps.at(-1);
-const bases = snap.ents.filter((e) => e.k === 'base');
-const towers = snap.ents.filter((e) => e.k === 'tower');
-const heroes = snap.ents.filter((e) => e.k === 'drone' || e.k === 'robot');
+const specSnap = spec.snaps.at(-1);   // 無霧視角:雙方主堡/塔/英雄都在
+const bases = specSnap.ents.filter((e) => e.k === 'base');
+const towers = specSnap.ents.filter((e) => e.k === 'tower');
+const heroes = specSnap.ents.filter((e) => e.k === 'drone' || e.k === 'robot');
 assert(bases.length === 2, `主堡 ×2(hp=${bases[0]?.hp})`);
 assert(towers.length === 4, `防禦塔 ×4(1 線 × 2 位置 × 2 方;實際 ${towers.length})`);
 assert(heroes.length === 2, `英雄 ×2(${heroes.map((h) => h.k).join(',')})`);
-const myHero = heroes.find((h) => h.pid === host.sync.youId);
+const myHero = snap.ents.find((h) => h.pid === host.sync.youId);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
 assert(typeof myHero.$ === 'number' && Array.isArray(myHero.it), `英雄快照帶金錢/武器欄($${myHero.$})`);
 
+log('— 危險區:field 訊息 + 快照帶中立障礙 —');
+const fieldMsg = host.msgs.find((m) => m.t === 'field');
+assert(fieldMsg && fieldMsg.mines.length > 0, `開戰收到 field(地雷 ${fieldMsg?.mines?.length} 顆)`);
+assert(snap.ents.some((e) => e.k === 'aasite'), '快照帶匿蹤防空陣地(中立實體)');
+assert(snap.ents.some((e) => e.sc && !e.s), '中立障礙帶尺寸 sc 且無陣營');
+
 log('— 等第一波兵線 —');
-const snapWave = await host.wait((c) => {
+await spec.wait((c) => {
   const s = c.snaps.at(-1);
-  return s.ents.some((e) => e.k === 'soldier') ? s : null;
+  return s.ents.some((e) => e.k === 'soldier');
 }, 15000);
-const creeps = snapWave.ents.filter((e) => ['soldier', 'apc', 'tank'].includes(e.k));
-assert(creeps.length === 10, `第一波小兵 10 隻(1線×2方×5;實際 ${creeps.length})`);
+const snapWave = spec.snaps.at(-1);   // 無霧視角:才看得到雙方全部小兵
+const creeps = snapWave.ents.filter((e) => ['soldier', 'rocketeer', 'howitzer', 'heli'].includes(e.k));
+assert(creeps.length === 12, `第一波小兵 12 隻(1線×2方×6;實際 ${creeps.length})`);
 
 log('— 英雄移動 + 射擊 —');
 const target = snapWave.ents.find((e) => e.k === 'soldier' && e.s === 'STEEL');
@@ -251,7 +372,7 @@ const t2 = after.ents.find((e) => e.id === target.id);
 assert(!t2 || t2.hp < hp0, `射擊生效(${hp0} → ${t2 ? t2.hp : '陣亡'})`);
 
 log('— 射速上限(狂發 hit 不會全吃)—');
-const t3 = after.ents.find((e) => e.k === 'apc' && e.s === 'STEEL');
+const t3 = spec.snaps.at(-1).ents.find((e) => e.k === 'howitzer' && e.s === 'STEEL');   // 無霧視角找目標(host 視野外)
 if (t3) {
   host.send({ t: 'pos', x: t3.x, y: 250, z: t3.z, ry: 0 });
   await new Promise((r) => setTimeout(r, 250));
@@ -317,6 +438,7 @@ assert(true, '主堡軍械庫購入攻城榴彈砲(快照 it 同步)');
 
 log('— 勝負(反建築武器高空拆堡)—');
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
+host.send({ t: 'aim', on: true });   // 攻城榴彈砲需瞄準模式才能開火
 const t0 = Date.now();
 const iv = setInterval(() => {
   host.send({ t: 'pos', x: steelBase.x, y: 250, z: steelBase.z, ry: 0 });
@@ -352,9 +474,10 @@ h5.send({ t: 'loaded' });
 g5.send({ t: 'loaded' });
 await h5.wait((c) => c.snaps.length > 2, 8000);
 const s5 = h5.snaps.at(-1);
-const drones5 = s5.ents.filter((e) => e.k === 'drone');
+// 人數不足一律補電腦到滿編:只看真人 pid(數字),電腦 pid 是 'b' 開頭字串
+const drones5 = s5.ents.filter((e) => e.k === 'drone' && !String(e.pid).startsWith('b'));
 const towers5 = s5.ents.filter((e) => e.k === 'tower');
-assert(drones5.length === 2, `同陣營 2 位英雄同時在場(pid:${drones5.map((d) => d.pid).join(',')})`);
+assert(drones5.length === 2, `同陣營 2 位真人英雄同時在場(pid:${drones5.map((d) => d.pid).join(',')})`);
 assert(towers5.length === 12, `3 線 → 防禦塔 ×12(實際 ${towers5.length})`);
 h5.ws.close(); g5.ws.close();
 
@@ -362,6 +485,10 @@ log('— 電腦玩家(單人 + AI 對手)—');
 const hb = await client('hb');
 hb.send({ t: 'createRoom', name: '獨行俠', roomName: 'BOT房', isPublic: false, teamSize: 2, battleConfig: fakeBattleConfig(1) });
 await hb.wait((c) => c.sync);
+// 霧戰爭:觀戰者收無霧全局快照,用來驗證「敵方」bot 位置(hb 本身在自己視野外看不到對面 bot)
+const hbSpec = await client('hbSpec');
+hbSpec.send({ t: 'joinRoom', pin: hb.sync.lobby.pin, name: '觀戰者', mode: 'spectator' });
+await hbSpec.wait((c) => c.sync);
 hb.send({ t: 'pickSide', side: 'SWARM' });
 hb.send({ t: 'addBot', side: 'STEEL' });
 hb.send({ t: 'addBot', side: 'STEEL' });
@@ -380,12 +507,14 @@ hb.send({ t: 'startBattle' });
 await hb.wait((c) => c.battleConfig);
 hb.send({ t: 'loaded' });   // 只需真人載入完成即可開戰(bot 不用載地形)
 await hb.wait((c) => c.snaps.length > 3, 8000);
+await hbSpec.wait((c) => c.snaps.length > 3, 8000);
 const sb = hb.snaps.at(-1);
-const botHero = sb.ents.find((e) => e.k === 'robot');
+const sbSpec = hbSpec.snaps.at(-1);   // 無霧視角:才看得到對面(STEEL)的 bot
+const botHero = sbSpec.ents.find((e) => e.k === 'robot');
 assert(botHero && typeof botHero.pid === 'string' && botHero.pid.startsWith('b'), `bot 英雄在場(pid=${botHero?.pid})`);
 const bp0 = { x: botHero.x, z: botHero.z };
 await new Promise((r) => setTimeout(r, 3500));
-const botHero2 = hb.snaps.at(-1).ents.find((e) => e.k === 'robot');
+const botHero2 = hbSpec.snaps.at(-1).ents.find((e) => e.k === 'robot');
 const movedM = botHero2 ? Math.hypot(botHero2.x - bp0.x, botHero2.z - bp0.z) : 999;
 assert(movedM > 10, `bot 沿兵線推進(3.5 秒移動 ${movedM.toFixed(0)}m)`);
 
@@ -408,8 +537,8 @@ clearInterval(flyIv);
 assert(true, '飛彈/塔防命中:高空無人機受損');
 const samBoom = hb.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'boom' && e.sam);
 if (samBoom) assert(samBoom.y > 40, `空中近炸事件帶高度(y=${samBoom.y.toFixed?.(0) ?? samBoom.y}m,客戶端爆炸衝擊用)`);
-hb.ws.close();
+hb.ws.close(); hbSpec.ws.close();
 
 log(failed ? '\n❌ 有測試失敗' : '\n🎉 全部通過');
-host.ws.close(); guest2.ws.close();
+host.ws.close(); guest2.ws.close(); spec.ws.close();
 process.exit(failed ? 1 : 0);

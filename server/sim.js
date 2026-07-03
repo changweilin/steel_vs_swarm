@@ -3,7 +3,7 @@
 // 防禦塔與主堡自動迎擊;英雄(無人機/機甲)位置由客戶端回報、
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
-import { SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, vsMult, upgradePrice } from '../public/js/data.js';
+import { SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, vsMult, upgradePrice } from '../public/js/data.js';
 
 let nextEntId = 1;
 
@@ -36,6 +36,8 @@ export class BattleSim {
     this.over = false;
     this.winner = null;
     this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0 } };
+    this._tickN = 0;                   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
+    this._frameTickN = -1;
 
     // 兵線折線轉公尺;lane[laneIdx] 方向:SWARM 主堡 → STEEL 主堡
     this.lanes = config.lanes.map((line) =>
@@ -46,13 +48,22 @@ export class BattleSim {
     };
 
     this._spawnStructures();
+    this._seedField();
+  }
+
+  // ---------- 危險區(Diablo 式隨機生成:地雷 + 障礙物 + 匿蹤防空陣地)----------
+  _seedField() {
+    this.loots = [];
     this._seedMines();
+    this._seedHazards();
+    this._seedAASites();
+    this._fires = [...this.ents.values()].filter((e) => e.kind === 'fire');
   }
 
   // ---------- 地雷(非正規路線;隱蔽,只有地面機甲會踩)----------
   _seedMines() {
     const M = GAME.MINES;
-    this.mines = [];
+    this.mines = [];   // 每項 [x, z, id]
     // 佈雷範圍:所有兵線點的外擴包圍盒
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const pts of this.lanes) for (const [x, z] of pts) {
@@ -70,7 +81,106 @@ export class BattleSim {
         const [bx, bz] = this.basePos[side];
         if (dist2d(x, z, bx, bz) < M.BASE_CLEAR) { nearBase = true; break; }
       }
-      if (!nearBase) this.mines.push([x, z]);
+      if (!nearBase) this.mines.push([x, z, nextEntId++]);
+    }
+  }
+
+  /** 兵線上距離 d 處的點與單位法線(垂直於路徑方向;障礙沿「路徑邊緣」擺) */
+  _lanePointNormal(li, d) {
+    const pts = this.lanes[li];
+    const cum = this._laneCum(li);
+    const [x, z] = pointAt(pts, cum, d);
+    let i = 1;
+    while (cum[i] < d && i < cum.length - 1) i++;
+    const dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1];
+    const len = Math.hypot(dx, dz) || 1;
+    return { x, z, nx: -dz / len, nz: dx / len };
+  }
+
+  /**
+   * 障礙物:空白區 / 主要路徑邊緣隨機生成(Diablo 迷宮思想)。
+   * 同型 1~CLUSTER_MAX 個連成「短牆」;牆段之間保證 HAZ_GAP 縫隙 —
+   * 限制行動但永不完全封鎖。類型依場地地貌 mix 加權(圖資地貌決定選用)。
+   */
+  _seedHazards() {
+    const F = FIELD;
+    const mix = this.config.venue?.mix || null;
+    const types = Object.keys(HAZARDS);
+    const w = types.map((t) => (mix ? (mix[HAZARDS[t].biome] || 0) + 0.05 : 1));
+    const wSum = w.reduce((a, b) => a + b, 0);
+    const pickType = () => {
+      let r = Math.random() * wSum;
+      for (let i = 0; i < types.length; i++) { r -= w[i]; if (r <= 0) return types[i]; }
+      return types[0];
+    };
+    this.hazBlockers = [];   // 阻擋型座標(牆段間距檢查用)
+    const want = F.HAZ_PER_LANE * this.lanes.length;
+    let placed = 0;
+    for (let tries = 0; tries < want * 20 && placed < want; tries++) {
+      const type = pickType();
+      const def = HAZARDS[type];
+      const li = Math.floor(Math.random() * this.lanes.length);
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      const p = this._lanePointNormal(li, total * (0.08 + Math.random() * 0.84));
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const off = F.HAZ_LANE_MIN + (F.HAZ_LANE_MAX - F.HAZ_LANE_MIN) * Math.pow(Math.random(), F.HAZ_EDGE_BIAS);
+      const n = 1 + Math.floor(Math.random() * F.CLUSTER_MAX);
+      const wallStart = this.hazBlockers.length;   // 牆內可緊靠,牆之間才查縫隙
+      for (let k = 0; k < n && placed < want; k++) {
+        const x = p.x + p.nx * dir * off + (Math.random() - 0.5) * def.r * 3;
+        const z = p.z + p.nz * dir * off + (Math.random() - 0.5) * def.r * 3;
+        if (!this._hazOk(x, z, def, wallStart)) continue;
+        const sc = Math.round((0.75 + Math.random() * 0.6) * 100) / 100;   // 每次生成隨機差異化
+        this._add({
+          kind: type, side: null, neutral: true, haz: true, x, z, sc,
+          hp: def.hp ? Math.round(def.hp * sc) : 1, inv: !def.hp,
+        });
+        if (def.block) this.hazBlockers.push([x, z, def.r * sc]);
+        placed++;
+      }
+    }
+  }
+
+  _hazOk(x, z, def, wallStart = Infinity) {
+    const F = FIELD;
+    if (this._distToLanes(x, z) < F.HAZ_LANE_MIN) return false;      // 不擋正規路線
+    for (const side of ['SWARM', 'STEEL']) {
+      const [bx, bz] = this.basePos[side];
+      if (dist2d(x, z, bx, bz) < F.HAZ_BASE_CLEAR) return false;
+    }
+    if (def.block) {
+      const upto = Math.min(wallStart, this.hazBlockers.length);
+      for (let i = 0; i < upto; i++) {
+        const [ox, oz] = this.hazBlockers[i];
+        if (dist2d(x, z, ox, oz) < F.HAZ_GAP) return false;          // 保證通行縫隙
+      }
+    }
+    return true;
+  }
+
+  /** 匿蹤防空陣地:非正規路線的伏擊發射源;可被擊毀(= 打出安全空域,有賞金) */
+  _seedAASites() {
+    const S = FIELD.AA_SITE;
+    const want = FIELD.AA_SITES_PER_LANE * this.lanes.length;
+    const sites = [];
+    for (let tries = 0; tries < want * 30 && sites.length < want; tries++) {
+      const li = Math.floor(Math.random() * this.lanes.length);
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      const p = this._lanePointNormal(li, total * (0.1 + Math.random() * 0.8));
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const off = S.laneMin + Math.random() * (S.laneMax - S.laneMin);
+      const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
+      if (this._distToLanes(x, z) < S.laneMin) continue;
+      let bad = false;
+      for (const side of ['SWARM', 'STEEL']) {
+        const [bx, bz] = this.basePos[side];
+        if (dist2d(x, z, bx, bz) < FIELD.HAZ_BASE_CLEAR) { bad = true; break; }
+      }
+      if (bad || sites.some(([sx, sz]) => dist2d(x, z, sx, sz) < S.spacing)) continue;
+      sites.push([x, z]);
+      this._add({ kind: 'aasite', side: null, neutral: true, x, z, hp: S.hp, sc: 1 });
     }
   }
 
@@ -133,7 +243,7 @@ export class BattleSim {
       z: bz + Math.sin(ang) * 30 * Math.min(idx, 1),
       y: 0, ry: 0, spawnIdx: idx,
       hp: UNITS[kind].hp, hero: true,
-      dead: false, respawnAt: 0, lastBurst: 0,
+      dead: false, respawnAt: 0, lastBurst: 0, aiming: false,
       // 經濟 / 武器狀態(彈藥伺服器權威)
       money: ECON.START, items: [], upg: { dmg: 0, hull: 0 },
       ammo: {}, reloadUntil: {}, fireAt: {}, aaCd: 0,
@@ -196,6 +306,13 @@ export class BattleSim {
     h.x = x; h.y = y; h.z = z; h.ry = ry;
   }
 
+  /** 瞄準模式切換(按住右鍵):熱兵器(rocket/railgun/siege 等)需瞄準中才能開火 */
+  heroAim(pid, on) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    h.aiming = !!on;
+  }
+
   /** 英雄射擊命中(客戶端 raycast 回報;傷害/克制查表、射程/射速/彈藥伺服器把關) */
   heroHit(pid, targetId, w) {
     const h = this.heroes.get(pid);
@@ -203,6 +320,7 @@ export class BattleSim {
     if (!h || h.dead || !t || t.side === h.side || this.over) return;
     const wp = this._heroWeapon(h, w);
     if (!wp || !wp.def.rate) return;
+    if (wp.def.needAim && !h.aiming) return;   // 熱兵器(狙擊/火箭等)需瞄準模式才能開火
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
     if (d3 > wp.def.range * 1.25) return;
@@ -218,6 +336,7 @@ export class BattleSim {
     if (!m || m.side === h.side) return;
     const wp = this._heroWeapon(h, w);
     if (!wp || !wp.def.rate) return;
+    if (wp.def.needAim && !h.aiming) return;   // 熱兵器(狙擊/火箭等)需瞄準模式才能開火
     const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
     if (d3 > wp.def.range * 1.25) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
@@ -256,6 +375,7 @@ export class BattleSim {
     if (!h || h.dead || this.over) return;
     if (h.kind === 'drone') { this.heroDetonate(pid); return; }
     const def = WEAPONS[UNITS[h.kind].burst];
+    if (def.needAim && !h.aiming) return;   // 肩射火箭需瞄準模式才能開火
     if (dist2d(h.x, h.z, x, z) > def.range) return;
     if (!this._gateFire(h, UNITS[h.kind].burst, def, false)) return;
     h.lastBurst = this.t;
@@ -322,11 +442,11 @@ export class BattleSim {
 
   // ---------- 傷害 / 擊殺 ----------
   _damage(t, dmg, by) {
-    if (this.over || t.hp <= 0) return;
+    if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
     if (t.kind === 'base' && by && by.side) {
       const near = [...this.ents.values()].some((e) =>
-        e.side === by.side && !e.hero && (e.kind === 'soldier' || e.kind === 'apc' || e.kind === 'tank')
+        e.side === by.side && !e.hero && !e.neutral
         && dist2d(e.x, e.z, t.x, t.z) < 320);
       if (!near) dmg *= GAME.BASE_ARMOR_NEED_CREEP;
     }
@@ -344,12 +464,24 @@ export class BattleSim {
     if (by && by.hero && bySide !== t.side) by.money += ECON.BOUNTY[t.kind] || 0;
     if (t.hero) {
       t.dead = true;
+      t.aiming = false;
       this.stats[t.side].deaths++;
       if (bySide && bySide !== t.side) this.stats[bySide].kills++;
       // 重生冷卻依兵種:機甲越死越久,無人機無冷卻
       const r = UNITS[t.kind].respawn;
       t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
       return; // 英雄不移除,等重生
+    }
+    if (t.neutral) {
+      this.ents.delete(t.id);
+      if (this.hazBlockers && HAZARDS[t.kind]?.block) {
+        this.hazBlockers = this.hazBlockers.filter(([x, z]) => x !== t.x || z !== t.z);
+      }
+      // Diablo 式隨機掉落:擊毀障礙有機率掉戰場物資
+      const def = HAZARDS[t.kind];
+      if (def?.salvage && Math.random() < def.salvage) this._spawnLoot(t.x, t.z);
+      if (t.kind === 'fire') this._fires = this._fires.filter((f) => f !== t);
+      return;
     }
     if (bySide && by.hero && bySide !== t.side) this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
     this.ents.delete(t.id);
@@ -362,6 +494,7 @@ export class BattleSim {
 
   // ---------- 主迴圈 ----------
   tick(dt) {
+    this._tickN++;   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
     if (this.over) return;
     this.t += dt;
 
@@ -392,11 +525,12 @@ export class BattleSim {
     }
     this._tickMines();
     this._tickAmbush(dt);
+    this._tickHazards(dt);
 
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     for (const e of [...this.ents.values()]) {
-      if (e.hero || e.hp <= 0) continue;
+      if (e.hero || e.neutral || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
@@ -423,10 +557,10 @@ export class BattleSim {
     for (const h of this.heroes.values()) {
       if (h.dead || h.kind !== 'robot') continue;
       for (let i = this.mines.length - 1; i >= 0; i--) {
-        const [mx, mz] = this.mines[i];
+        const [mx, mz, mid] = this.mines[i];
         if (dist2d(h.x, h.z, mx, mz) > M.TRIGGER_R) continue;
         this.mines.splice(i, 1);
-        this.events.push({ e: 'boom', x: mx, z: mz, r: M.R, mine: true, tpid: h.pid });
+        this.events.push({ e: 'boom', x: mx, z: mz, r: M.R, mine: true, mid, tpid: h.pid });
         for (const t of [...this.ents.values()]) {   // 中立危害:雙方都炸
           if (t.hero && t.dead) continue;
           const d = dist2d(mx, mz, t.x, t.z);
@@ -440,23 +574,73 @@ export class BattleSim {
   }
 
   // ---------- 匿蹤防空伏擊(非正規路線上的無人機,命中直接擊墜)----------
+  // 發射源 = 射程內最近的存活防空陣地(aasite);陣地被拔掉 = 該區安全空域。
   _tickAmbush(dt) {
     const A = GAME.AA_AMBUSH;
+    const S = FIELD.AA_SITE;
+    let sites = null;   // lazy:多數 tick 沒人觸發
     for (const h of this.heroes.values()) {
       if (h.dead || h.kind !== 'drone') continue;
       h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
       if (h.aaCd > 0) continue;
       if (this._distToLanes(h.x, h.z) <= GAME.LANE_SAFE_M) continue;   // 走廊內安全
       if (Math.random() > A.CHANCE_PER_S * dt) continue;
+      sites ??= [...this.ents.values()].filter((e) => e.kind === 'aasite');
+      let best = null, bestD = Infinity;
+      for (const s of sites) {
+        const d = dist2d(h.x, h.z, s.x, s.z);
+        if (d <= S.range && d < bestD) { bestD = d; best = s; }
+      }
+      if (!best) continue;   // 附近陣地已被摧毀 → 這條非正規路線是打出來的安全通道
       h.aaCd = A.CD_S;
-      const ang = Math.random() * Math.PI * 2;
       this.missiles.push({
-        id: nextEntId++, byId: null, side: OTHER_SIDE[h.side], tpid: h.pid,
-        x: h.x + Math.cos(ang) * A.SPAWN_DIST, z: h.z + Math.sin(ang) * A.SPAWN_DIST,
-        y: 0, speed: A.SPEED, dmg: A.DMG, hp: A.HP, ttl: 14,
+        id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tpid: h.pid,
+        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, hp: A.HP, ttl: 14,
       });
-      this.events.push({ e: 'sam', from: [h.x, h.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
+      this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
     }
+  }
+
+  // ---------- 障礙物效果(火場灼傷)+ 戰場物資(過期 / 拾取)----------
+  _tickHazards(dt) {
+    const fireDef = HAZARDS.fire;
+    for (const f of this._fires || []) {
+      for (const h of this.heroes.values()) {
+        if (h.dead || (h.y || 0) > fireDef.maxY) continue;
+        if (dist2d(h.x, h.z, f.x, f.z) > fireDef.r * (f.sc || 1)) continue;
+        this._damage(h, fireDef.dot * dt, null);
+        if ((h._burnAt || 0) + 2 < this.t) {   // 事件節流:每 2 秒提示一次
+          h._burnAt = this.t;
+          this.events.push({ e: 'burn', pid: h.pid, x: f.x, z: f.z });
+        }
+      }
+    }
+    for (let i = this.loots.length - 1; i >= 0; i--) {
+      const l = this.loots[i];
+      l.ttl -= dt;
+      if (l.ttl <= 0) { this.loots.splice(i, 1); continue; }
+      for (const h of this.heroes.values()) {
+        if (h.dead || (h.y || 0) > LOOT.MAX_Y) continue;
+        if (dist2d(h.x, h.z, l.x, l.z) > LOOT.PICK_R) continue;
+        if (l.ammo) { h.ammo = {}; h.reloadUntil = {}; }   // 清空 = _gateFire 下次視為滿彈夾
+        else h.money += l.v;
+        this.events.push({ e: 'loot', pid: h.pid, x: l.x, z: l.z, ...(l.ammo ? { ammo: 1 } : { v: l.v }) });
+        this.loots.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  _spawnLoot(x, z) {
+    let r = Math.random();
+    let tier = LOOT.TIERS[0];
+    for (const t of LOOT.TIERS) { r -= t.p; if (r <= 0) { tier = t; break; } }
+    this.loots.push({
+      id: nextEntId++,
+      x: x + (Math.random() - 0.5) * 6, z: z + (Math.random() - 0.5) * 6,
+      ttl: LOOT.TTL_S,
+      ...(tier.ammo ? { ammo: true } : { v: Math.round(tier.min + Math.random() * (tier.max - tier.min)) }),
+    });
   }
 
   // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
@@ -503,20 +687,19 @@ export class BattleSim {
   }
 
   _spawnWave() {
-    const withTank = this.wave % GAME.TANK_EVERY_WAVE === 0;
     for (let li = 0; li < this.lanes.length; li++) {
       for (const side of ['SWARM', 'STEEL']) {
         const pts = this.lanes[li];
         const start = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
         const comp = [];
         for (let i = 0; i < GAME.WAVE_SOLDIERS; i++) comp.push('soldier');
-        for (let i = 0; i < GAME.WAVE_APC; i++) comp.push('apc');
-        if (withTank) comp.push('tank');
+        comp.push('rocketeer', 'howitzer', 'heli');
         comp.forEach((kind, i) => {
           const jx = (Math.random() - 0.5) * 24, jz = (Math.random() - 0.5) * 24;
           this._add({
             kind, side, lane: li,
             x: start[0] + jx, z: start[1] + jz,
+            y: kind === 'heli' ? GAME.HELI_ALT : 0,
             hp: UNITS[kind].hp,
             // 沿線進度(公尺,從己方端起算);錯開避免疊隊
             prog: -i * 14,
@@ -524,17 +707,20 @@ export class BattleSim {
         });
       }
     }
-    this.events.push({ e: 'wave', n: this.wave, tank: withTank });
+    this.events.push({ e: 'wave', n: this.wave });
   }
 
   _acquireTarget(e, u) {
     let best = null, bestD = Infinity;
+    const wd = u.wid ? WEAPONS[u.wid] : null;
     for (const t of this.ents.values()) {
-      if (t.side === e.side || t.hp <= 0) continue;
-      if (t.hero && (t.dead || t.kind === 'drone' && (t.y || 0) > u.range * 0.9)) continue; // 高空無人機難鎖定
+      if (t.side === e.side || t.neutral || t.hp <= 0) continue;   // 中立障礙不當目標
+      if (t.hero && t.dead) continue;
+      if ((t.kind === 'drone' || t.kind === 'heli') && (t.y || 0) > u.range * 0.9) continue; // 高空飛行單位難鎖定
       let d = dist2d(e.x, e.z, t.x, t.z);
       if (d > u.range) continue;
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
+      if (wd) d /= vsMult(wd, t.kind);             // 優先打武器克制的目標類型
       if (d < bestD) { bestD = d; best = t; }
     }
     return best;
@@ -559,6 +745,23 @@ export class BattleSim {
       e.x = s.x + (e.x - s.x) / dd * r;
       e.z = s.z + (e.z - s.z) / dd * r;
     }
+    // 阻擋型障礙物:比照建築繞開,不卡在牆前
+    for (const [hx, hz, hr] of this.hazBlockers || []) {
+      const dd = dist2d(e.x, e.z, hx, hz);
+      if (dd >= hr || dd === 0) continue;
+      e.x = hx + (e.x - hx) / dd * hr;
+      e.z = hz + (e.z - hz) / dd * hr;
+    }
+    // 前方卡住的同陣營單位(如被障礙擋住減速者):側移繞過,不疊在一起
+    const UNIT_PUSH_R = 4.5;
+    for (const o of this.ents.values()) {
+      if (o === e || o.side !== e.side || o.lane !== e.lane || o.hero || o.neutral) continue;
+      const dd = dist2d(e.x, e.z, o.x, o.z);
+      if (dd >= UNIT_PUSH_R || dd === 0) continue;
+      const push = (UNIT_PUSH_R - dd) / 2;
+      e.x += (e.x - o.x) / dd * push;
+      e.z += (e.z - o.z) / dd * push;
+    }
   }
 
   _laneCum(li) {
@@ -566,27 +769,83 @@ export class BattleSim {
     return (this._cumCache[li] ??= cumLen(this.lanes[li]));
   }
 
-  // ---------- 快照 ----------
-  snapshot() {
-    const ents = [];
-    for (const e of this.ents.values()) {
-      const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
-      if (e.hero) {
-        o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
-        o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
-        o.$ = Math.floor(e.money); o.it = e.items; o.up = e.upg;   // 經濟(客戶端 HUD / 商店)
-      }
-      ents.push(o);
+  // ---------- 快照(霧戰爭:單位類實體限視野範圍,建築/中立物永遠可見)----------
+  _serializeEnt(e) {
+    const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
+    if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
+    if (e.kind === 'heli') o.y = Math.round((e.y || 0) * 10) / 10;   // 攻擊直升機巡航高度(純渲染用)
+    if (e.hero) {
+      o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
+      o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
+      o.$ = Math.floor(e.money); o.it = e.items; o.up = e.upg;   // 經濟(客戶端 HUD / 商店)
     }
+    return o;
+  }
+
+  /** 一方目前的視野來源(英雄 + 小兵 + 塔 + 主堡,各自 sight 半徑;瞄準模式加成視野) */
+  _visionSources(side) {
+    const sources = [];
+    for (const e of this.ents.values()) {
+      if (e.side !== side || e.hp <= 0) continue;
+      const sight = UNITS[e.kind]?.sight;
+      if (sight == null) continue;
+      const r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
+      sources.push([e.x, e.z, r]);
+    }
+    return sources;
+  }
+
+  /** 建築/中立物永遠可見(非「單位」);敵方英雄/小兵要在己方視野內才可見 */
+  _visibleTo(e, side, sources) {
+    if (e.side === side || e.neutral || e.kind === 'tower' || e.kind === 'base') return true;
+    for (const [sx, sz, r] of sources) {
+      if (dist2d(e.x, e.z, sx, sz) <= r) return true;
+    }
+    return false;
+  }
+
+  /** 同一 tick 內共用的事件/飛彈/物資(events 只能清一次,多個收件者快照要共用同一份) */
+  _frame() {
+    if (this._frameTickN === this._tickN) return this._frameCache;
+    this._frameTickN = this._tickN;
     const ev = this.events;
     this.events = [];
     const sm = this.missiles.map((m) => ({
       id: m.id, x: Math.round(m.x * 10) / 10, y: Math.round(m.y * 10) / 10, z: Math.round(m.z * 10) / 10,
     }));
+    const lt = this.loots.map((l) => ({
+      id: l.id, x: Math.round(l.x * 10) / 10, z: Math.round(l.z * 10) / 10, a: l.ammo ? 1 : 0,
+    }));
+    this._frameCache = { ev, sm, lt };
+    return this._frameCache;
+  }
+
+  /** side=null → 無霧(觀戰者);'SWARM'/'STEEL' → 依該陣營視野過濾單位類實體 */
+  snapshotFor(side) {
+    const sources = side ? this._visionSources(side) : null;
+    const ents = [];
+    for (const e of this.ents.values()) {
+      if (sources && !this._visibleTo(e, side, sources)) continue;
+      ents.push(this._serializeEnt(e));
+    }
+    const { ev, sm, lt } = this._frame();
     return {
       t: 'snap', time: Math.round(this.t),
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
-      ents, ev, sm, stats: this.stats, over: this.over, winner: this.winner,
+      ents, ev, sm, lt, stats: this.stats, over: this.over, winner: this.winner,
+    };
+  }
+
+  /** 無霧完整快照(觀戰者 / 內部工具用) */
+  snapshot() {
+    return this.snapshotFor(null);
+  }
+
+  /** 靜態危險區資料(開戰 / 重連時發一次;地雷不進快照,雙方都要「用眼睛掃雷」) */
+  fieldPayload() {
+    return {
+      t: 'field',
+      mines: this.mines.map(([x, z, id]) => [Math.round(x * 10) / 10, Math.round(z * 10) / 10, id]),
     };
   }
 }

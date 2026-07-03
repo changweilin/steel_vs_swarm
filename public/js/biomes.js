@@ -11,8 +11,10 @@
 // 植被全部用 InstancedMesh(低多邊形 + flatShading),整張圖 < 20 個 draw call。
 // 亂數以戰場中心為種子:同一房間所有玩家看到同一片森林。
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ENV, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
+import { toonMat, toonGradient } from './hazards.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 30m > 4×3.5m 機甲
 const MAX_VEG = 6000;            // 植被實例上限
@@ -110,6 +112,8 @@ const ico = (r) => new THREE.IcosahedronGeometry(r, 0);
 const VEG_DEFS = {
   bamboo:      { parts: [{ g: cyl(0.10, 0.14, 6.5), y: 3.25, c: 0x8fae4e }, { g: cone(1.1, 2.4), y: 7.4, key: 'foliage' }] },
   broadleaf:   { parts: [{ g: cyl(0.22, 0.34, 2.8), y: 1.4, c: 0x6b4a2f }, { g: ico(2.6), y: 4.8, key: 'foliage', sy: 0.78 }] },
+  birch:       { parts: [{ g: cyl(0.16, 0.22, 3.4), y: 1.7, c: 0xe8e4dc }, { g: ico(2.0), y: 4.6, key: 'foliage', sy: 0.9 }] },
+  deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 }, { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 }] },
   conifer:     { parts: [{ g: cyl(0.20, 0.30, 1.8), y: 0.9, c: 0x5d4027 }, { g: cone(2.0, 6.4, 6), y: 4.9, key: 'conifer' }] },
   silvergrass: { parts: [{ g: cone(0.7, 1.7), y: 0.85, key: 'grass' }] },
   arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a }] },
@@ -118,6 +122,105 @@ const VEG_DEFS = {
   mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e }, { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
   reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a }] },
 };
+
+// ---- Quaternius Ultimate Stylized Nature(CC0)植被插槽 ----
+// 下載自 quaternius.com(gltf + bin + 貼圖,法線圖已剝除);
+// 載入失敗自動退回上面 VEG_DEFS 的程序生成版本,不開天窗。
+const NATURE_DIR = 'assets/models/quaternius/nature/';
+const NATURE_MANIFEST = {
+  broadleaf:   { files: ['MapleTree_1.gltf', 'MapleTree_2.gltf', 'MapleTree_3.gltf'], h: 8 },
+  birch:       { files: ['BirchTree_1.gltf', 'BirchTree_2.gltf'], h: 8.5 },
+  shrub:       { files: ['Bush.gltf', 'Bush_Large.gltf', 'Bush_Small_Flowers.gltf'], h: 1.8 },
+  silvergrass: { files: ['Grass_Large.gltf', 'Grass_Small.gltf'], h: 1.2 },
+  deadtree:    { files: ['DeadTree_1.gltf', 'DeadTree_2.gltf'], h: 6.5 },
+};
+// 葉片的季節色偏(乘在貼圖上;樹幹不動)
+const SEASON_LEAF_TINT = { spring: 0xd9ffd0, summer: 0xffffff, autumn: 0xffab5e, winter: 0xc9d6da };
+
+/** gltf → 正規化零件(高度=1、底部貼地),材質轉 toon 並保留貼圖 */
+function extractNatureParts(gltf, season) {
+  const root = gltf.scene;
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const h = Math.max(0.01, box.max.y - box.min.y);
+  const norm = new THREE.Matrix4()
+    .makeScale(1 / h, 1 / h, 1 / h)
+    .multiply(new THREE.Matrix4().makeTranslation(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2));
+  const parts = [];
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const geo = o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(norm, o.matrixWorld));
+    const src = Array.isArray(o.material) ? o.material[0] : o.material;
+    const mat = new THREE.MeshToonMaterial({
+      color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
+      map: src.map || null,
+      gradientMap: toonGradient(),
+    });
+    if (src.map) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }   // 葉片鏤空貼圖
+    if (/leaves|grass|flower|bush/i.test(`${src.name} ${o.name} ${src.map?.name || ''}`)) {
+      mat.color.multiply(new THREE.Color(SEASON_LEAF_TINT[season] ?? 0xffffff));
+    }
+    parts.push({ geo, mat });
+  });
+  return parts;
+}
+
+/** 併發載入 manifest 植被模型;個別失敗只是該類型退回程序生成 */
+async function loadNatureModels(season) {
+  const loader = new GLTFLoader();
+  const out = {};
+  await Promise.all(Object.entries(NATURE_MANIFEST).map(async ([type, def]) => {
+    const slots = new Array(def.files.length).fill(null);   // 保持檔案順序:全房間變體分配一致
+    await Promise.all(def.files.map(async (f, i) => {
+      try {
+        const gltf = await loader.loadAsync(NATURE_DIR + f);
+        const parts = extractNatureParts(gltf, season);
+        if (parts.length) slots[i] = { parts };
+      } catch (e) {
+        console.warn(`植被模型載入失敗(退回程序生成):${f}`, e.message);
+      }
+    }));
+    const variants = slots.filter(Boolean);
+    if (variants.length) out[type] = { variants, h: def.h };
+  }));
+  return out;
+}
+
+/** GLB 植被 → InstancedMesh(變體以 i % n 決定性分配;實例色/傾斜差異化同程序生成版) */
+function buildVegMeshesGlb(entry, items) {
+  const meshes = [];
+  const groups = entry.variants.map(() => []);
+  items.forEach((it, i) => groups[i % entry.variants.length].push([it, i]));
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const P = new THREE.Vector3(), S = new THREE.Vector3();
+  const tint = new THREE.Color();
+  groups.forEach((list, vi) => {
+    if (!list.length) return;
+    for (const part of entry.variants[vi].parts) {
+      const m = new THREE.InstancedMesh(part.geo, part.mat, list.length);
+      list.forEach(([it, gi], k) => {
+        E.set(it.tx || 0, it.ry, it.tz || 0);
+        Q.setFromEuler(E);
+        P.set(it.x, it.y, it.z);
+        const sc = it.s * entry.h;
+        S.set(sc, sc, sc);
+        M.compose(P, Q, S);
+        m.setMatrixAt(k, M);
+        const j1 = ((gi * 2654435761) >>> 0) % 100 / 100;
+        const j2 = ((gi * 1597334677) >>> 0) % 100 / 100;
+        const j3 = ((gi * 3812015801) >>> 0) % 100 / 100;
+        tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
+        m.setColorAt(k, tint);
+      });
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      m.castShadow = false;
+      m.frustumCulled = false;
+      meshes.push(m);
+    }
+  });
+  return meshes;
+}
 
 function seasonColor(key, fixed, season) {
   const s = ENV.seasons[season] || ENV.seasons.summer;
@@ -135,18 +238,21 @@ function buildVegMeshes(type, items, season) {
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
   for (const part of def.parts) {
-    const mat = new THREE.MeshStandardMaterial({
-      color: seasonColor(part.key, part.c, season), flatShading: true, roughness: 0.92, metalness: 0,
-    });
+    // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
+    const mat = toonMat(seasonColor(part.key, part.c, season));
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
     items.forEach((it, i) => {
-      E.set(0, it.ry, 0);
+      E.set(it.tx || 0, it.ry, it.tz || 0);   // 微傾斜:每棵樹站姿不同
       Q.setFromEuler(E);
       P.set(it.x, it.y + part.y * it.s, it.z);
       S.set(it.s, it.s * (part.sy || 1), it.s);
       M.compose(P, Q, S);
       m.setMatrixAt(i, M);
-      tint.setScalar(0.85 + ((i * 2654435761) % 100) / 333);   // 明度抖動,免得像複製貼上
+      // 每實例隨機差異化:RGB 各自抖動 = 明度 + 色相同時變化,不像複製貼上
+      const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
+      const j2 = ((i * 1597334677) >>> 0) % 100 / 100;
+      const j3 = ((i * 3812015801) >>> 0) % 100 / 100;
+      tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
       m.setColorAt(i, tint);
     });
     m.instanceMatrix.needsUpdate = true;
@@ -160,7 +266,7 @@ function buildVegMeshes(type, items, season) {
 
 // ---- 建物(特殊地標 = 小 Group;住宅/商辦 = InstancedMesh)----
 function bmat(color, opts = {}) {
-  return new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.85, metalness: 0.05, ...opts });
+  return toonMat(color, opts);   // 建物同樣走日漫賽璐璐
 }
 function box(w, h, d, color, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bmat(color));
@@ -250,24 +356,232 @@ function buildingHeight(tags, type, rnd) {
   return type === 'commercial' ? 24 + rnd() * 40 : 7 + rnd() * 9;
 }
 
-/** Overpass 建物(10 秒沒回就放棄 → 程序生成備援) */
-async function fetchOsmBuildings(bbox) {
+/** Overpass 圖資(10 秒沒回就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
+async function fetchOsmFeatures(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
-  const q = `[out:json][timeout:9];(way["building"](${bb});node["power"="tower"](${bb}););out center tags 600;`;
+  const q = `[out:json][timeout:9];`
+    + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags 600;`
+    + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
+    + `node["waterway"="waterfall"](${bb});out 20;`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
     const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
     if (!resp.ok) return null;
     const data = await resp.json();
-    return (data.elements || []).map((el) => ({
-      lat: el.center?.lat ?? el.lat, lng: el.center?.lon ?? el.lon, tags: el.tags || {},
-    })).filter((e) => Number.isFinite(e.lat));
+    const buildings = [], rails = [], falls = [];
+    for (const el of data.elements || []) {
+      const tags = el.tags || {};
+      if (el.type === 'way' && el.geometry && tags.railway) {
+        rails.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'node' && tags.waterway === 'waterfall') {
+        falls.push({ lat: el.lat, lng: el.lon, tags });
+      } else {
+        const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
+        if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
+      }
+    }
+    return { buildings, rails, falls };
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ---- 鐵路 / 捷運(圖資 way):道碴 + 雙軌 + 行駛中的低多邊形列車 ----
+function buildRails(group, rails, terrain, center, dynamics) {
+  const lines = [];
+  for (const way of rails) {
+    if (way.tags.tunnel) continue;   // 隧道段不可見(捷運地下段)
+    const elevated = !!way.tags.bridge || way.tags.railway === 'monorail';
+    const lift = elevated ? 8 : 0.35;
+    const pts = [];
+    for (const gpt of way.geometry) {
+      const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
+      if (x < terrain.minX + 5 || x > terrain.maxX - 5 || z < terrain.minZ + 5 || z > terrain.maxZ - 5) {
+        if (pts.length >= 2) { lines.push({ pts: [...pts], tags: way.tags, elevated, lift }); }
+        pts.length = 0;
+        continue;
+      }
+      pts.push(new THREE.Vector3(x, terrain.heightAt(x, z) + lift, z));
+    }
+    if (pts.length >= 2) lines.push({ pts, tags: way.tags, elevated, lift });
+    if (lines.length >= 30) break;
+  }
+  if (!lines.length) return 0;
+
+  // 軌道:每線段 1 個道碴床 + 2 條鋼軌(InstancedMesh,整批 3 個 draw call)
+  let segs = [];
+  for (const l of lines) {
+    for (let i = 1; i < l.pts.length && segs.length < 900; i++) segs.push([l.pts[i - 1], l.pts[i], l]);
+  }
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const bedM = new THREE.InstancedMesh(unit, toonMat(0x5a5348), segs.length);
+  const railM = new THREE.InstancedMesh(unit, toonMat(0x3a3f45), segs.length * 2);
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3();
+  const up = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3(), side = new THREE.Vector3();
+  segs.forEach(([a, b], i) => {
+    dir.subVectors(b, a);
+    const len = dir.length();
+    dir.normalize();
+    Q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    side.crossVectors(dir, up).normalize();
+    P.addVectors(a, b).multiplyScalar(0.5);
+    S.set(3.4, 0.5, len + 0.4);
+    M.compose(P, Q, S);
+    bedM.setMatrixAt(i, M);
+    for (const s of [-1, 1]) {
+      const rp = P.clone().addScaledVector(side, s * 0.8);
+      rp.y += 0.32;
+      S.set(0.2, 0.24, len + 0.4);
+      M.compose(rp, Q, S);
+      railM.setMatrixAt(i * 2 + (s > 0 ? 1 : 0), M);
+    }
+  });
+  bedM.instanceMatrix.needsUpdate = railM.instanceMatrix.needsUpdate = true;
+  bedM.frustumCulled = railM.frustumCulled = false;
+  group.add(bedM, railM);
+
+  // 高架橋墩(捷運/橋段)
+  const piers = segs.filter(([, , l]) => l.elevated);
+  if (piers.length) {
+    const pierM = new THREE.InstancedMesh(unit, toonMat(0x8f9296), Math.min(piers.length, 200));
+    piers.slice(0, 200).forEach(([a], i) => {
+      const gy = terrain.heightAt(a.x, a.z);
+      P.set(a.x, (gy + a.y) / 2, a.z);
+      S.set(1.6, Math.max(1, a.y - gy), 1.6);
+      M.compose(P, new THREE.Quaternion(), S);
+      pierM.setMatrixAt(i, M);
+    });
+    pierM.instanceMatrix.needsUpdate = true;
+    pierM.frustumCulled = false;
+    group.add(pierM);
+  }
+
+  // 列車:最長兩條路線各跑一列(捷運=銀藍、鐵路=橘白),往返行駛
+  const byLen = lines.map((l) => {
+    let d = 0;
+    for (let i = 1; i < l.pts.length; i++) d += l.pts[i].distanceTo(l.pts[i - 1]);
+    return { ...l, total: d };
+  }).filter((l) => l.total > 300).sort((a, b) => b.total - a.total);
+  for (const line of byLen.slice(0, 2)) {
+    const metro = /subway|light_rail|monorail|tram/.test(line.tags.railway);
+    const train = makeTrain(metro);
+    group.add(train);
+    dynamics.push(trainDriver(train, line, metro ? 22 : 17));
+  }
+  return lines.length;
+}
+
+/** 低多邊形列車(車頭 + 2 節車廂) */
+function makeTrain(metro) {
+  const g = new THREE.Group();
+  const body = metro ? 0xdfe5ea : 0xe8873c;
+  const stripe = metro ? 0x2a6fa8 : 0xf4f0e6;
+  for (let c = 0; c < 3; c++) {
+    const car = new THREE.Group();
+    const m = new THREE.Mesh(new THREE.BoxGeometry(3.0, 3.4, 13.4), toonMat(body));
+    m.position.y = 2.4;
+    car.add(m);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.7, 13.4), toonMat(stripe));
+    st.position.y = 1.7;
+    car.add(st);
+    const win = new THREE.Mesh(new THREE.BoxGeometry(3.06, 0.9, 11.5),
+      toonMat(0x27313a, { emissive: new THREE.Color(0x36434f), emissiveIntensity: 0.5 }));
+    win.position.y = 3.1;
+    car.add(win);
+    if (c === 0) {   // 車頭斜鼻
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.6, 2.2), toonMat(body));
+      nose.position.set(0, 2.0, -7.6);
+      nose.rotation.x = 0.35;
+      car.add(nose);
+    }
+    car.position.z = c * 14.4;
+    g.add(car);
+  }
+  return g;
+}
+
+/** 列車駕駛:沿折線等速前進,端點折返(回傳 dt 更新器) */
+function trainDriver(train, line, speed) {
+  const cum = [0];
+  for (let i = 1; i < line.pts.length; i++) cum.push(cum[i - 1] + line.pts[i].distanceTo(line.pts[i - 1]));
+  let s = Math.random() * line.total, dirn = 1;
+  const at = (d) => {
+    const dd = Math.max(0, Math.min(line.total, d));
+    let i = 1;
+    while (cum[i] < dd && i < cum.length - 1) i++;
+    const f = (dd - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return new THREE.Vector3().lerpVectors(line.pts[i - 1], line.pts[i], f);
+  };
+  return (dt) => {
+    s += speed * dirn * dt;
+    if (s > line.total || s < 0) { dirn *= -1; s = Math.max(0, Math.min(line.total, s)); }
+    const p = at(s);
+    const ahead = at(s + dirn * 8);
+    train.position.copy(p);
+    if (ahead.distanceToSquared(p) > 0.5) train.lookAt(ahead);
+  };
+}
+
+// ---- 瀑布(圖資節點):水簾 + 底部水潭 + 湧動泡沫 ----
+function buildWaterfalls(group, falls, terrain, center, dynamics) {
+  let built = 0;
+  for (const f of falls.slice(0, 6)) {
+    const [x, z] = llToWorld(f.lat, f.lng, center);
+    if (x < terrain.minX + 20 || x > terrain.maxX - 20 || z < terrain.minZ + 20 || z > terrain.maxZ - 20) continue;
+    // 找落差方向:採樣 8 方位高程,水從最高側流向最低側
+    let hi = { h: -Infinity }, lo = { h: Infinity };
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2;
+      const h = terrain.heightAt(x + Math.cos(a) * 18, z + Math.sin(a) * 18);
+      if (h > hi.h) hi = { h, a };
+      if (h < lo.h) lo = { h, a };
+    }
+    const drop = Math.max(6, hi.h - lo.h);
+    const g = new THREE.Group();
+    g.position.set(x, lo.h, z);
+    g.rotation.y = -lo.a;
+    // 水簾(兩層錯開的半透明白幕)
+    const sheets = [];
+    for (const [w, off, op] of [[7, 0, 0.85], [5, 0.8, 0.55]]) {
+      const sheet = new THREE.Mesh(
+        new THREE.PlaneGeometry(w, drop),
+        new THREE.MeshToonMaterial({
+          color: 0xeaf6fb, gradientMap: toonGradient(), transparent: true, opacity: op, side: THREE.DoubleSide,
+        }),
+      );
+      sheet.position.set(0, drop / 2, -off);
+      g.add(sheet);
+      sheets.push(sheet);
+    }
+    // 頂緣溢流 + 底部水潭 + 泡沫
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.8, 2.4), toonMat(0xd8eef6, { transparent: true, opacity: 0.9 }));
+    lip.position.set(0, drop, -0.6);
+    g.add(lip);
+    const pool = new THREE.Mesh(new THREE.CylinderGeometry(6.5, 6.5, 0.5, 14),
+      toonMat(0x9fd4e8, { transparent: true, opacity: 0.7 }));
+    pool.position.y = 0.25;
+    g.add(pool);
+    const foam = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 4.2, 1.1, 12),
+      toonMat(0xffffff, { transparent: true, opacity: 0.8 }));
+    foam.position.y = 0.7;
+    g.add(foam);
+    group.add(g);
+    built++;
+    // 動態:水簾上下捲動錯覺(縮放脈動)+ 泡沫呼吸
+    let t = Math.random() * 10;
+    dynamics.push((dt) => {
+      t += dt;
+      sheets.forEach((s, i) => {
+        s.material.opacity = (i === 0 ? 0.85 : 0.55) + Math.sin(t * (3 + i)) * 0.1;
+        s.scale.x = 1 + Math.sin(t * 2.4 + i) * 0.05;
+      });
+      foam.scale.setScalar(1 + Math.sin(t * 3.2) * 0.12);
+    });
+  }
+  return built;
 }
 
 /**
@@ -286,6 +600,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   group.name = 'biomes';
 
   onProgress?.(0.02, '規劃兵線淨空走廊…');
+  const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
   const blocked = buildClearance(cfg, center);
   const inb = 30;   // 邊界內縮
   const rx = () => terrain.minX + inb + rnd() * (terrain.worldW - inb * 2);
@@ -299,7 +614,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   let placed = 0;
   const put = (type, x, z, s) => {
     items[type] ??= [];
-    items[type].push({ x, y: terrain.heightAt(x, z), z, s, ry: rnd() * Math.PI * 2 });
+    items[type].push({
+      x, y: terrain.heightAt(x, z), z, s, ry: rnd() * Math.PI * 2,
+      tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,   // 站姿微傾斜(每棵不同)
+    });
     placed++;
   };
 
@@ -334,28 +652,34 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       } else if (relH > 0.55 || r < 0.55) {
         put('conifer', x, z, 0.75 + rnd() * 0.9);
       } else {
-        put('broadleaf', x, z, 0.75 + rnd() * 0.9);
+        put(rnd() < 0.3 ? 'birch' : 'broadleaf', x, z, 0.75 + rnd() * 0.9);
       }
     } else if (biome === 'bare') {
       const r = rnd();
       if (r < 0.38) put('silvergrass', x, z, 0.8 + rnd() * 1.0);
-      else if (r < 0.60) put('arrowbamboo', x, z, 0.8 + rnd() * 0.8);
-      else if (r < 0.82) put('shrub', x, z, 0.7 + rnd() * 0.9);
+      else if (r < 0.58) put('arrowbamboo', x, z, 0.8 + rnd() * 0.8);
+      else if (r < 0.78) put('shrub', x, z, 0.7 + rnd() * 0.9);
+      else if (r < 0.88) put('deadtree', x, z, 0.7 + rnd() * 0.7);
       else put('succulent', x, z, 0.7 + rnd() * 0.8);
     } else if (biome === 'wet') {
       if (rnd() < 0.45) put('mangrove', x, z, 0.8 + rnd() * 0.7);
       else put('reed', x, z, 0.8 + rnd() * 0.8);
     }
   }
+  onProgress?.(0.38, '建置植被模型(Quaternius CC0)…');
+  const nature = await naturePromise;
   for (const type in items) {
-    for (const m of buildVegMeshes(type, items[type], season)) group.add(m);
+    const meshes = nature[type]
+      ? buildVegMeshesGlb(nature[type], items[type])
+      : buildVegMeshes(type, items[type], season);
+    for (const m of meshes) group.add(m);
   }
 
-  // ---- 建物(市區)----
-  onProgress?.(0.42, '讀取 OSM 圖資建物…');
-  const wantUrban = (mix ? (mix.urban || 0) > 0.05 : true) || urbanPts.length > 8;
-  let osm = null;
-  if (wantUrban && terrain.sampleColor) osm = await fetchOsmBuildings(terrain.bbox);
+  // ---- 圖資(建物 + 鐵路 + 瀑布)----
+  onProgress?.(0.42, '讀取 OSM 圖資(建物/鐵路/瀑布)…');
+  let osmData = null;
+  if (terrain.sampleColor) osmData = await fetchOsmFeatures(terrain.bbox);
+  const osm = osmData?.buildings || null;
 
   const generic = [];       // {x,z,w,h,d,ry,commercial}
   const landmarks = [];     // {x,z,type,scale}
@@ -405,9 +729,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (const commercial of [false, true]) {
     const list = generic.filter((b) => b.commercial === commercial);
     if (!list.length) continue;
-    const mat = new THREE.MeshStandardMaterial({
-      color: commercial ? 0x5f7382 : 0x9c948a, flatShading: true, roughness: 0.8, metalness: commercial ? 0.3 : 0.05,
-      emissive: night ? (commercial ? 0x36434f : 0x2a2418) : 0x000000,
+    const mat = toonMat(commercial ? 0x5f7382 : 0x9c948a, {
+      emissive: new THREE.Color(night ? (commercial ? 0x36434f : 0x2a2418) : 0x000000),
       emissiveIntensity: night ? 0.6 : 0,
     });
     const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, list.length);
@@ -434,11 +757,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     group.add(g);
   }
 
+  // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
+  onProgress?.(0.92, '鋪設鐵路與瀑布…');
+  const dynamics = [];
+  const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics) : 0;
+  const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
+  if (dynamics.length) {
+    group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
+  }
+
   onProgress?.(1, '地貌完成');
   group.userData.stats = {
     veg: placed,
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
+    rails: railLines,
+    falls: fallsBuilt,
     osm: !!(osm && osm.length),
   };
   return group;

@@ -99,6 +99,16 @@ function sideCount(room, side) {
     + [...room.bots.values()].filter((b) => b.side === side).length;
 }
 
+/** 在指定陣營補一名電腦玩家(已滿則不動作) */
+function addBotToSide(room, side) {
+  if (sideCount(room, side) >= room.config.teamSize) return false;
+  const id = 'b' + (++room.nextBotId);
+  const used = new Set([...room.bots.values()].map((b) => b.name));
+  const name = BOT_NAMES.find((n) => !used.has(n)) || `AI-${room.nextBotId}`;
+  room.bots.set(id, { name, side });
+  return true;
+}
+
 function lanUrls() {
   const urls = [];
   const ifaces = os.networkInterfaces();
@@ -198,6 +208,9 @@ function startBattle(room) {
     return new BotBrain(room.battle, bid, b.side, i);
   });
   room.phase = 'game';
+  // 危險區靜態資料(地雷位置等)只發一次;快照不帶,雙方都要「用眼睛掃雷」
+  const field = room.battle.fieldPayload();
+  for (const c of room.clients.values()) send(c.ws, field);
   let last = Date.now();
   room.tickTimer = setInterval(() => {
     const now = Date.now();
@@ -205,8 +218,13 @@ function startBattle(room) {
     last = now;
     for (const brain of room.botBrains) brain.update(dt);
     room.battle.tick(dt);
-    const snap = room.battle.snapshot();
-    for (const c of room.clients.values()) send(c.ws, snap);
+    // 霧戰爭:各陣營依己方視野收到不同過濾後的快照;觀戰者收無霧全局快照
+    const snaps = {
+      SWARM: room.battle.snapshotFor('SWARM'),
+      STEEL: room.battle.snapshotFor('STEEL'),
+      all: room.battle.snapshotFor(null),
+    };
+    for (const c of room.clients.values()) send(c.ws, snaps[c.side] || snaps.all);
     if (room.battle.over) {
       room.phase = 'over';
       stopBattle(room, /*keepPhase*/ true);
@@ -277,9 +295,10 @@ wss.on('connection', (ws) => {
       room = r;
       room.clients.set(clientId, client);
       broadcast(room);
-      // 加入中途對局:立即補送階段與戰場設定
+      // 加入中途對局:立即補送階段與戰場設定(含危險區)
       if (room.phase === 'game' || room.phase === 'loading') {
         send(ws, { t: 'battleConfig', config: room.battleConfig });
+        if (room.battle) send(ws, room.battle.fieldPayload());
       }
       return;
     }
@@ -293,6 +312,7 @@ wss.on('connection', (ws) => {
             broadcast(room);
             if (room.battleConfig && (room.phase === 'loading' || room.phase === 'game')) {
               send(ws, { t: 'battleConfig', config: room.battleConfig });
+              if (room.battle) send(ws, room.battle.fieldPayload());
             }
             return;
           }
@@ -324,11 +344,7 @@ wss.on('connection', (ws) => {
       if (room.phase !== 'room') return;
       const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
       if (!side) return;
-      if (sideCount(room, side) >= room.config.teamSize) { send(ws, { t: 'error', msg: `${SIDES[side].name} 已滿(${room.config.teamSize} 席)` }); return; }
-      const id = 'b' + (++room.nextBotId);
-      const used = new Set([...room.bots.values()].map((b) => b.name));
-      const name = BOT_NAMES.find((n) => !used.has(n)) || `AI-${room.nextBotId}`;
-      room.bots.set(id, { name, side });
+      if (!addBotToSide(room, side)) { send(ws, { t: 'error', msg: `${SIDES[side].name} 已滿(${room.config.teamSize} 席)` }); return; }
       broadcast(room);
       return;
     }
@@ -345,12 +361,16 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'startBattle') {
-      // 房主開戰(地圖開房時已鎖定):至少 1 位已選陣營並準備(單人=練習模式)
+      // 房主開戰(地圖開房時已鎖定):至少 1 位已選陣營並準備
       if (clientId !== room.hostId) { send(ws, { t: 'error', msg: '只有房主能開戰' }); return; }
       if (room.phase !== 'room') return;
       const players = [...room.clients.values()].filter((c) => c.mode === 'player' && c.side);
       if (players.length === 0) { send(ws, { t: 'error', msg: '請先選擇陣營' }); return; }
       if (!players.every((c) => c.ready)) { send(ws, { t: 'error', msg: '還有指揮官未按「準備完成」' }); return; }
+      // 人數不足一律補電腦玩家到滿編(取消單人練習模式)
+      for (const side of ['SWARM', 'STEEL']) {
+        while (addBotToSide(room, side)) { /* 補到滿編為止 */ }
+      }
       room.phase = 'loading';
       for (const c of room.clients.values()) { c.loaded = false; send(c.ws, { t: 'battleConfig', config: room.battleConfig }); }
       broadcast(room);
@@ -365,6 +385,7 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry); return; }
+    if (m.t === 'aim' && client.side) { b.heroAim(clientId, m.on); return; }
     if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }

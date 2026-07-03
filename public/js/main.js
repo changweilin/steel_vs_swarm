@@ -361,8 +361,10 @@ async function enterLoading(cfg) {
     app.terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
     const biomes = await buildBiomes(cfg, app.terrain, (f, label) => setP(0.60 + f * 0.36, label));
     app.terrain.group.add(biomes);
+    app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     const st = biomes.userData.stats;
-    setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}${st.osm ? '・OSM 圖資' : ''})`);
+    setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
+      `${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);
     app.net.send({ t: 'loaded' });
   } catch (e) {
     console.error(e);
@@ -384,14 +386,15 @@ function enterGame() {
     terrain: app.terrain,
     hud,
   });
+  if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
   // 陣營樣式 & 操作說明
   document.body.dataset.side = app.mySide || 'SPEC';
   const isDrone = app.mySide && SIDES[app.mySide].hero === 'drone';
   $('hudSideName').textContent = app.mySide ? `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}` : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊 ・ 右鍵 火箭 ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵 瞄準 ・ F/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊(瞄準時發射火箭) ・ 右鍵 按住瞄準 ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
 }
@@ -408,11 +411,11 @@ function makeHud() {
         $('wpnAmmo').textContent = w.reload > 0 ? `填彈 ${w.reload.toFixed(1)}s` : `${w.ammo} / ${w.mag}`;
         $('wpnAmmo').classList.toggle('reloading', w.reload > 0);
         $('wpnAmmo').classList.toggle('low', w.reload <= 0 && w.ammo <= w.mag * 0.25);
-        // 右鍵武器:火箭彈數 / 自爆
+        // 副武器:火箭彈數(瞄準+左鍵發射)/ 自爆(F 鍵)
         const alt = w.alt;
         const altText = alt.label
-          ? `${alt.name}(右鍵/撞擊)`
-          : (alt.reload > 0 ? `${alt.name} 填彈 ${alt.reload.toFixed(1)}s` : `${alt.name} ×${alt.ammo}`);
+          ? `${alt.name}(F/撞擊)`
+          : (alt.reload > 0 ? `${alt.name} 填彈 ${alt.reload.toFixed(1)}s` : `${alt.name} ×${alt.ammo}(瞄準+左鍵)`);
         $('burstName').textContent = altText;
         $('moneyText').textContent = Math.floor(w.money);
         $('shopHint').textContent = w.atBase ? 'B 開軍械庫' : '升級隨處可買(B)・熱兵器需回主堡';
@@ -537,6 +540,7 @@ function onSync(m) {
 
   if (phase === 'room') {
     if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; }
+    app.fieldMsg = null;   // 回房再戰會重新生成危險區
     $('overOverlay').style.display = 'none';
     $('shopOverlay').style.display = 'none';
     delete $('overOverlay').dataset.done;
@@ -567,6 +571,8 @@ window.addEventListener('DOMContentLoaded', () => {
     },
     info: (m) => toast(m.msg),
     battleConfig: (m) => enterLoading(m.config),
+    // 危險區靜態資料(地雷等):可能比 BattleClient 早到,先暫存
+    field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
     snap: (m) => app.battle?.onSnap(m),
     tracer: (m) => app.battle?.onTracer(m),
     reconnect: () => {

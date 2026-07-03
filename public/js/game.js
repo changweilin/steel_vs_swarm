@@ -5,13 +5,15 @@
 //  - 射擊 raycast 命中回報、範圍技落點回報
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
-import { SIDES, UNITS, GAME, WEAPONS, ECON } from './data.js';
+import { SIDES, UNITS, GAME, WEAPONS, ECON, HAZARDS } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
 import { applyEnvironment } from './environment.js';
+import { buildHazard, buildMineBump, buildLoot, toonMat } from './hazards.js';
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
+  rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot',
 };
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
@@ -46,6 +48,12 @@ export class BattleClient {
     this.roll = 0;
     this.weaponKick = 0;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
+    this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
+    this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
+    this.flamers = new Set();        // 火場(火舌閃爍動畫)
+    this.floods = [];                // 淹水區(機甲減速判定)
+    this._mineCheckAt = 0;
+    this._floodWarnAt = 0;
 
     this.isDrone = this.side && SIDES[this.side].hero === 'drone';
     this.heroKind = this.side ? SIDES[this.side].hero : null;
@@ -64,6 +72,7 @@ export class BattleClient {
     this.upg = { dmg: 0, hull: 0 };
     this.shopOpen = false;
     this._crashSent = false;          // 撞擊引爆去重
+    this.aiming = false;              // 按住右鍵瞄準(拉近視角、解鎖熱兵器)
 
     this._initScene();
     this._initLanes();
@@ -92,6 +101,7 @@ export class BattleClient {
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
     // 無人機視野廣(fov 100),機甲座艙視野窄(fov 72)
     const fov = this.heroKind ? UNITS[this.heroKind].fov : 72;
+    this.baseFov = fov;
     this.camera = new THREE.PerspectiveCamera(fov, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
 
     // 季節/日夜/天氣(開房時定案,全房一致)
@@ -129,8 +139,10 @@ export class BattleClient {
   _buildCockpit() {
     if (!this.side) return;
     this.scene.add(this.camera);   // 相機要在場景樹裡,座艙子物件才會渲染
-    const mk = (geo, color, opts = {}) => new THREE.Mesh(geo,
-      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.55, ...opts }));
+    const mk = (geo, color, opts = {}) => {
+      const { metalness, roughness, ...rest } = opts;   // 座艙同樣走日漫 toon
+      return new THREE.Mesh(geo, toonMat(color, rest));
+    };
     const accent = new THREE.Color(SIDES[this.side].color);
     const g = new THREE.Group();
     this.cockpitSpin = [];
@@ -242,7 +254,8 @@ export class BattleClient {
     const myTop = this.pos.y + (this.isDrone ? 1.2 : 4.2);
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
-      const c = BattleClient.COLLIDER[ent.kind];
+      let c = BattleClient.COLLIDER[ent.kind];
+      if (!c && ent.colR) c = { r: ent.colR, h: ent.colH || 6 };   // 阻擋型障礙物
       if (!c) continue;
       const p = ent.mesh.position;
       if (myBot > p.y + c.h || myTop < p.y) continue;     // 垂直不重疊
@@ -277,6 +290,7 @@ export class BattleClient {
         }
         if (e.code === 'KeyR') this._startReload();
         if (e.code === 'KeyB') this._toggleShop();
+        if (e.code === 'KeyF' && this.isDrone) this._detonate();   // 無人機自爆(右鍵已改為瞄準)
         if (e.code === 'Escape' && this.shopOpen) this._toggleShop(false);
       }
       this.keys[e.code] = e.type === 'keydown';
@@ -295,9 +309,12 @@ export class BattleClient {
       if (!this.side || this.shopOpen) return;
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
-      if (e.button === 2) this._fireBurst();
+      if (e.button === 2) this._setAiming(true);   // 按住右鍵 = 瞄準(拉近視角、解鎖熱兵器)
     };
-    this._onMouseUp = (e) => { if (e.button === 0) this.firing = false; };
+    this._onMouseUp = (e) => {
+      if (e.button === 0) this.firing = false;
+      if (e.button === 2) this._setAiming(false);
+    };
     this.canvas.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
     this._onCtx = (e) => e.preventDefault();
@@ -315,10 +332,13 @@ export class BattleClient {
       if (!ent) ent = this._spawnEnt(e);
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
+      if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       if (e.k === 'drone' || e.k === 'robot') {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
+        const wasDead = ent.dead;
         ent.dead = !!e.dead;
+        if (wasDead && !e.dead && !ent.isSelf) ent._snapPos = true;
         ent.mesh.visible = !e.dead && !ent.isSelf;
         if (ent.isSelf) {
           this.hp = e.hp; this.maxHp = e.m;
@@ -349,6 +369,8 @@ export class BattleClient {
     for (const ev of m.ev || []) this._onEvent(ev);
     // 防空飛彈(伺服器權威 3D 追蹤)
     this._syncMissiles(m.sm || []);
+    // 戰場物資(擊毀障礙物掉落,靠近拾取)
+    this._syncLoot(m.lt || []);
 
     // HUD
     const bases = {};
@@ -362,6 +384,26 @@ export class BattleClient {
   }
 
   _spawnEnt(e) {
+    // 中立危險區實體(障礙物 / 防空陣地):程序生成低多邊形,不吃 makeUnit
+    const hazDef = HAZARDS[e.k];
+    if (hazDef || e.k === 'aasite') {
+      const r = (hazDef?.r ?? 6) * (e.sc || 1);
+      const group = buildHazard(e.k, e.id, r);
+      this.scene.add(group);
+      const ent = {
+        id: e.id, kind: e.k, side: null, mesh: group,
+        tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
+        neutral: true, isStatic: true, hero: false,
+        // 阻擋型障礙:限制行動但不完全封鎖(縫隙由伺服器佈局保證,無人機可飛越)
+        colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : 0),
+        colH: e.k === 'aasite' ? 3.5 : 6,
+      };
+      group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
+      if (group.userData.flames) this.flamers.add(group);
+      if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
+      this.ents.set(e.id, ent);
+      return ent;
+    }
     const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
     const { group, mixer } = makeUnit(key, e.s);
     const hero = e.k === 'drone' || e.k === 'robot';
@@ -373,7 +415,7 @@ export class BattleClient {
     const ent = {
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
-      isSelf, hero, heroY: 0, ry: 0,
+      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli',
       isStatic: e.k === 'tower' || e.k === 'base',
     };
     group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
@@ -385,6 +427,7 @@ export class BattleClient {
     this.scene.remove(ent.mesh);
     if (ent.mixer) this.mixers.delete(ent.mixer);
     this.spinners.delete(ent.mesh);
+    this.flamers.delete(ent.mesh);
     this.ents.delete(id);
   }
 
@@ -398,7 +441,10 @@ export class BattleClient {
       const bg = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.09),
         new THREE.MeshBasicMaterial({ color: 0x111417, transparent: true, opacity: 0.8, depthTest: false }));
       const fg = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.09),
-        new THREE.MeshBasicMaterial({ color: ent.side === 'SWARM' ? 0xffb300 : 0x4fc3f7, depthTest: false }));
+        new THREE.MeshBasicMaterial({
+          color: ent.neutral ? 0xb8bfc4 : ent.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
+          depthTest: false,
+        }));
       fg.position.z = 0.02;
       const grp = new THREE.Group();
       grp.add(bg); grp.add(fg);
@@ -439,6 +485,81 @@ export class BattleClient {
     }
   }
 
+  // ---------------- 危險區:地雷 / 物資 / 火場 / 淹水 ----------------
+  /** 開戰時伺服器發一次的靜態危險區資料(地雷位置;雙方都要用眼睛掃雷) */
+  onField(m) {
+    for (const mesh of this.mineMeshes.values()) this.scene.remove(mesh);
+    this.mineMeshes.clear();
+    for (const [x, z, id] of m.mines || []) {
+      const wz = -z;   // 模擬 z=北 → three z=南
+      const bump = buildMineBump(this.terrain.sampleColor?.(x, wz));
+      bump.position.set(x, this.terrain.heightAt(x, wz) + 0.05, wz);
+      this.scene.add(bump);
+      this.mineMeshes.set(id, bump);
+    }
+  }
+
+  /** 地雷突起:靠近才浮現(SEE_M 內漸顯、CLEAR_M 內全顯);節流 8Hz */
+  _updateMines(now) {
+    if (now - this._mineCheckAt < 0.12) return;
+    this._mineCheckAt = now;
+    const M = GAME.MINES;
+    const px = this.pos.x, py = this.pos.y, pz = this.pos.z;
+    for (const bump of this.mineMeshes.values()) {
+      const p = bump.position;
+      const d = Math.hypot(px - p.x, py - p.y, pz - p.z);
+      if (d > M.SEE_M) { bump.visible = false; continue; }
+      bump.visible = true;
+      bump.material.opacity = Math.min(1, (M.SEE_M - d) / Math.max(1, M.SEE_M - M.CLEAR_M));
+    }
+  }
+
+  _syncLoot(lt) {
+    const seen = new Set();
+    for (const l of lt) {
+      seen.add(l.id);
+      if (this.lootMeshes.has(l.id)) continue;
+      const g = buildLoot(!!l.a);
+      g.position.set(l.x, this.terrain.heightAt(l.x, -l.z), -l.z);
+      this.scene.add(g);
+      this.lootMeshes.set(l.id, g);
+    }
+    for (const [id, g] of this.lootMeshes) {
+      if (!seen.has(id)) { this.scene.remove(g); this.lootMeshes.delete(id); }
+    }
+  }
+
+  _updateLoot(dt, now) {
+    for (const g of this.lootMeshes.values()) {
+      g.rotation.y += dt * 1.6;
+      g.children[0].position.y = 1.0 + Math.sin(now * 2.2 + g.position.x) * 0.18;
+    }
+    // 火場火舌閃爍
+    for (const grp of this.flamers) {
+      for (const f of grp.userData.flames) {
+        const k = 0.75 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2);
+        f.scale.set(1, k, 1);
+        f.position.y = f.userData.h0 * k / 2;
+      }
+    }
+  }
+
+  /** 淹水區:機甲深水行進大幅減速(限制但不封鎖) */
+  _zoneSlow() {
+    if (this.isDrone) return 1;
+    for (const f of this.floods) {
+      if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) {
+        const now = performance.now() / 1000;
+        if (now - this._floodWarnAt > 8) {
+          this._floodWarnAt = now;
+          this.hud.feed?.('🌊 淹水區:機甲涉水速度大減!');
+        }
+        return f.slow;
+      }
+    }
+    return 1;
+  }
+
   _updateMissiles(dt) {
     for (const ms of this.samMeshes.values()) {
       const p = ms.mesh.position;
@@ -465,11 +586,15 @@ export class BattleClient {
   _onEvent(ev) {
     if (ev.e === 'die') {
       const [x, z] = [ev.x, -ev.z];
-      const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank';
+      const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'howitzer' || ev.kind === 'heli';
       const ey = this.terrain.heightAt(x, z) + 3;
       this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
       this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
-      if (ev.kind === 'drone' || ev.kind === 'robot') {
+      if (ev.kind === 'aasite') {
+        this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
+      } else if (HAZARDS[ev.kind]) {
+        this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
+      } else if (ev.kind === 'drone' || ev.kind === 'robot') {
         this.hud.feed?.(`💥 ${SIDES[ev.side].name}的${UNITS[ev.kind].name}被擊毀!`);
       } else if (ev.kind === 'tower') {
         this.hud.feed?.(`🏗️ ${SIDES[ev.side].name}的防禦塔倒了!`);
@@ -482,6 +607,25 @@ export class BattleClient {
       this._explosion(x, y, z, ev.r * 0.8, ev.sam ? 0xff7744 : 0xffaa33);
       this._applyBlast(x, y, z, ev.r);
       if (ev.mine && ev.tpid === this.youId) this.hud.feed?.('💣 你踩到地雷了!非正規路線佈有雷區!');
+      if (ev.mid != null) {   // 觸發的地雷:移除微凸起
+        const bump = this.mineMeshes.get(ev.mid);
+        if (bump) { this.scene.remove(bump); this.mineMeshes.delete(ev.mid); }
+      }
+    } else if (ev.e === 'burn') {
+      if (ev.pid === this.youId) {
+        this.trauma = Math.min(1, this.trauma + 0.25);
+        this.hud.feed?.('🔥 你在火場中持續受創,快離開!');
+      }
+    } else if (ev.e === 'loot') {
+      if (ev.pid === this.youId) {
+        if (ev.ammo) {
+          // 稀有掉落:全武器彈藥即刻補滿(本地 HUD 同步)
+          for (const [id, st] of Object.entries(this.wstate)) { st.ammo = WEAPONS[id].mag; st.reloadEnd = 0; }
+          this.hud.feed?.('🔋 拾獲彈藥補給:全武器裝滿!');
+        } else {
+          this.hud.feed?.(`💰 拾獲戰場物資 +$${ev.v}`);
+        }
+      }
     } else if (ev.e === 'sam') {
       if (ev.tpid === this.youId) {
         this.hud.feed?.(ev.ambush
@@ -501,7 +645,7 @@ export class BattleClient {
         ev.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
       );
     } else if (ev.e === 'wave') {
-      this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊${ev.tank ? '(含坦克!)' : ''}`);
+      this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊(含攻擊直升機)`);
     } else if (ev.e === 'respawn') {
       if (this.side === ev.side) this.hud.feed?.('🔁 你已重生,守住防線!');
     }
@@ -519,6 +663,7 @@ export class BattleClient {
   _onSelfDeath() {
     this.dead = true;
     this.firing = false;
+    this.aiming = false;
     if (this.shopOpen) { this.shopOpen = false; this.hud.shop?.(false, null); }
     document.exitPointerLock?.();
   }
@@ -691,15 +836,17 @@ export class BattleClient {
     return Math.max(0, cd - (performance.now() / 1000 - this.lastBurst));
   }
 
+  /** 瞄準模式(按住右鍵):拉近視角、解鎖熱兵器(伺服器另行把關開火權限) */
+  _setAiming(on) {
+    if (!this.side || this.aiming === on) return;
+    this.aiming = on;
+    this.net.send({ t: 'aim', on });
+  }
+
+  /** 機甲肩射火箭:需瞄準模式 + 冷卻 + 彈數(打空自動填彈) */
   _fireBurst() {
-    if (this.dead || this.shopOpen) return;
+    if (this.dead || this.shopOpen || this.isDrone) return;
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    if (this.isDrone) {
-      // 重型炸彈:原地引爆(自毀,重生無冷卻)
-      this._detonate();
-      return;
-    }
-    // 肩射火箭:冷卻 + 彈數(打空自動填彈)
     if (this._burstCdLeft() > 0) return;
     const st = this.wstate.rocket;
     const now = performance.now() / 1000;
@@ -858,7 +1005,7 @@ export class BattleClient {
       this.roll += (-lat / u.speed * 0.16 - this.roll) * Math.min(1, dt * 5);
     } else {
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
-      this.pos.addScaledVector(move, u.speed * boost * dt);
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       const fr = Math.exp(-dt * 6);
@@ -895,6 +1042,15 @@ export class BattleClient {
     this.camera.rotateY(this.yaw + this.recoil.y + shY);
     this.camera.rotateX(this.pitch + this.recoil.p + shP);
     this.camera.rotateZ(this.roll + shR);
+
+    // 瞄準縮放:按住右鍵拉近視角(FOV 越小越像瞄準鏡)
+    const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;
+    if (Math.abs(this.camera.fov - wantFov) > 0.05) {
+      this.camera.fov += (wantFov - this.camera.fov) * Math.min(1, dt * 10);
+      this.camera.updateProjectionMatrix();
+    }
+    // 瞄準時左鍵改發射肩射火箭(取代舊右鍵瞬發)
+    if (!this.isDrone && this.aiming && this.firing) this._fireBurst();
 
     // 位置回報(10Hz;模擬 z=北)
     if (now - this.lastPosSend > 0.1) {
@@ -937,11 +1093,17 @@ export class BattleClient {
         continue;
       }
       const cur = ent.mesh.position;
-      const k = Math.min(1, dt * 9);
-      const nx = cur.x + (ent.tgt.x - cur.x) * k;
-      const nz = cur.z + (ent.tgt.z - cur.z) * k;
+      let nx, nz;
+      if (ent._snapPos) {
+        nx = ent.tgt.x; nz = ent.tgt.z;
+        ent._snapPos = false;
+      } else {
+        const k = Math.min(1, dt * 9);
+        nx = cur.x + (ent.tgt.x - cur.x) * k;
+        nz = cur.z + (ent.tgt.z - cur.z) * k;
+      }
       const gy = this.terrain.heightAt(nx, nz);
-      const ny = ent.hero ? gy + ent.heroY : gy;
+      const ny = (ent.hero || ent.flies) ? gy + ent.heroY : gy;
       // 朝向移動方向(英雄用伺服器回報的 ry)
       if (ent.hero) {
         ent.mesh.rotation.y = ent.ry;
@@ -988,8 +1150,9 @@ export class BattleClient {
       ctx.stroke();
     });
     ctx.globalAlpha = 1;
-    // 單位
+    // 單位(中立障礙不上圖:偵察情報要親眼看)
     for (const ent of this.ents.values()) {
+      if (ent.neutral) continue;
       const [mx, my] = this._world2mm(ent.mesh.position.x, ent.mesh.position.z, w, h);
       const c = ent.side === 'SWARM' ? '#ffb300' : '#4fc3f7';
       ctx.fillStyle = c;
@@ -1041,8 +1204,11 @@ export class BattleClient {
     this._updateEnts(dt);
     this._updateProjectiles(dt);
     this._updateMissiles(dt);
+    this._updateMines(now);
+    this._updateLoot(dt, now);
     this._updateEffects(dt);
     this.envFx?.update(dt, this.camera);
+    this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);
     for (const g of this.spinners) {
       for (const p of g.userData.spin) p.rotation.y += dt * 40;
