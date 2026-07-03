@@ -178,10 +178,22 @@
     <div class="hud-self">
       <div class="hud-side" id="hudSideName"></div>
       <div class="hpbar"><div id="hpBar" class="hpbar-fill"></div><span id="hpText" class="hp-text"></span></div>
-      <div class="burst-box">右鍵絕招 <span id="burstCd" class="burst-cd">就緒</span></div>
+      <div class="wpn-box"><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
+      <div class="burst-box"><span id="burstName">右鍵武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
+      <div class="money-box">💰 <span id="moneyText">0</span> <span class="shop-hint" id="shopHint">B 商店</span></div>
     </div>
     <div class="hud-help" id="hudHelp"></div>
     <canvas id="minimap" width="220" height="220"></canvas>
+  </div>
+
+  <!-- 主堡軍械庫(B) -->
+  <div id="shopOverlay" class="overlay shop-overlay" style="display:none">
+    <div class="overlay-box shop-box">
+      <div class="panel-head">▍軍械庫 <span id="shopMoney" class="shop-money"></span></div>
+      <div id="shopItems" class="shop-items"></div>
+      <div class="shop-note">升級隨處可買;熱兵器需在主堡補給圈內購買(擊殺賺錢:步兵 $15 ・ 裝甲車 $35 ・ 坦克 $80 ・ 防禦塔 $200 ・ 英雄 $150)</div>
+      <button id="shopCloseBtn" class="btn">關閉(B / ESC)</button>
+    </div>
   </div>
 
   <!-- 死亡 -->

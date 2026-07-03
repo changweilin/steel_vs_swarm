@@ -365,8 +365,16 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry); return; }
-    if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id); return; }
+    if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
+    if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }
+    if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId); return; }
+    if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }
+    if (m.t === 'buy' && client.side) {
+      const err = b.buy(clientId, m.item);
+      if (err) send(ws, { t: 'error', msg: err });
+      return;
+    }
     if (m.t === 'tracer') {
       // 純視覺:轉播給其他客戶端畫彈道
       for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side });

@@ -270,6 +270,34 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); }
 .burst-box { font-size: 12px; color: var(--dim); }
 .burst-cd { font-family: Orbitron; color: var(--danger); margin-left: 6px; }
 .burst-cd.ready { color: var(--ok); }
+
+/* 武器 / 彈藥 / 金錢 HUD */
+.wpn-box {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(10, 14, 18, 0.75); border-left: 3px solid var(--line);
+  padding: 4px 10px; font-size: 13px;
+}
+.wpn-ammo { font-family: Orbitron, monospace; color: #eaf5ea; letter-spacing: 1px; }
+.wpn-ammo.low { color: var(--danger); }
+.wpn-ammo.reloading { color: #ffb300; animation: reloadBlink 0.6s infinite alternate; }
+@keyframes reloadBlink { from { opacity: 1; } to { opacity: 0.35; } }
+.money-box { font-size: 13px; color: #ffd75e; }
+.shop-hint { color: var(--dim); font-size: 11px; margin-left: 8px; }
+
+/* 主堡軍械庫 */
+.shop-overlay { pointer-events: auto; }
+.shop-box { text-align: left; max-width: min(560px, 94vw); max-height: 86vh; overflow-y: auto; }
+.shop-money { float: right; color: #ffd75e; font-family: Orbitron; }
+.shop-items { display: flex; flex-direction: column; gap: 6px; }
+.shop-head { color: var(--dim); font-size: 12px; letter-spacing: 1px; margin-top: 8px; }
+.shop-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: rgba(10, 14, 18, 0.6); border: 1px solid var(--line); padding: 8px 12px;
+}
+.shop-item.off { opacity: 0.55; }
+.shop-info { font-size: 13px; }
+.shop-item-note { color: var(--dim); font-size: 11px; }
+.shop-note { color: var(--dim); font-size: 11px; line-height: 1.6; }
 .hud-help { flex: 1; text-align: center; color: #8a98a3; font-size: 12px; letter-spacing: 1px; }
 #minimap { border: 1px solid var(--line); background: rgba(8, 12, 16, 0.92); pointer-events: none; }
 

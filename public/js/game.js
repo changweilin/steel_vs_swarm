@@ -5,7 +5,7 @@
 //  - 射擊 raycast 命中回報、範圍技落點回報
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
-import { SIDES, UNITS, GAME } from './data.js';
+import { SIDES, UNITS, GAME, WEAPONS, ECON } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
 import { applyEnvironment } from './environment.js';
@@ -50,6 +50,21 @@ export class BattleClient {
     this.isDrone = this.side && SIDES[this.side].hero === 'drone';
     this.heroKind = this.side ? SIDES[this.side].hero : null;
 
+    // 武器狀態(彈夾/填彈本地模擬,伺服器另行把關;快照 it 同步已購武器)
+    this.loadout = this.heroKind ? [...UNITS[this.heroKind].loadout] : [];
+    this.wi = 0;                      // 目前武器索引(1/2/3 切換)
+    this.wstate = {};                 // id -> { ammo, reloadEnd }
+    for (const id of this.loadout) this.wstate[id] = { ammo: WEAPONS[id].mag, reloadEnd: 0 };
+    if (this.heroKind === 'robot') {  // 右鍵肩射火箭也有彈數
+      const r = WEAPONS[UNITS.robot.burst];
+      this.wstate.rocket = { ammo: r.mag, reloadEnd: 0 };
+    }
+    this.money = 0;
+    this.items = [];
+    this.upg = { dmg: 0, hull: 0 };
+    this.shopOpen = false;
+    this._crashSent = false;          // 撞擊引爆去重
+
     this._initScene();
     this._initLanes();
     this._initInput();
@@ -75,7 +90,9 @@ export class BattleClient {
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
     this.scene = new THREE.Scene();
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
-    this.camera = new THREE.PerspectiveCamera(72, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
+    // 無人機視野廣(fov 100),機甲座艙視野窄(fov 72)
+    const fov = this.heroKind ? UNITS[this.heroKind].fov : 72;
+    this.camera = new THREE.PerspectiveCamera(fov, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
 
     // 季節/日夜/天氣(開房時定案,全房一致)
     this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env);
@@ -239,7 +256,11 @@ export class BattleClient {
       this.pos.z += nz * push;
       // 吃掉衝向障礙物的速度分量(不回彈)
       const into = this.vel.x * nx + this.vel.z * nz;
-      if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
+      if (into < 0) {
+        // 飛行單位高速撞擊 → 重型炸彈引爆(FPV 神風)
+        if (this.isDrone && -into > 16) this._detonate();
+        this.vel.x -= into * nx; this.vel.z -= into * nz;
+      }
     }
   }
 
@@ -247,6 +268,17 @@ export class BattleClient {
   _initInput() {
     this._onKey = (e) => {
       if (e.type === 'keydown' && e.code === 'KeyM') this.minimapBig = !this.minimapBig;
+      if (e.type === 'keydown' && this.side && !this.dead) {
+        // 1/2/3 切換武器(自帶 + 已購)
+        const n = { Digit1: 0, Digit2: 1, Digit3: 2 }[e.code];
+        if (n != null && n < this.loadout.length && n !== this.wi) {
+          this.wi = n;
+          this.hud.feed?.(`🔫 切換:${WEAPONS[this.loadout[n]].name}`);
+        }
+        if (e.code === 'KeyR') this._startReload();
+        if (e.code === 'KeyB') this._toggleShop();
+        if (e.code === 'Escape' && this.shopOpen) this._toggleShop(false);
+      }
       this.keys[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', this._onKey);
@@ -260,7 +292,7 @@ export class BattleClient {
     document.addEventListener('mousemove', this._onMouseMove);
 
     this._onMouseDown = (e) => {
-      if (!this.side) return;
+      if (!this.side || this.shopOpen) return;
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
       if (e.button === 2) this._fireBurst();
@@ -290,9 +322,21 @@ export class BattleClient {
         ent.mesh.visible = !e.dead && !ent.isSelf;
         if (ent.isSelf) {
           this.hp = e.hp; this.maxHp = e.m;
+          this.money = e.$ ?? this.money;
+          this.upg = e.up || this.upg;
+          // 已購武器同步進 loadout(伺服器權威)
+          for (const id of e.it || []) {
+            if (!this.loadout.includes(id)) {
+              this.loadout.push(id);
+              this.wstate[id] = { ammo: WEAPONS[id].mag, reloadEnd: 0 };
+              this.hud.feed?.(`🛒 已購入 ${WEAPONS[id].name}(按 ${this.loadout.length} 使用)`);
+            }
+          }
+          this.items = e.it || this.items;
           if (e.dead && !this.dead) this._onSelfDeath();
           if (!e.dead && this.dead) this._onSelfRespawn();
           this.hud.dead?.(e.dead ? e.rs : null);
+          if (this.shopOpen) this.hud.shop?.(true, this._shopState());
         }
       }
       this._updateHpBar(ent);
@@ -313,7 +357,7 @@ export class BattleClient {
     }
     this.hud.bases?.(bases, m.stats);
     this.hud.wave?.(m.wave, m.nextWave);
-    this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft());
+    this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft(), this._weaponHud());
     if (m.over) this.hud.over?.(m.winner, m.stats);
   }
 
@@ -437,8 +481,17 @@ export class BattleClient {
       const y = this.terrain.heightAt(x, z) + (ev.y != null ? ev.y : 2);   // 防空飛彈在空中炸
       this._explosion(x, y, z, ev.r * 0.8, ev.sam ? 0xff7744 : 0xffaa33);
       this._applyBlast(x, y, z, ev.r);
+      if (ev.mine && ev.tpid === this.youId) this.hud.feed?.('💣 你踩到地雷了!非正規路線佈有雷區!');
     } else if (ev.e === 'sam') {
-      if (ev.tpid === this.youId) this.hud.feed?.('🚨 防空飛彈鎖定你了,快規避!');
+      if (ev.tpid === this.youId) {
+        this.hud.feed?.(ev.ambush
+          ? '🚨 匿蹤防空陣地開火!命中即墜毀,快擊落飛彈或回兵線走廊!'
+          : '🚨 防空飛彈鎖定你了,快規避!');
+      }
+    } else if (ev.e === 'buy') {
+      if (ev.pid === this.youId && ev.lvl != null) {
+        this.hud.feed?.(`⬆️ ${ECON.UPGRADES[ev.item]?.name || ev.item} Lv.${ev.lvl}`);
+      }
     } else if (ev.e === 'shot') {
       const [fx, fz] = [ev.from[0], -ev.from[1]];
       const [tx, tz] = [ev.to[0], -ev.to[1]];
@@ -466,12 +519,41 @@ export class BattleClient {
   _onSelfDeath() {
     this.dead = true;
     this.firing = false;
+    if (this.shopOpen) { this.shopOpen = false; this.hud.shop?.(false, null); }
     document.exitPointerLock?.();
   }
   _onSelfRespawn() {
     this.dead = false;
     this._spawnAt();
     this.vel.set(0, 0, 0);
+    // 重生滿彈
+    for (const [id, st] of Object.entries(this.wstate)) { st.ammo = WEAPONS[id].mag; st.reloadEnd = 0; }
+    this._crashSent = false;
+  }
+
+  // ---------------- 主堡軍械庫(B 鍵)----------------
+  _atBase() {
+    if (!this.side) return false;
+    const [bx, bz] = llToWorld(this.cfg.bases[this.side][0], this.cfg.bases[this.side][1], this.center);
+    return Math.hypot(this.pos.x - bx, this.pos.z - bz) <= GAME.HERO_HEAL_RADIUS;
+  }
+
+  _shopState() {
+    return {
+      money: this.money, items: this.items, upg: this.upg,
+      kind: this.heroKind, slots: UNITS[this.heroKind].slots, atBase: this._atBase(),
+      buy: (item) => this.net.send({ t: 'buy', item }),
+    };
+  }
+
+  _toggleShop(force) {
+    if (!this.side || this.dead) return;
+    const want = force != null ? force : !this.shopOpen;
+    if (want === this.shopOpen) return;
+    this.shopOpen = want;
+    this.firing = false;
+    this.hud.shop?.(want, want ? this._shopState() : null);
+    if (want) document.exitPointerLock?.();
   }
 
   /** 己方主堡往敵方方向 100m、面向敵方主堡 */
@@ -489,25 +571,63 @@ export class BattleClient {
     this.pitch = -0.05;
   }
 
-  // ---------------- 射擊 ----------------
+  // ---------------- 射擊(彈夾/填彈)----------------
+  /** 目前主武器 id 與狀態 */
+  _curWeapon() {
+    const id = this.loadout[this.wi] || this.loadout[0];
+    return { id, def: WEAPONS[id], st: this.wstate[id] };
+  }
+
+  /** 填彈:R 鍵手動 / 打空自動;填彈完成在 _tickWeapons 補滿 */
+  _startReload(id) {
+    const wid = id || this._curWeapon().id;
+    const def = WEAPONS[wid], st = this.wstate[wid];
+    if (!st || st.reloadEnd > 0 || st.ammo >= def.mag) return;
+    st.ammo = 0;
+    st.reloadEnd = performance.now() / 1000 + def.reload;
+    if (this.net) this.net.send({ t: 'reload', w: wid });
+    this.hud.feed?.(`🔄 ${def.name} 填彈中…`);
+  }
+
+  _tickWeapons(now) {
+    for (const [id, st] of Object.entries(this.wstate)) {
+      if (st.reloadEnd > 0 && now >= st.reloadEnd) {
+        st.ammo = WEAPONS[id].mag;
+        st.reloadEnd = 0;
+      }
+    }
+  }
+
   _tryFire(now) {
-    if (!this.side || this.dead || !this.firing) return;
-    const gun = UNITS[this.heroKind].gun;
-    if (now - this.lastFire < 1 / gun.rate) return;
+    if (!this.side || this.dead || !this.firing || this.shopOpen) return;
+    const { id, def, st } = this._curWeapon();
+    if (now - this.lastFire < 1 / def.rate) return;
+    if (st.reloadEnd > 0) return;                       // 填彈中
+    if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     this.lastFire = now;
+    st.ammo--;
+    if (st.ammo <= 0) this._startReload(id);
 
     this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
-    this.raycaster.far = gun.range;
+    this.raycaster.far = def.range;
     const targets = [];
     for (const ent of this.ents.values()) {
       if (ent.side !== this.side && ent.mesh.visible) targets.push(ent.mesh);
     }
-    // 只對單位與地形網格做 raycast(地貌植被是純視覺,不擋子彈也不吃效能)
-    const hits = this.raycaster.intersectObjects([...targets, this.terrain.mesh], true);
-    let hitPoint = null, hitEnt = null;
+    // 來襲防空飛彈也可被擊毀
+    const missileMeshes = [];
+    for (const [mid, ms] of this.samMeshes) { ms.mesh.userData.missileId = mid; missileMeshes.push(ms.mesh); }
+    // 只對單位/飛彈與地形網格做 raycast(地貌植被是純視覺,不擋子彈也不吃效能)
+    const hits = this.raycaster.intersectObjects([...targets, ...missileMeshes, this.terrain.mesh], true);
+    let hitPoint = null, hitEnt = null, hitMissile = null;
     for (const h of hits) {
       let o = h.object;
-      while (o && !o.userData.kind && o.parent) o = o.parent;
+      while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
+      if (o && o.userData.missileId != null) {
+        hitMissile = o.userData.missileId;
+        hitPoint = h.point;
+        break;
+      }
       if (o && o.userData.kind) {
         hitEnt = [...this.ents.values()].find((en) => en.mesh === o);
         hitPoint = h.point;
@@ -517,7 +637,7 @@ export class BattleClient {
       break;
     }
     if (!hitPoint) {
-      hitPoint = this.raycaster.ray.at(gun.range, new THREE.Vector3());
+      hitPoint = this.raycaster.ray.at(def.range, new THREE.Vector3());
     }
     // 槍口:座艙槍管末端(世界座標)
     this.camera.updateMatrixWorld();
@@ -537,49 +657,76 @@ export class BattleClient {
     }
     this._tracer(muzzle, hitPoint, this.side === 'SWARM' ? 0xffd24a : 0x7fd8ff);
     this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [hitPoint.x, hitPoint.y, hitPoint.z] });
-    if (hitEnt) {
-      this.net.send({ t: 'hit', id: hitEnt.id });
+    if (hitMissile != null) {
+      this.net.send({ t: 'hitMissile', id: hitMissile, w: id });
+      this.hud.hitmark?.();
+    } else if (hitEnt) {
+      this.net.send({ t: 'hit', id: hitEnt.id, w: id });
       this.hud.hitmark?.();
     }
   }
 
+  /** HUD 資料:目前武器 / 彈藥 / 填彈 / 右鍵武器 / 金錢 */
+  _weaponHud() {
+    if (!this.side) return null;
+    const now = performance.now() / 1000;
+    const { id, def, st } = this._curWeapon();
+    const rocket = this.wstate.rocket;
+    return {
+      money: this.money,
+      slot: this.wi + 1, slots: this.loadout.length,
+      name: def.name, ammo: st.ammo, mag: def.mag,
+      reload: st.reloadEnd > 0 ? Math.max(0, st.reloadEnd - now) : 0,
+      alt: this.isDrone
+        ? { name: WEAPONS[UNITS.drone.bomb].name, label: '自爆' }
+        : { name: WEAPONS.rocket.name, ammo: rocket.ammo, mag: WEAPONS.rocket.mag, reload: rocket.reloadEnd > 0 ? Math.max(0, rocket.reloadEnd - now) : 0 },
+      atBase: this._atBase(),
+    };
+  }
+
+  /** 右鍵冷卻(機甲火箭 = 1/rate;無人機自爆無冷卻) */
   _burstCdLeft() {
-    if (!this.side) return 0;
-    const cd = UNITS[this.heroKind].burst.cd;
+    if (!this.side || this.isDrone) return 0;
+    const cd = 1 / WEAPONS[UNITS.robot.burst].rate;
     return Math.max(0, cd - (performance.now() / 1000 - this.lastBurst));
   }
 
   _fireBurst() {
-    if (this.dead || this._burstCdLeft() > 0) return;
-    this.lastBurst = performance.now() / 1000;
+    if (this.dead || this.shopOpen) return;
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
-    // 大後座:機甲肩射火箭整台被推退,無人機投彈輕微上彈
     if (this.isDrone) {
-      this.vel.y += 2.5;
-      this.trauma = Math.min(1, this.trauma + 0.15);
-    } else {
-      this.vel.addScaledVector(dir, -7);
-      this.recoil.p += 0.035;
-      this.trauma = Math.min(1, this.trauma + 0.35);
+      // 重型炸彈:原地引爆(自毀,重生無冷卻)
+      this._detonate();
+      return;
     }
+    // 肩射火箭:冷卻 + 彈數(打空自動填彈)
+    if (this._burstCdLeft() > 0) return;
+    const st = this.wstate.rocket;
+    const now = performance.now() / 1000;
+    if (st.reloadEnd > 0) { if (now >= st.reloadEnd) { st.ammo = WEAPONS.rocket.mag; st.reloadEnd = 0; } else return; }
+    if (st.ammo <= 0) return;
+    st.ammo--;
+    if (st.ammo <= 0) { st.reloadEnd = now + WEAPONS.rocket.reload; this.hud.feed?.('🔄 肩射火箭 填彈中…'); }
+    this.lastBurst = now;
+    // 大後座:整台機甲被推退
+    this.vel.addScaledVector(dir, -7);
+    this.recoil.p += 0.035;
+    this.trauma = Math.min(1, this.trauma + 0.35);
     this.weaponKick = 1;
-    if (this.isDrone) {
-      // 空投炸彈:自由落體
-      this.projectiles.push({
-        pos: this.pos.clone().add(new THREE.Vector3(0, -1, 0)),
-        vel: dir.clone().multiplyScalar(14).add(this.vel.clone().multiplyScalar(0.5)),
-        grav: true,
-        mesh: this._bombMesh(0x2b2f34),
-      });
-    } else {
-      // 肩射火箭:直線
-      this.projectiles.push({
-        pos: this.camera.position.clone().add(dir.clone().multiplyScalar(3)),
-        vel: dir.clone().multiplyScalar(95),
-        grav: false,
-        mesh: this._bombMesh(0x50585f),
-      });
-    }
+    this.projectiles.push({
+      pos: this.camera.position.clone().add(dir.clone().multiplyScalar(3)),
+      vel: dir.clone().multiplyScalar(95),
+      grav: false,
+      mesh: this._bombMesh(0x50585f),
+    });
+  }
+
+  /** 無人機自爆(右鍵原地 / 高速撞擊):伺服器結算傷害並擊毀座機 */
+  _detonate() {
+    if (!this.isDrone || this.dead || this._crashSent) return;
+    this._crashSent = true;
+    this.trauma = 1;
+    this.net.send({ t: 'detonate' });
   }
 
   _bombMesh(color) {
@@ -608,7 +755,7 @@ export class BattleClient {
       if (boom || p.pos.y < gy - 50) {
         this.scene.remove(p.mesh);
         this.projectiles.splice(i, 1);
-        const r = UNITS[this.heroKind].burst.r;
+        const r = WEAPONS[UNITS.robot.burst].r;
         const by = Math.max(p.pos.y, gy + 1);
         this._explosion(p.pos.x, by, p.pos.z, r * 0.8, 0xffaa33);
         this._applyBlast(p.pos.x, by, p.pos.z, r);   // 太近丟炸彈,自己也會被衝擊波掀飛
@@ -889,6 +1036,7 @@ export class BattleClient {
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
 
+    this._tickWeapons(now);
     this._updatePlayer(dt, now);
     this._updateEnts(dt);
     this._updateProjectiles(dt);

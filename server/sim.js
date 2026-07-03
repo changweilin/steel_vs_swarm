@@ -3,7 +3,7 @@
 // 防禦塔與主堡自動迎擊;英雄(無人機/機甲)位置由客戶端回報、
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
-import { SIDES, OTHER_SIDE, UNITS, GAME } from '../public/js/data.js';
+import { SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, vsMult, upgradePrice } from '../public/js/data.js';
 
 let nextEntId = 1;
 
@@ -46,6 +46,48 @@ export class BattleSim {
     };
 
     this._spawnStructures();
+    this._seedMines();
+  }
+
+  // ---------- 地雷(非正規路線;隱蔽,只有地面機甲會踩)----------
+  _seedMines() {
+    const M = GAME.MINES;
+    this.mines = [];
+    // 佈雷範圍:所有兵線點的外擴包圍盒
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const pts of this.lanes) for (const [x, z] of pts) {
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+    }
+    minX -= 120; maxX += 120; minZ -= 120; maxZ += 120;
+    const want = M.PER_LANE * this.lanes.length;
+    for (let tries = 0; tries < want * 30 && this.mines.length < want; tries++) {
+      const x = minX + Math.random() * (maxX - minX);
+      const z = minZ + Math.random() * (maxZ - minZ);
+      if (this._distToLanes(x, z) < M.LANE_CLEAR) continue;       // 兵線走廊淨空
+      let nearBase = false;
+      for (const side of ['SWARM', 'STEEL']) {
+        const [bx, bz] = this.basePos[side];
+        if (dist2d(x, z, bx, bz) < M.BASE_CLEAR) { nearBase = true; break; }
+      }
+      if (!nearBase) this.mines.push([x, z]);
+    }
+  }
+
+  /** 點到所有兵線折線的最短距離(判定「非正規路線」用) */
+  _distToLanes(x, z) {
+    let best = Infinity;
+    for (const pts of this.lanes) {
+      for (let i = 1; i < pts.length; i++) {
+        const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+        const dx = bx - ax, dz = bz - az;
+        const len2 = dx * dx + dz * dz || 1;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2));
+        best = Math.min(best, dist2d(x, z, ax + dx * t, az + dz * t));
+        if (best === 0) return 0;
+      }
+    }
+    return best;
   }
 
   // ---------- 建置:主堡 + 每線每方 2 座防禦塔 ----------
@@ -91,10 +133,61 @@ export class BattleSim {
       z: bz + Math.sin(ang) * 30 * Math.min(idx, 1),
       y: 0, ry: 0, spawnIdx: idx,
       hp: UNITS[kind].hp, hero: true,
-      dead: false, respawnAt: 0, lastFire: 0, lastBurst: 0,
+      dead: false, respawnAt: 0, lastBurst: 0,
+      // 經濟 / 武器狀態(彈藥伺服器權威)
+      money: ECON.START, items: [], upg: { dmg: 0, hull: 0 },
+      ammo: {}, reloadUntil: {}, fireAt: {}, aaCd: 0,
     });
     this.heroes.set(pid, h);
     return h;
+  }
+
+  // ---------- 武器解析 / 開火閘門(射速 + 彈夾 + 填彈,伺服器把關)----------
+  /** w: 武器 id;'gun'/缺值 = 自帶主武器。回傳 {id, def} 或 null(未持有) */
+  _heroWeapon(h, w) {
+    const loadout = UNITS[h.kind].loadout;
+    const id = (!w || w === 'gun') ? loadout[0] : String(w);
+    if (!WEAPONS[id]) return null;
+    if (!loadout.includes(id) && !h.items.includes(id)) return null;
+    return { id, def: WEAPONS[id] };
+  }
+
+  /**
+   * 開火判定:射速上限、填彈中禁射、彈夾耗盡自動填彈。
+   * lenient=true 給網路延遲寬容(真人客戶端);bot 用嚴格射速。
+   */
+  _gateFire(h, id, def, lenient) {
+    const now = this.t;
+    // 填彈完成 → 補滿
+    if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
+      h.ammo[id] = def.mag;
+      h.reloadUntil[id] = 0;
+    }
+    if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
+    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
+    if (h.ammo[id] == null) h.ammo[id] = def.mag;
+    if (h.ammo[id] <= 0) { h.reloadUntil[id] = now + def.reload; return false; }
+    h.fireAt[id] = now;
+    h.ammo[id]--;
+    if (h.ammo[id] <= 0) h.reloadUntil[id] = now + def.reload;     // 打空自動填彈
+    return true;
+  }
+
+  /** 主動填彈(R 鍵):未滿且不在填彈中才會觸發 */
+  heroReload(pid, w) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    const wp = this._heroWeapon(h, w);
+    if (!wp || wp.def.mag == null) return;
+    if (h.ammo[wp.id] == null) h.ammo[wp.id] = wp.def.mag;
+    if (h.ammo[wp.id] >= wp.def.mag || (h.reloadUntil[wp.id] || 0) > this.t) return;
+    h.ammo[wp.id] = 0;
+    h.reloadUntil[wp.id] = this.t + wp.def.reload;
+  }
+
+  /** 英雄傷害倍率(火力升級) */
+  _heroDmg(h, def, targetKind) {
+    return def.dmg * vsMult(def, targetKind) * (1 + ECON.UPGRADES.dmg.step * (h.upg?.dmg || 0));
   }
 
   heroPos(pid, x, y, z, ry) {
@@ -103,20 +196,37 @@ export class BattleSim {
     h.x = x; h.y = y; h.z = z; h.ry = ry;
   }
 
-  /** 英雄射擊命中(客戶端 raycast 回報;傷害查表、射程與射速伺服器把關) */
-  heroHit(pid, targetId) {
+  /** 英雄射擊命中(客戶端 raycast 回報;傷害/克制查表、射程/射速/彈藥伺服器把關) */
+  heroHit(pid, targetId, w) {
     const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
     if (!h || h.dead || !t || t.side === h.side || this.over) return;
-    const gun = UNITS[h.kind].gun;
+    const wp = this._heroWeapon(h, w);
+    if (!wp || !wp.def.rate) return;
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > gun.range * 1.25) return;
-    const now = this.t;
-    const minGap = 1 / (gun.rate * 1.5);                            // 射速上限驗證
-    if (now - h.lastFire < minGap) return;
-    h.lastFire = now;
-    this._damage(t, gun.dmg, h);
+    if (d3 > wp.def.range * 1.25) return;
+    if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    this._damage(t, this._heroDmg(h, wp.def, t.kind), h);
+  }
+
+  /** 射擊來襲防空飛彈(飛彈可被擊毀) */
+  hitMissile(pid, missileId, w) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    const m = this.missiles.find((x) => x.id === missileId);
+    if (!m || m.side === h.side) return;
+    const wp = this._heroWeapon(h, w);
+    if (!wp || !wp.def.rate) return;
+    const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
+    if (d3 > wp.def.range * 1.25) return;
+    if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    m.hp -= wp.def.dmg * (1 + ECON.UPGRADES.dmg.step * h.upg.dmg);
+    if (m.hp <= 0) {
+      this.missiles.splice(this.missiles.indexOf(m), 1);
+      this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
+      h.money += ECON.BOUNTY.missile;
+    }
   }
 
   /**
@@ -127,32 +237,87 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
     if (!h || h.dead || !t || t.side === h.side || this.over) return false;
-    const gun = UNITS[h.kind].gun;
+    const wp = this._heroWeapon(h, 'gun');
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > gun.range) return false;
-    if (this.t - h.lastFire < 1 / gun.rate) return false;
-    h.lastFire = this.t;
+    if (d3 > wp.def.range) return false;
+    if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
     if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
-    this._damage(t, gun.dmg, h);
+    this._damage(t, this._heroDmg(h, wp.def, t.kind), h);
     return true;
   }
 
-  /** 範圍攻擊(無人機空投炸彈 / 機甲火箭):落點由客戶端回報,冷卻伺服器把關 */
+  /**
+   * 右鍵範圍攻擊。機甲=肩射火箭(彈數/填彈伺服器把關,落點由客戶端回報);
+   * 無人機=重型炸彈,一律在自身位置引爆(原地或撞擊)→ 轉 heroDetonate。
+   */
   heroBurst(pid, x, z) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
-    const b = UNITS[h.kind].burst;
-    if (this.t - h.lastBurst < b.cd * 0.9) return;
-    if (dist2d(h.x, h.z, x, z) > 600) return;
+    if (h.kind === 'drone') { this.heroDetonate(pid); return; }
+    const def = WEAPONS[UNITS[h.kind].burst];
+    if (dist2d(h.x, h.z, x, z) > def.range) return;
+    if (!this._gateFire(h, UNITS[h.kind].burst, def, false)) return;
     h.lastBurst = this.t;
-    this.events.push({ e: 'boom', x, z, r: b.r, side: h.side });
+    this.events.push({ e: 'boom', x, z, r: def.r, side: h.side });
+    this._blast(h, def, x, z, 0);
+  }
+
+  /** 無人機重型炸彈:右鍵原地引爆 / 高速撞擊引爆 — 座機同歸於盡(重生無冷卻) */
+  heroDetonate(pid) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || h.kind !== 'drone' || this.over) return;
+    const def = WEAPONS[UNITS.drone.bomb];
+    this.events.push({ e: 'boom', x: h.x, z: h.z, y: h.y || 0, r: def.r, side: h.side });
+    this._blast(h, def, h.x, h.z, h.y || 0);
+    h.hp = 0;
+    this._kill(h, null);   // 自毀:不給任何一方擊殺數
+  }
+
+  /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方) */
+  _blast(h, def, x, z, y) {
     for (const t of [...this.ents.values()]) {
-      if (t.side === h.side) continue;
-      const d = dist2d(x, z, t.x, t.z);
-      if (d <= b.r) this._damage(t, b.dmg * (t.kind === 'base' || t.kind === 'tower' ? 0.5 : 1), h);
-      else if (d <= b.r * 1.8) this._damage(t, b.dmg * 0.4, h);
+      if (t.side === h.side || (t.hero && t.dead)) continue;
+      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero ? (t.y || 0) : 0));
+      const dmg = this._heroDmg(h, def, t.kind);
+      if (d <= def.r) this._damage(t, dmg, h);
+      else if (d <= def.r * 1.8) this._damage(t, dmg * 0.4, h);
     }
+  }
+
+  // ---------- 經濟:購買(升級隨處可買;熱兵器要在主堡補給圈)----------
+  /** 回傳錯誤訊息字串或 null(成功) */
+  buy(pid, item) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return '目前無法購買';
+    const up = ECON.UPGRADES[item];
+    if (up) {
+      const lvl = h.upg[item] || 0;
+      if (lvl >= up.max) return `${up.name} 已滿級`;
+      const price = upgradePrice(up, lvl);
+      if (h.money < price) return `資金不足(${up.name} 需 $${price})`;
+      h.money -= price;
+      h.upg[item] = lvl + 1;
+      if (item === 'hull') {
+        const nm = Math.round(UNITS[h.kind].hp * (1 + up.step * h.upg.hull));
+        h.hp += nm - h.maxHp;
+        h.maxHp = nm;
+      }
+      this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
+      return null;
+    }
+    const wd = WEAPONS[item];
+    if (!wd || !wd.price) return '沒有這項商品';
+    const [bx, bz] = this.basePos[h.side];
+    if (dist2d(h.x, h.z, bx, bz) > GAME.HERO_HEAL_RADIUS) return '熱兵器需回主堡補給圈內購買';
+    if (h.items.includes(item)) return `已擁有${wd.name}`;
+    if (h.items.length >= UNITS[h.kind].slots) return `武器槽已滿(${UNITS[h.kind].slots} 件)`;
+    if (h.money < wd.price) return `資金不足(${wd.name} 需 $${wd.price})`;
+    h.money -= wd.price;
+    h.items.push(item);
+    h.ammo[item] = wd.mag;
+    this.events.push({ e: 'buy', pid, item });
+    return null;
   }
 
   // ---------- 傷害 / 擊殺 ----------
@@ -175,15 +340,18 @@ export class BattleSim {
   _kill(t, by) {
     const bySide = by?.side || null;
     this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero ? { pid: t.pid } : {}) });
+    // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
+    if (by && by.hero && bySide !== t.side) by.money += ECON.BOUNTY[t.kind] || 0;
     if (t.hero) {
       t.dead = true;
       this.stats[t.side].deaths++;
-      if (bySide) this.stats[bySide].kills++;
-      const delay = GAME.RESPAWN_BASE_S + GAME.RESPAWN_PER_DEATH_S * this.stats[t.side].deaths;
-      t.respawnAt = this.t + delay;
+      if (bySide && bySide !== t.side) this.stats[bySide].kills++;
+      // 重生冷卻依兵種:機甲越死越久,無人機無冷卻
+      const r = UNITS[t.kind].respawn;
+      t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
       return; // 英雄不移除,等重生
     }
-    if (bySide && by.hero) this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
+    if (bySide && by.hero && bySide !== t.side) this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
     this.ents.delete(t.id);
     if (t.kind === 'base') {
       this.over = true;
@@ -204,13 +372,15 @@ export class BattleSim {
       this._spawnWave();
     }
 
-    // 英雄重生 / 主堡補血
+    // 英雄:被動收入 / 重生 / 主堡補血
     for (const h of this.heroes.values()) {
+      h.money += ECON.INCOME_PER_S * dt;
       if (h.dead && this.t >= h.respawnAt) {
         h.dead = false;
         h.hp = h.maxHp;
         [h.x, h.z] = this.basePos[h.side];
         h.y = 0;
+        h.ammo = {}; h.reloadUntil = {}; h.fireAt = {};   // 重生滿彈
         this.events.push({ e: 'respawn', id: h.id, side: h.side, pid: h.pid });
       }
       if (!h.dead && h.hp < h.maxHp) {
@@ -220,8 +390,11 @@ export class BattleSim {
         }
       }
     }
+    this._tickMines();
+    this._tickAmbush(dt);
 
     // 小兵 / 塔 / 主堡行為
+    this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     for (const e of [...this.ents.values()]) {
       if (e.hero || e.hp <= 0) continue;
       const u = UNITS[e.kind];
@@ -244,6 +417,48 @@ export class BattleSim {
     this._tickMissiles(dt);
   }
 
+  // ---------- 地雷觸發(地面機甲踩到 → 爆炸,無差別範圍傷害)----------
+  _tickMines() {
+    const M = GAME.MINES;
+    for (const h of this.heroes.values()) {
+      if (h.dead || h.kind !== 'robot') continue;
+      for (let i = this.mines.length - 1; i >= 0; i--) {
+        const [mx, mz] = this.mines[i];
+        if (dist2d(h.x, h.z, mx, mz) > M.TRIGGER_R) continue;
+        this.mines.splice(i, 1);
+        this.events.push({ e: 'boom', x: mx, z: mz, r: M.R, mine: true, tpid: h.pid });
+        for (const t of [...this.ents.values()]) {   // 中立危害:雙方都炸
+          if (t.hero && t.dead) continue;
+          const d = dist2d(mx, mz, t.x, t.z);
+          if (t.hero && (t.y || 0) > M.R) continue;  // 空中不受地雷波及
+          if (d <= M.R) this._damage(t, M.DMG, null);
+          else if (d <= M.R * 1.8) this._damage(t, M.DMG * 0.4, null);
+        }
+        break;
+      }
+    }
+  }
+
+  // ---------- 匿蹤防空伏擊(非正規路線上的無人機,命中直接擊墜)----------
+  _tickAmbush(dt) {
+    const A = GAME.AA_AMBUSH;
+    for (const h of this.heroes.values()) {
+      if (h.dead || h.kind !== 'drone') continue;
+      h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
+      if (h.aaCd > 0) continue;
+      if (this._distToLanes(h.x, h.z) <= GAME.LANE_SAFE_M) continue;   // 走廊內安全
+      if (Math.random() > A.CHANCE_PER_S * dt) continue;
+      h.aaCd = A.CD_S;
+      const ang = Math.random() * Math.PI * 2;
+      this.missiles.push({
+        id: nextEntId++, byId: null, side: OTHER_SIDE[h.side], tpid: h.pid,
+        x: h.x + Math.cos(ang) * A.SPAWN_DIST, z: h.z + Math.sin(ang) * A.SPAWN_DIST,
+        y: 0, speed: A.SPEED, dmg: A.DMG, hp: A.HP, ttl: 14,
+      });
+      this.events.push({ e: 'sam', from: [h.x, h.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
+    }
+  }
+
   // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
   _tryLaunchSam(e, sam, dt) {
     e.samCd = Math.max(0, (e.samCd ?? 0) - dt);
@@ -260,7 +475,7 @@ export class BattleSim {
     e.samCd = sam.cd;
     this.missiles.push({
       id: nextEntId++, byId: e.id, side: e.side, tpid: best.pid,
-      x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, ttl: 12,
+      x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, hp: sam.hp, ttl: 12,
     });
     this.events.push({ e: 'sam', from: [e.x, e.z], side: e.side, tpid: best.pid });
   }
@@ -335,6 +550,15 @@ export class BattleSim {
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)
     e.x = x + (e.x - x) * 0.6;
     e.z = z + (e.z - z) * 0.6;
+    // 地面單位不穿越建築:圓形推擠(塔在兵線上,小兵繞塔而行)
+    const STRUCT_R = { tower: 9, base: 22 };
+    for (const s of this._structs || []) {
+      const r = STRUCT_R[s.kind];
+      const dd = dist2d(e.x, e.z, s.x, s.z);
+      if (dd >= r || dd === 0) continue;
+      e.x = s.x + (e.x - s.x) / dd * r;
+      e.z = s.z + (e.z - s.z) / dd * r;
+    }
   }
 
   _laneCum(li) {
@@ -347,7 +571,11 @@ export class BattleSim {
     const ents = [];
     for (const e of this.ents.values()) {
       const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
-      if (e.hero) { o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100; o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t)); }
+      if (e.hero) {
+        o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
+        o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
+        o.$ = Math.floor(e.money); o.it = e.items; o.up = e.upg;   // 經濟(客戶端 HUD / 商店)
+      }
       ents.push(o);
     }
     const ev = this.events;

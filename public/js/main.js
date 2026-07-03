@@ -2,7 +2,7 @@
 // 畫面流程:connect(大廳)→ setup(開房前:隊伍規模/場地/環境/選址)
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { Net } from './net.js';
-import { SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO } from './data.js';
+import { SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, WEAPONS, ECON, upgradePrice, CLASS_NAME } from './data.js';
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
 import { buildBiomes } from './biomes.js';
@@ -390,8 +390,8 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide ? `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}` : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'W/S 沿視線飛(抬頭爬升)・ A/D 橫移 ・ Space/C 升降 ・ Shift 加速 ・ 左鍵 機砲 ・ 右鍵 空投炸彈 ・ 高飛注意防空飛彈!'
-      : 'WASD 移動 ・ 滑鼠 視角 ・ Space 跳躍 ・ Shift 衝刺 ・ 左鍵 重機槍 ・ 右鍵 火箭 ・ M 大地圖')
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊 ・ 右鍵 火箭 ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
 }
@@ -399,13 +399,29 @@ function enterGame() {
 function makeHud() {
   const feedBox = $('killFeed');
   return {
-    self: (hp, max, cd) => {
+    self: (hp, max, cd, w) => {
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
       $('hpText').textContent = `${Math.max(0, Math.round(hp))} / ${max}`;
+      if (w) {
+        // 主武器:彈藥 / 填彈
+        $('wpnName').textContent = `[${w.slot}] ${w.name}`;
+        $('wpnAmmo').textContent = w.reload > 0 ? `填彈 ${w.reload.toFixed(1)}s` : `${w.ammo} / ${w.mag}`;
+        $('wpnAmmo').classList.toggle('reloading', w.reload > 0);
+        $('wpnAmmo').classList.toggle('low', w.reload <= 0 && w.ammo <= w.mag * 0.25);
+        // 右鍵武器:火箭彈數 / 自爆
+        const alt = w.alt;
+        const altText = alt.label
+          ? `${alt.name}(右鍵/撞擊)`
+          : (alt.reload > 0 ? `${alt.name} 填彈 ${alt.reload.toFixed(1)}s` : `${alt.name} ×${alt.ammo}`);
+        $('burstName').textContent = altText;
+        $('moneyText').textContent = Math.floor(w.money);
+        $('shopHint').textContent = w.atBase ? 'B 開軍械庫' : '升級隨處可買(B)・熱兵器需回主堡';
+      }
       const cdEl = $('burstCd');
       cdEl.textContent = cd > 0 ? `${cd.toFixed(1)}s` : '就緒';
       cdEl.classList.toggle('ready', cd <= 0);
     },
+    shop: (open, st) => renderShop(open, st),
     bases: (bases, stats) => {
       for (const side of ['SWARM', 'STEEL']) {
         const b = bases[side];
@@ -458,6 +474,53 @@ function makeHud() {
   };
 }
 
+// ================= 主堡軍械庫(B 鍵開關;升級隨處可買,熱兵器需在主堡)=================
+function renderShop(open, st) {
+  const ov = $('shopOverlay');
+  ov.style.display = open ? '' : 'none';
+  if (!open || !st) return;
+  $('shopMoney').textContent = `💰 ${Math.floor(st.money)}`;
+  const box = $('shopItems');
+  box.innerHTML = '';
+  const row = (html, price, enabled, onBuy, note = '') => {
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (enabled ? '' : ' off');
+    div.innerHTML = `<div class="shop-info">${html}${note ? `<div class="shop-item-note">${note}</div>` : ''}</div>`;
+    const btn = document.createElement('button');
+    btn.className = 'btn small';
+    btn.textContent = price != null ? `$${price}` : '—';
+    btn.disabled = !enabled;
+    btn.onclick = onBuy;
+    div.appendChild(btn);
+    box.appendChild(div);
+  };
+  const head = (t) => {
+    const d = document.createElement('div');
+    d.className = 'shop-head';
+    d.textContent = t;
+    box.appendChild(d);
+  };
+  head('⬆️ 升級(隨處可買,立即生效)');
+  for (const [id, up] of Object.entries(ECON.UPGRADES)) {
+    const lvl = st.upg[id] || 0;
+    const full = lvl >= up.max;
+    const price = full ? null : upgradePrice(up, lvl);
+    row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
+      price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '');
+  }
+  head(`🔫 熱兵器(${st.items.length}/${st.slots} 槽${st.atBase ? '' : ' ・ 需回主堡補給圈'})`);
+  for (const [id, wd] of Object.entries(WEAPONS)) {
+    if (!wd.price) continue;
+    const owned = st.items.includes(id);
+    const vs = Object.entries(wd.vs).filter(([, m]) => m > 1)
+      .map(([k, m]) => `${CLASS_NAME[k]}×${m}`).join(' ');
+    const enabled = !owned && st.atBase && st.items.length < st.slots && st.money >= wd.price;
+    row(`<b>${wd.name}</b> <span class="tag dim">${wd.tag}</span> <span class="dim">傷害 ${wd.dmg} ・ 彈夾 ${wd.mag} ・ ${vs}</span>`,
+      owned ? null : wd.price, enabled, () => st.buy(id), owned ? '已擁有' : '');
+  }
+}
+$('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));
+
 $('backRoomBtn')?.addEventListener('click', () => {
   app.net.send({ t: 'backToRoom' });
 });
@@ -475,6 +538,7 @@ function onSync(m) {
   if (phase === 'room') {
     if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; }
     $('overOverlay').style.display = 'none';
+    $('shopOverlay').style.display = 'none';
     delete $('overOverlay').dataset.done;
     if (app.mapSel) { app.mapSel.destroy(); app.mapSel = null; }   // 設定畫面用完即收
     if (app.phaseShown !== 'room') show('room');

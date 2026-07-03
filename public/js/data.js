@@ -29,20 +29,19 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
 // ---- 隊伍規模 ----
 // 每陣營 N 人(1~5),總人數 2N;兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
-// 地圖邊長正比 L,基準為 5v5(L=3,兩堡 4800m)。
+// 地圖邊長正比 L(兩堡 1000m × L),1/2/3 線目標場均 5/8/10 分鐘。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
 export const targetDistFor = (L) => MAPGEO.DIST_M_PER_LANE * L;
 
-// ---- 地圖幾何(DOTA 規模)----
+// ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 候選主堡搜尋:5v5(3 線)以 4km 見方(DOTA 約 8km²)為基準 → 兩堡 4800m;
-  // 兩堡距離依線數等比:1600m × L
-  DIST_M_PER_LANE: 1600,
-  TARGET_DIST_M: 4800,
+  // 節奏簡化:兩堡距離 1000m × L(1/2/3 線 ≈ 5/8/10 分鐘一場)
+  DIST_M_PER_LANE: 1000,
+  TARGET_DIST_M: 3000,
   // 三條兵線側向偏移(佔兩堡距離比例)
   LANE_OFFSET_FRAC: 0.30,
   // 路徑重合判定格 (m) 與允許重合率(1 - 80% 不重合)
@@ -52,47 +51,88 @@ export const MAPGEO = {
   MAX_CANDIDATES: 4,
 };
 
+// ---- 目標類型(武器克制查表:單位種類 → 類別)----
+export const TARGET_CLASS = {
+  soldier: 'flesh', apc: 'armor', tank: 'armor',
+  robot: 'armor', drone: 'air', tower: 'building', base: 'building',
+};
+export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', building: '建築' };
+
+// ---- 熱兵器(全部有彈夾,打空要填彈;vs = 對目標類型加成)----
+// 自帶:dgun/rgun(主武器)、rocket(機甲右鍵)、bomb(無人機自帶重型炸彈,
+//        右鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
+// 有 price 的才會在主堡軍械庫上架(額外武器:機甲 2 槽、無人機 1 槽)。
+export const WEAPONS = {
+  dgun:   { name: '蜂刺機槍',   dmg: 16,  rate: 7,   range: 420, mag: 24, reload: 1.8, vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
+  rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 380, mag: 48, reload: 2.2, vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 600, mag: 3, reload: 8, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
+  bomb:   { name: '重型炸彈',   dmg: 240, r: 22, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
+  railgun: { name: '磁軌狙擊砲', dmg: 110, rate: 0.9, range: 700, mag: 4,  reload: 3.0, price: 400, tag: '反裝甲', vs: { flesh: 1.0, armor: 2.0, air: 1.4, building: 0.8 } },
+  flak:    { name: '防空霰彈砲', dmg: 50,  rate: 2.5, range: 280, mag: 8,  reload: 2.5, price: 300, tag: '反飛行', vs: { flesh: 1.3, armor: 0.5, air: 2.5, building: 0.3 } },
+  siege:   { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 430, mag: 6,  reload: 3.5, price: 400, tag: '反建築', vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
+  ripper:  { name: '鏈鋸速射砲', dmg: 10,  rate: 12,  range: 230, mag: 60, reload: 2.2, price: 250, tag: '反人員', vs: { flesh: 2.2, armor: 0.5, air: 1.2, building: 0.3 } },
+};
+export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
+
+// ---- 經濟(擊殺得錢 → 隨處升級 / 回主堡買熱兵器)----
+export const ECON = {
+  START: 200,
+  INCOME_PER_S: 2,
+  // 擊殺賞金:高價值單位報酬越高(missile = 擊落防空飛彈)
+  BOUNTY: { soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, missile: 15 },
+  UPGRADES: {
+    dmg:  { name: '火力強化', desc: '所有武器傷害 +12%', max: 5, step: 0.12, base: 150, inc: 100 },
+    hull: { name: '裝甲強化', desc: '座機血量上限 +12%', max: 5, step: 0.12, base: 150, inc: 100 },
+  },
+};
+export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
+
 // ---- 單位數值 ----
 export const UNITS = {
   // 小兵(雙方都是人類部隊:士兵 / 裝甲車 / 坦克)
-  soldier: { name: '步兵',   hp: 90,   dmg: 10, range: 60,  rate: 1.0, speed: 7,  sight: 150, bounty: 1 },
-  apc:     { name: '裝甲車', hp: 320,  dmg: 22, range: 100, rate: 0.9, speed: 10, sight: 170, bounty: 2 },
-  tank:    { name: '主戰坦克', hp: 750, dmg: 55, range: 150, rate: 0.6, speed: 8,  sight: 200, bounty: 4 },
-  // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈)
-  tower:   { name: '防禦塔', hp: 1400, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
-             sam: { name: '防空飛彈', dmg: 45, range: 360, cd: 4, speed: 120 } },
-  base:    { name: '主堡',   hp: 4500, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
-  // 英雄
+  soldier: { name: '步兵',   hp: 90,   dmg: 10, range: 60,  rate: 1.0, speed: 8,  sight: 150, bounty: 1 },
+  apc:     { name: '裝甲車', hp: 320,  dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2 },
+  tank:    { name: '主戰坦克', hp: 750, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4 },
+  // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
+  tower:   { name: '防禦塔', hp: 1000, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
+             sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40 } },
+  base:    { name: '主堡',   hp: 3000, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
+  // 英雄:機甲 HP/彈藥 = 無人機 2 倍;無人機速度 = 機甲 2 倍、視野廣(fov)
   drone: {
-    name: '獵蜂無人機', hp: 320, speed: 46, vspeed: 22,
-    gun:   { dmg: 16, rate: 7,  range: 420 },   // 機砲
-    burst: { dmg: 90, r: 26, cd: 6, name: '空投炸彈' }, // 右鍵
+    name: '獵蜂無人機', hp: 320, speed: 42, vspeed: 22, fov: 100,
+    loadout: ['dgun'], slots: 1,        // 自帶機槍 + 可加購 1 件熱兵器
+    bomb: 'bomb',                        // 右鍵原地引爆 / 高速撞擊引爆(自毀)
     regen: 12,
+    respawn: { base: 0, perDeath: 0 },   // 無冷卻重生
   },
   robot: {
-    name: '執法者機甲', hp: 700, speed: 21, jump: 9,
-    gun:   { dmg: 26, rate: 4.5, range: 380 },  // 重機槍
-    burst: { dmg: 130, r: 20, cd: 6, name: '肩射火箭' }, // 右鍵
+    name: '執法者機甲', hp: 640, speed: 21, jump: 9, fov: 72,
+    loadout: ['rgun'], slots: 2,         // 自帶重機槍 + 可加購 2 件熱兵器
+    burst: 'rocket',                     // 右鍵肩射火箭(有彈數)
     regen: 18,
+    respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
 };
 
-// ---- 對局節奏 ----
+// ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
 export const GAME = {
   TICK_MS: 125,               // 伺服器模擬 8Hz
   SNAP_MS: 125,               // 快照廣播 8Hz
-  WAVE_INTERVAL_S: 26,        // 兵線波次間隔
-  FIRST_WAVE_DELAY_S: 8,
+  WAVE_INTERVAL_S: 22,        // 兵線波次間隔
+  FIRST_WAVE_DELAY_S: 6,
   WAVE_SOLDIERS: 4,
   WAVE_APC: 1,
   TANK_EVERY_WAVE: 3,         // 每第 3 波加派 1 輛坦克
   TOWER_FRACS: [0.24, 0.42],  // 防禦塔在兵線上的位置(距己方主堡比例)
-  RESPAWN_BASE_S: 8,
-  RESPAWN_PER_DEATH_S: 2,
   CREEP_AGGRO_HERO_BIAS: 0.7, // 小兵優先打小兵/建築,英雄目標權重
-  HERO_HEAL_RADIUS: 160,      // 主堡補血半徑
+  HERO_HEAL_RADIUS: 160,      // 主堡補血半徑(也是軍械庫購物範圍)
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
-  AA_MIN_ALT: 40,             // 防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
+  AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
+  LANE_SAFE_M: 45,            // 正規路線走廊半寬;出了走廊 = 非正規路線(地雷 / 防空伏擊)
+  // 地雷(非正規路線,只有地面機甲會踩;隱蔽不可見)
+  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, LANE_CLEAR: 40, BASE_CLEAR: 150 },
+  // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀
+  AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 400, SPEED: 130, SPAWN_DIST: 160, HP: 40 },
 };
 
 // ---- 電腦玩家(單人練習 / 補位)----
