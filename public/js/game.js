@@ -309,11 +309,21 @@ export class BattleClient {
       if (!this.side || this.shopOpen) return;
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
-      if (e.button === 2) this._setAiming(true);   // 按住右鍵 = 瞄準(拉近視角、解鎖熱兵器)
+      if (e.button === 2) {
+        // 右鍵雙功能:彈藥空了 → 換彈夾;有彈時 → 按住瞄準(拉近視角、解鎖熱兵器)
+        const { id, st } = this._curWeapon();
+        if (st && st.ammo <= 0 && st.reloadEnd <= 0) {
+          this._rmbReloaded = true;
+          this._startReload(id);
+        } else {
+          this._rmbReloaded = false;
+          this._setAiming(true);
+        }
+      }
     };
     this._onMouseUp = (e) => {
       if (e.button === 0) this.firing = false;
-      if (e.button === 2) this._setAiming(false);
+      if (e.button === 2) { if (!this._rmbReloaded) this._setAiming(false); this._rmbReloaded = false; }
     };
     this.canvas.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
@@ -732,6 +742,21 @@ export class BattleClient {
     st.reloadEnd = performance.now() / 1000 + def.reload;
     if (this.net) this.net.send({ t: 'reload', w: wid });
     this.hud.feed?.(`🔄 ${def.name} 填彈中…`);
+  }
+
+  /**
+   * 換彈夾動作(疊加在 gunGroup 上,無獨立手臂模型,用現有槍身/槍管代理呈現):
+   * p 為填彈進度 0→1,依武器機構分類給不同動作曲線。
+   */
+  _reloadAnimOffset(id, p) {
+    const swing = Math.sin(Math.min(1, Math.max(0, p)) * Math.PI); // 0→1→0,填彈完歸零
+    if (id === 'railgun') return { dz: swing * 0.4, dy: 0, rx: 0 };            // 磁軌砲:整管後拉再歸位
+    if (id === 'siege') return { dz: 0, dy: 0, rx: -swing * 0.5 };             // 攻城砲:槍口上掀開膛裝填
+    if (id === 'flak') {                                                       // 防空霰彈:逐發上膛頓挫感
+      const bump = Math.abs(Math.sin(p * Math.PI * 5)) * (1 - p);
+      return { dz: bump * 0.16, dy: -bump * 0.05, rx: 0 };
+    }
+    return { dz: 0, dy: -swing * 0.22, rx: swing * 0.12 };                     // dgun/rgun/ripper:彈匣下沉退彈匣再扣回
   }
 
   _tickWeapons(now) {
@@ -1217,7 +1242,15 @@ export class BattleClient {
     if (this.cockpit) {
       for (const p of this.cockpitSpin) p.rotation.y += dt * 55;
       this.weaponKick = Math.max(0, this.weaponKick - dt * 9);
-      this.gunGroup.position.z = this._gunBaseZ + this.weaponKick * 0.11;
+      const cur = this._curWeapon();
+      let reloadOff = { dz: 0, dy: 0, rx: 0 };
+      if (cur.st && cur.st.reloadEnd > 0) {
+        const p = 1 - Math.max(0, cur.st.reloadEnd - now) / cur.def.reload;
+        reloadOff = this._reloadAnimOffset(cur.id, p);
+      }
+      this.gunGroup.position.z = this._gunBaseZ + this.weaponKick * 0.11 + reloadOff.dz;
+      this.gunGroup.position.y = reloadOff.dy;
+      this.gunGroup.rotation.x = reloadOff.rx;
       if (this._flashTtl != null) {
         this._flashTtl -= dt;
         if (this._flashTtl <= 0) { this.flash.visible = false; this._flashTtl = null; }

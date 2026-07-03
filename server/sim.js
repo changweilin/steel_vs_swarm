@@ -470,6 +470,12 @@ export class BattleSim {
       // 重生冷卻依兵種:機甲越死越久,無人機無冷卻
       const r = UNITS[t.kind].respawn;
       t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
+      // 死亡多發生在 tick() 之外的訊息處理當下(detonate/hit),respawnAt 用的是
+      // 上一個 tick 結束時的 this.t;若 r.base=0(無人機),下一個 tick 就會立刻
+      // 达成重生條件,導致 dead:true 從未出現在任何一份快照裡(客戶端永遠不知道自己死過,
+      // 見 _applySnap 的 dead 邊緣觸發邏輯)。強制至少跨過一次完整 tick 週期才能重生,
+      // 確保至少有一份快照廣播出 dead:true。
+      t.deadTick = this._tickN;
       return; // 英雄不移除,等重生
     }
     if (t.neutral) {
@@ -508,7 +514,7 @@ export class BattleSim {
     // 英雄:被動收入 / 重生 / 主堡補血
     for (const h of this.heroes.values()) {
       h.money += ECON.INCOME_PER_S * dt;
-      if (h.dead && this.t >= h.respawnAt) {
+      if (h.dead && this.t >= h.respawnAt && this._tickN > (h.deadTick || 0) + 1) {
         h.dead = false;
         h.hp = h.maxHp;
         [h.x, h.z] = this.basePos[h.side];

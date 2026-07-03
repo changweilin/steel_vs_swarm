@@ -35,10 +35,9 @@
     <div class="panel-head">▍指揮官登入</div>
     <input id="myName" placeholder="你的代號(最多 16 字)" maxlength="16">
     <div class="row">
-      <input id="roomNameInput" placeholder="戰區名稱(可留白)" maxlength="16">
-      <label class="chk"><input type="checkbox" id="createPublic" checked> 公開</label>
+      <button id="mapBuilderBtn" class="btn big swarm-btn">🗺️ 建立地圖</button>
+      <button id="openRoomBtn" class="btn big steel-btn">🚪 開戰時刻</button>
     </div>
-    <button id="createBtn" class="btn big swarm-btn">🗺️ 建立戰區(先建地圖再開房)</button>
 
     <div class="divider">─── 加入現有戰區 ───</div>
     <div class="join-mode">
@@ -58,13 +57,13 @@
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 </div>
 
-<!-- ========= 開房前:戰場設定(隊伍規模 / 場地 / 環境 / 選址)========= -->
-<div id="setup" class="screen" style="display:none">
+<!-- ========= 建立地圖(隊伍規模 / 場地 / 選址,建好後存入最愛)========= -->
+<div id="mapbuilder" class="screen" style="display:none">
   <div class="map-panel setup-panel">
-    <div class="panel-head">▍建立戰區 — 先建好地圖再開房</div>
+    <div class="panel-head">▍建立地圖 — 建好後存入最愛,開戰時刻時再選用</div>
 
     <div class="setup-sec">
-      <div class="setup-label">隊伍規模(每陣營人數)</div>
+      <div class="setup-label">隊伍規模(每陣營人數,決定兵線數)</div>
       <div class="row ts-row" id="tsRow"></div>
       <div class="setup-info" id="tsInfo"></div>
     </div>
@@ -74,9 +73,52 @@
       <div class="venue-grid" id="venueGrid"></div>
     </div>
 
-    <div class="setup-sec" id="favSection" style="display:none">
+    <div class="map-rules">
+      規則:兩主堡距離 ≥ 地圖對角線 80% ・ 兵線任兩條重合 &lt; 20%(真實道路)・ 兵線寬容 4 台機甲並行
+    </div>
+    <div id="mapStatus" class="map-status">選一個預設場地,或在地圖上點選蜂群主堡位置。</div>
+    <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
+    <div class="row">
+      <button id="saveFavBtn" class="btn big swarm-btn" disabled>⭐ 存入最愛</button>
+      <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
+    </div>
+    <div class="row">
+      <button id="goOpenRoomBtn" class="btn steel-btn">開戰時刻(選已存地圖)→</button>
+      <button id="backLobbyBtn" class="btn">← 返回大廳</button>
+    </div>
+  </div>
+  <div id="leafletMap"></div>
+</div>
+
+<!-- ========= 開戰時刻(從已存地圖挑一個,設定房名/公開性/環境後開房)========= -->
+<div id="openroom" class="screen center-screen" style="display:none">
+  <div class="panel connect-box">
+    <div class="panel-head">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
+
+    <div class="setup-sec">
+      <div class="setup-label">隊伍規模(現場切換,免先存最愛)</div>
+      <div class="row ts-row" id="tsRowOpen"></div>
+      <div class="setup-info" id="tsInfoOpen"></div>
+    </div>
+
+    <div class="setup-sec">
+      <div class="setup-label">預設場地(依上方人數即時重算兵線,即選即用)</div>
+      <div class="venue-grid" id="venueGridOpen"></div>
+    </div>
+
+    <div class="divider">─── 或從我的最愛選 ───</div>
+
+    <div class="setup-sec" id="favSection">
       <div class="setup-label">⭐ 我的最愛</div>
       <div class="venue-grid" id="favGrid"></div>
+      <div class="setup-info" id="favEmptyHint" style="display:none">
+        還沒有存過地圖。<button id="goMapBuilderBtn" class="btn small">先去建一張 →</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <input id="roomNameInput" placeholder="戰區名稱(可留白)" maxlength="16">
+      <label class="chk"><input type="checkbox" id="createPublic" checked> 公開</label>
     </div>
 
     <div class="setup-sec">
@@ -88,19 +130,10 @@
       </div>
     </div>
 
-    <div class="map-rules">
-      規則:兩主堡距離 ≥ 地圖對角線 80% ・ 兵線任兩條重合 &lt; 20%(真實道路)・ 兵線寬容 4 台機甲並行
-    </div>
-    <div id="mapStatus" class="map-status">選一個預設場地,或在地圖上點選蜂群主堡位置。</div>
-    <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
-    <div class="row">
-      <button id="confirmSiteBtn" class="btn big swarm-btn" disabled>⚡ 建立戰區(開房)</button>
-      <button id="saveFavBtn" class="btn" disabled>⭐ 存入最愛</button>
-      <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
-      <button id="backLobbyBtn" class="btn">← 返回大廳</button>
-    </div>
+    <div id="openRoomStatus" class="map-status">先從上面挑一張已存的地圖。</div>
+    <button id="createRoomBtn" class="btn big swarm-btn" disabled>⚡ 建立戰區(開房)</button>
+    <button id="backFromOpenRoomBtn" class="btn">← 返回大廳</button>
   </div>
-  <div id="leafletMap"></div>
 </div>
 
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->

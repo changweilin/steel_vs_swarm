@@ -66,14 +66,14 @@ export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', bui
 //        右鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
 // 有 price 的才會在主堡軍械庫上架(額外武器:機甲 2 槽、無人機 1 槽)。
 export const WEAPONS = {
-  dgun:   { name: '蜂刺機槍',   dmg: 16,  rate: 7,   range: 420, mag: 24, reload: 1.8, vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
-  rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 380, mag: 48, reload: 2.2, vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
-  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 600, mag: 3, reload: 8, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
+  dgun:   { name: '蜂刺機槍',   dmg: 16,  rate: 7,   range: 240, mag: 24, reload: 1.8, vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
+  rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
   bomb:   { name: '重型炸彈',   dmg: 240, r: 22, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
-  railgun: { name: '磁軌狙擊砲', dmg: 110, rate: 0.9, range: 700, mag: 4,  reload: 3.0, price: 400, tag: '反裝甲', needAim: true, vs: { flesh: 1.0, armor: 2.0, air: 1.4, building: 0.8 } },
-  flak:    { name: '防空霰彈砲', dmg: 50,  rate: 2.5, range: 280, mag: 8,  reload: 2.5, price: 300, tag: '反飛行', vs: { flesh: 1.3, armor: 0.5, air: 2.5, building: 0.3 } },
-  siege:   { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 430, mag: 6,  reload: 3.5, price: 400, tag: '反建築', needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
-  ripper:  { name: '鏈鋸速射砲', dmg: 10,  rate: 12,  range: 230, mag: 60, reload: 2.2, price: 250, tag: '反人員', vs: { flesh: 2.2, armor: 0.5, air: 1.2, building: 0.3 } },
+  railgun: { name: '磁軌狙擊砲', dmg: 110, rate: 0.9, range: 380, mag: 4,  reload: 3.0, price: 400, tag: '反裝甲', needAim: true, vs: { flesh: 1.0, armor: 2.0, air: 1.4, building: 0.8 } },
+  flak:    { name: '防空霰彈砲', dmg: 50,  rate: 2.5, range: 170, mag: 8,  reload: 2.5, price: 300, tag: '反飛行', vs: { flesh: 1.3, armor: 0.5, air: 2.5, building: 0.3 } },
+  siege:   { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, price: 400, tag: '反建築', needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
+  ripper:  { name: '鏈鋸速射砲', dmg: 10,  rate: 12,  range: 150, mag: 60, reload: 2.2, price: 250, tag: '反人員', vs: { flesh: 2.2, armor: 0.5, air: 1.2, building: 0.3 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 

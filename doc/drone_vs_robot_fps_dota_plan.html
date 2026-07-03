@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Execution Plan: Cel-Shaded FPS + DOTA Drone vs. Robot POC</title>
+    <style>
+        :root {
+            --bg-color: #121417;
+            --card-bg: #1e2229;
+            --text-color: #e0e6ed;
+            --accent-color: #00eaff;
+            --warning-color: #ffaa00;
+            --danger-color: #ff3366;
+            --border-color: #333a46;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: var(--accent-color); }
+        .directive-box {
+            background-color: rgba(0, 234, 255, 0.05);
+            border-left: 4px solid var(--accent-color);
+            padding: 1.2rem;
+            margin-bottom: 2rem;
+            border-radius: 0 8px 8px 0;
+        }
+        .warning-box {
+            background-color: rgba(255, 170, 0, 0.1);
+            border-left: 4px solid var(--warning-color);
+            padding: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .phase-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .task {
+            border-top: 1px dashed var(--border-color);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        code {
+            background-color: #0b0d0e;
+            color: #ff80bf;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .badge {
+            display: inline-block;
+            background: var(--accent-color);
+            color: #000;
+            font-weight: bold;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+        .badge-dota { background: var(--warning-color); }
+        .badge-fps { background: var(--danger-color); color: #fff; }
+        
+        /* Screenshot Reference Grid */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1st));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .ref-card {
+            background: #15181d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            padding: 0.8rem;
+        }
+        .ref-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid #444;
+            display: block;
+            background-color: #2a2f3a;
+            min-height: 180px;
+            object-fit: cover;
+        }
+        .ref-card caption, .ref-card p {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-top: 0.5rem;
+        }
+        .ref-highlight {
+            color: var(--warning-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>AI Agent Execution Plan: Dynamic 3D Drone vs. Robot</h1>
+        <p><strong>Genre:</strong> <span class="badge badge-fps">FPS</span> + <span class="badge badge-dota">DOTA Lite</span> Tactical Arena Combat</p>
+        <p><strong>Core Tech Stack:</strong> TypeScript, Vite, Three.js / React Three Fiber, WebAudio API, Cannon.js / Rapier (Physics)</p>
+    </header>
+
+    <section id="system-directives" class="warning-box">
+        <h2>⚠️ Core Operational Directives for AI Agent</h2>
+        <p>You are an expert 3D Game Architect and Shading Engineer. When executing this document, you MUST follow these constraints:</p>
+        <ul>
+            <li><strong>Step-by-Step Iteration:</strong> Execute one single Task per prompt. Wait for user testing and verification before initiating the next phase.</li>
+            <li><strong>English Comments Only:</strong> All generated code, inline documentation, and architectural notes inside source files MUST be written in strictly professional English.</li>
+            <li><strong>Procedural & Dynamic Modeling Focus:</strong> Unlike human bipedal characters, Drones and Robots are hard-surface mechanical assets. You MUST prioritize <em>procedural animations</em> (e.g., spinning propellers, recoil displacement, mechanical turret rotation, banking physics) over standard skeletal Mixamo loops.</li>
+        </ul>
+    </section>
+
+    <section id="art-style-reference" class="directive-box">
+        <h2>🎨 Visual Art Style Reference (Learned from Zombie Game POC)</h2>
+        <p><strong>AI Instruction:</strong> Analyze the following screenshots extracted from the reference anime zombie game. You MUST replicate the exact same art direction, shading techniques, and UI aesthetics for our Drone vs. Robot sci-fi theme.</p>
+        
+        <div class="gallery-grid">
+            <div class="ref-card">
+                <img src="./reference_screenshots/zombie_toon_city.png" alt="Toon Shaded Cityscape Reference" />
+                <p><span class="ref-highlight">[Key Feature: Cel-Shading & Outlines]</span><br>
+                Notice the environment and characters. Apply a 3-step gradient <code>THREE.MeshToonMaterial</code>. All meshes MUST possess a distinct, 2px–3px thick black comic outline using either Post-Processing (<code>OutlinePass</code>) or the Inverted Hull technique.</p>
+            </div>
+            <div class="ref-card">
+                <img src="./reference_screenshots/zombie_stand_ui.png" alt="Stand Summon Billboard VFX Reference" />
+                <p><span class="ref-highlight">[Key Feature: 2D Comic Billboard VFX]</span><br>
+                When deploying drone ultimate abilities or destroying Robot Towers, implement high-impact 2D Billboard Sprites in 3D space with bold, angled comic typography (like the "STAND ACTIVATED" style) and radial screen-shake.</p>
+            </div>
+            <div class="ref-card">
+                <img src="./reference_screenshots/zombie_hit_impact.png" alt="Combat Impact Sparks Reference" />
+                <p><span class="ref-highlight">[Key Feature: Combat Feel & Hit VFX]</span><br>
+                Melee or projectile impacts must generate stylized, non-photorealistic spark sprites (starburst shapes) scaling up and fading out rapidly within 150ms, paired with dynamic lighting flashes.</p>
+            </div>
+            <div class="ref-card">
+                <img src="./reference_screenshots/zombie_hit_impact_AoE.png" alt="Combat Impact Sparks Reference for AoE Effects" />
+                <p><span class="ref-highlight">[Key Feature: Combat Feel & Hit VFX for AoE]</span><br>
+                Area of Effect (AoE) detonations, such as missile barrages or ground slams, must generate stylized, radial shockwave sprites and multi-directional starburst particles that expand rapidly to the boundary of the damage radius. The visual burst should scale up and dissipate within 200–300ms, accompanied by radial dynamic lighting flashes and procedural camera shake.</p>
+            </div>
+        </div>
+    </section>
+
+    <main id="execution-plan">
+
+        <section class="phase-card" data-phase="1" id="phase-fps-dota-setup">
+            <h2><span class="badge">Phase 1</span> FPS Drone Controller & DOTA Arena Setup</h2>
+            <p><strong>Objective:</strong> Establish a responsive First-Person Flight controller for the combat drone and build the simplified DOTA map architecture (Lanes, Bases, Turrets).</p>
+            
+            <div class="task" data-task="1.1">
+                <h3>Task 1.1: FPS Drone Flight Rig (6-DoF Lite)</h3>
+                <p><strong>Action:</strong> Implement a first-person camera attached to a dynamic Drone Controller. Unlike walking characters, implement hover physics: inertia, momentum, and slight vertical hover bobbing using a sine wave.</p>
+                <p><strong>Code Requirement:</strong> Add camera banking (rolling slightly left/right when strafing or turning horizontally) to simulate realistic aerial drone flight dynamics.</p>
+                <p><strong>Acceptance Criteria:</strong> Smooth WASD/Mouse flight controls with feeling of weight and air resistance. No clipping through ground.</p>
+            </div>
+
+            <div class="task" data-task="1.2">
+                <h3>Task 1.2: DOTA "Lite" Map Layout & NavMesh</h3>
+                <p><strong>Action:</strong> Procedurally generate or construct a 3-lane (or single mid-lane for POC) sci-fi arena. Place a Player Core Nexus (Base), an Enemy Core Nexus, and 2 Defensive Towers along the lane.</p>
+                <p><strong>Acceptance Criteria:</strong> Distinct visual landmarks for bases. Basic grid/pathing system operational for automated minion waves.</p>
+            </div>
+        </section>
+
+        <section class="phase-card" data-phase="2" id="phase-dynamic-models">
+            <h2><span class="badge">Phase 2</span> Dynamic 3D Modeling: Drones & Robots</h2>
+            <p><strong>Objective:</strong> Design and program procedural mechanical behaviors and hard-surface rigging without relying on human skeletal animations.</p>
+
+            <div class="task" data-task="2.1">
+                <h3>Task 2.1: Procedural Drone Anatomy & Weapon Deployment</h3>
+                <p><strong>Action:</strong> Construct the player Drone model using modular mesh groups (Chassis, 4 Propeller Arms, Mounted Gatling/Laser Gun). 
+                <br>• <strong>Propellers:</strong> Rotate continuously via <code>requestAnimationFrame</code> based on throttle speed.
+                <br>• <strong>Weapon Recoil:</strong> When firing, procedurally displace the barrel mesh backward along its local Z-axis and spring it back using linear interpolation (Lerp).</p>
+                <p><strong>Acceptance Criteria:</strong> Visual mechanical feedback is highly responsive to player inputs (accelerating spins props faster, shooting shakes gun barrels).</p>
+            </div>
+
+            <div class="task" data-task="2.2">
+                <h3>Task 2.2: Robot Minions & Tower Turret IK (Inverse Kinematics)</h3>
+                <p><strong>Action:</strong> Load hard-surface Robot models (Minions) and Defense Towers. Implement procedural aiming: Tower heads and Robot upper torsos must dynamically rotate (look-at matrix / IK) to track the drone or opposing minions in real-time within their aggro radius.</p>
+                <p><strong>Acceptance Criteria:</strong> Turrets smoothly track moving targets without snapping instantly. Mechanical joint limits are respected (e.g., turrets only pitch vertically within -30 to 60 degrees).</p>
+            </div>
+        </section>
+
+        <section class="phase-card" data-phase="3" id="phase-art-transfer">
+            <h2><span class="badge">Phase 3</span> Cel-Shading & Sci-Fi Anime Style Transfer</h2>
+            <p><strong>Objective:</strong> Apply the visual lessons learned from the Zombie Game reference to our metallic hard-surface Sci-Fi models.</p>
+
+            <div class="task" data-task="3.1">
+                <h3>Task 3.1: Hard-Surface Toon Shading & Metallic Ramps</h3>
+                <p><strong>Action:</strong> Apply <code>THREE.MeshToonMaterial</code> with a custom 3-tier color ramp texture. For sci-fi metal surfaces, inject a custom shader chunk to simulate high-contrast comic specular highlights (sharp, non-blurred white reflection bands).</p>
+                <p><strong>Acceptance Criteria:</strong> Drones and Robots look like 3D anime mecha illustrations (e.g., Gundam or Borderlands aesthetic) rather than plain realistic metal.</p>
+            </div>
+
+            <div class="task" data-task="3.2">
+                <h3>Task 3.2: Dynamic Energy Shields & Laser Shaders</h3>
+                <p><strong>Action:</strong> Create a custom vertex/fragment shader for Defense Towers and Core Base shields. Implement a hexagonal grid pattern that scrolls over time and glows brightly at point-of-impact when shot by the FPS drone.</p>
+                <p><strong>Acceptance Criteria:</strong> Shields are transparent until hit, lighting up with anime-style energy ripples upon taking damage.</p>
+            </div>
+        </section>
+
+        <section class="phase-card" data-phase="4" id="phase-combat-dota">
+            <h2><span class="badge">Phase 4</span> DOTA Game Loop: Minion Waves & Tower AI</h2>
+            <p><strong>Objective:</strong> Bring the arena to life with MOBA combat mechanics and FPS shooting interaction.</p>
+
+            <div class="task" data-task="4.1">
+                <h3>Task 4.1: Automated Minion Wave Spawning & Aggro AI</h3>
+                <p><strong>Action:</strong> Every 30 seconds, spawn a wave of Allied Drones and Enemy Robots from respective bases. Implement a finite state machine (FSM): <code>Pathing along Lane</code> ➔ <code>Engage Nearest Enemy within Range</code> ➔ <code>Attack Tower/Base</code>.</p>
+                <p><strong>Acceptance Criteria:</strong> Minions march down the lane, stop to engage each other in firefights, and push toward the enemy base without player intervention.</p>
+            </div>
+
+            <div class="task" data-task="4.2">
+                <h3>Task 4.2: FPS Hitscan / Projectile Weapons & Tower Aggro Rules</h3>
+                <p><strong>Action:</strong> Implement primary drone plasma cannons (fast projectiles with glowing trail shaders) and secondary missile barrage (cooldown-based DOTA hero skill). Implement MOBA tower aggro rules: Towers shoot minions first, but switch aggro immediately to the Player Drone if the player damages an enemy hero/minion within tower range.</p>
+                <p><strong>Acceptance Criteria:</strong> Accurate collision detection, clear HUD cooldown indicators, and functional MOBA tower aggro switching.</p>
+            </div>
+        </section>
+
+        <section class="phase-card" data-phase="5" id="phase-destruction-feel">
+            <h2><span class="badge">Phase 5</span> Combat Feel (打擊感) & Dynamic Model Destruction</h2>
+            <p><strong>Objective:</strong> Maximize kinetic feedback using FPS camera shake, Hitstops, and mechanical dismemberment.</p>
+
+            <div class="task" data-task="5.1">
+                <h3>Task 5.1: FPS Combat Feel (Hit Marker, Camera Shake, Hitstop)</h3>
+                <p><strong>Action:</strong> 
+                <br>• <strong>Hit Markers:</strong> Display 2D UI crosshair flashes and floating damage numbers upon hit.
+                <br>• <strong>Camera Shake:</strong> Add procedural high-frequency noise to camera orientation when firing heavy weapons or taking damage.
+                <br>• <strong>Hitstop (頓點):</strong> When landing a finishing blow or destroying a Tower, freeze global game execution for 50ms to emphasize kinetic weight.</p>
+                <p><strong>Acceptance Criteria:</strong> Shooting feels punchy, responsive, and visually rewarding, perfectly matching the intensity of the reference zombie game.</p>
+            </div>
+
+            <div class="task" data-task="5.2">
+                <h3>Task 5.2: Dynamic Destruction Meshes (Debris & Scrap Metal)</h3>
+                <p><strong>Action:</strong> When an Enemy Robot or Defense Tower HP reaches 0, hide the main mesh and swap in a "fractured" pre-sliced debris mesh group. Apply explosive radial impulse forces using a lightweight physics engine (or simple kinematic gravity/velocity vectors) so robotic limbs, gears, and armor plates scatter across the battlefield before shrinking and despawning.</p>
+                <p><strong>Acceptance Criteria:</strong> Satisfying mechanical explosions with comic-book "BOOM" 3D billboards and scattering metal parts.</p>
+            </div>
+        </section>
+
+        <section class="directive-box" style="border-color: var(--accent-color); background-color: rgba(0, 234, 255, 0.05);">
+            <h2>🏁 Final Verification Checklist for AI Agent</h2>
+            <p>Before flagging the POC as complete, verify that:</p>
+            <ul>
+                <li>[ ] Drone flight mechanics include tilt/banking and hover physics (no static sliding).</li>
+                <li>[ ] Propellers, turrets, and recoil utilize dynamic procedural animations.</li>
+                <li>[ ] Anime cel-shading and black outlines are consistently applied across all hard-surface sci-fi assets.</li>
+                <li>[ ] Minion waves spawn on timers, follow lanes, and trigger tower aggro correctly.</li>
+                <li>[ ] Robot destruction results in dynamic scattering debris meshes and 2D comic billboard VFX.</li>
+                <li>[ ] All source code comments are written entirely in English.</li>
+            </ul>
+        </section>
+
+    </main>
+</body>
+</html>

@@ -108,7 +108,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.dead, '自爆座機同歸於盡');
   assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺得賞金 +$${Math.round(dr.money - $kill0)}`);
   sim.tick(0.05);
-  assert(!dr.dead, '無人機重生無冷卻(下一 tick 即歸隊)');
+  assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true,客戶端才能感知死亡)');
+  sim.tick(0.05);
+  assert(!dr.dead, '無人機重生無冷卻(跨過一次完整 tick 週期後立即歸隊)');
   assert(UNITS.robot.respawn.base > 0, '機甲重生有冷卻(數值檢查)');
 
   log('— sim:軍械庫(升級隨處買 / 熱兵器限主堡 / 槽位)—');

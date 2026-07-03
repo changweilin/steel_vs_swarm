@@ -1,5 +1,6 @@
 // ============ 無人戰略:鋼鐵與蜂群 — 前端主控 ============
-// 畫面流程:connect(大廳)→ setup(開房前:隊伍規模/場地/環境/選址)
+// 畫面流程:connect(大廳)→ mapbuilder(建地圖:隊伍規模/場地/選址,存入最愛)
+//          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { Net } from './net.js';
 import { SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, WEAPONS, ECON, upgradePrice, CLASS_NAME } from './data.js';
@@ -12,7 +13,7 @@ import { VENUES, venueConfig, loadFavorites, saveFavorite, removeFavorite } from
 import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
-const screens = ['connect', 'setup', 'room', 'loading', 'game'];
+const screens = ['connect', 'mapbuilder', 'openroom', 'room', 'loading', 'game'];
 
 const app = {
   net: null,
@@ -22,6 +23,7 @@ const app = {
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
+  venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
   terrain: null,
   battleCfg: null,
@@ -93,11 +95,10 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-// ================= 開房前:戰場設定(隊伍規模/場地/環境/選址)=================
-function enterSetup() {
-  show('setup');
+// ================= 建立地圖(隊伍規模/場地/選址,建好後存入最愛)=================
+function enterMapBuilder() {
+  show('mapbuilder');
   app.favCfg = null;
-  $('confirmSiteBtn').disabled = true;
   $('saveFavBtn').disabled = true;
 
   if (!app.mapSel) {
@@ -109,7 +110,6 @@ function enterSetup() {
       confirmReady: (cfg) => {
         app.favCfg = null;
         app.venueSel = null;
-        $('confirmSiteBtn').disabled = !cfg;
         $('saveFavBtn').disabled = !cfg;
         if (cfg) {
           $('mapStatus').innerHTML =
@@ -120,7 +120,6 @@ function enterSetup() {
     });
     renderTeamSize();
     renderVenues();
-    renderEnvSelects();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
   $('mapStatus').textContent = '選一個預設場地,或在地圖上點選你的蜂群主堡位置。';
@@ -143,7 +142,6 @@ function setTeamSize(n) {
   app.teamSize = n;
   app.favCfg = null;
   app.mapSel?.setTeamSize(n);
-  $('confirmSiteBtn').disabled = true;
   $('saveFavBtn').disabled = true;
   for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfo();
@@ -168,7 +166,6 @@ function renderVenues() {
     b.onclick = () => selectVenue(v);
     grid.appendChild(b);
   }
-  renderFavs();
 }
 
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
@@ -178,16 +175,16 @@ function selectVenue(v) {
   app.venueSel = v;
   app.favCfg = cfg;
   $('mapStatus').innerHTML =
-    `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可直接建立戰區。` +
+    `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)`;
   $('mapProgressBar').style.width = '100%';
-  $('confirmSiteBtn').disabled = false;
-  $('saveFavBtn').disabled = true;
+  $('saveFavBtn').disabled = false;
 }
 
-function renderFavs() {
+/** 開戰時刻畫面:我的最愛列表(選一個 → 可建立戰區) */
+function renderFavsOpenRoom() {
   const favs = loadFavorites();
-  $('favSection').style.display = favs.length ? '' : 'none';
+  $('favEmptyHint').style.display = favs.length ? 'none' : '';
   const grid = $('favGrid');
   grid.innerHTML = '';
   for (const f of favs) {
@@ -195,22 +192,105 @@ function renderFavs() {
     b.className = 'venue-btn fav';
     b.innerHTML = `⭐ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
     b.onclick = () => {
-      setTeamSize(f.teamSize);
-      app.mapSel.showConfig(f.cfg);   // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
-      app.venueSel = null;
+      app.teamSize = f.teamSize;
       app.favCfg = f.cfg;
-      $('mapStatus').textContent = `⭐ 已載入最愛「${f.name}」(${f.cfg.placeName}),可直接建立戰區。`;
-      $('confirmSiteBtn').disabled = false;
-      $('saveFavBtn').disabled = true;
+      app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
+      for (const el of grid.children) el.classList.remove('on');
+      for (const el of $('venueGridOpen').children) el.classList.remove('on');
+      for (const [i, tb] of [...$('tsRowOpen').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
+      updateTsInfoOpen();
+      b.classList.add('on');
+      $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize},可以開房了。`;
+      $('createRoomBtn').disabled = false;
     };
     const del = document.createElement('span');
     del.className = 'fav-del';
     del.textContent = '✕';
     del.title = '移除最愛';
-    del.onclick = (e) => { e.stopPropagation(); removeFavorite(f.name); renderFavs(); };
+    del.onclick = (e) => {
+      e.stopPropagation();
+      removeFavorite(f.name);
+      if (app.favCfg === f.cfg) { app.favCfg = null; $('createRoomBtn').disabled = true; }
+      renderFavsOpenRoom();
+    };
     b.appendChild(del);
     grid.appendChild(b);
   }
+}
+
+// ================= 開戰時刻(現場選人數 + 預設場地,或挑已存最愛;設定房名/公開性/環境後開房)=================
+function enterOpenRoom() {
+  show('openroom');
+  app.favCfg = null;
+  app.venueSelOpen = null;
+  $('createRoomBtn').disabled = true;
+  $('openRoomStatus').textContent = '選人數 + 場地,或從下面挑一張已存的地圖。';
+  renderTeamSizeOpen();
+  renderVenuesOpen();
+  renderEnvSelects();
+  renderFavsOpenRoom();
+}
+
+function renderTeamSizeOpen() {
+  const row = $('tsRowOpen');
+  row.innerHTML = '';
+  for (let n = TEAM.MIN; n <= TEAM.MAX; n++) {
+    const b = document.createElement('button');
+    b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
+    b.textContent = `${n}v${n}`;
+    b.onclick = () => setTeamSizeOpen(n);
+    row.appendChild(b);
+  }
+  updateTsInfoOpen();
+}
+
+function setTeamSizeOpen(n) {
+  app.teamSize = n;
+  for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
+  updateTsInfoOpen();
+  if (app.venueSelOpen) {
+    // 預設場地選好時,換人數直接即時重算(確定性幾何,瞬間完成)
+    selectVenueOpen(app.venueSelOpen);
+  } else {
+    // 沒有正在用的預設場地(可能剛選了固定 teamSize 的最愛)→ 舊配置的兵線數已跟新人數不符,清掉逼重選
+    app.favCfg = null;
+    for (const el of $('favGrid').children) el.classList.remove('on');
+    $('createRoomBtn').disabled = true;
+    $('openRoomStatus').textContent = '人數已變更,請重新選一個預設場地,或挑對應人數的最愛地圖。';
+  }
+}
+
+function updateTsInfoOpen() {
+  const L = lanesFor(app.teamSize);
+  const size = targetDistFor(L) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+}
+
+function renderVenuesOpen() {
+  const grid = $('venueGridOpen');
+  grid.innerHTML = '';
+  for (const v of VENUES) {
+    const b = document.createElement('button');
+    b.className = 'venue-btn';
+    b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
+    b.title = `地貌:${Object.entries(v.mix).map(([k, f]) => `${{ green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' }[k]} ${Math.round(f * 100)}%`).join('・')}`;
+    b.onclick = () => selectVenueOpen(v);
+    grid.appendChild(b);
+  }
+}
+
+/** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
+function selectVenueOpen(v) {
+  const cfg = venueConfig(v, app.teamSize);
+  app.venueSelOpen = v;
+  app.favCfg = cfg;
+  for (const el of $('venueGridOpen').children) el.classList.remove('on');
+  const idx = VENUES.indexOf(v);
+  if (idx >= 0 && $('venueGridOpen').children[idx]) $('venueGridOpen').children[idx].classList.add('on');
+  for (const el of $('favGrid').children) el.classList.remove('on');
+  $('openRoomStatus').innerHTML =
+    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize} ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`;
+  $('createRoomBtn').disabled = false;
 }
 
 function renderEnvSelects() {
@@ -226,13 +306,34 @@ function renderEnvSelects() {
   fill('envWeather', ENV.weathers, '天氣');
 }
 
-$('confirmSiteBtn')?.addEventListener('click', async () => {
-  const fromFav = !!app.favCfg;
+$('saveFavBtn')?.addEventListener('click', async () => {
   const cfg = app.favCfg || app.mapSel?.buildConfig();
   if (!cfg) return;
-  $('confirmSiteBtn').disabled = true;
-  $('mapStatus').textContent = '鎖定戰場並建立戰區…';
-  if (!fromFav) await app.mapSel.fetchPlaceName(cfg);
+  await app.mapSel.fetchPlaceName(cfg);
+  const name = prompt('地圖名稱:', cfg.placeName)?.trim();
+  if (!name) return;
+  saveFavorite(name, app.teamSize, cfg);
+  toast(`⭐ 已存入最愛:${name}(可到「開戰時刻」選用)`);
+});
+
+$('resetSiteBtn')?.addEventListener('click', () => {
+  app.favCfg = null;
+  app.mapSel?.reset();
+});
+$('backLobbyBtn')?.addEventListener('click', () => {
+  app.favCfg = null;
+  app.mapSel?.reset();
+  show('connect');
+  refreshRooms();
+});
+$('goOpenRoomBtn')?.addEventListener('click', () => enterOpenRoom());
+$('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
+
+$('createRoomBtn')?.addEventListener('click', () => {
+  const cfg = app.favCfg;
+  if (!cfg) return;
+  $('createRoomBtn').disabled = true;
+  $('openRoomStatus').textContent = '建立戰區…';
   cfg.env = {
     season: $('envSeason').value,
     time: $('envTime').value,
@@ -247,25 +348,8 @@ $('confirmSiteBtn')?.addEventListener('click', async () => {
     battleConfig: cfg,
   });
 });
-
-$('saveFavBtn')?.addEventListener('click', async () => {
-  const cfg = app.mapSel?.buildConfig();
-  if (!cfg) return;
-  await app.mapSel.fetchPlaceName(cfg);
-  const name = prompt('最愛場地名稱:', cfg.placeName)?.trim();
-  if (!name) return;
-  saveFavorite(name, app.teamSize, cfg);
-  renderFavs();
-  toast(`⭐ 已存入最愛:${name}`);
-});
-
-$('resetSiteBtn')?.addEventListener('click', () => {
+$('backFromOpenRoomBtn')?.addEventListener('click', () => {
   app.favCfg = null;
-  app.mapSel?.reset();
-});
-$('backLobbyBtn')?.addEventListener('click', () => {
-  app.favCfg = null;
-  app.mapSel?.reset();
   show('connect');
   refreshRooms();
 });
@@ -393,8 +477,8 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide ? `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}` : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵 瞄準 ・ F/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊(瞄準時發射火箭) ・ 右鍵 按住瞄準 ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵 瞄準(彈藥空時改換彈夾) ・ F/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊(瞄準時發射火箭) ・ 右鍵 按住瞄準(彈藥空時改換彈夾) ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
 }
@@ -566,8 +650,8 @@ window.addEventListener('DOMContentLoaded', () => {
     rooms: (m) => renderRooms(m.rooms),
     error: (m) => {
       toast(`⚠️ ${m.msg}`);
-      // 開房被拒(驗證失敗)→ 解鎖確認鈕讓房主重試
-      if (app.phaseShown === 'setup') $('confirmSiteBtn').disabled = !(app.favCfg || app.mapSel?.chosen);
+      // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
+      if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
     },
     info: (m) => toast(m.msg),
     battleConfig: (m) => enterLoading(m.config),
@@ -582,7 +666,8 @@ window.addEventListener('DOMContentLoaded', () => {
     },
   });
 
-  $('createBtn').onclick = () => { myName(); enterSetup(); };
+  $('mapBuilderBtn').onclick = () => { myName(); enterMapBuilder(); };
+  $('openRoomBtn').onclick = () => { myName(); enterOpenRoom(); };
   $('refreshRoomsBtn').onclick = refreshRooms;
   $('joinBtn').onclick = () => {
     const pin = $('joinPin').value.trim();
