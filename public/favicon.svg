@@ -1,13 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#10161d"/>
-  <path d="M8 8 L28 8 L28 28 L8 28 Z" fill="none" stroke="#4fc3f7" stroke-width="3"/>
-  <circle cx="18" cy="18" r="5" fill="#4fc3f7"/>
-  <g stroke="#ffb300" stroke-width="3" fill="none">
-    <circle cx="46" cy="46" r="9"/>
-    <line x1="46" y1="30" x2="46" y2="37"/>
-    <line x1="46" y1="55" x2="46" y2="62"/>
-    <line x1="30" y1="46" x2="37" y2="46"/>
-    <line x1="55" y1="46" x2="62" y2="46"/>
-  </g>
-  <line x1="28" y1="28" x2="37" y2="37" stroke="#7c8a95" stroke-width="2" stroke-dasharray="3 2"/>
+  <rect width="64" height="64" rx="12" fill="#10161d"/>
+  <!-- Left Side: Steel (Blue) Mech Triangle -->
+  <path d="M14 14 L30 32 L14 50 Z" fill="#4fc3f7"/>
+  <path d="M10 18 L10 46" stroke="#17475c" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Right Side: Swarm (Yellow) Drone Wings -->
+  <path d="M34 14 L50 22 L38 32 L34 32 Z" fill="#ffb300"/>
+  <path d="M34 36 L44 41 L34 50 L30 50 Z" fill="#ffb300" opacity="0.8"/>
+  <circle cx="48" cy="38" r="3" fill="#ffea00"/>
 </svg>

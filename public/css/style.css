@@ -48,6 +48,22 @@ body {
 }
 
 /* ---------- 標題 ---------- */
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.game-logo {
+  width: 160px;
+  height: auto;
+  filter: drop-shadow(0 0 15px rgba(79, 195, 247, 0.2)) drop-shadow(0 0 15px rgba(255, 179, 0, 0.2));
+  animation: pulse-logo 4s ease-in-out infinite alternate;
+}
+@keyframes pulse-logo {
+  0% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(79, 195, 247, 0.15)) drop-shadow(0 0 12px rgba(255, 179, 0, 0.15)); }
+  100% { transform: scale(1.02); filter: drop-shadow(0 0 20px rgba(79, 195, 247, 0.35)) drop-shadow(0 0 20px rgba(255, 179, 0, 0.35)); }
+}
 .masthead { text-align: center; z-index: 3; }
 .mast-tag {
   font-family: Orbitron, monospace; font-size: 11px; letter-spacing: 4px;
