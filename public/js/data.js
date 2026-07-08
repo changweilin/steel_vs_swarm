@@ -49,7 +49,63 @@ export const MAPGEO = {
   MAX_OVERLAP: 0.20,
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
+  // 路徑戰術指標(Diablo DRLG 思想:走廊要彎、要有轉角,拒絕一眼看穿的直線)——
+  // 彎曲度 = 路長/兩端直線距;轉角 = 等距取樣後轉向 ≥ TURN_MIN_DEG 的取樣點
+  // (轉角 = 伏擊點/掩體錨點/視線遮斷,伺服器障礙佈設與客戶端選路評分共用)。
+  TACTICS: {
+    SEG_M: 60,             // 轉角偵測等距取樣段長(重取樣,避免 OSRM 密集頂點灌水)
+    TURN_MIN_DEG: 28,      // 視為戰術轉角的最小轉向角
+    MIN_SINUOSITY: 1.12,   // 彎曲度低於此 = 太直,評分重扣(soft gate,仍可選)
+    SINUOSITY_CAP: 1.9,    // 過度繞路不再加分(單程太久拖慢節奏)
+    TURNS_PER_KM_CAP: 3,   // 轉角密度加分上限
+    W_SINU: 0.45, W_TURN: 0.35, W_SEP: 0.20,   // 綜合評分權重:彎曲/轉角/兵線分離
+  },
 };
+
+/**
+ * 折線戰術幾何(公尺平面 [x,z] 陣列):彎曲度 + 轉角沿線距離清單。
+ * 客戶端選路評分(mapSelect)與伺服器障礙佈設(sim._laneTurns)共用同一份判定。
+ */
+export function laneTacticsXZ(pts) {
+  const T = MAPGEO.TACTICS;
+  if (!pts || pts.length < 2) return { total: 0, straight: 1, sinuosity: 1, turns: [], turnsPerKm: 0 };
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) {
+    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  }
+  const total = cum[cum.length - 1];
+  const straight = Math.hypot(pts[pts.length - 1][0] - pts[0][0], pts[pts.length - 1][1] - pts[0][1]) || 1;
+  const at = (d) => {
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  };
+  const turns = [];
+  const minRad = T.TURN_MIN_DEG * Math.PI / 180;
+  let prevHead = null;
+  for (let d = T.SEG_M; d <= total; d += T.SEG_M) {
+    const p0 = at(d - T.SEG_M), p1 = at(d);
+    const head = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+    if (prevHead != null) {
+      let dh = Math.abs(head - prevHead);
+      if (dh > Math.PI) dh = Math.PI * 2 - dh;
+      if (dh >= minRad) turns.push(d - T.SEG_M);
+    }
+    prevHead = head;
+  }
+  return { total, straight, sinuosity: total / straight, turns, turnsPerKm: turns.length / (total / 1000 || 1) };
+}
+
+/** 0~1 路徑戰術評分:太直重扣、過度繞路不加分、兵線越分離越好 */
+export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
+  const T = MAPGEO.TACTICS;
+  let sSinu = Math.max(0, Math.min(1, (sinuosity - 1) / (T.SINUOSITY_CAP - 1)));
+  if (sinuosity < T.MIN_SINUOSITY) sSinu *= 0.35;
+  const sTurn = Math.min(1, (turnsPerKm || 0) / T.TURNS_PER_KM_CAP);
+  const sSep = 1 - Math.min(1, (maxOverlap || 0) / MAPGEO.MAX_OVERLAP);
+  return T.W_SINU * sSinu + T.W_TURN * sTurn + T.W_SEP * sSep;
+}
 
 // ---- 目標類型(武器克制查表:單位種類 → 類別)----
 export const TARGET_CLASS = {
@@ -140,8 +196,10 @@ export const GAME = {
   AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
   LANE_SAFE_M: 45,            // 正規路線走廊半寬;出了走廊 = 非正規路線(地雷 / 防空伏擊)
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
+  // CUT_BIAS/CUT_R:偏向佈在兵線轉角外圍的「切彎捷徑」帶 — 抄直線省時間 = 承擔雷區風險
   MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, LANE_CLEAR: 40, BASE_CLEAR: 150,
-           SEE_M: 30, CLEAR_M: 14 },   // 客戶端:SEE_M 內開始浮現,CLEAR_M 內完全可見
+           SEE_M: 30, CLEAR_M: 14,     // 客戶端:SEE_M 內開始浮現,CLEAR_M 內完全可見
+           CUT_BIAS: 0.5, CUT_R: 70 },
   // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀。
   // 觸發需要射程內有存活的匿蹤防空陣地(aasite)——拔掉陣地 = 打出安全空域。
   AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 400, SPEED: 130, HP: 40 },
@@ -173,6 +231,8 @@ export const FIELD = {
   HAZ_GAP: 30,           // 「牆段」彼此最小間距 = 保證通行縫隙(> 4 台機甲並行)
   HAZ_BASE_CLEAR: 170,   // 主堡淨空
   CLUSTER_MAX: 3,        // 同型障礙連成短牆(Diablo 迷宮牆 + 門的手感)
+  TURN_BIAS: 0.55,       // 障礙/防空陣地錨定在兵線轉角的比例(Diablo:轉角 = 房間/伏擊點)
+  TURN_R: 90,            // 轉角錨定的沿線散布半徑(m)
   AA_SITES_PER_LANE: 3,  // 匿蹤防空陣地 / 兵線
   AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 260, laneMin: 60, laneMax: 240, spacing: 130 },
 };

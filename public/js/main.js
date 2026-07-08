@@ -114,7 +114,9 @@ function enterMapBuilder() {
         if (cfg) {
           $('mapStatus').innerHTML =
             `已選定:兩堡直線 <b>${(cfg.distM / 1000).toFixed(2)} km</b>(門檻 ${(cfg.diagM * 0.8 / 1000).toFixed(2)} km)` +
-            `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
+            `・${cfg.laneCount} 條兵線,最大重合 <b>${(cfg.maxOverlap * 100).toFixed(0)}%</b>` +
+            (cfg.tactics ? `・彎折 <b>×${cfg.tactics.sinuosity.toFixed(2)}</b>・轉角 <b>${cfg.tactics.turnsPerKm.toFixed(1)}/km</b>` : '') +
+            `${cfg.synthetic ? '(含離線模擬路徑)' : ''}`;
         }
       },
     });

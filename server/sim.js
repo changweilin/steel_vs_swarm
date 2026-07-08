@@ -3,7 +3,7 @@
 // 防禦塔與主堡自動迎擊;英雄(無人機/機甲)位置由客戶端回報、
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
-import { SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, vsMult, upgradePrice } from '../public/js/data.js';
+import { SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, vsMult, upgradePrice, laneTacticsXZ } from '../public/js/data.js';
 
 let nextEntId = 1;
 
@@ -71,10 +71,25 @@ export class BattleSim {
       minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
     }
     minX -= 120; maxX += 120; minZ -= 120; maxZ += 120;
+    // 兵線轉角座標:CUT_BIAS 比例的地雷佈在轉角外圍的「切彎捷徑」帶 —
+    // 機甲抄直線切彎省時間 = 承擔雷區風險(限制行動但不封鎖,走廊永遠安全)
+    const turnPts = [];
+    for (let li = 0; li < this.lanes.length; li++) {
+      const cum = this._laneCum(li);
+      for (const d of this._laneTurns(li)) turnPts.push(pointAt(this.lanes[li], cum, d));
+    }
     const want = M.PER_LANE * this.lanes.length;
     for (let tries = 0; tries < want * 30 && this.mines.length < want; tries++) {
-      const x = minX + Math.random() * (maxX - minX);
-      const z = minZ + Math.random() * (maxZ - minZ);
+      let x, z;
+      if (turnPts.length && Math.random() < M.CUT_BIAS) {
+        const [tx, tz] = turnPts[Math.floor(Math.random() * turnPts.length)];
+        const ang = Math.random() * Math.PI * 2;
+        const rr = M.LANE_CLEAR + Math.random() * M.CUT_R;
+        x = tx + Math.cos(ang) * rr; z = tz + Math.sin(ang) * rr;
+      } else {
+        x = minX + Math.random() * (maxX - minX);
+        z = minZ + Math.random() * (maxZ - minZ);
+      }
       if (this._distToLanes(x, z) < M.LANE_CLEAR) continue;       // 兵線走廊淨空
       let nearBase = false;
       for (const side of ['SWARM', 'STEEL']) {
@@ -83,6 +98,25 @@ export class BattleSim {
       }
       if (!nearBase) this.mines.push([x, z, nextEntId++]);
     }
+  }
+
+  /** 兵線轉角(戰術要點)沿線距離清單;與客戶端選路評分共用 laneTacticsXZ 判定 */
+  _laneTurns(li) {
+    this._turnCache ??= [];
+    return (this._turnCache[li] ??= laneTacticsXZ(this.lanes[li]).turns);
+  }
+
+  /**
+   * 兵線上取一個佈設位置 d:轉角優先(Diablo:轉角 = 房間/伏擊點)。
+   * bias 機率錨定在隨機轉角 ±TURN_R,其餘均勻散布;夾在 [lo,hi] 比例區間。
+   */
+  _pickLaneD(li, total, lo, hi, bias) {
+    const turns = this._laneTurns(li);
+    if (turns.length && Math.random() < bias) {
+      const d = turns[Math.floor(Math.random() * turns.length)] + (Math.random() - 0.5) * 2 * FIELD.TURN_R;
+      return Math.max(total * lo, Math.min(total * hi, d));
+    }
+    return total * (lo + Math.random() * (hi - lo));
   }
 
   /** 兵線上距離 d 處的點與單位法線(垂直於路徑方向;障礙沿「路徑邊緣」擺) */
@@ -122,7 +156,8 @@ export class BattleSim {
       const li = Math.floor(Math.random() * this.lanes.length);
       const cum = this._laneCum(li);
       const total = cum[cum.length - 1];
-      const p = this._lanePointNormal(li, total * (0.08 + Math.random() * 0.84));
+      // 轉角優先佈設:過半障礙錨定在兵線彎道(掩體 + 視線遮斷 = 伏擊點),其餘均勻
+      const p = this._lanePointNormal(li, this._pickLaneD(li, total, 0.08, 0.92, F.TURN_BIAS));
       const dir = Math.random() < 0.5 ? -1 : 1;
       const off = F.HAZ_LANE_MIN + (F.HAZ_LANE_MAX - F.HAZ_LANE_MIN) * Math.pow(Math.random(), F.HAZ_EDGE_BIAS);
       const n = 1 + Math.floor(Math.random() * F.CLUSTER_MAX);
@@ -168,7 +203,8 @@ export class BattleSim {
       const li = Math.floor(Math.random() * this.lanes.length);
       const cum = this._laneCum(li);
       const total = cum[cum.length - 1];
-      const p = this._lanePointNormal(li, total * (0.1 + Math.random() * 0.8));
+      // 防空陣地同樣偏向扼守彎道:轉角處視線被掩體遮斷,伏擊飛彈最難預警
+      const p = this._lanePointNormal(li, this._pickLaneD(li, total, 0.1, 0.9, FIELD.TURN_BIAS));
       const dir = Math.random() < 0.5 ? -1 : 1;
       const off = S.laneMin + Math.random() * (S.laneMax - S.laneMin);
       const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;

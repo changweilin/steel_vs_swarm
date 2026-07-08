@@ -53,27 +53,63 @@ function destPoint([lat, lng], bearingDeg, d) {
   ];
 }
 
-/** 貝茲弧線兵線(與 mapSelect.synthLane 同款幾何;side: -1/0/+1 = 下/中/上) */
-function synthLane(a, b, side) {
-  const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+// ---- 決定性亂數(與 biomes.js 同款 mulberry32)----
+// 種子取自端點座標 + 線別:同一組 (a,b,side) 永遠生成同一條兵線,
+// 預設場地維持「預先算好、即選即用」的可重現性(最愛/重連皆一致)。
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * 合成兵線(預設場地 / OSRM 離線備援;side: -1/0/+1 = 下/中/上)。
+ * Diablo DRLG 思想:不再是一眼看穿的單一貝茲弧,而是「側移主脊 + 交錯側擺
+ * via 點」再 Chaikin 平滑的戰術折線 — 保證非直線、有真實轉角
+ * (轉角 = 伺服器障礙/防空/地雷的伏擊錨點),端點精確落在兩堡。
+ * 三條線共用同一組交錯相位 → 同進同退,維持兵線分離度。
+ */
+export function synthLane(a, b, side) {
   const cosLat = Math.cos(a[0] * Math.PI / 180);
   const vx = (b[1] - a[1]) * Math.PI / 180 * R_EARTH * cosLat;
   const vz = (b[0] - a[0]) * Math.PI / 180 * R_EARTH;
   const d = Math.hypot(vx, vz) || 1;
-  const off = d * MAPGEO.LANE_OFFSET_FRAC * side;
   const px = -vz / d, pz = vx / d;                       // 垂直單位向量(公尺系)
-  const c = [
-    mid[0] + off * pz / R_EARTH * 180 / Math.PI,
-    mid[1] + off * px / (R_EARTH * cosLat) * 180 / Math.PI,
+  // 種子不含 side:全部兵線共用同一組側擺相位(同進同退),
+  // 線間距離恆為主脊間距(0.3×D×sin),側擺不會互相吃掉分離度
+  const rnd = mulberry32(
+    (Math.round(a[0] * 1e4) * 31 + Math.round(a[1] * 1e4) * 17
+     + Math.round(b[0] * 1e4) * 7 + Math.round(b[1] * 1e4) * 3) >>> 0,
+  );
+  const latOf = (t, lateral) => [
+    a[0] + (b[0] - a[0]) * t + lateral * pz / R_EARTH * 180 / Math.PI,
+    a[1] + (b[1] - a[1]) * t + lateral * px / (R_EARTH * cosLat) * 180 / Math.PI,
   ];
-  const pts = [];
-  for (let t = 0; t <= 1.0001; t += 1 / 24) {
-    const u = 1 - t;
-    pts.push([
-      u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
-      u * u * a[1] + 2 * u * t * c[1] + t * t * b[1],
-    ]);
+  // via 間距固定 ~400m、側擺振幅與間距成比例:轉角銳度跨地圖尺寸一致,
+  // 平滑後仍保留 ≥ TACTICS.TURN_MIN_DEG 的真實轉角(障礙/地雷的伏擊錨點)
+  const N = Math.max(3, Math.round(d / 400));
+  const spacing = d / (N + 1);
+  const ctrl = [[...a]];
+  for (let i = 1; i <= N; i++) {
+    const t = i / (N + 1);
+    // 主脊:側翼線的固定側移(sin 拱形,端點歸零);交錯側擺製造轉角
+    const spine = d * MAPGEO.LANE_OFFSET_FRAC * side * Math.sin(Math.PI * t);
+    const wiggle = (i % 2 ? 1 : -1) * spacing * (0.32 + rnd() * 0.16);
+    ctrl.push(latOf(t, spine + wiggle));
   }
+  ctrl.push([...b]);
+  // Chaikin 平滑 ×1:去掉尖刺但保留戰術轉角;端點不動
+  const pts = [ctrl[0]];
+  for (let i = 0; i < ctrl.length - 1; i++) {
+    const [x1, y1] = ctrl[i], [x2, y2] = ctrl[i + 1];
+    pts.push([x1 * 0.75 + x2 * 0.25, y1 * 0.75 + y2 * 0.25]);
+    pts.push([x1 * 0.25 + x2 * 0.75, y1 * 0.25 + y2 * 0.75]);
+  }
+  pts.push(ctrl[ctrl.length - 1]);
   return pts;
 }
 
@@ -95,7 +131,7 @@ export function venueConfig(venue, teamSize) {
     lanes,
     laneCount: L,
     sizeM, diagM: sizeM * Math.SQRT2, distM: D,
-    maxOverlap: 0.06,            // 側移貝茲僅端點交會,遠低於 20% 門檻
+    maxOverlap: 0.06,            // 三線同相位側擺、主脊間距 0.3×D,僅端點交會,遠低於 20% 門檻
     synthetic: true, precomputed: true,
     venue: { id: venue.id, name: venue.name, mix: venue.mix },
     placeName: venue.name,

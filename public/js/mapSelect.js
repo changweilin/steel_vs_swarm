@@ -10,7 +10,8 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, TEAM } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, TEAM, laneTacticsXZ, tacticalScore } from './data.js';
+import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
 const R_EARTH = 6371000;
@@ -56,28 +57,20 @@ function overlapRatio(laneA, laneB, origin) {
   return shared / Math.min(ga.size, gb.size);
 }
 
-/** 合成備援路徑(無網路 / OSRM 失敗時):貝茲弧線 */
-function synthLane(a, b, side) {
-  // side: -1 / 0 / +1(下 / 中 / 上)
-  const [mx, mz] = midPoint(a, b);
-  const d = distM(a, b);
-  const off = d * MAPGEO.LANE_OFFSET_FRAC * side;
-  // 垂直於 AB 的單位向量(公尺系),把控制點往側向推出去
-  const [vx, vz] = toMeters(b, a);
-  const len = Math.hypot(vx, vz) || 1;
-  const px = -vz / len, pz = vx / len;
-  const dLat = off * pz / R_EARTH * 180 / Math.PI;
-  const dLng = off * px / (R_EARTH * Math.cos(a[0] * Math.PI / 180)) * 180 / Math.PI;
-  const c = [mx + dLat, mz + dLng];
-  const pts = [];
-  for (let t = 0; t <= 1.0001; t += 1 / 24) {
-    const u = 1 - t;
-    pts.push([
-      u * u * a[0] + 2 * u * t * c[0] + t * t * b[0],
-      u * u * a[1] + 2 * u * t * c[1] + t * t * b[1],
-    ]);
+/** 路徑戰術指標(座標序列 [lat,lng] → 公尺平面後交給共用判定) */
+function laneTactics(coords, origin) {
+  return laneTacticsXZ(coords.map((c) => toMeters(c, origin)));
+}
+
+/** 一組兵線的綜合戰術評分 + 摘要(彎曲度/轉角密度取各線平均) */
+function lanesTactics(lanes, origin, maxOverlap) {
+  let sinu = 0, tpk = 0;
+  for (const lane of lanes) {
+    const t = laneTactics(lane, origin);
+    sinu += t.sinuosity; tpk += t.turnsPerKm;
   }
-  return pts;
+  sinu /= lanes.length; tpk /= lanes.length;
+  return { sinuosity: sinu, turnsPerKm: tpk, score: tacticalScore(sinu, tpk, maxOverlap) };
 }
 
 /** OSRM 路線(座標序列 [lat,lng]);失敗回 null */
@@ -128,7 +121,8 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3) {
   const mid = directRoute || (await osrmRoute([A, B], signal));
   if (!mid) return null;
 
-  // 側翼:逐一加大側移,取「與中路重合率」最低的路線
+  // 側翼:逐一加大側移。分離達標(重合 ≤ 上限)者取戰術評分最高(越彎越好);
+  // 全不達標退而取重合最低 — 分離是硬門檻,非直線是偏好。
   const flank = async (side) => {
     let best = null;
     for (const frac of OFFSET_FRACS) {
@@ -136,8 +130,14 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3) {
       const r = await osrmRoute([A, viaOf(side, frac), B], signal);
       if (!r) continue;
       const ov = overlapRatio(r.coords, mid.coords, A);
-      if (!best || ov < best.ov) best = { ...r, ov };
-      if (ov <= MAPGEO.MAX_OVERLAP * 0.9) break;   // 夠分離就收
+      const tac = laneTactics(r.coords, A);
+      const sep = ov <= MAPGEO.MAX_OVERLAP;
+      const score = tacticalScore(tac.sinuosity, tac.turnsPerKm, ov);
+      const better = !best
+        || (sep && !best.sep) || (sep === best.sep && (sep ? score > best.score : ov < best.ov));
+      if (better) best = { ...r, ov, sep, score };
+      // 夠分離又夠彎才提前收手,否則試完剩餘側移找更彎的路
+      if (sep && ov <= MAPGEO.MAX_OVERLAP * 0.9 && tac.sinuosity >= MAPGEO.TACTICS.MIN_SINUOSITY) break;
     }
     return best || { coords: synthLane(A, B, side), dist: d * 1.2, synth: true };
   };
@@ -314,9 +314,16 @@ export class MapSelect {
       if (!ok) continue;
 
       const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist, bearing };
+      cand.tactics = lanesTactics(lanes, A, maxOverlap);
       this.candidates.push(cand);
       this._drawCandidate(cand, this.candidates.length - 1);
       if (this.candidates.length >= MAPGEO.MAX_CANDIDATES) break;
+    }
+    // 依戰術評分排序(彎曲走廊 + 轉角伏擊點優先)並依名次重繪
+    if (this.candidates.length > 1) {
+      this.candidates.sort((a, b) => (b.tactics?.score || 0) - (a.tactics?.score || 0));
+      this._clearLayers('cand');
+      this.candidates.forEach((c, i) => this._drawCandidate(c, i));
     }
 
     // 完全連不上 OSRM(離線)→ 全合成兵線,遊戲照樣能開
@@ -330,6 +337,7 @@ export class MapSelect {
           for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A));
         }
         const cand = { latlng: B, lanes, distM: distM(A, B), sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
+        cand.tactics = lanesTactics(lanes, A, maxOverlap);
         this.candidates.push(cand);
         this._drawCandidate(cand, this.candidates.length - 1);
       }
@@ -356,7 +364,8 @@ export class MapSelect {
     const mk = this._addLayer(L.circleMarker(cand.latlng, {
       radius: 12, color: '#4fc3f7', fillColor: '#0d2d3d', fillOpacity: 0.85, weight: 3, className: 'cand-pulse',
     }).bindTooltip(
-      `⚙ 推薦點 ${idx + 1} — 距離 ${(cand.distM / 1000).toFixed(2)}km / 重合 ${(cand.maxOverlap * 100).toFixed(0)}%`,
+      `⚙ 推薦點 ${idx + 1} — 距離 ${(cand.distM / 1000).toFixed(2)}km / 重合 ${(cand.maxOverlap * 100).toFixed(0)}%`
+      + (cand.tactics ? ` / 彎折 ×${cand.tactics.sinuosity.toFixed(2)}・轉角 ${cand.tactics.turnsPerKm.toFixed(1)}/km` : ''),
       { direction: 'top' },
     ), 'cand');
     mk.on('click', (ev) => {
@@ -426,6 +435,7 @@ export class MapSelect {
       diagM: this.chosen.diagM,
       distM: this.chosen.distM,
       maxOverlap: this.chosen.maxOverlap,
+      tactics: this.chosen.tactics || null,
       synthetic: this.chosen.synthetic,
       venue: this.venue ? { id: this.venue.id, name: this.venue.name, mix: this.venue.mix } : null,
       placeName: this.venue?.name || `${c[0].toFixed(4)}, ${c[1].toFixed(4)}`,
