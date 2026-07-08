@@ -5,6 +5,7 @@
 // 粒子手法參考 mapping_elf/weatherFx3D.js(程序生成、無外部資產)。
 import * as THREE from 'three';
 import { ENV } from './data.js';
+import { setCelSun } from './toon.js';
 
 export function envLabel(env) {
   if (!env) return '';
@@ -108,6 +109,7 @@ export function applyEnvironment(scene, terrain, env) {
   const az = env?.time === 'dusk' ? 0.9 : 0.4;   // 黃昏太陽壓低偏西
   sun.position.set(span * Math.cos(az), span * T.elev, span * Math.sin(az) * 0.5);
   scene.add(sun);
+  setCelSun(sun.position);   // 賽璐璐硬邊高光帶跟著本場太陽走
 
   let particles = null;
   if (W.particle) {

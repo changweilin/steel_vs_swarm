@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { SIDES } from './data.js';
-import { toonMat, toonify } from './hazards.js';
+import { toonMat, toonify, outlinify } from './toon.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
 export const MODEL_MANIFEST = Object.assign({
@@ -105,9 +105,13 @@ function teamRing(side, radius) {
 }
 
 function mat(color, opts = {}) {
-  const { metalness, roughness, ...rest } = opts;   // 日漫賽璐璐:PBR 參數不適用 toon
-  return toonMat(color, rest);
+  // 賽璐璐:PBR 參數不適用 toon;高金屬度 → 漫畫硬邊高光帶(celMetal)
+  const { metalness, roughness, ...rest } = opts;
+  return toonMat(color, { ...rest, celMetal: (metalness ?? 0) >= 0.5 });
 }
+
+/** 描邊寬度:隨單位尺寸走,遠看近看都 ≈ 2~3px 漫畫勾線 */
+const outlineW = (target) => Math.min(0.45, Math.max(0.05, target * 0.016));
 
 // ---------- 程式生成備援模型 ----------
 /** 四旋翼武裝無人機(蜂群英雄) */
@@ -317,6 +321,41 @@ function buildBaseFallback(side) {
   return g;
 }
 
+/**
+ * 防禦塔程序砲塔頭(計畫 Task 2.2:procedural aiming)。
+ * 結構:yaw 樞軸 → pitch 樞軸 → 雙管砲;game.js 每幀平滑轉向目標,
+ * 俯仰限制 -30°~+60°(機械關節極限)。砲管沿 +z,pitch.rotation.x 負值抬升。
+ */
+function buildTowerTurret(side) {
+  const accent = new THREE.Color(SIDES[side].color);
+  const yaw = new THREE.Group();
+  const head = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 4.0), mat(0x2b3239, { metalness: 0.7 }));
+  head.position.y = 0.4;
+  yaw.add(head);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.7, 0.9, 8), mat(0x39424b));
+  cap.position.y = 1.5;
+  yaw.add(cap);
+  const pitch = new THREE.Group();
+  pitch.position.set(0, 0.55, 1.1);
+  for (const sx of [-0.55, 0.55]) {
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 4.6, 8), mat(0x14171a, { metalness: 0.9 }));
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(sx, 0, 2.0);
+    pitch.add(barrel);
+    const brake = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.5, 8), mat(0x0d0f11));
+    brake.rotation.x = Math.PI / 2;
+    brake.position.set(sx, 0, 4.1);
+    pitch.add(brake);
+  }
+  const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+  sensor.position.set(0, 0.9, 1.6);
+  pitch.add(sensor);
+  yaw.add(pitch);
+  yaw.userData.pitch = pitch;
+  outlinify(yaw, 0.1);
+  return yaw;
+}
+
 const FALLBACK = {
   'hero:drone': (side) => buildDrone(side),
   'hero:robot': (side) => buildDrone(side), // mech GLB 失敗時暫用無人機骨架換色
@@ -352,8 +391,9 @@ export function makeUnit(kind, side, { ring = true } = {}) {
 
   if (entry) {
     const model = SkeletonUtils.clone(entry.scene);
-    toonify(model);   // GLB 也重新渲染成日漫 2.5D(保留貼圖/顏色)
+    toonify(model);   // GLB 也重新渲染成賽璐璐(保留貼圖/顏色)
     fitToHeight(model, target);
+    outlinify(model, outlineW(target));   // 反轉外殼漫畫描邊(骨骼動畫共用骨架)
     // skinned mesh 的包圍球以綁定姿勢計算,經縮放+動畫後會被視錐剔除
     // 導致模型「消失」,一律關閉 frustum culling
     model.traverse((o) => { if (o.isSkinnedMesh || o.isMesh) o.frustumCulled = false; });
@@ -368,8 +408,17 @@ export function makeUnit(kind, side, { ring = true } = {}) {
   } else {
     const built = (FALLBACK[kind] || FALLBACK['creep:apc'])(side);
     fitToHeight(built, target);
+    outlinify(built, outlineW(target));
     g.add(built);
     if (built.userData.spin) g.userData.spin = built.userData.spin;
+  }
+
+  // 防禦塔:頂部加程序砲塔頭(每幀追蹤目標;見 game.js _aimTurret)
+  if (kind === 'tower') {
+    const turret = buildTowerTurret(side);
+    turret.position.y = target * 0.92;
+    g.add(turret);
+    g.userData.turret = turret;
   }
 
   if (ring) g.add(teamRing(side, Math.max(2.2, target * 0.55)));

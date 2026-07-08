@@ -16,44 +16,9 @@ export function mulberry32(seed) {
   };
 }
 
-// ---- 日漫 cel-shading:4 階漸層貼圖(全專案共用,一張就好)----
-let _grad = null;
-export function toonGradient() {
-  if (_grad) return _grad;
-  const data = new Uint8Array([96, 160, 218, 255]);   // 暗部/中間調/亮部/高光 4 階
-  _grad = new THREE.DataTexture(data, 4, 1, THREE.RedFormat);
-  _grad.minFilter = THREE.NearestFilter;
-  _grad.magFilter = THREE.NearestFilter;
-  _grad.needsUpdate = true;
-  return _grad;
-}
-
-/** 賽璐璐材質(取代 MeshStandardMaterial 的共用入口) */
-export function toonMat(color, opts = {}) {
-  return new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...opts });
-}
-
-/** 把載入的 GLB(或任何子樹)整棵換成 toon 材質,保留貼圖/顏色/透明度 */
-export function toonify(root) {
-  root.traverse((o) => {
-    if (!o.isMesh || !o.material) return;
-    const swap = (m) => {
-      if (m.isMeshToonMaterial) return m;
-      const t = new THREE.MeshToonMaterial({
-        color: m.color ? m.color.clone() : new THREE.Color(0xffffff),
-        map: m.map || null,
-        gradientMap: toonGradient(),
-        transparent: m.transparent || false,
-        opacity: m.opacity ?? 1,
-        side: m.side ?? THREE.FrontSide,
-      });
-      if (m.emissive) { t.emissive = m.emissive.clone(); t.emissiveIntensity = m.emissiveIntensity ?? 1; }
-      return t;
-    };
-    o.material = Array.isArray(o.material) ? o.material.map(swap) : swap(o.material);
-  });
-  return root;
-}
+// ---- 賽璐璐核心已抽到 toon.js(3 階 ramp / 描邊 / 硬邊高光),此處 re-export 保持相容 ----
+import { toonGradient, toonMat, toonify, outlinify } from './toon.js';
+export { toonGradient, toonMat, toonify };
 
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -299,6 +264,7 @@ export function buildHazard(kind, seed, r = 8) {
   const g = new THREE.Group();
   const rnd = mulberry32((seed * 2654435761) >>> 0);
   (BUILDERS[kind] || BUILDERS.rockfall)(g, r, rnd);
+  outlinify(g, 0.07);   // 漫畫描邊(透明件:水面/偽裝網/火舌 自動跳過)
   g.userData.kind = kind;
   return g;
 }
@@ -339,6 +305,7 @@ export function buildLoot(isAmmo) {
   halo.rotation.x = -Math.PI / 2;
   halo.position.y = 0.15;
   g.add(halo);
+  outlinify(g, 0.05);
   g.userData.loot = true;
   return g;
 }

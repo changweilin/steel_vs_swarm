@@ -5,11 +5,13 @@
 //  - 射擊 raycast 命中回報、範圍技落點回報
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
-import { SIDES, UNITS, GAME, WEAPONS, ECON, HAZARDS } from './data.js';
+import { SIDES, UNITS, GAME, WEAPONS, ECON, HAZARDS, vsMult } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
 import { applyEnvironment } from './environment.js';
-import { buildHazard, buildMineBump, buildLoot, toonMat } from './hazards.js';
+import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
+import { toonMat, outlinify, updateCelLight } from './toon.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield } from './vfx.js';
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
@@ -40,6 +42,7 @@ export class BattleClient {
     this.lastPosSend = 0;
     this.mixers = new Set();
     this.spinners = new Set();
+    this.shields = new Set();        // 塔/主堡能量護盾(hex shader,受擊閃亮)
     this.disposed = false;
     this._snapQueue = null;
     // 物理:後座力(視角踢)、鏡頭震動(trauma)、FPV 側傾
@@ -140,8 +143,9 @@ export class BattleClient {
     if (!this.side) return;
     this.scene.add(this.camera);   // 相機要在場景樹裡,座艙子物件才會渲染
     const mk = (geo, color, opts = {}) => {
-      const { metalness, roughness, ...rest } = opts;   // 座艙同樣走日漫 toon
-      return new THREE.Mesh(geo, toonMat(color, rest));
+      // 座艙同樣走賽璐璐;高金屬度 → 漫畫硬邊高光帶
+      const { metalness, roughness, ...rest } = opts;
+      return new THREE.Mesh(geo, toonMat(color, { ...rest, celMetal: (metalness ?? 0) >= 0.5 }));
     };
     const accent = new THREE.Color(SIDES[this.side].color);
     const g = new THREE.Group();
@@ -150,15 +154,16 @@ export class BattleClient {
 
     if (this.isDrone) {
       // 四旋翼 FPV:前二臂 + 旋翼在畫面上緣、機砲吊艙在下緣
-      const nose = mk(new THREE.BoxGeometry(0.5, 0.16, 0.5), 0x22262b);
+      // (賽璐璐:座艙用中灰藍軍武色,暗部才不會塌成純黑剪影)
+      const nose = mk(new THREE.BoxGeometry(0.5, 0.16, 0.5), 0x4b545e);
       nose.position.set(0, -0.42, -0.78);
       g.add(nose);
       for (const sx of [-1, 1]) {
-        const arm = mk(new THREE.BoxGeometry(0.75, 0.05, 0.08), 0x3a4148);
+        const arm = mk(new THREE.BoxGeometry(0.75, 0.05, 0.08), 0x5b6772);
         arm.position.set(sx * 0.48, 0.30, -0.72);
         arm.rotation.y = sx * -0.6;
         g.add(arm);
-        const hub = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 8), 0x14171a);
+        const hub = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 8), 0x39414a);
         hub.position.set(sx * 0.72, 0.33, -0.92);
         g.add(hub);
         const prop = mk(new THREE.BoxGeometry(0.62, 0.015, 0.055), 0x9aa4ad, { transparent: true, opacity: 0.55 });
@@ -166,25 +171,25 @@ export class BattleClient {
         g.add(prop);
         this.cockpitSpin.push(prop);
       }
-      const pod = mk(new THREE.BoxGeometry(0.16, 0.14, 0.4), 0x191d21);
+      const pod = mk(new THREE.BoxGeometry(0.16, 0.14, 0.4), 0x3d454e);
       pod.position.set(0.2, -0.34, -0.7);
       this.gunGroup.add(pod);
-      const barrel = mk(new THREE.CylinderGeometry(0.03, 0.035, 0.75, 8), 0x111418, { metalness: 0.85 });
+      const barrel = mk(new THREE.CylinderGeometry(0.03, 0.035, 0.75, 8), 0x30373f, { metalness: 0.85 });
       barrel.rotation.x = Math.PI / 2;
       barrel.position.set(0.2, -0.32, -1.15);
       this.gunGroup.add(barrel);
       this._muzzle = new THREE.Vector3(0.2, -0.32, -1.55);
     } else {
-      // 機甲駕駛艙:座艙框 + 儀表台 + 右側重機槍 + 左肩護甲
-      const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x232a31);
+      // 機甲駕駛艙:座艙框 + 儀表台 + 右側重機槍 + 左肩護甲(中灰藍,避免暗部全黑)
+      const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x46505b);
       dash.position.set(0, -0.52, -0.85);
       dash.rotation.x = 0.5;
       g.add(dash);
-      const topStrut = mk(new THREE.BoxGeometry(1.6, 0.1, 0.3), 0x2b333b);
+      const topStrut = mk(new THREE.BoxGeometry(1.6, 0.1, 0.3), 0x4d5865);
       topStrut.position.set(0, 0.52, -0.8);
       g.add(topStrut);
       for (const sx of [-1, 1]) {
-        const pillar = mk(new THREE.BoxGeometry(0.09, 1.15, 0.2), 0x2b333b);
+        const pillar = mk(new THREE.BoxGeometry(0.09, 1.15, 0.2), 0x4d5865);
         pillar.position.set(sx * 0.78, 0, -0.78);
         pillar.rotation.z = sx * -0.12;
         g.add(pillar);
@@ -192,18 +197,18 @@ export class BattleClient {
       const light = mk(new THREE.BoxGeometry(0.5, 0.04, 0.05), accent, { emissive: accent, emissiveIntensity: 0.9 });
       light.position.set(0, -0.4, -0.72);
       g.add(light);
-      const shoulder = mk(new THREE.BoxGeometry(0.5, 0.28, 0.7), 0x39424b);
+      const shoulder = mk(new THREE.BoxGeometry(0.5, 0.28, 0.7), 0x5a6673);
       shoulder.position.set(-0.72, -0.34, -1.0);
       shoulder.rotation.z = 0.28;
       g.add(shoulder);
-      const recv = mk(new THREE.BoxGeometry(0.24, 0.26, 0.85), 0x1d2226);
+      const recv = mk(new THREE.BoxGeometry(0.24, 0.26, 0.85), 0x3c444d);
       recv.position.set(0.5, -0.36, -1.0);
       this.gunGroup.add(recv);
-      const barrel = mk(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 10), 0x111418, { metalness: 0.85 });
+      const barrel = mk(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 10), 0x30373f, { metalness: 0.85 });
       barrel.rotation.x = Math.PI / 2;
       barrel.position.set(0.5, -0.32, -1.85);
       this.gunGroup.add(barrel);
-      const brake = mk(new THREE.CylinderGeometry(0.075, 0.075, 0.16, 10), 0x0d0f11);
+      const brake = mk(new THREE.CylinderGeometry(0.075, 0.075, 0.16, 10), 0x272c31);
       brake.rotation.x = Math.PI / 2;
       brake.position.set(0.5, -0.32, -2.35);
       this.gunGroup.add(brake);
@@ -218,6 +223,7 @@ export class BattleClient {
     this._gunBaseZ = this.gunGroup.position.z;
 
     g.add(this.gunGroup);
+    outlinify(g, 0.012);   // 座艙近距離,細描邊即可(≈2px)
     this.cockpit = g;
     this.camera.add(g);
   }
@@ -340,6 +346,8 @@ export class BattleClient {
       seen.add(e.id);
       let ent = this.ents.get(e.id);
       if (!ent) ent = this._spawnEnt(e);
+      // 護盾受擊回饋:hp 下降的那個快照閃亮 + 波紋
+      if (ent.shield && e.hp < ent.hp) ent.shield.userData.hit();
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
@@ -428,6 +436,13 @@ export class BattleClient {
       isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli',
       isStatic: e.k === 'tower' || e.k === 'base',
     };
+    // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
+    if (e.k === 'tower' || e.k === 'base') {
+      const shield = makeShield(e.k === 'base' ? 30 : 11, SIDES[e.s].color, e.k === 'base' ? 1.5 : 2.3);
+      group.add(shield);
+      ent.shield = shield;
+      this.shields.add(shield);
+    }
     group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
     this.ents.set(e.id, ent);
     return ent;
@@ -436,6 +451,7 @@ export class BattleClient {
   _removeEnt(id, ent) {
     this.scene.remove(ent.mesh);
     if (ent.mixer) this.mixers.delete(ent.mixer);
+    if (ent.shield) this.shields.delete(ent.shield);
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
     this.ents.delete(id);
@@ -477,8 +493,9 @@ export class BattleClient {
       if (!ms) {
         const mesh = new THREE.Mesh(
           new THREE.ConeGeometry(0.35, 2.2, 6),
-          new THREE.MeshStandardMaterial({ color: 0xd8dde2, emissive: 0xff6633, emissiveIntensity: 0.7 }),
+          toonMat(0xd8dde2, { emissive: 0xff6633, emissiveIntensity: 0.7, celMetal: true }),
         );
+        outlinify(mesh, 0.05);
         this.scene.add(mesh);
         ms = { mesh, tgt: new THREE.Vector3(), prev: new THREE.Vector3() };
         const y0 = this.terrain.heightAt(s.x, -s.z) + s.y;
@@ -597,9 +614,19 @@ export class BattleClient {
     if (ev.e === 'die') {
       const [x, z] = [ev.x, -ev.z];
       const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'howitzer' || ev.kind === 'heli';
+      const hero = ev.kind === 'drone' || ev.kind === 'robot';
       const ey = this.terrain.heightAt(x, z) + 3;
       this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
       this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
+      // 漫畫式破壞回饋:機械碎片噴散 + BOOM 字卡 + hitstop(頓點強調重量感)
+      debrisBurst(this.scene, this.effects, x, ey + (big ? 6 : 1), z,
+        { big, accent: ev.side ? SIDES[ev.side].color : 0xd8b04a });
+      if (big || hero) {
+        comicPop(this.scene, this.effects, x, ey + (ev.kind === 'base' ? 30 : ev.kind === 'tower' ? 20 : 8), z,
+          { big: true, hue: hero ? 2 : 18 });
+        this._hitstop = Math.max(this._hitstop || 0,
+          ev.kind === 'base' ? 0.12 : ev.kind === 'tower' ? 0.08 : 0.05);
+      }
       if (ev.kind === 'aasite') {
         this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
       } else if (HAZARDS[ev.kind]) {
@@ -615,6 +642,8 @@ export class BattleClient {
       const [x, z] = [ev.x, -ev.z];
       const y = this.terrain.heightAt(x, z) + (ev.y != null ? ev.y : 2);   // 防空飛彈在空中炸
       this._explosion(x, y, z, ev.r * 0.8, ev.sam ? 0xff7744 : 0xffaa33);
+      // AoE:放射衝擊環擴張到傷害半徑邊界(貼地),空中炸點只留星爆
+      if ((ev.y ?? 0) < 12) shockRing(this.scene, this.effects, x, this.terrain.heightAt(x, z), z, ev.r, 0xffd27a);
       this._applyBlast(x, y, z, ev.r);
       if (ev.mine && ev.tpid === this.youId) this.hud.feed?.('💣 你踩到地雷了!非正規路線佈有雷區!');
       if (ev.mid != null) {   // 觸發的地雷:移除微凸起
@@ -830,9 +859,16 @@ export class BattleClient {
     if (hitMissile != null) {
       this.net.send({ t: 'hitMissile', id: hitMissile, w: id });
       this.hud.hitmark?.();
+      starburst(this.scene, this.effects, hitPoint.x, hitPoint.y, hitPoint.z, 3, 0xfff2b8);
     } else if (hitEnt) {
       this.net.send({ t: 'hit', id: hitEnt.id, w: id });
       this.hud.hitmark?.();
+      // 命中回饋:星爆火花 + 浮動傷害數字(本地估算:武器 × 克制 × 升級;伺服器仍是權威)
+      starburst(this.scene, this.effects, hitPoint.x, hitPoint.y, hitPoint.z, 2.6, 0xfff2b8);
+      const mult = vsMult(def, hitEnt.kind);
+      const est = Math.round(def.dmg * mult * (1 + (this.upg.dmg || 0) * ECON.UPGRADES.dmg.step));
+      damageNumber(this.scene, this.effects,
+        hitPoint.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
     }
   }
 
@@ -904,8 +940,9 @@ export class BattleClient {
   _bombMesh(color) {
     const m = new THREE.Mesh(
       new THREE.SphereGeometry(0.5, 8, 6),
-      new THREE.MeshStandardMaterial({ color, emissive: 0xff5522, emissiveIntensity: 0.4 }),
+      toonMat(color, { emissive: 0xff5522, emissiveIntensity: 0.4, celMetal: true }),
     );
+    outlinify(m, 0.05);
     this.scene.add(m);
     return m;
   }
@@ -945,6 +982,8 @@ export class BattleClient {
   }
 
   _explosion(x, y, z, r, color) {
+    // 漫畫星爆閃光:150ms 硬邊放大淡出(所有爆炸共通的第一拍)
+    starburst(this.scene, this.effects, x, y, z, r * 1.7, color);
     const n = 26;
     const pos = new Float32Array(n * 3);
     const vels = [];
@@ -983,6 +1022,7 @@ export class BattleClient {
       e.fade?.(e.obj, f, dt);
       if (e.ttl <= 0) {
         this.scene.remove(e.obj);
+        e.dispose?.();   // 一次性 canvas 貼圖(傷害數字)釋放 GPU 資源
         this.effects.splice(i, 1);
       }
     }
@@ -1109,12 +1149,53 @@ export class BattleClient {
   }
 
   // ---------------- 單位插值 ----------------
-  _updateEnts(dt) {
+  /**
+   * 防禦塔砲塔追蹤(計畫 Task 2.2):0.25s 挑一次最近敵目標,
+   * 每幀平滑轉向(不瞬移),俯仰夾在 -30°~+60° 機械極限;無目標慢速掃描。
+   */
+  _aimTurret(ent, dt, now) {
+    const tur = ent.mesh.userData.turret;
+    if (!tur) return;
+    if (!ent._aimNext || now >= ent._aimNext) {
+      ent._aimNext = now + 0.25;
+      let best = null, bestD = UNITS.tower.sam.range;   // 追蹤半徑同防空飛彈射程
+      const tp = ent.mesh.position;
+      for (const o of this.ents.values()) {
+        if (!o.side || o.side === ent.side || o.neutral || o.isStatic || o.dead) continue;
+        if (!o.mesh.visible && !o.isSelf) continue;
+        const p = o.mesh.position;
+        const d = Math.hypot(p.x - tp.x, p.z - tp.z);
+        if (d < bestD) { bestD = d; best = o; }
+      }
+      ent._aimTarget = best;
+    }
+    const t = ent._aimTarget;
+    let wantYaw, wantPitch;
+    if (t && this.ents.has(t.id)) {
+      const p = t.isSelf ? this.pos : t.mesh.position;
+      const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
+      wantYaw = Math.atan2(dx, dz);
+      const turY = ent.mesh.position.y + tur.position.y;
+      wantPitch = Math.atan2((p.y + 2) - turY, Math.hypot(dx, dz));
+    } else {
+      wantYaw = tur.rotation.y + dt * 2;   // 警戒掃描
+      wantPitch = 0;
+    }
+    wantPitch = Math.max(-Math.PI / 6, Math.min(Math.PI / 3, wantPitch));
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    tur.rotation.y += wrap(wantYaw - tur.rotation.y) * Math.min(1, dt * 4);
+    const pit = tur.userData.pitch;
+    pit.rotation.x += (-wantPitch - pit.rotation.x) * Math.min(1, dt * 4);
+  }
+
+  _updateEnts(dt, now) {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) { ent.mesh.position.copy(this.pos); continue; }
       if (ent.isStatic) {
         const y = this.terrain.heightAt(ent.tgt.x, ent.tgt.z);
         ent.mesh.position.set(ent.tgt.x, y, ent.tgt.z);
+        if (ent.kind === 'tower') this._aimTurret(ent, dt, now);
+        if (ent.bar) ent.bar.lookAt(this.camera.position);
         continue;
       }
       const cur = ent.mesh.position;
@@ -1219,19 +1300,23 @@ export class BattleClient {
   _loop() {
     if (this.disposed) return;
     this._raf = requestAnimationFrame(() => this._loop());
-    const dt = Math.min(0.1, this.clock.getDelta());
+    let dt = Math.min(0.1, this.clock.getDelta());
     const now = performance.now() / 1000;
+
+    // Hitstop(頓點):拆塔/擊殺瞬間全域凍結 50~120ms 強調打擊重量,期間照常渲染
+    if (this._hitstop > 0) { this._hitstop -= dt; dt = 0; }
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
 
     this._tickWeapons(now);
     this._updatePlayer(dt, now);
-    this._updateEnts(dt);
+    this._updateEnts(dt, now);
     this._updateProjectiles(dt);
     this._updateMissiles(dt);
     this._updateMines(now);
     this._updateLoot(dt, now);
     this._updateEffects(dt);
+    for (const s of this.shields) s.userData.update(dt);
     this.envFx?.update(dt, this.camera);
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);
@@ -1259,6 +1344,7 @@ export class BattleClient {
       this.cockpit.visible = !this.dead;
     }
     this._drawMinimap(now);
+    updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
     this.renderer.render(this.scene, this.camera);
   }
 
