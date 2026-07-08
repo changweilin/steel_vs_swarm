@@ -3,7 +3,10 @@
 //          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { Net } from './net.js';
-import { SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, WEAPONS, ECON, upgradePrice, CLASS_NAME } from './data.js';
+import {
+  SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, ECON, upgradePrice,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG,
+} from './data.js';
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
 import { buildBiomes } from './biomes.js';
@@ -386,7 +389,8 @@ function renderRoom() {
       const div = document.createElement('div');
       div.className = 'slot' + (c ? ' filled' : '') + (c?.id === app.youId ? ' me' : '') + (c?.isBot ? ' bot' : '');
       if (c) {
-        div.innerHTML = `${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)} <span class="slot-ready">${c.ready ? '✅' : '⏳'}</span>${c.connected === false ? ' 🔌' : ''}`;
+        const chTag = c.ch && CHARACTERS[c.ch] ? ` <span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : ' <span class="slot-char dim">🎲隨機</span>';
+        div.innerHTML = `${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)}${chTag} <span class="slot-ready">${c.ready ? '✅' : '⏳'}</span>${c.connected === false ? ' 🔌' : ''}`;
         if (c.isBot && app.isHost) {
           const del = document.createElement('span');
           del.className = 'bot-del';
@@ -409,6 +413,8 @@ function renderRoom() {
     }
   }
 
+  renderCharPick(me);
+
   const specs = lb.clients.filter((c) => c.mode === 'spectator');
   $('specList').textContent = specs.length ? `👁️ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
 
@@ -426,6 +432,48 @@ function renderRoom() {
   $('roomHint').textContent = app.isHost
     ? (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備完成」後,由你開戰。')
     : '等待房主開戰…';
+}
+
+// ================= 選角(入座後出現;不選 = 開戰隨機)=================
+function charTip(id) {
+  const c = CHARACTERS[id];
+  const l = heroWeapon(id, 'light', 1), h = heroWeapon(id, 'heavy', 1);
+  const s = heroAbility(id, 'skill', 1), u = heroAbility(id, 'ult', 1);
+  return `${c.machine}
+輕:${l.name}(${c.light.rw})傷害 ${Math.round(l.dmg)} ・ 射程 ${Math.round(l.range)}m${l.crit ? ` ・ 爆擊 ${Math.round(l.crit * 100)}%` : ''}
+重:${h.name}(${c.heavy.rw})傷害 ${Math.round(h.dmg)} ・ 射程 ${Math.round(h.range)}m ・ CD ${h.reload}s${h.pen ? ` ・ 破甲 ${h.pen}` : ''}
+Q:${s.name} — ${s.desc}
+E:${u.name} — ${u.desc}
+護甲 ${c.mods.armor} ・ 護盾×${c.mods.sp ?? 1} ・ 速度×${c.mods.speed ?? 1}`;
+}
+
+function renderCharPick(me) {
+  const sec = $('charSection');
+  if (!me || me.mode !== 'player' || !me.side || app.lobby.phase !== 'room') {
+    sec.style.display = 'none';
+    return;
+  }
+  sec.style.display = '';
+  const grid = $('charGrid');
+  grid.innerHTML = '';
+  const rnd = document.createElement('button');
+  rnd.className = 'char-btn' + (me.ch ? '' : ' on');
+  rnd.innerHTML = '🎲<br>隨機';
+  rnd.onclick = () => app.net.send({ t: 'pickChar', ch: null });
+  grid.appendChild(rnd);
+  for (const id of charsOf(me.side)) {
+    const c = CHARACTERS[id];
+    const b = document.createElement('button');
+    b.className = 'char-btn' + (me.ch === id ? ' on' : '');
+    b.innerHTML = `<b>${esc(c.code)}</b><br><span class="char-name">${esc(c.name)}</span>`;
+    b.title = charTip(id);
+    b.onclick = () => { app.net.send({ t: 'pickChar', ch: id }); $('charInfo').textContent = `${c.code} ・ ${charTip(id).split('\n')[0]}`; };
+    grid.appendChild(b);
+  }
+  const cur = me.ch && CHARACTERS[me.ch];
+  $('charInfo').innerHTML = cur
+    ? `<b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}<br>${esc(charTip(me.ch).split('\n').slice(1).join(' ・ '))}`
+    : '未選角色:開戰時將隨機指派一名(滑鼠停留可看角色簡歷)。';
 }
 
 // ================= 載入 + 開戰 =================
@@ -462,12 +510,15 @@ function enterGame() {
   if (app.battle || !app.terrain) return;
   show('game');
   const hud = makeHud();
+  const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
+  const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
   app.battle = new BattleClient({
     canvas: $('gameCanvas'),
     minimapCanvas: $('minimap'),
     cfg: app.battleCfg,
     side: app.mySide,
     youId: app.youId,
+    ch: myCh,
     net: app.net,
     terrain: app.terrain,
     hud,
@@ -476,11 +527,14 @@ function enterGame() {
   // 陣營樣式 & 操作說明
   document.body.dataset.side = app.mySide || 'SPEC';
   const isDrone = app.mySide && SIDES[app.mySide].hero === 'drone';
-  $('hudSideName').textContent = app.mySide ? `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}` : '觀戰模式';
+  const chData = myCh && CHARACTERS[myCh];
+  $('hudSideName').textContent = app.mySide
+    ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
+    : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 射擊 ・ 右鍵 瞄準(彈藥空時改換彈夾) ・ F/高速撞擊 自爆 ・ 1/2 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 射擊(瞄準時發射火箭) ・ 右鍵 按住瞄準(彈藥空時改換彈夾) ・ 1/2/3 切武器 ・ R 填彈 ・ B 商店 ・ 偏離兵線小心地雷!')
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆 ・ R 填彈 ・ B 升級 ・ 子彈有彈道下墜,遠距請抬高準星!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
 }
@@ -490,24 +544,38 @@ function makeHud() {
   return {
     self: (hp, max, cd, w) => {
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
-      $('hpText').textContent = `${Math.max(0, Math.round(hp))} / ${max}`;
+      $('hpText').textContent = `裝甲 ${Math.max(0, Math.round(hp))} / ${max}`;
       if (w) {
-        // 主武器:彈藥 / 填彈
-        $('wpnName').textContent = `[${w.slot}] ${w.name}`;
-        $('wpnAmmo').textContent = w.reload > 0 ? `填彈 ${w.reload.toFixed(1)}s` : `${w.ammo} / ${w.mag}`;
-        $('wpnAmmo').classList.toggle('reloading', w.reload > 0);
-        $('wpnAmmo').classList.toggle('low', w.reload <= 0 && w.ammo <= w.mag * 0.25);
-        // 副武器:火箭彈數(瞄準+左鍵發射)/ 自爆(F 鍵)
-        const alt = w.alt;
-        const altText = alt.label
-          ? `${alt.name}(F/撞擊)`
-          : (alt.reload > 0 ? `${alt.name} 填彈 ${alt.reload.toFixed(1)}s` : `${alt.name} ×${alt.ammo}(瞄準+左鍵)`);
-        $('burstName').textContent = altText;
+        // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(回堡/招式才能修)
+        $('spBar').style.width = `${Math.max(0, w.sp / w.msp * 100)}%`;
+        $('spText').textContent = `護盾 ${Math.max(0, Math.round(w.sp))} / ${w.msp}`;
+        // 電力(MP)
+        $('mpBar').style.width = `${Math.max(0, w.mp / w.mm * 100)}%`;
+        $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}`;
+        // 輕武器:彈藥 / 填彈(瞄準中 HUD 高亮重武器)
+        const l = w.light;
+        $('wpnName').textContent = `${l.name} Lv.${l.lvl}${w.emp > 0 ? ' ⚡離線' : ''}`;
+        $('wpnAmmo').textContent = l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
+        $('wpnAmmo').classList.toggle('reloading', l.reload > 0);
+        $('wpnAmmo').classList.toggle('low', l.reload <= 0 && l.ammo <= l.mag * 0.25);
+        // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示
+        const hv = w.heavy;
+        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${w.bomb ? '(另有 F 自爆)' : ''}`;
+        // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
+        const abEl = (box, nameEl, cdEl2, a) => {
+          $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
+          $(cdEl2).textContent = a.lvl === 0 ? '' : a.cd > 0 ? `${a.cd.toFixed(0)}s` : `${a.mp}MP`;
+          $(box).classList.toggle('ready', a.ready);
+          $(box).classList.toggle('locked', a.lvl === 0);
+        };
+        abEl('abSkill', 'abSkillName', 'abSkillCd', w.skill);
+        abEl('abUlt', 'abUltName', 'abUltCd', w.ult);
         $('moneyText').textContent = Math.floor(w.money);
-        $('shopHint').textContent = w.atBase ? 'B 開軍械庫' : '升級隨處可買(B)・熱兵器需回主堡';
+        $('knText').textContent = w.kn;
+        $('shopHint').textContent = 'B 升級(擊殺+金錢)';
       }
       const cdEl = $('burstCd');
-      cdEl.textContent = cd > 0 ? `${cd.toFixed(1)}s` : '就緒';
+      cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
       cdEl.classList.toggle('ready', cd <= 0);
     },
     shop: (open, st) => renderShop(open, st),
@@ -563,12 +631,12 @@ function makeHud() {
   };
 }
 
-// ================= 主堡軍械庫(B 鍵開關;升級隨處可買,熱兵器需在主堡)=================
+// ================= 升級工坊(B 鍵開關;招式升級 = 擊殺數 + 金錢,隨處可買)=================
 function renderShop(open, st) {
   const ov = $('shopOverlay');
   ov.style.display = open ? '' : 'none';
   if (!open || !st) return;
-  $('shopMoney').textContent = `💰 ${Math.floor(st.money)}`;
+  $('shopMoney').textContent = `💰 ${Math.floor(st.money)} ・ ☠ ${st.kn} 擊殺`;
   const box = $('shopItems');
   box.innerHTML = '';
   const row = (html, price, enabled, onBuy, note = '') => {
@@ -589,23 +657,45 @@ function renderShop(open, st) {
     d.textContent = t;
     box.appendChild(d);
   };
-  head('⬆️ 升級(隨處可買,立即生效)');
+  const c = st.ch && CHARACTERS[st.ch];
+  if (c) {
+    head(`🎖 招式升級 —「${c.code}」${c.machine}(每招三階;需擊殺數 + 金錢)`);
+    const KEY = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
+    for (const slot of ['light', 'heavy', 'skill', 'ult']) {
+      const lvl = st.ab[slot] || 0;
+      const isWpn = slot === 'light' || slot === 'heavy';
+      const name = c[slot].name;
+      const full = lvl >= 3;
+      const needK = full ? null : PROG[slot].kills[lvl];
+      const price = full ? null : PROG[slot].cost[lvl];
+      const kOk = !full && st.kn >= needK;
+      // 下一階數值預覽
+      let nextInfo = '';
+      if (!full) {
+        if (isWpn) {
+          const nw = heroWeapon(st.ch, slot, lvl + 1);
+          nextInfo = `下一階:傷害 ${Math.round(nw.dmg)} ・ 彈夾 ${nw.mag}${nw.pen ? ` ・ 破甲 ${nw.pen}` : ''}`;
+        } else {
+          const na = heroAbility(st.ch, slot, lvl + 1);
+          nextInfo = `下一階:CD ${na.cd}s ・ ${na.mp}MP${na.dmg ? ` ・ 傷害 ${na.dmg}` : ''}${na.heal ? ` ・ 修復 ${na.heal}` : ''}${na.dur ? ` ・ ${na.dur}s` : ''}`;
+        }
+      }
+      const desc = isWpn ? c[slot].rw : c[slot].desc;
+      row(
+        `<b>${name}</b> <span class="tag dim">${PROG[slot].name}・${KEY[slot]}</span> Lv.${lvl}/3 <span class="dim">${desc}</span>`,
+        price, kOk && st.money >= price, () => st.buy(`ab:${slot}`),
+        full ? '已滿階'
+          : `${kOk ? '✅' : '☠'} 需 ${needK} 擊殺(目前 ${st.kn})${lvl === 0 && !isWpn ? ' ・ 解鎖後按 ' + KEY[slot] + ' 施放' : ''}${nextInfo ? ' ・ ' + nextInfo : ''}`,
+      );
+    }
+  }
+  head('⬆️ 通用強化(隨處可買,立即生效)');
   for (const [id, up] of Object.entries(ECON.UPGRADES)) {
     const lvl = st.upg[id] || 0;
     const full = lvl >= up.max;
     const price = full ? null : upgradePrice(up, lvl);
     row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
       price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '');
-  }
-  head(`🔫 熱兵器(${st.items.length}/${st.slots} 槽${st.atBase ? '' : ' ・ 需回主堡補給圈'})`);
-  for (const [id, wd] of Object.entries(WEAPONS)) {
-    if (!wd.price) continue;
-    const owned = st.items.includes(id);
-    const vs = Object.entries(wd.vs).filter(([, m]) => m > 1)
-      .map(([k, m]) => `${CLASS_NAME[k]}×${m}`).join(' ');
-    const enabled = !owned && st.atBase && st.items.length < st.slots && st.money >= wd.price;
-    row(`<b>${wd.name}</b> <span class="tag dim">${wd.tag}</span> <span class="dim">傷害 ${wd.dmg} ・ 彈夾 ${wd.mag} ・ ${vs}</span>`,
-      owned ? null : wd.price, enabled, () => st.buy(id), owned ? '已擁有' : '');
   }
 }
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));

@@ -1,9 +1,12 @@
-// 端對端測試:sim 直測(地雷/彈夾/克制/自爆/商店/防空伏擊)
-//            → 開房前選圖 → 建房(含隊伍規模/環境)→ 選陣營(N 席)
-//            → 準備 → 開戰載入 → 快照 → 命中 → 經濟購買 → 勝負 → 回房保留地圖
+// 端對端測試:sim 直測(地雷/彈夾/克制/自爆/角色招式/雙層HP/防空伏擊)
+//            → 開房前選圖 → 建房(含隊伍規模/環境)→ 選陣營(N 席)→ 選角
+//            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 勝負 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
-import { UNITS, WEAPONS, ECON, GAME, FIELD, HAZARDS, AFFIXES } from '../public/js/data.js';
+import {
+  UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul,
+} from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
@@ -67,39 +70,72 @@ function fakeBattleConfig(L = 3) {
 }
 
 // ================= sim 直測(不經 WebSocket,確定性驗證新機制)=================
+log('— sim:角色系統(24 角 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
+{
+  assert(charsOf('SWARM').length === 12 && charsOf('STEEL').length === 12, '雙陣營各 12 名角色');
+  let dataOk = true, rangeOk = true, tierOk = true;
+  for (const id of Object.keys(CHARACTERS)) {
+    for (const slot of ['light', 'heavy']) {
+      for (let lvl = 1; lvl <= 3; lvl++) {
+        const w = heroWeapon(id, slot, lvl);
+        if (!w || !(w.dmg > 0) || !(w.range > 0) || !(w.reload > 0) || !(w.mag > 0)) dataOk = false;
+      }
+      if (heroWeapon(id, slot, 3).dmg <= heroWeapon(id, slot, 1).dmg) tierOk = false;
+    }
+    for (const slot of ['skill', 'ult']) {
+      for (let lvl = 1; lvl <= 3; lvl++) {
+        const a = heroAbility(id, slot, lvl);
+        if (!a || !(a.cd > 0) || !(a.mp > 0)) dataOk = false;
+      }
+    }
+    // #INC-104:e2e 從 y=250 高空垂直射擊 → 輕武器英雄射程 ×1.25 必須 > 250
+    if (heroWeapon(id, 'light', 1).range * 1.25 <= 250) rangeOk = false;
+  }
+  assert(dataOk, '24 角 × 4 招 × 3 階資料完整(傷害/射程/CD/MP 皆為正值)');
+  assert(tierOk, '三階升級傷害遞增');
+  assert(rangeOk, '全部輕武器英雄射程 ×1.25 > 250(高空射擊測試相容,#INC-104)');
+  const wn = heroWeapon('t01', 'light', 1, false), wh = heroWeapon('t01', 'light', 1, true);
+  assert(Math.abs(wh.range / wn.range - HEROIC.range) < 1e-9 && Math.abs(wh.dmg / wn.dmg - HEROIC.dmg) < 1e-9,
+    `玩家英雄同型武器:射程 ×${HEROIC.range}、威力 ×${HEROIC.dmg}(vs NPC 基準)`);
+}
+
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 {
   const sim = new BattleSim(fakeBattleConfig(1));
   assert(sim.mines.length >= 20, `地雷 ${sim.mines.length} 顆(目標 ${GAME.MINES.PER_LANE}/線)`);
   assert(sim.mines.every(([x, z]) => sim._distToLanes(x, z) >= GAME.MINES.LANE_CLEAR), '雷區避開兵線走廊');
-  const rb = sim.addHero('STEEL', 'p_r');
+  const rb = sim.addHero('STEEL', 'p_r', 't01');   // 冬將軍(輕武器無爆擊 → 傷害確定性)
   const nMines = sim.mines.length;
   [rb.x, rb.z] = sim.mines[0];
   sim.tick(0.125);
-  assert(rb.hp < rb.maxHp && sim.mines.length === nMines - 1,
-    `機甲踩雷受創(${rb.maxHp} → ${Math.round(rb.hp)},雷被消耗)`);
+  assert(rb.sp < rb.maxSp && sim.mines.length === nMines - 1,
+    `機甲踩雷受創(護盾 ${rb.maxSp} → ${Math.round(rb.sp)},雷被消耗)`);
   assert(sim.events.some((e) => e.e === 'boom' && e.mine && e.tpid === 'p_r'), '地雷爆炸事件帶 tpid');
   assert(sim.events.some((e) => e.e === 'boom' && e.mine && e.mid != null), '地雷爆炸事件帶 mid(客戶端移除微凸起)');
   assert(sim.fieldPayload().mines.every((m) => m.length === 3), 'fieldPayload 地雷格式 [x,z,id]');
 
-  log('— sim:武器克制(rgun vs 肉體 ×1.3)+ 彈夾上限 —');
+  log('— sim:武器克制 × 護甲減免 + 彈夾上限 —');
+  const wl = heroWeapon('t01', 'light', 1);
   const dummy = sim._add({ kind: 'soldier', side: 'SWARM', x: rb.x + 10, z: rb.z, hp: UNITS.soldier.hp });
   sim.t += 1;   // 越過射速下限
   sim.heroHit('p_r', dummy.id);
-  assert(Math.abs((UNITS.soldier.hp - dummy.hp) - 26 * 1.3) < 0.5,
-    `克制傷害 ${(UNITS.soldier.hp - dummy.hp).toFixed(1)}(= 26 × 肉體 1.3)`);
+  const expSoldier = wl.dmg * 1.3 * armorMul(UNITS.soldier.armor, wl.pen);
+  assert(Math.abs((UNITS.soldier.hp - dummy.hp) - expSoldier) < 0.5,
+    `克制傷害 ${(UNITS.soldier.hp - dummy.hp).toFixed(1)}(= ${wl.dmg} × 肉體 1.3 × 護甲減免)`);
   sim.ents.delete(dummy.id);   // 測試假人沒有 lane,tick 前先移除
   const tw = [...sim.ents.values()].find((e) => e.kind === 'tower' && e.side === 'SWARM');
   rb.x = tw.x + 30; rb.z = tw.z;
   rb.ammo = {}; rb.fireAt = {}; rb.reloadUntil = {};   // 重置彈藥計數
   const hp0t = tw.hp;
-  for (let i = 0; i < 60; i++) { sim.t += 0.16; sim.heroHit('p_r', tw.id); }
+  const shots = wl.mag + 10;   // 填彈完成前打完(只吃得進一個彈夾)
+  for (let i = 0; i < shots; i++) { sim.t += 0.16; sim.heroHit('p_r', tw.id); }
   const magDmg = hp0t - tw.hp;
-  assert(Math.abs(magDmg - 48 * 26 * 0.6) < 1,
-    `60 連發只吃進一個彈夾 48 發 × 建築 0.6(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
+  const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
+  assert(Math.abs(magDmg - expMag) < 1,
+    `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
 
   log('— sim:無人機重型炸彈自爆 + 無冷卻重生 —');
-  const dr = sim.addHero('SWARM', 'p_d');
+  const dr = sim.addHero('SWARM', 'p_d', 's01');
   const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 6, z: dr.z, hp: UNITS.soldier.hp });
   dr.y = 4;
   const $kill0 = dr.money;
@@ -107,24 +143,52 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(!sim.ents.has(victim.id), '自爆(240 × 肉體 1.5)炸死近旁敵兵');
   assert(dr.dead, '自爆座機同歸於盡');
   assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺得賞金 +$${Math.round(dr.money - $kill0)}`);
+  assert(dr.kn >= 1, `擊殺數入帳(kn=${dr.kn},招式解鎖門檻用)`);
   sim.tick(0.05);
   assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true,客戶端才能感知死亡)');
   sim.tick(0.05);
   assert(!dr.dead, '無人機重生無冷卻(跨過一次完整 tick 週期後立即歸隊)');
   assert(UNITS.robot.respawn.base > 0, '機甲重生有冷卻(數值檢查)');
 
-  log('— sim:軍械庫(升級隨處買 / 熱兵器限主堡 / 槽位)—');
-  dr.money = 1000;
-  assert(sim.buy('p_d', 'railgun') === null && dr.items.includes('railgun') && dr.money === 600,
-    '主堡購入磁軌狙擊砲($400)');
-  assert(/已擁有/.test(sim.buy('p_d', 'railgun') || ''), '重複購買被拒');
-  assert(/槽/.test(sim.buy('p_d', 'flak') || ''), '超出武器槽被拒(無人機 1 槽)');
-  assert(sim.buy('p_d', 'dmg') === null && dr.upg.dmg === 1, '火力升級 Lv.1(隨處可買)');
-  const rb2 = sim.addHero('STEEL', 'p_r2');
-  rb2.money = 999; rb2.x += 400;
-  assert(/主堡/.test(sim.buy('p_r2', 'flak') || ''), '離開主堡買熱兵器被拒');
-  assert(sim.buy('p_r2', 'hull') === null && rb2.maxHp > UNITS.robot.hp,
-    `裝甲升級隨處可買(HP 上限 ${UNITS.robot.hp} → ${rb2.maxHp})`);
+  log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');
+  dr.x = sim.basePos.SWARM[0] + 500; dr.z = sim.basePos.SWARM[1];   // 先遠離主堡補血圈
+  dr.sp = 0; dr.hp = Math.round(dr.maxHp * 0.6);
+  const hpNow = dr.hp;
+  dr.lastHitAt = sim.t;
+  sim.tick(0.125);
+  assert(dr.sp === 0, '戰鬥中(剛受擊)護盾不回復');
+  dr.lastHitAt = sim.t - VITALS.OOC_S - 1;
+  sim.tick(0.5);
+  assert(dr.sp > 0, `脫戰 ${VITALS.OOC_S}s 後護盾自然回復(sp=${Math.round(dr.sp)})`);
+  assert(dr.hp === hpNow, '裝甲在主堡補血圈外不回復(只能回堡或治療招式)');
+  [dr.x, dr.z] = sim.basePos.SWARM;
+  sim.tick(0.5);
+  assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
+  assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
+
+  log('— sim:招式養成(擊殺數解鎖 + 金錢購買 + CD + 電力)—');
+  dr.money = 9999; dr.kn = 0;
+  assert(/擊殺數不足/.test(sim.buy('p_d', 'ab:skill') || ''), '擊殺數不足 → 解鎖小招被拒');
+  dr.kn = PROG.skill.kills[0];
+  assert(sim.buy('p_d', 'ab:skill') === null && dr.abil.skill === 1, `${PROG.skill.kills[0]} 擊殺 + $${PROG.skill.cost[0]} → 小招解鎖`);
+  dr.kn = PROG.light.kills[1];
+  assert(sim.buy('p_d', 'ab:light') === null && dr.abil.light === 2, '輕武器升 Lv.2(擊殺+金錢)');
+  const dmgL2 = heroWeapon('s01', 'light', 2).dmg;
+  assert(dmgL2 > heroWeapon('s01', 'light', 1).dmg, `升階後傷害提升(${heroWeapon('s01', 'light', 1).dmg} → ${dmgL2})`);
+  dr.mp = dr.maxMp;
+  const A1 = heroAbility('s01', 'skill', 1);
+  const mp0 = dr.mp;
+  sim.heroCast('p_d', 'skill', dr.x, dr.z);
+  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === A1.mp, `施放小招:CD ${A1.cd}s、電力 -${A1.mp}MP`);
+  const mp1 = dr.mp;
+  sim.heroCast('p_d', 'skill', dr.x, dr.z);
+  assert(dr.mp === mp1, 'CD 中重複施放被拒(電力未扣)');
+  assert(dr.mods.length > 0, '增益類小招掛上 mods(蜂群協奏)');
+  const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
+  rb2.money = 999;
+  assert(sim.buy('p_r2', 'hull') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
+    `裝甲強化隨處可買(HP 上限 → ${rb2.maxHp})`);
+  assert(/沒有這項商品/.test(sim.buy('p_r2', 'railgun') || ''), '舊制軍械庫武器已下架(輕重武器外無其他配置)');
 
   log('— sim:非正規路線防空伏擊(需射程內有存活陣地)+ 飛彈可破壞 —');
   const site0 = [...sim.ents.values()].find((e) => e.kind === 'aasite');
@@ -228,22 +292,22 @@ log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
   const loot = sim.loots[0];
   const isAmmo = !!loot.ammo, isAffix = !!loot.af;
   const $1 = rb.money;
-  rb.ammo.rgun = 5;                       // 造一個「半彈夾」狀態驗證補彈
+  rb.ammo.light = 5;                       // 造一個「半彈夾」狀態驗證補彈
   rb.x = loot.x; rb.z = loot.z; rb.y = 0;
   sim.tick(0.05);
   assert(sim.loots.length === 0, `戰場物資被拾取(${isAmmo ? '彈藥補給' : isAffix ? '詞綴強化' : '現金'})`);
-  if (isAmmo) assert(rb.ammo.rgun == null, '彈藥補給清空計數 = 下次開火滿彈夾');
+  if (isAmmo) assert(rb.ammo.light == null, '彈藥補給清空計數 = 下次開火滿彈夾');
   else if (isAffix) assert(rb.buffs[loot.af] > sim.t, `詞綴強化生效(${AFFIXES[loot.af].name})`);
   else assert(rb.money > $1, `現金物資入帳 +$${Math.round(rb.money - $1)}`);
   assert(sim.events.some((e) => e.e === 'loot' && e.pid === 'hz_r'), 'loot 事件帶 pid');
 
-  // 火場 DoT:低空/地面才吃,高空免疫
+  // 火場 DoT:低空/地面才吃(先扣護盾),高空免疫
   const fire = sim._add({ kind: 'fire', side: null, neutral: true, haz: true, inv: true, x: rb.x + 300, z: rb.z + 300, sc: 1, hp: 1 });
   sim._fires.push(fire);
   rb.x = fire.x; rb.z = fire.z;
-  const hpF = rb.hp;
+  const vitF = rb.sp + rb.hp;
   for (let i = 0; i < 8; i++) sim.tick(0.125);
-  assert(hpF - rb.hp > HAZARDS.fire.dot * 0.8, `火場灼傷 ${Math.round(hpF - rb.hp)}/秒`);
+  assert(vitF - (rb.sp + rb.hp) > HAZARDS.fire.dot * 0.8, `火場灼傷 ${Math.round(vitF - (rb.sp + rb.hp))}/秒(先扣護盾)`);
   // 高空免疫灼傷(先拔光防空陣地,避免伏擊飛彈干擾判定)
   for (const s of [...sim.ents.values()]) if (s.kind === 'aasite') sim.ents.delete(s.id);
   sim.missiles.length = 0;
@@ -275,18 +339,21 @@ log('— sim:TreasureClass 分層 + 詞綴強化 + 偵察中繼站 + 連通性�
   sim.loots = [];
 
   // 詞綴(伺服器結算):淬火軍械縮短填彈、複合裝甲減傷、快照帶 bf 倒數
-  const rb = sim.addHero('STEEL', 'af_r');
+  const rb = sim.addHero('STEEL', 'af_r', 't01');
+  const wl2 = heroWeapon('t01', 'light', 1);
   rb.buffs.tempered = sim.t + 999;
-  rb.ammo.rgun = 5;
-  sim.heroReload('af_r', 'rgun');
-  const rl = rb.reloadUntil.rgun - sim.t;
-  assert(Math.abs(rl - WEAPONS.rgun.reload * AFFIXES.tempered.reload) < 1e-6,
-    `淬火軍械:填彈 ${rl.toFixed(2)}s(${WEAPONS.rgun.reload}s × ${AFFIXES.tempered.reload})`);
+  rb.ammo.light = 5;
+  sim.heroReload('af_r', 'light');
+  const rl = rb.reloadUntil.light - sim.t;
+  assert(Math.abs(rl - wl2.reload * AFFIXES.tempered.reload) < 1e-6,
+    `淬火軍械:填彈 ${rl.toFixed(2)}s(${wl2.reload}s × ${AFFIXES.tempered.reload})`);
   rb.buffs.hardened = sim.t + 999;
+  rb.sp = 0;   // 清空護盾,直接驗裝甲層公式
   const hp0 = rb.hp;
   sim._damage(rb, 100, null);
-  assert(Math.abs((hp0 - rb.hp) - 100 * AFFIXES.hardened.dmgTaken) < 1e-6,
-    `複合裝甲:100 傷害實吃 ${(hp0 - rb.hp).toFixed(0)}`);
+  const expArmor = 100 * AFFIXES.hardened.dmgTaken * armorMul(rb.armor);
+  assert(Math.abs((hp0 - rb.hp) - expArmor) < 0.5,
+    `複合裝甲 × 護甲值:100 傷害實吃 ${(hp0 - rb.hp).toFixed(1)}(減傷 ${AFFIXES.hardened.dmgTaken} × 護甲 ${rb.armor})`);
   assert(sim.snapshotFor('STEEL').ents.find((e) => e.pid === 'af_r').bf?.length === 2, '快照帶詞綴倒數(bf)');
 
   // 偵察中繼站:每線 1 座、走廊之外(要冒險才吃得到)、佔用 → 視野脈衝 → 用過即毀
@@ -374,6 +441,17 @@ await guest.wait((c) => c.msgs.find((m) => m.t === 'error' && /已滿/.test(m.ms
 assert(true, '陣營滿員(1 席)再搶被拒絕');
 guest.send({ t: 'pickSide', side: 'STEEL' });
 
+log('— 選角(角色綁陣營;不選 = 開戰隨機)—');
+host.send({ t: 'pickChar', ch: 't01' });   // 蜂群玩家選鋼鐵角色 → 拒絕
+await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /陣營不符/.test(m.msg)));
+assert(true, '選敵陣營角色被拒絕');
+host.send({ t: 'pickChar', ch: 's02' });   // 鐵匠(重武器溫壓火箭:反建築,後面拆堡用)
+await host.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 's02');
+assert(true, `host 選角「${CHARACTERS.s02.code}」(lobby 同步)`);
+guest.send({ t: 'pickChar', ch: 't04' });
+await guest.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 't04');
+assert(true, `guest 選角「${CHARACTERS.t04.code}」`);
+
 log('— 滿房拒收第三位玩家(2N=2)—');
 const third = await client('third');
 third.send({ t: 'joinRoom', pin, name: '第三者', mode: 'player' });
@@ -405,7 +483,13 @@ assert(towers.length === 4, `防禦塔 ×4(1 線 × 2 位置 × 2 方;實際 ${t
 assert(heroes.length === 2, `英雄 ×2(${heroes.map((h) => h.k).join(',')})`);
 const myHero = snap.ents.find((h) => h.pid === host.sync.youId);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
-assert(typeof myHero.$ === 'number' && Array.isArray(myHero.it), `英雄快照帶金錢/武器欄($${myHero.$})`);
+assert(typeof myHero.$ === 'number' && myHero.ab && typeof myHero.kn === 'number',
+  `英雄快照帶金錢/招式階級/擊殺數($${myHero.$}・ab=${JSON.stringify(myHero.ab)})`);
+assert(myHero.ch === 's02', `快照帶角色 id(ch=${myHero.ch},客戶端渲染專屬機體)`);
+assert(myHero.sp != null && myHero.msp > 0 && myHero.mp != null && myHero.mm > 0,
+  `快照帶護盾/電力(sp=${myHero.sp}/${myHero.msp}・mp=${myHero.mp}/${myHero.mm})`);
+const botAssigned = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.ch);
+assert(botAssigned.length === heroes.length, '所有英雄(含未選角者)開戰時都有角色(默認隨機)');
 
 log('— 危險區:field 訊息 + 快照帶中立障礙 —');
 const fieldMsg = host.msgs.find((m) => m.t === 'field');
@@ -449,15 +533,27 @@ if (t3) {
   await new Promise((r) => setTimeout(r, 400));
   const nowT = host.snaps.at(-1).ents.find((e) => e.id === t3.id);
   const dmgDone = before - (nowT ? nowT.hp : 0);
-  assert(dmgDone < 16 * 10, `50 連發只吃進 ${dmgDone} 傷害(限速生效)`);
+  const wLight = heroWeapon('s02', 'light', 1);
+  const cap = wLight.dmg * 1.3 * (wLight.critX ?? 1.6) * 10;   // 遠小於 50 發全吃
+  assert(dmgDone < cap, `50 連發只吃進 ${Math.round(dmgDone)} 傷害 < ${Math.round(cap)}(限速生效)`);
 }
 
-log('— 無人機右鍵 = 重型炸彈原地自爆(死亡後連按無效)—');
+log('— 重武器 CD(瞄準 + 著彈回報;CD 中連發被拒)—');
+host.send({ t: 'pos', x: target.x, y: 250, z: target.z, ry: 0 });   // 回到著彈點正上方(射程內)
+const boomsBefore = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
+host.send({ t: 'aim', on: true });
+await new Promise((r) => setTimeout(r, 200));
 host.send({ t: 'burst', x: target.x, z: target.z });
 host.send({ t: 'burst', x: target.x, z: target.z });
+await new Promise((r) => setTimeout(r, 400));
+host.send({ t: 'aim', on: false });
+const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
+assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
+
+log('— 無人機自爆(F 鍵;死亡後連按無效)—');
+host.send({ t: 'detonate' });
+host.send({ t: 'detonate' });
 await new Promise((r) => setTimeout(r, 300));
-const booms = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom');
-assert(booms.length === 1, `連按兩次只爆一次(自爆後座機已毀;實際 ${booms.length})`);
 const selfKill = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'die' && e.kind === 'drone');
 assert(!!selfKill, '自爆擊毀自身座機(同歸於盡)');
 await host.wait((c) => {
@@ -490,7 +586,7 @@ await guest2.wait((c) => c.sync);
 assert(guest2.sync.lobby.clients.some((x) => x.name === '鋼鐵上校' && x.connected), '用 token 認回原座位');
 assert(guest2.battleConfig != null, '重連後補收 battleConfig');
 
-log('— 經濟:回主堡等資金 → 購入攻城榴彈砲(反建築 ×2.2)—');
+log('— 經濟:回主堡等資金 → 通用強化(火力升級隨處可買)—');
 const swarmBase = snap.ents.find((e) => e.k === 'base' && e.s === 'SWARM');
 const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z: swarmBase.z, ry: 0 }), 200);
 const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId);
@@ -499,18 +595,18 @@ const richSnap = await host.wait((c) => {
   return me && me.$ >= 400 ? me : null;
 }, 180000);
 assert(richSnap.$ >= 400, `擊殺 + 被動收入累積資金 $${richSnap.$}`);
-host.send({ t: 'buy', item: 'siege' });
-await host.wait((c) => meOf(c)?.it?.includes('siege'), 5000);
+host.send({ t: 'buy', item: 'dmg' });
+await host.wait((c) => (meOf(c)?.up?.dmg || 0) >= 1, 5000);
 clearInterval(homeIv);
-assert(true, '主堡軍械庫購入攻城榴彈砲(快照 it 同步)');
+assert(true, '火力強化 Lv.1(快照 up 同步)');
 
-log('— 勝負(反建築武器高空拆堡)—');
+log('— 勝負(重武器溫壓火箭高空拆堡:反建築 ×2.0 + 破甲)—');
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
-host.send({ t: 'aim', on: true });   // 攻城榴彈砲需瞄準模式才能開火
 const t0 = Date.now();
 const iv = setInterval(() => {
   host.send({ t: 'pos', x: steelBase.x, y: 250, z: steelBase.z, ry: 0 });
-  host.send({ t: 'hit', id: steelBase.id, w: 'siege' });
+  host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
+  host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
 }, 300);
 const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 240000);
 clearInterval(iv);

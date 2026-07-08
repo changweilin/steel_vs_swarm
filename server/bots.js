@@ -1,14 +1,17 @@
 // ============ 電腦玩家(伺服器端英雄 AI)============
 // 每個 bot 操控一位英雄(無人機/機甲),與人類玩家共用 sim 的英雄規則:
-// 傷害查表、射速/射程/冷卻全由 sim 把關(botFire / heroBurst)。
+// 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, vsMult } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
-const RETREAT_HP = 0.32;                    // 低於 32% 血撤退
+const RETREAT_HP = 0.32;                    // 低於 32% 裝甲撤退
 const RESUME_HP = 0.85;                     // 回血到 85% 再出擊
+
+// 消費優先序:先解鎖小招/大招,再升武器,再通用強化(sim.buy 會擋擊殺數/資金不足)
+const BUY_ORDER = ['ab:skill', 'ab:ult', 'ab:light', 'ab:heavy', 'dmg', 'hull'];
 
 export class BotBrain {
   /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線 */
@@ -24,6 +27,9 @@ export class BotBrain {
     this._cum = cumLen(sim.lanes[this.lane]);
   }
 
+  /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
+  _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
+
   update(dt) {
     const sim = this.sim;
     const h = sim.heroes.get(this.pid);
@@ -35,14 +41,19 @@ export class BotBrain {
     if (this.state !== 'RETREAT' && frac < RETREAT_HP) this.state = 'RETREAT';
     if (this.state === 'RETREAT' && frac >= RESUME_HP) { this.state = 'PUSH'; this.prog = 0; }
 
-    const target = this._acquire(h, u);
+    const target = this._acquire(h);
     if (this.state !== 'RETREAT') this.state = target ? 'ENGAGE' : 'PUSH';
 
-    // 經濟:有閒錢就升級(火力/裝甲輪流,升級隨處可買)
-    if (h.money >= 300 && sim.t - (this._buyAt || 0) > 4) {
+    // 經濟:優先解鎖/升級招式,再買通用強化(擊殺數/資金門檻由 sim.buy 把關)
+    if (h.money >= 150 && sim.t - (this._buyAt || 0) > 4) {
       this._buyAt = sim.t;
-      sim.buy(this.pid, (h.upg.dmg || 0) <= (h.upg.hull || 0) ? 'dmg' : 'hull');
+      for (const item of BUY_ORDER) {
+        if (sim.buy(this.pid, item) === null) break;
+      }
     }
+
+    // 自保/輔助類招式:低血時放治療/護盾,撤退時也用
+    this._castSupport(h, frac);
 
     if (this.state === 'RETREAT') this._moveToward(h, u, sim.basePos[this.side], dt);
     else if (this.state === 'ENGAGE') this._engage(h, u, target, dt);
@@ -80,9 +91,31 @@ export class BotBrain {
     if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - u.speed * dt * 4);
   }
 
+  /** 招式可用性(解鎖 + CD + MP)——實際結算仍由 sim.heroCast 把關 */
+  _ready(h, slot) {
+    const lvl = h.abil[slot];
+    if (!lvl || (h.acd[slot] || 0) > this.sim.t) return null;
+    const A = heroAbility(h.ch, slot, lvl);
+    return (A && h.mp >= A.mp) ? A : null;
+  }
+
+  /** 輔助/自保招式(不需目標點):治療、護盾、增益、匿蹤撤退 */
+  _castSupport(h, frac) {
+    for (const slot of ['skill', 'ult']) {
+      const A = this._ready(h, slot);
+      if (!A) continue;
+      const hurt = frac < 0.55;
+      if ((A.fx === 'heal' && hurt)
+        || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
+        || (A.fx === 'stealth' && this.state === 'RETREAT')) {
+        this.sim.heroCast(this.pid, slot);
+      }
+    }
+  }
+
   /** 交戰:保持在射程 60~85% 的距離環,邊打邊橫移 */
   _engage(h, u, t, dt) {
-    const gun = WEAPONS[u.loadout[0]];
+    const gun = this._gun(h);
     const dx = t.x - h.x, dz = t.z - h.z;
     const d = Math.hypot(dx, dz) || 1;
     const keep = gun.range * (t.kind === 'tower' || t.kind === 'base' ? 0.85 : 0.6);
@@ -93,27 +126,39 @@ export class BotBrain {
     h.x += vx * dt;
     h.z += vz * dt;
     this._face(h, t.x, t.z);
-    this.sim.botFire(this.pid, t.id);
-    if (h.kind === 'robot') {
-      // 肩射火箭:目標周圍 ≥3 個敵人或目標是建築時丟(彈數/填彈由 sim 把關)
-      const b = WEAPONS[UNITS.robot.burst];
-      if (this.sim.t - h.lastBurst >= 1 / b.rate) {
-        const packed = [...this.sim.ents.values()].filter((e2) =>
-          e2.side !== h.side && Math.hypot(e2.x - t.x, e2.z - t.z) <= b.r * 1.5).length;
-        if (packed >= 3 || t.kind === 'tower' || t.kind === 'base') {
-          h.aiming = true;   // 熱兵器需瞄準模式,bot 開火前直接切換(無真人輸入)
-          this.sim.heroBurst(this.pid, t.x, t.z);
-        }
+    this.sim.botFire(this.pid, t.id, 'light');
+
+    // 重武器(CD 由 sim 的 mag/reload 把關):建築或成群敵人時出手
+    const hv = heroWeapon(h.ch, 'heavy', h.abil.heavy, true);
+    const packed = [...this.sim.ents.values()].filter((e2) =>
+      e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
+    if (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero) {
+      h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
+      if (hv.type === 'launcher') this.sim.heroBurst(this.pid, t.x, t.z);
+      else this.sim.botFire(this.pid, t.id, 'heavy');
+    }
+
+    // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)
+    for (const slot of ['skill', 'ult']) {
+      const A = this._ready(h, slot);
+      if (!A) continue;
+      if ((A.fx === 'strike' || A.fx === 'emp') && packed >= 3) this.sim.heroCast(this.pid, slot, t.x, t.z);
+      else if (A.fx === 'summon' || A.fx === 'vision') this.sim.heroCast(this.pid, slot, t.x, t.z);
+      else if (A.fx === 'buff' && A.mul?.dmg) this.sim.heroCast(this.pid, slot);
+      else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) {
+        this.sim.heroCast(this.pid, slot);
       }
-    } else {
-      // 無人機神風:貼近建築或敵群密集時撞擊引爆(重生無冷卻,值得換)
+    }
+
+    // 無人機神風:貼近建築或敵群密集時撞擊引爆(重生無冷卻,值得換)
+    if (h.kind === 'drone') {
       const b = WEAPONS[UNITS.drone.bomb];
-      const packed = [...this.sim.ents.values()].filter((e2) =>
-        e2.side !== h.side && !e2.hero
+      const near = [...this.sim.ents.values()].filter((e2) =>
+        e2.side !== h.side && !e2.hero && !e2.neutral
         && Math.hypot(e2.x - h.x, e2.z - h.z, (h.y || 0)) <= b.r).length;
       const onStruct = (t.kind === 'tower' || t.kind === 'base')
         && Math.hypot(t.x - h.x, t.z - h.z, h.y || 0) <= b.r * 0.8;
-      if (packed >= 4 || onStruct) this.sim.heroDetonate(this.pid);
+      if (near >= 4 || onStruct) this.sim.heroDetonate(this.pid);
     }
   }
 
@@ -132,12 +177,13 @@ export class BotBrain {
   }
 
   /** 目標選擇:射程內最近敵人;優先英雄 > 小兵 > 建築(權重折算) */
-  _acquire(h, u) {
-    const wd = WEAPONS[u.loadout[0]];
+  _acquire(h) {
+    const wd = this._gun(h);
     const range = wd.range;
     let best = null, bestD = Infinity;
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙
+      if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
       if (t.hero) d *= 0.55;                             // 優先咬英雄

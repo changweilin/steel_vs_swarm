@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
-import { SIDES, GAME, TEAM, BOT_NAMES, lanesFor, resolveEnv } from '../public/js/data.js';
+import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv } from '../public/js/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -165,11 +165,11 @@ function broadcast(room) {
   const lobby = {
     pin: room.pin, phase: room.phase, urls: lanUrls(), config: room.config,
     clients: [...room.clients.entries()].map(([id, c]) => ({
-      id, name: c.name, side: c.side, mode: c.mode,
+      id, name: c.name, side: c.side, mode: c.mode, ch: c.ch || null,
       ready: !!c.ready, loaded: !!c.loaded, isHost: id === room.hostId,
       connected: c.connected !== false,
     })).concat([...room.bots.entries()].map(([id, b]) => ({
-      id, name: b.name, side: b.side, mode: 'player',
+      id, name: b.name, side: b.side, mode: 'player', ch: b.ch || null,
       ready: true, loaded: true, isHost: false, connected: true, isBot: true,
     }))),
     battleConfig: room.battleConfig || null,
@@ -199,12 +199,17 @@ function leaveRoom(client, room, clientId) {
 function startBattle(room) {
   if (room.battle || !room.battleConfig) return;
   room.battle = new BattleSim(room.battleConfig);
+  // 角色指派:玩家已選的優先;沒選(默認隨機)由 addHero 抽同陣營未用角色
   for (const [id, c] of room.clients) {
-    if (c.mode === 'player' && c.side) room.battle.addHero(c.side, id);
+    if (c.mode === 'player' && c.side) {
+      const h = room.battle.addHero(c.side, id, c.ch);
+      c.ch = h.ch;   // 回寫實際角色(隨機結果),lobby 廣播給全員看
+    }
   }
   // 電腦玩家:伺服器端 AI 操控英雄,兵線輪流指派(NPC 路線 = 房間兵線)
   room.botBrains = [...room.bots.entries()].map(([bid, b], i) => {
-    room.battle.addHero(b.side, bid);
+    const h = room.battle.addHero(b.side, bid, b.ch);
+    b.ch = h.ch;
     return new BotBrain(room.battle, bid, b.side, i);
   });
   room.phase = 'game';
@@ -334,6 +339,17 @@ wss.on('connection', (ws) => {
       }
       client.side = side;
       client.ready = false;
+      client.ch = null;   // 換陣營:角色重選(角色綁陣營)
+      broadcast(room);
+      return;
+    }
+    if (m.t === 'pickChar') {
+      // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營
+      if (room.phase !== 'room' || client.mode !== 'player') return;
+      if (m.ch == null) { client.ch = null; broadcast(room); return; }
+      const c = CHARACTERS[m.ch];
+      if (!c || !client.side || c.side !== client.side) { send(ws, { t: 'error', msg: '角色與陣營不符' }); return; }
+      client.ch = m.ch;
       broadcast(room);
       return;
     }
@@ -390,6 +406,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }
     if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId); return; }
+    if (m.t === 'cast' && client.side) { b.heroCast(clientId, m.slot, m.x, m.z); return; }
     if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }
     if (m.t === 'buy' && client.side) {
       const err = b.buy(clientId, m.item);

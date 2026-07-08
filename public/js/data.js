@@ -117,21 +117,473 @@ export const TARGET_CLASS = {
 };
 export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', building: '建築' };
 
-// ---- 熱兵器(全部有彈夾,打空要填彈;vs = 對目標類型加成)----
-// 自帶:dgun/rgun(主武器)、rocket(機甲右鍵)、bomb(無人機自帶重型炸彈,
-//        右鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
-// 有 price 的才會在主堡軍械庫上架(額外武器:機甲 2 槽、無人機 1 槽)。
+// ---- NPC 熱兵器(小兵/塔用;vs = 對目標類型加成,pen = 破甲值)----
+// 英雄武器改住 CHARACTERS(每名角色專屬輕/重武器);bomb = 無人機自帶重型炸彈
+// (F 鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
 export const WEAPONS = {
-  dgun:   { name: '蜂刺機槍',   dmg: 16,  rate: 7,   range: 240, mag: 24, reload: 1.8, vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
-  rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
-  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
-  bomb:   { name: '重型炸彈',   dmg: 240, r: 22, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
-  railgun: { name: '磁軌狙擊砲', dmg: 110, rate: 0.9, range: 380, mag: 4,  reload: 3.0, price: 400, tag: '反裝甲', needAim: true, vs: { flesh: 1.0, armor: 2.0, air: 1.4, building: 0.8 } },
-  flak:    { name: '防空霰彈砲', dmg: 50,  rate: 2.5, range: 170, mag: 8,  reload: 2.5, price: 300, tag: '反飛行', vs: { flesh: 1.3, armor: 0.5, air: 2.5, building: 0.3 } },
-  siege:   { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, price: 400, tag: '反建築', needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
-  ripper:  { name: '鏈鋸速射砲', dmg: 10,  rate: 12,  range: 150, mag: 60, reload: 2.2, price: 250, tag: '反人員', vs: { flesh: 2.2, armor: 0.5, air: 1.2, building: 0.3 } },
+  rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
+  bomb:   { name: '重型炸彈',   dmg: 240, r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
+  siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
+
+// ---- 戰鬥核心公式(FPS × DOTA)----
+// HEROIC:玩家(英雄)持有的武器 vs NPC 同型武器 → 射程 +20%、威力 +50%。
+// VITALS:雙層 HP — 第一層護盾(非戰鬥 OOC_S 秒後自然回復,不吃護甲減免)、
+//         第二層裝甲 HP(只能回主堡 / 治療招式回復,吃護甲值減免)。
+// 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
+// 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
+export const HEROIC = { range: 1.2, dmg: 1.5 };
+export const VITALS = {
+  OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
+  SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例
+  AR_K: 120,           // 護甲減免曲線常數
+  CRIT_X: 1.6,         // 預設爆擊倍率
+};
+export const BALLISTIC = { G: 9.81 };   // 彈道重力(真實值;武器 mv = 初速 m/s)
+export const armorMul = (ar, pen = 0) => {
+  const a = Math.max(0, (ar || 0) - (pen || 0));
+  return 1 - a / (a + VITALS.AR_K);
+};
+
+// ---- 招式養成(擊殺數解鎖 + 金錢購買;輕/重武器 Lv1 自帶,小招/大招要先解鎖)----
+// kills/cost[i] = 升到 Lv(i+1) 的門檻;擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。
+export const PROG = {
+  light: { name: '輕武器', kills: [0, 6, 15],  cost: [0, 250, 550] },
+  heavy: { name: '重武器', kills: [0, 9, 20],  cost: [0, 300, 650] },
+  skill: { name: '小招',   kills: [2, 12, 25], cost: [150, 400, 800] },
+  ult:   { name: '大招',   kills: [6, 18, 32], cost: [400, 800, 1400] },
+};
+export const KILL_SCORE = { drone: 4, robot: 4, tower: 3, tank: 2, heli: 2 };
+export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
+
+// 三階數值取值:陣列 = [Lv1, Lv2, Lv3];純量 = 各階相同
+export const tierVal = (v, lvl = 1) =>
+  Array.isArray(v) ? v[Math.max(0, Math.min(v.length - 1, lvl - 1))] : v;
+
+/**
+ * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
+ * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5);false = NPC 基準值。
+ * 重武器以 mag×reload 實作 CD:每發打完自動進入 cd 秒冷卻(HUD 顯示為冷卻)。
+ */
+export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
+  const w = CHARACTERS[ch]?.[slot];
+  if (!w) return null;
+  const t = (v) => tierVal(v, lvl);
+  return {
+    id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
+    dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1),
+    range: w.range * (heroic ? HEROIC.range : 1),
+    rate: w.rate ?? 3,
+    mag: t(w.mag ?? 1),
+    reload: t(w.cd ?? w.reload ?? 2),
+    r: t(w.r), pen: t(w.pen ?? 0), crit: t(w.crit ?? 0), critX: w.critX ?? VITALS.CRIT_X,
+    emp: t(w.emp ?? 0),
+    needAim: slot === 'heavy' || !!w.needAim,
+    vs: w.vs || {},
+  };
+}
+
+/** 解析角色招式(slot: 'skill'|'ult')在 lvl 階的實戰數值 */
+export function heroAbility(ch, slot, lvl = 1) {
+  const a = CHARACTERS[ch]?.[slot];
+  if (!a) return null;
+  const t = (v) => tierVal(v, lvl);
+  return {
+    id: slot, name: a.name, fx: a.fx, desc: a.desc,
+    cd: t(a.cd), mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
+    dmg: t(a.dmg ?? 0), heal: t(a.heal ?? 0), count: t(a.count ?? 1),
+    range: t(a.range ?? 0), imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),
+    unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0),
+    mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
+    vs: a.vs || {},
+    pen: t(a.pen ?? 0),
+  };
+}
+
+export const charsOf = (side) => Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === side);
+
+// ---- 角色圖鑑(24 名;劇情設定見 docs/characters.md)----
+// 每名角色 = 專屬機體(蜂群=無人機、鋼鐵=機甲)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
+// 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
+// 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
+// mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
+// visual:程序生成機體外觀參數(hue 主色;無人機 frame/body、機甲 pod 掛件)。
+// fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
+//          / vision(視野)/ stealth(匿蹤)/ dash(突進)/ intercept(攔截飛彈)。
+export const CHARACTERS = {
+  // ================= 蜂群陣營(無人機)=================
+  s01: {
+    side: 'SWARM', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
+    visual: { hue: 0xffd257, frame: 'hexa', body: 'box' },
+    mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
+    light: { name: '雙聯 5.56 機槍艙', rw: 'FN Minimi・初速 915m/s', type: 'gun', mv: 915,
+      dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
+      vs: { flesh: 1.2, armor: 0.6, air: 1.3, building: 0.5 } },
+    heavy: { name: '70mm 火箭巢', rw: 'Hydra 70・初速 700m/s', type: 'launcher', mv: 700,
+      dmg: [100, 135, 170], r: [12, 14, 16], cd: [8, 7, 6], range: 300, pen: 6,
+      vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
+    skill: { name: '蜂群協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.2, 1.28, 1.35] },
+      dur: [6, 8, 10], cd: 20, mp: [35, 40, 45], desc: '指揮頻道開啟:半徑內友軍火力提升' },
+    ult: { name: '總譜:終樂章', fx: 'summon', unit: 'heli', count: [2, 3, 4],
+      cd: [80, 70, 60], mp: [80, 90, 100], desc: '呼叫攻擊直升機編隊沿最近兵線壓上' },
+  },
+  s02: {
+    side: 'SWARM', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
+    visual: { hue: 0xc98a3d, frame: 'quad', body: 'slab' },
+    mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
+    light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
+      dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0.05, pen: 6,
+      vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
+    heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
+      dmg: [150, 200, 250], r: [15, 17, 19], cd: [9, 8, 7], range: 260, pen: 15,
+      vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
+    skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
+      cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
+    ult: { name: '蜂巢再鑄', fx: 'heal', target: 'team', r: 200, heal: [220, 300, 380], sp: true,
+      cd: [80, 70, 60], mp: [85, 95, 105], desc: '半徑內友軍裝甲大修,護盾同步充滿' },
+  },
+  s03: {
+    side: 'SWARM', name: '林芷晴', code: 'Silicon', machine: '「跳頻蜂」電戰無人機',
+    visual: { hue: 0x9ef2e6, frame: 'quad', body: 'wedge' },
+    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
+    light: { name: '5.8 機槍艙', rw: 'QJB-95 派生・初速 930m/s', type: 'gun', mv: 930,
+      dmg: [13, 16, 20], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
+      vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
+    heavy: { name: '高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
+      dmg: [70, 95, 120], cd: [6, 5.5, 5], range: 280, emp: [0.8, 1.0, 1.2],
+      vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
+    skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
+      cd: [18, 16, 14], mp: [40, 45, 50], desc: '指定區域敵軍武器離線(建築免疫)' },
+    ult: { name: '全頻壓制', fx: 'emp', r: 260, dur: [4, 5, 6],
+      cd: [70, 62, 54], mp: [90, 100, 110], desc: '以自身為中心的大範圍電子壓制' },
+  },
+  s04: {
+    side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」突擊四旋翼',
+    visual: { hue: 0x8fd14f, frame: 'quad', body: 'box' },
+    mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
+    light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400,
+      dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
+      vs: { flesh: 1.6, armor: 0.5, air: 1.2, building: 0.4 } },
+    heavy: { name: '榴彈拋射器', rw: 'M203・初速 76m/s', type: 'launcher', mv: 76,
+      dmg: [110, 150, 190], r: [10, 12, 14], cd: [6, 5, 4], range: 240, pen: 8,
+      vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
+    skill: { name: '突進機動', fx: 'dash', imp: [28, 34, 40],
+      cd: [12, 10, 8], mp: [25, 30, 35], desc: '沿視線方向爆發加速(教官の鐵鍬距離)' },
+    ult: { name: '白刃時刻', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], dmgTaken: [0.85, 0.8, 0.75] },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '近接教官進入戰鬥反射狀態' },
+  },
+  s05: {
+    side: 'SWARM', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
+    visual: { hue: 0xff6fb0, frame: 'quad', body: 'wedge' },
+    mods: { hp: 0.85, sp: 1.1, mp: 1.1, speed: 1.2, armor: 3 },
+    light: { name: '微型旋轉機砲', rw: 'M134 7.62 縮裝・初速 840m/s', type: 'gun', mv: 840,
+      dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
+      vs: { flesh: 1.2, armor: 0.6, air: 1.4, building: 0.4 } },
+    heavy: { name: '巡飛彈釋放器', rw: 'Lancet 縮裝・巡飛 90m/s', type: 'launcher', mv: 90,
+      dmg: [160, 210, 260], r: [13, 15, 17], cd: [10, 9, 8], range: 320, pen: 12,
+      vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
+    skill: { name: '超頻', fx: 'buff', target: 'self', mul: { dmg: [1.1, 1.15, 1.2], reload: [0.65, 0.6, 0.55] },
+      dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: 'APM 全開:填彈大幅加速、火力小幅提升' },
+    ult: { name: '蜂群風暴', fx: 'strike', count: [6, 8, 10], dmg: [70, 90, 110], r: 10, scatter: 30,
+      range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
+      desc: '呼叫 FPV 蜂群對指定區域飽和俯衝' },
+  },
+  s06: {
+    side: 'SWARM', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」攔截者',
+    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere' },
+    mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 6 },
+    light: { name: '精準標記步槍艙', rw: 'M110 SASS 7.62・初速 850m/s', type: 'gun', mv: 850,
+      dmg: [24, 30, 37], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
+      vs: { flesh: 1.2, armor: 0.8, air: 1.5, building: 0.5 } },
+    heavy: { name: '微型攔截彈', rw: 'AIM-9X 縮裝・初速 1000m/s', type: 'gun', mv: 1000,
+      dmg: [90, 120, 150], cd: [7, 6, 5], range: 340, pen: 6,
+      vs: { flesh: 0.6, armor: 0.6, air: 2.5, building: 0.3 } },
+    skill: { name: '攔截領域', fx: 'intercept', r: [150, 190, 230],
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '擊落半徑內所有來襲飛彈(擋下的,不是打掉的)' },
+    ult: { name: '空白布章', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.6, 0.5, 0.4] },
+      dur: [6, 7, 8], cd: [75, 65, 55], mp: [85, 95, 105], desc: '護航誓約:半徑內友軍承傷大減' },
+  },
+  s07: {
+    side: 'SWARM', name: '埃坦・沙哈', code: '鐵數學', machine: '「證明完畢」防空平台',
+    visual: { hue: 0x7fd8ff, frame: 'hexa', body: 'slab' },
+    mods: { hp: 1.05, sp: 1.1, mp: 1.1, speed: 0.9, armor: 8 },
+    light: { name: '25mm 空爆機砲', rw: 'XM25 派生・初速 760m/s', type: 'gun', mv: 760,
+      dmg: [16, 20, 25], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.6, building: 0.5 } },
+    heavy: { name: '攔截飛彈連射', rw: 'Tamir 縮裝・初速 850m/s', type: 'launcher', mv: 850,
+      dmg: [120, 160, 200], r: [12, 14, 16], cd: [8, 7, 6], range: 340, pen: 6,
+      vs: { flesh: 0.8, armor: 0.9, air: 2.2, building: 0.8 } },
+    skill: { name: '分配演算法', fx: 'intercept', r: [170, 210, 250],
+      cd: [15, 13, 11], mp: [30, 35, 40], desc: '一道證明完畢:清空半徑內來襲飛彈' },
+    ult: { name: '飽和反擊', fx: 'strike', count: [5, 7, 9], dmg: [80, 100, 125], r: 11, scatter: 35,
+      range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
+      desc: '攔截網反向齊射:對指定空域/地面飽和打擊' },
+  },
+  s08: {
+    side: 'SWARM', name: '佐菲亞・馬列克', code: '聖燭', machine: '「聖燭」醫療運補機',
+    visual: { hue: 0xe8f0f4, frame: 'quad', body: 'sphere' },
+    mods: { hp: 1.0, sp: 1.15, mp: 1.25, speed: 1.0, armor: 5 },
+    light: { name: '護航機槍艙', rw: 'PKM 7.62・初速 825m/s', type: 'gun', mv: 825,
+      dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.1, building: 0.5 } },
+    heavy: { name: '僚機狙擊莢艙', rw: 'M2010 .300WM・初速 880m/s', type: 'gun', mv: 880,
+      dmg: [130, 170, 215], cd: [7, 6, 5], range: 360, crit: 0.25, critX: 2.0, pen: 10,
+      vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
+    skill: { name: '血漿空投', fx: 'heal', target: 'team', r: 140, heal: [150, 210, 270],
+      cd: [20, 18, 16], mp: [40, 45, 50], desc: '空中血庫開倉:半徑內友軍裝甲回復' },
+    ult: { name: '修道院鐘聲', fx: 'heal', target: 'team', r: 240, heal: [280, 380, 480], sp: true,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '大範圍野戰醫療:裝甲大量回復、護盾充滿' },
+  },
+  s09: {
+    side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
+    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box' },
+    mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
+    light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420,
+      dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
+      vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
+    heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・初速 300m/s', type: 'launcher', mv: 300,
+      dmg: [130, 170, 215], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 10,
+      vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
+    skill: { name: '好球!', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
+      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '紳士的狩獵節奏:短時間火力全開' },
+    ult: { name: '獵場封鎖', fx: 'strike', count: [8, 10, 12], dmg: [60, 75, 90], r: 9, scatter: 40,
+      range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
+      desc: '防空霰彈彈幕封鎖指定空域' },
+  },
+  s10: {
+    side: 'SWARM', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」訊號機',
+    visual: { hue: 0xd7b8ff, frame: 'quad', body: 'frame' },
+    mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 3 },
+    light: { name: '消音衝鋒槍艙', rw: 'MP5SD 9mm・初速 285m/s', type: 'gun', mv: 285,
+      dmg: [14, 17, 21], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
+      vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
+    heavy: { name: '訊號矛', rw: 'EMP 狙擊彈・初速 900m/s', type: 'gun', mv: 900,
+      dmg: [80, 105, 130], cd: [7, 6, 5], range: 340, emp: [1.5, 2, 2.5],
+      vs: { flesh: 0.8, armor: 1.0, air: 1.8, building: 0.5 } },
+    skill: { name: '頻譜側錄', fx: 'vision', vision: [6, 8, 10],
+      cd: [26, 23, 20], mp: [35, 40, 45], desc: '破解敵方遙測:全隊限時無霧視野' },
+    ult: { name: '拒絕服務', fx: 'emp', r: 300, dur: [4, 5, 6],
+      cd: [75, 65, 55], mp: [90, 100, 110], desc: '大範圍鏈路壓制,聽起來就很假' },
+  },
+  s11: {
+    side: 'SWARM', name: '維爾納・哈特曼', code: '鐘匠', machine: '「錶芯」精密工作機',
+    visual: { hue: 0xd8c690, frame: 'hexa', body: 'frame' },
+    mods: { hp: 1.0, sp: 1.05, mp: 1.05, speed: 0.95, armor: 8 },
+    light: { name: '精密點放步槍', rw: 'HK417・初速 790m/s', type: 'gun', mv: 790,
+      dmg: [22, 27, 33], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
+      vs: { flesh: 1.1, armor: 1.3, air: 1.0, building: 0.6 } },
+    heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'gun', mv: 2000,
+      dmg: [170, 220, 275], cd: [9, 8, 7], range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
+      vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
+    skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55] },
+      dur: [5, 6, 7], cd: [18, 16, 14], mp: [35, 40, 45], desc: '我造了那個膝蓋:短時間傷害大增' },
+    ult: { name: '大修', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
+      cd: [80, 70, 60], mp: [80, 90, 100], desc: '鐘錶匠的手:自身裝甲大修、護盾充滿' },
+  },
+  s12: {
+    side: 'SWARM', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」偵察機',
+    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge' },
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 4 },
+    light: { name: '偵察卡賓艙', rw: 'AKS-74U・初速 735m/s', type: 'gun', mv: 735,
+      dmg: [14, 17, 21], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
+      vs: { flesh: 1.3, armor: 0.6, air: 1.1, building: 0.4 } },
+    heavy: { name: '標定打擊', rw: '呼叫 122mm 火箭彈著・落速 200m/s', type: 'launcher', mv: 200,
+      dmg: [140, 180, 225], r: [14, 16, 18], cd: [9, 8, 7], range: 340, pen: 10,
+      vs: { flesh: 1.1, armor: 1.1, air: 0.4, building: 1.5 } },
+    skill: { name: '薰衣草斗篷', fx: 'stealth', dur: [4, 5, 6],
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '從敵方感測網上消失(開火即現形)' },
+    ult: { name: '滿天星座', fx: 'vision', vision: [10, 13, 16],
+      cd: [70, 62, 54], mp: [80, 90, 100], desc: '衛星會被打下來,星星不會:全隊長時間無霧' },
+  },
+
+  // ================= 鋼鐵陣營(機甲)=================
+  t01: {
+    side: 'STEEL', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
+    visual: { hue: 0xd6e4ef, pod: 'antenna' },
+    mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 22 },
+    light: { name: '12.7 同軸重機槍', rw: 'Kord・初速 860m/s', type: 'gun', mv: 860,
+      dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
+      vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+    heavy: { name: '152mm 榴彈砲', rw: '2A65 縮裝・初速 650m/s', type: 'launcher', mv: 650,
+      dmg: [180, 240, 300], r: [16, 18, 20], cd: [10, 9, 8], range: 340, pen: 14,
+      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
+    skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.2, 1.3, 1.4] },
+      dur: [6, 8, 10], cd: [22, 20, 18], mp: [35, 40, 45], desc: '我不再送沒有裝甲的孩子上戰場' },
+    ult: { name: '雪崩齊射', fx: 'strike', count: [6, 8, 10], dmg: [90, 115, 140], r: 12, scatter: 40,
+      range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
+      desc: '全營砲兵向指定座標行進間齊射' },
+  },
+  t02: {
+    side: 'STEEL', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
+    visual: { hue: 0xcfd8ff, pod: 'blade' },
+    mods: { hp: 0.9, sp: 1.3, mp: 1.2, speed: 1.15, armor: 14 },
+    light: { name: '高斯衝鋒槍', rw: '實驗性 EM・初速 1100m/s', type: 'gun', mv: 1100,
+      dmg: [15, 19, 23], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
+      vs: { flesh: 1.2, armor: 0.9, air: 1.1, building: 0.5 } },
+    heavy: { name: '同步狙擊砲', rw: 'EM 加速穿甲彈・初速 1500m/s', type: 'gun', mv: 1500,
+      dmg: [150, 195, 245], cd: [8, 7, 6], range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
+      vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
+    skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
+      cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
+    ult: { name: '同步率 100%', fx: 'buff', target: 'self',
+      mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.75, 0.7, 0.65], reload: [0.75, 0.7, 0.65] },
+      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '她與機體之間再沒有介面延遲' },
+  },
+  t03: {
+    side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
+    visual: { hue: 0xe08a4a, pod: 'shield' },
+    mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
+    light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400,
+      dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
+      vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
+    heavy: { name: '溫壓噴射', rw: 'TOS-1 縮裝・初速 150m/s', type: 'launcher', mv: 150,
+      dmg: [170, 225, 280], r: [16, 18, 20], cd: [9, 8, 7], range: 240, pen: 12,
+      vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    skill: { name: '鑄鐵鍋盾', fx: 'buff', target: 'self', mul: { dmgTaken: [0.55, 0.5, 0.45] },
+      dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋架起:承傷大減' },
+    ult: { name: '開鍋!', fx: 'buff', target: 'self', mul: { dmg: [1.45, 1.55, 1.65], reload: [0.8, 0.75, 0.7] },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '懲戒營主廚火力全開' },
+  },
+  t04: {
+    side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
+    visual: { hue: 0x8a97a5, pod: 'rack' },
+    mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
+    light: { name: '消音 DMR', rw: 'VSS Vintorez 9×39・初速 295m/s', type: 'gun', mv: 295,
+      dmg: [24, 30, 37], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
+      vs: { flesh: 1.4, armor: 0.8, air: 1.0, building: 0.5 } },
+    heavy: { name: '14.5 反器材砲', rw: 'KPV・初速 1000m/s', type: 'gun', mv: 1000,
+      dmg: [180, 235, 290], cd: [9, 8, 7], range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
+      vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
+    skill: { name: '灰色迷彩', fx: 'stealth', dur: [4, 5, 6],
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '從所有感測器上消失(開火即現形)' },
+    ult: { name: '獵殺名單', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] }, vision: [8, 10, 12],
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '名單下一行:全圖視野 + 火力提升' },
+  },
+  t05: {
+    side: 'STEEL', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
+    visual: { hue: 0xf2f2f2, pod: 'dish' },
+    mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.05, armor: 18 },
+    light: { name: '5.8 車載機槍', rw: 'QJZ-89・初速 870m/s', type: 'gun', mv: 870,
+      dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
+      vs: { flesh: 1.3, armor: 0.8, air: 1.0, building: 0.5 } },
+    heavy: { name: '膝上導彈', rw: '紅箭-12・初速 140m/s', type: 'launcher', mv: 140,
+      dmg: [160, 210, 260], r: [13, 15, 17], cd: [9, 8, 7], range: 320, pen: [16, 20, 24],
+      vs: { flesh: 0.9, armor: 1.8, air: 0.5, building: 1.1 } },
+    skill: { name: '結構自檢', fx: 'heal', target: 'self', heal: [200, 280, 360],
+      cd: [22, 19, 16], mp: [35, 40, 45], desc: '仿生關節自我修復(掉漆的才是我的)' },
+    ult: { name: '量產線', fx: 'summon', unit: 'tank', count: [1, 2, 3],
+      cd: [90, 80, 70], mp: [90, 100, 110], desc: '瀋陽重工加班:主戰坦克沿最近兵線出廠' },
+  },
+  t06: {
+    side: 'STEEL', name: '陸小川', code: '小川', machine: '「輕功」高機動機甲',
+    visual: { hue: 0xffb84d, pod: 'none' },
+    mods: { hp: 0.95, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
+    light: { name: '5.8 突擊步槍', rw: 'QBZ-191・初速 930m/s', type: 'gun', mv: 930,
+      dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
+    heavy: { name: '鐵拳火箭', rw: 'PF-98・初速 250m/s', type: 'launcher', mv: 250,
+      dmg: [140, 185, 230], r: [13, 15, 17], cd: [7, 6, 5], range: 300, pen: 14,
+      vs: { flesh: 1.0, armor: 1.6, air: 0.4, building: 1.2 } },
+    skill: { name: '麻辣走位', fx: 'dash', imp: [28, 34, 40],
+      cd: [11, 9, 7], mp: [25, 30, 35], desc: '模擬器省冠軍的走位,機體像長在他身上' },
+    ult: { name: '主角時刻', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], dmgTaken: [0.8, 0.75, 0.7] },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '儲物櫃漫畫的主角上場了' },
+  },
+  t07: {
+    side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
+    visual: { hue: 0x6d7a68, pod: 'rack' },
+    mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
+    light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
+      dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.4 } },
+    heavy: { name: '白頭山反器材', rw: '14.5mm 栓動・初速 1000m/s', type: 'gun', mv: 1000,
+      dmg: [200, 260, 325], cd: [10, 9, 8], range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
+      vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
+    skill: { name: '靜默潛行', fx: 'stealth', dur: [5, 6, 7],
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '動作省到一毫米都不多(開火即現形)' },
+    ult: { name: '零點五度', fx: 'strike', count: 1, dmg: [400, 520, 650], r: 6,
+      range: 400, pen: 20, cd: [70, 62, 54], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.2 },
+      desc: '一發,只需要一發' },
+  },
+  t08: {
+    side: 'STEEL', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰機甲',
+    visual: { hue: 0xffc7dd, pod: 'dish' },
+    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 12 },
+    light: { name: '同軸機槍', rw: 'PKT・初速 825m/s', type: 'gun', mv: 825,
+      dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
+    heavy: { name: '諧振波炮', rw: '定向聲電複合・光速', type: 'beam',
+      dmg: [75, 100, 125], cd: [6, 5.5, 5], range: 300, emp: [1.0, 1.5, 2.0],
+      vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
+    skill: { name: '搖籃曲', fx: 'emp', r: 140, dur: [2.5, 3, 3.5], range: 260,
+      cd: [18, 16, 14], mp: [40, 45, 50], desc: '把你頻道撕碎的搖籃曲(區域武器離線)' },
+    ult: { name: '詠嘆調', fx: 'emp', r: 280, dur: [4, 5, 6],
+      cd: [72, 64, 56], mp: [90, 100, 110], desc: '絕對音感的全頻壓制' },
+  },
+  t09: {
+    side: 'STEEL', name: '達留什・法拉赫扎德', code: '詩人', machine: '「悲歌」巡飛彈平台',
+    visual: { hue: 0xc9b7e8, pod: 'rack' },
+    mods: { hp: 1.05, sp: 1.0, mp: 1.15, speed: 0.9, armor: 16 },
+    light: { name: '防衛機槍', rw: 'MG3 7.62・初速 820m/s', type: 'gun', mv: 820,
+      dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
+      vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
+    heavy: { name: '見證者巡飛彈', rw: 'Shahed 縮裝・巡飛 100m/s', type: 'launcher', mv: 100,
+      dmg: [170, 225, 280], r: [15, 17, 19], cd: [10, 9, 8], range: 360, pen: 10,
+      vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
+    skill: { name: '哀悼詩', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
+      cd: [26, 23, 20], mp: [40, 45, 50], desc: '為敵我雙方各寫一行:火箭兵支援' },
+    ult: { name: '巡飛彈之雨', fx: 'strike', count: [7, 9, 11], dmg: [85, 105, 130], r: 11, scatter: 45,
+      range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
+      desc: '讓戰爭打不完的東西,一次下完' },
+  },
+  t10: {
+    side: 'STEEL', name: '蕾拉・侯賽尼', code: '軌跡', machine: '「軌跡」攔截機甲',
+    visual: { hue: 0x7fe8c9, pod: 'twin' },
+    mods: { hp: 1.0, sp: 1.15, mp: 1.2, speed: 1.0, armor: 16 },
+    light: { name: '30mm 速射砲', rw: '2A42 縮裝・初速 960m/s', type: 'gun', mv: 960,
+      dmg: [18, 22, 27], rate: 5.5, mag: [28, 34, 40], reload: 2.3, range: 210, pen: 6,
+      vs: { flesh: 1.1, armor: 1.0, air: 1.5, building: 0.5 } },
+    heavy: { name: '攔截者飛彈', rw: '9M330 縮裝・初速 800m/s', type: 'launcher', mv: 800,
+      dmg: [120, 155, 195], r: [11, 13, 15], cd: [7, 6, 5], range: 340, pen: 6,
+      vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
+    skill: { name: '彈道預解', fx: 'intercept', r: [160, 200, 240],
+      cd: [15, 13, 11], mp: [30, 35, 40], desc: '攔截永遠該比打擊便宜:清空來襲飛彈' },
+    ult: { name: '不可攔截區', fx: 'buff', target: 'team', r: 220, mul: { dmgTaken: [0.55, 0.45, 0.35] },
+      dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '頭巾內襯的那頁詩:友軍承傷大減' },
+  },
+  t11: {
+    side: 'STEEL', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」戰術指導機',
+    visual: { hue: 0x8a9a5a, pod: 'antenna' },
+    mods: { hp: 1.2, sp: 0.9, mp: 1.0, speed: 0.9, armor: 24 },
+    light: { name: '車載重機槍', rw: 'DShKM・初速 850m/s', type: 'gun', mv: 850,
+      dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
+      vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+    heavy: { name: '無後座砲', rw: 'SPG-9・初速 435m/s', type: 'launcher', mv: 435,
+      dmg: [150, 195, 245], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 12,
+      vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.3 } },
+    skill: { name: '老兵的叮嚀', fx: 'buff', target: 'team', r: 160, mul: { dmgTaken: [0.7, 0.65, 0.6] },
+      dur: [4, 5, 6], cd: [20, 18, 16], mp: [35, 40, 45], desc: '罐頭哪裡最薄,他都教過:友軍承傷降低' },
+    ult: { name: '安哥拉支援', fx: 'summon', unit: 'squad', count: [4, 6, 8],
+      cd: [85, 75, 65], mp: [85, 95, 105], desc: '老戰友聽得懂的黑話:步兵班沿最近兵線投入' },
+  },
+  t12: {
+    side: 'STEEL', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「螢火」訊號掃描機',
+    visual: { hue: 0xb8ffb0, pod: 'antenna' },
+    mods: { hp: 0.9, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
+    light: { name: '防衛衝鋒槍', rw: 'PP-19 9mm・初速 340m/s', type: 'gun', mv: 340,
+      dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 170, crit: 0.08,
+      vs: { flesh: 1.3, armor: 0.5, air: 1.0, building: 0.4 } },
+    heavy: { name: '標定脈衝砲', rw: 'EM 標定彈・初速 2500m/s', type: 'beam',
+      dmg: [90, 120, 150], cd: [7, 6, 5], range: 340, emp: [0.8, 1.0, 1.2],
+      vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
+    skill: { name: '螢火掃描', fx: 'vision', vision: [5, 7, 9],
+      cd: [24, 21, 18], mp: [35, 40, 45], desc: '在頻譜裡找蜂群的心跳:全隊限時無霧' },
+    ult: { name: '那也是一個人', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
+      cd: [75, 65, 55], mp: [90, 100, 110], desc: '標記過的訊號全數靜默,並回傳位置' },
+  },
+};
 
 // ---- 經濟(擊殺得錢 → 隨處升級 / 回主堡買熱兵器)----
 export const ECON = {
@@ -149,32 +601,32 @@ export const ECON = {
 };
 export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
 
-// ---- 單位數值 ----
+// ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----
 export const UNITS = {
   // 小兵(雙方都是人類部隊:士兵 / 裝甲車 / 坦克)
-  soldier:   { name: '步槍兵', hp: 90,  dmg: 10, range: 60,  rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 100, dmg: 60, range: 130, rate: 0.4, speed: 7, sight: 160, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 130, dmg: 70, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 260, dmg: 35, range: 140, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
-  // 舊兵種資料保留(不再於一般波次生成,供其他機制/測試沿用)
-  apc:     { name: '裝甲車', hp: 320,  dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
-  tank:    { name: '主戰坦克', hp: 750, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
+  soldier:   { name: '步槍兵', hp: 90,  armor: 0,  dmg: 10, range: 60,  rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 100, armor: 0,  dmg: 60, range: 130, rate: 0.4, speed: 7, sight: 160, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 130, armor: 6,  dmg: 70, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 260, armor: 4, dmg: 35, range: 140, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
+  // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
+  apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
+  tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
   // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
-  tower:   { name: '防禦塔', hp: 1000, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
-             sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40 } },
-  base:    { name: '主堡',   hp: 3000, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
-  // 英雄:機甲 HP/彈藥 = 無人機 2 倍;無人機速度 = 機甲 2 倍、視野廣(fov)
+  tower:   { name: '防禦塔', hp: 1000, armor: 24, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
+             sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40, pen: 8 } },
+  base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
+  // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
+  // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招消耗)。
   drone: {
-    name: '獵蜂無人機', hp: 320, speed: 42, vspeed: 22, fov: 100, zoomFov: 55, sight: 300,
-    loadout: ['dgun'], slots: 1,        // 自帶機槍 + 可加購 1 件熱兵器
+    name: '獵蜂無人機', hp: 320, shield: 140, mp: 100, mpRegen: 4,
+    speed: 42, vspeed: 22, fov: 100, zoomFov: 55, sight: 300,
     bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀)
     regen: 12,
     respawn: { base: 0, perDeath: 0 },   // 無冷卻重生
   },
   robot: {
-    name: '執法者機甲', hp: 640, speed: 21, jump: 9, fov: 72, zoomFov: 35, sight: 220,
-    loadout: ['rgun'], slots: 2,         // 自帶重機槍 + 可加購 2 件熱兵器
-    burst: 'rocket',                     // 按住右鍵瞄準、左鍵發射肩射火箭(有彈數)
+    name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
+    speed: 21, jump: 9, fov: 72, zoomFov: 35, sight: 220,
     regen: 18,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
@@ -197,12 +649,13 @@ export const GAME = {
   LANE_SAFE_M: 45,            // 正規路線走廊半寬;出了走廊 = 非正規路線(地雷 / 防空伏擊)
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
   // CUT_BIAS/CUT_R:偏向佈在兵線轉角外圍的「切彎捷徑」帶 — 抄直線省時間 = 承擔雷區風險
-  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, LANE_CLEAR: 40, BASE_CLEAR: 150,
+  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10, LANE_CLEAR: 40, BASE_CLEAR: 150,
            SEE_M: 30, CLEAR_M: 14,     // 客戶端:SEE_M 內開始浮現,CLEAR_M 內完全可見
            CUT_BIAS: 0.5, CUT_R: 70 },
   // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀。
   // 觸發需要射程內有存活的匿蹤防空陣地(aasite)——拔掉陣地 = 打出安全空域。
-  AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 400, SPEED: 130, HP: 40 },
+  // DMG 620:雙層 HP 後仍須一發穿透護盾+裝甲直接擊墜(維持「命中即墜」設計)。
+  AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
 };
 
 // ---- 危險區:非圖資障礙物(Diablo 核心思想:迷宮式隨機佈局 + 隨機物品掉落)----

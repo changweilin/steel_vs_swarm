@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { SIDES } from './data.js';
+import { SIDES, CHARACTERS } from './data.js';
 import { toonMat, toonify, outlinify } from './toon.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
@@ -114,35 +114,146 @@ function mat(color, opts = {}) {
 const outlineW = (target) => Math.min(0.45, Math.max(0.05, target * 0.016));
 
 // ---------- 程式生成備援模型 ----------
-/** 四旋翼武裝無人機(蜂群英雄) */
-function buildDrone(side) {
+/**
+ * 武裝無人機(蜂群英雄)——角色專屬機體:
+ * vis = CHARACTERS[ch].visual = { hue 主色, frame 'quad'|'hexa'|'coax'|'wing', body 'box'|'wedge'|'sphere'|'slab'|'frame' }。
+ * 未指定角色(觀戰/舊路徑)退回預設四旋翼。
+ */
+function buildDrone(side, vis = null) {
   const g = new THREE.Group();
-  const accent = new THREE.Color(SIDES[side].color);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 1.6), mat(0x22262b, { metalness: 0.6 }));
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  // 機身(依角色差異化剪影)
+  const bodyKind = vis?.body || 'box';
+  let body;
+  if (bodyKind === 'wedge') {
+    body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.95, 2.0, 4), mat(0x22262b, { metalness: 0.6 }));
+    body.rotation.x = Math.PI / 2;
+    body.rotation.y = Math.PI / 4;
+  } else if (bodyKind === 'sphere') {
+    body = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 9), mat(0x272b31, { metalness: 0.5 }));
+  } else if (bodyKind === 'slab') {
+    body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 1.5), mat(0x2a2e33, { metalness: 0.6 }));
+  } else if (bodyKind === 'frame') {
+    body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.26, 1.4), mat(0x22262b, { metalness: 0.6 }));
+    for (const sx of [-1, 1]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 1.7), mat(0x3a4148));
+      rail.position.set(sx * 0.65, 0.06, 0);
+      body.add(rail);
+    }
+  } else {
+    body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 1.6), mat(0x22262b, { metalness: 0.6 }));
+  }
   body.position.y = 1.2;
   g.add(body);
   const dome = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), mat(accent, { emissive: accent, emissiveIntensity: 0.6 }));
-  dome.position.y = 1.5;
+  dome.position.y = 1.55;
   g.add(dome);
   const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.2, 8), mat(0x111418, { metalness: 0.8 }));
   gun.rotation.x = Math.PI / 2;
   gun.position.set(0, 1.0, 0.9);
   g.add(gun);
+  // 機架與旋翼(quad 四軸 / hexa 六軸 / coax 同軸雙槳 / wing 固定翼混合)
   const props = [];
-  for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.18), mat(0x3a4148));
-    arm.position.set(sx * 1.0, 1.35, sz * 1.0);
-    arm.rotation.y = Math.atan2(sz, sx);
+  const addRotor = (x, z, big = 1) => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(x, z) * 1.05 + 0.4, 0.12, 0.18), mat(0x3a4148));
+    arm.position.set(x * 0.62, 1.35, z * 0.62);
+    arm.rotation.y = Math.atan2(-z, x);   // 機臂沿徑向
     g.add(arm);
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8), mat(0x14171a));
-    hub.position.set(sx * 1.55, 1.42, sz * 1.55);
+    hub.position.set(x, 1.42, z);
     g.add(hub);
-    const prop = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.04, 0.14), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
-    prop.position.set(sx * 1.55, 1.55, sz * 1.55);
+    const prop = new THREE.Mesh(new THREE.BoxGeometry(1.5 * big, 0.04, 0.14), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
+    prop.position.set(x, 1.55, z);
     g.add(prop);
     props.push(prop);
+  };
+  const frame = vis?.frame || 'quad';
+  if (frame === 'hexa') {
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3 + Math.PI / 6;
+      addRotor(Math.cos(a) * 1.55, Math.sin(a) * 1.55, 0.85);
+    }
+  } else if (frame === 'coax') {
+    for (const y of [1.55, 1.85]) {
+      const prop = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.05, 0.2), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
+      prop.position.y = y;
+      g.add(prop);
+      props.push(prop);
+    }
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 8), mat(0x14171a));
+    mast.position.y = 1.6;
+    g.add(mast);
+  } else if (frame === 'wing') {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 0.75), mat(0x3a4148));
+    wing.position.y = 1.35;
+    g.add(wing);
+    for (const sx of [-1, 1]) addRotor(sx * 1.3, -0.5, 0.8);
+  } else {
+    for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) addRotor(sx * 1.55, sz * 1.55);
   }
   g.userData.spin = props; // 每幀旋轉
+  return g;
+}
+
+/**
+ * 機甲角色掛件(GLB 共用骨架上的專屬差異化):
+ * vis.pod = 'antenna'|'cannon'|'dish'|'shield'|'rack'|'blade'|'twin'|'none';
+ * 一律加胸前主色識別燈條。座標以 fitToHeight 後的機體(高 target、腳底 y=0)為準。
+ */
+function charPod(vis, target) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? 0xffffff);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(target * 0.22, target * 0.035, target * 0.03),
+    mat(accent, { emissive: accent, emissiveIntensity: 1.1 }));
+  trim.position.set(0, target * 0.62, target * 0.14);
+  g.add(trim);
+  const sy = target * 0.78, sx = target * 0.22;   // 右肩基準
+  const dark = 0x39424b;
+  const pod = vis?.pod || 'none';
+  if (pod === 'antenna') {
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, target * 0.5, 6), mat(dark));
+    mast.position.set(sx, sy + target * 0.2, 0);
+    g.add(mast);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.4 }));
+    tip.position.set(sx, sy + target * 0.45, 0);
+    g.add(tip);
+  } else if (pod === 'cannon') {
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, target * 0.55, 8), mat(0x2b3239, { metalness: 0.8 }));
+    tube.rotation.x = Math.PI / 2;
+    tube.position.set(sx, sy, -target * 0.05);
+    g.add(tube);
+  } else if (pod === 'dish') {
+    const dish = new THREE.Mesh(new THREE.CylinderGeometry(target * 0.12, target * 0.04, 0.08, 10), mat(0xaab4bd));
+    dish.rotation.z = Math.PI / 3;
+    dish.position.set(sx, sy + target * 0.08, 0);
+    g.add(dish);
+  } else if (pod === 'shield') {
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.12, target * 0.34, target * 0.26), mat(dark, { metalness: 0.6 }));
+    plate.position.set(-sx - 0.15, sy - target * 0.18, 0);
+    g.add(plate);
+  } else if (pod === 'rack') {
+    const rack = new THREE.Mesh(new THREE.BoxGeometry(target * 0.14, target * 0.12, target * 0.2), mat(dark));
+    rack.position.set(sx, sy + target * 0.04, 0);
+    g.add(rack);
+    for (const [oy, oz] of [[-0.03, -0.05], [-0.03, 0.05], [0.03, -0.05], [0.03, 0.05]]) {
+      const cell = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, target * 0.16, 6), mat(0x14171a));
+      cell.rotation.x = Math.PI / 2;
+      cell.position.set(sx, sy + target * 0.04 + oy * target, oz * target);
+      g.add(cell);
+    }
+  } else if (pod === 'blade') {
+    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.06, target * 0.36, target * 0.14), mat(dark, { metalness: 0.7 }));
+    fin.rotation.z = -0.35;
+    fin.position.set(sx, sy + target * 0.12, -target * 0.04);
+    g.add(fin);
+  } else if (pod === 'twin') {
+    for (const oz of [-0.06, 0.06]) {
+      const t2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, target * 0.4, 8), mat(0x2b3239, { metalness: 0.8 }));
+      t2.rotation.x = Math.PI / 2;
+      t2.position.set(sx, sy, oz * target);
+      g.add(t2);
+    }
+  }
   return g;
 }
 
@@ -357,8 +468,8 @@ function buildTowerTurret(side) {
 }
 
 const FALLBACK = {
-  'hero:drone': (side) => buildDrone(side),
-  'hero:robot': (side) => buildDrone(side), // mech GLB 失敗時暫用無人機骨架換色
+  'hero:drone': (side, vis) => buildDrone(side, vis),
+  'hero:robot': (side, vis) => buildDrone(side, vis), // mech GLB 失敗時暫用無人機骨架換色
   'creep:soldier': () => buildSoldierFallback(),
   'creep:apc': (side) => buildApc(side),
   'creep:tank': (side) => buildTank(side),
@@ -382,12 +493,14 @@ function pickWalkClip(anims) {
 /**
  * 建立一個單位 mesh。回傳 { group, mixer? }。
  * kind: 'hero:drone' | 'hero:robot' | 'creep:soldier' | 'creep:apc' | 'creep:tank' | 'tower' | 'base:SWARM' | 'base:STEEL'
+ * opts.ch:英雄角色 id — 依 CHARACTERS[ch].visual 生成專屬機體(主色/機架/掛件)。
  */
-export function makeUnit(kind, side, { ring = true } = {}) {
+export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   const entry = MODEL_MANIFEST[kind] ? cache[kind] : null;
   const target = TARGET_H[kind] || 4;
   const g = new THREE.Group();
   let mixer = null;
+  const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
 
   if (entry) {
     const model = SkeletonUtils.clone(entry.scene);
@@ -398,6 +511,12 @@ export function makeUnit(kind, side, { ring = true } = {}) {
     // 導致模型「消失」,一律關閉 frustum culling
     model.traverse((o) => { if (o.isSkinnedMesh || o.isMesh) o.frustumCulled = false; });
     g.add(model);
+    // 機甲角色差異化:共用 GLB 骨架 + 專屬掛件/識別燈條
+    if (vis && kind === 'hero:robot') {
+      const pod = charPod(vis, target);
+      outlinify(pod, outlineW(target));
+      g.add(pod);
+    }
     const clip = kind === 'creep:soldier' ? pickWalkClip(entry.animations) : null;
     if (clip) {
       mixer = new THREE.AnimationMixer(model);
@@ -406,7 +525,7 @@ export function makeUnit(kind, side, { ring = true } = {}) {
       action.play();
     }
   } else {
-    const built = (FALLBACK[kind] || FALLBACK['creep:apc'])(side);
+    const built = (FALLBACK[kind] || FALLBACK['creep:apc'])(side, vis);
     fitToHeight(built, target);
     outlinify(built, outlineW(target));
     g.add(built);

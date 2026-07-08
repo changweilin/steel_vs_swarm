@@ -406,3 +406,53 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); }
 .bot-add:hover { opacity: 1; }
 .bot-del { float: right; margin-left: 8px; color: var(--dim); cursor: pointer; }
 .bot-del:hover { color: #e05c4a; }
+
+/* ===== 角色系統(選角 / 雙層 HP / 電力 / 招式)===== */
+/* 選角區(房間階段,入座後出現) */
+.char-section {
+  width: min(860px, 94vw); margin: 10px auto 0; text-align: left;
+  background: rgba(10, 14, 18, 0.6); border: 1px solid var(--line); padding: 8px 12px 10px;
+}
+.char-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.char-btn {
+  font: inherit; font-size: 12px; color: var(--fg); line-height: 1.3;
+  background: rgba(30, 40, 50, 0.85); border: 1px solid var(--line);
+  padding: 5px 9px; cursor: pointer; text-align: center; min-width: 84px;
+}
+.char-btn:hover { border-color: var(--swarm); }
+.char-btn.on { border-color: var(--ok); color: var(--ok); box-shadow: inset 0 0 14px rgba(80, 220, 120, 0.15); }
+.char-name { font-size: 10px; color: var(--dim); }
+.char-info { margin-top: 8px; font-size: 12px; color: var(--dim); line-height: 1.6; }
+.slot-char { color: #ffd75e; font-weight: 400; font-size: 12px; }
+.slot-char.dim { color: var(--dim); }
+
+/* 護盾 / 電力條(與 .hpbar 同族) */
+.spbar { position: relative; height: 12px; background: rgba(10, 14, 18, 0.85); border: 1px solid var(--line); overflow: hidden; }
+.spbar-fill { height: 100%; background: linear-gradient(90deg, #2f6f8f, #6fd2ff); transition: width 0.2s; }
+.sp-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-family: Orbitron, monospace; color: #dff2ff; text-shadow: 0 1px 2px #000;
+}
+.mpbar { position: relative; height: 10px; background: rgba(10, 14, 18, 0.85); border: 1px solid var(--line); overflow: hidden; }
+.mpbar-fill { height: 100%; background: linear-gradient(90deg, #5a3f8f, #b78aff); transition: width 0.2s; }
+.mp-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-family: Orbitron, monospace; color: #efe4ff; text-shadow: 0 1px 2px #000;
+}
+
+/* 招式盒(Q 小招 / E 大招) */
+.ab-row { display: flex; gap: 6px; }
+.ab-box {
+  flex: 1; display: flex; align-items: center; gap: 6px;
+  background: rgba(10, 14, 18, 0.75); border: 1px solid var(--line);
+  padding: 3px 8px; font-size: 11px; color: var(--dim);
+}
+.ab-box.ready { border-color: var(--ok); color: var(--fg); box-shadow: inset 0 0 10px rgba(80, 220, 120, 0.12); }
+.ab-box.locked { opacity: 0.55; }
+.ab-key {
+  font-family: Orbitron, monospace; font-size: 11px; color: #0b0e12;
+  background: var(--dim); padding: 0 5px; border-radius: 2px;
+}
+.ab-box.ready .ab-key { background: var(--ok); }
+.ab-name { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ab-cd { font-family: Orbitron, monospace; font-size: 10px; }
