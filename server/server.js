@@ -344,11 +344,11 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'pickChar') {
-      // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營
+      // 開戰前選角(不選 = 開戰時隨機);角色必須屬於自己的陣營,傭兵雙陣營皆可
       if (room.phase !== 'room' || client.mode !== 'player') return;
       if (m.ch == null) { client.ch = null; broadcast(room); return; }
       const c = CHARACTERS[m.ch];
-      if (!c || !client.side || c.side !== client.side) { send(ws, { t: 'error', msg: '角色與陣營不符' }); return; }
+      if (!c || !client.side || (c.side !== client.side && c.side !== 'MERC')) { send(ws, { t: 'error', msg: '角色與陣營不符' }); return; }
       client.ch = m.ch;
       broadcast(room);
       return;

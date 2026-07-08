@@ -5,7 +5,7 @@
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
+  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ,
 } from '../public/js/data.js';
 
@@ -370,13 +370,13 @@ export class BattleSim {
   // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵;ch = 角色 id)----------
   addHero(side, pid, ch) {
     if (this.heroes.has(pid)) return this.heroes.get(pid);
-    const kind = SIDES[side].hero; // drone | robot
-    // 角色未指定(默認隨機):抽同陣營未被使用的角色
-    if (!CHARACTERS[ch] || CHARACTERS[ch].side !== side) {
+    // 角色未指定(默認隨機):抽同陣營未被使用的角色(池含雙陣營共用的傭兵)
+    if (!CHARACTERS[ch] || (CHARACTERS[ch].side !== side && CHARACTERS[ch].side !== 'MERC')) {
       const used = new Set([...this.heroes.values()].filter((x) => x.side === side).map((x) => x.ch));
       const pool = charsOf(side).filter((id) => !used.has(id));
       ch = (pool.length ? pool : charsOf(side))[Math.floor(Math.random() * (pool.length ? pool.length : charsOf(side).length))];
     }
+    const kind = heroKindOf(ch, side); // drone | robot(傭兵機體綁角色,不隨陣營)
     const c = CHARACTERS[ch];
     const m = c.mods || {};
     const u = UNITS[kind];
@@ -720,7 +720,8 @@ export class BattleSim {
   /** item: 'dmg'|'hull' 或 'ab:light'|'ab:heavy'|'ab:skill'|'ab:ult'。回傳錯誤訊息或 null */
   buy(pid, item) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || this.over) return '目前無法購買';
+    // 陣亡等待重生也能購買(DOTA 慣例;重生點/死亡畫面補升級)
+    if (!h || this.over) return '目前無法購買';
     const up = ECON.UPGRADES[item];
     if (up) {
       const lvl = h.upg[item] || 0;
@@ -731,7 +732,7 @@ export class BattleSim {
       h.upg[item] = lvl + 1;
       if (item === 'hull') {
         const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hull));
-        h.hp += nm - h.maxHp;
+        if (!h.dead) h.hp += nm - h.maxHp;   // 陣亡中只擴上限,重生時 hp = maxHp
         h.maxHp = nm;
       }
       this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });

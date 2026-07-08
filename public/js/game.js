@@ -59,8 +59,9 @@ export class BattleClient {
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
 
-    this.isDrone = this.side && SIDES[this.side].hero === 'drone';
-    this.heroKind = this.side ? SIDES[this.side].hero : null;
+    // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
+    this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
+    this.isDrone = this.heroKind === 'drone';
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
     this.abil = { light: 1, heavy: 1, skill: 0, ult: 0 };
@@ -101,7 +102,17 @@ export class BattleClient {
 
   /** 設定/更新角色與武器解析(升階時重算;伺服器已重置彈藥 → 本地同步滿彈夾) */
   _setChar(ch, refill = false) {
-    if (ch && CHARACTERS[ch]) this.ch = ch;
+    if (ch && CHARACTERS[ch]) {
+      const changed = ch !== this.ch;
+      this.ch = ch;
+      // 角色由快照晚到(隨機指派):機體種類與座艙跟著角色重建
+      if (changed && this.side) {
+        this.heroKind = CHARACTERS[ch].kind || SIDES[this.side].hero;
+        this.isDrone = this.heroKind === 'drone';
+        this.baseFov = UNITS[this.heroKind].fov;
+        if (this.cockpit) { this.camera.remove(this.cockpit); this._buildCockpit(); }
+      }
+    }
     if (!this.ch || !this.side) return;
     for (const slot of ['light', 'heavy']) {
       const def = heroWeapon(this.ch, slot, this.abil[slot] || 1, true);
@@ -153,7 +164,10 @@ export class BattleClient {
     });
   }
 
-  // ---------------- FPV 座艙(駕駛情境:看得到自己的武器與部分機身)----------------
+  // ---------------- FPV 座艙(角色專屬:依 CHARACTERS[ch].visual 差異化,3D 賽璐璐)----------------
+  // 與世界模型(models.js buildDrone/charPod)同一套視覺語彙:
+  // 無人機 = frame(quad/hexa/coax/wing)× body 機鼻剪影;機甲 = pod 肩部掛件;
+  // 輕武器外觀依機構分類(gun/launcher/beam),主色 = 角色識別色。
   _buildCockpit() {
     if (!this.side) return;
     this.scene.add(this.camera);   // 相機要在場景樹裡,座艙子物件才會渲染
@@ -162,73 +176,17 @@ export class BattleClient {
       const { metalness, roughness, ...rest } = opts;
       return new THREE.Mesh(geo, toonMat(color, { ...rest, celMetal: (metalness ?? 0) >= 0.5 }));
     };
-    const accent = new THREE.Color(SIDES[this.side].color);
+    const c = this.ch && CHARACTERS[this.ch];
+    const vis = c?.visual || {};
+    const accent = new THREE.Color(vis.hue ?? SIDES[this.side].color);
     const g = new THREE.Group();
     this.cockpitSpin = [];
     this.gunGroup = new THREE.Group();
 
-    if (this.isDrone) {
-      // 四旋翼 FPV:前二臂 + 旋翼在畫面上緣、機砲吊艙在下緣
-      // (賽璐璐:座艙用中灰藍軍武色,暗部才不會塌成純黑剪影)
-      const nose = mk(new THREE.BoxGeometry(0.5, 0.16, 0.5), 0x4b545e);
-      nose.position.set(0, -0.42, -0.78);
-      g.add(nose);
-      for (const sx of [-1, 1]) {
-        const arm = mk(new THREE.BoxGeometry(0.75, 0.05, 0.08), 0x5b6772);
-        arm.position.set(sx * 0.48, 0.30, -0.72);
-        arm.rotation.y = sx * -0.6;
-        g.add(arm);
-        const hub = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 8), 0x39414a);
-        hub.position.set(sx * 0.72, 0.33, -0.92);
-        g.add(hub);
-        const prop = mk(new THREE.BoxGeometry(0.62, 0.015, 0.055), 0x9aa4ad, { transparent: true, opacity: 0.55 });
-        prop.position.set(sx * 0.72, 0.38, -0.92);
-        g.add(prop);
-        this.cockpitSpin.push(prop);
-      }
-      const pod = mk(new THREE.BoxGeometry(0.16, 0.14, 0.4), 0x3d454e);
-      pod.position.set(0.2, -0.34, -0.7);
-      this.gunGroup.add(pod);
-      const barrel = mk(new THREE.CylinderGeometry(0.03, 0.035, 0.75, 8), 0x30373f, { metalness: 0.85 });
-      barrel.rotation.x = Math.PI / 2;
-      barrel.position.set(0.2, -0.32, -1.15);
-      this.gunGroup.add(barrel);
-      this._muzzle = new THREE.Vector3(0.2, -0.32, -1.55);
-    } else {
-      // 機甲駕駛艙:座艙框 + 儀表台 + 右側重機槍 + 左肩護甲(中灰藍,避免暗部全黑)
-      const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x46505b);
-      dash.position.set(0, -0.52, -0.85);
-      dash.rotation.x = 0.5;
-      g.add(dash);
-      const topStrut = mk(new THREE.BoxGeometry(1.6, 0.1, 0.3), 0x4d5865);
-      topStrut.position.set(0, 0.52, -0.8);
-      g.add(topStrut);
-      for (const sx of [-1, 1]) {
-        const pillar = mk(new THREE.BoxGeometry(0.09, 1.15, 0.2), 0x4d5865);
-        pillar.position.set(sx * 0.78, 0, -0.78);
-        pillar.rotation.z = sx * -0.12;
-        g.add(pillar);
-      }
-      const light = mk(new THREE.BoxGeometry(0.5, 0.04, 0.05), accent, { emissive: accent, emissiveIntensity: 0.9 });
-      light.position.set(0, -0.4, -0.72);
-      g.add(light);
-      const shoulder = mk(new THREE.BoxGeometry(0.5, 0.28, 0.7), 0x5a6673);
-      shoulder.position.set(-0.72, -0.34, -1.0);
-      shoulder.rotation.z = 0.28;
-      g.add(shoulder);
-      const recv = mk(new THREE.BoxGeometry(0.24, 0.26, 0.85), 0x3c444d);
-      recv.position.set(0.5, -0.36, -1.0);
-      this.gunGroup.add(recv);
-      const barrel = mk(new THREE.CylinderGeometry(0.05, 0.06, 1.1, 10), 0x30373f, { metalness: 0.85 });
-      barrel.rotation.x = Math.PI / 2;
-      barrel.position.set(0.5, -0.32, -1.85);
-      this.gunGroup.add(barrel);
-      const brake = mk(new THREE.CylinderGeometry(0.075, 0.075, 0.16, 10), 0x272c31);
-      brake.rotation.x = Math.PI / 2;
-      brake.position.set(0.5, -0.32, -2.35);
-      this.gunGroup.add(brake);
-      this._muzzle = new THREE.Vector3(0.5, -0.32, -2.45);
-    }
+    if (this.isDrone) this._buildDroneCockpit(g, mk, accent, vis);
+    else this._buildMechCockpit(g, mk, accent, vis);
+    this._buildCockpitGun(mk, accent, c?.light?.type || 'gun');
+
     // 槍口焰(開火瞬間顯示)
     this.flash = mk(new THREE.SphereGeometry(0.09, 6, 5), 0xffd27a,
       { emissive: 0xffb347, emissiveIntensity: 3, transparent: true, opacity: 0.95 });
@@ -241,6 +199,180 @@ export class BattleClient {
     outlinify(g, 0.012);   // 座艙近距離,細描邊即可(≈2px)
     this.cockpit = g;
     this.camera.add(g);
+  }
+
+  /** 無人機座艙:機鼻(body 剪影)+ 機架/旋翼(frame)在畫面上緣;中灰藍避免暗部塌黑 */
+  _buildDroneCockpit(g, mk, accent, vis) {
+    const body = vis.body || 'box';
+    let nose;
+    if (body === 'wedge') {
+      nose = mk(new THREE.CylinderGeometry(0.05, 0.36, 0.7, 4), 0x4b545e);
+      nose.rotation.set(-Math.PI / 2, Math.PI / 4, 0);   // 尖端朝前的楔形
+    } else if (body === 'sphere') {
+      nose = mk(new THREE.SphereGeometry(0.3, 10, 8), 0x4b545e);
+    } else if (body === 'slab') {
+      nose = mk(new THREE.BoxGeometry(0.8, 0.12, 0.5), 0x4b545e);
+    } else if (body === 'frame') {
+      nose = mk(new THREE.BoxGeometry(0.5, 0.08, 0.5), 0x4b545e);
+      for (const sx of [-1, 1]) {
+        const rail = mk(new THREE.BoxGeometry(0.06, 0.14, 0.55), 0x5b6772);
+        rail.position.set(sx * 0.24, 0.05, 0);
+        nose.add(rail);
+      }
+    } else {
+      nose = mk(new THREE.BoxGeometry(0.5, 0.16, 0.5), 0x4b545e);
+    }
+    nose.position.set(0, -0.42, -0.78);
+    g.add(nose);
+    const lamp = mk(new THREE.BoxGeometry(0.34, 0.03, 0.04), accent, { emissive: accent, emissiveIntensity: 1.2 });
+    lamp.position.set(0, -0.33, -0.6);
+    g.add(lamp);
+
+    const prop = (x, y, z, len = 0.62) => {
+      const hub = mk(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 8), 0x39414a);
+      hub.position.set(x, y - 0.05, z);
+      g.add(hub);
+      const p = mk(new THREE.BoxGeometry(len, 0.015, 0.055), 0x9aa4ad, { transparent: true, opacity: 0.55 });
+      p.position.set(x, y, z);
+      g.add(p);
+      this.cockpitSpin.push(p);
+    };
+    const arm = (x, y, z, ry, len = 0.75) => {
+      const a = mk(new THREE.BoxGeometry(len, 0.05, 0.08), 0x5b6772);
+      a.position.set(x, y, z);
+      a.rotation.y = ry;
+      g.add(a);
+    };
+    const frame = vis.frame || 'quad';
+    if (frame === 'hexa') {
+      // 六旋翼:左右二臂 + 正前中臂
+      for (const sx of [-1, 1]) { arm(sx * 0.5, 0.28, -0.7, sx * -0.55, 0.62); prop(sx * 0.72, 0.36, -0.9, 0.5); }
+      arm(0, 0.34, -0.8, Math.PI / 2, 0.5);
+      prop(0, 0.42, -1.0, 0.5);
+    } else if (frame === 'coax') {
+      // 同軸雙槳:中央桅桿 + 上下兩層大旋翼
+      const mast = mk(new THREE.CylinderGeometry(0.035, 0.05, 0.5, 8), 0x39414a);
+      mast.position.set(0, 0.42, -0.85);
+      g.add(mast);
+      prop(0, 0.5, -0.85, 0.9);
+      prop(0, 0.62, -0.85, 0.9);
+    } else if (frame === 'wing') {
+      // 固定翼混合:翼樑橫貫視野上緣 + 翼尖旋翼
+      const wing = mk(new THREE.BoxGeometry(2.0, 0.04, 0.3), 0x5b6772);
+      wing.position.set(0, 0.42, -0.9);
+      g.add(wing);
+      for (const sx of [-1, 1]) prop(sx * 0.95, 0.5, -0.9, 0.55);
+    } else {
+      // 四旋翼:前二臂 + 旋翼
+      for (const sx of [-1, 1]) { arm(sx * 0.48, 0.30, -0.72, sx * -0.6); prop(sx * 0.72, 0.38, -0.92); }
+    }
+  }
+
+  /** 機甲座艙:共通艙框(儀表台/頂樑/A 柱)+ 左肩角色掛件(與 models.js charPod 同語彙) */
+  _buildMechCockpit(g, mk, accent, vis) {
+    const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x46505b);
+    dash.position.set(0, -0.52, -0.85);
+    dash.rotation.x = 0.5;
+    g.add(dash);
+    const topStrut = mk(new THREE.BoxGeometry(1.6, 0.1, 0.3), 0x4d5865);
+    topStrut.position.set(0, 0.52, -0.8);
+    g.add(topStrut);
+    for (const sx of [-1, 1]) {
+      const pillar = mk(new THREE.BoxGeometry(0.09, 1.15, 0.2), 0x4d5865);
+      pillar.position.set(sx * 0.78, 0, -0.78);
+      pillar.rotation.z = sx * -0.12;
+      g.add(pillar);
+    }
+    const light = mk(new THREE.BoxGeometry(0.5, 0.04, 0.05), accent, { emissive: accent, emissiveIntensity: 0.9 });
+    light.position.set(0, -0.4, -0.72);
+    g.add(light);
+    const shoulder = mk(new THREE.BoxGeometry(0.5, 0.28, 0.7), 0x5a6673);
+    shoulder.position.set(-0.72, -0.34, -1.0);
+    shoulder.rotation.z = 0.28;
+    g.add(shoulder);
+    const pod = vis.pod || 'none';
+    if (pod === 'antenna') {
+      const mast = mk(new THREE.CylinderGeometry(0.02, 0.03, 0.6, 6), 0x39424b);
+      mast.position.set(-0.78, 0.12, -1.0);
+      g.add(mast);
+      const tip = mk(new THREE.SphereGeometry(0.045, 8, 6), accent, { emissive: accent, emissiveIntensity: 1.4 });
+      tip.position.set(-0.78, 0.44, -1.0);
+      g.add(tip);
+    } else if (pod === 'blade') {
+      const fin = mk(new THREE.BoxGeometry(0.04, 0.42, 0.16), 0x39424b, { metalness: 0.7 });
+      fin.rotation.z = 0.3;
+      fin.position.set(-0.8, 0.05, -1.0);
+      g.add(fin);
+    } else if (pod === 'shield') {
+      const plate = mk(new THREE.BoxGeometry(0.1, 0.5, 0.42), 0x39424b, { metalness: 0.6 });
+      plate.rotation.z = 0.14;
+      plate.position.set(-0.85, -0.18, -0.95);
+      g.add(plate);
+    } else if (pod === 'rack') {
+      const rack = mk(new THREE.BoxGeometry(0.26, 0.18, 0.3), 0x39424b);
+      rack.position.set(-0.74, -0.08, -1.0);
+      g.add(rack);
+      for (const [ox, oy] of [[-0.06, -0.04], [0.06, -0.04], [-0.06, 0.04], [0.06, 0.04]]) {
+        const cell = mk(new THREE.CylinderGeometry(0.03, 0.03, 0.26, 6), 0x14171a);
+        cell.rotation.x = Math.PI / 2;
+        cell.position.set(-0.74 + ox, -0.08 + oy, -1.02);
+        g.add(cell);
+      }
+    } else if (pod === 'dish') {
+      const dish = mk(new THREE.CylinderGeometry(0.16, 0.05, 0.05, 10), 0xaab4bd);
+      dish.rotation.z = Math.PI / 3;
+      dish.position.set(-0.78, 0.1, -1.0);
+      g.add(dish);
+    } else if (pod === 'twin') {
+      for (const oy of [-0.05, 0.05]) {
+        const tube = mk(new THREE.CylinderGeometry(0.035, 0.04, 0.5, 8), 0x2b3239, { metalness: 0.8 });
+        tube.rotation.x = Math.PI / 2;
+        tube.position.set(-0.76, -0.05 + oy, -1.1);
+        g.add(tube);
+      }
+    }
+  }
+
+  /** 輕武器外觀(gunGroup):依武器機構分類;掛點無人機吊艙較小、機甲右臂較大口徑 */
+  _buildCockpitGun(mk, accent, type) {
+    const d = this.isDrone;
+    const x = d ? 0.2 : 0.5, y = d ? -0.34 : -0.36, s = d ? 1 : 1.4;
+    const recv = mk(new THREE.BoxGeometry(0.16 * s, 0.14 * s, d ? 0.4 : 0.85), d ? 0x3d454e : 0x3c444d);
+    recv.position.set(x, y, d ? -0.7 : -1.0);
+    this.gunGroup.add(recv);
+    if (type === 'beam') {
+      // 能量武器:粗短炮管 + 主色發光聚焦環
+      const tube = mk(new THREE.CylinderGeometry(0.05 * s, 0.06 * s, 0.6 * s, 8), 0x30373f, { metalness: 0.85 });
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(x, y + 0.02, -1.05 - 0.25 * s);
+      this.gunGroup.add(tube);
+      const coil = mk(new THREE.TorusGeometry(0.07 * s, 0.018, 6, 12), accent, { emissive: accent, emissiveIntensity: 1.6 });
+      coil.position.set(x, y + 0.02, -1.2 - 0.3 * s);
+      this.gunGroup.add(coil);
+      this._muzzle = new THREE.Vector3(x, y + 0.02, -1.35 - 0.35 * s);
+    } else if (type === 'launcher') {
+      // 發射器:大口徑短筒(火箭/榴彈/飛彈)
+      const tube = mk(new THREE.CylinderGeometry(0.075 * s, 0.08 * s, 0.7 * s, 10), 0x2b3239, { metalness: 0.7 });
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(x, y + 0.02, -1.05 - 0.3 * s);
+      this.gunGroup.add(tube);
+      const lip = mk(new THREE.CylinderGeometry(0.09 * s, 0.09 * s, 0.08, 10), 0x272c31);
+      lip.rotation.x = Math.PI / 2;
+      lip.position.set(x, y + 0.02, -1.4 - 0.35 * s);
+      this.gunGroup.add(lip);
+      this._muzzle = new THREE.Vector3(x, y + 0.02, -1.5 - 0.35 * s);
+    } else {
+      // 槍械:細長槍管 + 制退器
+      const barrel = mk(new THREE.CylinderGeometry(0.03 * s, 0.035 * s, 0.8 * s, 8), 0x30373f, { metalness: 0.85 });
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(x, y + 0.02, -1.1 - 0.3 * s);
+      this.gunGroup.add(barrel);
+      const brake = mk(new THREE.CylinderGeometry(0.05 * s, 0.05 * s, 0.12, 8), 0x272c31);
+      brake.rotation.x = Math.PI / 2;
+      brake.position.set(x, y + 0.02, -1.5 - 0.35 * s);
+      this.gunGroup.add(brake);
+      this._muzzle = new THREE.Vector3(x, y + 0.02, -1.6 - 0.35 * s);
+    }
   }
 
   // ---------------- 物理:爆炸衝擊 / 碰撞 ----------------
@@ -302,13 +434,16 @@ export class BattleClient {
   _initInput() {
     this._onKey = (e) => {
       if (e.type === 'keydown' && e.code === 'KeyM') this.minimapBig = !this.minimapBig;
-      if (e.type === 'keydown' && this.side && !this.dead) {
-        if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
-        if (e.code === 'KeyE') this._castAbility('ult');     // 大招
-        if (e.code === 'KeyR') this._startReload();
+      if (e.type === 'keydown' && this.side) {
+        // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
-        if (e.code === 'KeyF' && this.isDrone) this._detonate();   // 無人機自爆(右鍵已改為瞄準)
         if (e.code === 'Escape' && this.shopOpen) this._toggleShop(false);
+        if (!this.dead) {
+          if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
+          if (e.code === 'KeyE') this._castAbility('ult');     // 大招
+          if (e.code === 'KeyR') this._startReload();
+          if (e.code === 'KeyF' && this.isDrone) this._detonate();   // 無人機自爆(右鍵已改為瞄準)
+        }
       }
       this.keys[e.code] = e.type === 'keydown';
     };
@@ -762,7 +897,7 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
-    if (this.shopOpen) { this.shopOpen = false; this.hud.shop?.(false, null); }
+    // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
     document.exitPointerLock?.();
   }
   _onSelfRespawn() {
@@ -791,7 +926,7 @@ export class BattleClient {
   }
 
   _toggleShop(force) {
-    if (!this.side || this.dead) return;
+    if (!this.side) return;   // 死亡不擋:重生等待也能購買
     const want = force != null ? force : !this.shopOpen;
     if (want === this.shopOpen) return;
     this.shopOpen = want;

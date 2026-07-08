@@ -463,10 +463,11 @@ function renderCharPick(me) {
   grid.appendChild(rnd);
   for (const id of charsOf(me.side)) {
     const c = CHARACTERS[id];
+    const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
     const b = document.createElement('button');
     b.className = 'char-btn' + (me.ch === id ? ' on' : '');
-    b.innerHTML = `<b>${esc(c.code)}</b><br><span class="char-name">${esc(c.name)}</span>`;
-    b.title = charTip(id);
+    b.innerHTML = `<b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><br><span class="char-name">${esc(c.name)}</span>`;
+    b.title = (merc ? '【傭兵】雙陣營皆可受雇,配置不隨陣營改變\n' : '') + charTip(id);
     b.onclick = () => { app.net.send({ t: 'pickChar', ch: id }); $('charInfo').textContent = `${c.code} ・ ${charTip(id).split('\n')[0]}`; };
     grid.appendChild(b);
   }
@@ -526,8 +527,9 @@ function enterGame() {
   if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
   // 陣營樣式 & 操作說明
   document.body.dataset.side = app.mySide || 'SPEC';
-  const isDrone = app.mySide && SIDES[app.mySide].hero === 'drone';
   const chData = myCh && CHARACTERS[myCh];
+  // 機體種類綁角色(傭兵 kind 自帶,不隨陣營),操作說明跟著機體走
+  const isDrone = (chData?.kind || (app.mySide && SIDES[app.mySide].hero)) === 'drone';
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';

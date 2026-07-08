@@ -301,7 +301,7 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); }
 .shop-hint { color: var(--dim); font-size: 11px; margin-left: 8px; }
 
 /* 主堡軍械庫 */
-.shop-overlay { pointer-events: auto; }
+.shop-overlay { pointer-events: auto; z-index: 30; }   /* 疊在死亡畫面上:陣亡等待重生也能購買 */
 .shop-box { text-align: left; max-width: min(560px, 94vw); max-height: 86vh; overflow-y: auto; }
 .shop-money { float: right; color: #ffd75e; font-family: Orbitron; }
 .shop-items { display: flex; flex-direction: column; gap: 6px; }

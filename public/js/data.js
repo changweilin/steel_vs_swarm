@@ -202,10 +202,15 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
-export const charsOf = (side) => Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === side);
+// 陣營可選角色池:專屬角色 + 傭兵(side:'MERC',雙陣營皆可受雇)
+export const charsOf = (side) => Object.keys(CHARACTERS)
+  .filter((id) => CHARACTERS[id].side === side || CHARACTERS[id].side === 'MERC');
 
-// ---- 角色圖鑑(24 名;劇情設定見 docs/characters.md)----
-// 每名角色 = 專屬機體(蜂群=無人機、鋼鐵=機甲)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
+/** 角色機體種類:傭兵 kind 綁角色(無人機/機甲不隨陣營);陣營角色沿用 SIDES 預設 */
+export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero;
+
+// ---- 角色圖鑑(24 名陣營角色 + 4 名傭兵;劇情設定見 docs/characters.md)----
+// 每名角色 = 專屬機體(蜂群=無人機、鋼鐵=機甲;傭兵 kind 自帶)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
 // 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
 // mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
@@ -582,6 +587,69 @@ export const CHARACTERS = {
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '在頻譜裡找蜂群的心跳:全隊限時無霧' },
     ult: { name: '那也是一個人', fx: 'emp', r: 240, dur: [3, 4, 5], vision: [4, 5, 6],
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '標記過的訊號全數靜默,並回傳位置' },
+  },
+
+  // ================= 傭兵(side:'MERC',雙陣營皆可受雇)=================
+  // kind 綁角色:無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
+  m01: {
+    side: 'MERC', kind: 'drone', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」傭兵突襲 FPV',
+    visual: { hue: 0xd94f4f, frame: 'quad', body: 'wedge' },
+    mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
+    light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
+      dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
+      vs: { flesh: 1.3, armor: 0.6, air: 1.3, building: 0.4 } },
+    heavy: { name: '地獄火反裝甲彈', rw: 'AGM-114 縮裝・初速 450m/s', type: 'launcher', mv: 450,
+      dmg: [150, 195, 245], r: [12, 14, 16], cd: [9, 8, 7], range: 320, pen: [14, 18, 22],
+      vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
+    skill: { name: '違約金條款', fx: 'dash', imp: [27, 33, 39],
+      cd: [12, 10, 8], mp: [25, 30, 35], desc: '哪邊付錢都一樣快:沿視線爆發脫離' },
+    ult: { name: '加班費三倍', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], reload: [0.8, 0.75, 0.7] },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '合約外時段:火力與填彈全面超載' },
+  },
+  m02: {
+    side: 'MERC', kind: 'robot', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型傭兵機甲',
+    visual: { hue: 0x9aa3ad, pod: 'shield' },
+    mods: { hp: 1.25, sp: 0.9, mp: 0.95, speed: 0.9, armor: 24 },
+    light: { name: '7.62 通用機槍', rw: 'FN MAG・初速 840m/s', type: 'gun', mv: 840,
+      dmg: [16, 20, 25], rate: 7, mag: [40, 48, 56], reload: 2.2, range: 195, crit: 0.05,
+      vs: { flesh: 1.3, armor: 0.8, air: 0.9, building: 0.5 } },
+    heavy: { name: '105mm 低壓砲', rw: 'M68 縮裝・初速 500m/s', type: 'launcher', mv: 500,
+      dmg: [170, 220, 275], r: [14, 16, 18], cd: [9, 8, 7], range: 320, pen: 12,
+      vs: { flesh: 1.0, armor: 1.4, air: 0.3, building: 1.6 } },
+    skill: { name: '掩體協議', fx: 'buff', target: 'self', mul: { dmgTaken: [0.6, 0.55, 0.5] },
+      dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '雇主的貨要緊:承傷大減' },
+    ult: { name: '押運合約', fx: 'buff', target: 'team', r: 200, mul: { dmgTaken: [0.7, 0.62, 0.55] },
+      dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '這一單保到底:半徑內友軍承傷降低' },
+  },
+  m03: {
+    side: 'MERC', kind: 'drone', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤補給機',
+    visual: { hue: 0x59c9a5, frame: 'hexa', body: 'sphere' },
+    mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
+    light: { name: '護衛衝鋒槍艙', rw: 'UMP45・初速 285m/s', type: 'gun', mv: 285,
+      dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
+      vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
+    heavy: { name: '空投截擊彈', rw: 'APKWS 導引・初速 700m/s', type: 'launcher', mv: 700,
+      dmg: [120, 160, 200], r: [11, 13, 15], cd: [8, 7, 6], range: 300, pen: 8,
+      vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
+    skill: { name: '戰地保單', fx: 'heal', target: 'team', r: 150, heal: [140, 200, 260],
+      cd: [20, 18, 16], mp: [40, 45, 50], desc: '先修好再收錢:半徑內友軍裝甲回復' },
+    ult: { name: '年度結算', fx: 'heal', target: 'team', r: 220, heal: [260, 350, 440], sp: true,
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '大帳一次結清:裝甲大修、護盾充滿' },
+  },
+  m04: {
+    side: 'MERC', kind: 'robot', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵傭兵機甲',
+    visual: { hue: 0xb59ce8, pod: 'antenna' },
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 13 },
+    light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
+      dmg: [21, 26, 32], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
+      vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
+    heavy: { name: '游騎反器材砲', rw: 'NTW-20・初速 900m/s', type: 'gun', mv: 900,
+      dmg: [175, 230, 285], cd: [9, 8, 7], range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
+      vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
+    skill: { name: '匿名發包', fx: 'stealth', dur: [4, 5, 6],
+      cd: [20, 18, 16], mp: [35, 40, 45], desc: '合約不留名:從感測網上消失(開火即現形)' },
+    ult: { name: '全境盡職調查', fx: 'vision', vision: [9, 12, 15],
+      cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊限時無霧視野' },
   },
 };
 

@@ -70,9 +70,9 @@ function fakeBattleConfig(L = 3) {
 }
 
 // ================= sim 直測(不經 WebSocket,確定性驗證新機制)=================
-log('— sim:角色系統(24 角 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
+log('— sim:角色系統(24 陣營角 + 4 傭兵 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
 {
-  assert(charsOf('SWARM').length === 12 && charsOf('STEEL').length === 12, '雙陣營各 12 名角色');
+  assert(charsOf('SWARM').length === 16 && charsOf('STEEL').length === 16, '雙陣營各 16 名可選角色(12 專屬 + 4 傭兵)');
   let dataOk = true, rangeOk = true, tierOk = true;
   for (const id of Object.keys(CHARACTERS)) {
     for (const slot of ['light', 'heavy']) {
@@ -91,12 +91,34 @@ log('— sim:角色系統(24 角 × 專屬武器/招式 × 三階;英雄 vs NPC 
     // #INC-104:e2e 從 y=250 高空垂直射擊 → 輕武器英雄射程 ×1.25 必須 > 250
     if (heroWeapon(id, 'light', 1).range * 1.25 <= 250) rangeOk = false;
   }
-  assert(dataOk, '24 角 × 4 招 × 3 階資料完整(傷害/射程/CD/MP 皆為正值)');
+  assert(dataOk, '28 角 × 4 招 × 3 階資料完整(傷害/射程/CD/MP 皆為正值)');
   assert(tierOk, '三階升級傷害遞增');
   assert(rangeOk, '全部輕武器英雄射程 ×1.25 > 250(高空射擊測試相容,#INC-104)');
   const wn = heroWeapon('t01', 'light', 1, false), wh = heroWeapon('t01', 'light', 1, true);
   assert(Math.abs(wh.range / wn.range - HEROIC.range) < 1e-9 && Math.abs(wh.dmg / wn.dmg - HEROIC.dmg) < 1e-9,
     `玩家英雄同型武器:射程 ×${HEROIC.range}、威力 ×${HEROIC.dmg}(vs NPC 基準)`);
+}
+
+log('— sim:傭兵(雙陣營可選;機體/武器/招式不隨陣營改變)+ 陣亡購買 —');
+{
+  const mercs = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === 'MERC');
+  assert(mercs.length === 4, `傭兵 ${mercs.length} 名(雙陣營共用)`);
+  assert(mercs.every((id) => charsOf('SWARM').includes(id) && charsOf('STEEL').includes(id)),
+    '雙陣營角色池皆含傭兵');
+  assert(mercs.some((id) => CHARACTERS[id].kind === 'drone') && mercs.some((id) => CHARACTERS[id].kind === 'robot'),
+    '傭兵機體含無人機與機甲兩型(kind 綁角色)');
+  const sim = new BattleSim(fakeBattleConfig(1));
+  const a = sim.addHero('SWARM', 'p_ma', 'm02');
+  const b = sim.addHero('STEEL', 'p_mb', 'm02');
+  assert(a.kind === 'robot' && b.kind === 'robot', '傭兵機甲受雇蜂群仍是機甲(kind 不隨陣營)');
+  assert(a.maxHp === b.maxHp && a.armor === b.armor && a.maxSp === b.maxSp && a.maxMp === b.maxMp,
+    `傭兵數值跨陣營一致(HP ${a.maxHp}/護甲 ${a.armor}/護盾 ${a.maxSp}/電力 ${a.maxMp})`);
+  // 陣亡等待重生仍可購買(DOTA 慣例;修復「重生位置無法買東西」)
+  a.money = 999;
+  sim._damage(a, 99999, null, 999);
+  assert(a.dead, '測試前置:傭兵陣亡');
+  assert(sim.buy('p_ma', 'dmg') === null && a.upg.dmg === 1, '陣亡等待重生仍可購買升級');
+  assert(sim.buy('p_ma', 'hull') === null && a.hp === 0, '陣亡買裝甲強化只擴上限(重生才回滿)');
 }
 
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
