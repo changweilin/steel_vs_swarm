@@ -57,9 +57,11 @@ function overlapRatio(laneA, laneB, origin) {
   return shared / Math.min(ga.size, gb.size);
 }
 
-/** 路徑戰術指標(座標序列 [lat,lng] → 公尺平面後交給共用判定) */
+/** 路徑戰術指標(座標序列 [lat,lng] → 遊戲世界公尺後交給共用判定)。
+ *  ÷REAL_SCALE:與伺服器 sim._laneTurns(遊戲世界公尺)同尺度,轉角密度一致。 */
 function laneTactics(coords, origin) {
-  return laneTacticsXZ(coords.map((c) => toMeters(c, origin)));
+  const s = 1 / MAPGEO.REAL_SCALE;
+  return laneTacticsXZ(coords.map((c) => { const [x, z] = toMeters(c, origin); return [x * s, z * s]; }));
 }
 
 /** 一組兵線的綜合戰術評分 + 摘要(彎曲度/轉角密度取各線平均) */
@@ -94,6 +96,66 @@ async function osrmRoute(waypoints, signal) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---- 高程取樣(terrarium 磚):兵線選路避開陡坡(Part 3)。輕量、不依賴 THREE ----
+const TERRARIUM = (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
+const lon2tx = (lon, z) => (lon + 180) / 360 * 2 ** z;
+const lat2ty = (lat, z) => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * 2 ** z;
+function loadImg(url, signal) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('elev tile'));
+    signal?.addEventListener('abort', () => reject(new Error('abort')));
+    img.src = url;
+  });
+}
+/** 抓 terrarium 高程磚拼成取樣器:(lat,lng)→公尺;失敗/範圍過大回 null(則跳過坡度濾網) */
+async function fetchElevSampler(bbox, signal) {
+  const z = 12;
+  const tx0 = Math.floor(lon2tx(bbox.minLng, z)), tx1 = Math.floor(lon2tx(bbox.maxLng, z));
+  const ty0 = Math.floor(lat2ty(bbox.maxLat, z)), ty1 = Math.floor(lat2ty(bbox.minLat, z));
+  const cols = tx1 - tx0 + 1, rows = ty1 - ty0 + 1;
+  if (cols < 1 || rows < 1 || cols * rows > 12) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = cols * 256; canvas.height = rows * 256;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  try {
+    await Promise.all(Array.from({ length: cols * rows }, (_, i) => {
+      const cx = i % cols, cy = (i / cols) | 0;
+      return loadImg(TERRARIUM(z, tx0 + cx, ty0 + cy), signal).then((img) => ctx.drawImage(img, cx * 256, cy * 256));
+    }));
+  } catch { return null; }
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const W = canvas.width, H = canvas.height;
+  return (lat, lng) => {
+    const px = Math.round((lon2tx(lng, z) - tx0) * 256), py = Math.round((lat2ty(lat, z) - ty0) * 256);
+    if (px < 0 || py < 0 || px >= W || py >= H) return null;
+    const k = (py * W + px) * 4;
+    return data[k] * 256 + data[k + 1] + data[k + 2] / 256 - 32768;
+  };
+}
+/** 一組兵線沿線最大坡度(tan θ):沿折線每 STEP 真實公尺取樣高程,取相鄰樣點的 |Δh|/run */
+function maxLaneGrade(lanes, sampleElev) {
+  const STEP = 40;
+  let mx = 0;
+  for (const lane of lanes) {
+    let prev = null, prevH = null;
+    for (let i = 1; i < lane.length; i++) {
+      const n = Math.max(1, Math.round(distM(lane[i - 1], lane[i]) / STEP));
+      for (let k = 1; k <= n; k++) {
+        const f = k / n;
+        const pt = [lane[i - 1][0] + (lane[i][0] - lane[i - 1][0]) * f, lane[i - 1][1] + (lane[i][1] - lane[i - 1][1]) * f];
+        const h = sampleElev(pt[0], pt[1]);
+        if (h == null) { prev = null; continue; }
+        if (prev) { const run = distM(prev, pt); if (run > 5) mx = Math.max(mx, Math.abs(h - prevH) / run); }
+        prev = pt; prevH = h;
+      }
+    }
+  }
+  return mx;
+}
 
 // 側翼兵線的候選側移距離(兩堡距離的倍率):由近到遠試,
 // 太近會被幹道「吸走」與中路重合,太遠繞路過長。
@@ -176,6 +238,7 @@ export class MapSelect {
     this.chosen = null;
     this.venue = null;           // 使用中的預設場地(含 mix),自訂點為 null
     this.teamSize = TEAM.DEFAULT;
+    this.sizeKey = 'medium';     // 地圖尺寸(大/中/小)
     this._layers = [];
     this._searchAbort = null;
 
@@ -211,15 +274,22 @@ export class MapSelect {
     this.map.remove();
   }
 
-  /** 兵線數(隨隊伍規模)與兩堡目標距離 */
+  /** 兵線數(隨隊伍規模)與兩堡目標距離(遊戲世界公尺) */
   get laneCount() { return lanesFor(this.teamSize); }
-  get targetDist() { return targetDistFor(this.laneCount); }
+  get targetDist() { return targetDistFor(this.laneCount, this.sizeKey); }
 
   /** 改隊伍規模:幾何條件全變,重置目前選點 */
   setTeamSize(n) {
     n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
     if (n === this.teamSize) return;
     this.teamSize = n;
+    if (this.anchor) this.reset();
+  }
+
+  /** 改地圖尺寸:兩堡距離變,重置目前選點 */
+  setSizeKey(k) {
+    if (k === this.sizeKey) return;
+    this.sizeKey = k;
     if (this.anchor) this.reset();
   }
 
@@ -236,7 +306,7 @@ export class MapSelect {
     cfg.lanes.forEach((lane, i) => {
       this._addLayer(L.polyline(lane, { color: colors[i % 3], weight: 4, opacity: 0.85 }), 'fav');
     });
-    const half = cfg.sizeM / 2;
+    const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
     const dLat = half / R_EARTH * 180 / Math.PI;
     const dLng = half / (R_EARTH * Math.cos(cfg.center.lat * Math.PI / 180)) * 180 / Math.PI;
     this._addLayer(L.rectangle([
@@ -288,10 +358,21 @@ export class MapSelect {
     const signal = this._searchAbort.signal;
     const A = this.anchor;
     const L = this.laneCount;
-    const D = this.targetDist;                            // 兩堡目標距離(1600m × L)
-    const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2); // 反推地圖邊長
+    const D = this.targetDist;                            // 兩堡目標距離(遊戲世界公尺)
+    const realD = D * MAPGEO.REAL_SCALE;                  // 真實地理距離(範圍縮小 → 地形更密)
+    const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2); // 反推地圖邊長(遊戲世界)
     const diagM = sizeM * Math.SQRT2;
     this.candidates = [];
+
+    // Part 3:抓搜尋範圍高程,供坡度濾網(best-effort;失敗/離線則不濾)
+    let elev = null;
+    const rLat = realD / R_EARTH * 180 / Math.PI;
+    const rLng = realD / (R_EARTH * Math.cos(A[0] * Math.PI / 180)) * 180 / Math.PI;
+    try {
+      elev = await fetchElevSampler(
+        { minLat: A[0] - rLat, maxLat: A[0] + rLat, minLng: A[1] - rLng, maxLng: A[1] + rLng }, signal);
+    } catch { elev = null; }
+    const gradeCap = Math.tan(MAPGEO.MAX_ROAD_GRADE_DEG * Math.PI / 180);
 
     const nB = MAPGEO.CANDIDATE_BEARINGS;
     let osrmDead = 0;                                     // 直達全掛 = 離線,啟用模擬模式
@@ -300,20 +381,22 @@ export class MapSelect {
       const bearing = i * (360 / nB);
       this.h.status?.(`掃描方位 ${Math.round(bearing)}° …(已找到 ${this.candidates.length} 個推薦點)`, i / nB);
 
-      const B = destPoint(A, bearing, D);
+      const B = destPoint(A, bearing, realD);
       // 直達路線:失敗(海面/無路網)或繞路過遠 → 淘汰此方位
       const direct = await osrmRoute([A, B], signal);
       await sleep(130);
       if (!direct) { osrmDead++; continue; }
-      if (direct.dist / D > 2.2) continue;
+      if (direct.dist / realD > 2.2) continue;
       const result = await buildLanes(A, B, signal, direct, L);
       if (!result) continue;
       const { lanes, maxOverlap, overlaps, synthetic, roadDist } = result;
-      const dist = distM(A, B);
+      const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP;
       if (!ok) continue;
+      // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
+      if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
 
-      const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist, bearing };
+      const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
       cand.tactics = lanesTactics(lanes, A, maxOverlap);
       this.candidates.push(cand);
       this._drawCandidate(cand, this.candidates.length - 1);
@@ -330,13 +413,13 @@ export class MapSelect {
     if (this.candidates.length === 0 && osrmDead === nB && !signal.aborted) {
       const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
       for (const bearing of [0, 90, 180, 270]) {
-        const B = destPoint(A, bearing, D);
+        const B = destPoint(A, bearing, realD);
         const lanes = sides.map((s) => synthLane(A, B, s));
         let maxOverlap = 0;
         for (let i = 0; i < lanes.length; i++) {
           for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A));
         }
-        const cand = { latlng: B, lanes, distM: distM(A, B), sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
+        const cand = { latlng: B, lanes, distM: distM(A, B) / MAPGEO.REAL_SCALE, sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
         cand.tactics = lanesTactics(lanes, A, maxOverlap);
         this.candidates.push(cand);
         this._drawCandidate(cand, this.candidates.length - 1);
@@ -399,7 +482,7 @@ export class MapSelect {
     });
     // 戰場邊界(以 AB 中點為中心的正方形)
     const c = midPoint(this.anchor, cand.latlng);
-    const half = cand.sizeM / 2;
+    const half = cand.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
     const dLat = half / R_EARTH * 180 / Math.PI;
     const dLng = half / (R_EARTH * Math.cos(c[0] * Math.PI / 180)) * 180 / Math.PI;
     this._addLayer(L.rectangle([[c[0] - dLat, c[1] - dLng], [c[0] + dLat, c[1] + dLng]], {
@@ -434,6 +517,8 @@ export class MapSelect {
       sizeM: this.chosen.sizeM,
       diagM: this.chosen.diagM,
       distM: this.chosen.distM,
+      sizeKey: this.sizeKey,
+      geoScaleVer: MAPGEO.GEO_SCALE_VER,
       maxOverlap: this.chosen.maxOverlap,
       tactics: this.chosen.tactics || null,
       synthetic: this.chosen.synthetic,

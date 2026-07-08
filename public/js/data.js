@@ -32,7 +32,10 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 // 地圖邊長正比 L(兩堡 1000m × L),1/2/3 線目標場均 5/8/10 分鐘。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
-export const targetDistFor = (L) => MAPGEO.DIST_M_PER_LANE * L;
+// 兩堡「遊戲世界」距離 = 1000m × L × 尺寸倍率(以 medium 正規化;medium = 現況)
+export const targetDistFor = (L, sizeKey = 'medium') =>
+  MAPGEO.DIST_M_PER_LANE * L * ((MAPGEO.SIZE_MULT[sizeKey] ?? MAPGEO.SIZE_MULT.medium) / MAPGEO.SIZE_MULT.medium);
+export const SIZE_KEYS = ['large', 'medium', 'small'];
 
 // ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
@@ -42,6 +45,18 @@ export const MAPGEO = {
   // 節奏簡化:兩堡距離 1000m × L(1/2/3 線 ≈ 5/8/10 分鐘一場)
   DIST_M_PER_LANE: 1000,
   TARGET_DIST_M: 3000,
+  // 地圖尺寸(大/中/小):遊戲世界邊長倍率;中型 = 現況錨點(以 medium 正規化)
+  SIZE_MULT: { large: 1.5, medium: 1.25, small: 1.0 },
+  // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
+  // 同一塊遊戲空間對應一半的真實範圍 → 地形/道路更密;
+  // 因 llToWorld/llToMeters 同步 ×(1/REAL_SCALE),遊戲世界公尺與武器射程「完全不變」。
+  REAL_SCALE: 0.5,
+  // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
+  GEO_SCALE_VER: 2,
+  // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
+  // 註:30° ≈ 58% grade,真實道路幾乎不會達標 → 此濾網現實中極少觸發;
+  //     若要濾「陡但仍常見」的路,改成 ~17(≈30% grade)。
+  MAX_ROAD_GRADE_DEG: 30,
   // 三條兵線側向偏移(佔兩堡距離比例)
   LANE_OFFSET_FRAC: 0.30,
   // 路徑重合判定格 (m) 與允許重合率(1 - 80% 不重合)
@@ -726,6 +741,16 @@ export const GAME = {
   AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
 };
 
+// ---- 地形呈現(解析度 + 主要道路外海拔放大)----
+// GRID_N/ELEV_ZOOM 純渲染;AMP_* 會改 heightAt(單位貼地)故列為平衡值住這裡。
+export const TERRAIN = {
+  GRID_N: 193,        // 地形頂點解析度(129→193;純幾何,便宜)
+  ELEV_ZOOM: 13,      // 高程磚 zoom(真實範圍已縮半,可提高一級;磚數仍在 buildTerrain 守衛內)
+  AMP: 0.9,           // 主要道路(兵線)以外:相對全場均值的海拔偏差放大係數
+  AMP_R0: 45,         // 距兵線 ≤ R0(= LANE_SAFE_M 走廊):完全不放大,保留真實可行駛
+  AMP_R1: 260,        // 距兵線 ≥ R1:完全放大
+};
+
 // ---- 危險區:非圖資障礙物(Diablo 核心思想:迷宮式隨機佈局 + 隨機物品掉落)----
 // 生成在空白區 / 非主要路徑與主要路徑邊緣:限制行動但不完全封鎖——
 // 阻擋型障礙以「短牆 + 保證縫隙」佈局(FIELD.HAZ_GAP),同時提供隱蔽與戰略通道;
@@ -737,6 +762,7 @@ export const HAZARDS = {
   wreck:        { name: '車禍殘骸',   biome: 'urban', r: 5.5, block: true, hp: 180, salvage: 0.7 },
   fire:         { name: '火場',       biome: 'urban', r: 12,  dot: 30, maxY: 24 },
   sinkhole:     { name: '路面塌陷',   biome: 'urban', r: 7,   block: true },
+  pothole:      { name: '坑洞',       biome: 'urban', r: 4,   slow: 0.55 },
   flood:        { name: '淹水區',     biome: 'wet',   r: 20,  slow: 0.45 },
   landslide:    { name: '坍方土石流', biome: 'bare',  r: 13,  block: true },
   rockfall:     { name: '落石',       biome: 'bare',  r: 6.5, block: true, hp: 300, salvage: 0.65 },

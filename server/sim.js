@@ -4,18 +4,20 @@
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
-  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES,
+  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
 
-/** 經緯度 → 以 center 為原點的公尺平面(等距圓柱,5km 內誤差可忽略) */
+/** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
+ *  ×(1/REAL_SCALE):真實範圍縮小,但遊戲世界公尺不變 — 與 terrain.js/llToWorld 必須同倍率。 */
 export function llToMeters(lat, lng, center) {
   const R = 6371000;
-  const x = (lng - center.lng) * Math.PI / 180 * R * Math.cos(center.lat * Math.PI / 180);
-  const z = (lat - center.lat) * Math.PI / 180 * R;
+  const s = 1 / MAPGEO.REAL_SCALE;
+  const x = (lng - center.lng) * Math.PI / 180 * R * Math.cos(center.lat * Math.PI / 180) * s;
+  const z = (lat - center.lat) * Math.PI / 180 * R * s;
   return [x, z];
 }
 

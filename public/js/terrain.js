@@ -8,10 +8,13 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { toonGradient } from './hazards.js';
+import { MAPGEO, TERRAIN, GAME } from './data.js';
 
 const R_EARTH = 6371000;
-const GRID_N = 129;            // 地形頂點 129×129
-const ELEV_ZOOM = 12;
+// 真實↔遊戲世界比例尺(與 sim.js/llToMeters 必須同倍率,否則單位錯位)
+const WORLD_S = 1 / MAPGEO.REAL_SCALE;
+const GRID_N = TERRAIN.GRID_N;         // 地形頂點解析度
+const ELEV_ZOOM = TERRAIN.ELEV_ZOOM;
 const TERRARIUM = (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
 const IMAGERY = (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 const OPEN_METEO = 'https://api.open-meteo.com/v1/elevation';
@@ -21,6 +24,26 @@ const d2r = (d) => d * Math.PI / 180;
 function lon2tx(lon, z) { return (lon + 180) / 360 * 2 ** z; }
 function lat2ty(lat, z) {
   return (1 - Math.log(Math.tan(d2r(lat)) + 1 / Math.cos(d2r(lat))) / Math.PI) / 2 * 2 ** z;
+}
+
+// smoothstep 到 [0,1]
+function smooth01(t) {
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  return t * t * (3 - 2 * t);
+}
+// 點到多段線集合(每段 [x1,z1,x2,z2])的最短距離
+function distToSegs(px, pz, segs) {
+  let min = Infinity;
+  for (const [x1, z1, x2, z2] of segs) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const l2 = dx * dx + dz * dz;
+    let t = l2 ? ((px - x1) * dx + (pz - z1) * dz) / l2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const cx = x1 + t * dx, cz = z1 + t * dz;
+    const d = Math.hypot(px - cx, pz - cz);
+    if (d < min) min = d;
+  }
+  return min;
 }
 
 function loadImage(url) {
@@ -39,7 +62,7 @@ export function battleBBox(cfg) {
     cfg.bases.SWARM, cfg.bases.STEEL,
     ...cfg.lanes.flat(),
   ];
-  const half = cfg.sizeM / 2;
+  const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑(範圍縮小)
   const dLat = half / R_EARTH * 180 / Math.PI;
   const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
   pts.push([cfg.center.lat - dLat, cfg.center.lng - dLng]);
@@ -57,8 +80,8 @@ export function battleBBox(cfg) {
 
 /** 經緯度 → 世界公尺(x 東、z 南) */
 export function llToWorld(lat, lng, center) {
-  const x = (lng - center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(center.lat));
-  const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH;
+  const x = (lng - center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(center.lat)) * WORLD_S;
+  const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH * WORLD_S;
   return [x, -zN];
 }
 
@@ -196,8 +219,9 @@ export async function buildTerrain(cfg, onProgress) {
     const idata = ictx.getImageData(0, 0, imagery.canvas.width, imagery.canvas.height).data;
     const iw = imagery.canvas.width, ih = imagery.canvas.height;
     sampleColor = (x, z) => {
-      const lng = center.lng + x / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
-      const lat = center.lat + (-z) / R_EARTH * 180 / Math.PI;
+      // 遊戲世界公尺 → 真實公尺(×REAL_SCALE)→ 經緯度(llToWorld 的逆運算)
+      const lng = center.lng + x * MAPGEO.REAL_SCALE / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
+      const lat = center.lat + (-z) * MAPGEO.REAL_SCALE / R_EARTH * 180 / Math.PI;
       const px = Math.round((lon2tx(lng, imagery.z) - imagery.tx0) * 256);
       const py = Math.round((lat2ty(lat, imagery.z) - imagery.ty0) * 256);
       if (px < 0 || py < 0 || px >= iw || py >= ih) return null;
@@ -238,6 +262,43 @@ export async function buildTerrain(cfg, onProgress) {
     }
   }
   heights.set(sm);
+
+  // ---- 主要道路(兵線)以外放大海拔起伏 ----
+  // 走廊(距兵線 ≤ AMP_R0)保留真實高度可行駛;遠離處放大「相對全場均值」的偏差 →
+  // 更戲劇性的丘壑。主堡半徑內壓回平坦,維持基座與單位貼地正常。
+  {
+    const segs = [];
+    for (const lane of (cfg.lanes || [])) {
+      let prev = null;
+      for (const [lat, lng] of lane) {
+        const p = llToWorld(lat, lng, center);
+        if (prev) segs.push([prev[0], prev[1], p[0], p[1]]);
+        prev = p;
+      }
+    }
+    if (segs.length) {
+      let meanH = 0;
+      for (let k = 0; k < N * N; k++) meanH += heights[k];
+      meanH /= N * N;
+      const bases = ['SWARM', 'STEEL'].map((s) => llToWorld(cfg.bases[s][0], cfg.bases[s][1], center));
+      const R0 = TERRAIN.AMP_R0, R1 = TERRAIN.AMP_R1, BR = GAME.HERO_HEAL_RADIUS;
+      minH = Infinity; maxH = -Infinity;
+      for (let i = 0; i < N; i++) {
+        const z = minZ + (maxZ - minZ) * i / (N - 1);
+        for (let j = 0; j < N; j++) {
+          const x = minX + (maxX - minX) * j / (N - 1);
+          let f = smooth01((distToSegs(x, z, segs) - R0) / (R1 - R0));
+          let db = Infinity;
+          for (const [bx, bz] of bases) db = Math.min(db, Math.hypot(x - bx, z - bz));
+          if (db < BR) f *= smooth01((db - BR * 0.4) / (BR * 0.6));   // 基座淨空壓平
+          const k = i * N + j;
+          if (f > 0) heights[k] += (heights[k] - meanH) * TERRAIN.AMP * f;
+          if (heights[k] < minH) minH = heights[k];
+          if (heights[k] > maxH) maxH = heights[k];
+        }
+      }
+    }
+  }
 
   // ---- BufferGeometry ----
   const geo = new THREE.BufferGeometry();

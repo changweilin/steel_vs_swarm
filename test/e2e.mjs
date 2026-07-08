@@ -4,7 +4,7 @@
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
 import {
-  UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES,
+  UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul,
 } from '../public/js/data.js';
 
@@ -44,7 +44,10 @@ function client(name) {
 function fakeBattleConfig(L = 3) {
   const A = [25.0330, 121.5654];
   const D = 1600 * L, R = 6371000;
-  const dLat = D / R * 180 / Math.PI;
+  // 幾何用「真實」距離 D×REAL_SCALE;sizeM/distM 為遊戲世界公尺 = D。
+  // 因 sim.llToMeters 同步 ×(1/REAL_SCALE),伺服器世界座標與比例尺改制前完全一致 → 斷言不變。
+  const realD = D * MAPGEO.REAL_SCALE;
+  const dLat = realD / R * 180 / Math.PI;
   const B = [A[0] + dLat, A[1]];
   const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
   const mkLane = (off) => {
@@ -57,13 +60,14 @@ function fakeBattleConfig(L = 3) {
     }
     return pts;
   };
-  const offs = L === 1 ? [0] : L === 2 ? [0.3 * D, -0.3 * D] : [0.3 * D, 0, -0.3 * D];
+  const offs = L === 1 ? [0] : L === 2 ? [0.3 * realD, -0.3 * realD] : [0.3 * realD, 0, -0.3 * realD];
   const sizeM = D / (0.85 * Math.SQRT2);
   return {
     center: { lat: mid[0], lng: mid[1] },
     bases: { SWARM: A, STEEL: B },
     lanes: offs.map(mkLane),
     sizeM, diagM: sizeM * Math.SQRT2, distM: D,
+    sizeKey: 'medium', geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap: 0.05, synthetic: true, placeName: '測試戰區',
     env: { season: 'summer', time: 'day', weather: 'clear' },
   };

@@ -5,14 +5,16 @@
 import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, SIZE_KEYS,
 } from './data.js';
+
+const SIZE_LABELS = { large: '大', medium: '中', small: '小' };
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
 import { buildBiomes } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
-import { VENUES, venueConfig, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
@@ -25,6 +27,7 @@ const app = {
   mySide: null,
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
+  sizeKey: 'medium',    // 地圖尺寸(大/中/小);中型 = 現況錨點
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
@@ -94,6 +97,16 @@ function myName() {
   localStorage.setItem('svs_name', v);
   return v;
 }
+
+// ---- 開房設定持久化(localStorage,重啟瀏覽器仍記憶)----
+// 存人數 / 尺寸 / 房名 / 上次場地;啟動時還原(見 DOMContentLoaded / enterOpenRoom)。
+const PREFS_KEY = 'svs_prefs';
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
+}
+function savePrefs(patch) {
+  localStorage.setItem(PREFS_KEY, JSON.stringify({ ...loadPrefs(), ...patch }));
+}
 function esc(s) {
   return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
@@ -124,6 +137,8 @@ function enterMapBuilder() {
       },
     });
     renderTeamSize();
+    renderSize('szRow', setSizeKey);
+    app.mapSel.setSizeKey(app.sizeKey);   // 同步還原的尺寸
     renderVenues();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
@@ -145,6 +160,7 @@ function renderTeamSize() {
 
 function setTeamSize(n) {
   app.teamSize = n;
+  savePrefs({ teamSize: n });
   app.favCfg = null;
   app.mapSel?.setTeamSize(n);
   $('saveFavBtn').disabled = true;
@@ -156,8 +172,34 @@ function setTeamSize(n) {
 
 function updateTsInfo() {
   const L = lanesFor(app.teamSize);
-  const size = targetDistFor(L) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
-  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+  const size = targetDistFor(L, app.sizeKey) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ ${SIZE_LABELS[app.sizeKey]}型戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+}
+
+// ---- 地圖尺寸(大/中/小)按鈕 ----
+function renderSize(rowId, onPick) {
+  const row = $(rowId);
+  if (!row) return;
+  row.innerHTML = '';
+  for (const k of SIZE_KEYS) {
+    const b = document.createElement('button');
+    b.className = 'btn ts-btn' + (k === app.sizeKey ? ' on' : '');
+    b.textContent = SIZE_LABELS[k];
+    b.title = `邊長 ×${(MAPGEO.SIZE_MULT[k] / MAPGEO.SIZE_MULT.medium).toFixed(2)}`;
+    b.onclick = () => onPick(k);
+    row.appendChild(b);
+  }
+}
+
+function setSizeKey(k) {
+  app.sizeKey = k;
+  savePrefs({ sizeKey: k });
+  app.favCfg = null;
+  app.mapSel?.setSizeKey(k);
+  $('saveFavBtn').disabled = true;
+  for (const b of [...$('szRow').children]) b.classList.toggle('on', b.textContent === SIZE_LABELS[k]);
+  updateTsInfo();
+  if (app.venueSel) selectVenue(app.venueSel);   // 預設場地已選 → 即時重算
 }
 
 function renderVenues() {
@@ -175,10 +217,11 @@ function renderVenues() {
 
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
 function selectVenue(v) {
-  const cfg = venueConfig(v, app.teamSize);
+  const cfg = venueConfig(v, app.teamSize, app.sizeKey);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
+  savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)`;
@@ -198,11 +241,15 @@ function renderFavsOpenRoom() {
     b.innerHTML = `⭐ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
     b.onclick = () => {
       app.teamSize = f.teamSize;
-      app.favCfg = f.cfg;
+      const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
+      app.sizeKey = cfg.sizeKey || 'medium';
+      savePrefs({ teamSize: f.teamSize, sizeKey: app.sizeKey });
+      app.favCfg = cfg;
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
       for (const el of $('venueGridOpen').children) el.classList.remove('on');
       for (const [i, tb] of [...$('tsRowOpen').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
+      renderSize('szRowOpen', setSizeKeyOpen);   // 反映最愛烤死的尺寸
       updateTsInfoOpen();
       b.classList.add('on');
       $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize},可以開房了。`;
@@ -231,9 +278,14 @@ function enterOpenRoom() {
   $('createRoomBtn').disabled = true;
   $('openRoomStatus').textContent = '選人數 + 場地,或從下面挑一張已存的地圖。';
   renderTeamSizeOpen();
+  renderSize('szRowOpen', setSizeKeyOpen);
   renderVenuesOpen();
   renderEnvSelects();
   renderFavsOpenRoom();
+  // 還原上次選的預設場地(記憶設定):命中則即時重算兵線並解鎖開房
+  const lastId = loadPrefs().lastVenueId;
+  const lastV = lastId && VENUES.find((v) => v.id === lastId);
+  if (lastV) selectVenueOpen(lastV);
 }
 
 function renderTeamSizeOpen() {
@@ -251,6 +303,7 @@ function renderTeamSizeOpen() {
 
 function setTeamSizeOpen(n) {
   app.teamSize = n;
+  savePrefs({ teamSize: n });
   for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfoOpen();
   if (app.venueSelOpen) {
@@ -267,8 +320,24 @@ function setTeamSizeOpen(n) {
 
 function updateTsInfoOpen() {
   const L = lanesFor(app.teamSize);
-  const size = targetDistFor(L) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
-  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+  const size = targetDistFor(L, app.sizeKey) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ ${SIZE_LABELS[app.sizeKey]}型戰場約 ${(size / 1000).toFixed(1)} km 見方`;
+}
+
+function setSizeKeyOpen(k) {
+  app.sizeKey = k;
+  savePrefs({ sizeKey: k });
+  for (const b of [...$('szRowOpen').children]) b.classList.toggle('on', b.textContent === SIZE_LABELS[k]);
+  updateTsInfoOpen();
+  if (app.venueSelOpen) {
+    selectVenueOpen(app.venueSelOpen);          // 預設場地已選 → 即時重算
+  } else {
+    // 最愛 cfg 烤死了尺寸,尺寸一變即失效,清掉逼重選(比照 setTeamSizeOpen)
+    app.favCfg = null;
+    for (const el of $('favGrid').children) el.classList.remove('on');
+    $('createRoomBtn').disabled = true;
+    $('openRoomStatus').textContent = '尺寸已變更,請重新選一個預設場地,或挑對應設定的最愛地圖。';
+  }
 }
 
 function renderVenuesOpen() {
@@ -286,9 +355,10 @@ function renderVenuesOpen() {
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
-  const cfg = venueConfig(v, app.teamSize);
+  const cfg = venueConfig(v, app.teamSize, app.sizeKey);
   app.venueSelOpen = v;
   app.favCfg = cfg;
+  savePrefs({ lastVenueId: v.id });
   for (const el of $('venueGridOpen').children) el.classList.remove('on');
   const idx = VENUES.indexOf(v);
   if (idx >= 0 && $('venueGridOpen').children[idx]) $('venueGridOpen').children[idx].classList.add('on');
@@ -499,7 +569,7 @@ async function enterLoading(cfg) {
     app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     const st = biomes.userData.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
-      `${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);
+      `${st.roads ? `・道路 ${st.roads} 段` : ''}${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);
     app.net.send({ t: 'loaded' });
   } catch (e) {
     console.error(e);
@@ -738,6 +808,13 @@ function onSync(m) {
 
 window.addEventListener('DOMContentLoaded', () => {
   $('myName').value = localStorage.getItem('svs_name') || '';
+
+  // 還原上次的開房設定(人數 / 尺寸 / 房名;場地在 enterOpenRoom 還原)
+  const prefs = loadPrefs();
+  if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
+  if (prefs.sizeKey) app.sizeKey = prefs.sizeKey;
+  $('roomNameInput').value = prefs.roomName || '';
+  $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 
   app.net = new Net({
     sync: onSync,

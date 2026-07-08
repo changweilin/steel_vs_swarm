@@ -141,6 +141,21 @@ const BUILDERS = {
     }
   },
 
+  /** 坑洞:路面破損的淺坑 + 底部積水 + 邊緣碎裂柏油塊(減速,不阻擋) */
+  pothole(g, r, rnd) {
+    mesh(g, cyl(r * 0.75, r * 0.5, 0.5, 12), 0x14161a, 0, -0.22, 0);   // 淺坑
+    const water = mesh(g, cyl(r * 0.55, r * 0.55, 0.1, 12), 0x243033, 0, -0.05, 0,
+      { transparent: true, opacity: 0.7 });
+    water.userData.water = true;                                       // 底部積水(反光/漣漪)
+    const n = 4 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rnd() * 0.6;
+      const chunk = mesh(g, box(0.7 + rnd() * 0.8, 0.18, 0.6 + rnd() * 0.7),
+        jitterColor(0x3a3f45, rnd, 0.01, 0.08), Math.cos(a) * r * 0.7, 0.06, Math.sin(a) * r * 0.7);
+      chunk.rotation.set((rnd() - 0.5) * 0.5, a, (rnd() - 0.5) * 0.4);
+    }
+  },
+
   /** 淹水區:半透明水面 + 漣漪圈 + 露出水面的雜物 */
   flood(g, r, rnd) {
     const water = mesh(g, cyl(r, r, 0.22, 18), 0x2e6f95, 0, 0.32, 0,

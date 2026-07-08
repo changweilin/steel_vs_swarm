@@ -89,9 +89,10 @@ export function synthLane(a, b, side) {
     a[0] + (b[0] - a[0]) * t + lateral * pz / R_EARTH * 180 / Math.PI,
     a[1] + (b[1] - a[1]) * t + lateral * px / (R_EARTH * cosLat) * 180 / Math.PI,
   ];
-  // via 間距固定 ~400m、側擺振幅與間距成比例:轉角銳度跨地圖尺寸一致,
-  // 平滑後仍保留 ≥ TACTICS.TURN_MIN_DEG 的真實轉角(障礙/地雷的伏擊錨點)
-  const N = Math.max(3, Math.round(d / 400));
+  // via 間距固定 ~400m 遊戲公尺、側擺振幅與間距成比例:轉角銳度跨地圖尺寸一致,
+  // 平滑後仍保留 ≥ TACTICS.TURN_MIN_DEG 的真實轉角(障礙/地雷的伏擊錨點)。
+  // d 是「真實」距離,除以 REAL_SCALE 換算成遊戲公尺以固定遊戲空間的轉角密度。
+  const N = Math.max(3, Math.round(d / (400 * MAPGEO.REAL_SCALE)));
   const spacing = d / (N + 1);
   const ctrl = [[...a]];
   for (let i = 1; i <= N; i++) {
@@ -117,24 +118,51 @@ export function synthLane(a, b, side) {
  * 由場地錨點 + 方位角直接產出完整 battleConfig(免掃描、離線可用)。
  * 幾何與 mapSelect 相同:兩堡距離 1600m × L,地圖邊長由距離反推。
  */
-export function venueConfig(venue, teamSize) {
+export function venueConfig(venue, teamSize, sizeKey = 'medium') {
   const L = lanesFor(teamSize);
-  const D = targetDistFor(L);
+  const D = targetDistFor(L, sizeKey);          // 遊戲世界距離
+  const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const A = [...venue.ll];
-  const B = destPoint(A, venue.bearing ?? 0, D);
+  const B = destPoint(A, venue.bearing ?? 0, realD);
   const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
   const lanes = sides.map((s) => synthLane(A, B, s));
-  const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
+  const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
   return {
     center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 },
     bases: { SWARM: A, STEEL: B },
     lanes,
     laneCount: L,
-    sizeM, diagM: sizeM * Math.SQRT2, distM: D,
+    sizeM, diagM: sizeM * Math.SQRT2, distM: D,   // 全為遊戲世界公尺
+    sizeKey, geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap: 0.06,            // 三線同相位側擺、主脊間距 0.3×D,僅端點交會,遠低於 20% 門檻
     synthetic: true, precomputed: true,
     venue: { id: venue.id, name: venue.name, mix: venue.mix },
     placeName: venue.name,
+  };
+}
+
+/**
+ * 尺度追溯:把舊尺度(geoScaleVer 不符)的最愛 cfg 遷移到目前尺度。
+ *  - 已知預設場地 → 直接以新尺度 venueConfig 重算(最精確)。
+ *  - 自訂地圖 → 真實座標朝中心收縮 REAL_SCALE:遊戲世界幾何不變(仍是同一張圖),
+ *    但與新的 llToWorld/battleBBox 地形取樣一致,不致基座落在地形外。
+ */
+export function migrateFavCfg(fav) {
+  const cfg = fav.cfg;
+  if (!cfg) return cfg;
+  if (cfg.geoScaleVer === MAPGEO.GEO_SCALE_VER) return cfg;
+  if (cfg.venue?.id) {
+    const v = VENUES.find((x) => x.id === cfg.venue.id);
+    if (v) return venueConfig(v, fav.teamSize, cfg.sizeKey || 'medium');
+  }
+  const c = cfg.center, s = MAPGEO.REAL_SCALE;
+  const sc = ([lat, lng]) => [c.lat + (lat - c.lat) * s, c.lng + (lng - c.lng) * s];
+  return {
+    ...cfg,
+    bases: { SWARM: sc(cfg.bases.SWARM), STEEL: sc(cfg.bases.STEEL) },
+    lanes: cfg.lanes.map((lane) => lane.map(sc)),
+    sizeKey: cfg.sizeKey || 'medium',
+    geoScaleVer: MAPGEO.GEO_SCALE_VER,
   };
 }
 

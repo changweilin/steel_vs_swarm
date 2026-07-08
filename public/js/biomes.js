@@ -389,6 +389,127 @@ async function fetchOsmFeatures(bbox) {
   }
 }
 
+/**
+ * 道路路網(獨立 Overpass 查詢):與建物/鐵路分開,避免道路查詢過重或逾時時
+ * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
+ */
+async function fetchOsmRoads(bbox) {
+  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  const q = `[out:json][timeout:9];`
+    + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom 300;`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const roads = [];
+    for (const el of data.elements || []) {
+      if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
+    }
+    return roads.length ? roads : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ---- 道路(圖資 way):有寬度的賽璐璐路面,主/次分級 + 依地貌變色 ----
+const ROAD_W = {
+  motorway: 12, trunk: 11, primary: 10, secondary: 8, tertiary: 7,
+  unclassified: 5, residential: 5.5, living_street: 5, service: 4,
+  pedestrian: 4, track: 3.5, footway: 2.4, path: 2.2,
+};
+const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
+function roadWidth(tags) {
+  const base = ROAD_W[tags.highway] || 4;
+  const lanes = parseInt(tags.lanes, 10) || 0;
+  return lanes ? Math.max(base, lanes * 3.2) : base;   // 寬度依圖資車道數
+}
+// 路面顏色(cel-shaded):城市柏油 / 綠地泥土 / 裸露地礫石;主/次略有深淺
+function roadColor(biome, main) {
+  if (biome === 'urban') return main ? 0x3a3f45 : 0x4a4640;
+  if (biome === 'green') return main ? 0x6f5b3e : 0x77603f;
+  if (biome === 'bare') return main ? 0x8c7c5a : 0x94855f;
+  if (biome === 'wet') return main ? 0x5c5a48 : 0x6a6350;
+  return main ? 0x44484d : 0x50493f;
+}
+
+/**
+ * 把圖資道路(或離線備援的兵線)畫成貼地賽璐璐路面。
+ * 純視覺:掛在 biomes group,不進射擊 raycast、不描邊。
+ * 依地貌 + 主/次分色批次合併(每色一個 Mesh),寬度取自圖資車道數。
+ */
+function buildRoads(group, roads, terrain, center, mix, rnd) {
+  const inb = 4;
+  const buckets = new Map();   // color -> { pos, nrm, idx, base }
+  const bucketOf = (color) => {
+    let b = buckets.get(color);
+    if (!b) { b = { pos: [], nrm: [], idx: [], base: 0 }; buckets.set(color, b); }
+    return b;
+  };
+  let built = 0;
+  for (const way of roads) {
+    if (way.tags.tunnel) continue;             // 隧道段不畫
+    const main = MAIN_HW.test(way.tags.highway);
+    const hw = roadWidth(way.tags) / 2;
+    const lift = way.tags.bridge ? 3 : 0.18;
+    // 世界折線(超出邊界即切段)
+    const runs = [];
+    let cur = [];
+    for (const gpt of way.geometry) {
+      const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
+      if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) {
+        if (cur.length >= 2) runs.push(cur);
+        cur = [];
+        continue;
+      }
+      cur.push([x, z]);
+    }
+    if (cur.length >= 2) runs.push(cur);
+    for (const run of runs) {
+      const mid = run[(run.length / 2) | 0];
+      const biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
+      if (biome === 'water') continue;
+      const b = bucketOf(roadColor(biome, main));
+      const nP = run.length, vbase = b.base;
+      for (let i = 0; i < nP; i++) {
+        const [x, z] = run[i];
+        const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
+        let dx = c[0] - a[0], dz = c[1] - a[1];
+        const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+        const px = dz, pz = -dx;                 // XZ 垂直向量
+        const lx = x + px * hw, lz = z + pz * hw, rxp = x - px * hw, rzp = z - pz * hw;
+        b.pos.push(lx, terrain.heightAt(lx, lz) + lift, lz);
+        b.pos.push(rxp, terrain.heightAt(rxp, rzp) + lift, rzp);
+        b.nrm.push(0, 1, 0, 0, 1, 0);
+      }
+      for (let i = 0; i < nP - 1; i++) {
+        const k = vbase + i * 2;
+        b.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+      }
+      b.base += nP * 2;
+      built++;
+      if (built >= 600) break;
+    }
+    if (built >= 600) break;
+  }
+  for (const [color, b] of buckets) {
+    if (!b.idx.length) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+    geo.setIndex(b.idx);
+    const m = new THREE.Mesh(geo, toonMat(color));
+    m.frustumCulled = false;
+    m.renderOrder = 1;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  return built;
+}
+
 // ---- 鐵路 / 捷運(圖資 way):道碴 + 雙軌 + 行駛中的低多邊形列車 ----
 function buildRails(group, rails, terrain, center, dynamics) {
   const lines = [];
@@ -676,9 +797,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
 
   // ---- 圖資(建物 + 鐵路 + 瀑布)----
-  onProgress?.(0.42, '讀取 OSM 圖資(建物/鐵路/瀑布)…');
-  let osmData = null;
-  if (terrain.sampleColor) osmData = await fetchOsmFeatures(terrain.bbox);
+  onProgress?.(0.42, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
+  let osmData = null, osmRoads = null;
+  if (terrain.sampleColor) [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
   const osm = osmData?.buildings || null;
 
   const generic = [];       // {x,z,w,h,d,ry,commercial}
@@ -757,6 +878,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     group.add(g);
   }
 
+  // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援)----
+  onProgress?.(0.9, '鋪設道路路面…');
+  const roadInput = osmRoads?.length
+    ? osmRoads
+    : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
+  const roadsBuilt = buildRoads(group, roadInput, terrain, center, mix, rnd);
+
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
@@ -771,6 +899,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     veg: placed,
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
+    roads: roadsBuilt,
     rails: railLines,
     falls: fallsBuilt,
     osm: !!(osm && osm.length),
