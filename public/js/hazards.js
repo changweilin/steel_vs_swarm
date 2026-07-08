@@ -252,11 +252,28 @@ const BUILDERS = {
         Math.cos(a) * R * 0.7, 2.6 + rnd() * 0.4, Math.sin(a) * R * 0.7).scale.y = 0.4;
     }
   },
+
+  /** 偵察中繼站:格架天線塔 + 碟形天線 + 發光信標(佔用 3 秒 → 全隊限時無霧視野) */
+  relay(g, r, rnd) {
+    mesh(g, cyl(2.4, 2.8, 0.7, 8), 0x4a5158, 0, 0.35, 0);                 // 基座
+    mesh(g, cyl(0.28, 0.42, 7.5, 6), 0x7a848c, 0, 4.4, 0);                // 天線塔
+    for (let i = 0; i < 3; i++) {                                          // 斜撐
+      const a = (i / 3) * Math.PI * 2 + rnd();
+      const leg = mesh(g, cyl(0.12, 0.12, 4.2, 5), 0x606a72,
+        Math.cos(a) * 1.5, 2.0, Math.sin(a) * 1.5);
+      leg.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45);
+    }
+    const dish = mesh(g, cone(1.5, 0.9, 10), 0xb8c4cc, 0, 7.2, 0);         // 碟形天線
+    dish.rotation.x = -1.1;
+    dish.rotation.y = rnd() * Math.PI * 2;
+    mesh(g, ico(0.4), 0x66ffe0, 0, 8.4, 0,                                 // 信標(可佔用提示)
+      { emissive: new THREE.Color(0x1f8a70), emissiveIntensity: 1.6 });
+  },
 };
 
 /**
  * 建立一個障礙物 / 防空陣地。
- * @param kind HAZARDS 的 key 或 'aasite'
+ * @param kind HAZARDS 的 key 或 'aasite' / 'relay'
  * @param seed 實體 id(全房間一致的隨機差異化)
  * @param r    影響半徑(m,伺服器 def.r × sc)
  */
@@ -283,10 +300,15 @@ export function buildMineBump(rgb) {
   return m;
 }
 
-/** 戰場物資:金色補給箱(現金)/ 綠色彈藥箱(補彈),game.js 逐幀旋轉+浮動 */
-export function buildLoot(isAmmo) {
+/** 戰場物資:金色補給箱(現金)/ 綠色彈藥箱(補彈)/ 紫色強化艙(詞綴),
+ *  game.js 逐幀旋轉+浮動 */
+export function buildLoot(isAmmo, isAffix) {
   const g = new THREE.Group();
-  if (isAmmo) {
+  if (isAffix) {
+    mesh(g, ico(0.9), 0x9a5ce0, 0, 1.1, 0,
+      { emissive: new THREE.Color(0x4a1a8a), emissiveIntensity: 1.1 });
+    mesh(g, box(1.3, 0.2, 1.3), 0x5a3a8a, 0, 0.4, 0);
+  } else if (isAmmo) {
     mesh(g, box(1.3, 0.8, 0.9), 0x4c7a3c, 0, 1.0, 0,
       { emissive: new THREE.Color(0x1c3a12), emissiveIntensity: 0.7 });
     mesh(g, box(1.4, 0.16, 1.0), 0x2f5226, 0, 1.45, 0);
@@ -300,7 +322,7 @@ export function buildLoot(isAmmo) {
   }
   const halo = new THREE.Mesh(
     new THREE.RingGeometry(1.0, 1.3, 18),
-    new THREE.MeshBasicMaterial({ color: isAmmo ? 0x7ce07c : 0xffd76a, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({ color: isAffix ? 0xc08aff : isAmmo ? 0x7ce07c : 0xffd76a, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
   );
   halo.rotation.x = -Math.PI / 2;
   halo.position.y = 0.15;

@@ -5,7 +5,7 @@
 //  - 射擊 raycast 命中回報、範圍技落點回報
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
-import { SIDES, UNITS, GAME, WEAPONS, ECON, HAZARDS, vsMult } from './data.js';
+import { SIDES, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, AFFIXES, vsMult } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
 import { applyEnvironment } from './environment.js';
@@ -402,9 +402,9 @@ export class BattleClient {
   }
 
   _spawnEnt(e) {
-    // 中立危險區實體(障礙物 / 防空陣地):程序生成低多邊形,不吃 makeUnit
+    // 中立危險區實體(障礙物 / 防空陣地 / 偵察中繼站):程序生成低多邊形,不吃 makeUnit
     const hazDef = HAZARDS[e.k];
-    if (hazDef || e.k === 'aasite') {
+    if (hazDef || e.k === 'aasite' || e.k === 'relay') {
       const r = (hazDef?.r ?? 6) * (e.sc || 1);
       const group = buildHazard(e.k, e.id, r);
       this.scene.add(group);
@@ -413,8 +413,8 @@ export class BattleClient {
         tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
         neutral: true, isStatic: true, hero: false,
         // 阻擋型障礙:限制行動但不完全封鎖(縫隙由伺服器佈局保證,無人機可飛越)
-        colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : 0),
-        colH: e.k === 'aasite' ? 3.5 : 6,
+        colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : e.k === 'relay' ? 1.6 : 0),
+        colH: e.k === 'aasite' ? 3.5 : e.k === 'relay' ? 8 : 6,
       };
       group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
       if (group.userData.flames) this.flamers.add(group);
@@ -546,7 +546,7 @@ export class BattleClient {
     for (const l of lt) {
       seen.add(l.id);
       if (this.lootMeshes.has(l.id)) continue;
-      const g = buildLoot(!!l.a);
+      const g = buildLoot(!!l.a, !!l.f);
       g.position.set(l.x, this.terrain.heightAt(l.x, -l.z), -l.z);
       this.scene.add(g);
       this.lootMeshes.set(l.id, g);
@@ -661,10 +661,19 @@ export class BattleClient {
           // 稀有掉落:全武器彈藥即刻補滿(本地 HUD 同步)
           for (const [id, st] of Object.entries(this.wstate)) { st.ammo = WEAPONS[id].mag; st.reloadEnd = 0; }
           this.hud.feed?.('🔋 拾獲彈藥補給:全武器裝滿!');
+        } else if (ev.af) {
+          const a = AFFIXES[ev.af];
+          this.hud.feed?.(`✨ 拾獲詞綴強化【${a?.name || ev.af}】${a?.desc || ''}(${a?.dur || 0} 秒)`);
         } else {
           this.hud.feed?.(`💰 拾獲戰場物資 +$${ev.v}`);
         }
       }
+    } else if (ev.e === 'relay') {
+      this.hud.feed?.(ev.side === this.side
+        ? `📡 我方啟動偵察中繼站:全隊 ${FIELD.RELAY.VISION_S} 秒無霧視野!`
+        : `⚠️ ${SIDES[ev.side].name}啟動了偵察中繼站,我方位置全數曝光!`);
+      starburst(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z) + 9, -ev.z,
+        8, ev.side ? SIDES[ev.side].color : 0x66ffe0);
     } else if (ev.e === 'sam') {
       if (ev.tpid === this.youId) {
         this.hud.feed?.(ev.ambush

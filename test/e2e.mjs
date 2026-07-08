@@ -3,7 +3,7 @@
 //            → 準備 → 開戰載入 → 快照 → 命中 → 經濟購買 → 勝負 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
-import { UNITS, WEAPONS, ECON, GAME, FIELD, HAZARDS } from '../public/js/data.js';
+import { UNITS, WEAPONS, ECON, GAME, FIELD, HAZARDS, AFFIXES } from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
@@ -226,13 +226,14 @@ log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
   sim.loots = [];
   sim._spawnLoot(rb.x + 3, rb.z);
   const loot = sim.loots[0];
-  const isAmmo = !!loot.ammo;
+  const isAmmo = !!loot.ammo, isAffix = !!loot.af;
   const $1 = rb.money;
   rb.ammo.rgun = 5;                       // 造一個「半彈夾」狀態驗證補彈
   rb.x = loot.x; rb.z = loot.z; rb.y = 0;
   sim.tick(0.05);
-  assert(sim.loots.length === 0, `戰場物資被拾取(${isAmmo ? '彈藥補給' : '現金'})`);
+  assert(sim.loots.length === 0, `戰場物資被拾取(${isAmmo ? '彈藥補給' : isAffix ? '詞綴強化' : '現金'})`);
   if (isAmmo) assert(rb.ammo.rgun == null, '彈藥補給清空計數 = 下次開火滿彈夾');
+  else if (isAffix) assert(rb.buffs[loot.af] > sim.t, `詞綴強化生效(${AFFIXES[loot.af].name})`);
   else assert(rb.money > $1, `現金物資入帳 +$${Math.round(rb.money - $1)}`);
   assert(sim.events.some((e) => e.e === 'loot' && e.pid === 'hz_r'), 'loot 事件帶 pid');
 
@@ -251,6 +252,71 @@ log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
   const hpD = dr2.hp;
   for (let i = 0; i < 8; i++) sim.tick(0.125);
   assert(dr2.hp === hpD, '高空飛越火場不受灼傷,且陣地拔光後無伏擊');
+}
+
+// ================= sim 直測:Diablo 進階(TreasureClass / 詞綴 / 中繼站 / 連通性)=================
+log('— sim:TreasureClass 分層 + 詞綴強化 + 偵察中繼站 + 連通性保證 —');
+{
+  const sim = new BattleSim(fakeBattleConfig(2));
+
+  // TreasureClass:tc=1(最硬障礙)比 tc=0 更常擲出稀有階(彈藥/詞綴)
+  const rareRate = (tc) => {
+    let n = 0;
+    for (let i = 0; i < 400; i++) {
+      sim.loots = [];
+      sim._spawnLoot(0, 0, tc);
+      const l = sim.loots[0];
+      if (l.ammo || l.af) n++;
+    }
+    return n / 400;
+  };
+  const r0 = rareRate(0), r1 = rareRate(1);
+  assert(r1 > r0 + 0.1, `TC 稀有度偏移生效(tc=0 → ${(r0 * 100).toFixed(0)}%,tc=1 → ${(r1 * 100).toFixed(0)}% 稀有)`);
+  sim.loots = [];
+
+  // 詞綴(伺服器結算):淬火軍械縮短填彈、複合裝甲減傷、快照帶 bf 倒數
+  const rb = sim.addHero('STEEL', 'af_r');
+  rb.buffs.tempered = sim.t + 999;
+  rb.ammo.rgun = 5;
+  sim.heroReload('af_r', 'rgun');
+  const rl = rb.reloadUntil.rgun - sim.t;
+  assert(Math.abs(rl - WEAPONS.rgun.reload * AFFIXES.tempered.reload) < 1e-6,
+    `淬火軍械:填彈 ${rl.toFixed(2)}s(${WEAPONS.rgun.reload}s × ${AFFIXES.tempered.reload})`);
+  rb.buffs.hardened = sim.t + 999;
+  const hp0 = rb.hp;
+  sim._damage(rb, 100, null);
+  assert(Math.abs((hp0 - rb.hp) - 100 * AFFIXES.hardened.dmgTaken) < 1e-6,
+    `複合裝甲:100 傷害實吃 ${(hp0 - rb.hp).toFixed(0)}`);
+  assert(sim.snapshotFor('STEEL').ents.find((e) => e.pid === 'af_r').bf?.length === 2, '快照帶詞綴倒數(bf)');
+
+  // 偵察中繼站:每線 1 座、走廊之外(要冒險才吃得到)、佔用 → 視野脈衝 → 用過即毀
+  const relays = [...sim.ents.values()].filter((e) => e.kind === 'relay');
+  assert(relays.length === sim.lanes.length, `中繼站 ${relays.length} 座(${FIELD.RELAY.PER_LANE}/線)`);
+  assert(relays.every((r) => sim._distToLanes(r.x, r.z) >= FIELD.RELAY.laneMin), '中繼站在兵線走廊之外');
+  for (const s of [...sim.ents.values()]) if (s.kind === 'aasite') sim.ents.delete(s.id);   // 排除伏擊干擾
+  const dr = sim.addHero('SWARM', 'rl_d');
+  dr.x = relays[0].x; dr.z = relays[0].z; dr.y = 0;
+  for (let i = 0; i < 28; i++) sim.tick(0.125);   // 3.5s > CHANNEL_S
+  assert(sim.visionUntil.SWARM > sim.t, '佔用 3 秒 → 全隊視野脈衝啟動');
+  assert([...sim.ents.values()].filter((e) => e.kind === 'relay').length === relays.length - 1, '中繼站用過即毀');
+  assert(sim.events.some((e) => e.e === 'relay' && e.side === 'SWARM'), 'relay 事件帶陣營(客戶端播報)');
+  const far = sim._add({ kind: 'soldier', side: 'STEEL', x: relays[0].x + 2000, z: relays[0].z, hp: UNITS.soldier.hp });
+  let ids = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
+  assert(ids.has(far.id), '視野脈衝生效中:霧外敵軍照樣進快照');
+  sim.t += FIELD.RELAY.VISION_S + 2;
+  ids = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
+  assert(!ids.has(far.id), '脈衝過期:恢復正常迷霧');
+  sim.ents.delete(far.id);   // 測試假人無 lane,清掉避免後續 tick 炸
+
+  // 連通性保證(flood-fill):自然生成本就互通;人工橫斷牆會被偵測並拆出缺口
+  const nb0 = sim.hazBlockers.length;
+  sim._ensureConnectivity();
+  assert(sim.hazBlockers.length === nb0, '連通性檢查:走廊淨空保證兩堡互通,無需拆牆');
+  const midZ = (sim.basePos.SWARM[1] + sim.basePos.STEEL[1]) / 2;
+  for (let x = -1600; x <= 1600; x += 18) sim.hazBlockers.push([x, midZ, 12]);
+  const nb1 = sim.hazBlockers.length;
+  sim._ensureConnectivity();
+  assert(sim.hazBlockers.length < nb1, `人工橫斷牆被偵測,拆 ${nb1 - sim.hazBlockers.length} 段開出缺口`);
 }
 
 // ================= WebSocket 端對端 =================

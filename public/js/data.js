@@ -233,18 +233,37 @@ export const FIELD = {
   CLUSTER_MAX: 3,        // 同型障礙連成短牆(Diablo 迷宮牆 + 門的手感)
   TURN_BIAS: 0.55,       // 障礙/防空陣地錨定在兵線轉角的比例(Diablo:轉角 = 房間/伏擊點)
   TURN_R: 90,            // 轉角錨定的沿線散布半徑(m)
+  MID_BIAS: 0.5,         // 難度梯度(D1 越深越難):均勻散布中此比例改用三角分布向兵線中段聚攏
   AA_SITES_PER_LANE: 3,  // 匿蹤防空陣地 / 兵線
   AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 260, laneMin: 60, laneMax: 240, spacing: 130 },
+  // 偵察中繼站(D1 神龕思想:非正規路線上的一次性正向誘因)——
+  // 停留 CHANNEL_S 秒佔用 → 全隊 VISION_S 秒無霧視野;先到先得,用過即毀。
+  RELAY: { name: '偵察中繼站', PER_LANE: 1, R: 14, CHANNEL_S: 3, VISION_S: 18,
+           laneMin: 70, laneMax: 220, dLo: 0.38, dHi: 0.62 },
+  CONNECT_CELL_M: 24,    // 連通性 flood-fill 網格(DevilutionX DRLG 思想:生成後驗證兩堡互通)
 };
 
 // ---- 戰場物資(Diablo 式隨機掉落:擊毀障礙物有機率掉,靠近拾取)----
+// TIERS 依序 = 普通 → 稀有;TC(TreasureClass,D2 思想)= 越硬的障礙掉越高階:
+// 擲骰時加上 (障礙 maxHp / HP_REF) × SHIFT 的稀有度偏移,拆牆變成投資報酬計算。
 export const LOOT = {
   PICK_R: 8, MAX_Y: 25, TTL_S: 90,
   TIERS: [
-    { p: 0.55, min: 15, max: 40 },    // 普通:小額現金
-    { p: 0.30, min: 45, max: 95 },    // 高級:大額現金
+    { p: 0.48, min: 15, max: 40 },    // 普通:小額現金
+    { p: 0.25, min: 45, max: 95 },    // 高級:大額現金
     { p: 0.15, ammo: true },          // 稀有:全武器彈藥即刻補滿
+    { p: 0.12, affix: true },         // 傳奇:隨機詞綴強化(限時 buff)
   ],
+  TC: { HP_REF: 300, SHIFT: 0.35 },
+};
+
+// ---- 詞綴強化(D2 prefix/suffix 思想:拾取後限時生效,全部伺服器結算)----
+// reload/dmgTaken = 乘數;killHeal = 擊殺回復上限血量比例;bounty = 賞金乘數。
+export const AFFIXES = {
+  tempered: { name: '淬火軍械', desc: '填彈時間 −35%',        dur: 45, reload: 0.65 },
+  hardened: { name: '複合裝甲', desc: '受到傷害 −25%',        dur: 30, dmgTaken: 0.75 },
+  vampiric: { name: '汲能核心', desc: '擊殺回復 15% 上限血量', dur: 45, killHeal: 0.15 },
+  bounty:   { name: '懸賞頻道', desc: '擊殺賞金 +50%',        dur: 45, bounty: 1.5 },
 };
 
 // ---- 電腦玩家(單人練習 / 補位)----
