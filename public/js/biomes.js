@@ -20,6 +20,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ENV, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
+import { buildGroundCover } from './ground.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -1158,6 +1159,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     if (col) blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: col.r * sc, h: col.h * sc + 1 });
   }
 
+  // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
+  // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
+  onProgress?.(0.88, '鋪設地表覆蓋層…');
+  const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
+  const grnd = mulberry32(gseed ^ 0x51AB);
+  const ground = buildGroundCover(group, terrain, {
+    isBlocked: (x, z) => blocked.has(cellKey(x, z)),
+    classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
+    blockers, season, seed: gseed, rnd: grnd,
+  });
+
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援)----
   onProgress?.(0.9, '鋪設道路路面…');
   const roadInput = osmRoads?.length
@@ -1178,6 +1190,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
   group.userData.stats = {
     veg: placed,
+    ground: ground.patches,
+    groundDetails: ground.details,
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,

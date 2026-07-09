@@ -186,6 +186,32 @@ async function fetchImagery(bbox, onProgress) {
   return { canvas, z, tx0, ty0 };
 }
 
+// ---- 衛星影像賽璐璐化(botw_plan Task 2.1):寬筆刷低通 + 色階量化 + 飽和提升 ----
+// photoreal 顆粒抹平成水彩色塊;呼叫前 sampleColor 已捕捉原始像素,分類不受影響。
+function stylizeImagery(canvas) {
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(W / 3));
+  small.height = Math.max(1, Math.round(H / 3));
+  const sctx = small.getContext('2d');
+  sctx.imageSmoothingEnabled = true;
+  sctx.drawImage(canvas, 0, 0, small.width, small.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(small, 0, 0, W, H);          // 1/3 縮放來回 = 寬筆刷低通
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  const STEP = 24, SAT = 1.3;
+  for (let k = 0; k < d.length; k += 4) {
+    const l = (d[k] + d[k + 1] + d[k + 2]) / 3;
+    for (let c = 0; c < 3; c++) {
+      const v = l + (d[k + c] - l) * SAT;    // 飽和提升 → 量化成色塊;+8 保底不塌黑(#INC-106 精神)
+      d[k + c] = Math.max(0, Math.min(255, Math.round(v / STEP) * STEP + 8));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 /**
  * 建立戰場地形。回傳:
  * { group, heightAt(x,z), sampleColor(x,z)|null, center, bbox,
@@ -228,6 +254,7 @@ export async function buildTerrain(cfg, onProgress) {
       const k = (py * iw + px) * 4;
       return [idata[k], idata[k + 1], idata[k + 2]];
     };
+    stylizeImagery(imagery.canvas);   // 原始像素已捕捉進 idata,底圖轉水彩色塊
   }
 
   onProgress?.(0.68, '建構地形網格…');
