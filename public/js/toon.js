@@ -163,9 +163,10 @@ export function toonMat(color, opts = {}) {
  * 機體/英雄/武器一律仍走 toonMat,不吃這裡的環境偏色。
  */
 export function envMat(color, opts = {}) {
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, ...rest } = opts;
+  // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...rest });
-  return applyCelPatch(m, { metal: !!celMetal, wash, cool, moss });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss });
 }
 
 /**

@@ -29,11 +29,13 @@ const SEASONS = {
   winter: { tint: 0xdceaf2, mul: 0.88 },
 };
 // 天氣:光量倍率 + 霧(near/far 為地圖跨距倍率)+ 粒子
+// 霧距離放遠(2026-07-10):舊值 near 0.25×span 在小圖 400m 就開始洗白,
+// 中景地貌全變白;遠處靠 fogFar 前緣淡淡藍灰即可,地圖邊緣仍融入天色。
 const WEATHERS = {
-  clear:  { light: 1.0,  fogNear: 0.25, fogFar: 1.2 },
-  cloudy: { light: 0.55, fogNear: 0.20, fogFar: 1.0 },
-  rain:   { light: 0.45, fogNear: 0.12, fogFar: 0.75, particle: 'rain' },
-  snow:   { light: 0.60, fogNear: 0.14, fogFar: 0.80, particle: 'snow', fogTint: 0xcfd8dd },
+  clear:  { light: 1.0,  fogNear: 0.50, fogFar: 1.9 },
+  cloudy: { light: 0.55, fogNear: 0.40, fogFar: 1.6 },
+  rain:   { light: 0.45, fogNear: 0.20, fogFar: 1.0, particle: 'rain' },
+  snow:   { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
   fog:    { light: 0.50, fogNear: 0.04, fogFar: 0.35 },
 };
 

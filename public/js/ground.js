@@ -9,11 +9,17 @@
 //   市區   — 草坪 / 水泥地 / 磚瓦地 / PU 球場 / 停車場 / 人行道磚 / 跑道 / 廢棄工地
 //            / 加油站 / 公園 / 廣場 / 廢車場 / 貨櫃場 / 墓園 / 太陽能場 / 直升機坪
 //   濕地   — 泥灘蘆葦 / 荷塘 / 魚塭
+// 雙層結構(2026-07-10 改制):
+//   底毯層 — 抖動網格把「全部陸地」鋪滿(不留衛星底圖空隙):角點以格點雜湊
+//            抖動且相鄰 cell 共用 → 水密無縫;地表種類由低頻雜訊分區指派成大片
+//            連續區域;異類交界再疊「外溢淡出」quad 做整格寬 cross-fade,無硬縫。
+//   特徵層 — 原 patch 散佈,降級為「場所」點綴(農田/球場/遺跡/工地…),
+//            疊在底毯上;fade 邊融入底毯、ink 邊讀作田埂/路緣,不再是磁磚縫。
 // 無縫拼接三原則(避免大面積重複感,無限延伸):
-//   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與水彩化衛星底圖(或彼此)交融
-//   2. tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰 patch 花紋自動連續延伸
-//   3. 變體以低頻雜訊分區指派(鄰近同變體)+ 每 patch 色調抖動 + 家族延伸擺放
-//      (農田拼布/運動園區/綠地群落),异類交疊也讀不出拼貼邊界
+//   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與底毯(或彼此)交融
+//   2. tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰花紋自動連續延伸
+//   3. 變體以低頻雜訊分區指派(鄰近同變體)+ 低頻水彩 wash 頂點色 + 家族延伸
+//      擺放(農田拼布/運動園區/綠地群落),异類交疊也讀不出拼貼邊界
 // 手法與 buildRoads 同族:貼地多邊形 + 程序生成 canvas 筆刷貼圖 + 頂點色墨線,
 // 每「地表×變體」合併成單一 Mesh(常數 draw call);細節物件全 InstancedMesh。
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
@@ -22,9 +28,10 @@ import * as THREE from 'three';
 import { ENV } from './data.js';
 import { toonMat, envMat } from './toon.js';
 
-const MAX_DETAIL = 6000;   // 3D 細節實例總上限
+const MAX_DETAIL = 15000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變)
+const FEAT_DETAIL = 9500;  // 特徵層細節配額;剩餘留給底毯,空地才不會光禿
 const VARIANTS = 4;        // 每種地表的貼圖變體數(變體貼圖惰性生成,只有實際用到才建)
-const RSCALE = 1.3;        // patch 半徑全域放大:配合高密度 target,往「連續拼圖覆蓋」推
+const RSCALE = 1.3;        // 特徵 patch 半徑全域放大
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -130,10 +137,10 @@ const PAINTERS = {
   },
   bushfield(g, S, rnd) {                               // 灌木叢地:深色團塊 + 左上受光
     g.fillStyle = vary(0x6f9a4c, rnd); g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 14; i++) {                     // 灌木淡影(灌木本體 = 3D 實例;受光壓淡不立體)
       const x = rnd() * S, y = rnd() * S, r = 12 + rnd() * 20;
       g.fillStyle = '#537c39'; brushBlob(g, x, y, r, rnd);
-      g.fillStyle = 'rgba(150,190,110,0.8)'; brushBlob(g, x - r * 0.3, y - r * 0.3, r * 0.45, rnd);
+      g.fillStyle = 'rgba(150,190,110,0.35)'; brushBlob(g, x - r * 0.3, y - r * 0.3, r * 0.45, rnd);
     }
   },
   flowerfield(g, S, rnd) {                             // 花田:彩色花帶漂流在綠底上
@@ -155,16 +162,15 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 5); g.stroke();
     }
   },
-  orchard(g, S, rnd) {                                 // 果園:整列樹蔭圓斑 + 除草帶
+  orchard(g, S, rnd) {                                 // 果園:除草帶 + 樹行淡影(果樹本體 = 3D 實例)
     g.fillStyle = vary(0x82ab5e, rnd); g.fillRect(0, 0, S, S);
     for (let y = 0; y < S; y += 42) {
       g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, y, S, 20);
     }
     for (let y = 21; y < S; y += 42) {
       for (let x = 16 + (rnd() * 10 | 0); x < S; x += 40) {
-        const r = 9 + rnd() * 4;
-        g.fillStyle = '#55803e'; brushBlob(g, x, y, r, rnd);
-        g.fillStyle = 'rgba(150,190,110,0.7)'; brushBlob(g, x - r * 0.3, y - r * 0.3, r * 0.4, rnd);
+        g.fillStyle = 'rgba(60,100,46,0.28)';          // 樹行淡影:只給定位感,不畫樹體
+        brushBlob(g, x, y, 8 + rnd() * 4, rnd);
       }
     }
   },
@@ -309,8 +315,8 @@ const PAINTERS = {
     g.fillStyle = '#824c34';
     for (let i = 0; i < 14; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
   },
-  concrete(g, S, rnd) {                                // 水泥地:伸縮縫格線 + 髮絲裂縫 + 污漬
-    g.fillStyle = vary(0xb4b6b2, rnd, 6); g.fillRect(0, 0, S, S);
+  concrete(g, S, rnd) {                                // 水泥地:伸縮縫格線 + 髮絲裂縫 + 污漬(降亮:遠處不刷白)
+    g.fillStyle = vary(0xa2a49e, rnd, 6); g.fillRect(0, 0, S, S);
     g.strokeStyle = '#8d8f8b'; g.lineWidth = 3;
     for (let p = 0; p <= S; p += 85) {
       g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
@@ -342,8 +348,8 @@ const PAINTERS = {
       }
     }
   },
-  pavement(g, S, rnd) {                                // 人行道磚:方格地磚 + 雙色交錯
-    g.fillStyle = vary(0xa8a49c, rnd, 6); g.fillRect(0, 0, S, S);
+  pavement(g, S, rnd) {                                // 人行道磚:方格地磚 + 雙色交錯(降亮:遠處不刷白)
+    g.fillStyle = vary(0x98948b, rnd, 6); g.fillRect(0, 0, S, S);
     for (let y = 0; y < S; y += 32) {
       for (let x = 0; x < S; x += 32) {
         if ((x / 32 + y / 32) % 2 < 1) { g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(x, y, 32, 32); }
@@ -407,17 +413,13 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 5, y - 7 - rnd() * 7); g.stroke();
     }
   },
-  lotus(g, S, rnd) {                                   // 荷塘:深水 + 荷葉圓盤(缺口)+ 荷花點
+  lotus(g, S, rnd) {                                   // 荷塘:深水 + 天光 + 水深暗影(荷葉 = 3D 實例)
     g.fillStyle = vary(0x41616b, rnd, 8); g.fillRect(0, 0, S, S);
     g.fillStyle = 'rgba(255,255,255,0.10)';
-    for (let i = 0; i < 8; i++) g.fillRect(rnd() * S, rnd() * S, 16 + rnd() * 30, 2);   // 水面天光
-    for (let i = 0; i < 12; i++) {
-      const x = rnd() * S, y = rnd() * S, r = 8 + rnd() * 9, a = rnd() * 7;
-      g.fillStyle = '#4f8f4f';
-      g.beginPath(); g.moveTo(x, y); g.arc(x, y, r, a + 0.5, a + 6.1); g.closePath(); g.fill();   // 缺口荷葉
-      g.strokeStyle = 'rgba(220,240,210,0.5)'; g.lineWidth = 1.4;
-      g.beginPath(); g.arc(x, y, r * 0.9, a + 0.6, a + 2.2); g.stroke();
-      if (rnd() < 0.3) { g.fillStyle = '#e88bb0'; g.beginPath(); g.arc(x + r, y - r * 0.4, 2.4, 0, 7); g.fill(); }
+    for (let i = 0; i < 10; i++) g.fillRect(rnd() * S, rnd() * S, 16 + rnd() * 30, 2);   // 水面天光
+    for (let i = 0; i < 8; i++) {                      // 水下暗影:水深錯落
+      g.fillStyle = `rgba(30,52,58,${0.15 + rnd() * 0.15})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);
     }
   },
   // ======== 綠地擴充 ========
@@ -442,84 +444,58 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + 5 + rnd() * 4, y - 2 - rnd() * 3); g.stroke();
     }
   },
-  deadwood(g, S, rnd) {                                // 枯木林:乾草底 + 落枝分岔 + 枯葉點
+  deadwood(g, S, rnd) {                                // 枯木林:乾草底 + 細碎小枝(枯木本體 = 3D 實例)
     g.fillStyle = vary(0x9c9070, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 12; i++) {
       g.fillStyle = `rgba(120,110,88,${0.2 + rnd() * 0.2})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 20, rnd);
     }
     g.lineCap = 'round';
-    for (let i = 0; i < 26; i++) {
-      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 14 + rnd() * 22;
-      g.strokeStyle = rnd() < 0.5 ? '#6e6152' : '#857766';
-      g.lineWidth = 2 + rnd() * 2;
-      g.beginPath(); g.moveTo(x, y);
-      g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
-      if (rnd() < 0.5) g.lineTo(x + Math.cos(a + 0.7) * l * 1.4, y + Math.sin(a + 0.7) * l * 1.4);
-      g.stroke();
+    g.strokeStyle = 'rgba(110,97,82,0.6)'; g.lineWidth = 1.6;
+    for (let i = 0; i < 22; i++) {                     // 細碎小枝:只是地面質感,不畫成倒枝
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 7); g.stroke();
     }
     g.fillStyle = '#b8a67e';
     for (let i = 0; i < 18; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.3, 0, 7); g.fill(); }
   },
-  fallenlogs(g, S, rnd) {                              // 混亂倒木:草土底 + 樹皮/受光雙色木身 + 年輪端面
+  fallenlogs(g, S, rnd) {                              // 混亂倒木:草土底 + 壓倒草痕(倒木本體 = 3D 實例)
     g.fillStyle = vary(0x7c8a55, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 8; i++) {
       g.fillStyle = `rgba(110,96,66,${0.2 + rnd() * 0.15})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 16, rnd);
     }
     g.lineCap = 'round';
-    for (let i = 0; i < 12; i++) {
-      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 26 + rnd() * 40;
-      const dx = Math.cos(a), dy = Math.sin(a);
-      for (const [c, w, off] of [['#6b4f36', 8, 0], ['#a5825a', 3, 2.5]]) {
-        g.strokeStyle = c; g.lineWidth = w;
-        g.beginPath(); g.moveTo(x - dy * off, y + dx * off);
-        g.lineTo(x + dx * l - dy * off, y + dy * l + dx * off); g.stroke();
-      }
-      g.fillStyle = '#d9c49a';                          // 年輪端面
-      g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill();
-      g.strokeStyle = '#8a6a48'; g.lineWidth = 1.2;
-      g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.stroke();
+    g.strokeStyle = 'rgba(90,80,52,0.35)'; g.lineWidth = 5;
+    for (let i = 0; i < 8; i++) {                      // 倒木壓出的草痕(淡影,非木身)
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 20 + rnd() * 30;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
     }
   },
-  clearcut(g, S, rnd) {                                // 砍伐跡地:泥土 + 木屑斑 + 樹頭年輪 + 拖木刮痕
+  clearcut(g, S, rnd) {                                // 砍伐跡地:泥土 + 木屑斑 + 拖木刮痕(樹頭 = 3D 實例)
     g.fillStyle = vary(0x8a7350, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 10; i++) {
       g.fillStyle = `rgba(214,196,150,${0.15 + rnd() * 0.15})`;
       brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 16, rnd);
     }
-    for (let i = 0; i < 12; i++) {
-      const x = rnd() * S, y = rnd() * S, r = 5 + rnd() * 5;
-      g.fillStyle = '#5c452e'; g.beginPath(); g.arc(x, y, r + 2, 0, 7); g.fill();
-      g.fillStyle = '#d9c49a'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-      g.strokeStyle = 'rgba(138,106,72,0.8)'; g.lineWidth = 1.2;
-      g.beginPath(); g.arc(x, y, r * 0.55, 0, 7); g.stroke();
-    }
+    g.fillStyle = '#d9c49a';
+    for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.2 + rnd() * 1.6, 0, 7); g.fill(); }
     g.strokeStyle = 'rgba(90,70,46,0.5)'; g.lineWidth = 2; g.lineCap = 'round';
     for (let i = 0; i < 10; i++) {
       const x = rnd() * S, y = rnd() * S;
       g.beginPath(); g.moveTo(x, y); g.lineTo(x + 20 + rnd() * 26, y + (rnd() - 0.5) * 10); g.stroke();
     }
   },
-  lumberyard(g, S, rnd) {                              // 木材堆置場:土面 + 原木端面群 + 板材堆
+  lumberyard(g, S, rnd) {                              // 木材堆置場:土面 + 木屑帶 + 車轍(木堆/板材 = 3D 實例)
     g.fillStyle = vary(0x8f7854, rnd); g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 5; i++) {
-      const cx = rnd() * S, cy = rnd() * S;
-      for (let k = 0; k < 8; k++) {                    // 原木堆:圓端面蜂窩排列
-        const x = cx + (k % 3) * 9 - 9 + (k / 3 | 0) * 4.5, y = cy + (k / 3 | 0) * 8;
-        g.fillStyle = '#d9c49a'; g.beginPath(); g.arc(x, y, 4.4, 0, 7); g.fill();
-        g.strokeStyle = '#6b4f36'; g.lineWidth = 1.6; g.stroke();
-      }
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(214,196,150,${0.18 + rnd() * 0.18})`;
+      brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 16, rnd);
     }
-    const cs = ['#c9a86a', '#b8935a', '#d4b478'];
-    for (let i = 0; i < 6; i++) {                      // 板材堆:平行長矩形
-      const x = rnd() * S, y = rnd() * S, a = (rnd() * 2 | 0) * Math.PI / 2;
-      g.save(); g.translate(x, y); g.rotate(a);
-      for (let k = 0; k < 3; k++) {
-        g.fillStyle = cs[(rnd() * cs.length) | 0];
-        g.fillRect(-16, k * 6 - 9, 32, 5);
-      }
-      g.restore();
+    g.lineCap = 'round'; g.strokeStyle = 'rgba(90,70,46,0.5)'; g.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {                      // 搬運車轍
+      const x = rnd() * S, y = rnd() * S;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 26 + rnd() * 30, y + (rnd() - 0.5) * 12); g.stroke();
     }
   },
   rottencabin(g, S, rnd) {                             // 腐朽木屋地:苔草底 + 爛木板 + 青苔斑 + 朽洞
@@ -556,17 +532,13 @@ const PAINTERS = {
       for (let x = 8; x < S; x += 26) g.fillRect(x, y - 6, 3, 12);   // 木樁
     }
   },
-  greenhouse(g, S, rnd) {                              // 溫室棚:白色拱棚帶 + 高光稜線 + 拱肋(fit)
+  greenhouse(g, S, rnd) {                              // 溫室棚地:土面 + 苗床帶(拱棚本體 = 3D 實例)(fit)
     g.fillStyle = vary(0x8a7a5c, rnd); g.fillRect(0, 0, S, S);
     for (let y = 6; y < S - 20; y += 34) {
-      g.fillStyle = vary(0xcfd6d2, rnd, 8);
+      g.fillStyle = 'rgba(120,100,70,0.5)';            // 苗床翻土帶
       g.fillRect(4, y, S - 8, 22);
-      g.fillStyle = 'rgba(255,255,255,0.75)';          // 拱頂高光稜線
-      g.fillRect(4, y + 4, S - 8, 5);
-      g.strokeStyle = 'rgba(120,128,124,0.6)'; g.lineWidth = 1.4;
-      for (let x = 12; x < S - 6; x += 16) {
-        g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke();
-      }
+      g.fillStyle = 'rgba(140,160,90,0.35)';           // 苗床新綠
+      g.fillRect(4, y + 8, S - 8, 7);
     }
   },
   // ======== 裸露地擴充 ========
@@ -584,23 +556,16 @@ const PAINTERS = {
     g.fillStyle = 'rgba(214,210,200,0.5)';
     for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, rnd() * S, 5 + rnd() * 8, rnd);
   },
-  slabruin(g, S, rnd) {                                // 倒塌石板屋:傾頹石板 + 殘存牆基 + 瓦礫
+  slabruin(g, S, rnd) {                                // 倒塌石板屋:殘存牆基 + 瓦礫斑(石板本體 = 3D 實例)
     g.fillStyle = vary(0x8d867a, rnd); g.fillRect(0, 0, S, S);
-    for (let i = 0; i < 12; i++) {
-      const x = rnd() * S, y = rnd() * S, w = 14 + rnd() * 18, h = 8 + rnd() * 10;
-      g.save(); g.translate(x, y); g.rotate(rnd() * 3.2);
-      g.fillStyle = rnd() < 0.5 ? '#9aa0a4' : '#a8aca6';
-      g.fillRect(-w / 2, -h / 2, w, h);
-      g.strokeStyle = 'rgba(70,74,78,0.8)'; g.lineWidth = 1.6;
-      g.strokeRect(-w / 2, -h / 2, w, h);
-      g.fillStyle = 'rgba(255,255,255,0.35)';          // 板緣受光
-      g.fillRect(-w / 2, -h / 2, w, 2.5);
-      g.restore();
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(154,160,164,${0.2 + rnd() * 0.2})`;
+      brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 14, rnd);
     }
     g.strokeStyle = 'rgba(90,86,78,0.7)'; g.lineWidth = 3;
     g.strokeRect(30 + rnd() * (S - 120), 30 + rnd() * (S - 120), 60 + rnd() * 40, 44 + rnd() * 30);
     g.fillStyle = '#6e6a60';
-    for (let i = 0; i < 20; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
+    for (let i = 0; i < 24; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
   },
   steppe(g, S, rnd) {                                  // 乾草原:金黃草浪(風向一致)+ 深草叢
     g.fillStyle = vary(0xbca95e, rnd); g.fillRect(0, 0, S, S);
@@ -766,10 +731,9 @@ const PAINTERS = {
       x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
     }
     g.stroke();
-    for (let i = 0; i < 6; i++) {
-      const x = rnd() * S, y = rnd() * S, r = 9 + rnd() * 9;
-      g.fillStyle = 'rgba(60,110,52,0.55)'; brushBlob(g, x, y, r, rnd);
-      g.fillStyle = 'rgba(150,200,110,0.5)'; brushBlob(g, x - r * 0.3, y - r * 0.3, r * 0.4, rnd);
+    for (let i = 0; i < 6; i++) {                      // 樹蔭淡影(樹體 = 3D 實例)
+      g.fillStyle = 'rgba(60,110,52,0.35)';
+      brushBlob(g, rnd() * S, rnd() * S, 9 + rnd() * 9, rnd);
     }
     const cs = ['#e88bb0', '#f2d24a', '#f5f5f5'];
     for (let i = 0; i < 3; i++) {
@@ -800,17 +764,9 @@ const PAINTERS = {
       g.fillStyle = `rgba(150,80,42,${0.18 + rnd() * 0.22})`;
       brushBlob(g, rnd() * S, rnd() * S, 6 + rnd() * 14, rnd);
     }
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {                      // 油污(廢鐵散件 = 3D 實例)
       g.fillStyle = `rgba(40,40,44,${0.2 + rnd() * 0.2})`;
       brushBlob(g, rnd() * S, rnd() * S, 5 + rnd() * 10, rnd);
-    }
-    const cs = ['#7a828a', '#9a5a3a', '#6a7060', '#8a8276'];
-    for (let i = 0; i < 10; i++) {
-      const x = rnd() * S, y = rnd() * S;
-      g.save(); g.translate(x, y); g.rotate(rnd() * 3.2);
-      g.fillStyle = cs[(rnd() * cs.length) | 0];
-      rnd() < 0.5 ? g.fillRect(-8, -3, 16, 6) : g.fillRect(-2, -9, 4, 18);
-      g.restore();
     }
   },
   containeryard(g, S, rnd) {                           // 貨櫃場:瀝青 + 黃色櫃位格線 + 走道白斑馬點(fit)
@@ -826,33 +782,23 @@ const PAINTERS = {
     g.fillStyle = 'rgba(240,242,238,0.85)';
     for (let x = 8; x < S; x += 22) g.fillRect(x, S / 2 - 2, 12, 4);
   },
-  cemetery(g, S, rnd) {                                // 墓園:草坪 + 十字步道 + 墓位列點(fit)
+  cemetery(g, S, rnd) {                                // 墓園:草坪 + 十字步道 + 墓位淡列(墓碑 = 3D 實例)(fit)
     g.fillStyle = vary(0x7fa35e, rnd, 8); g.fillRect(0, 0, S, S);
     g.strokeStyle = '#cfc8b4'; g.lineWidth = 9;
     g.beginPath(); g.moveTo(S / 2, 4); g.lineTo(S / 2, S - 4); g.stroke();
     g.beginPath(); g.moveTo(4, S / 2); g.lineTo(S - 4, S / 2); g.stroke();
-    for (let y = 18; y < S - 8; y += 24) {
-      for (let x = 14; x < S - 8; x += 20) {
-        if (Math.abs(x - S / 2) < 12 || Math.abs(y - S / 2) < 10 || rnd() < 0.18) continue;
-        g.fillStyle = 'rgba(60,80,50,0.5)'; g.fillRect(x - 3, y + 3, 8, 4);   // 碑影
-        g.fillStyle = '#b4b6b0'; g.fillRect(x - 3, y - 4, 7, 8);
-        g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(x - 3, y - 4, 7, 2);
-      }
+    g.strokeStyle = 'rgba(90,110,80,0.4)'; g.lineWidth = 2;
+    for (let y = 18; y < S - 8; y += 24) {             // 墓位列的踏痕淡線
+      g.beginPath(); g.moveTo(8, y); g.lineTo(S - 8, y); g.stroke();
     }
   },
-  solarfarm(g, S, rnd) {                               // 太陽能場:深藍板列 + 白框格線 + 斜向天光(fit)
+  solarfarm(g, S, rnd) {                               // 太陽能場:碎石地 + 支架軌道列(板體 = 3D 實例)(fit)
     g.fillStyle = vary(0x9a9584, rnd, 7); g.fillRect(0, 0, S, S);
-    for (let y = 8; y < S - 14; y += 30) {
-      for (let x = 6; x < S - 20; x += 42) {
-        g.fillStyle = vary(0x2e4a6e, rnd, 8);
-        g.fillRect(x, y, 36, 18);
-        g.strokeStyle = '#c8ccd0'; g.lineWidth = 1.5; g.strokeRect(x, y, 36, 18);
-        g.strokeStyle = 'rgba(200,214,228,0.7)';
-        g.beginPath(); g.moveTo(x + 12, y); g.lineTo(x + 12, y + 18); g.stroke();
-        g.beginPath(); g.moveTo(x + 24, y); g.lineTo(x + 24, y + 18); g.stroke();
-        g.fillStyle = 'rgba(255,255,255,0.55)';        // 斜向天光
-        g.beginPath(); g.moveTo(x, y); g.lineTo(x + 10, y); g.lineTo(x + 2, y + 18); g.lineTo(x, y + 18); g.closePath(); g.fill();
-      }
+    g.fillStyle = 'rgba(255,255,255,0.07)';
+    for (let i = 0; i < 40; i++) g.fillRect(rnd() * S, rnd() * S, 2, 2);
+    g.strokeStyle = 'rgba(140,136,124,0.8)'; g.lineWidth = 3;
+    for (let y = 14; y < S - 8; y += 30) {             // 支架軌道(板列由 3D solarpanel 對齊排上)
+      g.beginPath(); g.moveTo(6, y); g.lineTo(S - 6, y); g.stroke();
     }
   },
   helipad(g, S, rnd) {                                 // 直升機坪:圓標 + H 字 + 外框虛線(fit)
@@ -948,17 +894,27 @@ const DEFS = {
   fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, fam: 'panFam' },
 };
 // 分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有)
+// 特徵層分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有):
+// 只放「場所」型地物 — 有立體細節或明確邊界;純地面型全數改由底毯負責
 const ZONES = {
-  green: ['rottencabin', 'deadwood', 'turf', 'meadow', 'paddy', 'flowerfield', 'turf', 'arrowbamboo',
-          'orchard', 'dryfield', 'meadow', 'teafield', 'vineyard', 'turf', 'bushfield', 'clearcut',
-          'meadow', 'fallenlogs', 'greenhouse', 'lumberyard'],
-  bare:  ['slabruin', 'deadforest', 'wild', 'gravel', 'steppe', 'crackedearth', 'sand', 'abandonedfarm',
-          'redsoil', 'scree', 'mud', 'gravel', 'wild', 'quarry', 'saltpan'],
-  urban: ['helipad', 'solarfarm', 'concrete', 'pavement', 'park', 'brick', 'lawn', 'parking', 'plaza',
-          'court', 'construction', 'track', 'pavement', 'gasstation', 'concrete', 'containeryard',
-          'cemetery', 'scrapyard'],
-  wet:   ['fishpond', 'marsh', 'lotus', 'marsh', 'fishpond'],
-  alpine: ['icefield', 'plateau', 'scree', 'steppe', 'plateau', 'scree', 'icefield'],
+  green: ['rottencabin', 'deadwood', 'paddy', 'flowerfield', 'orchard', 'arrowbamboo',
+          'dryfield', 'bushfield', 'teafield', 'vineyard', 'paddy', 'clearcut',
+          'flowerfield', 'fallenlogs', 'greenhouse', 'lumberyard'],
+  bare:  ['slabruin', 'quarry', 'abandonedfarm', 'crackedearth', 'gravel', 'abandonedfarm', 'saltpan'],
+  urban: ['helipad', 'solarfarm', 'park', 'brick', 'parking', 'plaza', 'court',
+          'construction', 'track', 'gasstation', 'containeryard', 'cemetery', 'scrapyard'],
+  wet:   ['fishpond', 'lotus', 'marsh', 'fishpond'],
+  alpine: ['slabruin', 'scree', 'plateau', 'slabruin'],
+};
+// 底毯分區切片:全為 tile 型(世界投影 UV)地面,大片連續鋪滿全部陸地
+const CARPET = {
+  green: ['turf', 'meadow', 'turf', 'bushfield', 'meadow', 'flowerfield', 'turf',
+          'arrowbamboo', 'meadow', 'deadwood', 'turf', 'fallenlogs'],
+  bare:  ['wild', 'gravel', 'steppe', 'crackedearth', 'sand', 'redsoil', 'wild',
+          'deadforest', 'mud', 'scree'],
+  urban: ['concrete', 'pavement', 'lawn', 'brick', 'concrete', 'park', 'pavement'],
+  wet:   ['marsh', 'marsh', 'lotus'],
+  alpine: ['plateau', 'scree', 'icefield', 'steppe', 'plateau'],
 };
 // 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落 /
 // 伐木跡地群 / 聚落遺跡 / 高地帶 / 鹽田魚塭 / 工地採石 / 堆置場)
@@ -996,6 +952,7 @@ const FLOWER_C = [0xe88bb0, 0xf2d24a, 0xf5f5f5, 0xc77ddb, 0xe8734a];
 const CONTAINER_C = [0xd94f3d, 0x3d7ad9, 0x4f9a55, 0xe8a03d, 0x8a8f96];   // 貨櫃塗裝
 const CAR_C = [0x9a4a3a, 0x5a6a7a, 0x7a6a3a, 0x4a5a4a, 0x8a3a2a];         // 廢車鏽色
 const PUMP_C = [0xd94f3d, 0x3d6ed9, 0xf2d24a];                            // 加油機品牌色
+const DRUM_C = [0x3d6ed9, 0xd94f3d, 0x4f9a55, 0xd9b23d, 0x8a8f96];        // 油桶塗裝
 
 // ---- 3D 細節(多零件;底部貼地,pebble 不平移 = 半埋入土)----
 // c:'grass'/'foliage' = 季節色;'palette' = 每實例指定色(材質白底 × instance tint)
@@ -1057,6 +1014,22 @@ const DETAIL_DEFS = {
   // — 休憩設施 —
   bench:    [{ geo: box(1.4, 0.45, 0.5), c: 0x8a6a48 }],
   headstone:[{ geo: box(0.5, 0.85, 0.16), c: 0xb0b2ae }],
+  // — 通用散件(2026-07-10:貼圖上的 2D 物件全面 3D 化)—
+  boulder:  [{ geo: new THREE.IcosahedronGeometry(1.0, 0).translate(0, 0.5, 0), c: 0x8a8578, sy: 0.75 },
+             { geo: new THREE.IcosahedronGeometry(0.5, 0).translate(0.75, 0.22, 0.3), c: 0x9a948a, sy: 0.7 }],
+  drybush:  [{ geo: new THREE.IcosahedronGeometry(0.7, 0).translate(0, 0.4, 0), c: 0xa08c58, sy: 0.7 }],
+  drum:     [{ geo: cyl(0.34, 0.34, 0.95, 8), c: 'palette' }],
+  crate:    [{ geo: box(0.95, 0.9, 0.95), c: 0xb8935a }],
+};
+
+// 每型別的最大隨機傾角(rad;繞 x/z 各自抽):自然件歪斜、人造件近直立,
+// 加上既有的隨機朝向 ry / 尺寸抖動 → 同型實例不再複製貼上
+const TILT = {
+  tuft: 0.22, rice: 0.16, reed: 0.2, bush: 0.1, sapling: 0.09, flower: 0.16, lotuspad: 0.05,
+  bamboo: 0.13, snag: 0.18, charsnag: 0.18, log: 0.07, stump: 0.06, logpile: 0.05, plank: 0.08,
+  fencepost: 0.14, vinerow: 0.04, ghouse: 0.03, slab: 0.22, iceshard: 0.35, rockflat: 0.3,
+  saltmound: 0.06, pipe: 0.06, spoil: 0.05, barrier: 0.08, pebble: 0.4, hay: 0.07,
+  boulder: 0.3, drybush: 0.18, drum: 0.07, crate: 0.06, carwreck: 0.05, bench: 0.04, headstone: 0.1,
 };
 
 function bucketOf(buckets, key) {
@@ -1135,17 +1108,21 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, rnd) {
  * @param opts.blockers   建物碰撞柱(patch 避開建物)
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blockers, season, seed, rnd }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, blockers, season, seed, rnd }) {
+  const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const buckets = new Map();   // `${sub}#${variant}` -> 幾何桶
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
+  let detCap = FEAT_DETAIL;   // 特徵層先用配額,底毯撒佈前放寬到 MAX_DETAIL
   // ry:null = 隨機朝向;傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向)
   const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
-    if (detCount >= MAX_DETAIL || isBlocked(px, pz)) return;
+    if (detCount >= detCap || isBlocked(px, pz)) return;
     const y = terrain.heightAt(px, pz);
     if (y < 0.4) return;
-    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? rnd() * Math.PI * 2, tint: tintHex });
+    const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
+    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? rnd() * Math.PI * 2,
+                     tx: (rnd() - 0.5) * 2 * tl, tz: (rnd() - 0.5) * 2 * tl, tint: tintHex });
     detCount++;
   };
 
@@ -1154,19 +1131,143 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
   const target = Math.max(140, Math.min(1800, Math.round(area * 420)));
   let placed = 0;
 
-  // ---- 高地/季節分區:量測全場最高點,相對高處改鋪高原/岩屑/冰原 ----
-  let hMax = 0;
+  // ---- 高地/季節分區:量測全場高程「起伏」(絕對海拔無意義,高原城市會誤判),
+  // 相對高處改鋪高原/岩屑/冰原 ----
+  let hMin = Infinity, hMax = -Infinity;
   for (let j = 0; j <= 20; j++) {
     for (let i = 0; i <= 20; i++) {
       const h = terrain.heightAt(terrain.minX + terrain.worldW * i / 20, terrain.minZ + terrain.worldH * j / 20);
+      if (h < hMin) hMin = h;
       if (h > hMax) hMax = h;
     }
   }
-  const alpineH = hMax > 40 ? hMax * 0.62 : Infinity;   // 平坦地圖不出現高地地貌
+  const relief = hMax - hMin;
+  const alpineH = relief > 40 ? hMin + relief * 0.62 : Infinity;   // 平坦地圖不出現高地地貌
   const zoneLists = { ...ZONES };
+  const carpetLists = { ...CARPET };
   if (season === 'winter') {                            // 冬季:裸露地混入冰原、高地以冰原為主
     zoneLists.bare = ['icefield', ...ZONES.bare, 'icefield'];
     zoneLists.alpine = ['plateau', 'icefield', 'scree', 'icefield', 'plateau', 'icefield'];
+    carpetLists.bare = ['icefield', ...CARPET.bare, 'icefield'];
+    carpetLists.alpine = ['icefield', 'plateau', 'icefield', 'scree', 'icefield'];
+  }
+
+  // ==== 底毯層:抖動網格無縫鋪滿全部陸地 ====
+  // 角點位置只由「格點索引雜湊」決定 → 相鄰 cell 引用同一角點,拼面天生水密;
+  // 抖動幅度 ±0.45 格(不足半格,拓撲不翻面)讓交界呈手繪碎形而非直線格線。
+  const carpetBuckets = new Map(), spillBuckets = new Map();
+  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 < 外溢 < 特徵 patch(0.12+)< 道路(0.18)
+  const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
+  const gnx = Math.ceil(terrain.worldW / cell), gnz = Math.ceil(terrain.worldH / cell);
+  const cornH = (i, j, s) => {
+    let n = ((i * 374761393 + j * 668265263) ^ (seed ^ s)) | 0;
+    n = Math.imul(n ^ (n >>> 13), 1274126177);
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+  };
+  const cornerAt = (i, j) => {
+    const x = terrain.minX + i * cell + (cornH(i, j, 0x9E37) - 0.5) * cell * 0.9;
+    const z = terrain.minZ + j * cell + (cornH(i, j, 0x85EB) - 0.5) * cell * 0.9;
+    return [Math.min(terrain.maxX, Math.max(terrain.minX, x)),
+            Math.min(terrain.maxZ, Math.max(terrain.minZ, z))];
+  };
+  // 低頻水彩 wash(連續函數 → 跨 cell 無階差;botw_plan Task 2.1 的反重複手段)
+  const wash = (x, z) => 0.88 + (vnoise(x * 0.011, z * 0.011, seed ^ 0x5A5A) - 0.5) * 0.34;
+  // cell 分區:5 點多數決(抹平衛星像素雜訊的逐格跳動)+ 坡度規則
+  //   懸崖(>0.75)→ '!' 不鋪(頂投影 UV 在近垂直面會拉絲,露地形岩面較自然,
+  //                  鄰格外溢淡出補縫);中坡(>0.28)→ 強制 bare(山坡不會是停車場)
+  //   低窪綠地(水面 +2.2m 內)→ wet(河岸蘆葦帶)
+  const cellKeyAt = (i, j) => {                         // `${sub}#${variant}` / '!' / null(水)
+    const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
+    const hC = terrain.heightAt(cx, cz);
+    const slope = Math.max(
+      Math.abs(terrain.heightAt(cx + cell, cz) - hC),
+      Math.abs(terrain.heightAt(cx, cz + cell) - hC)) / cell;
+    if (slope > 0.75) return '!';
+    const votes = {};
+    for (const [ox, oz] of [[0, 0], [cell * 0.4, 0], [-cell * 0.4, 0], [0, cell * 0.4], [0, -cell * 0.4]]) {
+      const zn0 = classifyPure(cx + ox, cz + oz);
+      votes[zn0] = (votes[zn0] || 0) + 1;
+    }
+    let zn = Object.keys(votes).reduce((a, b) => (votes[b] > votes[a] ? b : a));
+    if (zn === 'water') return null;
+    if (slope > 0.28 && zn !== 'wet') zn = 'bare';
+    // 河岸蘆葦帶:只在「地圖真的有水面」(minH<0.5 才會放水)且貼近水面高度時
+    if (zn === 'green' && hC < 2.2 && terrain.minH < 0.5) zn = 'wet';
+    if ((zn === 'green' || zn === 'bare') && hC > alpineH) zn = 'alpine';
+    const list = carpetLists[zn];
+    if (!list) return null;
+    const t = Math.min(0.999, Math.max(0, (vnoise(cx * 0.006, cz * 0.006, seed) - 0.5) * 2.2 + 0.5));
+    // 底毯用 3 變體(vs 特徵層 4;draw call 可控);大面積反重複交給 wash 雜訊 + 鏡射 UV
+    const variant = Math.min(2, (vnoise(cx * 0.0025, cz * 0.0025, seed ^ 0x7E11) * 3) | 0);
+    return `${list[(t * list.length) | 0]}#${variant}`;
+  };
+  // cell 幾何:3×3 貼地網格(邊中點 = 共用角點的中點 → 相鄰 cell 完全同點,水密;
+  // ~半格取樣讓 cell 貼合地形起伏,丘頂不再戳穿底毯),頂點色 = wash
+  const emitCell = (bmap, key, ti, tj, alphas) => {
+    const P0 = cornerAt(ti, tj), P1 = cornerAt(ti + 1, tj);
+    const P2 = cornerAt(ti + 1, tj + 1), P3 = cornerAt(ti, tj + 1);
+    const mid = (a2, b2) => [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2];
+    // 3×3 排列(列沿 z、行沿 x):P0 E01 P1 / E30 M E12 / P3 E23 P2
+    const G = [P0, mid(P0, P1), P1,
+               mid(P3, P0), mid(mid(P0, P1), mid(P3, P2)), mid(P1, P2),
+               P3, mid(P3, P2), P2];
+    const hs = G.map(([px, pz]) => terrain.heightAt(px, pz));
+    if (Math.min(...hs) < 0.45) return null;            // 岸際留空 = 灘線,不鋪下水
+    const [aA, aB, aC, aD] = alphas || [1, 1, 1, 1];
+    const AL = [aA, (aA + aB) / 2, aB,
+                (aD + aA) / 2, (aA + aB + aC + aD) / 4, (aB + aC) / 2,
+                aD, (aC + aD) / 2, aC];
+    const sub = key.slice(0, key.indexOf('#'));
+    const uvS = DEFS[sub].uvS || 1 / 12;
+    const lift = alphas ? SLIFT : CLIFT;
+    const b = bucketOf(bmap, key);
+    G.forEach(([px, pz], k) => {
+      const w = wash(px, pz);
+      b.pos.push(px, hs[k] + lift, pz);
+      b.nrm.push(0, 1, 0);
+      b.uv.push(px * uvS, pz * uvS);
+      b.col.push(w, w, w, AL[k]);
+    });
+    for (let v = 0; v < 2; v++) {                       // 2×2 小格,面朝 +y
+      for (let u = 0; u < 2; u++) {
+        const a2 = b.base + v * 3 + u, e = a2 + 1, f = a2 + 3, g2 = f + 1;
+        b.idx.push(a2, f, e, e, f, g2);
+      }
+    }
+    b.base += 9;
+    return G[4];
+  };
+  const keys = new Array(gnx * gnz).fill(null);
+  const landCells = [];                                 // [x, z, key]:底毯細節撒佈用
+  for (let j = 0; j < gnz; j++) {
+    for (let i = 0; i < gnx; i++) {
+      const key = cellKeyAt(i, j);
+      if (!key) continue;
+      if (key === '!') { keys[j * gnx + i] = '!'; continue; }   // 陡坡:不鋪但記錄(供外溢補縫)
+      const mid = emitCell(carpetBuckets, key, i, j, null);
+      if (!mid) continue;
+      keys[j * gnx + i] = key;
+      landCells.push([mid[0], mid[1], key]);
+    }
+  }
+  // 異類交界的外溢淡出:key 較小的一側把自己的貼圖「溢」進鄰 cell 一整格,
+  // 共享邊 alpha=1 → 對邊 alpha=0,跨材質 cross-fade 約一格寬,硬縫消失。
+  // 鄰格是陡坡('!')時單向外溢 → 底毯淡出融入崖面,不留硬邊。
+  // pair(A, B):A 在左/上。alpha 依「目標 cell 的共享邊」給 1、對邊給 0
+  const spillPair = (kA, kB, iB, jB, iA, jA, aIntoB, aIntoA) => {
+    if (!kA || !kB || kA === kB) return;
+    if (kA === '!') { if (kB !== '!') emitCell(spillBuckets, kB, iA, jA, aIntoA); return; }
+    if (kB === '!') { emitCell(spillBuckets, kA, iB, jB, aIntoB); return; }
+    if (kA < kB) emitCell(spillBuckets, kA, iB, jB, aIntoB);
+    else emitCell(spillBuckets, kB, iA, jA, aIntoA);
+  };
+  for (let j = 0; j < gnz; j++) {
+    for (let i = 0; i < gnx; i++) {
+      const k0 = keys[j * gnx + i];
+      if (!k0) continue;
+      if (i + 1 < gnx) spillPair(k0, keys[j * gnx + i + 1], i + 1, j, i, j, [1, 0, 0, 1], [0, 1, 1, 0]);
+      if (j + 1 < gnz) spillPair(k0, keys[(j + 1) * gnx + i], i, j + 1, i, j, [1, 1, 0, 0], [0, 0, 1, 1]);
+    }
   }
 
   // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同變體連片)----
@@ -1228,35 +1329,58 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     const w = r * 2, dp = r * 2 * (def.aspect || 0.7);
     const ca = Math.cos(rot), sa = Math.sin(rot);
     const atLocal = (lx, lz) => [x + lx * ca - lz * sa, z + lx * sa + lz * ca];
+    // 數量隨 patch 面積縮放(大 patch 不再顯得稀疏)+ 每次呼叫再抖 ±40%;
+    // 散佈型態每 patch×型別隨機:cluster 群聚(1~3 簇)/ ring 沿緣 / uniform 均勻
+    const kMul = Math.min(3, Math.max(0.7, (r / ((SIZE[sub]?.[0] || 9) * RSCALE)) ** 1.6));
     const scatter = (type, k, s0, sv, tintPick = null) => {
+      k = Math.max(1, Math.round(k * kMul * (0.7 + rnd() * 0.8)));
+      const mode = rnd();
+      let centers = null;
+      if (mode < 0.3) {
+        centers = [];
+        const nC = 1 + (rnd() * 3 | 0);
+        for (let c = 0; c < nC; c++) centers.push([(rnd() - 0.5) * r * 1.1, (rnd() - 0.5) * r * 1.1]);
+      }
       for (let i = 0; i < k; i++) {
-        const rr = r * 0.75 * Math.sqrt(rnd()), th = rnd() * Math.PI * 2;
+        let px, pz;
+        if (centers) {                                 // cluster:簇心 + 高斯狀聚攏
+          const [ox, oz] = centers[(rnd() * centers.length) | 0];
+          const rr = r * 0.3 * rnd(), th = rnd() * Math.PI * 2;
+          px = x + ox + Math.cos(th) * rr; pz = z + oz + Math.sin(th) * rr;
+        } else if (mode < 0.45) {                      // ring:沿 patch 邊緣圍一圈
+          const rr = r * (0.55 + rnd() * 0.35), th = rnd() * Math.PI * 2;
+          px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
+        } else {                                       // uniform:面積均勻
+          const rr = r * 0.75 * Math.sqrt(rnd()), th = rnd() * Math.PI * 2;
+          px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
+        }
         const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
-        addDetail(type, x + Math.cos(th) * rr, z + Math.sin(th) * rr, s0 + rnd() * sv, tint);
+        addDetail(type, px, pz, s0 + rnd() * sv, tint);
       }
     };
     // 對齊列陣:沿 patch 局部軸整齊排列;ry=-rot 使 3D 件與貼圖行列同向
-    // (atLocal 的平面旋轉正向 = three.js rotation.y 的負向)
+    // (atLocal 的平面旋轉正向 = three.js rotation.y 的負向);格位/朝向微抖不豆腐格
     const rows = (type, stepX, stepZ, mX, mZ, cap, skip, tintPick = null, s0 = 1, sv = 0) => {
       let k = 0;
+      const jx = stepX * 0.18, jz = stepZ * 0.18;
       for (let lz = -dp * mZ; lz <= dp * mZ && k < cap; lz += stepZ) {
         for (let lx = -w * mX; lx <= w * mX && k < cap; lx += stepX) {
           if (rnd() < skip) continue;
-          const [px, pz] = atLocal(lx, lz);
+          const [px, pz] = atLocal(lx + (rnd() - 0.5) * jx, lz + (rnd() - 0.5) * jz);
           const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
-          addDetail(type, px, pz, s0 + rnd() * sv, tint, 1, -rot);
+          addDetail(type, px, pz, s0 + rnd() * sv, tint, 1, -rot + (rnd() - 0.5) * 0.1);
           k++;
         }
       }
     };
-    if (sub === 'turf' || sub === 'lawn') scatter('tuft', 2 + (rnd() * 3 | 0), 0.7, 0.6);
-    else if (sub === 'meadow') scatter('tuft', 4, 1.0, 0.8);
-    else if (sub === 'bushfield') { scatter('bush', 3 + (rnd() * 3 | 0), 0.8, 0.9); scatter('tuft', 2, 0.7, 0.5); }
-    else if (sub === 'flowerfield') { scatter('flower', 8 + (rnd() * 6 | 0), 0.8, 0.6, FLOWER_C); scatter('tuft', 3, 0.6, 0.4); }
+    if (sub === 'turf' || sub === 'lawn') scatter('tuft', 3 + (rnd() * 4 | 0), 0.7, 0.6);
+    else if (sub === 'meadow') scatter('tuft', 7, 1.0, 0.8);
+    else if (sub === 'bushfield') { scatter('bush', 5 + (rnd() * 4 | 0), 0.8, 0.9); scatter('tuft', 3, 0.7, 0.5); }
+    else if (sub === 'flowerfield') { scatter('flower', 12 + (rnd() * 8 | 0), 0.8, 0.6, FLOWER_C); scatter('tuft', 4, 0.6, 0.4); }
     else if (sub === 'orchard') {
       let k = 0;                                  // 果樹成行成列(局部軸網格 + 微抖)
-      for (let lz = -r * 0.6; lz <= r * 0.6 && k < 10; lz += 5) {
-        for (let lx = -r * 0.6; lx <= r * 0.6 && k < 10; lx += 5) {
+      for (let lz = -r * 0.7; lz <= r * 0.7 && k < 14; lz += 5) {
+        for (let lx = -r * 0.7; lx <= r * 0.7 && k < 14; lx += 5) {
           if (rnd() < 0.2) continue;
           const [px, pz] = atLocal(lx + (rnd() - 0.5) * 1.4, lz + (rnd() - 0.5) * 1.4);
           addDetail('sapling', px, pz, 0.9 + rnd() * 0.5);
@@ -1266,8 +1390,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     } else if (sub === 'teafield') scatter('tuft', 2, 0.5, 0.3);
     else if (sub === 'paddy') {
       let k = 0;                                  // 秧苗列:沿田塊軸向整齊插秧
-      for (let lz = -dp * 0.32; lz <= dp * 0.32 && k < 26; lz += 2.6) {
-        for (let lx = -w * 0.38; lx <= w * 0.38 && k < 26; lx += 2.8) {
+      for (let lz = -dp * 0.32; lz <= dp * 0.32 && k < 34; lz += 2.6) {
+        for (let lx = -w * 0.38; lx <= w * 0.38 && k < 34; lx += 2.8) {
           if (rnd() < 0.15) continue;
           const [px, pz] = atLocal(lx, lz);
           addDetail('rice', px, pz, 0.8 + rnd() * 0.4);
@@ -1277,49 +1401,55 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     } else if (sub === 'dryfield') {
       if (rnd() < 0.6) scatter('hay', 1 + (rnd() < 0.3 ? 1 : 0), 0.8, 0.5);
       scatter('pebble', 2, 0.5, 0.5);
-    } else if (sub === 'gravel') scatter('pebble', 4 + (rnd() * 5 | 0), 0.5, 0.9);
-    else if (sub === 'wild') { scatter('pebble', 3, 0.5, 0.8); scatter('tuft', 2, 0.6, 0.4); }
-    else if (sub === 'sand') scatter('pebble', 2, 0.7, 1.1);
-    else if (sub === 'mud' || sub === 'crackedearth') scatter('pebble', 2, 0.5, 0.4);
+    } else if (sub === 'gravel') scatter('pebble', 6 + (rnd() * 6 | 0), 0.5, 0.9);
+    else if (sub === 'wild') { scatter('pebble', 3, 0.5, 0.8); scatter('tuft', 3, 0.6, 0.4); scatter('drybush', 2, 0.7, 0.5); if (rnd() < 0.35) scatter('boulder', 1, 0.7, 0.5); }
+    else if (sub === 'sand') scatter('pebble', 3, 0.7, 1.1);
+    else if (sub === 'mud' || sub === 'crackedearth') { scatter('pebble', 2, 0.5, 0.4); if (sub === 'crackedearth') scatter('drybush', 1, 0.6, 0.4); }
     else if (sub === 'redsoil') { scatter('pebble', 2, 0.5, 0.4); scatter('tuft', 1, 0.5, 0.3); }
-    else if (sub === 'marsh') scatter('reed', 4 + (rnd() * 4 | 0), 0.8, 0.6);
-    else if (sub === 'lotus') { scatter('lotuspad', 5 + (rnd() * 5 | 0), 0.8, 0.8); scatter('reed', 3, 0.7, 0.5); }
+    else if (sub === 'marsh') scatter('reed', 8 + (rnd() * 6 | 0), 0.8, 0.6);
+    else if (sub === 'lotus') { scatter('lotuspad', 12 + (rnd() * 8 | 0), 0.8, 0.8); scatter('reed', 4, 0.7, 0.5); }
     // — 綠地擴充 —
-    else if (sub === 'arrowbamboo') { scatter('bamboo', 6 + (rnd() * 5 | 0), 0.8, 0.6); scatter('tuft', 2, 0.6, 0.4); }
-    else if (sub === 'deadwood') { scatter('snag', 3 + (rnd() * 3 | 0), 0.8, 0.7); scatter('log', 1, 0.7, 0.4); scatter('pebble', 1, 0.5, 0.4); }
-    else if (sub === 'fallenlogs') { scatter('log', 4 + (rnd() * 4 | 0), 0.8, 0.7); scatter('stump', 1, 0.8, 0.4); scatter('tuft', 2, 0.6, 0.4); }
-    else if (sub === 'clearcut') { scatter('stump', 5 + (rnd() * 5 | 0), 0.8, 0.5); scatter('log', 1, 0.7, 0.4); }
-    else if (sub === 'lumberyard') { rows('logpile', 4.2, 3.4, 0.3, 0.28, 4, 0.2, null, 0.9, 0.4); scatter('plank', 1 + (rnd() * 2 | 0), 0.8, 0.4); }
-    else if (sub === 'rottencabin') { addDetail('cabin', x, z, 0.85 + rnd() * 0.35); scatter('fencepost', 3 + (rnd() * 2 | 0), 0.9, 0.3); scatter('bush', 2, 0.6, 0.5); }
-    else if (sub === 'vineyard') rows('vinerow', 3.4, 3.0, 0.36, 0.32, 12, 0.12, null, 0.9, 0.3);
-    else if (sub === 'greenhouse') rows('ghouse', 3.8, 3.2, 0.3, 0.3, 6, 0.15, null, 1.1, 0.4);
+    else if (sub === 'arrowbamboo') { scatter('bamboo', 9 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.4); }
+    else if (sub === 'deadwood') { scatter('snag', 5 + (rnd() * 4 | 0), 0.8, 0.7); scatter('log', 2, 0.7, 0.4); scatter('pebble', 2, 0.5, 0.4); }
+    else if (sub === 'fallenlogs') { scatter('log', 7 + (rnd() * 5 | 0), 0.8, 0.7); scatter('stump', 2, 0.8, 0.4); scatter('tuft', 3, 0.6, 0.4); }
+    else if (sub === 'clearcut') { scatter('stump', 8 + (rnd() * 6 | 0), 0.8, 0.5); scatter('log', 2, 0.7, 0.4); }
+    else if (sub === 'lumberyard') { rows('logpile', 4.2, 3.4, 0.3, 0.28, 7, 0.2, null, 0.9, 0.4); scatter('plank', 2 + (rnd() * 3 | 0), 0.8, 0.4); scatter('crate', 1, 0.9, 0.3); }
+    else if (sub === 'rottencabin') { addDetail('cabin', x, z, 0.85 + rnd() * 0.35); scatter('fencepost', 5 + (rnd() * 3 | 0), 0.9, 0.3); scatter('bush', 3, 0.6, 0.5); }
+    else if (sub === 'vineyard') rows('vinerow', 3.4, 3.0, 0.36, 0.32, 16, 0.12, null, 0.9, 0.3);
+    else if (sub === 'greenhouse') rows('ghouse', 3.8, 3.2, 0.3, 0.3, 10, 0.08, null, 1.1, 0.4);
     // — 裸露地/高地擴充 —
-    else if (sub === 'deadforest') { scatter('charsnag', 4 + (rnd() * 4 | 0), 0.8, 0.8); scatter('pebble', 2, 0.4, 0.4); }
-    else if (sub === 'slabruin') { scatter('slab', 4 + (rnd() * 4 | 0), 0.8, 0.6); scatter('pebble', 3, 0.5, 0.6); }
-    else if (sub === 'steppe') { scatter('tuft', 5, 0.9, 0.7); scatter('pebble', 1, 0.5, 0.4); }
-    else if (sub === 'abandonedfarm') { scatter('tuft', 4, 0.7, 0.5); scatter('fencepost', 2, 0.9, 0.3); if (rnd() < 0.4) scatter('hay', 1, 0.7, 0.3); }
-    else if (sub === 'saltpan') scatter('saltmound', 2 + (rnd() * 2 | 0), 0.7, 0.5);
-    else if (sub === 'quarry') { scatter('rockflat', 3, 0.9, 0.8); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.6); }
-    else if (sub === 'plateau') { scatter('rockflat', 2 + (rnd() * 2 | 0), 0.8, 0.7); scatter('tuft', 2, 0.6, 0.4); }
-    else if (sub === 'icefield') { scatter('iceshard', 3 + (rnd() * 3 | 0), 0.7, 0.8); scatter('pebble', 1, 0.4, 0.4); }
-    else if (sub === 'scree') { scatter('pebble', 6 + (rnd() * 5 | 0), 0.5, 0.9); scatter('rockflat', 2, 0.7, 0.6); }
+    else if (sub === 'deadforest') { scatter('charsnag', 6 + (rnd() * 5 | 0), 0.8, 0.8); scatter('pebble', 2, 0.4, 0.4); }
+    else if (sub === 'slabruin') { scatter('slab', 7 + (rnd() * 5 | 0), 0.8, 0.6); scatter('pebble', 4, 0.5, 0.6); scatter('boulder', 1, 0.6, 0.4); }
+    else if (sub === 'steppe') { scatter('tuft', 7, 0.9, 0.7); scatter('drybush', 3, 0.7, 0.5); scatter('pebble', 1, 0.5, 0.4); }
+    else if (sub === 'abandonedfarm') { scatter('tuft', 4, 0.7, 0.5); scatter('drybush', 2, 0.7, 0.4); scatter('fencepost', 3, 0.9, 0.3); if (rnd() < 0.4) scatter('hay', 1, 0.7, 0.3); }
+    else if (sub === 'saltpan') scatter('saltmound', 4 + (rnd() * 3 | 0), 0.7, 0.5);
+    else if (sub === 'quarry') { scatter('rockflat', 4, 0.9, 0.8); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.6); scatter('boulder', 1 + (rnd() * 2 | 0), 0.7, 0.5); }
+    else if (sub === 'plateau') { scatter('rockflat', 3 + (rnd() * 3 | 0), 0.8, 0.7); scatter('boulder', 1, 0.7, 0.5); scatter('tuft', 3, 0.6, 0.4); }
+    else if (sub === 'icefield') { scatter('iceshard', 6 + (rnd() * 5 | 0), 0.7, 0.8); scatter('pebble', 1, 0.4, 0.4); }
+    else if (sub === 'scree') { scatter('pebble', 9 + (rnd() * 7 | 0), 0.5, 0.9); scatter('rockflat', 3, 0.7, 0.6); scatter('boulder', 1, 0.6, 0.5); }
     // — 市區擴充 —
-    else if (sub === 'construction') { scatter('pipe', 1 + (rnd() * 2 | 0), 0.9, 0.4); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.5); scatter('barrier', 2, 0.9, 0.3); scatter('plank', 1, 0.8, 0.3); }
+    else if (sub === 'construction') { scatter('pipe', 1 + (rnd() * 2 | 0), 0.9, 0.4); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.5); scatter('barrier', 3, 0.9, 0.3); scatter('plank', 1, 0.8, 0.3); scatter('drum', 2, 0.9, 0.2, DRUM_C); scatter('crate', 1, 0.9, 0.3); }
     else if (sub === 'gasstation') {
       addDetail('canopy', x, z, 1 + rnd() * 0.2, null, 1, -rot);   // 中柱雨棚 + 兩座加油機
       for (const lx of [-1.4, 1.4]) {
         const [px, pz] = atLocal(lx, 0);
         addDetail('pump', px, pz, 1, PUMP_C[(rnd() * PUMP_C.length) | 0], 1, -rot);
       }
+      scatter('drum', 2, 0.9, 0.2, DRUM_C);
     }
-    else if (sub === 'park') { scatter('sapling', 3 + (rnd() * 3 | 0), 0.9, 0.5); scatter('bench', 1 + (rnd() * 2 | 0), 0.9, 0.2); scatter('flower', 4, 0.7, 0.5, FLOWER_C); scatter('tuft', 2, 0.6, 0.4); }
+    else if (sub === 'park') { scatter('sapling', 4 + (rnd() * 3 | 0), 0.9, 0.5); scatter('bench', 1 + (rnd() * 2 | 0), 0.9, 0.2); scatter('flower', 8, 0.7, 0.5, FLOWER_C); scatter('tuft', 3, 0.6, 0.4); }
     else if (sub === 'plaza') scatter('bench', 2 + (rnd() * 2 | 0), 0.9, 0.2);
-    else if (sub === 'scrapyard') { scatter('carwreck', 3 + (rnd() * 3 | 0), 0.9, 0.4, CAR_C); scatter('pipe', 1, 0.7, 0.3); scatter('pebble', 2, 0.5, 0.4); }
-    else if (sub === 'containeryard') rows('container', 4.4, 3.0, 0.34, 0.3, 8, 0.25, CONTAINER_C, 0.9, 0.3);
-    else if (sub === 'cemetery') { rows('headstone', 2.2, 2.6, 0.36, 0.3, 16, 0.25, null, 0.9, 0.3); scatter('sapling', 1, 0.9, 0.3); }
-    else if (sub === 'solarfarm') rows('solarpanel', 3.2, 3.0, 0.36, 0.32, 12, 0.08, null, 0.9, 0.2);
+    else if (sub === 'concrete' || sub === 'pavement' || sub === 'brick') {   // 市區空地:偶發街道家具,不再一片全空
+      if (rnd() < 0.4) scatter('bench', 1, 0.9, 0.2);
+      if (rnd() < 0.3) scatter('drum', 1, 0.9, 0.2, DRUM_C);
+      if (rnd() < 0.3) scatter('crate', 1, 0.9, 0.3);
+    }
+    else if (sub === 'scrapyard') { scatter('carwreck', 4 + (rnd() * 3 | 0), 0.9, 0.4, CAR_C); scatter('drum', 2, 0.9, 0.2, DRUM_C); scatter('crate', 1, 0.9, 0.3); scatter('pipe', 1, 0.7, 0.3); scatter('pebble', 2, 0.5, 0.4); }
+    else if (sub === 'containeryard') { rows('container', 4.4, 3.0, 0.34, 0.3, 12, 0.25, CONTAINER_C, 0.9, 0.3); scatter('crate', 2, 0.9, 0.3); }
+    else if (sub === 'cemetery') { rows('headstone', 2.2, 2.6, 0.36, 0.3, 24, 0.25, null, 0.9, 0.3); scatter('sapling', 1, 0.9, 0.3); }
+    else if (sub === 'solarfarm') rows('solarpanel', 3.2, 3.0, 0.36, 0.32, 18, 0.08, null, 0.9, 0.2);
     // — 濕地擴充 —
-    else if (sub === 'fishpond') scatter('reed', 3, 0.7, 0.4);
+    else if (sub === 'fishpond') scatter('reed', 6, 0.7, 0.4);
   }
 
   // ---- 主散佈迴圈 ----
@@ -1338,7 +1468,46 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     tryPatch(x, z, sub, Math.min(VARIANTS - 1, variant), r, rnd() * Math.PI, 0);
   }
 
-  // ---- 色塊 Mesh(每「地表×變體」一個 draw call)----
+  // ---- 底毯細節:剩餘配額均勻撒進大片空地(仍避開兵線走廊/建物)----
+  detCap = MAX_DETAIL;
+  const remain = MAX_DETAIL - detCount;
+  if (remain > 60 && landCells.length) {
+    const pDet = Math.min(0.3, remain / (landCells.length * 5));
+    for (const [cx2, cz2, key] of landCells) {
+      if (detCount >= MAX_DETAIL) break;
+      if (rnd() >= pDet) continue;
+      const sub = key.slice(0, key.indexOf('#'));
+      scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub]);
+    }
+  }
+
+  // ---- 底毯 Mesh(不透明,墊在最底)+ 外溢 Mesh(透明淡出,先於特徵/特效繪製)----
+  for (const [bmap, spillPass] of [[carpetBuckets, false], [spillBuckets, true]]) {
+    for (const [key, b] of bmap) {
+      if (!b.idx.length) continue;
+      const [sub, v] = key.split('#');
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
+      geo.setIndex(b.idx);
+      const tint = DEFS[sub].green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
+      const m = new THREE.Mesh(geo, envMat(tint, {
+        map: groundTex(sub, +v, false),
+        vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim:掠射角全開會把遠處洗白
+        transparent: spillPass,   // 外溢靠頂點 alpha 淡出;depthWrite 保持 true
+      }));
+      // 外溢在透明佇列裡必須早於特徵 patch / 特效(renderOrder 0)繪製,
+      // 否則 depthWrite 會把後畫的底層擋掉出現描圈破洞
+      if (spillPass) m.renderOrder = -2;
+      m.frustumCulled = false;
+      m.userData.noOutline = true;
+      group.add(m);
+    }
+  }
+
+  // ---- 特徵色塊 Mesh(每「地表×變體」一個 draw call)----
   for (const [key, b] of buckets) {
     if (!b.idx.length) continue;
     const [sub, v] = key.split('#');
@@ -1352,7 +1521,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     const tint = def.green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
     const m = new THREE.Mesh(geo, envMat(tint, {
       map: groundTex(sub, +v, def.uv === 'fit'),
-      vertexColors: true, wash: 0.5, cool: 0.5,
+      vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim(同底毯)
       transparent: def.edge === 'fade',   // 淡出邊融入地形;depthWrite 保持 true(貼花式)
     }));
     m.frustumCulled = false;
@@ -1371,7 +1540,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     for (const part of DETAIL_DEFS[type]) {
       const m = new THREE.InstancedMesh(part.geo, toonMat(partColor(part.c)), items.length);
       items.forEach((it, i) => {
-        E.set(0, it.ry, 0);
+        E.set(it.tx || 0, it.ry, it.tz || 0);   // 隨機傾角(TILT 表)+ 隨機朝向
         Q.setFromEuler(E);
         P.set(it.x, it.y, it.z);
         S.set(it.s, it.s * (part.sy ?? 1) * it.sy, it.s);
@@ -1393,5 +1562,5 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
       group.add(m);
     }
   }
-  return { patches: placed, details: detCount };
+  return { patches: placed, details: detCount, cells: landCells.length };
 }
