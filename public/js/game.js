@@ -14,6 +14,7 @@ import { makeUnit } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
+import { stepLocomotion } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield } from './vfx.js';
 
 const KIND_KEY = {
@@ -1478,10 +1479,13 @@ export class BattleClient {
         continue;
       }
       const cur = ent.mesh.position;
-      let nx, nz;
+      const px = cur.x, pz = cur.z, pyaw = ent.mesh.rotation.y;
+      let nx, nz, snapped = false;
       if (ent._snapPos) {
         nx = ent.tgt.x; nz = ent.tgt.z;
         ent._snapPos = false;
+        snapped = true;
+        ent.loco = null;   // 重生瞬移:骨架動畫狀態歸零,不殘留舊速度
       } else {
         const k = Math.min(1, dt * 9);
         nx = cur.x + (ent.tgt.x - cur.x) * k;
@@ -1489,14 +1493,24 @@ export class BattleClient {
       }
       const gy = this.terrain.heightAt(nx, nz);
       const ny = (ent.hero || ent.flies) ? gy + ent.heroY : gy;
-      // 朝向移動方向(英雄用伺服器回報的 ry)
+      // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
+      let wantYaw = null;
       if (ent.hero) {
-        ent.mesh.rotation.y = ent.ry;
+        wantYaw = ent.ry;
       } else {
         const dx = ent.tgt.x - cur.x, dz = ent.tgt.z - cur.z;
-        if (dx * dx + dz * dz > 0.5) ent.mesh.rotation.y = Math.atan2(dx, dz);
+        if (dx * dx + dz * dz > 0.5) wantYaw = Math.atan2(dx, dz);
+      }
+      if (wantYaw != null) {
+        if (snapped) ent.mesh.rotation.y = wantYaw;
+        else {
+          const dy = Math.atan2(Math.sin(wantYaw - pyaw), Math.cos(wantYaw - pyaw));
+          ent.mesh.rotation.y = pyaw + dy * Math.min(1, dt * 8);
+        }
       }
       cur.set(nx, ny, nz);
+      // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)
+      stepLocomotion(ent, dt, now, px, pz, pyaw);
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
     }

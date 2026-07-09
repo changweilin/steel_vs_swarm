@@ -113,6 +113,22 @@ function mat(color, opts = {}) {
 /** 描邊寬度:隨單位尺寸走,遠看近看都 ≈ 2~3px 漫畫勾線 */
 const outlineW = (target) => Math.min(0.45, Math.max(0.05, target * 0.016));
 
+// ---------- 程式生成模型積木(盒 / 圓柱,自動掛進父層) ----------
+function bx(parent, w, h, d, x, y, z, color, opts) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+function cyl(parent, rt, rb, h, seg, x, y, z, color, opts) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat(color, opts));
+  m.position.set(x, y, z);
+  parent.add(m);
+  return m;
+}
+/** 同色系明暗分版(賽璐璐面板分割:大色塊裡切出深淺層次) */
+const dim = (c, f) => new THREE.Color(c).multiplyScalar(f);
+
 // ---------- 程式生成備援模型 ----------
 /**
  * 武裝無人機(蜂群英雄)——角色專屬機體:
@@ -191,7 +207,21 @@ function buildDrone(side, vis = null) {
   } else {
     for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) addRotor(sx * 1.55, sz * 1.55);
   }
+  // 姿態視覺錨點:航行燈(左紅右綠)+ 雲台攝影機 — 壓坡/俯仰時方位一目了然
+  bx(g, 0.1, 0.06, 0.22, -0.85, 1.28, 0, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
+  bx(g, 0.1, 0.06, 0.22, 0.85, 1.28, 0, 0x55ff88, { emissive: 0x22ff66, emissiveIntensity: 1.6 });
+  cyl(g, 0.12, 0.12, 0.2, 8, 0, 0.86, 0.55, 0x23262a);
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+  lens.position.set(0, 0.78, 0.62);
+  g.add(lens);
+  // 壓坡樞軸(locomotion.js Task 1.1):整機掛在機身重心高度的 tilt 下,
+  // 橫移壓坡 / 前傾 / 懸停浮沉都轉這個群組,不動根節點(定位/描邊不受影響)
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.3;
+  for (const k of [...g.children]) { k.position.y -= 1.3; tilt.add(k); }
+  g.add(tilt);
   g.userData.spin = props; // 每幀旋轉
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.06, top: 30 };
   return g;
 }
 
@@ -257,113 +287,203 @@ function charPod(vis, target) {
   return g;
 }
 
-/** 輪式裝甲運兵車 */
+/**
+ * 輪式裝甲運兵車 — 車體掛懸吊樞軸(hull),locomotion.js 驅動
+ * 離心側傾/煞車點頭;輪子留在根節點保持著地,轉速 = 線速度(Task 1.2)。
+ * 色塊:主艙/頂甲/側裙三層明暗 + 陣營識別條 + 頭燈/觀察窗發光細節。
+ */
 function buildApc(side) {
   const g = new THREE.Group();
-  const accent = new THREE.Color(SIDES[side].colorDim);
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.3, 5.2), mat(0x4a5347));
-  hull.position.y = 1.5;
+  const dimA = new THREE.Color(SIDES[side].colorDim);
+  const hull = new THREE.Group();
   g.add(hull);
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.9, 1.2), mat(0x3f4840));
-  nose.position.set(0, 1.25, 2.9);
+  bx(hull, 2.6, 1.3, 5.2, 0, 1.5, 0, 0x4a5347);                          // 主裝甲艙
+  const nose = bx(hull, 2.6, 0.9, 1.2, 0, 1.25, 2.9, 0x3f4840);          // 斜鼻
   nose.rotation.x = 0.3;
-  g.add(nose);
-  const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.7, 8), mat(accent));
-  turret.position.y = 2.5;
-  g.add(turret);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 2.2, 8), mat(0x14171a));
+  bx(hull, 2.3, 0.22, 4.2, 0, 2.24, -0.3, 0x424b40);                     // 頂甲板
+  bx(hull, 0.62, 0.14, 0.9, 0.7, 2.4, -1.4, 0x39413a);                   // 艙口蓋
+  for (const s of [-1, 1]) {
+    bx(hull, 0.14, 0.6, 4.6, s * 1.38, 1.1, 0.2, 0x3b4239);              // 側裙板
+    bx(hull, 0.16, 0.14, 4.2, s * 1.39, 1.52, 0.2, dimA);                // 陣營識別條
+    bx(hull, 0.12, 0.12, 0.12, s * 1.0, 1.4, 3.2, 0xffe9b0,
+      { emissive: 0xffd27a, emissiveIntensity: 1.3 });                   // 頭燈
+  }
+  bx(hull, 1.5, 0.14, 0.08, 0, 1.92, 2.55, 0x141a20,
+    { emissive: 0x9adfff, emissiveIntensity: 0.6 });                     // 駕駛觀察窗
+  const pipe = cyl(hull, 0.09, 0.09, 0.7, 6, -1.15, 2.1, -2.5, 0x2c3033, { metalness: 0.6 });
+  pipe.rotation.x = 0.5;                                                 // 排氣管
+  cyl(hull, 0.02, 0.03, 1.4, 5, 1.15, 3.0, -2.3, 0x23262a);              // 通訊天線
+  cyl(hull, 0.7, 0.9, 0.7, 8, 0, 2.7, 0.3, dimA);                        // 砲塔
+  const barrel = cyl(hull, 0.09, 0.09, 2.2, 8, 0, 2.75, 1.7, 0x14171a, { metalness: 0.8 });
   barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 2.55, 1.4);
-  g.add(barrel);
+  cyl(barrel, 0.13, 0.13, 0.28, 8, 0, 1.05, 0, 0x0d0f11);                // 砲口制退器
+  const wheels = [];
   for (let i = 0; i < 4; i++) {
     for (const s of [-1, 1]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 12), mat(0x191c1f));
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(s * 1.42, 0.55, -1.8 + i * 1.25);
-      g.add(wheel);
+      const w = cyl(g, 0.55, 0.55, 0.4, 12, s * 1.42, 0.55, -1.8 + i * 1.25, 0x191c1f);
+      w.rotation.z = Math.PI / 2;
+      cyl(w, 0.2, 0.2, 0.42, 8, 0, 0, 0, 0x2c3033);                      // 輪轂(轉動可見)
+      wheels.push({ m: w, r: 0.55 });
     }
   }
+  g.userData.rig = { kind: 'wheeled', hull, hullY0: 0, wheels, top: 11 };
   return g;
 }
 
-/** 主戰坦克 */
+/**
+ * 主戰坦克 — 全車(含履帶)掛懸吊樞軸,轉彎側傾/煞車點頭幅度小、慣性大;
+ * 外露路輪轉速 = 線速度(消除滑行感)。砲塔總成:艙蓋/尾艙置物/觀瞄鏡/排煙器。
+ */
 function buildTank(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].colorDim);
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.2, 6.4), mat(0x4c5245));
-  hull.position.y = 1.35;
+  const hull = new THREE.Group();
   g.add(hull);
+  bx(hull, 3.4, 1.2, 6.4, 0, 1.35, 0, 0x4c5245);                         // 車體
+  const glacis = bx(hull, 3.2, 0.7, 1.3, 0, 1.7, 3.0, 0x434a3e);         // 前斜甲
+  glacis.rotation.x = 0.42;
+  bx(hull, 3.0, 0.2, 5.4, 0, 2.0, -0.3, 0x454c40);                       // 引擎甲板
+  bx(hull, 1.4, 0.24, 1.2, 0, 2.06, -2.2, 0x394037);                     // 引擎散熱柵
   for (const s of [-1, 1]) {
-    const track = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 6.8), mat(0x23262a));
-    track.position.set(s * 1.85, 0.85, 0);
-    g.add(track);
+    bx(hull, 0.9, 1.1, 6.8, s * 1.85, 0.85, 0, 0x23262a);                // 履帶
+    bx(hull, 0.96, 0.28, 6.2, s * 1.85, 1.52, 0, 0x3a4136);              // 履帶上護板
+    bx(hull, 0.98, 0.12, 5.6, s * 1.85, 1.72, 0, accent);                // 陣營識別條
   }
-  const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.45, 0.95, 10), mat(accent));
+  // 外露路輪(下半可見;locomotion 依半徑換算轉速)
+  const wheels = [];
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 5; i++) {
+      const w = cyl(hull, 0.42, 0.42, 0.95, 10, s * 1.85, 0.5, -2.4 + i * 1.2, 0x14171a);
+      w.rotation.z = Math.PI / 2;
+      cyl(w, 0.16, 0.16, 0.98, 8, 0, 0, 0, 0x2c3033);                    // 輪轂
+      wheels.push({ m: w, r: 0.42 });
+    }
+  }
+  // 砲塔總成
+  const turret = new THREE.Group();
   turret.position.set(0, 2.4, -0.4);
-  g.add(turret);
-  const gun = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, 4.6, 10), mat(0x14171a, { metalness: 0.8 }));
+  hull.add(turret);
+  cyl(turret, 1.15, 1.45, 0.95, 10, 0, 0, 0, accent);
+  bx(turret, 0.7, 0.16, 0.7, 0.45, 0.56, -0.3, 0x394037);                // 車長艙蓋
+  bx(turret, 1.6, 0.5, 0.6, 0, 0.1, -1.3, 0x3a4136);                     // 尾艙置物架
+  bx(turret, 0.3, 0.22, 0.3, 0.75, 0.6, 0.4, 0x141a20,
+    { emissive: 0x9adfff, emissiveIntensity: 0.7 });                     // 觀瞄鏡
+  cyl(turret, 0.02, 0.03, 1.3, 5, -0.8, 0.95, -0.5, 0x23262a);           // 天線
+  const gun = cyl(turret, 0.14, 0.17, 4.6, 10, 0, 0.05, 2.4, 0x14171a, { metalness: 0.8 });
   gun.rotation.x = Math.PI / 2;
-  gun.position.set(0, 2.45, 2.0);
-  g.add(gun);
+  cyl(gun, 0.2, 0.2, 0.5, 8, 0, 0.9, 0, 0x1e2226);                       // 排煙器
+  cyl(gun, 0.22, 0.22, 0.35, 8, 0, 2.2, 0, 0x0d0f11);                    // 砲口制退器
+  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels, top: 9 };
   return g;
 }
 
-/** 備援步兵(GLB 失敗時) */
-function buildSoldierFallback() {
+/**
+ * 可動步兵骨架(mobility_plan Task 2.1):
+ * 髖×2 + 肩×2 四個關節樞軸 + 骨盆(hips)重心樞軸;locomotion.js 以實際地速驅動
+ * 步頻(不滑步)、重心側移支撐腿、速度前傾、手臂反相擺動。
+ * 色塊:迷彩服/防彈背心/護具三層明暗 + 陣營識別(胸燈/護目鏡/頭盔條)。
+ */
+function buildTrooper(side, p) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 1.15, 4, 8), mat(0x5a6148));
-  body.position.y = 1.35;
-  g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), mat(0xc9a481));
-  head.position.y = 2.35;
-  g.add(head);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x3d4436));
-  helmet.position.y = 2.42;
-  g.add(helmet);
-  const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.16, 1.15), mat(0x1a1d20));
-  rifle.position.set(0.32, 1.6, 0.35);
-  g.add(rifle);
+  const accent = new THREE.Color(SIDES[side].color);
+  const hipY = 1.3;
+  // 腿:髖關節樞軸(大腿/護膝/小腿/戰鬥靴)
+  const mkLeg = (sx) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 0.22, hipY, 0);
+    bx(leg, 0.26, 0.56, 0.3, 0, -0.3, 0, p.fatigue);
+    bx(leg, 0.28, 0.14, 0.32, 0, -0.58, 0.04, p.pad);
+    bx(leg, 0.2, 0.52, 0.24, 0, -0.86, 0, dim(p.fatigue, 0.85));
+    bx(leg, 0.24, 0.16, 0.44, 0, -1.16, 0.06, 0x23262a);
+    g.add(leg);
+    return leg;
+  };
+  const legL = mkLeg(-1), legR = mkLeg(1);
+  // 上半身(骨盆樞軸:浮沉/側移/前傾都在這裡)
+  const hips = new THREE.Group();
+  hips.position.y = hipY;
+  g.add(hips);
+  bx(hips, 0.56, 0.26, 0.36, 0, 0.1, 0, 0x2f342b);                       // 腰帶
+  for (const sx of [-1, 1]) bx(hips, 0.14, 0.18, 0.1, sx * 0.18, 0.08, 0.2, 0x23262a);  // 彈匣袋
+  bx(hips, 0.6, 0.62, 0.4, 0, 0.58, 0, p.fatigue);                       // 軀幹
+  bx(hips, 0.66, 0.48, 0.46, 0, 0.62, 0.02, p.vest);                     // 防彈背心
+  bx(hips, 0.2, 0.1, 0.06, 0, 0.74, 0.27, accent,
+    { emissive: accent, emissiveIntensity: 0.9 });                       // 敵我識別燈
+  bx(hips, 0.46, 0.46, 0.22, 0, 0.62, -0.34, dim(p.vest, 0.82));         // 背包
+  for (const sx of [-1, 1]) bx(hips, 0.26, 0.14, 0.34, sx * 0.44, 0.92, 0, p.pad);      // 肩甲
+  // 手臂:肩關節樞軸(上臂/前臂/手套)
+  const mkArm = (sx) => {
+    const a = new THREE.Group();
+    a.position.set(sx * 0.47, 0.88, 0);
+    bx(a, 0.17, 0.44, 0.22, 0, -0.22, 0, p.fatigue);
+    bx(a, 0.15, 0.4, 0.19, 0, -0.62, 0.06, dim(p.fatigue, 0.9));
+    bx(a, 0.14, 0.14, 0.18, 0, -0.88, 0.1, 0x8a6f52);
+    hips.add(a);
+    return a;
+  };
+  const armL = mkArm(-1), armR = mkArm(1);
+  // 頭/鋼盔/護目鏡(主色發光:賽璐璐識別點)+ 盔頂陣營條
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), mat(0xc9a481));
+  head.position.set(0, 1.18, 0.02);
+  hips.add(head);
+  const helmet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.29, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(p.helmet));
+  helmet.position.set(0, 1.2, 0);
+  hips.add(helmet);
+  bx(hips, 0.1, 0.05, 0.5, 0, 1.42, 0, dim(SIDES[side].color, 0.75));
+  bx(hips, 0.36, 0.1, 0.08, 0, 1.2, 0.25, accent, { emissive: accent, emissiveIntensity: 1.2 });
+  // 武器
+  if (p.weapon === 'tube') {
+    // 肩扛火箭筒(前彈頭 / 後噴口分色)
+    const tube = cyl(hips, 0.15, 0.15, 1.9, 8, 0.34, 1.06, -0.1, 0x1c1f22, { metalness: 0.7 });
+    tube.rotation.x = Math.PI / 2 - 0.28;   // 筒口朝前上
+    cyl(tube, 0.16, 0.11, 0.3, 8, 0, 1.05, 0, dim(SIDES[side].color, 0.8));
+    cyl(tube, 0.17, 0.17, 0.14, 8, 0, -0.98, 0, 0x2c3033);
+  } else {
+    // 突擊步槍(槍身/槍管/彈匣分件)掛右手
+    const rifle = bx(armR, 0.09, 0.16, 1.05, 0.03, -0.82, 0.4, 0x1a1d20);
+    bx(rifle, 0.045, 0.07, 0.4, 0, 0.02, 0.65, 0x30373f, { metalness: 0.85 });
+    bx(rifle, 0.07, 0.22, 0.12, 0, -0.16, 0.1, 0x23262a);
+  }
+  g.userData.rig = {
+    kind: 'biped', hips, legL, legR, armL, armR,
+    hipsY0: hipY, stride: 0.95, bob: 0.07, sway: 0.06, top: 8, gunArm: true,
+  };
   return g;
 }
 
-/** 備援火箭兵(步兵 + 肩扛長管) */
-function buildRocketeerFallback() {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.44, 1.15, 4, 8), mat(0x4a5138));
-  body.position.y = 1.35;
-  g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), mat(0xc9a481));
-  head.position.y = 2.35;
-  g.add(head);
-  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x33392c));
-  helmet.position.y = 2.42;
-  g.add(helmet);
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 1.9, 8), mat(0x1c1f22));
-  tube.rotation.z = Math.PI / 2.4;
-  tube.position.set(0.15, 2.1, -0.25);
-  g.add(tube);
-  return g;
+/** 備援步兵(GLB 失敗時)— 可動骨架 */
+function buildSoldierFallback(side) {
+  return buildTrooper(side, {
+    fatigue: 0x5a6148, vest: 0x3a4034, pad: 0x474e3c, helmet: 0x3d4436, weapon: 'rifle',
+  });
 }
 
-/** 備援榴彈兵(固定式榴彈砲台) */
+/** 備援火箭兵(重護具 + 肩扛長管) */
+function buildRocketeerFallback(side) {
+  return buildTrooper(side, {
+    fatigue: 0x4a5138, vest: 0x343a2c, pad: 0x3e4534, helmet: 0x33392c, weapon: 'tube',
+  });
+}
+
+/** 備援榴彈兵(牽引式榴彈砲):整體掛搖晃樞軸,行進時有慣性起伏 */
 function buildHowitzerFallback(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].colorDim);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 0.6, 8), mat(0x3a3f34));
-  base.position.y = 0.3;
-  g.add(base);
+  const hull = new THREE.Group();
+  g.add(hull);
+  cyl(hull, 1.1, 1.3, 0.6, 8, 0, 0.3, 0, 0x3a3f34);                      // 底盤
   for (const [sx, sz] of [[-0.9, -1.6], [0.9, -1.6]]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 2.2), mat(0x2c302a));
-    leg.position.set(sx, 0.3, sz);
-    g.add(leg);
+    bx(hull, 0.18, 0.18, 2.2, sx, 0.3, sz, 0x2c302a);                    // 駐鋤架
   }
-  const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.7, 8), mat(accent));
-  mount.position.y = 0.95;
-  g.add(mount);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 3.4, 8), mat(0x16191c));
+  cyl(hull, 0.5, 0.6, 0.7, 8, 0, 0.95, 0, accent);                       // 砲架
+  bx(hull, 1.7, 0.9, 0.12, 0, 1.35, 0.65, 0x353b30);                     // 防盾板
+  bx(hull, 0.5, 0.35, 0.8, 0.95, 0.55, 0.4, 0x2f342b);                   // 彈藥箱
+  bx(hull, 0.52, 0.08, 0.82, 0.95, 0.76, 0.4, accent);                   // 彈藥箱識別蓋
+  const barrel = cyl(hull, 0.16, 0.22, 3.4, 8, 0, 1.5, -0.8, 0x16191c, { metalness: 0.7 });
   barrel.rotation.x = -0.55;
-  barrel.position.set(0, 1.5, -0.8);
-  g.add(barrel);
+  cyl(barrel, 0.24, 0.24, 0.4, 8, 0, 1.55, 0, 0x0d0f11);                 // 砲口制退器
+  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels: [], top: 5 };
   return g;
 }
 
@@ -396,7 +516,22 @@ function buildHeliFallback(side) {
     skid.position.set(skidX, 0.55, 0);
     g.add(skid);
   }
+  // 短翼 + 火箭莢艙 + 尾翼識別條(攻擊直升機剪影)
+  bx(g, 2.4, 0.1, 0.55, 0, 1.5, -0.3, 0x333a30);
+  for (const s of [-1, 1]) {
+    const pod = cyl(g, 0.18, 0.18, 0.9, 8, s * 1.05, 1.42, -0.3, 0x2c3033);
+    pod.rotation.x = Math.PI / 2;
+    cyl(pod, 0.14, 0.14, 0.06, 8, 0, 0.46, 0, 0xffb27a, { emissive: 0xff8844, emissiveIntensity: 0.6 });
+  }
+  bx(g, 0.08, 0.7, 0.5, -3.2, 2.1, 0, 0x2c322a);
+  bx(g, 0.1, 0.16, 0.52, -3.2, 2.3, 0, accent);
+  // 壓坡樞軸(locomotion.js):巡航壓坡 / 入彎側傾 / 浮沉整機一起動
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.6;
+  for (const k of [...g.children]) { k.position.y -= 1.6; tilt.add(k); }
+  g.add(tilt);
   g.userData.spin = [rotor, tailRotor];
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.6, bob: 0.05, top: 16 };
   return g;
 }
 
@@ -470,10 +605,10 @@ function buildTowerTurret(side) {
 const FALLBACK = {
   'hero:drone': (side, vis) => buildDrone(side, vis),
   'hero:robot': (side, vis) => buildDrone(side, vis), // mech GLB 失敗時暫用無人機骨架換色
-  'creep:soldier': () => buildSoldierFallback(),
+  'creep:soldier': (side) => buildSoldierFallback(side),
   'creep:apc': (side) => buildApc(side),
   'creep:tank': (side) => buildTank(side),
-  'creep:rocketeer': () => buildRocketeerFallback(),
+  'creep:rocketeer': (side) => buildRocketeerFallback(side),
   'creep:howitzer': (side) => buildHowitzerFallback(side),
   'creep:heli': (side) => buildHeliFallback(side),
   tower: (side) => buildTowerFallback(side),
@@ -517,12 +652,16 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
       outlinify(pod, outlineW(target));
       g.add(pod);
     }
-    const clip = kind === 'creep:soldier' ? pickWalkClip(entry.animations) : null;
+    // 步行 clip:交給 locomotion.js 以實際地速調 timeScale(靜止不原地滑步)
+    const clip = (kind === 'creep:soldier' || kind === 'hero:robot')
+      ? pickWalkClip(entry.animations) : null;
     if (clip) {
       mixer = new THREE.AnimationMixer(model);
       const action = mixer.clipAction(clip);
       action.time = Math.random() * clip.duration;   // 錯開步伐
       action.play();
+      g.userData.walk = action;
+      g.userData.walkRef = kind === 'hero:robot' ? 9 : 6;   // timeScale=1 的參考地速(m/s)
     }
   } else {
     const built = (FALLBACK[kind] || FALLBACK['creep:apc'])(side, vis);
@@ -530,6 +669,11 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
     outlinify(built, outlineW(target));
     g.add(built);
     if (built.userData.spin) g.userData.spin = built.userData.spin;
+    // 程序骨架(locomotion.js):記錄 fitToHeight 縮放供步幅/輪半徑換算世界尺度
+    if (built.userData.rig) {
+      built.userData.rig.s = built.scale.x;
+      g.userData.rig = built.userData.rig;
+    }
   }
 
   // 防禦塔:頂部加程序砲塔頭(每幀追蹤目標;見 game.js _aimTurret)
