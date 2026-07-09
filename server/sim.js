@@ -6,7 +6,7 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
-  vsMult, upgradePrice, laneTacticsXZ, SQUAD,
+  vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -1176,11 +1176,13 @@ export class BattleSim {
     return best;
   }
 
-  // ---------- 地雷觸發(地面機甲踩到 → 爆炸,無差別範圍傷害)----------
+  // ---------- 地雷觸發(地面機體踩到 → 爆炸,無差別範圍傷害)----------
   _tickMines() {
     const M = GAME.MINES;
     for (const h of this.heroes.values()) {
-      if (h.dead || h.kind !== 'robot') continue;
+      // 機甲恆貼地會踩雷;變形機甲只有地面型態(回報高度 y ≈ 0)會踩,飛行型不觸發
+      const grounded = h.kind === 'robot' || (h.kind === 'morph' && (h.y || 0) <= MORPH.GROUND_Y);
+      if (h.dead || !grounded) continue;
       for (let i = this.mines.length - 1; i >= 0; i--) {
         const [mx, mz, mid] = this.mines[i];
         if (dist2d(h.x, h.z, mx, mz) > M.TRIGGER_R) continue;
@@ -1205,7 +1207,9 @@ export class BattleSim {
     const S = FIELD.AA_SITE;
     let sites = null;   // lazy:多數 tick 沒人觸發
     for (const h of this._allBodies()) {   // 每一架無人機各自可能被伏擊
-      if (h.dead || h.kind !== 'drone') continue;
+      // 無人機恆為空中目標;變形機甲僅飛行型態(y ≥ AA_MIN_ALT)會被伏擊鎖定
+      if (h.dead) continue;
+      if (h.kind !== 'drone' && !(h.kind === 'morph' && (h.y || 0) >= GAME.AA_MIN_ALT)) continue;
       h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
       if (h.aaCd > 0) continue;
       if ((h.stealthUntil || 0) > this.t) continue;                    // 匿蹤中不被伏擊鎖定
@@ -1309,7 +1313,8 @@ export class BattleSim {
     if (e.samCd > 0) return;
     let best = null, bestD = Infinity;
     for (const h of this._allBodies()) {   // 小隊每一架都可能被塔 SAM 鎖定
-      if (h.side === e.side || h.dead || h.kind !== 'drone') continue;
+      // 變形機甲飛行型態同樣是防空目標(下方 AA_MIN_ALT 高度閘門擋掉地面型)
+      if (h.side === e.side || h.dead || (h.kind !== 'drone' && h.kind !== 'morph')) continue;
       if ((h.stealthUntil || 0) > this.t) continue;      // 匿蹤中不被防空鎖定
       const y = h.y || 0;
       if (y < GAME.AA_MIN_ALT) continue;                 // 低飛交給塔砲
@@ -1378,7 +1383,7 @@ export class BattleSim {
     for (const t of this.ents.values()) {
       if (t.side === e.side || t.neutral || t.hp <= 0) continue;   // 中立障礙不當目標
       if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) continue;   // 匿蹤英雄不被鎖定
-      if ((t.kind === 'drone' || t.kind === 'heli') && (t.y || 0) > u.range * 0.9) continue; // 高空飛行單位難鎖定
+      if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph') && (t.y || 0) > u.range * 0.9) continue; // 高空飛行單位難鎖定
       let d = dist2d(e.x, e.z, t.x, t.z);
       if (d > u.range) continue;
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標

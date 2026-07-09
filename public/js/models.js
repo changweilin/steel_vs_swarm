@@ -13,6 +13,7 @@ import { toonMat, toonify, outlinify } from './toon.js';
 export const MODEL_MANIFEST = Object.assign({
   'hero:robot':   'assets/models/quaternius/pawn-mech.glb',     // 執法者機甲
   'hero:drone':   null,                                          // 無人機:程式生成四旋翼
+  'hero:morph':   null,                                          // 傭兵變形機甲:程式生成(雙型態)
   'creep:soldier': 'assets/models/quaternius/pawn-casual.glb',  // 步槍兵
   'creep:apc':    null,                                          // 裝甲車:程式生成
   'creep:tank':   null,                                          // 坦克:程式生成
@@ -26,7 +27,7 @@ export const MODEL_MANIFEST = Object.assign({
 
 // 單位顯示高度(公尺;fitToHeight 自動縮放)
 const TARGET_H = {
-  'hero:robot': 6, 'hero:drone': 3,
+  'hero:robot': 6, 'hero:drone': 3, 'hero:morph': 6, 'hero:beast': 5,
   'creep:soldier': 3.2, 'creep:apc': 4.5, 'creep:tank': 5,
   'creep:rocketeer': 3.4, 'creep:howitzer': 4, 'creep:heli': 4.2,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
@@ -222,6 +223,271 @@ function buildDrone(side, vis = null) {
   g.add(tilt);
   g.userData.spin = props; // 每幀旋轉
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.06, top: 30 };
+  return g;
+}
+
+/**
+ * 飛行生物型無人機(form:'avian'):鳥/蜂剪影 + 拍翼樞軸(mobility_plan Task 2.2 延伸)。
+ * 仍是無人機(機械感細節:艙蓋/感測眼/航行燈),但升力來自撲翼 —
+ * locomotion.js stepAerial 依速度驅動拍翼頻率/振幅,外翼相位延遲(follow-through)。
+ * creature: 'wasp'(雙對半透明蟲翼+螫尾)| 'raptor' | 'falcon' | 'swallow'(燕尾)。
+ */
+const AVIAN = {
+  wasp:    { span: 1.5, pairs: 2, tail: 'stinger', body: 1.15 },
+  raptor:  { span: 2.5, pairs: 1, tail: 'fan',     body: 1.0 },
+  falcon:  { span: 2.2, pairs: 1, tail: 'fan',     body: 0.9 },
+  swallow: { span: 2.6, pairs: 1, tail: 'fork',    body: 0.8 },
+};
+function buildAvianDrone(side, vis) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  const P = AVIAN[vis?.creature] || AVIAN.raptor;
+  const dark = 0x2a2e33, mid = 0x3a4148;
+  // 壓坡/拍翼都掛 tilt 樞軸下(同 buildDrone 慣例:根節點只管定位/描邊)
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.3;
+  g.add(tilt);
+  const bs = P.body;
+  // 胸腹(流線機身):壓扁球體;背脊裝甲板
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.62 * bs, 12, 9), mat(dark, { metalness: 0.6 }));
+  body.scale.set(1, 0.82, 1.7);
+  tilt.add(body);
+  const spineArm = new THREE.Mesh(new THREE.BoxGeometry(0.5 * bs, 0.14, 1.3 * bs), mat(mid));
+  spineArm.position.y = 0.42 * bs;
+  tilt.add(spineArm);
+  // 頭 + 喙(感測器眼 = 主色,左紅右綠航行燈保留姿態辨識)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34 * bs, 10, 8), mat(mid, { metalness: 0.5 }));
+  head.position.set(0, 0.28 * bs, 1.05 * bs);
+  tilt.add(head);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.16 * bs, 0.55 * bs, 6), mat(0x14171a, { metalness: 0.8 }));
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 0.24 * bs, 1.45 * bs);
+  tilt.add(beak);
+  for (const sx of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09 * bs, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.4 }));
+    eye.position.set(sx * 0.2 * bs, 0.36 * bs, 1.2 * bs);
+    tilt.add(eye);
+  }
+  bx(tilt, 0.08, 0.05, 0.2, -0.55 * bs, 0.1, 0.4, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
+  bx(tilt, 0.08, 0.05, 0.2, 0.55 * bs, 0.1, 0.4, 0x55ff88, { emissive: 0x22ff66, emissiveIntensity: 1.6 });
+  // 頜下武器艙(仍是武裝無人機)
+  const gun = cyl(tilt, 0.06, 0.08, 0.9, 8, 0, -0.32 * bs, 0.8, 0x111418, { metalness: 0.8 });
+  gun.rotation.x = Math.PI / 2;
+  // 翼:內翼樞軸 + 外翼樞軸(拍翼由 locomotion stepAerial 驅動)
+  const wings = [];
+  const insect = P.pairs > 1;
+  const wingMatOpts = insect
+    ? { transparent: true, opacity: 0.55, emissive: accent, emissiveIntensity: 0.25 }
+    : { metalness: 0.4 };
+  const mkWing = (sgn, z0) => {
+    const w = new THREE.Group();
+    w.position.set(sgn * 0.45 * bs, 0.2 * bs, z0);
+    tilt.add(w);
+    const inner = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.55, 0.06, 0.7 * bs), mat(insect ? 0x9adfff : mid, wingMatOpts));
+    inner.position.set(sgn * P.span * 0.28, 0, -0.08);
+    w.add(inner);
+    const outer = new THREE.Group();
+    outer.position.set(sgn * P.span * 0.55, 0, 0);
+    w.add(outer);
+    const tipPanel = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.5, 0.05, 0.5 * bs), mat(insect ? 0x9adfff : dim(mid, 0.85), wingMatOpts));
+    tipPanel.position.set(sgn * P.span * 0.25, 0, -0.12);
+    outer.add(tipPanel);
+    if (!insect) {
+      // 翼尖分叉羽片(鳥類剪影)+ 主色識別羽
+      for (let i = 0; i < 3; i++) {
+        const f = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.22, 0.04, 0.14 * bs), mat(i === 1 ? accent : 0x23262a));
+        f.position.set(sgn * P.span * (0.5 + i * 0.04), 0, -0.4 * bs + i * 0.16 * bs);
+        f.rotation.y = sgn * -0.18 * (i - 1);
+        outer.add(f);
+      }
+    }
+    wings.push({ w, outer, sgn });
+  };
+  for (const sgn of [-1, 1]) {
+    mkWing(sgn, 0.25 * bs);
+    if (insect) mkWing(sgn, -0.35 * bs);
+  }
+  // 尾:扇尾 / 燕尾 / 螫針(蜂)
+  if (P.tail === 'stinger') {
+    const st = new THREE.Mesh(new THREE.ConeGeometry(0.2 * bs, 0.9 * bs, 6), mat(accent, { emissive: accent, emissiveIntensity: 0.5 }));
+    st.rotation.x = -Math.PI / 2;
+    st.position.set(0, -0.05, -1.25 * bs);
+    tilt.add(st);
+    for (let i = 0; i < 2; i++) bx(tilt, 0.7 * bs, 0.06, 0.16, 0, 0.05 + i * 0.12, -0.8 * bs - i * 0.1, 0x14171a);
+  } else if (P.tail === 'fork') {
+    for (const sx of [-1, 1]) {
+      const f = bx(tilt, 0.16 * bs, 0.05, 1.1 * bs, sx * 0.2 * bs, 0, -1.35 * bs, mid);
+      f.rotation.y = sx * 0.22;
+    }
+  } else {
+    for (let i = -1; i <= 1; i++) {
+      const f = bx(tilt, 0.22 * bs, 0.05, 0.95 * bs, i * 0.22 * bs, 0, -1.3 * bs, i === 0 ? accent : mid);
+      f.rotation.y = i * 0.28;
+    }
+  }
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.1, top: 30, wings };
+  return g;
+}
+
+/**
+ * 獸型機甲(form:'beast'):四足步態骨架(mobility_plan Task 2.2)。
+ * rig 樞軸:四髖(legFL/FR/HL/HR)+ 脊椎(spine→chest→neck 波傳導)+ 雙節尾(配重)。
+ * creature: 'bear'(壯碩)| 'wolf'(修長長尾)| 'panther'(低伏)| 'rhino'(重甲+鼻角)。
+ */
+const BEAST = {
+  bear:    { bulk: 1.25, hipY: 2.0, tailLen: 0.7, ear: 0.16, snoutL: 0.6 },
+  wolf:    { bulk: 0.95, hipY: 2.0, tailLen: 1.6, ear: 0.22, snoutL: 0.95 },
+  panther: { bulk: 0.85, hipY: 1.7, tailLen: 1.9, ear: 0.14, snoutL: 0.75 },
+  rhino:   { bulk: 1.45, hipY: 2.1, tailLen: 0.5, ear: 0,    snoutL: 0.55, horn: true },
+};
+function buildBeastMech(side, vis) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  const P = BEAST[vis?.creature] || BEAST.wolf;
+  const B = P.bulk, hipY = P.hipY;
+  const hull = 0x3c444d, hullDk = 0x333b43, plate = 0x46505b;
+  // 脊椎樞軸(浮沉/入彎傾斜/波傳導的根)
+  const spine = new THREE.Group();
+  spine.position.y = hipY;
+  g.add(spine);
+  bx(spine, 1.5 * B, 1.2 * B, 2.2, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });   // 後軀
+  bx(spine, 1.3 * B, 0.2, 2.0, 0, 0.68 * B, -0.9, dim(plate, 0.9));              // 背甲(後)
+  // 胸(次級樞軸:波傳導第二節)
+  const chest = new THREE.Group();
+  chest.position.set(0, 0.1, 0.55);
+  spine.add(chest);
+  bx(chest, 1.7 * B, 1.45 * B, 2.0, 0, 0.1, 0.55, hull, { metalness: 0.6 });     // 前胸
+  bx(chest, 1.5 * B, 0.22, 1.7, 0, 0.85 * B, 0.5, plate);                        // 背甲(前)
+  bx(chest, 1.72 * B, 0.16, 0.5, 0, 0.35 * B, 1.5, accent,
+    { emissive: accent, emissiveIntensity: 0.9 });                               // 胸前識別燈條
+  // 頸(第三節)+ 頭
+  const neck = new THREE.Group();
+  neck.position.set(0, 0.55 * B, 1.55);
+  chest.add(neck);
+  bx(neck, 0.7 * B, 0.6 * B, 0.9, 0, 0.18, 0.3, hullDk);
+  const head = new THREE.Group();
+  head.position.set(0, 0.45 * B, 0.8);
+  neck.add(head);
+  bx(head, 0.85 * B, 0.65 * B, 0.9, 0, 0, 0.2, plate, { metalness: 0.6 });       // 顱殼
+  bx(head, 0.5 * B, 0.4 * B, P.snoutL, 0, -0.12 * B, 0.75 + P.snoutL / 2, hullDk); // 吻部
+  bx(head, 0.52 * B, 0.14, 0.3, 0, -0.34 * B, 0.85, 0x23262a);                   // 下顎
+  const eye = new THREE.Mesh(new THREE.BoxGeometry(0.56 * B, 0.1, 0.06), mat(accent, { emissive: accent, emissiveIntensity: 1.6 }));
+  eye.position.set(0, 0.12 * B, 0.68);
+  head.add(eye);                                                                 // 單列感測眼(獸瞳)
+  if (P.ear) for (const sx of [-1, 1]) {
+    const ear = bx(head, 0.14, P.ear * 2.4, 0.1, sx * 0.3 * B, 0.42 * B, 0.1, hullDk);
+    ear.rotation.z = sx * -0.2;
+  }
+  if (P.horn) {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.8, 6), mat(0xd8dde2, { metalness: 0.7 }));
+    horn.position.set(0, 0.18 * B, 1.1);
+    horn.rotation.x = 0.5;
+    head.add(horn);
+  }
+  // 雙節尾(急轉配重 + 行走搖擺;locomotion 驅動)
+  const tail = new THREE.Group();
+  tail.position.set(0, 0.35 * B, -2.0);
+  spine.add(tail);
+  bx(tail, 0.26 * B, 0.22 * B, P.tailLen, 0, 0, -P.tailLen / 2, hullDk);
+  const tail2 = new THREE.Group();
+  tail2.position.set(0, 0, -P.tailLen);
+  tail.add(tail2);
+  bx(tail2, 0.16 * B, 0.14 * B, P.tailLen * 0.8, 0, 0, -P.tailLen * 0.4, 0x23262a);
+  bx(tail2, 0.18 * B, 0.16 * B, 0.2, 0, 0, -P.tailLen * 0.8, accent, { emissive: accent, emissiveIntensity: 0.8 });
+  // 四腿:髖樞軸 + 逆關節小腿 + 足爪(腿掛根節點,脊椎浮沉不帶動腳底 → 不滑步)
+  const mkLeg = (sx, sz, front) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 0.78 * B, hipY, sz);
+    bx(leg, 0.4 * B, 0.55, 0.66, 0, -0.1, 0, plate);                             // 髖甲
+    bx(leg, 0.3 * B, hipY * 0.55, 0.42, 0, -hipY * 0.32, front ? 0.06 : -0.08, hull);   // 大腿
+    bx(leg, 0.22 * B, hipY * 0.5, 0.3, 0, -hipY * 0.75, front ? -0.08 : 0.1, hullDk);   // 小腿(逆關節)
+    bx(leg, 0.34 * B, 0.2, 0.55, 0, -hipY + 0.1, 0.12, 0x23262a);                // 足爪
+    g.add(leg);
+    return leg;
+  };
+  const rig = {
+    kind: 'quad', spine, chest, neck, head, tail, tail2,
+    legFL: mkLeg(-1, 1.05, true), legFR: mkLeg(1, 1.05, true),
+    legHL: mkLeg(-1, -1.25, false), legHR: mkLeg(1, -1.25, false),
+    hipsY0: hipY, stride: 1.5, bob: 0.09, top: 10,
+  };
+  g.userData.rig = rig;
+  return g;
+}
+
+/**
+ * 傭兵變形機甲(hero:morph):雙型態程序模型。
+ * rig 樞軸:torso(整體姿態)+ 雙腿/雙臂(地面步行 ↔ 飛行收折)+ 背翼(收折 ↔ 展開)
+ * + 背部推進器(飛行時發光)。型態參數 0(地面)→1(飛行)由 locomotion stepMorph
+ * 依伺服器回報高度 heroY 推導 — 遠端玩家/bot 的變形不需要額外網路訊息。
+ */
+function buildMorphMech(side, vis) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  const hull = 0x46505b, hullDk = 0x39424b;
+  const hipY = 1.95;
+  const torso = new THREE.Group();
+  torso.position.y = hipY;
+  g.add(torso);
+  bx(torso, 1.1, 0.5, 0.8, 0, 0.05, 0, hullDk);                                  // 骨盆
+  bx(torso, 1.5, 1.05, 0.95, 0, 0.85, 0.05, hull, { metalness: 0.6 });           // 胸艙
+  bx(torso, 1.0, 0.16, 0.1, 0, 1.0, 0.55, accent, { emissive: accent, emissiveIntensity: 1.1 });  // 胸前識別燈
+  bx(torso, 0.6, 0.4, 0.55, 0, 1.6, 0.05, hullDk);                               // 頭
+  bx(torso, 0.44, 0.12, 0.08, 0, 1.62, 0.34, accent, { emissive: accent, emissiveIntensity: 1.5 });  // 面罩感測條
+  // 進氣口(賽璐璐面板分割)
+  for (const sx of [-1, 1]) bx(torso, 0.16, 0.6, 0.5, sx * 0.62, 0.85, 0.3, dim(hull, 0.8));
+  // 腿(髖樞軸;飛行時後收成尾噴管姿態)— 掛在 torso 下,飛行前傾整機一起轉
+  const mkLeg = (sx) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 0.4, -0.15, 0);
+    torso.add(leg);
+    bx(leg, 0.42, 0.9, 0.55, 0, -0.45, 0.03, hull);                              // 大腿
+    bx(leg, 0.32, 0.85, 0.4, 0, -1.25, -0.05, hullDk);                           // 小腿
+    bx(leg, 0.4, 0.18, 0.7, 0, -1.72, 0.12, 0x23262a);                           // 足
+    cyl(leg, 0.1, 0.12, 0.3, 8, 0, -1.6, -0.28, 0x1c1f22, { metalness: 0.7 });   // 足底噴口(飛行姿態朝後)
+    return leg;
+  };
+  const legL = mkLeg(-1), legR = mkLeg(1);
+  // 臂 + 武器莢艙
+  const mkArm = (sx) => {
+    const a = new THREE.Group();
+    a.position.set(sx * 0.85, 1.15, 0);
+    torso.add(a);
+    bx(a, 0.3, 0.28, 0.36, 0, 0.05, 0, dim(hull, 0.9));                          // 肩甲
+    bx(a, 0.24, 0.7, 0.32, 0, -0.4, 0.02, hullDk);
+    if (sx > 0) {                                                                // 右臂武器莢艙
+      const pod = cyl(a, 0.09, 0.11, 0.8, 8, 0.02, -0.75, 0.25, 0x14171a, { metalness: 0.85 });
+      pod.rotation.x = Math.PI / 2;
+    }
+    return a;
+  };
+  const armL = mkArm(-1), armR = mkArm(1);
+  // 背翼(收折樞軸:地面豎折於背後,飛行展開後掠)+ 翼尖主色識別
+  const mkWing = (sgn) => {
+    const w = new THREE.Group();
+    w.position.set(sgn * 0.35, 1.25, -0.5);
+    torso.add(w);
+    const panel = bx(w, 1.7, 0.08, 0.6, sgn * 0.85, 0, -0.1, hull, { metalness: 0.6 });
+    panel.rotation.y = sgn * -0.3;                                               // 後掠
+    const tip = bx(w, 0.5, 0.06, 0.3, sgn * 1.7, 0, -0.45, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    tip.rotation.y = sgn * -0.4;
+    return w;
+  };
+  const wingL = mkWing(-1), wingR = mkWing(1);
+  // 背部推進器(飛行型態增亮;材質引用交給 rig)
+  const thrusters = [];
+  for (const sx of [-1, 1]) {
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.5, 8),
+      mat(0x2b3239, { emissive: 0xff7733, emissiveIntensity: 0.3, metalness: 0.7 }));
+    t.rotation.x = 0.5;
+    t.position.set(sx * 0.35, 0.45, -0.55);
+    torso.add(t);
+    thrusters.push(t);
+  }
+  g.userData.rig = {
+    kind: 'morph', torso, legL, legR, armL, armR, wingL, wingR, thrusters,
+    hipsY0: hipY, stride: 1.1, bob: 0.07, top: 9, topAir: 30,
+  };
   return g;
 }
 
@@ -605,6 +871,7 @@ function buildTowerTurret(side) {
 const FALLBACK = {
   'hero:drone': (side, vis) => buildDrone(side, vis),
   'hero:robot': (side, vis) => buildDrone(side, vis), // mech GLB 失敗時暫用無人機骨架換色
+  'hero:morph': (side, vis) => buildMorphMech(side, vis),
   'creep:soldier': (side) => buildSoldierFallback(side),
   'creep:apc': (side) => buildApc(side),
   'creep:tank': (side) => buildTank(side),
@@ -631,11 +898,14 @@ function pickWalkClip(anims) {
  * opts.ch:英雄角色 id — 依 CHARACTERS[ch].visual 生成專屬機體(主色/機架/掛件)。
  */
 export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
-  const entry = MODEL_MANIFEST[kind] ? cache[kind] : null;
-  const target = TARGET_H[kind] || 4;
+  const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
+  // 獸型機甲 / 飛行生物無人機:跳過 GLB,一律程序生成(角色剪影差異化)
+  const beast = kind === 'hero:robot' && vis?.form === 'beast';
+  const avian = kind === 'hero:drone' && vis?.form === 'avian';
+  const entry = !beast && !avian && MODEL_MANIFEST[kind] ? cache[kind] : null;
+  const target = beast ? TARGET_H['hero:beast'] : (TARGET_H[kind] || 4);
   const g = new THREE.Group();
   let mixer = null;
-  const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
 
   if (entry) {
     const model = SkeletonUtils.clone(entry.scene);
@@ -664,7 +934,10 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
       g.userData.walkRef = kind === 'hero:robot' ? 9 : 6;   // timeScale=1 的參考地速(m/s)
     }
   } else {
-    const built = (FALLBACK[kind] || FALLBACK['creep:apc'])(side, vis);
+    const build = beast ? buildBeastMech
+      : avian ? buildAvianDrone
+      : (FALLBACK[kind] || FALLBACK['creep:apc']);
+    const built = build(side, vis);
     fitToHeight(built, target);
     outlinify(built, outlineW(target));
     g.add(built);

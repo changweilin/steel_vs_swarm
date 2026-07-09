@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult,
+  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, MORPH,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
@@ -21,8 +21,9 @@ import { CutIn } from './cutin.js';
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
-  tower: 'tower', drone: 'hero:drone', robot: 'hero:robot',
+  tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph',
 };
+const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
 
 export class BattleClient {
@@ -65,6 +66,9 @@ export class BattleClient {
     // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
     this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
     this.isDrone = this.heroKind === 'drone';
+    this.isMorph = this.heroKind === 'morph';   // 傭兵變形機甲(飛行 ↔ 地面雙型態)
+    this.flight = false;                        // morph:目前是否飛行型態
+    this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
     this.abil = { light: 1, heavy: 1, skill: 0, ult: 0 };
@@ -112,6 +116,9 @@ export class BattleClient {
       if (changed && this.side) {
         this.heroKind = CHARACTERS[ch].kind || SIDES[this.side].hero;
         this.isDrone = this.heroKind === 'drone';
+        this.isMorph = this.heroKind === 'morph';
+        this.flight = false;
+        this.charge = 0;
         this.baseFov = UNITS[this.heroKind].fov;
         if (this.cockpit) { this.camera.remove(this.cockpit); this._buildCockpit(); }
       }
@@ -393,9 +400,9 @@ export class BattleClient {
     const dir = new THREE.Vector3(eye.x - x, eye.y - y, eye.z - z);
     if (dir.lengthSq() < 0.01) dir.set(0, 1, 0);
     dir.normalize();
-    const power = k * eScale * (this.isDrone ? 55 : 26);
+    const power = k * eScale * (this._flying() ? 55 : 26);
     this.vel.addScaledVector(dir, power);
-    if (!this.isDrone) this.vy = (this.vy ?? 0) + k * eScale * 10;   // 機甲被掀離地
+    if (!this._flying()) this.vy = (this.vy ?? 0) + k * eScale * 10;   // 機甲被掀離地
     this.trauma = Math.min(1, this.trauma + k * eScale * 0.8);
   }
 
@@ -403,14 +410,18 @@ export class BattleClient {
   static COLLIDER = {
     base: { r: 20, h: 46 }, tower: { r: 7, h: 26 },
     tank: { r: 4.2, h: 5.5 }, apc: { r: 3.4, h: 5 }, soldier: { r: 1.0, h: 3.2 },
-    drone: { r: 2.4, h: 3.5 }, robot: { r: 2.6, h: 6.5 },
+    drone: { r: 2.4, h: 3.5 }, robot: { r: 2.6, h: 6.5 }, morph: { r: 2.6, h: 6 },
   };
+
+  /** 目前是否為飛行機體(無人機恆飛;變形機甲僅飛行型態) */
+  _flying() { return this.isDrone || (this.isMorph && this.flight); }
 
   /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
   _collide() {
-    const myR = this.isDrone ? 1.6 : 1.9;
-    const myBot = this.pos.y - (this.isDrone ? 0.8 : 0);
-    const myTop = this.pos.y + (this.isDrone ? 1.2 : 4.2);
+    const fly = this._flying();
+    const myR = fly ? 1.6 : 1.9;
+    const myBot = this.pos.y - (fly ? 0.8 : 0);
+    const myTop = this.pos.y + (fly ? 1.2 : 4.2);
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
       // 自己的僚機不碰撞:歸隊時牠們以 50m/s 貼上來,會誤觸下面的高速撞擊自爆
@@ -528,7 +539,7 @@ export class BattleClient {
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
-      if (e.k === 'drone' || e.k === 'robot') {
+      if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
         const wasDead = ent.dead;
@@ -614,7 +625,7 @@ export class BattleClient {
     }
     const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
     const { group, mixer } = makeUnit(key, e.s, { ch: e.ch });   // 英雄:角色專屬機體外觀
-    const hero = e.k === 'drone' || e.k === 'robot';
+    const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
     if (isSelf) group.visible = false;
@@ -762,9 +773,9 @@ export class BattleClient {
     }
   }
 
-  /** 淹水區:機甲深水行進大幅減速(限制但不封鎖) */
+  /** 淹水區:地面機體深水行進大幅減速(限制但不封鎖;飛行型態不受影響) */
   _zoneSlow() {
-    if (this.isDrone) return 1;
+    if (this._flying()) return 1;
     for (const f of this.floods) {
       if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) {
         const now = performance.now() / 1000;
@@ -805,7 +816,7 @@ export class BattleClient {
     if (ev.e === 'die') {
       const [x, z] = [ev.x, -ev.z];
       const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'howitzer' || ev.kind === 'heli';
-      const hero = ev.kind === 'drone' || ev.kind === 'robot';
+      const hero = HERO_KINDS.has(ev.kind);
       const ey = this.terrain.heightAt(x, z) + 3;
       this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
       this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
@@ -822,7 +833,7 @@ export class BattleClient {
         this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
       } else if (HAZARDS[ev.kind]) {
         this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
-      } else if (ev.kind === 'drone' || ev.kind === 'robot') {
+      } else if (hero) {
         this.hud.feed?.(`💥 ${SIDES[ev.side].name}的${UNITS[ev.kind].name}被擊毀!`);
       } else if (ev.kind === 'tower') {
         this.hud.feed?.(`🏗️ ${SIDES[ev.side].name}的防禦塔倒了!`);
@@ -1038,6 +1049,38 @@ export class BattleClient {
     this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // three:-z 前方
     this.pitch = -0.05;
+    // 變形機甲:重生一律地面型態
+    if (this.isMorph) {
+      this.flight = false;
+      this.charge = 0;
+      this.baseFov = UNITS.morph.fov;
+    }
+  }
+
+  // ---------------- 變形機甲:型態切換(蓄力彈射 ↔ 觸地變形)----------------
+  /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣 */
+  _morphLaunch(gy) {
+    this.flight = true;
+    this.vel.y = MORPH.JUMP_V * this.charge;
+    this.vy = 0;
+    this.pos.y = gy + 1.0;   // 抬離地表,避免下一幀立即觸發觸地變形
+    this.charge = 0;
+    this.baseFov = UNITS.morph.fovAir;
+    this.trauma = Math.min(1, this.trauma + 0.4);
+    shockRing(this.scene, this.effects, this.pos.x, gy, this.pos.z, 7, 0xffd27a);
+    this.hud.feed?.('🛫 蓄力彈射:變形為飛行型態!(觸地變形回地面型)');
+  }
+
+  /** 飛行型 → 地面型:觸地變形 */
+  _morphLand(gy) {
+    this.flight = false;
+    this.pos.y = gy;
+    this.vy = 0;
+    this.vel.y = 0;
+    this.baseFov = UNITS.morph.fov;
+    this.trauma = Math.min(1, this.trauma + 0.3);
+    shockRing(this.scene, this.effects, this.pos.x, gy, this.pos.z, 5, 0x9adfff);
+    this.hud.feed?.('🦿 觸地變形:地面型態!(按住 Space 蓄力跳返回飛行)');
   }
 
   // ---------------- 射擊(彈道學:初速 mv + 重力 9.81,射程上限)----------------
@@ -1136,13 +1179,14 @@ export class BattleClient {
 
     // 後座力:視角上踢 + 隨機偏擺 + 槍身後坐 + 槍口焰;重武器踢更大;無人機吃反作用力後推
     const heavyKick = id === 'heavy' ? 3 : 1;
-    this.recoil.p += (this.isDrone ? 0.0075 : 0.011) * heavyKick;
+    const fly = this._flying();
+    this.recoil.p += (fly ? 0.0075 : 0.011) * heavyKick;
     this.recoil.y += (Math.random() - 0.5) * 0.006 * heavyKick;
     this.trauma = Math.min(1, this.trauma + 0.06 * heavyKick);
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
-    if (this.isDrone) this.vel.addScaledVector(dir, -0.9 * heavyKick);
+    if (fly) this.vel.addScaledVector(dir, -0.9 * heavyKick);
     else if (id === 'heavy') this.vel.addScaledVector(dir, -6);
 
     if (def.type === 'beam') {
@@ -1257,7 +1301,7 @@ export class BattleClient {
     // 突進:位移本就客戶端權威,樂觀立即生效(CD/MP 伺服器把關)
     if (A.fx === 'dash') {
       const look = this.camera.getWorldDirection(new THREE.Vector3());
-      if (!this.isDrone) { look.y = 0; look.normalize(); this.vy = (this.vy ?? 0) + 5; }
+      if (!this._flying()) { look.y = 0; look.normalize(); this.vy = (this.vy ?? 0) + 5; }
       this.vel.addScaledVector(look, A.imp || 30);
       this.trauma = Math.min(1, this.trauma + 0.3);
     }
@@ -1322,6 +1366,7 @@ export class BattleClient {
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
       bomb: this.isDrone,
+      morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
     };
   }
 
@@ -1395,9 +1440,10 @@ export class BattleClient {
     if (this.keys.KeyA) move.sub(right);
     if (move.lengthSq() > 0) move.normalize();
 
-    if (this.isDrone) {
+    if (this._flying()) {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
-      // A/D 水平橫移;Space/C 純垂直(懸停微調)。
+      // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形機甲飛行型態用 fly 巡航速度。
+      const spd = this.isMorph ? u.fly : u.speed;
       const look = new THREE.Vector3(
         -Math.sin(this.yaw) * Math.cos(this.pitch),
         Math.sin(this.pitch),
@@ -1408,7 +1454,7 @@ export class BattleClient {
       if (this.keys.KeyS) target.sub(look);
       if (this.keys.KeyD) target.add(right);
       if (this.keys.KeyA) target.sub(right);
-      if (target.lengthSq() > 0) target.normalize().multiplyScalar(u.speed * boost);
+      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost);
       if (this.keys.Space) target.y += u.vspeed;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
@@ -1416,13 +1462,17 @@ export class BattleClient {
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
       this.pos.addScaledVector(this.vel, dt);
       const gy = this.terrain.heightAt(this.pos.x, this.pos.z);
-      this.pos.y = Math.max(gy + 2.5, Math.min(gy + 320, this.pos.y));
+      // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
+      this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
+      if (this.isMorph && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
       const lat = this.vel.x * right.x + this.vel.z * right.z;
-      this.roll += (-lat / u.speed * 0.16 - this.roll) * Math.min(1, dt * 5);
+      this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
     } else {
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * dt);
+      // 變形機甲蓄力中重心下沉、移動減速(起跳預備動作,mobility_plan Task 2.1)
+      const slowK = this.isMorph ? 1 - 0.6 * this.charge : 1;
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       const fr = Math.exp(-dt * 6);
@@ -1430,7 +1480,18 @@ export class BattleClient {
       const gy = this.terrain.heightAt(this.pos.x, this.pos.z);
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
-      if (onGround && this.keys.Space) this.vy = u.jump;
+      if (this.isMorph) {
+        // 蓄力跳:按住 Space 蓄力 → 放開時蓄力足夠即彈射變形為飛行型,不足只是小跳
+        if (onGround && this.keys.Space) {
+          this.charge = Math.min(1, this.charge + dt / MORPH.CHARGE_S);
+        } else if (this.charge > 0) {
+          if (onGround && this.charge >= MORPH.JUMP_MIN) this._morphLaunch(gy);
+          else if (onGround) { this.vy = u.jump; this.charge = 0; }
+          else this.charge = 0;
+        }
+      } else if (onGround && this.keys.Space) {
+        this.vy = u.jump;
+      }
       this.vy -= 24 * dt;
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; }
@@ -1453,7 +1514,8 @@ export class BattleClient {
     const shY = (Math.random() * 2 - 1) * n * 0.045;
     const shR = (Math.random() * 2 - 1) * n * 0.05;
 
-    const eye = this.isDrone ? 0 : 3.4;
+    // 蓄力中重心下沉(起跳預備:鏡頭跟著蹲)
+    const eye = this._flying() ? 0 : 3.4 - (this.isMorph ? this.charge * MORPH.CROUCH_M : 0);
     this.camera.position.copy(this.pos).add(new THREE.Vector3(0, eye, 0));
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw + this.recoil.y + shY);

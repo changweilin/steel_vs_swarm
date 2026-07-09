@@ -609,10 +609,11 @@ function charDetailHTML(id) {
       <i><b style="width:${Math.min(100, v / BAR_MAX[k] * 100).toFixed(0)}%"></b></i>
       <em>${v}</em></div>`).join('');
 
+  const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
   return `<div class="cd-art">
       <img src="${portraitURL(id)}" alt="${esc(c.name)}">
       <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
-        ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${isDrone ? '無人機' : '機甲'}</div>
+        ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindLabel}</div>
     </div>
     <div class="cd-body">
       <div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
@@ -623,6 +624,7 @@ function charDetailHTML(id) {
       ${lo.bio ? `<p class="cd-bio">${esc(lo.bio)}</p>` : ''}
       <div class="cd-stats">${stats}
         ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值,單機傷害為機甲的 1/3,三機齊射 ≈ 一台機甲。</div>` : ''}
+        ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
         ${charWeaponRow(id, 'light', '左鍵')}
@@ -730,13 +732,15 @@ function enterGame() {
   document.body.dataset.side = app.mySide || 'SPEC';
   const chData = myCh && CHARACTERS[myCh];
   // 機體種類綁角色(傭兵 kind 自帶,不隨陣營),操作說明跟著機體走
-  const isDrone = (chData?.kind || (app.mySide && SIDES[app.mySide].hero)) === 'drone';
+  const heroKind = chData?.kind || (app.mySide && SIDES[app.mySide].hero);
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
-    ? (isDrone
+    ? (heroKind === 'drone'
       ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆(僚機衝向鎖定目標) ・ V 或 1~3 切換主視野 ・ R 填彈 ・ B 升級 ・ 三機齊射才是完整火力,別讓僚機掉隊!'
+      : heroKind === 'morph'
+      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
@@ -761,9 +765,13 @@ function makeHud() {
         $('wpnAmmo').textContent = l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
         $('wpnAmmo').classList.toggle('reloading', l.reload > 0);
         $('wpnAmmo').classList.toggle('low', l.reload <= 0 && l.ammo <= l.mag * 0.25);
-        // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示
+        // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示 / 變形機甲型態指示
         const hv = w.heavy;
-        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${w.bomb ? '(另有 F 自爆)' : ''}`;
+        const morphTag = w.morph
+          ? (w.morph.flight ? '(✈ 飛行型態)'
+            : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
+          : '';
+        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${w.bomb ? '(另有 F 自爆)' : ''}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;

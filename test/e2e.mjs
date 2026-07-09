@@ -103,20 +103,34 @@ log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三�
     `玩家英雄同型武器:射程 ×${HEROIC.range}、威力 ×${HEROIC.dmg}(vs NPC 基準)`);
 }
 
-log('— sim:傭兵(雙陣營可選;機體/武器/招式不隨陣營改變)+ 陣亡購買 —');
+log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面雙型態)+ 陣亡購買 —');
 {
   const mercs = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === 'MERC');
   assert(mercs.length === 8, `傭兵 ${mercs.length} 名(雙陣營共用)`);
   assert(mercs.every((id) => charsOf('SWARM').includes(id) && charsOf('STEEL').includes(id)),
     '雙陣營角色池皆含傭兵');
-  assert(mercs.some((id) => CHARACTERS[id].kind === 'drone') && mercs.some((id) => CHARACTERS[id].kind === 'robot'),
-    '傭兵機體含無人機與機甲兩型(kind 綁角色)');
+  assert(mercs.every((id) => CHARACTERS[id].kind === 'morph'),
+    '傭兵一律駕駛變形機甲(kind:morph,不再駕駛無人機/機甲)');
+  assert(UNITS.morph.hp === UNITS.robot.hp && UNITS.morph.shield === UNITS.robot.shield,
+    `變形機甲 HP/護盾與機甲相同(${UNITS.morph.hp}/${UNITS.morph.shield})`);
+  assert(Math.abs(heroWeapon('m01', 'light', 1, false).dmg - tierVal(CHARACTERS.m01.light.dmg, 1)) < 1e-6,
+    '變形機甲傷害不吃小隊折算(火力同機甲)');
   const sim = new BattleSim(fakeBattleConfig(1));
   const a = sim.addHero('SWARM', 'p_ma', 'm02');
   const b = sim.addHero('STEEL', 'p_mb', 'm02');
-  assert(a.kind === 'robot' && b.kind === 'robot', '傭兵機甲受雇蜂群仍是機甲(kind 不隨陣營)');
+  assert(a.kind === 'morph' && b.kind === 'morph', '傭兵受雇雙方皆為變形機甲(kind 不隨陣營)');
+  assert(sim.squads.get('p_ma').bodies.length === 1, '變形機甲是單機(無三機小隊)');
   assert(a.maxHp === b.maxHp && a.armor === b.armor && a.maxSp === b.maxSp && a.maxMp === b.maxMp,
     `傭兵數值跨陣營一致(HP ${a.maxHp}/護甲 ${a.armor}/護盾 ${a.maxSp}/電力 ${a.maxMp})`);
+  // 型態由回報高度 y 判定:飛行型(y>0)不觸發地雷,地面型(y≈0)會踩雷
+  const nMines0 = sim.mines.length;
+  [b.x, b.z] = sim.mines[0];
+  b.y = 30;
+  sim.tick(0.125);
+  assert(sim.mines.length === nMines0, '飛行型態(y=30)不觸發地雷');
+  b.y = 0;
+  sim.tick(0.125);
+  assert(sim.mines.length === nMines0 - 1 && b.sp < b.maxSp, '地面型態(y=0)踩雷受創');
   // 陣亡等待重生仍可購買(DOTA 慣例;修復「重生位置無法買東西」)
   a.money = 999;
   sim._damage(a, 99999, null, 999);

@@ -62,6 +62,8 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (!rig) return;
   if (rig.kind === 'biped') stepBiped(L, rig, dt, now, speed);
   else if (rig.kind === 'aerial') stepAerial(L, rig, dt, now, vFwd, vLat);
+  else if (rig.kind === 'quad') stepQuad(L, rig, dt, now, speed, yawRate);
+  else if (rig.kind === 'morph') stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed);
   else stepVehicle(L, rig, dt, now, speed, vFwd, yawRate);
 }
 
@@ -108,7 +110,7 @@ function stepVehicle(L, rig, dt, now, speed, vFwd, yawRate) {
   rig.hull.position.y = (rig.hullY0 || 0) + Math.sin(now * 12.5 + L.ph * 7) * 0.012 * jig;
 }
 
-/** 飛行載具:壓坡入彎 ≤15° + 前傾 + 懸停浮沉(Task 1.1) */
+/** 飛行載具:壓坡入彎 ≤15° + 前傾 + 懸停浮沉(Task 1.1);rig.wings = 撲翼(飛行生物型) */
 function stepAerial(L, rig, dt, now, vFwd, vLat) {
   const top = rig.top || 20;
   // 向右橫移(vLat>0)→ 右側(局部 +x)下壓 = rotation.z 負
@@ -117,4 +119,79 @@ function stepAerial(L, rig, dt, now, vFwd, vLat) {
   rig.tilt.rotation.z = L.roll;
   rig.tilt.rotation.x = L.pitch;
   rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 + L.ph) * (rig.bob || 0.08);
+  if (rig.wings) {
+    // 撲翼:頻率/振幅隨速度提升(懸停慢拍、巡航快拍);外翼相位延遲 = 鞭式 follow-through
+    const k = clamp(Math.hypot(vFwd, vLat) / top, 0, 1);
+    L.flap = (L.flap || 0) + dt * (3.2 + k * 9);
+    const amp = 0.24 + k * 0.34;
+    for (const { w, outer, sgn } of rig.wings) {
+      w.rotation.z = sgn * Math.sin(L.flap + L.ph) * amp;
+      outer.rotation.z = sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.5;
+    }
+  }
+}
+
+/** 四足獸型:對角步態 + 脊椎波傳導 + 尾巴配重(Task 2.2) */
+function stepQuad(L, rig, dt, now, speed, yawRate) {
+  const strideW = (rig.stride || 1.4) * (rig.s || 1);
+  L.ph += speed * dt * Math.PI / Math.max(0.25, strideW);   // 步頻嚴格耦合位移(不滑步)
+  L.amp = damp(L.amp, clamp(speed / (rig.top || 10), 0, 1.15), 6, dt);
+  const a = L.amp;
+  // trot:對角腿同相(FL+HR / FR+HL);高速時後腿相位拉近前腿 → 趨近 gallop 的縱向彈跳
+  const gallop = clamp((a - 0.6) / 0.4, 0, 1);
+  const off = Math.PI * 0.5 * gallop;
+  const legA = 0.66 * a;
+  rig.legFL.rotation.x = Math.sin(L.ph) * legA;
+  rig.legFR.rotation.x = Math.sin(L.ph + Math.PI) * legA;
+  rig.legHL.rotation.x = Math.sin(L.ph + Math.PI + off) * legA * 0.9;
+  rig.legHR.rotation.x = Math.sin(L.ph + off) * legA * 0.9;
+  // 脊椎波:動力由後髖生成向前傳導(腰 → 胸 → 頸 逐節相位延遲),鞭式屈伸
+  const wave = L.ph * 2;
+  rig.spine.rotation.x = Math.sin(wave) * 0.05 * a + clamp(L.accel * 0.012, -0.08, 0.1);
+  rig.chest.rotation.x = Math.sin(wave - 0.7) * 0.05 * a;
+  rig.neck.rotation.x = Math.sin(wave - 1.4) * 0.07 * a;
+  // 縱向彈跳(gallop 越明顯)+ 靜止呼吸微沉浮;頭部靜止時緩慢警戒掃描
+  rig.spine.position.y = rig.hipsY0 - (0.5 - 0.5 * Math.cos(wave)) * (rig.bob || 0.08) * a * (1 + gallop * 0.8)
+    + (a < 0.05 ? Math.sin(now * 1.4 + L.ph) * 0.02 : 0);
+  rig.head.rotation.y = a < 0.05 ? Math.sin(now * 0.6 + L.ph) * 0.3 : 0;
+  // 尾巴配重:急轉時甩向轉向反側(counterweight),尾梢延遲跟隨;身體入彎傾斜
+  L.roll = damp(L.roll, clamp(yawRate * 0.22, -0.5, 0.5), 3.5, dt);
+  rig.tail.rotation.y = -L.roll * 1.1 + Math.sin(L.ph) * 0.14 * a;
+  rig.tail2.rotation.y = damp(rig.tail2.rotation.y, rig.tail.rotation.y * 0.8, 5, dt);
+  rig.tail.rotation.x = 0.12 + Math.sin(wave - 2.0) * 0.08 * a;
+  rig.spine.rotation.z = -L.roll * 0.14;
+}
+
+/**
+ * 變形機甲:型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),阻尼漸變 —
+ * 翼收折↔展開、腿步行↔後收、推進器增亮;地面雙足步態、飛行壓坡巡航。
+ */
+function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed) {
+  const want = (ent.heroY || 0) > 1.2 ? 1 : 0;
+  L.morph = damp(L.morph ?? want, want, 2.8, dt);
+  const m = L.morph;
+  // 背翼:地面豎折(±1.2 rad)→ 飛行展平
+  rig.wingL.rotation.z = -(1.2 - 1.1 * m);
+  rig.wingR.rotation.z = 1.2 - 1.1 * m;
+  // 地面步態(步頻耦合位移),飛行時擺幅歸零、腿後收成尾噴管姿態
+  const strideW = (rig.stride || 1.1) * (rig.s || 1);
+  L.ph += speed * dt * Math.PI / Math.max(0.2, strideW);
+  L.amp = damp(L.amp, clamp(speed / (rig.top || 9), 0, 1.1) * (1 - m), 6, dt);
+  const sw = Math.sin(L.ph) * 0.6 * L.amp;
+  rig.legL.rotation.x = sw + 1.05 * m;
+  rig.legR.rotation.x = -sw + 1.05 * m;
+  rig.armL.rotation.x = -sw * 0.7 - 0.45 * m;
+  rig.armR.rotation.x = sw * 0.25 - 0.45 * m;   // 持械手擺幅收斂
+  // 軀幹:地面 = 浮沉 + 速度前傾;飛行 = 前傾巡航 + 壓坡入彎
+  const topAir = rig.topAir || 30;
+  L.roll = damp(L.roll, clamp(-vLat / topAir, -1, 1) * 0.3 * m, 4, dt);
+  L.pitch = damp(L.pitch,
+    m * (0.35 + clamp(vFwd / topAir, -1, 1) * 0.18)
+    + (1 - m) * (0.2 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15)), 4, dt);
+  rig.torso.rotation.z = L.roll;
+  rig.torso.rotation.x = L.pitch;
+  rig.torso.position.y = rig.hipsY0
+    - (0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.07) * L.amp
+    + m * Math.sin(now * 2.4 + L.ph) * 0.1;   // 飛行懸停浮沉
+  for (const t of rig.thrusters) t.material.emissiveIntensity = 0.3 + m * 2.2;
 }

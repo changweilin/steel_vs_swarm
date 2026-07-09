@@ -42,6 +42,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - 自爆(F):主視野機原地引爆;**有準星鎖定敵方目標時**(`heroLock`,`SQUAD.LOCK_TTL` 秒內有效)僚機衝向該目標直到引爆,沒鎖定則不動作。`_blast` 一律跳過同陣營 → 不會炸到友軍。主視野機陣亡 → `_promote()` 立刻讓位給存活僚機,且**接手那架取消衝刺**(玩家重新掌控)。
   - 僚機移動全在伺服器 `_tickSquads()`:dash > regroup(離主機 > `SQUAD.REGROUP_M`:先切回標準兵線走廊 → 沿線飛到離主機最近的線上點 → 再直接歸隊)> follow(編隊)。客戶端只回報主視野那架的 `pos`。
   - 飛彈追蹤 **MUST** 用 `m.tid`(ent id)而非 `tpid`(pid 只給客戶端判斷「是不是在打我」)—— 一個 pid 底下有三架。
+- **傭兵變形機甲(2026-07-09 起)**:傭兵(`side:'MERC'`)一律 `kind:'morph'` 單機,HP/火力與機甲完全相同(`UNITS.morph` 由 `UNITS.robot` spread 而來,**MUST NOT** 拆開手抄數值;傷害不吃 SQUAD 折算)。飛行↔地面變形是客戶端物理(蓄力跳彈射 / 觸地變形,常數住 `MORPH`);伺服器**不需要型態訊息**,一律以回報 `y` 判定:`y ≤ MORPH.GROUND_Y` = 地面型(踩地雷)、`y ≥ GAME.AA_MIN_ALT` = 空中目標(塔 SAM / 防空伏擊)。獸型機甲(`visual.form:'beast'`)與飛行生物無人機(`'avian'`)只是外觀/骨架(models.js + locomotion.js),**不影響 sim 數值**。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。
 - 彈道學在客戶端(`game.js` bullets:初速 mv + 重力 G,線段 raycast 補內插),伺服器仍以 `heroHit` 射程 ×1.25 驗證 — 防作弊邏輯**不**搬客戶端(不變)。

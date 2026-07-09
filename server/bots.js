@@ -31,6 +31,9 @@ export class BotBrain {
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
 
+  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義) */
+  _speed(h, u) { return h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed; }
+
   /** 開火(含難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
   _fire(tid, slot) {
     if (Math.random() < this.diff.aimErr) return false;
@@ -72,6 +75,11 @@ export class BotBrain {
     if (h.kind === 'drone') {
       const want = this.state === 'ENGAGE' ? Math.max(GAME.AA_MIN_ALT * 0.6, this.alt * 0.6) : this.alt;
       h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
+    } else if (h.kind === 'morph') {
+      // 變形機甲:推線時飛行型態趕路,交戰/撤退回堡時落地變形(y=0 才吃地雷、脫離防空)
+      const want = this.state === 'PUSH' ? this.alt : 0;
+      h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
+      if (want === 0 && h.y < 1.5) h.y = 0;
     } else {
       h.y = 0;
     }
@@ -81,14 +89,14 @@ export class BotBrain {
   _push(h, u, dt) {
     const pts = this.sim.lanes[this.lane];
     const total = this._cum[this._cum.length - 1];
-    this.prog = Math.min(total, this.prog + u.speed * 0.85 * dt);
+    this.prog = Math.min(total, this.prog + this._speed(h, u) * 0.85 * dt);
     const d = this.side === 'SWARM' ? this.prog : total - this.prog;
     const [x, z] = pointAt(pts, this._cum, d);
     this._face(h, x, z);
     h.x += (x + this.jitter[0] - h.x) * Math.min(1, dt * 2.2);
     h.z += (z + this.jitter[1] - h.z) * Math.min(1, dt * 2.2);
-    // 繞開阻擋型障礙物,不卡在牆前(機甲貼地移動才會撞到,無人機飛越)
-    if (h.kind !== 'drone') {
+    // 繞開阻擋型障礙物,不卡在牆前(貼地移動才會撞到;無人機/飛行型變形機甲飛越)
+    if (h.kind !== 'drone' && (h.y || 0) < 2) {
       for (const [hx, hz, hr] of this.sim.hazBlockers || []) {
         const dd = Math.hypot(h.x - hx, h.z - hz);
         if (dd >= hr || dd === 0) continue;
@@ -180,8 +188,8 @@ export class BotBrain {
     const d = Math.hypot(dx, dz);
     if (d < 30) return;                                  // 到堡附近等補血
     this._face(h, tx, tz);
-    h.x += dx / d * u.speed * dt;
-    h.z += dz / d * u.speed * dt;
+    h.x += dx / d * this._speed(h, u) * dt;
+    h.z += dz / d * this._speed(h, u) * dt;
   }
 
   _face(h, tx, tz) {

@@ -126,7 +126,7 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
 // ---- 目標類型(武器克制查表:單位種類 → 類別)----
 export const TARGET_CLASS = {
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'armor', heli: 'air',
-  robot: 'armor', drone: 'air', tower: 'building', base: 'building',
+  robot: 'armor', drone: 'air', morph: 'armor', tower: 'building', base: 'building',
   // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
   aasite: 'building', construction: 'building', wreck: 'building',
   rockfall: 'building', fallentree: 'building',
@@ -154,6 +154,18 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 // SQUAD:蜂群玩家同時操控 N 架無人機(主視野一架 + 僚機)。
 // 單機 HP/傷害 = 機甲的 1/3,三機齊射 ≈ 一台機甲;死一架就少 1/3 戰力。
 // 傷害折算住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
+// MORPH:傭兵變形機甲(單機;HP/火力與機甲完全相同)。
+// 飛行型態「觸地」→ 變形為地面型;地面型態「蓄力跳躍」(按住 Space 蓄力後放開)→ 彈射升空變形為飛行型。
+// 變形是客戶端物理(位置本就客戶端回報),伺服器一律以回報高度 y 判定型態:
+// y≈0 = 地面型(會踩地雷)、y ≥ GAME.AA_MIN_ALT = 空中目標(吃塔 SAM / 防空伏擊)。
+export const MORPH = {
+  CHARGE_S: 1.1,     // 蓄力至滿所需秒數(蓄力中重心下沉 = 起跳預備動作)
+  JUMP_MIN: 0.45,    // 低於此蓄力比例 = 普通小跳(不變形)
+  JUMP_V: 30,        // 滿蓄力彈射初速(m/s;實際 = JUMP_V × 蓄力比例)
+  LAND_M: 0.5,       // 飛行型離地 ≤ 此距離 → 觸地變形回地面型
+  CROUCH_M: 1.4,     // 滿蓄力時機體下蹲幅度(公尺;FPV 鏡頭同步下沉)
+  GROUND_Y: 2,       // 伺服器:y ≤ 此值視為地面型(踩雷判定)
+};
 export const SQUAD = {
   N: 3,
   DMG: 1 / 3,
@@ -189,7 +201,7 @@ export const PROG = {
   skill: { name: '小招',   kills: [2, 12, 25], cost: [150, 400, 800] },
   ult:   { name: '大招',   kills: [6, 18, 32], cost: [400, 800, 1400] },
 };
-export const KILL_SCORE = { drone: 4, robot: 4, tower: 3, tank: 2, heli: 2 };
+export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2 };
 export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
 
 // 三階數值取值:陣列 = [Lv1, Lv2, Lv3];純量 = 各階相同
@@ -254,14 +266,15 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 // 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
 // mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
-// visual:程序生成機體外觀參數(hue 主色;無人機 frame/body、機甲 pod 掛件)。
+// visual:程序生成機體外觀參數(hue 主色;無人機 frame/body、機甲 pod 掛件;
+//         form:'beast'=獸型機甲、'avian'=飛行生物型無人機(creature 指定剪影),傭兵 morph 用 pod)。
 // fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
 //          / vision(視野)/ stealth(匿蹤)/ dash(突進)/ intercept(攔截飛彈)。
 export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
     side: 'SWARM', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
-    visual: { hue: 0xffd257, frame: 'hexa', body: 'box' },
+    visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'wasp' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
     light: { name: '雙聯 5.56 機槍艙', rw: 'FN Minimi・初速 915m/s', type: 'gun', mv: 915,
       dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
@@ -337,7 +350,7 @@ export const CHARACTERS = {
   },
   s06: {
     side: 'SWARM', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」攔截者',
-    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere' },
+    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere', form: 'avian', creature: 'raptor' },
     mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 6 },
     light: { name: '精準標記步槍艙', rw: 'M110 SASS 7.62・初速 850m/s', type: 'gun', mv: 850,
       dmg: [24, 30, 37], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
@@ -383,7 +396,7 @@ export const CHARACTERS = {
   },
   s09: {
     side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
-    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box' },
+    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box', form: 'avian', creature: 'falcon' },
     mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
     light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420,
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
@@ -429,7 +442,7 @@ export const CHARACTERS = {
   },
   s12: {
     side: 'SWARM', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」偵察機',
-    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge' },
+    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'avian', creature: 'swallow' },
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 4 },
     light: { name: '偵察卡賓艙', rw: 'AKS-74U・初速 735m/s', type: 'gun', mv: 735,
       dmg: [14, 17, 21], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
@@ -478,7 +491,7 @@ export const CHARACTERS = {
   },
   t03: {
     side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
-    visual: { hue: 0xe08a4a, pod: 'shield' },
+    visual: { hue: 0xe08a4a, pod: 'shield', form: 'beast', creature: 'bear' },
     mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
     light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400,
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
@@ -493,7 +506,7 @@ export const CHARACTERS = {
   },
   t04: {
     side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
-    visual: { hue: 0x8a97a5, pod: 'rack' },
+    visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'wolf' },
     mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
     light: { name: '消音 DMR', rw: 'VSS Vintorez 9×39・初速 295m/s', type: 'gun', mv: 295,
       dmg: [24, 30, 37], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
@@ -538,7 +551,7 @@ export const CHARACTERS = {
   },
   t07: {
     side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
-    visual: { hue: 0x6d7a68, pod: 'rack' },
+    visual: { hue: 0x6d7a68, pod: 'rack', form: 'beast', creature: 'panther' },
     mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
     light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
@@ -600,7 +613,7 @@ export const CHARACTERS = {
   },
   t11: {
     side: 'STEEL', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」戰術指導機',
-    visual: { hue: 0x8a9a5a, pod: 'antenna' },
+    visual: { hue: 0x8a9a5a, pod: 'antenna', form: 'beast', creature: 'rhino' },
     mods: { hp: 1.2, sp: 0.9, mp: 1.0, speed: 0.9, armor: 24 },
     light: { name: '車載重機槍', rw: 'DShKM・初速 850m/s', type: 'gun', mv: 850,
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
@@ -630,10 +643,12 @@ export const CHARACTERS = {
   },
 
   // ================= 傭兵(side:'MERC',雙陣營皆可受雇)=================
-  // kind 綁角色:無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
+  // 傭兵一律駕駛「變形機甲」(kind:'morph'):HP/火力與機甲相同,
+  // 飛行型觸地變形為地面型、地面型蓄力跳躍彈射變形為飛行型(見 MORPH/UNITS.morph)。
+  // 無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
   m01: {
-    side: 'MERC', kind: 'drone', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」傭兵突襲 FPV',
-    visual: { hue: 0xd94f4f, frame: 'quad', body: 'wedge' },
+    side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
+    visual: { hue: 0xd94f4f, pod: 'rack' },
     mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
@@ -647,7 +662,7 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '合約外時段:火力與填彈全面超載' },
   },
   m02: {
-    side: 'MERC', kind: 'robot', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型傭兵機甲',
+    side: 'MERC', kind: 'morph', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型可變機甲',
     visual: { hue: 0x9aa3ad, pod: 'shield' },
     mods: { hp: 1.25, sp: 0.9, mp: 0.95, speed: 0.9, armor: 24 },
     light: { name: '7.62 通用機槍', rw: 'FN MAG・初速 840m/s', type: 'gun', mv: 840,
@@ -662,8 +677,8 @@ export const CHARACTERS = {
       dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '這一單保到底:半徑內友軍承傷降低' },
   },
   m03: {
-    side: 'MERC', kind: 'drone', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤補給機',
-    visual: { hue: 0x59c9a5, frame: 'hexa', body: 'sphere' },
+    side: 'MERC', kind: 'morph', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤可變機甲',
+    visual: { hue: 0x59c9a5, pod: 'dish' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛衝鋒槍艙', rw: 'UMP45・初速 285m/s', type: 'gun', mv: 285,
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
@@ -677,7 +692,7 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '大帳一次結清:裝甲大修、護盾充滿' },
   },
   m04: {
-    side: 'MERC', kind: 'robot', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵傭兵機甲',
+    side: 'MERC', kind: 'morph', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵可變機甲',
     visual: { hue: 0xb59ce8, pod: 'antenna' },
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 13 },
     light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
@@ -692,7 +707,7 @@ export const CHARACTERS = {
       cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊限時無霧視野' },
   },
   m05: {
-    side: 'MERC', kind: 'robot', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰突擊機甲',
+    side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰可變機甲',
     visual: { hue: 0xe0a13a, pod: 'antenna' },
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19・初速 900m/s', type: 'gun', mv: 900,
@@ -708,8 +723,8 @@ export const CHARACTERS = {
       desc: '逾期利滾利:對指定座標飽和清算打擊' },
   },
   m06: {
-    side: 'MERC', kind: 'drone', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦型六旋翼',
-    visual: { hue: 0xf0c24a, frame: 'hexa', body: 'wedge' },
+    side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
+    visual: { hue: 0xf0c24a, pod: 'rack' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
@@ -723,7 +738,7 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '訂單爆量:攻擊直升機編隊壓上' },
   },
   m07: {
-    side: 'MERC', kind: 'robot', name: '約蘭妲・里奧斯', code: '保全', machine: '「保全」區域拒止機甲',
+    side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '保全', machine: '「保全」區域拒止可變機甲',
     visual: { hue: 0x5fa8d3, pod: 'shield' },
     mods: { hp: 1.15, sp: 1.05, mp: 1.1, speed: 0.9, armor: 20 },
     light: { name: '雙 35 快砲', rw: 'Oerlikon 縮裝・初速 1100m/s', type: 'gun', mv: 1100,
@@ -739,8 +754,8 @@ export const CHARACTERS = {
       desc: '把整片天空劃進責任區:防空彈幕封鎖' },
   },
   m08: {
-    side: 'MERC', kind: 'drone', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊 FPV',
-    visual: { hue: 0x8f7fd0, frame: 'quad', body: 'sphere' },
+    side: 'MERC', kind: 'morph', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊可變機甲',
+    visual: { hue: 0x8f7fd0, pod: 'blade' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.15, speed: 1.15, armor: 5 },
     light: { name: '消音精準艙', rw: 'VSS 縮裝・初速 295m/s', type: 'gun', mv: 295,
       dmg: [24, 30, 37], rate: 3.2, mag: [18, 22, 26], reload: 2.0, range: 200, crit: 0.16, critX: 1.9,
@@ -761,7 +776,7 @@ export const ECON = {
   INCOME_PER_S: 2,
   // 擊殺賞金:高價值單位報酬越高(missile = 擊落防空飛彈)
   BOUNTY: {
-    soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, missile: 15, aasite: 40,
+    soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, morph: 150, missile: 15, aasite: 40,
     rocketeer: 30, howitzer: 45, heli: 60,
   },
   UPGRADES: {
@@ -802,6 +817,14 @@ export const UNITS = {
     regen: 18,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
+};
+// 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
+// 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
+UNITS.morph = {
+  ...UNITS.robot,
+  name: '變形機甲',
+  fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
+  fov: 76, fovAir: 96, zoomFov: 38, sight: 240,
 };
 
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
