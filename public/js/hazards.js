@@ -235,6 +235,93 @@ const BUILDERS = {
     }
   },
 
+  /** 神木:超尺度巨樹 — 板根裙 + 樹瘤 + 多層樹冠 + 注連繩(遮視線的立體掩體) */
+  sacredtree(g, r, rnd) {
+    const H = 20 + rnd() * 8;                       // 主幹高(含 sc 可達 ~38m,遠超現實同座標樹木)
+    const tR = r * 0.42;                            // 主幹半徑(粗壯:視覺佔地貼近碰撞半徑 r)
+    const bark = jitterColor(0x5e4630, rnd, 0.02, 0.08);
+    const trunk = mesh(g, cyl(tR * 0.62, tR, H, 9), bark, 0, H / 2, 0);
+    trunk.rotation.y = rnd() * Math.PI;
+    // 板根裙:環繞主幹的放射狀鰭板(巨木的視覺錨點,外緣 ≈ 碰撞半徑)
+    const fins = 5 + Math.floor(rnd() * 3);
+    for (let i = 0; i < fins; i++) {
+      const a = (i / fins) * Math.PI * 2 + rnd() * 0.5;
+      const fin = mesh(g, box(tR * 2.0, 3.2 + rnd() * 2.2, 0.55), new THREE.Color(bark).multiplyScalar(0.9),
+        Math.cos(a) * tR * 1.4, 1.6, Math.sin(a) * tR * 1.4);
+      fin.rotation.y = -a + Math.PI / 2;
+      fin.rotation.z = (rnd() - 0.5) * 0.15;
+    }
+    // 根丘:板根外圈的隆起土丘,把「不可通行」的地面範圍畫出來
+    for (let i = 0; i < 4; i++) {
+      const a = rnd() * Math.PI * 2;
+      const mound = mesh(g, ico(0.9 + rnd() * 0.8), new THREE.Color(bark).offsetHSL(0.02, 0, -0.06),
+        Math.cos(a) * r * 0.7, 0.35, Math.sin(a) * r * 0.7);
+      mound.scale.y = 0.45;
+      mound.rotation.y = rnd() * 3;
+    }
+    // 樹瘤 + 垂落氣根
+    for (let i = 0; i < 4; i++) {
+      const a = rnd() * Math.PI * 2, y = H * (0.15 + rnd() * 0.5);
+      mesh(g, ico(0.5 + rnd() * 0.6), new THREE.Color(bark).offsetHSL(0, 0, -0.04),
+        Math.cos(a) * tR * 0.85, y, Math.sin(a) * tR * 0.85);
+      if (rnd() < 0.6) {
+        const vine = mesh(g, cyl(0.05, 0.09, y * 0.7, 5), 0x4e5a38,
+          Math.cos(a) * tR * 1.15, y - y * 0.35, Math.sin(a) * tR * 1.15);
+        vine.rotation.z = (rnd() - 0.5) * 0.2;
+      }
+    }
+    // 注連繩:神木的識別記號(繩環 + 紙垂)
+    const rope = mesh(g, new THREE.TorusGeometry(tR * 0.95, 0.14, 5, 12), 0xd8c894, 0, H * 0.22, 0);
+    rope.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 0.4;
+      mesh(g, box(0.22, 0.7, 0.05), 0xf4f0e6, Math.cos(a) * tR * 0.98, H * 0.22 - 0.5, Math.sin(a) * tR * 0.98);
+    }
+    // 多層樹冠:由大到小疊三~四層(壓扁 ico,每層色相微差 → 手繪層次)
+    const layers = 3 + (rnd() < 0.5 ? 1 : 0);
+    for (let i = 0; i < layers; i++) {
+      const t = i / layers;
+      const cr = r * (1.35 - t * 0.75);
+      const canopy = mesh(g, ico(cr), jitterColor(0x3e7a36, rnd, 0.05, 0.1),
+        (rnd() - 0.5) * r * 0.35, H * (0.82 + t * 0.28), (rnd() - 0.5) * r * 0.35);
+      canopy.scale.y = 0.55 + rnd() * 0.15;
+      canopy.rotation.y = rnd() * Math.PI;
+    }
+  },
+
+  /** 巨石:比現實高大的獨立巨岩 — 主碑岩 + 倚靠斜岩 + 苔蘚頂 + 碎石裙 */
+  boulder(g, r, rnd) {
+    const H = 9 + rnd() * 5;                        // 主岩高(含 sc 可達 ~19m)
+    const rockC = jitterColor(rnd() < 0.5 ? 0x7d8288 : 0x8a8274, rnd, 0.01, 0.1);
+    const main = mesh(g, ico(r * 0.62), rockC, 0, H * 0.42, 0);
+    main.scale.set(1, H / (r * 0.62) * 0.5, 0.8 + rnd() * 0.3);   // 拉高成碑狀
+    main.rotation.y = rnd() * Math.PI;
+    // 倚靠的斜岩(兩塊,構成可鑽的視覺縫隙感)
+    for (let i = 0; i < 2; i++) {
+      const a = rnd() * Math.PI * 2;
+      const s = r * (0.3 + rnd() * 0.2);
+      const lean = mesh(g, ico(s), new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.08),
+        Math.cos(a) * r * 0.65, s * (0.9 + rnd() * 0.6), Math.sin(a) * r * 0.65);
+      lean.scale.y = 1.4 + rnd() * 0.8;
+      lean.rotation.set((rnd() - 0.5) * 0.7, rnd() * 3, (rnd() - 0.5) * 0.7);
+    }
+    // 苔蘚頂 + 岩面色帶(沉積紋)
+    const moss = mesh(g, ico(r * 0.45), 0x5e7a44, (rnd() - 0.5) * r * 0.3, H * 0.86, (rnd() - 0.5) * r * 0.3);
+    moss.scale.y = 0.35;
+    const band = mesh(g, cyl(r * 0.55, r * 0.58, 0.8, 9), new THREE.Color(rockC).multiplyScalar(0.82),
+      0, H * (0.3 + rnd() * 0.25), 0);
+    band.rotation.z = (rnd() - 0.5) * 0.2;
+    // 碎石裙
+    for (let i = 0; i < 5 + rnd() * 4; i++) {
+      const a = rnd() * Math.PI * 2, d = r * (0.6 + rnd() * 0.5);
+      const s = 0.5 + rnd() * 1.1;
+      const rk = mesh(g, ico(s), new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.1),
+        Math.cos(a) * d, s * 0.5, Math.sin(a) * d);
+      rk.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
+      rk.scale.y = 0.6 + rnd() * 0.4;
+    }
+  },
+
   /** 匿蹤防空陣地:迷彩偽裝網 + 飛彈發射架 + 沙包圈 */
   aasite(g, r, rnd) {
     const R = 5.5;

@@ -600,6 +600,7 @@ async function enterLoading(cfg) {
     const biomes = await buildBiomes(cfg, app.terrain, (f, label) => setP(0.60 + f * 0.36, label));
     app.terrain.group.add(biomes);
     app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
+    app.terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
     const st = biomes.userData.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
       `${st.roads ? `・道路 ${st.roads} 段` : ''}${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);

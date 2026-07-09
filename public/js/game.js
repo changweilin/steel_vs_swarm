@@ -431,6 +431,23 @@ export class BattleClient {
         this.vel.x -= into * nx; this.vel.z -= into * nz;
       }
     }
+    // 圖資建物(biomes 客戶端幾何,全房間同一 OSM 來源 → 各端一致):
+    // 純推擠不結算傷害,伺服器權威不受影響;無人機可飛越屋頂
+    for (const b of this.terrain.blockers || []) {
+      if (myBot > b.y + b.h || myTop < b.y) continue;
+      const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
+      const d = Math.hypot(dx, dz);
+      const min = myR + b.r;
+      if (d >= min || d === 0) continue;
+      const nx = dx / d, nz = dz / d;
+      this.pos.x += nx * (min - d);
+      this.pos.z += nz * (min - d);
+      const into = this.vel.x * nx + this.vel.z * nz;
+      if (into < 0) {
+        if (this.isDrone && -into > 16) this._detonate();
+        this.vel.x -= into * nx; this.vel.z -= into * nz;
+      }
+    }
   }
 
   // ---------------- 輸入 ----------------
@@ -567,7 +584,7 @@ export class BattleClient {
         neutral: true, isStatic: true, hero: false,
         // 阻擋型障礙:限制行動但不完全封鎖(縫隙由伺服器佈局保證,無人機可飛越)
         colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : e.k === 'relay' ? 1.6 : 0),
-        colH: e.k === 'aasite' ? 3.5 : e.k === 'relay' ? 8 : 6,
+        colH: e.k === 'aasite' ? 3.5 : e.k === 'relay' ? 8 : (hazDef?.hgt || 6),
       };
       group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
       if (group.userData.flames) this.flamers.add(group);

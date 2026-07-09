@@ -8,17 +8,29 @@
 //   濕地   — 紅樹林 / 蘆葦(僅低海拔成立)
 // 預設場地的 mix(venues.js)會對分類加權,做出「單一 80% / 混合」的場地感。
 // 兵線走廊保持淨空(寬度 > 4 台機甲並行),主堡與防禦塔周圍同樣清場。
-// 植被全部用 InstancedMesh(低多邊形 + flatShading),整張圖 < 20 個 draw call。
+// 植被全部用 InstancedMesh(低多邊形 + 分層樹冠),整張圖數十個 draw call。
 // 亂數以戰場中心為種子:同一房間所有玩家看到同一片森林。
+//
+// 超尺度原則(2026-07-09):圖資建物比現實更高大(高度 ×1.8、佔地 ×1.25),
+// 立面用程序生成窗格貼圖(賽璐璐「畫上去的窗」)取代單色塊;
+// 建物同時輸出碰撞柱(group.userData.blockers)— 限制玩家行動但不封鎖,
+// 兵線走廊由淨空網格保證暢通,無人機永遠可以飛越屋頂。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ENV, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
 import { toonMat, toonGradient } from './hazards.js';
 
-const CELL = 10;                 // 淨空網格(m);走廊全寬約 30m > 4×3.5m 機甲
-const MAX_VEG = 6000;            // 植被實例上限
+const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
+const MAX_VEG = 7000;            // 植被實例上限
 const MAX_BUILDINGS = 240;       // 建物上限(特殊地標另計 ≤ 60)
+// 超尺度倍率:圖資建物 / 地標 / 植被都比現實高大(氣勢 + 立體掩體)
+const OVER = { bldH: 1.8, bldXZ: 1.25, bldCap: 170, lm: 1.6 };
+// 植被放大倍率(喬木最誇張,地被小幅)
+const VEG_SCALE = {
+  bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
+  shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
+};
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
 // ---- 決定性亂數(mulberry32):全房間共享同一片地貌 ----
@@ -53,7 +65,7 @@ function buildClearance(cfg, center) {
       const seg = Math.hypot(x2 - x1, z2 - z1);
       const n = Math.max(1, Math.ceil(seg / 5));
       for (let k = 0; k <= n; k++) {
-        blockPoint(x1 + (x2 - x1) * k / n, z1 + (z2 - z1) * k / n, 14);   // 走廊半寬 14m
+        blockPoint(x1 + (x2 - x1) * k / n, z1 + (z2 - z1) * k / n, 17);   // 走廊半寬 17m(建物佔地放大後仍不侵走廊)
       }
     }
     // 防禦塔位置(與 sim.js 同一算法)周圍清場
@@ -109,17 +121,37 @@ const cyl = (r1, r2, h, n = 5) => new THREE.CylinderGeometry(r1, r2, h, n);
 const cone = (r, h, n = 5) => new THREE.ConeGeometry(r, h, n);
 const ico = (r) => new THREE.IcosahedronGeometry(r, 0);
 
+// 每型多零件 = 分層樹冠/主幹/枝節,擺脫「一根柱 + 一顆球」的扁平輪廓;
+// 每個 part 一個 InstancedMesh(draw call),整批仍是常數級
 const VEG_DEFS = {
-  bamboo:      { parts: [{ g: cyl(0.10, 0.14, 6.5), y: 3.25, c: 0x8fae4e }, { g: cone(1.1, 2.4), y: 7.4, key: 'foliage' }] },
-  broadleaf:   { parts: [{ g: cyl(0.22, 0.34, 2.8), y: 1.4, c: 0x6b4a2f }, { g: ico(2.6), y: 4.8, key: 'foliage', sy: 0.78 }] },
-  birch:       { parts: [{ g: cyl(0.16, 0.22, 3.4), y: 1.7, c: 0xe8e4dc }, { g: ico(2.0), y: 4.6, key: 'foliage', sy: 0.9 }] },
-  deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 }, { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 }] },
-  conifer:     { parts: [{ g: cyl(0.20, 0.30, 1.8), y: 0.9, c: 0x5d4027 }, { g: cone(2.0, 6.4, 6), y: 4.9, key: 'conifer' }] },
-  silvergrass: { parts: [{ g: cone(0.7, 1.7), y: 0.85, key: 'grass' }] },
-  arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a }] },
-  shrub:       { parts: [{ g: ico(0.9), y: 0.8, key: 'foliage', sy: 0.8 }] },
-  succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 }] },
-  mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e }, { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
+  bamboo:      { parts: [{ g: cyl(0.10, 0.14, 6.5), y: 3.25, c: 0x8fae4e },
+                         { g: cone(1.1, 2.4), y: 7.4, key: 'foliage' },
+                         { g: cone(0.8, 1.6), y: 5.6, key: 'foliage', sy: 0.9 }] },
+  broadleaf:   { parts: [{ g: cyl(0.22, 0.40, 3.2), y: 1.6, c: 0x6b4a2f },
+                         { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // 分枝
+                         { g: ico(2.7), y: 5.0, key: 'foliage', sy: 0.75 },
+                         { g: ico(1.7), y: 6.6, key: 'foliage', sy: 0.7 }] },   // 疊層樹冠
+  birch:       { parts: [{ g: cyl(0.16, 0.22, 3.8), y: 1.9, c: 0xe8e4dc },
+                         { g: ico(2.0), y: 4.9, key: 'foliage', sy: 0.85 },
+                         { g: ico(1.2), y: 6.3, key: 'foliage', sy: 0.8 }] },
+  deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 },
+                         { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 },
+                         { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }] },
+  conifer:     { parts: [{ g: cyl(0.20, 0.32, 2.0), y: 1.0, c: 0x5d4027 },
+                         { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
+                         { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
+                         { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }] },
+  silvergrass: { parts: [{ g: cone(0.85, 1.5), y: 0.75, key: 'grass' },
+                         { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8 }] },      // 抽穗的芒花
+  arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a },
+                         { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44 }] },
+  shrub:       { parts: [{ g: ico(0.9), y: 0.8, key: 'foliage', sy: 0.8 },
+                         { g: ico(0.6), y: 1.3, key: 'foliage', sy: 0.75 }] },
+  succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 },
+                         { g: cyl(0.28, 0.4, 0.7, 6), y: 1.1, c: 0x8cae82 }] },
+  mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e },
+                         { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // 支柱根
+                         { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
   reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a }] },
 };
 
@@ -127,6 +159,7 @@ const VEG_DEFS = {
 // 下載自 quaternius.com(gltf + bin + 貼圖,法線圖已剝除);
 // 載入失敗自動退回上面 VEG_DEFS 的程序生成版本,不開天窗。
 const NATURE_DIR = 'assets/models/quaternius/nature/';
+// h = 基準高(m):GLB 植被同步吃超尺度(比現實高大;put() 的 VEG_SCALE 已含在 s)
 const NATURE_MANIFEST = {
   broadleaf:   { files: ['MapleTree_1.gltf', 'MapleTree_2.gltf', 'MapleTree_3.gltf'], h: 8 },
   birch:       { files: ['BirchTree_1.gltf', 'BirchTree_2.gltf'], h: 8.5 },
@@ -274,60 +307,182 @@ function box(w, h, d, color, x = 0, y = 0, z = 0) {
   return m;
 }
 
+// ---- 立面窗格貼圖(賽璐璐「畫上去的窗」;取代單一色塊)----
+// 底色畫白 → 與材質 color / setColorAt 相乘 = 同貼圖多種外牆色。
+// emissiveMap 只畫「亮著的窗」,夜間配 emissive 暖光 = 萬家燈火。
+// 固定種子:全房間(乃至每次載入)同一張貼圖,不吃共享 rnd 的呼叫序。
+const _facadeCache = new Map();
+function facadeTex(key, cols, rows, winC, litRatio) {
+  if (_facadeCache.has(key)) return _facadeCache.get(key);
+  const W = 128, H = 256;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cx = cv.getContext('2d');
+  const em = document.createElement('canvas'); em.width = W; em.height = H;
+  const ex = em.getContext('2d');
+  cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = 'rgba(0,0,0,0.18)'; cx.fillRect(0, H - 14, W, 14);      // 底層基座暗帶
+  ex.fillStyle = '#000000'; ex.fillRect(0, 0, W, H);
+  const rnd = mulberry32(0xFACADE ^ (cols * 131 + rows * 7));
+  const cw = W / cols, ch = (H - 26) / rows;                             // 頂部留女兒牆帶
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * cw + cw * 0.24, y = 12 + r * ch + ch * 0.28;
+      const w = cw * 0.52, h = ch * 0.48;
+      cx.fillStyle = winC; cx.fillRect(x, y, w, h);
+      cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(x, y, w, h * 0.2);   // 窗玻璃高光帶
+      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(x, y, w, h); }
+    }
+  }
+  const mk = (c) => {
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.magFilter = THREE.NearestFilter;   // 硬邊窗格 = 漫畫筆觸
+    return t;
+  };
+  const out = { map: mk(cv), emissiveMap: mk(em) };
+  _facadeCache.set(key, out);
+  return out;
+}
+
+// 一般建物外牆色盤(setColorAt 相乘;暖灰住宅 vs 冷色玻璃帷幕)
+const PALETTE = {
+  residential: [0xc4b8a8, 0xb0a494, 0xccc0b4, 0xa8b0ac, 0xc8b09a, 0xb8ac9c],
+  commercial:  [0x7a92a4, 0x6a8294, 0x8aa0b0, 0x9aa8b0, 0x708898, 0x84909c],
+};
+
+// 地標近似碰撞柱(未縮放;放置時 × lm scale)
+const LANDMARK_COL = {
+  hospital: { r: 11, h: 22 }, school: { r: 13, h: 11 }, station: { r: 14, h: 13 },
+  temple: { r: 8, h: 13 }, church: { r: 9, h: 19 }, mosque: { r: 10, h: 14 },
+  museum: { r: 12, h: 12 }, power: { r: 2.6, h: 42 }, factory: { r: 13, h: 12 },
+};
+
 const LANDMARKS = {
   hospital: (g) => {
-    g.add(box(16, 18, 12, 0xe8e4dc));
-    g.add(box(1.6, 5, 0.6, 0xd93a2b, 0, 18.2, 6.0));   // 紅十字(直)
-    g.add(box(5, 1.6, 0.6, 0xd93a2b, 0, 19.9, 6.0));   //        (橫)
+    const f = facadeTex('hosp', 6, 6, '#46525c', 0.3);
+    const main = box(16, 18, 12, 0xe8e4dc); main.material.map = f.map; g.add(main);
+    g.add(box(10, 10, 10, 0xdcd8cc, 12, 0, 2));                 // 側翼
+    g.add(box(6, 3, 3, 0xcfc8b8, 0, 0, 7));                     // 急診入口雨庇
+    g.add(box(1.6, 5, 0.6, 0xd93a2b, 0, 18.2, 6.0));            // 紅十字(直)
+    g.add(box(5, 1.6, 0.6, 0xd93a2b, 0, 19.9, 6.0));            //        (橫)
+    const pad = new THREE.Mesh(cyl(4.5, 4.5, 0.5, 12), bmat(0x5a6068));
+    pad.position.set(0, 18.4, -1); g.add(pad);                  // 屋頂直升機坪
+    const hMark = new THREE.Mesh(cyl(2.6, 2.6, 0.2, 12), bmat(0xe8e4dc));
+    hMark.position.set(0, 18.7, -1); g.add(hMark);
   },
   school: (g) => {
-    g.add(box(22, 9, 8, 0xd9c9a8));
-    g.add(box(8, 9, 8, 0xd9c9a8, 10, 0, 8));
+    const f = facadeTex('school', 8, 3, '#4a5058', 0.2);
+    const main = box(22, 9, 8, 0xd9c9a8); main.material.map = f.map; g.add(main);
+    const wing = box(8, 9, 8, 0xd9c9a8, 10, 0, 8); wing.material.map = f.map; g.add(wing);
+    g.add(box(23, 1, 9, 0xb89a78, 0, 9, 0));                    // 屋簷
+    const clock = new THREE.Mesh(cyl(1.1, 1.1, 0.4, 12), bmat(0xf4f0e6));
+    clock.rotation.x = Math.PI / 2; clock.position.set(0, 7, 4.2); g.add(clock);
     const pole = new THREE.Mesh(cyl(0.12, 0.12, 12, 6), bmat(0x9aa2a8));
     pole.position.set(-8, 6, 8); g.add(pole);
+    g.add(box(1.4, 0.9, 0.06, 0xd93a2b, -7.2, 11, 8));          // 旗
+    for (const s of [-1, 1]) g.add(box(1, 2.6, 1, 0xb0a898, s * 4, 0, 9));   // 校門柱
   },
   station: (g) => {
-    g.add(box(26, 7, 12, 0xb8bfc4));
+    const f = facadeTex('station', 9, 2, '#3c4854', 0.45);
+    const main = box(26, 7, 12, 0xb8bfc4); main.material.map = f.map; g.add(main);
     const roof = new THREE.Mesh(new THREE.CylinderGeometry(6, 6, 26, 10, 1, false, 0, Math.PI), bmat(0x6f8a99));
     roof.rotation.z = Math.PI / 2; roof.position.y = 7; g.add(roof);
+    const clock = new THREE.Mesh(cyl(1.3, 1.3, 0.4, 12), bmat(0xf4f0e6));
+    clock.rotation.x = Math.PI / 2; clock.position.set(0, 9.5, 6.1); g.add(clock);
+    g.add(box(20, 0.4, 6, 0x8a9298, 0, 4.6, 10));               // 月台雨棚
+    for (const sx of [-8, 0, 8]) g.add(box(0.4, 4.6, 0.4, 0x6a7278, sx, 0, 12));
+    g.add(box(5, 3.4, 0.5, 0x2e3840, 0, 0, 6.1));               // 大門
   },
   temple: (g) => {
-    g.add(box(12, 6, 10, 0xc9563a));
-    const r1 = new THREE.Mesh(cone(9.5, 3.4, 4), bmat(0x8a3324)); r1.position.y = 7.7; r1.rotation.y = Math.PI / 4; g.add(r1);
-    const r2 = new THREE.Mesh(cone(6.5, 2.8, 4), bmat(0x8a3324)); r2.position.y = 11; r2.rotation.y = Math.PI / 4; g.add(r2);
+    g.add(box(13, 1.2, 11, 0xb0a494));                          // 石台基
+    g.add(box(12, 6, 10, 0xc9563a, 0, 1.2, 0));
+    for (const [sx, sz] of [[-5, 4.4], [5, 4.4], [-5, -4.4], [5, -4.4]]) {
+      const col = new THREE.Mesh(cyl(0.4, 0.4, 6, 8), bmat(0x8a3324));
+      col.position.set(sx, 4.2, sz); g.add(col);                // 廊柱
+    }
+    const r1 = new THREE.Mesh(cone(9.5, 3.4, 4), bmat(0x2e5a46)); r1.position.y = 8.9; r1.rotation.y = Math.PI / 4; g.add(r1);
+    const r2 = new THREE.Mesh(cone(6.5, 2.8, 4), bmat(0x2e5a46)); r2.position.y = 12.2; r2.rotation.y = Math.PI / 4; g.add(r2);
+    g.add(box(1.4, 0.8, 0.8, 0xc7a13d, 0, 13.6, 0));            // 脊飾
+    for (const s of [-1, 1]) {                                  // 燈籠(夜裡也亮)
+      const lan = new THREE.Mesh(cyl(0.5, 0.6, 1.0, 8),
+        bmat(0xe8a03c, { emissive: new THREE.Color(0x8a4a10), emissiveIntensity: 0.8 }));
+      lan.position.set(s * 4, 3.4, 5.6); g.add(lan);
+    }
   },
   church: (g) => {
-    g.add(box(10, 9, 16, 0xd8d2c4));
-    g.add(box(4.5, 17, 4.5, 0xd8d2c4, 0, 0, -8));
-    g.add(box(0.5, 3, 0.5, 0xc7a13d, 0, 17, -8));
-    g.add(box(1.8, 0.5, 0.5, 0xc7a13d, 0, 18.6, -8));
+    const f = facadeTex('church', 3, 3, '#4e5a66', 0.15);
+    const nave = box(10, 9, 16, 0xd8d2c4); nave.material.map = f.map; g.add(nave);
+    for (const s of [-1, 1]) for (const z of [-3, 3]) g.add(box(1.2, 6, 1.6, 0xc8c2b4, s * 5.2, 0, z));   // 扶壁
+    const gable = new THREE.Mesh(cone(7.2, 4, 4), bmat(0x8a6a4a));
+    gable.rotation.y = Math.PI / 4; gable.scale.x = 0.72; gable.position.set(0, 11, 0); g.add(gable);     // 斜屋頂
+    g.add(box(4.5, 17, 4.5, 0xd8d2c4, 0, 0, -8));               // 鐘塔
+    const spire = new THREE.Mesh(cone(3.4, 5, 4), bmat(0x6a7a88));
+    spire.rotation.y = Math.PI / 4; spire.position.set(0, 19.4, -8); g.add(spire);
+    const rose = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.3, 6, 12),
+      bmat(0x4a6a9a, { emissive: new THREE.Color(0x1a3a6a), emissiveIntensity: 0.5 }));
+    rose.position.set(0, 6.5, 8.1); g.add(rose);                // 玫瑰窗
+    g.add(box(0.5, 3, 0.5, 0xc7a13d, 0, 21.8, -8));             // 十字架
+    g.add(box(1.8, 0.5, 0.5, 0xc7a13d, 0, 23.4, -8));
+    g.add(box(2.6, 4, 0.4, 0x5a4a3a, 0, 0, 8.1));               // 木門
   },
   mosque: (g) => {
-    g.add(box(14, 8, 14, 0xe6ded0));
+    const f = facadeTex('mosque', 5, 2, '#5a6a6a', 0.2);
+    const main = box(14, 8, 14, 0xe6ded0); main.material.map = f.map; g.add(main);
     const dome = new THREE.Mesh(new THREE.SphereGeometry(5.4, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), bmat(0x3f8f7a));
     dome.position.y = 8; g.add(dome);
-    const mn = new THREE.Mesh(cyl(0.9, 1.1, 18, 8), bmat(0xe6ded0)); mn.position.set(9.5, 9, 9.5); g.add(mn);
-    const mt = new THREE.Mesh(cone(1.3, 2.6, 8), bmat(0x3f8f7a)); mt.position.set(9.5, 19.3, 9.5); g.add(mt);
+    const crest = new THREE.Mesh(cyl(0.12, 0.12, 1.8, 6), bmat(0xc7a13d));
+    crest.position.y = 14; g.add(crest);                        // 新月桿
+    for (const [sx, sz] of [[9.5, 9.5], [-9.5, 9.5]]) {         // 對稱雙宣禮塔
+      const mn = new THREE.Mesh(cyl(0.9, 1.1, 18, 8), bmat(0xe6ded0)); mn.position.set(sx, 9, sz); g.add(mn);
+      const gal = new THREE.Mesh(cyl(1.4, 1.4, 0.6, 8), bmat(0xd8cfc0)); gal.position.set(sx, 15.5, sz); g.add(gal);
+      const mt = new THREE.Mesh(cone(1.3, 2.6, 8), bmat(0x3f8f7a)); mt.position.set(sx, 19.3, sz); g.add(mt);
+    }
+    for (const s of [-1, 1]) {                                  // 側頂小圓頂
+      const sd = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), bmat(0x3f8f7a));
+      sd.position.set(s * 5.2, 8, -5); g.add(sd);
+    }
+    g.add(box(3.4, 5, 0.5, 0x8a7a5a, 0, 0, 7.1));               // 拱門(方形近似)
   },
   museum: (g) => {
-    g.add(box(20, 8, 14, 0xcfc8b8));
+    g.add(box(22, 1.4, 16, 0xb8b0a0));                          // 台階基座
+    g.add(box(20, 8, 14, 0xcfc8b8, 0, 1.4, 0));
     for (let i = -2; i <= 2; i++) {
       const col = new THREE.Mesh(cyl(0.55, 0.55, 7, 8), bmat(0xe3dccb));
-      col.position.set(i * 3.6, 3.5, 7.6); g.add(col);
+      col.position.set(i * 3.6, 4.9, 7.6); g.add(col);
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 1.4), bmat(0xe3dccb));
+      cap.position.set(i * 3.6, 8.6, 7.6); g.add(cap);          // 柱頭
     }
     const ped = new THREE.Mesh(cone(11, 3, 3), bmat(0xd8d1c0));
-    ped.rotation.y = Math.PI / 2; ped.scale.z = 0.45; ped.position.y = 9.4; g.add(ped);
+    ped.rotation.y = Math.PI / 2; ped.scale.z = 0.45; ped.position.y = 10.8; g.add(ped);
+    g.add(box(3, 5, 0.6, 0xd93a5e, 8.5, 3.2, 7.4));             // 特展直幅
+    g.add(box(3, 5, 0.6, 0x3a6ad9, -8.5, 3.2, 7.4));
   },
   power: (g) => {
     const tower = new THREE.Mesh(cyl(0.9, 3.4, 42, 4), bmat(0x8e979e, { wireframe: true }));
     tower.position.y = 21; g.add(tower);
     g.add(box(16, 0.7, 0.7, 0x8e979e, 0, 34, 0));
     g.add(box(11, 0.7, 0.7, 0x8e979e, 0, 38, 0));
+    for (const [sx, y] of [[-7, 33], [7, 33], [-4.8, 37], [4.8, 37]]) {   // 礙子串
+      const ins = new THREE.Mesh(cyl(0.22, 0.22, 1.6, 6), bmat(0x3a4046));
+      ins.position.set(sx, y, 0); g.add(ins);
+    }
+    const beacon = new THREE.Mesh(ico(0.5), bmat(0xd93a2b, { emissive: new THREE.Color(0x8a1408), emissiveIntensity: 1.4 }));
+    beacon.position.y = 42.6; g.add(beacon);                    // 航空警示燈
   },
   factory: (g) => {
-    g.add(box(24, 9, 14, 0x9aa0a4));
+    const f = facadeTex('factory', 7, 2, '#3e464e', 0.25);
+    const main = box(24, 9, 14, 0x9aa0a4); main.material.map = f.map; g.add(main);
+    for (let i = -1; i <= 1; i++) {                             // 鋸齒天窗屋頂
+      const saw = new THREE.Mesh(cone(4.2, 3, 4), bmat(0x7c8388));
+      saw.rotation.y = Math.PI / 4; saw.scale.z = 1.6; saw.position.set(i * 8, 10.4, 0); g.add(saw);
+    }
     const ch1 = new THREE.Mesh(cyl(1.1, 1.4, 16, 8), bmat(0x7c8388)); ch1.position.set(-8, 8, -4); g.add(ch1);
+    g.add(box(3.4, 1.2, 3.4, 0xd93a2b, -8, 15.2, -4));          // 煙囪警示環
     const ch2 = new THREE.Mesh(cyl(0.9, 1.2, 12, 8), bmat(0x7c8388)); ch2.position.set(-4.5, 6, -4); g.add(ch2);
+    const tank = new THREE.Mesh(cyl(2.6, 2.6, 6, 10), bmat(0xb8bfc4)); tank.position.set(10, 3, -9); g.add(tank);
+    const pipe = new THREE.Mesh(cyl(0.3, 0.3, 8, 6), bmat(0x6a7278));
+    pipe.rotation.z = Math.PI / 2; pipe.position.set(6, 5.5, -8); g.add(pipe);   // 連通管線
+    g.add(box(6, 5, 0.6, 0x4a5058, 4, 0, 7.1));                 // 捲門
   },
 };
 
@@ -351,9 +506,9 @@ function buildingType(tags) {
 }
 
 function buildingHeight(tags, type, rnd) {
-  const h = parseFloat(tags.height) || (+tags['building:levels'] || 0) * 3.2;
-  if (h > 3) return Math.min(h, 120);
-  return type === 'commercial' ? 24 + rnd() * 40 : 7 + rnd() * 9;
+  const real = parseFloat(tags.height) || (+tags['building:levels'] || 0) * 3.2;
+  const h = real > 3 ? Math.min(real, 120) : (type === 'commercial' ? 24 + rnd() * 40 : 7 + rnd() * 9);
+  return Math.min(h * OVER.bldH, OVER.bldCap);   // 超尺度:比現實同座標建物更高大
 }
 
 /** Overpass 圖資(10 秒沒回就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
@@ -729,14 +884,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 散佈植被 ----
   const areaKm2 = terrain.worldW * terrain.worldH / 1e6;
-  const vegTarget = Math.max(800, Math.min(MAX_VEG, Math.round(areaKm2 * 420)));
+  const vegTarget = Math.max(800, Math.min(MAX_VEG, Math.round(areaKm2 * 560)));   // 密度加高(仍全 instanced)
   const items = {};   // type -> [{x,y,z,s,ry}]
   const urbanPts = [];
   let placed = 0;
   const put = (type, x, z, s) => {
     items[type] ??= [];
     items[type].push({
-      x, y: terrain.heightAt(x, z), z, s, ry: rnd() * Math.PI * 2,
+      x, y: terrain.heightAt(x, z), z, s: s * (VEG_SCALE[type] || 1),   // 超尺度植被
+      ry: rnd() * Math.PI * 2,
       tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,   // 站姿微傾斜(每棵不同)
     });
     placed++;
@@ -825,7 +981,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       } else if (generic.length < MAX_BUILDINGS) {
         const commercial = type === 'commercial';
         const h = buildingHeight(el.tags, type, rnd);
-        generic.push({ x, z, w: 8 + rnd() * (commercial ? 12 : 7), d: 8 + rnd() * (commercial ? 12 : 7), h, ry: rnd() * Math.PI, commercial });
+        generic.push({
+          x, z,
+          w: (8 + rnd() * (commercial ? 12 : 7)) * OVER.bldXZ,
+          d: (8 + rnd() * (commercial ? 12 : 7)) * OVER.bldXZ,
+          h, ry: rnd() * Math.PI, commercial,
+        });
       }
     }
   }
@@ -839,43 +1000,109 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (generic.length >= MAX_BUILDINGS) return;
       const commercial = rnd() < 0.25;
       generic.push({
-        x, z, w: 8 + rnd() * 8, d: 8 + rnd() * 8,
-        h: commercial ? 24 + rnd() * 40 : 7 + rnd() * 9,
+        x, z, w: (8 + rnd() * 8) * OVER.bldXZ, d: (8 + rnd() * 8) * OVER.bldXZ,
+        h: Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap),
         ry: rnd() * Math.PI, commercial,
       });
     });
   }
 
-  // 一般建物:兩個 InstancedMesh(住宅暖灰、商辦冷玻璃;夜間商辦亮窗)
-  for (const commercial of [false, true]) {
-    const list = generic.filter((b) => b.commercial === commercial);
-    if (!list.length) continue;
-    const mat = toonMat(commercial ? 0x5f7382 : 0x9c948a, {
-      emissive: new THREE.Color(night ? (commercial ? 0x36434f : 0x2a2418) : 0x000000),
-      emissiveIntensity: night ? 0.6 : 0,
-    });
-    const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, list.length);
+  // 一般建物:住宅/商辦兩個 InstancedMesh — 窗格立面貼圖(白底 × 色盤 tint =
+  // 同貼圖多種外牆色)取代單一色塊;夜間亮窗走 emissiveMap(只有畫了燈的窗亮)。
+  // 同時登記碰撞柱(blockers):限制玩家行動但不封鎖(走廊已淨空、可飛越屋頂)。
+  const blockers = [];
+  const roofBoxes = [];    // 屋頂雜項(水塔/空調機組):打破光禿平屋頂輪廓
+  const antennas = [];     // 高樓天線
+  {
+    const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
-    list.forEach((b, i) => {
-      E.set(0, b.ry, 0); Q.setFromEuler(E);
-      P.set(b.x, terrain.heightAt(b.x, b.z) + b.h / 2 - 0.5, b.z);
-      S.set(b.w, b.h, b.d);
-      M.compose(P, Q, S);
-      m.setMatrixAt(i, M);
-    });
-    m.instanceMatrix.needsUpdate = true;
-    m.frustumCulled = false;
-    group.add(m);
+    for (const commercial of [false, true]) {
+      const list = generic.filter((b) => b.commercial === commercial);
+      if (!list.length) continue;
+      const f = commercial
+        ? facadeTex('com', 7, 13, '#2e3c4a', 0.55)
+        : facadeTex('res', 5, 7, '#3a4046', 0.3);
+      const mat = toonMat(0xffffff, {
+        map: f.map,
+        emissiveMap: f.emissiveMap,
+        emissive: new THREE.Color(night ? 0xffb45e : 0x000000),
+        emissiveIntensity: night ? (commercial ? 0.9 : 0.55) : 0,
+      });
+      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, list.length);
+      const pal = PALETTE[commercial ? 'commercial' : 'residential'];
+      list.forEach((b, i) => {
+        E.set(0, b.ry, 0); Q.setFromEuler(E);
+        const gy = terrain.heightAt(b.x, b.z);
+        P.set(b.x, gy + b.h / 2 - 0.5, b.z);
+        S.set(b.w, b.h, b.d);
+        M.compose(P, Q, S);
+        m.setMatrixAt(i, M);
+        tint.setHex(pal[((i * 2654435761) >>> 0) % pal.length]);
+        m.setColorAt(i, tint);
+        blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1 });
+        // 屋頂雜項:約七成建物加水塔/空調(局部座標 → 依 ry 旋回世界)
+        if (rnd() < 0.7) {
+          const ox = (rnd() - 0.5) * b.w * 0.45, oz = (rnd() - 0.5) * b.d * 0.45;
+          const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+          roofBoxes.push({
+            x: b.x + ox * ca + oz * sa, z: b.z - ox * sa + oz * ca,
+            y: gy + b.h - 0.5, ry: b.ry,
+            w: 1.6 + rnd() * b.w * 0.12, h: 1.4 + rnd() * 2.4, d: 1.6 + rnd() * b.d * 0.12,
+          });
+        }
+        if (commercial && b.h > 60 && rnd() < 0.6) {
+          antennas.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, h: 5 + rnd() * 7 });
+        }
+      });
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      m.frustumCulled = false;
+      group.add(m);
+    }
+    if (roofBoxes.length) {
+      const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMat(0x8a9096), roofBoxes.length);
+      roofBoxes.forEach((b, i) => {
+        E.set(0, b.ry, 0); Q.setFromEuler(E);
+        P.set(b.x, b.y + b.h / 2, b.z);
+        S.set(b.w, b.h, b.d);
+        M.compose(P, Q, S);
+        rm.setMatrixAt(i, M);
+      });
+      rm.instanceMatrix.needsUpdate = true;
+      rm.frustumCulled = false;
+      group.add(rm);
+    }
+    if (antennas.length) {
+      const am = new THREE.InstancedMesh(
+        new THREE.CylinderGeometry(0.12, 0.28, 1, 6),
+        toonMat(0xc4ccd2, { emissive: new THREE.Color(0x8a1408), emissiveIntensity: night ? 1.2 : 0.15 }),
+        antennas.length,
+      );
+      antennas.forEach((a, i) => {
+        P.set(a.x, a.y + a.h / 2, a.z);
+        S.set(1, a.h, 1);
+        M.compose(P, new THREE.Quaternion(), S);
+        am.setMatrixAt(i, M);
+      });
+      am.instanceMatrix.needsUpdate = true;
+      am.frustumCulled = false;
+      group.add(am);
+    }
   }
-  // 特殊地標
+  // 特殊地標(超尺度 + 碰撞柱)
   onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
     LANDMARKS[lm.type](g);
-    g.position.set(lm.x, terrain.heightAt(lm.x, lm.z) - 0.3, lm.z);
+    const sc = OVER.lm * (0.9 + rnd() * 0.25);
+    g.scale.setScalar(sc);
+    const gy = terrain.heightAt(lm.x, lm.z);
+    g.position.set(lm.x, gy - 0.3, lm.z);
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
+    const col = LANDMARK_COL[lm.type];
+    if (col) blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: col.r * sc, h: col.h * sc + 1 });
   }
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援)----
@@ -895,6 +1122,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
 
   onProgress?.(1, '地貌完成');
+  group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
   group.userData.stats = {
     veg: placed,
     buildings: generic.length + landmarks.length,

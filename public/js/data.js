@@ -819,7 +819,8 @@ export const TERRAIN = {
 // 阻擋型障礙以「短牆 + 保證縫隙」佈局(FIELD.HAZ_GAP),同時提供隱蔽與戰略通道;
 // 有 hp 的可擊毀(= 自行開路),掉落隨機物資。分布依場地地貌 mix(biome)加權。
 // r: 影響半徑(m,乘實例 sc);block: 阻擋地面單位;slow: 地面速度倍率;
-// dot: 每秒灼傷(y < maxY 才吃);salvage: 擊毀後掉物資機率。
+// dot: 每秒灼傷(y < maxY 才吃);salvage: 擊毀後掉物資機率;
+// hgt: 碰撞高度(m,未填 = 6)— 神木/巨石比現實更高大,低飛也撞得到。
 export const HAZARDS = {
   construction: { name: '施工圍籬',   biome: 'urban', r: 8,   block: true, hp: 240, salvage: 0.6 },
   wreck:        { name: '車禍殘骸',   biome: 'urban', r: 5.5, block: true, hp: 180, salvage: 0.7 },
@@ -830,11 +831,14 @@ export const HAZARDS = {
   landslide:    { name: '坍方土石流', biome: 'bare',  r: 13,  block: true },
   rockfall:     { name: '落石',       biome: 'bare',  r: 6.5, block: true, hp: 300, salvage: 0.65 },
   fallentree:   { name: '倒木',       biome: 'green', r: 7,   block: true, hp: 130, salvage: 0.5 },
+  // 超尺度地標型障礙(比現實高大):遮視線 + 立體掩體;高 HP → TC 掉落更高階
+  sacredtree:   { name: '神木',       biome: 'green', r: 9,   block: true, hp: 520, salvage: 0.75, hgt: 26 },
+  boulder:      { name: '巨石',       biome: 'bare',  r: 8,   block: true, hp: 420, salvage: 0.7,  hgt: 13 },
 };
 
 // ---- 危險區生成參數(伺服器 sim._seedField)----
 export const FIELD = {
-  HAZ_PER_LANE: 16,      // 障礙物目標數 / 兵線
+  HAZ_PER_LANE: 24,      // 障礙物目標數 / 兵線(神木/巨石加入後整體加密;HAZ_GAP 仍保證縫隙)
   HAZ_LANE_MIN: 20,      // 距兵線中心線最小距離(走廊半寬 14m + 邊緣帶,不擋正規路線)
   HAZ_LANE_MAX: 300,     // 最遠分布(涵蓋空白區)
   HAZ_EDGE_BIAS: 1.8,    // 越靠走廊邊緣越密(rnd^bias):主要路徑邊緣的戰略隱蔽
