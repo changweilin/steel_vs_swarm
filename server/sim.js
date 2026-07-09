@@ -521,6 +521,10 @@ export class BattleSim {
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
     if (d3 > wp.def.range * 1.25) return;
+    // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
+    // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
+    const pulse = this.visionUntil?.[h.side] > this.t;
+    if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind), t);
     this._applyHitEmp(h, wp.def, t);

@@ -74,9 +74,9 @@ function fakeBattleConfig(L = 3) {
 }
 
 // ================= sim 直測(不經 WebSocket,確定性驗證新機制)=================
-log('— sim:角色系統(24 陣營角 + 4 傭兵 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
+log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三階;英雄 vs NPC 倍率)—');
 {
-  assert(charsOf('SWARM').length === 16 && charsOf('STEEL').length === 16, '雙陣營各 16 名可選角色(12 專屬 + 4 傭兵)');
+  assert(charsOf('SWARM').length === 20 && charsOf('STEEL').length === 20, '雙陣營各 20 名可選角色(12 專屬 + 8 傭兵)');
   let dataOk = true, rangeOk = true, tierOk = true;
   for (const id of Object.keys(CHARACTERS)) {
     for (const slot of ['light', 'heavy']) {
@@ -106,7 +106,7 @@ log('— sim:角色系統(24 陣營角 + 4 傭兵 × 專屬武器/招式 × 三�
 log('— sim:傭兵(雙陣營可選;機體/武器/招式不隨陣營改變)+ 陣亡購買 —');
 {
   const mercs = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === 'MERC');
-  assert(mercs.length === 4, `傭兵 ${mercs.length} 名(雙陣營共用)`);
+  assert(mercs.length === 8, `傭兵 ${mercs.length} 名(雙陣營共用)`);
   assert(mercs.every((id) => charsOf('SWARM').includes(id) && charsOf('STEEL').includes(id)),
     '雙陣營角色池皆含傭兵');
   assert(mercs.some((id) => CHARACTERS[id].kind === 'drone') && mercs.some((id) => CHARACTERS[id].kind === 'robot'),
@@ -246,8 +246,9 @@ log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成�
   const sim = new BattleSim(fakeBattleConfig(1));
   const dr = sim.addHero('SWARM', 'p_fow');
   dr.x = 0; dr.z = 0; dr.y = 0;
-  const nearSight = UNITS.drone.sight * 0.5;                 // 明確在視野內
-  const farOut = UNITS.drone.sight * 1.5;                    // 明確在視野外(未瞄準)
+  const sightBase = UNITS[dr.kind].sight;                    // 隨機角色機體(drone/robot 傭兵)視野基準,測試不寫死
+  const nearSight = sightBase * 0.5;                         // 明確在視野內
+  const farOut = sightBase * 1.5;                            // 明確在視野外(未瞄準)
   const near = sim._add({ kind: 'soldier', side: 'STEEL', x: nearSight, z: 0, hp: UNITS.soldier.hp });
   const far = sim._add({ kind: 'soldier', side: 'STEEL', x: farOut, z: 0, hp: UNITS.soldier.hp });
   const enemyHero = sim.addHero('STEEL', 'p_fow2');
@@ -268,7 +269,7 @@ log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成�
   assert(!neutral || ids.has(neutral.id), '中立實體(障礙/防空陣地)不受霧戰爭影響');
 
   // 瞄準模式:視野加成應能看到原本在視野外的敵方小兵
-  const aimTarget = sim._add({ kind: 'soldier', side: 'STEEL', x: UNITS.drone.sight * 1.3, z: 0, hp: UNITS.soldier.hp });
+  const aimTarget = sim._add({ kind: 'soldier', side: 'STEEL', x: sightBase * 1.3, z: 0, hp: UNITS.soldier.hp });
   let idsNoAim = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
   assert(!idsNoAim.has(aimTarget.id), '瞄準前:1.3 倍視野外看不到');
   dr.aiming = true;

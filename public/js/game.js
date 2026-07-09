@@ -376,21 +376,24 @@ export class BattleClient {
   }
 
   // ---------------- 物理:爆炸衝擊 / 碰撞 ----------------
-  /** 爆炸衝擊波:把自己(座機)往外推 + 鏡頭震動,強度隨距離衰減 */
+  /** 爆炸衝擊波:把自己(座機)往外推 + 鏡頭震動。強度隨距離平方衰減、隨爆炸半徑(能量)遞增 —
+   *  近炸猛烈、遠處迅速歸零;同距離下大爆炸比小爆炸更晃(符合爆壓物理直覺)。 */
   _applyBlast(x, y, z, r) {
     if (!this.side || this.dead) return;
     const eye = this.camera.position;
     const d = Math.hypot(eye.x - x, eye.y - y, eye.z - z);
-    const R = Math.max(20, r * 3);
+    const R = Math.max(20, r * 3);   // 影響半徑正比於爆炸半徑:越大的爆炸波及越遠
     if (d > R) return;
-    const k = 1 - d / R;
+    const f = 1 - d / R;
+    const k = f * f;                 // 平方衰減(距離越遠震動掉得越快)
+    const eScale = Math.min(1.6, Math.max(0.4, r / 12));   // 爆炸半徑代表能量:小彈少晃、重砲/主堡更晃
     const dir = new THREE.Vector3(eye.x - x, eye.y - y, eye.z - z);
     if (dir.lengthSq() < 0.01) dir.set(0, 1, 0);
     dir.normalize();
-    const power = k * (this.isDrone ? 55 : 26);
+    const power = k * eScale * (this.isDrone ? 55 : 26);
     this.vel.addScaledVector(dir, power);
-    if (!this.isDrone) this.vy = (this.vy ?? 0) + k * 10;   // 機甲被掀離地
-    this.trauma = Math.min(1, this.trauma + k * 0.8);
+    if (!this.isDrone) this.vy = (this.vy ?? 0) + k * eScale * 10;   // 機甲被掀離地
+    this.trauma = Math.min(1, this.trauma + k * eScale * 0.8);
   }
 
   // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築

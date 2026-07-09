@@ -32,7 +32,7 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 // 地圖邊長正比 L(兩堡 1000m × L),1/2/3 線目標場均 5/8/10 分鐘。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
-// 兩堡「遊戲世界」距離 = 1000m × L × 尺寸倍率(以 medium 正規化;medium = 現況)
+// 兩堡「遊戲世界」距離 = 1500m × L × 尺寸倍率(以 medium 正規化;medium@L1 邊長 = 1.25km)
 export const targetDistFor = (L, sizeKey = 'medium') =>
   MAPGEO.DIST_M_PER_LANE * L * ((MAPGEO.SIZE_MULT[sizeKey] ?? MAPGEO.SIZE_MULT.medium) / MAPGEO.SIZE_MULT.medium);
 export const SIZE_KEYS = ['large', 'medium', 'small'];
@@ -42,17 +42,18 @@ export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 節奏簡化:兩堡距離 1000m × L(1/2/3 線 ≈ 5/8/10 分鐘一場)
-  DIST_M_PER_LANE: 1000,
+  // 節奏簡化:兩堡距離 1500m × L(1 線 medium 遊戲邊長錨定 = 1.25km,見 SIZE_MULT)
+  DIST_M_PER_LANE: 1500,
   TARGET_DIST_M: 3000,
-  // 地圖尺寸(大/中/小):遊戲世界邊長倍率;中型 = 現況錨點(以 medium 正規化)
+  // 地圖尺寸(大/中/小):遊戲世界邊長倍率 = 邊長 km(1 線錨點:large 1.5 / medium 1.25 / small 1.0 km)。
+  // sizeM = D/(BASE_DIST_FRAC×√2);medium@L1 = 1500/1.202 ≈ 1250m ⇒ 1.25km,大小依比例。
   SIZE_MULT: { large: 1.5, medium: 1.25, small: 1.0 },
   // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
-  // 同一塊遊戲空間對應一半的真實範圍 → 地形/道路更密;
+  // 改制:現實範圍再縮小 2 倍(0.5→0.25)→ 同一塊遊戲空間僅對應更小的真實範圍,地形/道路更密;
   // 因 llToWorld/llToMeters 同步 ×(1/REAL_SCALE),遊戲世界公尺與武器射程「完全不變」。
-  REAL_SCALE: 0.5,
+  REAL_SCALE: 0.25,
   // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
-  GEO_SCALE_VER: 2,
+  GEO_SCALE_VER: 3,
   // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
   // 註:30° ≈ 58% grade,真實道路幾乎不會達標 → 此濾網現實中極少觸發;
   //     若要濾「陡但仍常見」的路,改成 ~17(≈30% grade)。
@@ -224,7 +225,7 @@ export const charsOf = (side) => Object.keys(CHARACTERS)
 /** 角色機體種類:傭兵 kind 綁角色(無人機/機甲不隨陣營);陣營角色沿用 SIDES 預設 */
 export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero;
 
-// ---- 角色圖鑑(24 名陣營角色 + 4 名傭兵;劇情設定見 docs/characters.md)----
+// ---- 角色圖鑑(24 名陣營角色 + 8 名傭兵;劇情設定見 docs/characters.md)----
 // 每名角色 = 專屬機體(蜂群=無人機、鋼鐵=機甲;傭兵 kind 自帶)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
 // 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
@@ -666,6 +667,68 @@ export const CHARACTERS = {
     ult: { name: '全境盡職調查', fx: 'vision', vision: [9, 12, 15],
       cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊限時無霧視野' },
   },
+  m05: {
+    side: 'MERC', kind: 'robot', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰突擊機甲',
+    visual: { hue: 0xe0a13a, pod: 'antenna' },
+    mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
+    light: { name: '12.7 電磁機砲', rw: 'GAU-19・初速 900m/s', type: 'gun', mv: 900,
+      dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
+      vs: { flesh: 1.2, armor: 1.0, air: 0.9, building: 0.6 } },
+    heavy: { name: '高爆穿甲榴彈', rw: 'PG-7VR 縮裝・初速 300m/s', type: 'launcher', mv: 300,
+      dmg: [160, 205, 255], r: [13, 15, 17], cd: [9, 8, 7], range: 310, pen: [12, 15, 18],
+      vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.4 } },
+    skill: { name: '斷路協議', fx: 'emp', r: 130, dur: [2.5, 3, 3.5], range: 250,
+      cd: [18, 16, 14], mp: [40, 45, 50], desc: '欠債不還就斷電:指定區域敵軍武器離線' },
+    ult: { name: '連本帶利', fx: 'strike', count: [6, 8, 10], dmg: [80, 100, 125], r: 11, scatter: 38,
+      range: 330, pen: 10, cd: [78, 68, 58], mp: [88, 98, 108], vs: { armor: 1.3, building: 1.2 },
+      desc: '逾期利滾利:對指定座標飽和清算打擊' },
+  },
+  m06: {
+    side: 'MERC', kind: 'drone', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦型六旋翼',
+    visual: { hue: 0xf0c24a, frame: 'hexa', body: 'wedge' },
+    mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
+    light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
+      dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
+      vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
+    heavy: { name: '集束子母彈', rw: 'CBU 縮裝・初速 400m/s', type: 'launcher', mv: 400,
+      dmg: [130, 170, 215], r: [16, 18, 20], cd: [10, 9, 8], range: 300, pen: 6,
+      vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
+    skill: { name: '轉分包', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
+      cd: [26, 23, 20], mp: [40, 45, 50], desc: '臨時轉包:火箭兵沿最近兵線加入' },
+    ult: { name: '旺季擴編', fx: 'summon', unit: 'heli', count: [1, 2, 3],
+      cd: [85, 75, 65], mp: [90, 100, 110], desc: '訂單爆量:攻擊直升機編隊壓上' },
+  },
+  m07: {
+    side: 'MERC', kind: 'robot', name: '約蘭妲・里奧斯', code: '保全', machine: '「保全」區域拒止機甲',
+    visual: { hue: 0x5fa8d3, pod: 'shield' },
+    mods: { hp: 1.15, sp: 1.05, mp: 1.1, speed: 0.9, armor: 20 },
+    light: { name: '雙 35 快砲', rw: 'Oerlikon 縮裝・初速 1100m/s', type: 'gun', mv: 1100,
+      dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
+      vs: { flesh: 1.0, armor: 0.9, air: 1.6, building: 0.5 } },
+    heavy: { name: '近迫防禦彈幕', rw: 'Phalanx 縮裝・初速 1100m/s', type: 'gun', mv: 1100,
+      dmg: [150, 195, 245], cd: [8, 7, 6], range: 340, pen: [10, 13, 16],
+      vs: { flesh: 0.9, armor: 1.2, air: 2.0, building: 0.4 } },
+    skill: { name: '拒止穹頂', fx: 'intercept', r: [160, 200, 240],
+      cd: [16, 14, 12], mp: [30, 35, 40], desc: '一手交錢一手交貨:清空半徑內來襲飛彈' },
+    ult: { name: '全域布防', fx: 'strike', count: [7, 9, 11], dmg: [65, 80, 100], r: 9, scatter: 40,
+      range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
+      desc: '把整片天空劃進責任區:防空彈幕封鎖' },
+  },
+  m08: {
+    side: 'MERC', kind: 'drone', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊 FPV',
+    visual: { hue: 0x8f7fd0, frame: 'quad', body: 'sphere' },
+    mods: { hp: 0.85, sp: 1.1, mp: 1.15, speed: 1.15, armor: 5 },
+    light: { name: '消音精準艙', rw: 'VSS 縮裝・初速 295m/s', type: 'gun', mv: 295,
+      dmg: [24, 30, 37], rate: 3.2, mag: [18, 22, 26], reload: 2.0, range: 200, crit: 0.16, critX: 1.9,
+      vs: { flesh: 1.4, armor: 0.6, air: 1.0, building: 0.4 } },
+    heavy: { name: '反器材長槍', rw: 'AMR 縮裝・初速 900m/s', type: 'gun', mv: 900,
+      dmg: [190, 250, 315], cd: [10, 9, 8], range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
+      vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
+    skill: { name: '預付訂金', fx: 'dash', imp: [28, 34, 40],
+      cd: [12, 10, 8], mp: [25, 30, 35], desc: '訂金到帳就位:沿視線瞬間位移' },
+    ult: { name: '查無此人', fx: 'stealth', dur: [4, 5, 6],
+      cd: [70, 62, 54], mp: [80, 90, 100], desc: '尾款結清便人間蒸發(開火即現形)' },
+  },
 };
 
 // ---- 經濟(擊殺得錢 → 隨處升級 / 回主堡買熱兵器)----
@@ -816,6 +879,20 @@ export const AFFIXES = {
 // ---- 電腦玩家(單人練習 / 補位)----
 export const BOT_NAMES = ['天網-01', '刺針-02', '寒鴉-03', '掠奪者-04', '哨兵-05', '幽靈-06', '雷霆-07', '毒蛛-08'];
 export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
+
+// ---- 電腦玩家難度(整房一個難度,房主於房間設定)----
+// aimErr:每發輕/重武器「射偏」機率(命中結算前擲骰,越高越常打空 → 瞄準越差)。
+// heavy:是否使用重武器;ability:是否施放招式。新手只用輕武器,低難度不用招式。
+// 消費(sim.buy)亦依此裁剪:不用招式者不解鎖招式,把錢投在武器/強化。
+export const BOT_DIFF = {
+  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false },
+  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false },
+  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true },
+  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true },
+};
+export const BOT_DIFF_KEYS = ['novice', 'low', 'medium', 'high'];
+export const DEFAULT_BOT_DIFF = 'medium';
+export const botDiffOf = (key) => BOT_DIFF[key] || BOT_DIFF[DEFAULT_BOT_DIFF];
 
 // ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
 export const ENV = {

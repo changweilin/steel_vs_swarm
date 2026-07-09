@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
-import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv } from '../public/js/data.js';
+import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv, BOT_DIFF, DEFAULT_BOT_DIFF } from '../public/js/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -210,7 +210,7 @@ function startBattle(room) {
   room.botBrains = [...room.bots.entries()].map(([bid, b], i) => {
     const h = room.battle.addHero(b.side, bid, b.ch);
     b.ch = h.ch;
-    return new BotBrain(room.battle, bid, b.side, i);
+    return new BotBrain(room.battle, bid, b.side, i, room.config.botDiff);
   });
   room.phase = 'game';
   // 危險區靜態資料(地雷位置等)只發一次;快照不帶,雙方都要「用眼睛掃雷」
@@ -278,7 +278,7 @@ wss.on('connection', (ws) => {
       client = { ws, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
       room = {
         pin, id: genRoomId(), hostId: clientId, phase: 'room',
-        config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false, teamSize },
+        config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false, teamSize, botDiff: BOT_DIFF[m.botDiff] ? m.botDiff : DEFAULT_BOT_DIFF },
         clients: new Map([[clientId, client]]),
         bots: new Map(), nextBotId: 0, botBrains: [],
         battle: null, battleConfig: cfg, tickTimer: null,
@@ -373,6 +373,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'setRoomConfig' && clientId === room.hostId) {
       if (m.roomName !== undefined) room.config.roomName = sanitizeName(m.roomName);
       if (m.isPublic !== undefined) room.config.isPublic = !!m.isPublic;
+      if (m.botDiff !== undefined && BOT_DIFF[m.botDiff]) room.config.botDiff = m.botDiff;
       broadcast(room);
       return;
     }

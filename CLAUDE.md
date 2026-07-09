@@ -16,7 +16,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `server/server.js` | HTTP 靜態檔 + WS 房間/配對 + 8Hz 快照廣播 + bot 管理 |
 | `server/sim.js` | `BattleSim` — 權威模擬核心 (single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家(推線/交戰/撤退狀態機) |
-| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 4 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
+| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
 | `public/js/` | game.js(FPV/物理/插值)· toon.js(賽璐璐核心)· vfx.js · biomes.js · terrain.js · mapSelect.js · venues.js · models.js · net.js · main.js · environment.js |
 | `reference/` | 上游唯讀副本(mapping_elf、ai_tycoon)— **MUST NOT** 修改,只准參考 |
 
@@ -41,7 +41,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 ### 效能與安全邊界
 - 射擊 raycast **MUST** 只打單位 + `terrain.mesh`;植被純視覺,**MUST NOT** 加進 raycast 目標。
 - 跨客戶端場景一致性靠 `mulberry32` 以戰場中心為種子的確定性散布 — 隨機散布 **MUST NOT** 用 `Math.random()`。
-- 命中判定在伺服器(`heroHit` 檢 `d3 > range*1.25`),迷霧不影響判定,只影響快照 — **MUST NOT** 把防作弊邏輯搬到客戶端。
+- 命中判定在伺服器(`heroHit` 檢 `d3 > range*1.25`),**且會檢視野**:`2026-07-09` 起,射手陣營看不見(迷霧內)的目標,回報命中一律無效(`_visibleTo` + 偵察脈衝旁路;塔/主堡/中立恆可見)。同理 bot 目標鎖定(`_acquire`)也吃迷霧,不再全知作弊。防作弊邏輯仍全部留在伺服器 — **MUST NOT** 把它搬到客戶端。
 
 ## 3. 危險模式與歷史陷阱(依事故日期標記)
 

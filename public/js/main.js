@@ -6,6 +6,7 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, SIZE_KEYS,
+  BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
 
 const SIZE_LABELS = { large: '大', medium: '中', small: '小' };
@@ -420,6 +421,7 @@ $('createRoomBtn')?.addEventListener('click', () => {
     roomName: $('roomNameInput').value.trim(),
     isPublic: $('createPublic').checked,
     teamSize: app.teamSize,
+    botDiff: loadPrefs().botDiff || DEFAULT_BOT_DIFF,
     battleConfig: cfg,
   });
 });
@@ -443,6 +445,8 @@ function renderRoom() {
   $('roomMapInfo').textContent = cfg
     ? `📍 ${cfg.placeName} ・ ${N}v${N} ・ ${cfg.lanes.length} 條兵線 ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
     : '';
+
+  renderBotDiff(lb);
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
@@ -502,6 +506,35 @@ function renderRoom() {
   $('roomHint').textContent = app.isHost
     ? (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備完成」後,由你開戰。')
     : '等待房主開戰…';
+}
+
+// 電腦玩家難度(整房一個;房主可改,其他人唯讀顯示)
+function renderBotDiff(lb) {
+  const row = $('botDiffRow');
+  if (!row) return;
+  const cur = lb.config.botDiff || DEFAULT_BOT_DIFF;
+  if (!app.isHost) {
+    row.textContent = `🤖 電腦難度:${BOT_DIFF[cur]?.name || cur}`;
+    return;
+  }
+  row.innerHTML = '🤖 電腦難度:';
+  const sel = document.createElement('select');
+  sel.className = 'diff-select';
+  for (const k of BOT_DIFF_KEYS) {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = BOT_DIFF[k].name;
+    if (k === cur) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  sel.onchange = () => {
+    savePrefs({ botDiff: sel.value });
+    app.net.send({ t: 'setRoomConfig', botDiff: sel.value });
+  };
+  row.appendChild(sel);
+  const hint = document.createElement('span');
+  hint.className = 'diff-hint dim';
+  hint.textContent = ' ・ 新手:只用輕武器 ・ 低:不用招式 ・ 越低瞄準越差';
+  row.appendChild(hint);
 }
 
 // ================= 選角(入座後出現;不選 = 開戰隨機)=================

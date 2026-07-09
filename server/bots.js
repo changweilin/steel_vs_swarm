@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult, botDiffOf } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -14,11 +14,12 @@ const RESUME_HP = 0.85;                     // 回血到 85% 再出擊
 const BUY_ORDER = ['ab:skill', 'ab:ult', 'ab:light', 'ab:heavy', 'dmg', 'hull'];
 
 export class BotBrain {
-  /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線 */
-  constructor(sim, pid, side, laneIdx) {
+  /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線;diffKey: 難度(新手/低/中/高) */
+  constructor(sim, pid, side, laneIdx, diffKey) {
     this.sim = sim;
     this.pid = pid;
     this.side = side;
+    this.diff = botDiffOf(diffKey);   // { aimErr, heavy, ability }
     this.lane = laneIdx % sim.lanes.length;
     this.state = 'PUSH';
     this.prog = 0;                          // 沿兵線進度(公尺,從己方端起算)
@@ -29,6 +30,12 @@ export class BotBrain {
 
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
+
+  /** 開火(含難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
+  _fire(tid, slot) {
+    if (Math.random() < this.diff.aimErr) return false;
+    return this.sim.botFire(this.pid, tid, slot);
+  }
 
   update(dt) {
     const sim = this.sim;
@@ -48,6 +55,8 @@ export class BotBrain {
     if (h.money >= 150 && sim.t - (this._buyAt || 0) > 4) {
       this._buyAt = sim.t;
       for (const item of BUY_ORDER) {
+        // 不使用招式的難度(新手/低):不解鎖招式,把錢留給武器/通用強化
+        if (!this.diff.ability && (item === 'ab:skill' || item === 'ab:ult')) continue;
         if (sim.buy(this.pid, item) === null) break;
       }
     }
@@ -101,6 +110,7 @@ export class BotBrain {
 
   /** 輔助/自保招式(不需目標點):治療、護盾、增益、匿蹤撤退 */
   _castSupport(h, frac) {
+    if (!this.diff.ability) return;   // 低/新手難度:不使用招式
     for (const slot of ['skill', 'ult']) {
       const A = this._ready(h, slot);
       if (!A) continue;
@@ -126,20 +136,20 @@ export class BotBrain {
     h.x += vx * dt;
     h.z += vz * dt;
     this._face(h, t.x, t.z);
-    this.sim.botFire(this.pid, t.id, 'light');
+    this._fire(t.id, 'light');
 
-    // 重武器(CD 由 sim 的 mag/reload 把關):建築或成群敵人時出手
+    // 重武器(CD 由 sim 的 mag/reload 把關):建築或成群敵人時出手。新手難度不使用重武器。
     const hv = heroWeapon(h.ch, 'heavy', h.abil.heavy, true);
     const packed = [...this.sim.ents.values()].filter((e2) =>
       e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
-    if (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero) {
+    if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)) {
       h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
-      if (hv.type === 'launcher') this.sim.heroBurst(this.pid, t.x, t.z);
-      else this.sim.botFire(this.pid, t.id, 'heavy');
+      if (hv.type === 'launcher') { if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z); }
+      else this._fire(t.id, 'heavy');
     }
 
-    // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)
-    for (const slot of ['skill', 'ult']) {
+    // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)。低/新手難度不使用招式。
+    if (this.diff.ability) for (const slot of ['skill', 'ult']) {
       const A = this._ready(h, slot);
       if (!A) continue;
       if ((A.fx === 'strike' || A.fx === 'emp') && packed >= 3) this.sim.heroCast(this.pid, slot, t.x, t.z);
@@ -180,9 +190,14 @@ export class BotBrain {
   _acquire(h) {
     const wd = this._gun(h);
     const range = wd.range;
+    // 迷霧內的敵人 bot 一律看不見(不再全知作弊):己方視野外的單位不列入鎖定。
+    // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 sim.snapshotFor / heroHit 同判定)。
+    const pulse = this.sim.visionUntil?.[this.side] > this.sim.t;
+    const sources = pulse ? null : this.sim._visionSources(this.side);
     let best = null, bestD = Infinity;
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙
+      if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
