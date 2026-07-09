@@ -1,10 +1,14 @@
 // ============ 地被覆蓋層:開闊地的賽璐璐地表精修(doc/botw_plan.html)============
 // 無障礙的空曠地面也要有「畫上去的地表」:依地貌分類鋪設特徵色塊(patch)+
-// 立體細節,取代裸露衛星照片質感。23 種地表 × 每種 3 變體貼圖,像無限隨機花磚:
-//   綠地   — 草皮 / 芒草原 / 灌木叢 / 水田 / 旱田 / 花田 / 果園 / 茶園
-//   裸露地 — 荒野 / 碎石 / 沙漠風沙 / 越野泥地 / 龜裂旱地 / 紅土地
-//   市區   — 草坪 / 水泥地 / 磚瓦地 / PU 球場 / 停車場 / 人行道磚 / 跑道
-//   濕地   — 泥灘蘆葦 / 荷塘
+// 立體細節,取代裸露衛星照片質感。50 種地表 × 每種 4 變體貼圖,像無限隨機花磚:
+//   綠地   — 草皮 / 芒草原 / 灌木叢 / 水田 / 旱田 / 花田 / 果園 / 茶園 / 箭竹林
+//            / 枯木林 / 混亂倒木 / 砍伐跡地 / 木材堆置場 / 腐朽木屋 / 葡萄園 / 溫室棚
+//   裸露地 — 荒野 / 碎石 / 沙漠風沙 / 越野泥地 / 龜裂旱地 / 紅土地 / 倒塌石板屋
+//            / 死林 / 乾草原 / 廢棄農田 / 鹽田 / 採石場
+//   高地   — 高原 / 岩屑坡 / 冰原(相對高程觸發;冬季裸露地也混入冰原)
+//   市區   — 草坪 / 水泥地 / 磚瓦地 / PU 球場 / 停車場 / 人行道磚 / 跑道 / 廢棄工地
+//            / 加油站 / 公園 / 廣場 / 廢車場 / 貨櫃場 / 墓園 / 太陽能場 / 直升機坪
+//   濕地   — 泥灘蘆葦 / 荷塘 / 魚塭
 // 無縫拼接三原則(避免大面積重複感,無限延伸):
 //   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與水彩化衛星底圖(或彼此)交融
 //   2. tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰 patch 花紋自動連續延伸
@@ -18,8 +22,9 @@ import * as THREE from 'three';
 import { ENV } from './data.js';
 import { toonMat, envMat } from './toon.js';
 
-const MAX_DETAIL = 3200;   // 3D 細節實例總上限
-const VARIANTS = 3;        // 每種地表的貼圖變體數
+const MAX_DETAIL = 6000;   // 3D 細節實例總上限
+const VARIANTS = 4;        // 每種地表的貼圖變體數(變體貼圖惰性生成,只有實際用到才建)
+const RSCALE = 1.3;        // patch 半徑全域放大:配合高密度 target,往「連續拼圖覆蓋」推
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -365,17 +370,17 @@ const PAINTERS = {
       }
     }
   },
-  court(g, S, rnd) {                                   // PU 球場:綠外圈 + 紅場心 + 白線(fit)
-    g.fillStyle = '#3f7f63'; g.fillRect(0, 0, S, S);
+  court(g, S, rnd) {                                   // PU 球場:變體換配色(籃球紅/硬地藍/紅土)(fit)
+    const [outer, inner] = [['#3f7f63', '#b5674d'], ['#4a7d94', '#38618f'], ['#5f8f46', '#b5744d']][(rnd() * 3) | 0];
+    g.fillStyle = outer; g.fillRect(0, 0, S, S);
     const m = 34;
-    g.fillStyle = '#b5674d'; g.fillRect(m, m, S - m * 2, S - m * 2);
+    g.fillStyle = inner; g.fillRect(m, m, S - m * 2, S - m * 2);
     g.strokeStyle = '#f2f4f0'; g.lineWidth = 3;
     g.strokeRect(m, m, S - m * 2, S - m * 2);
     g.beginPath(); g.moveTo(m, S / 2); g.lineTo(S - m, S / 2); g.stroke();   // 中線
     g.beginPath(); g.arc(S / 2, S / 2, 30, 0, 7); g.stroke();                // 中圈
     g.strokeRect(S / 2 - 28, m, 56, 34);                                     // 兩端禁區
     g.strokeRect(S / 2 - 28, S - m - 34, 56, 34);
-    void rnd;
   },
   track(g, S, rnd) {                                   // 跑道:紅 PU + 白分道線(fit)
     g.fillStyle = vary(0xb85a44, rnd, 8); g.fillRect(0, 0, S, S);
@@ -415,6 +420,470 @@ const PAINTERS = {
       if (rnd() < 0.3) { g.fillStyle = '#e88bb0'; g.beginPath(); g.arc(x + r, y - r * 0.4, 2.4, 0, 7); g.fill(); }
     }
   },
+  // ======== 綠地擴充 ========
+  arrowbamboo(g, S, rnd) {                             // 箭竹林:密集細稈直豎 + 竹節 + 斜葉短撇
+    g.fillStyle = vary(0x8ba757, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(60,96,44,${0.10 + rnd() * 0.1})`;
+      brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 22, rnd);
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * S, y = rnd() * S, h = 14 + rnd() * 14;
+      g.strokeStyle = rnd() < 0.5 ? '#c8d47e' : '#a9bd63';
+      g.lineWidth = 1.8;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - h); g.stroke();
+      g.fillStyle = '#7d8f43';
+      g.fillRect(x - 1.5, y - h * 0.5, 3, 1.5);        // 竹節
+    }
+    g.strokeStyle = 'rgba(220,236,150,0.7)'; g.lineWidth = 1.4;
+    for (let i = 0; i < 40; i++) {
+      const x = rnd() * S, y = rnd() * S;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 5 + rnd() * 4, y - 2 - rnd() * 3); g.stroke();
+    }
+  },
+  deadwood(g, S, rnd) {                                // 枯木林:乾草底 + 落枝分岔 + 枯葉點
+    g.fillStyle = vary(0x9c9070, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 12; i++) {
+      g.fillStyle = `rgba(120,110,88,${0.2 + rnd() * 0.2})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 20, rnd);
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 14 + rnd() * 22;
+      g.strokeStyle = rnd() < 0.5 ? '#6e6152' : '#857766';
+      g.lineWidth = 2 + rnd() * 2;
+      g.beginPath(); g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      if (rnd() < 0.5) g.lineTo(x + Math.cos(a + 0.7) * l * 1.4, y + Math.sin(a + 0.7) * l * 1.4);
+      g.stroke();
+    }
+    g.fillStyle = '#b8a67e';
+    for (let i = 0; i < 18; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.3, 0, 7); g.fill(); }
+  },
+  fallenlogs(g, S, rnd) {                              // 混亂倒木:草土底 + 樹皮/受光雙色木身 + 年輪端面
+    g.fillStyle = vary(0x7c8a55, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = `rgba(110,96,66,${0.2 + rnd() * 0.15})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 16, rnd);
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 12; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 26 + rnd() * 40;
+      const dx = Math.cos(a), dy = Math.sin(a);
+      for (const [c, w, off] of [['#6b4f36', 8, 0], ['#a5825a', 3, 2.5]]) {
+        g.strokeStyle = c; g.lineWidth = w;
+        g.beginPath(); g.moveTo(x - dy * off, y + dx * off);
+        g.lineTo(x + dx * l - dy * off, y + dy * l + dx * off); g.stroke();
+      }
+      g.fillStyle = '#d9c49a';                          // 年輪端面
+      g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill();
+      g.strokeStyle = '#8a6a48'; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.stroke();
+    }
+  },
+  clearcut(g, S, rnd) {                                // 砍伐跡地:泥土 + 木屑斑 + 樹頭年輪 + 拖木刮痕
+    g.fillStyle = vary(0x8a7350, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(214,196,150,${0.15 + rnd() * 0.15})`;
+      brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 16, rnd);
+    }
+    for (let i = 0; i < 12; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 5 + rnd() * 5;
+      g.fillStyle = '#5c452e'; g.beginPath(); g.arc(x, y, r + 2, 0, 7); g.fill();
+      g.fillStyle = '#d9c49a'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+      g.strokeStyle = 'rgba(138,106,72,0.8)'; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(x, y, r * 0.55, 0, 7); g.stroke();
+    }
+    g.strokeStyle = 'rgba(90,70,46,0.5)'; g.lineWidth = 2; g.lineCap = 'round';
+    for (let i = 0; i < 10; i++) {
+      const x = rnd() * S, y = rnd() * S;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + 20 + rnd() * 26, y + (rnd() - 0.5) * 10); g.stroke();
+    }
+  },
+  lumberyard(g, S, rnd) {                              // 木材堆置場:土面 + 原木端面群 + 板材堆
+    g.fillStyle = vary(0x8f7854, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 5; i++) {
+      const cx = rnd() * S, cy = rnd() * S;
+      for (let k = 0; k < 8; k++) {                    // 原木堆:圓端面蜂窩排列
+        const x = cx + (k % 3) * 9 - 9 + (k / 3 | 0) * 4.5, y = cy + (k / 3 | 0) * 8;
+        g.fillStyle = '#d9c49a'; g.beginPath(); g.arc(x, y, 4.4, 0, 7); g.fill();
+        g.strokeStyle = '#6b4f36'; g.lineWidth = 1.6; g.stroke();
+      }
+    }
+    const cs = ['#c9a86a', '#b8935a', '#d4b478'];
+    for (let i = 0; i < 6; i++) {                      // 板材堆:平行長矩形
+      const x = rnd() * S, y = rnd() * S, a = (rnd() * 2 | 0) * Math.PI / 2;
+      g.save(); g.translate(x, y); g.rotate(a);
+      for (let k = 0; k < 3; k++) {
+        g.fillStyle = cs[(rnd() * cs.length) | 0];
+        g.fillRect(-16, k * 6 - 9, 32, 5);
+      }
+      g.restore();
+    }
+  },
+  rottencabin(g, S, rnd) {                             // 腐朽木屋地:苔草底 + 爛木板 + 青苔斑 + 朽洞
+    g.fillStyle = vary(0x74855a, rnd); g.fillRect(0, 0, S, S);
+    g.lineCap = 'round';
+    for (let i = 0; i < 16; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7, l = 12 + rnd() * 16;
+      g.strokeStyle = rnd() < 0.4 ? '#4f3a28' : '#5c452e'; g.lineWidth = 4 + rnd() * 3;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+    }
+    for (let i = 0; i < 12; i++) {
+      g.fillStyle = `rgba(96,138,70,${0.25 + rnd() * 0.25})`;
+      brushBlob(g, rnd() * S, rnd() * S, 6 + rnd() * 12, rnd);
+    }
+    g.fillStyle = '#3f4a35';
+    for (let i = 0; i < 8; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.6 + rnd() * 2, 0, 7); g.fill(); }
+  },
+  vineyard(g, S, rnd) {                                // 葡萄園:藤蔓籬行列 + 木樁 + 行間草帶(fit)
+    g.fillStyle = vary(0x9a8a5e, rnd); g.fillRect(0, 0, S, S);
+    for (let y = 14; y < S - 8; y += 24) {
+      g.fillStyle = 'rgba(140,160,90,0.4)';            // 行間草帶
+      g.fillRect(0, y + 7, S, 10);
+      const ph = rnd() * 7;
+      g.strokeStyle = '#3f6b30'; g.lineWidth = 9; g.lineCap = 'round';
+      g.beginPath();
+      for (let x = 2; x <= S - 2; x += 8) {
+        const yy = y + Math.sin(x * 0.08 + ph) * 1.5;
+        x <= 2 ? g.moveTo(x, yy) : g.lineTo(x, yy);
+      }
+      g.stroke();
+      g.strokeStyle = '#7fae57'; g.lineWidth = 2.5;    // 籬頂受光
+      g.beginPath(); g.moveTo(2, y - 3); g.lineTo(S - 2, y - 3); g.stroke();
+      g.fillStyle = '#6e5138';
+      for (let x = 8; x < S; x += 26) g.fillRect(x, y - 6, 3, 12);   // 木樁
+    }
+  },
+  greenhouse(g, S, rnd) {                              // 溫室棚:白色拱棚帶 + 高光稜線 + 拱肋(fit)
+    g.fillStyle = vary(0x8a7a5c, rnd); g.fillRect(0, 0, S, S);
+    for (let y = 6; y < S - 20; y += 34) {
+      g.fillStyle = vary(0xcfd6d2, rnd, 8);
+      g.fillRect(4, y, S - 8, 22);
+      g.fillStyle = 'rgba(255,255,255,0.75)';          // 拱頂高光稜線
+      g.fillRect(4, y + 4, S - 8, 5);
+      g.strokeStyle = 'rgba(120,128,124,0.6)'; g.lineWidth = 1.4;
+      for (let x = 12; x < S - 6; x += 16) {
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke();
+      }
+    }
+  },
+  // ======== 裸露地擴充 ========
+  deadforest(g, S, rnd) {                              // 死林:灰燼地 + 焦木倒影 + 白灰斑
+    g.fillStyle = vary(0x6b655c, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(40,38,34,${0.18 + rnd() * 0.18})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 18, rnd);
+    }
+    g.strokeStyle = '#3a3632'; g.lineWidth = 3; g.lineCap = 'round';
+    for (let i = 0; i < 16; i++) {
+      const x = rnd() * S, y = rnd() * S, l = 12 + rnd() * 18, a = rnd() * 7;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+    }
+    g.fillStyle = 'rgba(214,210,200,0.5)';
+    for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, rnd() * S, 5 + rnd() * 8, rnd);
+  },
+  slabruin(g, S, rnd) {                                // 倒塌石板屋:傾頹石板 + 殘存牆基 + 瓦礫
+    g.fillStyle = vary(0x8d867a, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 12; i++) {
+      const x = rnd() * S, y = rnd() * S, w = 14 + rnd() * 18, h = 8 + rnd() * 10;
+      g.save(); g.translate(x, y); g.rotate(rnd() * 3.2);
+      g.fillStyle = rnd() < 0.5 ? '#9aa0a4' : '#a8aca6';
+      g.fillRect(-w / 2, -h / 2, w, h);
+      g.strokeStyle = 'rgba(70,74,78,0.8)'; g.lineWidth = 1.6;
+      g.strokeRect(-w / 2, -h / 2, w, h);
+      g.fillStyle = 'rgba(255,255,255,0.35)';          // 板緣受光
+      g.fillRect(-w / 2, -h / 2, w, 2.5);
+      g.restore();
+    }
+    g.strokeStyle = 'rgba(90,86,78,0.7)'; g.lineWidth = 3;
+    g.strokeRect(30 + rnd() * (S - 120), 30 + rnd() * (S - 120), 60 + rnd() * 40, 44 + rnd() * 30);
+    g.fillStyle = '#6e6a60';
+    for (let i = 0; i < 20; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
+  },
+  steppe(g, S, rnd) {                                  // 乾草原:金黃草浪(風向一致)+ 深草叢
+    g.fillStyle = vary(0xbca95e, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(220,204,140,${0.12 + rnd() * 0.12})`;
+      brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 24, rnd);
+    }
+    g.lineCap = 'round';
+    for (let i = 0; i < 60; i++) {
+      const x = rnd() * S, y = rnd() * S;
+      g.strokeStyle = rnd() < 0.5 ? 'rgba(150,130,70,0.6)' : 'rgba(228,214,156,0.6)';
+      g.lineWidth = 1.8;
+      g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 7, y - 3, x + 14, y - 2); g.stroke();
+    }
+    g.fillStyle = '#7d7040';
+    for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, rnd() * S, 3 + rnd() * 4, rnd);
+  },
+  abandonedfarm(g, S, rnd) {                           // 廢棄農田:褪色壟溝 + 雜草入侵 + 傾倒圍籬(fit)
+    g.fillStyle = vary(0x8f7f5e, rnd); g.fillRect(0, 0, S, S);
+    for (let x = 6; x < S; x += 18) {
+      g.fillStyle = 'rgba(110,92,64,0.45)'; g.fillRect(x, 0, 7, S);
+    }
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(120,150,80,${0.3 + rnd() * 0.3})`;
+      brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 16, rnd);
+    }
+    g.strokeStyle = 'rgba(90,72,50,0.8)'; g.lineWidth = 3; g.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 0.8 - 0.4;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 18, y + Math.sin(a) * 18); g.stroke();
+    }
+  },
+  saltpan(g, S, rnd) {                                 // 鹽田:結晶白池格 + 淡粉滷水 + 埂道(fit)
+    g.fillStyle = vary(0xd8d4c8, rnd, 6); g.fillRect(0, 0, S, S);
+    const cs = ['#f2f4f0', '#e8dfe0', '#edd8d2', '#dfe8ea'];
+    const gw = 58, gh = 44;
+    for (let y = 6; y < S - 8; y += gh) {
+      for (let x = 6; x < S - 8; x += gw) {
+        g.fillStyle = cs[(rnd() * cs.length) | 0];     // 每池結晶度/滷水色不同
+        g.fillRect(x, y, gw - 6, gh - 6);
+        g.fillStyle = 'rgba(255,255,255,0.8)';
+        for (let k = 0; k < 5; k++) g.fillRect(x + rnd() * (gw - 10), y + rnd() * (gh - 10), 3, 1.6);
+      }
+    }
+    g.strokeStyle = '#a09884'; g.lineWidth = 4;
+    for (let y = 3; y < S; y += gh) { g.beginPath(); g.moveTo(0, y); g.lineTo(S, y); g.stroke(); }
+    for (let x = 3; x < S; x += gw) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, S); g.stroke(); }
+  },
+  quarry(g, S, rnd) {                                  // 採石場:階狀採掘帶 + 垂直切割線 + 碎石(fit)
+    g.fillStyle = vary(0xa39a8c, rnd, 7); g.fillRect(0, 0, S, S);
+    for (let y = 0; y < S; y += 40) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(150,140,124,0.6)' : 'rgba(190,182,166,0.6)';
+      g.fillRect(0, y, S, 22 + rnd() * 10);
+      g.strokeStyle = 'rgba(80,74,64,0.7)'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(S, y); g.stroke();
+    }
+    g.strokeStyle = 'rgba(110,102,90,0.6)'; g.lineWidth = 1.6;
+    for (let x = 20; x < S; x += 34 + (rnd() * 20 | 0)) {
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (rnd() - 0.5) * 8, S); g.stroke();
+    }
+    g.fillStyle = '#8a8274';
+    for (let i = 0; i < 20; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.5 + rnd() * 2.5, 0, 7); g.fill(); }
+  },
+  // ======== 高地擴充 ========
+  plateau(g, S, rnd) {                                 // 高原:層積岩階帶 + 階緣受光 + 高地矮草
+    g.fillStyle = vary(0xa08c6a, rnd); g.fillRect(0, 0, S, S);
+    for (let y = 0; y < S; y += 26 + (rnd() * 14 | 0)) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(140,116,84,0.5)' : 'rgba(180,158,120,0.5)';
+      g.fillRect(0, y, S, 12 + rnd() * 10);
+      g.strokeStyle = 'rgba(240,228,200,0.5)'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(S, y); g.stroke();
+      g.strokeStyle = 'rgba(90,74,54,0.6)'; g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(0, y + 13); g.lineTo(S, y + 13); g.stroke();
+    }
+    g.fillStyle = 'rgba(122,138,84,0.8)';
+    for (let i = 0; i < 16; i++) brushBlob(g, rnd() * S, rnd() * S, 2.5 + rnd() * 3.5, rnd);
+  },
+  icefield(g, S, rnd) {                                // 冰原:青白冰面 + 裂隙分岔 + 雪斑 + 晶點
+    g.fillStyle = vary(0xd8e8ee, rnd, 7); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(255,255,255,${0.25 + rnd() * 0.3})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 20, rnd);
+    }
+    g.strokeStyle = 'rgba(124,168,190,0.8)'; g.lineWidth = 2; g.lineCap = 'round';
+    for (let i = 0; i < 10; i++) {
+      let x = rnd() * S, y = rnd() * S;
+      g.beginPath(); g.moveTo(x, y);
+      for (let k = 0; k < 4; k++) {
+        x += (rnd() - 0.5) * 50; y += (rnd() - 0.5) * 50;
+        g.lineTo(x, y);
+        if (rnd() < 0.35) { g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 26, y + (rnd() - 0.5) * 26); g.moveTo(x, y); }
+      }
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    for (let i = 0; i < 20; i++) g.fillRect(rnd() * S, rnd() * S, 2, 2);
+  },
+  scree(g, S, rnd) {                                   // 岩屑坡:角礫三角碎片 + 陰影錯落
+    g.fillStyle = vary(0x8f8c84, rnd, 6); g.fillRect(0, 0, S, S);
+    const cs = ['#a2a09a', '#8a8880', '#b0aea6', '#7c7a72'];
+    for (let i = 0; i < 90; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 3 + rnd() * 6, a = rnd() * 7;
+      g.fillStyle = cs[(rnd() * cs.length) | 0];
+      g.beginPath();
+      g.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      g.lineTo(x + Math.cos(a + 2.1) * r, y + Math.sin(a + 2.1) * r);
+      g.lineTo(x + Math.cos(a + 4.2) * r, y + Math.sin(a + 4.2) * r);
+      g.closePath(); g.fill();
+      if (rnd() < 0.4) { g.strokeStyle = 'rgba(60,58,52,0.5)'; g.lineWidth = 1; g.stroke(); }
+    }
+  },
+  // ======== 市區擴充 ========
+  construction(g, S, rnd) {                            // 廢棄工地:翻土 + 弧形車轍 + 鏽色鋼筋束 + 水泥板(fit)
+    g.fillStyle = vary(0x9c8a70, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(120,100,72,${0.2 + rnd() * 0.2})`;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 18, rnd);
+    }
+    g.lineCap = 'round';
+    const cx = rnd() * S, cy = rnd() * S, a0 = rnd() * 4;
+    g.strokeStyle = '#6b5a42'; g.lineWidth = 4;
+    for (const off of [-6, 6]) {                       // 履帶雙轍
+      g.beginPath(); g.arc(cx, cy, 60 + off, a0, a0 + 2.2); g.stroke();
+    }
+    g.strokeStyle = '#8a5a3a'; g.lineWidth = 1.6;
+    for (let i = 0; i < 4; i++) {                      // 鏽色鋼筋束
+      const x = rnd() * S, y = rnd() * S, a = rnd() * 7;
+      for (let k = 0; k < 4; k++) {
+        const ox = k * 3 * Math.sin(a), oy = k * 3 * Math.cos(a);
+        g.beginPath(); g.moveTo(x + ox, y + oy);
+        g.lineTo(x + Math.cos(a) * 30 + ox, y + Math.sin(a) * 30 + oy); g.stroke();
+      }
+    }
+    g.fillStyle = '#b0b4b8';
+    for (let i = 0; i < 4; i++) g.fillRect(rnd() * S, rnd() * S, 20 + rnd() * 14, 10 + rnd() * 8);
+  },
+  gasstation(g, S, rnd) {                              // 加油站:水泥坪 + 黃邊加油島 + 油漬 + 導引虛線(fit)
+    g.fillStyle = vary(0xb8bab6, rnd, 6); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 7; i++) {
+      g.fillStyle = `rgba(50,52,56,${0.15 + rnd() * 0.2})`;
+      brushBlob(g, rnd() * S, S * 0.3 + rnd() * S * 0.5, 6 + rnd() * 12, rnd);
+    }
+    g.fillStyle = '#d9b23d';
+    g.fillRect(S * 0.28, S * 0.42, S * 0.44, 16);
+    g.fillStyle = '#c8cac6';
+    g.fillRect(S * 0.28 + 3, S * 0.42 + 3, S * 0.44 - 6, 10);
+    g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3;
+    g.setLineDash([14, 10]);
+    for (const y of [S * 0.2, S * 0.78]) {
+      g.beginPath(); g.moveTo(8, y); g.lineTo(S - 8, y); g.stroke();
+    }
+    g.setLineDash([]);
+    g.strokeStyle = '#e04a3a'; g.lineWidth = 2;        // 禁停紅框
+    g.strokeRect(S * 0.06, S * 0.34, 26, 30);
+  },
+  park(g, S, rnd) {                                    // 公園:草坪 + 蜿蜒步道 + 樹蔭 + 花圃
+    g.fillStyle = vary(0x74a85c, rnd); g.fillRect(0, 0, S, S);
+    const ph = rnd() * 7;
+    g.strokeStyle = '#c9b98e'; g.lineWidth = 12; g.lineCap = 'round';
+    g.beginPath();
+    for (let x = -4; x <= S + 4; x += 10) {
+      const y = S * 0.5 + Math.sin(x * 0.03 + ph) * S * 0.22;
+      x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+    }
+    g.stroke();
+    for (let i = 0; i < 6; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 9 + rnd() * 9;
+      g.fillStyle = 'rgba(60,110,52,0.55)'; brushBlob(g, x, y, r, rnd);
+      g.fillStyle = 'rgba(150,200,110,0.5)'; brushBlob(g, x - r * 0.3, y - r * 0.3, r * 0.4, rnd);
+    }
+    const cs = ['#e88bb0', '#f2d24a', '#f5f5f5'];
+    for (let i = 0; i < 3; i++) {
+      const x = rnd() * S, y = rnd() * S;
+      g.fillStyle = '#5c8a44'; g.beginPath(); g.arc(x, y, 8, 0, 7); g.fill();
+      g.fillStyle = cs[(rnd() * cs.length) | 0];
+      for (let k = 0; k < 7; k++) { g.beginPath(); g.arc(x + (rnd() - 0.5) * 10, y + (rnd() - 0.5) * 10, 1.6, 0, 7); g.fill(); }
+    }
+  },
+  plaza(g, S, rnd) {                                   // 廣場:同心圓環雙色舖面 + 放射縫線(fit)
+    g.fillStyle = vary(0xb0a898, rnd, 6); g.fillRect(0, 0, S, S);
+    const cx = S / 2, cy = S / 2;
+    for (let r = S * 0.62; r > 10; r -= 16) {
+      g.fillStyle = (r / 16 | 0) % 2 ? '#a89a86' : '#c0b4a0';
+      g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+    }
+    g.strokeStyle = 'rgba(120,110,96,0.7)'; g.lineWidth = 2;
+    for (let a = 0; a < 6.28; a += 0.52) {
+      g.beginPath(); g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(a) * S * 0.62, cy + Math.sin(a) * S * 0.62); g.stroke();
+    }
+    g.fillStyle = '#8a7c68';
+    g.beginPath(); g.arc(cx, cy, 9, 0, 7); g.fill();
+  },
+  scrapyard(g, S, rnd) {                               // 廢車場:鏽水漬 + 油污 + 廢鐵散件(fit)
+    g.fillStyle = vary(0x86766a, rnd); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 12; i++) {
+      g.fillStyle = `rgba(150,80,42,${0.18 + rnd() * 0.22})`;
+      brushBlob(g, rnd() * S, rnd() * S, 6 + rnd() * 14, rnd);
+    }
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(40,40,44,${0.2 + rnd() * 0.2})`;
+      brushBlob(g, rnd() * S, rnd() * S, 5 + rnd() * 10, rnd);
+    }
+    const cs = ['#7a828a', '#9a5a3a', '#6a7060', '#8a8276'];
+    for (let i = 0; i < 10; i++) {
+      const x = rnd() * S, y = rnd() * S;
+      g.save(); g.translate(x, y); g.rotate(rnd() * 3.2);
+      g.fillStyle = cs[(rnd() * cs.length) | 0];
+      rnd() < 0.5 ? g.fillRect(-8, -3, 16, 6) : g.fillRect(-2, -9, 4, 18);
+      g.restore();
+    }
+  },
+  containeryard(g, S, rnd) {                           // 貨櫃場:瀝青 + 黃色櫃位格線 + 走道白斑馬點(fit)
+    g.fillStyle = vary(0x4a4e52, rnd, 5); g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = 'rgba(255,255,255,0.05)';
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 18, rnd);
+    }
+    g.strokeStyle = '#d9b23d'; g.lineWidth = 2.5;
+    for (let y = 14; y < S; y += 46) {
+      for (let x = 10; x < S - 30; x += 40) g.strokeRect(x, y, 34, 16);
+    }
+    g.fillStyle = 'rgba(240,242,238,0.85)';
+    for (let x = 8; x < S; x += 22) g.fillRect(x, S / 2 - 2, 12, 4);
+  },
+  cemetery(g, S, rnd) {                                // 墓園:草坪 + 十字步道 + 墓位列點(fit)
+    g.fillStyle = vary(0x7fa35e, rnd, 8); g.fillRect(0, 0, S, S);
+    g.strokeStyle = '#cfc8b4'; g.lineWidth = 9;
+    g.beginPath(); g.moveTo(S / 2, 4); g.lineTo(S / 2, S - 4); g.stroke();
+    g.beginPath(); g.moveTo(4, S / 2); g.lineTo(S - 4, S / 2); g.stroke();
+    for (let y = 18; y < S - 8; y += 24) {
+      for (let x = 14; x < S - 8; x += 20) {
+        if (Math.abs(x - S / 2) < 12 || Math.abs(y - S / 2) < 10 || rnd() < 0.18) continue;
+        g.fillStyle = 'rgba(60,80,50,0.5)'; g.fillRect(x - 3, y + 3, 8, 4);   // 碑影
+        g.fillStyle = '#b4b6b0'; g.fillRect(x - 3, y - 4, 7, 8);
+        g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(x - 3, y - 4, 7, 2);
+      }
+    }
+  },
+  solarfarm(g, S, rnd) {                               // 太陽能場:深藍板列 + 白框格線 + 斜向天光(fit)
+    g.fillStyle = vary(0x9a9584, rnd, 7); g.fillRect(0, 0, S, S);
+    for (let y = 8; y < S - 14; y += 30) {
+      for (let x = 6; x < S - 20; x += 42) {
+        g.fillStyle = vary(0x2e4a6e, rnd, 8);
+        g.fillRect(x, y, 36, 18);
+        g.strokeStyle = '#c8ccd0'; g.lineWidth = 1.5; g.strokeRect(x, y, 36, 18);
+        g.strokeStyle = 'rgba(200,214,228,0.7)';
+        g.beginPath(); g.moveTo(x + 12, y); g.lineTo(x + 12, y + 18); g.stroke();
+        g.beginPath(); g.moveTo(x + 24, y); g.lineTo(x + 24, y + 18); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,0.55)';        // 斜向天光
+        g.beginPath(); g.moveTo(x, y); g.lineTo(x + 10, y); g.lineTo(x + 2, y + 18); g.lineTo(x, y + 18); g.closePath(); g.fill();
+      }
+    }
+  },
+  helipad(g, S, rnd) {                                 // 直升機坪:圓標 + H 字 + 外框虛線(fit)
+    g.fillStyle = vary(0x8f9294, rnd, 5); g.fillRect(0, 0, S, S);
+    g.strokeStyle = '#f2f4f0'; g.lineWidth = 6;
+    g.beginPath(); g.arc(S / 2, S / 2, S * 0.34, 0, 7); g.stroke();
+    g.lineWidth = 10;
+    g.beginPath(); g.moveTo(S * 0.42, S * 0.36); g.lineTo(S * 0.42, S * 0.64); g.stroke();
+    g.beginPath(); g.moveTo(S * 0.58, S * 0.36); g.lineTo(S * 0.58, S * 0.64); g.stroke();
+    g.beginPath(); g.moveTo(S * 0.42, S / 2); g.lineTo(S * 0.58, S / 2); g.stroke();
+    g.setLineDash([10, 8]); g.lineWidth = 3;
+    g.strokeRect(8, 8, S - 16, S - 16); g.setLineDash([]);
+  },
+  // ======== 濕地擴充 ========
+  fishpond(g, S, rnd) {                                // 魚塭:深水池格 + 水車白花 + 土堤(fit)
+    g.fillStyle = vary(0x9a8a68, rnd); g.fillRect(0, 0, S, S);
+    const gw = 74, gh = 56;
+    for (let y = 8; y < S - 10; y += gh) {
+      for (let x = 8; x < S - 10; x += gw) {
+        g.fillStyle = vary(0x3f5e63, rnd, 10);
+        g.fillRect(x, y, gw - 10, gh - 10);
+        g.fillStyle = 'rgba(255,255,255,0.16)';        // 水面天光
+        g.fillRect(x + 4, y + 4, gw - 26, 2.5);
+        const wx = x + 10 + rnd() * (gw - 30), wy = y + 8 + rnd() * (gh - 24);
+        g.fillStyle = 'rgba(240,248,250,0.85)';        // 增氧水車白花
+        for (let k = 0; k < 6; k++) {
+          g.beginPath(); g.arc(wx + (rnd() - 0.5) * 10, wy + (rnd() - 0.5) * 7, 1.6, 0, 7); g.fill();
+        }
+      }
+    }
+  },
 };
 
 // ---- 地表定義 ----
@@ -445,21 +914,67 @@ const DEFS = {
   track:        { shape: 'rect', uv: 'fit', aspect: 0.5, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
   marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, green: true, fam: 'wetFam' },
   lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, fam: 'wetFam' },
+  // — 綠地擴充:竹林/枯朽森林/伐木業/棚架農業 —
+  arrowbamboo:  { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.50, green: true, fam: 'blobGreen' },
+  deadwood:     { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'deadFam' },
+  fallenlogs:   { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.45, green: true, fam: 'deadFam' },
+  clearcut:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, fam: 'deadFam' },
+  lumberyard:   { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.20, fam: 'deadFam' },
+  rottencabin:  { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.25, green: true, fam: 'ruinFam' },
+  vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, green: true, fam: 'rectFarm' },
+  greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, fam: 'rectFarm' },
+  // — 裸露地擴充:遺跡/死林/乾草原/廢耕/產業 —
+  deadforest:   { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'deadFam' },
+  slabruin:     { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.45, fam: 'ruinFam' },
+  steppe:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.50, green: true, fam: 'alpFam' },
+  abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, fam: 'rectFarm' },
+  saltpan:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.06, fam: 'panFam' },
+  quarry:       { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.45, fam: 'digFam' },
+  // — 高地(相對高程分區;冬季裸露地也混入冰原)—
+  plateau:      { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.60, fam: 'alpFam' },
+  icefield:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, fam: 'alpFam' },
+  scree:        { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.80, fam: 'alpFam' },
+  // — 市區擴充:工業/服務/休憩設施 —
+  construction: { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.20, fam: 'digFam' },
+  gasstation:   { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
+  park:         { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.30, green: true, fam: 'blobGreen' },
+  plaza:        { shape: 'rect', uv: 'fit', aspect: 0.85, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
+  scrapyard:    { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.15, fam: 'yardFam' },
+  containeryard:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, fam: 'yardFam' },
+  cemetery:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.18, green: true },
+  solarfarm:    { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, fam: 'solarFam' },
+  helipad:      { shape: 'rect', uv: 'fit', aspect: 1.0, edge: 'ink', slope: 0.06 },
+  // — 濕地擴充 —
+  fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, fam: 'panFam' },
 };
 // 分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有)
 const ZONES = {
-  green: ['meadow', 'turf', 'paddy', 'flowerfield', 'turf', 'dryfield', 'orchard', 'teafield', 'bushfield'],
-  bare:  ['wild', 'gravel', 'crackedearth', 'sand', 'redsoil', 'mud', 'gravel', 'wild'],
-  urban: ['concrete', 'pavement', 'brick', 'lawn', 'parking', 'court', 'track', 'pavement', 'concrete'],
-  wet:   ['marsh', 'lotus'],
+  green: ['rottencabin', 'deadwood', 'turf', 'meadow', 'paddy', 'flowerfield', 'turf', 'arrowbamboo',
+          'orchard', 'dryfield', 'meadow', 'teafield', 'vineyard', 'turf', 'bushfield', 'clearcut',
+          'meadow', 'fallenlogs', 'greenhouse', 'lumberyard'],
+  bare:  ['slabruin', 'deadforest', 'wild', 'gravel', 'steppe', 'crackedearth', 'sand', 'abandonedfarm',
+          'redsoil', 'scree', 'mud', 'gravel', 'wild', 'quarry', 'saltpan'],
+  urban: ['helipad', 'solarfarm', 'concrete', 'pavement', 'park', 'brick', 'lawn', 'parking', 'plaza',
+          'court', 'construction', 'track', 'pavement', 'gasstation', 'concrete', 'containeryard',
+          'cemetery', 'scrapyard'],
+  wet:   ['fishpond', 'marsh', 'lotus', 'marsh', 'fishpond'],
+  alpine: ['icefield', 'plateau', 'scree', 'steppe', 'plateau', 'scree', 'icefield'],
 };
-// 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落)
+// 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落 /
+// 伐木跡地群 / 聚落遺跡 / 高地帶 / 鹽田魚塭 / 工地採石 / 堆置場)
 const FAMS = {
-  rectFarm:  ['paddy', 'dryfield', 'teafield'],
-  rectUrban: ['parking', 'court', 'track', 'concrete'],
-  blobGreen: ['turf', 'meadow', 'flowerfield', 'bushfield', 'orchard'],
+  rectFarm:  ['paddy', 'dryfield', 'teafield', 'vineyard', 'greenhouse', 'abandonedfarm'],
+  rectUrban: ['parking', 'court', 'track', 'concrete', 'plaza', 'gasstation'],
+  blobGreen: ['turf', 'meadow', 'flowerfield', 'bushfield', 'orchard', 'park', 'arrowbamboo'],
   blobBare:  ['wild', 'gravel', 'sand', 'crackedearth', 'redsoil', 'mud'],
   wetFam:    ['marsh', 'lotus'],
+  deadFam:   ['deadwood', 'deadforest', 'fallenlogs', 'clearcut', 'lumberyard'],
+  ruinFam:   ['slabruin', 'rottencabin'],
+  alpFam:    ['plateau', 'scree', 'icefield', 'steppe'],
+  panFam:    ['saltpan', 'fishpond'],
+  digFam:    ['quarry', 'construction'],
+  yardFam:   ['scrapyard', 'containeryard'],
+  solarFam:  ['solarfarm'],
 };
 // 尺寸 [基準半徑, 變幅](rect 半寬;court/track 接近真實場地)
 const SIZE = {
@@ -468,14 +983,25 @@ const SIZE = {
   crackedearth: [11, 10], redsoil: [10, 9], marsh: [8, 8], lotus: [8, 6],
   paddy: [13, 8], dryfield: [12, 8], teafield: [12, 6], concrete: [9, 7], brick: [7, 6],
   pavement: [8, 6], parking: [14, 4], court: [16, 3], track: [15, 3],
+  arrowbamboo: [10, 8], deadwood: [11, 10], deadforest: [12, 10], fallenlogs: [9, 8],
+  clearcut: [12, 8], lumberyard: [8, 6], rottencabin: [7, 4], vineyard: [13, 6],
+  greenhouse: [11, 5], abandonedfarm: [12, 8], saltpan: [12, 6], fishpond: [11, 6],
+  slabruin: [9, 6], steppe: [12, 12], plateau: [13, 10], icefield: [12, 10], scree: [10, 10],
+  quarry: [14, 6], construction: [12, 6], gasstation: [11, 4], park: [12, 8], plaza: [10, 6],
+  scrapyard: [11, 6], containeryard: [13, 5], cemetery: [10, 6], solarfarm: [14, 5], helipad: [9, 3],
 };
 // 綠色系季節色偏(材質 color 乘上貼圖)
 const SEASON_TINT = { spring: 0xeaffe0, summer: 0xffffff, autumn: 0xffd9a8, winter: 0xdfe8ea };
 const FLOWER_C = [0xe88bb0, 0xf2d24a, 0xf5f5f5, 0xc77ddb, 0xe8734a];
+const CONTAINER_C = [0xd94f3d, 0x3d7ad9, 0x4f9a55, 0xe8a03d, 0x8a8f96];   // 貨櫃塗裝
+const CAR_C = [0x9a4a3a, 0x5a6a7a, 0x7a6a3a, 0x4a5a4a, 0x8a3a2a];         // 廢車鏽色
+const PUMP_C = [0xd94f3d, 0x3d6ed9, 0xf2d24a];                            // 加油機品牌色
 
 // ---- 3D 細節(多零件;底部貼地,pebble 不平移 = 半埋入土)----
 // c:'grass'/'foliage' = 季節色;'palette' = 每實例指定色(材質白底 × instance tint)
 const cone = (r, h, n) => new THREE.ConeGeometry(r, h, n).translate(0, h / 2, 0);
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0);
+const cyl = (r0, r1, h, n) => new THREE.CylinderGeometry(r0, r1, h, n).translate(0, h / 2, 0);
 const DETAIL_DEFS = {
   tuft:     [{ geo: cone(0.5, 1.2, 5), c: 'grass' }],
   rice:     [{ geo: cone(0.26, 0.95, 4), c: 0x7fb257 }],
@@ -488,6 +1014,49 @@ const DETAIL_DEFS = {
   flower:   [{ geo: cone(0.07, 0.5, 4), c: 0x5f8f44 },
              { geo: new THREE.IcosahedronGeometry(0.16, 0).translate(0, 0.55, 0), c: 'palette' }],
   lotuspad: [{ geo: new THREE.CylinderGeometry(0.6, 0.65, 0.06, 9).translate(0, 0.16, 0), c: 0x4f8f4f }],
+  // — 枯朽森林/伐木業 —
+  bamboo:   [{ geo: cyl(0.05, 0.08, 2.6, 4), c: 0xa9c364 },
+             { geo: new THREE.IcosahedronGeometry(0.5, 0).translate(0, 2.7, 0), c: 'foliage', sy: 0.7 }],
+  snag:     [{ geo: cyl(0.12, 0.3, 3.0, 5), c: 0x8a7a66 },
+             { geo: cone(0.09, 1.5, 4).rotateZ(-0.9).translate(0.35, 1.9, 0), c: 0x8a7a66 },
+             { geo: cone(0.08, 1.2, 4).rotateZ(1.1).translate(-0.3, 2.3, 0), c: 0x8a7a66 }],
+  charsnag: [{ geo: cyl(0.1, 0.26, 2.4, 5), c: 0x3a3632 },
+             { geo: cone(0.08, 1.2, 4).rotateZ(-1.0).translate(0.3, 1.6, 0), c: 0x3a3632 }],
+  log:      [{ geo: new THREE.CylinderGeometry(0.32, 0.36, 3.4, 7).rotateZ(Math.PI / 2).translate(0, 0.34, 0), c: 0x8a6a48 }],
+  stump:    [{ geo: cyl(0.42, 0.55, 0.55, 7), c: 0x6e5138 },
+             { geo: new THREE.CylinderGeometry(0.36, 0.36, 0.08, 7).translate(0, 0.58, 0), c: 0xd9c49a }],
+  logpile:  [{ geo: new THREE.CylinderGeometry(0.3, 0.3, 3.0, 6).rotateZ(Math.PI / 2).translate(0, 0.3, 0), c: 0x9a744e },
+             { geo: new THREE.CylinderGeometry(0.3, 0.3, 3.0, 6).rotateZ(Math.PI / 2).translate(0, 0.3, 0.62), c: 0x8a6a48 },
+             { geo: new THREE.CylinderGeometry(0.28, 0.28, 2.8, 6).rotateZ(Math.PI / 2).translate(0, 0.82, 0.3), c: 0xa5825a }],
+  plank:    [{ geo: box(2.2, 0.8, 1.1), c: 0xc9a86a }],
+  cabin:    [{ geo: box(3.2, 1.7, 2.6), c: 0x6e5138 },
+             { geo: new THREE.BoxGeometry(3.8, 0.2, 3.0).rotateZ(0.34).translate(0, 2.0, 0), c: 0x4f3a28 },
+             { geo: new THREE.BoxGeometry(0.18, 2.6, 0.18).rotateZ(1.15).translate(1.9, 0.5, 0.6), c: 0x5c452e }],
+  fencepost:[{ geo: cyl(0.07, 0.09, 1.1, 4), c: 0x6e5138 }],
+  // — 棚架農業(半埋圓管 = 拱棚)—
+  vinerow:  [{ geo: box(3.0, 1.0, 0.5), c: 0x4f7a38 },
+             { geo: cyl(0.06, 0.06, 1.4, 4), c: 0x6e5138 }],
+  ghouse:   [{ geo: new THREE.CylinderGeometry(1.0, 1.0, 3.2, 10).rotateZ(Math.PI / 2).translate(0, 0.32, 0), c: 0xd4dcd8 }],
+  // — 遺跡/高地 —
+  slab:     [{ geo: new THREE.BoxGeometry(1.7, 0.22, 1.2).rotateZ(0.16).translate(0, 0.3, 0), c: 0x9aa0a4 },
+             { geo: box(0.7, 0.5, 0.6), c: 0x8d9094 }],
+  iceshard: [{ geo: new THREE.IcosahedronGeometry(0.5, 0).translate(0, 0.28, 0), c: 0xcfe8f2 }],
+  rockflat: [{ geo: new THREE.IcosahedronGeometry(0.7, 0), c: 0x8f887a, sy: 0.45 }],
+  saltmound:[{ geo: cone(0.6, 0.9, 6), c: 0xf2f4f0 }],
+  // — 工地/工業 —
+  pipe:     [{ geo: new THREE.CylinderGeometry(0.5, 0.5, 2.6, 9).rotateZ(Math.PI / 2).translate(0, 0.5, 0), c: 0xb4b8bc }],
+  spoil:    [{ geo: cone(1.2, 0.9, 7), c: 0x9a9384 }],
+  barrier:  [{ geo: box(1.6, 0.7, 0.3), c: 0xe0dcd0 }],
+  canopy:   [{ geo: cyl(0.14, 0.14, 3.2, 5), c: 0xc8ccc8 },
+             { geo: new THREE.BoxGeometry(4.6, 0.28, 3.2).translate(0, 3.3, 0), c: 0xe8e4da }],
+  pump:     [{ geo: box(0.5, 1.1, 0.35), c: 'palette' }],
+  container:[{ geo: box(3.0, 1.3, 1.25), c: 'palette' }],
+  carwreck: [{ geo: box(1.9, 0.6, 1.05), c: 'palette' }],
+  solarpanel: [{ geo: new THREE.BoxGeometry(2.4, 0.1, 1.4).rotateX(-0.42).translate(0, 0.85, 0), c: 0x2e4a6e },
+             { geo: cyl(0.07, 0.07, 0.6, 4), c: 0x9aa0a4 }],
+  // — 休憩設施 —
+  bench:    [{ geo: box(1.4, 0.45, 0.5), c: 0x8a6a48 }],
+  headstone:[{ geo: box(0.5, 0.85, 0.16), c: 0xb0b2ae }],
 };
 
 function bucketOf(buckets, key) {
@@ -571,18 +1140,34 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
-  const addDetail = (type, px, pz, s, tintHex = null, sy = 1) => {
+  // ry:null = 隨機朝向;傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向)
+  const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
     if (detCount >= MAX_DETAIL || isBlocked(px, pz)) return;
     const y = terrain.heightAt(px, pz);
     if (y < 0.4) return;
-    det[type].push({ x: px, y, z: pz, s, sy, ry: rnd() * Math.PI * 2, tint: tintHex });
+    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? rnd() * Math.PI * 2, tint: tintHex });
     detCount++;
   };
 
   const inb = 30;
   const area = terrain.worldW * terrain.worldH / 1e6;
-  const target = Math.max(90, Math.min(560, Math.round(area * 170)));
+  const target = Math.max(140, Math.min(1800, Math.round(area * 420)));
   let placed = 0;
+
+  // ---- 高地/季節分區:量測全場最高點,相對高處改鋪高原/岩屑/冰原 ----
+  let hMax = 0;
+  for (let j = 0; j <= 20; j++) {
+    for (let i = 0; i <= 20; i++) {
+      const h = terrain.heightAt(terrain.minX + terrain.worldW * i / 20, terrain.minZ + terrain.worldH * j / 20);
+      if (h > hMax) hMax = h;
+    }
+  }
+  const alpineH = hMax > 40 ? hMax * 0.62 : Infinity;   // 平坦地圖不出現高地地貌
+  const zoneLists = { ...ZONES };
+  if (season === 'winter') {                            // 冬季:裸露地混入冰原、高地以冰原為主
+    zoneLists.bare = ['icefield', ...ZONES.bare, 'icefield'];
+    zoneLists.alpine = ['plateau', 'icefield', 'scree', 'icefield', 'plateau', 'icefield'];
+  }
 
   // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同變體連片)----
   const tryPatch = (x, z, sub, variant, r, rot, depth) => {
@@ -629,7 +1214,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
           const ca = Math.cos(rot), sa = Math.sin(rot);
           tryPatch(x + ox * ca - oz * sa, z + ox * sa + oz * ca, sub2, variant, r, rot, depth + 1);
         } else {
-          const r2 = SIZE[sub2][0] + rnd() * SIZE[sub2][1];
+          const r2 = (SIZE[sub2][0] + rnd() * SIZE[sub2][1]) * RSCALE;
           const th = rnd() * Math.PI * 2, dist = (r + r2) * 0.78;   // 交疊:fade 邊互融
           tryPatch(x + Math.cos(th) * dist, z + Math.sin(th) * dist, sub2, variant, r2, rnd() * Math.PI, depth + 1);
         }
@@ -648,6 +1233,20 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
         const rr = r * 0.75 * Math.sqrt(rnd()), th = rnd() * Math.PI * 2;
         const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
         addDetail(type, x + Math.cos(th) * rr, z + Math.sin(th) * rr, s0 + rnd() * sv, tint);
+      }
+    };
+    // 對齊列陣:沿 patch 局部軸整齊排列;ry=-rot 使 3D 件與貼圖行列同向
+    // (atLocal 的平面旋轉正向 = three.js rotation.y 的負向)
+    const rows = (type, stepX, stepZ, mX, mZ, cap, skip, tintPick = null, s0 = 1, sv = 0) => {
+      let k = 0;
+      for (let lz = -dp * mZ; lz <= dp * mZ && k < cap; lz += stepZ) {
+        for (let lx = -w * mX; lx <= w * mX && k < cap; lx += stepX) {
+          if (rnd() < skip) continue;
+          const [px, pz] = atLocal(lx, lz);
+          const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
+          addDetail(type, px, pz, s0 + rnd() * sv, tint, 1, -rot);
+          k++;
+        }
       }
     };
     if (sub === 'turf' || sub === 'lawn') scatter('tuft', 2 + (rnd() * 3 | 0), 0.7, 0.6);
@@ -685,19 +1284,57 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, blocke
     else if (sub === 'redsoil') { scatter('pebble', 2, 0.5, 0.4); scatter('tuft', 1, 0.5, 0.3); }
     else if (sub === 'marsh') scatter('reed', 4 + (rnd() * 4 | 0), 0.8, 0.6);
     else if (sub === 'lotus') { scatter('lotuspad', 5 + (rnd() * 5 | 0), 0.8, 0.8); scatter('reed', 3, 0.7, 0.5); }
+    // — 綠地擴充 —
+    else if (sub === 'arrowbamboo') { scatter('bamboo', 6 + (rnd() * 5 | 0), 0.8, 0.6); scatter('tuft', 2, 0.6, 0.4); }
+    else if (sub === 'deadwood') { scatter('snag', 3 + (rnd() * 3 | 0), 0.8, 0.7); scatter('log', 1, 0.7, 0.4); scatter('pebble', 1, 0.5, 0.4); }
+    else if (sub === 'fallenlogs') { scatter('log', 4 + (rnd() * 4 | 0), 0.8, 0.7); scatter('stump', 1, 0.8, 0.4); scatter('tuft', 2, 0.6, 0.4); }
+    else if (sub === 'clearcut') { scatter('stump', 5 + (rnd() * 5 | 0), 0.8, 0.5); scatter('log', 1, 0.7, 0.4); }
+    else if (sub === 'lumberyard') { rows('logpile', 4.2, 3.4, 0.3, 0.28, 4, 0.2, null, 0.9, 0.4); scatter('plank', 1 + (rnd() * 2 | 0), 0.8, 0.4); }
+    else if (sub === 'rottencabin') { addDetail('cabin', x, z, 0.85 + rnd() * 0.35); scatter('fencepost', 3 + (rnd() * 2 | 0), 0.9, 0.3); scatter('bush', 2, 0.6, 0.5); }
+    else if (sub === 'vineyard') rows('vinerow', 3.4, 3.0, 0.36, 0.32, 12, 0.12, null, 0.9, 0.3);
+    else if (sub === 'greenhouse') rows('ghouse', 3.8, 3.2, 0.3, 0.3, 6, 0.15, null, 1.1, 0.4);
+    // — 裸露地/高地擴充 —
+    else if (sub === 'deadforest') { scatter('charsnag', 4 + (rnd() * 4 | 0), 0.8, 0.8); scatter('pebble', 2, 0.4, 0.4); }
+    else if (sub === 'slabruin') { scatter('slab', 4 + (rnd() * 4 | 0), 0.8, 0.6); scatter('pebble', 3, 0.5, 0.6); }
+    else if (sub === 'steppe') { scatter('tuft', 5, 0.9, 0.7); scatter('pebble', 1, 0.5, 0.4); }
+    else if (sub === 'abandonedfarm') { scatter('tuft', 4, 0.7, 0.5); scatter('fencepost', 2, 0.9, 0.3); if (rnd() < 0.4) scatter('hay', 1, 0.7, 0.3); }
+    else if (sub === 'saltpan') scatter('saltmound', 2 + (rnd() * 2 | 0), 0.7, 0.5);
+    else if (sub === 'quarry') { scatter('rockflat', 3, 0.9, 0.8); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.6); }
+    else if (sub === 'plateau') { scatter('rockflat', 2 + (rnd() * 2 | 0), 0.8, 0.7); scatter('tuft', 2, 0.6, 0.4); }
+    else if (sub === 'icefield') { scatter('iceshard', 3 + (rnd() * 3 | 0), 0.7, 0.8); scatter('pebble', 1, 0.4, 0.4); }
+    else if (sub === 'scree') { scatter('pebble', 6 + (rnd() * 5 | 0), 0.5, 0.9); scatter('rockflat', 2, 0.7, 0.6); }
+    // — 市區擴充 —
+    else if (sub === 'construction') { scatter('pipe', 1 + (rnd() * 2 | 0), 0.9, 0.4); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.5); scatter('barrier', 2, 0.9, 0.3); scatter('plank', 1, 0.8, 0.3); }
+    else if (sub === 'gasstation') {
+      addDetail('canopy', x, z, 1 + rnd() * 0.2, null, 1, -rot);   // 中柱雨棚 + 兩座加油機
+      for (const lx of [-1.4, 1.4]) {
+        const [px, pz] = atLocal(lx, 0);
+        addDetail('pump', px, pz, 1, PUMP_C[(rnd() * PUMP_C.length) | 0], 1, -rot);
+      }
+    }
+    else if (sub === 'park') { scatter('sapling', 3 + (rnd() * 3 | 0), 0.9, 0.5); scatter('bench', 1 + (rnd() * 2 | 0), 0.9, 0.2); scatter('flower', 4, 0.7, 0.5, FLOWER_C); scatter('tuft', 2, 0.6, 0.4); }
+    else if (sub === 'plaza') scatter('bench', 2 + (rnd() * 2 | 0), 0.9, 0.2);
+    else if (sub === 'scrapyard') { scatter('carwreck', 3 + (rnd() * 3 | 0), 0.9, 0.4, CAR_C); scatter('pipe', 1, 0.7, 0.3); scatter('pebble', 2, 0.5, 0.4); }
+    else if (sub === 'containeryard') rows('container', 4.4, 3.0, 0.34, 0.3, 8, 0.25, CONTAINER_C, 0.9, 0.3);
+    else if (sub === 'cemetery') { rows('headstone', 2.2, 2.6, 0.36, 0.3, 16, 0.25, null, 0.9, 0.3); scatter('sapling', 1, 0.9, 0.3); }
+    else if (sub === 'solarfarm') rows('solarpanel', 3.2, 3.0, 0.36, 0.32, 12, 0.08, null, 0.9, 0.2);
+    // — 濕地擴充 —
+    else if (sub === 'fishpond') scatter('reed', 3, 0.7, 0.4);
   }
 
   // ---- 主散佈迴圈 ----
   for (let a = 0, tries = target * 3; a < tries && placed < target; a++) {
     const x = terrain.minX + inb + rnd() * (terrain.worldW - inb * 2);
     const z = terrain.minZ + inb + rnd() * (terrain.worldH - inb * 2);
-    const zones = ZONES[classifyAt(x, z)];
+    let zname = classifyAt(x, z);
+    if ((zname === 'green' || zname === 'bare') && terrain.heightAt(x, z) > alpineH) zname = 'alpine';
+    const zones = zoneLists[zname];
     if (!zones) continue;
     // 分區雜訊挑 subtype + 變體:鄰近同類同變體 → 大面積連片、花紋接續不重複
     const t = Math.min(0.999, Math.max(0, (vnoise(x * 0.006, z * 0.006, seed) - 0.5) * 2.2 + 0.5));
     const sub = zones[(t * zones.length) | 0];
     const variant = (vnoise(x * 0.0025, z * 0.0025, seed ^ 0x7E11) * VARIANTS) | 0;
-    const r = SIZE[sub][0] + rnd() * SIZE[sub][1];
+    const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
     tryPatch(x, z, sub, Math.min(VARIANTS - 1, variant), r, rnd() * Math.PI, 0);
   }
 
