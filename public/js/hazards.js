@@ -17,8 +17,8 @@ export function mulberry32(seed) {
 }
 
 // ---- 賽璐璐核心已抽到 toon.js(3 階 ramp / 描邊 / 硬邊高光),此處 re-export 保持相容 ----
-import { toonGradient, toonMat, toonify, outlinify } from './toon.js';
-export { toonGradient, toonMat, toonify };
+import { toonGradient, toonMat, toonify, outlinify, envMat, bakeContactAO } from './toon.js';
+export { toonGradient, toonMat, toonify, envMat, bakeContactAO };
 
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -27,9 +27,46 @@ const cone = (r, h, n = 6) => new THREE.ConeGeometry(r, h, n);
 const ico = (r) => new THREE.IcosahedronGeometry(r, 0);
 
 function mesh(g, geo, color, x = 0, y = 0, z = 0, opts = {}) {
-  const m = new THREE.Mesh(geo, toonMat(color, opts));
+  // 障礙物一律走環境賽璐璐(低頻水彩 wash + 冷藍陰影;botw_plan Task 2.1/3.1)
+  const m = new THREE.Mesh(geo, envMat(color, { wash: 0.45, cool: 0.5, ...opts }));
   m.position.set(x, y, z);
   g.add(m);
+  return m;
+}
+
+/**
+ * 鑿刻岩幾何(botw_plan Task 1.1):細分 ico + 決定性頂點位移
+ * (同座標頂點同位移 → 水密不裂),非索引 per-face 法線 = 硬邊鑿刻面,
+ * 手工雕鑿輪廓而非圓滑有機球。回傳附帶平滑球面法線副本(outline)
+ * 給 inverted-hull 描邊用 — 面法線外推外殼會沿硬邊裂開。
+ */
+function chiselRock(r, rnd) {
+  const geo = new THREE.IcosahedronGeometry(r, 1);
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  const seen = new Map();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const key = `${Math.round(v.x / r * 64)},${Math.round(v.y / r * 64)},${Math.round(v.z / r * 64)}`;
+    let s = seen.get(key);
+    if (s === undefined) { s = 0.74 + rnd() * 0.5; seen.set(key, s); }
+    pos.setXYZ(i, v.x * s, v.y * s, v.z * s);
+  }
+  geo.computeVertexNormals();   // 非索引幾何 → 每面獨立法線(硬邊)
+  const outline = geo.clone();
+  const on = outline.attributes.normal, op = outline.attributes.position;
+  for (let i = 0; i < op.count; i++) {
+    v.fromBufferAttribute(op, i).normalize();
+    on.setXYZ(i, v.x, v.y, v.z);
+  }
+  return { geo, outline };
+}
+
+/** 鑿刻岩 mesh 速記:掛描邊幾何 + 苔蘚投影選項 */
+function rockMesh(g, size, rnd, color, x, y, z, moss) {
+  const { geo, outline } = chiselRock(size, rnd);
+  const m = mesh(g, geo, color, x, y, z, moss ? { moss } : {});
+  m.userData.outlineGeo = outline;
   return m;
 }
 
@@ -187,10 +224,11 @@ const BUILDERS = {
       const t = rnd();
       const d = r * (t * 1.2 - 0.2);
       const spread = r * 0.5 * (1 - t * 0.5);
-      const rock = mesh(g, ico(0.9 + rnd() * 1.6), jitterColor(rnd() < 0.6 ? 0x76604a : 0x7d7f82, rnd, 0.02, 0.12),
+      // 新崩的土石不長苔;鑿刻碎面 + 泥/岩兩色系交錯 = 手繪土石流
+      const rock = rockMesh(g, 0.9 + rnd() * 1.6, rnd, jitterColor(rnd() < 0.6 ? 0x76604a : 0x7d7f82, rnd, 0.02, 0.12),
         Math.cos(dirA) * d + (rnd() - 0.5) * spread,
         0.4 + rnd() * 0.7,
-        Math.sin(dirA) * d + (rnd() - 0.5) * spread);
+        Math.sin(dirA) * d + (rnd() - 0.5) * spread, null);
       rock.scale.y = 0.55 + rnd() * 0.3;
       rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
     }
@@ -201,13 +239,14 @@ const BUILDERS = {
     }
   },
 
-  /** 落石:巨石群(可擊毀開路) */
+  /** 落石:鑿刻巨石群(可擊毀開路)— 硬邊碎面 + 頂部苔蘚投影 */
   rockfall(g, r, rnd) {
+    const moss = { color: 0x63834a, amount: 0.75 };
     for (let i = 0; i < 4 + rnd() * 3; i++) {
       const a = rnd() * Math.PI * 2, d = r * rnd() * 0.75;
       const size = 0.8 + rnd() * (i === 0 ? 2.4 : 1.4);
-      const rock = mesh(g, ico(size), jitterColor(0x83878b, rnd, 0.01, 0.14),
-        Math.cos(a) * d, size * 0.55, Math.sin(a) * d);
+      const rock = rockMesh(g, size, rnd, jitterColor(0x83878b, rnd, 0.01, 0.14),
+        Math.cos(a) * d, size * 0.55, Math.sin(a) * d, moss);
       rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
       rock.scale.set(1, 0.75 + rnd() * 0.4, 0.85 + rnd() * 0.3);
     }
@@ -217,7 +256,8 @@ const BUILDERS = {
   fallentree(g, r, rnd) {
     const dirA = rnd() * Math.PI * 2;
     const len = r * 1.7;
-    const trunk = mesh(g, cyl(0.35 + rnd() * 0.2, 0.55 + rnd() * 0.2, len, 7), jitterColor(0x6b4a2f, rnd), 0, 0.6, 0);
+    const trunk = mesh(g, cyl(0.35 + rnd() * 0.2, 0.55 + rnd() * 0.2, len, 7), jitterColor(0x6b4a2f, rnd), 0, 0.6, 0,
+      { moss: { color: 0x6a8a4c, amount: 0.7 } });   // 橫躺樹幹朝天側著苔(投影自動貼上緣)
     trunk.rotation.set(Math.PI / 2, 0, dirA);
     const rootX = Math.cos(dirA + Math.PI / 2) * len * 0.5, rootZ = Math.sin(dirA - Math.PI / 2) * len * 0.5;
     const root = mesh(g, cyl(1.3, 0.4, 0.7, 8), 0x54412e, -rootX, 0.9, -rootZ);
@@ -240,6 +280,7 @@ const BUILDERS = {
     const H = 20 + rnd() * 8;                       // 主幹高(含 sc 可達 ~38m,遠超現實同座標樹木)
     const tR = r * 0.42;                            // 主幹半徑(粗壯:視覺佔地貼近碰撞半徑 r)
     const bark = jitterColor(0x5e4630, rnd, 0.02, 0.08);
+    const mossy = { color: 0x64854a, amount: 0.6 };  // 老樹陰面著苔(朝上面投影)
     const trunk = mesh(g, cyl(tR * 0.62, tR, H, 9), bark, 0, H / 2, 0);
     trunk.rotation.y = rnd() * Math.PI;
     // 板根裙:環繞主幹的放射狀鰭板(巨木的視覺錨點,外緣 ≈ 碰撞半徑)
@@ -247,7 +288,7 @@ const BUILDERS = {
     for (let i = 0; i < fins; i++) {
       const a = (i / fins) * Math.PI * 2 + rnd() * 0.5;
       const fin = mesh(g, box(tR * 2.0, 3.2 + rnd() * 2.2, 0.55), new THREE.Color(bark).multiplyScalar(0.9),
-        Math.cos(a) * tR * 1.4, 1.6, Math.sin(a) * tR * 1.4);
+        Math.cos(a) * tR * 1.4, 1.6, Math.sin(a) * tR * 1.4, { moss: mossy });
       fin.rotation.y = -a + Math.PI / 2;
       fin.rotation.z = (rnd() - 0.5) * 0.15;
     }
@@ -255,7 +296,7 @@ const BUILDERS = {
     for (let i = 0; i < 4; i++) {
       const a = rnd() * Math.PI * 2;
       const mound = mesh(g, ico(0.9 + rnd() * 0.8), new THREE.Color(bark).offsetHSL(0.02, 0, -0.06),
-        Math.cos(a) * r * 0.7, 0.35, Math.sin(a) * r * 0.7);
+        Math.cos(a) * r * 0.7, 0.35, Math.sin(a) * r * 0.7, { moss: mossy });
       mound.scale.y = 0.45;
       mound.rotation.y = rnd() * 3;
     }
@@ -279,6 +320,7 @@ const BUILDERS = {
     }
     // 多層樹冠:由大到小疊三~四層(壓扁 ico,每層色相微差 → 手繪層次)
     const layers = 3 + (rnd() < 0.5 ? 1 : 0);
+    const canopies = [];
     for (let i = 0; i < layers; i++) {
       const t = i / layers;
       const cr = r * (1.35 - t * 0.75);
@@ -286,28 +328,45 @@ const BUILDERS = {
         (rnd() - 0.5) * r * 0.35, H * (0.82 + t * 0.28), (rnd() - 0.5) * r * 0.35);
       canopy.scale.y = 0.55 + rnd() * 0.15;
       canopy.rotation.y = rnd() * Math.PI;
+      canopies.push(canopy);
+    }
+    // 樹冠法線球化(botw_plan Task 3.2):所有層的法線一律改成
+    // 「從樹冠團中心向外」— 整團樹冠像一朵實心雲,cel 明暗帶橫跨
+    // 整個冠層,而不是每顆 ico 各自為政的破碎光影
+    const cCen = new THREE.Vector3(0, H * 0.95, 0);
+    const q = new THREE.Quaternion(), qi = new THREE.Quaternion();
+    const cv = new THREE.Vector3();
+    for (const cm of canopies) {
+      q.setFromEuler(cm.rotation);
+      qi.copy(q).invert();
+      const p = cm.geometry.attributes.position, n = cm.geometry.attributes.normal;
+      for (let i = 0; i < p.count; i++) {
+        cv.fromBufferAttribute(p, i).multiply(cm.scale).applyQuaternion(q)
+          .add(cm.position).sub(cCen).normalize().applyQuaternion(qi);
+        n.setXYZ(i, cv.x, cv.y, cv.z);
+      }
+      n.needsUpdate = true;
     }
   },
 
-  /** 巨石:比現實高大的獨立巨岩 — 主碑岩 + 倚靠斜岩 + 苔蘚頂 + 碎石裙 */
+  /** 巨石:比現實高大的獨立巨岩 — 鑿刻主碑岩 + 倚靠斜岩 + 苔蘚投影 + 碎石裙 */
   boulder(g, r, rnd) {
     const H = 9 + rnd() * 5;                        // 主岩高(含 sc 可達 ~19m)
     const rockC = jitterColor(rnd() < 0.5 ? 0x7d8288 : 0x8a8274, rnd, 0.01, 0.1);
-    const main = mesh(g, ico(r * 0.62), rockC, 0, H * 0.42, 0);
+    const moss = { color: 0x5e7a44, amount: 0.9 };  // 世界 Y 軸投影:朝上岩面自動長苔(參考圖 cliff-rocks)
+    const main = rockMesh(g, r * 0.62, rnd, rockC, 0, H * 0.42, 0, moss);
     main.scale.set(1, H / (r * 0.62) * 0.5, 0.8 + rnd() * 0.3);   // 拉高成碑狀
     main.rotation.y = rnd() * Math.PI;
     // 倚靠的斜岩(兩塊,構成可鑽的視覺縫隙感)
     for (let i = 0; i < 2; i++) {
       const a = rnd() * Math.PI * 2;
       const s = r * (0.3 + rnd() * 0.2);
-      const lean = mesh(g, ico(s), new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.08),
-        Math.cos(a) * r * 0.65, s * (0.9 + rnd() * 0.6), Math.sin(a) * r * 0.65);
+      const lean = rockMesh(g, s, rnd, new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.08),
+        Math.cos(a) * r * 0.65, s * (0.9 + rnd() * 0.6), Math.sin(a) * r * 0.65, moss);
       lean.scale.y = 1.4 + rnd() * 0.8;
       lean.rotation.set((rnd() - 0.5) * 0.7, rnd() * 3, (rnd() - 0.5) * 0.7);
     }
-    // 苔蘚頂 + 岩面色帶(沉積紋)
-    const moss = mesh(g, ico(r * 0.45), 0x5e7a44, (rnd() - 0.5) * r * 0.3, H * 0.86, (rnd() - 0.5) * r * 0.3);
-    moss.scale.y = 0.35;
+    // 岩面色帶(沉積紋;苔蘚改由投影著生,不再用貼片球)
     const band = mesh(g, cyl(r * 0.55, r * 0.58, 0.8, 9), new THREE.Color(rockC).multiplyScalar(0.82),
       0, H * (0.3 + rnd() * 0.25), 0);
     band.rotation.z = (rnd() - 0.5) * 0.2;
@@ -315,8 +374,8 @@ const BUILDERS = {
     for (let i = 0; i < 5 + rnd() * 4; i++) {
       const a = rnd() * Math.PI * 2, d = r * (0.6 + rnd() * 0.5);
       const s = 0.5 + rnd() * 1.1;
-      const rk = mesh(g, ico(s), new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.1),
-        Math.cos(a) * d, s * 0.5, Math.sin(a) * d);
+      const rk = rockMesh(g, s, rnd, new THREE.Color(rockC).offsetHSL(0, 0, (rnd() - 0.5) * 0.1),
+        Math.cos(a) * d, s * 0.5, Math.sin(a) * d, rnd() < 0.5 ? moss : null);
       rk.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
       rk.scale.y = 0.6 + rnd() * 0.4;
     }
@@ -383,6 +442,9 @@ export function buildHazard(kind, seed, r = 8) {
   const g = new THREE.Group();
   const rnd = mulberry32((seed * 2654435761) >>> 0);
   (BUILDERS[kind] || BUILDERS.rockfall)(g, r, rnd);
+  // 接地 AO 頂點色(botw_plan Task 2.2):貼地處偏暗冷 → 物件「長」在地上
+  // (神木不加大衰減:板根/樹幹本色深,AO 拉高會整片近黑)
+  bakeContactAO(g, 2.4);
   outlinify(g, 0.07);   // 漫畫描邊(透明件:水面/偽裝網/火舌 自動跳過)
   g.userData.kind = kind;
   return g;

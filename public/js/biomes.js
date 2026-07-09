@@ -19,7 +19,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ENV, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
-import { toonMat, toonGradient } from './hazards.js';
+import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -299,7 +299,8 @@ function buildVegMeshes(type, items, season) {
 
 // ---- 建物(特殊地標 = 小 Group;住宅/商辦 = InstancedMesh)----
 function bmat(color, opts = {}) {
-  return toonMat(color, opts);   // 建物同樣走日漫賽璐璐
+  // 建物走環境賽璐璐:低頻水彩 wash 打破大立面單色 + 冷藍陰影(botw_plan Task 2.1/3.1)
+  return envMat(color, { wash: 0.4, cool: 0.45, ...opts });
 }
 function box(w, h, d, color, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bmat(color));
@@ -595,15 +596,18 @@ function roadColor(biome, main) {
  * 把圖資道路(或離線備援的兵線)畫成貼地賽璐璐路面。
  * 純視覺:掛在 biomes group,不進射擊 raycast、不描邊。
  * 依地貌 + 主/次分色批次合併(每色一個 Mesh),寬度取自圖資車道數。
+ * 賽璐璐精修(botw_plan):4 頂點截面 — 路緣 18% 為頂點色「手繪墨線帶」;
+ * 市區主幹道加虛線中線;材質帶低頻水彩 wash 打破長路面單色。
  */
 function buildRoads(group, roads, terrain, center, mix, rnd) {
   const inb = 4;
-  const buckets = new Map();   // color -> { pos, nrm, idx, base }
+  const buckets = new Map();   // color -> { pos, nrm, col, idx, base }
   const bucketOf = (color) => {
     let b = buckets.get(color);
-    if (!b) { b = { pos: [], nrm: [], idx: [], base: 0 }; buckets.set(color, b); }
+    if (!b) { b = { pos: [], nrm: [], col: [], idx: [], base: 0 }; buckets.set(color, b); }
     return b;
   };
+  const dash = { pos: [], nrm: [], idx: [], base: 0 };   // 虛線中線(市區主幹道)
   let built = 0;
   for (const way of roads) {
     if (way.tags.tunnel) continue;             // 隧道段不畫
@@ -635,16 +639,48 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
         let dx = c[0] - a[0], dz = c[1] - a[1];
         const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
         const px = dz, pz = -dx;                 // XZ 垂直向量
-        const lx = x + px * hw, lz = z + pz * hw, rxp = x - px * hw, rzp = z - pz * hw;
-        b.pos.push(lx, terrain.heightAt(lx, lz) + lift, lz);
-        b.pos.push(rxp, terrain.heightAt(rxp, rzp) + lift, rzp);
-        b.nrm.push(0, 1, 0, 0, 1, 0);
+        // 截面 4 頂點:外緣暗(墨線)→ 內緣亮,漸層即手繪描邊筆觸
+        for (const [off, ink] of [[hw, 1], [hw * 0.64, 0], [-hw * 0.64, 0], [-hw, 1]]) {
+          const vx = x + px * off, vz = z + pz * off;
+          b.pos.push(vx, terrain.heightAt(vx, vz) + lift, vz);
+          b.nrm.push(0, 1, 0);
+          if (ink) b.col.push(0.52, 0.52, 0.58);   // 邊墨帶微偏冷
+          else b.col.push(1, 1, 1);
+        }
       }
       for (let i = 0; i < nP - 1; i++) {
-        const k = vbase + i * 2;
-        b.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+        const k = vbase + i * 4;
+        for (const o of [0, 1, 2]) {
+          b.idx.push(k + o, k + o + 1, k + o + 4, k + o + 1, k + o + 5, k + o + 4);
+        }
       }
-      b.base += nP * 2;
+      b.base += nP * 4;
+      // 虛線中線:只畫市區柏油主幹道(泥土/礫石路沒有標線)
+      if (main && biome === 'urban') {
+        const cum = [0];
+        for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
+        const total = cum[nP - 1];
+        for (let s = 5; s + 3.2 < total; s += 9.5) {
+          const pts = [s, s + 3.2].map((d) => {
+            let i = 1; while (cum[i] < d && i < nP - 1) i++;
+            const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+            return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f];
+          });
+          let ddx = pts[1][0] - pts[0][0], ddz = pts[1][1] - pts[0][1];
+          const dl = Math.hypot(ddx, ddz) || 1; ddx /= dl; ddz /= dl;
+          const qx = ddz, qz = -ddx, wq = 0.3;
+          const k = dash.base;
+          for (const [ex, ez] of pts) {
+            for (const sgn of [1, -1]) {
+              const vx = ex + qx * wq * sgn, vz = ez + qz * wq * sgn;
+              dash.pos.push(vx, terrain.heightAt(vx, vz) + lift + 0.06, vz);
+              dash.nrm.push(0, 1, 0);
+            }
+          }
+          dash.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+          dash.base += 4;
+        }
+      }
       built++;
       if (built >= 600) break;
     }
@@ -655,10 +691,22 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
     geo.setIndex(b.idx);
-    const m = new THREE.Mesh(geo, toonMat(color));
+    const m = new THREE.Mesh(geo, envMat(color, { vertexColors: true, wash: 0.55, cool: 0.5 }));
     m.frustumCulled = false;
     m.renderOrder = 1;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  if (dash.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(dash.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(dash.nrm, 3));
+    geo.setIndex(dash.idx);
+    const m = new THREE.Mesh(geo, envMat(0xe8e2d0, { wash: 0.15, cool: 0.3 }));
+    m.frustumCulled = false;
+    m.renderOrder = 2;
     m.userData.noOutline = true;
     group.add(m);
   }
@@ -1023,13 +1071,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       const f = commercial
         ? facadeTex('com', 7, 13, '#2e3c4a', 0.55)
         : facadeTex('res', 5, 7, '#3a4046', 0.3);
-      const mat = toonMat(0xffffff, {
+      const wall = bmat(0xffffff, {
         map: f.map,
         emissiveMap: f.emissiveMap,
         emissive: new THREE.Color(night ? 0xffb45e : 0x000000),
         emissiveIntensity: night ? (commercial ? 0.9 : 0.55) : 0,
       });
-      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, list.length);
+      // 屋頂/底面用素色材質(色塊分離):窗格貼圖只留在四面牆,
+      // 屋頂不再出現「躺平的窗」;instance tint 兩材質同吃 → 每棟仍有色差
+      const roof = bmat(commercial ? 0x707c88 : 0x9c8e7c, { wash: 0.5 });
+      // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
+      const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), [wall, wall, roof, roof, wall, wall], list.length);
       const pal = PALETTE[commercial ? 'commercial' : 'residential'];
       list.forEach((b, i) => {
         E.set(0, b.ry, 0); Q.setFromEuler(E);
@@ -1061,7 +1113,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(m);
     }
     if (roofBoxes.length) {
-      const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMat(0x8a9096), roofBoxes.length);
+      const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), roofBoxes.length);
       roofBoxes.forEach((b, i) => {
         E.set(0, b.ry, 0); Q.setFromEuler(E);
         P.set(b.x, b.y + b.h / 2, b.z);
@@ -1095,6 +1147,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   for (const lm of landmarks) {
     const g = new THREE.Group();
     LANDMARKS[lm.type](g);
+    bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
     const sc = OVER.lm * (0.9 + rnd() * 0.25);
     g.scale.setScalar(sc);
     const gy = terrain.heightAt(lm.x, lm.z);
