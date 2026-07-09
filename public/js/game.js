@@ -16,6 +16,7 @@ import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { stepLocomotion } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield } from './vfx.js';
+import { CutIn } from './cutin.js';
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
@@ -59,6 +60,7 @@ export class BattleClient {
     this.floods = [];                // 淹水區(機甲減速判定)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
+    this.cutin = new CutIn(document.getElementById('cutinLayer'));
 
     // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
     this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
@@ -411,6 +413,8 @@ export class BattleClient {
     const myTop = this.pos.y + (this.isDrone ? 1.2 : 4.2);
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
+      // 自己的僚機不碰撞:歸隊時牠們以 50m/s 貼上來,會誤觸下面的高速撞擊自爆
+      if (ent.hero && ent.pid != null && ent.pid === this.youId) continue;
       let c = BattleClient.COLLIDER[ent.kind];
       if (!c && ent.colR) c = { r: ent.colR, h: ent.colH || 6 };   // 阻擋型障礙物
       if (!c) continue;
@@ -464,6 +468,12 @@ export class BattleClient {
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
           if (e.code === 'KeyF' && this.isDrone) this._detonate();   // 無人機自爆(右鍵已改為瞄準)
+        }
+        // 三機小隊:V 循環切換主視野、1~3 直選(陣亡中也能切到存活的僚機)
+        if (this.isDrone) {
+          if (e.code === 'KeyV') this._swapDrone(null);
+          const n = /^Digit([123])$/.exec(e.code);
+          if (n) this._swapDrone(Number(n[1]) - 1);
         }
       }
       this.keys[e.code] = e.type === 'keydown';
@@ -523,6 +533,8 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
+        // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
+        if (e.pid === this.youId && !!e.act !== ent.isSelf) this._takeOver(ent, e);
         if (wasDead && !e.dead && !ent.isSelf) ent._snapPos = true;
         ent.mesh.visible = !e.dead && !ent.isSelf;
         if (ent.isSelf) {
@@ -566,6 +578,13 @@ export class BattleClient {
     for (const ent of this.ents.values()) {
       if (ent.kind === 'base') bases[ent.side] = { hp: ent.hp, max: ent.max };
     }
+    // 三機小隊狀態列(各機 HP / 陣亡倒數 / 誰是主視野)
+    if (this.isDrone) {
+      this.hud.squad?.(m.ents
+        .filter((e) => e.pid === this.youId)
+        .sort((a, b) => (a.si || 0) - (b.si || 0))
+        .map((e) => ({ si: e.si || 0, hp: e.hp, max: e.m, dead: !!e.dead, rs: e.rs || 0, act: !!e.act })));
+    }
     this.hud.bases?.(bases, m.stats);
     this.hud.wave?.(m.wave, m.nextWave);
     this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft(), this._weaponHud());
@@ -596,13 +615,14 @@ export class BattleClient {
     const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
     const { group, mixer } = makeUnit(key, e.s, { ch: e.ch });   // 英雄:角色專屬機體外觀
     const hero = e.k === 'drone' || e.k === 'robot';
-    const isSelf = hero && e.pid != null && e.pid === this.youId;
+    // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
+    const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
     if (isSelf) group.visible = false;
     this.scene.add(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
     const ent = {
-      id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch,
+      id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli',
       isStatic: e.k === 'tower' || e.k === 'base',
@@ -873,6 +893,10 @@ export class BattleClient {
         this.hud.feed?.(ev.side === this.side
           ? `✨ ${c.code}【${a.name}】`
           : `⚠️ 敵方 ${c.code} 施放【${a.name}】!`);
+        // 立繪演出:自己的招式一律演;敵方只演大招(小招太頻繁會蓋住視野)
+        const self = ev.pid === this.youId;
+        this.cutin.show(ev, self, ev.side ? SIDES[ev.side].color : '#ffffff');
+        if (ev.slot === 'ult') this.trauma = Math.min(1, this.trauma + (self ? 0.45 : 0.25));
       }
     } else if (ev.e === 'crit') {
       // 爆擊(伺服器擲骰):自己打出 → 橘色大字回饋
@@ -911,6 +935,51 @@ export class BattleClient {
       new THREE.Vector3(m.to[0], m.to[1], m.to[2]),
       m.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
     );
+  }
+
+  // ---------------- 三機小隊:主視野接管 ----------------
+  /**
+   * 伺服器是主視野的唯一決定者(死亡自動讓位 / V 鍵手動切換)。
+   * 接管 = 座艙瞬移到新座機的伺服器座標(e.y 是離地高度),舊座機交還給僚機 AI 渲染。
+   */
+  _takeOver(ent, e) {
+    if (!e.act) { ent.isSelf = false; ent._snapPos = true; return; }
+    for (const o of this.ents.values()) {
+      if (o.hero && o.isSelf && o !== ent) { o.isSelf = false; o._snapPos = true; }
+    }
+    ent.isSelf = true;
+    const wx = e.x, wz = -e.z;
+    this.pos.set(wx, this.terrain.heightAt(wx, wz) + (e.y ?? 0), wz);
+    this.vel.set(0, 0, 0);
+    this.vy = 0;
+    this.yaw = e.ry ?? this.yaw;
+    this.firing = false;
+    this._crashSent = false;
+    this.trauma = 0.35;
+    this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
+  }
+
+  /** 切換主視野(V 循環 / 1~3 直選);實際換機由伺服器裁決 */
+  _swapDrone(i) {
+    if (!this.isDrone || !this.side) return;
+    this.net.send(i == null ? { t: 'swap' } : { t: 'swap', i });
+  }
+
+  /**
+   * 準星鎖定:瞄準中把準星掃到的敵方單位回報伺服器(自爆衝刺的目標)。
+   * 只送變化與心跳,避免每幀灌訊息。
+   */
+  _tickLock(now) {
+    if (!this.isDrone || this.dead || !this.aiming || this.shopOpen) return;
+    if (now - (this._lockAt || 0) < 0.25) return;
+    this._lockAt = now;
+    const { ent } = this._resolveAim(600);
+    if (!ent || ent.side === this.side || ent.neutral) return;
+    this.net.send({ t: 'lock', id: ent.id });
+    if (this._lockId !== ent.id) {
+      this._lockId = ent.id;
+      this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}(F 自爆 → 僚機衝刺)`);
+    }
   }
 
   // ---------------- 自身死亡 / 重生 ----------------
@@ -1409,6 +1478,7 @@ export class BattleClient {
       });
     }
     this._tryFire(now);
+    this._tickLock(now);
   }
 
   _updateSpectator(dt) {
@@ -1643,6 +1713,7 @@ export class BattleClient {
 
   dispose() {
     this.disposed = true;
+    this.cutin?.dispose();
     this.envFx?.dispose();
     cancelAnimationFrame(this._raf);
     window.removeEventListener('resize', this._onResize);

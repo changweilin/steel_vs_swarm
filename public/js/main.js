@@ -5,9 +5,12 @@
 import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, SIZE_KEYS,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, PROG, SIZE_KEYS,
+  UNITS, SQUAD,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
+import { LORE } from './lore.js';
+import { avatarURL, portraitURL } from './portraits.js';
 
 const SIZE_LABELS = { large: '大', medium: '中', small: '小' };
 import { MapSelect } from './mapSelect.js';
@@ -538,16 +541,104 @@ function renderBotDiff(lb) {
 }
 
 // ================= 選角(入座後出現;不選 = 開戰隨機)=================
-function charTip(id) {
+const FX_LABEL = {
+  buff: '增益', heal: '維修', strike: '打擊', summon: '召喚', emp: '癱瘓',
+  vision: '視野', stealth: '匿蹤', dash: '突進', intercept: '攔截',
+};
+// 屬性條的滿格基準(取全角色池上緣,純顯示用)
+const BAR_MAX = { hp: 850, sp: 300, mp: 135, speed: 52, armor: 28 };
+
+/** 三階數值:全等 → 單值;否則 "a → b → c" */
+const tri = (fn, digits = 0) => {
+  const v = [1, 2, 3].map((l) => +fn(l).toFixed(digits));
+  return v.every((x) => x === v[0]) ? `${v[0]}` : v.join(' → ');
+};
+
+function charWeaponRow(id, slot, key) {
+  const raw = CHARACTERS[id][slot];
+  const w = (l) => heroWeapon(id, slot, l);
+  const bits = [`傷害 ${tri((l) => w(l).dmg)}`, `射程 ${Math.round(w(1).range)}m`];
+  if (slot === 'light') bits.push(`射速 ${tri((l) => w(l).rate, 1)}/s`, `彈匣 ${tri((l) => w(l).mag)}`);
+  else bits.push(`冷卻 ${tri((l) => w(l).reload, 1)}s`);
+  if (raw.r) bits.push(`爆風 ${tri((l) => w(l).r)}m`);
+  if (raw.pen) bits.push(`破甲 ${tri((l) => w(l).pen)}`);
+  if (raw.crit) bits.push(`爆擊 ${Math.round(w(1).crit * 100)}%×${w(1).critX}`);
+  if (raw.emp) bits.push(`癱瘓 ${tri((l) => w(l).emp, 1)}s`);
+  return `<div class="cd-row">
+    <span class="cd-key">${key}</span>
+    <div><b>${esc(raw.name)}</b> <span class="dim">${esc(raw.rw)}</span>
+    <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
+}
+
+function charAbilityRow(id, slot, key) {
+  const a = (l) => heroAbility(id, slot, l);
+  const A = a(1);
+  const bits = [`電力 ${tri((l) => a(l).mp)}`, `冷卻 ${tri((l) => a(l).cd, 1)}s`];
+  if (A.dmg) bits.push(`傷害 ${tri((l) => a(l).dmg)}`);
+  if (A.heal) bits.push(`修復 ${tri((l) => a(l).heal)}`);
+  if (A.count > 1 || A.unit) bits.push(`數量 ${tri((l) => a(l).count)}`);
+  if (A.dur) bits.push(`持續 ${tri((l) => a(l).dur, 1)}s`);
+  if (A.r) bits.push(`半徑 ${tri((l) => a(l).r)}m`);
+  if (A.range) bits.push(`施放距離 ${tri((l) => a(l).range)}m`);
+  if (A.vision) bits.push(`無霧 ${tri((l) => a(l).vision)}s`);
+  if (A.imp) bits.push(`推力 ${tri((l) => a(l).imp)}`);
+  if (A.mul) bits.push(...Object.entries(A.mul).map(([k, _]) =>
+    `${k === 'dmg' ? '傷害' : k === 'dmgTaken' ? '承傷' : '填彈'} ${tri((l) => a(l).mul[k], 2)}×`));
+  return `<div class="cd-row">
+    <span class="cd-key">${key}</span>
+    <div><b>${esc(A.name)}</b> <span class="cd-fx">${FX_LABEL[A.fx] || A.fx}</span>
+    <div class="cd-desc">${esc(A.desc || '')}</div>
+    <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
+}
+
+function charDetailHTML(id) {
   const c = CHARACTERS[id];
-  const l = heroWeapon(id, 'light', 1), h = heroWeapon(id, 'heavy', 1);
-  const s = heroAbility(id, 'skill', 1), u = heroAbility(id, 'ult', 1);
-  return `${c.machine}
-輕:${l.name}(${c.light.rw})傷害 ${Math.round(l.dmg)} ・ 射程 ${Math.round(l.range)}m${l.crit ? ` ・ 爆擊 ${Math.round(l.crit * 100)}%` : ''}
-重:${h.name}(${c.heavy.rw})傷害 ${Math.round(h.dmg)} ・ 射程 ${Math.round(h.range)}m ・ CD ${h.reload}s${h.pen ? ` ・ 破甲 ${h.pen}` : ''}
-Q:${s.name} — ${s.desc}
-E:${u.name} — ${u.desc}
-護甲 ${c.mods.armor} ・ 護盾×${c.mods.sp ?? 1} ・ 速度×${c.mods.speed ?? 1}`;
+  const lo = LORE[id] || {};
+  const kind = charKind(id);
+  const u = UNITS[kind];
+  const m = c.mods;
+  const isDrone = kind === 'drone';
+  const stats = [
+    ['裝甲 HP', Math.round(u.hp * (m.hp ?? 1)), 'hp'],
+    ['護盾', Math.round(u.shield * (m.sp ?? 1)), 'sp'],
+    ['電力', Math.round(u.mp * (m.mp ?? 1)), 'mp'],
+    ['機動', Math.round(u.speed * (m.speed ?? 1)), 'speed'],
+    ['護甲值', m.armor ?? 0, 'armor'],
+  ].map(([label, v, k]) =>
+    `<div class="cd-stat"><span>${label}</span>
+      <i><b style="width:${Math.min(100, v / BAR_MAX[k] * 100).toFixed(0)}%"></b></i>
+      <em>${v}</em></div>`).join('');
+
+  return `<div class="cd-art">
+      <img src="${portraitURL(id)}" alt="${esc(c.name)}">
+      <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
+        ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${isDrone ? '無人機' : '機甲'}</div>
+    </div>
+    <div class="cd-body">
+      <div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
+      <div class="cd-machine">${esc(c.machine)}</div>
+      <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
+      ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
+      ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
+      ${lo.bio ? `<p class="cd-bio">${esc(lo.bio)}</p>` : ''}
+      <div class="cd-stats">${stats}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值,單機傷害為機甲的 1/3,三機齊射 ≈ 一台機甲。</div>` : ''}
+      </div>
+      <div class="cd-kit">
+        ${charWeaponRow(id, 'light', '左鍵')}
+        ${charWeaponRow(id, 'heavy', '右鍵')}
+        ${charAbilityRow(id, 'skill', 'Q')}
+        ${charAbilityRow(id, 'ult', 'E')}
+      </div>
+      <div class="cd-foot">數值為 Lv1 → Lv2 → Lv3(擊殺數 + 金錢於戰場升級);已含英雄倍率(射程 ×1.2、威力 ×1.5)。</div>
+    </div>`;
+}
+
+function showCharDetail(id) {
+  const box = $('charDetail');
+  box.innerHTML = id
+    ? charDetailHTML(id)
+    : '<div class="cd-empty">🎲 未選角色<br><span>開戰時隨機指派一名。點選頭像可看完整簡歷與數值。</span></div>';
 }
 
 function renderCharPick(me) {
@@ -560,24 +651,30 @@ function renderCharPick(me) {
   const grid = $('charGrid');
   grid.innerHTML = '';
   const rnd = document.createElement('button');
-  rnd.className = 'char-btn' + (me.ch ? '' : ' on');
-  rnd.innerHTML = '🎲<br>隨機';
+  rnd.className = 'char-btn rnd' + (me.ch ? '' : ' on');
+  rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
   rnd.onclick = () => app.net.send({ t: 'pickChar', ch: null });
+  rnd.onmouseenter = () => showCharDetail(null);
   grid.appendChild(rnd);
   for (const id of charsOf(me.side)) {
     const c = CHARACTERS[id];
     const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
     const b = document.createElement('button');
-    b.className = 'char-btn' + (me.ch === id ? ' on' : '');
-    b.innerHTML = `<b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><br><span class="char-name">${esc(c.name)}</span>`;
-    b.title = (merc ? '【傭兵】雙陣營皆可受雇,配置不隨陣營改變\n' : '') + charTip(id);
-    b.onclick = () => { app.net.send({ t: 'pickChar', ch: id }); $('charInfo').textContent = `${c.code} ・ ${charTip(id).split('\n')[0]}`; };
+    b.className = 'char-btn' + (me.ch === id ? ' on' : '') + (merc ? ' merc' : '');
+    b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
+      <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
+    b.onclick = () => app.net.send({ t: 'pickChar', ch: id });
+    b.onmouseenter = () => showCharDetail(id);
     grid.appendChild(b);
   }
+  // 滑鼠移出網格 → 退回目前選定角色
+  grid.onmouseleave = () => showCharDetail(me.ch || null);
+  showCharDetail(me.ch || null);
+
   const cur = me.ch && CHARACTERS[me.ch];
   $('charInfo').innerHTML = cur
-    ? `<b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}<br>${esc(charTip(me.ch).split('\n').slice(1).join(' ・ '))}`
-    : '未選角色:開戰時將隨機指派一名(滑鼠停留可看角色簡歷)。';
+    ? `已選定 <b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}`
+    : '未選角色:開戰時將隨機指派一名(滑鼠移到頭像可預覽)。';
 }
 
 // ================= 載入 + 開戰 =================
@@ -639,7 +736,7 @@ function enterGame() {
     : '觀戰模式';
   $('hudHelp').innerHTML = app.mySide
     ? (isDrone
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆 ・ R 填彈 ・ B 升級 ・ 子彈有彈道下墜,遠距請抬高準星!'
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆(僚機衝向鎖定目標) ・ V 或 1~3 切換主視野 ・ R 填彈 ・ B 升級 ・ 三機齊射才是完整火力,別讓僚機掉隊!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
@@ -683,6 +780,17 @@ function makeHud() {
       const cdEl = $('burstCd');
       cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
       cdEl.classList.toggle('ready', cd <= 0);
+    },
+    // 三機小隊:HP 條 + 陣亡重生倒數;高亮主視野那一架
+    squad: (list) => {
+      const box = $('squadRow');
+      if (!list || list.length < 2) { box.innerHTML = ''; return; }
+      box.innerHTML = list.map((d) => {
+        const cls = `sq-box${d.act ? ' act' : ''}${d.dead ? ' down' : ''}`;
+        const w = d.dead ? 100 : Math.max(0, d.hp / d.max * 100);
+        const label = d.dead ? `☠ ${d.rs}s` : `${Math.round(d.hp)}`;
+        return `<div class="${cls}"><div class="sq-fill" style="width:${w}%"></div><span>${d.si + 1}號 ${label}</span></div>`;
+      }).join('');
     },
     shop: (open, st) => renderShop(open, st),
     bases: (bases, stats) => {

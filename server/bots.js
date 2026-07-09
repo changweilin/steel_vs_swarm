@@ -160,7 +160,7 @@ export class BotBrain {
       }
     }
 
-    // 無人機神風:貼近建築或敵群密集時撞擊引爆(重生無冷卻,值得換)
+    // 無人機神風:貼近建築或敵群密集時撞擊引爆(先鎖定目標,僚機才會跟著衝刺自爆)
     if (h.kind === 'drone') {
       const b = WEAPONS[UNITS.drone.bomb];
       const near = [...this.sim.ents.values()].filter((e2) =>
@@ -168,7 +168,10 @@ export class BotBrain {
         && Math.hypot(e2.x - h.x, e2.z - h.z, (h.y || 0)) <= b.r).length;
       const onStruct = (t.kind === 'tower' || t.kind === 'base')
         && Math.hypot(t.x - h.x, t.z - h.z, h.y || 0) <= b.r * 0.8;
-      if (near >= 4 || onStruct) this.sim.heroDetonate(this.pid);
+      if (near >= 4 || onStruct) {
+        this.sim.heroLock(this.pid, t.id);
+        this.sim.heroDetonate(this.pid);
+      }
     }
   }
 

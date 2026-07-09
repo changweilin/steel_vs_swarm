@@ -6,10 +6,18 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
-  vsMult, upgradePrice, laneTacticsXZ,
+  vsMult, upgradePrice, laneTacticsXZ, SQUAD,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
+
+// 小隊共用的「玩家狀態」:一名玩家不論操控幾架機體,經濟/電力/彈藥/招式只有一份。
+// 三架機體各自是獨立 ent(有自己的 hp/護盾/座標/死亡狀態),但這些欄位透過
+// getter/setter 指回同一個 sq.ps —— 讓既有的 h.money / h.abil / h.ammo 全部原樣可用。
+const SQUAD_SHARED = [
+  'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
+  'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst',
+];
 
 /** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
  *  ×(1/REAL_SCALE):真實範圍縮小,但遊戲世界公尺不變 — 與 terrain.js/llToWorld 必須同倍率。 */
@@ -36,7 +44,8 @@ export class BattleSim {
     this.wave = 0;
     this.nextWaveAt = GAME.FIRST_WAVE_DELAY_S;
     this.ents = new Map();            // id -> entity
-    this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> hero entity
+    this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> 目前主視野機體
+    this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
     this.missiles = [];               // 防空飛彈(伺服器權威 3D 追蹤)
     this.events = [];                 // 快照間累積的事件
     this.over = false;
@@ -382,34 +391,107 @@ export class BattleSim {
     const c = CHARACTERS[ch];
     const m = c.mods || {};
     const u = UNITS[kind];
-    const idx = [...this.heroes.values()].filter((h) => h.side === side).length;
+    const idx = this.squads.size ? [...this.squads.values()].filter((s) => s.side === side).length : 0;
     const [bx, bz] = this.basePos[side];
     // 同陣營多英雄:繞主堡錯開出生點,避免疊在一起
     const ang = idx * (Math.PI * 2 / 5);
-    const h = this._add({
-      kind, side, pid, ch,
-      x: bx + Math.cos(ang) * 30 * Math.min(idx, 1),
-      z: bz + Math.sin(ang) * 30 * Math.min(idx, 1),
-      y: 0, ry: 0, spawnIdx: idx,
-      hp: Math.round(u.hp * (m.hp ?? 1)), hero: true,
-      dead: false, respawnAt: 0, lastBurst: 0, aiming: false,
-      // 經濟 / 武器狀態(彈藥伺服器權威)
-      money: ECON.START, upg: { dmg: 0, hull: 0 },
-      ammo: {}, reloadUntil: {}, fireAt: {}, aaCd: 0, buffs: {},
-      // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
-      armor: m.armor ?? 0, lastHitAt: -99,
-      // 電力(施放招式消耗)/ 招式階級(輕重武器 Lv1 自帶,小招/大招要解鎖)
-      mp: Math.round(u.mp * (m.mp ?? 1)), mpRegen: u.mpRegen,
-      abil: { light: 1, heavy: 1, skill: 0, ult: 0 },
-      acd: { skill: 0, ult: 0 }, kn: 0,
-      mods: [],                       // 招式增益 [{k, m, until}]
-      empUntil: 0, stealthUntil: 0,
-    });
-    h.maxSp = Math.round(u.shield * (m.sp ?? 1));
-    h.sp = h.maxSp;
-    h.maxMp = h.mp;
-    this.heroes.set(pid, h);
-    return h;
+    const ox = bx + Math.cos(ang) * 30 * Math.min(idx, 1);
+    const oz = bz + Math.sin(ang) * 30 * Math.min(idx, 1);
+    const mp = Math.round(u.mp * (m.mp ?? 1));
+    const sq = {
+      pid, side, ch, kind, act: 0, bodies: [],
+      lock: 0, lockAt: -99,          // 準星鎖定(自爆衝刺目標)
+      ps: {                          // 共用玩家狀態(見 SQUAD_SHARED)
+        money: ECON.START, upg: { dmg: 0, hull: 0 },
+        ammo: {}, reloadUntil: {}, fireAt: {}, buffs: {},
+        mp, maxMp: mp, mpRegen: u.mpRegen,
+        abil: { light: 1, heavy: 1, skill: 0, ult: 0 },
+        acd: { skill: 0, ult: 0 }, kn: 0,
+        mods: [],                    // 招式增益 [{k, m, until}]
+        empUntil: 0, stealthUntil: 0, aiming: false, lastBurst: 0,
+      },
+    };
+    const n = kind === 'drone' ? SQUAD.N : 1;
+    for (let i = 0; i < n; i++) {
+      const b = this._add({
+        kind, side, pid, ch, si: i, spawnIdx: idx,
+        x: ox + i * 12, z: oz + i * 6, y: 0, ry: 0,
+        hp: Math.round(u.hp * (m.hp ?? 1)), hero: true,
+        dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
+        // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
+        armor: m.armor ?? 0, lastHitAt: -99,
+        dash: 0, rg: false,          // 僚機:衝刺自爆目標 / 歸隊中
+      });
+      b.maxSp = Math.round(u.shield * (m.sp ?? 1));
+      b.sp = b.maxSp;
+      this._bindShared(b, sq);
+      sq.bodies.push(b);
+    }
+    this.squads.set(pid, sq);
+    this.heroes.set(pid, sq.bodies[0]);
+    return sq.bodies[0];
+  }
+
+  /** 把共用玩家狀態掛成 ent 上的存取器 —— 三架機體讀寫同一份 sq.ps */
+  _bindShared(b, sq) {
+    b.sq = sq;
+    const props = {};
+    for (const k of SQUAD_SHARED) {
+      props[k] = { get: () => sq.ps[k], set: (v) => { sq.ps[k] = v; }, enumerable: true, configurable: true };
+    }
+    Object.defineProperties(b, props);
+  }
+
+  /** 全體機體(所有小隊的所有機體;跟 heroes.values() 不同,後者一隊只有主視野那架) */
+  *_allBodies() {
+    for (const sq of this.squads.values()) for (const b of sq.bodies) yield b;
+  }
+
+  _bodies(h) { return h.sq ? h.sq.bodies : [h]; }
+  _aliveN(h) { return this._bodies(h).filter((b) => !b.dead).length; }
+
+  /**
+   * 指定主視野機體。i 為 null / 已陣亡 → 自動挑第一架存活的;
+   * 全滅時主視野留在原機(客戶端才看得到死亡畫面與重生倒數)。
+   */
+  _promote(sq, i = null) {
+    if (i == null || !sq.bodies[i] || sq.bodies[i].dead) {
+      const k = sq.bodies.findIndex((b) => !b.dead);
+      i = k >= 0 ? k : sq.act;
+    }
+    const b = sq.bodies[i];
+    if (this.heroes.get(sq.pid) === b) return false;
+    sq.act = i;
+    b.dash = 0;      // 接管主視野 = 玩家操控,取消自爆衝刺
+    b.rg = false;
+    this.heroes.set(sq.pid, b);
+    this.events.push({ e: 'swap', pid: sq.pid, id: b.id });
+    return true;
+  }
+
+  /** 切換主視野(客戶端 V / 1~3);目標機體陣亡則忽略 */
+  heroSwap(pid, i) {
+    const sq = this.squads.get(pid);
+    if (!sq || this.over || sq.bodies.length < 2) return;
+    if (i == null) {   // 循環切換到下一架存活機體
+      for (let k = 1; k < sq.bodies.length; k++) {
+        const j = (sq.act + k) % sq.bodies.length;
+        if (!sq.bodies[j].dead) { this._promote(sq, j); return; }
+      }
+      return;
+    }
+    if (!sq.bodies[i] || sq.bodies[i].dead) return;
+    this._promote(sq, i);
+  }
+
+  /** 準星鎖定敵方目標(自爆衝刺用);中立物與友軍不鎖 */
+  heroLock(pid, targetId) {
+    const sq = this.squads.get(pid);
+    if (!sq || this.over) return;
+    const t = this.ents.get(targetId);
+    if (!t || t.neutral || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
+    sq.lock = targetId;
+    sq.lockAt = this.t;
   }
 
   // ---------- 武器解析 / 開火閘門(射速 + 彈夾 + 填彈,伺服器把關)----------
@@ -529,6 +611,27 @@ export class BattleSim {
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
+    this._echo(h, t, wp.def);
+  }
+
+  /**
+   * 僚機同步射擊:主視野機命中什麼,射程內的存活僚機就跟著打同一個目標。
+   * 單機傷害已在 heroWeapon() 折成 1/3,所以「三機齊射 ≈ 一台機甲」。
+   * 彈藥/射速只在主視野機那次 _gateFire 扣一份(小隊共用同一個彈匣)。
+   */
+  _echo(h, t, def) {
+    const sq = h.sq;
+    if (!sq || sq.bodies.length < 2) return;
+    for (const b of sq.bodies) {
+      if (b === h || b.dead) continue;
+      if (t.hp <= 0 || (t.hero && t.dead)) return;
+      const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
+      if (d3 > def.range * 1.25) continue;
+      this.events.push({ e: 'shot', from: [b.x, b.z], to: [t.x, t.z], side: b.side });
+      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind), t);
+      this._applyHitEmp(b, def, t);
+      this._damage(t, dmg, b, def.pen);
+    }
   }
 
   /** 射擊來襲防空飛彈(飛彈可被擊毀) */
@@ -544,7 +647,12 @@ export class BattleSim {
     const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
     if (d3 > wp.def.range * 1.25) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    m.hp -= wp.def.dmg * (1 + ECON.UPGRADES.dmg.step * h.upg.dmg);
+    // 僚機同步射擊(單機傷害是 1/3,三機齊射才打得掉飛彈)
+    for (const b of this._bodies(h)) {
+      if (b.dead) continue;
+      if (Math.hypot(b.x - m.x, b.z - m.z, (b.y || 0) - m.y) > wp.def.range * 1.25) continue;
+      m.hp -= wp.def.dmg * (1 + ECON.UPGRADES.dmg.step * h.upg.dmg);
+    }
     if (m.hp <= 0) {
       this.missiles.splice(this.missiles.indexOf(m), 1);
       this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
@@ -571,6 +679,7 @@ export class BattleSim {
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
+    this._echo(h, t, wp.def);
     return true;
   }
 
@@ -590,17 +699,40 @@ export class BattleSim {
     h.lastBurst = this.t;
     this.events.push({ e: 'boom', x, z, r: wp.def.r, side: h.side });
     this._blast(h, wp.def, x, z, 0);
+    // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
+    for (const b of this._bodies(h)) {
+      if (b === h || b.dead) continue;
+      if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
+      this._blast(b, wp.def, x, z, 0);
+    }
   }
 
-  /** 無人機重型炸彈:右鍵原地引爆 / 高速撞擊引爆 — 座機同歸於盡(重生無冷卻) */
+  /**
+   * 無人機重型炸彈:F 鍵原地引爆 / 高速撞擊引爆 — 主視野座機同歸於盡。
+   * 僚機:有鎖定的敵方目標才會朝它衝刺直到引爆;沒鎖定則不動作。
+   * 爆風走 _blast(同陣營一律跳過)→ 不會炸到友軍。
+   */
   heroDetonate(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'drone' || this.over) return;
+    const sq = h.sq;
+    const t = this.ents.get(sq.lock);
+    const locked = t && t.hp > 0 && !(t.hero && t.dead) && t.side !== sq.side
+      && this.t - sq.lockAt <= SQUAD.LOCK_TTL;
+    if (locked) {
+      for (const b of sq.bodies) if (b !== h && !b.dead) b.dash = t.id;
+    }
+    this._boom(h);   // 主視野機原地引爆(_kill 內部會把主視野讓給存活僚機)
+  }
+
+  /** 單機自毀引爆:不給任何一方擊殺數 */
+  _boom(b) {
     const def = WEAPONS[UNITS.drone.bomb];
-    this.events.push({ e: 'boom', x: h.x, z: h.z, y: h.y || 0, r: def.r, side: h.side });
-    this._blast(h, def, h.x, h.z, h.y || 0);
-    h.hp = 0;
-    this._kill(h, null);   // 自毀:不給任何一方擊殺數
+    this.events.push({ e: 'boom', x: b.x, z: b.z, y: b.y || 0, r: def.r, side: b.side });
+    this._blast(b, def, b.x, b.z, b.y || 0);
+    b.dash = 0;
+    b.hp = 0;
+    this._kill(b, null);
   }
 
   // ---------- 招式(小招 Q / 大招 E:解鎖階級 + CD + 電力 MP,全部伺服器結算)----------
@@ -643,6 +775,7 @@ export class BattleSim {
     h.mp -= A.mp;
     h.acd[slot] = this.t + A.cd;
     if (A.fx !== 'stealth' && A.fx !== 'vision') h.stealthUntil = 0;   // 出手即現形
+    // 一隊只回傳主視野那架當代表:招式增益(mods)是小隊共用的,推三次會疊三倍
     const allies = (r) => [...this.heroes.values()].filter((a) =>
       a.side === h.side && !a.dead && (a === h || dist2d(a.x, a.z, h.x, h.z) <= r));
 
@@ -652,11 +785,14 @@ export class BattleSim {
         for (const [k, m] of Object.entries(A.mul || {})) a.mods.push({ k, m, until: this.t + A.dur });
       }
     } else if (A.fx === 'heal') {
-      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段
+      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
       for (const a of targets) {
-        a.hp = Math.min(a.maxHp, a.hp + A.heal);
-        if (A.sp) a.sp = a.maxSp;
+        for (const b of this._bodies(a)) {
+          if (b.dead) continue;
+          b.hp = Math.min(b.maxHp, b.hp + A.heal);
+          if (A.sp) b.sp = b.maxSp;
+        }
       }
     } else if (A.fx === 'strike') {
       for (let i = 0; i < A.count; i++) {
@@ -738,8 +874,10 @@ export class BattleSim {
       h.upg[item] = lvl + 1;
       if (item === 'hull') {
         const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hull));
-        if (!h.dead) h.hp += nm - h.maxHp;   // 陣亡中只擴上限,重生時 hp = maxHp
-        h.maxHp = nm;
+        for (const b of this._bodies(h)) {       // 機殼升級套用到小隊每一架
+          if (!b.dead) b.hp += nm - b.maxHp;     // 陣亡中只擴上限,重生時 hp = maxHp
+          b.maxHp = nm;
+        }
       }
       this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
       return null;
@@ -813,18 +951,23 @@ export class BattleSim {
     }
     if (t.hero) {
       t.dead = true;
-      t.aiming = false;
+      t.dash = 0;
+      if (this._aliveN(t) === 0) t.aiming = false;   // 小隊全滅才收瞄準(aiming 是共用狀態)
       this.stats[t.side].deaths++;
       if (bySide && bySide !== t.side) this.stats[bySide].kills++;
-      // 重生冷卻依兵種:機甲越死越久,無人機無冷卻
+      // 重生冷卻:每一架各自計數(小隊三架共用陣營死亡數會讓 CD 三倍速膨脹)
       const r = UNITS[t.kind].respawn;
-      t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
+      t.deaths = (t.deaths || 0) + 1;
+      const dn = t.sq && t.sq.bodies.length > 1 ? t.deaths : this.stats[t.side].deaths;
+      t.respawnAt = this.t + r.base + r.perDeath * dn;
       // 死亡多發生在 tick() 之外的訊息處理當下(detonate/hit),respawnAt 用的是
       // 上一個 tick 結束時的 this.t;若 r.base=0(無人機),下一個 tick 就會立刻
       // 达成重生條件,導致 dead:true 從未出現在任何一份快照裡(客戶端永遠不知道自己死過,
       // 見 _applySnap 的 dead 邊緣觸發邏輯)。強制至少跨過一次完整 tick 週期才能重生,
       // 確保至少有一份快照廣播出 dead:true。
       t.deadTick = this._tickN;
+      // 主視野機陣亡 → 立刻讓給存活僚機(全滅時留在原機,客戶端才會進死亡畫面)
+      if (t.sq && this.heroes.get(t.pid) === t) this._promote(t.sq);
       return; // 英雄不移除,等重生
     }
     if (t.neutral) {
@@ -862,33 +1005,32 @@ export class BattleSim {
       this._spawnWave();
     }
 
-    // 英雄:被動收入 / 電力回充 / 護盾脫戰回復 / 重生 / 主堡修裝甲
+    // 小隊層級(每名玩家一次):被動收入 / 電力回充 — money/mp 是三架共用的
     for (const h of this.heroes.values()) {
       h.money += ECON.INCOME_PER_S * dt;
-      if (h.dead && this.t >= h.respawnAt && this._tickN > (h.deadTick || 0) + 1) {
-        h.dead = false;
-        h.hp = h.maxHp;
-        h.sp = h.maxSp; h.mp = h.maxMp;
-        h.empUntil = 0; h.stealthUntil = 0; h.mods = [];
-        [h.x, h.z] = this.basePos[h.side];
-        h.y = 0;
-        h.ammo = {}; h.reloadUntil = {}; h.fireAt = {};   // 重生滿彈
-        this.events.push({ e: 'respawn', id: h.id, side: h.side, pid: h.pid });
-      }
-      if (h.dead) continue;
-      // 電力(MP)持續回充
-      h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * dt);
-      // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式
-      if (h.sp < h.maxSp && this.t - h.lastHitAt > VITALS.OOC_S) {
-        h.sp = Math.min(h.maxSp, h.sp + h.maxSp * VITALS.SP_REGEN_PS * dt);
-      }
-      if (h.hp < h.maxHp) {
-        const [bx, bz] = this.basePos[h.side];
-        if (dist2d(h.x, h.z, bx, bz) < GAME.HERO_HEAL_RADIUS) {
-          h.hp = Math.min(h.maxHp, h.hp + UNITS[h.kind].regen * dt);
+      if (this._aliveN(h) > 0) h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * dt);
+    }
+    // 機體層級:重生 / 護盾脫戰回復 / 主堡修裝甲
+    for (const sq of this.squads.values()) {
+      for (const b of sq.bodies) {
+        if (b.dead) {
+          if (this.t >= b.respawnAt && this._tickN > (b.deadTick || 0) + 1) this._respawn(b);
+          continue;
+        }
+        // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式
+        if (b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
+          b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * dt);
+        }
+        if (b.hp < b.maxHp) {
+          const [bx, bz] = this.basePos[b.side];
+          if (dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_RADIUS) {
+            b.hp = Math.min(b.maxHp, b.hp + UNITS[b.kind].regen * dt);
+          }
         }
       }
+      if (this.heroes.get(sq.pid).dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }
+    this._tickSquads(dt);
     this._tickMines();
     this._tickAmbush(dt);
     this._tickRelays(dt);
@@ -919,6 +1061,121 @@ export class BattleSim {
     this._tickMissiles(dt);
   }
 
+  /** 單機重生:回主堡、滿血滿盾;全隊都躺著時才重置共用資源(彈藥/增益) */
+  _respawn(b) {
+    const soloWipe = this._aliveN(b) === 0;
+    b.dead = false;
+    b.dash = 0;
+    b.hp = b.maxHp;
+    b.sp = b.maxSp;
+    b.lastHitAt = -99;
+    const [bx, bz] = this.basePos[b.side];
+    b.x = bx + (b.si || 0) * 12;
+    b.z = bz + (b.si || 0) * 6;
+    b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
+    b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
+    if (soloWipe) {
+      b.mp = b.maxMp;
+      b.empUntil = 0; b.stealthUntil = 0; b.mods = [];
+      b.ammo = {}; b.reloadUntil = {}; b.fireAt = {};   // 重生滿彈
+    }
+    this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid });
+  }
+
+  // ---------- 僚機 AI(伺服器權威;主視野那架的位置由客戶端回報)----------
+  /**
+   * 僚機三種行為,優先序由上而下:
+   *   1. dash   — 主視野機按下自爆且有鎖定目標:直線衝向它,進入引爆距離就同歸於盡。
+   *   2. regroup— 離主視野太遠(剛重生):先切回標準兵線路線,沿線飛到離主視野最近的線上點,再直接歸隊。
+   *   3. follow — 保持編隊(主視野機後方左右各一),動作與目標跟著主視野走。
+   */
+  _tickSquads(dt) {
+    for (const sq of this.squads.values()) {
+      if (this.t - sq.lockAt > SQUAD.LOCK_TTL) sq.lock = 0;   // 鎖定過期
+      if (sq.bodies.length < 2) continue;
+      const lead = this.heroes.get(sq.pid);
+      let slot = 0;
+      for (const b of sq.bodies) {
+        if (b === lead || b.dead) continue;
+        const si = slot++;
+        if (b.dash) { this._dash(b, dt); continue; }
+        if (lead.dead) continue;   // 主視野機陣亡(= 全滅):僚機原地待命
+        this._follow(b, lead, si, dt);
+      }
+    }
+  }
+
+  /** 自爆衝刺:目標消失就取消(不會亂撞),進入 DASH_BOOM_M 即引爆 */
+  _dash(b, dt) {
+    const t = this.ents.get(b.dash);
+    if (!t || t.hp <= 0 || (t.hero && t.dead)) { b.dash = 0; return; }
+    const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
+    const d = Math.hypot(t.x - b.x, t.z - b.z, ty - (b.y || 0));
+    if (d <= SQUAD.DASH_BOOM_M) { this._boom(b); return; }
+    this._moveTo(b, t.x, ty, t.z, UNITS.drone.speed * SQUAD.DASH_MUL, dt);
+  }
+
+  /** 編隊 / 歸隊 */
+  _follow(b, lead, si, dt) {
+    // 模擬座標系:客戶端 yaw 對應的前方向量(見 game.js three z = -sim z)
+    const fx = -Math.sin(lead.ry || 0), fz = Math.cos(lead.ry || 0);
+    const lat = (si === 0 ? -1 : 1) * SQUAD.FORM_SIDE;
+    let tx = lead.x - fx * SQUAD.FORM_BACK + fz * lat;
+    let tz = lead.z - fz * SQUAD.FORM_BACK - fx * lat;
+    let ty = lead.y || 0;
+    let speed = UNITS.drone.speed;
+
+    const gap = dist2d(b.x, b.z, lead.x, lead.z);
+    if (gap > SQUAD.REGROUP_M) b.rg = true;
+    else if (gap <= SQUAD.REGROUP_M * SQUAD.REJOIN_F) b.rg = false;
+
+    if (b.rg) {
+      const L = this._nearestLane(lead.x, lead.z);   // 主視野機所在兵線 + 沿線進度
+      const P = this._projLane(L.li, b.x, b.z);      // 僚機在同一條線上的投影
+      const pts = this.lanes[L.li], cum = this._laneCum(L.li);
+      if (P.dist > GAME.LANE_SAFE_M) {
+        [tx, tz] = pointAt(pts, cum, P.d);           // 先切回標準路線(走廊內 = 不吃地雷/防空伏擊)
+      } else if (Math.abs(L.d - P.d) > SQUAD.LANE_SNAP_M) {
+        const step = Math.max(-SQUAD.LANE_STEP_M, Math.min(SQUAD.LANE_STEP_M, L.d - P.d));
+        [tx, tz] = pointAt(pts, cum, P.d + step);    // 沿線飛到離主視野最近的線上點
+      } else {
+        b.rg = false;                                // 已到最近線上點 → 直接飛向主視野
+      }
+      if (b.rg) {
+        ty = Math.max(lead.y || 0, SQUAD.REGROUP_ALT);
+        speed *= SQUAD.REGROUP_MUL;
+      }
+    }
+    this._moveTo(b, tx, ty, tz, speed, dt);
+  }
+
+  _moveTo(b, tx, ty, tz, speed, dt) {
+    const dx = tx - b.x, dy = ty - (b.y || 0), dz = tz - b.z;
+    const d = Math.hypot(dx, dy, dz);
+    if (d < 0.01) return;
+    const k = Math.min(1, speed * dt / d);
+    b.x += dx * k;
+    b.z += dz * k;
+    b.y = Math.max(0, (b.y || 0) + dy * k);
+    if (Math.hypot(dx, dz) > 1) b.ry = Math.atan2(-dx, dz);   // 與 game.js 的 yaw 同慣例
+  }
+
+  /** 點在指定兵線上的投影:{ d 沿線進度, dist 垂距 } */
+  _projLane(li, x, z) {
+    const pts = this.lanes[li];
+    const cum = this._laneCum(li);
+    let best = { d: 0, dist: Infinity };
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+      const ddx = bx - ax, ddz = bz - az;
+      const len2 = ddx * ddx + ddz * ddz || 1;
+      const f = Math.max(0, Math.min(1, ((x - ax) * ddx + (z - az) * ddz) / len2));
+      const dist = dist2d(x, z, ax + ddx * f, az + ddz * f);
+      if (dist < best.dist) best = { d: cum[i - 1] + Math.sqrt(len2) * f, dist };
+    }
+    return best;
+  }
+
   // ---------- 地雷觸發(地面機甲踩到 → 爆炸,無差別範圍傷害)----------
   _tickMines() {
     const M = GAME.MINES;
@@ -947,7 +1204,7 @@ export class BattleSim {
     const A = GAME.AA_AMBUSH;
     const S = FIELD.AA_SITE;
     let sites = null;   // lazy:多數 tick 沒人觸發
-    for (const h of this.heroes.values()) {
+    for (const h of this._allBodies()) {   // 每一架無人機各自可能被伏擊
       if (h.dead || h.kind !== 'drone') continue;
       h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
       if (h.aaCd > 0) continue;
@@ -963,7 +1220,7 @@ export class BattleSim {
       if (!best) continue;   // 附近陣地已被摧毀 → 這條非正規路線是打出來的安全通道
       h.aaCd = A.CD_S;
       this.missiles.push({
-        id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tpid: h.pid,
+        id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
         x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, hp: A.HP, ttl: 14,
       });
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
@@ -976,7 +1233,7 @@ export class BattleSim {
     for (let i = (this._relays || []).length - 1; i >= 0; i--) {
       const r = this._relays[i];
       let side = null, contested = false;
-      for (const h of this.heroes.values()) {
+      for (const h of this._allBodies()) {
         if (h.dead || dist2d(h.x, h.z, r.x, r.z) > R.R) continue;
         if (side && h.side !== side) { contested = true; break; }
         side = h.side;
@@ -1000,7 +1257,7 @@ export class BattleSim {
   _tickHazards(dt) {
     const fireDef = HAZARDS.fire;
     for (const f of this._fires || []) {
-      for (const h of this.heroes.values()) {
+      for (const h of this._allBodies()) {
         if (h.dead || (h.y || 0) > fireDef.maxY) continue;
         if (dist2d(h.x, h.z, f.x, f.z) > fireDef.r * (f.sc || 1)) continue;
         this._damage(h, fireDef.dot * dt, null);
@@ -1014,7 +1271,7 @@ export class BattleSim {
       const l = this.loots[i];
       l.ttl -= dt;
       if (l.ttl <= 0) { this.loots.splice(i, 1); continue; }
-      for (const h of this.heroes.values()) {
+      for (const h of this._allBodies()) {   // 任一架拾取 → 記在共用的玩家狀態上
         if (h.dead || (h.y || 0) > LOOT.MAX_Y) continue;
         if (dist2d(h.x, h.z, l.x, l.z) > LOOT.PICK_R) continue;
         if (l.ammo) { h.ammo = {}; h.reloadUntil = {}; }   // 清空 = _gateFire 下次視為滿彈夾
@@ -1051,7 +1308,7 @@ export class BattleSim {
     e.samCd = Math.max(0, (e.samCd ?? 0) - dt);
     if (e.samCd > 0) return;
     let best = null, bestD = Infinity;
-    for (const h of this.heroes.values()) {
+    for (const h of this._allBodies()) {   // 小隊每一架都可能被塔 SAM 鎖定
       if (h.side === e.side || h.dead || h.kind !== 'drone') continue;
       if ((h.stealthUntil || 0) > this.t) continue;      // 匿蹤中不被防空鎖定
       const y = h.y || 0;
@@ -1062,7 +1319,7 @@ export class BattleSim {
     if (!best) return;
     e.samCd = sam.cd;
     this.missiles.push({
-      id: nextEntId++, byId: e.id, side: e.side, tpid: best.pid,
+      id: nextEntId++, byId: e.id, side: e.side, tid: best.id, tpid: best.pid,
       x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, pen: sam.pen, hp: sam.hp, ttl: 12,
     });
     this.events.push({ e: 'sam', from: [e.x, e.z], side: e.side, tpid: best.pid });
@@ -1071,7 +1328,8 @@ export class BattleSim {
   _tickMissiles(dt) {
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
-      const t = this.heroes.get(m.tpid);
+      // 追蹤特定機體(小隊三架各自可被鎖定;tpid 只給客戶端判斷「是不是在打我」)
+      const t = this.ents.get(m.tid);
       m.ttl -= dt;
       if (!t || t.dead || m.ttl <= 0) { this.missiles.splice(i, 1); continue; }  // 目標消失:飛彈自毀
       const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
@@ -1187,11 +1445,16 @@ export class BattleSim {
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
-      o.$ = Math.floor(e.money); o.up = e.upg;                   // 經濟(客戶端 HUD / 商店)
-      o.mp = Math.floor(e.mp); o.mm = e.maxMp;                   // 電力(招式資源)
-      o.ab = e.abil; o.kn = e.kn;                                // 招式階級 / 擊殺數
-      o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
-               Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
+      o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)
+      // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
+      o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
+      if (o.act) {
+        o.$ = Math.floor(e.money); o.up = e.upg;                 // 經濟(客戶端 HUD / 商店)
+        o.mp = Math.floor(e.mp); o.mm = e.maxMp;                 // 電力(招式資源)
+        o.ab = e.abil; o.kn = e.kn;                              // 招式階級 / 擊殺數
+        o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
+                 Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
+      }
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;
       const bf = [];

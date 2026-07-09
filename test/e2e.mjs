@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul, SQUAD, tierVal,
 } from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
@@ -160,21 +160,46 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
 
-  log('— sim:無人機重型炸彈自爆 + 無冷卻重生 —');
+  log('— sim:三機小隊(共用玩家狀態 / 主視野讓位 / 僚機衝刺自爆)—');
   const dr = sim.addHero('SWARM', 'p_d', 's01');
+  const sq = sim.squads.get('p_d');
+  assert(sq.bodies.length === SQUAD.N, `無人機一次操控 ${SQUAD.N} 架(實際 ${sq.bodies.length})`);
+  assert(sim.squads.get('p_r').bodies.length === 1, '機甲仍是單機');
+  dr.money = 1234;
+  assert(sq.bodies.every((b) => b.money === 1234), '經濟/彈藥/招式是三架共用的玩家狀態');
+  assert(Math.abs(UNITS.drone.hp * SQUAD.N - UNITS.robot.hp) < UNITS.robot.hp * 0.05,
+    `單機 HP = 機甲的 1/${SQUAD.N}(${UNITS.drone.hp} × ${SQUAD.N} ≈ ${UNITS.robot.hp})`);
+  assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - tierVal(CHARACTERS.s01.light.dmg, 1) * SQUAD.DMG) < 1e-6,
+    `無人機單機傷害 = 原數值的 1/${SQUAD.N}(折算只住在 heroWeapon())`);
+  assert(Math.abs(heroWeapon('t01', 'light', 1, false).dmg - tierVal(CHARACTERS.t01.light.dmg, 1)) < 1e-6,
+    '機甲傷害不被小隊折算');
+
+  log('— sim:無人機重型炸彈自爆 + 重生冷卻 —');
   const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 6, z: dr.z, hp: UNITS.soldier.hp });
   dr.y = 4;
   const $kill0 = dr.money;
+  const foe = sim._add({ kind: 'tank', side: 'STEEL', x: dr.x + 40, z: dr.z, hp: 9999 });
+  sim.heroLock('p_d', foe.id);
   sim.heroDetonate('p_d');
   assert(!sim.ents.has(victim.id), '自爆(240 × 肉體 1.5)炸死近旁敵兵');
   assert(dr.dead, '自爆座機同歸於盡');
+  assert(sq.bodies.some((b) => b.dash === foe.id), '有鎖定 → 僚機朝目標衝刺');
+  const newLead = sim.heroes.get('p_d');
+  assert(!newLead.dead, '主視野自動讓位給存活僚機');
+  assert(!newLead.dash, '接手主視野的那架取消衝刺(玩家重新掌控)');
   assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺得賞金 +$${Math.round(dr.money - $kill0)}`);
   assert(dr.kn >= 1, `擊殺數入帳(kn=${dr.kn},招式解鎖門檻用)`);
+  // 收掉衝刺中的僚機與測試假人(假人沒有 lane,tick 前 MUST 移除)
+  for (const b of sq.bodies) b.dash = 0;
+  sim.ents.delete(foe.id);
   sim.tick(0.05);
   assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true,客戶端才能感知死亡)');
-  sim.tick(0.05);
-  assert(!dr.dead, '無人機重生無冷卻(跨過一次完整 tick 週期後立即歸隊)');
-  assert(UNITS.robot.respawn.base > 0, '機甲重生有冷卻(數值檢查)');
+  assert(UNITS.drone.respawn.base > 0 && UNITS.robot.respawn.base > 0, '無人機/機甲重生都有冷卻(數值檢查)');
+  sim.t += UNITS.drone.respawn.base + UNITS.drone.respawn.perDeath * 3;
+  sim.tick(0.05); sim.tick(0.05);
+  assert(!dr.dead, `重生冷卻結束後歸隊(base ${UNITS.drone.respawn.base}s)`);
+  dr.rg = false;
+  sim.heroSwap('p_d', 0);   // 把主視野切回 dr,後續測試才是對它結算
 
   log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');
   dr.x = sim.basePos.SWARM[0] + 500; dr.z = sim.basePos.SWARM[1];   // 先遠離主堡補血圈
@@ -219,12 +244,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   log('— sim:非正規路線防空伏擊(需射程內有存活陣地)+ 飛彈可破壞 —');
   const site0 = [...sim.ents.values()].find((e) => e.kind === 'aasite');
   assert(!!site0, '匿蹤防空陣地已生成');
-  dr.x = site0.x; dr.z = site0.z; dr.y = 30;           // 陣地正上方(走廊外);y=30 避開火場
-  dr.hp = dr.maxHp = 99999;                            // 防塔砲/流彈把測試機打下來(只驗伏擊)
+  // 三架一起擺到陣地正上方(走廊外);y=30 避開火場。
+  // 僚機若還在沿兵線歸隊就湊不齊「三機齊射」,飛彈打不掉 → 直接放到編隊位置。
+  // 全設不死:防塔砲/流彈/伏擊把測試機打下來(只驗伏擊與飛彈可破壞)。
+  sq.bodies.forEach((b, i) => {
+    b.x = site0.x + i * 8; b.z = site0.z; b.y = 30;
+    b.hp = b.maxHp = 99999; b.rg = false;
+  });
   let launched = null;
   for (let i = 0; i < 800 && !launched && !dr.dead; i++) {
     sim.tick(0.125);
-    launched = sim.missiles.find((m) => m.tpid === 'p_d');
+    launched = sim.missiles.find((m) => m.tid === dr.id);   // 只認主視野那架(僚機也會各自被伏擊)
   }
   assert(!!launched, '偏離兵線走廊 → 匿蹤防空飛彈升空');
   assert(sim.events.some((e) => e.e === 'sam' && e.ambush), 'sam 事件帶 ambush 旗標(客戶端警告)');
@@ -504,18 +534,20 @@ const snap = host.snaps.at(-1);
 const specSnap = spec.snaps.at(-1);   // 無霧視角:雙方主堡/塔/英雄都在
 const bases = specSnap.ents.filter((e) => e.k === 'base');
 const towers = specSnap.ents.filter((e) => e.k === 'tower');
-const heroes = specSnap.ents.filter((e) => e.k === 'drone' || e.k === 'robot');
+const heroes = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.act);
 assert(bases.length === 2, `主堡 ×2(hp=${bases[0]?.hp})`);
 assert(towers.length === 4, `防禦塔 ×4(1 線 × 2 位置 × 2 方;實際 ${towers.length})`);
-assert(heroes.length === 2, `英雄 ×2(${heroes.map((h) => h.k).join(',')})`);
-const myHero = snap.ents.find((h) => h.pid === host.sync.youId);
+assert(heroes.length === 2, `英雄 ×2(主視野機;${heroes.map((h) => h.k).join(',')})`);
+assert(specSnap.ents.filter((e) => e.k === 'drone').length === SQUAD.N,
+  `無人機玩家在場 ${SQUAD.N} 架機體(主視野 1 + 僚機 ${SQUAD.N - 1})`);
+const myHero = snap.ents.find((h) => h.pid === host.sync.youId && h.act);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
 assert(typeof myHero.$ === 'number' && myHero.ab && typeof myHero.kn === 'number',
   `英雄快照帶金錢/招式階級/擊殺數($${myHero.$}・ab=${JSON.stringify(myHero.ab)})`);
 assert(myHero.ch === 's02', `快照帶角色 id(ch=${myHero.ch},客戶端渲染專屬機體)`);
 assert(myHero.sp != null && myHero.msp > 0 && myHero.mp != null && myHero.mm > 0,
   `快照帶護盾/電力(sp=${myHero.sp}/${myHero.msp}・mp=${myHero.mp}/${myHero.mm})`);
-const botAssigned = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.ch);
+const botAssigned = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.act && e.ch);
 assert(botAssigned.length === heroes.length, '所有英雄(含未選角者)開戰時都有角色(默認隨機)');
 
 log('— 危險區:field 訊息 + 快照帶中立障礙 —');
@@ -583,25 +615,22 @@ host.send({ t: 'detonate' });
 await new Promise((r) => setTimeout(r, 300));
 const selfKill = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'die' && e.kind === 'drone');
 assert(!!selfKill, '自爆擊毀自身座機(同歸於盡)');
+const swapEv = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'swap' && e.pid === host.sync.youId);
+assert(!!swapEv, '主視野自動讓位給存活僚機(swap 事件)');
 await host.wait((c) => {
-  const me = c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId);
+  const me = c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
   return me && !me.dead;
 }, 5000);
-assert(true, '無人機重生無冷卻(即刻歸隊)');
+assert(true, '接手的僚機立即可操作(不必等重生)');
 
 log('— 俯衝進兵線 → 被擊殺 → 重生 —');
 host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });
-const deadSnap = await host.wait((c) => {
-  const s = c.snaps.at(-1);
-  const me = s.ents.find((e) => e.k === 'drone');
-  return me?.dead ? s : null;
-}, 30000);
-assert(true, `無人機硬闖兵線被擊殺(重生倒數 ${deadSnap.ents.find((e) => e.k === 'drone').rs}s)`);
-await host.wait((c) => {
-  const me = c.snaps.at(-1).ents.find((e) => e.k === 'drone');
-  return me && !me.dead;
-}, 30000);
-assert(true, '重生成功(回到主堡)');
+const mine = (c) => c.snaps.at(-1).ents.filter((e) => e.pid === host.sync.youId);
+const deadSnap = await host.wait((c) => (mine(c).some((e) => e.dead) ? c.snaps.at(-1) : null), 30000);
+const downed = deadSnap.ents.filter((e) => e.pid === host.sync.youId && e.dead);
+assert(true, `無人機硬闖兵線被擊落 ${downed.length} 架(重生倒數 ${downed[0].rs}s)`);
+await host.wait((c) => mine(c).length > 0 && mine(c).every((e) => !e.dead), 40000);
+assert(true, '全機重生成功(回到主堡)');
 
 log('— 斷線重連 —');
 const token = guest.sync.token;
@@ -666,9 +695,11 @@ g5.send({ t: 'loaded' });
 await h5.wait((c) => c.snaps.length > 2, 8000);
 const s5 = h5.snaps.at(-1);
 // 人數不足一律補電腦到滿編:只看真人 pid(數字),電腦 pid 是 'b' 開頭字串
-const drones5 = s5.ents.filter((e) => e.k === 'drone' && !String(e.pid).startsWith('b'));
+const drones5 = s5.ents.filter((e) => e.act && e.pid != null && !String(e.pid).startsWith('b'));
 const towers5 = s5.ents.filter((e) => e.k === 'tower');
 assert(drones5.length === 2, `同陣營 2 位真人英雄同時在場(pid:${drones5.map((d) => d.pid).join(',')})`);
+assert(s5.ents.filter((e) => e.pid != null && !String(e.pid).startsWith('b')).length
+  === drones5.reduce((n, d) => n + (d.k === 'drone' ? SQUAD.N : 1), 0), '每位真人的機體數 = 無人機 3 架 / 機甲 1 架');
 assert(towers5.length === 12, `3 線 → 防禦塔 ×12(實際 ${towers5.length})`);
 h5.ws.close(); g5.ws.close();
 
@@ -681,6 +712,7 @@ const hbSpec = await client('hbSpec');
 hbSpec.send({ t: 'joinRoom', pin: hb.sync.lobby.pin, name: '觀戰者', mode: 'spectator' });
 await hbSpec.wait((c) => c.sync);
 hb.send({ t: 'pickSide', side: 'SWARM' });
+hb.send({ t: 'pickChar', ch: 's02' });   // 固定無人機:後面的防空飛彈測試要高空無人機
 hb.send({ t: 'addBot', side: 'STEEL' });
 hb.send({ t: 'addBot', side: 'STEEL' });
 hb.send({ t: 'addBot', side: 'STEEL' });   // 第 3 個超過 2 席應被拒
@@ -701,17 +733,18 @@ await hb.wait((c) => c.snaps.length > 3, 8000);
 await hbSpec.wait((c) => c.snaps.length > 3, 8000);
 const sb = hb.snaps.at(-1);
 const sbSpec = hbSpec.snaps.at(-1);   // 無霧視角:才看得到對面(STEEL)的 bot
-const botHero = sbSpec.ents.find((e) => e.k === 'robot');
-assert(botHero && typeof botHero.pid === 'string' && botHero.pid.startsWith('b'), `bot 英雄在場(pid=${botHero?.pid})`);
+const isBot = (e) => typeof e.pid === 'string' && e.pid.startsWith('b') && e.act;
+const botHero = sbSpec.ents.find(isBot);   // bot 角色隨機,機體可能是無人機(傭兵)
+assert(!!botHero, `bot 英雄在場(pid=${botHero?.pid})`);
 const bp0 = { x: botHero.x, z: botHero.z };
 await new Promise((r) => setTimeout(r, 3500));
-const botHero2 = hbSpec.snaps.at(-1).ents.find((e) => e.k === 'robot');
+const botHero2 = hbSpec.snaps.at(-1).ents.find((e) => e.pid === botHero.pid && e.act);
 const movedM = botHero2 ? Math.hypot(botHero2.x - bp0.x, botHero2.z - bp0.z) : 999;
 assert(movedM > 10, `bot 沿兵線推進(3.5 秒移動 ${movedM.toFixed(0)}m)`);
 
 log('— 防空飛彈(高空無人機被鎖定追擊)—');
 const twr = sb.ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
-const meHp0 = sb.ents.find((e) => e.k === 'drone').hp;
+const meHp0 = sb.ents.find((e) => e.pid === hb.sync.youId && e.act).hp;
 const flyIv = setInterval(() => hb.send({ t: 'pos', x: twr.x, y: 120, z: twr.z, ry: 0 }), 200);
 const samSnap = await hb.wait((c) => {
   const s = c.snaps.at(-1);
@@ -721,7 +754,7 @@ assert(samSnap.sm.length > 0, `防空飛彈升空(${samSnap.sm.length} 枚,3D �
 const samEv = hb.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'sam');
 assert(samEv && samEv.tpid === hb.sync.youId, 'sam 事件帶鎖定目標 pid(客戶端可警告)');
 await hb.wait((c) => {
-  const me = c.snaps.at(-1).ents.find((e) => e.k === 'drone');
+  const me = c.snaps.at(-1).ents.find((e) => e.pid === hb.sync.youId && e.act);
   return me && (me.hp < meHp0 || me.dead);
 }, 15000);
 clearInterval(flyIv);

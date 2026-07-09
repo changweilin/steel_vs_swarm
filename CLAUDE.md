@@ -16,7 +16,10 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `server/server.js` | HTTP 靜態檔 + WS 房間/配對 + 8Hz 快照廣播 + bot 管理 |
 | `server/sim.js` | `BattleSim` — 權威模擬核心 (single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家(推線/交戰/撤退狀態機) |
-| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
+| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/SQUAD/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
+| `public/js/lore.js` | 角色敘事文本(國籍/年齡/職務/外貌/生平/台詞 + 立繪外觀提示 `art`)— **客戶端專用,伺服器不 import**;`data.js` 只住平衡數值,文字一律住這裡 |
+| `public/js/portraits.js` | 程序生成 SVG 頭像/立繪(`avatarURL`/`portraitURL`);`PORTRAIT_MANIFEST` 登記手繪檔即覆蓋,呼叫端不變(同 `MODEL_MANIFEST` 模式) |
+| `public/js/cutin.js` | 招式立繪演出(自己大招=全屏、小招=角落小卡、敵方大招=警示條);純 DOM overlay(`#cutinLayer`,z-index 15),**MUST NOT** 拉進 3D 場景 |
 | `public/js/` | game.js(FPV/物理/插值)· toon.js(賽璐璐核心)· vfx.js · biomes.js · terrain.js · mapSelect.js · venues.js · models.js · net.js · main.js · environment.js |
 | `reference/` | 上游唯讀副本(mapping_elf、ai_tycoon)— **MUST NOT** 修改,只准參考 |
 
@@ -31,6 +34,14 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 ### 狀態管理與資料流
 - 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只改 `data.js`;**MUST NOT** 在 sim.js/game.js 硬編碼。
 - **角色戰鬥系統(2026-07-08 起)**:每玩家 = 1 名角色(房間階段 `pickChar` 選角,不選 = 開戰隨機)= 專屬機體 + 輕武器(左鍵)+ 重武器(右鍵瞄準+左鍵,CD 型,**用 mag:1 + reload=cd 實作**,別再發明第二套 CD)+ 小招 Q + 大招 E。招式升級 = 擊殺數(`h.kn`)+ 金錢(`buy 'ab:light|heavy|skill|ult'`),施放吃電力 MP + CD,全部 `sim.heroCast` 結算。
+- **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
+  - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。
+  - 迴圈粒度 **MUST** 分清楚:`heroes.values()` = 一隊一次(金錢/電力/招式增益);`_allBodies()` = 每架一次(重生/護盾/伏擊/中繼站/火場/物資)。搞錯 = 收入三倍或增益疊三層。
+  - 單機 HP/傷害 = 機甲的 1/3(`UNITS.drone.hp`、`SQUAD.DMG`)。**傷害折算只准住在 `heroWeapon()`**(與 HEROIC 同一個縫),`sim.js`/`game.js` **MUST NOT** 二次乘算。
+  - 火力靠 `_echo()`:主視野機命中什麼,射程內存活僚機就打同一個目標(彈藥/射速只在主機扣一次)。三機齊射 ≈ 一台機甲。
+  - 自爆(F):主視野機原地引爆;**有準星鎖定敵方目標時**(`heroLock`,`SQUAD.LOCK_TTL` 秒內有效)僚機衝向該目標直到引爆,沒鎖定則不動作。`_blast` 一律跳過同陣營 → 不會炸到友軍。主視野機陣亡 → `_promote()` 立刻讓位給存活僚機,且**接手那架取消衝刺**(玩家重新掌控)。
+  - 僚機移動全在伺服器 `_tickSquads()`:dash > regroup(離主機 > `SQUAD.REGROUP_M`:先切回標準兵線走廊 → 沿線飛到離主機最近的線上點 → 再直接歸隊)> follow(編隊)。客戶端只回報主視野那架的 `pos`。
+  - 飛彈追蹤 **MUST** 用 `m.tid`(ent id)而非 `tpid`(pid 只給客戶端判斷「是不是在打我」)—— 一個 pid 底下有三架。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。
 - 彈道學在客戶端(`game.js` bullets:初速 mv + 重力 G,線段 raycast 補內插),伺服器仍以 `heroHit` 射程 ×1.25 驗證 — 防作弊邏輯**不**搬客戶端(不變)。
@@ -47,7 +58,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 
 - `[2026-07-03 #INC-101]` **`npm test` 不會啟動伺服器**,只是連 `ws://localhost:8620` 的 client。改完 `server/*.js` 或 `data.js` 沒重啟伺服器 → 測到舊程式碼還「全綠燈」。曾因此白跑兩輪測試。
 - `[2026-07-08 #INC-102]` Windows 上 Node 預設 SO_REUSEADDR,**兩個 server 可同時 LISTEN 8620(不會 EADDRINUSE)**,連線被拆散到不同 process → 事件遺失、`timeout: host`。查 `netstat` 時 **MUST NOT** 用 head 截斷輸出;殺進程要連 npm 父進程一起殺,確認 0 個 LISTENING 後才重啟。
-- `[2026-07-03 #INC-103]` **無人機原地復活 bug**:死亡發生在 tick 外的 handler、`respawn.base=0` 時,`dead:true` 從未進過任何快照,客戶端 `_onSelfDeath` 邊緣觸發失效。修法是 `deadTick` 守衛強制跨一個完整 tick — **MUST NOT** 以「優化延遲」為由移除。
+- `[2026-07-03 #INC-103]` **無人機原地復活 bug**:死亡發生在 tick 外的 handler、`respawn.base=0` 時,`dead:true` 從未進過任何快照,客戶端 `_onSelfDeath` 邊緣觸發失效。修法是 `deadTick` 守衛強制跨一個完整 tick — **MUST NOT** 以「優化延遲」為由移除(2026-07-09 起無人機也吃重生 CD,但只要有人把 `respawn.base` 調回 0,這個 bug 就會復活)。
 - `[2026-07-03 #INC-104]`(2026-07-08 改制後仍有效)**武器射程與 e2e 耦合**:e2e 多處從 y=250 高空垂直射擊 → **所有角色輕武器 NPC 基準 `range` MUST ≥ 170**(英雄 ×1.2 ×1.25 寬容 > 250;e2e 有自動檢查斷言);塔 SAM `range: 240` 刻意 < 250(高空探測機不被鎖);e2e `fakeBattleConfig` 用 1600m×L(留防空安全邊界)。e2e 傷害斷言全部由 `heroWeapon()`/`armorMul()` 動態推導,測試用角色刻意選 **t01/s02(輕武器 crit:0,傷害確定性)** — 幫這兩角加爆擊會把測試變隨機。改射程/傷害 **MUST** 同步重驗 e2e。
 - `[2026-07-03 #INC-105]` 障礙/防空陣地是**中立 ents**(`side:null, neutral:true`):`_acquireTarget`(sim)、`_acquire`(bots)、tick 主迴圈三處都 **MUST** skip neutral,否則 `UNITS[kind]` undefined 直接炸;`inv:true` 表不可摧毀(`_damage` 早退)。
 - `[2026-07-08 #INC-106]` toon 三階 ramp `[102,182,255]` 的暗部曾設 88 → 深色機體塌成純黑,**MUST NOT** 調低。`MeshToonMaterial` 沒有 roughness/metalness/flatShading — 一律走 `toon.js` 的 `mat()` 包裝(metalness≥0.5 映射成 celMetal 硬邊高光)。賽璐璐核心只住 `toon.js`(`hazards.js` 僅 re-export 相容)。

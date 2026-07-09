@@ -151,6 +151,24 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
+// SQUAD:蜂群玩家同時操控 N 架無人機(主視野一架 + 僚機)。
+// 單機 HP/傷害 = 機甲的 1/3,三機齊射 ≈ 一台機甲;死一架就少 1/3 戰力。
+// 傷害折算住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
+export const SQUAD = {
+  N: 3,
+  DMG: 1 / 3,
+  FORM_SIDE: 15,      // 僚機編隊橫向偏移(公尺)
+  FORM_BACK: 10,      // 僚機編隊後方偏移
+  REGROUP_M: 70,      // 離主視野超過此距離 → 先沿標準兵線路線歸隊
+  REJOIN_F: 0.6,      // 縮短到 REGROUP_M × 此比例 → 解除歸隊、直接編隊
+  LANE_SNAP_M: 25,    // 沿線推進的到位判定
+  LANE_STEP_M: 80,    // 每次沿線推進的前瞻距離
+  REGROUP_ALT: 30,    // 歸隊巡航高度(< AA_MIN_ALT,不被防空鎖定)
+  REGROUP_MUL: 1.3,   // 歸隊加速
+  DASH_MUL: 1.7,      // 自爆衝刺加速
+  DASH_BOOM_M: 4,     // 衝刺引爆距離
+  LOCK_TTL: 2.5,      // 準星鎖定有效秒數(過期即失去自爆衝刺目標)
+};
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例
@@ -182,14 +200,16 @@ export const tierVal = (v, lvl = 1) =>
  * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
  * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5);false = NPC 基準值。
  * 重武器以 mag×reload 實作 CD:每發打完自動進入 cd 秒冷卻(HUD 顯示為冷卻)。
+ * 無人機是三機小隊(SQUAD.N),單機傷害折成 1/3 — 這裡是唯一的折算點。
  */
 export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   const w = CHARACTERS[ch]?.[slot];
   if (!w) return null;
   const t = (v) => tierVal(v, lvl);
+  const squad = charKind(ch) === 'drone' ? SQUAD.DMG : 1;
   return {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
-    dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1),
+    dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1) * squad,
     range: w.range * (heroic ? HEROIC.range : 1),
     rate: w.rate ?? 3,
     mag: t(w.mag ?? 1),
@@ -217,6 +237,10 @@ export function heroAbility(ch, slot, lvl = 1) {
     pen: t(a.pen ?? 0),
   };
 }
+
+/** 角色機體種類(不需要 side:傭兵自帶 kind,陣營角色由 side 決定)— heroWeapon 的折算依據 */
+export const charKind = (ch) =>
+  CHARACTERS[ch]?.kind || (CHARACTERS[ch]?.side === 'SWARM' ? 'drone' : 'robot');
 
 // 陣營可選角色池:專屬角色 + 傭兵(side:'MERC',雙陣營皆可受雇)
 export const charsOf = (side) => Object.keys(CHARACTERS)
@@ -763,12 +787,14 @@ export const UNITS = {
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招消耗)。
+  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield = 機甲的 1/3,傷害折算在 heroWeapon()。
+  // 每一架各自重生、各自吃冷卻(與機甲同表)。
   drone: {
-    name: '獵蜂無人機', hp: 320, shield: 140, mp: 100, mpRegen: 4,
+    name: '獵蜂無人機', hp: 214, shield: 74, mp: 100, mpRegen: 4,
     speed: 42, vspeed: 22, fov: 100, zoomFov: 55, sight: 300,
-    bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀)
+    bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀);僚機衝刺自爆
     regen: 12,
-    respawn: { base: 0, perDeath: 0 },   // 無冷卻重生
+    respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久(單機獨立計數)
   },
   robot: {
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
