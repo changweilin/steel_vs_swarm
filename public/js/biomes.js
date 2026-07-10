@@ -16,11 +16,12 @@
 // 植被全部用 InstancedMesh(低多邊形 + 分層樹冠),整張圖數十個 draw call。
 // 亂數以戰場中心為種子:同一房間所有玩家看到同一片森林。
 //
-// 超尺度原則(2026-07-09):圖資建物比現實更高大(高度 ×1.8、佔地 ×1.25),
+// 超尺度原則(2026-07-09;2026-07-10 佔地對齊現實比例):士兵顯示高 3.2m ≈ 真人 ×1.8,
+// 建物高度與佔地同乘 ×1.8 → 建物:士兵比例與現實一致;神木/巨岩跟著等比放大(×1.35)。
 // 立面用程序生成窗格貼圖(賽璐璐「畫上去的窗」)取代單色塊;
 // 建物同時輸出碰撞柱(group.userData.blockers)— 限制玩家行動但不封鎖,
-// 兵線走廊由淨空網格保證暢通,無人機永遠可以飛越屋頂。
-// 立體掩體三本柱(2026-07-10):建物 / 神木 / 巨岩高度範圍互相對齊(約 26~165m),
+// 兵線走廊由淨空網格保證暢通(佔地放大後改用半對角掃走廊),無人機永遠可以飛越屋頂。
+// 立體掩體三本柱(2026-07-10):建物 26~170m,神木 / 巨岩隨等比放大可達 ~220m,
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -32,8 +33,9 @@ import { buildGroundCover } from './ground.js';
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
 const MAX_BUILDINGS = 240;       // 建物上限(特殊地標另計 ≤ 60)
-// 超尺度倍率:圖資建物 / 地標 / 植被都比現實高大(氣勢 + 立體掩體)
-const OVER = { bldH: 1.8, bldXZ: 1.25, bldCap: 170, lm: 1.6 };
+// 超尺度倍率:bldH/bldXZ 同為 1.8 = 建物:士兵比例即現實比例(士兵顯示 3.2m/真人 1.75m);
+// giant/mega = 神木/巨岩跟著建物佔地放大等比上調
+const OVER = { bldH: 1.8, bldXZ: 1.8, bldCap: 170, lm: 2.2, giant: 1.35, mega: 1.35 };
 // 植被放大倍率(喬木最誇張,地被小幅)
 const VEG_SCALE = {
   bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
@@ -187,7 +189,7 @@ const VEG_DEFS = {
 // ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
 //   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
 //   花旗松(100m)/ 西加雲杉(97m)/ 黃柳桉(婆羅洲熱帶巨樹 100m)/ 台灣杉(90m)
-// 同一種神木成群聚落、株高各異(s 0.54~1.5 → 約 46~165m,對齊超尺度建物);
+// 同一種神木成群聚落、株高各異(s ×OVER.giant → 約 63~223m,隨建物佔地放大等比上調);
 // 每株多零件建模:板根/樹皮絲帶/斜出枝節/多層樹冠(px/pz = 距軸心偏移,
 // rx/rz = 枝幹傾角),樹幹登記碰撞柱 = 立體障礙與隱蔽。h/r = 公稱高/幹半徑。
 const GIANT_DEFS = {
@@ -196,13 +198,15 @@ const GIANT_DEFS = {
     { g: cyl(2.4, 3.5, 40, 7), y: 26, c: 0x7a4a32 },
     { g: cyl(1.4, 2.4, 34, 7), y: 63, c: 0x82503a },
     { g: cyl(0.6, 1.4, 22, 6), y: 91, c: 0x82503a },
+    { g: cyl(1.4, 2.2, 6, 4), y: 3, px: 3.2, c: 0x38241a },      // 火疤(基部焦黑鑿痕)
     { g: cyl(0.4, 0.6, 9, 5), y: 56, px: 4.5, rz: 1.25, c: 0x6e4630 },
     { g: cyl(0.4, 0.6, 8, 5), y: 48, px: -4, rz: -1.2, c: 0x6e4630 },
-    { g: cone(7, 26, 7), y: 96, c: 0x2e5c38 },
+    { g: cone(7, 26, 7), y: 96, c: 0x3f7a46 },                   // 頂冠偏亮 = 受光層次
     { g: cone(9, 20, 7), y: 82, c: 0x33643c },
     { g: cone(10, 16, 7), y: 68, c: 0x2e5c38 },
     { g: ico(5), y: 58, px: 6, sy: 0.8, c: 0x33643c },
     { g: ico(5), y: 51, px: -6, sy: 0.8, c: 0x2e5c38 },
+    { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, c: 0x3b7042 },
   ] },
   sequoia:  { h: 92, r: 5.6, parts: [
     { g: cyl(5.6, 9.2, 9, 8), y: 4.5, c: 0x7d4a2e },
@@ -210,29 +214,34 @@ const GIANT_DEFS = {
     { g: cyl(2.2, 4.0, 26, 7), y: 65, c: 0x936030 },
     { g: cyl(0.7, 1.0, 13, 5), y: 50, px: 5.5, rz: 1.3, c: 0x7d4a2e },
     { g: cyl(0.7, 1.0, 12, 5), y: 58, px: -5.5, rz: -1.3, c: 0x7d4a2e },
+    { g: ico(1.9), y: 12, px: 5.4, sy: 0.8, c: 0x6e4226 },       // 樹瘤
     { g: ico(9), y: 72, sy: 0.8, c: 0x39683a },
     { g: ico(7), y: 82, c: 0x336033 },
-    { g: ico(6), y: 66, px: 7.5, c: 0x39683a },
+    { g: ico(6), y: 66, px: 7.5, c: 0x4a7a3c },                  // 黃綠受光簇
     { g: ico(6), y: 60, px: -7.5, c: 0x336033 },
     { g: ico(5), y: 55, pz: 7, c: 0x39683a },
     { g: cone(5, 10, 6), y: 89, c: 0x336033 },
+    { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
   ] },
   euc:      { h: 98, r: 2.6, parts: [
     { g: cyl(2.2, 3.6, 6, 7), y: 3, c: 0xcfc4b0 },
     { g: cyl(1.6, 2.3, 52, 7), y: 32, c: 0xdbd2c0 },
     { g: cyl(0.9, 1.6, 28, 6), y: 72, c: 0xe3dac8 },
     { g: cyl(0.16, 0.2, 12, 4), y: 20, px: 2.1, c: 0x9a8a76 },   // 剝落樹皮絲帶
+    { g: cyl(0.14, 0.18, 10, 4), y: 44, px: -2.0, pz: 0.8, rz: 0.12, c: 0xa89884 },
     { g: cyl(0.5, 0.9, 18, 5), y: 80, px: 3.5, rz: 0.55, c: 0xcfc4b0 },
     { g: cyl(0.5, 0.8, 16, 5), y: 76, px: -3.2, rz: -0.6, c: 0xd6ccba },
     { g: ico(7), y: 90, sy: 0.7, c: 0x5c7a4a },
-    { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, c: 0x648250 },
+    { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, c: 0x738a52 },      // 橄欖偏黃簇(桉葉銀綠層次)
     { g: ico(5), y: 80, px: -8, sy: 0.65, c: 0x5c7a4a },
     { g: ico(4.5), y: 83, pz: 7.5, sy: 0.6, c: 0x648250 },
-    { g: ico(4), y: 96, c: 0x648250 },
+    { g: ico(4), y: 96, c: 0x7a9058 },
   ] },
   dougfir:  { h: 100, r: 2.5, parts: [
     { g: cyl(2.5, 4.0, 6, 7), y: 3, c: 0x5d4027 },
     { g: cyl(1.8, 2.6, 42, 7), y: 27, c: 0x694a2d },
+    { g: cyl(2.52, 2.62, 8, 7), y: 13, c: 0x49663a },            // 樹幹苔蘚環帶
+    { g: ico(3.2), y: 34, pz: 6, sy: 0.55, c: 0x3a7a52 },
     { g: cone(11, 22, 8), y: 52, c: 0x2f5e40 },
     { g: cone(9, 20, 8), y: 65, c: 0x35684a },
     { g: cone(7, 18, 7), y: 78, c: 0x2f5e40 },
@@ -260,16 +269,16 @@ const GIANT_DEFS = {
     { g: cyl(0.9, 1.5, 20, 6), y: 66, c: 0xa89068 },
     { g: cyl(0.5, 0.8, 14, 5), y: 74, px: 4, rz: 1.0, c: 0x93805e },
     { g: cyl(0.5, 0.8, 14, 5), y: 76, px: -4, rz: -1.0, c: 0x93805e },
-    { g: ico(12), y: 82, sy: 0.55, c: 0x3f7a3a },                // 傘狀突出樹冠
-    { g: ico(8), y: 78, px: 9.5, sy: 0.5, c: 0x468545 },
-    { g: ico(8), y: 76, px: -9.5, sy: 0.5, c: 0x3f7a3a },
-    { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x468545 },
-    { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x3f7a3a },
-    { g: ico(6), y: 88, sy: 0.6, c: 0x468545 },
+    { g: ico(12), y: 82, sy: 0.55, c: 0x4a8a3e },                // 傘狀突出樹冠(熱帶亮綠)
+    { g: ico(8), y: 78, px: 9.5, sy: 0.5, c: 0x57994a },
+    { g: ico(8), y: 76, px: -9.5, sy: 0.5, c: 0x4a8a3e },
+    { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x57994a },
+    { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x4a8a3e },
+    { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
   ] },
   taiwania: { h: 86, r: 2.1, parts: [
-    { g: cyl(2.1, 3.4, 5, 7), y: 2.5, c: 0x6b4a30 },
-    { g: cyl(1.4, 2.2, 38, 7), y: 24, c: 0x775434 },
+    { g: cyl(2.1, 3.4, 5, 7), y: 2.5, c: 0x8a5a38 },             // 紅褐樹皮(台灣杉特徵)
+    { g: cyl(1.4, 2.2, 38, 7), y: 24, c: 0x96603a },
     { g: cone(8, 14, 7), y: 45, c: 0x2c6242 },
     { g: cone(6.5, 13, 7), y: 56, c: 0x347050 },
     { g: cone(5, 12, 7), y: 67, c: 0x2c6242 },
@@ -310,20 +319,20 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
   let trees = 0;
   for (const [x, z] of sites) {
     if (centers.length >= 6) break;
-    if (centers.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 170)) continue;
+    if (centers.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 210)) continue;
     const type = species[Math.floor(rnd() * species.length)];
     const def = GIANT_DEFS[type];
     const n = 5 + Math.floor(rnd() * 7);          // 一群 5~11 株
-    const cr = 30 + rnd() * 40;                   // 群落半徑
-    const base = 0.75 + rnd() * 0.35;             // 群落基準體格
+    const cr = 34 + rnd() * 48;                   // 群落半徑(株體放大 → 群落跟著攤開)
+    const base = (0.75 + rnd() * 0.35) * OVER.giant;   // 群落基準體格(隨建物佔地等比放大)
     let added = 0;
     for (let k = 0; k < n; k++) {
-      const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 8 + rnd() * cr;
+      const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
       const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
       if (blocked.has(cellKey(gx, gz))) continue;
       const gy = terrain.heightAt(gx, gz);
       if (gy < 0.4) continue;
-      const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 46~165m
+      const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -518,7 +527,7 @@ function box(w, h, d, color, x = 0, y = 0, z = 0) {
 // 固定種子:全房間(乃至每次載入)同一張貼圖,不吃共享 rnd 的呼叫序。
 const _facadeCache = new Map();
 // style:'plain' 標準窗格 | 'curtain' 玻璃帷幕(整格寬窗)| 'balcony' 每層陽台帶 |
-//       'shop' 底層店面(彩色遮陽棚 + 亮櫥窗)
+//       'shop' 底層店面(彩色遮陽棚 + 亮櫥窗)| 'hband' 整層水平帶窗(現代主義商辦)
 function facadeTex(key, cols, rows, winC, litRatio, style = 'plain') {
   if (_facadeCache.has(key)) return _facadeCache.get(key);
   const W = 128, H = 256;
@@ -533,7 +542,16 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain') {
   const cw = W / cols, ch = (H - 26) / rows;                             // 頂部留女兒牆帶
   // 窗格幾何依樣式:[x偏,y偏,寬,高](格內比例);帷幕窗近乎滿格
   const [ox, oy, fw, fh] = style === 'curtain' ? [0.07, 0.2, 0.86, 0.62] : [0.24, 0.28, 0.52, 0.48];
-  for (let r = 0; r < rows; r++) {
+  if (style === 'hband') {                                               // 整層絲帶窗 + 豎框
+    for (let r = 0; r < rows; r++) {
+      const y = 12 + r * ch + ch * 0.26, h = ch * 0.5;
+      cx.fillStyle = winC; cx.fillRect(3, y, W - 6, h);
+      cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(3, y, W - 6, h * 0.22);
+      cx.fillStyle = 'rgba(255,255,255,0.45)';
+      for (let c = 1; c < cols; c++) cx.fillRect(c * cw - 1, y, 2, h);
+      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(3, y, W - 6, h); }
+    }
+  } else for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const x = c * cw + cw * ox, y = 12 + r * ch + ch * oy;
       const w = cw * fw, h = ch * fh;
@@ -569,26 +587,32 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain') {
 }
 
 // 一般建物外牆色盤(setColorAt 相乘;暖灰住宅 vs 冷色玻璃帷幕,
-// 2026-07-10 擴充:磚紅/陶土/奶油黃/灰綠/粉藍/米白、青玻璃/藍紫/綠玻璃/石墨)
+// 2026-07-10 擴充二:焦糖/赭石/鼠尾草綠/霧藍/玫瑰灰、深青玻璃/古銅/板岩/暮紫)
 const PALETTE = {
   residential: [0xc4b8a8, 0xb0a494, 0xccc0b4, 0xa8b0ac, 0xc8b09a, 0xb8ac9c,
-                0xc99a7e, 0xb3766a, 0xd6c48e, 0x9db3a4, 0xa9b8c8, 0xd8cfc4],
+                0xc99a7e, 0xb3766a, 0xd6c48e, 0x9db3a4, 0xa9b8c8, 0xd8cfc4,
+                0xd9a06a, 0xa77e5f, 0xc5cfa8, 0x8fa6b8, 0xd7b8b0, 0xbfae8e],
   commercial:  [0x7a92a4, 0x6a8294, 0x8aa0b0, 0x9aa8b0, 0x708898, 0x84909c,
-                0x5f7d8c, 0x7f96b2, 0x6e8a7a, 0x8d95ac, 0x9fb4bd, 0x63707e],
+                0x5f7d8c, 0x7f96b2, 0x6e8a7a, 0x8d95ac, 0x9fb4bd, 0x63707e,
+                0x4f7a72, 0x8a7a5f, 0x50606e, 0x7c88a8, 0x9aa899, 0x6a7f95],
 };
 
-// 立面樣式變體:同類建物分三款(窗格節奏/窗色/亮燈率/樣式/屋頂色),
+// 立面樣式變體:同類建物分五款(窗格節奏/窗色/亮燈率/樣式/屋頂色),
 // 街景擺脫「同一張貼圖複製貼上」;v 在建物生成時決定性分配
 const FACADES = {
   residential: [
     { key: 'res0', cols: 5, rows: 7, winC: '#3a4046', lit: 0.3,  style: 'shop',    roof: 0x9c8e7c },
     { key: 'res1', cols: 4, rows: 6, winC: '#46525e', lit: 0.22, style: 'balcony', roof: 0x8a6f5a },
     { key: 'res2', cols: 6, rows: 8, winC: '#333b42', lit: 0.36, style: 'plain',   roof: 0x7a8577 },
+    { key: 'res3', cols: 3, rows: 5, winC: '#4a3f38', lit: 0.26, style: 'balcony', roof: 0xa2543e },
+    { key: 'res4', cols: 5, rows: 6, winC: '#3d4750', lit: 0.32, style: 'shop',    roof: 0x6e7f8a },
   ],
   commercial: [
     { key: 'com0', cols: 7, rows: 13, winC: '#2e3c4a', lit: 0.55, style: 'plain',   roof: 0x707c88 },
     { key: 'com1', cols: 9, rows: 16, winC: '#243240', lit: 0.68, style: 'curtain', roof: 0x5c6874 },
     { key: 'com2', cols: 6, rows: 11, winC: '#35424e', lit: 0.45, style: 'shop',    roof: 0x86766a },
+    { key: 'com3', cols: 5, rows: 14, winC: '#1f3a38', lit: 0.6,  style: 'hband',   roof: 0x4f6a66 },
+    { key: 'com4', cols: 8, rows: 12, winC: '#2c3350', lit: 0.5,  style: 'curtain', roof: 0x5a5f7c },
   ],
 };
 
@@ -730,8 +754,9 @@ const LANDMARKS = {
 
 // ---- 巨岩地標(裸露地;取材世界知名岩體/巨石遺跡)----
 // 酋長岩(優勝美地花崗岩壁)/ 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
-// 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣。
-// 高度範圍對齊超尺度建物(約 26~160m);col = 近似碰撞柱(× s),
+// 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣 /
+// 百內三塔(花崗岩尖塔群)/ 張家界石柱(石英砂岩方柱)。
+// 高度隨建物佔地等比放大(×OVER.mega,可達 ~220m);col = 近似碰撞柱(× s),
 // s = 放置縮放區間。岩面走 envMat + 頂部苔蘚投影(botw_plan 岩石要點)。
 function rockMat(color, moss = 0) {
   return envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
@@ -861,6 +886,38 @@ const MEGALITHS = {
     const altar = new THREE.Mesh(new THREE.BoxGeometry(6, 1.6, 3), rockMat(0x7f7a6e));
     altar.position.y = 0.8; g.add(altar);
   } },
+  torres: { col: { r: 30, h: 120 }, s: [0.8, 1.4],
+    anchor: { topY: 28, topR: 2.5, side: { y: [26, 90], rx: 24, rz: 15, dome: false } },
+    build: (g, rnd) => {
+    // 百內三塔:淺色花崗岩塔身 + 暗色角頁岩殘帽,底部共用碎石肩
+    for (const [px, h, r] of [[-18, 96, 11], [2, 120, 13], [20, 82, 10]]) {
+      const pz = (rnd() - 0.5) * 6;
+      const body = new THREE.Mesh(cyl(r * 0.45, r, h, 7), rockMat(0xd0c3ae, 0.12));
+      body.position.set(px, h / 2, pz); g.add(body);
+      const cap = new THREE.Mesh(cyl(r * 0.28, r * 0.48, h * 0.14, 6), rockMat(0x4e4a48));
+      cap.position.set(px, h * 0.98, pz); g.add(cap);
+    }
+    const shoulder = new THREE.Mesh(cone(30, 30, 8), rockMat(0x8f8474, 0.4));
+    shoulder.position.y = 15; g.add(shoulder);
+  } },
+  karst: { col: { r: 18, h: 104 }, s: [0.8, 1.4],
+    anchor: { topY: 100, topR: 7, side: { y: [15, 85], rx: 9, rz: 8, dome: false } },
+    build: (g, rnd) => {
+    // 張家界石柱:石英砂岩方柱疊層(上收 + 錯位微轉),崖頂綠冠環繞
+    let y = 0;
+    const w0 = 22;
+    for (const [i, hh] of [20, 16, 18, 15, 17, 14].entries()) {
+      const f = 1 - i * 0.08;
+      const st = new THREE.Mesh(new THREE.BoxGeometry(w0 * f, hh, w0 * 0.85 * f),
+        rockMat(i % 2 ? 0x8a7a5e : 0x7a6a50, i % 2 ? 0.12 : 0));
+      st.position.y = y + hh / 2; st.rotation.y = (rnd() - 0.5) * 0.24; y += hh; g.add(st);
+    }
+    for (const a of [0.4, 2.3, 4.4]) {   // 崖頂綠冠(頂緣三簇,中央留給石屋/疊石)
+      const crown = new THREE.Mesh(ico(5.5), toonMat(0x3f7a44));
+      crown.scale.y = 0.55;
+      crown.position.set(Math.cos(a) * 6.5, y + 1.5, Math.sin(a) * 5.5); g.add(crown);
+    }
+  } },
 };
 
 // ---- 巨岩表面特徵:高壓電塔 / 石砌屋 / 疊石堆 / 鳥巢 / 斷崖側樹 ----
@@ -968,14 +1025,15 @@ function decorateMegalith(g, anchor, rnd, s) {
 }
 
 // ---- 合成巨岩:抽組名岩「特徵基因」隨機重組,每顆獨一無二 ----
-// 主體(圓頂=烏魯魯系/岩壁=酋長岩系/岩層塔=大霸系/尖峰)× 伴生小圓丘 ×
-// 侵蝕溝 × 碎石坡 × 岩色系;回傳 col/anchor 供放置檢查與表面特徵。
-const ROCK_TONES = [0xb3502e, 0xc9c4b8, 0x9a6248, 0x6f6a62, 0xa8875c, 0x8f8878];
+// 主體(圓頂=烏魯魯系/岩壁=酋長岩系/岩層塔=大霸系/尖峰/天然岩拱/平頂桌山)×
+// 伴生小圓丘 × 崩落岩塊 × 侵蝕溝 × 碎石坡 × 岩色系;回傳 col/anchor 供放置與表面特徵。
+const ROCK_TONES = [0xb3502e, 0xc9c4b8, 0x9a6248, 0x6f6a62, 0xa8875c, 0x8f8878,
+                    0xd8b878, 0xc49a8a, 0x5a6470, 0xd4cdb8, 0x7a6a52, 0x996a3e];
 function synthMegalith(g, rnd) {
   const base = new THREE.Color(ROCK_TONES[Math.floor(rnd() * ROCK_TONES.length)]);
   const shade = (dl) => base.clone().offsetHSL(0, 0, dl).getHex();
   const moss = rnd() < 0.55 ? 0.2 + rnd() * 0.35 : 0;
-  const kinds = ['dome', 'slab', 'tower', 'spire'];
+  const kinds = ['dome', 'slab', 'tower', 'spire', 'arch', 'mesa'];
   const main = kinds[Math.floor(rnd() * kinds.length)];
   let H = 0, RX = 0, RZ = 0, topR = 6, dome = false;
   if (main === 'dome') {
@@ -1004,6 +1062,27 @@ function synthMegalith(g, rnd) {
       if (!band) r *= 0.92;
     }
     H = y; RX = RZ = r0 * 1.1; topR = r * 0.85;
+  } else if (main === 'arch') {   // 天然岩拱:雙墩 + 頂樑 + 拱背圓丘
+    const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
+    for (const sgn of [-1, 1]) {
+      const pier = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pw * 1.3), rockMat(shade(sgn * 0.03), moss));
+      pier.position.set(sgn * span / 2, ph / 2, 0); pier.rotation.y = sgn * 0.15; g.add(pier);
+    }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(span + pw * 1.6, pw * 0.9, pw * 1.1), rockMat(shade(0.05), moss));
+    beam.position.y = ph + pw * 0.45; g.add(beam);
+    const hump = new THREE.Mesh(new THREE.SphereGeometry(pw * 0.9, 8, 6), rockMat(shade(0.02), moss));
+    hump.scale.set((span + pw) / (pw * 1.8), 0.7, 1); hump.position.y = ph + pw * 0.8; g.add(hump);
+    H = ph + pw * 1.3; RX = span / 2 + pw; RZ = pw * 1.4; topR = 3;
+  } else if (main === 'mesa') {   // 平頂桌山:裙狀崖錐 + 疊層 + 開闊平頂
+    const r0 = 30 + rnd() * 22, h = 40 + rnd() * 26;
+    const skirt = new THREE.Mesh(cone(r0 * 1.7, h * 0.55, 10), rockMat(shade(0.05), 0.3));
+    skirt.position.y = h * 0.275; g.add(skirt);
+    let y = h * 0.3;
+    for (const [f, hh, dl] of [[1.12, h * 0.22, -0.04], [1.04, h * 0.16, 0.05], [1.0, h * 0.32, -0.02]]) {
+      const st = new THREE.Mesh(cyl(r0 * f * 0.94, r0 * f, hh, 10), rockMat(shade(dl)));
+      st.position.y = y + hh / 2; y += hh; g.add(st);
+    }
+    H = y; RX = RZ = r0 * 1.2; topR = r0 * 0.8;
   } else {   // spire 尖峰
     const r0 = 20 + rnd() * 10, h = 80 + rnd() * 45;
     const m = new THREE.Mesh(cone(r0, h, 8), rockMat(shade(0), moss));
@@ -1011,6 +1090,19 @@ function synthMegalith(g, rnd) {
     const m2 = new THREE.Mesh(cone(r0 * 0.6, h * 0.6, 7), rockMat(shade(0.05), moss));
     m2.position.set(r0 * 0.8, h * 0.3, 0); g.add(m2);
     H = h; RX = r0 * 1.5; RZ = r0 * 1.1; topR = 3;
+  }
+  {   // 崩落岩塊:山腳鑿刻感碎岩(BOTW 手雕硬邊)
+    const nB = 2 + Math.floor(rnd() * 3);
+    for (let i = 0; i < nB; i++) {
+      const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
+      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.12), moss * 0.6));
+      bd.scale.y = 0.6 + rnd() * 0.3;
+      bd.rotation.set(rnd() * 0.6, rnd() * Math.PI, rnd() * 0.6);
+      bd.position.set(Math.cos(a) * d, 2, Math.sin(a) * d);
+      g.add(bd);
+      RX = Math.max(RX, Math.abs(Math.cos(a) * d) + br);
+      RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + br);
+    }
   }
   const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
   for (let i = 0; i < nSub; i++) {
@@ -1057,12 +1149,12 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     let meta, s;
     if (synth) {
       meta = synthMegalith(g, rnd);
-      s = 0.9 + rnd() * 0.5;
+      s = (0.9 + rnd() * 0.5) * OVER.mega;
     } else {
       const def = MEGALITHS[types[(start + named) % types.length]];
       def.build(g, rnd);
       meta = def;
-      s = def.s[0] + rnd() * (def.s[1] - def.s[0]);
+      s = (def.s[0] + rnd() * (def.s[1] - def.s[0])) * OVER.mega;
     }
     const r = meta.col.r * s;
     if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
@@ -1653,16 +1745,20 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!tryPlace(x, z)) continue;
       const type = buildingType(el.tags);
       if (LANDMARKS[type]) {
-        if (landmarks.length < 60) { landmarks.push({ x, z, type }); usedLm.add(type); }
+        // 地標放大後不能只驗中心格:以碰撞半徑掃走廊,牆面才不會侵入兵線
+        const cr = (LANDMARK_COL[type]?.r || 10) * OVER.lm;
+        if (landmarks.length < 60 && areaFree(blocked, x, z, cr * 0.8)) { landmarks.push({ x, z, type }); usedLm.add(type); }
       } else if (generic.length < MAX_BUILDINGS) {
         const commercial = type === 'commercial';
-        const h = buildingHeight(el.tags, type, rnd);
+        const w = (commercial ? 10 + rnd() * 14 : 8 + rnd() * 8) * OVER.bldXZ;
+        const d = (commercial ? 10 + rnd() * 14 : 8 + rnd() * 8) * OVER.bldXZ;
+        // 佔地對齊現實比例後改用半對角掃走廊(單格驗證擋不住大樓牆面)
+        if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) continue;
         generic.push({
-          x, z,
-          w: (8 + rnd() * (commercial ? 12 : 7)) * OVER.bldXZ,
-          d: (8 + rnd() * (commercial ? 12 : 7)) * OVER.bldXZ,
-          h, ry: rnd() * Math.PI, commercial,
-          v: Math.floor(rnd() * 3),   // 立面樣式變體
+          x, z, w, d,
+          h: buildingHeight(el.tags, type, rnd),
+          ry: rnd() * Math.PI, commercial,
+          v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
         });
       }
     }
@@ -1676,11 +1772,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (i < lmTypes.length && rnd() < 0.8) { landmarks.push({ x, z, type: lmTypes[i] }); return; }
       if (generic.length >= MAX_BUILDINGS) return;
       const commercial = rnd() < 0.25;
+      const w = (commercial ? 10 + rnd() * 14 : 8 + rnd() * 8) * OVER.bldXZ;
+      const d = (commercial ? 10 + rnd() * 14 : 8 + rnd() * 8) * OVER.bldXZ;
+      if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return;
       generic.push({
-        x, z, w: (8 + rnd() * 8) * OVER.bldXZ, d: (8 + rnd() * 8) * OVER.bldXZ,
+        x, z, w, d,
         h: Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap),
         ry: rnd() * Math.PI, commercial,
-        v: Math.floor(rnd() * 3),   // 立面樣式變體
+        v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
     });
   }
@@ -1691,6 +1790,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 同時登記碰撞柱(blockers):限制玩家行動但不封鎖(走廊已淨空、可飛越屋頂)。
   const roofBoxes = [];    // 屋頂雜項(空調機組/機房):打破光禿平屋頂輪廓
   const roofTanks = [];    // 圓筒水塔
+  const roofGables = [];   // 低層住宅四坡斜屋頂(彩色瓦)
   const billboards = [];   // 商辦屋頂廣告看板(彩色 + 夜間發光)
   const antennas = [];     // 高樓天線
   {
@@ -1699,7 +1799,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const P = new THREE.Vector3(), S = new THREE.Vector3();
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
-      // 三款立面樣式各一個 InstancedMesh(共 6 個 draw call,仍是常數級)
+      // 五款立面樣式各一個 InstancedMesh(共 10 個 draw call,仍是常數級)
       for (let v = 0; v < FACADES[cat].length; v++) {
         const list = generic.filter((b) => b.commercial === commercial && (b.v ?? 0) === v);
         if (!list.length) continue;
@@ -1714,22 +1814,43 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 屋頂/底面用素色材質(色塊分離):窗格貼圖只留在四面牆,
         // 屋頂不再出現「躺平的窗」;instance tint 兩材質同吃 → 每棟仍有色差
         const roof = bmat(fd.roof, { wash: 0.5 });
-        // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
-        const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), [wall, wall, roof, roof, wall, wall], list.length);
         const pal = PALETTE[cat];
+        // 先攤平成實例清單:主體 + 輪廓件(退縮頂塔/臨街裙樓)同吃立面貼圖與 tint,
+        // 高層商辦成「婚禮蛋糕」剪影、街廓出裙樓 — 天際線擺脫單一長方體(botw_plan Task 1.1)
+        const inst = [];
         list.forEach((b, i) => {
-          E.set(0, b.ry, 0); Q.setFromEuler(E);
-          const gy = terrain.heightAt(b.x, b.z);
-          P.set(b.x, gy + b.h / 2 - 0.5, b.z);
-          S.set(b.w, b.h, b.d);
-          M.compose(P, Q, S);
-          m.setMatrixAt(i, M);
-          tint.setHex(pal[((i * 2654435761) >>> 0) % pal.length]);
-          m.setColorAt(i, tint);
+          // 佔地放大後坡地會露餡:取中心 + 四角最低點落底,寧可陷入山坡不懸空
+          const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+          let gy = terrain.heightAt(b.x, b.z);
+          for (const [lx, lz] of [[b.w / 2, b.d / 2], [b.w / 2, -b.d / 2], [-b.w / 2, b.d / 2], [-b.w / 2, -b.d / 2]]) {
+            gy = Math.min(gy, terrain.heightAt(b.x + lx * ca + lz * sa, b.z - lx * sa + lz * ca));
+          }
+          const palC = pal[((i * 2654435761) >>> 0) % pal.length];
+          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
           blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1 });
-          // 屋頂雜項:空調機組或圓筒水塔(局部座標 → 依 ry 旋回世界)
+          let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
+          if (commercial && b.h > 55 && rnd() < 0.6) {          // 退縮頂塔(夠高可再疊一階)
+            const tw = b.w * 0.62, td = b.d * 0.62, th = b.h * 0.22;
+            inst.push({ x: b.x, y: gy + crownTop + th / 2 - 0.5, z: b.z, ry: b.ry, w: tw, h: th, d: td, c: palC });
+            crownTop += th;
+            if (b.h > 100 && rnd() < 0.55) {
+              const t2 = th * 0.7;
+              inst.push({ x: b.x, y: gy + crownTop + t2 / 2 - 0.5, z: b.z, ry: b.ry, w: tw * 0.62, h: t2, d: td * 0.62, c: palC });
+              crownTop += t2;
+            }
+          }
+          if (commercial && rnd() < 0.4) {                      // 臨街裙樓
+            const ph = Math.max(6, b.h * 0.12);
+            inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC });
+          }
+          let gable = false;
+          if (!commercial && b.h < 30 && rnd() < 0.65) {        // 低層住宅:四坡斜屋頂
+            gable = true;
+            roofGables.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: b.w, d: b.d, h: 2.5 + rnd() * 3 });
+          }
+          // 屋頂雜項:空調機組或圓筒水塔(局部座標 → 依 ry 旋回世界);斜屋頂棟跳過
           const rr = rnd();
-          if (rr < 0.72) {
+          if (!gable && rr < 0.72) {
             const ox = (rnd() - 0.5) * b.w * 0.45, oz = (rnd() - 0.5) * b.d * 0.45;
             const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
             const wx = b.x + ox * ca + oz * sa, wz = b.z - ox * sa + oz * ca;
@@ -1742,12 +1863,23 @@ export async function buildBiomes(cfg, terrain, onProgress) {
               roofTanks.push({ x: wx, z: wz, y: gy + b.h - 0.5, r: 1.1 + rnd() * 1.3, h: 2.4 + rnd() * 2.2 });
             }
           }
-          if (commercial && b.h > 40 && rnd() < 0.5) {
+          if (commercial && b.h > 40 && crownTop === b.h && rnd() < 0.5) {   // 頂塔棟看板會插進塔身 → 跳過
             billboards.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: Math.min(b.w * 0.7, 10), h: 3 + rnd() * 4 });
           }
           if (commercial && b.h > 60 && rnd() < 0.6) {
-            antennas.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, h: 5 + rnd() * 7 });
+            antennas.push({ x: b.x, z: b.z, y: gy + crownTop - 0.5, h: 5 + rnd() * 7 });
           }
+        });
+        // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
+        const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), [wall, wall, roof, roof, wall, wall], inst.length);
+        inst.forEach((t, i) => {
+          E.set(0, t.ry, 0); Q.setFromEuler(E);
+          P.set(t.x, t.y, t.z);
+          S.set(t.w, t.h, t.d);
+          M.compose(P, Q, S);
+          m.setMatrixAt(i, M);
+          tint.setHex(t.c);
+          m.setColorAt(i, tint);
         });
         m.instanceMatrix.needsUpdate = true;
         if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -1779,6 +1911,27 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       tm.instanceMatrix.needsUpdate = true;
       tm.frustumCulled = false;
       group.add(tm);
+    }
+    if (roofGables.length) {
+      // 單位四角錐(底面 1×1 貼齊屋頂),instance tint 上瓦色
+      const geo = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4);
+      geo.rotateY(Math.PI / 4);
+      geo.translate(0, 0.5, 0);
+      const gm = new THREE.InstancedMesh(geo, bmat(0xffffff, { wash: 0.5 }), roofGables.length);
+      const rpal = [0xa2543e, 0x7d8a70, 0x54636e, 0x8a6f5a, 0x9c8e7c, 0x6e5a48];
+      roofGables.forEach((r, i) => {
+        E.set(0, r.ry, 0); Q.setFromEuler(E);
+        P.set(r.x, r.y, r.z);
+        S.set(r.w * 1.08, r.h, r.d * 1.08);
+        M.compose(P, Q, S);
+        gm.setMatrixAt(i, M);
+        tint.setHex(rpal[((i * 40503) >>> 0) % rpal.length]);
+        gm.setColorAt(i, tint);
+      });
+      gm.instanceMatrix.needsUpdate = true;
+      if (gm.instanceColor) gm.instanceColor.needsUpdate = true;
+      gm.frustumCulled = false;
+      group.add(gm);
     }
     if (billboards.length) {
       // 看板底色靠 instance tint 上彩;夜間白光背光(emissive 不吃 tint,壓低強度保留色感)
@@ -1827,7 +1980,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
     const sc = OVER.lm * (0.9 + rnd() * 0.25);
     g.scale.setScalar(sc);
-    const gy = terrain.heightAt(lm.x, lm.z);
+    // 佔地放大後坡地會露餡:取中心 + 四向最低點落底,寧可陷入山坡不懸空
+    const lr = (LANDMARK_COL[lm.type]?.r || 10) * sc * 0.7;
+    let gy = terrain.heightAt(lm.x, lm.z);
+    for (const [ox, oz] of [[lr, 0], [-lr, 0], [0, lr], [0, -lr]]) {
+      gy = Math.min(gy, terrain.heightAt(lm.x + ox, lm.z + oz));
+    }
     g.position.set(lm.x, gy - 0.3, lm.z);
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
