@@ -734,19 +734,19 @@ export class BattleSim {
   }
 
   /**
-   * 無人機重型炸彈:F 鍵原地引爆 / 高速撞擊引爆 — 主視野座機同歸於盡。
-   * 僚機:有鎖定的敵方目標才會朝它衝刺直到引爆;沒鎖定則不動作。
+   * 無人機重型炸彈:F 鍵必須有準星鎖定的敵方目標才會動作 — 主視野機引爆、
+   * 僚機朝鎖定目標衝刺直到引爆;沒鎖定 = 完全不動作(不再原地白白自爆)。
+   * 高速撞擊(crash)是物理引爆,不吃鎖定閘門。
    * 爆風走 _blast(同陣營一律跳過)→ 不會炸到友軍。
    */
-  heroDetonate(pid) {
+  heroDetonate(pid, crash = false) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'drone' || this.over) return;
-    const sq = h.sq;
-    const t = this._lockedTarget(sq);
-    if (t) {
-      for (const b of sq.bodies) if (b !== h && !b.dead) b.dash = t.id;
-    }
-    this._boom(h);   // 主視野機原地引爆(_kill 內部會把主視野讓給存活僚機)
+    if (crash) { this._boom(h); return; }   // 撞擊引爆:FPV 神風,不需鎖定
+    const t = this._lockedTarget(h.sq);
+    if (!t) return;                          // 無鎖定 → 不動作
+    for (const b of h.sq.bodies) if (b !== h && !b.dead) b.dash = t.id;
+    this._boom(h);   // 主視野機引爆(_kill 內部會把主視野讓給存活僚機)
   }
 
   /** 目前仍有效的準星鎖定目標(存活、敵方、未過期);沒有 → null */
@@ -1041,7 +1041,7 @@ export class BattleSim {
 
   _kill(t, by) {
     const bySide = by?.side || null;
-    this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero ? { pid: t.pid } : {}) });
+    this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero || t.decoy ? { pid: t.pid } : {}) });
     // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
     if (by && by.hero && bySide !== t.side) {
       by.money += (ECON.BOUNTY[t.kind] || 0) * this._buffMul(by, 'bounty');

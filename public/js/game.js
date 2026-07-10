@@ -448,7 +448,7 @@ export class BattleClient {
       const into = this.vel.x * nx + this.vel.z * nz;
       if (into < 0) {
         // 飛行單位高速撞擊 → 重型炸彈引爆(FPV 神風)
-        if (this.isDrone && -into > 16) this._detonate();
+        if (this.isDrone && -into > 16) this._detonate(true);
         this.vel.x -= into * nx; this.vel.z -= into * nz;
       }
     }
@@ -465,7 +465,7 @@ export class BattleClient {
       this.pos.z += nz * (min - d);
       const into = this.vel.x * nx + this.vel.z * nz;
       if (into < 0) {
-        if (this.isDrone && -into > 16) this._detonate();
+        if (this.isDrone && -into > 16) this._detonate(true);
         this.vel.x -= into * nx; this.vel.z -= into * nz;
       }
     }
@@ -849,6 +849,9 @@ export class BattleClient {
       }
       if (ev.kind === 'aasite') {
         this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
+      } else if (ev.kind === 'decoy') {
+        // 餌機被攔截擊落:誘餌任務結束(PiP 隨實體消失一起收掉)
+        if (ev.pid === this.youId) this.hud.feed?.('💥 餌機被擊落,回傳畫面終止');
       } else if (HAZARDS[ev.kind]) {
         this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
       } else if (hero) {
@@ -1399,10 +1402,22 @@ export class BattleClient {
     this.net.send({ t: 'aim', on });
   }
 
-  /** 無人機自爆(F 鍵原地 / 高速撞擊):伺服器結算傷害並擊毀座機 */
-  _detonate() {
+  /**
+   * 無人機自爆:F 鍵必須有準星鎖定目標(伺服器複驗)才會引爆 + 僚機追擊;
+   * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
+   */
+  _detonate(crash = false) {
     if (!this.isDrone || this.dead || this._crashSent) return;
-    this._crashSent = true;
+    if (crash) {
+      this._crashSent = true;
+      this.trauma = 1;
+      this.net.send({ t: 'detonate', crash: 1 });
+      return;
+    }
+    if (!this._lockId) {
+      this.hud.feed?.('🎯 需要準星鎖定目標(對準敵人)才能發動追擊自爆');
+      return;
+    }
     this.trauma = 1;
     this.net.send({ t: 'detonate' });
   }
@@ -1689,6 +1704,22 @@ export class BattleClient {
     pit.rotation.x += (-wantPitch - pit.rotation.x) * Math.min(1, dt * 4);
   }
 
+  /**
+   * 車載砲塔追蹤(坦克):車體照常朝移動方向,砲塔獨立咬住射程內最近敵人,
+   * 換目標跟著轉;無目標平滑歸中(砲管回正對齊車頭)。純視覺,命中仍由伺服器結算。
+   */
+  _aimVehicleTurret(ent, tur, dt, now) {
+    const t = this._nearestEnemy(ent, now, (UNITS[ent.kind]?.range || 0) * 1.2, true);
+    let wantLocal = 0;   // 無目標:歸中
+    if (t) {
+      const p = t.isSelf ? this.pos : t.mesh.position;
+      const world = Math.atan2(p.x - ent.mesh.position.x, p.z - ent.mesh.position.z);
+      wantLocal = world - ent.mesh.rotation.y;
+    }
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    tur.rotation.y += wrap(wantLocal - tur.rotation.y) * Math.min(1, dt * 5);
+  }
+
   _updateEnts(dt, now) {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) { ent.mesh.position.copy(this.pos); continue; }
@@ -1745,6 +1776,9 @@ export class BattleClient {
         }
       }
       cur.set(nx, ny, nz);
+      // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
+      const tur = ent.mesh.userData.turret;
+      if (tur) this._aimVehicleTurret(ent, tur, dt, now);
       // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)
       stepLocomotion(ent, dt, now, px, pz, pyaw);
       // 血條面向相機

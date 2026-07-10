@@ -1007,6 +1007,7 @@ function buildTank(side) {
   cyl(gun, 0.19, 0.19, 0.5, 8, 0, 0.8, 0, 0x1e2226);                     // 排煙器
   cyl(gun, 0.21, 0.21, 0.35, 8, 0, 2.05, 0, 0x0d0f11);                   // 砲口制退器
   g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels, top: 9 };
+  g.userData.turret = turret;   // 砲塔獨立追蹤目標(game.js _aimVehicleTurret)
   return g;
 }
 
@@ -1746,6 +1747,8 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
     outlinify(built, outlineW(target));
     g.add(built);
     if (built.userData.spin) g.userData.spin = built.userData.spin;
+    // 車載砲塔(坦克):提上外層 group,game.js _aimVehicleTurret 才找得到
+    if (built.userData.turret) g.userData.turret = built.userData.turret;
     // 程序骨架(locomotion.js):記錄 fitToHeight 縮放供步幅/輪半徑換算世界尺度
     if (built.userData.rig) {
       built.userData.rig.s = built.scale.x;

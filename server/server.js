@@ -406,7 +406,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }
-    if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId); return; }
+    if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId, !!m.crash); return; }
     if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }
     if (m.t === 'swap' && client.side) { b.heroSwap(clientId, m.i); return; }
     if (m.t === 'lock' && client.side) { b.heroLock(clientId, m.id); return; }

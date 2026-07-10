@@ -217,8 +217,16 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   dr.y = 4;
   const $kill0 = dr.money;
   const foe = sim._add({ kind: 'tank', side: 'STEEL', x: dr.x + 40, z: dr.z, hp: 9999 });
+  sim.heroDetonate('p_d');
+  assert(!dr.dead && sim.ents.has(victim.id), '無鎖定 → F 完全不動作(不會原地白白自爆)');
+  sim.heroDetonate('p_d', true);
+  assert(dr.dead, '高速撞擊(crash)引爆不吃鎖定閘門');
+  dr.dead = false; dr.hp = dr.maxHp;   // 復原:下面測「鎖定 + F」的完整流程
+  sim.heroes.set('p_d', dr); sq.act = sq.bodies.indexOf(dr);
+  const victim2 = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 6, z: dr.z, hp: UNITS.soldier.hp });
   sim.heroLock('p_d', foe.id);
   sim.heroDetonate('p_d');
+  sim.ents.delete(victim2.id);
   assert(!sim.ents.has(victim.id), '自爆(240 × 肉體 1.5)炸死近旁敵兵');
   assert(dr.dead, '自爆座機同歸於盡');
   assert(sq.bodies.some((b) => b.dash === foe.id), '有鎖定 → 僚機朝目標衝刺');
@@ -707,12 +715,23 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機自爆(F 鍵;死亡後連按無效)—');
+log('— 無人機自爆(F 鍵:需準星鎖定;無鎖定不動作;死亡後連按無效)—');
+const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
+const dies0 = droneDies();
+host.send({ t: 'detonate' });   // 尚未鎖定任何目標
+await new Promise((r) => setTimeout(r, 300));
+assert(droneDies() === dies0, '無鎖定 → F 完全不動作(不會原地白白自爆)');
+// 鎖定敵塔(恆可見)後再按 F:主視野機引爆 + 僚機衝刺
+const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
+host.send({ t: 'pos', x: foeTower.x, y: 250, z: foeTower.z, ry: 0 });   // 250 > SAM 240:高空不被防空鎖
+await new Promise((r) => setTimeout(r, 250));
+host.send({ t: 'lock', id: foeTower.id });
+await host.wait((c) => c.snaps.flatMap((s) => s.ev || []).some((e) => e.e === 'lock' && e.pid === host.sync.youId), 3000);
 host.send({ t: 'detonate' });
 host.send({ t: 'detonate' });
 await new Promise((r) => setTimeout(r, 300));
-const selfKill = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'die' && e.kind === 'drone');
-assert(!!selfKill, '自爆擊毀自身座機(同歸於盡)');
+const selfKill = droneDies() > dies0;
+assert(selfKill, '鎖定後自爆擊毀自身座機(同歸於盡)');
 const swapEv = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'swap' && e.pid === host.sync.youId);
 assert(!!swapEv, '主視野自動讓位給存活僚機(swap 事件)');
 await host.wait((c) => {
