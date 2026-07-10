@@ -740,8 +740,8 @@ function enterGame() {
     ? (heroKind === 'drone'
       ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆(僚機衝向鎖定目標) ・ V 或 1~3 切換主視野 ・ R 填彈 ・ B 升級 ・ 三機齊射才是完整火力,別讓僚機掉隊!'
       : heroKind === 'morph'
-      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
+      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤,右下角回傳畫面) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
 }
@@ -771,7 +771,11 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${w.bomb ? '(另有 F 自爆)' : ''}${morphTag}`;
+        // F 鍵:無人機 = 自爆;機甲 = 分離發射餌機(就緒 / 重組倒數)
+        const fTag = w.bomb ? '(另有 F 自爆)'
+          : w.decoy ? (w.decoy.ready ? '(F 餌機就緒)' : `(F 餌機 ${w.decoy.cd.toFixed(0)}s)`)
+          : '';
+        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${fTag}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
@@ -844,6 +848,8 @@ function makeHud() {
       $('backRoomBtn').style.display = app.isHost ? '' : 'none';
       document.exitPointerLock?.();
     },
+    // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
+    locked: (on) => $('lockWarn').classList.toggle('on', !!on),
     hitmark: () => {
       const el = $('hitmark');
       el.classList.remove('on');

@@ -365,3 +365,65 @@ export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {
     },
   });
 }
+
+// ---------------- 準星鎖定光暈(常駐,由 game.js 掛/卸)----------------
+/**
+ * 掛在目標 mesh 底下的鎖定光暈:脈動的加成混合光球 + 腳下旋轉環。
+ * 走 onBeforeRender 自更新(不進 effects 陣列 —— 它不會自己過期)。
+ * 回傳的 Group 由呼叫端 remove() 卸除。
+ */
+export function lockGlow(target, color = 0xffffff) {
+  const box = new THREE.Box3().setFromObject(target);
+  const size = box.getSize(new THREE.Vector3());
+  const r = Math.max(1.5, Math.max(size.x, size.z) * 0.75);
+  const g = new THREE.Group();
+  g.userData.noOutline = true;
+
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture(), color, transparent: true, opacity: 0.55,
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+  }));
+  halo.scale.setScalar(r * 3);
+  halo.position.y = size.y * 0.5;
+  g.add(halo);
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(r * 1.05, r * 1.35, 4, 1),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.9, side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }),
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.3;
+  g.add(ring);
+
+  g.onBeforeRender = () => {
+    const t = performance.now() / 1000;
+    const p = 0.5 + 0.5 * Math.sin(t * 6);
+    halo.material.opacity = 0.3 + p * 0.35;
+    halo.scale.setScalar(r * (2.7 + p * 0.5));
+    ring.rotation.z = t * 1.6;
+    ring.scale.setScalar(0.94 + p * 0.12);
+  };
+  target.add(g);
+  return g;
+}
+
+/** 徑向漸層光暈貼圖(快取) */
+function glowTexture() {
+  if (_texCache.has('glow')) return _texCache.get('glow');
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const gr = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,0.95)');
+  gr.addColorStop(0.35, 'rgba(255,255,255,0.35)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, S, S);
+  const tex = new THREE.CanvasTexture(cv);
+  _texCache.set('glow', tex);
+  return tex;
+}

@@ -27,7 +27,8 @@ export const MODEL_MANIFEST = Object.assign({
 
 // 單位顯示高度(公尺;fitToHeight 自動縮放)
 const TARGET_H = {
-  'hero:robot': 6, 'hero:drone': 3, 'hero:morph': 6, 'hero:beast': 5,
+  // decoy:fitToHeight 量的是「高度」— 餌機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
+  'hero:robot': 6, 'hero:drone': 3, 'hero:morph': 6, 'hero:beast': 5, decoy: 1.4,
   'creep:soldier': 3.2, 'creep:apc': 4.5, 'creep:tank': 5,
   'creep:rocketeer': 3.4, 'creep:howitzer': 4, 'creep:heli': 4.2,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
@@ -799,6 +800,46 @@ function buildRobotMech(side, vis) {
  * 預設加胸前主色識別燈條。座標以 fitToHeight 後的機體(高 target、腳底 y=0)為準;
  * anchor 可覆寫肩點/燈條位置(程序生成人型機甲自帶胸燈,傳 trim:false)。
  */
+/**
+ * 餌機:機甲外掛的可分離子機(誘導導彈 / 偵察機 / 誘餌)。
+ * 機首朝 +z(與機甲模型同慣例;game.js 一律以 ry + π 套用朝向)。
+ * 尺寸以 len ≈ 2.2 為基準,掛在機甲肩上時整組縮放。
+ */
+function buildDecoy(side, vis = null) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side]?.color ?? 0xffffff);
+  const shell = 0xb9c2cb, dark = 0x39424b;
+  // 彈體 + 錐形彈頭(圓柱預設軸為 +y,轉 90° 讓它躺成 +z 朝向)
+  const body = cyl(g, 0.24, 0.28, 1.5, 10, 0, 0, 0, shell, { metalness: 0.6 });
+  body.rotation.x = Math.PI / 2;
+  const nose = cyl(g, 0.02, 0.24, 0.55, 10, 0, 0, 1.0, dark, { metalness: 0.7 });
+  nose.rotation.x = Math.PI / 2;
+  // 感測球(偵察機之眼)+ 尾焰口
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8),
+    mat(accent, { emissive: accent, emissiveIntensity: 1.6 }));
+  eye.position.set(0, 0.16, 0.72);
+  g.add(eye);
+  cyl(g, 0.18, 0.14, 0.18, 8, 0, 0, -0.82, dark).rotation.x = Math.PI / 2;
+  // 四片尾翼(繞彈體軸每 90° 一片)
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    const fin = bx(g, 0.05, 0.55, 0.42, Math.sin(a) * 0.22, Math.cos(a) * 0.22, -0.6, shell, { metalness: 0.5 });
+    fin.rotation.z = a;
+  }
+  const trim = bx(g, 0.06, 0.06, 0.9, 0, 0.27, 0.05, accent, { emissive: accent, emissiveIntensity: 1.2 });
+  trim.userData.noOutline = true;
+  g.userData.decoyLen = 2.2;
+  return g;
+}
+
+/** 機甲肩上的餌機掛點(組合/分離動畫的錨點;game.js 以 userData.decoyPod 控制顯隱與縮放) */
+function decoyPod(side, vis, target) {
+  const pod = buildDecoy(side, vis);
+  pod.scale.setScalar(target * 0.42 / pod.userData.decoyLen);
+  pod.position.set(-target * 0.3, target * 0.72, -target * 0.06);
+  return pod;
+}
+
 function charPod(vis, target, anchor = null) {
   const A = {
     sx: target * 0.22, sy: target * 0.78, trim: true,
@@ -1231,6 +1272,7 @@ const FALLBACK = {
   'hero:drone': (side, vis) => buildDrone(side, vis),
   'hero:robot': (side, vis) => buildRobotMech(side, vis),
   'hero:morph': (side, vis) => buildMorphMech(side, vis),
+  decoy: (side, vis) => buildDecoy(side, vis),
   'creep:soldier': (side) => buildSoldierFallback(side),
   'creep:apc': (side) => buildApc(side),
   'creep:tank': (side) => buildTank(side),
@@ -1306,6 +1348,14 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
       built.userData.rig.s = built.scale.x;
       g.userData.rig = built.userData.rig;
     }
+  }
+
+  // 機甲:肩上的餌機掛點(F 分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)
+  if (kind === 'hero:robot' || kind === 'hero:morph') {
+    const pod = decoyPod(side, vis, target);
+    outlinify(pod, outlineW(target));
+    g.add(pod);
+    g.userData.decoyPod = pod;
   }
 
   // 防禦塔:頂部加程序砲塔頭(每幀追蹤目標;見 game.js _aimTurret)

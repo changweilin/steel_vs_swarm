@@ -710,3 +710,16 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
   16%, 76% { transform: translateX(0); opacity: 1; }
   100% { transform: translateX(-20px); opacity: 0; }
 }
+
+/* 被敵方準星鎖定的警示(sim lock 事件 → hud.locked) */
+.lock-warn {
+  position: absolute; left: 50%; top: 58%; z-index: 11; pointer-events: none;
+  transform: translateX(-50%);
+  display: none;
+  padding: 4px 14px; border: 1px solid #ff5a4a; border-radius: 3px;
+  background: rgba(40, 6, 6, 0.55);
+  color: #ff8a7a; font-weight: 700; letter-spacing: 2px; font-size: 13px;
+  text-shadow: 0 0 8px rgba(255, 60, 40, 0.8);
+}
+.lock-warn.on { display: block; animation: lockPulse 0.7s infinite; }
+@keyframes lockPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, MORPH,
+  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, MORPH, LOCK, DECOY,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit } from './models.js';
@@ -15,16 +15,19 @@ import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { stepLocomotion } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow } from './vfx.js';
 import { CutIn } from './cutin.js';
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
-  tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph',
+  tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
+// 副視窗(PiP):無人機僚機視角 / 機甲餌機視角
+// 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
+const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
 
 export class BattleClient {
   /**
@@ -142,6 +145,8 @@ export class BattleClient {
     const fov = this.heroKind ? UNITS[this.heroKind].fov : 72;
     this.baseFov = fov;
     this.camera = new THREE.PerspectiveCamera(fov, this.canvas.clientWidth / this.canvas.clientHeight, 0.5, span * 2);
+    // 副視窗共用相機(僚機 / 餌機視角;每幀重設位置後重複使用)
+    this.pipCam = new THREE.PerspectiveCamera(PIP.FOV, 1 / PIP.ASPECT, 0.5, span * 2);
 
     // 季節/日夜/天氣(開房時定案,全房一致)
     this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env);
@@ -478,7 +483,8 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          if (e.code === 'KeyF' && this.isDrone) this._detonate();   // 無人機自爆(右鍵已改為瞄準)
+          // F:無人機自爆 / 機甲分離發射餌機(右鍵已改為瞄準)
+          if (e.code === 'KeyF') { if (this.isDrone) this._detonate(); else this._launchDecoy(); }
         }
         // 三機小隊:V 循環切換主視野、1~3 直選(陣亡中也能切到存活的僚機)
         if (this.isDrone) {
@@ -539,16 +545,25 @@ export class BattleClient {
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
+      if (e.k === 'decoy') {
+        ent.heroY = e.y ?? 0;
+        ent.ry = e.ry ?? 0;
+        ent.lost = !!e.lost;
+      }
       if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
+        ent.si = e.si || 0;
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
         // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
         if (e.pid === this.youId && !!e.act !== ent.isSelf) this._takeOver(ent, e);
         if (wasDead && !e.dead && !ent.isSelf) ent._snapPos = true;
         ent.mesh.visible = !e.dead && !ent.isSelf;
+        if (e.dc != null) ent.dock = !!e.dc;   // 餌機掛點:已組合就緒(組合/分離動畫)
         if (ent.isSelf) {
+          this.decoyCd = e.dcd ?? 0;
+          this.decoyDocked = !!e.dc;
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
@@ -624,7 +639,8 @@ export class BattleClient {
       return ent;
     }
     const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
-    const { group, mixer } = makeUnit(key, e.s, { ch: e.ch });   // 英雄:角色專屬機體外觀
+    // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
+    const { group, mixer } = makeUnit(key, e.s, { ch: e.ch, ring: e.k !== 'decoy' });
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
@@ -635,7 +651,8 @@ export class BattleClient {
     const ent = {
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
-      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli',
+      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy',
+      decoy: e.k === 'decoy', si: e.si || 0,
       isStatic: e.k === 'tower' || e.k === 'base',
     };
     // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
@@ -651,6 +668,7 @@ export class BattleClient {
   }
 
   _removeEnt(id, ent) {
+    if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
     this.scene.remove(ent.mesh);
     if (ent.mixer) this.mixers.delete(ent.mixer);
     if (ent.shield) this.shields.delete(ent.shield);
@@ -882,6 +900,20 @@ export class BattleClient {
           ? '🚨 匿蹤防空陣地開火!命中即墜毀,快擊落飛彈或回兵線走廊!'
           : '🚨 防空飛彈鎖定你了,快規避!');
       }
+    } else if (ev.e === 'lock') {
+      // 伺服器確認的準星鎖定:我鎖到人 → 目標亮光暈;我被鎖 → HUD 警告(LOCK.WARN_S 後自動退)
+      if (ev.pid === this.youId) {
+        const ent = this.ents.get(ev.tid);
+        if (ent) this._setLockGlow(ent);
+      } else if (ev.tpid === this.youId) {
+        this._lockedUntil = performance.now() / 1000 + LOCK.WARN_S;
+      }
+    } else if (ev.e === 'decoy') {
+      if (ev.pid === this.youId) {
+        this.hud.feed?.(ev.homing ? '🚀 餌機分離:追蹤鎖定目標!' : '🛰️ 餌機分離:直飛偵察中(無法操舵)');
+      }
+    } else if (ev.e === 'decoyLost') {
+      if (ev.pid === this.youId) this.hud.feed?.(`📡 餌機超出 ${DECOY.LINK_M}m,鏈路中斷`);
     } else if (ev.e === 'cast') {
       // 招式施放:特效 + 播報(敵我口徑不同)
       const c = CHARACTERS[ev.ch];
@@ -977,20 +1009,65 @@ export class BattleClient {
   }
 
   /**
-   * 準星鎖定:瞄準中把準星掃到的敵方單位回報伺服器(自爆衝刺的目標)。
+   * 準星鎖定:準星掃到「射程內」的敵方單位就回報伺服器(全機種通用)。
+   * 伺服器複驗距離/視野後廣播 lock 事件 → 施放者看到光暈、目標本人跳警告。
    * 只送變化與心跳,避免每幀灌訊息。
    */
   _tickLock(now) {
-    if (!this.isDrone || this.dead || !this.aiming || this.shopOpen) return;
+    if (this.dead || this.shopOpen || !this.side) return;
     if (now - (this._lockAt || 0) < 0.25) return;
     this._lockAt = now;
-    const { ent } = this._resolveAim(600);
-    if (!ent || ent.side === this.side || ent.neutral) return;
-    this.net.send({ t: 'lock', id: ent.id });
-    if (this._lockId !== ent.id) {
-      this._lockId = ent.id;
-      this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}(F 自爆 → 僚機衝刺)`);
+    const def = this._curWeapon().def;
+    if (!def) return;
+    const { ent, point } = this._resolveAim(def.range);
+    // 射程閘門在客戶端先擋一次(伺服器仍會複驗);準星沒掃到敵人 → 解除光暈
+    if (!ent || ent.side === this.side || ent.neutral || !point
+        || this.pos.distanceTo(point) > def.range) {
+      this._clearLockGlow();
+      return;
     }
+    this.net.send({ t: 'lock', id: ent.id });
+  }
+
+  // ---------------- 餌機(機甲 F:分離發射)----------------
+  /** 發射請求;航向由伺服器取當下機首朝向,玩家無法操舵 */
+  _launchDecoy() {
+    if (this.isDrone || !this.side) return;
+    if (!this.decoyDocked) {
+      this.hud.feed?.(`🔧 餌機重組中(${(this.decoyCd || 0).toFixed(0)}s)`);
+      return;
+    }
+    this.net.send({ t: 'decoy' });
+  }
+
+  /** 掛點餌機:組合(慢慢裝上)/ 分離(瞬間彈出)的縮放動畫 */
+  _updateDecoyPod(ent, dt) {
+    const pod = ent.mesh.userData.decoyPod;
+    pod.userData.s0 ??= pod.scale.x;
+    pod.userData.x0 ??= pod.position.x;
+    const want = ent.dock ? 1 : 0;
+    const s = ent.podS ?? want;
+    const rate = want ? 2.4 : 9;   // 組合:機械臂慢慢裝填;分離:彈射瞬間抽離
+    ent.podS = s + Math.max(-rate * dt, Math.min(rate * dt, want - s));
+    pod.visible = ent.podS > 0.02;
+    pod.scale.setScalar(pod.userData.s0 * ent.podS);
+    pod.position.x = pod.userData.x0 - (1 - ent.podS) * 1.2;   // 分離時往外滑開
+  }
+
+  /** 目前被自己鎖定的目標:加上脈動光暈 */
+  _setLockGlow(ent) {
+    if (this._lockId === ent.id) return;
+    this._clearLockGlow();
+    this._lockId = ent.id;
+    this._lockGlow = lockGlow(ent.mesh, SIDES[this.side].color);
+    this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}`);
+  }
+
+  _clearLockGlow() {
+    if (!this._lockGlow) { this._lockId = null; return; }
+    this._lockGlow.parent?.remove(this._lockGlow);
+    this._lockGlow = null;
+    this._lockId = null;
   }
 
   // ---------------- 自身死亡 / 重生 ----------------
@@ -1366,6 +1443,8 @@ export class BattleClient {
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
       bomb: this.isDrone,
+      // 機甲餌機:掛點就緒 / 重組倒數(F 分離發射)
+      decoy: this.isDrone ? null : { ready: !!this.decoyDocked, cd: this.decoyCd || 0 },
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
     };
   }
@@ -1620,6 +1699,7 @@ export class BattleClient {
         if (ent.bar) ent.bar.lookAt(this.camera.position);
         continue;
       }
+      if (ent.hero && ent.mesh.userData.decoyPod) this._updateDecoyPod(ent, dt);
       const cur = ent.mesh.position;
       const px = cur.x, pz = cur.z, pyaw = ent.mesh.rotation.y;
       let nx, nz, snapped = false;
@@ -1637,7 +1717,9 @@ export class BattleClient {
       const ny = (ent.hero || ent.flies) ? gy + ent.heroY : gy;
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
-      if (ent.hero) {
+      if (ent.decoy) {
+        wantYaw = ent.ry + Math.PI;   // 機首朝 +z,與機甲同慣例
+      } else if (ent.hero) {
         // ry 是「相機朝向」慣例(前方 = -z),機體模型一律朝 +z(見 buildRobotMech 腳尖/駕駛艙)
         // → 直接套用會讓所有英雄(含 bot)倒著走。差 π。
         wantYaw = ent.ry + Math.PI;
@@ -1793,6 +1875,71 @@ export class BattleClient {
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
     this.renderer.render(this.scene, this.camera);
+    this._renderPips();
+    this.hud.locked?.(now < (this._lockedUntil || 0));
+  }
+
+  // ---------------- 副視窗(PiP)----------------
+  /**
+   * 需要小螢幕的視角:蜂群 = 非主視野的僚機(最多 2 個);機甲 = 空中的餌機(1 個)。
+   * 餌機失聯後不再回傳畫面 → 不渲染(HUD 由 hud.feed 播報鏈路中斷)。
+   */
+  _pipSources() {
+    const out = [];
+    if (!this.side || this.dead) return out;
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== this.youId) continue;
+      if (this.isDrone) {
+        if (ent.hero && !ent.isSelf && !ent.dead) out.push({ ent, tag: `${ent.si + 1}號機` });
+      } else if (ent.decoy && !ent.lost) {
+        out.push({ ent, tag: '餌機' });
+      }
+    }
+    return out.sort((a, b) => a.ent.si - b.ent.si).slice(0, 2);
+  }
+
+  /**
+   * 在主畫面左上角疊畫小螢幕:scissor 限制清除/繪製範圍,同一個 scene 重繪。
+   * 座艙掛在主相機底下、來源機體自己的模型 → 兩者都要在該次繪製中藏起來。
+   */
+  _renderPips() {
+    const list = this._pipSources();
+    if (!list.length) return;
+    const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+    const pw = Math.round(Math.min(PIP.MAX_W, W * PIP.W_FRAC));
+    const ph = Math.round(pw * PIP.ASPECT);
+    const r = this.renderer;
+    const cockVis = this.cockpit?.visible;
+    if (this.cockpit) this.cockpit.visible = false;
+    // setClearColor 是 renderer 全域狀態:畫外框會蓋掉它,收工前必須還原
+    const clear0 = r.getClearColor(new THREE.Color());
+    const alpha0 = r.getClearAlpha();
+    this.pipCam.aspect = pw / ph;
+    this.pipCam.updateProjectionMatrix();
+    r.setScissorTest(true);
+    list.forEach((p, i) => {
+      const x = PIP.PAD;
+      const y = H - PIP.TOP - ph - i * (ph + PIP.GAP);   // scissor 原點在左下,由上往下疊
+      const m = p.ent.mesh;
+      this.pipCam.position.copy(m.position);
+      this.pipCam.position.y += p.ent.decoy ? 0.6 : 1.2;
+      // ry 是相機朝向慣例(前方 = -z),模型才要 +π
+      this.pipCam.rotation.set(0, p.ent.ry, 0, 'YXZ');
+      // 外框:先清一圈陣營色,再把內圈交給場景繪製
+      r.setScissor(x - 2, y - 2, pw + 4, ph + 4);
+      r.setClearColor(SIDES[this.side].color, 1);
+      r.clear(true, false, false);
+      r.setViewport(x, y, pw, ph);
+      r.setScissor(x, y, pw, ph);
+      const wasVisible = m.visible;
+      m.visible = false;              // 不要從自己的鼻子裡往外看
+      r.render(this.scene, this.pipCam);
+      m.visible = wasVisible;
+    });
+    r.setScissorTest(false);
+    r.setViewport(0, 0, W, H);
+    r.setClearColor(clear0, alpha0);
+    if (this.cockpit) this.cockpit.visible = cockVis;
   }
 
   dispose() {

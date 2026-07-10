@@ -126,7 +126,7 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
 // ---- 目標類型(武器克制查表:單位種類 → 類別)----
 export const TARGET_CLASS = {
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'armor', heli: 'air',
-  robot: 'armor', drone: 'air', morph: 'armor', tower: 'building', base: 'building',
+  robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
   // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
   aasite: 'building', construction: 'building', wreck: 'building',
   rockfall: 'building', fallentree: 'building',
@@ -152,7 +152,7 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
 // SQUAD:蜂群玩家同時操控 N 架無人機(主視野一架 + 僚機)。
-// 單機 HP/傷害 = 機甲的 1/3,三機齊射 ≈ 一台機甲;死一架就少 1/3 戰力。
+// 單機 HP/傷害 = 機甲的 1/N 再 ×BUFF(2026-07-10:單機強化 +50%)→ 三機齊射 ≈ 1.5 台機甲。
 // 傷害折算住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
 // MORPH:傭兵變形機甲(單機;HP/火力與機甲完全相同)。
 // 飛行型態「觸地」→ 變形為地面型;地面型態「蓄力跳躍」(按住 Space 蓄力後放開)→ 彈射升空變形為飛行型。
@@ -168,7 +168,8 @@ export const MORPH = {
 };
 export const SQUAD = {
   N: 3,
-  DMG: 1 / 3,
+  BUFF: 1.5,          // 單機強化倍率(HP / 傷害);UNITS.drone.hp 與 DMG 都由它推導
+  DMG: 1.5 / 3,       // = BUFF / N
   FORM_SIDE: 15,      // 僚機編隊橫向偏移(公尺)
   FORM_BACK: 10,      // 僚機編隊後方偏移
   REGROUP_M: 70,      // 離主視野超過此距離 → 先沿標準兵線路線歸隊
@@ -177,10 +178,36 @@ export const SQUAD = {
   LANE_STEP_M: 80,    // 每次沿線推進的前瞻距離
   REGROUP_ALT: 30,    // 歸隊巡航高度(< AA_MIN_ALT,不被防空鎖定)
   REGROUP_MUL: 1.3,   // 歸隊加速
-  DASH_MUL: 1.7,      // 自爆衝刺加速
+  DASH_MUL: 3,        // 自爆衝刺加速(三倍速撲擊)
   DASH_BOOM_M: 4,     // 衝刺引爆距離
-  LOCK_TTL: 2.5,      // 準星鎖定有效秒數(過期即失去自爆衝刺目標)
 };
+
+// ---- 準星鎖定(全機種通用;2026-07-10 起不再只是無人機自爆衝刺的目標)----
+// 客戶端把「射程內 + 準星對準」的敵方單位回報伺服器;伺服器複驗距離後廣播 lock 事件:
+//   施放者 → 目標身上浮現光暈;目標本人 → HUD 被鎖定警告。
+// 無人機另外沿用它當自爆衝刺目標。
+export const LOCK = { TTL: 2.5, WARN_S: 1.6 };
+
+// ---- 餌機(機甲外掛的可分離子機;對應無人機的 F 鍵自爆)----
+// 平時組合在主機甲掛點上。F 分離發射,航向鎖定發射瞬間的機首朝向 —— 玩家無法操舵。
+// 準星有鎖定目標(LOCK.TTL 內)才會追蹤,否則直飛到燃料耗盡自爆。
+// 飛行中經 PiP 小視窗回傳畫面與視野;超過 LINK_M 即失聯(斷訊、不再回傳視野),
+// 機體仍直飛到 TTL_S 自爆。可被擊落 —— 這就是「餌」:替主機甲吸走火力。
+export const DECOY = {
+  HP_F: 0.25,       // 生命值 = 主機甲裝甲上限的 1/4
+  SPEED: 62,
+  TURN: 2.0,        // 追蹤時每秒最大轉向(弧度);無鎖定時完全不轉向
+  ALT: 8,           // 發射後相對主機甲的爬升高度
+  LINK_M: 340,      // 失聯距離
+  TTL_S: 14,
+  CD_S: 24,         // 冷卻(自發射瞬間起算;歸零 = 掛點重新組合出一架)
+  BOOM_M: 6,        // 追蹤命中的近炸引信半徑
+  SIGHT: 200,       // 偵察視野(僅連線中回傳)
+  DMG: 260, R: 20, PEN: 10,
+  vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
+};
+/** 餌機自爆的爆風定義(交給 sim._blast;與 WEAPONS 同形) */
+export const decoyBlast = () => ({ dmg: DECOY.DMG, r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs });
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例
@@ -202,6 +229,8 @@ export const PROG = {
   ult:   { name: '大招',   kills: [6, 18, 32], cost: [400, 800, 1400] },
 };
 export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2 };
+// 電腦玩家(bot;含駕駛傭兵變形機甲的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
+export const BOT_KILL_SCORE = 3;
 export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
 
 // 三階數值取值:陣列 = [Lv1, Lv2, Lv3];純量 = 各階相同
@@ -209,20 +238,32 @@ export const tierVal = (v, lvl = 1) =>
   Array.isArray(v) ? v[Math.max(0, Math.min(v.length - 1, lvl - 1))] : v;
 
 /**
+ * 玩家可操作機體的射程上限 = 視野 × RANGE_SIGHT_F(恆 < 視野:打不到看不到的東西)。
+ * 重武器一律需開狙擊視角(needAim),瞄準時視野 ×AIM_SIGHT_MULT → 上限跟著放大。
+ * 伺服器 _visibleTo 本來就會作廢「看不見的目標」的命中回報,這裡只是讓數值誠實。
+ */
+export function rangeCap(kind, slot) {
+  const sight = UNITS[kind]?.sight;
+  if (!sight) return Infinity;
+  return sight * (slot === 'heavy' ? GAME.AIM_SIGHT_MULT : 1) * GAME.RANGE_SIGHT_F;
+}
+
+/**
  * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
- * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5);false = NPC 基準值。
+ * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5)並夾住 rangeCap;false = NPC 基準值。
  * 重武器以 mag×reload 實作 CD:每發打完自動進入 cd 秒冷卻(HUD 顯示為冷卻)。
- * 無人機是三機小隊(SQUAD.N),單機傷害折成 1/3 — 這裡是唯一的折算點。
+ * 無人機是三機小隊(SQUAD.N),單機傷害折成 SQUAD.DMG — 這裡是唯一的折算點。
  */
 export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   const w = CHARACTERS[ch]?.[slot];
   if (!w) return null;
   const t = (v) => tierVal(v, lvl);
-  const squad = charKind(ch) === 'drone' ? SQUAD.DMG : 1;
+  const kind = charKind(ch);
+  const squad = kind === 'drone' ? SQUAD.DMG : 1;
   return {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
     dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1) * squad,
-    range: w.range * (heroic ? HEROIC.range : 1),
+    range: heroic ? Math.min(w.range * HEROIC.range, rangeCap(kind, slot)) : w.range,
     rate: w.rate ?? 3,
     mag: t(w.mag ?? 1),
     reload: t(w.cd ?? w.reload ?? 2),
@@ -778,7 +819,7 @@ export const ECON = {
   INCOME_PER_S: 2,
   // 擊殺賞金:高價值單位報酬越高(missile = 擊落防空飛彈)
   BOUNTY: {
-    soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, morph: 150, missile: 15, aasite: 40,
+    soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, morph: 150, missile: 15, aasite: 40, decoy: 25,
     rocketeer: 30, howitzer: 45, heli: 60,
   },
   UPGRADES: {
@@ -804,21 +845,26 @@ export const UNITS = {
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招消耗)。
-  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield = 機甲的 1/3,傷害折算在 heroWeapon()。
-  // 每一架各自重生、各自吃冷卻(與機甲同表)。
+  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield = 機甲 ÷ N × SQUAD.BUFF(= 640/3×1.5 = 320),
+  // 傷害折算在 heroWeapon()。每一架各自重生、各自吃冷卻(與機甲同表)。
   drone: {
-    name: '獵蜂無人機', hp: 214, shield: 74, mp: 100, mpRegen: 4,
+    name: '獵蜂無人機', hp: 320, shield: 110, mp: 100, mpRegen: 4,
     speed: 42, vspeed: 22, fov: 100, zoomFov: 55, sight: 300,
     bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀);僚機衝刺自爆
     regen: 12,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久(單機獨立計數)
   },
   robot: {
+    // sight 240(原 220):輕武器射程被 rangeCap 夾到 sight×0.9,220 會把全機甲輕武器砍到
+    // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形機甲齊平。
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
-    speed: 21, jump: 9, fov: 72, zoomFov: 35, sight: 220,
+    speed: 21, jump: 9, fov: 72, zoomFov: 35, sight: 240,
     regen: 18,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
+  // 餌機:機甲的外掛子機(F 分離發射)。hp 於生成時覆寫為主機甲上限 × DECOY.HP_F;
+  // speed:0 = 不進 sim 主迴圈的推線邏輯(位置由 _tickDecoys 管),但仍是敵方小兵/塔的合法目標。
+  decoy: { name: '餌機', hp: 160, armor: 0, speed: 0, sight: DECOY.SIGHT },
 };
 // 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
@@ -840,6 +886,9 @@ export const GAME = {
   WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(另加固定 1 火箭兵/1 榴彈兵/1 攻擊直升機)
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
   AIM_SIGHT_MULT: 1.6,        // 瞄準模式視野加成(狙擊模式看得更遠)
+  // 玩家可操作機體的射程上限比例:射程 = min(基準×HEROIC, sight×(重武器再×AIM_SIGHT_MULT)×此值)。
+  // 恆 < 1 ⇒ 射程一定小於視野;見 rangeCap()。
+  RANGE_SIGHT_F: 0.9,
   TOWER_FRACS: [0.22, 0.40],  // 防禦塔在兵線上的位置(距己方主堡比例)
   // 塔位橫向偏移(公尺):每個塔位在兵線左右各一座,砲塔不擋路、交叉火力涵蓋走廊
   TOWER_SIDE_OFF: 15,

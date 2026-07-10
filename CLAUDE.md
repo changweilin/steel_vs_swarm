@@ -37,12 +37,19 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 - **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
   - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。
   - 迴圈粒度 **MUST** 分清楚:`heroes.values()` = 一隊一次(金錢/電力/招式增益);`_allBodies()` = 每架一次(重生/護盾/伏擊/中繼站/火場/物資)。搞錯 = 收入三倍或增益疊三層。
-  - 單機 HP/傷害 = 機甲的 1/3(`UNITS.drone.hp`、`SQUAD.DMG`)。**傷害折算只准住在 `heroWeapon()`**(與 HEROIC 同一個縫),`sim.js`/`game.js` **MUST NOT** 二次乘算。
+  - 單機 HP/傷害 = 機甲 ÷ `SQUAD.N` × `SQUAD.BUFF`(1.5,2026-07-10 單機強化 +50%)= `UNITS.drone.hp` / `SQUAD.DMG`。**傷害折算只准住在 `heroWeapon()`**(與 HEROIC 同一個縫),`sim.js`/`game.js` **MUST NOT** 二次乘算。
+  - 非主視野的僚機 = 客戶端左上角 PiP 小螢幕(`game.js _renderPips`,scissor + 共用 `pipCam` 重繪同一個 scene);機甲的餌機共用同一套。PiP **MUST** 避開 minimap / kill-feed 這兩塊 DOM。
   - 火力靠 `_echo()`:主視野機命中什麼,射程內存活僚機就打同一個目標(彈藥/射速只在主機扣一次)。三機齊射 ≈ 一台機甲。
   - 自爆(F):主視野機原地引爆;**有準星鎖定敵方目標時**(`heroLock`,`SQUAD.LOCK_TTL` 秒內有效)僚機衝向該目標直到引爆,沒鎖定則不動作。`_blast` 一律跳過同陣營 → 不會炸到友軍。主視野機陣亡 → `_promote()` 立刻讓位給存活僚機,且**接手那架取消衝刺**(玩家重新掌控)。
   - 僚機移動全在伺服器 `_tickSquads()`:dash > regroup(離主機 > `SQUAD.REGROUP_M`:先切回標準兵線走廊 → 沿線飛到離主機最近的線上點 → 再直接歸隊)> follow(編隊)。客戶端只回報主視野那架的 `pos`。
   - 飛彈追蹤 **MUST** 用 `m.tid`(ent id)而非 `tpid`(pid 只給客戶端判斷「是不是在打我」)—— 一個 pid 底下有三架。
 - **傭兵變形機甲(2026-07-09 起)**:傭兵(`side:'MERC'`)一律 `kind:'morph'` 單機,HP/火力與機甲完全相同(`UNITS.morph` 由 `UNITS.robot` spread 而來,**MUST NOT** 拆開手抄數值;傷害不吃 SQUAD 折算)。飛行↔地面變形是客戶端物理(蓄力跳彈射 / 觸地變形,常數住 `MORPH`);伺服器**不需要型態訊息**,一律以回報 `y` 判定:`y ≤ MORPH.GROUND_Y` = 地面型(踩地雷)、`y ≥ GAME.AA_MIN_ALT` = 空中目標(塔 SAM / 防空伏擊)。獸型機甲(`visual.form:'beast'`)與飛行生物無人機(`'avian'`)只是外觀/骨架(models.js + locomotion.js),**不影響 sim 數值**。
+- **機甲餌機(2026-07-10 起)**:非無人機英雄(`robot`/`morph`)肩上掛一架 `kind:'decoy'` 子機,F 鍵分離發射(對應無人機的 F 自爆)。狀態住 `sq.decoy`(空中那架)/ `sq.decoyCd`;航向鎖定發射瞬間的 `h.ry`,**玩家不能操舵**。有準星鎖定(`_lockedTarget`)才限轉率追蹤,近炸 `DECOY.BOOM_M` 引爆;否則直飛到 `TTL_S` 自爆。離主機甲 > `LINK_M` = 失聯(`d.lost`):`_visionSources` 不再算它、客戶端收掉 PiP,但機體照飛照炸。HP = 主機甲 `maxHp × DECOY.HP_F`,可被擊落(= 誘餌本體);被擊落 **不** 引爆,只有自爆/近炸才引爆。
+  - decoy 是普通 ent(有 side、非 neutral)→ 敵方 `_acquireTarget` 會鎖它(這就是「餌」)。但它 **MUST** 在 sim 主迴圈 `if (e.hero || e.neutral || e.decoy …) continue` 被跳過(沒有 lane / 不開火,位置歸 `_tickDecoys` 管)。
+  - 自爆爆風走 `_blast(owner, decoyBlast(), …)` —— 算在主機甲頭上(吃它的火力升級/增益,擊殺記給它)。
+- **準星鎖定(2026-07-10 起全機種通用)**:客戶端 `_tickLock` 每 0.25s 回報「射程內 + 準星對準」的敵人;伺服器 `heroLock` 複驗**距離 ×1.25 與迷霧視野**(與 `heroHit` 同一條規則)後廣播 `lock` 事件 → 施放者畫光暈(`vfx.lockGlow`)、目標本人跳 HUD 警告。無人機沿用它當自爆衝刺目標、機甲當餌機追蹤目標。時效住 `LOCK.TTL`。
+- **射程恆小於視野(2026-07-10 起)**:玩家武器射程 = `min(基準 × HEROIC.range, rangeCap(kind, slot))`,`rangeCap = sight × (重武器再 × GAME.AIM_SIGHT_MULT) × GAME.RANGE_SIGHT_F`(< 1)。夾住的縫**只在 `heroWeapon()`**,`heroic=false` 的 NPC 基準值不夾。改 `sight` / 角色 `range` **MUST** 重跑 e2e(#INC-104 的 y=250 高空射擊仍要求輕武器英雄射程 ×1.25 > 250)。
+- **擊殺分數**:`by.kn += killScore(kind)`,但**被擊殺者是電腦玩家(`isBotId(t.pid)`)一律 `BOT_KILL_SCORE`(3)** —— 刷 bot 不能速成招式。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。
 - 彈道學在客戶端(`game.js` bullets:初速 mv + 重力 G,線段 raycast 補內插),伺服器仍以 `heroHit` 射程 ×1.25 驗證 — 防作弊邏輯**不**搬客戶端(不變)。

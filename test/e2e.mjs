@@ -6,6 +6,7 @@ import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul, SQUAD, tierVal,
+  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore,
 } from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
@@ -98,9 +99,31 @@ log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三�
   assert(dataOk, '28 角 × 4 招 × 3 階資料完整(傷害/射程/CD/MP 皆為正值)');
   assert(tierOk, '三階升級傷害遞增');
   assert(rangeOk, '全部輕武器英雄射程 ×1.25 > 250(高空射擊測試相容,#INC-104)');
-  const wn = heroWeapon('t01', 'light', 1, false), wh = heroWeapon('t01', 'light', 1, true);
+  // t03 輕武器基準 170 → ×1.2 = 204 < robot/drone 的 rangeCap,不會被夾,可驗純倍率
+  const wn = heroWeapon('t03', 'light', 1, false), wh = heroWeapon('t03', 'light', 1, true);
   assert(Math.abs(wh.range / wn.range - HEROIC.range) < 1e-9 && Math.abs(wh.dmg / wn.dmg - HEROIC.dmg) < 1e-9,
-    `玩家英雄同型武器:射程 ×${HEROIC.range}、威力 ×${HEROIC.dmg}(vs NPC 基準)`);
+    `玩家英雄同型武器(未觸頂):射程 ×${HEROIC.range}、威力 ×${HEROIC.dmg}(vs NPC 基準)`);
+}
+
+log('— sim:玩家射程恆小於視野(rangeCap;重武器吃狙擊視角加成)—');
+{
+  let capOk = true, clamped = 0;
+  for (const id of Object.keys(CHARACTERS)) {
+    const kind = charKind(id);
+    for (const slot of ['light', 'heavy']) {
+      const w = heroWeapon(id, slot, 3);          // 最高階也不得超標
+      const cap = rangeCap(kind, slot);
+      if (w.range > cap + 1e-9) capOk = false;
+      if (CHARACTERS[id][slot].range * HEROIC.range > cap + 1e-9) clamped++;
+    }
+  }
+  assert(capOk, '全角色輕/重武器射程 ≤ rangeCap(= 視野 × RANGE_SIGHT_F,重武器再 ×AIM_SIGHT_MULT)');
+  assert(GAME.RANGE_SIGHT_F < 1, `RANGE_SIGHT_F = ${GAME.RANGE_SIGHT_F} < 1 ⇒ 射程一定小於視野`);
+  assert(rangeCap('robot', 'heavy') > rangeCap('robot', 'light'),
+    '重武器需開狙擊視角,射程上限跟著視野放大');
+  assert(clamped > 0, `${clamped} 支武器被射程上限夾住(遠程狙擊不再打霧裡的東西)`);
+  assert(heroWeapon('t01', 'light', 1).range * 1.25 > 250,
+    '夾住後仍滿足 #INC-104(y=250 高空垂直射擊)');
 }
 
 log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面雙型態)+ 陣亡購買 —');
@@ -181,10 +204,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(sim.squads.get('p_r').bodies.length === 1, '機甲仍是單機');
   dr.money = 1234;
   assert(sq.bodies.every((b) => b.money === 1234), '經濟/彈藥/招式是三架共用的玩家狀態');
-  assert(Math.abs(UNITS.drone.hp * SQUAD.N - UNITS.robot.hp) < UNITS.robot.hp * 0.05,
-    `單機 HP = 機甲的 1/${SQUAD.N}(${UNITS.drone.hp} × ${SQUAD.N} ≈ ${UNITS.robot.hp})`);
+  assert(Math.abs(UNITS.drone.hp * SQUAD.N - UNITS.robot.hp * SQUAD.BUFF) < UNITS.robot.hp * 0.05,
+    `單機 HP = 機甲 ÷ ${SQUAD.N} × ${SQUAD.BUFF}(${UNITS.drone.hp} × ${SQUAD.N} ≈ ${UNITS.robot.hp} × ${SQUAD.BUFF})`);
+  assert(Math.abs(SQUAD.DMG - SQUAD.BUFF / SQUAD.N) < 1e-9, `單機傷害折算 = BUFF/N = ${SQUAD.DMG.toFixed(3)}`);
   assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - tierVal(CHARACTERS.s01.light.dmg, 1) * SQUAD.DMG) < 1e-6,
-    `無人機單機傷害 = 原數值的 1/${SQUAD.N}(折算只住在 heroWeapon())`);
+    `無人機單機傷害 = 原數值 × ${SQUAD.DMG.toFixed(3)}(折算只住在 heroWeapon())`);
   assert(Math.abs(heroWeapon('t01', 'light', 1, false).dmg - tierVal(CHARACTERS.t01.light.dmg, 1)) < 1e-6,
     '機甲傷害不被小隊折算');
 
@@ -214,6 +238,66 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(!dr.dead, `重生冷卻結束後歸隊(base ${UNITS.drone.respawn.base}s)`);
   dr.rg = false;
   sim.heroSwap('p_d', 0);   // 把主視野切回 dr,後續測試才是對它結算
+  assert(SQUAD.DASH_MUL === 3, `自爆衝刺 ${SQUAD.DASH_MUL} 倍速`);
+
+  log('— sim:機甲餌機(F 分離 / 追蹤 / 失聯 / 誘餌 HP)—');
+  {
+    const rb = sim.heroes.get('p_r');
+    rb.dead = false; rb.hp = rb.maxHp; rb.x = 0; rb.z = 0; rb.y = 0; rb.ry = 0;
+    const rsq = sim.squads.get('p_r');
+    sim.heroDecoy('p_r');
+    const d = rsq.decoy;
+    assert(!!d && d.kind === 'decoy', '機甲 F 分離出餌機(無人機沒有;無鎖定 = 直飛)');
+    assert(Math.abs(d.hp - rb.maxHp * DECOY.HP_F) < 1, `餌機 HP = 主機甲的 ${DECOY.HP_F}(${d.hp})`);
+    assert(!d.tid, '無鎖定 → 不追蹤');
+    assert(rsq.decoyCd > sim.t, '發射即進入冷卻,空中同時只有一架');
+    const before = rsq.decoy;
+    sim.heroDecoy('p_r');
+    assert(rsq.decoy === before, '冷卻/空中有機時再按 F 無效');
+    // 直飛:ry=0 → 沿 +z 前進(與 _moveTo 同慣例)
+    const z0 = d.z;
+    sim._tickDecoys(0.5);
+    assert(d.z > z0 + DECOY.SPEED * 0.4, '無鎖定的餌機沿發射瞬間機首方向直飛(玩家不能操舵)');
+    // 誘餌:它是敵方的合法目標,且被擊落不引爆
+    const bait = sim._acquireTarget({ side: 'SWARM', x: d.x, z: d.z }, { range: 200 });
+    assert(bait === d || bait?.kind === 'decoy', '餌機是敵方單位的合法鎖定目標(吸火力)');
+    d.hp = 0;
+    sim._kill(d, null);
+    assert(!sim.ents.has(d.id) && !rsq.decoy, '餌機被擊落 → 從場上與小隊狀態一起清掉');
+
+    // 失聯:超過 LINK_M 即斷訊、放棄追蹤,且不再提供視野
+    rsq.decoyCd = 0;
+    sim.heroDecoy('p_r');
+    const d2 = rsq.decoy;
+    d2.x = rb.x + DECOY.LINK_M + 50;
+    d2.tid = 999;
+    sim._tickDecoys(0.05);
+    assert(d2.lost && !d2.tid, `餌機超過 ${DECOY.LINK_M}m 失聯(鏈路中斷 → 失去火控)`);
+    assert(!sim._visionSources('STEEL').some(([sx]) => Math.abs(sx - d2.x) < 1e-6),
+      '失聯的餌機不再回傳視野');
+    // 燃料耗盡自爆(爆風算主機甲頭上)
+    const near = sim._add({ kind: 'soldier', side: 'SWARM', x: d2.x + 2, z: d2.z, y: 0, hp: UNITS.soldier.hp });
+    near.y = d2.y;
+    d2.dieAt = sim.t - 1;
+    sim._tickDecoys(0.05);
+    assert(!rsq.decoy, '燃料耗盡 → 自爆並清場');
+    assert(!sim.ents.has(near.id), `自爆爆風(${DECOY.DMG} × 肉體 ${DECOY.vs.flesh})炸死近旁敵兵`);
+    assert(LOCK.TTL > 0 && DECOY.CD_S > 0, '鎖定時效 / 餌機冷卻皆為正值');
+  }
+
+  log('— sim:擊殺電腦玩家只算 3 分 —');
+  {
+    const botHero = sim.addHero('STEEL', 'b9', 't06');
+    const killer = sim.heroes.get('p_d');
+    const kn0 = killer.kn;
+    botHero.hp = 0; botHero.sp = 0;
+    sim._kill(botHero, killer);
+    assert(killer.kn - kn0 === BOT_KILL_SCORE,
+      `擊殺 bot 機甲 = ${BOT_KILL_SCORE} 分(真人英雄仍是 ${killScore('robot')} 分)`);
+    sim.squads.delete('b9');
+    sim.heroes.delete('b9');
+    for (const b of botHero.sq.bodies) sim.ents.delete(b.id);
+  }
 
   log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');
   dr.x = sim.basePos.SWARM[0] + 500; dr.z = sim.basePos.SWARM[1];   // 先遠離主堡補血圈

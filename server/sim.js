@@ -6,7 +6,7 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
-  vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH,
+  vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -410,7 +410,8 @@ export class BattleSim {
     const mp = Math.round(u.mp * (m.mp ?? 1));
     const sq = {
       pid, side, ch, kind, act: 0, bodies: [],
-      lock: 0, lockAt: -99,          // 準星鎖定(自爆衝刺目標)
+      lock: 0, lockAt: -99,          // 準星鎖定(光暈 / 被鎖定警告 / 無人機自爆衝刺目標)
+      decoy: null, decoyCd: 0,       // 機甲餌機:目前在空中的那架 / 掛點重新組合完成的時刻
       ps: {                          // 共用玩家狀態(見 SQUAD_SHARED)
         money: ECON.START, upg: { dmg: 0, hull: 0 },
         ammo: {}, reloadUntil: {}, fireAt: {}, buffs: {},
@@ -494,14 +495,29 @@ export class BattleSim {
     this._promote(sq, i);
   }
 
-  /** 準星鎖定敵方目標(自爆衝刺用);中立物與友軍不鎖 */
+  /**
+   * 準星鎖定敵方目標:客戶端「射程內 + 準星對準」時回報,伺服器複驗距離與視野後成立。
+   * 成立 → 廣播 lock 事件(施放者畫光暈、目標本人跳被鎖定警告);
+   * 無人機另外沿用它當自爆衝刺目標、機甲當餌機的追蹤目標。中立物與友軍不鎖。
+   */
   heroLock(pid, targetId) {
     const sq = this.squads.get(pid);
     if (!sq || this.over) return;
+    const h = this.heroes.get(pid);
+    if (!h || h.dead) return;
     const t = this.ents.get(targetId);
     if (!t || t.neutral || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
+    // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容
+    const wp = this._heroWeapon(h, h.aiming ? 'heavy' : 'light');
+    if (!wp) return;
+    const ty = t.hero || t.kind === 'heli' || t.decoy ? (t.y || 0) : 0;
+    if (Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)) > wp.def.range * 1.25) return;
+    // 迷霧內的目標不可鎖定(與 heroHit 同一條規則:看不見 = 沒有火控解)
+    const pulse = this.visionUntil?.[h.side] > this.t;
+    if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     sq.lock = targetId;
     sq.lockAt = this.t;
+    this.events.push({ e: 'lock', pid, side: sq.side, tid: targetId, tpid: t.pid ?? null });
   }
 
   // ---------- 武器解析 / 開火閘門(射速 + 彈夾 + 填彈,伺服器把關)----------
@@ -726,13 +742,19 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'drone' || this.over) return;
     const sq = h.sq;
-    const t = this.ents.get(sq.lock);
-    const locked = t && t.hp > 0 && !(t.hero && t.dead) && t.side !== sq.side
-      && this.t - sq.lockAt <= SQUAD.LOCK_TTL;
-    if (locked) {
+    const t = this._lockedTarget(sq);
+    if (t) {
       for (const b of sq.bodies) if (b !== h && !b.dead) b.dash = t.id;
     }
     this._boom(h);   // 主視野機原地引爆(_kill 內部會把主視野讓給存活僚機)
+  }
+
+  /** 目前仍有效的準星鎖定目標(存活、敵方、未過期);沒有 → null */
+  _lockedTarget(sq) {
+    if (this.t - sq.lockAt > LOCK.TTL) return null;
+    const t = this.ents.get(sq.lock);
+    if (!t || t.hp <= 0 || t.side === sq.side || (t.hero && t.dead)) return null;
+    return t;
   }
 
   /** 單機自毀引爆:不給任何一方擊殺數 */
@@ -743,6 +765,80 @@ export class BattleSim {
     b.dash = 0;
     b.hp = 0;
     this._kill(b, null);
+  }
+
+  // ---------- 餌機(機甲的 F 鍵:分離發射 = 誘導導彈 + 偵察機 + 誘餌)----------
+  /**
+   * 發射:航向鎖定發射瞬間的機首朝向(玩家不能操舵);準星有鎖定才追蹤。
+   * 空中已有一架 / 冷卻未到 → 忽略。CD 自發射瞬間起算(歸零 = 掛點重新組合完成)。
+   */
+  heroDecoy(pid) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || h.kind === 'drone' || this.over) return;
+    const sq = h.sq;
+    if (sq.decoy || this.t < sq.decoyCd) return;
+    const t = this._lockedTarget(sq);
+    const ry = h.ry || 0;
+    const d = this._add({
+      kind: 'decoy', side: h.side, pid, decoy: true,
+      x: h.x, z: h.z, y: (h.y || 0) + DECOY.ALT, ry,
+      hp: Math.max(1, Math.round(h.maxHp * DECOY.HP_F)),
+      armor: 0, tid: t ? t.id : 0, lost: false, dieAt: this.t + DECOY.TTL_S,
+    });
+    sq.decoy = d;
+    sq.decoyCd = this.t + DECOY.CD_S;
+    this.events.push({ e: 'decoy', pid, side: h.side, id: d.id, homing: t ? 1 : 0 });
+  }
+
+  /**
+   * 每 tick:追蹤轉向(限轉率)→ 直線前進 → 失聯判定 → 近炸 / 燃料耗盡自爆。
+   * 失聯 = 離主機甲 > LINK_M:斷訊(不再回傳視野與 PiP 畫面)且放棄追蹤,但仍會直飛到自爆。
+   */
+  _tickDecoys(dt) {
+    for (const sq of this.squads.values()) {
+      const d = sq.decoy;
+      if (!d) continue;
+      if (this.t >= d.dieAt) { this._decoyBoom(d); continue; }
+
+      const owner = sq.bodies[sq.act];
+      if (!d.lost && dist2d(d.x, d.z, owner.x, owner.z) > DECOY.LINK_M) {
+        d.lost = true;
+        d.tid = 0;                                   // 失聯 = 失去火控,不再追蹤
+        this.events.push({ e: 'decoyLost', pid: sq.pid, id: d.id });
+      }
+
+      const t = d.tid ? this.ents.get(d.tid) : null;
+      if (t && (t.hp <= 0 || (t.hero && t.dead))) d.tid = 0;
+      else if (t) {
+        const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
+        if (Math.hypot(t.x - d.x, t.z - d.z, ty - d.y) <= DECOY.BOOM_M) { this._decoyBoom(d); continue; }
+        // 限轉率追蹤(水平航向 + 直接對齊高度;無法瞬間掉頭 = 可被走位甩掉)
+        const want = Math.atan2(-(t.x - d.x), t.z - d.z);
+        let dr = want - d.ry;
+        while (dr > Math.PI) dr -= Math.PI * 2;
+        while (dr < -Math.PI) dr += Math.PI * 2;
+        d.ry += Math.max(-DECOY.TURN * dt, Math.min(DECOY.TURN * dt, dr));
+        d.y += Math.max(-DECOY.SPEED * dt, Math.min(DECOY.SPEED * dt, ty - d.y));
+      }
+      d.x += -Math.sin(d.ry) * DECOY.SPEED * dt;
+      d.z += Math.cos(d.ry) * DECOY.SPEED * dt;
+      d.y = Math.max(0, d.y);
+    }
+  }
+
+  /** 餌機自爆:爆風算在主機甲頭上(吃它的火力升級 / 招式增益,擊殺也記給它) */
+  _decoyBoom(d) {
+    const sq = this.squads.get(d.pid);
+    const owner = sq ? sq.bodies[sq.act] : null;
+    this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: DECOY.R, side: d.side });
+    if (owner) this._blast(owner, decoyBlast(), d.x, d.z, d.y);
+    this._removeDecoy(d);
+  }
+
+  _removeDecoy(d) {
+    this.ents.delete(d.id);
+    const sq = this.squads.get(d.pid);
+    if (sq && sq.decoy === d) sq.decoy = null;
   }
 
   // ---------- 招式(小招 Q / 大招 E:解鎖階級 + CD + 電力 MP,全部伺服器結算)----------
@@ -861,7 +957,7 @@ export class BattleSim {
   _blast(h, def, x, z, y) {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
-      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero ? (t.y || 0) : 0));
+      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy ? (t.y || 0) : 0));
       const dmg = this._heroDmg(h, def, t.kind);
       if (d <= def.r) this._damage(t, dmg, h, def.pen);
       else if (d <= def.r * 1.8) this._damage(t, dmg * 0.4, h, def.pen);
@@ -949,7 +1045,8 @@ export class BattleSim {
     // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
     if (by && by.hero && bySide !== t.side) {
       by.money += (ECON.BOUNTY[t.kind] || 0) * this._buffMul(by, 'bounty');
-      if (!t.neutral) by.kn += killScore(t.kind);   // 擊殺數:招式解鎖/升級的門檻
+      // 擊殺數:招式解鎖/升級的門檻。電腦玩家(bot)只算 BOT_KILL_SCORE 分,不能靠刷 bot 速成。
+      if (!t.neutral) by.kn += (t.hero && isBotId(t.pid)) ? BOT_KILL_SCORE : killScore(t.kind);
       // 汲能核心詞綴:擊殺(非中立)回復上限血量比例
       if (!t.neutral && !by.dead) {
         for (const id in by.buffs || {}) {
@@ -958,6 +1055,10 @@ export class BattleSim {
           }
         }
       }
+    }
+    if (t.decoy) {   // 餌機被擊落:誘餌任務達成,不引爆(引爆只在自爆/近炸)
+      this._removeDecoy(t);
+      return;
     }
     if (t.hero) {
       t.dead = true;
@@ -1043,6 +1144,7 @@ export class BattleSim {
       if (this.heroes.get(sq.pid).dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }
     this._tickSquads(dt);
+    this._tickDecoys(dt);
     this._tickMines();
     this._tickAmbush(dt);
     this._tickRelays(dt);
@@ -1051,7 +1153,8 @@ export class BattleSim {
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     for (const e of [...this.ents.values()]) {
-      if (e.hero || e.neutral || e.hp <= 0) continue;
+      // 餌機:位置由 _tickDecoys 管、自己不開火,但仍是敵方小兵/塔的合法目標(誘餌本體)
+      if (e.hero || e.neutral || e.decoy || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
@@ -1104,7 +1207,7 @@ export class BattleSim {
    */
   _tickSquads(dt) {
     for (const sq of this.squads.values()) {
-      if (this.t - sq.lockAt > SQUAD.LOCK_TTL) sq.lock = 0;   // 鎖定過期
+      if (this.t - sq.lockAt > LOCK.TTL) sq.lock = 0;   // 鎖定過期
       if (sq.bodies.length < 2) continue;
       const lead = this.heroes.get(sq.pid);
       let slot = 0;
@@ -1473,6 +1576,10 @@ export class BattleSim {
       o.cp = Math.min(100, Math.round(e.charge / FIELD.RELAY.CHANNEL_S * 100));
       o.cps = e.chargeSide;
     }
+    if (e.decoy) {   // 餌機:客戶端要姿態(PiP 攝影機)+ 失聯旗標(斷訊雜訊)
+      o.pid = e.pid; o.y = Math.round(e.y * 10) / 10; o.ry = Math.round(e.ry * 100) / 100;
+      if (e.lost) o.lost = 1;
+    }
     if (e.hero) {
       o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
@@ -1487,6 +1594,11 @@ export class BattleSim {
         o.ab = e.abil; o.kn = e.kn;                              // 招式階級 / 擊殺數
         o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
                  Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
+      }
+      // 機甲餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
+      if (e.sq && e.kind !== 'drone') {
+        o.dcd = Math.max(0, Math.round((e.sq.decoyCd - this.t) * 10) / 10);
+        o.dc = !e.sq.decoy && o.dcd === 0 ? 1 : 0;
       }
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;
@@ -1504,6 +1616,7 @@ export class BattleSim {
     const sources = [];
     for (const e of this.ents.values()) {
       if (e.side !== side || e.hp <= 0) continue;
+      if (e.decoy && e.lost) continue;   // 失聯的餌機不再回傳遙測 → 不提供視野
       const sight = UNITS[e.kind]?.sight;
       if (sight == null) continue;
       const r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
