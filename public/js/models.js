@@ -20,7 +20,7 @@ export const MODEL_MANIFEST = Object.assign({
   'creep:rocketeer': null,                                        // 火箭兵:程式生成
   'creep:howitzer':  null,                                        // 榴彈兵:程式生成
   'creep:heli':      null,                                        // 攻擊直升機:程式生成
-  'tower':        'assets/models/quaternius/silo.glb',          // 防禦塔
+  'tower':        null,                                          // 防禦塔:程式生成(賽璐璐重繪)
   'base:SWARM':   'assets/models/quaternius/dome.glb',          // 蜂群主堡(穹頂)
   'base:STEEL':   'assets/models/quaternius/structure.glb',     // 鋼鐵主堡(工業塔)
 }, (typeof window !== 'undefined' && window.MODEL_MANIFEST_EXTRA) || {});
@@ -1111,17 +1111,67 @@ function buildHeliFallback(side) {
 }
 
 /** 備援塔 / 主堡 */
+/**
+ * 防禦塔基座(賽璐璐重繪):六角混凝土墩 → 稜角扶壁 → 裝甲柱 → 肩環 → 感測桅杆。
+ * 頭部砲塔由 buildTowerTurret 掛在 target*0.92,此處只做「機庫感」的固定結構:
+ * 大色塊 + 同色系明暗分版 + 陣營光條,正面(+z)朝兵線。
+ */
 function buildTowerFallback(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].color);
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3.2, 16, 8), mat(0x4b555f));
-  shaft.position.y = 8;
-  g.add(shaft);
-  const head = new THREE.Mesh(new THREE.CylinderGeometry(3, 2.2, 3.4, 8), mat(0x333a41));
-  head.position.y = 17.5;
-  g.add(head);
-  const eye = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), mat(accent, { emissive: accent, emissiveIntensity: 0.9 }));
-  eye.position.y = 18;
+
+  // 垂直佈局硬約束:makeUnit 先 fitToHeight(整體高 = target)才把砲塔掛在 target*0.92,
+  // 所以「座圈唇緣頂面 / 全高」必須剛好 = 0.92(17.25 / 18.75),否則砲塔會浮空或陷進柱子。
+  const TOP = 18.75, RING = TOP * 0.92;   // 天線頂 / 座圈頂
+
+  // 六角基墩:兩階,下階外擴(手繪剪影靠俐落的收分)
+  const plinth = cyl(g, 5.0, 5.8, 1.6, 6, 0, 0.8, 0, 0x5b656e);
+  plinth.rotation.y = Math.PI / 6;
+  const podium = cyl(g, 4.0, 4.8, 2.2, 6, 0, 2.6, 0, 0x6d7883);
+  podium.rotation.y = Math.PI / 6;
+
+  // 四向稜角扶壁:斜切塊撐住主柱,腳邊留一圈陰影帶
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const but = bx(g, 1.5, 5.2, 2.6, Math.sin(a) * 3.1, 4.0, Math.cos(a) * 3.1, 0x59636d);
+    but.rotation.y = a;
+    but.rotation.x = 0.12;
+  }
+
+  // 主裝甲柱:八角收分 + 兩側裝甲板 + 散熱柵
+  const shaft = cyl(g, 2.0, 3.0, 11.4, 8, 0, 7.8, 0, 0x77828e);
+  shaft.rotation.y = Math.PI / 8;
+  for (const s of [-1, 1]) {
+    bx(g, 0.5, 7.6, 2.9, s * 2.35, 7.8, 0, 0x616b76);      // 側裝甲板
+    bx(g, 0.18, 5.0, 0.5, s * 2.62, 7.8, 0, accent,
+      { emissive: accent, emissiveIntensity: 0.55 });                  // 陣營光條
+    for (let k = 0; k < 3; k++) bx(g, 0.62, 0.3, 2.2, s * 2.2, 4.3 + k * 0.9, 0, 0x454e57);  // 散熱柵
+  }
+  bx(g, 3.4, 0.8, 3.4, 0, 3.6, 0, 0x5a646e);                          // 柱腳護環
+  bx(g, 2.2, 1.4, 0.8, 0, 5.2, 2.0, 0x454e57);                        // 正面維修艙門(+z 朝兵線)
+
+  // 肩環:承載砲塔的旋轉座圈
+  const collar = cyl(g, 3.6, 2.6, 2.9, 8, 0, RING - 1.75, 0, 0x525c66);
+  collar.rotation.y = Math.PI / 8;
+  cyl(g, 3.9, 3.9, 0.5, 8, 0, RING - 0.25, 0, 0x6d7883);   // 座圈唇緣(頂面 = RING)
+  for (let i = 0; i < 6; i++) {                                        // 環繞警示燈
+    const a = i * Math.PI / 3;
+    bx(g, 0.34, 0.34, 0.34, Math.sin(a) * 3.7, RING - 0.25, Math.cos(a) * 3.7, accent,
+      { emissive: accent, emissiveIntensity: 1.1 });
+  }
+
+  // 彈藥莢艙 + 感測桅杆(剪影上的不對稱重點)
+  for (const s of [-1, 1]) {
+    const pod = bx(g, 1.3, 3.2, 1.8, s * 3.4, 12.2, -0.6, 0x59636d);
+    pod.rotation.z = s * 0.16;
+  }
+  cyl(g, 0.12, 0.16, 3.0, 5, -2.7, TOP - 1.5, -1.6, 0x3a4149);        // 天線(全模型最高點)
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x5a646e));
+  dish.position.set(2.6, 15.6, -1.4);
+  dish.rotation.set(-0.9, 0, 0.3);
+  g.add(dish);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.75, 10, 8), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+  eye.position.set(0, RING - 1.4, 2.4);
   g.add(eye);
   return g;
 }
@@ -1150,10 +1200,10 @@ function buildBaseFallback(side) {
 function buildTowerTurret(side) {
   const accent = new THREE.Color(SIDES[side].color);
   const yaw = new THREE.Group();
-  const head = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 4.0), mat(0x2b3239, { metalness: 0.7 }));
+  const head = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 4.0), mat(0x4a545e, { metalness: 0.7 }));
   head.position.y = 0.4;
   yaw.add(head);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.7, 0.9, 8), mat(0x39424b));
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.7, 0.9, 8), mat(0x5c6670));
   cap.position.y = 1.5;
   yaw.add(cap);
   const pitch = new THREE.Group();

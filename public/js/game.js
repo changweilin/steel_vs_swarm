@@ -1562,18 +1562,17 @@ export class BattleClient {
 
   // ---------------- 單位插值 ----------------
   /**
-   * 防禦塔砲塔追蹤(計畫 Task 2.2):0.25s 挑一次最近敵目標,
-   * 每幀平滑轉向(不瞬移),俯仰夾在 -30°~+60° 機械極限;無目標慢速掃描。
+   * 最近的可見敵方單位(0.25s 快取)。純視覺:只用來轉砲塔 / 讓 NPC 面向交戰方向,
+   * 命中與鎖定一律以伺服器為準(見 CLAUDE.md:server-authoritative)。
    */
-  _aimTurret(ent, dt, now) {
-    const tur = ent.mesh.userData.turret;
-    if (!tur) return;
+  _nearestEnemy(ent, now, range, structs = false) {
     if (!ent._aimNext || now >= ent._aimNext) {
       ent._aimNext = now + 0.25;
-      let best = null, bestD = UNITS.tower.sam.range;   // 追蹤半徑同防空飛彈射程
+      let best = null, bestD = range;
       const tp = ent.mesh.position;
       for (const o of this.ents.values()) {
-        if (!o.side || o.side === ent.side || o.neutral || o.isStatic || o.dead) continue;
+        if (!o.side || o.side === ent.side || o.neutral || o.dead) continue;
+        if (o.isStatic && !structs) continue;   // 塔:只追單位;小兵:也會打建築
         if (!o.mesh.visible && !o.isSelf) continue;
         const p = o.mesh.position;
         const d = Math.hypot(p.x - tp.x, p.z - tp.z);
@@ -1582,8 +1581,19 @@ export class BattleClient {
       ent._aimTarget = best;
     }
     const t = ent._aimTarget;
+    return t && this.ents.has(t.id) ? t : null;
+  }
+
+  /**
+   * 防禦塔砲塔追蹤(計畫 Task 2.2):0.25s 挑一次最近敵目標,
+   * 每幀平滑轉向(不瞬移),俯仰夾在 -30°~+60° 機械極限;無目標慢速掃描。
+   */
+  _aimTurret(ent, dt, now) {
+    const tur = ent.mesh.userData.turret;
+    if (!tur) return;
+    const t = this._nearestEnemy(ent, now, UNITS.tower.sam.range);   // 追蹤半徑同防空飛彈射程
     let wantYaw, wantPitch;
-    if (t && this.ents.has(t.id)) {
+    if (t) {
       const p = t.isSelf ? this.pos : t.mesh.position;
       const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
       wantYaw = Math.atan2(dx, dz);
@@ -1630,8 +1640,18 @@ export class BattleClient {
       if (ent.hero) {
         wantYaw = ent.ry;
       } else {
+        // NPC 沒有伺服器方位,靠插值殘差推朝向。殘差 ≈ 速度/插值增益(小兵 6 m/s → 僅 0.7m),
+        // 門檻設 0.5(距離平方)等於永遠不轉向 — 全場小兵一律朝 +z。改用 0.2m 門檻。
         const dx = ent.tgt.x - cur.x, dz = ent.tgt.z - cur.z;
-        if (dx * dx + dz * dz > 0.5) wantYaw = Math.atan2(dx, dz);
+        if (dx * dx + dz * dz > 0.04) wantYaw = Math.atan2(dx, dz);
+        else {
+          // 停止 = 交戰中(sim:有目標就不前進):面向最近的敵人
+          const t = this._nearestEnemy(ent, now, UNITS[ent.kind]?.range || 0, true);
+          if (t) {
+            const p = t.isSelf ? this.pos : t.mesh.position;
+            wantYaw = Math.atan2(p.x - cur.x, p.z - cur.z);
+          }
+        }
       }
       if (wantYaw != null) {
         if (snapped) ent.mesh.rotation.y = wantYaw;

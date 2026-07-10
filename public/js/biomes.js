@@ -600,6 +600,18 @@ function roadColor(biome, main) {
  * 賽璐璐精修(botw_plan):4 頂點截面 — 路緣 18% 為頂點色「手繪墨線帶」;
  * 市區主幹道加虛線中線;材質帶低頻水彩 wash 打破長路面單色。
  */
+const ROAD_SEG = 6;   // 路面貼地取樣間距(公尺)
+/** 折線細分:每段長度不超過 seg,回傳新折線(端點保留) */
+function densify(pts, seg) {
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / seg));
+    for (let k = 1; k <= n; k++) out.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+  }
+  return out;
+}
+
 function buildRoads(group, roads, terrain, center, mix, rnd) {
   const inb = 4;
   const buckets = new Map();   // color -> { pos, nrm, col, idx, base }
@@ -614,7 +626,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
     if (way.tags.tunnel) continue;             // 隧道段不畫
     const main = MAIN_HW.test(way.tags.highway);
     const hw = roadWidth(way.tags) / 2;
-    const lift = way.tags.bridge ? 3 : 0.18;
+    const lift = way.tags.bridge ? 3 : 0.3;
     // 世界折線(超出邊界即切段)
     const runs = [];
     let cur = [];
@@ -628,7 +640,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
       cur.push([x, z]);
     }
     if (cur.length >= 2) runs.push(cur);
-    for (const run of runs) {
+    for (const raw of runs) {
+      // 圖資節點間距可達數十公尺,直接連線會讓路面弦切進丘陵裡(整段沉到地表下)。
+      // 先細分成 ≤ ROAD_SEG 的小段,每個新頂點各自貼地。
+      const run = densify(raw, ROAD_SEG);
       const mid = run[(run.length / 2) | 0];
       const biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
       if (biome === 'water') continue;

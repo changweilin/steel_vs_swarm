@@ -349,7 +349,7 @@ export class BattleSim {
     return best;
   }
 
-  // ---------- 建置:主堡 + 每線每方 2 座防禦塔 ----------
+  // ---------- 建置:主堡 + 每線每方 2 個塔位 ×(左右各 1 座)----------
   _spawnStructures() {
     for (const side of ['SWARM', 'STEEL']) {
       const [x, z] = this.basePos[side];
@@ -364,7 +364,17 @@ export class BattleSim {
           // 塔位:距「己方端」frac 比例(SWARM 端是折線起點)
           const d = side === 'SWARM' ? total * frac : total * (1 - frac);
           const [x, z] = pointAt(pts, cum, d);
-          this._add({ kind: 'tower', side, x, z, hp: UNITS.tower.hp, lane: li });
+          // 兵線切線的法向量:塔蓋在路的左右兩側,不擋走廊
+          const [ax, az] = pointAt(pts, cum, Math.max(0, d - 1));
+          const [bx, bz] = pointAt(pts, cum, Math.min(total, d + 1));
+          const len = Math.hypot(bx - ax, bz - az) || 1;
+          const nx = (bz - az) / len, nz = -(bx - ax) / len;
+          for (const s of [-1, 1]) {
+            this._add({
+              kind: 'tower', side, lane: li, hp: UNITS.tower.hp,
+              x: x + nx * GAME.TOWER_SIDE_OFF * s, z: z + nz * GAME.TOWER_SIDE_OFF * s,
+            });
+          }
         }
       }
     }

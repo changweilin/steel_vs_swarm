@@ -550,7 +550,7 @@ const bases = specSnap.ents.filter((e) => e.k === 'base');
 const towers = specSnap.ents.filter((e) => e.k === 'tower');
 const heroes = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') && e.act);
 assert(bases.length === 2, `主堡 ×2(hp=${bases[0]?.hp})`);
-assert(towers.length === 4, `防禦塔 ×4(1 線 × 2 位置 × 2 方;實際 ${towers.length})`);
+assert(towers.length === 8, `防禦塔 ×8(1 線 × 2 塔位 × 左右 2 座 × 2 方;實際 ${towers.length})`);
 assert(heroes.length === 2, `英雄 ×2(主視野機;${heroes.map((h) => h.k).join(',')})`);
 assert(specSnap.ents.filter((e) => e.k === 'drone').length === SQUAD.N,
   `無人機玩家在場 ${SQUAD.N} 架機體(主視野 1 + 僚機 ${SQUAD.N - 1})`);
@@ -714,7 +714,7 @@ const towers5 = s5.ents.filter((e) => e.k === 'tower');
 assert(drones5.length === 2, `同陣營 2 位真人英雄同時在場(pid:${drones5.map((d) => d.pid).join(',')})`);
 assert(s5.ents.filter((e) => e.pid != null && !String(e.pid).startsWith('b')).length
   === drones5.reduce((n, d) => n + (d.k === 'drone' ? SQUAD.N : 1), 0), '每位真人的機體數 = 無人機 3 架 / 機甲 1 架');
-assert(towers5.length === 12, `3 線 → 防禦塔 ×12(實際 ${towers5.length})`);
+assert(towers5.length === 24, `3 線 → 防禦塔 ×24(實際 ${towers5.length})`);
 h5.ws.close(); g5.ws.close();
 
 log('— 電腦玩家(單人 + AI 對手)—');

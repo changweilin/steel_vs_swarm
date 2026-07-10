@@ -390,7 +390,9 @@ export async function buildTerrain(cfg, onProgress) {
     group.add(water);
   }
 
-  // 世界座標高度取樣(雙線性)
+  // 世界座標高度取樣。
+  // MUST 與網格三角化(idx: a,c,b / b,c,d;對角線 = b–c)一致:雙線性在鞍點會低於
+  // 實際三角面最多 (a+d-b-c)/4 公尺,單位/道路/地被就會沉進地表被擋住。
   function heightAt(x, z) {
     const gj = (x - minX) / (maxX - minX) * (N - 1);
     const gi = (z - minZ) / (maxZ - minZ) * (N - 1);
@@ -399,8 +401,10 @@ export async function buildTerrain(cfg, onProgress) {
     const fi = Math.max(0, Math.min(1, gi - i0));
     const fj = Math.max(0, Math.min(1, gj - j0));
     const at = (i, j) => heights[i * N + j];
-    return at(i0, j0) * (1 - fi) * (1 - fj) + at(i0, j0 + 1) * (1 - fi) * fj
-         + at(i0 + 1, j0) * fi * (1 - fj) + at(i0 + 1, j0 + 1) * fi * fj;
+    const a = at(i0, j0), b = at(i0, j0 + 1), c = at(i0 + 1, j0), d = at(i0 + 1, j0 + 1);
+    return fi + fj <= 1
+      ? a + (b - a) * fj + (c - a) * fi              // 三角形 (a, c, b)
+      : d + (c - d) * (1 - fj) + (b - d) * (1 - fi); // 三角形 (b, c, d)
   }
 
   onProgress?.(1, '地形完成');
