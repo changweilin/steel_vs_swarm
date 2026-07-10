@@ -11,8 +11,8 @@ import { toonMat, toonify, outlinify } from './toon.js';
 
 // 單位 → GLB 檔(Quaternius,CC0 1.0;None = 直接用程式生成)
 export const MODEL_MANIFEST = Object.assign({
-  'hero:robot':   null,                                          // 執法者機甲:程序生成人型機甲(doc/image/robot 賽璐璐重構;GLB 可經 MODEL_MANIFEST_EXTRA 蓋回)
-  'hero:drone':   null,                                          // 無人機:程式生成 FPV 四旋翼(doc/image/drone 賽璐璐重構)
+  'hero:robot':   null,                                          // 機甲:程序生成 人形/雙足獸/四足獸(doc/image/robot+beast 賽璐璐重構;GLB 可經 MODEL_MANIFEST_EXTRA 蓋回)
+  'hero:drone':   null,                                          // 無人機:程序生成 旋翼/定翼/擬態翼(doc/image/drone+fly 賽璐璐重構)
   'hero:morph':   null,                                          // 傭兵變形機甲:程式生成(雙型態)
   'creep:soldier': null,                                         // 機槍步兵:程式生成(pawn-casual GLB 徒手,無法滿足「步兵手持機槍」)
   'creep:apc':    null,                                          // 裝甲車:程式生成
@@ -270,191 +270,835 @@ function buildDrone(side, vis = null) {
 }
 
 /**
- * 飛行生物型無人機(form:'avian'):鳥/蜂剪影 + 拍翼樞軸(mobility_plan Task 2.2 延伸)。
- * 仍是無人機(機械感細節:艙蓋/感測眼/航行燈),但升力來自撲翼 —
- * locomotion.js stepAerial 依速度驅動拍翼頻率/振幅,外翼相位延遲(follow-through)。
- * creature: 'wasp'(雙對半透明蟲翼+螫尾)| 'raptor' | 'falcon' | 'swallow'(燕尾)。
+ * 定翼無人機(form:'fixed')— 軍用定翼 UAV 剪影(doc/image/drone 灰色偵察機參考)。
+ * vis.wing = 'twinboom' 雙尾桁|'vtail' V 尾推進|'canard' 鴨式|'delta' 三角飛翼。
+ * 升力來自固定翼(壓坡/俯仰由 locomotion stepAerial 演出),螺旋槳進 userData.spin;
+ * 感測球/腹掛武器艙/航行燈維持武裝無人機語彙。
+ */
+const FIXED = {
+  twinboom: { span: 3.6 },
+  vtail:    { span: 3.2 },
+  canard:   { span: 2.9 },
+  delta:    { span: 2.7 },
+};
+function buildFixedWing(side, vis) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  const W = FIXED[vis?.wing] ? vis.wing : 'twinboom';
+  const span = FIXED[W].span;
+  const shell = 0x3a4148, dark = 0x2a2e33, lite = 0x4a525b;
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.3;
+  g.add(tilt);
+  const props = [];
+  // 螺旋槳:holder 定槳盤朝向(+z 前 / -z 後推),槳繞局部 y 自轉 → game.js spinners 通用
+  const mkProp = (z, blades, len) => {
+    const holder = new THREE.Group();
+    holder.position.set(0, 0.02, z);
+    holder.rotation.x = Math.PI / 2;
+    tilt.add(holder);
+    cyl(holder, 0.07, 0.09, 0.18, 8, 0, 0, 0, 0x14171a, { metalness: 0.8 });
+    const prop = new THREE.Group();
+    prop.position.y = 0.12;
+    holder.add(prop);
+    for (let i = 0; i < blades; i++) {
+      const b = bx(prop, len, 0.03, 0.11, 0, 0, 0, 0x9aa4ad, { transparent: true, opacity: 0.8 });
+      b.rotation.y = i * Math.PI / blades;
+    }
+    props.push(prop);
+  };
+  // 機身(流線莢艙)+ 背部識別艙蓋 + 下顎感測球 + 腹掛武器艙 + 通訊鞭天線
+  const fus = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.9, 4, 10), mat(shell, { metalness: 0.6 }));
+  fus.rotation.x = Math.PI / 2;
+  fus.position.z = 0.1;
+  tilt.add(fus);
+  bx(tilt, 0.3, 0.1, 0.7, 0, 0.3, 0.55, accent, { emissive: accent, emissiveIntensity: 0.6 });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat(0x1c2126, { metalness: 0.6 }));
+  ball.position.set(0, -0.3, 0.95);
+  tilt.add(ball);
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.5 }));
+  lens.position.set(0, -0.35, 1.06);
+  tilt.add(lens);
+  const gun = cyl(tilt, 0.07, 0.09, 1.1, 8, 0, -0.34, 0.1, 0x111418, { metalness: 0.85 });
+  gun.rotation.x = Math.PI / 2;
+  const whip = cyl(tilt, 0.015, 0.02, 0.5, 5, 0, 0.4, -0.6, 0x14171a);
+  whip.rotation.x = 0.5;
+  // 翼尖航行燈(左紅右綠:壓坡時姿態一目了然)
+  const wingY = 0.16;
+  const tipLight = (x, z, y = wingY + 0.04) => {
+    bx(tilt, 0.16, 0.05, 0.18, -x, y, z, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
+    bx(tilt, 0.16, 0.05, 0.18, x, y, z, 0x55ff88, { emissive: 0x22ff66, emissiveIntensity: 1.6 });
+  };
+  if (W === 'twinboom') {
+    // 高直翼 + 雙尾桁 + 端板雙垂尾;機鼻牽引槳
+    bx(tilt, span, 0.07, 0.55, 0, wingY, 0.15, lite, { metalness: 0.5 });
+    for (const sx of [-1, 1]) {
+      bx(tilt, 0.5, 0.06, 0.42, sx * (span / 2 - 0.25), wingY + 0.02, 0.12, dim(accent, 0.85));
+      bx(tilt, 0.09, 0.09, 2.1, sx * 0.62, wingY, -0.95, dark, { metalness: 0.6 });   // 尾桁
+      bx(tilt, 0.07, 0.62, 0.42, sx * 0.62, wingY + 0.3, -1.95, lite);                // 垂尾
+      bx(tilt, 0.08, 0.14, 0.3, sx * 0.62, wingY + 0.62, -1.98, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    }
+    bx(tilt, 1.24, 0.06, 0.4, 0, wingY + 0.5, -1.95, lite);                           // 水平尾
+    mkProp(1.45, 2, 0.95);
+    tipLight(span / 2 - 0.1, 0.15);
+  } else if (W === 'vtail') {
+    // 中直翼 + V 尾;尾推槳
+    bx(tilt, span, 0.07, 0.6, 0, wingY, 0.3, lite, { metalness: 0.5 });
+    bx(tilt, 0.16, 0.14, 1.3, 0, 0, -0.85, dark, { metalness: 0.6 });                 // 尾桁
+    for (const sx of [-1, 1]) {
+      bx(tilt, 0.5, 0.06, 0.44, sx * (span / 2 - 0.25), wingY + 0.02, 0.26, dim(accent, 0.85));
+      const fin = bx(tilt, 0.6, 0.06, 0.42, sx * 0.28, 0.34, -1.1, lite);
+      fin.rotation.z = sx * 0.8;                                                      // V 尾
+      bx(fin, 0.18, 0.08, 0.44, sx * 0.24, 0.02, 0, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    }
+    mkProp(-1.5, 2, 0.85);
+    tipLight(span / 2 - 0.1, 0.3);
+  } else if (W === 'canard') {
+    // 鴨式:機鼻前翼 + 後置後掠主翼 + 單垂尾;尾推槳
+    for (const sx of [-1, 1]) {
+      const mw = bx(tilt, span / 2, 0.07, 0.6, sx * span / 4, wingY, -0.45, lite, { metalness: 0.5 });
+      mw.rotation.y = sx * 0.35;                                                      // 後掠
+      bx(mw, 0.45, 0.06, 0.46, sx * (span / 4 - 0.2), 0.02, 0, dim(accent, 0.85));
+    }
+    bx(tilt, 1.15, 0.05, 0.3, 0, 0.05, 1.05, lite);                                   // 前翼
+    bx(tilt, 0.07, 0.6, 0.5, 0, 0.42, -1.0, lite);                                    // 垂尾
+    bx(tilt, 0.08, 0.16, 0.34, 0, 0.72, -1.05, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    mkProp(-1.4, 3, 0.8);
+    tipLight(span / 2 * 0.94, -0.9, wingY + 0.06);
+  } else {
+    // 三角飛翼:大後掠翼 + 翼端垂直小翼;尾推槳
+    for (const sx of [-1, 1]) {
+      const w1 = bx(tilt, span / 2, 0.07, 1.5, sx * span / 4, wingY, -0.3, lite, { metalness: 0.5 });
+      w1.rotation.y = sx * 0.5;                                                       // 後掠
+      bx(w1, span / 4, 0.06, 0.62, sx * span / 8, 0.02, -0.3, dim(accent, 0.85));
+      bx(w1, 0.06, 0.42, 0.5, sx * (span / 2 - 0.06), 0.2, -0.45, dark);              // 端板小翼
+    }
+    mkProp(-1.3, 3, 0.8);
+    tipLight(span / 2 * 0.85, -1.0, wingY + 0.3);
+  }
+  g.userData.spin = props;
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.05, top: 30 };
+  return g;
+}
+
+/**
+ * 擬態翼無人機(form:'avian')— 生物擬態剪影 + 拍翼樞軸(doc/image/fly
+ * 機械鳥/機械龍參考;mobility_plan Task 2.2 延伸)。仍是無人機(感測眼/
+ * 航行燈/機械關節),攻擊機構隨生物形態多樣化:
+ * creature: 'bee' 蜜蜂(雙對蟲翼,尾部螫針 = 砲管)
+ *         | 'eagle' 機械鷹(羽刃翼 + 翼下羽毛飛彈掛架,頦下雙管)
+ *         | 'ptero' 翼龍(膜翼,吊掛雙爪各抓一具槍莢)
+ *         | 'dragon' 機械龍(膜翼,張口露出口腔飛彈巢)。
+ * locomotion stepAerial 依速度驅動拍翼頻率/振幅,外翼相位延遲(follow-through)。
  */
 const AVIAN = {
-  wasp:    { span: 1.5, pairs: 2, tail: 'stinger', body: 1.15 },
-  raptor:  { span: 2.5, pairs: 1, tail: 'fan',     body: 1.0 },
-  falcon:  { span: 2.2, pairs: 1, tail: 'fan',     body: 0.9 },
-  swallow: { span: 2.6, pairs: 1, tail: 'fork',    body: 0.8 },
+  bee:    { span: 1.6, pairs: 2, body: 1.15 },
+  eagle:  { span: 2.6, pairs: 1, body: 1.0 },
+  ptero:  { span: 2.9, pairs: 1, body: 0.9 },
+  dragon: { span: 2.7, pairs: 1, body: 1.05 },
 };
 function buildAvianDrone(side, vis) {
   const g = new THREE.Group();
   const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
-  const P = AVIAN[vis?.creature] || AVIAN.raptor;
-  const dark = 0x2a2e33, mid = 0x3a4148;
+  const C = AVIAN[vis?.creature] ? vis.creature : 'eagle';
+  const P = AVIAN[C];
+  const dark = 0x2a2e33, mid = 0x3a4148, plate = 0x454d56;
   // 壓坡/拍翼都掛 tilt 樞軸下(同 buildDrone 慣例:根節點只管定位/描邊)
   const tilt = new THREE.Group();
   tilt.position.y = 1.3;
   g.add(tilt);
   const bs = P.body;
-  // 胸腹(流線機身):壓扁球體;背脊裝甲板
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.62 * bs, 12, 9), mat(dark, { metalness: 0.6 }));
-  body.scale.set(1, 0.82, 1.7);
-  tilt.add(body);
-  const spineArm = new THREE.Mesh(new THREE.BoxGeometry(0.5 * bs, 0.14, 1.3 * bs), mat(mid));
-  spineArm.position.y = 0.42 * bs;
-  tilt.add(spineArm);
-  // 頭 + 喙(感測器眼 = 主色,左紅右綠航行燈保留姿態辨識)
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34 * bs, 10, 8), mat(mid, { metalness: 0.5 }));
-  head.position.set(0, 0.28 * bs, 1.05 * bs);
-  tilt.add(head);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.16 * bs, 0.55 * bs, 6), mat(0x14171a, { metalness: 0.8 }));
-  beak.rotation.x = Math.PI / 2;
-  beak.position.set(0, 0.24 * bs, 1.45 * bs);
-  tilt.add(beak);
-  for (const sx of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09 * bs, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.4 }));
-    eye.position.set(sx * 0.2 * bs, 0.36 * bs, 1.2 * bs);
-    tilt.add(eye);
-  }
-  bx(tilt, 0.08, 0.05, 0.2, -0.55 * bs, 0.1, 0.4, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
-  bx(tilt, 0.08, 0.05, 0.2, 0.55 * bs, 0.1, 0.4, 0x55ff88, { emissive: 0x22ff66, emissiveIntensity: 1.6 });
-  // 頜下武器艙(仍是武裝無人機)
-  const gun = cyl(tilt, 0.06, 0.08, 0.9, 8, 0, -0.32 * bs, 0.8, 0x111418, { metalness: 0.8 });
-  gun.rotation.x = Math.PI / 2;
-  // 翼:內翼樞軸 + 外翼樞軸(拍翼由 locomotion stepAerial 驅動)
   const wings = [];
-  const insect = P.pairs > 1;
-  const wingMatOpts = insect
-    ? { transparent: true, opacity: 0.55, emissive: accent, emissiveIntensity: 0.25 }
-    : { metalness: 0.4 };
+  // 胸腹(流線機身)+ 背脊裝甲 + 航行燈(左紅右綠)
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.6 * bs, 12, 9), mat(dark, { metalness: 0.6 }));
+  body.scale.set(1, 0.8, 1.6);
+  tilt.add(body);
+  bx(tilt, 0.46 * bs, 0.12, 1.1 * bs, 0, 0.4 * bs, -0.1, plate);
+  bx(tilt, 0.08, 0.05, 0.2, -0.5 * bs, 0.08, 0.35, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
+  bx(tilt, 0.08, 0.05, 0.2, 0.5 * bs, 0.08, 0.35, 0x55ff88, { emissive: 0x22ff66, emissiveIntensity: 1.6 });
+  // ---- 翼:內翼 w + 外翼 outer 樞軸(拍翼由 locomotion stepAerial 驅動)----
+  const membrane = { transparent: true, opacity: 0.5, emissive: accent, emissiveIntensity: 0.3 };
   const mkWing = (sgn, z0) => {
     const w = new THREE.Group();
-    w.position.set(sgn * 0.45 * bs, 0.2 * bs, z0);
+    w.position.set(sgn * 0.42 * bs, 0.22 * bs, z0);
     tilt.add(w);
-    const inner = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.55, 0.06, 0.7 * bs), mat(insect ? 0x9adfff : mid, wingMatOpts));
-    inner.position.set(sgn * P.span * 0.28, 0, -0.08);
-    w.add(inner);
     const outer = new THREE.Group();
-    outer.position.set(sgn * P.span * 0.55, 0, 0);
+    outer.position.set(sgn * P.span * 0.52, 0, 0);
     w.add(outer);
-    const tipPanel = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.5, 0.05, 0.5 * bs), mat(insect ? 0x9adfff : dim(mid, 0.85), wingMatOpts));
-    tipPanel.position.set(sgn * P.span * 0.25, 0, -0.12);
-    outer.add(tipPanel);
-    if (!insect) {
-      // 翼尖分叉羽片(鳥類剪影)+ 主色識別羽
+    if (C === 'bee') {
+      // 半透明蟲翼(雙對)
+      bx(w, P.span * 0.5, 0.04, 0.6 * bs, sgn * P.span * 0.26, 0, -0.05, 0x9adfff, membrane);
+      bx(outer, P.span * 0.46, 0.04, 0.42 * bs, sgn * P.span * 0.23, 0, -0.1, 0x9adfff, membrane);
+    } else if (C === 'eagle') {
+      // 覆羽內翼 + 指狀分叉外翼;翼下羽毛飛彈掛架(羽片即彈體,彈尖主色)
+      bx(w, P.span * 0.5, 0.07, 0.75 * bs, sgn * P.span * 0.26, 0, -0.1, plate, { metalness: 0.4 });
       for (let i = 0; i < 3; i++) {
-        const f = new THREE.Mesh(new THREE.BoxGeometry(P.span * 0.22, 0.04, 0.14 * bs), mat(i === 1 ? accent : 0x23262a));
-        f.position.set(sgn * P.span * (0.5 + i * 0.04), 0, -0.4 * bs + i * 0.16 * bs);
-        f.rotation.y = sgn * -0.18 * (i - 1);
-        outer.add(f);
+        const fm = new THREE.Group();
+        fm.position.set(sgn * P.span * (0.14 + i * 0.12), -0.12, -0.05 - i * 0.06);
+        w.add(fm);
+        bx(fm, 0.07, 0.06, 0.62, 0, 0, 0, 0x23262a, { metalness: 0.6 });
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.2, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+        tip.rotation.x = Math.PI / 2;
+        tip.position.z = 0.4;
+        fm.add(tip);
       }
+      for (let i = 0; i < 4; i++) {
+        const f = bx(outer, P.span * 0.4, 0.05, 0.15 * bs, sgn * P.span * (0.18 + i * 0.03), 0, 0.14 - i * 0.17 * bs, i === 1 ? accent : 0x2a2e33);
+        f.rotation.y = sgn * -0.13 * i;
+      }
+    } else {
+      // 膜翼(ptero/dragon):骨梁 + 半透明翼膜(透明材質:outlinify 自動跳過)+ 翼指尖爪
+      bx(w, P.span * 0.52, 0.09, 0.13, sgn * P.span * 0.26, 0.02, 0.16, dark, { metalness: 0.6 });
+      bx(w, P.span * 0.5, 0.03, 0.95 * bs, sgn * P.span * 0.26, -0.02, -0.32 * bs, accent, membrane);
+      bx(outer, P.span * 0.44, 0.08, 0.11, sgn * P.span * 0.22, 0.02, 0.14, dark, { metalness: 0.6 });
+      const mem2 = bx(outer, P.span * 0.42, 0.03, 0.7 * bs, sgn * P.span * 0.21, -0.02, -0.2 * bs, accent, membrane);
+      mem2.rotation.y = sgn * -0.1;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.4, 5), mat(0xd8dde2, { metalness: 0.7 }));
+      spike.position.set(sgn * P.span * 0.45, 0, 0.14);
+      spike.rotation.z = sgn * -Math.PI / 2;
+      outer.add(spike);
     }
     wings.push({ w, outer, sgn });
   };
   for (const sgn of [-1, 1]) {
-    mkWing(sgn, 0.25 * bs);
-    if (insect) mkWing(sgn, -0.35 * bs);
+    mkWing(sgn, 0.2 * bs);
+    if (P.pairs > 1) mkWing(sgn, -0.35 * bs);
   }
-  // 尾:扇尾 / 燕尾 / 螫針(蜂)
-  if (P.tail === 'stinger') {
-    const st = new THREE.Mesh(new THREE.ConeGeometry(0.2 * bs, 0.9 * bs, 6), mat(accent, { emissive: accent, emissiveIntensity: 0.5 }));
-    st.rotation.x = -Math.PI / 2;
-    st.position.set(0, -0.05, -1.25 * bs);
-    tilt.add(st);
-    for (let i = 0; i < 2; i++) bx(tilt, 0.7 * bs, 0.06, 0.16, 0, 0.05 + i * 0.12, -0.8 * bs - i * 0.1, 0x14171a);
-  } else if (P.tail === 'fork') {
+  // ---- 生物形態(頭/尾/武裝)----
+  if (C === 'bee') {
+    // 頭:大複眼 ×2 + 觸角;節腹琥珀環紋;螫針 = 砲管(尾部後向武器)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.36 * bs, 10, 8), mat(mid, { metalness: 0.5 }));
+    head.position.set(0, 0.14 * bs, 0.95 * bs);
+    tilt.add(head);
     for (const sx of [-1, 1]) {
-      const f = bx(tilt, 0.16 * bs, 0.05, 1.1 * bs, sx * 0.2 * bs, 0, -1.35 * bs, mid);
-      f.rotation.y = sx * 0.22;
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.17 * bs, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+      eye.scale.set(0.7, 1, 0.8);
+      eye.position.set(sx * 0.24 * bs, 0.2 * bs, 1.06 * bs);
+      tilt.add(eye);
+      const ant = cyl(tilt, 0.015, 0.02, 0.5, 5, sx * 0.12 * bs, 0.42 * bs, 1.15 * bs, 0x14171a);
+      ant.rotation.x = -0.8;
+      ant.rotation.z = sx * 0.3;
     }
-  } else {
+    const abd = new THREE.Mesh(new THREE.SphereGeometry(0.52 * bs, 12, 9), mat(dark, { metalness: 0.5 }));
+    abd.scale.set(1, 0.9, 1.5);
+    abd.position.set(0, -0.05, -1.0 * bs);
+    tilt.add(abd);
+    for (let i = 0; i < 2; i++) {
+      const ring = cyl(tilt, 0.44 * bs - i * 0.1, 0.44 * bs - i * 0.1, 0.1, 12, 0, -0.05, -(1.0 + i * 0.38) * bs, accent, { emissive: accent, emissiveIntensity: 0.7 });
+      ring.rotation.x = Math.PI / 2;
+    }
+    const sting = new THREE.Mesh(new THREE.ConeGeometry(0.16 * bs, 0.6 * bs, 8), mat(0x1c1f23, { metalness: 0.8 }));
+    sting.rotation.x = -Math.PI / 2;   // 錐尖朝後
+    sting.position.set(0, -0.08, -1.75 * bs);
+    tilt.add(sting);
+    const barrel = cyl(tilt, 0.05, 0.05, 0.5, 6, 0, -0.08, -2.0 * bs, 0x111418, { metalness: 0.85 });
+    barrel.rotation.x = Math.PI / 2;
+    const muz = cyl(tilt, 0.07, 0.07, 0.06, 6, 0, -0.08, -2.24 * bs, accent, { emissive: accent, emissiveIntensity: 1.3 });
+    muz.rotation.x = Math.PI / 2;
+  } else if (C === 'eagle') {
+    // 鉤喙猛禽頭 + 頦下雙管 + 折收雙爪 + 扇尾
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.3 * bs, 10, 8), mat(plate, { metalness: 0.5 }));
+    head.position.set(0, 0.3 * bs, 1.0 * bs);
+    tilt.add(head);
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.13 * bs, 0.45 * bs, 6), mat(0xd8b23c, { metalness: 0.6 }));
+    beak.rotation.x = Math.PI / 2 + 0.25;   // 鉤喙微下勾
+    beak.position.set(0, 0.24 * bs, 1.3 * bs);
+    tilt.add(beak);
+    for (const sx of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08 * bs, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.5 }));
+      eye.position.set(sx * 0.17 * bs, 0.38 * bs, 1.12 * bs);
+      tilt.add(eye);
+      const b = cyl(tilt, 0.045, 0.055, 0.7, 6, sx * 0.09 * bs, -0.3 * bs, 0.85 * bs, 0x111418, { metalness: 0.85 });
+      b.rotation.x = Math.PI / 2;
+      const leg = cyl(tilt, 0.05, 0.06, 0.35, 6, sx * 0.22 * bs, -0.42 * bs, 0.2, 0x23262a);
+      leg.rotation.x = 0.5;
+      for (let i = -1; i <= 1; i++) bx(tilt, 0.05, 0.06, 0.2, sx * 0.22 * bs + i * 0.06, -0.56 * bs, 0.36, 0x30373f);
+    }
     for (let i = -1; i <= 1; i++) {
-      const f = bx(tilt, 0.22 * bs, 0.05, 0.95 * bs, i * 0.22 * bs, 0, -1.3 * bs, i === 0 ? accent : mid);
-      f.rotation.y = i * 0.28;
+      const f = bx(tilt, 0.2 * bs, 0.05, 0.95 * bs, i * 0.2 * bs, 0, -1.25 * bs, i === 0 ? accent : mid);
+      f.rotation.y = i * 0.26;
     }
+  } else if (C === 'ptero') {
+    // 後掠頭冠 + 長喙;吊掛雙爪各抓一具槍莢(爪握槍砲)
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.34 * bs, 0.3 * bs, 0.6 * bs), mat(plate, { metalness: 0.5 }));
+    head.position.set(0, 0.34 * bs, 1.05 * bs);
+    tilt.add(head);
+    const crest = new THREE.Mesh(new THREE.ConeGeometry(0.12 * bs, 0.85 * bs, 5), mat(accent, { emissive: accent, emissiveIntensity: 0.5 }));
+    crest.rotation.x = -Math.PI / 2 - 0.35;   // 朝後上
+    crest.position.set(0, 0.55 * bs, 0.72 * bs);
+    tilt.add(crest);
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.1 * bs, 0.75 * bs, 6), mat(0x14171a, { metalness: 0.8 }));
+    beak.rotation.x = Math.PI / 2;
+    beak.position.set(0, 0.28 * bs, 1.7 * bs);
+    tilt.add(beak);
+    bx(tilt, 0.3 * bs, 0.07, 0.06, 0, 0.42 * bs, 1.32 * bs, accent, { emissive: accent, emissiveIntensity: 1.5 });
+    for (const sx of [-1, 1]) {
+      const leg = cyl(tilt, 0.06, 0.07, 0.55, 6, sx * 0.28 * bs, -0.42 * bs, -0.15, 0x2a2e33, { metalness: 0.6 });
+      leg.rotation.x = 0.25;
+      const pod = cyl(tilt, 0.09, 0.1, 1.1, 8, sx * 0.28 * bs, -0.72 * bs, 0.1, 0x111418, { metalness: 0.85 });
+      pod.rotation.x = Math.PI / 2;
+      const muz = cyl(tilt, 0.11, 0.11, 0.06, 8, sx * 0.28 * bs, -0.72 * bs, 0.68, accent, { emissive: accent, emissiveIntensity: 1.2 });
+      muz.rotation.x = Math.PI / 2;
+      for (const a of [-1, 0, 1]) {   // 三指握爪扣住槍莢
+        const claw = bx(tilt, 0.05, 0.3, 0.07, sx * 0.28 * bs + a * 0.11, -0.58 * bs, 0.1, 0x30373f);
+        claw.rotation.z = a * 0.55;
+      }
+    }
+    bx(tilt, 0.12 * bs, 0.08, 0.9 * bs, 0, 0.02, -1.15 * bs, mid);   // 短尾桁
+    const dart = new THREE.Mesh(new THREE.ConeGeometry(0.1 * bs, 0.3 * bs, 4), mat(accent));
+    dart.rotation.x = -Math.PI / 2;
+    dart.position.set(0, 0.02, -1.68 * bs);
+    tilt.add(dart);
+  } else {
+    // 機械龍:長頸雙角;張口 = 上顎/下顎間露出口腔飛彈巢(口射飛彈)
+    const neck = bx(tilt, 0.28 * bs, 0.6 * bs, 0.34 * bs, 0, 0.42 * bs, 0.85 * bs, dark);
+    neck.rotation.x = 0.5;
+    const head = new THREE.Group();
+    head.position.set(0, 0.72 * bs, 1.15 * bs);
+    tilt.add(head);
+    bx(head, 0.42 * bs, 0.3 * bs, 0.5 * bs, 0, 0.1 * bs, 0.1, plate, { metalness: 0.6 });   // 顱殼
+    bx(head, 0.3 * bs, 0.16 * bs, 0.55 * bs, 0, 0.06 * bs, 0.55 * bs, mid);                 // 上顎
+    const jaw = bx(head, 0.26 * bs, 0.09 * bs, 0.5 * bs, 0, -0.2 * bs, 0.42 * bs, dark);
+    jaw.rotation.x = 0.5;                                                                    // 下顎張開
+    bx(head, 0.32 * bs, 0.08, 0.06, 0, 0.22 * bs, 0.34 * bs, accent, { emissive: accent, emissiveIntensity: 1.6 });  // 眼列
+    for (const sx of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06 * bs, 0.5 * bs, 5), mat(0xd8dde2, { metalness: 0.7 }));
+      horn.position.set(sx * 0.15 * bs, 0.28 * bs, -0.1);
+      horn.rotation.x = -2.3;
+      head.add(horn);
+    }
+    // 口腔飛彈巢:2×2 管口(彈尖主色發光)+ 喉部充能光
+    for (const [ox, oy] of [[-0.07, 0.02], [0.07, 0.02], [-0.07, -0.08], [0.07, -0.08]]) {
+      const cell = cyl(head, 0.045 * bs, 0.045 * bs, 0.3, 6, ox * bs, oy * bs, 0.5 * bs, 0x111418, { metalness: 0.8 });
+      cell.rotation.x = Math.PI / 2;
+      const tip = cyl(head, 0.03 * bs, 0.03 * bs, 0.05, 6, ox * bs, oy * bs, 0.66 * bs, accent, { emissive: accent, emissiveIntensity: 1.6 });
+      tip.rotation.x = Math.PI / 2;
+    }
+    bx(head, 0.18 * bs, 0.1 * bs, 0.12, 0, -0.08 * bs, 0.18 * bs, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    for (let i = 0; i < 3; i++) {   // 背棘列
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.07 * bs, 0.26 * bs, 4), mat(0xd8dde2, { metalness: 0.6 }));
+      sp.position.set(0, 0.5 * bs, 0.15 - i * 0.45 * bs);
+      tilt.add(sp);
+    }
+    bx(tilt, 0.16 * bs, 0.14 * bs, 1.0 * bs, 0, 0, -1.2 * bs, dark);                        // 尾段一
+    bx(tilt, 0.11 * bs, 0.1 * bs, 0.8 * bs, 0, 0.02, -1.95 * bs, 0x23262a);                 // 尾段二
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.09 * bs, 0.4 * bs, 5), mat(accent, { emissive: accent, emissiveIntensity: 0.8 }));
+    spike.rotation.x = -Math.PI / 2;
+    spike.position.set(0, 0.02, -2.5 * bs);
+    tilt.add(spike);
   }
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.1, top: 30, wings };
   return g;
 }
 
 /**
- * 獸型機甲(form:'beast'):四足步態骨架(mobility_plan Task 2.2)。
+ * 四足獸型機甲(form:'beast'):四足步態骨架(mobility_plan Task 2.2)。
  * rig 樞軸:四髖(legFL/FR/HL/HR)+ 脊椎(spine→chest→neck 波傳導)+ 雙節尾(配重)。
- * creature: 'bear'(壯碩)| 'wolf'(修長長尾)| 'panther'(低伏)| 'rhino'(重甲+鼻角)。
+ * 武裝內建於生物構造(doc/image/beast Zoids 式參考):
+ * creature: 'hound' 機械獵犬(背揹長管反器材砲)
+ *         | 'centaur' 人馬(四足底盤 + 人形上身雙手持長槍)
+ *         | 'stego' 劍龍(背鰭 = 四聯裝飛彈鰭,尾錘尖刺)
+ *         | 'cthulhu' 克蘇魯(四觸手步行 + 四觸手持武,複眼群+面鬚)。
  */
 const BEAST = {
-  bear:    { bulk: 1.25, hipY: 2.0, tailLen: 0.7, ear: 0.16, snoutL: 0.6 },
-  wolf:    { bulk: 0.95, hipY: 2.0, tailLen: 1.6, ear: 0.22, snoutL: 0.95 },
-  panther: { bulk: 0.85, hipY: 1.7, tailLen: 1.9, ear: 0.14, snoutL: 0.75 },
-  rhino:   { bulk: 1.45, hipY: 2.1, tailLen: 0.5, ear: 0,    snoutL: 0.55, horn: true },
+  hound:   { bulk: 0.95, hipY: 2.0, tailLen: 1.5, stride: 1.5, legX: 0.78, fz: 1.05, hz: -1.25 },
+  centaur: { bulk: 1.0,  hipY: 2.2, tailLen: 1.0, stride: 1.6, legX: 0.6,  fz: 1.0,  hz: -1.2 },
+  stego:   { bulk: 1.45, hipY: 1.9, tailLen: 1.7, stride: 1.3, legX: 0.95, fz: 1.2,  hz: -1.6 },
+  cthulhu: { bulk: 1.15, hipY: 2.1, tailLen: 1.4, stride: 1.2, legX: 0.8,  fz: 0.8,  hz: -1.1 },
 };
 function buildBeastMech(side, vis) {
   const g = new THREE.Group();
   const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
-  const P = BEAST[vis?.creature] || BEAST.wolf;
+  const C = BEAST[vis?.creature] ? vis.creature : 'hound';
+  const P = BEAST[C];
   const B = P.bulk, hipY = P.hipY;
   const hull = 0x3c444d, hullDk = 0x333b43, plate = 0x46505b;
-  // 脊椎樞軸(浮沉/入彎傾斜/波傳導的根)
+  // 脊椎樞軸(浮沉/入彎傾斜/波傳導的根)→ 胸 → 頸 → 頭;尾雙節
   const spine = new THREE.Group();
   spine.position.y = hipY;
   g.add(spine);
-  bx(spine, 1.5 * B, 1.2 * B, 2.2, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });   // 後軀
-  bx(spine, 1.3 * B, 0.2, 2.0, 0, 0.68 * B, -0.9, dim(plate, 0.9));              // 背甲(後)
-  // 胸(次級樞軸:波傳導第二節)
   const chest = new THREE.Group();
   chest.position.set(0, 0.1, 0.55);
   spine.add(chest);
-  bx(chest, 1.7 * B, 1.45 * B, 2.0, 0, 0.1, 0.55, hull, { metalness: 0.6 });     // 前胸
-  bx(chest, 1.5 * B, 0.22, 1.7, 0, 0.85 * B, 0.5, plate);                        // 背甲(前)
-  bx(chest, 1.72 * B, 0.16, 0.5, 0, 0.35 * B, 1.5, accent,
-    { emissive: accent, emissiveIntensity: 0.9 });                               // 胸前識別燈條
-  // 頸(第三節)+ 頭
   const neck = new THREE.Group();
-  neck.position.set(0, 0.55 * B, 1.55);
-  chest.add(neck);
-  bx(neck, 0.7 * B, 0.6 * B, 0.9, 0, 0.18, 0.3, hullDk);
   const head = new THREE.Group();
-  head.position.set(0, 0.45 * B, 0.8);
-  neck.add(head);
-  bx(head, 0.85 * B, 0.65 * B, 0.9, 0, 0, 0.2, plate, { metalness: 0.6 });       // 顱殼
-  bx(head, 0.5 * B, 0.4 * B, P.snoutL, 0, -0.12 * B, 0.75 + P.snoutL / 2, hullDk); // 吻部
-  bx(head, 0.52 * B, 0.14, 0.3, 0, -0.34 * B, 0.85, 0x23262a);                   // 下顎
-  const eye = new THREE.Mesh(new THREE.BoxGeometry(0.56 * B, 0.1, 0.06), mat(accent, { emissive: accent, emissiveIntensity: 1.6 }));
-  eye.position.set(0, 0.12 * B, 0.68);
-  head.add(eye);                                                                 // 單列感測眼(獸瞳)
-  if (P.ear) for (const sx of [-1, 1]) {
-    const ear = bx(head, 0.14, P.ear * 2.4, 0.1, sx * 0.3 * B, 0.42 * B, 0.1, hullDk);
-    ear.rotation.z = sx * -0.2;
-  }
-  if (P.horn) {
-    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.8, 6), mat(0xd8dde2, { metalness: 0.7 }));
-    horn.position.set(0, 0.18 * B, 1.1);
-    horn.rotation.x = 0.5;
-    head.add(horn);
-  }
-  // 雙節尾(急轉配重 + 行走搖擺;locomotion 驅動)
   const tail = new THREE.Group();
-  tail.position.set(0, 0.35 * B, -2.0);
   spine.add(tail);
-  bx(tail, 0.26 * B, 0.22 * B, P.tailLen, 0, 0, -P.tailLen / 2, hullDk);
   const tail2 = new THREE.Group();
   tail2.position.set(0, 0, -P.tailLen);
   tail.add(tail2);
-  bx(tail2, 0.16 * B, 0.14 * B, P.tailLen * 0.8, 0, 0, -P.tailLen * 0.4, 0x23262a);
-  bx(tail2, 0.18 * B, 0.16 * B, 0.2, 0, 0, -P.tailLen * 0.8, accent, { emissive: accent, emissiveIntensity: 0.8 });
-  // 四腿:髖樞軸 + 逆關節小腿 + 足爪(腿掛根節點,脊椎浮沉不帶動腳底 → 不滑步)
+
+  // 四腿(腿掛根節點:脊椎浮沉不帶動腳底 → 不滑步);腿型隨生物構造
   const mkLeg = (sx, sz, front) => {
     const leg = new THREE.Group();
-    leg.position.set(sx * 0.78 * B, hipY, sz);
-    bx(leg, 0.4 * B, 0.55, 0.66, 0, -0.1, 0, plate);                             // 髖甲
-    bx(leg, 0.3 * B, hipY * 0.55, 0.42, 0, -hipY * 0.32, front ? 0.06 : -0.08, hull);   // 大腿
-    bx(leg, 0.22 * B, hipY * 0.5, 0.3, 0, -hipY * 0.75, front ? -0.08 : 0.1, hullDk);   // 小腿(逆關節)
-    bx(leg, 0.34 * B, 0.2, 0.55, 0, -hipY + 0.1, 0.12, 0x23262a);                // 足爪
+    leg.position.set(sx * P.legX * B, hipY, sz);
     g.add(leg);
+    if (C === 'cthulhu') {
+      // 觸手柱腿:三節收分 + 主色環紋 + 三爪
+      cyl(leg, 0.3 * B, 0.36 * B, hipY * 0.42, 8, 0, -hipY * 0.2, 0, hull, { metalness: 0.5 });
+      cyl(leg, 0.24 * B, 0.3 * B, hipY * 0.36, 8, 0, -hipY * 0.55, front ? 0.06 : -0.06, hullDk);
+      cyl(leg, 0.18 * B, 0.24 * B, hipY * 0.3, 8, 0, -hipY * 0.85, 0, 0x23262a);
+      cyl(leg, 0.27 * B, 0.27 * B, 0.08, 8, 0, -hipY * 0.4, 0, accent, { emissive: accent, emissiveIntensity: 0.6 });
+      for (let i = 0; i < 3; i++) {
+        const a = i * Math.PI * 2 / 3;
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.07 * B, 0.32, 5), mat(0xd8dde2, { metalness: 0.7 }));
+        claw.position.set(Math.cos(a) * 0.24 * B, -hipY + 0.14, Math.sin(a) * 0.24 * B);
+        claw.rotation.x = Math.PI;   // 錐尖朝下
+        claw.rotation.z = Math.cos(a) * 0.35;
+        leg.add(claw);
+      }
+    } else if (C === 'stego') {
+      // 象柱腿:粗壯直柱 + 足環
+      bx(leg, 0.46 * B, 0.5, 0.6, 0, -0.15, 0, plate);
+      cyl(leg, 0.22 * B, 0.26 * B, hipY * 0.82, 8, 0, -hipY * 0.55, 0, hull);
+      cyl(leg, 0.3 * B, 0.32 * B, 0.25, 8, 0, -hipY + 0.14, 0, 0x23262a);
+    } else if (C === 'centaur') {
+      // 馬腿:修長直柱 + 蹄
+      bx(leg, 0.36 * B, 0.5, 0.55, 0, -0.12, 0, plate);
+      bx(leg, 0.24 * B, hipY * 0.5, 0.34, 0, -hipY * 0.3, front ? 0.04 : -0.06, hull);
+      bx(leg, 0.15 * B, hipY * 0.55, 0.22, 0, -hipY * 0.78, front ? -0.04 : 0.08, hullDk);
+      cyl(leg, 0.14 * B, 0.16 * B, 0.24, 8, 0, -hipY + 0.13, 0.02, 0x23262a);
+    } else {
+      // 犬腿:髖甲 + 逆關節小腿 + 足爪
+      bx(leg, 0.4 * B, 0.55, 0.66, 0, -0.1, 0, plate);
+      bx(leg, 0.3 * B, hipY * 0.55, 0.42, 0, -hipY * 0.32, front ? 0.06 : -0.08, hull);
+      bx(leg, 0.22 * B, hipY * 0.5, 0.3, 0, -hipY * 0.75, front ? -0.08 : 0.1, hullDk);
+      bx(leg, 0.34 * B, 0.2, 0.55, 0, -hipY + 0.1, 0.12, 0x23262a);
+    }
     return leg;
   };
+
+  if (C === 'hound') {
+    // ---- 機械獵犬:修長犬軀 + 立耳吻部;背揹反器材長砲(揹負重武)----
+    bx(spine, 1.4 * B, 1.1 * B, 2.1, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });
+    bx(spine, 1.2 * B, 0.2, 1.9, 0, 0.62 * B, -0.9, dim(plate, 0.9));
+    bx(chest, 1.6 * B, 1.35 * B, 1.9, 0, 0.1, 0.5, hull, { metalness: 0.6 });
+    bx(chest, 1.62 * B, 0.16, 0.5, 0, 0.32 * B, 1.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    neck.position.set(0, 0.55 * B, 1.45);
+    chest.add(neck);
+    bx(neck, 0.65 * B, 0.55 * B, 0.8, 0, 0.15, 0.25, hullDk);
+    head.position.set(0, 0.42 * B, 0.7);
+    neck.add(head);
+    bx(head, 0.8 * B, 0.6 * B, 0.85, 0, 0, 0.2, plate, { metalness: 0.6 });
+    bx(head, 0.46 * B, 0.36 * B, 0.9, 0, -0.12 * B, 0.9, hullDk);                  // 吻部
+    bx(head, 0.48 * B, 0.13, 0.28, 0, -0.32 * B, 0.85, 0x23262a);                  // 下顎
+    bx(head, 0.52 * B, 0.1, 0.06, 0, 0.12 * B, 0.64, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    for (const sx of [-1, 1]) {
+      const ear = bx(head, 0.14, 0.5, 0.1, sx * 0.28 * B, 0.42 * B, 0.05, hullDk);
+      ear.rotation.z = sx * -0.2;
+    }
+    // 背架 + 長砲管(朝 +z)+ 觀瞄鏡 + 彈藥箱
+    bx(spine, 0.5 * B, 0.4, 1.2, 0.25 * B, 0.95 * B, -0.5, 0x2b3138, { metalness: 0.6 });
+    const barrel = cyl(spine, 0.09, 0.12, 3.6, 8, 0.25 * B, 1.15 * B, 0.9, 0x14171a, { metalness: 0.85 });
+    barrel.rotation.x = Math.PI / 2;
+    cyl(barrel, 0.14, 0.14, 0.3, 8, 0, 1.7, 0, 0x0d0f11);                          // 砲口制退器
+    bx(spine, 0.2, 0.16, 0.5, 0.25 * B, 1.42 * B, -0.3, 0x1c2126);                 // 觀瞄鏡體
+    bx(spine, 0.12, 0.08, 0.14, 0.25 * B, 1.42 * B, 0.0, accent, { emissive: accent, emissiveIntensity: 1.2 });
+    bx(spine, 0.5 * B, 0.35, 0.7, -0.35 * B, 0.85 * B, -1.1, hullDk);              // 彈藥箱
+    bx(spine, 0.52 * B, 0.1, 0.72, -0.35 * B, 1.06 * B, -1.1, dim(accent, 0.8));
+    tail.position.set(0, 0.35 * B, -1.95);
+    bx(tail, 0.24 * B, 0.2 * B, P.tailLen, 0, 0, -P.tailLen / 2, hullDk);
+    bx(tail2, 0.15 * B, 0.13 * B, P.tailLen * 0.8, 0, 0, -P.tailLen * 0.4, 0x23262a);
+    bx(tail2, 0.17 * B, 0.15 * B, 0.2, 0, 0, -P.tailLen * 0.8, accent, { emissive: accent, emissiveIntensity: 0.8 });
+  } else if (C === 'centaur') {
+    // ---- 人馬:馬軀四足底盤 + 人形上身(neck 樞軸 = 腰,隨步伐微俯仰)雙手持長槍 ----
+    bx(spine, 1.35 * B, 1.05 * B, 2.0, 0, 0.05, -0.85, hullDk, { metalness: 0.6 });
+    bx(spine, 1.15 * B, 0.18, 1.8, 0, 0.6 * B, -0.85, dim(plate, 0.9));
+    bx(chest, 1.5 * B, 1.2 * B, 1.7, 0, 0.05, 0.35, hull, { metalness: 0.6 });
+    neck.position.set(0, 0.75 * B, 0.95);
+    chest.add(neck);
+    bx(neck, 0.85 * B, 0.5, 0.6, 0, 0.2, 0, hullDk);                               // 腰
+    bx(neck, 1.05 * B, 0.9, 0.7, 0, 0.85, 0, hull, { metalness: 0.6 });            // 胸廓
+    bx(neck, 0.5 * B, 0.3, 0.14, 0, 0.95, 0.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    for (const sx of [-1, 1]) {
+      bx(neck, 0.5, 0.35, 0.6, sx * 0.75 * B, 1.2, 0, plate);                      // 墊肩
+      bx(neck, 0.24, 0.85, 0.3, sx * 0.78 * B, 0.55, 0.1, hullDk);                 // 垂臂
+    }
+    // 長槍跨胸前(槍口朝 +z)+ 左手托護木
+    const rifle = bx(neck, 0.14, 0.24, 3.2, 0.15 * B, 0.55, 0.75, 0x14171a, { metalness: 0.85 });
+    bx(rifle, 0.07, 0.1, 0.9, 0, 0.04, 1.85, 0x30373f, { metalness: 0.85 });
+    bx(rifle, 0.09, 0.26, 0.3, 0, -0.2, -1.5, 0x23262a);                           // 槍托
+    bx(rifle, 0.08, 0.07, 0.3, 0, 0.22, 0.2, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    bx(neck, 0.2, 0.2, 0.5, -0.35 * B, 0.35, 0.7, 0x30373f);
+    head.position.set(0, 1.5, 0.05);
+    neck.add(head);
+    bx(head, 0.42 * B, 0.4, 0.46, 0, 0.1, 0, plate, { metalness: 0.6 });
+    bx(head, 0.32 * B, 0.1, 0.06, 0, 0.12, 0.25, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    tail.position.set(0, 0.4 * B, -1.8);
+    const t1 = bx(tail, 0.18 * B, 0.5, P.tailLen, 0, -0.2, -P.tailLen / 2, hullDk);
+    t1.rotation.x = 0.25;                                                          // 馬尾散熱索
+    bx(tail2, 0.12 * B, 0.34, P.tailLen * 0.6, 0, -0.42, -P.tailLen * 0.28, 0x23262a);
+  } else if (C === 'stego') {
+    // ---- 劍龍:拱背軀體 + 交錯背鰭列;四片大鰭 = 四聯裝飛彈鰭(一次齊射四枚)----
+    bx(spine, 1.9 * B, 1.3 * B, 2.4, 0, 0.1, -1.0, hullDk, { metalness: 0.6 });
+    bx(chest, 2.1 * B, 1.5 * B, 2.2, 0, 0.25, 0.5, hull, { metalness: 0.6 });
+    bx(chest, 1.7 * B, 0.2, 1.9, 0, 1.05 * B, 0.5, dim(plate, 0.9));
+    const finAt = (parent, y, z, h, big, sx) => {
+      const f = new THREE.Group();
+      f.position.set(sx * 0.26 * B, y, z);
+      parent.add(f);
+      const pl = bx(f, 0.14, h, h * 0.85, 0, h * 0.42, 0, big ? plate : hullDk, { metalness: 0.5 });
+      pl.rotation.x = Math.PI / 4;                                                 // 菱形鰭(側視)
+      if (big) {
+        for (let i = 0; i < 4; i++) {   // 前緣四聯裝管口(彈尖主色)
+          const cy = h * (0.28 + i * 0.14), cz = h * (0.5 - i * 0.14);
+          const cell = cyl(f, 0.065, 0.065, 0.24, 6, 0, cy, cz, 0x111418, { metalness: 0.8 });
+          cell.rotation.x = Math.PI / 2;
+          const tip = cyl(f, 0.045, 0.045, 0.06, 6, 0, cy, cz + 0.15, accent, { emissive: accent, emissiveIntensity: 1.5 });
+          tip.rotation.x = Math.PI / 2;
+        }
+      } else {
+        bx(f, 0.15, 0.2, 0.14, 0, h * 0.82, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+      }
+    };
+    finAt(chest, 1.05 * B, 1.25, 0.9, false, -1);
+    finAt(chest, 1.1 * B, 0.62, 1.3, true, 1);
+    finAt(chest, 1.12 * B, -0.05, 1.45, true, -1);
+    finAt(spine, 0.72 * B, -0.6, 1.35, true, 1);
+    finAt(spine, 0.68 * B, -1.25, 1.15, true, -1);
+    finAt(spine, 0.6 * B, -1.85, 0.85, false, 1);
+    // 小頭低伸(喙吻 + 感測眼列)
+    neck.position.set(0, -0.1, 1.6);
+    chest.add(neck);
+    bx(neck, 0.5 * B, 0.42 * B, 0.7, 0, 0, 0.2, hullDk);
+    head.position.set(0, -0.05, 0.6);
+    neck.add(head);
+    bx(head, 0.5 * B, 0.36 * B, 0.6, 0, 0, 0.15, plate, { metalness: 0.6 });
+    bx(head, 0.34 * B, 0.22 * B, 0.4, 0, -0.06 * B, 0.55, hullDk);
+    bx(head, 0.36 * B, 0.09, 0.06, 0, 0.08 * B, 0.42, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    // 重尾 + 尾錘尖刺(thagomizer)
+    tail.position.set(0, 0.3 * B, -2.2);
+    bx(tail, 0.4 * B, 0.35 * B, P.tailLen, 0, 0, -P.tailLen / 2, hullDk);
+    bx(tail2, 0.26 * B, 0.24 * B, P.tailLen * 0.75, 0, 0, -P.tailLen * 0.38, 0x23262a);
+    for (const [sx, sz] of [[-1, -0.5], [1, -0.5], [-1, -0.75], [1, -0.75]]) {
+      const spk = new THREE.Mesh(new THREE.ConeGeometry(0.09 * B, 0.7, 5), mat(0xd8dde2, { metalness: 0.7 }));
+      spk.position.set(sx * 0.2 * B, 0.1, sz * P.tailLen);
+      spk.rotation.z = sx * -1.2;
+      tail2.add(spk);
+    }
+  } else {
+    // ---- 克蘇魯:外套膜軀體 + 複眼群/面鬚;四持武觸手(雙槍莢/刃鰭/感測球)----
+    const mantle = new THREE.Mesh(new THREE.SphereGeometry(1.05 * B, 14, 10), mat(hull, { metalness: 0.5 }));
+    mantle.scale.set(1, 0.95, 1.25);
+    mantle.position.set(0, 0.35, -0.3);
+    spine.add(mantle);
+    bx(spine, 1.3 * B, 0.18, 1.6, 0, 1.25 * B, -0.3, dim(plate, 0.9));
+    bx(chest, 1.6 * B, 1.1 * B, 1.4, 0, 0.3, 0.3, hull, { metalness: 0.55 });
+    bx(chest, 1.2 * B, 0.16, 0.4, 0, 0.05, 1.0, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    neck.position.set(0, 0.35, 0.75);
+    chest.add(neck);
+    head.position.set(0, 0.15 * B, 0.45);
+    neck.add(head);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.62 * B, 12, 9), mat(plate, { metalness: 0.5 }));
+    dome.scale.set(1, 0.9, 1);
+    head.add(dome);
+    for (let i = -2; i <= 2; i++) {   // 弧列複眼群(中央大眼)
+      const eye = new THREE.Mesh(new THREE.SphereGeometry((i === 0 ? 0.11 : 0.07) * B, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.6 }));
+      eye.position.set(Math.sin(i * 0.5) * 0.48 * B, 0.2 * B, Math.cos(i * 0.5) * 0.5 * B);
+      head.add(eye);
+    }
+    for (let i = -2; i <= 2; i++) {   // 面鬚觸手
+      const b1 = cyl(head, 0.05 * B, 0.08 * B, 0.55, 6, i * 0.16 * B, -0.4 * B, 0.42 * B, hullDk);
+      b1.rotation.x = 0.35 - Math.abs(i) * 0.08;
+      const b2 = cyl(head, 0.03 * B, 0.05 * B, 0.4, 6, i * 0.18 * B, -0.72 * B, 0.55 * B, 0x23262a);
+      b2.rotation.x = 0.6;
+    }
+    // 四持武觸手(四爪步行已由 mkLeg 提供;此為上部四爪持武)
+    const wArm = (sx, sz, ry, tipKind) => {
+      const a = new THREE.Group();
+      a.position.set(sx * 0.85 * B, 0.85 * B, sz);
+      a.rotation.y = ry;
+      chest.add(a);
+      const s1 = cyl(a, 0.11 * B, 0.15 * B, 0.9, 7, sx * 0.3, 0.25, 0.1, hull, { metalness: 0.5 });
+      s1.rotation.z = sx * 0.9;
+      const s2 = cyl(a, 0.08 * B, 0.11 * B, 0.7, 7, sx * 0.75, 0.62, 0.2, hullDk);
+      s2.rotation.z = sx * 0.5;
+      const tipP = new THREE.Group();
+      tipP.position.set(sx * 0.95, 0.95, 0.3);
+      a.add(tipP);
+      if (tipKind === 'gun') {
+        const pod = cyl(tipP, 0.09, 0.11, 1.0, 8, 0, 0, 0.2, 0x111418, { metalness: 0.85 });
+        pod.rotation.x = Math.PI / 2;
+        const muz = cyl(tipP, 0.12, 0.12, 0.06, 8, 0, 0, 0.74, accent, { emissive: accent, emissiveIntensity: 1.2 });
+        muz.rotation.x = Math.PI / 2;
+      } else if (tipKind === 'blade') {
+        const bl = bx(tipP, 0.06, 0.6, 0.36, 0, 0.22, 0.05, 0xd8dde2, { metalness: 0.8 });
+        bl.rotation.x = -0.3;
+      } else {
+        const orb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.5 }));
+        tipP.add(orb);
+      }
+    };
+    wArm(-1, 0.55, 0, 'gun');
+    wArm(1, 0.55, 0, 'gun');
+    wArm(-1, -0.25, -0.5, 'blade');
+    wArm(1, -0.25, 0.5, 'orb');
+    // 後觸手(尾:急轉配重)
+    tail.position.set(0, 0.5 * B, -1.5);
+    const t1 = cyl(tail, 0.14 * B, 0.2 * B, P.tailLen, 7, 0, 0, -P.tailLen / 2, hullDk);
+    t1.rotation.x = Math.PI / 2;
+    const t2m = cyl(tail2, 0.08 * B, 0.13 * B, P.tailLen * 0.75, 7, 0, 0.12, -P.tailLen * 0.36, 0x23262a);
+    t2m.rotation.x = Math.PI / 2 - 0.35;
+  }
+
   const rig = {
     kind: 'quad', spine, chest, neck, head, tail, tail2,
-    legFL: mkLeg(-1, 1.05, true), legFR: mkLeg(1, 1.05, true),
-    legHL: mkLeg(-1, -1.25, false), legHR: mkLeg(1, -1.25, false),
-    hipsY0: hipY, stride: 1.5, bob: 0.09, top: 10,
+    legFL: mkLeg(-1, P.fz, true), legFR: mkLeg(1, P.fz, true),
+    legHL: mkLeg(-1, P.hz, false), legHR: mkLeg(1, P.hz, false),
+    hipsY0: hipY, stride: P.stride, bob: 0.09, top: 10,
   };
   g.userData.rig = rig;
+  return g;
+}
+
+/**
+ * 雙足獸型機甲(form:'biped'):可動雙足骨架(rig 'biped' 合約同 buildRobotMech,
+ * locomotion stepBiped 驅動步態/重心側移/前傾)。武裝內建於生物構造:
+ * creature: 'gorilla' 猩猩(巨臂武裝:右前臂旋轉機砲、左前臂鑄鐵鍋盾)
+ *         | 'ostrich' 鴕鳥/仿生鶴(半開翼內藏飛彈管、膝部導彈莢)
+ *         | 'trex' 暴龍(巨顎藏無後座砲,重尾配重)
+ *         | 'roo' 袋鼠(強健雙腿 + 著地平衡尾,前臂拳砲)。
+ */
+const BIPED = {
+  gorilla: { hipY: 2.0, stride: 1.6, bob: 0.12, sway: 0.1,  top: 9 },
+  ostrich: { hipY: 3.0, stride: 2.6, bob: 0.1,  sway: 0.06, top: 10 },
+  trex:    { hipY: 2.5, stride: 2.2, bob: 0.12, sway: 0.08, top: 9 },
+  roo:     { hipY: 2.2, stride: 2.4, bob: 0.15, sway: 0.07, top: 10 },
+};
+function buildBipedBeast(side, vis) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side].color);
+  const C = BIPED[vis?.creature] ? vis.creature : 'gorilla';
+  const P = BIPED[C];
+  const hipY = P.hipY;
+  const hull = 0x8d97a1, hullDk = 0x6f7983, plate = 0x9aa4ad, joint = 0x2b3138;
+  const hips = new THREE.Group();
+  hips.position.y = hipY;
+  g.add(hips);
+  let legL, legR, armL, armR;
+
+  if (C === 'gorilla') {
+    // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿 ----
+    const mkLeg = (sx) => {
+      const leg = new THREE.Group();
+      leg.position.set(sx * 0.62, hipY, 0);
+      g.add(leg);
+      bx(leg, 0.55, 1.0, 0.7, 0, -0.5, 0.02, hull, { metalness: 0.6 });
+      bx(leg, 0.5, 0.9, 0.6, 0, -1.3, -0.02, hullDk);
+      bx(leg, 0.6, 0.3, 0.95, 0, -1.85, 0.1, 0x23262a);
+      return leg;
+    };
+    legL = mkLeg(-1); legR = mkLeg(1);
+    bx(hips, 1.3, 0.6, 0.9, 0, 0.1, 0, joint, { metalness: 0.6 });                 // 骨盆
+    const torso = bx(hips, 2.1, 1.3, 1.3, 0, 1.0, 0.1, hull, { metalness: 0.6 });
+    torso.rotation.x = 0.22;                                                       // 前傾聳背
+    bx(hips, 2.3, 0.35, 1.1, 0, 1.62, -0.15, plate);                               // 肩背甲
+    bx(hips, 0.8, 0.3, 0.14, 0, 0.85, 0.72, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    bx(hips, 0.62, 0.5, 0.6, 0, 1.75, 0.55, plate, { metalness: 0.6 });            // 低伏頭
+    bx(hips, 0.66, 0.16, 0.2, 0, 1.98, 0.68, hullDk);                              // 眉甲
+    bx(hips, 0.46, 0.12, 0.06, 0, 1.82, 0.86, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    const mkArm = (sx) => {
+      const a = new THREE.Group();
+      a.position.set(sx * 1.35, 1.45, 0.1);
+      hips.add(a);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(plate, { metalness: 0.6 }));
+      ball.position.y = 0.1;
+      a.add(ball);
+      bx(a, 0.6, 1.1, 0.7, 0, -0.6, 0.05, hull, { metalness: 0.6 });               // 巨上臂
+      if (sx > 0) {
+        // 右巨臂 = 旋轉機砲(彈鼓前臂 + 三管砲口 + 主色充能環)
+        cyl(a, 0.42, 0.46, 1.3, 10, 0, -1.75, 0.05, hullDk, { metalness: 0.7 });
+        for (const aa of [0, 2.1, 4.2])
+          cyl(a, 0.07, 0.07, 0.6, 6, Math.cos(aa) * 0.18, -2.55, 0.05 + Math.sin(aa) * 0.18, 0x111418, { metalness: 0.85 });
+        cyl(a, 0.3, 0.3, 0.1, 10, 0, -2.42, 0.05, accent, { emissive: accent, emissiveIntensity: 0.9 });
+      } else {
+        // 左巨臂 = 鑄鐵鍋盾(前臂外側圓盾)+ 拳
+        bx(a, 0.55, 1.2, 0.6, 0, -1.7, 0.02, hullDk, { metalness: 0.6 });
+        const pot = cyl(a, 0.85, 0.85, 0.22, 14, -0.5, -1.6, 0.05, 0x2b3138, { metalness: 0.7 });
+        pot.rotation.z = Math.PI / 2;
+        cyl(pot, 0.6, 0.6, 0.26, 14, 0, 0, 0, 0x363e46, { metalness: 0.6 });
+        cyl(pot, 0.78, 0.78, 0.06, 14, 0, -0.12, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+        bx(a, 0.4, 0.35, 0.5, 0, -2.35, 0.05, 0x30373f);
+      }
+      return a;
+    };
+    armL = mkArm(-1); armR = mkArm(1);
+  } else if (C === 'ostrich') {
+    // ---- 鴕鳥/仿生鶴:長逆關節腿(膝部導彈莢)+ 半開翼內藏飛彈管 + 長頸小頭 ----
+    const mkLeg = (sx) => {
+      const leg = new THREE.Group();
+      leg.position.set(sx * 0.42, hipY, 0);
+      g.add(leg);
+      bx(leg, 0.26, 1.3, 0.4, 0, -0.6, 0.1, hull);                                 // 大腿
+      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), mat(joint, { metalness: 0.7 }));
+      knee.position.set(0, -1.3, -0.05);
+      leg.add(knee);
+      const podK = bx(leg, 0.24, 0.32, 0.24, 0, -1.2, 0.22, hullDk);               // 膝部導彈莢
+      for (const oy of [-0.07, 0.07]) {
+        const c = cyl(podK, 0.05, 0.05, 0.1, 6, 0, oy, 0.14, accent, { emissive: accent, emissiveIntensity: 1.2 });
+        c.rotation.x = Math.PI / 2;
+      }
+      bx(leg, 0.16, 1.5, 0.24, 0, -2.05, -0.12, hullDk);                           // 長脛(逆關節)
+      bx(leg, 0.3, 0.16, 0.7, 0, -2.85, 0.15, 0x23262a);                           // 二趾足
+      const toe = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 5), mat(0xd8dde2, { metalness: 0.7 }));
+      toe.rotation.x = Math.PI / 2;
+      toe.position.set(0, -2.85, 0.6);
+      leg.add(toe);
+      return leg;
+    };
+    legL = mkLeg(-1); legR = mkLeg(1);
+    bx(hips, 0.9, 0.45, 0.7, 0, 0.05, 0, joint);
+    const bodyM = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 9), mat(hull, { metalness: 0.55 }));
+    bodyM.scale.set(0.85, 0.75, 1.15);
+    bodyM.position.set(0, 0.55, 0);
+    hips.add(bodyM);
+    for (let i = -1; i <= 1; i++) {                                                // 尾羽扇
+      const f = bx(hips, 0.28, 0.06, 0.85, i * 0.24, 0.62, -1.0, i === 0 ? accent : plate);
+      f.rotation.x = -0.5;
+      f.rotation.y = i * 0.3;
+    }
+    const n1 = bx(hips, 0.22, 0.9, 0.26, 0, 1.25, 0.55, hullDk);                   // 長頸雙節
+    n1.rotation.x = 0.25;
+    bx(hips, 0.18, 0.85, 0.2, 0, 1.95, 0.72, hull);
+    bx(hips, 0.34, 0.3, 0.5, 0, 2.42, 0.78, plate, { metalness: 0.6 });            // 小頭
+    const beak = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.5, 6), mat(0xd8b23c, { metalness: 0.6 }));
+    beak.rotation.x = Math.PI / 2;
+    beak.position.set(0, 2.4, 1.2);
+    hips.add(beak);
+    bx(hips, 0.28, 0.08, 0.06, 0, 2.5, 1.02, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    bx(hips, 0.1, 0.3, 0.2, 0, 2.66, 0.6, accent);                                 // 頂冠
+    const mkArm = (sx) => {
+      // 翼 = 臂:半開翼板,翼下露出三管飛彈口(武器藏在翅膀內)
+      const a = new THREE.Group();
+      a.position.set(sx * 0.68, 0.75, 0.15);
+      hips.add(a);
+      const wing = bx(a, 0.14, 0.75, 1.5, sx * 0.05, -0.35, -0.25, plate, { metalness: 0.5 });
+      wing.rotation.z = sx * 0.18;
+      const covert = bx(a, 0.1, 0.5, 1.3, sx * 0.18, -0.3, -0.2, dim(plate, 0.85));
+      covert.rotation.z = sx * 0.35;
+      for (let i = 0; i < 3; i++) {
+        const c = cyl(a, 0.06, 0.06, 0.2, 6, sx * -0.02, -0.58, 0.3 - i * 0.42, 0x111418, { metalness: 0.8 });
+        c.rotation.x = Math.PI / 2;
+        const t = cyl(a, 0.04, 0.04, 0.05, 6, sx * -0.02, -0.58, 0.43 - i * 0.42, accent, { emissive: accent, emissiveIntensity: 1.3 });
+        t.rotation.x = Math.PI / 2;
+      }
+      return a;
+    };
+    armL = mkArm(-1); armR = mkArm(1);
+  } else if (C === 'trex') {
+    // ---- 暴龍:水平體軸 + 巨顎藏無後座砲;小短臂,重尾配重 ----
+    const mkLeg = (sx) => {
+      const leg = new THREE.Group();
+      leg.position.set(sx * 0.72, hipY, 0);
+      g.add(leg);
+      bx(leg, 0.55, 1.15, 0.85, 0, -0.5, 0.1, hull, { metalness: 0.6 });
+      const shin = bx(leg, 0.4, 1.0, 0.5, 0, -1.42, -0.15, hullDk);
+      shin.rotation.x = 0.35;
+      bx(leg, 0.55, 0.28, 1.0, 0, -2.35, 0.2, 0x23262a);                           // 三趾足
+      for (let i = -1; i <= 1; i++) {
+        const cl = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 5), mat(0xd8dde2, { metalness: 0.7 }));
+        cl.rotation.x = Math.PI / 2;
+        cl.position.set(i * 0.2, -2.38, 0.78);
+        leg.add(cl);
+      }
+      return leg;
+    };
+    legL = mkLeg(-1); legR = mkLeg(1);
+    bx(hips, 1.15, 0.85, 1.1, 0, 0.15, 0, joint, { metalness: 0.6 });              // 骨盆
+    const chestT = bx(hips, 1.3, 1.05, 1.5, 0, 0.5, 1.05, hull, { metalness: 0.6 });
+    chestT.rotation.x = 0.12;
+    for (let i = 0; i < 4; i++) {                                                  // 背甲鱗列
+      const sc = bx(hips, 0.28, 0.22, 0.34, 0, 1.06 - i * 0.04, 1.3 - i * 0.75, hullDk);
+      sc.rotation.x = 0.3;
+    }
+    const head = new THREE.Group();
+    head.position.set(0, 0.95, 1.9);
+    hips.add(head);
+    bx(head, 0.85, 0.6, 1.0, 0, 0.15, 0.3, plate, { metalness: 0.6 });             // 顱殼
+    bx(head, 0.6, 0.34, 0.9, 0, -0.05, 0.85, hullDk);                              // 上顎
+    for (let i = 0; i < 4; i++) {                                                  // 上齒列
+      const th = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 4), mat(0xe8ecef));
+      th.rotation.x = Math.PI;
+      th.position.set((i - 1.5) * 0.14, -0.26, 1.1);
+      head.add(th);
+    }
+    const jaw = bx(head, 0.5, 0.2, 0.95, 0, -0.52, 0.62, 0x23262a);
+    jaw.rotation.x = 0.42;                                                         // 下顎張開
+    const gunT = cyl(head, 0.09, 0.11, 1.6, 8, 0, -0.12, 1.2, 0x111418, { metalness: 0.85 });
+    gunT.rotation.x = Math.PI / 2;                                                 // 口腔無後座砲
+    const muzT = cyl(head, 0.13, 0.13, 0.07, 8, 0, -0.12, 2.0, accent, { emissive: accent, emissiveIntensity: 1.3 });
+    muzT.rotation.x = Math.PI / 2;
+    bx(head, 0.3, 0.14, 0.2, 0, -0.3, 0.5, accent, { emissive: accent, emissiveIntensity: 1.0 });   // 喉部充能
+    bx(head, 0.6, 0.1, 0.08, 0, 0.34, 0.78, accent, { emissive: accent, emissiveIntensity: 1.6 });  // 眼列
+    const mkArm = (sx) => {
+      const a = new THREE.Group();
+      a.position.set(sx * 0.62, 0.35, 1.55);
+      hips.add(a);
+      bx(a, 0.16, 0.4, 0.2, 0, -0.18, 0.05, hull);
+      bx(a, 0.12, 0.3, 0.14, 0, -0.45, 0.12, hullDk);
+      for (const o of [-0.05, 0.06]) bx(a, 0.05, 0.14, 0.08, o, -0.62, 0.16, 0x30373f);   // 二爪
+      return a;
+    };
+    armL = mkArm(-1); armR = mkArm(1);
+    const tl1 = bx(hips, 0.9, 0.6, 1.4, 0, 0.3, -1.1, hull);                       // 巨尾三節
+    tl1.rotation.x = -0.08;
+    bx(hips, 0.6, 0.4, 1.3, 0, 0.22, -2.3, hullDk);
+    bx(hips, 0.35, 0.25, 1.1, 0, 0.15, -3.3, 0x23262a);
+    bx(hips, 0.28, 0.2, 0.2, 0, 0.15, -3.9, accent, { emissive: accent, emissiveIntensity: 0.8 });
+  } else {
+    // ---- 袋鼠:大後腿長足 + 著地平衡尾 + 拳砲前臂(拳擊架式)+ 長耳 ----
+    const mkLeg = (sx) => {
+      const leg = new THREE.Group();
+      leg.position.set(sx * 0.55, hipY, 0);
+      g.add(leg);
+      const haunch = bx(leg, 0.5, 1.0, 0.95, 0, -0.4, 0.05, hull, { metalness: 0.6 });
+      haunch.rotation.x = -0.2;
+      const shin = bx(leg, 0.24, 0.95, 0.3, 0, -1.25, -0.1, hullDk);
+      shin.rotation.x = 0.4;
+      bx(leg, 0.3, 0.18, 1.15, 0, -1.95, 0.3, 0x23262a);                           // 長足
+      bx(leg, 0.32, 0.1, 0.3, 0, -1.9, 0.85, dim(accent, 0.8));                    // 足尖識別
+      return leg;
+    };
+    legL = mkLeg(-1); legR = mkLeg(1);
+    bx(hips, 1.0, 0.55, 0.85, 0, 0.1, 0, joint, { metalness: 0.6 });
+    const torso = bx(hips, 1.05, 1.1, 0.85, 0, 0.85, 0.15, hull, { metalness: 0.6 });
+    torso.rotation.x = 0.3;
+    bx(hips, 0.6, 0.5, 0.16, 0, 0.55, 0.55, hullDk);                               // 育袋艙蓋
+    bx(hips, 0.34, 0.12, 0.06, 0, 0.6, 0.66, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    bx(hips, 0.4, 0.36, 0.5, 0, 1.62, 0.42, plate, { metalness: 0.6 });            // 頭
+    bx(hips, 0.26, 0.2, 0.28, 0, 1.54, 0.72, hullDk);                              // 吻部
+    bx(hips, 0.32, 0.09, 0.06, 0, 1.7, 0.66, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    for (const sx of [-1, 1]) {                                                    // 長耳
+      const ear = bx(hips, 0.1, 0.55, 0.16, sx * 0.16, 2.05, 0.32, hull);
+      ear.rotation.z = sx * -0.15;
+    }
+    const mkArm = (sx) => {
+      const a = new THREE.Group();
+      a.position.set(sx * 0.6, 1.15, 0.3);
+      hips.add(a);
+      bx(a, 0.2, 0.5, 0.24, 0, -0.2, 0.05, hull);
+      bx(a, 0.22, 0.24, 0.6, 0, -0.5, 0.25, hullDk);                               // 前臂平舉
+      for (const oy of [-0.05, 0.05]) {
+        const b = cyl(a, 0.04, 0.04, 0.3, 6, 0, -0.5 + oy, 0.62, 0x111418, { metalness: 0.85 });
+        b.rotation.x = Math.PI / 2;
+      }
+      const muz = cyl(a, 0.06, 0.06, 0.05, 6, 0, -0.5, 0.8, accent, { emissive: accent, emissiveIntensity: 1.2 });
+      muz.rotation.x = Math.PI / 2;
+      return a;
+    };
+    armL = mkArm(-1); armR = mkArm(1);
+    const t1 = bx(hips, 0.55, 0.5, 1.5, 0, -0.1, -1.0, hull);                      // 著地平衡尾
+    t1.rotation.x = -0.35;
+    const t2 = bx(hips, 0.4, 0.35, 1.4, 0, -0.75, -2.15, hullDk);
+    t2.rotation.x = -0.55;
+    bx(hips, 0.42, 0.2, 0.4, 0, -1.35, -2.9, 0x23262a);                            // 尾端著地墊
+    bx(hips, 0.3, 0.12, 0.2, 0, -1.28, -3.1, accent, { emissive: accent, emissiveIntensity: 0.8 });
+  }
+
+  g.userData.rig = {
+    kind: 'biped', hips, legL, legR, armL, armR,
+    hipsY0: hipY, stride: P.stride, bob: P.bob, sway: P.sway, top: P.top, gunArm: true,
+  };
   return g;
 }
 
@@ -1730,10 +2374,12 @@ function pickWalkClip(anims) {
  */
 export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   const vis = ch && CHARACTERS[ch] ? CHARACTERS[ch].visual : null;
-  // 獸型機甲 / 飛行生物無人機:跳過 GLB,一律程序生成(角色剪影差異化)
+  // 獸型機甲(四足/雙足)/ 擬態翼/定翼無人機:跳過 GLB,一律程序生成(角色剪影差異化)
   const beast = kind === 'hero:robot' && vis?.form === 'beast';
+  const biped = kind === 'hero:robot' && vis?.form === 'biped';
   const avian = kind === 'hero:drone' && vis?.form === 'avian';
-  const entry = !beast && !avian && MODEL_MANIFEST[kind] ? cache[kind] : null;
+  const fixedW = kind === 'hero:drone' && vis?.form === 'fixed';
+  const entry = !beast && !biped && !avian && !fixedW && MODEL_MANIFEST[kind] ? cache[kind] : null;
   // 英雄體型綁角色護甲(heroTargetH 內含獸型矮化);其餘查表
   const heroKind = kind.startsWith('hero:') ? kind.slice(5) : null;
   const target = heroKind ? heroTargetH(heroKind, ch) : (TARGET_H[kind] || 4);
@@ -1770,7 +2416,9 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
     }
   } else {
     const build = beast ? buildBeastMech
+      : biped ? buildBipedBeast
       : avian ? buildAvianDrone
+      : fixedW ? buildFixedWing
       : (FALLBACK[kind] || FALLBACK['creep:apc']);
     const built = build(side, vis);
     fitToHeight(built, target);

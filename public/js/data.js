@@ -280,7 +280,7 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
     dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1) * squad,
     range: heroic ? Math.min(w.range * HEROIC.range, rangeCap(kind, slot)) : w.range,
-    rate: w.rate ?? 3,
+    rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
     mag: t(w.mag ?? 1),
     reload: t(w.cd ?? w.reload ?? 2),
     r: t(w.r), pen: t(w.pen ?? 0), crit: t(w.crit ?? 0), critX: w.critX ?? VITALS.CRIT_X,
@@ -323,8 +323,15 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 // 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
 // mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
-// visual:程序生成機體外觀參數(hue 主色;無人機 frame/body、機甲 pod 掛件;
-//         form:'beast'=獸型機甲、'avian'=飛行生物型無人機(creature 指定剪影);
+// visual:程序生成機體外觀參數(hue 主色;無人機 frame/body(座艙沿用)、機甲 pod 掛件;
+//         2026-07-10 外觀改制(doc/image 賽璐璐重構,兩陣營各三型等比例):
+//         無人機 = 旋翼(無 form;frame quad/hexa/coax)/ 定翼(form:'fixed',wing 指定
+//                   twinboom/vtail/canard/delta 剪影)/ 擬態翼(form:'avian',creature:
+//                   bee 尾針砲・eagle 羽毛飛彈・ptero 爪抓槍莢・dragon 張口飛彈巢);
+//         機甲   = 人形(無 form;pod 掛件)/ 雙足獸(form:'biped',creature: gorilla 巨臂
+//                   武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・roo 強腿重尾)/ 四足獸
+//                   (form:'beast',creature: hound 揹負重武・centaur 人馬持槍・
+//                   stego 背鰭四聯飛彈・cthulhu 四爪步行四爪持武);
 //         傭兵 morph 用 flight(飛行型:jet 戰機/uav 固定翼無人機/bird 機械鳥/dragon 機械龍)
 //         + ground(地面型:biped 人型機器人/beast 前肢著地機械獸)+ bulk 體格倍率 — 純外觀,不動數值)。
 // fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
@@ -333,7 +340,7 @@ export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
     side: 'SWARM', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
-    visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'wasp' },
+    visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'bee' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
     light: { name: '雙聯 5.56 機槍艙', rw: 'FN Minimi・初速 915m/s', type: 'gun', mv: 915,
       dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
@@ -348,7 +355,7 @@ export const CHARACTERS = {
   },
   s02: {
     side: 'SWARM', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
-    visual: { hue: 0xc98a3d, frame: 'quad', body: 'slab' },
+    visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
       dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0.05, pen: 6,
@@ -363,7 +370,7 @@ export const CHARACTERS = {
   },
   s03: {
     side: 'SWARM', name: '林芷晴', code: 'Silicon', machine: '「跳頻蜂」電戰無人機',
-    visual: { hue: 0x9ef2e6, frame: 'quad', body: 'wedge' },
+    visual: { hue: 0x9ef2e6, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'canard' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
     light: { name: '5.8 機槍艙', rw: 'QJB-95 派生・初速 930m/s', type: 'gun', mv: 930,
       dmg: [13, 16, 20], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
@@ -409,7 +416,7 @@ export const CHARACTERS = {
   },
   s06: {
     side: 'SWARM', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」攔截者',
-    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere', form: 'avian', creature: 'raptor' },
+    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere', form: 'avian', creature: 'ptero' },
     mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 6 },
     light: { name: '精準標記步槍艙', rw: 'M110 SASS 7.62・初速 850m/s', type: 'gun', mv: 850,
       dmg: [24, 30, 37], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
@@ -424,7 +431,7 @@ export const CHARACTERS = {
   },
   s07: {
     side: 'SWARM', name: '埃坦・沙哈', code: '鐵數學', machine: '「證明完畢」防空平台',
-    visual: { hue: 0x7fd8ff, frame: 'hexa', body: 'slab' },
+    visual: { hue: 0x7fd8ff, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon' },
     mods: { hp: 1.05, sp: 1.1, mp: 1.1, speed: 0.9, armor: 8 },
     light: { name: '25mm 空爆機砲', rw: 'XM25 派生・初速 760m/s', type: 'gun', mv: 760,
       dmg: [16, 20, 25], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
@@ -440,7 +447,7 @@ export const CHARACTERS = {
   },
   s08: {
     side: 'SWARM', name: '佐菲亞・馬列克', code: '聖燭', machine: '「聖燭」醫療運補機',
-    visual: { hue: 0xe8f0f4, frame: 'quad', body: 'sphere' },
+    visual: { hue: 0xe8f0f4, frame: 'coax', body: 'sphere' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.25, speed: 1.0, armor: 5 },
     light: { name: '護航機槍艙', rw: 'PKM 7.62・初速 825m/s', type: 'gun', mv: 825,
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
@@ -455,7 +462,7 @@ export const CHARACTERS = {
   },
   s09: {
     side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
-    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box', form: 'avian', creature: 'falcon' },
+    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle' },
     mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
     light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420,
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
@@ -471,7 +478,7 @@ export const CHARACTERS = {
   },
   s10: {
     side: 'SWARM', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」訊號機',
-    visual: { hue: 0xd7b8ff, frame: 'quad', body: 'frame' },
+    visual: { hue: 0xd7b8ff, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom' },
     mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 3 },
     light: { name: '消音衝鋒槍艙', rw: 'MP5SD 9mm・初速 285m/s', type: 'gun', mv: 285,
       dmg: [14, 17, 21], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
@@ -486,7 +493,7 @@ export const CHARACTERS = {
   },
   s11: {
     side: 'SWARM', name: '維爾納・哈特曼', code: '鐘匠', machine: '「錶芯」精密工作機',
-    visual: { hue: 0xd8c690, frame: 'hexa', body: 'frame' },
+    visual: { hue: 0xd8c690, frame: 'wing', body: 'frame', form: 'fixed', wing: 'vtail' },
     mods: { hp: 1.0, sp: 1.05, mp: 1.05, speed: 0.95, armor: 8 },
     light: { name: '精密點放步槍', rw: 'HK417・初速 790m/s', type: 'gun', mv: 790,
       dmg: [22, 27, 33], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
@@ -501,7 +508,7 @@ export const CHARACTERS = {
   },
   s12: {
     side: 'SWARM', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」偵察機',
-    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'avian', creature: 'swallow' },
+    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'delta' },
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 4 },
     light: { name: '偵察卡賓艙', rw: 'AKS-74U・初速 735m/s', type: 'gun', mv: 735,
       dmg: [14, 17, 21], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
@@ -550,7 +557,7 @@ export const CHARACTERS = {
   },
   t03: {
     side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
-    visual: { hue: 0xe08a4a, pod: 'shield', form: 'beast', creature: 'bear' },
+    visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla' },
     mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
     light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400,
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
@@ -565,7 +572,7 @@ export const CHARACTERS = {
   },
   t04: {
     side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
-    visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'wolf' },
+    visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'hound' },
     mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
     light: { name: '消音 DMR', rw: 'VSS Vintorez 9×39・初速 295m/s', type: 'gun', mv: 295,
       dmg: [24, 30, 37], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
@@ -580,7 +587,7 @@ export const CHARACTERS = {
   },
   t05: {
     side: 'STEEL', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
-    visual: { hue: 0xf2f2f2, pod: 'dish' },
+    visual: { hue: 0xf2f2f2, pod: 'dish', form: 'biped', creature: 'ostrich' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.05, armor: 18 },
     light: { name: '5.8 車載機槍', rw: 'QJZ-89・初速 870m/s', type: 'gun', mv: 870,
       dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
@@ -595,7 +602,7 @@ export const CHARACTERS = {
   },
   t06: {
     side: 'STEEL', name: '陸小川', code: '小川', machine: '「輕功」高機動機甲',
-    visual: { hue: 0xffb84d, pod: 'none' },
+    visual: { hue: 0xffb84d, pod: 'none', form: 'biped', creature: 'roo' },
     mods: { hp: 0.95, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
     light: { name: '5.8 突擊步槍', rw: 'QBZ-191・初速 930m/s', type: 'gun', mv: 930,
       dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
@@ -610,7 +617,7 @@ export const CHARACTERS = {
   },
   t07: {
     side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
-    visual: { hue: 0x6d7a68, pod: 'rack', form: 'beast', creature: 'panther' },
+    visual: { hue: 0x6d7a68, pod: 'rack', form: 'beast', creature: 'centaur' },
     mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
     light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
@@ -626,7 +633,7 @@ export const CHARACTERS = {
   },
   t08: {
     side: 'STEEL', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰機甲',
-    visual: { hue: 0xffc7dd, pod: 'dish' },
+    visual: { hue: 0xffc7dd, pod: 'dish', form: 'beast', creature: 'cthulhu' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 12 },
     light: { name: '同軸機槍', rw: 'PKT・初速 825m/s', type: 'gun', mv: 825,
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
@@ -641,7 +648,7 @@ export const CHARACTERS = {
   },
   t09: {
     side: 'STEEL', name: '達留什・法拉赫扎德', code: '詩人', machine: '「悲歌」巡飛彈平台',
-    visual: { hue: 0xc9b7e8, pod: 'rack' },
+    visual: { hue: 0xc9b7e8, pod: 'rack', form: 'beast', creature: 'stego' },
     mods: { hp: 1.05, sp: 1.0, mp: 1.15, speed: 0.9, armor: 16 },
     light: { name: '防衛機槍', rw: 'MG3 7.62・初速 820m/s', type: 'gun', mv: 820,
       dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
@@ -672,7 +679,7 @@ export const CHARACTERS = {
   },
   t11: {
     side: 'STEEL', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」戰術指導機',
-    visual: { hue: 0x8a9a5a, pod: 'antenna', form: 'beast', creature: 'rhino' },
+    visual: { hue: 0x8a9a5a, pod: 'antenna', form: 'biped', creature: 'trex' },
     mods: { hp: 1.2, sp: 0.9, mp: 1.0, speed: 0.9, armor: 24 },
     light: { name: '車載重機槍', rw: 'DShKM・初速 850m/s', type: 'gun', mv: 850,
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
