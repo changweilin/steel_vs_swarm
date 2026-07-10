@@ -833,8 +833,10 @@ UNITS.morph = {
 export const GAME = {
   TICK_MS: 125,               // 伺服器模擬 8Hz
   SNAP_MS: 125,               // 快照廣播 8Hz
-  WAVE_INTERVAL_S: 22,        // 兵線波次間隔
+  // 波次節奏:前期慢(對線期長,英雄有時間補刀/囤錢),中後期逐波加速到 MIN_S
+  WAVE_PACE: { START_S: 34, MIN_S: 14, RAMP_FROM: 4, RAMP_TO: 14 },
   FIRST_WAVE_DELAY_S: 6,
+  WAVE_COHESION_M: 26,        // 同波僚兵最大脫節距離:領先者原地等最慢的(交戰中除外)
   WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(另加固定 1 火箭兵/1 榴彈兵/1 攻擊直升機)
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
   AIM_SIGHT_MULT: 1.6,        // 瞄準模式視野加成(狙擊模式看得更遠)

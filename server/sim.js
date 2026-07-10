@@ -1011,9 +1011,11 @@ export class BattleSim {
     // 波次
     if (this.t >= this.nextWaveAt) {
       this.wave++;
-      this.nextWaveAt = this.t + GAME.WAVE_INTERVAL_S;
+      this.nextWaveAt = this.t + waveInterval(this.wave);
       this._spawnWave();
     }
+    // 波次凝聚錨點(上一 tick 的交戰狀態):每 tick 算一次,_advance 查表
+    this._anchors = this._waveAnchors();
 
     // 小隊層級(每名玩家一次):被動收入 / 電力回充 — money/mp 是三架共用的
     for (const h of this.heroes.values()) {
@@ -1054,6 +1056,7 @@ export class BattleSim {
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
       const target = this._acquireTarget(e, u);
+      e._eng = !!target;   // 交戰中的不當凝聚錨點(否則整波卡在原地等它)
       if (target) {
         // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)
         if (e.cd === 0 && !((e.empUntil || 0) > this.t)) {
@@ -1372,14 +1375,14 @@ export class BattleSim {
         for (let i = 0; i < GAME.WAVE_SOLDIERS; i++) comp.push('soldier');
         comp.push('rocketeer', 'howitzer', 'heli');
         comp.forEach((kind, i) => {
-          const jx = (Math.random() - 0.5) * 24, jz = (Math.random() - 0.5) * 24;
+          const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
           this._add({
-            kind, side, lane: li,
+            kind, side, lane: li, wv: this.wave,
             x: start[0] + jx, z: start[1] + jz,
             y: kind === 'heli' ? GAME.HELI_ALT : 0,
             hp: UNITS[kind].hp,
             // 沿線進度(公尺,從己方端起算);錯開避免疊隊
-            prog: -i * 14,
+            prog: -i * 8,
           });
         });
       }
@@ -1403,11 +1406,26 @@ export class BattleSim {
     return best;
   }
 
+  /** 同波、同線、同陣營的「最慢進度」;交戰中的成員不列入(否則整波停下來等它打完) */
+  _waveAnchors() {
+    const m = new Map();
+    for (const e of this.ents.values()) {
+      if (e.hero || e.neutral || e.hp <= 0 || e.lane == null || e.wv == null || e._eng) continue;
+      const k = `${e.side}|${e.lane}|${e.wv}`;
+      const p = e.prog ?? 0;
+      if (!(m.get(k) <= p)) m.set(k, p);
+    }
+    return m;
+  }
+
   _advance(e, u, dt) {
     const pts = this.lanes[e.lane];
     const cum = this._laneCum(e.lane);
     const total = cum[cum.length - 1];
-    e.prog = (e.prog ?? 0) + u.speed * dt;
+    // 隊形凝聚:領先最慢僚兵超過 WAVE_COHESION_M 就原地待命(仍會靠攏兵線/繞障礙)
+    const anchor = e.wv != null ? this._anchors?.get(`${e.side}|${e.lane}|${e.wv}`) : null;
+    const hold = anchor != null && (e.prog ?? 0) > anchor + GAME.WAVE_COHESION_M;
+    if (!hold) e.prog = (e.prog ?? 0) + u.speed * dt;
     const d = e.side === 'SWARM' ? e.prog : total - e.prog;
     const [x, z] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)
@@ -1561,6 +1579,13 @@ export function cumLen(pts) {
   }
   return cum;
 }
+/** 第 n 波的出兵間隔:前期慢,RAMP_FROM→RAMP_TO 之間線性加速到 MIN_S */
+export function waveInterval(n) {
+  const P = GAME.WAVE_PACE;
+  const t = Math.max(0, Math.min(1, (n - P.RAMP_FROM) / (P.RAMP_TO - P.RAMP_FROM)));
+  return P.START_S + (P.MIN_S - P.START_S) * t;
+}
+
 export function pointAt(pts, cum, d) {
   if (d <= 0) return [...pts[0]];
   const total = cum[cum.length - 1];

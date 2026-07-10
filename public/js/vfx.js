@@ -296,11 +296,15 @@ export function makeShield(radius, color, yScale = 1) {
   mesh.scale.y = yScale;
   mesh.renderOrder = 10;
   mesh.userData.noOutline = true;
+  mesh.visible = false;   // 平時不存在;受擊才浮現(閃亮 → 淡出 → 收起)
   mesh.userData.update = (dt) => {
+    if (!mesh.visible) return;
     mat.uniforms.uTime.value += dt;
-    mat.uniforms.uFlash.value = Math.max(0, mat.uniforms.uFlash.value - dt * 2.2);
+    const f = mat.uniforms.uFlash.value - dt * 0.9;
+    mat.uniforms.uFlash.value = Math.max(0, f);
+    if (f <= 0) mesh.visible = false;
   };
-  mesh.userData.hit = () => { mat.uniforms.uFlash.value = 1; };
+  mesh.userData.hit = () => { mesh.visible = true; mat.uniforms.uFlash.value = 1; };
   return mesh;
 }
 

@@ -1638,7 +1638,9 @@ export class BattleClient {
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
       if (ent.hero) {
-        wantYaw = ent.ry;
+        // ry 是「相機朝向」慣例(前方 = -z),機體模型一律朝 +z(見 buildRobotMech 腳尖/駕駛艙)
+        // → 直接套用會讓所有英雄(含 bot)倒著走。差 π。
+        wantYaw = ent.ry + Math.PI;
       } else {
         // NPC 沒有伺服器方位,靠插值殘差推朝向。殘差 ≈ 速度/插值增益(小兵 6 m/s → 僅 0.7m),
         // 門檻設 0.5(距離平方)等於永遠不轉向 — 全場小兵一律朝 +z。改用 0.2m 門檻。
