@@ -1,9 +1,11 @@
 // ============ 地貌系統:五類地被 + 圖資建物 + 兵線淨空 ============
 // 依衛星影像逐點分類五種地貌,鋪設對應的 3D 地物:
 //   綠地   — 竹林(大小不一的群落)/ 闊葉林 / 針葉林(高海拔)
-//            + 神木群落:全球實存 >65m 巨樹樹種,同種群聚、株高各異(GIANT_DEFS)
+//            + 神木群落:全球實存 >65m 巨樹樹種,同種群聚、株高各異(GIANT_DEFS),
+//              樹身掛鳥巢/樹屋/附生植物/垂藤(GIANT_DECO)
 //   裸露地 — 芒草 / 箭竹 / 灌木 / 多肉植物
 //            + 巨岩地標:世界名岩取材(酋長岩/烏魯魯/大霸尖山…,MEGALITHS)
+//              與特徵基因合成岩(synthMegalith);岩上有電塔/石屋/疊石/鳥巢/斷崖樹
 //   市區   — 依 OSM 圖資設置建物(住宅/商辦/醫院/學校/車站/寺廟/教堂/
 //            清真寺/博物館/電塔/工廠),離線時退回程序生成街區;
 //            一般建物分三款立面樣式(店面/陽台/玻璃帷幕)× 擴充色盤
@@ -278,6 +280,29 @@ const GIANT_DEFS = {
   ] },
 };
 
+// ---- 巨木表面特徵(鳥巢/樹屋/附生植物/垂藤):與植被同管線 InstancedMesh ----
+// 放置時把「樹幹半徑 + 掛載高度」烤進實例座標(item.x/y/z),零件只做小幅局部偏移;
+// item.s ≈ 1 與樹齡脫鉤 → 特徵在任何體格的巨木上世界尺寸恆定。
+const GIANT_DECO = {
+  gnest:     { parts: [{ g: new THREE.TorusGeometry(0.85, 0.3, 5, 8), y: 0.15, rx: Math.PI / 2, c: 0x6a5138 },
+                       { g: ico(0.2), y: 0.26, px: 0.25, c: 0xf2ead6 },
+                       { g: ico(0.2), y: 0.26, px: -0.2, pz: 0.2, c: 0xf6efdc },
+                       { g: cone(0.28, 0.75, 4), y: 0.62, pz: -0.35, c: 0x4a586a }] },       // 停棲的鳥
+  treehouse: { parts: [{ g: new THREE.BoxGeometry(3.6, 0.4, 3.6), y: 0, c: 0x7a5a3c },       // 平台
+                       { g: new THREE.BoxGeometry(2.2, 1.9, 2.0), y: 1.15, c: 0x8a6a48 },    // 小屋
+                       { g: cone(2.0, 1.4, 4), y: 2.8, c: 0x6e4a38 },                        // 屋頂
+                       { g: new THREE.BoxGeometry(0.9, 1.2, 0.12), y: 1.0, pz: 1.05, c: 0x3e3226 },   // 門
+                       { g: new THREE.BoxGeometry(0.5, 4.5, 0.14), y: -2.4, pz: 1.5, c: 0x6a4e34 },   // 垂降木梯
+                       { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: 1.2, c: 0x6a4e34 },         // 斜撐
+                       { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: -1.2, c: 0x6a4e34 }] },
+  epiphyte:  { parts: [{ g: ico(0.95), y: 0, sy: 0.5, c: 0x4f7a3c },                         // 鳥巢蕨簇
+                       { g: ico(0.55), y: 0.1, px: 0.6, sy: 0.55, c: 0x5c8a46 },
+                       { g: cone(0.5, 1.6, 5), y: -0.9, rx: Math.PI, c: 0x567a40 }] },       // 垂根
+  vine:      { parts: [{ g: cyl(0.07, 0.14, 7, 4), y: -3.5, c: 0x567a40 },                   // 垂掛藤蔓
+                       { g: ico(0.4), y: -7, sy: 0.6, c: 0x4f7a3c },
+                       { g: ico(0.3), y: -4.6, px: 0.3, sy: 0.6, c: 0x5c8a46 }] },
+};
+
 /** 綠地神木群落:同一樹種成群、株高各異;樹幹登記碰撞柱(障礙 + 隱蔽) */
 function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
   const species = Object.keys(GIANT_DEFS);
@@ -306,6 +331,23 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       });
       blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1 });
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
+      // 巨木表面特徵:掛在樹幹側面(幹半徑隨高度收窄),世界尺寸與樹齡脫鉤
+      const trunkR = (yy) => def.r * s * (1 - 0.72 * yy / (def.h * s));
+      const hang = (dtype, frac, ds) => {
+        const ha = rnd() * Math.PI * 2;
+        const hy = def.h * s * frac;
+        const rr = trunkR(hy) + 0.3;
+        (items[dtype] ??= []).push({
+          x: gx + Math.cos(ha) * rr, y: gy + hy, z: gz + Math.sin(ha) * rr,
+          s: ds, ry: rnd() * Math.PI * 2,
+        });
+      };
+      // 掛載高度停在樹冠底緣以下(各樹種冠層約自 40% 樹高起),特徵才不被樹冠吞掉
+      if (rnd() < 0.4) hang('gnest', 0.28 + rnd() * 0.14, 0.9 + rnd() * 0.7);
+      if (rnd() < 0.2) hang('treehouse', 0.16 + rnd() * 0.14, 0.9 + rnd() * 0.4);
+      const nEp = Math.floor(rnd() * 3);
+      for (let e = 0; e < nEp; e++) hang('epiphyte', 0.12 + rnd() * 0.28, 0.8 + rnd() * 0.8);
+      if (rnd() < 0.5) hang('vine', 0.38 + rnd() * 0.12, 0.8 + rnd() * 0.6);
       added++; trees++;
     }
     if (added) centers.push([x, z]);
@@ -423,7 +465,7 @@ function seasonColor(key, fixed, season) {
 
 /** 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call) */
 function buildVegMeshes(type, items, season) {
-  const def = VEG_DEFS[type] || GIANT_DEFS[type];
+  const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const meshes = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
@@ -695,7 +737,9 @@ function rockMat(color, moss = 0) {
   return envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
 }
 const MEGALITHS = {
-  elcap: { col: { r: 34, h: 112 }, s: [0.8, 1.4], build: (g, rnd) => {
+  elcap: { col: { r: 34, h: 112 }, s: [0.8, 1.4],
+    anchor: { topY: 112, topR: 15, side: { y: [30, 95], rx: 28, rz: 17, dome: false } },
+    build: (g, rnd) => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(52, 112, 30), rockMat(0xc9c4b8, 0.3));
     wall.position.y = 56; wall.rotation.y = 0.06; g.add(wall);            // 主岩壁
     const nose = new THREE.Mesh(new THREE.BoxGeometry(24, 96, 22), rockMat(0xbdb6a8, 0.25));
@@ -709,7 +753,9 @@ const MEGALITHS = {
     const scree = new THREE.Mesh(cone(30, 14, 9), rockMat(0xb5ac9a));
     scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);              // 山腳碎石坡
   } },
-  uluru: { col: { r: 62, h: 62 }, s: [1.0, 1.7], build: (g, rnd) => {
+  uluru: { col: { r: 62, h: 62 }, s: [1.0, 1.7],
+    anchor: { topY: 60, topR: 24, side: { y: [12, 42], rx: 74, rz: 44, dome: true } },
+    build: (g, rnd) => {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(50, 12, 8), rockMat(0xb3502e));
     dome.scale.set(1.5, 1.15, 0.9); dome.position.y = 4; g.add(dome);     // 長條圓頂單體岩
     const hump = new THREE.Mesh(new THREE.SphereGeometry(26, 10, 7), rockMat(0xc25c33));
@@ -719,7 +765,9 @@ const MEGALITHS = {
       rib.position.set(-40 + i * 18, 22, 38 + rnd() * 3); rib.rotation.x = 0.55; g.add(rib);
     }
   } },
-  augustus: { col: { r: 58, h: 50 }, s: [0.9, 1.6], build: (g) => {
+  augustus: { col: { r: 58, h: 50 }, s: [0.9, 1.6],
+    anchor: { topY: 46, topR: 22, side: { y: [8, 34], rx: 76, rz: 47, dome: true } },
+    build: (g) => {
     const ridge = new THREE.Mesh(new THREE.SphereGeometry(46, 11, 8), rockMat(0x9a6248, 0.45));
     ridge.scale.set(1.7, 0.95, 1.05); ridge.position.y = 2; g.add(ridge); // 主山脊(帶植被苔蘚)
     const peak = new THREE.Mesh(new THREE.SphereGeometry(24, 9, 7), rockMat(0xa86e50, 0.4));
@@ -727,7 +775,9 @@ const MEGALITHS = {
     const toe = new THREE.Mesh(new THREE.SphereGeometry(20, 9, 6), rockMat(0x8f5a42, 0.5));
     toe.scale.set(1.3, 0.6, 1.0); toe.position.set(52, 4, 8); g.add(toe);
   } },
-  dabajian: { col: { r: 26, h: 96 }, s: [0.8, 1.5], build: (g) => {
+  dabajian: { col: { r: 26, h: 96 }, s: [0.8, 1.5],
+    anchor: { topY: 97, topR: 12, side: { y: [34, 86], rx: 20, rz: 20, dome: false } },
+    build: (g) => {
     const base = new THREE.Mesh(cone(44, 34, 9), rockMat(0x7d7466, 0.45));
     base.position.y = 17; g.add(base);                                    // 山體基座
     let y = 30;
@@ -740,7 +790,9 @@ const MEGALITHS = {
     const cap = new THREE.Mesh(cyl(13, 15.5, 5, 10), rockMat(0x7d7466, 0.5));
     cap.position.y = y + 2.5; g.add(cap);                                 // 平坦霸頂
   } },
-  moai: { col: { r: 16, h: 34 }, s: [1.0, 1.9], build: (g, rnd) => {
+  moai: { col: { r: 16, h: 34 }, s: [1.0, 1.9],
+    anchor: { topY: 3.4, topR: 13, side: null },
+    build: (g, rnd) => {
     g.add(box(34, 3.4, 10, 0x7f7868));                                    // 阿胡祭壇石台
     for (let i = 0; i < 4; i++) {
       const s = 0.85 + rnd() * 0.3;
@@ -763,7 +815,9 @@ const MEGALITHS = {
       g.add(m);
     }
   } },
-  machupicchu: { col: { r: 34, h: 44 }, s: [1.0, 1.7], build: (g) => {
+  machupicchu: { col: { r: 34, h: 44 }, s: [1.0, 1.7],
+    anchor: { topY: 35, topR: 11, side: { y: [5, 30], rx: 33, rz: 27, dome: true } },
+    build: (g) => {
     let y = 0;
     for (const [w, d] of [[64, 52], [54, 44], [44, 36], [34, 28], [25, 20]]) {
       const tier = new THREE.Mesh(new THREE.BoxGeometry(w, 7, d), rockMat(0x8d8672, 0.55));
@@ -781,7 +835,9 @@ const MEGALITHS = {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 18), rockMat(0x968e7a));
     wall.position.set(11, y + 2.5, 0); g.add(wall);                       // 太陽神殿弧牆(直牆近似)
   } },
-  stonehenge: { col: { r: 24, h: 27 }, s: [1.1, 2.0], build: (g) => {
+  stonehenge: { col: { r: 24, h: 27 }, s: [1.1, 2.0],
+    anchor: { topY: 0.2, topR: 12, side: null },   // 特徵落在石圈內地面
+    build: (g) => {
     for (let i = 0; i < 10; i++) {                                        // 外環立石 + 楣石
       const a = i / 10 * Math.PI * 2, r0 = 19;
       const post = new THREE.Mesh(new THREE.BoxGeometry(4.6, 17, 3), rockMat(0x9b968a, 0.3));
@@ -807,32 +863,223 @@ const MEGALITHS = {
   } },
 };
 
-/** 裸露地巨岩地標:footprint 整圓淨空檢查後放置,登記碰撞柱(障礙 + 隱蔽) */
+// ---- 巨岩表面特徵:高壓電塔 / 石砌屋 / 疊石堆 / 鳥巢 / 斷崖側樹 ----
+// 在岩體 local 座標放置(隨岩體旋轉縮放),特徵自身尺寸 ÷ s 抵銷縮放 →
+// 世界尺寸恆定;anchor 描述可放置面(topY/topR 平頂、side 側壁橢圓,
+// dome 型側壁半徑隨高度以 √(1-u²) 收縮,樹才貼壁不懸空)。
+function decorateMegalith(g, anchor, rnd, s) {
+  if (!anchor) return;
+  const k = 1 / s;
+  const put = (obj, x, y, z, sc = 1) => {
+    obj.scale.multiplyScalar(sc * k);
+    obj.position.set(x, y, z);
+    g.add(obj);
+  };
+  // 小型特徵不描邊:一顆岩體可掛十餘件,省下反轉殼 draw call
+  const noOut = (grp) => { grp.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; }); return grp; };
+  const nest = () => {   // 鳥巢:枝條環 + 蛋 + 停棲的鳥
+    const n = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.3, 5, 8), toonMat(0x6a5138));
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.15; n.add(ring);
+    for (let e = 0; e < 3; e++) {
+      const egg = new THREE.Mesh(ico(0.2), toonMat(0xf2ead6));
+      egg.position.set((rnd() - 0.5) * 0.6, 0.22, (rnd() - 0.5) * 0.6);
+      n.add(egg);
+    }
+    if (rnd() < 0.5) {
+      const bird = new THREE.Mesh(cone(0.3, 0.8, 4), toonMat(0x4a586a));
+      bird.position.set(0.7, 0.5, 0); bird.rotation.z = -0.4; n.add(bird);
+    }
+    return noOut(n);
+  };
+  const stoneHut = () => {   // 石砌屋:石牆 + 石板頂 + 煙囪 + 木門
+    const hg = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3, 3.4), rockMat(0x9c9480));
+    body.position.y = 1.5; hg.add(body);
+    const roof = new THREE.Mesh(cone(3.3, 2.4, 4), rockMat(0x6e5a44));
+    roof.rotation.y = Math.PI / 4; roof.scale.z = 0.8; roof.position.y = 4.2; hg.add(roof);
+    const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.7, 0.7), rockMat(0x8a8274));
+    chimney.position.set(1.2, 4.5, 0.6); hg.add(chimney);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.8, 0.2), toonMat(0x4a3a2a));
+    door.position.set(0, 0.9, 1.75); hg.add(door);
+    return hg;
+  };
+  const cairn = () => {   // 疊石堆(登頂紀念)
+    const cg = new THREE.Group();
+    let y = 0;
+    for (const r of [0.9, 0.68, 0.48, 0.3]) {
+      const st = new THREE.Mesh(ico(r), rockMat(0x8f8a80));
+      st.scale.y = 0.7; y += r * 0.72; st.position.y = y; y += r * 0.42;
+      cg.add(st);
+    }
+    return noOut(cg);
+  };
+  const cliffTree = () => {   // 斷崖側樹:自岩縫斜出的針葉小樹
+    const t = new THREE.Group();
+    const trunk = new THREE.Mesh(cyl(0.28, 0.5, 5, 5), toonMat(0x6b4a30));
+    trunk.position.y = 2.5; t.add(trunk);
+    const c1 = new THREE.Mesh(cone(1.9, 3.4, 6), toonMat(0x2f5e40));
+    c1.position.y = 5.6; t.add(c1);
+    const c2 = new THREE.Mesh(cone(1.3, 2.6, 6), toonMat(0x35684a));
+    c2.position.y = 7.6; t.add(c2);
+    return t;
+  };
+
+  const topWorldY = anchor.topY * s;
+  if (anchor.topR >= 8 && topWorldY > 45 && rnd() < 0.5) {   // 高壓電塔:夠高的平頂才架線
+    const pylon = new THREE.Group();
+    LANDMARKS.power(pylon);
+    put(pylon, (rnd() - 0.5) * anchor.topR * 0.4, anchor.topY - 1, (rnd() - 0.5) * anchor.topR * 0.4, 0.55 + rnd() * 0.25);
+  }
+  if (anchor.topR >= 5 && rnd() < 0.7) {                     // 石砌屋 1~2 間
+    const n = 1 + Math.floor(rnd() * 2);
+    for (let i = 0; i < n; i++) {
+      const h = stoneHut();
+      h.rotation.y = rnd() * Math.PI * 2;
+      put(h, (rnd() - 0.5) * anchor.topR, anchor.topY - 0.3, (rnd() - 0.5) * anchor.topR, 0.9 + rnd() * 0.5);
+    }
+  }
+  if (rnd() < 0.7) {                                         // 疊石堆
+    const n = 1 + Math.floor(rnd() * 3);
+    for (let i = 0; i < n; i++) {
+      put(cairn(), (rnd() - 0.5) * anchor.topR * 1.2, anchor.topY - 0.2, (rnd() - 0.5) * anchor.topR * 1.2, 1 + rnd() * 0.8);
+    }
+  }
+  {                                                          // 鳥巢(頂緣)
+    const n = 1 + Math.floor(rnd() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2;
+      put(nest(), Math.cos(a) * anchor.topR * 0.8, anchor.topY - 0.1, Math.sin(a) * anchor.topR * 0.8, 1 + rnd() * 0.8);
+    }
+  }
+  if (anchor.side) {                                         // 斷崖側邊長樹
+    const sd = anchor.side;
+    const n = 2 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2;
+      const y = sd.y[0] + rnd() * (sd.y[1] - sd.y[0]);
+      const f = sd.dome ? Math.sqrt(Math.max(0.08, 1 - (y / Math.max(1, anchor.topY)) ** 2)) : 1;
+      const er = (sd.rx * sd.rz) / Math.hypot(sd.rz * Math.cos(a), sd.rx * Math.sin(a));   // 橢圓邊界半徑
+      const t = cliffTree();
+      t.rotation.set(0, -a, -(0.9 + rnd() * 0.5));   // XYZ 序:先 Z 傾斜再 Y 轉向方位 → 朝壁外斜出
+      put(t, Math.cos(a) * er * f * 0.99, y, Math.sin(a) * er * f * 0.99, 0.8 + rnd() * 0.8);
+    }
+  }
+}
+
+// ---- 合成巨岩:抽組名岩「特徵基因」隨機重組,每顆獨一無二 ----
+// 主體(圓頂=烏魯魯系/岩壁=酋長岩系/岩層塔=大霸系/尖峰)× 伴生小圓丘 ×
+// 侵蝕溝 × 碎石坡 × 岩色系;回傳 col/anchor 供放置檢查與表面特徵。
+const ROCK_TONES = [0xb3502e, 0xc9c4b8, 0x9a6248, 0x6f6a62, 0xa8875c, 0x8f8878];
+function synthMegalith(g, rnd) {
+  const base = new THREE.Color(ROCK_TONES[Math.floor(rnd() * ROCK_TONES.length)]);
+  const shade = (dl) => base.clone().offsetHSL(0, 0, dl).getHex();
+  const moss = rnd() < 0.55 ? 0.2 + rnd() * 0.35 : 0;
+  const kinds = ['dome', 'slab', 'tower', 'spire'];
+  const main = kinds[Math.floor(rnd() * kinds.length)];
+  let H = 0, RX = 0, RZ = 0, topR = 6, dome = false;
+  if (main === 'dome') {
+    const r = 28 + rnd() * 26, sx = 1.1 + rnd() * 0.7, sy = 0.7 + rnd() * 0.55, sz = 0.8 + rnd() * 0.3;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 11, 8), rockMat(shade(0), moss));
+    m.scale.set(sx, sy, sz); m.position.y = 3; g.add(m);
+    H = 3 + r * sy; RX = r * sx; RZ = r * sz; topR = Math.min(RX, RZ) * 0.35; dome = true;
+  } else if (main === 'slab') {
+    const w = 30 + rnd() * 26, h = 70 + rnd() * 50, d = 16 + rnd() * 12;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), rockMat(shade(0), moss));
+    m.position.y = h / 2; m.rotation.y = (rnd() - 0.5) * 0.2; g.add(m);
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(w * 0.45, h * 0.8, d * 0.8), rockMat(shade(0.04), moss));
+    nose.position.set(w * 0.36, h * 0.4, d * 0.2); nose.rotation.y = 0.45; g.add(nose);
+    H = h; RX = w * 0.62; RZ = d * 0.8; topR = Math.min(w, d) * 0.32;
+  } else if (main === 'tower') {
+    const r0 = 17 + rnd() * 8, bh = 24 + rnd() * 14;
+    const baseC = new THREE.Mesh(cone(r0 * 2.2, bh, 9), rockMat(shade(0.03), 0.35));
+    baseC.position.y = bh / 2; g.add(baseC);
+    let y = bh * 0.85, r = r0;
+    const nL = 5 + Math.floor(rnd() * 3);
+    for (let i = 0; i < nL; i++) {
+      const band = i % 2 === 1, hh = band ? 3.5 : 9 + rnd() * 5;
+      const st = new THREE.Mesh(cyl(r * (band ? 1.06 : 1), r * (band ? 1.06 : 1) + 1, hh, 10),
+        rockMat(shade(band ? 0.06 : -0.03), band ? 0.12 : 0));
+      st.position.y = y + hh / 2; y += hh; g.add(st);
+      if (!band) r *= 0.92;
+    }
+    H = y; RX = RZ = r0 * 1.1; topR = r * 0.85;
+  } else {   // spire 尖峰
+    const r0 = 20 + rnd() * 10, h = 80 + rnd() * 45;
+    const m = new THREE.Mesh(cone(r0, h, 8), rockMat(shade(0), moss));
+    m.position.y = h / 2; g.add(m);
+    const m2 = new THREE.Mesh(cone(r0 * 0.6, h * 0.6, 7), rockMat(shade(0.05), moss));
+    m2.position.set(r0 * 0.8, h * 0.3, 0); g.add(m2);
+    H = h; RX = r0 * 1.5; RZ = r0 * 1.1; topR = 3;
+  }
+  const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
+  for (let i = 0; i < nSub; i++) {
+    const r = 10 + rnd() * 14, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.9 + rnd() * 0.3);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
+    m.scale.set(1.2, 0.6 + rnd() * 0.3, 1);
+    m.position.set(Math.cos(a) * d, 4, Math.sin(a) * d);
+    g.add(m);
+    RX = Math.max(RX, Math.abs(Math.cos(a) * d) + r * 1.2);
+    RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + r);
+  }
+  if (rnd() < 0.6) {   // 侵蝕溝墨線
+    const n = 3 + Math.floor(rnd() * 4);
+    for (let i = 0; i < n; i++) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.6, H * (0.3 + rnd() * 0.4), 1.3), rockMat(shade(-0.1)));
+      const a = rnd() * Math.PI * 2, f = dome ? 0.8 : 0.96;
+      rib.position.set(Math.cos(a) * RX * f, H * (0.25 + rnd() * 0.3), Math.sin(a) * RZ * f);
+      rib.rotation.y = -a;
+      rib.rotation.x = dome ? 0.4 : 0;
+      g.add(rib);
+    }
+  }
+  if (rnd() < 0.5) {   // 碎石坡
+    const scree = new THREE.Mesh(cone(Math.max(RX, RZ) * 0.8, 10 + rnd() * 8, 9), rockMat(shade(0.06)));
+    scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);
+  }
+  return {
+    col: { r: Math.max(RX, RZ) + 4, h: H },
+    anchor: { topY: H, topR, side: { y: [H * 0.22, H * 0.8], rx: RX, rz: RZ, dome } },
+  };
+}
+
+/** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
 function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
+  let named = 0;
   for (const [x, z] of sites) {
-    if (placedM.length >= 7) break;
-    const type = types[(start + placedM.length) % types.length];
-    const def = MEGALITHS[type];
-    const s = def.s[0] + rnd() * (def.s[1] - def.s[0]);
-    const r = def.col.r * s;
+    if (placedM.length >= 12) break;
+    // 約四成抽合成巨岩(先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致)
+    const synth = rnd() < 0.4;
+    const g = new THREE.Group();
+    let meta, s;
+    if (synth) {
+      meta = synthMegalith(g, rnd);
+      s = 0.9 + rnd() * 0.5;
+    } else {
+      const def = MEGALITHS[types[(start + named) % types.length]];
+      def.build(g, rnd);
+      meta = def;
+      s = def.s[0] + rnd() * (def.s[1] - def.s[0]);
+    }
+    const r = meta.col.r * s;
     if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
       || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) continue;
     const gy = terrain.heightAt(x, z);
     if (gy < 0.4) continue;
     if (!areaFree(blocked, x, z, r + 6)) continue;
     if (placedM.some((p) => Math.hypot(x - p.x, z - p.z) < r + p.r + 70)) continue;
-    const g = new THREE.Group();
-    def.build(g, rnd);
+    if (!synth) named++;
+    decorateMegalith(g, meta.anchor, rnd, s);
     bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
     g.scale.setScalar(s);
     g.position.set(x, gy - 1.5, z);
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
     blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
-    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: def.col.h * s + 2 });
+    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2 });
     placedM.push({ x, z, r });
   }
   return placedM.length;
@@ -1316,13 +1563,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   onProgress?.(0.04, '安置神木群落與巨岩地標…');
   const blockers = [];   // 建物/神木/巨岩碰撞柱(main.js → terrain.blockers → game.js _collide)
   const greenSites = [], bareSites = [];
-  for (let a = 0; a < 1200 && (greenSites.length < 20 || bareSites.length < 20); a++) {
+  for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
     const x = rx(), z = rz();
     const h = terrain.heightAt(x, z);
     if (h < 0.4 || blocked.has(cellKey(x, z))) continue;
     const b = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
-    else if (b === 'bare' && bareSites.length < 20) bareSites.push([x, z]);
+    else if (b === 'bare' && bareSites.length < 28) bareSites.push([x, z]);
   }
   const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites });
   const giantTrees = placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites: greenSites });

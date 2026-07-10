@@ -4,15 +4,14 @@
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
 import { Net } from './net.js';
 import {
-  SIDES, ENV, TEAM, lanesFor, targetDistFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, PROG, SIZE_KEYS,
+  SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, PROG,
   UNITS, SQUAD,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
 
-const SIZE_LABELS = { large: '大', medium: '中', small: '小' };
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
 import { buildBiomes } from './biomes.js';
@@ -31,7 +30,6 @@ const app = {
   mySide: null,
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
-  sizeKey: 'medium',    // 地圖尺寸(大/中/小);中型 = 現況錨點
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
@@ -141,8 +139,6 @@ function enterMapBuilder() {
       },
     });
     renderTeamSize();
-    renderSize('szRow', setSizeKey);
-    app.mapSel.setSizeKey(app.sizeKey);   // 同步還原的尺寸
     renderVenues();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
@@ -176,34 +172,8 @@ function setTeamSize(n) {
 
 function updateTsInfo() {
   const L = lanesFor(app.teamSize);
-  const size = targetDistFor(L, app.sizeKey) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
-  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ ${SIZE_LABELS[app.sizeKey]}型戰場約 ${(size / 1000).toFixed(1)} km 見方`;
-}
-
-// ---- 地圖尺寸(大/中/小)按鈕 ----
-function renderSize(rowId, onPick) {
-  const row = $(rowId);
-  if (!row) return;
-  row.innerHTML = '';
-  for (const k of SIZE_KEYS) {
-    const b = document.createElement('button');
-    b.className = 'btn ts-btn' + (k === app.sizeKey ? ' on' : '');
-    b.textContent = SIZE_LABELS[k];
-    b.title = `邊長 ×${(MAPGEO.SIZE_MULT[k] / MAPGEO.SIZE_MULT.medium).toFixed(2)}`;
-    b.onclick = () => onPick(k);
-    row.appendChild(b);
-  }
-}
-
-function setSizeKey(k) {
-  app.sizeKey = k;
-  savePrefs({ sizeKey: k });
-  app.favCfg = null;
-  app.mapSel?.setSizeKey(k);
-  $('saveFavBtn').disabled = true;
-  for (const b of [...$('szRow').children]) b.classList.toggle('on', b.textContent === SIZE_LABELS[k]);
-  updateTsInfo();
-  if (app.venueSel) selectVenue(app.venueSel);   // 預設場地已選 → 即時重算
+  const size = sideMFor(L);
+  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`;
 }
 
 function renderVenues() {
@@ -221,7 +191,7 @@ function renderVenues() {
 
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
 function selectVenue(v) {
-  const cfg = venueConfig(v, app.teamSize, app.sizeKey);
+  const cfg = venueConfig(v, app.teamSize);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -246,14 +216,12 @@ function renderFavsOpenRoom() {
     b.onclick = () => {
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
-      app.sizeKey = cfg.sizeKey || 'medium';
-      savePrefs({ teamSize: f.teamSize, sizeKey: app.sizeKey });
+      savePrefs({ teamSize: f.teamSize });
       app.favCfg = cfg;
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
       for (const el of $('venueGridOpen').children) el.classList.remove('on');
       for (const [i, tb] of [...$('tsRowOpen').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
-      renderSize('szRowOpen', setSizeKeyOpen);   // 反映最愛烤死的尺寸
       updateTsInfoOpen();
       b.classList.add('on');
       $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize},可以開房了。`;
@@ -282,7 +250,6 @@ function enterOpenRoom() {
   $('createRoomBtn').disabled = true;
   $('openRoomStatus').textContent = '選人數 + 場地,或從下面挑一張已存的地圖。';
   renderTeamSizeOpen();
-  renderSize('szRowOpen', setSizeKeyOpen);
   renderVenuesOpen();
   renderEnvSelects();
   renderFavsOpenRoom();
@@ -324,24 +291,8 @@ function setTeamSizeOpen(n) {
 
 function updateTsInfoOpen() {
   const L = lanesFor(app.teamSize);
-  const size = targetDistFor(L, app.sizeKey) / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
-  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ ${SIZE_LABELS[app.sizeKey]}型戰場約 ${(size / 1000).toFixed(1)} km 見方`;
-}
-
-function setSizeKeyOpen(k) {
-  app.sizeKey = k;
-  savePrefs({ sizeKey: k });
-  for (const b of [...$('szRowOpen').children]) b.classList.toggle('on', b.textContent === SIZE_LABELS[k]);
-  updateTsInfoOpen();
-  if (app.venueSelOpen) {
-    selectVenueOpen(app.venueSelOpen);          // 預設場地已選 → 即時重算
-  } else {
-    // 最愛 cfg 烤死了尺寸,尺寸一變即失效,清掉逼重選(比照 setTeamSizeOpen)
-    app.favCfg = null;
-    for (const el of $('favGrid').children) el.classList.remove('on');
-    $('createRoomBtn').disabled = true;
-    $('openRoomStatus').textContent = '尺寸已變更,請重新選一個預設場地,或挑對應設定的最愛地圖。';
-  }
+  const size = sideMFor(L);
+  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`;
 }
 
 function renderVenuesOpen() {
@@ -359,7 +310,7 @@ function renderVenuesOpen() {
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
-  const cfg = venueConfig(v, app.teamSize, app.sizeKey);
+  const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
   app.favCfg = cfg;
   savePrefs({ lastVenueId: v.id });
@@ -965,10 +916,9 @@ function onSync(m) {
 window.addEventListener('DOMContentLoaded', () => {
   $('myName').value = localStorage.getItem('svs_name') || '';
 
-  // 還原上次的開房設定(人數 / 尺寸 / 房名;場地在 enterOpenRoom 還原)
+  // 還原上次的開房設定(人數 / 房名;場地在 enterOpenRoom 還原)
   const prefs = loadPrefs();
   if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
-  if (prefs.sizeKey) app.sizeKey = prefs.sizeKey;
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 

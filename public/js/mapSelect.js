@@ -6,7 +6,7 @@
 //  1. 房主在真實地圖點一個點 → 作為「蜂群」主堡候選錨點 A。
 //  2. 演算法在 A 周圍(方位角 0~330° 掃描)找出多個推薦點 B:
 //     - |AB| ≥ 地圖對角線 × 80%(地圖 = 以 AB 中點為中心的正方形戰場,
-//       邊長由 |AB| 反推;兩堡距離 = 1600m × 兵線數 L,5v5 = 4800m)
+//       邊長由 |AB| 反推;真實邊長綁定人數 = 0.45 + 0.15×L km)
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
@@ -238,7 +238,6 @@ export class MapSelect {
     this.chosen = null;
     this.venue = null;           // 使用中的預設場地(含 mix),自訂點為 null
     this.teamSize = TEAM.DEFAULT;
-    this.sizeKey = 'medium';     // 地圖尺寸(大/中/小)
     this._layers = [];
     this._searchAbort = null;
 
@@ -276,20 +275,13 @@ export class MapSelect {
 
   /** 兵線數(隨隊伍規模)與兩堡目標距離(遊戲世界公尺) */
   get laneCount() { return lanesFor(this.teamSize); }
-  get targetDist() { return targetDistFor(this.laneCount, this.sizeKey); }
+  get targetDist() { return targetDistFor(this.laneCount); }
 
   /** 改隊伍規模:幾何條件全變,重置目前選點 */
   setTeamSize(n) {
     n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
     if (n === this.teamSize) return;
     this.teamSize = n;
-    if (this.anchor) this.reset();
-  }
-
-  /** 改地圖尺寸:兩堡距離變,重置目前選點 */
-  setSizeKey(k) {
-    if (k === this.sizeKey) return;
-    this.sizeKey = k;
     if (this.anchor) this.reset();
   }
 
@@ -517,7 +509,6 @@ export class MapSelect {
       sizeM: this.chosen.sizeM,
       diagM: this.chosen.diagM,
       distM: this.chosen.distM,
-      sizeKey: this.sizeKey,
       geoScaleVer: MAPGEO.GEO_SCALE_VER,
       maxOverlap: this.chosen.maxOverlap,
       tactics: this.chosen.tactics || null,

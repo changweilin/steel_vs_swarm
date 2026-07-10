@@ -116,11 +116,11 @@ export function synthLane(a, b, side) {
 
 /**
  * 由場地錨點 + 方位角直接產出完整 battleConfig(免掃描、離線可用)。
- * 幾何與 mapSelect 相同:兩堡距離 1600m × L,地圖邊長由距離反推。
+ * 幾何與 mapSelect 相同:真實邊長 0.45+0.15L km,兩堡距離 = 邊長 × 0.85 × √2。
  */
-export function venueConfig(venue, teamSize, sizeKey = 'medium') {
+export function venueConfig(venue, teamSize) {
   const L = lanesFor(teamSize);
-  const D = targetDistFor(L, sizeKey);          // 遊戲世界距離
+  const D = targetDistFor(L);                   // 遊戲世界距離
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const A = [...venue.ll];
   const B = destPoint(A, venue.bearing ?? 0, realD);
@@ -133,7 +133,7 @@ export function venueConfig(venue, teamSize, sizeKey = 'medium') {
     lanes,
     laneCount: L,
     sizeM, diagM: sizeM * Math.SQRT2, distM: D,   // 全為遊戲世界公尺
-    sizeKey, geoScaleVer: MAPGEO.GEO_SCALE_VER,
+    geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap: 0.06,            // 三線同相位側擺、主脊間距 0.3×D,僅端點交會,遠低於 20% 門檻
     synthetic: true, precomputed: true,
     venue: { id: venue.id, name: venue.name, mix: venue.mix },
@@ -153,15 +153,15 @@ export function migrateFavCfg(fav) {
   if (cfg.geoScaleVer === MAPGEO.GEO_SCALE_VER) return cfg;
   if (cfg.venue?.id) {
     const v = VENUES.find((x) => x.id === cfg.venue.id);
-    if (v) return venueConfig(v, fav.teamSize, cfg.sizeKey || 'medium');
+    if (v) return venueConfig(v, fav.teamSize);
   }
-  const c = cfg.center, s = MAPGEO.REAL_SCALE;
+  // ver3(REAL_SCALE 0.25)→ ver4(0.125):真實座標朝中心收縮一半,遊戲世界幾何不變
+  const c = cfg.center, s = 0.5;
   const sc = ([lat, lng]) => [c.lat + (lat - c.lat) * s, c.lng + (lng - c.lng) * s];
   return {
     ...cfg,
     bases: { SWARM: sc(cfg.bases.SWARM), STEEL: sc(cfg.bases.STEEL) },
     lanes: cfg.lanes.map((lane) => lane.map(sc)),
-    sizeKey: cfg.sizeKey || 'medium',
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
   };
 }

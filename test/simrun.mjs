@@ -38,7 +38,7 @@ function buildConfig(L) {
   return {
     center: { lat: mid[0], lng: mid[1] }, bases: { SWARM: A, STEEL: B },
     lanes: offs.map(mkLane), sizeM, diagM: sizeM * Math.SQRT2, distM: D,
-    sizeKey: 'medium', geoScaleVer: MAPGEO.GEO_SCALE_VER,
+    geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap: 0.05, synthetic: true, placeName: '模擬戰區',
     env: { season: 'summer', time: 'day', weather: 'clear' },
   };

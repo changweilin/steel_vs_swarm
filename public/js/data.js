@@ -29,35 +29,34 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
 // ---- 隊伍規模 ----
 // 每陣營 N 人(1~5),總人數 2N;兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
-// 地圖邊長正比 L(兩堡 1000m × L),1/2/3 線目標場均 5/8/10 分鐘。
+// 地圖大小「綁定人數」:真實世界邊長 = 0.45 + 0.15×L km(L1/L2/L3 = 0.6/0.75/0.9 km),
+// 不再有大/中/小尺寸選項。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
-// 兩堡「遊戲世界」距離 = 1500m × L × 尺寸倍率(以 medium 正規化;medium@L1 邊長 = 1.25km)
-export const targetDistFor = (L, sizeKey = 'medium') =>
-  MAPGEO.DIST_M_PER_LANE * L * ((MAPGEO.SIZE_MULT[sizeKey] ?? MAPGEO.SIZE_MULT.medium) / MAPGEO.SIZE_MULT.medium);
-export const SIZE_KEYS = ['large', 'medium', 'small'];
+// 地圖「真實世界」邊長 (m)
+export const realSideMFor = (L) => (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000;
+// 地圖「遊戲世界」邊長 (m) = 真實 ÷ REAL_SCALE;兩堡目標距離 = 邊長 × 0.85 × √2
+export const sideMFor = (L) => realSideMFor(L) / MAPGEO.REAL_SCALE;
+export const targetDistFor = (L) => sideMFor(L) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
 
 // ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 節奏簡化:兩堡距離 1500m × L(1 線 medium 遊戲邊長錨定 = 1.25km,見 SIZE_MULT)
-  DIST_M_PER_LANE: 1500,
-  TARGET_DIST_M: 3000,
-  // 地圖尺寸(大/中/小):遊戲世界邊長倍率 = 邊長 km(1 線錨點:large 1.5 / medium 1.25 / small 1.0 km)。
-  // sizeM = D/(BASE_DIST_FRAC×√2);medium@L1 = 1500/1.202 ≈ 1250m ⇒ 1.25km,大小依比例。
-  SIZE_MULT: { large: 1.5, medium: 1.25, small: 1.0 },
+  // 地圖真實世界邊長 = BASE + PER_LANE × L (km):大小只綁人數,L3 ≈ 沿用改制前的真實範圍,
+  // L1/L2 加大真實範圍讓小場也有足夠的真實道路可選(兵線仍必須與現實路線相符)。
+  REAL_SIDE_BASE_KM: 0.45,
+  REAL_SIDE_PER_LANE_KM: 0.15,
   // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
-  // 改制:現實範圍再縮小 2 倍(0.5→0.25)→ 同一塊遊戲空間僅對應更小的真實範圍,地形/道路更密;
-  // 因 llToWorld/llToMeters 同步 ×(1/REAL_SCALE),遊戲世界公尺與武器射程「完全不變」。
-  REAL_SCALE: 0.25,
+  // 改制 2026-07-10:比例尺再縮小 50%(0.25→0.125)→ 同樣的現實長度對應 2 倍遊戲空間,
+  // 地形/道路更密。llToWorld/llToMeters 同步 ×(1/REAL_SCALE),武器射程等遊戲公尺數值不受影響。
+  REAL_SCALE: 0.125,
   // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
-  GEO_SCALE_VER: 3,
+  GEO_SCALE_VER: 4,
   // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
-  // 註:30° ≈ 58% grade,真實道路幾乎不會達標 → 此濾網現實中極少觸發;
-  //     若要濾「陡但仍常見」的路,改成 ~17(≈30% grade)。
-  MAX_ROAD_GRADE_DEG: 30,
+  // 16° ≈ 29% grade,會濾掉「陡但仍存在」的山路。
+  MAX_ROAD_GRADE_DEG: 16,
   // 三條兵線側向偏移(佔兩堡距離比例)
   LANE_OFFSET_FRAC: 0.30,
   // 路徑重合判定格 (m) 與允許重合率(1 - 80% 不重合)
