@@ -8,42 +8,54 @@
 // 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
 import { MAPGEO, lanesFor, targetDistFor } from './data.js';
+import { VENUE_LANES } from './venueLanes.js';
 
+// ll = 兵線起點(SWARM 主堡)。**必須是有導航路網的道路節點**:兵線一律取自現實道路
+// (見 venueLanes.js),路網不足的自然景點一律把錨點移到鄰近的聚落/園區道路,
+// 地貌 mix 不變(視覺仍是森林/沙漠/濕地)。改 ll MUST 重跑 scratchpad/bake3.mjs。
+// bearing 只在該場地某個 L 沒有預算資料、退回 synthLane 時才用得到。
 export const VENUES = [
   // ---- 市區單一(≥80%)----
-  { id: 'taipei101',  name: '台北・101 信義計畫區',   country: '🇹🇼', type: '市區', ll: [25.0339, 121.5645], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 } },
-  { id: 'shibuya',    name: '東京・澀谷十字路口',     country: '🇯🇵', type: '市區', ll: [35.6595, 139.7005], bearing: 280, mix: { urban: 0.9, green: 0.1 } },
-  { id: 'manhattan',  name: '紐約・曼哈頓中城',       country: '🇺🇸', type: '市區', ll: [40.7549, -73.9840], bearing: 30,  mix: { urban: 0.85, green: 0.15 } },
-  { id: 'paris',      name: '巴黎・艾菲爾鐵塔',       country: '🇫🇷', type: '市區', ll: [48.8584, 2.2945],   bearing: 95,  mix: { urban: 0.8, green: 0.15, water: 0.05 } },
-  { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.4979, 127.0276], bearing: 150, mix: { urban: 0.9, green: 0.1 } },
+  { id: 'taipei101',  name: '台北・101 信義計畫區',   country: '🇹🇼', type: '市區', ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 } },
+  { id: 'shibuya',    name: '東京・澀谷十字路口',     country: '🇯🇵', type: '市區', ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 } },
+  { id: 'manhattan',  name: '紐約・曼哈頓中城',       country: '🇺🇸', type: '市區', ll: [40.754938, -73.984047], bearing: 30,  mix: { urban: 0.85, green: 0.15 } },
+  { id: 'paris',      name: '巴黎・艾菲爾鐵塔',       country: '🇫🇷', type: '市區', ll: [48.859026, 2.293461],   bearing: 95,  mix: { urban: 0.8, green: 0.15, water: 0.05 } },
+  { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.497891, 127.027621], bearing: 150, mix: { urban: 0.9, green: 0.1 } },
 
   // ---- 綠地單一(≥80%)----
-  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.1550, 121.5600], bearing: 100, mix: { green: 0.85, bare: 0.15 } },
-  { id: 'aokigahara',  name: '富士山麓・青木原樹海',  country: '🇯🇵', type: '綠地', ll: [35.4700, 138.6200], bearing: 260, mix: { green: 0.9, bare: 0.1 } },
-  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.2700, 8.1700],   bearing: 10,  mix: { green: 0.9, bare: 0.1 } },
-  { id: 'yosemite',    name: '優勝美地・谷地',        country: '🇺🇸', type: '綠地', ll: [37.7456, -119.5936], bearing: 85, mix: { green: 0.8, bare: 0.15, water: 0.05 } },
+  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 } },   // 天母(南麓路網)
+  { id: 'aokigahara',  name: '富士山麓・青木原樹海',  country: '🇯🇵', type: '綠地', ll: [35.497619, 138.754966], bearing: 260, mix: { green: 0.9, bare: 0.1 } },      // 河口湖町
+  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 } },      // Freudenstadt
+  { id: 'yosemite',    name: '優勝美地・谷地',        country: '🇺🇸', type: '綠地', ll: [37.748470, -119.588441], bearing: 85, mix: { green: 0.8, bare: 0.15, water: 0.05 } },   // 谷底環道(L3 無解 → synth)
 
   // ---- 裸露地單一(≥80%)----
-  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.9773, 31.1325],  bearing: 210, mix: { bare: 0.85, urban: 0.15 } },
-  { id: 'uluru',      name: '澳洲・烏魯魯巨岩',       country: '🇦🇺', type: '裸露地', ll: [-25.3444, 131.0369], bearing: 80, mix: { bare: 0.95, green: 0.05 } },
-  { id: 'atacama',    name: '智利・阿塔卡馬月亮谷',   country: '🇨🇱', type: '裸露地', ll: [-22.9087, -68.3053], bearing: 350, mix: { bare: 1 } },
-  { id: 'hehuanshan', name: '合歡山・箭竹草原',       country: '🇹🇼', type: '裸露地', ll: [24.1408, 121.2716], bearing: 25, mix: { bare: 0.8, green: 0.2 } },
+  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 } },   // Nazlet El-Semman
+  { id: 'uluru',      name: '澳洲・烏魯魯巨岩',       country: '🇦🇺', type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, mix: { bare: 0.95, green: 0.05 } },   // Yulara(L3 無解 → synth)
+  { id: 'atacama',    name: '智利・阿塔卡馬月亮谷',   country: '🇨🇱', type: '裸露地', ll: [-22.909569, -68.200042], bearing: 350, mix: { bare: 1 } },                   // San Pedro(L3 無解 → synth)
+  { id: 'hehuanshan', name: '合歡山・箭竹草原',       country: '🇹🇼', type: '裸露地', ll: [23.965067, 120.967128], bearing: 25, mix: { bare: 0.8, green: 0.2 } },      // 埔里鎮
 
   // ---- 水體 / 濕地為主 ----
-  { id: 'venice',     name: '威尼斯・潟湖水都',       country: '🇮🇹', type: '水體', ll: [45.4408, 12.3155],  bearing: 300, mix: { water: 0.45, urban: 0.4, wet: 0.15 } },
-  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '水體', ll: [-25.6953, -54.4367], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 } },
-  { id: 'tamsui',     name: '淡水河口・紅樹林濕地',   country: '🇹🇼', type: '濕地', ll: [25.1550, 121.4590], bearing: 140, mix: { wet: 0.5, water: 0.3, green: 0.2 } },
-  { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.2800, 22.9000], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 } },
+  { id: 'venice',     name: '威尼斯・潟湖水都',       country: '🇮🇹', type: '水體', ll: [45.484986, 12.234699],  bearing: 300, mix: { water: 0.45, urban: 0.4, wet: 0.15 } },   // Mestre(本島無車道)
+  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '水體', ll: [-25.598749, -54.573988], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 } },    // Puerto Iguazú
+  { id: 'tamsui',     name: '淡水河口・紅樹林濕地',   country: '🇹🇼', type: '濕地', ll: [25.168155, 121.444729], bearing: 140, mix: { wet: 0.5, water: 0.3, green: 0.2 } },     // 淡水市區(L3 無解 → synth)
+  { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.983022, 23.416720], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 } },   // Maun
 
   // ---- 混合型 ----
-  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.9519, -43.2105], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 } },
-  { id: 'sydney',     name: '雪梨・歌劇院港灣',       country: '🇦🇺', type: '混合', ll: [-33.8568, 151.2153], bearing: 265, mix: { urban: 0.5, water: 0.35, green: 0.15 } },
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.5007, -0.1246],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },
-  { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.0094, 135.6722], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },
+  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 } },
+  { id: 'sydney',     name: '雪梨・歌劇院港灣',       country: '🇦🇺', type: '混合', ll: [-33.870079, 151.207018], bearing: 265, mix: { urban: 0.5, water: 0.35, green: 0.15 } },   // CBD(歌劇院在岬角)
+  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },
+  { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----
 const R_EARTH = 6371000;
+
+/** 兩點真實距離 (m);equirectangular,1km 內誤差可忽略 */
+function distMeters(a, b) {
+  const x = (b[1] - a[1]) * Math.PI / 180 * R_EARTH * Math.cos(a[0] * Math.PI / 180);
+  const z = (b[0] - a[0]) * Math.PI / 180 * R_EARTH;
+  return Math.hypot(x, z);
+}
 
 function destPoint([lat, lng], bearingDeg, d) {
   const br = bearingDeg * Math.PI / 180;
@@ -115,27 +127,47 @@ export function synthLane(a, b, side) {
 }
 
 /**
- * 由場地錨點 + 方位角直接產出完整 battleConfig(免掃描、離線可用)。
- * 幾何與 mapSelect 相同:真實邊長 0.45+0.15L km,兩堡距離 = 邊長 × 0.85 × √2。
+ * 由場地產出完整 battleConfig(免掃描、離線可用)。
+ * 兵線一律取 venueLanes.js 預算好的**真實道路路線**(Overpass 路網 + 邊不相交最短路徑),
+ * 每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線與現實導航路線完全相符;
+ * 主堡座標即該路線兩端的道路節點,兵線端點因此精確落在主堡上。
+ *
+ * 沒有預算資料的場地(路網不足)才退回 synthLane 合成弧 —— 這是離線/無圖資的最後防線,
+ * MUST NOT 移除(見 CLAUDE.md「外部 API 皆會限流或掛掉」)。
+ * 幾何:真實邊長 0.3+0.1L km,兩堡距離 = 邊長 × 0.85 × √2。
  */
 export function venueConfig(venue, teamSize) {
   const L = lanesFor(teamSize);
   const D = targetDistFor(L);                   // 遊戲世界距離
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
-  const A = [...venue.ll];
-  const B = destPoint(A, venue.bearing ?? 0, realD);
-  const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
-  const lanes = sides.map((s) => synthLane(A, B, s));
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
+
+  const baked = VENUE_LANES[venue.id]?.[L];
+  let A, B, lanes, maxOverlap, synthetic;
+  if (baked) {
+    [A, B] = baked.bases.map((p) => [...p]);
+    lanes = baked.lanes.map((l) => l.map((p) => [...p]));
+    maxOverlap = baked.maxOverlap;
+    synthetic = false;
+  } else {
+    A = [...venue.ll];
+    B = destPoint(A, venue.bearing ?? 0, realD);
+    const sides = L === 1 ? [0] : L === 2 ? [1, -1] : [1, 0, -1];
+    lanes = sides.map((s) => synthLane(A, B, s));
+    maxOverlap = 0.06;           // 三線同相位側擺、主脊間距 0.3×D,僅端點交會
+    synthetic = true;
+  }
+  // distM 用實際兩堡距離(預算路線的端點吸附到道路節點,與理想值有數十公尺差)
+  const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
   return {
     center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 },
     bases: { SWARM: A, STEEL: B },
     lanes,
     laneCount: L,
-    sizeM, diagM: sizeM * Math.SQRT2, distM: D,   // 全為遊戲世界公尺
+    sizeM, diagM: sizeM * Math.SQRT2, distM: distGame,   // 全為遊戲世界公尺
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
-    maxOverlap: 0.06,            // 三線同相位側擺、主脊間距 0.3×D,僅端點交會,遠低於 20% 門檻
-    synthetic: true, precomputed: true,
+    maxOverlap,
+    synthetic, precomputed: true,
     venue: { id: venue.id, name: venue.name, mix: venue.mix },
     placeName: venue.name,
   };
@@ -143,9 +175,12 @@ export function venueConfig(venue, teamSize) {
 
 /**
  * 尺度追溯:把舊尺度(geoScaleVer 不符)的最愛 cfg 遷移到目前尺度。
- *  - 已知預設場地 → 直接以新尺度 venueConfig 重算(最精確)。
- *  - 自訂地圖 → 真實座標朝中心收縮 REAL_SCALE:遊戲世界幾何不變(仍是同一張圖),
- *    但與新的 llToWorld/battleBBox 地形取樣一致,不致基座落在地形外。
+ *  - 已知預設場地 → 直接以新尺度 venueConfig 重算(最精確,且拿得到新的真實道路兵線)。
+ *  - 自訂地圖 → 真實座標朝中心等比收縮,使兩堡真實距離對上新尺度的 realDistFor(L);
+ *    遊戲世界幾何(邊長/對角/兩堡距離比例)因此完全符合新公式。
+ *    收縮比由「新舊實際距離」推導,**MUST NOT** 寫死倍率:ver3→ver4 動的是 REAL_SCALE,
+ *    ver4→ver5 動的是邊長公式,寫死 0.5 只對前者成立。
+ *    代價:收縮後的自訂兵線不再精確貼合現實道路(預設場地不受影響,它們是重算的)。
  */
 export function migrateFavCfg(fav) {
   const cfg = fav.cfg;
@@ -155,13 +190,20 @@ export function migrateFavCfg(fav) {
     const v = VENUES.find((x) => x.id === cfg.venue.id);
     if (v) return venueConfig(v, fav.teamSize);
   }
-  // ver3(REAL_SCALE 0.25)→ ver4(0.125):真實座標朝中心收縮一半,遊戲世界幾何不變
-  const c = cfg.center, s = 0.5;
+  const L = lanesFor(fav.teamSize);
+  const D = targetDistFor(L);
+  const realNow = D * MAPGEO.REAL_SCALE;
+  const realOld = distMeters(cfg.bases.SWARM, cfg.bases.STEEL);
+  const s = realOld > 1 ? realNow / realOld : 1;
+  const c = cfg.center;
   const sc = ([lat, lng]) => [c.lat + (lat - c.lat) * s, c.lng + (lng - c.lng) * s];
+  const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);
   return {
     ...cfg,
     bases: { SWARM: sc(cfg.bases.SWARM), STEEL: sc(cfg.bases.STEEL) },
     lanes: cfg.lanes.map((lane) => lane.map(sc)),
+    laneCount: L,
+    sizeM, diagM: sizeM * Math.SQRT2, distM: D,
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
   };
 }

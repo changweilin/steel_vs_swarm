@@ -29,7 +29,7 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 
 // ---- 隊伍規模 ----
 // 每陣營 N 人(1~5),總人數 2N;兵線 L = ⌈N/2⌉(1v1=1 線 … 5v5=3 線);
-// 地圖大小「綁定人數」:真實世界邊長 = 0.45 + 0.15×L km(L1/L2/L3 = 0.6/0.75/0.9 km),
+// 地圖大小「綁定人數」:真實世界邊長 = 0.3 + 0.1×L km(L1/L2/L3 = 0.4/0.5/0.6 km),
 // 不再有大/中/小尺寸選項。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
@@ -38,29 +38,46 @@ export const realSideMFor = (L) => (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_
 // 地圖「遊戲世界」邊長 (m) = 真實 ÷ REAL_SCALE;兩堡目標距離 = 邊長 × 0.85 × √2
 export const sideMFor = (L) => realSideMFor(L) / MAPGEO.REAL_SCALE;
 export const targetDistFor = (L) => sideMFor(L) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
+// 兩堡「真實世界」距離 (m)
+export const realDistFor = (L) => targetDistFor(L) * MAPGEO.REAL_SCALE;
+/** 重合率判定網格邊長 (m,真實世界):與兩堡真實距離等比,見 MAPGEO.OVERLAP_CELL_FRAC */
+export const overlapCellM = (L) =>
+  Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L) * MAPGEO.OVERLAP_CELL_FRAC);
 
 // ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
   // 主堡距離目標 ≈ 0.85 × 地圖對角線(> 題目要求的 80%)
   BASE_DIST_FRAC: 0.85,
   MIN_DIST_FRAC: 0.80,
-  // 地圖真實世界邊長 = BASE + PER_LANE × L (km):大小只綁人數,L3 ≈ 沿用改制前的真實範圍,
-  // L1/L2 加大真實範圍讓小場也有足夠的真實道路可選(兵線仍必須與現實路線相符)。
-  REAL_SIDE_BASE_KM: 0.45,
-  REAL_SIDE_PER_LANE_KM: 0.15,
+  // 地圖真實世界邊長 = BASE + PER_LANE × L (km) = 0.3 + 0.1×L(L1/L2/L3 = 0.4/0.5/0.6 km)。
+  // 大小只綁人數。兩堡真實距離 = 邊長 × 0.85 × √2 = 0.48/0.60/0.72 km,
+  // 全部落在市區導航路網走得出來的尺度內(兵線 MUST 與現實導航路線相符,見 venues.js LANES)。
+  REAL_SIDE_BASE_KM: 0.3,
+  REAL_SIDE_PER_LANE_KM: 0.1,
   // 真實↔遊戲世界比例尺:真實地理距離 = 遊戲距離 × REAL_SCALE。
   // 改制 2026-07-10:比例尺再縮小 50%(0.25→0.125)→ 同樣的現實長度對應 2 倍遊戲空間,
   // 地形/道路更密。llToWorld/llToMeters 同步 ×(1/REAL_SCALE),武器射程等遊戲公尺數值不受影響。
   REAL_SCALE: 0.125,
   // 尺度版本:改動比例尺 / 尺寸模型時 +1,用於偵測過期的「我的最愛」並重算(見 venues.js)
-  GEO_SCALE_VER: 4,
+  // ver5:邊長公式改 0.3 + 0.1×L,且預設場地兵線改用真實 OSRM 導航路線
+  GEO_SCALE_VER: 5,
   // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
   // 16° ≈ 29% grade,會濾掉「陡但仍存在」的山路。
   MAX_ROAD_GRADE_DEG: 16,
   // 三條兵線側向偏移(佔兩堡距離比例)
   LANE_OFFSET_FRAC: 0.30,
-  // 路徑重合判定格 (m) 與允許重合率(1 - 80% 不重合)
-  OVERLAP_CELL_M: 120,
+  // 路徑重合判定格與允許重合率(1 - 80% 不重合)。**規則本身不變**:任兩條兵線重合率 < MAX_OVERLAP。
+  // 判定網格是「量測解析度」,MUST 隨地圖尺度等比縮放(舊制 120m 是照 L3 兩堡真實距離 1082m 校準的)。
+  //
+  // FRAC 的下限公式(2026-07-10 實測導出):三條兵線必然共用「含 A 的格」與「含 B 的格」,
+  // 而每條線約佔 N = 1.2/FRAC 格 ⇒ 重合率下限 = 2/N = 2×FRAC/1.2,**與地圖大小無關**。
+  //   FRAC 0.111(照舊制等比)→ 下限 0.185,離門檻 0.20 僅 0.015 餘裕 → 六大城市只有 3 個
+  //                             能湊出三條真實道路兵線,且兩個正好卡在 0.200。
+  //   FRAC 0.060            → 下限 0.100,六城市 6/6 通過(現值)。
+  // 0.06 另有物理意義:L3 格寬 43m 真實 = 346 遊戲公尺 > 英雄武器射程上限(~300),
+  // 即「不同格 = 互相打不到 = 真的是不同兵線」。調小 MAX_OVERLAP 或調大 FRAC 前 MUST 重跑 bake2/3。
+  OVERLAP_CELL_FRAC: 0.06,         // L1/L2/L3 → 29/36/43m
+  OVERLAP_CELL_MIN_M: 24,
   MAX_OVERLAP: 0.20,
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,

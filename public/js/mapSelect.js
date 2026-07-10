@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, TEAM, laneTacticsXZ, tacticalScore } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -34,9 +34,8 @@ function destPoint(origin, bearingDeg, d) {
 }
 function midPoint(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
 
-/** 折線重合率:120m 網格佔用率(相對較短一條) */
-function overlapRatio(laneA, laneB, origin) {
-  const cell = MAPGEO.OVERLAP_CELL_M;
+/** 折線重合率:網格佔用率(相對較短一條)。cell 由 overlapCellM(L) 依地圖尺度給定 */
+function overlapRatio(laneA, laneB, origin, cell) {
   const gridOf = (lane) => {
     const set = new Set();
     for (let i = 1; i < lane.length; i++) {
@@ -168,6 +167,7 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
  * 直達路線失敗(海面/無路網)回傳 null,由呼叫端淘汰該方位。
  */
 async function buildLanes(A, B, signal, directRoute = null, L = 3) {
+  const cell = overlapCellM(L);
   const d = distM(A, B);
   const [vx, vz] = toMeters(B, A);
   const len = Math.hypot(vx, vz) || 1;
@@ -191,7 +191,7 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3) {
       await sleep(130);
       const r = await osrmRoute([A, viaOf(side, frac), B], signal);
       if (!r) continue;
-      const ov = overlapRatio(r.coords, mid.coords, A);
+      const ov = overlapRatio(r.coords, mid.coords, A, cell);
       const tac = laneTactics(r.coords, A);
       const sep = ov <= MAPGEO.MAX_OVERLAP;
       const score = tacticalScore(tac.sinuosity, tac.turnsPerKm, ov);
@@ -221,7 +221,7 @@ async function buildLanes(A, B, signal, directRoute = null, L = 3) {
   // 任兩條重合率
   const ov = [0];
   for (let i = 0; i < lanes.length; i++) {
-    for (let j = i + 1; j < lanes.length; j++) ov.push(overlapRatio(lanes[i], lanes[j], A));
+    for (let j = i + 1; j < lanes.length; j++) ov.push(overlapRatio(lanes[i], lanes[j], A, cell));
   }
   return { lanes, maxOverlap: Math.max(...ov), overlaps: ov, synthetic, roadDist: mid.dist };
 }
@@ -409,7 +409,7 @@ export class MapSelect {
         const lanes = sides.map((s) => synthLane(A, B, s));
         let maxOverlap = 0;
         for (let i = 0; i < lanes.length; i++) {
-          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A));
+          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A, overlapCellM(L)));
         }
         const cand = { latlng: B, lanes, distM: distM(A, B) / MAPGEO.REAL_SCALE, sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
         cand.tactics = lanesTactics(lanes, A, maxOverlap);
