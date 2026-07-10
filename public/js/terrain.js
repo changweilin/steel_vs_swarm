@@ -57,24 +57,35 @@ function loadImage(url) {
 }
 
 /** 依戰場設定算出涵蓋範圍(正方形戰場 ∪ 三條兵線 ∪ 主堡,外擴 8%) */
+// 兵線/主堡與地圖邊界(空氣牆)之間的保證淨空(遊戲公尺)。真實道路兵線會蜿蜒到
+// 對稱方框之外,若只給百分比 pad,最外側兵線頂點會貼著內縮 40m 的空氣牆(玩家沿線飛就撞牆)。
+// 這裡確保「任何兵線/主堡頂點」離地形邊緣至少這麼遠;空氣牆再內縮 40m 仍有充裕餘裕。
+const ROUTE_EDGE_MARGIN_M = 160;
+
 export function battleBBox(cfg) {
-  const pts = [
-    cfg.bases.SWARM, cfg.bases.STEEL,
-    ...cfg.lanes.flat(),
-  ];
-  const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑(範圍縮小)
-  const dLat = half / R_EARTH * 180 / Math.PI;
-  const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
-  pts.push([cfg.center.lat - dLat, cfg.center.lng - dLng]);
-  pts.push([cfg.center.lat + dLat, cfg.center.lng + dLng]);
+  // 1) 路線包絡(主堡 + 全兵線頂點),外擴 ROUTE_EDGE_MARGIN_M(換算真實公尺 → 度)
+  const mReal = ROUTE_EDGE_MARGIN_M * MAPGEO.REAL_SCALE;
+  const mLat = mReal / R_EARTH * 180 / Math.PI;
+  const mLng = mReal / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
   let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-  for (const [la, ln] of pts) {
+  for (const [la, ln] of [cfg.bases.SWARM, cfg.bases.STEEL, ...cfg.lanes.flat()]) {
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
     if (ln < minLng) minLng = ln;
     if (ln > maxLng) maxLng = ln;
   }
-  const padLat = (maxLat - minLat) * 0.08, padLng = (maxLng - minLng) * 0.08;
+  minLat -= mLat; maxLat += mLat; minLng -= mLng; maxLng += mLng;
+
+  // 2) 與對稱方框(center ± 半邊長)取聯集,保證即使兵線很短也維持基本地圖尺寸
+  const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
+  const dLat = half / R_EARTH * 180 / Math.PI;
+  const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
+  minLat = Math.min(minLat, cfg.center.lat - dLat);
+  maxLat = Math.max(maxLat, cfg.center.lat + dLat);
+  minLng = Math.min(minLng, cfg.center.lng - dLng);
+  maxLng = Math.max(maxLng, cfg.center.lng + dLng);
+
+  const padLat = (maxLat - minLat) * 0.05, padLng = (maxLng - minLng) * 0.05;
   return { minLat: minLat - padLat, maxLat: maxLat + padLat, minLng: minLng - padLng, maxLng: maxLng + padLng };
 }
 

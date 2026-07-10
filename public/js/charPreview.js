@@ -1,0 +1,365 @@
+// ============ 選角畫面:機體展示台(3D 預覽 + 招式演出)============
+// 房間選角時在角色詳情卡裡跑一個獨立的小 Three.js 場景:
+//   - 拖曳旋轉機體(idle 時自動慢轉)、滾輪推拉鏡頭
+//   - 點武器/招式區塊 → 播放對應的施展動畫(後座/蓄力/衝擊環)
+//
+// 純展示層:不連伺服器、不碰 sim 狀態,數值一律經 heroWeapon()/heroAbility() 讀取。
+// 機體與戰場共用 models.js makeUnit(),所以體型/掛件/剪影與實戰完全一致。
+//
+// 生命週期:整個 app 只建一個 renderer(WebGL context 稀缺資源),
+// setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
+
+import * as THREE from 'three';
+import { SIDES, CHARACTERS, charKind, heroWeapon, heroAbility } from './data.js';
+import { makeUnit, heroTargetH } from './models.js';
+import { updateCelLight } from './toon.js';
+import { starburst, shockRing } from './vfx.js';
+
+// 招式特效配色(與 game.js 的 cast 事件同一套口徑)
+const FX_COLOR = {
+  emp: 0xb78aff, heal: 0x8affa0, intercept: 0x9adfff,
+  strike: 0xff8a4a, summon: 0xfff2b8,
+};
+
+const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
+const AUTO_SPIN = 0.35;      // idle 自轉角速度 (rad/s)
+const IDLE_DELAY = 1.6;      // 放開滑鼠後多久恢復自轉 (s)
+
+export class CharPreview {
+  /** @param {HTMLCanvasElement} canvas 展示台畫布(尺寸由 CSS 決定) */
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
+
+    const dir = new THREE.DirectionalLight(0xffffff, 2.1);
+    dir.position.copy(SUN).multiplyScalar(50);
+    this.scene.add(dir, new THREE.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
+
+    this.effects = [];
+    this.holder = new THREE.Group();     // 招式演出的後座/浮沉都作用在這層,不動 makeUnit 內部骨架
+    this.scene.add(this.holder);
+
+    this.unit = null;
+    this.charId = null;
+    this.height = 6;
+    this.fitR = 6;          // 機體包圍球半徑(取景基準)
+    this.viewR = 6;         // 目前取景半徑(緩動;施展招式時暫時放大以框住特效)
+    this.wantR = 6;         // 目標取景半徑
+    this.targetY = 3;
+    this.size = new THREE.Vector3(4, 6, 4);
+
+    // 變形機甲:0=地面型,1=飛行型(直接驅動 rig.pose,略過高度判定)
+    this.morphRig = null;
+    this.morphM = 0;
+    this.morphTarget = 0;
+
+    // 軌道鏡頭
+    this.yaw = Math.PI;      // models.js 機體一律面朝 +z,初始鏡頭擺正面
+    this.pitch = 0.18;
+    this.dist = 1;
+    this.idle = 0;
+    this.drag = null;
+
+    this.anim = null;
+    this._auto = true;       // 自動取景中(施展招式拉遠 / 待命特寫);手動滾輪後關閉
+    this.clock = new THREE.Clock();
+    this.running = false;
+    this._loop = this._loop.bind(this);
+
+    this._bindInput();
+    this._ro = new ResizeObserver(() => this._resize());
+    this._ro.observe(canvas);
+  }
+
+  // ---- 機體 ----
+  /** @param {string} id 角色 id;@param {string} side 檢視陣營(傭兵隨雇主換色) */
+  setChar(id, side) {
+    if (this.charId === id && this.unit?.userData.side === side) return;
+    this._clearUnit();
+    this.charId = id;
+    if (!id || !CHARACTERS[id]) return;
+
+    const kind = charKind(id);
+    const { group, mixer } = makeUnit(`hero:${kind}`, side, { ring: true, ch: id });
+    this.unit = group;
+    this.mixer = mixer;
+    this.height = heroTargetH(kind, id);
+    this.holder.add(group);
+
+    // 變形機甲:抓 rig(kind==='morph' 才有 pose);兩型態剪影差很大,取景要涵蓋較大者
+    const rig = group.userData.rig;
+    this.morphRig = rig?.kind === 'morph' ? rig : null;
+    this.morphM = 0;
+    this.morphTarget = 0;
+
+    // 取景一律用包圍球:無人機「寬 >> 高」,只按身高擺鏡頭會讓旋翼滿出畫面
+    if (this.morphRig) this.morphRig.pose(0);
+    let box = this._measure();
+    if (this.morphRig) {
+      this.morphRig.pose(1);
+      box = box.union(this._measure());
+      this.morphRig.pose(0);   // 回到地面型待命
+    }
+    this.size = box.getSize(new THREE.Vector3());
+    this.targetY = box.getCenter(new THREE.Vector3()).y;
+    this.fitR = Math.max(1, this.size.length() / 2);
+    this.viewR = this.wantR = this.fitR;
+    this.dist = this._fitDist(this.fitR);
+    this.holder.position.set(0, 0, 0);
+    this.holder.rotation.set(0, 0, 0);
+    this._resize();
+  }
+
+  _measure() { this.unit.updateMatrixWorld(true); return new THREE.Box3().setFromObject(this.unit); }
+
+  /** 半徑 r 的包圍球剛好內接於視錐(留邊給浮空/衝擊環) */
+  _fitDist(r) {
+    const half = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+    return r / Math.sin(half) * 1.12;
+  }
+
+  /** 變形機甲:切換地面↔飛行,回傳切換後是否為飛行型(給按鈕更新標籤) */
+  toggleMorph() {
+    if (!this.morphRig) return false;
+    this.morphTarget = this.morphTarget > 0.5 ? 0 : 1;
+    this.idle = 0;
+    return this.morphTarget > 0.5;
+  }
+
+  _clearUnit() {
+    this.anim = null;
+    if (this.unit) {
+      this.holder.remove(this.unit);
+      this.unit.traverse((o) => {
+        if (o.isMesh || o.isSkinnedMesh) {
+          o.geometry?.dispose();
+          const m = o.material;
+          (Array.isArray(m) ? m : [m]).forEach((x) => x?.dispose());
+        }
+      });
+      this.unit = null;
+      this.mixer = null;
+    }
+    for (const e of this.effects) this.scene.remove(e.obj);
+    this.effects.length = 0;
+  }
+
+  // ---- 招式演出 ----
+  /** @param {'light'|'heavy'|'skill'|'ult'} slot */
+  play(slot) {
+    if (!this.charId) return;
+    const id = this.charId;
+    const R = this.fitR;
+    if (slot === 'light' || slot === 'heavy') {
+      const w = heroWeapon(id, slot, 1);
+      // 輕武器連射一個彈匣的頭幾發;重武器單發蓄力
+      const gap = slot === 'light' ? Math.max(0.09, 1 / (w.rate || 4)) : 0;
+      const shots = slot === 'light' ? Math.min(6, w.mag || 6) : 1;
+      this.anim = {
+        slot, t: 0, next: 0, fired: 0, shots, gap, w,
+        dur: slot === 'light' ? shots * gap + 0.5 : 1.5,
+      };
+      // 重武器有爆風環,取景放大到框住它;輕武器維持機體特寫
+      this.wantR = slot === 'heavy' ? Math.max(R, (w.r || 0) * 1.15, R * 1.15) : R;
+    } else {
+      const a = heroAbility(id, slot, 1);
+      this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 2.2 : 1.5 };
+      // 大招衝擊環最大到 ~1.8R + 浮空,取景放大以完整入鏡
+      this.wantR = slot === 'ult' ? R * 2.0 : R * 1.35;
+    }
+    this._auto = true;
+    this.idle = 0;
+  }
+
+  /** 槍口世界座標(概略:機體正前方、腰高;機體一律面朝 +z) */
+  _muzzle() {
+    const v = new THREE.Vector3(0, this.targetY * 1.15, this.size.z * 0.55);
+    return this.holder.localToWorld(v);
+  }
+
+  _stepAnim(dt) {
+    const A = this.anim;
+    if (!A) return;
+    A.t += dt;
+    const R = this.fitR;   // 演出尺度綁包圍球:機甲與無人機體型差 3 倍,同一組常數才讀得出來
+
+    if (A.slot === 'light' || A.slot === 'heavy') {
+      if (A.slot === 'light') {
+        while (A.fired < A.shots && A.t >= A.next) {
+          const m = this._muzzle();
+          starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
+          this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
+          A.fired++; A.next += A.gap;
+        }
+      } else if (A.fired === 0 && A.t >= 0.55) {
+        // 蓄力後單發重擊:大星爆 + 貼地衝擊環(半徑取爆風,直擊武器給個象徵值)
+        const m = this._muzzle();
+        starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
+        shockRing(this.scene, this.effects, 0, 0, 0, Math.max(R * 0.9, A.w.r || 0), 0xffd27a);
+        this.holder.position.z -= R * 0.12;
+        this.holder.rotation.x -= 0.10;
+        A.fired = 1;
+      } else if (A.fired === 0) {
+        // 蓄力:機體微微下蹲蓄勢
+        this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);
+      }
+    } else {
+      const col = FX_COLOR[A.a.fx] ?? SIDES[this.unit.userData.side].color;
+      const isUlt = A.slot === 'ult';
+      if (A.fired === 0 && A.t >= (isUlt ? 0.6 : 0.3)) {
+        shockRing(this.scene, this.effects, 0, 0, 0, isUlt ? R * 1.8 : R * 1.1, col);
+        starburst(this.scene, this.effects, 0, this.targetY, 0, R * (isUlt ? 0.6 : 0.35), col);
+        A.fired = 1;
+      }
+      if (isUlt && A.fired === 1 && A.t >= 1.2) {
+        shockRing(this.scene, this.effects, 0, 0, 0, R * 2.6, col);
+        A.fired = 2;
+      }
+      // 施放姿態:大招浮空 + 慢旋,小招輕彈跳
+      const f = Math.min(1, A.t / A.dur);
+      const rise = Math.sin(f * Math.PI);
+      this.holder.position.y = rise * R * (isUlt ? 0.25 : 0.08);
+      if (isUlt) this.holder.rotation.y += dt * 2.4 * rise;
+    }
+
+    if (A.t >= A.dur) this.anim = null;
+  }
+
+  /** 變形機甲:緩動 morphM → morphTarget,直接驅動 rig.pose;變形進行中排氣口/推進器增亮 */
+  _stepMorph(dt) {
+    const rig = this.morphRig;
+    if (!rig) return;
+    const prev = this.morphM;
+    this.morphM += (this.morphTarget - this.morphM) * Math.min(1, 3 * dt);
+    const m = this.morphM;
+    rig.pose(m);
+    const act = clamp(Math.abs(m - prev) / dt * 4, 0, 1);   // 變形活動度(排氣熱散逸)
+    for (const t of rig.thrusters) t.material.emissiveIntensity = 0.25 + m * 2.2 + act * 1.2;
+    for (const v of rig.vents) v.material.emissiveIntensity = 0.15 + act * 2.6;
+    // 飛行型輕微懸停浮沉(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
+    if (!this.anim) this.holder.position.y = m * Math.sin(performance.now() * 0.0024) * this.fitR * 0.05;
+  }
+
+  _updateEffects(dt) {
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const e = this.effects[i];
+      e.ttl -= dt;
+      e.age = (e.age || 0) + dt;
+      const f = Math.max(0, e.ttl / (e.ttl + e.age));
+      e.fade?.(e.obj, f, dt);
+      if (e.ttl <= 0) {
+        this.scene.remove(e.obj);
+        e.dispose?.();
+        this.effects.splice(i, 1);
+      }
+    }
+  }
+
+  // ---- 輸入 ----
+  _bindInput() {
+    const c = this.canvas;
+    c.addEventListener('pointerdown', (e) => {
+      this.drag = { x: e.clientX, y: e.clientY };
+      c.setPointerCapture(e.pointerId);
+      c.classList.add('grabbing');
+    });
+    c.addEventListener('pointermove', (e) => {
+      if (!this.drag) return;
+      this.yaw -= (e.clientX - this.drag.x) * 0.01;
+      this.pitch = clamp(this.pitch + (e.clientY - this.drag.y) * 0.006, -0.35, 0.95);
+      this.drag = { x: e.clientX, y: e.clientY };
+      this.idle = 0;
+    });
+    const end = (e) => {
+      if (!this.drag) return;
+      this.drag = null;
+      c.releasePointerCapture?.(e.pointerId);
+      c.classList.remove('grabbing');
+    };
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointercancel', end);
+    c.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      this._auto = false;   // 手動縮放後不再自動取景,直到下次施展招式
+      this.dist = clamp(this.dist * (1 + Math.sign(e.deltaY) * 0.12), this.fitR * 0.6, this.fitR * 5);
+      this.idle = 0;
+    }, { passive: false });
+  }
+
+  _resize() {
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    if (!w || !h) return;
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
+
+  // ---- 主迴圈 ----
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.clock.getDelta();   // 丟掉暫停期間累積的時間
+    requestAnimationFrame(this._loop);
+  }
+
+  stop() { this.running = false; }
+
+  _loop() {
+    if (!this.running) return;
+    requestAnimationFrame(this._loop);
+    const dt = Math.min(0.05, this.clock.getDelta());
+
+    if (this.unit) {
+      this.idle += dt;
+      if (!this.drag && !this.anim && this.idle > IDLE_DELAY) this.yaw += AUTO_SPIN * dt;
+
+      const wasAnim = !!this.anim;
+      this._stepAnim(dt);
+      if (wasAnim && !this.anim) this.wantR = this.fitR;   // 招式結束 → 取景回機體特寫
+      // 後座/姿態阻尼回正(招式結束後自然歸位)
+      if (!this.anim) {
+        this.holder.rotation.y = 0;
+        this.holder.rotation.x += (0 - this.holder.rotation.x) * Math.min(1, 8 * dt);
+      }
+      this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * dt);
+      if (!this.anim) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * dt);
+
+      this._stepMorph(dt);
+
+      // 動態取景:施展招式時鏡頭拉遠框住特效,結束緩回;手動滾輪後讓位給玩家
+      if (this._auto) {
+        this.viewR += (this.wantR - this.viewR) * Math.min(1, 5 * dt);
+        this.dist += (this._fitDist(this.viewR) - this.dist) * Math.min(1, 6 * dt);
+        if (!this.anim && Math.abs(this.viewR - this.fitR) < this.fitR * 0.02) this._auto = false;
+      }
+
+      this.mixer?.update(dt);
+      this._updateEffects(dt);
+
+      const ty = this.targetY;
+      const cp = Math.cos(this.pitch);
+      this.camera.position.set(
+        Math.sin(this.yaw) * cp * this.dist,
+        ty + Math.sin(this.pitch) * this.dist,
+        Math.cos(this.yaw) * cp * this.dist,
+      );
+      this.camera.lookAt(0, ty, 0);
+      this.camera.updateMatrixWorld();
+      updateCelLight(this.camera);
+    }
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  dispose() {
+    this.stop();
+    this._ro.disconnect();
+    this._clearUnit();
+    this.renderer.dispose();
+  }
+}
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

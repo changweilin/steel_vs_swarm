@@ -364,6 +364,19 @@ wss.on('connection', (ws) => {
       broadcast(room);
       return;
     }
+    if (m.t === 'setBotChar') {
+      // 房主替電腦玩家指定角色(null = 開戰時隨機,與真人 pickChar 同語意)
+      if (clientId !== room.hostId) { send(ws, { t: 'error', msg: '只有房主能設定電腦玩家' }); return; }
+      if (room.phase !== 'room') return;
+      const bot = room.bots.get(String(m.id));
+      if (!bot) return;
+      if (m.ch == null) { bot.ch = null; broadcast(room); return; }
+      const c = CHARACTERS[m.ch];
+      if (!c || (c.side !== bot.side && c.side !== 'MERC')) { send(ws, { t: 'error', msg: '角色與陣營不符' }); return; }
+      bot.ch = m.ch;
+      broadcast(room);
+      return;
+    }
     if (m.t === 'removeBot') {
       if (clientId !== room.hostId || room.phase !== 'room') return;
       room.bots.delete(String(m.id));
