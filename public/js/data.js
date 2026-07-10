@@ -856,8 +856,9 @@ export const UNITS = {
   robot: {
     // sight 240(原 220):輕武器射程被 rangeCap 夾到 sight×0.9,220 會把全機甲輕武器砍到
     // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形機甲齊平。
+    // fov 68:座艙內是真人駕駛,取自然人眼的舒適垂直視角(無人機是遙控攝影機饋送,才保留廣角)
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
-    speed: 21, jump: 9, fov: 72, zoomFov: 35, sight: 240,
+    speed: 21, jump: 9, fov: 68, zoomFov: 35, sight: 240,
     regen: 18,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
@@ -871,7 +872,7 @@ UNITS.morph = {
   ...UNITS.robot,
   name: '變形機甲',
   fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
-  fov: 76, fovAir: 96, zoomFov: 38, sight: 240,
+  fov: 70, fovAir: 92, zoomFov: 38, sight: 240,   // 地面型 = 人眼視角;飛行型放寬(高速需周邊視野)
 };
 
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----

@@ -32,11 +32,20 @@ import { buildGroundCover } from './ground.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
-const MAX_BUILDINGS = 240;       // 建物上限(特殊地標另計 ≤ 60)
-// 超尺度倍率:bldH/bldXZ 同為 1.8 = 建物:士兵比例即現實比例(士兵顯示 3.2m/真人 1.75m);
-// giant/mega = 神木/巨岩跟著建物佔地放大等比上調
-const OVER = { bldH: 1.8, bldXZ: 1.8, bldCap: 170, lm: 2.2, giant: 1.35, mega: 1.35 };
-// 植被放大倍率(喬木最誇張,地被小幅)
+const MAX_BUILDINGS = 240;       // 種子建物上限:OSM 圖資 / 程序街區(特殊地標另計 ≤ 60)
+const MAX_INFILL = 1200;         // 補間建物上限(立面 InstancedMesh 仍是常數級 10 個)
+// 市區補間參數:每個種子沿自身朝向鋪一塊 cols×rows 的街廓網格。
+// pitch 24m ≈ 最大佔地(20m)+ 巷弄 ⇒ 巷弄寬 4~9m:大樓間僅 4m(< 機甲碰撞直徑 4.6~7.7m)不可穿越
+// = 實心掩體;小住宅間 9m 可鑽 = 巷戰路徑。兵線走廊(半寬 17m)恆淨空 = 保證通行的戰略通道。
+const INFILL = { maxSeeds: 160, pitch: 24, cols: [3, 6], rows: [3, 6], skip: 0.18, gap: 2 };
+// 尺度倍率(2026-07-10 改制:步兵 = 真人 1.8m,見 models.js SOLDIER_H)。
+// 舊制步兵顯示 3.2m,得靠 bldH/bldXZ ×1.8、giant/mega ×1.35 把地物撐大才有正確人樓比;
+// 步兵回歸真人尺寸後,這些倍率一律歸 1 —— 建物/神木/巨岩的公稱值本來就是真實世界公尺
+// (紅杉 110m、住宅 7~16m),照抄即為現實比例。lm 仍略大於 1:地標刻意保留超尺度存在感。
+const OVER = { bldH: 1.0, bldXZ: 1.0, bldCap: 170, lm: 1.22, giant: 1.0, mega: 1.0 };
+// 植被放大倍率(喬木最誇張,地被小幅)。
+// 注意:此表作用在很小的公稱幾何上(針葉樹公稱僅 ~8.7m),放大後的「絕對高度」本就接近真實,
+// 故改制不動它 —— 步兵縮到 1.8m 後,樹木相對步兵的比例自動回歸現實。
 const VEG_SCALE = {
   bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
@@ -189,7 +198,7 @@ const VEG_DEFS = {
 // ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
 //   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
 //   花旗松(100m)/ 西加雲杉(97m)/ 黃柳桉(婆羅洲熱帶巨樹 100m)/ 台灣杉(90m)
-// 同一種神木成群聚落、株高各異(s ×OVER.giant → 約 63~223m,隨建物佔地放大等比上調);
+// 同一種神木成群聚落、株高各異(s = 0.75~1.10 → 公稱高的 75%~110%,即真實世界株高區間);
 // 每株多零件建模:板根/樹皮絲帶/斜出枝節/多層樹冠(px/pz = 距軸心偏移,
 // rx/rz = 枝幹傾角),樹幹登記碰撞柱 = 立體障礙與隱蔽。h/r = 公稱高/幹半徑。
 const GIANT_DEFS = {
@@ -756,7 +765,7 @@ const LANDMARKS = {
 // 酋長岩(優勝美地花崗岩壁)/ 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
 // 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣 /
 // 百內三塔(花崗岩尖塔群)/ 張家界石柱(石英砂岩方柱)。
-// 高度隨建物佔地等比放大(×OVER.mega,可達 ~220m);col = 近似碰撞柱(× s),
+// 公稱高即真實比例(×OVER.mega = 1;放置縮放後約 90~160m);col = 近似碰撞柱(× s),
 // s = 放置縮放區間。岩面走 envMat + 頂部苔蘚投影(botw_plan 岩石要點)。
 function rockMat(color, moss = 0) {
   return envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
@@ -1613,6 +1622,86 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
   return built;
 }
 
+// 建物占位網格:補間建物不得與既有建物/地標互穿。
+// bucket 邊長 64 > 最大(建物半對角 17 + 地標碰撞半徑 ~40 + gap 5),故 3×3 掃描必然涵蓋所有可能重疊者。
+function makeOccupancy() {
+  const C = 64;
+  const g = new Map();
+  const add = (x, z, r) => {
+    const k = `${Math.floor(x / C)},${Math.floor(z / C)}`;
+    let a = g.get(k);
+    if (!a) g.set(k, a = []);
+    a.push([x, z, r]);
+  };
+  const free = (x, z, r, gap) => {
+    const ci = Math.floor(x / C), cj = Math.floor(z / C);
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const a = g.get(`${ci + i},${cj + j}`);
+        if (!a) continue;
+        for (const [bx, bz, br] of a) if (Math.hypot(x - bx, z - bz) < r + br + gap) return false;
+      }
+    }
+    return true;
+  };
+  return { add, free };
+}
+
+/**
+ * 市區補間:OSM 座標經 llToWorld 放大 1/REAL_SCALE(8×)—— 現實相隔 20m 的鄰棟,在遊戲世界裡
+ * 相隔 160m,街廓被撐成荒野。這裡把每個既有建物當「街廓種子」,沿它的朝向鋪一塊 cols×rows
+ * 的建物網格,補回連續街區:
+ *   - 同街廓共用朝向 ⇒ 樓面對齊、巷弄成直線;街廓之間的 160m 空隙自然留成街道
+ *   - 只從既有建物長出去 ⇒ 郊野維持開闊,不會整張圖長滿樓
+ *   - areaFree(blocked) 擋住兵線走廊(半寬 17m)/ 塔位 / 主堡 ⇒ 淨空帶成為街廓夾出的戰略通道
+ *   - occ 以「外接圓」保證不穿模;skip 留出空地/中庭破除棋盤感
+ * 補出的建物與 OSM 建物走同一條路徑登記 blockers,碰撞/隱蔽一致。
+ * rnd 為 mulberry32 且每格消耗固定枚數(檢查一律放在抽樣之後)⇒ 全房間各客戶端結果相同。
+ */
+function densifyUrban({ generic, landmarks, blocked, terrain, rnd, inb }) {
+  if (!generic.length) return 0;
+  const occ = makeOccupancy();
+  for (const b of generic) occ.add(b.x, b.z, Math.hypot(b.w, b.d) / 2);
+  for (const lm of landmarks) occ.add(lm.x, lm.z, (LANDMARK_COL[lm.type]?.r || 10) * OVER.lm);
+
+  const rint = ([lo, hi]) => lo + Math.floor(rnd() * (hi - lo + 1));
+  let added = 0;
+  for (const s of generic.slice(0, INFILL.maxSeeds)) {
+    if (added >= MAX_INFILL) break;
+    const ca = Math.cos(s.ry), sa = Math.sin(s.ry);
+    const cols = rint(INFILL.cols), rows = rint(INFILL.rows);
+    for (let i = 0; i < cols && added < MAX_INFILL; i++) {
+      for (let j = 0; j < rows && added < MAX_INFILL; j++) {
+        // 抽樣一律先做完,淘汰與否都消耗等量亂數 ⇒ 序列不因地形/淘汰而漂移
+        const commercial = rnd() < 0.28;
+        const w = (commercial ? 10 + rnd() * 10 : 8 + rnd() * 7) * OVER.bldXZ;
+        const d = (commercial ? 10 + rnd() * 10 : 8 + rnd() * 7) * OVER.bldXZ;
+        const h = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
+        const jx = (rnd() - 0.5) * 2.4, jz = (rnd() - 0.5) * 2.4;   // 沿街微抖動
+        const ry = s.ry + (rnd() - 0.5) * 0.12;
+        const v = Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length);
+        const vacant = rnd() < INFILL.skip;
+        if (vacant) continue;
+        const lx = (i - (cols - 1) / 2) * INFILL.pitch + jx;
+        const lz = (j - (rows - 1) / 2) * INFILL.pitch + jz;
+        const x = s.x + lx * ca + lz * sa;
+        const z = s.z - lx * sa + lz * ca;
+        if (x < terrain.minX + inb || x > terrain.maxX - inb
+          || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
+        if (terrain.heightAt(x, z) <= 0.4) continue;              // 水面
+        // occ 用外接圓(不穿模),blocked 用內縮圓(牆面不侵走廊)— 與 OSM 建物同一套判準
+        const r = Math.hypot(w, d) / 2;
+        if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) continue;
+        if (!areaFree(blocked, x, z, r * 0.75)) continue;
+        occ.add(x, z, Math.max(w, d) / 2);
+        generic.push({ x, z, w, d, h, ry, commercial, v });
+        added++;
+      }
+    }
+  }
+  return added;
+}
+
 /**
  * 建立整張圖的地物。回傳 THREE.Group(加進 terrain.group 同層即可)。
  * cfg 需含 lanes/bases/center/env/venue;terrain 來自 buildTerrain()。
@@ -1782,6 +1871,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
     });
+  }
+
+  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)
+  if (generic.length) {
+    const n = densifyUrban({ generic, landmarks, blocked, terrain, rnd, inb });
+    if (n) onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
   }
 
   // 一般建物:住宅/商辦 × 三款立面樣式 = 六個 InstancedMesh — 窗格立面貼圖

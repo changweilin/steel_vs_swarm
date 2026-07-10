@@ -49,6 +49,11 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - 自爆爆風走 `_blast(owner, decoyBlast(), …)` —— 算在主機甲頭上(吃它的火力升級/增益,擊殺記給它)。
 - **準星鎖定(2026-07-10 起全機種通用)**:客戶端 `_tickLock` 每 0.25s 回報「射程內 + 準星對準」的敵人;伺服器 `heroLock` 複驗**距離 ×1.25 與迷霧視野**(與 `heroHit` 同一條規則)後廣播 `lock` 事件 → 施放者畫光暈(`vfx.lockGlow`)、目標本人跳 HUD 警告。無人機沿用它當自爆衝刺目標、機甲當餌機追蹤目標。時效住 `LOCK.TTL`。
 - **射程恆小於視野(2026-07-10 起)**:玩家武器射程 = `min(基準 × HEROIC.range, rangeCap(kind, slot))`,`rangeCap = sight × (重武器再 × GAME.AIM_SIGHT_MULT) × GAME.RANGE_SIGHT_F`(< 1)。夾住的縫**只在 `heroWeapon()`**,`heroic=false` 的 NPC 基準值不夾。改 `sight` / 角色 `range` **MUST** 重跑 e2e(#INC-104 的 y=250 高空射擊仍要求輕武器英雄射程 ×1.25 > 250)。
+- **世界尺度:步兵 = 真人 1.8m(2026-07-10 起)**:`models.js` 的 `SOLDIER_H` 是全遊戲唯一的身高單位,人員/載具/建物一律用**真實世界公稱尺寸**(住宅 7~16m、紅杉 110m),`biomes.js` 的 `OVER.bldH/bldXZ/giant/mega` 因此全歸 1 —— **MUST NOT** 為了「看起來大一點」把它們調回超尺度。`VEG_SCALE` 作用在很小的公稱幾何上,絕對高度本就近真實,**不在此列**。
+  - 英雄體型 = `heroTargetH(kind, ch)`:機甲 3~5×、無人機 1~2× 步兵,倍率隨 `mods.armor` 在該機種護甲區間內插(高防禦 = 巨大 = 剪影大 = 好命中,因為命中是客戶端對 mesh raycast)。獸型 `visual.form:'beast'` 再 ×`BEAST_H_F`。**體型只准住這個縫**,`game.js`/`biomes.js` **MUST NOT** 硬編碼機體尺寸。
+  - 由它推導的東西:`game.js` 的 `heroCollider()`(英雄碰撞圓柱,走 `ent.heroCol` 而非 `COLLIDER` 表)、自機 `SELF_F`(碰撞半徑/上下緣/**座艙視點高度**)、`models.js` 的 `walkRef`(步幅正比身高,忘了改就原地滑步)。改 `SOLDIER_H` 或倍率,以上全部自動連動。
+  - **尺度不動 `sight`/`range`**:座艙的「人類駕駛感」只靠視點高度 + `fov`(機甲 = 人眼視角;無人機是遙控攝影機,保留廣角)。平衡數值與 #INC-104 因此完全不受尺度改制影響。
+- **市區密集化**:OSM 座標經 `llToWorld` 放大 `1/REAL_SCALE`(8×)→ 現實相隔 20m 的鄰棟在遊戲世界相隔 160m,街廓被撐成荒野。`biomes.js densifyUrban()` 以每棟 OSM 建物為種子、沿其朝向鋪 `cols×rows` 街廓網格補回連續街區;`areaFree(blocked)` 保證兵線走廊(半寬 17m)/塔位/主堡恆淨空 → **淨空帶就是戰略通道,街廓就是掩體**。補間全走 `mulberry32`(每格消耗固定枚亂數,檢查一律放在抽樣之後)→ 全房間一致,**MUST NOT** 改成「淘汰就跳過抽樣」。
 - **擊殺分數**:`by.kn += killScore(kind)`,但**被擊殺者是電腦玩家(`isBotId(t.pid)`)一律 `BOT_KILL_SCORE`(3)** —— 刷 bot 不能速成招式。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。

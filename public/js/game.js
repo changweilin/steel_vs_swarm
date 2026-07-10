@@ -10,7 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, MORPH, LOCK, DECOY,
 } from './data.js';
 import { llToWorld } from './terrain.js';
-import { makeUnit } from './models.js';
+import { makeUnit, heroTargetH, SOLDIER_H } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
@@ -24,6 +24,18 @@ const KIND_KEY = {
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
+// 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
+// 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
+const HERO_COL_R = { robot: 0.43, morph: 0.43, drone: 0.80 };
+const heroCollider = (kind, ch) => {
+  const h = heroTargetH(kind, ch);
+  return { r: h * (HERO_COL_R[kind] ?? 0.43), h: h * 1.08 };
+};
+// 自機碰撞/視點的身高比例(同樣校準自舊制:robot 6m→myR 1.9 / eye 3.4、drone 3m→myR 1.6)
+const SELF_F = {
+  groundR: 0.317, groundTop: 0.70, eye: 0.567,
+  flyR: 0.533, flyBot: 0.267, flyTop: 0.40,
+};
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
 // 副視窗(PiP):無人機僚機視角 / 機甲餌機視角
 // 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
@@ -411,12 +423,16 @@ export class BattleClient {
     this.trauma = Math.min(1, this.trauma + k * eScale * 0.8);
   }
 
-  // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築
+  // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築。
+  // 人員/載具 = 真實世界尺寸(見 models.js TARGET_H);英雄機體體型綁角色護甲,
+  // 故不查此表,改由 heroCollider() 依 heroTargetH 動態推導(見 _makeEnt 的 ent.heroCol)。
   static COLLIDER = {
     base: { r: 20, h: 46 }, tower: { r: 7, h: 26 },
-    tank: { r: 4.2, h: 5.5 }, apc: { r: 3.4, h: 5 }, soldier: { r: 1.0, h: 3.2 },
-    drone: { r: 2.4, h: 3.5 }, robot: { r: 2.6, h: 6.5 }, morph: { r: 2.6, h: 6 },
+    tank: { r: 1.9, h: 2.8 }, apc: { r: 1.6, h: 2.7 }, soldier: { r: 0.6, h: 1.8 },
   };
+
+  /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導 */
+  get selfH() { return this.heroKind ? heroTargetH(this.heroKind, this.ch) : SOLDIER_H * 4; }
 
   /** 目前是否為飛行機體(無人機恆飛;變形機甲僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
@@ -424,14 +440,15 @@ export class BattleClient {
   /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
   _collide() {
     const fly = this._flying();
-    const myR = fly ? 1.6 : 1.9;
-    const myBot = this.pos.y - (fly ? 0.8 : 0);
-    const myTop = this.pos.y + (fly ? 1.2 : 4.2);
+    const H = this.selfH;
+    const myR = H * (fly ? SELF_F.flyR : SELF_F.groundR);
+    const myBot = this.pos.y - (fly ? H * SELF_F.flyBot : 0);
+    const myTop = this.pos.y + H * (fly ? SELF_F.flyTop : SELF_F.groundTop);
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
       // 自己的僚機不碰撞:歸隊時牠們以 50m/s 貼上來,會誤觸下面的高速撞擊自爆
       if (ent.hero && ent.pid != null && ent.pid === this.youId) continue;
-      let c = BattleClient.COLLIDER[ent.kind];
+      let c = ent.heroCol || BattleClient.COLLIDER[ent.kind];
       if (!c && ent.colR) c = { r: ent.colR, h: ent.colH || 6 };   // 阻擋型障礙物
       if (!c) continue;
       const p = ent.mesh.position;
@@ -654,6 +671,8 @@ export class BattleClient {
       isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy',
       decoy: e.k === 'decoy', si: e.si || 0,
       isStatic: e.k === 'tower' || e.k === 'base',
+      // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
+      heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
     // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
     if (e.k === 'tower' || e.k === 'base') {
@@ -1608,8 +1627,11 @@ export class BattleClient {
     const shY = (Math.random() * 2 - 1) * n * 0.045;
     const shR = (Math.random() * 2 - 1) * n * 0.05;
 
-    // 蓄力中重心下沉(起跳預備:鏡頭跟著蹲)
-    const eye = this._flying() ? 0 : 3.4 - (this.isMorph ? this.charge * MORPH.CROUCH_M : 0);
+    // 座艙視點 = 機體實高 × SELF_F.eye(≈ 胸腔/頭艙位置):體型越大看得越高,
+    // 與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。蓄力中重心下沉(鏡頭跟著蹲)。
+    const eye = this._flying()
+      ? 0
+      : this.selfH * SELF_F.eye - (this.isMorph ? this.charge * MORPH.CROUCH_M : 0);
     this.camera.position.copy(this.pos).add(new THREE.Vector3(0, eye, 0));
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw + this.recoil.y + shY);

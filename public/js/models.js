@@ -25,12 +25,38 @@ export const MODEL_MANIFEST = Object.assign({
   'base:STEEL':   'assets/models/quaternius/structure.glb',     // 鋼鐵主堡(工業塔)
 }, (typeof window !== 'undefined' && window.MODEL_MANIFEST_EXTRA) || {});
 
-// 單位顯示高度(公尺;fitToHeight 自動縮放)
+// ---- 尺度基準(2026-07-10 改制)----
+// 步兵 = 真人身高 SOLDIER_H,是全遊戲唯一的「身高單位」。人員/載具/建物一律用真實世界
+// 公稱尺寸,不再有超尺度倍率(舊制步兵 3.2m,建物/植被便得靠 biomes.js OVER ×1.8 補回比例)。
+export const SOLDIER_H = 1.8;
+
+// 機甲 3~5×、無人機 1~2× 步兵,倍率隨 mods.armor 在該機種的護甲區間內插:
+// 高防禦 = 更巨大 = 剪影更大 = 更容易被命中(命中是客戶端對 mesh raycast,體型直接生效)。
+const HERO_SIZE = {
+  robot: { armor: [12, 26], mul: [3, 5] },
+  morph: { armor: [5, 24], mul: [3, 5] },
+  drone: { armor: [3, 12], mul: [1, 2] },
+};
+const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)
+
+/** 英雄機體顯示高度(公尺):依角色護甲值在機種區間內插 */
+export function heroTargetH(kind, ch) {
+  const S = HERO_SIZE[kind];
+  if (!S) return SOLDIER_H * 4;
+  const c = CHARACTERS[ch];
+  const armor = c?.mods?.armor;
+  const t = armor == null ? 0.5 : clamp01((armor - S.armor[0]) / (S.armor[1] - S.armor[0]));
+  const h = SOLDIER_H * (S.mul[0] + (S.mul[1] - S.mul[0]) * t);
+  return c?.visual?.form === 'beast' ? h * BEAST_H_F : h;
+}
+
+// 非英雄單位顯示高度(公尺;fitToHeight 自動縮放)。人員/載具 = 真實世界尺寸;
+// 塔/主堡是虛構工事,維持既有的地標級量體。
 const TARGET_H = {
   // decoy:fitToHeight 量的是「高度」— 餌機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
-  'hero:robot': 6, 'hero:drone': 3, 'hero:morph': 6, 'hero:beast': 5, decoy: 1.4,
-  'creep:soldier': 3.2, 'creep:apc': 4.5, 'creep:tank': 5,
-  'creep:rocketeer': 3.4, 'creep:howitzer': 4, 'creep:heli': 4.2,
+  decoy: 1.4,
+  'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
+  'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
 };
 
@@ -1708,7 +1734,9 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   const beast = kind === 'hero:robot' && vis?.form === 'beast';
   const avian = kind === 'hero:drone' && vis?.form === 'avian';
   const entry = !beast && !avian && MODEL_MANIFEST[kind] ? cache[kind] : null;
-  const target = beast ? TARGET_H['hero:beast'] : (TARGET_H[kind] || 4);
+  // 英雄體型綁角色護甲(heroTargetH 內含獸型矮化);其餘查表
+  const heroKind = kind.startsWith('hero:') ? kind.slice(5) : null;
+  const target = heroKind ? heroTargetH(heroKind, ch) : (TARGET_H[kind] || 4);
   const g = new THREE.Group();
   let mixer = null;
 
@@ -1736,7 +1764,9 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
       action.time = Math.random() * clip.duration;   // 錯開步伐
       action.play();
       g.userData.walk = action;
-      g.userData.walkRef = kind === 'hero:robot' ? 9 : 6;   // timeScale=1 的參考地速(m/s)
+      // timeScale=1 的參考地速(m/s):步幅正比於身高,故 walkRef 必須隨 target 縮放,
+      // 否則體型一改就原地滑步(係數 = 舊制 walkRef ÷ 舊制身高)
+      g.userData.walkRef = target * (kind === 'hero:robot' ? 9 / 6 : 6 / 3.2);
     }
   } else {
     const build = beast ? buildBeastMech
@@ -1772,7 +1802,7 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
     g.userData.turret = turret;
   }
 
-  if (ring) g.add(teamRing(side, Math.max(2.2, target * 0.55)));
+  if (ring) g.add(teamRing(side, Math.max(1.1, target * 0.55)));
   g.userData.kind = kind;
   g.userData.side = side;
   return { group: g, mixer };
