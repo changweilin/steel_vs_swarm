@@ -267,7 +267,9 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
 // mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
 // visual:程序生成機體外觀參數(hue 主色;無人機 frame/body、機甲 pod 掛件;
-//         form:'beast'=獸型機甲、'avian'=飛行生物型無人機(creature 指定剪影),傭兵 morph 用 pod)。
+//         form:'beast'=獸型機甲、'avian'=飛行生物型無人機(creature 指定剪影);
+//         傭兵 morph 用 flight(飛行型:jet 戰機/uav 固定翼無人機/bird 機械鳥/dragon 機械龍)
+//         + ground(地面型:biped 人型機器人/beast 前肢著地機械獸)+ bulk 體格倍率 — 純外觀,不動數值)。
 // fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
 //          / vision(視野)/ stealth(匿蹤)/ dash(突進)/ intercept(攔截飛彈)。
 export const CHARACTERS = {
@@ -648,7 +650,7 @@ export const CHARACTERS = {
   // 無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
   m01: {
     side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
-    visual: { hue: 0xd94f4f, pod: 'rack' },
+    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'bird', ground: 'biped', bulk: 1.0 },
     mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
@@ -663,7 +665,7 @@ export const CHARACTERS = {
   },
   m02: {
     side: 'MERC', kind: 'morph', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型可變機甲',
-    visual: { hue: 0x9aa3ad, pod: 'shield' },
+    visual: { hue: 0x9aa3ad, pod: 'shield', flight: 'jet', ground: 'beast', bulk: 1.3 },
     mods: { hp: 1.25, sp: 0.9, mp: 0.95, speed: 0.9, armor: 24 },
     light: { name: '7.62 通用機槍', rw: 'FN MAG・初速 840m/s', type: 'gun', mv: 840,
       dmg: [16, 20, 25], rate: 7, mag: [40, 48, 56], reload: 2.2, range: 195, crit: 0.05,
@@ -678,7 +680,7 @@ export const CHARACTERS = {
   },
   m03: {
     side: 'MERC', kind: 'morph', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤可變機甲',
-    visual: { hue: 0x59c9a5, pod: 'dish' },
+    visual: { hue: 0x59c9a5, pod: 'dish', flight: 'uav', ground: 'biped', bulk: 0.95 },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛衝鋒槍艙', rw: 'UMP45・初速 285m/s', type: 'gun', mv: 285,
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
@@ -693,7 +695,7 @@ export const CHARACTERS = {
   },
   m04: {
     side: 'MERC', kind: 'morph', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵可變機甲',
-    visual: { hue: 0xb59ce8, pod: 'antenna' },
+    visual: { hue: 0xb59ce8, pod: 'antenna', flight: 'bird', ground: 'beast', bulk: 0.85 },
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 13 },
     light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
       dmg: [21, 26, 32], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
@@ -708,7 +710,7 @@ export const CHARACTERS = {
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰可變機甲',
-    visual: { hue: 0xe0a13a, pod: 'antenna' },
+    visual: { hue: 0xe0a13a, pod: 'antenna', flight: 'jet', ground: 'biped', bulk: 1.05 },
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19・初速 900m/s', type: 'gun', mv: 900,
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
@@ -724,7 +726,7 @@ export const CHARACTERS = {
   },
   m06: {
     side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
-    visual: { hue: 0xf0c24a, pod: 'rack' },
+    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'uav', ground: 'biped', bulk: 1.15 },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
@@ -739,7 +741,7 @@ export const CHARACTERS = {
   },
   m07: {
     side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '保全', machine: '「保全」區域拒止可變機甲',
-    visual: { hue: 0x5fa8d3, pod: 'shield' },
+    visual: { hue: 0x5fa8d3, pod: 'shield', flight: 'dragon', ground: 'beast', bulk: 1.25 },
     mods: { hp: 1.15, sp: 1.05, mp: 1.1, speed: 0.9, armor: 20 },
     light: { name: '雙 35 快砲', rw: 'Oerlikon 縮裝・初速 1100m/s', type: 'gun', mv: 1100,
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
@@ -755,7 +757,7 @@ export const CHARACTERS = {
   },
   m08: {
     side: 'MERC', kind: 'morph', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊可變機甲',
-    visual: { hue: 0x8f7fd0, pod: 'blade' },
+    visual: { hue: 0x8f7fd0, pod: 'blade', flight: 'dragon', ground: 'biped', bulk: 0.85 },
     mods: { hp: 0.85, sp: 1.1, mp: 1.15, speed: 1.15, armor: 5 },
     light: { name: '消音精準艙', rw: 'VSS 縮裝・初速 295m/s', type: 'gun', mv: 295,
       dmg: [24, 30, 37], rate: 3.2, mag: [18, 22, 26], reload: 2.0, range: 200, crit: 0.16, critX: 1.9,

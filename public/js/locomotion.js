@@ -163,35 +163,51 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
 }
 
 /**
- * 變形機甲:型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),阻尼漸變 —
- * 翼收折↔展開、腿步行↔後收、推進器增亮;地面雙足步態、飛行壓坡巡航。
+ * 變形機甲(transformer_plan):型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),
+ * 阻尼漸變出 0(地面)→1(飛行)的型態參數 m —
+ * rig.pose(m)(models.js)以各部件自己的分段時窗 smoothstep 到位
+ * (翼先展 → 腿後收 → 機首鎖上的 Macross 式序列);這裡在姿勢之上疊加動態:
+ * 地面步態(人型雙足 / 獸型前肢著地小跑)、飛行壓坡巡航、鳥/龍拍翼、
+ * 推進器發光 ∝ m、關節排氣口熱散逸 ∝ 變形活動度(Task 3.1)。
  */
 function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed) {
   const want = (ent.heroY || 0) > 1.2 ? 1 : 0;
-  L.morph = damp(L.morph ?? want, want, 2.8, dt);
+  const prev = L.morph ?? want;
+  L.morph = damp(prev, want, 2.6, dt);
   const m = L.morph;
-  // 背翼:地面豎折(±1.2 rad)→ 飛行展平
-  rig.wingL.rotation.z = -(1.2 - 1.1 * m);
-  rig.wingR.rotation.z = 1.2 - 1.1 * m;
-  // 地面步態(步頻耦合位移),飛行時擺幅歸零、腿後收成尾噴管姿態
-  const strideW = (rig.stride || 1.1) * (rig.s || 1);
+  // 變形活動度(|dm/dt| 平滑):進行中排氣口增亮,完成後自然歸零
+  L.act = damp(L.act || 0, clamp(Math.abs(m - prev) / dt * 4, 0, 1), 5, dt);
+  rig.pose(m);   // 分段姿勢插值(基底;以下全部疊加其上)
+  // 地面步態:步頻耦合位移(不滑步);獸型前肢 = 對角小跑,人型持械手收斂
+  const strideW = (rig.stride || 1.15) * (rig.s || 1);
   L.ph += speed * dt * Math.PI / Math.max(0.2, strideW);
   L.amp = damp(L.amp, clamp(speed / (rig.top || 9), 0, 1.1) * (1 - m), 6, dt);
   const sw = Math.sin(L.ph) * 0.6 * L.amp;
-  rig.legL.rotation.x = sw + 1.05 * m;
-  rig.legR.rotation.x = -sw + 1.05 * m;
-  rig.armL.rotation.x = -sw * 0.7 - 0.45 * m;
-  rig.armR.rotation.x = sw * 0.25 - 0.45 * m;   // 持械手擺幅收斂
-  // 軀幹:地面 = 浮沉 + 速度前傾;飛行 = 前傾巡航 + 壓坡入彎
+  rig.legL.rotation.x += sw;
+  rig.legR.rotation.x += -sw;
+  rig.armL.rotation.x += -sw * (rig.swingArm || 0.4);
+  rig.armR.rotation.x += sw * (rig.swingArm || 0.4) * (rig.beast ? 1 : 0.5);
+  // 軀幹動態:地面前傾/加減速預備、飛行壓坡入彎 + 巡航俯仰、懸停浮沉
   const topAir = rig.topAir || 30;
   L.roll = damp(L.roll, clamp(-vLat / topAir, -1, 1) * 0.3 * m, 4, dt);
   L.pitch = damp(L.pitch,
-    m * (0.35 + clamp(vFwd / topAir, -1, 1) * 0.18)
-    + (1 - m) * (0.2 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15)), 4, dt);
+    m * clamp(vFwd / topAir, -1, 1) * 0.2
+    + (1 - m) * (0.16 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15)), 4, dt);
+  rig.torso.rotation.x += L.pitch;
   rig.torso.rotation.z = L.roll;
-  rig.torso.rotation.x = L.pitch;
-  rig.torso.position.y = rig.hipsY0
-    - (0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.07) * L.amp
-    + m * Math.sin(now * 2.4 + L.ph) * 0.1;   // 飛行懸停浮沉
-  for (const t of rig.thrusters) t.material.emissiveIntensity = 0.3 + m * 2.2;
+  rig.torso.position.y += -(0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.07) * L.amp
+    + m * Math.sin(now * 2.4 + L.ph) * 0.12;   // 飛行懸停浮沉
+  // 拍翼(鳥/龍):翼展開後才拍;頻率隨速度、外翼相位延遲(follow-through)
+  if (rig.flapWings && m > 0.45) {
+    const k = clamp(Math.hypot(vFwd, vLat) / topAir, 0, 1);
+    L.flap = (L.flap || 0) + dt * (2.6 + k * 8);
+    const amp = (0.2 + k * 0.3) * m;
+    for (const { w, outer, sgn } of rig.flapWings) {
+      w.rotation.z += sgn * Math.sin(L.flap + L.ph) * amp;
+      outer.rotation.z += sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.4;
+    }
+  }
+  // 推進器 ∝ 飛行推力;排氣口 ∝ 變形熱散逸(transformer_plan Task 3.1)
+  for (const t of rig.thrusters) t.material.emissiveIntensity = 0.25 + m * 2.2 + L.act * 1.2;
+  for (const v of rig.vents) v.material.emissiveIntensity = 0.15 + L.act * 2.6;
 }
