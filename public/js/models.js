@@ -14,7 +14,7 @@ export const MODEL_MANIFEST = Object.assign({
   'hero:robot':   null,                                          // 執法者機甲:程序生成人型機甲(doc/image/robot 賽璐璐重構;GLB 可經 MODEL_MANIFEST_EXTRA 蓋回)
   'hero:drone':   null,                                          // 無人機:程式生成 FPV 四旋翼(doc/image/drone 賽璐璐重構)
   'hero:morph':   null,                                          // 傭兵變形機甲:程式生成(雙型態)
-  'creep:soldier': 'assets/models/quaternius/pawn-casual.glb',  // 步槍兵
+  'creep:soldier': null,                                         // 機槍步兵:程式生成(pawn-casual GLB 徒手,無法滿足「步兵手持機槍」)
   'creep:apc':    null,                                          // 裝甲車:程式生成
   'creep:tank':   null,                                          // 坦克:程式生成
   'creep:rocketeer': null,                                        // 火箭兵:程式生成
@@ -947,48 +947,65 @@ function buildApc(side) {
 }
 
 /**
- * 主戰坦克 — 全車(含履帶)掛懸吊樞軸,轉彎側傾/煞車點頭幅度小、慣性大;
- * 外露路輪轉速 = 線速度(消除滑行感)。砲塔總成:艙蓋/尾艙置物/觀瞄鏡/排煙器。
+ * 主戰坦克(2026-07-10 重繪)— 舊版路輪整圈藏在履帶箱裡、側裙 + 過大砲塔
+ * 蓋住車身,側視只剩一塊黑。重繪重點:
+ *  · 履帶總成外露:路輪比履帶帶「寬」(輪面凸出可見)、前惰輪/後主動輪
+ *    抬高撐出環帶輪廓,上下履帶帶 + 前後斜段圍出履帶剪影
+ *  · 車身墊高:主車身高於履帶頂線,側視三層(履帶/車身/砲塔)分明
+ *  · 砲塔縮小前置,不再壓過車身;全部輪組進 rig.wheels(轉速 = 線速度)
  */
 function buildTank(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].colorDim);
+  const body = 0x57604b, bodyDk = 0x49523f, deck = 0x525b46, band = 0x2f343a;
   const hull = new THREE.Group();
   g.add(hull);
-  bx(hull, 3.4, 1.2, 6.4, 0, 1.35, 0, 0x4c5245);                         // 車體
-  const glacis = bx(hull, 3.2, 0.7, 1.3, 0, 1.7, 3.0, 0x434a3e);         // 前斜甲
-  glacis.rotation.x = 0.42;
-  bx(hull, 3.0, 0.2, 5.4, 0, 2.0, -0.3, 0x454c40);                       // 引擎甲板
-  bx(hull, 1.4, 0.24, 1.2, 0, 2.06, -2.2, 0x394037);                     // 引擎散熱柵
+  // 車體(底面 1.5 > 履帶頂帶 1.48:側視大色塊不被履帶吃掉)
+  bx(hull, 2.5, 1.05, 6.2, 0, 2.0, 0, body);                             // 主車身
+  const glacis = bx(hull, 2.5, 0.95, 1.6, 0, 1.85, 3.25, bodyDk);        // 前斜甲
+  glacis.rotation.x = 0.5;
+  bx(hull, 2.4, 0.18, 2.6, 0, 2.6, -1.7, deck);                          // 引擎甲板
+  bx(hull, 1.5, 0.12, 1.3, 0, 2.72, -2.0, 0x394037);                     // 散熱柵
+  bx(hull, 2.3, 0.5, 0.6, 0, 2.2, -3.3, bodyDk);                         // 車尾艙
   for (const s of [-1, 1]) {
-    bx(hull, 0.9, 1.1, 6.8, s * 1.85, 0.85, 0, 0x23262a);                // 履帶
-    bx(hull, 0.96, 0.28, 6.2, s * 1.85, 1.52, 0, 0x3a4136);              // 履帶上護板
-    bx(hull, 0.98, 0.12, 5.6, s * 1.85, 1.72, 0, accent);                // 陣營識別條
+    // 履帶環帶剪影:上帶/著地帶 + 前後斜段(繞惰輪/主動輪)
+    bx(hull, 0.72, 0.32, 5.6, s * 1.7, 1.32, 0, band);                   // 上履帶帶
+    bx(hull, 0.72, 0.3, 5.9, s * 1.7, 0.24, 0, band);                    // 著地帶
+    const f = bx(hull, 0.72, 0.3, 1.4, s * 1.7, 0.78, 3.05, band);       // 前斜段
+    f.rotation.x = -0.72;
+    const r = bx(hull, 0.72, 0.3, 1.4, s * 1.7, 0.78, -3.05, band);      // 後斜段
+    r.rotation.x = 0.72;
+    bx(hull, 1.05, 0.14, 6.6, s * 1.7, 1.56, 0.15, deck);                // 擋泥板
+    bx(hull, 1.07, 0.1, 5.4, s * 1.7, 1.66, 0.15, accent);               // 陣營識別條
   }
-  // 外露路輪(下半可見;locomotion 依半徑換算轉速)
+  // 輪組:輪寬 1.0 > 帶寬 0.72 → 輪面凸出履帶帶外,轉動清晰可見
   const wheels = [];
+  const roadWheel = (s, z, r, y) => {
+    const w = cyl(hull, r, r, 1.0, 12, s * 1.7, y, z, 0x22262b);
+    w.rotation.z = Math.PI / 2;
+    cyl(w, r * 0.45, r * 0.45, 1.04, 8, 0, 0, 0, 0x3a4046);              // 輪轂
+    wheels.push({ m: w, r });
+  };
   for (const s of [-1, 1]) {
-    for (let i = 0; i < 5; i++) {
-      const w = cyl(hull, 0.42, 0.42, 0.95, 10, s * 1.85, 0.5, -2.4 + i * 1.2, 0x14171a);
-      w.rotation.z = Math.PI / 2;
-      cyl(w, 0.16, 0.16, 0.98, 8, 0, 0, 0, 0x2c3033);                    // 輪轂
-      wheels.push({ m: w, r: 0.42 });
-    }
+    for (let i = 0; i < 6; i++) roadWheel(s, -2.35 + i * 0.94, 0.5, 0.55);  // 六路輪
+    roadWheel(s, 3.15, 0.42, 0.95);                                      // 前惰輪(高位)
+    roadWheel(s, -3.15, 0.42, 0.95);                                     // 後主動輪(高位)
   }
-  // 砲塔總成
+  // 砲塔總成(縮小前置)
   const turret = new THREE.Group();
-  turret.position.set(0, 2.4, -0.4);
+  turret.position.set(0, 2.55, 0.55);
   hull.add(turret);
-  cyl(turret, 1.15, 1.45, 0.95, 10, 0, 0, 0, accent);
-  bx(turret, 0.7, 0.16, 0.7, 0.45, 0.56, -0.3, 0x394037);                // 車長艙蓋
-  bx(turret, 1.6, 0.5, 0.6, 0, 0.1, -1.3, 0x3a4136);                     // 尾艙置物架
-  bx(turret, 0.3, 0.22, 0.3, 0.75, 0.6, 0.4, 0x141a20,
+  cyl(turret, 0.95, 1.25, 0.8, 8, 0, 0.35, 0, body);                     // 塔體
+  bx(turret, 1.1, 0.5, 0.8, 0, 0.35, 0.85, bodyDk);                      // 防盾
+  bx(turret, 0.65, 0.18, 0.65, -0.35, 0.83, -0.2, 0x394037);             // 車長艙蓋
+  bx(turret, 0.28, 0.22, 0.28, 0.55, 0.85, 0.25, 0x141a20,
     { emissive: 0x9adfff, emissiveIntensity: 0.7 });                     // 觀瞄鏡
-  cyl(turret, 0.02, 0.03, 1.3, 5, -0.8, 0.95, -0.5, 0x23262a);           // 天線
-  const gun = cyl(turret, 0.14, 0.17, 4.6, 10, 0, 0.05, 2.4, 0x14171a, { metalness: 0.8 });
+  bx(turret, 1.7, 0.45, 0.7, 0, 0.28, -1.05, 0x3a4136);                  // 尾艙置物架
+  cyl(turret, 0.02, 0.03, 1.3, 5, -0.7, 1.35, -0.6, 0x23262a);           // 天線
+  const gun = cyl(turret, 0.13, 0.16, 4.4, 10, 0, 0.42, 2.9, 0x14171a, { metalness: 0.8 });
   gun.rotation.x = Math.PI / 2;
-  cyl(gun, 0.2, 0.2, 0.5, 8, 0, 0.9, 0, 0x1e2226);                       // 排煙器
-  cyl(gun, 0.22, 0.22, 0.35, 8, 0, 2.2, 0, 0x0d0f11);                    // 砲口制退器
+  cyl(gun, 0.19, 0.19, 0.5, 8, 0, 0.8, 0, 0x1e2226);                     // 排煙器
+  cyl(gun, 0.21, 0.21, 0.35, 8, 0, 2.05, 0, 0x0d0f11);                   // 砲口制退器
   g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels, top: 9 };
   return g;
 }
@@ -1056,10 +1073,18 @@ function buildTrooper(side, p) {
     cyl(tube, 0.16, 0.11, 0.3, 8, 0, 1.05, 0, dim(SIDES[side].color, 0.8));
     cyl(tube, 0.17, 0.17, 0.14, 8, 0, -0.98, 0, 0x2c3033);
   } else {
-    // 突擊步槍(槍身/槍管/彈匣分件)掛右手
-    const rifle = bx(armR, 0.09, 0.16, 1.05, 0.03, -0.82, 0.4, 0x1a1d20);
-    bx(rifle, 0.045, 0.07, 0.4, 0, 0.02, 0.65, 0x30373f, { metalness: 0.85 });
-    bx(rifle, 0.07, 0.22, 0.12, 0, -0.16, 0.1, 0x23262a);
+    // 通用機槍(槍身/長槍管/彈鏈盒/提把/收折兩腳架)掛右手
+    const mg = bx(armR, 0.1, 0.18, 1.5, 0.03, -0.82, 0.5, 0x1a1d20);
+    bx(mg, 0.05, 0.08, 0.75, 0, 0.04, 1.05, 0x30373f, { metalness: 0.85 });   // 長槍管
+    const fl = cyl(mg, 0.055, 0.04, 0.16, 6, 0, 0.04, 1.48, 0x0d0f11);        // 消焰器
+    fl.rotation.x = Math.PI / 2;
+    bx(mg, 0.05, 0.07, 0.4, 0, 0.15, 0.25, 0x23262a);                         // 提把/照門
+    bx(mg, 0.2, 0.26, 0.3, -0.14, -0.12, 0.2, 0x2e332c);                      // 彈鏈盒(左掛)
+    bx(mg, 0.07, 0.24, 0.12, 0, -0.18, -0.15, 0x23262a);                      // 握把
+    for (const sx of [-1, 1]) {                                               // 兩腳架(沿槍管收折)
+      const bp = bx(mg, 0.03, 0.42, 0.03, sx * 0.06, -0.1, 0.85, 0x23262a);
+      bp.rotation.x = 1.25;
+    }
   }
   g.userData.rig = {
     kind: 'biped', hips, legL, legR, armL, armR,
@@ -1068,10 +1093,10 @@ function buildTrooper(side, p) {
   return g;
 }
 
-/** 備援步兵(GLB 失敗時)— 可動骨架 */
+/** 鋼鐵機槍步兵 — 可動骨架 + 手持通用機槍 */
 function buildSoldierFallback(side) {
   return buildTrooper(side, {
-    fatigue: 0x5a6148, vest: 0x3a4034, pad: 0x474e3c, helmet: 0x3d4436, weapon: 'rifle',
+    fatigue: 0x5a6148, vest: 0x3a4034, pad: 0x474e3c, helmet: 0x3d4436, weapon: 'mg',
   });
 }
 
@@ -1149,6 +1174,382 @@ function buildHeliFallback(side) {
   g.userData.spin = [rotor, tailRotor];
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.6, bob: 0.05, top: 16 };
   return g;
+}
+
+// ---------- 蜂群陣營專屬 NPC(2026-07-10 陣營差異化重塑)----------
+// 設計原則(doc/mobility_plan.html):
+//  · 剪影差異化:鋼鐵 = 履帶/輪式軍武寫實系;蜂群 = 懸浮/旋翼/機器人科技系,
+//    遠距一眼分敵我(不只靠陣營色)
+//  · 骨架全部走 locomotion.js 既有 rig 合約(biped/quad/wheeled/tracked/aerial),
+//    步態/側傾/壓坡動力學零新增程式
+//  · 賽璐璐大色塊 + 同色系明暗分版 + 琥珀發光識別(複眼/蜂腹環紋/蜂室燈)
+const SW_SHELL = 0x34383f, SW_DK = 0x282c31, SW_PLATE = 0x41464e, SW_JOINT = 0x1c1f23;
+
+/**
+ * 蜂群戰鬥機器人步兵(soldier / rocketeer 共用雙足骨架):
+ * 逆關節鳥腿 + 蜂腹環紋 + 單眼複合感測條;soldier 右手鼓式彈鼓機槍,
+ * rocketeer 改右肩四聯裝火箭莢艙(對應 wid:'rocket')。
+ */
+function buildSwarmTrooper(side, { rocket = false } = {}) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const hipY = 1.45;
+  // 逆關節鳥腿:大腿前傾 / 小腿後折 / 趾爪足
+  const mkLeg = (sx) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 0.26, hipY, 0);
+    const ax = cyl(leg, 0.1, 0.1, 0.22, 6, 0, 0, 0, SW_JOINT, { metalness: 0.7 });
+    ax.rotation.z = Math.PI / 2;                                          // 髖軸
+    const th = bx(leg, 0.17, 0.62, 0.24, 0, -0.3, 0.09, SW_PLATE, { metalness: 0.6 });
+    th.rotation.x = -0.3;                                                 // 大腿
+    const sh = bx(leg, 0.12, 0.6, 0.16, 0, -0.85, -0.04, SW_SHELL);
+    sh.rotation.x = 0.45;                                                 // 小腿(逆關節)
+    bx(leg, 0.16, 0.12, 0.42, 0, -1.36, 0.12, SW_DK);                     // 趾爪足
+    g.add(leg);
+    return leg;
+  };
+  const legL = mkLeg(-1), legR = mkLeg(1);
+  const hips = new THREE.Group();
+  hips.position.y = hipY;
+  g.add(hips);
+  bx(hips, 0.5, 0.24, 0.34, 0, 0.04, 0, SW_JOINT);                        // 骨盆
+  // 蜂腹(後伸節腹):琥珀×碳黑環紋 = 蜂群識別
+  bx(hips, 0.34, 0.32, 0.55, 0, -0.05, -0.42, SW_DK);
+  bx(hips, 0.36, 0.1, 0.5, 0, -0.05, -0.44, accent, { emissive: accent, emissiveIntensity: 0.6 });
+  bx(hips, 0.26, 0.22, 0.3, 0, -0.08, -0.78, SW_DK);
+  // 軀幹:胸殼 + 前胸甲 + 識別燈 + 背部散熱包
+  bx(hips, 0.56, 0.62, 0.4, 0, 0.55, 0.02, SW_SHELL, { metalness: 0.6 });
+  bx(hips, 0.6, 0.42, 0.44, 0, 0.62, 0.04, SW_PLATE);
+  bx(hips, 0.24, 0.1, 0.06, 0, 0.72, 0.28, accent, { emissive: accent, emissiveIntensity: 1.0 });
+  bx(hips, 0.42, 0.5, 0.22, 0, 0.6, -0.32, SW_DK);
+  for (const sx of [-1, 1]) bx(hips, 0.24, 0.16, 0.3, sx * 0.42, 0.92, 0, SW_PLATE);  // 肩甲
+  // 手臂:肩關節樞軸
+  const mkArm = (sx) => {
+    const a = new THREE.Group();
+    a.position.set(sx * 0.46, 0.88, 0);
+    bx(a, 0.15, 0.44, 0.2, 0, -0.22, 0, SW_SHELL);
+    bx(a, 0.13, 0.4, 0.17, 0, -0.62, 0.05, SW_DK);
+    hips.add(a);
+    return a;
+  };
+  const armL = mkArm(-1), armR = mkArm(1);
+  // 頭:單眼複合感測條 + 雙天線(蜂觸角)
+  bx(hips, 0.3, 0.28, 0.34, 0, 1.2, 0.04, SW_SHELL, { metalness: 0.6 });
+  bx(hips, 0.26, 0.08, 0.06, 0, 1.22, 0.24, accent, { emissive: accent, emissiveIntensity: 1.6 });
+  for (const sx of [-1, 1]) {
+    const ant = cyl(hips, 0.015, 0.02, 0.4, 5, sx * 0.1, 1.5, 0.1, 0x14171a);
+    ant.rotation.x = -0.5;
+  }
+  // 武器
+  if (rocket) {
+    // 右肩四聯裝火箭莢艙(琥珀管口)
+    const pod = bx(hips, 0.32, 0.36, 0.72, 0.44, 1.1, -0.02, SW_DK, { metalness: 0.6 });
+    for (const [oy, ox] of [[-0.08, -0.07], [-0.08, 0.07], [0.08, -0.07], [0.08, 0.07]]) {
+      const tube = cyl(pod, 0.055, 0.055, 0.16, 6, ox, oy, 0.34, 0x14171a);
+      tube.rotation.x = Math.PI / 2;
+      const rim = cyl(pod, 0.06, 0.06, 0.03, 6, ox, oy, 0.42, accent, { emissive: accent, emissiveIntensity: 0.9 });
+      rim.rotation.x = Math.PI / 2;
+    }
+  } else {
+    // 鼓式彈鼓機槍掛右手(短護木 + 琥珀砲口環)
+    const mg = bx(armR, 0.1, 0.16, 1.2, 0.02, -0.78, 0.42, 0x15181c);
+    bx(mg, 0.05, 0.07, 0.55, 0, 0.03, 0.8, 0x30373f, { metalness: 0.85 });    // 槍管
+    const drum = cyl(mg, 0.13, 0.13, 0.14, 8, 0, -0.16, 0.02, SW_DK);         // 彈鼓
+    drum.rotation.z = Math.PI / 2;
+    const muz = cyl(mg, 0.05, 0.05, 0.05, 6, 0, 0.03, 1.08, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    muz.rotation.x = Math.PI / 2;
+  }
+  g.userData.rig = {
+    kind: 'biped', hips, legL, legR, armL, armR,
+    hipsY0: hipY, stride: 0.95, bob: 0.07, sway: 0.06, top: 8, gunArm: true,
+  };
+  return g;
+}
+
+/**
+ * 蜂群懸浮運兵艇(apc)— 無輪地效滑行平台:氣墊裙 + 四角向量噴口。
+ * rig 走 wheeled(側傾/點頭係數較大 = 懸浮漂移感),wheels 留空。
+ */
+function buildSwarmApc(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const hull = new THREE.Group();
+  g.add(hull);
+  bx(hull, 2.5, 0.9, 4.6, 0, 1.3, -0.2, SW_SHELL, { metalness: 0.6 });   // 主艙
+  const nose = bx(hull, 2.3, 0.7, 1.4, 0, 1.2, 2.35, SW_DK);             // 楔形艏
+  nose.rotation.x = 0.35;
+  bx(hull, 2.2, 0.18, 3.6, 0, 1.85, -0.4, SW_PLATE);                     // 頂甲
+  bx(hull, 0.7, 0.12, 0.9, 0.6, 1.98, -1.3, SW_DK);                      // 艙口蓋
+  bx(hull, 1.5, 0.12, 0.08, 0, 1.62, 2.62, accent,
+    { emissive: accent, emissiveIntensity: 0.7 });                       // 蜂眼駕駛窗
+  for (const s of [-1, 1]) {
+    const skirt = bx(hull, 0.5, 0.55, 4.6, s * 1.5, 0.72, -0.1, SW_DK);  // 氣墊裙(外擴)
+    skirt.rotation.z = s * 0.35;
+    bx(hull, 0.14, 0.1, 3.8, s * 1.6, 1.15, -0.1, accent,
+      { emissive: accent, emissiveIntensity: 0.9 });                     // 舷側識別光條
+  }
+  // 四角向量噴口(底面琥珀光 = 懸浮感)
+  for (const [sx, sz] of [[-1, 1.5], [1, 1.5], [-1, -1.9], [1, -1.9]]) {
+    const pod = cyl(hull, 0.32, 0.4, 0.5, 8, sx * 1.1, 0.55, sz, SW_JOINT, { metalness: 0.7 });
+    cyl(pod, 0.26, 0.26, 0.08, 8, 0, -0.28, 0, accent, { emissive: accent, emissiveIntensity: 1.1 });
+  }
+  // 遙控槍塔 + 天線
+  cyl(hull, 0.45, 0.55, 0.4, 6, 0, 2.12, 0.5, SW_PLATE);
+  const barrel = cyl(hull, 0.06, 0.07, 1.6, 6, 0, 2.2, 1.5, 0x111418, { metalness: 0.8 });
+  barrel.rotation.x = Math.PI / 2;
+  cyl(hull, 0.02, 0.03, 1.2, 5, -1.0, 2.4, -2.0, 0x23262a);
+  g.userData.rig = { kind: 'wheeled', hull, hullY0: 0, wheels: [], top: 11 };
+  return g;
+}
+
+/**
+ * 蜂群四足步行砲台(tank)— 甲蟲式四足走獸 + 背載磁軌砲。
+ * rig 走 quad(stepQuad:對角步態/脊椎波/尾配重),與獸型機甲同合約;
+ * 腿掛根節點(脊椎浮沉不帶動腳底 → 不滑步)。
+ */
+function buildSwarmTank(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const hipY = 2.1;
+  const spine = new THREE.Group();
+  spine.position.y = hipY;
+  g.add(spine);
+  // 後段蜂腹甲殼(琥珀環紋)
+  bx(spine, 2.2, 1.2, 2.0, 0, 0, -1.5, SW_SHELL, { metalness: 0.6 });
+  bx(spine, 2.3, 0.16, 1.8, 0, 0.66, -1.5, SW_PLATE);
+  for (let i = 0; i < 2; i++)
+    bx(spine, 2.26, 0.18, 0.26, 0, -0.1, -1.0 - i * 0.75, accent,
+      { emissive: accent, emissiveIntensity: 0.5 });                     // 腹部環紋
+  // 前段主甲殼(胸樞軸:脊椎波第二節)
+  const chest = new THREE.Group();
+  chest.position.set(0, 0.05, 0.2);
+  spine.add(chest);
+  bx(chest, 2.5, 1.4, 2.6, 0, 0.1, 0.8, SW_PLATE, { metalness: 0.6 });
+  bx(chest, 2.3, 0.2, 2.2, 0, 0.88, 0.8, SW_SHELL);                      // 背甲
+  // 背載磁軌砲(朝 +z;導軌 + 充能環)
+  const gun = cyl(chest, 0.15, 0.19, 4.6, 8, 0, 1.05, 2.6, 0x14171a, { metalness: 0.8 });
+  gun.rotation.x = Math.PI / 2;
+  for (const s of [-1, 1]) bx(gun, 0.08, 3.8, 0.16, s * 0.24, -0.2, 0, SW_DK, { metalness: 0.7 });
+  cyl(gun, 0.24, 0.24, 0.4, 6, 0, 2.1, 0, 0x0d0f11);                     // 砲口
+  cyl(gun, 0.21, 0.21, 0.16, 6, 0, 1.55, 0, accent, { emissive: accent, emissiveIntensity: 0.9 });
+  // 頸/頭(複眼感測;stepQuad 靜止警戒掃描)
+  const neck = new THREE.Group();
+  neck.position.set(0, -0.15, 2.1);
+  chest.add(neck);
+  bx(neck, 0.5, 0.4, 0.5, 0, 0, 0.1, SW_DK);
+  const head = new THREE.Group();
+  head.position.set(0, 0, 0.4);
+  neck.add(head);
+  bx(head, 0.7, 0.5, 0.6, 0, 0, 0.2, SW_SHELL, { metalness: 0.6 });
+  bx(head, 0.56, 0.12, 0.08, 0, 0.06, 0.52, accent, { emissive: accent, emissiveIntensity: 1.6 });
+  for (const sx of [-1, 1]) {
+    const ant = cyl(head, 0.02, 0.03, 0.7, 5, sx * 0.22, 0.5, 0.3, 0x14171a);
+    ant.rotation.x = -0.6;                                               // 蜂觸角
+  }
+  // 尾(散熱鰭配重;stepQuad 急轉甩尾)
+  const tail = new THREE.Group();
+  tail.position.set(0, 0.15, -2.5);
+  spine.add(tail);
+  bx(tail, 0.3, 0.5, 0.8, 0, 0, -0.4, SW_DK);
+  const tail2 = new THREE.Group();
+  tail2.position.set(0, 0, -0.8);
+  tail.add(tail2);
+  bx(tail2, 0.2, 0.36, 0.6, 0, 0, -0.3, SW_JOINT);
+  bx(tail2, 0.22, 0.2, 0.16, 0, 0, -0.62, accent, { emissive: accent, emissiveIntensity: 0.8 });
+  // 四足:髖樞軸 + 逆關節 + 足墊
+  const mkLeg = (sx, sz, front) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 1.3, hipY, sz);
+    bx(leg, 0.5, 0.5, 0.6, 0, 0, 0, SW_PLATE, { metalness: 0.6 });       // 髖甲
+    const th = bx(leg, 0.3, 1.3, 0.45, 0, -0.55, front ? 0.15 : -0.15, SW_SHELL);
+    th.rotation.x = front ? -0.25 : 0.25;
+    const sh = bx(leg, 0.2, 1.2, 0.3, 0, -1.5, front ? -0.15 : 0.15, SW_DK);
+    sh.rotation.x = front ? 0.3 : -0.3;
+    bx(leg, 0.34, 0.18, 0.5, 0, -2.02, 0.05, SW_JOINT);                  // 足墊
+    g.add(leg);
+    return leg;
+  };
+  g.userData.rig = {
+    kind: 'quad', spine, chest, neck, head, tail, tail2,
+    legFL: mkLeg(-1, 1.1, true), legFR: mkLeg(1, 1.1, true),
+    legHL: mkLeg(-1, -1.5, false), legHR: mkLeg(1, -1.5, false),
+    hipsY0: hipY, stride: 1.6, bob: 0.08, top: 9,
+  };
+  return g;
+}
+
+/**
+ * 蜂群懸浮砲台(howitzer)— 六角浮游平台 + 高仰角磁軌榴砲;
+ * rig 走 tracked(小側傾/大點頭 = 重平台慣性),wheels 留空。
+ */
+function buildSwarmHowitzer(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const hull = new THREE.Group();
+  g.add(hull);
+  cyl(hull, 1.5, 1.8, 0.6, 6, 0, 0.75, 0, SW_SHELL);                     // 六角平台
+  cyl(hull, 1.52, 1.52, 0.1, 6, 0, 1.1, 0, accent, { emissive: accent, emissiveIntensity: 0.6 });  // 平台識別環
+  // 三向量噴口(底面琥珀光 = 懸浮)
+  for (let i = 0; i < 3; i++) {
+    const a = i * Math.PI * 2 / 3 + Math.PI / 2;
+    const pod = cyl(hull, 0.26, 0.34, 0.4, 6, Math.cos(a) * 1.0, 0.32, Math.sin(a) * 1.0, SW_JOINT, { metalness: 0.7 });
+    cyl(pod, 0.22, 0.22, 0.06, 6, 0, -0.22, 0, accent, { emissive: accent, emissiveIntensity: 1.1 });
+  }
+  // 後穩定鰭 ×2
+  for (const s of [-1, 1]) {
+    const fin = bx(hull, 0.12, 0.9, 1.1, s * 0.8, 1.4, -1.25, SW_DK);
+    fin.rotation.x = -0.35;
+  }
+  // 磁軌榴砲(仰角 ~33°:雙導軌 + 砲口充能環)
+  cyl(hull, 0.55, 0.7, 0.7, 6, 0, 1.4, 0, SW_PLATE);                     // 砲架
+  const barrel = cyl(hull, 0.1, 0.14, 3.6, 8, 0, 1.95, -0.85, 0x14171a, { metalness: 0.8 });
+  barrel.rotation.x = -0.58;
+  for (const s of [-1, 1]) bx(barrel, 0.06, 3.2, 0.14, s * 0.17, 0.1, 0, SW_DK, { metalness: 0.7 });
+  cyl(barrel, 0.17, 0.17, 0.18, 6, 0, 1.6, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
+  // 側掛彈藥蜂室 ×3
+  for (let i = 0; i < 3; i++) {
+    const cell = cyl(hull, 0.17, 0.17, 0.5, 6, 0.95, 1.05, 0.55 - i * 0.42, SW_DK);
+    cell.rotation.z = Math.PI / 2;
+  }
+  cyl(hull, 0.02, 0.03, 1.1, 5, -0.9, 1.9, 0.6, 0x23262a);               // 感測桅杆
+  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels: [], top: 5 };
+  return g;
+}
+
+/**
+ * 蜂群六旋翼砲艇(heli)— 沒有主旋翼/尾桁的巨型六軸,剪影與鋼鐵直升機
+ * 徹底區隔;userData.spin 供每幀轉槳,rig 走 aerial(壓坡/浮沉)。
+ */
+function buildSwarmHeli(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.7;
+  g.add(tilt);
+  bx(tilt, 1.3, 1.0, 2.8, 0, 0, 0, SW_SHELL, { metalness: 0.6 });        // 裝甲莢艙機身
+  const canopy = bx(tilt, 0.9, 0.5, 0.7, 0, 0.15, 1.45, accent, { emissive: accent, emissiveIntensity: 0.7 });
+  canopy.rotation.x = 0.25;                                              // 蜂眼座艙
+  bx(tilt, 1.4, 0.16, 2.2, 0, 0.55, -0.2, SW_PLATE);                     // 背甲
+  const chin = cyl(tilt, 0.08, 0.1, 1.0, 8, 0, -0.55, 1.2, 0x111418, { metalness: 0.8 });
+  chin.rotation.x = Math.PI / 2;                                         // 頜下機砲
+  // 短翼火箭莢艙
+  bx(tilt, 2.6, 0.1, 0.5, 0, -0.15, -0.2, SW_DK);
+  for (const s of [-1, 1]) {
+    const pod = cyl(tilt, 0.2, 0.2, 0.8, 6, s * 1.15, -0.32, -0.2, SW_JOINT);
+    pod.rotation.x = Math.PI / 2;
+    cyl(pod, 0.16, 0.16, 0.06, 6, 0, 0.42, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+  }
+  // 尾感測桁 + 識別燈
+  bx(tilt, 0.2, 0.24, 1.4, 0, 0.1, -2.0, SW_DK);
+  bx(tilt, 0.24, 0.3, 0.2, 0, 0.2, -2.75, accent, { emissive: accent, emissiveIntensity: 1.2 });
+  // 六軸旋翼環(蜂群剪影核心)
+  const props = [];
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3 + Math.PI / 6;
+    const x = Math.cos(a) * 1.9, z = Math.sin(a) * 1.9;
+    const arm = bx(tilt, 2.0, 0.09, 0.16, x * 0.5, 0.3, z * 0.5, SW_PLATE, { metalness: 0.6 });
+    arm.rotation.y = Math.atan2(-z, x);
+    cyl(tilt, 0.14, 0.17, 0.22, 8, x, 0.42, z, SW_JOINT, { metalness: 0.8 });
+    cyl(tilt, 0.15, 0.15, 0.05, 8, x, 0.55, z, accent);                  // 馬達頂環
+    const prop = new THREE.Group();
+    prop.position.set(x, 0.62, z);
+    tilt.add(prop);
+    for (const sx of [-1, 1])
+      bx(prop, 1.3, 0.04, 0.15, sx * 0.66, 0, 0, 0x9aa4ad, { transparent: true, opacity: 0.75 });
+    props.push(prop);
+  }
+  // 起落架 ×4
+  for (const [sx, sz] of [[-0.6, 0.9], [0.6, 0.9], [-0.6, -0.9], [0.6, -0.9]])
+    bx(tilt, 0.1, 0.5, 0.1, sx, -0.75, sz, SW_JOINT);
+  g.userData.spin = props;
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.7, bob: 0.06, top: 16 };
+  return g;
+}
+
+/**
+ * 蜂群防禦塔(蜂巢塔)— 六角疊節收分 + 蜂室發光格 + 無人機棲架。
+ * 垂直硬約束同 buildTowerFallback:座圈頂面 / 全高 必須 = 0.92
+ * (makeUnit 把砲塔頭掛在 target*0.92),否則砲塔浮空或陷柱。
+ */
+function buildSwarmTower(side) {
+  const g = new THREE.Group();
+  const accent = new THREE.Color(SIDES[side].color);
+  const TOP = 18.75, RING = TOP * 0.92;
+  // 六角基墩兩階
+  cyl(g, 5.2, 6.0, 1.5, 6, 0, 0.75, 0, 0x3f444b).rotation.y = Math.PI / 6;
+  cyl(g, 4.2, 5.0, 2.0, 6, 0, 2.5, 0, 0x4a5058).rotation.y = Math.PI / 6;
+  // 塔身三節收分(交錯轉 30° = 蜂巢積木感)
+  const segs = [
+    { rt: 3.0, rb: 3.6, h: 4.2, y: 5.6 },
+    { rt: 2.5, rb: 3.0, h: 4.0, y: 9.7 },
+    { rt: 2.1, rb: 2.5, h: 3.6, y: 13.5 },
+  ];
+  segs.forEach((s, i) => {
+    const seg = cyl(g, s.rt, s.rb, s.h, 6, 0, s.y, 0, i % 2 ? 0x3a3f46 : 0x434951);
+    seg.rotation.y = i % 2 ? 0 : Math.PI / 6;
+  });
+  // 蜂室發光格:六面 × 四列,確定性挑格點亮(不用 Math.random)
+  const rows = [[5.2, 3.35], [7.8, 3.02], [10.4, 2.72], [13.0, 2.42]];
+  for (let f = 0; f < 6; f++) {
+    const fg = new THREE.Group();
+    fg.rotation.y = f * Math.PI / 3;
+    g.add(fg);
+    for (let k = 0; k < rows.length; k++) {
+      const [y, r] = rows[k];
+      const lit = (f + k) % 3 === 0;
+      const cell = cyl(fg, 0.5, 0.5, 0.5, 6, 0, y, r, lit ? accent : 0x2c3138,
+        lit ? { emissive: accent, emissiveIntensity: 1.0 } : {});
+      cell.rotation.x = Math.PI / 2;
+    }
+  }
+  // 頂部座圈(頂面 = RING)+ 環繞警示燈
+  cyl(g, 3.0, 2.4, 1.6, 6, 0, RING - 1.05, 0, 0x4a5058);
+  cyl(g, 3.4, 3.4, 0.5, 6, 0, RING - 0.25, 0, 0x545b64);
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3;
+    bx(g, 0.32, 0.32, 0.32, Math.sin(a) * 3.2, RING - 0.25, Math.cos(a) * 3.2, accent,
+      { emissive: accent, emissiveIntensity: 1.2 });
+  }
+  // 感測尖塔(全模型最高點 = TOP)+ 正面複眼(+z 朝兵線)
+  cyl(g, 0.08, 0.2, 3.4, 5, 1.8, TOP - 1.7, -1.2, 0x2c3138);
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), mat(accent, { emissive: accent, emissiveIntensity: 1.3 }));
+  eye.position.set(0, RING - 1.6, 2.6);
+  g.add(eye);
+  // 無人機棲架(懸臂桁架 ×2:剪影不對稱重點)
+  for (const s of [-1, 1]) {
+    const perch = bx(g, 2.6, 0.18, 0.9, s * 3.2, 12.4 + s * 0.7, -0.4, 0x3a3f46);
+    perch.rotation.z = s * 0.12;
+    bx(g, 0.5, 0.3, 0.5, s * 4.2, 12.6 + s * 0.7, -0.4, accent, { emissive: accent, emissiveIntensity: 0.7 });
+  }
+  return g;
+}
+
+/**
+ * 蜂群塔頭:六聯裝蜂巢飛彈莢艙(與鋼鐵雙管砲塔剪影區隔)。
+ * 合約同 buildTowerTurret:yaw 樞軸 → userData.pitch 俯仰樞軸,砲口沿 +z。
+ */
+function buildSwarmTowerTurret(side) {
+  const accent = new THREE.Color(SIDES[side].color);
+  const yaw = new THREE.Group();
+  cyl(yaw, 1.4, 1.8, 0.9, 6, 0, 0.45, 0, 0x494f58, { metalness: 0.7 });  // 承載環
+  const pitch = new THREE.Group();
+  pitch.position.set(0, 1.05, 0.3);
+  yaw.add(pitch);
+  bx(pitch, 3.2, 1.4, 2.4, 0, 0, 0.4, 0x3f444b, { metalness: 0.6 });     // 莢艙本體
+  for (const sx of [-1.0, 0, 1.0]) {
+    for (const sy of [-0.35, 0.35]) {
+      const tube = cyl(pitch, 0.3, 0.3, 0.4, 6, sx, sy, 1.55, 0x14171a);
+      tube.rotation.x = Math.PI / 2;
+      const rim = cyl(pitch, 0.34, 0.34, 0.08, 6, sx, sy, 1.74, accent, { emissive: accent, emissiveIntensity: 1.0 });
+      rim.rotation.x = Math.PI / 2;
+    }
+  }
+  const sensor = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.3 }));
+  sensor.position.set(0, 0.95, 0.9);
+  pitch.add(sensor);
+  yaw.userData.pitch = pitch;
+  outlinify(yaw, 0.1);
+  return yaw;
 }
 
 /** 備援塔 / 主堡 */
@@ -1239,6 +1640,7 @@ function buildBaseFallback(side) {
  * 俯仰限制 -30°~+60°(機械關節極限)。砲管沿 +z,pitch.rotation.x 負值抬升。
  */
 function buildTowerTurret(side) {
+  if (side === 'SWARM') return buildSwarmTowerTurret(side);   // 陣營差異化:蜂群 = 飛彈莢艙
   const accent = new THREE.Color(SIDES[side].color);
   const yaw = new THREE.Group();
   const head = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.7, 4.0), mat(0x4a545e, { metalness: 0.7 }));
@@ -1273,13 +1675,14 @@ const FALLBACK = {
   'hero:robot': (side, vis) => buildRobotMech(side, vis),
   'hero:morph': (side, vis) => buildMorphMech(side, vis),
   decoy: (side, vis) => buildDecoy(side, vis),
-  'creep:soldier': (side) => buildSoldierFallback(side),
-  'creep:apc': (side) => buildApc(side),
-  'creep:tank': (side) => buildTank(side),
-  'creep:rocketeer': (side) => buildRocketeerFallback(side),
-  'creep:howitzer': (side) => buildHowitzerFallback(side),
-  'creep:heli': (side) => buildHeliFallback(side),
-  tower: (side) => buildTowerFallback(side),
+  // NPC/塔陣營差異化:鋼鐵 = 履帶/輪式軍武;蜂群 = 懸浮/旋翼/機器人重塑版
+  'creep:soldier': (side) => (side === 'SWARM' ? buildSwarmTrooper(side) : buildSoldierFallback(side)),
+  'creep:apc': (side) => (side === 'SWARM' ? buildSwarmApc(side) : buildApc(side)),
+  'creep:tank': (side) => (side === 'SWARM' ? buildSwarmTank(side) : buildTank(side)),
+  'creep:rocketeer': (side) => (side === 'SWARM' ? buildSwarmTrooper(side, { rocket: true }) : buildRocketeerFallback(side)),
+  'creep:howitzer': (side) => (side === 'SWARM' ? buildSwarmHowitzer(side) : buildHowitzerFallback(side)),
+  'creep:heli': (side) => (side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
+  tower: (side) => (side === 'SWARM' ? buildSwarmTower(side) : buildTowerFallback(side)),
   'base:SWARM': () => buildBaseFallback('SWARM'),
   'base:STEEL': () => buildBaseFallback('STEEL'),
 };
