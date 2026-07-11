@@ -729,15 +729,23 @@ function buildBeastMech(side, vis) {
   tail2.position.set(0, 0, -P.tailLen);
   tail.add(tail2);
 
-  // 四腿(腿掛根節點:脊椎浮沉不帶動腳底 → 不滑步);腿型隨生物構造
+  // 四腿(腿掛根節點:脊椎浮沉不帶動腳底 → 不滑步);腿型隨生物構造,
+  // 一律分節(髖 → 膝 → 踝/蹄):前肢肘朝後折、後肢跗關節朝前折(S = ∓1)= 真獸的 Z 形腿;
+  // 觸手腿則是五節多關節,以逐節相位延遲跑一道行進波(locomotion flexChain / undulate)
+  const legChains = [], tents = [];
   const mkLeg = (sx, sz, front) => {
-    const leg = new THREE.Group();
-    leg.position.set(sx * P.legX * B, hipY, sz);
-    g.add(leg);
+    const chain = [];
+    legChains.push(chain);
+    const S = front ? 1 : -1;
+    const pos = [sx * P.legX * B, hipY, sz];
+    let leg;
     if (C === 'cthulhu') {
       // 多關節觸手腿(與持武觸手同構:章魚 / 八爪博士式機械臂)——
       // 五節逐段收分,先外弓再內捲下探,節間關節環主色發光;末端三爪吸盤扣地
       const segs = [0.34, 0.3, 0.27, 0.24, 0.2];   // 節長(× hipY)
+      leg = new THREE.Group();
+      leg.position.set(pos[0], pos[1], pos[2]);
+      g.add(leg);
       let node = leg, prev = 0;
       for (let i = 0; i < segs.length; i++) {
         const j = new THREE.Group();
@@ -746,6 +754,7 @@ function buildBeastMech(side, vis) {
         // 外弓 → 內捲(觸手的多關節曲線,不是直柱);前腳向前撇、後腳向後撇
         j.rotation.z = sx * (i === 0 ? 0.55 : -0.3);
         j.rotation.x = (front ? 0.16 : -0.16) * (i === 0 ? 1 : -0.6);
+        chain.push({ g: j, base: j.rotation.x, k: 0.16 * S, d: i * 0.55 });   // 行進波(節節延遲)
         const len = hipY * segs[i];
         const rt = (0.3 - i * 0.045) * B, rb = (0.34 - i * 0.045) * B;
         cyl(j, rt, rb, len, 8, 0, -len / 2, 0, i % 2 ? hullDk : hull, { metalness: 0.5 });
@@ -763,23 +772,49 @@ function buildBeastMech(side, vis) {
         claw.rotation.z = Math.cos(a) * 0.4;
         node.add(claw);
       }
+      chain.shift();   // 第一節是肩基座(由 stepQuad 直接擺動),不進屈曲鏈
     } else if (C === 'stego') {
-      // 象柱腿:粗壯直柱 + 足環
-      bx(leg, 0.46 * B, 0.5, 0.6, 0, -0.15, 0, plate);
-      cyl(leg, 0.22 * B, 0.26 * B, hipY * 0.82, 8, 0, -hipY * 0.55, 0, hull);
-      cyl(leg, 0.3 * B, 0.32 * B, 0.25, 8, 0, -hipY + 0.14, 0, 0x23262a);
+      // 象柱腿:粗壯直柱 + 足環(承重腿:關節幾乎不折,只在擺動時微屈)
+      leg = segLimb(g, pos, [
+        { len: hipY * 0.45, draw: (l) => {
+          bx(l, 0.46 * B, 0.5, 0.6, 0, -0.15, 0, plate);
+          cyl(l, 0.24 * B, 0.26 * B, hipY * 0.5, 8, 0, -hipY * 0.24, 0, hull);
+        } },
+        { len: hipY * 0.4, base: S * 0.12, k: S * 0.3, d: 0.16, draw: (l) => {
+          cyl(l, 0.2 * B, 0.24 * B, hipY * 0.45, 8, 0, -hipY * 0.21, 0, hull);
+        } },
+        { len: 0, base: -S * 0.1, k: -S * 0.24, d: 0.45, draw: (l) => {
+          cyl(l, 0.3 * B, 0.32 * B, 0.25, 8, 0, -0.1, 0, 0x23262a);              // 足環
+        } },
+      ], chain);
     } else if (C === 'centaur') {
-      // 馬腿:修長直柱 + 蹄
-      bx(leg, 0.36 * B, 0.5, 0.55, 0, -0.12, 0, plate);
-      bx(leg, 0.24 * B, hipY * 0.5, 0.34, 0, -hipY * 0.3, front ? 0.04 : -0.06, hull);
-      bx(leg, 0.15 * B, hipY * 0.55, 0.22, 0, -hipY * 0.78, front ? -0.04 : 0.08, hullDk);
-      cyl(leg, 0.14 * B, 0.16 * B, 0.24, 8, 0, -hipY + 0.13, 0.02, 0x23262a);
+      // 馬腿:修長股 → 管骨 → 蹄(奔馳時管骨大幅回折)
+      leg = segLimb(g, pos, [
+        { len: hipY * 0.45, draw: (l) => {
+          bx(l, 0.36 * B, 0.5, 0.55, 0, -0.12, 0, plate);
+          bx(l, 0.24 * B, hipY * 0.5, 0.34, 0, -hipY * 0.24, front ? 0.04 : -0.06, hull);
+        } },
+        { len: hipY * 0.42, base: S * 0.34, k: S * 0.5, d: 0.15, draw: (l) => {
+          bx(l, 0.15 * B, hipY * 0.52, 0.22, 0, -hipY * 0.25, front ? -0.04 : 0.08, hullDk);
+        } },
+        { len: 0, base: -S * 0.3, k: -S * 0.4, d: 0.42, draw: (l) => {
+          cyl(l, 0.14 * B, 0.16 * B, 0.24, 8, 0, -0.1, 0.02, 0x23262a);          // 蹄
+        } },
+      ], chain);
     } else {
-      // 犬腿:髖甲 + 逆關節小腿 + 足爪
-      bx(leg, 0.4 * B, 0.55, 0.66, 0, -0.1, 0, plate);
-      bx(leg, 0.3 * B, hipY * 0.55, 0.42, 0, -hipY * 0.32, front ? 0.06 : -0.08, hull);
-      bx(leg, 0.22 * B, hipY * 0.5, 0.3, 0, -hipY * 0.75, front ? -0.08 : 0.1, hullDk);
-      bx(leg, 0.34 * B, 0.2, 0.55, 0, -hipY + 0.1, 0.12, 0x23262a);
+      // 犬腿:髖甲 + 逆關節小腿 + 足爪(前肢肘後折、後肢跗前折)
+      leg = segLimb(g, pos, [
+        { len: hipY * 0.5, draw: (l) => {
+          bx(l, 0.4 * B, 0.55, 0.66, 0, -0.1, 0, plate);
+          bx(l, 0.3 * B, hipY * 0.52, 0.42, 0, -hipY * 0.28, front ? 0.06 : -0.08, hull);
+        } },
+        { len: hipY * 0.42, base: S * 0.45, k: S * 0.55, d: 0.15, draw: (l) => {
+          bx(l, 0.22 * B, hipY * 0.5, 0.3, 0, -hipY * 0.25, front ? -0.08 : 0.1, hullDk);
+        } },
+        { len: 0, base: -S * 0.4, k: -S * 0.45, d: 0.42, draw: (l) => {
+          bx(l, 0.34 * B, 0.2, 0.55, 0, -0.1, 0.12, 0x23262a);                   // 足爪
+        } },
+      ], chain);
     }
     return leg;
   };
@@ -943,6 +978,8 @@ function buildBeastMech(side, vis) {
       a.rotation.y = ry;
       chest.add(a);
       const segs = [0.8, 0.72, 0.62, 0.52, 0.42];
+      const chain = [];
+      tents.push(chain);
       let node = a, prev = 0;
       for (let i = 0; i < segs.length; i++) {
         const j = new THREE.Group();
@@ -950,6 +987,8 @@ function buildBeastMech(side, vis) {
         node.add(j);
         j.rotation.z = i === 0 ? sx * 2.3 : -sx * 0.34;   // 先外舉(節段朝上外)→ 逐節回捲
         j.rotation.x = i === 0 ? 0 : 0.3;                 // 逐節前捲(章魚/八爪博士式曲線)
+        // 節節相位延遲 → 由根往梢跑的蠕動波(locomotion undulate);末節不動,武器才穩得住
+        if (i < segs.length - 1) chain.push({ g: j, base: j.rotation.x, k: 0.13, d: i * 0.6 });
         const len = segs[i] * B, rt = (0.14 - i * 0.018) * B, rb = (0.17 - i * 0.018) * B;
         cyl(j, rt, rb, len, 8, 0, -len / 2, 0, i % 2 ? hullDk : hull, { metalness: 0.5 });
         cyl(j, rb * 1.12, rb * 1.12, 0.07, 8, 0, -0.02, 0, accent, { emissive: accent, emissiveIntensity: 0.6 });  // 關節環
@@ -987,10 +1026,14 @@ function buildBeastMech(side, vis) {
     t2m.rotation.x = Math.PI / 2 - 0.35;
   }
 
+  // 建腿的順序 = legChains 的順序(FL, FR, HL, HR)
+  const legFL = mkLeg(-1, P.fz, true), legFR = mkLeg(1, P.fz, true);
+  const legHL = mkLeg(-1, P.hz, false), legHR = mkLeg(1, P.hz, false);
   const rig = {
     kind: 'quad', spine, chest, neck, head, tail, tail2,
-    legFL: mkLeg(-1, P.fz, true), legFR: mkLeg(1, P.fz, true),
-    legHL: mkLeg(-1, P.hz, false), legHR: mkLeg(1, P.hz, false),
+    legFL, legFR, legHL, legHR,
+    chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
+    tents: tents.length ? tents : null,   // 持武觸手(克蘇魯):恆時緩慢蠕動的多節波
     hipsY0: hipY, stride: P.stride, bob: 0.09, top: 10,
   };
   g.userData.rig = rig;
@@ -1021,19 +1064,20 @@ function buildBipedBeast(side, vis) {
   const hips = new THREE.Group();
   hips.position.y = hipY;
   g.add(hips);
+  // 分節骨架(segLimb + locomotion flexChain):四台各自照原型的關節構造 —
+  // 猩猩蹠行短粗腿 / 鴕鳥逆關節三節長腿 / 暴龍 Z 形趾行腿 / 袋鼠強力後腿長蹠
+  const legChainL = [], legChainR = [], armChainL = [], armChainR = [];
+  const cl = (sx) => (sx < 0 ? legChainL : legChainR);
+  const ca = (sx) => (sx < 0 ? armChainL : armChainR);
   let legL, legR, armL, armR;
 
   if (C === 'gorilla') {
-    // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿 ----
-    const mkLeg = (sx) => {
-      const leg = new THREE.Group();
-      leg.position.set(sx * 0.62, hipY, 0);
-      g.add(leg);
-      bx(leg, 0.55, 1.0, 0.7, 0, -0.5, 0.02, hull, { metalness: 0.6 });
-      bx(leg, 0.5, 0.9, 0.6, 0, -1.3, -0.02, hullDk);
-      bx(leg, 0.6, 0.3, 0.95, 0, -1.85, 0.1, 0x23262a);
-      return leg;
-    };
+    // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿(蹠行,膝微屈)----
+    const mkLeg = (sx) => segLimb(g, [sx * 0.62, hipY, 0], [
+      { len: 1.0, draw: (l) => bx(l, 0.55, 1.0, 0.7, 0, -0.5, 0.02, hull, { metalness: 0.6 }) },
+      { len: 0.75, base: 0.1, k: 0.5, d: 0.15, draw: (l) => bx(l, 0.5, 0.9, 0.6, 0, -0.35, -0.02, hullDk) },
+      { len: 0, base: -0.06, k: -0.28, d: 0.5, draw: (l) => bx(l, 0.6, 0.3, 0.95, 0, -0.16, 0.1, 0x23262a) },
+    ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
     bx(hips, 1.3, 0.6, 0.9, 0, 0.1, 0, joint, { metalness: 0.6 });                 // 骨盆
     const torso = bx(hips, 2.1, 1.3, 1.3, 0, 1.0, 0.1, hull, { metalness: 0.6 });
@@ -1043,55 +1087,62 @@ function buildBipedBeast(side, vis) {
     bx(hips, 0.62, 0.5, 0.6, 0, 1.75, 0.55, plate, { metalness: 0.6 });            // 低伏頭
     bx(hips, 0.66, 0.16, 0.2, 0, 1.98, 0.68, hullDk);                              // 眉甲
     bx(hips, 0.46, 0.12, 0.06, 0, 1.82, 0.86, accent, { emissive: accent, emissiveIntensity: 1.6 });
-    const mkArm = (sx) => {
-      const a = new THREE.Group();
-      a.position.set(sx * 1.35, 1.45, 0.1);
-      hips.add(a);
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(plate, { metalness: 0.6 }));
-      ball.position.y = 0.1;
-      a.add(ball);
-      bx(a, 0.6, 1.1, 0.7, 0, -0.6, 0.05, hull, { metalness: 0.6 });               // 巨上臂
-      if (sx > 0) {
-        // 右巨臂 = 旋轉機砲(彈鼓前臂 + 三管砲口 + 主色充能環)
-        cyl(a, 0.42, 0.46, 1.3, 10, 0, -1.75, 0.05, hullDk, { metalness: 0.7 });
-        for (const aa of [0, 2.1, 4.2])
-          cyl(a, 0.07, 0.07, 0.6, 6, Math.cos(aa) * 0.18, -2.55, 0.05 + Math.sin(aa) * 0.18, 0x111418, { metalness: 0.85 });
-        cyl(a, 0.3, 0.3, 0.1, 10, 0, -2.42, 0.05, accent, { emissive: accent, emissiveIntensity: 0.9 });
-      } else {
-        // 左巨臂 = 鑄鐵鍋盾(前臂外側圓盾)+ 拳
-        bx(a, 0.55, 1.2, 0.6, 0, -1.7, 0.02, hullDk, { metalness: 0.6 });
-        const pot = cyl(a, 0.85, 0.85, 0.22, 14, -0.5, -1.6, 0.05, 0x2b3138, { metalness: 0.7 });
-        pot.rotation.z = Math.PI / 2;
-        cyl(pot, 0.6, 0.6, 0.26, 14, 0, 0, 0, 0x363e46, { metalness: 0.6 });
-        cyl(pot, 0.78, 0.78, 0.06, 14, 0, -0.12, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
-        bx(a, 0.4, 0.35, 0.5, 0, -2.35, 0.05, 0x30373f);
-      }
-      return a;
-    };
+    // 巨臂:肩球 → 上臂 → 肘(武裝前臂)。猩猩的肘幾乎打直垂放,擺動時才明顯回折
+    const mkArm = (sx) => segLimb(hips, [sx * 1.35, 1.45, 0.1], [
+      { len: 1.15, draw: (a) => {
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(plate, { metalness: 0.6 }));
+        ball.position.y = 0.1;
+        a.add(ball);
+        bx(a, 0.6, 1.1, 0.7, 0, -0.6, 0.05, hull, { metalness: 0.6 });             // 巨上臂
+      } },
+      { len: 0, base: -0.14, k: -0.45, d: 0.32, draw: (a) => {
+        if (sx > 0) {
+          // 右巨臂 = 旋轉機砲(彈鼓前臂 + 三管砲口 + 主色充能環)
+          cyl(a, 0.42, 0.46, 1.3, 10, 0, -0.6, 0.05, hullDk, { metalness: 0.7 });
+          for (const aa of [0, 2.1, 4.2])
+            cyl(a, 0.07, 0.07, 0.6, 6, Math.cos(aa) * 0.18, -1.4, 0.05 + Math.sin(aa) * 0.18, 0x111418, { metalness: 0.85 });
+          cyl(a, 0.3, 0.3, 0.1, 10, 0, -1.27, 0.05, accent, { emissive: accent, emissiveIntensity: 0.9 });
+        } else {
+          // 左巨臂 = 鑄鐵鍋盾(前臂外側圓盾)+ 拳
+          bx(a, 0.55, 1.2, 0.6, 0, -0.55, 0.02, hullDk, { metalness: 0.6 });
+          const pot = cyl(a, 0.85, 0.85, 0.22, 14, -0.5, -0.45, 0.05, 0x2b3138, { metalness: 0.7 });
+          pot.rotation.z = Math.PI / 2;
+          cyl(pot, 0.6, 0.6, 0.26, 14, 0, 0, 0, 0x363e46, { metalness: 0.6 });
+          cyl(pot, 0.78, 0.78, 0.06, 14, 0, -0.12, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+          bx(a, 0.4, 0.35, 0.5, 0, -1.2, 0.05, 0x30373f);
+        }
+      } },
+    ], ca(sx));
     armL = mkArm(-1); armR = mkArm(1);
   } else if (C === 'ostrich') {
-    // ---- 鴕鳥/仿生鶴:長逆關節腿(膝部導彈莢)+ 半開翼內藏飛彈管 + 長頸小頭 ----
-    const mkLeg = (sx) => {
-      const leg = new THREE.Group();
-      leg.position.set(sx * 0.42, hipY, 0);
-      g.add(leg);
-      bx(leg, 0.26, 1.3, 0.4, 0, -0.6, 0.1, hull);                                 // 大腿
-      const knee = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), mat(joint, { metalness: 0.7 }));
-      knee.position.set(0, -1.3, -0.05);
-      leg.add(knee);
-      const podK = bx(leg, 0.24, 0.32, 0.24, 0, -1.2, 0.22, hullDk);               // 膝部導彈莢
-      for (const oy of [-0.07, 0.07]) {
-        const c = cyl(podK, 0.05, 0.05, 0.1, 6, 0, oy, 0.14, accent, { emissive: accent, emissiveIntensity: 1.2 });
-        c.rotation.x = Math.PI / 2;
-      }
-      bx(leg, 0.16, 1.5, 0.24, 0, -2.05, -0.12, hullDk);                           // 長脛(逆關節)
-      bx(leg, 0.3, 0.16, 0.7, 0, -2.85, 0.15, 0x23262a);                           // 二趾足
-      const toe = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 5), mat(0xd8dde2, { metalness: 0.7 }));
-      toe.rotation.x = Math.PI / 2;
-      toe.position.set(0, -2.85, 0.6);
-      leg.add(toe);
-      return leg;
-    };
+    // ---- 鴕鳥/仿生鶴:逆關節三節長腿(股 → 長脛 → 蹠節 → 二趾足)+ 半開翼內藏飛彈管 ----
+    const mkLeg = (sx) => segLimb(g, [sx * 0.42, hipY, 0], [
+      { len: 1.3, draw: (l) => {
+        bx(l, 0.26, 1.3, 0.4, 0, -0.6, 0.1, hull);                                 // 股節
+        const podK = bx(l, 0.24, 0.32, 0.24, 0, -1.2, 0.22, hullDk);               // 膝部導彈莢
+        for (const oy of [-0.07, 0.07]) {
+          const c = cyl(podK, 0.05, 0.05, 0.1, 6, 0, oy, 0.14, accent, { emissive: accent, emissiveIntensity: 1.2 });
+          c.rotation.x = Math.PI / 2;
+        }
+      } },
+      // 逆關節:脛節向後折(base 正)、蹠節再向前回折(base 負)= 鳥類的 Z 形腿
+      { len: 1.5, base: 0.45, k: 0.62, d: 0.14, draw: (l) => {
+        const knee = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), mat(joint, { metalness: 0.7 }));
+        knee.position.set(0, 0, -0.05);
+        l.add(knee);
+        bx(l, 0.16, 1.5, 0.24, 0, -0.75, -0.12, hullDk);                           // 長脛
+      } },
+      { len: 0.55, base: -0.5, k: -0.55, d: 0.36, draw: (l) => {
+        bx(l, 0.14, 0.6, 0.2, 0, -0.28, 0.06, hull);                               // 蹠節(跗蹠骨)
+      } },
+      { len: 0, base: 0.12, k: 0.3, d: 0.55, draw: (l) => {
+        bx(l, 0.3, 0.16, 0.7, 0, -0.06, 0.18, 0x23262a);                           // 二趾足
+        const toe = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.3, 5), mat(0xd8dde2, { metalness: 0.7 }));
+        toe.rotation.x = Math.PI / 2;
+        toe.position.set(0, -0.06, 0.62);
+        l.add(toe);
+      } },
+    ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
     bx(hips, 0.9, 0.45, 0.7, 0, 0.05, 0, joint);
     const bodyM = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 9), mat(hull, { metalness: 0.55 }));
@@ -1113,42 +1164,44 @@ function buildBipedBeast(side, vis) {
     hips.add(beak);
     bx(hips, 0.28, 0.08, 0.06, 0, 2.5, 1.02, accent, { emissive: accent, emissiveIntensity: 1.6 });
     bx(hips, 0.1, 0.3, 0.2, 0, 2.66, 0.6, accent);                                 // 頂冠
-    const mkArm = (sx) => {
-      // 翼 = 臂:半開翼板,翼下露出三管飛彈口(武器藏在翅膀內)
-      const a = new THREE.Group();
-      a.position.set(sx * 0.68, 0.75, 0.15);
-      hips.add(a);
-      const wing = bx(a, 0.14, 0.75, 1.5, sx * 0.05, -0.35, -0.25, plate, { metalness: 0.5 });
-      wing.rotation.z = sx * 0.18;
-      const covert = bx(a, 0.1, 0.5, 1.3, sx * 0.18, -0.3, -0.2, dim(plate, 0.85));
-      covert.rotation.z = sx * 0.35;
-      for (let i = 0; i < 3; i++) {
-        const c = cyl(a, 0.06, 0.06, 0.2, 6, sx * -0.02, -0.58, 0.3 - i * 0.42, 0x111418, { metalness: 0.8 });
-        c.rotation.x = Math.PI / 2;
-        const t = cyl(a, 0.04, 0.04, 0.05, 6, sx * -0.02, -0.58, 0.43 - i * 0.42, accent, { emissive: accent, emissiveIntensity: 1.3 });
-        t.rotation.x = Math.PI / 2;
-      }
-      return a;
-    };
+    // 翼 = 臂:肩節(覆羽板 + 飛彈管)→ 腕節(初級飛羽),擺動時腕節延遲跟隨 = 半開翼的抖動
+    const mkArm = (sx) => segLimb(hips, [sx * 0.68, 0.75, 0.15], [
+      { len: 0.72, draw: (a) => {
+        const wing = bx(a, 0.14, 0.75, 1.5, sx * 0.05, -0.35, -0.25, plate, { metalness: 0.5 });
+        wing.rotation.z = sx * 0.18;
+        const covert = bx(a, 0.1, 0.5, 1.3, sx * 0.18, -0.3, -0.2, dim(plate, 0.85));
+        covert.rotation.z = sx * 0.35;
+        for (let i = 0; i < 3; i++) {
+          const c = cyl(a, 0.06, 0.06, 0.2, 6, sx * -0.02, -0.58, 0.3 - i * 0.42, 0x111418, { metalness: 0.8 });
+          c.rotation.x = Math.PI / 2;
+          const t = cyl(a, 0.04, 0.04, 0.05, 6, sx * -0.02, -0.58, 0.43 - i * 0.42, accent, { emissive: accent, emissiveIntensity: 1.3 });
+          t.rotation.x = Math.PI / 2;
+        }
+      } },
+      { len: 0, base: -0.25, k: -0.5, d: 0.4, draw: (a) => {
+        for (let i = -1; i <= 1; i++) {
+          const f = bx(a, 0.07, 0.5, 0.8, sx * 0.12, -0.28, -0.35 + i * 0.16, i === 0 ? dim(accent, 0.8) : hullDk);
+          f.rotation.z = sx * 0.3;
+          f.rotation.y = sx * i * 0.12;                                            // 指狀初級飛羽
+        }
+      } },
+    ], ca(sx));
     armL = mkArm(-1); armR = mkArm(1);
   } else if (C === 'trex') {
-    // ---- 暴龍:水平體軸 + 巨顎藏無後座砲;小短臂,重尾配重 ----
-    const mkLeg = (sx) => {
-      const leg = new THREE.Group();
-      leg.position.set(sx * 0.72, hipY, 0);
-      g.add(leg);
-      bx(leg, 0.55, 1.15, 0.85, 0, -0.5, 0.1, hull, { metalness: 0.6 });
-      const shin = bx(leg, 0.4, 1.0, 0.5, 0, -1.42, -0.15, hullDk);
-      shin.rotation.x = 0.35;
-      bx(leg, 0.55, 0.28, 1.0, 0, -2.35, 0.2, 0x23262a);                           // 三趾足
-      for (let i = -1; i <= 1; i++) {
-        const cl = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 5), mat(0xd8dde2, { metalness: 0.7 }));
-        cl.rotation.x = Math.PI / 2;
-        cl.position.set(i * 0.2, -2.38, 0.78);
-        leg.add(cl);
-      }
-      return leg;
-    };
+    // ---- 暴龍:水平體軸 + 巨顎藏無後座砲;Z 形趾行腿、小短臂,重尾配重 ----
+    const mkLeg = (sx) => segLimb(g, [sx * 0.72, hipY, 0], [
+      { len: 1.1, draw: (l) => bx(l, 0.55, 1.15, 0.85, 0, -0.5, 0.1, hull, { metalness: 0.6 }) },
+      { len: 0.95, base: 0.4, k: 0.6, d: 0.15, draw: (l) => bx(l, 0.4, 1.0, 0.5, 0, -0.42, -0.1, hullDk) },
+      { len: 0, base: -0.42, k: -0.5, d: 0.45, draw: (l) => {
+        bx(l, 0.55, 0.28, 1.0, 0, -0.3, 0.2, 0x23262a);                            // 三趾足
+        for (let i = -1; i <= 1; i++) {
+          const claw = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 5), mat(0xd8dde2, { metalness: 0.7 }));
+          claw.rotation.x = Math.PI / 2;
+          claw.position.set(i * 0.2, -0.33, 0.78);
+          l.add(claw);
+        }
+      } },
+    ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
     bx(hips, 1.15, 0.85, 1.1, 0, 0.15, 0, joint, { metalness: 0.6 });              // 骨盆
     const chestT = bx(hips, 1.3, 1.05, 1.5, 0, 0.5, 1.05, hull, { metalness: 0.6 });
@@ -1176,15 +1229,14 @@ function buildBipedBeast(side, vis) {
     muzT.rotation.x = Math.PI / 2;
     bx(head, 0.3, 0.14, 0.2, 0, -0.3, 0.5, accent, { emissive: accent, emissiveIntensity: 1.0 });   // 喉部充能
     bx(head, 0.6, 0.1, 0.08, 0, 0.34, 0.78, accent, { emissive: accent, emissiveIntensity: 1.6 });  // 眼列
-    const mkArm = (sx) => {
-      const a = new THREE.Group();
-      a.position.set(sx * 0.62, 0.35, 1.55);
-      hips.add(a);
-      bx(a, 0.16, 0.4, 0.2, 0, -0.18, 0.05, hull);
-      bx(a, 0.12, 0.3, 0.14, 0, -0.45, 0.12, hullDk);
-      for (const o of [-0.05, 0.06]) bx(a, 0.05, 0.14, 0.08, o, -0.62, 0.16, 0x30373f);   // 二爪
-      return a;
-    };
+    // 小短臂:上臂 → 肘(二爪),永遠深屈在胸前(暴龍的招牌姿勢)
+    const mkArm = (sx) => segLimb(hips, [sx * 0.62, 0.35, 1.55], [
+      { len: 0.4, draw: (a) => bx(a, 0.16, 0.4, 0.2, 0, -0.18, 0.05, hull) },
+      { len: 0, base: -0.85, k: -0.4, d: 0.3, draw: (a) => {
+        bx(a, 0.12, 0.3, 0.14, 0, -0.14, 0.02, hullDk);
+        for (const o of [-0.05, 0.06]) bx(a, 0.05, 0.14, 0.08, o, -0.32, 0.06, 0x30373f);   // 二爪
+      } },
+    ], ca(sx));
     armL = mkArm(-1); armR = mkArm(1);
     const tl1 = bx(hips, 0.9, 0.6, 1.4, 0, 0.3, -1.1, hull);                       // 巨尾三節
     tl1.rotation.x = -0.08;
@@ -1192,19 +1244,18 @@ function buildBipedBeast(side, vis) {
     bx(hips, 0.35, 0.25, 1.1, 0, 0.15, -3.3, 0x23262a);
     bx(hips, 0.28, 0.2, 0.2, 0, 0.15, -3.9, accent, { emissive: accent, emissiveIntensity: 0.8 });
   } else {
-    // ---- 袋鼠:大後腿長足 + 著地平衡尾 + 拳砲前臂(拳擊架式)+ 長耳 ----
-    const mkLeg = (sx) => {
-      const leg = new THREE.Group();
-      leg.position.set(sx * 0.55, hipY, 0);
-      g.add(leg);
-      const haunch = bx(leg, 0.5, 1.0, 0.95, 0, -0.4, 0.05, hull, { metalness: 0.6 });
-      haunch.rotation.x = -0.2;
-      const shin = bx(leg, 0.24, 0.95, 0.3, 0, -1.25, -0.1, hullDk);
-      shin.rotation.x = 0.4;
-      bx(leg, 0.3, 0.18, 1.15, 0, -1.95, 0.3, 0x23262a);                           // 長足
-      bx(leg, 0.32, 0.1, 0.3, 0, -1.9, 0.85, dim(accent, 0.8));                    // 足尖識別
-      return leg;
-    };
+    // ---- 袋鼠:大後腿(股 → 脛 → 長蹠 → 趾)+ 著地平衡尾 + 拳砲前臂(拳擊架式)----
+    const mkLeg = (sx) => segLimb(g, [sx * 0.55, hipY, 0], [
+      { len: 0.95, draw: (l) => {
+        const haunch = bx(l, 0.5, 1.0, 0.95, 0, -0.4, 0.05, hull, { metalness: 0.6 });
+        haunch.rotation.x = -0.2;                                                  // 蓄力的粗股
+      } },
+      { len: 0.8, base: 0.6, k: 0.72, d: 0.14, draw: (l) => bx(l, 0.24, 0.95, 0.3, 0, -0.4, -0.1, hullDk) },
+      { len: 0, base: -0.62, k: -0.6, d: 0.4, draw: (l) => {
+        bx(l, 0.3, 0.18, 1.15, 0, -0.08, 0.35, 0x23262a);                          // 長蹠(著地面)
+        bx(l, 0.32, 0.1, 0.3, 0, -0.06, 0.9, dim(accent, 0.8));                    // 足尖識別
+      } },
+    ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
     bx(hips, 1.0, 0.55, 0.85, 0, 0.1, 0, joint, { metalness: 0.6 });
     const torso = bx(hips, 1.05, 1.1, 0.85, 0, 0.85, 0.15, hull, { metalness: 0.6 });
@@ -1218,20 +1269,19 @@ function buildBipedBeast(side, vis) {
       const ear = bx(hips, 0.1, 0.55, 0.16, sx * 0.16, 2.05, 0.32, hull);
       ear.rotation.z = sx * -0.15;
     }
-    const mkArm = (sx) => {
-      const a = new THREE.Group();
-      a.position.set(sx * 0.6, 1.15, 0.3);
-      hips.add(a);
-      bx(a, 0.2, 0.5, 0.24, 0, -0.2, 0.05, hull);
-      bx(a, 0.22, 0.24, 0.6, 0, -0.5, 0.25, hullDk);                               // 前臂平舉
-      for (const oy of [-0.05, 0.05]) {
-        const b = cyl(a, 0.04, 0.04, 0.3, 6, 0, -0.5 + oy, 0.62, 0x111418, { metalness: 0.85 });
-        b.rotation.x = Math.PI / 2;
-      }
-      const muz = cyl(a, 0.06, 0.06, 0.05, 6, 0, -0.5, 0.8, accent, { emissive: accent, emissiveIntensity: 1.2 });
-      muz.rotation.x = Math.PI / 2;
-      return a;
-    };
+    // 拳擊架式:肘恆深屈把拳砲收在胸前,擺動時只小幅開合(不甩大臂)
+    const mkArm = (sx) => segLimb(hips, [sx * 0.6, 1.15, 0.3], [
+      { len: 0.45, draw: (a) => bx(a, 0.2, 0.5, 0.24, 0, -0.2, 0.05, hull) },
+      { len: 0, base: -0.95, k: -0.35, d: 0.3, draw: (a) => {
+        bx(a, 0.22, 0.24, 0.6, 0, -0.08, 0.28, hullDk);                            // 前臂平舉
+        for (const oy of [-0.05, 0.05]) {
+          const b = cyl(a, 0.04, 0.04, 0.3, 6, 0, -0.08 + oy, 0.65, 0x111418, { metalness: 0.85 });
+          b.rotation.x = Math.PI / 2;
+        }
+        const muz = cyl(a, 0.06, 0.06, 0.05, 6, 0, -0.08, 0.83, accent, { emissive: accent, emissiveIntensity: 1.2 });
+        muz.rotation.x = Math.PI / 2;
+      } },
+    ], ca(sx));
     armL = mkArm(-1); armR = mkArm(1);
     const t1 = bx(hips, 0.55, 0.5, 1.5, 0, -0.1, -1.0, hull);                      // 著地平衡尾
     t1.rotation.x = -0.35;
@@ -1243,6 +1293,7 @@ function buildBipedBeast(side, vis) {
 
   g.userData.rig = {
     kind: 'biped', hips, legL, legR, armL, armR,
+    legChainL, legChainR, armChainL, armChainR,
     hipsY0: hipY, stride: P.stride, bob: P.bob, sway: P.sway, top: P.top, gunArm: true,
   };
   return g;

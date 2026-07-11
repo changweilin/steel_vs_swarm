@@ -80,6 +80,11 @@ function flexChain(chain, ph, a) {
   }
 }
 
+/** 多節蠕動波(觸手/軟肢):正負皆可(不是只朝一邊折的關節),節節延遲 = 由根往梢傳的波 */
+function undulate(chain, ph, amp) {
+  for (const j of chain) j.g.rotation.x = j.base + j.k * Math.sin(ph - j.d) * amp;
+}
+
 /** 雙足步態:步頻耦合位移 + 重心側移 + 前傾 + 手臂反相 + 膝/肘分節(Task 2.1) */
 function stepBiped(L, rig, dt, now, speed) {
   const strideW = (rig.stride || 0.9) * (rig.s || 1);   // 一步的世界長度
@@ -177,10 +182,20 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const gallop = clamp((a - 0.6) / 0.4, 0, 1);
   const off = Math.PI * 0.5 * gallop;
   const legA = 0.66 * a;
-  rig.legFL.rotation.x = Math.sin(L.ph) * legA;
-  rig.legFR.rotation.x = Math.sin(L.ph + Math.PI) * legA;
-  rig.legHL.rotation.x = Math.sin(L.ph + Math.PI + off) * legA * 0.9;
-  rig.legHR.rotation.x = Math.sin(L.ph + off) * legA * 0.9;
+  const phFL = L.ph, phFR = L.ph + Math.PI, phHL = L.ph + Math.PI + off, phHR = L.ph + off;
+  rig.legFL.rotation.x = Math.sin(phFL) * legA;
+  rig.legFR.rotation.x = Math.sin(phFR) * legA;
+  rig.legHL.rotation.x = Math.sin(phHL) * legA * 0.9;
+  rig.legHR.rotation.x = Math.sin(phHR) * legA * 0.9;
+  // 膝/跗/蹄的分節屈曲(擺動相收腿、支撐相打直);觸手腿是逐節延遲的行進波
+  if (rig.chFL) {
+    flexChain(rig.chFL, phFL, a);
+    flexChain(rig.chFR, phFR, a);
+    flexChain(rig.chHL, phHL, a);
+    flexChain(rig.chHR, phHR, a);
+  }
+  // 持武觸手:與步態無關的恆時蠕動(靜止也在動 = 活的東西),速度越快擺越大
+  if (rig.tents) for (const t of rig.tents) undulate(t, now * 1.5 + L.ph * 0.5, 0.5 + 0.5 * a);
   // 脊椎波:動力由後髖生成向前傳導(腰 → 胸 → 頸 逐節相位延遲),鞭式屈伸
   const wave = L.ph * 2;
   rig.spine.rotation.x = Math.sin(wave) * 0.05 * a + clamp(L.accel * 0.012, -0.08, 0.1);
