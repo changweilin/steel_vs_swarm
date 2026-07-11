@@ -1799,23 +1799,23 @@ function buildHowitzerFallback(side) {
   return g;
 }
 
-/** 備援攻擊直升機(機身+尾桁+主旋翼,userData.spin 供每幀轉動) */
+/** 備援攻擊直升機(機身+尾桁+主旋翼,userData.spin 供每幀轉動)。機首朝 +z(全機體慣例,見 game.js _updateEnts) */
 function buildHeliFallback(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].color);
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.7, 1.6, 4, 8), mat(0x3a4038));
-  body.rotation.z = Math.PI / 2;
+  body.rotation.x = Math.PI / 2;   // 機身長軸沿 +z
   body.position.y = 1.6;
   g.add(body);
   const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 8), mat(accent, { emissive: accent, emissiveIntensity: 0.4 }));
-  cockpit.position.set(1.15, 1.6, 0);
+  cockpit.position.set(0, 1.6, 1.15);   // 座艙在機首 +z
   g.add(cockpit);
   const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, 2.6, 8), mat(0x2c322a));
-  tail.rotation.z = Math.PI / 2;
-  tail.position.set(-2.2, 1.75, 0);
+  tail.rotation.x = Math.PI / 2;
+  tail.position.set(0, 1.75, -2.2);     // 尾桁在後 -z
   g.add(tail);
   const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.12), mat(0x9aa4ad, { transparent: true, opacity: 0.85 }));
-  tailRotor.position.set(-3.4, 1.75, 0);
+  tailRotor.position.set(0, 1.75, -3.4);
   g.add(tailRotor);
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.3, 8), mat(0x14171a));
   hub.position.y = 2.35;
@@ -1825,18 +1825,18 @@ function buildHeliFallback(side) {
   g.add(rotor);
   for (const skidX of [-0.9, 0.9]) {
     const skid = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 2.6), mat(0x1c1f22));
-    skid.position.set(skidX, 0.55, 0);
+    skid.position.set(skidX, 0.55, 0);   // 起落橇沿 +z 前後向
     g.add(skid);
   }
   // 短翼 + 火箭莢艙 + 尾翼識別條(攻擊直升機剪影)
-  bx(g, 2.4, 0.1, 0.55, 0, 1.5, -0.3, 0x333a30);
+  bx(g, 2.4, 0.1, 0.55, 0, 1.5, -0.3, 0x333a30);   // 短翼左右展開(x 向)
   for (const s of [-1, 1]) {
     const pod = cyl(g, 0.18, 0.18, 0.9, 8, s * 1.05, 1.42, -0.3, 0x2c3033);
-    pod.rotation.x = Math.PI / 2;
+    pod.rotation.x = Math.PI / 2;                   // 火箭莢艙筒口朝 +z
     cyl(pod, 0.14, 0.14, 0.06, 8, 0, 0.46, 0, 0xffb27a, { emissive: 0xff8844, emissiveIntensity: 0.6 });
   }
-  bx(g, 0.08, 0.7, 0.5, -3.2, 2.1, 0, 0x2c322a);
-  bx(g, 0.1, 0.16, 0.52, -3.2, 2.3, 0, accent);
+  bx(g, 0.08, 0.7, 0.5, 0, 2.1, -3.2, 0x2c322a);   // 垂直尾翼(x 薄、z 長)
+  bx(g, 0.1, 0.16, 0.52, 0, 2.3, -3.2, accent);
   // 壓坡樞軸(locomotion.js):巡航壓坡 / 入彎側傾 / 浮沉整機一起動
   const tilt = new THREE.Group();
   tilt.position.y = 1.6;
@@ -2347,10 +2347,11 @@ const FALLBACK = {
   'hero:morph': (side, vis) => buildMorphMech(side, vis),
   decoy: (side, vis) => buildDecoy(side, vis),
   // NPC/塔陣營差異化:鋼鐵 = 履帶/輪式軍武;蜂群 = 懸浮/旋翼/機器人重塑版
-  'creep:soldier': (side) => (side === 'SWARM' ? buildSwarmTrooper(side) : buildSoldierFallback(side)),
+  // 人類步兵外觀雙方對調:蜂群 = 人類部隊、鋼鐵 = 機器人部隊(2026-07-11)
+  'creep:soldier': (side) => (side === 'SWARM' ? buildSoldierFallback(side) : buildSwarmTrooper(side)),
   'creep:apc': (side) => (side === 'SWARM' ? buildSwarmApc(side) : buildApc(side)),
   'creep:tank': (side) => (side === 'SWARM' ? buildSwarmTank(side) : buildTank(side)),
-  'creep:rocketeer': (side) => (side === 'SWARM' ? buildSwarmTrooper(side, { rocket: true }) : buildRocketeerFallback(side)),
+  'creep:rocketeer': (side) => (side === 'SWARM' ? buildRocketeerFallback(side) : buildSwarmTrooper(side, { rocket: true })),
   'creep:howitzer': (side) => (side === 'SWARM' ? buildSwarmHowitzer(side) : buildHowitzerFallback(side)),
   'creep:heli': (side) => (side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
   tower: (side) => (side === 'SWARM' ? buildSwarmTower(side) : buildTowerFallback(side)),

@@ -862,10 +862,12 @@ export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
 // ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----
 export const UNITS = {
   // 小兵(雙方都是人類部隊:士兵 / 裝甲車 / 坦克)
-  soldier:   { name: '步槍兵', hp: 90,  armor: 0,  dmg: 10, range: 60,  rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 100, armor: 0,  dmg: 60, range: 130, rate: 0.4, speed: 7, sight: 160, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 130, armor: 6,  dmg: 70, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 260, armor: 4, dmg: 35, range: 140, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
+  // 射程刻意逼近砲塔(190):波次小兵才能在被塔壓制前開火,慢慢啃塔血(塔不回血,傷害逐波累積)。
+  // hp/armor 同步上調 = 不再一觸即死,能撐到進入射程還擊。榴彈兵射程 220 > 塔 190 = 安全圍攻位。
+  soldier:   { name: '步槍兵', hp: 130, armor: 0,  dmg: 10, range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 170, armor: 3,  dmg: 60, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 220, armor: 10, dmg: 70, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 340, armor: 8, dmg: 35, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
