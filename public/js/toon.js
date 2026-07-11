@@ -42,15 +42,20 @@ export function updateCelLight(camera) {
  *   wash — 低頻世界空間水彩暈染,打破大面積單色的貼圖重複感(Task 2.1)
  *   moss — 世界 Y 軸朝上投影的手繪苔蘚(Task 2.2 / cliff-rocks 參考圖)
  *   cool — 陰影面偏冷藍 tint(Task 3.1;只偏色相、亮度≈0.93,不違反 #INC-106)
+ * 機體塗裝(paint.js;英雄機體專用):
+ *   paint — { tex, matrix, scale } 以「靜止姿勢的機體局部座標」三平面投影花紋。
+ *           matrix = mesh 局部 → 機體根(建模當下固定,不隨動畫更新)⇒ 花紋鎖在裝甲板上。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0 } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null } = {}) {
   const defines = { ...(mat.defines || {}) };
   if (metal) defines.CEL_METAL = '';
   if (wash > 0) defines.CEL_WASH = '';
   if (moss) defines.CEL_MOSS = '';
   if (cool > 0) defines.CEL_COOL = '';
+  if (paint) defines.CEL_PAINT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
   mat.defines = defines;
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     shader.uniforms.uCelRim = { value: rim };
@@ -58,10 +63,19 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uCelCool = { value: cool };
     shader.uniforms.uCelMossC = { value: new THREE.Color(moss?.color ?? 0x6d8f4a) };
     shader.uniforms.uCelMossAmt = { value: moss?.amount ?? 0.85 };
+    shader.uniforms.uPaintTex = { value: paint?.tex ?? null };
+    shader.uniforms.uPaintM = { value: paint?.matrix ?? new THREE.Matrix4() };
+    shader.uniforms.uPaintS = { value: paint?.scale ?? 1 };
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', `
         #ifdef CEL_WP
         varying vec3 vCelWP;
+        #endif
+        #ifdef CEL_PAINT
+        uniform mat4 uPaintM;
+        uniform float uPaintS;
+        varying vec3 vPaintP;
+        varying vec3 vPaintN;
         #endif
         void main() {`)
       .replace('#include <project_vertex>', `
@@ -74,6 +88,14 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
             celWP = instanceMatrix * celWP;
           #endif
           vCelWP = ( modelMatrix * celWP ).xyz;
+        }
+        #endif
+        #ifdef CEL_PAINT
+        {
+          // Rest-pose rig-space position/normal: paint sticks to the armor plate,
+          // so joint rotation never makes the pattern swim across the body.
+          vPaintP = ( uPaintM * vec4( transformed, 1.0 ) ).xyz * uPaintS;
+          vPaintN = mat3( uPaintM ) * objectNormal;
         }
         #endif`);
     shader.fragmentShader = shader.fragmentShader
@@ -100,6 +122,20 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
             diffuseColor.rgb = mix( diffuseColor.rgb, uCelMossC, mossW );
           }
           #endif
+        }
+        #endif
+        #ifdef CEL_PAINT
+        {
+          // Triplanar decal in rig-rest space; hard alpha cut keeps the cel look.
+          // Canvas textures are premultiplied, so un-premultiply after the blend.
+          vec3 pw = abs( normalize( vPaintN ) );
+          pw = pow( pw, vec3( 4.0 ) );
+          pw /= ( pw.x + pw.y + pw.z );
+          vec4 pc = texture2D( uPaintTex, vPaintP.zy ) * pw.x
+                  + texture2D( uPaintTex, vPaintP.xz ) * pw.y
+                  + texture2D( uPaintTex, vPaintP.xy ) * pw.z;
+          float pa = smoothstep( 0.4, 0.62, pc.a );
+          diffuseColor.rgb = mix( diffuseColor.rgb, pc.rgb / max( pc.a, 0.001 ), pa );
         }
         #endif`)
       .replace('#include <opaque_fragment>', `
@@ -129,6 +165,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         uniform float uCelCool;
         uniform vec3 uCelMossC;
         uniform float uCelMossAmt;
+        #ifdef CEL_PAINT
+        uniform sampler2D uPaintTex;
+        varying vec3 vPaintP;
+        varying vec3 vPaintN;
+        #endif
         #ifdef CEL_WP
         varying vec3 vCelWP;
         // Cheap 2D value noise (hash-based); low frequency only, never photoreal grain.
@@ -143,7 +184,17 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         void main() {`);
   };
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${rim}`;
+  return mat;
+}
+
+/**
+ * 事後掛塗裝(paint.js paintUnit):材質在建模時就已 applyCelPatch 過,
+ * 這裡沿用它當初的 cel 選項(metal/rim…)重新注入,只多一層花紋。
+ */
+export function applyPaint(mat, paint) {
+  applyCelPatch(mat, { ...(mat.userData.celOpts || {}), paint });
+  mat.needsUpdate = true;
   return mat;
 }
 

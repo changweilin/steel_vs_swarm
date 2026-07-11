@@ -18,6 +18,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `server/bots.js` | `BotBrain` 電腦玩家(推線/交戰/撤退狀態機) |
 | `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/SQUAD/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
 | `public/js/lore.js` | 角色敘事文本(國籍/年齡/職務/外貌/生平/台詞 + 機體設計原型 `proto` + 立繪外觀提示 `art`)— **客戶端專用,伺服器不 import**;`data.js` 只住平衡數值,文字一律住這裡 |
+| `public/js/paint.js` | 機體塗裝:`heroPalette()` 由角色 `visual.hue` 推導整套裝甲色版(lite/main/mid/dark/deep + 花紋用的 ink/ink2/paper/hot);`paintUnit()` 依 `visual.paint` 性格花紋(minimal/camo/graffiti/tattoo/totem/flag)生成程序 canvas 貼圖,以**靜止姿勢的機體局部座標**三平面投影上裝甲 |
 | `public/js/portraits.js` | 程序生成 SVG 頭像/立繪(`avatarURL`/`portraitURL`);`PORTRAIT_MANIFEST` 登記手繪檔即覆蓋,呼叫端不變(同 `MODEL_MANIFEST` 模式) |
 | `public/js/charPreview.js` | 選角畫面的 3D 機體展示台(拖曳旋轉 + 點武器/招式播放演出 + 變形機甲切換型態 + **雙擊機體切換移動/靜止演示**)。**預設縮小開啟,無關閉狀態**(見 §2);與戰場共用 `makeUnit()`,取景走包圍球(無人機寬 >> 高;變形機甲取兩型態聯集);施展招式時鏡頭動態拉遠框住特效(`_auto`,手動滾輪後讓位)。變形直接驅動 `rig.pose(m)` 略過高度判定。**全 app 只建一個 WebGLRenderer**,canvas 節點跨 `charDetail` 重繪搬移(大圖為 sticky 全寬固定,捲動不消失);離開房間畫面即 `stop()` rAF |
 | `public/js/cutin.js` | 招式立繪演出(自己大招=全屏、小招=角落小卡、敵方大招=警示條);純 DOM overlay(`#cutinLayer`,z-index 15),**MUST NOT** 拉進 3D 場景 |
@@ -35,9 +36,18 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 ### 狀態管理與資料流
 - 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只改 `data.js`;**MUST NOT** 在 sim.js/game.js 硬編碼。
 - **機體原型與分節骨架(2026-07-11 起)**:人形機甲四台各有 `visual.proto`(`bastion` 過裝甲長戟 / `seraph` 倒三角胸磁軌長槍 / `aegis` 塔盾攔截 / `colossus` 多節扁長四肢蠍弩),人形變形機甲四台各有 `visual.ground` 體態(`wolf` 趾行 / `vampire` 挺立·披風即機翼 / `monkey` 蹲伏·多節長尾 / `atlas` 負重前傾)—— **MUST NOT** 退回「同一具機體換色換掛件」。
-  - 四肢一律分節(**全機種**:人形機甲 / 變形機甲 / 雙足獸 / 四足獸):`models.js segLimb()` 建「髖→膝→踝(→趾)」「肩→肘→腕(→指)」樞軸群組並登記 chain,`locomotion.js flexChain()` 以**遞增相位延遲**驅動(動力鏈 follow-through);**只有擺動相會屈曲**(`max(0, −cos(ph−d))`),支撐相回靜姿角打直 = 腳不滑地、膝不反折。旋轉符號慣例:**膝後折為正、肘前折為負、踝取反號**(肢體幾何朝 −y,+x 旋轉 = 末端後移);四足獸的前肢/後肢方向相反(`S = front ? 1 : −1`)= 真獸的 Z 形腿。多節軟肢(克蘇魯觸手腿/持武觸手)走 `undulate()`(正負皆折的行進波,靜止也蠕動)。
+  - 四肢一律分節(**全機種**:人形機甲 / 變形機甲 / 雙足獸 / 四足獸):`models.js segLimb()` 建「髖→膝→踝(→趾)」「肩→肘→腕(→指)」樞軸群組並登記 chain,`locomotion.js flexChain()` 以**遞增相位延遲**驅動(動力鏈 follow-through);**只有擺動相會屈曲**(`max(0, −cos(ph−d))`),支撐相回靜姿角打直 = 腳不滑地、膝不反折。旋轉符號慣例:**膝後折為正、肘前折為負、踝取反號**(肢體幾何朝 −y,+x 旋轉 = 末端後移);四足獸的前肢/後肢方向相反(`S = front ? 1 : −1`)= 真獸的 Z 形腿。多節軟肢(克蘇魯觸手腿/持武觸手)走 `undulate()`(正負皆折的行進波,靜止也蠕動)。**靜止 ≠ 定格**:`idleOf(a)` 隨速度連續淡入待機動態(分節鏈的液壓微顫、換腳站的重心交換、呼吸沉浮、警戒掃頭),持械手的微顫再收斂到 30%(槍口要穩)。
+  - **關節鏈 MUST 節節俱全(2026-07-11 補齊)**:腿 = 髖 → 膝 → 踝 → 趾/蹄;臂 = 肩 → 肘 → **腕** → 指/掌。手掌/腳掌 **MUST NOT** 焊死在前臂/小腿上(那是木棍,不是肢)。現況:人形機甲 4 台、雙足獸 4 台走 `segLimb` chain;四足獸走 `chFL/FR/HL/HR`(犬蹠骨 / 馬球節 / 象蹠墊 = 第三節);變形機甲 8 台走 `rig.kneeL/ankleL/elbowL/wristL`(獸型的踝與前掌 2026-07-11 才補上,**MUST NOT** 退回 null)。改骨架後跑 `heroes 全角色 rig 稽核`(見 §4)確認沒有機種掉節。
+  - **脊椎 / 頸 / 頭 / 尾(2026-07-11 補齊)**:`hips`(骨盆:浮沉·側移·前傾)→ `chest`(胸腔:與骨盆**對轉** counter-rotation + 呼吸)→ `neck` → `head`。頭 **MUST** 每幀反轉抵銷上游累計旋轉(`locomotion.js stabilizeHead`,抵銷率 0.85~0.9,留殘留晃動)—— **頭跟著軀幹一起甩 = 壞掉的布娃娃**,真獸/真人跑步時頭幾乎不動(前庭反射)。四足獸的 `neck` 留著脊椎波(它是鞭的一段),只有 `head` 做補償。
+  - **尾 = 活的配重,不是裝飾**:多節 `tailSegs` 走 `whipTail()`(急轉甩向轉向反側 + 逐節延遲 + 尾梢甩幅遞增)。體軸**水平**的機種(暴龍/鴕鳥/袋鼠)`leanF` **MUST** 壓到 0.3~0.5 並給 `tailUp` —— 套人形的前傾量會變成頭朝地俯衝;牠們是**抬尾**配平,不是壓頭。
+  - `segLimb` 的樞軸預設在 `[0, −前一節 len, 0]`;**深屈而幾何沿 +z 長出去的肢節**(袋鼠平舉的拳砲前臂)**MUST** 用 `piv:[x,y,z]` 覆寫,否則手掌會接到前臂側面。
   - `MORPH_HUMANOID`(models.js)是「人形 ground」的唯一真相 —— `heroTargetH` 的獸型矮化與 `buildMorphMech` 的 `beast` 判定都查它;新增地面體態 **MUST** 同步加進去。
   - 配件會撐大包圍盒:`fitToHeight` 以整體 bbox 高度定尺 ⇒ **高聳的天線/直立長兵器會把機體本身縮小**。武器一律斜置/前傾收在機體頂高以內。
+- **機體塗裝與性格花紋(2026-07-11 起)**:機體裝甲色 = 角色主色系,**MUST NOT** 再硬編碼灰色裝甲。
+  - 色版唯一的縫是 `paint.js heroPalette(vis, side, tone)`:由 `visual.hue` 推 HSL 階梯(`tone:'light'` 人形機甲/雙足獸;`'dark'` 無人機/獸型/變形機甲 —— 機種既有明暗基調不動)。builder 只取用 `PAL.main/mid/lite/dark/deep`,識別燈條(emissive accent)照舊。
+  - 花紋走 `visual.paint`(minimal/camo/graffiti/tattoo/totem/flag,依角色性格;文本依據見 `lore.js`),`paintUnit()` 在 **fitToHeight/outlinify 之前**呼叫,程序 canvas 貼圖(256²,`mulberry32` 以 hue 為種子,**MUST NOT** 用 `Math.random`)。
+  - 投影用**靜止姿勢下「mesh 局部 → 機體根」的固定矩陣**(toon.js `CEL_PAINT` triplanar):花紋因此烤死在裝甲板上,關節怎麼轉都不游移。**MUST NOT** 改成世界座標投影(機體一走花紋就整片流動),也 **MUST NOT** 每幀更新該矩陣(限肢會把花紋甩出去)。
+  - 描邊外殼 / 透明件(旋翼·膜翼)/ 發光件(識別燈·推進器·砲口)一律跳過塗裝 —— 花紋不吃掉辨識訊號。
 - **角色戰鬥系統(2026-07-08 起)**:每玩家 = 1 名角色(房間階段 `pickChar` 選角,不選 = 開戰隨機)= 專屬機體 + 輕武器(左鍵)+ 重武器(右鍵瞄準+左鍵,CD 型,**用 mag:1 + reload=cd 實作**,別再發明第二套 CD)+ 小招 Q + 大招 E。招式升級 = 擊殺數(`h.kn`)+ 金錢(`buy 'ab:light|heavy|skill|ult'`),施放吃電力 MP + CD,全部 `sim.heroCast` 結算。
 - **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
   - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。
@@ -117,3 +127,5 @@ npm test             # node test/e2e.mjs,約 60 項斷言
 **瀏覽器冒煙測試**:借用 mapping_elf 的 Playwright
 (`file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs`);
 `window.__SVS` 可存取 app 狀態;`__SVS.net.send({t:'createRoom', battleConfig: <synthetic cfg>})` 可跳過緩慢的 OSRM 掃描。
+
+**全角色 rig 稽核**(動骨架/關節後 MUST 跑):頁面內 `import('/js/models.js')` 對 32 名角色各跑一次 `makeUnit`,印出每具的 `rig.legChainL/armChainL/chFL…` 長度與 morph 的 `kneeL/ankleL/elbowL/wristL` 是否存在 → 一眼看出哪個機種掉了關節(手掌/腳掌被焊死的老 bug 就是這樣抓到的)。再以 `stepLocomotion` 餵假位移跑 40 幀後量包圍盒 `min.y ≈ 0`,確認腳沒有離地或插進地面。
