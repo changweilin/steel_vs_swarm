@@ -72,8 +72,8 @@ function renderRooms(list) {
     const row = document.createElement('div');
     row.className = 'room-row' + (r.phase !== 'room' ? ' started' : '');
     const n = r.teamSize || 1;
-    const sideTags = `<span class="tag swarm">🐝 ${r.sides.SWARM.length}/${n}</span>
-                      <span class="tag steel">🤖 ${r.sides.STEEL.length}/${n}</span>`;
+    const sideTags = `<span class="tag swarm">SWARM ${r.sides.SWARM.length}/${n}</span>
+                      <span class="tag steel">STEEL ${r.sides.STEEL.length}/${n}</span>`;
     row.innerHTML = `
       <div class="room-info">
         <div class="room-name">${r.isPublic ? '🌐' : '🔒'} ${esc(r.name)} <span class="room-host">房主:${esc(r.host)}</span></div>
@@ -218,7 +218,7 @@ function renderFavsOpenRoom() {
   for (const f of favs) {
     const b = document.createElement('button');
     b.className = 'venue-btn fav';
-    b.innerHTML = `⭐ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
+    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
     b.onclick = () => {
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
@@ -436,8 +436,8 @@ function renderRoom() {
         // 填滿槽位:點整格 = 高亮 + 檢視該玩家角色(自己/電腦可改、他人唯讀)
         div.className = 'slot filled' + (c.id === app.youId ? ' me' : '') + (c.isBot ? ' bot' : '')
           + (app.charTarget === c.id ? ' sel' : '');
-        const chTag = c.ch && CHARACTERS[c.ch] ? `<span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : '<span class="slot-char dim">🎲隨機</span>';
-        div.innerHTML = `<span class="slot-name">${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)}</span> ${chTag}<span class="slot-ready">${c.ready ? '✅' : '⏳'}${c.connected === false ? ' 🔌' : ''}</span>`;
+        const chTag = c.ch && CHARACTERS[c.ch] ? `<span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : '<span class="slot-char dim">RND</span>';
+        div.innerHTML = `<span class="slot-name">${c.isHost ? '◆ ' : ''}${c.isBot ? '▣ ' : ''}${esc(c.name)}</span> ${chTag}<span class="slot-ready">${c.ready ? '●' : '○'}${c.connected === false ? ' ✕' : ''}</span>`;
         div.onclick = () => { app.charTarget = c.id; renderRoom(); };
         // 自己:X 才離座(點格子只是選取,不再離座);電腦(房主):X 移除
         if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net.send({ t: 'pickSide', side: null })));
@@ -468,7 +468,7 @@ function renderRoom() {
   renderCharPick(me);
 
   const specs = lb.clients.filter((c) => c.mode === 'spectator');
-  $('specList').textContent = specs.length ? `👁️ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
+  $('specList').textContent = specs.length ? `◇ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
 
   const readyBtn = $('readyBtn');
   readyBtn.disabled = !me?.side;
@@ -492,10 +492,10 @@ function renderBotDiff(lb) {
   if (!row) return;
   const cur = lb.config.botDiff || DEFAULT_BOT_DIFF;
   if (!app.isHost) {
-    row.textContent = `🤖 電腦難度:${BOT_DIFF[cur]?.name || cur}`;
+    row.textContent = `▣ 電腦難度:${BOT_DIFF[cur]?.name || cur}`;
     return;
   }
-  row.innerHTML = '🤖 電腦難度:';
+  row.innerHTML = '▣ 電腦難度:';
   const sel = document.createElement('select');
   sel.className = 'diff-select';
   for (const k of BOT_DIFF_KEYS) {
@@ -725,7 +725,7 @@ function renderCharPick(me) {
   const isSelf = subject.id === app.youId;
   const editable = isSelf || (subject.isBot && app.isHost);   // 自己 / 房主代電腦選;他人唯讀
   const send = (ch) => app.net.send(isSelf ? { t: 'pickChar', ch } : { t: 'setBotChar', id: subject.id, ch });
-  const whoLabel = isSelf ? '你' : `${subject.isBot ? '🤖 ' : ''}${esc(subject.name)}`;
+  const whoLabel = isSelf ? '你' : `${subject.isBot ? '▣ ' : ''}${esc(subject.name)}`;
 
   $('charSectionHead').innerHTML = editable
     ? (isSelf ? '▍選擇你的角色(不選 = 隨機)' : `▍替 ${whoLabel} 選擇角色(不選 = 隨機)`)
@@ -925,8 +925,8 @@ function makeHud() {
         ? (app.mySide === winner ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
         : '戰役結束。';
       $('overStats').textContent =
-        `🐝 ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
-        `🤖 ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
+        `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
+        `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
       $('backRoomBtn').style.display = app.isHost ? '' : 'none';
       document.exitPointerLock?.();
     },

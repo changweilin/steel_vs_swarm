@@ -290,10 +290,10 @@ export class MapSelect {
     this.reset();
     this._addLayer(L.circleMarker(cfg.bases.SWARM, {
       radius: 10, color: '#ffb300', fillColor: '#ffb300', fillOpacity: 0.9, weight: 3,
-    }).bindTooltip('🐝 蜂群主堡', { permanent: true, direction: 'top' }), 'fav');
+    }).bindTooltip('◆ 蜂群主堡', { permanent: true, direction: 'top' }), 'fav');
     this._addLayer(L.circleMarker(cfg.bases.STEEL, {
       radius: 10, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
-    }).bindTooltip('🤖 鋼鐵主堡', { permanent: true, direction: 'top' }), 'fav');
+    }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'fav');
     const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
     cfg.lanes.forEach((lane, i) => {
       this._addLayer(L.polyline(lane, { color: colors[i % 3], weight: 4, opacity: 0.85 }), 'fav');
@@ -339,7 +339,7 @@ export class MapSelect {
     this.h.confirmReady?.(null);
     this._addLayer(L.circleMarker(latlng, {
       radius: 10, color: '#ffb300', fillColor: '#ffb300', fillOpacity: 0.9, weight: 3,
-    }).bindTooltip('🐝 蜂群主堡(錨點)', { permanent: true, direction: 'top' }), 'anchor');
+    }).bindTooltip('◆ 蜂群主堡(錨點)', { permanent: true, direction: 'top' }), 'anchor');
     await this._search();
   }
 
@@ -463,7 +463,7 @@ export class MapSelect {
     }
     this._addLayer(L.circleMarker(cand.latlng, {
       radius: 12, color: '#4fc3f7', fillColor: '#4fc3f7', fillOpacity: 0.9, weight: 3,
-    }).bindTooltip('🤖 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
+    }).bindTooltip('◆ 鋼鐵主堡', { permanent: true, direction: 'top' }), 'cand');
 
     const colors = ['#e6c34a', '#e05c4a', '#4ac3e6'];
     const names = cand.lanes.length === 1 ? ['中路']

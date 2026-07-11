@@ -24,9 +24,10 @@
 <!-- ========= 大廳 ========= -->
 <div id="connect" class="screen center-screen">
   <div class="scanlines"></div>
+  <div class="sysbar"><span><b>TACTICAL NET</b> // NODE 8620</span><span>戰術終端 <i>●</i> ONLINE</span></div>
   <header class="masthead">
     <div class="logo-container">
-      <img src="assets/logo.png" alt="Steel vs. Swarm Logo" class="game-logo">
+      <img src="assets/logo_flat.png" alt="Steel vs. Swarm Logo" class="game-logo">
     </div>
     <div class="mast-tag">TACTICAL UPLINK // v0.1</div>
     <h1 class="title"><span class="t-steel">鋼鐵</span><span class="t-vs">×</span><span class="t-swarm">蜂群</span></h1>
@@ -38,22 +39,22 @@
     <div class="panel-head">▍指揮官登入</div>
     <input id="myName" placeholder="你的代號(最多 16 字)" maxlength="16">
     <div class="row">
-      <button id="mapBuilderBtn" class="btn big swarm-btn">🗺️ 建立地圖</button>
-      <button id="openRoomBtn" class="btn big steel-btn">🚪 開戰時刻</button>
+      <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
+      <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
     </div>
 
     <div class="divider">─── 加入現有戰區 ───</div>
     <div class="join-mode">
-      <label><input type="radio" name="joinMode" value="player" checked> 🎮 參戰</label>
-      <label><input type="radio" name="joinMode" value="spectator"> 👁️ 觀戰</label>
+      <label><input type="radio" name="joinMode" value="player" checked> ◆ 參戰</label>
+      <label><input type="radio" name="joinMode" value="spectator"> ◇ 觀戰</label>
     </div>
     <div id="roomList" class="room-list"></div>
-    <button id="refreshRoomsBtn" class="btn">🔄 重新整理列表</button>
+    <button id="refreshRoomsBtn" class="btn">↻ 重新整理列表</button>
     <details class="pin-join">
       <summary>用 PIN 直接加入</summary>
       <div class="row">
         <input id="joinPin" placeholder="4 位數 PIN" inputmode="numeric" maxlength="4">
-        <button id="joinBtn" class="btn">🔌 加入</button>
+        <button id="joinBtn" class="btn">▶ 加入</button>
       </div>
     </details>
   </div>
@@ -82,7 +83,7 @@
     <div id="mapStatus" class="map-status">選一個預設場地,或在地圖上點選蜂群主堡位置。</div>
     <div class="pbar"><div id="mapProgressBar" class="pbar-fill"></div></div>
     <div class="row">
-      <button id="saveFavBtn" class="btn big swarm-btn" disabled>⭐ 存入最愛</button>
+      <button id="saveFavBtn" class="btn big swarm-btn" disabled>★ 存入最愛</button>
       <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
     </div>
     <div class="row">
@@ -95,6 +96,8 @@
 
 <!-- ========= 開戰時刻(從已存地圖挑一個,設定房名/公開性/環境後開房)========= -->
 <div id="openroom" class="screen center-screen" style="display:none">
+  <div class="scanlines"></div>
+  <div class="sysbar"><span><b>DEPLOY</b> // 戰區生成</span><span>MAP × TEAM × ENV <i>●</i></span></div>
   <div class="panel connect-box">
     <div class="panel-head">▍開戰時刻 — 選人數 + 地圖,或挑一個已存最愛</div>
 
@@ -112,7 +115,7 @@
     <div class="divider">─── 或從我的最愛選 ───</div>
 
     <div class="setup-sec" id="favSection">
-      <div class="setup-label">⭐ 我的最愛</div>
+      <div class="setup-label">★ 我的最愛</div>
       <div class="venue-grid" id="favGrid"></div>
       <div class="setup-info" id="favEmptyHint" style="display:none">
         還沒有存過地圖。<button id="goMapBuilderBtn" class="btn small">先去建一張 →</button>
@@ -134,7 +137,7 @@
     </div>
 
     <div id="openRoomStatus" class="map-status">先從上面挑一張已存的地圖。</div>
-    <button id="createRoomBtn" class="btn big swarm-btn" disabled>⚡ 建立戰區(開房)</button>
+    <button id="createRoomBtn" class="btn big swarm-btn" disabled>▶ 建立戰區(開房)</button>
     <button id="backFromOpenRoomBtn" class="btn">← 返回大廳</button>
   </div>
 </div>
@@ -142,6 +145,7 @@
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
+  <div class="sysbar"><span><b>BRIEFING</b> // 陣營配對</span><span>SWARM × STEEL <i>●</i></span></div>
   <header class="masthead small">
     <h2 class="room-title" id="roomTitle">戰區</h2>
     <div class="room-meta">PIN <b id="roomPin">----</b> ・ 區網 <span id="roomUrls"></span></div>
@@ -151,14 +155,40 @@
 
   <div class="side-cards">
     <div class="side-card swarm" id="sideSWARM">
-      <div class="side-emblem">🐝</div>
+      <!-- 陣營軍旗:倒三角 + 展翼 + 蜂巢(取自 logo 的蜂群徽記,平塗硬邊重繪) -->
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="蜂群兵團">
+          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
+          <path d="M28 48 L2 38 L10 56 L30 62 Z" fill="currentColor"/>
+          <path d="M28 64 L6 62 L18 76 L34 76 Z" fill="currentColor" opacity="0.7"/>
+          <path d="M122 48 L148 38 L140 56 L120 62 Z" fill="currentColor"/>
+          <path d="M122 64 L144 62 L132 76 L116 76 Z" fill="currentColor" opacity="0.7"/>
+          <path d="M22 42 H128 L75 132 Z" stroke="currentColor" stroke-width="7"/>
+          <path d="M75 52 l13 7.5 v15 L75 82 l-13 -7.5 v-15 Z" fill="currentColor"/>
+          <path d="M58 78 l13 7.5 v15 L58 108 l-13 -7.5 v-15 Z" fill="currentColor" opacity="0.8"/>
+          <path d="M92 78 l13 7.5 v15 L92 108 l-13 -7.5 v-15 Z" fill="currentColor" opacity="0.8"/>
+          <rect x="66" y="116" width="6" height="6" fill="currentColor"/>
+          <rect x="78" y="116" width="6" height="6" fill="currentColor"/>
+        </svg>
+      </div>
       <div class="side-name">蜂群兵團 <span class="side-en">THE SWARM</span></div>
       <div class="side-hero">獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
       <div class="side-slots"></div>
     </div>
     <div class="side-vs">VS</div>
     <div class="side-card steel" id="sideSTEEL">
-      <div class="side-emblem">🤖</div>
+      <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="鋼鐵軍團">
+          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
+          <circle cx="75" cy="82" r="56" stroke="currentColor" stroke-width="11" stroke-dasharray="9 14"/>
+          <circle cx="75" cy="82" r="47" stroke="currentColor" stroke-width="2" opacity="0.65"/>
+          <path d="M75 40 L118 116 L32 116 Z" fill="currentColor"/>
+          <path d="M75 62 L99 105 L51 105 Z" fill="#05070a"/>
+          <path d="M75 70 L88 92 H62 Z" fill="currentColor"/>
+          <path d="M56 96 H94 V103 H56 Z" fill="currentColor"/>
+        </svg>
+      </div>
       <div class="side-name">鋼鐵軍團 <span class="side-en">STEEL LEGION</span></div>
       <div class="side-hero">執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
       <div class="side-slots"></div>
@@ -177,8 +207,8 @@
   <p class="room-hint" id="roomHint"></p>
 
   <div class="row room-actions">
-    <button id="readyBtn" class="btn big" disabled>✔ 準備完成</button>
-    <button id="startBattleBtn" class="btn big steel-btn" disabled>⚔️ 開戰</button>
+    <button id="readyBtn" class="btn big" disabled>◆ 準備完成</button>
+    <button id="startBattleBtn" class="btn big steel-btn" disabled>▶▶ 開戰</button>
     <button id="leaveRoomBtn" class="btn">離開</button>
   </div>
   <p class="room-note">點陣營卡片入座/離座;房主可在空位補「電腦玩家」單人開戰。小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿兵線推進。</p>
@@ -187,6 +217,7 @@
 <!-- ========= 載入 ========= -->
 <div id="loading" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
+  <div class="sysbar"><span><b>SYNC</b> // 地形高程 + 影像</span><span>STAND BY <i>●</i></span></div>
   <div class="panel load-box">
     <div class="panel-head">▍戰場部署中</div>
     <div class="load-place" id="loadPlace"></div>
@@ -206,7 +237,7 @@
   <!-- HUD -->
   <div class="hud-top">
     <div class="base-bar swarm">
-      <span class="base-label">🐝 蜂群主堡</span>
+      <span class="base-label">蜂群主堡</span>
       <div class="bbar"><div id="baseSWARM" class="bbar-fill swarm"></div></div>
       <span class="score" id="scoreSWARM"></span>
     </div>
@@ -214,7 +245,7 @@
     <div class="base-bar steel">
       <span class="score" id="scoreSTEEL"></span>
       <div class="bbar"><div id="baseSTEEL" class="bbar-fill steel"></div></div>
-      <span class="base-label">鋼鐵主堡 🤖</span>
+      <span class="base-label">鋼鐵主堡</span>
     </div>
   </div>
 
@@ -237,7 +268,7 @@
         <div class="ab-box" id="abSkill"><span class="ab-key">Q</span><span class="ab-name" id="abSkillName">—</span><span class="ab-cd" id="abSkillCd"></span></div>
         <div class="ab-box" id="abUlt"><span class="ab-key">E</span><span class="ab-name" id="abUltName">—</span><span class="ab-cd" id="abUltCd"></span></div>
       </div>
-      <div class="money-box">💰 <span id="moneyText">0</span> ・ ☠ <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
+      <div class="money-box">$ <span id="moneyText">0</span> ・ KILL <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
     </div>
     <div class="hud-help" id="hudHelp"></div>
     <canvas id="minimap" width="220" height="220"></canvas>
@@ -256,7 +287,7 @@
   <!-- 死亡 -->
   <div id="deadOverlay" class="overlay" style="display:none">
     <div class="overlay-box dead-box">
-      <div class="dead-title">💥 你的座機被擊毀</div>
+      <div class="dead-title">座機被擊毀</div>
       <div class="dead-sub">重生倒數 <span id="deadTimer">--</span> 秒</div>
     </div>
   </div>
@@ -268,7 +299,7 @@
       <div class="over-sub" id="overSub"></div>
       <div class="over-stats" id="overStats"></div>
       <div class="row" style="justify-content:center">
-        <button id="backRoomBtn" class="btn big">↩ 返回戰區(再來一場)</button>
+        <button id="backRoomBtn" class="btn big">◀ 返回戰區(再來一場)</button>
         <button id="leaveGameBtn" class="btn">離開</button>
       </div>
     </div>
