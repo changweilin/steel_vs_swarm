@@ -107,16 +107,27 @@ function stabilizeHead(rig, acc, idle, now, k = 0.85) {
 }
 
 /**
+ * 頭部畫弧補償(四足獸專用):脊椎/胸的俯仰角 θ 落在長度 L 的頸力臂上 → 頭部產生 ≈ L·θ 的
+ * 上下位移(小角度近似)。把這段從頸的高度扣回去,頭就不再隨每一步畫大弧。
+ * 只補償「旋轉造成的」那一段,彈跳另外補 —— 兩者來源不同,混在一起調不動。
+ */
+function headArc(rig, k) {
+  return ((rig.spine.rotation.x + rig.chest.rotation.x) * (rig.headArm || 0)
+    + rig.neck.rotation.x * (rig.headArmN || 0)) * k;
+}
+
+/**
  * 多節尾配重(mobility_plan Task 2.2):急轉時整條尾甩向轉向反側(角動量守恆的視覺化),
  * 尾梢逐節延遲 = 鞭;行進間再疊一道與步頻同調的擺動。基礎姿勢住幾何,這裡直接寫 rotation。
  */
-function whipTail(segs, L, dt, a, idle, now, yawRate) {
+function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0) {
   L.tail = damp(L.tail ?? 0, clamp(-yawRate * 0.3, -0.55, 0.55), 3.5, dt);
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
     t.rotation.y = L.tail * lag + Math.sin(L.ph - d) * 0.1 * a;
-    t.rotation.x = Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03;
+    t.rotation.x = (i === 0 ? base : 0)
+      + Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03;
   });
 }
 
@@ -169,6 +180,8 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     chest.rotation.z = -hips.rotation.z * 0.55;
     chest.rotation.x = 0.06 * a + idle * Math.sin(now * 1.5) * 0.02;
   }
+  // 頭把骨盆的縱向彈跳吸掉一半(頸/頭自己往回撐)⇒ 頭的上下位移收斂,不隨每一步上下彈
+  if (rig.headY0 != null) rig.head.position.y = rig.headY0 + (rig.hipsY0 - hips.position.y) * 0.5;
   // 頭/頸:反轉抵銷骨盆 + 胸腔 ⇒ 跑起來軀幹在扭,頭卻穩穩鎖住前方
   stabilizeHead(rig, [
     hips.rotation.x + (chest ? chest.rotation.x : 0),
@@ -261,25 +274,37 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   }
   // 持武觸手:與步態無關的恆時蠕動(靜止也在動 = 活的東西),速度越快擺越大
   if (rig.tents) for (const t of rig.tents) undulate(t, now * 1.5 + L.ph * 0.5, 0.5 + 0.5 * a);
+  // 入彎傾斜(先算:頭/尾/騎士都要抵銷它,晚一幀補償會看得出來)
+  L.roll = damp(L.roll, clamp(yawRate * 0.22, -0.5, 0.5), 3.5, dt);
+  rig.spine.rotation.z = -L.roll * 0.14;
   // 脊椎波:動力由後髖生成向前傳導(腰 → 胸 → 頸 逐節相位延遲),鞭式屈伸
   const wave = L.ph * 2;
   rig.spine.rotation.x = Math.sin(wave) * 0.05 * a + clamp(L.accel * 0.012, -0.08, 0.1);
   rig.chest.rotation.x = Math.sin(wave - 0.7) * 0.05 * a;
-  rig.neck.rotation.x = Math.sin(wave - 1.4) * 0.07 * a;
-  // 縱向彈跳(gallop 越明顯)+ 靜止呼吸微沉浮;頭部靜止時緩慢警戒掃描
-  rig.spine.position.y = rig.hipsY0 - (0.5 - 0.5 * Math.cos(wave)) * (rig.bob || 0.08) * a * (1 + gallop * 0.8)
-    + idle * Math.sin(now * 1.4 + L.ph) * 0.02;
-  // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)。
-  // 頸留著波(它是鞭的一段),只有頭做補償 —— 所以不把 rig.neck 交給 stabilizeHead
+  // 縱向彈跳(gallop 越明顯)+ 靜止呼吸微沉浮
+  const bob = (0.5 - 0.5 * Math.cos(wave)) * (rig.bob || 0.08) * a * (1 + gallop * 0.8);
+  rig.spine.position.y = rig.hipsY0 - bob + idle * Math.sin(now * 1.4 + L.ph) * 0.02;
+  if (rig.rider) {
+    // 人馬:上半身是「騎士」,不是脖子 —— 腰以下跟著馬軀,腰以上反向吸收馬的俯仰/滾轉,
+    // 胸口維持水平、槍口才穩(騎馬的坐姿)。只留一點沒吸乾淨的殘留 = 有重量的人,不是雲台。
+    rig.neck.rotation.x = -(rig.spine.rotation.x + rig.chest.rotation.x) * 0.9
+      + Math.sin(wave - 1.4) * 0.02 * a;
+    rig.neck.rotation.z = -rig.spine.rotation.z * 0.8;
+    rig.neck.position.y = rig.neckY0 + bob * 0.75 + headArc(rig, 0.9);
+  } else {
+    rig.neck.rotation.x = Math.sin(wave - 1.4) * 0.07 * a;
+    // 頸吸收「脊椎彈跳 + 脊椎/胸俯仰在長頸力臂上放大出來的畫弧」⇒ 頭近乎平移前進
+    rig.neck.position.y = rig.neckY0 + bob * 0.55 + headArc(rig, 0.85);
+  }
+  // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)
   stabilizeHead({ head: rig.head }, [
-    rig.spine.rotation.x + rig.chest.rotation.x + rig.neck.rotation.x, 0, rig.spine.rotation.z,
-  ], idle, now, 0.9);
-  // 尾巴配重:急轉時甩向轉向反側(counterweight),尾梢延遲跟隨;身體入彎傾斜
-  L.roll = damp(L.roll, clamp(yawRate * 0.22, -0.5, 0.5), 3.5, dt);
-  rig.tail.rotation.y = -L.roll * 1.1 + Math.sin(L.ph) * 0.14 * a;
-  rig.tail2.rotation.y = damp(rig.tail2.rotation.y, rig.tail.rotation.y * 0.8, 5, dt);
-  rig.tail.rotation.x = 0.12 + Math.sin(wave - 2.0) * 0.08 * a;
-  rig.spine.rotation.z = -L.roll * 0.14;
+    rig.spine.rotation.x + rig.chest.rotation.x + rig.neck.rotation.x,
+    0,
+    rig.spine.rotation.z + rig.neck.rotation.z,
+  ], idle, now, 0.95);
+  // 尾:急轉甩向轉向反側(配重)+ 逐節延遲的鞭;高速時尾根抬起配平前傾
+  whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0.12);
+  rig.tailSegs[0].rotation.x += (rig.tailUp || 0.12) * a;
 }
 
 /**
@@ -352,8 +377,10 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     rig.head.rotation.z -= L.roll * k;
     rig.head.rotation.y += idle * Math.sin(now * 0.5) * 0.25;   // 靜止:緩慢警戒掃視
   }
+  // 地面步態的縱向彈跳 + 飛行浮沉。浮沉只給「活的」擬態獸型(拍翼會產生升力脈動);
+  // 定翼/旋翼是機械飛行器 —— 巡航時機體穩定,MUST NOT 讓它跟著上下呼吸(airBob = 0)
   rig.torso.position.y += -(0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.07) * L.amp
-    + m * Math.sin(now * 2.4 + L.ph) * 0.12;   // 飛行懸停浮沉
+    + m * Math.sin(now * 2.4 + L.ph) * 0.12 * (rig.airBob ?? 1);
   // 拍翼(鳥/龍):翼展開後才拍;頻率隨速度、外翼相位延遲(follow-through)
   if (rig.flapWings && m > 0.45) {
     const k = clamp(Math.hypot(vFwd, vLat) / topAir, 0, 1);

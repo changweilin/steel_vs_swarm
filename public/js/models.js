@@ -1048,6 +1048,14 @@ function buildBeastMech(side, vis) {
   const legHL = mkLeg(-1, P.hz, false), legHR = mkLeg(1, P.hz, false);
   const rig = {
     kind: 'quad', spine, chest, neck, head, tail, tail2,
+    tailSegs: [tail, tail2],              // 尾 = 多節鞭:whipTail 逐節延遲 + 急轉配重
+    neckY0: neck.position.y,              // 頸的靜姿高度:跑動時反向吸收脊椎彈跳 → 頭不亂晃
+    // 頭離脊椎樞軸的水平力臂:脊椎波只有 ±0.05 rad,但長頸把它放大成頭部好幾十公分的上下畫弧
+    // (獵犬/劍龍實測 0.57m,是軀幹自身起伏的 4 倍)⇒ 頸必須按力臂反向補償,不能只補彈跳
+    headArm: chest.position.z + neck.position.z + head.position.z,
+    headArmN: head.position.z,
+    // 人馬的「頸」其實是人形上半身 —— 它不做脊椎波,而是像騎士一樣反向吸收馬軀的起伏
+    rider: C === 'centaur',
     legFL, legFR, legHL, legHR,
     chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
     tents: tents.length ? tents : null,   // 持武觸手(克蘇魯):恆時緩慢蠕動的多節波
@@ -1370,8 +1378,8 @@ function buildBipedBeast(side, vis) {
     kind: 'biped', hips, chest, neck, head, legL, legR, armL, armR,
     legChainL, legChainR, armChainL, armChainR,
     tailSegs: tailSegs.length ? tailSegs : null,
-    hipsY0: hipY, stride: P.stride, bob: P.bob, sway: P.sway, top: P.top, gunArm: true,
-    leanF: P.lean, tailUp: P.tailUp,
+    hipsY0: hipY, headY0: head.position.y, stride: P.stride, bob: P.bob, sway: P.sway,
+    top: P.top, gunArm: true, leanF: P.lean, tailUp: P.tailUp,
   };
   return g;
 }
@@ -2057,6 +2065,9 @@ function buildMorphMech(side, vis) {
     tailSegs: tailSegs.length ? tailSegs : null,
     // 拍翼頻率倍率:利維坦緩拍巡游、犀金龜高頻振翅、夜梟緩而無聲
     flapF: { levi: 0.45, archo: 1, beetle: 2.6, owl: 0.7 }[F] ?? 1,
+    // 飛行浮沉幅度:機械飛行型(定翼 jet/uav、旋翼 heli/tilt)= 0 —— 飛機/直升機巡航時
+    // 機體是穩定的,靠氣動面與旋翼盤配平,不會跟著呼吸上下起伏;會浮沉的是「活的」擬態獸型
+    airBob: { jet: 0, uav: 0, heli: 0, tilt: 0 }[F] ?? 1,
     stride: gait[0], swingArm: gait[1], bob: gait[2], top: 9, topAir: 30,
   };
   return g;
@@ -2441,7 +2452,7 @@ function buildRobotMech(side, vis) {
   g.userData.rig = {
     kind: 'biped', hips, chest, head, legL, legR, armL, armR,
     legChainL, legChainR, armChainL, armChainR,
-    hipsY0: hipY, gunArm: true,
+    hipsY0: hipY, headY0: head.position.y, gunArm: true,
     stride: gait.stride, bob: gait.bob, sway: gait.sway, top: gait.top,
     legBase: gait.legBase || 0, armBase: gait.armBase || 0,
   };
