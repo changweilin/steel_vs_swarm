@@ -67,7 +67,20 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   else stepVehicle(L, rig, dt, now, speed, vFwd, yawRate);
 }
 
-/** 雙足步態:步頻耦合位移 + 重心側移 + 前傾 + 手臂反相(Task 2.1) */
+/**
+ * 分節屈曲(mobility_plan「hierarchy delay」= 動力鏈 follow-through):
+ * 只有擺動相(該肢正把末端往前送 ⇒ −cos < 0 的那半週期)才屈曲,支撐相回到靜姿角打直 ——
+ * 這是「腳不滑地、膝不反折」的來源;每節自己的相位延遲 d 讓力由近端傳向遠端。
+ * 符號見 models.js segLimb:膝 k 為正(後折)、肘為負(前折)、踝取反號(擺動抬腳背)。
+ */
+function flexChain(chain, ph, a) {
+  for (const j of chain) {
+    const f = Math.max(0, -Math.cos(ph - j.d));
+    j.g.rotation.x = j.base + j.k * f * a;
+  }
+}
+
+/** 雙足步態:步頻耦合位移 + 重心側移 + 前傾 + 手臂反相 + 膝/肘分節(Task 2.1) */
 function stepBiped(L, rig, dt, now, speed) {
   const strideW = (rig.stride || 0.9) * (rig.s || 1);   // 一步的世界長度
   L.ph += speed * dt * Math.PI / Math.max(0.2, strideW);
@@ -75,11 +88,19 @@ function stepBiped(L, rig, dt, now, speed) {
   const a = L.amp;
   const sw = Math.sin(L.ph);
   const legA = 0.62 * a;
-  rig.legL.rotation.x = sw * legA;
-  rig.legR.rotation.x = -sw * legA;
+  const legB = rig.legBase || 0, armB = rig.armBase || 0;   // 原型站姿(拱背/負重機體的靜態屈角)
+  rig.legL.rotation.x = legB + sw * legA;
+  rig.legR.rotation.x = legB - sw * legA;
   // 手臂與腿反相(follow-through);持械手擺幅收斂,槍口保持穩定
-  rig.armL.rotation.x = -sw * legA * 0.75;
-  rig.armR.rotation.x = sw * legA * (rig.gunArm ? 0.25 : 0.75);
+  rig.armL.rotation.x = armB - sw * legA * 0.75;
+  rig.armR.rotation.x = armB + sw * legA * (rig.gunArm ? 0.25 : 0.75);
+  // 膝→踝、肘→腕:分節鏈(有掛才跑;舊的單節機體照舊只擺髖/肩)
+  if (rig.legChainL) {
+    flexChain(rig.legChainL, L.ph, a);
+    flexChain(rig.legChainR, L.ph + Math.PI, a);
+    flexChain(rig.armChainL, L.ph + Math.PI, a);
+    flexChain(rig.armChainR, L.ph, a * (rig.gunArm ? 0.45 : 1));   // 持械側手肘幾乎不甩
+  }
   const hips = rig.hips;
   // 骨盆:每步兩次浮沉(雙支撐最高、單支撐最低)+ 重心側移到支撐腿
   hips.position.y = rig.hipsY0 - (0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.06) * a
@@ -202,6 +223,25 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed) {
   rig.legR.rotation.x += -sw;
   rig.armL.rotation.x += -sw * (rig.swingArm || 0.4);
   rig.armR.rotation.x += sw * (rig.swingArm || 0.4) * (rig.beast ? 1 : 0.5);
+  // 分節屈曲疊在 pose 之上(擺動相才折,支撐相打直):膝 → 踝(延遲)→ 肘(反相)。
+  // 獸型的 Z 形腿本身已屈,屈曲量減半;L.amp 已含 (1−m) ⇒ 飛行型態自動歸零
+  const a = L.amp;
+  const fx = (ph) => Math.max(0, -Math.cos(ph));
+  const kA = rig.beast ? 0.3 : 0.6;
+  rig.kneeL.rotation.x += fx(L.ph) * kA * a;
+  rig.kneeR.rotation.x += fx(L.ph + Math.PI) * kA * a;
+  if (rig.ankleL) {
+    rig.ankleL.rotation.x -= fx(L.ph - 0.5) * 0.3 * a;
+    rig.ankleR.rotation.x -= fx(L.ph + Math.PI - 0.5) * 0.3 * a;
+  }
+  const eA = 0.4 * (rig.swingArm || 0.4);
+  rig.elbowL.rotation.x -= fx(L.ph + Math.PI - 0.4) * eA * a;
+  rig.elbowR.rotation.x -= fx(L.ph - 0.4) * eA * a * (rig.beast ? 1 : 0.5);
+  // 多節長尾(猿猴型):逐節相位延遲的鞭式擺動 = 奔跑配重
+  if (rig.tailSegs) rig.tailSegs.forEach((t, i) => {
+    t.rotation.y += Math.sin(L.ph - i * 0.5) * 0.14 * a;
+    t.rotation.x += Math.sin(L.ph * 2 - i * 0.6) * 0.05 * a;
+  });
   // 軀幹動態:地面前傾/加減速預備、飛行壓坡入彎 + 巡航俯仰、懸停浮沉
   const topAir = rig.topAir || 30;
   L.roll = damp(L.roll, clamp(-vLat / topAir, -1, 1) * 0.3 * m, 4, dt);

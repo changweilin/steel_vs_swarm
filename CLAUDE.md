@@ -34,6 +34,10 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 
 ### 狀態管理與資料流
 - 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只改 `data.js`;**MUST NOT** 在 sim.js/game.js 硬編碼。
+- **機體原型與分節骨架(2026-07-11 起)**:人形機甲四台各有 `visual.proto`(`bastion` 過裝甲長戟 / `seraph` 倒三角胸磁軌長槍 / `aegis` 塔盾攔截 / `colossus` 多節扁長四肢蠍弩),人形變形機甲四台各有 `visual.ground` 體態(`wolf` 趾行 / `vampire` 挺立·披風即機翼 / `monkey` 蹲伏·多節長尾 / `atlas` 負重前傾)—— **MUST NOT** 退回「同一具機體換色換掛件」。
+  - 四肢一律分節:`models.js segLimb()` 建「髖→膝→踝(→趾)」「肩→肘→腕(→指)」樞軸群組並登記 chain,`locomotion.js flexChain()` 以**遞增相位延遲**驅動(動力鏈 follow-through);**只有擺動相會屈曲**(`max(0, −cos(ph−d))`),支撐相回靜姿角打直 = 腳不滑地、膝不反折。旋轉符號慣例:**膝後折為正、肘前折為負、踝取反號**(肢體幾何朝 −y,+x 旋轉 = 末端後移)。
+  - `MORPH_HUMANOID`(models.js)是「人形 ground」的唯一真相 —— `heroTargetH` 的獸型矮化與 `buildMorphMech` 的 `beast` 判定都查它;新增地面體態 **MUST** 同步加進去。
+  - 配件會撐大包圍盒:`fitToHeight` 以整體 bbox 高度定尺 ⇒ **高聳的天線/直立長兵器會把機體本身縮小**。武器一律斜置/前傾收在機體頂高以內。
 - **角色戰鬥系統(2026-07-08 起)**:每玩家 = 1 名角色(房間階段 `pickChar` 選角,不選 = 開戰隨機)= 專屬機體 + 輕武器(左鍵)+ 重武器(右鍵瞄準+左鍵,CD 型,**用 mag:1 + reload=cd 實作**,別再發明第二套 CD)+ 小招 Q + 大招 E。招式升級 = 擊殺數(`h.kn`)+ 金錢(`buy 'ab:light|heavy|skill|ult'`),施放吃電力 MP + CD,全部 `sim.heroCast` 結算。
 - **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
   - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。

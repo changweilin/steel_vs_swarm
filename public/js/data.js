@@ -406,12 +406,17 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //                   twinboom/vtail/canard/delta/zero 剪影;canard/delta 為噴射動力,
 //                   其餘掛螺旋槳 — 現實原型沒有槳的機種一律不畫槳)/ 擬態翼(form:'avian',creature:
 //                   bee 尾針砲・eagle 羽毛飛彈・ptero 爪抓槍莢・dragon 張口飛彈巢);
-//         機甲   = 人形(無 form;pod 掛件)/ 雙足獸(form:'biped',creature: gorilla 巨臂
-//                   武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・roo 強腿重尾)/ 四足獸
-//                   (form:'beast',creature: hound 揹負重武・centaur 人馬持槍・
+//         機甲   = 人形(無 form,但 MUST 指定 proto 原型 — 四台的比例/裝備/站姿全不同:
+//                   bastion 過裝甲巨肩 + 長戟(戟刃即 152mm 砲口)・seraph 倒三角上胸 + 磁軌長槍・
+//                   aegis 方形塔盾 + 肩部垂直發射彈艙・colossus 多節扁長四肢 + 背負蠍弩;
+//                   2026-07-11 重構,MUST NOT 退回「同一具機體換色換掛件」)/ 雙足獸
+//                   (form:'biped',creature: gorilla 巨臂武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・
+//                   roo 強腿重尾)/ 四足獸(form:'beast',creature: hound 揹負重武・centaur 人馬持槍・
 //                   stego 背鰭四聯飛彈・cthulhu 四爪步行四爪持武);
-//         傭兵 morph 用 flight(飛行型:jet 戰機/uav 固定翼無人機/bird 機械鳥/dragon 機械龍)
-//         + ground(地面型:biped 人型機器人/beast 前肢著地機械獸)+ bulk 體格倍率 — 純外觀,不動數值)。
+//         傭兵 morph 用 flight(飛行型:jet 戰機/uav 固定翼/heli 直升機/tilt 傾轉旋翼/
+//         levi・archo・beetle・owl 擬態翼)+ ground(地面型:人形四體態 wolf 狼人趾行/
+//         vampire 吸血鬼挺立(披風即機翼)/monkey 猿猴蹲伏(多節長尾)/atlas 負重前傾(雙肩掛架);
+//         四足獸 elephant/raptor/beetle/panther)+ bulk 體格倍率 — 純外觀,不動數值)。
 // fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
 //          / vision(視野)/ stealth(匿蹤)/ dash(突進)/ intercept(攔截飛彈)。
 // 武器 type 一覽(2026-07-11 機制多元化;傷害距離衰減見 dmgFalloff):
@@ -610,7 +615,7 @@ export const CHARACTERS = {
   // ================= 鋼鐵陣營(機甲)=================
   t01: {
     side: 'STEEL', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
-    visual: { hue: 0xd6e4ef, pod: 'antenna' },
+    visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion' },
     mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 22 },
     light: { name: '12.7 同軸重機槍', rw: 'Kord・初速 860m/s', type: 'gun', mv: 860,
       dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
@@ -626,7 +631,7 @@ export const CHARACTERS = {
   },
   t02: {
     side: 'STEEL', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
-    visual: { hue: 0xcfd8ff, pod: 'blade' },
+    visual: { hue: 0xcfd8ff, pod: 'none', proto: 'seraph' },
     mods: { hp: 0.9, sp: 1.3, mp: 1.2, speed: 1.15, armor: 14 },
     light: { name: '高斯衝鋒槍', rw: '實驗性 EM・初速 1100m/s', type: 'gun', mv: 1100,
       dmg: [15, 19, 23], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
@@ -749,7 +754,7 @@ export const CHARACTERS = {
   },
   t10: {
     side: 'STEEL', name: '蕾拉・侯賽尼', code: '軌跡', machine: '「軌跡」攔截機甲',
-    visual: { hue: 0x7fe8c9, pod: 'twin' },
+    visual: { hue: 0x7fe8c9, pod: 'none', proto: 'aegis' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.2, speed: 1.0, armor: 16 },
     light: { name: '30mm 速射砲', rw: '2A42 縮裝・初速 960m/s', type: 'gun', mv: 960,
       dmg: [18, 22, 27], rate: 5.5, mag: [28, 34, 40], reload: 2.3, range: 210, pen: 6,
@@ -779,7 +784,7 @@ export const CHARACTERS = {
   },
   t12: {
     side: 'STEEL', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「螢火」訊號掃描機',
-    visual: { hue: 0xb8ffb0, pod: 'antenna' },
+    visual: { hue: 0xb8ffb0, pod: 'none', proto: 'colossus' },
     mods: { hp: 0.9, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
     light: { name: '防衛衝鋒槍', rw: 'PP-19 9mm・初速 340m/s', type: 'gun', mv: 340,
       dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 170, crit: 0.08,
@@ -798,11 +803,13 @@ export const CHARACTERS = {
   // 飛行型觸地變形為地面型、地面型蓄力跳躍彈射變形為飛行型(見 MORPH/UNITS.morph)。
   // 無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
   // 型態兩類等比例(4/4,原型迴避兩陣營既有生物:蜂/翼龍/飛龍/鷹/猩猩/鴕鳥/袋鼠/暴龍/獵犬/人馬/克蘇魯/劍龍):
-  //  A 類 定翼/旋翼 ↔ 人形雙足:m01 heli、m03 uav、m05 jet、m06 tilt(手持圓盾=傾轉旋翼)
+  //  A 類 定翼/旋翼 ↔ 人形(地面型各有體態,不再共用一套站姿):
+//       m01 heli↔vampire(挺立高領・披風展開即機翼)、m03 uav↔monkey(蹲伏長臂・多節長尾拉直成尾桁)、
+//       m05 jet↔wolf(趾行深屈・鬃刺肩尖)、m06 tilt↔atlas(負重前傾・雙肩掛架;手持圓盾=傾轉旋翼盤)
   //  B 類 擬態翼 ↔ 四足獸:m02 levi↔elephant、m04 archo↔raptor、m07 beetle、m08 owl↔panther
   m01: {
     side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
-    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'biped', bulk: 1.0 },
+    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0 },
     mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
@@ -832,7 +839,7 @@ export const CHARACTERS = {
   },
   m03: {
     side: 'MERC', kind: 'morph', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤可變機甲',
-    visual: { hue: 0x59c9a5, pod: 'dish', flight: 'uav', ground: 'biped', bulk: 0.95 },
+    visual: { hue: 0x59c9a5, pod: 'dish', flight: 'uav', ground: 'monkey', bulk: 0.95 },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛衝鋒槍艙', rw: 'UMP45・初速 285m/s', type: 'gun', mv: 285,
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
@@ -862,7 +869,7 @@ export const CHARACTERS = {
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰可變機甲',
-    visual: { hue: 0xe0a13a, pod: 'antenna', flight: 'jet', ground: 'biped', bulk: 1.05 },
+    visual: { hue: 0xe0a13a, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05 },
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19・初速 900m/s', type: 'gun', mv: 900,
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
@@ -878,7 +885,7 @@ export const CHARACTERS = {
   },
   m06: {
     side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
-    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'tilt', ground: 'biped', bulk: 1.15 },
+    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'tilt', ground: 'atlas', bulk: 1.15 },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
