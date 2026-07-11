@@ -43,7 +43,7 @@ function Model({ url }) {
 
 export default function GameScene() {
   return (
-    <Canvas 10], 5, 60 [0, camera="{{" fov: position: }}>
+    <Canvas camera={{ position: [0, 5, 10], fov: 60 }}>
       <ambientLight intensity={0.5} />
       <directionalLight position={[5, 10, 5]} castShadow />
       <Suspense fallback="{null}">
@@ -53,3 +53,11 @@ export default function GameScene() {
     </Canvas>
   );
 }
+```
+
+5. Execution Constraints
+- **Texture Cap:** Maximum 2K resolution for hero assets, 1K or less than 1K for background objects.
+
+- **Mesh Cap:** Total scene vertex count must be kept within reasonable budgets to guarantee 60 FPS on mobile browsers.
+
+- **Code Comments:** All generated code comments must be written in English.
