@@ -200,13 +200,17 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed) {
   // 拍翼(鳥/龍):翼展開後才拍;頻率隨速度、外翼相位延遲(follow-through)
   if (rig.flapWings && m > 0.45) {
     const k = clamp(Math.hypot(vFwd, vLat) / topAir, 0, 1);
-    L.flap = (L.flap || 0) + dt * (2.6 + k * 8);
+    L.flap = (L.flap || 0) + dt * (2.6 + k * 8) * (rig.flapF || 1);
     const amp = (0.2 + k * 0.3) * m;
     for (const { w, outer, sgn } of rig.flapWings) {
       w.rotation.z += sgn * Math.sin(L.flap + L.ph) * amp;
       outer.rotation.z += sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.4;
     }
   }
+  // 旋翼轉速 ∝ 推力(地面完全靜止 — 收攏槳葉/手持圓盾不自轉;變形中緩轉起旋);
+  // dir 正逆槳互抵扭矩、f = 尾旋翼加速比
+  if (rig.rotors) for (const r of rig.rotors)
+    r.g.rotation.y += dt * r.dir * (m * 26 + L.act * 10) * (r.f || 1);
   // 推進器 ∝ 飛行推力;排氣口 ∝ 變形熱散逸(transformer_plan Task 3.1)
   for (const t of rig.thrusters) t.material.emissiveIntensity = 0.25 + m * 2.2 + L.act * 1.2;
   for (const v of rig.vents) v.material.emissiveIntensity = 0.15 + L.act * 2.6;
