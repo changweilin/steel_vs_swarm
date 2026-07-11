@@ -1,0 +1,42 @@
+{
+  "note": "四區塊的拼合座標(原圖 512² 座標系)。改完任一塊後跑 node tools/compose_logo.mjs 還原 logo_flat.png。",
+  "canvas": {
+    "w": 512,
+    "h": 512
+  },
+  "order": "由後往前依序 src-over 合成(陣列順序即繪製順序)",
+  "parts": [
+    {
+      "file": "logo_gear.png",
+      "x": 139,
+      "y": 61,
+      "w": 233,
+      "h": 81,
+      "desc": "上方齒輪弧(金屬光澤)"
+    },
+    {
+      "file": "logo_steel_tri.png",
+      "x": 66,
+      "y": 138,
+      "w": 206,
+      "h": 171,
+      "desc": "鋼鐵三角(金屬光澤)"
+    },
+    {
+      "file": "logo_swarm_tri.png",
+      "x": 207,
+      "y": 140,
+      "w": 239,
+      "h": 171,
+      "desc": "蜂群倒三角(純色平塗)"
+    },
+    {
+      "file": "logo_swarm_trail.png",
+      "x": 152,
+      "y": 308,
+      "w": 215,
+      "h": 75,
+      "desc": "下方蜂群軌跡(純色平塗)"
+    }
+  ]
+}

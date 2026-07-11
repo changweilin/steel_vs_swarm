@@ -120,6 +120,17 @@ npm test             # node test/e2e.mjs,約 60 項斷言
 ```
 - PowerShell 下 `PORT=x node ...` 這種 env 前綴**無效**,用 `--port` 參數。
 
+**LOGO 影像管線(離線,純 Node + 內建 `zlib`,無 npm 依賴;共用核心 `tools/logo_lib.mjs`):**
+```bash
+node tools/flatten_logo.mjs   # logo.png → logo_flat.png(整枚徽記;頁面 .game-logo 用這張)
+node tools/split_logo.mjs     # logo.png → 四區塊 PNG + logo_parts.json(拼合座標);--probe 印元件清單
+node tools/compose_logo.mjs   # 四區塊 PNG + logo_parts.json → logo_flat.png(改完單塊後還原)
+```
+- 四區塊 = `logo_gear`(齒輪弧)/ `logo_steel_tri`(鋼鐵三角)/ `logo_swarm_tri`(蜂群倒三角)/ `logo_swarm_trail`(蜂群軌跡)。**鋼鐵兩塊保留原圖金屬漸層,蜂群兩塊純化為單一色平塗**(`SWARM_FLAT`)。
+- **拼回去的唯一依據是 `public/assets/logo_parts.json` 的 x/y(原圖 512² 座標系)+ 每塊的畫布尺寸。** 單獨修改某塊時 **MUST** 維持該塊畫布 `w×h` 不變、透明邊不裁;要移動位置改 manifest 的 x/y,**MUST NOT** 平移圖內容。改完跑 `compose_logo.mjs` 即還原(不回頭讀 `logo.png`,四塊 PNG 就是真相)。
+- 去背 **MUST** 用「與底色 `(28,32,35)` 的色差」判定,不是亮度 —— 機甲面片是暗藍(46,71,91),亮度門檻會把整片裝甲當背景挖空。覆蓋率用**硬遮罩**(`CUT`)切掉原圖那圈柔光暈(斜坡會留下霧邊),再靠 **4× 超取樣降取樣**換回無鋸齒的銳利邊;取色 **MUST** 解除底色混合(un-premultiply),否則每個圖形會鑲一圈暗灰邊。
+- 材質分類 **MUST** 只在高彩度處下判斷,低信心像素(圖形內部的暗描邊)以 BFS 從鄰居取材質 —— 硬判色相會把黃色形狀的描邊判成鋼鐵,連通元件碎成上百塊、四區塊分家全亂。
+
 **測試標準流程(MUST 逐步執行,見 #INC-101/102):**
 1. `netstat -ano | grep :8620` — 檢視**全部** LISTENING 行。
 2. `taskkill` 所有監聽者(含 npm 父進程),再確認 0 個 LISTENING。
