@@ -10,8 +10,9 @@
 // setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
 
 import * as THREE from 'three';
-import { SIDES, CHARACTERS, charKind, heroWeapon, heroAbility } from './data.js';
+import { SIDES, CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
+import { stepLocomotion } from './locomotion.js';
 import { updateCelLight } from './toon.js';
 import { starburst, shockRing, beamLine } from './vfx.js';
 
@@ -24,6 +25,10 @@ const FX_COLOR = {
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
 const AUTO_SPIN = 0.35;      // idle 自轉角速度 (rad/s)
 const IDLE_DELAY = 1.6;      // 放開滑鼠後多久恢復自轉 (s)
+// 移動演示(雙擊機體切換):0 → 巡航 / 巡航 → 0 的秒數。
+// 機體固定在原點,靠地面網格反向捲動製造跑步機;骨架仍由 locomotion.js 依「實際速度」驅動,
+// 所以加速前傾/煞車點頭/步頻耦合與戰場完全同一套演算。
+const MOVE = { ACC_S: 1.6, DEC_S: 0.9 };
 
 export class CharPreview {
   /** @param {HTMLCanvasElement} canvas 展示台畫布(尺寸由 CSS 決定) */
@@ -56,6 +61,16 @@ export class CharPreview {
     this.morphRig = null;
     this.morphM = 0;
     this.morphTarget = 0;
+
+    // 移動演示:speed = 目前地速(m/s);_ent 是餵給 locomotion.js 的假實體(mesh 恆在原點)
+    this.moving = false;
+    this.speed = 0;
+    this.topSpeed = 0;
+    this.travel = 0;
+    this.ground = null;
+    this.groundCell = 1;
+    this._ent = null;
+    this.onMove = null;      // (moving, speed) → 外部 HUD(main.js 的狀態徽章)
 
     // 軌道鏡頭
     this.yaw = Math.PI;      // models.js 機體一律面朝 +z,初始鏡頭擺正面
@@ -111,7 +126,34 @@ export class CharPreview {
     this.dist = this._fitDist(this.fitR);
     this.holder.position.set(0, 0, 0);
     this.holder.rotation.set(0, 0, 0);
+
+    // 移動演示:巡航速 = 戰場實速(UNITS × 角色 mods),骨架演出才與實戰一致
+    this._ent = { id, mesh: group, heroY: 0 };
+    this.topSpeed = (UNITS[kind]?.speed || 10) * (CHARACTERS[id].mods?.speed ?? 1);
+    this.moving = false;
+    this.speed = 0;
+    this.travel = 0;
+    this._buildGround();
+    this.onMove?.(false, 0);
     this._resize();
+  }
+
+  /** 地面參考網格:機體不動,網格反向捲動 = 跑步機(唯一的速度視覺線索) */
+  _buildGround() {
+    if (this.ground) {
+      this.scene.remove(this.ground);
+      this.ground.geometry.dispose();
+      this.ground.material.dispose();
+    }
+    const cell = Math.max(1, this.fitR * 0.4);
+    const n = 28;
+    const g = new THREE.GridHelper(cell * n, n, 0x3d7f96, 0x22505f);
+    g.material.transparent = true;
+    g.material.opacity = 0.55;
+    g.material.depthWrite = false;
+    this.ground = g;
+    this.groundCell = cell;
+    this.scene.add(g);
   }
 
   _measure() { this.unit.updateMatrixWorld(true); return new THREE.Box3().setFromObject(this.unit); }
@@ -143,6 +185,7 @@ export class CharPreview {
       });
       this.unit = null;
       this.mixer = null;
+      this._ent = null;   // loco 狀態綁 mesh,換機體一律重建
     }
     for (const e of this.effects) this.scene.remove(e.obj);
     this.effects.length = 0;
@@ -333,19 +376,42 @@ export class CharPreview {
     if (A.t >= A.dur) this.anim = null;
   }
 
-  /** 變形機甲:緩動 morphM → morphTarget,直接驅動 rig.pose;變形進行中排氣口/推進器增亮 */
-  _stepMorph(dt) {
-    const rig = this.morphRig;
-    if (!rig) return;
-    const prev = this.morphM;
-    this.morphM += (this.morphTarget - this.morphM) * Math.min(1, 3 * dt);
-    const m = this.morphM;
-    rig.pose(m);
-    const act = clamp(Math.abs(m - prev) / dt * 4, 0, 1);   // 變形活動度(排氣熱散逸)
-    for (const t of rig.thrusters) t.material.emissiveIntensity = 0.25 + m * 2.2 + act * 1.2;
-    for (const v of rig.vents) v.material.emissiveIntensity = 0.15 + act * 2.6;
-    // 飛行型輕微懸停浮沉(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
-    if (!this.anim) this.holder.position.y = m * Math.sin(performance.now() * 0.0024) * this.fitR * 0.05;
+  /** 移動演示開關(雙擊機體);回傳切換後是否在移動 */
+  toggleMove() {
+    this.moving = !this.moving;
+    this.idle = 0;
+    return this.moving;
+  }
+
+  /**
+   * 移動演示 + 骨架驅動:速度以不同的加速/減速斜率逼近巡航速(前傾/煞車點頭因此讀得出來),
+   * 再把「這一幀走了多遠」餵給 locomotion.js —— 機體其實停在原點,靠假的前一幀座標 pz 造出速度,
+   * 所以步頻/輪速/壓坡/變形推進器全部沿用戰場那一套(不另寫一份預覽專用動畫)。
+   */
+  _stepLoco(dt, now) {
+    if (!this._ent) return;
+    const top = this.topSpeed;
+    const want = this.moving ? top : 0;
+    this.speed = want > this.speed
+      ? Math.min(want, this.speed + top / MOVE.ACC_S * dt)
+      : Math.max(want, this.speed - top / MOVE.DEC_S * dt);
+    this.travel += this.speed * dt;
+    if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
+
+    // 變形機甲:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
+    this._ent.heroY = this.morphTarget > 0.5 ? 5 : 0;
+    stepLocomotion(this._ent, dt, now, 0, -this.speed * dt, 0);
+    if (this.morphRig) {
+      this.morphM = this._ent.loco?.morph ?? 0;
+      // 飛行型離地懸停(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
+      if (!this.anim) {
+        this.holder.position.y = this.morphM * this.fitR * (0.22 + Math.sin(now * 2.4) * 0.04);
+      }
+    }
+    // 旋翼/螺旋槳(game.js spinners 同口徑)
+    const spin = this.unit.userData.spin;
+    if (spin) for (const p of spin) p.rotation.y += dt * 40;
+    this.onMove?.(this.moving, this.speed);
   }
 
   _updateEffects(dt) {
@@ -386,6 +452,7 @@ export class CharPreview {
     };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
+    c.addEventListener('dblclick', () => { this.onMove?.(this.toggleMove(), this.speed); });
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
       this._auto = false;   // 手動縮放後不再自動取景,直到下次施展招式
@@ -432,7 +499,7 @@ export class CharPreview {
       this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * dt);
       if (!this.anim) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * dt);
 
-      this._stepMorph(dt);
+      this._stepLoco(dt, performance.now() / 1000);
 
       // 動態取景:施展招式時鏡頭拉遠框住特效,結束緩回;手動滾輪後讓位給玩家
       if (this._auto) {

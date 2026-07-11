@@ -499,12 +499,12 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
 .slot-ready { flex: 0 0 auto; }
 .slot-x { flex: 0 0 auto; margin-left: 2px; color: var(--dim); cursor: pointer; font-weight: 400; }
 .slot-x:hover { color: var(--danger); }
-/* 空位:入座 / 加電腦玩家,兩顆按鈕同寬堆疊 */
-.slot.empty { flex-direction: column; align-items: stretch; gap: 4px; padding: 5px; }
+/* 空位:入座 / 加電腦玩家 左右並排均分(槽位總寬不變) */
+.slot.empty { flex-direction: row; align-items: stretch; gap: 4px; padding: 5px; }
 .slot-btn {
-  width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 8px;
+  flex: 1 1 0; min-width: 0; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 4px;
   color: var(--fg); background: rgba(16, 25, 35, 0.85); border: 1px solid var(--line);
-  border-radius: 3px; cursor: pointer;
+  border-radius: 3px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .slot-btn:hover { border-color: var(--swarm); }
 .slot-empty-label { color: var(--dim); font-size: 13px; text-align: center; width: 100%; }
@@ -548,12 +548,16 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
   background: rgba(8, 13, 20, 0.6); border: 1px solid var(--line); border-radius: 3px;
   padding: 10px; max-height: 460px; overflow-y: auto; position: relative;
 }
+/* 大展示台(300px)+ 頭像(~200px)兩塊都要 sticky → 捲動視窗必須容得下兩者,否則頭像會被展示台蓋住 */
+.char-detail.stage-large { max-height: 620px; }
 .cd-empty { text-align: center; color: var(--dim); font-size: 14px; line-height: 2; padding: 40px 10px; }
 .cd-empty span { font-size: 11px; }
 /* 展示台下方:立繪 + 簡歷雙欄 */
 .cd-lower { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; margin-top: 10px; }
 @media (max-width: 640px) { .cd-lower { grid-template-columns: 1fr; } }
-.cd-art { align-self: start; }
+/* 左欄(頭像 + 小展示台)捲動時固定;大展示台是 sticky 全寬,左欄要讓開它的高度 */
+.cd-art { align-self: start; position: sticky; top: 0; z-index: 1; }
+.char-detail.stage-large .cd-art { top: 294px; }   /* = 大展示台 sticky 後的下緣(-10 + 300)+ 間隙 */
 .cd-portrait { position: relative; }
 .cd-portrait img { width: 100%; border-radius: 3px; display: block; background: #0b0f14; }
 
@@ -563,13 +567,6 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
   position: relative; border: 1px solid var(--line); border-radius: 3px; overflow: hidden;
   background: radial-gradient(circle at 50% 58%, #10222c, #070b10 72%);
 }
-/* 展示台預設不打開:只顯示開啟鈕(不建 renderer / 不跑 rAF) */
-.cd-stage-open {
-  display: block; width: 100%; font: inherit; font-size: 13px; padding: 10px; cursor: pointer;
-  color: var(--steel); background: rgba(16, 25, 35, 0.85); border: 1px dashed var(--steel-dark);
-  border-radius: 3px; margin-bottom: 2px;
-}
-.cd-stage-open:hover { border-style: solid; box-shadow: 0 0 10px rgba(79, 195, 247, 0.25); }
 /* 大:全寬 + sticky,捲到下方點武器/招式時固定在頂端不被捲走(演出恆可見) */
 .cd-stage.large { position: sticky; top: -10px; z-index: 2; height: 300px; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55); }
 /* 小:塞進頭像下方的左欄(150px),讓出簡歷空間 */
@@ -582,15 +579,21 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
 }
 .cd-stage.small .cd-stage-hint { display: none; }   /* 小圖沒空間放提示 */
 .cd-stage-tr { position: absolute; right: 8px; top: 8px; z-index: 1; display: flex; gap: 4px; }
-.cd-morph-btn, .cd-size-btn, .cd-close-btn {
+.cd-morph-btn, .cd-size-btn {
   font: inherit; font-size: 11px; color: var(--fg); background: rgba(16, 25, 35, 0.9);
   border: 1px solid var(--steel-dark); border-radius: 3px; padding: 4px 9px; cursor: pointer;
 }
 .cd-morph-btn { position: absolute; left: 8px; top: 8px; z-index: 1; }
-.cd-close-btn { padding: 4px 8px; }
 .cd-morph-btn:hover, .cd-size-btn:hover { border-color: var(--steel); box-shadow: 0 0 8px rgba(79, 195, 247, 0.3); }
-.cd-close-btn:hover { border-color: var(--danger); color: var(--danger); }
-.cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn, .cd-stage.small .cd-close-btn { font-size: 9px; padding: 2px 5px; }
+.cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn { font-size: 9px; padding: 2px 5px; }
+/* 移動狀態徽章(雙擊機體切換;顯示即時地速) */
+.cd-speed {
+  position: absolute; left: 8px; bottom: 20px; z-index: 1; pointer-events: none;
+  font-size: 10px; color: var(--dim); background: rgba(6, 10, 16, 0.8);
+  border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px;
+}
+.cd-speed.on { color: var(--ok); border-color: var(--ok); }
+.cd-stage.small .cd-speed { bottom: 4px; font-size: 9px; padding: 1px 4px; }
 .cd-tag {
   position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
   font-size: 10px; padding: 2px 0; background: rgba(6, 10, 16, 0.85);
@@ -602,6 +605,15 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
 .cd-name { font-family: var(--serif); font-size: 17px; color: var(--fg); }
 .cd-machine { font-size: 12px; color: var(--swarm); margin-top: 1px; }
 .cd-meta { font-size: 11px; color: var(--dim); margin-top: 3px; }
+/* 機體設計原型(現實中的載具/技術出處) */
+.cd-proto {
+  font-size: 11px; color: #b9c8d2; line-height: 1.6; margin-top: 4px;
+  border-left: 2px solid var(--steel-dark); padding-left: 7px;
+}
+.cd-proto span {
+  display: inline-block; margin-right: 5px; font-size: 10px; color: var(--steel);
+  border: 1px solid var(--steel-dark); border-radius: 2px; padding: 0 4px;
+}
 .cd-quote {
   margin: 6px 0; padding: 4px 8px; font-family: var(--serif); font-size: 12.5px; color: #d8cfa8;
   border-left: 2px solid var(--line-strong); background: rgba(255, 255, 255, 0.03);

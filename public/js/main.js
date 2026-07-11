@@ -32,8 +32,7 @@ const app = {
   charTarget: null,     // 選角對象:null = 自己;bot id = 房主代選(setBotChar)
   preview: null,        // CharPreview(機體展示台);previewCv 為其共用 canvas 節點
   previewCv: null,
-  stageOpen: false,     // 3D 機體展示台預設不打開(關閉時只顯示開啟鈕,省 GPU)
-  stageSmall: false,    // 展示台縮放:false = 大(頂端)/ true = 小(頭像下方)
+  stageSmall: true,     // 展示台縮放:true = 小(頭像下方,預設)/ false = 大(頂端 sticky)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
@@ -572,6 +571,15 @@ function charAbilityRow(id, slot, key) {
     <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
 
+/** 機體設計原型:「現實原型」(工程出處)/「仿生原型」(獸型機體取自哪種生物)各自一行 */
+function protoHTML(proto) {
+  if (!proto) return '';
+  return proto.split(/(?=仿生原型:)/).map((p) => {
+    const bionic = p.startsWith('仿生原型');
+    return `<div class="cd-proto"><span>${bionic ? '仿生原型' : '設計原型'}</span>${esc(p.replace(/^(現實|仿生)原型:/, ''))}</div>`;
+  }).join('');
+}
+
 function charDetailHTML(id) {
   const c = CHARACTERS[id];
   const lo = LORE[id] || {};
@@ -605,6 +613,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       <div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
       <div class="cd-machine">${esc(c.machine)}</div>
+      ${protoHTML(lo.proto)}
       <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
       ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
       ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
@@ -634,7 +643,7 @@ function previewCanvas() {
   return app.previewCv;
 }
 
-/** 展示台外殼(變形鈕 + 縮放鈕 + 關閉鈕 + 提示);canvas 由呼叫端掛入,可在大/小掛載點間搬移 */
+/** 展示台外殼(變形鈕 + 縮放鈕 + 移動狀態徽章 + 提示);canvas 由呼叫端掛入,可在大/小掛載點間搬移 */
 function buildStageShell(kind) {
   const s = document.createElement('div');
   s.id = 'charStage';
@@ -642,21 +651,20 @@ function buildStageShell(kind) {
     `${kind === 'morph' ? '<button class="cd-morph-btn" id="charMorphBtn">✈ 切換飛行型態</button>' : ''}
      <div class="cd-stage-tr">
        <button class="cd-size-btn" id="charSizeBtn"></button>
-       <button class="cd-close-btn" id="charStageClose" title="關閉展示台">✕</button>
      </div>
-     <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點下方武器/招式看演出</div>`;
+     <div class="cd-speed" id="charStageSpeed">⏸ 靜止</div>
+     <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 雙擊機體切換移動/靜止 ・ 點下方武器/招式看演出</div>`;
   return s;
 }
 
 /** 依 app.stageSmall 把展示台掛到頂端(大,#charDetail 直接子代)或頭像下方(小,#stageBottom) */
 function mountStage(stage) {
   stage.className = 'cd-stage ' + (app.stageSmall ? 'small' : 'large');
-  if (app.stageSmall) {
-    $('stageBottom').appendChild(stage);
-  } else {
-    const box = $('charDetail');
-    box.insertBefore(stage, box.firstChild);
-  }
+  // 大圖是 sticky 全寬,左欄(頭像)要跟著讓開它的高度 → 由 #charDetail 的 class 決定 sticky 位移
+  const box = $('charDetail');
+  box.classList.toggle('stage-large', !app.stageSmall);
+  if (app.stageSmall) $('stageBottom').appendChild(stage);
+  else box.insertBefore(stage, box.firstChild);
   const sb = $('charSizeBtn');
   if (sb) sb.textContent = app.stageSmall ? '⤢ 放大' : '⤡ 縮小';
   app.preview?._resize();   // 掛載點尺寸不同,搬移後立即重算 canvas 尺寸/長寬比
@@ -674,27 +682,23 @@ function showCharDetail(id, side) {
   const s = side || CHARACTERS[id].side;
   const viewSide = s === 'MERC' ? 'STEEL' : s;
 
-  if (!app.stageOpen) {
-    // 預設不打開:只放一顆開啟鈕於頂端,不建 renderer / 不跑 rAF
-    app.preview?.stop();
-    const open = document.createElement('button');
-    open.className = 'cd-stage-open';
-    open.textContent = '🎬 開啟 3D 機體展示台';
-    open.onclick = () => { app.stageOpen = true; showCharDetail(id, side); };
-    box.insertBefore(open, box.firstChild);
-    return;
-  }
-
   const stage = buildStageShell(charKind(id));
   stage.appendChild(previewCanvas());
   mountStage(stage);
+  // 移動/靜止徽章:每幀回呼,只在文字真的變了才寫 DOM
+  const sp = $('charStageSpeed');
+  let last = '';
+  app.preview.onMove = (moving, v) => {
+    const txt = moving || v > 0.05 ? `▶ 移動 ${v.toFixed(1)} m/s` : '⏸ 靜止';
+    if (txt !== last) { last = txt; sp.textContent = txt; }
+    sp.classList.toggle('on', moving);
+  };
   app.preview.setChar(id, viewSide);
   app.preview.start();
 
   const mb = $('charMorphBtn');   // 變形機甲:觀看變形過程 + 切換型態
   if (mb) mb.onclick = () => { mb.textContent = app.preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
   $('charSizeBtn').onclick = () => { app.stageSmall = !app.stageSmall; mountStage(stage); };
-  $('charStageClose').onclick = () => { app.stageOpen = false; showCharDetail(id, side); };
 }
 
 // 點武器/招式區塊 → 展示台播放施展動畫(委派,charDetail 每次重繪都沿用)
@@ -734,8 +738,7 @@ function renderCharPick(me) {
     const rnd = document.createElement('button');
     rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
     rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
-    rnd.onclick = () => send(null);
-    rnd.onmouseenter = () => showCharDetail(null);
+    rnd.onclick = () => { send(null); showCharDetail(null); };   // 只有點擊會換展示角色(懸浮不換)
     grid.appendChild(rnd);
     for (const id of charsOf(subject.side)) {
       const c = CHARACTERS[id];
@@ -744,11 +747,9 @@ function renderCharPick(me) {
       b.className = 'char-btn' + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
       b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
         <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
-      b.onclick = () => send(id);
-      b.onmouseenter = () => showCharDetail(id, subject.side);
+      b.onclick = () => { send(id); showCharDetail(id, subject.side); };   // 伺服器 sync 前先換,點擊即時有反應
       grid.appendChild(b);
     }
-    grid.onmouseleave = () => showCharDetail(subject.ch || null, subject.side);   // 移出 → 退回選定角色
   }
   showCharDetail(subject.ch || null, subject.side);
 
@@ -756,7 +757,7 @@ function renderCharPick(me) {
   $('charInfo').innerHTML = cur
     ? `${whoLabel}已選定 <b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}`
     : editable
-      ? `${whoLabel}未選角色:開戰時將隨機指派一名(滑鼠移到頭像可預覽,點武器/招式看演出)。`
+      ? `${whoLabel}未選角色:開戰時將隨機指派一名(點頭像選角並展示,點武器/招式看演出)。`
       : `${whoLabel}尚未選定角色(開戰隨機)。`;
 }
 
