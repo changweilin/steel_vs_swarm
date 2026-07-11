@@ -19,7 +19,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/SQUAD/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
 | `public/js/lore.js` | 角色敘事文本(國籍/年齡/職務/外貌/生平/台詞 + 立繪外觀提示 `art`)— **客戶端專用,伺服器不 import**;`data.js` 只住平衡數值,文字一律住這裡 |
 | `public/js/portraits.js` | 程序生成 SVG 頭像/立繪(`avatarURL`/`portraitURL`);`PORTRAIT_MANIFEST` 登記手繪檔即覆蓋,呼叫端不變(同 `MODEL_MANIFEST` 模式) |
-| `public/js/charPreview.js` | 選角畫面的 3D 機體展示台(拖曳旋轉 + 點武器/招式播放演出);與戰場共用 `makeUnit()`,取景走包圍球(無人機寬 >> 高)。**全 app 只建一個 WebGLRenderer**,canvas 節點跨 `charDetail` 重繪搬移;離開房間畫面即 `stop()` rAF |
+| `public/js/charPreview.js` | 選角畫面的 3D 機體展示台(拖曳旋轉 + 點武器/招式播放演出 + 變形機甲切換型態)。**預設不打開**(見 §2);與戰場共用 `makeUnit()`,取景走包圍球(無人機寬 >> 高;變形機甲取兩型態聯集);施展招式時鏡頭動態拉遠框住特效(`_auto`,手動滾輪後讓位)。變形直接驅動 `rig.pose(m)` 略過高度判定。**全 app 只建一個 WebGLRenderer**,canvas 節點跨 `charDetail` 重繪搬移(大圖為 sticky 全寬固定,捲動不消失);離開房間畫面即 `stop()` rAF |
 | `public/js/cutin.js` | 招式立繪演出(自己大招=全屏、小招=角落小卡、敵方大招=警示條);純 DOM overlay(`#cutinLayer`,z-index 15),**MUST NOT** 拉進 3D 場景 |
 | `public/js/` | game.js(FPV/物理/插值)· toon.js(賽璐璐核心)· vfx.js · biomes.js · ground.js(開闊地地被覆蓋層)· terrain.js · mapSelect.js · venues.js · models.js · net.js · main.js · environment.js |
 | `reference/` | 上游唯讀副本(mapping_elf、ai_tycoon)— **MUST NOT** 修改,只准參考 |
@@ -54,14 +54,17 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - 英雄體型 = `heroTargetH(kind, ch)`:機甲 3~5×、無人機 1~2× 步兵,倍率隨 `mods.armor` 在該機種護甲區間內插(高防禦 = 巨大 = 剪影大 = 好命中,因為命中是客戶端對 mesh raycast)。獸型 `visual.form:'beast'` 再 ×`BEAST_H_F`。**體型只准住這個縫**,`game.js`/`biomes.js` **MUST NOT** 硬編碼機體尺寸。
   - 由它推導的東西:`game.js` 的 `heroCollider()`(英雄碰撞圓柱,走 `ent.heroCol` 而非 `COLLIDER` 表)、自機 `SELF_F`(碰撞半徑/上下緣/**座艙視點高度**)、`models.js` 的 `walkRef`(步幅正比身高,忘了改就原地滑步)。改 `SOLDIER_H` 或倍率,以上全部自動連動。
   - **尺度不動 `sight`/`range`**:座艙的「人類駕駛感」只靠視點高度 + `fov`(機甲 = 人眼視角;無人機是遙控攝影機,保留廣角)。平衡數值與 #INC-104 因此完全不受尺度改制影響。
-- **地圖尺寸與兵線來源(2026-07-10 起)**:真實邊長 = `0.3 + 0.1×L` km(L1/L2/L3 = 0.4/0.5/0.6 km),兩堡真實距離 = 邊長 × 0.85 × √2 = 481/601/721m。`GEO_SCALE_VER` = 6。
-- **世界比例尺 1:1(2026-07-10 起)**:`MAPGEO.REAL_SCALE = 1` — 遊戲距離即真實地理距離,`llToWorld` 不再放大。舊制 0.125 是把現實放大 8×(物件卻是真實公稱尺寸),街廓因此被撐成荒野。改 `REAL_SCALE` **MUST** 同步 +1 `GEO_SCALE_VER`(觸發 `migrateFavCfg` 重算過期最愛)並重跑 `tools/bake_venue_lanes.mjs`(`laneTacticsXZ` 的 `SEG_M` 是遊戲公尺,尺度一動轉角評分就變)。`overlapCellM` 只由 `realDistFor` 推導,**不受 `REAL_SCALE` 影響**。
+- **地圖尺寸與兵線來源(2026-07-10 起)**:真實邊長 = `0.3 + 0.1×L` km(L1/L2/L3 = 0.4/0.5/0.6 km),兩堡真實距離 = 邊長 × 0.85 × √2 = 481/601/721m。`GEO_SCALE_VER` = 7。
+- **世界比例尺(2026-07-11 起 REAL_SCALE = 0.5,遊戲 = 2×真實)**:沿革 `0.125`(放大 8×,街廓成荒野)→ `1`(1:1,戰場太緊湊、武器相對射程過長)→ `0.5`(遊戲空間放大 2×,兵線走廊拉開一倍;武器射程/視野的**遊戲公尺**值不動 ⇒ 相對射程減半)。改 `REAL_SCALE` **MUST** 同步 +1 `GEO_SCALE_VER`(觸發 `migrateFavCfg` 重算過期最愛)並重跑 `tools/bake_venue_lanes.mjs`(`laneTacticsXZ` 的 `SEG_M` 是遊戲公尺,尺度一動轉角評分就變)。
+  - **關鍵:`realDistFor` 與 `REAL_SCALE` 無關(公式裡相消)** ⇒ OSM 查詢半徑 `overlapCellM` 都不變、`venueLanes.js` 真實道路兵線原封有效,重烤純離線。**放大真實邊長(改 `REAL_SIDE_*`)才會**改變查詢半徑、需 2× 半徑重抓 Overpass 並改選不同真實道路 —— 想「放大地圖」優先動 `REAL_SCALE`,別動邊長常數。
+  - **空氣牆離兵線的淨空**:`terrain.js battleBBox` 以 `ROUTE_EDGE_MARGIN_M`(160 遊戲公尺)外擴「主堡 + 全兵線頂點」包絡,再與對稱方框取聯集 ⇒ 真實道路蜿蜒到方框外時,最外側兵線點離地形邊緣仍 ≥160m(空氣牆再內縮 40m 後 ≥ ~120m)。**MUST NOT** 改回「只給百分比 pad」(真實道路頂點會貼著空氣牆,沿線飛就撞牆)。
   - **預設場地的兵線是真實道路**:`public/js/venueLanes.js`(由 `node tools/bake_venue_lanes.mjs` 離線預算)存 Overpass 路網上的最短路徑,**每個頂點都是 OSM 道路節點**,主堡 = 路線兩端節點 ⇒ NPC 引導路線與現實導航路線完全相符。`venueConfig()` 逐 `(venueId, L)` 查表;查無資料的 `(場地, L)` 才退回 `synthLane()` 合成弧(離線最後防線,**MUST NOT** 移除)。現況 21 場地 × L1/L2/L3 = 63 組,59 組真實道路、4 組(yosemite/uluru/atacama/tamsui 的 L3)現實中就只有一兩條路 → synth。
   - 改 `VENUES[].ll` 或 `MAPGEO` 的尺寸/重合率常數 **MUST** 重跑 `tools/bake_venue_lanes.mjs` 重新產生 `venueLanes.js`(Overpass 回應快取在 `tools/.osm_cache/`,已 gitignore)。
   - **重合率的網格是解析度,不是規則**:規則恆為「任兩線重合率 < `MAX_OVERLAP`(0.20)」;判定網格 `overlapCellM(L)` 隨兩堡真實距離等比縮放。下限公式:三條線必然共用「含 A 的格」與「含 B 的格」,每條線約佔 `N = 1.2/OVERLAP_CELL_FRAC` 格 ⇒ **重合率下限 = 2×FRAC/1.2,與地圖大小無關**。FRAC 0.111(照舊制 120m/1082m 等比)→ 下限 0.185,六大城市只有 3 個湊得出三條真實道路兵線;FRAC 0.06 → 下限 0.10,6/6 通過(現值)。**MUST NOT** 改回固定 120m,調大 FRAC 前先看這條下限。
   - 側翼選路 **MUST NOT** 用 OSRM via-point:最快幹道會把側翼吸回中線(重合率爆掉的根因,實測 0.23~1.00)。bake 工具改用「已用邊重罰 + 側移弧線導引」的 Dijkstra。互動式選址流程(`mapSelect`)仍用 OSRM,其側翼失敗時會補合成弧 —— 那條路徑**不保證**全線貼合現實道路。
 - **市區密集化**:1:1 後 OSM 建物已落在真實間距上,補間量由 `occ.free()` 自然收斂;OSM 覆蓋稀疏的郊區/未測繪街廓仍靠 `biomes.js densifyUrban()` 以每棟 OSM 建物為種子、沿其朝向鋪 `cols×rows` 街廓網格長出街景;`areaFree(blocked)` 保證兵線走廊(半寬 17m)/塔位/主堡恆淨空 → **淨空帶就是戰略通道,街廓就是掩體**。補間全走 `mulberry32`(每格消耗固定枚亂數,檢查一律放在抽樣之後)→ 全房間一致,**MUST NOT** 改成「淘汰就跳過抽樣」。
-- **電腦玩家選角**:bot 的 `ch` 一直存在(`startBattle` 就吃 `b.ch`),房主經 `setBotChar` 指定(伺服器驗證陣營,規則與真人 `pickChar` 完全相同);不設 = 開戰隨機。客戶端以 `app.charTarget`(bot id / null=自己)切換同一套選角 UI,**MUST NOT** 為 bot 另寫一份。
+- **選角互動(2026-07-11 統一)**:`app.charTarget` = 目前高亮的**任一 client id**(自己 / 電腦 / 他人),不是 null=自己的舊語意。點任一填滿槽位 = 設 `charTarget` + 檢視該玩家角色;`renderCharPick` 依 `isSelf || (isBot && isHost)` 決定可選(送 `pickChar`/`setBotChar`)或唯讀(藏 `charGrid`)。bot 的 `ch` 一直存在(`startBattle` 就吃 `b.ch`),`setBotChar` 伺服器驗證陣營同 `pickChar`。**整卡不再綁 `pickSide`**:入座 = 空位的「＋ 入座」按鈕、離座 = 自己槽位的 ✕(點格子只選取不換陣營)。**MUST NOT** 為 bot/他人另寫一套選角 UI。
+- **機體展示台預設不打開**(`app.stageOpen=false`):關閉時只放一顆開啟鈕、不建 renderer 不跑 rAF;開啟後才 `setChar`/`start`。背景 **MUST 完全不透明**(radial 兩端都 opaque hex `#10222c→#070b10`),否則 sticky 疊在簡歷上會透出底下文字。縮放(大/頂端 sticky ↔ 小/頭像下方)與關閉鈕在 `#charStage` 右上,變形鈕左上。
 - **擊殺分數**:`by.kn += killScore(kind)`,但**被擊殺者是電腦玩家(`isBotId(t.pid)`)一律 `BOT_KILL_SCORE`(3)** —— 刷 bot 不能速成招式。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。

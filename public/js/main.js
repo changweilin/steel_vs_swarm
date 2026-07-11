@@ -32,6 +32,8 @@ const app = {
   charTarget: null,     // 選角對象:null = 自己;bot id = 房主代選(setBotChar)
   preview: null,        // CharPreview(機體展示台);previewCv 為其共用 canvas 節點
   previewCv: null,
+  stageOpen: false,     // 3D 機體展示台預設不打開(關閉時只顯示開啟鈕,省 GPU)
+  stageSmall: false,    // 展示台縮放:false = 大(頂端)/ true = 小(頭像下方)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
@@ -409,6 +411,17 @@ function renderRoom() {
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
+  // 選角高亮對象 = 任一 client id(自己/電腦/他人);指向的對象消失就退回自己
+  if (!lb.clients.some((c) => c.id === app.charTarget)) app.charTarget = me?.side ? me.id : null;
+
+  const slotX = (title, fn) => {
+    const x = document.createElement('span');
+    x.className = 'slot-x';
+    x.textContent = '✕';
+    x.title = title;
+    x.onclick = (e) => { e.stopPropagation(); fn(); };
+    return x;
+  };
 
   for (const side of ['SWARM', 'STEEL']) {
     const card = $(`side${side}`);
@@ -420,42 +433,34 @@ function renderRoom() {
     for (let i = 0; i < N; i++) {
       const c = members[i];
       const div = document.createElement('div');
-      div.className = 'slot' + (c ? ' filled' : '') + (c?.id === app.youId ? ' me' : '') + (c?.isBot ? ' bot' : '');
       if (c) {
-        const chTag = c.ch && CHARACTERS[c.ch] ? ` <span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : ' <span class="slot-char dim">🎲隨機</span>';
-        div.innerHTML = `${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)}${chTag} <span class="slot-ready">${c.ready ? '✅' : '⏳'}</span>${c.connected === false ? ' 🔌' : ''}`;
-        if (c.id === app.youId) {
-          // 自己的槽位:點 🎭 回到替自己選角(與 bot 對稱;charTarget=null)
-          const pick = document.createElement('span');
-          pick.className = 'bot-pick' + (app.charTarget == null ? ' on' : '');
-          pick.textContent = '🎭';
-          pick.title = '設定/查看你的角色';
-          pick.onclick = (e) => { e.stopPropagation(); app.charTarget = null; renderRoom(); };
-          div.appendChild(pick);
-        }
-        if (c.isBot && app.isHost) {
-          const pick = document.createElement('span');
-          pick.className = 'bot-pick' + (app.charTarget === c.id ? ' on' : '');
-          pick.textContent = '🎭';
-          pick.title = '設定這名電腦玩家的角色';
-          pick.onclick = (e) => { e.stopPropagation(); app.charTarget = c.id; renderRoom(); };
-          div.appendChild(pick);
-          const del = document.createElement('span');
-          del.className = 'bot-del';
-          del.textContent = '✕';
-          del.title = '移除電腦玩家';
-          del.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'removeBot', id: c.id }); };
-          div.appendChild(del);
-        }
-      } else if (app.isHost) {
-        div.innerHTML = '—— 空位 ——';
-        const add = document.createElement('button');
-        add.className = 'btn tiny bot-add';
-        add.textContent = '+ 電腦玩家';
-        add.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'addBot', side }); };
-        div.appendChild(add);
+        // 填滿槽位:點整格 = 高亮 + 檢視該玩家角色(自己/電腦可改、他人唯讀)
+        div.className = 'slot filled' + (c.id === app.youId ? ' me' : '') + (c.isBot ? ' bot' : '')
+          + (app.charTarget === c.id ? ' sel' : '');
+        const chTag = c.ch && CHARACTERS[c.ch] ? `<span class="slot-char">「${CHARACTERS[c.ch].code}」</span>` : '<span class="slot-char dim">🎲隨機</span>';
+        div.innerHTML = `<span class="slot-name">${c.isHost ? '👑 ' : ''}${c.isBot ? '🤖 ' : ''}${esc(c.name)}</span> ${chTag}<span class="slot-ready">${c.ready ? '✅' : '⏳'}${c.connected === false ? ' 🔌' : ''}</span>`;
+        div.onclick = () => { app.charTarget = c.id; renderRoom(); };
+        // 自己:X 才離座(點格子只是選取,不再離座);電腦(房主):X 移除
+        if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net.send({ t: 'pickSide', side: null })));
+        else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦玩家', () => app.net.send({ t: 'removeBot', id: c.id })));
       } else {
-        div.innerHTML = '—— 空位 ——';
+        // 空位:入座 + 加電腦玩家,兩顆按鈕同寬
+        div.className = 'slot empty';
+        if (me && me.mode === 'player' && me.side !== side) {
+          const join = document.createElement('button');
+          join.className = 'slot-btn';
+          join.textContent = '＋ 入座';
+          join.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'pickSide', side }); };
+          div.appendChild(join);
+        }
+        if (app.isHost) {
+          const add = document.createElement('button');
+          add.className = 'slot-btn';
+          add.textContent = '＋ 電腦玩家';
+          add.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'addBot', side }); };
+          div.appendChild(add);
+        }
+        if (!div.childElementCount) div.innerHTML = '<span class="slot-empty-label">—— 空位 ——</span>';
       }
       slotsEl.appendChild(div);
     }
@@ -581,17 +586,16 @@ function charDetailHTML(id) {
       <em>${v}</em></div>`).join('');
 
   const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
-  return `<div class="cd-stage" id="charStage">
-      ${kind === 'morph' ? '<button class="cd-morph-btn" id="charMorphBtn">✈ 切換飛行型態</button>' : ''}
-      <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點下方武器/招式看演出</div>
-    </div>
-    <div class="cd-lower">
+  // 展示台 #charStage 由 showCharDetail 直接插進 #charDetail 頂端(大)或 #stageBottom(小,頭像下方)。
+  // 大圖必須是 #charDetail 的直接子代,sticky 才能在整個捲動容器內固定(套 wrapper 會被限制在 wrapper 內)。
+  return `<div class="cd-lower">
     <div class="cd-art">
       <div class="cd-portrait">
         <img src="${portraitURL(id)}" alt="${esc(c.name)}">
         <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
           ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindLabel}</div>
       </div>
+      <div id="stageBottom"></div>
     </div>
     <div class="cd-body">
       <div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
@@ -625,6 +629,34 @@ function previewCanvas() {
   return app.previewCv;
 }
 
+/** 展示台外殼(變形鈕 + 縮放鈕 + 關閉鈕 + 提示);canvas 由呼叫端掛入,可在大/小掛載點間搬移 */
+function buildStageShell(kind) {
+  const s = document.createElement('div');
+  s.id = 'charStage';
+  s.innerHTML =
+    `${kind === 'morph' ? '<button class="cd-morph-btn" id="charMorphBtn">✈ 切換飛行型態</button>' : ''}
+     <div class="cd-stage-tr">
+       <button class="cd-size-btn" id="charSizeBtn"></button>
+       <button class="cd-close-btn" id="charStageClose" title="關閉展示台">✕</button>
+     </div>
+     <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點下方武器/招式看演出</div>`;
+  return s;
+}
+
+/** 依 app.stageSmall 把展示台掛到頂端(大,#charDetail 直接子代)或頭像下方(小,#stageBottom) */
+function mountStage(stage) {
+  stage.className = 'cd-stage ' + (app.stageSmall ? 'small' : 'large');
+  if (app.stageSmall) {
+    $('stageBottom').appendChild(stage);
+  } else {
+    const box = $('charDetail');
+    box.insertBefore(stage, box.firstChild);
+  }
+  const sb = $('charSizeBtn');
+  if (sb) sb.textContent = app.stageSmall ? '⤢ 放大' : '⤡ 縮小';
+  app.preview?._resize();   // 掛載點尺寸不同,搬移後立即重算 canvas 尺寸/長寬比
+}
+
 function showCharDetail(id, side) {
   const box = $('charDetail');
   if (!id) {
@@ -635,12 +667,29 @@ function showCharDetail(id, side) {
   box.innerHTML = charDetailHTML(id);
   // 傭兵隨雇主換色:展示台一律以「檢視中的陣營」建機體
   const s = side || CHARACTERS[id].side;
-  $('charStage').appendChild(previewCanvas());
-  app.preview.setChar(id, s === 'MERC' ? 'STEEL' : s);
+  const viewSide = s === 'MERC' ? 'STEEL' : s;
+
+  if (!app.stageOpen) {
+    // 預設不打開:只放一顆開啟鈕於頂端,不建 renderer / 不跑 rAF
+    app.preview?.stop();
+    const open = document.createElement('button');
+    open.className = 'cd-stage-open';
+    open.textContent = '🎬 開啟 3D 機體展示台';
+    open.onclick = () => { app.stageOpen = true; showCharDetail(id, side); };
+    box.insertBefore(open, box.firstChild);
+    return;
+  }
+
+  const stage = buildStageShell(charKind(id));
+  stage.appendChild(previewCanvas());
+  mountStage(stage);
+  app.preview.setChar(id, viewSide);
   app.preview.start();
 
   const mb = $('charMorphBtn');   // 變形機甲:觀看變形過程 + 切換型態
   if (mb) mb.onclick = () => { mb.textContent = app.preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
+  $('charSizeBtn').onclick = () => { app.stageSmall = !app.stageSmall; mountStage(stage); };
+  $('charStageClose').onclick = () => { app.stageOpen = false; showCharDetail(id, side); };
 }
 
 // 點武器/招式區塊 → 展示台播放施展動畫(委派,charDetail 每次重繪都沿用)
@@ -655,57 +704,55 @@ $('charDetail').addEventListener('click', (e) => {
  */
 function renderCharPick(me) {
   const sec = $('charSection');
-  const bot = app.charTarget
-    ? app.lobby.clients.find((c) => c.id === app.charTarget && c.isBot)
-    : null;
-  if (app.charTarget && (!bot || !app.isHost)) app.charTarget = null;   // bot 被移除/失去房主 → 退回自己
-
-  const subject = bot || me;
-  const canPick = app.lobby.phase === 'room' && subject
-    && (bot ? app.isHost : me.mode === 'player' && !!me.side);
-  if (!canPick) {
+  // 檢視/選角對象:高亮的槽位(自己/電腦/他人);沒有就退回自己
+  const subject = app.lobby.clients.find((c) => c.id === app.charTarget) || me;
+  if (app.lobby.phase !== 'room' || !me || me.mode !== 'player' || !me.side || !subject) {
     sec.style.display = 'none';
     app.preview?.stop();
     return;
   }
   sec.style.display = '';
-  const send = (ch) => app.net.send(bot
-    ? { t: 'setBotChar', id: bot.id, ch }
-    : { t: 'pickChar', ch });
 
-  $('charSectionHead').innerHTML = bot
-    ? `▍替 🤖 ${esc(bot.name)} 選擇角色(不選 = 隨機) <button class="btn tiny" id="charTargetBack">← 選自己的角色</button>`
-    : '▍選擇角色(不選 = 隨機)';
-  if (bot) $('charTargetBack').onclick = () => { app.charTarget = null; renderRoom(); };
+  const isSelf = subject.id === app.youId;
+  const editable = isSelf || (subject.isBot && app.isHost);   // 自己 / 房主代電腦選;他人唯讀
+  const send = (ch) => app.net.send(isSelf ? { t: 'pickChar', ch } : { t: 'setBotChar', id: subject.id, ch });
+  const whoLabel = isSelf ? '你' : `${subject.isBot ? '🤖 ' : ''}${esc(subject.name)}`;
+
+  $('charSectionHead').innerHTML = editable
+    ? (isSelf ? '▍選擇你的角色(不選 = 隨機)' : `▍替 ${whoLabel} 選擇角色(不選 = 隨機)`)
+    : `▍檢視 ${whoLabel} 的角色(唯讀 —— 點自己的區塊可選角)`;
 
   const grid = $('charGrid');
+  grid.style.display = editable ? '' : 'none';
   grid.innerHTML = '';
-  const rnd = document.createElement('button');
-  rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
-  rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
-  rnd.onclick = () => send(null);
-  rnd.onmouseenter = () => showCharDetail(null);
-  grid.appendChild(rnd);
-  for (const id of charsOf(subject.side)) {
-    const c = CHARACTERS[id];
-    const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
-    const b = document.createElement('button');
-    b.className = 'char-btn' + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
-    b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
-      <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
-    b.onclick = () => send(id);
-    b.onmouseenter = () => showCharDetail(id, subject.side);
-    grid.appendChild(b);
+  if (editable) {
+    const rnd = document.createElement('button');
+    rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
+    rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
+    rnd.onclick = () => send(null);
+    rnd.onmouseenter = () => showCharDetail(null);
+    grid.appendChild(rnd);
+    for (const id of charsOf(subject.side)) {
+      const c = CHARACTERS[id];
+      const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
+      const b = document.createElement('button');
+      b.className = 'char-btn' + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
+      b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
+        <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
+      b.onclick = () => send(id);
+      b.onmouseenter = () => showCharDetail(id, subject.side);
+      grid.appendChild(b);
+    }
+    grid.onmouseleave = () => showCharDetail(subject.ch || null, subject.side);   // 移出 → 退回選定角色
   }
-  // 滑鼠移出網格 → 退回目前選定角色
-  grid.onmouseleave = () => showCharDetail(subject.ch || null, subject.side);
   showCharDetail(subject.ch || null, subject.side);
 
   const cur = subject.ch && CHARACTERS[subject.ch];
-  const who = bot ? `🤖 ${esc(bot.name)}` : '你';
   $('charInfo').innerHTML = cur
-    ? `${who}已選定 <b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}`
-    : `${who}未選角色:開戰時將隨機指派一名(滑鼠移到頭像可預覽,點武器/招式看演出)。`;
+    ? `${whoLabel}已選定 <b>「${esc(cur.code)}」${esc(cur.name)}</b> ・ ${esc(cur.machine)}`
+    : editable
+      ? `${whoLabel}未選角色:開戰時將隨機指派一名(滑鼠移到頭像可預覽,點武器/招式看演出)。`
+      : `${whoLabel}尚未選定角色(開戰隨機)。`;
 }
 
 // ================= 載入 + 開戰 =================
@@ -1031,14 +1078,8 @@ window.addEventListener('DOMContentLoaded', () => {
     app.net.send({ t: 'joinRoom', pin, name: myName(), mode });
   };
 
-  for (const side of ['SWARM', 'STEEL']) {
-    $(`side${side}`).onclick = () => {
-      const me = app.lobby?.clients.find((c) => c.id === app.youId);
-      if (!me || me.mode !== 'player') return;
-      // 已在此陣營 → 離開;否則加入(滿了由伺服器拒絕)
-      app.net.send({ t: 'pickSide', side: me.side === side ? null : side });
-    };
-  }
+  // 入座/離座改由槽位內的「＋ 入座」按鈕與自己槽位的 ✕ 處理(見 renderRoom),
+  // 整卡不再綁 pickSide —— 點卡片/槽位是「選取檢視角色」,不會誤觸換陣營。
   $('readyBtn').onclick = () => {
     const me = app.lobby?.clients.find((c) => c.id === app.youId);
     app.net.send({ t: 'setReady', ready: !me?.ready });

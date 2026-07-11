@@ -207,7 +207,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--swarm); }
 }
 .side-card {
   position: relative;
-  width: min(330px, 88vw); padding: 26px 20px; cursor: pointer; text-align: center;
+  width: min(330px, 88vw); padding: 26px 20px; cursor: default; text-align: center;
   background: linear-gradient(180deg, rgba(16, 24, 34, 0.88), rgba(9, 14, 21, 0.93));
   border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
@@ -484,22 +484,31 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
 .room-map-info { font-size: 13px; color: var(--ok); margin-top: 4px; }
 .side-slots { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .slot {
-  font-size: 14px; padding: 5px 10px; border: 1px dashed var(--line); border-radius: 3px;
+  display: flex; align-items: center; gap: 6px; min-height: 32px; box-sizing: border-box;
+  font-size: 13px; padding: 5px 10px; border: 1px dashed var(--line); border-radius: 3px;
   color: var(--dim); background: rgba(8, 13, 20, 0.5);
 }
-.slot.filled { border-style: solid; border-color: var(--line-strong); color: var(--fg); font-weight: 700; }
-.slot.me { outline: 1px solid rgba(169, 221, 107, 0.8); outline-offset: 1px; }
+/* 填滿槽位:整格可點(選取檢視該玩家角色) */
+.slot.filled { border-style: solid; border-color: var(--line-strong); color: var(--fg); font-weight: 700; cursor: pointer; }
+.slot.filled:hover { background: rgba(20, 30, 42, 0.7); }
+.slot.filled.sel { outline: 2px solid var(--steel); outline-offset: 1px; background: rgba(79, 195, 247, 0.10); }
+.slot.me { border-left: 3px solid rgba(169, 221, 107, 0.85); }
 .slot.bot { border-style: dotted; }
-.slot-ready { float: right; }
-
-/* 電腦玩家(房主增減) */
+.slot-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-char { flex: 0 0 auto; }
+.slot-ready { flex: 0 0 auto; }
+.slot-x { flex: 0 0 auto; margin-left: 2px; color: var(--dim); cursor: pointer; font-weight: 400; }
+.slot-x:hover { color: var(--danger); }
+/* 空位:入座 / 加電腦玩家,兩顆按鈕同寬堆疊 */
+.slot.empty { flex-direction: column; align-items: stretch; gap: 4px; padding: 5px; }
+.slot-btn {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 5px 8px;
+  color: var(--fg); background: rgba(16, 25, 35, 0.85); border: 1px solid var(--line);
+  border-radius: 3px; cursor: pointer;
+}
+.slot-btn:hover { border-color: var(--swarm); }
+.slot-empty-label { color: var(--dim); font-size: 13px; text-align: center; width: 100%; }
 .btn.tiny { padding: 2px 8px; font-size: 12px; margin-left: 8px; }
-.bot-add { opacity: 0.75; }
-.bot-add:hover { opacity: 1; }
-.bot-del { float: right; margin-left: 8px; color: var(--dim); cursor: pointer; }
-.bot-del:hover { color: var(--danger); }
-.bot-pick { float: right; margin-left: 8px; cursor: pointer; opacity: 0.55; }
-.bot-pick:hover, .bot-pick.on { opacity: 1; }
 
 /* ===== 角色系統(選角 / 雙層 HP / 電力 / 招式)===== */
 /* 選角區(房間階段,入座後出現) */
@@ -548,25 +557,40 @@ body[data-side="STEEL"] .hud-side { color: var(--steel); text-shadow: 0 0 8px rg
 .cd-portrait { position: relative; }
 .cd-portrait img { width: 100%; border-radius: 3px; display: block; background: #0b0f14; }
 
-/* 機體展示台(charPreview.js;canvas 節點跨重繪搬移)
-   全寬 + sticky:捲到下方點武器/招式時,展示台固定在頂端不被捲走(演出恆可見) */
+/* 機體展示台(charPreview.js;canvas 節點跨重繪搬移)。背景**完全不透明**(radial 兩端都是
+   opaque hex),否則 sticky 疊在簡歷上時,底下文字會透出來干擾觀看。 */
 .cd-stage {
-  position: sticky; top: -10px; z-index: 2; height: 300px; border: 1px solid var(--line); border-radius: 3px;
-  background: radial-gradient(circle at 50% 58%, rgba(79, 195, 247, 0.12), rgba(6, 10, 16, 0.96) 70%);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45); overflow: hidden;
+  position: relative; border: 1px solid var(--line); border-radius: 3px; overflow: hidden;
+  background: radial-gradient(circle at 50% 58%, #10222c, #070b10 72%);
 }
+/* 展示台預設不打開:只顯示開啟鈕(不建 renderer / 不跑 rAF) */
+.cd-stage-open {
+  display: block; width: 100%; font: inherit; font-size: 13px; padding: 10px; cursor: pointer;
+  color: var(--steel); background: rgba(16, 25, 35, 0.85); border: 1px dashed var(--steel-dark);
+  border-radius: 3px; margin-bottom: 2px;
+}
+.cd-stage-open:hover { border-style: solid; box-shadow: 0 0 10px rgba(79, 195, 247, 0.25); }
+/* 大:全寬 + sticky,捲到下方點武器/招式時固定在頂端不被捲走(演出恆可見) */
+.cd-stage.large { position: sticky; top: -10px; z-index: 2; height: 300px; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55); }
+/* 小:塞進頭像下方的左欄(150px),讓出簡歷空間 */
+.cd-stage.small { height: 150px; margin-top: 8px; }
 .cd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 .cd-canvas.grabbing { cursor: grabbing; }
 .cd-stage-hint {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; text-align: center; pointer-events: none;
   font-size: 9.5px; color: var(--dim); padding: 2px 0; background: rgba(6, 10, 16, 0.7);
 }
-.cd-morph-btn {
-  position: absolute; left: 8px; top: 8px; z-index: 1; font: inherit; font-size: 11px;
-  color: var(--fg); background: rgba(16, 25, 35, 0.9); border: 1px solid var(--steel-dark);
-  border-radius: 3px; padding: 4px 9px; cursor: pointer;
+.cd-stage.small .cd-stage-hint { display: none; }   /* 小圖沒空間放提示 */
+.cd-stage-tr { position: absolute; right: 8px; top: 8px; z-index: 1; display: flex; gap: 4px; }
+.cd-morph-btn, .cd-size-btn, .cd-close-btn {
+  font: inherit; font-size: 11px; color: var(--fg); background: rgba(16, 25, 35, 0.9);
+  border: 1px solid var(--steel-dark); border-radius: 3px; padding: 4px 9px; cursor: pointer;
 }
-.cd-morph-btn:hover { border-color: var(--steel); box-shadow: 0 0 8px rgba(79, 195, 247, 0.3); }
+.cd-morph-btn { position: absolute; left: 8px; top: 8px; z-index: 1; }
+.cd-close-btn { padding: 4px 8px; }
+.cd-morph-btn:hover, .cd-size-btn:hover { border-color: var(--steel); box-shadow: 0 0 8px rgba(79, 195, 247, 0.3); }
+.cd-close-btn:hover { border-color: var(--danger); color: var(--danger); }
+.cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn, .cd-stage.small .cd-close-btn { font-size: 9px; padding: 2px 5px; }
 .cd-tag {
   position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
   font-size: 10px; padding: 2px 0; background: rgba(6, 10, 16, 0.85);
