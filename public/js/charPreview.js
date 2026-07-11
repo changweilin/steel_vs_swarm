@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { SIDES, CHARACTERS, charKind, heroWeapon, heroAbility } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { updateCelLight } from './toon.js';
-import { starburst, shockRing } from './vfx.js';
+import { starburst, shockRing, beamLine } from './vfx.js';
 
 // 招式特效配色(與 game.js 的 cast 事件同一套口徑)
 const FX_COLOR = {
@@ -156,15 +156,17 @@ export class CharPreview {
     const R = this.fitR;
     if (slot === 'light' || slot === 'heavy') {
       const w = heroWeapon(id, slot, 1);
-      // 輕武器連射一個彈匣的頭幾發;重武器單發蓄力
+      // 輕武器連射一個彈匣的頭幾發;重武器演出依機制型別分家(_stepHeavy)
       const gap = slot === 'light' ? Math.max(0.09, 1 / (w.rate || 4)) : 0;
       const shots = slot === 'light' ? Math.min(6, w.mag || 6) : 1;
+      const durH = { rail: (w.charge || 1.2) + 1.0, beam: 1.9, plasma: 1.7, missile: 2.2, launcher: 2.2 }[w.type] ?? 1.5;
       this.anim = {
         slot, t: 0, next: 0, fired: 0, shots, gap, w,
-        dur: slot === 'light' ? shots * gap + 0.5 : 1.5,
+        dur: slot === 'light' ? shots * gap + 0.5 : durH,
       };
-      // 重武器有爆風環,取景放大到框住它;輕武器維持機體特寫
-      this.wantR = slot === 'heavy' ? Math.max(R, (w.r || 0) * 1.15, R * 1.15) : R;
+      // 取景:彈體飛行/磁軌光束要拉遠框住軌跡;爆風環框住半徑;輕武器維持機體特寫
+      const wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.15;
+      this.wantR = slot === 'heavy' ? Math.max(R * wide, (w.r || 0) * 1.15) : R;
     } else {
       const a = heroAbility(id, slot, 1);
       this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 2.2 : 1.5 };
@@ -181,6 +183,117 @@ export class CharPreview {
     return this.holder.localToWorld(v);
   }
 
+  /** 槍口射向(世界座標;機體面朝 +z) */
+  _fwd() {
+    const m = this._muzzle();
+    return this.holder.localToWorld(new THREE.Vector3(0, this.targetY * 1.15, this.size.z * 0.55 + 1))
+      .sub(m).normalize();
+  }
+
+  /**
+   * 重武器演出:每種機制一套動作(與實戰同口徑)—
+   * rail 蓄力電光→極速光束重後座 / beam 持續穩定光束(emp 附帶控場漣漪)/
+   * plasma 扇形焰舌 / missile S 形追蹤俯衝 / launcher 雷射標定 + 上拋俯衝 / gun 蓄力單發。
+   */
+  _stepHeavy(A, R) {
+    const w = A.w;
+    const hue = CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a;
+    const m = this._muzzle();
+    const fwd = this._fwd();
+    const up = new THREE.Vector3(0, 1, 0);
+
+    if (w.type === 'rail') {
+      if (A.fired) return;
+      const chg = Math.min(1, A.t / (w.charge || 1.2));
+      this.holder.position.y = -R * 0.03 * chg;                       // 蓄力重心下沉
+      if (A.t >= (A.spark || 0)) {                                    // 軌道電光聚集
+        starburst(this.scene, this.effects, m.x, m.y, m.z, R * (0.06 + chg * 0.14), 0xaef4ff);
+        A.spark = A.t + 0.12;
+      }
+      if (chg >= 1) {
+        beamLine(this.scene, this.effects, m, m.clone().addScaledVector(fwd, R * 7), 0xaef4ff,
+          { ttl: 0.5, w: R * 0.035 });
+        starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.35, 0xffffff);
+        this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
+        this.holder.rotation.x -= 0.14;
+        A.fired = 1;
+      }
+    } else if (w.type === 'beam') {
+      // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
+      if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
+        const end = m.clone().addScaledVector(fwd, R * 5);
+        beamLine(this.scene, this.effects, m, end, hue, { ttl: 0.18, w: R * 0.02 });
+        starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.12, hue);
+        this.holder.position.z -= R * 0.004;                          // 持續微反壓
+        A.tick = A.t + 0.11;
+      }
+      if (w.emp && !A.fired && A.t >= 0.7) {                          // EMP 附帶:控場癱瘓漣漪
+        shockRing(this.scene, this.effects, 0, 0, 0, R * 1.3, 0xb78aff);
+        A.fired = 1;
+      }
+    } else if (w.type === 'plasma') {
+      if (A.fired === 0 && A.t < 0.45) {
+        this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.45 * Math.PI);   // 蓄壓下蹲
+      } else if (A.fired === 0) {
+        const arc = (w.arc || 15) * Math.PI / 180;                    // 扇形大面積焰舌
+        for (let k = -2; k <= 2; k++) {
+          const dk = fwd.clone().applyAxisAngle(up, arc * k / 2);
+          const end = m.clone().addScaledVector(dk, R * 3.5);
+          beamLine(this.scene, this.effects, m, end, 0x7fe8ff, { ttl: 0.35, w: R * 0.05 });
+          starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.2, 0x7fe8ff);
+        }
+        shockRing(this.scene, this.effects, 0, 0, 0, R * 2.0, 0x7fe8ff);
+        this.holder.position.z -= R * 0.1;
+        A.fired = 1;
+      }
+    } else if (w.type === 'missile' || w.type === 'launcher') {
+      if (A.fired === 0 && A.t >= 0.4) {
+        // 彈體離架:missile = 橫向 S 形獵殺;guided launcher = 上拋再俯衝(雷射標定線)
+        const T = 1.2;
+        const v = fwd.clone().multiplyScalar(R * 4.5 / T);
+        const boomPos = m.clone().addScaledVector(v, T);
+        const side = fwd.clone().cross(up).normalize();
+        const proj = new THREE.Mesh(
+          new THREE.CylinderGeometry(R * 0.02, R * 0.035, R * 0.18, 6),
+          new THREE.MeshBasicMaterial({ color: hue }),
+        );
+        proj.quaternion.setFromUnitVectors(up, fwd);
+        proj.position.copy(m);
+        this.scene.add(proj);
+        const weaving = w.type === 'missile';
+        this.effects.push({
+          obj: proj, ttl: T,
+          fade: (o, f, dt2) => {
+            const age = T * (1 - f);
+            const env = Math.sin(Math.min(1, age / T) * Math.PI);     // 頭尾貼合直線的擺動包絡
+            o.position.copy(m).addScaledVector(v, age)
+              .addScaledVector(weaving ? side : up, (weaving ? Math.sin(age * 6) * 0.5 : 0.45) * R * env);
+            starburst(this.scene, this.effects, o.position.x, o.position.y, o.position.z, R * 0.05, 0xd8d8d8);
+          },
+        });
+        if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
+        this.holder.position.z -= R * 0.06;
+        A.boomAt = A.t + T;
+        A.boomPos = boomPos;
+        A.fired = 1;
+      } else if (A.fired === 1 && A.t >= A.boomAt) {
+        const p = A.boomPos;
+        starburst(this.scene, this.effects, p.x, p.y, p.z, Math.max(R * 0.5, (w.r || 0) * 0.5), 0xffaa33);
+        shockRing(this.scene, this.effects, p.x, 0, p.z, Math.max(R * 0.9, w.r || 0), 0xffaa33);
+        A.fired = 2;
+      }
+    } else if (A.fired === 0 && A.t >= 0.55) {
+      // 動能重砲(gun):蓄力後單發重擊 + 象徵性衝擊環
+      starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
+      shockRing(this.scene, this.effects, 0, 0, 0, Math.max(R * 0.9, w.r || 0), 0xffd27a);
+      this.holder.position.z -= R * 0.12;
+      this.holder.rotation.x -= 0.10;
+      A.fired = 1;
+    } else if (A.fired === 0) {
+      this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);   // 蓄力下蹲
+    }
+  }
+
   _stepAnim(dt) {
     const A = this.anim;
     if (!A) return;
@@ -195,17 +308,8 @@ export class CharPreview {
           this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
           A.fired++; A.next += A.gap;
         }
-      } else if (A.fired === 0 && A.t >= 0.55) {
-        // 蓄力後單發重擊:大星爆 + 貼地衝擊環(半徑取爆風,直擊武器給個象徵值)
-        const m = this._muzzle();
-        starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
-        shockRing(this.scene, this.effects, 0, 0, 0, Math.max(R * 0.9, A.w.r || 0), 0xffd27a);
-        this.holder.position.z -= R * 0.12;
-        this.holder.rotation.x -= 0.10;
-        A.fired = 1;
-      } else if (A.fired === 0) {
-        // 蓄力:機體微微下蹲蓄勢
-        this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);
+      } else {
+        this._stepHeavy(A, R);                          // 重武器:依機制型別分家演出
       }
     } else {
       const col = FX_COLOR[A.a.fx] ?? SIDES[this.unit.userData.side].color;

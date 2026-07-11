@@ -7,6 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
+  dmgFalloff, blastFalloff,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -634,7 +635,8 @@ export class BattleSim {
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
-    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind), t);
+    // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)
+    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
     this._echo(h, t, wp.def);
@@ -654,7 +656,7 @@ export class BattleSim {
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d3 > def.range * 1.25) continue;
       this.events.push({ e: 'shot', from: [b.x, b.z], to: [t.x, t.z], side: b.side });
-      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind), t);
+      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
       this._damage(t, dmg, b, def.pen);
     }
@@ -676,8 +678,9 @@ export class BattleSim {
     // 僚機同步射擊(單機傷害是 1/3,三機齊射才打得掉飛彈)
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
-      if (Math.hypot(b.x - m.x, b.z - m.z, (b.y || 0) - m.y) > wp.def.range * 1.25) continue;
-      m.hp -= wp.def.dmg * (1 + ECON.UPGRADES.dmg.step * h.upg.dmg);
+      const bd = Math.hypot(b.x - m.x, b.z - m.z, (b.y || 0) - m.y);
+      if (bd > wp.def.range * 1.25) continue;
+      m.hp -= wp.def.dmg * (1 + ECON.UPGRADES.dmg.step * h.upg.dmg) * dmgFalloff(wp.def, bd);
     }
     if (m.hp <= 0) {
       this.missiles.splice(this.missiles.indexOf(m), 1);
@@ -702,7 +705,7 @@ export class BattleSim {
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
     if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
-    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind), t);
+    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
     this._echo(h, t, wp.def);
@@ -718,7 +721,7 @@ export class BattleSim {
     if (!h || h.dead || this.over) return;
     if (this._jammed(h)) return;
     const wp = this._heroWeapon(h, 'heavy');
-    if (!wp || wp.def.type !== 'launcher') return;
+    if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
     if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15) return;   // 著彈點超程(留彈道寬容)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
@@ -731,6 +734,42 @@ export class BattleSim {
       if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
       this._blast(b, wp.def, x, z, 0);
     }
+  }
+
+  /**
+   * 電漿扇形攻擊(type:'plasma'):客戶端只回報射向(dx,dz 為 sim 座標單位向量),
+   * 命中判定全在伺服器 — 射程內、水平夾角 ≤ arc、迷霧可見的敵方單位全數受創
+   * (× 電漿消散衰減)。小隊僚機以各自位置沿同射向齊噴,彈藥/射速只扣一份。
+   */
+  heroPlasma(pid, dx, dz) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
+    if (this._jammed(h)) return;
+    const wp = this._heroWeapon(h, 'heavy');
+    if (!wp || wp.def.type !== 'plasma') return;
+    if (wp.def.needAim && !h.aiming) return;
+    const len = Math.hypot(dx, dz) || 1;
+    dx /= len; dz /= len;
+    if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    const pulse = this.visionUntil?.[h.side] > this.t;
+    const src = this._visionSources(h.side);
+    const cosA = Math.cos((wp.def.arc || 15) * Math.PI / 180);
+    for (const b of this._bodies(h)) {
+      if (b.dead) continue;
+      for (const t of [...this.ents.values()]) {
+        if (t.side === h.side || (t.hero && t.dead)) continue;
+        const tx = t.x - b.x, tz = t.z - b.z;
+        const d2 = Math.hypot(tx, tz);
+        const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
+        if (d3 > wp.def.range * 1.25) continue;
+        // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
+        if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
+        if (!pulse && !this._visibleTo(t, h.side, src)) continue;
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3), b, wp.def.pen);
+      }
+    }
+    this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
+      dx, dz, r: wp.def.range, arc: wp.def.arc || 15 });
   }
 
   /**
@@ -953,14 +992,14 @@ export class BattleSim {
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl });
   }
 
-  /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊) */
+  /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
+   *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。 */
   _blast(h, def, x, z, y) {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
       const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy ? (t.y || 0) : 0));
-      const dmg = this._heroDmg(h, def, t.kind);
-      if (d <= def.r) this._damage(t, dmg, h, def.pen);
-      else if (d <= def.r * 1.8) this._damage(t, dmg * 0.4, h, def.pen);
+      const f = blastFalloff(def.r, d);
+      if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);
     }
   }
 

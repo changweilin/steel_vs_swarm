@@ -152,8 +152,11 @@ export class BotBrain {
       e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
     if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)) {
       h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
-      if (hv.type === 'launcher') { if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z); }
-      else this._fire(t.id, 'heavy');
+      if (hv.type === 'launcher' || hv.type === 'missile') {
+        if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z);
+      } else if (hv.type === 'plasma') {
+        this.sim.heroPlasma(this.pid, t.x - h.x, t.z - h.z);
+      } else this._fire(t.id, 'heavy');
     }
 
     // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)。低/新手難度不使用招式。

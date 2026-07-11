@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, MORPH, LOCK, DECOY,
+  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H } from './models.js';
@@ -979,6 +979,20 @@ export class BattleClient {
           : null;
         this.hud.feed?.(`⬆️ ${abName || ECON.UPGRADES[ev.item]?.name || ev.item} Lv.${ev.lvl}`);
       }
+    } else if (ev.e === 'plasma') {
+      // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
+      if (ev.pid !== this.youId) {
+        const fx = ev.x, fz = -ev.z;
+        const from = new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + (ev.y || 0) + 2, fz);
+        const dir3 = new THREE.Vector3(ev.dx, 0, -ev.dz).normalize();
+        const arc = (ev.arc || 15) * Math.PI / 180;
+        const up = new THREE.Vector3(0, 1, 0);
+        for (let k = -2; k <= 2; k++) {
+          const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
+          const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
+          this._tracer(from, end, 0x7fe8ff, 0.28);
+        }
+      }
     } else if (ev.e === 'shot') {
       const [fx, fz] = [ev.from[0], -ev.from[1]];
       const [tx, tz] = [ev.to[0], -ev.to[1]];
@@ -1206,8 +1220,9 @@ export class BattleClient {
    */
   _reloadAnimOffset(def, p) {
     const swing = Math.sin(Math.min(1, Math.max(0, p)) * Math.PI); // 0→1→0,填彈完歸零
-    if (def?.type === 'beam') return { dz: swing * 0.4, dy: 0, rx: 0 };        // 能量武器:整管後拉充能
-    if (def?.type === 'launcher') return { dz: 0, dy: 0, rx: -swing * 0.5 };   // 發射器:上掀開膛裝填
+    if (def?.type === 'beam' || def?.type === 'rail') return { dz: swing * 0.4, dy: 0, rx: 0 };  // 能量/磁軌:整管後拉充能
+    if (def?.type === 'launcher' || def?.type === 'missile' || def?.type === 'plasma')
+      return { dz: 0, dy: 0, rx: -swing * 0.5 };   // 發射器/飛彈/電漿罐:上掀開膛裝填
     return { dz: 0, dy: -swing * 0.22, rx: swing * 0.12 };                     // 槍械:退彈匣再扣回
   }
 
@@ -1248,7 +1263,9 @@ export class BattleClient {
     starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
     if (ent) {
       const mult = vsMult(def, ent.kind);
-      const est = Math.round(def.dmg * mult * (1 + (this.upg.dmg || 0) * ECON.UPGRADES.dmg.step));
+      // 本地估算含距離物理衰減(伺服器結算同一條公式,HUD 數字才對得上)
+      const est = Math.round(def.dmg * mult * (1 + (this.upg.dmg || 0) * ECON.UPGRADES.dmg.step)
+        * dmgFalloff(def, this.pos.distanceTo(point)));
       damageNumber(this.scene, this.effects,
         point.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
     }
@@ -1262,9 +1279,23 @@ export class BattleClient {
     }
     const { id, def, st } = this._curWeapon();
     if (!def || !st) return;
+    // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
+    if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); }
     if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
+
+    // 磁軌炮:按住開火鍵蓄力 charge 秒,蓄滿才擊發;提前放開 = 取消(不耗彈,歸零見 _updateSelf)
+    if (def.type === 'rail' && def.charge) {
+      if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); }
+      const p = (now - this._railAt) / def.charge;
+      this.flash.visible = true;           // 蓄力視覺:槍口電光隨進度增亮
+      this._flashTtl = 0.06;
+      this.flash.scale.setScalar(0.4 + Math.min(1, p) * 2.4);
+      if (p < 1) return;
+      this._railAt = 0;
+      this.flash.scale.setScalar(1);
+    }
     this.lastFireAt[id] = now;
     st.ammo--;
     if (st.ammo <= 0) this._startReload(id);
@@ -1288,10 +1319,26 @@ export class BattleClient {
     if (fly) this.vel.addScaledVector(dir, -0.9 * heavyKick);
     else if (id === 'heavy') this.vel.addScaledVector(dir, -6);
 
+    if (def.type === 'plasma') {
+      // 電漿扇形:無彈道,命中由伺服器以「射向 + 夾角 + 射程」結算;本地畫扇形焰舌
+      const arc = (def.arc || 15) * Math.PI / 180;
+      const up = new THREE.Vector3(0, 1, 0);
+      for (let k = -2; k <= 2; k++) {
+        const dk = dir.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
+        const end = muzzle.clone().addScaledVector(dk, def.range * (0.7 + Math.random() * 0.3));
+        this._tracer(muzzle, end, 0x7fe8ff, 0.28);
+        starburst(this.scene, this.effects, end.x, end.y, end.z, 3, 0x7fe8ff);
+      }
+      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z });   // three z 南 → 模擬 z 北
+      return;
+    }
+
     if (def.type === 'beam') {
-      // 定向能:光速直擊(無彈道下墜),仍受射程限制
+      // 定向能:光速直擊(無彈道下墜),仍受射程限制;光束短暫駐留 = 持續穩定輸出感
       const { point, ent, missileId } = this._resolveAim(def.range);
-      this._tracer(muzzle, point, this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff);
+      const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+      this._tracer(muzzle, point, col, 0.35);
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z] });
       if (missileId != null) { this.net.send({ t: 'hitMissile', id: missileId, w: id }); this._hitFeedback(def, null, point); }
       else if (ent) { this.net.send({ t: 'hit', id: ent.id, w: id }); this._hitFeedback(def, ent, point); }
@@ -1299,7 +1346,8 @@ export class BattleClient {
     }
 
     // 彈道學子彈:初速 mv(真實參數)+ 重力下墜;超出射程即失效(FPS/DOTA 射程上限)
-    const aoe = def.type === 'launcher';
+    // launcher/missile 皆為 AoE 戰鬥部;missile 帶著發射瞬間的準星鎖定 → 飛行中自動追蹤
+    const aoe = def.type === 'launcher' || def.type === 'missile';
     const mesh = aoe
       ? this._bombMesh(0x50585f)
       : new THREE.Mesh(
@@ -1308,11 +1356,16 @@ export class BattleClient {
       );
     if (!aoe) this.scene.add(mesh);
     mesh.position.copy(muzzle);
+    const homing = def.type === 'missile' && this._lockId != null && this.ents.has(this._lockId)
+      ? this._lockId : null;
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
       pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
       dist: 0, max: def.range, mesh,
+      mv: def.mv || 600, guide: !!def.guide, homing,
     });
+    if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
+    else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
     // 其他客戶端的槍口視覺(對方不模擬我的彈道,給一條短曳光示意射向)
     this.net.send({
       t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z],
@@ -1329,10 +1382,31 @@ export class BattleClient {
     }
     for (const [mid, ms] of this.samMeshes) { ms.mesh.userData.missileId = mid; targets.push(ms.mesh); }
     targets.push(this.terrain.mesh);
+    // 轉向助手:等速改向(推力彈體),每秒最大轉角 maxTurn(弧度)
+    const steer = (b, want, maxTurn) => {
+      const cur = b.vel.clone().normalize();
+      const ang = cur.angleTo(want);
+      if (ang > 1e-4) cur.lerp(want, Math.min(1, maxTurn * dt / ang)).normalize();
+      b.vel.copy(cur.multiplyScalar(b.mv));
+    };
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       const prev = b.pos.clone();
-      b.vel.y -= BALLISTIC.G * dt;                    // 重力下墜(拋物線彈道)
+      const tgt = b.homing ? this.ents.get(b.homing) : null;
+      if (tgt) {
+        // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
+        const want = tgt.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)).sub(b.pos).normalize();
+        steer(b, want, 3.2);
+      } else if (b.guide && this.aiming && b.slot === 'heavy') {
+        // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正
+        const ro = this.camera.position;
+        const rd = this.camera.getWorldDirection(new THREE.Vector3());
+        const along = Math.max(20, b.pos.clone().sub(ro).dot(rd) + 40);
+        const gp = ro.clone().addScaledVector(rd, along);
+        steer(b, gp.sub(b.pos).normalize(), 2.2);
+      } else {
+        b.vel.y -= BALLISTIC.G * dt;                  // 重力下墜(拋物線彈道)
+      }
       b.pos.addScaledVector(b.vel, dt);
       const seg = b.pos.clone().sub(prev);
       const len = seg.length();
@@ -1350,6 +1424,10 @@ export class BattleClient {
           hit = { point: h.point, terrain: true };
           break;
         }
+      }
+      // 追蹤飛彈近炸引信:貼近鎖定目標即引爆(戰鬥部 AoE 由伺服器 heroBurst 結算)
+      if (!hit && tgt && b.pos.distanceTo(tgt.mesh.position) < Math.max(4, (b.r || 0) * 0.5)) {
+        hit = { point: b.pos.clone(), ent: tgt };
       }
       const done = hit || b.dist >= b.max;
       if (!done) {
@@ -1484,11 +1562,11 @@ export class BattleClient {
   }
 
   // ---------------- 特效 ----------------
-  _tracer(from, to, color) {
+  _tracer(from, to, color, ttl = 0.1) {
     const geo = new THREE.BufferGeometry().setFromPoints([from, to]);
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
     this.scene.add(line);
-    this.effects.push({ obj: line, ttl: 0.1, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
+    this.effects.push({ obj: line, ttl, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
   }
 
   _explosion(x, y, z, r, color) {
@@ -1655,6 +1733,8 @@ export class BattleClient {
         ry: Math.round(this.yaw * 100) / 100,
       });
     }
+    // 磁軌蓄力:放開開火鍵 = 取消蓄力(不耗彈)
+    if (!this.firing && this._railAt) { this._railAt = 0; this.flash?.scale.setScalar(1); }
     this._tryFire(now);
     this._tickLock(now);
   }

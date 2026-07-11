@@ -540,6 +540,11 @@ function charWeaponRow(id, slot, key) {
   if (raw.pen) bits.push(`破甲 ${tri((l) => w(l).pen)}`);
   if (raw.crit) bits.push(`爆擊 ${Math.round(w(1).crit * 100)}%×${w(1).critX}`);
   if (raw.emp) bits.push(`癱瘓 ${tri((l) => w(l).emp, 1)}s`);
+  // 機制標籤(2026-07-11 武器多元化):一眼看出這把的操作手感
+  if (raw.charge) bits.push(`蓄力 ${tri((l) => w(l).charge, 1)}s`);
+  if (raw.arc) bits.push(`扇形 ±${tri((l) => w(l).arc)}°`);
+  if (raw.guide) bits.push('雷射導引');
+  if (raw.type === 'missile') bits.push('鎖定追蹤');
   return `<div class="cd-row" data-slot="${slot}" title="點擊播放施展動畫">
     <span class="cd-key">${key}</span>
     <div><b>${esc(raw.name)}</b> <span class="dim">${esc(raw.rw)}</span> <span class="cd-play">▶</span>

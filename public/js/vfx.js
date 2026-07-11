@@ -174,6 +174,30 @@ export function starburst(scene, effects, x, y, z, r, color = 0xffe27a) {
   });
 }
 
+/** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用) */
+export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 } = {}) {
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  if (len < 0.01) return;
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(w, w, len, 6, 1, true),
+    new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }),
+  );
+  beam.position.copy(from).addScaledVector(dir, 0.5);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  scene.add(beam);
+  effects.push({
+    obj: beam, ttl,
+    fade(o, f) {
+      o.material.opacity = 0.85 * f;
+      o.scale.x = o.scale.z = 0.3 + 0.7 * f;   // 光束冷卻收細
+    },
+  });
+}
+
 /** AoE 衝擊環:貼地放射環,250ms 擴張到傷害半徑邊界後消散 */
 export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
   const ring = new THREE.Mesh(
