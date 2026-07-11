@@ -407,8 +407,9 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //                   其餘掛螺旋槳 — 現實原型沒有槳的機種一律不畫槳)/ 擬態翼(form:'avian',creature:
 //                   bee 尾針砲・eagle 羽毛飛彈・ptero 爪抓槍莢・dragon 張口飛彈巢);
 //         機甲   = 人形(無 form,但 MUST 指定 proto 原型 — 四台的比例/裝備/站姿全不同:
-//                   bastion 過裝甲巨肩 + 長戟(戟刃即 152mm 砲口)・seraph 倒三角上胸 + 磁軌長槍・
-//                   aegis 方形塔盾 + 肩部垂直發射彈艙・colossus 多節扁長四肢 + 背負蠍弩;
+//                   bastion 過裝甲巨肩 + 長戟(戟刃即 152mm 砲口)・seraph EVA 式倒三角上胸
+//                   (兩個上端點即雙肩)+ 磁軌長槍・aegis 方形塔盾 + 肩部垂直發射彈艙・
+//                   colossus「巨兵」圓角矩形身軀 + 蜈蚣節肢 + 眉心脈衝砲;
 //                   2026-07-11 重構,MUST NOT 退回「同一具機體換色換掛件」)/ 雙足獸
 //                   (form:'biped',creature: gorilla 巨臂武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・
 //                   roo 強腿重尾)/ 四足獸(form:'beast',creature: hound 揹負重武・centaur 人馬持槍・
@@ -787,7 +788,7 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [85, 95, 105], desc: '老戰友聽得懂的黑話:步兵班沿最近兵線投入' },
   },
   t12: {
-    side: 'STEEL', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「螢火」訊號掃描機',
+    side: 'STEEL', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
     visual: { hue: 0xb8ffb0, pod: 'none', proto: 'colossus', paint: 'tattoo' },
     mods: { hp: 0.9, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
     light: { name: '防衛衝鋒槍', rw: 'PP-19 9mm・初速 340m/s', type: 'gun', mv: 340,
@@ -809,7 +810,8 @@ export const CHARACTERS = {
   // 型態兩類等比例(4/4,原型迴避兩陣營既有生物:蜂/翼龍/飛龍/鷹/猩猩/鴕鳥/袋鼠/暴龍/獵犬/人馬/克蘇魯/劍龍):
   //  A 類 定翼/旋翼 ↔ 人形(地面型各有體態,不再共用一套站姿):
 //       m01 heli↔vampire(挺立高領・三旋翼:機首桅 + 雙腿末端,飛行雙腿與機身呈 Y 字)、
-//       m03 uav↔monkey(蹲伏長臂・多節長尾拉直成尾桁)、
+//       m03 uav↔monkey(悟空:掌行猴姿;飛行「不」變形成飛機 —— 展開不揮動的光之翼、
+//           體軸壓平雙腿併攏、多節尾蠍式前捲讓尾端巨砲朝前備射)、
 //       m05 jet↔wolf(趾行深屈・鬃刺肩尖)、m06 tilt↔atlas(負重前傾・雙肩掛架;手持圓盾=傾轉旋翼盤)
   //  B 類 擬態翼 ↔ 四足獸:m02 levi↔elephant、m04 archo↔raptor、m07 beetle、m08 owl↔panther
   m01: {
