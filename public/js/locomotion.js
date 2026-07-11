@@ -120,13 +120,28 @@ function stepAerial(L, rig, dt, now, vFwd, vLat) {
   rig.tilt.rotation.x = L.pitch;
   rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 + L.ph) * (rig.bob || 0.08);
   if (rig.wings) {
-    // 撲翼:頻率/振幅隨速度提升(懸停慢拍、巡航快拍);外翼相位延遲 = 鞭式 follow-through
     const k = clamp(Math.hypot(vFwd, vLat) / top, 0, 1);
-    L.flap = (L.flap || 0) + dt * (3.2 + k * 9);
-    const amp = 0.24 + k * 0.34;
-    for (const { w, outer, sgn } of rig.wings) {
-      w.rotation.z = sgn * Math.sin(L.flap + L.ph) * amp;
-      outer.rotation.z = sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.5;
+    if (rig.insect) {
+      // 昆蟲震翅:頻率遠高於鳥類(懸停時也全速振,不靠前進速度產生升力),
+      // 行程平面近水平 —— 上下拍幅小,主運動是「前後掃掠 + 每半衝程翼面翻轉」的 8 字軌跡;
+      // 後翅相位落後前翅(蜂類前後翅耦合但非同相)。
+      L.flap = (L.flap || 0) + dt * (30 + k * 16);
+      const amp = 0.3 + k * 0.12;
+      for (const { w, outer, sgn, pair } of rig.wings) {
+        const ph = L.flap - (pair ? 0.5 : 0);
+        w.rotation.z = sgn * Math.sin(ph) * amp;            // 拍(小幅)
+        w.rotation.y = sgn * Math.cos(ph) * 0.55;           // 掃(主運動:前後掃掠)
+        w.rotation.x = Math.cos(ph) * 0.8;                  // 翻(衝程換向時翼面反轉迎角)
+        outer.rotation.z = sgn * Math.sin(ph - 0.35) * amp * 0.8;
+      }
+    } else {
+      // 鳥類撲翼:頻率/振幅隨速度提升(懸停慢拍、巡航快拍);外翼相位延遲 = 鞭式 follow-through
+      L.flap = (L.flap || 0) + dt * (3.2 + k * 9);
+      const amp = 0.24 + k * 0.34;
+      for (const { w, outer, sgn } of rig.wings) {
+        w.rotation.z = sgn * Math.sin(L.flap + L.ph) * amp;
+        outer.rotation.z = sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.5;
+      }
     }
   }
 }

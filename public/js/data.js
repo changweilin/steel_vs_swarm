@@ -403,7 +403,8 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 // visual:程序生成機體外觀參數(hue 主色;無人機 frame/body(座艙沿用)、機甲 pod 掛件;
 //         2026-07-10 外觀改制(doc/image 賽璐璐重構,兩陣營各三型等比例):
 //         無人機 = 旋翼(無 form;frame quad/hexa/coax)/ 定翼(form:'fixed',wing 指定
-//                   twinboom/vtail/canard/delta 剪影)/ 擬態翼(form:'avian',creature:
+//                   twinboom/vtail/canard/delta/zero 剪影;canard/delta 為噴射動力,
+//                   其餘掛螺旋槳 — 現實原型沒有槳的機種一律不畫槳)/ 擬態翼(form:'avian',creature:
 //                   bee 尾針砲・eagle 羽毛飛彈・ptero 爪抓槍莢・dragon 張口飛彈巢);
 //         機甲   = 人形(無 form;pod 掛件)/ 雙足獸(form:'biped',creature: gorilla 巨臂
 //                   武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・roo 強腿重尾)/ 四足獸
@@ -468,8 +469,8 @@ export const CHARACTERS = {
       cd: [70, 62, 54], mp: [90, 100, 110], desc: '以自身為中心的大範圍電子壓制' },
   },
   s04: {
-    side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」突擊四旋翼',
-    visual: { hue: 0x8fd14f, frame: 'quad', body: 'box' },
+    side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
+    visual: { hue: 0x8fd14f, body: 'box', form: 'fixed', wing: 'zero' },
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
     light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400,
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
