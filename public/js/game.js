@@ -110,7 +110,7 @@ export class BattleClient {
     this._initMinimap();
     this._buildCockpit();
 
-    // 出生點:己方主堡朝敵方主堡方向外推 100m(避免卡在主堡模型裡),面向敵方
+    // 出生點:己方主堡朝敵方主堡方向外推 GAME.HERO_SPAWN_OFF(避免卡在主堡模型裡),面向敵方
     this._spawnAt();
     if (!this.side) {
       const [cx, cz] = llToWorld(this.center.lat, this.center.lng, this.center);
@@ -1157,7 +1157,7 @@ export class BattleClient {
     const [ex, ez] = llToWorld(this.cfg.bases[other][0], this.cfg.bases[other][1], this.center);
     const dx = ex - bx, dz = ez - bz;
     const len = Math.hypot(dx, dz) || 1;
-    const sx = bx + dx / len * 100, sz = bz + dz / len * 100;
+    const sx = bx + dx / len * GAME.HERO_SPAWN_OFF, sz = bz + dz / len * GAME.HERO_SPAWN_OFF;
     const gy = this.terrain.heightAt(sx, sz);
     this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // three:-z 前方

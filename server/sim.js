@@ -7,7 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
-  dmgFalloff, blastFalloff,
+  dmgFalloff, blastFalloff, battleBBox,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -62,6 +62,18 @@ export class BattleSim {
       SWARM: llToMeters(config.bases.SWARM[0], config.bases.SWARM[1], this.center),
       STEEL: llToMeters(config.bases.STEEL[0], config.bases.STEEL[1], this.center),
     };
+    // 地形涵蓋範圍(與 terrain.js buildTerrain 同一份 battleBBox 幾何)內縮空氣牆 40m:
+    // 中立物(地雷/障礙/防空/中繼站)散布的越界防線 —— 兵線蜿蜒出對稱方框的路段,
+    // 地形邊緣離兵線只有 ROUTE_EDGE_MARGIN_M(160),HAZ_LANE_MAX(300)側偏會落到地形外懸空。
+    {
+      const bb = battleBBox(config);
+      const [x1, z1] = llToMeters(bb.minLat, bb.minLng, this.center);
+      const [x2, z2] = llToMeters(bb.maxLat, bb.maxLng, this.center);
+      this.bounds = {
+        minX: Math.min(x1, x2) + 40, maxX: Math.max(x1, x2) - 40,
+        minZ: Math.min(z1, z2) + 40, maxZ: Math.max(z1, z2) - 40,
+      };
+    }
 
     this._spawnStructures();
     this._seedField();
@@ -109,6 +121,7 @@ export class BattleSim {
         x = minX + Math.random() * (maxX - minX);
         z = minZ + Math.random() * (maxZ - minZ);
       }
+      if (!this._inBounds(x, z)) continue;                        // 不落在地形外/空氣牆外
       if (this._distToLanes(x, z) < M.LANE_CLEAR) continue;       // 兵線走廊淨空
       let nearBase = false;
       for (const side of ['SWARM', 'STEEL']) {
@@ -201,8 +214,15 @@ export class BattleSim {
     }
   }
 
+  /** 中立物散布的越界防線:含半徑 r 整體落在地形(空氣牆內)才准放 */
+  _inBounds(x, z, r = 0) {
+    const b = this.bounds;
+    return x - r >= b.minX && x + r <= b.maxX && z - r >= b.minZ && z + r <= b.maxZ;
+  }
+
   _hazOk(x, z, def, wallStart = Infinity) {
     const F = FIELD;
+    if (!this._inBounds(x, z, def.r)) return false;                  // 不落在地形外/空氣牆外
     if (this._distToLanes(x, z) < F.HAZ_LANE_MIN) return false;      // 不擋正規路線
     for (const side of ['SWARM', 'STEEL']) {
       const [bx, bz] = this.basePos[side];
@@ -232,6 +252,7 @@ export class BattleSim {
       const dir = Math.random() < 0.5 ? -1 : 1;
       const off = S.laneMin + Math.random() * (S.laneMax - S.laneMin);
       const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
+      if (!this._inBounds(x, z, 6)) continue;
       if (this._distToLanes(x, z) < S.laneMin) continue;
       let bad = false;
       for (const side of ['SWARM', 'STEEL']) {
@@ -324,6 +345,7 @@ export class BattleSim {
         const dir = Math.random() < 0.5 ? -1 : 1;
         const off = R.laneMin + Math.random() * (R.laneMax - R.laneMin);
         const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
+        if (!this._inBounds(x, z, R.R)) continue;
         if (this._distToLanes(x, z) < R.laneMin) continue;
         if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 10)) continue;
         this._relays.push(this._add({

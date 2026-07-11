@@ -101,6 +101,46 @@ export const MAPGEO = {
   },
 };
 
+// ---- 戰場涵蓋範圍(地形 bbox)----
+// 兵線/主堡與地圖邊界(空氣牆)之間的保證淨空(遊戲公尺)。真實道路兵線會蜿蜒到
+// 對稱方框之外,若只給百分比 pad,最外側兵線頂點會貼著內縮 40m 的空氣牆(玩家沿線飛就撞牆)。
+export const ROUTE_EDGE_MARGIN_M = 160;
+
+/**
+ * 依戰場設定算出地形涵蓋範圍(路線包絡外擴 ∪ 對稱方框,再 pad 5%)。
+ * 幾何真相只有一份:客戶端地形(terrain.js buildTerrain)與伺服器中立物散布
+ * (sim.js 障礙/防空/中繼站的越界判定)共用 —— 伺服器沒有地形網格,
+ * 但用同一個 bbox 就能保證中立物不落在地形外(HAZ_LANE_MAX 300 > 邊距 160)。
+ */
+export function battleBBox(cfg) {
+  const R_EARTH = 6371000;
+  const d2r = (d) => d * Math.PI / 180;
+  // 1) 路線包絡(主堡 + 全兵線頂點),外擴 ROUTE_EDGE_MARGIN_M(換算真實公尺 → 度)
+  const mReal = ROUTE_EDGE_MARGIN_M * MAPGEO.REAL_SCALE;
+  const mLat = mReal / R_EARTH * 180 / Math.PI;
+  const mLng = mReal / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of [cfg.bases.SWARM, cfg.bases.STEEL, ...cfg.lanes.flat()]) {
+    if (la < minLat) minLat = la;
+    if (la > maxLat) maxLat = la;
+    if (ln < minLng) minLng = ln;
+    if (ln > maxLng) maxLng = ln;
+  }
+  minLat -= mLat; maxLat += mLat; minLng -= mLng; maxLng += mLng;
+
+  // 2) 與對稱方框(center ± 半邊長)取聯集,保證即使兵線很短也維持基本地圖尺寸
+  const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
+  const dLat = half / R_EARTH * 180 / Math.PI;
+  const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
+  minLat = Math.min(minLat, cfg.center.lat - dLat);
+  maxLat = Math.max(maxLat, cfg.center.lat + dLat);
+  minLng = Math.min(minLng, cfg.center.lng - dLng);
+  maxLng = Math.max(maxLng, cfg.center.lng + dLng);
+
+  const padLat = (maxLat - minLat) * 0.05, padLng = (maxLng - minLng) * 0.05;
+  return { minLat: minLat - padLat, maxLat: maxLat + padLat, minLng: minLng - padLng, maxLng: maxLng + padLng };
+}
+
 /**
  * 折線戰術幾何(公尺平面 [x,z] 陣列):彎曲度 + 轉角沿線距離清單。
  * 客戶端選路評分(mapSelect)與伺服器障礙佈設(sim._laneTurns)共用同一份判定。
@@ -967,6 +1007,9 @@ export const GAME = {
   TOWER_SIDE_OFF: 15,
   CREEP_AGGRO_HERO_BIAS: 0.7, // 小兵優先打小兵/建築,英雄目標權重
   HERO_HEAL_RADIUS: 160,      // 主堡補血半徑(也是軍械庫購物範圍)
+  // 出生/重生點:主堡朝敵方向外推距離。> 主堡護盾半徑 30 + 模型半徑 ~23,
+  // 剛好落在堡外、遠在補血半徑內(舊值 100 是 8× 超尺度世界時代校的,重生跑回堡太遠)
+  HERO_SPAWN_OFF: 45,
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
   AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
   LANE_SAFE_M: 45,            // 正規路線走廊半寬;出了走廊 = 非正規路線(地雷 / 防空伏擊)

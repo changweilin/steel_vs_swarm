@@ -1800,16 +1800,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       else put('reed', x, z, 0.8 + rnd() * 0.8);
     }
   }
-  onProgress?.(0.38, '建置植被模型(Quaternius CC0)…');
-  const nature = await naturePromise;
-  for (const type in items) {
-    const meshes = nature[type]
-      ? buildVegMeshesGlb(nature[type], items[type])
-      : buildVegMeshes(type, items[type], season);
-    for (const m of meshes) group.add(m);
-  }
-
   // ---- 圖資(建物 + 鐵路 + 瀑布)----
+  // 植被網格延後到建物定案之後才建:先拔掉落在建物腳印內的植被(見下),樹才不會穿屋頂。
   onProgress?.(0.42, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
   let osmData = null, osmRoads = null;
   if (terrain.sampleColor) [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
@@ -1877,6 +1869,69 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (generic.length) {
     const n = densifyUrban({ generic, landmarks, blocked, terrain, rnd, inb });
     if (n) onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
+  }
+
+  // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
+  // 不濾掉就會樹冠穿屋頂、樹卡進牆面。只濾「錨點貼地」的實例 —— 神木上的
+  // 鳥巢/樹屋/垂藤錨在樹身高處,不在此列(神木本體已進 blocked,建物不會壓上來)。
+  // 判定用「旋轉矩形 + 樹冠半徑外擴」:圓測試(半對角 ×0.8)在長方形建物的
+  // 長邊側面留縫、角落外凸,貼牆的樹會漏掉。
+  if (generic.length || landmarks.length) {
+    const C = 64;   // 桶格 > 最大半對角 ~17 + 最大樹冠外擴 ~8,±1 格掃描必然涵蓋
+    const rectG = new Map();
+    for (const b of generic) {
+      const k = `${Math.floor(b.x / C)},${Math.floor(b.z / C)}`;
+      let a = rectG.get(k);
+      if (!a) rectG.set(k, a = []);
+      a.push(b);
+    }
+    const lmC = landmarks.map((lm) => [lm.x, lm.z, (LANDMARK_COL[lm.type]?.r || 10) * OVER.lm]);
+    const hitsBld = (x, z, pad) => {
+      const ci = Math.floor(x / C), cj = Math.floor(z / C);
+      for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+          const a = rectG.get(`${ci + i},${cj + j}`);
+          if (!a) continue;
+          for (const b of a) {
+            const dx = x - b.x, dz = z - b.z;
+            const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+            // 世界 → 建物局部座標(densifyUrban 正轉的逆),含冠半徑外擴的矩形包含判定。
+            // 佔地取「可能的最大輪廓」:商辦臨街裙樓 w×1.4 / d×1.28、住宅四坡屋簷 ×1.08
+            // (輪廓件在後段 mesh 建置才擲骰決定,過濾當下不知道 → 一律按最大算,寧可多拔)
+            const hw = b.w / 2 * (b.commercial ? 1.4 : 1.08);
+            const hd = b.d / 2 * (b.commercial ? 1.28 : 1.08);
+            if (Math.abs(dx * ca - dz * sa) < hw + pad
+              && Math.abs(dx * sa + dz * ca) < hd + pad) return true;
+          }
+        }
+      }
+      for (const [lx, lz, lr] of lmC) if (Math.hypot(x - lx, z - lz) < lr + pad) return true;
+      return false;
+    };
+    // 樹冠半徑係數(×實例 s ≈ 冠緣到樹幹的水平距):喬木冠寬大,樹幹離牆面至少
+    // 一個冠半徑才不插牆;地被/草類貼牆自然,只留最小淨距
+    const CROWN_R = {
+      bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
+      shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
+    };
+    for (const type in items) {
+      // 神木不濾:已進 blocked(建物 areaFree 會避開),且登記了碰撞柱,拔掉會留隱形牆
+      if (GIANT_DEFS[type]) continue;
+      const cr = CROWN_R[type] ?? 1;
+      const kept = items[type].filter((it) =>
+        Math.abs(it.y - terrain.heightAt(it.x, it.z)) > 4 || !hitsBld(it.x, it.z, cr * it.s));
+      placed -= items[type].length - kept.length;
+      items[type] = kept;
+    }
+  }
+
+  onProgress?.(0.7, '建置植被模型(Quaternius CC0)…');
+  const nature = await naturePromise;
+  for (const type in items) {
+    const meshes = nature[type]
+      ? buildVegMeshesGlb(nature[type], items[type])
+      : buildVegMeshes(type, items[type], season);
+    for (const m of meshes) group.add(m);
   }
 
   // 一般建物:住宅/商辦 × 三款立面樣式 = 六個 InstancedMesh — 窗格立面貼圖
