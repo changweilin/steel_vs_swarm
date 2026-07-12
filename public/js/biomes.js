@@ -2855,7 +2855,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const ground = buildGroundCover(group, terrain, {
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
-    // 底毯逐格取樣要空間連貫:純色彩分類(mix=null,跳過 55% 場地隨機改寫)
+    // 底毯與特徵層一律走純色彩分類(mix=null,跳過 55% 場地隨機改寫)→
+    // 拼圖類型與衛星圖資相符;classifyAt 僅作 classifyPureAt 缺席時的備援
+
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
     blockers, season, seed: gseed, rnd: grnd,
   });

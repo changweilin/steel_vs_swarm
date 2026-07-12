@@ -1,6 +1,6 @@
 // ============ 地被覆蓋層:開闊地的賽璐璐地表精修(doc/botw_plan.html)============
 // 無障礙的空曠地面也要有「畫上去的地表」:依地貌分類鋪設特徵色塊(patch)+
-// 立體細節,取代裸露衛星照片質感。50 種地表 × 每種 4 變體貼圖,像無限隨機花磚:
+// 立體細節,取代裸露衛星照片質感。50 種地表 × 每種 6 變體貼圖,像無限隨機花磚:
 //   綠地   — 草皮 / 芒草原 / 灌木叢 / 水田 / 旱田 / 花田 / 果園 / 茶園 / 箭竹林
 //            / 枯木林 / 混亂倒木 / 砍伐跡地 / 木材堆置場 / 腐朽木屋 / 葡萄園 / 溫室棚
 //   裸露地 — 荒野 / 碎石 / 沙漠風沙 / 越野泥地 / 龜裂旱地 / 紅土地 / 倒塌石板屋
@@ -15,11 +15,15 @@
 //            連續區域;異類交界再疊「外溢淡出」quad 做整格寬 cross-fade,無硬縫。
 //   特徵層 — 原 patch 散佈,降級為「場所」點綴(農田/球場/遺跡/工地…),
 //            疊在底毯上;fade 邊融入底毯、ink 邊讀作田埂/路緣,不再是磁磚縫。
-// 無縫拼接三原則(避免大面積重複感,無限延伸):
+// 無縫拼接原則(避免大面積重複感,無限延伸;2026-07-12 反重複改制):
 //   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與底毯(或彼此)交融
-//   2. tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰花紋自動連續延伸
-//   3. 變體以低頻雜訊分區指派(鄰近同變體)+ 低頻水彩 wash 頂點色 + 家族延伸
-//      擺放(農田拼布/運動園區/綠地群落),异類交疊也讀不出拼貼邊界
+//   2. 底毯 tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰花紋自動連續延伸;
+//      特徵 patch 的 blob UV 每塊隨機旋轉 + rect fit 隨機鏡射(U/V)→ 同款不同貌
+//   3. 低頻水彩 wash 頂點色 + 家族延伸擺放(農田拼布/運動園區/綠地群落)
+//   4. 特徵拼圖不疊置:僅允許邊緣小比例交疊(SEP_F 圓近似間距);且英雄視野
+//      (VIS_R)內同款「地表#變體」只准出現一次,同款用罄輪替其他變體/地表
+//   5. 特徵層分區走純圖資分類(classifyPure,不吃場地 mix 隨機改寫)→
+//      球場/停車場只落市區、水田/果園只落綠地、沙漠/碎石只落裸露地
 // 手法與 buildRoads 同族:貼地多邊形 + 程序生成 canvas 筆刷貼圖 + 頂點色墨線,
 // 每「地表×變體」合併成單一 Mesh(常數 draw call);細節物件全 InstancedMesh。
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
@@ -30,8 +34,11 @@ import { toonMat, envMat } from './toon.js';
 
 const MAX_DETAIL = 15000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變)
 const FEAT_DETAIL = 9500;  // 特徵層細節配額;剩餘留給底毯,空地才不會光禿
-const VARIANTS = 4;        // 每種地表的貼圖變體數(變體貼圖惰性生成,只有實際用到才建)
+const VARIANTS = 6;        // 每種地表的貼圖變體數(變體貼圖惰性生成,只有實際用到才建;
+                           // 2026-07-12 4→6:視野內同款不重複需要更多款式輪替)
 const RSCALE = 1.3;        // 特徵 patch 半徑全域放大
+const VIS_R = 300;         // 反重複半徑 = 英雄最大視野(UNITS.drone.sight)
+const SEP_F = 0.85;        // 拼圖間距係數(圓近似):d ≥ (r1+r2)×0.85,僅容邊緣小比例交疊
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -1041,15 +1048,18 @@ function bucketOf(buckets, key) {
 // 不規則色塊。edge:'fade' 外圈 alpha=0 淡入地形;'ink' 外圈墨線頂點色(手繪描邊)
 function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
   const n = 12;
+  // 每塊 UV 隨機旋轉:同款貼圖不同朝向(視野內同款已不重複,無需跨塊花紋連續)
+  const ua = rnd() * Math.PI * 2, cu = Math.cos(ua), su = Math.sin(ua);
   const push = (vx, vz, cr, cg, cb, ca) => {
     b.pos.push(vx, terrain.heightAt(vx, vz) + lift, vz);
     b.nrm.push(0, 1, 0);
-    b.uv.push(vx * uvS, vz * uvS);
+    b.uv.push((vx * cu - vz * su) * uvS, (vx * su + vz * cu) * uvS);
     b.col.push(cr * pt[0], cg * pt[1], cb * pt[2], ca);
   };
+  const ph = rnd() * Math.PI * 2;               // 輪廓隨機起始相位:同半徑 blob 形狀互異
   const angs = [], rads = [];
   for (let i = 0; i < n; i++) {
-    angs.push(-i / n * Math.PI * 2);            // 角度遞減 → 三角形面朝 +y
+    angs.push(ph - i / n * Math.PI * 2);        // 角度遞減 → 三角形面朝 +y
     rads.push(r * (0.72 + rnd() * 0.42));       // 邊界抖動 = 手繪輪廓
   }
   const eC = edge === 'fade' ? [1, 1, 1, 0] : [0.55, 0.56, 0.62, 1];
@@ -1066,7 +1076,7 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
 }
 
 // 矩形田塊/場地:6×7 網格貼地;rim = 外圈隆起田埂(暖土頂點色),否則外圈墨線
-function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, rnd) {
+function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
   const w = r * 2, d = r * 2 * (def.aspect || 0.7);
   const nx = 7, nz = 6;
   const ca = Math.cos(rot), sa = Math.sin(rot);
@@ -1083,8 +1093,8 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, rnd) {
       b.pos.push(vx, terrain.heightAt(vx, vz) + lift + dy, vz);
       b.nrm.push(0, 1, 0);
       if (def.uv === 'fit') {
-        const u = i / (nx - 1);
-        b.uv.push(flipU ? 1 - u : u, j / (nz - 1));   // 隨機鏡射:同變體場地也左右互異
+        const u = i / (nx - 1), v = j / (nz - 1);
+        b.uv.push(flipU ? 1 - u : u, flipV ? 1 - v : v);   // 隨機雙軸鏡射:同變體場地四款朝向
       } else b.uv.push(vx * def.uvS, vz * def.uvS);
       b.col.push(cr * pt[0], cg * pt[1], cb * pt[2], 1);
     }
@@ -1104,7 +1114,9 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, rnd) {
  * @param group     biomes 的 THREE.Group
  * @param terrain   buildTerrain() 回傳物
  * @param opts.isBlocked  (x,z)=>bool 兵線/塔/主堡淨空
- * @param opts.classifyAt (x,z)=>'green'|'bare'|'urban'|'wet'|'water'
+ * @param opts.classifyAt (x,z)=>'green'|'bare'|'urban'|'wet'|'water'(classifyPureAt 缺席時的備援)
+ * @param opts.classifyPureAt 純圖資分類(無場地 mix 改寫);底毯與特徵層一律用它,
+ *                            拼圖類型才與衛星影像相符(球場限市區/水田限綠地/碎石限裸露地)
  * @param opts.blockers   建物碰撞柱(patch 避開建物)
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
  */
@@ -1151,6 +1163,23 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     carpetLists.bare = ['icefield', ...CARPET.bare, 'icefield'];
     carpetLists.alpine = ['icefield', 'plateau', 'icefield', 'scree', 'icefield'];
   }
+  // 每地表允許出現的分區(特徵 + 底毯清單聯集):tryPatch 一律據此把關,
+  // 家族延伸(鹽田→魚塭、農田拼布)跨進異分區/越過圖資邊界時直接擋下
+  const subZones = new Map();
+  for (const lists of [zoneLists, carpetLists]) {
+    for (const zn in lists) {
+      for (const sub of lists[zn]) {
+        let s = subZones.get(sub);
+        if (!s) { s = new Set(); subZones.set(sub, s); }
+        s.add(zn);
+      }
+    }
+  }
+  const zoneAt = (x, z) => {
+    let zn = classifyPure(x, z);
+    if ((zn === 'green' || zn === 'bare') && terrain.heightAt(x, z) > alpineH) zn = 'alpine';
+    return zn;
+  };
 
   // ==== 底毯層:抖動網格無縫鋪滿全部陸地 ====
   // 角點位置只由「格點索引雜湊」決定 → 相鄰 cell 引用同一角點,拼面天生水密;
@@ -1270,11 +1299,62 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
 
-  // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同變體連片)----
+  // ---- 特徵拼圖登錄:不疊置(邊緣小比例交疊)+ 視野內同款不重複 ----
+  const MAXRE = 26;                       // 最大有效半徑(SIZE 上限 × RSCALE)
+  const PCELL = 64;                       // 疊置查詢空間網格(交疊半徑 ≤ ~50m)
+  const pGrid = new Map();                // `${i},${j}` -> [{x,z,re}]:疊置檢查
+  const keyPos = new Map();               // 'sub#variant' -> [{x,z}]:同款反重複
+  // 有效半徑:rect 以等面積圓近似(半寬 × √aspect),blob 直接用 r
+  const rEffOf = (def, r) => def.shape === 'rect' ? r * Math.sqrt(def.aspect || 0.7) : r;
+  const overlapPs = (x, z, re) => {
+    const R = (re + MAXRE) * SEP_F;
+    const i0 = Math.floor((x - R) / PCELL), i1 = Math.floor((x + R) / PCELL);
+    const j0 = Math.floor((z - R) / PCELL), j1 = Math.floor((z + R) / PCELL);
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const arr = pGrid.get(`${i},${j}`);
+        if (!arr) continue;
+        for (const p of arr) {
+          const dx = p.x - x, dz = p.z - z, rr = (re + p.re) * SEP_F;
+          if (dx * dx + dz * dz < rr * rr) return true;
+        }
+      }
+    }
+    return false;
+  };
+  const usedNear = (x, z, key) => {
+    const arr = keyPos.get(key);
+    if (!arr) return false;
+    for (const p of arr) {
+      const dx = p.x - x, dz = p.z - z;
+      if (dx * dx + dz * dz < VIS_R * VIS_R) return true;
+    }
+    return false;
+  };
+  const regPatch = (x, z, re, key) => {
+    const gk = `${Math.floor(x / PCELL)},${Math.floor(z / PCELL)}`;
+    let arr = pGrid.get(gk);
+    if (!arr) { arr = []; pGrid.set(gk, arr); }
+    arr.push({ x, z, re });
+    let ps = keyPos.get(key);
+    if (!ps) { ps = []; keyPos.set(key, ps); }
+    ps.push({ x, z });
+  };
+  // 自雜訊指定變體起輪替,回傳視野內未用的變體;全數用罄回 -1(改試其他地表)
+  const freeVariant = (sub, x, z, v0) => {
+    for (let k = 0; k < VARIANTS; k++) {
+      const v = (v0 + k) % VARIANTS;
+      if (!usedNear(x, z, `${sub}#${v}`)) return v;
+    }
+    return -1;
+  };
+
+  // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同族異款毗鄰)----
   const tryPatch = (x, z, sub, variant, r, rot, depth) => {
     if (placed >= target) return false;
     if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
     if (isBlocked(x, z)) return false;
+    if (!subZones.get(sub)?.has(zoneAt(x, z))) return false;   // 類型必須與所在圖資分區相符
     const def = DEFS[sub];
     // 坡度/水面檢查:整塊落在陸地、高差在容許內(田與球場要平)
     let mn = Infinity, mx = -Infinity;
@@ -1288,23 +1368,29 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const dx = x - bl.x, dz = z - bl.z, rr = bl.r + r * 0.7;
       if (dx * dx + dz * dz < rr * rr) return false;
     }
+    // 拼圖不疊置:與既有特徵拼圖圓近似間距,僅容邊緣小比例交疊(fade 邊互融)
+    const rEff = rEffOf(def, r);
+    if (overlapPs(x, z, rEff)) return false;
 
     const lift = 0.12 + rnd() * 0.05;            // patch 間微錯層防 z-fighting(< 道路 0.18)
     const pt = [0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24];   // 每塊色調抖動
     const b = bucketOf(buckets, `${sub}#${variant}`);
-    if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd);
+    if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd);
     else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd);
+    regPatch(x, z, rEff, `${sub}#${variant}`);
     placed++;
 
     scatterDetails(sub, x, z, r, rot, def);
 
-    // 家族延伸:農田拼布 / 運動園區 / 綠地群落(rect 沿軸毗鄰、blob 交疊淡接)
+    // 家族延伸:農田拼布 / 運動園區 / 綠地群落(rect 沿軸毗鄰、blob 邊緣淡接);
+    // 每鄰塊經 freeVariant 換款 → 拼布連片但視野內無同款重複
     if (def.fam && depth < 2 && rnd() < 0.65) {
       const k = 1 + (rnd() * 2 | 0);
       for (let i = 0; i < k; i++) {
         const sub2 = rnd() < 0.7 ? sub : FAMS[def.fam][(rnd() * FAMS[def.fam].length) | 0];
         const def2 = DEFS[sub2];
         if (def2.shape !== def.shape) continue;
+        let nx2, nz2, r2, rot2;
         if (def.shape === 'rect') {
           // 沿本塊局部軸擺到正鄰位(間留 1.2m 小路),同 rot → 田字拼布
           const w1 = r * 2, d1 = r * 2 * (def.aspect || 0.7), d2 = r * 2 * (def2.aspect || 0.7);
@@ -1313,12 +1399,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             ? [(w1 + g2) * (rnd() < 0.5 ? 1 : -1), 0]
             : [0, ((d1 + d2) / 2 + g2) * (rnd() < 0.5 ? 1 : -1)];
           const ca = Math.cos(rot), sa = Math.sin(rot);
-          tryPatch(x + ox * ca - oz * sa, z + ox * sa + oz * ca, sub2, variant, r, rot, depth + 1);
+          nx2 = x + ox * ca - oz * sa; nz2 = z + ox * sa + oz * ca; r2 = r; rot2 = rot;
         } else {
-          const r2 = (SIZE[sub2][0] + rnd() * SIZE[sub2][1]) * RSCALE;
-          const th = rnd() * Math.PI * 2, dist = (r + r2) * 0.78;   // 交疊:fade 邊互融
-          tryPatch(x + Math.cos(th) * dist, z + Math.sin(th) * dist, sub2, variant, r2, rnd() * Math.PI, depth + 1);
+          r2 = (SIZE[sub2][0] + rnd() * SIZE[sub2][1]) * RSCALE;
+          const th = rnd() * Math.PI * 2, dist = (r + r2) * 0.86;   // 邊緣小比例交疊:fade 邊互融(> SEP_F)
+          nx2 = x + Math.cos(th) * dist; nz2 = z + Math.sin(th) * dist; rot2 = rnd() * Math.PI;
         }
+        const v2 = freeVariant(sub2, nx2, nz2, variant);
+        if (v2 >= 0) tryPatch(nx2, nz2, sub2, v2, r2, rot2, depth + 1);
       }
     }
     return true;
@@ -1333,13 +1421,15 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 散佈型態每 patch×型別隨機:cluster 群聚(1~3 簇)/ ring 沿緣 / uniform 均勻
     const kMul = Math.min(3, Math.max(0.7, (r / ((SIZE[sub]?.[0] || 9) * RSCALE)) ** 1.6));
     const scatter = (type, k, s0, sv, tintPick = null) => {
-      k = Math.max(1, Math.round(k * kMul * (0.7 + rnd() * 0.8)));
+      k = Math.max(1, Math.round(k * kMul * (0.55 + rnd() * 1.1)));   // 數量抖動 ±55%
       const mode = rnd();
-      let centers = null;
+      let centers = null, arc0 = 0, arcSpan = Math.PI * 2;
       if (mode < 0.3) {
         centers = [];
         const nC = 1 + (rnd() * 3 | 0);
         for (let c = 0; c < nC; c++) centers.push([(rnd() - 0.5) * r * 1.1, (rnd() - 0.5) * r * 1.1]);
+      } else if (mode < 0.45) {                        // ring 改隨機弧段:C 形/半圈,不再恆整圈
+        arc0 = rnd() * Math.PI * 2; arcSpan = Math.PI * (0.5 + rnd() * 1.5);
       }
       for (let i = 0; i < k; i++) {
         let px, pz;
@@ -1347,8 +1437,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const [ox, oz] = centers[(rnd() * centers.length) | 0];
           const rr = r * 0.3 * rnd(), th = rnd() * Math.PI * 2;
           px = x + ox + Math.cos(th) * rr; pz = z + oz + Math.sin(th) * rr;
-        } else if (mode < 0.45) {                      // ring:沿 patch 邊緣圍一圈
-          const rr = r * (0.55 + rnd() * 0.35), th = rnd() * Math.PI * 2;
+        } else if (mode < 0.45) {                      // ring:沿 patch 邊緣的隨機弧段
+          const rr = r * (0.55 + rnd() * 0.35), th = arc0 + rnd() * arcSpan;
           px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
         } else {                                       // uniform:面積均勻
           const rr = r * 0.75 * Math.sqrt(rnd()), th = rnd() * Math.PI * 2;
@@ -1363,8 +1453,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const rows = (type, stepX, stepZ, mX, mZ, cap, skip, tintPick = null, s0 = 1, sv = 0) => {
       let k = 0;
       const jx = stepX * 0.18, jz = stepZ * 0.18;
-      for (let lz = -dp * mZ; lz <= dp * mZ && k < cap; lz += stepZ) {
-        for (let lx = -w * mX; lx <= w * mX && k < cap; lx += stepX) {
+      // 列陣隨機起點相位:同款場地的排列位置塊塊互異
+      const px0 = (rnd() - 0.5) * stepX * 0.6, pz0 = (rnd() - 0.5) * stepZ * 0.6;
+      for (let lz = -dp * mZ + pz0; lz <= dp * mZ && k < cap; lz += stepZ) {
+        for (let lx = -w * mX + px0; lx <= w * mX && k < cap; lx += stepX) {
           if (rnd() < skip) continue;
           const [px, pz] = atLocal(lx + (rnd() - 0.5) * jx, lz + (rnd() - 0.5) * jz);
           const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
@@ -1453,19 +1545,24 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   }
 
   // ---- 主散佈迴圈 ----
-  for (let a = 0, tries = target * 3; a < tries && placed < target; a++) {
+  // 分區走純圖資分類(classifyPure):場所類型與衛星影像相符 —— 球場/停車場
+  // 只落市區、水田/果園只落綠地、碎石/鹽田只落裸露地(場地 mix 不再改寫)
+  for (let a = 0, tries = target * 4; a < tries && placed < target; a++) {
     const x = terrain.minX + inb + rnd() * (terrain.worldW - inb * 2);
     const z = terrain.minZ + inb + rnd() * (terrain.worldH - inb * 2);
-    let zname = classifyAt(x, z);
-    if ((zname === 'green' || zname === 'bare') && terrain.heightAt(x, z) > alpineH) zname = 'alpine';
-    const zones = zoneLists[zname];
+    const zones = zoneLists[zoneAt(x, z)];
     if (!zones) continue;
-    // 分區雜訊挑 subtype + 變體:鄰近同類同變體 → 大面積連片、花紋接續不重複
+    // 分區雜訊挑 subtype(區域風貌仍連貫);視野內同款用罄 → 輪替變體/其他地表
     const t = Math.min(0.999, Math.max(0, (vnoise(x * 0.006, z * 0.006, seed) - 0.5) * 2.2 + 0.5));
-    const sub = zones[(t * zones.length) | 0];
-    const variant = (vnoise(x * 0.0025, z * 0.0025, seed ^ 0x7E11) * VARIANTS) | 0;
-    const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
-    tryPatch(x, z, sub, Math.min(VARIANTS - 1, variant), r, rnd() * Math.PI, 0);
+    const zi = (t * zones.length) | 0;
+    const v0 = Math.min(VARIANTS - 1, (vnoise(x * 0.0025, z * 0.0025, seed ^ 0x7E11) * VARIANTS) | 0);
+    for (let s = 0; s < zones.length; s++) {
+      const sub = zones[(zi + s) % zones.length];
+      const v = freeVariant(sub, x, z, v0);
+      if (v < 0) continue;
+      const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
+      if (tryPatch(x, z, sub, v, r, rnd() * Math.PI, 0)) break;
+    }
   }
 
   // ---- 底毯細節:剩餘配額均勻撒進大片空地(仍避開兵線走廊/建物)----
@@ -1526,6 +1623,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }));
     m.frustumCulled = false;
     m.userData.noOutline = true;
+    // 特徵拼圖識別標記:冒煙測試核對不疊置/反重複/分區相符用
+    m.userData.gsub = sub; m.userData.gvar = +v; m.userData.gshape = def.shape;
     group.add(m);
   }
 
