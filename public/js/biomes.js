@@ -48,6 +48,7 @@ const OVER = { bldH: 1.0, bldXZ: 1.0, bldCap: 170, lm: 1.5, giant: 1.35, mega: 1
 // 故改制不動它 —— 步兵縮到 1.8m 後,樹木相對步兵的比例自動回歸現實。
 const VEG_SCALE = {
   bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
+  conifer2: 1.5, conifer3: 1.45, conifer4: 1.5,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
 };
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
@@ -181,6 +182,23 @@ const VEG_DEFS = {
                          { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
                          { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
                          { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }] },
+  // 針葉林幾何多樣化(2026-07-12):三角錐塔之外再添三款輪廓,同林異形
+  conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // 老雲杉:不規則簇疊冠
+                         { g: ico(2.0), y: 3.4, key: 'conifer', sy: 0.8 },
+                         { g: ico(1.6), y: 4.9, px: 0.7, key: 'conifer', sy: 0.75 },
+                         { g: ico(1.4), y: 6.1, px: -0.6, key: 'conifer', sy: 0.7 },
+                         { g: ico(0.9), y: 7.3, key: 'conifer', sy: 0.8 },
+                         { g: cone(0.5, 1.6, 5), y: 7.9, key: 'conifer' }] },   // 突出頂梢
+  conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // 柱狀絲柏:細長紡錘
+                         { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
+                         { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
+                         { g: cone(0.5, 2.0, 5), y: 8.6, key: 'conifer' }] },
+  conifer4:    { parts: [{ g: cyl(0.24, 0.36, 3.4), y: 1.7, c: 0x66492e },      // 雪松:平展層枝盤
+                         { g: cyl(2.6, 3.1, 0.9, 8), y: 3.0, key: 'conifer' },
+                         { g: cyl(2.0, 2.5, 0.85, 8), y: 4.6, key: 'conifer' },
+                         { g: cyl(1.4, 1.9, 0.8, 8), y: 6.1, key: 'conifer' },
+                         { g: cyl(0.7, 1.2, 0.75, 7), y: 7.4, key: 'conifer' },
+                         { g: cone(0.5, 1.3, 6), y: 8.0, key: 'conifer' }] },
   silvergrass: { parts: [{ g: cone(0.85, 1.5), y: 0.75, key: 'grass' },
                          { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8 }] },      // 抽穗的芒花
   arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a },
@@ -1170,7 +1188,12 @@ function synthMegalith(g, rnd) {
   const base = new THREE.Color(ROCK_TONES[Math.floor(rnd() * ROCK_TONES.length)]);
   const shade = (dl) => base.clone().offsetHSL(0, 0, dl).getHex();
   const moss = rnd() < 0.55 ? 0.2 + rnd() * 0.35 : 0;
-  const kinds = ['dome', 'slab', 'tower', 'spire', 'arch', 'mesa', 'hoodoo', 'fin'];
+  // basalt/granite/marble(2026-07-12):多塊大石拼接 —— 依真實岩石節理各有拼法:
+  // 玄武岩 = 柱狀節理(高低參差的六角/方/圓柱束,巨人堤道式);
+  // 花崗岩 = 大塊方料錯縫整齊疊置(節理稀疏 → 巨大規則岩塊,tor 岩堆);
+  // 大理岩 = 大小互異的渾圓岩塊堆疊互倚(溶蝕圓稜,大塊在下小塊在上)
+  const kinds = ['dome', 'slab', 'tower', 'spire', 'arch', 'mesa', 'hoodoo', 'fin',
+                 'basalt', 'granite', 'marble'];
   const main = kinds[Math.floor(rnd() * kinds.length)];
   let H = 0, RX = 0, RZ = 0, topR = 6;
   // 側壁錨點逐型定義(貼合主體輪廓;null = 該型側壁放不了樹)。
@@ -1289,6 +1312,86 @@ function synthMegalith(g, rnd) {
     sideDef = cols;
     RZ = 12; topR = 4;
     topYA = 0.2; topRA = 4;   // 刃嶺頂是一排參差薄脊,頂面特徵落地放刃間
+  } else if (main === 'basalt') {   // 柱狀玄武岩束:高低參差的六角/方/圓柱拼接
+    base.set([0x4a4e55, 0x3f4246, 0x565a62, 0x4e4a44][Math.floor(rnd() * 4)]);   // 玄武岩深灰
+    const R0 = 16 + rnd() * 10, hMax = 34 + rnd() * 30;
+    const nCol = 10 + Math.floor(rnd() * 8);
+    for (let i = 0; i < nCol; i++) {
+      // 徑向擠壓排列:中央最高、外圈遞減 = 管風琴輪廓(巨人堤道/澎湖柱狀節理)
+      const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : Math.sqrt(rnd()) * R0;
+      const px = Math.cos(a) * d, pz = Math.sin(a) * d;
+      const r = 2.6 + rnd() * 2.2;
+      const h = Math.max(8, hMax * (1 - (d / R0) * 0.55) * (0.8 + rnd() * 0.35) * (i === 0 ? 1.1 : 1));
+      const t = rnd();
+      // 同束柱形一致才像節理:六角為主、偶夾方柱/圓柱段
+      const geo2 = t < 0.62 ? cyl(r, r * 1.04, h, 6)
+        : t < 0.84 ? new THREE.BoxGeometry(r * 1.7, h, r * 1.7)
+        : cyl(r, r * 1.04, h, 10);
+      const col = new THREE.Mesh(geo2, rockMat(shade((rnd() - 0.5) * 0.09), moss * (d / R0) * 0.6));
+      col.position.set(px, h / 2, pz);
+      col.rotation.y = rnd() * Math.PI;
+      g.add(col);
+      // 柱頂斷口:略寬的節理帽蓋(斷面色淺 = 新鮮斷口);中央柱必有 = 頂面特徵落腳點
+      if (i === 0 || rnd() < 0.5) {
+        const cap = new THREE.Mesh(cyl(r * 1.05, r * 0.95, 1.6, 6), rockMat(shade(0.08)));
+        cap.position.set(px, h + 0.8, pz);
+        cap.rotation.y = col.rotation.y;
+        g.add(cap);
+      }
+      // 頂錨 = 中央柱帽蓋斷面(特徵放置以群組原點為準,錨在別柱會懸空)
+      if (i === 0) { topYA = h + 1.6; topRA = r * 0.9; }
+      H = Math.max(H, h + 1.6);
+    }
+    RX = RZ = R0 + 5; topR = 3;
+    sideDef = { y: [H * 0.12, H * 0.6], rx: R0 + 2, rz: R0 + 2, taper: 0.5 };   // 柱束外壁
+  } else if (main === 'granite') {   // 花崗岩 tor:大塊方料錯縫整齊疊置
+    base.set([0xc9c4b8, 0xbdb2a0, 0xd2cabb, 0xb8b0a4][Math.floor(rnd() * 4)]);   // 淺色花崗岩
+    const w0 = 30 + rnd() * 16, d0 = 22 + rnd() * 12;
+    const nL = 3 + Math.floor(rnd() * 2);
+    let y = 0;
+    for (let i = 0; i < nL; i++) {
+      const f = 1 - i * (0.12 + rnd() * 0.08);      // 逐層內收
+      const hh = 12 + rnd() * 9;
+      // 每層 1~2 塊並列(錯縫 = 上層縫不對齊下層縫),塊間留 0.8m 節理縫
+      const nB = rnd() < 0.5 ? 1 : 2;
+      const wL = w0 * f, off0 = (rnd() - 0.5) * 5;
+      for (let b2 = 0; b2 < nB; b2++) {
+        const wB = nB === 1 ? wL : wL * (0.36 + rnd() * 0.24);
+        const px = nB === 1 ? off0 : off0 + (b2 ? 1 : -1) * (wL / 2 - wB / 2) * 1.02;
+        const blk = new THREE.Mesh(new THREE.BoxGeometry(wB, hh, d0 * f), rockMat(shade((rnd() - 0.5) * 0.06), i === nL - 1 ? moss : 0));
+        blk.position.set(px, y + hh / 2, (rnd() - 0.5) * 2);
+        blk.rotation.y = (rnd() - 0.5) * 0.07;      // 整齊拼接:僅極小微轉
+        g.add(blk);
+      }
+      y += hh + 0.5;                                // 層間水平節理縫
+    }
+    H = y; RX = w0 * 0.62; RZ = d0 * 0.62; topR = Math.min(w0, d0) * 0.3;
+    sideDef = { y: [H * 0.15, H * 0.8], rx: w0 * 0.5, rz: d0 * 0.5, taper: 0.72 };
+  } else if (main === 'marble') {   // 大理岩堆:大小互異的渾圓岩塊互倚
+    base.set([0xd8d3c8, 0xcfc8bc, 0xd4cdc4, 0xc8c4bc][Math.floor(rnd() * 4)]);   // 大理岩灰白
+    const R0 = 14 + rnd() * 10;
+    const nB = 5 + Math.floor(rnd() * 4);
+    let y = 0, rPrev = 0;
+    for (let i = 0; i < nB; i++) {
+      const r = (12 - i * 1.8) * (0.8 + rnd() * 0.4);   // 大塊在下、小塊在上
+      if (r < 3) break;
+      // 水平漂移隨層高收斂:頂塊貼近軸心,頂面特徵(錨在原點)才有落腳處
+      const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
+      const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
+      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.08), i < 2 ? moss * 0.6 : 0));
+      blk.scale.y = 0.72 + rnd() * 0.2;             // 溶蝕圓稜:壓扁的渾圓塊
+      blk.rotation.set(rnd() * 0.5, rnd() * Math.PI, rnd() * 0.5);
+      // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠)
+      y = i === 0 ? r * 0.5 : y + rPrev * 0.55 + r * 0.3;
+      blk.position.set(px, y, pz);
+      g.add(blk);
+      rPrev = r;
+      H = Math.max(H, y + r * 0.8);
+      RX = Math.max(RX, Math.abs(px) + r); RZ = Math.max(RZ, Math.abs(pz) + r);
+    }
+    topR = 3.5;
+    topYA = H * 0.96; topRA = 3;
+    sideDef = { y: [H * 0.15, H * 0.7], rx: RX * 0.8, rz: RZ * 0.8, dome: true };
   } else {   // spire 尖峰
     const r0 = 20 + rnd() * 10, h = 80 + rnd() * 45;
     const m = new THREE.Mesh(cone(r0, h, 8), rockMat(shade(0), moss));
@@ -1551,21 +1654,168 @@ function densify(pts, seg) {
   return out;
 }
 
-function buildRoads(group, roads, terrain, center, mix, rnd) {
+// ---- 路面材質塗層:程序生成 canvas 貼圖(柏油骨材/泥土車轍/礫石)----
+// 白底 + 淡灰細節 → 與 roadColor 相乘 = 各地貌路色不變,只多「畫上去的路面質感」;
+// 世界投影 UV + 鏡射重複,長路無接縫(與 ground.js 底毯同手法)。固定種子 = 全房一致。
+const _roadTexCache = new Map();
+function roadTex(kind) {
+  if (_roadTexCache.has(kind)) return _roadTexCache.get(kind);
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const rnd = mulberry32(0x40AD ^ kind.charCodeAt(0));
+  g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, S, S);
+  if (kind === 'asphalt') {                        // 柏油:骨材噪點 + 髮絲裂縫 + 瀝青補丁
+    for (let i = 0; i < 240; i++) {
+      const v = 200 + (rnd() * 55 | 0);
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(rnd() * S, rnd() * S, 1.6, 1.6);
+    }
+    g.strokeStyle = 'rgba(120,120,126,0.5)'; g.lineWidth = 1.4; g.lineCap = 'round';
+    for (let i = 0; i < 5; i++) {
+      let x = rnd() * S, y = rnd() * S;
+      g.beginPath(); g.moveTo(x, y);
+      for (let k = 0; k < 4; k++) { x += (rnd() - 0.5) * 30; y += (rnd() - 0.5) * 30; g.lineTo(x, y); }
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(190,190,196,0.5)';         // 補丁(重鋪的深色方塊)
+    for (let i = 0; i < 3; i++) g.fillRect(rnd() * S, rnd() * S, 24 + rnd() * 30, 16 + rnd() * 22);
+  } else if (kind === 'dirt') {                    // 泥土:縱向車轍雙帶 + 土斑
+    for (const x0 of [S * 0.3, S * 0.7]) {
+      g.fillStyle = 'rgba(150,140,126,0.5)';
+      g.fillRect(x0 - 5, 0, 10, S);
+      g.fillStyle = 'rgba(255,255,255,0.35)';      // 轍間受光脊
+      g.fillRect(x0 + 6, 0, 3, S);
+    }
+    for (let i = 0; i < 18; i++) {
+      g.fillStyle = `rgba(160,150,132,${0.2 + rnd() * 0.25})`;
+      g.beginPath(); g.arc(rnd() * S, rnd() * S, 4 + rnd() * 10, 0, 7); g.fill();
+    }
+  } else {                                         // gravel 礫石:碎石鱗片 + 描邊
+    for (let i = 0; i < 130; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 2.5 + rnd() * 4;
+      const v = 205 + (rnd() * 50 | 0);
+      g.fillStyle = `rgb(${v},${v},${v - 6})`;
+      g.beginPath(); g.ellipse(x, y, r, r * 0.7, rnd() * 3.2, 0, 7); g.fill();
+      if (rnd() < 0.5) { g.strokeStyle = 'rgba(150,146,136,0.6)'; g.lineWidth = 1; g.stroke(); }
+    }
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+  _roadTexCache.set(kind, t);
+  return t;
+}
+const ROAD_TEX_OF = { urban: 'asphalt', green: 'dirt', wet: 'dirt', bare: 'gravel' };
+
+// ---- 道路附屬 3D 件(路燈/紅綠燈/行道樹):多零件 InstancedMesh,常數 draw call ----
+// part = { g, y, px, pz, c, e? };px/pz 隨實例朝向 ry 旋轉,e = 恆亮燈件
+function roadPropMeshes(group, parts, items) {
+  if (!items.length) return;
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const P = new THREE.Vector3(), S = new THREE.Vector3(), tint = new THREE.Color();
+  for (const part of parts) {
+    const mat = part.e
+      ? toonMat(part.c, { emissive: new THREE.Color(part.e), emissiveIntensity: 0.95 })
+      : toonMat(part.c);
+    const m = new THREE.InstancedMesh(part.g, mat, items.length);
+    items.forEach((it, i) => {
+      E.set(0, it.ry, 0);
+      Q.setFromEuler(E);
+      const s = it.s || 1;
+      const px = part.px || 0, pz = part.pz || 0;
+      const ca = Math.cos(it.ry), sa = Math.sin(it.ry);
+      P.set(it.x + (px * ca + pz * sa) * s, it.y + part.y * s, it.z + (-px * sa + pz * ca) * s);
+      S.set(s, s, s);
+      M.compose(P, Q, S);
+      m.setMatrixAt(i, M);
+      if (!part.e) {                               // 燈件保持定色;結構件微抖不像複製貼上
+        const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
+        tint.setRGB(0.88 + j1 * 0.2, 0.88 + j1 * 0.2, 0.88 + j1 * 0.2);
+        m.setColorAt(i, tint);
+      }
+    });
+    m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    m.castShadow = false;
+    m.frustumCulled = false;
+    group.add(m);
+  }
+}
+
+function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   const inb = 4;
-  const buckets = new Map();   // color -> { pos, nrm, col, idx, base }
-  const bucketOf = (color) => {
-    let b = buckets.get(color);
-    if (!b) { b = { pos: [], nrm: [], col: [], idx: [], base: 0 }; buckets.set(color, b); }
+  const buckets = new Map();   // `${biome}|${main}` -> { color, pos, nrm, col, uv, idx, base }
+  const bucketOf = (biome, main) => {
+    const key = `${biome}|${main ? 1 : 0}`;
+    let b = buckets.get(key);
+    if (!b) {
+      b = { color: roadColor(biome, main), tex: ROAD_TEX_OF[biome] || 'asphalt',
+            pos: [], nrm: [], col: [], uv: [], idx: [], base: 0 };
+      buckets.set(key, b);
+    }
     return b;
   };
-  const dash = { pos: [], nrm: [], idx: [], base: 0 };   // 虛線中線(市區主幹道)
+  // 標線合併幾何(頂點色 = 黃/白):雙黃線/白虛線/路緣邊線/斑馬線全進同一 draw call
+  const mark = { pos: [], nrm: [], col: [], idx: [], base: 0 };
+  const MARK_Y = [1.0, 0.78, 0.28], MARK_W = [0.95, 0.96, 0.9];   // 標線黃 / 標線白
+  const putMark = (vx, vz, lift2, c) => {
+    mark.pos.push(vx, terrain.heightAt(vx, vz) + lift2, vz);
+    mark.nrm.push(0, 1, 0);
+    mark.col.push(...c);
+  };
+  // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫)
+  const emitLine = (run, lift2, off, w, c) => {
+    const nP = run.length, k0 = mark.base;
+    for (let i = 0; i < nP; i++) {
+      const [x, z] = run[i];
+      const a = run[Math.max(0, i - 1)], b2 = run[Math.min(nP - 1, i + 1)];
+      let dx = b2[0] - a[0], dz = b2[1] - a[1];
+      const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const px = dz, pz = -dx;
+      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c);
+      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c);
+    }
+    for (let i = 0; i < nP - 1; i++) {
+      const k = k0 + i * 2;
+      mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+    }
+    mark.base += nP * 2;
+  };
+  // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
+  // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
+  const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
+  const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
   let built = 0;
   for (const way of roads) {
     if (way.tags.tunnel) continue;             // 隧道段不畫
     const main = MAIN_HW.test(way.tags.highway);
+    const arterial = /^(motorway|trunk|primary)$/.test(way.tags.highway);   // 幹道:雙黃實線
     const hw = roadWidth(way.tags) / 2;
     const lift = way.tags.bridge ? 3 : 0.3;
+    // 路口統計(車行道才算;步道/小徑不設斑馬線紅綠燈)
+    if (hw >= 2 && !way.tags.bridge) {
+      const n = way.geometry.length;
+      for (let i = 0; i < n; i++) {
+        const gpt = way.geometry[i];
+        const key = `${gpt.lat.toFixed(6)},${gpt.lon.toFixed(6)}`;
+        let rec = nodeArms.get(key);
+        if (!rec) {
+          const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
+          rec = { x, z, arms: 0, hw: 0, dirs: [] };
+          nodeArms.set(key, rec);
+        }
+        rec.arms += (i === 0 || i === n - 1) ? 1 : 2;
+        rec.hw = Math.max(rec.hw, hw);
+        for (const j of [i - 1, i + 1]) {          // 各臂方向(指向鄰節點)
+          if (j < 0 || j >= n) continue;
+          const [ax, az] = llToWorld(way.geometry[j].lat, way.geometry[j].lon, center);
+          const dl = Math.hypot(ax - rec.x, az - rec.z) || 1;
+          rec.dirs.push([(ax - rec.x) / dl, (az - rec.z) / dl]);
+        }
+      }
+    }
     // 世界折線(超出邊界即切段)
     const runs = [];
     let cur = [];
@@ -1586,7 +1836,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
       const mid = run[(run.length / 2) | 0];
       const biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
       if (biome === 'water') continue;
-      const b = bucketOf(roadColor(biome, main));
+      const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
@@ -1599,6 +1849,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
           const vx = x + px * off, vz = z + pz * off;
           b.pos.push(vx, terrain.heightAt(vx, vz) + lift, vz);
           b.nrm.push(0, 1, 0);
+          b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
           if (ink) b.col.push(0.52, 0.52, 0.58);   // 邊墨帶微偏冷
           else b.col.push(1, 1, 1);
         }
@@ -1610,30 +1861,66 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
         }
       }
       b.base += nP * 4;
-      // 虛線中線:只畫市區柏油主幹道(泥土/礫石路沒有標線)
-      if (main && biome === 'urban') {
-        const cum = [0];
-        for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
-        const total = cum[nP - 1];
-        for (let s = 5; s + 3.2 < total; s += 9.5) {
-          const pts = [s, s + 3.2].map((d) => {
-            let i = 1; while (cum[i] < d && i < nP - 1) i++;
-            const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
-            return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f];
-          });
-          let ddx = pts[1][0] - pts[0][0], ddz = pts[1][1] - pts[0][1];
-          const dl = Math.hypot(ddx, ddz) || 1; ddx /= dl; ddz /= dl;
-          const qx = ddz, qz = -ddx, wq = 0.3;
-          const k = dash.base;
-          for (const [ex, ez] of pts) {
-            for (const sgn of [1, -1]) {
-              const vx = ex + qx * wq * sgn, vz = ez + qz * wq * sgn;
-              dash.pos.push(vx, terrain.heightAt(vx, vz) + lift + 0.06, vz);
-              dash.nrm.push(0, 1, 0);
+      const cum = [0];
+      for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
+      const total = cum[nP - 1];
+      const at = (d) => {
+        let i = 1; while (cum[i] < d && i < nP - 1) i++;
+        const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+        const x = run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f;
+        const z = run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f;
+        let dx = run[i][0] - run[i - 1][0], dz = run[i][1] - run[i - 1][1];
+        const l = Math.hypot(dx, dz) || 1;
+        return [x, z, dx / l, dz / l];
+      };
+      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線)----
+      if (biome === 'urban' && hw >= 2) {
+        if (main) {
+          if (arterial) {                        // 幹道:雙黃實線分向
+            emitLine(run, lift + 0.06, 0.33, 0.2, MARK_Y);
+            emitLine(run, lift + 0.06, -0.33, 0.2, MARK_Y);
+          } else {                               // 次要道:單白虛線
+            for (let s = 5; s + 3.2 < total; s += 9.5) {
+              const k = mark.base;
+              for (const d of [s, s + 3.2]) {
+                const [ex, ez, ddx, ddz] = at(d);
+                const qx = ddz, qz = -ddx;
+                putMark(ex + qx * 0.28, ez + qz * 0.28, lift + 0.06, MARK_W);
+                putMark(ex - qx * 0.28, ez - qz * 0.28, lift + 0.06, MARK_W);
+              }
+              mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+              mark.base += 4;
             }
           }
-          dash.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
-          dash.base += 4;
+          // 路緣白邊線(車道外側,墨帶內)
+          emitLine(run, lift + 0.05, hw * 0.78, 0.18, MARK_W);
+          emitLine(run, lift + 0.05, -hw * 0.78, 0.18, MARK_W);
+        }
+        // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
+        if (main && lamps.length < 380) {
+          let side = rnd() < 0.5 ? 1 : -1;
+          for (let s = 14 + rnd() * 10; s < total - 8 && lamps.length < 380; s += 40) {
+            const [ex, ez, ddx, ddz] = at(s);
+            const qx = ddz, qz = -ddx, off = hw + 1.2;
+            const lx = ex + qx * off * side, lz = ez + qz * off * side;
+            if (terrain.heightAt(lx, lz) < 0.4) { side = -side; continue; }
+            lamps.push({ x: lx, y: terrain.heightAt(lx, lz), z: lz,
+                         ry: Math.atan2(qz * side, -qx * side) });   // 局部 +x 指向路心
+            side = -side;
+          }
+        }
+      } else if ((biome === 'green' || biome === 'wet') && main && hw >= 2.4) {
+        // ---- 行道樹:郊區幹道兩側等間距(純視覺,不登記碰撞)----
+        for (let s = 10 + rnd() * 8; s < total - 6 && roadTrees.length < 460; s += 26 + rnd() * 8) {
+          const [ex, ez, ddx, ddz] = at(s);
+          const qx = ddz, qz = -ddx, off = hw + 1.6 + rnd() * 0.8;
+          for (const side of [1, -1]) {
+            if (rnd() < 0.18) continue;          // 缺株:不像牙籤陣
+            const tx = ex + qx * off * side, tz = ez + qz * off * side;
+            const ty = terrain.heightAt(tx, tz);
+            if (ty < 0.4) continue;
+            roadTrees.push({ x: tx, y: ty, z: tz, ry: rnd() * Math.PI * 2, s: 0.8 + rnd() * 0.5 });
+          }
         }
       }
       built++;
@@ -1641,30 +1928,103 @@ function buildRoads(group, roads, terrain, center, mix, rnd) {
     }
     if (built >= 600) break;
   }
-  for (const [color, b] of buckets) {
+
+  // ---- 路口:斑馬線 + 紅綠燈(市區、車行路口、彼此至少 70m)----
+  const junctions = [];
+  for (const rec of nodeArms.values()) {
+    if (rec.arms < 3 || junctions.length >= 30) continue;
+    if (rec.x < terrain.minX + inb + 10 || rec.x > terrain.maxX - inb - 10
+      || rec.z < terrain.minZ + inb + 10 || rec.z > terrain.maxZ - inb - 10) continue;
+    const h = terrain.heightAt(rec.x, rec.z);
+    if (h < 0.4) continue;
+    // 純圖資分類(不吃場地 mix 改寫):斑馬線只該出現在柏油市區
+    if (classify(terrain.sampleColor?.(rec.x, rec.z), h, null, rnd) !== 'urban') continue;
+    if (junctions.some((j) => Math.hypot(j.x - rec.x, j.z - rec.z) < 70)) continue;
+    junctions.push(rec);
+    // 相近方向的臂合併(雙向路的一進一出幾乎共線)
+    const arms2 = [];
+    for (const [dx, dz] of rec.dirs) {
+      if (arms2.some(([ax, az]) => ax * dx + az * dz > 0.86)) continue;
+      arms2.push([dx, dz]);
+      if (arms2.length >= 4) break;
+    }
+    const zw = rec.hw * 0.9;                       // 斑馬線半寬(略窄於路寬)
+    for (const [dx, dz] of arms2) {
+      const qx = dz, qz = -dx;
+      const d0 = rec.hw + 1.8;                     // 條帶起點:離路口中心一個路寬
+      for (let k = 0; k < 5; k++) {                // 5 條白槓,槓 0.5m / 間 0.5m
+        const d = d0 + k * 1.0;
+        const kb = mark.base;
+        for (const dd of [d, d + 0.5]) {
+          const cx2 = rec.x + dx * dd, cz2 = rec.z + dz * dd;
+          putMark(cx2 + qx * zw, cz2 + qz * zw, 0.4, MARK_W);
+          putMark(cx2 - qx * zw, cz2 - qz * zw, 0.4, MARK_W);
+        }
+        mark.idx.push(kb, kb + 1, kb + 2, kb + 1, kb + 3, kb + 2);
+        mark.base += 4;
+      }
+    }
+    // 紅綠燈:取前兩臂的右側轉角各立一支,燈頭朝路口
+    for (const [dx, dz] of arms2.slice(0, 2)) {
+      const qx = dz, qz = -dx;
+      const lx = rec.x + dx * (rec.hw + 1.6) + qx * (rec.hw + 1.0);
+      const lz = rec.z + dz * (rec.hw + 1.6) + qz * (rec.hw + 1.0);
+      const ly = terrain.heightAt(lx, lz);
+      if (ly < 0.4) continue;
+      lights.push({ x: lx, y: ly, z: lz, ry: Math.atan2(qz, -qx) });   // 燈臂 +x 伸回路面上方
+    }
+  }
+
+  // ---- 路面 Mesh(每「地貌×主次」一個 draw call;柏油/泥土/礫石材質塗層)----
+  for (const b of buckets.values()) {
     if (!b.idx.length) continue;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
     geo.setIndex(b.idx);
-    const m = new THREE.Mesh(geo, envMat(color, { vertexColors: true, wash: 0.55, cool: 0.5 }));
+    const m = new THREE.Mesh(geo, envMat(b.color, {
+      map: roadTex(b.tex), vertexColors: true, wash: 0.55, cool: 0.5, rim: 0,
+    }));
     m.frustumCulled = false;
     m.renderOrder = 1;
     m.userData.noOutline = true;
     group.add(m);
   }
-  if (dash.idx.length) {
+  // ---- 標線 Mesh(黃/白頂點色,單一 draw call)----
+  if (mark.idx.length) {
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(dash.pos, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(dash.nrm, 3));
-    geo.setIndex(dash.idx);
-    const m = new THREE.Mesh(geo, envMat(0xe8e2d0, { wash: 0.15, cool: 0.3 }));
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(mark.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(mark.nrm, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(mark.col, 3));
+    geo.setIndex(mark.idx);
+    const m = new THREE.Mesh(geo, envMat(0xf2edda, { vertexColors: true, wash: 0.15, cool: 0.3, rim: 0 }));
     m.frustumCulled = false;
     m.renderOrder = 2;
     m.userData.noOutline = true;
     group.add(m);
   }
+  // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
+  roadPropMeshes(group, [
+    { g: cyl(0.09, 0.13, 5.4, 6), y: 2.7, c: 0x50565e },
+    { g: cyl(0.05, 0.07, 1.7, 5).rotateZ(Math.PI / 2), y: 5.32, px: 0.75, c: 0x50565e },
+    { g: new THREE.BoxGeometry(0.66, 0.2, 0.32), y: 5.28, px: 1.5, c: 0xe8e2cc, e: 0xffe9a0 },
+  ], lamps);
+  roadPropMeshes(group, [
+    { g: cyl(0.1, 0.14, 5.6, 6), y: 2.8, c: 0x3f464e },
+    { g: cyl(0.06, 0.09, 3.0, 5).rotateZ(Math.PI / 2), y: 5.45, px: 1.4, c: 0x3f464e },
+    { g: new THREE.BoxGeometry(1.1, 0.42, 0.3), y: 5.0, px: 2.4, c: 0x22262c },       // 橫式三燈箱
+    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.06, pz: 0.16, c: 0x551512, e: 0xff3b30 },
+    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.4, pz: 0.16, c: 0x554512, e: 0xffb200 },
+    { g: new THREE.BoxGeometry(0.22, 0.22, 0.08), y: 5.0, px: 2.74, pz: 0.16, c: 0x124a22, e: 0x2ee06a },
+  ], lights);
+  const leafC = (ENV.seasons[season] || ENV.seasons.summer).foliage;   // 行道樹樹冠吃季節色
+  roadPropMeshes(group, [
+    { g: cyl(0.14, 0.2, 2.8, 5), y: 1.4, c: 0x6b4a2f },
+    { g: ico(1.6).scale(1, 0.85, 1), y: 3.7, c: leafC },
+    { g: ico(1.0).scale(1, 0.8, 1), y: 4.9, c: leafC },
+  ], roadTrees);
   return built;
 }
 
@@ -2245,7 +2605,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           put('bamboo', bx, bz, 0.8 + rnd() * 0.7);
         }
       } else if (relH > 0.55 || r < 0.55) {
-        put('conifer', x, z, 0.75 + rnd() * 0.9);
+        // 針葉林四款輪廓輪替(塔錐/簇疊/紡錘/層盤),同林異形不再滿山三角錐
+        put(['conifer', 'conifer', 'conifer2', 'conifer3', 'conifer4'][(rnd() * 5) | 0], x, z, 0.75 + rnd() * 0.9);
       } else {
         put(rnd() < 0.3 ? 'birch' : 'broadleaf', x, z, 0.75 + rnd() * 0.9);
       }
@@ -2395,6 +2756,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 一個冠半徑才不插牆;地被/草類貼牆自然,只留最小淨距
     const CROWN_R = {
       bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
+      conifer2: 2.4, conifer3: 1.4, conifer4: 3.0,
       shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
     };
     for (const type in items) {
@@ -2867,7 +3229,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
-  const roadsBuilt = buildRoads(group, roadInput, terrain, center, mix, rnd);
+  const roadsBuilt = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
   // 道路穿出空氣牆處 → 車禍/施工/巨坑封路事件(合成兵線不出界,自然為 0)
   const roadBlockN = buildRoadBlocks(group, roadInput, terrain, center, blockers, rnd);
 
