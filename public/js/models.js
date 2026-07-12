@@ -40,7 +40,7 @@ const HERO_SIZE = {
 };
 const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)
 // 變形機甲的人形地面型(vis.ground):其餘值一律四足獸型
-const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
+export const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
 
 /** 英雄機體顯示高度(公尺):依角色護甲值在機種區間內插 */
 export function heroTargetH(kind, ch) {

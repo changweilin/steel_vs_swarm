@@ -976,7 +976,9 @@ export const UNITS = {
   // 傷害折算在 heroWeapon()。每一架各自重生、各自吃冷卻(與機甲同表)。
   drone: {
     name: '獵蜂無人機', hp: 320, shield: 110, mp: 100, mpRegen: 4,
-    speed: 42, vspeed: 22, fov: 100, zoomFov: 55, sight: 300,
+    // fov/zoomFov 與機甲一致(2026-07-12):FPV 視覺大小感受度雙陣營必須相同,
+    // 廣角會把同距離目標畫小(舊 100/55 = 無人機看 NPC 比機甲小一號)。
+    speed: 42, vspeed: 22, fov: 68, zoomFov: 35, sight: 300,
     bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀);僚機衝刺自爆
     regen: 12,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久(單機獨立計數)
@@ -984,7 +986,8 @@ export const UNITS = {
   robot: {
     // sight 240(原 220):輕武器射程被 rangeCap 夾到 sight×0.9,220 會把全機甲輕武器砍到
     // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形機甲齊平。
-    // fov 68:座艙內是真人駕駛,取自然人眼的舒適垂直視角(無人機是遙控攝影機饋送,才保留廣角)
+    // fov 68:自然人眼的舒適垂直視角 = 全機種 FPV 基準(2026-07-12 起無人機/變形機甲一律對齊,
+    // 雙陣營同距離目標的視覺大小才一致;差異化只靠座艙造型與視點高度)
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
     speed: 21, jump: 9, fov: 68, zoomFov: 35, sight: 240,
     regen: 18,
@@ -1000,7 +1003,7 @@ UNITS.morph = {
   ...UNITS.robot,
   name: '變形機甲',
   fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
-  fov: 70, fovAir: 92, zoomFov: 38, sight: 240,   // 地面型 = 人眼視角;飛行型放寬(高速需周邊視野)
+  fov: 68, fovAir: 68, zoomFov: 35, sight: 240,   // 全型態 = 人眼視角(FPV 視覺大小雙陣營一致,飛行不再放寬)
 };
 
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
