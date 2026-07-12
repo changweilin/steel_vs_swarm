@@ -337,7 +337,7 @@ const GIANT_DEFS = {
     { g: cone(1.6, 9, 5), y: 85, c: 0x2c6242 },
     { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, c: 0x347050 },
     { g: ico(3.5), y: 34, px: -4.5, sy: 0.65, c: 0x2c6242 },
-    { g: cyl(0.2, 0.35, 6, 4), y: 88, rz: 0.5, c: 0x9a7a56 },    // 頂梢突出枯枝
+    { g: cyl(0.2, 0.35, 6, 4), y: 88, px: 0.8, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
   ] },
   dinizia:  { h: 88, r: 2.7, parts: [                            // 亞馬遜天使樹(Dinizia excelsa 88m)
@@ -1323,12 +1323,14 @@ function synthMegalith(g, rnd) {
       const r = 2.6 + rnd() * 2.2;
       const h = Math.max(8, hMax * (1 - (d / R0) * 0.55) * (0.8 + rnd() * 0.35) * (i === 0 ? 1.1 : 1));
       const t = rnd();
-      // 同束柱形一致才像節理:六角為主、偶夾方柱/圓柱段
-      const geo2 = t < 0.62 ? cyl(r, r * 1.04, h, 6)
-        : t < 0.84 ? new THREE.BoxGeometry(r * 1.7, h, r * 1.7)
-        : cyl(r, r * 1.04, h, 10);
-      const col = new THREE.Mesh(geo2, rockMat(shade((rnd() - 0.5) * 0.09), moss * (d / R0) * 0.6));
-      col.position.set(px, h / 2, pz);
+      // 同束柱形一致才像節理:六角為主、偶夾方柱/圓柱段;
+      // 柱身向下多長 6m(埋進地基)→ 坡地上外圈柱也確實入土,不懸空
+      const geo2 = t < 0.62 ? cyl(r, r * 1.04, h + 6, 6)
+        : t < 0.84 ? new THREE.BoxGeometry(r * 1.7, h + 6, r * 1.7)
+        : cyl(r, r * 1.04, h + 6, 10);
+      // 色差收斂 ±0.02:同束節理是同一次岩漿冷卻,只該有風化深淺
+      const col = new THREE.Mesh(geo2, rockMat(shade((rnd() - 0.5) * 0.04), moss * (d / R0) * 0.6));
+      col.position.set(px, h / 2 - 3, pz);
       col.rotation.y = rnd() * Math.PI;
       g.add(col);
       // 柱頂斷口:略寬的節理帽蓋(斷面色淺 = 新鮮斷口);中央柱必有 = 頂面特徵落腳點
@@ -1348,7 +1350,7 @@ function synthMegalith(g, rnd) {
     base.set([0xc9c4b8, 0xbdb2a0, 0xd2cabb, 0xb8b0a4][Math.floor(rnd() * 4)]);   // 淺色花崗岩
     const w0 = 30 + rnd() * 16, d0 = 22 + rnd() * 12;
     const nL = 3 + Math.floor(rnd() * 2);
-    let y = 0;
+    let y = -3;   // 底層下沉 3m:坡地上塊底確實入土
     for (let i = 0; i < nL; i++) {
       const f = 1 - i * (0.12 + rnd() * 0.08);      // 逐層內收
       const hh = 12 + rnd() * 9;
@@ -1358,7 +1360,8 @@ function synthMegalith(g, rnd) {
       for (let b2 = 0; b2 < nB; b2++) {
         const wB = nB === 1 ? wL : wL * (0.36 + rnd() * 0.24);
         const px = nB === 1 ? off0 : off0 + (b2 ? 1 : -1) * (wL / 2 - wB / 2) * 1.02;
-        const blk = new THREE.Mesh(new THREE.BoxGeometry(wB, hh, d0 * f), rockMat(shade((rnd() - 0.5) * 0.06), i === nL - 1 ? moss : 0));
+        // 色差收斂 ±0.015:同一露頭的花崗岩色勻,只留極淡的塊間變化
+        const blk = new THREE.Mesh(new THREE.BoxGeometry(wB, hh, d0 * f), rockMat(shade((rnd() - 0.5) * 0.03), i === nL - 1 ? moss : 0));
         blk.position.set(px, y + hh / 2, (rnd() - 0.5) * 2);
         blk.rotation.y = (rnd() - 0.5) * 0.07;      // 整齊拼接:僅極小微轉
         g.add(blk);
@@ -1378,11 +1381,13 @@ function synthMegalith(g, rnd) {
       // 水平漂移隨層高收斂:頂塊貼近軸心,頂面特徵(錨在原點)才有落腳處
       const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
       const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
-      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.08), i < 2 ? moss * 0.6 : 0));
+      // 色差收斂 ±0.02:同一岩體的大理岩塊色近,靠明暗交界讀塊面
+      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
       blk.scale.y = 0.72 + rnd() * 0.2;             // 溶蝕圓稜:壓扁的渾圓塊
       blk.rotation.set(rnd() * 0.5, rnd() * Math.PI, rnd() * 0.5);
-      // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠)
-      y = i === 0 ? r * 0.5 : y + rPrev * 0.55 + r * 0.3;
+      // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠);
+      // 底塊心壓到 0.2r:超過半顆入土,坡地上也確實著地
+      y = i === 0 ? r * 0.2 : y + rPrev * 0.55 + r * 0.3;
       blk.position.set(px, y, pz);
       g.add(blk);
       rPrev = r;
@@ -1407,10 +1412,11 @@ function synthMegalith(g, rnd) {
     const nB = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < nB; i++) {
       const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
-      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.12), moss * 0.6));
+      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
       bd.scale.y = 0.6 + rnd() * 0.3;
       bd.rotation.set(rnd() * 0.6, rnd() * Math.PI, rnd() * 0.6);
-      bd.position.set(Math.cos(a) * d, 2, Math.sin(a) * d);
+      // 塊心壓低到 0.1×半徑:過半入土,離群體最遠的崩落塊在坡地上也不懸空
+      bd.position.set(Math.cos(a) * d, br * 0.1, Math.sin(a) * d);
       g.add(bd);
       RX = Math.max(RX, Math.abs(Math.cos(a) * d) + br);
       RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + br);
@@ -1757,16 +1763,20 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     }
     return b;
   };
+  // 路面貼地規則:非橋樑截面「各自貼地,但夾在同截面最高點 −0.7m 之上」——
+  // 橫坡路段路面切進山壁(路塹感)而不是被地形吞掉;抬升量 0.45 > 地被(0.07~0.18)
+  const ROAD_LIFT = 0.45, CLAMP = 0.7;
   // 標線合併幾何(頂點色 = 黃/白):雙黃線/白虛線/路緣邊線/斑馬線全進同一 draw call
   const mark = { pos: [], nrm: [], col: [], idx: [], base: 0 };
   const MARK_Y = [1.0, 0.78, 0.28], MARK_W = [0.95, 0.96, 0.9];   // 標線黃 / 標線白
-  const putMark = (vx, vz, lift2, c) => {
-    mark.pos.push(vx, terrain.heightAt(vx, vz) + lift2, vz);
+  // hM = 該截面最高點(標線跟路面吃同一條夾高規則,才不會沉進被抬高的路面下)
+  const putMark = (vx, vz, lift2, c, hM = -Infinity) => {
+    mark.pos.push(vx, Math.max(terrain.heightAt(vx, vz), hM - CLAMP) + lift2, vz);
     mark.nrm.push(0, 1, 0);
     mark.col.push(...c);
   };
-  // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫)
-  const emitLine = (run, lift2, off, w, c) => {
+  // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫);hw2 = 路半寬(夾高取樣)
+  const emitLine = (run, hw2, lift2, off, w, c) => {
     const nP = run.length, k0 = mark.base;
     for (let i = 0; i < nP; i++) {
       const [x, z] = run[i];
@@ -1774,8 +1784,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       let dx = b2[0] - a[0], dz = b2[1] - a[1];
       const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
       const px = dz, pz = -dx;
-      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c);
-      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c);
+      const hM = Math.max(terrain.heightAt(x + px * hw2, z + pz * hw2),
+                          terrain.heightAt(x - px * hw2, z - pz * hw2));
+      // 頂點序:大偏移在前(與路面quad同向繞行 → 面朝 +y,不會背面剔除消失)
+      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c, hM);
+      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c, hM);
     }
     for (let i = 0; i < nP - 1; i++) {
       const k = k0 + i * 2;
@@ -1783,17 +1796,42 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     }
     mark.base += nP * 2;
   };
+  // 高架橋構件:欄杆(直立緞帶幾何)+ 橋墩(InstancedMesh);地下道門洞(隧道端點)
+  const rail = { pos: [], nrm: [], idx: [], base: 0 };
+  const piers = [], portals = [];
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
   const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
   const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
   let built = 0;
   for (const way of roads) {
-    if (way.tags.tunnel) continue;             // 隧道段不畫
+    if (way.tags.tunnel) {
+      // 地下道路面不畫(藏在地形下),但在進出口立隧道門洞 —— 向玩家解釋
+      // 「這條路鑽進山裡了」;僅山體端(入口後方地勢明顯抬升)才立,
+      // 平地下穿的都會地下道沒有門臉可立,略過
+      const gpts = way.geometry;
+      if (gpts.length >= 2) {
+        const phw = roadWidth(way.tags) / 2;
+        for (const [eIdx, nIdx] of [[0, 1], [gpts.length - 1, gpts.length - 2]]) {
+          if (portals.length >= 10) break;
+          const [ex, ez] = llToWorld(gpts[eIdx].lat, gpts[eIdx].lon, center);
+          if (ex < terrain.minX + inb + 8 || ex > terrain.maxX - inb - 8
+            || ez < terrain.minZ + inb + 8 || ez > terrain.maxZ - inb - 8) continue;
+          const [nx2, nz2] = llToWorld(gpts[nIdx].lat, gpts[nIdx].lon, center);
+          const dl = Math.hypot(nx2 - ex, nz2 - ez) || 1;
+          const dIn = [(nx2 - ex) / dl, (nz2 - ez) / dl];   // 指向隧道內
+          const hE = terrain.heightAt(ex, ez);
+          if (hE < 0.4) continue;
+          if (terrain.heightAt(ex + dIn[0] * 14, ez + dIn[1] * 14) < hE + 2.2) continue;
+          portals.push({ x: ex, z: ez, y: hE, ry: Math.atan2(-dIn[0], -dIn[1]), w: phw * 2 + 2 });
+        }
+      }
+      continue;
+    }
     const main = MAIN_HW.test(way.tags.highway);
     const arterial = /^(motorway|trunk|primary)$/.test(way.tags.highway);   // 幹道:雙黃實線
     const hw = roadWidth(way.tags) / 2;
-    const lift = way.tags.bridge ? 3 : 0.3;
+    const bridge = !!way.tags.bridge;
     // 路口統計(車行道才算;步道/小徑不設斑馬線紅綠燈)
     if (hw >= 2 && !way.tags.bridge) {
       const n = way.geometry.length;
@@ -1838,16 +1876,35 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       if (biome === 'water') continue;
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
+      const cum = [0];
+      for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
+      const total = cum[nP - 1];
+      // 高架橋橋面:兩端地面高的直線內插 + 端點 24m 緩坡爬升淨空 —— 橋面是水平的,
+      // 不跟著河谷/窪地起伏;地形突起處仍夾在地表之上(不鑽土)
+      const hA = terrain.heightAt(run[0][0], run[0][1]);
+      const hB = terrain.heightAt(run[nP - 1][0], run[nP - 1][1]);
+      const deckAt = (s, gx, gz) => {
+        const ramp = Math.min(1, s / 24, (total - s) / 24);
+        const yLine = hA + (hB - hA) * (s / (total || 1)) + 4.2 * Math.max(0, ramp);
+        return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT);
+      };
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
         const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
         let dx = c[0] - a[0], dz = c[1] - a[1];
         const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
         const px = dz, pz = -dx;                 // XZ 垂直向量
-        // 截面 4 頂點:外緣暗(墨線)→ 內緣亮,漸層即手繪描邊筆觸
-        for (const [off, ink] of [[hw, 1], [hw * 0.64, 0], [-hw * 0.64, 0], [-hw, 1]]) {
+        // 截面 4 頂點:外緣暗(墨線)→ 內緣亮,漸層即手繪描邊筆觸。
+        // 非橋:各自貼地但夾在截面最高點 −CLAMP 之上(橫坡不吞路);橋:水平橋面
+        const offs = [[hw, 1], [hw * 0.64, 0], [-hw * 0.64, 0], [-hw, 1]];
+        const hs = offs.map(([off]) => terrain.heightAt(x + px * off, z + pz * off));
+        const hMax = Math.max(...hs);
+        for (let k = 0; k < 4; k++) {
+          const [off, ink] = offs[k];
           const vx = x + px * off, vz = z + pz * off;
-          b.pos.push(vx, terrain.heightAt(vx, vz) + lift, vz);
+          const vy = bridge ? deckAt(cum[i], x, z)
+            : Math.max(hs[k], hMax - CLAMP) + ROAD_LIFT;
+          b.pos.push(vx, vy, vz);
           b.nrm.push(0, 1, 0);
           b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
           if (ink) b.col.push(0.52, 0.52, 0.58);   // 邊墨帶微偏冷
@@ -1861,9 +1918,6 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         }
       }
       b.base += nP * 4;
-      const cum = [0];
-      for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
-      const total = cum[nP - 1];
       const at = (d) => {
         let i = 1; while (cum[i] < d && i < nP - 1) i++;
         const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
@@ -1873,28 +1927,56 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         const l = Math.hypot(dx, dz) || 1;
         return [x, z, dx / l, dz / l];
       };
-      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線)----
-      if (biome === 'urban' && hw >= 2) {
+      // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 等間距橋墩落地 ----
+      if (bridge && total > 10) {
+        for (const side of [1, -1]) {
+          const k0 = rail.base;
+          for (let i = 0; i < nP; i++) {
+            const [x, z] = run[i];
+            const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
+            let dx = c[0] - a[0], dz = c[1] - a[1];
+            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+            const vx = x + dz * hw * 0.96 * side, vz = z - dx * hw * 0.96 * side;
+            const dy = deckAt(cum[i], x, z);
+            rail.pos.push(vx, dy + 0.02, vz, vx, dy + 1.1, vz);
+            rail.nrm.push(dz * side, 0, -dx * side, dz * side, 0, -dx * side);
+          }
+          for (let i = 0; i < nP - 1; i++) {
+            const k = k0 + i * 2;
+            rail.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+          }
+          rail.base += nP * 2;
+        }
+        for (let s = 12; s < total - 8 && piers.length < 120; s += 24) {
+          const [ex, ez] = at(s);
+          const y0 = terrain.heightAt(ex, ez), y1 = deckAt(s, ex, ez);
+          if (y0 > 0.3 && y1 - y0 > 1.4) piers.push({ x: ex, z: ez, y0: y0 - 0.5, y1, r: Math.min(1.4, hw * 0.35) });
+        }
+      }
+      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫)----
+      if (!bridge && biome === 'urban' && hw >= 2) {
         if (main) {
           if (arterial) {                        // 幹道:雙黃實線分向
-            emitLine(run, lift + 0.06, 0.33, 0.2, MARK_Y);
-            emitLine(run, lift + 0.06, -0.33, 0.2, MARK_Y);
+            emitLine(run, hw, 0.58, 0.33, 0.2, MARK_Y);
+            emitLine(run, hw, 0.58, -0.33, 0.2, MARK_Y);
           } else {                               // 次要道:單白虛線
             for (let s = 5; s + 3.2 < total; s += 9.5) {
               const k = mark.base;
               for (const d of [s, s + 3.2]) {
                 const [ex, ez, ddx, ddz] = at(d);
                 const qx = ddz, qz = -ddx;
-                putMark(ex + qx * 0.28, ez + qz * 0.28, lift + 0.06, MARK_W);
-                putMark(ex - qx * 0.28, ez - qz * 0.28, lift + 0.06, MARK_W);
+                const hM = Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
+                                    terrain.heightAt(ex - qx * hw, ez - qz * hw));
+                putMark(ex + qx * 0.28, ez + qz * 0.28, 0.58, MARK_W, hM);
+                putMark(ex - qx * 0.28, ez - qz * 0.28, 0.58, MARK_W, hM);
               }
               mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
               mark.base += 4;
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
-          emitLine(run, lift + 0.05, hw * 0.78, 0.18, MARK_W);
-          emitLine(run, lift + 0.05, -hw * 0.78, 0.18, MARK_W);
+          emitLine(run, hw, 0.56, hw * 0.78, 0.18, MARK_W);
+          emitLine(run, hw, 0.56, -hw * 0.78, 0.18, MARK_W);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         if (main && lamps.length < 380) {
@@ -1909,7 +1991,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             side = -side;
           }
         }
-      } else if ((biome === 'green' || biome === 'wet') && main && hw >= 2.4) {
+      } else if (!bridge && (biome === 'green' || biome === 'wet') && main && hw >= 2.4) {
         // ---- 行道樹:郊區幹道兩側等間距(純視覺,不登記碰撞)----
         for (let s = 10 + rnd() * 8; s < total - 6 && roadTrees.length < 460; s += 26 + rnd() * 8) {
           const [ex, ez, ddx, ddz] = at(s);
@@ -1949,16 +2031,18 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       if (arms2.length >= 4) break;
     }
     const zw = rec.hw * 0.9;                       // 斑馬線半寬(略窄於路寬)
+    const hJ = terrain.heightAt(rec.x, rec.z);     // 路口中心高:白槓跟路面同一條夾高規則
     for (const [dx, dz] of arms2) {
       const qx = dz, qz = -dx;
       const d0 = rec.hw + 1.8;                     // 條帶起點:離路口中心一個路寬
-      for (let k = 0; k < 5; k++) {                // 5 條白槓,槓 0.5m / 間 0.5m
-        const d = d0 + k * 1.0;
+      // 白槓長軸沿行車方向(3.2m 深)、槓寬 0.5m / 間 0.5m,橫向重複鋪滿路寬
+      for (let lo = -zw; lo + 0.5 <= zw + 0.01; lo += 1.0) {
         const kb = mark.base;
-        for (const dd of [d, d + 0.5]) {
+        for (const dd of [d0, d0 + 3.2]) {
           const cx2 = rec.x + dx * dd, cz2 = rec.z + dz * dd;
-          putMark(cx2 + qx * zw, cz2 + qz * zw, 0.4, MARK_W);
-          putMark(cx2 - qx * zw, cz2 - qz * zw, 0.4, MARK_W);
+          // 頂點序同 emitLine(大偏移在前)→ 面朝 +y
+          putMark(cx2 + qx * (lo + 0.5), cz2 + qz * (lo + 0.5), 0.62, MARK_W, hJ);
+          putMark(cx2 + qx * lo, cz2 + qz * lo, 0.62, MARK_W, hJ);
         }
         mark.idx.push(kb, kb + 1, kb + 2, kb + 1, kb + 3, kb + 2);
         mark.base += 4;
@@ -2004,6 +2088,56 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     m.renderOrder = 2;
     m.userData.noOutline = true;
     group.add(m);
+  }
+  // ---- 高架橋欄杆(直立緞帶,雙面)----
+  if (rail.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(rail.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(rail.nrm, 3));
+    geo.setIndex(rail.idx);
+    const m = new THREE.Mesh(geo, envMat(0xaab2b8, { wash: 0.35, cool: 0.45, side: THREE.DoubleSide }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh,純視覺不登記碰撞)----
+  if (piers.length) {
+    const pM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.18, 1, 8),
+      envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 }), piers.length);
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3();
+    piers.forEach((p, i) => {
+      P.set(p.x, (p.y0 + p.y1) / 2, p.z);
+      S.set(p.r, p.y1 - p.y0, p.r);
+      M.compose(P, Q, S);
+      pM.setMatrixAt(i, M);
+    });
+    pM.instanceMatrix.needsUpdate = true;
+    pM.castShadow = false;
+    pM.frustumCulled = false;
+    group.add(pM);
+  }
+  // ---- 隧道門洞:額牆 + 黑洞面 + 兩翼擋土牆(嵌進山壁,面朝來路)----
+  for (const p of portals) {
+    const g = new THREE.Group();
+    const W = Math.max(6, p.w), H2 = 6.5;
+    const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45 });
+    const face = new THREE.Mesh(new THREE.BoxGeometry(W + 3, H2 + 2, 1.2), wallM);
+    face.position.y = (H2 + 2) / 2;
+    g.add(face);
+    const hole = new THREE.Mesh(new THREE.BoxGeometry(W - 1.6, H2 - 1.2, 0.6),
+      new THREE.MeshBasicMaterial({ color: 0x07090c }));   // 洞內無光:純黑面即「深不見底」
+    hole.position.set(0, (H2 - 1.2) / 2, 0.45);
+    g.add(hole);
+    for (const s of [1, -1]) {                             // 翼牆:向來路外八張開的擋土牆
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.0, H2 - 0.8, 6), wallM);
+      wing.position.set(s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4);
+      wing.rotation.y = s * 0.5;
+      g.add(wing);
+    }
+    g.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; });
+    g.position.set(p.x, p.y - 0.4, p.z);
+    g.rotation.y = p.ry;
+    group.add(g);
   }
   // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
   roadPropMeshes(group, [

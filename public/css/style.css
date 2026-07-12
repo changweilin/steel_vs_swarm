@@ -900,3 +900,12 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .lock-warn.on { display: block; animation: lockPulse 0.5s steps(1) infinite; }
 @keyframes lockPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* ---------- 載入背景插圖 ---------- */
+#loading {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.5s ease-in-out;
+}
+

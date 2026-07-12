@@ -1060,11 +1060,12 @@ const DETAIL_DEFS = {
   // — 枯朽森林/伐木業 —
   bamboo:   [{ geo: cyl(0.05, 0.08, 2.6, 4), c: 0xa9c364 },
              { geo: new THREE.IcosahedronGeometry(0.5, 0).translate(0, 2.7, 0), c: 'foliage', sy: 0.7 }],
+  // 枯立木:分枝基部 MUST 落在該高度的主幹半徑內(骨折感 = 基部懸在幹外)
   snag:     [{ geo: cyl(0.12, 0.3, 3.0, 5), c: 0x8a7a66 },
-             { geo: cone(0.09, 1.5, 4).rotateZ(-0.9).translate(0.35, 1.9, 0), c: 0x8a7a66 },
-             { geo: cone(0.08, 1.2, 4).rotateZ(1.1).translate(-0.3, 2.3, 0), c: 0x8a7a66 }],
+             { geo: cone(0.09, 1.5, 4).rotateZ(-0.9).translate(0.1, 1.8, 0), c: 0x8a7a66 },
+             { geo: cone(0.08, 1.2, 4).rotateZ(1.1).translate(-0.08, 2.1, 0), c: 0x8a7a66 }],
   charsnag: [{ geo: cyl(0.1, 0.26, 2.4, 5), c: 0x3a3632 },
-             { geo: cone(0.08, 1.2, 4).rotateZ(-1.0).translate(0.3, 1.6, 0), c: 0x3a3632 }],
+             { geo: cone(0.08, 1.2, 4).rotateZ(-1.0).translate(0.08, 1.5, 0), c: 0x3a3632 }],
   log:      [{ geo: new THREE.CylinderGeometry(0.32, 0.36, 3.4, 7).rotateZ(Math.PI / 2).translate(0, 0.34, 0), c: 0x8a6a48 }],
   stump:    [{ geo: cyl(0.42, 0.55, 0.55, 7), c: 0x6e5138 },
              { geo: new THREE.CylinderGeometry(0.36, 0.36, 0.08, 7).translate(0, 0.58, 0), c: 0xd9c49a }],
@@ -1108,9 +1109,10 @@ const DETAIL_DEFS = {
   crate:    [{ geo: box(0.95, 0.9, 0.95), c: 0xb8935a, tex: 'wood' }],
   // — 2026-07-12 附件擴充:飄逸芒草/雜草/菜園葉球/看板/盆栽/籃球架 —
   miscanthus:[{ geo: cone(0.5, 1.6, 5), c: 'grass' },                     // 芒草束:斜出抽穗 = 飄逸剪影
-             { geo: cone(0.15, 1.1, 4).rotateZ(0.4).translate(0.36, 1.2, 0), c: 0xe8dfb8 },
-             { geo: cone(0.14, 1.0, 4).rotateZ(-0.32).translate(-0.3, 1.15, 0.1), c: 0xd8cfa8 },
-             { geo: cone(0.13, 0.9, 4).rotateX(0.35).translate(0, 1.1, 0.32), c: 0xe0d5ae }],
+             // 花穗基部埋進草束錐內(該高度錐半徑 ~0.15),自叢心斜出才不像折枝
+             { geo: cone(0.15, 1.1, 4).rotateZ(0.4).translate(0.1, 1.1, 0), c: 0xe8dfb8 },
+             { geo: cone(0.14, 1.0, 4).rotateZ(-0.32).translate(-0.09, 1.05, 0.04), c: 0xd8cfa8 },
+             { geo: cone(0.13, 0.9, 4).rotateX(0.35).translate(0, 1.0, 0.1), c: 0xe0d5ae }],
   weed:     [{ geo: cone(0.3, 0.75, 4), c: 0x9aa060 },                    // 雜草:歪斜雙叢
              { geo: cone(0.2, 0.55, 4).rotateZ(0.5).translate(0.25, 0, 0), c: 0x8a9050 }],
   cabbage:  [{ geo: new THREE.IcosahedronGeometry(0.34, 0).translate(0, 0.24, 0), c: 0x6f9a44, sy: 0.75 }],

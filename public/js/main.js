@@ -765,6 +765,35 @@ function renderCharPick(me) {
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
   if (app.battle) { app.battle.dispose(); app.battle = null; }
+  
+  // Select a dynamic background based on room participants
+  try {
+    const clients = app.lobby?.clients || [];
+    const bots = app.lobby?.bots || [];
+    const allParticipants = [...clients, ...bots].filter(p => p.ch);
+    const sides = new Set(allParticipants.map(p => CHARACTERS[p.ch]?.side).filter(Boolean));
+    
+    let pool = 'steel_vs_swarm';
+    if (sides.has('MERC')) {
+      const mySide = clients.find((c) => c.id === app.youId)?.side || 'SWARM';
+      if (mySide === 'SWARM') {
+        pool = Math.random() < 0.5 ? 'swarm_vs_mercenary' : 'steel_vs_swarm';
+      } else {
+        pool = Math.random() < 0.5 ? 'steel_vs_mercenary' : 'steel_vs_swarm';
+      }
+    } else {
+      const r = Math.random();
+      if (r < 0.5) pool = 'steel_vs_swarm';
+      else if (r < 0.75) pool = 'steel_vs_mercenary';
+      else pool = 'swarm_vs_mercenary';
+    }
+    const idx = Math.floor(Math.random() * 6) + 1;
+    $('loading').style.backgroundImage = `url('assets/loading/${pool}_${idx}.png')`;
+  } catch (err) {
+    console.error('Failed to set loading background:', err);
+    $('loading').style.backgroundImage = '';
+  }
+
   show('loading');
   $('loadPlace').textContent = `${cfg.placeName || ''} ・ ${envLabel(cfg.env)}`;
   $('loadStats').textContent =
