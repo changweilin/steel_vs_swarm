@@ -90,7 +90,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 - **世界尺度:步兵 = 真人 1.8m(2026-07-10 起)**:`models.js` 的 `SOLDIER_H` 是全遊戲唯一的身高單位,人員/載具/建物一律用**真實世界公稱尺寸**(建物高 7~16m、紅杉 110m),`biomes.js` 的 `OVER.bldH/bldXZ` 因此全歸 1 —— **MUST NOT** 為了「看起來大一點」把它們調回超尺度。**建物佔地(2026-07-12 加大)**:公稱佔地對齊真實市街量體(住宅 10~22m、商辦 16~32m,`INFILL.pitch` 36 同步放大),建物佔地:士兵比例即現實比例;`OVER.giant/mega = 1.35` 跟隨佔地等比放大(神木/巨岩與建物維持視覺等比,使用者指示)。`VEG_SCALE` 作用在很小的公稱幾何上,絕對高度本就近真實,**不在此列**。
   - 英雄體型 = `heroTargetH(kind, ch)`:**機甲 / 變形機甲(不分型態)= 真人 150%~250%、無人機 = 75%~150%**(2026-07-12 改制,舊制 3~5× / 1~2× 已作廢),倍率隨 `mods.armor` 在該機種護甲區間**線性**內插(高防禦 = 巨大 = 剪影大 = 好命中,因為命中是客戶端對 mesh raycast)。獸型(`visual.form:'beast'` / 非人形 `visual.ground`)再 ×`BEAST_H_F`,但 **MUST 夾回機種下限**(機甲不論獸型都 ≥150%)。**體型只准住這個縫**,`game.js`/`biomes.js` **MUST NOT** 硬編碼機體尺寸。
   - 由它推導的東西:`game.js` 的 `heroCollider()`(英雄碰撞圓柱,走 `ent.heroCol` 而非 `COLLIDER` 表)、自機 `SELF_F`(碰撞半徑/上下緣/**座艙視點高度**)、`models.js` 的 `walkRef`(步幅正比身高,忘了改就原地滑步)。改 `SOLDIER_H` 或倍率,以上全部自動連動。
-  - **尺度不動 `sight`/`range`**:座艙的「人類駕駛感」只靠視點高度 + `fov`(機甲 = 人眼視角;無人機是遙控攝影機,保留廣角)。平衡數值與 #INC-104 因此完全不受尺度改制影響。
+  - **尺度不動 `sight`/`range`**:座艙的「人類駕駛感」只靠視點位置(`heroView`);`fov` 全機種一律 68(2026-07-12 起無人機不再是廣角,見 FPV 座艙條目)。平衡數值與 #INC-104 因此完全不受尺度改制影響。
 - **地圖尺寸與兵線來源(2026-07-10 起)**:真實邊長 = `0.3 + 0.1×L` km(L1/L2/L3 = 0.4/0.5/0.6 km),兩堡真實距離 = 邊長 × 0.85 × √2 = 481/601/721m。`GEO_SCALE_VER` = 7。
 - **世界比例尺(2026-07-11 起 REAL_SCALE = 0.5,遊戲 = 2×真實)**:沿革 `0.125`(放大 8×,街廓成荒野)→ `1`(1:1,戰場太緊湊、武器相對射程過長)→ `0.5`(遊戲空間放大 2×,兵線走廊拉開一倍;武器射程/視野的**遊戲公尺**值不動 ⇒ 相對射程減半)。改 `REAL_SCALE` **MUST** 同步 +1 `GEO_SCALE_VER`(觸發 `migrateFavCfg` 重算過期最愛)並重跑 `tools/bake_venue_lanes.mjs`(`laneTacticsXZ` 的 `SEG_M` 是遊戲公尺,尺度一動轉角評分就變)。
   - **關鍵:`realDistFor` 與 `REAL_SCALE` 無關(公式裡相消)** ⇒ OSM 查詢半徑 `overlapCellM` 都不變、`venueLanes.js` 真實道路兵線原封有效,重烤純離線。**放大真實邊長(改 `REAL_SIDE_*`)才會**改變查詢半徑、需 2× 半徑重抓 Overpass 並改選不同真實道路 —— 想「放大地圖」優先動 `REAL_SCALE`,別動邊長常數。
@@ -106,6 +106,12 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - **頭像與展示台捲動時恆固定**:`.cd-art`(頭像 + 小展示台)`position:sticky`;大展示台是 sticky 全寬,`.cd-art` 的 `top` 因此要讓開它的高度(`.char-detail.stage-large` 那條規則),且捲動框 `max-height` **MUST** 容得下「大展示台 + 頭像」(620px),否則頭像會被展示台蓋掉。
   - **移動演示(雙擊機體)**:機體恆在原點,靠地面網格反向捲動 = 跑步機;速度以不同的加/減速斜率(`MOVE`)逼近戰場實速(`UNITS[kind].speed × mods.speed`),再把「這一幀走了多遠」餵給 `stepLocomotion`(假的前一幀座標)—— 步頻/輪速/壓坡/前傾/煞車點頭**一律沿用戰場那一套**,**MUST NOT** 另寫一份預覽專用動畫。變形型態一樣走 `ent.heroY` 高度判定,與伺服器同一條規則。
 - **擊殺分數**:`by.kn += killScore(kind)`,但**被擊殺者是電腦玩家(`isBotId(t.pid)`)一律 `BOT_KILL_SCORE`(3)** —— 刷 bot 不能速成招式。
+- **砲塔壓制不等式(2026-07-12 起,MUST 成立)**:`tower.range`(310)> **所有玩家輕武器**(最大 270 = `drone.sight` 300 × `RANGE_SIGHT_F`)且 > **所有 NPC**(最大 220 = 榴彈兵);並且 `tower.range ≥ maxLight + 2×TOWER_SIDE_OFF` ⇒ **打其中一座塔必定同時吃到同塔位另一座的覆蓋火力**。改 `sight` / `RANGE_SIGHT_F` / 任一角色 `light.range` / `TOWER_SIDE_OFF` **MUST** 重驗這條。NPC 不再有「射程外安全圍攻位」(榴彈兵 220 曾 > 舊塔射程 190)。
+  - **塔 HP/護甲的推導**:`towerHp = 1.8 × heroEHP × heroDPS / towerDPS` —— 兩位機甲玩家(lvl1、無人干擾)集火單塔約 13.5s 拆掉,期間兩座塔的回擊 ≈ 1.79 × 機甲 EHP(981)⇒ **擊殺一位、把另一位壓到 ~21%**。現值 hp 1800 / armor 30 / dmg 65。動塔或機甲任一數值 **MUST** 重算這條。
+  - **塔距守衛(`sim._spawnStructures`)**:兵線可能 90° 或更銳的急彎 ⇒ **沿線距離遠 ≠ 直線距離遠**。塔位按 `TOWER_FRACS`(0.16/0.30)算出後,雙方**對稱**往己方主堡回收(每次 −0.01 frac,下限 `TOWER_MIN_FRAC`),直到與所有敵方塔的**直線距離** > `tower.range × TOWER_SEP_F`(1.15)+ 2×`TOWER_SIDE_OFF` —— 前線兩塔不對射。**MUST NOT** 改用沿線距離判定。
+  - **直射鎖定天花板 `GAME.GUN_CEIL_M`(170)MUST 與射程脫鉤**:舊制 `range × 0.9` 在塔射程拉高後會把 #INC-104 的 y=250 高空機從 SAM 手上搶走。
+- **第三方打擊的淨空(2026-07-12 起)**:地雷/匿蹤防空伏擊的判定半徑是 `GAME.AMBUSH_M`(110,**不是** `LANE_SAFE_M` 45)—— **稍微偏離兵線不該被打到**。佈設另外避開主堡(含外推重生點)與砲塔:`MINES.LANE_CLEAR/BASE_CLEAR/TOWER_CLEAR`(115/260/90)、`AA_SITE.laneMin/baseClear/towerClear`(130/260/90),共用 `sim._farFromStructures()`。收緊淨空 **MUST** 同步放大 `_seedMines` 的取樣框與嘗試次數(否則佈雷數湊不滿,e2e 的「25 顆/線」會紅)。
+- **NPC 戰力(2026-07-12 起)**:小兵 hp/armor/dmg 大幅上調(步槍兵 300/8/17、火箭兵 380/12/95、榴彈兵 460/18/110、直升機 700/14/55)—— 小兵不是英雄的移動經驗值,三隻步槍兵齊射就能逼退半血機甲。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。
 - 彈道學在客戶端(`game.js` bullets:初速 mv + 重力 G,線段 raycast 補內插),伺服器仍以 `heroHit` 射程 ×1.25 驗證 — 防作弊邏輯**不**搬客戶端(不變)。

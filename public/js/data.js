@@ -957,17 +957,25 @@ export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
 // ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----
 export const UNITS = {
   // 小兵(雙方都是人類部隊:士兵 / 裝甲車 / 坦克)
-  // 射程刻意逼近砲塔(190):波次小兵才能在被塔壓制前開火,慢慢啃塔血(塔不回血,傷害逐波累積)。
-  // hp/armor 同步上調 = 不再一觸即死,能撐到進入射程還擊。榴彈兵射程 220 > 塔 190 = 安全圍攻位。
-  soldier:   { name: '步槍兵', hp: 130, armor: 0,  dmg: 10, range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 170, armor: 3,  dmg: 60, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 220, armor: 10, dmg: 70, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 340, armor: 8, dmg: 35, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
+  // 射程一律 < 防禦塔(2026-07-12 起,見 UNITS.tower):沒有「安全圍攻位」,推塔要靠人數/血量硬吃塔火。
+  // hp/armor/dmg 大幅上調(2026-07-12「拉近 NPC 與玩家戰力」):小兵不再是英雄的移動經驗值 ——
+  // 步槍兵 EHP 320、火箭兵一發 95,三隻步槍兵齊射就足以逼退半血機甲。
+  soldier:   { name: '步槍兵', hp: 300, armor: 8,  dmg: 17, range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 380, armor: 12, dmg: 95, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 460, armor: 18, dmg: 110, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 700, armor: 14, dmg: 55, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
   // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
-  tower:   { name: '防禦塔', hp: 1000, armor: 24, dmg: 65, range: 190, rate: 1.0, speed: 0,  sight: 190,
+  // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 270 = drone sight 300 × RANGE_SIGHT_F)
+  // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)
+  // ⇒ 打其中一座塔,必定同時吃到另一座的覆蓋火力。改 sight/RANGE_SIGHT_F/TOWER_SIDE_OFF
+  // MUST 重驗這條不等式(sim._spawnStructures 的塔距守衛也吃 range)。
+  // hp/armor(2026-07-12):兩位機甲玩家(lvl1,無人干擾)集火單塔 ≈ 13~14s 拆掉,
+  // 期間兩座塔的回擊 ≈ 1.8 × 機甲 EHP(981)⇒ 剛好擊殺一位、把另一位壓到 ~20%。
+  // 推導:towerHp = 1.8 × heroEHP × heroDPS / towerDPS。改任一邊 MUST 重算(tools 的 _bal 推導)。
+  tower:   { name: '防禦塔', hp: 1800, armor: 30, dmg: 65, range: 310, rate: 1.0, speed: 0,  sight: 310,
              sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40, pen: 8 } },
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
@@ -1020,9 +1028,18 @@ export const GAME = {
   // 玩家可操作機體的射程上限比例:射程 = min(基準×HEROIC, sight×(重武器再×AIM_SIGHT_MULT)×此值)。
   // 恆 < 1 ⇒ 射程一定小於視野;見 rangeCap()。
   RANGE_SIGHT_F: 0.9,
-  TOWER_FRACS: [0.22, 0.40],  // 防禦塔在兵線上的位置(距己方主堡比例)
+  // 防禦塔在兵線上的位置(距己方主堡比例)。前線塔往後退(舊值 0.22/0.40)——
+  // 塔射程拉到 310 後,0.40 的前線塔會直接互相涵蓋。實際位置仍由 sim._spawnStructures
+  // 的「塔距守衛」逐座往回收(兵線可能 90° 急彎 ⇒ 沿線距離遠 ≠ 直線距離遠)。
+  TOWER_FRACS: [0.16, 0.30],
+  // 敵我塔安全間距係數:任兩座敵對塔的**直線距離** MUST > tower.range × 此值(前線塔不對射)
+  TOWER_SEP_F: 1.15,
+  TOWER_MIN_FRAC: 0.09,       // 塔距守衛往回收的下限(不得退進主堡懷裡)
   // 塔位橫向偏移(公尺):每個塔位在兵線左右各一座,砲塔不擋路、交叉火力涵蓋走廊
   TOWER_SIDE_OFF: 15,
+  // 直射武器的鎖定天花板(公尺):高過此高度的飛行單位塔砲/小兵打不到(交給 SAM)。
+  // MUST 與 range 脫鉤 —— 綁 range×0.9 的話,塔射程一拉高就會把 #INC-104 的 y=250 高空機也鎖住。
+  GUN_CEIL_M: 170,
   CREEP_AGGRO_HERO_BIAS: 0.7, // 小兵優先打小兵/建築,英雄目標權重
   HERO_HEAL_RADIUS: 160,      // 主堡補血半徑(也是軍械庫購物範圍)
   // 出生/重生點:主堡朝敵方向外推距離。> 主堡護盾半徑 30 + 模型半徑 ~23,
@@ -1030,10 +1047,17 @@ export const GAME = {
   HERO_SPAWN_OFF: 45,
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
   AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
-  LANE_SAFE_M: 45,            // 正規路線走廊半寬;出了走廊 = 非正規路線(地雷 / 防空伏擊)
+  LANE_SAFE_M: 45,            // 正規路線走廊半寬(僚機歸隊/地形不放大的走廊)
+  // 第三方打擊(地雷 / 匿蹤防空伏擊)的「非正規路線」判定半徑(2026-07-12):
+  // **稍微偏離主要路線不該被打到** ⇒ 觸發與佈設淨空一律用這個(遠大於走廊半寬 45),
+  // 且雷區/陣地另外避開主堡、重生點與砲塔。MUST NOT 改回用 LANE_SAFE_M 當伏擊閘門。
+  AMBUSH_M: 110,
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
   // CUT_BIAS/CUT_R:偏向佈在兵線轉角外圍的「切彎捷徑」帶 — 抄直線省時間 = 承擔雷區風險
-  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10, LANE_CLEAR: 40, BASE_CLEAR: 150,
+  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10,
+           LANE_CLEAR: 115,            // > AMBUSH_M:走廊 + 緩衝帶內絕不佈雷(含雷體半徑 R)
+           BASE_CLEAR: 260,            // > 主堡補血半徑 160 + 重生點外推 45 + 緩衝
+           TOWER_CLEAR: 90,            // 砲塔周邊淨空(塔下不佈雷)
            SEE_M: 30, CLEAR_M: 14,     // 客戶端:SEE_M 內開始浮現,CLEAR_M 內完全可見
            CUT_BIAS: 0.5, CUT_R: 70 },
   // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀。
@@ -1087,7 +1111,9 @@ export const FIELD = {
   TURN_R: 90,            // 轉角錨定的沿線散布半徑(m)
   MID_BIAS: 0.5,         // 難度梯度(D1 越深越難):均勻散布中此比例改用三角分布向兵線中段聚攏
   AA_SITES_PER_LANE: 3,  // 匿蹤防空陣地 / 兵線
-  AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 260, laneMin: 60, laneMax: 240, spacing: 130 },
+  // laneMin 130 > GAME.AMBUSH_M(110):陣地不會蹲在走廊邊緣;towerClear 讓它離砲塔一段距離
+  AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 260, laneMin: 130, laneMax: 300, spacing: 130,
+             baseClear: 260, towerClear: 90 },
   // 偵察中繼站(D1 神龕思想:非正規路線上的一次性正向誘因)——
   // 停留 CHANNEL_S 秒佔用 → 全隊 VISION_S 秒無霧視野;先到先得,用過即毀。
   RELAY: { name: '偵察中繼站', PER_LANE: 1, R: 14, CHANNEL_S: 3, VISION_S: 18,

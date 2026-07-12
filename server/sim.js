@@ -101,7 +101,9 @@ export class BattleSim {
       minX = Math.min(minX, x); maxX = Math.max(maxX, x);
       minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
     }
-    minX -= 120; maxX += 120; minZ -= 120; maxZ += 120;
+    // 取樣框外擴 > LANE_CLEAR:淨空條件收緊(走廊 115 / 主堡 260 / 塔 90)後,
+    // 貼著兵線的舊框(+120)幾乎每個候選點都被打回票 → 佈雷數湊不滿
+    minX -= 220; maxX += 220; minZ -= 220; maxZ += 220;
     // 兵線轉角座標:CUT_BIAS 比例的地雷佈在轉角外圍的「切彎捷徑」帶 —
     // 機甲抄直線切彎省時間 = 承擔雷區風險(限制行動但不封鎖,走廊永遠安全)
     const turnPts = [];
@@ -110,7 +112,7 @@ export class BattleSim {
       for (const d of this._laneTurns(li)) turnPts.push(pointAt(this.lanes[li], cum, d));
     }
     const want = M.PER_LANE * this.lanes.length;
-    for (let tries = 0; tries < want * 30 && this.mines.length < want; tries++) {
+    for (let tries = 0; tries < want * 80 && this.mines.length < want; tries++) {
       let x, z;
       if (turnPts.length && Math.random() < M.CUT_BIAS) {
         const [tx, tz] = turnPts[Math.floor(Math.random() * turnPts.length)];
@@ -122,14 +124,26 @@ export class BattleSim {
         z = minZ + Math.random() * (maxZ - minZ);
       }
       if (!this._inBounds(x, z)) continue;                        // 不落在地形外/空氣牆外
-      if (this._distToLanes(x, z) < M.LANE_CLEAR) continue;       // 兵線走廊淨空
-      let nearBase = false;
-      for (const side of ['SWARM', 'STEEL']) {
-        const [bx, bz] = this.basePos[side];
-        if (dist2d(x, z, bx, bz) < M.BASE_CLEAR) { nearBase = true; break; }
-      }
-      if (!nearBase) this.mines.push([x, z, nextEntId++]);
+      if (this._distToLanes(x, z) < M.LANE_CLEAR) continue;       // 兵線走廊 + 緩衝帶淨空
+      if (!this._farFromStructures(x, z, M.BASE_CLEAR, M.TOWER_CLEAR)) continue;   // 主堡/重生點/砲塔淨空
+      this.mines.push([x, z, nextEntId++]);
     }
+  }
+
+  /**
+   * 第三方打擊(地雷 / 防空陣地)的結構物淨空:主堡(含外推的重生點,baseClear
+   * 已涵蓋 HERO_SPAWN_OFF)與所有砲塔。回 true = 這個點離得夠遠,可以佈設。
+   */
+  _farFromStructures(x, z, baseClear, towerClear) {
+    for (const side of ['SWARM', 'STEEL']) {
+      const [bx, bz] = this.basePos[side];
+      if (dist2d(x, z, bx, bz) < baseClear) return false;
+    }
+    for (const e of this.ents.values()) {
+      if (e.kind !== 'tower') continue;
+      if (dist2d(x, z, e.x, e.z) < towerClear) return false;
+    }
+    return true;
   }
 
   /** 兵線轉角(戰術要點)沿線距離清單;與客戶端選路評分共用 laneTacticsXZ 判定 */
@@ -253,13 +267,9 @@ export class BattleSim {
       const off = S.laneMin + Math.random() * (S.laneMax - S.laneMin);
       const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
       if (!this._inBounds(x, z, 6)) continue;
-      if (this._distToLanes(x, z) < S.laneMin) continue;
-      let bad = false;
-      for (const side of ['SWARM', 'STEEL']) {
-        const [bx, bz] = this.basePos[side];
-        if (dist2d(x, z, bx, bz) < FIELD.HAZ_BASE_CLEAR) { bad = true; break; }
-      }
-      if (bad || sites.some(([sx, sz]) => dist2d(x, z, sx, sz) < S.spacing)) continue;
+      if (this._distToLanes(x, z) < S.laneMin) continue;                        // 走廊 + 緩衝帶淨空
+      if (!this._farFromStructures(x, z, S.baseClear, S.towerClear)) continue;  // 主堡/重生點/砲塔淨空
+      if (sites.some(([sx, sz]) => dist2d(x, z, sx, sz) < S.spacing)) continue;
       sites.push([x, z]);
       this._add({ kind: 'aasite', side: null, neutral: true, x, z, hp: S.hp, sc: 1 });
     }
@@ -378,24 +388,41 @@ export class BattleSim {
       const [x, z] = this.basePos[side];
       this._add({ kind: 'base', side, x, z, hp: UNITS.base.hp });
     }
+    // 塔距守衛:兵線可能 90°(或更銳)急彎 ⇒ 沿線距離拉得再開,兩座敵對塔的**直線距離**
+    // 仍可能落在彼此射程內。做法 —— 先按 TOWER_FRACS 算出塔位,再逐塔往己方主堡收
+    // (每次 −0.01 frac),直到與**所有**敵方塔的直線距離 > tower.range × TOWER_SEP_F。
+    // MUST 用直線距離判定,沿線距離會被急彎騙過去。
+    const SEP = UNITS.tower.range * GAME.TOWER_SEP_F;
+    const site = (li, side, frac) => {
+      const pts = this.lanes[li], cum = cumLen(pts), total = cum[cum.length - 1];
+      const d = side === 'SWARM' ? total * frac : total * (1 - frac);
+      const [x, z] = pointAt(pts, cum, d);
+      const [ax, az] = pointAt(pts, cum, Math.max(0, d - 1));
+      const [bx, bz] = pointAt(pts, cum, Math.min(total, d + 1));
+      const len = Math.hypot(bx - ax, bz - az) || 1;
+      return { x, z, nx: (bz - az) / len, nz: -(bx - ax) / len };
+    };
+    // 左右兩座塔各偏移 TOWER_SIDE_OFF ⇒ 兩個塔位中心的最壞塔對塔距離要再讓開 2×
+    const need = SEP + GAME.TOWER_SIDE_OFF * 2;
+    const placed = [];   // { side, x, z }:已定案的塔位中心
     for (let li = 0; li < this.lanes.length; li++) {
-      const pts = this.lanes[li];
-      const cum = cumLen(pts);
-      const total = cum[cum.length - 1];
-      for (const side of ['SWARM', 'STEEL']) {
-        for (const frac of GAME.TOWER_FRACS) {
-          // 塔位:距「己方端」frac 比例(SWARM 端是折線起點)
-          const d = side === 'SWARM' ? total * frac : total * (1 - frac);
-          const [x, z] = pointAt(pts, cum, d);
-          // 兵線切線的法向量:塔蓋在路的左右兩側,不擋走廊
-          const [ax, az] = pointAt(pts, cum, Math.max(0, d - 1));
-          const [bx, bz] = pointAt(pts, cum, Math.min(total, d + 1));
-          const len = Math.hypot(bx - ax, bz - az) || 1;
-          const nx = (bz - az) / len, nz = -(bx - ax) / len;
+      for (const frac0 of GAME.TOWER_FRACS) {
+        // 雙方同步後退(對稱):任一側單獨退會讓地圖偏心
+        let frac = frac0, pS = site(li, 'SWARM', frac), pT = site(li, 'STEEL', frac);
+        const clash = () => dist2d(pS.x, pS.z, pT.x, pT.z) < need
+          || placed.some((q) => (q.side === 'STEEL' && dist2d(pS.x, pS.z, q.x, q.z) < need)
+                             || (q.side === 'SWARM' && dist2d(pT.x, pT.z, q.x, q.z) < need));
+        while (frac > GAME.TOWER_MIN_FRAC && clash()) {
+          frac -= 0.01;
+          pS = site(li, 'SWARM', frac);
+          pT = site(li, 'STEEL', frac);
+        }
+        for (const [side, p] of [['SWARM', pS], ['STEEL', pT]]) {
+          placed.push({ side, x: p.x, z: p.z });
           for (const s of [-1, 1]) {
             this._add({
               kind: 'tower', side, lane: li, hp: UNITS.tower.hp,
-              x: x + nx * GAME.TOWER_SIDE_OFF * s, z: z + nz * GAME.TOWER_SIDE_OFF * s,
+              x: p.x + p.nx * GAME.TOWER_SIDE_OFF * s, z: p.z + p.nz * GAME.TOWER_SIDE_OFF * s,
             });
           }
         }
@@ -1390,7 +1417,7 @@ export class BattleSim {
       h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
       if (h.aaCd > 0) continue;
       if ((h.stealthUntil || 0) > this.t) continue;                    // 匿蹤中不被伏擊鎖定
-      if (this._distToLanes(h.x, h.z) <= GAME.LANE_SAFE_M) continue;   // 走廊內安全
+      if (this._distToLanes(h.x, h.z) <= GAME.AMBUSH_M) continue;   // 走廊 + 緩衝帶內安全(稍微偏離不吃伏擊)
       if (Math.random() > A.CHANCE_PER_S * dt) continue;
       sites ??= [...this.ents.values()].filter((e) => e.kind === 'aasite');
       let best = null, bestD = Infinity;
@@ -1560,7 +1587,10 @@ export class BattleSim {
     for (const t of this.ents.values()) {
       if (t.side === e.side || t.neutral || t.hp <= 0) continue;   // 中立障礙不當目標
       if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) continue;   // 匿蹤英雄不被鎖定
-      if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph') && (t.y || 0) > u.range * 0.9) continue; // 高空飛行單位難鎖定
+      // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
+      // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
+      if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
+        && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) continue;
       let d = dist2d(e.x, e.z, t.x, t.z);
       if (d > u.range) continue;
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
