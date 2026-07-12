@@ -31,14 +31,16 @@ export const MODEL_MANIFEST = Object.assign({
 // 公稱尺寸,不再有超尺度倍率(舊制步兵 3.2m,建物/植被便得靠 biomes.js OVER ×1.8 補回比例)。
 export const SOLDIER_H = 1.8;
 
-// 機甲 3~5×、無人機 1~2× 步兵,倍率隨 mods.armor 在該機種的護甲區間內插:
+// 機體尺寸(2026-07-12 改制,相對真人身高):
+//   機甲 / 變形機甲(不分型態)= 150%~250%、無人機 = 75%~150%。
+// 倍率仍隨 mods.armor 在該機種護甲區間內線性內插:
 // 高防禦 = 更巨大 = 剪影更大 = 更容易被命中(命中是客戶端對 mesh raycast,體型直接生效)。
 const HERO_SIZE = {
-  robot: { armor: [12, 26], mul: [3, 5] },
-  morph: { armor: [5, 24], mul: [3, 5] },
-  drone: { armor: [3, 12], mul: [1, 2] },
+  robot: { armor: [12, 26], mul: [1.5, 2.5] },
+  morph: { armor: [5, 24], mul: [1.5, 2.5] },
+  drone: { armor: [3, 12], mul: [0.75, 1.5] },
 };
-const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)
+const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)—— 但不得跌破機種下限
 // 變形機甲的人形地面型(vis.ground):其餘值一律四足獸型
 export const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
 
@@ -50,10 +52,11 @@ export function heroTargetH(kind, ch) {
   const armor = c?.mods?.armor;
   const t = armor == null ? 0.5 : clamp01((armor - S.armor[0]) / (S.armor[1] - S.armor[0]));
   const h = SOLDIER_H * (S.mul[0] + (S.mul[1] - S.mul[0]) * t);
-  // 獸型矮化:機甲看 visual.form;變形機甲看 visual.ground(非人形即四足獸,體長換高度)
+  // 獸型矮化:機甲看 visual.form;變形機甲看 visual.ground(非人形即四足獸,體長換高度)。
+  // 矮化後 MUST 夾回機種區間下限 —— 機甲/變形機甲不分型態都要 ≥ 150% 真人身高。
   const quad = c?.visual?.form === 'beast'
     || (c?.visual?.ground && !MORPH_HUMANOID.has(c.visual.ground));
-  return quad ? h * BEAST_H_F : h;
+  return quad ? Math.max(SOLDIER_H * S.mul[0], h * BEAST_H_F) : h;
 }
 
 // 非英雄單位顯示高度(公尺;fitToHeight 自動縮放)。人員/載具 = 真實世界尺寸;

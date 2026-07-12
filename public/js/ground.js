@@ -412,16 +412,34 @@ const PAINTERS = {
     g.strokeRect(S / 2 - 28, m, 56, 34);                                     // 兩端禁區
     g.strokeRect(S / 2 - 28, S - m - 34, 56, 34);
   },
-  track(g, S, rnd) {                                   // 跑道:紅 PU + 白分道線(fit)
-    g.fillStyle = vary(0xb85a44, rnd, 8); g.fillRect(0, 0, S, S);
+  track(g, S, rnd) {                                   // 操場:完整一圈 PU 跑道(直道 + 兩端彎道)+ 內場草皮(fit)
+    // 跑道是「環」不是「條」:外緣圓角矩形 → 內場草皮 → 白分道線沿整圈繞行。
+    // canvas 為正方,rect 以 aspect 0.5 貼上 → 畫面上自然拉成真實操場的長橢圓。
+    const ring = (inset, r) => {                        // 圓角矩形路徑(跑道等距內縮 = 一條分道線)
+      g.beginPath();
+      g.moveTo(inset + r, inset);
+      g.lineTo(S - inset - r, inset);
+      g.arcTo(S - inset, inset, S - inset, inset + r, r);
+      g.lineTo(S - inset, S - inset - r);
+      g.arcTo(S - inset, S - inset, S - inset - r, S - inset, r);
+      g.lineTo(inset + r, S - inset);
+      g.arcTo(inset, S - inset, inset, S - inset - r, r);
+      g.lineTo(inset, inset + r);
+      g.arcTo(inset, inset, inset + r, inset, r);
+      g.closePath();
+    };
+    g.fillStyle = vary(0x6f8a52, rnd, 6); g.fillRect(0, 0, S, S);            // 場外草地
+    const OUT = 10, LANES = 6, LW = 12;                 // 外緣內縮 / 分道數 / 單道寬
+    g.fillStyle = vary(0xb85a44, rnd, 8);
+    ring(OUT, 52); g.fill();                            // PU 跑道環(外緣)
     g.fillStyle = 'rgba(255,255,255,0.06)';
-    for (let i = 0; i < 60; i++) g.fillRect(rnd() * S, rnd() * S, 2, 2);     // PU 顆粒
-    g.strokeStyle = '#f2f4f0'; g.lineWidth = 2;
-    for (let x = 16; x < S; x += 32) {
-      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, S); g.stroke();
-    }
-    g.lineWidth = 4;                                    // 起跑線
-    g.beginPath(); g.moveTo(0, S - 20); g.lineTo(S, S - 20); g.stroke();
+    for (let i = 0; i < 80; i++) g.fillRect(rnd() * S, rnd() * S, 2, 2);     // PU 顆粒
+    g.fillStyle = vary(0x5f8f46, rnd, 6);
+    ring(OUT + LANES * LW, 52 - LANES * LW * 0.6); g.fill();                 // 內場草皮(足球場)
+    g.strokeStyle = '#f2f4f0'; g.lineWidth = 2;                              // 分道線:整圈繞行
+    for (let k = 0; k <= LANES; k++) { ring(OUT + k * LW, Math.max(6, 52 - k * LW * 0.6)); g.stroke(); }
+    g.lineWidth = 4;                                    // 起跑/終點線:橫跨直道
+    g.beginPath(); g.moveTo(S * 0.72, OUT); g.lineTo(S * 0.72, OUT + LANES * LW); g.stroke();
   },
   marsh(g, S, rnd) {                                   // 濕地泥灘:積水塊 + 蘆葦筆觸
     g.fillStyle = vary(0x63604a, rnd); g.fillRect(0, 0, S, S);

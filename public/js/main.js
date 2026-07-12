@@ -14,7 +14,7 @@ import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
-import { buildBiomes } from './biomes.js';
+import { buildBiomes, makeDeckIndex } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -23,6 +23,7 @@ import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'room', 'loading', 'game'];
+const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
 
 const app = {
   net: null,
@@ -811,6 +812,16 @@ async function enterLoading(cfg) {
     app.terrain.group.add(biomes);
     app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     app.terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
+    // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
+    const deckY = makeDeckIndex(biomes.userData.decks);
+    app.terrain.deckY = deckY;
+    app.terrain.surfaceAt = (x, z, curY) => {
+      const h = app.terrain.heightAt(x, z);
+      if (curY == null) return h;
+      const d = deckY(x, z);
+      return (d != null && d > h && curY >= d - DECK_STEP) ? d : h;
+    };
     const st = biomes.userData.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
       `${st.roads ? `・道路 ${st.roads} 段` : ''}${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);

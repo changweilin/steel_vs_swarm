@@ -1627,6 +1627,8 @@ const ROAD_W = {
   pedestrian: 4, track: 3.5, footway: 2.4, path: 2.2,
 };
 const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
+// 橋面/地下道的最小通行寬度(遊戲公尺):機甲碰撞直徑約 4~5m,兩台並行 + 小兵夾縫仍有餘裕
+const PASS_W = 16;
 function roadWidth(tags) {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
@@ -1799,19 +1801,29 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   // 高架橋構件:欄杆(直立緞帶幾何)+ 橋墩(InstancedMesh);地下道門洞(隧道端點)
   const rail = { pos: [], nrm: [], idx: [], base: 0 };
   const piers = [], portals = [];
+  // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)
+  const wall = { pos: [], nrm: [], idx: [], base: 0 };
+  const beams = [];
+  // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
+  const decks = [];
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
   const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
   const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
   let built = 0;
   for (const way of roads) {
-    if (way.tags.tunnel) {
-      // 地下道路面不畫(藏在地形下),但在進出口立隧道門洞 —— 向玩家解釋
-      // 「這條路鑽進山裡了」;僅山體端(入口後方地勢明顯抬升)才立,
-      // 平地下穿的都會地下道沒有門臉可立,略過
+    const main = MAIN_HW.test(way.tags.highway);
+    const arterial = /^(motorway|trunk|primary)$/.test(way.tags.highway);   // 幹道:雙黃實線
+    const bridge = !!way.tags.bridge;
+    const tunnel = !!way.tags.tunnel;
+    // 橋樑/地下道是「可站上去、可穿過去」的結構物(兵線可能就走在上面):
+    // 路寬夾到 PASS_W 以上,NPC 與玩家並肩通過不互相卡住。
+    const hw = Math.max(roadWidth(way.tags) / 2, (bridge || tunnel) ? PASS_W / 2 : 0);
+    if (tunnel) {
+      // 地下道 = 開挖式(cut-and-cover)通道:路面仍貼地(地形是高程場,沒有「地下」可鑽),
+      // 兩側立擋土牆、上方跨橫樑,山體端再立門洞 —— 玩家與 NPC 實際走得進去。
       const gpts = way.geometry;
       if (gpts.length >= 2) {
-        const phw = roadWidth(way.tags) / 2;
         for (const [eIdx, nIdx] of [[0, 1], [gpts.length - 1, gpts.length - 2]]) {
           if (portals.length >= 10) break;
           const [ex, ez] = llToWorld(gpts[eIdx].lat, gpts[eIdx].lon, center);
@@ -1823,17 +1835,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
           const hE = terrain.heightAt(ex, ez);
           if (hE < 0.4) continue;
           if (terrain.heightAt(ex + dIn[0] * 14, ez + dIn[1] * 14) < hE + 2.2) continue;
-          portals.push({ x: ex, z: ez, y: hE, ry: Math.atan2(-dIn[0], -dIn[1]), w: phw * 2 + 2 });
+          portals.push({ x: ex, z: ez, y: hE, ry: Math.atan2(-dIn[0], -dIn[1]), w: hw * 2 + 2 });
         }
       }
-      continue;
     }
-    const main = MAIN_HW.test(way.tags.highway);
-    const arterial = /^(motorway|trunk|primary)$/.test(way.tags.highway);   // 幹道:雙黃實線
-    const hw = roadWidth(way.tags) / 2;
-    const bridge = !!way.tags.bridge;
-    // 路口統計(車行道才算;步道/小徑不設斑馬線紅綠燈)
-    if (hw >= 2 && !way.tags.bridge) {
+    // 路口統計(車行道才算;步道/小徑不設斑馬線紅綠燈;橋/地下道不設)
+    if (hw >= 2 && !bridge && !tunnel) {
       const n = way.geometry.length;
       for (let i = 0; i < n; i++) {
         const gpt = way.geometry[i];
@@ -1927,6 +1934,42 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         const l = Math.hypot(dx, dz) || 1;
         return [x, z, dx / l, dz / l];
       };
+      // ---- 橋面碰撞面:每個路面小段登記成可站立平台(game.js 表面高度取樣用)----
+      if (bridge) {
+        for (let i = 0; i < nP - 1; i++) {
+          decks.push({
+            x1: run[i][0], z1: run[i][1], y1: deckAt(cum[i], run[i][0], run[i][1]),
+            x2: run[i + 1][0], z2: run[i + 1][1], y2: deckAt(cum[i + 1], run[i + 1][0], run[i + 1][1]),
+            hw,
+          });
+        }
+      }
+      // ---- 地下道外觀:兩側擋土牆(直立緞帶)+ 跨越橫樑(開挖式通道,頂上留縫透光)----
+      if (tunnel && total > 8) {
+        const wallY = (i) => Math.max(terrain.heightAt(run[i][0], run[i][1]), 0) + ROAD_LIFT;
+        for (const side of [1, -1]) {
+          const k0 = wall.base;
+          for (let i = 0; i < nP; i++) {
+            const [x, z] = run[i];
+            const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
+            let dx = c[0] - a[0], dz = c[1] - a[1];
+            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+            const vx = x + dz * (hw + 0.5) * side, vz = z - dx * (hw + 0.5) * side;
+            const y0 = wallY(i);
+            wall.pos.push(vx, y0 - 0.4, vz, vx, y0 + 4.0, vz);
+            wall.nrm.push(-dz * side, 0, dx * side, -dz * side, 0, dx * side);   // 法線朝道路內側
+          }
+          for (let i = 0; i < nP - 1; i++) {
+            const k = k0 + i * 2;
+            wall.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+          }
+          wall.base += nP * 2;
+        }
+        for (let s = 6; s < total - 4 && beams.length < 90; s += 13) {
+          const [ex, ez, ddx, ddz] = at(s);
+          beams.push({ x: ex, z: ez, y: terrain.heightAt(ex, ez) + 6.6, ry: Math.atan2(ddx, ddz), w: hw * 2 + 2 });
+        }
+      }
       // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 等間距橋墩落地 ----
       if (bridge && total > 10) {
         for (const side of [1, -1]) {
@@ -2100,6 +2143,33 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     m.userData.noOutline = true;
     group.add(m);
   }
+  // ---- 地下道擋土牆(直立緞帶,雙面)+ 橫樑 ----
+  if (wall.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(wall.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(wall.nrm, 3));
+    geo.setIndex(wall.idx);
+    const m = new THREE.Mesh(geo, envMat(0x8f8b83, { wash: 0.4, cool: 0.4, side: THREE.DoubleSide }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  if (beams.length) {
+    const bM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.7, 1.4),
+      envMat(0x9a958c, { wash: 0.35, cool: 0.45 }), beams.length);
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+    const P = new THREE.Vector3(), S = new THREE.Vector3();
+    beams.forEach((b, i) => {
+      E.set(0, b.ry, 0); Q.setFromEuler(E);
+      P.set(b.x, b.y, b.z);
+      S.set(b.w, 1, 1);
+      M.compose(P, Q, S);
+      bM.setMatrixAt(i, M);
+    });
+    bM.instanceMatrix.needsUpdate = true;
+    bM.frustumCulled = false;
+    group.add(bM);
+  }
   // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh,純視覺不登記碰撞)----
   if (piers.length) {
     const pM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.18, 1, 8),
@@ -2159,7 +2229,47 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     { g: ico(1.6).scale(1, 0.85, 1), y: 3.7, c: leafC },
     { g: ico(1.0).scale(1, 0.8, 1), y: 4.9, c: leafC },
   ], roadTrees);
-  return built;
+  return { built, decks };
+}
+
+/**
+ * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
+ * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
+ */
+export function makeDeckIndex(decks) {
+  if (!decks?.length) return () => null;
+  const CELL = 16;
+  const grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  decks.forEach((d, n) => {
+    const pad = d.hw + 2;
+    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
+    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const k = key(i, j);
+        let arr = grid.get(k);
+        if (!arr) { arr = []; grid.set(k, arr); }
+        arr.push(n);
+      }
+    }
+  });
+  return (x, z) => {
+    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+    if (!arr) return null;
+    let best = null;
+    for (const n of arr) {
+      const d = decks[n];
+      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+      const len2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - d.x1) * ex + (z - d.z1) * ez) / len2));
+      const px = d.x1 + ex * t, pz = d.z1 + ez * t;
+      if (Math.hypot(x - px, z - pz) > d.hw) continue;   // 不在橋面上(側向出界)
+      const y = d.y1 + (d.y2 - d.y1) * t;
+      if (best === null || y > best) best = y;
+    }
+    return best;
+  };
 }
 
 // ---- 鐵路 / 捷運(圖資 way):道碴 + 雙軌 + 行駛中的低多邊形列車 ----
@@ -3363,7 +3473,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
-  const roadsBuilt = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
+  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
+  const roadsBuilt = roadRes.built;
+  group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   // 道路穿出空氣牆處 → 車禍/施工/巨坑封路事件(合成兵線不出界,自然為 0)
   const roadBlockN = buildRoadBlocks(group, roadInput, terrain, center, blockers, rnd);
 

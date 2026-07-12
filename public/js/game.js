@@ -118,6 +118,46 @@ const heroView = (kind, ch, flying) => {
   return VIEW_SHAPE[vis.proto || vis.creature || vis.ground] || VIEW_DEF;
 };
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
+
+// ---- 敵方標示:走進視野的敵人頭上掛「對方陣營主視覺」的下指箭頭(spotted marker)----
+// 主視覺 = 陣營識別色 + 徽記幾何(STEEL 鋼鐵三角 / SWARM 蜂群倒三角,同 logo 語彙)。
+// 迷霧是伺服器過濾的:快照裡出現 = 已進入視野,所以「有 mesh 就該有標示」。
+const _markTex = new Map();
+function factionMarkTex(side) {
+  if (_markTex.has(side)) return _markTex.get(side);
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const col = SIDES[side].color;
+  const tri = (cx, cy, r, up) => {                 // 陣營徽記:鋼鐵正三角 / 蜂群倒三角
+    g.beginPath();
+    for (let k = 0; k < 3; k++) {
+      const a = (up ? -Math.PI / 2 : Math.PI / 2) + k * Math.PI * 2 / 3;
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      k ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.closePath();
+  };
+  g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(10,14,18,0.9)';
+  g.fillStyle = col;
+  g.lineWidth = 7;
+  g.beginPath();                                   // 下指箭頭本體(V 形楔子)
+  g.moveTo(20, 46); g.lineTo(64, 108); g.lineTo(108, 46);
+  g.lineTo(86, 46); g.lineTo(64, 76); g.lineTo(42, 46);
+  g.closePath();
+  g.stroke(); g.fill();
+  tri(64, 26, 22, side === 'STEEL');               // 徽記懸在箭頭上方
+  g.stroke(); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,0.85)';        // 內描白邊:暗底/亮底都讀得出來
+  g.lineWidth = 2;
+  g.stroke();
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  _markTex.set(side, t);
+  return t;
+}
 // 副視窗(PiP):無人機僚機視角 / 機甲餌機視角
 // 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
 const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
@@ -258,19 +298,116 @@ export class BattleClient {
     this.raycaster = new THREE.Raycaster();
   }
 
-  /** 三條兵線畫在地形上(發光折線) */
+  /**
+   * 站得住的表面高度 = 地形 ∪ 高架橋面(main.js 掛上的 terrain.surfaceAt)。
+   * curY = 該物體目前的高度:高過橋面一個台階內 → 站在橋上;更低 → 從橋下經過踩地形。
+   * 玩家物理、位置回報、NPC/敵機貼地渲染全走這一個縫。
+   */
+  _surf(x, z, curY) {
+    return this.terrain.surfaceAt ? this.terrain.surfaceAt(x, z, curY) : this.terrain.heightAt(x, z);
+  }
+
+  /**
+   * 兵線指引:不畫連續線,改成沿線的 3D 浮空箭頭(指向敵方主堡)。
+   * 佈點規則 —— 直線段每 ARROW_GAP 一支;航向變化 > TURN_RAD 的轉角「一定」有一支;
+   * 任兩支間距不得小於 MIN_GAP(轉角優先,擠掉太近的等距箭頭)= 不會連成一條蜈蚣。
+   */
   _initLanes() {
+    const ARROW_GAP = 55, MIN_GAP = 26, TURN_RAD = 0.22;
     this.lanePts = this.cfg.lanes.map((lane) => lane.map(([lat, lng]) => {
       const [x, z] = llToWorld(lat, lng, this.center);
       return new THREE.Vector3(x, this.terrain.heightAt(x, z) + 2, z);
     }));
-    this.lanePts.forEach((pts, i) => {
-      const geo = new THREE.BufferGeometry().setFromPoints(pts);
-      const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
-        color: LANE_COLORS[i], transparent: true, opacity: 0.65,
-      }));
-      this.scene.add(line);
+    // 前進方向 = 朝敵方主堡(觀戰者沿用圖資方向)
+    const foe = this.side === 'SWARM' ? 'STEEL' : 'SWARM';
+    const fb = this.cfg.bases?.[this.side ? foe : 'STEEL'];
+    const foeW = fb ? llToWorld(fb[0], fb[1], this.center) : null;
+
+    this.laneArrows = [];
+    this.lanePts.forEach((raw, li) => {
+      const pts = raw.map((p) => [p.x, p.z]);
+      if (foeW && Math.hypot(pts[0][0] - foeW[0], pts[0][1] - foeW[1])
+                < Math.hypot(pts[pts.length - 1][0] - foeW[0], pts[pts.length - 1][1] - foeW[1])) pts.reverse();
+      const n = pts.length;
+      if (n < 2) return;
+      const cum = [0];
+      for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const total = cum[n - 1];
+      const at = (s) => {                       // 沿線取樣:回傳 [x, z, dx, dz]
+        let i = 1;
+        while (i < n - 1 && cum[i] < s) i++;
+        const f = (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+        let dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1];
+        const l = Math.hypot(dx, dz) || 1;
+        return [pts[i - 1][0] + dx * f, pts[i - 1][1] + dz * f, dx / l, dz / l];
+      };
+      // ① 轉角(優先佔位)
+      const stations = [];
+      for (let i = 1; i < n - 1; i++) {
+        const a = Math.atan2(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+        const b = Math.atan2(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+        const turn = Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
+        if (turn < TURN_RAD) continue;
+        if (stations.length && cum[i] - stations[stations.length - 1] < MIN_GAP * 0.6) continue;   // 連續彎不塞爆
+        stations.push(cum[i]);
+      }
+      // ② 直線段等距補點(離任何轉角箭頭太近就略過)
+      const turns = stations.slice();
+      for (let s = ARROW_GAP * 0.5; s < total - 8; s += ARROW_GAP) {
+        if (turns.some((t) => Math.abs(t - s) < MIN_GAP)) continue;
+        stations.push(s);
+      }
+      stations.sort((a, b) => a - b);
+      if (!stations.length) return;
+
+      const items = stations.map((s, k) => {
+        const [x, z, dx, dz] = at(s);
+        return { x, z, ry: Math.atan2(dx, dz), ph: k * 0.7 };
+      });
+      const color = LANE_COLORS[li % LANE_COLORS.length];
+      // 扁平箭鏃(幾何朝 +z,與 ry 慣例一致):沿線推進的玩家從後方看到的是箭的「上表面」,
+      // 立體角錐從背面看只會變成一個菱形 —— 壓扁 + 抬頭(ARROW_PITCH)才讀得出方向。
+      const head = new THREE.ConeGeometry(2.4, 5.0, 4).rotateX(Math.PI / 2).scale(1, 0.34, 1);
+      const shaft = new THREE.BoxGeometry(1.4, 0.42, 4.0).translate(0, 0, -3.6);
+      const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.78, depthWrite: false });
+      const im = [new THREE.InstancedMesh(head, mat(), items.length),
+                  new THREE.InstancedMesh(shaft, mat(), items.length)];
+      for (const m of im) {
+        m.frustumCulled = false;
+        m.renderOrder = 3;
+        m.userData.noOutline = true;
+        this.scene.add(m);
+      }
+      this.laneArrows.push({ im, items });
     });
+    this._arrowM = new THREE.Matrix4();
+    this._arrowQ = new THREE.Quaternion();
+    this._arrowE = new THREE.Euler(0, 0, 0, 'YXZ');   // 先轉向(Y)再抬頭(X):抬頭軸恆垂直於前進方向
+    this._arrowP = new THREE.Vector3();
+    this._arrowS = new THREE.Vector3(1, 1, 1);
+  }
+
+  /** 兵線箭頭動畫:沿前進方向脈動前送 + 上下浮沉(每支相位錯開 = 流動感) */
+  _updateLaneArrows(now) {
+    if (!this.laneArrows?.length) return;
+    const M = this._arrowM, Q = this._arrowQ, E = this._arrowE, P = this._arrowP, S = this._arrowS;
+    for (const la of this.laneArrows) {
+      la.items.forEach((it, i) => {
+        const t = now * 1.6 + it.ph;
+        const flow = (Math.sin(t) * 0.5 + 0.5) * 2.4;           // 沿前進方向推進 0~2.4m
+        const bob = Math.sin(t * 0.8) * 0.6;
+        const x = it.x + Math.sin(it.ry) * flow, z = it.z + Math.cos(it.ry) * flow;
+        const y = this._surf(x, z, Infinity) + 6.4 + bob;   // 兵線走上高架橋 → 箭頭浮在橋面上方
+        E.set(-0.42, it.ry, 0); Q.setFromEuler(E);          // 抬頭 24°:箭面朝向後方跟上來的玩家
+        P.set(x, y, z);
+        S.setScalar(0.9 + 0.12 * Math.sin(t));
+        M.compose(P, Q, S);
+        la.im[0].setMatrixAt(i, M);
+        la.im[1].setMatrixAt(i, M);
+      });
+      la.im[0].instanceMatrix.needsUpdate = true;
+      la.im[1].instanceMatrix.needsUpdate = true;
+    }
   }
 
   // ---------------- FPV 座艙(角色專屬:依 CHARACTERS[ch].visual 差異化,3D 賽璐璐)----------------
@@ -314,6 +451,9 @@ export class BattleClient {
     this.cockAir = null;      // 變形機甲:飛行型態組件
     this._cockT = 0;
     this.gunGroup = new THREE.Group();
+
+    // 人類駕駛艙罩:全機種共通(座艙裡坐的是人),機體自身結構一律在艙框之外
+    this._cockCanopy(g, mk, accent, vis);
 
     // 座艙 builder 回傳「這具機體的武器掛點錨」—— 只有它知道自己的頭顱/機翼/手臂在哪
     let anchors;
@@ -677,10 +817,9 @@ export class BattleClient {
     return { body: { x: 0.2, y: -0.34, z: -0.7, s: 1.0 } };
   }
 
-  /** 機甲座艙:人形(proto)= 艙框 + 原型專屬結構;獸型(creature)= 依座位看出去。回傳武器掛點錨 */
+  /** 機甲座艙(艙罩已由 _cockCanopy 建好):人形 = 原型專屬結構;獸型 = 依座位看到自己的頭。回傳掛點錨 */
   _buildMechCockpit(g, mk, accent, vis) {
     if (vis.proto || !vis.creature) {
-      this._cockMechFrame(g, mk, accent, vis);
       this._cockProto(g, mk, accent, vis.proto);
       return { hand: { x: 0.5, y: -0.36, z: -1.0, s: 1.4 } };   // 人形:右手持械
     }
@@ -767,23 +906,12 @@ export class BattleClient {
       : this._cockSkull(g, mk, accent, creature);
   }
 
-  /** 頭部艙(體軸直立:猩猩/袋鼠/章魚):從自己的頭殼內看出去 —— 眉骨、頰骨、吻部、獠牙 */
+  /**
+   * 頭部艙(體軸直立:猩猩/袋鼠/章魚):駕駛艙在顱腔,**隔著艙罩**看到自己的吻部/獠牙/觸手
+   * 在前下方(艙框本身由 _cockCanopy 提供 —— 座艙裡坐的是人,不是獸的眼窩)。
+   */
   _cockSkull(g, mk, accent, creature) {
     const bone = 0x4b545e, hard = 0x5b6772, tooth = 0xe4e9ee;
-    // 貼邊即可:z=-0.9 處畫面半高 0.61 / 半寬 1.05,件再往內就會吃掉戰場視野。
-    const brow = mk(new THREE.BoxGeometry(1.9, 0.14, 0.4), hard);
-    brow.position.set(0, 0.66, -0.9);
-    brow.rotation.x = -0.2;
-    g.add(brow);
-    for (const sx of [-1, 1]) {
-      const cheek = mk(new THREE.BoxGeometry(0.14, 1.2, 0.3), bone);
-      cheek.position.set(sx * 1.02, -0.05, -0.9);
-      cheek.rotation.z = sx * -0.16;
-      g.add(cheek);
-      const led = mk(new THREE.BoxGeometry(0.05, 0.24, 0.05), accent, { emissive: accent, emissiveIntensity: 1.2 });
-      led.position.set(sx * 0.94, 0.3, -0.8);
-      g.add(led);
-    }
     const jaw = (w, h, len, z = -1.25, y = -0.62) => {
       const m = mk(new THREE.BoxGeometry(w, h, len), bone);
       m.position.set(0, y, z);
@@ -1028,9 +1156,9 @@ export class BattleClient {
     g.add(gr); g.add(air);
     this.cockGround = gr; this.cockAir = air;
 
-    // ---- 地面型:人形艙框 or 獸首(依 visual.ground;MORPH_HUMANOID 是唯一真相)----
+    // ---- 地面型:人形(艙罩之外沒有多餘結構)or 獸型頭顱(依 visual.ground;MORPH_HUMANOID 是唯一真相)----
     const groundAnchors = MORPH_HUMANOID.has(vis.ground)
-      ? (this._cockMechFrame(gr, mk, accent, vis), { hand: { x: 0.5, y: -0.36, z: -1.0, s: 1.4 } })
+      ? { hand: { x: 0.5, y: -0.36, z: -1.0, s: 1.4 } }
       : this._cockBeast(gr, mk, accent, vis.ground);
 
     // ---- 飛行型:依 visual.flight ----
@@ -1107,8 +1235,12 @@ export class BattleClient {
     };
   }
 
-  /** 機甲共通艙框(儀表台/頂樑/A 柱)+ 左肩角色掛件(與 models.js charPod 同語彙) */
-  _cockMechFrame(g, mk, accent, vis) {
+  /**
+   * 人類駕駛艙罩(**全機種共通**,2026-07-12):儀表台 / 頂樑 / A 柱 / HUD 燈條 + 左肩角色掛件。
+   * 座艙裡坐的是人 —— 不論外面那具機體是人形、獸型還是無人機,看出去一律先隔著這面艙框,
+   * 機體自身的結構(頭顱/吻部/翼/旋翼/武器)都在艙框之外。**MUST NOT** 退回「從獸的眼窩看出去」。
+   */
+  _cockCanopy(g, mk, accent, vis) {
     const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x46505b);
     dash.position.set(0, -0.52, -0.85);
     dash.rotation.x = 0.5;
@@ -1634,6 +1766,29 @@ export class BattleClient {
     }
     ent.barFg.scale.x = Math.max(0.001, frac);
     ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
+  }
+
+  /**
+   * 敵方標示:目標一進視野(= 出現在快照裡)就在頭上掛陣營箭頭,淡入 + 上下浮沉。
+   * depthTest 關掉 = 被掩體擋住仍看得到標記(標的已被己方偵知);離開視野時 ent 被移除,
+   * 標記是 mesh 的子節點 → 自動消失。
+   */
+  _enemyMark(ent, dt, now) {
+    if (!ent.mark) {
+      const box = new THREE.Box3().setFromObject(ent.mesh);
+      const h = Math.max(2, box.max.y - box.min.y);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: factionMarkTex(ent.side), transparent: true, opacity: 0, depthTest: false, depthWrite: false,
+      }));
+      sp.scale.setScalar(Math.max(3.6, h * 0.75));
+      sp.renderOrder = 998;
+      ent.markY = h + 3.4 + sp.scale.y * 0.5;   // 讓開血條(bbox 高 + 2.2)
+      ent.mesh.add(sp);
+      ent.mark = sp;
+    }
+    const m = ent.mark.material;
+    m.opacity = Math.min(0.92, m.opacity + dt * 3.5);                 // 進入視野:淡入
+    ent.mark.position.y = ent.markY + Math.sin(now * 2.6) * 0.45;     // 浮沉
   }
 
   /** 快照裡的飛彈同步:建/移/更新目標點(渲染時再插值) */
@@ -2565,7 +2720,7 @@ export class BattleClient {
       this.vel.z += (target.z - this.vel.z) * Math.min(1, dt * 4);
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
       this.pos.addScaledVector(this.vel, dt);
-      const gy = this.terrain.heightAt(this.pos.x, this.pos.z);
+      const gy = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
       if (this.isMorph && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
@@ -2581,7 +2736,7 @@ export class BattleClient {
       this.pos.z += this.vel.z * dt;
       const fr = Math.exp(-dt * 6);
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
-      const gy = this.terrain.heightAt(this.pos.x, this.pos.z);
+      const gy = this._surf(this.pos.x, this.pos.z, this.pos.y);
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
       if (this.isMorph) {
@@ -2643,7 +2798,8 @@ export class BattleClient {
       this.net.send({
         t: 'pos',
         x: Math.round(this.pos.x * 10) / 10,
-        y: Math.round((this.pos.y - this.terrain.heightAt(this.pos.x, this.pos.z)) * 10) / 10,
+        // y = 離「站立表面」的高度(橋上算 0):伺服器的地面型/防空判定不會因為站上橋面而誤判
+        y: Math.round((this.pos.y - this._surf(this.pos.x, this.pos.z, this.pos.y)) * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
       });
@@ -2761,8 +2917,11 @@ export class BattleClient {
         nx = cur.x + (ent.tgt.x - cur.x) * k;
         nz = cur.z + (ent.tgt.z - cur.z) * k;
       }
-      const gy = this.terrain.heightAt(nx, nz);
-      const ny = (ent.hero || ent.flies) ? gy + ent.heroY : gy;
+      // 貼地取樣吃橋面:以「上一幀的表面高度」當作判斷依據(離地高度 heroY 要先扣掉),
+      // 兵線走上高架橋時小兵/敵機自然走在橋面上,從橋下經過的則照舊踩地形。
+      const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
+      const gy = this._surf(nx, nz, cur.y - lift);
+      const ny = gy + lift;
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
       if (ent.decoy) {
@@ -2800,6 +2959,8 @@ export class BattleClient {
       stepLocomotion(ent, dt, now, px, pz, pyaw);
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
+      // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)
+      if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
     }
   }
 
@@ -2893,6 +3054,7 @@ export class BattleClient {
     this._updateEnts(dt, now);
     this._updateBullets(dt);
     this._updateMissiles(dt);
+    this._updateLaneArrows(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
     this._updateEffects(dt);
