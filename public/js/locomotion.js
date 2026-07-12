@@ -375,7 +375,10 @@ function stepAerial(L, rig, dt, now, vFwd, vLat) {
   const top = rig.top || 20;
   // 向右橫移(vLat>0)→ 右側(局部 +x)下壓 = rotation.z 負
   L.roll = damp(L.roll, clamp(-vLat / top, -1, 1) * 0.26, 4.5, dt);
-  L.pitch = damp(L.pitch, clamp(vFwd / top, -1, 1) * 0.2 + clamp(L.accel * 0.006, -0.07, 0.07), 4.5, dt);
+  // 前傾只屬於旋翼/撲翼(靠傾轉產生前向推力);定翼機(rig.level)推力來自引擎,
+  // 巡航機身保持水平 —— MUST NOT 跟著速度低頭(壓坡入彎照舊)
+  L.pitch = damp(L.pitch, rig.level ? 0
+    : clamp(vFwd / top, -1, 1) * 0.2 + clamp(L.accel * 0.006, -0.07, 0.07), 4.5, dt);
   rig.tilt.rotation.z = L.roll;
   rig.tilt.rotation.x = L.pitch;
   rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 + L.ph) * (rig.bob || 0.08);
@@ -648,6 +651,17 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     + (1 - m) * (0.16 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15)), 4, dt);
   // 迴旋襲步的拱背-伸展脈動(獵豹引擎)疊在阻尼俯仰之上:與步頻同調,不進阻尼(太慢跟不上)
   rig.torso.rotation.x += L.pitch + Math.sin(L.ph) * 0.09 * galF * a;
+  // 悟空懸停直立(rig.hoverUp = cruise):飛行「靜止」時機體立回直立、光翼垂展身後;
+  // 開始移動才連續前傾壓平到近水平的巡航姿態。頭本來以 0.15−cruise 補償前傾,
+  // 直立時一併回正,否則會仰天
+  if (rig.hoverUp) {
+    const spd = Math.hypot(vFwd, vLat);
+    L.hov = damp(L.hov ?? 0, m * (1 - clamp(spd / 6, 0, 1)), 3, dt);
+    rig.torso.rotation.x -= (rig.hoverUp - 0.12) * L.hov;
+    if (rig.head) rig.head.rotation.x += (rig.hoverUp - 0.3) * L.hov;
+    // 懸停光翼上揚:機體立直後翼束改朝上後方全幅展開(孔雀開屏),移動時滑回後掠
+    if (rig.lightWingRoots) for (const r of rig.lightWingRoots) r.rotation.x += 1.55 * L.hov;
+  }
   // 地面體側搖擺(rig.rollSway,巨象側步的重心逐拍換邊;a 已含 1−m ⇒ 飛行自動歸零)
   rig.torso.rotation.z = L.roll + (rig.rollSway || 0) * Math.sin(L.ph) * a;
   // 頭:抵銷軀幹的動態俯仰/側傾(地面步行時鎖平視線;飛行時讓位給 pose —— 機首本來就該跟著航向)
@@ -686,16 +700,17 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
       j.m1.emissiveIntensity = 1.2 + 2.4 * k;
     });
   }
-  // 悟空光之翼:焰刃「不揮動」—— 只隨型態展開(pose)與速度增輝拉長;
-  // 高速巡航時火光更烈(命運鋼彈的長航跡),地面完全熄滅只剩翼根機構
+  // 悟空光之翼:焰刃「不揮動」—— 只隨型態展開(pose)與速度增輝拉長。
+  // 懸停直立時光翼就已經是全幅的大翼(基礎 ×3),移動巡航再拉長增烈
+  // (合計 ×2 的長航跡);地面完全熄滅只剩翼根機構
   if (rig.lightWings) {
     const k = clamp(Math.hypot(vFwd, vLat) / topAir, 0, 1);
     rig.lightWings.forEach((b, i) => {
       b.visible = m > 0.06;
       const flick = 1 + Math.sin(now * 24 + i * 1.7) * 0.07;
-      b.scale.y = m * (0.5 + 1.3 * k) * flick + 0.01;
-      b.material.opacity = m * (0.3 + 0.42 * k);
-      b.material.emissiveIntensity = m * (1.3 + 2.8 * k);
+      b.scale.y = m * (1.5 + 2.1 * k) * flick + 0.01;
+      b.material.opacity = m * (0.42 + 0.3 * k);
+      b.material.emissiveIntensity = m * (1.8 + 2.4 * k);
     });
   }
   // 旋翼轉速 ∝ 推力(地面完全靜止 — 收攏槳葉/手持圓盾不自轉;變形中緩轉起旋);
