@@ -593,6 +593,7 @@ function buildAvianDrone(side, vis) {
     if (P.pairs > 1) mkWing(sgn, -0.35 * bs, 1);
   }
   // ---- 生物形態(頭/尾/武裝)----
+  let tailSegs = null;   // 僅重尾機種(機械龍)登記,供 stepAerial 甩尾配重驅動
   if (C === 'bee') {
     // 頭:大複眼 ×2 + 觸角;節腹琥珀環紋;螫針 = 砲管(尾部後向武器)
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.36 * bs, 10, 8), mat(mid, { metalness: 0.5 }));
@@ -736,23 +737,32 @@ function buildAvianDrone(side, vis) {
       sp.position.set(0, 0.5 * bs, 0.15 - i * 0.45 * bs);
       tilt.add(sp);
     }
-    // 長重尾(飛龍配重舵面):四節連續收分,根粗梢細,總長 ≈ 體長 ×2
-    const tSeg = [[0.58, 0.52, 1.3, -1.35], [0.45, 0.4, 1.2, -2.55], [0.32, 0.28, 1.1, -3.65], [0.2, 0.18, 0.9, -4.6]];
-    for (let i = 0; i < tSeg.length; i++) {
-      const [w, h, len, z] = tSeg[i];
-      bx(tilt, w * bs, h * bs, len * bs, 0, 0.02 * i, z * bs, i % 2 ? 0x23262a : dark);
+    // 長重尾(飛龍配重舵面):四節逐節掛接成鏈(root→tip,各節局部 z span 為 [0,-len]),
+    // 節與節之間留 0.05 重疊(沿用原視覺比例),whipTail(stepAerial)依轉向角速度甩動配重 ——
+    // MUST NOT 退回裸 Mesh 直掛 tilt(那樣就沒有樞軸可供逐節驅動)
+    const tSegLen = [1.3, 1.2, 1.1, 0.9], tSegWH = [[0.58, 0.52], [0.45, 0.4], [0.32, 0.28], [0.2, 0.18]];
+    tailSegs = [];
+    let tNode = tilt;
+    for (let i = 0; i < tSegLen.length; i++) {
+      const len = tSegLen[i] * bs, [w, h] = tSegWH[i];
+      const seg = new THREE.Group();
+      seg.position.set(0, 0.02 * i, i === 0 ? -0.7 * bs : -tSegLen[i - 1] * bs + 0.05 * bs);
+      tNode.add(seg);
+      tailSegs.push(seg);
+      bx(seg, w * bs, h * bs, len, 0, 0, -len / 2, i % 2 ? 0x23262a : dark);
+      tNode = seg;
     }
-    for (let i = 0; i < 2; i++) {   // 尾鰭(舵面)
-      const fin = bx(tilt, 0.06, 0.5 * bs, 0.6 * bs, 0, 0.3 * bs, (-3.2 - i * 0.9) * bs, dark, { metalness: 0.6 });
+    for (const fz of [-0.1, -1.0]) {   // 尾鰭(舵面,掛在第三節,隨尾梢一起甩,不再是與尾巴脫節的靜態掛件)
+      const fin = bx(tailSegs[2], 0.06, 0.5 * bs, 0.6 * bs, 0, 0.3 * bs, fz * bs, dark, { metalness: 0.6 });
       fin.rotation.x = -0.25;
     }
     const spike = new THREE.Mesh(new THREE.ConeGeometry(0.12 * bs, 0.7 * bs, 5), mat(accent, { emissive: accent, emissiveIntensity: 0.8 }));
     spike.rotation.x = -Math.PI / 2;
-    spike.position.set(0, 0.08 * bs, -5.35 * bs);
-    tilt.add(spike);
+    spike.position.set(0, 0.08 * bs, -1.2 * bs);
+    tailSegs[3].add(spike);
   }
   // insect:昆蟲高頻震翅(前後掃掠 + 翼面翻轉),與鳥類上下揮翅是兩套動力學(locomotion stepAerial)
-  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.1, top: 30, wings, insect: C === 'bee' };
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.1, top: 30, wings, insect: C === 'bee', tailSegs };
   return g;
 }
 
@@ -909,6 +919,7 @@ function buildBeastMech(side, vis) {
     return leg;
   };
 
+  let armSh = null, armEl = null, armBase = null;   // 人馬持槍雙臂(僅 C==='centaur' 賦值)
   if (C === 'hound') {
     // ---- 機械獵犬:修長犬軀(圓角矩形量體 —— 真獸沒有直角)+ 立耳吻部;背揹反器材長砲 ----
     rbz(spine, 1.4 * B, 1.1 * B, 2.3, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });
@@ -969,7 +980,10 @@ function buildBeastMech(side, vis) {
     bx(rifle, 0.09, 0.26, 0.3, 0, -0.2, -1.5, 0x23262a);                           // 槍托
     bx(rifle, 0.08, 0.07, 0.3, 0, 0.22, 0.2, accent, { emissive: accent, emissiveIntensity: 0.8 });
     // 持槍雙臂(不再是垂臂):肩樞軸 → 上臂前伸下壓 → 前臂折向槍身 ——
-    // 右手扣握把(槍身後段)、左手前伸托護木;雙手把長槍鎖死在胸前的備射姿勢
+    // 右手扣握把(槍身後段)、左手前伸托護木;雙手把長槍鎖死在胸前的備射姿勢。
+    // sh/el 存進 armSh/armEl + 記下建構時的基準角(armBase),讓 stepQuad 能疊加待機微顫
+    // 而不打散「鎖死當穩定射擊台」的姿勢 —— MUST NOT 只是建好姿勢就丟著不再驅動
+    armSh = []; armEl = []; armBase = [];
     for (const sx of [-1, 1]) {
       bx(neck, 0.5, 0.35, 0.6, sx * 0.75 * B, 1.2, 0, plate);                      // 墊肩
       const sh = new THREE.Group();
@@ -985,6 +999,8 @@ function buildBeastMech(side, vis) {
       el.rotation.z = sx * 0.22;
       bx(el, 0.18, 0.55, 0.2, 0, -0.26, 0.02, 0x30373f);                           // 前臂
       bx(el, 0.16, 0.18, 0.24, 0, -0.55, 0.04, 0x23262a);                          // 手(握把/護木)
+      armSh.push(sh); armEl.push(el);
+      armBase.push({ shX: sh.rotation.x, shZ: sh.rotation.z, elX: el.rotation.x, elZ: el.rotation.z });
     }
     head.position.set(0, 1.5, 0.05);
     neck.add(head);
@@ -1171,6 +1187,7 @@ function buildBeastMech(side, vis) {
     legFL, legFR, legHL, legHR,
     chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
     tents: tents.length ? tents : null,   // 持武觸手(克蘇魯):恆時緩慢蠕動的多節波
+    armSh, armEl, armBase,   // 人馬持槍雙臂(僅 centaur 非 null;stepQuad rider 分支疊加待機微顫)
     hipsY0: hipY, stride: P.stride, top: P.top ?? 10,
     // 各生物專屬步態參數(見 BEAST 表):側步/小跑/觸手輪 + 體側搖擺/彈跳/俯仰幅;
     // soft = 觸手腿(整條走 undulate 全波,不是關節腿的屈曲)
@@ -1204,7 +1221,8 @@ const BIPED = {
              bound: 1, knuckle: 1, armBase: 0.14 },
   ostrich: { hipY: 3.0, stride: 3.8, bob: 0.1,  sway: 0.06, top: 7,  lean: 0.35, tailUp: 0.16,
              grounded: 1, tuckArms: 1 },
-  trex:    { hipY: 2.5, stride: 3.4, bob: 0.12, sway: 0.08, top: 7,  lean: 0.3,  tailUp: 0.3 },
+  trex:    { hipY: 2.5, stride: 3.4, bob: 0.12, sway: 0.08, top: 7,  lean: 0.3,  tailUp: 0.3,
+             tinyArms: 1 },
   roo:     { hipY: 2.2, stride: 5.6, bob: 0.15, sway: 0.07, top: 7,  lean: 0.5,  tailUp: 0.22,
              hop: 1, hopLean: 0.85, hopH: 0.75 },
 };
@@ -1535,6 +1553,7 @@ function buildBipedBeast(side, vis) {
     top: P.top, gunArm: !P.knuckle, leanF: P.lean, tailUp: P.tailUp, armBase: P.armBase || 0,
     bound: P.bound, hop: P.hop, hopLean: P.hopLean, hopH: P.hopH,   // 跳奔/袋鼠跳(見 BIPED 表)
     knuckle: P.knuckle, grounded: P.grounded, tuckArms: P.tuckArms, // 指節行走/貼地跑(見 BIPED 表)
+    tinyArms: P.tinyArms,   // 退化短前臂(暴龍):只做抓握狀微顫,不套用一般雙足擺臂公式
   };
   return g;
 }
@@ -1677,6 +1696,7 @@ function buildMorphMech(side, vis) {
   // 四足獸的頭一律以 −pitch 反轉:地面抬頭前視(0.25 − θg)、飛行吻部沿航向軸(0.15 − cruise)----
   const head = new THREE.Group();
   torso.add(head);
+  let trunk = null, trunkTip = null;   // 機械巨象象鼻(僅 F==='levi' 賦值),供 stepMorph 逐幀驅動
   // 悟空的頭飛行時不縮入機身:抬頭鎖定前方(超人式飛行,臉朝航向)
   const headF = WUKONG ? [0, 1.62, 0.02]
     : { levi: [0, 2.0, 0.08], archo: [0, 1.95, 0.04], beetle: [0, 1.72, 0.08], owl: [0, 1.9, 0.06] }[F];
@@ -1706,16 +1726,16 @@ function buildMorphMech(side, vis) {
       tusk.rotation.x = 1.35;
       head.add(tusk);
     }
-    const trunk = new THREE.Group();
+    trunk = new THREE.Group();
     trunk.position.set(0, -0.12, 0.34);
     head.add(trunk);
     P(trunk, { p: null, r: [1.35, 0, 0] }, { p: null, r: [0.12, 0, 0] }, 0.45, 0.9);
     bx(trunk, 0.2 * B, 0.2, 0.7, 0, 0, 0.32, hullDk);                                   // 象鼻根段
-    const tr2 = new THREE.Group();
-    tr2.position.set(0, 0, 0.64);
-    trunk.add(tr2);
-    P(tr2, { p: null, r: [0.7, 0, 0] }, { p: null, r: [0.05, 0, 0] }, 0.5, 0.95);
-    bx(tr2, 0.15 * B, 0.15, 0.55, 0, 0, 0.26, 0x2a2e33);                                // 象鼻端段
+    trunkTip = new THREE.Group();
+    trunkTip.position.set(0, 0, 0.64);
+    trunk.add(trunkTip);
+    P(trunkTip, { p: null, r: [0.7, 0, 0] }, { p: null, r: [0.05, 0, 0] }, 0.5, 0.95);
+    bx(trunkTip, 0.15 * B, 0.15, 0.55, 0, 0, 0.26, 0x2a2e33);                           // 象鼻端段
   } else if (F === 'archo') {
     // 迅猛龍顱 ↔ 始祖鳥:楔形吻 + 齒列 + 後掠羽冠
     bx(head, 0.4 * B, 0.34, 0.4, 0, 0.06, 0, plate, { metalness: 0.5 });                // 顱殼
@@ -2118,9 +2138,9 @@ function buildMorphMech(side, vis) {
   // ---- 中足對(犀金龜是三對足的昆蟲):圓柱肢(股-脛-跗),地面全數觸地,
   // 與前後足構成 tripod 步態(stepMorph:任一時刻恆有三足著地);
   // 變形時與前腳同窗收攏貼腹 ----
-  let midLegs = null, midKnees = null;
+  let midLegs = null, midKnees = null, midTarsi = null;
   if (G === 'beetle') {
-    midLegs = []; midKnees = [];
+    midLegs = []; midKnees = []; midTarsi = [];
     for (const sx of [-1, 1]) {
       const ml = new THREE.Group();
       torso.add(ml);
@@ -2132,11 +2152,14 @@ function buildMorphMech(side, vis) {
       knee.rotation.x = 0.55;
       ml.add(knee);
       cyl(knee, 0.09 * B, 0.12 * B, 0.75, 8, 0, -0.36, 0, hullDk);                      // 中脛節
+      // 跗節(獨立關節,MUST NOT 焊死在脛節上 —— 對照前後足的 ankle 皆為可獨立旋轉的 Group)
+      const tarsusJ = new THREE.Group();
+      tarsusJ.position.set(0, -0.88, 0.04);
+      knee.add(tarsusJ);
       const tar = new THREE.Mesh(new THREE.ConeGeometry(0.09 * B, 0.4, 6), mat(0x23262a, { metalness: 0.6 }));
-      tar.position.set(0, -0.88, 0.04);
       tar.rotation.x = Math.PI;
-      knee.add(tar);                                                                    // 尖錐跗節(觸地)
-      midLegs.push(ml); midKnees.push(knee);
+      tarsusJ.add(tar);                                                                 // 尖錐跗節(觸地)
+      midLegs.push(ml); midKnees.push(knee); midTarsi.push(tarsusJ);
     }
   }
 
@@ -2316,6 +2339,16 @@ function buildMorphMech(side, vis) {
       cyl(t2, 0.045 * B, 0.04 * B, 0.65, 8, 0, 0, -0.32, 0x23262a).rotation.x = Math.PI / 2;
       cyl(t2, 0.055 * B, 0.055 * B, 0.16, 8, 0, 0, -0.7, accent, { emissive: accent, emissiveIntensity: 0.9 })
         .rotation.x = Math.PI / 2;                                                       // 尾梢識別環
+      // 夜梟短扇尾(飛行專屬子結構,比照 raptor 分支手法):貓科細鞭尾與貓頭鷹寬扇尾剪影
+      // 完全不同,地面型收折貼合鞭尾(P() 起始角),飛行時展開成扇形 —— MUST NOT 讓 owl
+      // 飛行時仍拖著一條沒有變身的豹尾
+      for (let i = -2; i <= 2; i++) {
+        const f = new THREE.Group();
+        f.position.set(0, 0, -0.55);
+        t2.add(f);
+        P(f, { p: null, r: [0, 0, 0] }, { p: null, r: [0, i * 0.22, 0] }, 0.55, 1);
+        bx(f, 0.16 * B, 0.04, 0.42, 0, 0, -0.21, i === 0 ? accent : (i % 2 ? dim(plate, 0.85) : plate));  // 扇尾羽
+      }
     } else {
       // 犀金龜短腹端(圓柱)
       cyl(tail, 0.15 * B, 0.12 * B, 0.5, 8, 0, 0, -0.25, hullDk).rotation.x = Math.PI / 2;
@@ -2357,14 +2390,17 @@ function buildMorphMech(side, vis) {
     stride: gait[0], swingArm: gait[1], bob: gait[2], flexF: gait[3],
     qphase: gait[4], rollSway: gait[5], top: 7, topAir: 30,
     // 步態原型分化(locomotion stepMorph):夜豹高速換迴旋襲步;迅猛龍前爪收起蓄勢
-    // (grounded running);猿猴掌行 —— 前肢是承重前腳,雙側全幅擺動
+    // (grounded running,彈跳隨速度收斂,同 stepBiped 的 rig.grounded 語意);
+    // 猿猴掌行 —— 前肢是承重前腳,雙側全幅擺動
     gallopType: G === 'panther' ? 'rotary' : null,
     tuck: G === 'raptor' ? 1 : 0, palmi: G === 'monkey' ? 1 : 0,
+    grounded: G === 'raptor' ? 1 : 0,
     jets: jets.length ? jets : null,             // 噴射尾焰(jet 雙發機艙):速度驅動
     lightWings,                                  // 悟空光之翼焰刃:∝ 型態 m × 速度
     hoverUp: WUKONG ? cruise : 0,                // 悟空懸停直立:飛行靜止立回直立,移動才前傾壓平
     lightWingRoots: lightWingRoots.length ? lightWingRoots : null,   // 懸停時翼束上揚(孔雀開屏)
-    midLegs, midKnees,                           // 犀金龜中足對(tripod 第三組)
+    midLegs, midKnees, midTarsi,                 // 犀金龜中足對(tripod 第三組)
+    trunk, trunkTip,                             // 機械巨象象鼻(僅 elephant 非 null)
   };
   return g;
 }
