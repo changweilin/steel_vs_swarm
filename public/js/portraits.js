@@ -9,12 +9,19 @@ import { CHARACTERS, SIDES, charKind } from './data.js';
 import { LORE } from './lore.js';
 import { mulberry32 } from './hazards.js';
 
-/** 手繪立繪覆蓋表:id -> 圖檔路徑(相對 public/)。留空 = 全部走程序生成 */
-export const PORTRAIT_MANIFEST = {
-  // s01: 'assets/portraits/s01.webp',
-};
-/** 手繪頭像覆蓋表(未登記則沿用立繪或程序生成) */
-export const AVATAR_MANIFEST = {};
+/** 已有手繪立繪/頭像的角色 id(對齊 public/assets/characters・avatars 現有檔案)。
+ * 新角色上線但美術未到位時,不列入此表即自動退回程序生成 fallback。 */
+const DRAWN_ART_IDS = [
+  's01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10', 's11', 's12',
+  't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10', 't11', 't12',
+  'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08',
+];
+/** 手繪立繪覆蓋表:id -> 圖檔路徑(相對 public/)。留空 = 全部走程序生成。一律原圖,不去背。 */
+export const PORTRAIT_MANIFEST = Object.fromEntries(
+  DRAWN_ART_IDS.map((id) => [id, `assets/characters/${id}_base.png`]));
+/** 手繪頭像覆蓋表(未登記則沿用立繪或程序生成)。一律原圖,不去背。 */
+export const AVATAR_MANIFEST = Object.fromEntries(
+  DRAWN_ART_IDS.map((id) => [id, `assets/avatars/${id}.png`]));
 
 export const hasDrawnArt = (id) => !!PORTRAIT_MANIFEST[id];
 
@@ -155,7 +162,7 @@ function buildSVG(id) {
 
 const uri = (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 
-/** 半身立繪(300×400)。已登記手繪檔 → 直接回傳圖檔路徑 */
+/** 半身立繪(300×400)。已登記手繪檔 → 直接回傳原圖路徑(不去背) */
 export function portraitURL(id) {
   if (PORTRAIT_MANIFEST[id]) return PORTRAIT_MANIFEST[id];
   let svg = cache.get(id);

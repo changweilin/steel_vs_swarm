@@ -572,18 +572,35 @@ function charAbilityRow(id, slot, key) {
     <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
 
-/** 機體設計原型:「現實原型」(工程出處)/「仿生原型」(獸型機體取自哪種生物)各自一行 */
+/** 機體設計原型:「現實原型」(工程出處)/「機體原型」(人形機甲裝甲哲學)/
+ * 「體態原型」(變形機甲地面體態)/「仿生原型」(獸型機體取自哪種生物)各自一行,
+ * 四種標籤格式一致(後三者皆為「名稱 —— 描述」),不併入單一「設計原型」桶。 */
+const PROTO_LABEL = { 現實: '設計原型', 機體: '機體原型', 體態: '體態原型', 仿生: '仿生原型' };
 function protoHTML(proto) {
   if (!proto) return '';
-  return proto.split(/(?=仿生原型:)/).map((p) => {
-    const bionic = p.startsWith('仿生原型');
-    return `<div class="cd-proto"><span>${bionic ? '仿生原型' : '設計原型'}</span>${esc(p.replace(/^(現實|仿生)原型:/, ''))}</div>`;
+  return proto.split(/(?=現實原型:|機體原型:|體態原型:|仿生原型:)/).map((p) => {
+    const m = p.match(/^(現實|機體|體態|仿生)原型:/);
+    const label = m ? PROTO_LABEL[m[1]] : '設計原型';
+    return `<div class="cd-proto"><span>${label}</span>${esc(p.replace(/^(現實|機體|體態|仿生)原型:/, ''))}</div>`;
   }).join('');
+}
+
+/** 敘事文字區塊(頭銜/機體關係/簡歷/嗜好/生平)—— 側欄面板與跳出視窗共用同一份,避免內容分岔。 */
+function charBioTextHTML(id) {
+  const c = CHARACTERS[id];
+  const lo = LORE[id] || {};
+  return `<div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
+    <div class="cd-machine">${esc(c.machine)}</div>
+    ${protoHTML(lo.proto)}
+    <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
+    ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
+    ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
+    ${lo.hobby ? `<p class="cd-bio"><b class="cd-bio-tag">興趣</b>${esc(lo.hobby)}</p>` : ''}
+    ${lo.bio ? `<p class="cd-bio"><b class="cd-bio-tag">生平</b>${esc(lo.bio)}</p>` : ''}`;
 }
 
 function charDetailHTML(id) {
   const c = CHARACTERS[id];
-  const lo = LORE[id] || {};
   const kind = charKind(id);
   const u = UNITS[kind];
   const m = c.mods;
@@ -612,13 +629,7 @@ function charDetailHTML(id) {
       <div id="stageBottom"></div>
     </div>
     <div class="cd-body">
-      <div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
-      <div class="cd-machine">${esc(c.machine)}</div>
-      ${protoHTML(lo.proto)}
-      <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
-      ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
-      ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
-      ${lo.bio ? `<p class="cd-bio">${esc(lo.bio)}</p>` : ''}
+      ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
         ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值,單機傷害為機甲的 1/3,三機齊射 ≈ 一台機甲。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
@@ -633,6 +644,27 @@ function charDetailHTML(id) {
     </div>
     </div>`;
 }
+
+/** 點角色說明面板的頭像(立繪縮圖)跳出大圖 + 完整簡歷(唯讀預覽,見 showCharDetail 掛載處)*/
+function showCharBioModal(id, side) {
+  const c = CHARACTERS[id];
+  if (!c) return;
+  const kind = charKind(id);
+  const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
+  const s = side || c.side;
+  $('charBioModalBody').innerHTML = `
+    <div class="bio-portrait">
+      <img src="${portraitURL(id)}" alt="${esc(c.name)}">
+      <div class="cd-tag ${s === 'MERC' ? 'merc' : s.toLowerCase()}">
+        ${s === 'MERC' ? '⚔ 傭兵' : SIDES[s].name}・${kindLabel}</div>
+    </div>
+    <div class="bio-text">${charBioTextHTML(id)}</div>`;
+  $('charBioModal').hidden = false;
+}
+function hideCharBioModal() { $('charBioModal').hidden = true; }
+$('charBioModalClose').onclick = hideCharBioModal;
+$('charBioModal').addEventListener('click', (e) => { if (e.target.id === 'charBioModal') hideCharBioModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('charBioModal').hidden) hideCharBioModal(); });
 
 /** 機體展示台:整個 app 共用一個 WebGL context,隨 charDetail 重繪搬移 canvas 節點 */
 function previewCanvas() {
@@ -679,6 +711,8 @@ function showCharDetail(id, side) {
     return;
   }
   box.innerHTML = charDetailHTML(id);
+  // 角色說明的頭像(立繪縮圖)點擊 → 跳出大圖 + 完整簡歷;純預覽,不影響選角(見選角區塊)
+  box.querySelector('.cd-portrait img').onclick = () => showCharBioModal(id, side);
   // 傭兵隨雇主換色:展示台一律以「檢視中的陣營」建機體
   const s = side || CHARACTERS[id].side;
   const viewSide = s === 'MERC' ? 'STEEL' : s;
@@ -736,11 +770,6 @@ function renderCharPick(me) {
   grid.style.display = editable ? '' : 'none';
   grid.innerHTML = '';
   if (editable) {
-    const rnd = document.createElement('button');
-    rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
-    rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
-    rnd.onclick = () => { send(null); showCharDetail(null); };   // 只有點擊會換展示角色(懸浮不換)
-    grid.appendChild(rnd);
     for (const id of charsOf(subject.side)) {
       const c = CHARACTERS[id];
       const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
@@ -751,6 +780,12 @@ function renderCharPick(me) {
       b.onclick = () => { send(id); showCharDetail(id, subject.side); };   // 伺服器 sync 前先換,點擊即時有反應
       grid.appendChild(b);
     }
+    // 隨機殿後(預設選項但排在列表最後,不搶頭像牆第一格的視覺焦點)
+    const rnd = document.createElement('button');
+    rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
+    rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
+    rnd.onclick = () => { send(null); showCharDetail(null); };   // 只有點擊會換展示角色(懸浮不換)
+    grid.appendChild(rnd);
   }
   showCharDetail(subject.ch || null, subject.side);
 
