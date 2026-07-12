@@ -279,7 +279,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     hips.rotation.z + (chest ? chest.rotation.z : 0),
   ], idle, now);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
-  rig.head.rotation.y += L.gaze;
+  if (rig.head) rig.head.rotation.y += L.gaze;   // 無頭 rig 的簡易單位(如步兵)跳過凝視
   if (rig.tailSegs) {
     whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate);
     // 抬尾配平:速度越快尾根抬得越高(暴龍/鴕鳥/袋鼠的重尾就是前傾的反向配重)
@@ -341,7 +341,7 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
     hips.rotation.x + (chest ? chest.rotation.x : 0), 0, 0,
   ], idle, now, 0.9);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
-  rig.head.rotation.y += L.gaze;
+  if (rig.head) rig.head.rotation.y += L.gaze;   // 同 stepBiped:無頭 rig 跳過凝視
   // 尾 = 第三條腿:與體軸反相上下甩(騰空尾壓下、蹬離尾抬起 = 角動量互抵),
   // 逐節相位延遲成鞭;急轉照樣橫甩配重(whipTail)
   if (rig.tailSegs) {

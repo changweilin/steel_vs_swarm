@@ -10,7 +10,13 @@
 
 ## 序幕:四百八十美元(2022–2025)
 
-![序幕：四百八十美元](../public/assets/story/story_prologue.png)
+````carousel
+![中立視角 (雙葬禮)](../public/assets/story/story_prologue.png)
+<!-- slide -->
+![自由蜂群同盟視角 (卡特琳娜修復飛行器)](../public/assets/story/story_prologue_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (格羅莫夫在雨中哀悼)](../public/assets/story/story_prologue_steel.png)
+````
 
 2022 年,東歐戰爭爆發,與我們的時空一模一樣——直到兩場葬禮讓它岔了出去。
 
@@ -29,7 +35,13 @@
 
 ## 第一幕:車庫與兵工廠(2026–2029)
 
-![第一幕：車庫與兵工廠](../public/assets/story/story_act1.png)
+````carousel
+![中立視角 (首次王牌對決)](../public/assets/story/story_act1.png)
+<!-- slide -->
+![自由蜂群同盟視角 (FPV 操縱席的專注)](../public/assets/story/story_act1_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (灰雁機甲座艙)](../public/assets/story/story_act1_steel.png)
+````
 
 2026 年黑海事件、2027 年東亞第二戰線與以伊開戰之後(詳見 characters.md 時間線),戰爭全球化。
 
@@ -53,7 +65,13 @@
 
 ## 第二幕:第二戰線(2029–2030)
 
-![第二幕：第二戰線](../public/assets/story/story_act2.png)
+````carousel
+![中立視角 (頻譜攻防)](../public/assets/story/story_act2.png)
+<!-- slide -->
+![自由蜂群同盟視角 (白噪音卡佳密碼解譯)](../public/assets/story/story_act2_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (電戰員韓雪低聲吟唱)](../public/assets/story/story_act2_steel.png)
+````
 
 **產線之夜**:台海戰事波及新竹的那一晚,林芷晴(S-03)抱著一盒晶圓進掩體,
 出來後在同盟技術交換計畫的申請欄寫:「我的晶片會飛,我不會,所以我去它們在的地方。」
@@ -77,7 +95,13 @@
 
 ## 第三幕:膝蓋戰爭(2030)
 
-![第三幕：膝蓋戰爭](../public/assets/story/story_act3.png)
+````carousel
+![中立視角 (薇拉與糖紙)](../public/assets/story/story_act3.png)
+<!-- slide -->
+![自由蜂群同盟視角 (哈特曼推演關節缺陷)](../public/assets/story/story_act3_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (沈鶴鳴於廠房抗議)](../public/assets/story/story_act3_steel.png)
+````
 
 維爾納・哈特曼(S-11)出庭作證自家公司的關節模組流入協約,隨後叛逃同盟。
 他設計的「**斷膝**」攔截戰術——專打步行平台的傳動關節——讓協約機甲折損率三個月內暴增。
@@ -98,7 +122,13 @@
 
 ## 第四幕:攔截經濟學(2030 冬)
 
-![第四幕：攔截經濟學](../public/assets/story/story_act4.png)
+````carousel
+![中立視角 (攔截之弧與詩)](../public/assets/story/story_act4.png)
+<!-- slide -->
+![自由蜂群同盟視角 (沙哈書寫攔截矩陣)](../public/assets/story/story_act4_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (侯賽尼演算突防軌跡)](../public/assets/story/story_act4_steel.png)
+````
 
 埃坦・沙哈(S-07)與蕾拉・侯賽尼(T-10)的演算法軍備競賽白熱化:
 攔截率在 58% 與 91% 之間鋸齒震盪,雙方每週互相迭代。
@@ -117,7 +147,13 @@
 
 ## 終幕:信使日(2031 春)
 
-![終幕：信使日](../public/assets/story/story_final.png)
+````carousel
+![中立視角 (六分鐘的和平)](../public/assets/story/story_final.png)
+<!-- slide -->
+![自由蜂群同盟視角 (悼歌瑪雅捨身遮擋)](../public/assets/story/story_final_swarm.png)
+<!-- slide -->
+![大陸鋼鐵協約視角 (李正赫狙擊哨兵機)](../public/assets/story/story_final_steel.png)
+````
 
 協約在北線試驗部署新型自主火控「**哨兵-9**」——交戰迴路裡沒有人,只有模型。
 
