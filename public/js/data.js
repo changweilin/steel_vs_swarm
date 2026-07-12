@@ -1052,9 +1052,17 @@ export const GAME = {
   // **稍微偏離主要路線不該被打到** ⇒ 觸發與佈設淨空一律用這個(遠大於走廊半寬 45),
   // 且雷區/陣地另外避開主堡、重生點與砲塔。MUST NOT 改回用 LANE_SAFE_M 當伏擊閘門。
   AMBUSH_M: 110,
+  // 第三方打擊總量(2026-07-12 二修):**地雷與匿蹤防空的「打擊面積」相等,且總量大幅下修**。
+  //   每線每種的打擊面積 = THREAT_AREA_PER_LANE(m²)——
+  //   地雷:PER_LANE × π×R²(由面積反推顆數);防空:AA_SITES_PER_LANE × π×range²(由面積反推射程)。
+  //   兩者一律在下方 derive(**MUST NOT** 手寫 MINES.PER_LANE / AA_SITE.range,會破壞等面積約束)。
+  // 舊制實際面積:地雷 7.9k/線、防空 637k/線(陣地射程 260)⇒ 天差地遠且防空幾乎覆蓋全場。
+  THREAT_AREA_PER_LANE: 20000,
+  THREAT_CD_S: 180,           // 同一機體被第三方打擊(踩雷 / 被伏擊)後的冷卻:3 分鐘,兩者共用
+  THREAT_MISSILES_MAX: 1,     // 同時在空中的第三方伏擊飛彈上限(全場 1 發)
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
   // CUT_BIAS/CUT_R:偏向佈在兵線轉角外圍的「切彎捷徑」帶 — 抄直線省時間 = 承擔雷區風險
-  MINES: { PER_LANE: 25, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10,
+  MINES: { PER_LANE: 0, TRIGGER_R: 4, DMG: 170, R: 10, PEN: 10,
            LANE_CLEAR: 115,            // > AMBUSH_M:走廊 + 緩衝帶內絕不佈雷(含雷體半徑 R)
            BASE_CLEAR: 260,            // > 主堡補血半徑 160 + 重生點外推 45 + 緩衝
            TOWER_CLEAR: 90,            // 砲塔周邊淨空(塔下不佈雷)
@@ -1063,8 +1071,10 @@ export const GAME = {
   // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀。
   // 觸發需要射程內有存活的匿蹤防空陣地(aasite)——拔掉陣地 = 打出安全空域。
   // DMG 620:雙層 HP 後仍須一發穿透護盾+裝甲直接擊墜(維持「命中即墜」設計)。
-  AA_AMBUSH: { CHANCE_PER_S: 0.22, CD_S: 7, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
+  AA_AMBUSH: { CHANCE_PER_S: 0.22, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
 };
+// 等面積約束的唯一推導處(見 GAME.THREAT_AREA_PER_LANE)
+GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MINES.R ** 2));
 
 // ---- 地形呈現(解析度 + 主要道路外海拔放大)----
 // GRID_N/ELEV_ZOOM 純渲染;AMP_* 會改 heightAt(單位貼地)故列為平衡值住這裡。
@@ -1110,9 +1120,9 @@ export const FIELD = {
   TURN_BIAS: 0.55,       // 障礙/防空陣地錨定在兵線轉角的比例(Diablo:轉角 = 房間/伏擊點)
   TURN_R: 90,            // 轉角錨定的沿線散布半徑(m)
   MID_BIAS: 0.5,         // 難度梯度(D1 越深越難):均勻散布中此比例改用三角分布向兵線中段聚攏
-  AA_SITES_PER_LANE: 3,  // 匿蹤防空陣地 / 兵線
-  // laneMin 130 > GAME.AMBUSH_M(110):陣地不會蹲在走廊邊緣;towerClear 讓它離砲塔一段距離
-  AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 260, laneMin: 130, laneMax: 300, spacing: 130,
+  AA_SITES_PER_LANE: 2,  // 匿蹤防空陣地 / 兵線
+  // range 由等面積約束推導(見下方);laneMin 130 > GAME.AMBUSH_M(110):陣地不蹲在走廊邊緣
+  AA_SITE: { name: '匿蹤防空陣地', hp: 120, range: 0, laneMin: 130, laneMax: 300, spacing: 130,
              baseClear: 260, towerClear: 90 },
   // 偵察中繼站(D1 神龕思想:非正規路線上的一次性正向誘因)——
   // 停留 CHANNEL_S 秒佔用 → 全隊 VISION_S 秒無霧視野;先到先得,用過即毀。
@@ -1120,6 +1130,10 @@ export const FIELD = {
            laneMin: 70, laneMax: 220, dLo: 0.38, dHi: 0.62 },
   CONNECT_CELL_M: 24,    // 連通性 flood-fill 網格(DevilutionX DRLG 思想:生成後驗證兩堡互通)
 };
+// 等面積約束的唯一推導處:防空陣地的射程 = 「每線打擊面積 ÷ 陣地數」的等效圓半徑
+// ⇒ 每線防空打擊面積 = 每線地雷打擊面積(見 GAME.THREAT_AREA_PER_LANE)
+FIELD.AA_SITE.range = Math.round(
+  Math.sqrt(GAME.THREAT_AREA_PER_LANE / (Math.PI * FIELD.AA_SITES_PER_LANE)));
 
 // ---- 戰場物資(Diablo 式隨機掉落:擊毀障礙物有機率掉,靠近拾取)----
 // TIERS 依序 = 普通 → 稀有;TC(TreasureClass,D2 思想)= 越硬的障礙掉越高階:

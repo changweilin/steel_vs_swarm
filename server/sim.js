@@ -1387,10 +1387,12 @@ export class BattleSim {
       // 機甲恆貼地會踩雷;變形機甲只有地面型態(回報高度 y ≈ 0)會踩,飛行型不觸發
       const grounded = h.kind === 'robot' || (h.kind === 'morph' && (h.y || 0) <= MORPH.GROUND_Y);
       if (h.dead || !grounded) continue;
+      if ((h.thirdCd || 0) > this.t) continue;   // 第三方打擊冷卻中(踩雷/被伏擊共用,3 分鐘)
       for (let i = this.mines.length - 1; i >= 0; i--) {
         const [mx, mz, mid] = this.mines[i];
         if (dist2d(h.x, h.z, mx, mz) > M.TRIGGER_R) continue;
         this.mines.splice(i, 1);
+        h.thirdCd = this.t + GAME.THREAT_CD_S;
         this.events.push({ e: 'boom', x: mx, z: mz, r: M.R, mine: true, mid, tpid: h.pid });
         for (const t of [...this.ents.values()]) {   // 中立危害:雙方都炸
           if (t.hero && t.dead) continue;
@@ -1411,11 +1413,12 @@ export class BattleSim {
     const S = FIELD.AA_SITE;
     let sites = null;   // lazy:多數 tick 沒人觸發
     for (const h of this._allBodies()) {   // 每一架無人機各自可能被伏擊
+      // 全場同時只准 1 發第三方伏擊飛彈在空中(THREAT_MISSILES_MAX)
+      if (this.missiles.filter((m) => m.amb).length >= GAME.THREAT_MISSILES_MAX) return;
       // 無人機恆為空中目標;變形機甲僅飛行型態(y ≥ AA_MIN_ALT)會被伏擊鎖定
       if (h.dead) continue;
       if (h.kind !== 'drone' && !(h.kind === 'morph' && (h.y || 0) >= GAME.AA_MIN_ALT)) continue;
-      h.aaCd = Math.max(0, (h.aaCd || 0) - dt);
-      if (h.aaCd > 0) continue;
+      if ((h.thirdCd || 0) > this.t) continue;   // 第三方打擊冷卻中(踩雷/被伏擊共用,3 分鐘)
       if ((h.stealthUntil || 0) > this.t) continue;                    // 匿蹤中不被伏擊鎖定
       if (this._distToLanes(h.x, h.z) <= GAME.AMBUSH_M) continue;   // 走廊 + 緩衝帶內安全(稍微偏離不吃伏擊)
       if (Math.random() > A.CHANCE_PER_S * dt) continue;
@@ -1426,10 +1429,11 @@ export class BattleSim {
         if (d <= S.range && d < bestD) { bestD = d; best = s; }
       }
       if (!best) continue;   // 附近陣地已被摧毀 → 這條非正規路線是打出來的安全通道
-      h.aaCd = A.CD_S;
+      h.thirdCd = this.t + GAME.THREAT_CD_S;
       this.missiles.push({
         id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
         x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, hp: A.HP, ttl: 14,
+        amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
       });
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
     }
@@ -1530,30 +1534,51 @@ export class BattleSim {
     this.missiles.push({
       id: nextEntId++, byId: e.id, side: e.side, tid: best.id, tpid: best.pid,
       x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, pen: sam.pen, hp: sam.hp, ttl: 12,
+      ox: e.x, oy: 18, oz: e.z, range: sam.range,   // 目標飛出塔的防空射程 → 失鎖直飛
     });
     this.events.push({ e: 'sam', from: [e.x, e.z], side: e.side, tpid: best.pid });
   }
 
+  /**
+   * 追蹤飛彈。**失鎖規則(2026-07-12,全飛彈通用)**:目標一旦離開「發射源的攻擊範圍」
+   * (m.range,以發射點為圓心),飛彈立刻失鎖 → 只沿當下航向直線飛行,不再追擊
+   * (still 有近炸引信,撞上算它走運),ttl 到期自毀。飛出射程 = 逃掉了。
+   */
   _tickMissiles(dt) {
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
-      // 追蹤特定機體(小隊三架各自可被鎖定;tpid 只給客戶端判斷「是不是在打我」)
-      const t = this.ents.get(m.tid);
       m.ttl -= dt;
-      if (!t || t.dead || m.ttl <= 0) { this.missiles.splice(i, 1); continue; }  // 目標消失:飛彈自毀
-      const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
-      const d = Math.hypot(dx, dy, dz);
+      if (m.ttl <= 0) { this.missiles.splice(i, 1); continue; }
       const step = m.speed * dt;
-      if (d <= Math.max(12, step)) {
-        // 命中:近炸引信
-        this._damage(t, m.dmg, this.ents.get(m.byId) || { side: m.side }, m.pen || 0);
-        this.events.push({ e: 'boom', x: t.x, z: t.z, y: t.y || 0, r: 14, side: m.side, sam: true });
-        this.missiles.splice(i, 1);
+      // 追蹤特定機體(小隊三架各自可被鎖定;tpid 只給客戶端判斷「是不是在打我」)
+      const t = m.lost ? null : this.ents.get(m.tid);
+      if (t && !t.dead) {
+        const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
+        const d = Math.hypot(dx, dy, dz) || 1;
+        if (d <= Math.max(12, step)) {   // 命中:近炸引信
+          this._damage(t, m.dmg, this.ents.get(m.byId) || { side: m.side }, m.pen || 0);
+          this.events.push({ e: 'boom', x: t.x, z: t.z, y: t.y || 0, r: 14, side: m.side, sam: true });
+          this.missiles.splice(i, 1);
+          continue;
+        }
+        // 目標跑出發射源的攻擊範圍 → 失鎖(記下當下航向,之後直線飛)
+        const out = m.range != null
+          && Math.hypot(t.x - m.ox, (t.y || 0) - (m.oy || 0), t.z - m.oz) > m.range;
+        if (out) {
+          m.lost = true;
+          m.vx = dx / d * m.speed; m.vy = dy / d * m.speed; m.vz = dz / d * m.speed;
+        } else {
+          m.x += dx / d * step; m.y += dy / d * step; m.z += dz / d * step;
+          continue;
+        }
+      } else if (!m.lost) {
+        this.missiles.splice(i, 1);   // 目標消失(陣亡/離場):飛彈自毀
         continue;
       }
-      m.x += dx / d * step;
-      m.y += dy / d * step;
-      m.z += dz / d * step;
+      // 失鎖:等速直線
+      m.x += (m.vx || 0) * dt;
+      m.y += (m.vy || 0) * dt;
+      m.z += (m.vz || 0) * dt;
     }
   }
 

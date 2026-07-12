@@ -471,8 +471,12 @@ log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
   const vitF = rb.sp + rb.hp;
   for (let i = 0; i < 8; i++) sim.tick(0.125);
   assert(vitF - (rb.sp + rb.hp) > HAZARDS.fire.dot * 0.8, `火場灼傷 ${Math.round(vitF - (rb.sp + rb.hp))}/秒(先扣護盾)`);
-  // 高空免疫灼傷(先拔光防空陣地,避免伏擊飛彈干擾判定)
-  for (const s of [...sim.ents.values()]) if (s.kind === 'aasite') sim.ents.delete(s.id);
+  // 高空免疫灼傷(先拔光防空陣地 + 敵方塔/主堡:塔射程 310 已能打到火場座標,
+  // 留著會讓「高空不受灼傷」的血量斷言被塔砲/SAM 汙染)
+  // (2026-07-12:塔射程 310 + 小兵強化後,火場座標已落在敵方火網內 → 只留火場,其餘敵方單位全清)
+  for (const s of [...sim.ents.values()]) {
+    if (s.kind === 'aasite' || s.side === 'STEEL') sim.ents.delete(s.id);
+  }
   sim.missiles.length = 0;
   const dr2 = sim.addHero('SWARM', 'hz_d');
   dr2.x = fire.x; dr2.z = fire.z; dr2.y = HAZARDS.fire.maxY + 20;

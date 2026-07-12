@@ -308,12 +308,20 @@ export class BattleClient {
   }
 
   /**
-   * 兵線指引:不畫連續線,改成沿線的 3D 浮空箭頭(指向敵方主堡)。
-   * 佈點規則 —— 直線段每 ARROW_GAP 一支;航向變化 > TURN_RAD 的轉角「一定」有一支;
-   * 任兩支間距不得小於 MIN_GAP(轉角優先,擠掉太近的等距箭頭)= 不會連成一條蜈蚣。
+   * 兵線指引:不畫連續線,改成沿線的「ㄑ 字形」推進箭頭(馬力歐賽車加速板語彙)。
+   * 造型 —— 每支箭 = 兩根扁平橫桿在頂點交會的 chevron,**貼在地面上**(HOVER 只留 0.3m
+   *   離地淨空防 z-fighting;桿身厚度 0.12m)—— 浮在空中的箭頭地面玩家看不到(視線被機體
+   *   與地物擋掉),**MUST NOT** 再把它抬高成空中路標。
+   * 佈點 —— 直線段每 ARROW_GAP 一支;航向變化 > TURN_RAD 的轉角「一定」有一支。
+   * 動畫 —— 直線:原地沿前進方向前送 + 脹縮;**轉角:整支箭沿著兵線「走過那個彎」**
+   *   (在轉角前後 TURN_RUN 公尺之間來回巡行,朝向恆為該點的切線)⇒ 玩家看到的是
+   *   一支示範轉彎路徑的箭頭,不是一個靜止的折角。
+   * 姿態 —— **貼地形坡度**:每根桿的傾角由自己兩端的地表高度決定(不是統一抬頭角)。
    */
   _initLanes() {
-    const ARROW_GAP = 55, MIN_GAP = 26, TURN_RAD = 0.22;
+    const ARROW_GAP = 110, MIN_GAP = 52, TURN_RAD = 0.22;
+    const BAR_L = 5.5, SPREAD = 0.62;   // 桿長 / chevron 的半張角(rad)
+    const TURN_RUN = 60;                // 轉角箭頭的巡行長度(轉角前後各半)
     this.lanePts = this.cfg.lanes.map((lane) => lane.map(([lat, lng]) => {
       const [x, z] = llToWorld(lat, lng, this.center);
       return new THREE.Vector3(x, this.terrain.heightAt(x, z) + 2, z);
@@ -341,69 +349,94 @@ export class BattleClient {
         const l = Math.hypot(dx, dz) || 1;
         return [pts[i - 1][0] + dx * f, pts[i - 1][1] + dz * f, dx / l, dz / l];
       };
-      // ① 轉角(優先佔位)
+      // ① 轉角(優先佔位):整支箭之後會沿線巡行走過這個彎
       const stations = [];
       for (let i = 1; i < n - 1; i++) {
         const a = Math.atan2(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
         const b = Math.atan2(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
         const turn = Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
         if (turn < TURN_RAD) continue;
-        if (stations.length && cum[i] - stations[stations.length - 1] < MIN_GAP * 0.6) continue;   // 連續彎不塞爆
-        stations.push(cum[i]);
+        if (stations.length && cum[i] - stations[stations.length - 1].s < TURN_RUN) continue;   // 連續彎共用一支巡行箭
+        stations.push({ s: cum[i], turn: true });
       }
       // ② 直線段等距補點(離任何轉角箭頭太近就略過)
-      const turns = stations.slice();
+      const turns = stations.map((t) => t.s);
       for (let s = ARROW_GAP * 0.5; s < total - 8; s += ARROW_GAP) {
-        if (turns.some((t) => Math.abs(t - s) < MIN_GAP)) continue;
-        stations.push(s);
+        if (turns.some((t) => Math.abs(t - s) < Math.max(MIN_GAP, TURN_RUN * 0.6))) continue;
+        stations.push({ s, turn: false });
       }
-      stations.sort((a, b) => a - b);
+      stations.sort((a, b) => a.s - b.s);
       if (!stations.length) return;
 
-      const items = stations.map((s, k) => {
-        const [x, z, dx, dz] = at(s);
-        return { x, z, ry: Math.atan2(dx, dz), ph: k * 0.7 };
+      const items = stations.map((st, k) => {
+        const [x, z, dx, dz] = at(st.s);
+        return { x, z, ry: Math.atan2(dx, dz), s: st.s, turn: st.turn, ph: k * 0.9 };
       });
       const color = LANE_COLORS[li % LANE_COLORS.length];
-      // 扁平箭鏃(幾何朝 +z,與 ry 慣例一致):沿線推進的玩家從後方看到的是箭的「上表面」,
-      // 立體角錐從背面看只會變成一個菱形 —— 壓扁 + 抬頭(ARROW_PITCH)才讀得出方向。
-      const head = new THREE.ConeGeometry(2.4, 5.0, 4).rotateX(Math.PI / 2).scale(1, 0.34, 1);
-      const shaft = new THREE.BoxGeometry(1.4, 0.42, 4.0).translate(0, 0, -3.6);
-      const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.78, depthWrite: false });
-      const im = [new THREE.InstancedMesh(head, mat(), items.length),
-                  new THREE.InstancedMesh(shaft, mat(), items.length)];
+      // 扁平桿(幾何自頂點朝 −z 延伸):厚度 0.12 = 貼地薄片,不是空中的立體箭頭
+      const bar = () => new THREE.BoxGeometry(1.6, 0.12, BAR_L).translate(0, 0, -BAR_L / 2);
+      const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false });
+      const im = [new THREE.InstancedMesh(bar(), mat(), items.length),
+                  new THREE.InstancedMesh(bar(), mat(), items.length)];
       for (const m of im) {
         m.frustumCulled = false;
         m.renderOrder = 3;
         m.userData.noOutline = true;
         this.scene.add(m);
       }
-      this.laneArrows.push({ im, items });
+      this.laneArrows.push({ im, items, barL: BAR_L, at, total, run: TURN_RUN, spread: SPREAD });
     });
     this._arrowM = new THREE.Matrix4();
     this._arrowQ = new THREE.Quaternion();
-    this._arrowE = new THREE.Euler(0, 0, 0, 'YXZ');   // 先轉向(Y)再抬頭(X):抬頭軸恆垂直於前進方向
+    this._arrowE = new THREE.Euler(0, 0, 0, 'YXZ');   // 先轉向(Y)再依坡度俯仰(X)
     this._arrowP = new THREE.Vector3();
     this._arrowS = new THREE.Vector3(1, 1, 1);
   }
 
-  /** 兵線箭頭動畫:沿前進方向脈動前送 + 上下浮沉(每支相位錯開 = 流動感) */
+  /**
+   * 兵線箭頭動畫(全部貼地):
+   *   直線段 — ㄑ 字 chevron 原地沿前進方向前送 + 脹縮(加速板的流動感)。
+   *   轉角   — 同一支 chevron **沿兵線巡行走過彎道**(轉角前後各 run/2),朝向恆取該點切線
+   *            ⇒ 箭頭自己示範怎麼轉。
+   * 姿態貼地形:每根桿以「頂點 → 桿尾」兩點的地表高度差定俯仰角 ⇒ 桿身平行坡面。
+   */
   _updateLaneArrows(now) {
     if (!this.laneArrows?.length) return;
     const M = this._arrowM, Q = this._arrowQ, E = this._arrowE, P = this._arrowP, S = this._arrowS;
+    const HOVER = 0.3;    // 離地淨空:只夠避開 z-fighting,箭頭實質貼在地面上
     for (const la of this.laneArrows) {
+      const L = la.barL, SP = la.spread;
       la.items.forEach((it, i) => {
-        const t = now * 1.6 + it.ph;
-        const flow = (Math.sin(t) * 0.5 + 0.5) * 2.4;           // 沿前進方向推進 0~2.4m
-        const bob = Math.sin(t * 0.8) * 0.6;
-        const x = it.x + Math.sin(it.ry) * flow, z = it.z + Math.cos(it.ry) * flow;
-        const y = this._surf(x, z, Infinity) + 6.4 + bob;   // 兵線走上高架橋 → 箭頭浮在橋面上方
-        E.set(-0.42, it.ry, 0); Q.setFromEuler(E);          // 抬頭 24°:箭面朝向後方跟上來的玩家
-        P.set(x, y, z);
-        S.setScalar(0.9 + 0.12 * Math.sin(t));
-        M.compose(P, Q, S);
-        la.im[0].setMatrixAt(i, M);
-        la.im[1].setMatrixAt(i, M);
+        let ax, az, ry, sc;
+        if (it.turn) {
+          // 巡行:沿線 s 在 [s0 − run/2, s0 + run/2] 之間循環(14 m/s),朝向取切線
+          const u = ((now * 14 + it.ph * 20) % la.run) - la.run / 2;
+          const s = Math.max(0, Math.min(la.total, it.s + u));
+          const [px, pz, dx, dz] = la.at(s);
+          ax = px; az = pz;
+          ry = Math.atan2(dx, dz);
+          const edge = 1 - Math.abs(u) / (la.run / 2);            // 兩端縮小 = 淡出淡入
+          sc = 0.55 + 0.55 * Math.min(1, edge * 2.5);
+        } else {
+          const t = now * 1.7 + it.ph;
+          const flow = (t % (Math.PI * 2)) / (Math.PI * 2) * 7;   // 原地前送 0~7m 後回捲
+          sc = 0.75 + 0.35 * Math.sin(t);
+          ry = it.ry;
+          ax = it.x + Math.sin(ry) * flow;
+          az = it.z + Math.cos(ry) * flow;
+        }
+        // 兩根桿共用頂點、左右各張開 SP ⇒ 頂點朝前進方向的 ㄑ
+        for (const [k, yaw] of [[0, ry + SP], [1, ry - SP]]) {
+          const y0 = this._surf(ax, az, Infinity);
+          const tx = ax - Math.sin(yaw) * L, tz = az - Math.cos(yaw) * L;   // 桿尾(幾何朝 −z 延伸)
+          const dy = this._surf(tx, tz, Infinity) - y0;
+          E.set(Math.asin(Math.max(-0.9, Math.min(0.9, dy / L))), yaw, 0);  // 俯仰 = 該桿所在坡度
+          Q.setFromEuler(E);
+          P.set(ax, y0 + HOVER, az);
+          S.setScalar(sc);
+          M.compose(P, Q, S);
+          la.im[k].setMatrixAt(i, M);
+        }
       });
       la.im[0].instanceMatrix.needsUpdate = true;
       la.im[1].instanceMatrix.needsUpdate = true;
@@ -2429,7 +2462,7 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
       pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
-      dist: 0, max: def.range, mesh,
+      dist: 0, max: def.range, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍)
       mv: def.mv || 600, guide: !!def.guide, homing,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
@@ -2460,7 +2493,13 @@ export class BattleClient {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       const prev = b.pos.clone();
-      const tgt = b.homing ? this.ents.get(b.homing) : null;
+      // 失鎖規則(與伺服器 _tickMissiles 同一條):目標/導引點跑出「攻擊範圍」(以發射點為圓心)
+      // → 導引失效,之後只沿當下航向直線飛(吃重力),不再追擊。
+      let tgt = b.homing ? this.ents.get(b.homing) : null;
+      if (tgt && tgt.mesh.position.distanceTo(b.origin) > b.max) {
+        b.homing = null; tgt = null;
+        this.hud.feed?.('📡 目標脫離射程:飛彈失鎖(直線飛行)');
+      }
       if (tgt) {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = tgt.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)).sub(b.pos).normalize();
@@ -2471,7 +2510,12 @@ export class BattleClient {
         const rd = this.camera.getWorldDirection(new THREE.Vector3());
         const along = Math.max(20, b.pos.clone().sub(ro).dot(rd) + 40);
         const gp = ro.clone().addScaledVector(rd, along);
-        steer(b, gp.sub(b.pos).normalize(), 2.2);
+        if (gp.distanceTo(b.origin) > b.max) {
+          b.guide = false;                     // 導引點出了射程 → 雷射導引失效
+          b.vel.y -= BALLISTIC.G * dt;
+        } else {
+          steer(b, gp.sub(b.pos).normalize(), 2.2);
+        }
       } else {
         b.vel.y -= BALLISTIC.G * dt;                  // 重力下墜(拋物線彈道)
       }
