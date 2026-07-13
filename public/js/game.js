@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY,
+  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -372,6 +372,11 @@ export class BattleClient {
       for (let s = ARROW_GAP * 0.5; s < total - 8; s += ARROW_GAP) {
         if (turns.some((t) => Math.abs(t - s) < Math.max(MIN_GAP, TURN_RUN * 0.6))) continue;
         stations.push({ s, turn: false });
+      }
+      // ③ 己方主堡(反轉後 s≈0 端)=玩家重生點:在堡外(base R 22)沿主路線補兩支近距箭頭,
+      //    重生後一眼看出往哪推。刻意較密(引導離開出生點),不受 ARROW_GAP 節流。
+      for (const s of [26, 46]) {
+        if (s < total - 8 && !stations.some((t) => Math.abs(t.s - s) < 18)) stations.push({ s, turn: false });
       }
       stations.sort((a, b) => a.s - b.s);
       if (!stations.length) return;
@@ -1660,6 +1665,7 @@ export class BattleClient {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
+        ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
         // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
@@ -1771,13 +1777,65 @@ export class BattleClient {
       this.shields.add(shield);
     }
     group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
+    if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
     this.ents.set(e.id, ent);
     return ent;
+  }
+
+  // 主堡補血光環:標出 HERO_HEAL_RADIUS 範圍(貼地環,陣營色,緩慢脈動)
+  _addHealAura(ent, e) {
+    const R = GAME.HERO_HEAL_RADIUS;
+    const wx = e.x, wz = -e.z, y = this.terrain.heightAt(wx, wz) + 0.6;
+    const col = SIDES[e.s].color;
+    const g = new THREE.Group();
+    g.position.set(wx, y, wz);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(R * 0.9, R, 64),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(R, 64),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide }));
+    ring.rotation.x = disc.rotation.x = -Math.PI / 2;
+    g.add(disc); g.add(ring);
+    g.renderOrder = 2;
+    this.scene.add(g);
+    ent.aura = g; ent.auraRing = ring;
+    (this._auras ??= []).push(ent);
+  }
+
+  // 主堡兩門大砲(視覺):砲管朝敵方主堡,伺服器 _tickBaseGuns 開火時走既有 shot 曳光
+  _addBaseGuns(ent, e) {
+    const wx = e.x, wz = -e.z;
+    const box = new THREE.Box3().setFromObject(ent.mesh);
+    const bh = box.max.y - box.min.y;
+    const foe = e.s === 'SWARM' ? 'STEEL' : 'SWARM';
+    const eb = this.cfg.bases?.[foe];
+    let dirX = 0, dirZ = 1;
+    if (eb) { const [ex, ez] = llToWorld(eb[0], eb[1], this.center); dirX = ex - wx; dirZ = ez - wz; }
+    const g = new THREE.Group();
+    g.position.set(wx, box.min.y + bh * 0.58, wz);
+    g.rotation.y = Math.atan2(dirX, dirZ);   // 本地 +z = 朝敵方
+    const barrelGeo = new THREE.CylinderGeometry(1.1, 1.4, 16, 12).rotateX(Math.PI / 2).translate(0, 0, 8);
+    const mountGeo = new THREE.BoxGeometry(4, 4, 5);
+    const barMat = toonMat(0x2e343c, { celMetal: true });
+    const mntMat = toonMat(0x3a4048, { celMetal: true });
+    for (const sx of [10, -10]) {
+      const c = new THREE.Group();
+      c.position.set(sx, 0, 6);
+      const mount = new THREE.Mesh(mountGeo, mntMat);
+      const barrel = new THREE.Mesh(barrelGeo, barMat);
+      barrel.rotation.x = -0.14;   // 略微仰角
+      c.add(mount); c.add(barrel);
+      g.add(c);
+    }
+    outlinify(g);
+    this.scene.add(g);
+    ent.guns = g;
   }
 
   _removeEnt(id, ent) {
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
     this.scene.remove(ent.mesh);
+    if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
+    if (ent.guns) this.scene.remove(ent.guns);
     if (ent.mixer) this.mixers.delete(ent.mixer);
     if (ent.shield) this.shields.delete(ent.shield);
     this.spinners.delete(ent.mesh);
@@ -1785,31 +1843,43 @@ export class BattleClient {
     this.ents.delete(id);
   }
 
-  // 血條:受損單位頭上的雙色板
+  // 血條:HP 用紅色標示現有值,護盾(英雄雙層 HP 第一層)用玻璃藍疊在上方一列
   _updateHpBar(ent) {
     if (ent.isSelf) return;
     const frac = Math.max(0, ent.hp / ent.max);
-    if (frac >= 1 && !ent.bar) return;
+    const maxSp = ent.maxSp || 0;
+    const sfrac = maxSp > 0 ? Math.max(0, (ent.sp || 0) / maxSp) : 0;
+    if (frac >= 1 && (maxSp <= 0 || sfrac >= 1) && !ent.bar) return;   // 滿血且護盾滿(或無護盾)→ 不建條
     if (!ent.bar) {
-      const w = ent.isStatic ? 18 : 5;
-      const bg = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.09),
-        new THREE.MeshBasicMaterial({ color: 0x111417, transparent: true, opacity: 0.8, depthTest: false }));
-      const fg = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 0.09),
-        new THREE.MeshBasicMaterial({
-          color: ent.neutral ? 0xb8bfc4 : ent.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
-          depthTest: false,
-        }));
-      fg.position.z = 0.02;
+      const w = ent.isStatic ? 18 : 5, hh = w * 0.09;
+      const plane = (color, opacity, z) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh),
+          new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthTest: false }));
+        m.position.z = z; return m;
+      };
       const grp = new THREE.Group();
-      grp.add(bg); grp.add(fg);
+      grp.add(plane(0x111417, 0.8, 0));      // 底
+      const fg = plane(0xe23b34, 1, 0.02);   // 現有 HP:紅
+      grp.add(fg);
+      let sfg = null;
+      if (maxSp > 0) {                        // 護盾:玻璃藍,疊在 HP 條上方一列
+        const sbg = plane(0x0a1723, 0.7, 0.01); sbg.position.y = hh * 1.15;
+        sfg = plane(0x7fd4ff, 0.9, 0.03);       sfg.position.y = hh * 1.15;
+        grp.add(sbg); grp.add(sfg);
+      }
       const box = new THREE.Box3().setFromObject(ent.mesh);
       grp.position.y = (box.max.y - box.min.y) + (ent.isStatic ? 6 : 2.2);
       grp.renderOrder = 999;
       ent.mesh.add(grp);
-      ent.bar = grp; ent.barFg = fg; ent.barW = w;
+      ent.bar = grp; ent.barFg = fg; ent.barSfg = sfg; ent.barW = w;
     }
     ent.barFg.scale.x = Math.max(0.001, frac);
     ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
+    if (ent.barSfg) {
+      ent.barSfg.scale.x = Math.max(0.001, sfrac);
+      ent.barSfg.position.x = -(1 - sfrac) * ent.barW / 2;
+      ent.barSfg.visible = sfrac > 0;
+    }
   }
 
   /**
@@ -2158,12 +2228,16 @@ export class BattleClient {
     for (const o of this.ents.values()) {
       if (o.hero && o.isSelf && o !== ent) { o.isSelf = false; o._snapPos = true; }
     }
+    // 切換前的視野方向與位置(this.pos 此刻仍是舊座機):新座機在跟隨距離內就沿用原視野方向
+    // (含被擊墜自動讓位),太遠(還沒歸隊到編隊距離)才用該機自身朝向。
+    const prevYaw = this.yaw, prevX = this.pos.x, prevZ = this.pos.z;
     ent.isSelf = true;
     const wx = e.x, wz = -e.z;
     this.pos.set(wx, this.terrain.heightAt(wx, wz) + (e.y ?? 0), wz);
     this.vel.set(0, 0, 0);
     this.vy = 0;
-    this.yaw = e.ry ?? this.yaw;
+    const near = Math.hypot(wx - prevX, wz - prevZ) <= SQUAD.REGROUP_M;
+    this.yaw = near ? prevYaw : (e.ry ?? this.yaw);
     this.firing = false;
     this._crashSent = false;
     this.trauma = 0.35;
@@ -3132,7 +3206,14 @@ export class BattleClient {
           ctx.strokeStyle = '#fff'; ctx.stroke();
         }
       } else {
-        ctx.fillRect(mx - 1.5, my - 1.5, 3, 3);
+        // NPC 兵團:實心圓點標位置(直升機加外環,一眼看出空中單位),深色描邊拉出對比
+        const r = ent.kind === 'heli' ? 3 : 2.4;
+        ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.fill();
+        ctx.lineWidth = 0.8; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.stroke();
+        if (ent.kind === 'heli') {
+          ctx.beginPath(); ctx.arc(mx, my, r + 1.6, 0, 7);
+          ctx.lineWidth = 1; ctx.strokeStyle = c; ctx.stroke();
+        }
       }
     }
     // 防空飛彈(紅點)
@@ -3146,7 +3227,7 @@ export class BattleClient {
       const [mx, my] = this._world2mm(this.pos.x, this.pos.z, w, h);
       ctx.save();
       ctx.translate(mx, my);
-      ctx.rotate(-this.yaw + Math.PI);
+      ctx.rotate(-this.yaw);   // 前方 = (−sinYaw,−cosYaw);世界→小地圖同號 ⇒ θ = −yaw(舊 +π 讓箭頭反向)
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.moveTo(0, -7); ctx.lineTo(4.5, 5); ctx.lineTo(-4.5, 5);
@@ -3177,6 +3258,10 @@ export class BattleClient {
     this._updateLoot(dt, now);
     this._updateEffects(dt);
     for (const s of this.shields) s.userData.update(dt);
+    if (this._auras) for (const ent of this._auras) {   // 補血光環:緩慢脈動
+      const p = 0.22 + 0.12 * Math.sin(now * 1.6);
+      ent.auraRing.material.opacity = p;
+    }
     this.envFx?.update(dt, this.camera);
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);

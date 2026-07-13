@@ -1130,11 +1130,21 @@ export class BattleSim {
       if (this._aliveN(t) === 0) t.aiming = false;   // 小隊全滅才收瞄準(aiming 是共用狀態)
       this.stats[t.side].deaths++;
       if (bySide && bySide !== t.side) this.stats[bySide].kills++;
-      // 重生冷卻:每一架各自計數(小隊三架共用陣營死亡數會讓 CD 三倍速膨脹)
+      // 重生冷卻:三機小隊只有「整隊全滅」才追加重生時間(全隊統一延後),個別墜毀只吃基礎重生;
+      // 機甲/變形機甲(單機)沿用陣營死亡數累加。
       const r = UNITS[t.kind].respawn;
-      t.deaths = (t.deaths || 0) + 1;
-      const dn = t.sq && t.sq.bodies.length > 1 ? t.deaths : this.stats[t.side].deaths;
-      t.respawnAt = this.t + r.base + r.perDeath * dn;
+      if (t.sq && t.sq.bodies.length > 1) {
+        if (this._aliveN(t) === 0) {              // 這一架墜毀 = 三艘全滅 → 追加時間、三架一起延後重生
+          t.sq.wipes = (t.sq.wipes || 0) + 1;
+          const at = this.t + r.base + r.perDeath * t.sq.wipes;
+          for (const b of t.sq.bodies) b.respawnAt = at;
+        } else {
+          t.respawnAt = this.t + r.base;          // 尚有僚機存活 → 個別快速重生,不累加
+        }
+      } else {
+        t.deaths = (t.deaths || 0) + 1;
+        t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
+      }
       // 死亡多發生在 tick() 之外的訊息處理當下(detonate/hit),respawnAt 用的是
       // 上一個 tick 結束時的 this.t;若 r.base=0(無人機),下一個 tick 就會立刻
       // 达成重生條件,導致 dead:true 從未出現在任何一份快照裡(客戶端永遠不知道自己死過,
@@ -1222,6 +1232,7 @@ export class BattleSim {
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
+      if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
       const target = this._acquireTarget(e, u);
       e._eng = !!target;   // 交戰中的不當凝聚錨點(否則整波卡在原地等它)
       if (target) {
@@ -1562,24 +1573,45 @@ export class BattleSim {
     for (let li = 0; li < this.lanes.length; li++) {
       for (const side of ['SWARM', 'STEEL']) {
         const pts = this.lanes[li];
-        const start = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
+        const cum = this._laneCum(li);
+        const total = cum[cum.length - 1];
+        const off = GAME.WAVE_SPAWN_OFF_M;   // 出生點落在主路線上、主堡外(領隊在 off,列隊向堡內錯開)
         const comp = [];
         for (let i = 0; i < GAME.WAVE_SOLDIERS; i++) comp.push('soldier');
         comp.push('rocketeer', 'howitzer', 'heli');
         comp.forEach((kind, i) => {
           const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
+          // 沿線進度(公尺,從己方端起算);領隊在 off 出主堡,其餘往堡內列隊錯開
+          const prog = off - i * 6;
+          const d = side === 'SWARM' ? prog : total - prog;
+          const [sx, sz] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
           this._add({
             kind, side, lane: li, wv: this.wave,
-            x: start[0] + jx, z: start[1] + jz,
+            x: sx + jx, z: sz + jz,
             y: kind === 'heli' ? GAME.HELI_ALT : 0,
             hp: UNITS[kind].hp,
-            // 沿線進度(公尺,從己方端起算);錯開避免疊隊
-            prog: -i * 8,
+            prog,
           });
         });
       }
     }
     this.events.push({ e: 'wave', n: this.wave });
+  }
+
+  /** 主堡兩門大砲:各自冷卻、獨立索敵,砲塔級射程/傷害(數值 derive 自 tower,見 data.js)。 */
+  _tickBaseGuns(e, g, dt) {
+    e.gunCd ??= new Array(g.n).fill(0);
+    const gu = { range: g.range };   // _acquireTarget 只讀 range / wid
+    for (let i = 0; i < g.n; i++) {
+      e.gunCd[i] = Math.max(0, e.gunCd[i] - dt);
+      if (e.gunCd[i] > 0) continue;
+      const target = this._acquireTarget(e, gu);
+      if (!target) continue;
+      e.gunCd[i] = 1 / g.rate;
+      this._damage(target, g.dmg, e, 0);
+      const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
+      this.events.push({ e: 'shot', from: [e.x + off, e.z], to: [target.x, target.z], side: e.side });
+    }
   }
 
   _acquireTarget(e, u) {

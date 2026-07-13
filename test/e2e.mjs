@@ -530,6 +530,7 @@ log('— sim:TreasureClass 分層 + 詞綴強化 + 偵察中繼站 + 連通性�
   for (const s of [...sim.ents.values()]) if (s.kind === 'aasite') sim.ents.delete(s.id);   // 排除伏擊干擾
   const dr = sim.addHero('SWARM', 'rl_d');
   dr.x = relays[0].x; dr.z = relays[0].z; dr.y = 0;
+  dr.hp = 99999;   // 中繼站落在射程 310 的塔火內:同防空伏擊測試,墊高 hp 防塔擊落(否則佔領被打斷 = flaky)
   for (let i = 0; i < 28; i++) sim.tick(0.125);   // 3.5s > CHANNEL_S
   assert(sim.visionUntil.SWARM > sim.t, '佔用 3 秒 → 全隊視野脈衝啟動');
   assert([...sim.ents.values()].filter((e) => e.kind === 'relay').length === relays.length - 1, '中繼站用過即毀');
@@ -766,7 +767,9 @@ assert(guest2.battleConfig != null, '重連後補收 battleConfig');
 log('— 經濟:回主堡等資金 → 通用強化(火力升級隨處可買)—');
 const swarmBase = snap.ents.find((e) => e.k === 'base' && e.s === 'SWARM');
 const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z: swarmBase.z, ry: 0 }), 200);
-const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId);
+// 金錢/升級只序列化在「主視野(act)」那架上;三機小隊死亡讓位後 act 可能不是 bodies[0],
+// 故讀取這些欄位 MUST 篩 e.act(與後面 e.act 讀法一致),不能用第一個 pid 命中的僚機。
+const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
 const richSnap = await host.wait((c) => {
   const me = meOf(c);
   return me && me.$ >= 400 ? me : null;

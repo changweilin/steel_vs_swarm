@@ -971,10 +971,11 @@ export const UNITS = {
   // 2026-07-13「一波 NPC = 玩家 60% EHP」校準:單挑同線一波(3 步槍兵 + 火箭兵 + 榴彈兵 + 直升機)
   // 全員在射程內持續開火、玩家只用 Lv1 輕武器 + 重武器 CD ⇒ 清完波後平均剩 ~40% EHP。
   // 由此反推(舊值 ×0.5 傷害 / ×0.6 HP;armor 不動)—— 改任一項 MUST 重跑 `npm run bal`。
-  soldier:   { name: '步槍兵', hp: 180, armor: 8,  dmg: 8,  range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 230, armor: 12, dmg: 48, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 280, armor: 18, dmg: 55, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 420, armor: 14, dmg: 28, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
+  // 移動速度校準(2026-07-13):一波平均 ≈ robot.speed(21)× 75% ≈ 15.8,兵團像推進的軍隊而非爬行。
+  soldier:   { name: '步槍兵', hp: 180, armor: 8,  dmg: 8,  range: 150, rate: 1.0, speed: 16, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 230, armor: 12, dmg: 48, range: 180, rate: 0.4, speed: 15, sight: 190, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 280, armor: 18, dmg: 55, range: 220, rate: 0.3, speed: 12, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 420, armor: 14, dmg: 28, range: 175, rate: 0.8, speed: 20, sight: 220, bounty: 6, wid: 'rgun' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
@@ -1028,6 +1029,8 @@ UNITS.morph = {
   fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
   fov: 68, fovAir: 68, zoomFov: 35, sight: 240,   // 全型態 = 人眼視角(FPV 視覺大小雙陣營一致,飛行不再放寬)
 };
+// 主堡加裝兩門大砲:射程/傷害/射速一律 derive 自砲塔(MUST NOT 手抄),獨立於主堡本體火砲。
+UNITS.base.guns = { n: 2, range: UNITS.tower.range, dmg: UNITS.tower.dmg, rate: UNITS.tower.rate };
 
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
 export const GAME = {
@@ -1035,7 +1038,8 @@ export const GAME = {
   SNAP_MS: 125,               // 快照廣播 8Hz
   // 波次節奏:前期慢(對線期長,英雄有時間補刀/囤錢),中後期逐波加速到 MIN_S
   WAVE_PACE: { START_S: 34, MIN_S: 14, RAMP_FROM: 4, RAMP_TO: 14 },
-  FIRST_WAVE_DELAY_S: 6,
+  FIRST_WAVE_DELAY_S: 0,      // 開局即出第一波(從主堡出發),不再空等對線
+  WAVE_SPAWN_OFF_M: 34,       // 波次生成點離己方主堡的沿線距離:落在主路線上、出主堡外(base R 22)
   WAVE_COHESION_M: 26,        // 同波僚兵最大脫節距離:領先者原地等最慢的(交戰中除外)
   WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(另加固定 1 火箭兵/1 榴彈兵/1 攻擊直升機)
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
