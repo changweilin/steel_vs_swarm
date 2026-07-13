@@ -2088,10 +2088,11 @@ export class BattleClient {
         const dir3 = new THREE.Vector3(ev.dx, 0, -ev.dz).normalize();
         const arc = (ev.arc || 15) * Math.PI / 180;
         const up = new THREE.Vector3(0, 1, 0);
+        const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
         for (let k = -2; k <= 2; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
           const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
-          this._tracer(from, end, 0x7fe8ff, 0.28);
+          this._tracer(from, end, pcol, 0.28);
         }
       }
     } else if (ev.e === 'shot') {
@@ -2424,11 +2425,12 @@ export class BattleClient {
       // 電漿扇形:無彈道,命中由伺服器以「射向 + 夾角 + 射程」結算;本地畫扇形焰舌
       const arc = (def.arc || 15) * Math.PI / 180;
       const up = new THREE.Vector3(0, 1, 0);
+      const pcol = this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
       for (let k = -2; k <= 2; k++) {
         const dk = dir.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
         const end = muzzle.clone().addScaledVector(dk, def.range * (0.7 + Math.random() * 0.3));
-        this._tracer(muzzle, end, 0x7fe8ff, 0.28);
-        starburst(this.scene, this.effects, end.x, end.y, end.z, 3, 0x7fe8ff);
+        this._tracer(muzzle, end, pcol, 0.28);
+        starburst(this.scene, this.effects, end.x, end.y, end.z, 3, pcol);
       }
       this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z });   // three z 南 → 模擬 z 北
       return;
