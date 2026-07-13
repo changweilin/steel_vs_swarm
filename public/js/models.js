@@ -3136,6 +3136,13 @@ function buildTank(side) {
   bx(hull, 2.4, 0.18, 2.6, 0, 2.6, -1.7, deck);                          // 引擎甲板
   bx(hull, 1.5, 0.12, 1.3, 0, 2.72, -2.0, 0x394037);                     // 散熱柵
   bx(hull, 2.3, 0.5, 0.6, 0, 2.2, -3.3, bodyDk);                         // 車尾艙
+  // 車頭大燈(白)/ 車尾燈(紅):不靠移動也能一眼判斷正面,弭平砲塔轉向造成的方向錯覺
+  for (const s of [-1, 1]) {
+    bx(hull, 0.22, 0.2, 0.12, s * 1.05, 1.7, 3.98, 0xfff3d6,
+      { emissive: 0xffdd88, emissiveIntensity: 1.1 });                   // 頭燈
+    bx(hull, 0.2, 0.16, 0.08, s * 0.95, 2.15, -3.62, 0x7a1e1e,
+      { emissive: 0xff3030, emissiveIntensity: 0.9 });                   // 尾燈
+  }
   for (const s of [-1, 1]) {
     // 履帶環帶剪影:上帶/著地帶 + 前後斜段(繞惰輪/主動輪)
     bx(hull, 0.72, 0.32, 5.6, s * 1.7, 1.32, 0, band);                   // 上履帶帶
@@ -3144,6 +3151,8 @@ function buildTank(side) {
     f.rotation.x = -0.72;
     const r = bx(hull, 0.72, 0.3, 1.4, s * 1.7, 0.78, -3.05, band);      // 後斜段
     r.rotation.x = 0.72;
+    // 側裙甲:封住上/著地履帶帶之間的空隙(舊版中段鏤空會透出背景,像車身缺了一塊)
+    bx(hull, 0.6, 1.1, 6.2, s * 1.7, 0.94, 0, bodyDk);                   // 側裙甲(封閉履帶側面空隙)
     bx(hull, 1.05, 0.14, 6.6, s * 1.7, 1.56, 0.15, deck);                // 擋泥板
     bx(hull, 1.07, 0.1, 5.4, s * 1.7, 1.66, 0.15, accent);               // 陣營識別條
   }
@@ -3170,7 +3179,7 @@ function buildTank(side) {
   bx(turret, 0.28, 0.22, 0.28, 0.55, 0.85, 0.25, 0x141a20,
     { emissive: 0x9adfff, emissiveIntensity: 0.7 });                     // 觀瞄鏡
   bx(turret, 1.7, 0.45, 0.7, 0, 0.28, -1.05, 0x3a4136);                  // 尾艙置物架
-  cyl(turret, 0.02, 0.03, 1.3, 5, -0.7, 1.35, -0.6, 0x23262a);           // 天線
+  cyl(turret, 0.02, 0.03, 0.6, 5, -0.7, 1.05, -0.6, 0x23262a);           // 天線(縮短:避免撐大 fitToHeight 包圍盒,把車體/履帶擠得過小)
   const gun = cyl(turret, 0.13, 0.16, 4.4, 10, 0, 0.42, 2.9, 0x14171a, { metalness: 0.8 });
   gun.rotation.x = Math.PI / 2;
   cyl(gun, 0.19, 0.19, 0.5, 8, 0, 0.8, 0, 0x1e2226);                     // 排煙器
@@ -3480,38 +3489,46 @@ function buildSwarmApc(side) {
 function buildSwarmTank(side) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].color);
+  // 本體專用略亮甲殼色(比其餘蜂群小兵高一階明度):四足步行砲台體型大、常整台逆光,
+  // 沿用小兵那組暗灰在城市場景下會糊成一片黑影,看不出車身分件與朝向。
+  const SHELL = 0x474c56, DK = 0x363b43, PLATE = 0x5a616c, JOINT = 0x282c33;
   const hipY = 2.1;
   const spine = new THREE.Group();
   spine.position.y = hipY;
   g.add(spine);
   // 後段蜂腹甲殼(琥珀環紋)
-  bx(spine, 2.2, 1.2, 2.0, 0, 0, -1.5, SW_SHELL, { metalness: 0.6 });
-  bx(spine, 2.3, 0.16, 1.8, 0, 0.66, -1.5, SW_PLATE);
+  bx(spine, 2.2, 1.2, 2.0, 0, 0, -1.5, SHELL, { metalness: 0.6 });
+  bx(spine, 2.3, 0.16, 1.8, 0, 0.66, -1.5, PLATE);
   for (let i = 0; i < 2; i++)
     bx(spine, 2.26, 0.18, 0.26, 0, -0.1, -1.0 - i * 0.75, accent,
       { emissive: accent, emissiveIntensity: 0.5 });                     // 腹部環紋
+  // 尾端警示燈(暗紅,呼應鋼鐵坦克尾燈邏輯):逆光/背對時仍能一眼認出「這端是後面」
+  bx(spine, 0.5, 0.16, 0.1, 0, 0.15, -2.52, 0x7a1e1e,
+    { emissive: 0xff3030, emissiveIntensity: 0.8 });                     // 尾燈
   // 前段主甲殼(胸樞軸:脊椎波第二節)
   const chest = new THREE.Group();
   chest.position.set(0, 0.05, 0.2);
   spine.add(chest);
-  bx(chest, 2.5, 1.4, 2.6, 0, 0.1, 0.8, SW_PLATE, { metalness: 0.6 });
-  bx(chest, 2.3, 0.2, 2.2, 0, 0.88, 0.8, SW_SHELL);                      // 背甲
+  bx(chest, 2.5, 1.4, 2.6, 0, 0.1, 0.8, PLATE, { metalness: 0.6 });
+  bx(chest, 2.3, 0.2, 2.2, 0, 0.88, 0.8, SHELL);                         // 背甲
   // 背載磁軌砲(朝 +z;導軌 + 充能環)
   const gun = cyl(chest, 0.15, 0.19, 4.6, 8, 0, 1.05, 2.6, 0x14171a, { metalness: 0.8 });
   gun.rotation.x = Math.PI / 2;
-  for (const s of [-1, 1]) bx(gun, 0.08, 3.8, 0.16, s * 0.24, -0.2, 0, SW_DK, { metalness: 0.7 });
+  for (const s of [-1, 1]) bx(gun, 0.08, 3.8, 0.16, s * 0.24, -0.2, 0, DK, { metalness: 0.7 });
   cyl(gun, 0.24, 0.24, 0.4, 6, 0, 2.1, 0, 0x0d0f11);                     // 砲口
   cyl(gun, 0.21, 0.21, 0.16, 6, 0, 1.55, 0, accent, { emissive: accent, emissiveIntensity: 0.9 });
   // 頸/頭(複眼感測;stepQuad 靜止警戒掃描)
   const neck = new THREE.Group();
   neck.position.set(0, -0.15, 2.1);
   chest.add(neck);
-  bx(neck, 0.5, 0.4, 0.5, 0, 0, 0.1, SW_DK);
+  bx(neck, 0.5, 0.4, 0.5, 0, 0, 0.1, DK);
   const head = new THREE.Group();
   head.position.set(0, 0, 0.4);
   neck.add(head);
-  bx(head, 0.7, 0.5, 0.6, 0, 0, 0.2, SW_SHELL, { metalness: 0.6 });
-  bx(head, 0.56, 0.12, 0.08, 0, 0.06, 0.52, accent, { emissive: accent, emissiveIntensity: 1.6 });
+  bx(head, 0.7, 0.5, 0.6, 0, 0, 0.2, SHELL, { metalness: 0.6 });
+  // 複眼:加大 + 左右分片,任何角度都至少露出一片,不靠移動也能判斷正面
+  for (const sx of [-1, 1])
+    bx(head, 0.26, 0.2, 0.1, sx * 0.16, 0.06, 0.54, accent, { emissive: accent, emissiveIntensity: 1.8 });
   for (const sx of [-1, 1]) {
     const ant = cyl(head, 0.02, 0.03, 0.7, 5, sx * 0.22, 0.5, 0.3, 0x14171a);
     ant.rotation.x = -0.6;                                               // 蜂觸角
@@ -3520,22 +3537,22 @@ function buildSwarmTank(side) {
   const tail = new THREE.Group();
   tail.position.set(0, 0.15, -2.5);
   spine.add(tail);
-  bx(tail, 0.3, 0.5, 0.8, 0, 0, -0.4, SW_DK);
+  bx(tail, 0.3, 0.5, 0.8, 0, 0, -0.4, DK);
   const tail2 = new THREE.Group();
   tail2.position.set(0, 0, -0.8);
   tail.add(tail2);
-  bx(tail2, 0.2, 0.36, 0.6, 0, 0, -0.3, SW_JOINT);
+  bx(tail2, 0.2, 0.36, 0.6, 0, 0, -0.3, JOINT);
   bx(tail2, 0.22, 0.2, 0.16, 0, 0, -0.62, accent, { emissive: accent, emissiveIntensity: 0.8 });
   // 四足:髖樞軸 + 逆關節 + 足墊
   const mkLeg = (sx, sz, front) => {
     const leg = new THREE.Group();
     leg.position.set(sx * 1.3, hipY, sz);
-    bx(leg, 0.5, 0.5, 0.6, 0, 0, 0, SW_PLATE, { metalness: 0.6 });       // 髖甲
-    const th = bx(leg, 0.3, 1.3, 0.45, 0, -0.55, front ? 0.15 : -0.15, SW_SHELL);
+    bx(leg, 0.5, 0.5, 0.6, 0, 0, 0, PLATE, { metalness: 0.6 });          // 髖甲
+    const th = bx(leg, 0.3, 1.3, 0.45, 0, -0.55, front ? 0.15 : -0.15, SHELL);
     th.rotation.x = front ? -0.25 : 0.25;
-    const sh = bx(leg, 0.2, 1.2, 0.3, 0, -1.5, front ? -0.15 : 0.15, SW_DK);
+    const sh = bx(leg, 0.2, 1.2, 0.3, 0, -1.5, front ? -0.15 : 0.15, DK);
     sh.rotation.x = front ? 0.3 : -0.3;
-    bx(leg, 0.34, 0.18, 0.5, 0, -2.02, 0.05, SW_JOINT);                  // 足墊
+    bx(leg, 0.34, 0.18, 0.5, 0, -2.02, 0.05, JOINT);                     // 足墊
     g.add(leg);
     return leg;
   };
