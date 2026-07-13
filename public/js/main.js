@@ -596,7 +596,9 @@ function charBioTextHTML(id) {
     ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
     ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
     ${lo.hobby ? `<p class="cd-bio"><b class="cd-bio-tag">興趣</b>${esc(lo.hobby)}</p>` : ''}
-    ${lo.bio ? `<p class="cd-bio"><b class="cd-bio-tag">生平</b>${esc(lo.bio)}</p>` : ''}`;
+    ${lo.bio ? `<p class="cd-bio"><b class="cd-bio-tag">生平</b>${esc(lo.bio)}</p>` : ''}
+    ${lo.expertise ? `<p class="cd-bio"><b class="cd-bio-tag">專長</b>${esc(lo.expertise)}</p>` : ''}
+    ${lo.bond ? `<p class="cd-bio"><b class="cd-bio-tag">與機體</b>${esc(lo.bond)}</p>` : ''}`;
 }
 
 function charDetailHTML(id) {
