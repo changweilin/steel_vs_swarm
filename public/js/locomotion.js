@@ -414,12 +414,17 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
   ], idle, now, 0.9, sg.idleK);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 同 stepBiped:無頭 rig 跳過凝視
-  // 尾 = 第三條腿:與體軸反相上下甩(騰空尾壓下、蹬離尾抬起 = 角動量互抵),
-  // 逐節相位延遲成鞭;急轉照樣橫甩配重(whipTail)
+  // 尾 = 第三條腿的水平配重桿:體軸前傾(hips.rotation.x)已把尾根整段抬到近水平後伸,
+  // 這裡「只」疊每跳的前後擺(騰空尾壓下、蹬離尾抬起 = 角動量互抵),逐節相位延遲成鞭。
+  // MUST NOT 再加持續上翹偏置(舊的 (rig.tailUp||0.2) 逐節累積 → 尾巴整條捲上天,使用者指正)
   if (rig.tailSegs) {
     whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate);
+    // 尾巴是「近水平的配重桿」:體軸壓成 ~49° 前傾俯衝時,尾若僵硬跟著鼓上去就成了「上翹」——
+    // 尾根反向抵銷大部分體軸前傾 → 尾維持後伸近水平(真袋鼠尾在奔跳時幾乎與地面平行);
+    // 只疊小幅上下配重擺(逐節 ×3 會累積,故壓小),尾梢略放大保留鞭感
     rig.tailSegs.forEach((t, i) => {
-      t.rotation.x += ((rig.tailUp || 0.2) - Math.sin(L.ph - i * 0.55) * 0.3) * a;
+      const counter = i === 0 ? -hips.rotation.x * 0.7 : 0;
+      t.rotation.x += counter - Math.sin(L.ph - i * 0.55) * (0.1 + i * 0.03) * a;
     });
   }
 }
@@ -599,9 +604,10 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const wave = G === 'trot' ? L.ph * 2 : L.ph;
   // 奔馳時脊椎屈伸放大:rotary(犬/豹)的拱背-伸展是 gallop 的引擎,幅度最大;
   // transverse(馬)平緩得多;騎乘型再收斂 —— 馬背要載人端槍
-  // 迴旋襲步脊椎屈伸仍最劇(> 橫向襲步),但收斂 —— 過大的脊椎俯仰乘上長頸力臂會把頭甩出大弧,
-  // 逼得頸部補償量過大而從肩上滑脫(獵犬頭-身分離的根源)
-  const pAmp = (rig.pitchAmp ?? 0.05) * (1 + gallop * (rig.rider ? 0.3 : ROT ? 0.85 : 0.7));
+  // 迴旋襲步脊椎屈伸最劇(拱背-伸展是 gallop 的引擎;犬/豹 ROT 幅度最大),橫向襲步(馬)平緩,
+  // 騎乘型(人馬)再收斂但仍要看得出馬身起伏 —— 頭與槍口的穩定改由「靈活長頸/上身分節逐段吸收」保證,
+  // 不再靠壓低脊椎俯仰來迴避(見下方 rider 分節鏈與非騎乘的頸主動反屈)
+  const pAmp = (rig.pitchAmp ?? 0.05) * (1 + gallop * (rig.rider ? 0.55 : ROT ? 0.9 : 0.7));
   // 加速俯仰改走阻尼(spool:重型獸傾角落後於速度=柴油機起轉)+ 爆發前撲 / 急停後坐插腳
   L.qacc = damp(L.qacc ?? 0, clamp(L.accel * 0.012, -0.08, 0.1), 5 * (1 - 0.6 * sg.spool), dt);
   // 四足脊椎近水平:起步/煞停幾乎不改脊背俯仰(靠步幅、後肢驅動與垂直起伏,不把頭壓向地面);
@@ -616,18 +622,36 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   rig.spine.position.y = rig.hipsY0 - bob + idK * Math.sin(now * 1.4 * iF + L.ph) * 0.02
     - L.srg * 0.03 - L.brk * 0.03;   // 爆發起跑蓄力 / 急停壓低重心
   if (rig.rider) {
-    // 人馬:騎士的骨盆「黏死」在馬背上 —— position 一律不動(先前用位移反向抵銷,
-    // 馬身下沉、騎士留在原地,兩者在腰際裂開;headArc 是給水平長頸用的力臂補償,
-    // 套在垂直的人身上變成前後亂晃的來源 —— 都拆掉)。
-    // 穩定全靠「腰部反向旋轉」:即時抵銷馬軀的俯仰/滾轉,胸口與槍口鎖平;
-    // 騎士跟著馬一起沉浮是真實騎乘感,不是缺陷。
-    rig.neck.rotation.x = -(rig.spine.rotation.x + rig.chest.rotation.x) * 0.92
-      + Math.sin(wave - 1.4) * 0.01 * a;
-    rig.neck.rotation.z = -rig.spine.rotation.z * 0.9;
+    // 人馬:騎士骨盆「黏死」馬背(position 不動)。穩定改由「上身分節鏈逐段反向吸收」——
+    // 腰(neck)→ 胸(humChest)→ 頸(humNeck)各吃一段馬軀的俯仰/滾轉,每節都看得出給彈=靈活,
+    // 累計把槍口與頭鎖平;頭最後反轉抵銷殘量 = 視線絕對靜止(扣扳機那一刻)。
+    // 騎士隨馬一起沉浮是真實騎乘感 —— 不做位移反抵銷(headArc 是水平長頸力臂補償,套直立人身上會亂晃)。
+    const hp = rig.spine.rotation.x + rig.chest.rotation.x;   // 馬軀俯仰
+    const hr = rig.spine.rotation.z;                          // 馬軀滾轉
+    // 腰彎:反吃 40% + 隨步態相位的微幅給彈(奔馳越明顯給得越多)
+    rig.neck.rotation.x = -hp * 0.4 + Math.sin(wave - 0.6) * 0.03 * a;
+    rig.neck.rotation.z = -hr * 0.5;
     rig.neck.position.y = rig.neckY0;
     rig.neck.position.x = 0;
-    // 持槍雙臂:鎖死當穩定射擊台(角度不隨步態擺動)是刻意設計,但完全零動態會像展示模型 ——
-    // 疊一點幅度遠小於腿部的待機液壓微顫在建構時的基準角上(armBase),不破壞「鎖死」的觀感
+    // 胸再吸 40%(+ 呼吸微擺)、頸吸 15%:力由腰往上逐節遞減散開 = 分節都在動
+    if (rig.humChest) {
+      rig.humChest.rotation.x = -hp * 0.4 + Math.sin(wave - 1.3) * 0.022 * a
+        + idle * sg.breathK * Math.sin(now * 1.5) * 0.015;
+      rig.humChest.rotation.z = -hr * 0.3;
+    }
+    if (rig.humNeck) {
+      rig.humNeck.rotation.x = -hp * 0.15;
+      rig.humNeck.rotation.z = -hr * 0.12;
+    }
+    // 頭:反轉抵銷腰+胸+頸的累計殘量 → 頭鎖平;留 ~5% 殘留晃動 = 有慣性的機械頭(非陀螺儀)
+    const accX = hp + rig.neck.rotation.x + (rig.humChest ? rig.humChest.rotation.x : 0)
+      + (rig.humNeck ? rig.humNeck.rotation.x : 0);
+    const accZ = hr + rig.neck.rotation.z + (rig.humChest ? rig.humChest.rotation.z : 0)
+      + (rig.humNeck ? rig.humNeck.rotation.z : 0);
+    rig.head.rotation.x = -accX * 0.95;
+    rig.head.rotation.z = -accZ * 0.9;
+    rig.head.rotation.y = idle * sg.idleK * Math.sin(now * 0.5) * 0.28;   // 靜止緩慢掃視(基底,下方再疊入彎凝視)
+    // 持槍雙臂:鎖死當穩定射擊台(角度不隨步態擺動)是刻意設計,疊遠小於腿部的待機液壓微顫
     if (rig.armSh) {
       rig.armSh.forEach((sh, i) => {
         const el = rig.armEl[i], b = rig.armBase[i];
@@ -637,18 +661,22 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
       });
     }
   } else {
-    rig.neck.rotation.x = Math.sin(wave - 1.4) * 0.07 * a;
-    // 頸吸收「脊椎彈跳 + 脊椎/胸俯仰在長頸力臂上放大出來的畫弧」⇒ 頭近乎平移前進
-    // 頸吸收「彈跳 + 長頸力臂畫弧」以穩住頭,但:①只補償步態俯仰(gaitPitch,加減速前傾不進補償,
-    // 否則起跑那下頸會被拋出)②夾住補償位移 —— 長頸機種(獵犬)迴旋襲步時補償量過大會把頸從肩上撐脫(分離)
-    rig.neck.position.y = rig.neckY0 + bob * 0.55 + clamp(headArc(rig, 0.85, gaitPitch), -0.18, 0.18);
+    // 非騎乘(獵犬/劍龍/克蘇魯):靈活長頸「主動反屈」吃掉大半脊椎俯仰(拱背再劇也把頭撐平),
+    // 殘量交給頭;位移補償只吃步態俯仰的畫弧(加減速前傾不進補償,否則起跑頸被拋出),
+    // 夾幅放寬到 ±0.28 讓迴旋襲步的大拱背也補得動,但仍夾住 → 頸不會從肩上撐脫(分離)
+    // 靈活長頸主動反屈:吃掉大半脊椎俯仰(拱背再劇也把頭撐平)—— 迴旋襲步長頸穩定的關鍵。
+    // 係數 1.8 是「頭鎖平」的火候(獵犬實測頭部垂直位移 0.87→0.36m、頭俯仰 <2°、脊椎拱背仍 ±12.5°);
+    // 小俯仰機種(劍龍/克蘇魯)乘上各自的小 spinePitch = 小幅反屈,行為幾乎不變
+    const spinePitch = rig.spine.rotation.x + rig.chest.rotation.x;
+    rig.neck.rotation.x = -spinePitch * 1.8 + Math.sin(wave - 1.4) * 0.05 * a;
+    rig.neck.position.y = rig.neckY0 + bob * 0.55 + clamp(headArc(rig, 0.9, gaitPitch), -0.28, 0.28);
+    // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)
+    stabilizeHead({ head: rig.head }, [
+      rig.spine.rotation.x + rig.chest.rotation.x + rig.neck.rotation.x,
+      rig.spine.rotation.y,
+      rig.spine.rotation.z + rig.neck.rotation.z,
+    ], idle, now, 0.95, sg.idleK);
   }
-  // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)
-  stabilizeHead({ head: rig.head }, [
-    rig.spine.rotation.x + rig.chest.rotation.x + rig.neck.rotation.x,
-    rig.spine.rotation.y,
-    rig.spine.rotation.z + rig.neck.rotation.z,
-  ], idle, now, 0.95, sg.idleK);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   rig.head.rotation.y += L.gaze;   // 入彎凝視:獵食者先看向要去的地方
   // 尾:急轉甩向轉向反側(配重)+ 逐節延遲的鞭;高速時尾根抬起配平前傾
@@ -798,8 +826,10 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     m * clamp(vFwd / topAir, -1, 1) * 0.2
     + (1 - m) * (0.16 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15) * uprightK),
     airK * (1 - 0.55 * sg.spool * (1 - m)), dt);   // spool:地面重型前傾遲滯(傾角先於速度=柴油機起轉)
-  // 迴旋襲步的拱背-伸展脈動(獵豹引擎)疊在阻尼俯仰之上;+ 地面爆發前撲/急停後坐、飛行揚翼(flare)煞停
-  rig.torso.rotation.x += L.pitch + Math.sin(L.ph) * 0.09 * galF * a
+  // 迴旋襲步的拱背-伸展脈動(獵豹引擎)疊在阻尼俯仰之上;放大幅度 → 脊背收攏相拱起、伸展相打直,
+  // 驅動四肢的圓周襲步(拱背才是 gallop 的引擎);+ 地面爆發前撲/急停後坐、飛行揚翼(flare)煞停
+  const archPulse = Math.sin(L.ph) * 0.22 * galF * a;
+  rig.torso.rotation.x += L.pitch + archPulse
     + (L.srg * 0.07 - L.brk * 0.08) * uprightK - L.flr * 0.06;   // 俯衝 × uprightK(水平體軸收斂);flare 屬飛行不縮
   // 悟空懸停直立(rig.hoverUp = cruise):飛行「靜止」時機體立回直立、光翼垂展身後;
   // 開始移動才連續前傾壓平到近水平的巡航姿態。頭本來以 0.15−cruise 補償前傾,
@@ -816,8 +846,12 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   rig.torso.rotation.z = L.roll + (rig.rollSway || 0) * Math.sin(L.ph) * a;
   // 頭:抵銷軀幹的動態俯仰/側傾(地面步行時鎖平視線;飛行時讓位給 pose —— 機首本來就該跟著航向)
   if (rig.head) {
+    // 拱背在水平獸軀上把頭甩出大弧(獵豹頭部垂直位移 0.72m):獸軀已放平 ⇒ 頭局部 −z ≈ 世界垂直,
+    // 沿它反向平移抵銷弧高 → 頭鎖平(垂直位移收斂到 0.19m)。archPulse 僅迴旋襲步(galF)非零 ⇒ 其餘機種不受影響
+    rig.head.position.z += archPulse * -2;
     const k = (1 - m) * 0.8;
-    rig.head.rotation.x -= L.pitch * k;
+    // 頭反向吸收阻尼俯仰 + 拱背脈動 → 視線鎖平(靈活頸的效果:身體拱背奔馳,頭卻不晃)
+    rig.head.rotation.x -= L.pitch * k + archPulse * 0.92;
     rig.head.rotation.z -= L.roll * k;
     L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
     rig.head.rotation.y += idle * sg.idleK * Math.sin(now * 0.5) * 0.25    // 靜止:緩慢警戒掃視(idleK 依性格:哨兵頻掃、狙擊近凍)

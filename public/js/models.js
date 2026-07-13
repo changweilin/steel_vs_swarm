@@ -825,9 +825,9 @@ function buildAvianDrone(side, vis) {
 // 永遠三腳著地,速度感全在步幅與體側搖擺)
 const BEAST = {
   hound:   { bulk: 0.95, hipY: 2.0, tailLen: 1.5, stride: 2.6, legX: 0.78, fz: 1.05, hz: -1.25,
-             gait: 'trot', gallopType: 'rotary', bob: 0.1, top: 7 },
-  centaur: { bulk: 1.0,  hipY: 2.2, tailLen: 1.0, stride: 2.8, legX: 0.6,  fz: 1.0,  hz: -1.2,
-             gait: 'trot', gallopType: 'transverse', bob: 0.09, top: 7 },
+             gait: 'trot', gallopType: 'rotary', bob: 0.1, pitchAmp: 0.1, top: 7 },
+  centaur: { bulk: 1.0,  hipY: 2.2, tailLen: 1.5, stride: 2.8, legX: 0.6,  fz: 1.0,  hz: -1.2,
+             gait: 'trot', gallopType: 'transverse', bob: 0.09, pitchAmp: 0.08, top: 7 },
   stego:   { bulk: 1.45, hipY: 1.9, tailLen: 1.7, stride: 2.3, legX: 0.95, fz: 1.2,  hz: -1.6,
              gait: 'walk', bob: 0.05, rollSway: 0.11, pitchAmp: 0.03, top: 8 },
   cthulhu: { bulk: 1.15, hipY: 2.1, tailLen: 1.4, stride: 1.7, legX: 0.8,  fz: 0.8,  hz: -1.1,
@@ -960,6 +960,7 @@ function buildBeastMech(side, vis) {
   };
 
   let armSh = null, armEl = null, armBase = null;   // 人馬持槍雙臂(僅 C==='centaur' 賦值)
+  let humChest = null, humNeck = null;              // 人馬上身分節(腰 neck → 胸 humChest → 頸 humNeck → 頭)
   if (C === 'hound') {
     // ---- 機械獵犬:修長犬軀(圓角矩形量體 —— 真獸沒有直角)+ 立耳吻部;背揹反器材長砲 ----
     rbz(spine, 1.4 * B, 1.1 * B, 2.3, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });
@@ -1015,13 +1016,20 @@ function buildBeastMech(side, vis) {
     const ccol = cyl(chest, 0.52 * B, 0.52 * B, 0.62, 14, 0, 0.0, -0.45, dim(hull, 0.82), { metalness: 0.6 });
     ccol.rotation.x = Math.PI / 2;
     ccol.scale.x = 1.28;
+    // 人形上身分節鏈(騎士脊柱):腰 neck(樞軸=馬背骨盆)→ 胸 humChest → 頸 humNeck → 頭。
+    // 每節在 locomotion rider 分支逐段反向吸收馬軀起伏(每節都給一點=靈活),累計鎖平槍口與頭。
+    // 腰是根樞軸:只掛「腰塊」,胸/臂/槍/頭全部改掛下游節點,這樣腰一彎、上身整段跟著給。
     neck.position.set(0, 0.75 * B, 0.95);
     chest.add(neck);
     bx(neck, 0.85 * B, 0.5, 0.6, 0, 0.2, 0, hullDk);                               // 腰
-    bx(neck, 1.05 * B, 0.9, 0.7, 0, 0.85, 0, hull, { metalness: 0.6 });            // 胸廓
-    bx(neck, 0.5 * B, 0.3, 0.14, 0, 0.95, 0.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
-    // 長槍端在胸前(槍口朝 +z):據槍射姿 —— 上身跟著 rider 穩定,槍口恆指前方
-    const rifle = bx(neck, 0.14, 0.24, 3.2, 0.15 * B, 0.55, 0.75, 0x14171a, { metalness: 0.85 });
+    // 胸腔樞軸(擱在腰上方 0.62):獨立分節,腰彎後胸再吸一段
+    humChest = new THREE.Group();
+    humChest.position.set(0, 0.62, 0);
+    neck.add(humChest);
+    bx(humChest, 1.05 * B, 0.9, 0.7, 0, 0.23, 0, hull, { metalness: 0.6 });        // 胸廓
+    bx(humChest, 0.5 * B, 0.3, 0.14, 0, 0.33, 0.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    // 長槍端在胸前(槍口朝 +z):據槍射姿 —— 上身跟著 rider 分節穩定,槍口恆指前方
+    const rifle = bx(humChest, 0.14, 0.24, 3.2, 0.15 * B, -0.07, 0.75, 0x14171a, { metalness: 0.85 });
     bx(rifle, 0.07, 0.1, 0.9, 0, 0.04, 1.85, 0x30373f, { metalness: 0.85 });
     bx(rifle, 0.09, 0.26, 0.3, 0, -0.2, -1.5, 0x23262a);                           // 槍托
     const centaurSight = bx(rifle, 0.08, 0.07, 0.3, 0, 0.22, 0.2, accent, { emissive: accent, emissiveIntensity: 0.8 });
@@ -1036,10 +1044,10 @@ function buildBeastMech(side, vis) {
     // 而不打散「鎖死當穩定射擊台」的姿勢 —— MUST NOT 只是建好姿勢就丟著不再驅動
     armSh = []; armEl = []; armBase = [];
     for (const sx of [-1, 1]) {
-      bx(neck, 0.5, 0.35, 0.6, sx * 0.75 * B, 1.2, 0, plate);                      // 墊肩
+      bx(humChest, 0.5, 0.35, 0.6, sx * 0.75 * B, 0.58, 0, plate);                 // 墊肩
       const sh = new THREE.Group();
-      sh.position.set(sx * 0.72 * B, 1.05, 0.12);
-      neck.add(sh);
+      sh.position.set(sx * 0.72 * B, 0.43, 0.12);
+      humChest.add(sh);
       sh.rotation.x = sx > 0 ? -0.55 : -1.05;      // 上臂前伸(左手伸得更遠去托護木)
       sh.rotation.z = sx * -0.35;                  // 內收向槍身
       bx(sh, 0.22, 0.7, 0.26, 0, -0.32, 0, hullDk);                                // 上臂
@@ -1053,54 +1061,68 @@ function buildBeastMech(side, vis) {
       armSh.push(sh); armEl.push(el);
       armBase.push({ shX: sh.rotation.x, shZ: sh.rotation.z, elX: el.rotation.x, elZ: el.rotation.z });
     }
-    head.position.set(0, 1.5, 0.05);
-    neck.add(head);
+    // 頸樞軸(短柱)+ 頭:頸再吸一小段,頭最後鎖平 = 視線絕對靜止
+    humNeck = new THREE.Group();
+    humNeck.position.set(0, 0.8, 0.0);
+    humChest.add(humNeck);
+    cyl(humNeck, 0.14 * B, 0.17 * B, 0.3, 8, 0, -0.02, 0, hullDk, { metalness: 0.6 });  // 頸柱
+    head.position.set(0, 0.16, 0.05);
+    humNeck.add(head);
     bx(head, 0.42 * B, 0.4, 0.46, 0, 0.1, 0, plate, { metalness: 0.6 });
     bx(head, 0.32 * B, 0.1, 0.06, 0, 0.12, 0.25, accent, { emissive: accent, emissiveIntensity: 1.6 });
-    // 馬尾散熱索:多節圓柱串接(下垂的粗-細兩節 + 關節環)
-    tail.position.set(0, 0.4 * B, -1.8);
-    const t1 = cyl(tail, 0.11 * B, 0.09 * B, P.tailLen, 8, 0, -0.2, -P.tailLen / 2, hullDk);
-    t1.rotation.x = Math.PI / 2 + 0.25;
-    cyl(tail2, 0.09 * B, 0.09 * B, 0.08, 8, 0, -0.32, -0.02, 0x30373f, { metalness: 0.8 })
-      .rotation.x = Math.PI / 2 + 0.35;                                            // 節間關節環
-    const t2c = cyl(tail2, 0.07 * B, 0.05 * B, P.tailLen * 0.6, 8, 0, -0.42, -P.tailLen * 0.28, 0x23262a);
-    t2c.rotation.x = Math.PI / 2 + 0.35;
+    // 馬尾散熱索:自臀部平順收分的流線長尾(粗根 → 細梢),柔和向後下方飄墜(不再是兩截突兀粗管)
+    tail.position.set(0, 0.45 * B, -1.75);
+    for (let i = 0; i < 3; i++) {   // 尾根三小節:連續收分的圓柱(流線)
+      const r0 = (0.1 - 0.024 * i) * B, r1 = (0.1 - 0.024 * (i + 1)) * B;
+      const seg = cyl(tail, r0, r1, P.tailLen / 3 + 0.03, 8, 0, -0.05 * i, -(i + 0.5) * P.tailLen / 3, i ? hullDk : hull, { metalness: 0.5 });
+      seg.rotation.x = Math.PI / 2 + 0.2;
+    }
+    for (let i = 0; i < 2; i++) {   // 尾梢兩小節:續收到細尖(飄尾)
+      const r0 = (0.028 - 0.01 * i) * B, r1 = (0.028 - 0.01 * (i + 1)) * B;
+      const seg = cyl(tail2, r0, r1, P.tailLen * 0.3, 8, 0, -0.04 * i, -(i + 0.4) * P.tailLen * 0.3, i ? 0x23262a : 0x30373f);
+      seg.rotation.x = Math.PI / 2 + 0.3;
+    }
   } else if (C === 'stego') {
     // ---- 劍龍:拱背軀體(圓角矩形量體)+ 交錯背鰭列;四片大鰭 = 四聯裝飛彈鰭 ----
     rbz(spine, 1.9 * B, 1.3 * B, 2.6, 0, 0.1, -1.0, hullDk, { metalness: 0.6 });
     rbz(chest, 2.1 * B, 1.5 * B, 2.4, 0, 0.25, 0.5, hull, { metalness: 0.6 });
-    bx(chest, 1.7 * B, 0.2, 1.9, 0, 1.05 * B, 0.5, dim(plate, 0.9));
+    // (原背上水平背甲板已移除:純裝飾、非掛點,使用者指示 —— 背鰭本身即發射軌)
     // 胸腹平面接合環(見獵犬):側步搖擺 + 脊椎波下前後量體不張口
     const scol = cyl(chest, 0.7 * B, 0.7 * B, 0.72, 14, 0, 0.12, -0.62, dim(hull, 0.82), { metalness: 0.6 });
     scol.rotation.x = Math.PI / 2;
     scol.scale.x = 1.42;
+    // 背鰭 = 正菱形板,靠「下沉鰭板本體到背脊裡」接合(不另接方塊):正方板(h×h)繞自身幾何中心
+    // 旋 45° = 側視正菱形,板心抬到半對角 ⇒ 下尖端落在 f 原點;把 f 原點壓到背面「以下」,菱形下半
+    // 就實實埋進圓角背裡 —— 露出的上半仍是完整菱形,底部與軀體連成一塊、不浮空。
     const finAt = (parent, y, z, h, big, sx) => {
       const f = new THREE.Group();
-      f.position.set(sx * 0.26 * B, y, z);
+      f.position.set(sx * 0.2 * B, y, z);
       parent.add(f);
-      const pl = bx(f, 0.14, h, h * 0.85, 0, h * 0.42, 0, big ? plate : hullDk, { metalness: 0.5 });
-      pl.rotation.x = Math.PI / 4;                                                 // 菱形鰭(側視)
+      const diag = 0.72 * h;   // 正方板旋 45° 後,中心 → 上/下尖端的距離
+      const pl = bx(f, 0.13, h, h, 0, diag, 0, big ? plate : hullDk, { metalness: 0.5 });
+      pl.rotation.x = Math.PI / 4;                                                 // 繞板中心 → 正菱形(尖端朝上下)
       const tips = [];
       if (big) {
-        for (let i = 0; i < 4; i++) {   // 前緣四聯裝管口(彈尖主色)
-          const cy = h * (0.28 + i * 0.14), cz = h * (0.5 - i * 0.14);
-          const cell = cyl(f, 0.065, 0.065, 0.24, 6, 0, cy, cz, 0x111418, { metalness: 0.8 });
+        for (let i = 0; i < 4; i++) {   // 前緣四聯裝管口(彈尖主色):沿鰭高由下往上,微凸於前面(+z)
+          const cy = diag + (i - 1.5) * h * 0.32;
+          const cell = cyl(f, 0.058, 0.058, 0.22, 6, 0, cy, 0.13, 0x111418, { metalness: 0.8 });
           cell.rotation.x = Math.PI / 2;
-          const tip = cyl(f, 0.045, 0.045, 0.06, 6, 0, cy, cz + 0.15, accent, { emissive: accent, emissiveIntensity: 1.5 });
+          const tip = cyl(f, 0.04, 0.04, 0.06, 6, 0, cy, 0.26, accent, { emissive: accent, emissiveIntensity: 1.5 });
           tip.rotation.x = Math.PI / 2;
           tips.push(tip);
         }
       } else {
-        bx(f, 0.15, 0.2, 0.14, 0, h * 0.82, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+        bx(f, 0.15, 0.2, 0.14, 0, diag + h * 0.55, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
       }
       return { f, tips };
     };
-    finAt(chest, 1.05 * B, 1.25, 0.9, false, -1);
-    const finA = finAt(chest, 1.1 * B, 0.62, 1.3, true, 1);
-    const finB = finAt(chest, 1.12 * B, -0.05, 1.45, true, -1);
-    const finC = finAt(spine, 0.72 * B, -0.6, 1.35, true, 1);
-    const finD = finAt(spine, 0.68 * B, -1.25, 1.15, true, -1);
-    finAt(spine, 0.6 * B, -1.85, 0.85, false, 1);
+    // 原點壓到背面之下(胸背頂 ≈1.34、脊背頂 ≈1.04),菱形下半沉入軀體 ⇒ 露出上半 + 底部咬進背脊
+    finAt(chest, 0.62 * B, 1.2, 0.85, false, -1);
+    const finA = finAt(chest, 0.66 * B, 0.6, 1.2, true, 1);
+    const finB = finAt(chest, 0.68 * B, -0.05, 1.32, true, -1);
+    const finC = finAt(spine, 0.4 * B, -0.6, 1.25, true, 1);
+    const finD = finAt(spine, 0.36 * B, -1.2, 1.05, true, -1);
+    finAt(spine, 0.3 * B, -1.8, 0.8, false, 1);
     // 重武器(見證者巡飛彈,missile):四聯裝背鰭本來就是為飛彈設計的,原地轉為功能性掛點
     const stegoTips = [...finA.tips, ...finB.tips, ...finC.tips, ...finD.tips];
     heavyRig = {
@@ -1240,12 +1262,8 @@ function buildBeastMech(side, vis) {
         deploy: { x: tOrb.tipP.rotation.x - 0.3, y: tOrb.tipP.rotation.y, z: tOrb.tipP.rotation.z },
       }],
     };
-    // 後觸手(尾:急轉配重)
-    tail.position.set(0, 0.5 * B, -1.5);
-    const t1 = cyl(tail, 0.14 * B, 0.2 * B, P.tailLen, 7, 0, 0, -P.tailLen / 2, hullDk);
-    t1.rotation.x = Math.PI / 2;
-    const t2m = cyl(tail2, 0.08 * B, 0.13 * B, P.tailLen * 0.75, 7, 0, 0.12, -P.tailLen * 0.36, 0x23262a);
-    t2m.rotation.x = Math.PI / 2 - 0.35;
+    // 尾已移除(使用者指示):克蘇魯不再拖曳後觸手尾。tail/tail2 群組留空,
+    // stepQuad 的 whipTail 空轉 → 無任何視覺輸出(不必動 rig 合約與空值守衛)
   }
 
   // 建腿的順序 = legChains 的順序(FL, FR, HL, HR)
@@ -1265,6 +1283,7 @@ function buildBeastMech(side, vis) {
     chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
     tents: tents.length ? tents : null,   // 持武觸手(克蘇魯):恆時緩慢蠕動的多節波
     armSh, armEl, armBase,   // 人馬持槍雙臂(僅 centaur 非 null;stepQuad rider 分支疊加待機微顫)
+    humChest, humNeck,       // 人馬上身分節樞軸(僅 centaur 非 null):腰→胸→頸逐節反向吸收馬軀起伏
     hipsY0: hipY, stride: P.stride, top: P.top ?? 10,
     // 各生物專屬步態參數(見 BEAST 表):側步/小跑/觸手輪 + 體側搖擺/彈跳/俯仰幅;
     // soft = 觸手腿(整條走 undulate 全波,不是關節腿的屈曲)
@@ -1520,9 +1539,17 @@ function buildBipedBeast(side, vis) {
     const tcol = cyl(chest, 0.48, 0.48, 0.55, 12, 0, 0.42, 0.35, dim(hull, 0.82), { metalness: 0.6 });
     tcol.rotation.x = Math.PI / 2;
     tcol.scale.x = 1.2;
-    for (let i = 0; i < 4; i++) {                                                  // 背甲鱗列
-      const sc = bx(chest, 0.28, 0.22, 0.34, 0, 1.06 - i * 0.04, 1.3 - i * 0.75, hullDk);
-      sc.rotation.x = 0.3;
+    // 背鰭列(小菱形板):沿脊背由肩到腰一排,比劍龍小一號 —— 正方板繞自身中心旋 45° = 正菱形,
+    // 下尖端落在群組原點、原點壓到背面之下 ⇒ 菱形下半沉入背脊、露出上半與軀體連成一塊(不另接方塊)
+    for (let i = 0; i < 5; i++) {
+      const fh = 0.34 - i * 0.035;
+      const f = new THREE.Group();
+      f.position.set(0, 0.86 - i * 0.05, 1.2 - i * 0.62);
+      chest.add(f);
+      const dg = 0.72 * fh;
+      const pl = bx(f, 0.09, fh, fh, 0, dg, 0, i % 2 ? plate : hullDk, { metalness: 0.5 });
+      pl.rotation.x = Math.PI / 4;
+      if (i === 1 || i === 3) bx(f, 0.1, 0.11, 0.08, 0, dg + fh * 0.5, 0, accent, { emissive: accent, emissiveIntensity: 0.9 });
     }
     // 頸(短而粗)→ 頭:奔跑時軀幹起伏,頭要維持水平前視(捕食者的凝視穩定)
     neck.position.set(0, 0.8, 1.5);
@@ -1799,8 +1826,9 @@ function buildMorphMech(side, vis) {
   // 悟空的頭飛行時不縮入機身:抬頭鎖定前方(超人式飛行,臉朝航向)
   const headF = WUKONG ? [0, 1.62, 0.02]
     : { levi: [0, 2.0, 0.08], archo: [0, 1.95, 0.04], beetle: [0, 1.72, 0.08], owl: [0, 1.9, 0.06] }[F];
+  // 夜豹地面頭位前移(局部 +y ≈ 世界前方)讓出可見的頸長 —— 其餘獸型維持原位
   P(head,
-    beast ? { p: [0, 1.66, -0.2], r: [0.25 - stance[1], 0, 0] } : { p: [0, 1.6, 0.06], r: [0, 0, 0] },
+    beast ? { p: [0, G === 'panther' ? 1.86 : 1.66, -0.2], r: [0.25 - stance[1], 0, 0] } : { p: [0, 1.6, 0.06], r: [0, 0, 0] },
     headF ? { p: headF, r: [0.15 - cruise, 0, 0] } : { p: [0, 1.38, -0.04], r: [-0.5, 0, 0] },
     0.55, 0.95);
   if (F === 'levi') {
@@ -1874,6 +1902,11 @@ function buildMorphMech(side, vis) {
       ear.rotation.x = -0.35;
       head.add(ear);
     }
+    // 頸(圓柱):夜豹本無頸,補上 —— 自顱底向後下方伸向肩部,銜接頭與軀幹(頭已 −1.05 前傾 ⇒
+    // 局部 −y 指向身體;根粗梢細,尾端關節環貼合肩部)
+    const nk = cyl(head, 0.15 * B, 0.21 * B, 0.86, 10, 0, -0.44, -0.16, hullDk, { metalness: 0.55 });
+    nk.rotation.x = -0.3;
+    cyl(head, 0.22 * B, 0.22 * B, 0.09, 10, 0, -0.85, -0.34, 0x23262a, { metalness: 0.7 }).rotation.x = -0.3;  // 頸根關節環
   } else {
     bx(head, 0.56 * B, 0.4, 0.52, 0, 0.06, 0, hullDk);                                  // 機甲頭
     bx(head, 0.42 * B, 0.11, 0.08, 0, 0.1, 0.29, accent, { emissive: accent, emissiveIntensity: 1.5 });  // 面罩感測條
