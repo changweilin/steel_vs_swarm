@@ -25,7 +25,7 @@
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ENV, GAME } from './data.js';
+import { ENV, solveTowerSites } from './data.js';
 import { llToWorld } from './terrain.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { buildGroundCover } from './ground.js';
@@ -109,17 +109,12 @@ function buildClearance(cfg, center) {
         blockPoint(x1 + (x2 - x1) * k / n, z1 + (z2 - z1) * k / n, 17);   // 走廊半寬 17m(建物佔地放大後仍不侵走廊)
       }
     }
-    // 防禦塔位置(與 sim.js 同一算法)周圍清場
-    const cum = [0];
-    for (let i = 1; i < lane.length; i++) cum.push(cum[i - 1] + Math.hypot(lane[i][0] - lane[i - 1][0], lane[i][1] - lane[i - 1][1]));
-    const total = cum[cum.length - 1];
-    for (const frac of GAME.TOWER_FRACS) {
-      for (const d of [total * frac, total * (1 - frac)]) {
-        let i = 1; while (cum[i] < d && i < cum.length - 1) i++;
-        const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
-        blockPoint(lane[i - 1][0] + (lane[i][0] - lane[i - 1][0]) * f,
-                   lane[i - 1][1] + (lane[i][1] - lane[i - 1][1]) * f, 30);
-      }
+  }
+  // 防禦塔位置周圍清場:與 sim._spawnStructures 共用 solveTowerSites()(前線塔位是解出來的,
+  // MUST NOT 用 TOWER_FRACS 自己重算 —— 那會清錯位置、讓建物長在塔上)
+  for (const sites of solveTowerSites(lanesW)) {
+    for (const st of sites) {
+      for (const side of ['SWARM', 'STEEL']) blockPoint(st[side].x, st[side].z, 30);
     }
   }
   for (const side of ['SWARM', 'STEEL']) {

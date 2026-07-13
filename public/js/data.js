@@ -231,8 +231,12 @@ export const MORPH = {
 };
 export const SQUAD = {
   N: 3,
-  BUFF: 1.5,          // 單機強化倍率(HP / 傷害);UNITS.drone.hp 與 DMG 都由它推導
-  DMG: 1.5 / 3,       // = BUFF / N
+  // 單機強化倍率(HP / 傷害);UNITS.drone.hp/shield 與 DMG 都由它推導。
+  // 1.05(2026-07-13,舊值 1.5):三機隊單挑一波 NPC 後也剩 ~40% EHP(與機甲同標準)。
+  // 損血比例 ∝ 1/BUFF²(EHP 與 DPS 同時 ×BUFF ⇒ 清波時間 ÷BUFF、承傷 ÷BUFF²)——
+  // 1.5 時三機隊只掉 ~30%,遠比機甲耐打。⇒ 三機齊射 ≈ 一台機甲、三機總 EHP ≈ 一台機甲。
+  BUFF: 1.05,
+  DMG: 1.05 / 3,      // = BUFF / N
   FORM_SIDE: 15,      // 僚機編隊橫向偏移(公尺)
   FORM_BACK: 10,      // 僚機編隊後方偏移
   REGROUP_M: 70,      // 離主視野超過此距離 → 先沿標準兵線路線歸隊
@@ -964,10 +968,13 @@ export const UNITS = {
   // 射程一律 < 防禦塔(2026-07-12 起,見 UNITS.tower):沒有「安全圍攻位」,推塔要靠人數/血量硬吃塔火。
   // hp/armor/dmg 大幅上調(2026-07-12「拉近 NPC 與玩家戰力」):小兵不再是英雄的移動經驗值 ——
   // 步槍兵 EHP 320、火箭兵一發 95,三隻步槍兵齊射就足以逼退半血機甲。
-  soldier:   { name: '步槍兵', hp: 300, armor: 8,  dmg: 17, range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 380, armor: 12, dmg: 95, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 460, armor: 18, dmg: 110, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 700, armor: 14, dmg: 55, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
+  // 2026-07-13「一波 NPC = 玩家 60% EHP」校準:單挑同線一波(3 步槍兵 + 火箭兵 + 榴彈兵 + 直升機)
+  // 全員在射程內持續開火、玩家只用 Lv1 輕武器 + 重武器 CD ⇒ 清完波後平均剩 ~40% EHP。
+  // 由此反推(舊值 ×0.5 傷害 / ×0.6 HP;armor 不動)—— 改任一項 MUST 重跑 `npm run bal`。
+  soldier:   { name: '步槍兵', hp: 180, armor: 8,  dmg: 8,  range: 150, rate: 1.0, speed: 8, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 230, armor: 12, dmg: 48, range: 180, rate: 0.4, speed: 7, sight: 190, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 280, armor: 18, dmg: 55, range: 220, rate: 0.3, speed: 5, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 420, armor: 14, dmg: 28, range: 175, rate: 0.8, speed: 16, sight: 220, bounty: 6, wid: 'rgun' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
@@ -984,10 +991,11 @@ export const UNITS = {
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招消耗)。
-  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield = 機甲 ÷ N × SQUAD.BUFF(= 640/3×1.5 = 320),
-  // 傷害折算在 heroWeapon()。每一架各自重生、各自吃冷卻(與機甲同表)。
+  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield 由 SQUAD.BUFF 於 UNITS 之後 derive
+  // (= 機甲 ÷ N × BUFF;MUST NOT 手寫,寫死就會與 SQUAD.DMG 漂移),傷害折算在 heroWeapon()。
+  // 每一架各自重生、各自吃冷卻(與機甲同表)。
   drone: {
-    name: '獵蜂無人機', hp: 320, shield: 110, mp: 100, mpRegen: 4,
+    name: '獵蜂無人機', hp: 0, shield: 0, mp: 100, mpRegen: 4,
     // fov/zoomFov 與機甲一致(2026-07-12):FPV 視覺大小感受度雙陣營必須相同,
     // 廣角會把同距離目標畫小(舊 100/55 = 無人機看 NPC 比機甲小一號)。
     speed: 42, vspeed: 22, fov: 68, zoomFov: 35, sight: 300,
@@ -1009,6 +1017,9 @@ export const UNITS = {
   // speed:0 = 不進 sim 主迴圈的推線邏輯(位置由 _tickDecoys 管),但仍是敵方小兵/塔的合法目標。
   decoy: { name: '餌機', hp: 160, armor: 0, speed: 0, sight: DECOY.SIGHT },
 };
+// 三機小隊單機生存值的唯一推導處(見 SQUAD.BUFF):三架合計 = 機甲 × BUFF
+UNITS.drone.hp = Math.round(UNITS.robot.hp / SQUAD.N * SQUAD.BUFF);
+UNITS.drone.shield = Math.round(UNITS.robot.shield / SQUAD.N * SQUAD.BUFF);
 // 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
 UNITS.morph = {
@@ -1032,13 +1043,17 @@ export const GAME = {
   // 玩家可操作機體的射程上限比例:射程 = min(基準×HEROIC, sight×(重武器再×AIM_SIGHT_MULT)×此值)。
   // 恆 < 1 ⇒ 射程一定小於視野;見 rangeCap()。
   RANGE_SIGHT_F: 0.9,
-  // 防禦塔在兵線上的位置(距己方主堡比例)。前線塔往後退(舊值 0.22/0.40)——
-  // 塔射程拉到 310 後,0.40 的前線塔會直接互相涵蓋。實際位置仍由 sim._spawnStructures
-  // 的「塔距守衛」逐座往回收(兵線可能 90° 急彎 ⇒ 沿線距離遠 ≠ 直線距離遠)。
+  // 防禦塔在兵線上的位置(距己方主堡比例)。**最前線那一組是解出來的,不是寫死的**:
+  // 0.30 只是後備/起始提示,實際 frac 由 solveTowerSites() 沿兵線搜到「敵我最近兩塔
+  // 直線距離 = tower.range × TOWER_SEP_F」為止(兵線可能 90° 急彎 ⇒ 沿線距離遠 ≠ 直線距離遠)。
   TOWER_FRACS: [0.16, 0.30],
-  // 敵我塔安全間距係數:任兩座敵對塔的**直線距離** MUST > tower.range × 此值(前線塔不對射)
-  TOWER_SEP_F: 1.15,
-  TOWER_MIN_FRAC: 0.09,       // 塔距守衛往回收的下限(不得退進主堡懷裡)
+  // 最前線敵我塔的射程重疊率(2026-07-13):兩座塔的攻擊距離(半徑 R)沿連心線重疊 2R − d。
+  // 要求「重疊 80% 的射程」⇒ 2R − d = 0.8R ⇒ d = 1.2R = TOWER_SEP_F × R。
+  // d = 1.2R > R ⇒ 同時滿足「不在彼此射程內」(塔不對射,但戰場中線必被雙方火力交疊)。
+  TOWER_OVERLAP: 0.8,
+  TOWER_SEP_F: 0,             // 於下方 derive = 2 − TOWER_OVERLAP(MUST NOT 手寫)
+  TOWER_MIN_FRAC: 0.09,       // 塔位沿線搜尋下限(不得退進主堡懷裡)
+  TOWER_MAX_FRAC: 0.45,       // 塔位沿線搜尋上限(不得越過戰場中線)
   // 塔位橫向偏移(公尺):每個塔位在兵線左右各一座,砲塔不擋路、交叉火力涵蓋走廊
   TOWER_SIDE_OFF: 15,
   // 直射武器的鎖定天花板(公尺):高過此高度的飛行單位塔砲/小兵打不到(交給 SAM)。
@@ -1079,6 +1094,93 @@ export const GAME = {
 };
 // 等面積約束的唯一推導處(見 GAME.THREAT_AREA_PER_LANE)
 GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MINES.R ** 2));
+// 塔距 = 射程重疊率的唯一推導處(見 GAME.TOWER_OVERLAP)
+GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
+
+/**
+ * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
+ * lanes: [[x,z], …][] — 兵線折線(世界公尺;index 0 = SWARM 主堡端)。
+ * 回傳 lanes.map(sites[]),每個 site = { frac, SWARM:{x,z,nx,nz}, STEEL:{…} };
+ * 實際砲塔 = site 沿法線 ±TOWER_SIDE_OFF 各一座。
+ *
+ * 規則(2026-07-13):**最前線那一組**沿兵線前後搜到「敵我最近兩塔直線距離 ≈ R×TOWER_SEP_F」
+ * (= 射程重疊 TOWER_OVERLAP、且 > R 故不對射);後方塔組維持「只往己方主堡收」的舊守衛。
+ * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。
+ */
+export function solveTowerSites(lanes) {
+  const R = UNITS.tower.range, SEP = R * GAME.TOWER_SEP_F, OFF = GAME.TOWER_SIDE_OFF;
+  const d2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+  const geom = (pts) => {
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = cum[cum.length - 1];
+    const at = (d) => {
+      d = Math.max(0, Math.min(total, d));
+      let i = 1;
+      while (i < cum.length - 1 && cum[i] < d) i++;
+      const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+    };
+    return { total, at };
+  };
+  const placed = [];   // 已定案的砲塔(跨兵線也要守距離){ side, x, z }
+  const out = [];
+  for (const pts of lanes) {
+    const { total, at } = geom(pts);
+    const site = (side, frac) => {
+      const d = side === 'SWARM' ? total * frac : total * (1 - frac);
+      const [x, z] = at(d);
+      const [ax, az] = at(d - 1), [bx, bz] = at(d + 1);
+      const len = Math.hypot(bx - ax, bz - az) || 1;
+      return { x, z, nx: (bz - az) / len, nz: -(bx - ax) / len };
+    };
+    const towers = (p) => [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s }));
+    // 這個 frac 下,敵我最近兩塔的直線距離(含跨兵線已定案的塔)
+    const minGap = (pS, pT) => {
+      const S = towers(pS), T = towers(pT);
+      let m = Infinity;
+      for (const a of S) for (const b of T) m = Math.min(m, d2(a, b));
+      for (const q of placed) {
+        const mine = q.side === 'STEEL' ? S : T;
+        for (const a of mine) m = Math.min(m, d2(a, q));
+      }
+      return m;
+    };
+    const sites = [];
+    for (let j = 0; j < GAME.TOWER_FRACS.length; j++) {
+      const frac0 = GAME.TOWER_FRACS[j];
+      const front = j === GAME.TOWER_FRACS.length - 1;
+      let best = null;
+      if (front) {
+        // 前線:全區間掃描,取「≥ SEP 且最貼近 SEP」的 frac ⇒ 重疊率剛好 TOWER_OVERLAP
+        let bestGap = Infinity;
+        for (let f = GAME.TOWER_MIN_FRAC; f <= GAME.TOWER_MAX_FRAC + 1e-9; f += 0.002) {
+          const pS = site('SWARM', f), pT = site('STEEL', f);
+          const gap = minGap(pS, pT);
+          if (gap >= SEP && gap < bestGap) { best = { f, pS, pT }; bestGap = gap; }
+        }
+      } else {
+        // 後方:從 frac0 往己方主堡收,第一個滿足距離的即定案(維持原設計的沿線位置)
+        for (let f = frac0; f >= GAME.TOWER_MIN_FRAC - 1e-9; f -= 0.002) {
+          const pS = site('SWARM', f), pT = site('STEEL', f);
+          if (minGap(pS, pT) < SEP) continue;
+          best = { f, pS, pT };
+          break;
+        }
+      }
+      if (!best) {           // 兵線太短:退到下限(接受重疊超標,總比塔疊在一起好)
+        const f = GAME.TOWER_MIN_FRAC;
+        best = { f, pS: site('SWARM', f), pT: site('STEEL', f) };
+      }
+      for (const [side, p] of [['SWARM', best.pS], ['STEEL', best.pT]]) {
+        for (const t of towers(p)) placed.push({ side, x: t.x, z: t.z });
+      }
+      sites.push({ frac: best.f, SWARM: best.pS, STEEL: best.pT });
+    }
+    out.push(sites);
+  }
+  return out;
+}
 
 // ---- 地形呈現(解析度 + 主要道路外海拔放大)----
 // GRID_N/ELEV_ZOOM 純渲染;AMP_* 會改 heightAt(單位貼地)故列為平衡值住這裡。

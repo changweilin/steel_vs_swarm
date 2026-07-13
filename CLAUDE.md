@@ -56,7 +56,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 - **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
   - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。
   - 迴圈粒度 **MUST** 分清楚:`heroes.values()` = 一隊一次(金錢/電力/招式增益);`_allBodies()` = 每架一次(重生/護盾/伏擊/中繼站/火場/物資)。搞錯 = 收入三倍或增益疊三層。
-  - 單機 HP/傷害 = 機甲 ÷ `SQUAD.N` × `SQUAD.BUFF`(1.5,2026-07-10 單機強化 +50%)= `UNITS.drone.hp` / `SQUAD.DMG`。**傷害折算只准住在 `heroWeapon()`**(與 HEROIC 同一個縫),`sim.js`/`game.js` **MUST NOT** 二次乘算。
+  - 單機 HP/傷害 = 機甲 ÷ `SQUAD.N` × `SQUAD.BUFF`(**1.05,2026-07-13 校準**;`UNITS.drone.hp/shield` 與 `SQUAD.DMG` 一律由它 derive,**MUST NOT** 手寫)。**傷害折算只准住在 `heroWeapon()`**(與 HEROIC 同一個縫),`sim.js`/`game.js` **MUST NOT** 二次乘算。三機隊承傷比例 ∝ 1/BUFF²(EHP 與 DPS 同時 ×BUFF ⇒ 清怪時間 ÷BUFF、承傷 ÷BUFF²)—— 舊值 1.5 讓三機隊遠比機甲耐打(單挑一波 NPC 只掉 30%,機甲掉 60%)。
   - 非主視野的僚機 = 客戶端左上角 PiP 小螢幕(`game.js _renderPips`,scissor + 共用 `pipCam` 重繪同一個 scene);機甲的餌機共用同一套。PiP **MUST** 避開 minimap / kill-feed 這兩塊 DOM。
   - 火力靠 `_echo()`:主視野機命中什麼,射程內存活僚機就打同一個目標(彈藥/射速只在主機扣一次)。三機齊射 ≈ 一台機甲。
   - 自爆(F,2026-07-10 起需鎖定):**必須有準星鎖定的敵方目標**(`heroLock`,`LOCK.TTL` 秒內有效)才會動作 — 主視野機引爆、僚機衝向鎖定目標直到引爆;**沒鎖定 = 完全不動作**(不會原地白白自爆)。高速撞擊引爆走 `detonate` 訊息的 `crash:1` 旗標,不吃鎖定閘門。`_blast` 一律跳過同陣營 → 不會炸到友軍。主視野機陣亡 → `_promote()` 立刻讓位給存活僚機,且**接手那架取消衝刺**(玩家重新掌控)。
@@ -112,7 +112,9 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 - **擊殺分數**:`by.kn += killScore(kind)`,但**被擊殺者是電腦玩家(`isBotId(t.pid)`)一律 `BOT_KILL_SCORE`(3)** —— 刷 bot 不能速成招式。
 - **砲塔壓制不等式(2026-07-12 起,MUST 成立)**:`tower.range`(310)> **所有玩家輕武器**(最大 270 = `drone.sight` 300 × `RANGE_SIGHT_F`)且 > **所有 NPC**(最大 220 = 榴彈兵);並且 `tower.range ≥ maxLight + 2×TOWER_SIDE_OFF` ⇒ **打其中一座塔必定同時吃到同塔位另一座的覆蓋火力**。改 `sight` / `RANGE_SIGHT_F` / 任一角色 `light.range` / `TOWER_SIDE_OFF` **MUST** 重驗這條。NPC 不再有「射程外安全圍攻位」(榴彈兵 220 曾 > 舊塔射程 190)。
   - **塔 HP/護甲的推導**:`towerHp = 1.8 × heroEHP × heroDPS / towerDPS` —— 兩位機甲玩家(lvl1、無人干擾)集火單塔約 13.5s 拆掉,期間兩座塔的回擊 ≈ 1.79 × 機甲 EHP(981)⇒ **擊殺一位、把另一位壓到 ~21%**。現值 hp 1800 / armor 30 / dmg 65。動塔或機甲任一數值 **MUST** 重算這條。
-  - **塔距守衛(`sim._spawnStructures`)**:兵線可能 90° 或更銳的急彎 ⇒ **沿線距離遠 ≠ 直線距離遠**。塔位按 `TOWER_FRACS`(0.16/0.30)算出後,雙方**對稱**往己方主堡回收(每次 −0.01 frac,下限 `TOWER_MIN_FRAC`),直到與所有敵方塔的**直線距離** > `tower.range × TOWER_SEP_F`(1.15)+ 2×`TOWER_SIDE_OFF` —— 前線兩塔不對射。**MUST NOT** 改用沿線距離判定。
+  - **塔位求解 = `data.js solveTowerSites(lanes)`(2026-07-13 起唯一的縫)**:`sim._spawnStructures` 與 `biomes` 建物淨空**共用**它,**MUST NOT** 各自用 `TOWER_FRACS` 重算(清錯位置 = 建物長在塔上)。
+    - **最前線敵我塔:射程重疊 `TOWER_OVERLAP`(0.8)且不對射**。兩塔攻擊圓沿連心線的重疊長度 = 2R − d ⇒ 要 0.8R 就得 **d = 1.2R = `tower.range × TOWER_SEP_F`**(`TOWER_SEP_F = 2 − TOWER_OVERLAP`,**MUST** derive)。d = 1.2R > R ⇒ 塔打不到對方的塔,但戰場中線必被雙方火力交疊。**MUST 用直線距離判定** —— 兵線 90° 急彎時沿線距離會騙過去。
+    - 前線那一組的 frac 是**解出來的**(沿 `[TOWER_MIN_FRAC, TOWER_MAX_FRAC]` 掃描,取「最近敵我塔距 ≥ 1.2R 且最貼近」者;`TOWER_FRACS` 的 0.30 只是提示值);後方那組維持「從 0.16 往己方主堡收」的舊守衛。實測 21 場地 ×1/2/3 線:塔距 372~382m、重疊 76.6~80.0%,無一組對射。
   - **直射鎖定天花板 `GAME.GUN_CEIL_M`(170)MUST 與射程脫鉤**:舊制 `range × 0.9` 在塔射程拉高後會把 #INC-104 的 y=250 高空機從 SAM 手上搶走。
 - **第三方打擊的淨空(2026-07-12 起)**:地雷/匿蹤防空伏擊的判定半徑是 `GAME.AMBUSH_M`(110,**不是** `LANE_SAFE_M` 45)—— **稍微偏離兵線不該被打到**。佈設另外避開主堡(含外推重生點)與砲塔:`MINES.LANE_CLEAR/BASE_CLEAR/TOWER_CLEAR`(115/260/90)、`AA_SITE.laneMin/baseClear/towerClear`(130/260/90),共用 `sim._farFromStructures()`。收緊淨空 **MUST** 同步放大 `_seedMines` 的取樣框與嘗試次數(否則佈雷數湊不滿,e2e 的顆數斷言會紅)。
 - **第三方打擊「等面積」約束(2026-07-12 二修)**:地雷與匿蹤防空的**打擊面積相等**,且總量大幅下修(舊制防空 637k m²/線 vs 地雷 7.9k m²/線)。唯一的縫是 `GAME.THREAT_AREA_PER_LANE`(20000 m²):
@@ -120,7 +122,10 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - `THREAT_CD_S`(180)= 同一機體踩雷/被伏擊後的**共用**冷卻(`b.thirdCd`);`THREAT_MISSILES_MAX`(1)= 全場同時只准 1 發伏擊飛彈在空中。
   - 主堡重生安全:陣地/雷區離主堡 ≥260m,防空射程 56m ⇒ 威脅圈最近也在離堡 204m 外,**三架無人機在重生點絕不會被打到**。改 `baseClear` 或面積 **MUST** 重驗這條。
 - **飛彈失鎖規則(2026-07-12,全飛彈通用)**:目標一旦離開**發射源的攻擊範圍**(飛彈帶 `ox/oy/oz` 發射點 + `range`),飛彈立刻失鎖 → 只沿當下航向**直線飛行**,不再追擊(近炸引信仍在,撞上算它走運),ttl 到期自毀。伺服器 `sim._tickMissiles`(塔 SAM / 匿蹤伏擊 / NPC)與客戶端 `game.js _updateBullets`(玩家 `type:'missile'` 追蹤彈、`guide` 雷射導引 —— 導引點超出射程即失效)**共用同一條規則**。**MUST NOT** 讓飛彈無限追蹤。
-- **NPC 戰力(2026-07-12 起)**:小兵 hp/armor/dmg 大幅上調(步槍兵 300/8/17、火箭兵 380/12/95、榴彈兵 460/18/110、直升機 700/14/55)—— 小兵不是英雄的移動經驗值,三隻步槍兵齊射就能逼退半血機甲。
+- **NPC 戰力 = 「一波打掉玩家 60% EHP」(2026-07-13 校準,MUST 成立)**:一波 = 同線同側 `WAVE_SOLDIERS`(3)步槍兵 + 1 火箭兵 + 1 榴彈兵 + 1 攻擊直升機。基準情境:玩家單挑整波、雙方全在射程內持續開火、玩家只有 Lv1 輕武器 + 重武器照 CD、無升級/招式/掩體 ⇒ **清完波後平均剩 ~40% EHP(護盾 + 裝甲)**。
+  - 現值:步槍兵 180/8/8、火箭兵 230/12/48、榴彈兵 280/18/55、直升機 420/14/28(hp/armor/dmg)。
+  - **三種機體同一標準**:機甲 40.6% / 變形機甲 42.6% / 無人機三機隊 40.9%(平均;三機隊靠 `SQUAD.BUFF` 1.05 對齊 —— 見 §2 三機小隊)。
+  - 改任一小兵數值、`SQUAD.BUFF`、`HEROIC`、角色武器或 `WAVE_SOLDIERS` **MUST** 重跑 `npm run bal`(承傷 ≈ 波次 DPS × 清波時間,兩邊都會動)。
 - **雙層 HP**:護盾(先扣、不吃護甲、脫戰 `VITALS.OOC_S` 秒後自然回復)→ 裝甲 hp(吃護甲值曲線 `armorMul(armor, pen)` 減免,只能回主堡 / heal 招式回復)。爆擊只在直擊武器(`_rollCrit`),AoE 不爆。
 - **英雄 vs NPC 同型武器 = HEROIC 倍率(射程 ×1.2、威力 ×1.5)**,只准在 `heroWeapon()` 套用,**MUST NOT** 在別處二次乘算。
 - 彈道學在客戶端(`game.js` bullets:初速 mv + 重力 G,線段 raycast 補內插),伺服器仍以 `heroHit` 射程 ×1.25 驗證 — 防作弊邏輯**不**搬客戶端(不變)。
@@ -152,7 +157,9 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 ```bash
 npm start            # server on http://localhost:8620 (--port <n> 可覆寫)
 npm test             # node test/e2e.mjs,約 60 項斷言
+npm run bal          # tools/balance.mjs:①一波 NPC = 玩家 60% EHP ②最前線敵我塔重疊 80% 且不對射
 ```
+- 動任何平衡數值(小兵/角色武器/`SQUAD.BUFF`/`HEROIC`/塔射程/`TOWER_OVERLAP`)**MUST** 跑 `npm run bal`(離線、不需伺服器)。
 - PowerShell 下 `PORT=x node ...` 這種 env 前綴**無效**,用 `--port` 參數。
 
 **LOGO 影像管線(離線,純 Node + 內建 `zlib`,無 npm 依賴;共用核心 `tools/logo_lib.mjs`):**

@@ -7,7 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
-  dmgFalloff, blastFalloff, battleBBox,
+  dmgFalloff, blastFalloff, battleBBox, solveTowerSites,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -388,37 +388,13 @@ export class BattleSim {
       const [x, z] = this.basePos[side];
       this._add({ kind: 'base', side, x, z, hp: UNITS.base.hp });
     }
-    // 塔距守衛:兵線可能 90°(或更銳)急彎 ⇒ 沿線距離拉得再開,兩座敵對塔的**直線距離**
-    // 仍可能落在彼此射程內。做法 —— 先按 TOWER_FRACS 算出塔位,再逐塔往己方主堡收
-    // (每次 −0.01 frac),直到與**所有**敵方塔的直線距離 > tower.range × TOWER_SEP_F。
-    // MUST 用直線距離判定,沿線距離會被急彎騙過去。
-    const SEP = UNITS.tower.range * GAME.TOWER_SEP_F;
-    const site = (li, side, frac) => {
-      const pts = this.lanes[li], cum = cumLen(pts), total = cum[cum.length - 1];
-      const d = side === 'SWARM' ? total * frac : total * (1 - frac);
-      const [x, z] = pointAt(pts, cum, d);
-      const [ax, az] = pointAt(pts, cum, Math.max(0, d - 1));
-      const [bx, bz] = pointAt(pts, cum, Math.min(total, d + 1));
-      const len = Math.hypot(bx - ax, bz - az) || 1;
-      return { x, z, nx: (bz - az) / len, nz: -(bx - ax) / len };
-    };
-    // 左右兩座塔各偏移 TOWER_SIDE_OFF ⇒ 兩個塔位中心的最壞塔對塔距離要再讓開 2×
-    const need = SEP + GAME.TOWER_SIDE_OFF * 2;
-    const placed = [];   // { side, x, z }:已定案的塔位中心
-    for (let li = 0; li < this.lanes.length; li++) {
-      for (const frac0 of GAME.TOWER_FRACS) {
-        // 雙方同步後退(對稱):任一側單獨退會讓地圖偏心
-        let frac = frac0, pS = site(li, 'SWARM', frac), pT = site(li, 'STEEL', frac);
-        const clash = () => dist2d(pS.x, pS.z, pT.x, pT.z) < need
-          || placed.some((q) => (q.side === 'STEEL' && dist2d(pS.x, pS.z, q.x, q.z) < need)
-                             || (q.side === 'SWARM' && dist2d(pT.x, pT.z, q.x, q.z) < need));
-        while (frac > GAME.TOWER_MIN_FRAC && clash()) {
-          frac -= 0.01;
-          pS = site(li, 'SWARM', frac);
-          pT = site(li, 'STEEL', frac);
-        }
-        for (const [side, p] of [['SWARM', pS], ['STEEL', pT]]) {
-          placed.push({ side, x: p.x, z: p.z });
+    // 塔位一律走 data.js 的 solveTowerSites()(與 biomes 淨空同一個縫):
+    // 最前線敵我塔的直線距離 = tower.range × TOWER_SEP_F(射程重疊 TOWER_OVERLAP、且不對射)。
+    const sites = solveTowerSites(this.lanes);
+    for (let li = 0; li < sites.length; li++) {
+      for (const st of sites[li]) {
+        for (const side of ['SWARM', 'STEEL']) {
+          const p = st[side];
           for (const s of [-1, 1]) {
             this._add({
               kind: 'tower', side, lane: li, hp: UNITS.tower.hp,
