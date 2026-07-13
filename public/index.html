@@ -145,7 +145,7 @@
 <!-- ========= 房間(陣營配對,每陣營 N 席)========= -->
 <div id="room" class="screen center-screen" style="display:none">
   <div class="scanlines"></div>
-  <div class="sysbar"><span><b>BRIEFING</b> // 陣營配對</span><span>SWARM × STEEL <i>●</i></span></div>
+  <div class="sysbar"><span><b>BRIEFING</b> // 陣營配對</span><span>STEEL × SWARM <i>●</i></span></div>
   <header class="masthead small">
     <h2 class="room-title" id="roomTitle">戰區</h2>
     <div class="room-meta">PIN <b id="roomPin">----</b> ・ 區網 <span id="roomUrls"></span></div>
@@ -153,7 +153,26 @@
     <div class="room-map-info" id="botDiffRow"></div>
   </header>
 
+  <!-- 卡序 = 主視覺方位:STEEL 左(藍)/ SWARM 右(黃),與 logo、標題橫幔、底圖對抗場一致 -->
   <div class="side-cards">
+    <div class="side-card steel" id="sideSTEEL">
+      <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
+      <div class="side-emblem">
+        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="鋼鐵軍團">
+          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
+          <circle cx="75" cy="82" r="56" stroke="currentColor" stroke-width="11" stroke-dasharray="9 14"/>
+          <circle cx="75" cy="82" r="47" stroke="currentColor" stroke-width="2" opacity="0.65"/>
+          <path d="M75 40 L118 116 L32 116 Z" fill="currentColor"/>
+          <path d="M75 62 L99 105 L51 105 Z" fill="#05070a"/>
+          <path d="M75 70 L88 92 H62 Z" fill="currentColor"/>
+          <path d="M56 96 H94 V103 H56 Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="side-name">鋼鐵軍團 <span class="side-en">STEEL LEGION</span></div>
+      <div class="side-hero">執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
+      <div class="side-slots"></div>
+    </div>
+    <div class="side-vs">VS</div>
     <div class="side-card swarm" id="sideSWARM">
       <!-- 陣營軍旗:倒三角 + 展翼 + 蜂巢(取自 logo 的蜂群徽記,平塗硬邊重繪) -->
       <div class="side-emblem">
@@ -173,24 +192,6 @@
       </div>
       <div class="side-name">蜂群兵團 <span class="side-en">THE SWARM</span></div>
       <div class="side-hero">獵蜂無人機 ・ 飛行 / 高機動 / 薄裝甲</div>
-      <div class="side-slots"></div>
-    </div>
-    <div class="side-vs">VS</div>
-    <div class="side-card steel" id="sideSTEEL">
-      <!-- 陣營軍旗:齒輪環 + 機甲三角(取自 logo 的鋼鐵徽記,平塗硬邊重繪) -->
-      <div class="side-emblem">
-        <svg class="crest" viewBox="0 0 150 150" fill="none" aria-label="鋼鐵軍團">
-          <path d="M8 26 H142 V34 H8 Z" fill="currentColor"/>
-          <circle cx="75" cy="82" r="56" stroke="currentColor" stroke-width="11" stroke-dasharray="9 14"/>
-          <circle cx="75" cy="82" r="47" stroke="currentColor" stroke-width="2" opacity="0.65"/>
-          <path d="M75 40 L118 116 L32 116 Z" fill="currentColor"/>
-          <path d="M75 62 L99 105 L51 105 Z" fill="#05070a"/>
-          <path d="M75 70 L88 92 H62 Z" fill="currentColor"/>
-          <path d="M56 96 H94 V103 H56 Z" fill="currentColor"/>
-        </svg>
-      </div>
-      <div class="side-name">鋼鐵軍團 <span class="side-en">STEEL LEGION</span></div>
-      <div class="side-hero">執法者機甲 ・ 地面 / 重火力 / 厚裝甲</div>
       <div class="side-slots"></div>
     </div>
   </div>

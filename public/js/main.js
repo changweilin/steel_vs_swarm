@@ -49,6 +49,8 @@ function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
   if (screen !== 'room') { app.preview?.stop(); app.charTarget = null; }   // 離開房間:展示台停 rAF,不與戰場搶 GPU
+  // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
+  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom') document.body.dataset.side = 'SPEC';
 }
 
 function toast(msg, ms = 3200) {
@@ -413,6 +415,9 @@ function renderRoom() {
   app.mySide = me?.side || null;
   // 選角高亮對象 = 任一 client id(自己/電腦/他人);指向的對象消失就退回自己
   if (!lb.clients.some((c) => c.id === app.charTarget)) app.charTarget = me?.side ? me.id : null;
+  // 主視覺:自己的角色一經 highlight,整套 UI 單色件收束成該陣營色(style.css --uiL/--uiR);
+  // 尚未選角(含觀戰/未入座)= 藍黃左右對抗。傭兵跟雇主陣營走。
+  document.body.dataset.side = (me?.mode === 'player' && me.side && me.ch) ? me.side : 'SPEC';
 
   const slotX = (title, fn) => {
     const x = document.createElement('span');
