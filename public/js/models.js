@@ -2469,6 +2469,8 @@ function buildRobotMech(side, vis) {
   const head = new THREE.Group();
   chest.add(head);
   let hipY, legL, legR, armL, armR, gait;
+  // 重武器掛點(依 proto 分支填入):glow = 蓄力/擊發發光驅動,pivot = 蓄力/擊發姿態驅動(rest→deploy)
+  let heavyRig = { glow: [], pivot: [] };
 
   if (PR === 'bastion') {
     // ---- 過裝甲重拳:所有量體堆在外層裝甲上,關節是縮在裡面的細軸 ----
@@ -2547,6 +2549,19 @@ function buildRobotMech(side, vis) {
       ant.rotation.z = sx * 0.18;
       bx(chest, 0.13, 0.13, 0.13, sx * 0.62, 2.74, -0.85, accent, { emissive: accent, emissiveIntensity: 1.2 });
     }
+    // 重武器(152mm 榴彈砲):背部可動砲管樞軸 —— 靜止直立貼背(不超出既有天線陣列頂高),
+    // 擊發瞬間繞樞軸擺盪至過肩位再緩慢收回(攻城坦克式的「紮穩打一砲」)。
+    const heavyPivot = new THREE.Group();
+    heavyPivot.position.set(0, 1.5, -0.55);
+    chest.add(heavyPivot);
+    cyl(heavyPivot, 0.22, 0.25, 1.15, 8, 0, 0.58, 0, armorDk, { metalness: 0.75 });     // 榴彈砲身
+    bx(heavyPivot, 0.34, 0.36, 0.3, 0, 0.05, -0.12, armor, { metalness: 0.6 });         // 樞軸座
+    const bastionMuzzle = cyl(heavyPivot, 0.2, 0.2, 0.14, 8, 0, 1.2, 0, accent,
+      { emissive: accent, emissiveIntensity: 0.3 });                                     // 膛口(擊發瞬間強閃)
+    heavyRig = {
+      glow: [{ mesh: bastionMuzzle, base: 0.3 }],
+      pivot: [{ obj: heavyPivot, rest: { x: 0, y: 0, z: 0 }, deploy: { x: 1.25, y: 0, z: 0 } }],
+    };
 
   } else if (PR === 'seraph') {
     // ---- 倒三角上胸:寬肩窄腰、細長四肢、關節外露肌腱缸(生體感) ----
@@ -2592,13 +2607,22 @@ function buildRobotMech(side, vis) {
       const edge = bx(chest, 0.09, 1.85, 0.06, sx * 0.72, 1.55, 0.47, armorDk);
       edge.rotation.z = sx * 0.58;                                                // 斜邊描線(倒三角輪廓)
     }
-    // 高聳肩甲莢(EVA 的肩部 binder):立在三角形兩個上端點的正上方
+    // 高聳肩甲莢(EVA 的肩部 binder):立在三角形兩個上端點的正上方 ——
+    // 兼作重武器(同步狙擊砲)蓄力展示器:蓄力時莢頂識別條發光轉強、雙莢向外展開如展翼。
+    const binderTrims = [], binderPivots = [];
     for (const sx of [-1, 1]) {
-      bx(chest, 0.36, 1.0, 1.0, sx * 1.26, 2.72, -0.04, armor, { metalness: 0.7 });
-      bx(chest, 0.38, 0.16, 1.02, sx * 1.26, 3.02, -0.04, dim(accent, 0.85));     // 莢頂識別條
+      const piv = new THREE.Group();
+      piv.position.set(sx * 1.26, 2.72, -0.04);
+      chest.add(piv);
+      bx(piv, 0.36, 1.0, 1.0, 0, 0, 0, armor, { metalness: 0.7 });
+      const trim = bx(piv, 0.38, 0.16, 1.02, 0, 0.3, 0, dim(accent, 0.85),
+        { emissive: accent, emissiveIntensity: 0.9 });                            // 莢頂識別條(蓄力發光)
+      binderTrims.push(trim);
+      binderPivots.push({ obj: piv, rest: { x: 0, y: 0, z: 0 }, deploy: { x: 0, y: sx * 0.5, z: 0 } });
     }
     bx(chest, 0.44, 0.44, 0.24, 0, 1.62, 0.52, accent, { emissive: accent, emissiveIntensity: 1.3 });  // 核心
     bx(chest, 0.7, 0.6, 0.5, 0, 2.1, -0.55, armorDk);                             // 背部連接埠
+    let lanceCore = null;   // 磁軌長槍的軌間電漿(重武器蓄力發光,右臂建構時填入)
     // 雙肩 = 倒三角的兩個上端點(肩線橫樑末端)
     const mkArm = (sx) => segLimb(chest, [sx * 1.25, 2.28, 0], [
       { len: 1.1, draw: (a) => {
@@ -2621,7 +2645,7 @@ function buildRobotMech(side, vis) {
           a.add(lance);
           for (const o of [-0.13, 0.13])
             cyl(lance, 0.07, 0.07, 4.4, 6, o, 2.0, 0, 0x1a1d20, { metalness: 0.85 });   // 雙軌
-          cyl(lance, 0.05, 0.05, 3.6, 6, 0, 1.9, 0, accent, { emissive: accent, emissiveIntensity: 1.4 });  // 軌間電漿
+          lanceCore = cyl(lance, 0.05, 0.05, 3.6, 6, 0, 1.9, 0, accent, { emissive: accent, emissiveIntensity: 1.4 });  // 軌間電漿
           bx(lance, 0.42, 0.7, 0.34, 0, 0.4, 0, armorDk, { metalness: 0.7 });     // 後膛
           const tip = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 6), mat(dim(accent, 1.1), { metalness: 0.8 }));
           tip.position.set(0, 4.3, 0);
@@ -2630,6 +2654,15 @@ function buildRobotMech(side, vis) {
       } },
     ], sx < 0 ? armChainL : armChainR);
     armL = mkArm(-1); armR = mkArm(1);
+    // 重武器(同步狙擊砲)= 手持長槍本體(蓄力時軌間電漿轉亮)+ binder 莢艙(蓄力展翼)
+    heavyRig = {
+      glow: [
+        { mesh: lanceCore, base: 1.4 },
+        { mesh: binderTrims[0], base: 0.9 },
+        { mesh: binderTrims[1], base: 0.9 },
+      ],
+      pivot: binderPivots,
+    };
     // 頭:單角 + 單眼掃描條(細長頸,自肩線橫樑中央探出 —— EVA 的小頭窄臉)
     head.position.set(0, 2.72, 0.06);
     sinew(head, 0.5, 0, -0.28, 0);
@@ -2669,13 +2702,16 @@ function buildRobotMech(side, vis) {
     fs.rotation.x = 0.16;                                                          // 前裙甲
     bx(chest, 1.5, 1.25, 1.05, 0, 1.15, 0.02, armor, { metalness: 0.6 });         // 胸廓
     bx(chest, 0.55, 0.4, 0.16, 0, 1.3, 0.56, accent, { emissive: accent, emissiveIntensity: 1.1 });
-    // 雙肩垂直發射彈艙(攔截彈 VLS:每側 2×3 發射管口朝上)
+    // 雙肩垂直發射彈艙(攔截彈 VLS:每側 2×3 發射管口朝上)—— 造型與重武器(攔截者飛彈)天生一致,
+    // 原地轉為功能性掛點:發射管口在擊發瞬間齊閃,不需另掛新量體。
+    const vlsCells = [];
     for (const sx of [-1, 1]) {
       const vls = bx(chest, 0.66, 0.62, 0.78, sx * 1.0, 1.85, -0.1, armorDk, { metalness: 0.65 });
       for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++)
-        cyl(vls, 0.09, 0.09, 0.1, 6, (i - 0.5) * 0.28, 0.33, (j - 1) * 0.24, accent,
-          { emissive: accent, emissiveIntensity: 1.0 });                           // 發射管口
+        vlsCells.push(cyl(vls, 0.09, 0.09, 0.1, 6, (i - 0.5) * 0.28, 0.33, (j - 1) * 0.24, accent,
+          { emissive: accent, emissiveIntensity: 1.0 }));                          // 發射管口
     }
+    heavyRig = { glow: vlsCells.map((mesh) => ({ mesh, base: 1.0 })), pivot: [] };
     const mkArm = (sx) => segLimb(chest, [sx * 0.98, 1.7, 0], [
       { len: 0.78, draw: (a) => {
         bx(a, 0.62, 0.48, 0.66, 0, 0.1, 0, armorDk, { metalness: 0.6 });          // 肩甲
@@ -2789,12 +2825,15 @@ function buildRobotMech(side, vis) {
       eye.position.set(sx * 0.17, 0.34, 0.31);
       head.add(eye);                                                                 // 雙圓眼
     }
-    cyl(head, 0.06, 0.06, 0.09, 8, 0, 0.64, 0.26, accent, { emissive: accent, emissiveIntensity: 1.4 })
-      .rotation.x = Math.PI / 2;                                                     // 眉心脈衝砲口(標定脈衝砲)
+    const browCannon = cyl(head, 0.06, 0.06, 0.09, 8, 0, 0.64, 0.26, accent, { emissive: accent, emissiveIntensity: 1.4 });
+    browCannon.rotation.x = Math.PI / 2;                                             // 眉心脈衝砲口(標定脈衝砲)
     for (const sx of [-1, 1]) {
       const ant = bx(head, 0.05, 0.6, 0.05, sx * 0.2, 0.9, -0.14, armorDk);
       ant.rotation.z = sx * 0.3;                                                     // 測向天線對(掃描機的本業)
     }
+    // 重武器(標定脈衝砲):不新增背部/肩部掛件(設計意圖:巨兵背後乾淨)——
+    // 蓄力/擊發全靠眉心射口本身的發光強度變化表現。
+    heavyRig = { glow: [{ mesh: browCannon, base: 1.4 }], pivot: [] };
   }
 
   // 角色掛件(胸燈已自帶 → trim:false;座標以真實尺寸錨定)
@@ -2807,6 +2846,7 @@ function buildRobotMech(side, vis) {
     hipsY0: hipY, headY0: head.position.y, gunArm: true,
     stride: gait.stride, bob: gait.bob, sway: gait.sway, top: gait.top,
     legBase: gait.legBase || 0, armBase: gait.armBase || 0,
+    heavy: heavyRig,
   };
   return g;
 }

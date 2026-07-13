@@ -1142,6 +1142,8 @@ window.addEventListener('DOMContentLoaded', () => {
     field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
     snap: (m) => app.battle?.onSnap(m),
     tracer: (m) => app.battle?.onTracer(m),
+    heavyCharge: (m) => app.battle?.onHeavyCharge(m),
+    heavyFire: (m) => app.battle?.onHeavyFire(m),
     reconnect: () => {
       const tk = sessionStorage.getItem('svs_token');
       if (tk) app.net.sendNow({ t: 'reattach', token: tk });

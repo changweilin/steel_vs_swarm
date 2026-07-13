@@ -95,6 +95,14 @@ const DEF_ANCHOR = {
   wing: { x: 0.9, y: -0.22, z: -1.0, s: 1.0 },
   claw: { x: 0.42, y: -0.72, z: -1.05, s: 0.9 },
 };
+// 重武器 third-person 掛點動畫(2026-07-13):models.js 依 proto 曝光 rig.heavy.{glow,pivot},
+// 這裡只依 ent.heavyFx.phase 算出一個通用的 0(idle)→1(蓄力滿/展開)→2(擊發尖峰) 目標值,
+// 再用彈簧阻尼靠近 —— 不需要額外的 recover 計時,尖峰過後自然衰減回 0 就是「餘韻」。
+// 蓄力時長用假定常數(不精確對應各角色真實 tier 值):third-person 只是戰術情報預告,
+// 差 0.1~0.3s 不影響可讀性,換來 self/remote 共用同一套邏輯。
+const HEAVY_CHARGE_ASSUME_S = 1.05;
+const HEAVY_FIRE_HOLD_S = 0.12;
+const HEAVY_LERP_K = 10;
 /** 該機體(該型態)的輕武器掛點。電漿是口噴武器:無手仿生體的背載一律改嘴砲 */
 function gunMount(vis, kind, air, wtype) {
   let m;
@@ -2118,6 +2126,25 @@ export class BattleClient {
     );
   }
 
+  /** 重武器(rail 類)蓄力狀態:純視覺轉播(同 onTracer),驅動射手第三人稱機體的掛點動畫 —
+   *  蓄力窗是敵方可利用的戰術情報,MUST 即時轉播(不等 8Hz 快照),讓被瞄準的一方有反應時間。 */
+  onHeavyCharge(m) {
+    const t0 = performance.now() / 1000;
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== m.pid) continue;
+      ent.heavyFx = m.on ? { phase: 'charge', t0 } : null;
+    }
+  }
+
+  /** 重武器擊發瞬間:third-person 掛點的釋放/後座演出(所有類型共通,不限 rail) */
+  onHeavyFire(m) {
+    const t0 = performance.now() / 1000;
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== m.pid) continue;
+      ent.heavyFx = { phase: 'fire', t0 };
+    }
+  }
+
   // ---------------- 三機小隊:主視野接管 ----------------
   /**
    * 伺服器是主視野的唯一決定者(死亡自動讓位 / V 鍵手動切換)。
@@ -2305,6 +2332,14 @@ export class BattleClient {
     return { id, def: this.wdef[id], st: this.wstate[id] };
   }
 
+  /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
+   *  讓其他玩家的畫面也能看到我方 rail 重武器的蓄力窗(戰術情報,非美術裝飾)。 */
+  _setRailCharge(on) {
+    if (!!this._railCharging === !!on) return;
+    this._railCharging = on;
+    this.net?.send({ t: 'heavyCharge', on });
+  }
+
   /** 填彈:R 鍵手動 / 打空自動(重武器的「填彈」= CD);完成在 _tickWeapons 補滿 */
   _startReload(id) {
     const wid = id || this._curWeapon().id;
@@ -2326,6 +2361,35 @@ export class BattleClient {
     if (def?.type === 'launcher' || def?.type === 'missile' || def?.type === 'plasma')
       return { dz: 0, dy: 0, rx: -swing * 0.5 };   // 發射器/飛彈/電漿罐:上掀開膛裝填
     return { dz: 0, dy: -swing * 0.22, rx: swing * 0.12 };                     // 槍械:退彈匣再扣回
+  }
+
+  /** 重武器掛點動畫(third-person,自己與他人共用同一份):依 ent.heavyFx 驅動
+   *  models.js 曝光的 rig.heavy.{glow,pivot}(見 HEAVY_* 常數的設計說明)。 */
+  _applyHeavyFx(ent, now, dt) {
+    const heavy = ent.mesh?.userData?.rig?.heavy;
+    if (!heavy || (!heavy.glow.length && !heavy.pivot.length)) return;
+    const fx = ent.heavyFx;
+    let t = 0;   // 0=idle/rest,1=蓄力滿/展開,2=擊發尖峰
+    if (fx) {
+      const el = now - fx.t0;
+      if (fx.phase === 'charge') t = Math.min(1, el / HEAVY_CHARGE_ASSUME_S);
+      else if (fx.phase === 'fire') {
+        if (el <= HEAVY_FIRE_HOLD_S) t = 2;
+        else ent.heavyFx = null;   // 尖峰過後交還阻尼衰減,狀態清空
+      }
+    }
+    const k = 1 - Math.exp(-HEAVY_LERP_K * dt);
+    for (const gd of heavy.glow) {
+      const target = gd.base * (t <= 1 ? (1 + t * 1.6) : (1 + 1.6 + (t - 1) * 3));
+      gd.mesh.material.emissiveIntensity += (target - gd.mesh.material.emissiveIntensity) * k;
+    }
+    const f = Math.min(1, t);
+    for (const pd of heavy.pivot) {
+      for (const ax of ['x', 'y', 'z']) {
+        const target = pd.rest[ax] + (pd.deploy[ax] - pd.rest[ax]) * f;
+        pd.obj.rotation[ax] += (target - pd.obj.rotation[ax]) * k;
+      }
+    }
   }
 
   _tickWeapons(now) {
@@ -2382,14 +2446,14 @@ export class BattleClient {
     const { id, def, st } = this._curWeapon();
     if (!def || !st) return;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
-    if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); }
+    if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
 
     // 磁軌炮:按住開火鍵蓄力 charge 秒,蓄滿才擊發;提前放開 = 取消(不耗彈,歸零見 _updateSelf)
     if (def.type === 'rail' && def.charge) {
-      if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); }
+      if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); this._setRailCharge(true); }
       const p = (now - this._railAt) / def.charge;
       this.flash.visible = true;           // 蓄力視覺:槍口電光隨進度增亮
       this._flashTtl = 0.06;
@@ -2397,10 +2461,13 @@ export class BattleClient {
       if (p < 1) return;
       this._railAt = 0;
       this.flash.scale.setScalar(1);
+      this._setRailCharge(false);
     }
     this.lastFireAt[id] = now;
     st.ammo--;
     if (st.ammo <= 0) this._startReload(id);
+    // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
+    if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
     // 槍口與射向(座艙槍管末端,世界座標)
     this.camera.updateMatrixWorld();
@@ -2851,7 +2918,7 @@ export class BattleClient {
       });
     }
     // 磁軌蓄力:放開開火鍵 = 取消蓄力(不耗彈)
-    if (!this.firing && this._railAt) { this._railAt = 0; this.flash?.scale.setScalar(1); }
+    if (!this.firing && this._railAt) { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     this._tryFire(now);
     this._tickLock(now);
   }
@@ -3003,6 +3070,8 @@ export class BattleClient {
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);
       // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)
       stepLocomotion(ent, dt, now, px, pz, pyaw);
+      // 重武器掛點動畫:蓄力/擊發姿態(不動 locomotion 既有的肢體鏈,獨立新節點,無所有權衝突)
+      this._applyHeavyFx(ent, now, dt);
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
       // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)

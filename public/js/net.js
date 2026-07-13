@@ -1,7 +1,7 @@
 // ============ WebSocket 客戶端(改自 ai_tycoon/public/js/net.js)============
 export class Net {
   constructor(handlers = {}) {
-    this.h = handlers;            // { sync, snap, rooms, error, info, battleConfig, mapProgress, tracer, reconnect }
+    this.h = handlers;            // { sync, snap, rooms, error, info, battleConfig, mapProgress, tracer, heavyCharge, heavyFire, reconnect }
     this.connected = false;
     this._everOpen = false;
     this._queue = [];

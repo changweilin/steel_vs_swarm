@@ -436,6 +436,16 @@ wss.on('connection', (ws) => {
       for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side });
       return;
     }
+    if (m.t === 'heavyCharge' && client.side) {
+      // 純視覺:即時轉播 rail 重武器蓄力狀態(third-person 掛點動畫),不進 sim 快照(不等 8Hz)
+      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'heavyCharge', pid: clientId, on: !!m.on });
+      return;
+    }
+    if (m.t === 'heavyFire' && client.side) {
+      // 純視覺:即時轉播重武器擊發瞬間(third-person 掛點動畫)
+      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'heavyFire', pid: clientId });
+      return;
+    }
     if (m.t === 'backToRoom' && clientId === room.hostId) {
       // 回到房間再戰:地圖屬於房間(開房前選定),保留 battleConfig
       stopBattle(room);
