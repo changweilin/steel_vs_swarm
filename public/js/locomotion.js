@@ -11,6 +11,11 @@
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * Math.min(1, k * dt);
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+// 加速/減速強度正規化基準(m/s²):L.accel 是原始加速度(硬起步可達 10~40),
+// 一律先除以它夾到 0..1 當「強度」,launch/brake/flare 脈衝才不會被原始量級放大成十幾度的暴衝。
+const ACC_REF = 9;
+const accUp = (L) => clamp(L.accel / ACC_REF, 0, 1);    // 加速強度 0..1
+const accDn = (L) => clamp(-L.accel / ACC_REF, 0, 1);   // 減速強度 0..1
 
 /** 以實體 id 生成穩定相位差(不用 Math.random:重連/多端步伐錯開方式一致) */
 function phaseOf(id) {
@@ -96,13 +101,42 @@ function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0) {
 /** 靜止度:速度趨零 → 1(給呼吸/微顫用;與步態振幅 a 互補) */
 const idleOf = (a) => clamp(1 - a / 0.06, 0, 1);
 
+// ── 運動性格 moveSig(models.js MOVE_SIG 依角色 id 掛在 rig 上)──────────────────
+// 把「靜止/加速/減速」三相位依真實運動員/軍種/生物飛行原型差異化(奔跑/飛行穩態早已差異化,不動)。
+// 每個旋鈕的預設值 = 現行通用行為 ⇒ 沒有 moveSig 的單位(NPC、未登記角色)完全不受影響。
+//   地面:idleF/idleA 靜止微動的節拍/幅倍率;freeze 趨向凍結(狙擊台)、restless 額外躁動(哨兵/擊劍);
+//         launch 爆發起步脈衝、spool 前傾遲滯(柴油機起轉)、brake 插地壓頭煞停、settle 回穩阻尼倍率。
+//   飛行:hover 懸停站位抖動、hoverA 懸停浮沉幅倍率、hoverF 節拍倍率;
+//         surge 暴衝俐落度、flare 揚翼張爪煞停(定翼/噴射恆 0)、bank 入彎壓坡積極度。
+const S0 = {};
+const gsig = (rig) => {
+  const s = rig.moveSig || S0;
+  // poise 與 idleA 是兩條獨立軸:重裝巨人「腳步不換(高 poise)卻胸腔深呼吸(高 idleA)」——不可混為一談。
+  const poise = s.poise ?? 0.5;
+  const freeze = Math.max(0, poise - 0.5) * 2, restless = Math.max(0, 0.5 - poise) * 2;
+  return {
+    iF: s.idleF ?? 1,
+    idleK: (1 - 0.9 * freeze) * (1 + 1.2 * restless),   // 重心交換/擺頭巡視的活躍度(狙擊近凍、哨兵/擊劍躁動)
+    breathK: s.idleA ?? 1,                               // 呼吸/液壓微顫的深淺(重裝深沉、狙擊淺)
+    launch: s.launch ?? 0, spool: s.spool ?? 0, brake: s.brake ?? 0,
+    settle: s.settle ?? 1,
+  };
+};
+const fsig = (rig) => {
+  const s = rig.moveSig || S0;
+  return {
+    hover: s.hover ?? 0, hoverF: s.hoverF ?? 1, hoverA: s.hoverA ?? 1,
+    surge: s.surge ?? 0, flare: s.flare ?? 0, bank: s.bank ?? 1,
+  };
+};
+
 /**
  * 凝視穩定(所有會走路的機種共用):頭/頸反轉抵銷骨盆 + 胸腔的旋轉 —— 軀幹再怎麼起伏扭轉,
  * 頭維持水平前視。真獸/真人跑步時頭幾乎不晃(前庭反射),頭跟著軀幹一起甩才是壞掉的布娃娃。
  * 抵銷率 < 1(留一點殘留晃動 = 有慣性的機械頭,不是陀螺儀);靜止時疊上緩慢的警戒掃視。
  * @param acc [x,y,z] 上游(骨盆+胸腔+脊椎…)的累計旋轉
  */
-function stabilizeHead(rig, acc, idle, now, k = 0.85) {
+function stabilizeHead(rig, acc, idle, now, k = 0.85, scanK = 1) {
   const neck = rig.neck, head = rig.head;
   if (!head) return;
   // 頸先吃掉一半(頸是柔軟的緩衝段),剩下的由頭補完 —— 兩段分攤比單段硬轉自然
@@ -113,7 +147,7 @@ function stabilizeHead(rig, acc, idle, now, k = 0.85) {
     neck.rotation.z = -acc[2] * k * kn;
   }
   head.rotation.x = -acc[0] * k * (1 - kn);
-  head.rotation.y = -acc[1] * k * (1 - kn) + idle * Math.sin(now * 0.5) * 0.28;   // 靜止:緩慢掃視
+  head.rotation.y = -acc[1] * k * (1 - kn) + idle * Math.sin(now * 0.5) * 0.28 * scanK;   // 靜止:緩慢掃視(scanK 依性格:哨兵頻掃、狙擊近凍)
   head.rotation.z = -acc[2] * k * (1 - kn);
 }
 
@@ -122,9 +156,22 @@ function stabilizeHead(rig, acc, idle, now, k = 0.85) {
  * 上下位移(小角度近似)。把這段從頸的高度扣回去,頭就不再隨每一步畫大弧。
  * 只補償「旋轉造成的」那一段,彈跳另外補 —— 兩者來源不同,混在一起調不動。
  */
-function headArc(rig, k) {
-  return ((rig.spine.rotation.x + rig.chest.rotation.x) * (rig.headArm || 0)
+function headArc(rig, k, spinePitch = rig.spine.rotation.x) {
+  return ((spinePitch + rig.chest.rotation.x) * (rig.headArm || 0)
     + rig.neck.rotation.x * (rig.headArmN || 0)) * k;
+}
+
+/**
+ * 腿與骨盆同層(非骨盆子節點)的雙足機種:骨盆的縱向位移(跳奔/袋鼠跳的騰空)必須帶著腿一起升降,
+ * 否則身體躍起、雙腿留在原地 = 分離。腿的靜姿高度只抓一次(loco 快取),之後套用骨盆相對 hipsY0 的位移。
+ * 腿本是骨盆子節點者自動跟隨,直接跳過。
+ */
+function syncLegsToHips(L, rig, hips) {
+  if (!rig.legL || rig.legL.parent === rig.hips) return;
+  if (L.legYL == null) { L.legYL = rig.legL.position.y; L.legYR = rig.legR.position.y; }
+  const dy = hips.position.y - rig.hipsY0;
+  rig.legL.position.y = L.legYL + dy;
+  rig.legR.position.y = L.legYR + dy;
 }
 
 /**
@@ -194,6 +241,11 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   L.amp = damp(L.amp, clamp(speed / (rig.top || 8), 0, 1.2), 6, dt);
   const a = L.amp;
   const idle = idleOf(a);
+  const sg = gsig(rig);
+  // 加速爆發脈衝(launch:短跑/擊劍/彈跳者先沉再彈射)+ 減速插地(brake:急停運動員壓低重心拋錨);
+  // 皆由 |L.accel| 驅動、以 settle 阻尼快落 —— 重裝 launch/brake≈0,改吃 spool 的前傾遲滯
+  L.srg = damp(L.srg ?? 0, accUp(L) * sg.launch, 10 * sg.settle, dt);
+  L.brk = damp(L.brk ?? 0, accDn(L) * sg.brake, 9 * sg.settle, dt);
   // 跳奔混成度:0 = 交替步,1 = 雙腿同相併蹬;左右相位差 π→0 連續縮短,步態不瞬跳
   const bnd = (rig.bound || 0) * clamp((a - 0.55) / 0.4, 0, 1);
   const phL = L.ph, phR = L.ph + Math.PI * (1 - bnd);
@@ -203,8 +255,9 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   const runF = clamp((a - 0.5) / 0.5, 0, 1);
   const legA = 0.62 * a * (1 + 0.45 * runF);
   const legB = rig.legBase || 0, armB = rig.armBase || 0;   // 原型站姿(拱背/負重機體的靜態屈角)
-  // 靜止待機:雙腿以極慢的反相重心交換微擺(左右換腳站),不是完全定格
-  const stand = idle * Math.sin(now * 0.9 + L.ph) * 0.03;
+  // 靜止待機:雙腿以極慢的反相重心交換微擺(左右換腳站),不是完全定格;
+  // idleK 依性格縮放(狙擊台近凍結、哨兵/擊劍手躁動放大),iF 調節拍
+  const stand = idle * sg.idleK * Math.sin(now * 0.9 * sg.iF + L.ph) * 0.03;
   rig.legL.rotation.x = legB + Math.sin(phL) * legA + stand;
   rig.legR.rotation.x = legB + Math.sin(phR) * legA - stand;
   // 手臂與腿反相(follow-through);跳奔時雙臂轉為同相前撐(前肢落在後腿併蹬的半拍後 =
@@ -264,20 +317,24 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   const bobF = rig.grounded ? 1 - 0.55 * runF : 1;
   hips.position.y = rig.hipsY0 - (0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.06) * a * (1 - bnd) * bobF
     + Math.sin(L.ph) * (rig.bob || 0.06) * 2.2 * a * bnd
-    + idle * Math.sin(now * 1.7 + L.ph) * 0.012;   // 靜止時的呼吸微沉浮(隨速度連續淡出)
+    + idle * sg.breathK * Math.sin(now * 1.7 * sg.iF + L.ph) * 0.012   // 靜止呼吸微沉浮(性格化:狼/豹極淺、重裝深沉)
+    - L.srg * 0.03 - L.brk * 0.025;   // 爆發起步下蹲驅離 / 急停壓低重心插地
   hips.position.x = sw * (rig.sway || 0.05) * a * (1 - bnd);
   hips.rotation.z = -sw * 0.07 * a * (1 - bnd);
   hips.rotation.y = -sw * 0.1 * a * (1 - bnd);    // 骨盆對轉(自然扭腰)
   // 前傾:速度越快越前壓;加減速再疊預備/回穩傾角;跳奔再多壓一段(衝刺的撲身)。
   // leanF 依體軸而定(人形 1.0;水平體軸的獸型 0.3~0.5 —— 牠們用抬尾配平,不是把頭壓向地面)
-  L.lean = damp(L.lean, (0.22 * a + bnd * 0.14 + clamp(L.accel * 0.015, -0.1, 0.15)) * (rig.leanF ?? 1), 5, dt);
-  hips.rotation.x = L.lean;
+  L.lean = damp(L.lean, (0.22 * a + bnd * 0.14 + clamp(L.accel * 0.015, -0.1, 0.15)) * (rig.leanF ?? 1),
+    5 * (1 - 0.6 * sg.spool), dt);   // spool:重裝前傾遲滯(慢阻尼 = 柴油機起轉,傾角落後於速度)
+  // launch 撲身前衝 / brake 後仰拋錨煞停:× leanF —— 直立機甲全幅俯衝,水平體軸獸型(鴕鳥/暴龍)
+  // 幾乎不再壓脊(牠們本來就近水平,再前傾就變臉朝地);垂直下蹲(hips.position.y)照舊保留給所有機種
+  hips.rotation.x = L.lean + (L.srg * 0.07 - L.brk * 0.08) * (rig.leanF ?? 1);
   // 胸腔:與骨盆對轉(走路時肩線與髖線反向扭 = 上下半身的角動量互抵)+ 呼吸擴張
   const chest = rig.chest;
   if (chest) {
     chest.rotation.y = -hips.rotation.y * 0.9;
     chest.rotation.z = -hips.rotation.z * 0.55;
-    chest.rotation.x = 0.06 * a + idle * Math.sin(now * 1.5) * 0.02;
+    chest.rotation.x = 0.06 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02;
   }
   // 頭把骨盆的縱向彈跳吸掉一半(頸/頭自己往回撐)⇒ 頭的上下位移收斂,不隨每一步上下彈
   if (rig.headY0 != null) rig.head.position.y = rig.headY0 + (rig.hipsY0 - hips.position.y) * 0.5;
@@ -286,7 +343,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     hips.rotation.x + (chest ? chest.rotation.x : 0),
     hips.rotation.y + (chest ? chest.rotation.y : 0),
     hips.rotation.z + (chest ? chest.rotation.z : 0),
-  ], idle, now);
+  ], idle, now, 0.85, sg.idleK);   // scanK = idleK:哨兵頻掃視、狙擊台近凍結
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 無頭 rig 的簡易單位(如步兵)跳過凝視
   if (rig.tailSegs) {
@@ -308,8 +365,10 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
   L.amp = damp(L.amp, clamp(speed / (rig.top || 10), 0, 1.15), 6, dt);
   const a = L.amp;
   const idle = idleOf(a);
-  const air = Math.max(0, Math.sin(L.ph));       // 騰空(身體升起)
-  const crouch = Math.max(0, -Math.sin(L.ph));   // 觸地(壓縮蓄力)
+  const sg = gsig(rig);
+  L.srg = damp(L.srg ?? 0, accUp(L) * sg.launch, 10 * sg.settle, dt);
+  L.brk = damp(L.brk ?? 0, accDn(L) * sg.brake, 9 * sg.settle, dt);
+  const air = Math.max(0, Math.sin(L.ph));       // 騰空(身體升起;觸地半週期 air=0 = 停在基準線,腳貼地)
   const legB = rig.legBase || 0, armB = rig.armBase || 0;
   // 雙腿同相:蹬離時全伸向後(cos=+1)、騰空前收準備落地(cos→−1);
   // 左右留 4% 振幅差 = 活體的不對稱,不是兩根同步的活塞
@@ -329,26 +388,30 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
   rig.armR.rotation.x = armB + air * 0.12 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.008;
   const hips = rig.hips;
   // 一跳一沉浮:騰空拋物線 + 觸地壓縮(不是交替步的一週期兩浮沉);無左右側移/扭腰
-  hips.position.y = rig.hipsY0 + (air * (rig.hopH || 0.5) - crouch * 0.3) * a
-    + idle * Math.sin(now * 1.7) * 0.012;
+  // 只向上騰空、不讓骨盆沉到基準線以下 —— 腿隨骨盆升降(syncLegsToHips),骨盆一旦下沉就會把腳帶穿地面;
+  // 蓄力/壓縮改由腿部屈曲(flexChain 在觸地相自然收腿)表現,不靠骨盆下沉
+  hips.position.y = rig.hipsY0 + air * (rig.hopH || 0.5) * a
+    + idle * sg.breathK * Math.sin(now * 1.7 * sg.iF) * 0.012;
   hips.position.x = 0;
+  syncLegsToHips(L, rig, hips);   // 袋鼠跳:雙腿隨骨盆騰空,不留在地面
   hips.rotation.z = 0;
   hips.rotation.y = 0;
   // 體軸前傾近水平(hopLean):速度越快壓得越平,靜止時回到直立;
   // 再疊每跳的俯仰律動 —— 蹬離時揚起、落地前俯衝(拋物線的切線方向)
-  L.lean = damp(L.lean, (rig.hopLean || 0.85) * a + clamp(L.accel * 0.012, -0.08, 0.12), 5, dt);
-  hips.rotation.x = L.lean + Math.cos(L.ph + 0.5) * 0.1 * a;
+  L.lean = damp(L.lean, (rig.hopLean || 0.85) * a + clamp(L.accel * 0.012, -0.08, 0.12),
+    5 * (1 - 0.6 * sg.spool), dt);
+  hips.rotation.x = L.lean + Math.cos(L.ph + 0.5) * 0.1 * a + (L.srg * 0.06 - L.brk * 0.07) * (rig.leanF ?? 0.5);   // 袋鼠近水平體軸:俯衝量收斂
   const chest = rig.chest;
   if (chest) {
     chest.rotation.y = 0;
     chest.rotation.z = 0;
-    chest.rotation.x = 0.05 * a + idle * Math.sin(now * 1.5) * 0.02;
+    chest.rotation.x = 0.05 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02;
   }
   if (rig.headY0 != null) rig.head.position.y = rig.headY0 + Math.max(0, rig.hipsY0 - hips.position.y) * 0.5;
   // 體軸壓平了,頭照樣抬起鎖平前方(袋鼠跳起來頭是穩的)+ 入彎凝視
   stabilizeHead(rig, [
     hips.rotation.x + (chest ? chest.rotation.x : 0), 0, 0,
-  ], idle, now, 0.9);
+  ], idle, now, 0.9, sg.idleK);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 同 stepBiped:無頭 rig 跳過凝視
   // 尾 = 第三條腿:與體軸反相上下甩(騰空尾壓下、蹬離尾抬起 = 角動量互抵),
@@ -382,15 +445,25 @@ function stepVehicle(L, rig, dt, now, speed, vFwd, yawRate) {
 /** 飛行載具:壓坡入彎 ≤15° + 前傾 + 懸停浮沉(Task 1.1);rig.wings = 撲翼(飛行生物型) */
 function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   const top = rig.top || 20;
+  const fs = fsig(rig);
+  const spd = Math.hypot(vFwd, vLat);
+  // surge:暴衝俐落度 → 加快壓坡/俯仰的阻尼響應(競速/噴射急甩、長航偵察/重載遲鈍);bank:入彎壓坡積極度
+  const airK = 4.5 * (1 + fs.surge);
   // 向右橫移(vLat>0)→ 右側(局部 +x)下壓 = rotation.z 負
-  L.roll = damp(L.roll, clamp(-vLat / top, -1, 1) * 0.26, 4.5, dt);
+  L.roll = damp(L.roll, clamp(-vLat / top, -1, 1) * 0.26 * fs.bank, airK, dt);
   // 前傾只屬於旋翼/撲翼(靠傾轉產生前向推力);定翼機(rig.level)推力來自引擎,
   // 巡航機身保持水平 —— MUST NOT 跟著速度低頭(壓坡入彎照舊)
   L.pitch = damp(L.pitch, rig.level ? 0
-    : clamp(vFwd / top, -1, 1) * 0.2 + clamp(L.accel * 0.006, -0.07, 0.07), 4.5, dt);
+    : clamp(vFwd / top, -1, 1) * 0.2 + clamp(L.accel * 0.006, -0.07, 0.07), airK, dt);
+  // flare:減速時揚翼張爪煞停、機鼻上仰(鷹/翼龍/龍/蜂);定翼(rig.level)spec flare 恆 0 ⇒ 不揚頭(MUST)
+  L.flr = damp(L.flr ?? 0, accDn(L) * fs.flare, 6, dt);
   rig.tilt.rotation.z = L.roll;
-  rig.tilt.rotation.x = L.pitch;
-  rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 + L.ph) * (rig.bob || 0.08);
+  rig.tilt.rotation.x = L.pitch - L.flr * 0.14;
+  // 懸停站位抖動(hover:蜂/競速高頻定點修正、長航偵察/共軸運補死穩);浮沉幅 ∝ hoverA(活翼大、機械旋翼/定翼≈0)
+  const hovK = clamp(1 - spd / 3, 0, 1) * fs.hover;
+  rig.tilt.rotation.x += Math.sin(now * 7 * fs.hoverF) * 0.014 * hovK;
+  rig.tilt.rotation.z += Math.sin(now * 6.1 * fs.hoverF + 1.1) * 0.016 * hovK;
+  rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 * fs.hoverF + L.ph) * (rig.bob || 0.08) * fs.hoverA;
   // 噴射尾焰(定翼 jet 機種):推力 ∝ 速度 —— 焰長/亮度隨速度拉長增亮 + 高頻抖焰,
   // 懸停/慢速幾乎熄火(噴射機的推力視覺全在尾焰)
   if (rig.jets) {
@@ -411,7 +484,7 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 行程平面近水平 —— 上下拍幅小,主運動是「前後掃掠 + 每半衝程翼面翻轉」的 8 字軌跡;
       // 後翅相位落後前翅(蜂類前後翅耦合但非同相)。
       L.flap = (L.flap || 0) + dt * (30 + k * 16);
-      const amp = 0.3 + k * 0.12;
+      const amp = 0.3 + k * 0.12 + L.flr * 0.3;   // flare:進場杯翼倒拍(蜂)
       for (const { w, outer, sgn, pair } of rig.wings) {
         const ph = L.flap - (pair ? 0.5 : 0);
         w.rotation.z = sgn * Math.sin(ph) * amp;            // 拍(小幅)
@@ -422,7 +495,7 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
     } else {
       // 鳥類撲翼:頻率/振幅隨速度提升(懸停慢拍、巡航快拍);外翼相位延遲 = 鞭式 follow-through
       L.flap = (L.flap || 0) + dt * (3.2 + k * 9);
-      const amp = 0.24 + k * 0.34;
+      const amp = 0.24 + k * 0.34 + L.flr * 0.5;   // flare:拉起收翼杯狀煞停(鷹/翼龍/龍)
       for (const { w, outer, sgn } of rig.wings) {
         w.rotation.z = sgn * Math.sin(L.flap + L.ph) * amp;
         outer.rotation.z = sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.5;
@@ -479,12 +552,18 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   // 跨距:奔馳時前後肢伸展幅再放大 35%(gallop 的騰空伸展 = 大步距的來源)
   const legA = 0.66 * a * (1 + 0.35 * gallop) * (rig.legAmp ?? 1);
   const idle = idleOf(a);
+  const sg = gsig(rig);
+  // 加速前撲驅離(launch:獵犬/獵豹起跑後軀下沉爆發)+ 急停插前腳(brake:追擊-急停射擊平台);
+  // idK = 待機微顫增益(半人馬狙擊台近凍結、章魚躁動不安)
+  L.srg = damp(L.srg ?? 0, accUp(L) * sg.launch, 10 * sg.settle, dt);
+  L.brk = damp(L.brk ?? 0, accDn(L) * sg.brake, 9 * sg.settle, dt);
+  const idK = idle * sg.breathK, iF = sg.iF;   // 靜止腿部液壓微顫的深淺(idleA:重役獸深、狙擊台淺)
   // 髖/肩(第 0 節)待機微顫:即使該節沒有 chain(如觸手腿的肩基座),完全靜止時仍要有液壓微顫,
   // 不能只靠子節點(如 softLeg 的 j1-j4)動、根節本身凍結
-  rig.legFL.rotation.x = Math.sin(phFL) * legA + idle * Math.sin(now * 1.6) * 0.025;
-  rig.legFR.rotation.x = Math.sin(phFR) * legA + idle * Math.sin(now * 1.6 + 1.5) * 0.025;
-  rig.legHL.rotation.x = Math.sin(phHL) * legA * 0.9 + idle * Math.sin(now * 1.6 + 3.0) * 0.025;
-  rig.legHR.rotation.x = Math.sin(phHR) * legA * 0.9 + idle * Math.sin(now * 1.6 + 4.5) * 0.025;
+  rig.legFL.rotation.x = Math.sin(phFL) * legA + idK * Math.sin(now * 1.6 * iF) * 0.025;
+  rig.legFR.rotation.x = Math.sin(phFR) * legA + idK * Math.sin(now * 1.6 * iF + 1.5) * 0.025;
+  rig.legHL.rotation.x = Math.sin(phHL) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 3.0) * 0.025;
+  rig.legHR.rotation.x = Math.sin(phHR) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 4.5) * 0.025;
   if (rig.chFL) {
     if (rig.soft) {
       // 章魚觸手腿:支撐相是推進的行進波,擺動相整條抬起收成搜索/蓄勢的 S 形(softLeg);
@@ -520,14 +599,22 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const wave = G === 'trot' ? L.ph * 2 : L.ph;
   // 奔馳時脊椎屈伸放大:rotary(犬/豹)的拱背-伸展是 gallop 的引擎,幅度最大;
   // transverse(馬)平緩得多;騎乘型再收斂 —— 馬背要載人端槍
-  const pAmp = (rig.pitchAmp ?? 0.05) * (1 + gallop * (rig.rider ? 0.3 : ROT ? 1.3 : 0.7));
-  rig.spine.rotation.x = Math.sin(wave) * pAmp * a + clamp(L.accel * 0.012, -0.08, 0.1);
+  // 迴旋襲步脊椎屈伸仍最劇(> 橫向襲步),但收斂 —— 過大的脊椎俯仰乘上長頸力臂會把頭甩出大弧,
+  // 逼得頸部補償量過大而從肩上滑脫(獵犬頭-身分離的根源)
+  const pAmp = (rig.pitchAmp ?? 0.05) * (1 + gallop * (rig.rider ? 0.3 : ROT ? 0.85 : 0.7));
+  // 加速俯仰改走阻尼(spool:重型獸傾角落後於速度=柴油機起轉)+ 爆發前撲 / 急停後坐插腳
+  L.qacc = damp(L.qacc ?? 0, clamp(L.accel * 0.012, -0.08, 0.1), 5 * (1 - 0.6 * sg.spool), dt);
+  // 四足脊椎近水平:起步/煞停幾乎不改脊背俯仰(靠步幅、後肢驅動與垂直起伏,不把頭壓向地面);
+  // 拱背-伸展仍由步態(sin(wave)·pAmp)與奔馳 gallop 主導 —— 不再疊加大幅的爆發/煞停俯衝
+  const gaitPitch = Math.sin(wave) * pAmp * a;   // 純步態俯仰(頭部畫弧補償只吃這一項,不吃加減速前傾)
+  rig.spine.rotation.x = gaitPitch + L.qacc + (L.srg - L.brk) * 0.02;
   rig.chest.rotation.x = Math.sin(wave - 0.7) * pAmp * a;
   // 章魚:外套膜隨行進波緩慢蛇擺(左右蠕行),靜止時也以極慢的幅度游動
   rig.spine.rotation.y = G === 'crawl' ? Math.sin(L.ph * 0.5) * 0.12 * a + idle * Math.sin(now * 0.6) * 0.04 : 0;
   // 縱向彈跳(gallop 越明顯;walk/crawl 幾乎貼地)+ 靜止呼吸微沉浮
   const bob = (0.5 - 0.5 * Math.cos(wave)) * (rig.bob || 0.08) * a * (1 + gallop * 0.8);
-  rig.spine.position.y = rig.hipsY0 - bob + idle * Math.sin(now * 1.4 + L.ph) * 0.02;
+  rig.spine.position.y = rig.hipsY0 - bob + idK * Math.sin(now * 1.4 * iF + L.ph) * 0.02
+    - L.srg * 0.03 - L.brk * 0.03;   // 爆發起跑蓄力 / 急停壓低重心
   if (rig.rider) {
     // 人馬:騎士的骨盆「黏死」在馬背上 —— position 一律不動(先前用位移反向抵銷,
     // 馬身下沉、騎士留在原地,兩者在腰際裂開;headArc 是給水平長頸用的力臂補償,
@@ -552,14 +639,16 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   } else {
     rig.neck.rotation.x = Math.sin(wave - 1.4) * 0.07 * a;
     // 頸吸收「脊椎彈跳 + 脊椎/胸俯仰在長頸力臂上放大出來的畫弧」⇒ 頭近乎平移前進
-    rig.neck.position.y = rig.neckY0 + bob * 0.55 + headArc(rig, 0.85);
+    // 頸吸收「彈跳 + 長頸力臂畫弧」以穩住頭,但:①只補償步態俯仰(gaitPitch,加減速前傾不進補償,
+    // 否則起跑那下頸會被拋出)②夾住補償位移 —— 長頸機種(獵犬)迴旋襲步時補償量過大會把頸從肩上撐脫(分離)
+    rig.neck.position.y = rig.neckY0 + bob * 0.55 + clamp(headArc(rig, 0.85, gaitPitch), -0.18, 0.18);
   }
   // 頭:反轉抵銷「脊椎波 + 胸 + 頸」的累計旋轉 ⇒ 身體在跑,頭卻鎖平(獵食者的視線穩定)
   stabilizeHead({ head: rig.head }, [
     rig.spine.rotation.x + rig.chest.rotation.x + rig.neck.rotation.x,
     rig.spine.rotation.y,
     rig.spine.rotation.z + rig.neck.rotation.z,
-  ], idle, now, 0.95);
+  ], idle, now, 0.95, sg.idleK);
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   rig.head.rotation.y += L.gaze;   // 入彎凝視:獵食者先看向要去的地方
   // 尾:急轉甩向轉向反側(配重)+ 逐節延遲的鞭;高速時尾根抬起配平前傾
@@ -583,6 +672,10 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 變形活動度(|dm/dt| 平滑):進行中排氣口增亮,完成後自然歸零
   L.act = damp(L.act || 0, clamp(Math.abs(m - prev) / dt * 4, 0, 1), 5, dt);
   rig.pose(m);   // 分段姿勢插值(基底;以下全部疊加其上)
+  // 體軸「直立度」uprightK:由目前姿勢的軀幹前傾推得(貓/龍/猴掌行近水平 → 趨 0.15;
+  // 吸血鬼/亞特拉斯直立 → 趨 1)。起步撲身/煞停後仰的「俯衝」只給直立體軸 —— 已經近水平的獸型
+  // 再往前壓就變臉朝地,牠們的加減速改由步幅、垂直起伏與脊椎波表現。
+  const uprightK = clamp(1 - Math.abs(rig.torso.rotation.x) / 0.9, 0.15, 1);
   // 地面步態:步頻耦合位移(不滑步)。四肢相位表 rig.qphase = [後左, 後右, 前左, 前右]
   // 依生物原型指定:預設對角小跑 [0, π, π, 0];巨象走側步序列(同側前腳落後後腳 1/4 週期,
   // 永遠三腳著地的重型慢步);昆蟲/貓科各以 flexF 調屈曲剛性(甲蟲硬肢、豹科彈簧腿)
@@ -590,6 +683,11 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   L.ph += speed * dt * Math.PI / Math.max(0.2, strideW);
   L.amp = damp(L.amp, clamp(speed / (rig.top || 9), 0, 1.1) * (1 - m), 6, dt);
   const a = L.amp;
+  const sg = gsig(rig), fs = fsig(rig);
+  // 地面爆發/急停(gated by 1−m)+ 飛行揚翼煞停(gated by m)脈衝,以 |L.accel| 驅動、settle 阻尼快落
+  L.srg = damp(L.srg ?? 0, accUp(L) * sg.launch * (1 - m), 10 * sg.settle, dt);
+  L.brk = damp(L.brk ?? 0, accDn(L) * sg.brake * (1 - m), 9 * sg.settle, dt);
+  L.flr = damp(L.flr ?? 0, accDn(L) * fs.flare * m, 7, dt);
   const qp0 = rig.qphase || [0, Math.PI, Math.PI, 0];
   // 迴旋襲步(rig.gallopType='rotary',夜豹):高速時相位自對角小跑連續內插到
   // LH→RH→RF→LF 的落腳表(同 stepQuad 的 rotary;qphase 序 = [後左, 後右, 前左, 前右])
@@ -619,7 +717,7 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 三對足裡唯一沒有液壓微顫的一對;跗節(midTarsi)若有獨立關節,也跟著擺動抬離/踩地
   if (rig.midLegs) {
     const mp = [Math.PI, 0];
-    const midIdle = idleOf(a) * (1 - m);
+    const midIdle = idleOf(a) * (1 - m) * sg.breathK;
     rig.midLegs.forEach((ml, i) => {
       ml.rotation.x += Math.sin(L.ph + mp[i]) * swA * 0.8 + midIdle * Math.sin(now * 1.6 - i * 1.8) * 0.025;
       rig.midKnees[i].rotation.x = 0.55 + Math.max(0, -Math.cos(L.ph + mp[i])) * 0.35 * a
@@ -638,7 +736,7 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   const runF = clamp((a - 0.5) / 0.5, 0, 1);   // 奔跑度:過半速全面放大屈曲
   // 每節自己的相位延遲 = 力由近端傳向遠端(髖→膝→踝 / 肩→肘→腕);
   // br() 疊上靜止時的液壓微顫,站著也不是一具定格模型
-  const br = (d, k) => idle * Math.sin(now * 1.6 - d) * k;
+  const br = (d, k) => idle * sg.breathK * Math.sin(now * 1.6 * sg.iF - d) * k;
   // 屈曲剛性:象柱腿/甲蟲硬肢 < 1、豹/迅猛龍彈簧腿 > 1;奔跑再 +30%
   const kF = (rig.flexF ?? 1) * (1 + 0.3 * runF);
   const kA = (rig.beast ? 0.34 : 0.6) * kF;
@@ -691,12 +789,18 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   }
   // 軀幹動態:地面前傾/加減速預備、飛行壓坡入彎 + 巡航俯仰、懸停浮沉
   const topAir = rig.topAir || 30;
-  L.roll = damp(L.roll, clamp(-vLat / topAir, -1, 1) * 0.3 * m, 4, dt);
+  // surge:飛行暴衝俐落度 → 加快壓坡/俯仰的阻尼響應(穿越/噴射急甩、飛鯨/重載遲鈍);bank:入彎壓坡積極度
+  const airK = 4 * (1 + fs.surge * m);
+  L.roll = damp(L.roll, clamp(-vLat / topAir, -1, 1) * 0.3 * m * fs.bank, airK, dt);
+  // 地面加速前傾的暫態(clamp 那項)對獸型(水平體軸)收斂 —— 否則貓/龍奔跑起步會臉朝地;
+  // 0.16·amp 的穩態奔跑姿與飛行俯仰不動
   L.pitch = damp(L.pitch,
     m * clamp(vFwd / topAir, -1, 1) * 0.2
-    + (1 - m) * (0.16 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15)), 4, dt);
-  // 迴旋襲步的拱背-伸展脈動(獵豹引擎)疊在阻尼俯仰之上:與步頻同調,不進阻尼(太慢跟不上)
-  rig.torso.rotation.x += L.pitch + Math.sin(L.ph) * 0.09 * galF * a;
+    + (1 - m) * (0.16 * L.amp + clamp(L.accel * 0.015, -0.1, 0.15) * uprightK),
+    airK * (1 - 0.55 * sg.spool * (1 - m)), dt);   // spool:地面重型前傾遲滯(傾角先於速度=柴油機起轉)
+  // 迴旋襲步的拱背-伸展脈動(獵豹引擎)疊在阻尼俯仰之上;+ 地面爆發前撲/急停後坐、飛行揚翼(flare)煞停
+  rig.torso.rotation.x += L.pitch + Math.sin(L.ph) * 0.09 * galF * a
+    + (L.srg * 0.07 - L.brk * 0.08) * uprightK - L.flr * 0.06;   // 俯衝 × uprightK(水平體軸收斂);flare 屬飛行不縮
   // 悟空懸停直立(rig.hoverUp = cruise):飛行「靜止」時機體立回直立、光翼垂展身後;
   // 開始移動才連續前傾壓平到近水平的巡航姿態。頭本來以 0.15−cruise 補償前傾,
   // 直立時一併回正,否則會仰天
@@ -716,21 +820,26 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     rig.head.rotation.x -= L.pitch * k;
     rig.head.rotation.z -= L.roll * k;
     L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
-    rig.head.rotation.y += idle * Math.sin(now * 0.5) * 0.25    // 靜止:緩慢警戒掃視
-      + L.gaze * (1 - m);                                       // 地面入彎凝視(飛行讓位給航向)
+    rig.head.rotation.y += idle * sg.idleK * Math.sin(now * 0.5) * 0.25    // 靜止:緩慢警戒掃視(idleK 依性格:哨兵頻掃、狙擊近凍)
+      + L.gaze * (1 - m);                                                   // 地面入彎凝視(飛行讓位給航向)
   }
   // 地面步態的縱向彈跳 + 飛行浮沉。浮沉只給「活的」擬態獸型(拍翼會產生升力脈動);
   // 定翼/旋翼是機械飛行器 —— 巡航時機體穩定,MUST NOT 讓它跟著上下呼吸(airBob = 0)。
   // grounded running(rig.grounded,如迅猛龍):沒有騰空相的跑 —— 速度越快浮沉反而收斂
   // (被長腿屈伸吸收),同 stepBiped:255 的 bobF,MUST NOT 讓彈跳隨速度單調放大
   const bobF = rig.grounded ? 1 - 0.55 * runF : 1;
+  // 懸停站位抖動(hover:蜂/穿越高頻定點修正、長航/飛鯨死穩)—— 純姿態旋轉、不動 position.y ⇒ 不違「機械飛行不呼吸」
+  const hovK = m * clamp(1 - Math.hypot(vFwd, vLat) / 3, 0, 1) * fs.hover;
+  rig.torso.rotation.x += Math.sin(now * 6.5 * fs.hoverF) * 0.012 * hovK;
+  rig.torso.rotation.z += Math.sin(now * 5.7 * fs.hoverF + 1.1) * 0.014 * hovK;
   rig.torso.position.y += -(0.5 - 0.5 * Math.cos(L.ph * 2)) * (rig.bob || 0.07) * L.amp * bobF
-    + m * Math.sin(now * 2.4 + L.ph) * 0.12 * (rig.airBob ?? 1);
+    + m * Math.sin(now * 2.4 * fs.hoverF + L.ph) * 0.12 * (rig.airBob ?? 1) * fs.hoverA   // 浮沉幅 ∝ hoverA(擬態獸大、機械≈0)
+    - L.srg * 0.03 - L.brk * 0.03;   // 地面爆發起步/急停壓低重心
   // 拍翼(鳥/龍):翼展開後才拍;頻率隨速度、外翼相位延遲(follow-through)
   if (rig.flapWings && m > 0.45) {
     const k = clamp(Math.hypot(vFwd, vLat) / topAir, 0, 1);
     L.flap = (L.flap || 0) + dt * (2.6 + k * 8) * (rig.flapF || 1);
-    const amp = (0.2 + k * 0.3) * m;
+    const amp = (0.2 + k * 0.3 + L.flr * 0.4) * m;   // flare:減速時杯翼倒拍煞停(始祖鳥/夜梟/龍/翼龍)
     for (const { w, outer, sgn } of rig.flapWings) {
       w.rotation.z += sgn * Math.sin(L.flap + L.ph) * amp;
       outer.rotation.z += sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.4;
