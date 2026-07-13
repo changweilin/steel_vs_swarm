@@ -411,7 +411,10 @@ export class BattleClient {
   _updateLaneArrows(now) {
     if (!this.laneArrows?.length) return;
     const M = this._arrowM, Q = this._arrowQ, E = this._arrowE, P = this._arrowP, S = this._arrowS;
-    const HOVER = 0.3;    // 離地淨空:只夠避開 z-fighting,箭頭實質貼在地面上
+    // 離地淨空:_surf() 在一般路段回傳「裸地形」高度,但實際鋪面比地形抬高 ROAD_LIFT(biomes.js,0.45)
+    // + 標線再抬高到 ~0.62 —— HOVER 若只有 0.3 會讓箭頭幾何埋進柏油下方,被路面 z-test 擋住。
+    // 0.85 留出安全餘裕,同時仍遠低於視線高度,不會變成空中路標。
+    const HOVER = 0.85;
     for (const la of this.laneArrows) {
       const L = la.barL, SP = la.spread;
       la.items.forEach((it, i) => {

@@ -1798,12 +1798,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     }
     mark.base += nP * 2;
   };
-  // 高架橋構件:欄杆(直立緞帶幾何)+ 橋墩(InstancedMesh);地下道門洞(隧道端點)
+  // 高架橋構件:欄杆(直立緞帶幾何)+ 邊梁(box girder 意象,直立緞帶)+ 橋墩/橋墩帽(InstancedMesh);地下道門洞(隧道端點)
   const rail = { pos: [], nrm: [], idx: [], base: 0 };
+  const girder = { pos: [], nrm: [], idx: [], base: 0 };
   const piers = [], portals = [];
-  // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)
+  // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)+ 天花照明(InstancedMesh)
   const wall = { pos: [], nrm: [], idx: [], base: 0 };
-  const beams = [];
+  const beams = [], ceilLamps = [];
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
@@ -1880,7 +1881,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       const run = densify(raw, ROAD_SEG);
       const mid = run[(run.length / 2) | 0];
       const biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
-      if (biome === 'water') continue;
+      // 橋樑就是為了跨越水面而存在 —— 橋段中點取樣落在水色上是常態(河/運河正下方),
+      // MUST NOT 跳過,否則現實中最常見的跨河橋會整段連同橋面碰撞一起消失。
+      if (biome === 'water' && !bridge) continue;
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       const cum = [0];
@@ -1969,8 +1972,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
           const [ex, ez, ddx, ddz] = at(s);
           beams.push({ x: ex, z: ez, y: terrain.heightAt(ex, ez) + 6.6, ry: Math.atan2(ddx, ddz), w: hw * 2 + 2 });
         }
+        // 天花照明:每支橫樑下掛一具長條燈,補足開挖式通道內部的細節與可視度
+        for (let s = 6; s < total - 4 && ceilLamps.length < 90; s += 13) {
+          const [ex, ez, ddx, ddz] = at(s);
+          ceilLamps.push({ x: ex, z: ez, y: terrain.heightAt(ex, ez) + 6.15, ry: Math.atan2(ddx, ddz) });
+        }
       }
-      // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 等間距橋墩落地 ----
+      // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 邊梁(box girder)+ 等間距橋墩落地(含墩帽)+ 橋燈 ----
       if (bridge && total > 10) {
         for (const side of [1, -1]) {
           const k0 = rail.base;
@@ -1989,11 +1997,41 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             rail.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
           }
           rail.base += nP * 2;
+          // 邊梁:貼在橋面外緣正下方的直立緞帶,補足側視結構厚度(box girder 意象)
+          const g0 = girder.base;
+          for (let i = 0; i < nP; i++) {
+            const [x, z] = run[i];
+            const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
+            let dx = c[0] - a[0], dz = c[1] - a[1];
+            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+            const vx = x + dz * hw * 0.98 * side, vz = z - dx * hw * 0.98 * side;
+            const dy = deckAt(cum[i], x, z);
+            girder.pos.push(vx, dy - 0.1, vz, vx, dy - 1.1, vz);
+            girder.nrm.push(dz * side, 0, -dx * side, dz * side, 0, -dx * side);
+          }
+          for (let i = 0; i < nP - 1; i++) {
+            const k = g0 + i * 2;
+            girder.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+          }
+          girder.base += nP * 2;
         }
         for (let s = 12; s < total - 8 && piers.length < 120; s += 24) {
-          const [ex, ez] = at(s);
+          const [ex, ez, ddx, ddz] = at(s);
           const y0 = terrain.heightAt(ex, ez), y1 = deckAt(s, ex, ez);
-          if (y0 > 0.3 && y1 - y0 > 1.4) piers.push({ x: ex, z: ez, y0: y0 - 0.5, y1, r: Math.min(1.4, hw * 0.35) });
+          if (y0 > 0.3 && y1 - y0 > 1.4) {
+            piers.push({ x: ex, z: ez, y0: y0 - 0.5, y1, r: Math.min(1.4, hw * 0.35), ry: Math.atan2(ddx, ddz), w: hw * 1.7 });
+          }
+        }
+        // 橋燈:沿橋面邊緣等間距、左右交錯(與地面路燈同款,燈臂朝橋心)
+        if (lamps.length < 380) {
+          let side2 = rnd() < 0.5 ? 1 : -1;
+          for (let s = 16 + rnd() * 10; s < total - 8 && lamps.length < 380; s += 34) {
+            const [ex, ez, ddx, ddz] = at(s);
+            const qx = ddz, qz = -ddx, off = hw * 0.96 + 0.5;
+            const lx = ex + qx * off * side2, lz = ez + qz * off * side2;
+            lamps.push({ x: lx, y: deckAt(s, ex, ez), z: lz, ry: Math.atan2(qz * side2, -qx * side2) });
+            side2 = -side2;
+          }
         }
       }
       // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫)----
@@ -2143,6 +2181,17 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     m.userData.noOutline = true;
     group.add(m);
   }
+  // ---- 高架橋邊梁(直立緞帶,雙面;貼在橋面外緣下方,補足側視結構厚度)----
+  if (girder.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(girder.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(girder.nrm, 3));
+    geo.setIndex(girder.idx);
+    const m = new THREE.Mesh(geo, envMat(0x5c636a, { wash: 0.3, cool: 0.5, side: THREE.DoubleSide }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
   // ---- 地下道擋土牆(直立緞帶,雙面)+ 橫樑 ----
   if (wall.idx.length) {
     const geo = new THREE.BufferGeometry();
@@ -2170,11 +2219,30 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     bM.frustumCulled = false;
     group.add(bM);
   }
-  // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh,純視覺不登記碰撞)----
+  // ---- 地下道天花照明:每支橫樑下掛一具長條燈(常亮 emissive)----
+  if (ceilLamps.length) {
+    const lM = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.14, 1.6),
+      toonMat(0xece7d2, { emissive: new THREE.Color(0xffe9a0), emissiveIntensity: 0.9 }), ceilLamps.length);
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+    const P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1);
+    ceilLamps.forEach((l, i) => {
+      E.set(0, l.ry, 0); Q.setFromEuler(E);
+      P.set(l.x, l.y, l.z);
+      M.compose(P, Q, S);
+      lM.setMatrixAt(i, M);
+    });
+    lM.instanceMatrix.needsUpdate = true;
+    lM.castShadow = false;
+    lM.frustumCulled = false;
+    lM.userData.noOutline = true;
+    group.add(lM);
+  }
+  // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh,純視覺不登記碰撞)+ 墩頂帽梁 ----
   if (piers.length) {
     const pM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.18, 1, 8),
       envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 }), piers.length);
-    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3();
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+    const P = new THREE.Vector3(), S = new THREE.Vector3();
     piers.forEach((p, i) => {
       P.set(p.x, (p.y0 + p.y1) / 2, p.z);
       S.set(p.r, p.y1 - p.y0, p.r);
@@ -2185,6 +2253,20 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     pM.castShadow = false;
     pM.frustumCulled = false;
     group.add(pM);
+    // 墩頂帽梁:橋墩與橋面之間加寬的橫向承接梁,補足支撐結構感
+    const capM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+      envMat(0x8f959a, { wash: 0.35, cool: 0.45 }), piers.length);
+    piers.forEach((p, i) => {
+      E.set(0, p.ry, 0); Q.setFromEuler(E);
+      P.set(p.x, p.y1 - 0.4, p.z);
+      S.set(p.w, 0.8, p.r * 2.3);
+      M.compose(P, Q, S);
+      capM.setMatrixAt(i, M);
+    });
+    capM.instanceMatrix.needsUpdate = true;
+    capM.castShadow = false;
+    capM.frustumCulled = false;
+    group.add(capM);
   }
   // ---- 隧道門洞:額牆 + 黑洞面 + 兩翼擋土牆(嵌進山壁,面朝來路)----
   for (const p of portals) {
@@ -2203,6 +2285,14 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       wing.position.set(s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4);
       wing.rotation.y = s * 0.5;
       g.add(wing);
+    }
+    // 洞口警示條紋(黃黑相間,貼在洞頂上緣):標示通行淨空邊界
+    const stripeN = 8, stripeSpan = W - 1.6, stripeW = stripeSpan / stripeN;
+    for (let si = 0; si < stripeN; si++) {
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(stripeW * 0.94, 0.5, 0.15),
+        envMat(si % 2 === 0 ? 0xf2c230 : 0x1a1a1a, { wash: 0.2, cool: 0.2 }));
+      seg.position.set(-stripeSpan / 2 + stripeW * (si + 0.5), H2 - 1.0, 0.76);
+      g.add(seg);
     }
     g.traverse((o) => { if (o.isMesh) o.userData.noOutline = true; });
     g.position.set(p.x, p.y - 0.4, p.z);
