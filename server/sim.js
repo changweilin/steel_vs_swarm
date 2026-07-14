@@ -7,7 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
-  dmgFalloff, blastFalloff, battleBBox, solveTowerSites,
+  dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -589,9 +589,9 @@ export class BattleSim {
     h.reloadUntil[wp.id] = this.t + wp.def.reload * this._buffMul(h, 'reload');
   }
 
-  /** 英雄傷害倍率(火力升級 × 招式增益) */
+  /** 英雄傷害倍率(火力升級 × 招式增益 × 榴彈對建築加成) */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind)
+    return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
       * (1 + ECON.UPGRADES.dmg.step * (h.upg?.dmg || 0))
       * this._buffMul(h, 'dmg');
   }
@@ -762,16 +762,17 @@ export class BattleSim {
   }
 
   /**
-   * 電漿扇形攻擊(type:'plasma'):客戶端只回報射向(dx,dz 為 sim 座標單位向量),
-   * 命中判定全在伺服器 — 射程內、水平夾角 ≤ arc、迷霧可見的敵方單位全數受創
-   * (× 電漿消散衰減)。小隊僚機以各自位置沿同射向齊噴,彈藥/射速只扣一份。
+   * 扇形攻擊(fan:電漿重武器 / 散彈輕武器):客戶端只回報射向(dx,dz 為 sim 座標單位向量)
+   * 與槽位 slot('heavy' 電漿 / 'light' 散彈;預設 heavy 向後相容)。命中判定全在伺服器 —
+   * 射程內、水平夾角 ≤ arc、迷霧可見的敵方單位全數受創(× 扇形近距高遠距低衰減)。
+   * 一發只扣一次彈藥/射速,錐內敵人全數命中 = 真散彈手感。僚機以各自位置沿同射向齊噴。
    */
-  heroPlasma(pid, dx, dz) {
+  heroPlasma(pid, dx, dz, slot = 'heavy') {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
     if (this._jammed(h)) return;
-    const wp = this._heroWeapon(h, 'heavy');
-    if (!wp || wp.def.type !== 'plasma') return;
+    const wp = this._heroWeapon(h, slot === 'light' ? 'light' : 'heavy');
+    if (!wp || !wp.def.fan) return;
     if (wp.def.needAim && !h.aiming) return;
     const len = Math.hypot(dx, dz) || 1;
     dx /= len; dz /= len;

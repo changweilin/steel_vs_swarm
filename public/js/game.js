@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD,
+  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -198,6 +198,13 @@ export class BattleClient {
     this.trauma = 0;
     this.roll = 0;
     this.weaponKick = 0;
+    // 後座力機制(見 data.js RECOIL):連射回穩 + 高後座重武器開火前穩定 + 開火中位移懲罰
+    this._burstN = {};              // slot -> 連射計數(達 profile.burst 後強制回穩)
+    this._settleUntil = {};         // slot -> 回穩解除時間戳(此間不能擊發)
+    this._steadyAt = 0;             // 高後座重武器:開始「停穩」的時間戳(0 = 尚未穩定)
+    this._recoilMove = null;        // 當前開火套用的位移懲罰 tier('slow'|'stop'|'back'|'free')
+    this._recoilMoveUntil = 0;      // 位移懲罰有效到此時間
+    this._recoilSlowF = 0.5;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
     this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
@@ -1531,6 +1538,45 @@ export class BattleClient {
   /** 目前是否為飛行機體(無人機恆飛;變形機甲僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
 
+  /** 玩家是否有移動輸入(高後座重武器的「停穩才能開火」判定) */
+  _moveInput() {
+    const k = this.keys;
+    return !!(k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.Space || k.KeyC || k.ControlLeft);
+  }
+
+  /** 開火中位移懲罰係數(stop=0 / slow=slowF / 其餘=1);飛行機體套 AIR_F 折扣(空中減半) */
+  _recoilMoveF(now, fly) {
+    if (!this._recoilMove || now >= (this._recoilMoveUntil || 0)) return 1;
+    let f = this._recoilMove === 'stop' ? 0 : this._recoilMove === 'slow' ? this._recoilSlowF : 1;
+    if (fly && f < 1) f = 1 - (1 - f) * RECOIL.AIR_F;
+    return f;
+  }
+
+  /**
+   * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
+   * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
+   */
+  _fanBlast(muzzle, dir, def) {
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const half = (def.arc || 15) * Math.PI / 180;
+    const plasma = def.type === 'plasma';
+    const col = plasma
+      ? (this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff)
+      : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff);
+    const blades = plasma ? 7 : 9;
+    for (let i = 0; i < blades; i++) {
+      const f = blades === 1 ? 0 : (i / (blades - 1)) * 2 - 1;          // −1..1 橫向
+      const dk = dir.clone()
+        .applyAxisAngle(up, half * f)
+        .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
+      const len = def.range * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      const end = muzzle.clone().addScaledVector(dk, len);
+      this._tracer(muzzle, end, col, plasma ? 0.28 : 0.13);
+      starburst(this.scene, this.effects, end.x, end.y, end.z, plasma ? 3 : 1.5, col);
+    }
+  }
+
   /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
   _collide() {
     const fly = this._flying();
@@ -2528,6 +2574,27 @@ export class BattleClient {
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
 
+    const prof = def.recoil || {};
+    // 連射回穩(中後座輕武器):連發 N 發後強制回穩,此間不能擊發(與換彈匣機制分離)
+    if ((this._settleUntil[id] || 0) > now) return;
+    // 高後座重武器:須先「停下 + 穩定」steady 秒才能擊發(狙擊 / 超電磁炮 / 導引飛彈)——
+    // rail 用既有 charge 當穩定時間,其餘型別用 steady 計時器;移動中一律無法穩定。
+    if (prof.steady > 0) {
+      if (this._moveInput()) {
+        if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this._setRailCharge(false); this.flash?.scale.setScalar(1); }
+        if (now - (this._steadyWarnAt || 0) > 1.2) { this._steadyWarnAt = now; this.hud.feed?.(`🎯【${def.name}】須停下穩定後才能擊發`); }
+        return;
+      }
+      if (def.type !== 'rail') {   // 非磁軌的高後座重武器:停穩計時到滿才擊發
+        if (!this._steadyAt) { this._steadyAt = now; this._setRailCharge(true); this.hud.feed?.(`🎯【${def.name}】穩定中…`); }
+        const sp = (now - this._steadyAt) / prof.steady;
+        this.flash.visible = true; this._flashTtl = 0.06;
+        this.flash.scale.setScalar(0.4 + Math.min(1, sp) * 2.4);
+        if (sp < 1) return;
+        this._steadyAt = 0; this.flash.scale.setScalar(1); this._setRailCharge(false);
+      }
+    }
+
     // 磁軌炮:按住開火鍵蓄力 charge 秒,蓄滿才擊發;提前放開 = 取消(不耗彈,歸零見 _updateSelf)
     if (def.type === 'rail' && def.charge) {
       if (!this._railAt) { this._railAt = now; this.hud.feed?.(`⚡【${def.name}】蓄力中…`); this._setRailCharge(true); }
@@ -2542,6 +2609,15 @@ export class BattleClient {
     }
     this.lastFireAt[id] = now;
     st.ammo--;
+    // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
+    // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
+    if (prof.burst && !def.fan) {
+      this._burstN[id] = (this._burstN[id] || 0) + 1;
+      if (this._burstN[id] >= prof.burst) {
+        this._burstN[id] = 0;
+        this._settleUntil[id] = now + (prof.settle || 0.4);
+      }
+    }
     if (st.ammo <= 0) this._startReload(id);
     // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
@@ -2553,30 +2629,26 @@ export class BattleClient {
       ? this.gunGroup.localToWorld(this._muzzle.clone())
       : this.camera.position.clone().add(dir.clone().multiplyScalar(2));
 
-    // 後座力:視角上踢 + 隨機偏擺 + 槍身後坐 + 槍口焰;重武器踢更大;無人機吃反作用力後推
-    const heavyKick = id === 'heavy' ? 3 : 1;
+    // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
+    // 位移懲罰(減速/停止)在 _updatePlayer 依 _recoilMove 夾住;'back' 每發沿槍口反向擊退。
     const fly = this._flying();
-    this.recoil.p += (fly ? 0.0075 : 0.011) * heavyKick;
-    this.recoil.y += (Math.random() - 0.5) * 0.006 * heavyKick;
-    this.trauma = Math.min(1, this.trauma + 0.06 * heavyKick);
+    const airF = fly ? RECOIL.AIR_F : 1;                                 // 空中位移懲罰減半(使用者指示)
+    this.recoil.p += (prof.climb ?? (id === 'heavy' ? 0.033 : 0.011));   // 準星上踢(開火停止後快速回穩)
+    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
+    this.trauma = Math.min(1, this.trauma + 0.03 * (prof.kick ?? 1));
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
-    if (fly) this.vel.addScaledVector(dir, -0.9 * heavyKick);
-    else if (id === 'heavy') this.vel.addScaledVector(dir, -6);
+    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airF);
+    this._recoilMove = prof.move || 'free';
+    this._recoilSlowF = prof.slowF ?? 0.5;
+    this._recoilMoveUntil = now + Math.max(0.22, 1 / def.rate) * 1.1;    // 位移懲罰持續到下一發窗口
 
-    if (def.type === 'plasma') {
-      // 電漿扇形:無彈道,命中由伺服器以「射向 + 夾角 + 射程」結算;本地畫扇形焰舌
-      const arc = (def.arc || 15) * Math.PI / 180;
-      const up = new THREE.Vector3(0, 1, 0);
-      const pcol = this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
-      for (let k = -2; k <= 2; k++) {
-        const dk = dir.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
-        const end = muzzle.clone().addScaledVector(dk, def.range * (0.7 + Math.random() * 0.3));
-        this._tracer(muzzle, end, pcol, 0.28);
-        starburst(this.scene, this.effects, end.x, end.y, end.z, 3, pcol);
-      }
-      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z });   // three z 南 → 模擬 z 北
+    if (def.fan) {
+      // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
+      // 本地畫扇形彈著(近距密、遠距散),slot 分輕(散彈)/ 重(電漿)。
+      this._fanBlast(muzzle, dir, def);
+      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id });   // three z 南 → 模擬 z 北
       return;
     }
 
@@ -2903,7 +2975,7 @@ export class BattleClient {
       if (this.keys.KeyS) target.sub(look);
       if (this.keys.KeyD) target.add(right);
       if (this.keys.KeyA) target.sub(right);
-      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost);
+      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost * this._recoilMoveF(now, true));
       if (this.keys.Space) target.y += u.vspeed;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
@@ -2921,7 +2993,7 @@ export class BattleClient {
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
       // 變形機甲蓄力中重心下沉、移動減速(起跳預備動作,mobility_plan Task 2.1)
       const slowK = this.isMorph ? 1 - 0.6 * this.charge : 1;
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * dt);
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._recoilMoveF(now, false) * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       const fr = Math.exp(-dt * 6);
@@ -2994,8 +3066,11 @@ export class BattleClient {
         ry: Math.round(this.yaw * 100) / 100,
       });
     }
-    // 磁軌蓄力:放開開火鍵 = 取消蓄力(不耗彈)
-    if (!this.firing && this._railAt) { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
+    // 放開開火鍵:取消磁軌/穩定蓄力(不耗彈)、連射計數歸零(下次扣扳機重新起算 N 連發)
+    if (!this.firing) {
+      if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
+      this._burstN = {};
+    }
     this._tryFire(now);
     this._tickLock(now);
   }

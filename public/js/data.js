@@ -301,6 +301,7 @@ export const FALLOFF = {
 };
 /** 距離傷害倍率(d = 射手→目標 3D 距離);未列型別(戰鬥部等)恆為 1 */
 export function dmgFalloff(def, d) {
+  if (def.fan) return fanFalloff(def.range || 0, d);   // 扇形武器(散彈/電漿)專屬曲線:越近越高
   const floor = FALLOFF.FLOOR[def.type];
   if (!floor) return 1;
   const dd = d - (def.range || 0) * FALLOFF.PLATEAU;
@@ -309,12 +310,75 @@ export function dmgFalloff(def, d) {
   const L = kinetic ? (def.mv || 600) * FALLOFF.KIN_L : FALLOFF.EXT[def.type];
   return Math.max(floor, Math.exp(-(kinetic ? 2 : 1) * dd / L));
 }
+// 扇形武器(散彈槍 / 電漿):無近距平台 —— 槍口傷害最高,隨距離線性遞減到射程末端的 FAN_FLOOR。
+// 這正是「射程偏短、越近傷害越高」的手感(使用者指示);射程本就短(近戰武器)。
+export const FAN_FLOOR = 0.25;
+export function fanFalloff(range, d) {
+  if (!range) return 1;
+  return Math.max(FAN_FLOOR, 1 - d / range);
+}
 /** 爆風超壓衰減:核心(≤0.5r)全傷,外圍隨距離急降、1.8r 歸零(取代舊二段式 1/0.4) */
 export function blastFalloff(r, d) {
   if (d <= r * 0.5) return 1;
   if (d >= r * 1.8) return 0;
   return ((r * 1.8 - d) / (r * 1.3)) ** 0.75;
 }
+
+// ---- 後座力機制(2026-07-14:輕/重武器各三階,依武器原型分派)----
+// 純客戶端手感:game.js 依「當前手上武器」的 def.recoil 套用位移懲罰 + 準星上踢 + 開火節奏。
+// 伺服器不涉入(位移本就客戶端回報,防作弊仍走 heroHit 射程/迷霧驗證)⇒ bal/e2e 不受影響。
+//   move   移動中射擊的位移懲罰:'free' 不受影響 / 'slow' 減速 / 'stop' 開火即停 / 'back' 後退
+//   climb  每發準星上踢量(rad,累加到 recoil.p,開火停止後快速回穩)
+//   kick   槍身後坐 + 鏡頭 trauma 震動倍率
+//   slowF  move:'slow' 時保留的速度比例
+//   back   每發沿槍口反向的擊退速度(m/s)
+//   burst  N 連射後強制回穩(0 = 無;扇形武器不吃 —— 見 game.js)
+//   settle burst 觸發後的回穩秒數(此間不能擊發,與換彈匣機制分離)
+//   steady 開火前須「停下 + 穩定」的秒數(高後座重武器:狙擊 / 超電磁炮 / 導引飛彈)
+// AIR_F:飛行機體(無人機 / 變形機飛行型)的位移懲罰折扣 —— 使用者指示「空中減半」,
+//   整個蜂群陣營靠飛行機動,套滿地面懲罰會過度削弱空戰體驗。
+export const RECOIL = {
+  AIR_F: 0.5,
+  light: {
+    low:  { move: 'free', climb: 0.006, kick: 0.8, slowF: 1,   back: 0, burst: 0, settle: 0,    steady: 0 },
+    med:  { move: 'slow', climb: 0.013, kick: 1.2, slowF: 0.5, back: 0, burst: 4, settle: 0.45, steady: 0 },
+    high: { move: 'stop', climb: 0.020, kick: 1.6, slowF: 0,   back: 3, burst: 0, settle: 0,    steady: 0 },
+  },
+  heavy: {
+    low:  { move: 'stop', climb: 0.022, kick: 2.4, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 0 },
+    med:  { move: 'back', climb: 0.032, kick: 3.2, slowF: 0.3, back: 9, burst: 0, settle: 0, steady: 0 },
+    high: { move: 'stop', climb: 0.044, kick: 4.5, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 1.4 },
+  },
+};
+/**
+ * 解析武器後座力分級(回傳 RECOIL[slot] 的 profile 物件)。
+ * 顯式 w.recoil('low'|'med'|'high')優先;否則依 type / 命名關鍵字 / 射速推導預設分級。
+ * 輕武器:光束・磁軌 = low;散彈(fan) = med;機槍/機砲/速射/高射速 = high;其餘步槍/卡賓 = med。
+ * 重武器:電漿/扇形・定向能 = low(開火即停);榴彈/火箭(launcher) = med(後退);
+ *         磁軌狙・超電磁・導引飛彈・反器材重砲 = high(須停穩)。
+ */
+export function recoilTier(w, slot, fan = !!w.fan || w.type === 'plasma') {
+  const R = RECOIL[slot];
+  if (w.recoil && R[w.recoil]) return R[w.recoil];
+  const nm = w.name || '', ty = w.type, rate = tierVal(w.rate ?? 3, 1);
+  let tier;
+  if (slot === 'light') {
+    if (ty === 'beam' || ty === 'rail') tier = 'low';
+    else if (fan) tier = 'med';
+    else if (/機槍|機砲|重機|速射|快砲|六管|通用機|轉輪|加農/.test(nm) || rate >= 7) tier = 'high';
+    else tier = 'med';
+  } else if (ty === 'plasma' || fan || ty === 'beam') tier = 'low';
+  else if (ty === 'launcher') tier = 'med';
+  else tier = 'high';   // rail 磁軌狙 / 超電磁、missile 導引飛彈、gun 反器材重砲
+  return R[tier];
+}
+
+// 榴彈 / 火箭(launcher)對建築的額外傷害加成(使用者指示「榴彈類武器對建築物傷害強化」)。
+// 疊在武器自身 vs.building 之上,只在 launcher 型命中建築(塔/主堡/障礙)時生效 ——
+// 攻城武器拆建築更快,但對兵員/裝甲/空中目標不變。套用點唯一:sim._heroDmg()。
+export const GRENADE = { BUILDING_MUL: 1.4 };
+export const grenadeBuildingMul = (def, kind) =>
+  def && def.type === 'launcher' && TARGET_CLASS[kind] === 'building' ? GRENADE.BUILDING_MUL : 1;
 
 // ---- 招式養成(擊殺數解鎖 + 金錢購買;輕/重武器 Lv1 自帶,小招/大招要先解鎖)----
 // kills/cost[i] = 升到 Lv(i+1) 的門檻;擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。
@@ -366,6 +430,8 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
     r: t(w.r), pen: t(w.pen ?? 0), crit: t(w.crit ?? 0), critX: w.critX ?? VITALS.CRIT_X,
     emp: t(w.emp ?? 0),
     charge: t(w.charge ?? 0), guide: !!w.guide, arc: t(w.arc ?? 0),
+    fan: !!w.fan || w.type === 'plasma',   // 扇形武器(散彈 / 電漿):錐狀判定 + 越近越高衰減
+    recoil: recoilTier(w, slot === 'heavy' ? 'heavy' : 'light', !!w.fan || w.type === 'plasma'),
     needAim: slot === 'heavy' || !!w.needAim,
     vs: w.vs || {},
   };
@@ -435,10 +501,12 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //   missile  飛彈:發射時有準星鎖定 → 自動追蹤該目標近炸;無鎖定 = 直飛(AoE 戰鬥部)
 //   beam     定向能:光速直擊無下墜,穩定輸出;吃大氣消光;emp 附帶 = 電磁癱瘓控場
 //   plasma   電漿:扇形 arc(半角度°)大面積,範圍內敵人全數命中(伺服器結算),消散快、射程短
-// 輕武器類型(2026-07-13 起多元化):launcher/missile/plasma 在 sim.js 的 heroBurst/heroPlasma
-// 一律硬編碼解析 'heavy' 槽位(client 的 burst/plasma 訊息不帶槽位),故輕武器只准 gun/rail/beam
-// 三種(heroHit 走 slot 參數,槽位無關);rail 用在輕武器時 MUST NOT 帶 charge(每次擊發都蓄力
-// 會讓速射步槍打不動,charge 只留給重武器的「蓄力後極速直擊」)。
+// 扇形武器(fan:電漿 / 散彈 shotgun):dmgFalloff 走 fanFalloff(越近越高)、sim.heroPlasma 錐判定。
+// 輕武器類型(2026-07-13 多元化;2026-07-14 開放散彈):launcher/missile 在 heroBurst、
+//   plasma/fan 在 heroPlasma —— heroPlasma 已收 slot 參數,故「散彈輕武器(fan:true)」可經
+//   {t:'plasma', slot:'light'} 走同一條錐判定(唯一破例;launcher/missile 仍只准重武器)。
+//   非扇形輕武器(gun/rail/beam)照走 heroHit(slot 無關);rail 用在輕武器時 MUST NOT 帶 charge
+//   (每次擊發都蓄力會讓速射步槍打不動,charge 只留給重武器的「蓄力後極速直擊」)。
 export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
@@ -463,8 +531,11 @@ export const CHARACTERS = {
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
       dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0.05, pen: 6,
       vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
+    // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
+    // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
+    // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
     heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
-      dmg: [150, 200, 250], r: [15, 17, 19], cd: [9, 8, 7], range: 260, pen: 15,
+      dmg: [150, 200, 250], r: [15, 17, 19], cd: [9, 8, 7], range: 275, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
@@ -490,7 +561,7 @@ export const CHARACTERS = {
     side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
     visual: { hue: 0x8fd14f, body: 'box', form: 'fixed', wing: 'zero', paint: 'flag' },
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
-    light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400,
+    light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [16, 14, 12],
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.5, air: 1.2, building: 0.4 } },
     heavy: { name: '電漿噴湧砲', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [13, 15, 17],
@@ -567,7 +638,7 @@ export const CHARACTERS = {
     side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
     visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'flag' },
     mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
-    light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420,
+    light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: [18, 16, 14],
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
     heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・雷射波束導引・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
@@ -662,7 +733,7 @@ export const CHARACTERS = {
     side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
     visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'graffiti' },
     mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
-    light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400,
+    light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
     heavy: { name: '電漿噴焰', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [15, 17, 19],
