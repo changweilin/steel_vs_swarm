@@ -42,6 +42,7 @@
       <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
       <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
     </div>
+    <button id="storyBtn" class="btn big story-btn">◈ 劇情戰役 — 鋼鐵軍團的征討,通關解鎖新戰場</button>
 
     <div class="divider">─── 加入現有戰區 ───</div>
     <div class="join-mode">
@@ -139,6 +140,31 @@
     <div id="openRoomStatus" class="map-status">先從上面挑一張已存的地圖。</div>
     <button id="createRoomBtn" class="btn big swarm-btn" disabled>▶ 建立戰區(開房)</button>
     <button id="backFromOpenRoomBtn" class="btn">← 返回大廳</button>
+  </div>
+</div>
+
+<!-- ========= 劇情戰役(選章 → 簡報 → 自動出戰;通關解鎖下一章)========= -->
+<div id="story" class="screen center-screen" style="display:none">
+  <div class="scanlines"></div>
+  <div class="sysbar"><span><b>CAMPAIGN</b> // 鋼鐵征討</span><span>STEEL vs SWARM <i>●</i></span></div>
+  <div class="panel connect-box story-panel">
+    <div class="panel-head">▍劇情戰役 — 鋼鐵軍團的征討</div>
+    <p class="story-blurb">你指揮鋼鐵機甲,沿著全球戰線鎮壓蜂群叛亂。每場戰役由劇情指定戰場與主角,擊毀敵方主堡即可通關,解鎖下一個戰場。</p>
+    <div class="story-chapters" id="storyChapters"></div>
+    <div class="story-progress" id="storyProgress"></div>
+    <div id="storyDeploy" class="map-status" style="display:none"></div>
+    <button id="storyBackBtn" class="btn">← 返回大廳</button>
+  </div>
+</div>
+
+<!-- 劇情簡報(選定章節後跳出;出擊 = 自動部署開戰)-->
+<div id="storyBrief" class="overlay" style="display:none">
+  <div class="overlay-box story-brief-box">
+    <div class="story-brief-body" id="storyBriefBody"></div>
+    <div class="row" style="justify-content:center">
+      <button id="storyFightBtn" class="btn big steel-btn">▶▶ 出擊</button>
+      <button id="storyBriefCloseBtn" class="btn">← 返回</button>
+    </div>
   </div>
 </div>
 
@@ -290,6 +316,18 @@
     <div class="overlay-box dead-box">
       <div class="dead-title">座機被擊毀</div>
       <div class="dead-sub">重生倒數 <span id="deadTimer">--</span> 秒</div>
+    </div>
+  </div>
+
+  <!-- 戰場選單(ESC / 切走視窗:指標解鎖時跳出)-->
+  <div id="pauseOverlay" class="overlay" style="display:none">
+    <div class="overlay-box pause-box">
+      <div class="pause-title">戰場選單</div>
+      <div class="pause-note">伺服器仍在持續模擬 —— 這不是真正的暫停,離開將退回大廳。</div>
+      <div class="row" style="justify-content:center">
+        <button id="resumeBtn" class="btn big steel-btn">▶ 繼續戰鬥</button>
+        <button id="pauseLeaveBtn" class="btn">⨯ 離開戰場</button>
+      </div>
     </div>
   </div>
 

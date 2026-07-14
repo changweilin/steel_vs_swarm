@@ -19,10 +19,11 @@ import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
 import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { STORY, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
-const screens = ['connect', 'mapbuilder', 'openroom', 'room', 'loading', 'game'];
+const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
 const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
 
 const app = {
@@ -37,6 +38,7 @@ const app = {
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
+  story: null,          // 劇情戰役進行中:{ chapterId, side, ch, index, launched }
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
   terrain: null,
@@ -50,7 +52,7 @@ function show(screen) {
   app.phaseShown = screen;
   if (screen !== 'room') { app.preview?.stop(); app.charTarget = null; }   // 離開房間:展示台停 rAF,不與戰場搶 GPU
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
-  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom') document.body.dataset.side = 'SPEC';
+  if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
 
 function toast(msg, ms = 3200) {
@@ -333,16 +335,137 @@ function selectVenueOpen(v) {
 }
 
 function renderEnvSelects() {
-  const fill = (id, obj, label) => {
+  // 環境選擇記憶:與人數/場地/房名同存於 svs_prefs.env,重啟瀏覽器仍還原
+  const saved = loadPrefs().env || {};
+  const persist = () => savePrefs({
+    env: { season: $('envSeason').value, time: $('envTime').value, weather: $('envWeather').value },
+  });
+  const fill = (id, obj, label, key) => {
     const sel = $(id);
     sel.innerHTML = `<option value="random">🎲 隨機${label}</option>`;
     for (const [k, v] of Object.entries(obj)) {
       sel.innerHTML += `<option value="${k}">${v.name}</option>`;
     }
+    const want = saved[key];
+    sel.value = (want === 'random' || obj[want]) ? want : 'random';   // 舊值失效退回隨機
+    sel.onchange = persist;
   };
-  fill('envSeason', ENV.seasons, '季節');
-  fill('envTime', ENV.times, '時段');
-  fill('envWeather', ENV.weathers, '天氣');
+  fill('envSeason', ENV.seasons, '季節', 'season');
+  fill('envTime', ENV.times, '時段', 'time');
+  fill('envWeather', ENV.weathers, '天氣', 'weather');
+}
+
+// ================= 劇情戰役(選章 → 簡報 → 自動出戰;通關解鎖下一章)=================
+function enterStory() {
+  app.story = null;                       // 進場清空(可能剛從某場劇情戰役退回)
+  $('storyBrief').style.display = 'none';
+  $('storyDeploy').style.display = 'none';
+  show('story');
+  renderStoryChapters();
+}
+
+function renderStoryChapters() {
+  const grid = $('storyChapters');
+  grid.innerHTML = '';
+  let clearedN = 0;
+  STORY.forEach((ch, i) => {
+    const unlocked = chapterUnlocked(i);
+    const cleared = isCleared(ch.id);
+    if (cleared) clearedN++;
+    const v = VENUES.find((x) => x.id === ch.venueId);
+    const card = document.createElement(unlocked ? 'button' : 'div');
+    card.className = 'chapter-card' + (unlocked ? '' : ' locked') + (cleared ? ' cleared' : '');
+    const state = cleared ? '<span class="chapter-state done">✓ 已通關</span>'
+      : unlocked ? '<span class="chapter-state go">▶ 可出戰</span>'
+      : '<span class="chapter-state lock">🔒 未解鎖</span>';
+    card.innerHTML = `
+      <span class="chapter-num">${i + 1}</span>
+      <div class="chapter-body">
+        <span class="chapter-title">${esc(ch.act)} ・ ${esc(ch.title)}</span>
+        <span class="chapter-place">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel({ season: ch.env.season, time: ch.env.time, weather: ch.env.weather }))}</span>
+      </div>
+      ${state}`;
+    if (unlocked) card.onclick = () => showStoryBrief(i);
+    grid.appendChild(card);
+  });
+  $('storyProgress').textContent = `戰線進度:已通關 ${clearedN} / ${STORY.length} 個戰場`
+    + (clearedN >= STORY.length ? ' ・ 🏆 全戰線肅清!' : '');
+}
+
+function showStoryBrief(i) {
+  const ch = STORY[i];
+  const v = VENUES.find((x) => x.id === ch.venueId);
+  const c = CHARACTERS[ch.ch];
+  $('storyBriefBody').innerHTML = `
+    <div class="sb-head">
+      <div class="sb-portrait"><img src="${portraitURL(ch.ch)}" alt="${esc(c?.name || '')}"></div>
+      <div class="sb-heads">
+        <div class="sb-act">${esc(ch.act)}</div>
+        <div class="sb-name">${esc(ch.name)}</div>
+        <div class="sb-hero">駕駛:「${esc(c?.code || '')}」${esc(c?.name || '')} ・ ${esc(c?.machine || '')}</div>
+        <div class="sb-meta">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</div>
+      </div>
+    </div>
+    <p class="sb-intro">${esc(ch.intro)}</p>
+    <div class="sb-obj">${esc(ch.objective)}</div>`;
+  $('storyFightBtn').onclick = () => startStoryChapter(i);
+  $('storyBrief').style.display = '';
+}
+
+/** 出擊:以劇情章節組出 battleConfig 並開一間私人房 —— 自動配對交給 onSync/launchStoryBattle */
+function startStoryChapter(i) {
+  const ch = STORY[i];
+  const v = VENUES.find((x) => x.id === ch.venueId);
+  if (!v) { toast('⚠️ 找不到戰場資料'); return; }
+  const cfg = venueConfig(v, ch.teamSize);
+  cfg.env = { ...ch.env };                 // 劇情指定環境(具體值,server resolveEnv 原樣保留)
+  app.story = { chapterId: ch.id, side: ch.side, ch: ch.ch, index: i, launched: false };
+  $('storyBrief').style.display = 'none';
+  $('storyDeploy').style.display = '';
+  $('storyDeploy').textContent = `⚙ 部署中:${ch.name}(${v.name})…`;
+  app.net.send({
+    t: 'createRoom',
+    name: myName(),
+    roomName: ch.name,
+    isPublic: false,
+    teamSize: ch.teamSize,
+    botDiff: ch.diff,
+    battleConfig: cfg,
+  });
+}
+
+/** onSync 在 room 階段呼叫一次:自動選陣營/角色/準備/開戰(server startBattle 會補滿 bot) */
+function launchStoryBattle() {
+  app.story.launched = true;
+  app.mySide = app.story.side;
+  app.net.send({ t: 'pickSide', side: app.story.side });
+  app.net.send({ t: 'pickChar', ch: app.story.ch });
+  app.net.send({ t: 'setReady', ready: true });
+  app.net.send({ t: 'startBattle' });
+}
+
+/** 退出劇情戰役(勝負已定或中途離開):收掉單人房,回到章節選擇(重繪解鎖狀態) */
+function exitStoryBattle() {
+  app.net.send({ t: 'leaveRoom' });
+  if (app.battle) { app.battle.dispose(); app.battle = null; }
+  app.terrain = null;
+  app.lobby = null;
+  app.story = null;
+  app.fieldMsg = null;
+  $('overOverlay').style.display = 'none';
+  $('pauseOverlay').style.display = 'none';
+  $('shopOverlay').style.display = 'none';
+  delete $('overOverlay').dataset.done;
+  sessionStorage.removeItem('svs_token');
+  enterStory();
+}
+
+/** 離開戰場(暫停選單「離開戰場」共用):劇情 → 回章節;一般對戰 → 退回大廳 */
+function leaveBattle() {
+  if (app.story) { exitStoryBattle(); return; }
+  app.net.send({ t: 'leaveRoom' });
+  sessionStorage.removeItem('svs_token');
+  location.reload();
 }
 
 $('saveFavBtn')?.addEventListener('click', async () => {
@@ -931,7 +1054,8 @@ function enterGame() {
       ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤,右下角回傳畫面) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
-  toast('點擊畫面鎖定滑鼠開始戰鬥', 4000);
+  $('hudHelp').innerHTML += ' ・ ESC 戰場選單/離開';
+  toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
 }
 
 function makeHud() {
@@ -1022,20 +1146,39 @@ function makeHud() {
     over: (winner, stats) => {
       const ov = $('overOverlay');
       if (ov.style.display !== 'none' && ov.dataset.done) return;
+      $('pauseOverlay').style.display = 'none';   // 分出勝負:收掉可能開著的戰場選單
       ov.style.display = '';
       ov.dataset.done = '1';
       const win = SIDES[winner];
-      $('overTitle').textContent = `${win.name} 勝利!`;
-      $('overTitle').style.color = win.color;
-      $('overSub').textContent = app.mySide
-        ? (app.mySide === winner ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
-        : '戰役結束。';
+      const won = app.mySide === winner;
+      // 劇情戰役:勝利即通關解鎖下一章;敘事文案改用該章的 victory/defeat
+      const chapter = app.story && STORY[app.story.index];
+      if (chapter && won) markCleared(chapter.id);
+      $('overTitle').textContent = chapter
+        ? (won ? '任務達成' : '任務失敗')
+        : `${win.name} 勝利!`;
+      $('overTitle').style.color = won ? win.color : (chapter ? 'var(--danger)' : win.color);
+      $('overSub').textContent = chapter
+        ? (won ? chapter.victory : chapter.defeat)
+        : app.mySide
+          ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
+          : '戰役結束。';
       $('overStats').textContent =
         `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
         `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
-      $('backRoomBtn').style.display = app.isHost ? '' : 'none';
+      const back = $('backRoomBtn');
+      if (chapter) {
+        back.style.display = '';
+        back.textContent = won && app.story.index + 1 < STORY.length ? '◀ 返回劇情(下一章已解鎖)' : '◀ 返回劇情';
+        if (won) toast(app.story.index + 1 < STORY.length ? '🎖 通關!已解鎖下一個戰場' : '🏆 全戰線肅清!劇情戰役全數通關', 4200);
+      } else {
+        back.style.display = app.isHost ? '' : 'none';
+        back.textContent = '◀ 返回戰區(再來一場)';
+      }
       document.exitPointerLock?.();
     },
+    // 戰場選單(暫停):game.js 於指標解鎖時推狀態
+    pause: (on) => { $('pauseOverlay').style.display = on ? '' : 'none'; },
     // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
     locked: (on) => $('lockWarn').classList.toggle('on', !!on),
     hitmark: () => {
@@ -1117,9 +1260,20 @@ function renderShop(open, st) {
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));
 
 $('backRoomBtn')?.addEventListener('click', () => {
+  if (app.story) { exitStoryBattle(); return; }   // 劇情:回章節選擇(重繪解鎖狀態)
   app.net.send({ t: 'backToRoom' });
 });
 $('leaveGameBtn')?.addEventListener('click', () => location.reload());
+
+// 戰場選單(暫停):繼續 / 離開戰場
+$('resumeBtn')?.addEventListener('click', () => app.battle?._setPaused(false));
+$('pauseLeaveBtn')?.addEventListener('click', () => leaveBattle());
+
+// 劇情戰役
+$('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
+$('storyBackBtn')?.addEventListener('click', () => { app.story = null; show('connect'); refreshRooms(); });
+$('storyBriefCloseBtn')?.addEventListener('click', () => { $('storyBrief').style.display = 'none'; });
+$('storyBrief')?.addEventListener('click', (e) => { if (e.target.id === 'storyBrief') $('storyBrief').style.display = 'none'; });
 
 // ================= 伺服器訊息 =================
 function onSync(m) {
@@ -1137,6 +1291,8 @@ function onSync(m) {
     $('shopOverlay').style.display = 'none';
     delete $('overOverlay').dataset.done;
     if (app.mapSel) { app.mapSel.destroy(); app.mapSel = null; }   // 設定畫面用完即收
+    // 劇情戰役:不顯示配對房 UI,自動完成選陣營/角色/準備/開戰(只跑一次)
+    if (app.story) { if (!app.story.launched) launchStoryBattle(); return; }
     if (app.phaseShown !== 'room') show('room');
     renderRoom();
   } else if (phase === 'loading') {
@@ -1166,6 +1322,8 @@ window.addEventListener('DOMContentLoaded', () => {
       toast(`⚠️ ${m.msg}`);
       // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
       if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
+      // 劇情部署被拒 → 清狀態退回章節列表
+      if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
     },
     info: (m) => toast(m.msg),
     battleConfig: (m) => enterLoading(m.config),

@@ -238,6 +238,9 @@ export class BattleClient {
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.stealthLeft = 0;
     this.shopOpen = false;
+    this.paused = false;              // 戰場選單開啟中(凍結輸入)
+    this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
+    this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
     this.aiming = false;              // 按住右鍵瞄準(拉近視角、切換重武器)
 
@@ -1633,6 +1636,7 @@ export class BattleClient {
   // ---------------- 輸入 ----------------
   _initInput() {
     this._onKey = (e) => {
+      if (this.paused) return;   // 戰場選單開啟:凍結所有輸入(keys 已清空 ⇒ 機體停住)
       if (e.type === 'keydown' && e.code === 'KeyM') this.minimapBig = !this.minimapBig;
       if (e.type === 'keydown' && this.side) {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
@@ -1688,6 +1692,33 @@ export class BattleClient {
     window.addEventListener('mouseup', this._onMouseUp);
     this._onCtx = (e) => e.preventDefault();
     this.canvas.addEventListener('contextmenu', this._onCtx);
+
+    // 戰場選單:指標鎖定 = 交戰;解鎖(ESC / 切走視窗)= 跳出暫停選單(繼續 / 離開)。
+    // 用 pointerlockchange 而非 ESC keydown —— 指標鎖定時瀏覽器會吃掉那顆 ESC 的 keydown。
+    this._onPlc = () => {
+      const locked = document.pointerLockElement === this.canvas;
+      if (locked) {
+        this._everLocked = true;
+        if (this.paused) this._setPaused(false);
+      } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused) {
+        this._setPaused(true);
+      }
+    };
+    document.addEventListener('pointerlockchange', this._onPlc);
+  }
+
+  /** 戰場選單開關;伺服器持續模擬(多人不是真暫停),此處只凍結本機輸入 + 叫出選單 */
+  _setPaused(on) {
+    if (!this.side || this._gameOver) return;
+    this.paused = on;
+    if (on) {
+      this.keys = {}; this.firing = false;
+      this.hud.pause?.(true);
+      document.exitPointerLock?.();
+    } else {
+      this.hud.pause?.(false);
+      this.canvas?.requestPointerLock?.();   // 由「繼續」按鈕的使用者手勢觸發,可重新鎖定
+    }
   }
 
   // ---------------- 快照同步 ----------------
@@ -1774,7 +1805,7 @@ export class BattleClient {
     this.hud.bases?.(bases, m.stats);
     this.hud.wave?.(m.wave, m.nextWave);
     this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft(), this._weaponHud());
-    if (m.over) this.hud.over?.(m.winner, m.stats);
+    if (m.over) { this._gameOver = true; this.hud.over?.(m.winner, m.stats); }
   }
 
   _spawnEnt(e) {
@@ -3596,6 +3627,7 @@ export class BattleClient {
     this.canvas.removeEventListener('mousedown', this._onMouseDown);
     window.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('contextmenu', this._onCtx);
+    document.removeEventListener('pointerlockchange', this._onPlc);
     document.exitPointerLock?.();
     this.renderer.dispose();
   }

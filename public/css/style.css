@@ -597,6 +597,60 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .diff-hint { font-size: 11px; font-family: var(--mono); }
 .diff-hint.dim { color: var(--dim); }
 
+/* ---------- 劇情戰役 ---------- */
+/* 大廳入口鈕:藍黃雙軌漸層描邊,與「征討」的雙陣營主題呼應 */
+.story-btn {
+  width: 100%; margin-top: 2px;
+  border-color: var(--line-strong);
+  background: linear-gradient(90deg, rgba(95, 208, 242, 0.12), rgba(255, 194, 71, 0.12));
+  box-shadow: inset 3px 0 0 var(--steel), inset -3px 0 0 var(--swarm);
+}
+.story-btn:hover:not(:disabled) { background: linear-gradient(90deg, rgba(95, 208, 242, 0.28), rgba(255, 194, 71, 0.28)); color: var(--text); border-color: #fff; }
+.story-panel { max-height: calc(100vh - 28px); overflow-y: auto; width: min(680px, 94vw); }
+.story-blurb { font-size: 13px; line-height: 1.7; color: var(--dim); }
+.story-chapters { display: flex; flex-direction: column; gap: 8px; }
+.chapter-card {
+  position: relative; text-align: left; cursor: pointer; font: inherit; color: var(--text);
+  background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line);
+  clip-path: var(--notch-sm); padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.chapter-card:hover:not(.locked) { border-color: var(--railS); background: rgba(95, 208, 242, 0.08); }
+.chapter-card.locked { opacity: 0.4; cursor: not-allowed; }
+.chapter-card.cleared { border-left: 3px solid var(--ok); }
+.chapter-num {
+  flex: none; width: 44px; text-align: center; font-family: var(--serif); font-weight: 900;
+  font-size: 20px; color: var(--railS); letter-spacing: 1px;
+}
+.chapter-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.chapter-title { font-weight: 700; letter-spacing: 2px; }
+.chapter-place { font-size: 11px; color: var(--dim); font-family: var(--mono); }
+.chapter-state { flex: none; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; }
+.chapter-state.done { color: var(--ok); }
+.chapter-state.lock { color: var(--dim); }
+.chapter-state.go { color: var(--railS); }
+.story-progress { font-size: 12px; font-family: var(--mono); color: var(--ok); letter-spacing: 1px; }
+
+/* 簡報跳窗 */
+.story-brief-box { max-width: min(560px, 94vw); text-align: left; }
+.story-brief-body { display: flex; flex-direction: column; gap: 10px; }
+.sb-head { display: flex; align-items: center; gap: 14px; }
+.sb-portrait { flex: none; width: 84px; height: 84px; border: 1px solid var(--line); background: rgba(4, 7, 11, 0.9); }
+.sb-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sb-heads { display: flex; flex-direction: column; gap: 3px; }
+.sb-act { font-family: var(--mono); font-size: 11px; color: var(--railS); letter-spacing: 3px; }
+.sb-name { font-family: var(--serif); font-weight: 900; font-size: 24px; letter-spacing: 4px; }
+.sb-meta { font-size: 11px; color: var(--dim); font-family: var(--mono); line-height: 1.6; }
+.sb-hero { font-size: 12px; color: var(--railW); font-family: var(--mono); }
+.sb-intro { font-size: 14px; line-height: 1.9; color: var(--text); }
+.sb-obj { font-size: 12px; color: var(--ok); font-family: var(--mono); letter-spacing: 1px; }
+.sb-obj::before { content: '◎ 任務目標:'; color: var(--railW); }
+
+/* 戰場選單(暫停)*/
+.pause-title { font-family: var(--serif); font-size: 30px; font-weight: 900; letter-spacing: 10px; color: var(--railS); }
+.pause-note { font-size: 12px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+
 /* ---------- 房間 N 席位 ---------- */
 .room-map-info { font-size: 12px; color: var(--ok); margin-top: 4px; font-family: var(--mono); letter-spacing: 1px; }
 .side-slots { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
