@@ -433,7 +433,7 @@ wss.on('connection', (ws) => {
     }
     if (m.t === 'tracer') {
       // 純視覺:轉播給其他客戶端畫彈道
-      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side });
+      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit });
       return;
     }
     if (m.t === 'heavyCharge' && client.side) {

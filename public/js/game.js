@@ -16,7 +16,7 @@ import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine } from './vfx.js';
 import { CutIn } from './cutin.js';
 
 const KIND_KEY = {
@@ -198,6 +198,7 @@ export class BattleClient {
     this.trauma = 0;
     this.roll = 0;
     this.weaponKick = 0;
+    this._flashHeavy = false;       // 上一發是否重武器(槍口焰放大)
     // 後座力機制(見 data.js RECOIL):連射回穩 + 高後座重武器開火前穩定 + 開火中位移懲罰
     this._burstN = {};              // slot -> 連射計數(達 profile.burst 後強制回穩)
     this._settleUntil = {};         // slot -> 回穩解除時間戳(此間不能擊發)
@@ -1565,6 +1566,7 @@ export class BattleClient {
       ? (this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff)
       : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff);
     const blades = plasma ? 7 : 9;
+    this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
     for (let i = 0; i < blades; i++) {
       const f = blades === 1 ? 0 : (i / (blades - 1)) * 2 - 1;          // −1..1 橫向
       const dk = dir.clone()
@@ -1572,7 +1574,7 @@ export class BattleClient {
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
       const len = def.range * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
-      this._tracer(muzzle, end, col, plasma ? 0.28 : 0.13);
+      beamLine(this.scene, this.effects, muzzle, end, col, plasma ? { ttl: 0.24, w: 0.16 } : { ttl: 0.12, w: 0.07 });
       starburst(this.scene, this.effects, end.x, end.y, end.z, plasma ? 3 : 1.5, col);
     }
   }
@@ -1790,12 +1792,54 @@ export class BattleClient {
         colR: hazDef?.block ? r : (e.k === 'aasite' ? 3.2 : e.k === 'relay' ? 1.6 : 0),
         colH: e.k === 'aasite' ? 3.5 : e.k === 'relay' ? 8 : (hazDef?.hgt || 6),
       };
-      group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
+      const czw = -e.z, cyw = this._surf(e.x, czw, this.terrain.heightAt(e.x, czw));
+      group.position.set(e.x, cyw, czw);
+      // 淹水/坑洞:水面是寬平盤,單一中心高度會在斜坡上飄空、在橋面下沉 —— 逐頂點貼地
+      if (e.k === 'flood' || e.k === 'pothole') this._conformWater(group, e.x, czw, cyw);
       if (group.userData.flames) this.flamers.add(group);
       if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
       this.ents.set(e.id, ent);
       return ent;
     }
+    // 覆蓋:此處回退,續建一般單位
+    return this._spawnUnit(e);
+  }
+
+  /**
+   * 淹水/坑洞水面貼地:平放水盤 + 漂浮雜物本來全掛在「群心單一高度」,斜坡上整塊飄空、
+   * 橋面下沉。改為:寬水盤重建成三角扇逐頂點貼地(緊貼地貌),漣漪圈/雜物各自依所在地表升降。
+   * 一次性(危險區靜止),用 _surf 走橋面 ∪ 地形的統一貼地縫。
+   */
+  _conformWater(group, cx, cz, cy) {
+    const surf = (x, z) => this._surf(x, z, this.terrain.heightAt(x, z));
+    for (const o of group.children) {
+      if (o.userData?.water && o.geometry?.parameters) {
+        const p = o.geometry.parameters;
+        const rad = p.radiusTop ?? p.radius ?? 6;
+        const off = o.position.y || 0;   // 保留原水面相對地面的高差(flood +0.32 站水 / pothole −0.05 積水)
+        const N = 28;
+        const pos = [0, surf(cx, cz) - cy + off, 0], idx = [];
+        for (let i = 0; i < N; i++) {
+          const a = i / N * Math.PI * 2, dx = Math.cos(a) * rad, dz = Math.sin(a) * rad;
+          pos.push(dx, surf(cx + dx, cz + dz) - cy + off, dz);
+        }
+        for (let i = 0; i < N; i++) idx.push(0, 1 + i, 1 + (i + 1) % N);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        geo.setIndex(idx);
+        geo.computeVertexNormals();
+        o.geometry.dispose();
+        o.geometry = geo;
+        o.position.set(0, 0, 0);
+        o.rotation.set(0, 0, 0);
+      } else {
+        // 漣漪圈 / 漂浮雜物:依所在地表升降,跟著坡度走(不再全部平放在群心高度)
+        o.position.y += surf(cx + o.position.x, cz + o.position.z) - cy;
+      }
+    }
+  }
+
+  _spawnUnit(e) {
     const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, e.s, { ch: e.ch, ring: e.k !== 'decoy' });
@@ -2216,20 +2260,23 @@ export class BattleClient {
         const arc = (ev.arc || 15) * Math.PI / 180;
         const up = new THREE.Vector3(0, 1, 0);
         const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
+        const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
+        this._muzzleBurst(from, heavy, ev.side);
         for (let k = -2; k <= 2; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
           const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
-          this._tracer(from, end, pcol, 0.28);
+          beamLine(this.scene, this.effects, from, end, pcol, heavy ? { ttl: 0.26, w: 0.22 } : { ttl: 0.2, w: 0.09 });
         }
       }
     } else if (ev.e === 'shot') {
+      // NPC 兵團開火:同樣升級為曳光束 + 槍口/落點火花(比玩家小一號,免得刷屏)
       const [fx, fz] = [ev.from[0], -ev.from[1]];
       const [tx, tz] = [ev.to[0], -ev.to[1]];
-      this._tracer(
-        new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + 16, fz),
-        new THREE.Vector3(tx, this.terrain.heightAt(tx, tz) + 3, tz),
-        ev.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
-      );
+      const from = new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + (ev.oy ?? 16), fz);
+      const to = new THREE.Vector3(tx, this.terrain.heightAt(tx, tz) + 3, tz);
+      const { col, hot } = this._shotCols(ev.side);
+      starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
+      beamLine(this.scene, this.effects, from, to, col, { ttl: 0.11, w: 0.06 });
     } else if (ev.e === 'wave') {
       this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊(含攻擊直升機)`);
     } else if (ev.e === 'respawn') {
@@ -2238,10 +2285,11 @@ export class BattleClient {
   }
 
   onTracer(m) {
-    this._tracer(
+    // 他人開火視覺:槍口爆 + 發光曳光束 +(命中點)火花。重武器(slot:'heavy')明顯放大。
+    this._shotFx(
       new THREE.Vector3(m.from[0], m.from[1], m.from[2]),
       new THREE.Vector3(m.to[0], m.to[1], m.to[2]),
-      m.side === 'SWARM' ? 0xffb300 : 0x4fc3f7,
+      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit },
     );
   }
 
@@ -2639,6 +2687,7 @@ export class BattleClient {
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
+    this._flashHeavy = id === 'heavy';   // 重武器槍口焰放大(FPV 明顯度)
     if (prof.back) this.vel.addScaledVector(dir, -prof.back * airF);
     this._recoilMove = prof.move || 'free';
     this._recoilSlowF = prof.slowF ?? 0.5;
@@ -2657,8 +2706,9 @@ export class BattleClient {
       const { point, ent, missileId } = this._resolveAim(def.range);
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       this._tracer(muzzle, point, col, 0.35);
-      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
-      this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z] });
+      this._muzzleBurst(muzzle, id === 'heavy', this.side);
+      starburst(this.scene, this.effects, point.x, point.y, point.z, id === 'heavy' ? 3.4 : 2.2, col);
+      this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
       if (missileId != null) { this.net.send({ t: 'hitMissile', id: missileId, w: id }); this._hitFeedback(def, null, point); }
       else if (ent) { this.net.send({ t: 'hit', id: ent.id, w: id }); this._hitFeedback(def, ent, point); }
       return;
@@ -2685,10 +2735,13 @@ export class BattleClient {
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
-    // 其他客戶端的槍口視覺(對方不模擬我的彈道,給一條短曳光示意射向)
+    // 自己 FPV 的槍口爆:重武器一律比輕武器大一號(輕武器已有 this.flash 球體,重武器再補世界爆閃)
+    if (id === 'heavy') this._muzzleBurst(muzzle, true, this.side);
+    // 其他客戶端的槍口視覺(對方不模擬我的彈道,給一條短曳光示意射向;帶 slot 讓對方分辨輕/重)
     this.net.send({
       t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z],
       to: [muzzle.x + dir.x * 60, muzzle.y + dir.y * 60, muzzle.z + dir.z * 60],
+      slot: id,
     });
   }
 
@@ -2897,6 +2950,37 @@ export class BattleClient {
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
     this.scene.add(line);
     this.effects.push({ obj: line, ttl, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
+  }
+
+  /** 陣營射擊配色(曳光主色 / 槍口熱芯) */
+  _shotCols(side) {
+    return side === 'SWARM'
+      ? { col: 0xffb300, hot: 0xffe6a0 }
+      : { col: 0x4fc3f7, hot: 0xcdeeff };
+  }
+
+  /**
+   * 統一的「開火視覺」:槍口閃光 + 發光曳光束(取代細線)+(命中點)火花。
+   * heavy 重武器一律比 light 更粗、更亮、更持久、槍口爆更大 —— 第一/第三人稱皆適用。
+   * @param opts.heavy 重武器  @param opts.side 陣營  @param opts.impact `to` 是真實命中點(才畫落點火花)
+   */
+  _shotFx(from, to, { heavy = false, side, impact = false } = {}) {
+    const { col, hot } = this._shotCols(side);
+    this._muzzleBurst(from, heavy, side);
+    beamLine(this.scene, this.effects, from, to, col,
+      heavy ? { ttl: 0.30, w: 0.30 } : { ttl: 0.13, w: 0.075 });
+    if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18, w: 0.11 });  // 高熱內芯
+    if (impact) starburst(this.scene, this.effects, to.x, to.y, to.z, heavy ? 4.2 : 1.6, col);
+  }
+
+  /** 槍口爆閃(世界座標):heavy 加一圈衝擊環 */
+  _muzzleBurst(pos, heavy, side) {
+    const { col, hot } = this._shotCols(side);
+    starburst(this.scene, this.effects, pos.x, pos.y, pos.z, heavy ? 3.4 : 1.3, hot);
+    if (heavy) {
+      starburst(this.scene, this.effects, pos.x, pos.y, pos.z, 1.8, col);
+      shockRing(this.scene, this.effects, pos.x, pos.y, pos.z, 2.6, col);
+    }
   }
 
   _explosion(x, y, z, r, color) {
@@ -3148,13 +3232,15 @@ export class BattleClient {
    */
   _aimVehicleTurret(ent, tur, dt, now) {
     const t = this._nearestEnemy(ent, now, (UNITS[ent.kind]?.range || 0) * 1.2, true);
-    let wantLocal = 0;   // 無目標:歸中
+    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+    // 有敵人:砲管咬住攻擊目標(任意方向,含車後);無敵人:歸中對齊車頭 = 前進方向。
+    // 純視覺,命中仍由伺服器結算。
+    let wantLocal = 0;
     if (t) {
       const p = t.isSelf ? this.pos : t.mesh.position;
       const world = Math.atan2(p.x - ent.mesh.position.x, p.z - ent.mesh.position.z);
-      wantLocal = world - ent.mesh.rotation.y;
+      wantLocal = wrap(world - ent.mesh.rotation.y);
     }
-    const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
     tur.rotation.y += wrap(wantLocal - tur.rotation.y) * Math.min(1, dt * 5);
   }
 
@@ -3363,7 +3449,7 @@ export class BattleClient {
       if (this._flashTtl != null) {
         this._flashTtl -= dt;
         if (this._flashTtl <= 0) { this.flash.visible = false; this._flashTtl = null; }
-        else this.flash.scale.setScalar(0.7 + Math.random() * 0.7);
+        else this.flash.scale.setScalar((0.7 + Math.random() * 0.7) * (this._flashHeavy ? 2.3 : 1));
       }
       this.cockpit.visible = !this.dead;
     }

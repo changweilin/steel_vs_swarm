@@ -795,7 +795,7 @@ export class BattleSim {
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
-      dx, dz, r: wp.def.range, arc: wp.def.arc || 15 });
+      dx, dz, r: wp.def.range, arc: wp.def.arc || 15, slot: slot === 'light' ? 'light' : 'heavy' });
   }
 
   /**

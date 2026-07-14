@@ -309,6 +309,18 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
         idle * (rig.gunArm ? 0.3 : 1), now + 2.6, 0.15, (rig.gunArm ? 0.2 : 0.5) * runF);
     }
   }
+  // 雙手持槍姿(bastion 斧砲 / seraph 長狙):靜止(交戰)= 雙手托槍標準射擊姿勢,
+  // 移動 = 交還步態擺臂(右手單手持)。以「靜止度 idle」連續混成 → 停下自然舉槍、起步自然放下。
+  if (rig.aimPose) {
+    const ap = rig.aimPose, aim = idle;
+    rig.armR.rotation.x += (ap.rShoulderX - rig.armR.rotation.x) * aim;
+    rig.armL.rotation.x += (ap.lShoulderX - rig.armL.rotation.x) * aim;
+    rig.armL.rotation.y = (ap.lShoulderY || 0) * aim;   // 左臂朝中線內收扶護木(移動時歸零)
+    if (rig.armChainR && rig.armChainR[0])
+      rig.armChainR[0].g.rotation.x += (ap.rElbowX - rig.armChainR[0].g.rotation.x) * aim;
+    if (rig.armChainL && rig.armChainL[0])
+      rig.armChainL[0].g.rotation.x += (ap.lElbowX - rig.armChainL[0].g.rotation.x) * aim;
+  }
   const hips = rig.hips;
   // 骨盆:交替步一週期兩次浮沉(雙支撐最高、單支撐最低)+ 重心側移到支撐腿;
   // 跳奔漸變為「一跳一大浮沉」的騰空拋物線,側移/扭腰同步歸零(併蹬沒有左右換腳)。
