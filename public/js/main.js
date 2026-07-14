@@ -590,8 +590,9 @@ function protoHTML(proto) {
   }).join('');
 }
 
-/** 敘事文字區塊(頭銜/機體關係/簡歷/嗜好/生平)—— 側欄面板與跳出視窗共用同一份,避免內容分岔。 */
-function charBioTextHTML(id) {
+/** 敘事文字區塊。簡歷(頭銜/機體關係/外貌/台詞)側欄與跳出視窗共用;
+ * 完整檔案(生平/興趣/專長/與機體的機緣)為 full=true 時才展開 —— 只在立繪跳出視窗(showCharBioModal)出現,不進側欄簡介區塊。 */
+function charBioTextHTML(id, full = false) {
   const c = CHARACTERS[id];
   const lo = LORE[id] || {};
   return `<div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
@@ -600,10 +601,11 @@ function charBioTextHTML(id) {
     <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
     ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
     ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
-    ${lo.hobby ? `<p class="cd-bio"><b class="cd-bio-tag">興趣</b>${esc(lo.hobby)}</p>` : ''}
+    ${full ? `
     ${lo.bio ? `<p class="cd-bio"><b class="cd-bio-tag">生平</b>${esc(lo.bio)}</p>` : ''}
+    ${lo.hobby ? `<p class="cd-bio"><b class="cd-bio-tag">興趣</b>${esc(lo.hobby)}</p>` : ''}
     ${lo.expertise ? `<p class="cd-bio"><b class="cd-bio-tag">專長</b>${esc(lo.expertise)}</p>` : ''}
-    ${lo.bond ? `<p class="cd-bio"><b class="cd-bio-tag">與機體</b>${esc(lo.bond)}</p>` : ''}`;
+    ${lo.bond ? `<p class="cd-bio"><b class="cd-bio-tag">與機體的機緣</b>${esc(lo.bond)}</p>` : ''}` : ''}`;
 }
 
 function charDetailHTML(id) {
@@ -633,6 +635,7 @@ function charDetailHTML(id) {
         <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
           ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindLabel}</div>
       </div>
+      <div class="cd-arthint">點立繪 ▸ 生平・興趣・專長・與機體的機緣</div>
       <div id="stageBottom"></div>
     </div>
     <div class="cd-body">
@@ -665,7 +668,7 @@ function showCharBioModal(id, side) {
       <div class="cd-tag ${s === 'MERC' ? 'merc' : s.toLowerCase()}">
         ${s === 'MERC' ? '⚔ 傭兵' : SIDES[s].name}・${kindLabel}</div>
     </div>
-    <div class="bio-text">${charBioTextHTML(id)}</div>`;
+    <div class="bio-text">${charBioTextHTML(id, true)}</div>`;
   $('charBioModal').hidden = false;
 }
 function hideCharBioModal() { $('charBioModal').hidden = true; }
@@ -718,8 +721,10 @@ function showCharDetail(id, side) {
     return;
   }
   box.innerHTML = charDetailHTML(id);
-  // 角色說明的頭像(立繪縮圖)點擊 → 跳出大圖 + 完整簡歷;純預覽,不影響選角(見選角區塊)
-  box.querySelector('.cd-portrait img').onclick = () => showCharBioModal(id, side);
+  // 角色說明的頭像(立繪縮圖)/ 提示列點擊 → 跳出大圖 + 完整檔案(生平/興趣/專長/機緣);純預覽,不影響選角
+  const openBio = () => showCharBioModal(id, side);
+  box.querySelector('.cd-portrait img').onclick = openBio;
+  box.querySelector('.cd-arthint').onclick = openBio;
   // 傭兵隨雇主換色:展示台一律以「檢視中的陣營」建機體
   const s = side || CHARACTERS[id].side;
   const viewSide = s === 'MERC' ? 'STEEL' : s;
