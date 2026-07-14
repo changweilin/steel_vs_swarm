@@ -372,6 +372,13 @@ export function recoilTier(w, slot, fan = !!w.fan || w.type === 'plasma') {
   else tier = 'high';   // rail 磁軌狙 / 超電磁、missile 導引飛彈、gun 反器材重砲
   return R[tier];
 }
+// 後座力分級的中文標籤(武器說明用):由 profile 反查階名。
+const RECOIL_LABEL = { low: '低', med: '中', high: '高' };
+export function recoilName(w, slot, fan = !!w.fan || w.type === 'plasma') {
+  const R = RECOIL[slot], prof = recoilTier(w, slot, fan);
+  for (const t of ['low', 'med', 'high']) if (R[t] === prof) return RECOIL_LABEL[t];
+  return '中';
+}
 
 // 榴彈 / 火箭(launcher)對建築的額外傷害加成(使用者指示「榴彈類武器對建築物傷害強化」)。
 // 疊在武器自身 vs.building 之上,只在 launcher 型命中建築(塔/主堡/障礙)時生效 ——
@@ -565,7 +572,7 @@ export const CHARACTERS = {
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.5, air: 1.2, building: 0.4 } },
     heavy: { name: '電漿噴湧砲', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [13, 15, 17],
-      dmg: [110, 150, 190], cd: [6, 5, 4], range: 190, pen: 8,
+      dmg: [110, 150, 190], cd: [6, 5, 4], range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
     skill: { name: '突進機動', fx: 'dash', imp: [28, 34, 40],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '沿視線方向爆發加速(教官の鐵鍬距離)' },
@@ -611,7 +618,7 @@ export const CHARACTERS = {
       dmg: [16, 20, 25], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.6, building: 0.5 } },
     heavy: { name: '防空散射矩陣', rw: '磁化電漿・扇形防空散布', type: 'plasma', arc: [20, 23, 26],
-      dmg: [90, 120, 150], cd: [7, 6, 5], range: 210, pen: 4,
+      dmg: [90, 120, 150], cd: [7, 6, 5], range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
     skill: { name: '分配演算法', fx: 'intercept', r: [170, 210, 250],
       cd: [15, 13, 11], mp: [30, 35, 40], desc: '一道證明完畢:清空半徑內來襲飛彈' },
@@ -737,7 +744,7 @@ export const CHARACTERS = {
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
     heavy: { name: '電漿噴焰', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [15, 17, 19],
-      dmg: [170, 225, 280], cd: [9, 8, 7], range: 200, pen: 12,
+      dmg: [170, 225, 280], cd: [9, 8, 7], range: 264, pen: 12,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     skill: { name: '鑄鐵鍋盾', fx: 'buff', target: 'self', mul: { dmgTaken: [0.55, 0.5, 0.45] },
       dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋架起:承傷大減' },
@@ -782,7 +789,7 @@ export const CHARACTERS = {
       dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '熔核直拳砲', rw: '磁化電漿聚爆・貼身直擊', type: 'plasma', arc: [10, 12, 14],
-      dmg: [130, 170, 215], cd: [6, 5, 4], range: 180, pen: 10,
+      dmg: [130, 170, 215], cd: [6, 5, 4], range: 264, pen: 10,
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '麻辣走位', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '模擬器省冠軍的走位,機體像長在他身上' },
@@ -992,7 +999,7 @@ export const CHARACTERS = {
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
       vs: { flesh: 1.0, armor: 0.9, air: 1.6, building: 0.5 } },
     heavy: { name: '區域拒止電漿陣列', rw: '近迫電漿散射・扇形攔截', type: 'plasma', arc: [22, 25, 28],
-      dmg: [110, 145, 180], cd: [6, 5, 4], range: 200, pen: 8,
+      dmg: [110, 145, 180], cd: [6, 5, 4], range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.0, air: 2.2, building: 0.3 } },
     skill: { name: '拒止穹頂', fx: 'intercept', r: [160, 200, 240],
       cd: [16, 14, 12], mp: [30, 35, 40], desc: '一手交錢一手交貨:清空半徑內來襲飛彈' },
@@ -1139,6 +1146,9 @@ export const GAME = {
   // 出生/重生點:主堡朝敵方向外推距離。> 主堡護盾半徑 30 + 模型半徑 ~23,
   // 剛好落在堡外、遠在補血半徑內(舊值 100 是 8× 超尺度世界時代校的,重生跑回堡太遠)
   HERO_SPAWN_OFF: 45,
+  // 出生/重生點橫向偏移(公尺):沿兵線推出主堡後只微偏到路旁(更靠近兵線,一出生就正對兵線箭頭)——
+  // 不擋在路中央,又貼著兵線走廊(< 半寬 LANE_SAFE_M 45)。
+  HERO_SPAWN_SIDE: 8,
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
   AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
   LANE_SAFE_M: 45,            // 正規路線走廊半寬(僚機歸隊/地形不放大的走廊)
@@ -1167,6 +1177,23 @@ export const GAME = {
   // DMG 620:雙層 HP 後仍須一發穿透護盾+裝甲直接擊墜(維持「命中即墜」設計)。
   AA_AMBUSH: { CHANCE_PER_S: 0.22, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
 };
+// ---- 閃避(2026-07-14)----
+// 有效機動(移速)> MOBILITY_MIN 的機體,在「移動中」對「輕武器直射」有機率完全閃開;
+// 飛行單位額外加成(蜂群靠機動求生)。純伺服器結算(命中本就 server-authoritative,
+// 客戶端只回報命中)。**只在移動中生效** ⇒ bal 的靜止對射清波情境不受影響(仍是站樁 DPS)。
+export const EVASION = {
+  MOBILITY_MIN: 20,   // 有效移速(m/s)> 此值才具閃避 —— 重甲慢速機體站著吃彈
+  MOVING_SPD: 3,      // 判定「移動中」的最低瞬時速度(m/s)
+  GROUND: 0.20,       // 地面移動:閃避率
+  AIR_BONUS: 0.15,    // 飛行單位(無人機 / 變形機飛行型)額外加成
+};
+// 機體有效機動 = 機種基準移速(飛行取 fly)× 角色 speed 修正
+export const heroMobility = (kind, mods, flying = false) => {
+  const u = UNITS[kind];
+  if (!u) return 0;
+  return (flying ? (u.fly ?? u.speed) : u.speed) * (mods?.speed ?? 1);
+};
+
 // 等面積約束的唯一推導處(見 GAME.THREAT_AREA_PER_LANE)
 GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MINES.R ** 2));
 // 塔距 = 射程重疊率的唯一推導處(見 GAME.TOWER_OVERLAP)

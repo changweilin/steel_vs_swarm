@@ -8,6 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
+  EVASION, heroMobility,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -414,6 +415,37 @@ export class BattleSim {
     return e;
   }
 
+  /** 該陣營主堡所在的那條兵線端點與朝戰場的方向(取端點最貼近主堡的一條) */
+  _laneAtBase(side) {
+    const [bx, bz] = this.basePos[side];
+    let best = null, bd = Infinity;
+    for (const pts of this.lanes) {
+      if (pts.length < 2) continue;
+      const end = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
+      const nxt = side === 'SWARM' ? pts[1] : pts[pts.length - 2];
+      const d = Math.hypot(end[0] - bx, end[1] - bz);
+      if (d < bd) { bd = d; best = { end, nxt }; }
+    }
+    return best;
+  }
+
+  /**
+   * 出生/重生點:沿主要道路推出主堡 HERO_SPAWN_OFF,再垂直偏到路旁(左右交錯),
+   * i 越大偏得越遠 —— 多架/多人不疊在一起,且都落在主要道路邊而非路中央。
+   */
+  _spawnPoint(side, i = 0) {
+    const [bx, bz] = this.basePos[side];
+    const lane = this._laneAtBase(side);
+    if (!lane) return [bx + i * 12, bz + i * 6];
+    let dx = lane.nxt[0] - lane.end[0], dz = lane.nxt[1] - lane.end[1];
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;          // 沿路指向戰場
+    const px = dz, pz = -dx;                                      // 路的垂直向(路旁)
+    const s = i % 2 === 0 ? 1 : -1;
+    const lat = GAME.HERO_SPAWN_SIDE + Math.floor(i / 2) * 9;     // 路旁偏移,交錯遞增
+    return [bx + dx * GAME.HERO_SPAWN_OFF + px * lat * s,
+      bz + dz * GAME.HERO_SPAWN_OFF + pz * lat * s];
+  }
+
   // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵;ch = 角色 id)----------
   addHero(side, pid, ch) {
     if (this.heroes.has(pid)) return this.heroes.get(pid);
@@ -428,11 +460,8 @@ export class BattleSim {
     const m = c.mods || {};
     const u = UNITS[kind];
     const idx = this.squads.size ? [...this.squads.values()].filter((s) => s.side === side).length : 0;
-    const [bx, bz] = this.basePos[side];
-    // 同陣營多英雄:繞主堡錯開出生點,避免疊在一起
-    const ang = idx * (Math.PI * 2 / 5);
-    const ox = bx + Math.cos(ang) * 30 * Math.min(idx, 1);
-    const oz = bz + Math.sin(ang) * 30 * Math.min(idx, 1);
+    // 同陣營多英雄:沿主要道路旁交錯出生,避免疊在一起(見 _spawnPoint)
+    const [ox, oz] = this._spawnPoint(side, idx * 2);
     const mp = Math.round(u.mp * (m.mp ?? 1));
     const sq = {
       pid, side, ch, kind, act: 0, bodies: [],
@@ -633,7 +662,31 @@ export class BattleSim {
   heroPos(pid, x, y, z, ry) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    // 瞬時移速(閃避判定用):this.t 只在 tick 前進(8Hz),同一 tick 內多次回報 dt=0 略過。
+    // 首次回報先初始化 _posT(否則 dt 恆為 0、_spd 永遠算不出來 = 閃避永遠不觸發)。
+    if (h._posT == null) h._posT = this.t;
+    const dt = this.t - h._posT;
+    if (dt > 0) { h._spd = Math.hypot(x - h.x, z - h.z) / dt; h._posT = this.t; }
     h.x = x; h.y = y; h.z = z; h.ry = ry;
+  }
+
+  /** 目標(僚機跟隨領機,故以領機瞬時移速判定)是否移動中 */
+  _isMoving(t) {
+    const lead = t.sq ? this.heroes.get(t.pid) : t;
+    return (lead?._spd ?? 0) >= EVASION.MOVING_SPD;
+  }
+
+  /**
+   * 閃避擲骰(輕武器直射專用,呼叫端負責只在 def.id==='light' / NPC gun 時呼叫)。
+   * 條件:目標是英雄機體 + 有效機動 > MOBILITY_MIN + 移動中;飛行單位額外加成。
+   * 只有英雄機體具閃避(NPC 移速 ≤ 20,永遠不符合) ⇒ 玩家打小兵不受影響。
+   */
+  _dodges(t) {
+    if (!t || !t.hero) return false;
+    const flying = t.kind === 'drone' || (t.y || 0) >= GAME.AA_MIN_ALT;
+    const mob = heroMobility(t.kind, CHARACTERS[t.ch]?.mods, flying);
+    if (mob <= EVASION.MOBILITY_MIN || !this._isMoving(t)) return false;
+    return Math.random() < EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0);
   }
 
   /** 瞄準模式切換(按住右鍵):熱兵器(rocket/railgun/siege 等)需瞄準中才能開火 */
@@ -660,6 +713,12 @@ export class BattleSim {
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    // 閃避(輕武器直射):機動機體移動中可能整發閃開(僚機齊射仍各自擲骰)
+    if (wp.def.id === 'light' && this._dodges(t)) {
+      this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
+      this._echo(h, t, wp.def);
+      return;
+    }
     // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
@@ -681,6 +740,7 @@ export class BattleSim {
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d3 > def.range * 1.25) continue;
       this.events.push({ e: 'shot', from: [b.x, b.z], to: [t.x, t.z], side: b.side });
+      if (def.id === 'light' && this._dodges(t)) continue;   // 閃避:僚機這一發也被閃開
       const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
       this._damage(t, dmg, b, def.pen);
@@ -730,6 +790,11 @@ export class BattleSim {
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
     if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
+    if (wp.def.id === 'light' && this._dodges(t)) {
+      this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
+      this._echo(h, t, wp.def);
+      return true;
+    }
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
@@ -1240,7 +1305,14 @@ export class BattleSim {
         // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)
         if (e.cd === 0 && !((e.empUntil || 0) > this.t)) {
           e.cd = 1 / u.rate;
-          this._damage(target, u.dmg, e, WEAPONS[u.wid]?.pen || 0);
+          const wd = WEAPONS[u.wid];
+          // 閃避:小兵的直射槍械(無爆風 r = 機槍/步槍)可被移動中的機動機體閃開;
+          // 火箭/榴彈/塔砲(有 r 或塔/主堡)是 AoE / 制式火砲,不可閃。
+          if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target)) {
+            this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
+          } else {
+            this._damage(target, u.dmg, e, wd?.pen || 0);
+          }
           if (e.kind === 'tower' || e.kind === 'base' || e.kind === 'tank') {
             this.events.push({ e: 'shot', from: [e.x, e.z], to: [target.x, target.z], side: e.side });
           }
@@ -1261,9 +1333,8 @@ export class BattleSim {
     b.hp = b.maxHp;
     b.sp = b.maxSp;
     b.lastHitAt = -99;
-    const [bx, bz] = this.basePos[b.side];
-    b.x = bx + (b.si || 0) * 12;
-    b.z = bz + (b.si || 0) * 6;
+    const [sx, sz] = this._spawnPoint(b.side, (b.spawnIdx || 0) * 3 + (b.si || 0));
+    b.x = sx; b.z = sz;
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     if (soloWipe) {

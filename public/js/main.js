@@ -5,7 +5,7 @@
 import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, PROG,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, PROG,
   UNITS, SQUAD,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
@@ -14,7 +14,7 @@ import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
-import { buildBiomes, makeDeckIndex } from './biomes.js';
+import { buildBiomes, makeDeckIndex, makeTunnelIndex } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -550,6 +550,7 @@ function charWeaponRow(id, slot, key) {
   if (raw.arc) bits.push(`扇形 ±${tri((l) => w(l).arc)}°`);
   if (raw.guide) bits.push('雷射導引');
   if (raw.type === 'missile') bits.push('鎖定追蹤');
+  bits.push(`後座力 ${recoilName(raw, slot === 'heavy' ? 'heavy' : 'light')}`);
   return `<div class="cd-row" data-slot="${slot}" title="點擊播放施展動畫">
     <span class="cd-key">${key}</span>
     <div><b>${esc(raw.name)}</b> <span class="dim">${esc(raw.rw)}</span> <span class="cd-play">▶</span>
@@ -862,12 +863,30 @@ async function enterLoading(cfg) {
     // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);
+    const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil } | null
+    const decks = biomes.userData.decks || [];
     app.terrain.deckY = deckY;
+    app.terrain.tunnelAt = tunnelAt;
+    // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上 ③否則地表
     app.terrain.surfaceAt = (x, z, curY) => {
       const h = app.terrain.heightAt(x, z);
       if (curY == null) return h;
+      const tn = tunnelAt(x, z);
+      if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
       const d = deckY(x, z);
       return (d != null && d > h && curY >= d - DECK_STEP) ? d : h;
+    };
+    // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
+    app.terrain.ceilingAt = (x, z, curY) => {
+      let c = null;
+      const tn = tunnelAt(x, z);
+      if (tn && curY < tn.ceil) c = tn.ceil;                       // 洞內天花板
+      const d = deckY(x, z);
+      if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~1.2m)
+        const under = d - 1.2;
+        if (c == null || under < c) c = under;
+      }
+      return c;
     };
     const st = biomes.userData.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +

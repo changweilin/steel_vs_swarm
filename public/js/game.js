@@ -1942,23 +1942,42 @@ export class BattleClient {
     if (frac >= 1 && (maxSp <= 0 || sfrac >= 1) && !ent.bar) return;   // 滿血且護盾滿(或無護盾)→ 不建條
     if (!ent.bar) {
       const w = ent.isStatic ? 18 : 5, hh = w * 0.09;
-      const plane = (color, opacity, z) => {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, hh),
+      const M = hh * 0.26;                      // 框邊寬
+      const hasSp = maxSp > 0;
+      const shY = hh * 1.55;                     // 護盾列的高度(與 HP 列間留間隔)
+      const plane = (color, opacity, z, pw = w, ph = hh) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph),
           new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthTest: false }));
         m.position.z = z; return m;
       };
       const grp = new THREE.Group();
-      grp.add(plane(0x111417, 0.8, 0));      // 底
-      const fg = plane(0xe23b34, 1, 0.02);   // 現有 HP:紅
+      // 外框:雙層描邊(暗外緣 + 金屬灰內緣)罩住整組,擺脫舊版單調的裸長條
+      const stackH = hasSp ? shY + hh : hh, cy = hasSp ? shY / 2 : 0;
+      const frame = plane(0x05070a, 0.94, -0.03, w + M * 2.4, stackH + M * 2.4); frame.position.y = cy;
+      const inner = plane(0x39424c, 0.95, -0.02, w + M, stackH + M);            inner.position.y = cy;
+      grp.add(frame); grp.add(inner);
+      grp.add(plane(0x111417, 1, 0));            // HP 底槽
+      const fg = plane(0xe23b34, 1, 0.02);       // 現有 HP:紅
       grp.add(fg);
+      // 分段刻痕(間隔):固定不隨血量縮放的暗線,把長條切成數格 → 一眼判讀血量段位
+      const segN = ent.isStatic ? 10 : 5, tickW = Math.max(0.05, w * 0.014);
+      const ticks = (y, col) => {
+        for (let s = 1; s < segN; s++) {
+          const tk = plane(col, 0.95, 0.05, tickW, hh);
+          tk.position.set(-w / 2 + (w / segN) * s, y, 0); grp.add(tk);
+        }
+      };
+      ticks(0, 0x111417);
       let sfg = null;
-      if (maxSp > 0) {                        // 護盾:玻璃藍,疊在 HP 條上方一列
-        const sbg = plane(0x0a1723, 0.7, 0.01); sbg.position.y = hh * 1.15;
-        sfg = plane(0x7fd4ff, 0.9, 0.03);       sfg.position.y = hh * 1.15;
+      if (hasSp) {                               // 護盾:玻璃藍,獨立一列並與 HP 列留間隔
+        const sbg = plane(0x0a1723, 0.85, 0.01); sbg.position.y = shY;
+        sfg = plane(0x7fd4ff, 0.95, 0.03);       sfg.position.y = shY;
         grp.add(sbg); grp.add(sfg);
+        ticks(shY, 0x0a1723);
       }
       const box = new THREE.Box3().setFromObject(ent.mesh);
-      grp.position.y = (box.max.y - box.min.y) + (ent.isStatic ? 6 : 2.2);
+      // 靜態建築(砲塔/主堡)的血條貼著頂端(剛好在上方,不再高高浮起);單位維持 2.2 抬高
+      grp.position.y = (box.max.y - box.min.y) + (ent.isStatic ? 1.4 : 2.2);
       grp.renderOrder = 999;
       ent.mesh.add(grp);
       ent.bar = grp; ent.barFg = fg; ent.barSfg = sfg; ent.barW = w;
@@ -2244,6 +2263,13 @@ export class BattleClient {
         comicPop(this.scene, this.effects, wx, y + 2, wz, { big: false, hue: 28 });
         this.hud.hitmark?.();
       }
+    } else if (ev.e === 'dodge') {
+      // 閃避(伺服器擲骰):在目標頭上跳「閃」——只畫鏡頭附近的,避免全場刷字
+      const wx = ev.x, wz = -ev.z, cam = this.camera.position;
+      if (Math.hypot(wx - cam.x, wz - cam.z) < 140) {
+        const y = this.terrain.heightAt(wx, wz) + (ev.y || 0) + 3;
+        comicPop(this.scene, this.effects, wx, y, wz, { text: '閃', hue: 190 });
+      }
     } else if (ev.e === 'buy') {
       if (ev.pid === this.youId && ev.lvl != null) {
         const abName = ev.item?.startsWith?.('ab:') && this.ch
@@ -2454,13 +2480,36 @@ export class BattleClient {
     const mySide = this.side || 'SWARM';
     const other = mySide === 'SWARM' ? 'STEEL' : 'SWARM';
     const [bx, bz] = llToWorld(this.cfg.bases[mySide][0], this.cfg.bases[mySide][1], this.center);
-    const [ex, ez] = llToWorld(this.cfg.bases[other][0], this.cfg.bases[other][1], this.center);
-    const dx = ex - bx, dz = ez - bz;
-    const len = Math.hypot(dx, dz) || 1;
-    const sx = bx + dx / len * GAME.HERO_SPAWN_OFF, sz = bz + dz / len * GAME.HERO_SPAWN_OFF;
-    const gy = this.terrain.heightAt(sx, sz);
+    // 沿「主堡所在的那條兵線」推出生成點 + 面向兵線前進方向 → 一重生就正對兵線箭頭(而非直線指向敵堡)
+    let sx, sz, dx, dz;
+    let bestLane = null, bd = Infinity;
+    for (const L of (this.cfg.lanes || [])) {
+      const w = L.map(([lat, lng]) => llToWorld(lat, lng, this.center));
+      if (w.length < 2) continue;
+      const seq = mySide === 'SWARM' ? w : w.slice().reverse();   // 從我方主堡端往敵方排序
+      const d = Math.hypot(seq[0][0] - bx, seq[0][1] - bz);
+      if (d < bd) { bd = d; bestLane = seq; }
+    }
+    if (bestLane) {
+      let acc = 0;   // 沿兵線走 HERO_SPAWN_OFF 找生成點(貼著兵線 → 更靠近)
+      for (let i = 0; i < bestLane.length - 1; i++) {
+        const ax = bestLane[i][0], az = bestLane[i][1];
+        const seg = Math.hypot(bestLane[i + 1][0] - ax, bestLane[i + 1][1] - az) || 1;
+        dx = bestLane[i + 1][0] - ax; dz = bestLane[i + 1][1] - az;
+        if (acc + seg >= GAME.HERO_SPAWN_OFF || i === bestLane.length - 2) {
+          const t = Math.min(1, (GAME.HERO_SPAWN_OFF - acc) / seg);
+          sx = ax + dx * t; sz = az + dz * t; break;
+        }
+        acc += seg;
+      }
+    } else {
+      const [ex, ez] = llToWorld(this.cfg.bases[other][0], this.cfg.bases[other][1], this.center);
+      dx = ex - bx; dz = ez - bz; const len = Math.hypot(dx, dz) || 1;
+      sx = bx + dx / len * GAME.HERO_SPAWN_OFF; sz = bz + dz / len * GAME.HERO_SPAWN_OFF;
+    }
+    const gy = this._surf(sx, sz, Infinity);
     this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
-    this.yaw = Math.atan2(-dx, -dz);   // three:-z 前方
+    this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
     this.pitch = -0.05;
     // 變形機甲:重生一律地面型態
     if (this.isMorph) {
@@ -3101,6 +3150,18 @@ export class BattleClient {
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; }
       this.roll += (0 - this.roll) * Math.min(1, dt * 6);
+    }
+
+    // 天花碰撞:地下道天花板 / 高架橋底緣 —— 頭頂(pos.y + 機高)不得穿過。ceilingAt 只在「人在其下方」時回值,
+    // 站上方地表 / 橋面時回 null → 不受影響(上方照常通行)。
+    const ceil = this.terrain.ceilingAt?.(this.pos.x, this.pos.z, this.pos.y);
+    if (ceil != null) {
+      const cap = ceil - this.selfH - 0.2;   // 頭頂留餘裕,機高由角色動態推導(最大機甲亦保證淨空)
+      if (this.pos.y > cap) {
+        this.pos.y = cap;
+        if (this.vy > 0) this.vy = 0;
+        if (this.vel?.y > 0) this.vel.y = 0;
+      }
     }
 
     // 碰撞:不能穿過單位 / 塔 / 主堡

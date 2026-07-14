@@ -389,6 +389,48 @@ export async function buildTerrain(cfg, onProgress) {
       : d + (c - d) * (1 - fj) + (b - d) * (1 - fi); // 三角形 (b, c, d)
   }
 
+  /**
+   * 地下道洞口開挖(2026-07-15):**只開挖approaches / 敞開段**,深山段完全不動 →
+   * 天花板上方的山體地表保持原樣(照常鋪地被拼圖)。
+   * runs: [{ pts:[[x,z]…], floors:[y…] }](floors = 該點的平直路面高度)。
+   * 規則:近走廊(≤ hw+3)且原地表低於「路面 + clear + 1」(= 山體不夠高、藏不住天花板的敞開/洞口段)→
+   *       壓到路面高 = 露出可通行的路;山體夠高處(covered)保持原地表不挖。
+   */
+  function carveTunnels(runs, { clear = 8, hw = 9 } = {}) {
+    if (!runs?.length) return;
+    const near = hw + 3;
+    const proj = (x, z, r) => {                       // 最近段 + 內插路面高
+      let bd = Infinity, bf = 0;
+      for (let i = 0; i < r.pts.length - 1; i++) {
+        const ax = r.pts[i][0], az = r.pts[i][1];
+        const ex = r.pts[i + 1][0] - ax, ez = r.pts[i + 1][1] - az;
+        const L2 = ex * ex + ez * ez || 1;
+        let t = ((x - ax) * ex + (z - az) * ez) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d = Math.hypot(x - (ax + ex * t), z - (az + ez * t));
+        if (d < bd) { bd = d; bf = r.floors[i] + (r.floors[i + 1] - r.floors[i]) * t; }
+      }
+      return { d: bd, floor: bf };
+    };
+    for (let i = 0; i < N; i++) {
+      const z = minZ + (maxZ - minZ) * i / (N - 1);
+      for (let j = 0; j < N; j++) {
+        const x = minX + (maxX - minX) * j / (N - 1);
+        const k = i * N + j, orig = heights[k];
+        let target = Infinity;
+        for (const r of runs) {
+          const p = proj(x, z, r);
+          if (p.d > near) continue;
+          if (orig < p.floor + clear + 1) target = Math.min(target, p.floor);   // 敞開/洞口段才挖
+        }
+        if (target < orig) heights[k] = target;
+      }
+    }
+    const posAttr = geo.getAttribute('position');
+    for (let k = 0; k < N * N; k++) posAttr.array[k * 3 + 1] = heights[k];
+    posAttr.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
+
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, sampleColor, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
+  return { group, mesh, heightAt, carveTunnels, sampleColor, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
 }

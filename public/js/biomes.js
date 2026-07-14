@@ -1624,6 +1624,15 @@ const ROAD_W = {
 const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
 // 橋面/地下道的最小通行寬度(遊戲公尺):機甲碰撞直徑約 4~5m,兩台並行 + 小兵夾縫仍有餘裕
 const PASS_W = 16;
+// 地下道(真・下沉,2026-07-15 改版):**不開挖地表**。隧道路面 = 兩端洞口地表高的平直內插道路,
+// 上方山體(未改動的原地形,照常鋪地被拼圖)自然高過路面即成「隧道」;洞內加不透明天花板遮住山體底面。
+//   CLEAR  路面到天花板的淨空(> 最大機甲 真人1.8×250%≈4.5m + 餘裕)⇒ 天花板夠高、最大機甲通過不卡。
+//   HW     隧道路面半寬(> PASS_W/2,雙機並行);ROOF_T 天花板厚度。
+//   覆蓋門檻:山體地表 ≥ 路面 + CLEAR + ROOF_T 才算「洞內」(天花板藏得進山體);否則是敞開洞口段。
+const TUN = { CLEAR: 8, HW: 9, ROOF_T: 1.0 };
+// 高架橋橋面在兩端地面之上的抬升量(公尺):淨空 > 最大機甲(~4.5m)+ 餘裕 ⇒ 機甲從橋下通過不卡;
+// 橋面底緣另登記為天花碰撞(game.js),機甲跳不穿橋。
+const BRIDGE_RISE = 7.5;
 function roadWidth(tags) {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
@@ -1802,6 +1811,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   const beams = [], ceilLamps = [];
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
+  const tunnelSegs = [];   // 地下道小段:{路面 fy, 天花 cy, hw} → main.js surfaceAt(洞內站路面)+ 天花碰撞
+  const ceilSegs = [];     // 地下道不透明天花板小段(覆蓋段;擋住山體底面)
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
   const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
@@ -1816,8 +1827,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     // 路寬夾到 PASS_W 以上,NPC 與玩家並肩通過不互相卡住。
     const hw = Math.max(roadWidth(way.tags) / 2, (bridge || tunnel) ? PASS_W / 2 : 0);
     if (tunnel) {
-      // 地下道 = 開挖式(cut-and-cover)通道:路面仍貼地(地形是高程場,沒有「地下」可鑽),
-      // 兩側立擋土牆、上方跨橫樑,山體端再立門洞 —— 玩家與 NPC 實際走得進去。
+      // 洞口門洞(額牆):立在山體端 —— 玩家沿地表路走到山腳即進洞。門洞高 = 隧道淨空。
       const gpts = way.geometry;
       if (gpts.length >= 2) {
         for (const [eIdx, nIdx] of [[0, 1], [gpts.length - 1, gpts.length - 2]]) {
@@ -1830,8 +1840,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
           const dIn = [(nx2 - ex) / dl, (nz2 - ez) / dl];   // 指向隧道內
           const hE = terrain.heightAt(ex, ez);
           if (hE < 0.4) continue;
-          if (terrain.heightAt(ex + dIn[0] * 14, ez + dIn[1] * 14) < hE + 2.2) continue;
-          portals.push({ x: ex, z: ez, y: hE, ry: Math.atan2(-dIn[0], -dIn[1]), w: hw * 2 + 2 });
+          if (terrain.heightAt(ex + dIn[0] * 14, ez + dIn[1] * 14) < hE + 2.2) continue;   // 內側山體確有上升 = 真洞口
+          portals.push({ x: ex, z: ez, y: hE, ry: Math.atan2(-dIn[0], -dIn[1]), w: hw * 2 + 2, h: TUN.CLEAR + 1 });
         }
       }
     }
@@ -1890,9 +1900,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       const hB = terrain.heightAt(run[nP - 1][0], run[nP - 1][1]);
       const deckAt = (s, gx, gz) => {
         const ramp = Math.min(1, s / 24, (total - s) / 24);
-        const yLine = hA + (hB - hA) * (s / (total || 1)) + 4.2 * Math.max(0, ramp);
+        const yLine = hA + (hB - hA) * (s / (total || 1)) + BRIDGE_RISE * Math.max(0, ramp);
         return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT);
       };
+      // 地下道:平直路面(兩端洞口地表高的內插)= 洞內在山體之下、洞口與地表齊平的通行道路
+      const tFloorAt = (s) => hA + (hB - hA) * (s / (total || 1));
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
         const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
@@ -1907,8 +1919,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         for (let k = 0; k < 4; k++) {
           const [off, ink] = offs[k];
           const vx = x + px * off, vz = z + pz * off;
-          const vy = bridge ? deckAt(cum[i], x, z)
-            : Math.max(hs[k], hMax - CLAMP) + ROAD_LIFT;
+          const vy = tunnel ? tFloorAt(cum[i]) + ROAD_LIFT
+            : bridge ? deckAt(cum[i], x, z)
+              : Math.max(hs[k], hMax - CLAMP) + ROAD_LIFT;
           b.pos.push(vx, vy, vz);
           b.nrm.push(0, 1, 0);
           b.uv.push(vx / 9, vz / 9);             // 世界投影 UV:路面質感貼圖(鏡射重複無接縫)
@@ -1942,9 +1955,21 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
           });
         }
       }
-      // ---- 地下道外觀:兩側擋土牆(直立緞帶)+ 跨越橫樑(開挖式通道,頂上留縫透光)----
+      // ---- 地下道(真・下沉,2026-07-15):路面在山體之下的平直道路 + 不透明天花板;山體地表原樣保留 ----
+      // 天花 = 路面 + CLEAR;山體地表高過天花 + ROOF_T 的段落才「覆蓋」(有牆/天花/樑);敞開段是洞口。
       if (tunnel && total > 8) {
-        const wallY = (i) => Math.max(terrain.heightAt(run[i][0], run[i][1]), 0) + ROAD_LIFT;
+        const ceilOf = (s) => tFloorAt(s) + TUN.CLEAR;
+        const coveredI = (i) => terrain.heightAt(run[i][0], run[i][1]) >= ceilOf(cum[i]) + TUN.ROOF_T;
+        // 路面 + 天花碰撞:**只在覆蓋段登記**(有天花板的段落才判定「洞內」+ 頭部碰撞;
+        // 敞開/洞口段地表已被 carve 到路面高、surfaceAt 走地表即可,不可掛隱形天花)。
+        for (let i = 0; i < nP - 1; i++) {
+          if (!coveredI(i) || !coveredI(i + 1)) continue;
+          tunnelSegs.push({
+            x1: run[i][0], z1: run[i][1], fy1: tFloorAt(cum[i]), cy1: ceilOf(cum[i]),
+            x2: run[i + 1][0], z2: run[i + 1][1], fy2: tFloorAt(cum[i + 1]), cy2: ceilOf(cum[i + 1]), hw,
+          });
+        }
+        // 兩側牆(路面 → 天花):覆蓋段立起,敞開段(洞口)收成零高不破圖
         for (const side of [1, -1]) {
           const k0 = wall.base;
           for (let i = 0; i < nP; i++) {
@@ -1952,25 +1977,25 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
             let dx = c[0] - a[0], dz = c[1] - a[1];
             const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-            const vx = x + dz * (hw + 0.5) * side, vz = z - dx * (hw + 0.5) * side;
-            const y0 = wallY(i);
-            wall.pos.push(vx, y0 - 0.4, vz, vx, y0 + 4.0, vz);
-            wall.nrm.push(-dz * side, 0, dx * side, -dz * side, 0, dx * side);   // 法線朝道路內側
+            const vx = x + dz * hw * side, vz = z - dx * hw * side;
+            const yF = tFloorAt(cum[i]) - 0.3;
+            const yT = coveredI(i) ? ceilOf(cum[i]) + 0.2 : yF + 0.15;
+            wall.pos.push(vx, yF, vz, vx, yT, vz);
+            wall.nrm.push(-dz * side, 0, dx * side, -dz * side, 0, dx * side);
           }
-          for (let i = 0; i < nP - 1; i++) {
-            const k = k0 + i * 2;
-            wall.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
-          }
+          for (let i = 0; i < nP - 1; i++) { const k = k0 + i * 2; wall.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
           wall.base += nP * 2;
         }
-        for (let s = 6; s < total - 4 && beams.length < 90; s += 13) {
-          const [ex, ez, ddx, ddz] = at(s);
-          beams.push({ x: ex, z: ez, y: terrain.heightAt(ex, ez) + 6.6, ry: Math.atan2(ddx, ddz), w: hw * 2 + 2 });
+        // 不透明天花板(擋住上方山體底面 = 不破圖)+ 橫樑 + 天花燈:僅覆蓋段
+        for (let i = 0; i < nP - 1; i++) {
+          if (!coveredI(i) || !coveredI(i + 1)) continue;
+          ceilSegs.push({ x1: run[i][0], z1: run[i][1], cy1: ceilOf(cum[i]), x2: run[i + 1][0], z2: run[i + 1][1], cy2: ceilOf(cum[i + 1]), hw: hw + 0.6 });
         }
-        // 天花照明:每支橫樑下掛一具長條燈,補足開挖式通道內部的細節與可視度
-        for (let s = 6; s < total - 4 && ceilLamps.length < 90; s += 13) {
+        for (let s = 6; s < total - 4 && beams.length < 120; s += 12) {
           const [ex, ez, ddx, ddz] = at(s);
-          ceilLamps.push({ x: ex, z: ez, y: terrain.heightAt(ex, ez) + 6.15, ry: Math.atan2(ddx, ddz) });
+          if (terrain.heightAt(ex, ez) < tFloorAt(s) + TUN.CLEAR + TUN.ROOF_T) continue;
+          beams.push({ x: ex, z: ez, y: tFloorAt(s) + TUN.CLEAR - 0.35, ry: Math.atan2(ddx, ddz), w: hw * 2 + 2 });
+          if (ceilLamps.length < 120) ceilLamps.push({ x: ex, z: ez, y: tFloorAt(s) + TUN.CLEAR - 0.95, ry: Math.atan2(ddx, ddz) });
         }
       }
       // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 邊梁(box girder)+ 等間距橋墩落地(含墩帽)+ 橋燈 ----
@@ -2198,6 +2223,26 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     m.userData.noOutline = true;
     group.add(m);
   }
+  // ---- 地下道不透明天花板:覆蓋段的頂板(擋住上方山體底面,從洞內抬頭看是天花而非穿幫的山體背面)----
+  if (ceilSegs.length) {
+    const pos = [], nrm = [], idx = []; let base = 0;
+    for (const s of ceilSegs) {
+      let dx = s.x2 - s.x1, dz = s.z2 - s.z1; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const px = dz, pz = -dx;
+      const c4 = [[s.x1 + px * s.hw, s.cy1, s.z1 + pz * s.hw], [s.x1 - px * s.hw, s.cy1, s.z1 - pz * s.hw],
+        [s.x2 + px * s.hw, s.cy2, s.z2 + pz * s.hw], [s.x2 - px * s.hw, s.cy2, s.z2 - pz * s.hw]];
+      for (const c of c4) { pos.push(c[0], c[1], c[2]); nrm.push(0, -1, 0); }   // 面朝下(洞內看得到)
+      idx.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
+      base += 4;
+    }
+    const cgeo = new THREE.BufferGeometry();
+    cgeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    cgeo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+    cgeo.setIndex(idx);
+    const cm = new THREE.Mesh(cgeo, envMat(0x4a4d47, { wash: 0.3, cool: 0.35, side: THREE.DoubleSide }));
+    cm.frustumCulled = false; cm.userData.noOutline = true;
+    group.add(cm);
+  }
   if (beams.length) {
     const bM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.7, 1.4),
       envMat(0x9a958c, { wash: 0.35, cool: 0.45 }), beams.length);
@@ -2266,7 +2311,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   // ---- 隧道門洞:額牆 + 黑洞面 + 兩翼擋土牆(嵌進山壁,面朝來路)----
   for (const p of portals) {
     const g = new THREE.Group();
-    const W = Math.max(6, p.w), H2 = 6.5;
+    const W = Math.max(6, p.w), H2 = Math.max(6.5, p.h || 6.5);   // 門洞高 ≥ 隧道淨空(最大機甲進得去)
     const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45 });
     const face = new THREE.Mesh(new THREE.BoxGeometry(W + 3, H2 + 2, 1.2), wallM);
     face.position.y = (H2 + 2) / 2;
@@ -2314,7 +2359,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     { g: ico(1.6).scale(1, 0.85, 1), y: 3.7, c: leafC },
     { g: ico(1.0).scale(1, 0.8, 1), y: 4.9, c: leafC },
   ], roadTrees);
-  return { built, decks };
+  return { built, decks, tunnels: tunnelSegs };
 }
 
 /**
@@ -2352,6 +2397,42 @@ export function makeDeckIndex(decks) {
       if (Math.hypot(x - px, z - pz) > d.hw) continue;   // 不在橋面上(側向出界)
       const y = d.y1 + (d.y2 - d.y1) * t;
       if (best === null || y > best) best = y;
+    }
+    return best;
+  };
+}
+
+/**
+ * 地下道查詢:回傳 (x, z) 處的 { floor, ceil }(路面高 / 天花高)—— 不在任何地下道上回 null。
+ * game.js/main.js 以「curY < ceil」判定人在洞內(站路面),否則走地表;天花另供頭部碰撞。
+ */
+export function makeTunnelIndex(tunnels) {
+  if (!tunnels?.length) return () => null;
+  const CELL = 16;
+  const grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  tunnels.forEach((d, n) => {
+    const pad = d.hw + 2;
+    const i0 = Math.floor((Math.min(d.x1, d.x2) - pad) / CELL), i1 = Math.floor((Math.max(d.x1, d.x2) + pad) / CELL);
+    const j0 = Math.floor((Math.min(d.z1, d.z2) - pad) / CELL), j1 = Math.floor((Math.max(d.z1, d.z2) + pad) / CELL);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const k = key(i, j); let arr = grid.get(k);
+      if (!arr) { arr = []; grid.set(k, arr); }
+      arr.push(n);
+    }
+  });
+  return (x, z) => {
+    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+    if (!arr) return null;
+    let best = null;
+    for (const n of arr) {
+      const d = tunnels[n];
+      const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+      const len2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - d.x1) * ex + (z - d.z1) * ez) / len2));
+      if (Math.hypot(x - (d.x1 + ex * t), z - (d.z1 + ez * t)) > d.hw) continue;
+      const floor = d.fy1 + (d.fy2 - d.fy1) * t;
+      if (best === null || floor < best.floor) best = { floor, ceil: d.cy1 + (d.cy2 - d.cy1) * t };
     }
     return best;
   };
@@ -2958,6 +3039,24 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (terrain.sampleColor) [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
   const osm = osmData?.buildings || null;
 
+  // ---- 地下道洞口開挖(2026-07-15,真・下沉版):**只開挖敞開段/洞口**,深山段地表保持原樣。----
+  // 路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。MUST 在鋪地被之前開挖(洞口段不鋪地被=出入口)。
+  const tunnelRuns = [];
+  if (terrain.carveTunnels && osmRoads?.length) {
+    for (const way of osmRoads) {
+      if (!way.tags?.tunnel) continue;
+      const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
+      if (pts.length < 2) continue;
+      const cum = [0];
+      for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const tot = cum[cum.length - 1] || 1;
+      const hA = terrain.heightAt(pts[0][0], pts[0][1]), hB = terrain.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+      const floors = cum.map((s) => hA + (hB - hA) * (s / tot));   // 平直路面
+      tunnelRuns.push({ pts, floors });
+    }
+    if (tunnelRuns.length) terrain.carveTunnels(tunnelRuns, { clear: TUN.CLEAR, hw: TUN.HW });
+  }
+
   const generic = [];       // {x,z,w,h,d,ry,commercial}
   const landmarks = [];     // {x,z,type,scale}
   const usedLm = new Set();
@@ -3561,6 +3660,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
   const roadsBuilt = roadRes.built;
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
+  group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   // 道路穿出空氣牆處 → 車禍/施工/巨坑封路事件(合成兵線不出界,自然為 0)
   const roadBlockN = buildRoadBlocks(group, roadInput, terrain, center, blockers, rnd);
 
