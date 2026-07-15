@@ -10,17 +10,12 @@
 // setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
 
 import * as THREE from 'three';
-import { SIDES, CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js';
+import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight } from './toon.js';
 import { starburst, shockRing, beamLine } from './vfx.js';
-
-// 招式特效配色(與 game.js 的 cast 事件同一套口徑)
-const FX_COLOR = {
-  emp: 0xb78aff, heal: 0x8affa0, intercept: 0x9adfff,
-  strike: 0xff8a4a, summon: 0xfff2b8,
-};
+import { spawnCastFx } from './castfx.js';
 
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
 const AUTO_SPIN = 0.35;      // idle 自轉角速度 (rad/s)
@@ -187,7 +182,7 @@ export class CharPreview {
       this.mixer = null;
       this._ent = null;   // loco 狀態綁 mesh,換機體一律重建
     }
-    for (const e of this.effects) this.scene.remove(e.obj);
+    for (const e of this.effects) { this.scene.remove(e.obj); e.dispose?.(); }
     this.effects.length = 0;
   }
 
@@ -215,9 +210,10 @@ export class CharPreview {
       this.wantR = slot === 'heavy' ? Math.max(R * wide, (w.r || 0) * 1.15) : R;
     } else {
       const a = heroAbility(id, slot, 1);
-      this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 2.2 : 1.5 };
-      // 大招衝擊環最大到 ~1.8R + 浮空,取景放大以完整入鏡
-      this.wantR = slot === 'ult' ? R * 2.0 : R * 1.35;
+      // dur 蓋住「蓄勢半拍 + 最長特效壽命 ~2.8s」:取景在演出結束前不縮回
+      this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 3.4 : 3.0 };
+      // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
+      this.wantR = slot === 'ult' ? R * 2.2 : R * 1.5;
     }
     this._auto = true;
     this.idle = 0;
@@ -373,16 +369,22 @@ export class CharPreview {
         this._stepHeavy(A, R);                          // 重武器:依機制型別分家演出
       }
     } else {
-      const col = FX_COLOR[A.a.fx] ?? SIDES[this.unit.userData.side].color;
       const isUlt = A.slot === 'ult';
-      if (A.fired === 0 && A.t >= (isUlt ? 0.6 : 0.3)) {
-        shockRing(this.scene, this.effects, 0, 0, 0, isUlt ? R * 1.8 : R * 1.1, col);
-        starburst(this.scene, this.effects, 0, this.targetY, 0, R * (isUlt ? 0.6 : 0.35), col);
+      // 角色專屬演出(castfx.js;與戰場 cast 事件同一套):蓄勢半拍後施放
+      if (A.fired === 0 && A.t >= (isUlt ? 0.45 : 0.25)) {
+        spawnCastFx(this.scene, this.effects, {
+          ch: this.charId, slot: A.slot, lvl: 1, fx: A.a.fx, side: this.unit.userData.side,
+          at: new THREE.Vector3(0, 0, 0),
+          casterPos: () => new THREE.Vector3(
+            this.holder.position.x, this.holder.position.y + this.targetY, this.holder.position.z),
+          groundY: () => 0,
+          // 展示台的範圍演出夾在取景可框住的尺度內(戰場才用真實半徑);
+          // rvCap 連帶夾住 gate/zone/snipe 的「絕對世界公尺下限」
+          r: Math.min(A.a.r || R * 1.2, R * (isUlt ? 2.2 : 1.5)),
+          rvCap: R * (isUlt ? 2.2 : 1.5),
+          dur: A.a.dur, scale: Math.max(this.height, R * 0.8),
+        });
         A.fired = 1;
-      }
-      if (isUlt && A.fired === 1 && A.t >= 1.2) {
-        shockRing(this.scene, this.effects, 0, 0, 0, R * 2.6, col);
-        A.fired = 2;
       }
       // 施放姿態:大招浮空 + 慢旋,小招輕彈跳
       const f = Math.min(1, A.t / A.dur);

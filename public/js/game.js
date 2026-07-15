@@ -17,6 +17,7 @@ import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine } from './vfx.js';
+import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 
 const KIND_KEY = {
@@ -2296,23 +2297,34 @@ export class BattleClient {
     } else if (ev.e === 'decoyLost') {
       if (ev.pid === this.youId) this.hud.feed?.(`📡 餌機超出 ${DECOY.LINK_M}m,鏈路中斷`);
     } else if (ev.e === 'cast') {
-      // 招式施放:特效 + 播報(敵我口徑不同)
+      // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
       const c = CHARACTERS[ev.ch];
       const a = c?.[ev.slot];
       const wx = ev.x, wz = -ev.z;
-      const gy = this.terrain.heightAt(wx, wz);
-      const col = ev.side ? SIDES[ev.side].color : 0xffffff;
-      if (ev.fx === 'emp') {
-        shockRing(this.scene, this.effects, wx, gy, wz, ev.r || 40, 0xb78aff);
-        starburst(this.scene, this.effects, wx, gy + 8, wz, 10, 0xb78aff);
-      } else if (ev.fx === 'buff' || ev.fx === 'heal') {
-        shockRing(this.scene, this.effects, wx, gy, wz, ev.r || 20, ev.fx === 'heal' ? 0x8affa0 : col);
-        starburst(this.scene, this.effects, wx, gy + 6, wz, 6, ev.fx === 'heal' ? 0x8affa0 : 0xfff2b8);
-      } else if (ev.fx === 'intercept') {
-        shockRing(this.scene, this.effects, wx, gy, wz, ev.r || 150, 0x9adfff);
-      } else if (ev.fx === 'summon' || ev.fx === 'dash' || ev.fx === 'stealth' || ev.fx === 'vision') {
-        starburst(this.scene, this.effects, wx, gy + 6, wz, 7, col);
+      // 施放者錨點:自己 = 即時位置;他人 = 快照插值中的 ent(迷霧看不見 → null,錨定落點)。
+      // 蜂群一 pid 三架 → 取離施放座標最近那架(自身型招式 ev.x/z 就是施放機位置)。
+      let casterPos = null, scale = 4;
+      if (ev.pid === this.youId) {
+        casterPos = () => this.pos;
+        scale = heroTargetH(this.heroKind, this.ch);
+      } else {
+        let best = null, bd = Infinity;
+        for (const ent of this.ents.values()) {
+          if (ent.pid !== ev.pid || ent.isSelf || !ent.hero || !ent.mesh.visible) continue;
+          const d = (ent.mesh.position.x - wx) ** 2 + (ent.mesh.position.z - wz) ** 2;
+          if (d < bd) { bd = d; best = ent; }
+        }
+        if (best) { casterPos = () => best.mesh.position; scale = best.dimH || 4; }
       }
+      // 地面高走 surfaceAt 唯一縫(§2):以施放者當下高度當 curY —— 隧道內施放
+      // 特效貼隧道路面、橋上施放貼橋面;裸 heightAt 會把演出釘上覆蓋段山頂。
+      const surfY = (x, z) => this._surf(x, z, casterPos ? casterPos().y : this.terrain.heightAt(x, z));
+      spawnCastFx(this.scene, this.effects, {
+        ch: ev.ch, slot: ev.slot, lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
+        at: new THREE.Vector3(wx, surfY(wx, wz), wz),
+        casterPos, groundY: surfY,
+        r: ev.r || 0, dur: ev.dur || 0, scale,
+      });
       if (a) {
         this.hud.feed?.(ev.side === this.side
           ? `✨ ${c.code}【${a.name}】`

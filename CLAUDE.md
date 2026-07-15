@@ -22,6 +22,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `public/js/portraits.js` | 程序生成 SVG 頭像/立繪(`avatarURL`/`portraitURL`);`PORTRAIT_MANIFEST` 登記手繪檔即覆蓋,呼叫端不變(同 `MODEL_MANIFEST` 模式) |
 | `public/js/charPreview.js` | 選角畫面的 3D 機體展示台(拖曳旋轉 + 點武器/招式播放演出 + 變形機甲切換型態 + **雙擊機體切換移動/靜止演示**)。**預設縮小開啟,無關閉狀態**(見 §2);與戰場共用 `makeUnit()`,取景走包圍球(無人機寬 >> 高;變形機甲取兩型態聯集);施展招式時鏡頭動態拉遠框住特效(`_auto`,手動滾輪後讓位)。變形直接驅動 `rig.pose(m)` 略過高度判定。**全 app 只建一個 WebGLRenderer**,canvas 節點跨 `charDetail` 重繪搬移(大圖為 sticky 全寬固定,捲動不消失);離開房間畫面即 `stop()` rAF |
 | `public/js/cutin.js` | 招式立繪演出(自己大招=全屏、小招=角落小卡、敵方大招=警示條);純 DOM overlay(`#cutinLayer`,z-index 15),**MUST NOT** 拉進 3D 場景 |
+| `public/js/castfx.js` | 招式 3D 演出庫(2026-07-15 起):14 種演出原型(魔法陣/元素環繞/拳影劍氣/靈魂束縛/治療綻放/召喚門/打擊標定/隱匿消散/掃描脈波/攔截穹頂/殘影突進/絕對領域/天穹狙擊/音波詠嘆)× 19 種程序 canvas 圖騰(音符/齒輪/雪花/數學/錶盤/電路/羽翼/爪痕/拳影……全向量白稿 + 材質著色,不吃字型),`CFX` 表 64 式逐一指定、查無走 fx 型別 fallback;戰場(game.js `cast` 事件)與展示台(charPreview.js)共用唯一入口 `spawnCastFx()`,**MUST NOT** 在兩端各寫一套;特效走呼叫端 effects 陣列、群組直掛 scene、跟隨施放者靠每幀讀 `casterPos()`(**MUST NOT** re-parent 到 ent mesh 底下 —— effects 迴圈以 `scene.remove` 卸除);純視覺不涉 sim |
 | `public/js/` | game.js(FPV/物理/插值)· toon.js(賽璐璐核心)· vfx.js · biomes.js · ground.js(開闊地地被覆蓋層)· terrain.js · mapSelect.js · venues.js · models.js · net.js · main.js · environment.js |
 | `reference/` | 上游唯讀副本(mapping_elf、ai_tycoon)— **MUST NOT** 修改,只准參考 |
 
