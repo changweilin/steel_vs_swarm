@@ -396,6 +396,22 @@ export class BattleClient {
         const [x, z, dx, dz] = at(st.s);
         return { x, z, ry: Math.atan2(dx, dz), s: st.s, turn: st.turn, ph: k * 0.9 };
       });
+      // 兵線表面剖面(行進式取樣):像小兵一樣從線頭沿線走一遍,帶著「上一步的高度」問
+      // surfaceAt ⇒ 上橋段走橋面、穿隧道段走隧道路面。舊做法 _surf(x, z, Infinity) 會把
+      // 穿隧道的箭頭放到上方山體、把從橋下經過的箭頭吸上別條路的橋面。
+      const PROF_SEG = 4;
+      const prof = [];
+      let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
+      for (let s = 0; s <= total; s += PROF_SEG) {
+        const [sx, sz] = at(s);
+        py = this._surf(sx, sz, py + 1.2);
+        prof.push(py);
+      }
+      const surfY = (s) => {
+        const f = Math.max(0, Math.min(prof.length - 1, s / PROF_SEG));
+        const i = Math.floor(f), j = Math.min(prof.length - 1, i + 1);
+        return prof[i] + (prof[j] - prof[i]) * (f - i);
+      };
       const color = LANE_COLORS[li % LANE_COLORS.length];
       // 扁平桿(幾何自頂點朝 −z 延伸):厚度 0.12 = 貼地薄片,不是空中的立體箭頭
       const bar = () => new THREE.BoxGeometry(1.6, 0.12, BAR_L).translate(0, 0, -BAR_L / 2);
@@ -408,7 +424,7 @@ export class BattleClient {
         m.userData.noOutline = true;
         this.scene.add(m);
       }
-      this.laneArrows.push({ im, items, barL: BAR_L, at, total, run: TURN_RUN, spread: SPREAD });
+      this.laneArrows.push({ im, items, barL: BAR_L, at, total, run: TURN_RUN, spread: SPREAD, surfY });
     });
     this._arrowM = new THREE.Matrix4();
     this._arrowQ = new THREE.Quaternion();
@@ -434,12 +450,12 @@ export class BattleClient {
     for (const la of this.laneArrows) {
       const L = la.barL, SP = la.spread;
       la.items.forEach((it, i) => {
-        let ax, az, ry, sc;
+        let ax, az, ry, sc, sPos;
         if (it.turn) {
           // 巡行:沿線 s 在 [s0 − run/2, s0 + run/2] 之間循環(14 m/s),朝向取切線
           const u = ((now * 14 + it.ph * 20) % la.run) - la.run / 2;
-          const s = Math.max(0, Math.min(la.total, it.s + u));
-          const [px, pz, dx, dz] = la.at(s);
+          sPos = Math.max(0, Math.min(la.total, it.s + u));
+          const [px, pz, dx, dz] = la.at(sPos);
           ax = px; az = pz;
           ry = Math.atan2(dx, dz);
           const edge = 1 - Math.abs(u) / (la.run / 2);            // 兩端縮小 = 淡出淡入
@@ -451,13 +467,15 @@ export class BattleClient {
           ry = it.ry;
           ax = it.x + Math.sin(ry) * flow;
           az = it.z + Math.cos(ry) * flow;
+          sPos = Math.min(la.total, it.s + flow);
         }
+        // 高度與坡度查「兵線表面剖面」(隧道內 = 隧道路面、橋上 = 橋面):
+        // 桿尾在頂點後方 ≈ L·cos(SP),坡度 = 剖面前後高差
+        const y0 = la.surfY(sPos);
+        const dy = la.surfY(Math.max(0, sPos - L * 0.81)) - y0;
         // 兩根桿共用頂點、左右各張開 SP ⇒ 頂點朝前進方向的 ㄑ
         for (const [k, yaw] of [[0, ry + SP], [1, ry - SP]]) {
-          const y0 = this._surf(ax, az, Infinity);
-          const tx = ax - Math.sin(yaw) * L, tz = az - Math.cos(yaw) * L;   // 桿尾(幾何朝 −z 延伸)
-          const dy = this._surf(tx, tz, Infinity) - y0;
-          E.set(Math.asin(Math.max(-0.9, Math.min(0.9, dy / L))), yaw, 0);  // 俯仰 = 該桿所在坡度
+          E.set(Math.asin(Math.max(-0.9, Math.min(0.9, dy / L))), yaw, 0);  // 俯仰 = 沿線坡度
           Q.setFromEuler(E);
           P.set(ax, y0 + HOVER, az);
           S.setScalar(sc);
@@ -1881,7 +1899,21 @@ export class BattleClient {
     this.scene.add(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
+    // 基準包圍盒:MUST 在掛護盾殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
+    // 撐大 —— 塔的護盾殼半徑 11m,曾把鎖定光暈吹成 49m 巨球、血條抬到半空)。
+    // 貼地陣營光環(teamRing,塔的圈 r≈14)同樣排除:光暈/血條要包的是機體本體。
+    const bb = new THREE.Box3();
+    const bbT = new THREE.Box3();
+    group.updateWorldMatrix(true, true);
+    group.traverse((o) => {
+      if (!o.isMesh || !o.geometry || o.userData.teamRing) return;
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+      bbT.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+      bb.union(bbT);
+    });
     const ent = {
+      dimTop: bb.max.y, dimH: bb.max.y - bb.min.y,
+      dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy',
@@ -1976,10 +2008,14 @@ export class BattleClient {
       const M = hh * 0.26;                      // 框邊寬
       const hasSp = maxSp > 0;
       const shY = hh * 1.55;                     // 護盾列的高度(與 HP 列間留間隔)
+      // 全部走 transparent + 顯式 renderOrder(z 疊序直翻繪製順序):框→槽→填色→刻痕的
+      // 分層不再賭 three 的排序細節,紅 HP / 玻璃藍護盾在任何角度都壓在框與底槽之上。
       const plane = (color, opacity, z, pw = w, ph = hh) => {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph),
-          new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthTest: false }));
-        m.position.z = z; return m;
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthTest: false, depthWrite: false }));
+        m.position.z = z;
+        m.renderOrder = 990 + Math.round(z * 100);
+        return m;
       };
       const grp = new THREE.Group();
       // 外框:雙層描邊(暗外緣 + 金屬灰內緣)罩住整組,擺脫舊版單調的裸長條
@@ -2006,10 +2042,13 @@ export class BattleClient {
         grp.add(sbg); grp.add(sfg);
         ticks(shY, 0x0a1723);
       }
-      const box = new THREE.Box3().setFromObject(ent.mesh);
-      // 靜態建築(砲塔/主堡)的血條貼著頂端(剛好在上方,不再高高浮起);單位維持 2.2 抬高
-      grp.position.y = (box.max.y - box.min.y) + (ent.isStatic ? 1.4 : 2.2);
-      grp.renderOrder = 999;
+      // 靜態建築(砲塔/主堡)的血條貼著頂端(剛好在上方,不再高高浮起);單位維持 2.2 抬高。
+      // 高度用 spawn 時的基準包圍盒(dimTop)—— 事後的 Box3 會把護盾殼/敵方標記一起量進去。
+      const top = ent.dimTop ?? (() => {
+        const box = new THREE.Box3().setFromObject(ent.mesh);
+        return box.max.y - box.min.y;
+      })();
+      grp.position.y = top + (ent.isStatic ? 1.4 : 2.2);
       ent.mesh.add(grp);
       ent.bar = grp; ent.barFg = fg; ent.barSfg = sfg; ent.barW = w;
     }
@@ -2029,14 +2068,17 @@ export class BattleClient {
    */
   _enemyMark(ent, dt, now) {
     if (!ent.mark) {
-      const box = new THREE.Box3().setFromObject(ent.mesh);
-      const h = Math.max(2, box.max.y - box.min.y);
+      // 基準包圍盒(排除護盾殼/血條):否則塔的標記會疊在護盾殼頂上再 +3.4
+      const h = Math.max(2, ent.dimH ?? (() => {
+        const box = new THREE.Box3().setFromObject(ent.mesh);
+        return box.max.y - box.min.y;
+      })());
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({
         map: factionMarkTex(ent.side), transparent: true, opacity: 0, depthTest: false, depthWrite: false,
       }));
       sp.scale.setScalar(Math.max(3.6, h * 0.75));
       sp.renderOrder = 998;
-      ent.markY = h + 3.4 + sp.scale.y * 0.5;   // 讓開血條(bbox 高 + 2.2)
+      ent.markY = (ent.dimTop ?? h) + 3.4 + sp.scale.y * 0.5;   // 讓開血條(頂端 + 2.2)
       ent.mesh.add(sp);
       ent.mark = sp;
     }
@@ -2452,7 +2494,9 @@ export class BattleClient {
     if (this._lockId === ent.id) return;
     this._clearLockGlow();
     this._lockId = ent.id;
-    this._lockGlow = lockGlow(ent.mesh, SIDES[this.side].color);
+    // 基準尺寸(排除護盾殼等子節點)→ 光暈剛好包住目標,塔不再是巨球
+    this._lockGlow = lockGlow(ent.mesh, SIDES[this.side].color,
+      ent.dimH != null ? { h: ent.dimH, r: ent.dimR, top: ent.dimTop } : null);
     this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}`);
   }
 
@@ -3114,6 +3158,10 @@ export class BattleClient {
   _updatePlayer(dt, now) {
     if (!this.side) { this._updateSpectator(dt); return; }
     if (this.dead) return;
+    // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)
+    const px0 = this.pos.x, pz0 = this.pos.z, py0 = this.pos.y;
+    const tn0 = this.terrain.tunnelAt?.(px0, pz0);
+    const inTun0 = !!(tn0 && py0 < tn0.ceil);
     const u = UNITS[this.heroKind];
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
@@ -3181,6 +3229,38 @@ export class BattleClient {
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; }
       this.roll += (0 - this.roll) * Math.min(1, dt * 6);
+    }
+
+    // 結構物硬碰撞(高架橋/地下道):機體與橋體/山體不可重疊 ——
+    //  ①隧道側壁:洞內只能沿路面走到洞口。側向跨出走廊時 surfaceAt 會瞬移到上方山體
+    //    (表面高度躍升 >2.6m)= 穿牆,一律擋下。
+    //  ②淨空不足:天花(橋面底緣/隧道天花板)與地面的夾縫塞不下機高 → 進不去(引道漸低段)。
+    // 撞牆時逐軸嘗試滑行(沿牆保留另一軸位移),都不行才整步還原;
+    // 位移前的位置若本來就違規(例外狀態)則放行,避免卡死。
+    if (this.terrain.ceilingAt) {
+      const hover = this._flying() ? (this.isMorph ? 0 : 2.5) : 0;
+      const passable = (cx, cz) => {
+        const g = this._surf(cx, cz, py0);
+        if (inTun0 && g > py0 + 2.6) return false;                        // 隧道側壁/上方山體
+        const ce = this.terrain.ceilingAt(cx, cz, py0);
+        if (ce != null && ce - this.selfH - 0.2 < g + hover) return false; // 夾縫 < 機高
+        return true;
+      };
+      if (!passable(this.pos.x, this.pos.z) && passable(px0, pz0)) {
+        let cx = px0, cz = pz0;
+        for (const [tx, tz] of [[this.pos.x, pz0], [px0, this.pos.z]]) {
+          if (passable(tx, tz)) { cx = tx; cz = tz; break; }
+        }
+        this.pos.x = cx; this.pos.z = cz;
+        this.vel.x = 0; this.vel.z = 0;
+        // 撞牆幀的高度 MUST 一併還原上限:位移分支已先用「牆外的 gy」把機體吸上山
+        // (貼坡吸附),只還原 x/z 會留下被抬高的 y → 下一幀 py0 > ceil = 誤判已在山上,
+        // 側壁規則就此解除(實測就是這樣穿牆的)。
+        this.pos.y = Math.min(this.pos.y, py0);
+        const gy2 = this._surf(cx, cz, py0);
+        if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + 320, this.pos.y));
+        else if (this.pos.y < gy2) { this.pos.y = gy2; this.vy = 0; }
+      }
     }
 
     // 天花碰撞:地下道天花板 / 高架橋底緣 —— 頭頂(pos.y + 機高)不得穿過。ceilingAt 只在「人在其下方」時回值,

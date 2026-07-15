@@ -138,6 +138,7 @@ function teamRing(side, radius) {
   );
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.25;
+  ring.userData.teamRing = true;   // 貼地識別圈:量「機體本體」尺寸時要排除(否則塔的光暈/血條吃到 r≈14 的圈)
   return ring;
 }
 

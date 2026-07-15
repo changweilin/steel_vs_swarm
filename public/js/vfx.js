@@ -396,10 +396,19 @@ export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {
  * 走 onBeforeRender 自更新(不進 effects 陣列 —— 它不會自己過期)。
  * 回傳的 Group 由呼叫端 remove() 卸除。
  */
-export function lockGlow(target, color = 0xffffff) {
-  const box = new THREE.Box3().setFromObject(target);
-  const size = box.getSize(new THREE.Vector3());
-  const r = Math.max(1.5, Math.max(size.x, size.z) * 0.75);
+export function lockGlow(target, color = 0xffffff, dims = null) {
+  // 尺寸優先吃呼叫端的「基準包圍盒」(掛護盾殼/血條/標記之前量的):
+  // 塔/主堡的 Box3 會被 11~30m 的護盾殼撐大 → 光暈飄成巨球。無 dims 才退回現量。
+  let h, halfR, top;
+  if (dims) {
+    h = dims.h; halfR = dims.r; top = dims.top ?? dims.h;
+  } else {
+    const box = new THREE.Box3().setFromObject(target);
+    const size = box.getSize(new THREE.Vector3());
+    h = size.y; halfR = Math.max(size.x, size.z) / 2; top = size.y;
+  }
+  const r = Math.max(1.5, halfR * 1.5);              // 腳下環半徑基準 ≈ 機體外緣
+  const D = Math.max(3, Math.max(h, halfR * 2) * 1.15);   // 光暈直徑 = 機體高/寬取大 ×1.15:剛好罩住
   const g = new THREE.Group();
   g.userData.noOutline = true;
 
@@ -407,8 +416,8 @@ export function lockGlow(target, color = 0xffffff) {
     map: glowTexture(), color, transparent: true, opacity: 0.55,
     blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
   }));
-  halo.scale.setScalar(r * 3);
-  halo.position.y = size.y * 0.5;
+  halo.scale.setScalar(D);
+  halo.position.y = top - h * 0.5;                   // 機體幾何中心(不是「高度一半」假設原點在腳)
   g.add(halo);
 
   const ring = new THREE.Mesh(
@@ -426,7 +435,7 @@ export function lockGlow(target, color = 0xffffff) {
     const t = performance.now() / 1000;
     const p = 0.5 + 0.5 * Math.sin(t * 6);
     halo.material.opacity = 0.3 + p * 0.35;
-    halo.scale.setScalar(r * (2.7 + p * 0.5));
+    halo.scale.setScalar(D * (0.92 + p * 0.16));
     ring.rotation.z = t * 1.6;
     ring.scale.setScalar(0.94 + p * 0.12);
   };

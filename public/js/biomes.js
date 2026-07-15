@@ -1756,6 +1756,66 @@ function roadPropMeshes(group, parts, items) {
   }
 }
 
+/**
+ * 隧道/橋樑分段合併:同類(tunnel/bridge)且共用端點節點的 way 併成一條完整鏈。
+ * OSM 的長隧道/長橋常被切成多段,共用節點深在山體內/河面上 —— 不合併的話,
+ * 每半段各自拿「端點地表高」內插路面/橋面,剖面會在結構中段爬回地表(洞內隱形牆、橋面中垂)。
+ * 節點鍵取 6 位小數(≈0.11m)= OSM 節點同一性;分岔(同節點 ≥3 條同類 way)不併,保守維持原樣。
+ */
+function mergeGradeChains(roads) {
+  const out = roads.filter((w) => !((w.tags?.tunnel || w.tags?.bridge) && w.geometry?.length >= 2));
+  for (const kind of ['tunnel', 'bridge']) {
+    // tunnel 優先歸隧道鏈:同時掛兩種 tag 的 way 不會進兩類
+    const ways = roads.filter((w) => w.tags?.[kind] && !(kind === 'bridge' && w.tags.tunnel) && w.geometry?.length >= 2);
+    const key = (p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+    // 方向連續性:雙孔隧道/雙幅橋常共用洞口節點 —— 只准「順向接續」(夾角 < ~80°)的 way
+    // 相併,倒鉤(平行孔折返)不併,否則 U/V 形鏈的路面內插會整段錯掉。
+    const dirDot = (a, b, c, d) => {
+      const kx = 111320 * Math.cos(a.lat * Math.PI / 180), ky = 110540;
+      const v1 = [(b.lon - a.lon) * kx, (b.lat - a.lat) * ky];
+      const v2 = [(d.lon - c.lon) * kx, (d.lat - c.lat) * ky];
+      const l1 = Math.hypot(...v1) || 1, l2 = Math.hypot(...v2) || 1;
+      return (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2);
+    };
+    const endMap = new Map();   // 節點鍵 -> [{w, end}](end: 0=頭 1=尾)
+    for (const w of ways) {
+      for (const [k, end] of [[key(w.geometry[0]), 0], [key(w.geometry[w.geometry.length - 1]), 1]]) {
+        if (!endMap.has(k)) endMap.set(k, []);
+        endMap.get(k).push({ w, end });
+      }
+    }
+    const used = new Set();
+    for (const w of ways) {
+      if (used.has(w)) continue;
+      used.add(w);
+      let chain = [...w.geometry];
+      for (const fwd of [true, false]) {
+        let guard = 0;
+        while (guard++ < 60) {
+          const endPt = fwd ? chain[chain.length - 1] : chain[0];
+          const here = endMap.get(key(endPt)) || [];
+          if (here.length !== 2) break;                      // 真洞口/橋台或分岔:停
+          const next = here.find((e) => !used.has(e.w));
+          if (!next) break;
+          const g = [...next.w.geometry];
+          if (next.end === (fwd ? 1 : 0)) g.reverse();       // 對準接續方向
+          // 順向接續才併:our 出向 vs 對方入向
+          const ours = fwd ? [chain[chain.length - 2] || chain[0], endPt] : [chain[1] || chain[0], chain[0]];
+          const theirs = fwd ? [g[0], g[1]] : [g[g.length - 1], g[g.length - 2]];
+          const dot = fwd ? dirDot(ours[0], ours[1], theirs[0], theirs[1])
+            : dirDot(ours[1], ours[0], theirs[1], theirs[0]);
+          if (dot < 0.17) break;                             // 倒鉤(平行孔折返)不併
+          used.add(next.w);
+          if (fwd) chain = chain.concat(g.slice(1));
+          else chain = g.slice(0, -1).concat(chain);
+        }
+      }
+      out.push({ tags: { ...w.tags }, geometry: chain });
+    }
+  }
+  return out;
+}
+
 function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   const inb = 4;
   const buckets = new Map();   // `${biome}|${main}` -> { color, pos, nrm, col, uv, idx, base }
@@ -1811,6 +1871,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   const beams = [], ceilLamps = [];
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
+  const cols = [];   // 結構碰撞柱(橋墩/門洞立柱/翼牆)→ blockers(game.js _collide 推擠,不可重疊)
   const tunnelSegs = [];   // 地下道小段:{路面 fy, 天花 cy, hw} → main.js surfaceAt(洞內站路面)+ 天花碰撞
   const ceilSegs = [];     // 地下道不透明天花板小段(覆蓋段;擋住山體底面)
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
@@ -2277,7 +2338,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     lM.userData.noOutline = true;
     group.add(lM);
   }
-  // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh,純視覺不登記碰撞)+ 墩頂帽梁 ----
+  // ---- 高架橋橋墩:橋面到地面的立柱(InstancedMesh)+ 墩頂帽梁;2026-07-15 起登記碰撞柱(cols → blockers)----
   if (piers.length) {
     const pM = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.18, 1, 8),
       envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 }), piers.length);
@@ -2313,13 +2374,16 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     const g = new THREE.Group();
     const W = Math.max(6, p.w), H2 = Math.max(6.5, p.h || 6.5);   // 門洞高 ≥ 隧道淨空(最大機甲進得去)
     const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45 });
-    const face = new THREE.Mesh(new THREE.BoxGeometry(W + 3, H2 + 2, 1.2), wallM);
-    face.position.y = (H2 + 2) / 2;
-    g.add(face);
-    const hole = new THREE.Mesh(new THREE.BoxGeometry(W - 1.6, H2 - 1.2, 0.6),
-      new THREE.MeshBasicMaterial({ color: 0x07090c }));   // 洞內無光:純黑面即「深不見底」
-    hole.position.set(0, (H2 - 1.2) / 2, 0.45);
-    g.add(hole);
+    // 門洞是「真的洞」(2026-07-15 隧道有實體內部後改版):額牆 = 兩側立柱 + 頂梁,中央開口
+    // (寬 W−1.6、高 H2−1.2)直通隧道路面 —— MUST NOT 退回蓋住路面的黑色實心塞子。
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(W + 3, 3.2, 1.2), wallM);
+    lintel.position.y = H2 + 0.4;                        // 底緣 = 開口頂(H2 − 1.2)
+    g.add(lintel);
+    for (const s of [1, -1]) {
+      const pil = new THREE.Mesh(new THREE.BoxGeometry(2.3, H2 - 1.2, 1.2), wallM);
+      pil.position.set(s * (W / 2 + 0.35), (H2 - 1.2) / 2, 0);
+      g.add(pil);
+    }
     for (const s of [1, -1]) {                             // 翼牆:向來路外八張開的擋土牆
       const wing = new THREE.Mesh(new THREE.BoxGeometry(1.0, H2 - 0.8, 6), wallM);
       wing.position.set(s * (W / 2 + 1.8), (H2 - 0.8) / 2 - 0.3, 2.4);
@@ -2338,6 +2402,15 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     g.position.set(p.x, p.y - 0.4, p.z);
     g.rotation.y = p.ry;
     group.add(g);
+    // 門洞立柱 + 翼牆 → 碰撞柱:額牆旁邊不能直接走穿,只有中央開口可通行
+    const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
+    const toW = (ox, oz) => [p.x + ox * ca + oz * sa, p.z - ox * sa + oz * ca];
+    for (const s of [1, -1]) {
+      const [pxw, pzw] = toW(s * (W / 2 + 0.35), 0);
+      cols.push({ x: pxw, z: pzw, y: p.y - 0.6, r: 1.6, h: H2 + 2 });
+      const [wxw, wzw] = toW(s * (W / 2 + 1.8), 2.4);
+      cols.push({ x: wxw, z: wzw, y: p.y - 0.6, r: 1.7, h: H2 - 0.8 });
+    }
   }
   // ---- 3D 附屬件:路燈 / 紅綠燈 / 行道樹(全 InstancedMesh)----
   roadPropMeshes(group, [
@@ -2359,7 +2432,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     { g: ico(1.6).scale(1, 0.85, 1), y: 3.7, c: leafC },
     { g: ico(1.0).scale(1, 0.8, 1), y: 4.9, c: leafC },
   ], roadTrees);
-  return { built, decks, tunnels: tunnelSegs };
+  // 橋墩 → 碰撞柱:機體不能穿過橋墩(視覺已存在,補上物理;柱距 24m,通行綽綽有餘)。
+  // 柱頂 MUST 封在橋面「底緣」(y1 − 1.2,與 ceilingAt 的 deck 厚度一致)—— 封到橋面上表面的話,
+  // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
+  for (const p of piers) cols.push({ x: p.x, z: p.z, y: p.y0, r: p.r + 0.25, h: Math.max(1, p.y1 - 1.2 - p.y0) });
+  return { built, decks, tunnels: tunnelSegs, cols };
 }
 
 /**
@@ -3039,20 +3116,40 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   if (terrain.sampleColor) [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
   const osm = osmData?.buildings || null;
 
+  // ---- 隧道/橋樑分段合併(2026-07-15 二修):OSM 常把一條隧道/橋切成多條 way,共用節點
+  // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表
+  // (Λ 形斷面、覆蓋斷開、接縫殘留岩階 = 洞內隱形牆)。共端點的同類 way MUST 先併成
+  // 完整鏈,carveTunnels 與 buildRoads 共用同一份 → 剖面一致、洞口 = 鏈的真端點。----
+  if (osmRoads?.length) osmRoads = mergeGradeChains(osmRoads);
   // ---- 地下道洞口開挖(2026-07-15,真・下沉版):**只開挖敞開段/洞口**,深山段地表保持原樣。----
   // 路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。MUST 在鋪地被之前開挖(洞口段不鋪地被=出入口)。
   const tunnelRuns = [];
   if (terrain.carveTunnels && osmRoads?.length) {
     for (const way of osmRoads) {
       if (!way.tags?.tunnel) continue;
-      const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
-      if (pts.length < 2) continue;
-      const cum = [0];
-      for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-      const tot = cum[cum.length - 1] || 1;
-      const hA = terrain.heightAt(pts[0][0], pts[0][1]), hB = terrain.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-      const floors = cum.map((s) => hA + (hB - hA) * (s / tot));   // 平直路面
-      tunnelRuns.push({ pts, floors });
+      // 邊界裁切 MUST 與 buildRoads 完全相同(inb=4、逐頂點丟棄切段)—— 兩邊的 run 端點一致,
+      // 路面剖面才一致。合併後的長鏈常跨出戰場邊界:拿「未裁切全長」內插 floors 會與
+      // buildRoads 的 tFloorAt 分家(錨點與跨距都不同)→ 洞口高低差斷層、覆蓋/敞開分類錯位。
+      const inb2 = 4;
+      const wruns = [];
+      let cur2 = [];
+      for (const p of way.geometry || []) {
+        const [x, z] = llToWorld(p.lat, p.lon, center);
+        if (x < terrain.minX + inb2 || x > terrain.maxX - inb2 || z < terrain.minZ + inb2 || z > terrain.maxZ - inb2) {
+          if (cur2.length >= 2) wruns.push(cur2);
+          cur2 = [];
+          continue;
+        }
+        cur2.push([x, z]);
+      }
+      if (cur2.length >= 2) wruns.push(cur2);
+      for (const pts of wruns) {
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        const tot = cum[cum.length - 1] || 1;
+        const hA = terrain.heightAt(pts[0][0], pts[0][1]), hB = terrain.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        tunnelRuns.push({ pts, floors: cum.map((s) => hA + (hB - hA) * (s / tot)) });   // 平直路面
+      }
     }
     if (tunnelRuns.length) terrain.carveTunnels(tunnelRuns, { clear: TUN.CLEAR, hw: TUN.HW });
   }
@@ -3661,6 +3758,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadsBuilt = roadRes.built;
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
+  blockers.push(...roadRes.cols);         // 橋墩/門洞立柱:與建物同一條碰撞路徑(玩家不可穿)
   // 道路穿出空氣牆處 → 車禍/施工/巨坑封路事件(合成兵線不出界,自然為 0)
   const roadBlockN = buildRoadBlocks(group, roadInput, terrain, center, blockers, rnd);
 
