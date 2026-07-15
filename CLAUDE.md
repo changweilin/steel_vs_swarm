@@ -47,6 +47,12 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - `segLimb` 的樞軸預設在 `[0, −前一節 len, 0]`;**深屈而幾何沿 +z 長出去的肢節**(袋鼠平舉的拳砲前臂)**MUST** 用 `piv:[x,y,z]` 覆寫,否則手掌會接到前臂側面。
   - `MORPH_HUMANOID`(models.js)是「人形 ground」的唯一真相 —— `heroTargetH` 的獸型矮化與 `buildMorphMech` 的 `beast` 判定都查它;新增地面體態 **MUST** 同步加進去。
   - 配件會撐大包圍盒:`fitToHeight` 以整體 bbox 高度定尺 ⇒ **高聳的天線/直立長兵器會把機體本身縮小**。武器一律斜置/前傾收在機體頂高以內。
+- **手持武器戰鬥動畫(2026-07-15 起,third-person;純視覺不涉 sim)**:人形/雙手自由機體的手持輕重武器,開火/蓄力動畫**唯一住 `locomotion.js stepCombatFx`**(戰場 `game.js _updateEnts` 與展示台 `charPreview.js _stepLoco` 都在 `stepLocomotion` **之前**呼叫它;舊 `game.js _applyHeavyFx` 已併入,**MUST NOT** 在 game.js/charPreview 另寫分叉)。
+  - 事件源:`tracer`(**伺服器轉播已附 `pid`**,server.js;比照 heavyCharge)/ `plasma` 事件 / `heavyCharge`/`heavyFire` → `ent.fireFx = {t0, slot}` 與 `ent.heavyFx = {phase, t0}`;`_snapPos` 重生瞬移時 `ent.cfx/fireFx/heavyFx` **MUST** 一併歸零。
+  - rig 欄位(models.js 各 builder 登記,locomotion 消費):`weap` 持手分邊('L'|'R'|'B'|'N')、`hvy` 蓄力/擊發帶符號幅度(**brace 正值 = 蓄力托壓抵肩/擊發槍口上跳後仰;punch 負胸值 = 袋鼠蓄力收拳後仰/擊發直拳前傾** —— 同一條線性項 `rot += chg×幅` 表達兩原型)、`gunR/gunL = {g, rest, aim}` 武器俯仰、`lightGlow` 輕武器槍口燈、`aimPose`(stepBiped)/`aimM`(stepMorph)據槍角。
+  - **據槍槍口 MUST 朝前**:武器挂載角是動態的(`gunPitch`)—— `aim = 1.57 − 手臂射姿總俯仰`(桿件幾何沿 +y);固定挂載角在舉臂時會把槍口甩上天(2026-07-15 前的 bug)。移動未開火 = `rest` 行軍持槍、手臂交還步態擺臂;開火(`rig._aim` 保持 1.5s)或靜止 = 據槍。
+  - **蓄力與開火 MUST 反向**:`chg` 蓄力沿假定時長緩升 0→+1、擊發瞬間翻 −1 再阻尼歸零;`rig.heavy.pivot` 同理(蓄力朝 deploy 展開、擊發以 −0.85 反向過衝)。**morph 手持武器的 `heavy.pivot` 留空** —— `gunR/gunL` 的 rotation.x 由 gunPitch 每幀賦值,再掛 pivot 會互相覆寫。
+  - 規則映射:輕重**同型** = 雙手一把切換兩模式(seraph 長狙 + 下掛高斯模組、centaur 步槍消音段/反器材段);**異型** = 雙槍一手一把(bastion 左 12.7 機槍 + 右斧砲、vampire 右 M134 + 左地獄火、wolf 右 GAU-19 + 左彈箱);重武器非手持則單手槍(colossus 右手脈衝槍 + 眉心砲、aegis 前臂砲 + VLS、roo 左腕槍 + 右直拳砲、atlas 肩架掛載)。**排除**指節行走(gorilla)與掌行(monkey)—— 手是前腳,不入手持列。
 - **機體塗裝與性格花紋(2026-07-11 起)**:機體裝甲色 = 角色主色系,**MUST NOT** 再硬編碼灰色裝甲。
   - 色版唯一的縫是 `paint.js heroPalette(vis, side, tone)`:由 `visual.hue` 推 HSL 階梯(`tone:'light'` 人形機甲/雙足獸;`'dark'` 無人機/獸型/變形機甲 —— 機種既有明暗基調不動)。builder 只取用 `PAL.main/mid/lite/dark/deep`,識別燈條(emissive accent)照舊。
   - 花紋走 `visual.paint`(minimal/camo/graffiti/tattoo/totem/flag,依角色性格;文本依據見 `lore.js`),`paintUnit()` 在 **fitToHeight/outlinify 之前**呼叫,程序 canvas 貼圖(256²,`mulberry32` 以 hue 為種子,**MUST NOT** 用 `Math.random`)。

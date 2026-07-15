@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { SIDES, CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
-import { stepLocomotion } from './locomotion.js';
+import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight } from './toon.js';
 import { starburst, shockRing, beamLine } from './vfx.js';
 
@@ -207,6 +207,9 @@ export class CharPreview {
         slot, t: 0, next: 0, fired: 0, shots, gap, w,
         dur: slot === 'light' ? shots * gap + 0.5 : durH,
       };
+      // 重武器:進蓄力(rig 的掛點展開/發光 + 據槍蓄力姿,stepCombatFx 與戰場同一條);
+      // 各機制在 _stepHeavy 的擊發瞬間切到 fire(反向後座)
+      if (slot === 'heavy' && this._ent) this._ent.heavyFx = { phase: 'charge', t0: performance.now() / 1000 };
       // 取景:彈體飛行/磁軌光束要拉遠框住軌跡;爆風環框住半徑;輕武器維持機體特寫
       const wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.15;
       this.wantR = slot === 'heavy' ? Math.max(R * wide, (w.r || 0) * 1.15) : R;
@@ -218,6 +221,15 @@ export class CharPreview {
     }
     this._auto = true;
     this.idle = 0;
+  }
+
+  /** 擊發提示 → rig 戰鬥動畫(stepCombatFx 消費;與戰場 onTracer/onHeavyFire 同語意):
+   *  設 fireFx(後座脈衝 + 射姿保持);重武器同時把 heavyFx 從 charge 切到 fire(蓄力反向釋放) */
+  _fireCue(heavy) {
+    if (!this._ent) return;
+    const t0 = performance.now() / 1000;
+    this._ent.fireFx = { t0, slot: heavy ? 'heavy' : 'light' };
+    if (heavy) this._ent.heavyFx = { phase: 'fire', t0 };
   }
 
   /** 槍口世界座標(概略:機體正前方、腰高;機體一律面朝 +z) */
@@ -259,11 +271,13 @@ export class CharPreview {
         starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.35, 0xffffff);
         this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
         this.holder.rotation.x -= 0.14;
+        this._fireCue(true);
         A.fired = 1;
       }
     } else if (w.type === 'beam') {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
+        if (!A.tick) this._fireCue(true);   // 首拍 = 擊發(蓄力→持續輸出)
         const end = m.clone().addScaledVector(fwd, R * 5);
         beamLine(this.scene, this.effects, m, end, hue, { ttl: 0.18, w: R * 0.02 });
         starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.12, hue);
@@ -287,6 +301,7 @@ export class CharPreview {
         }
         shockRing(this.scene, this.effects, 0, 0, 0, R * 2.0, 0x7fe8ff);
         this.holder.position.z -= R * 0.1;
+        this._fireCue(true);
         A.fired = 1;
       }
     } else if (w.type === 'missile' || w.type === 'launcher') {
@@ -316,6 +331,7 @@ export class CharPreview {
         });
         if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
         this.holder.position.z -= R * 0.06;
+        this._fireCue(true);
         A.boomAt = A.t + T;
         A.boomPos = boomPos;
         A.fired = 1;
@@ -331,6 +347,7 @@ export class CharPreview {
       shockRing(this.scene, this.effects, 0, 0, 0, Math.max(R * 0.9, w.r || 0), 0xffd27a);
       this.holder.position.z -= R * 0.12;
       this.holder.rotation.x -= 0.10;
+      this._fireCue(true);
       A.fired = 1;
     } else if (A.fired === 0) {
       this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);   // 蓄力下蹲
@@ -349,6 +366,7 @@ export class CharPreview {
           const m = this._muzzle();
           starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
           this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
+          this._fireCue(false);
           A.fired++; A.next += A.gap;
         }
       } else {
@@ -373,7 +391,11 @@ export class CharPreview {
       if (isUlt) this.holder.rotation.y += dt * 2.4 * rise;
     }
 
-    if (A.t >= A.dur) this.anim = null;
+    if (A.t >= A.dur) {
+      // 演出結束:未釋放的蓄力態清掉(掛點展開/發光交還阻尼歸位)
+      if (this._ent?.heavyFx?.phase === 'charge') this._ent.heavyFx = null;
+      this.anim = null;
+    }
   }
 
   /** 移動演示開關(雙擊機體);回傳切換後是否在移動 */
@@ -400,6 +422,9 @@ export class CharPreview {
 
     // 變形機甲:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
     this._ent.heroY = this.morphTarget > 0.5 ? 5 : 0;
+    // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
+    // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
+    stepCombatFx(this._ent, now, dt);
     stepLocomotion(this._ent, dt, now, 0, -this.speed * dt, 0);
     if (this.morphRig) {
       this.morphM = this._ent.loco?.morph ?? 0;

@@ -101,6 +101,84 @@ function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0) {
 /** 靜止度:速度趨零 → 1(給呼吸/微顫用;與步態振幅 a 互補) */
 const idleOf = (a) => clamp(1 - a / 0.06, 0, 1);
 
+// ── 開火/蓄力戰鬥動畫(third-person;game.js 戰場與 charPreview 展示台共用同一條)──
+// stepCombatFx 由 ent.fireFx(tracer/plasma 開火事件)與 ent.heavyFx(heavyCharge/heavyFire)
+// 推導本幀 rig 驅動場,各 step 函式再把它揉進步態:
+//   rig._aim   0..1 開火保持:開火後 AIM_HOLD_S 內維持標準射擊姿勢(槍口朝前;移動中開火也舉槍)
+//   rig._kickL/_kickR 後座脈衝:每發疊加、指數衰減 —— 依 rig.weap 的持手分邊(雙槍各自後座)
+//   rig._chg  −1..+1 蓄力/擊發:蓄力緩升 0→+1、擊發瞬間 −1(方向與蓄力相反)再阻尼歸零。
+//     同一條線性項 rot += chg×幅 依 rig.hvy 正負表達兩種原型:托槍下壓蓄力→槍口上跳(brace),
+//     或拳砲後拉蓄力→直拳前突(punch)。
+// 並直接驅動 rig.heavy.{glow,pivot}(蓄力增亮/展開;擊發 glow 強閃、pivot 反向過衝 = 與蓄力相反)
+// 與 rig.lightGlow(輕武器槍口識別燈的擊發閃光)。純視覺,不涉 sim。
+const AIM_HOLD_S = 1.5;               // 最後一發後維持射擊姿勢的秒數
+const HEAVY_CHARGE_ASSUME_S = 1.05;   // third-person 蓄力進度的假定時長(戰術轉播,毋須逐角色精確)
+const HEAVY_FIRE_HOLD_S = 0.12;       // 擊發尖峰保持
+const FX_K = 10;                      // 彈簧阻尼:目標值突變也不瞬跳
+
+export function stepCombatFx(ent, now, dt) {
+  const rig = ent.mesh?.userData?.rig;
+  if (!rig || dt <= 0) return;
+  const C = ent.cfx || (ent.cfx = { aim: 0, kL: 0, kR: 0, chg: 0, lg: 0, fireT: -1, aimUntil: -1 });
+  // 開火事件邊緣觸發(以 t0 去重):一次後座脈衝 + 展開射姿保持窗
+  const fx = ent.fireFx;
+  if (fx && fx.t0 !== C.fireT) {
+    C.fireT = fx.t0;
+    C.aimUntil = Math.max(C.aimUntil, fx.t0 + AIM_HOLD_S);
+    const amp = fx.slot === 'heavy' ? 1.0 : 0.45;
+    const side = (rig.weap || S0)[fx.slot] || 'R';   // 'L'|'R'|'B' 持手;'N' = 機載(無臂後座)
+    if (side === 'L' || side === 'B') C.kL = Math.min(1.3, C.kL + amp);
+    if (side === 'R' || side === 'B') C.kR = Math.min(1.3, C.kR + amp);
+    if (fx.slot !== 'heavy') C.lg = 1;
+  }
+  // 蓄力/擊發:蓄力沿假定時長線性升到 +1(緩、看得見的預備),擊發瞬間目標翻到 −1(急、反向)
+  const hf = ent.heavyFx;
+  let chgT = 0, glowT = 0;
+  if (hf) {
+    const el = now - hf.t0;
+    if (hf.phase === 'charge') {
+      chgT = Math.min(1, el / HEAVY_CHARGE_ASSUME_S);
+      glowT = chgT;
+      C.aimUntil = Math.max(C.aimUntil, now + 0.4);   // 蓄力中就進射姿
+    } else if (el <= HEAVY_FIRE_HOLD_S) { chgT = -1; glowT = 2; }
+    else ent.heavyFx = null;   // 尖峰過後交還阻尼衰減
+  }
+  const k = 1 - Math.exp(-FX_K * dt);
+  C.chg += (chgT - C.chg) * k;
+  C.aim = damp(C.aim, now < C.aimUntil ? 1 : 0, now < C.aimUntil ? 9 : 3.5, dt);
+  C.kL = damp(C.kL, 0, 7, dt);
+  C.kR = damp(C.kR, 0, 7, dt);
+  C.lg = damp(C.lg, 0, 10, dt);
+  rig._aim = C.aim; rig._kickL = C.kL; rig._kickR = C.kR; rig._chg = C.chg;
+  // 重武器掛點:蓄力 glow 增亮 / pivot 朝 deploy 展開;擊發 glow 強閃、pivot 以 −0.85 反向過衝
+  // (蓄力怎麼展開,擊發就怎麼反向甩回 = 「蓄力動畫與開火相反」的通則,全機種共用)
+  if (rig.heavy) {
+    for (const gd of rig.heavy.glow) {
+      const tgt = gd.base * (glowT <= 1 ? 1 + glowT * 1.6 : 2.6 + (glowT - 1) * 3);
+      const m0 = gd.mesh.material;
+      m0.emissiveIntensity += (tgt - m0.emissiveIntensity) * k;
+    }
+    const f = C.chg >= 0 ? C.chg : C.chg * 0.85;
+    for (const pd of rig.heavy.pivot) {
+      for (const ax of ['x', 'y', 'z']) {
+        const tgt = pd.rest[ax] + (pd.deploy[ax] - pd.rest[ax]) * f;
+        pd.obj.rotation[ax] += (tgt - pd.obj.rotation[ax]) * k;
+      }
+    }
+  }
+  // 輕武器槍口識別燈:擊發強閃後快速回穩(base 為靜置亮度)
+  if (rig.lightGlow) for (const gd of rig.lightGlow)
+    gd.mesh.material.emissiveIntensity = gd.base + C.lg * 3.2;
+}
+
+/** 手持武器俯仰(rig.gunR/gunL = { g, rest, aim }):aimF 混成「行軍持槍(rest,槍口朝前下)→
+ *  據槍(aim,槍口水平朝前)」,疊後座上跳(−kick)與蓄力反向(+chg×hv.gun:蓄力下壓、擊發上跳)。
+ *  aim 角由 models.js 依「1.57 − 手臂射姿總俯仰」解算 —— 據槍時槍口 MUST 朝前,不是朝天。 */
+function gunPitch(gp, aimF, kick, chg, hv) {
+  if (!gp) return;
+  gp.g.rotation.x = gp.rest + (gp.aim - gp.rest) * aimF - kick * 0.14 + chg * (hv.gun ?? 0.05) * aimF;
+}
+
 // ── 運動性格 moveSig(models.js MOVE_SIG 依角色 id 掛在 rig 上)──────────────────
 // 把「靜止/加速/減速」三相位依真實運動員/軍種/生物飛行原型差異化(奔跑/飛行穩態早已差異化,不動)。
 // 每個旋鈕的預設值 = 現行通用行為 ⇒ 沒有 moveSig 的單位(NPC、未登記角色)完全不受影響。
@@ -309,18 +387,33 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
         idle * (rig.gunArm ? 0.3 : 1), now + 2.6, 0.15, (rig.gunArm ? 0.2 : 0.5) * runF);
     }
   }
-  // 雙手持槍姿(bastion 斧砲 / seraph 長狙):靜止(交戰)= 雙手托槍標準射擊姿勢,
-  // 移動 = 交還步態擺臂(右手單手持)。以「靜止度 idle」連續混成 → 停下自然舉槍、起步自然放下。
+  // 手持武器射擊姿勢(雙手托一把 / 雙槍 / 單手槍,由 aimPose 欄位有無決定):
+  // 靜止(交戰)或開火保持(rig._aim)= 標準射擊姿勢 —— 移動中開火也舉槍,步態擺臂讓位;
+  // 未開火的移動 = 交還步態擺臂(行軍持槍)。連續混成 → 停下/開火自然舉槍、起步自然放下。
+  const aimF = Math.min(1, idle + (rig._aim || 0));
   if (rig.aimPose) {
-    const ap = rig.aimPose, aim = idle;
-    rig.armR.rotation.x += (ap.rShoulderX - rig.armR.rotation.x) * aim;
-    rig.armL.rotation.x += (ap.lShoulderX - rig.armL.rotation.x) * aim;
-    rig.armL.rotation.y = (ap.lShoulderY || 0) * aim;   // 左臂朝中線內收扶護木(移動時歸零)
+    const ap = rig.aimPose;
+    rig.armR.rotation.x += (ap.rShoulderX - rig.armR.rotation.x) * aimF;
     if (rig.armChainR && rig.armChainR[0])
-      rig.armChainR[0].g.rotation.x += (ap.rElbowX - rig.armChainR[0].g.rotation.x) * aim;
-    if (rig.armChainL && rig.armChainL[0])
-      rig.armChainL[0].g.rotation.x += (ap.lElbowX - rig.armChainL[0].g.rotation.x) * aim;
+      rig.armChainR[0].g.rotation.x += (ap.rElbowX - rig.armChainR[0].g.rotation.x) * aimF;
+    if (ap.lShoulderX != null) {   // 單手槍機種不給左臂欄位 → 左臂交還步態(自由)
+      rig.armL.rotation.x += (ap.lShoulderX - rig.armL.rotation.x) * aimF;
+      rig.armL.rotation.y = (ap.lShoulderY || 0) * aimF;   // 左臂朝中線內收扶護木(移動時歸零)
+      if (rig.armChainL && rig.armChainL[0])
+        rig.armChainL[0].g.rotation.x += (ap.lElbowX - rig.armChainL[0].g.rotation.x) * aimF;
+    }
   }
+  // 後座/蓄力(登記 rig.weap 的持武機種):後座 = 持械肩上抬 + 肘回折(左右手各自吃自己的脈衝);
+  // 蓄力/擊發走 rig.hvy 的帶符號幅度(brace 正值 = 蓄力托壓/擊發上跳;punch 正值 = 蓄力後拉/擊發前突)
+  const kL = rig._kickL || 0, kR = rig._kickR || 0, chg = rig._chg || 0, hv = rig.hvy || S0;
+  if (rig.weap) {
+    rig.armR.rotation.x += -kR * 0.15 + chg * (hv.armR || 0);
+    rig.armL.rotation.x += -kL * 0.15 + chg * (hv.armL || 0);
+    if (rig.armChainR && rig.armChainR[0]) rig.armChainR[0].g.rotation.x -= kR * 0.1;
+    if (rig.armChainL && rig.armChainL[0]) rig.armChainL[0].g.rotation.x -= kL * 0.1;
+  }
+  gunPitch(rig.gunR, aimF, kR, chg, hv);
+  gunPitch(rig.gunL, aimF, kL, chg, hv);
   const hips = rig.hips;
   // 骨盆:交替步一週期兩次浮沉(雙支撐最高、單支撐最低)+ 重心側移到支撐腿;
   // 跳奔漸變為「一跳一大浮沉」的騰空拋物線,側移/扭腰同步歸零(併蹬沒有左右換腳)。
@@ -346,7 +439,10 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (chest) {
     chest.rotation.y = -hips.rotation.y * 0.9;
     chest.rotation.z = -hips.rotation.z * 0.55;
-    chest.rotation.x = 0.06 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02;
+    // + 蓄力/擊發的軀幹搖(brace:蓄力前傾抵肩、擊發後仰)與後座震(每發胸腔往後震一下);
+    //   進 stabilizeHead 的 acc → 頭補償 85%,殘留 15% = 開火的衝擊感
+    chest.rotation.x = 0.06 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02
+      + chg * (hv.chest || 0) - Math.max(kL, kR) * 0.06;
   }
   // 頭把骨盆的縱向彈跳吸掉一半(頸/頭自己往回撐)⇒ 頭的上下位移收斂,不隨每一步上下彈
   if (rig.headY0 != null) rig.head.position.y = rig.headY0 + (rig.hipsY0 - hips.position.y) * 0.5;
@@ -398,6 +494,13 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
   }
   rig.armL.rotation.x = armB + air * 0.12 * a + idle * Math.sin(now * 1.3) * 0.02;
   rig.armR.rotation.x = armB + air * 0.12 * a + idle * Math.sin(now * 1.3 + 0.6) * 0.008;
+  // 拳砲戰鬥動畫(袋鼠 punch 原型,hv.armR 為正):蓄力 = 右拳向後收滿(chg→+1 的大幅後拉蓄勢),
+  // 擊發 = chg 瞬間翻負 → 直拳全幅前突;輕武器(左腕槍)開火 = 左臂小幅後座
+  const kL = rig._kickL || 0, kR = rig._kickR || 0, chg = rig._chg || 0, hv = rig.hvy || S0;
+  if (rig.weap) {
+    rig.armR.rotation.x += -kR * 0.15 + chg * (hv.armR || 0);
+    rig.armL.rotation.x += -kL * 0.15 + chg * (hv.armL || 0);
+  }
   const hips = rig.hips;
   // 一跳一沉浮:騰空拋物線 + 觸地壓縮(不是交替步的一週期兩浮沉);無左右側移/扭腰
   // 只向上騰空、不讓骨盆沉到基準線以下 —— 腿隨骨盆升降(syncLegsToHips),骨盆一旦下沉就會把腳帶穿地面;
@@ -417,7 +520,9 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
   if (chest) {
     chest.rotation.y = 0;
     chest.rotation.z = 0;
-    chest.rotation.x = 0.05 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02;
+    // 拳砲的軀幹配合(hv.chest 為負 = punch 原型):蓄力微後仰蓄勢、擊發前傾灌拳(follow-through)
+    chest.rotation.x = 0.05 * a + idle * sg.breathK * Math.sin(now * 1.5 * sg.iF) * 0.02
+      + chg * (hv.chest || 0) - Math.max(kL, kR) * 0.05;
   }
   if (rig.headY0 != null) rig.head.position.y = rig.headY0 + Math.max(0, rig.hipsY0 - hips.position.y) * 0.5;
   // 體軸壓平了,頭照樣抬起鎖平前方(袋鼠跳起來頭是穩的)+ 入彎凝視
@@ -645,10 +750,15 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     rig.neck.rotation.z = -hr * 0.5;
     rig.neck.position.y = rig.neckY0;
     rig.neck.position.x = 0;
-    // 胸再吸 40%(+ 呼吸微擺)、頸吸 15%:力由腰往上逐節遞減散開 = 分節都在動
+    // 胸再吸 40%(+ 呼吸微擺)、頸吸 15%:力由腰往上逐節遞減散開 = 分節都在動。
+    // 開火戰鬥動畫(騎士雙手據槍):蓄力 = 上身前傾抵肩(brace)、擊發 = 反向後仰 + 每發後座震;
+    // 加在 humChest 上 → 下方 acc 累計自動把它算進頭部補償,狙擊手的視線在後座中仍近乎鎖死
+    const rkL = rig._kickL || 0, rkR = rig._kickR || 0;
+    const rKick = Math.max(rkL, rkR), rChg = rig._chg || 0, rHv = rig.hvy || S0;
     if (rig.humChest) {
       rig.humChest.rotation.x = -hp * 0.4 + Math.sin(wave - 1.3) * 0.022 * a
-        + idle * sg.breathK * Math.sin(now * 1.5) * 0.015;
+        + idle * sg.breathK * Math.sin(now * 1.5) * 0.015
+        + rChg * (rHv.chest || 0) - rKick * 0.06;
       rig.humChest.rotation.z = -hr * 0.3;
     }
     if (rig.humNeck) {
@@ -663,11 +773,13 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     rig.head.rotation.x = -accX * 0.95;
     rig.head.rotation.z = -accZ * 0.9;
     rig.head.rotation.y = idle * sg.idleK * Math.sin(now * 0.5) * 0.28;   // 靜止緩慢掃視(基底,下方再疊入彎凝視)
-    // 持槍雙臂:鎖死當穩定射擊台(角度不隨步態擺動)是刻意設計,疊遠小於腿部的待機液壓微顫
+    // 持槍雙臂:鎖死當穩定射擊台(角度不隨步態擺動)是刻意設計,疊遠小於腿部的待機液壓微顫;
+    // 開火時雙臂隨槍後座(肩微抬 + 蓄力反向項)—— 槍身本體的後座由 rig.heavy.pivot 負責
     if (rig.armSh) {
       rig.armSh.forEach((sh, i) => {
         const el = rig.armEl[i], b = rig.armBase[i];
-        sh.rotation.x = b.shX + idle * 0.02 * Math.sin(now * 1.6 - i * 1.8);
+        sh.rotation.x = b.shX + idle * 0.02 * Math.sin(now * 1.6 - i * 1.8)
+          + rChg * (rHv.armR || 0) - rKick * 0.08;
         sh.rotation.z = b.shZ + idle * 0.015 * Math.sin(now * 1.6 - i * 1.8 + 1.2);
         el.rotation.x = b.elX + idle * 0.025 * Math.sin(now * 1.6 - i * 1.8 + 0.6);
       });
@@ -806,6 +918,22 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     rig.wristL.rotation.x += (fx(L.ph + qp[2] - 0.9) + st(L.ph + qp[2] - 0.9) * 0.3) * wA * a + br(1.8, 0.02);
     rig.wristR.rotation.x += (fx(L.ph + qp[3] - 0.9) + st(L.ph + qp[3] - 0.9) * 0.3) * wA * a * (armFull ? 1 : 0.5) + br(3.6, 0.02);
   }
+  // 手持武器射擊姿勢(rig.aimM 的人形地面型傭兵):靜止或開火保持 = 肩/肘/腕混成到據槍角
+  // (雙槍 = 兩臂都給欄位;單手 = 只給右臂),槍口朝前由 gunPitch 解算;後座各手獨立。
+  // 全部 ×(1−m) —— 飛行型態手臂是收攏的機構,MUST NOT 把射姿帶上天
+  const cKL = rig._kickL || 0, cKR = rig._kickR || 0;
+  const cChg = (rig._chg || 0) * (1 - m), cHv = rig.hvy || S0;
+  if (rig.aimM) {
+    const aimF = clamp(idle + (rig._aim || 0) * (1 - m), 0, 1);
+    const A = rig.aimM;
+    const toAim = (g, t) => { if (g && t != null) g.rotation.x += (t - g.rotation.x) * aimF; };
+    toAim(rig.armR, A.shR); toAim(rig.elbowR, A.elR); toAim(rig.wristR, A.wrR);
+    toAim(rig.armL, A.shL); toAim(rig.elbowL, A.elL); toAim(rig.wristL, A.wrL);
+    rig.armR.rotation.x += (-cKR * 0.15 + cChg * (cHv.armR || 0)) * (1 - m);
+    rig.armL.rotation.x += (-cKL * 0.15 + cChg * (cHv.armL || 0)) * (1 - m);
+    gunPitch(rig.gunR, aimF, cKR * (1 - m), cChg, cHv);
+    gunPitch(rig.gunL, aimF, cKL * (1 - m), cChg, cHv);
+  }
   // 多節尾(猿猴長尾 / 獸型尾):逐節相位延遲的鞭式擺動 + 急轉時甩向轉向反側 = 配重。
   // 全部疊在 pose(m) 之上(飛行型態 a→0、L.tail 也阻尼歸零 ⇒ 尾自動拉直成尾桁)。
   // idle 微顫(比照 whipTail locomotion.js:141)不可省略:靜止時尾巴仍要有液壓微顫,
@@ -842,7 +970,8 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 驅動四肢的圓周襲步(拱背才是 gallop 的引擎);+ 地面爆發前撲/急停後坐、飛行揚翼(flare)煞停
   const archPulse = Math.sin(L.ph) * 0.22 * galF * a;
   rig.torso.rotation.x += L.pitch + archPulse
-    + (L.srg * 0.07 - L.brk * 0.08) * uprightK - L.flr * 0.06;   // 俯衝 × uprightK(水平體軸收斂);flare 屬飛行不縮
+    + (L.srg * 0.07 - L.brk * 0.08) * uprightK - L.flr * 0.06    // 俯衝 × uprightK(水平體軸收斂);flare 屬飛行不縮
+    + (cChg * (cHv.chest || 0) - Math.max(cKL, cKR) * 0.05) * (1 - m);   // 開火軀幹搖:蓄力抵肩/擊發反向 + 每發後座震
   // 悟空懸停直立(rig.hoverUp = cruise):飛行「靜止」時機體立回直立、光翼垂展身後;
   // 開始移動才連續前傾壓平到近水平的巡航姿態。頭本來以 0.15−cruise 補償前傾,
   // 直立時一併回正,否則會仰天

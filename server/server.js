@@ -432,8 +432,8 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'tracer') {
-      // 純視覺:轉播給其他客戶端畫彈道
-      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit });
+      // 純視覺:轉播給其他客戶端畫彈道;pid 供接收端驅動射手機體的開火動畫(比照 heavyCharge,伺服器附上,不信任客戶端)
+      for (const [id, c] of room.clients) if (id !== clientId) send(c.ws, { t: 'tracer', pid: clientId, from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit });
       return;
     }
     if (m.t === 'heavyCharge' && client.side) {

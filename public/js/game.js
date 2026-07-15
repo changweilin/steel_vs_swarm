@@ -15,7 +15,7 @@ import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
-import { stepLocomotion } from './locomotion.js';
+import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine } from './vfx.js';
 import { CutIn } from './cutin.js';
 
@@ -95,14 +95,9 @@ const DEF_ANCHOR = {
   wing: { x: 0.9, y: -0.22, z: -1.0, s: 1.0 },
   claw: { x: 0.42, y: -0.72, z: -1.05, s: 0.9 },
 };
-// 重武器 third-person 掛點動畫(2026-07-13):models.js 依 proto 曝光 rig.heavy.{glow,pivot},
-// 這裡只依 ent.heavyFx.phase 算出一個通用的 0(idle)→1(蓄力滿/展開)→2(擊發尖峰) 目標值,
-// 再用彈簧阻尼靠近 —— 不需要額外的 recover 計時,尖峰過後自然衰減回 0 就是「餘韻」。
-// 蓄力時長用假定常數(不精確對應各角色真實 tier 值):third-person 只是戰術情報預告,
-// 差 0.1~0.3s 不影響可讀性,換來 self/remote 共用同一套邏輯。
-const HEAVY_CHARGE_ASSUME_S = 1.05;
-const HEAVY_FIRE_HOLD_S = 0.12;
-const HEAVY_LERP_K = 10;
+// 重武器 third-person 掛點動畫(2026-07-13;2026-07-15 移居 locomotion.js stepCombatFx):
+// ent.heavyFx / ent.fireFx 事件驅動的蓄力/擊發/後座/射姿動畫全數住 stepCombatFx ——
+// 戰場(這裡)與選角展示台(charPreview)共用同一條,MUST NOT 在 game.js 另寫一份。
 /** 該機體(該型態)的輕武器掛點。電漿是口噴武器:無手仿生體的背載一律改嘴砲 */
 function gunMount(vis, kind, air, wtype) {
   let m;
@@ -2366,6 +2361,8 @@ export class BattleClient {
           const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
           beamLine(this.scene, this.effects, from, end, pcol, heavy ? { ttl: 0.26, w: 0.22 } : { ttl: 0.2, w: 0.09 });
         }
+        // 扇形武器不走 tracer 訊息 → 在此標記射手開火動畫(電漿噴湧的後座/射姿)
+        this._markFire(ev.pid, heavy ? 'heavy' : 'light', performance.now() / 1000);
       }
     } else if (ev.e === 'shot') {
       // NPC 兵團開火:同樣升級為曳光束 + 槍口/落點火花(比玩家小一號,免得刷屏)
@@ -2390,6 +2387,8 @@ export class BattleClient {
       new THREE.Vector3(m.to[0], m.to[1], m.to[2]),
       { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit },
     );
+    // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
+    this._markFire(m.pid, m.slot, performance.now() / 1000);
   }
 
   /** 重武器(rail 類)蓄力狀態:純視覺轉播(同 onTracer),驅動射手第三人稱機體的掛點動畫 —
@@ -2658,32 +2657,15 @@ export class BattleClient {
     return { dz: 0, dy: -swing * 0.22, rx: swing * 0.12 };                     // 槍械:退彈匣再扣回
   }
 
-  /** 重武器掛點動畫(third-person,自己與他人共用同一份):依 ent.heavyFx 驅動
-   *  models.js 曝光的 rig.heavy.{glow,pivot}(見 HEAVY_* 常數的設計說明)。 */
-  _applyHeavyFx(ent, now, dt) {
-    const heavy = ent.mesh?.userData?.rig?.heavy;
-    if (!heavy || (!heavy.glow.length && !heavy.pivot.length)) return;
-    const fx = ent.heavyFx;
-    let t = 0;   // 0=idle/rest,1=蓄力滿/展開,2=擊發尖峰
-    if (fx) {
-      const el = now - fx.t0;
-      if (fx.phase === 'charge') t = Math.min(1, el / HEAVY_CHARGE_ASSUME_S);
-      else if (fx.phase === 'fire') {
-        if (el <= HEAVY_FIRE_HOLD_S) t = 2;
-        else ent.heavyFx = null;   // 尖峰過後交還阻尼衰減,狀態清空
-      }
-    }
-    const k = 1 - Math.exp(-HEAVY_LERP_K * dt);
-    for (const gd of heavy.glow) {
-      const target = gd.base * (t <= 1 ? (1 + t * 1.6) : (1 + 1.6 + (t - 1) * 3));
-      gd.mesh.material.emissiveIntensity += (target - gd.mesh.material.emissiveIntensity) * k;
-    }
-    const f = Math.min(1, t);
-    for (const pd of heavy.pivot) {
-      for (const ax of ['x', 'y', 'z']) {
-        const target = pd.rest[ax] + (pd.deploy[ax] - pd.rest[ax]) * f;
-        pd.obj.rotation[ax] += (target - pd.obj.rotation[ax]) * k;
-      }
+  // (重武器掛點動畫已整併進 locomotion.js stepCombatFx —— _updateEnts 於 stepLocomotion 前呼叫)
+
+  /** 開火事件 → 射手第三人稱機體的戰鬥動畫(後座/射姿保持;stepCombatFx 以 t0 邊緣觸發)。
+   *  一個 pid 底下可能有三架(蜂群小隊)—— 全數標記,僚機齊射的視覺一致。 */
+  _markFire(pid, slot, t0) {
+    if (pid == null) return;
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== pid || ent.isSelf) continue;
+      ent.fireFx = { t0, slot: slot === 'heavy' ? 'heavy' : 'light' };
     }
   }
 
@@ -3435,6 +3417,7 @@ export class BattleClient {
         ent._snapPos = false;
         snapped = true;
         ent.loco = null;   // 重生瞬移:骨架動畫狀態歸零,不殘留舊速度
+        ent.cfx = null; ent.fireFx = null; ent.heavyFx = null;   // 戰鬥動畫狀態一併歸零
       } else {
         const k = Math.min(1, dt * 9);
         nx = cur.x + (ent.tgt.x - cur.x) * k;
@@ -3478,10 +3461,12 @@ export class BattleClient {
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);
+      // 戰鬥開火/蓄力動畫(locomotion stepCombatFx):由 fireFx/heavyFx 事件推導 rig 驅動場
+      // (射姿保持/後座脈衝/蓄力反向)+ 直接驅動掛點 glow/pivot 與槍口閃光 ——
+      // MUST 在 stepLocomotion 之前呼叫,本幀步態才吃得到驅動場
+      stepCombatFx(ent, now, dt);
       // 程序化骨架動畫:實際位移驅動步態/輪速/壓坡(locomotion.js)
       stepLocomotion(ent, dt, now, px, pz, pyaw);
-      // 重武器掛點動畫:蓄力/擊發姿態(不動 locomotion 既有的肢體鏈,獨立新節點,無所有權衝突)
-      this._applyHeavyFx(ent, now, dt);
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
       // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)

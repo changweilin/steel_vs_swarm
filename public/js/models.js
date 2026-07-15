@@ -962,6 +962,7 @@ function buildBeastMech(side, vis) {
 
   let armSh = null, armEl = null, armBase = null;   // 人馬持槍雙臂(僅 C==='centaur' 賦值)
   let humChest = null, humNeck = null;              // 人馬上身分節(腰 neck → 胸 humChest → 頸 humNeck → 頭)
+  let quadWeap = null, quadHvy = null, quadLGlow = null;   // 手持武器戰鬥動畫欄位(僅 centaur 騎士)
   if (C === 'hound') {
     // ---- 機械獵犬:修長犬軀(圓角矩形量體 —— 真獸沒有直角)+ 立耳吻部;背揹反器材長砲 ----
     rbz(spine, 1.4 * B, 1.1 * B, 2.3, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });
@@ -1029,16 +1030,40 @@ function buildBeastMech(side, vis) {
     neck.add(humChest);
     bx(humChest, 1.05 * B, 0.9, 0.7, 0, 0.23, 0, hull, { metalness: 0.6 });        // 胸廓
     bx(humChest, 0.5 * B, 0.3, 0.14, 0, 0.33, 0.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
-    // 長槍端在胸前(槍口朝 +z):據槍射姿 —— 上身跟著 rider 分節穩定,槍口恆指前方
+    // 長槍端在胸前(槍口朝 +z):據槍射姿 —— 上身跟著 rider 分節穩定,槍口恆指前方。
+    // 輕/重同型(gun×gun)→ 雙手持同一把,切換兩種模式:輕 = 消音卡賓段(整體式消音管),
+    // 重 = 反器材長管段(制退器 + 栓動大威力)。瞄準鏡/彈匣/前握把/摺疊腳架強化辨識。
     const rifle = bx(humChest, 0.14, 0.24, 3.2, 0.15 * B, -0.07, 0.75, 0x14171a, { metalness: 0.85 });
-    bx(rifle, 0.07, 0.1, 0.9, 0, 0.04, 1.85, 0x30373f, { metalness: 0.85 });
+    const supp = cyl(rifle, 0.1, 0.1, 0.85, 10, 0, 0.05, 1.0, 0x23262a, { metalness: 0.75 });
+    supp.rotation.x = Math.PI / 2;                                                 // 整體式消音管(VSS 語彙 = 輕模式)
+    const centaurLGlow = cyl(rifle, 0.11, 0.11, 0.07, 10, 0, 0.05, 0.55, accent,
+      { emissive: accent, emissiveIntensity: 0.6 });
+    centaurLGlow.rotation.x = Math.PI / 2;                                         // 消音管根部識別環(輕武器擊發閃光)
+    bx(rifle, 0.07, 0.1, 1.0, 0, 0.04, 1.95, 0x30373f, { metalness: 0.85 });       // 反器材長管(重模式)
+    bx(rifle, 0.12, 0.14, 0.3, 0, 0.04, 2.55, 0x0d0f11, { metalness: 0.85 });      // 箭形制退器
     bx(rifle, 0.09, 0.26, 0.3, 0, -0.2, -1.5, 0x23262a);                           // 槍托
-    const centaurSight = bx(rifle, 0.08, 0.07, 0.3, 0, 0.22, 0.2, accent, { emissive: accent, emissiveIntensity: 0.8 });
-    // 重武器(白頭山反器材,gun):騎槍本體即重武器載體,擊發時整槍後座
+    bx(rifle, 0.08, 0.1, 0.5, 0, 0.14, -1.2, 0x2b3138);                            // 貼腮墊
+    bx(rifle, 0.08, 0.3, 0.14, 0, -0.26, 0.35, 0x23262a, { metalness: 0.7 });      // 彈匣(下插)
+    bx(rifle, 0.07, 0.2, 0.1, 0, -0.22, 1.2, 0x2b3138);                            // 前握把(左手扶位)
+    for (const ox of [-0.08, 0.08]) {                                              // 摺疊兩腳架(收攏貼管)
+      const leg = bx(rifle, 0.03, 0.03, 0.55, ox, -0.14, 1.75, 0x30373f, { metalness: 0.8 });
+      leg.rotation.x = -0.12;
+    }
+    // 瞄準鏡:鏡筒 + 物鏡發光(既有小識別塊升級)
+    const scopeT = cyl(rifle, 0.06, 0.06, 0.55, 8, 0, 0.24, 0.15, 0x0e1114, { metalness: 0.8 });
+    scopeT.rotation.x = Math.PI / 2;
+    const centaurSight = cyl(rifle, 0.065, 0.065, 0.05, 8, 0, 0.24, 0.44, accent,
+      { emissive: accent, emissiveIntensity: 0.8 });
+    centaurSight.rotation.x = Math.PI / 2;                                         // 物鏡(重武器蓄力發光)
+    // 重武器(白頭山反器材,gun):騎槍本體即重武器載體 —— 蓄力(穩定)= 槍身下壓抵肩,
+    // 擊發 = 反向過衝上跳(stepCombatFx 通則:pivot 擊發與蓄力反向)
     heavyRig = {
       glow: [{ mesh: centaurSight, base: 0.8 }],
-      pivot: [{ obj: rifle, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.1, y: 0, z: 0 } }],
+      pivot: [{ obj: rifle, rest: { x: 0, y: 0, z: 0 }, deploy: { x: 0.07, y: 0, z: 0 } }],
     };
+    quadWeap = { light: 'B', heavy: 'B' };
+    quadHvy = { armR: 0.06, armL: 0.06, chest: 0.05 };   // brace:蓄力上身前傾抵肩、擊發後仰
+    quadLGlow = [{ mesh: centaurLGlow, base: 0.6 }];
     // 持槍雙臂(不再是垂臂):肩樞軸 → 上臂前伸下壓 → 前臂折向槍身 ——
     // 右手扣握把(槍身後段)、左手前伸托護木;雙手把長槍鎖死在胸前的備射姿勢。
     // sh/el 存進 armSh/armEl + 記下建構時的基準角(armBase),讓 stepQuad 能疊加待機微顫
@@ -1284,6 +1309,7 @@ function buildBeastMech(side, vis) {
     chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
     tents: tents.length ? tents : null,   // 持武觸手(克蘇魯):恆時緩慢蠕動的多節波
     armSh, armEl, armBase,   // 人馬持槍雙臂(僅 centaur 非 null;stepQuad rider 分支疊加待機微顫)
+    weap: quadWeap, hvy: quadHvy, lightGlow: quadLGlow,   // 開火後座/蓄力反向/槍口閃光(僅 centaur)
     humChest, humNeck,       // 人馬上身分節樞軸(僅 centaur 非 null):腰→胸→頸逐節反向吸收馬軀起伏
     hipsY0: hipY, stride: P.stride, top: P.top ?? 10,
     // 各生物專屬步態參數(見 BEAST 表):側步/小跑/觸手輪 + 體側搖擺/彈跳/俯仰幅;
@@ -1363,6 +1389,7 @@ function buildBipedBeast(side, vis) {
   const ca = (sx) => (sx < 0 ? armChainL : armChainR);
   let legL, legR, armL, armR;
   let heavyRig = { glow: [], pivot: [] };   // 重武器掛點(依生物分支填入)
+  let bpWeap = null, bpHvy = null, bpLGlow = null;   // 手持/拳砲戰鬥動畫欄位(僅 roo 賦值)
 
   if (C === 'gorilla') {
     // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿(蹠行,膝微屈)----
@@ -1646,16 +1673,22 @@ function buildBipedBeast(side, vis) {
         }
         const muz = cyl(a, 0.06, 0.06, 0.05, 6, 0, 0, 0.38, accent, { emissive: accent, emissiveIntensity: 1.2 });
         muz.rotation.x = Math.PI / 2;
-        // 重武器(熔核直拳砲,plasma):右腕拳砲本體即重武器載體
+        // 重武器(熔核直拳砲,plasma):右腕拳砲本體即重武器載體;左腕雙管 = 輕武器(步槍艙)
         if (sx > 0) {
           heavyRig = {
             glow: [{ mesh: muz, base: 1.2 }],
             pivot: [{ obj: muz, rest: { x: Math.PI / 2, y: 0, z: 0 }, deploy: { x: Math.PI / 2 - 0.25, y: 0, z: 0 } }],
           };
+        } else {
+          bpLGlow = [{ mesh: muz, base: 1.2 }];   // 左腕槍口(輕武器擊發閃光)
         }
       } },
     ], ca(sx));
     armL = mkArm(-1); armR = mkArm(1);
+    // 拳砲戰鬥動畫(punch 原型):蓄力 = 右拳大幅後收蓄勢(chg→+1)、擊發 = 直拳全幅前突(chg 翻 −1);
+    // 胸腔取負值 = 蓄力後仰蓄勢、擊發前傾灌拳(follow-through)—— 與 brace 托槍機種方向相反
+    bpWeap = { light: 'L', heavy: 'R' };
+    bpHvy = { armR: 0.8, armL: 0.15, chest: -0.12 };
     // 著地平衡尾(三節圓柱串接):袋鼠跳躍時尾是第三條腿 —— 前擺蓄力、落地尾梢先觸地卸力
     mkTail(hips, [0, -0.1, -0.3], [[0], [0, -0.65, -1.15], [0, -0.6, -0.75]]);
     const t1 = cyl(tailSegs[0], 0.27, 0.22, 1.5, 10, 0, 0, -0.7, hull);
@@ -1680,6 +1713,7 @@ function buildBipedBeast(side, vis) {
     knuckle: P.knuckle, grounded: P.grounded, tuckArms: P.tuckArms, // 指節行走/貼地跑(見 BIPED 表)
     tinyArms: P.tinyArms,   // 退化短前臂(暴龍):只做抓握狀微顫,不套用一般雙足擺臂公式
     heavy: heavyRig,
+    weap: bpWeap, hvy: bpHvy, lightGlow: bpLGlow,   // 拳砲戰鬥動畫(僅 roo;stepHop 消費)
   };
   return g;
 }
@@ -1750,6 +1784,10 @@ function buildMorphMech(side, vis) {
   const hull = PAL.main, hullDk = PAL.mid, plate = PAL.lite;
   const parts = [], vents = [], thrusters = [], flapWings = [], rotors = [], jets = [];
   let heavyRig = { glow: [], pivot: [] };   // 重武器掛點(右臂莢艙泛用;monkey 另補尾砲)
+  // 手持武器人形(輕/重異型 → 雙槍):右手輕武器、左手重武器;atlas 武裝在肩架(掛載,非手持)、
+  // monkey 掌行(手是前腳)不入列 —— 兩者維持既有莢艙/尾砲。MUST 與 stepMorph 的 aimM 消費對齊
+  const HANDGUN = G === 'vampire' || G === 'wolf';
+  let morphGunR = null, morphGunL = null, morphLMuz = null, atlasLGlow = null;
   const P = (grp, a, b, s0, s1) => { const p = { g: grp, a, b, s0, s1, t: 0 }; parts.push(p); return p; };
   const vent = (parent, w, h, d, x, y, z) => {
     const v = bx(parent, w, h, d, x, y, z, 0x1c2126, { emissive: 0xff8a3c, emissiveIntensity: 0.15 });
@@ -2259,7 +2297,81 @@ function buildMorphMech(side, vis) {
           cl.rotation.z = i * 0.12;
         }
     }
-    if (sx > 0) {                                                                       // 右臂武器莢艙
+    // 手持武器人形(vampire/wolf:輕/重異型 → 雙槍,一手一把)不再用泛用前臂莢艙 ——
+    // 武器掛在手掌群組下(隨 pose(m) 收攏:飛行型自然折臂收槍貼艙),俯仰由 gunPitch 驅動
+    if (HANDGUN) {
+      // 行軍持槍 rest 依站姿定:狼人趾行深屈 → 手位貼近地面,槍管前下傾會戳破腳底
+      // (fitToHeight 以最低點歸零 = 整機浮空)⇒ 狼人 rest 拉到近水平;吸血鬼挺立照舊前下傾
+      const restP = G === 'wolf' ? 1.62 : 1.35;
+      if (sx > 0) {
+        // ── 右手輕武器:依角色原型建模(渡鴉 M134 六管速射 / 清算日 GAU-19 電磁旋管)──
+        const gg = new THREE.Group();
+        gg.position.set(0, -0.12, 0.12);
+        gg.rotation.x = restP;                                                          // rest:行軍持槍
+        hand.add(gg);
+        morphGunR = { g: gg, rest: restP, aim: 3.02 };   // aim = 1.57 − aimM 總俯仰(−1.45)→ 槍口水平
+        bx(gg, 0.24, 0.5, 0.28, 0, 0.02, 0, 0x23262a, { metalness: 0.75 });             // 機匣
+        bx(gg, 0.12, 0.24, 0.2, 0, -0.2, -0.2, 0x14171a);                               // 握把
+        if (G === 'vampire') {
+          // M134 六管速射:環列六管 + 前後束環 + 旋轉軸轂 + 側掛供彈鏈
+          for (let i = 0; i < 6; i++) {
+            const th = i / 6 * Math.PI * 2;
+            cyl(gg, 0.035, 0.035, 1.0, 6, Math.cos(th) * 0.085, 0.8, Math.sin(th) * 0.085,
+              0x14171a, { metalness: 0.85 });
+          }
+          for (const oy of [0.5, 1.15])                                                 // 束管環
+            cyl(gg, 0.13, 0.13, 0.07, 10, 0, oy, 0, 0x30373f, { metalness: 0.8 });
+          cyl(gg, 0.1, 0.12, 0.22, 10, 0, 0.32, 0, 0x1c2126, { metalness: 0.85 });      // 旋轉軸轂
+          bx(gg, 0.1, 0.4, 0.16, sx * 0.16, 0.05, 0.1, 0x2b3138, { metalness: 0.7 });   // 供彈鏈匣
+          morphLMuz = cyl(gg, 0.12, 0.12, 0.06, 10, 0, 1.34, 0, accent,
+            { emissive: accent, emissiveIntensity: 0.7 });                               // 槍口環(擊發閃光)
+        } else {
+          // GAU-19 電磁化三管旋砲(rail):三管 + 線圈環 ×2(發光)+ 導線束
+          for (let i = 0; i < 3; i++) {
+            const th = i / 3 * Math.PI * 2;
+            cyl(gg, 0.045, 0.045, 1.05, 6, Math.cos(th) * 0.07, 0.82, Math.sin(th) * 0.07,
+              0x14171a, { metalness: 0.85 });
+          }
+          for (const oy of [0.55, 1.0])                                                 // 加速線圈環(蓄能識別)
+            cyl(gg, 0.13, 0.13, 0.09, 10, 0, oy, 0, dim(accent, 0.7),
+              { emissive: accent, emissiveIntensity: 0.5 });
+          bx(gg, 0.08, 0.5, 0.08, sx * 0.14, 0.15, -0.08, 0x23262a, { metalness: 0.8 }); // 導線束
+          morphLMuz = cyl(gg, 0.11, 0.11, 0.06, 10, 0, 1.4, 0, accent,
+            { emissive: accent, emissiveIntensity: 0.7 });
+        }
+      } else {
+        // ── 左手重武器(雙槍的另一手):渡鴉地獄火雙聯管 / 清算日追債者四聯彈匣箱 ──
+        const gg = new THREE.Group();
+        gg.position.set(0, -0.12, 0.12);
+        gg.rotation.x = restP;
+        hand.add(gg);
+        morphGunL = { g: gg, rest: restP, aim: 3.02 };
+        const cells = [];
+        if (G === 'vampire') {
+          // 地獄火雙聯發射管(半主動雷射導引):上下雙管 + 管口導引窗 + 掛軌
+          bx(gg, 0.26, 0.9, 0.3, 0, 0.35, 0, 0x23262a, { metalness: 0.7 });              // 發射器框
+          for (const oz of [-0.09, 0.09]) {
+            cyl(gg, 0.09, 0.09, 0.95, 8, 0, 0.38, oz, 0x14171a, { metalness: 0.8 });     // 發射管
+            cells.push(cyl(gg, 0.08, 0.08, 0.05, 8, 0, 0.88, oz, accent,
+              { emissive: accent, emissiveIntensity: 0.9 }));                             // 管口(蓄力/擊發發光)
+          }
+          bx(gg, 0.1, 0.7, 0.06, 0, 0.3, 0.2, 0x30373f, { metalness: 0.8 });             // 掛軌
+          bx(gg, 0.12, 0.22, 0.18, 0, -0.18, -0.18, 0x14171a);                           // 握把
+        } else {
+          // 追債者 2×2 聯裝彈箱(射後鎖定):方箱 + 四膛口 + 頂部鎖定感測條
+          bx(gg, 0.34, 0.8, 0.36, 0, 0.32, 0, 0x23262a, { metalness: 0.7 });             // 彈箱
+          for (const ox of [-0.08, 0.08]) for (const oz of [-0.08, 0.08]) {
+            cells.push(cyl(gg, 0.06, 0.06, 0.06, 8, ox, 0.74, oz, accent,
+              { emissive: accent, emissiveIntensity: 0.9 }));                             // 四膛口
+          }
+          bx(gg, 0.3, 0.1, 0.05, 0, 0.5, 0.21, dim(accent, 0.85));                       // 鎖定感測條
+          bx(gg, 0.12, 0.22, 0.18, 0, -0.18, -0.18, 0x14171a);                           // 握把
+        }
+        // pivot 留空:gg.rotation.x 由 gunPitch 每幀賦值(據槍/後座/蓄力反向都在那條),
+        // 再掛 pivot 會互相覆寫 —— 武器俯仰的唯一寫入者是 gunPitch
+        heavyRig = { glow: cells.map((mesh) => ({ mesh, base: 0.9 })), pivot: [] };
+      }
+    } else if (sx > 0 && G !== 'atlas') {                                               // 右臂武器莢艙(atlas 武裝改掛肩架)
       const pod = cyl(fore, 0.09, 0.11, 0.85, 8, 0.03, -0.35, 0.26, 0x14171a, { metalness: 0.85 });
       pod.rotation.x = Math.PI / 2;
       // 重武器泛用掛點:右臂莢艙本來就是唯一的武裝量體(多數地面型共用),補一顆膛口發光
@@ -2329,13 +2441,50 @@ function buildMorphMech(side, vis) {
     bx(torso, 0.7 * B, 1.1, 0.14, 0, 0.5, -0.62, hullDk, { metalness: 0.5 });            // 背脊整流罩(收納機首桅)
     bx(torso, 0.5 * B, 0.12, 0.15, 0, 1.1, -0.63, accent, { emissive: accent, emissiveIntensity: 0.8 });
   } else if (G === 'atlas') {
-    // 負重型:雙肩貨運掛架(轉包的貨都吊在上面)+ 腰際配重塊 = 前傾負重站姿的來源
+    // 負重型:雙肩貨運掛架(轉包的貨都吊在上面)+ 腰際配重塊 = 前傾負重站姿的來源。
+    // 武裝全數「掛載」在貨運架下(機體名就叫外包母艦 —— 手不持槍,手持圓盾=旋翼盤):
+    // 右架 = 雙聯掛載機槍(輕),左架 = 集束子母彈布撒器(重,蓄力上仰瞄準/擊發反向下沉)
     for (const sx of [-1, 1]) {
       const py = bx(torso, 0.5 * B, 0.5, 1.5, sx * 0.95 * B, 1.35, -0.35, plate, { metalness: 0.65 });
       py.rotation.z = sx * -0.12;                                                        // 掛載臂
       bx(torso, 0.34 * B, 0.7, 0.34, sx * 1.0 * B, 0.95, -0.8, hullDk);                  // 貨櫃鎖扣
       bx(torso, 0.3 * B, 0.12, 0.3, sx * 1.0 * B, 0.62, -0.8, accent,
         { emissive: accent, emissiveIntensity: 0.9 });                                   // 掛點識別燈
+      if (sx > 0) {
+        // 右架雙聯機槍莢:並列雙管 + 雙彈匣 + 槍口識別燈 ×2
+        const mg = new THREE.Group();
+        mg.position.set(sx * 0.95 * B, 1.02, 0.3);
+        torso.add(mg);
+        bx(mg, 0.36, 0.26, 0.7, 0, 0, -0.1, 0x23262a, { metalness: 0.75 });              // 共構機匣
+        atlasLGlow = [];
+        for (const ox of [-0.1, 0.1]) {
+          cyl(mg, 0.05, 0.05, 0.85, 6, ox, 0, 0.6, 0x14171a, { metalness: 0.85 })
+            .rotation.x = Math.PI / 2;                                                   // 雙管
+          const mz = cyl(mg, 0.07, 0.07, 0.05, 6, ox, 0, 1.04, accent,
+            { emissive: accent, emissiveIntensity: 0.7 });
+          mz.rotation.x = Math.PI / 2;
+          atlasLGlow.push({ mesh: mz, base: 0.7 });                                      // 槍口燈(擊發閃光)
+          bx(mg, 0.08, 0.3, 0.2, ox, -0.26, -0.05, 0x2b3138, { metalness: 0.7 });        // 彈匣
+        }
+      } else {
+        // 左架集束布撒器:方箱 + 2×3 布撒膛口(發光)+ 俯仰樞軸(蓄力上仰、擊發反向)
+        const disp = new THREE.Group();
+        disp.position.set(sx * 0.95 * B, 1.02, 0.25);
+        torso.add(disp);
+        bx(disp, 0.5, 0.4, 0.8, 0, 0, -0.05, 0x23262a, { metalness: 0.7 });              // 布撒箱
+        bx(disp, 0.46, 0.1, 0.7, 0, 0.24, -0.05, dim(accent, 0.8));                      // 頂蓋識別
+        const cells = [];
+        for (const ox of [-0.13, 0.13]) for (const oy of [-0.1, 0, 0.1]) {
+          const c = cyl(disp, 0.05, 0.05, 0.05, 8, ox, oy, 0.38, accent,
+            { emissive: accent, emissiveIntensity: 0.8 });
+          c.rotation.x = Math.PI / 2;
+          cells.push(c);                                                                  // 布撒膛口
+        }
+        heavyRig = {
+          glow: cells.map((mesh) => ({ mesh, base: 0.8 })),
+          pivot: [{ obj: disp, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.18, y: 0, z: 0 } }],
+        };
+      }
     }
   } else if (G === 'monkey') {
     // 齊天大聖(悟空):額上金箍(緊箍圈:貫穿頭殼的薄金環)+ 斜背如意金箍棒
@@ -2546,6 +2695,17 @@ function buildMorphMech(side, vis) {
     midLegs, midKnees, midTarsi,                 // 犀金龜中足對(tripod 第三組)
     trunk, trunkTip,                             // 機械巨象象鼻(僅 elephant 非 null)
     heavy: heavyRig,
+    // 手持武器戰鬥動畫(stepMorph 消費):aimM = 地面型據槍角(肩/肘/腕絕對角,雙槍給雙臂);
+    // gunR/gunL 武器俯仰(行軍 rest ↔ 據槍水平 aim);weap 持手分邊;hvy 蓄力/擊發帶符號幅度
+    aimM: HANDGUN
+      ? { shR: -0.75, shL: -0.75, elR: -0.6, elL: -0.6, wrR: -0.1, wrL: -0.1 }
+      : null,
+    gunR: morphGunR, gunL: morphGunL,
+    weap: HANDGUN ? { light: 'R', heavy: 'L' }
+      : G === 'atlas' ? { light: 'N', heavy: 'N' } : null,
+    hvy: HANDGUN ? { armR: 0.15, armL: 0.25, chest: 0.06, gun: 0.06 }
+      : G === 'atlas' ? { chest: 0.05 } : null,
+    lightGlow: morphLMuz ? [{ mesh: morphLMuz, base: 0.7 }] : atlasLGlow,
   };
   return g;
 }
@@ -2617,10 +2777,19 @@ function buildRobotMech(side, vis) {
   let hipY, legL, legR, armL, armR, gait;
   // 重武器掛點(依 proto 分支填入):glow = 蓄力/擊發發光驅動,pivot = 蓄力/擊發姿態驅動(rest→deploy)
   let heavyRig = { glow: [], pivot: [] };
-  // 雙手持槍姿(bastion/seraph 手持長兵器才填):locomotion 依「靜止度」把手臂混成標準射擊姿勢
-  // —— 停止(交戰)= 雙手托槍,移動 = 交還步態擺臂(單手持)。角度慣例:肩/肘 rotation.x,
-  //    負 x = 手臂朝機體正面(+z)抬起;lShoulderY 正 = 左臂朝中線內收扶護木。
+  // 手持武器射擊姿勢(locomotion 依「靜止度 + 開火保持」把手臂混成標準射擊姿勢):
+  // —— 停止(交戰)或開火中 = 據槍(雙手托一把 / 雙槍 / 單手槍,由欄位有無決定),
+  //    移動未開火 = 交還步態擺臂(行軍持槍)。角度慣例:肩/肘 rotation.x,
+  //    負 x = 手臂朝機體正面(+z)抬起;lShoulderY 正 = 左臂朝中線內收扶護木;
+  //    不給左臂欄位 = 單手槍,左臂交還步態(自由)。
   let aimPose = null;
+  // 手持武器戰鬥動畫欄位(locomotion stepCombatFx / gunPitch 消費):
+  //   weap  = { light:'L'|'R'|'B'|'N', heavy:… } 輕/重武器持手(後座脈衝分邊;'N' = 機載無臂後座)
+  //   hvy   = { armR, armL, chest, gun } 蓄力/擊發帶符號幅度(brace 正 = 蓄力托壓/擊發上跳)
+  //   gunR/gunL = { g, rest, aim } 武器俯仰群組:行軍持槍角 rest ↔ 據槍水平角 aim
+  //     (aim MUST = 1.57 − 手臂射姿總俯仰 —— 據槍時槍口朝前,不是朝天)
+  //   lightGlow = [{ mesh, base }] 輕武器槍口識別燈(開火閃光)
+  let weap = null, hvy = null, gunR = null, gunL = null, lightGlow = null;
 
   if (PR === 'bastion') {
     // ---- 過裝甲重拳:所有量體堆在外層裝甲上,關節是縮在裡面的細軸 ----
@@ -2655,6 +2824,7 @@ function buildRobotMech(side, vis) {
     bx(chest, 1.4, 0.9, 0.6, 0, 1.75, -0.7, armorDk);                             // 背部散熱堆
     // 圓弧巨肩(球體 = 動畫感的過裝甲肩)
     let bastionMuzzle = null;   // 右手斧砲的膛口(重武器擊發強閃),手部建構時填入
+    let bastionLMuz = null;     // 左手重機槍槍口識別燈(輕武器擊發閃光)
     const mkArm = (sx) => segLimb(chest, [sx * 1.2, 1.38, 0], [
       { len: 0.72, draw: (a) => {
         const pad = new THREE.Mesh(new THREE.SphereGeometry(0.68, 12, 9), mat(armor, { metalness: 0.6 }));
@@ -2672,12 +2842,15 @@ function buildRobotMech(side, vis) {
         bx(a, 0.5, 0.44, 0.5, 0, -0.24, 0.04, dark);                              // 巨拳
         if (sx > 0) {
           // ── 斧砲(結合斧頭 + 152mm 榴彈砲):粗短榴彈砲管 + 轉輪彈倉 + 前段側掛大斧刃 ──
-          // 平舉朝前(gl-local +y = 前方,略上揚讓開巨肩);雙手托砲時砲管落在正面。
+          // gl-local +y = 前方;俯仰由 locomotion gunPitch 動態驅動(行軍上揚 ↔ 據槍水平)。
           const gl = new THREE.Group();
           gl.position.set(sx * 0.3, -0.26, 0.36);
-          gl.rotation.set(1.36, 0, sx * 0.14);   // 平舉略上揚,微外撇避開胸口
+          gl.rotation.set(1.36, 0, sx * 0.14);   // rest:行軍持砲略上揚,微外撇避開胸口
           a.add(gl);
+          gunR = { g: gl, rest: 1.36, aim: 2.87 };   // aim = 1.57 − (rShoulderX + rElbowX) → 據槍砲口水平朝前
           bx(gl, 0.56, 0.78, 0.56, 0, 0.12, 0, armorDk, { metalness: 0.7 });       // 後膛托(握把段)
+          bx(gl, 0.2, 0.34, 0.3, 0, -0.28, -0.3, dark, { metalness: 0.7 });        // 手槍握把 + 護圈
+          bx(gl, 0.05, 0.2, 0.26, 0, -0.14, -0.46, 0x14171a);
           const drum = cyl(gl, 0.44, 0.44, 0.5, 10, 0, 0.72, 0.12, armor, { metalness: 0.65 });
           drum.rotation.x = Math.PI / 2;                                            // 轉輪彈倉(榴彈鼓)
           for (let i = 0; i < 6; i++) {                                             // 鼓上榴彈膛
@@ -2686,6 +2859,10 @@ function buildRobotMech(side, vis) {
               .rotation.x = Math.PI / 2;
           }
           cyl(gl, 0.24, 0.28, 2.5, 10, 0, 1.9, 0, 0x1a1d20, { metalness: 0.82 });  // 榴彈砲主管(粗短)
+          for (const oy of [1.1, 1.7])                                              // 砲管加強環
+            cyl(gl, 0.31, 0.31, 0.12, 10, 0, oy, 0, armorDk, { metalness: 0.75 });
+          for (const ox of [-0.3, 0.3])                                             // 駐退復進機(雙筒)
+            cyl(gl, 0.09, 0.09, 1.3, 6, ox, 1.0, -0.12, 0x23262a, { metalness: 0.8 });
           cyl(gl, 0.34, 0.34, 0.5, 10, 0, 3.05, 0, 0x0d0f11, { metalness: 0.85 }); // 槍口制退器
           bastionMuzzle = cyl(gl, 0.3, 0.3, 0.16, 10, 0, 3.32, 0, accent,
             { emissive: accent, emissiveIntensity: 0.3 });                          // 膛口(擊發強閃)
@@ -2696,6 +2873,25 @@ function buildRobotMech(side, vis) {
           bx(axe, 0.16, 1.7, 1.5, sx * 0.34, 0, 0.28, armorDk, { metalness: 0.72 });   // 斧刃主面
           bx(axe, 0.1, 1.9, 0.5, sx * 0.52, 0, 0.72, dim(accent, 0.95));               // 斧刃前緣識別
           bx(axe, 0.14, 0.9, 0.5, sx * 0.3, 0, -0.5, dark, { metalness: 0.7 });        // 斧背反刃(鉤)
+        } else {
+          // ── 左手 12.7 同軸重機槍(Kord 式,輕武器):輕/重異型 → 雙槍 —— 左手輕武器與
+          // 右手斧砲成對舉槍(dual-wield 射姿);散熱套筒 + 彈鏈箱 + 提把 + 制退器。
+          const gl = new THREE.Group();
+          gl.position.set(sx * 0.3, -0.26, 0.36);
+          gl.rotation.set(1.36, 0, sx * 0.14);
+          a.add(gl);
+          gunL = { g: gl, rest: 1.36, aim: 2.87 };
+          bx(gl, 0.34, 0.62, 0.4, 0, 0.1, 0, armorDk, { metalness: 0.7 });          // 機匣
+          bx(gl, 0.16, 0.3, 0.26, 0, -0.24, -0.26, dark, { metalness: 0.7 });       // 握把
+          cyl(gl, 0.13, 0.13, 1.7, 8, 0, 1.25, 0, 0x1a1d20, { metalness: 0.82 });   // 槍管
+          for (const oy of [0.7, 1.0, 1.3, 1.6])                                    // 散熱套筒環(Kord 識別)
+            cyl(gl, 0.17, 0.17, 0.09, 8, 0, oy, 0, 0x23262a, { metalness: 0.78 });
+          bx(gl, 0.3, 0.34, 0.06, 0, 2.2, 0, 0x0d0f11, { metalness: 0.85 });        // 平板制退器(橫翼)
+          bastionLMuz = cyl(gl, 0.1, 0.1, 0.1, 8, 0, 2.28, 0, accent,
+            { emissive: accent, emissiveIntensity: 0.8 });                           // 槍口識別燈(擊發閃光)
+          bx(gl, 0.4, 0.5, 0.34, sx * 0.32, 0.16, 0.02, armor, { metalness: 0.6 }); // 彈鏈箱(外側掛)
+          bx(gl, 0.34, 0.1, 0.3, sx * 0.32, 0.44, 0.02, dim(accent, 0.8));          // 彈箱蓋識別
+          bx(gl, 0.08, 0.5, 0.12, 0, 0.35, -0.3, 0x23262a, { metalness: 0.7 });     // 提把
         }
       } },
     ], sx < 0 ? armChainL : armChainR);
@@ -2711,11 +2907,15 @@ function buildRobotMech(side, vis) {
       ant.rotation.z = sx * 0.18;
       bx(chest, 0.13, 0.13, 0.13, sx * 0.62, 2.74, -0.85, accent, { emissive: accent, emissiveIntensity: 1.2 });
     }
-    // 重武器(152mm 榴彈砲)已整合進右手斧砲 —— 擊發表現靠膛口強閃 + 雙手托砲的射擊姿勢,
+    // 重武器(152mm 榴彈砲)已整合進右手斧砲 —— 擊發表現靠膛口強閃 + 據槍射姿 + 蓄力反向後座,
     // 不再另掛背部砲管(避免斧砲 + 背砲兩門榴彈砲的冗餘)。
     heavyRig = { glow: [{ mesh: bastionMuzzle, base: 0.3 }], pivot: [] };
-    // 雙手托斧砲姿(標準射擊):右肩抬起端平砲身、左臂前伸內收扶砲身前段。粗短臂 → 左臂內收角較大。
-    aimPose = { rShoulderX: -0.72, rElbowX: -0.5, lShoulderX: -1.0, lShoulderY: 0.75, lElbowX: -1.05 };
+    // 雙槍射姿(輕 gun × 重 launcher 異型 → 一手一把):左右對稱平舉 —— 左手重機槍、右手斧砲
+    // 同時指向正面;槍口朝前由 gunR/gunL 的 aim 角解算(1.57 − 1.30 → 2.87)。
+    aimPose = { rShoulderX: -0.78, rElbowX: -0.52, lShoulderX: -0.78, lShoulderY: 0, lElbowX: -0.52 };
+    weap = { light: 'L', heavy: 'R' };
+    hvy = { armR: 0.22, armL: 0.1, chest: 0.07, gun: 0.06 };   // brace:擊發砲口上跳、胸腔後仰
+    lightGlow = [{ mesh: bastionLMuz, base: 0.8 }];
 
   } else if (PR === 'seraph') {
     // ---- 倒三角上胸:寬肩窄腰、細長四肢、關節外露肌腱缸(生體感) ----
@@ -2777,6 +2977,7 @@ function buildRobotMech(side, vis) {
     bx(chest, 0.44, 0.44, 0.24, 0, 1.62, 0.52, accent, { emissive: accent, emissiveIntensity: 1.3 });  // 核心
     bx(chest, 0.7, 0.6, 0.5, 0, 2.1, -0.55, armorDk);                             // 背部連接埠
     let lanceCore = null;   // 同步狙擊砲的軌間電漿(重武器蓄力發光,右臂建構時填入)
+    let lanceSub = null;    // 下掛高斯衝鋒模組的副槍口(輕武器模式擊發閃光)
     // 雙肩 = 倒三角的兩個上端點(肩線橫樑末端)。手臂加長(使用者指示):細長四肢再拉長,
     // 上臂/前臂各 +0.35,好讓雙手托住比機體略高的長狙擊砲(標準射擊姿勢)。
     const mkArm = (sx) => segLimb(chest, [sx * 1.25, 2.28, 0], [
@@ -2794,12 +2995,26 @@ function buildRobotMech(side, vis) {
         bx(a, 0.24, 0.28, 0.3, 0, -0.14, 0.02, dark);                             // 掌
         if (sx > 0) {
           // ── 同步狙擊砲(反器材長狙):比機體略高的加速砲身 + 前端刺槍(bayonet)──
-          // 平舉朝前(lance-local +y = 前方);雙軌加速器 + 中央電漿芯 + 光學鏡 + 後膛托 + 前刺。
+          // 輕/重同型(rail×rail)→ 雙手托同一把,切換兩種模式:重 = 主砲身蓄力極速直擊,
+          // 輕 = 下掛高斯衝鋒模組(短線圈速射)。lance-local +y = 前方;
+          // 俯仰由 gunPitch 動態驅動(行軍上揚 ↔ 據槍水平)。
           const lance = new THREE.Group();
           lance.position.set(sx * 0.14, -0.2, 0.22);
-          lance.rotation.x = 1.52;                                                 // 平舉朝前
+          lance.rotation.x = 1.52;                                                 // rest:行軍持槍
           a.add(lance);
+          gunR = { g: lance, rest: 1.52, aim: 2.74 };   // aim = 1.57 − (−0.62 − 0.55) → 據槍砲口水平
           bx(lance, 0.5, 0.9, 0.42, 0, 0.15, 0, armorDk, { metalness: 0.72 });    // 後膛托(握把段)
+          bx(lance, 0.14, 0.4, 0.3, 0, 0.05, 0.34, dark, { metalness: 0.7 });     // 主握把(扳機組)
+          bx(lance, 0.4, 0.24, 0.1, 0, -0.35, 0.05, armor, { metalness: 0.7 });   // 槍托肩墊
+          // 下掛高斯衝鋒模組(輕武器模式):短線圈套筒 ×3 + 彈匣 + 前握把 + 副槍口(擊發閃光)。
+          // lance-local +z = 據槍時的正下方(rotation.x 帶著整把轉,模組恆在主砲身下側)
+          for (let i = 0; i < 3; i++)
+            cyl(lance, 0.11, 0.11, 0.16, 8, 0, 1.05 + i * 0.28, 0.3, 0x23262a, { metalness: 0.8 });  // 線圈套筒
+          cyl(lance, 0.07, 0.07, 1.1, 6, 0, 1.3, 0.3, 0x14171a, { metalness: 0.85 });   // 副槍管
+          lanceSub = cyl(lance, 0.08, 0.08, 0.08, 6, 0, 1.88, 0.3, accent,
+            { emissive: accent, emissiveIntensity: 0.7 });                          // 副槍口識別燈
+          bx(lance, 0.1, 0.34, 0.24, 0, 0.72, 0.42, dark, { metalness: 0.7 });     // 彈匣(下插)
+          bx(lance, 0.09, 0.2, 0.3, 0, 2.3, 0.28, 0x23262a, { metalness: 0.7 });   // 前握把(左手扶位)
           cyl(lance, 0.17, 0.2, 5.6, 10, 0, 3.0, 0, 0x1a1d20, { metalness: 0.85 });  // 主砲身(加長)
           for (const o of [-0.17, 0.17])
             cyl(lance, 0.07, 0.07, 5.2, 6, o, 3.0, 0.02, 0x14171a, { metalness: 0.85 });  // 雙軌加速器
@@ -2826,8 +3041,12 @@ function buildRobotMech(side, vis) {
       ],
       pivot: binderPivots,
     };
-    // 雙手托長狙姿(標準射擊):右肩抬起端平砲身、左臂前伸內收扶前護木
-    aimPose = { rShoulderX: -0.62, rElbowX: -0.55, lShoulderX: -0.95, lShoulderY: 0.62, lElbowX: -1.15 };
+    // 雙手托長狙姿(標準射擊):右肩抬起端平砲身、左臂前伸內收扶前握把;
+    // 據槍時砲身由 gunPitch 轉到水平(槍口朝前),左手角度配合水平砲身的前握把位置
+    aimPose = { rShoulderX: -0.62, rElbowX: -0.55, lShoulderX: -0.9, lShoulderY: 0.55, lElbowX: -0.55 };
+    weap = { light: 'B', heavy: 'B' };   // 同一把雙手持:輕/重開火雙臂一起後座
+    hvy = { armR: 0.14, armL: 0.14, chest: 0.06, gun: 0.06 };   // brace:蓄力抵肩下壓、擊發上跳後仰
+    lightGlow = [{ mesh: lanceSub, base: 0.7 }];
     // 頭:單角 + 單眼掃描條(細長頸,自肩線橫樑中央探出 —— EVA 的小頭窄臉)
     head.position.set(0, 2.72, 0.06);
     sinew(head, 0.5, 0, -0.28, 0);
@@ -2877,6 +3096,7 @@ function buildRobotMech(side, vis) {
           { emissive: accent, emissiveIntensity: 1.0 }));                          // 發射管口
     }
     heavyRig = { glow: vlsCells.map((mesh) => ({ mesh, base: 1.0 })), pivot: [] };
+    let aegisMuz = null;   // 右前臂速射砲砲口(輕武器擊發閃光),手臂建構時填入
     const mkArm = (sx) => segLimb(chest, [sx * 0.98, 1.7, 0], [
       { len: 0.78, draw: (a) => {
         bx(a, 0.62, 0.48, 0.66, 0, 0.1, 0, armorDk, { metalness: 0.6 });          // 肩甲
@@ -2885,11 +3105,21 @@ function buildRobotMech(side, vis) {
       { len: 0.9, base: -0.35, k: -0.5, d: 0.32, draw: (a) => {
         bx(a, 0.42, 0.85, 0.46, 0, -0.42, 0.02, armor, { metalness: 0.6 });       // 前臂
         if (sx > 0) {
-          // 右前臂 = 30mm 速射砲(砲身沿前臂前伸)
-          const gun = cyl(a, 0.13, 0.15, 1.9, 8, 0, -0.5, 0.7, 0x1a1d20, { metalness: 0.85 });
-          gun.rotation.x = Math.PI / 2;
-          cyl(a, 0.16, 0.16, 0.12, 8, 0, -0.5, 1.66, accent, { emissive: accent, emissiveIntensity: 1.0 })
-            .rotation.x = Math.PI / 2;
+          // 右前臂 = 30mm 速射砲(2A42 式):砲身掛在俯仰群組上 —— 舉臂射姿時 gunPitch
+          // 反向補償手臂俯仰,砲口恆水平朝前;護筒 + 制退器 + 供彈滑槽強化辨識
+          const gg = new THREE.Group();
+          gg.position.set(0, -0.5, 0.15);
+          a.add(gg);
+          gunR = { g: gg, rest: 0.25, aim: 0.85 };   // +z 砲管:rest/aim = 抵銷臂俯仰(−0.25 / −0.85)
+          cyl(gg, 0.13, 0.15, 1.9, 8, 0, 0, 0.55, 0x1a1d20, { metalness: 0.85 })
+            .rotation.x = Math.PI / 2;                                              // 主砲身
+          cyl(gg, 0.18, 0.18, 0.7, 8, 0, 0, 0.35, armorDk, { metalness: 0.7 })
+            .rotation.x = Math.PI / 2;                                              // 砲身護筒
+          bx(gg, 0.22, 0.22, 0.3, 0, 0, 1.42, 0x0d0f11, { metalness: 0.85 });      // 多孔制退器
+          aegisMuz = cyl(gg, 0.16, 0.16, 0.12, 8, 0, 0, 1.6, accent,
+            { emissive: accent, emissiveIntensity: 1.0 });
+          aegisMuz.rotation.x = Math.PI / 2;                                        // 砲口識別燈(擊發閃光)
+          bx(gg, 0.14, 0.1, 0.6, 0, 0.16, -0.1, 0x23262a, { metalness: 0.7 });     // 供彈滑槽(連向供彈箱)
           bx(a, 0.3, 0.34, 0.4, 0, -0.2, -0.32, armorDk);                          // 供彈箱
         } else {
           // 左前臂 = 方形塔盾(盾面外掛;邊框 + 主色十字肋)
@@ -2909,6 +3139,12 @@ function buildRobotMech(side, vis) {
       } },
     ], sx < 0 ? armChainL : armChainR);
     armL = mkArm(-1); armR = mkArm(1);
+    // 攔截機射姿(前臂固定砲,非手持 → 只舉右砲臂;左臂欄位不給 = 塔盾照常守位/擺動):
+    // 舉臂幅度刻意小(−0.5),砲口水平交給 gunPitch 的 rest/aim 反向補償
+    aimPose = { rShoulderX: -0.5, rElbowX: -0.35 };
+    weap = { light: 'R', heavy: 'N' };   // 重武器 = 雙肩 VLS(機載,無臂後座)
+    hvy = { chest: 0.05 };               // 攔截彈齊射:胸腔輕微後仰
+    lightGlow = [{ mesh: aegisMuz, base: 1.0 }];
     // 頭:雙感測窗 + 側耳雷達
     head.position.set(0, 2.15, 0.06);
     bx(head, 0.5, 0.42, 0.52, 0, 0.08, 0, armorDk, { metalness: 0.6 });
@@ -2961,6 +3197,7 @@ function buildRobotMech(side, vis) {
     for (let i = 0; i < 3; i++)                                                      // 胸口紋章(縱列光點)
       cyl(chest, 0.07, 0.07, 0.1, 8, 0, 1.88 - i * 0.34, 0.58, accent, { emissive: accent, emissiveIntensity: 1.2 })
         .rotation.x = Math.PI / 2;
+    let colMuz = null;   // 右手掃描脈衝槍槍口光核(輕武器擊發閃光),手臂建構時填入
     const mkArm = (sx) => segLimb(chest, [sx * 0.92, 2.0, -0.05], [
       { len: 1.2, draw: (a) => {
         const dome = new THREE.Mesh(new THREE.SphereGeometry(0.44, 12, 9), mat(armor, { metalness: 0.6 }));
@@ -2976,8 +3213,27 @@ function buildRobotMech(side, vis) {
           const fg = rslab(a, 0.13, 0.56, 0.16, i * 0.14, -0.28, 0.03, dark);
           fg.rotation.z = i * 0.1;                                                   // 三指(圓角長指)
         }
-        if (sx > 0) cyl(a, 0.08, 0.08, 0.14, 8, 0, -0.3, 0.16, accent,
-          { emissive: accent, emissiveIntensity: 1.0 }).rotation.x = Math.PI / 2;    // 右掌心測向器
+        if (sx > 0) {
+          cyl(a, 0.08, 0.08, 0.14, 8, 0, -0.3, 0.16, accent,
+            { emissive: accent, emissiveIntensity: 1.0 }).rotation.x = Math.PI / 2;  // 右掌心測向器
+          // ── 右手掃描脈衝槍(輕武器,單手持):圓角矩形機匣(與巨兵語彙一致)+ 圓柱射束器
+          // + 聚焦環 ×2 + 槍口光核 —— 重武器仍是眉心標定脈衝砲(機體固定,不入手)
+          const gg = new THREE.Group();
+          gg.position.set(0, -0.34, 0.14);
+          gg.rotation.x = 1.4;                                                       // rest:行軍持槍
+          a.add(gg);
+          gunR = { g: gg, rest: 1.4, aim: 3.02 };   // aim = 1.57 − (−0.8 − 0.35 − 0.22 − 0.08)
+          rslab(gg, 0.3, 0.8, 0.26, 0, 0.3, 0, armor).rotation.x = Math.PI / 2;      // 圓角機匣(橫置)
+          rslab(gg, 0.16, 0.34, 0.16, 0, -0.1, -0.2, armorDk).rotation.x = Math.PI / 2;  // 握把
+          cyl(gg, 0.09, 0.11, 0.9, 10, 0, 0.95, 0, 0x1a1d20, { metalness: 0.8 });    // 射束器管
+          for (const oy of [0.75, 1.1])
+            cyl(gg, 0.15, 0.15, 0.08, 10, 0, oy, 0, joint, { metalness: 0.8 });      // 聚焦環
+          colMuz = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8),
+            mat(accent, { emissive: accent, emissiveIntensity: 1.0 }));
+          colMuz.position.set(0, 1.44, 0);
+          gg.add(colMuz);                                                             // 槍口光核(擊發閃光)
+          rslab(gg, 0.1, 0.3, 0.1, 0, 0.55, -0.2, dim(accent, 0.8));                  // 頂部圓角照門
+        }
       } },
     ], sx < 0 ? armChainL : armChainR);
     armL = mkArm(-1); armR = mkArm(1);
@@ -2999,6 +3255,11 @@ function buildRobotMech(side, vis) {
     // 重武器(標定脈衝砲):不新增背部/肩部掛件(設計意圖:巨兵背後乾淨)——
     // 蓄力/擊發全靠眉心射口本身的發光強度變化表現。
     heavyRig = { glow: [{ mesh: browCannon, base: 1.4 }], pivot: [] };
+    // 單手槍射姿(輕武器手持、重武器機體固定 → 只舉右臂;左臂自由交還步態)
+    aimPose = { rShoulderX: -0.8, rElbowX: -0.35 };
+    weap = { light: 'R', heavy: 'N' };
+    hvy = { chest: 0.04 };   // 眉心砲擊發:軀幹輕微後仰
+    lightGlow = [{ mesh: colMuz, base: 1.0 }];
   }
 
   // 角色掛件(胸燈已自帶 → trim:false;座標以真實尺寸錨定)
@@ -3012,6 +3273,7 @@ function buildRobotMech(side, vis) {
     stride: gait.stride, bob: gait.bob, sway: gait.sway, top: gait.top,
     legBase: gait.legBase || 0, armBase: gait.armBase || 0,
     heavy: heavyRig, aimPose,
+    weap, hvy, gunR, gunL, lightGlow,   // 手持武器戰鬥動畫(見上方欄位說明)
   };
   return g;
 }
