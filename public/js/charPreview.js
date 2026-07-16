@@ -228,17 +228,20 @@ export class CharPreview {
     if (heavy) this._ent.heavyFx = { phase: 'fire', t0 };
   }
 
-  /** 槍口世界座標(概略:機體正前方、腰高;機體一律面朝 +z) */
-  _muzzle() {
+  /** 槍口世界座標(slot 'light'|'heavy'):優先讀 rig.muzzles 錨(models.js 各 builder
+   *  登記的實際槍口)—— 光束/焰舌從手上/背上的槍管射出;查無錨退回概略點(機體正前腰高) */
+  _muzzle(slot = 'light') {
+    const mz = this.unit?.userData?.rig?.muzzles?.[slot];
+    // 變形機甲飛行型武器收攏(錨指地面型槍口)、後向 fxOnly 錨(蜂后螫針)→ 退回概略點,與戰場同語意
+    if (mz?.n && !mz.fxOnly && !(this.morphM > 0.4)) return mz.n.getWorldPosition(new THREE.Vector3());
     const v = new THREE.Vector3(0, this.targetY * 1.15, this.size.z * 0.55);
     return this.holder.localToWorld(v);
   }
 
-  /** 槍口射向(世界座標;機體面朝 +z) */
+  /** 槍口射向(世界座標;機體面朝 +z —— 取 holder 前向,與槍口錨位置無關) */
   _fwd() {
-    const m = this._muzzle();
-    return this.holder.localToWorld(new THREE.Vector3(0, this.targetY * 1.15, this.size.z * 0.55 + 1))
-      .sub(m).normalize();
+    const a = this.holder.localToWorld(new THREE.Vector3(0, 0, 0));
+    return this.holder.localToWorld(new THREE.Vector3(0, 0, 1)).sub(a).normalize();
   }
 
   /**
@@ -249,7 +252,7 @@ export class CharPreview {
   _stepHeavy(A, R) {
     const w = A.w;
     const hue = CHARACTERS[this.charId]?.visual?.hue ?? 0xffd27a;
-    const m = this._muzzle();
+    const m = this._muzzle('heavy');
     const fwd = this._fwd();
     const up = new THREE.Vector3(0, 1, 0);
 

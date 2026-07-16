@@ -2462,7 +2462,9 @@ export class BattleClient {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {
         const fx = ev.x, fz = -ev.z;
-        const from = new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + (ev.y || 0) + 2, fz);
+        // 起點優先解析射手機體的 rig 槍口錨(嘴砲/噴口);退路才用 ent 座標 + 高度概略
+        const from = this._entMuzzle(ev.pid, ev.slot !== 'light' ? 'heavy' : 'light',
+          new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + (ev.y || 0) + 2, fz));
         const dir3 = new THREE.Vector3(ev.dx, 0, -ev.dz).normalize();
         const arc = (ev.arc || 15) * Math.PI / 180;
         const up = new THREE.Vector3(0, 1, 0);
@@ -2495,8 +2497,11 @@ export class BattleClient {
 
   onTracer(m) {
     // 他人開火視覺:槍口爆 + 發光曳光束 +(命中點)火花。重武器(slot:'heavy')明顯放大。
+    // 起點解析成射手機體的 rig 槍口錨(找不到才用訊息座標)—— 曳光從對方手上/背上的槍管射出
+    const from = this._entMuzzle(m.pid, m.slot,
+      new THREE.Vector3(m.from[0], m.from[1], m.from[2]));
     this._shotFx(
-      new THREE.Vector3(m.from[0], m.from[1], m.from[2]),
+      from,
       new THREE.Vector3(m.to[0], m.to[1], m.to[2]),
       { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit },
     );
@@ -2771,6 +2776,25 @@ export class BattleClient {
   }
 
   // (重武器掛點動畫已整併進 locomotion.js stepCombatFx —— _updateEnts 於 stepLocomotion 前呼叫)
+
+  /** 第三人稱槍口世界座標:依 pid 找機體 rig.muzzles 錨(models.js 各 builder 登記),
+   *  曳光/槍口爆從機體實際槍管射出,不再用射手 FPV 座標(機體越大偏差越大)。
+   *  找不到錨(NPC/舊模型)、自己(FPV 已畫)、變形機甲飛行型(武器收攏,錨指地面型槍口)
+   *  一律退回訊息座標;三機小隊取離訊息座標最近那架(訊息只描述開火的那一架)。 */
+  _entMuzzle(pid, slot, fallback) {
+    if (pid == null) return fallback;
+    let best = null, bd = Infinity;
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== pid || ent.isSelf) continue;
+      const mz = ent.mesh?.userData?.rig?.muzzles?.[slot === 'heavy' ? 'heavy' : 'light'];
+      if (!mz?.n || mz.fxOnly) continue;   // fxOnly = 只掛槍口焰的後向錨(蜂后螫針),曳光不從它出
+      if (ent.kind === 'morph' && ent.heroY > 1.2) continue;   // 飛行/變形過渡:武器收攏貼艙(門檻對齊 stepMorph)
+      const d = ent.mesh.position.distanceToSquared(fallback);
+      if (d < bd) { bd = d; best = mz.n; }
+    }
+    if (!best) return fallback;
+    return best.getWorldPosition(new THREE.Vector3());
+  }
 
   /** 開火事件 → 射手第三人稱機體的戰鬥動畫(後座/射姿保持;stepCombatFx 以 t0 邊緣觸發)。
    *  一個 pid 底下可能有三架(蜂群小隊)—— 全數標記,僚機齊射的視覺一致。 */
