@@ -1059,14 +1059,14 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
-  $('hudHelp').innerHTML = app.mySide
+  $('pauseHelp').innerHTML = app.mySide
     ? (heroKind === 'drone'
       ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆(僚機衝向鎖定目標) ・ V 或 1~3 切換主視野 ・ R 填彈 ・ B 升級 ・ 三機齊射才是完整火力,別讓僚機掉隊!'
       : heroKind === 'morph'
       ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤,右下角回傳畫面) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
-  $('hudHelp').innerHTML += ' ・ ESC 戰場選單/離開';
+  $('pauseHelp').innerHTML += ' ・ ESC 戰場選單/離開';
   toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
 }
 

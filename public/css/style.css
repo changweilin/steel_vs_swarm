@@ -425,10 +425,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .hud-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; pointer-events: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.hud-self { display: flex; flex-direction: column; gap: 5px; min-width: 300px; }
+.hud-self { display: flex; flex-direction: column; gap: 4px; min-width: 240px; max-width: 260px; }
 .hud-side {
   font-family: var(--serif); font-size: 12px; letter-spacing: 4px; font-weight: 900;
   padding: 2px 8px; align-self: flex-start;
@@ -436,7 +436,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 body[data-side="SWARM"] .hud-side { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 /* 條類一律硬邊 + 內部格柵 */
-.hpbar { position: relative; height: 18px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.hpbar { position: relative; height: 14px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .hpbar-fill {
   height: 100%;
   background: repeating-linear-gradient(90deg, #6fae3e 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
@@ -483,7 +483,11 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .shop-info { font-size: 13px; }
 .shop-item-note { color: var(--dim); font-size: 10px; font-family: var(--mono); }
 .shop-note { color: var(--dim); font-size: 10px; line-height: 1.7; border-left: 2px solid var(--line); padding-left: 8px; }
-.hud-help { flex: 1; text-align: center; color: #78868f; font-size: 11px; letter-spacing: 2px; font-family: var(--mono); }
+/* HUD 收斂(2026-07-16):只留機體數據 + 小地圖;操作說明移駐 ESC 戰場選單 */
+.pause-help {
+  color: var(--dim); font-size: 11px; line-height: 1.9; font-family: var(--mono); letter-spacing: 1px;
+  text-align: left; border-left: 2px solid var(--line); padding-left: 10px;
+}
 #minimap {
   border: 1px solid var(--railS); border-radius: 0;
   background: rgba(4, 7, 10, 0.92); pointer-events: none;
@@ -859,7 +863,7 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .slot-char.dim { color: var(--dim); }
 
 /* 護盾 / 電力條(與 .hpbar 同族) */
-.spbar { position: relative; height: 12px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.spbar { position: relative; height: 10px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .spbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #2f8fb8 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
@@ -868,7 +872,7 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 9px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
-.mpbar { position: relative; height: 10px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.mpbar { position: relative; height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
 .mpbar-fill {
   height: 100%; background: repeating-linear-gradient(90deg, #7d55c7 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);

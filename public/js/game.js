@@ -693,13 +693,14 @@ export class BattleClient {
       dragon: { hz: 0.9, amp: 0.26, len: 1.45, chord: 0.85, opacity: 0.78, pairs: 1 },
       eagle: { hz: 1.3, amp: 0.28, len: 1.30, chord: 0.55, opacity: 1, pairs: 1, feather: true },
     }[C];
-    // 翼根必須落在視錐內才看得見:z=-0.3 處畫面半寬僅 0.35m,翼會整片在錐外 —— 根前移到 z≈-0.75
-    // 並前掠(rotation.y),翼面就從畫面兩側邊緣掃出去(翼尖出畫 = 正確的鳥類 FPV)。
+    // 翼根落在視錐內才看得見,但 MUST 靠畫面側緣下方(2026-07-16 視野開闊化):
+    // 根太靠中央(舊 x±0.34)翼面會蓋掉兩側中段視野;外推 + 下沉 + 加大後掠,
+    // 只剩翼前緣沿畫面兩側下角掃出去(翼尖出畫 = 正確的鳥類 FPV)。
     for (const sx of [-1, 1]) {
       for (let p = 0; p < wingSpec.pairs; p++) {
         const root = new THREE.Group();
-        root.position.set(sx * 0.34, -0.02 - p * 0.16, -0.72 + p * 0.22);
-        root.rotation.y = sx * 0.3;
+        root.position.set(sx * 0.62, -0.32 - p * 0.16, -0.95 + p * 0.22);
+        root.rotation.y = sx * 0.5;
         g.add(root);
         if (wingSpec.feather) {
           // 羽刃翼:羽片沿翼展放射(掠角逐片遞增),與 models.js feather() 同語彙
@@ -814,16 +815,7 @@ export class BattleClient {
   _cockFixed(g, mk, accent, vis) {
     const W = vis.wing || 'twinboom';
     const hard = 0x5b6772, dark = 0x46505b;
-    // 座艙罩:頂樑 + 兩側 A 柱(飛行員視角的框)
-    const top = mk(new THREE.BoxGeometry(1.5, 0.07, 0.34), hard);
-    top.position.set(0, 0.5, -0.85);
-    g.add(top);
-    for (const sx of [-1, 1]) {
-      const pillar = mk(new THREE.BoxGeometry(0.07, 1.1, 0.16), hard);
-      pillar.position.set(sx * 0.72, 0.0, -0.86);
-      pillar.rotation.z = sx * -0.14;
-      g.add(pillar);
-    }
+    // 氣泡罩全視野(2026-07-16 視野開闊化):無頂樑/A 柱,只剩儀表台與翼型剪影
     const dash = mk(new THREE.BoxGeometry(1.35, 0.22, 0.42), dark);
     dash.position.set(0, -0.52, -0.9);
     dash.rotation.x = 0.42;
@@ -854,11 +846,11 @@ export class BattleClient {
       g.add(prop);
       this.cockpitSpinZ.push(prop);
     } else if (W === 'delta') {
-      // 三角飛翼:大後掠前緣從兩側斜掠入畫
+      // 三角飛翼:後掠前緣只從畫面下側角落斜掠出去(退離近場,不再是側牆)
       for (const sx of [-1, 1]) {
-        const le = mk(new THREE.BoxGeometry(1.9, 0.06, 0.5), hard);
-        le.position.set(sx * 1.05, -0.28, -0.5);
-        le.rotation.set(0, sx * 0.62, sx * -0.06);
+        const le = mk(new THREE.BoxGeometry(1.3, 0.05, 0.3), hard);
+        le.position.set(sx * 1.25, -0.4, -1.0);
+        le.rotation.set(0, sx * 0.7, sx * -0.06);
         g.add(le);
       }
       const nose = mk(new THREE.ConeGeometry(0.22, 0.8, 4), dark);
@@ -900,8 +892,8 @@ export class BattleClient {
       pod.position.set(0, -0.58, -1.05);
       g.add(pod);
     }
-    // 掛點:戰機 = 機翼硬點(左右對稱掛架);零式的翼根較靠內
-    return { wing: { x: W === 'zero' ? 0.72 : 0.9, y: -0.24, z: -1.0, s: 1.0 } };
+    // 掛點:戰機 = 機翼硬點(左右對稱掛架,壓到下側角落 —— 側帶中段不放武裝);零式翼根較靠內
+    return { wing: { x: W === 'zero' ? 0.82 : 0.95, y: -0.45, z: -1.05, s: 0.95 } };
   }
 
   /** 旋翼無人機座艙:機鼻(body 剪影)+ 機架/旋翼(frame)在畫面上緣;中灰藍避免暗部塌黑 */
@@ -940,34 +932,36 @@ export class BattleClient {
       g.add(p);
       this.cockpitSpin.push(p);
     };
+    // 機臂一律退離近場(z ≤ -1.05)+ 貼頂緣(2026-07-16 視野開闊化):
+    // 舊值 z -0.7 的臂內端旋到 z≈-0.5,在畫面上放大成巨樑,把上方視野吃掉一半。
     const arm = (x, y, z, ry, len = 0.75) => {
-      const a = mk(new THREE.BoxGeometry(len, 0.05, 0.08), 0x5b6772);
+      const a = mk(new THREE.BoxGeometry(len, 0.035, 0.055), 0x5b6772);
       a.position.set(x, y, z);
       a.rotation.y = ry;
       g.add(a);
     };
     const frame = vis.frame || 'quad';
     if (frame === 'hexa') {
-      // 六旋翼:左右二臂 + 正前中臂
-      for (const sx of [-1, 1]) { arm(sx * 0.5, 0.28, -0.7, sx * -0.55, 0.62); prop(sx * 0.72, 0.36, -0.9, 0.5); }
-      arm(0, 0.34, -0.8, Math.PI / 2, 0.5);
-      prop(0, 0.42, -1.0, 0.5);
+      // 六旋翼:左右二臂 + 正前中臂(全數縮上角/遠場)
+      for (const sx of [-1, 1]) { arm(sx * 0.72, 0.42, -1.05, sx * -0.65, 0.45); prop(sx * 0.92, 0.52, -1.18, 0.42); }
+      arm(0, 0.52, -1.15, Math.PI / 2, 0.4);
+      prop(0, 0.6, -1.32, 0.42);
     } else if (frame === 'coax') {
-      // 同軸雙槳:中央桅桿 + 上下兩層大旋翼
-      const mast = mk(new THREE.CylinderGeometry(0.035, 0.05, 0.5, 8), 0x39414a);
-      mast.position.set(0, 0.42, -0.85);
+      // 同軸雙槳:中央桅桿 + 上下兩層大旋翼(細桅 + 半透明槳盤,不擋視野)
+      const mast = mk(new THREE.CylinderGeometry(0.03, 0.045, 0.44, 8), 0x39414a);
+      mast.position.set(0, 0.56, -1.1);
       g.add(mast);
-      prop(0, 0.5, -0.85, 0.9);
-      prop(0, 0.62, -0.85, 0.9);
+      prop(0, 0.64, -1.1, 0.85);
+      prop(0, 0.74, -1.1, 0.85);
     } else if (frame === 'wing') {
-      // 固定翼混合:翼樑橫貫視野上緣 + 翼尖旋翼
-      const wing = mk(new THREE.BoxGeometry(2.0, 0.04, 0.3), 0x5b6772);
-      wing.position.set(0, 0.42, -0.9);
+      // 固定翼混合:細翼樑貼頂緣 + 翼尖旋翼
+      const wing = mk(new THREE.BoxGeometry(2.0, 0.035, 0.24), 0x5b6772);
+      wing.position.set(0, 0.56, -1.15);
       g.add(wing);
-      for (const sx of [-1, 1]) prop(sx * 0.95, 0.5, -0.9, 0.55);
+      for (const sx of [-1, 1]) prop(sx * 1.05, 0.64, -1.15, 0.5);
     } else {
-      // 四旋翼:前二臂 + 旋翼
-      for (const sx of [-1, 1]) { arm(sx * 0.48, 0.30, -0.72, sx * -0.6); prop(sx * 0.72, 0.38, -0.92); }
+      // 四旋翼:前二臂 + 旋翼(縮上角/遠場)
+      for (const sx of [-1, 1]) { arm(sx * 0.7, 0.42, -1.05, sx * -0.7, 0.5); prop(sx * 0.9, 0.52, -1.18, 0.45); }
     }
     // 掛點:旋翼無人機 = 機身固定(機腹吊艙,不是手持)
     return { body: { x: 0.2, y: -0.34, z: -0.7, s: 1.0 } };
@@ -985,72 +979,67 @@ export class BattleClient {
   /** 人形機甲原型專屬:與 models.js 的 visual.proto 同一套設計語彙 */
   _cockProto(g, mk, accent, proto) {
     if (proto === 'bastion') {
-      // 過裝甲:厚重防彈框(視窗收窄)+ 長戟斜過畫面上緣
-      for (const sx of [-1, 1]) {
-        const armor = mk(new THREE.BoxGeometry(0.3, 1.25, 0.24), 0x3f4852, { metalness: 0.6 });
-        armor.position.set(sx * 0.95, -0.05, -0.9);
-        armor.rotation.z = sx * -0.1;
-        g.add(armor);
-      }
+      // 過裝甲(2026-07-16 視野開闊化:側面防彈牆拆除)—— 只剩斧砲長柄斜掠過右上遠角
       const halberd = mk(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 8), 0x2f353c, { metalness: 0.8 });
       halberd.rotation.set(0.2, 0, 0.75);
-      halberd.position.set(0.55, 0.5, -1.4);
+      halberd.position.set(0.9, 0.72, -1.75);
       g.add(halberd);
       const blade = mk(new THREE.BoxGeometry(0.5, 0.22, 0.05), 0xb9c3cc, { metalness: 0.9 });
       blade.rotation.z = 0.75;
-      blade.position.set(1.35, 1.02, -1.4);
+      blade.position.set(1.7, 1.24, -1.75);
       g.add(blade);
     } else if (proto === 'seraph') {
-      // EVA 式倒三角上胸:肩線 = 視窗兩上端點,肩上 binder 莢外張
+      // EVA 式倒三角上胸:肩上 binder 莢縮小、退到畫面上角外緣(只露內側一角)
       for (const sx of [-1, 1]) {
-        const binder = mk(new THREE.BoxGeometry(0.26, 0.5, 0.6), 0x515e6b, { metalness: 0.5 });
-        binder.position.set(sx * 0.95, 0.45, -0.95);
+        const binder = mk(new THREE.BoxGeometry(0.12, 0.26, 0.36), 0x515e6b, { metalness: 0.5 });
+        binder.position.set(sx * 1.2, 0.74, -1.05);
         binder.rotation.z = sx * -0.28;
         g.add(binder);
-        const vent = mk(new THREE.BoxGeometry(0.06, 0.3, 0.06), accent, { emissive: accent, emissiveIntensity: 1.3 });
-        vent.position.set(sx * 0.82, 0.5, -0.7);
+        const vent = mk(new THREE.BoxGeometry(0.05, 0.2, 0.05), accent, { emissive: accent, emissiveIntensity: 1.3 });
+        vent.position.set(sx * 1.06, 0.72, -0.8);
         g.add(vent);
       }
       const lance = mk(new THREE.CylinderGeometry(0.045, 0.06, 2.6, 8), 0x39424b, { metalness: 0.85 });
       lance.rotation.set(Math.PI / 2 - 0.12, 0, 0.06);
-      lance.position.set(0.62, -0.2, -1.7);
+      lance.position.set(0.85, -0.45, -1.7);
       g.add(lance);
       const rail = mk(new THREE.TorusGeometry(0.09, 0.02, 6, 12), accent, { emissive: accent, emissiveIntensity: 1.5 });
-      rail.position.set(0.62, -0.16, -2.4);
+      rail.position.set(0.85, -0.41, -2.4);
       g.add(rail);
     } else if (proto === 'aegis') {
-      // 塔盾攔截:左半視野被巨盾吃掉(這就是它的防禦感)
-      const shield = mk(new THREE.BoxGeometry(0.12, 1.6, 0.95), 0x4a5560, { metalness: 0.6 });
+      // 塔盾攔截(2026-07-16 視野開闊化):巨盾降為「艙沿盾」—— 沉到左下角、只露盾緣,
+      // 防禦感保留在盾徽識別燈,不再吃掉左半視野。
+      const shield = mk(new THREE.BoxGeometry(0.12, 0.8, 0.65), 0x4a5560, { metalness: 0.6 });
       shield.rotation.set(0, 0.22, 0.08);
-      shield.position.set(-0.95, -0.15, -1.15);
+      shield.position.set(-1.1, -0.62, -1.15);
       g.add(shield);
-      const boss = mk(new THREE.CylinderGeometry(0.16, 0.16, 0.08, 10), accent, { emissive: accent, emissiveIntensity: 1.0 });
+      const boss = mk(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 10), accent, { emissive: accent, emissiveIntensity: 1.0 });
       boss.rotation.z = Math.PI / 2;
-      boss.position.set(-0.86, -0.1, -1.15);
+      boss.position.set(-1.0, -0.5, -1.15);
       g.add(boss);
-      for (const oy of [0.35, -0.55]) {   // 攔截器發射巢
-        const cell = mk(new THREE.BoxGeometry(0.2, 0.16, 0.3), 0x39424b);
-        cell.position.set(-0.9, oy, -0.9);
+      for (const ox of [0, 0.28]) {   // 攔截器發射巢:沿下緣排列
+        const cell = mk(new THREE.BoxGeometry(0.2, 0.14, 0.28), 0x39424b);
+        cell.position.set(-0.72 + ox, -0.66, -0.95);
         g.add(cell);
       }
     } else if (proto === 'colossus') {
-      // 巨兵:全圓角矩形艙(壓扁膠囊)+ 雙圓眼 + 眉心脈衝砲
-      const brow = mk(new THREE.CapsuleGeometry(0.14, 1.5, 4, 8), 0x5a6673);
+      // 巨兵:眉簷細化並貼頂緣、雙圓眼縮上角(識別剪影保留,不遮上方視野)
+      const brow = mk(new THREE.CapsuleGeometry(0.06, 1.2, 4, 8), 0x5a6673);
       brow.rotation.z = Math.PI / 2;
-      brow.position.set(0, 0.5, -0.9);
+      brow.position.set(0, 0.8, -1.15);   // 貼畫面上緣,只露簷底(不吃上方視野)
       g.add(brow);
       for (const sx of [-1, 1]) {
-        const eye = mk(new THREE.CylinderGeometry(0.13, 0.13, 0.05, 12), accent, { emissive: accent, emissiveIntensity: 1.6 });
+        const eye = mk(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 12), accent, { emissive: accent, emissiveIntensity: 1.6 });
         eye.rotation.x = Math.PI / 2;
-        eye.position.set(sx * 0.34, 0.32, -1.0);
+        eye.position.set(sx * 0.38, 0.5, -1.15);
         g.add(eye);
       }
-      const pulse = mk(new THREE.CylinderGeometry(0.07, 0.09, 0.34, 10), 0x39424b, { metalness: 0.8 });
+      const pulse = mk(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 10), 0x39424b, { metalness: 0.8 });
       pulse.rotation.x = Math.PI / 2;
-      pulse.position.set(0, 0.42, -1.2);
+      pulse.position.set(0, 0.58, -1.35);
       g.add(pulse);
-      const tip = mk(new THREE.SphereGeometry(0.06, 8, 6), accent, { emissive: accent, emissiveIntensity: 2 });
-      tip.position.set(0, 0.42, -1.4);
+      const tip = mk(new THREE.SphereGeometry(0.05, 8, 6), accent, { emissive: accent, emissiveIntensity: 2 });
+      tip.position.set(0, 0.58, -1.52);
       g.add(tip);
     }
   }
@@ -1093,10 +1082,10 @@ export class BattleClient {
       }
     } else if (creature === 'roo') {
       jaw(0.4, 0.22, 0.7, -1.2, -0.62);
-      for (const sx of [-1, 1]) {                  // 大耳
-        const ear = mk(new THREE.CapsuleGeometry(0.09, 0.4, 4, 8), hard);
-        ear.position.set(sx * 0.66, 0.72, -0.8);
-        ear.rotation.z = sx * 0.25;
+      for (const sx of [-1, 1]) {                  // 大耳:細長、貼頂角外緣(只露耳尖入畫)
+        const ear = mk(new THREE.CapsuleGeometry(0.065, 0.3, 4, 8), hard);
+        ear.position.set(sx * 0.78, 0.84, -0.9);
+        ear.rotation.z = sx * 0.3;
         g.add(ear);
       }
     } else if (creature === 'cthulhu') {
@@ -1320,27 +1309,25 @@ export class BattleClient {
     // ---- 飛行型:依 visual.flight ----
     const F = vis.flight, hard = 0x5b6772, dark = 0x46505b;
     if (F === 'heli' || F === 'tilt') {
-      // 旋翼:頂上旋翼盤(heli 三旋翼 / tilt 兩具傾轉旋翼在兩側)
-      const canopy = mk(new THREE.BoxGeometry(1.5, 0.08, 0.35), hard);
-      canopy.position.set(0, 0.52, -0.85);
-      air.add(canopy);
-      const xs = F === 'tilt' ? [-0.95, 0.95] : [-0.8, 0.8, 0];
+      // 旋翼:頂上旋翼盤(heli 三旋翼 / tilt 兩具傾轉旋翼在兩側);
+      // 2026-07-16 視野開闊化:頂部 canopy 橫樑拆除,機艙/旋翼縮上角遠場
+      const xs = F === 'tilt' ? [-1.15, 1.15] : [-1.0, 1.0, 0];
       for (const x of xs) {
-        const nac = mk(new THREE.CylinderGeometry(0.1, 0.12, 0.4, 8), dark);
-        nac.position.set(x, x === 0 ? 0.62 : 0.3, x === 0 ? -1.2 : -0.9);
+        const nac = mk(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 8), dark);
+        nac.position.set(x, x === 0 ? 0.74 : 0.56, x === 0 ? -1.6 : -1.45);
         air.add(nac);
-        const rot = mk(new THREE.BoxGeometry(1.3, 0.02, 0.09), 0x9aa4ad, { transparent: true, opacity: 0.4 });
-        rot.position.set(x, (x === 0 ? 0.62 : 0.3) + 0.24, x === 0 ? -1.2 : -0.9);
+        const rot = mk(new THREE.BoxGeometry(1.2, 0.02, 0.08), 0x9aa4ad, { transparent: true, opacity: 0.4 });
+        rot.position.set(x, (x === 0 ? 0.74 : 0.56) + 0.18, x === 0 ? -1.6 : -1.45);
         air.add(rot);
         this.cockpitSpin.push(rot);
       }
     } else if (F === 'jet' || F === 'uav') {
-      // 定翼噴射:氣泡罩 + 兩側翼前緣 + 機鼻(uav = 悟空光翼:兩側光焰束)
+      // 定翼噴射:兩側翼前緣退到下側角落遠場(不再是側牆)+ 機鼻(uav = 悟空光翼:光焰束)
       for (const sx of [-1, 1]) {
-        const le = mk(new THREE.BoxGeometry(1.6, 0.05, 0.4), F === 'uav' ? accent : hard,
+        const le = mk(new THREE.BoxGeometry(1.2, 0.05, 0.26), F === 'uav' ? accent : hard,
           F === 'uav' ? { emissive: accent, emissiveIntensity: 1.4, transparent: true, opacity: 0.6 } : {});
-        le.position.set(sx * 0.95, -0.15, -0.55);
-        le.rotation.set(0, sx * 0.5, sx * -0.1);
+        le.position.set(sx * 1.15, -0.35, -0.95);
+        le.rotation.set(0, sx * 0.6, sx * -0.1);
         air.add(le);
       }
       const nose = mk(new THREE.ConeGeometry(0.22, 0.9, 5), dark);
@@ -1360,17 +1347,17 @@ export class BattleClient {
       }[F];
       for (const sx of [-1, 1]) {
         const root = new THREE.Group();
-        root.position.set(sx * 0.34, -0.02, -0.72);   // 同 _cockAvian:翼根要在視錐內才看得見
-        root.rotation.y = sx * 0.3;
+        root.position.set(sx * 0.62, -0.32, -0.95);   // 同 _cockAvian:翼根貼側緣下方(視野開闊化)
+        root.rotation.y = sx * 0.5;
         air.add(root);
         const w = mk(new THREE.BoxGeometry(spec.len, 0.04, spec.chord), spec.col,
           { transparent: spec.op < 1, opacity: spec.op });
         w.position.set(sx * spec.len * 0.5, 0, 0.08);
         root.add(w);
         this._flap(root, 'z', sx * 0.08, sx * spec.amp, spec.hz);
-        if (F === 'beetle') {   // 鞘翅(不動的硬殼罩在膜翼上;z 必須留在近場外,見 _buildCockpitGun 的 zb)
-          const elytra = mk(new THREE.BoxGeometry(0.7, 0.06, 0.5), hard);
-          elytra.position.set(sx * 0.62, 0.16, -0.78);
+        if (F === 'beetle') {   // 鞘翅(不動的硬殼罩在膜翼上;縮小退到側緣,z 留在近場外)
+          const elytra = mk(new THREE.BoxGeometry(0.5, 0.05, 0.36), hard);
+          elytra.position.set(sx * 0.82, 0.1, -0.95);
           air.add(elytra);
         }
       }
@@ -1384,7 +1371,7 @@ export class BattleClient {
       ground: groundAnchors,
       // 飛行武裝:機翼硬點(定翼)/ 機身吊艙(旋翼)/ 口砲(擬態獸型)
       air: {
-        wing: { x: 0.92, y: -0.22, z: -1.0, s: 1.05 },
+        wing: { x: 0.95, y: -0.45, z: -1.05, s: 1.0 },
         body: { x: 0.28, y: -0.42, z: -1.0, s: 1.05 },
         mouth: { x: 0, y: -0.62, z: -1.55, s: 1.05 },
       },
@@ -1392,29 +1379,22 @@ export class BattleClient {
   }
 
   /**
-   * 人類駕駛艙罩(**全機種共通**,2026-07-12):儀表台 / 頂樑 / A 柱 / HUD 燈條 + 左肩角色掛件。
+   * 人類駕駛艙罩(**全機種共通**,2026-07-12;2026-07-16 拆除 A 柱/頂樑):儀表台 / HUD 燈條 + 左肩角色掛件。
    * 座艙裡坐的是人 —— 不論外面那具機體是人形、獸型還是無人機,看出去一律先隔著這面艙框,
    * 機體自身的結構(頭顱/吻部/翼/旋翼/武器)都在艙框之外。**MUST NOT** 退回「從獸的眼窩看出去」。
+   * 上方與兩側視野全開放(無 A 柱/無頂樑)—— 艙外的機體特徵不被艙框遮擋。
    */
   _cockCanopy(g, mk, accent, vis) {
     const dash = mk(new THREE.BoxGeometry(1.7, 0.28, 0.5), 0x46505b);
     dash.position.set(0, -0.52, -0.85);
     dash.rotation.x = 0.5;
     g.add(dash);
-    const topStrut = mk(new THREE.BoxGeometry(1.6, 0.1, 0.3), 0x4d5865);
-    topStrut.position.set(0, 0.52, -0.8);
-    g.add(topStrut);
-    for (const sx of [-1, 1]) {
-      const pillar = mk(new THREE.BoxGeometry(0.09, 1.15, 0.2), 0x4d5865);
-      pillar.position.set(sx * 0.78, 0, -0.78);
-      pillar.rotation.z = sx * -0.12;
-      g.add(pillar);
-    }
     const light = mk(new THREE.BoxGeometry(0.5, 0.04, 0.05), accent, { emissive: accent, emissiveIntensity: 0.9 });
     light.position.set(0, -0.4, -0.72);
     g.add(light);
-    const shoulder = mk(new THREE.BoxGeometry(0.5, 0.28, 0.7), 0x5a6673);
-    shoulder.position.set(-0.72, -0.34, -1.0);
+    // 左肩掛件座:縮小並沉到左下角(2026-07-16 視野開闊化:側面不放大面積件)
+    const shoulder = mk(new THREE.BoxGeometry(0.36, 0.2, 0.5), 0x5a6673);
+    shoulder.position.set(-0.84, -0.48, -1.0);
     shoulder.rotation.z = 0.28;
     g.add(shoulder);
     const pod = vis.pod || 'none';
@@ -1426,35 +1406,35 @@ export class BattleClient {
       tip.position.set(-0.78, 0.44, -1.0);
       g.add(tip);
     } else if (pod === 'blade') {
-      const fin = mk(new THREE.BoxGeometry(0.04, 0.42, 0.16), 0x39424b, { metalness: 0.7 });
+      const fin = mk(new THREE.BoxGeometry(0.04, 0.36, 0.14), 0x39424b, { metalness: 0.7 });
       fin.rotation.z = 0.3;
-      fin.position.set(-0.8, 0.05, -1.0);
+      fin.position.set(-0.9, -0.28, -1.0);
       g.add(fin);
     } else if (pod === 'shield') {
-      const plate = mk(new THREE.BoxGeometry(0.1, 0.5, 0.42), 0x39424b, { metalness: 0.6 });
+      const plate = mk(new THREE.BoxGeometry(0.08, 0.36, 0.3), 0x39424b, { metalness: 0.6 });
       plate.rotation.z = 0.14;
-      plate.position.set(-0.85, -0.18, -0.95);
+      plate.position.set(-0.95, -0.34, -0.95);
       g.add(plate);
     } else if (pod === 'rack') {
       const rack = mk(new THREE.BoxGeometry(0.26, 0.18, 0.3), 0x39424b);
-      rack.position.set(-0.74, -0.08, -1.0);
+      rack.position.set(-0.84, -0.3, -1.0);
       g.add(rack);
       for (const [ox, oy] of [[-0.06, -0.04], [0.06, -0.04], [-0.06, 0.04], [0.06, 0.04]]) {
         const cell = mk(new THREE.CylinderGeometry(0.03, 0.03, 0.26, 6), 0x14171a);
         cell.rotation.x = Math.PI / 2;
-        cell.position.set(-0.74 + ox, -0.08 + oy, -1.02);
+        cell.position.set(-0.84 + ox, -0.3 + oy, -1.02);
         g.add(cell);
       }
     } else if (pod === 'dish') {
       const dish = mk(new THREE.CylinderGeometry(0.16, 0.05, 0.05, 10), 0xaab4bd);
       dish.rotation.z = Math.PI / 3;
-      dish.position.set(-0.78, 0.1, -1.0);
+      dish.position.set(-0.9, -0.26, -1.0);
       g.add(dish);
     } else if (pod === 'twin') {
       for (const oy of [-0.05, 0.05]) {
         const tube = mk(new THREE.CylinderGeometry(0.035, 0.04, 0.5, 8), 0x2b3239, { metalness: 0.8 });
         tube.rotation.x = Math.PI / 2;
-        tube.position.set(-0.76, -0.05 + oy, -1.1);
+        tube.position.set(-0.86, -0.28 + oy, -1.1);
         g.add(tube);
       }
     }
@@ -2413,6 +2393,8 @@ export class BattleClient {
       this.hud.feed?.(ev.side === this.side
         ? `📡 我方啟動偵察中繼站:全隊 ${FIELD.RELAY.VISION_S} 秒無霧視野!`
         : `⚠️ ${SIDES[ev.side].name}啟動了偵察中繼站,我方位置全數曝光!`);
+      // 小地圖迷霧全掀(鏡像 sim.visionUntil 的 pulse 旁路)
+      if (ev.side === this.side) this._pulseUntil = performance.now() / 1000 + FIELD.RELAY.VISION_S;
       starburst(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z) + 9, -ev.z,
         8, ev.side ? SIDES[ev.side].color : 0x66ffe0);
     } else if (ev.e === 'sam') {
@@ -2496,6 +2478,11 @@ export class BattleClient {
       for (const ent of this.ents.values()) {
         if (ent.pid !== ev.pid || ent.isSelf || !ent.hero) continue;
         ent.castFx = { t0: castT0, slot: ev.slot, dir: dirCast };
+      }
+      // 偵察類招式(vision > 0)= 全隊無霧脈衝:小地圖迷霧全掀(鏡像 sim.visionUntil)
+      const abV = heroAbility(ev.ch, ev.slot, ev.lvl)?.vision;
+      if (abV && ev.side === this.side) {
+        this._pulseUntil = Math.max(this._pulseUntil, performance.now() / 1000 + abV);
       }
       if (a) {
         this.hud.feed?.(ev.side === this.side
@@ -3769,6 +3756,85 @@ export class BattleClient {
   _initMinimap() {
     this.mmCtx = this.minimapCanvas.getContext('2d');
     this._mmLast = 0;
+    const w = this.minimapCanvas.width, h = this.minimapCanvas.height;
+    this._mmBase = this._bakeMmBase(w, h);   // 底圖 = 原始圖資地形(一次性烤好,之後只 drawImage)
+    // 戰爭迷霧:已探索累積遮罩 + 每 tick 重組的迷霧層(觀戰 side=null 無霧,鏡像伺服器規則)
+    this._mmSeen = document.createElement('canvas');
+    this._mmSeen.width = w; this._mmSeen.height = h;
+    this._mmFog = document.createElement('canvas');
+    this._mmFog.width = w; this._mmFog.height = h;
+    this._pulseUntil = 0;   // 全隊無霧脈衝(偵察中繼站/偵察招式)到期時刻:迷霧全掀
+  }
+
+  /**
+   * 小地圖底圖 = 原始圖資:衛星影像原始像素(terrain.sampleColor,stylize 前捕捉的那份)上色,
+   * 高程(terrain.heightAt)做西北光暈渲(hillshade)畫出稜線/谷地;海平面以下鋪水色。
+   * 無衛星影像(離線 fallback)→ 高程分層設色。
+   */
+  _bakeMmBase(w, h) {
+    const t = this.terrain;
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const bctx = cv.getContext('2d');
+    const img = bctx.createImageData(w, h);
+    const stepX = (t.maxX - t.minX) / w, stepZ = (t.maxZ - t.minZ) / h;
+    const hRange = Math.max(1e-6, t.maxH - t.minH);
+    // 高程先取進緩衝:hillshade 梯度直接查鄰格,不重複三角取樣
+    const hs = new Float32Array(w * h);
+    for (let py = 0; py < h; py++) {
+      const z = t.minZ + (py + 0.5) * stepZ;
+      for (let px = 0; px < w; px++) hs[py * w + px] = t.heightAt(t.minX + (px + 0.5) * stepX, z);
+    }
+    // 高程分層設色(無影像時的底色):谷地深綠 → 山腰黃褐 → 稜線灰白
+    const RAMP = [[46, 77, 64], [96, 108, 74], [139, 121, 88], [205, 200, 190]];
+    const rampAt = (f) => {
+      const s = Math.max(0, Math.min(0.999, f)) * (RAMP.length - 1);
+      const i = Math.floor(s), k = s - i;
+      return [0, 1, 2].map((c) => RAMP[i][c] + (RAMP[i + 1][c] - RAMP[i][c]) * k);
+    };
+    for (let py = 0; py < h; py++) {
+      const z = t.minZ + (py + 0.5) * stepZ;
+      for (let px = 0; px < w; px++) {
+        const x = t.minX + (px + 0.5) * stepX;
+        const k = py * w + px, y = hs[k];
+        let rgb = t.sampleColor?.(x, z) || rampAt((y - t.minH) / hRange);
+        if (t.waterY != null && y < t.waterY) rgb = [38, 66, 92];   // 海平面以下 = 水色
+        // 西北光 hillshade:高度朝東南遞增(= 坡面朝西北)的斜面亮、背光面暗
+        const dx = (px > 0 && px < w - 1) ? hs[k + 1] - hs[k - 1] : 0;
+        const dz = (py > 0 && py < h - 1) ? hs[k + w] - hs[k - w] : 0;
+        const shade = Math.max(0.55, Math.min(1.3, 0.92 + (dx + dz) / (stepX + stepZ) * 0.9));
+        const o = k * 4;
+        img.data[o] = Math.min(255, rgb[0] * shade);
+        img.data[o + 1] = Math.min(255, rgb[1] * shade);
+        img.data[o + 2] = Math.min(255, rgb[2] * shade);
+        img.data[o + 3] = 255;
+      }
+    }
+    bctx.putImageData(img, 0, 0);
+    // 壓一層暗紗:單位/兵線標記才拉得開對比
+    bctx.fillStyle = 'rgba(5, 9, 13, 0.34)';
+    bctx.fillRect(0, 0, w, h);
+    return cv;
+  }
+
+  /** 戰爭迷霧視野來源(鏡像 sim._visionSources):己方存活單位各自 sight 半徑。
+   *  瞄準視野加成:aiming 是小隊共用狀態(SQUAD_SHARED)→ 自機與僚機一起放大;
+   *  其他友方英雄的瞄準狀態快照未攜帶,不鏡像 —— 僅顯示層誤差(單位標記本就畫在迷霧之上)。 */
+  _mmVision() {
+    const out = [];
+    const aimF = this.aiming ? GAME.AIM_SIGHT_MULT : 1;
+    for (const ent of this.ents.values()) {
+      if (ent.side !== this.side || ent.isSelf || ent.dead || ent.hp <= 0) continue;
+      if (ent.decoy && ent.lost) continue;   // 失聯餌機不回傳遙測(與伺服器同規則)
+      const sight = UNITS[ent.kind]?.sight;
+      if (sight == null) continue;
+      out.push([ent.mesh.position.x, ent.mesh.position.z, sight * (ent.hero && ent.pid === this.youId ? aimF : 1)]);
+    }
+    if (!this.dead && this.heroKind) {
+      const sight = UNITS[this.heroKind]?.sight;
+      if (sight != null) out.push([this.pos.x, this.pos.z, sight * aimF]);
+    }
+    return out;
   }
 
   _world2mm(x, z, w, h) {
@@ -3782,8 +3848,51 @@ export class BattleClient {
     this._mmLast = now;
     const ctx = this.mmCtx;
     const w = this.minimapCanvas.width, h = this.minimapCanvas.height;
-    ctx.fillStyle = 'rgba(8,12,16,0.92)';
-    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(this._mmBase, 0, 0);   // 底圖:原始圖資地形
+    // 戰爭迷霧(觀戰無迷霧):未探索近全黑、已探索留暗紗、目前視野全亮。
+    // 迷霧只壓底圖 —— 兵線(已知情報)與單位(快照本身就是伺服器迷霧過濾後的結果,
+    // 塔/主堡恆可見)一律畫在迷霧之上,與伺服器可見性規則一致。
+    if (this.side) {
+      // 視野圈按 x/z 各自比例尺畫橢圓 —— battleBBox 是兵線包絡聯集,非恆正方形,
+      // 正圓會與逐軸縮放的單位標記在被拉伸的軸向上對不齊
+      const scX = w / (this.terrain.maxX - this.terrain.minX);
+      const scZ = h / (this.terrain.maxZ - this.terrain.minZ);
+      const pulse = now < this._pulseUntil;   // 偵察脈衝:全隊無霧(鏡像 snapshotFor 的 pulse 旁路)
+      const vis = this._mmVision();
+      const sctx = this._mmSeen.getContext('2d');
+      sctx.fillStyle = '#fff';
+      if (pulse) sctx.fillRect(0, 0, w, h);   // 脈衝看過的全圖進「已探索」
+      for (const [vx, vz, r] of vis) {   // 已探索累積(整場保留:走過的地圖記得住)
+        const [mx, my] = this._world2mm(vx, vz, w, h);
+        sctx.beginPath(); sctx.ellipse(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), 0, 0, 7); sctx.fill();
+      }
+      if (!pulse) {
+        const f = this._mmFog.getContext('2d');
+        f.globalCompositeOperation = 'source-over';
+        f.globalAlpha = 1;
+        f.clearRect(0, 0, w, h);
+        f.fillStyle = 'rgba(4, 7, 11, 0.9)';
+        f.fillRect(0, 0, w, h);
+        f.globalCompositeOperation = 'destination-out';
+        f.globalAlpha = 0.5;
+        f.drawImage(this._mmSeen, 0, 0);   // 已探索:掀掉一半暗紗
+        f.globalAlpha = 1;
+        for (const [vx, vz, r] of vis) {   // 目前視野:全亮(柔邊;縮放座標系畫橢圓漸層)
+          const [mx, my] = this._world2mm(vx, vz, w, h);
+          const rx = Math.max(6, r * scX), ry = Math.max(6, r * scZ);
+          f.save();
+          f.translate(mx, my);
+          f.scale(1, ry / rx);
+          const grad = f.createRadialGradient(0, 0, rx * 0.72, 0, 0, rx);
+          grad.addColorStop(0, 'rgba(0,0,0,1)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          f.fillStyle = grad;
+          f.beginPath(); f.arc(0, 0, rx, 0, 7); f.fill();
+          f.restore();
+        }
+        ctx.drawImage(this._mmFog, 0, 0);
+      }
+    }
     // 兵線
     const cols = ['#e6c34a', '#e05c4a', '#4ac3e6'];
     this.lanePts.forEach((pts, i) => {
