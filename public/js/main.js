@@ -19,7 +19,7 @@ import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
 import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
-import { STORY, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
+import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
@@ -42,7 +42,9 @@ const app = {
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
-  story: null,          // 劇情戰役進行中:{ chapterId, side, ch, index, launched }
+  story: null,          // 劇情戰役進行中:{ chapterId, side, foe, ch(主駕), allies[], enemies[], index, launched }
+  storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
+  storyPilot: null,     // 簡報中選定的出戰主駕
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
   terrain: null,
@@ -359,22 +361,39 @@ function renderEnvSelects() {
   fill('envWeather', ENV.weathers, '天氣', 'weather');
 }
 
-// ================= 劇情戰役(選章 → 簡報 → 自動出戰;通關解鎖下一章)=================
+// ================= 劇情戰役(雙陣營雙故事線:選陣營 → 選章 → 圖文簡報 + 選主駕 → 出戰)=================
+const STORY_DIFF = ['novice', 'low', 'low', 'medium', 'medium', 'high'];   // 六章難度漸升
+
 function enterStory() {
   app.story = null;                       // 進場清空(可能剛從某場劇情戰役退回)
+  if (app.storySide !== 'STEEL' && app.storySide !== 'SWARM') app.storySide = 'STEEL';
   $('storyBrief').style.display = 'none';
+  $('worldOverlay').style.display = 'none';
   $('storyDeploy').style.display = 'none';
   show('story');
+  renderStorySide();
+}
+
+/** 切換/重繪目前瀏覽的陣營戰線(主視覺色軌一併收束成該陣營) */
+function renderStorySide() {
+  const side = app.storySide;
+  document.querySelectorAll('#storySideToggle .ss-btn').forEach((b) => b.classList.toggle('on', b.dataset.side === side));
+  document.body.dataset.side = side;
+  $('storyBlurb').textContent = side === 'STEEL'
+    ? '你指揮協約的鋼鐵機甲,替沒能穿上裝甲的孩子補上那一層。沿全球戰線鎮壓蜂群,擊毀敵方主堡即通關,解鎖下一戰場。'
+    : '你指揮同盟的蜂群無人機,用數量與速度證明便宜的東西一樣能贏。沿全球戰線抵擋協約,擊毀敵方主堡即通關,解鎖下一戰場。';
   renderStoryChapters();
 }
 
 function renderStoryChapters() {
+  const side = app.storySide;
   const grid = $('storyChapters');
   grid.innerHTML = '';
   let clearedN = 0;
   STORY.forEach((ch, i) => {
-    const unlocked = chapterUnlocked(i);
-    const cleared = isCleared(ch.id);
+    const sc = chapterSide(ch, side);
+    const unlocked = chapterUnlocked(side, i);
+    const cleared = isCleared(side, ch.id);
     if (cleared) clearedN++;
     const v = VENUES.find((x) => x.id === ch.venueId);
     const card = document.createElement(unlocked ? 'button' : 'div');
@@ -385,67 +404,113 @@ function renderStoryChapters() {
     card.innerHTML = `
       <span class="chapter-num">${i + 1}</span>
       <div class="chapter-body">
-        <span class="chapter-title">${esc(ch.act)} ・ ${esc(ch.title)}</span>
-        <span class="chapter-place">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel({ season: ch.env.season, time: ch.env.time, weather: ch.env.weather }))}</span>
+        <span class="chapter-title">${esc(ch.act)} ・ ${esc(sc.title)}</span>
+        <span class="chapter-place">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</span>
       </div>
       ${state}`;
     if (unlocked) card.onclick = () => showStoryBrief(i);
     grid.appendChild(card);
   });
-  $('storyProgress').textContent = `戰線進度:已通關 ${clearedN} / ${STORY.length} 個戰場`
+  $('storyProgress').textContent = `${SIDES[side].name}戰線:已通關 ${clearedN} / ${STORY.length}`
     + (clearedN >= STORY.length ? ' ・ 🏆 全戰線肅清!' : '');
+}
+
+/** 角色小卡(選主駕 / 敵方預覽共用) */
+function heroChip(id, opts = {}) {
+  const c = CHARACTERS[id] || {};
+  const cls = 'sb-chip' + (opts.merc ? ' merc' : '') + (opts.on ? ' on' : '') + (opts.enemy ? ' enemy' : '');
+  return `<button class="${cls}" data-ch="${id}"${opts.enemy ? ' disabled' : ''}>
+      <img src="${avatarURL(id)}" alt="">
+      <span class="sb-chip-txt"><b>「${esc(c.code || '')}」</b>${esc(c.name || '')}${opts.merc ? '<i>傭兵</i>' : ''}</span>
+    </button>`;
 }
 
 function showStoryBrief(i) {
   const ch = STORY[i];
+  const side = app.storySide, foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
+  const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
   const v = VENUES.find((x) => x.id === ch.venueId);
-  const c = CHARACTERS[ch.ch];
+  const roster = [...sc.heroes, ...sc.mercs];
+  app.storyPilot = roster[0];             // 預設主駕 = 第一名陣營角色
+  const cine = sc.img
+    ? `<img class="sb-cine-img" src="${esc(sc.img)}" alt="${esc(sc.title)}" onerror="this.classList.add('sb-cine-fail')">`
+    : '';
+  const mercSet = new Set(sc.mercs);
+  const yourChips = roster.map((id) => heroChip(id, { merc: mercSet.has(id), on: id === app.storyPilot })).join('');
+  const foeMerc = new Set(ec.mercs);
+  const foeChips = [...ec.heroes, ...ec.mercs].map((id) => heroChip(id, { merc: foeMerc.has(id), enemy: true })).join('');
+  // 圖文並茂:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標
   $('storyBriefBody').innerHTML = `
-    <div class="sb-head">
-      <div class="sb-portrait"><img src="${portraitURL(ch.ch)}" alt="${esc(c?.name || '')}"></div>
-      <div class="sb-heads">
-        <div class="sb-act">${esc(ch.act)}</div>
-        <div class="sb-name">${esc(ch.name)}</div>
-        <div class="sb-hero">駕駛:「${esc(c?.code || '')}」${esc(c?.name || '')} ・ ${esc(c?.machine || '')}</div>
-        <div class="sb-meta">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</div>
+    <div class="sb-cine sb-cine-${side}">
+      ${cine}
+      <div class="sb-cine-scrim"></div>
+      <div class="sb-cine-corners"><i></i><i></i><i></i><i></i></div>
+      <div class="sb-cine-tag">${side === 'STEEL' ? '協約 · 鋼鐵征討' : '同盟 · 蜂群逆襲'}</div>
+      <div class="sb-cine-cap">
+        <div class="sb-cine-act">${esc(ch.act)} ／ CH.${String(i + 1).padStart(2, '0')}</div>
+        <div class="sb-cine-name">${esc(sc.title)}</div>
+        <div class="sb-cine-meta">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</div>
       </div>
     </div>
-    <p class="sb-intro">${esc(ch.intro)}</p>
-    <div class="sb-obj">${esc(ch.objective)}</div>`;
+    <div class="sb-prose"><p class="sb-intro">${esc(sc.intro).replace(/\n\n+/g, '</p><p class="sb-intro">')}</p></div>
+    <div class="sb-roster" style="--own:var(${side === 'STEEL' ? '--steel' : '--swarm'});--foe:var(${side === 'STEEL' ? '--swarm' : '--steel'})">
+      <div class="sb-roster-h your">◈ 你的部隊 — 點選出戰主駕,其餘為 AI 僚機</div>
+      <div class="sb-chips" id="sbYourChips">${yourChips}</div>
+      <div class="sb-roster-h foe">✖ 當面之敵</div>
+      <div class="sb-chips">${foeChips}</div>
+    </div>
+    <div class="sb-obj">${esc(sc.objective)}</div>`;
+  $('sbYourChips').querySelectorAll('.sb-chip').forEach((btn) => {
+    btn.onclick = () => {
+      app.storyPilot = btn.dataset.ch;
+      $('sbYourChips').querySelectorAll('.sb-chip').forEach((b) => b.classList.toggle('on', b === btn));
+    };
+  });
+  $('storyFightBtn').className = 'btn big ' + (side === 'STEEL' ? 'steel-btn' : 'swarm-btn');
   $('storyFightBtn').onclick = () => startStoryChapter(i);
   $('storyBrief').style.display = '';
+  $('storyBriefBody').scrollTop = 0;
 }
 
-/** 出擊:以劇情章節組出 battleConfig 並開一間私人房 —— 自動配對交給 onSync/launchStoryBattle */
+/** 出擊:組 battleConfig 開私人房;僚機/敵方角色於 launchStoryBattle 指派 */
 function startStoryChapter(i) {
   const ch = STORY[i];
+  const side = app.storySide, foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
+  const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
   const v = VENUES.find((x) => x.id === ch.venueId);
   if (!v) { toast('⚠️ 找不到戰場資料'); return; }
   const cfg = venueConfig(v, ch.teamSize);
-  cfg.env = { ...ch.env };                 // 劇情指定環境(具體值,server resolveEnv 原樣保留)
-  app.story = { chapterId: ch.id, side: ch.side, ch: ch.ch, index: i, launched: false };
+  cfg.env = { ...ch.env };
+  const pilot = app.storyPilot || sc.heroes[0];
+  const allies = [...sc.heroes, ...sc.mercs].filter((id) => id !== pilot);   // 我方僚機(指名 AI)
+  const enemies = [...ec.heroes, ...ec.mercs];                              // 敵方陣容(指名 AI)
+  app.story = { chapterId: ch.id, side, foe, ch: pilot, allies, enemies, index: i, launched: false };
   $('storyBrief').style.display = 'none';
   $('storyDeploy').style.display = '';
-  $('storyDeploy').textContent = `⚙ 部署中:${ch.name}(${v.name})…`;
+  $('storyDeploy').textContent = `⚙ 部署中:${sc.title}(${v.name})…`;
   app.net.send({
-    t: 'createRoom',
-    name: myName(),
-    roomName: ch.name,
-    isPublic: false,
-    teamSize: ch.teamSize,
-    botDiff: ch.diff,
-    battleConfig: cfg,
+    t: 'createRoom', name: myName(), roomName: sc.title, isPublic: false,
+    teamSize: ch.teamSize, botDiff: STORY_DIFF[i] || 'medium', battleConfig: cfg,
   });
 }
 
-/** onSync 在 room 階段呼叫一次:自動選陣營/角色/準備/開戰(server startBattle 會補滿 bot) */
+/** onSync 在 room 階段呼叫一次:選陣營/主駕、指名我方僚機 + 敵方陣容、開戰。
+    私人劇情房 nextBotId 從 0 起、且只有房主在操作 ⇒ addBot 次序決定 bot id 為 b1,b2,…(可預測),
+    因此能一次把 setBotChar 指名完再開戰,不必等每次 addBot 的 lobby 回廣播。 */
 function launchStoryBattle() {
-  app.story.launched = true;
-  app.mySide = app.story.side;
-  app.net.send({ t: 'pickSide', side: app.story.side });
-  app.net.send({ t: 'pickChar', ch: app.story.ch });
-  app.net.send({ t: 'setReady', ready: true });
-  app.net.send({ t: 'startBattle' });
+  const s = app.story;
+  s.launched = true;
+  app.mySide = s.side;
+  const net = app.net;
+  net.send({ t: 'pickSide', side: s.side });
+  net.send({ t: 'pickChar', ch: s.ch });
+  let n = 0;
+  const assign = [];
+  for (const id of s.allies) { net.send({ t: 'addBot', side: s.side }); assign.push(['b' + (++n), id]); }
+  for (const id of s.enemies) { net.send({ t: 'addBot', side: s.foe }); assign.push(['b' + (++n), id]); }
+  for (const [bid, cid] of assign) net.send({ t: 'setBotChar', id: bid, ch: cid });
+  net.send({ t: 'setReady', ready: true });
+  net.send({ t: 'startBattle' });
 }
 
 /** 退出劇情戰役(勝負已定或中途離開):收掉單人房,回到章節選擇(重繪解鎖狀態) */
@@ -1458,15 +1523,16 @@ function makeHud() {
       ov.dataset.done = '1';
       const win = SIDES[winner];
       const won = app.mySide === winner;
-      // 劇情戰役:勝利即通關解鎖下一章;敘事文案改用該章的 victory/defeat
+      // 劇情戰役:勝利即通關解鎖同陣營下一章;敘事文案改用該章該陣營的 victory/defeat
       const chapter = app.story && STORY[app.story.index];
-      if (chapter && won) markCleared(chapter.id);
+      const csc = chapter && chapterSide(chapter, app.story.side);
+      if (chapter && won) markCleared(app.story.side, chapter.id);
       $('overTitle').textContent = chapter
         ? (won ? '任務達成' : '任務失敗')
         : `${win.name} 勝利!`;
       $('overTitle').style.color = won ? win.color : (chapter ? 'var(--danger)' : win.color);
       $('overSub').textContent = chapter
-        ? (won ? chapter.victory : chapter.defeat)
+        ? (won ? csc.victory : csc.defeat)
         : app.mySide
           ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
           : '戰役結束。';
@@ -1588,6 +1654,21 @@ $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
 $('storyBackBtn')?.addEventListener('click', () => { app.story = null; show('connect'); refreshRooms(); });
 $('storyBriefCloseBtn')?.addEventListener('click', () => { $('storyBrief').style.display = 'none'; });
 $('storyBrief')?.addEventListener('click', (e) => { if (e.target.id === 'storyBrief') $('storyBrief').style.display = 'none'; });
+// 陣營戰線切換(協約 / 同盟)
+$('storySideToggle')?.addEventListener('click', (e) => {
+  const b = e.target.closest('.ss-btn');
+  if (!b || b.dataset.side === app.storySide) return;
+  app.storySide = b.dataset.side;
+  renderStorySide();
+});
+// 世界觀・序章
+$('worldBtn')?.addEventListener('click', () => {
+  $('worldBody').innerHTML = `<p>${esc(WORLD).replace(/\n\n+/g, '</p><p>')}</p>`;
+  $('worldOverlay').style.display = '';
+  $('worldBody').scrollTop = 0;
+});
+$('worldCloseBtn')?.addEventListener('click', () => { $('worldOverlay').style.display = 'none'; });
+$('worldOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'worldOverlay') $('worldOverlay').style.display = 'none'; });
 
 // ================= 伺服器訊息 =================
 function onSync(m) {
