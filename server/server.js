@@ -199,6 +199,9 @@ function leaveRoom(client, room, clientId) {
 function startBattle(room) {
   if (room.battle || !room.battleConfig) return;
   room.battle = new BattleSim(room.battleConfig);
+  // 世界障礙(房主載圖時上傳,存房間一份 → rematch 直接沿用):
+  // MUST 在 fieldPayload 廣播之前套用 —— 走廊淨空會清掉隧道/橋下的第三方障礙與地雷。
+  if (room.world) room.battle.setWorld(room.world);
   // 角色指派:玩家已選的優先;沒選(默認隨機)由 addHero 抽同陣營未用角色
   for (const [id, c] of room.clients) {
     if (c.mode === 'player' && c.side) {
@@ -254,7 +257,9 @@ function maybeLaunch(room) {
 }
 
 // ---------------- WebSocket ----------------
-const wss = new WebSocketServer({ server: httpServer });
+// maxPayload 1MiB:最大合法訊息 = world 障礙上傳(occ 4000 + cor 2400 ≈ 250KB,留 4 倍餘裕)。
+// ws 預設 100MiB —— 惡意巨型訊息會讓單執行緒 JSON.parse 阻塞全部房間,先在框架層封頂。
+const wss = new WebSocketServer({ server: httpServer, maxPayload: 1 << 20 });
 
 wss.on('connection', (ws) => {
   const clientId = nextClientId++;
@@ -407,6 +412,16 @@ wss.on('connection', (ws) => {
       return;
     }
     if (m.t === 'loaded') { client.loaded = true; broadcast(room); maybeLaunch(room); return; }
+    if (m.t === 'world') {
+      // 房主上傳世界障礙(建物/神木/巨岩碰撞柱)+ 立體交通走廊(sim 座標)。
+      // 通常先於開戰抵達(存房間,startBattle 套用);房主是觀戰者時可能晚到 → 直接套用進行中的 sim
+      // (LOS 即時生效;走廊內障礙從快照消失,客戶端自動收掉)。非房主來源一律丟棄。
+      if (clientId === room.hostId && m.occ) {
+        room.world = { occ: m.occ, cor: m.cor };
+        if (room.battle) room.battle.setWorld(room.world);
+      }
+      return;
+    }
 
     // ---- 戰鬥中 ----
     const b = room.battle;

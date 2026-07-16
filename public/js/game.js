@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
+  WATER,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -311,6 +312,87 @@ export class BattleClient {
     window.addEventListener('resize', this._onResize);
 
     this.raycaster = new THREE.Raycaster();
+    // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
+    // 障礙有物理碰撞就不可讓砲火穿越 —— 與 _collide 用同一份 terrain.blockers,牆與彈道一致。
+    this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
+  }
+
+  /** 障礙柱 → 64m 均勻網格(彈道線段只掃沿途格) */
+  _buildBlockGrid(blockers) {
+    const C = 64;
+    const grid = new Map();
+    blockers.forEach((b) => {
+      const i0 = Math.floor((b.x - b.r) / C), i1 = Math.floor((b.x + b.r) / C);
+      const j0 = Math.floor((b.z - b.r) / C), j1 = Math.floor((b.z + b.r) / C);
+      for (let i = i0; i <= i1; i++) {
+        for (let j = j0; j <= j1; j++) {
+          const k = `${i},${j}`;
+          let a = grid.get(k);
+          if (!a) grid.set(k, a = []);
+          a.push(b);
+        }
+      }
+    });
+    return { C, grid };
+  }
+
+  /**
+   * 線段 vs 障礙圓柱(建物/神木/巨岩/橋墩):回傳最近命中距離(沿線段),沒打到回 null。
+   * 圓柱 = _collide 同一份碰撞柱(x, z, y 基座, r, h)—— 側面進入與自上而下打頂面都算。
+   * 有物理障礙的物件不可讓砲火穿越;植被(無碰撞)照舊不擋彈。
+   */
+  _blockerHitT(ax, ay, az, bx, by, bz) {
+    if (!this._blockGrid) return null;
+    const { C, grid } = this._blockGrid;
+    const i0 = Math.floor(Math.min(ax, bx) / C), i1 = Math.floor(Math.max(ax, bx) / C);
+    const j0 = Math.floor(Math.min(az, bz) / C), j1 = Math.floor(Math.max(az, bz) / C);
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    const len = Math.hypot(dx, dy, dz) || 1;
+    let bestT = null;
+    const seen = new Set();
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const a = grid.get(`${i},${j}`);
+        if (!a) continue;
+        for (const b of a) {
+          if (seen.has(b)) continue;
+          seen.add(b);
+          // 2D 射線 × 圓:|A + t·D − O|² = r²
+          const ox = ax - b.x, oz = az - b.z;
+          const A2 = dx * dx + dz * dz;
+          const B2 = 2 * (ox * dx + oz * dz);
+          const C2 = ox * ox + oz * oz - b.r * b.r;
+          let t0, t1;
+          if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在圓內
+            if (C2 > 0) continue;
+            t0 = 0; t1 = 1;
+          } else {
+            const disc = B2 * B2 - 4 * A2 * C2;
+            if (disc < 0) continue;
+            const sq = Math.sqrt(disc);
+            t0 = (-B2 - sq) / (2 * A2);
+            t1 = (-B2 + sq) / (2 * A2);
+            if (t1 < 0 || t0 > 1) continue;
+          }
+          const yTop = b.y + b.h;
+          // 側面進入:入點高度落在柱身區間
+          const tIn = Math.max(0, t0);
+          const yIn = ay + dy * tIn;
+          if (yIn > b.y - 0.5 && yIn < yTop) {
+            if (bestT === null || tIn < bestT) bestT = tIn;
+            continue;
+          }
+          // 頂面:自上而下跨越 yTop 且交點仍在圓內
+          if (Math.abs(dy) > 1e-6) {
+            const tTop = (yTop - ay) / dy;
+            if (tTop >= Math.max(0, t0) && tTop <= Math.min(1, t1) && dy < 0) {
+              if (bestT === null || tTop < bestT) bestT = tTop;
+            }
+          }
+        }
+      }
+    }
+    return bestT === null ? null : bestT * len;
   }
 
   /**
@@ -2186,6 +2268,25 @@ export class BattleClient {
     return 1;
   }
 
+  /**
+   * 水中速度減半(2026-07-15):地面機體腳踩的表面泡在水裡 —— 海(表面低於水面)
+   * 或河面(衛星影像水色的貼地路段)。站在橋面/結構物上不算(表面高於地形 = 在橋上)。
+   */
+  _waterSlowF() {
+    if (this._flying()) return 1;
+    const x = this.pos.x, z = this.pos.z;
+    const s = this._surf(x, z, this.pos.y);
+    if (this.terrain.waterY != null && s < this.terrain.waterY && this.pos.y < this.terrain.waterY + 0.5) {
+      return WATER.SLOW;
+    }
+    // 河/湖(高程有值但影像是水色):貼地行走才算,站上橋面(表面高於地形 >1m)不算
+    if (this.pos.y - s < 1.5 && s - this.terrain.heightAt(x, z) < 1) {
+      const c = this.terrain.sampleColor?.(x, z);
+      if (c && c[2] > c[0] + 14 && c[2] > c[1] + 6) return WATER.SLOW;
+    }
+    return 1;
+  }
+
   _updateMissiles(dt) {
     for (const ms of this.samMeshes.values()) {
       const p = ms.mesh.position;
@@ -2700,16 +2801,23 @@ export class BattleClient {
     }
     const missileMeshes = [];
     for (const [mid, ms] of this.samMeshes) { ms.mesh.userData.missileId = mid; missileMeshes.push(ms.mesh); }
-    // 只對單位/飛彈與地形網格做 raycast(地貌植被是純視覺,不擋子彈也不吃效能)
+    // 只對單位/飛彈與地形網格做 raycast(地貌植被是純視覺,不擋子彈也不吃效能);
+    // 建物/神木/巨岩等「有物理碰撞的障礙」另以解析圓柱判定(_blockerHitT)——
+    // 準星射線先撞到障礙 → 視同打在障礙上(看不到的單位就不能射擊/鎖定,beam/招式落點同樣被擋)。
     const hits = this.raycaster.intersectObjects([...targets, ...missileMeshes, this.terrain.mesh], true);
+    const rEnd = this.raycaster.ray.at(far, new THREE.Vector3());
+    const ro = this.raycaster.ray.origin;
+    const dBlock = this._blockerHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
     for (const h of hits) {
+      if (dBlock != null && dBlock < h.distance) break;   // 障礙更近:落到下方的障礙回傳
       let o = h.object;
       while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
       if (o && o.userData.missileId != null) return { point: h.point, ent: null, missileId: o.userData.missileId };
       if (o && o.userData.kind) return { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o), missileId: null };
       return { point: h.point, ent: null, missileId: null };   // 地形
     }
-    return { point: this.raycaster.ray.at(far, new THREE.Vector3()), ent: null, missileId: null };
+    if (dBlock != null) return { point: this.raycaster.ray.at(dBlock, new THREE.Vector3()), ent: null, missileId: null };
+    return { point: rEnd, ent: null, missileId: null };
   }
 
   /** 命中回饋:星爆 + 準星標記 + 本地估算傷害數字(伺服器仍是權威) */
@@ -2924,6 +3032,12 @@ export class BattleClient {
           if (o && o.userData.kind) { hit = { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o) }; break; }
           hit = { point: h.point, terrain: true };
           break;
+        }
+        // 實體障礙擋彈(建物/神木/巨岩/橋墩):障礙柱比 mesh 命中更近 → 彈頭止於障礙,
+        // 不穿越造成傷害(伺服器 heroHit 另有 LOS 複驗,這裡是彈道本體)。
+        const dB = this._blockerHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
+        if (dB != null && (!hit || dB < prev.distanceTo(hit.point))) {
+          hit = { point: prev.clone().addScaledVector(seg.clone().divideScalar(len), dB), terrain: true };
         }
       }
       // 追蹤飛彈近炸引信:貼近鎖定目標即引爆(戰鬥部 AoE 由伺服器 heroBurst 結算)
@@ -3188,10 +3302,14 @@ export class BattleClient {
       this.vel.z += (target.z - this.vel.z) * Math.min(1, dt * 4);
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
       this.pos.addScaledVector(this.vel, dt);
-      const gy = this._surf(this.pos.x, this.pos.z, this.pos.y);
+      const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
+      // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水
+      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS;
       // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
-      if (this.isMorph && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
+      // 深水上空不落地變形(水深 > 可涉水深 WADE_M 的水域,機體無法下水)
+      const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.WADE_M;
+      if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
       const lat = this.vel.x * right.x + this.vel.z * right.z;
       this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
@@ -3199,12 +3317,15 @@ export class BattleClient {
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
       // 變形機甲蓄力中重心下沉、移動減速(起跳預備動作,mobility_plan Task 2.1)
       const slowK = this.isMorph ? 1 - 0.6 * this.charge : 1;
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._recoilMoveF(now, false) * dt);
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._waterSlowF() * this._recoilMoveF(now, false) * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       const fr = Math.exp(-dt * 6);
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
-      const gy = this._surf(this.pos.x, this.pos.z, this.pos.y);
+      const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
+      // 垂直落水保底(2026-07-15):深水處的有效地板 = 水面 − 可涉水深(半身泡水浮著),
+      // 不會沉到海床 —— 側向走進深水由下方 passable() 直接擋下,這裡只接「從高處落水」。
+      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.WADE_M) : gyS;
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
       if (this.isMorph) {
@@ -3236,6 +3357,10 @@ export class BattleClient {
       const passable = (cx, cz) => {
         const g = this._surf(cx, cz, py0);
         if (inTun0 && g > py0 + 2.6) return false;                        // 隧道側壁/上方山體
+        // 深水不可入(2026-07-15):地面機體走向「水深 > WADE_M」的水域 = 撞牆
+        // (逐軸滑行沿岸走);位移前已在深水(高處落水)由 passable(px0,pz0) 例外放行 → 走得出來
+        if (!this._flying() && this.terrain.waterY != null
+          && g < this.terrain.waterY - WATER.WADE_M) return false;
         const ce = this.terrain.ceilingAt(cx, cz, py0);
         if (ce != null && ce - this.selfH - 0.2 < g + hover) return false; // 夾縫 < 機高
         return true;
@@ -3307,11 +3432,14 @@ export class BattleClient {
     // 位置回報(10Hz;模擬 z=北)
     if (now - this.lastPosSend > 0.1) {
       this.lastPosSend = now;
+      // y = 離「站立表面」的高度(橋上算 0):伺服器的地面型/防空判定不會因為站上橋面而誤判;
+      // 深水處的站立表面 = 水面 − 涉水深(泡在水裡漂著的機體不是空中目標)
+      const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
+      const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.WADE_M) : sy;
       this.net.send({
         t: 'pos',
         x: Math.round(this.pos.x * 10) / 10,
-        // y = 離「站立表面」的高度(橋上算 0):伺服器的地面型/防空判定不會因為站上橋面而誤判
-        y: Math.round((this.pos.y - this._surf(this.pos.x, this.pos.z, this.pos.y)) * 10) / 10,
+        y: Math.round((this.pos.y - sEff) * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
       });

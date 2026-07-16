@@ -387,6 +387,19 @@ export const GRENADE = { BUILDING_MUL: 1.4 };
 export const grenadeBuildingMul = (def, kind) =>
   def && def.type === 'launcher' && TARGET_CLASS[kind] === 'building' ? GRENADE.BUILDING_MUL : 1;
 
+// ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用,伺服器不涉入)----
+// LEVEL:海平面水面高(terrain.js 水面盤 y,minH < 0.5 才有水);WADE_M:機體可涉水的最大深度
+// (超過 = 不可通行,game.js _updatePlayer 視同牆);SLOW:涉水/河面移動速度倍率(水中速度減半);
+// SPAN_MIN_M:道路連續泡水段達此長度即自動升級高架橋(biomes.js buildRoads);RAMP_M:自動橋段
+// 向兩岸乾地各外延的引道長(與橋面 24m 緩坡同級,出入口是斜坡不是階梯)。
+export const WATER = { LEVEL: 0.3, WADE_M: 1.2, SLOW: 0.5, SPAN_MIN_M: 18, RAMP_M: 24 };
+
+// ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
+// 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。
+// EYE_M/TGT_M:射手眼高 / 目標身高取樣(地面單位);TOWER_EYE_M:塔的砲位高(塔身 26m,砲位過半);
+// THRU_M:穿越障礙圓柱的弦長門檻(< 門檻 = 貼牆擦邊,不算遮蔽);MAX_OCC:上傳障礙數上限。
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64 };
+
 // ---- 招式養成(擊殺數解鎖 + 金錢購買;輕/重武器 Lv1 自帶,小招/大招要先解鎖)----
 // kills/cost[i] = 升到 Lv(i+1) 的門檻;擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。
 export const PROG = {

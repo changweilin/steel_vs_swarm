@@ -211,10 +211,11 @@ export class BotBrain {
     let best = null, bestD = Infinity;
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙
-      if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
+      // 便宜的射程淘汰在前、_visibleTo(LOS 上線後含遮蔽 trace)在後 —— 全圖打不到的目標不付視野成本
+      if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       if (t.hero) d *= 0.55;                             // 優先咬英雄
       else if (t.kind === 'tower' || t.kind === 'base') d *= 1.3;
       d /= vsMult(wd, t.kind);                            // 優先打武器克制的目標類型

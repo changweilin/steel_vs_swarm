@@ -8,7 +8,7 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { toonGradient } from './hazards.js';
-import { MAPGEO, TERRAIN, GAME, battleBBox } from './data.js';
+import { MAPGEO, TERRAIN, GAME, WATER, battleBBox } from './data.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
@@ -361,14 +361,17 @@ export async function buildTerrain(cfg, onProgress) {
   const group = new THREE.Group();
   group.add(mesh);
 
-  // 水面(有低於海平面的區域才加)
-  if (minH < 0.5) {
+  // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
+  // 水面高的唯一真相 = data.js WATER.LEVEL(涉水深/道路跨水判定共用同一數字)。
+  let waterY = null;
+  if (minH < WATER.LEVEL + 0.2) {
+    waterY = WATER.LEVEL;
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(worldW, worldH),
       new THREE.MeshToonMaterial({ color: 0x1a4a6a, gradientMap: toonGradient(), transparent: true, opacity: 0.82 }),
     );
     water.rotation.x = -Math.PI / 2;
-    water.position.set((minX + maxX) / 2, 0.3, (minZ + maxZ) / 2);
+    water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);
     group.add(water);
   }
 
@@ -432,5 +435,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, carveTunnels, sampleColor, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
+  return { group, mesh, heightAt, carveTunnels, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
 }

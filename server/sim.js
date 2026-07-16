@@ -8,7 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  EVASION, heroMobility,
+  EVASION, heroMobility, LOS,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -78,6 +78,161 @@ export class BattleSim {
 
     this._spawnStructures();
     this._seedField();
+  }
+
+  // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
+  /**
+   * 房主客戶端上傳的世界資料(server.js 驗證來源後轉入;sim 座標 z=北):
+   *   occ:[[x,z,r,h]…] 建物/神木/巨岩/橋墩碰撞柱 → 視線/彈道遮蔽(塔/NPC/命中驗證不可透視);
+   *   cor:[[x1,z1,x2,z2,hw,tun]…] 隧道(tun=1,全段)/橋樑走廊 → 清除走廊內第三方障礙與地雷
+   *       (地下道/隧道內只會有道路物件;橋下淨空可通行)。
+   * 未上傳(e2e/無瀏覽器headless對局)→ _losGrid 不存在,LOS 遮蔽停用,行為與舊版一致。
+   * 數值/數量皆夾上限:上傳資料只能「減少」可打擊目標,不會放大任何傷害。
+   */
+  setWorld(w) {
+    if (!w || this._worldSet) return;   // 房主一份,只收一次
+    this._worldSet = true;
+    const occ = [];
+    for (const o of Array.isArray(w.occ) ? w.occ.slice(0, LOS.MAX_OCC) : []) {
+      if (!Array.isArray(o) || o.length < 4) continue;
+      const [x, z, r, h] = o.map(Number);
+      if (![x, z, r, h].every(Number.isFinite)) continue;
+      occ.push([x, z, Math.min(60, Math.max(0.5, r)), Math.min(300, Math.max(1, h))]);
+    }
+    this.worldOcc = occ;
+    const cor = [];
+    for (const c of Array.isArray(w.cor) ? w.cor.slice(0, 2400) : []) {
+      if (!Array.isArray(c) || c.length < 5) continue;
+      const [x1, z1, x2, z2, hw, tun] = c.map(Number);
+      if (![x1, z1, x2, z2, hw].every(Number.isFinite)) continue;
+      cor.push([x1, z1, x2, z2, Math.min(20, Math.max(2, hw)), tun ? 1 : 0]);
+    }
+    if (cor.length) this._pruneCorridors(cor);
+    this._rebuildLosGrid();
+  }
+
+  /** 走廊淨空:隧道內/橋下不留第三方障礙(建物由客戶端 blocked 淨空,這裡清 sim 自己種的) */
+  _pruneCorridors(cor) {
+    const distToCor = (x, z, tunOnly) => {
+      let min = Infinity;
+      for (const [x1, z1, x2, z2, hw, tun] of cor) {
+        if (tunOnly && !tun) continue;
+        const ex = x2 - x1, ez = z2 - z1;
+        const L2 = ex * ex + ez * ez || 1;
+        let t = ((x - x1) * ex + (z - z1) * ez) / L2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const d = Math.hypot(x - (x1 + ex * t), z - (z1 + ez * t)) - hw;
+        if (d < min) min = d;
+      }
+      return min;
+    };
+    // 障礙物/防空陣地/中繼站:落在任何走廊內(隧道全段 + 橋下)一律移除
+    for (const e of [...this.ents.values()]) {
+      if (!e.neutral) continue;
+      const def = HAZARDS[e.kind];
+      if (!def && e.kind !== 'aasite' && e.kind !== 'relay') continue;
+      const r = (def?.r || 3) * (e.sc || 1);
+      if (distToCor(e.x, e.z, false) >= r + 2) continue;
+      this.ents.delete(e.id);
+      if (this.hazBlockers && def?.block) {
+        this.hazBlockers = this.hazBlockers.filter(([x, z]) => x !== e.x || z !== e.z);
+      }
+      if (e.kind === 'fire') this._fires = this._fires.filter((f) => f !== e);
+    }
+    // 地雷:隧道路面上不留(橋下地雷在地面,不衝突)
+    this.mines = this.mines.filter(([x, z]) => distToCor(x, z, true) >= 2);
+  }
+
+  /** 遮蔽物網格 = 上傳碰撞柱 + sim 自己的阻擋型障礙(擊毀障礙後 MUST 重建 → 打穿牆開視野)。
+   *  格鍵用整數(i,j 各偏移 32768 打包)、另記全場最高障礙 _losMaxH 供高空快篩 —— 8Hz 熱路徑零字串。 */
+  _rebuildLosGrid() {
+    if (!this.worldOcc) return;   // 未上傳 → LOS 遮蔽停用
+    const occ = [...this.worldOcc];
+    for (const e of this.ents.values()) {
+      const def = HAZARDS[e.kind];
+      if (!e.neutral || !def?.block) continue;
+      occ.push([e.x, e.z, def.r * (e.sc || 1), def.hgt || 6]);
+    }
+    const C = LOS.CELL_M;
+    const grid = new Map();
+    let maxH = 0;
+    for (const o of occ) {
+      const [x, z, r, h] = o;
+      if (h > maxH) maxH = h;
+      const i0 = Math.floor((x - r) / C), i1 = Math.floor((x + r) / C);
+      const j0 = Math.floor((z - r) / C), j1 = Math.floor((z + r) / C);
+      for (let i = i0; i <= i1; i++) {
+        for (let j = j0; j <= j1; j++) {
+          const k = (i + 32768) * 65536 + (j + 32768);
+          let a = grid.get(k);
+          if (!a) grid.set(k, a = []);
+          a.push(o);
+        }
+      }
+    }
+    this._losGrid = grid;
+    this._losMaxH = maxH;
+  }
+
+  /**
+   * 視線/彈道遮蔽(2026-07-15):線段(射手眼 → 目標)是否被實體障礙(建物/神木/巨岩)擋住。
+   * 高度是「離地」近似(伺服器無地形高程):障礙視為 [0, h] 圓柱,線段兩端高度線性內插;
+   * 穿越弦長 < LOS.THRU_M(貼牆擦邊)不算遮蔽。看不到單位就不能射擊 —— 塔/NPC/玩家一體適用。
+   * 熱路徑注意(2026-07-16 效能修):Amanatides–Woo 沿線走格(不掃 bbox,對角線省 ~3 倍格查詢);
+   * 圓柱已按半徑外擴登記進所有重疊格 ⇒ 只訪線格即完備;跨格圓柱會重測,冪等且比配置 Set 去重便宜
+   * —— MUST NOT 加回 per-call Set/字串鍵(V8 minor GC 會吃掉 tick 預算)。
+   */
+  _losBlocked(ax, az, ay, bx, bz, by) {
+    if (this._losDirty) { this._losDirty = false; this._rebuildLosGrid(); }   // 障礙被擊毀後的懶重建
+    const grid = this._losGrid;
+    if (!grid) return false;
+    if (Math.min(ay, by) >= (this._losMaxH || 0)) return false;   // 全程高於最高障礙(高空對高空)
+    const dx = bx - ax, dz = bz - az;
+    const len = Math.hypot(dx, dz);
+    if (len < 1e-6) return false;
+    const C = LOS.CELL_M;
+    const A2 = dx * dx + dz * dz;
+    let i = Math.floor(ax / C), j = Math.floor(az / C);
+    const iEnd = Math.floor(bx / C), jEnd = Math.floor(bz / C);
+    const stepI = dx > 0 ? 1 : -1, stepJ = dz > 0 ? 1 : -1;
+    let tMaxI = dx !== 0 ? ((dx > 0 ? i + 1 : i) * C - ax) / dx : Infinity;
+    let tMaxJ = dz !== 0 ? ((dz > 0 ? j + 1 : j) * C - az) / dz : Infinity;
+    const tDI = dx !== 0 ? C / Math.abs(dx) : Infinity;
+    const tDJ = dz !== 0 ? C / Math.abs(dz) : Infinity;
+    for (let guard = 0; guard < 96; guard++) {
+      const arr = grid.get((i + 32768) * 65536 + (j + 32768));
+      if (arr) {
+        for (const o of arr) {
+          const [x, z, r, h] = o;
+          if (Math.min(ay, by) >= h) continue;   // 兩端都高於此柱 → 穿柱段必也高於(線性內插)
+          const ox = ax - x, oz = az - z;
+          const B2 = 2 * (ox * dx + oz * dz);
+          const C2 = ox * ox + oz * oz - r * r;
+          const disc = B2 * B2 - 4 * A2 * C2;
+          if (disc <= 0) continue;
+          const sq = Math.sqrt(disc);
+          let t0 = (-B2 - sq) / (2 * A2), t1 = (-B2 + sq) / (2 * A2);
+          if (t1 < 0 || t0 > 1) continue;
+          t0 = Math.max(0, t0); t1 = Math.min(1, t1);
+          if ((t1 - t0) * len < LOS.THRU_M) continue;        // 擦邊不擋
+          const y0 = ay + (by - ay) * t0, y1 = ay + (by - ay) * t1;
+          if (Math.min(y0, y1) < h) return true;             // 穿柱段低於障礙高 = 被擋
+        }
+      }
+      if (i === iEnd && j === jEnd) break;
+      if (tMaxI < tMaxJ) { i += stepI; tMaxI += tDI; }
+      else { j += stepJ; tMaxJ += tDJ; }
+    }
+    return false;
+  }
+
+  /** 射手眼高(離地):塔的砲位過半塔身,能越過矮牆射擊 */
+  _eyeY(e) { return (e.y || 0) + (e.kind === 'tower' ? LOS.TOWER_EYE_M : LOS.EYE_M); }
+
+  /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到 */
+  _tgtY(e) {
+    if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
+    return (e.hero || e.kind === 'heli' || e.decoy ? (e.y || 0) : 0) + LOS.TGT_M;
   }
 
   // ---------- 危險區(Diablo 式隨機生成:地雷 + 障礙物 + 匿蹤防空陣地 + 中繼站)----------
@@ -570,6 +725,8 @@ export class BattleSim {
     // 迷霧內的目標不可鎖定(與 heroHit 同一條規則:看不見 = 沒有火控解)
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
+    // 實體障礙後的目標沒有火控解(與 heroHit 同一條 LOS 規則)
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return;
     sq.lock = targetId;
     sq.lockAt = this.t;
     this.events.push({ e: 'lock', pid, side: sq.side, tid: targetId, tpid: t.pid ?? null });
@@ -712,6 +869,9 @@ export class BattleSim {
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
+    // 實體障礙遮蔽:射手自己的彈道被建物/神木/巨岩擋住 = 打不到(客戶端彈道已擋,此為防作弊複驗;
+    // 偵察脈衝給的是「情報」,不會讓砲彈穿牆 —— 不吃 pulse 旁路)
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     // 閃避(輕武器直射):機動機體移動中可能整發閃開(僚機齊射仍各自擲骰)
     if (wp.def.id === 'light' && this._dodges(t)) {
@@ -739,6 +899,8 @@ export class BattleSim {
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d3 > def.range * 1.25) continue;
+      // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
+      if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
       this.events.push({ e: 'shot', from: [b.x, b.z], to: [t.x, t.z], side: b.side });
       if (def.id === 'light' && this._dodges(t)) continue;   // 閃避:僚機這一發也被閃開
       const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
@@ -787,6 +949,8 @@ export class BattleSim {
     if (!wp) return false;
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
     if (d3 > wp.def.range) return false;
+    // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
     if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
@@ -856,6 +1020,8 @@ export class BattleSim {
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
+        // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
+        if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
         this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3), b, wp.def.pen);
       }
     }
@@ -1225,6 +1391,9 @@ export class BattleSim {
       this.ents.delete(t.id);
       if (this.hazBlockers && HAZARDS[t.kind]?.block) {
         this.hazBlockers = this.hazBlockers.filter(([x, z]) => x !== t.x || z !== t.z);
+        // 擊毀障礙 = 打穿牆開視野:標記待重建,下一次 _losBlocked 需要時才重建一次
+        // (一發爆風掃掉整道短牆 = 同 tick 多殺,不逐殺全量重建)
+        this._losDirty = true;
       }
       // Diablo 式隨機掉落:擊毀障礙有機率掉戰場物資(TreasureClass:越硬掉越高階)
       const def = HAZARDS[t.kind];
@@ -1700,7 +1869,12 @@ export class BattleSim {
       if (d > u.range) continue;
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
       if (wd) d /= vsMult(wd, t.kind);             // 優先打武器克制的目標類型
-      if (d < bestD) { bestD = d; best = t; }
+      if (d >= bestD) continue;
+      // 塔/NPC 不能透視:實體障礙(建物/神木/巨岩)後的目標不列入鎖定(看不到就不能射擊)。
+      // LOS trace 只付給「會成為新 best」的候選(running-minimum 惰性驗證;被擋者不更新
+      // bestD ⇒ 結果 = 未被擋候選中折算距離最小者,與逐一檢查完全相同,trace 數期望 ~O(ln n))
+      if (this._losGrid && this._losBlocked(e.x, e.z, this._eyeY(e), t.x, t.z, this._tgtY(t))) continue;
+      bestD = d; best = t;
     }
     return best;
   }
@@ -1807,8 +1981,24 @@ export class BattleSim {
     return o;
   }
 
+  /** 同 tick 視野快取(2026-07-16 效能修):snapshotFor ×2 + 每次 heroHit/heroLock/bot _acquire
+   *  都要視野來源與可見性;LOS 遮蔽上線後 trace 不便宜,而位置只在 tick 間有意義地變動
+   *  —— 比照 _frame() 以 _tickN 換代。位置以外的離散視野狀態(瞄準加成/死亡/單位增減)
+   *  可能在 tick 之間的訊息處理中變動 → 換代鍵再疊一個便宜指紋(≤10 名英雄 + ents 數),
+   *  同 tick 內狀態一變快取即失效(e2e 的「瞄準後立刻看得到」正是這個路徑)。 */
+  _visMemoFor() {
+    let fp = this.ents.size | 0;
+    for (const h of this.heroes.values()) fp = (fp * 31 + (h.aiming ? 2 : 0) + (h.dead ? 1 : 0)) | 0;
+    if (!this._visMemo || this._visMemo.tickN !== this._tickN || this._visMemo.fp !== fp) {
+      this._visMemo = { tickN: this._tickN, fp, src: {}, vis: { SWARM: new Map(), STEEL: new Map() } };
+    }
+    return this._visMemo;
+  }
+
   /** 一方目前的視野來源(英雄 + 小兵 + 塔 + 主堡,各自 sight 半徑;瞄準模式加成視野) */
   _visionSources(side) {
+    const m = this._visMemoFor();
+    if (m.src[side]) return m.src[side];
     const sources = [];
     for (const e of this.ents.values()) {
       if (e.side !== side || e.hp <= 0) continue;
@@ -1816,19 +2006,36 @@ export class BattleSim {
       const sight = UNITS[e.kind]?.sight;
       if (sight == null) continue;
       const r = e.hero && e.aiming ? sight * GAME.AIM_SIGHT_MULT : sight;
-      sources.push([e.x, e.z, r]);
+      sources.push([e.x, e.z, r, this._eyeY(e)]);   // 眼高:LOS 遮蔽用(高飛的無人機看得過建物)
     }
+    m.src[side] = sources;
     return sources;
   }
 
-  /** 建築/中立物永遠可見(非「單位」);敵方英雄/小兵要在己方視野內才可見 */
+  /** 建築/中立物永遠可見(非「單位」);敵方英雄/小兵要在己方視野內才可見。
+   *  2026-07-15 起視野吃實體障礙遮蔽(_losBlocked):躲在建物/神木/巨岩後 = 看不到
+   *  (快照過濾 → 敵標消失;heroHit/heroLock 同一條規則 → 看不到就打不到)。
+   *  只在 sources 是本 tick 的正典視野來源(_visionSources 回傳的那份)時走 (side, ent) 快取
+   *  —— 呼叫端自組 sources(測試/特例)不吃快取,語意不變。 */
   _visibleTo(e, side, sources) {
     if (e.side === side || e.neutral || e.kind === 'tower' || e.kind === 'base') return true;
     if (e.hero && (e.stealthUntil || 0) > this.t) return false;   // 匿蹤:連視野內也看不到
-    for (const [sx, sz, r] of sources) {
-      if (dist2d(e.x, e.z, sx, sz) <= r) return true;
+    const m = this._visMemoFor();
+    const memo = sources === m.src[side] ? m.vis[side] : null;
+    if (memo) {
+      const c = memo.get(e.id);
+      if (c !== undefined) return c;
     }
-    return false;
+    const ty = this._tgtY(e);
+    let vis = false;
+    for (const [sx, sz, r, sy] of sources) {
+      if (dist2d(e.x, e.z, sx, sz) > r) continue;
+      if (this._losGrid && this._losBlocked(sx, sz, sy ?? LOS.EYE_M, e.x, e.z, ty)) continue;
+      vis = true;
+      break;
+    }
+    if (memo) memo.set(e.id, vis);
+    return vis;
   }
 
   /** 同一 tick 內共用的事件/飛彈/物資(events 只能清一次,多個收件者快照要共用同一份) */

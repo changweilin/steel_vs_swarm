@@ -6,7 +6,7 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, PROG,
-  UNITS, SQUAD,
+  UNITS, SQUAD, LOS,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
 import { LORE } from './lore.js';
@@ -1014,6 +1014,18 @@ async function enterLoading(cfg) {
     const st = biomes.userData.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
       `${st.roads ? `・道路 ${st.roads} 段` : ''}${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);
+    // 障礙視線遮蔽 + 立體交通走廊上傳(2026-07-15;房主一份,伺服器驗證上限並於開戰時套用):
+    // occ = 建物/神木/巨岩/橋墩碰撞柱 → sim 的 LOS 遮蔽(塔/NPC/命中驗證不可透視);
+    // cor = 隧道/橋樑走廊 → sim 清除走廊內第三方障礙與地雷(地下道/隧道內只會有道路物件)。
+    // 座標轉 sim 系(z 北 = −three z)。e2e/無瀏覽器對局不會上傳 → LOS 遮蔽自動停用(行為不變)。
+    if (app.isHost) {
+      const rd = (v) => Math.round(v * 10) / 10;
+      const occ = (biomes.userData.blockers || []).slice(0, LOS.MAX_OCC)
+        .map((b) => [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]);
+      const cor = (biomes.userData.gradeCorridors || []).slice(0, 2400)
+        .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
+      app.net.send({ t: 'world', occ, cor });
+    }
     app.net.send({ t: 'loaded' });
   } catch (e) {
     console.error(e);
