@@ -255,6 +255,11 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     const p = dijkstra(g, aIdx, bIdx, used, wMul);
     if (!p) { why = 'noPath'; return null; }
     if (pathLen(g, p) / straight > 2.2) { why = 'detour'; return null; }   // 繞路閘門(同 mapSelect)
+    // 折返閘門(同 mapSelect / MAPGEO.MAX_BACKTRACK):prog 已正規化為 A→B 進度,
+    // 累加進度倒退段 = 往主堡折返比例;超標淘汰(側翼 via 導引偶會把路徑吸回起點)
+    let back = 0, pr = prog(p[0]);
+    for (let k = 1; k < p.length; k++) { const pg = prog(p[k]); if (pg < pr) back += pr - pg; pr = pg; }
+    if (back > MAPGEO.MAX_BACKTRACK) { why = 'backtrack'; return null; }
     banPath(used, p, n);                                      // 標記已用邊(下一條會被 REUSE_PEN 重罰)
     const all = p.map((i) => [X[i], Z[i]]);
     const keep = simplifyIdx(all, 3);

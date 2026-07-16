@@ -570,35 +570,29 @@ export class BattleSim {
     return e;
   }
 
-  /** 該陣營主堡所在的那條兵線端點與朝戰場的方向(取端點最貼近主堡的一條) */
-  _laneAtBase(side) {
-    const [bx, bz] = this.basePos[side];
-    let best = null, bd = Infinity;
-    for (const pts of this.lanes) {
-      if (pts.length < 2) continue;
-      const end = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
-      const nxt = side === 'SWARM' ? pts[1] : pts[pts.length - 2];
-      const d = Math.hypot(end[0] - bx, end[1] - bz);
-      if (d < bd) { bd = d; best = { end, nxt }; }
-    }
-    return best;
-  }
-
   /**
-   * 出生/重生點:沿主要道路推出主堡 HERO_SPAWN_OFF,再垂直偏到路旁(左右交錯),
-   * i 越大偏得越遠 —— 多架/多人不疊在一起,且都落在主要道路邊而非路中央。
+   * 出生/重生點:每名玩家(squadIdx)分配到不同兵線 + 交替左右側,彼此避開;沿該兵線推出
+   * 主堡 HERO_SPAWN_OFF(> NPC 波次生成點沿線距離 WAVE_SPAWN_OFF_M,故落在 NPC 隊列之前),
+   * 再垂直偏到路旁(避開落在兵線中央的 NPC 生成點)。同隊各機(bodyIdx)沿側向再錯開不疊在一起。
    */
-  _spawnPoint(side, i = 0) {
+  _spawnPoint(side, squadIdx = 0, bodyIdx = 0) {
     const [bx, bz] = this.basePos[side];
-    const lane = this._laneAtBase(side);
-    if (!lane) return [bx + i * 12, bz + i * 6];
-    let dx = lane.nxt[0] - lane.end[0], dz = lane.nxt[1] - lane.end[1];
-    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;          // 沿路指向戰場
-    const px = dz, pz = -dx;                                      // 路的垂直向(路旁)
-    const s = i % 2 === 0 ? 1 : -1;
-    const lat = GAME.HERO_SPAWN_SIDE + Math.floor(i / 2) * 9;     // 路旁偏移,交錯遞增
-    return [bx + dx * GAME.HERO_SPAWN_OFF + px * lat * s,
-      bz + dz * GAME.HERO_SPAWN_OFF + pz * lat * s];
+    const lanes = this.lanes.filter((p) => p.length >= 2);
+    if (!lanes.length) return [bx + squadIdx * 14 + bodyIdx * 8, bz + squadIdx * 8 + bodyIdx * 5];
+    const nL = lanes.length;
+    const li = squadIdx % nL;                                     // 不同玩家分散到不同兵線
+    const layer = Math.floor(squadIdx / nL);                      // 兵線數用罄後的外圈
+    const s = layer % 2 === 0 ? 1 : -1;                           // 交替兵線左右兩側
+    const pts = lanes[li];
+    const end = side === 'SWARM' ? pts[0] : pts[pts.length - 1];
+    const nxt = side === 'SWARM' ? pts[1] : pts[pts.length - 2];
+    let dx = nxt[0] - end[0], dz = nxt[1] - end[1];
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;          // 沿兵線指向戰場
+    const px = dz, pz = -dx;                                      // 兵線垂直向(路旁)
+    // 側偏:基準偏移 + 外圈漸遠 + 同隊各機錯開(都 < 走廊半寬 LANE_SAFE_M 45,仍貼兵線)
+    const lat = GAME.HERO_SPAWN_SIDE + Math.floor(layer / 2) * 11 + bodyIdx * 10;
+    return [end[0] + dx * GAME.HERO_SPAWN_OFF + px * lat * s,
+      end[1] + dz * GAME.HERO_SPAWN_OFF + pz * lat * s];
   }
 
   // ---------- 英雄(每陣營可多位,以玩家 pid 為鍵;ch = 角色 id)----------
@@ -615,8 +609,7 @@ export class BattleSim {
     const m = c.mods || {};
     const u = UNITS[kind];
     const idx = this.squads.size ? [...this.squads.values()].filter((s) => s.side === side).length : 0;
-    // 同陣營多英雄:沿主要道路旁交錯出生,避免疊在一起(見 _spawnPoint)
-    const [ox, oz] = this._spawnPoint(side, idx * 2);
+    // 同陣營多英雄:分散到不同兵線兩側 + 避開 NPC 生成點(見 _spawnPoint;逐機於下方 body 迴圈取點)
     const mp = Math.round(u.mp * (m.mp ?? 1));
     const sq = {
       pid, side, ch, kind, act: 0, bodies: [],
@@ -635,9 +628,10 @@ export class BattleSim {
     };
     const n = kind === 'drone' ? SQUAD.N : 1;
     for (let i = 0; i < n; i++) {
+      const [ox, oz] = this._spawnPoint(side, idx, i);
       const b = this._add({
         kind, side, pid, ch, si: i, spawnIdx: idx,
-        x: ox + i * 12, z: oz + i * 6, y: 0, ry: 0,
+        x: ox, z: oz, y: 0, ry: 0,
         hp: Math.round(u.hp * (m.hp ?? 1)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
         // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
@@ -1540,7 +1534,7 @@ export class BattleSim {
         }
         if (b.hp < b.maxHp) {
           const [bx, bz] = this.basePos[b.side];
-          if (dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_RADIUS) {
+          if (dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_R) {
             b.hp = Math.min(b.maxHp, b.hp + UNITS[b.kind].regen * dt);
           }
         }
@@ -1604,7 +1598,7 @@ export class BattleSim {
     b.hp = b.maxHp;
     b.sp = b.maxSp;
     b.lastHitAt = -99;
-    const [sx, sz] = this._spawnPoint(b.side, (b.spawnIdx || 0) * 3 + (b.si || 0));
+    const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0);
     b.x = sx; b.z = sz;
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊

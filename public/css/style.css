@@ -422,6 +422,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .hitmark.on { animation: hitPop 0.2s steps(4); }
 @keyframes hitPop { 0% { opacity: 1; transform: rotate(45deg) scale(0.6); } 100% { opacity: 0; transform: rotate(45deg) scale(1.6); } }
 
+/* 受傷暈影:被擊瞬間全屏邊緣紅光閃爍(在準星/HUD 之下,只染畫面周邊不擋中央視線) */
+.hurt-vig {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 42%, rgba(190, 20, 24, 0.55) 100%);
+}
+.hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
+@keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
+
 .hud-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; pointer-events: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;

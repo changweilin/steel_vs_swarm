@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -383,7 +383,10 @@ export class MapSelect {
       if (!result) continue;
       const { lanes, maxOverlap, overlaps, synthetic, roadDist } = result;
       const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
-      const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP;
+      // 折返門檻(同 bake / MAPGEO.MAX_BACKTRACK):任一兵線往主堡折返超標 → 淘汰此推薦點
+      const maxBt = Math.max(...lanes.map((lane) => laneBacktrackFrac(lane.map((c) => toMeters(c, A)))));
+      const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
+        && maxBt <= MAPGEO.MAX_BACKTRACK;
       if (!ok) continue;
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;

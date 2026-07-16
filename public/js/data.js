@@ -86,6 +86,10 @@ export const MAPGEO = {
   OVERLAP_CELL_FRAC: 0.06,         // L1/L2/L3 → 29/36/43m
   OVERLAP_CELL_MIN_M: 24,
   MAX_OVERLAP: 0.20,
+  // 兵線「往主堡折返」上限:沿 A→B 主軸投影,累加所有進度倒退的段長 ÷ 兩堡直線距離。
+  // > 此值 = 路線繞回頭路折返主堡過多(側翼 via-point 偶會把路徑吸回起點),生成階段淘汰。
+  // 與 MAX_OVERLAP 同性質(生成時硬門檻,伺服器不複驗;見 laneBacktrackFrac)。
+  MAX_BACKTRACK: 0.20,
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
   // 路徑戰術指標(Diablo DRLG 思想:走廊要彎、要有轉角,拒絕一眼看穿的直線)——
@@ -174,6 +178,26 @@ export function laneTacticsXZ(pts) {
     prevHead = head;
   }
   return { total, straight, sinuosity: total / straight, turns, turnsPerKm: turns.length / (total / 1000 || 1) };
+}
+
+/**
+ * 兵線「往主堡折返」比例:沿兩堡連線(A=pts[0]→B=末點)主軸投影,累加所有「進度倒退」
+ * 的段長,除以兩堡直線距離。單調向前的路線 → 0;繞回頭路折返主堡越多 → 越大。
+ * pts:[[x,z], …] 同一尺度即可(比例無單位);用於 MAPGEO.MAX_BACKTRACK 生成門檻。
+ */
+export function laneBacktrackFrac(pts) {
+  if (!pts || pts.length < 3) return 0;
+  const a = pts[0], b = pts[pts.length - 1];
+  const vx = b[0] - a[0], vz = b[1] - a[1];
+  const straight = Math.hypot(vx, vz) || 1;
+  const ux = vx / straight, uz = vz / straight;
+  let back = 0, prev = 0;                                   // prev = 上一點沿主軸的進度(公尺)
+  for (let i = 1; i < pts.length; i++) {
+    const s = (pts[i][0] - a[0]) * ux + (pts[i][1] - a[1]) * uz;
+    if (s < prev) back += prev - s;                         // 沿主軸倒退 = 往主堡折返
+    prev = s;
+  }
+  return back / straight;
 }
 
 /** 0~1 路徑戰術評分:太直重扣、過度繞路不加分、兵線越分離越好 */
@@ -1208,7 +1232,8 @@ export const GAME = {
   // MUST 與 range 脫鉤 —— 綁 range×0.9 的話,塔射程一拉高就會把 #INC-104 的 y=250 高空機也鎖住。
   GUN_CEIL_M: 170,
   CREEP_AGGRO_HERO_BIAS: 0.7, // 小兵優先打小兵/建築,英雄目標權重
-  HERO_HEAL_RADIUS: 160,      // 主堡補血半徑(也是軍械庫購物範圍)
+  HERO_HEAL_RADIUS: 160,      // 主堡服務半徑:軍械庫購物範圍 + 地形整平(治癒光暈半徑見 HERO_HEAL_R)
+  HERO_HEAL_R: 80,            // 主堡治癒光暈半徑(補裝甲 + 貼地光環)= 服務半徑一半
   // 出生/重生點:主堡朝敵方向外推距離。> 主堡護盾半徑 30 + 模型半徑 ~23,
   // 剛好落在堡外、遠在補血半徑內(舊值 100 是 8× 超尺度世界時代校的,重生跑回堡太遠)
   HERO_SPAWN_OFF: 45,

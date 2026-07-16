@@ -1494,6 +1494,13 @@ function makeHud() {
       void el.offsetWidth;
       el.classList.add('on');
     },
+    // 受傷暈影:自機被擊(HP/護盾下降)時全屏邊緣紅光閃一下(重觸發動畫同 hitmark 手法)
+    hurt: () => {
+      const el = $('hurtVig');
+      el.classList.remove('on');
+      void el.offsetWidth;
+      el.classList.add('on');
+    },
   };
 }
 

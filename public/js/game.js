@@ -1861,6 +1861,11 @@ export class BattleClient {
           this.decoyDocked = !!e.dc;
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
+          // 受傷暈影:自機總量(裝甲+護盾)較上一快照下降 = 被擊 → 閃紅暈影;
+          // 重生/補血的上升不觸發;換主視野(_takeOver 清 _prevVital)不誤觸
+          const vital = this.hp + this.sp;
+          if (this._prevVital != null && vital < this._prevVital - 0.5 && !e.dead) this.hud.hurt?.();
+          this._prevVital = vital;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
           this.money = e.$ ?? this.money;
           this.upg = e.up || this.upg;
@@ -2031,9 +2036,9 @@ export class BattleClient {
     return ent;
   }
 
-  // 主堡補血光環:標出 HERO_HEAL_RADIUS 範圍(貼地環,陣營色,緩慢脈動)
+  // 主堡治癒光環:標出 HERO_HEAL_R 範圍(貼地環,陣營色,緩慢脈動)
   _addHealAura(ent, e) {
-    const R = GAME.HERO_HEAL_RADIUS;
+    const R = GAME.HERO_HEAL_R;
     const wx = e.x, wz = -e.z, y = this.terrain.heightAt(wx, wz) + 0.6;
     const col = SIDES[e.s].color;
     const g = new THREE.Group();
@@ -2609,6 +2614,7 @@ export class BattleClient {
     this.firing = false;
     this._crashSent = false;
     this.trauma = 0.35;
+    this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
   }
 
@@ -2680,6 +2686,11 @@ export class BattleClient {
     this._lockGlow.parent?.remove(this._lockGlow);
     this._lockGlow = null;
     this._lockId = null;
+  }
+
+  /** 命中鎖定目標:讓其鎖定光暈短暫閃亮(vfx.lockGlow 讀 userData.flashAt 衰減)*/
+  _flashLockGlow() {
+    if (this._lockGlow) this._lockGlow.userData.flashAt = performance.now();
   }
 
   // ---------------- 自身死亡 / 重生 ----------------
@@ -2937,6 +2948,8 @@ export class BattleClient {
   /** 命中回饋:星爆 + 準星標記 + 本地估算傷害數字(伺服器仍是權威) */
   _hitFeedback(def, ent, point) {
     this.hud.hitmark?.();
+    // 命中鎖定目標 → 該目標的鎖定光暈短暫閃爍(射程範圍提示回饋)
+    if (ent && this._lockId === ent.id) this._flashLockGlow();
     starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
     if (ent) {
       const mult = vsMult(def, ent.kind);

@@ -432,12 +432,16 @@ export function lockGlow(target, color = 0xffffff, dims = null) {
   g.add(ring);
 
   g.onBeforeRender = () => {
-    const t = performance.now() / 1000;
+    const now = performance.now();
+    const t = now / 1000;
     const p = 0.5 + 0.5 * Math.sin(t * 6);
-    halo.material.opacity = 0.3 + p * 0.35;
-    halo.scale.setScalar(D * (0.92 + p * 0.16));
+    // 命中閃爍:呼叫端設 userData.flashAt(performance.now()),之後 FLASH_MS 內額外增亮放大、線性衰減
+    const fl = Math.max(0, 1 - (now - (g.userData.flashAt || -1e9)) / 200);
+    halo.material.opacity = Math.min(1, 0.3 + p * 0.35 + fl * 0.6);
+    halo.scale.setScalar(D * (0.92 + p * 0.16 + fl * 0.55));
+    ring.material.opacity = Math.min(1, 0.9 + fl * 0.6);
     ring.rotation.z = t * 1.6;
-    ring.scale.setScalar(0.94 + p * 0.12);
+    ring.scale.setScalar(0.94 + p * 0.12 + fl * 0.45);
   };
   target.add(g);
   return g;
