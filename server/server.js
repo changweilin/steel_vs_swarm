@@ -440,6 +440,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'swap' && client.side) { b.heroSwap(clientId, m.i); return; }
     if (m.t === 'lock' && client.side) { b.heroLock(clientId, m.id); return; }
     if (m.t === 'cast' && client.side) { b.heroCast(clientId, m.slot, m.x, m.z); return; }
+    if (m.t === 'iframe' && client.side) { b.heroIframe(clientId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
     if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }
     if (m.t === 'buy' && client.side) {
       const err = b.buy(clientId, m.item);

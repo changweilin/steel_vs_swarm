@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
-  WATER,
+  WATER, CJUMP, IFRAME,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -1652,6 +1652,34 @@ export class BattleClient {
     return f;
   }
 
+  /** 招式增益倍率(伺服器 mods 快照 [k, m, remS]):同鍵取最強;查無 = 1(speed 衝鋒 / jump 大跳躍) */
+  _modF(k) {
+    let v = 1;
+    for (const md of this.selfMods || []) if (md[0] === k && md[1] > v) v = md[1];
+    return v;
+  }
+
+  /** 控場移動係數(麻痺 = 0、緩速 ×slowF)—— 與伺服器 NPC(_advance)/bot(_speed)同一套規則 */
+  _ccMoveF() {
+    if ((this.stunLeft || 0) > 0) return 0;
+    return (this.slowLeft || 0) > 0 ? (this.slowF || 0.6) : 1;
+  }
+
+  /** 控場/標記狀態的上升沿播報(比照 _empWarnAt 的自我節流模式;快照 8Hz 驅動) */
+  _ccFeed() {
+    const edge = (key, left, msg) => {
+      const on = (left || 0) > 0;
+      if (on && !this[key]) this.hud.feed?.(msg);
+      this[key] = on;
+    };
+    edge('_stunOn', this.stunLeft, '⛓️ 機體麻痺:動力系統離線(武器仍可運作)!');
+    edge('_slowOn', this.slowLeft, '🕸️ 機體緩速:行動遲滯!');
+    edge('_confOn', this.confLeft, '💫 操縱混亂:控制訊號反轉!');
+    edge('_bleedOn', this.bleedLeft, '🩸 裝甲破口:持續失血中!');
+    edge('_markOn', this.markLeft, '🎯 定位完成:下一擊必中必爆!');
+    edge('_invOn', this.invLeft, '🛡️ 相位護盾:1 秒無敵!');
+  }
+
   /**
    * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
@@ -1860,6 +1888,16 @@ export class BattleClient {
           this.cds = e.cds || this.cds;
           this.empLeft = e.emp || 0;
           this.stealthLeft = e.st || 0;
+          // 控場/追加效果狀態(伺服器權威剩餘秒;條件欄位缺省 = 已結束)
+          this.stunLeft = e.pz || 0;
+          this.slowLeft = e.sl || 0;
+          this.slowF = e.slf ?? 0.6;
+          this.confLeft = e.cf || 0;
+          this.markLeft = e.mk || 0;
+          this.bleedLeft = e.bl || 0;
+          this.invLeft = e.iv || 0;
+          this.selfMods = e.md || [];   // 招式增益 [k, m, remS](speed/jump 由客戶端物理消費)
+          this._ccFeed();
           // 角色 / 招式階級同步(伺服器權威;升階 → 重算武器數值並滿彈夾)
           if (e.ch && e.ch !== this.ch) this._setChar(e.ch);
           if (e.ab) {
@@ -2391,6 +2429,29 @@ export class BattleClient {
       } else if (ev.tpid === this.youId) {
         this._lockedUntil = performance.now() / 1000 + LOCK.WARN_S;
       }
+    } else if (ev.e === 'cc') {
+      // 控場位移(拉近):位置客戶端權威 —— 指名自己的事件才生效,自套朝彈著中心的衝量
+      // (dash 先例的反向;NPC/bot/僚機由伺服器直接位移,不會收到這條)
+      if (ev.k === 'pull' && ev.tpid === this.youId && !this.dead) {
+        const wx = ev.x, wz = -ev.z;
+        const dx = wx - this.pos.x, dz = wz - this.pos.z;
+        const d = Math.hypot(dx, dz);
+        if (d > 1) {
+          const imp = Math.min(ev.imp || 18, d * 2);   // 近距離不過衝
+          this.vel.x += dx / d * imp;
+          this.vel.z += dz / d * imp;
+          if (!this._flying()) this.vy = (this.vy ?? 0) + 3;   // 地面機體被拉離地(掀起感)
+          this.trauma = Math.min(1, this.trauma + 0.3);
+          this.hud.feed?.('🪝 被拉向彈著中心!');
+        }
+      }
+    } else if (ev.e === 'iframe') {
+      // 無敵幀(蓄力跳/變形中段):施放者機體亮相位光環;自己的由 _ccFeed 播報
+      const ent = [...this.ents.values()].find((e2) => e2.pid === ev.pid && e2.hero && e2.mesh.visible);
+      if (ent) {
+        const p = ent.mesh.position;
+        shockRing(this.scene, this.effects, p.x, p.y + (ent.dimH || 4) * 0.5, p.z, (ent.dimR || 3) * 1.6, 0xcfe8ff);
+      }
     } else if (ev.e === 'decoy') {
       if (ev.pid === this.youId) {
         this.hud.feed?.(ev.homing ? '🚀 餌機分離:追蹤鎖定目標!' : '🛰️ 餌機分離:直飛偵察中(無法操舵)');
@@ -2426,6 +2487,16 @@ export class BattleClient {
         casterPos, groundY: surfY,
         r: ev.r || 0, dur: ev.dur || 0, scale,
       });
+      // 施法動作(locomotion stepCastPose;與展示台共用,MUST NOT 另寫分叉):
+      // 指向型招式(strike/dash/遠端 emp)= 定向動作(揮武/刺拳/踢腿),其餘 = 全向(吼叫/跺腳/旋轉…)
+      const cpNow = casterPos ? casterPos() : null;
+      const dirCast = ev.fx === 'strike' || ev.fx === 'dash'
+        || (ev.fx === 'emp' && cpNow && Math.hypot(wx - cpNow.x, wz - cpNow.z) > 12) ? 1 : 0;
+      const castT0 = performance.now() / 1000;
+      for (const ent of this.ents.values()) {
+        if (ent.pid !== ev.pid || ent.isSelf || !ent.hero) continue;
+        ent.castFx = { t0: castT0, slot: ev.slot, dir: dirCast };
+      }
       if (a) {
         this.hud.feed?.(ev.side === this.side
           ? `✨ ${c.code}【${a.name}】`
@@ -2704,15 +2775,18 @@ export class BattleClient {
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
     this.pitch = -0.05;
     // 變形機甲:重生一律地面型態
+    // 蓄力/騰空狀態一律歸零(robot 蓄力中陣亡 → 重生殘留 charge 會立刻誤觸蓄力跳)
+    this.charge = 0;
+    this._lowG = false;
+    this._ifSent = false;
     if (this.isMorph) {
       this.flight = false;
-      this.charge = 0;
       this.baseFov = UNITS.morph.fov;
     }
   }
 
   // ---------------- 變形機甲:型態切換(蓄力彈射 ↔ 觸地變形)----------------
-  /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣 */
+  /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣;變形中段附無敵幀請求 */
   _morphLaunch(gy) {
     this.flight = true;
     this.vel.y = MORPH.JUMP_V * this.charge;
@@ -2721,11 +2795,12 @@ export class BattleClient {
     this.charge = 0;
     this.baseFov = UNITS.morph.fovAir;
     this.trauma = Math.min(1, this.trauma + 0.4);
+    this._reqIframe();
     shockRing(this.scene, this.effects, this.pos.x, gy, this.pos.z, 7, 0xffd27a);
     this.hud.feed?.('🛫 蓄力彈射:變形為飛行型態!(觸地變形回地面型)');
   }
 
-  /** 飛行型 → 地面型:觸地變形 */
+  /** 飛行型 → 地面型:觸地變形;變形中段附無敵幀請求 */
   _morphLand(gy) {
     this.flight = false;
     this.pos.y = gy;
@@ -2733,8 +2808,36 @@ export class BattleClient {
     this.vel.y = 0;
     this.baseFov = UNITS.morph.fov;
     this.trauma = Math.min(1, this.trauma + 0.3);
+    this._reqIframe();
     shockRing(this.scene, this.effects, this.pos.x, gy, this.pos.z, 5, 0x9adfff);
     this.hud.feed?.('🦿 觸地變形:地面型態!(按住 Space 蓄力跳返回飛行)');
+  }
+
+  // ---------------- 機甲蓄力跳躍(2026-07-16;robot 限定,常數住 data.js CJUMP)----------------
+  /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進;騰空低重力 + 低阻力 = 太空漫步;中段請求無敵幀 */
+  _chargeJump() {
+    const k = this.charge;
+    this.vy = CJUMP.V * k * this._modF('jump');
+    this._cjV = this.vy;      // 中段判定基準(升速衰減過半 = 請求無敵幀)
+    this._lowG = true;
+    this._ifSent = false;
+    const look = this.camera.getWorldDirection(new THREE.Vector3());
+    look.y = 0;
+    if (look.lengthSq() > 0) look.normalize();
+    this.vel.x += look.x * CJUMP.FWD * k;
+    this.vel.z += look.z * CJUMP.FWD * k;
+    this.trauma = Math.min(1, this.trauma + 0.25);
+    shockRing(this.scene, this.effects, this.pos.x, this.pos.y, this.pos.z, 5, 0xbfe6ff);
+    this.hud.feed?.('🦿 蓄力跳躍!(騰空低重力滑行)');
+  }
+
+  /** 請求無敵幀(蓄力跳/變形中段):時長與 20s CD 由伺服器 heroIframe 權威把關,
+   *  這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
+  _reqIframe() {
+    const now = performance.now() / 1000;
+    if (now < (this._ifReqAt || 0) + 1.5) return;
+    this._ifReqAt = now;
+    this.net?.send({ t: 'iframe' });
   }
 
   // ---------------- 射擊(彈道學:初速 mv + 重力 9.81,射程上限)----------------
@@ -3319,7 +3422,10 @@ export class BattleClient {
       if (this.keys.KeyS) target.sub(look);
       if (this.keys.KeyD) target.add(right);
       if (this.keys.KeyA) target.sub(right);
-      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost * this._recoilMoveF(now, true));
+      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost * this._recoilMoveF(now, true)
+        * this._ccMoveF() * this._modF('speed'));
+      // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
+      if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
       if (this.keys.Space) target.y += u.vspeed;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
@@ -3339,12 +3445,16 @@ export class BattleClient {
       this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
     } else {
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
-      // 變形機甲蓄力中重心下沉、移動減速(起跳預備動作,mobility_plan Task 2.1)
-      const slowK = this.isMorph ? 1 - 0.6 * this.charge : 1;
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._waterSlowF() * this._recoilMoveF(now, false) * dt);
+      // 蓄力中重心下沉、移動減速(起跳預備動作;morph 變形彈射與 robot 蓄力跳共用 this.charge)
+      const slowK = 1 - 0.6 * this.charge;
+      // 混亂(招式追加效果):操縱反轉 + 慢速航向漂移
+      if ((this.confLeft || 0) > 0) { move.multiplyScalar(-1); this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._waterSlowF()
+        * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
-      const fr = Math.exp(-dt * 6);
+      // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
+      const fr = Math.exp(-dt * (this._lowG ? 0.8 : 6));
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 垂直落水保底(2026-07-15):深水處的有效地板 = 水面 − 可涉水深(半身泡水浮著),
@@ -3358,15 +3468,26 @@ export class BattleClient {
           this.charge = Math.min(1, this.charge + dt / MORPH.CHARGE_S);
         } else if (this.charge > 0) {
           if (onGround && this.charge >= MORPH.JUMP_MIN) this._morphLaunch(gy);
-          else if (onGround) { this.vy = u.jump; this.charge = 0; }
+          else if (onGround) { this.vy = u.jump * this._modF('jump'); this.charge = 0; }
           else this.charge = 0;
         }
       } else if (onGround && this.keys.Space) {
-        this.vy = u.jump;
+        // 機甲蓄力跳躍(2026-07-16,CJUMP;robot 限定):長按 Space 蓄力 → 放開彈射高跳,
+        // 騰空低重力 = 太空漫步;蓄力不足 = 普通小跳。與 morph 共用 this.charge(下蹲/減速一致)。
+        this.charge = Math.min(1, this.charge + dt / CJUMP.CHARGE_S);
+      } else if (!this.isMorph && this.charge > 0) {
+        if (onGround && this.charge >= CJUMP.MIN) this._chargeJump();
+        else if (onGround) this.vy = u.jump * this._modF('jump');
+        this.charge = 0;
       }
-      this.vy -= 24 * dt;
+      // 蓄力跳騰空吃低重力(月面滯空);「中段」= 升速衰減過半時請求無敵幀(伺服器驗 20s CD)
+      this.vy -= 24 * (this._lowG ? CJUMP.GRAV_F : 1) * dt;
+      if (this._lowG && !this._ifSent && this.vy <= (this._cjV || 0) * 0.5) {
+        this._ifSent = true;
+        this._reqIframe();
+      }
       this.pos.y += this.vy * dt;
-      if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; }
+      if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; this._lowG = false; }
       this.roll += (0 - this.roll) * Math.min(1, dt * 6);
     }
 
@@ -3438,7 +3559,8 @@ export class BattleClient {
     // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
     // 蓄力中重心下沉(鏡頭跟著蹲)。
     const vw = heroView(this.heroKind, this.ch, this._flying());
-    const eye = this.selfH * vw.e - (this.isMorph && !this._flying() ? this.charge * MORPH.CROUCH_M : 0);
+    const eye = this.selfH * vw.e
+      - (!this._flying() ? this.charge * (this.isMorph ? MORPH.CROUCH_M : CJUMP.CROUCH_M) : 0);
     const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
     this.camera.position.copy(this.pos).add(
       new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
@@ -3581,7 +3703,7 @@ export class BattleClient {
         ent._snapPos = false;
         snapped = true;
         ent.loco = null;   // 重生瞬移:骨架動畫狀態歸零,不殘留舊速度
-        ent.cfx = null; ent.fireFx = null; ent.heavyFx = null;   // 戰鬥動畫狀態一併歸零
+        ent.cfx = null; ent.fireFx = null; ent.heavyFx = null; ent.castFx = null;   // 戰鬥動畫狀態一併歸零
       } else {
         const k = Math.min(1, dt * 9);
         nx = cur.x + (ent.tgt.x - cur.x) * k;

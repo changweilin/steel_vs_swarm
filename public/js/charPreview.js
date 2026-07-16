@@ -212,6 +212,12 @@ export class CharPreview {
       const a = heroAbility(id, slot, 1);
       // dur 蓋住「蓄勢半拍 + 最長特效壽命 ~2.8s」:取景在演出結束前不縮回
       this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 3.4 : 3.0 };
+      // 施法動作(locomotion stepCastPose;與戰場 'cast' 事件同語意):
+      // 指向型(strike/dash/遠端 emp)= 定向動作,其餘 = 全向動作
+      if (this._ent) {
+        const dir = a.fx === 'strike' || a.fx === 'dash' || (a.fx === 'emp' && a.range > 0) ? 1 : 0;
+        this._ent.castFx = { t0: performance.now() / 1000, slot, dir };
+      }
       // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
       this.wantR = slot === 'ult' ? R * 2.2 : R * 1.5;
     }

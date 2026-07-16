@@ -229,6 +229,22 @@ export const MORPH = {
   CROUCH_M: 1.4,     // 滿蓄力時機體下蹲幅度(公尺;FPV 鏡頭同步下沉)
   GROUND_Y: 2,       // 伺服器:y ≤ 此值視為地面型(踩雷判定)
 };
+// ---- 機甲蓄力跳躍(2026-07-16;kind:'robot' 限定 —— morph 的長按 Space 已被變形彈射佔用)----
+// 長按 Space 蓄力 → 放開彈射高跳,騰空吃低重力係數 GRAV_F(月面/太空漫步的滯空感);
+// 蓄力不足 = 普通小跳。純客戶端物理(位置本就客戶端回報);高跳越過 GAME.AA_MIN_ALT
+// 一樣算空中目標(y 判定規則不變,吃塔 SAM 是刻意風險)。
+export const CJUMP = {
+  CHARGE_S: 0.9,     // 蓄滿秒數
+  MIN: 0.35,         // 低於此蓄力比例 = 普通小跳
+  V: 24,             // 滿蓄力垂直初速(m/s;實際 = V × 蓄力比例)
+  FWD: 7,            // 沿視線的水平推進(m/s,× 蓄力比例)
+  GRAV_F: 0.45,      // 蓄力跳騰空重力係數(< 1 = 太空漫步)
+  CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
+};
+// ---- 無敵幀(2026-07-16;蓄力跳躍 / 變形「中段」1 秒無敵,20 秒限用一次)----
+// 客戶端在中段時點送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
+// 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長;蜂群無人機無此機制。
+export const IFRAME = { DUR: 1.0, CD: 20 };
 export const SQUAD = {
   N: 3,
   // 單機強化倍率(HP / 傷害);UNITS.drone.hp/shield 與 DMG 都由它推導。
@@ -471,6 +487,9 @@ export function heroAbility(ch, slot, lvl = 1) {
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
     pen: t(a.pen ?? 0),
+    // 追加效果(2026-07-16):{fx:'pull|stun|slow|confuse|haste|leap|dodge|vamp|bleed|mark', 數值欄逐一過 tierVal}
+    add: a.add ? Object.fromEntries(Object.entries(a.add).map(([k, v]) =>
+      [k, typeof v === 'string' ? v : t(v)])) : null,
   };
 }
 
@@ -514,6 +533,16 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //         三平面投影(paint.js paintUnit),鎖在裝甲板上不隨關節游移。
 // fx 一覽:buff(增益)/ heal(維修)/ strike(打擊)/ summon(召喚)/ emp(癱瘓)
 //          / vision(視野)/ stealth(匿蹤)/ dash(突進)/ intercept(攔截飛彈)。
+// 招式追加效果 add(2026-07-16):攻擊性招式全面小幅降傷(strike 約 −15%、增益 dmg 倍率 −0.05),
+// 換取一項追加效果;數值欄吃 [L1,L2,L3] 階梯,解析在 heroAbility、結算唯一縫 = sim.heroCast/_applyCC:
+//   控場(strike 彈著區 r×1.5 內敵人;建築/無敵幀免疫):pull 拉近彈著中心(imp 衝量)/
+//     stun 麻痺(禁移動、武器照常 —— 與 EMP「武器離線、可移動」互補)/ slow 緩速(f 移速倍率)/
+//     confuse 混亂(玩家操縱反轉、NPC 沿線倒退)
+//   走位(掛在增益招式上,走 mods 通道 [{k,m,until}]):haste 衝鋒(k:'speed' 移速倍率)/
+//     leap 大跳躍(k:'jump' 跳躍初速倍率)/ dodge 完美迴避(k:'dodge',直射武器必閃)/
+//    (隱形 = 既有 stealth 招式,不另設 add)
+//   其他:vamp 吸血(k:'vamp',實際造成傷害 × f 回自身裝甲)/ bleed 出血(DoT,dps×dur,
+//     擊殺計給施放者)/ mark 定位(markUntil:下一擊必中 —— 無視閃避 —— 且必爆)
 // 武器 type 一覽(2026-07-11 機制多元化;傷害距離衰減見 dmgFalloff):
 //   gun      動能彈:彈道學拋物線,動能隨空阻衰減
 //   rail     磁軌炮:按住開火蓄力 charge 秒 → 極速直擊(幾乎無衰減、高破甲);提前放開不耗彈
@@ -539,8 +568,9 @@ export const CHARACTERS = {
     heavy: { name: '70mm 導引火箭巢', rw: 'Hydra 70 + APKWS 雷射導引・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
       dmg: [100, 135, 170], r: [12, 14, 16], cd: [8, 7, 6], range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
-    skill: { name: '蜂群協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.2, 1.28, 1.35] },
-      dur: [6, 8, 10], cd: 20, mp: [35, 40, 45], desc: '指揮頻道開啟:半徑內友軍火力提升' },
+    skill: { name: '蜂群協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.15, 1.23, 1.3] },
+      add: { fx: 'vamp', f: [0.1, 0.13, 0.16] },
+      dur: [6, 8, 10], cd: 20, mp: [35, 40, 45], desc: '指揮頻道開啟:友軍火力提升,蜂群回收戰果(吸血)' },
     ult: { name: '總譜:終樂章', fx: 'summon', unit: 'heli', count: [2, 3, 4],
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '呼叫攻擊直升機編隊沿最近兵線壓上' },
   },
@@ -589,8 +619,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
     skill: { name: '突進機動', fx: 'dash', imp: [28, 34, 40],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '沿視線方向爆發加速(教官の鐵鍬距離)' },
-    ult: { name: '白刃時刻', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], dmgTaken: [0.85, 0.8, 0.75] },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '近接教官進入戰鬥反射狀態' },
+    ult: { name: '白刃時刻', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.85, 0.8, 0.75] },
+      add: { fx: 'haste', f: [1.25, 1.3, 1.35] },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '近接教官進入戰鬥反射狀態,衝鋒突臉' },
   },
   s05: {
     side: 'SWARM', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
@@ -602,11 +633,13 @@ export const CHARACTERS = {
     heavy: { name: '巡飛彈釋放器', rw: 'Lancet 縮裝・巡飛 90m/s', type: 'missile', mv: 90,
       dmg: [160, 210, 260], r: [13, 15, 17], cd: [10, 9, 8], range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
-    skill: { name: '超頻', fx: 'buff', target: 'self', mul: { dmg: [1.1, 1.15, 1.2], reload: [0.65, 0.6, 0.55] },
-      dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: 'APM 全開:填彈大幅加速、火力小幅提升' },
-    ult: { name: '蜂群風暴', fx: 'strike', count: [6, 8, 10], dmg: [70, 90, 110], r: 10, scatter: 30,
+    skill: { name: '超頻', fx: 'buff', target: 'self', mul: { dmg: [1.05, 1.1, 1.15], reload: [0.65, 0.6, 0.55] },
+      add: { fx: 'dodge' },
+      dur: [6, 7, 8], cd: [18, 16, 14], mp: [30, 35, 40], desc: 'APM 全開:填彈大幅加速,競速走位完美迴避直射' },
+    ult: { name: '蜂群風暴', fx: 'strike', count: [6, 8, 10], dmg: [60, 77, 94], r: 10, scatter: 30,
+      add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 320, pen: 8, cd: [70, 62, 54], mp: [85, 95, 105], vs: { armor: 1.3, building: 1.1 },
-      desc: '呼叫 FPV 蜂群對指定區域飽和俯衝' },
+      desc: '呼叫 FPV 蜂群對指定區域飽和俯衝,纏擾致盲(混亂)' },
   },
   s06: {
     side: 'SWARM', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」攔截者',
@@ -635,9 +668,10 @@ export const CHARACTERS = {
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
     skill: { name: '分配演算法', fx: 'intercept', r: [170, 210, 250],
       cd: [15, 13, 11], mp: [30, 35, 40], desc: '一道證明完畢:清空半徑內來襲飛彈' },
-    ult: { name: '飽和反擊', fx: 'strike', count: [5, 7, 9], dmg: [80, 100, 125], r: 11, scatter: 35,
+    ult: { name: '飽和反擊', fx: 'strike', count: [5, 7, 9], dmg: [68, 85, 106], r: 11, scatter: 35,
+      add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 340, pen: 6, cd: [72, 64, 56], mp: [85, 95, 105], vs: { air: 1.5, armor: 1.1 },
-      desc: '攔截網反向齊射:對指定空域/地面飽和打擊' },
+      desc: '攔截網反向齊射:破片撕裂操縱面(緩速)' },
   },
   s08: {
     side: 'SWARM', name: '佐菲亞・馬列克', code: '聖燭', machine: '「聖燭」醫療運補機',
@@ -664,11 +698,13 @@ export const CHARACTERS = {
     heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・雷射波束導引・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
       dmg: [130, 170, 215], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 10,
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
-    skill: { name: '好球!', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
-      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '紳士的狩獵節奏:短時間火力全開' },
-    ult: { name: '獵場封鎖', fx: 'strike', count: [8, 10, 12], dmg: [60, 75, 90], r: 9, scatter: 40,
+    skill: { name: '好球!', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
+      add: { fx: 'mark', dur: [4, 5, 6] },
+      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '紳士的指定球路:下一擊必中必爆' },
+    ult: { name: '獵場封鎖', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
+      add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },
-      desc: '防空霰彈彈幕封鎖指定空域' },
+      desc: '獵網彈幕封鎖指定空域,獵物向彈著中心收攏(拉近)' },
   },
   s10: {
     side: 'SWARM', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」訊號機',
@@ -695,8 +731,9 @@ export const CHARACTERS = {
     heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'rail', mv: 2000, charge: [1.5, 1.3, 1.1],
       dmg: [170, 220, 275], cd: [9, 8, 7], range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
-    skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55] },
-      dur: [5, 6, 7], cd: [18, 16, 14], mp: [35, 40, 45], desc: '我造了那個膝蓋:短時間傷害大增' },
+    skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
+      add: { fx: 'mark', dur: [4, 5, 6] },
+      dur: [5, 6, 7], cd: [18, 16, 14], mp: [35, 40, 45], desc: '我造了那個膝蓋:下一擊必中必爆' },
     ult: { name: '大修', fx: 'heal', target: 'self', heal: [400, 550, 700], sp: true,
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '鐘錶匠的手:自身裝甲大修、護盾充滿' },
   },
@@ -727,11 +764,13 @@ export const CHARACTERS = {
     heavy: { name: '152mm 榴彈砲', rw: '2A65 縮裝・初速 650m/s', type: 'launcher', mv: 650,
       dmg: [180, 240, 300], r: [16, 18, 20], cd: [10, 9, 8], range: 340, pen: 14,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
-    skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.2, 1.3, 1.4] },
-      dur: [6, 8, 10], cd: [22, 20, 18], mp: [35, 40, 45], desc: '我不再送沒有裝甲的孩子上戰場' },
-    ult: { name: '雪崩齊射', fx: 'strike', count: [6, 8, 10], dmg: [90, 115, 140], r: 12, scatter: 40,
+    skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
+      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
+      dur: [6, 8, 10], cd: [22, 20, 18], mp: [35, 40, 45], desc: '全軍衝鋒:友軍火力與移速齊升' },
+    ult: { name: '雪崩齊射', fx: 'strike', count: [6, 8, 10], dmg: [77, 98, 119], r: 12, scatter: 40,
+      add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 340, pen: 10, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.4, armor: 1.2 },
-      desc: '全營砲兵向指定座標行進間齊射' },
+      desc: '全營砲兵行進間齊射,砲擊震撼(麻痺)' },
   },
   t02: {
     side: 'STEEL', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
@@ -746,8 +785,9 @@ export const CHARACTERS = {
     skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
     ult: { name: '同步率 100%', fx: 'buff', target: 'self',
-      mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.75, 0.7, 0.65], reload: [0.75, 0.7, 0.65] },
-      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '她與機體之間再沒有介面延遲' },
+      mul: { dmg: [1.3, 1.4, 1.5], dmgTaken: [0.75, 0.7, 0.65], reload: [0.75, 0.7, 0.65] },
+      add: { fx: 'dodge' },
+      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '再沒有介面延遲:直射攻擊完美迴避' },
   },
   t03: {
     side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
@@ -761,8 +801,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     skill: { name: '鑄鐵鍋盾', fx: 'buff', target: 'self', mul: { dmgTaken: [0.55, 0.5, 0.45] },
       dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋架起:承傷大減' },
-    ult: { name: '開鍋!', fx: 'buff', target: 'self', mul: { dmg: [1.45, 1.55, 1.65], reload: [0.8, 0.75, 0.7] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '懲戒營主廚火力全開' },
+    ult: { name: '開鍋!', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], reload: [0.8, 0.75, 0.7] },
+      add: { fx: 'vamp', f: [0.15, 0.2, 0.25] },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '懲戒營主廚火力全開,打到就是吃到(吸血)' },
   },
   t04: {
     side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
@@ -776,8 +817,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '灰色迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從所有感測器上消失(開火即現形)' },
-    ult: { name: '獵殺名單', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] }, vision: [8, 10, 12],
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '名單下一行:全圖視野 + 火力提升' },
+    ult: { name: '獵殺名單', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] }, vision: [8, 10, 12],
+      add: { fx: 'mark', dur: [5, 6, 7] },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '名單下一行:全圖視野,下一擊必中必爆' },
   },
   t05: {
     side: 'STEEL', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
@@ -806,8 +848,9 @@ export const CHARACTERS = {
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '麻辣走位', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '模擬器省冠軍的走位,機體像長在他身上' },
-    ult: { name: '主角時刻', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], dmgTaken: [0.8, 0.75, 0.7] },
-      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '儲物櫃漫畫的主角上場了' },
+    ult: { name: '主角時刻', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], dmgTaken: [0.8, 0.75, 0.7] },
+      add: { fx: 'leap', f: [2.0, 2.3, 2.6] },
+      dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '儲物櫃漫畫的主角上場了:輕功大跳躍' },
   },
   t07: {
     side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
@@ -821,9 +864,10 @@ export const CHARACTERS = {
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
     skill: { name: '靜默潛行', fx: 'stealth', dur: [5, 6, 7],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '動作省到一毫米都不多(開火即現形)' },
-    ult: { name: '零點五度', fx: 'strike', count: 1, dmg: [400, 520, 650], r: 6,
+    ult: { name: '零點五度', fx: 'strike', count: 1, dmg: [340, 442, 553], r: 6,
+      add: { fx: 'bleed', dps: [24, 30, 38], dur: 5, pen: 12 },
       range: 400, pen: 20, cd: [70, 62, 54], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.2 },
-      desc: '一發,只需要一發' },
+      desc: '一發,只需要一發 —— 貫穿創口持續失血(出血)' },
   },
   t08: {
     side: 'STEEL', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰機甲',
@@ -852,9 +896,10 @@ export const CHARACTERS = {
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     skill: { name: '哀悼詩', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
       cd: [26, 23, 20], mp: [40, 45, 50], desc: '為敵我雙方各寫一行:火箭兵支援' },
-    ult: { name: '巡飛彈之雨', fx: 'strike', count: [7, 9, 11], dmg: [85, 105, 130], r: 11, scatter: 45,
+    ult: { name: '巡飛彈之雨', fx: 'strike', count: [7, 9, 11], dmg: [72, 89, 111], r: 11, scatter: 45,
+      add: { fx: 'confuse', dur: [1.5, 2, 2.5] },
       range: 360, pen: 8, cd: [80, 70, 60], mp: [90, 100, 110], vs: { building: 1.3, armor: 1.2 },
-      desc: '讓戰爭打不完的東西,一次下完' },
+      desc: '讓戰爭打不完的東西一次下完,漫天彈雨引發恐慌(混亂)' },
   },
   t10: {
     side: 'STEEL', name: '蕾拉・侯賽尼', code: '軌跡', machine: '「軌跡」攔截機甲',
@@ -925,8 +970,9 @@ export const CHARACTERS = {
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
     skill: { name: '違約金條款', fx: 'dash', imp: [27, 33, 39],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '哪邊付錢都一樣快:沿視線爆發脫離' },
-    ult: { name: '加班費三倍', fx: 'buff', target: 'self', mul: { dmg: [1.35, 1.45, 1.55], reload: [0.8, 0.75, 0.7] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '合約外時段:火力與填彈全面超載' },
+    ult: { name: '加班費三倍', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5], reload: [0.8, 0.75, 0.7] },
+      add: { fx: 'vamp', f: [0.12, 0.16, 0.2] },
+      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '合約外時段全面超載,渡鴉汲血(吸血)' },
   },
   m02: {
     side: 'MERC', kind: 'morph', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型可變機甲',
@@ -985,9 +1031,10 @@ export const CHARACTERS = {
       vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.2 } },
     skill: { name: '斷路協議', fx: 'emp', r: 130, dur: [2.5, 3, 3.5], range: 250,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '欠債不還就斷電:指定區域敵軍武器離線' },
-    ult: { name: '連本帶利', fx: 'strike', count: [6, 8, 10], dmg: [80, 100, 125], r: 11, scatter: 38,
+    ult: { name: '連本帶利', fx: 'strike', count: [6, 8, 10], dmg: [68, 85, 106], r: 11, scatter: 38,
+      add: { fx: 'stun', dur: [0.8, 1, 1.2] },
       range: 330, pen: 10, cd: [78, 68, 58], mp: [88, 98, 108], vs: { armor: 1.3, building: 1.2 },
-      desc: '逾期利滾利:對指定座標飽和清算打擊' },
+      desc: '逾期利滾利:飽和清算打擊,斷電扣押(麻痺)' },
   },
   m06: {
     side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
@@ -1016,9 +1063,10 @@ export const CHARACTERS = {
       vs: { flesh: 0.8, armor: 1.0, air: 2.2, building: 0.3 } },
     skill: { name: '拒止穹頂', fx: 'intercept', r: [160, 200, 240],
       cd: [16, 14, 12], mp: [30, 35, 40], desc: '一手交錢一手交貨:清空半徑內來襲飛彈' },
-    ult: { name: '全域布防', fx: 'strike', count: [7, 9, 11], dmg: [65, 80, 100], r: 9, scatter: 40,
+    ult: { name: '全域布防', fx: 'strike', count: [7, 9, 11], dmg: [55, 68, 85], r: 9, scatter: 40,
+      add: { fx: 'slow', f: 0.6, dur: [2, 2.5, 3] },
       range: 320, cd: [74, 66, 58], mp: [85, 95, 105], vs: { air: 2.0, flesh: 1.2 },
-      desc: '把整片天空劃進責任區:防空彈幕封鎖' },
+      desc: '把整片天空劃進責任區:彈幕壓制(緩速)' },
   },
   m08: {
     side: 'MERC', kind: 'morph', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊可變機甲',

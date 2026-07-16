@@ -31,8 +31,17 @@ export class BotBrain {
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
 
-  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義) */
-  _speed(h, u) { return h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed; }
+  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義)。
+   *  控場效果(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
+   *  麻痺 = 0(原地,武器照常)、緩速 ×slowF、混亂 ×0.5(bot 沒有操縱可反轉,折半近似)。 */
+  _speed(h, u) {
+    const t = this.sim.t;
+    if ((h.stunUntil || 0) > t) return 0;
+    let f = 1;
+    if ((h.slowUntil || 0) > t) f *= h.slowF ?? 0.6;
+    if ((h.confUntil || 0) > t) f *= 0.5;
+    return (h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed) * f;
+  }
 
   /** 開火(含難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
   _fire(tid, slot) {
@@ -139,8 +148,9 @@ export class BotBrain {
     const keep = gun.range * (t.kind === 'tower' || t.kind === 'base' ? 0.85 : 0.6);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
-    const vx = dx / d * radial * u.speed + (-dz / d) * strafe * u.speed;
-    const vz = dz / d * radial * u.speed + (dx / d) * strafe * u.speed;
+    const spd = this._speed(h, u);                       // 控場(麻痺/緩速/混亂)折算後的地速
+    const vx = dx / d * radial * spd + (-dz / d) * strafe * spd;
+    const vz = dz / d * radial * spd + (dx / d) * strafe * spd;
     h.x += vx * dt;
     h.z += vz * dt;
     this._face(h, t.x, t.z);

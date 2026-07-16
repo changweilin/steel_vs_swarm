@@ -70,6 +70,11 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   else if (rig.kind === 'quad') stepQuad(L, rig, dt, now, speed, yawRate);
   else if (rig.kind === 'morph') stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate);
   else stepVehicle(L, rig, dt, now, speed, vFwd, yawRate);
+  // 施法動作 + 跳躍動作(post-pass):疊加在本幀步態之上的角度增量。
+  // 只准動「上面各步態每幀都會重新賦值」的通道(rotation.x / 已賦值的 y、z、position.y),
+  // 加法才不會跨幀累積;morph 的部件經 pose(m) 全軸 rotation.set 重設,全軸皆安全。
+  stepCastPose(L, rig, ent, dt, now);
+  stepJumpPose(L, rig, ent, dt);
 }
 
 /**
@@ -1096,4 +1101,248 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 推進器 ∝ 飛行推力;排氣口 ∝ 變形熱散逸(transformer_plan Task 3.1)
   for (const t of rig.thrusters) t.material.emissiveIntensity = 0.25 + m * 2.2 + L.act * 1.2;
   for (const v of rig.vents) v.material.emissiveIntensity = 0.15 + L.act * 2.6;
+}
+
+// ══════════ 施法動作(2026-07-16)══════════
+// 事件源:戰場 game.js 'cast' 事件 / 展示台 charPreview.play() 都寫 ent.castFx = {t0, slot, dir}
+// (與 fireFx/heavyFx 同型的邊緣觸發物件;_snapPos 重生瞬移一併歸零)。
+// 全向類(自身/團隊/範圍招式):吼叫 roar / 跺腳(人立踏擊)stomp / 跳舞 dance / 旋轉 spin /
+// 甩尾 tailwhip / 捶胸 beat / 展翼 flare;
+// 定向類(指向敵人的 strike/dash/遠端 emp):揮舞武器 swing / 刺拳 jab / 踢腿 kick / 俯衝突刺 lunge。
+// 機種 → 原型對應住 models.js CAST_SIG(rig.castSig),查無依 rig.kind 給預設;
+// 動作純視覺,MUST NOT 在 game.js / charPreview 各寫一套分叉(stepCombatFx 同一條規則)。
+const CAST_DEF = {
+  biped: { omni: 'stomp', dir: 'swing' },
+  quad: { omni: 'roar', dir: 'jab' },
+  morph: { omni: 'stomp', dir: 'jab' },
+  aerial: { omni: 'spin', dir: 'lunge' },
+};
+
+/** 定向動作曲線:蓄勢後引(負)→ 揮出過衝(正脈衝)→ 回穩歸零 */
+function castDrive(p) {
+  if (p >= 1) return 0;
+  if (p < 0.3) return -0.6 * Math.sin(p / 0.3 * Math.PI / 2);
+  const s = (p - 0.3) / 0.7;
+  return Math.sin(Math.min(1, s * 2.4) * Math.PI) * (1 - 0.5 * s);
+}
+const ease01 = (p) => p * p * (3 - 2 * p);
+
+function stepCastPose(L, rig, ent, dt, now) {
+  const cf = ent.castFx;
+  if (!cf) return;
+  const dur = cf.slot === 'ult' ? 1.35 : 0.95;
+  const p = (now - cf.t0) / dur;
+  if (p >= 1 || p < 0) { ent.castFx = null; return; }
+  const sig = rig.castSig || CAST_DEF[rig.kind] || CAST_DEF.biped;
+  const arch = cf.dir ? (sig.dir || 'jab') : (sig.omni || 'stomp');
+  const K = cf.slot === 'ult' ? 1 : 0.7;                          // 大招全幅、小招收斂
+  const env = Math.sin(Math.min(1, p * 1.15) * Math.PI) * K;      // 全向:緩起緩收
+  const d0 = castDrive(p);
+  const lift = Math.max(0, -d0) * K;                              // 定向前段:蓄勢
+  const hit = Math.max(0, d0) * K;                                // 定向後段:揮出
+  const air = rig.kind === 'morph' && (L.morph ?? 0) > 0.5;       // 飛行型態:只留軀幹級演出
+  const R = (g, ax, v) => { if (g) g.rotation[ax] += v; };        // 有節點才動(機種差異吸在這裡)
+
+  if (arch === 'roar') {
+    // 吼叫/嚎叫/象鳴:昂首挺胸、前肢揚起、尾上揚
+    R(rig.head, 'x', -0.55 * env);
+    R(rig.neck, 'x', -0.35 * env);
+    R(rig.chest, 'x', -0.2 * env);
+    R(rig.hips, 'x', -0.08 * env);
+    R(rig.spine, 'x', -0.14 * env);
+    if (!air) R(rig.torso, 'x', -0.16 * env);
+    if (!air && rig.kind !== 'quad') { R(rig.armL, 'x', -0.55 * env); R(rig.armR, 'x', -0.55 * env); }
+    if (rig.trunk) { R(rig.trunk, 'x', -0.8 * env); R(rig.trunkTip, 'x', -0.5 * env); }
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += 0.08 * env * (1 + i * 0.25); });
+  } else if (arch === 'stomp') {
+    // 跺腳(雙足:抬腿踏地;四足:人立刨擊)—— 蓄勢抬起、揮出落地全身下沉
+    if (rig.kind === 'quad') {
+      R(rig.spine, 'x', -0.3 * lift + 0.1 * hit);
+      R(rig.legFL, 'x', -(0.95 * lift + 0.15 * hit));
+      R(rig.legFR, 'x', -(0.75 * lift + 0.1 * hit));
+      R(rig.neck, 'x', 0.22 * lift);                    // 長頸反屈:人立時頭仍看向前方
+      if (rig.spine) rig.spine.position.y -= 0.14 * hit;
+    } else {
+      R(rig.legR, 'x', -1.05 * lift);
+      if (rig.legChainR?.[0]) rig.legChainR[0].g.rotation.x += 0.9 * lift;
+      R(rig.kneeR, 'x', 0.7 * lift);                    // morph 分節腿
+      R(rig.hips, 'x', 0.1 * hit - 0.06 * lift);
+      R(rig.torso, 'x', air ? 0 : 0.1 * hit - 0.06 * lift);
+      R(rig.chest, 'x', 0.1 * hit);
+      if (rig.hips) rig.hips.position.y -= 0.16 * hit;
+      if (rig.torso && !air) rig.torso.position.y -= 0.12 * hit;
+    }
+  } else if (arch === 'dance') {
+    // 跳舞:骨盆/軀幹左右律動 + 雙臂波浪 + 觸手群共舞(章魚)
+    const sw = Math.sin(p * Math.PI * 4) * env;
+    R(rig.hips, 'y', sw * 0.35);
+    R(rig.spine, 'y', sw * 0.22);
+    if (!air) R(rig.torso, 'y', sw * 0.3);
+    R(rig.chest, 'y', -sw * 0.25);
+    R(rig.head, 'y', sw * 0.2);
+    R(rig.head, 'x', -Math.abs(Math.sin(p * Math.PI * 8)) * 0.05 * env);
+    if (!air) { R(rig.armL, 'x', (-0.55 - sw * 0.45) * env); R(rig.armR, 'x', (-0.55 + sw * 0.45) * env); }
+    if (rig.hips) rig.hips.position.y -= Math.abs(sw) * 0.05;
+    if (rig.tents) rig.tents.forEach((tc, i) => tc.forEach((j, k) => {
+      j.g.rotation.x += Math.sin(p * Math.PI * 4 - k * 0.5 + i * 1.6) * 0.25 * env;
+    }));
+  } else if (arch === 'spin') {
+    // 旋轉:地面 = 全身自轉一整圈(披風旋/掃描迴旋);飛行/無人機 = 滾轉一圈(桶滾)
+    const a = ease01(p) * Math.PI * 2;
+    if (rig.kind === 'aerial') R(rig.tilt, 'z', a);
+    else if (air) R(rig.torso, 'z', a);
+    else {
+      R(rig.hips, 'y', a);
+      R(rig.spine, 'y', a);
+      R(rig.torso, 'y', a);
+      const fl = env;                                    // 離心:雙臂甩開
+      if (rig.kind !== 'quad') { R(rig.armL, 'x', -0.5 * fl); R(rig.armR, 'x', -0.5 * fl); }
+    }
+  } else if (arch === 'tailwhip') {
+    // 甩尾:整條尾橫掃一記(逐節延遲成鞭),軀幹反向擰腰配重
+    const sw = Math.sin(Math.min(1, p * 1.2) * Math.PI * 2) * K;   // 一去一回
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => {
+      t.rotation.y += Math.sin(Math.min(1, Math.max(0, p * 1.2 - i * 0.06)) * Math.PI * 2) * K * (0.5 + i * 0.35);
+    });
+    R(rig.spine, 'y', -sw * 0.28);
+    R(rig.hips, 'y', -sw * 0.3);
+    if (!air) R(rig.torso, 'y', -sw * 0.3);
+    R(rig.head, 'y', sw * 0.2);                          // 目光咬住目標
+  } else if (arch === 'beat') {
+    // 捶胸(猩猩):雙拳交替擂胸、胸腔挺起、頭上揚
+    const bt = Math.sin(p * Math.PI * 10) * env;
+    R(rig.armL, 'x', (-1.05 - bt * 0.3) * env);
+    R(rig.armR, 'x', (-1.05 + bt * 0.3) * env);
+    if (rig.armChainL?.[0]) rig.armChainL[0].g.rotation.x -= (0.9 + bt * 0.3) * env;
+    if (rig.armChainR?.[0]) rig.armChainR[0].g.rotation.x -= (0.9 - bt * 0.3) * env;
+    R(rig.chest, 'x', -0.18 * env);
+    R(rig.head, 'x', -0.3 * env);
+    if (rig.hips) rig.hips.position.y -= Math.abs(bt) * 0.03;
+  } else if (arch === 'flare') {
+    // 展翼(擬態飛行獸):雙翼全幅張開定住 + 機首上仰(威嚇/宣告)
+    if (rig.wings) for (const { w, outer, sgn } of rig.wings) {
+      w.rotation.z += sgn * 0.65 * env;
+      outer.rotation.z += sgn * 0.5 * env;
+    }
+    if (rig.flapWings) for (const { w, outer, sgn } of rig.flapWings) {
+      w.rotation.z += sgn * 0.6 * env;
+      outer.rotation.z += sgn * 0.45 * env;
+    }
+    R(rig.tilt, 'x', -0.28 * env);
+    if (air) R(rig.torso, 'x', -0.2 * env);
+  } else if (arch === 'swing') {
+    // 揮舞武器(斧砲/如意棒/獸爪/象鼻/犀角):持械臂高舉後引 → 斜劈而下,擰腰跟上
+    R(rig.armR, 'x', 0.9 * lift - 1.5 * hit);
+    if (rig.armChainR?.[0]) rig.armChainR[0].g.rotation.x -= 0.5 * lift - 0.3 * hit;
+    R(rig.elbowR, 'x', -(0.5 * lift - 0.3 * hit));       // morph 分節臂
+    R(rig.hips, 'y', 0.25 * lift - 0.4 * hit);
+    R(rig.chest, 'y', 0.2 * lift - 0.3 * hit);
+    if (!air) R(rig.torso, 'y', 0.22 * lift - 0.35 * hit);
+    R(rig.chest, 'x', -0.1 * lift + 0.2 * hit);
+    if (rig.trunk) { R(rig.trunk, 'x', -0.7 * lift + 0.9 * hit); R(rig.trunkTip, 'x', -0.5 * lift + 0.6 * hit); }
+    if (rig.kind === 'quad') {                            // 四足持械(克蘇魯觸手鞭)
+      R(rig.spine, 'x', -0.12 * lift + 0.1 * hit);
+      if (rig.tents) rig.tents.forEach((tc) => tc.forEach((j, k) => {
+        j.g.rotation.x += (0.5 * lift - 0.7 * hit) * (0.4 + k * 0.25);
+      }));
+    }
+  } else if (arch === 'jab') {
+    // 刺拳/突刺/咬擊:直線前突 —— 雙足 = 右直拳;四足/巨顎 = 頸頭前撲點殺
+    if (rig.kind === 'quad' || (rig.tinyArms && !rig.armR)) {
+      R(rig.spine, 'x', -0.1 * lift + 0.16 * hit);
+      R(rig.neck, 'x', -0.3 * lift + 0.5 * hit);
+      R(rig.head, 'x', -0.2 * lift + 0.3 * hit);
+      if (rig.spine) rig.spine.position.y -= 0.1 * hit;
+    } else {
+      R(rig.armR, 'x', 0.5 * lift - 1.45 * hit);
+      if (rig.armChainR?.[0]) rig.armChainR[0].g.rotation.x -= 0.8 * lift - 0.15 * hit;
+      R(rig.elbowR, 'x', -(0.8 * lift - 0.15 * hit));
+      R(rig.chest, 'x', -0.08 * lift + 0.14 * hit);
+      R(rig.chest, 'y', 0.18 * lift - 0.3 * hit);
+      R(rig.hips, 'y', 0.12 * lift - 0.22 * hit);
+      if (!air) R(rig.torso, 'y', 0.15 * lift - 0.25 * hit);
+      if (rig.tinyArms) { R(rig.neck, 'x', -0.25 * lift + 0.45 * hit); R(rig.head, 'x', -0.15 * lift + 0.25 * hit); }
+    }
+  } else if (arch === 'kick') {
+    // 踢腿(鴕鳥/袋鼠/迅猛龍):重心後坐 → 右腿全幅前踢,尾後甩配平
+    R(rig.legR, 'x', 0.5 * lift - 1.5 * hit);
+    if (rig.legChainR?.[0]) rig.legChainR[0].g.rotation.x += 0.9 * lift - 0.2 * hit;
+    R(rig.kneeR, 'x', 0.9 * lift - 0.2 * hit);
+    R(rig.hips, 'x', -0.12 * lift + 0.18 * hit);
+    R(rig.chest, 'x', 0.1 * lift - 0.15 * hit);
+    if (!air) R(rig.torso, 'x', -0.1 * lift + 0.15 * hit);
+    if (rig.hips) rig.hips.position.y -= 0.08 * hit;
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.15 * hit - 0.08 * lift) * (1 + i * 0.2); });
+  } else if (arch === 'lunge') {
+    // 俯衝突刺(無人機/飛行型):機首猛沉一記再拉起(對地宣告攻擊軸線)
+    R(rig.tilt, 'x', -0.2 * lift + 0.4 * hit);
+    if (rig.tilt) rig.tilt.position.y -= 0.25 * hit;
+    if (air || rig.kind === 'morph') R(rig.torso, 'x', -0.15 * lift + 0.3 * hit);
+    if (rig.wings) for (const { w, sgn } of rig.wings) w.rotation.z += sgn * 0.3 * lift;
+  }
+}
+
+// ══════════ 跳躍動作(2026-07-16;地面類機體)══════════
+// 由 ent.heroY(快照回報的離地高)推導騰空/落地:蹬伸(上升)→ 收腿滑翔(下墜)→ 觸地壓縮回彈。
+// 全向適用 biped(人形機甲/雙足獸)/ quad(四足獸)/ morph 地面型;aerial 與 morph 飛行型讓位。
+function stepJumpPose(L, rig, ent, dt) {
+  if (ent.heroY == null || rig.kind === 'aerial' || rig.kind === 'wheeled' || rig.kind === 'tracked') return;
+  if (rig.kind === 'morph' && (L.morph ?? 0) > 0.35) { L.airY = 0; L.airPrev = 0; return; }  // 變形接管
+  const y = Math.min(ent.heroY || 0, 6);
+  const prevY = L.airY ?? 0;
+  L.airY = damp(prevY, y, 10, dt);
+  const vy = (L.airY - prevY) / Math.max(dt, 1e-4);      // 平滑後的垂直速度(m/s)
+  const airF = clamp(L.airY / 1.1, 0, 1);
+  // 落地衝擊(邊緣觸發):幅度 ∝ 觸地瞬間下墜速度,之後阻尼回彈
+  if ((L.airPrev ?? 0) > 0.3 && airF < 0.12) L.landK = clamp(0.45 + Math.max(0, -vy) * 0.05, 0, 1);
+  L.airPrev = airF;
+  L.landK = damp(L.landK ?? 0, 0, 5.5, dt);
+  const landK = L.landK;
+  if (airF < 0.02 && landK < 0.02) return;
+  const rise = clamp(vy * 0.18, -1, 1);
+  const up = Math.max(0, rise) * airF;                   // 蹬伸相
+  const fall = Math.max(0, -rise) * airF;                // 下墜相(前收 brace)
+  const R = (g, ax, v) => { if (g) g.rotation[ax] += v; };
+
+  if (rig.kind === 'quad') {
+    // 四足:騰空 = 飛撲伸展(前肢前伸、後肢後蹬),下墜前收準備觸地;落地脊背下沉
+    R(rig.legFL, 'x', -(0.5 * up + 0.25 * fall));
+    R(rig.legFR, 'x', -(0.45 * up + 0.3 * fall));
+    R(rig.legHL, 'x', 0.5 * up - 0.2 * fall);
+    R(rig.legHR, 'x', 0.45 * up - 0.25 * fall);
+    R(rig.spine, 'x', -0.09 * up + 0.06 * fall + 0.1 * landK);
+    if (rig.spine) rig.spine.position.y -= 0.2 * landK;
+    if (rig.chFL) {                                       // 分節:下墜收爪、落地載荷屈曲
+      for (const ch of [rig.chFL, rig.chFR, rig.chHL, rig.chHR]) {
+        if (ch?.[0]) ch[0].g.rotation.x += ch[0].k * (0.5 * fall + 0.55 * landK);
+      }
+    }
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall) * (1 + i * 0.2); });
+  } else {
+    // 雙足 / morph 地面型:蹬伸腿後直 → 下墜雙腿前收屈膝、雙臂揚起平衡 → 落地深蹲緩衝
+    const tuck = 0.35 * up - (0.5 * fall);
+    R(rig.legL, 'x', tuck * 1.1);
+    R(rig.legR, 'x', tuck * 0.85);
+    if (rig.legChainL?.[0]) {
+      rig.legChainL[0].g.rotation.x += 0.55 * fall + 0.35 * up + 0.75 * landK;
+      rig.legChainR[0].g.rotation.x += 0.6 * fall + 0.3 * up + 0.7 * landK;
+      // 踝:蹬伸繃腳背、落地回折吸震(踝取反號慣例)
+      if (rig.legChainL[1]) rig.legChainL[1].g.rotation.x -= 0.3 * up + 0.25 * landK;
+      if (rig.legChainR[1]) rig.legChainR[1].g.rotation.x -= 0.28 * up + 0.25 * landK;
+    }
+    R(rig.kneeL, 'x', 0.5 * fall + 0.3 * up + 0.65 * landK);   // morph 分節腿
+    R(rig.kneeR, 'x', 0.55 * fall + 0.25 * up + 0.6 * landK);
+    R(rig.ankleL, 'x', -(0.25 * up + 0.2 * landK));
+    R(rig.ankleR, 'x', -(0.23 * up + 0.2 * landK));
+    if (!rig.tinyArms && !rig.tuckArms) {                 // 雙臂:下墜揚起找平衡(持械手收斂)
+      R(rig.armL, 'x', -(0.45 * fall + 0.15 * up));
+      R(rig.armR, 'x', -(0.45 * fall + 0.15 * up) * (rig.gunArm ? 0.35 : 1));
+    }
+    R(rig.hips, 'x', 0.1 * up - 0.08 * fall + 0.1 * landK);
+    R(rig.chest, 'x', 0.08 * fall + 0.14 * landK);
+    if (!((L.morph ?? 0) > 0.35)) R(rig.torso, 'x', 0.06 * fall + 0.12 * landK);
+    if (rig.hips) rig.hips.position.y -= 0.3 * landK;
+    if (rig.torso) rig.torso.position.y -= 0.22 * landK;
+    if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.12 * up - 0.08 * fall) * (1 + i * 0.2); });
+  }
 }

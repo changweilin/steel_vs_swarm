@@ -4768,6 +4768,49 @@ const MOVE_SIG = {
   m08: { poise: 0.95, idleF: 0.60, idleA: 0.30, launch: 0.95, spool: 0.05, brake: 0.50, settle: 0.35, hover: 0.10, hoverF: 0.5, hoverA: 0.90, surge: 0.25, flare: 0.92, bank: 0.42 },  // 夜豹凍結-爆發 ⟷ 夜梟消音撲翼
 };
 
+// ── 施法動作性格 CAST_SIG(2026-07-16;locomotion.js stepCastPose 消費)────────────────
+// 每角色一組 {omni 全向, dir 定向}:全向 = 自身/團隊/範圍招式(吼叫 roar/跺腳·人立 stomp/
+// 跳舞 dance/旋轉·桶滾 spin/甩尾 tailwhip/捶胸 beat/展翼 flare);定向 = 指向敵人的
+// strike/dash/遠端 emp(揮舞武器 swing/刺拳·撲咬 jab/踢腿 kick/俯衝突刺 lunge)。
+// 依機體生物/機種原型指定;未登記者 stepCastPose 依 rig.kind 給預設。純視覺,不涉 sim。
+const CAST_SIG = {
+  // 蜂群無人機:擬態獸展翼、旋翼/定翼勝利桶滾;定向一律俯衝突刺
+  s01: { omni: 'flare', dir: 'lunge' },   // 蜂后:震翅威嚇
+  s02: { omni: 'spin', dir: 'lunge' },
+  s03: { omni: 'spin', dir: 'lunge' },
+  s04: { omni: 'spin', dir: 'lunge' },    // 零式:橫滾特技
+  s05: { omni: 'spin', dir: 'lunge' },    // 競速 FPV:花式滾轉
+  s06: { omni: 'flare', dir: 'lunge' },   // 翼龍:張膜翼
+  s07: { omni: 'flare', dir: 'lunge' },   // 機械龍:展翼咆哮
+  s08: { omni: 'spin', dir: 'lunge' },
+  s09: { omni: 'flare', dir: 'lunge' },   // 獵鷹:揚翼宣告
+  s10: { omni: 'spin', dir: 'lunge' },
+  s11: { omni: 'spin', dir: 'lunge' },
+  s12: { omni: 'spin', dir: 'lunge' },
+  // 鋼鐵機甲:依原型 —— 斧砲揮劈/刺槍突刺/獸吼/踢擊/甩尾/捶胸/盾擊
+  t01: { omni: 'stomp', dir: 'swing' },   // 巴斯通:重踏 + 揮斧
+  t02: { omni: 'spin', dir: 'jab' },      // 熾天使:迴身 + 刺槍
+  t03: { omni: 'beat', dir: 'swing' },    // 猩猩:捶胸 + 巨臂橫掃
+  t04: { omni: 'roar', dir: 'jab' },      // 獵犬:嚎叫 + 前撲咬
+  t05: { omni: 'dance', dir: 'kick' },    // 鴕鳥:求偶舞 + 飛踢
+  t06: { omni: 'stomp', dir: 'kick' },    // 袋鼠:跺腳警報 + 正蹬
+  t07: { omni: 'stomp', dir: 'jab' },     // 人馬:人立刨蹄 + 前蹄踏擊
+  t08: { omni: 'dance', dir: 'swing' },   // 克蘇魯:觸手共舞 + 觸手鞭
+  t09: { omni: 'tailwhip', dir: 'tailwhip' },   // 劍龍:一切交給尾錘
+  t10: { omni: 'stomp', dir: 'jab' },     // 神盾:落盾定樁 + 盾擊
+  t11: { omni: 'roar', dir: 'jab' },      // 暴龍:咆哮 + 俯衝咬殺
+  t12: { omni: 'dance', dir: 'jab' },     // 巨兵:園丁機器人搖擺 + 圓臂直拳
+  // 傭兵變形機甲(地面型演出;飛行型自動收斂成軀幹級動作)
+  m01: { omni: 'spin', dir: 'swing' },    // 吸血鬼:披風迴旋 + 爪擊
+  m02: { omni: 'roar', dir: 'swing' },    // 巨象:昂鼻長鳴 + 象鼻橫掃
+  m03: { omni: 'dance', dir: 'swing' },   // 悟空:猴舞 + 如意棒掄劈
+  m04: { omni: 'roar', dir: 'kick' },     // 迅猛龍:嘶鳴 + 鐮爪踢
+  m05: { omni: 'roar', dir: 'swing' },    // 狼人:仰天長嚎 + 爪擊
+  m06: { omni: 'stomp', dir: 'jab' },     // 亞特拉斯:重踏 + 直拳
+  m07: { omni: 'stomp', dir: 'swing' },   // 犀金龜:六足定樁 + 犀角上挑
+  m08: { omni: 'tailwhip', dir: 'jab' },  // 夜豹:豹尾抽甩 + 撲擊
+};
+
 /**
  * 建立一個單位 mesh。回傳 { group, mixer? }。
  * kind: 'hero:drone' | 'hero:robot' | 'creep:soldier' | 'creep:apc' | 'creep:tank' | 'tower' | 'base:SWARM' | 'base:STEEL'
@@ -4854,6 +4897,8 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   // 運動性格(moveSig):四相位(靜止/加速/(奔跑或飛行)/減速)依真實運動員/軍種/生物飛行原型差異化;
   // 純客戶端視覺,locomotion.js 各步態 handler 讀取。keyed by 角色 id ⇒ 未登記者(NPC)行為完全不變。
   if (ch && g.userData.rig && MOVE_SIG[ch]) g.userData.rig.moveSig = MOVE_SIG[ch];
+  // 施法動作性格(castSig):全向/定向施法動作原型(locomotion.js stepCastPose 消費)
+  if (ch && g.userData.rig && CAST_SIG[ch]) g.userData.rig.castSig = CAST_SIG[ch];
 
   // 機甲:肩上的餌機掛點(F 分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)
   if (kind === 'hero:robot' || kind === 'hero:morph') {

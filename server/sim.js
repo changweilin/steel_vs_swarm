@@ -8,7 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  EVASION, heroMobility, LOS,
+  EVASION, heroMobility, LOS, IFRAME,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -18,7 +18,7 @@ let nextEntId = 1;
 // getter/setter 指回同一個 sq.ps —— 讓既有的 h.money / h.abil / h.ammo 全部原樣可用。
 const SQUAD_SHARED = [
   'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
-  'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst',
+  'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
 ];
 
 /** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
@@ -630,6 +630,7 @@ export class BattleSim {
         acd: { skill: 0, ult: 0 }, kn: 0,
         mods: [],                    // 招式增益 [{k, m, until}]
         empUntil: 0, stealthUntil: 0, aiming: false, lastBurst: 0,
+        markUntil: 0,                // 定位標記(下一擊必中必爆;小隊共用 —— 任一架出手都算)
       },
     };
     const n = kind === 'drone' ? SQUAD.N : 1;
@@ -816,6 +817,16 @@ export class BattleSim {
   /** 電磁癱瘓中?(武器與招式全數離線) */
   _jammed(h) { return (h.empUntil || 0) > this.t; }
 
+  /** 招式增益的「數值型」欄位(吸血比例/完美迴避旗標):取生效中最大值,無則 0。
+   *  與 _buffMul(乘數疊加)分開 —— 這類效果多來源取最強,不相乘。 */
+  _buffVal(h, key) {
+    let v = 0;
+    if (h.mods) for (const md of h.mods) {
+      if (md.k === key && md.until > this.t) v = Math.max(v, md.m);
+    }
+    return v;
+  }
+
   heroPos(pid, x, y, z, ry) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
@@ -840,6 +851,8 @@ export class BattleSim {
    */
   _dodges(t) {
     if (!t || !t.hero) return false;
+    // 完美迴避(招式追加效果 dodge):生效期間直射武器必閃,不吃機動/移動門檻
+    if (this._buffVal(t, 'dodge') > 0) return true;
     const flying = t.kind === 'drone' || (t.y || 0) >= GAME.AA_MIN_ALT;
     const mob = heroMobility(t.kind, CHARACTERS[t.ch]?.mods, flying);
     if (mob <= EVASION.MOBILITY_MIN || !this._isMoving(t)) return false;
@@ -873,14 +886,23 @@ export class BattleSim {
     // 偵察脈衝給的是「情報」,不會讓砲彈穿牆 —— 不吃 pulse 旁路)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    // 定位標記(招式追加效果 mark):下一擊必中(無視閃避)必爆(強制爆擊);一擊即耗
+    const marked = (h.markUntil || 0) > this.t;
+    if (marked) h.markUntil = 0;
     // 閃避(輕武器直射):機動機體移動中可能整發閃開(僚機齊射仍各自擲骰)
-    if (wp.def.id === 'light' && this._dodges(t)) {
+    if (!marked && wp.def.id === 'light' && this._dodges(t)) {
       this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
       this._echo(h, t, wp.def);
       return;
     }
     // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)
-    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
+    let dmg = this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3);
+    if (marked) {
+      dmg *= wp.def.critX || VITALS.CRIT_X;
+      this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(dmg) });
+    } else {
+      dmg = this._rollCrit(h, wp.def, dmg, t);
+    }
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
     this._echo(h, t, wp.def);
@@ -1185,6 +1207,16 @@ export class BattleSim {
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
       for (const a of targets) {
         for (const [k, m] of Object.entries(A.mul || {})) a.mods.push({ k, m, until: this.t + A.dur });
+        // 走位/其他類追加效果(haste 衝鋒 / leap 大跳躍 / dodge 完美迴避 / vamp 吸血 → mods 通道;
+        // mark 定位 → markUntil 一擊即耗)—— 效果種類與數值全住 data.js 的 add 欄位
+        const ad = A.add;
+        if (ad) {
+          if (ad.fx === 'haste') a.mods.push({ k: 'speed', m: ad.f || 1.25, until: this.t + A.dur });
+          else if (ad.fx === 'leap') a.mods.push({ k: 'jump', m: ad.f || 2, until: this.t + A.dur });
+          else if (ad.fx === 'dodge') a.mods.push({ k: 'dodge', m: 1, until: this.t + A.dur });
+          else if (ad.fx === 'vamp') a.mods.push({ k: 'vamp', m: ad.f || 0.12, until: this.t + A.dur });
+          else if (ad.fx === 'mark') a.markUntil = this.t + (ad.dur || A.dur);
+        }
       }
     } else if (A.fx === 'heal') {
       // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)
@@ -1203,6 +1235,7 @@ export class BattleSim {
         const ix = x + Math.cos(ang) * rr, iz = z + Math.sin(ang) * rr;
         this.events.push({ e: 'boom', x: ix, z: iz, r: A.r, side: h.side });
         this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen }, ix, iz, 0);
+        if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
       const { li, d } = this._nearestLane(h.x, h.z);
@@ -1247,6 +1280,56 @@ export class BattleSim {
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
     if (A.fx === 'buff' && A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl });
+  }
+
+  /** 控場類追加效果(strike 彈著區 r×1.5 內敵人;建築/中立/無敵幀免疫)。
+   *  麻痺=禁移動(武器照常,與 EMP 互補)/緩速/混亂 = 時間戳欄位 → 快照帶剩餘秒 → 客戶端自鎖、
+   *  NPC 在 _advance 折算;出血 = DoT(tick 結算,擊殺記給施放者);
+   *  拉近:NPC/bot/僚機位置在伺服器 → 直接位移;真人主視野機位置客戶端權威 →
+   *  推 cc 事件由受害客戶端自套衝量(dash 先例的反向)。 */
+  _applyCC(h, ad, x, z, r) {
+    const rr = r * 1.5;
+    for (const t of [...this.ents.values()]) {
+      if (t.side === h.side || !t.side || t.neutral || t.decoy || t.hp <= 0) continue;
+      if (t.hero && t.dead) continue;
+      if (t.kind === 'tower' || t.kind === 'base') continue;
+      if (t.hero && (t.invUntil || 0) > this.t) continue;
+      const d = dist2d(t.x, t.z, x, z);
+      if (d > rr) continue;
+      if (ad.fx === 'stun') {
+        t.stunUntil = Math.max(t.stunUntil || 0, this.t + (ad.dur || 1));
+      } else if (ad.fx === 'slow') {
+        t.slowUntil = Math.max(t.slowUntil || 0, this.t + (ad.dur || 2.5));
+        t.slowF = ad.f ?? 0.6;
+      } else if (ad.fx === 'confuse') {
+        t.confUntil = Math.max(t.confUntil || 0, this.t + (ad.dur || 2));
+      } else if (ad.fx === 'bleed') {
+        t.bleed = { dps: ad.dps || 15, until: this.t + (ad.dur || 4), pen: ad.pen || 10, pid: h.pid };
+      } else if (ad.fx === 'pull') {
+        const imp = ad.imp || 18;
+        const dd = d || 1;
+        // 真人玩家的主視野機:位置客戶端權威,事件指名 tpid 由客戶端自套衝量
+        const act = t.hero && !isBotId(t.pid) && this.heroes.get(t.pid) === t;
+        if (act) {
+          this.events.push({ e: 'cc', k: 'pull', tpid: t.pid, x, z, imp });
+        } else {
+          const m = Math.min(imp * 0.5, dd);   // 伺服器擁有的位置(NPC/bot/僚機):直接拖向彈著中心
+          t.x += (x - t.x) / dd * m;
+          t.z += (z - t.z) / dd * m;
+        }
+      }
+    }
+  }
+
+  /** 無敵幀(蓄力跳躍 / 變形中段):客戶端在中段時點請求,伺服器驗 20s CD 後給 1s 免傷。
+   *  時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用;蜂群無人機無此機制。 */
+  heroIframe(pid) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over || h.kind === 'drone') return;
+    if ((h.iframeCdUntil || 0) > this.t) return;
+    h.iframeCdUntil = this.t + IFRAME.CD;
+    h.invUntil = this.t + IFRAME.DUR;
+    this.events.push({ e: 'iframe', pid, side: h.side, dur: IFRAME.DUR });
   }
 
   /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
@@ -1308,6 +1391,7 @@ export class BattleSim {
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
   _damage(t, dmg, by, pen = 0) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
+    if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
     if (t.kind === 'base' && by && by.side) {
       const near = [...this.ents.values()].some((e) =>
@@ -1315,6 +1399,7 @@ export class BattleSim {
         && dist2d(e.x, e.z, t.x, t.z) < 320);
       if (!near) dmg *= GAME.BASE_ARMOR_NEED_CREEP;
     }
+    let dealt;   // 實際造成的護盾 + 裝甲損耗(吸血結算基準)
     if (t.hero) {
       dmg *= this._buffMul(t, 'dmgTaken');   // 複合裝甲詞綴 / 護盾類招式
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
@@ -1322,17 +1407,27 @@ export class BattleSim {
       const toShield = Math.min(t.sp || 0, dmg);
       t.sp = (t.sp || 0) - toShield;
       let rem = dmg - toShield;
-      if (rem <= 0) return;
+      if (rem <= 0) { this._vamp(by, toShield); return; }
       // 第二層裝甲:護甲值減免(破甲抵銷)
       dmg = rem * armorMul(t.armor, pen);
+      dealt = toShield + Math.min(t.hp, dmg);
     } else {
       dmg *= armorMul(UNITS[t.kind]?.armor ?? 0, pen);
+      dealt = Math.min(t.hp, dmg);
     }
+    this._vamp(by, dealt);
     t.hp -= dmg;
     if (t.hp <= 0) {
       t.hp = 0;
       this._kill(t, by);
     }
+  }
+
+  /** 吸血(招式追加效果 vamp):攻擊者按「實際造成傷害 × 比例」回復自身裝甲 */
+  _vamp(by, dealt) {
+    if (!by || !by.hero || by.dead || !(dealt > 0)) return;
+    const f = this._buffVal(by, 'vamp');
+    if (f > 0) by.hp = Math.min(by.maxHp, by.hp + dealt * f);
   }
 
   _kill(t, by) {
@@ -1452,6 +1547,13 @@ export class BattleSim {
       }
       if (this.heroes.get(sq.pid).dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }
+    // 出血 DoT(招式追加效果):走 _damage 常規結算(護盾/護甲照規則),擊殺記給施放者;
+    // 施放者查 heroes 活參照 —— 施放者陣亡仍持續失血,擊殺信用照記(狙擊手的創口不因重生消失)
+    for (const e of [...this.ents.values()]) {
+      if (!e.bleed) continue;
+      if (e.bleed.until <= this.t || e.hp <= 0 || (e.hero && e.dead)) { e.bleed = null; continue; }
+      this._damage(e, e.bleed.dps * dt, this.heroes.get(e.bleed.pid) || null, e.bleed.pen);
+    }
     this._tickSquads(dt);
     this._tickDecoys(dt);
     this._tickMines();
@@ -1506,9 +1608,11 @@ export class BattleSim {
     b.x = sx; b.z = sz;
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
+    // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0;
     if (soloWipe) {
       b.mp = b.maxMp;
-      b.empUntil = 0; b.stealthUntil = 0; b.mods = [];
+      b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;
       b.ammo = {}; b.reloadUntil = {}; b.fireAt = {};   // 重生滿彈
     }
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid });
@@ -1898,7 +2002,14 @@ export class BattleSim {
     // 隊形凝聚:領先最慢僚兵超過 WAVE_COHESION_M 就原地待命(仍會靠攏兵線/繞障礙)
     const anchor = e.wv != null ? this._anchors?.get(`${e.side}|${e.lane}|${e.wv}`) : null;
     const hold = anchor != null && (e.prog ?? 0) > anchor + GAME.WAVE_COHESION_M;
-    if (!hold) e.prog = (e.prog ?? 0) + u.speed * dt;
+    // 控場效果(招式追加):麻痺原地(武器照常)、緩速折速、混亂沿線倒退亂走
+    let sf = 1;
+    if ((e.stunUntil || 0) > this.t) sf = 0;
+    else {
+      if ((e.slowUntil || 0) > this.t) sf *= e.slowF ?? 0.6;
+      if ((e.confUntil || 0) > this.t) sf *= -0.5;
+    }
+    if (!hold && sf !== 0) e.prog = Math.max(0, (e.prog ?? 0) + u.speed * sf * dt);
     const d = e.side === 'SWARM' ? e.prog : total - e.prog;
     const [x, z] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
     // 平滑靠攏路徑(保留生成時的隊形抖動,不瞬移)
@@ -1972,6 +2083,13 @@ export class BattleSim {
       }
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;
+      // 控場/追加效果剩餘秒(客戶端自鎖移動 / HUD;條件欄位,讀取端一律 || 0)
+      if ((e.stunUntil || 0) > this.t) o.pz = Math.round((e.stunUntil - this.t) * 10) / 10;
+      if ((e.slowUntil || 0) > this.t) { o.sl = Math.round((e.slowUntil - this.t) * 10) / 10; o.slf = e.slowF ?? 0.6; }
+      if ((e.confUntil || 0) > this.t) o.cf = Math.round((e.confUntil - this.t) * 10) / 10;
+      if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
+      if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
+      if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
       const bf = [];
       for (const id in e.buffs || {}) if (e.buffs[id] > this.t) bf.push([id, Math.round(e.buffs[id] - this.t)]);
       if (bf.length) o.bf = bf;   // 詞綴強化(HUD 倒數)
