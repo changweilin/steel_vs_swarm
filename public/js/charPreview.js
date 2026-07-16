@@ -80,6 +80,17 @@ export class CharPreview {
     this.running = false;
     this._loop = this._loop.bind(this);
 
+    // 慢速播放:action 走自累加的模擬時鐘(慢速時走得慢),鏡頭/自轉仍吃真實 dt(操作手感不拖慢)
+    this.timeScale = 1;
+    this.clockT = 0;
+    // 鏡頭聚焦點:預設看機體中心,可暫時追蹤移動的砲彈(重武器演出)
+    this.focus = new THREE.Vector3(0, this.targetY, 0);
+    this.trackObj = null;
+    // 虛擬目標(有目標招式 / 重武器 / NPC 攻擊演出對準用);NPC 路徑旗標;跳躍演示狀態
+    this.isUnit = false;
+    this._jump = null;
+    this._buildTargetMarker();
+
     this._bindInput();
     this._ro = new ResizeObserver(() => this._resize());
     this._ro.observe(canvas);
@@ -128,9 +139,54 @@ export class CharPreview {
     this.moving = false;
     this.speed = 0;
     this.travel = 0;
+    this.isUnit = false;
+    this._resetDemo();
     this._buildGround();
     this.onMove?.(false, 0);
     this._resize();
+  }
+
+  /** NPC / 攻擊建築展示台(非英雄:無招式,武器走 WEAPONS/UNITS)。共用同一具 renderer/holder。 */
+  setUnit(kind, side) {
+    this._clearUnit();
+    this.charId = null;
+    this.isUnit = true;
+    if (!UNITS[kind]) return;
+    const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}` : `creep:${kind}`;
+    const { group, mixer } = makeUnit(mapKind, side);
+    this.unit = group;
+    this.unit.userData.side = side;
+    this.mixer = mixer;
+    this.morphRig = null; this.morphM = 0; this.morphTarget = 0;
+    this.holder.add(group);
+
+    const box = this._measure();
+    this.size = box.getSize(new THREE.Vector3());
+    this.targetY = box.getCenter(new THREE.Vector3()).y;
+    this.height = this.size.y;
+    this.fitR = Math.max(1, this.size.length() / 2);
+    this.viewR = this.wantR = this.fitR;
+    this.dist = this._fitDist(this.fitR);
+    this.holder.position.set(0, 0, 0);
+    this.holder.rotation.set(0, 0, 0);
+
+    // 單位不做移動演示(徽章隱藏),但保留假實體讓 stepCombatFx/後座在有 rig 時仍作用
+    this._ent = { id: kind, mesh: group, heroY: 0 };
+    this.topSpeed = 0; this.moving = false; this.speed = 0; this.travel = 0;
+    this._resetDemo();
+    this._buildGround();
+    this.onMove?.(false, 0);
+    this._resize();
+  }
+
+  /** 換展示對象時清乾淨演出狀態(追蹤運鏡 / 虛擬目標 / 跳躍 / 聚焦點 / 慢速) */
+  _resetDemo() {
+    this.anim = null;
+    this.trackObj = null;
+    this._jump = null;
+    this.timeScale = 1;
+    this._hideTarget();
+    this.focus.set(0, this.targetY, 0);
   }
 
   /** 地面參考網格:機體不動,網格反向捲動 = 跑步機(唯一的速度視覺線索) */
@@ -150,6 +206,39 @@ export class CharPreview {
     this.groundCell = cell;
     this.scene.add(g);
   }
+
+  /** 慢速一致的時間基準:play/_fireCue/castFx 的 t0 一律讀這裡,慢速時 fireFx/heavyFx 才不會漂 */
+  _now() { return this.clockT; }
+
+  /** 虛擬目標標記:地面警戒環 + 浮空菱形(敵方紅);預設隱藏,施放有目標招式/攻擊時亮起 */
+  _buildTargetMarker() {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.82, 1.0, 28),
+      new THREE.MeshBasicMaterial({ color: 0xff5a5a, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2;
+    const dia = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.42),
+      new THREE.MeshBasicMaterial({ color: 0xff8a8a, transparent: true, opacity: 0.65, depthWrite: false }));
+    dia.position.y = 1.8;
+    g.add(ring, dia);
+    g.visible = false;
+    g.userData = { dia, ring };
+    this.targetMarker = g;
+    this.scene.add(g);
+  }
+
+  /** 在機體正前方 dist(世界公尺)顯示虛擬目標;回傳其世界座標(供 castFx 的 at) */
+  _showTarget(dist) {
+    const s = Math.max(1, this.fitR * 0.6);
+    const p = this._fwd().multiplyScalar(dist);   // 沿槍口前向(機體實際朝向)
+    this.targetMarker.position.set(p.x, 0, p.z);
+    this.targetMarker.scale.setScalar(s);
+    this.targetMarker.visible = true;
+    return this.targetMarker.position.clone();
+  }
+
+  _hideTarget() { if (this.targetMarker) this.targetMarker.visible = false; }
 
   _measure() { this.unit.updateMatrixWorld(true); return new THREE.Box3().setFromObject(this.unit); }
 
@@ -204,19 +293,23 @@ export class CharPreview {
       };
       // 重武器:進蓄力(rig 的掛點展開/發光 + 據槍蓄力姿,stepCombatFx 與戰場同一條);
       // 各機制在 _stepHeavy 的擊發瞬間切到 fire(反向後座)
-      if (slot === 'heavy' && this._ent) this._ent.heavyFx = { phase: 'charge', t0: performance.now() / 1000 };
-      // 取景:彈體飛行/磁軌光束要拉遠框住軌跡;爆風環框住半徑;輕武器維持機體特寫
-      const wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.15;
-      this.wantR = slot === 'heavy' ? Math.max(R * wide, (w.r || 0) * 1.15) : R;
+      if (slot === 'heavy' && this._ent) this._ent.heavyFx = { phase: 'charge', t0: this._now() };
+      // 鏡頭:重武器蓄力/開火期間先定住看機體(wantR=R),砲彈射出後 _stepHeavy 才把鏡頭
+      // 交給砲彈(trackObj)並拉遠;輕武器全程維持機體特寫。虛擬目標在正前方供彈道對準。
+      this.wantR = R;
+      if (slot === 'heavy') { this.anim.aimAt = this._showTarget(this._aimDist(w)); this.anim.wide = { rail: 2.6, missile: 2.4, launcher: 2.4, plasma: 2.0, beam: 1.8 }[w.type] ?? 1.6; }
     } else {
       const a = heroAbility(id, slot, 1);
       // dur 蓋住「蓄勢半拍 + 最長特效壽命 ~2.8s」:取景在演出結束前不縮回
       this.anim = { slot, t: 0, a, fired: 0, dur: slot === 'ult' ? 3.4 : 3.0 };
+      // 有目標招式(strike / 有施放距離)→ 前方立虛擬目標,特效落在目標上;自身型(增益/治療/視野)不立標記
+      const targeted = (a.range || 0) > 0 || a.fx === 'strike';
+      this.anim.at = targeted ? this._showTarget(Math.min(this.fitR * 1.8, this.fitR * 3)) : new THREE.Vector3(0, 0, 0);
       // 施法動作(locomotion stepCastPose;與戰場 'cast' 事件同語意):
       // 指向型(strike/dash/遠端 emp)= 定向動作,其餘 = 全向動作
       if (this._ent) {
         const dir = a.fx === 'strike' || a.fx === 'dash' || (a.fx === 'emp' && a.range > 0) ? 1 : 0;
-        this._ent.castFx = { t0: performance.now() / 1000, slot, dir };
+        this._ent.castFx = { t0: this._now(), slot, dir };
       }
       // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡
       this.wantR = slot === 'ult' ? R * 2.2 : R * 1.5;
@@ -229,7 +322,7 @@ export class CharPreview {
    *  設 fireFx(後座脈衝 + 射姿保持);重武器同時把 heavyFx 從 charge 切到 fire(蓄力反向釋放) */
   _fireCue(heavy) {
     if (!this._ent) return;
-    const t0 = performance.now() / 1000;
+    const t0 = this._now();
     this._ent.fireFx = { t0, slot: heavy ? 'heavy' : 'light' };
     if (heavy) this._ent.heavyFx = { phase: 'fire', t0 };
   }
@@ -250,10 +343,30 @@ export class CharPreview {
     return this.holder.localToWorld(new THREE.Vector3(0, 0, 1)).sub(a).normalize();
   }
 
+  /** 目標下彈道距離(世界公尺):虛擬目標擺這、砲彈也飛向這 —— 夾在取景框得住的範圍 */
+  _aimDist(w) { return Math.min(Math.max(this.fitR * 2.6, (w?.r || 0) * 2), this.fitR * 3.4); }
+
+  /** 擊發瞬間把鏡頭交給砲彈:trackObj 追蹤點 from→to,鏡頭跟著拉遠;結束緩回機體特寫。
+   *  瞬擊武器(rail/beam/plasma/gun)無實體彈 → 建一顆隱形追蹤點模擬「砲彈飛出去」。 */
+  _followShell(from, to, dur) {
+    const o = new THREE.Object3D();
+    o.position.copy(from);
+    this.scene.add(o);
+    this.trackObj = o;
+    this.wantR = this.fitR * (this.anim?.wide || 2.0);
+    this.effects.push({
+      obj: o, ttl: dur,
+      fade: (obj, f) => { obj.position.copy(from).lerp(to, 1 - f); },
+      dispose: () => { if (this.trackObj === o) { this.trackObj = null; this.wantR = this.fitR; } },
+    });
+    return o;
+  }
+
   /**
    * 重武器演出:每種機制一套動作(與實戰同口徑)—
    * rail 蓄力電光→極速光束重後座 / beam 持續穩定光束(emp 附帶控場漣漪)/
    * plasma 扇形焰舌 / missile S 形追蹤俯衝 / launcher 雷射標定 + 上拋俯衝 / gun 蓄力單發。
+   * 擊發後鏡頭交給砲彈追遠(_followShell);砲彈落點/光束端點一律對準虛擬目標 A.aimAt。
    */
   _stepHeavy(A, R) {
     const w = A.w;
@@ -261,6 +374,7 @@ export class CharPreview {
     const m = this._muzzle('heavy');
     const fwd = this._fwd();
     const up = new THREE.Vector3(0, 1, 0);
+    const aim = A.aimAt || m.clone().addScaledVector(fwd, this._aimDist(w));
 
     if (w.type === 'rail') {
       if (A.fired) return;
@@ -271,26 +385,27 @@ export class CharPreview {
         A.spark = A.t + 0.12;
       }
       if (chg >= 1) {
-        beamLine(this.scene, this.effects, m, m.clone().addScaledVector(fwd, R * 7), 0xaef4ff,
-          { ttl: 0.5, w: R * 0.035 });
-        starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.35, 0xffffff);
+        const end = m.clone().addScaledVector(fwd, R * 7);
+        beamLine(this.scene, this.effects, m, end, 0xaef4ff, { ttl: 0.5, w: R * 0.035 });
+        starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.35, 0xffffff);
         this.holder.position.z -= R * 0.2;                            // 極速彈的重後座
         this.holder.rotation.x -= 0.14;
         this._fireCue(true);
+        this._followShell(m, aim, 0.55);                              // 鏡頭追極速彈
         A.fired = 1;
       }
     } else if (w.type === 'beam') {
       // 0.25s 起持續 1 秒的穩定輸出:短壽命光束連續刷新 = 駐留光束
       if (A.t >= 0.25 && A.t <= 1.35 && A.t >= (A.tick || 0)) {
-        if (!A.tick) this._fireCue(true);   // 首拍 = 擊發(蓄力→持續輸出)
+        if (!A.tick) { this._fireCue(true); this._followShell(m, aim, 1.1); }   // 首拍 = 擊發
         const end = m.clone().addScaledVector(fwd, R * 5);
         beamLine(this.scene, this.effects, m, end, hue, { ttl: 0.18, w: R * 0.02 });
-        starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.12, hue);
+        starburst(this.scene, this.effects, aim.x, aim.y, aim.z, R * 0.12, hue);
         this.holder.position.z -= R * 0.004;                          // 持續微反壓
         A.tick = A.t + 0.11;
       }
       if (w.emp && !A.fired && A.t >= 0.7) {                          // EMP 附帶:控場癱瘓漣漪
-        shockRing(this.scene, this.effects, 0, 0, 0, R * 1.3, 0xb78aff);
+        shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 1.3, 0xb78aff);
         A.fired = 1;
       }
     } else if (w.type === 'plasma') {
@@ -304,17 +419,18 @@ export class CharPreview {
           beamLine(this.scene, this.effects, m, end, 0x7fe8ff, { ttl: 0.35, w: R * 0.05 });
           starburst(this.scene, this.effects, end.x, end.y, end.z, R * 0.2, 0x7fe8ff);
         }
-        shockRing(this.scene, this.effects, 0, 0, 0, R * 2.0, 0x7fe8ff);
+        shockRing(this.scene, this.effects, aim.x, 0, aim.z, R * 2.0, 0x7fe8ff);
         this.holder.position.z -= R * 0.1;
         this._fireCue(true);
+        this._followShell(m, aim, 0.5);
         A.fired = 1;
       }
     } else if (w.type === 'missile' || w.type === 'launcher') {
       if (A.fired === 0 && A.t >= 0.4) {
-        // 彈體離架:missile = 橫向 S 形獵殺;guided launcher = 上拋再俯衝(雷射標定線)
+        // 彈體離架:missile = 橫向 S 形獵殺;guided launcher = 上拋再俯衝(雷射標定線)。落點對準 aim。
+        const boomPos = aim.clone();
         const T = 1.2;
-        const v = fwd.clone().multiplyScalar(R * 4.5 / T);
-        const boomPos = m.clone().addScaledVector(v, T);
+        const v = boomPos.clone().sub(m);
         const side = fwd.clone().cross(up).normalize();
         const proj = new THREE.Mesh(
           new THREE.CylinderGeometry(R * 0.02, R * 0.035, R * 0.18, 6),
@@ -324,15 +440,18 @@ export class CharPreview {
         proj.position.copy(m);
         this.scene.add(proj);
         const weaving = w.type === 'missile';
+        this.trackObj = proj;                                         // 鏡頭跟著飛彈
+        this.wantR = R * (A.wide || 2.4);
         this.effects.push({
           obj: proj, ttl: T,
           fade: (o, f, dt2) => {
-            const age = T * (1 - f);
-            const env = Math.sin(Math.min(1, age / T) * Math.PI);     // 頭尾貼合直線的擺動包絡
-            o.position.copy(m).addScaledVector(v, age)
-              .addScaledVector(weaving ? side : up, (weaving ? Math.sin(age * 6) * 0.5 : 0.45) * R * env);
+            const u = 1 - f;                                          // 0→1 沿彈道
+            const env = Math.sin(Math.min(1, u) * Math.PI);          // 頭尾貼合直線的擺動包絡
+            o.position.copy(m).addScaledVector(v, u)
+              .addScaledVector(weaving ? side : up, (weaving ? Math.sin(u * 6 * Math.PI) * 0.5 : 0.45) * R * env);
             starburst(this.scene, this.effects, o.position.x, o.position.y, o.position.z, R * 0.05, 0xd8d8d8);
           },
+          dispose: () => { if (this.trackObj === proj) { this.trackObj = null; this.wantR = this.fitR; } },
         });
         if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
         this.holder.position.z -= R * 0.06;
@@ -349,10 +468,11 @@ export class CharPreview {
     } else if (A.fired === 0 && A.t >= 0.55) {
       // 動能重砲(gun):蓄力後單發重擊 + 象徵性衝擊環
       starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.30, 0xffd27a);
-      shockRing(this.scene, this.effects, 0, 0, 0, Math.max(R * 0.9, w.r || 0), 0xffd27a);
+      shockRing(this.scene, this.effects, aim.x, 0, aim.z, Math.max(R * 0.9, w.r || 0), 0xffd27a);
       this.holder.position.z -= R * 0.12;
       this.holder.rotation.x -= 0.10;
       this._fireCue(true);
+      this._followShell(m, aim, 0.5);
       A.fired = 1;
     } else if (A.fired === 0) {
       this.holder.position.y = -R * 0.02 * Math.sin(A.t / 0.55 * Math.PI);   // 蓄力下蹲
@@ -370,6 +490,12 @@ export class CharPreview {
         while (A.fired < A.shots && A.t >= A.next) {
           const m = this._muzzle();
           starburst(this.scene, this.effects, m.x, m.y, m.z, R * 0.10, 0xfff2b8);
+          // NPC 連射:朝虛擬目標拉曳光(帶輕微散布);英雄輕武器維持原本純槍口焰(不設 aimAt)
+          if (A.aimAt) {
+            const j = R * 0.12;
+            const end = A.aimAt.clone().add(new THREE.Vector3((Math.random() - 0.5) * j, (Math.random() - 0.5) * j, 0));
+            beamLine(this.scene, this.effects, m, end, 0xfff2b8, { ttl: 0.09, w: R * 0.014 });
+          }
           this.holder.position.z -= R * 0.02;          // 後座:每發往後推,下面阻尼拉回
           this._fireCue(false);
           A.fired++; A.next += A.gap;
@@ -383,7 +509,7 @@ export class CharPreview {
       if (A.fired === 0 && A.t >= (isUlt ? 0.45 : 0.25)) {
         spawnCastFx(this.scene, this.effects, {
           ch: this.charId, slot: A.slot, lvl: 1, fx: A.a.fx, side: this.unit.userData.side,
-          at: new THREE.Vector3(0, 0, 0),
+          at: A.at || new THREE.Vector3(0, 0, 0),   // 有目標招式 → 落在虛擬目標上
           casterPos: () => new THREE.Vector3(
             this.holder.position.x, this.holder.position.y + this.targetY, this.holder.position.z),
           groundY: () => 0,
@@ -403,8 +529,9 @@ export class CharPreview {
     }
 
     if (A.t >= A.dur) {
-      // 演出結束:未釋放的蓄力態清掉(掛點展開/發光交還阻尼歸位)
+      // 演出結束:未釋放的蓄力態清掉(掛點展開/發光交還阻尼歸位)、收起虛擬目標
       if (this._ent?.heavyFx?.phase === 'charge') this._ent.heavyFx = null;
+      this._hideTarget();
       this.anim = null;
     }
   }
@@ -414,6 +541,42 @@ export class CharPreview {
     this.moving = !this.moving;
     this.idle = 0;
     return this.moving;
+  }
+
+  /** 慢速播放切換(0.3×);回傳切換後是否為慢速 */
+  toggleSlow() { this.timeScale = this.timeScale < 1 ? 1 : 0.3; return this.timeScale < 1; }
+
+  /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);
+   *  變形機甲 = 蓄力跳彈射變形(對應遊戲的 Space)。 */
+  jump() {
+    if (this.isUnit) return false;   // NPC/建築不跳
+    if (this.morphRig) return this.toggleMorph();
+    if (!this._ent || this._jump) return false;
+    this._jump = { t: 0, dur: 0.95, peak: this.fitR * 0.7 };
+    this.idle = 0;
+    return true;
+  }
+
+  /** NPC / 攻擊建築武器演出:w = 整形後武器 {name,type,dmg,r,rate,mag,range}。
+   *  gun → 連射曳光;launcher/missile/rail → 單發彈道 + 落點爆風,鏡頭追砲彈。一律對準前方虛擬目標。 */
+  playUnitWeapon(w) {
+    if (!this.unit) return;
+    const R = this.fitR;
+    const aimPos = this._showTarget(this._aimDist(w));
+    if (w.type === 'gun') {
+      const rate = w.rate || 4;
+      const gap = Math.max(0.08, 1 / rate);
+      const shots = Math.min(6, w.mag || 6);
+      this.anim = { slot: 'light', t: 0, next: 0, fired: 0, shots, gap, w, dur: shots * gap + 0.6, aimAt: aimPos };
+      this.wantR = R;
+    } else {
+      const durH = { missile: 2.2, launcher: 2.2, rail: 2.2 }[w.type] ?? 1.6;
+      this.anim = { slot: 'heavy', t: 0, fired: 0, w, dur: durH, aimAt: aimPos, wide: 2.4 };
+      if (this._ent) this._ent.heavyFx = { phase: 'charge', t0: this._now() };
+      this.wantR = R;
+    }
+    this._auto = true;
+    this.idle = 0;
   }
 
   /**
@@ -432,7 +595,18 @@ export class CharPreview {
     if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
 
     // 變形機甲:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
-    this._ent.heroY = this.morphTarget > 0.5 ? 5 : 0;
+    let hy = this.morphTarget > 0.5 ? 5 : 0;
+    // 跳躍演示(robot/drone;morph 走變形不走此路):heroY 拋物線 → stepJumpPose 蹬伸/收腿/落地
+    if (this._jump) {
+      this._jump.t += dt;
+      const f = this._jump.t / this._jump.dur;
+      if (f >= 1) { this._jump = null; }
+      else {
+        hy = Math.max(hy, Math.sin(f * Math.PI) * this._jump.peak);
+        if (!this.anim) this.holder.position.y = hy;   // 機體實際離地(無招式時由此主導 y)
+      }
+    }
+    this._ent.heroY = hy;
     // 戰鬥開火/蓄力動畫(與戰場共用 stepCombatFx;fireFx/heavyFx 由招式演出寫入)——
     // MUST 在 stepLocomotion 之前,本幀步態才吃得到射姿/後座/蓄力驅動場
     stepCombatFx(this._ent, now, dt);
@@ -519,42 +693,48 @@ export class CharPreview {
     if (!this.running) return;
     requestAnimationFrame(this._loop);
     const dt = Math.min(0.05, this.clock.getDelta());
+    const adt = dt * this.timeScale;   // 慢速:action 走 adt、模擬時鐘自累加;鏡頭/自轉仍吃真實 dt
+    this.clockT += adt;
 
     if (this.unit) {
       this.idle += dt;
       if (!this.drag && !this.anim && this.idle > IDLE_DELAY) this.yaw += AUTO_SPIN * dt;
 
       const wasAnim = !!this.anim;
-      this._stepAnim(dt);
-      if (wasAnim && !this.anim) this.wantR = this.fitR;   // 招式結束 → 取景回機體特寫
+      this._stepAnim(adt);
+      // 招式結束 → 取景回機體特寫;但砲彈仍在追蹤時不搶回(讓 _followShell 的 dispose 收尾)
+      if (wasAnim && !this.anim && !this.trackObj) this.wantR = this.fitR;
       // 後座/姿態阻尼回正(招式結束後自然歸位)
       if (!this.anim) {
         this.holder.rotation.y = 0;
-        this.holder.rotation.x += (0 - this.holder.rotation.x) * Math.min(1, 8 * dt);
+        this.holder.rotation.x += (0 - this.holder.rotation.x) * Math.min(1, 8 * adt);
       }
-      this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * dt);
-      if (!this.anim) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * dt);
+      this.holder.position.z += (0 - this.holder.position.z) * Math.min(1, 9 * adt);
+      if (!this.anim && !this._jump) this.holder.position.y += (0 - this.holder.position.y) * Math.min(1, 9 * adt);
 
-      this._stepLoco(dt, performance.now() / 1000);
+      this._stepLoco(adt, this.clockT);
 
-      // 動態取景:施展招式時鏡頭拉遠框住特效,結束緩回;手動滾輪後讓位給玩家
+      // 動態取景:施展招式/砲彈飛行時鏡頭拉遠框住,結束緩回;手動滾輪後讓位給玩家
       if (this._auto) {
         this.viewR += (this.wantR - this.viewR) * Math.min(1, 5 * dt);
         this.dist += (this._fitDist(this.viewR) - this.dist) * Math.min(1, 6 * dt);
-        if (!this.anim && Math.abs(this.viewR - this.fitR) < this.fitR * 0.02) this._auto = false;
+        if (!this.anim && !this.trackObj && Math.abs(this.viewR - this.fitR) < this.fitR * 0.02) this._auto = false;
       }
 
-      this.mixer?.update(dt);
-      this._updateEffects(dt);
+      this.mixer?.update(adt);
+      this._updateEffects(adt);
 
       const ty = this.targetY;
+      // 聚焦點:預設看機體中心;重武器擊發後暫時追蹤砲彈(_followShell / 飛彈本體)→ 鏡頭跟彈拉遠
+      const wf = this.trackObj ? this.trackObj.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, ty, 0);
+      this.focus.lerp(wf, Math.min(1, (this.trackObj ? 5 : 4) * dt));
       const cp = Math.cos(this.pitch);
       this.camera.position.set(
-        Math.sin(this.yaw) * cp * this.dist,
-        ty + Math.sin(this.pitch) * this.dist,
-        Math.cos(this.yaw) * cp * this.dist,
+        this.focus.x + Math.sin(this.yaw) * cp * this.dist,
+        this.focus.y + Math.sin(this.pitch) * this.dist,
+        this.focus.z + Math.cos(this.yaw) * cp * this.dist,
       );
-      this.camera.lookAt(0, ty, 0);
+      this.camera.lookAt(this.focus);
       this.camera.updateMatrixWorld();
       updateCelLight(this.camera);
     }

@@ -229,6 +229,17 @@
       <div class="char-detail" id="charDetail"></div>
     </div>
     <div class="char-info" id="charInfo"></div>
+    <!-- NPC / 攻擊建築圖鑑(現役單位,雙陣營外觀;左選項右展示台+數據,與角色卡同框並存) -->
+    <div class="unit-section" id="unitSection">
+      <div class="unit-head">
+        <span class="unit-head-title">▍NPC / 攻擊建築圖鑑</span>
+        <span class="unit-side-toggle" id="unitSideToggle"></span>
+      </div>
+      <div class="char-pick">
+        <div class="unit-grid" id="unitGrid"></div>
+        <div class="char-detail" id="unitDetail"></div>
+      </div>
+    </div>
   </div>
   <div class="spec-list" id="specList"></div>
   <p class="room-hint" id="roomHint"></p>
@@ -352,6 +363,32 @@
   <div class="bio-modal-box">
     <button class="bio-modal-close" id="charBioModalClose">✕</button>
     <div class="bio-modal-body" id="charBioModalBody"></div>
+  </div>
+</div>
+
+<!-- 機體展示台放大獨立視窗(仿遊戲操作演出;只留基本數值 + 武器/招式)-->
+<div id="charStageModal" class="stage-modal" hidden>
+  <div class="stage-modal-box">
+    <button class="bio-modal-close" id="charStageModalClose">✕</button>
+    <div class="stage-modal-title" id="stageModalTitle"></div>
+    <div class="stage-modal-grid">
+      <div class="stage-modal-stage" id="stageModalStage"></div>
+      <div class="stage-modal-side">
+        <div class="stage-modal-keys" id="stageModalKeys"></div>
+        <div id="stageModalInfo"></div>
+        <div class="cd-kit" id="stageModalKit"></div>
+      </div>
+    </div>
+    <div class="stage-modal-pick">
+      <div class="smp-col" id="modalCharCol">
+        <div class="smp-head">角色</div>
+        <div class="char-grid smp-grid" id="modalCharGrid"></div>
+      </div>
+      <div class="smp-col">
+        <div class="smp-head">NPC / 建築 <span class="unit-side-toggle" id="modalUnitToggle"></span></div>
+        <div class="unit-grid smp-grid" id="modalUnitGrid"></div>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -6,7 +6,7 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, PROG,
-  UNITS, SQUAD, LOS,
+  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, SQUAD, LOS,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
 } from './data.js';
 import { LORE } from './lore.js';
@@ -34,7 +34,11 @@ const app = {
   charTarget: null,     // 選角對象:null = 自己;bot id = 房主代選(setBotChar)
   preview: null,        // CharPreview(機體展示台);previewCv 為其共用 canvas 節點
   previewCv: null,
-  stageSmall: true,     // 展示台縮放:true = 小(頭像下方,預設)/ false = 大(頂端 sticky)
+  stages: { char: null, unit: null },   // 角色卡 / NPC 卡各一台持久展示台(各自 WebGLRenderer,同框並存)
+  modalRole: null,      // 放大視窗當前展示的 role('char'|'unit'|null=關閉)
+  unitSide: null,       // NPC 圖鑑檢視陣營(可切換);unitKind = 目前選的單位;unitShown = 已載入的 kind:side
+  unitKind: null, unitShown: null,
+  pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
@@ -50,7 +54,7 @@ const app = {
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
-  if (screen !== 'room') { app.preview?.stop(); app.charTarget = null; }   // 離開房間:展示台停 rAF,不與戰場搶 GPU
+  if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
@@ -735,21 +739,9 @@ function charBioTextHTML(id, full = false) {
 function charDetailHTML(id) {
   const c = CHARACTERS[id];
   const kind = charKind(id);
-  const u = UNITS[kind];
-  const m = c.mods;
   const isDrone = kind === 'drone';
-  const stats = [
-    ['裝甲 HP', Math.round(u.hp * (m.hp ?? 1)), 'hp'],
-    ['護盾', Math.round(u.shield * (m.sp ?? 1)), 'sp'],
-    ['電力', Math.round(u.mp * (m.mp ?? 1)), 'mp'],
-    ['機動', Math.round(u.speed * (m.speed ?? 1)), 'speed'],
-    ['護甲值', m.armor ?? 0, 'armor'],
-  ].map(([label, v, k]) =>
-    `<div class="cd-stat"><span>${label}</span>
-      <i><b style="width:${Math.min(100, v / BAR_MAX[k] * 100).toFixed(0)}%"></b></i>
-      <em>${v}</em></div>`).join('');
-
-  const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
+  const stats = heroStatCells(id);
+  const kindLabel = kindLabelOf(kind);
   // 展示台 #charStage 由 showCharDetail 直接插進 #charDetail 頂端(大)或 #stageBottom(小,頭像下方)。
   // 大圖必須是 #charDetail 的直接子代,sticky 才能在整個捲動容器內固定(套 wrapper 會被限制在 wrapper 內)。
   return `<div class="cd-lower">
@@ -800,47 +792,126 @@ $('charBioModalClose').onclick = hideCharBioModal;
 $('charBioModal').addEventListener('click', (e) => { if (e.target.id === 'charBioModal') hideCharBioModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('charBioModal').hidden) hideCharBioModal(); });
 
-/** 機體展示台:整個 app 共用一個 WebGL context,隨 charDetail 重繪搬移 canvas 節點 */
-function previewCanvas() {
-  if (!app.previewCv) {
-    app.previewCv = document.createElement('canvas');
-    app.previewCv.className = 'cd-canvas';
-    app.preview = new CharPreview(app.previewCv);
+// 機體展示台:角色卡與 NPC 卡「各一台」持久 CharPreview(各自 WebGLRenderer)→ 兩台同框並存,
+// 選角色不清 NPC、反之亦然。放大 = 頁內 modal,把該卡的 shell 搬進 modal 大圖(可在 modal 內切換對象)。
+
+// ---- 屬性數值格(角色 / 單位共用);max = 該欄滿格基準 ----
+function statCell(label, v, max) {
+  return `<div class="cd-stat"><span>${esc(label)}</span>
+      <i><b style="width:${Math.min(100, v / max * 100).toFixed(0)}%"></b></i>
+      <em>${v}</em></div>`;
+}
+function heroStatCells(id) {
+  const kind = charKind(id); const u = UNITS[kind]; const m = CHARACTERS[id].mods;
+  return [
+    ['裝甲 HP', Math.round(u.hp * (m.hp ?? 1)), 'hp'],
+    ['護盾', Math.round(u.shield * (m.sp ?? 1)), 'sp'],
+    ['電力', Math.round(u.mp * (m.mp ?? 1)), 'mp'],
+    ['機動', Math.round(u.speed * (m.speed ?? 1)), 'speed'],
+    ['護甲值', m.armor ?? 0, 'armor'],
+  ].map(([label, v, k]) => statCell(label, v, BAR_MAX[k])).join('');
+}
+const UNIT_BAR_MAX = { hp: 3000, armor: 30, dmg: 130, range: 320, rate: 5, speed: 22, sight: 310 };
+function unitStatCells(kind) {
+  const u = UNITS[kind];
+  const rows = [
+    ['血量', u.hp, 'hp'], ['護甲值', u.armor ?? 0, 'armor'], ['火力', u.dmg, 'dmg'],
+    ['射程', Math.round(u.range), 'range'], ['射速', +u.rate.toFixed(1), 'rate'], ['視野', u.sight, 'sight'],
+  ];
+  if (u.speed) rows.push(['機動', u.speed, 'speed']);
+  return rows.map(([label, v, k]) => statCell(label, v, UNIT_BAR_MAX[k])).join('');
+}
+const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
+const sideName = (side) => SIDES[side]?.name || side;
+const unitClassLabel = (kind) => CLASS_NAME[TARGET_CLASS[kind]] || '';
+
+// ---- NPC / 建築武器(整形成 heroWeapon 形狀供展示台 playUnitWeapon)----
+const WTYPE_NAME = { gun: '動能', launcher: '榴彈', missile: '飛彈', rail: '軌道', beam: '能束', plasma: '電漿' };
+function unitWeaponList(kind) {
+  const u = UNITS[kind];
+  const gun = (label, name, o) => ({ label, name, type: 'gun', dmg: o.dmg, rate: o.rate, range: o.range, mag: o.mag, r: 0 });
+  const launcher = (label, name, o) => ({ label, name, type: 'launcher', dmg: o.dmg, rate: o.rate, range: o.range, mag: o.mag, r: o.r || 15 });
+  switch (kind) {
+    case 'soldier': case 'heli': { const w = WEAPONS[u.wid]; return [gun('主武', w.name, w)]; }
+    case 'rocketeer': { const w = WEAPONS.rocket; return [launcher('主武', w.name, w)]; }
+    case 'howitzer': { const w = WEAPONS.siege; return [launcher('主武', w.name, w)]; }
+    case 'tower': {
+      const s = u.sam;
+      return [gun('主砲', '防禦砲塔', { dmg: u.dmg, rate: u.rate, range: u.range }),
+        { label: '防空', name: s.name, type: 'missile', dmg: s.dmg, rate: +(1 / (s.cd || 4)).toFixed(2), range: s.range, r: 0 }];
+    }
+    case 'base': {
+      const g = u.guns;
+      return [gun('主砲', '主堡火砲', { dmg: u.dmg, rate: u.rate, range: u.range }),
+        gun('雙聯', '主堡雙聯裝砲', { dmg: g.dmg, rate: g.rate, range: g.range })];
+    }
+    default: return [];
   }
-  return app.previewCv;
+}
+function unitWeaponRow(w, i) {
+  const bits = [`傷害 ${w.dmg}`, `射程 ${Math.round(w.range)}m`, `射速 ${(+w.rate).toFixed(1)}/s`];
+  if (w.mag) bits.push(`彈匣 ${w.mag}`);
+  if (w.r) bits.push(`爆風 ${w.r}m`);
+  return `<div class="cd-row" data-uwid="${i}" title="點擊播放攻擊演出">
+    <span class="cd-key">${esc(w.label)}</span>
+    <div><b>${esc(w.name)}</b> <span class="cd-fx">${WTYPE_NAME[w.type] || w.type}</span> <span class="cd-play">▶</span>
+    <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
 
-/** 展示台外殼(變形鈕 + 縮放鈕 + 移動狀態徽章 + 提示);canvas 由呼叫端掛入,可在大/小掛載點間搬移 */
-function buildStageShell(kind) {
-  const s = document.createElement('div');
-  s.id = 'charStage';
-  s.innerHTML =
-    `${kind === 'morph' ? '<button class="cd-morph-btn" id="charMorphBtn">✈ 切換飛行型態</button>' : ''}
-     <div class="cd-stage-tr">
-       <button class="cd-size-btn" id="charSizeBtn"></button>
-     </div>
-     <div class="cd-speed" id="charStageSpeed">⏸ 靜止</div>
-     <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 雙擊機體切換移動/靜止 ・ 點下方武器/招式看演出</div>`;
-  return s;
+/** 建一台展示台(角色 'char' / NPC 'unit' 各一,持久重用):自帶 canvas + shell + CharPreview 實例。
+ *  按鈕以 class 定位 + 閉包綁定(兩台 shell 並存,不可用共用 id)。 */
+function buildStage(role) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'cd-canvas';
+  const preview = new CharPreview(canvas);
+  const shell = document.createElement('div');
+  shell.className = 'cd-stage small';
+  shell.innerHTML = `
+    <button class="cd-morph-btn" hidden>✈ 切換飛行型態</button>
+    <div class="cd-stage-tr">
+      <button class="cd-slow-btn">🐢 慢速</button>
+      <button class="cd-size-btn">⤢ 放大</button>
+    </div>
+    <div class="cd-speed">⏸ 靜止</div>
+    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 雙擊機體切換移動/靜止 ・ 點武器/招式看演出</div>`;
+  shell.appendChild(canvas);
+  const q = (s) => shell.querySelector(s);
+  const st = { role, preview, shell, canvas, home: null, subject: null, weapons: null };
+  q('.cd-slow-btn').onclick = (e) => {
+    const on = preview.toggleSlow();
+    e.currentTarget.classList.toggle('on', on);
+    e.currentTarget.textContent = on ? '🐢 慢速中' : '🐢 慢速';
+  };
+  q('.cd-size-btn').onclick = () => toggleStageModal(role);
+  q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
+  preview.onMove = (moving, v) => { const sp = q('.cd-speed'); sp.textContent = moving || v > 0.05 ? `▶ 移動 ${v.toFixed(1)} m/s` : '⏸ 靜止'; sp.classList.toggle('on', moving); };
+  app.stages[role] = st;
+  return st;
 }
+function getStage(role) { return app.stages[role] || buildStage(role); }
+function stopStages() { for (const r of ['char', 'unit']) app.stages[r]?.preview.stop(); }
 
-/** 依 app.stageSmall 把展示台掛到頂端(大,#charDetail 直接子代)或頭像下方(小,#stageBottom) */
-function mountStage(stage) {
-  stage.className = 'cd-stage ' + (app.stageSmall ? 'small' : 'large');
-  // 大圖是 sticky 全寬,左欄(頭像)要跟著讓開它的高度 → 由 #charDetail 的 class 決定 sticky 位移
-  const box = $('charDetail');
-  box.classList.toggle('stage-large', !app.stageSmall);
-  if (app.stageSmall) $('stageBottom').appendChild(stage);
-  else box.insertBefore(stage, box.firstChild);
-  const sb = $('charSizeBtn');
-  if (sb) sb.textContent = app.stageSmall ? '⤢ 放大' : '⤡ 縮小';
-  app.preview?._resize();   // 掛載點尺寸不同,搬移後立即重算 canvas 尺寸/長寬比
+/** 配置某台展示台的按鈕(變形鈕/移動徽章/慢速)並掛到內嵌 home;若正被 modal 放大則不搬(留在 modal) */
+function mountStageInline(role, subject, homeEl) {
+  const st = getStage(role);
+  st.subject = subject;
+  st.home = homeEl;
+  const shell = st.shell;
+  const isMorph = subject.type === 'char' && charKind(subject.id) === 'morph';
+  const mb = shell.querySelector('.cd-morph-btn'); mb.hidden = !isMorph; mb.textContent = '✈ 切換飛行型態';
+  shell.querySelector('.cd-speed').style.display = subject.type === 'unit' ? 'none' : '';
+  const slow = shell.querySelector('.cd-slow-btn'); slow.classList.remove('on'); slow.textContent = '🐢 慢速';
+  if (app.modalRole !== role) homeEl.appendChild(shell);
+  else fillModalPanels(role);   // 正被放大 → shell 留在 modal,改更新 modal 面板
+  st.preview._resize();
 }
 
 function showCharDetail(id, side) {
   const box = $('charDetail');
   if (!id) {
-    app.preview?.stop();
+    if (app.modalRole === 'char') closeStageModal();
+    app.stages.char?.preview.stop();
+    if (app.stages.char) app.stages.char.subject = null;
     box.innerHTML = '<div class="cd-empty">🎲 未選角色<br><span>開戰時隨機指派一名。點選頭像可看完整簡歷與數值。</span></div>';
     return;
   }
@@ -852,30 +923,249 @@ function showCharDetail(id, side) {
   // 傭兵隨雇主換色:展示台一律以「檢視中的陣營」建機體
   const s = side || CHARACTERS[id].side;
   const viewSide = s === 'MERC' ? 'STEEL' : s;
-
-  const stage = buildStageShell(charKind(id));
-  stage.appendChild(previewCanvas());
-  mountStage(stage);
-  // 移動/靜止徽章:每幀回呼,只在文字真的變了才寫 DOM
-  const sp = $('charStageSpeed');
-  let last = '';
-  app.preview.onMove = (moving, v) => {
-    const txt = moving || v > 0.05 ? `▶ 移動 ${v.toFixed(1)} m/s` : '⏸ 靜止';
-    if (txt !== last) { last = txt; sp.textContent = txt; }
-    sp.classList.toggle('on', moving);
-  };
-  app.preview.setChar(id, viewSide);
-  app.preview.start();
-
-  const mb = $('charMorphBtn');   // 變形機甲:觀看變形過程 + 切換型態
-  if (mb) mb.onclick = () => { mb.textContent = app.preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
-  $('charSizeBtn').onclick = () => { app.stageSmall = !app.stageSmall; mountStage(stage); };
+  const st = getStage('char');
+  mountStageInline('char', { type: 'char', id, side: s }, $('stageBottom'));
+  st.preview.setChar(id, viewSide);
+  st.preview.start();
 }
 
-// 點武器/招式區塊 → 展示台播放施展動畫(委派,charDetail 每次重繪都沿用)
+// 點武器/招式區塊 → 角色展示台播放施展動畫(委派,charDetail 每次重繪都沿用)
 $('charDetail').addEventListener('click', (e) => {
   const row = e.target.closest('.cd-row');
-  if (row?.dataset.slot) app.preview?.play(row.dataset.slot);
+  if (row?.dataset.slot) app.stages.char?.preview.play(row.dataset.slot);
+});
+
+// ================= 放大獨立視窗(仿遊戲操作演出;含角色/NPC 選擇,可切換放大對象) =================
+function stageTitleHTML(subject) {
+  if (subject.type === 'char') {
+    const c = CHARACTERS[subject.id];
+    return `「${esc(c.code)}」${esc(c.name)} <span class="dim">${esc(c.machine)} ・ ${kindLabelOf(charKind(subject.id))}</span>`;
+  }
+  const u = UNITS[subject.kind];
+  return `${esc(u.name)} <span class="dim">${esc(sideName(subject.side))} ・ ${esc(unitClassLabel(subject.kind))}</span>`;
+}
+function stageInfoHTML(subject) {
+  if (subject.type === 'char') {
+    const isDrone = charKind(subject.id) === 'drone';
+    return `<div class="cd-stats">${heroStatCells(subject.id)}</div>
+      ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值。</div>` : ''}`;
+  }
+  return `<div class="cd-stats">${unitStatCells(subject.kind)}</div>`;
+}
+function stageKitHTML(st) {
+  const subject = st.subject;
+  if (subject.type === 'char') {
+    const id = subject.id;
+    return charWeaponRow(id, 'light', '左鍵') + charWeaponRow(id, 'heavy', '右鍵')
+      + charAbilityRow(id, 'skill', 'Q') + charAbilityRow(id, 'ult', 'E');
+  }
+  return (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
+}
+/** modal 側欄面板(標題/數值/武器/操作提示)依目前放大的 role 填 */
+function fillModalPanels(role) {
+  const st = app.stages[role]; if (!st?.subject) return;
+  $('stageModalTitle').innerHTML = stageTitleHTML(st.subject);
+  $('stageModalInfo').innerHTML = stageInfoHTML(st.subject);
+  $('stageModalKit').innerHTML = stageKitHTML(st);
+  $('stageModalKeys').innerHTML = st.subject.type === 'char'
+    ? '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 移動'
+    : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊';
+}
+function activeStage() { return app.modalRole ? app.stages[app.modalRole] : null; }
+/** 把放大視窗裡的 shell 歸位到它的內嵌 home,還原放大鈕字樣 */
+function restoreModalShell() {
+  const st = app.modalRole && app.stages[app.modalRole];
+  if (!st) return;
+  const size = st.shell.querySelector('.cd-size-btn'); if (size) size.textContent = '⤢ 放大';
+  if (st.home) st.home.appendChild(st.shell);
+}
+/** 讓 role 的 shell 成為放大視窗當前展示(切換放大對象;必要時重綁操作) */
+function enlargeInModal(role) {
+  const st = getStage(role);
+  if (!st.subject || app.modalRole === role) return;
+  const wasOpen = !!app.modalRole;
+  if (wasOpen) unbindStageControls();
+  restoreModalShell();
+  app.modalRole = role;
+  $('stageModalStage').appendChild(st.shell);
+  st.shell.querySelector('.cd-size-btn').textContent = '⤡ 縮小';
+  fillModalPanels(role);
+  if (wasOpen) bindStageControls();
+  st.preview._resize();
+}
+function toggleStageModal(role) { if (app.modalRole === role) closeStageModal(); else openStageModal(role); }
+function openStageModal(role) {
+  const st = getStage(role);
+  if (!st.subject) return;
+  restoreModalShell();
+  app.modalRole = role;
+  $('stageModalStage').appendChild(st.shell);
+  st.shell.querySelector('.cd-size-btn').textContent = '⤡ 縮小';
+  fillModalPanels(role);
+  renderModalPicks();
+  $('charStageModal').hidden = false;
+  bindStageControls();
+  st.preview._resize();
+}
+function closeStageModal() {
+  if (!app.modalRole) return;
+  unbindStageControls();
+  restoreModalShell();
+  app.modalRole = null;
+  $('charStageModal').hidden = true;
+  for (const r of ['char', 'unit']) app.stages[r]?.preview._resize();
+}
+function stagePlaySlot(slot) { const st = activeStage(); if (st?.subject.type === 'char') st.preview.play(slot); }
+function stagePlayPrimary(secondary) {
+  const st = activeStage(); if (!st?.subject) return;
+  if (st.subject.type === 'char') st.preview.play(secondary ? 'heavy' : 'light');
+  else { const list = st.weapons || []; const w = secondary && list[1] ? list[1] : list[0]; if (w) st.preview.playUnitWeapon(w); }
+}
+/** 仿遊戲操作:鍵盤 Q/E/Space/W + 滑鼠左右鍵(拖曳=旋轉、點擊=開火)。綁在「目前放大那台」的 canvas。 */
+function bindStageControls() {
+  const st = activeStage(); if (!st) return;
+  const cv = st.canvas, p = st.preview;
+  let down = null;
+  const onKey = (e) => {
+    if (!app.modalRole) return;
+    if (e.code === 'Escape') { closeStageModal(); return; }
+    if (e.code === 'KeyQ') stagePlaySlot('skill');
+    else if (e.code === 'KeyE') stagePlaySlot('ult');
+    else if (e.code === 'Space') { e.preventDefault(); p.jump(); }
+    else if (e.code === 'KeyW') p.toggleMove();
+  };
+  const onDown = (e) => { down = { x: e.clientX, y: e.clientY, b: e.button }; };
+  const onUp = (e) => {
+    if (!down) return;
+    if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) < 6) stagePlayPrimary(down.b === 2);
+    down = null;
+  };
+  const onCtx = (e) => e.preventDefault();
+  window.addEventListener('keydown', onKey);
+  cv.addEventListener('mousedown', onDown);
+  cv.addEventListener('mouseup', onUp);
+  cv.addEventListener('contextmenu', onCtx);
+  app._stageBind = { onKey, onDown, onUp, onCtx, cv };
+}
+function unbindStageControls() {
+  const b = app._stageBind; if (!b) return;
+  window.removeEventListener('keydown', b.onKey);
+  b.cv.removeEventListener('mousedown', b.onDown);
+  b.cv.removeEventListener('mouseup', b.onUp);
+  b.cv.removeEventListener('contextmenu', b.onCtx);
+  app._stageBind = null;
+}
+/** 選角(角色格 onclick 與放大視窗角色格共用):唯讀對象不可選;送 pickChar/setBotChar 後即時換展示 */
+function selectChar(id) {
+  if (!app.pickEditable) return;
+  app.net.send(app.pickIsSelf ? { t: 'pickChar', ch: id } : { t: 'setBotChar', id: app.pickSubject.id, ch: id });
+  showCharDetail(id, app.pickSide);
+}
+/** 放大視窗內的角色 + NPC 選擇格(req:放大頁面也出現選擇)。角色格僅在可選角(自己/房主代選)時出現。 */
+function renderModalPicks() {
+  const cg = $('modalCharGrid');
+  if (app.pickEditable && app.pickSide) {
+    cg.innerHTML = '';
+    for (const id of charsOf(app.pickSide)) {
+      const c = CHARACTERS[id];
+      const b = document.createElement('button');
+      b.className = 'char-btn' + (app.stages.char?.subject?.id === id ? ' on' : '') + (c.side === 'MERC' ? ' merc' : '');
+      b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false"><b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
+      b.onclick = () => { selectChar(id); enlargeInModal('char'); renderModalPicks(); };
+      cg.appendChild(b);
+    }
+    cg.parentElement.style.display = '';
+  } else { cg.parentElement.style.display = 'none'; }
+
+  const side = app.unitSide || app.pickSide || 'STEEL';
+  $('modalUnitToggle').innerHTML = ['STEEL', 'SWARM'].map((sd) =>
+    `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-muside="${sd}">${esc(SIDES[sd].name)}</button>`).join('');
+  const ug = $('modalUnitGrid');
+  ug.innerHTML = '';
+  for (const kind of UNIT_ROSTER) {
+    const b = document.createElement('button');
+    b.className = 'unit-btn' + (app.stages.unit?.subject?.kind === kind && app.stages.unit?.subject?.side === side ? ' on' : '');
+    b.innerHTML = `<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
+    b.onclick = () => { app.unitKind = kind; app.unitShown = null; renderUnitGrid(side); showUnitDetail(kind, side); enlargeInModal('unit'); renderModalPicks(); };
+    ug.appendChild(b);
+  }
+}
+$('charStageModalClose').onclick = closeStageModal;
+$('charStageModal').addEventListener('click', (e) => { if (e.target.id === 'charStageModal') closeStageModal(); });
+$('stageModalKit').addEventListener('click', (e) => {
+  const row = e.target.closest('.cd-row'); if (!row) return;
+  const st = activeStage(); if (!st) return;
+  if (row.dataset.slot) st.preview.play(row.dataset.slot);
+  else if (row.dataset.uwid != null) { const w = (st.weapons || [])[+row.dataset.uwid]; if (w) st.preview.playUnitWeapon(w); }
+});
+$('modalUnitToggle').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-muside]'); if (!b) return;
+  app.unitSide = b.dataset.muside; app.unitShown = null;
+  renderUnitGrid(app.unitSide);
+  if (app.unitKind) showUnitDetail(app.unitKind, app.unitSide);
+  renderModalPicks();
+});
+
+// ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營,與角色卡同框並存) =================
+const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'heli', 'tower', 'base'];
+const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
+function unitDetailHTML(kind, side) {
+  const u = UNITS[kind];
+  const list = unitWeaponList(kind);
+  return `<div class="cd-lower">
+    <div class="cd-art"><div id="unitStageBottom" class="unit-stage-mount"></div></div>
+    <div class="cd-body">
+      <div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
+      <div class="cd-stats">${unitStatCells(kind)}</div>
+      <div class="cd-kit">${list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
+      <div class="cd-foot">點武器列播放攻擊演出;拖曳旋轉、滾輪縮放,「放大」開獨立視窗。</div>
+    </div>
+  </div>`;
+}
+function showUnitDetail(kind, side) {
+  $('unitDetail').innerHTML = unitDetailHTML(kind, side);
+  const st = getStage('unit');
+  st.weapons = unitWeaponList(kind);
+  mountStageInline('unit', { type: 'unit', kind, side }, $('unitStageBottom'));
+  st.preview.setUnit(kind, side);
+  st.preview.start();
+  app.unitShown = kind + ':' + side;
+}
+/** 圖鑑陣營切換 + 單位牆(highlight);不重建 detail(避免每次房間同步重載模型) */
+function renderUnitGrid(side) {
+  app.unitSide = side;
+  $('unitSideToggle').innerHTML = ['STEEL', 'SWARM'].map((sd) =>
+    `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-uside="${sd}">${esc(SIDES[sd].name)}</button>`).join('');
+  const grid = $('unitGrid');
+  grid.innerHTML = '';
+  for (const kind of UNIT_ROSTER) {
+    const b = document.createElement('button');
+    b.className = 'unit-btn' + (app.unitKind === kind ? ' on' : '');
+    b.innerHTML = `<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
+    b.onclick = () => { app.unitKind = kind; app.unitShown = null; renderUnitGrid(side); showUnitDetail(kind, side); };
+    grid.appendChild(b);
+  }
+}
+/** 選角重繪時呼叫:NPC 選取保留(不清),已選單位持續顯示(未變則不重載) */
+function renderUnitSection(defaultSide) {
+  renderUnitGrid(app.unitSide || defaultSide);
+  if (app.unitKind) {
+    if (app.unitShown !== app.unitKind + ':' + app.unitSide) showUnitDetail(app.unitKind, app.unitSide);
+  } else {
+    $('unitDetail').innerHTML = UNIT_PROMPT;
+  }
+}
+$('unitSideToggle').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-uside]'); if (!b) return;
+  app.unitShown = null;
+  renderUnitGrid(b.dataset.uside);
+  if (app.unitKind) showUnitDetail(app.unitKind, b.dataset.uside);   // 切陣營保留當前單位、換外觀
+});
+$('unitDetail').addEventListener('click', (e) => {
+  const row = e.target.closest('.cd-row'); if (!row || row.dataset.uwid == null) return;
+  const st = app.stages.unit;
+  const w = (st?.weapons || [])[+row.dataset.uwid];
+  if (w) st.preview.playUnitWeapon(w);
 });
 
 /**
@@ -888,14 +1178,15 @@ function renderCharPick(me) {
   const subject = app.lobby.clients.find((c) => c.id === app.charTarget) || me;
   if (app.lobby.phase !== 'room' || !me || me.mode !== 'player' || !me.side || !subject) {
     sec.style.display = 'none';
-    app.preview?.stop();
+    stopStages();
     return;
   }
   sec.style.display = '';
 
   const isSelf = subject.id === app.youId;
   const editable = isSelf || (subject.isBot && app.isHost);   // 自己 / 房主代電腦選;他人唯讀
-  const send = (ch) => app.net.send(isSelf ? { t: 'pickChar', ch } : { t: 'setBotChar', id: subject.id, ch });
+  // 選角上下文(供角色格 onclick 與放大視窗的角色格共用)
+  app.pickSubject = subject; app.pickSide = subject.side; app.pickEditable = editable; app.pickIsSelf = isSelf;
   const whoLabel = isSelf ? '你' : `${subject.isBot ? '▣ ' : ''}${esc(subject.name)}`;
 
   $('charSectionHead').innerHTML = editable
@@ -913,14 +1204,14 @@ function renderCharPick(me) {
       b.className = 'char-btn' + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
       b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
         <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
-      b.onclick = () => { send(id); showCharDetail(id, subject.side); };   // 伺服器 sync 前先換,點擊即時有反應
+      b.onclick = () => selectChar(id);   // 伺服器 sync 前先換,點擊即時有反應
       grid.appendChild(b);
     }
     // 隨機殿後(預設選項但排在列表最後,不搶頭像牆第一格的視覺焦點)
     const rnd = document.createElement('button');
     rnd.className = 'char-btn rnd' + (subject.ch ? '' : ' on');
     rnd.innerHTML = '<span class="char-dice">🎲</span><span class="char-name">隨機</span>';
-    rnd.onclick = () => { send(null); showCharDetail(null); };   // 只有點擊會換展示角色(懸浮不換)
+    rnd.onclick = () => selectChar(null);   // 只有點擊會換展示角色(懸浮不換)
     grid.appendChild(rnd);
   }
   showCharDetail(subject.ch || null, subject.side);
@@ -931,6 +1222,10 @@ function renderCharPick(me) {
     : editable
       ? `${whoLabel}未選角色:開戰時將隨機指派一名(點頭像選角並展示,點武器/招式看演出)。`
       : `${whoLabel}尚未選定角色(開戰隨機)。`;
+
+  // NPC / 攻擊建築圖鑑(獨立於角色選擇,選取不互清;預設檢視自己陣營,可切換雙陣營)
+  renderUnitSection(subject.side);
+  if (app.modalRole) { fillModalPanels(app.modalRole); renderModalPicks(); }   // 放大視窗開啟中 → 同步刷新
 }
 
 // ================= 載入 + 開戰 =================
