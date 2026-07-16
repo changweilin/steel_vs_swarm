@@ -3764,6 +3764,47 @@ export class BattleClient {
     this._mmFog = document.createElement('canvas');
     this._mmFog.width = w; this._mmFog.height = h;
     this._pulseUntil = 0;   // 全隊無霧脈衝(偵察中繼站/偵察招式)到期時刻:迷霧全掀
+    this._mmLanes = this._gradeLanes();   // 兵線分級取樣(地面/高架橋/地下道)— 一次算好
+  }
+
+  /**
+   * 兵線立體交通分級(小地圖圖例):沿線行進式取樣(帶上一步高度問 surfaceAt,
+   * 與 _initLanes 的箭頭剖面同一套規則)—— 站上橋面 = bridge、進洞內 = tunnel、其餘地面。
+   * 回傳每條線的 [{x, z, grade}] 取樣序列(世界座標,_drawMinimap 轉小地圖再分段畫虛線)。
+   */
+  _gradeLanes() {
+    const SEG = 6;
+    return this.lanePts.map((raw) => {
+      const pts = raw.map((p) => [p.x, p.z]);
+      if (pts.length < 2) return [];
+      const cum = [0];
+      for (let i = 1; i < pts.length; i++) {
+        cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      }
+      const total = cum[cum.length - 1];
+      const at = (s) => {
+        let i = 1;
+        while (i < pts.length - 1 && cum[i] < s) i++;
+        const f = (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+      };
+      const out = [];
+      let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
+      for (let s = 0; s <= total; s += SEG) {
+        const [sx, sz] = at(Math.min(s, total));
+        py = this._surf(sx, sz, py + 1.2);
+        let grade = 'ground';
+        const tn = this.terrain.tunnelAt?.(sx, sz);
+        if (tn && py + 1.2 < tn.ceil && Math.abs(py - tn.floor) < 0.6) {
+          grade = 'tunnel';
+        } else {
+          const d = this.terrain.deckY?.(sx, sz);
+          if (d != null && d > this.terrain.heightAt(sx, sz) + 0.5 && Math.abs(py - d) < 0.6) grade = 'bridge';
+        }
+        out.push({ x: sx, z: sz, grade });
+      }
+      return out;
+    });
   }
 
   /**
@@ -3893,19 +3934,29 @@ export class BattleClient {
         ctx.drawImage(this._mmFog, 0, 0);
       }
     }
-    // 兵線
+    // 兵線:依立體交通分段畫線 —— 地面實線、高架橋 --- 虛線、地下道/隧道 ⋯ 點線
     const cols = ['#e6c34a', '#e05c4a', '#4ac3e6'];
-    this.lanePts.forEach((pts, i) => {
-      ctx.strokeStyle = cols[i];
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
-      pts.forEach((p, k) => {
-        const [mx, my] = this._world2mm(p.x, p.z, w, h);
-        k === 0 ? ctx.moveTo(mx, my) : ctx.lineTo(mx, my);
-      });
-      ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.7;
+    this._mmLanes.forEach((samples, i) => {
+      if (samples.length < 2) return;
+      ctx.strokeStyle = cols[i % cols.length];
+      let k = 0;
+      while (k < samples.length - 1) {
+        const gr = samples[k].grade;
+        let e = k + 1;
+        while (e < samples.length - 1 && samples[e].grade === gr) e++;
+        ctx.setLineDash(gr === 'bridge' ? [5, 4] : gr === 'tunnel' ? [1.5, 3.5] : []);
+        ctx.beginPath();
+        for (let j = k; j <= e; j++) {
+          const [mx, my] = this._world2mm(samples[j].x, samples[j].z, w, h);
+          j === k ? ctx.moveTo(mx, my) : ctx.lineTo(mx, my);
+        }
+        ctx.stroke();
+        k = e;
+      }
     });
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
     // 單位(中立障礙不上圖:偵察情報要親眼看)
     for (const ent of this.ents.values()) {

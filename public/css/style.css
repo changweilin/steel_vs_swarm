@@ -425,13 +425,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .hud-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; pointer-events: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
-  padding: 10px 12px;
+  padding: 6px 10px;
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.85), transparent);
 }
-.hud-self { display: flex; flex-direction: column; gap: 4px; min-width: 240px; max-width: 260px; }
+.hud-self { display: flex; flex-direction: column; gap: 3px; min-width: 240px; max-width: 260px; }
 .hud-side {
-  font-family: var(--serif); font-size: 12px; letter-spacing: 4px; font-weight: 900;
-  padding: 2px 8px; align-self: flex-start;
+  font-family: var(--serif); font-size: 11px; letter-spacing: 3px; font-weight: 900;
+  padding: 1px 8px; align-self: flex-start;
 }
 body[data-side="SWARM"] .hud-side { color: #0d0900; background: var(--swarm); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
@@ -455,14 +455,14 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .wpn-box {
   display: flex; justify-content: space-between; align-items: center;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-left: 3px solid var(--railS);
-  padding: 4px 10px; font-size: 12px;
+  padding: 2px 8px; font-size: 12px;
   clip-path: var(--notch-sm);
 }
 .wpn-ammo { font-family: var(--mono); font-weight: 700; color: #eaf5ea; letter-spacing: 3px; }
 .wpn-ammo.low { color: var(--danger); }
 .wpn-ammo.reloading { color: var(--railW); animation: reloadBlink 0.4s steps(1) infinite alternate; }
 @keyframes reloadBlink { from { opacity: 1; } to { opacity: 0.25; } }
-.money-box { font-size: 12px; color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
+.money-box { font-size: 11px; color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
 .shop-hint { color: var(--dim); font-size: 10px; margin-left: 8px; }
 
 /* 主堡軍械庫 */
@@ -489,6 +489,8 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   text-align: left; border-left: 2px solid var(--line); padding-left: 10px;
 }
 #minimap {
+  /* 顯示尺寸縮到與機體數據面板等高(繪製解析度仍是 220,CSS 縮放) */
+  width: 172px; height: 172px;
   border: 1px solid var(--railS); border-radius: 0;
   background: rgba(4, 7, 10, 0.92); pointer-events: none;
   clip-path: var(--notch);
@@ -901,7 +903,7 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .ab-box {
   flex: 1; display: flex; align-items: center; gap: 6px;
   background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line); border-radius: 0;
-  padding: 3px 8px; font-size: 11px; color: var(--dim);
+  padding: 2px 7px; font-size: 11px; color: var(--dim);
   clip-path: var(--notch-sm);
 }
 .ab-box.ready { border-color: var(--ok); color: var(--fg); background: rgba(169, 221, 107, 0.1); }
