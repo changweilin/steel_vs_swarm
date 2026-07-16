@@ -8,6 +8,8 @@
 // 所有目標值都經指數阻尼(非線性緩動)進骨架,不出現機械式瞬跳。
 // 純客戶端視覺:不動伺服器權威狀態;rig 由 models.js 各建模函式提供。
 
+import { MORPH } from './data.js';
+
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * Math.min(1, k * dt);
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -765,6 +767,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const gaitPitch = Math.sin(wave) * pAmp * a;   // 純步態俯仰(頭部畫弧補償只吃這一項,不吃加減速前傾)
   rig.spine.rotation.x = gaitPitch + L.qacc + (L.srg - L.brk) * 0.02;
   rig.chest.rotation.x = Math.sin(wave - 0.7) * pAmp * a;
+  rig.chest.rotation.y = 0;   // 施法 post-pass(dance/swing)對此通道 += —— 不每幀重賦會跨幀永久累積
   // 機載武器開火反應(背砲/嘴砲/觸手莢,非騎乘):每發後座胸腔下沉後送、蓄力反向前壓抵住
   // —— 加在 chest 上,下方長頸主動反屈與頭部補償自動吃進去,射擊中頭仍鎖平
   if (!rig.rider) {
@@ -860,7 +863,9 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
  * 推進器發光 ∝ m、關節排氣口熱散逸 ∝ 變形活動度(Task 3.1)。
  */
 function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
-  const want = (ent.heroY || 0) > 1.2 ? 1 : 0;
+  // 型態門檻 = MORPH.GROUND_Y(與伺服器地面型判定同一條規則):tap 小跳頂點 ≈1.69m(vy 9 / g 24)
+  // 不得觸發變形 —— 舊門檻 1.2 會讓地面小跳播出半套 Macross 變形再收回(抽搐)
+  const want = (ent.heroY || 0) > MORPH.GROUND_Y ? 1 : 0;
   const prev = L.morph ?? want;
   L.morph = damp(prev, want, 2.6, dt);
   const m = L.morph;
@@ -1287,15 +1292,23 @@ function stepCastPose(L, rig, ent, dt, now) {
 // 全向適用 biped(人形機甲/雙足獸)/ quad(四足獸)/ morph 地面型;aerial 與 morph 飛行型讓位。
 function stepJumpPose(L, rig, ent, dt) {
   if (ent.heroY == null || rig.kind === 'aerial' || rig.kind === 'wheeled' || rig.kind === 'tracked') return;
-  if (rig.kind === 'morph' && (L.morph ?? 0) > 0.35) { L.airY = 0; L.airPrev = 0; return; }  // 變形接管
+  if (rig.kind === 'morph' && (L.morph ?? 0) > 0.35) { L.airY = 0; L.aloft = false; L.rawY = 0; return; }  // 變形接管
   const y = Math.min(ent.heroY || 0, 6);
   const prevY = L.airY ?? 0;
   L.airY = damp(prevY, y, 10, dt);
   const vy = (L.airY - prevY) / Math.max(dt, 1e-4);      // 平滑後的垂直速度(m/s)
   const airF = clamp(L.airY / 1.1, 0, 1);
-  // 落地衝擊(邊緣觸發):幅度 ∝ 觸地瞬間下墜速度,之後阻尼回彈
-  if ((L.airPrev ?? 0) > 0.3 && airF < 0.12) L.landK = clamp(0.45 + Math.max(0, -vy) * 0.05, 0, 1);
-  L.airPrev = airF;
+  // 落地衝擊:騰空「鎖存」→ 觸地釋放的邊緣觸發,一次落地恰觸發一次。
+  // MUST 用未平滑高度 + 鎖存 —— ①damp 後的 airF 單幀最多收斂 ~15%(60fps)、②即便原始高度,
+  // 落地速度 ~10m/s 每幀也只掉 0.17m,「單幀同跨 0.3→0.12 雙門檻」兩種寫法都永遠/經常不觸發。
+  const rawF = clamp(y / 1.1, 0, 1);
+  const rawVy = (y - (L.rawY ?? y)) / Math.max(dt, 1e-4);
+  if (rawF > 0.3) L.aloft = true;
+  else if (L.aloft && rawF < 0.12) {
+    L.landK = clamp(0.45 + Math.max(0, -rawVy) * 0.05, 0, 1);   // 幅度 ∝ 觸地瞬間原始下墜速度
+    L.aloft = false;
+  }
+  L.rawY = y;
   L.landK = damp(L.landK ?? 0, 0, 5.5, dt);
   const landK = L.landK;
   if (airF < 0.02 && landK < 0.02) return;

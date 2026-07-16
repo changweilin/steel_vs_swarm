@@ -231,8 +231,9 @@ export const MORPH = {
 };
 // ---- 機甲蓄力跳躍(2026-07-16;kind:'robot' 限定 —— morph 的長按 Space 已被變形彈射佔用)----
 // 長按 Space 蓄力 → 放開彈射高跳,騰空吃低重力係數 GRAV_F(月面/太空漫步的滯空感);
-// 蓄力不足 = 普通小跳。純客戶端物理(位置本就客戶端回報);高跳越過 GAME.AA_MIN_ALT
-// 一樣算空中目標(y 判定規則不變,吃塔 SAM 是刻意風險)。
+// 蓄力不足 = 普通小跳。純客戶端物理(位置本就客戶端回報);y 判定規則不變 ——
+// 滿蓄頂點 ≈ V²/(2×24×GRAV_F) ≈ 27m < GAME.AA_MIN_ALT(40),單靠蓄力跳不進 SAM 空域;
+// 疊加跳躍增益(leap)越過 40m 時照吃塔 SAM(刻意風險)。
 export const CJUMP = {
   CHARGE_S: 0.9,     // 蓄滿秒數
   MIN: 0.35,         // 低於此蓄力比例 = 普通小跳
@@ -542,7 +543,8 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //     leap 大跳躍(k:'jump' 跳躍初速倍率)/ dodge 完美迴避(k:'dodge',直射武器必閃)/
 //    (隱形 = 既有 stealth 招式,不另設 add)
 //   其他:vamp 吸血(k:'vamp',實際造成傷害 × f 回自身裝甲)/ bleed 出血(DoT,dps×dur,
-//     擊殺計給施放者)/ mark 定位(markUntil:下一擊必中 —— 無視閃避 —— 且必爆)
+//     擊殺計給施放者)/ mark 定位(markUntil:下一擊必中 —— 無視閃避 —— 且必爆;
+//     消耗路徑只在 heroHit 直擊 —— fan/launcher/missile AoE 武器的角色 MUST NOT 掛 mark)
 // 武器 type 一覽(2026-07-11 機制多元化;傷害距離衰減見 dmgFalloff):
 //   gun      動能彈:彈道學拋物線,動能隨空阻衰減
 //   rail     磁軌炮:按住開火蓄力 charge 秒 → 極速直擊(幾乎無衰減、高破甲);提前放開不耗彈
@@ -579,7 +581,8 @@ export const CHARACTERS = {
     visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'graffiti' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
-      dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0.05, pen: 6,
+      // crit MUST 為 0:s02 是 e2e 指定角,輕武器傷害要確定性(#INC-104;t01 同)
+      dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
       vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
     // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
     // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
@@ -698,9 +701,11 @@ export const CHARACTERS = {
     heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・雷射波束導引・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
       dmg: [130, 170, 215], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 10,
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
+    // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
+    // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
     skill: { name: '好球!', fx: 'buff', target: 'self', mul: { dmg: [1.25, 1.35, 1.45] },
-      add: { fx: 'mark', dur: [4, 5, 6] },
-      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '紳士的指定球路:下一擊必中必爆' },
+      add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
+      dur: 6, cd: [18, 16, 14], mp: [30, 35, 40], desc: '紳士的開獵宣言:火力增幅、健步追獵' },
     ult: { name: '獵場封鎖', fx: 'strike', count: [8, 10, 12], dmg: [51, 64, 77], r: 9, scatter: 40,
       add: { fx: 'pull', imp: [16, 20, 24] },
       range: 300, cd: [70, 62, 54], mp: [80, 90, 100], vs: { air: 2.0, flesh: 1.2 },

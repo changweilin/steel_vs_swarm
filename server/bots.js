@@ -31,16 +31,21 @@ export class BotBrain {
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
   _gun(h) { return heroWeapon(h.ch, 'light', h.abil.light, true); }
 
-  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義)。
-   *  控場效果(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
-   *  麻痺 = 0(原地,武器照常)、緩速 ×slowF、混亂 ×0.5(bot 沒有操縱可反轉,折半近似)。 */
-  _speed(h, u) {
+  /** 控場折速係數(招式追加)鏡像:真人玩家由客戶端自鎖,bot 的「客戶端」就是這裡 ——
+   *  麻痺 = 0(原地,武器照常)、緩速 ×slowF、混亂 ×0.5(bot 沒有操縱可反轉,折半近似)。
+   *  _speed 與 _push 的位置收斂共用這一縫 —— 不得在 update 各處另寫折速。 */
+  _ccF(h) {
     const t = this.sim.t;
     if ((h.stunUntil || 0) > t) return 0;
     let f = 1;
     if ((h.slowUntil || 0) > t) f *= h.slowF ?? 0.6;
     if ((h.confUntil || 0) > t) f *= 0.5;
-    return (h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed) * f;
+    return f;
+  }
+
+  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速 */
+  _speed(h, u) {
+    return (h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed) * this._ccF(h);
   }
 
   /** 開火(含難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
@@ -102,8 +107,10 @@ export class BotBrain {
     const d = this.side === 'SWARM' ? this.prog : total - this.prog;
     const [x, z] = pointAt(pts, this._cum, d);
     this._face(h, x, z);
-    h.x += (x + this.jitter[0] - h.x) * Math.min(1, dt * 2.2);
-    h.z += (z + this.jitter[1] - h.z) * Math.min(1, dt * 2.2);
+    // 位置收斂同乘控場係數:prog 凍結(麻痺)時機體不得再以指數速率滑回線上目標點
+    const cf = this._ccF(h);
+    h.x += (x + this.jitter[0] - h.x) * Math.min(1, dt * 2.2 * cf);
+    h.z += (z + this.jitter[1] - h.z) * Math.min(1, dt * 2.2 * cf);
     // 繞開阻擋型障礙物,不卡在牆前(貼地移動才會撞到;無人機/飛行型變形機甲飛越)
     if (h.kind !== 'drone' && (h.y || 0) < 2) {
       for (const [hx, hz, hr] of this.sim.hazBlockers || []) {

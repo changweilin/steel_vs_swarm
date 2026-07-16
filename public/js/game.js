@@ -2891,7 +2891,7 @@ export class BattleClient {
       if (ent.pid !== pid || ent.isSelf) continue;
       const mz = ent.mesh?.userData?.rig?.muzzles?.[slot === 'heavy' ? 'heavy' : 'light'];
       if (!mz?.n || mz.fxOnly) continue;   // fxOnly = 只掛槍口焰的後向錨(蜂后螫針),曳光不從它出
-      if (ent.kind === 'morph' && ent.heroY > 1.2) continue;   // 飛行/變形過渡:武器收攏貼艙(門檻對齊 stepMorph)
+      if (ent.kind === 'morph' && ent.heroY > MORPH.GROUND_Y) continue;   // 飛行/變形過渡:武器收攏貼艙(門檻對齊 stepMorph)
       const d = ent.mesh.position.distanceToSquared(fallback);
       if (d < bd) { bd = d; best = mz.n; }
     }
@@ -3422,12 +3422,14 @@ export class BattleClient {
       if (this.keys.KeyS) target.sub(look);
       if (this.keys.KeyD) target.add(right);
       if (this.keys.KeyA) target.sub(right);
+      // 控場:垂直升降同樣折速(麻痺 = 禁移動含爬升/下降,否則被暈仍可垂直脫離)
+      const ccF = this._ccMoveF();
       if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost * this._recoilMoveF(now, true)
-        * this._ccMoveF() * this._modF('speed'));
+        * ccF * this._modF('speed'));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
-      if (this.keys.Space) target.y += u.vspeed;
-      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed;
+      if (this.keys.Space) target.y += u.vspeed * ccF;
+      if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
       this.vel.z += (target.z - this.vel.z) * Math.min(1, dt * 4);
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
@@ -3462,7 +3464,10 @@ export class BattleClient {
       const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.WADE_M) : gyS;
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
-      if (this.isMorph) {
+      // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
+      if ((this.stunLeft || 0) > 0) {
+        this.charge = 0;
+      } else if (this.isMorph) {
         // 蓄力跳:按住 Space 蓄力 → 放開時蓄力足夠即彈射變形為飛行型,不足只是小跳
         if (onGround && this.keys.Space) {
           this.charge = Math.min(1, this.charge + dt / MORPH.CHARGE_S);

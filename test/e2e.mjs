@@ -6,7 +6,7 @@ import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul, SQUAD, tierVal,
-  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore,
+  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME,
 } from '../public/js/data.js';
 
 const URL = 'ws://localhost:8620';
@@ -305,6 +305,23 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     sim.squads.delete('b9');
     sim.heroes.delete('b9');
     for (const b of botHero.sq.bodies) sim.ents.delete(b.id);
+  }
+
+  log('— sim:無敵幀(蓄力跳/變形中段 1s 免傷 + 20s CD;無人機被拒)—');
+  {
+    const rb = sim.heroes.get('p_r');
+    sim.heroIframe('p_r');
+    assert((rb.invUntil || 0) > sim.t, `機甲請求無敵幀 → ${IFRAME.DUR}s 免傷(時長夾在伺服器)`);
+    const hp0 = rb.hp, sp0 = rb.sp;
+    sim._damage(rb, 100, sim.heroes.get('p_d'), 0);
+    assert(rb.hp === hp0 && rb.sp === sp0, '無敵幀期間 _damage 免傷(護盾/裝甲皆不動)');
+    const inv0 = rb.invUntil;
+    sim.heroIframe('p_r');
+    assert(rb.invUntil === inv0, `CD ${IFRAME.CD}s 內再請求被拒(免傷視窗不重置)`);
+    rb.invUntil = 0;   // 清場:不影響後續傷害測試
+    const dr2 = sim.heroes.get('p_d');
+    sim.heroIframe('p_d');
+    assert(!((dr2.invUntil || 0) > sim.t), '蜂群無人機請求無敵幀一律被拒');
   }
 
   log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');

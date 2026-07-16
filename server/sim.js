@@ -1651,6 +1651,17 @@ export class BattleSim {
     this._moveTo(b, t.x, ty, t.z, UNITS.drone.speed * SQUAD.DASH_MUL, dt);
   }
 
+  /** 僚機控場折速(位置權威第四縫,與 NPC _advance / bots._speed 同規則):
+   *  麻痺 = 0(原地,_echo 火力照常)、緩速 ×slowF、混亂 ×0.5(無兵線可倒退,折半近似)。
+   *  dash 自爆衝刺刻意不吃(與真人施放 dash 掙脫控場同一條規則)。 */
+  _ccSpeedF(b) {
+    if ((b.stunUntil || 0) > this.t) return 0;
+    let f = 1;
+    if ((b.slowUntil || 0) > this.t) f *= b.slowF ?? 0.6;
+    if ((b.confUntil || 0) > this.t) f *= 0.5;
+    return f;
+  }
+
   /** 編隊 / 歸隊 */
   _follow(b, lead, si, dt) {
     // 模擬座標系:客戶端 yaw 對應的前方向量(見 game.js three z = -sim z)
@@ -1682,7 +1693,7 @@ export class BattleSim {
         speed *= SQUAD.REGROUP_MUL;
       }
     }
-    this._moveTo(b, tx, ty, tz, speed, dt);
+    this._moveTo(b, tx, ty, tz, speed * this._ccSpeedF(b), dt);
   }
 
   _moveTo(b, tx, ty, tz, speed, dt) {
