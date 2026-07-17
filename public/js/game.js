@@ -8,12 +8,12 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
-  WATER, CJUMP, IFRAME, sideInfo, THIRD,
+  WATER, CJUMP, IFRAME, sideInfo, THIRD, AIRDROP,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
 import { applyEnvironment } from './environment.js';
-import { buildHazard, buildMineBump, buildLoot } from './hazards.js';
+import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
@@ -212,6 +212,7 @@ export class BattleClient {
     this._recoilSlowF = 0.5;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
+    this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
     this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
     this.flamers = new Set();        // 火場(火舌閃爍動畫)
     this.floods = [];                // 淹水區(機甲減速判定)
@@ -1917,6 +1918,8 @@ export class BattleClient {
     this._syncMissiles(m.sm || []);
     // 戰場物資(擊毀障礙物掉落,靠近拾取)
     this._syncLoot(m.lt || []);
+    // 空投物資(非兵線隨機空投,降落傘飄降後靠近拾取)
+    this._syncAirdrop(m.ad || []);
 
     // HUD
     const bases = {};
@@ -2277,6 +2280,42 @@ export class BattleClient {
     }
   }
 
+  _syncAirdrop(ad) {
+    const seen = new Set();
+    for (const a of ad) {
+      seen.add(a.id);
+      if (this.airdropMeshes.has(a.id)) continue;
+      const g = buildAirdrop(a.s || 'S');
+      const gy = this.terrain.heightAt(a.x, -a.z);
+      g.position.set(a.x, gy, -a.z);
+      // 首見即起飄降:d=1(尚未落地)從 DROP_H 高處下降;無 d 表示中途進場,直接落地
+      g.userData.groundY = gy;
+      g.userData.bornT = performance.now() / 1000;   // 與 _updateAirdrop 的 now 同時基
+      g.userData.landing = !!a.d;
+      this.scene.add(g);
+      this.airdropMeshes.set(a.id, g);
+    }
+    for (const [id, g] of this.airdropMeshes) {
+      if (!seen.has(id)) { this.scene.remove(g); this.airdropMeshes.delete(id); }
+    }
+  }
+
+  _updateAirdrop(dt, now) {
+    for (const g of this.airdropMeshes.values()) {
+      const u = g.userData;
+      const age = now - (u.bornT || now);
+      const t = AIRDROP.LAND_S > 0 ? Math.min(1, age / AIRDROP.LAND_S) : 1;
+      const landed = !u.landing || t >= 1;
+      // 飄降:從 DROP_H 高處等速下降到地面(ease-out 收尾),落地後傘布淡出隱藏
+      g.position.y = u.groundY + (u.landing ? AIRDROP.DROP_H * (1 - t) * (1 - t) : 0);
+      if (u.chute) u.chute.visible = !landed;
+      if (u.halo) u.halo.visible = landed;
+      g.rotation.y += dt * (landed ? 0.9 : 0.3);
+      // 落地後木箱輕微起伏(以體型為錨,和 loot 同款呼吸感)
+      if (u.crate && landed) u.crate.position.y = Math.sin(now * 2.0 + g.position.x) * 0.14;
+    }
+  }
+
   _updateLoot(dt, now) {
     for (const g of this.lootMeshes.values()) {
       g.rotation.y += dt * 1.6;
@@ -2412,6 +2451,20 @@ export class BattleClient {
         } else {
           this.hud.feed?.(`💰 拾獲戰場物資 +$${ev.v}`);
         }
+      }
+    } else if (ev.e === 'airfall') {
+      this.hud.feed?.(`🪂 偵測到 ${ev.n} 批空投物資落入戰場,搶先取得補給!`);
+    } else if (ev.e === 'airdrop') {
+      // 開箱星爆(稀有色由箱型決定;所有人可見「補給被拿走了」)
+      const tone = ev.sz === 'L' ? 0xffd24a : ev.sz === 'M' ? 0xc9ced6 : 0xffb066;
+      starburst(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z) + 3, -ev.z, tone);
+      if (ev.pid === this.youId) {
+        const box = ev.sz === 'L' ? '大型' : ev.sz === 'M' ? '中型' : '小型';
+        if (ev.r === 'medkit') this.hud.feed?.(`🩹 拾獲${box}空投【急救包】裝甲 +${ev.hp}・護盾 +${ev.sp}`);
+        else if (ev.r === 'battery') this.hud.feed?.(`🔋 拾獲${box}空投【電池】電力 +${ev.mp}(可破上限)・招式冷卻 −${ev.cd}s`);
+        else this.hud.feed?.(`💰 拾獲${box}空投物資 +$${ev.v}`);
+      } else if (ev.side && ev.side !== this.side) {
+        this.hud.feed?.(`⚠️ ${(sideInfo(ev.side)?.name) || '敵方'}搶走了一箱空投物資!`);
       }
     } else if (ev.e === 'relay') {
       this.hud.feed?.(ev.side === this.side
@@ -4173,6 +4226,7 @@ export class BattleClient {
     this._updateLaneArrows(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
+    this._updateAirdrop(dt, now);
     this._updateEffects(dt);
     for (const s of this.shields) s.userData.update(dt);
     if (this._auras) for (const ent of this._auras) {   // 補血光環:緩慢脈動

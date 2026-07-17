@@ -4,7 +4,7 @@
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
-  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AFFIXES, MAPGEO,
+  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore,
   vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
@@ -45,6 +45,8 @@ export class BattleSim {
     this.t = 0;                       // 經過秒數
     this.wave = 0;
     this.nextWaveAt = GAME.FIRST_WAVE_DELAY_S;
+    this.airdrops = [];               // 空投物資(時間驅動;非兵線空曠處先到先得)
+    this.nextAirdropAt = AIRDROP.INTERVAL_S;
     this.ents = new Map();            // id -> entity
     this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> 目前主視野機體
     this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
@@ -1770,13 +1772,19 @@ export class BattleSim {
       this.nextWaveAt = this.t + waveInterval(this.wave);
       this._spawnWave();
     }
+    // 空投物資(時間驅動;每分鐘一批,批量 ∝ 玩家數)
+    if (this.t >= this.nextAirdropAt) {
+      this.nextAirdropAt = this.t + AIRDROP.INTERVAL_S;
+      this._spawnAirdropWave();
+    }
     // 波次凝聚錨點(上一 tick 的交戰狀態):每 tick 算一次,_advance 查表
     this._anchors = this._waveAnchors();
 
     // 小隊層級(每名玩家一次):電力回充 — mp 是三架共用的。
     // 2026-07-17:被動收入停發(金錢只來自擊殺/助攻/物資);回充速度 × 充能等級(chargeF)。
     for (const h of this.heroes.values()) {
-      if (this._aliveN(h) > 0) h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * dt);
+      // mp < maxMp 才回充:電池 overcharge(mp > maxMp)不被回充迴圈回削,只靠消耗降回(一次性突破上限)
+      if (this._aliveN(h) > 0 && h.mp < h.maxMp) h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * dt);
     }
     // 機體層級:重生 / 護盾脫戰回復 / 主堡修裝甲
     for (const sq of this.squads.values()) {
@@ -1823,6 +1831,7 @@ export class BattleSim {
     this._tickAmbush(dt);
     this._tickRelays(dt);
     this._tickHazards(dt);
+    this._tickAirdrops(dt);
     this._tickCamps(dt);
 
     // 小兵 / 塔 / 主堡行為
@@ -2130,6 +2139,100 @@ export class BattleSim {
         : tier.affix ? { af: affixIds[Math.floor(Math.random() * affixIds.length)] }
         : { v: Math.round(tier.min + Math.random() * (tier.max - tier.min)) }),
     });
+  }
+
+  // ---------- 空投物資(時間驅動;非兵線空曠處先到先得,不分陣營)----------
+  /** 每分鐘一批:批量 = ceil(玩家數 × PER_PLAYER),夾 [1, MAX_LIVE − 現存]。 */
+  _spawnAirdropWave() {
+    const R = AIRDROP;
+    const players = this.squads.size;
+    if (players <= 0) return;
+    const room = R.MAX_LIVE - this.airdrops.length;
+    if (room <= 0) return;
+    const n = Math.min(room, Math.max(1, Math.ceil(players * R.PER_PLAYER)));
+    let dropped = 0;
+    for (let i = 0; i < n; i++) {
+      const pt = this._airdropPoint();
+      if (!pt) continue;   // 取不到合法點(地圖太擠):寧缺勿錯
+      const sz = this._rollAirdropSize();
+      this.airdrops.push({
+        id: nextEntId++, x: pt.x, z: pt.z, s: sz.key, mul: sz.mul,
+        ttl: R.TTL_S, landAt: this.t + R.LAND_S,
+      });
+      dropped++;
+    }
+    if (dropped > 0) this.events.push({ e: 'airfall', n: dropped });
+  }
+
+  /** 箱型加權抽樣(S:M:L = 15:4:1)。 */
+  _rollAirdropSize() {
+    const sizes = AIRDROP.SIZES;
+    const total = sizes.reduce((s, z) => s + z.w, 0);
+    let r = Math.random() * total;
+    for (const z of sizes) { r -= z.w; if (r <= 0) return z; }
+    return sizes[0];
+  }
+
+  /** 隨機取一個非兵線、離主堡與障礙夠遠的落點(~40 次嘗試,失敗回 null)。 */
+  _airdropPoint() {
+    const R = AIRDROP, b = this.bounds;
+    for (let tries = 0; tries < 40; tries++) {
+      const x = b.minX + Math.random() * (b.maxX - b.minX);
+      const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
+      if (!this._inBounds(x, z, R.PICK_R)) continue;
+      if (this._distToLanes(x, z) < R.LANE_MIN) continue;            // 非兵線位置
+      if (!this._farFromStructures(x, z, R.BASE_CLEAR, 0)) continue; // 不投在主堡/重生點
+      if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + R.PICK_R)) continue;   // 不投進障礙裡
+      return { x, z };
+    }
+    return null;
+  }
+
+  /** 過期自毀;落地後任一陣營機體靠近即開箱(先到先得)。 */
+  _tickAirdrops(dt) {
+    const R = AIRDROP;
+    for (let i = this.airdrops.length - 1; i >= 0; i--) {
+      const a = this.airdrops[i];
+      a.ttl -= dt;
+      if (a.ttl <= 0) { this.airdrops.splice(i, 1); continue; }
+      if (this.t < a.landAt) continue;   // 降落傘飄降中,尚未落地
+      for (const body of this._allBodies()) {
+        if (body.dead || (body.y || 0) > R.MAX_Y) continue;
+        if (dist2d(body.x, body.z, a.x, a.z) > R.PICK_R) continue;
+        this._openAirdrop(body, a);
+        this.airdrops.splice(i, 1);
+        break;
+      }
+    }
+  }
+
+  /**
+   * 開箱:等機率抽 medkit / battery / money,量 = 基準 × 箱型 mul。
+   * medkit 補該機體 HP/護盾;battery/money 進小隊共用池(電池電力可 overcharge 超過上限)。
+   */
+  _openAirdrop(body, a) {
+    const R = AIRDROP;
+    const reward = R.REWARDS[Math.floor(Math.random() * R.REWARDS.length)];
+    const ev = { e: 'airdrop', pid: body.pid, side: body.side, x: a.x, z: a.z, r: reward, sz: a.s };
+    if (reward === 'medkit') {
+      const hp = Math.round(body.maxHp * R.MEDKIT_HP * a.mul);
+      const sp = Math.round(body.maxSp * R.MEDKIT_SP * a.mul);
+      body.hp = Math.min(body.maxHp, body.hp + hp);
+      body.sp = Math.min(body.maxSp, body.sp + sp);
+      ev.hp = hp; ev.sp = sp;
+    } else if (reward === 'battery') {
+      const mp = Math.round(body.maxMp * R.BATTERY_MP * a.mul);
+      body.mp += mp;                                            // 可超過 maxMp:一次性 overcharge
+      const cd = R.BATTERY_CD * a.mul;
+      body.acd.skill = Math.max(0, (body.acd.skill || 0) - cd); // acd 為絕對可用時刻:減去 = 縮短剩餘冷卻
+      body.acd.ult = Math.max(0, (body.acd.ult || 0) - cd);
+      ev.mp = mp; ev.cd = Math.round(cd * 10) / 10;
+    } else {
+      const money = Math.round(R.MONEY * a.mul);
+      body.money += money;
+      ev.v = money;
+    }
+    this.events.push(ev);
   }
 
   // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
@@ -2462,7 +2565,12 @@ export class BattleSim {
       id: l.id, x: Math.round(l.x * 10) / 10, z: Math.round(l.z * 10) / 10, a: l.ammo ? 1 : 0,
       ...(l.af ? { f: 1 } : {}),   // 詞綴物資(客戶端紫色補給箱)
     }));
-    this._frameCache = { ev, sm, lt };
+    // 空投物資:恆可見(不吃迷霧,雙陣營競搶);s = 箱型、d = 尚未落地(客戶端演出飄降 + 禁互動)
+    const ad = this.airdrops.map((a) => ({
+      id: a.id, x: Math.round(a.x * 10) / 10, z: Math.round(a.z * 10) / 10, s: a.s,
+      ...(this.t < a.landAt ? { d: 1 } : {}),
+    }));
+    this._frameCache = { ev, sm, lt, ad };
     return this._frameCache;
   }
 
@@ -2476,11 +2584,11 @@ export class BattleSim {
       if (sources && !this._visibleTo(e, side, sources)) continue;
       ents.push(this._serializeEnt(e));
     }
-    const { ev, sm, lt } = this._frame();
+    const { ev, sm, lt, ad } = this._frame();
     return {
       t: 'snap', time: Math.round(this.t),
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
-      ents, ev, sm, lt, stats: this.stats, over: this.over, winner: this.winner,
+      ents, ev, sm, lt, ad, stats: this.stats, over: this.over, winner: this.winner,
     };
   }
 

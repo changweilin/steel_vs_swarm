@@ -1454,9 +1454,11 @@ function makeHud() {
         // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(回堡/招式才能修)
         $('spBar').style.width = `${Math.max(0, w.sp / w.msp * 100)}%`;
         $('spText').textContent = `護盾 ${Math.max(0, Math.round(w.sp))} / ${w.msp}`;
-        // 電力(MP)
-        $('mpBar').style.width = `${Math.max(0, w.mp / w.mm * 100)}%`;
-        $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}`;
+        // 電力(MP;電池 overcharge 可 > 上限 → 條夾 100%,數字照實顯示 130 / 100)
+        const mpo = w.mp > w.mm;
+        $('mpBar').style.width = `${Math.max(0, Math.min(100, w.mp / w.mm * 100))}%`;
+        $('mpBar').classList.toggle('overcharge', mpo);
+        $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}${mpo ? ' ⚡' : ''}`;
         // 輕武器:彈藥 / 填彈(瞄準中 HUD 高亮重武器)
         const l = w.light;
         $('wpnName').textContent = `${l.name} Lv.${l.lvl}${w.emp > 0 ? ' ⚡離線' : ''}`;

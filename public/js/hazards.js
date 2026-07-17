@@ -495,3 +495,61 @@ export function buildLoot(isAmmo, isAffix) {
   g.userData.loot = true;
   return g;
 }
+
+// ---- 空投物資補給箱(降落傘 + 軍用木箱;箱型 S/M/L 決定尺寸與稀有色)----
+// 稀有色也塗上傘布 ⇒ 遠遠看見金傘 = 大箱,值得搶。獎勵開箱才揭曉,箱體本身不透露內容。
+const AIRDROP_TONE = {   // S 銅 / M 銀 / L 金:越大越亮眼
+  S: 0xb0763a, M: 0xc9ced6, L: 0xffd24a,
+};
+export function buildAirdrop(sizeKey = 'S') {
+  const sc = sizeKey === 'L' ? 1.7 : sizeKey === 'M' ? 1.35 : 1.0;
+  const tone = AIRDROP_TONE[sizeKey] || AIRDROP_TONE.S;
+  const g = new THREE.Group();
+
+  // 木箱(bob 動畫的主體;game.js 以 userData.crate 驅動起伏)
+  const crate = new THREE.Group();
+  const s = 1.2 * sc;
+  mesh(crate, box(s, s * 0.85, s), 0x5a6b3a, 0, s * 0.5, 0,
+    { emissive: new THREE.Color(0x232b16), emissiveIntensity: 0.55 });
+  mesh(crate, box(s * 1.05, s * 0.16, s * 0.28), tone, 0, s * 0.5, 0);   // 打包束帶(稀有色)
+  mesh(crate, box(s * 0.28, s * 0.16, s * 1.05), tone, 0, s * 0.5, 0);
+  // 頂面補給十字
+  mesh(crate, box(s * 0.5, s * 0.08, s * 0.14), 0xe8ede4, 0, s * 0.94, 0);
+  mesh(crate, box(s * 0.14, s * 0.08, s * 0.5), 0xe8ede4, 0, s * 0.94, 0);
+  g.add(crate);
+  g.userData.crate = crate;
+
+  // 降落傘(落地後 game.js 隱藏 userData.chute)
+  const chute = new THREE.Group();
+  const cr = 2.3 * sc, chY = 4.2 * sc;
+  mesh(chute, cone(cr, 1.5 * sc, 12), tone, 0, chY, 0,
+    { emissive: new THREE.Color(tone), emissiveIntensity: 0.35 });
+  mesh(chute, cyl(cr, cr * 0.55, 0.25 * sc, 12), 0xd7dbe2, 0, chY - 0.7 * sc, 0);
+  for (let i = 0; i < 4; i++) {   // 吊索:傘緣 → 箱角
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const rimX = Math.cos(a) * cr * 0.7, rimZ = Math.sin(a) * cr * 0.7;
+    const boxX = Math.cos(a) * s * 0.5, boxZ = Math.sin(a) * s * 0.5;
+    const ln = new THREE.Mesh(cyl(0.04, 0.04, chY - 0.9 * sc, 4),
+      new THREE.MeshBasicMaterial({ color: 0xcfd4db }));
+    ln.position.set((rimX + boxX) / 2, (chY - 0.7 * sc + s) / 2, (rimZ + boxZ) / 2);
+    ln.lookAt(boxX, s, boxZ);
+    ln.rotateX(Math.PI / 2);
+    chute.add(ln);
+  }
+  g.add(chute);
+  g.userData.chute = chute;
+
+  // 落地光暈(稀有色)
+  const halo = new THREE.Mesh(
+    new THREE.RingGeometry(1.1 * sc, 1.5 * sc, 20),
+    new THREE.MeshBasicMaterial({ color: tone, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+  );
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = 0.14;
+  g.add(halo);
+  g.userData.halo = halo;
+
+  outlinify(g, 0.05);
+  g.userData.airdrop = true;
+  return g;
+}

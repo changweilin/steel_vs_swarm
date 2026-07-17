@@ -1537,6 +1537,34 @@ export const LOOT = {
   TC: { HP_REF: 300, SHIFT: 0.35 },
 };
 
+// ---- 空投物資(2026-07-17;非兵線隨機空投,時間驅動,不分陣營先到先得)----
+// 與 LOOT(擊毀障礙掉落)分家:LOOT 事件驅動、掉在障礙原地;空投時間驅動、投在非兵線空曠處。
+// 每 INTERVAL_S 投一批 → 批量 = ceil(玩家數 × PER_PLAYER)(至少 1、上限 MAX_LIVE);每箱存活 TTL_S。
+// 箱型 S/M/L 依 SIZES 權重(15:4:1);開箱等機率抽 medkit(補血+護盾)/ battery(補電力·可破上限 + 減招式CD)/ money。
+// 獎勵量 = 基準 × 箱型 mul;medkit/battery 以「上限比例」計 ⇒ 三機種同一手感。全部伺服器結算。
+export const AIRDROP = {
+  INTERVAL_S: 60,          // 投放間隔(每分鐘一批)
+  TTL_S: 180,              // 單箱存活上限(3 分鐘,過期自毀)
+  LAND_S: 1.6,             // 落地時間:降落傘飄降期間不可拾取(客戶端同步演出下降 DROP_H)
+  DROP_H: 55,              // 空投起始高度(公尺;純客戶端下降動畫用)
+  PER_PLAYER: 0.5,         // 批量 = ceil(玩家數 × 此值)
+  MAX_LIVE: 12,            // 場上同時存在上限(防堆積)
+  PICK_R: 8, MAX_Y: 25,    // 拾取半徑 / 拾取高度上限(沿用 LOOT 尺度)
+  LANE_MIN: 60,            // 距兵線走廊最小距離(= 非兵線位置)
+  BASE_CLEAR: 130,         // 距主堡淨空(不投在重生點附近)
+  SIZES: [                 // 權重 15:4:1(S 75% / M 20% / L 5%);mul = 該箱獎勵倍率
+    { key: 'S', w: 15, mul: 1.0 },
+    { key: 'M', w: 4,  mul: 2.0 },
+    { key: 'L', w: 1,  mul: 3.5 },
+  ],
+  REWARDS: ['medkit', 'battery', 'money'],   // 開箱等機率抽一種
+  MEDKIT_HP: 0.35,         // 回復裝甲 HP(× maxHp × 箱型 mul,夾 maxHp)
+  MEDKIT_SP: 0.5,          // 回復護盾(× maxSp × 箱型 mul,夾 maxSp)
+  BATTERY_MP: 0.6,         // 回復電力(× maxMp × 箱型 mul;可 overcharge 超過上限)
+  BATTERY_CD: 5,           // 招式冷卻減少秒數(skill + ult,× 箱型 mul)
+  MONEY: 50,               // 金錢(× 箱型 mul)
+};
+
 // ---- 詞綴強化(D2 prefix/suffix 思想:拾取後限時生效,全部伺服器結算)----
 // reload/dmgTaken = 乘數;killHeal = 擊殺回復上限血量比例;bounty = 賞金乘數。
 export const AFFIXES = {

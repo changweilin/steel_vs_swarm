@@ -1125,6 +1125,12 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   height: 100%; background: repeating-linear-gradient(90deg, #7d55c7 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
   transition: width 0.2s steps(10);
 }
+/* 電池 overcharge:電力突破上限 → 金色脈動,提示這是一次性溢充 */
+.mpbar-fill.overcharge {
+  background: repeating-linear-gradient(90deg, #ffcf4a 0 11px, rgba(90, 60, 5, 0.5) 11px 12px);
+  box-shadow: 0 0 6px #ffd24a; animation: mp-oc 0.9s ease-in-out infinite;
+}
+@keyframes mp-oc { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
 .mp-text {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 8px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
