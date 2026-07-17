@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, THIRD,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -234,7 +234,7 @@ export class BattleClient {
     this.bullets = [];                // 彈道學子彈(初速 mv + 重力,射程上限)
     this._setChar(this.ch || null);
     this.money = 0;
-    this.upg = { dmg: 0, hull: 0 };
+    this.upg = { wq: 0, aq: 0, wm: 0, am: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this.kn = 0;                      // 擊殺數(招式解鎖門檻)
@@ -2535,11 +2535,12 @@ export class BattleClient {
       }
     } else if (ev.e === 'buy') {
       if (ev.pid === this.youId && ev.lvl != null) {
-        const abName = ev.item?.startsWith?.('ab:') && this.ch
-          ? heroAbility(this.ch, ev.item.slice(3), ev.lvl)?.name || heroWeapon(this.ch, ev.item.slice(3), ev.lvl)?.name
-          : null;
-        this.hud.feed?.(`⬆️ ${abName || ECON.UPGRADES[ev.item]?.name || ev.item} Lv.${ev.lvl}`);
+        const name = (QUAL[ev.item] || ECON.UPGRADES[ev.item])?.name || ev.item;
+        // wq 底階 1(Lv1 自帶):顯示階級 = 已購步數 + 1
+        this.hud.feed?.(`⬆️ ${name} Lv.${ev.item === 'wq' ? ev.lvl + 1 : ev.lvl}`);
       }
+    } else if (ev.e === 'assist') {
+      if (ev.pid === this.youId) this.hud.feed?.(`🤝 助攻 +$${ev.v}`);
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {
@@ -2895,7 +2896,8 @@ export class BattleClient {
     const def = this.wdef[wid], st = this.wstate[wid];
     if (!def || !st || st.reloadEnd > 0 || st.ammo >= def.mag) return;
     st.ammo = 0;
-    st.reloadEnd = performance.now() / 1000 + def.reload;
+    // 武器精通:填彈/冷卻折減(伺服器 _reloadT 同一條公式)
+    st.reloadEnd = performance.now() / 1000 + def.reload * masteryF('wm', this.upg?.wm);
     if (this.net) this.net.send({ t: 'reload', w: wid });
     this.hud.feed?.(wid === 'heavy' ? `⏳ ${def.name} 冷卻中…` : `🔄 ${def.name} 填彈中…`);
   }
@@ -3040,9 +3042,8 @@ export class BattleClient {
     starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
     if (ent) {
       const mult = vsMult(def, ent.kind);
-      // 本地估算含距離物理衰減(伺服器結算同一條公式,HUD 數字才對得上)
-      const est = Math.round(def.dmg * mult * (1 + (this.upg.dmg || 0) * ECON.UPGRADES.dmg.step)
-        * dmgFalloff(def, this.pos.distanceTo(point)));
+      // 本地估算含距離物理衰減(伺服器結算同一條公式,HUD 數字才對得上;火力成長走武器品質階級)
+      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(point)));
       damageNumber(this.scene, this.effects,
         point.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
     }
@@ -3061,6 +3062,12 @@ export class BattleClient {
     if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
+    // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
+    const mpc = id === 'heavy' ? heavyMpCost(def, this.upg?.wm) : 0;
+    if (mpc > 0 && this.mp < mpc) {
+      if (now - (this._mpWarnAt || 0) > 1.5) { this._mpWarnAt = now; this.hud.feed?.(`🔋 電力不足(【${def.name}】每發需 ${mpc} MP)`); }
+      return;
+    }
 
     const prof = def.recoil || {};
     // 連射回穩(中後座輕武器):連發 N 發後強制回穩,此間不能擊發(與換彈匣機制分離)
@@ -3097,6 +3104,7 @@ export class BattleClient {
     }
     this.lastFireAt[id] = now;
     st.ammo--;
+    if (mpc > 0) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電;快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
     // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
     if (prof.burst && !def.fan) {
@@ -3293,10 +3301,12 @@ export class BattleClient {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const lvl = this.abil[slot] || 0;
     const A = lvl ? heroAbility(this.ch, slot, lvl) : heroAbility(this.ch, slot, 1);
-    if (!lvl) { this.hud.feed?.(`🔒【${A.name}】尚未解鎖(B 商店:${PROG[slot].kills[0]} 擊殺 + $${PROG[slot].cost[0]})`); return; }
+    if (!lvl) { this.hud.feed?.(`🔒【${A.name}】尚未解鎖(B 商店:招式品質 ${QUAL.aq.kills[0]} 擊殺 + $${QUAL.aq.cost[0]})`); return; }
     const cdLeft = this.cds[slot === 'skill' ? 0 : 1] || 0;
     if (cdLeft > 0) { this.hud.feed?.(`⏳【${A.name}】冷卻中(${cdLeft.toFixed(0)}s)`); return; }
-    if (this.mp < A.mp) { this.hud.feed?.(`🔋 電力不足(【${A.name}】需 ${A.mp} MP)`); return; }
+    // 招式精通:電力消耗折減(伺服器 heroCast 同一條公式)
+    const mpc = Math.round(A.mp * masteryF('am', this.upg?.am));
+    if (this.mp < mpc) { this.hud.feed?.(`🔋 電力不足(【${A.name}】需 ${mpc} MP)`); return; }
     if (this.empLeft > 0) { this.hud.feed?.('⚡ 系統離線(遭電磁癱瘓),無法施放!'); return; }
     // 指向型招式:準星與地形/單位交點為目標落點(超程由伺服器夾回射程)
     let x = this.pos.x, z = this.pos.z;
@@ -3375,7 +3385,8 @@ export class BattleClient {
     const abHud = (slot, idx) => {
       const lvl = this.abil[slot] || 0;
       const A = heroAbility(this.ch, slot, lvl || 1);
-      return { name: A.name, lvl, cd: this.cds[idx] || 0, mp: A.mp, ready: lvl > 0 && (this.cds[idx] || 0) <= 0 && this.mp >= A.mp };
+      const mpc = Math.round(A.mp * masteryF('am', this.upg?.am));   // 招式精通折減後的實際耗電
+      return { name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc, ready: lvl > 0 && (this.cds[idx] || 0) <= 0 && this.mp >= mpc };
     };
     return {
       money: this.money, atBase: this._atBase(),
@@ -4185,7 +4196,9 @@ export class BattleClient {
       const cur = this._curWeapon();
       let reloadOff = { dz: 0, dy: 0, rx: 0 };
       if (cur.def && cur.st && cur.st.reloadEnd > 0) {
-        const p = 1 - Math.max(0, cur.st.reloadEnd - now) / cur.def.reload;
+        // 進度分母要吃武器精通折減後的實際填彈時長,否則動作提前結束定格
+        const rl = cur.def.reload * masteryF('wm', this.upg?.wm);
+        const p = 1 - Math.max(0, cur.st.reloadEnd - now) / rl;
         reloadOff = this._reloadAnimOffset(cur.def, p);
       }
       this.gunGroup.position.z = this._gunBaseZ + this.weaponKick * 0.11 + reloadOff.dz;

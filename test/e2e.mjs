@@ -5,7 +5,8 @@ import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul, SQUAD, tierVal,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, QUAL, masteryF, chargeF, heavyMpCost,
+  HEROIC, VITALS, armorMul, SQUAD, tierVal,
   charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
 } from '../public/js/data.js';
 
@@ -164,8 +165,8 @@ log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面
   a.money = 999;
   sim._damage(a, 99999, null, 999);
   assert(a.dead, '測試前置:傭兵陣亡');
-  assert(sim.buy('p_ma', 'dmg') === null && a.upg.dmg === 1, '陣亡等待重生仍可購買升級');
-  assert(sim.buy('p_ma', 'hull') === null && a.hp === 0, '陣亡買裝甲強化只擴上限(重生才回滿)');
+  assert(sim.buy('p_ma', 'wm') === null && a.upg.wm === 1, '陣亡等待重生仍可購買升級');
+  assert(sim.buy('p_ma', 'hp') === null && a.hp === 0, '陣亡買裝甲強化只擴上限(重生才回滿)');
 }
 
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
@@ -347,29 +348,97 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
   assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
 
-  log('— sim:招式養成(擊殺數解鎖 + 金錢購買 + CD + 電力)—');
+  log('— sim:八軌養成(品質吃擊殺數 + 金錢;精通/充能影響消耗與回復)—');
   dr.money = 9999; dr.kn = 0;
-  assert(/擊殺數不足/.test(sim.buy('p_d', 'ab:skill') || ''), '擊殺數不足 → 解鎖小招被拒');
-  dr.kn = PROG.skill.kills[0];
-  assert(sim.buy('p_d', 'ab:skill') === null && dr.abil.skill === 1, `${PROG.skill.kills[0]} 擊殺 + $${PROG.skill.cost[0]} → 小招解鎖`);
-  dr.kn = PROG.light.kills[1];
-  assert(sim.buy('p_d', 'ab:light') === null && dr.abil.light === 2, '輕武器升 Lv.2(擊殺+金錢)');
+  assert(/擊殺數不足/.test(sim.buy('p_d', 'aq') || ''), '擊殺數不足 → 解鎖招式品質被拒');
+  dr.kn = QUAL.aq.kills[0];
+  assert(sim.buy('p_d', 'aq') === null && dr.abil.skill === 1 && dr.abil.ult === 1,
+    `${QUAL.aq.kills[0]} 擊殺 + $${QUAL.aq.cost[0]} → 招式品質 Lv1(小招+大招一起解鎖)`);
+  dr.kn = QUAL.wq.kills[1];
+  assert(sim.buy('p_d', 'wq') === null && dr.abil.light === 2 && dr.abil.heavy === 2,
+    '武器品質升 Lv.2(輕+重連動,擊殺+金錢)');
   const dmgL2 = heroWeapon('s01', 'light', 2).dmg;
   assert(dmgL2 > heroWeapon('s01', 'light', 1).dmg, `升階後傷害提升(${heroWeapon('s01', 'light', 1).dmg} → ${dmgL2})`);
   dr.mp = dr.maxMp;
   const A1 = heroAbility('s01', 'skill', 1);
   const mp0 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
-  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === A1.mp, `施放小招:CD ${A1.cd}s、電力 -${A1.mp}MP`);
+  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === Math.round(A1.mp * masteryF('am', dr.upg.am)),
+    `施放小招:CD、電力 -${Math.round(A1.mp * masteryF('am', dr.upg.am))}MP(招式精通折減)`);
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
   assert(dr.mp === mp1, 'CD 中重複施放被拒(電力未扣)');
   assert(dr.mods.length > 0, '增益類小招掛上 mods(蜂群協奏)');
   const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
   rb2.money = 999;
-  assert(sim.buy('p_r2', 'hull') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
+  assert(sim.buy('p_r2', 'hp') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
     `裝甲強化隨處可買(HP 上限 → ${rb2.maxHp})`);
+  const sp0max = rb2.maxSp;
+  assert(sim.buy('p_r2', 'sp') === null && rb2.maxSp > sp0max, `護盾強化擴上限(${sp0max} → ${rb2.maxSp})`);
+  const ar0 = CHARACTERS.t05.mods.armor ?? 0;
+  assert(sim.buy('p_r2', 'ar') === null && rb2.armor === ar0 + ECON.UPGRADES.ar.step,
+    `複合裝甲 +${ECON.UPGRADES.ar.step} 護甲值(${ar0} → ${rb2.armor})`);
   assert(/沒有這項商品/.test(sim.buy('p_r2', 'railgun') || ''), '舊制軍械庫武器已下架(輕重武器外無其他配置)');
+  const $g0 = rb2.money;
+  assert(/沒有這項商品/.test(sim.buy('p_r2', 'toString') || '') && rb2.money === $g0 && Number.isFinite(rb2.money),
+    '原型鏈鍵名(toString)被拒 —— 共用經濟不被 NaN 污染(hasOwn 守衛)');
+
+  log('— sim:經濟改制(無被動收入 + 重武器耗電 + 充能回復)—');
+  {
+    const $t0 = rb2.money;
+    sim.tick(0.5); sim.tick(0.5);
+    assert(rb2.money === $t0, '被動收入停發(金錢只來自擊殺/助攻/物資)');
+    const whv = heroWeapon('t05', 'heavy', 1);
+    const cost = heavyMpCost(whv, rb2.upg.wm);
+    assert(cost > 0, `重武器每發耗電 ${cost}MP(= cd ${whv.reload}s × ${ECON.HEAVY_MP_PER_CD} × 精通折減)`);
+    rb2.mp = cost - 1;
+    rb2.aiming = true;
+    const foe2 = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 20, z: rb2.z, hp: 9999 });
+    sim.t += 1;
+    const hpF0 = foe2.hp;
+    sim.heroHit('p_r2', foe2.id, 'heavy');
+    assert(foe2.hp === hpF0, '電力不足 → 重武器禁射');
+    rb2.mp = rb2.maxMp;
+    sim.t += 1;
+    sim.heroHit('p_r2', foe2.id, 'heavy');
+    assert(foe2.hp < hpF0 && Math.round(rb2.maxMp - rb2.mp) === cost, `電力充足 → 擊發並扣 ${cost}MP`);
+    sim.ents.delete(foe2.id);
+    // 充能:Lv0 回復 = 滿級 × CHARGE_MIN;滿級 = 現役規格(SP_REGEN_PS / mpRegen)
+    assert(Math.abs(chargeF(0) - ECON.CHARGE_MIN) < 1e-9 && Math.abs(chargeF(ECON.UPGRADES.ch.max) - 1) < 1e-9,
+      `充能曲線:Lv0 = ${ECON.CHARGE_MIN * 100}% 規格、滿級 = 100% 現役規格`);
+    const mpLow = rb2.mp = 10;
+    sim.tick(1.0);
+    const gain0 = rb2.mp - mpLow;
+    rb2.upg.ch = ECON.UPGRADES.ch.max;
+    rb2.mp = 10;
+    sim.tick(1.0);
+    const gainMax = rb2.mp - 10;
+    assert(gainMax > gain0 * 1.5, `充能滿級電力回速 ×${(gainMax / gain0).toFixed(2)}(Lv0 ${gain0.toFixed(1)} → 滿級 ${gainMax.toFixed(1)} MP/s)`);
+    rb2.upg.ch = 0;
+  }
+
+  log('— sim:助攻(傷害/負面狀態 = 貢獻;賞金 × 1/4)—');
+  {
+    const prey = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 22, z: rb2.z, hp: UNITS.tank.hp });
+    rb2.ammo = {}; rb2.fireAt = {}; rb2.reloadUntil = {}; rb2.mp = rb2.maxMp;
+    sim.t += 1;
+    sim.heroHit('p_r2', prey.id);            // rb2 造成傷害 = 助攻貢獻
+    assert(prey.asst && prey.asst.p_r2 != null, '傷害貢獻戳記入帳');
+    const $a0 = rb2.money;
+    sim._damage(prey, 99999, null, 999);     // 補刀者非英雄(如塔)→ 擊殺無賞金,助攻照發
+    assert(!sim.ents.has(prey.id), '測試目標已被擊殺');
+    assert(rb2.money - $a0 >= Math.floor(ECON.BOUNTY.tank * ECON.ASSIST.F),
+      `助攻入帳 +$${Math.round(rb2.money - $a0)}(= 賞金 ${ECON.BOUNTY.tank} × ${ECON.ASSIST.F})`);
+    assert(sim.events.some((e) => e.e === 'assist' && e.pid === 'p_r2'), 'assist 事件廣播(HUD 提示)');
+    // 招式型範圍 EMP 也是負面狀態 → 記助攻貢獻(與武器附帶 EMP / _applyCC 同規)
+    const empc = sim.addHero('SWARM', 'p_e', 's03');
+    const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
+    empc.abil.skill = 1; empc.mp = empc.maxMp;
+    sim.heroCast('p_e', 'skill', empc.x, empc.z);
+    assert((mark.empUntil || 0) > sim.t && mark.asst && mark.asst.p_e != null,
+      '範圍 EMP(負面狀態)寫入助攻貢獻戳記');
+    sim.ents.delete(mark.id);
+  }
 
   log('— sim:非正規路線防空伏擊(需射程內有存活陣地)+ 飛彈可破壞 —');
   const site0 = [...sim.ents.values()].find((e) => e.kind === 'aasite');
@@ -882,7 +951,7 @@ await guest2.wait((c) => c.sync);
 assert(guest2.sync.lobby.clients.some((x) => x.name === '鋼鐵上校' && x.connected), '用 token 認回原座位');
 assert(guest2.battleConfig != null, '重連後補收 battleConfig');
 
-log('— 經濟:回主堡等資金 → 通用強化(火力升級隨處可買)—');
+log('— 經濟:開局資金 + 擊殺賞金 → 通用強化(隨處可買;被動收入已停發)—');
 const swarmBase = snap.ents.find((e) => e.k === 'base' && e.s === 'SWARM');
 const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z: swarmBase.z, ry: 0 }), 200);
 // 金錢/升級只序列化在「主視野(act)」那架上;三機小隊死亡讓位後 act 可能不是 bodies[0],
@@ -890,13 +959,13 @@ const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z:
 const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
 const richSnap = await host.wait((c) => {
   const me = meOf(c);
-  return me && me.$ >= 400 ? me : null;
-}, 180000);
-assert(richSnap.$ >= 400, `擊殺 + 被動收入累積資金 $${richSnap.$}`);
-host.send({ t: 'buy', item: 'dmg' });
-await host.wait((c) => (meOf(c)?.up?.dmg || 0) >= 1, 5000);
+  return me && me.$ >= 30 ? me : null;   // 30 = 最便宜強化的 Lv1 價;START 200 + 擊殺賞金必然足夠
+}, 30000);
+assert(richSnap.$ >= 30, `開局資金 + 擊殺賞金累積 $${richSnap.$}(無被動收入)`);
+host.send({ t: 'buy', item: 'wm' });
+await host.wait((c) => (meOf(c)?.up?.wm || 0) >= 1, 5000);
 clearInterval(homeIv);
-assert(true, '火力強化 Lv.1(快照 up 同步)');
+assert(true, '武器精通 Lv.1(快照 up 同步)');
 
 log('— 勝負(重武器溫壓火箭高空拆堡:反建築 ×2.0 + 破甲)—');
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');

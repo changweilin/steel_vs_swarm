@@ -16,7 +16,7 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 | `server/server.js` | HTTP 靜態檔 + WS 房間/配對 + 8Hz 快照廣播 + bot 管理 |
 | `server/sim.js` | `BattleSim` — 權威模擬核心 (single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家(推線/交戰/撤退狀態機) |
-| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/SQUAD/VITALS/PROG — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
+| `public/js/data.js` | 共用常數 UNITS/WEAPONS/ECON/GAME/HAZARDS/**CHARACTERS(24 陣營角色 + 8 傭兵 `side:'MERC'` 雙陣營可選、`kind` 綁機體;×專屬輕重武器/小招/大招×3 階)**/HEROIC/SQUAD/VITALS/QUAL — **伺服器直接 import 這支客戶端檔**;所有平衡數值只准住這裡,英雄武器/招式一律經 `heroWeapon()`/`heroAbility()` 解析 |
 | `public/js/lore.js` | 角色敘事文本(國籍/年齡/職務/外貌/生平/台詞 + 機體設計原型 `proto` + 立繪外觀提示 `art`)— **客戶端專用,伺服器不 import**;`data.js` 只住平衡數值,文字一律住這裡 |
 | `public/js/paint.js` | 機體塗裝:`heroPalette()` 由角色 `visual.hue` 推導整套裝甲色版(lite/main/mid/dark/deep + 花紋用的 ink/ink2/paper/hot);`paintUnit()` 依 `visual.paint` 性格花紋(minimal/camo/graffiti/tattoo/totem/flag)生成程序 canvas 貼圖,以**靜止姿勢的機體局部座標**三平面投影上裝甲 |
 | `public/js/portraits.js` | 程序生成 SVG 頭像/立繪(`avatarURL`/`portraitURL`);`PORTRAIT_MANIFEST` 登記手繪檔即覆蓋,呼叫端不變(同 `MODEL_MANIFEST` 模式) |
@@ -71,7 +71,12 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
   - 花紋走 `visual.paint`(minimal/camo/graffiti/tattoo/totem/flag,依角色性格;文本依據見 `lore.js`),`paintUnit()` 在 **fitToHeight/outlinify 之前**呼叫,程序 canvas 貼圖(256²,`mulberry32` 以 hue 為種子,**MUST NOT** 用 `Math.random`)。
   - 投影用**靜止姿勢下「mesh 局部 → 機體根」的固定矩陣**(toon.js `CEL_PAINT` triplanar):花紋因此烤死在裝甲板上,關節怎麼轉都不游移。**MUST NOT** 改成世界座標投影(機體一走花紋就整片流動),也 **MUST NOT** 每幀更新該矩陣(限肢會把花紋甩出去)。
   - 描邊外殼 / 透明件(旋翼·膜翼)/ 發光件(識別燈·推進器·砲口)一律跳過塗裝 —— 花紋不吃掉辨識訊號。
-- **角色戰鬥系統(2026-07-08 起)**:每玩家 = 1 名角色(房間階段 `pickChar` 選角,不選 = 開戰隨機)= 專屬機體 + 輕武器(左鍵)+ 重武器(右鍵瞄準+左鍵,CD 型,**用 mag:1 + reload=cd 實作**,別再發明第二套 CD)+ 小招 Q + 大招 E。招式升級 = 擊殺數(`h.kn`)+ 金錢(`buy 'ab:light|heavy|skill|ult'`),施放吃電力 MP + CD,全部 `sim.heroCast` 結算。
+- **角色戰鬥系統(2026-07-08 起)**:每玩家 = 1 名角色(房間階段 `pickChar` 選角,不選 = 開戰隨機)= 專屬機體 + 輕武器(左鍵)+ 重武器(右鍵瞄準+左鍵,CD 型,**用 mag:1 + reload=cd 實作**,別再發明第二套 CD;**2026-07-17 起擊發吃電力** `heavyMpCost` = cd × `ECON.HEAVY_MP_PER_CD` × 精通折減,唯一閘門在 `sim._gateFire`)+ 小招 Q + 大招 E(施放吃電力 MP + CD,全部 `sim.heroCast` 結算)。
+- **八軌升級經濟(2026-07-17 改制;金錢只來自擊殺/助攻/戰場物資,無被動收入)**:
+  - **賞金 = 對應難度**:表列戰鬥單位(soldier/…/tower/base/bunker)由 `data.js` UNITS 之後的推導區塊算出(戰力 = EHP + DPS×`BOUNTY_DPS_S`,× `BOUNTY_F` 取 5 的倍數),**MUST NOT 手寫**;missile/aasite/decoy/英雄機體手訂(無人機單架 ≈ 機甲 ÷3)。第三方(GUER/MILI)沿用同一張表。
+  - **助攻 = 賞金 × `ECON.ASSIST.F`(1/4)**:對死者**造成過傷害或負面狀態**(_damage/_applyCC/_applyHitEmp/**heroCast 的 fx:'emp' 分支**/bleed 都記 `t.asst` 貢獻戳記 —— 新增負面狀態路徑 MUST 一併記,漏一路 = 該類輔助角零收入)才算;「離開可視半徑 10 秒後不算」= tick 內**在場刷新**(貢獻者活著且在自身 sight 半徑內 → 戳記刷新為現在;已逾期不因重返半徑復活),`sim._kill` 結算只驗戳記 ≤ `ASSIST.TTL_S`、**MUST NOT** 再看擊殺當下距離(會讓失效貢獻復活)。擊殺者不重複領;重生清 `b.asst`。
+  - **八軌**:品質二軌 `wq`/`aq`(住 `QUAL`,擊殺數 + 金錢;**wq 連動輕+重武器階級、aq 連動小招+大招** —— `h.abil` 由 `h.upg.wq/aq` 推導,aq Lv1 同時解鎖 Q/E)+ 通用六軌 `wm`/`am`/`hp`/`ar`/`sp`/`ch`(住 `ECON.UPGRADES`,只吃金錢)。品質影響武器/招式數值(既有三階 tier),**精通影響消耗與冷卻**(`masteryF`:wm = 填彈/冷卻/重武器電力 −8%/級、am = 招式 CD/MP −8%/級),**充能影響回復速度**(`chargeF`:護盾 `VITALS.SP_REGEN_PS` 與電力 `mpRegen` 皆為**滿級規格**,Lv0 = `CHARGE_MIN` 40%)。
+  - **校準不變式(npm run bal ③④,改任何賞金/價格/step MUST 重跑)**:③ 單一兵線 30% 擊殺 + 40% 助攻 × 10 分鐘收入 + 開局資金 ≈ 八軌全滿總價 ±10%(現值 $2,954 vs $2,950);④ 八軌全滿單推**同塔位一對塔**——機甲/變形機甲(單機)近戰互轟平均剩 0~20% EHP(現值 9.5% / 4.2%);**無人機不驗近戰互轟**(塔 `_acquireTarget` 逐機集火 + `_echo` 每折一架掉 1/3 火力 ⇒ 三機隊互轟必敗,共用 EHP 池模型是假象),改驗**站外攻堅**:全員重武器射程 > 塔射程(311m 外零承傷、> SAM 240)且機種平均拆完兩座 ≤ 180s(現值 143s;fan 電漿刻意最慢)。另驗滿級電力回充 ≥ 重武器持續耗電率。攻防成長一致:攻 ×2.2 ≈ 防 ×2.1。
 - **招式追加效果(2026-07-16;攻擊性招式降傷換效果)**:strike 全面 −15% 傷害、攻擊型增益 dmg 倍率 −0.05,各附一項 `add:{fx,…}` 追加效果(數值三階,**只准住 data.js**、`heroAbility` 解析;效果種類見 data.js CHARACTERS 頭註)。結算縫:控場(pull 拉近/stun 麻痺/slow 緩速/confuse 混亂/bleed 出血)= strike 彈著區 r×1.5 走 `sim._applyCC`(建築/中立/無敵幀免疫;**死人不出血** —— _blast 先殺掉的不掛 CC);走位/其他(haste `k:'speed'`/leap `k:'jump'`/dodge/vamp)= buff 分支入 `mods` 通道、mark 入 `markUntil`(SQUAD_SHARED,一擊即耗:heroHit 必中 —— 繞過 `_dodges` —— 且強制爆擊;**消耗路徑只在 heroHit 直擊 ⇒ fan/launcher/missile AoE 武器的角色 MUST NOT 掛 mark**,s09 2026-07-16 因此換 haste;t01/s02 無 mark 招 ⇒ e2e 確定性傷害不受影響)。**麻痺 = 禁移動、武器照常 —— 與 EMP「武器離線、可移動」刻意互補;禁移動涵蓋跳躍/蓄力跳/變形彈射/飛行垂直升降**(客戶端 `_updatePlayer` 封鎖,已騰空的慣性不受影響)。位置權威四分法(pull/緩速皆同):真人主視野機 = 事件 `{e:'cc',tpid}`/快照欄位(`pz/sl/slf/cf/mk/bl`)→ 客戶端 `_ccMoveF()`/`_modF()` 自鎖自套(dash 先例);bot 英雄 = `bots.js _ccF()` 鏡像折速(**唯一縫**,`_speed` 與 `_push` 位置收斂共用,MUST NOT 在 update 各處另寫);NPC = `_advance` 折速(混亂 = 沿線倒退 ×0.5)、pull 直接位移;**僚機 = `sim._ccSpeedF()` 折 `_follow` 編隊速度**(dash 自爆衝刺刻意不吃,與真人 dash 掙脫同規則)。吸血走 `_damage` 的實際造成傷害(`_vamp`);出血 DoT 在 tick 結算、擊殺記給施放者。重生清理:per-body CC 欄位在 `_respawn` 一律清,markUntil 只在 soloWipe 清。
 - **三機小隊(2026-07-09 起)**:蜂群玩家 = `SQUAD.N`(3)架無人機;機甲仍是單機。`sim.squads: pid -> {bodies[], act, lock, ps}`,`sim.heroes: pid -> 目前主視野那架`(**pid 為鍵的規則不變**)。
   - 每架是獨立 ent(自己的 hp/護盾/座標/死亡與重生 CD);經濟/電力/彈藥/招式/增益住在 `sq.ps`,靠 `_bindShared()` 的 getter/setter 掛回每架 ent — 所以 `h.money`/`h.abil`/`h.ammo` 在任何一架上讀寫都是同一份。
@@ -204,8 +209,9 @@ HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只送�
 npm start            # server on http://localhost:8620 (--port <n> 可覆寫)
 npm test             # node test/e2e.mjs,約 60 項斷言
 npm run bal          # tools/balance.mjs:①一波 NPC = 玩家 60% EHP ②最前線敵我塔重疊 80% 且不對射
+                     #                  ③單線 30% 擊殺/40% 助攻 10 分鐘 ≈ 八軌升滿 ④滿級單推同塔位雙塔剩 0~20%
 ```
-- 動任何平衡數值(小兵/角色武器/`SQUAD.BUFF`/`HEROIC`/塔射程/`TOWER_OVERLAP`)**MUST** 跑 `npm run bal`(離線、不需伺服器)。
+- 動任何平衡數值(小兵/角色武器/`SQUAD.BUFF`/`HEROIC`/塔射程/`TOWER_OVERLAP`/賞金/八軌價格與 step)**MUST** 跑 `npm run bal`(離線、不需伺服器)。
 - PowerShell 下 `PORT=x node ...` 這種 env 前綴**無效**,用 `--port` 參數。
 
 **LOGO 影像管線(離線,純 Node + 內建 `zlib`,無 npm 依賴;共用核心 `tools/logo_lib.mjs`):**

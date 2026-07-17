@@ -323,7 +323,7 @@ export const DECOY = {
 export const decoyBlast = () => ({ dmg: DECOY.DMG, r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs });
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
-  SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例
+  SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
   AR_K: 120,           // 護甲減免曲線常數
   CRIT_X: 1.6,         // 預設爆擊倍率
 };
@@ -446,13 +446,13 @@ export const WATER = { LEVEL: 0.3, WADE_M: 1.2, SLOW: 0.5, SPAN_MIN_M: 18, RAMP_
 // THRU_M:穿越障礙圓柱的弦長門檻(< 門檻 = 貼牆擦邊,不算遮蔽);MAX_OCC:上傳障礙數上限。
 export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64 };
 
-// ---- 招式養成(擊殺數解鎖 + 金錢購買;輕/重武器 Lv1 自帶,小招/大招要先解鎖)----
+// ---- 品質養成(2026-07-17 八軌改制;擊殺數解鎖 + 金錢購買)----
+// 「武器品質」一次升輕+重兩把(Lv1 自帶)、「招式品質」一次升小招+大招(Lv1 才解鎖)。
 // kills/cost[i] = 升到 Lv(i+1) 的門檻;擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。
-export const PROG = {
-  light: { name: '輕武器', kills: [0, 6, 15],  cost: [0, 250, 550] },
-  heavy: { name: '重武器', kills: [0, 9, 20],  cost: [0, 300, 650] },
-  skill: { name: '小招',   kills: [2, 12, 25], cost: [150, 400, 800] },
-  ult:   { name: '大招',   kills: [6, 18, 32], cost: [400, 800, 1400] },
+// 成本與 ECON.UPGRADES 一起受「10 分鐘升滿」預算約束(npm run bal ③),改任一價 MUST 重跑。
+export const QUAL = {
+  wq: { name: '武器品質', kills: [0, 9, 20],  cost: [0, 250, 400] },
+  aq: { name: '招式品質', kills: [6, 18, 32], cost: [150, 250, 400] },
 };
 export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
 // 電腦玩家(bot;含駕駛傭兵變形機甲的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
@@ -1119,22 +1119,42 @@ export const CHARACTERS = {
   },
 };
 
-// ---- 經濟(擊殺得錢 → 隨處升級 / 回主堡買熱兵器)----
+// ---- 經濟(2026-07-17 改制:金錢只來自擊殺/助攻/物資,無被動收入)----
+// 擊殺 = 全額賞金;助攻 = 賞金 × ASSIST.F —— 曾對死者造成傷害或負面狀態才算貢獻,
+// 貢獻後離開可視半徑(自身 sight)超過 ASSIST.TTL_S 秒即失效(sim._kill 結算)。
+// 賞金「對應難度」:表列戰鬥單位由 UNITS 戰力推導(見 UNITS 之後的推導區塊),
+// 此處只手訂非表列目標(missile 擊落防空飛彈 / aasite 匿蹤陣地 / decoy 餌機 / 英雄機體)。
+// 校準錨(npm run bal ③):單一兵線 30% 擊殺 + 40% 助攻 × 10 分鐘 ≈ 八軌全滿總價。
 export const ECON = {
   START: 200,
-  INCOME_PER_S: 2,
-  // 擊殺賞金:高價值單位報酬越高(missile = 擊落防空飛彈)
-  BOUNTY: {
-    soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, morph: 150, missile: 15, aasite: 40, decoy: 25,
-    rocketeer: 30, howitzer: 45, heli: 60,
-    bunker: 100,   // 第三方碉堡(HP = 塔一半 ⇒ 賞金也是塔一半);與第三方交戰的金錢報酬走同一張表
-  },
+  ASSIST: { F: 0.25, TTL_S: 10 },
+  // 重武器每發電力 = 該武器 cd 秒 × 此值 ×(武器精通折減)⇒ 持續火力的耗電率全武器一致
+  HEAVY_MP_PER_CD: 2.0,
+  // 英雄賞金:機甲/變形機甲全額;無人機是三機小隊 → 單架 ≈ 機甲 ÷ 3 × SQUAD.BUFF(全滅 ≈ 一台機甲)
+  BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 70, robot: 190, morph: 190 },
+  BOUNTY_DPS_S: 8,     // 戰力公式的 DPS 權重(秒):value = EHP + DPS × 此值
+  BOUNTY_F: 0.12,      // 戰力 → 金錢的匯率(10 分鐘升滿預算的主旋鈕)
+  // 八軌之六:通用強化(隨處可買;wq/aq 品質二軌住 QUAL,要吃擊殺數門檻)。
+  // 攻防曲線一致(2026-07-17 校準):滿級攻擊成長 ≈ ×2.2(品質 + 精通)、
+  // 防禦成長 ≈ ×2.1(hp/sp ×1.8 + 護甲 +30 → 對塔承傷 ×1.22)—— 改 step MUST 重跑 bal ④。
   UPGRADES: {
-    dmg:  { name: '火力強化', desc: '所有武器傷害 +12%', max: 5, step: 0.12, base: 150, inc: 100 },
-    hull: { name: '裝甲強化', desc: '座機血量上限 +12%', max: 5, step: 0.12, base: 150, inc: 100 },
+    wm: { name: '武器精通', desc: '武器冷卻/填彈 −8%、重武器電力消耗 −8%', max: 5, step: 0.08, base: 30, inc: 10 },
+    am: { name: '招式精通', desc: '招式冷卻與電力消耗 −8%', max: 5, step: 0.08, base: 30, inc: 10 },
+    hp: { name: '裝甲強化', desc: '裝甲上限 +16%', max: 5, step: 0.16, base: 30, inc: 10 },
+    ar: { name: '複合裝甲', desc: '護甲值 +6', max: 5, step: 6, base: 30, inc: 10 },
+    sp: { name: '護盾強化', desc: '護盾上限 +16%', max: 5, step: 0.16, base: 30, inc: 10 },
+    ch: { name: '充能系統', desc: '護盾/電力回復速度提升(滿級 = 現役最高規格)', max: 5, base: 30, inc: 10 },
   },
+  CHARGE_MIN: 0.4,     // 充能 Lv0 的回復速度比例(滿級 = 1.0 = VITALS.SP_REGEN_PS / mpRegen 現值)
 };
 export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
+/** 精通折減(track: 'wm'|'am'):冷卻/填彈/電力消耗 × 此倍率 */
+export const masteryF = (track, lvl) => 1 - ECON.UPGRADES[track].step * (lvl || 0);
+/** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
+export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
+/** 重武器每發電力(解析後 def;wmLvl = 武器精通等級)。輕武器不耗電。 */
+export const heavyMpCost = (def, wmLvl) =>
+  Math.round((def.reload || 0) * ECON.HEAVY_MP_PER_CD * masteryF('wm', wmLvl));
 
 // ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----
 export const UNITS = {
@@ -1167,7 +1187,8 @@ export const UNITS = {
              sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40, pen: 8 } },
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
-  // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招消耗)。
+  // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
+  // 見 heavyMpCost);mpRegen 為「充能」滿級規格(實際回速 × chargeF(充能等級))。
   // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield 由 SQUAD.BUFF 於 UNITS 之後 derive
   // (= 機甲 ÷ N × BUFF;MUST NOT 手寫,寫死就會與 SQUAD.DMG 漂移),傷害折算在 heroWeapon()。
   // 每一架各自重生、各自吃冷卻(與機甲同表)。
@@ -1212,6 +1233,15 @@ UNITS.morph = {
 };
 // 主堡加裝兩門大砲:射程/傷害/射速一律 derive 自砲塔(MUST NOT 手抄),獨立於主堡本體火砲。
 UNITS.base.guns = { n: 2, range: UNITS.tower.range, dmg: UNITS.tower.dmg, rate: UNITS.tower.rate };
+// 擊殺賞金推導(2026-07-17;「對應難度的金錢」唯一推導處,MUST NOT 手寫表列單位):
+// 賞金 = 戰力(EHP + DPS × BOUNTY_DPS_S)× BOUNTY_F,取 5 的倍數。
+// 第三方(GUER/MILI)沿用正規 kind ⇒ 同一張表;改 UNITS 任一數值賞金自動連動。
+// 現值:步兵 20 / 火箭 35 / 榴彈 35 / 坦克 75 / 直升機 50 / 塔 330 / 主堡 540 / 碉堡 135。
+for (const k of ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'apc', 'tower', 'base', 'bunker']) {
+  const u = UNITS[k];
+  const v = u.hp / armorMul(u.armor || 0) + (u.dmg || 0) * (u.rate || 0) * ECON.BOUNTY_DPS_S;
+  ECON.BOUNTY[k] = Math.round(v * ECON.BOUNTY_F / 5) * 5;
+}
 
 // ---- 第三方軍隊(2026-07-17;遠離兵線的中立武裝,DOTA 野區思想:交戰可獲得金錢)----
 // 每條兵線兩側各駐守一團(總團數 = 兵線數 × 2):游擊隊 GUER / 武裝民兵 MILI 各踞一側。

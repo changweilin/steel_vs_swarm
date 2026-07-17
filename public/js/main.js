@@ -5,7 +5,7 @@
 import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, PROG,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, QUAL,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, SQUAD, LOS,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo,
@@ -1612,37 +1612,43 @@ function renderShop(open, st) {
   };
   const c = st.ch && CHARACTERS[st.ch];
   if (c) {
-    head(`🎖 招式升級 —「${c.code}」${c.machine}(每招三階;需擊殺數 + 金錢)`);
-    const KEY = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
-    for (const slot of ['light', 'heavy', 'skill', 'ult']) {
-      const lvl = st.ab[slot] || 0;
-      const isWpn = slot === 'light' || slot === 'heavy';
-      const name = c[slot].name;
-      const full = lvl >= 3;
-      const needK = full ? null : PROG[slot].kills[lvl];
-      const price = full ? null : PROG[slot].cost[lvl];
+    head(`🎖 品質升級 —「${c.code}」${c.machine}(輕+重武器 / 小招+大招 連動升階;需擊殺數 + 金錢)`);
+    // 武器品質:一次升輕 + 重兩把(Lv1 自帶);招式品質:一次升小招 + 大招(Lv1 才解鎖)
+    const qualRow = (id, tier, names, keys, nextInfo, unlockNote) => {
+      const q = QUAL[id];
+      const full = tier >= 3;
+      const needK = full ? null : q.kills[tier];
+      const price = full ? null : q.cost[tier];
       const kOk = !full && st.kn >= needK;
-      // 下一階數值預覽
-      let nextInfo = '';
-      if (!full) {
-        if (isWpn) {
-          const nw = heroWeapon(st.ch, slot, lvl + 1);
-          nextInfo = `下一階:傷害 ${Math.round(nw.dmg)} ・ 彈夾 ${nw.mag}${nw.pen ? ` ・ 破甲 ${nw.pen}` : ''}`;
-        } else {
-          const na = heroAbility(st.ch, slot, lvl + 1);
-          nextInfo = `下一階:CD ${na.cd}s ・ ${na.mp}MP${na.dmg ? ` ・ 傷害 ${na.dmg}` : ''}${na.heal ? ` ・ 修復 ${na.heal}` : ''}${na.dur ? ` ・ ${na.dur}s` : ''}`;
-        }
-      }
-      const desc = isWpn ? c[slot].rw : c[slot].desc;
       row(
-        `<b>${name}</b> <span class="tag dim">${PROG[slot].name}・${KEY[slot]}</span> Lv.${lvl}/3 <span class="dim">${desc}</span>`,
-        price, kOk && st.money >= price, () => st.buy(`ab:${slot}`),
+        `<b>${q.name}</b> <span class="tag dim">${names}・${keys}</span> Lv.${tier}/3`,
+        price, kOk && st.money >= price, () => st.buy(id),
         full ? '已滿階'
-          : `${kOk ? '✅' : '☠'} 需 ${needK} 擊殺(目前 ${st.kn})${lvl === 0 && !isWpn ? ' ・ 解鎖後按 ' + KEY[slot] + ' 施放' : ''}${nextInfo ? ' ・ ' + nextInfo : ''}`,
+          : `${kOk ? '✅' : '☠'} 需 ${needK} 擊殺(目前 ${st.kn})${unlockNote}${nextInfo ? ' ・ ' + nextInfo : ''}`,
       );
+    };
+    {
+      const tier = 1 + (st.upg.wq || 0);
+      let next = '';
+      if (tier < 3) {
+        const nl = heroWeapon(st.ch, 'light', tier + 1);
+        const nh = heroWeapon(st.ch, 'heavy', tier + 1);
+        next = `下一階:${nl.name} 傷害 ${Math.round(nl.dmg)}/彈夾 ${nl.mag} ・ ${nh.name} 傷害 ${Math.round(nh.dmg)}`;
+      }
+      qualRow('wq', tier, `${c.light.name}+${c.heavy.name}`, '左鍵/右鍵瞄準', next, '');
+    }
+    {
+      const tier = st.upg.aq || 0;
+      let next = '';
+      if (tier < 3) {
+        const ns = heroAbility(st.ch, 'skill', tier + 1);
+        const nu = heroAbility(st.ch, 'ult', tier + 1);
+        next = `下一階:${ns.name} CD ${ns.cd}s/${ns.mp}MP ・ ${nu.name} CD ${nu.cd}s/${nu.mp}MP`;
+      }
+      qualRow('aq', tier, `${c.skill.name}+${c.ult.name}`, 'Q/E', next, tier === 0 ? ' ・ 解鎖後按 Q/E 施放' : '');
     }
   }
-  head('⬆️ 通用強化(隨處可買,立即生效)');
+  head('⬆️ 通用強化(隨處可買,立即生效;精通影響消耗與冷卻、充能影響護盾/電力回速)');
   for (const [id, up] of Object.entries(ECON.UPGRADES)) {
     const lvl = st.upg[id] || 0;
     const full = lvl >= up.max;
