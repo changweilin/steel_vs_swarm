@@ -1106,7 +1106,9 @@ export class BattleSim {
       if (d3 > def.range * 1.25) continue;
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
-      this.events.push({ e: 'shot', from: [b.x, b.z], to: [t.x, t.z], side: b.side });
+      // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
+      this.events.push({ e: 'shot', pid: b.pid, slot: def.id, from: [b.x, b.z], to: [t.x, t.z],
+        ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: b.side });
       if (def.id === 'light' && this._dodges(t)) continue;   // 閃避:僚機這一發也被閃開
       const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
@@ -1158,7 +1160,11 @@ export class BattleSim {
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
-    if (h._shotN % 3 === 0) this.events.push({ e: 'shot', from: [h.x, h.z], to: [t.x, t.z], side: h.side });
+    // pid/slot:客戶端據此解析 bot 英雄機體的 rig 槍口錨 + 標記開火動畫(後座/射姿,與真人 tracer 同路)
+    if (h._shotN % 3 === 0 || wp.id === 'heavy') {
+      this.events.push({ e: 'shot', pid, slot: wp.id, from: [h.x, h.z], to: [t.x, t.z],
+        ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: h.side });
+    }
     if (wp.def.id === 'light' && this._dodges(t)) {
       this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
       this._echo(h, t, wp.def);
@@ -1780,9 +1786,14 @@ export class BattleSim {
           } else {
             this._damage(target, u.dmg, e, wd?.pen || 0);
           }
-          if (e.kind === 'tower' || e.kind === 'base' || e.kind === 'tank') {
-            this.events.push({ e: 'shot', from: [e.x, e.z], to: [target.x, target.z], side: e.side });
-          }
+          // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
+          // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
+          // ty = 空中目標高度(直升機/英雄),曳光才不會打在目標腳下的地面
+          this.events.push({
+            e: 'shot', id: e.id, kind: e.kind, from: [e.x, e.z], to: [target.x, target.z],
+            ty: (target.hero || target.decoy || target.kind === 'heli') ? Math.round(target.y || 0) : 0,
+            side: e.side,
+          });
         }
         continue; // 交戰中不前進
       }
@@ -2165,7 +2176,12 @@ export class BattleSim {
       e.gunCd[i] = 1 / g.rate;
       this._damage(target, g.dmg, e, 0);
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
-      this.events.push({ e: 'shot', from: [e.x + off, e.z], to: [target.x, target.z], side: e.side });
+      // gi = 第幾門砲:客戶端把該門砲管轉向目標、曳光自實際砲口射出
+      this.events.push({
+        e: 'shot', id: e.id, kind: 'base', gi: i, from: [e.x + off, e.z], to: [target.x, target.z],
+        ty: (target.hero || target.decoy || target.kind === 'heli') ? Math.round(target.y || 0) : 0,
+        side: e.side,
+      });
     }
   }
 

@@ -439,8 +439,9 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     if (rig.armChainR && rig.armChainR[0]) rig.armChainR[0].g.rotation.x -= kR * 0.1;
     if (rig.armChainL && rig.armChainL[0]) rig.armChainL[0].g.rotation.x -= kL * 0.1;
   }
-  gunPitch(rig.gunR, aimF, kR, chg, hv);
-  gunPitch(rig.gunL, aimF, kL, chg, hv);
+  // 機載/肩扛樞軸槍(weap 'N' 但有 gunR,如猩猩肩砲/火箭筒):後座走 _kickB 一樣要有槍口上跳
+  gunPitch(rig.gunR, aimF, Math.max(kR, (rig._kickB || 0) * 0.8), chg, hv);
+  gunPitch(rig.gunL, aimF, Math.max(kL, (rig._kickB || 0) * 0.8), chg, hv);
   const hips = rig.hips;
   // 骨盆:交替步一週期兩次浮沉(雙支撐最高、單支撐最低)+ 重心側移到支撐腿;
   // 跳奔漸變為「一跳一大浮沉」的騰空拋物線,側移/扭腰同步歸零(併蹬沒有左右換腳)。
@@ -529,6 +530,10 @@ function stepHop(L, rig, dt, now, speed, yawRate) {
     rig.armR.rotation.x += -kR * 0.15 + chg * (hv.armR || 0);
     rig.armL.rotation.x += -kL * 0.15 + chg * (hv.armL || 0);
   }
+  // 腕槍俯仰(roo 左腕雙管的迴旋槍架):據槍水平 + 每發後座槍口上跳
+  const hopAim = Math.min(1, idle + (rig._aim || 0));
+  gunPitch(rig.gunR, hopAim, kR, chg, hv);
+  gunPitch(rig.gunL, hopAim, kL, chg, hv);
   const hips = rig.hips;
   // 一跳一沉浮:騰空拋物線 + 觸地壓縮(不是交替步的一週期兩浮沉);無左右側移/扭腰
   // 只向上騰空、不讓骨盆沉到基準線以下 —— 腿隨骨盆升降(syncLegsToHips),骨盆一旦下沉就會把腳帶穿地面;
@@ -586,7 +591,8 @@ function stepVehicle(L, rig, dt, now, speed, vFwd, yawRate) {
   L.roll = damp(L.roll, roll, 4, dt);
   L.pitch = damp(L.pitch, pitch, 4, dt);
   rig.hull.rotation.z = L.roll;
-  rig.hull.rotation.x = L.pitch;
+  // 主砲後座(stepCombatFx 的 _kickB):車體向後仰一記再回穩(rotation.x 負 = 車鼻上抬)
+  rig.hull.rotation.x = L.pitch - (rig._kickB || 0) * 0.045;
   // 行駛細碎顛簸(懸吊咬地感;幅度極小,靜止歸零)
   const jig = clamp(speed / (rig.top || 10), 0, 1);
   rig.hull.position.y = (rig.hullY0 || 0) + Math.sin(now * 12.5 + L.ph * 7) * 0.012 * jig;
@@ -966,22 +972,30 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
     rig.wristL.rotation.x += (fx(L.ph + qp[2] - 0.9) + st(L.ph + qp[2] - 0.9) * 0.3) * wA * a + br(1.8, 0.02);
     rig.wristR.rotation.x += (fx(L.ph + qp[3] - 0.9) + st(L.ph + qp[3] - 0.9) * 0.3) * wA * a * (armFull ? 1 : 0.5) + br(3.6, 0.02);
   }
-  // 手持武器射擊姿勢(rig.aimM 的人形地面型傭兵):靜止或開火保持 = 肩/肘/腕混成到據槍角
-  // (雙槍 = 兩臂都給欄位;單手 = 只給右臂),槍口朝前由 gunPitch 解算;後座各手獨立。
-  // 全部 ×(1−m) —— 飛行型態手臂是收攏的機構,MUST NOT 把射姿帶上天
+  // 手持武器射擊姿勢(rig.aimM 的手持傭兵):靜止或開火保持 = 肩/肘/腕混成到據槍角
+  // (雙槍 = 兩臂都給欄位;雙手一把 = 左臂帶到護木),槍口朝前由武器俯仰解算;後座各手獨立。
+  // 據槍姿 ×(1−m)(飛行的臂姿由 pose 的前伸 air 姿勢接管);後座脈衝不分型態(飛行開火也要有)。
+  // 武器俯仰 = 地面「rest 行軍 ↔ aim 據槍」與飛行 gp.air(雙臂前伸時槍口朝航向)以 m 混成 ——
+  // 2026-07-17 起手持機體飛行雙手朝前方射擊(使用者指示),不再把武器收攏折走
   const cKL = rig._kickL || 0, cKR = rig._kickR || 0;
   const cChg = (rig._chg || 0) * (1 - m), cHv = rig.hvy || S0;
+  const aimF = clamp(idle + (rig._aim || 0) * (1 - m), 0, 1);
   if (rig.aimM) {
-    const aimF = clamp(idle + (rig._aim || 0) * (1 - m), 0, 1);
     const A = rig.aimM;
     const toAim = (g, t) => { if (g && t != null) g.rotation.x += (t - g.rotation.x) * aimF; };
     toAim(rig.armR, A.shR); toAim(rig.elbowR, A.elR); toAim(rig.wristR, A.wrR);
     toAim(rig.armL, A.shL); toAim(rig.elbowL, A.elL); toAim(rig.wristL, A.wrL);
-    rig.armR.rotation.x += (-cKR * 0.15 + cChg * (cHv.armR || 0)) * (1 - m);
-    rig.armL.rotation.x += (-cKL * 0.15 + cChg * (cHv.armL || 0)) * (1 - m);
-    gunPitch(rig.gunR, aimF, cKR * (1 - m), cChg, cHv);
-    gunPitch(rig.gunL, aimF, cKL * (1 - m), cChg, cHv);
+    rig.armR.rotation.x += -cKR * 0.15 + cChg * (cHv.armR || 0);
+    rig.armL.rotation.x += -cKL * 0.15 + cChg * (cHv.armL || 0);
   }
+  const gunM = (gp, kick) => {
+    if (!gp) return;
+    const ground = gp.rest + (gp.aim - gp.rest) * aimF;
+    gp.g.rotation.x = ground + ((gp.air ?? gp.rest) - ground) * m
+      - kick * 0.14 + (rig._chg || 0) * (cHv.gun ?? 0.05) * Math.max(aimF, m);
+  };
+  gunM(rig.gunR, cKR);
+  gunM(rig.gunL, cKL);
   // 多節尾(猿猴長尾 / 獸型尾):逐節相位延遲的鞭式擺動 + 急轉時甩向轉向反側 = 配重。
   // 全部疊在 pose(m) 之上(飛行型態 a→0、L.tail 也阻尼歸零 ⇒ 尾自動拉直成尾桁)。
   // idle 微顫(比照 whipTail locomotion.js:141)不可省略:靜止時尾巴仍要有液壓微顫,
@@ -1029,7 +1043,9 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 直立時一併回正,否則會仰天
   if (rig.hoverUp) {
     const spd = Math.hypot(vFwd, vLat);
-    L.hov = damp(L.hov ?? 0, m * (1 - clamp(spd / 6, 0, 1)), 3, dt);
+    // 開火保持(rig._aim)壓平懸停直立:懸停中開火機體回到巡航水平 ⇒ 肩扛武器(如意棒砲)
+    // 隨軀幹指向攻擊方向,不會朝天開火(槍口一律朝攻擊方向)
+    L.hov = damp(L.hov ?? 0, m * (1 - clamp(spd / 6, 0, 1)) * (1 - (rig._aim || 0)), 3, dt);
     rig.torso.rotation.x -= (rig.hoverUp - 0.12) * L.hov;
     if (rig.head) rig.head.rotation.x += (rig.hoverUp - 0.3) * L.hov;
     // 懸停光翼上揚:機體立直後翼束改朝上後方全幅展開(孔雀開屏),移動時滑回後掠
