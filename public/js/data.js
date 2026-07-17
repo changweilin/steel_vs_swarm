@@ -1159,6 +1159,8 @@ export const CHARACTERS = {
 // 校準錨(npm run bal ③):單一兵線 30% 擊殺 + 40% 助攻 × 10 分鐘 ≈ 八軌全滿總價。
 export const ECON = {
   START: 200,
+  // DOTA 式陣亡罰金:每 1 秒重生倒數,額外自玩家共用金錢扣 $10(不透支)。只罰玩家英雄/無人機。
+  DEATH_PENALTY_PER_S: 10,
   ASSIST: { F: 0.25, TTL_S: 10 },
   // 重武器每發電力 = 該武器 cd 秒 × 此值 ×(武器精通折減)⇒ 持續火力的耗電率全武器一致
   HEAVY_MP_PER_CD: 2.0,
@@ -1380,6 +1382,8 @@ export const THIRD = {
   LANE_MAX: 560,         // 佈營取樣最遠側偏
   SPACING: 140,          // 營地彼此最小間距
   FORM_R: 13,            // 駐守編隊半徑(繞碉堡站位)
+  EXIT_ARC: Math.PI / 3, // 出堡/重生扇形半角(60°):駐守與重生位集中在朝兵線的清空側,而非整圈環列
+  BLD_CLEAR_R: 16,       // 碉堡淨空半徑(> FORM_R 13 + 碉堡半徑):重疊建物(客戶端移除)與 LOS 遮蔽柱(伺服器)同步清此半徑內
   TETHER_M: 90,          // 追擊繫繩:離碉堡超過即刻放棄交戰撤回
   HOME_R: 26,            // 撤回解除半徑(回到碉堡周圍)
   GAR_ENTER_F: 0.5,      // 步槍兵 HP ≤ 50% 躲進碉堡

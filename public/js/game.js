@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
-  WATER, CJUMP, IFRAME, sideInfo, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
+  WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altF, isGunnery,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -1849,7 +1849,7 @@ export class BattleClient {
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
-      if (!ent.hero && !ent.decoy && !ent.isStatic) ent.mesh.visible = !e.gar;
+      if (!ent.hero && !ent.decoy && !ent.isStatic) { ent.mesh.visible = !e.gar; if (ent.aura) ent.aura.visible = ent.mesh.visible; }
       if (e.k === 'decoy') {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -2061,8 +2061,23 @@ export class BattleClient {
     }
     group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
     if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
+    else if (isThirdSide(e.s)) this._addRangeRing(ent, e);   // 第三方(GUER/MILI)戰鬥單位與碉堡:貼地射程光暈
+    if (e.k === 'bunker') this._clearAroundBunker(e);        // 碉堡淨空:移除重疊建物 + 清同區碰撞柱
     this.ents.set(e.id, ent);
     return ent;
+  }
+
+  // 碉堡淨空:碉堡進場時移除與其重疊的客戶端建物/地標(視覺 + 碰撞柱一併,由 clearAround 內部同判定處理,
+  // 只動建物/地標、不動植被/巨岩/橋墩 —— A6 砲火/碰撞與視覺一致)。讓碉堡不半插樓體、周圍留出駐守/重生空間。
+  // clearAround 有動碰撞柱時回 true → 重建 _blockGrid。以四捨五入位置去重,避免重進視野/重生時重複全掃。
+  _clearAroundBunker(e) {
+    const wx = e.x, wz = -e.z, R = THIRD.BLD_CLEAR_R;
+    const key = `${Math.round(wx)},${Math.round(wz)}`;
+    (this._bldCleared ??= new Set());
+    if (this._bldCleared.has(key)) return;
+    this._bldCleared.add(key);
+    const removed = this.terrain.clearBuildingsAround?.(wx, wz, R);
+    if (removed) this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);   // 碰撞柱與視覺一致(A6)
   }
 
   // 主堡治癒光環:標出 HERO_HEAL_R 範圍(貼地環,陣營色,緩慢脈動)
@@ -2076,6 +2091,29 @@ export class BattleClient {
       new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
     const disc = new THREE.Mesh(new THREE.CircleGeometry(R, 64),
       new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.06, depthWrite: false, side: THREE.DoubleSide }));
+    ring.rotation.x = disc.rotation.x = -Math.PI / 2;
+    g.add(disc); g.add(ring);
+    g.renderOrder = 2;
+    this.scene.add(g);
+    ent.aura = g; ent.auraRing = ring;
+    (this._auras ??= []).push(ent);
+  }
+
+  // 第三方(GUER/MILI)射程範圍光暈:貼地環 + 極淡填色,陣營識別色,緩慢脈動(共用 base 補血光環的
+  // ent.aura/_auras 機制 ⇒ 移除清理(_removeEnt)與脈動(update:_auras 迴圈)免額外接線)。
+  // 半徑取自 data.js 射程唯一真相(MUST NOT 手寫/量 bbox):戰鬥單位 = UNITS[kind].range;
+  // 碉堡本身 range 0 ⇒ 取駐守步槍兵實際火力半徑 = soldier.range × THIRD.GAR_RANGE_F。
+  _addRangeRing(ent, e) {
+    const R = e.k === 'bunker' ? UNITS.soldier.range * THIRD.GAR_RANGE_F : (UNITS[e.k]?.range || 0);
+    if (R <= 0) return;   // 寧缺勿錯:無射程不畫(bunker.range=0 走上面 derive)
+    const wx = e.x, wz = -e.z, y = this.terrain.heightAt(wx, wz) + 0.6;
+    const col = sideInfo(e.s).color;   // GUER 綠 / MILI 橙紅;MUST NOT 用 SIDES[e.s](第三方不在表內 → undefined)
+    const g = new THREE.Group();
+    g.position.set(wx, y, wz);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(R * 0.96, R, 64),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(R, 64),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.035, depthWrite: false, side: THREE.DoubleSide }));
     ring.rotation.x = disc.rotation.x = -Math.PI / 2;
     g.add(disc); g.add(ring);
     g.renderOrder = 2;
@@ -2643,6 +2681,8 @@ export class BattleClient {
       }
     } else if (ev.e === 'assist') {
       if (ev.pid === this.youId) this.hud.feed?.(`🤝 助攻 +$${ev.v}`);
+    } else if (ev.e === 'penalty') {
+      if (ev.pid === this.youId && ev.v > 0) this.hud.feed?.(`💀 陣亡罰金 -$${ev.v}`);
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {
@@ -4360,9 +4400,15 @@ export class BattleClient {
     this._updateAirdrop(dt, now);
     this._updateEffects(dt);
     for (const s of this.shields) s.userData.update(dt);
-    if (this._auras) for (const ent of this._auras) {   // 補血光環:緩慢脈動
+    if (this._auras) for (const ent of this._auras) {   // 補血光環 / 第三方射程環:緩慢脈動
       const p = 0.22 + 0.12 * Math.sin(now * 1.6);
       ent.auraRing.material.opacity = p;
+      // 移動的第三方單位(soldier/tank/heli 巡邏/追擊):射程環跟著機體貼地移動;
+      // 靜態的 base 補血光環與 bunker 射程環(isStatic)固定不動。
+      if (!ent.isStatic && ent.aura) {
+        const mx = ent.mesh.position.x, mz = ent.mesh.position.z;
+        ent.aura.position.set(mx, this.terrain.heightAt(mx, mz) + 0.6, mz);
+      }
     }
     this.envFx?.update(dt, this.camera);
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)

@@ -960,21 +960,23 @@ function buildStage(role) {
     </div>
     <div class="cd-run">
       <button class="cd-run-btn" data-run="idle">⏸ 靜止</button>
-      <button class="cd-run-btn" data-run="slow">🐢 慢速</button>
-      <button class="cd-run-btn" data-run="normal">▶ 正常</button>
     </div>
-    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 靜止/慢速/正常 切換跑步 ・ 點武器/招式看演出</div>`;
+    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點按循環 靜止→慢速→正常 ・ 點武器/招式看演出</div>`;
   shell.appendChild(canvas);
   const q = (s) => shell.querySelector(s);
   const st = { role, preview, shell, canvas, home: null, subject: null, weapons: null };
-  const syncRun = () => q('.cd-run')?.querySelectorAll('.cd-run-btn')
-    .forEach((b) => b.classList.toggle('on', b.dataset.run === preview.runMode));
-  q('.cd-run').querySelectorAll('.cd-run-btn').forEach((b) => {
-    b.onclick = () => { preview.setRun(b.dataset.run); };   // setRun → onMove → syncRun 更新高亮
-  });
+  const RUN_LABEL = { idle: '⏸ 靜止', slow: '🐢 慢速', normal: '▶ 正常' };
+  const syncRun = () => {
+    const b = q('.cd-run-btn'); if (!b) return;
+    b.textContent = RUN_LABEL[preview.runMode] || RUN_LABEL.idle;   // 單鍵循環:標籤即目前態
+    b.dataset.run = preview.runMode;
+    b.classList.toggle('on', preview.runMode !== 'idle');           // 非靜止 = 高亮(沿用 .cd-run-btn.on)
+  };
+  st.syncRun = syncRun;   // 供 mountStageInline 重掛時共用同一份標籤邏輯(單一縫)
+  q('.cd-run-btn').onclick = () => { preview.cycleRun(); };   // cycleRun → setRun → onMove → syncRun
   q('.cd-size-btn').onclick = () => toggleStageModal(role);
   q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
-  preview.onMove = () => syncRun();   // setRun / 雙擊 / W / setChar 重置 → 高亮跟著切
+  preview.onMove = () => syncRun();   // cycleRun / 雙擊 / W / setChar 重置 → 單鍵標籤跟著切
   app.stages[role] = st;
   return st;
 }
@@ -991,7 +993,7 @@ function mountStageInline(role, subject, homeEl) {
   const mb = shell.querySelector('.cd-morph-btn'); mb.hidden = !isMorph; mb.textContent = '✈ 切換飛行型態';
   const run = shell.querySelector('.cd-run');
   run.style.display = subject.type === 'unit' ? 'none' : '';   // NPC/建築不做移動演示
-  run.querySelectorAll('.cd-run-btn').forEach((b) => b.classList.toggle('on', b.dataset.run === st.preview.runMode));
+  st.syncRun?.();   // 重掛內嵌 → 依 preview.runMode(setChar 已重置 idle)刷新單鍵標籤
   if (app.modalRole !== role) homeEl.appendChild(shell);
   else fillModalPanels(role);   // 正被放大 → shell 留在 modal,改更新 modal 面板
   st.preview._resize();
@@ -1061,7 +1063,7 @@ function fillModalPanels(role) {
   $('stageModalInfo').innerHTML = stageInfoHTML(st.subject);
   $('stageModalKit').innerHTML = stageKitHTML(st);
   $('stageModalKeys').innerHTML = st.subject.type === 'char'
-    ? '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 移動'
+    ? '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 循環跑速'
     : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊';
 }
 function activeStage() { return app.modalRole ? app.stages[app.modalRole] : null; }
@@ -1125,7 +1127,7 @@ function bindStageControls() {
     if (e.code === 'KeyQ') stagePlaySlot('skill');
     else if (e.code === 'KeyE') stagePlaySlot('ult');
     else if (e.code === 'Space') { e.preventDefault(); p.jump(); }
-    else if (e.code === 'KeyW') p.toggleMove();
+    else if (e.code === 'KeyW') p.cycleRun();
   };
   const onDown = (e) => { down = { x: e.clientX, y: e.clientY, b: e.button }; };
   const onUp = (e) => {
@@ -1402,6 +1404,7 @@ async function enterLoading(cfg) {
     app.terrain.group.add(biomes);
     app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     app.terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    app.terrain.clearBuildingsAround = biomes.userData.clearAround || null;   // 碉堡淨空:移除重疊建物(game.js 碉堡進場時呼叫)
     // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);

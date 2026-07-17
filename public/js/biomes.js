@@ -3725,6 +3725,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const cellMasts = [];    // 行動基地台桅桿
   const cellPanels = [];   // 基地台三向扇區天線
   const wallSigns = [];    // 牆面直式招牌:建物垂直面唯一允許的附著物(垂直長條、微凸牆面)
+  const bldStart = group.children.length;   // 碉堡淨空用:此後加入 group 的都是建物 InstancedMesh(供 clearAround 篩選)
   {
     const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
@@ -3759,7 +3760,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           }
           const palC = pal[((i * 2654435761) >>> 0) % pal.length];
           inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
-          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1 });
+          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1 });
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
@@ -4112,6 +4113,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(am);
     }
   }
+  const bldMeshes = group.children.slice(bldStart);   // 建物實例(不含之後的地標/植被/道路),供 clearAround 篩選
+  const landmarkG = [];                               // 地標群組 + 佔地半徑(clearAround 一併隱藏整棟)
   // 特殊地標(超尺度 + 碰撞柱)
   onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
@@ -4133,8 +4136,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     g.position.set(lm.x, gy - 0.3, lm.z);
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
+    landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用
     const col = LANDMARK_COL[lm.type];
-    if (col) blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: col.r * sc, h: col.h * sc + 1 });
+    if (col) blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: col.r * sc, h: col.h * sc + 1, bld: 1 });
   }
 
   // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
@@ -4211,6 +4215,35 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     rails: railLines,
     falls: fallsBuilt,
     osm: !!(osm && osm.length),
+  };
+  // 碉堡淨空(反應式):碉堡進場時 game.js 呼叫。移除「與碉堡淨空區重疊」的建物(縮 0 隱形)+ 地標(整棟隱藏),
+  // 並同步清掉這些建物/地標「自己的」碰撞柱(bld 標記)——植被/巨岩/橋墩(非建物)一律保留機體與碰撞。
+  // 視覺與碰撞用同一個「圓重疊」判定(距離 − 半徑 < r)⇒ A6 砲火/碰撞一致:不會出現看得見卻穿得過、
+  // 或看不見卻擋彈的物件。回傳是否有動到碰撞柱(供 game.js 決定是否重建 _blockGrid)。
+  group.userData.clearAround = (wx, wz, r) => {
+    const P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), M = new THREE.Matrix4();
+    for (const o of bldMeshes) {
+      if (!o.isInstancedMesh) continue;
+      let hit = false;
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, M); M.decompose(P, Q, S);
+        if (S.x === 0) continue;   // 已清過(縮 0)略過
+        // 圓重疊:實例佔地半徑 = hypot(寬,深)/2×0.8(與建物碰撞柱 r 同式)
+        if (Math.hypot(P.x - wx, P.z - wz) - Math.hypot(S.x, S.z) / 2 * 0.8 < r) { M.makeScale(0, 0, 0); o.setMatrixAt(i, M); hit = true; }
+      }
+      if (hit) o.instanceMatrix.needsUpdate = true;
+    }
+    for (const lm of landmarkG) {
+      if (!lm.cleared && Math.hypot(lm.x - wx, lm.z - wz) - lm.r < r) { lm.g.visible = false; lm.cleared = true; }
+    }
+    // 同步清建物/地標碰撞柱(bld=1):in-place splice 讓 terrain.blockers(同一陣列參照)一併生效
+    let removed = false;
+    const blk = group.userData.blockers;
+    for (let i = blk.length - 1; i >= 0; i--) {
+      const b = blk[i];
+      if (b.bld && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r) { blk.splice(i, 1); removed = true; }
+    }
+    return removed;
   };
   return group;
 }

@@ -237,6 +237,12 @@
       <div class="side-slots"></div>
     </div>
   </div>
+  <!-- 準備/開戰/離開:置於軍團(陣營)選擇正下方 -->
+  <div class="row room-actions">
+    <button id="readyBtn" class="btn big" disabled>◆ 準備完成</button>
+    <button id="startBattleBtn" class="btn big steel-btn" disabled>▶▶ 開戰</button>
+    <button id="leaveRoomBtn" class="btn">離開</button>
+  </div>
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
     <div class="panel-head" id="charSectionHead">▍選擇角色(不選 = 隨機)</div>
@@ -259,12 +265,6 @@
   </div>
   <div class="spec-list" id="specList"></div>
   <p class="room-hint" id="roomHint"></p>
-
-  <div class="row room-actions">
-    <button id="readyBtn" class="btn big" disabled>◆ 準備完成</button>
-    <button id="startBattleBtn" class="btn big steel-btn" disabled>▶▶ 開戰</button>
-    <button id="leaveRoomBtn" class="btn">離開</button>
-  </div>
   <p class="room-note">點陣營卡片入座/離座;房主可在空位補「電腦玩家」單人開戰。小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿兵線推進。</p>
 </div>
 

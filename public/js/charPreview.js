@@ -552,6 +552,11 @@ export class CharPreview {
     return mode;
   }
 
+  /** 展示台單鍵循環三態:靜止 → 慢速 → 正常 → 靜止;沿用 setRun 這一個縫。回傳切換後的 mode。 */
+  cycleRun() {
+    return this.setRun({ idle: 'slow', slow: 'normal', normal: 'idle' }[this.runMode] || 'slow');
+  }
+
   /** 移動演示開關(雙擊機體 / W 鍵便捷鍵):靜止 ↔ 上次的跑速(預設正常);回傳切換後是否在移動 */
   toggleMove() {
     this.setRun(this.moving ? 'idle' : (this.runMode === 'slow' ? 'slow' : 'normal'));
@@ -677,7 +682,7 @@ export class CharPreview {
     };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
-    c.addEventListener('dblclick', () => { this.onMove?.(this.toggleMove(), this.speed); });
+    c.addEventListener('dblclick', () => { this.cycleRun(); });   // 雙擊也走單鍵循環(setRun 內部已觸發 onMove)
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
       this._auto = false;   // 手動縮放後不再自動取景,直到下次施展招式

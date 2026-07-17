@@ -105,7 +105,11 @@ export class BattleSim {
       if (![x, z, r, h].every(Number.isFinite)) continue;
       occ.push([x, z, Math.min(60, Math.max(0.5, r)), Math.min(300, Math.max(1, h))]);
     }
-    this.worldOcc = occ;
+    // 碉堡淨空:清掉與野營重疊(BLD_CLEAR_R 內)的遮蔽柱 —— 客戶端已移除這些重疊建物,
+    // 伺服器 LOS 同步不再當它們擋線(setWorld 契約:上傳資料只能「減少」遮蔽,合規)。
+    this.worldOcc = this.camps?.length
+      ? occ.filter((o) => !this.camps.some((c) => dist2d(o[0], o[1], c.x, c.z) < THIRD.BLD_CLEAR_R))
+      : occ;
     const cor = [];
     for (const c of Array.isArray(w.cor) ? w.cor.slice(0, 2400) : []) {
       if (!Array.isArray(c) || c.length < 5) continue;
@@ -553,7 +557,7 @@ export class BattleSim {
       const total = cum[cum.length - 1];
       for (const dir of [-1, 1]) {
         const type = dir < 0 ? 'GUER' : 'MILI';
-        let best = null, bestScore = -Infinity;
+        let best = null, bestScore = -Infinity, bestN = null;
         // 兩輪取樣:第二輪放寬「側偏上限」(硬約束照舊)—— 山谷/小圖的合法區常在斜後方遠處
         for (const maxOff of [THIRD.LANE_MAX, THIRD.LANE_MAX * 1.6]) {
           for (let tries = 0; tries < 320; tries++) {
@@ -567,19 +571,21 @@ export class BattleSim {
             if (this.camps.some((c) => dist2d(x, z, c.x, c.z) < THIRD.SPACING)) continue;
             if ((this.hazBlockers || []).some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 16)) continue;
             const score = -Math.abs(dl - (THIRD.LANE_MIN + 90));       // 偏好取樣帶中段
-            if (score > bestScore) { bestScore = score; best = [x, z]; }
+            if (score > bestScore) { bestScore = score; best = [x, z]; bestN = [p.nx * dir, p.nz * dir]; }
           }
           if (best) break;
         }
         if (!best) continue;
-        this._spawnCamp(type, li, best[0], best[1]);
+        this._spawnCamp(type, li, best[0], best[1], bestN);
       }
     }
   }
 
-  _spawnCamp(type, li, x, z) {
+  _spawnCamp(type, li, x, z, outN) {
     const ci = this.camps.length;
-    const camp = { type, li, x, z, bunker: null, bunkerRem: 0, pool: [] };
+    // 出堡/重生朝向 = 兵線方向(外法線反向):駐守與重生集中在朝戰場的清空側(_campHome 用)
+    const exitA = outN ? Math.atan2(-outN[1], -outN[0]) : 0;
+    const camp = { type, li, x, z, exitA, bunker: null, bunkerRem: 0, pool: [] };
     this.camps.push(camp);
     camp.bunker = this._spawnBunker(camp, ci);
     THIRD.COMP[type].forEach((kind, i) => this._spawnCampUnit(camp, ci, kind, i));
@@ -601,7 +607,10 @@ export class BattleSim {
 
   /** 團員的駐守位(碉堡周圍等角環列) */
   _campHome(camp, slot) {
-    const a = (slot || 0) / THIRD.COMP[camp.type].length * Math.PI * 2;
+    const n = THIRD.COMP[camp.type].length;
+    // 保留清空側:駐守/重生位集中在 exitA ± EXIT_ARC 的扇形(朝兵線),而非整圈環列 ⇒ 碉堡至少一面清空作重生點
+    const spread = n > 1 ? ((slot || 0) / (n - 1) - 0.5) * 2 * THIRD.EXIT_ARC : 0;
+    const a = (camp.exitA || 0) + spread;
     return [camp.x + Math.cos(a) * THIRD.FORM_R, camp.z + Math.sin(a) * THIRD.FORM_R];
   }
 
@@ -1983,14 +1992,17 @@ export class BattleSim {
       if (t.sq && t.sq.bodies.length > 1) {
         if (this._aliveN(t) === 0) {              // 這一架墜毀 = 三艘全滅 → 追加時間、三架一起延後重生
           t.sq.wipes = (t.sq.wipes || 0) + 1;
-          const at = this.t + r.base + r.perDeath * t.sq.wipes;
-          for (const b of t.sq.bodies) b.respawnAt = at;
+          const rs = r.base + r.perDeath * t.sq.wipes;   // 重生倒數秒數(整隊全滅)
+          for (const b of t.sq.bodies) b.respawnAt = this.t + rs;
+          this._deathPenalty(t, rs);              // DOTA 式陣亡罰金:整隊全滅才扣一次(不三重收費)
         } else {
-          t.respawnAt = this.t + r.base;          // 尚有僚機存活 → 個別快速重生,不累加
+          t.respawnAt = this.t + r.base;          // 尚有僚機存活 → 個別快速重生,不累加(玩家未真正陣亡,不罰金)
         }
       } else {
         t.deaths = (t.deaths || 0) + 1;
-        t.respawnAt = this.t + r.base + r.perDeath * this.stats[t.side].deaths;
+        const rs = r.base + r.perDeath * this.stats[t.side].deaths;   // 重生倒數秒數(單機累計)
+        t.respawnAt = this.t + rs;
+        this._deathPenalty(t, rs);
       }
       // 死亡多發生在 tick() 之外的訊息處理當下(detonate/hit),respawnAt 用的是
       // 上一個 tick 結束時的 this.t;若 r.base=0(無人機),下一個 tick 就會立刻
@@ -2028,6 +2040,17 @@ export class BattleSim {
       this.winner = OTHER_SIDE[t.side];
       this.events.push({ e: 'gameOver', winner: this.winner });
     }
+  }
+
+  /**
+   * DOTA 式陣亡罰金:額外自玩家共用金錢扣除「重生倒數秒數 × ECON.DEATH_PENALTY_PER_S」。
+   * 只在玩家真正陣亡時呼叫(機甲單機死亡 / 無人機整隊全滅)—— 個別僚機墜毀不呼叫,避免三重收費。
+   * money 是 sq.ps 共用欄位(SQUAD_SHARED),扣在死亡機體上即扣整隊共用錢包;不透支(floor 0)。
+   */
+  _deathPenalty(t, respawnSeconds) {
+    const pen = respawnSeconds * ECON.DEATH_PENALTY_PER_S;
+    t.money = Math.max(0, t.money - pen);
+    this.events.push({ e: 'penalty', pid: t.pid, side: t.side, v: Math.round(pen) });
   }
 
   // ---------- 主迴圈 ----------
