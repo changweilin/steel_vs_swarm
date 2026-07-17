@@ -152,7 +152,8 @@ export class CharPreview {
     this.charId = null;
     this.isUnit = true;
     if (!UNITS[kind]) return;
-    const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}` : `creep:${kind}`;
+    const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}`
+      : kind === 'bunker' ? 'bunker' : `creep:${kind}`;   // 第三方碉堡有自己的 FALLBACK 鍵
     const { group, mixer } = makeUnit(mapKind, side);
     this.unit = group;
     this.unit.userData.side = side;

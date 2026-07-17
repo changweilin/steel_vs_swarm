@@ -8,6 +8,7 @@ import {
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, PROG,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, SQUAD, LOS,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
+  THIRD, isThirdSide, sideInfo,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -887,7 +888,7 @@ function unitStatCells(kind) {
   return rows.map(([label, v, k]) => statCell(label, v, UNIT_BAR_MAX[k])).join('');
 }
 const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
-const sideName = (side) => SIDES[side]?.name || side;
+const sideName = (side) => sideInfo(side).name;   // SWARM/STEEL/第三方(GUER/MILI)統一查表
 const unitClassLabel = (kind) => CLASS_NAME[TARGET_CLASS[kind]] || '';
 
 // ---- NPC / 建築武器(整形成 heroWeapon 形狀供展示台 playUnitWeapon)----
@@ -923,6 +924,11 @@ function unitWeaponRow(w, i) {
     <div><b>${esc(w.name)}</b> <span class="cd-fx">${WTYPE_NAME[w.type] || w.type}</span> <span class="cd-play">▶</span>
     <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
+/** 碉堡專用說明列(無武裝工事,武器列以駐防機制代替;數值一律讀 THIRD,不手抄) */
+const bunkerNoteRow = () => `<div class="cd-row">
+  <span class="cd-key">駐防</span>
+  <div><b>無武裝工事</b>
+  <div class="cd-nums">駐守 ${THIRD.GAR_CAP} 名步槍兵:免傷 ・ 回血 ${Math.round(THIRD.GAR_REGEN_PS * 100)}%/s ・ 射程 ×${THIRD.GAR_RANGE_F} ・ 被拆 ${THIRD.BUNKER_RESPAWN_S / 60} 分鐘原地重生</div></div></div>`;
 
 /** 建一台展示台(角色 'char' / NPC 'unit' 各一,持久重用):自帶 canvas + shell + CharPreview 實例。
  *  按鈕以 class 定位 + 閉包綁定(兩台 shell 並存,不可用共用 id)。 */
@@ -1025,7 +1031,8 @@ function stageKitHTML(st) {
     return charWeaponRow(id, 'light', '左鍵') + charWeaponRow(id, 'heavy', '右鍵')
       + charAbilityRow(id, 'skill', 'Q') + charAbilityRow(id, 'ult', 'E');
   }
-  return (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
+  return subject.kind === 'bunker' ? bunkerNoteRow()
+    : (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
 }
 /** modal 側欄面板(標題/數值/武器/操作提示)依目前放大的 role 填 */
 function fillModalPanels(role) {
@@ -1144,11 +1151,10 @@ function renderModalPicks() {
   } else { cg.parentElement.style.display = 'none'; }
 
   const side = app.unitSide || app.pickSide || 'STEEL';
-  $('modalUnitToggle').innerHTML = ['STEEL', 'SWARM'].map((sd) =>
-    `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-muside="${sd}">${esc(SIDES[sd].name)}</button>`).join('');
+  $('modalUnitToggle').innerHTML = sideToggleHTML(side, 'muside');
   const ug = $('modalUnitGrid');
   ug.innerHTML = '';
-  for (const kind of UNIT_ROSTER) {
+  for (const kind of unitRosterOf(side)) {
     const b = document.createElement('button');
     b.className = 'unit-btn' + (app.stages.unit?.subject?.kind === kind && app.stages.unit?.subject?.side === side ? ' on' : '');
     b.innerHTML = `<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
@@ -1172,8 +1178,13 @@ $('modalUnitToggle').addEventListener('click', (e) => {
   renderModalPicks();
 });
 
-// ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營,與角色卡同框並存) =================
+// ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營 + 第三方,與角色卡同框並存) =================
 const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
+const UNIT_SIDES = ['STEEL', 'SWARM', 'GUER', 'MILI'];   // 圖鑑可切陣營(2026-07-17 起含第三方)
+// 第三方單位牆 = 編制唯一真相 THIRD.COMP(去重)+ 碉堡;雙陣營維持現役清單
+const unitRosterOf = (side) => isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
+const sideToggleHTML = (side, attr) => UNIT_SIDES.map((sd) =>
+  `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-${attr}="${sd}">${esc(sideInfo(sd).name)}</button>`).join('');
 const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
 function unitDetailHTML(kind, side) {
   const u = UNITS[kind];
@@ -1183,7 +1194,7 @@ function unitDetailHTML(kind, side) {
     <div class="cd-body">
       <div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
       <div class="cd-stats">${unitStatCells(kind)}</div>
-      <div class="cd-kit">${list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
+      <div class="cd-kit">${kind === 'bunker' ? bunkerNoteRow() : list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
       <div class="cd-foot">點武器列播放攻擊演出;拖曳旋轉、滾輪縮放,「放大」開獨立視窗。</div>
     </div>
   </div>`;
@@ -1200,11 +1211,13 @@ function showUnitDetail(kind, side) {
 /** 圖鑑陣營切換 + 單位牆(highlight);不重建 detail(避免每次房間同步重載模型) */
 function renderUnitGrid(side) {
   app.unitSide = side;
-  $('unitSideToggle').innerHTML = ['STEEL', 'SWARM'].map((sd) =>
-    `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-uside="${sd}">${esc(SIDES[sd].name)}</button>`).join('');
+  const roster = unitRosterOf(side);
+  // 切到沒有這個兵種的陣營(第三方沒有塔/主堡、雙陣營沒有碉堡)→ 落到該陣營第一個單位
+  if (app.unitKind && !roster.includes(app.unitKind)) { app.unitKind = roster[0]; app.unitShown = null; }
+  $('unitSideToggle').innerHTML = sideToggleHTML(side, 'uside');
   const grid = $('unitGrid');
   grid.innerHTML = '';
-  for (const kind of UNIT_ROSTER) {
+  for (const kind of roster) {
     const b = document.createElement('button');
     b.className = 'unit-btn' + (app.unitKind === kind ? ' on' : '');
     b.innerHTML = `<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
