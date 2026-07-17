@@ -342,12 +342,14 @@
     </div>
   </div>
 
-  <!-- 死亡 -->
-  <div id="deadOverlay" class="overlay" style="display:none">
-    <div class="overlay-box dead-box">
+  <!-- 死亡:重生倒數 + 最前線砲塔視角小視窗(不再跳出離開遊戲的詢問) -->
+  <div id="deadOverlay" class="overlay dead-overlay" style="display:none">
+    <div class="overlay-box dead-box dead-panel">
       <div class="dead-title">座機被擊毀</div>
       <div class="dead-sub">重生倒數 <span id="deadTimer">--</span> 秒</div>
+      <div class="dead-hint">重生後點擊畫面繼續操作 ・ B 陣亡購物</div>
     </div>
+    <div id="deadCam" class="dead-cam"><span class="dead-cam-cap">最前線砲塔視角</span></div>
   </div>
 
   <!-- 戰場選單(ESC / 切走視窗:指標解鎖時跳出)-->

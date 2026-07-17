@@ -504,11 +504,12 @@ const AIRDROP_TONE = {   // S 銅 / M 銀 / L 金:越大越亮眼
 export function buildAirdrop(sizeKey = 'S') {
   const sc = sizeKey === 'L' ? 1.7 : sizeKey === 'M' ? 1.35 : 1.0;
   const tone = AIRDROP_TONE[sizeKey] || AIRDROP_TONE.S;
+  const toneC = new THREE.Color(tone);
   const g = new THREE.Group();
 
-  // 木箱(bob 動畫的主體;game.js 以 userData.crate 驅動起伏)
+  // 木箱(bob 動畫的主體;game.js 以 userData.crate 驅動起伏)—— 2026-07-17 加大更醒目
   const crate = new THREE.Group();
-  const s = 1.2 * sc;
+  const s = 1.75 * sc;
   mesh(crate, box(s, s * 0.85, s), 0x5a6b3a, 0, s * 0.5, 0,
     { emissive: new THREE.Color(0x232b16), emissiveIntensity: 0.55 });
   mesh(crate, box(s * 1.05, s * 0.16, s * 0.28), tone, 0, s * 0.5, 0);   // 打包束帶(稀有色)
@@ -519,19 +520,19 @@ export function buildAirdrop(sizeKey = 'S') {
   g.add(crate);
   g.userData.crate = crate;
 
-  // 降落傘(落地後 game.js 隱藏 userData.chute)
+  // 空投傘(飄降中顯示;落地後 game.js 隱藏 userData.chute,改顯示地面攤開傘)
   const chute = new THREE.Group();
-  const cr = 2.3 * sc, chY = 4.2 * sc;
-  mesh(chute, cone(cr, 1.5 * sc, 12), tone, 0, chY, 0,
-    { emissive: new THREE.Color(tone), emissiveIntensity: 0.35 });
-  mesh(chute, cyl(cr, cr * 0.55, 0.25 * sc, 12), 0xd7dbe2, 0, chY - 0.7 * sc, 0);
+  const cr = 3.0 * sc, chY = 5.4 * sc;
+  mesh(chute, cone(cr, 1.9 * sc, 12), tone, 0, chY, 0,
+    { emissive: toneC, emissiveIntensity: 0.35 });
+  mesh(chute, cyl(cr, cr * 0.55, 0.28 * sc, 12), 0xd7dbe2, 0, chY - 0.9 * sc, 0);
   for (let i = 0; i < 4; i++) {   // 吊索:傘緣 → 箱角
     const a = i * Math.PI / 2 + Math.PI / 4;
     const rimX = Math.cos(a) * cr * 0.7, rimZ = Math.sin(a) * cr * 0.7;
     const boxX = Math.cos(a) * s * 0.5, boxZ = Math.sin(a) * s * 0.5;
-    const ln = new THREE.Mesh(cyl(0.04, 0.04, chY - 0.9 * sc, 4),
+    const ln = new THREE.Mesh(cyl(0.05, 0.05, chY - 1.1 * sc, 4),
       new THREE.MeshBasicMaterial({ color: 0xcfd4db }));
-    ln.position.set((rimX + boxX) / 2, (chY - 0.7 * sc + s) / 2, (rimZ + boxZ) / 2);
+    ln.position.set((rimX + boxX) / 2, (chY - 0.9 * sc + s) / 2, (rimZ + boxZ) / 2);
     ln.lookAt(boxX, s, boxZ);
     ln.rotateX(Math.PI / 2);
     chute.add(ln);
@@ -539,13 +540,50 @@ export function buildAirdrop(sizeKey = 'S') {
   g.add(chute);
   g.userData.chute = chute;
 
-  // 落地光暈(稀有色)
-  const halo = new THREE.Mesh(
-    new THREE.RingGeometry(1.1 * sc, 1.5 * sc, 20),
-    new THREE.MeshBasicMaterial({ color: tone, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+  // 落地攤開的降落傘:攤在箱子旁地面的傘布(壓扁淺穹頂 = 傘幅切面)+ 散落吊索(落地後顯示)
+  const gchute = new THREE.Group();
+  const gr = 3.4 * sc, off = s * 0.5 + gr * 0.72;               // 傘布中心 = 箱側邊外
+  const canopy = mesh(gchute, cone(gr, 0.9 * sc, 14), tone, off, 0.05, 0,
+    { emissive: toneC, emissiveIntensity: 0.26 });
+  canopy.scale.y = 0.3;                                          // 壓扁 = 攤在地面的傘布
+  mesh(gchute, cyl(gr * 0.16, gr * 0.16, 0.12 * sc, 10), 0xd7dbe2, off, 0.28 * sc, 0);  // 傘頂氣孔帽
+  for (let i = 0; i < 4; i++) {   // 吊索:箱角 → 攤開的傘緣(散落感)
+    const a = i * Math.PI / 2 + Math.PI / 4;
+    const boxX = Math.cos(a) * s * 0.5, boxZ = Math.sin(a) * s * 0.5;
+    const rimX = off + Math.cos(a) * gr * 0.82, rimZ = Math.sin(a) * gr * 0.82;
+    const ln = new THREE.Mesh(cyl(0.05, 0.05, Math.hypot(rimX - boxX, rimZ - boxZ), 4),
+      new THREE.MeshBasicMaterial({ color: 0xcfd4db }));
+    ln.position.set((rimX + boxX) / 2, 0.16, (rimZ + boxZ) / 2);
+    ln.lookAt(rimX, 0.16, rimZ);
+    ln.rotateX(Math.PI / 2);
+    gchute.add(ln);
+  }
+  gchute.visible = false;
+  g.add(gchute);
+  g.userData.groundChute = gchute;
+
+  // 醒目提示(落地後顯示):地面光環 + additive 光柱信標(遠處也看得到)
+  const halo = new THREE.Group();
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.9 * sc, 2.8 * sc, 24),
+    new THREE.MeshBasicMaterial({ color: tone, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false }),
   );
-  halo.rotation.x = -Math.PI / 2;
-  halo.position.y = 0.14;
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.14;
+  ring.userData.noOutline = true;
+  halo.add(ring);
+  const beamH = 24 * sc;
+  const beam = new THREE.Mesh(
+    cyl(1.6 * sc, 0.7 * sc, beamH, 12),
+    new THREE.MeshBasicMaterial({
+      color: tone, transparent: true, opacity: 0.17, side: THREE.DoubleSide,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    }),
+  );
+  beam.position.y = beamH / 2;
+  beam.userData.noOutline = true;
+  halo.add(beam);
+  halo.userData.noOutline = true;
   g.add(halo);
   g.userData.halo = halo;
 

@@ -9,6 +9,7 @@ import {
   vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
+  ALTITUDE, altF, isGunnery,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -530,9 +531,9 @@ export class BattleSim {
   // ---------- 第三方軍隊(2026-07-17;DOTA 野區:游擊隊 / 武裝民兵,見 data.js THIRD)----------
   /**
    * 佈營:每條兵線兩側各一團(左 = 游擊隊 GUER、右 = 武裝民兵 MILI;總團數 = 兵線數 × 2)。
-   * 硬約束(MUST,不放寬):離雙方每座砲塔 ≥ tower.range × CLEAR_F、離兩主堡 ≥ max(主堡射程) × CLEAR_F
-   * —— 野營永遠在正規工事火網之外;另離所有兵線走廊 ≥ LANE_MIN(> NPC 最大射程)⇒ 不掃兵線。
-   * 取樣不到合法點(地圖太小)→ 該團不生成(寧缺勿錯)。
+   * 硬不變式:離雙方每座砲塔 ≥ tower.range × CLEAR_F、離兩主堡 ≥ max(主堡射程) × CLEAR_F ——
+   * 淨空 > max(塔射程, 野營最大射程) ⇒ 雙方互不可及、野營永遠在正規工事火網之外(CLEAR_F 只准 > 1.0);
+   * 另離所有兵線走廊 ≥ LANE_MIN(> NPC 最大射程)⇒ 不掃兵線。取樣不到合法點 → 該團不生成(寧缺勿錯)。
    */
   _seedCamps() {
     this.camps = [];
@@ -980,6 +981,31 @@ export class BattleSim {
       * this._buffMul(h, 'dmg');
   }
 
+  /** 空中判定:無人機/直升機/餌機/自殺機恆算飛行;其餘(機甲/變形/NPC)以高度 ≥ AA_MIN_ALT 論 */
+  _airborne(e) {
+    return e.kind === 'drone' || e.kind === 'heli' || e.kind === 'decoy' || e.kind === 'kami'
+      || (e.y || 0) >= GAME.AA_MIN_ALT;
+  }
+
+  /**
+   * 高度制空「傷害」乘數(見 data.js ALTITUDE):只作用於輕武器/機槍類直射,對空↔對地反向。
+   *   高空無人機 → 地面:×(1 + DMG·f)  /  地面單位 → 高空無人機:×(1 − DMG·f)  /  其餘 = 1
+   */
+  _altDmg(shooter, target, def) {
+    if (!shooter || !target || !isGunnery(def)) return 1;
+    if (shooter.kind === 'drone' && !this._airborne(target)) return 1 + ALTITUDE.DMG * altF(shooter.y);
+    if (target.kind === 'drone' && !this._airborne(shooter)) return 1 - ALTITUDE.DMG * altF(target.y);
+    return 1;
+  }
+
+  /** 高度制空「射程」乘數(見 _altDmg):高空無人機對地拉遠、地面對高空無人機縮短 */
+  _altRange(shooter, target, def) {
+    if (!shooter || !target || !isGunnery(def)) return 1;
+    if (shooter.kind === 'drone' && !this._airborne(target)) return 1 + ALTITUDE.RANGE * altF(shooter.y);
+    if (target.kind === 'drone' && !this._airborne(shooter)) return 1 - ALTITUDE.RANGE * altF(target.y);
+    return 1;
+  }
+
   /** 爆擊擲骰(FPS:直擊武器限定,AoE 不爆);爆中推事件給客戶端跳橘字 */
   _rollCrit(h, def, dmg, t) {
     if (!def.crit || Math.random() >= def.crit) return dmg;
@@ -1076,7 +1102,7 @@ export class BattleSim {
     if (wp.def.needAim && !h.aiming) return;   // 重武器需瞄準模式才能開火
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > wp.def.range * 1.25) return;
+    if (d3 > wp.def.range * this._altRange(h, t, wp.def) * 1.25) return;   // 高度制空:對地拉遠/對高空無人機縮短
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -1095,7 +1121,7 @@ export class BattleSim {
       return;
     }
     // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)
-    let dmg = this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3);
+    let dmg = this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(h, t, wp.def);
     if (marked) {
       dmg *= wp.def.critX || VITALS.CRIT_X;
       this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(dmg) });
@@ -1119,14 +1145,14 @@ export class BattleSim {
       if (b === h || b.dead) continue;
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-      if (d3 > def.range * 1.25) continue;
+      if (d3 > def.range * this._altRange(b, t, def) * 1.25) continue;   // 高度制空(見 heroHit)
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
       this.events.push({ e: 'shot', pid: b.pid, slot: def.id, from: [b.x, b.z], to: [t.x, t.z],
         ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: b.side });
       if (def.id === 'light' && this._dodges(t)) continue;   // 閃避:僚機這一發也被閃開
-      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
+      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3) * this._altDmg(b, t, def), t);
       this._applyHitEmp(b, def, t);
       this._damage(t, dmg, b, def.pen);
     }
@@ -1171,7 +1197,7 @@ export class BattleSim {
     const wp = this._heroWeapon(h, w);
     if (!wp) return false;
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > wp.def.range) return false;
+    if (d3 > wp.def.range * this._altRange(h, t, wp.def)) return false;   // 高度制空(見 heroHit)
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
     if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
@@ -1186,7 +1212,7 @@ export class BattleSim {
       this._echo(h, t, wp.def);
       return true;
     }
-    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
+    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(h, t, wp.def), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
     this._echo(h, t, wp.def);
@@ -1246,13 +1272,13 @@ export class BattleSim {
         const tx = t.x - b.x, tz = t.z - b.z;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-        if (d3 > wp.def.range * 1.25) continue;
+        if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25) continue;   // 高度制空(散彈輕武器)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
         if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3), b, wp.def.pen);
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(b, t, wp.def), b, wp.def.pen);
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -2103,7 +2129,7 @@ export class BattleSim {
           if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target)) {
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
-            this._damage(target, u.dmg, e, wd?.pen || 0);
+            this._damage(target, u.dmg * this._altDmg(e, target, wd), e, wd?.pen || 0);   // 高度制空:地面槍械對高空無人機減傷
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -2632,7 +2658,7 @@ export class BattleSim {
       if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
         && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) continue;
       let d = dist2d(e.x, e.z, t.x, t.z);
-      if (d > u.range) continue;
+      if (d > u.range * this._altRange(e, t, wd)) continue;   // 高度制空:地面槍械對高空無人機縮短射程
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
       if (wd) d /= vsMult(wd, t.kind);             // 優先打武器克制的目標類型
       if (d >= bestD) continue;

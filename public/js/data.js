@@ -68,6 +68,12 @@ export const MAPGEO = {
   // ver6:REAL_SCALE 0.125 → 1(遊戲世界 = 真實世界 1:1)
   // ver7:REAL_SCALE 1 → 0.5(遊戲空間放大 2×,真實道路兵線不變)
   GEO_SCALE_VER: 7,
+  // 地圖外擴倍率(2026-07-17):battleBBox 繞中心等比放大,**兵線/主堡/塔位一律不動**。
+  // 目的:第三方野營的佈營硬約束(離每座砲塔 ≥ 射程×CLEAR_F=388m)在真實地圖尺寸
+  //   (L1 兩堡遊戲距離 ≈962m)下,舊 5% pad 幾乎無側翼合法區 → L1 完全不生成野營。
+  //   放大側翼淨空(不動兵線 ⇒ 不需重烤 venueLanes、不需 +GEO_SCALE_VER:battleBBox 為
+  //   執行期由 config 推導,「我的最愛」存的是 lanes/sizeM/bases 而非 bbox,不受影響)。
+  MAP_EXPAND: 1.33,
   // 兵線選路坡度上限:真實道路沿線坡度超過此角度即淘汰(僅作用於真實 OSRM 路線)。
   // 16° ≈ 29% grade,會濾掉「陡但仍存在」的山路。
   MAX_ROAD_GRADE_DEG: 16,
@@ -141,8 +147,10 @@ export function battleBBox(cfg) {
   minLng = Math.min(minLng, cfg.center.lng - dLng);
   maxLng = Math.max(maxLng, cfg.center.lng + dLng);
 
-  const padLat = (maxLat - minLat) * 0.05, padLng = (maxLng - minLng) * 0.05;
-  return { minLat: minLat - padLat, maxLat: maxLat + padLat, minLng: minLng - padLng, maxLng: maxLng + padLng };
+  // 3) 繞 bbox 中心等比放大 MAP_EXPAND(兵線不動;取代舊 5% pad,為第三方野營留側翼合法區)
+  const cLat = (minLat + maxLat) / 2, cLng = (minLng + maxLng) / 2;
+  const hLat = (maxLat - minLat) / 2 * MAPGEO.MAP_EXPAND, hLng = (maxLng - minLng) / 2 * MAPGEO.MAP_EXPAND;
+  return { minLat: cLat - hLat, maxLat: cLat + hLat, minLng: cLng - hLng, maxLng: cLng + hLng };
 }
 
 /**
@@ -243,6 +251,20 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
+// ---- 高度制空修正(2026-07-17)----
+// 無人機飛越高:地面槍械對它越無力、它自身槍械對地越強(制空優勢)。純作用於「輕武器 / 機槍類直射」,
+// 對空↔對地互為反向,f = clamp(無人機離地高度 / REF_M, 0, 1):
+//   地面單位 → 高空無人機:傷害 ×(1 − DMG·f)、射程 ×(1 − RANGE·f)
+//   高空無人機 → 地面目標:傷害 ×(1 + DMG·f)、射程 ×(1 + RANGE·f)
+// REF_M = 40(= GAME.AA_MIN_ALT 進入 SAM 空域的高度);傷害差距上限 33%、射程 16%。
+export const ALTITUDE = { REF_M: 40, DMG: 0.33, RANGE: 0.16 };
+export const altF = (y) => Math.max(0, Math.min(1, (y || 0) / ALTITUDE.REF_M));
+// 是否「輕武器 / 機槍類直射武器」:英雄輕武器(含散彈/電漿輕武器,全算)、機槍型重武器(type gun)、
+// NPC 直射機槍(rgun:無爆風 r、非瞄準、射速 ≥2;NPC 武器無 id/type 欄以資辨識)。
+export const isGunnery = (def) => !!def && (
+  def.id === 'light' || def.type === 'gun'
+  || (def.id == null && def.type == null && !def.r && !def.needAim && (def.rate || 0) >= 2)
+);
 // SQUAD:蜂群玩家 = 單架無人機(2026-07-17 起;舊制為 N 架小隊,現 N=1)。
 // 生存值(HP/護盾/護甲)= 機甲平均的 HP_F(80%);傷害 = 機甲全額(DMG=1,單機不折)。
 // 傷害折算仍住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
@@ -1335,7 +1357,7 @@ UNITS.civilian = {
 
 // ---- 第三方軍隊(2026-07-17;遠離兵線的中立武裝,DOTA 野區思想:交戰可獲得金錢)----
 // 每條兵線兩側各駐守一團(總團數 = 兵線數 × 2):游擊隊 GUER / 武裝民兵 MILI 各踞一側。
-// 佈營硬約束:離雙方每座砲塔與主堡的距離 ≥ 該工事射程 × CLEAR_F(1.5)—— 絕不與正規戰線交火;
+// 佈營硬約束:離雙方每座砲塔與主堡的距離 ≥ 該工事射程 × CLEAR_F(1.25 = 塔 388m)—— 絕不與正規戰線交火;
 // 另離兵線走廊 ≥ LANE_MIN(> 全 NPC 最大射程 220 + 緩衝 ⇒ 兵線上的部隊不會被野營射到)。
 // 開戰即生成,單位走一般迷霧規則(非 neutral、碉堡非 tower/base)⇒ 開始時全數藏在戰爭迷霧。
 // 行為:駐守碉堡周圍;追擊離碉堡 > TETHER_M 立即撤回(HOME_R 內解除);
@@ -1351,7 +1373,9 @@ export const THIRD = {
     GUER: ['soldier', 'soldier', 'soldier', 'rocketeer', 'tank'],
     MILI: ['soldier', 'soldier', 'soldier', 'howitzer', 'heli'],
   },
-  CLEAR_F: 1.5,          // 離砲塔/主堡淨空 = 工事射程 × 此倍率(硬約束,MUST ≥ 1.5)
+  CLEAR_F: 1.25,         // 離砲塔/主堡淨空 = 工事射程 × 此倍率(= 塔 388m)。硬不變式:淨空 > max(塔射程 310,
+                         //   野營最大射程 220)= 310 ⇒ 雙方互不可及、絕不交火 ⇒ MUST > 1.0(此值留 78m 緩衝)。
+                         //   2026-07-18:1.5→1.25 讓 L2(兩線相擠)也生滿野營;改此值 MUST 重跑 camp 冒煙(見 §3)
   LANE_MIN: 260,         // 離兵線走廊最小距離(> NPC 最大射程 220 + 40 緩衝:野營不掃兵線)
   LANE_MAX: 560,         // 佈營取樣最遠側偏
   SPACING: 140,          // 營地彼此最小間距
@@ -1639,8 +1663,9 @@ export const AIRDROP = {
   TTL_S: 180,              // 單箱存活上限(3 分鐘,過期自毀)
   LAND_S: 1.6,             // 落地時間:降落傘飄降期間不可拾取(客戶端同步演出下降 DROP_H)
   DROP_H: 55,              // 空投起始高度(公尺;純客戶端下降動畫用)
-  PER_PLAYER: 0.5,         // 批量 = ceil(玩家數 × 此值)
-  MAX_LIVE: 12,            // 場上同時存在上限(防堆積)
+  PER_PLAYER: 2.0,         // 批量 = ceil(玩家數 × 此值);玩家數 = sim.squads.size = 敵我雙方總玩家數(含電腦)
+                           //   ⇒ 每批空投數 = 總玩家數 × 2(2026-07-18 使用者指定)
+  MAX_LIVE: 40,            // 場上同時存在上限(防堆積;放寬到能容一整批 ×2 + 前批殘留不被夾)
   PICK_R: 8, MAX_Y: 25,    // 拾取半徑 / 拾取高度上限(沿用 LOOT 尺度)
   LANE_MIN: 60,            // 距兵線走廊最小距離(= 非兵線位置)
   BASE_CLEAR: 130,         // 距主堡淨空(不投在重生點附近)

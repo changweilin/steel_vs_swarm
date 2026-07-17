@@ -584,6 +584,20 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .dead-sub { color: var(--dim); font-family: var(--mono); letter-spacing: 2px; }
 #deadTimer { font-family: var(--mono); font-size: 26px; color: #fff; }
+/* 陣亡頁(2026-07-17):不全屏變暗 —— 砲塔視窗以 box-shadow 打洞式聚光,倒數卡浮在上方 */
+.dead-overlay { background: transparent; pointer-events: none; flex-direction: column; gap: 22px; }
+.dead-overlay .dead-panel { position: relative; z-index: 2; padding: 20px 34px; }
+.dead-hint { color: var(--dim); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
+.dead-cam {
+  position: relative; z-index: 1; width: min(40vw, 480px); aspect-ratio: 16 / 9;
+  border: 2px solid var(--danger); background: transparent;
+  box-shadow: 0 0 0 100vmax rgba(3, 5, 8, 0.86), 0 0 24px rgba(255, 68, 54, 0.4);
+}
+.dead-cam-cap {
+  position: absolute; left: 0; right: 0; bottom: -22px; text-align: center;
+  color: var(--danger); font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(255, 68, 54, 0.5);
+}
 .over-title { font-family: var(--serif); font-size: 42px; font-weight: 900; letter-spacing: 10px; }
 .over-sub { font-size: 15px; font-family: var(--mono); letter-spacing: 2px; }
 .over-stats { color: var(--dim); font-size: 12px; font-family: var(--mono); line-height: 1.8; }
@@ -933,22 +947,23 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .cd-stage.small .cd-stage-hint { display: none; }   /* 小圖沒空間放提示 */
 .cd-stage-tr { position: absolute; right: 8px; top: 8px; z-index: 1; display: flex; gap: 4px; }
-.cd-morph-btn, .cd-size-btn, .cd-slow-btn {
+.cd-morph-btn, .cd-size-btn {
   font-family: var(--mono); font-size: 10px; color: var(--railS); background: rgba(6, 10, 15, 0.95);
   border: 1px solid var(--railS-dark); border-radius: 0; padding: 4px 9px; cursor: pointer; letter-spacing: 1px;
 }
 .cd-morph-btn { position: absolute; left: 8px; top: 8px; z-index: 1; }
-.cd-morph-btn:hover, .cd-size-btn:hover, .cd-slow-btn:hover { background: var(--railS); color: #04080b; border-color: var(--railS); }
-.cd-slow-btn.on { color: var(--ok); border-color: var(--ok); }
-.cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn, .cd-stage.small .cd-slow-btn { font-size: 9px; padding: 2px 5px; }
-/* 移動狀態徽章(雙擊機體切換;顯示即時地速) */
-.cd-speed {
-  position: absolute; left: 8px; bottom: 20px; z-index: 1; pointer-events: none;
+.cd-morph-btn:hover, .cd-size-btn:hover { background: var(--railS); color: #04080b; border-color: var(--railS); }
+.cd-stage.small .cd-morph-btn, .cd-stage.small .cd-size-btn { font-size: 9px; padding: 2px 5px; }
+/* 跑步演示三態切換(靜止/慢速/正常;2026-07-17 取代雙擊移動徽章 + 慢速鈕) */
+.cd-run { position: absolute; left: 8px; bottom: 20px; z-index: 1; display: flex; gap: 3px; }
+.cd-run-btn {
   font-family: var(--mono); font-size: 10px; color: var(--dim); background: rgba(4, 7, 11, 0.85);
-  border: 1px solid var(--line); border-radius: 0; padding: 2px 6px;
+  border: 1px solid var(--line); border-radius: 0; padding: 2px 6px; cursor: pointer; letter-spacing: 1px;
 }
-.cd-speed.on { color: var(--ok); border-color: var(--ok); }
-.cd-stage.small .cd-speed { bottom: 4px; font-size: 9px; padding: 1px 4px; }
+.cd-run-btn:hover { color: var(--railS); border-color: var(--railS-dark); }
+.cd-run-btn.on { color: var(--ok); border-color: var(--ok); background: rgba(4, 7, 11, 0.95); }
+.cd-stage.small .cd-run { bottom: 4px; }
+.cd-stage.small .cd-run-btn { font-size: 9px; padding: 1px 4px; }
 .cd-tag {
   position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
   font-family: var(--mono); font-size: 10px; letter-spacing: 2px; padding: 2px 0;
@@ -1054,18 +1069,15 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .stage-modal-stage .cd-stage.small { height: 100%; margin-top: 0; }
 .stage-modal-stage .cd-stage.small .cd-stage-hint { display: block; }
 .stage-modal-stage .cd-stage.small .cd-morph-btn,
-.stage-modal-stage .cd-stage.small .cd-size-btn,
-.stage-modal-stage .cd-stage.small .cd-slow-btn { font-size: 10px; padding: 4px 9px; }
-.stage-modal-stage .cd-stage.small .cd-speed { bottom: 20px; font-size: 10px; padding: 2px 6px; }
+.stage-modal-stage .cd-stage.small .cd-size-btn { font-size: 10px; padding: 4px 9px; }
+.stage-modal-stage .cd-stage.small .cd-run { bottom: 20px; }
+.stage-modal-stage .cd-stage.small .cd-run-btn { font-size: 10px; padding: 3px 8px; }
 .stage-modal-side { min-width: 0; }
 .stage-modal-keys {
   font-family: var(--mono); font-size: 10.5px; color: #b9c9d2; line-height: 1.7;
   border: 1px dashed var(--railS-dark); border-radius: 0; padding: 6px 9px; margin-bottom: 10px;
 }
 .stage-modal-keys b { color: var(--railS); letter-spacing: 1px; }
-/* 慢速鍵只在放大視窗出現;縮小台不放(需求 2026-07-16) */
-.cd-slow-btn { display: none; }
-.stage-modal-stage .cd-slow-btn { display: inline-block; }
 /* 放大視窗內的角色 / NPC 選擇格 */
 .stage-modal-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
 @media (max-width: 820px) { .stage-modal-pick { grid-template-columns: 1fr; } }

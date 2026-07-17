@@ -956,22 +956,25 @@ function buildStage(role) {
   shell.innerHTML = `
     <button class="cd-morph-btn" hidden>✈ 切換飛行型態</button>
     <div class="cd-stage-tr">
-      <button class="cd-slow-btn">🐢 慢速</button>
       <button class="cd-size-btn">⤢ 放大</button>
     </div>
-    <div class="cd-speed">⏸ 靜止</div>
-    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 雙擊機體切換移動/靜止 ・ 點武器/招式看演出</div>`;
+    <div class="cd-run">
+      <button class="cd-run-btn" data-run="idle">⏸ 靜止</button>
+      <button class="cd-run-btn" data-run="slow">🐢 慢速</button>
+      <button class="cd-run-btn" data-run="normal">▶ 正常</button>
+    </div>
+    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 靜止/慢速/正常 切換跑步 ・ 點武器/招式看演出</div>`;
   shell.appendChild(canvas);
   const q = (s) => shell.querySelector(s);
   const st = { role, preview, shell, canvas, home: null, subject: null, weapons: null };
-  q('.cd-slow-btn').onclick = (e) => {
-    const on = preview.toggleSlow();
-    e.currentTarget.classList.toggle('on', on);
-    e.currentTarget.textContent = on ? '🐢 慢速中' : '🐢 慢速';
-  };
+  const syncRun = () => q('.cd-run')?.querySelectorAll('.cd-run-btn')
+    .forEach((b) => b.classList.toggle('on', b.dataset.run === preview.runMode));
+  q('.cd-run').querySelectorAll('.cd-run-btn').forEach((b) => {
+    b.onclick = () => { preview.setRun(b.dataset.run); };   // setRun → onMove → syncRun 更新高亮
+  });
   q('.cd-size-btn').onclick = () => toggleStageModal(role);
   q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
-  preview.onMove = (moving, v) => { const sp = q('.cd-speed'); sp.textContent = moving || v > 0.05 ? `▶ 移動 ${v.toFixed(1)} m/s` : '⏸ 靜止'; sp.classList.toggle('on', moving); };
+  preview.onMove = () => syncRun();   // setRun / 雙擊 / W / setChar 重置 → 高亮跟著切
   app.stages[role] = st;
   return st;
 }
@@ -986,8 +989,9 @@ function mountStageInline(role, subject, homeEl) {
   const shell = st.shell;
   const isMorph = subject.type === 'char' && charKind(subject.id) === 'morph';
   const mb = shell.querySelector('.cd-morph-btn'); mb.hidden = !isMorph; mb.textContent = '✈ 切換飛行型態';
-  shell.querySelector('.cd-speed').style.display = subject.type === 'unit' ? 'none' : '';
-  const slow = shell.querySelector('.cd-slow-btn'); slow.classList.remove('on'); slow.textContent = '🐢 慢速';
+  const run = shell.querySelector('.cd-run');
+  run.style.display = subject.type === 'unit' ? 'none' : '';   // NPC/建築不做移動演示
+  run.querySelectorAll('.cd-run-btn').forEach((b) => b.classList.toggle('on', b.dataset.run === st.preview.runMode));
   if (app.modalRole !== role) homeEl.appendChild(shell);
   else fillModalPanels(role);   // 正被放大 → shell 留在 modal,改更新 modal 面板
   st.preview._resize();

@@ -58,7 +58,9 @@ export class CharPreview {
     this.morphTarget = 0;
 
     // 移動演示:speed = 目前地速(m/s);_ent 是餵給 locomotion.js 的假實體(mesh 恆在原點)
+    // runMode = 跑步演示三態:'idle' 靜止 / 'slow' 慢速跑 / 'normal' 正常跑(展示台按鍵切換)
     this.moving = false;
+    this.runMode = 'idle';
     this.speed = 0;
     this.topSpeed = 0;
     this.travel = 0;
@@ -186,6 +188,7 @@ export class CharPreview {
     this.trackObj = null;
     this._jump = null;
     this.timeScale = 1;
+    this.runMode = 'idle';
     this._hideTarget();
     this.focus.set(0, this.targetY, 0);
   }
@@ -537,14 +540,25 @@ export class CharPreview {
     }
   }
 
-  /** 移動演示開關(雙擊機體);回傳切換後是否在移動 */
-  toggleMove() {
-    this.moving = !this.moving;
+  /** 跑步演示三態(展示台按鍵切換):'idle' 靜止 / 'slow' 慢速跑(0.3×)/ 'normal' 正常跑。
+   *  慢速沿用 timeScale = action 時鐘減速(骨架步態放慢看細節);回傳設定後的 mode。 */
+  setRun(mode) {
+    if (mode !== 'idle' && mode !== 'slow' && mode !== 'normal') return this.runMode;
+    this.runMode = mode;
+    this.moving = mode !== 'idle';
+    this.timeScale = mode === 'slow' ? 0.3 : 1;
     this.idle = 0;
+    this.onMove?.(this.moving, this.speed);
+    return mode;
+  }
+
+  /** 移動演示開關(雙擊機體 / W 鍵便捷鍵):靜止 ↔ 上次的跑速(預設正常);回傳切換後是否在移動 */
+  toggleMove() {
+    this.setRun(this.moving ? 'idle' : (this.runMode === 'slow' ? 'slow' : 'normal'));
     return this.moving;
   }
 
-  /** 慢速播放切換(0.3×);回傳切換後是否為慢速 */
+  /** 慢速播放切換(0.3×);回傳切換後是否為慢速 —— 保留相容,展示台改走 setRun 三態 */
   toggleSlow() { this.timeScale = this.timeScale < 1 ? 1 : 0.3; return this.timeScale < 1; }
 
   /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);

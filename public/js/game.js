@@ -9,6 +9,7 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
+  ALTITUDE, altF, isGunnery,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -1688,7 +1689,7 @@ export class BattleClient {
       const dk = dir.clone()
         .applyAxisAngle(up, half * f)
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
-      const len = def.range * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      const len = def.range * this._altRangeMul(def) * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       beamLine(this.scene, this.effects, muzzle, end, col, plasma ? { ttl: 0.24, w: 0.16 } : { ttl: 0.12, w: 0.07 });
       starburst(this.scene, this.effects, end.x, end.y, end.z, plasma ? 3 : 1.5, col);
@@ -1811,7 +1812,8 @@ export class BattleClient {
       if (locked) {
         this._everLocked = true;
         if (this.paused) this._setPaused(false);
-      } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused) {
+      } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused && !this.dead) {
+        // 陣亡不跳戰場選單(離開詢問):改顯示陣亡頁(重生倒數 + 砲塔視窗),見 _onSelfDeath
         this._setPaused(true);
       }
     };
@@ -2321,13 +2323,20 @@ export class BattleClient {
       const age = now - (u.bornT || now);
       const t = AIRDROP.LAND_S > 0 ? Math.min(1, age / AIRDROP.LAND_S) : 1;
       const landed = !u.landing || t >= 1;
-      // 飄降:從 DROP_H 高處等速下降到地面(ease-out 收尾),落地後傘布淡出隱藏
+      // 飄降:從 DROP_H 高處等速下降到地面(ease-out 收尾),落地後空投傘收起、改顯示地面攤開傘
       g.position.y = u.groundY + (u.landing ? AIRDROP.DROP_H * (1 - t) * (1 - t) : 0);
       if (u.chute) u.chute.visible = !landed;
+      if (u.groundChute) u.groundChute.visible = landed;
       if (u.halo) u.halo.visible = landed;
-      g.rotation.y += dt * (landed ? 0.9 : 0.3);
-      // 落地後木箱輕微起伏(以體型為錨,和 loot 同款呼吸感)
-      if (u.crate && landed) u.crate.position.y = Math.sin(now * 2.0 + g.position.x) * 0.14;
+      if (landed) {
+        // 攤開傘/光柱是偏置的 → 整體不再旋轉(否則傘會繞著箱子公轉);只讓木箱自轉+起伏當拾取提示
+        if (u.crate) {
+          u.crate.rotation.y += dt * 0.6;
+          u.crate.position.y = Math.sin(now * 2.0 + g.position.x) * 0.14;
+        }
+      } else {
+        g.rotation.y += dt * 0.3;   // 飄降中整傘微轉
+      }
     }
   }
 
@@ -2765,10 +2774,11 @@ export class BattleClient {
     this._lockAt = now;
     const def = this._curWeapon().def;
     if (!def) return;
-    const { ent, point } = this._resolveAim(def.range);
+    const rng = def.range * this._altRangeMul(def);   // 高度制空:高空無人機對地拉遠鎖定/射程
+    const { ent, point } = this._resolveAim(rng);
     // 射程閘門在客戶端先擋一次(伺服器仍會複驗);準星沒掃到敵人 → 解除光暈
     if (!ent || ent.side === this.side || ent.neutral || !point
-        || this.pos.distanceTo(point) > def.range) {
+        || this.pos.distanceTo(point) > rng) {
       this._clearLockGlow();
       return;
     }
@@ -2828,6 +2838,8 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
+    // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
+    if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
     document.exitPointerLock?.();
   }
@@ -3004,6 +3016,13 @@ export class BattleClient {
   _curWeapon() {
     const id = this.aiming && this.wdef.heavy ? 'heavy' : 'light';
     return { id, def: this.wdef[id], st: this.wstate[id] };
+  }
+
+  /** 高度制空(客戶端):高空無人機的輕/機槍武器對地射程拉遠(伺服器 _altRange 同步驗證);
+   *  以「離站立表面高度 _altAG」求 f(與回報 y 同源)。其餘機體 = 1。 */
+  _altRangeMul(def) {
+    if (!def || !this.isDrone || !isGunnery(def)) return 1;
+    return 1 + ALTITUDE.RANGE * altF(this._altAG || 0);
   }
 
   /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
@@ -3275,7 +3294,7 @@ export class BattleClient {
 
     if (def.type === 'beam') {
       // 定向能:光速直擊(無彈道下墜),仍受射程限制;光束短暫駐留 = 持續穩定輸出感
-      const { point, ent, missileId } = this._resolveAim(def.range);
+      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def));   // 高度制空
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, id === 'heavy', this.side);
@@ -3302,7 +3321,8 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
       pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
-      dist: 0, max: def.range, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍)
+      dist: 0, max: def.range * this._altRangeMul(def), mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
+
       mv: def.mv || 600, guide: !!def.guide, homing,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
@@ -3811,10 +3831,11 @@ export class BattleClient {
       // 深水處的站立表面 = 水面 − 涉水深(泡在水裡漂著的機體不是空中目標)
       const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
       const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.WADE_M) : sy;
+      this._altAG = this.pos.y - sEff;   // 離站立表面高度(與回報 y 同源;高度制空 _altRangeMul 用)
       this.net.send({
         t: 'pos',
         x: Math.round(this.pos.x * 10) / 10,
-        y: Math.round((this.pos.y - sEff) * 10) / 10,
+        y: Math.round(this._altAG * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
       });
@@ -4379,6 +4400,7 @@ export class BattleClient {
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
     this.renderer.render(this.scene, this.camera);
     this._renderPips();
+    this._renderDeathCam();
     this.hud.locked?.(now < (this._lockedUntil || 0));
     // 平民互動提示:靠近平民時顯示「[G]跟隨 [H]驅趕」+ 其陣營(不揭露間諜)
     const nc = this._nearestCiv();
@@ -4445,6 +4467,59 @@ export class BattleClient {
     });
     r.setScissorTest(false);
     r.setViewport(0, 0, W, H);
+    r.setClearColor(clear0, alpha0);
+    if (this.cockpit) this.cockpit.visible = cockVis;
+  }
+
+  /**
+   * 陣亡頁的「最前線砲塔視角」小視窗:離敵堡最近的存活我方砲塔往敵方看(無砲塔 → 我方主堡)。
+   * 與 _renderPips 同法(scissor 在主 canvas 上重繪場景),但視窗位置對齊 DOM 框 #deadCam
+   * (該框內部透明,外圈由 CSS box-shadow 打洞式變暗);共用 pipCam(陣亡時 _renderPips 早退不衝突)。
+   */
+  _renderDeathCam() {
+    if (!this.dead || this._gameOver || !this.side || !this.cfg) return;
+    const frame = document.getElementById('deadCam');
+    if (!frame || frame.offsetParent === null) return;   // 陣亡頁未顯示 → 不繪
+
+    const enemy = this.side === 'SWARM' ? 'STEEL' : 'SWARM';
+    const [ex, ez] = llToWorld(this.cfg.bases[enemy][0], this.cfg.bases[enemy][1], this.center);
+    // 最前線 = 離敵堡最近的存活我方砲塔;查無 → 我方主堡
+    let src = null, best = Infinity;
+    for (const e of this.ents.values()) {
+      if (e.kind !== 'tower' || e.side !== this.side || e.dead || !e.mesh) continue;
+      const d = (e.mesh.position.x - ex) ** 2 + (e.mesh.position.z - ez) ** 2;
+      if (d < best) { best = d; src = e; }
+    }
+    if (!src) for (const e of this.ents.values()) {
+      if (e.kind === 'base' && e.side === this.side && e.mesh) { src = e; break; }
+    }
+    if (!src) return;
+
+    const m = src.mesh.position, cam = this.pipCam;
+    cam.position.set(m.x, m.y + (src.dimTop || 14) + 2, m.z);
+    cam.up.set(0, 1, 0);
+    // 朝敵堡方向 100m 外近地面看 → 自然俯瞰兵線來襲方向
+    const dx = ex - m.x, dz = ez - m.z, dl = Math.hypot(dx, dz) || 1;
+    cam.lookAt(m.x + dx / dl * 100, m.y + 1, m.z + dz / dl * 100);
+
+    const r = this.renderer, canvas = this.canvas;
+    const cr = canvas.getBoundingClientRect(), fr = frame.getBoundingClientRect();
+    const bw = 2;   // 內縮 CSS 邊框
+    const px = fr.left - cr.left + bw, pw = fr.width - bw * 2, ph = fr.height - bw * 2;
+    const y = canvas.clientHeight - (fr.top - cr.top + bw) - ph;   // scissor 原點左下
+    if (pw < 6 || ph < 6) return;
+    cam.aspect = pw / ph;
+    cam.updateProjectionMatrix();
+
+    const cockVis = this.cockpit?.visible;
+    if (this.cockpit) this.cockpit.visible = false;
+    const clear0 = r.getClearColor(new THREE.Color()), alpha0 = r.getClearAlpha();
+    r.setScissorTest(true);
+    r.setViewport(px, y, pw, ph);
+    r.setScissor(px, y, pw, ph);
+    r.render(this.scene, cam);   // autoClear 只清 scissor 內
+    r.setScissorTest(false);
+    r.setViewport(0, 0, canvas.clientWidth, canvas.clientHeight);
     r.setClearColor(clear0, alpha0);
     if (this.cockpit) this.cockpit.visible = cockVis;
   }
