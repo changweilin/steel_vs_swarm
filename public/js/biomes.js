@@ -1556,11 +1556,24 @@ function buildingHeight(tags, type, rnd) {
   return Math.min(h * OVER.bldH, OVER.bldCap);   // 超尺度:比現實同座標建物更高大
 }
 
-/** Overpass 圖資(10 秒沒回就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
+/**
+ * Overpass `out N` 額度隨 bbox 真實面積縮放(2026-07-17):固定額度對大地圖截斷
+ * (依 way id 序,空間上整片缺)、對小地圖浪費 payload/查詢時間。
+ * 密度基準以巴黎 L3(~1.18 km²,實測幹道 ~95/小徑 ~1204/建物 ~676 每 km²)加 ~25% 裕度。
+ */
+function bboxKm2(bbox) {
+  const midLat = (bbox.minLat + bbox.maxLat) / 2;
+  return (bbox.maxLat - bbox.minLat) * 111.32
+       * (bbox.maxLng - bbox.minLng) * 111.32 * Math.cos(midLat * Math.PI / 180);
+}
+const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km2 * perKm2)));
+
+/** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
 async function fetchOsmFeatures(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  const nBld = quotaOf(bboxKm2(bbox), 850, 400, 1200);
   const q = `[out:json][timeout:9];`
-    + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags 600;`
+    + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["waterway"="waterfall"](${bb});out 20;`;
   const ctrl = new AbortController();
@@ -1595,10 +1608,18 @@ async function fetchOsmFeatures(bbox) {
  */
 async function fetchOsmRoads(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
-  const q = `[out:json][timeout:9];`
-    + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom 300;`;
+  // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
+  // (巴黎 L3 bbox 實測 1533 條 way)截掉八成道路,且 Overpass 依 id 序輸出 —— 主幹道
+  // 一樣被犧牲。車道級與小徑分開給額(隨 bbox 面積縮放),幹道永不被 footway/path 擠掉。
+  // 額度放大後 payload ~700KB、Overpass 實測 ~10s(舊 10s abort 必掐死)→ timeout 同步放寬。
+  const km2 = bboxKm2(bbox);
+  const nMain = quotaOf(km2, 150, 150, 600);
+  const nMinor = quotaOf(km2, 1300, 400, 1600);
+  const q = `[out:json][timeout:15];`
+    + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
+    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`;
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
+  const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
     const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
     if (!resp.ok) return null;
@@ -2005,6 +2026,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
   const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
   const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
+  // 建路段數上限隨地圖真實面積縮放(2026-07-17):固定 600 是第二層截斷 —— 查詢額度
+  // 提高後照樣只畫前 600 段。計數單位是拆段後的 run(≈ way × 1.2~1.5,邊界裁切/跨水拆段),
+  // 密度基準對齊 fetchOsmRoads 額度(~1450 way/km²)再給拆段裕度;附屬件(路燈/紅綠燈/
+  // 行道樹)另有各自實例上限,不受此值影響。
+  const km2R = terrain.worldW * terrain.worldH * MAPGEO.REAL_SCALE * MAPGEO.REAL_SCALE / 1e6;
+  const maxRuns = Math.max(600, Math.min(2600, Math.round(km2R * 1800)));
   let built = 0;
   for (const way of roads) {
     const main = MAIN_HW.test(way.tags.highway);
@@ -2080,10 +2107,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       // 跨水自動橋段夾通行寬(PASS_W):橋是兵線可能走的結構物;乾段維持原路寬
       const hw = brg ? Math.max(hwWay, PASS_W / 2) : hwWay;
       const mid = run[(run.length / 2) | 0];
-      const biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
+      let biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
       // 橋樑就是為了跨越水面而存在 —— 橋段中點取樣落在水色上是常態(河/運河正下方),
       // MUST NOT 跳過,否則現實中最常見的跨河橋會整段連同橋面碰撞一起消失。
-      if (biome === 'water' && !brg) continue;
+      // 乾段(splitWaterPieces 已逐點判定無泡水跨距)中點取到水色 = 河岸取樣誤差,
+      // 整段丟棄會讓沿河街道憑空消失(2026-07-17 巴黎塞納河岸案)→ 退回城市路面色。
+      if (biome === 'water' && !brg) biome = 'urban';
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       const cum = [0];
@@ -2325,11 +2354,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         }
       }
       built++;
-      if (built >= 600) break;
+      if (built >= maxRuns) break;
       }   // pieces(拆段)迴圈
-      if (built >= 600) break;
+      if (built >= maxRuns) break;
     }
-    if (built >= 600) break;
+    if (built >= maxRuns) break;
   }
 
   // ---- 路口:斑馬線 + 紅綠燈(市區、車行路口、彼此至少 70m)----
@@ -3339,6 +3368,73 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 全建物共用占位網格(OSM/離線/地標/補間):佔地是隨機抽的、不是 OSM 實測輪廓,
   // 相鄰 OSM 種子放大後會彼此互穿 —— 一律先驗占位再收
   const occ = makeOccupancy();
+  // 街道淨空(2026-07-17 巴黎建物騎路案):OSM 建物只有中心點、量體與朝向是程序抽的,
+  // 沿街種子與補間網格會直接壓上路面 —— 道路以占位圓帶進 occ,建物系統(種子/補間/邊界物)
+  // 經既有 occ.free 檢查自動避讓。占位圓只作用於建物,植被/危險區不查 occ,影響面最小;
+  // blocked 的 10m 網格對窄巷太粗(blockPoint 最小 30m 帶會清光沿街建物),不用它。
+  // 隧道(覆蓋段上方照常鋪地物)與橋樑(橋下走廊已在 blocked)跳過;離線備援 = 兵線,
+  // 走廊已淨空,同樣不需重複。不耗共享 rnd(佈局亂數序列不變)。
+  // 同一迴圈順便把道路線段收進桶索引:建物朝向對齊最近道路(nearestRoadAngle)用。
+  const roadSegIdx = new Map();   // `${bx},${bz}`(64m 桶)-> [[x1,z1,x2,z2]…]
+  const SEG_C = 64;
+  const segBucketAdd = (x1, z1, x2, z2) => {
+    // 線段掛進兩端桶(段長 ≤ 桶邊即涵蓋);兩端同桶只掛一次
+    const k1 = `${Math.floor(x1 / SEG_C)},${Math.floor(z1 / SEG_C)}`;
+    const k2 = `${Math.floor(x2 / SEG_C)},${Math.floor(z2 / SEG_C)}`;
+    for (const k of (k1 === k2 ? [k1] : [k1, k2])) {
+      let a = roadSegIdx.get(k);
+      if (!a) roadSegIdx.set(k, a = []);
+      a.push([x1, z1, x2, z2]);
+    }
+  };
+  if (osmRoads?.length) {
+    for (const way of osmRoads) {
+      if (way.tags?.tunnel || way.tags?.bridge) continue;
+      const hw = roadWidth(way.tags) / 2;
+      let px = null, pz = 0;
+      for (const p of way.geometry || []) {
+        const [x, z] = llToWorld(p.lat, p.lon, center);
+        if (px !== null) {
+          const seg = Math.hypot(x - px, z - pz);
+          const n = Math.max(1, Math.ceil(seg / Math.max(hw * 1.2, 6)));
+          for (let k = 1; k <= n; k++) {
+            const sx = px + (x - px) * (k - 1) / n, sz = pz + (z - pz) * (k - 1) / n;
+            const ex = px + (x - px) * k / n, ez = pz + (z - pz) * k / n;
+            occ.add(ex, ez, hw);
+            segBucketAdd(sx, sz, ex, ez);
+          }
+        } else {
+          occ.add(x, z, hw);
+        }
+        px = x; pz = z;
+      }
+    }
+  }
+  /**
+   * 最近道路段的沿路朝向(建物局部 x 軸對齊道路方向;查無 → null 由呼叫端 fallback)。
+   * toW 轉換下局部 x 軸的世界向量 = (cos ry, −sin ry) ⇒ ry = atan2(−dz, dx)。
+   * 掃 ±1 桶(最壞覆蓋 64m)—— 沿街建物離路遠小於此,街廓深處查無就隨機,符合直覺。
+   */
+  const nearestRoadAngle = (x, z) => {
+    const ci = Math.floor(x / SEG_C), cj = Math.floor(z / SEG_C);
+    let bd = Infinity, ang = null;
+    for (let i = -1; i <= 1; i++) {
+      for (let j = -1; j <= 1; j++) {
+        const a = roadSegIdx.get(`${ci + i},${cj + j}`);
+        if (!a) continue;
+        for (const [x1, z1, x2, z2] of a) {
+          const dx = x2 - x1, dz = z2 - z1;
+          const l2 = dx * dx + dz * dz;
+          if (!l2) continue;
+          let t = ((x - x1) * dx + (z - z1) * dz) / l2;
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const d = Math.hypot(x - (x1 + dx * t), z - (z1 + dz * t));
+          if (d < bd) { bd = d; ang = Math.atan2(-dz, dx); }
+        }
+      }
+    }
+    return ang;
+  };
 
   const tryPlace = (x, z) =>
     !blocked.has(cellKey(x, z))
@@ -3371,10 +3467,13 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) continue;
         if (!occ.free(x, z, Math.max(w, d) / 2, 1)) continue;   // 不與既收建物互穿
         occ.add(x, z, Math.max(w, d) / 2);
+        // 朝向對齊最近道路(2026-07-17):OSM 只給中心點,隨機朝向讓沿街建物歪斜壓路。
+        // rnd 先抽(消耗固定枚數,查無路才用)—— 序列不因對齊與否漂移。
+        const rndRy = rnd() * Math.PI;
         generic.push({
           x, z, w, d,
           h: buildingHeight(el.tags, type, rnd),
-          ry: rnd() * Math.PI, commercial,
+          ry: nearestRoadAngle(x, z) ?? rndRy, commercial,
           v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
         });
       }
@@ -3400,10 +3499,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return;
       if (!occ.free(x, z, Math.max(w, d) / 2, 1)) return;
       occ.add(x, z, Math.max(w, d) / 2);
+      const rndRy = rnd() * Math.PI;   // 先抽保序列固定;離線無路網時 nearestRoadAngle 恆 null
       generic.push({
         x, z, w, d,
         h: Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap),
-        ry: rnd() * Math.PI, commercial,
+        ry: nearestRoadAngle(x, z) ?? rndRy, commercial,
         v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
       });
     });

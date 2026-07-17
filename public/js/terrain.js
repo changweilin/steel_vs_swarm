@@ -285,6 +285,9 @@ export async function buildTerrain(cfg, onProgress) {
         prev = p;
       }
     }
+    // 市區衰減:SRTM 市區建物殘留雜訊經 AMP 放大會把平坦市街變丘壑(建物半埋、街道忽上忽下、
+    // 河谷成乾峽谷)—— 依場地市區成分縮減放大量(公式與常數住 data.js TERRAIN.AMP_URBAN_F)。
+    const amp = TERRAIN.AMP * (1 - Math.min(1, cfg.venue?.mix?.urban || 0) * TERRAIN.AMP_URBAN_F);
     if (segs.length) {
       let meanH = 0;
       for (let k = 0; k < N * N; k++) meanH += heights[k];
@@ -301,7 +304,7 @@ export async function buildTerrain(cfg, onProgress) {
           for (const [bx, bz] of bases) db = Math.min(db, Math.hypot(x - bx, z - bz));
           if (db < BR) f *= smooth01((db - BR * 0.4) / (BR * 0.6));   // 基座淨空壓平
           const k = i * N + j;
-          if (f > 0) heights[k] += (heights[k] - meanH) * TERRAIN.AMP * f;
+          if (f > 0) heights[k] += (heights[k] - meanH) * amp * f;
           if (heights[k] < minH) minH = heights[k];
           if (heights[k] > maxH) maxH = heights[k];
         }
