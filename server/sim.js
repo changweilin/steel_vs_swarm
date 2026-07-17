@@ -6,9 +6,9 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore,
-  vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
+  vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  EVASION, heroMobility, LOS, IFRAME, THIRD,
+  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -47,6 +47,7 @@ export class BattleSim {
     this.nextWaveAt = GAME.FIRST_WAVE_DELAY_S;
     this.airdrops = [];               // 空投物資(時間驅動;非兵線空曠處先到先得)
     this.nextAirdropAt = AIRDROP.INTERVAL_S;
+    this.civRespawns = [];            // 平民陣亡重生佇列 [{cs, spy, at}](_tickCivilians 到期補位)
     this.ents = new Map();            // id -> entity
     this.heroes = new Map();          // pid(玩家連線 id;電腦玩家為 'b1' 之類字串)-> 目前主視野機體
     this.squads = new Map();          // pid -> { bodies:[ent], act, lock, lockAt, ps }(機甲小隊只有 1 架)
@@ -81,6 +82,7 @@ export class BattleSim {
     this._spawnStructures();
     this._seedField();
     this._seedCamps();
+    this._seedCivilians();
   }
 
   // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
@@ -235,7 +237,7 @@ export class BattleSim {
   /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到 */
   _tgtY(e) {
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
-    return (e.hero || e.kind === 'heli' || e.decoy ? (e.y || 0) : 0) + LOS.TGT_M;
+    return (e.hero || e.kind === 'heli' || e.decoy || e.kami ? (e.y || 0) : 0) + LOS.TGT_M;
   }
 
   // ---------- 危險區(Diablo 式隨機生成:地雷 + 障礙物 + 匿蹤防空陣地 + 中繼站)----------
@@ -804,8 +806,9 @@ export class BattleSim {
     const mp = Math.round(u.mp * (m.mp ?? 1));
     const sq = {
       pid, side, ch, kind, act: 0, bodies: [],
-      lock: 0, lockAt: -99,          // 準星鎖定(光暈 / 被鎖定警告 / 無人機自爆衝刺目標)
+      lock: 0, lockAt: -99,          // 準星鎖定(光暈 / 被鎖定警告 / 自殺攻擊機的追蹤目標)
       decoy: null, decoyCd: 0,       // 機甲餌機:目前在空中的那架 / 掛點重新組合完成的時刻
+      kamis: [], kamiCd: 0,          // 無人機自殺攻擊機:目前在空中的那些 / F 鍵冷卻到期時刻
       ps: {                          // 共用玩家狀態(見 SQUAD_SHARED)
         // 八軌升級(2026-07-17):wq/aq 品質(連動 abil)+ 六條通用強化(見 ECON.UPGRADES)
         money: ECON.START, upg: { wq: 0, aq: 0, wm: 0, am: 0, hp: 0, ar: 0, sp: 0, ch: 0 },
@@ -827,7 +830,7 @@ export class BattleSim {
         hp: Math.round(u.hp * (m.hp ?? 1)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
         // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
-        armor: m.armor ?? 0, lastHitAt: -99,
+        armor: heroArmor(ch), lastHitAt: -99,   // 無人機護甲等比縮放至機甲平均 ×HP_F(見 data.heroArmor)
         dash: 0, rg: false,          // 僚機:衝刺自爆目標 / 歸隊中
       });
       b.maxSp = Math.round(u.shield * (m.sp ?? 1));
@@ -1257,19 +1260,100 @@ export class BattleSim {
   }
 
   /**
-   * 無人機重型炸彈:F 鍵必須有準星鎖定的敵方目標才會動作 — 主視野機引爆、
-   * 僚機朝鎖定目標衝刺直到引爆;沒鎖定 = 完全不動作(不再原地白白自爆)。
-   * 高速撞擊(crash)是物理引爆,不吃鎖定閘門。
-   * 爆風走 _blast(同陣營一律跳過)→ 不會炸到友軍。
+   * 無人機 F 鍵(2026-07-17,取代舊自爆):前方左右各釋放一架「自殺攻擊機(kami)」——
+   * 體型/血量為本機 1/3、其餘數值相同,以本機 3 倍速撲向目標近炸;CD 固定 KAMI.CD_S。
+   * 有準星鎖定 → 直接指定,否則生成後自動索敵。主機不再自爆(單機是玩家唯一機體)。
+   * 敵方導引飛彈會被自殺機吸走砲火(見 _tickMissiles)。
    */
-  heroDetonate(pid, crash = false) {
+  heroKamikaze(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'drone' || this.over) return;
-    if (crash) { this._boom(h); return; }   // 撞擊引爆:FPV 神風,不需鎖定
-    const t = this._lockedTarget(h.sq);
-    if (!t) return;                          // 無鎖定 → 不動作
-    for (const b of h.sq.bodies) if (b !== h && !b.dead) b.dash = t.id;
-    this._boom(h);   // 主視野機引爆(_kill 內部會把主視野讓給存活僚機)
+    const sq = h.sq;
+    if (this.t < (sq.kamiCd || 0)) return;   // 冷卻中
+    const K = SQUAD.KAMI;
+    sq.kamiCd = this.t + K.CD_S;
+    sq.kamis ??= [];
+    const t0 = this._lockedTarget(sq);       // 有鎖定 → 直接指定,否則生成後自動索敵
+    const ry = h.ry || 0;
+    const fx = -Math.sin(ry), fz = Math.cos(ry);   // 前方(sim z=北)
+    const rx = Math.cos(ry), rz = Math.sin(ry);    // 右方
+    for (let i = 0; i < K.N; i++) {
+      const s = i === 0 ? -1 : 1;                  // 左 / 右
+      const k = this._add({
+        kind: 'kami', side: h.side, pid, ch: h.ch, kami: true,
+        x: h.x + fx * K.FWD + rx * K.SIDE * s,
+        z: h.z + fz * K.FWD + rz * K.SIDE * s,
+        y: h.y || 0, ry: ry + K.SPREAD * s,        // 朝前方左右散開
+        hp: Math.max(1, Math.round(h.maxHp * K.HP_F)),
+        armor: h.armor, tid: t0 ? t0.id : 0, dieAt: this.t + K.TTL_S,
+      });
+      k.maxSp = Math.max(0, Math.round((h.maxSp || 0) * K.HP_F)); k.sp = k.maxSp;
+      sq.kamis.push(k);
+    }
+    this.events.push({ e: 'kami', pid, side: h.side, n: K.N });
+  }
+
+  /** 自殺攻擊機索敵:半徑內最近的敵方單位(不含中立/駐守/彼此的誘餌munitions);沒有 → null */
+  _kamiAcquire(k) {
+    let best = null, bd = SQUAD.KAMI.ACQ_R;
+    for (const e of this.ents.values()) {
+      if (e.side === k.side || e.neutral || e.hp <= 0 || e.kami || e.decoy || e.gar) continue;
+      if (e.hero && (e.dead || (e.stealthUntil || 0) > this.t)) continue;
+      const ty = e.hero || e.kind === 'heli' ? (e.y || 0) : 0;
+      const d = Math.hypot(e.x - k.x, e.z - k.z, ty - (k.y || 0));
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
+
+  /**
+   * 每 tick:鎖定目標無效則自動索敵 → 限轉率撲擊(3 倍速)→ 近炸 / 燃料耗盡自爆。
+   * 爆風算主機頭上(吃火力升級/招式增益,擊殺記給它);被擊落則只消失、不引爆。
+   */
+  _tickKamis(dt) {
+    const K = SQUAD.KAMI;
+    const spd = UNITS.drone.speed * K.SPEED_MUL;
+    for (const sq of this.squads.values()) {
+      if (!sq.kamis || !sq.kamis.length) continue;
+      for (let i = sq.kamis.length - 1; i >= 0; i--) {
+        const k = sq.kamis[i];
+        if (k.hp <= 0) { sq.kamis.splice(i, 1); continue; }   // 已被 _kill 移除
+        if (this.t >= k.dieAt) { this._kamiBoom(k); continue; }
+        let t = k.tid ? this.ents.get(k.tid) : null;
+        if (t && (t.hp <= 0 || t.side === k.side || t.neutral || t.gar || (t.hero && t.dead))) { t = null; k.tid = 0; }
+        if (!t) { t = this._kamiAcquire(k); k.tid = t ? t.id : 0; }
+        if (t) {
+          const ty = t.hero || t.kind === 'heli' || t.decoy || t.kami ? (t.y || 0) : 0;
+          if (Math.hypot(t.x - k.x, t.z - k.z, ty - k.y) <= K.BOOM_M) { this._kamiBoom(k); continue; }
+          const want = Math.atan2(-(t.x - k.x), t.z - k.z);
+          let dr = want - k.ry;
+          while (dr > Math.PI) dr -= Math.PI * 2;
+          while (dr < -Math.PI) dr += Math.PI * 2;
+          k.ry += Math.max(-K.TURN * dt, Math.min(K.TURN * dt, dr));
+          k.y += Math.max(-spd * dt, Math.min(spd * dt, ty - k.y));
+        }
+        k.x += -Math.sin(k.ry) * spd * dt;
+        k.z += Math.cos(k.ry) * spd * dt;
+        k.y = Math.max(0, k.y);
+      }
+    }
+  }
+
+  /** 自殺攻擊機引爆:重型炸彈爆風(同餌機:算主機頭上,吃其火力升級/增益,擊殺記給它) */
+  _kamiBoom(k) {
+    const sq = this.squads.get(k.pid);
+    const owner = sq ? sq.bodies[sq.act] : null;
+    const def = WEAPONS[UNITS.drone.bomb];
+    this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
+    if (owner) this._blast(owner, def, k.x, k.z, k.y || 0);
+    this._removeKami(k);
+  }
+
+  _removeKami(k) {
+    k.hp = 0;
+    this.ents.delete(k.id);
+    const sq = this.squads.get(k.pid);
+    if (sq && sq.kamis) { const j = sq.kamis.indexOf(k); if (j >= 0) sq.kamis.splice(j, 1); }
   }
 
   /** 目前仍有效的準星鎖定目標(存活、敵方、未過期);沒有 → null */
@@ -1346,6 +1430,145 @@ export class BattleSim {
       d.x += -Math.sin(d.ry) * DECOY.SPEED * dt;
       d.z += Math.cos(d.ry) * DECOY.SPEED * dt;
       d.y = Math.max(0, d.y);
+    }
+  }
+
+  // ---------- 平民與間諜(非兵線隨機放置的非戰鬥人員;neutral ent)----------
+  /** 每陣營在非兵線空曠處生成 ~10 名平民(隨兵線數縮放),其中 SPY_RATE 為間諜(9:1)。 */
+  _seedCivilians() {
+    const n = CIVILIAN.PER_SIDE_BASE + CIVILIAN.PER_SIDE_PER_LANE * this.lanes.length;
+    const spies = Math.round(n * CIVILIAN.SPY_RATE);
+    for (const side of ['SWARM', 'STEEL']) {
+      for (let i = 0; i < n; i++) {
+        const pt = this._civPoint();
+        if (!pt) continue;   // 地圖太擠取不到合法點:寧缺勿錯
+        this._spawnCiv(side, i < spies, Math.floor(Math.random() * CIVILIANS.length), pt);
+      }
+    }
+  }
+
+  /** 在合法點生成一名平民/間諜(seed 與陣亡重生共用,避免兩處各抄一份 ent 欄位)。 */
+  _spawnCiv(cs, spy, prof, pt) {
+    this._add({
+      kind: 'civilian', side: null, neutral: true, civ: true,
+      cs, spy, prof,
+      x: pt.x, z: pt.z, y: 0, ry: 0, hp: UNITS.civilian.hp,
+      home: [pt.x, pt.z], wp: null, wpPause: Math.random() * CIVILIAN.WANDER_PAUSE[1],
+      follow: null, followT: 0, flee: false, fleeTtl: 0, fleeX: 0, fleeZ: 0,
+    });
+  }
+
+  /** 隨機取一個非兵線、離主堡與障礙夠遠的平民生成點(比照 _airdropPoint)。 */
+  _civPoint() {
+    const b = this.bounds;
+    for (let tries = 0; tries < 40; tries++) {
+      const x = b.minX + Math.random() * (b.maxX - b.minX);
+      const z = b.minZ + Math.random() * (b.maxZ - b.minZ);
+      if (!this._inBounds(x, z, 2)) continue;
+      if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
+      if (!this._farFromStructures(x, z, CIVILIAN.BASE_CLEAR, 0)) continue;
+      if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 2)) continue;
+      return { x, z };
+    }
+    return null;
+  }
+
+  /** 徘徊路點:繞出生點 WANDER_R 內、仍在非兵線範圍的隨機點(取不到回原地)。 */
+  _civWander(e) {
+    for (let i = 0; i < 12; i++) {
+      const a = Math.random() * Math.PI * 2, r = Math.random() * CIVILIAN.WANDER_R;
+      const x = e.home[0] + Math.cos(a) * r, z = e.home[1] + Math.sin(a) * r;
+      if (!this._inBounds(x, z, 2)) continue;
+      if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
+      return [x, z];
+    }
+    return [e.home[0], e.home[1]];
+  }
+
+  /** 平民朝(away=遠離)目標移動;更新朝向、夾在地圖內。回傳是否有位移。 */
+  _moveCiv(e, tx, tz, sp, dt, away = false) {
+    let dx = tx - e.x, dz = tz - e.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-3) return false;
+    const s = (away ? -1 : 1) / d;
+    e.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, e.x + s * dx * sp * dt));
+    e.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, e.z + s * dz * sp * dt));
+    e.ry = Math.atan2(-(s * dx), s * dz);   // 面向移動方向(sim z=北,與餌機同慣例)
+    return true;
+  }
+
+  /** 平民/間諜每 tick:先處理陣亡重生,再逃離(驅趕)> 跟隨(我方跟隨者週期給物資)> 徘徊。 */
+  _tickCivilians(dt) {
+    // 陣亡重生:到期者於隨機合法點補位;取不到點(地圖太擠)留佇列下 tick 再試
+    if (this.civRespawns.length) {
+      const still = [];
+      for (const r of this.civRespawns) {
+        if (this.t < r.at) { still.push(r); continue; }
+        const pt = this._civPoint();
+        if (!pt) { still.push(r); continue; }
+        this._spawnCiv(r.cs, r.spy, Math.floor(Math.random() * CIVILIANS.length), pt);
+      }
+      this.civRespawns = still;
+    }
+    for (const e of this.ents.values()) {
+      if (!e.civ) continue;
+      const sp = civSpeed(e.spy);
+      // 被驅趕:朝相反方向快步離開,計時到就消失
+      if (e.flee) {
+        e.fleeTtl -= dt;
+        if (e.fleeTtl <= 0) { this.ents.delete(e.id); continue; }
+        this._moveCiv(e, e.fleeX, e.fleeZ, sp * CIVILIAN.FLEE_SPEED_F, dt, true);
+        continue;
+      }
+      // 跟隨:保持 FOLLOW_R;主人陣亡/失聯 → 回復徘徊
+      if (e.follow != null) {
+        const owner = this.heroes.get(e.follow);
+        if (!owner || owner.dead || dist2d(e.x, e.z, owner.x, owner.z) > CIVILIAN.FOLLOW_LINK_M) {
+          e.follow = null; e.followT = 0;
+        } else {
+          if (dist2d(e.x, e.z, owner.x, owner.z) > CIVILIAN.FOLLOW_R) this._moveCiv(e, owner.x, owner.z, sp, dt);
+          // 我方跟隨者存活:每 FOLLOW_REWARD_S 給一次「依職業」的小空投物資
+          if (e.cs === owner.side) {
+            e.followT += dt;
+            if (e.followT >= CIVILIAN.FOLLOW_REWARD_S) {
+              e.followT -= CIVILIAN.FOLLOW_REWARD_S;
+              const ev = { e: 'civaid', pid: owner.pid, side: owner.side, x: e.x, z: e.z, prof: e.prof,
+                ...this._grantReward(owner, CIVILIANS[e.prof].reward, CIVILIAN.FOLLOW_MUL) };
+              this.events.push(ev);
+            }
+          }
+          continue;
+        }
+      }
+      // 徘徊:繞出生點慢走 + 抵達後停留
+      if (e.wpPause > 0) { e.wpPause -= dt; continue; }
+      if (!e.wp || dist2d(e.x, e.z, e.wp[0], e.wp[1]) < 2) {
+        e.wp = this._civWander(e);
+        e.wpPause = CIVILIAN.WANDER_PAUSE[0] + Math.random() * (CIVILIAN.WANDER_PAUSE[1] - CIVILIAN.WANDER_PAUSE[0]);
+        continue;
+      }
+      this._moveCiv(e, e.wp[0], e.wp[1], sp, dt);
+    }
+  }
+
+  /**
+   * 平民互動(客戶端靠近 INTERACT_R 內回報):act='follow' 要求跟隨 / 'away' 驅趕。
+   * 兩者不分陣營皆可;跟隨的週期報酬只有「我方平民(cs === 玩家陣營)」才有(見 _tickCivilians)。
+   */
+  civInteract(pid, id, act) {
+    const h = this.heroes.get(pid);
+    const t = this.ents.get(id);
+    if (!h || h.dead || !t || !t.civ || t.hp <= 0 || this.over) return;
+    if (dist2d(h.x, h.z, t.x, t.z) > CIVILIAN.INTERACT_R * 1.25) return;   // 留一成寬容給延遲
+    if (act === 'away') {
+      t.follow = null; t.followT = 0;
+      t.flee = true; t.fleeTtl = CIVILIAN.FLEE_TTL_S;
+      t.fleeX = h.x; t.fleeZ = h.z;   // 逃離「玩家所在」方向
+      this.events.push({ e: 'civact', pid, act: 'away', side: h.side, x: t.x, z: t.z, cs: t.cs });
+    } else {
+      t.flee = false;
+      t.follow = pid; t.followT = 0;
+      this.events.push({ e: 'civact', pid, act: 'follow', side: h.side, x: t.x, z: t.z, cs: t.cs });
     }
   }
 
@@ -1584,8 +1807,9 @@ export class BattleSim {
           b.maxSp = nm;
         }
       } else if (item === 'ar') {
-        // 護甲是絕對值疊加(armorMul 曲線);不影響體型(heroTargetH 只看角色 mods.armor)
-        const na = (CHARACTERS[h.ch].mods?.armor ?? 0) + up.step * h.upg.ar;
+        // 護甲是絕對值疊加(armorMul 曲線);不影響體型(heroTargetH 只看角色 mods.armor)。
+        // 基底走 heroArmor()(無人機已等比縮放)—— 與 _add 生成同一個縫,升級才不會把縮放洗掉。
+        const na = heroArmor(h.ch) + up.step * h.upg.ar;
         for (const b of this._bodies(h)) b.armor = na;
       }
       this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
@@ -1664,6 +1888,22 @@ export class BattleSim {
   _kill(t, by) {
     const bySide = by?.side || null;
     this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero || t.decoy ? { pid: t.pid } : {}) });
+    // 平民/間諜:誤殺平民一律負值賞金,揪出敵方間諜才 +6(以步槍兵賞金 ECON.BOUNTY.soldier 為單位)。
+    // 死亡瞬間才在事件裡揭露身分(spy);快照從不帶 spy —— 生前只能靠移動速度猜。
+    if (t.civ) {
+      if (by && by.hero) {
+        const own = by.side === t.cs;
+        const f = t.spy ? (own ? CIVILIAN.KILL_F.ownSpy : CIVILIAN.KILL_F.enemySpy)
+                        : (own ? CIVILIAN.KILL_F.ownCiv : CIVILIAN.KILL_F.enemyCiv);
+        const v = Math.round(ECON.BOUNTY.soldier * f);
+        by.money = Math.max(0, by.money + v);
+        this.events.push({ e: 'civkill', pid: by.pid, side: by.side, x: t.x, z: t.z, v, spy: t.spy ? 1 : 0, cs: t.cs });
+      }
+      // 陣亡重生:保留陣營/間諜身分(維持 9:1 與全場數量),RESPAWN_S 後於隨機合法點補位
+      this.civRespawns.push({ cs: t.cs, spy: t.spy, at: this.t + CIVILIAN.RESPAWN_S });
+      this.ents.delete(t.id);
+      return;
+    }
     // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
     if (by && by.hero && bySide !== t.side) {
       by.money += (ECON.BOUNTY[t.kind] || 0) * this._buffMul(by, 'bounty');
@@ -1698,6 +1938,10 @@ export class BattleSim {
     }
     if (t.decoy) {   // 餌機被擊落:誘餌任務達成,不引爆(引爆只在自爆/近炸)
       this._removeDecoy(t);
+      return;
+    }
+    if (t.kami) {   // 自殺攻擊機被擊落:任務失敗,只消失、不引爆(引爆只在撲擊近炸/燃料耗盡)
+      this._removeKami(t);
       return;
     }
     if (t.hero) {
@@ -1827,6 +2071,8 @@ export class BattleSim {
     }
     this._tickSquads(dt);
     this._tickDecoys(dt);
+    this._tickKamis(dt);
+    this._tickCivilians(dt);
     this._tickMines();
     this._tickAmbush(dt);
     this._tickRelays(dt);
@@ -1837,8 +2083,8 @@ export class BattleSim {
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     for (const e of [...this.ents.values()]) {
-      // 餌機:位置由 _tickDecoys 管、自己不開火,但仍是敵方小兵/塔的合法目標(誘餌本體)
-      if (e.hero || e.neutral || e.decoy || e.hp <= 0) continue;
+      // 餌機/自殺攻擊機:位置由 _tickDecoys/_tickKamis 管、自己不推線,但仍是敵方小兵/塔的合法目標
+      if (e.hero || e.neutral || e.decoy || e.kami || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
@@ -2207,32 +2453,39 @@ export class BattleSim {
   }
 
   /**
-   * 開箱:等機率抽 medkit / battery / money,量 = 基準 × 箱型 mul。
+   * 授予一份物資報酬(空投開箱 / 平民跟隨共用):reward='medkit'|'battery'|'money'、
+   * mul = 量倍率(空投 = 箱型 mul、平民跟隨 = CIVILIAN.FOLLOW_MUL)。回傳事件欄位片段(含 r 與數值)。
    * medkit 補該機體 HP/護盾;battery/money 進小隊共用池(電池電力可 overcharge 超過上限)。
    */
-  _openAirdrop(body, a) {
+  _grantReward(body, reward, mul) {
     const R = AIRDROP;
-    const reward = R.REWARDS[Math.floor(Math.random() * R.REWARDS.length)];
-    const ev = { e: 'airdrop', pid: body.pid, side: body.side, x: a.x, z: a.z, r: reward, sz: a.s };
+    const ev = { r: reward };
     if (reward === 'medkit') {
-      const hp = Math.round(body.maxHp * R.MEDKIT_HP * a.mul);
-      const sp = Math.round(body.maxSp * R.MEDKIT_SP * a.mul);
+      const hp = Math.round(body.maxHp * R.MEDKIT_HP * mul);
+      const sp = Math.round(body.maxSp * R.MEDKIT_SP * mul);
       body.hp = Math.min(body.maxHp, body.hp + hp);
       body.sp = Math.min(body.maxSp, body.sp + sp);
       ev.hp = hp; ev.sp = sp;
     } else if (reward === 'battery') {
-      const mp = Math.round(body.maxMp * R.BATTERY_MP * a.mul);
+      const mp = Math.round(body.maxMp * R.BATTERY_MP * mul);
       body.mp += mp;                                            // 可超過 maxMp:一次性 overcharge
-      const cd = R.BATTERY_CD * a.mul;
+      const cd = R.BATTERY_CD * mul;
       body.acd.skill = Math.max(0, (body.acd.skill || 0) - cd); // acd 為絕對可用時刻:減去 = 縮短剩餘冷卻
       body.acd.ult = Math.max(0, (body.acd.ult || 0) - cd);
       ev.mp = mp; ev.cd = Math.round(cd * 10) / 10;
     } else {
-      const money = Math.round(R.MONEY * a.mul);
+      const money = Math.round(R.MONEY * mul);
       body.money += money;
       ev.v = money;
     }
-    this.events.push(ev);
+    return ev;
+  }
+
+  /** 開箱:等機率抽 medkit / battery / money,量 = 基準 × 箱型 mul(見 _grantReward)。 */
+  _openAirdrop(body, a) {
+    const reward = AIRDROP.REWARDS[Math.floor(Math.random() * AIRDROP.REWARDS.length)];
+    this.events.push({ e: 'airdrop', pid: body.pid, side: body.side, x: a.x, z: a.z, sz: a.s,
+      ...this._grantReward(body, reward, a.mul) });
   }
 
   // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
@@ -2270,7 +2523,21 @@ export class BattleSim {
       m.ttl -= dt;
       if (m.ttl <= 0) { this.missiles.splice(i, 1); continue; }
       const step = m.speed * dt;
-      // 追蹤特定機體(小隊三架各自可被鎖定;tpid 只給客戶端判斷「是不是在打我」)
+      // 導引飛彈吸附(2026-07-17):目標是「有存活自殺攻擊機的無人機玩家」→ 改追最近的自殺機
+      // (吸走砲火);自殺機炸掉/被擊落後其 tid 失效 → 下方目標消失分支使飛彈自毀。
+      if (!m.lost) {
+        const cur = this.ents.get(m.tid);
+        if (cur && cur.hero && cur.kind === 'drone' && cur.sq && cur.sq.kamis && cur.sq.kamis.length) {
+          let best = null, bd = Infinity;
+          for (const k of cur.sq.kamis) {
+            if (k.hp <= 0) continue;
+            const d = Math.hypot(k.x - m.x, (k.y || 0) - m.y, k.z - m.z);
+            if (d < bd) { bd = d; best = k; }
+          }
+          if (best) m.tid = best.id;
+        }
+      }
+      // 追蹤特定機體(tpid 只給客戶端判斷「是不是在打我」)
       const t = m.lost ? null : this.ents.get(m.tid);
       if (t && !t.dead) {
         const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
@@ -2449,6 +2716,11 @@ export class BattleSim {
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
     if (e.kind === 'heli') o.y = Math.round((e.y || 0) * 10) / 10;   // 攻擊直升機巡航高度(純渲染用)
     if (e.gar) o.gar = 1;    // 第三方步槍兵駐守碉堡中(客戶端隱藏機體)
+    if (e.civ) {             // 平民/間諜:客戶端只知陣營(cs)與職業(pf)——MUST NOT 送 spy(生前只能靠移速猜)
+      o.cs = e.cs; o.pf = e.prof;
+      if (e.follow != null) o.fo = 1;   // 跟隨中
+      if (e.flee) o.fl = 1;             // 逃離中
+    }
     if (e.kind === 'relay' && e.charge > 0) {   // 佔用進度(客戶端進度環 / 警示)
       o.cp = Math.min(100, Math.round(e.charge / FIELD.RELAY.CHANNEL_S * 100));
       o.cps = e.chargeSide;
@@ -2456,6 +2728,9 @@ export class BattleSim {
     if (e.decoy) {   // 餌機:客戶端要姿態(PiP 攝影機)+ 失聯旗標(斷訊雜訊)
       o.pid = e.pid; o.y = Math.round(e.y * 10) / 10; o.ry = Math.round(e.ry * 100) / 100;
       if (e.lost) o.lost = 1;
+    }
+    if (e.kami) {   // 自殺攻擊機:客戶端要姿態 + 角色(縮小 1/3 渲染成該角色的無人機)
+      o.pid = e.pid; o.ch = e.ch; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
     }
     if (e.hero) {
       o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
@@ -2477,6 +2752,8 @@ export class BattleSim {
         o.dcd = Math.max(0, Math.round((e.sq.decoyCd - this.t) * 10) / 10);
         o.dc = !e.sq.decoy && o.dcd === 0 ? 1 : 0;
       }
+      // 無人機自殺攻擊機:F 鍵冷卻倒數(HUD)—— 只跟主視野機發一份
+      if (o.act && e.sq && e.kind === 'drone') o.kcd = Math.max(0, Math.round((e.sq.kamiCd - this.t) * 10) / 10);
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;
       // 控場/追加效果剩餘秒(客戶端自鎖移動 / HUD;條件欄位,讀取端一律 || 0)

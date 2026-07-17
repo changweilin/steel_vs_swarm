@@ -435,10 +435,11 @@ wss.on('connection', (ws) => {
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z, m.y); return; }   // y = 對空引爆高度(sim 夾範圍)
     if (m.t === 'plasma' && client.side) { b.heroPlasma(clientId, m.dx, m.dz, m.slot); return; }
-    if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId, !!m.crash); return; }
+    if (m.t === 'kami' && client.side) { b.heroKamikaze(clientId); return; }   // 無人機 F:釋放自殺攻擊機
     if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }
     if (m.t === 'swap' && client.side) { b.heroSwap(clientId, m.i); return; }
     if (m.t === 'lock' && client.side) { b.heroLock(clientId, m.id); return; }
+    if (m.t === 'civ' && client.side) { b.civInteract(clientId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
     if (m.t === 'cast' && client.side) { b.heroCast(clientId, m.slot, m.x, m.z); return; }
     if (m.t === 'iframe' && client.side) { b.heroIframe(clientId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
     if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }

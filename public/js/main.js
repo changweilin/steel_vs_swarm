@@ -6,9 +6,9 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, QUAL,
-  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, SQUAD, LOS,
+  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
-  THIRD, isThirdSide, sideInfo,
+  THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -38,7 +38,7 @@ const app = {
   stages: { char: null, unit: null },   // 角色卡 / NPC 卡各一台持久展示台(各自 WebGLRenderer,同框並存)
   modalRole: null,      // 放大視窗當前展示的 role('char'|'unit'|null=關閉)
   unitSide: null,       // NPC 圖鑑檢視陣營(可切換);unitKind = 目前選的單位;unitShown = 已載入的 kind:side
-  unitKind: null, unitShown: null,
+  unitKind: null, unitShown: null, civProf: 0, civFaction: 'STEEL',   // 平民圖鑑:目前檢視的職業 index + 陣營
   pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
@@ -823,7 +823,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值,單機傷害為機甲的 1/3,三機齊射 ≈ 一台機甲。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;F 鍵可釋放兩架自殺攻擊機。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
@@ -880,10 +880,12 @@ function heroStatCells(id) {
 const UNIT_BAR_MAX = { hp: 3000, armor: 30, dmg: 130, range: 320, rate: 5, speed: 22, sight: 310 };
 function unitStatCells(kind) {
   const u = UNITS[kind];
-  const rows = [
-    ['血量', u.hp, 'hp'], ['護甲值', u.armor ?? 0, 'armor'], ['火力', u.dmg, 'dmg'],
-    ['射程', Math.round(u.range), 'range'], ['射速', +u.rate.toFixed(1), 'rate'], ['視野', u.sight, 'sight'],
-  ];
+  // 戰鬥列一律「有值才顯示」:平民只有 hp/armor/speed(無 dmg/range/rate/sight),不會踩 undefined.toFixed
+  const rows = [['血量', u.hp, 'hp'], ['護甲值', u.armor ?? 0, 'armor']];
+  if (u.dmg != null) rows.push(['火力', u.dmg, 'dmg']);
+  if (u.range != null) rows.push(['射程', Math.round(u.range), 'range']);
+  if (u.rate != null) rows.push(['射速', +u.rate.toFixed(1), 'rate']);
+  if (u.sight != null) rows.push(['視野', u.sight, 'sight']);
   if (u.speed) rows.push(['機動', u.speed, 'speed']);
   return rows.map(([label, v, k]) => statCell(label, v, UNIT_BAR_MAX[k])).join('');
 }
@@ -929,6 +931,19 @@ const bunkerNoteRow = () => `<div class="cd-row">
   <span class="cd-key">駐防</span>
   <div><b>無武裝工事</b>
   <div class="cd-nums">駐守 ${THIRD.GAR_CAP} 名步槍兵:免傷 ・ 回血 ${Math.round(THIRD.GAR_REGEN_PS * 100)}%/s ・ 射程 ×${THIRD.GAR_RANGE_F} ・ 被拆 ${THIRD.BUNKER_RESPAWN_S / 60} 分鐘原地重生</div></div></div>`;
+
+/** 平民專用說明列(非戰鬥人員;平民/間諜同外觀,只能分辨陣營) */
+const civNoteRow = () => `<div class="cd-row">
+  <span class="cd-key">身分</span>
+  <div><b>非戰鬥人員</b>
+  <div class="cd-nums">平民與間諜外觀完全相同(只能分辨陣營)・移速 平民 ×${CIVILIAN.CIV_SPEED_F} / 間諜 ×${CIVILIAN.SPY_SPEED_F} 步槍兵 —— 細看走位可辨 ・ 誤殺平民一律負賞金,揪出敵方間諜 +${CIVILIAN.KILL_F.enemySpy} 步槍兵賞金</div></div></div>`;
+const CIV_REWARD_ICON = { medkit: '🩹', battery: '🔋', money: '💰' };
+/** 職業選擇格(男女 20 種,點選切換展示台外觀;圖示 = 我方跟隨時提供的物資) */
+const civProfGrid = () => `<div class="civ-prof-grid">${CIVILIANS.map((c, i) =>
+  `<button class="civ-prof-btn ${i === (app.civProf || 0) ? 'on' : ''}" data-civprof="${i}">${c.g === 'F' ? '♀' : '♂'} ${esc(c.name)} ${CIV_REWARD_ICON[c.reward]}</button>`).join('')}</div>`;
+/** 平民陣營子切換(鋼鐵/蜂群;外觀只換貼地光環色) */
+const civFactionToggle = (side) => `<div class="civ-fac-toggle">${['STEEL', 'SWARM'].map((s) =>
+  `<button class="unit-side-btn ${s === side ? 'on' : ''}" data-civfac="${s}">${esc(sideInfo(s).name)}</button>`).join('')}</div>`;
 
 /** 建一台展示台(角色 'char' / NPC 'unit' 各一,持久重用):自帶 canvas + shell + CharPreview 實例。
  *  按鈕以 class 定位 + 閉包綁定(兩台 shell 並存,不可用共用 id)。 */
@@ -1020,7 +1035,7 @@ function stageInfoHTML(subject) {
   if (subject.type === 'char') {
     const isDrone = charKind(subject.id) === 'drone';
     return `<div class="cd-stats">${heroStatCells(subject.id)}</div>
-      ${isDrone ? `<div class="cd-note">※ 蜂群為 ${SQUAD.N} 機小隊:上表為單機值。</div>` : ''}`;
+      ${isDrone ? '<div class="cd-note">※ 蜂群為單架無人機(生存值 = 機甲平均 80%、傷害同機甲)。</div>' : ''}`;
   }
   return `<div class="cd-stats">${unitStatCells(subject.kind)}</div>`;
 }
@@ -1032,7 +1047,8 @@ function stageKitHTML(st) {
       + charAbilityRow(id, 'skill', 'Q') + charAbilityRow(id, 'ult', 'E');
   }
   return subject.kind === 'bunker' ? bunkerNoteRow()
-    : (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
+    : subject.kind === 'civilian' ? civFactionToggle(subject.side) + civNoteRow() + civProfGrid()
+      : (st.weapons || []).map((w, i) => unitWeaponRow(w, i)).join('');
 }
 /** modal 側欄面板(標題/數值/武器/操作提示)依目前放大的 role 填 */
 function fillModalPanels(role) {
@@ -1165,6 +1181,11 @@ function renderModalPicks() {
 $('charStageModalClose').onclick = closeStageModal;
 $('charStageModal').addEventListener('click', (e) => { if (e.target.id === 'charStageModal') closeStageModal(); });
 $('stageModalKit').addEventListener('click', (e) => {
+  // 平民放大視窗:職業格 / 陣營子切換(重載 → mountStageInline 偵測放大中會回填 modal 面板)
+  const cp = e.target.closest('[data-civprof]');
+  if (cp) { app.civProf = +cp.dataset.civprof; showUnitDetail('civilian', 'CIV'); return; }
+  const cf = e.target.closest('[data-civfac]');
+  if (cf) { app.civFaction = cf.dataset.civfac; showUnitDetail('civilian', 'CIV'); return; }
   const row = e.target.closest('.cd-row'); if (!row) return;
   const st = activeStage(); if (!st) return;
   if (row.dataset.slot) st.preview.play(row.dataset.slot);
@@ -1181,10 +1202,14 @@ $('modalUnitToggle').addEventListener('click', (e) => {
 // ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營 + 第三方,與角色卡同框並存) =================
 const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
 const UNIT_SIDES = ['STEEL', 'SWARM', 'GUER', 'MILI'];   // 圖鑑可切陣營(2026-07-17 起含第三方)
-// 第三方單位牆 = 編制唯一真相 THIRD.COMP(去重)+ 碉堡;雙陣營維持現役清單
-const unitRosterOf = (side) => isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
-const sideToggleHTML = (side, attr) => UNIT_SIDES.map((sd) =>
-  `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-${attr}="${sd}">${esc(sideInfo(sd).name)}</button>`).join('');
+// 切換列另加「平民」獨立按鈕(2026-07-18;偽陣營 'CIV',非真實 side)——雙方平民從這裡切換職業/陣營
+const UNIT_TOGGLE = [...UNIT_SIDES, 'CIV'];
+const toggleLabel = (sd) => sd === 'CIV' ? '平民' : sideInfo(sd).name;
+// 第三方單位牆 = 編制唯一真相 THIRD.COMP(去重)+ 碉堡;雙陣營維持現役清單;平民只有一格(職業在詳情選)
+const unitRosterOf = (side) => side === 'CIV' ? ['civilian']
+  : isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
+const sideToggleHTML = (side, attr) => UNIT_TOGGLE.map((sd) =>
+  `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-${attr}="${sd}">${esc(toggleLabel(sd))}</button>`).join('');
 const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
 function unitDetailHTML(kind, side) {
   const u = UNITS[kind];
@@ -1194,26 +1219,39 @@ function unitDetailHTML(kind, side) {
     <div class="cd-body">
       <div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
       <div class="cd-stats">${unitStatCells(kind)}</div>
-      <div class="cd-kit">${kind === 'bunker' ? bunkerNoteRow() : list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
+      <div class="cd-kit">${kind === 'bunker' ? bunkerNoteRow()
+        : kind === 'civilian' ? civFactionToggle(side) + civNoteRow() + civProfGrid()
+          : list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
       <div class="cd-foot">點武器列播放攻擊演出;拖曳旋轉、滾輪縮放,「放大」開獨立視窗。</div>
     </div>
   </div>`;
 }
 function showUnitDetail(kind, side) {
-  $('unitDetail').innerHTML = unitDetailHTML(kind, side);
+  const civ = kind === 'civilian';
+  const mside = civ ? (app.civFaction || 'STEEL') : side;   // 平民實際陣營走 civFaction('CIV' 偽陣營無模型)
+  const prof = app.civProf || 0;
+  $('unitDetail').innerHTML = unitDetailHTML(kind, mside);
   const st = getStage('unit');
   st.weapons = unitWeaponList(kind);
-  mountStageInline('unit', { type: 'unit', kind, side }, $('unitStageBottom'));
-  st.preview.setUnit(kind, side);
+  mountStageInline('unit', { type: 'unit', kind, side: mside, prof }, $('unitStageBottom'));
+  st.preview.setUnit(kind, mside, prof);
   st.preview.start();
-  app.unitShown = kind + ':' + side;
+  app.unitShown = civ ? `civilian:${mside}:${prof}` : kind + ':' + side;
+  // 平民圖鑑:職業格 + 陣營子切換(點選重載本卡;不揭露間諜)
+  if (civ) {
+    for (const b of $('unitDetail').querySelectorAll('[data-civprof]'))
+      b.onclick = () => { app.civProf = +b.dataset.civprof; showUnitDetail('civilian', side); };
+    for (const b of $('unitDetail').querySelectorAll('[data-civfac]'))
+      b.onclick = () => { app.civFaction = b.dataset.civfac; showUnitDetail('civilian', side); };
+  }
 }
 /** 圖鑑陣營切換 + 單位牆(highlight);不重建 detail(避免每次房間同步重載模型) */
 function renderUnitGrid(side) {
   app.unitSide = side;
   const roster = unitRosterOf(side);
-  // 切到沒有這個兵種的陣營(第三方沒有塔/主堡、雙陣營沒有碉堡)→ 落到該陣營第一個單位
-  if (app.unitKind && !roster.includes(app.unitKind)) { app.unitKind = roster[0]; app.unitShown = null; }
+  // 平民列只有一格 → 自動選取(切進來即顯示);切到沒有此兵種的陣營 → 落到第一個單位
+  if (side === 'CIV') { if (app.unitKind !== 'civilian') { app.unitKind = 'civilian'; app.unitShown = null; } }
+  else if (app.unitKind && !roster.includes(app.unitKind)) { app.unitKind = roster[0]; app.unitShown = null; }
   $('unitSideToggle').innerHTML = sideToggleHTML(side, 'uside');
   const grid = $('unitGrid');
   grid.innerHTML = '';
@@ -1229,7 +1267,10 @@ function renderUnitGrid(side) {
 function renderUnitSection(defaultSide) {
   renderUnitGrid(app.unitSide || defaultSide);
   if (app.unitKind) {
-    if (app.unitShown !== app.unitKind + ':' + app.unitSide) showUnitDetail(app.unitKind, app.unitSide);
+    const key = app.unitKind === 'civilian'
+      ? `civilian:${app.civFaction || 'STEEL'}:${app.civProf || 0}`
+      : app.unitKind + ':' + app.unitSide;
+    if (app.unitShown !== key) showUnitDetail(app.unitKind, app.unitSide);
   } else {
     $('unitDetail').innerHTML = UNIT_PROMPT;
   }
@@ -1435,7 +1476,7 @@ function enterGame() {
     : '觀戰模式';
   $('pauseHelp').innerHTML = app.mySide
     ? (heroKind === 'drone'
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F/高速撞擊 自爆(僚機衝向鎖定目標) ・ V 或 1~3 切換主視野 ・ R 填彈 ・ B 升級 ・ 三機齊射才是完整火力,別讓僚機掉隊!'
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F 釋放自殺攻擊機(前方左右各一,3 倍速撲擊、會吸走敵方導引飛彈,CD 30s) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用自殺機拆塔清群!'
       : heroKind === 'morph'
       ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤,右下角回傳畫面) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
@@ -1471,8 +1512,8 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // F 鍵:無人機 = 自爆;機甲 = 分離發射餌機(就緒 / 重組倒數)
-        const fTag = w.bomb ? '(另有 F 自爆)'
+        // F 鍵:無人機 = 釋放自殺攻擊機(就緒 / 冷卻);機甲 = 分離發射餌機(就緒 / 重組倒數)
+        const fTag = w.kami ? (w.kami.cd > 0.05 ? `(F 自殺機 ${w.kami.cd.toFixed(0)}s)` : `(F 自殺機 ×${w.kami.n})`)
           : w.decoy ? (w.decoy.ready ? '(F 餌機就緒)' : `(F 餌機 ${w.decoy.cd.toFixed(0)}s)`)
           : '';
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${fTag}${morphTag}`;
@@ -1570,6 +1611,15 @@ function makeHud() {
     pause: (on) => { $('pauseOverlay').style.display = on ? '' : 'none'; },
     // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
     locked: (on) => $('lockWarn').classList.toggle('on', !!on),
+    // 平民互動提示:info={cs 陣營, self 是否我方, follow 是否跟隨中} 或 null(離開互動範圍)
+    civPrompt: (info) => {
+      const el = $('civPrompt');
+      if (!info) { el.classList.remove('on'); return; }
+      const s = sideInfo(info.cs);
+      el.innerHTML = `<span class="civ-fac" style="color:${s.color}">◈ ${esc(s.name)}平民 ${info.self ? '(我方)' : '(敵方)'}</span>`
+        + `<span class="civ-hint">${info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕'}</span>`;
+      el.classList.add('on');
+    },
     hitmark: () => {
       const el = $('hitmark');
       el.classList.remove('on');

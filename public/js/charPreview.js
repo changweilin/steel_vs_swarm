@@ -147,14 +147,14 @@ export class CharPreview {
   }
 
   /** NPC / 攻擊建築展示台(非英雄:無招式,武器走 WEAPONS/UNITS)。共用同一具 renderer/holder。 */
-  setUnit(kind, side) {
+  setUnit(kind, side, prof = 0) {
     this._clearUnit();
     this.charId = null;
     this.isUnit = true;
     if (!UNITS[kind]) return;
     const mapKind = kind === 'tower' ? 'tower' : kind === 'base' ? `base:${side}`
-      : kind === 'bunker' ? 'bunker' : `creep:${kind}`;   // 第三方碉堡有自己的 FALLBACK 鍵
-    const { group, mixer } = makeUnit(mapKind, side);
+      : kind === 'bunker' ? 'bunker' : kind === 'civilian' ? 'civ' : `creep:${kind}`;   // 平民 = civ builder(ch=職業)
+    const { group, mixer } = makeUnit(mapKind, side, { ch: kind === 'civilian' ? prof : null });
     this.unit = group;
     this.unit.userData.side = side;
     this.mixer = mixer;

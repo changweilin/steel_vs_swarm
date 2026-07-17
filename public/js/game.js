@@ -6,9 +6,9 @@
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
 import {
-  SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
+  SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
-  WATER, CJUMP, IFRAME, sideInfo, THIRD, AIRDROP,
+  WATER, CJUMP, IFRAME, sideInfo, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -26,6 +26,7 @@ const KIND_KEY = {
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
   bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
+  kami: 'hero:drone', // 自殺攻擊機:渲染成該角色的無人機(_spawnUnit 縮小 1/3)
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
@@ -1721,9 +1722,7 @@ export class BattleClient {
       // 吃掉衝向障礙物的速度分量(不回彈)
       const into = this.vel.x * nx + this.vel.z * nz;
       if (into < 0) {
-        // 飛行單位高速撞擊 → 重型炸彈引爆(FPV 神風)
-        if (this.isDrone && -into > 16) this._detonate(true);
-        this.vel.x -= into * nx; this.vel.z -= into * nz;
+        this.vel.x -= into * nx; this.vel.z -= into * nz;   // 吃掉衝向單位的速度分量(單機不再撞擊自爆)
       }
     }
     // 圖資建物(biomes 客戶端幾何,全房間同一 OSM 來源 → 各端一致):
@@ -1738,10 +1737,7 @@ export class BattleClient {
       this.pos.x += nx * (min - d);
       this.pos.z += nz * (min - d);
       const into = this.vel.x * nx + this.vel.z * nz;
-      if (into < 0) {
-        if (this.isDrone && -into > 16) this._detonate(true);
-        this.vel.x -= into * nx; this.vel.z -= into * nz;
-      }
+      if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞圖資建物:吃掉速度分量
     }
   }
 
@@ -1758,8 +1754,11 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // F:無人機自爆 / 機甲分離發射餌機(右鍵已改為瞄準)
-          if (e.code === 'KeyF') { if (this.isDrone) this._detonate(); else this._launchDecoy(); }
+          // F:無人機釋放自殺攻擊機 / 機甲分離發射餌機(右鍵已改為瞄準)
+          if (e.code === 'KeyF') { if (this.isDrone) this._launchKamikaze(); else this._launchDecoy(); }
+          // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
+          if (e.code === 'KeyG') this._civAct('follow');
+          if (e.code === 'KeyH') this._civAct('away');
         }
         // 三機小隊:V 循環切換主視野、1~3 直選(陣亡中也能切到存活的僚機)
         if (this.isDrone) {
@@ -1854,6 +1853,8 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         ent.lost = !!e.lost;
       }
+      if (e.k === 'kami') { ent.heroY = e.y ?? 0; ent.ry = e.ry ?? 0; }
+      if (e.k === 'civilian') { ent.fo = !!e.fo; ent.fl = !!e.fl; }   // 跟隨/逃離旗標(頭頂提示)
       if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -1869,6 +1870,8 @@ export class BattleClient {
         if (ent.isSelf) {
           this.decoyCd = e.dcd ?? 0;
           this.decoyDocked = !!e.dc;
+          this.kamiCd = e.kcd ?? 0;   // 無人機自殺攻擊機 F 鍵冷卻(HUD)
+
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
           // 受傷暈影:自機總量(裝甲+護盾)較上一快照下降 = 被擊 → 閃紅暈影;
@@ -1903,7 +1906,14 @@ export class BattleClient {
           if (e.dead && !this.dead) this._onSelfDeath();
           if (!e.dead && this.dead) this._onSelfRespawn();
           this.hud.dead?.(e.dead ? e.rs : null);
-          if (this.shopOpen) this.hud.shop?.(true, this._shopState());
+          // 商店只在數值變動時重繪(2026-07-17):每 8Hz 全量重建 DOM 會在點擊瞬間銷毀按鈕 →
+          // 掉點擊(「沒辦法馬上購買」)。以 money/擊殺/升級/角色/階級簽章 gate,idle 時完全不重繪。
+          if (this.shopOpen) {
+            const u = this.upg;
+            const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
+              + ['wq', 'aq', 'wm', 'am', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',');
+            if (sig !== this._shopSig) { this._shopSig = sig; this.hud.shop?.(true, this._shopState()); }
+          }
         }
       }
       this._updateHpBar(ent);
@@ -2002,9 +2012,12 @@ export class BattleClient {
   }
 
   _spawnUnit(e) {
-    const key = e.k === 'base' ? `base:${e.s}` : KIND_KEY[e.k];
+    const civ = e.k === 'civilian';
+    const key = e.k === 'base' ? `base:${e.s}` : civ ? 'civ' : KIND_KEY[e.k];
+    // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
-    const { group, mixer } = makeUnit(key, e.s, { ch: e.ch, ring: e.k !== 'decoy' });
+    const { group, mixer } = makeUnit(key, civ ? e.cs : e.s, { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' });
+    if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 自殺攻擊機:1/3 體型
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
@@ -2029,12 +2042,14 @@ export class BattleClient {
       dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
-      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy',
-      decoy: e.k === 'decoy', si: e.si || 0,
+      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami',
+      decoy: e.k === 'decoy', kami: e.k === 'kami', si: e.si || 0,
       isStatic: e.k === 'tower' || e.k === 'base' || e.k === 'bunker',
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
+    // 平民/間諜:side 保持 null(兩陣營皆可開槍),陣營記在 cs 供頭頂箭頭;neutral = 不進準星敵人推測
+    if (e.k === 'civilian') { ent.civ = true; ent.cs = e.cs; ent.prof = e.pf; ent.neutral = true; ent.fo = !!e.fo; ent.fl = !!e.fl; }
     // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
     if (e.k === 'tower' || e.k === 'base') {
       const shield = makeShield(e.k === 'base' ? 30 : 11, SIDES[e.s].color, e.k === 'base' ? 1.5 : 2.3);
@@ -2391,6 +2406,12 @@ export class BattleClient {
 
   _onEvent(ev) {
     if (ev.e === 'die') {
+      if (ev.kind === 'civilian') {   // 平民非機械:輕量倒地演出,不炸開(擊殺報酬走 civkill 事件)
+        const [cx, cz] = [ev.x, -ev.z], cy = this.terrain.heightAt(cx, cz) + 1;
+        comicPop(this.scene, this.effects, cx, cy + 1.6, cz, { hue: 0 });
+        debrisBurst(this.scene, this.effects, cx, cy, cz, { accent: 0xb03030 });
+        return;
+      }
       const [x, z] = [ev.x, -ev.z];
       const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'heli' || ev.kind === 'bunker';
       const hero = HERO_KINDS.has(ev.kind);
@@ -2466,6 +2487,25 @@ export class BattleClient {
       } else if (ev.side && ev.side !== this.side) {
         this.hud.feed?.(`⚠️ ${(sideInfo(ev.side)?.name) || '敵方'}搶走了一箱空投物資!`);
       }
+    } else if (ev.e === 'civkill') {
+      // 擊殺平民/間諜的報酬回饋(死亡瞬間才揭露身分):只有擊殺者本人看得到明細
+      if (ev.pid === this.youId) {
+        const enemy = ev.cs !== this.side;
+        const who = ev.spy ? (enemy ? '敵方間諜' : '我方間諜') : (enemy ? '敵方平民' : '我方平民');
+        const gain = ev.v >= 0;
+        this.hud.feed?.(`${gain ? '🎯' : '☠️'} ${who}:${gain ? '+' : ''}$${ev.v}`);
+      }
+    } else if (ev.e === 'civaid') {
+      // 我方跟隨平民每 3 分提供的物資(依職業)
+      if (ev.pid === this.youId) {
+        const nm = CIVILIANS[ev.prof]?.name || '平民';
+        const msg = ev.r === 'medkit' ? `急救包(裝甲 +${ev.hp}・護盾 +${ev.sp})`
+          : ev.r === 'battery' ? `電池(電力 +${ev.mp}・冷卻 −${ev.cd}s)`
+            : `資金(+$${ev.v})`;
+        this.hud.feed?.(`🤝 跟隨的${nm}提供物資:${msg}`);
+      }
+    } else if (ev.e === 'civact') {
+      if (ev.pid === this.youId) this.hud.feed?.(ev.act === 'follow' ? '🚶 平民開始跟隨你' : '👋 你驅離了一名平民');
     } else if (ev.e === 'relay') {
       this.hud.feed?.(ev.side === this.side
         ? `📡 我方啟動偵察中繼站:全隊 ${FIELD.RELAY.VISION_S} 秒無霧視野!`
@@ -2812,8 +2852,38 @@ export class BattleClient {
       money: this.money, upg: this.upg,
       ch: this.ch, ab: { ...this.abil }, kn: this.kn,
       kind: this.heroKind, atBase: this._atBase(),
-      buy: (item) => this.net.send({ t: 'buy', item }),
+      buy: (item) => this._optimisticBuy(item),
     };
+  }
+
+  /**
+   * 商店購買:樂觀本地更新(立即扣款/升級 → UI 馬上回饋)+ 送伺服器(權威)。
+   * 伺服器拒絕會回 error toast,下一份快照把 money/upg 校正回權威值(僅顯示層,不動 abil —— 讓
+   * 快照的 _setChar 重算武器/招式)。修「點了要等一下才生效」的延遲感。
+   */
+  _optimisticBuy(item) {
+    const applied = (() => {
+      const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
+      if (up) {
+        const lvl = this.upg[item] || 0;
+        if (lvl >= up.max) return false;
+        const price = upgradePrice(up, lvl);
+        if (this.money < price) return false;
+        this.money -= price; this.upg[item] = lvl + 1;
+        return true;
+      }
+      const q = Object.hasOwn(QUAL, item) ? QUAL[item] : null;
+      if (q) {
+        const cur = this.upg[item] || 0;
+        const tier = item === 'wq' ? cur + 1 : cur;
+        if (tier >= 3 || this.kn < q.kills[tier] || this.money < q.cost[tier]) return false;
+        this.money -= q.cost[tier]; this.upg[item] = cur + 1;
+        return true;
+      }
+      return false;
+    })();
+    if (applied && this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
+    this.net.send({ t: 'buy', item });
   }
 
   _toggleShop(force) {
@@ -2821,6 +2891,7 @@ export class BattleClient {
     const want = force != null ? force : !this.shopOpen;
     if (want === this.shopOpen) return;
     this.shopOpen = want;
+    this._shopSig = null;   // 重置商店重繪簽章(見 _applySnap 的 gate)
     this.firing = false;
     this.hud.shop?.(want, want ? this._shopState() : null);
     if (want) document.exitPointerLock?.();
@@ -3396,20 +3467,20 @@ export class BattleClient {
    * 無人機自爆:F 鍵必須有準星鎖定目標(伺服器複驗)才會引爆 + 僚機追擊;
    * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
    */
-  _detonate(crash = false) {
-    if (!this.isDrone || this.dead || this._crashSent) return;
-    if (crash) {
-      this._crashSent = true;
-      this.trauma = 1;
-      this.net.send({ t: 'detonate', crash: 1 });
+  /**
+   * 無人機 F 鍵(2026-07-17):前方左右各釋放一架自殺攻擊機(1/3 體型/血量、3 倍速撲擊)。
+   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自殺機自動索敵。
+   */
+  _launchKamikaze() {
+    if (!this.isDrone || this.dead) return;
+    if ((this.kamiCd || 0) > 0.05) {
+      this.hud.feed?.(`🛠️ 自殺攻擊機整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
       return;
     }
-    if (!this._lockId) {
-      this.hud.feed?.('🎯 需要準星鎖定目標(對準敵人)才能發動追擊自爆');
-      return;
-    }
-    this.trauma = 1;
-    this.net.send({ t: 'detonate' });
+    this.trauma = 0.6;
+    this.kamiCd = SQUAD.KAMI.CD_S;   // 樂觀本地冷卻(下一份快照的 kcd 會校正)
+    this.net.send({ t: 'kami' });
+    this.hud.feed?.(`💥 釋放 ${SQUAD.KAMI.N} 架自殺攻擊機`);
   }
 
   _bombMesh(color) {
@@ -3448,7 +3519,8 @@ export class BattleClient {
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      bomb: this.isDrone,
+      // 無人機自殺攻擊機:F 冷卻倒數(0 = 就緒)
+      kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
       // 機甲餌機:掛點就緒 / 重組倒數(F 分離發射)
       decoy: this.isDrone ? null : { ready: !!this.decoyDocked, cd: this.decoyCd || 0 },
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
@@ -3904,7 +3976,7 @@ export class BattleClient {
       const ny = gy + lift;
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
-      if (ent.decoy) {
+      if (ent.decoy || ent.kami) {
         wantYaw = ent.ry + Math.PI;   // 機首朝 +z,與機甲同慣例
       } else if (ent.hero) {
         // ry 是「相機朝向」慣例(前方 = -z),機體模型一律朝 +z(見 buildRobotMech 腳尖/駕駛艙)
@@ -3947,8 +4019,46 @@ export class BattleClient {
       // 血條面向相機
       if (ent.bar) ent.bar.lookAt(this.camera.position);
       // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)
-      if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
+      if (ent.civ) this._civMark(ent, dt, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
+      else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
     }
+  }
+
+  /** 平民/間諜:頭頂掛「其陣營」箭頭(我方/敵方都顯示 —— 外觀只能分辨陣營,不揭露間諜);
+   *  跟隨中(fo)略微加亮。marker 由陣營色決定,和一般敵標分開一份(cs ≠ side)。 */
+  _civMark(ent, dt, now) {
+    if (!ent.civMark) {
+      const h = Math.max(1.8, ent.dimH ?? 2);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: factionMarkTex(ent.cs), transparent: true, opacity: 0, depthTest: false, depthWrite: false,
+      }));
+      sp.scale.setScalar(Math.max(2.6, h * 0.6));
+      sp.renderOrder = 998;
+      ent.civMarkY = (ent.dimTop ?? h) + 2.4 + sp.scale.y * 0.5;
+      ent.mesh.add(sp);
+      ent.civMark = sp;
+    }
+    const m = ent.civMark.material;
+    m.opacity = Math.min(ent.fo ? 0.95 : 0.66, m.opacity + dt * 3);
+    ent.civMark.position.y = ent.civMarkY + Math.sin(now * 2.4) * 0.35;
+  }
+
+  /** 互動半徑內、水平距離最近的平民(靠近可驅趕/跟隨)。 */
+  _nearestCiv() {
+    if (!this.side || this.dead) return null;
+    let best = null, bd = CIVILIAN.INTERACT_R;
+    for (const ent of this.ents.values()) {
+      if (!ent.civ || !ent.mesh.visible) continue;
+      const d = Math.hypot(ent.mesh.position.x - this.pos.x, ent.mesh.position.z - this.pos.z);
+      if (d < bd) { bd = d; best = ent; }
+    }
+    return best;
+  }
+
+  /** 送出平民互動(act='follow'|'away'):以本幀算好的最近平民為目標。 */
+  _civAct(act) {
+    const ent = this._civTarget || this._nearestCiv();
+    if (ent) this.net.send({ t: 'civ', id: ent.id, act });
   }
 
   // ---------------- 2D 戰術地圖 ----------------
@@ -4270,6 +4380,10 @@ export class BattleClient {
     this.renderer.render(this.scene, this.camera);
     this._renderPips();
     this.hud.locked?.(now < (this._lockedUntil || 0));
+    // 平民互動提示:靠近平民時顯示「[G]跟隨 [H]驅趕」+ 其陣營(不揭露間諜)
+    const nc = this._nearestCiv();
+    this._civTarget = nc;
+    this.hud.civPrompt?.(nc ? { cs: nc.cs, self: nc.cs === this.side, follow: !!nc.fo } : null);
   }
 
   // ---------------- 副視窗(PiP)----------------

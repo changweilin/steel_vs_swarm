@@ -1099,6 +1099,20 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .unit-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
 .unit-btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
 .unit-cls { font-size: 9px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+
+/* 平民圖鑑:20 職業選擇格(點選切換展示台外觀) */
+.civ-prof-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 4px; margin-top: 8px;
+}
+.civ-prof-btn {
+  font: inherit; font-size: 11px; color: var(--fg);
+  background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line); border-radius: 0;
+  padding: 5px 3px; cursor: pointer; text-align: center; white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+}
+.civ-prof-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
+.civ-prof-btn.on { border-color: var(--ok); color: var(--ok); }
+.civ-fac-toggle { display: flex; gap: 6px; margin: 4px 0 8px; }
 .unit-empty { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 30px 10px; text-align: center; line-height: 1.9; }
 /* NPC 卡沿用角色卡版面(.char-pick + .char-detail + .cd-lower/.cd-art/.cd-body);展示台與角色小台同尺寸 */
 .unit-stage-mount { position: relative; }
@@ -1270,6 +1284,20 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 }
 .lock-warn.on { display: block; animation: lockPulse 0.5s steps(1) infinite; }
 @keyframes lockPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* 平民互動提示(靠近平民時顯示陣營 + 操作鍵) */
+.civ-prompt {
+  position: absolute; left: 50%; top: 63%; z-index: 11; pointer-events: none;
+  transform: translateX(-50%);
+  display: none;
+  padding: 5px 14px; border-radius: 4px;
+  background: rgba(12, 16, 22, 0.82); border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e8edf2; font-family: var(--serif); font-size: 13px; letter-spacing: 1px; white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+}
+.civ-prompt.on { display: block; }
+.civ-prompt .civ-fac { font-weight: 900; margin-right: 10px; }
+.civ-prompt .civ-hint b { color: #ffd77a; font-weight: 900; }
 
 /* ---------- 載入背景插圖 ---------- */
 #loading {

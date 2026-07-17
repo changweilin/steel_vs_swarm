@@ -190,17 +190,17 @@ export class BotBrain {
       }
     }
 
-    // 無人機神風:貼近建築或敵群密集時撞擊引爆(先鎖定目標,僚機才會跟著衝刺自爆)
+    // 無人機自殺攻擊機:貼近建築或敵群密集時釋放(先鎖定目標,自殺機直接撲擊;CD 由 sim 把關)
     if (h.kind === 'drone') {
       const b = WEAPONS[UNITS.drone.bomb];
       const near = [...this.sim.ents.values()].filter((e2) =>
         e2.side !== h.side && !e2.hero && !e2.neutral
-        && Math.hypot(e2.x - h.x, e2.z - h.z, (h.y || 0)) <= b.r).length;
+        && Math.hypot(e2.x - h.x, e2.z - h.z, (h.y || 0)) <= b.r * 2).length;
       const onStruct = (t.kind === 'tower' || t.kind === 'base')
-        && Math.hypot(t.x - h.x, t.z - h.z, h.y || 0) <= b.r * 0.8;
-      if (near >= 4 || onStruct) {
+        && Math.hypot(t.x - h.x, t.z - h.z, h.y || 0) <= b.r * 3;
+      if (near >= 3 || onStruct) {
         this.sim.heroLock(this.pid, t.id);
-        this.sim.heroDetonate(this.pid);
+        this.sim.heroKamikaze(this.pid);
       }
     }
   }

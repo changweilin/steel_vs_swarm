@@ -7,7 +7,7 @@ import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, QUAL, masteryF, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal,
-  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
+  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
 } from '../public/js/data.js';
 
 /** 清掉第三方野營(游擊隊/民兵):與本節無關的 sim 直測要確定性,不能吃野營流彈 */
@@ -205,56 +205,71 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
 
-  log('— sim:三機小隊(共用玩家狀態 / 主視野讓位 / 僚機衝刺自爆)—');
+  log('— sim:單架無人機(共用玩家狀態 / 生存值 80% / 傷害同機甲 / 射程高約 1/8)—');
   const dr = sim.addHero('SWARM', 'p_d', 's01');
   const sq = sim.squads.get('p_d');
-  assert(sq.bodies.length === SQUAD.N, `無人機一次操控 ${SQUAD.N} 架(實際 ${sq.bodies.length})`);
+  assert(sq.bodies.length === SQUAD.N && SQUAD.N === 1, `無人機為單機(SQUAD.N=${SQUAD.N},實際 ${sq.bodies.length} 架)`);
   assert(sim.squads.get('p_r').bodies.length === 1, '機甲仍是單機');
   dr.money = 1234;
-  assert(sq.bodies.every((b) => b.money === 1234), '經濟/彈藥/招式是三架共用的玩家狀態');
-  assert(Math.abs(UNITS.drone.hp * SQUAD.N - UNITS.robot.hp * SQUAD.BUFF) < UNITS.robot.hp * 0.05,
-    `單機 HP = 機甲 ÷ ${SQUAD.N} × ${SQUAD.BUFF}(${UNITS.drone.hp} × ${SQUAD.N} ≈ ${UNITS.robot.hp} × ${SQUAD.BUFF})`);
-  assert(Math.abs(SQUAD.DMG - SQUAD.BUFF / SQUAD.N) < 1e-9, `單機傷害折算 = BUFF/N = ${SQUAD.DMG.toFixed(3)}`);
-  assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - tierVal(CHARACTERS.s01.light.dmg, 1) * SQUAD.DMG) < 1e-6,
-    `無人機單機傷害 = 原數值 × ${SQUAD.DMG.toFixed(3)}(折算只住在 heroWeapon())`);
+  assert(sq.bodies.every((b) => b.money === 1234), '經濟/彈藥/招式住共用玩家狀態');
+  const avgOf = (kind, f) => {
+    const cs = Object.keys(CHARACTERS).filter((c) => charKind(c) === kind);
+    return cs.reduce((s, c) => s + f(c), 0) / cs.length;
+  };
+  const totHP = (c) => {
+    const k = charKind(c), m = CHARACTERS[c].mods;
+    return UNITS[k].hp * (m.hp ?? 1) + UNITS[k].shield * (m.sp ?? 1);
+  };
+  assert(Math.abs(avgOf('drone', totHP) - SQUAD.HP_F * avgOf('robot', totHP)) < avgOf('robot', totHP) * 0.02,
+    `無人機平均總血量 = 機甲平均 ×${SQUAD.HP_F}(${avgOf('drone', totHP).toFixed(0)} vs ${(SQUAD.HP_F * avgOf('robot', totHP)).toFixed(0)})`);
+  assert(Math.abs(avgOf('drone', heroArmor) - SQUAD.HP_F * avgOf('robot', heroArmor)) < 0.5,
+    `無人機平均護甲 = 機甲平均 ×${SQUAD.HP_F}(${avgOf('drone', heroArmor).toFixed(1)} vs ${(SQUAD.HP_F * avgOf('robot', heroArmor)).toFixed(1)})`);
+  assert(Math.abs(SQUAD.DMG - 1) < 1e-9, `單機傷害不折算(SQUAD.DMG=${SQUAD.DMG})`);
+  assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - tierVal(CHARACTERS.s01.light.dmg, 1)) < 1e-6,
+    '無人機單機傷害 = 原數值(DMG=1,不折算)');
   assert(Math.abs(heroWeapon('t01', 'light', 1, false).dmg - tierVal(CHARACTERS.t01.light.dmg, 1)) < 1e-6,
-    '機甲傷害不被小隊折算');
+    '機甲傷害不被折算');
+  assert(Math.abs(UNITS.drone.sight / UNITS.robot.sight - 1.125) < 0.01,
+    `無人機射程上限 ≈ 機甲 ×9/8(sight ${UNITS.drone.sight} vs ${UNITS.robot.sight},射程較機甲高約 1/8)`);
 
-  log('— sim:無人機重型炸彈自爆 + 重生冷卻 —');
-  const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 6, z: dr.z, hp: UNITS.soldier.hp });
-  dr.y = 4;
+  log('— sim:無人機自殺攻擊機(F:前方左右各一 / 3 倍速撲擊 / 吸走導引飛彈 / 主機不自爆)—');
   const $kill0 = dr.money;
-  const foe = sim._add({ kind: 'tank', side: 'STEEL', x: dr.x + 40, z: dr.z, hp: 9999 });
-  sim.heroDetonate('p_d');
-  assert(!dr.dead && sim.ents.has(victim.id), '無鎖定 → F 完全不動作(不會原地白白自爆)');
-  sim.heroDetonate('p_d', true);
-  assert(dr.dead, '高速撞擊(crash)引爆不吃鎖定閘門');
-  dr.dead = false; dr.hp = dr.maxHp;   // 復原:下面測「鎖定 + F」的完整流程
-  sim.heroes.set('p_d', dr); sq.act = sq.bodies.indexOf(dr);
-  const victim2 = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 6, z: dr.z, hp: UNITS.soldier.hp });
-  sim.heroLock('p_d', foe.id);
-  sim.heroDetonate('p_d');
-  sim.ents.delete(victim2.id);
-  assert(!sim.ents.has(victim.id), '自爆(240 × 肉體 1.5)炸死近旁敵兵');
-  assert(dr.dead, '自爆座機同歸於盡');
-  assert(sq.bodies.some((b) => b.dash === foe.id), '有鎖定 → 僚機朝目標衝刺');
-  const newLead = sim.heroes.get('p_d');
-  assert(!newLead.dead, '主視野自動讓位給存活僚機');
-  assert(!newLead.dash, '接手主視野的那架取消衝刺(玩家重新掌控)');
-  assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺得賞金 +$${Math.round(dr.money - $kill0)}`);
-  assert(dr.kn >= 1, `擊殺數入帳(kn=${dr.kn},招式解鎖門檻用)`);
-  // 收掉衝刺中的僚機與測試假人(假人沒有 lane,tick 前 MUST 移除)
-  for (const b of sq.bodies) b.dash = 0;
-  sim.ents.delete(foe.id);
+  sim.heroKamikaze('p_d');
+  assert(sq.kamis.length === SQUAD.KAMI.N, `F 釋放 ${SQUAD.KAMI.N} 架自殺攻擊機(實際 ${sq.kamis.length})`);
+  assert(!dr.dead, '主機不再自爆(單機是玩家唯一機體)');
+  const kExpHp = Math.max(1, Math.round(dr.maxHp * SQUAD.KAMI.HP_F));
+  assert(sq.kamis.every((k) => k.kami && k.side === 'SWARM' && Math.abs(k.hp - kExpHp) <= 1),
+    `自殺機 HP = 主機 ×${SQUAD.KAMI.HP_F.toFixed(2)}(${sq.kamis[0].hp} ≈ ${kExpHp})`);
+  assert(sq.kamiCd > sim.t, `F 冷卻啟動(CD ${SQUAD.KAMI.CD_S}s)`);
+  sim.heroKamikaze('p_d');
+  assert(sq.kamis.length === SQUAD.KAMI.N, '冷卻中再按 F 不會再生成一批');
+  // 導引飛彈吸附:朝主機發射的追蹤飛彈 → 改追最近的自殺機(吸走砲火)
+  sim.missiles.push({ id: 990001, byId: 0, side: 'STEEL', tid: dr.id, tpid: 'p_d',
+    x: dr.x, z: dr.z + 40, y: dr.y || 0, speed: 1, dmg: 10, pen: 0, hp: 40, ttl: 14 });
+  sim._tickMissiles(0.001);
+  assert(sq.kamis.some((k) => k.id === sim.missiles[0].tid), '敵方導引飛彈被自殺機吸走砲火(改追自殺機)');
+  sim.missiles.length = 0;
+  // 撲擊近炸:把一架自殺機挪到孤立敵人旁,tick 引爆 → 重型炸彈爆風命中、擊殺記主機
+  const k0 = sq.kamis[0];
+  const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 400, z: dr.z + 400, hp: UNITS.soldier.hp });
+  k0.x = victim.x - 1; k0.z = victim.z; k0.y = 0; k0.tid = victim.id;
+  sim._tickKamis(0.05);
+  assert(!sim.ents.has(victim.id), '自殺機撲擊近炸(重型炸彈爆風)炸死孤立敵兵');
+  assert(!sim.ents.has(k0.id) && !sq.kamis.includes(k0), '自殺機引爆後移除');
+  assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺賞金記主機 +$${Math.round(dr.money - $kill0)}`);
+  for (const k of [...sq.kamis]) sim._removeKami(k);   // 收掉剩餘自殺機
+
+  log('— sim:無人機重生冷卻 —');
+  dr.hp = 0; sim._kill(dr, null);
+  assert(dr.dead, '無人機被擊落 → dead');
   sim.tick(0.05);
-  assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true,客戶端才能感知死亡)');
+  assert(dr.dead, '死亡當下那個 tick 仍維持 dead(確保至少一份快照廣播 dead:true)');
   assert(UNITS.drone.respawn.base > 0 && UNITS.robot.respawn.base > 0, '無人機/機甲重生都有冷卻(數值檢查)');
   sim.t += UNITS.drone.respawn.base + UNITS.drone.respawn.perDeath * 3;
   sim.tick(0.05); sim.tick(0.05);
   assert(!dr.dead, `重生冷卻結束後歸隊(base ${UNITS.drone.respawn.base}s)`);
   dr.rg = false;
-  sim.heroSwap('p_d', 0);   // 把主視野切回 dr,後續測試才是對它結算
-  assert(SQUAD.DASH_MUL === 3, `自爆衝刺 ${SQUAD.DASH_MUL} 倍速`);
+  sim.heroes.set('p_d', dr); sq.act = 0;   // 主視野切回 dr,後續測試對它結算
 
   log('— sim:機甲餌機(F 分離 / 追蹤 / 失聯 / 誘餌 HP)—');
   {
@@ -832,8 +847,8 @@ const heroes = specSnap.ents.filter((e) => (e.k === 'drone' || e.k === 'robot') 
 assert(bases.length === 2, `主堡 ×2(hp=${bases[0]?.hp})`);
 assert(towers.length === 8, `防禦塔 ×8(1 線 × 2 塔位 × 左右 2 座 × 2 方;實際 ${towers.length})`);
 assert(heroes.length === 2, `英雄 ×2(主視野機;${heroes.map((h) => h.k).join(',')})`);
-assert(specSnap.ents.filter((e) => e.k === 'drone').length === SQUAD.N,
-  `無人機玩家在場 ${SQUAD.N} 架機體(主視野 1 + 僚機 ${SQUAD.N - 1})`);
+assert(specSnap.ents.filter((e) => e.k === 'drone').length === 1,
+  '無人機玩家在場 1 架機體(單機)');
 const myHero = snap.ents.find((h) => h.pid === host.sync.youId && h.act);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
 assert(typeof myHero.$ === 'number' && myHero.ab && typeof myHero.kn === 'number',
@@ -907,30 +922,27 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機自爆(F 鍵:需準星鎖定;無鎖定不動作;死亡後連按無效)—');
+log('— 無人機自殺攻擊機(F 鍵:前方左右各一;主機不自爆;CD 內再按無效)—');
 const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
 const dies0 = droneDies();
-host.send({ t: 'detonate' });   // 尚未鎖定任何目標
-await new Promise((r) => setTimeout(r, 300));
-assert(droneDies() === dies0, '無鎖定 → F 完全不動作(不會原地白白自爆)');
-// 鎖定敵塔(恆可見)後再按 F:主視野機引爆 + 僚機衝刺
+// 移到高空(250 > SAM 240)避免被塔擊落干擾,再按 F 釋放自殺攻擊機
 const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
-host.send({ t: 'pos', x: foeTower.x, y: 250, z: foeTower.z, ry: 0 });   // 250 > SAM 240:高空不被防空鎖
+host.send({ t: 'pos', x: foeTower.x, y: 250, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
-host.send({ t: 'lock', id: foeTower.id });
-await host.wait((c) => c.snaps.flatMap((s) => s.ev || []).some((e) => e.e === 'lock' && e.pid === host.sync.youId), 3000);
-host.send({ t: 'detonate' });
-host.send({ t: 'detonate' });
+// 累計不同 id(自殺機撲擊敵塔 → 會邊飛邊死,任一瞬間的快照未必同時看到兩架 → 用累計 id 才穩)
+const kamiIds = () => { const s = new Set();
+  for (const snp of spec.snaps) for (const e of snp.ents) if (e.k === 'kami' && e.pid === host.sync.youId) s.add(e.id);
+  return s; };
+// WS 端只驗「F → 伺服器 → 快照」這條路走通(冒出自殺機);確切 2 架/HP/吸彈/引爆走上方 sim 直測。
+// (自殺機一冒出就撲向敵塔並被塔火集火 → 任一瞬間快照未必同時看到兩架,故只驗 ≥1)
+host.send({ t: 'kami' });
+await host.wait(() => kamiIds().size >= 1, 3000);
+assert(kamiIds().size >= 1, `F 經網路生成自殺攻擊機(累計不同 id ${kamiIds().size};確切數量見 sim 直測)`);
+assert(droneDies() === dies0, '主機不再自爆(F 不會炸掉自己)');
+const idsAfterFirst = kamiIds().size;
+host.send({ t: 'kami' });   // CD 內再按:不應再生成一批
 await new Promise((r) => setTimeout(r, 300));
-const selfKill = droneDies() > dies0;
-assert(selfKill, '鎖定後自爆擊毀自身座機(同歸於盡)');
-const swapEv = host.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'swap' && e.pid === host.sync.youId);
-assert(!!swapEv, '主視野自動讓位給存活僚機(swap 事件)');
-await host.wait((c) => {
-  const me = c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
-  return me && !me.dead;
-}, 5000);
-assert(true, '接手的僚機立即可操作(不必等重生)');
+assert(kamiIds().size === idsAfterFirst, 'CD 內再按 F 不會再多一批自殺攻擊機');
 
 log('— 俯衝進兵線 → 被擊殺 → 重生 —');
 host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });
@@ -1009,8 +1021,8 @@ const s5 = h5.snaps.at(-1);
 const drones5 = s5.ents.filter((e) => e.act && e.pid != null && !String(e.pid).startsWith('b'));
 const towers5 = s5.ents.filter((e) => e.k === 'tower');
 assert(drones5.length === 2, `同陣營 2 位真人英雄同時在場(pid:${drones5.map((d) => d.pid).join(',')})`);
-assert(s5.ents.filter((e) => e.pid != null && !String(e.pid).startsWith('b')).length
-  === drones5.reduce((n, d) => n + (d.k === 'drone' ? SQUAD.N : 1), 0), '每位真人的機體數 = 無人機 3 架 / 機甲 1 架');
+assert(s5.ents.filter((e) => e.pid != null && !String(e.pid).startsWith('b') && e.k !== 'kami').length
+  === drones5.length, '每位真人 = 單一機體(無人機/機甲皆單機)');
 assert(towers5.length === 24, `3 線 → 防禦塔 ×24(實際 ${towers5.length})`);
 h5.ws.close(); g5.ws.close();
 

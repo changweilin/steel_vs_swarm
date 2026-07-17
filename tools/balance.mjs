@@ -5,7 +5,7 @@
 //    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + WAVE_EXTRAS(火箭兵/榴彈兵/坦克/攻擊直升機)。
 //    情境:玩家單挑整波、雙方全在有效射程內(近距平台,無距離衰減)持續開火、
 //    玩家只有 Lv1 輕武器 + 重武器照 CD、無升級/招式/掩體 ⇒ 清完波後應剩 ~40% EHP。
-//    (無人機三機隊靠 _echo 齊射同一目標,EHP/DPS 皆 = 單機 × SQUAD.N)
+//    (無人機為單機:EHP = 機甲平均 ×80%、傷害同機甲;恆飛行 → 對直射武器有 EVASION 閃避)
 //
 // ② 最前線敵我砲塔:射程重疊 TOWER_OVERLAP(0.8)且互不在對方射程內(d = 1.2R > R)。
 //    對全部預設場地 × 1/2/3 線實際起一份 BattleSim,量最近的一對敵我塔。
@@ -16,12 +16,10 @@
 // ④ 滿級單推同塔位雙塔:八軌全滿的玩家攻擊一組塔位。
 //    機甲/變形機甲(單機)= 近戰互轟模型(前段雙塔回擊、殺一座後單塔;無距離衰減/
 //    無招式/無爆擊/護盾持續受擊不回復)⇒ 平均「剛好」活著拆完(剩 0~20% EHP)。
-//    無人機(三機隊)= 站外圍攻模型:塔會逐機集火(_acquireTarget 鎖單一機體)且
-//    _echo 每折一架掉 1/3 火力 ⇒ 近戰互轟必敗;蜂群的雙塔正解是「重武器射程 > 砲塔」
-//    的站外攻堅(311m 外零承傷、含距離衰減)⇒ 驗每台重武器射程確實 > 塔 + 機種平均
-//    拆完兩座 ≤ 站外時間預算。
+//    無人機(單機)= 站外圍攻模型:重武器射程 > 砲塔(311m 外零承傷、含距離衰減)⇒
+//    驗每台重武器射程確實 > 塔 + 機種平均拆完兩座 ≤ 站外時間預算(單機 DPS ⇒ 較慢但不承傷)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, QUAL, upgradePrice, masteryF, chargeF,
-  killScore, armorMul, vsMult, heroWeapon, charKind, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+  killScore, armorMul, vsMult, heroWeapon, charKind, heroArmor, EVASION, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim, waveInterval } from '../server/sim.js';
 
@@ -37,21 +35,26 @@ const slotDps = (ch, slot, tk) => {
 };
 const heroDps = (ch, tk) => {
   const d = slotDps(ch, 'light', tk) + slotDps(ch, 'heavy', tk);
-  return charKind(ch) === 'drone' ? d * SQUAD.N : d;   // _echo:三機齊射同一目標
+  return charKind(ch) === 'drone' ? d * SQUAD.N : d;   // 無人機單機(N=1);保留 ×N 形以防未來調整
 };
 
 /** 單挑一波:0.05s 步進,玩家先集火「對自己最痛的」;回傳戰後剩餘 EHP 比例(可為負) */
 function fightWave(ch) {
   const kind = charKind(ch), u = UNITS[kind], m = CHARACTERS[ch].mods;
-  const n = kind === 'drone' ? SQUAD.N : 1;
-  const armor = m.armor ?? 0;
+  const n = kind === 'drone' ? SQUAD.N : 1;   // 無人機單機(N=1);EHP/DPS 不再 ×N
+  const armor = heroArmor(ch);   // 無人機護甲已等比縮放至機甲平均 ×HP_F(與 sim 同一個縫)
+  // 無人機恆飛行 → 移動中,對「直射(無爆風)」武器有 EVASION 閃避(比照 sim _dodges 觸發條件);
+  // 這是蜂群的正規求生機制(單機 80% EHP 的補償)。機甲仍以「站樁不閃」的最壞情況估。
+  const flying = kind === 'drone';
   let ar = Math.round(u.hp * (m.hp ?? 1)) * n;
   let sh = Math.round(u.shield * (m.sp ?? 1)) * n;
   const ehp0 = ar + sh;
-  const foes = WAVE.map((k) => ({
-    hp: UNITS[k].hp, dps: heroDps(ch, k),
-    dmg: UNITS[k].dmg * UNITS[k].rate, pen: WEAPONS[UNITS[k].wid]?.pen || 0,
-  })).sort((a, b) => b.dmg * armorMul(armor, b.pen) - a.dmg * armorMul(armor, a.pen));
+  const foes = WAVE.map((k) => {
+    const wd = WEAPONS[UNITS[k].wid];
+    const ev = flying && wd && !wd.r ? EVASION.GROUND + EVASION.AIR_BONUS : 0;
+    return { hp: UNITS[k].hp, dps: heroDps(ch, k),
+      dmg: UNITS[k].dmg * UNITS[k].rate * (1 - ev), pen: wd?.pen || 0 };
+  }).sort((a, b) => b.dmg * armorMul(armor, b.pen) - a.dmg * armorMul(armor, a.pen));
   const dt = 0.05;
   let t = 0, i = 0;
   while (i < foes.length && t < 600) {
@@ -158,8 +161,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     }
     return { left: (sh + hull) / cap0, T1 };
   };
-  // 無人機(三機隊):站外圍攻 —— 塔射程外一步(零承傷、> SAM 240 亦不吃防空),
-  // 重武器 × 距離衰減 × 三機齊射;fan 電漿在射程末端貼 FAN_FLOOR = 刻意「碰得到、拆得慢」
+  // 無人機(單機):站外圍攻 —— 塔射程外一步(零承傷、> SAM 240 亦不吃防空),
+  // 重武器 × 距離衰減;fan 電漿在射程末端貼 FAN_FLOOR = 刻意「碰得到、拆得慢」
   const standoff = (ch) => {
     const d = UNITS.tower.range + 1;
     const w = heroWeapon(ch, 'heavy', 3, true);

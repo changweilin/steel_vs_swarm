@@ -216,6 +216,7 @@ export const TARGET_CLASS = {
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'flesh', heli: 'air',
   robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
   bunker: 'building',   // 第三方碉堡(見 THIRD)
+  civilian: 'flesh',    // 平民/間諜(非戰鬥人員;永不被 NPC 鎖定,見 CIVILIAN)
   // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
   aasite: 'building', construction: 'building', wreck: 'building',
   rockfall: 'building', fallentree: 'building',
@@ -242,9 +243,9 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
-// SQUAD:蜂群玩家同時操控 N 架無人機(主視野一架 + 僚機)。
-// 單機 HP/傷害 = 機甲的 1/N 再 ×BUFF(2026-07-10:單機強化 +50%)→ 三機齊射 ≈ 1.5 台機甲。
-// 傷害折算住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
+// SQUAD:蜂群玩家 = 單架無人機(2026-07-17 起;舊制為 N 架小隊,現 N=1)。
+// 生存值(HP/護盾/護甲)= 機甲平均的 HP_F(80%);傷害 = 機甲全額(DMG=1,單機不折)。
+// 傷害折算仍住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
 // MORPH:傭兵變形機甲(單機;HP/火力與機甲完全相同)。
 // 飛行型態「觸地」→ 變形為地面型;地面型態「蓄力跳躍」(按住 Space 蓄力後放開)→ 彈射升空變形為飛行型。
 // 變形是客戶端物理(位置本就客戶端回報),伺服器一律以回報高度 y 判定型態:
@@ -275,24 +276,26 @@ export const CJUMP = {
 // 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長;蜂群無人機無此機制。
 export const IFRAME = { DUR: 1.0, CD: 20 };
 export const SQUAD = {
-  N: 3,
-  // 單機強化倍率(HP / 傷害);UNITS.drone.hp/shield 與 DMG 都由它推導。
-  // 1.12(2026-07-17,舊值 1.05):波次追加主戰坦克(armor 18)後,無人機武器普遍剋肉不剋甲、
-  // 清坦克特別慢 ⇒ 三機隊承傷失衡;BUFF 是「三機隊對齊機甲 40% 剩餘」的正規旋鈕
-  // (損血比例 ∝ 1/BUFF²:EHP 與 DPS 同時 ×BUFF ⇒ 清波時間 ÷BUFF、承傷 ÷BUFF²)。
-  // 校準情境同 npm run bal ①;改波次編制/任一小兵數值 MUST 重跑。
-  BUFF: 1.12,
-  DMG: 1.12 / 3,      // = BUFF / N
-  FORM_SIDE: 15,      // 僚機編隊橫向偏移(公尺)
-  FORM_BACK: 10,      // 僚機編隊後方偏移
-  REGROUP_M: 70,      // 離主視野超過此距離 → 先沿標準兵線路線歸隊
-  REJOIN_F: 0.6,      // 縮短到 REGROUP_M × 此比例 → 解除歸隊、直接編隊
-  LANE_SNAP_M: 25,    // 沿線推進的到位判定
-  LANE_STEP_M: 80,    // 每次沿線推進的前瞻距離
-  REGROUP_ALT: 30,    // 歸隊巡航高度(< AA_MIN_ALT,不被防空鎖定)
-  REGROUP_MUL: 1.3,   // 歸隊加速
-  DASH_MUL: 3,        // 自爆衝刺加速(三倍速撲擊)
-  DASH_BOOM_M: 4,     // 衝刺引爆距離
+  N: 1,               // 單架無人機(2026-07-17 起:由三機小隊改為單機)
+  HP_F: 0.8,          // 生存值 = 機甲平均的 80%(HP/護盾/護甲;見 UNITS.drone 推導 + heroArmor())
+  DMG: 1,             // 單機傷害 = 機甲全額(不再折算;heroWeapon() 唯一套用點,三機時代 = 1/3)
+  ARMOR_F: 1,         // 無人機護甲等比縮放係數(UNITS 之後 derive:令無人機平均 armor = 機甲平均 ×HP_F)
+  DRONE_AVG_HP: 0,    // 初始無人機平均總血量(護盾+裝甲;UNITS 之後 derive)→ 防空伏擊傷害 = 此值 /3
+  // ── 自殺攻擊機(F 鍵:前方左右各釋放一架 1/3 體型/血量的神風機,以自身 3 倍速撲擊;CD 固定 30s;
+  //    敵方導引飛彈會被牠們吸走砲火 —— 見 sim._tickKamis / _tickMissiles)──
+  KAMI: {
+    N: 2, HP_F: 1 / 3, SIZE_F: 1 / 3, SPEED_MUL: 3, CD_S: 30,
+    SPREAD: 0.55,     // 前方左右散開角(弧度,≈32°)
+    FWD: 8, SIDE: 5,  // 生成點:前置 / 側置偏移(公尺)
+    TURN: 3.2,        // 追蹤限轉率(弧度/秒;比餌機敏捷)
+    BOOM_M: 5,        // 近炸引信半徑
+    TTL_S: 8,         // 無目標時直飛自毀秒數
+    ACQ_R: 260,       // 無鎖定時自動索敵半徑
+  },
+  // 以下為三機小隊時代的編隊/歸隊常數;N=1 後 _tickSquads 無僚機可跑,保留以維持路徑相容。
+  FORM_SIDE: 15, FORM_BACK: 10, REGROUP_M: 70, REJOIN_F: 0.6,
+  LANE_SNAP_M: 25, LANE_STEP_M: 80, REGROUP_ALT: 30, REGROUP_MUL: 1.3,
+  DASH_MUL: 3, DASH_BOOM_M: 4,
 };
 
 // ---- 準星鎖定(全機種通用;2026-07-10 起不再只是無人機自爆衝刺的目標)----
@@ -478,7 +481,7 @@ export function rangeCap(kind, slot) {
  * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
  * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5)並夾住 rangeCap;false = NPC 基準值。
  * 重武器以 mag×reload 實作 CD:每發打完自動進入 cd 秒冷卻(HUD 顯示為冷卻)。
- * 無人機是三機小隊(SQUAD.N),單機傷害折成 SQUAD.DMG — 這裡是唯一的折算點。
+ * 無人機為單機(SQUAD.N=1),SQUAD.DMG=1 = 不折算(唯一折算點,保留機制;三機時代 = 1/3)。
  */
 export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   const w = CHARACTERS[ch]?.[slot];
@@ -526,6 +529,13 @@ export function heroAbility(ch, slot, lvl = 1) {
 /** 角色機體種類(不需要 side:傭兵自帶 kind,陣營角色由 side 決定)— heroWeapon 的折算依據 */
 export const charKind = (ch) =>
   CHARACTERS[ch]?.kind || (CHARACTERS[ch]?.side === 'SWARM' ? 'drone' : 'robot');
+
+/** 角色實戰護甲值:無人機等比縮放到「機甲平均 armor ×SQUAD.HP_F」(SQUAD.ARMOR_F,UNITS 後 derive);
+ *  其餘機種照 mods.armor。套用點:sim._add 生成 + buy('ar') 升級,兩處共用此縫(客戶端體型仍讀原 mods.armor)。 */
+export const heroArmor = (ch) => {
+  const a = CHARACTERS[ch]?.mods?.armor ?? 0;
+  return charKind(ch) === 'drone' ? a * SQUAD.ARMOR_F : a;
+};
 
 // 陣營可選角色池:專屬角色 + 傭兵(side:'MERC',雙陣營皆可受雇)
 export const charsOf = (side) => Object.keys(CHARACTERS)
@@ -1130,8 +1140,8 @@ export const ECON = {
   ASSIST: { F: 0.25, TTL_S: 10 },
   // 重武器每發電力 = 該武器 cd 秒 × 此值 ×(武器精通折減)⇒ 持續火力的耗電率全武器一致
   HEAVY_MP_PER_CD: 2.0,
-  // 英雄賞金:機甲/變形機甲全額;無人機是三機小隊 → 單架 ≈ 機甲 ÷ 3 × SQUAD.BUFF(全滅 ≈ 一台機甲)
-  BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 70, robot: 190, morph: 190 },
+  // 英雄賞金:機甲/變形機甲全額;無人機(單機,2026-07-17)≈ 機甲 ×SQUAD.HP_F(生存值 80% → 150)
+  BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 150, robot: 190, morph: 190 },
   BOUNTY_DPS_S: 8,     // 戰力公式的 DPS 權重(秒):value = EHP + DPS × 此值
   BOUNTY_F: 0.12,      // 戰力 → 金錢的匯率(10 分鐘升滿預算的主旋鈕)
   // 八軌之六:通用強化(隨處可買;wq/aq 品質二軌住 QUAL,要吃擊殺數門檻)。
@@ -1176,7 +1186,7 @@ export const UNITS = {
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
   // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
-  // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 270 = drone sight 300 × RANGE_SIGHT_F)
+  // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 243 = drone sight 270 × RANGE_SIGHT_F)
   // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)
   // ⇒ 打其中一座塔,必定同時吃到另一座的覆蓋火力。改 sight/RANGE_SIGHT_F/TOWER_SIDE_OFF
   // MUST 重驗這條不等式(sim._spawnStructures 的塔距守衛也吃 range)。
@@ -1189,14 +1199,14 @@ export const UNITS = {
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
   // 見 heavyMpCost);mpRegen 為「充能」滿級規格(實際回速 × chargeF(充能等級))。
-  // 無人機 = 三機小隊(SQUAD.N):單機 hp/shield 由 SQUAD.BUFF 於 UNITS 之後 derive
-  // (= 機甲 ÷ N × BUFF;MUST NOT 手寫,寫死就會與 SQUAD.DMG 漂移),傷害折算在 heroWeapon()。
-  // 每一架各自重生、各自吃冷卻(與機甲同表)。
+  // 無人機 = 單架(SQUAD.N=1,2026-07-17):hp/shield/armor 於 UNITS 之後 derive = 機甲平均 ×SQUAD.HP_F
+  // (80%;MUST NOT 手寫),傷害 = 機甲全額(heroWeapon() 唯一折算點,DMG=1)。各自重生、各自吃冷卻。
   drone: {
     name: '獵蜂無人機', hp: 0, shield: 0, mp: 100, mpRegen: 4,
-    // fov/zoomFov 與機甲一致(2026-07-12):FPV 視覺大小感受度雙陣營必須相同,
-    // 廣角會把同距離目標畫小(舊 100/55 = 無人機看 NPC 比機甲小一號)。
-    speed: 42, vspeed: 22, fov: 68, zoomFov: 35, sight: 300,
+    // fov/zoomFov 與機甲一致(2026-07-12):FPV 視覺大小感受度雙陣營必須相同,廣角會把同距離目標畫小。
+    // sight 270(原 300,2026-07-17):單機取代小隊 —— 輕武器射程上限 = 270×RANGE_SIGHT_F = 243m,
+    //   ≈ 機甲 216 的 9/8(射程較機甲高約 1/8);重武器上限(×AIM_SIGHT_MULT)仍遠 > 塔 310。
+    speed: 42, vspeed: 22, fov: 68, zoomFov: 35, sight: 270,
     bomb: 'bomb',                        // F 鍵原地引爆 / 高速撞擊引爆(自毀);僚機衝刺自爆
     regen: 12,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久(單機獨立計數)
@@ -1220,9 +1230,20 @@ export const UNITS = {
   bunker: { name: '碉堡', hp: 0, armor: 30, dmg: 0, range: 0, rate: 0, speed: 0, sight: 150 },
 };
 UNITS.bunker.hp = Math.round(UNITS.tower.hp / 2);   // 碉堡 HP = 砲塔一半(唯一推導處)
-// 三機小隊單機生存值的唯一推導處(見 SQUAD.BUFF):三架合計 = 機甲 × BUFF
-UNITS.drone.hp = Math.round(UNITS.robot.hp / SQUAD.N * SQUAD.BUFF);
-UNITS.drone.shield = Math.round(UNITS.robot.shield / SQUAD.N * SQUAD.BUFF);
+// 單架無人機生存值的唯一推導處(2026-07-17):令「無人機各角色 effective 值的平均」= 機甲(robot)
+// 平均的 SQUAD.HP_F(80%),HP/護盾逐層對齊;護甲等比縮放係數 ARMOR_F 於此一併算出(套用點 heroArmor())。
+{
+  const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+  const dch = Object.keys(CHARACTERS).filter((c) => charKind(c) === 'drone');
+  const mch = Object.keys(CHARACTERS).filter((c) => charKind(c) === 'robot');
+  const modAvg = (cs, k, d) => avg(cs.map((c) => CHARACTERS[c].mods?.[k] ?? d));
+  UNITS.drone.hp = Math.round(SQUAD.HP_F * UNITS.robot.hp * modAvg(mch, 'hp', 1) / modAvg(dch, 'hp', 1));
+  UNITS.drone.shield = Math.round(SQUAD.HP_F * UNITS.robot.shield * modAvg(mch, 'sp', 1) / modAvg(dch, 'sp', 1));
+  SQUAD.ARMOR_F = SQUAD.HP_F * modAvg(mch, 'armor', 0) / modAvg(dch, 'armor', 0);
+  // 初始無人機平均總血量(護盾+裝甲)—— 防空伏擊傷害 = 此值 /3(見 GAME 之後的 AA_AMBUSH.DMG derive)
+  SQUAD.DRONE_AVG_HP = avg(dch.map((c) =>
+    UNITS.drone.hp * (CHARACTERS[c].mods?.hp ?? 1) + UNITS.drone.shield * (CHARACTERS[c].mods?.sp ?? 1)));
+}
 // 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
 UNITS.morph = {
@@ -1242,6 +1263,75 @@ for (const k of ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'apc', 'tow
   const v = u.hp / armorMul(u.armor || 0) + (u.dmg || 0) * (u.rate || 0) * ECON.BOUNTY_DPS_S;
   ECON.BOUNTY[k] = Math.round(v * ECON.BOUNTY_F / 5) * 5;
 }
+
+// ---- 平民與間諜(2026-07-18;非兵線隨機放置的非戰鬥人員,DOTA 野區思想的變體)----
+// 每陣營在非兵線空曠處隨機生成 ~10 名(隨兵線數縮放),其中 SPY_RATE(1/10)為間諜(9:1)。
+// 外觀「只能分辨陣營、無法分辨間諜」:平民與間諜共用模型(models.js buildCivilian),
+// 陣營僅靠貼地 teamRing / 頭頂陣營箭頭辨識;唯一的行為破綻是「移動速度」——
+// 平民 = 步槍兵 ×CIV_SPEED_F(0.5)、間諜 = ×SPY_SPEED_F(0.66),細看走位可分辨。
+// 是 neutral ent(NPC 永不鎖定、恆可見、可被玩家武器/爆風擊殺),伺服器權威 _tickCivilians。
+// 陣亡後 RESPAWN_S 秒於隨機合法點重生(保留陣營/間諜身分維持 9:1,職業與位置重抽)。
+//
+// 擊殺報酬(以步槍兵賞金 ECON.BOUNTY.soldier 為單位;平民一律負值 = 誤殺平民有損失):
+//   我方平民 −1 / 敵方平民 −0.33 / 我方間諜 −3 / 敵方間諜 +6(唯一正報酬 = 揪出敵方間諜)。
+// 互動(靠近 INTERACT_R 內):驅趕(逃離後消失)或要求跟隨,兩者不分陣營皆可。
+//   我方跟隨者(cs === 玩家陣營)存活時每 FOLLOW_REWARD_S(3 分)給一次報酬 ——
+//   依職業給 medkit/battery/money(見 CIVILIANS.reward),量 = 小空投(S,FOLLOW_MUL)。
+export const CIVILIAN = {
+  PER_SIDE_BASE: 6, PER_SIDE_PER_LANE: 2,   // 每側數量 = BASE + PER_LANE × 兵線數(1/2/3 → 8/10/12)
+  SPY_RATE: 0.1,                            // 9:1 平民:間諜
+  RESPAWN_S: 30,                            // 陣亡後於隨機合法點重生的延遲(維持全場平民數量)
+  HP: 40, ARMOR: 0,                         // 低血:一輪點放即倒
+  CIV_SPEED_F: 0.5, SPY_SPEED_F: 0.66,      // × 步槍兵移速(UNITS.soldier.speed = 16 → 8 / 10.56)
+  LANE_MIN: 60,                             // 非兵線位置(距兵線走廊最小距離)
+  BASE_CLEAR: 90,                           // 距主堡/重生點淨空
+  WANDER_R: 45,                             // 徘徊半徑(繞出生點慢走)
+  WANDER_PAUSE: [1.5, 4.5],                 // 抵達路點後停留秒數區間
+  INTERACT_R: 22,                           // 玩家互動半徑(靠近可驅趕/跟隨)
+  FOLLOW_R: 9,                              // 跟隨時保持的距離
+  FOLLOW_LINK_M: 260,                       // 跟隨者離主人超過此距離 = 失聯,回復徘徊
+  FOLLOW_REWARD_S: 180,                     // 我方跟隨者每 180s 給一次報酬
+  FOLLOW_MUL: 1.0,                          // 報酬量 = 小空投(S)
+  FLEE_SPEED_F: 1.35,                       // 被驅趕後逃離速度(× 自身移速)
+  FLEE_TTL_S: 6,                            // 逃離後消失
+  KILL_F: { ownCiv: -1, enemyCiv: -0.33, ownSpy: -3, enemySpy: 6 },   // × ECON.BOUNTY.soldier
+};
+// 平民/間諜移動速度(m/s):唯一辨識破綻(伺服器 _tickCivilians 與客戶端估算共用)
+export const civSpeed = (spy) => UNITS.soldier.speed * (spy ? CIVILIAN.SPY_SPEED_F : CIVILIAN.CIV_SPEED_F);
+// 平民職業圖鑑(男 10 + 女 10;展示台可逐一檢視)。
+// 外觀差異化(2026-07-18):models.js buildCivilian 依 name 給每種職業專屬服裝剪影
+// (頭飾 + 罩衫 + 招牌配件,如醫師白袍聽診器 / 廚師高帽 / 建築工反光背心工具帶……);
+// hat/bag 僅供備援 __def 分支使用。服裝一律中性/職業色,MUST NOT 用雙方陣營標誌色
+// (SWARM 琥珀 #ffb300 / STEEL 冷藍 #4fc3f7)。reward = 我方跟隨者每 3 分提供的物資種類。
+export const CIVILIANS = [
+  // 男性 10 種
+  { name: '醫師',       g: 'M', reward: 'medkit',  hat: 0xf2f2f2, bag: 0xc0392b },
+  { name: '工程師',     g: 'M', reward: 'battery', hat: 0xe8621f, bag: 0x556070 },
+  { name: '商人',       g: 'M', reward: 'money',   hat: 0x6e4b2a, bag: 0x3b2a1c },
+  { name: '廚師',       g: 'M', reward: 'money',   hat: 0xf4f4f0, bag: 0x7a2e2a },
+  { name: '電工',       g: 'M', reward: 'battery', hat: 0xc0362f, bag: 0x2b3550 },
+  { name: '教師',       g: 'M', reward: 'money',   hat: 0x4a4e86, bag: 0x6f3f7a },
+  { name: '農夫',       g: 'M', reward: 'medkit',  hat: 0xb59a58, bag: 0x5f6a34 },
+  { name: '記者',       g: 'M', reward: 'battery', hat: 0x3a4150, bag: 0x2b3038 },
+  { name: '郵差',       g: 'M', reward: 'money',   hat: 0x2f6b45, bag: 0x244f34 },
+  { name: '建築工',     g: 'M', reward: 'battery', hat: 0xd9591f, bag: 0x6b6b6b },
+  // 女性 10 種
+  { name: '護理師',     g: 'F', reward: 'medkit',  hat: 0xf2f2f2, bag: 0xd8657f },
+  { name: '藥師',       g: 'F', reward: 'medkit',  hat: 0xe8eef0, bag: 0x2f9e6a },
+  { name: '銀行員',     g: 'F', reward: 'money',   hat: 0x3a4250, bag: 0x2b3038 },
+  { name: '程式設計師', g: 'F', reward: 'battery', hat: 0x6b4f9e, bag: 0x3a2f5a },
+  { name: '會計師',     g: 'F', reward: 'money',   hat: 0x7d6fae, bag: 0x4a4470 },
+  { name: '律師',       g: 'F', reward: 'money',   hat: 0x2a2f38, bag: 0x5c2a34 },
+  { name: '獸醫',       g: 'F', reward: 'medkit',  hat: 0xefe7d3, bag: 0xcf4d4a },
+  { name: '技師',       g: 'F', reward: 'battery', hat: 0xbf4f2f, bag: 0x455060 },
+  { name: '攤販',       g: 'F', reward: 'money',   hat: 0xcf6a34, bag: 0x7a5330 },
+  { name: '心理師',     g: 'F', reward: 'medkit',  hat: 0xa86ab8, bag: 0xdcc7e4 },
+];
+// 平民單位數值(neutral ent;無戰鬥屬性 —— 展示台/傷害只讀 hp/armor/speed)
+UNITS.civilian = {
+  name: '平民', hp: CIVILIAN.HP, armor: CIVILIAN.ARMOR,
+  speed: Math.round(UNITS.soldier.speed * CIVILIAN.CIV_SPEED_F),
+};
 
 // ---- 第三方軍隊(2026-07-17;遠離兵線的中立武裝,DOTA 野區思想:交戰可獲得金錢)----
 // 每條兵線兩側各駐守一團(總團數 = 兵線數 × 2):游擊隊 GUER / 武裝民兵 MILI 各踞一側。
@@ -1331,12 +1421,12 @@ export const GAME = {
   // **稍微偏離主要路線不該被打到** ⇒ 觸發與佈設淨空一律用這個(遠大於走廊半寬 45),
   // 且雷區/陣地另外避開主堡、重生點與砲塔。MUST NOT 改回用 LANE_SAFE_M 當伏擊閘門。
   AMBUSH_M: 110,
-  // 第三方打擊總量(2026-07-12 二修):**地雷與匿蹤防空的「打擊面積」相等,且總量大幅下修**。
-  //   每線每種的打擊面積 = THREAT_AREA_PER_LANE(m²)——
+  // 第三方打擊總量(2026-07-12;2026-07-17 修:防空砍為地雷的 1/3):
+  //   地雷打擊面積 = THREAT_AREA_PER_LANE(m²);防空打擊面積 = 地雷 × THREAT_AA_AREA_FRAC(1/3)。
   //   地雷:PER_LANE × π×R²(由面積反推顆數);防空:AA_SITES_PER_LANE × π×range²(由面積反推射程)。
-  //   兩者一律在下方 derive(**MUST NOT** 手寫 MINES.PER_LANE / AA_SITE.range,會破壞等面積約束)。
-  // 舊制實際面積:地雷 7.9k/線、防空 637k/線(陣地射程 260)⇒ 天差地遠且防空幾乎覆蓋全場。
+  //   兩者一律在下方 derive(**MUST NOT** 手寫 MINES.PER_LANE / AA_SITE.range)。
   THREAT_AREA_PER_LANE: 20000,
+  THREAT_AA_AREA_FRAC: 1 / 3,   // 防空打擊總面積 = 地雷總面積的 1/3(密度 = 地雷 1/3;見下方 AA_SITE.range derive)
   THREAT_CD_S: 180,           // 同一機體被第三方打擊(踩雷 / 被伏擊)後的冷卻:3 分鐘,兩者共用
   THREAT_MISSILES_MAX: 1,     // 同時在空中的第三方伏擊飛彈上限(全場 1 發)
   // 地雷(非正規路線,只有地面機甲會踩;顏色融入地表,靠近才看得到極輕微突起)
@@ -1347,10 +1437,10 @@ export const GAME = {
            TOWER_CLEAR: 90,            // 砲塔周邊淨空(塔下不佈雷)
            SEE_M: 30, CLEAR_M: 14,     // 客戶端:SEE_M 內開始浮現,CLEAR_M 內完全可見
            CUT_BIAS: 0.5, CUT_R: 70 },
-  // 匿蹤防空伏擊(非正規路線的無人機):命中直接擊墜;飛彈可被擊毀。
-  // 觸發需要射程內有存活的匿蹤防空陣地(aasite)——拔掉陣地 = 打出安全空域。
-  // DMG 620:雙層 HP 後仍須一發穿透護盾+裝甲直接擊墜(維持「命中即墜」設計)。
-  AA_AMBUSH: { CHANCE_PER_S: 0.22, DMG: 620, SPEED: 130, HP: 40, PEN: 20 },
+  // 匿蹤防空伏擊(非正規路線的無人機):飛彈可被擊毀。觸發需射程內有存活的匿蹤防空陣地(aasite)。
+  // DMG(2026-07-17)= 初始無人機平均總血量的 1/3,於 FIELD 之後 derive(**MUST NOT** 手寫);
+  //   不再命中即墜 —— 一發約削去三分之一血量。
+  AA_AMBUSH: { CHANCE_PER_S: 0.22, DMG: 0, SPEED: 130, HP: 40, PEN: 20 },
 };
 // ---- 閃避(2026-07-14)----
 // 有效機動(移速)> MOBILITY_MIN 的機體,在「移動中」對「輕武器直射」有機率完全閃開;
@@ -1518,10 +1608,12 @@ export const FIELD = {
            laneMin: 70, laneMax: 220, dLo: 0.38, dHi: 0.62 },
   CONNECT_CELL_M: 24,    // 連通性 flood-fill 網格(DevilutionX DRLG 思想:生成後驗證兩堡互通)
 };
-// 等面積約束的唯一推導處:防空陣地的射程 = 「每線打擊面積 ÷ 陣地數」的等效圓半徑
-// ⇒ 每線防空打擊面積 = 每線地雷打擊面積(見 GAME.THREAT_AREA_PER_LANE)
+// 防空陣地射程 = 「每線防空打擊面積 ÷ 陣地數」的等效圓半徑(2026-07-17:防空總面積 =
+// 地雷總面積 × THREAT_AA_AREA_FRAC(1/3)⇒ 防空密度 = 地雷密度的 1/3;不再等面積)。
 FIELD.AA_SITE.range = Math.round(
-  Math.sqrt(GAME.THREAT_AREA_PER_LANE / (Math.PI * FIELD.AA_SITES_PER_LANE)));
+  Math.sqrt(GAME.THREAT_AREA_PER_LANE * GAME.THREAT_AA_AREA_FRAC / (Math.PI * FIELD.AA_SITES_PER_LANE)));
+// 防空伏擊傷害 = 初始無人機平均總血量(護盾+裝甲)的 1/3(2026-07-17:不再命中即墜)。
+GAME.AA_AMBUSH.DMG = Math.round(SQUAD.DRONE_AVG_HP / 3);
 
 // ---- 戰場物資(Diablo 式隨機掉落:擊毀障礙物有機率掉,靠近拾取)----
 // TIERS 依序 = 普通 → 稀有;TC(TreasureClass,D2 思想)= 越硬的障礙掉越高階:

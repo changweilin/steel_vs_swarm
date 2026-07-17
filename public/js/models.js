@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo } from './data.js';
+import { SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo, CIVILIANS } from './data.js';
 import { toonMat, toonify, outlinify } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 
@@ -68,6 +68,7 @@ const TARGET_H = {
   'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
   bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
+  civ: SOLDIER_H,   // 平民/間諜(真人身高)
 };
 
 const loader = new GLTFLoader();
@@ -5131,6 +5132,350 @@ function buildGrenadierFallback(side) {
   });
 }
 
+/**
+ * 平民/間諜(2026-07-18;非戰鬥人員)— 可動人形骨架,無武裝、無敵我識別燈。
+ * 外觀依 CIVILIANS[prof]:職業以「帽子/包包顏色」區分(MUST NOT 用雙方陣營標誌色);
+ * 其餘配件一律中性色。陣營僅靠貼地 teamRing / 頭頂箭頭辨識(game.js _civMark)——
+ * 間諜與平民外觀完全相同,唯一破綻是移動速度(伺服器 civSpeed)。
+ * rig 為「biped 減去所有戰鬥欄位」:自然擺臂(無 gunArm)、無槍口焰(無 muzzles)。
+ */
+function buildCivilian(side, prof) {
+  const c = CIVILIANS[(prof | 0) % CIVILIANS.length] || CIVILIANS[0];
+  const female = c.g === 'F';
+  const g = new THREE.Group();
+  const hipY = 1.28;
+  // 依職業做確定性外觀變化(同職業恆定;不同職業膚色/髮色/髮型/鬍各異 —— 避免千人一面)
+  const pIdx = prof | 0;
+  const hp = (arr, salt) => arr[(pIdx * 7 + salt) % arr.length];
+  const SKIN = [0xf0c8a4, 0xe4b189, 0xd8a072, 0xc48a5c, 0xb07a4e, 0x9c6a42];
+  const HAIRC = [0x1a1512, 0x27201c, 0x352720, 0x4a3527, 0x6a4a30, 0x9aa0a6];  // 黑→棕→灰白
+  const MHAIR = ['short', 'sidepart', 'buzz', 'short', 'sidepart', 'curly'];
+  const FHAIR = ['bun', 'pony', 'bob', 'long', 'long', 'bun'];
+  const FACIAL = ['none', 'beard', 'stache', 'none', 'goatee', 'none'];
+  const skin = hp(SKIN, female ? 3 : 1);
+  const hairCol = hp(HAIRC, female ? 5 : 2);
+  const hairStyle = female ? hp(FHAIR, 1) : hp(MHAIR, 0);
+  const facial = female ? 'none' : hp(FACIAL, 4);
+  const cloth = female ? 0x6a6f7a : 0x565c66;    // 便服襯衫底色(職業罩衫蓋在其上;中性,不吃陣營色)
+  const pants = female ? 0x3c4048 : 0x33373f;
+  const shoulder = female ? 0.5 : 0.58;
+  const torsoD = female ? 0.32 : 0.38;
+  // 腿:髖關節樞軸(便褲/小腿/鞋)
+  const mkLeg = (sx) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * (female ? 0.16 : 0.19), hipY, 0);
+    bx(leg, 0.22, 0.58, 0.26, 0, -0.32, 0, pants);
+    bx(leg, 0.18, 0.5, 0.22, 0, -0.86, 0, dim(pants, 0.9));
+    bx(leg, 0.2, 0.12, 0.38, 0, -1.18, 0.05, 0x2a2622);   // 鞋
+    g.add(leg);
+    return leg;
+  };
+  const legL = mkLeg(-1), legR = mkLeg(1);
+  // 骨盆/軀幹(女性肩窄 + 裙腰)
+  const hips = new THREE.Group();
+  hips.position.y = hipY;
+  g.add(hips);
+  bx(hips, shoulder * 0.9, 0.24, 0.34, 0, 0.1, 0, dim(pants, 1.05));               // 腰
+  bx(hips, shoulder, 0.6, torsoD, 0, 0.56, 0, cloth);                             // 上身便服(底層襯衫)
+  if (female) bx(hips, shoulder * 1.04, 0.22, 0.36, 0, 0.28, 0, dim(cloth, 1.08));  // 裙擺/腰線
+  // 手臂:肩關節樞軸(便服上臂 + 裸前臂),自然擺動 —— rig 不設 gunArm
+  const mkArm = (sx) => {
+    const a = new THREE.Group();
+    a.position.set(sx * (shoulder * 0.8), 0.84, 0);
+    bx(a, 0.14, 0.42, 0.18, 0, -0.22, 0, cloth);
+    bx(a, 0.12, 0.36, 0.15, 0, -0.58, 0.04, skin);
+    hips.add(a);
+    return a;
+  };
+  const armL = mkArm(-1), armR = mkArm(1);
+  // 頸 + 頭 + 五官 + 髮型(2026-07-18 補臉:避免無臉/光頭,並依職業變化膚色/髮色/髮型/鬍)
+  cyl(hips, 0.09, 0.11, 0.18, 8, 0, 0.92, 0.02, dim(skin, 0.95));   // 頸(補住頭與軀幹的縫)
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 11), mat(skin));
+  head.position.set(0, 1.16, 0.02);
+  hips.add(head);
+  const sphere = (r, x, y, z, col) => {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 7), mat(col));
+    s.position.set(x, y, z); hips.add(s); return s;
+  };
+  // 五官(朝 +z;頭球心 y1.16 前表面 z≈0.24)
+  const fz = 0.2;
+  for (const sx of [-1, 1]) {
+    bx(hips, 0.075, 0.055, 0.03, sx * 0.082, 1.185, fz, 0xf4f1ea);          // 眼白
+    bx(hips, 0.036, 0.045, 0.03, sx * 0.09, 1.182, fz + 0.01, 0x241d18);    // 瞳
+    const brow = bx(hips, 0.095, 0.022, 0.03, sx * 0.086, 1.24, fz - 0.005, hairCol);
+    brow.rotation.z = sx * 0.08;                                            // 眉(略挑)
+    bx(hips, 0.03, 0.08, 0.05, sx * 0.205, 1.15, 0.03, dim(skin, 0.96));    // 耳
+  }
+  bx(hips, 0.05, 0.1, 0.07, 0, 1.13, fz + 0.02, dim(skin, 0.93));           // 鼻
+  bx(hips, 0.09, 0.024, 0.03, 0, 1.072, fz + 0.018, 0x8a4b46);             // 嘴
+  // 髮:頭皮罩(上半球,朝前留臉) + 後腦 + 額際 + 分型
+  const scalp = new THREE.Mesh(
+    new THREE.SphereGeometry(0.234, 14, 9, 0, Math.PI * 2, 0, Math.PI * 0.6), mat(hairCol));
+  scalp.position.set(0, 1.165, 0.005); hips.add(scalp);
+  bx(hips, 0.3, 0.22, 0.16, 0, 1.13, -0.12, hairCol);                       // 後腦髮
+  if (hairStyle !== 'buzz') bx(hips, 0.36, 0.07, 0.12, 0, 1.275, 0.13, dim(hairCol, 1.03));  // 低瀏海
+  if (hairStyle === 'sidepart') { const p = bx(hips, 0.2, 0.09, 0.16, 0.06, 1.3, 0.14, hairCol); p.rotation.z = 0.16; }
+  else if (hairStyle === 'curly') for (const [x, y, z] of [[0.16, 1.32, 0.06], [-0.16, 1.32, 0.06], [0, 1.37, -0.02], [0.2, 1.24, -0.06], [-0.2, 1.24, -0.06]]) sphere(0.1, x, y, z, hairCol);
+  else if (hairStyle === 'bun') sphere(0.13, 0, 1.35, -0.15, hairCol);
+  else if (hairStyle === 'pony') { bx(hips, 0.13, 0.16, 0.14, 0, 1.26, -0.18, hairCol); bx(hips, 0.11, 0.46, 0.12, 0, 0.98, -0.2, hairCol); }
+  else if (hairStyle === 'bob') { bx(hips, 0.42, 0.32, 0.3, 0, 1.08, -0.01, hairCol); for (const sx of [-1, 1]) bx(hips, 0.11, 0.34, 0.14, sx * 0.22, 1.06, 0.05, hairCol); }
+  else if (hairStyle === 'long') { bx(hips, 0.34, 0.42, 0.26, 0, 1.02, -0.1, hairCol); for (const sx of [-1, 1]) bx(hips, 0.13, 0.52, 0.13, sx * 0.19, 0.9, 0.02, hairCol); }
+  // 鬍(部分男性)
+  if (facial === 'beard') { bx(hips, 0.26, 0.16, 0.16, 0, 1.055, 0.13, hairCol); bx(hips, 0.11, 0.03, 0.04, 0, 1.108, fz + 0.02, hairCol); }
+  else if (facial === 'stache') bx(hips, 0.12, 0.03, 0.04, 0, 1.108, fz + 0.02, hairCol);
+  else if (facial === 'goatee') { bx(hips, 0.1, 0.11, 0.09, 0, 1.03, 0.14, hairCol); bx(hips, 0.11, 0.03, 0.04, 0, 1.108, fz + 0.02, hairCol); }
+
+  // ---------- 職業服裝差異化(2026-07-18)----------
+  // 每種職業有專屬剪影(頭飾 + 罩衫 + 招牌配件);罩衫掛 hips(隨軀幹)、手持物/手套掛 armL/armR
+  // (隨擺臂),膠靴掛腿(隨步態)。一律中性/職業色 —— MUST NOT 用陣營標誌色(琥珀/冷藍)。
+  const torsoW = shoulder + 0.06, frontZ = torsoD / 2;
+  // — 頭飾 —
+  const hardHat = (col) => {                                   // 安全帽:圓頂 + 全周簷 + 頂脊
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(0.26, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(col));
+    dome.position.set(0, 1.24, 0); hips.add(dome);
+    bx(hips, 0.46, 0.05, 0.5, 0, 1.22, 0.02, dim(col, 0.9));
+    bx(hips, 0.08, 0.12, 0.5, 0, 1.32, 0.02, dim(col, 1.05));
+  };
+  const roundCap = (col) => {                                  // 貼頭圓帽(手術帽/護士帽):完整罩住頭髮 + 帽箍
+    const d = new THREE.Mesh(                                   // 與頭髮同心且略大 → 不與頭皮髮 z-fight(避免斑駁腦紋)
+      new THREE.SphereGeometry(0.252, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.66), mat(col));
+    d.position.set(0, 1.165, 0.005); hips.add(d);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.236, 0.028, 8, 20), mat(dim(col, 0.88)));
+    band.position.set(0, 1.14, 0.005); band.rotation.x = Math.PI / 2; hips.add(band);
+  };
+  const toque = () => {                                        // 高廚帽:筒身 + 蓬頂
+    cyl(hips, 0.2, 0.22, 0.34, 10, 0, 1.36, 0, 0xf4f4f0);
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), mat(0xf7f7f2));
+    puff.position.set(0, 1.56, 0); puff.scale.set(1, 0.72, 1); hips.add(puff);
+  };
+  const strawHat = (col) => {                                  // 寬草帽:寬簷抬到額上(不擋眼)+ 盆型帽頂
+    cyl(hips, 0.56, 0.58, 0.06, 16, 0, 1.29, 0.0, col);
+    cyl(hips, 0.27, 0.31, 0.2, 16, 0, 1.37, 0.0, dim(col, 1.04));
+  };
+  const peakCap = (col) => {                                   // 制服帽:圓頂 + 前簷 + 帽章帶
+    const d = new THREE.Mesh(
+      new THREE.SphereGeometry(0.24, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(col));
+    d.position.set(0, 1.22, 0); hips.add(d);
+    bx(hips, 0.36, 0.04, 0.2, 0, 1.16, 0.26, dim(col, 0.85));
+    bx(hips, 0.34, 0.05, 0.06, 0, 1.24, 0.02, dim(col, 1.1));
+  };
+  const visor = (col) => {                                     // 遮陽帽:頭帶 + 前簷
+    bx(hips, 0.42, 0.08, 0.28, 0, 1.2, 0.0, col);
+    bx(hips, 0.38, 0.04, 0.22, 0, 1.18, 0.24, dim(col, 0.8));
+  };
+  const glasses = () => {                                      // 眼鏡
+    for (const sx of [-1, 1]) bx(hips, 0.12, 0.1, 0.03, sx * 0.09, 1.15, 0.2, 0x1a1c20);
+    bx(hips, 0.08, 0.03, 0.03, 0, 1.15, 0.2, 0x1a1c20);
+  };
+  // — 罩衫 —
+  const jacket = (col, sleeve = true) => {                     // 過胸罩衫(西裝/制服/外套上身 + 袖)
+    bx(hips, torsoW + 0.02, 0.64, torsoD + 0.06, 0, 0.55, 0.02, col);
+    if (sleeve) for (const a of [armL, armR]) bx(a, 0.17, 0.46, 0.22, 0, -0.2, 0, col);
+  };
+  const coat = (col) => {                                      // 長袍/白袍:上身 + 過腰下擺 + 前開襟 + 袖
+    jacket(col);
+    bx(hips, torsoW - 0.02, 0.62, torsoD + 0.02, 0, -0.06, 0.0, col);
+    bx(hips, 0.05, 0.62, frontZ + 0.06, 0, 0.5, frontZ + 0.02, dim(col, 0.8));
+  };
+  const vest = (col, stripe = false) => {                      // 無袖背心 + 開襟(可選反光帶)
+    bx(hips, torsoW, 0.56, torsoD + 0.06, 0, 0.56, 0.03, col);
+    bx(hips, 0.06, 0.54, frontZ + 0.05, 0, 0.56, frontZ + 0.02, dim(col, 0.7));
+    if (stripe) for (const yy of [0.66, 0.46]) bx(hips, torsoW + 0.01, 0.06, torsoD + 0.07, 0, yy, 0.02, 0xdfe6ea);
+  };
+  const knitVest = (col) => {                                  // 針織背心(無袖,露出襯衫)
+    bx(hips, torsoW, 0.54, torsoD + 0.05, 0, 0.54, 0.02, col);
+    bx(hips, 0.14, 0.5, frontZ + 0.05, 0, 0.56, frontZ + 0.01, 0xecedf0);
+  };
+  const suit = (col) => {                                      // 西裝:上身 + 袖 + 白襯衫 V 開 + 翻領
+    jacket(col);
+    bx(hips, 0.16, 0.5, frontZ + 0.05, 0, 0.56, frontZ + 0.01, 0xecedf0);
+    for (const sx of [-1, 1]) {
+      const l = bx(hips, 0.12, 0.3, 0.05, sx * 0.1, 0.72, frontZ + 0.02, dim(col, 0.85));
+      l.rotation.z = sx * 0.5;
+    }
+  };
+  const tie = (col) => {                                       // 領帶:領結 + 帶身
+    bx(hips, 0.08, 0.08, 0.05, 0, 0.78, frontZ + 0.03, col);
+    bx(hips, 0.09, 0.34, 0.04, 0, 0.58, frontZ + 0.03, col);
+  };
+  const apron = (col) => {                                     // 圍裙:胸兜 + 下裙 + 肩帶
+    bx(hips, shoulder * 0.78, 0.48, 0.05, 0, 0.5, frontZ + 0.02, col);
+    bx(hips, shoulder * 0.92, 0.5, 0.05, 0, 0.02, frontZ + 0.01, col);
+    for (const sx of [-1, 1]) {
+      const s = bx(hips, 0.05, 0.4, 0.05, sx * 0.14, 0.72, 0.14, dim(col, 0.85));
+      s.rotation.x = 0.1;
+    }
+  };
+  const overalls = (col) => {                                  // 吊帶褲:胸兜 + 吊帶 + 腰 + 銅釦
+    bx(hips, shoulder * 0.7, 0.42, 0.06, 0, 0.42, frontZ + 0.02, col);
+    for (const sx of [-1, 1]) {
+      const s = bx(hips, 0.07, 0.5, 0.06, sx * 0.16, 0.66, 0.13, col);
+      s.rotation.x = -0.05;
+    }
+    bx(hips, torsoW, 0.18, torsoD + 0.06, 0, 0.1, 0, dim(col, 0.9));
+    for (const sx of [-1, 1]) bx(hips, 0.07, 0.07, 0.06, sx * 0.14, 0.44, frontZ + 0.05, 0xc79a3a);
+  };
+  // — 配件 —
+  const toolBelt = (col) => {                                  // 工具腰帶 + 三個工具袋
+    bx(hips, torsoW, 0.12, torsoD + 0.08, 0, 0.16, 0.02, dim(col, 0.9));
+    for (const sx of [-1, 0, 1]) bx(hips, 0.14, 0.18, 0.12, sx * 0.22, 0.12, frontZ - 0.02, col);
+  };
+  const gloves = (col) => { for (const a of [armL, armR]) bx(a, 0.14, 0.2, 0.17, 0, -0.68, 0.03, col); };
+  const stetho = () => {                                       // 聽診器:頸掛雙管 + 導管 + 聽診頭
+    for (const sx of [-1, 1]) {
+      const s = bx(hips, 0.04, 0.4, 0.04, sx * 0.12, 0.82, 0.14, 0x2a2f36);
+      s.rotation.z = sx * -0.2; s.rotation.x = 0.2;
+    }
+    bx(hips, 0.03, 0.34, 0.03, 0.1, 0.5, frontZ + 0.02, 0x2a2f36);
+    cyl(hips, 0.07, 0.07, 0.04, 10, 0.1, 0.34, frontZ + 0.03, 0xb8bdc4);
+  };
+  const cameraNeck = () => {                                   // 頸掛相機:雙背帶 + 機身 + 鏡頭
+    for (const sx of [-1, 1]) bx(hips, 0.04, 0.42, 0.04, sx * 0.14, 0.8, 0.12, 0x23262a);
+    bx(hips, 0.26, 0.16, 0.12, 0, 0.5, frontZ + 0.04, 0x1a1c20);
+    cyl(hips, 0.06, 0.07, 0.1, 12, 0, 0.5, frontZ + 0.12, 0x0e0f12).rotation.x = Math.PI / 2;
+  };
+  const headphones = () => {                                   // 頭戴耳機:頭梁半環 + 雙耳罩
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.03, 6, 16, Math.PI), mat(0x1c1f24));
+    band.position.set(0, 1.24, 0); hips.add(band);
+    for (const sx of [-1, 1]) {
+      const cup = cyl(hips, 0.08, 0.08, 0.08, 10, sx * 0.23, 1.14, 0.02, 0x2a2f36);
+      cup.rotation.z = Math.PI / 2;
+    }
+  };
+  const backpack = (col) => {                                  // 後背包:主體 + 雙肩帶
+    bx(hips, 0.4, 0.5, 0.2, 0, 0.56, -0.28, col);
+    for (const sx of [-1, 1]) bx(hips, 0.06, 0.5, 0.06, sx * 0.2, 0.6, 0.14, dim(col, 0.8));
+  };
+  const satchel = (col) => {                                   // 斜背郵袋:背帶 + 袋身 + 袋蓋
+    const strap = bx(hips, 0.08, 0.7, 0.05, 0, 0.56, 0.14, dim(col, 0.7));
+    strap.rotation.z = 0.6;
+    bx(hips, 0.3, 0.32, 0.18, -0.36, 0.3, 0.02, col);
+    bx(hips, 0.3, 0.1, 0.19, -0.36, 0.42, 0.02, dim(col, 0.85));
+  };
+  const lanyard = (col) => {                                   // 識別證吊繩
+    for (const sx of [-1, 1]) {
+      const s = bx(hips, 0.03, 0.4, 0.03, sx * 0.1, 0.82, 0.14, col);
+      s.rotation.z = sx * -0.14;
+    }
+    bx(hips, 0.12, 0.16, 0.03, 0, 0.5, frontZ + 0.02, 0xf0f0f0);
+  };
+  const scarf = (col) => {                                     // 圍巾/領巾
+    bx(hips, shoulder * 0.72, 0.14, torsoD + 0.06, 0, 0.78, 0.04, col);
+    bx(hips, 0.1, 0.3, 0.05, 0.12, 0.62, frontZ + 0.02, dim(col, 0.9));
+  };
+  const cross = (col, x, y) => {                               // 醫療十字標記
+    bx(hips, 0.12, 0.04, 0.03, x, y, frontZ + 0.01, col);
+    bx(hips, 0.04, 0.12, 0.03, x, y, frontZ + 0.01, col);
+  };
+  const bootsOver = (col) => { for (const lg of [legL, legR]) bx(lg, 0.24, 0.32, 0.42, 0, -1.06, 0.05, col); };
+  const inHand = (arm, build) => {                             // 手持物(掛手部,隨擺臂)
+    const gp = new THREE.Group();
+    gp.position.set(0, -0.82, 0.1); arm.add(gp); build(gp);
+  };
+
+  const outfits = {
+    // 男性 10
+    '醫師': () => {
+      coat(0xf1f2ef); stetho(); glasses();
+      cyl(hips, 0.09, 0.09, 0.02, 12, 0, 1.26, 0.19, 0xd7dde0);     // 額鏡
+      bx(hips, 0.16, 0.05, 0.04, 0, 1.3, 0.14, 0x2a2f36);
+    },
+    '工程師': () => {
+      hardHat(0xe8621f); vest(0x5f6a4a, true); toolBelt(0x3a3d33);
+      inHand(armL, (gp) => { bx(gp, 0.24, 0.03, 0.3, 0, 0, 0.1, 0x2f3a2c); bx(gp, 0.18, 0.02, 0.24, 0, 0.02, 0.1, 0xf0f0ea); });
+    },
+    '商人': () => {
+      suit(0x33373f); tie(0x6b2f2f);
+      inHand(armR, (gp) => { bx(gp, 0.32, 0.24, 0.12, 0, -0.06, 0.05, 0x3b2a1c); bx(gp, 0.1, 0.06, 0.03, 0, 0.08, 0.05, 0x22160e); });
+    },
+    '廚師': () => {
+      toque(); jacket(0xf4f4f0); apron(0xe4e4dc); scarf(0x9a2f2f);
+      for (const sx of [-1, 1]) for (const yy of [0.72, 0.56, 0.4]) bx(hips, 0.04, 0.05, 0.03, sx * 0.1, yy, frontZ + 0.03, 0x2a2f36);  // 雙排釦
+    },
+    '電工': () => {
+      hardHat(0xc0362f); vest(0x2b3550); toolBelt(0x23262a); gloves(0xe8621f);
+      const coil = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.05, 6, 14), mat(0x2a2f36));
+      coil.position.set(-0.3, 0.72, 0.02); coil.rotation.y = 0.6; hips.add(coil);
+    },
+    '教師': () => {
+      knitVest(0x4a4e86); tie(0x6f3f7a); glasses();
+      inHand(armR, (gp) => { bx(gp, 0.24, 0.08, 0.3, 0, -0.02, 0.1, 0x6f3f7a); bx(gp, 0.22, 0.06, 0.28, 0, -0.02, 0.1, 0xf0ead6); });
+    },
+    '農夫': () => {
+      strawHat(0xcbb26a); overalls(0x3c5a72); bootsOver(0x4a3a26);
+      bx(hips, shoulder * 0.7, 0.1, torsoD + 0.04, 0, 0.8, 0.04, 0x6b7f4a);  // 頸巾
+    },
+    '記者': () => {
+      peakCap(0x3a4150); vest(0x4a4e52); cameraNeck(); lanyard(0x2b3038);
+      for (const sx of [-1, 1]) for (const yy of [0.62, 0.44]) bx(hips, 0.14, 0.14, 0.1, sx * 0.2, yy, frontZ + 0.02, dim(0x4a4e52, 0.85));  // 採訪口袋
+    },
+    '郵差': () => { peakCap(0x2f4a5c); jacket(0x2f4a5c); satchel(0x2f6b45); },
+    '建築工': () => {
+      hardHat(0xdfe2e6); vest(0xe0531f, true); gloves(0x6b6b6b); toolBelt(0x3a3d33); bootsOver(0x2a2622);
+    },
+    // 女性 10
+    '護理師': () => {
+      roundCap(0xdfe7ea); vest(0xc67d92); apron(0xf0f0ec); cross(0xc0362f, 0, 0.66);
+    },
+    '藥師': () => {
+      coat(0xeef0ee); glasses();
+      bx(hips, 0.28, 0.28, 0.16, -0.34, 0.32, 0.02, 0x2f7d55); cross(0x2f9e6a, -0.34, 0.34);  // 藥袋 + 綠十字
+    },
+    '銀行員': () => {
+      suit(0x3a4250); lanyard(0x2b3038);
+      inHand(armL, (gp) => bx(gp, 0.22, 0.08, 0.28, 0, -0.02, 0.08, 0x243040));
+    },
+    '程式設計師': () => {
+      jacket(0x5a6270); headphones(); backpack(0x3a2f5a); glasses();
+      bx(hips, 0.34, 0.16, 0.3, 0, 0.92, -0.06, 0x4c5360);                 // 兜帽(垂後頸)
+      bx(hips, 0.18, 0.5, frontZ + 0.06, 0, 0.5, frontZ + 0.02, 0x4c5360);  // 連帽衫前口袋
+    },
+    '會計師': () => {
+      knitVest(0x4a4470); glasses();
+      inHand(armR, (gp) => { bx(gp, 0.22, 0.06, 0.28, 0, -0.02, 0.08, 0x2a2f45); bx(gp, 0.14, 0.04, 0.18, 0, 0.02, 0.14, 0x9aa0a6); });
+    },
+    '律師': () => {
+      suit(0x2a2f38); tie(0x2a2f38);
+      inHand(armL, (gp) => bx(gp, 0.26, 0.05, 0.34, 0, 0, 0.1, 0x5c2a34));  // 卷宗
+    },
+    '獸醫': () => {
+      roundCap(0xe6ddc9); vest(0x3f7d5f); gloves(0xcfe0d6);
+      bx(hips, 0.3, 0.3, 0.18, -0.34, 0.3, 0.02, 0xcf4d4a); cross(0xf0f0ec, -0.34, 0.32);  // 診療包 + 白十字
+    },
+    '技師': () => {
+      peakCap(0x455060); jacket(0xbf4f2f); toolBelt(0x2a2d33);
+      for (const lg of [legL, legR]) bx(lg, 0.2, 0.56, 0.24, 0, -0.32, 0, 0xbf4f2f);  // 連身工作服褲管
+    },
+    '攤販': () => {
+      visor(0xcf6a34); apron(0x7a5330);
+      bx(hips, shoulder * 0.5, 0.14, 0.06, 0, 0.1, frontZ + 0.03, dim(0x7a5330, 0.85));  // 圍裙口袋
+      inHand(armR, (gp) => { bx(gp, 0.4, 0.05, 0.3, 0, -0.05, 0.18, 0x8a6a3a); for (const sx of [-1, 1]) bx(gp, 0.05, 0.12, 0.05, sx * 0.16, 0.03, 0.18, 0x6a4f28); });  // 托盤
+    },
+    '心理師': () => {
+      jacket(0x8a6aa8); scarf(0xdcc7e4); glasses();
+      bx(hips, 0.14, 0.56, frontZ + 0.05, 0, 0.54, frontZ + 0.01, 0xecedf0);  // 開襟內襯
+      inHand(armL, (gp) => { bx(gp, 0.24, 0.03, 0.3, 0, 0, 0.1, 0x6a4f8a); bx(gp, 0.18, 0.02, 0.24, 0, 0.02, 0.1, 0xf4f4f0); });  // 記事夾板
+    },
+    __def: () => {   // 備援:舊版帽 + 側背包(職業色)
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(c.hat));
+      cap.position.set(0, 1.24, 0); hips.add(cap);
+      bx(hips, 0.34, 0.05, 0.18, 0, 1.24, 0.2, dim(c.hat, 0.85));
+      const strap = bx(hips, 0.08, 0.62, 0.06, 0.16, 0.56, 0.18, dim(c.bag, 0.7));
+      strap.rotation.z = 0.5;
+      bx(hips, 0.26, 0.28, 0.16, -0.34, 0.36, 0.02, c.bag);
+    },
+  };
+  (outfits[c.name] || outfits.__def)();
+
+  g.userData.rig = {
+    kind: 'biped', hips, legL, legR, armL, armR,
+    hipsY0: hipY, stride: 0.82, bob: 0.06, sway: 0.06, top: 7,
+  };
+  return g;
+}
+
 /** 備援攻擊直升機(機身+尾桁+主旋翼,userData.spin 供每幀轉動)。機首朝 +z(全機體慣例,見 game.js _updateEnts) */
 function buildHeliFallback(side) {
   const g = new THREE.Group();
@@ -5996,6 +6341,8 @@ const FALLBACK = {
   'creep:heli': (side) => (isThirdSide(side) ? buildRebelHeli(side)
     : side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
   bunker: (side) => buildBunker(side),
+  // 平民/間諜(ch = 職業 index;陣營靠 side 決定 teamRing,外觀共用不分間諜)
+  civ: (side, vis, ch) => buildCivilian(side, ch | 0),
   tower: (side) => (side === 'SWARM' ? buildSwarmTower(side) : buildTowerFallback(side)),
   'base:SWARM': () => buildBaseFallback('SWARM'),
   'base:STEEL': () => buildBaseFallback('STEEL'),
