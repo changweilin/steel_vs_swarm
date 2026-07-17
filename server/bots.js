@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult, botDiffOf } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -170,7 +170,9 @@ export class BotBrain {
     if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)) {
       h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
       if (hv.type === 'launcher' || hv.type === 'missile') {
-        if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z);
+        // 對空引爆高度:目標是飛行機體(英雄/直升機)就在其高度炸(火箭筒對空)
+        const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
+        if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z, ty);
       } else if (hv.type === 'plasma') {
         this.sim.heroPlasma(this.pid, t.x - h.x, t.z - h.z);
       } else this._fire(t.id, 'heavy');
@@ -227,7 +229,7 @@ export class BotBrain {
     const sources = pulse ? null : this.sim._visionSources(this.side);
     let best = null, bestD = Infinity;
     for (const t of this.sim.ents.values()) {
-      if (t.side === h.side || t.neutral || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙
+      if (t.side === h.side || t.neutral || t.gar || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙/駐守兵
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
@@ -235,6 +237,7 @@ export class BotBrain {
       if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
       if (t.hero) d *= 0.55;                             // 優先咬英雄
       else if (t.kind === 'tower' || t.kind === 'base') d *= 1.3;
+      else if (isThirdSide(t.side)) d *= 1.8;            // 第三方野營:順路才打,不主動棄線刷錢
       d /= vsMult(wd, t.kind);                            // 優先打武器克制的目標類型
       if (d < bestD) { bestD = d; best = t; }
     }

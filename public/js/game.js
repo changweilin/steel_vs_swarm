@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, PROG, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
-  WATER, CJUMP, IFRAME,
+  WATER, CJUMP, IFRAME, sideInfo, THIRD,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
@@ -25,6 +25,7 @@ const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
+  bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
@@ -134,7 +135,7 @@ function factionMarkTex(side) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
-  const col = SIDES[side].color;
+  const col = sideInfo(side).color;                // 第三方(GUER/MILI)也有識別色
   const tri = (cx, cy, r, up) => {                 // 陣營徽記:鋼鐵正三角 / 蜂群倒三角
     g.beginPath();
     for (let k = 0; k < 3; k++) {
@@ -142,6 +143,11 @@ function factionMarkTex(side) {
       const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
       k ? g.lineTo(x, y) : g.moveTo(x, y);
     }
+    g.closePath();
+  };
+  const diamond = (cx, cy, r) => {                 // 第三方徽記:菱形(與雙陣營三角分家)
+    g.beginPath();
+    g.moveTo(cx, cy - r); g.lineTo(cx + r * 0.72, cy); g.lineTo(cx, cy + r); g.lineTo(cx - r * 0.72, cy);
     g.closePath();
   };
   g.lineJoin = 'round';
@@ -153,7 +159,8 @@ function factionMarkTex(side) {
   g.lineTo(86, 46); g.lineTo(64, 76); g.lineTo(42, 46);
   g.closePath();
   g.stroke(); g.fill();
-  tri(64, 26, 22, side === 'STEEL');               // 徽記懸在箭頭上方
+  if (SIDES[side]) tri(64, 26, 22, side === 'STEEL');   // 徽記懸在箭頭上方
+  else diamond(64, 26, 24);
   g.stroke(); g.fill();
   g.strokeStyle = 'rgba(255,255,255,0.85)';        // 內描白邊:暗底/亮底都讀得出來
   g.lineWidth = 2;
@@ -1839,6 +1846,8 @@ export class BattleClient {
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
+      // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
+      if (!ent.hero && !ent.decoy && !ent.isStatic) ent.mesh.visible = !e.gar;
       if (e.k === 'decoy') {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -2019,7 +2028,7 @@ export class BattleClient {
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
       isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy',
       decoy: e.k === 'decoy', si: e.si || 0,
-      isStatic: e.k === 'tower' || e.k === 'base',
+      isStatic: e.k === 'tower' || e.k === 'base' || e.k === 'bunker',
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
@@ -2336,14 +2345,14 @@ export class BattleClient {
   _onEvent(ev) {
     if (ev.e === 'die') {
       const [x, z] = [ev.x, -ev.z];
-      const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'howitzer' || ev.kind === 'heli';
+      const big = ev.kind === 'tower' || ev.kind === 'base' || ev.kind === 'tank' || ev.kind === 'heli' || ev.kind === 'bunker';
       const hero = HERO_KINDS.has(ev.kind);
       const ey = this.terrain.heightAt(x, z) + 3;
       this._explosion(x, ey, z, big ? 14 : 5, big ? 0xff8844 : 0xffcc66);
       this._applyBlast(x, ey, z, big ? 16 : 6);   // 近距離看拆塔/坦克殉爆會被衝擊波推開
       // 漫畫式破壞回饋:機械碎片噴散 + BOOM 字卡 + hitstop(頓點強調重量感)
       debrisBurst(this.scene, this.effects, x, ey + (big ? 6 : 1), z,
-        { big, accent: ev.side ? SIDES[ev.side].color : 0xd8b04a });
+        { big, accent: ev.side ? sideInfo(ev.side).color : 0xd8b04a });
       if (big || hero) {
         comicPop(this.scene, this.effects, x, ey + (ev.kind === 'base' ? 30 : ev.kind === 'tower' ? 20 : 8), z,
           { big: true, hue: hero ? 2 : 18 });
@@ -2357,6 +2366,8 @@ export class BattleClient {
         if (ev.pid === this.youId) this.hud.feed?.('💥 餌機被擊落,回傳畫面終止');
       } else if (HAZARDS[ev.kind]) {
         this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
+      } else if (ev.kind === 'bunker') {
+        this.hud.feed?.(`🏚️ ${sideInfo(ev.side).name}的碉堡被摧毀!(${THIRD.BUNKER_RESPAWN_S / 60} 分鐘後原地重建)`);
       } else if (hero) {
         this.hud.feed?.(`💥 ${SIDES[ev.side].name}的${UNITS[ev.kind].name}被擊毀!`);
       } else if (ev.kind === 'tower') {
@@ -3187,7 +3198,8 @@ export class BattleClient {
         const by = Math.max(p.y, gy + 1);
         this._explosion(p.x, by, p.z, (b.r || 12) * 0.8, 0xffaa33);
         this._applyBlast(p.x, by, p.z, b.r || 12);   // 太近開砲,自己也會被衝擊波掀飛
-        this.net.send({ t: 'burst', x: p.x, z: -p.z });   // three z 南 → 模擬 z 北
+        // y = 離地引爆高度(對空:直擊飛行目標時在其高度炸;sim._blast 吃 3D 距離)
+        this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10) });   // three z 南 → 模擬 z 北
       } else if (hit?.missileId != null) {
         this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
         this._hitFeedback(def, null, p);
@@ -3311,11 +3323,11 @@ export class BattleClient {
     this.effects.push({ obj: line, ttl, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
   }
 
-  /** 陣營射擊配色(曳光主色 / 槍口熱芯) */
+  /** 陣營射擊配色(曳光主色 / 槍口熱芯);第三方(GUER/MILI)走各自識別色 */
   _shotCols(side) {
-    return side === 'SWARM'
-      ? { col: 0xffb300, hot: 0xffe6a0 }
-      : { col: 0x4fc3f7, hot: 0xcdeeff };
+    if (side === 'SWARM') return { col: 0xffb300, hot: 0xffe6a0 };
+    if (side === 'STEEL') return { col: 0x4fc3f7, hot: 0xcdeeff };
+    return { col: new THREE.Color(sideInfo(side).color).getHex(), hot: 0xf4ffd9 };
   }
 
   /**
@@ -3975,13 +3987,15 @@ export class BattleClient {
     for (const ent of this.ents.values()) {
       if (ent.neutral) continue;
       const [mx, my] = this._world2mm(ent.mesh.position.x, ent.mesh.position.z, w, h);
-      const c = ent.side === 'SWARM' ? '#ffb300' : '#4fc3f7';
+      const c = sideInfo(ent.side).color;   // 第三方(GUER/MILI)走各自識別色
       ctx.fillStyle = c;
       if (ent.kind === 'base') {
         ctx.fillRect(mx - 5, my - 5, 10, 10);
         ctx.strokeStyle = c; ctx.strokeRect(mx - 7, my - 7, 14, 14);
       } else if (ent.kind === 'tower') {
         ctx.fillRect(mx - 3, my - 3, 6, 6);
+      } else if (ent.kind === 'bunker') {
+        ctx.fillRect(mx - 2.5, my - 2.5, 5, 5);   // 第三方碉堡:小方塊(進視野才會在快照裡)
       } else if (ent.hero) {
         if (!ent.isSelf) {
           ctx.beginPath(); ctx.arc(mx, my, 4, 0, 7); ctx.fill();

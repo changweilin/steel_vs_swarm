@@ -211,9 +211,11 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
 }
 
 // ---- 目標類型(武器克制查表:單位種類 → 類別)----
+// howitzer 2026-07-17 改制:榴彈兵是「手持榴彈槍的步兵」(flesh),不再是牽引砲車(armor)。
 export const TARGET_CLASS = {
-  soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'armor', heli: 'air',
+  soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'flesh', heli: 'air',
   robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
+  bunker: 'building',   // 第三方碉堡(見 THIRD)
   // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
   aasite: 'building', construction: 'building', wreck: 'building',
   rockfall: 'building', fallentree: 'building',
@@ -225,7 +227,9 @@ export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', bui
 // (F 鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
 export const WEAPONS = {
   rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
-  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.3 } },
+  // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
+  // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
+  rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
   bomb:   { name: '重型炸彈',   dmg: 240, r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
 };
@@ -273,11 +277,12 @@ export const IFRAME = { DUR: 1.0, CD: 20 };
 export const SQUAD = {
   N: 3,
   // 單機強化倍率(HP / 傷害);UNITS.drone.hp/shield 與 DMG 都由它推導。
-  // 1.05(2026-07-13,舊值 1.5):三機隊單挑一波 NPC 後也剩 ~40% EHP(與機甲同標準)。
-  // 損血比例 ∝ 1/BUFF²(EHP 與 DPS 同時 ×BUFF ⇒ 清波時間 ÷BUFF、承傷 ÷BUFF²)——
-  // 1.5 時三機隊只掉 ~30%,遠比機甲耐打。⇒ 三機齊射 ≈ 一台機甲、三機總 EHP ≈ 一台機甲。
-  BUFF: 1.05,
-  DMG: 1.05 / 3,      // = BUFF / N
+  // 1.12(2026-07-17,舊值 1.05):波次追加主戰坦克(armor 18)後,無人機武器普遍剋肉不剋甲、
+  // 清坦克特別慢 ⇒ 三機隊承傷失衡;BUFF 是「三機隊對齊機甲 40% 剩餘」的正規旋鈕
+  // (損血比例 ∝ 1/BUFF²:EHP 與 DPS 同時 ×BUFF ⇒ 清波時間 ÷BUFF、承傷 ÷BUFF²)。
+  // 校準情境同 npm run bal ①;改波次編制/任一小兵數值 MUST 重跑。
+  BUFF: 1.12,
+  DMG: 1.12 / 3,      // = BUFF / N
   FORM_SIDE: 15,      // 僚機編隊橫向偏移(公尺)
   FORM_BACK: 10,      // 僚機編隊後方偏移
   REGROUP_M: 70,      // 離主視野超過此距離 → 先沿標準兵線路線歸隊
@@ -449,7 +454,7 @@ export const PROG = {
   skill: { name: '小招',   kills: [2, 12, 25], cost: [150, 400, 800] },
   ult:   { name: '大招',   kills: [6, 18, 32], cost: [400, 800, 1400] },
 };
-export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2 };
+export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
 // 電腦玩家(bot;含駕駛傭兵變形機甲的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
 export const BOT_KILL_SCORE = 3;
 export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
@@ -1122,6 +1127,7 @@ export const ECON = {
   BOUNTY: {
     soldier: 15, apc: 35, tank: 80, tower: 200, drone: 150, robot: 150, morph: 150, missile: 15, aasite: 40, decoy: 25,
     rocketeer: 30, howitzer: 45, heli: 60,
+    bunker: 100,   // 第三方碉堡(HP = 塔一半 ⇒ 賞金也是塔一半);與第三方交戰的金錢報酬走同一張表
   },
   UPGRADES: {
     dmg:  { name: '火力強化', desc: '所有武器傷害 +12%', max: 5, step: 0.12, base: 150, inc: 100 },
@@ -1136,17 +1142,19 @@ export const UNITS = {
   // 射程一律 < 防禦塔(2026-07-12 起,見 UNITS.tower):沒有「安全圍攻位」,推塔要靠人數/血量硬吃塔火。
   // hp/armor/dmg 大幅上調(2026-07-12「拉近 NPC 與玩家戰力」):小兵不再是英雄的移動經驗值 ——
   // 步槍兵 EHP 320、火箭兵一發 95,三隻步槍兵齊射就足以逼退半血機甲。
-  // 2026-07-13「一波 NPC = 玩家 60% EHP」校準:單挑同線一波(3 步槍兵 + 火箭兵 + 榴彈兵 + 直升機)
-  // 全員在射程內持續開火、玩家只用 Lv1 輕武器 + 重武器 CD ⇒ 清完波後平均剩 ~40% EHP。
-  // 由此反推(舊值 ×0.5 傷害 / ×0.6 HP;armor 不動)—— 改任一項 MUST 重跑 `npm run bal`。
-  // 移動速度校準(2026-07-13):一波平均 ≈ robot.speed(21)× 75% ≈ 15.8,兵團像推進的軍隊而非爬行。
-  soldier:   { name: '步槍兵', hp: 180, armor: 8,  dmg: 8,  range: 150, rate: 1.0, speed: 16, sight: 150, bounty: 1, wid: 'rgun' },
-  rocketeer: { name: '火箭兵', hp: 230, armor: 12, dmg: 48, range: 180, rate: 0.4, speed: 15, sight: 190, bounty: 3, wid: 'rocket' },
-  howitzer:  { name: '榴彈兵', hp: 280, armor: 18, dmg: 55, range: 220, rate: 0.3, speed: 12, sight: 220, bounty: 4, wid: 'siege' },
-  heli:      { name: '攻擊直升機', hp: 420, armor: 14, dmg: 28, range: 175, rate: 0.8, speed: 20, sight: 220, bounty: 6, wid: 'rgun' },
+  // 2026-07-17「一波 NPC = 玩家 60% EHP」重校準:波次追加主戰坦克(使用者指示)——
+  // 一波 = WAVE_SOLDIERS 步槍兵 + 火箭兵 + 榴彈兵 + 坦克 + 攻擊直升機(見 GAME.WAVE_EXTRAS)。
+  // 波次總 EHP/DPS 因坦克大增 ⇒ 全員 hp/dmg 下修(armor 不動)維持同一條不變式:
+  // 玩家只用 Lv1 輕武器 + 重武器照 CD 單挑整波 ⇒ 清完波後平均剩 ~40% EHP。
+  // 改任一項 MUST 重跑 `npm run bal`。
+  // 移動速度:坦克 9 → 12(波次凝聚錨定最慢者 —— 坦克拖到 9 整團就在爬行;12 = 榴彈兵同級)。
+  soldier:   { name: '步槍兵', hp: 115, armor: 8,  dmg: 6,  range: 150, rate: 1.0, speed: 16, sight: 150, bounty: 1, wid: 'rgun' },
+  rocketeer: { name: '火箭兵', hp: 150, armor: 12, dmg: 34, range: 180, rate: 0.4, speed: 15, sight: 190, bounty: 3, wid: 'rocket' },
+  howitzer:  { name: '榴彈兵', hp: 180, armor: 14, dmg: 39, range: 220, rate: 0.3, speed: 12, sight: 220, bounty: 4, wid: 'siege' },
+  heli:      { name: '攻擊直升機', hp: 270, armor: 14, dmg: 20, range: 175, rate: 0.8, speed: 20, sight: 220, bounty: 6, wid: 'rgun' },
+  tank:      { name: '主戰坦克', hp: 390, armor: 18, dmg: 39, range: 150, rate: 0.6, speed: 12, sight: 200, bounty: 4, wid: 'siege' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
-  tank:    { name: '主戰坦克', hp: 750, armor: 22, dmg: 55, range: 150, rate: 0.6, speed: 9,  sight: 200, bounty: 4, wid: 'siege' },
   // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
   // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 270 = drone sight 300 × RANGE_SIGHT_F)
   // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)
@@ -1185,7 +1193,12 @@ export const UNITS = {
   // 餌機:機甲的外掛子機(F 分離發射)。hp 於生成時覆寫為主機甲上限 × DECOY.HP_F;
   // speed:0 = 不進 sim 主迴圈的推線邏輯(位置由 _tickDecoys 管),但仍是敵方小兵/塔的合法目標。
   decoy: { name: '餌機', hp: 160, armor: 0, speed: 0, sight: DECOY.SIGHT },
+  // 第三方碉堡(2026-07-17,見 THIRD):本身無傷害(range/dmg 0 ⇒ 永不鎖定目標),
+  // 功能 = 駐守 3 名步槍兵(免傷 + 緩慢回血 + 射程 ×GAR_RANGE_F)。
+  // hp 於 UNITS 之後 derive = 塔的一半(MUST NOT 手寫,塔一動就漂移);armor 同塔。
+  bunker: { name: '碉堡', hp: 0, armor: 30, dmg: 0, range: 0, rate: 0, speed: 0, sight: 150 },
 };
+UNITS.bunker.hp = Math.round(UNITS.tower.hp / 2);   // 碉堡 HP = 砲塔一半(唯一推導處)
 // 三機小隊單機生存值的唯一推導處(見 SQUAD.BUFF):三架合計 = 機甲 × BUFF
 UNITS.drone.hp = Math.round(UNITS.robot.hp / SQUAD.N * SQUAD.BUFF);
 UNITS.drone.shield = Math.round(UNITS.robot.shield / SQUAD.N * SQUAD.BUFF);
@@ -1200,6 +1213,44 @@ UNITS.morph = {
 // 主堡加裝兩門大砲:射程/傷害/射速一律 derive 自砲塔(MUST NOT 手抄),獨立於主堡本體火砲。
 UNITS.base.guns = { n: 2, range: UNITS.tower.range, dmg: UNITS.tower.dmg, rate: UNITS.tower.rate };
 
+// ---- 第三方軍隊(2026-07-17;遠離兵線的中立武裝,DOTA 野區思想:交戰可獲得金錢)----
+// 每條兵線兩側各駐守一團(總團數 = 兵線數 × 2):游擊隊 GUER / 武裝民兵 MILI 各踞一側。
+// 佈營硬約束:離雙方每座砲塔與主堡的距離 ≥ 該工事射程 × CLEAR_F(1.5)—— 絕不與正規戰線交火;
+// 另離兵線走廊 ≥ LANE_MIN(> 全 NPC 最大射程 220 + 緩衝 ⇒ 兵線上的部隊不會被野營射到)。
+// 開戰即生成,單位走一般迷霧規則(非 neutral、碉堡非 tower/base)⇒ 開始時全數藏在戰爭迷霧。
+// 行為:駐守碉堡周圍;追擊離碉堡 > TETHER_M 立即撤回(HOME_R 內解除);
+// 步槍兵 HP ≤ GAR_ENTER_F 躲進碉堡(免傷 + GAR_REGEN_PS 回血 + 射程 ×GAR_RANGE_F,回滿出堡)。
+// 重生:碉堡 BUNKER_RESPAWN_S 原地重生(倒數恆走);其他單位 UNIT_RESPAWN_S,
+// 碉堡不存在時單位重生「暫停倒數」(碉堡回來才繼續)。
+export const THIRD = {
+  SIDES: {
+    GUER: { name: '游擊隊',   color: '#7ed957', colorDim: '#3f7a2c' },
+    MILI: { name: '武裝民兵', color: '#e0714f', colorDim: '#8a3a24' },
+  },
+  COMP: {
+    GUER: ['soldier', 'soldier', 'soldier', 'rocketeer', 'tank'],
+    MILI: ['soldier', 'soldier', 'soldier', 'howitzer', 'heli'],
+  },
+  CLEAR_F: 1.5,          // 離砲塔/主堡淨空 = 工事射程 × 此倍率(硬約束,MUST ≥ 1.5)
+  LANE_MIN: 260,         // 離兵線走廊最小距離(> NPC 最大射程 220 + 40 緩衝:野營不掃兵線)
+  LANE_MAX: 560,         // 佈營取樣最遠側偏
+  SPACING: 140,          // 營地彼此最小間距
+  FORM_R: 13,            // 駐守編隊半徑(繞碉堡站位)
+  TETHER_M: 90,          // 追擊繫繩:離碉堡超過即刻放棄交戰撤回
+  HOME_R: 26,            // 撤回解除半徑(回到碉堡周圍)
+  GAR_ENTER_F: 0.5,      // 步槍兵 HP ≤ 50% 躲進碉堡
+  GAR_EXIT_F: 1.0,       // 回滿血出堡
+  GAR_REGEN_PS: 0.03,    // 駐守回血:每秒上限血量 3%(緩慢)
+  GAR_RANGE_F: 0.75,     // 駐守射程 = 3/4(射孔限制)
+  GAR_CAP: 3,            // 碉堡容量:3 名步槍兵
+  UNIT_RESPAWN_S: 60,    // 單位重生 1 分鐘(碉堡不存在時暫停倒數)
+  BUNKER_RESPAWN_S: 180, // 碉堡 3 分鐘原地重生(恆倒數)
+};
+export const isThirdSide = (s) => s === 'GUER' || s === 'MILI';
+/** 陣營資訊統一查表(SWARM/STEEL/第三方皆可):客戶端配色/播報用,查無給中性灰 */
+export const sideInfo = (s) =>
+  SIDES[s] || THIRD.SIDES[s] || { name: '不明勢力', color: '#9aa39b', colorDim: '#4d524c' };
+
 // ---- 對局節奏(緊湊化:1/2/3 線目標 5/8/10 分鐘一場)----
 export const GAME = {
   TICK_MS: 125,               // 伺服器模擬 8Hz
@@ -1209,7 +1260,10 @@ export const GAME = {
   FIRST_WAVE_DELAY_S: 0,      // 開局即出第一波(從主堡出發),不再空等對線
   WAVE_SPAWN_OFF_M: 34,       // 波次生成點離己方主堡的沿線距離:落在主路線上、出主堡外(base R 22)
   WAVE_COHESION_M: 26,        // 同波僚兵最大脫節距離:領先者原地等最慢的(交戰中除外)
-  WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(另加固定 1 火箭兵/1 榴彈兵/1 攻擊直升機)
+  WAVE_SOLDIERS: 3,           // 每波每兵線步槍兵數(固定編制另見 WAVE_EXTRAS)
+  // 波次固定編制(2026-07-17 追加坦克):sim._spawnWave / tools/balance.mjs / e2e 共用唯一真相,
+  // MUST NOT 在任何一處手抄編制;改編制 MUST 重跑 `npm run bal`(60% EHP 不變式)。
+  WAVE_EXTRAS: ['rocketeer', 'howitzer', 'tank', 'heli'],
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
   AIM_SIGHT_MULT: 1.6,        // 瞄準模式視野加成(狙擊模式看得更遠)
   // 玩家可操作機體的射程上限比例:射程 = min(基準×HEROIC, sight×(重武器再×AIM_SIGHT_MULT)×此值)。

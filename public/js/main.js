@@ -899,7 +899,8 @@ function unitWeaponList(kind) {
   switch (kind) {
     case 'soldier': case 'heli': { const w = WEAPONS[u.wid]; return [gun('主武', w.name, w)]; }
     case 'rocketeer': { const w = WEAPONS.rocket; return [launcher('主武', w.name, w)]; }
-    case 'howitzer': { const w = WEAPONS.siege; return [launcher('主武', w.name, w)]; }
+    case 'howitzer': { const w = WEAPONS.siege; return [launcher('主武', '手持榴彈槍', w)]; }   // 步兵化:顯示名改手持,數值同 siege 表
+    case 'tank': { const w = WEAPONS.siege; return [launcher('主砲', '滑膛戰車砲', w)]; }
     case 'tower': {
       const s = u.sam;
       return [gun('主砲', '防禦砲塔', { dmg: u.dmg, rate: u.rate, range: u.range }),
@@ -1172,7 +1173,7 @@ $('modalUnitToggle').addEventListener('click', (e) => {
 });
 
 // ================= NPC / 攻擊建築圖鑑(選角牆下方獨立區塊;雙陣營,與角色卡同框並存) =================
-const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'heli', 'tower', 'base'];
+const UNIT_ROSTER = ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base'];   // tank 2026-07-17 入列(波次追加坦克)
 const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
 function unitDetailHTML(kind, side) {
   const u = UNITS[kind];

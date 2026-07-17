@@ -2,7 +2,7 @@
 // 兩條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
 //
 // ① 一波 NPC = 玩家 60% EHP
-//    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + 火箭兵 + 榴彈兵 + 攻擊直升機。
+//    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + WAVE_EXTRAS(火箭兵/榴彈兵/坦克/攻擊直升機)。
 //    情境:玩家單挑整波、雙方全在有效射程內(近距平台,無距離衰減)持續開火、
 //    玩家只有 Lv1 輕武器 + 重武器照 CD、無升級/招式/掩體 ⇒ 清完波後應剩 ~40% EHP。
 //    (無人機三機隊靠 _echo 齊射同一目標,EHP/DPS 皆 = 單機 × SQUAD.N)
@@ -14,7 +14,7 @@ import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim } from '../server/sim.js';
 
 const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
-const WAVE = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), 'rocketeer', 'howitzer', 'heli'];
+const WAVE = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];   // 編制唯一真相住 data.js
 
 /** 角色某槽位對某目標的持續 DPS(含換彈 / CD;重武器 = mag 1 + reload = cd) */
 const slotDps = (ch, slot, tk) => {

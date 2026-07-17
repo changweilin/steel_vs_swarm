@@ -6,8 +6,14 @@ import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, PROG, HEROIC, VITALS, armorMul, SQUAD, tierVal,
-  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME,
+  charKind, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
 } from '../public/js/data.js';
+
+/** 清掉第三方野營(游擊隊/民兵):與本節無關的 sim 直測要確定性,不能吃野營流彈 */
+function purgeCamps(sim) {
+  for (const s of [...sim.ents.values()]) if (s.tp) sim.ents.delete(s.id);
+  sim.camps = [];
+}
 
 const URL = 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
@@ -165,6 +171,7 @@ log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 {
   const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
   assert(sim.mines.length >= 20, `地雷 ${sim.mines.length} 顆(目標 ${GAME.MINES.PER_LANE}/線)`);
   assert(sim.mines.every(([x, z]) => sim._distToLanes(x, z) >= GAME.MINES.LANE_CLEAR), '雷區避開兵線走廊');
   const rb = sim.addHero('STEEL', 'p_r', 't01');   // 冬將軍(輕武器無爆擊 → 傷害確定性)
@@ -438,6 +445,7 @@ log('— sim:霧戰爭(視野外的敵方單位不進快照;瞄準模式加成�
 log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
 {
   const sim = new BattleSim(fakeBattleConfig(2));
+  purgeCamps(sim);
   const haz = [...sim.ents.values()].filter((e) => e.haz);
   const sites = [...sim.ents.values()].filter((e) => e.kind === 'aasite');
   assert(haz.length >= FIELD.HAZ_PER_LANE, `障礙物 ${haz.length} 個(目標 ${FIELD.HAZ_PER_LANE}/線)`);
@@ -571,6 +579,95 @@ log('— sim:TreasureClass 分層 + 詞綴強化 + 偵察中繼站 + 連通性�
   assert(sim.hazBlockers.length < nb1, `人工橫斷牆被偵測,拆 ${nb1 - sim.hazBlockers.length} 段開出缺口`);
 }
 
+// ================= sim 直測:第三方軍隊(游擊隊 / 武裝民兵)=================
+log('— sim:第三方軍隊(佈營淨空 / 迷霧隱藏 / 碉堡駐守 / 繫繩 / 重生暫停)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(2));
+  const camps = sim.camps || [];
+  assert(camps.length > 0 && camps.length <= sim.lanes.length * 2,
+    `野營 ${camps.length} 團(上限 = 兵線數 × 2;塞不下的團寧缺勿錯)`);
+  const bunkers = [...sim.ents.values()].filter((e) => e.kind === 'bunker');
+  assert(bunkers.length === camps.length, '每團一座碉堡');
+  assert(UNITS.bunker.hp === Math.round(UNITS.tower.hp / 2), `碉堡 HP = 砲塔一半(${UNITS.bunker.hp})`);
+  // 佈營硬約束:離雙方每座砲塔 / 主堡 ≥ 工事射程 × 1.5,且遠離兵線走廊
+  const towers = [...sim.ents.values()].filter((e) => e.kind === 'tower');
+  const rT = UNITS.tower.range * THIRD.CLEAR_F;
+  const rB = Math.max(UNITS.base.range, UNITS.base.guns.range) * THIRD.CLEAR_F;
+  assert(camps.every((c) => towers.every((t) => Math.hypot(c.x - t.x, c.z - t.z) >= rT)),
+    `野營離所有砲塔 ≥ 塔射程 × ${THIRD.CLEAR_F}(${rT}m)`);
+  assert(camps.every((c) => Object.values(sim.basePos).every(([bx, bz]) => Math.hypot(c.x - bx, c.z - bz) >= rB)),
+    `野營離兩主堡 ≥ 主堡射程 × ${THIRD.CLEAR_F}(${rB}m)`);
+  assert(camps.every((c) => sim._distToLanes(c.x, c.z) >= THIRD.LANE_MIN),
+    `野營離兵線走廊 ≥ ${THIRD.LANE_MIN}m(> NPC 最大射程:不掃兵線)`);
+  // 編制:游擊隊 = 3 步槍 + 火箭 + 坦克;武裝民兵 = 3 步槍 + 榴彈 + 直升機
+  const campEnts = (ci) => [...sim.ents.values()].filter((e) => e.tp && e.ci === ci && e.kind !== 'bunker');
+  const kindsOf = (ci) => campEnts(ci).map((e) => e.kind).sort().join(',');
+  const gi = camps.findIndex((c) => c.type === 'GUER');
+  const mi = camps.findIndex((c) => c.type === 'MILI');
+  if (gi >= 0) assert(kindsOf(gi) === [...THIRD.COMP.GUER].sort().join(','), `游擊隊編制(${kindsOf(gi)})`);
+  if (mi >= 0) assert(kindsOf(mi) === [...THIRD.COMP.MILI].sort().join(','), `武裝民兵編制(${kindsOf(mi)})`);
+  // 開戰時全數藏在戰爭迷霧(單位走一般迷霧規則、碉堡非塔/堡);觀戰無霧看得到
+  const ids0 = new Set(sim.snapshotFor('SWARM').ents.map((e) => e.id));
+  assert(campEnts(0).every((e) => !ids0.has(e.id)) && !ids0.has(camps[0].bunker.id),
+    '第三方單位與碉堡開戰時藏在戰爭迷霧');
+  assert(sim.snapshotFor(null).ents.some((e) => e.k === 'bunker'), '觀戰(無霧)快照帶碉堡');
+  // 駐守:半血步槍兵進碉堡 → 免傷 + 不可被命中 + 緩慢回血;回滿自動出堡
+  const c0 = camps[0];
+  const sold = campEnts(0).find((e) => e.kind === 'soldier');
+  sold.hp = Math.round(sold.maxHp * 0.4);
+  sold.x = c0.x + 3; sold.z = c0.z;
+  sim._tpBehave(sold, 0.125);
+  assert(sold.gar === 1, '半血步槍兵進碉堡駐守');
+  const hpG = sold.hp;
+  sim._damage(sold, 9999, null, 999);
+  assert(sold.hp === hpG, '駐守中免傷(碉堡保護)');
+  const rb = sim.addHero('STEEL', 'tp_r', 't01');
+  rb.x = c0.x + 20; rb.z = c0.z;
+  sim.t += 1;
+  sim.heroHit('tp_r', sold.id);
+  assert(sold.hp === hpG, '駐守中不可被命中(heroHit 早退)');
+  sim._tpBehave(sold, 10);
+  assert(sold.hp > hpG, `駐守緩慢回血(${THIRD.GAR_REGEN_PS * 100}%/s)`);
+  assert(sim.snapshotFor(null).ents.find((e) => e.id === sold.id)?.gar === 1, '快照帶 gar 旗標(客戶端隱藏機體)');
+  sold.hp = sold.maxHp;
+  sim._tpBehave(sold, 0.125);
+  assert(!sold.gar, '回滿血自動出堡');
+  // 繫繩:離碉堡超過 TETHER_M → 馬上撤回(移動朝碉堡收斂)
+  sold.x = c0.x + THIRD.TETHER_M + 30; sold.z = c0.z;
+  sim._tpBehave(sold, 0.125);
+  assert(sold.ret === 1, `離碉堡 > ${THIRD.TETHER_M}m → 馬上撤回`);
+  const dx0 = Math.abs(sold.x - c0.x);
+  sim._tpMove(sold, UNITS.soldier, 0.5);
+  assert(Math.abs(sold.x - c0.x) < dx0, '撤回中朝碉堡移動');
+  // 交戰得賞金 + 陣亡進 60s 重生池
+  const $0 = rb.money;
+  const prey = campEnts(0).find((e) => e.kind !== 'soldier');
+  prey.hp = 1;
+  sim.t += 1;
+  sim.heroHit('tp_r', prey.id);
+  assert(!sim.ents.has(prey.id), '第三方單位可被擊殺');
+  assert(rb.money - $0 >= ECON.BOUNTY[prey.kind], `交戰得賞金 +$${Math.round(rb.money - $0)}`);
+  assert(c0.pool.length === 1 && c0.pool[0].rem === THIRD.UNIT_RESPAWN_S,
+    `陣亡單位進 ${THIRD.UNIT_RESPAWN_S}s 重生池`);
+  // 碉堡被拆 → 180s 原地重生;期間單位重生「暫停倒數」
+  const bk = c0.bunker;
+  const $b = rb.money;
+  bk.hp = 0;
+  sim._kill(bk, rb);
+  assert(!c0.bunker && c0.bunkerRem === THIRD.BUNKER_RESPAWN_S,
+    `碉堡被拆 → ${THIRD.BUNKER_RESPAWN_S}s 原地重生倒數`);
+  assert(rb.money - $b >= ECON.BOUNTY.bunker, `拆碉堡賞金 +$${ECON.BOUNTY.bunker}`);
+  const rem0 = c0.pool[0].rem;
+  sim._tickCamps(10);
+  assert(c0.pool[0].rem === rem0, '碉堡不存在:單位重生暫停倒數');
+  sim._tickCamps(THIRD.BUNKER_RESPAWN_S);
+  assert(!!c0.bunker && c0.bunker.kind === 'bunker'
+    && Math.hypot(c0.bunker.x - c0.x, c0.bunker.z - c0.z) < 1, '碉堡時限到 → 原地重生');
+  sim._tickCamps(THIRD.UNIT_RESPAWN_S + 1);
+  assert(c0.pool.length === 0 && campEnts(0).length === THIRD.COMP[c0.type].length,
+    '碉堡回來後單位恢復倒數並重生歸隊');
+}
+
 // ================= WebSocket 端對端 =================
 log('— 開房驗證(地圖必須先建立)—');
 const host = await client('host');
@@ -685,13 +782,17 @@ assert(snap.ents.some((e) => e.k === 'aasite'), '快照帶匿蹤防空陣地(中
 assert(snap.ents.some((e) => e.sc && !e.s), '中立障礙帶尺寸 sc 且無陣營');
 
 log('— 等第一波兵線 —');
+// 第三方野營的步槍兵開戰即在場(觀戰無霧看得到)→ 等波次 MUST 篩雙陣營
+const isFaction = (e) => e.s === 'SWARM' || e.s === 'STEEL';
 await spec.wait((c) => {
   const s = c.snaps.at(-1);
-  return s.ents.some((e) => e.k === 'soldier');
+  return s.ents.some((e) => e.k === 'soldier' && isFaction(e));
 }, 15000);
 const snapWave = spec.snaps.at(-1);   // 無霧視角:才看得到雙方全部小兵
-const creeps = snapWave.ents.filter((e) => ['soldier', 'rocketeer', 'howitzer', 'heli'].includes(e.k));
-assert(creeps.length === 12, `第一波小兵 12 隻(1線×2方×6;實際 ${creeps.length})`);
+const WAVE_KINDS = ['soldier', ...GAME.WAVE_EXTRAS];
+const wavePer = GAME.WAVE_SOLDIERS + GAME.WAVE_EXTRAS.length;
+const creeps = snapWave.ents.filter((e) => WAVE_KINDS.includes(e.k) && isFaction(e));
+assert(creeps.length === wavePer * 2, `第一波小兵 ${wavePer * 2} 隻(1線×2方×${wavePer},含坦克;實際 ${creeps.length})`);
 
 log('— 英雄移動 + 射擊 —');
 const target = snapWave.ents.find((e) => e.k === 'soldier' && e.s === 'STEEL');

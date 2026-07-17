@@ -433,7 +433,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'aim' && client.side) { b.heroAim(clientId, m.on); return; }
     if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
-    if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z); return; }
+    if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z, m.y); return; }   // y = 對空引爆高度(sim 夾範圍)
     if (m.t === 'plasma' && client.side) { b.heroPlasma(clientId, m.dx, m.dz, m.slot); return; }
     if (m.t === 'detonate' && client.side) { b.heroDetonate(clientId, !!m.crash); return; }
     if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }

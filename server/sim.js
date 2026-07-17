@@ -8,7 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, PROG, VITALS, armorMul, killScore,
   vsMult, upgradePrice, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  EVASION, heroMobility, LOS, IFRAME,
+  EVASION, heroMobility, LOS, IFRAME, THIRD,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -78,6 +78,7 @@ export class BattleSim {
 
     this._spawnStructures();
     this._seedField();
+    this._seedCamps();
   }
 
   // ---------- 世界障礙(2026-07-15:LOS 遮蔽 + 立體交通走廊淨空)----------
@@ -522,6 +523,194 @@ export class BattleSim {
     }
   }
 
+  // ---------- 第三方軍隊(2026-07-17;DOTA 野區:游擊隊 / 武裝民兵,見 data.js THIRD)----------
+  /**
+   * 佈營:每條兵線兩側各一團(左 = 游擊隊 GUER、右 = 武裝民兵 MILI;總團數 = 兵線數 × 2)。
+   * 硬約束(MUST,不放寬):離雙方每座砲塔 ≥ tower.range × CLEAR_F、離兩主堡 ≥ max(主堡射程) × CLEAR_F
+   * —— 野營永遠在正規工事火網之外;另離所有兵線走廊 ≥ LANE_MIN(> NPC 最大射程)⇒ 不掃兵線。
+   * 取樣不到合法點(地圖太小)→ 該團不生成(寧缺勿錯)。
+   */
+  _seedCamps() {
+    this.camps = [];
+    const rTower = UNITS.tower.range * THIRD.CLEAR_F;
+    const rBase = Math.max(UNITS.base.range, UNITS.base.guns.range) * THIRD.CLEAR_F;
+    const towers = [...this.ents.values()].filter((e) => e.kind === 'tower');
+    const clearOk = (x, z) => {
+      for (const side of ['SWARM', 'STEEL']) {
+        const [bx, bz] = this.basePos[side];
+        if (dist2d(x, z, bx, bz) < rBase) return false;
+      }
+      for (const tw of towers) if (dist2d(x, z, tw.x, tw.z) < rTower) return false;
+      return true;
+    };
+    for (let li = 0; li < this.lanes.length; li++) {
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      for (const dir of [-1, 1]) {
+        const type = dir < 0 ? 'GUER' : 'MILI';
+        let best = null, bestScore = -Infinity;
+        // 兩輪取樣:第二輪放寬「側偏上限」(硬約束照舊)—— 山谷/小圖的合法區常在斜後方遠處
+        for (const maxOff of [THIRD.LANE_MAX, THIRD.LANE_MAX * 1.6]) {
+          for (let tries = 0; tries < 320; tries++) {
+            const p = this._lanePointNormal(li, total * (0.1 + Math.random() * 0.8));
+            const off = THIRD.LANE_MIN + Math.random() * (maxOff - THIRD.LANE_MIN);
+            const x = p.x + p.nx * dir * off, z = p.z + p.nz * dir * off;
+            if (!this._inBounds(x, z, 16)) continue;
+            const dl = this._distToLanes(x, z);                        // 其他兵線也要淨空
+            if (dl < THIRD.LANE_MIN) continue;
+            if (!clearOk(x, z)) continue;                              // 1.5× 工事射程(硬)
+            if (this.camps.some((c) => dist2d(x, z, c.x, c.z) < THIRD.SPACING)) continue;
+            if ((this.hazBlockers || []).some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 16)) continue;
+            const score = -Math.abs(dl - (THIRD.LANE_MIN + 90));       // 偏好取樣帶中段
+            if (score > bestScore) { bestScore = score; best = [x, z]; }
+          }
+          if (best) break;
+        }
+        if (!best) continue;
+        this._spawnCamp(type, li, best[0], best[1]);
+      }
+    }
+  }
+
+  _spawnCamp(type, li, x, z) {
+    const ci = this.camps.length;
+    const camp = { type, li, x, z, bunker: null, bunkerRem: 0, pool: [] };
+    this.camps.push(camp);
+    camp.bunker = this._spawnBunker(camp, ci);
+    THIRD.COMP[type].forEach((kind, i) => this._spawnCampUnit(camp, ci, kind, i));
+  }
+
+  _spawnBunker(camp, ci) {
+    return this._add({ kind: 'bunker', side: camp.type, tp: 1, ci, x: camp.x, z: camp.z, hp: UNITS.bunker.hp });
+  }
+
+  /** 團員生成/重生:繞碉堡的駐守位(slot 定角);直升機吃巡航高度 */
+  _spawnCampUnit(camp, ci, kind, slot) {
+    const [hx, hz] = this._campHome(camp, slot);
+    return this._add({
+      kind, side: camp.type, tp: 1, ci, slot,
+      x: hx, z: hz, y: kind === 'heli' ? GAME.HELI_ALT : 0,
+      hp: UNITS[kind].hp,
+    });
+  }
+
+  /** 團員的駐守位(碉堡周圍等角環列) */
+  _campHome(camp, slot) {
+    const a = (slot || 0) / THIRD.COMP[camp.type].length * Math.PI * 2;
+    return [camp.x + Math.cos(a) * THIRD.FORM_R, camp.z + Math.sin(a) * THIRD.FORM_R];
+  }
+
+  /** 團員陣亡 → 進重生池(60s);碉堡陣亡 → 原地重生倒數(180s)+ 駐守者被迫出堡 */
+  _onThirdDeath(t) {
+    const camp = this.camps?.[t.ci];
+    if (!camp) return;
+    if (t.kind === 'bunker') {
+      camp.bunker = null;
+      camp.bunkerRem = THIRD.BUNKER_RESPAWN_S;
+      // 碉堡塌了:駐守中的步槍兵被迫出堡(免傷/射孔限制即刻解除)
+      for (const e of this.ents.values()) if (e.tp && e.ci === t.ci && e.gar) this._ungarrison(e);
+    } else {
+      camp.pool.push({ kind: t.kind, slot: t.slot || 0, rem: THIRD.UNIT_RESPAWN_S });
+    }
+  }
+
+  /** 重生管理:碉堡倒數恆走(原地重生);單位倒數只在碉堡存在時前進(暫停規則) */
+  _tickCamps(dt) {
+    for (let ci = 0; ci < (this.camps || []).length; ci++) {
+      const camp = this.camps[ci];
+      if (!camp.bunker) {
+        camp.bunkerRem -= dt;
+        if (camp.bunkerRem <= 0) camp.bunker = this._spawnBunker(camp, ci);
+        continue;   // 碉堡不存在:單位重生暫停倒數
+      }
+      for (let i = camp.pool.length - 1; i >= 0; i--) {
+        const p = camp.pool[i];
+        p.rem -= dt;
+        if (p.rem > 0) continue;
+        camp.pool.splice(i, 1);
+        this._spawnCampUnit(camp, ci, p.kind, p.slot);
+      }
+    }
+  }
+
+  /** 駐守中的團員數(容量閘門) */
+  _garCount(ci) {
+    let n = 0;
+    for (const e of this.ents.values()) if (e.tp && e.ci === ci && e.gar) n++;
+    return n;
+  }
+
+  /**
+   * 第三方單位的狀態機(開火/移動之外):
+   * 駐守 = 免傷(_damage 早退)+ 緩慢回血 + 射程 ×GAR_RANGE_F,回滿出堡;
+   * 半血步槍兵 → 尋堡(seek);離碉堡 > TETHER_M → 繫繩撤回(ret,途中不交戰)。
+   */
+  _tpBehave(e, dt) {
+    const camp = this.camps?.[e.ci];
+    if (!camp || e.kind === 'bunker') return;
+    if (e.gar) {
+      if (!camp.bunker) { this._ungarrison(e); return; }   // 防禦性:碉堡消失即出堡
+      e.hp = Math.min(e.maxHp, e.hp + e.maxHp * THIRD.GAR_REGEN_PS * dt);
+      e.x = camp.x; e.z = camp.z;                          // 人在堡內,位置鎖定
+      if (e.hp >= e.maxHp * THIRD.GAR_EXIT_F) this._ungarrison(e);
+      return;
+    }
+    const dHome = dist2d(e.x, e.z, camp.x, camp.z);
+    if (!e.ret && dHome > THIRD.TETHER_M) e.ret = 1;
+    else if (e.ret && dHome <= THIRD.HOME_R) e.ret = 0;
+    e.seek = 0;
+    if (e.kind === 'soldier' && camp.bunker && e.hp <= e.maxHp * THIRD.GAR_ENTER_F) {
+      if (dHome > 7) e.seek = 1;                           // 朝碉堡移動(_tpMove 消費)
+      else if (this._garCount(e.ci) < THIRD.GAR_CAP) {
+        e.gar = 1; e.ret = 0;
+        e.x = camp.x; e.z = camp.z;
+      }
+    }
+  }
+
+  /** 第三方移動:撤回/尋堡 > 追擊(視野內、射程外)> 歸位駐守;吃控場折速、繞阻擋障礙 */
+  _tpMove(e, u, dt) {
+    const camp = this.camps?.[e.ci];
+    if (!camp || e.gar) return;
+    let sf = 1;   // 控場折速(與 _advance 同規則;無兵線可倒退,混亂折半)
+    if ((e.stunUntil || 0) > this.t) sf = 0;
+    else {
+      if ((e.slowUntil || 0) > this.t) sf *= e.slowF ?? 0.6;
+      if ((e.confUntil || 0) > this.t) sf *= 0.5;
+    }
+    if (sf <= 0) return;
+    let tx, tz, arrive = 2;
+    if (e.ret || e.seek) { tx = camp.x; tz = camp.z; arrive = e.seek ? 5 : THIRD.HOME_R * 0.6; }
+    else {
+      // 追擊:武器射程外、但視野內的敵人(繫繩由 _tpBehave 把關,追過頭就撤回)
+      const chase = this._acquireTarget(e, { range: u.sight ?? u.range, wid: u.wid });
+      if (chase) { tx = chase.x; tz = chase.z; arrive = Math.max(6, u.range * 0.7); }
+      else { [tx, tz] = this._campHome(camp, e.slot); }
+    }
+    const dx = tx - e.x, dz = tz - e.z;
+    const d = Math.hypot(dx, dz);
+    if (d <= arrive) return;
+    const step = Math.min(d, u.speed * sf * dt);
+    e.x += dx / d * step;
+    e.z += dz / d * step;
+    if (e.kind !== 'heli') {   // 阻擋型障礙:比照 _advance 繞開(直升機飛越)
+      for (const [hx, hz, hr] of this.hazBlockers || []) {
+        const dd = dist2d(e.x, e.z, hx, hz);
+        if (dd >= hr || dd === 0) continue;
+        e.x = hx + (e.x - hx) / dd * hr;
+        e.z = hz + (e.z - hz) / dd * hr;
+      }
+    }
+  }
+
+  /** 出堡:回到駐守位(免傷/射孔限制一併解除) */
+  _ungarrison(e) {
+    e.gar = 0;
+    const camp = this.camps?.[e.ci];
+    if (!camp) return;
+    [e.x, e.z] = this._campHome(camp, e.slot);
+  }
+
   /** 點到所有兵線折線的最短距離(判定「非正規路線」用) */
   _distToLanes(x, z) {
     let best = Infinity;
@@ -711,7 +900,7 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     if (!h || h.dead) return;
     const t = this.ents.get(targetId);
-    if (!t || t.neutral || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
+    if (!t || t.neutral || t.gar || t.side === sq.side || t.hp <= 0 || (t.hero && t.dead)) return;
     // 射程閘門:用玩家當下手上那把武器(瞄準中 = 重武器),留與 heroHit 同一份彈道寬容
     const wp = this._heroWeapon(h, h.aiming ? 'heavy' : 'light');
     if (!wp) return;
@@ -864,7 +1053,7 @@ export class BattleSim {
   heroHit(pid, targetId, w) {
     const h = this.heroes.get(pid);
     const t = this.ents.get(targetId);
-    if (!h || h.dead || !t || t.side === h.side || this.over) return;
+    if (!h || h.dead || !t || t.gar || t.side === h.side || this.over) return;
     if (this._jammed(h)) return;   // 電磁癱瘓:武器離線
     const wp = this._heroWeapon(h, w);
     if (!wp || !wp.def.rate) return;
@@ -985,24 +1174,27 @@ export class BattleSim {
   /**
    * 重武器(launcher 型)著彈:落點由客戶端彈道回報,
    * CD(mag=1 + reload=cd)/瞄準/射程/電磁癱瘓皆伺服器把關。
+   * y(2026-07-17 火箭筒對空):彈頭直擊空中目標時客戶端回報引爆高度 →
+   * 爆風在高空結算(_blast 的 3D 距離)⇒ 火箭筒/榴彈可對空;缺值 = 地面引爆(向後相容)。
    */
-  heroBurst(pid, x, z) {
+  heroBurst(pid, x, z, y = 0) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     if (this._jammed(h)) return;
+    y = Number.isFinite(y) ? Math.max(0, Math.min(400, y)) : 0;   // 引爆高度夾範圍(防作弊)
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
     if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15) return;   // 著彈點超程(留彈道寬容)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
-    this.events.push({ e: 'boom', x, z, r: wp.def.r, side: h.side });
-    this._blast(h, wp.def, x, z, 0);
+    this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side });
+    this._blast(h, wp.def, x, z, y);
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
       if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
-      this._blast(b, wp.def, x, z, 0);
+      this._blast(b, wp.def, x, z, y);
     }
   }
 
@@ -1028,7 +1220,7 @@ export class BattleSim {
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
       for (const t of [...this.ents.values()]) {
-        if (t.side === h.side || (t.hero && t.dead)) continue;
+        if (t.side === h.side || t.gar || (t.hero && t.dead)) continue;
         const tx = t.x - b.x, tz = t.z - b.z;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
@@ -1284,9 +1476,9 @@ export class BattleSim {
   _applyCC(h, ad, x, z, r) {
     const rr = r * 1.5;
     for (const t of [...this.ents.values()]) {
-      if (t.side === h.side || !t.side || t.neutral || t.decoy || t.hp <= 0) continue;
+      if (t.side === h.side || !t.side || t.neutral || t.decoy || t.gar || t.hp <= 0) continue;
       if (t.hero && t.dead) continue;
-      if (t.kind === 'tower' || t.kind === 'base') continue;
+      if (t.kind === 'tower' || t.kind === 'base' || t.kind === 'bunker') continue;   // 工事免控場
       if (t.hero && (t.invUntil || 0) > this.t) continue;
       const d = dist2d(t.x, t.z, x, z);
       if (d > rr) continue;
@@ -1327,11 +1519,13 @@ export class BattleSim {
   }
 
   /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
-   *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。 */
+   *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。
+   *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,
+   *  高空直擊/同高度自爆才炸得到 —— 與英雄/餌機同一條 3D 規則。 */
   _blast(h, def, x, z, y) {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
-      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy ? (t.y || 0) : 0));
+      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy || t.kind === 'heli' ? (t.y || 0) : 0));
       const f = blastFalloff(def.r, d);
       if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);
     }
@@ -1385,6 +1579,7 @@ export class BattleSim {
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
   _damage(t, dmg, by, pen = 0) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
+    if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
     if (t.kind === 'base' && by && by.side) {
@@ -1450,7 +1645,8 @@ export class BattleSim {
       t.dash = 0;
       if (this._aliveN(t) === 0) t.aiming = false;   // 小隊全滅才收瞄準(aiming 是共用狀態)
       this.stats[t.side].deaths++;
-      if (bySide && bySide !== t.side) this.stats[bySide].kills++;
+      // 第三方軍隊(GUER/MILI)沒有 stats 欄:擊殺英雄只記受害方 deaths,不記殺手 kills
+      if (bySide && bySide !== t.side && this.stats[bySide]) this.stats[bySide].kills++;
       // 重生冷卻:三機小隊只有「整隊全滅」才追加重生時間(全隊統一延後),個別墜毀只吃基礎重生;
       // 機甲/變形機甲(單機)沿用陣營死亡數累加。
       const r = UNITS[t.kind].respawn;
@@ -1492,8 +1688,11 @@ export class BattleSim {
       if (t.kind === 'fire') this._fires = this._fires.filter((f) => f !== t);
       return;
     }
-    if (bySide && by.hero && bySide !== t.side) this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
+    if (bySide && by.hero && bySide !== t.side && this.stats[bySide]) {
+      this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
+    }
     this.ents.delete(t.id);
+    if (t.tp) { this._onThirdDeath(t); return; }   // 第三方軍隊:進重生池(碉堡沒了就暫停倒數)
     if (t.kind === 'base') {
       this.over = true;
       this.winner = OTHER_SIDE[t.side];
@@ -1554,6 +1753,7 @@ export class BattleSim {
     this._tickAmbush(dt);
     this._tickRelays(dt);
     this._tickHazards(dt);
+    this._tickCamps(dt);
 
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
@@ -1564,9 +1764,11 @@ export class BattleSim {
       e.cd = Math.max(0, e.cd - dt);
       if (u.sam) this._tryLaunchSam(e, u.sam, dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
-      const target = this._acquireTarget(e, u);
+      if (e.tp) this._tpBehave(e, dt);   // 第三方:駐守回血/進出碉堡/繫繩旗標(開火與移動之外的狀態機)
+      // 駐守碉堡:射孔限制,射程 ×GAR_RANGE_F(其餘規格照舊)
+      const target = this._acquireTarget(e, e.gar ? { ...u, range: u.range * THIRD.GAR_RANGE_F } : u);
       e._eng = !!target;   // 交戰中的不當凝聚錨點(否則整波卡在原地等它)
-      if (target) {
+      if (target && !e.ret) {   // 第三方撤回中(ret)不停下交戰 —— 「馬上撤回碉堡周圍」
         // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)
         if (e.cd === 0 && !((e.empUntil || 0) > this.t)) {
           e.cd = 1 / u.rate;
@@ -1584,7 +1786,10 @@ export class BattleSim {
         }
         continue; // 交戰中不前進
       }
-      if (u.speed > 0) this._advance(e, u, dt);
+      if (u.speed > 0) {
+        if (e.tp) this._tpMove(e, u, dt);
+        else this._advance(e, u, dt);
+      }
     }
 
     this._tickMissiles(dt);
@@ -1928,7 +2133,7 @@ export class BattleSim {
         const off = GAME.WAVE_SPAWN_OFF_M;   // 出生點落在主路線上、主堡外(領隊在 off,列隊向堡內錯開)
         const comp = [];
         for (let i = 0; i < GAME.WAVE_SOLDIERS; i++) comp.push('soldier');
-        comp.push('rocketeer', 'howitzer', 'heli');
+        comp.push(...GAME.WAVE_EXTRAS);   // 固定編制唯一真相住 data.js(2026-07-17 起含坦克)
         comp.forEach((kind, i) => {
           const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
           // 沿線進度(公尺,從己方端起算);領隊在 off 出主堡,其餘往堡內列隊錯開
@@ -1969,6 +2174,8 @@ export class BattleSim {
     const wd = u.wid ? WEAPONS[u.wid] : null;
     for (const t of this.ents.values()) {
       if (t.side === e.side || t.neutral || t.hp <= 0) continue;   // 中立障礙不當目標
+      if (e.tp && t.tp) continue;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
+      if (t.gar) continue;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
       if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) continue;   // 匿蹤英雄不被鎖定
       // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
       // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
@@ -2058,6 +2265,7 @@ export class BattleSim {
     const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
     if (e.kind === 'heli') o.y = Math.round((e.y || 0) * 10) / 10;   // 攻擊直升機巡航高度(純渲染用)
+    if (e.gar) o.gar = 1;    // 第三方步槍兵駐守碉堡中(客戶端隱藏機體)
     if (e.kind === 'relay' && e.charge > 0) {   // 佔用進度(客戶端進度環 / 警示)
       o.cp = Math.min(100, Math.round(e.charge / FIELD.RELAY.CHANNEL_S * 100));
       o.cps = e.chargeSide;

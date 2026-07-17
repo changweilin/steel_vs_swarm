@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { SIDES, CHARACTERS, recoilTier } from './data.js';
+import { SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo } from './data.js';
 import { toonMat, toonify, outlinify } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 
@@ -67,6 +67,7 @@ const TARGET_H = {
   'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
   'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
+  bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
 };
 
 const loader = new GLTFLoader();
@@ -128,12 +129,12 @@ function fitToHeight(obj, target) {
   return obj;
 }
 
-/** 陣營光環(單位腳下的識別圈) */
+/** 陣營光環(單位腳下的識別圈);sideInfo:第三方(GUER/MILI)也有識別色 */
 function teamRing(side, radius) {
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(radius * 0.75, radius, 24),
     new THREE.MeshBasicMaterial({
-      color: SIDES[side].color, transparent: true, opacity: 0.55, side: THREE.DoubleSide,
+      color: sideInfo(side).color, transparent: true, opacity: 0.55, side: THREE.DoubleSide,
     }),
   );
   ring.rotation.x = -Math.PI / 2;
@@ -4855,6 +4856,54 @@ function buildTank(side) {
   return g;
 }
 
+// ---------- 步兵手持武器積木(2026-07-17 重設計;人類/機器人/第三方步兵共用)----------
+/**
+ * 肩射式火箭筒:發射管 + 錐形戰鬥部(前)+ 喇叭噴口(後)+ 握把/瞄具/肩墊。
+ * +z = 筒口朝向;呼叫端架上右肩(hips 子層)並給前仰角。accent = 陣營識別環。
+ */
+function shoulderTube(accent) {
+  const t = new THREE.Group();
+  const barrel = cyl(t, 0.085, 0.085, 1.6, 8, 0, 0, 0, 0x22261f, { metalness: 0.6 });
+  barrel.rotation.x = Math.PI / 2;                                       // 發射管沿 +z
+  const mid = cyl(t, 0.095, 0.095, 0.22, 8, 0, 0, 0.42, accent, { emissive: accent, emissiveIntensity: 0.7 });
+  mid.rotation.x = Math.PI / 2;                                          // 陣營識別環
+  const wh = cyl(t, 0.05, 0.14, 0.4, 8, 0, 0, 1.0, 0x3a4232);
+  wh.rotation.x = Math.PI / 2;                                           // 錐形戰鬥部(基座寬於發射管 = 超口徑彈)
+  const tip = cyl(t, 0.01, 0.05, 0.16, 8, 0, 0, 1.26, 0x2c3033);
+  tip.rotation.x = Math.PI / 2;                                          // 引信尖
+  const noz = cyl(t, 0.09, 0.15, 0.28, 8, 0, 0, -0.9, 0x1c1f22);
+  noz.rotation.x = Math.PI / 2;                                          // 尾部喇叭噴口(後噴無後座)
+  bx(t, 0.05, 0.18, 0.07, 0, -0.17, 0.22, 0x23262a);                     // 前握把
+  bx(t, 0.05, 0.15, 0.07, 0, -0.16, -0.12, 0x23262a);                    // 扳機握把
+  bx(t, 0.07, 0.09, 0.18, -0.1, 0.12, 0.06, 0x14171a);                   // 光學瞄具(左上)
+  bx(t, 0.12, 0.05, 0.3, 0, -0.12, -0.45, 0x2e332c);                     // 肩墊
+  return t;
+}
+
+/**
+ * 手持榴彈槍(榴彈兵步兵化):短粗砲管 + 六膛轉輪彈巢 + 前握把 + 摺疊肩托。
+ * +z = 槍口;呼叫端掛右手(armR 子層)。accent = 砲口識別環。
+ */
+function handGL(accent) {
+  const t = new THREE.Group();
+  bx(t, 0.09, 0.15, 0.5, 0, 0, -0.1, 0x1a1d20);                          // 機匣
+  const drum = cyl(t, 0.15, 0.15, 0.2, 10, 0, 0, 0.18, 0x2e332c);
+  drum.rotation.x = Math.PI / 2;                                         // 轉輪彈巢(鼓軸∥砲管,見 §2 供彈同軸規則)
+  for (let k = 0; k < 6; k++) {                                          // 六膛室(口部露頭)
+    const a = k * Math.PI / 3;
+    cyl(drum, 0.04, 0.04, 0.22, 6, Math.cos(a) * 0.09, 0, Math.sin(a) * 0.09, 0x14171a);
+  }
+  const gb = cyl(t, 0.07, 0.07, 0.45, 8, 0, 0, 0.5, 0x30373f, { metalness: 0.8 });
+  gb.rotation.x = Math.PI / 2;                                           // 短粗砲管(40mm 級口徑感)
+  const muz = cyl(t, 0.085, 0.085, 0.08, 8, 0, 0, 0.72, accent, { emissive: accent, emissiveIntensity: 0.9 });
+  muz.rotation.x = Math.PI / 2;                                          // 砲口識別環
+  bx(t, 0.05, 0.14, 0.06, 0, -0.15, 0.32, 0x23262a);                     // 前握把
+  bx(t, 0.05, 0.12, 0.07, 0, -0.13, -0.28, 0x23262a);                    // 手槍握把
+  bx(t, 0.04, 0.06, 0.3, 0, 0.03, -0.5, 0x2e332c);                       // 摺疊肩托
+  bx(t, 0.05, 0.05, 0.12, 0, 0.11, 0.02, 0x14171a);                      // 照門
+  return t;
+}
+
 /**
  * 可動步兵骨架(mobility_plan Task 2.1):
  * 髖×2 + 肩×2 四個關節樞軸 + 骨盆(hips)重心樞軸;locomotion.js 以實際地速驅動
@@ -4912,11 +4961,16 @@ function buildTrooper(side, p) {
   bx(hips, 0.36, 0.1, 0.08, 0, 1.2, 0.25, accent, { emissive: accent, emissiveIntensity: 1.2 });
   // 武器
   if (p.weapon === 'tube') {
-    // 肩扛火箭筒(前彈頭 / 後噴口分色)
-    const tube = cyl(hips, 0.15, 0.15, 1.9, 8, 0.34, 1.06, -0.1, 0x1c1f22, { metalness: 0.7 });
-    tube.rotation.x = Math.PI / 2 - 0.28;   // 筒口朝前上
-    cyl(tube, 0.16, 0.11, 0.3, 8, 0, 1.05, 0, dim(SIDES[side].color, 0.8));
-    cyl(tube, 0.17, 0.17, 0.14, 8, 0, -0.98, 0, 0x2c3033);
+    // 肩射式火箭筒(2026-07-17 重設計):架右肩、筒口朝前微仰(shoulderTube 共用積木)
+    const tube = shoulderTube(new THREE.Color(SIDES[side].color));
+    tube.position.set(0.34, 1.05, 0);
+    tube.rotation.x = -0.24;
+    hips.add(tube);
+  } else if (p.weapon === 'gl') {
+    // 手持榴彈槍(2026-07-17 榴彈兵步兵化):右手托持(handGL 共用積木)
+    const gl = handGL(new THREE.Color(SIDES[side].color));
+    gl.position.set(0.03, -0.8, 0.3);
+    armR.add(gl);
   } else {
     // 通用機槍(槍身/長槍管/彈鏈盒/提把/收折兩腳架)掛右手
     const mg = bx(armR, 0.1, 0.18, 1.5, 0.03, -0.82, 0.5, 0x1a1d20);
@@ -4952,25 +5006,11 @@ function buildRocketeerFallback(side) {
   });
 }
 
-/** 備援榴彈兵(牽引式榴彈砲):整體掛搖晃樞軸,行進時有慣性起伏 */
-function buildHowitzerFallback(side) {
-  const g = new THREE.Group();
-  const accent = new THREE.Color(SIDES[side].colorDim);
-  const hull = new THREE.Group();
-  g.add(hull);
-  cyl(hull, 1.1, 1.3, 0.6, 8, 0, 0.3, 0, 0x3a3f34);                      // 底盤
-  for (const [sx, sz] of [[-0.9, -1.6], [0.9, -1.6]]) {
-    bx(hull, 0.18, 0.18, 2.2, sx, 0.3, sz, 0x2c302a);                    // 駐鋤架
-  }
-  cyl(hull, 0.5, 0.6, 0.7, 8, 0, 0.95, 0, accent);                       // 砲架
-  bx(hull, 1.7, 0.9, 0.12, 0, 1.35, 0.65, 0x353b30);                     // 防盾板
-  bx(hull, 0.5, 0.35, 0.8, 0.95, 0.55, 0.4, 0x2f342b);                   // 彈藥箱
-  bx(hull, 0.52, 0.08, 0.82, 0.95, 0.76, 0.4, accent);                   // 彈藥箱識別蓋
-  const barrel = cyl(hull, 0.16, 0.22, 3.4, 8, 0, 1.5, -0.8, 0x16191c, { metalness: 0.7 });
-  barrel.rotation.x = -0.55;
-  cyl(barrel, 0.24, 0.24, 0.4, 8, 0, 1.55, 0, 0x0d0f11);                 // 砲口制退器
-  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels: [], top: 5 };
-  return g;
+/** 榴彈兵(2026-07-17 步兵化重設計)— 可動骨架 + 手持轉輪榴彈槍(不再是牽引砲車) */
+function buildGrenadierFallback(side) {
+  return buildTrooper(side, {
+    fatigue: 0x565e42, vest: 0x363c2e, pad: 0x424a38, helmet: 0x363d30, weapon: 'gl',
+  });
 }
 
 /** 備援攻擊直升機(機身+尾桁+主旋翼,userData.spin 供每幀轉動)。機首朝 +z(全機體慣例,見 game.js _updateEnts) */
@@ -5031,11 +5071,12 @@ function buildHeliFallback(side) {
 const SW_SHELL = 0x34383f, SW_DK = 0x282c31, SW_PLATE = 0x41464e, SW_JOINT = 0x1c1f23;
 
 /**
- * 蜂群戰鬥機器人步兵(soldier / rocketeer 共用雙足骨架):
+ * 蜂群戰鬥機器人步兵(soldier / rocketeer / howitzer 共用雙足骨架):
  * 逆關節鳥腿 + 蜂腹環紋 + 單眼複合感測條;soldier 右手鼓式彈鼓機槍,
- * rocketeer 改右肩四聯裝火箭莢艙(對應 wid:'rocket')。
+ * rocket 架右肩肩射式火箭筒(2026-07-17 重設計,對應 wid:'rocket'),
+ * gl 右手轉輪榴彈槍(2026-07-17 榴彈兵步兵化)。
  */
-function buildSwarmTrooper(side, { rocket = false } = {}) {
+function buildSwarmTrooper(side, { rocket = false, gl = false } = {}) {
   const g = new THREE.Group();
   const accent = new THREE.Color(SIDES[side].color);
   const hipY = 1.45;
@@ -5087,14 +5128,16 @@ function buildSwarmTrooper(side, { rocket = false } = {}) {
   }
   // 武器
   if (rocket) {
-    // 右肩四聯裝火箭莢艙(琥珀管口)
-    const pod = bx(hips, 0.32, 0.36, 0.72, 0.44, 1.1, -0.02, SW_DK, { metalness: 0.6 });
-    for (const [oy, ox] of [[-0.08, -0.07], [-0.08, 0.07], [0.08, -0.07], [0.08, 0.07]]) {
-      const tube = cyl(pod, 0.055, 0.055, 0.16, 6, ox, oy, 0.34, 0x14171a);
-      tube.rotation.x = Math.PI / 2;
-      const rim = cyl(pod, 0.06, 0.06, 0.03, 6, ox, oy, 0.42, accent, { emissive: accent, emissiveIntensity: 0.9 });
-      rim.rotation.x = Math.PI / 2;
-    }
+    // 肩射式火箭筒(2026-07-17 重設計):架右肩、筒口朝前微仰(shoulderTube 共用積木)
+    const tube = shoulderTube(accent);
+    tube.position.set(0.4, 1.02, -0.05);
+    tube.rotation.x = -0.22;
+    hips.add(tube);
+  } else if (gl) {
+    // 手持轉輪榴彈槍(2026-07-17 榴彈兵步兵化):右手托持(handGL 共用積木)
+    const g2 = handGL(accent);
+    g2.position.set(0.02, -0.76, 0.28);
+    armR.add(g2);
   } else {
     // 鼓式彈鼓機槍掛右手(短護木 + 琥珀砲口環)
     const mg = bx(armR, 0.1, 0.16, 1.2, 0.02, -0.78, 0.42, 0x15181c);
@@ -5223,7 +5266,9 @@ function buildSwarmTank(side) {
     return leg;
   };
   g.userData.rig = {
-    kind: 'quad', spine, chest, neck, head, tail, tail2,
+    kind: 'quad', spine, chest, neck, head,
+    tailSegs: [tail, tail2],   // stepQuad 契約:尾 = 多節鞭(2026-07-17 坦克重返波次時補登,缺了會炸 whipTail)
+    neckY0: neck.position.y,   // 頸的靜姿高度(stepQuad 每幀以它為基準補償)
     legFL: mkLeg(-1, 1.1, true), legFR: mkLeg(1, 1.1, true),
     legHL: mkLeg(-1, -1.5, false), legHR: mkLeg(1, -1.5, false),
     hipsY0: hipY, stride: 1.6, bob: 0.08, top: 9,
@@ -5231,41 +5276,251 @@ function buildSwarmTank(side) {
   return g;
 }
 
+// ---------- 第三方軍隊(2026-07-17;游擊隊 GUER / 武裝民兵 MILI,見 data.js THIRD)----------
+// 設計原則:剪影與雙陣營都不同 —— 鋼鐵 = 制式機器人部隊、蜂群 = 正規人類軍;
+// 第三方 = 非正規武裝:無鋼盔(頭巾/扁帽)、捲袖露膚、木質槍托、舊式載具外掛沙包/柵欄裝甲,
+// 識別色走 THIRD.SIDES(游擊隊 = 叢林綠、民兵 = 鏽橙),賽璐璐大色塊語彙不變。
+const REBEL_COLS = {
+  GUER: { cloth: 0x55603c, cloth2: 0x465032, dark: 0x333b28, skin: 0xc09a72, wood: 0x6e4f30, hull: 0x50583e },
+  MILI: { cloth: 0x5d5248, cloth2: 0x4d443c, dark: 0x38322c, skin: 0xb98d66, wood: 0x5e452c, hull: 0x5a5044 },
+};
+const rebelAccent = (side) => new THREE.Color(THIRD.SIDES[side]?.color || '#9aa39b');
+
 /**
- * 蜂群懸浮砲台(howitzer)— 六角浮游平台 + 高仰角磁軌榴砲;
- * rig 走 tracked(小側傾/大點頭 = 重平台慣性),wheels 留空。
+ * 第三方步兵(游擊隊/武裝民兵共用可動骨架;rig 合約同 buildTrooper):
+ * weapon: 'rifle' 木托突擊步槍 / 'rpg' 肩射式火箭筒 / 'gl' 手持轉輪榴彈槍。
  */
-function buildSwarmHowitzer(side) {
+function buildRebelTrooper(side, weapon) {
   const g = new THREE.Group();
-  const accent = new THREE.Color(SIDES[side].color);
+  const C = REBEL_COLS[side] || REBEL_COLS.GUER;
+  const accent = rebelAccent(side);
+  const hipY = 1.3;
+  const mkLeg = (sx) => {
+    const leg = new THREE.Group();
+    leg.position.set(sx * 0.21, hipY, 0);
+    bx(leg, 0.26, 0.56, 0.29, 0, -0.3, 0, C.cloth);                      // 寬鬆野戰褲
+    bx(leg, 0.2, 0.5, 0.23, 0, -0.86, 0, dim(C.cloth, 0.85));
+    bx(leg, 0.23, 0.16, 0.42, 0, -1.16, 0.05, C.dark);                   // 舊軍靴
+    g.add(leg);
+    return leg;
+  };
+  const legL = mkLeg(-1), legR = mkLeg(1);
+  const hips = new THREE.Group();
+  hips.position.y = hipY;
+  g.add(hips);
+  bx(hips, 0.52, 0.22, 0.32, 0, 0.08, 0, C.dark);                        // 工作腰帶
+  bx(hips, 0.18, 0.16, 0.12, 0.17, 0.04, 0.17, C.cloth2);                // 雜物腰包
+  bx(hips, 0.58, 0.62, 0.36, 0, 0.58, 0, C.cloth);                       // 軀幹(無防彈背心 = 非正規)
+  const sash = bx(hips, 0.16, 0.72, 0.4, 0, 0.58, 0.01, C.dark);         // 彈鏈斜背帶
+  sash.rotation.z = 0.6;
+  for (const k of [-0.22, 0, 0.22]) {
+    bx(sash, 0.06, 0.08, 0.42, 0, k, 0.01, 0xb8a468);                    // 彈鏈彈殼列
+  }
+  // 頭 + 頭巾(游擊隊)/扁帽(民兵)—— 刻意無鋼盔,剪影與正規軍分家
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 10, 8), mat(C.skin));
+  head.position.set(0, 1.16, 0.02);
+  hips.add(head);
+  if (side === 'GUER') {
+    cyl(hips, 0.245, 0.255, 0.1, 10, 0, 1.29, 0.02, accent);             // 頭巾纏帶
+    bx(hips, 0.08, 0.05, 0.22, -0.16, 1.24, -0.18, accent);              // 頭巾尾
+    const net = bx(hips, 0.5, 0.1, 0.4, 0.08, 0.94, -0.04, C.cloth2);    // 肩披偽裝網
+    net.rotation.z = -0.14;
+  } else {
+    cyl(hips, 0.26, 0.27, 0.09, 10, 0, 1.32, 0, C.cloth2);               // 扁帽
+    bx(hips, 0.2, 0.04, 0.16, 0, 1.3, 0.26, C.cloth2);                   // 帽簷
+    bx(hips, 0.1, 0.06, 0.04, 0, 1.33, 0.2, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 帽徽
+  }
+  // 手臂:上臂著衣、前臂捲袖露膚(非正規識別剪影)
+  const mkArm = (sx) => {
+    const a = new THREE.Group();
+    a.position.set(sx * 0.45, 0.88, 0);
+    bx(a, 0.16, 0.42, 0.21, 0, -0.21, 0, C.cloth);
+    bx(a, 0.13, 0.38, 0.17, 0, -0.6, 0.05, C.skin);
+    bx(a, 0.13, 0.12, 0.16, 0, -0.84, 0.08, C.skin);
+    hips.add(a);
+    return a;
+  };
+  const armL = mkArm(-1), armR = mkArm(1);
+  bx(armL, 0.2, 0.11, 0.24, 0, -0.1, 0, accent, { emissive: accent, emissiveIntensity: 0.6 });   // 識別臂章
+  // 武器
+  if (weapon === 'rpg') {
+    const tube = shoulderTube(accent);
+    tube.position.set(0.34, 1.04, 0);
+    tube.rotation.x = -0.24;
+    hips.add(tube);
+  } else if (weapon === 'gl') {
+    const gl = handGL(accent);
+    gl.position.set(0.03, -0.78, 0.3);
+    armR.add(gl);
+  } else {
+    // 木托突擊步槍(弧形彈匣)掛右手
+    const ak = bx(armR, 0.08, 0.14, 1.0, 0.02, -0.78, 0.34, 0x22262a);
+    bx(ak, 0.07, 0.11, 0.3, 0, 0.01, 0.28, C.wood);                      // 木護木
+    bx(ak, 0.045, 0.055, 0.5, 0, 0.03, 0.72, 0x30373f, { metalness: 0.85 });  // 槍管
+    cyl(ak, 0.035, 0.035, 0.08, 6, 0, 0.03, 1.0, 0x0d0f11).rotation.x = Math.PI / 2;  // 槍口
+    const mag = bx(ak, 0.05, 0.26, 0.11, 0, -0.17, 0.12, C.wood);        // 弧形彈匣
+    mag.rotation.x = 0.4;
+    bx(ak, 0.06, 0.11, 0.36, 0, -0.03, -0.62, C.wood);                   // 木槍托
+    bx(ak, 0.05, 0.1, 0.06, 0, -0.13, -0.18, 0x23262a);                  // 握把
+  }
+  g.userData.rig = {
+    kind: 'biped', hips, legL, legR, armL, armR,
+    hipsY0: hipY, stride: 0.95, bob: 0.07, sway: 0.06, top: 8, gunArm: true,
+  };
+  return g;
+}
+
+/**
+ * 游擊隊舊式坦克:鑄造圓砲塔 + 外露路輪(無側裙)+ 沙包/柵欄裝甲/外掛油桶 ——
+ * 與鋼鐵現代 MBT、蜂群四足砲台剪影三方分家。rig 走 tracked(輪留根節點著地)。
+ */
+function buildRebelTank(side) {
+  const g = new THREE.Group();
+  const C = REBEL_COLS[side] || REBEL_COLS.GUER;
+  const accent = rebelAccent(side);
+  const hullC = C.hull, hullD = dim(C.hull, 0.82);
   const hull = new THREE.Group();
   g.add(hull);
-  cyl(hull, 1.5, 1.8, 0.6, 6, 0, 0.75, 0, SW_SHELL);                     // 六角平台
-  cyl(hull, 1.52, 1.52, 0.1, 6, 0, 1.1, 0, accent, { emissive: accent, emissiveIntensity: 0.6 });  // 平台識別環
-  // 三向量噴口(底面琥珀光 = 懸浮)
-  for (let i = 0; i < 3; i++) {
-    const a = i * Math.PI * 2 / 3 + Math.PI / 2;
-    const pod = cyl(hull, 0.26, 0.34, 0.4, 6, Math.cos(a) * 1.0, 0.32, Math.sin(a) * 1.0, SW_JOINT, { metalness: 0.7 });
-    cyl(pod, 0.22, 0.22, 0.06, 6, 0, -0.22, 0, accent, { emissive: accent, emissiveIntensity: 1.1 });
+  bx(hull, 2.4, 0.9, 5.2, 0, 1.55, 0, hullC);                            // 主車身(短促舊式)
+  const glacis = bx(hull, 2.4, 0.8, 1.3, 0, 1.45, 2.7, hullD);           // 前斜甲
+  glacis.rotation.x = 0.55;
+  bx(hull, 2.2, 0.16, 2.2, 0, 2.08, -1.6, hullD);                        // 引擎甲板
+  // 沙包堆(前甲野戰補強)
+  for (const [sx, sy, sz] of [[-0.6, 1.98, 2.35], [0, 2.04, 2.45], [0.6, 1.98, 2.35], [-0.3, 1.86, 2.7], [0.3, 1.86, 2.7]]) {
+    rbz(hull, 0.52, 0.26, 0.68, sx, sy, sz, 0x8a7a58);
   }
-  // 後穩定鰭 ×2
+  // 外掛油桶 ×2(車尾)
   for (const s of [-1, 1]) {
-    const fin = bx(hull, 0.12, 0.9, 1.1, s * 0.8, 1.4, -1.25, SW_DK);
-    fin.rotation.x = -0.35;
+    const drum = cyl(hull, 0.26, 0.26, 0.8, 10, s * 0.55, 2.15, -2.8, C.dark);
+    drum.rotation.x = Math.PI / 2;
   }
-  // 磁軌榴砲(仰角 ~33°:雙導軌 + 砲口充能環)
-  cyl(hull, 0.55, 0.7, 0.7, 6, 0, 1.4, 0, SW_PLATE);                     // 砲架
-  const barrel = cyl(hull, 0.1, 0.14, 3.6, 8, 0, 1.95, -0.85, 0x14171a, { metalness: 0.8 });
-  barrel.rotation.x = -0.58;
-  for (const s of [-1, 1]) bx(barrel, 0.06, 3.2, 0.14, s * 0.17, 0.1, 0, SW_DK, { metalness: 0.7 });
-  cyl(barrel, 0.17, 0.17, 0.18, 6, 0, 1.6, 0, accent, { emissive: accent, emissiveIntensity: 1.0 });
-  // 側掛彈藥蜂室 ×3
-  for (let i = 0; i < 3; i++) {
-    const cell = cyl(hull, 0.17, 0.17, 0.5, 6, 0.95, 1.05, 0.55 - i * 0.42, SW_DK);
-    cell.rotation.z = Math.PI / 2;
+  // 柵欄裝甲(側面條板;鏤空 = 反成形裝藥的貧窮人智慧)
+  for (const s of [-1, 1]) {
+    for (let k = 0; k < 4; k++) bx(hull, 0.06, 0.5, 0.14, s * 1.58, 1.6, -1.7 + k * 1.15, C.dark);
+    bx(hull, 0.06, 0.08, 4.6, s * 1.58, 1.86, 0, C.dark);                // 上橫桿
+    bx(hull, 0.06, 0.08, 4.6, s * 1.58, 1.36, 0, C.dark);                // 下橫桿
+    bx(hull, 0.6, 0.16, 5.4, s * 1.25, 1.12, 0, 0x2a2e33);               // 履帶上帶
   }
-  cyl(hull, 0.02, 0.03, 1.1, 5, -0.9, 1.9, 0.6, 0x23262a);               // 感測桅杆
-  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels: [], top: 5 };
+  // 外露路輪(無側裙 = 舊式底盤剪影;輪在根節點,rig.wheels 吃線速度)
+  const wheels = [];
+  const roadWheel = (s, z, r, y) => {
+    const w = cyl(g, r, r, 0.5, 12, s * 1.25, y, z, 0x1e2226);
+    w.rotation.z = Math.PI / 2;
+    cyl(w, r * 0.45, r * 0.45, 0.54, 8, 0, 0, 0, 0x3a4046);              // 輪轂
+    wheels.push({ m: w, r });
+  };
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < 5; i++) roadWheel(s, -1.9 + i * 0.95, 0.52, 0.55);
+    roadWheel(s, 2.6, 0.4, 0.9);                                         // 前惰輪
+    roadWheel(s, -2.6, 0.4, 0.9);                                        // 後主動輪
+  }
+  // 鑄造圓砲塔(半球壓扁)前置
+  const turret = new THREE.Group();
+  turret.position.set(0, 2.16, 0.4);
+  hull.add(turret);
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(1.02, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(hullD));
+  dome.scale.set(1, 0.72, 1.12);
+  turret.add(dome);
+  bx(turret, 0.5, 0.12, 0.5, -0.3, 0.72, -0.15, C.dark);                 // 艙蓋
+  const gun = cyl(turret, 0.11, 0.14, 3.5, 10, 0, 0.3, 2.3, 0x14171a, { metalness: 0.8 });
+  gun.rotation.x = Math.PI / 2;                                          // 主砲
+  cyl(gun, 0.16, 0.16, 0.3, 8, 0, 1.65, 0, 0x0d0f11);                    // 砲口
+  cyl(turret, 0.02, 0.02, 0.9, 5, -0.5, 0.85, -0.55, 0x23262a);          // 旗桿
+  bx(turret, 0.02, 0.24, 0.36, -0.5, 1.2, -0.72, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 陣營識別旗
+  g.userData.rig = { kind: 'tracked', hull, hullY0: 0, wheels, top: 9 };
+  g.userData.turret = turret;                                            // 砲塔獨立追蹤目標
+  return g;
+}
+
+/**
+ * 武裝民兵輕型直升機:泡形座艙 + 桁架尾桁 + 側掛雙機槍(門射手改裝)——
+ * 與鋼鐵攻擊直升機、蜂群六旋翼砲艇剪影三方分家。rig 走 aerial + spin 轉槳。
+ */
+function buildRebelHeli(side) {
+  const g = new THREE.Group();
+  const C = REBEL_COLS[side] || REBEL_COLS.GUER;
+  const accent = rebelAccent(side);
+  const bodyC = C.hull;
+  const tilt = new THREE.Group();
+  tilt.position.y = 1.5;
+  g.add(tilt);
+  const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 10),
+    mat(0x1c2830, { emissive: 0x9adfff, emissiveIntensity: 0.25 }));
+  bubble.position.set(0, 0.15, 0.95);
+  bubble.scale.set(0.95, 0.9, 1.05);
+  tilt.add(bubble);                                                      // 泡形座艙(民用改裝感)
+  bx(tilt, 1.0, 0.8, 1.5, 0, 0.05, -0.1, bodyC);                         // 短機身艙
+  bx(tilt, 0.9, 0.1, 0.9, 0, 0.52, 0, dim(bodyC, 0.85));                 // 艙頂板
+  // 桁架尾桁(鏤空斜撐 = 輕型機剪影核心)
+  for (const s of [-1, 1]) {
+    bx(tilt, 0.05, 0.05, 2.4, s * 0.14, 0.32, -1.6, C.dark);             // 上桁
+    const low = bx(tilt, 0.05, 0.05, 2.35, s * 0.14, -0.02, -1.55, C.dark);
+    low.rotation.x = 0.13;                                               // 下桁(收斂)
+  }
+  for (let k = 0; k < 4; k++) {
+    const brace = bx(tilt, 0.04, 0.32, 0.04, 0, 0.14, -0.75 - k * 0.55, C.dark);
+    brace.rotation.x = k % 2 ? 0.55 : -0.55;                             // 斜撐交錯
+  }
+  bx(tilt, 0.05, 0.5, 0.3, 0, 0.3, -2.85, bodyC);                        // 垂直尾翼
+  bx(tilt, 0.06, 0.14, 0.32, 0, 0.55, -2.85, accent, { emissive: accent, emissiveIntensity: 0.9 });
+  const tailRotor = bx(tilt, 0.04, 0.8, 0.1, 0.1, 0.25, -2.95, 0x9aa4ad, { transparent: true, opacity: 0.85 });
+  cyl(tilt, 0.1, 0.12, 0.35, 8, 0, 0.75, 0.1, 0x14171a);                 // 主軸
+  const rotor = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.04, 0.16),
+    mat(0x9aa4ad, { transparent: true, opacity: 0.8 }));
+  rotor.position.set(0, 0.95, 0.1);
+  tilt.add(rotor);                                                       // 主旋翼
+  // 側掛機槍 ×2(門射手改裝)
+  for (const s of [-1, 1]) {
+    const mg = cyl(tilt, 0.05, 0.05, 0.9, 6, s * 0.56, -0.12, 0.5, 0x14171a, { metalness: 0.8 });
+    mg.rotation.x = Math.PI / 2;
+    bx(tilt, 0.1, 0.14, 0.2, s * 0.56, -0.12, 0.12, C.dark);             // 槍架
+  }
+  // 起落橇
+  for (const s of [-1, 1]) {
+    bx(tilt, 0.08, 0.08, 2.2, s * 0.7, -0.85, 0.1, C.dark);
+    for (const z of [-0.5, 0.7]) {
+      const strut = bx(tilt, 0.06, 0.5, 0.06, s * 0.7, -0.6, z, C.dark);
+      strut.rotation.z = s * 0.3;
+    }
+  }
+  bx(tilt, 0.9, 0.08, 0.5, 0, -0.36, 0.2, accent, { emissive: accent, emissiveIntensity: 0.7 });  // 機腹識別條
+  g.userData.spin = [rotor, tailRotor];
+  g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.5, bob: 0.07, top: 16 };
+  return g;
+}
+
+/**
+ * 第三方碉堡:八角混凝土工事 + 四向射孔 + 頂圈沙包胸牆 + 陣營旗 ——
+ * 駐守 3 名步槍兵的家(sim 駐守機制見 THIRD);無 rig(靜態建築)。
+ */
+function buildBunker(side) {
+  const g = new THREE.Group();
+  const accent = rebelAccent(side);
+  const conc = side === 'GUER' ? 0x6a705c : 0x6f675c;                    // 混凝土(帶陣營土色)
+  const dark = dim(conc, 0.72);
+  cyl(g, 3.4, 3.9, 0.8, 8, 0, 0.4, 0, dark).rotation.y = Math.PI / 8;    // 基座
+  cyl(g, 2.6, 3.3, 2.2, 8, 0, 1.9, 0, conc).rotation.y = Math.PI / 8;    // 八角主體
+  for (let k = 0; k < 4; k++) {                                          // 四向水平射孔(黑縫)
+    const a = k * Math.PI / 2;
+    const slit = bx(g, 1.4, 0.22, 0.3, 0, 2.2, 0, 0x0a0c0e);
+    slit.position.set(Math.sin(a) * 2.55, 2.2, Math.cos(a) * 2.55);
+    slit.rotation.y = a;
+  }
+  cyl(g, 2.9, 2.7, 0.5, 8, 0, 3.25, 0, dark).rotation.y = Math.PI / 8;   // 頂蓋
+  for (let k = 0; k < 8; k++) {                                          // 頂圈沙包胸牆
+    const a = k * Math.PI / 4;
+    const bag = rbz(g, 0.7, 0.3, 0.5, Math.sin(a) * 2.25, 3.6, Math.cos(a) * 2.25, 0x8a7a58);
+    bag.rotation.y = a;
+  }
+  bx(g, 1.0, 1.4, 0.5, 0, 0.9, 2.95, 0x14171a);                          // 正面門洞(步槍兵進出口)
+  bx(g, 1.3, 0.24, 0.55, 0, 1.72, 2.95, dark);                           // 門楣
+  cyl(g, 0.04, 0.05, 1.7, 5, -1.4, 4.2, -1.0, 0x23262a);                 // 通訊桿
+  bx(g, 0.03, 0.5, 0.8, -1.4, 4.85, -1.42, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 陣營旗
+  for (let k = 0; k < 4; k++) {                                          // 識別燈(斜角四座)
+    const a = k * Math.PI / 2 + Math.PI / 4;
+    bx(g, 0.2, 0.2, 0.2, Math.sin(a) * 2.75, 3.0, Math.cos(a) * 2.75, accent, { emissive: accent, emissiveIntensity: 1.0 });
+  }
   return g;
 }
 
@@ -5531,12 +5786,20 @@ const FALLBACK = {
   decoy: (side, vis) => buildDecoy(side, vis),
   // NPC/塔陣營差異化:鋼鐵 = 履帶/輪式軍武;蜂群 = 懸浮/旋翼/機器人重塑版
   // 人類步兵外觀雙方對調:蜂群 = 人類部隊、鋼鐵 = 機器人部隊(2026-07-11)
-  'creep:soldier': (side) => (side === 'SWARM' ? buildSoldierFallback(side) : buildSwarmTrooper(side)),
+  // 第三方(GUER/MILI,2026-07-17):非正規武裝專屬建模,剪影與雙陣營都不同
+  // 榴彈兵(2026-07-17 步兵化):雙陣營一律「步兵 + 手持榴彈槍」,不再是砲車/浮游平台
+  'creep:soldier': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'rifle')
+    : side === 'SWARM' ? buildSoldierFallback(side) : buildSwarmTrooper(side)),
   'creep:apc': (side) => (side === 'SWARM' ? buildSwarmApc(side) : buildApc(side)),
-  'creep:tank': (side) => (side === 'SWARM' ? buildSwarmTank(side) : buildTank(side)),
-  'creep:rocketeer': (side) => (side === 'SWARM' ? buildRocketeerFallback(side) : buildSwarmTrooper(side, { rocket: true })),
-  'creep:howitzer': (side) => (side === 'SWARM' ? buildSwarmHowitzer(side) : buildHowitzerFallback(side)),
-  'creep:heli': (side) => (side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
+  'creep:tank': (side) => (isThirdSide(side) ? buildRebelTank(side)
+    : side === 'SWARM' ? buildSwarmTank(side) : buildTank(side)),
+  'creep:rocketeer': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'rpg')
+    : side === 'SWARM' ? buildRocketeerFallback(side) : buildSwarmTrooper(side, { rocket: true })),
+  'creep:howitzer': (side) => (isThirdSide(side) ? buildRebelTrooper(side, 'gl')
+    : side === 'SWARM' ? buildGrenadierFallback(side) : buildSwarmTrooper(side, { gl: true })),
+  'creep:heli': (side) => (isThirdSide(side) ? buildRebelHeli(side)
+    : side === 'SWARM' ? buildSwarmHeli(side) : buildHeliFallback(side)),
+  bunker: (side) => buildBunker(side),
   tower: (side) => (side === 'SWARM' ? buildSwarmTower(side) : buildTowerFallback(side)),
   'base:SWARM': () => buildBaseFallback('SWARM'),
   'base:STEEL': () => buildBaseFallback('STEEL'),
