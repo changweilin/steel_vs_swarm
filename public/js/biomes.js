@@ -1575,6 +1575,7 @@ async function fetchOsmFeatures(bbox) {
   const q = `[out:json][timeout:9];`
     + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
+    + `node["railway"="level_crossing"](${bb});out 40;`
     + `node["waterway"="waterfall"](${bb});out 20;`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
@@ -1582,11 +1583,13 @@ async function fetchOsmFeatures(bbox) {
     const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
     if (!resp.ok) return null;
     const data = await resp.json();
-    const buildings = [], rails = [], falls = [];
+    const buildings = [], rails = [], falls = [], crossings = [];
     for (const el of data.elements || []) {
       const tags = el.tags || {};
       if (el.type === 'way' && el.geometry && tags.railway) {
         rails.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'node' && tags.railway === 'level_crossing') {
+        crossings.push({ lat: el.lat, lng: el.lon, tags });
       } else if (el.type === 'node' && tags.waterway === 'waterfall') {
         falls.push({ lat: el.lat, lng: el.lon, tags });
       } else {
@@ -1594,7 +1597,7 @@ async function fetchOsmFeatures(bbox) {
         if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
       }
     }
-    return { buildings, rails, falls };
+    return { buildings, rails, falls, crossings };
   } catch {
     return null;
   } finally {
@@ -2715,24 +2718,62 @@ export function makeTunnelIndex(tunnels) {
 }
 
 // ---- 鐵路 / 捷運(圖資 way):道碴 + 雙軌 + 行駛中的低多邊形列車 ----
-function buildRails(group, rails, terrain, center, dynamics) {
-  const lines = [];
+// 高度一致性(2026-07-18):OSM 常把一條連續鐵軌切成「地面 way + `bridge` way」,舊版對整條
+// way 套固定 lift(高架 8m / 地面 0.35m)→ 接點瞬間垂直跳 8m,鐵軌看起來斷掉。改為**逐頂點
+// lift**:高架段只在「未接續另一段高架」的端點爬升緩坡(RAMP 內插回地面),接續高架處保持全高
+// → 地面↔高架平順銜接;橋墩隨爬升自動縮短(過矮者略過)。與道路 BRIDGE_RISE 端點緩坡同理。
+const RAIL_ELEV = 8, RAIL_GROUND = 0.35, RAIL_RAMP = 55;
+function buildRails(group, rails, terrain, center, dynamics, crossings) {
+  // Pass A:圖資 → 世界折線片段(超界即切段),記高架旗標 + 端點地面高
+  const raw = [];
   for (const way of rails) {
     if (way.tags.tunnel) continue;   // 隧道段不可見(捷運地下段)
     const elevated = !!way.tags.bridge || way.tags.railway === 'monorail';
-    const lift = elevated ? 8 : 0.35;
-    const pts = [];
+    let cur = [];
     for (const gpt of way.geometry) {
       const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
       if (x < terrain.minX + 5 || x > terrain.maxX - 5 || z < terrain.minZ + 5 || z > terrain.maxZ - 5) {
-        if (pts.length >= 2) { lines.push({ pts: [...pts], tags: way.tags, elevated, lift }); }
-        pts.length = 0;
+        if (cur.length >= 2) raw.push({ g: cur, elevated, tags: way.tags });
+        cur = [];
         continue;
       }
-      pts.push(new THREE.Vector3(x, terrain.heightAt(x, z) + lift, z));
+      cur.push({ x, z, gy: terrain.heightAt(x, z) });
     }
-    if (pts.length >= 2) lines.push({ pts, tags: way.tags, elevated, lift });
-    if (lines.length >= 30) break;
+    if (cur.length >= 2) raw.push({ g: cur, elevated, tags: way.tags });
+    if (raw.length >= 30) break;
+  }
+  if (!raw.length) return 0;
+
+  // 高架端點連續性:共用端點(相同 OSM 節點 → 相同世界座標)且兩側都高架 = 連續高架,不爬坡
+  const ekey = (p) => `${Math.round(p.x * 2)},${Math.round(p.z * 2)}`;   // 0.5m 量化
+  const elevCount = new Map();
+  for (const r of raw) {
+    if (!r.elevated) continue;
+    for (const p of [r.g[0], r.g[r.g.length - 1]]) elevCount.set(ekey(p), (elevCount.get(ekey(p)) || 0) + 1);
+  }
+
+  // Pass B:逐頂點 lift(高架端點爬升緩坡 → 平順接地面)
+  const lines = [];
+  for (const r of raw) {
+    const g = r.g, nP = g.length;
+    const cum = [0];
+    for (let i = 1; i < nP; i++) cum.push(cum[i - 1] + Math.hypot(g[i].x - g[i - 1].x, g[i].z - g[i - 1].z));
+    const total = cum[nP - 1] || 1;
+    let liftAt;
+    if (r.elevated) {
+      const startJoined = (elevCount.get(ekey(g[0])) || 0) >= 2;         // 起點接續另一段高架
+      const endJoined = (elevCount.get(ekey(g[nP - 1])) || 0) >= 2;      // 終點接續另一段高架
+      liftAt = (s) => {
+        const upIn = startJoined ? 1 : s / RAIL_RAMP;
+        const upOut = endJoined ? 1 : (total - s) / RAIL_RAMP;
+        const ease = Math.max(0, Math.min(1, upIn, upOut));
+        return RAIL_GROUND + (RAIL_ELEV - RAIL_GROUND) * ease;
+      };
+    } else {
+      liftAt = () => RAIL_GROUND;
+    }
+    const pts = g.map((p, i) => new THREE.Vector3(p.x, p.gy + liftAt(cum[i]), p.z));
+    lines.push({ pts, tags: r.tags, elevated: r.elevated });
   }
   if (!lines.length) return 0;
 
@@ -2768,14 +2809,15 @@ function buildRails(group, rails, terrain, center, dynamics) {
   bedM.frustumCulled = railM.frustumCulled = false;
   group.add(bedM, railM);
 
-  // 高架橋墩(捷運/橋段)
-  const piers = segs.filter(([, , l]) => l.elevated);
-  if (piers.length) {
-    const pierM = new THREE.InstancedMesh(unit, toonMat(0x8f9296), Math.min(piers.length, 200));
-    piers.slice(0, 200).forEach(([a], i) => {
+  // 高架橋墩(捷運/橋段):爬升緩坡段橋墩自動變矮,過矮者(< 2.5m)略過不留地面殘樁
+  const pierPts = segs.filter(([, , l]) => l.elevated).map(([a]) => a)
+    .filter((a) => a.y - terrain.heightAt(a.x, a.z) > 2.5).slice(0, 200);
+  if (pierPts.length) {
+    const pierM = new THREE.InstancedMesh(unit, toonMat(0x8f9296), pierPts.length);
+    pierPts.forEach((a, i) => {
       const gy = terrain.heightAt(a.x, a.z);
       P.set(a.x, (gy + a.y) / 2, a.z);
-      S.set(1.6, Math.max(1, a.y - gy), 1.6);
+      S.set(1.6, a.y - gy, 1.6);
       M.compose(P, new THREE.Quaternion(), S);
       pierM.setMatrixAt(i, M);
     });
@@ -2783,6 +2825,9 @@ function buildRails(group, rails, terrain, center, dynamics) {
     pierM.frustumCulled = false;
     group.add(pierM);
   }
+
+  // 平交道(圖資 railway=level_crossing 節點):地面鐵軌與道路平面交會處的柵欄警示建模
+  if (crossings?.length) buildLevelCrossings(group, crossings, lines, terrain, center);
 
   // 列車:最長兩條路線各跑一列(捷運=銀藍、鐵路=橘白),往返行駛
   const byLen = lines.map((l) => {
@@ -2848,6 +2893,85 @@ function trainDriver(train, line, speed) {
     train.position.copy(p);
     if (ahead.distanceToSquared(p) > 0.5) train.lookAt(ahead);
   };
+}
+
+// ---- 平交道(圖資 railway=level_crossing 節點):鐵路與道路平面交會處的柵欄警示 ----
+// 只在「地面鐵軌」附近設(高架/隧道段不可能有平交道);方位取最近地面軌切線,道路 ≈ 垂直於軌。
+function buildLevelCrossings(group, crossings, lines, terrain, center) {
+  const segs = [];
+  for (const l of lines) {
+    if (l.elevated) continue;
+    for (let i = 1; i < l.pts.length; i++) segs.push([l.pts[i - 1], l.pts[i]]);
+  }
+  if (!segs.length) return 0;
+  let built = 0;
+  for (const c of crossings) {
+    if (built >= 8) break;
+    const [x, z] = llToWorld(c.lat, c.lng, center);
+    if (x < terrain.minX + 12 || x > terrain.maxX - 12 || z < terrain.minZ + 12 || z > terrain.maxZ - 12) continue;
+    // 最近地面鐵軌段 → 軌道切線方向
+    let bestD = Infinity, bdx = 0, bdz = 0, bx = 0, bz = 0;
+    for (const [a, b] of segs) {
+      const ex = b.x - a.x, ez = b.z - a.z, len2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * ex + (z - a.z) * ez) / len2));
+      const px = a.x + ex * t, pz = a.z + ez * t;
+      const d = Math.hypot(x - px, z - pz);
+      if (d < bestD) { bestD = d; bdx = ex; bdz = ez; bx = px; bz = pz; }
+    }
+    if (bestD > 30) continue;   // 附近無地面鐵軌(可能落在高架/隧道段)→ 略過
+    const rl = Math.hypot(bdx, bdz) || 1;
+    group.add(makeLevelCrossing(bx, terrain.heightAt(bx, bz), bz, bdx / rl, bdz / rl));
+    built++;
+  }
+  return built;
+}
+
+/** 平交道 3D 建模:兩支警示柱(交叉警示牌 + 紅燈箱)+ 抬起狀態的紅白遮斷器(平交道開放,不擋兵線)*/
+function makeLevelCrossing(x, gy, z, rdx, rdz) {
+  const g = new THREE.Group();
+  g.position.set(x, gy, z);
+  g.rotation.y = Math.atan2(-rdz, rdx);   // 本地 +X ← 鐵軌方向;道路 ≈ 本地 Z
+  const ROADW = 9, TRK = 5.5, red = 0xd23a2e, white = 0xf2f2f2, dark = 0x2b2f33;
+  const post = (sx, sz, face, armDir) => {
+    const a = new THREE.Group();
+    a.position.set(sx, 0, sz);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 6), toonMat(dark));
+    pole.position.y = 2.1; a.add(pole);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.7), toonMat(0x55595e));
+    base.position.y = 0.25; a.add(base);
+    // 紅燈箱(面向道路)
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.28), toonMat(dark));
+    box.position.set(0, 3.0, face * 0.22); a.add(box);
+    for (const lx of [-0.45, 0.45]) {
+      const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.2, 12),
+        toonMat(0x7a1c17, { emissive: new THREE.Color(0x3a0d0a), emissiveIntensity: 0.4 }));
+      lamp.position.set(lx, 3.0, face * 0.37);
+      lamp.rotation.y = face > 0 ? 0 : Math.PI;
+      a.add(lamp);
+    }
+    // 交叉警示牌(St. Andrew's cross,面向道路)
+    for (const rot of [Math.PI / 4, -Math.PI / 4]) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.42, 0.1), toonMat(white));
+      bar.position.set(0, 3.75, face * 0.32); bar.rotation.z = rot; a.add(bar);
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.14, 0.12), toonMat(red));
+      edge.position.set(0, 3.75, face * 0.34); edge.rotation.z = rot; a.add(edge);
+    }
+    // 遮斷器:抬起狀態(平交道開放,不擋兵線),紅白條紋臂
+    const boom = new THREE.Group();
+    boom.position.set(0, 2.4, 0);
+    boom.rotation.z = armDir * 1.28;   // ~73° 抬起
+    const ARM = ROADW * 0.62, seg = 6;
+    for (let i = 0; i < seg; i++) {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(ARM / seg * 0.96, 0.24, 0.18), toonMat(i % 2 ? white : red));
+      s.position.x = armDir * (ARM / seg) * (i + 0.5);
+      boom.add(s);
+    }
+    a.add(boom);
+    return a;
+  };
+  g.add(post(ROADW / 2 + 0.4, TRK, 1, -1));     // +Z 進場側:右肩 +X,臂朝 -X 跨路
+  g.add(post(-ROADW / 2 - 0.4, -TRK, -1, 1));   // -Z 進場側:右肩 -X,臂朝 +X 跨路
+  return g;
 }
 
 // ---- 瀑布(圖資節點):水簾 + 底部水潭 + 湧動泡沫 ----
@@ -4063,7 +4187,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
-  const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics) : 0;
+  const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
   if (dynamics.length) {
     group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
