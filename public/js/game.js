@@ -1815,7 +1815,9 @@ export class BattleClient {
     for (const b of this.terrain.blockers || []) {
       if (onDeck && b.y < surfHere - 3) continue;                       // 站橋面上:橋下街廓不處理(高架飛越)
       if (camY < b.y || camY > b.y + b.h) continue;                     // 垂直不重疊
-      const rr = b.hw2 != null ? Math.max(b.hw2, b.hd2) : b.r;
+      // broad-phase 半徑 MUST 用**外接**(對角 hypot)非 max(內切):貼牆角時 pos 在盒對角外緣,
+      // 用 max 會誤判「太遠」而跳過 → 牆面過(pos 近盒面)但牆角漏(前科:撞牆角仍破圖)
+      const rr = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;
       if (Math.hypot(ox - b.x, oz - b.z) > dlen + rr + SKIN + 1) continue;  // broad-phase:太遠不可能戳到
       if (b.hw2 != null) clampBox(b); else clamp(b.x, b.z, b.r);
       if (maxT <= 0) break;

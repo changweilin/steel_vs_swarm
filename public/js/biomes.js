@@ -3806,6 +3806,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           if (commercial && rnd() < 0.4) {                      // 臨街裙樓
             const ph = Math.max(6, b.h * 0.12);
             inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC });
+            // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
+            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8 });
           }
           if (!commercial && b.h >= 14 && rnd() < 0.4) {        // 中層住宅:角落梯間塔(佔地內、突出屋頂)
             const tw = Math.min(b.w, b.d) * 0.3;
@@ -4163,7 +4165,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     group.add(g);
     landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用
     const col = LANDMARK_COL[lm.type];
-    if (col) blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: col.r * sc, h: col.h * sc + 1, bld: 1 });
+    if (col) {
+      // 地標是多箱體自訂幾何(主體 + 偏心側翼)+ 隨機朝向 → col.r 常內切於實際輪廓(側翼露在外),
+      // 玩家/鏡頭會鑽進側翼看穿牆。用整體包圍盒外接半徑當碰撞半徑(圓柱對旋轉不變,寧大不小)。
+      const bb = new THREE.Box3().setFromObject(g);
+      const footR = Math.max(
+        Math.hypot(bb.max.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.max.x - lm.x, bb.min.z - lm.z),
+        Math.hypot(bb.min.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.min.x - lm.x, bb.min.z - lm.z));
+      blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: Math.max(col.r * sc, footR), h: col.h * sc + 1, bld: 1 });
+    }
   }
 
   // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----

@@ -45,7 +45,12 @@ const httpServer = http.createServer((req, res) => {
   if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end(); return; }
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('404'); return; }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream' });
+    // 開發用靜態伺服器:一律 no-cache,瀏覽器每次重新驗證 → 改了客戶端(game.js/biomes.js…)
+    // 普通 F5 就拿得到新碼,免「改了沒效其實是快取舊檔」的假象(前科:防穿模修好了但玩家看舊版)。
+    res.writeHead(200, {
+      'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream',
+      'Cache-Control': 'no-cache, must-revalidate',
+    });
     res.end(data);
   });
 });
