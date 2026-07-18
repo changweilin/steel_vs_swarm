@@ -1857,6 +1857,8 @@ export class BattleClient {
       }
       if (e.k === 'kami') { ent.heroY = e.y ?? 0; ent.ry = e.ry ?? 0; }
       if (e.k === 'civilian') { ent.fo = !!e.fo; ent.fl = !!e.fl; }   // 跟隨/逃離旗標(頭頂提示)
+      // 第三方碉堡進視野 = 情報永久留存:記位置(量化去重),小地圖離開視野後仍標示
+      if (e.k === 'bunker') this._seenBunkers.set(`${Math.round(e.x)},${Math.round(e.z)}`, { x: e.x, z: e.z, side: e.s });
       if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -2553,6 +2555,8 @@ export class BattleClient {
       }
     } else if (ev.e === 'civact') {
       if (ev.pid === this.youId) this.hud.feed?.(ev.act === 'follow' ? '🚶 平民開始跟隨你' : '👋 你驅離了一名平民');
+    } else if (ev.e === 'civfree') {
+      if (ev.pid === this.youId) this.hud.feed?.(`🕊️ 清空第三方營地!${ev.n} 名平民脫困並自動跟隨你(隨機陣營・不重生)`);
     } else if (ev.e === 'relay') {
       this.hud.feed?.(ev.side === this.side
         ? `📡 我方啟動偵察中繼站:全隊 ${FIELD.RELAY.VISION_S} 秒無霧視野!`
@@ -2981,6 +2985,11 @@ export class BattleClient {
       dx = ex - bx; dz = ez - bz; const len = Math.hypot(dx, dz) || 1;
       sx = bx + dx / len * GAME.HERO_SPAWN_OFF; sz = bz + dz / len * GAME.HERO_SPAWN_OFF;
     }
+    // 橫向偏移到路旁:重生點落在兵線中央會被剛生出/行進中的 NPC 波次撞開,偏出兵線走廊即可避開
+    // (伺服器 _spawnPoint 同一偏移;垂直於兵線前進方向,不影響面向兵線箭頭的 yaw)
+    const pl = Math.hypot(dx, dz) || 1;
+    sx += (dz / pl) * GAME.HERO_SPAWN_SIDE;
+    sz += (-dx / pl) * GAME.HERO_SPAWN_SIDE;
     const gy = this._surf(sx, sz, Infinity);
     this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
@@ -4135,6 +4144,9 @@ export class BattleClient {
     this._mmFog.width = w; this._mmFog.height = h;
     this._pulseUntil = 0;   // 全隊無霧脈衝(偵察中繼站/偵察招式)到期時刻:迷霧全掀
     this._mmLanes = this._gradeLanes();   // 兵線分級取樣(地面/高架橋/地下道)— 一次算好
+    // 已探索的第三方碉堡:一旦進過視野就永久標示(即使離開視野、被摧毀待重建也保留位置)。
+    // 位置量化為鍵 → 同一營地重生的碉堡自動去重。
+    this._seenBunkers = new Map();
   }
 
   /**
@@ -4340,7 +4352,7 @@ export class BattleClient {
       } else if (ent.kind === 'tower') {
         ctx.fillRect(mx - 3, my - 3, 6, 6);
       } else if (ent.kind === 'bunker') {
-        ctx.fillRect(mx - 2.5, my - 2.5, 5, 5);   // 第三方碉堡:小方塊(進視野才會在快照裡)
+        continue;   // 碉堡改由 _seenBunkers 永久標示(見下方持久層),避免離開視野即消失
       } else if (ent.hero) {
         if (!ent.isSelf) {
           ctx.beginPath(); ctx.arc(mx, my, 4, 0, 7); ctx.fill();
@@ -4356,6 +4368,14 @@ export class BattleClient {
           ctx.lineWidth = 1; ctx.strokeStyle = c; ctx.stroke();
         }
       }
+    }
+    // 已探索的第三方碉堡:永久標示(方塊 + 白框標記為已知據點),即使離開視野/摧毀待重建也保留
+    for (const b of this._seenBunkers.values()) {
+      const [mx, my] = this._world2mm(b.x, b.z, w, h);
+      ctx.fillStyle = sideInfo(b.side).color;
+      ctx.fillRect(mx - 2.5, my - 2.5, 5, 5);
+      ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.strokeRect(mx - 3.5, my - 3.5, 7, 7);
     }
     // 防空飛彈(紅點)
     ctx.fillStyle = '#ff5533';

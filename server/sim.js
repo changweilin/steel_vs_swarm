@@ -5,7 +5,7 @@
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
-  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore,
+  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
@@ -615,7 +615,7 @@ export class BattleSim {
   }
 
   /** 團員陣亡 → 進重生池(60s);碉堡陣亡 → 原地重生倒數(180s)+ 駐守者被迫出堡 */
-  _onThirdDeath(t) {
+  _onThirdDeath(t, by) {
     const camp = this.camps?.[t.ci];
     if (!camp) return;
     if (t.kind === 'bunker') {
@@ -626,6 +626,45 @@ export class BattleSim {
     } else {
       camp.pool.push({ kind: t.kind, slot: t.slot || 0, rem: THIRD.UNIT_RESPAWN_S });
     }
+    // 全清獎勵(首次觸發):碉堡與所有團員同時陣亡 → 釋出 THIRD.CLEAR_CIVS 名脫困平民
+    // (隨機陣營、自動跟隨清營者、不重生)。營地仍會照常重生,但獎勵只給第一次清空。
+    if (!camp.freed && this._campCleared(t.ci)) {
+      camp.freed = true;
+      this._freeCampCivilians(camp, by);
+    }
+  }
+
+  /** 該營是否已全清(this.ents 中無任何存活團員/碉堡;呼叫點在死者已從 ents 移除之後)。 */
+  _campCleared(ci) {
+    for (const e of this.ents.values()) if (e.tp && e.ci === ci) return false;
+    return true;
+  }
+
+  /** 離座標最近的存活英雄(清營者非英雄時的跟隨對象備援);無 → null。 */
+  _nearestHero(x, z) {
+    let best = null, bd = Infinity;
+    for (const h of this.heroes.values()) {
+      if (h.dead) continue;
+      const d = dist2d(x, z, h.x, h.z);
+      if (d < bd) { bd = d; best = h; }
+    }
+    return best;
+  }
+
+  /** 清空營地釋出的平民:繞碉堡等角散布、隨機陣營、不重生、自動跟隨清營者(非英雄則跟最近英雄)。 */
+  _freeCampCivilians(camp, by) {
+    const owner = (by && by.hero && this.heroes.has(by.pid) && !by.dead) ? by : this._nearestHero(camp.x, camp.z);
+    const n = THIRD.CLEAR_CIVS;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const pt = { x: camp.x + Math.cos(a) * THIRD.FORM_R, z: camp.z + Math.sin(a) * THIRD.FORM_R };
+      const cs = Math.random() < 0.5 ? 'SWARM' : 'STEEL';   // 陣營隨機
+      const civ = this._spawnCiv(cs, false, Math.floor(Math.random() * CIVILIANS.length), pt);
+      civ.noRespawn = true;                    // 不重生(_kill 略過 civRespawns)
+      civ.home = [camp.x, camp.z];             // 失聯後繞營地徘徊,而非出生點
+      if (owner) { civ.follow = owner.pid; civ.followT = 0; }   // 自動跟隨
+    }
+    if (owner) this.events.push({ e: 'civfree', pid: owner.pid, side: owner.side, x: camp.x, z: camp.z, n });
   }
 
   /** 重生管理:碉堡倒數恆走(原地重生);單位倒數只在碉堡存在時前進(暫停規則) */
@@ -1374,11 +1413,20 @@ export class BattleSim {
     }
   }
 
+  /**
+   * 自殺攻擊/自毀炸彈定義:傷害吃無人機武器品質階級(wq → owner.abil.light 1/2/3,以 tierVal 解析),
+   * 其餘(半徑/破甲/vs)照 UNITS.drone.bomb。owner 缺值/無 abil → 底階(Lv1 = 原值,向後相容)。
+   */
+  _bombDef(owner) {
+    const base = WEAPONS[UNITS.drone.bomb];
+    return { ...base, dmg: tierVal(base.dmg, owner?.abil?.light || 1) };
+  }
+
   /** 自殺攻擊機引爆:重型炸彈爆風(同餌機:算主機頭上,吃其火力升級/增益,擊殺記給它) */
   _kamiBoom(k) {
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
-    const def = WEAPONS[UNITS.drone.bomb];
+    const def = this._bombDef(owner);
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
     if (owner) this._blast(owner, def, k.x, k.z, k.y || 0);
     this._removeKami(k);
@@ -1399,9 +1447,9 @@ export class BattleSim {
     return t;
   }
 
-  /** 單機自毀引爆:不給任何一方擊殺數 */
+  /** 單機自毀引爆:不給任何一方擊殺數;傷害同吃武器品質階級(見 _bombDef) */
   _boom(b) {
-    const def = WEAPONS[UNITS.drone.bomb];
+    const def = this._bombDef(b);
     this.events.push({ e: 'boom', x: b.x, z: b.z, y: b.y || 0, r: def.r, side: b.side });
     this._blast(b, def, b.x, b.z, b.y || 0);
     b.dash = 0;
@@ -1482,9 +1530,9 @@ export class BattleSim {
     }
   }
 
-  /** 在合法點生成一名平民/間諜(seed 與陣亡重生共用,避免兩處各抄一份 ent 欄位)。 */
+  /** 在合法點生成一名平民/間諜(seed 與陣亡重生共用,避免兩處各抄一份 ent 欄位)。回傳生成的 ent。 */
   _spawnCiv(cs, spy, prof, pt) {
-    this._add({
+    return this._add({
       kind: 'civilian', side: null, neutral: true, civ: true,
       cs, spy, prof,
       x: pt.x, z: pt.z, y: 0, ry: 0, hp: UNITS.civilian.hp,
@@ -1934,8 +1982,9 @@ export class BattleSim {
         by.money = Math.max(0, by.money + v);
         this.events.push({ e: 'civkill', pid: by.pid, side: by.side, x: t.x, z: t.z, v, spy: t.spy ? 1 : 0, cs: t.cs });
       }
-      // 陣亡重生:保留陣營/間諜身分(維持 9:1 與全場數量),RESPAWN_S 後於隨機合法點補位
-      this.civRespawns.push({ cs: t.cs, spy: t.spy, at: this.t + CIVILIAN.RESPAWN_S });
+      // 陣亡重生:保留陣營/間諜身分(維持 9:1 與全場數量),RESPAWN_S 後於隨機合法點補位。
+      // 清營釋出的脫困平民(noRespawn)例外:陣亡即永久消失,不回補。
+      if (!t.noRespawn) this.civRespawns.push({ cs: t.cs, spy: t.spy, at: this.t + CIVILIAN.RESPAWN_S });
       this.ents.delete(t.id);
       return;
     }
@@ -2034,7 +2083,7 @@ export class BattleSim {
       this.stats[bySide].creepKills += UNITS[t.kind]?.bounty || 1;
     }
     this.ents.delete(t.id);
-    if (t.tp) { this._onThirdDeath(t); return; }   // 第三方軍隊:進重生池(碉堡沒了就暫停倒數)
+    if (t.tp) { this._onThirdDeath(t, by); return; }   // 第三方軍隊:進重生池(碉堡沒了就暫停倒數;全清釋出平民)
     if (t.kind === 'base') {
       this.over = true;
       this.winner = OTHER_SIDE[t.side];

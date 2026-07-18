@@ -233,13 +233,15 @@ export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', bui
 
 // ---- NPC 熱兵器(小兵/塔用;vs = 對目標類型加成,pen = 破甲值)----
 // 英雄武器改住 CHARACTERS(每名角色專屬輕/重武器);bomb = 無人機自帶重型炸彈
-// (F 鍵原地引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
+// (F 鍵自殺攻擊機引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
+// bomb.dmg 為三階陣列(2026-07-18 起):傷害吃無人機武器品質階級(wq → abil.light 1/2/3),
+// 由 sim._bombDef() 以 tierVal 解析。Lv1 = 原值 240(不變),升階才增威(自殺攻擊隨武器等級成長)。
 export const WEAPONS = {
   rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
   // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
   // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
   rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
-  bomb:   { name: '重型炸彈',   dmg: 240, r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
+  bomb:   { name: '重型炸彈',   dmg: [240, 300, 360], r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
@@ -1393,6 +1395,7 @@ export const THIRD = {
   GAR_CAP: 3,            // 碉堡容量:3 名步槍兵
   UNIT_RESPAWN_S: 60,    // 單位重生 1 分鐘(碉堡不存在時暫停倒數)
   BUNKER_RESPAWN_S: 180, // 碉堡 3 分鐘原地重生(恆倒數)
+  CLEAR_CIVS: 4,         // 首次清空整營(碉堡 + 全單位皆亡)脫困的平民數:隨機陣營、自動跟隨清營者、不重生
 };
 export const isThirdSide = (s) => s === 'GUER' || s === 'MILI';
 /** 陣營資訊統一查表(SWARM/STEEL/第三方皆可):客戶端配色/播報用,查無給中性灰 */
@@ -1439,9 +1442,10 @@ export const GAME = {
   // 出生/重生點:主堡朝敵方向外推距離。> 主堡護盾半徑 30 + 模型半徑 ~23,
   // 剛好落在堡外、遠在補血半徑內(舊值 100 是 8× 超尺度世界時代校的,重生跑回堡太遠)
   HERO_SPAWN_OFF: 45,
-  // 出生/重生點橫向偏移(公尺):沿兵線推出主堡後只微偏到路旁(更靠近兵線,一出生就正對兵線箭頭)——
-  // 不擋在路中央,又貼著兵線走廊(< 半寬 LANE_SAFE_M 45)。
-  HERO_SPAWN_SIDE: 8,
+  // 出生/重生點橫向偏移(公尺):沿兵線推出主堡後偏到路旁,避開兵線中央的 NPC 波次生成點與行進隊列
+  // (伺服器 _spawnPoint 與客戶端 _spawnAt 共用此值)。> 波次抖動 ±7 + 最大機體半徑(坦克 1.9)+ 自機半徑,
+  // 一出生就不會被剛生出的兵線 NPC 撞到;仍 < 走廊半寬 LANE_SAFE_M 45(貼著兵線,正對兵線箭頭)。
+  HERO_SPAWN_SIDE: 18,
   BASE_ARMOR_NEED_CREEP: 0.35,// 沒有己方小兵在場時打主堡的傷害折減
   AA_MIN_ALT: 40,             // 兵線走廊上:防空飛彈只鎖定離地 ≥ 40m 的無人機(低飛吃塔砲)
   LANE_SAFE_M: 45,            // 正規路線走廊半寬(僚機歸隊/地形不放大的走廊)
