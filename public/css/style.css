@@ -474,6 +474,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   background: radial-gradient(ellipse at center, transparent 42%, rgba(190, 20, 24, 0.55) 100%);
 }
+/* 火場滯留視野霧化:煙塵暖灰暈影,中央保留一圈可視,opacity 由 game.js 依滯留時間推(0~1);
+   z 8 同 hurt-vig(HUD 之下,不擋 HUD);transition 讓濃度平滑漸變 = 漸漸霧化/漸清 */
+.env-fog {
+  position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
+  transition: opacity 0.35s ease-out;
+  background: radial-gradient(ellipse at center, rgba(86, 78, 66, 0) 22%, rgba(74, 66, 56, 0.9) 100%);
+}
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 

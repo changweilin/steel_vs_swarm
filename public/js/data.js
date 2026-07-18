@@ -485,12 +485,27 @@ export const GRENADE = { BUILDING_MUL: 1.4 };
 export const grenadeBuildingMul = (def, kind) =>
   def && def.type === 'launcher' && TARGET_CLASS[kind] === 'building' ? GRENADE.BUILDING_MUL : 1;
 
-// ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用,伺服器不涉入)----
-// LEVEL:海平面水面高(terrain.js 水面盤 y,minH < 0.5 才有水);WADE_M:機體可涉水的最大深度
-// (超過 = 不可通行,game.js _updatePlayer 視同牆);SLOW:涉水/河面移動速度倍率(水中速度減半);
-// SPAN_MIN_M:道路連續泡水段達此長度即自動升級高架橋(biomes.js buildRoads);RAMP_M:自動橋段
-// 向兩岸乾地各外延的引道長(與橋面 24m 緩坡同級,出入口是斜坡不是階梯)。
-export const WATER = { LEVEL: 0.3, WADE_M: 1.2, SLOW: 0.5, SPAN_MIN_M: 18, RAMP_M: 24 };
+// ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用)----
+// LEVEL:海平面水面高(terrain.js 水面盤 y,minH < 0.5 才有水);WADE_M:淺水/涉水判定深度界
+// (道路跨水升橋沿用);SLOW:涉水/河面基準減速;SPAN_MIN_M:道路連續泡水段達此長度即自動升級高架橋
+// (biomes.js buildRoads);RAMP_M:自動橋段向兩岸乾地各外延的引道長(斜坡出入口)。
+// 2026-07-19 水沼可通行改制:深水不再是牆(FULL_D 全滅頂深度、SLOW_MIN 最深減速倍率);
+// SHORE/SWAMP_BAND = terrainEnvCode 水/沼分類界;GRID_M = 主機上傳水沼遮罩格粒(伺服器 AI 迴避)。
+export const WATER = {
+  LEVEL: 0.3, WADE_M: 1.2, SLOW: 0.5, SPAN_MIN_M: 18, RAMP_M: 24,
+  FULL_D: 5.0, SLOW_MIN: 0.25, SHORE: 0.05, SWAMP_BAND: 2.2, GRID_M: 20,
+};
+
+// ---- 地形環境效果(2026-07-19;水域/沼澤/火場對移動與狀態的影響)----
+// 移動減速純客戶端(領機客戶端權威);狀態結算純伺服器(客戶端只回報身處環境 env)。
+// SWAMP_SLOW:沼澤固定移動倍率(水域改用深度插值);_DRAIN_S/_PS:滯留門檻與每秒扣血(走 _damage,護盾先擋);
+// WATER_FREEZE_S:水域滯留多久後凍結換彈/招式冷卻;FIRE_FOG_S/_MAX_S:火場滯留視野霧化起訖(純客戶端)。
+export const TERRAIN_FX = {
+  SWAMP_SLOW: 0.5,
+  SWAMP_DRAIN_S: 3, SWAMP_DRAIN_PS: 8,
+  WATER_FREEZE_S: 3,
+  FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
+};
 
 // ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。

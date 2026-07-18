@@ -9,7 +9,7 @@ import {
   vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
-  ALTITUDE, altF, isGunnery,
+  ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -40,7 +40,7 @@ export class BattleSim {
    * { center:{lat,lng}, bases:{SWARM:[lat,lng], STEEL:[lat,lng]},
    *   lanes:[[ [lat,lng],... ] ×3], sizeM, diagM, distM }
    */
-  constructor(config) {
+  constructor(config, world = null) {
     this.config = config;
     this.center = config.center;
     this.t = 0;                       // 經過秒數
@@ -80,6 +80,10 @@ export class BattleSim {
       };
     }
 
+    // 水沼粗網格(2026-07-19):主機載圖時烘烤上傳 → 中立單位(平民/第三方)佈點與行動迴避。
+    // MUST 在 _seedField/_seedCamps/_seedCivilians 之前吃進(初次佈點就避開水沼);
+    // 未提供(e2e/headless 或房主尚未上傳)→ _wetGrid 為空,_wetAt 恆 0,佈點行為與舊版一致。
+    if (world) this._ingestWorldWet(world);
     this._spawnStructures();
     this._seedField();
     this._seedCamps();
@@ -98,6 +102,7 @@ export class BattleSim {
   setWorld(w) {
     if (!w || this._worldSet) return;   // 房主一份,只收一次
     this._worldSet = true;
+    if (!this._wetGrid) this._ingestWorldWet(w);   // 構造時未收到(房主晚傳)→ 這裡補收(初次佈點已過,僅供重生/移動迴避)
     const occ = [];
     for (const o of Array.isArray(w.occ) ? w.occ.slice(0, LOS.MAX_OCC) : []) {
       if (!Array.isArray(o) || o.length < 4) continue;
@@ -119,6 +124,40 @@ export class BattleSim {
     }
     if (cor.length) this._pruneCorridors(cor);
     this._rebuildLosGrid();
+  }
+
+  /**
+   * 水沼粗網格吃進(2026-07-19):main.js 主機端以 terrainEnvCode 逐格烘烤,sim 座標系
+   * (z 北 = −three z);data = 每格 '0'/'1'/'2' 字元(乾/水/沼),原點 + 格粒隨附。
+   * 只作中立單位佈點/移動迴避 —— 不影響任何權威傷害/勝負(領機水沼效果走客戶端回報 h.wet)。
+   */
+  _ingestWorldWet(w) {
+    const m = w && w.wet;
+    if (!m || typeof m.data !== 'string') return;
+    const cols = m.cols | 0, rows = m.rows | 0, cell = +m.cell;
+    if (cols <= 0 || rows <= 0 || !(cell > 0) || cols * rows > 90000 || m.data.length < cols * rows) return;
+    const data = new Uint8Array(cols * rows);
+    for (let k = 0; k < cols * rows; k++) { const c = m.data.charCodeAt(k) - 48; if (c === 1 || c === 2) data[k] = c; }
+    this._wetGrid = { minX: +m.minX, minZ: +m.minZ, cell, cols, rows, data };
+  }
+
+  /** 該世界座標的水沼分類(0 乾 / 1 水 / 2 沼);無網格(未上傳)恆回 0。 */
+  _wetAt(x, z) {
+    const g = this._wetGrid;
+    if (!g) return 0;
+    const j = Math.floor((x - g.minX) / g.cell);
+    const i = Math.floor((z - g.minZ) / g.cell);
+    if (i < 0 || j < 0 || i >= g.rows || j >= g.cols) return 0;
+    return g.data[i * g.cols + j] || 0;
+  }
+
+  /** 中立單位佈點/移動迴避:水域/沼澤(網格) + 火場/淹水區(既有危險區 ent) */
+  _terrainBlocked(x, z) {
+    if (this._wetAt(x, z) > 0) return true;
+    for (const zn of this._avoidZones || []) {
+      if (dist2d(x, z, zn.x, zn.z) < zn.r + 2) return true;
+    }
+    return false;
   }
 
   /** 走廊淨空:隧道內/橋下不留第三方障礙(建物由客戶端 blocked 淨空,這裡清 sim 自己種的) */
@@ -151,6 +190,7 @@ export class BattleSim {
     }
     // 地雷:隧道路面上不留(橋下地雷在地面,不衝突)
     this.mines = this.mines.filter(([x, z]) => distToCor(x, z, true) >= 2);
+    this._rebuildAvoidZones();   // 走廊內火場/淹水區可能被清 → 同步迴避快取
   }
 
   /** 遮蔽物網格 = 上傳碰撞柱 + sim 自己的阻擋型障礙(擊毀障礙後 MUST 重建 → 打穿牆開視野)。
@@ -255,6 +295,14 @@ export class BattleSim {
     this._seedAASites();
     this._seedRelays();
     this._fires = [...this.ents.values()].filter((e) => e.kind === 'fire');
+    this._rebuildAvoidZones();
+  }
+
+  /** 中立單位迴避的傷害/限制區快取(火場 dot + 淹水區 slow);佈點/移動查表用,ent 增刪後重建。 */
+  _rebuildAvoidZones() {
+    this._avoidZones = [...this.ents.values()]
+      .filter((e) => e.kind === 'fire' || e.kind === 'flood')
+      .map((e) => ({ x: e.x, z: e.z, r: (HAZARDS[e.kind]?.r || 6) * (e.sc || 1) }));
   }
 
   // ---------- 地雷(非正規路線;隱蔽,只有地面機甲會踩)----------
@@ -403,7 +451,9 @@ export class BattleSim {
   _hazOk(x, z, def, wallStart = Infinity) {
     const F = FIELD;
     if (!this._inBounds(x, z, def.r)) return false;                  // 不落在地形外/空氣牆外
-    if (this._distToLanes(x, z) < F.HAZ_LANE_MIN) return false;      // 不擋正規路線
+    // 2026-07-19:改半徑感知 —— 障礙「邊緣」(中心距 − def.r)須離兵線 ≥ HAZ_LANE_MIN,
+    // 否則 fire(r12)/flood(r20)等大半徑危險區在最小中心距時邊緣已伸進 14m 走廊(干擾兵線)。
+    if (this._distToLanes(x, z) - def.r < F.HAZ_LANE_MIN) return false;
     for (const side of ['SWARM', 'STEEL']) {
       const [bx, bz] = this.basePos[side];
       if (dist2d(x, z, bx, bz) < F.HAZ_BASE_CLEAR) return false;
@@ -570,6 +620,7 @@ export class BattleSim {
             if (!clearOk(x, z)) continue;                              // 1.5× 工事射程(硬)
             if (this.camps.some((c) => dist2d(x, z, c.x, c.z) < THIRD.SPACING)) continue;
             if ((this.hazBlockers || []).some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 16)) continue;
+            if (this._terrainBlocked(x, z)) continue;                  // 第三方營地不設在水域/沼澤/火場(feature 9)
             const score = -Math.abs(dl - (THIRD.LANE_MIN + 90));       // 偏好取樣帶中段
             if (score > bestScore) { bestScore = score; best = [x, z]; bestN = [p.nx * dir, p.nz * dir]; }
           }
@@ -744,8 +795,11 @@ export class BattleSim {
     const d = Math.hypot(dx, dz);
     if (d <= arrive) return;
     const step = Math.min(d, u.speed * sf * dt);
-    e.x += dx / d * step;
-    e.z += dz / d * step;
+    const nx = e.x + dx / d * step, nz = e.z + dz / d * step;
+    // 不踏入水域/沼澤/火場(feature 9;地面型才判定,直升機飛越)——目的地是傷害/限制區且當前不是 → 停步。
+    if (e.kind !== 'heli' && this._terrainBlocked(nx, nz) && !this._terrainBlocked(e.x, e.z)) return;
+    e.x = nx;
+    e.z = nz;
     if (e.kind !== 'heli') {   // 阻擋型障礙:比照 _advance 繞開(直升機飛越)
       for (const [hx, hz, hr] of this.hazBlockers || []) {
         const dd = dist2d(e.x, e.z, hx, hz);
@@ -1106,7 +1160,7 @@ export class BattleSim {
     return v;
   }
 
-  heroPos(pid, x, y, z, ry) {
+  heroPos(pid, x, y, z, ry, wet) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     // 瞬時移速(閃避判定用):this.t 只在 tick 前進(8Hz),同一 tick 內多次回報 dt=0 略過。
@@ -1115,6 +1169,10 @@ export class BattleSim {
     const dt = this.t - h._posT;
     if (dt > 0) { h._spd = Math.hypot(x - h.x, z - h.z) / dt; h._posT = this.t; }
     h.x = x; h.y = y; h.z = z; h.ry = ry;
+    // 領機身處環境(0 乾 / 1 水 / 2 沼;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
+    // 環境改變即重置滯留計時(_wetT);沼澤扣血/停恢復、水域停電力/凍結 CD 換彈 皆在 tick 依此結算。
+    const w = wet === 1 || wet === 2 ? wet : 0;
+    if (w !== (h.wet || 0)) { h.wet = w; h.wetT = this.t; }
   }
 
   /** 目標(僚機跟隨領機,故以領機瞬時移速判定)是否移動中 */
@@ -1585,6 +1643,7 @@ export class BattleSim {
       if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
       if (!this._farFromStructures(x, z, CIVILIAN.BASE_CLEAR, 0)) continue;
       if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + 2)) continue;
+      if (this._terrainBlocked(x, z)) continue;   // 平民生成/重生點避開水域/沼澤/火場(feature 9)
       return { x, z };
     }
     return null;
@@ -1597,6 +1656,7 @@ export class BattleSim {
       const x = e.home[0] + Math.cos(a) * r, z = e.home[1] + Math.sin(a) * r;
       if (!this._inBounds(x, z, 2)) continue;
       if (this._distToLanes(x, z) < CIVILIAN.LANE_MIN) continue;
+      if (this._terrainBlocked(x, z)) continue;   // 徘徊路點避開水域/沼澤/火場(feature 9)
       return [x, z];
     }
     return [e.home[0], e.home[1]];
@@ -1608,8 +1668,13 @@ export class BattleSim {
     const d = Math.hypot(dx, dz);
     if (d < 1e-3) return false;
     const s = (away ? -1 : 1) / d;
-    e.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, e.x + s * dx * sp * dt));
-    e.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, e.z + s * dz * sp * dt));
+    const nx = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, e.x + s * dx * sp * dt));
+    const nz = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, e.z + s * dz * sp * dt));
+    // 不走進水域/沼澤/火場(feature 9;逃離/跟隨的動態目標可能穿越危險區 → 逐步擋在邊緣;
+    // 當前已在危險區內才放行走出來)。與第三方 _tpMove 邊緣守衛一致。
+    if (this._terrainBlocked(nx, nz) && !this._terrainBlocked(e.x, e.z)) return false;
+    e.x = nx;
+    e.z = nz;
     e.ry = Math.atan2(-(s * dx), s * dz);   // 面向移動方向(sim z=北,與餌機同慣例)
     return true;
   }
@@ -1695,6 +1760,8 @@ export class BattleSim {
     const owner = sq ? sq.bodies[sq.act] : null;
     this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: DECOY.R, side: d.side });
     if (owner) this._blast(owner, decoyBlast(), d.x, d.z, d.y);
+    // 2026-07-19:自爆(燃料耗盡/近炸)時尚有未投完的炸彈 → 原地補投一枚(復用單一投彈縫,記主機甲)
+    if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner); }
     this._removeDecoy(d);
   }
 
@@ -2196,29 +2263,43 @@ export class BattleSim {
     // 小隊層級(每名玩家一次):電力回充 — mp 是三架共用的。
     // 2026-07-17:被動收入停發(金錢只來自擊殺/助攻/物資);回充速度 × 充能等級(chargeF)。
     for (const h of this.heroes.values()) {
-      // mp < maxMp 才回充:電池 overcharge(mp > maxMp)不被回充迴圈回削,只靠消耗降回(一次性突破上限)
-      if (this._aliveN(h) > 0 && h.mp < h.maxMp) h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * dt);
+      // 水域(領機泡水,h.wet===1):電子系統失效 —— 停止電力回充;滯留 WATER_FREEZE_S 後再凍結換彈與招式冷卻。
+      // reload/acd 是絕對 sim 時間 deadline(this.t 持續前進不會自停),凍結 = 每凍結 tick 把 deadline 往後推 dt。
+      const inWater = (h.wet || 0) === 1 && !h.dead;
+      if (!inWater && this._aliveN(h) > 0 && h.mp < h.maxMp) {
+        h.mp = Math.min(h.maxMp, h.mp + h.mpRegen * chargeF(h.upg?.ch) * dt);
+      }
+      if (inWater && this.t - (h.wetT || 0) >= TERRAIN_FX.WATER_FREEZE_S) {
+        for (const id in h.reloadUntil) if (h.reloadUntil[id] > this.t) h.reloadUntil[id] += dt;
+        if ((h.acd?.skill || 0) > this.t) h.acd.skill += dt;
+        if ((h.acd?.ult || 0) > this.t) h.acd.ult += dt;
+      }
     }
     // 機體層級:重生 / 護盾脫戰回復 / 主堡修裝甲
     for (const sq of this.squads.values()) {
+      const hh = this.heroes.get(sq.pid);
+      const swamp = (hh?.wet || 0) === 2;   // 沼澤只影響回報環境的領機(玩家所在機體)
       for (const b of sq.bodies) {
         if (b.dead) {
           if (this.t >= b.respawnAt && this._tickN > (b.deadTick || 0) + 1) this._respawn(b);
           continue;
         }
+        const bSwamp = swamp && b === hh;   // 沼澤:無法恢復/治療 護盾與裝甲(feature 7)
         // 護盾:脫戰(OOC_S 秒沒受擊)自然回復;裝甲只能回主堡 / 治療招式。
         // 回復速度 × 充能等級(chargeF;SP_REGEN_PS 是滿級規格)
-        if (b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
+        if (!bSwamp && b.sp < b.maxSp && this.t - b.lastHitAt > VITALS.OOC_S) {
           b.sp = Math.min(b.maxSp, b.sp + b.maxSp * VITALS.SP_REGEN_PS * chargeF(b.upg?.ch) * dt);
         }
-        if (b.hp < b.maxHp) {
+        if (!bSwamp && b.hp < b.maxHp) {
           const [bx, bz] = this.basePos[b.side];
           if (dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_R) {
             b.hp = Math.min(b.maxHp, b.hp + UNITS[b.kind].regen * dt);
           }
         }
+        // 沼澤滯留:緩慢扣血(走 _damage,護盾先擋;null 攻擊者 = 不記擊殺信用)
+        if (bSwamp && this.t - (hh.wetT || 0) >= TERRAIN_FX.SWAMP_DRAIN_S) this._damage(b, TERRAIN_FX.SWAMP_DRAIN_PS * dt, null);
       }
-      if (this.heroes.get(sq.pid).dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
+      if (hh.dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }
     // 出血 DoT(招式追加效果):走 _damage 常規結算(護盾/護甲照規則),擊殺記給施放者;
     // 施放者查 heroes 活參照 —— 施放者陣亡仍持續失血,擊殺信用照記(狙擊手的創口不因重生消失)
@@ -2302,6 +2383,7 @@ export class BattleSim {
     b.hp = b.maxHp;
     b.sp = b.maxSp;
     b.lastHitAt = -99;
+    b.wet = 0; b.wetT = this.t;   // 重生清環境滯留(下個 pos 回報重新判定)
     const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0);
     b.x = sx; b.z = sz;
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;

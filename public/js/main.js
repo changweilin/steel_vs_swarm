@@ -6,7 +6,7 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, QUAL,
-  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS,
+  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
 } from './data.js';
@@ -15,7 +15,7 @@ import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
-import { buildBiomes, makeDeckIndex, makeTunnelIndex } from './biomes.js';
+import { buildBiomes, makeDeckIndex, makeTunnelIndex, terrainEnvCode } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -25,6 +25,27 @@ import { BattleClient } from './game.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
+
+/**
+ * 水沼粗網格烘烤(2026-07-19;房主載圖後上傳,供伺服器中立單位佈點/移動迴避)。
+ * 逐格取 terrainEnvCode(0 乾 / 1 水 / 2 沼),sim 座標系(x = three x、z 北 = −three z);
+ * 回傳 { minX, minZ, cell, cols, rows, data },data 為 cols×rows 個 '0'/'1'/'2' 字元(row-major)。
+ */
+function bakeWetGrid(t) {
+  const cell = WATER.GRID_M;
+  const minX = t.minX, minZ = -t.maxZ;   // sim z = −three z ⇒ three maxZ 對應 sim minZ
+  const cols = Math.max(1, Math.min(300, Math.ceil((t.maxX - t.minX) / cell)));
+  const rows = Math.max(1, Math.min(300, Math.ceil((t.maxZ - t.minZ) / cell)));
+  let data = '';
+  for (let i = 0; i < rows; i++) {
+    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    for (let j = 0; j < cols; j++) {
+      const sx = minX + (j + 0.5) * cell;            // sim x = three x
+      data += String(terrainEnvCode(t, sx, -sz));    // 取樣 three 座標 (sx, −sz)
+    }
+  }
+  return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10, cell, cols, rows, data };
+}
 const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
 const DECK_MARGIN = 3.0;  // 站立表面側向容差:走位/轉向/後座漂移貼近橋緣仍不掉下橋(上橋更穩);天花碰撞不吃此容差
                           // 值大 = 站得住橋緣外一截(免掉橋),代價是可站到可見橋緣外 3m —— 取「不掉橋」優先
@@ -1458,7 +1479,9 @@ async function enterLoading(cfg) {
         .map((b) => [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]);
       const cor = (biomes.userData.gradeCorridors || []).slice(0, 2400)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
-      app.net.send({ t: 'world', occ, cor });
+      // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
+      // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。
+      app.net.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain) });
     }
     app.net.send({ t: 'loaded' });
   } catch (e) {
@@ -1653,6 +1676,8 @@ function makeHud() {
       void el.offsetWidth;
       el.classList.add('on');
     },
+    // 火場滯留視野霧化(2026-07-19;game.js 每幀推 0~1 濃度,離場漸清)—— 純表現,傷害由伺服器結算
+    envFog: (v) => { $('envFog').style.opacity = String(Math.max(0, Math.min(1, v || 0))); },
     // 陣亡殉爆過場:on=過場期間紅警邊框開關;flash=額外觸發一次全屏白閃(高潮/觸地);比照 hitmark 的 remove→reflow→add 重觸發
     deathCine: (on, flash) => {
       $('deathAlert').classList.toggle('on', !!on);

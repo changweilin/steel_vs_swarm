@@ -1857,6 +1857,23 @@ function isWaterPt(terrain, x, z) {
 }
 
 /**
+ * 地形環境分類(2026-07-19;0 乾地 / 1 水域 / 2 沼澤)。純地形高程 + 衛星影像訊號,
+ * 不吃場地 mix、不耗共享 rnd —— 客戶端涉水/狀態回報(game._envAt)與主機水沼遮罩烘烤
+ * (main.js 上傳)共用同一規則,確保「玩家看到的濕地 = 伺服器判定的濕地」(WYSIWYG)。
+ * 水域:沒入水面下(waterY 有值且高程 < 水面 + SHORE)或影像純水色;
+ * 沼澤:近水低地綠植(高程在水面上 SWAMP_BAND 內、非人工鋪面),比照 ground.js 濕地促進。
+ */
+export function terrainEnvCode(terrain, x, z) {
+  const h = terrain.heightAt(x, z);
+  const wy = terrain.waterY;
+  const c = terrain.sampleColor?.(x, z);
+  const blue = !!c && c[2] > c[0] + 14 && c[2] > c[1] + 6;
+  if ((wy != null && h < wy + WATER.SHORE) || blue) return 1;
+  if (wy != null && h < wy + WATER.SWAMP_BAND && (!c || (c[1] >= c[0] - 4 && c[1] >= c[2] - 4))) return 2;
+  return 0;
+}
+
+/**
  * 大面積水域自動高架橋(2026-07-15):非橋/非隧道道路的連續泡水段 ≥ WATER.SPAN_MIN_M
  * 即整段升級為高架橋 —— 機體無法下深水(game.js),道路通過大面積水域一定要有橋。
  * 泡水區間向兩岸乾地各外延 WATER.RAMP_M 當引道錨點(deckAt 的 24m 緩坡落在乾地上 = 斜坡出入口,

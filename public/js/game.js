@@ -9,9 +9,10 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altF, isGunnery,
+  ALTITUDE, altF, isGunnery, TERRAIN_FX,
 } from './data.js';
 import { llToWorld } from './terrain.js';
+import { terrainEnvCode } from './biomes.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
@@ -219,6 +220,9 @@ export class BattleClient {
     this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
     this.flamers = new Set();        // 火場(火舌閃爍動畫)
     this.floods = [];                // 淹水區(機甲減速判定)
+    this.fires = [];                 // 火場(滯留視野霧化判定;傷害由伺服器結算)
+    this._fireDwell = 0;             // 火場滯留累計秒(離開後較快消散 → 視野漸清)
+    this._env = { code: 0, depth: 0 }; // 領機當幀環境(0 乾 / 1 水 / 2 沼;每幀 _envAt 更新)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
@@ -1842,6 +1846,9 @@ export class BattleClient {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
         if (e.code === 'Escape' && this.shopOpen) this._toggleShop(false);
+        // 陣亡重生倒數中:ESC 叫出戰場選單(離開/繼續)。此時指標已解鎖 → pointerlockchange 不再觸發,
+        // 故直接綁 keydown(正常交戰時 ESC 被指標鎖定吞掉,走 _onPlc;陣亡例外走這條)。
+        else if (e.code === 'Escape' && this.dead && !this._gameOver) this._setPaused(true);
         if (!this.dead) {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
@@ -1921,7 +1928,8 @@ export class BattleClient {
       document.exitPointerLock?.();
     } else {
       this.hud.pause?.(false);
-      this.canvas?.requestPointerLock?.();   // 由「繼續」按鈕的使用者手勢觸發,可重新鎖定
+      // 陣亡倒數中「繼續」= 回到陣亡頁(不需鎖定指標);存活時才重新鎖定進入交戰
+      if (!this.dead) this.canvas?.requestPointerLock?.();
     }
   }
 
@@ -2002,8 +2010,9 @@ export class BattleClient {
           }
           if (e.dead && !this.dead) this._onSelfDeath();
           if (!e.dead && this.dead) this._onSelfRespawn();
-          // 過場播放中壓住倒數頁(#deadOverlay/砲塔 PiP),過場結束(_deathSeq=null)下一快照才顯示
-          this.hud.dead?.(e.dead && !this._deathSeq ? e.rs : null);
+          // 過場播放中壓住倒數頁(#deadOverlay/砲塔 PiP),過場結束(_deathSeq=null)下一快照才顯示;
+          // 開著戰場選單(this.paused)時亦壓住倒數頁 → 讓離開/繼續選單獨佔畫面(ESC 開的離開頁)
+          this.hud.dead?.(e.dead && !this._deathSeq && !this.paused ? e.rs : null);
           // 商店只在數值變動時重繪(2026-07-17):每 8Hz 全量重建 DOM 會在點擊瞬間銷毀按鈕 →
           // 掉點擊(「沒辦法馬上購買」)。以 money/擊殺/升級/角色/階級簽章 gate,idle 時完全不重繪。
           if (this.shopOpen) {
@@ -2068,6 +2077,7 @@ export class BattleClient {
       if (e.k === 'flood' || e.k === 'pothole') this._conformWater(group, e.x, czw, cyw);
       if (group.userData.flames) this.flamers.add(group);
       if (e.k === 'flood') this.floods.push({ x: e.x, z: -e.z, r, slow: hazDef.slow });
+      if (e.k === 'fire') this.fires.push({ x: e.x, z: -e.z, r });   // 火場滯留霧化判定
       this.ents.set(e.id, ent);
       return ent;
     }
@@ -2537,22 +2547,46 @@ export class BattleClient {
   }
 
   /**
-   * 水中速度減半(2026-07-15):地面機體腳踩的表面泡在水裡 —— 海(表面低於水面)
-   * 或河面(衛星影像水色的貼地路段)。站在橋面/結構物上不算(表面高於地形 = 在橋上)。
+   * 領機當幀環境(0 乾 / 1 水 / 2 沼)+ 水深(公尺)。與 biomes.terrainEnvCode 同規則
+   * (WYSIWYG),另加飛行 / 橋面結構物豁免:站在橋面/結構物上(表面高於地形 >1.2m)= 乾地。
+   * 每幀 _updatePlayer 開頭算一次存 this._env;移動減速、pos 回報、火場霧化皆讀它。
    */
-  _waterSlowF() {
-    if (this._flying()) return 1;
+  _envAt() {
+    if (this._flying()) return { code: 0, depth: 0 };
     const x = this.pos.x, z = this.pos.z;
     const s = this._surf(x, z, this.pos.y);
-    if (this.terrain.waterY != null && s < this.terrain.waterY && this.pos.y < this.terrain.waterY + 0.5) {
-      return WATER.SLOW;
+    if (s - this.terrain.heightAt(x, z) > 1.2) return { code: 0, depth: 0 };   // 橋面/結構物 = 乾
+    const code = terrainEnvCode(this.terrain, x, z);
+    const wy = this.terrain.waterY;
+    const depth = code === 1 && wy != null ? Math.max(0, wy - s) : 0;
+    return { code, depth };
+  }
+
+  /**
+   * 地形環境移動減速(2026-07-19;取代舊 _waterSlowF)。水域:速度隨深度線性內插
+   * 1.0(岸邊)→ SLOW_MIN(全滅頂 FULL_D);沼澤:固定 SWAMP_SLOW。飛行型態不受影響。
+   */
+  _terrainSlowF() {
+    const e = this._env;
+    if (!e || e.code === 0) return 1;
+    if (e.code === 2) return TERRAIN_FX.SWAMP_SLOW;
+    // 水域:至少涉水基準 WATER.SLOW(含影像水色偵測、淺水/無海平面盤的內陸水,depth 可能為 0),
+    // 深水再依深度插值到 SLOW_MIN(全滅頂)—— 確保任何水域都減速,不會出現「客戶端不減速但伺服器已凍結」的不一致。
+    return Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
+  }
+
+  /** 火場滯留 → 視野漸霧化(feature 6;純客戶端表現,傷害由伺服器 _tickHazards 結算)。
+   *  進火場累積、離場 2× 速消散;滯留超過 FIRE_FOG_S 起霧、FIRE_FOG_MAX_S 達最濃。 */
+  _updateEnvFog(dt) {
+    let inFire = false;
+    if (!this._flying()) {
+      for (const f of this.fires) {
+        if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) { inFire = true; break; }
+      }
     }
-    // 河/湖(高程有值但影像是水色):貼地行走才算,站上橋面(表面高於地形 >1m)不算
-    if (this.pos.y - s < 1.5 && s - this.terrain.heightAt(x, z) < 1) {
-      const c = this.terrain.sampleColor?.(x, z);
-      if (c && c[2] > c[0] + 14 && c[2] > c[1] + 6) return WATER.SLOW;
-    }
-    return 1;
+    this._fireDwell = Math.max(0, this._fireDwell + (inFire ? dt : -dt * 2));
+    const { FIRE_FOG_S, FIRE_FOG_MAX_S } = TERRAIN_FX;
+    this.hud.envFog?.(Math.max(0, Math.min(1, (this._fireDwell - FIRE_FOG_S) / (FIRE_FOG_MAX_S - FIRE_FOG_S))));
   }
 
   _updateMissiles(dt) {
@@ -3016,6 +3050,7 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
+    this._fireDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0 };   // 死亡:清火場霧化(_updatePlayer 已早退不再更新)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
@@ -4168,6 +4203,8 @@ export class BattleClient {
   _updatePlayer(dt, now) {
     if (!this.side) { this._updateSpectator(dt); return; }
     if (this.dead) return;
+    this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
+    this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)
     const px0 = this.pos.x, pz0 = this.pos.z, py0 = this.pos.y;
     const tn0 = this.terrain.tunnelAt?.(px0, pz0);
@@ -4214,8 +4251,8 @@ export class BattleClient {
       const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS;
       // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
-      // 深水上空不落地變形(水深 > 可涉水深 WADE_M 的水域,機體無法下水)
-      const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.WADE_M;
+      // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
+      const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.FULL_D;
       if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
       // FPV 側傾:橫移/轉向時機身壓坡度
       const lat = this.vel.x * right.x + this.vel.z * right.z;
@@ -4226,7 +4263,7 @@ export class BattleClient {
       const slowK = 1 - 0.6 * this.charge;
       // 混亂(招式追加效果):操縱反轉 + 慢速航向漂移
       if ((this.confLeft || 0) > 0) { move.multiplyScalar(-1); this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._waterSlowF()
+      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._terrainSlowF()
         * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
@@ -4234,9 +4271,9 @@ export class BattleClient {
       const fr = Math.exp(-dt * (this._lowG ? 0.8 : 6));
       this.vel.x *= fr; this.vel.z *= fr; this.vel.y = 0;
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      // 垂直落水保底(2026-07-15):深水處的有效地板 = 水面 − 可涉水深(半身泡水浮著),
-      // 不會沉到海床 —— 側向走進深水由下方 passable() 直接擋下,這裡只接「從高處落水」。
-      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.WADE_M) : gyS;
+      // 水中有效地板(2026-07-19 可涉水改制):可下沉至「水面 − FULL_D(全滅頂深)」→ 深水可涉、
+      // 過深則半浮於 FULL_D(頭沒入水),不無限沉海床;淺水踩實際河床。深水不再是牆(passable 已放行)。
+      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.FULL_D) : gyS;
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
       // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
@@ -4282,10 +4319,8 @@ export class BattleClient {
       const passable = (cx, cz) => {
         const g = this._surf(cx, cz, py0);
         if (inTun0 && g > py0 + 2.6) return false;                        // 隧道側壁/上方山體
-        // 深水不可入(2026-07-15):地面機體走向「水深 > WADE_M」的水域 = 撞牆
-        // (逐軸滑行沿岸走);位移前已在深水(高處落水)由 passable(px0,pz0) 例外放行 → 走得出來
-        if (!this._flying() && this.terrain.waterY != null
-          && g < this.terrain.waterY - WATER.WADE_M) return false;
+        // 2026-07-19:深水不再是牆 —— 水域/沼澤可通行,依深度減速(_terrainSlowF),
+        // 有效地板 = 水面 − FULL_D(可涉水橫渡河湖)。深水不再由此擋下。
         const ce = this.terrain.ceilingAt(cx, cz, py0);
         if (ce != null && ce - this.selfH - 0.2 < g + hover) return false; // 夾縫 < 機高
         return true;
@@ -4360,9 +4395,9 @@ export class BattleClient {
     if (now - this.lastPosSend > 0.1) {
       this.lastPosSend = now;
       // y = 離「站立表面」的高度(橋上算 0):伺服器的地面型/防空判定不會因為站上橋面而誤判;
-      // 深水處的站立表面 = 水面 − 涉水深(泡在水裡漂著的機體不是空中目標)
+      // 深水處的站立表面 = 水面 − 全滅頂深(泡在水裡的機體是地面單位,不是空中目標)
       const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.WADE_M) : sy;
+      const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.FULL_D) : sy;
       this._altAG = this.pos.y - sEff;   // 離站立表面高度(與回報 y 同源;高度制空 _altRangeMul 用)
       this.net.send({
         t: 'pos',
@@ -4370,6 +4405,7 @@ export class BattleClient {
         y: Math.round(this._altAG * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
+        wet: this._env.code,   // 身處環境(0 乾 / 1 水 / 2 沼):伺服器結算沼澤扣血/水域凍結 CD 換彈
       });
     }
     // 放開開火鍵:取消磁軌/穩定蓄力(不耗彈)、連射計數歸零(下次扣扳機重新起算 N 連發)
