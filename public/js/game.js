@@ -193,6 +193,7 @@ export class BattleClient {
     this.pos = new THREE.Vector3();
     this.hp = 0; this.maxHp = 1;
     this.dead = false;
+    this._deathSeq = null;   // 陣亡過場狀態機:null=未播(哨兵);物件=播放中。gate 皆 truthiness、teardown 皆 = null
     this.lastPosSend = 0;
     this.mixers = new Set();
     this.spinners = new Set();
@@ -1728,7 +1729,12 @@ export class BattleClient {
     }
     // 圖資建物(biomes 客戶端幾何,全房間同一 OSM 來源 → 各端一致):
     // 純推擠不結算傷害,伺服器權威不受影響;無人機可飛越屋頂
+    // 站在高架橋面上時,橋面「下方」街廓的建物(基座低於腳下一截)不推擠 —— 高架路飛越街廓,
+    // 否則橋下高樓的碰撞柱垂直涵蓋橋面高度 → 走在橋上會被橋下建物側推撞下橋(#INC 高架橋掉橋)。
+    const surfHere = this._surf(this.pos.x, this.pos.z, this.pos.y);
+    const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0;
     for (const b of this.terrain.blockers || []) {
+      if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
       if (myBot > b.y + b.h || myTop < b.y) continue;
       const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
       const d = Math.hypot(dx, dz);
@@ -1909,7 +1915,8 @@ export class BattleClient {
           }
           if (e.dead && !this.dead) this._onSelfDeath();
           if (!e.dead && this.dead) this._onSelfRespawn();
-          this.hud.dead?.(e.dead ? e.rs : null);
+          // 過場播放中壓住倒數頁(#deadOverlay/砲塔 PiP),過場結束(_deathSeq=null)下一快照才顯示
+          this.hud.dead?.(e.dead && !this._deathSeq ? e.rs : null);
           // 商店只在數值變動時重繪(2026-07-17):每 8Hz 全量重建 DOM 會在點擊瞬間銷毀按鈕 →
           // 掉點擊(「沒辦法馬上購買」)。以 money/擊殺/升級/角色/階級簽章 gate,idle 時完全不重繪。
           if (this.shopOpen) {
@@ -1950,7 +1957,7 @@ export class BattleClient {
     this.hud.bases?.(bases, m.stats);
     this.hud.wave?.(m.wave, m.nextWave);
     this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft(), this._weaponHud());
-    if (m.over) { this._gameOver = true; this.hud.over?.(m.winner, m.stats); }
+    if (m.over) { this._gameOver = true; this._deathSeq = null; this.hud.deathCine?.(false); this.hud.over?.(m.winner, m.stats); }
   }
 
   _spawnEnt(e) {
@@ -2886,9 +2893,39 @@ export class BattleClient {
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
     document.exitPointerLock?.();
+
+    // ── 陣亡過場(純表現層;伺服器已權威判定死亡)──
+    // 於 _applySnap 觸發、早於本幀 _updatePlayer(對 dead 早退未覆寫 camera)→ camera/pos/vel 仍是死亡瞬間的活體姿態
+    const fly = this._flying();
+    const eye = this.camera.position.clone();                    // 死亡瞬間眼位(過場錨點)
+    const surf = this._surf(this.pos.x, this.pos.z, this.pos.y); // 腳下站立表面(橋面/路面/地表)
+    const col = sideInfo(this.side).color;                       // 陣營色(碎片 accent / 地環色)
+    const dur = fly ? 2.4 : 2.0;
+    // 飛行:重力依墜落高度自適應,確保多數高度在收尾前真正墜地(而非半空硬切鏡頭);仍以觸地偵測為準
+    const T = dur - 0.55;
+    const g = fly ? Math.min(95, Math.max(30, 2 * Math.max(2, eye.y - surf) / (T * T))) : 0;
+    this._deathSeq = {
+      t: 0, dur, fly, col, eye, surf, g,
+      p: eye.clone(),                                            // 飛行墜落積分位置
+      v: fly ? this.vel.clone().add(new THREE.Vector3(0, 5, 0)) : null, // 初速 + 微上拋讓弧線明顯
+      yaw: this.yaw, pitch: this.pitch, roll: this.roll,
+      // 飛行翻滾角速度(rad/s;per-axis 隨機,roll 為主翻滾);地面 null
+      spin: fly ? new THREE.Vector3(
+        (Math.random() * 2 - 1) * 2.4,                           // pitch
+        (Math.random() * 2 - 1) * 1.6,                           // yaw
+        (Math.random() < 0.5 ? -1 : 1) * (3.0 + Math.random() * 1.5), // roll
+      ) : null,
+      smokeAcc: 0, climax: false, holdUntil: 0,
+    };
+    this.hud.deathCine?.(true);                                  // 紅警邊框亮(白閃只在高潮/觸地觸發)
+    // 地面:腳下起火煙柱(~2s);飛行:死亡高度補一記空中火花(die 事件的地面爆在下方,補視覺缺口)
+    if (fly) starburst(this.scene, this.effects, eye.x, eye.y, eye.z, 3.0, 0xffb050);
+    else this._deathPlume(this.pos.x, surf, this.pos.z);
   }
   _onSelfRespawn() {
     this.dead = false;
+    this._deathSeq = null;        // 過場未播完就重生:硬切,交還 _updatePlayer 控制鏡頭
+    this.hud.deathCine?.(false);  // 熄紅框(#deadOverlay 由本幀 e.dead=false 的 hud.dead(null) 自動隱藏)
     this._spawnAt();
     this.vel.set(0, 0, 0);
     // 重生滿彈、重武器 CD 清空
@@ -3649,7 +3686,9 @@ export class BattleClient {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size: Math.max(1.4, r * 0.22), transparent: true, opacity: 1 }));
+    // 火焰貼圖:取代預設方形點精靈的粗糙塊感,帶內部火舌結構(第一人稱近距離殉爆看得最清楚)
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+      color, size: Math.max(1.4, r * 0.3), map: this._fireTex(), transparent: true, opacity: 1, depthWrite: false }));
     this.scene.add(pts);
     this.effects.push({
       obj: pts, ttl: 0.8, vels,
@@ -3680,6 +3719,276 @@ export class BattleClient {
         this.effects.splice(i, 1);
       }
     }
+  }
+
+  // ---------------- 陣亡過場(第一人稱被擊毀動畫)----------------
+  /** 陣亡過場逐幀驅動:地面=劇震+緩傾覆+火煙柱+尾段殉爆白閃;飛行=拋物墜毀+翻滾+拖煙+觸地(或逾時空中)爆+俯看殘骸。
+   *  完整獨佔 this.camera(_updatePlayer 對 dead 早退,無他者寫 camera);cockpit 為 camera 子物件自動隨傾倒/翻滾
+   *  → 第一人稱「還在艙內爆」讀感。純表現層不動權威狀態;dt 吃 hitstop 定格,時長確定;結束時 _deathSeq=null 並熄紅框。 */
+  _updateDeathSeq(dt, now) {
+    const s = this._deathSeq;
+    s.t += dt;
+    const cam = this.camera;
+    let done = false;
+
+    if (!s.fly) {
+      // ── 地面機體:原地劇震(0.9s 內衰減)+ smoothstep 側翻下陷,尾段主爆白閃 ──
+      const decay = Math.max(0, 1 - s.t / 0.9);
+      const n = decay * decay;
+      const shP = (Math.random() * 2 - 1) * n * 0.11;
+      const shY = (Math.random() * 2 - 1) * n * 0.11;
+      const shR = (Math.random() * 2 - 1) * n * 0.13;
+      const tp = Math.min(1, Math.max(0, (s.t - 0.2) / 1.4));   // 0.2s→1.6s 之間側翻
+      const topple = tp * tp * (3 - 2 * tp);                    // smoothstep
+      cam.position.copy(s.eye);
+      cam.position.y -= topple * 1.2;                           // 隨傾覆下陷 ~1.2m
+      cam.rotation.set(0, 0, 0);
+      cam.rotateY(s.yaw + shY);
+      cam.rotateX(s.pitch + topple * 0.35 + shP);               // pitch 次(~20°)
+      cam.rotateZ(s.roll + topple * 1.0 + shR);                 // roll 主(~57°)
+      s.smokeAcc += dt;                                         // 週期小火花(燃燒感)
+      if (s.smokeAcc >= 0.22) {
+        s.smokeAcc = 0;
+        starburst(this.scene, this.effects,
+          s.eye.x + (Math.random() * 2 - 1) * 2, s.surf + 1 + Math.random() * 2,
+          s.eye.z + (Math.random() * 2 - 1) * 2, 1.2, 0xffb055);
+      }
+      // 尾段殉爆高潮(t≈1.45):主爆 + 地環 + 碎片 + 大字卡 + hitstop + 白閃(各一次)
+      if (!s.climax && s.t >= 1.45) {
+        s.climax = true;
+        const fx = s.eye.x, fy = s.surf, fz = s.eye.z;
+        this._explosion(fx, fy + 3, fz, 11, 0xff8a3a);
+        shockRing(this.scene, this.effects, fx, fy, fz, 10, s.col);
+        debrisBurst(this.scene, this.effects, fx, fy + 2, fz, { big: true, accent: s.col });
+        comicPop(this.scene, this.effects, fx, fy + 9, fz, { big: true, hue: 18 });
+        this._deathPlume(fx, fy, fz);                          // 殉爆後持續燃燒的火煙柱
+        this._emberBurst(fx, fy + 2, fz, 22, 7);               // 大量迸射火星
+        this._hitstop = Math.max(this._hitstop || 0, 0.06);
+        this.hud.deathCine?.(true, true);                      // 白閃
+      }
+      if (s.t >= s.dur) done = true;
+
+    } else if (!s.climax) {
+      // ── 飛行機體:自適應重力拋物墜落 + per-axis 翻滾 + 拖尾煙 ──
+      s.v.y -= s.g * dt;
+      s.v.x *= Math.exp(-dt * 0.7); s.v.z *= Math.exp(-dt * 0.7);   // 微空氣阻力:墜點不飄太遠
+      s.p.addScaledVector(s.v, dt);
+      s.yaw += s.spin.y * dt; s.pitch += s.spin.x * dt; s.roll += s.spin.z * dt;
+      s.smokeAcc += dt;
+      if (s.smokeAcc > 0.06) { s.smokeAcc = 0; this._crashSmoke(s.p.x, s.p.y, s.p.z, 1.0); }
+      cam.position.copy(s.p);
+      cam.rotation.set(0, 0, 0);
+      cam.rotateY(s.yaw); cam.rotateX(s.pitch); cam.rotateZ(s.roll);
+      // 觸地偵測(_surf → 橋面/地表);逾時仍在空中則就地空中爆(不瞬移鏡頭到地面),時長有界
+      const gy = this._surf(s.p.x, s.p.z, s.p.y);
+      const hitGround = s.p.y <= gy + 1.6;
+      const timeout = s.t >= s.dur - 0.45;
+      if (hitGround || timeout) {
+        s.climax = true;
+        const iy = hitGround ? gy + 1.0 : s.p.y;               // 落地→貼地爆;逾時→原空中位置爆
+        s.p.y = iy;
+        this._explosion(s.p.x, iy + 2, s.p.z, 13, 0xff7a30);
+        shockRing(this.scene, this.effects, s.p.x, iy, s.p.z, 9, s.col);
+        debrisBurst(this.scene, this.effects, s.p.x, iy + 1, s.p.z, { big: true, accent: s.col });
+        this._deathPlume(s.p.x, iy, s.p.z);                    // 觸地後燃燒火煙柱
+        this._emberBurst(s.p.x, iy + 1, s.p.z, 22, 7);         // 大量迸射火星
+        this._hitstop = Math.max(this._hitstop || 0, 0.06);
+        this.hud.deathCine?.(true, true);                      // 白閃
+        s.v.set(0, 0, 0); s.holdUntil = s.t + 0.45;            // 釘爆點,俯看殘骸
+      }
+
+    } else {
+      // ── 飛行觸地保留:鏡頭在殘骸上方緩緩下俯、翻滾歸零,煙續冒 ──
+      s.pitch += (-0.5 - s.pitch) * Math.min(1, dt * 3);
+      s.roll += (0 - s.roll) * Math.min(1, dt * 3);
+      cam.position.copy(s.p);
+      cam.rotation.set(0, 0, 0);
+      cam.rotateY(s.yaw); cam.rotateX(s.pitch); cam.rotateZ(s.roll);
+      s.smokeAcc += dt;
+      if (s.smokeAcc > 0.12) { s.smokeAcc = 0; this._crashSmoke(s.p.x, s.p.y, s.p.z, 1.6); }
+      if (s.t >= s.holdUntil) done = true;
+    }
+
+    // 第一人稱燃燒吞沒:鏡頭定位「之後」在其前方近距離持續撒火 + 火星,填滿 FPV(座艙被火吞沒感)。
+    // climax 前密、climax 後轉稀疏餘燼;純加法火焰不擋操作視覺、隨鏡頭一起翻滾。
+    s.fpvAcc = (s.fpvAcc || 0) + dt;
+    if (s.fpvAcc >= (s.climax ? 0.26 : 0.12)) { s.fpvAcc = 0; this._engulfFPV(cam); }
+
+    if (done) {
+      this._deathSeq = null;
+      this.hud.deathCine?.(false);   // 熄紅框(倒數頁由下一 8Hz 快照顯示)
+    }
+  }
+
+  /** 第一人稱「座艙被火吞沒」:在鏡頭前方近距離撒火焰 + 火星,填滿 FPV(殉爆過場專用,強化第一人稱燃燒感)。 */
+  _engulfFPV(cam) {
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
+    for (let i = 0; i < 3; i++) {
+      const p = cam.position.clone()
+        .addScaledVector(fwd, 1.6 + Math.random() * 1.3)
+        .addScaledVector(right, (Math.random() - 0.5) * 3)
+        .add(new THREE.Vector3(0, -0.6 - Math.random() * 0.9, 0));   // 從下方往上舔
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this._fireTex(), color: Math.random() < 0.5 ? 0xff7a2a : 0xffd166,
+        transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sp.userData.noOutline = true;
+      sp.position.copy(p);
+      const base = 1.6 + Math.random() * 1.5; sp.scale.setScalar(base);
+      this.scene.add(sp);
+      this.effects.push({
+        obj: sp, ttl: 0.32 + Math.random() * 0.26,
+        fade: (o, f, dt) => { o.position.y += (3 + Math.random() * 3) * dt; o.scale.setScalar(base * (1 + (1 - f) * 0.8)); o.material.opacity = 0.9 * f; },
+        dispose: () => sp.material.dispose(),
+      });
+    }
+    this._emberBurst(cam.position.x, cam.position.y - 0.3, cam.position.z, 4, 2.4);
+  }
+
+  /** 火焰粒子貼圖(快取,512px):白熱核心 + 中層暖輝 + 大量細火舌 + 熱斑點 → 加法混色的高解析度火光。 */
+  _fireTex() {
+    if (this._fireTexC) return this._fireTexC;
+    const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const c = cv.getContext('2d'), cx = S / 2, cy = S / 2;
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, S / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.22, 'rgba(255,248,224,0.95)');
+    g.addColorStop(0.5, 'rgba(255,168,72,0.55)');
+    g.addColorStop(0.78, 'rgba(255,110,34,0.24)');
+    g.addColorStop(1, 'rgba(230,70,16,0)');
+    c.fillStyle = g; c.fillRect(0, 0, S, S);
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 130; i++) {                  // 細火舌:徑向亮條(高密度內部結構)
+      const a = Math.random() * Math.PI * 2;
+      const r0 = S * (0.04 + Math.random() * 0.08), r1 = S * (0.24 + Math.random() * 0.24);
+      const wob = (Math.random() - 0.5) * 0.25;
+      c.strokeStyle = `rgba(255,${(180 + Math.random() * 70) | 0},${(70 + Math.random() * 90) | 0},${0.03 + Math.random() * 0.06})`;
+      c.lineWidth = 1 + Math.random() * 4;
+      c.beginPath();
+      c.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      c.quadraticCurveTo(cx + Math.cos(a + wob) * (r0 + r1) * 0.5, cy + Math.sin(a + wob) * (r0 + r1) * 0.5,
+        cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      c.stroke();
+    }
+    for (let i = 0; i < 60; i++) {                   // 熱斑點:亮核心散布(火花感)
+      const a = Math.random() * Math.PI * 2, rr = S * Math.random() * 0.32;
+      const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr, pr = 2 + Math.random() * 6;
+      const pg = c.createRadialGradient(px, py, 0, px, py, pr);
+      pg.addColorStop(0, `rgba(255,250,220,${0.3 + Math.random() * 0.4})`); pg.addColorStop(1, 'rgba(255,180,90,0)');
+      c.fillStyle = pg; c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+    }
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+    this._fireTexC = t; return t;
+  }
+
+  /** 煙霧粒子貼圖(快取,512px):多層 fBm 濃度斑塊 + 暗紋(翻騰立體感)+ 圓形遮罩 → 高解析度雲絮,由 sprite 色染灰。 */
+  _smokeTex() {
+    if (this._smokeTexC) return this._smokeTexC;
+    const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const c = cv.getContext('2d');
+    c.globalCompositeOperation = 'lighter';          // 亮斑:疊多團白斑 → 濃度不均的雲
+    for (let i = 0; i < 60; i++) {
+      const bx = S / 2 + (Math.random() - 0.5) * S * 0.46, by = S / 2 + (Math.random() - 0.5) * S * 0.46;
+      const br = S * (0.06 + Math.random() * 0.22);
+      const g = c.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, `rgba(255,255,255,${0.08 + Math.random() * 0.1})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(bx, by, br, 0, 7); c.fill();
+    }
+    c.globalCompositeOperation = 'destination-out';  // 暗紋:挖掉小塊 → 翻騰的立體暗部(fBm 近似)
+    for (let i = 0; i < 34; i++) {
+      const bx = S / 2 + (Math.random() - 0.5) * S * 0.5, by = S / 2 + (Math.random() - 0.5) * S * 0.5;
+      const br = S * (0.03 + Math.random() * 0.1);
+      const g = c.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, `rgba(0,0,0,${0.12 + Math.random() * 0.16})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g; c.beginPath(); c.arc(bx, by, br, 0, 7); c.fill();
+    }
+    c.globalCompositeOperation = 'destination-in';   // 圓形遮罩:邊緣淡出
+    const m = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.66, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = m; c.fillRect(0, 0, S, S);
+    const t = new THREE.CanvasTexture(cv);
+    this._smokeTexC = t; return t;
+  }
+
+  /** 火星/餘燼(加法小亮點,上升飄散淡出):替殉爆火煙補細節顆粒感。n 顆一批。 */
+  _emberBurst(x, y, z, n = 8, spread = 2) {
+    const tex = this._fireTex();
+    for (let i = 0; i < n; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex, color: Math.random() < 0.5 ? 0xffd27a : 0xff9840,
+        transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sp.userData.noOutline = true;
+      sp.position.set(x + (Math.random() - 0.5) * spread, y + (Math.random() - 0.5) * spread, z + (Math.random() - 0.5) * spread);
+      const base = 0.35 + Math.random() * 0.5;
+      sp.scale.setScalar(base);
+      this.scene.add(sp);
+      const vel = new THREE.Vector3((Math.random() - 0.5) * 6, 4 + Math.random() * 8, (Math.random() - 0.5) * 6);
+      this.effects.push({
+        obj: sp, ttl: 0.7 + Math.random() * 0.6,
+        fade: (o, f, dt) => { vel.y -= 6 * dt; o.position.addScaledVector(vel, dt); o.material.opacity = 0.95 * f; },
+        dispose: () => sp.material.dispose(),
+      });
+    }
+  }
+
+  /** 殉爆火煙柱(~2s):噴發火(加法橙)+ 煙(灰上升),沿飛彈煙尾 idiom;地面路徑起始演出。
+   *  改用柔邊 sprite billboard(徑向漸層貼圖):恆面向相機、無 facet → 第一人稱近距離仍高解析度、不粗糙;
+   *  depthWrite:false 不 z-fight,掛 userData.noOutline 讓 outlinify 跳過。貼圖共用快取,dispose 只釋放材質。 */
+  _deathPlume(x, y, z) {
+    const g = new THREE.Group();
+    g.userData.noOutline = true;
+    const parts = [], NF = 22, NS = 18;
+    for (let i = 0; i < NF + NS; i++) {
+      const fire = i < NF;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: fire ? this._fireTex() : this._smokeTex(),
+        color: fire ? (Math.random() < 0.5 ? 0xff8a3a : 0xffd166) : 0x4a4e52,
+        transparent: true, opacity: fire ? 0.95 : 0.62, depthWrite: false,
+        blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending }));
+      const th = Math.random() * Math.PI * 2, rad = Math.random() * 3;
+      sp.position.set(x + Math.cos(th) * rad, y + Math.random() * 2, z + Math.sin(th) * rad);
+      const base = fire ? 3.0 + Math.random() * 2 : 5 + Math.random() * 3;
+      sp.scale.setScalar(base);
+      parts.push({ sp, fire, base,
+        rise: fire ? 4 + Math.random() * 4 : 7 + Math.random() * 6,
+        drift: new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2),
+        grow: fire ? 1.8 : 3.2, delay: fire ? 0 : Math.random() * 0.5 });   // 煙稍晚冒
+      g.add(sp);
+    }
+    this.scene.add(g);
+    this.effects.push({
+      obj: g, ttl: 2.0,
+      fade: (o, f, dt) => {
+        const p = 1 - f;
+        for (const c of parts) {
+          if (p < c.delay) { c.sp.visible = false; continue; }
+          c.sp.visible = true;
+          c.sp.position.y += c.rise * dt;
+          c.sp.position.addScaledVector(c.drift, dt);
+          c.sp.scale.setScalar(c.base * (1 + p * c.grow));
+          c.sp.material.opacity = c.fire ? Math.max(0, f * 1.4 - 0.2) * 0.95 : 0.6 * f;
+        }
+      },
+      dispose: () => { for (const c of parts) c.sp.material.dispose(); },   // 貼圖共用快取不 dispose
+    });
+    this._emberBurst(x, y + 1, z, 14, 4);   // 起始迸射一批火星補顆粒細節
+  }
+
+  /** 單顆上升灰煙(墜機拖尾 / 觸地煙,單一縫共用);scale 控大小。柔邊 sprite,恆面向相機、無 facet。 */
+  _crashSmoke(x, y, z, scale = 1) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this._smokeTex(), color: 0x484c50, transparent: true, opacity: 0.6, depthWrite: false }));
+    sp.userData.noOutline = true;
+    sp.position.set(x + (Math.random() - 0.5) * 2, y, z + (Math.random() - 0.5) * 2);
+    const base = 3.4 * scale;
+    sp.scale.setScalar(base);
+    this.scene.add(sp);
+    const rise = 5 + Math.random() * 4;
+    this.effects.push({
+      obj: sp, ttl: 1.1,
+      fade: (o, f, dt) => { o.position.y += rise * dt; o.scale.setScalar(base * (1 + (1 - f) * 2.2)); o.material.opacity = 0.6 * f; },
+      dispose: () => { sp.material.dispose(); },
+    });
   }
 
   // ---------------- 玩家移動 ----------------
@@ -4411,6 +4720,7 @@ export class BattleClient {
 
     this._tickWeapons(now);
     this._updatePlayer(dt, now);
+    if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
     this._updateBullets(dt);
     this._updateMissiles(dt);
@@ -4460,7 +4770,7 @@ export class BattleClient {
         if (this._flashTtl <= 0) { this.flash.visible = false; this._flashTtl = null; }
         else this.flash.scale.setScalar((0.7 + Math.random() * 0.7) * (this._flashHeavy ? 2.3 : 1));
       }
-      this.cockpit.visible = !this.dead;
+      this.cockpit.visible = !this.dead || !!this._deathSeq;   // 過場期間保留座艙,隨鏡頭傾倒/翻滾(第一人稱殉爆)
     }
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
@@ -4543,7 +4853,7 @@ export class BattleClient {
    * (該框內部透明,外圈由 CSS box-shadow 打洞式變暗);共用 pipCam(陣亡時 _renderPips 早退不衝突)。
    */
   _renderDeathCam() {
-    if (!this.dead || this._gameOver || !this.side || !this.cfg) return;
+    if (!this.dead || this._deathSeq || this._gameOver || !this.side || !this.cfg) return;   // 過場播放中不繪砲塔視窗
     const frame = document.getElementById('deadCam');
     if (!frame || frame.offsetParent === null) return;   // 陣亡頁未顯示 → 不繪
 

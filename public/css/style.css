@@ -477,6 +477,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 
+/* 陣亡殉爆白閃:高潮/觸地瞬間全屏過曝,0.4s 淡出(重觸發同 hurt/hitmark 手法)。z 29:蓋過 HUD(10)
+   與倒數頁(20),但壓在商店(30)之下 —— 陣亡購物時不被白閃打斷 */
+.death-flash { position: absolute; inset: 0; z-index: 29; pointer-events: none; opacity: 0; background: #fff; }
+.death-flash.on { animation: deathWhiteout 0.4s ease-out; }
+@keyframes deathWhiteout { 0% { opacity: 0; } 10% { opacity: 0.92; } 100% { opacity: 0; } }
+/* 陣亡殉爆紅警邊框:過場期間常亮脈動(inset box-shadow 打紅框,不擋中央;z 9 在 HUD 之下,HUD 仍可讀) */
+.death-alert { position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0;
+  box-shadow: inset 0 0 120px 24px rgba(220, 30, 30, 0.55); }
+.death-alert.on { animation: deathPulse 0.7s ease-in-out infinite; }
+@keyframes deathPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
+
 .hud-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; pointer-events: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;

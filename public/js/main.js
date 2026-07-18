@@ -26,6 +26,11 @@ import { BattleClient } from './game.js';
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
 const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
+const DECK_MARGIN = 3.0;  // 站立表面側向容差:走位/轉向/後座漂移貼近橋緣仍不掉下橋(上橋更穩);天花碰撞不吃此容差
+                          // 值大 = 站得住橋緣外一截(免掉橋),代價是可站到可見橋緣外 3m —— 取「不掉橋」優先
+const DECK_UNDER = 1.2;   // 橋面結構厚度(頂面→底緣);= biomes.js soffit/girder 底緣深
+const MAX_MECH_H = 4.8;   // 最大機體所需淨空(4.5m + 頭頂餘裕)。橋底緣離地低於此 = 鑽不過去 → 該上橋,
+                          // MUST NOT 讓機體卡在「上不了橋面(> DECK_STEP)又鑽不過橋腹」的死區(引道口卡住前科)
 
 const app = {
   net: null,
@@ -1423,8 +1428,10 @@ async function enterLoading(cfg) {
       if (curY == null) return h;
       const tn = tunnelAt(x, z);
       if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
-      const d = deckY(x, z);
-      return (d != null && d > h && curY >= d - DECK_STEP) ? d : h;
+      const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
+      if (d == null || d <= h) return h;
+      // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
+      return (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H) ? d : h;
     };
     // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
     app.terrain.ceilingAt = (x, z, curY) => {
@@ -1432,9 +1439,10 @@ async function enterLoading(cfg) {
       const tn = tunnelAt(x, z);
       if (tn && curY < tn.ceil) c = tn.ceil;                       // 洞內天花板
       const d = deckY(x, z);
-      if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~1.2m)
-        const under = d - 1.2;
-        if (c == null || under < c) c = under;
+      if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~DECK_UNDER)
+        const under = d - DECK_UNDER;
+        // 只有「真能鑽過去的高架段」(底緣淨空 ≥ 最大機體)才擋頭;引道低架段不擋 → 交給 surfaceAt 上橋,免卡死
+        if (under - app.terrain.heightAt(x, z) >= MAX_MECH_H && (c == null || under < c)) c = under;
       }
       return c;
     };
@@ -1644,6 +1652,11 @@ function makeHud() {
       el.classList.remove('on');
       void el.offsetWidth;
       el.classList.add('on');
+    },
+    // 陣亡殉爆過場:on=過場期間紅警邊框開關;flash=額外觸發一次全屏白閃(高潮/觸地);比照 hitmark 的 remove→reflow→add 重觸發
+    deathCine: (on, flash) => {
+      $('deathAlert').classList.toggle('on', !!on);
+      if (flash) { const el = $('deathFlash'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); }
     },
   };
 }

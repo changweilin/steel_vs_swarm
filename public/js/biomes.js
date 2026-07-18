@@ -2127,8 +2127,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       const hA = terrain.heightAt(run[0][0], run[0][1]);
       const hB = terrain.heightAt(run[nP - 1][0], run[nP - 1][1]);
       const deckAt = (s, gx, gz) => {
-        const ramp = Math.min(1, s / 24, (total - s) / 24);
-        const yLine = hA + (hB - hA) * (s / (total || 1)) + BRIDGE_RISE * Math.max(0, ramp);
+        // 端點緩坡改平滑 S 曲線(smoothstep):斜率在坡底與坡頂皆歸零 → 與地面、水平橋面 C1 連續,
+        // 出入口是「連續斜坡」而非硬折角(舊線性版在 s=24 有膝折 = 階梯感)。t=0 逐位元同舊版
+        // (坡底抬升 0 = 接地);total≥48 的橋跨中 t=1 峰值仍滿 BRIDGE_RISE(淨空同今日);total<48 的
+        // 短橋跨中峰值微幅上抬(淨空不減,安全)。geometry/橋墩/decks 碰撞取同一 deckAt 自動跟隨。
+        const t = Math.min(1, s / 24, (total - s) / 24);   // s∈[0,total] 故 t 已夾 [0,1]
+        const ramp = t * t * (3 - 2 * t);                  // smoothstep:兩端切線為 0,免三角函式
+        const yLine = hA + (hB - hA) * (s / (total || 1)) + BRIDGE_RISE * ramp;
         const floor = run.wet ? WATER.LEVEL + 0.9 : -Infinity;
         return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT, floor);
       };
@@ -2255,7 +2260,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
             const vx = x + dz * hw * 0.98 * side, vz = z - dx * hw * 0.98 * side;
             const dy = deckAt(cum[i], x, z);
-            girder.pos.push(vx, dy - 0.1, vz, vx, dy - 1.1, vz);
+            // 底緣夾在地表之上(留 0.2m 微埋):引道口/低架段淨空 <1.1m 時邊梁原本會鑽出地面 = 破圖
+            const gBot = Math.max(dy - 1.1, terrain.heightAt(vx, vz) - 0.2);
+            girder.pos.push(vx, dy - 0.1, vz, vx, gBot, vz);
             girder.nrm.push(dz * side, 0, -dx * side, dz * side, 0, -dx * side);
           }
           for (let i = 0; i < nP - 1; i++) {
@@ -2273,9 +2280,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
             let dx = c[0] - a[0], dz = c[1] - a[1];
             const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-            const dy = deckAt(cum[i], x, z) - 1.1;   // 與邊梁底緣同深(封成箱梁)
-            soffit.pos.push(x + dz * hw * 0.98, dy, z - dx * hw * 0.98,
-                            x - dz * hw * 0.98, dy, z + dx * hw * 0.98);
+            const dyB = deckAt(cum[i], x, z) - 1.1;   // 與邊梁底緣同深(封成箱梁)
+            // 底板同樣夾在地表之上:低淨空引道段免鑽出地面破圖(兩緣各自貼各自地表 → 橋腹在橋頭平順沒入地面)
+            const ex1 = x + dz * hw * 0.98, ez1 = z - dx * hw * 0.98;
+            const ex2 = x - dz * hw * 0.98, ez2 = z + dx * hw * 0.98;
+            const sy1 = Math.max(dyB, terrain.heightAt(ex1, ez1) - 0.2);
+            const sy2 = Math.max(dyB, terrain.heightAt(ex2, ez2) - 0.2);
+            soffit.pos.push(ex1, sy1, ez1, ex2, sy2, ez2);
             soffit.nrm.push(0, -1, 0, 0, -1, 0);
           }
           for (let i = 0; i < nP - 1; i++) {
@@ -2663,7 +2674,9 @@ export function makeDeckIndex(decks) {
       }
     }
   });
-  return (x, z) => {
+  // margin:側向容差(遊戲公尺)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下窄橋面 → 上得了橋),
+  // 天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
+  return (x, z, margin = 0) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
@@ -2673,7 +2686,7 @@ export function makeDeckIndex(decks) {
       const len2 = ex * ex + ez * ez || 1;
       const t = Math.max(0, Math.min(1, ((x - d.x1) * ex + (z - d.z1) * ez) / len2));
       const px = d.x1 + ex * t, pz = d.z1 + ez * t;
-      if (Math.hypot(x - px, z - pz) > d.hw) continue;   // 不在橋面上(側向出界)
+      if (Math.hypot(x - px, z - pz) > d.hw + margin) continue;   // 不在橋面上(側向出界,含容差)
       const y = d.y1 + (d.y2 - d.y1) * t;
       if (best === null || y > best) best = y;
     }
