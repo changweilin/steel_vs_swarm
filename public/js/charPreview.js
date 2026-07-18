@@ -544,17 +544,24 @@ export class CharPreview {
    *  慢速沿用 timeScale = action 時鐘減速(骨架步態放慢看細節);回傳設定後的 mode。 */
   setRun(mode) {
     if (mode !== 'idle' && mode !== 'slow' && mode !== 'normal') return this.runMode;
+    const prev = this.runMode;
     this.runMode = mode;
     this.moving = mode !== 'idle';
-    this.timeScale = mode === 'slow' ? 0.3 : 1;
+    // 慢速→靜止(反向循環):沿用慢速時鐘 0.3× ⇒「動作也反向」= 慢慢停,而非快速煞停。
+    // 停穩後 _stepLoco 立即把時鐘還原 1×(慢速只作用於減速過程本身,不滲進待機/招式演出)。
+    this.timeScale = (mode === 'slow' || (mode === 'idle' && prev === 'slow')) ? 0.3 : 1;
     this.idle = 0;
     this.onMove?.(this.moving, this.speed);
     return mode;
   }
 
-  /** 展示台單鍵循環三態:靜止 → 慢速 → 正常 → 靜止;沿用 setRun 這一個縫。回傳切換後的 mode。 */
-  cycleRun() {
-    return this.setRun({ idle: 'slow', slow: 'normal', normal: 'idle' }[this.runMode] || 'slow');
+  /** 展示台循環三態:dir=+1 正向(靜止→慢速→正常→靜止),dir=-1 反向(靜止→正常→慢速→靜止);
+   *  沿用 setRun 這一個縫。點一下正向、點兩下反向。回傳切換後的 mode。 */
+  cycleRun(dir = 1) {
+    const nxt = dir < 0
+      ? { idle: 'normal', normal: 'slow', slow: 'idle' }
+      : { idle: 'slow', slow: 'normal', normal: 'idle' };
+    return this.setRun(nxt[this.runMode] || 'slow');
   }
 
   /** 移動演示開關(雙擊機體 / W 鍵便捷鍵):靜止 ↔ 上次的跑速(預設正常);回傳切換後是否在移動 */
@@ -611,6 +618,8 @@ export class CharPreview {
     this.speed = want > this.speed
       ? Math.min(want, this.speed + top / MOVE.ACC_S * dt)
       : Math.max(want, this.speed - top / MOVE.DEC_S * dt);
+    // 慢速→靜止收尾:停穩(speed 歸零)後把時鐘還原 1×,慢慢停只作用於減速過程本身
+    if (!this.moving && this.speed <= 0 && this.timeScale < 1) this.timeScale = 1;
     this.travel += this.speed * dt;
     if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
 
@@ -682,7 +691,7 @@ export class CharPreview {
     };
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
-    c.addEventListener('dblclick', () => { this.cycleRun(); });   // 雙擊也走單鍵循環(setRun 內部已觸發 onMove)
+    c.addEventListener('dblclick', () => { this.cycleRun(-1); });   // 雙擊機體 = 反向循環(setRun 內部已觸發 onMove)
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
       this._auto = false;   // 手動縮放後不再自動取景,直到下次施展招式

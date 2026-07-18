@@ -961,7 +961,7 @@ function buildStage(role) {
     <div class="cd-run">
       <button class="cd-run-btn" data-run="idle">⏸ 靜止</button>
     </div>
-    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點按循環 靜止→慢速→正常 ・ 點武器/招式看演出</div>`;
+    <div class="cd-stage-hint">拖曳旋轉 ・ 滾輪縮放 ・ 點按循環跑速(雙擊反向)・ 點武器/招式看演出</div>`;
   shell.appendChild(canvas);
   const q = (s) => shell.querySelector(s);
   const st = { role, preview, shell, canvas, home: null, subject: null, weapons: null };
@@ -973,7 +973,12 @@ function buildStage(role) {
     b.classList.toggle('on', preview.runMode !== 'idle');           // 非靜止 = 高亮(沿用 .cd-run-btn.on)
   };
   st.syncRun = syncRun;   // 供 mountStageInline 重掛時共用同一份標籤邏輯(單一縫)
-  q('.cd-run-btn').onclick = () => { preview.cycleRun(); };   // cycleRun → setRun → onMove → syncRun
+  // 點一下正向循環;點兩下反向循環(用點擊計時分辨,避免雙擊被算成兩次正向 → 乾淨的單步反向)
+  let runClickT = null;
+  q('.cd-run-btn').onclick = () => {
+    if (runClickT) { clearTimeout(runClickT); runClickT = null; preview.cycleRun(-1); }
+    else runClickT = setTimeout(() => { runClickT = null; preview.cycleRun(1); }, 250);
+  };
   q('.cd-size-btn').onclick = () => toggleStageModal(role);
   q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
   preview.onMove = () => syncRun();   // cycleRun / 雙擊 / W / setChar 重置 → 單鍵標籤跟著切
