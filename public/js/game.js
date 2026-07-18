@@ -1733,9 +1733,27 @@ export class BattleClient {
     // 否則橋下高樓的碰撞柱垂直涵蓋橋面高度 → 走在橋上會被橋下建物側推撞下橋(#INC 高架橋掉橋)。
     const surfHere = this._surf(this.pos.x, this.pos.z, this.pos.y);
     const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0;
+    this._surfHere = surfHere; this._onDeck = onDeck;   // 供 _cameraDeClip 共用(免重算)
     for (const b of this.terrain.blockers || []) {
       if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
       if (myBot > b.y + b.h || myTop < b.y) continue;
+      if (b.hw2 != null) {
+        // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
+        const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+        const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
+        const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
+        const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
+        if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) continue;  // 盒外
+        const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);    // 各軸穿透深度 → 沿最小穿透軸推出
+        let dlx = 0, dlz = 0;
+        if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
+        const dwx = dlx * cs - dlz * sn, dwz = dlx * sn + dlz * cs;   // local→world(繞 +ry)
+        this.pos.x += dwx; this.pos.z += dwz;
+        const nl = Math.hypot(dwx, dwz) || 1, nx = dwx / nl, nz = dwz / nl;
+        const into = this.vel.x * nx + this.vel.z * nz;
+        if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
+        continue;
+      }
       const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
       const d = Math.hypot(dx, dz);
       const min = myR + b.r;
@@ -1744,8 +1762,73 @@ export class BattleClient {
       this.pos.x += nx * (min - d);
       this.pos.z += nz * (min - d);
       const into = this.vel.x * nx + this.vel.z * nz;
-      if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞圖資建物:吃掉速度分量
+      if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞神木/巨岩/橋墩:吃掉速度分量
     }
+  }
+
+  /**
+   * 相機防穿模(純視覺,不動 pos/vel/權威狀態):第一人稱鏡頭掛在機體「頭艙」= pos 前方 headF 處,
+   * _collide 只把 pos 擋在障礙圓柱外,鏡頭仍會戳進建物/神木/巨岩等障礙內看穿牆面(破圖)。
+   * 此處沿「pos→鏡頭」水平軸把鏡頭拉回柱體外緣(留 SKIN 餘裕,絕不拉到 pos 後方 → pos 已被 _collide
+   * 擋在 myR 外,退回 pos 必在牆外)。與 _collide 用同一份 blockers/colliders,牆面判定一致。
+   */
+  _cameraDeClip() {
+    const cam = this.camera.position;
+    const ox = this.pos.x, oz = this.pos.z, camY = cam.y;
+    const dx = cam.x - ox, dz = cam.z - oz;
+    const dlen = Math.hypot(dx, dz);
+    if (dlen < 1e-3) return;
+    const ux = dx / dlen, uz = dz / dlen;
+    const SKIN = 0.9;                       // near(0.5)+餘裕:障礙外緣再退一截,免貼面破圖
+    let maxT = dlen;                        // 鏡頭相對 pos 的前伸量上限(不超過原本 headF 水平量)
+    // 射線 P(t)=pos+t·u 進入圓柱(半徑 R,水平圓)的最小 t(較小根);pos 在柱內 → 縮回 pos(t=0)
+    const clamp = (cx, cz, cr) => {
+      const R = cr + SKIN;
+      const ex = ox - cx, ez = oz - cz;
+      const proj = ex * ux + ez * uz;
+      const c = ex * ex + ez * ez - R * R;
+      if (c <= 0) { maxT = 0; return; }      // pos 已在柱內(理論上不會)
+      const disc = proj * proj - c;
+      if (disc <= 0) return;                 // 射線不進柱體
+      const t = -proj - Math.sqrt(disc);
+      if (t > 0 && t < maxT) maxT = t;
+    };
+    // 有向盒版(建物):射線在盒 local frame 走 slab 求進入 t(盒外擴 SKIN);pos 已在盒內 → 縮回 pos
+    const clampBox = (b) => {
+      const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+      const olx = (ox - b.x) * cs + (oz - b.z) * sn, olz = -(ox - b.x) * sn + (oz - b.z) * cs;
+      const ulx = ux * cs + uz * sn, ulz = -ux * sn + uz * cs;
+      const ex = b.hw2 + SKIN, ez = b.hd2 + SKIN;
+      if (Math.abs(olx) < ex && Math.abs(olz) < ez) { maxT = 0; return; }
+      let tmin = -Infinity, tmax = Infinity;
+      const axes = [[olx, ulx, ex], [olz, ulz, ez]];
+      for (const [o, d, e] of axes) {
+        if (Math.abs(d) < 1e-9) { if (o < -e || o > e) return; continue; }   // 平行且在板外 → 不相交
+        let t1 = (-e - o) / d, t2 = (e - o) / d; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+        tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+      }
+      if (tmax < tmin || tmax < 0) return;   // 射線不進盒體(或盒在後方)
+      const t = tmin > 0 ? tmin : 0;
+      if (t < maxT) maxT = t;
+    };
+    const onDeck = this._onDeck, surfHere = this._surfHere ?? this._surf(ox, oz, this.pos.y);
+    for (const b of this.terrain.blockers || []) {
+      if (onDeck && b.y < surfHere - 3) continue;                       // 站橋面上:橋下街廓不處理(高架飛越)
+      if (camY < b.y || camY > b.y + b.h) continue;                     // 垂直不重疊
+      const rr = b.hw2 != null ? Math.max(b.hw2, b.hd2) : b.r;
+      if (Math.hypot(ox - b.x, oz - b.z) > dlen + rr + SKIN + 1) continue;  // broad-phase:太遠不可能戳到
+      if (b.hw2 != null) clampBox(b); else clamp(b.x, b.z, b.r);
+      if (maxT <= 0) break;
+    }
+    if (maxT > 0) for (const ent of this.ents.values()) {
+      if (!ent.colR || ent.isSelf) continue;                            // 阻擋型障礙(危險區/防空/中繼)
+      const p = ent.mesh.position, ch = ent.colH || 6;
+      if (camY < p.y || camY > p.y + ch) continue;
+      if (Math.hypot(ox - p.x, oz - p.z) > dlen + ent.colR + SKIN + 1) continue;
+      clamp(p.x, p.z, ent.colR);
+      if (maxT <= 0) break;
+    }
+    if (maxT < dlen) { cam.x = ox + ux * maxT; cam.z = oz + uz * maxT; }
   }
 
   // ---------------- 輸入 ----------------
@@ -3824,25 +3907,39 @@ export class BattleClient {
   _engulfFPV(cam) {
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
-    for (let i = 0; i < 3; i++) {
+    // 火 + 煙集中在左右兩側帶,中央 ~1/3 正前方留空 —— 被擊殺過場仍看得見前方戰況(可讀性優先)。
+    // 交替左右均衡;每顆側向強制外推(lat 絕對值 ≥1.7),焰/煙球不侵入正前方視野。
+    for (let i = 0; i < 4; i++) {
+      const side = (i % 2) ? 1 : -1;                     // 交替左右兩側
+      const smoke = i >= 2;                              // 後兩顆為煙(灰、法線混色),前兩顆為火(加法)
+      const d = (smoke ? 1.8 : 1.6) + Math.random() * 1.2;
+      const base = smoke ? 1.8 + Math.random() * 1.3 : 1.1 + Math.random() * 1.0;
+      // 側向外推量與尺寸掛鉤:大焰球推更遠 → 內緣不越過中央 1/3(FOV 68°,中央 1/3 = ±11°);
+      // 焰/煙自畫面左右邊緣舔入(集中兩側),正前方 1/3 保持視野。
+      const lat = side * ((smoke ? 2.4 : 1.9) + base * 0.35 + Math.random() * 1.2);
       const p = cam.position.clone()
-        .addScaledVector(fwd, 1.6 + Math.random() * 1.3)
-        .addScaledVector(right, (Math.random() - 0.5) * 3)
-        .add(new THREE.Vector3(0, -0.6 - Math.random() * 0.9, 0));   // 從下方往上舔
+        .addScaledVector(fwd, d)
+        .addScaledVector(right, lat)
+        .add(new THREE.Vector3(0, (smoke ? 0.2 : -0.4) - Math.random() * 0.9, 0));   // 火從下往上舔、煙齊眼高翻騰
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-        map: this._fireTex(), color: Math.random() < 0.5 ? 0xff7a2a : 0xffd166,
-        transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+        map: smoke ? this._smokeTex() : this._fireTex(),
+        color: smoke ? 0x4a4e52 : (Math.random() < 0.5 ? 0xff7a2a : 0xffd166),
+        transparent: true, opacity: smoke ? 0.55 : 0.9, depthWrite: false,
+        blending: smoke ? THREE.NormalBlending : THREE.AdditiveBlending }));
       sp.userData.noOutline = true;
       sp.position.copy(p);
-      const base = 1.6 + Math.random() * 1.5; sp.scale.setScalar(base);
+      sp.scale.setScalar(base);
       this.scene.add(sp);
+      const rise = smoke ? 2 : 3 + Math.random() * 3, grow = smoke ? 1.2 : 0.8, op = smoke ? 0.55 : 0.9;
       this.effects.push({
-        obj: sp, ttl: 0.32 + Math.random() * 0.26,
-        fade: (o, f, dt) => { o.position.y += (3 + Math.random() * 3) * dt; o.scale.setScalar(base * (1 + (1 - f) * 0.8)); o.material.opacity = 0.9 * f; },
+        obj: sp, ttl: (smoke ? 0.5 : 0.32) + Math.random() * 0.26,
+        fade: (o, f, dt) => { o.position.y += rise * dt; o.scale.setScalar(base * (1 + (1 - f) * grow)); o.material.opacity = op * f; },
         dispose: () => sp.material.dispose(),
       });
     }
-    this._emberBurst(cam.position.x, cam.position.y - 0.3, cam.position.z, 4, 2.4);
+    // 火星只沿兩側迸射(以 right 軸偏移),中央不撒 → 正前方保持通透
+    for (const s of [-1, 1]) this._emberBurst(
+      cam.position.x + right.x * s * 2.2, cam.position.y - 0.3, cam.position.z + right.z * s * 2.2, 2, 1.6);
   }
 
   /** 火焰粒子貼圖(快取,512px):白熱核心 + 中層暖輝 + 大量細火舌 + 熱斑點 → 加法混色的高解析度火光。 */
@@ -4175,6 +4272,7 @@ export class BattleClient {
     this.camera.rotateY(this.yaw + this.recoil.y + shY);
     this.camera.rotateX(this.pitch + this.recoil.p + shP);
     this.camera.rotateZ(this.roll + shR);
+    this._cameraDeClip();   // 鏡頭防穿模:貼牆時退回障礙外緣,不看穿建物/神木/巨岩
 
     // 瞄準縮放:按住右鍵拉近視角(FOV 越小越像瞄準鏡)
     const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;

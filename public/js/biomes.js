@@ -2674,8 +2674,13 @@ export function makeDeckIndex(decks) {
       }
     }
   });
-  // margin:側向容差(遊戲公尺)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下窄橋面 → 上得了橋),
-  // 天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
+  // margin:**側向**容差(遊戲公尺,垂直於橋段方向)。站立表面查詢帶 margin(讓機體貼近橋緣不掉下
+  // 窄橋面 → 上得了橋),天花碰撞查詢用 0(緊貼可見橋面,免橋緣外憑空撞頭)。
+  // margin MUST NOT 洩到「縱向」(沿橋段方向):相鄰橋段共用端點會自然接手,只需 LONG_TOL 微容差銜接。
+  // 前科(2026-07-18 倫敦案實測):舊版用 hypot(到夾制端點) > hw+margin 判定,margin=3 讓查詢點
+  // 縱向溢出到「相鄰較高橋段」的端點 → 斜引道上回報的橋面高度被高估近一整段(~2.5m)→ 上橋台階
+  // 超過 DECK_STEP → 爬到一半掉回地面、卡在橋下(=「無法走上去 / 破圖穿越」)。分離側向/縱向即修正。
+  const LONG_TOL = 1.0;   // 縱向端點外容差:遠低於橋段長(ROAD_SEG 6m),不會夠到相鄰段端點
   return (x, z, margin = 0) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
@@ -2683,10 +2688,15 @@ export function makeDeckIndex(decks) {
     for (const n of arr) {
       const d = decks[n];
       const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
-      const len2 = ex * ex + ez * ez || 1;
-      const t = Math.max(0, Math.min(1, ((x - d.x1) * ex + (z - d.z1) * ez) / len2));
-      const px = d.x1 + ex * t, pz = d.z1 + ez * t;
-      if (Math.hypot(x - px, z - pz) > d.hw + margin) continue;   // 不在橋面上(側向出界,含容差)
+      const len2 = ex * ex + ez * ez || 1, len = Math.sqrt(len2);
+      const tRaw = ((x - d.x1) * ex + (z - d.z1) * ez) / len2;
+      // 縱向:超出線段兩端的距離只准 LONG_TOL(margin 不放寬縱向 → 斜引道橋面高度不被高估)
+      const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
+      if (over > LONG_TOL) continue;
+      // 側向:點到橋段直線的垂距(叉積 / 段長),margin 只放寬這一維(貼橋緣不掉下)
+      const lat = Math.abs((x - d.x1) * ez - (z - d.z1) * ex) / len;
+      if (lat > d.hw + margin) continue;
+      const t = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
       const y = d.y1 + (d.y2 - d.y1) * t;
       if (best === null || y > best) best = y;
     }
@@ -3773,7 +3783,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           }
           const palC = pal[((i * 2654435761) >>> 0) % pal.length];
           inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
-          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1 });
+          // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
+          // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
+          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, hw2: b.w / 2, hd2: b.d / 2, ry: b.ry });
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
