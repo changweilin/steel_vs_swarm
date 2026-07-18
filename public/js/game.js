@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altF, isGunnery,
 } from './data.js';
@@ -1846,8 +1846,8 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // F:無人機釋放自殺攻擊機 / 機甲分離發射餌機(右鍵已改為瞄準)
-          if (e.code === 'KeyF') { if (this.isDrone) this._launchKamikaze(); else this._launchDecoy(); }
+          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)改「狙擊模式長按左鍵」觸發
+          // (見 _tickSnipeAbility);F 鍵停用(2026-07-18)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
           if (e.code === 'KeyH') this._civAct('away');
@@ -1954,6 +1954,7 @@ export class BattleClient {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
+        ent.kcd = e.kcd;   // 無人機護衛自殺機冷卻(其他客戶端據此顯隱貼身護衛機;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
@@ -1965,7 +1966,8 @@ export class BattleClient {
         if (ent.isSelf) {
           this.decoyCd = e.dcd ?? 0;
           this.decoyDocked = !!e.dc;
-          this.kamiCd = e.kcd ?? 0;   // 無人機自殺攻擊機 F 鍵冷卻(HUD)
+          this.kamiCd = e.kcd ?? 0;   // 無人機護衛自殺機冷卻(HUD;歸零 = 兩架重現)
+          this.barrageCd = e.bcd ?? 0;   // 非變形機甲重砲模式冷卻(HUD)
 
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
@@ -2113,7 +2115,7 @@ export class BattleClient {
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
     const { group, mixer } = makeUnit(key, civ ? e.cs : e.s, { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' });
-    if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 自殺攻擊機:1/3 體型
+    if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
     const isSelf = hero && e.pid != null && e.pid === this.youId && !!e.act;
@@ -2157,8 +2159,38 @@ export class BattleClient {
     if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
     else if (isThirdSide(e.s)) this._addRangeRing(ent, e);   // 第三方(GUER/MILI)戰鬥單位與碉堡:貼地射程光暈
     if (e.k === 'bunker') this._clearAroundBunker(e);        // 碉堡淨空:移除重疊建物 + 清同區碰撞柱
+    // 無人機:兩架常駐護衛自殺機(純外觀,貼身跟隨;觸發前不可鎖定/受傷 = 不進 sim)。自機 FPV 看不到自身,略過。
+    if (e.k === 'drone' && !isSelf) this._buildDroneEscorts(ent);
     this.ents.set(e.id, ent);
     return ent;
+  }
+
+  /** 無人機兩架常駐護衛自殺機(純客戶端外觀:外觀同主機、SIZE_F 體型、貼身兩側)。
+   *  觸發前不是 sim 實體(不可鎖定/受傷);狙擊長按左鍵衝出時交給 sim 的 kami 實體渲染,
+   *  自爆後 kamiCd 歸零才重現(見 _updateEscorts 的顯隱判定)。 */
+  _buildDroneEscorts(ent) {
+    ent.escorts = [];
+    for (let i = 0; i < SQUAD.KAMI.N; i++) {
+      const { group } = makeUnit('hero:drone', ent.side, { ch: ent.ch, ring: false });
+      group.scale.setScalar(SQUAD.KAMI.SIZE_F);
+      group.visible = false;
+      this.scene.add(group);
+      if (group.userData.spin) this.spinners.add(group);
+      ent.escorts.push({ mesh: group, s: i === 0 ? -1 : 1 });   // 左 / 右
+    }
+  }
+
+  /** 每幀擺放護衛機於主機兩側(隨主機朝向);kami 冷卻中(已衝出/未重現)或主機不可見則隱藏 */
+  _updateEscorts(ent) {
+    const ready = ent.mesh.visible && (ent.kcd || 0) <= 0.05;
+    const yaw = ent.mesh.rotation.y, cx = Math.cos(yaw), sx = Math.sin(yaw);
+    const p = ent.mesh.position, off = 3.5, back = -1.0;
+    for (const es of ent.escorts) {
+      es.mesh.visible = ready;
+      if (!ready) continue;
+      es.mesh.position.set(p.x + cx * off * es.s + sx * back, p.y, p.z - sx * off * es.s + cx * back);
+      es.mesh.rotation.y = yaw;
+    }
   }
 
   // 碉堡淨空:碉堡進場時移除與其重疊的客戶端建物/地標(視覺 + 碰撞柱一併,由 clearAround 內部同判定處理,
@@ -2263,6 +2295,7 @@ export class BattleClient {
     if (ent.shield) this.shields.delete(ent.shield);
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
+    if (ent.escorts) for (const es of ent.escorts) { this.scene.remove(es.mesh); this.spinners.delete(es.mesh); }
     this.ents.delete(id);
   }
 
@@ -2596,6 +2629,15 @@ export class BattleClient {
         const bump = this.mineMeshes.get(ev.mid);
         if (bump) { this.scene.remove(bump); this.mineMeshes.delete(ev.mid); }
       }
+    } else if (ev.e === 'decoyBomb') {
+      // 變形機甲餌機沿途投彈:依機體類型上色的爆風 + 地環(燃燒橙/凍結藍/毒霧綠/雷爆黃)
+      const [x, z] = [ev.x, -ev.z];
+      const gy = this.terrain.heightAt(x, z);
+      const y = gy + (ev.y != null ? ev.y : 2);
+      const col = (DECOY_BOMB[ev.bomb] || DECOY_BOMB.fire).color;
+      this._explosion(x, y, z, ev.r * 0.9, col);
+      shockRing(this.scene, this.effects, x, gy, z, ev.r * 1.6, col);
+      this._applyBlast(x, y, z, ev.r);
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
@@ -3371,14 +3413,17 @@ export class BattleClient {
     }
     const { id, def, st } = this._curWeapon();
     if (!def || !st) return;
+    // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%
+    const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
+    const rMul = barraging ? BARRAGE.RANGE_F : 1;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
-    if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
+    if (!barraging && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
     const mpc = id === 'heavy' ? heavyMpCost(def, this.upg?.wm) : 0;
-    if (mpc > 0 && this.mp < mpc) {
+    if (!barraging && mpc > 0 && this.mp < mpc) {
       if (now - (this._mpWarnAt || 0) > 1.5) { this._mpWarnAt = now; this.hud.feed?.(`🔋 電力不足(【${def.name}】每發需 ${mpc} MP)`); }
       return;
     }
@@ -3418,7 +3463,7 @@ export class BattleClient {
     }
     this.lastFireAt[id] = now;
     st.ammo--;
-    if (mpc > 0) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電;快照回寫校正
+    if (mpc > 0 && !barraging) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電(重砲窗免電力);快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
     // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
     if (prof.burst && !def.fan) {
@@ -3465,7 +3510,7 @@ export class BattleClient {
 
     if (def.type === 'beam') {
       // 定向能:光速直擊(無彈道下墜),仍受射程限制;光束短暫駐留 = 持續穩定輸出感
-      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def));   // 高度制空
+      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul);   // 高度制空(重砲 +20%)
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       this._tracer(muzzle, point, col, 0.35);
       this._muzzleBurst(muzzle, id === 'heavy', this.side);
@@ -3492,7 +3537,7 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
       pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
-      dist: 0, max: def.range * this._altRangeMul(def), mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
+      dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
 
       mv: def.mv || 600, guide: !!def.guide, homing,
     });
@@ -3659,19 +3704,48 @@ export class BattleClient {
    * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
    */
   /**
-   * 無人機 F 鍵(2026-07-17):前方左右各釋放一架自殺攻擊機(1/3 體型/血量、3 倍速撲擊)。
-   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自殺機自動索敵。
+   * 無人機護衛自殺機(2026-07-18;狙擊模式長按左鍵):兩架常駐護衛機衝出撲擊(各半傷、3 倍速)。
+   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵;自爆後 CD 結束才重現。
    */
   _launchKamikaze() {
     if (!this.isDrone || this.dead) return;
     if ((this.kamiCd || 0) > 0.05) {
-      this.hud.feed?.(`🛠️ 自殺攻擊機整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
+      this.hud.feed?.(`🛠️ 護衛自殺機整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
       return;
     }
     this.trauma = 0.6;
     this.kamiCd = SQUAD.KAMI.CD_S;   // 樂觀本地冷卻(下一份快照的 kcd 會校正)
     this.net.send({ t: 'kami' });
-    this.hud.feed?.(`💥 釋放 ${SQUAD.KAMI.N} 架自殺攻擊機`);
+    this.hud.feed?.(`💥 ${SQUAD.KAMI.N} 架護衛自殺機衝出!`);
+  }
+
+  /** 狙擊模式(右鍵)持續按住左鍵達 GAME.SNIPE_HOLD_S → 觸發機種專屬能力。
+   *  短按/連按照常開火;達門檻才觸發,一次按住只觸發一次(放開或退出狙擊即重置)。 */
+  _tickSnipeAbility(now) {
+    if (!this.side || this.dead || this.shopOpen || !this.aiming || !this.firing) {
+      this._snipeHoldAt = 0; this._snipeFired = false; return;
+    }
+    if (!this._snipeHoldAt) { this._snipeHoldAt = now; this._snipeFired = false; return; }
+    if (this._snipeFired || now - this._snipeHoldAt < GAME.SNIPE_HOLD_S) return;
+    this._snipeFired = true;
+    if (this.isDrone) this._launchKamikaze();
+    else if (this.isMorph) this._launchDecoy();
+    else this._launchBarrage();
+  }
+
+  /** 重砲模式(非變形機甲:狙擊長按左鍵):送請求 + 開本地傾洩窗(0.5s 內快速傾洩剩餘重武器彈夾,
+   *  傷害 +33%、射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage)。 */
+  _launchBarrage() {
+    if (this.isDrone || this.isMorph || this.dead || !this.side) return;
+    if ((this.barrageCd || 0) > 0.05) {
+      this.hud.feed?.(`🎯 重砲整備中(${(this.barrageCd || 0).toFixed(0)}s)`);
+      return;
+    }
+    this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(下一份快照的 bcd 校正)
+    this._barrageUntil = performance.now() / 1000 + BARRAGE.DUR;
+    this.trauma = Math.min(1, this.trauma + 0.4);
+    this.net.send({ t: 'barrage' });
+    this.hud.feed?.('💥 重砲模式:傾洩彈夾!');
   }
 
   _bombMesh(color) {
@@ -3710,10 +3784,10 @@ export class BattleClient {
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      // 無人機自殺攻擊機:F 冷卻倒數(0 = 就緒)
+      // 機種專屬能力(狙擊模式長按左鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
       kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
-      // 機甲餌機:掛點就緒 / 重組倒數(F 分離發射)
-      decoy: this.isDrone ? null : { ready: !!this.decoyDocked, cd: this.decoyCd || 0 },
+      decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
+      barrage: (!this.isDrone && !this.isMorph) ? { cd: this.barrageCd || 0 } : null,
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
     };
   }
@@ -4303,6 +4377,7 @@ export class BattleClient {
       if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
       this._burstN = {};
     }
+    this._tickSnipeAbility(now);   // 狙擊模式長按左鍵 → 機種專屬能力(在 _tryFire 之前判定手勢)
     this._tryFire(now);
     this._tickLock(now);
   }
@@ -4424,7 +4499,11 @@ export class BattleClient {
 
   _updateEnts(dt, now) {
     for (const ent of this.ents.values()) {
-      if (ent.isSelf) { ent.mesh.position.copy(this.pos); continue; }
+      if (ent.isSelf) {
+        ent.mesh.position.copy(this.pos);
+        if (ent.escorts) for (const es of ent.escorts) es.mesh.visible = false;   // 切為自機視角:貼身護衛機藏起(自機 FPV 不畫)
+        continue;
+      }
       if (ent.isStatic) {
         const y = this.terrain.heightAt(ent.tgt.x, ent.tgt.z);
         ent.mesh.position.set(ent.tgt.x, y, ent.tgt.z);
@@ -4486,6 +4565,9 @@ export class BattleClient {
         }
       }
       cur.set(nx, ny, nz);
+      // 無人機兩架貼身護衛自殺機(顯隱依 kami 冷卻);切離自機視角的機體補建護衛(spawn 時是自機故未建)
+      if (ent.kind === 'drone' && !ent.escorts) this._buildDroneEscorts(ent);
+      if (ent.escorts) this._updateEscorts(ent);
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);

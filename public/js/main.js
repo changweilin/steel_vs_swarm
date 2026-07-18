@@ -738,13 +738,12 @@ function charWeaponRow(id, slot, key) {
   const w = (l) => heroWeapon(id, slot, l);
   const bits = [`傷害 ${tri((l) => w(l).dmg)}`, `射程 ${Math.round(w(1).range)}m`];
   if (slot === 'light') bits.push(`射速 ${tri((l) => w(l).rate, 1)}/s`, `彈匣 ${tri((l) => w(l).mag)}`);
-  else bits.push(`冷卻 ${tri((l) => w(l).reload, 1)}s`);
+  else bits.push(`彈夾 ${tri((l) => w(l).mag)}`, `裝填 ${tri((l) => w(l).reload, 1)}s`);
   if (raw.r) bits.push(`爆風 ${tri((l) => w(l).r)}m`);
   if (raw.pen) bits.push(`破甲 ${tri((l) => w(l).pen)}`);
   if (raw.crit) bits.push(`爆擊 ${Math.round(w(1).crit * 100)}%×${w(1).critX}`);
   if (raw.emp) bits.push(`癱瘓 ${tri((l) => w(l).emp, 1)}s`);
   // 機制標籤(2026-07-11 武器多元化):一眼看出這把的操作手感
-  if (raw.charge) bits.push(`蓄力 ${tri((l) => w(l).charge, 1)}s`);
   if (raw.arc) bits.push(`扇形 ±${tri((l) => w(l).arc)}°`);
   if (raw.guide) bits.push('雷射導引');
   if (raw.type === 'missile') bits.push('鎖定追蹤');
@@ -828,7 +827,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;F 鍵可釋放兩架自殺攻擊機。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,狙擊模式長按左鍵令其衝出(各半傷、自爆後 30s 重現)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
@@ -1496,10 +1495,10 @@ function enterGame() {
     : '觀戰模式';
   $('pauseHelp').innerHTML = app.mySide
     ? (heroKind === 'drone'
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ F 釋放自殺攻擊機(前方左右各一,3 倍速撲擊、會吸走敵方導引飛彈,CD 30s) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用自殺機拆塔清群!'
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ 狙擊模式長按左鍵 令兩架常駐護衛自殺機衝出(各半傷、3 倍速撲擊、吸走敵方導引飛彈,CD 30s、自爆後重現) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用護衛機拆塔清群!'
       : heroKind === 'morph'
-      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ F 分離餌機(有鎖定就追蹤,右下角回傳畫面) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
+      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按左鍵 分離餌機(沿途投彈:依機體類型燃燒/凍結/毒霧/雷爆,有鎖定就追蹤,CD 30s) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
+      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵按住 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按左鍵 重砲模式(0.5s 傾洩剩餘彈夾、傷害 +33% 射程 +20%,CD 30s) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
     : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
   $('pauseHelp').innerHTML += ' ・ ESC 戰場選單/離開';
   toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
@@ -1532,11 +1531,12 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // F 鍵:無人機 = 釋放自殺攻擊機(就緒 / 冷卻);機甲 = 分離發射餌機(就緒 / 重組倒數)
-        const fTag = w.kami ? (w.kami.cd > 0.05 ? `(F 自殺機 ${w.kami.cd.toFixed(0)}s)` : `(F 自殺機 ×${w.kami.n})`)
-          : w.decoy ? (w.decoy.ready ? '(F 餌機就緒)' : `(F 餌機 ${w.decoy.cd.toFixed(0)}s)`)
+        // 狙擊模式長按左鍵:無人機 = 護衛自殺機;變形機甲 = 餌機(沿途投彈);非變形機甲 = 重砲模式
+        const abTag = w.kami ? (w.kami.cd > 0.05 ? `(護衛機 ${w.kami.cd.toFixed(0)}s)` : `(護衛機 ×${w.kami.n} 就緒)`)
+          : w.decoy ? (w.decoy.ready ? '(餌機就緒)' : `(餌機 ${w.decoy.cd.toFixed(0)}s)`)
+          : w.barrage ? (w.barrage.cd > 0.05 ? `(重砲 ${w.barrage.cd.toFixed(0)}s)` : '(重砲就緒)')
           : '';
-        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${fTag}${morphTag}`;
+        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${abTag}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;

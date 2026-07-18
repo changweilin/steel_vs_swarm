@@ -6,7 +6,7 @@ import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, QUAL, masteryF, chargeF, heavyMpCost,
-  HEROIC, VITALS, armorMul, SQUAD, tierVal,
+  HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
 } from '../public/js/data.js';
 
@@ -232,11 +232,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(Math.abs(UNITS.drone.sight / UNITS.robot.sight - 1.125) < 0.01,
     `無人機射程上限 ≈ 機甲 ×9/8(sight ${UNITS.drone.sight} vs ${UNITS.robot.sight},射程較機甲高約 1/8)`);
 
-  log('— sim:無人機自殺攻擊機(F:前方左右各一 / 3 倍速撲擊 / 吸走導引飛彈 / 主機不自爆)—');
+  log('— sim:無人機護衛自殺機(狙擊長按左鍵:兩架衝出 / 半傷 / 3 倍速撲擊 / 吸走導引飛彈 / 主機不自爆)—');
   const $kill0 = dr.money;
   sim.heroKamikaze('p_d');
-  assert(sq.kamis.length === SQUAD.KAMI.N, `F 釋放 ${SQUAD.KAMI.N} 架自殺攻擊機(實際 ${sq.kamis.length})`);
-  assert(!dr.dead, '主機不再自爆(單機是玩家唯一機體)');
+  assert(sq.kamis.length === SQUAD.KAMI.N, `護衛機衝出 ${SQUAD.KAMI.N} 架(實際 ${sq.kamis.length})`);
+  assert(!dr.dead, '主機不自爆(護衛機才是自殺攻擊來源)');
   const kExpHp = Math.max(1, Math.round(dr.maxHp * SQUAD.KAMI.HP_F));
   assert(sq.kamis.every((k) => k.kami && k.side === 'SWARM' && Math.abs(k.hp - kExpHp) <= 1),
     `自殺機 HP = 主機 ×${SQUAD.KAMI.HP_F.toFixed(2)}(${sq.kamis[0].hp} ≈ ${kExpHp})`);
@@ -257,7 +257,21 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(!sim.ents.has(victim.id), '自殺機撲擊近炸(重型炸彈爆風)炸死孤立敵兵');
   assert(!sim.ents.has(k0.id) && !sq.kamis.includes(k0), '自殺機引爆後移除');
   assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺賞金記主機 +$${Math.round(dr.money - $kill0)}`);
-  for (const k of [...sq.kamis]) sim._removeKami(k);   // 收掉剩餘自殺機
+  // 半傷驗證(2026-07-18):護衛機爆風 = 重型炸彈 × KAMI.DMG_F(0.5)
+  assert(Math.abs(SQUAD.KAMI.DMG_F - 0.5) < 1e-9, `護衛機傷害減半常數 DMG_F=${SQUAD.KAMI.DMG_F}`);
+  if (sq.kamis.length) {
+    const k1 = sq.kamis[0];
+    const beef = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x - 400, z: dr.z - 400, y: 0, hp: 9999 });
+    k1.x = beef.x; k1.z = beef.z; k1.y = 0; k1.tid = beef.id;
+    const bhp0 = beef.hp;
+    sim._tickKamis(0.05);
+    const bombLv1 = tierVal(WEAPONS.bomb.dmg, dr.abil?.light || 1);
+    const expHalf = bombLv1 * SQUAD.KAMI.DMG_F * WEAPONS.bomb.vs.flesh * armorMul(UNITS.soldier.armor, WEAPONS.bomb.pen);
+    assert(Math.abs((bhp0 - beef.hp) - expHalf) < 2,
+      `護衛機近炸半傷 ${(bhp0 - beef.hp).toFixed(0)} ≈ 重彈 ${bombLv1} ×${SQUAD.KAMI.DMG_F} × 肉體 ${WEAPONS.bomb.vs.flesh} × 護甲減免(${expHalf.toFixed(0)})`);
+    if (sim.ents.has(beef.id)) sim.ents.delete(beef.id);
+  }
+  for (const k of [...sq.kamis]) sim._removeKami(k);   // 收掉剩餘護衛機
 
   log('— sim:無人機重生冷卻 —');
   dr.hp = 0; sim._kill(dr, null);
@@ -271,36 +285,56 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   dr.rg = false;
   sim.heroes.set('p_d', dr); sq.act = 0;   // 主視野切回 dr,後續測試對它結算
 
-  log('— sim:機甲餌機(F 分離 / 追蹤 / 失聯 / 誘餌 HP)—');
+  log('— sim:變形機甲餌機(狙擊長按左鍵分離 / 沿途投彈 / 追蹤 / 失聯;非變形機甲改重砲無餌機)—');
   {
-    const rb = sim.heroes.get('p_r');
-    rb.dead = false; rb.hp = rb.maxHp; rb.x = 0; rb.z = 0; rb.y = 0; rb.ry = 0;
-    const rsq = sim.squads.get('p_r');
+    // 非變形機甲(robot)不再有餌機
+    const rbR = sim.heroes.get('p_r');
+    rbR.dead = false; rbR.x = 0; rbR.z = 0; rbR.y = 0;
+    sim.squads.get('p_r').decoyCd = 0;
     sim.heroDecoy('p_r');
-    const d = rsq.decoy;
-    assert(!!d && d.kind === 'decoy', '機甲 F 分離出餌機(無人機沒有;無鎖定 = 直飛)');
-    assert(Math.abs(d.hp - rb.maxHp * DECOY.HP_F) < 1, `餌機 HP = 主機甲的 ${DECOY.HP_F}(${d.hp})`);
-    assert(!d.tid, '無鎖定 → 不追蹤');
-    assert(rsq.decoyCd > sim.t, '發射即進入冷卻,空中同時只有一架');
-    const before = rsq.decoy;
-    sim.heroDecoy('p_r');
-    assert(rsq.decoy === before, '冷卻/空中有機時再按 F 無效');
-    // 直飛:ry=0 → 沿 +z 前進(與 _moveTo 同慣例)
-    const z0 = d.z;
-    sim._tickDecoys(0.5);
-    assert(d.z > z0 + DECOY.SPEED * 0.4, '無鎖定的餌機沿發射瞬間機首方向直飛(玩家不能操舵)');
+    assert(!sim.squads.get('p_r').decoy, '非變形機甲(robot)不再分離餌機(改重砲模式)');
+
+    // 變形機甲(morph)分離餌機
+    const mo = sim.addHero('STEEL', 'p_m', 'm01');
+    mo.dead = false; mo.hp = mo.maxHp; mo.x = 0; mo.z = 0; mo.y = 0; mo.ry = 0;
+    const msq = sim.squads.get('p_m');
+    sim.heroDecoy('p_m');
+    const d = msq.decoy;
+    assert(!!d && d.kind === 'decoy', '變形機甲狙擊長按左鍵分離出餌機(無鎖定 = 直飛)');
+    assert(Math.abs(d.hp - mo.maxHp * DECOY.HP_F) < 1, `餌機 HP = 主機甲的 ${DECOY.HP_F}(${d.hp})`);
+    assert(d.bombType && d.bombsLeft === DECOY.BOMB_MAX, `餌機帶沿途投彈:類型 ${d.bombType}、彈數 ${d.bombsLeft}`);
+    assert(msq.decoyCd > sim.t, '發射即進入冷卻,空中同時只有一架');
+    const before = msq.decoy;
+    sim.heroDecoy('p_m');
+    assert(msq.decoy === before, '冷卻/空中有機時再按無效');
+
+    // 沿途投彈:敵人進 BOMB_R 才丟一枚,依機體類型(m01 = 雷爆)附加狀態
+    const bombDef = DECOY_BOMB[d.bombType];
+    const prey = sim._add({ kind: 'soldier', side: 'SWARM', x: d.x + 5, z: d.z, y: 0, hp: 9999 });
+    const bl0 = d.bombsLeft, php0 = prey.hp;
+    d.nextBomb = 0;
+    sim._tickDecoys(0.05);
+    assert(d.bombsLeft === bl0 - 1, `敵入攻擊範圍 → 投下一枚(剩 ${d.bombsLeft})`);
+    assert(php0 - prey.hp > 0, '投彈直擊造成傷害(略高於輕武器)');
+    assert(prey.asst && prey.asst.p_m != null, '投彈貢獻記助攻(輔助收入)');
+    if (bombDef.dot) assert(prey.bleed && prey.bleed.pid === 'p_m', '燃燒/毒霧:持續傷害 DoT(記施放者)');
+    if (bombDef.slow) assert((prey.slowUntil || 0) > sim.t, '凍結/毒霧:減速');
+    if (bombDef.emp) assert((prey.empUntil || 0) > sim.t, '雷爆:武器離線 EMP');
+    if (bombDef.stun) assert((prey.stunUntil || 0) > sim.t, '雷爆:短暫麻痺');
+    sim.ents.delete(prey.id);
+
     // 誘餌:它是敵方的合法目標,且被擊落不引爆
     const bait = sim._acquireTarget({ side: 'SWARM', x: d.x, z: d.z }, { range: 200 });
     assert(bait === d || bait?.kind === 'decoy', '餌機是敵方單位的合法鎖定目標(吸火力)');
     d.hp = 0;
     sim._kill(d, null);
-    assert(!sim.ents.has(d.id) && !rsq.decoy, '餌機被擊落 → 從場上與小隊狀態一起清掉');
+    assert(!sim.ents.has(d.id) && !msq.decoy, '餌機被擊落 → 從場上與小隊狀態一起清掉');
 
     // 失聯:超過 LINK_M 即斷訊、放棄追蹤,且不再提供視野
-    rsq.decoyCd = 0;
-    sim.heroDecoy('p_r');
-    const d2 = rsq.decoy;
-    d2.x = rb.x + DECOY.LINK_M + 50;
+    msq.decoyCd = 0;
+    sim.heroDecoy('p_m');
+    const d2 = msq.decoy;
+    d2.x = mo.x + DECOY.LINK_M + 50;
     d2.tid = 999;
     sim._tickDecoys(0.05);
     assert(d2.lost && !d2.tid, `餌機超過 ${DECOY.LINK_M}m 失聯(鏈路中斷 → 失去火控)`);
@@ -311,9 +345,44 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     near.y = d2.y;
     d2.dieAt = sim.t - 1;
     sim._tickDecoys(0.05);
-    assert(!rsq.decoy, '燃料耗盡 → 自爆並清場');
+    assert(!msq.decoy, '燃料耗盡 → 自爆並清場');
     assert(!sim.ents.has(near.id), `自爆爆風(${DECOY.DMG} × 肉體 ${DECOY.vs.flesh})炸死近旁敵兵`);
     assert(LOCK.TTL > 0 && DECOY.CD_S > 0, '鎖定時效 / 餌機冷卻皆為正值');
+  }
+
+  log('— sim:非變形機甲重砲模式(狙擊長按左鍵:傾洩彈夾 / +33% 傷害 / +20% 射程 / 獨立 CD)—');
+  {
+    const rb3 = sim.heroes.get('p_r');
+    rb3.dead = false; rb3.hp = rb3.maxHp; rb3.mp = rb3.maxMp; rb3.x = 0; rb3.z = 0; rb3.y = 0;
+    rb3.barrageCd = 0; rb3.barrageUntil = 0;
+    rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
+    // 只有非變形機甲能重砲
+    sim.heroBarrage('p_d'); assert(!((sim.heroes.get('p_d').barrageUntil || 0) > sim.t), '無人機不能重砲');
+    sim.heroBarrage('p_m'); assert(!((sim.heroes.get('p_m').barrageUntil || 0) > sim.t), '變形機甲不能重砲');
+    // 需在狙擊模式
+    rb3.aiming = false; sim.heroBarrage('p_r');
+    assert(!((rb3.barrageUntil || 0) > sim.t), '非狙擊模式不能重砲');
+    rb3.aiming = true;
+    // 彈夾裝填中無彈可傾洩 → 不啟動(免白吃 30s CD)
+    rb3.reloadUntil = { heavy: sim.t + 5 }; sim.heroBarrage('p_r');
+    assert(!((rb3.barrageUntil || 0) > sim.t) && !((rb3.barrageCd || 0) > sim.t), '彈夾裝填中觸發重砲無效(不白吃 CD)');
+    rb3.reloadUntil = {};
+    sim.heroBarrage('p_r');
+    assert((rb3.barrageUntil || 0) > sim.t && (rb3.barrageCd || 0) > sim.t, '重砲開窗 + 進入獨立 CD');
+    // 傷害加成:重武器 ×DMG_F(其他倍率相同 → 比值 = DMG_F)
+    const whv = heroWeapon('t01', 'heavy', rb3.abil.heavy || 1, true);
+    const buffed = sim._heroDmg(rb3, whv, 'tank');
+    rb3.barrageUntil = 0;
+    const plain = sim._heroDmg(rb3, whv, 'tank');
+    assert(Math.abs(buffed / plain - BARRAGE.DMG_F) < 1e-6, `重砲傷害 ×${BARRAGE.DMG_F}(實測 ${(buffed / plain).toFixed(2)})`);
+    // 傾洩:窗內解射速閘,一口氣打完整個彈夾
+    rb3.barrageUntil = sim.t + BARRAGE.DUR;
+    rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {}; rb3.mp = rb3.maxMp;
+    const wp = sim._heroWeapon(rb3, 'heavy');
+    let fired = 0;
+    for (let i = 0; i < wp.def.mag + 3; i++) if (sim._gateFire(rb3, 'heavy', wp.def, true)) fired++;
+    assert(fired === wp.def.mag, `重砲窗內解射速閘,一口氣傾洩整個彈夾 ${wp.def.mag} 發(實際 ${fired})`);
+    rb3.barrageUntil = 0; rb3.barrageCd = 0; rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
   }
 
   log('— sim:擊殺電腦玩家只算 3 分 —');

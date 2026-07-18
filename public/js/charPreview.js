@@ -290,7 +290,8 @@ export class CharPreview {
       // 輕武器連射一個彈匣的頭幾發;重武器演出依機制型別分家(_stepHeavy)
       const gap = slot === 'light' ? Math.max(0.09, 1 / (w.rate || 4)) : 0;
       const shots = slot === 'light' ? Math.min(6, w.mag || 6) : 1;
-      const durH = { rail: (w.charge || 1.2) + 1.0, beam: 1.9, plasma: 1.7, missile: 2.2, launcher: 2.2 }[w.type] ?? 1.5;
+      // 2026-07-18:重武器已取消蓄力,rail 改「短暫線圈旋轉起跳」(RAIL_SPIN 0.5s),不再讀已移除的 w.charge
+      const durH = { rail: 1.6, beam: 1.9, plasma: 1.7, missile: 2.2, launcher: 2.2 }[w.type] ?? 1.5;
       this.anim = {
         slot, t: 0, next: 0, fired: 0, shots, gap, w,
         dur: slot === 'light' ? shots * gap + 0.5 : durH,
@@ -382,8 +383,8 @@ export class CharPreview {
 
     if (w.type === 'rail') {
       if (A.fired) return;
-      const chg = Math.min(1, A.t / (w.charge || 1.2));
-      this.holder.position.y = -R * 0.03 * chg;                       // 蓄力重心下沉
+      const chg = Math.min(1, A.t / 0.5);                            // 線圈旋轉起跳(0.5s;非舊蓄力,已取消)
+      this.holder.position.y = -R * 0.03 * chg;                       // 起跳重心下沉
       if (A.t >= (A.spark || 0)) {                                    // 軌道電光聚集
         starburst(this.scene, this.effects, m.x, m.y, m.z, R * (0.06 + chg * 0.14), 0xaef4ff);
         A.spark = A.t + 0.12;

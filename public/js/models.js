@@ -6535,8 +6535,9 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   // 施法動作性格(castSig):全向/定向施法動作原型(locomotion.js stepCastPose 消費)
   if (ch && g.userData.rig && CAST_SIG[ch]) g.userData.rig.castSig = CAST_SIG[ch];
 
-  // 機甲:肩上的餌機掛點(F 分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)
-  if (kind === 'hero:robot' || kind === 'hero:morph') {
+  // 變形機甲:肩上的餌機掛點(狙擊長按左鍵分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)。
+  // 2026-07-18:非變形機甲(hero:robot)移除餌機(改重砲模式),不再掛餌機模組。
+  if (kind === 'hero:morph') {
     const pod = decoyPod(side, vis, target);
     outlinify(pod, outlineW(target));
     g.add(pod);

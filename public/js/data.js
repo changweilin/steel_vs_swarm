@@ -305,12 +305,16 @@ export const SQUAD = {
   DMG: 1,             // 單機傷害 = 機甲全額(不再折算;heroWeapon() 唯一套用點,三機時代 = 1/3)
   ARMOR_F: 1,         // 無人機護甲等比縮放係數(UNITS 之後 derive:令無人機平均 armor = 機甲平均 ×HP_F)
   DRONE_AVG_HP: 0,    // 初始無人機平均總血量(護盾+裝甲;UNITS 之後 derive)→ 防空伏擊傷害 = 此值 /3
-  // ── 自殺攻擊機(F 鍵:前方左右各釋放一架 1/3 體型/血量的神風機,以自身 3 倍速撲擊;CD 固定 30s;
-  //    敵方導引飛彈會被牠們吸走砲火 —— 見 sim._tickKamis / _tickMissiles)──
+  // ── 護衛自殺攻擊機(2026-07-18 重設計)──
+  //  兩架 1/2 體型、外觀同主機的護衛機常駐主機兩側;觸發前不可被鎖定/受傷(純客戶端貼身外觀,不在 sim)。
+  //  「狙擊模式長按左鍵」觸發:兩架同時衝出,以主機 3 倍速撲擊,各造成 DMG_F 倍(半傷)重型炸彈爆風;
+  //  自爆後需等滿 CD_S 秒才重新出現(客戶端以 kamiCd 判定顯隱)。敵方導引飛彈會被衝出的護衛機吸走砲火
+  //  (見 sim._tickKamis / _tickMissiles)。觸發改狙擊長按左鍵(舊 F 鍵)。
   KAMI: {
-    N: 2, HP_F: 1 / 3, SIZE_F: 1 / 3, SPEED_MUL: 3, CD_S: 30,
-    SPREAD: 0.55,     // 前方左右散開角(弧度,≈32°)
-    FWD: 8, SIDE: 5,  // 生成點:前置 / 側置偏移(公尺)
+    N: 2, HP_F: 1 / 3, SIZE_F: 1 / 2, SPEED_MUL: 3, CD_S: 30,
+    DMG_F: 0.5,       // 自殺攻擊傷害減半(每架護衛機爆風 = _bombDef × 此值)
+    SPREAD: 0.55,     // 衝出時前方左右散開角(弧度,≈32°)
+    FWD: 8, SIDE: 5,  // 衝出生成點:前置 / 側置偏移(公尺)
     TURN: 3.2,        // 追蹤限轉率(弧度/秒;比餌機敏捷)
     BOOM_M: 5,        // 近炸引信半徑
     TTL_S: 8,         // 無目標時直飛自毀秒數
@@ -328,9 +332,9 @@ export const SQUAD = {
 // 無人機另外沿用它當自爆衝刺目標。
 export const LOCK = { TTL: 2.5, WARN_S: 1.6 };
 
-// ---- 餌機(機甲外掛的可分離子機;對應無人機的 F 鍵自爆)----
-// 平時組合在主機甲掛點上。F 分離發射,航向鎖定發射瞬間的機首朝向 —— 玩家無法操舵。
-// 準星有鎖定目標(LOCK.TTL 內)才會追蹤,否則直飛到燃料耗盡自爆。
+// ---- 餌機(變形機甲專屬可分離子機;2026-07-18:非變形機甲已移除餌機,改重砲模式)----
+// 觸發改「狙擊模式長按左鍵」(舊 F 鍵)。分離發射,航向鎖定發射瞬間的機首朝向 —— 玩家無法操舵。
+// 準星有鎖定目標(LOCK.TTL 內)才會追蹤,否則直飛到燃料耗盡自爆。沿途投彈見下(BOMB_*)。
 // 飛行中經 PiP 小視窗回傳畫面與視野;超過 LINK_M 即失聯(斷訊、不再回傳視野),
 // 機體仍直飛到 TTL_S 自爆。可被擊落 —— 這就是「餌」:替主機甲吸走火力。
 export const DECOY = {
@@ -340,14 +344,35 @@ export const DECOY = {
   ALT: 8,           // 發射後相對主機甲的爬升高度
   LINK_M: 340,      // 失聯距離
   TTL_S: 14,
-  CD_S: 24,         // 冷卻(自發射瞬間起算;歸零 = 掛點重新組合出一架)
+  CD_S: 30,         // 冷卻(自發射瞬間起算;歸零 = 掛點重新組合出一架)
   BOOM_M: 6,        // 追蹤命中的近炸引信半徑
   SIGHT: 200,       // 偵察視野(僅連線中回傳)
   DMG: 260, R: 20, PEN: 10,
   vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
+  // 沿途投彈(2026-07-18):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
+  // 單枚 = 直擊 BOMB_DMG(略高於輕武器)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
+  BOMB_R: 90, BOMB_MAX: 3, BOMB_GAP: 0.9, BOMB_DMG: 34, BOMB_BLAST_R: 14,
 };
 /** 餌機自爆的爆風定義(交給 sim._blast;與 WEAPONS 同形) */
 export const decoyBlast = () => ({ dmg: DECOY.DMG, r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs });
+// ---- 餌機沿途投彈:依機體類型的效果(復用 sim 既有 bleed/slow/EMP/stun,無新狀態欄位)----
+// fire/poison 走 bleed 逐體 DoT(owner 記功)、freeze 走 slow 減速、thunder 走 EMP(武器離線)+ stun 麻痺。
+export const DECOY_BOMB = {
+  fire:    { name: '燃燒彈', color: 0xff6a2a, dot: 22, dur: 4 },              // 灼燒 DoT
+  freeze:  { name: '凍結彈', color: 0x8fd8ff, slow: 0.35, dur: 3 },          // 重減速(近凍結)
+  poison:  { name: '毒霧彈', color: 0x8fe36a, dot: 15, dur: 5, slow: 0.7 },  // 毒 DoT + 微減速
+  thunder: { name: '雷爆彈', color: 0xffe14f, emp: 2.0, stun: 0.6 },         // 武器離線 + 短暫麻痺
+};
+/** 變形機甲角色 → 餌機炸彈類型(四類各兩台,依機體/性格配置) */
+export const MORPH_BOMB = {
+  m01: 'thunder', m02: 'freeze', m03: 'fire',   m04: 'poison',
+  m05: 'thunder', m06: 'fire',   m07: 'freeze', m08: 'poison',
+};
+export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
+// ---- 重砲模式(2026-07-18;非變形機甲專屬:狙擊模式長按左鍵)----
+// 0.5 秒內傾洩重武器剩餘彈夾(此窗解除射速閘與電力門檻),傷害 +33%、射程 +20%;
+// 獨立於彈夾裝填的 30s 冷卻。伺服器以 h.barrageUntil 窗結算加成(見 sim.heroBarrage / _heroDmg / heroHit)。
+export const BARRAGE = { DUR: 0.5, DMG_F: 1.33, RANGE_F: 1.20, CD_S: 30 };
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
@@ -420,7 +445,7 @@ export const RECOIL = {
   heavy: {
     low:  { move: 'stop', climb: 0.022, kick: 2.4, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 0 },
     med:  { move: 'back', climb: 0.032, kick: 3.2, slowF: 0.3, back: 9, burst: 0, settle: 0, steady: 0 },
-    high: { move: 'stop', climb: 0.044, kick: 4.5, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 1.4 },
+    high: { move: 'stop', climb: 0.044, kick: 4.5, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 0 },   // steady 0(2026-07-18):重武器改彈夾連發,取消開火前停穩蓄力
   },
 };
 /**
@@ -504,7 +529,7 @@ export function rangeCap(kind, slot) {
 /**
  * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
  * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5)並夾住 rangeCap;false = NPC 基準值。
- * 重武器以 mag×reload 實作 CD:每發打完自動進入 cd 秒冷卻(HUD 顯示為冷卻)。
+ * 重武器以 mag 發彈夾 + reload 秒裝填實作(2026-07-18:彈夾 2~5、裝填 6~15s,取代舊「蓄力/單發 cd」)。
  * 無人機為單機(SQUAD.N=1),SQUAD.DMG=1 = 不折算(唯一折算點,保留機制;三機時代 = 1/3)。
  */
 export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
@@ -610,7 +635,7 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //     消耗路徑只在 heroHit 直擊 —— fan/launcher/missile AoE 武器的角色 MUST NOT 掛 mark)
 // 武器 type 一覽(2026-07-11 機制多元化;傷害距離衰減見 dmgFalloff):
 //   gun      動能彈:彈道學拋物線,動能隨空阻衰減
-//   rail     磁軌炮:按住開火蓄力 charge 秒 → 極速直擊(幾乎無衰減、高破甲);提前放開不耗彈
+//   rail     磁軌炮:極速直擊(幾乎無衰減、高破甲);2026-07-18 取消蓄力,改彈夾連發
 //   launcher 火箭/榴彈:AoE 戰鬥部;guide:1 = 狙擊視角雷射導引(彈體追準星修正航向)
 //   missile  飛彈:發射時有準星鎖定 → 自動追蹤該目標近炸;無鎖定 = 直飛(AoE 戰鬥部)
 //   beam     定向能:光速直擊無下墜,穩定輸出;吃大氣消光;emp 附帶 = 電磁癱瘓控場
@@ -619,8 +644,8 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 // 輕武器類型(2026-07-13 多元化;2026-07-14 開放散彈):launcher/missile 在 heroBurst、
 //   plasma/fan 在 heroPlasma —— heroPlasma 已收 slot 參數,故「散彈輕武器(fan:true)」可經
 //   {t:'plasma', slot:'light'} 走同一條錐判定(唯一破例;launcher/missile 仍只准重武器)。
-//   非扇形輕武器(gun/rail/beam)照走 heroHit(slot 無關);rail 用在輕武器時 MUST NOT 帶 charge
-//   (每次擊發都蓄力會讓速射步槍打不動,charge 只留給重武器的「蓄力後極速直擊」)。
+//   非扇形輕武器(gun/rail/beam)照走 heroHit(slot 無關)。2026-07-18:重武器全面取消蓄力(charge),
+//   改「彈夾 2~5 發 + 裝填 6~15s」(依型別,見 heroWeapon 上方各型 mag/reload 設計);rail 亦不再有蓄力窗。
 export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
@@ -631,7 +656,7 @@ export const CHARACTERS = {
       dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.6, air: 1.3, building: 0.5 } },
     heavy: { name: '70mm 導引火箭巢', rw: 'Hydra 70 + APKWS 雷射導引・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
-      dmg: [100, 135, 170], r: [12, 14, 16], cd: [8, 7, 6], range: 300, pen: 6,
+      dmg: [52, 80, 116], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
     skill: { name: '蜂群協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.15, 1.23, 1.3] },
       add: { fx: 'vamp', f: [0.1, 0.13, 0.16] },
@@ -651,7 +676,7 @@ export const CHARACTERS = {
     // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
     // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
     heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
-      dmg: [150, 200, 250], r: [15, 17, 19], cd: [9, 8, 7], range: 275, pen: 15,
+      dmg: [70, 104, 148], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
@@ -666,7 +691,7 @@ export const CHARACTERS = {
       dmg: [13, 16, 20], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
     heavy: { name: '高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
-      dmg: [70, 95, 120], cd: [6, 5.5, 5], range: 280, emp: [0.8, 1.0, 1.2],
+      dmg: [21, 31, 44], mag: 5, reload: 8, range: 280, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
     skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '指定區域敵軍武器離線(建築免疫)' },
@@ -681,7 +706,7 @@ export const CHARACTERS = {
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.5, air: 1.2, building: 0.4 } },
     heavy: { name: '電漿噴湧砲', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [13, 15, 17],
-      dmg: [110, 150, 190], cd: [6, 5, 4], range: 264, pen: 8,
+      dmg: [46, 75, 117], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 1.5, armor: 1.0, air: 0.5, building: 1.2 } },
     skill: { name: '突進機動', fx: 'dash', imp: [28, 34, 40],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '沿視線方向爆發加速(教官の鐵鍬距離)' },
@@ -697,7 +722,7 @@ export const CHARACTERS = {
       dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
       vs: { flesh: 1.2, armor: 0.6, air: 1.4, building: 0.4 } },
     heavy: { name: '巡飛彈釋放器', rw: 'Lancet 縮裝・巡飛 90m/s', type: 'missile', mv: 90,
-      dmg: [160, 210, 260], r: [13, 15, 17], cd: [10, 9, 8], range: 320, pen: 12,
+      dmg: [48, 69, 96], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
     skill: { name: '超頻', fx: 'buff', target: 'self', mul: { dmg: [1.05, 1.1, 1.15], reload: [0.65, 0.6, 0.55] },
       add: { fx: 'dodge' },
@@ -715,7 +740,7 @@ export const CHARACTERS = {
       dmg: [24, 30, 37], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.2, armor: 0.8, air: 1.5, building: 0.5 } },
     heavy: { name: '微型攔截彈', rw: 'AIM-9X 縮裝・初速 1000m/s', type: 'missile', mv: 1000,
-      dmg: [90, 120, 150], r: [6, 7, 8], cd: [7, 6, 5], range: 340, pen: 6,
+      dmg: [38, 58, 87], r: [6, 7, 8], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.6, air: 2.5, building: 0.3 } },
     skill: { name: '攔截領域', fx: 'intercept', r: [150, 190, 230],
       cd: [16, 14, 12], mp: [30, 35, 40], desc: '擊落半徑內所有來襲飛彈(擋下的,不是打掉的)' },
@@ -730,7 +755,7 @@ export const CHARACTERS = {
       dmg: [16, 20, 25], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.6, building: 0.5 } },
     heavy: { name: '防空散射矩陣', rw: '磁化電漿・扇形防空散布', type: 'plasma', arc: [20, 23, 26],
-      dmg: [90, 120, 150], cd: [7, 6, 5], range: 264, pen: 4,
+      dmg: [33, 51, 75], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
     skill: { name: '分配演算法', fx: 'intercept', r: [170, 210, 250],
       cd: [15, 13, 11], mp: [30, 35, 40], desc: '一道證明完畢:清空半徑內來襲飛彈' },
@@ -746,8 +771,8 @@ export const CHARACTERS = {
     light: { name: '護航機槍艙', rw: 'PKM 7.62・初速 825m/s', type: 'gun', mv: 825,
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.1, building: 0.5 } },
-    heavy: { name: '同步軌道狙擊砲', rw: '實驗性電磁狙擊系統・初速 2200m/s', type: 'rail', mv: 2200, charge: [2.0, 1.7, 1.4],
-      dmg: [130, 170, 215], cd: [7, 6, 5], range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
+    heavy: { name: '同步軌道狙擊砲', rw: '實驗性電磁狙擊系統・初速 2200m/s', type: 'rail', mv: 2200,
+      dmg: [77, 116, 175], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
     skill: { name: '血漿空投', fx: 'heal', target: 'team', r: 140, heal: [150, 210, 270],
       cd: [20, 18, 16], mp: [40, 45, 50], desc: '空中血庫開倉:半徑內友軍裝甲回復' },
@@ -762,7 +787,7 @@ export const CHARACTERS = {
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
     heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・雷射波束導引・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
-      dmg: [130, 170, 215], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 10,
+      dmg: [68, 100, 147], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 10,
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
@@ -782,7 +807,7 @@ export const CHARACTERS = {
       dmg: [14, 17, 21], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
     heavy: { name: '訊號矛', rw: 'EMP 狙擊彈・初速 900m/s', type: 'gun', mv: 900,
-      dmg: [80, 105, 130], cd: [7, 6, 5], range: 340, emp: [1.5, 2, 2.5],
+      dmg: [36, 55, 81], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
       vs: { flesh: 0.8, armor: 1.0, air: 1.8, building: 0.5 } },
     skill: { name: '頻譜側錄', fx: 'vision', vision: [6, 8, 10],
       cd: [26, 23, 20], mp: [35, 40, 45], desc: '破解敵方遙測:全隊限時無霧視野' },
@@ -796,8 +821,8 @@ export const CHARACTERS = {
     light: { name: '精密聚焦雷射步槍', rw: '低散射固態雷射・光速直擊', type: 'beam',
       dmg: [22, 27, 33], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
       vs: { flesh: 1.1, armor: 1.3, air: 1.0, building: 0.6 } },
-    heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'rail', mv: 2000, charge: [1.5, 1.3, 1.1],
-      dmg: [170, 220, 275], cd: [9, 8, 7], range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
+    heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'rail', mv: 2000,
+      dmg: [79, 114, 163], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
     skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
       add: { fx: 'mark', dur: [4, 5, 6] },
@@ -813,7 +838,7 @@ export const CHARACTERS = {
       dmg: [14, 17, 21], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.6, air: 1.1, building: 0.4 } },
     heavy: { name: '衛星測距雷射砲', rw: '高能雷射測距一體・光速直擊', type: 'beam',
-      dmg: [130, 170, 215], cd: [7, 6, 5], range: 320, pen: [10, 13, 16],
+      dmg: [34, 52, 78], mag: 5, reload: 8, range: 320, pen: [10, 13, 16],
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
     skill: { name: '薰衣草斗篷', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從敵方感測網上消失(開火即現形)' },
@@ -830,7 +855,7 @@ export const CHARACTERS = {
       dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
     heavy: { name: '152mm 榴彈砲', rw: '2A65 縮裝・初速 650m/s', type: 'launcher', mv: 650,
-      dmg: [180, 240, 300], r: [16, 18, 20], cd: [10, 9, 8], range: 340, pen: 14,
+      dmg: [75, 111, 156], r: [16, 18, 20], mag: 3, reload: 12, range: 340, pen: 14,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
       add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
@@ -847,8 +872,8 @@ export const CHARACTERS = {
     light: { name: '高斯衝鋒槍', rw: '實驗性 EM 線圈・初速 1100m/s', type: 'rail', mv: 1100,
       dmg: [15, 19, 23], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
       vs: { flesh: 1.2, armor: 0.9, air: 1.1, building: 0.5 } },
-    heavy: { name: '同步狙擊砲', rw: 'EM 加速穿甲彈・初速 1500m/s', type: 'rail', mv: 1500, charge: [1.2, 1.05, 0.9],
-      dmg: [150, 195, 245], cd: [8, 7, 6], range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
+    heavy: { name: '同步狙擊砲', rw: 'EM 加速穿甲彈・初速 1500m/s', type: 'rail', mv: 1500,
+      dmg: [78, 115, 168], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
     skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
@@ -865,7 +890,7 @@ export const CHARACTERS = {
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.6, armor: 0.6, air: 0.9, building: 0.5 } },
     heavy: { name: '電漿噴焰', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [15, 17, 19],
-      dmg: [170, 225, 280], cd: [9, 8, 7], range: 264, pen: 12,
+      dmg: [49, 72, 102], mag: 3, reload: 7, range: 264, pen: 12,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
     skill: { name: '鑄鐵鍋盾', fx: 'buff', target: 'self', mul: { dmgTaken: [0.55, 0.5, 0.45] },
       dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋架起:承傷大減' },
@@ -881,7 +906,7 @@ export const CHARACTERS = {
       dmg: [24, 30, 37], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.4, armor: 0.8, air: 1.0, building: 0.5 } },
     heavy: { name: '14.5 反器材砲', rw: 'KPV・初速 1000m/s', type: 'gun', mv: 1000,
-      dmg: [180, 235, 290], cd: [9, 8, 7], range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
+      dmg: [64, 94, 132], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '灰色迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從所有感測器上消失(開火即現形)' },
@@ -897,7 +922,7 @@ export const CHARACTERS = {
       dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.8, air: 1.0, building: 0.5 } },
     heavy: { name: '原型脈衝雷射矛', rw: '仿生關節整合雷射・光速直擊', type: 'beam',
-      dmg: [140, 185, 230], cd: [7, 6, 5], range: 300, pen: [18, 22, 26],
+      dmg: [37, 56, 83], mag: 5, reload: 8, range: 300, pen: [18, 22, 26],
       vs: { flesh: 0.8, armor: 1.7, air: 0.6, building: 0.6 } },
     skill: { name: '結構自檢', fx: 'heal', target: 'self', heal: [200, 280, 360],
       cd: [22, 19, 16], mp: [35, 40, 45], desc: '仿生關節自我修復(掉漆的才是我的)' },
@@ -912,7 +937,7 @@ export const CHARACTERS = {
       dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '熔核直拳砲', rw: '磁化電漿聚爆・貼身直擊', type: 'plasma', arc: [10, 12, 14],
-      dmg: [130, 170, 215], cd: [6, 5, 4], range: 264, pen: 10,
+      dmg: [55, 85, 132], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '麻辣走位', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '模擬器省冠軍的走位,機體像長在他身上' },
@@ -928,7 +953,7 @@ export const CHARACTERS = {
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.4 } },
     heavy: { name: '白頭山反器材', rw: '14.5mm 栓動・初速 1000m/s', type: 'gun', mv: 1000,
-      dmg: [200, 260, 325], cd: [10, 9, 8], range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
+      dmg: [65, 93, 130], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
     skill: { name: '靜默潛行', fx: 'stealth', dur: [5, 6, 7],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '動作省到一毫米都不多(開火即現形)' },
@@ -945,7 +970,7 @@ export const CHARACTERS = {
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '諧振波炮', rw: '定向聲電複合・光速', type: 'beam',
-      dmg: [75, 100, 125], cd: [6, 5.5, 5], range: 300, emp: [1.0, 1.5, 2.0],
+      dmg: [23, 33, 45], mag: 5, reload: 8, range: 300, emp: [1.0, 1.5, 2.0],
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
     skill: { name: '搖籃曲', fx: 'emp', r: 140, dur: [2.5, 3, 3.5], range: 260,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '把你頻道撕碎的搖籃曲(區域武器離線)' },
@@ -960,7 +985,7 @@ export const CHARACTERS = {
       dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '見證者巡飛彈', rw: 'Shahed 縮裝・巡飛 100m/s', type: 'missile', mv: 100,
-      dmg: [170, 225, 280], r: [15, 17, 19], cd: [10, 9, 8], range: 360, pen: 10,
+      dmg: [51, 74, 104], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     skill: { name: '哀悼詩', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
       cd: [26, 23, 20], mp: [40, 45, 50], desc: '為敵我雙方各寫一行:火箭兵支援' },
@@ -977,7 +1002,7 @@ export const CHARACTERS = {
       dmg: [18, 22, 27], rate: 5.5, mag: [28, 34, 40], reload: 2.3, range: 210, pen: 6,
       vs: { flesh: 1.1, armor: 1.0, air: 1.5, building: 0.5 } },
     heavy: { name: '攔截者飛彈', rw: '9M330 縮裝・初速 800m/s', type: 'missile', mv: 800,
-      dmg: [120, 155, 195], r: [11, 13, 15], cd: [7, 6, 5], range: 340, pen: 6,
+      dmg: [50, 75, 113], r: [11, 13, 15], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.7, armor: 0.7, air: 2.4, building: 0.4 } },
     skill: { name: '彈道預解', fx: 'intercept', r: [160, 200, 240],
       cd: [15, 13, 11], mp: [30, 35, 40], desc: '攔截永遠該比打擊便宜:清空來襲飛彈' },
@@ -992,7 +1017,7 @@ export const CHARACTERS = {
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
     heavy: { name: '無後座砲', rw: 'SPG-9・初速 435m/s', type: 'launcher', mv: 435,
-      dmg: [150, 195, 245], r: [13, 15, 17], cd: [8, 7, 6], range: 320, pen: 12,
+      dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.3 } },
     skill: { name: '老兵的叮嚀', fx: 'buff', target: 'team', r: 160, mul: { dmgTaken: [0.7, 0.65, 0.6] },
       dur: [4, 5, 6], cd: [20, 18, 16], mp: [35, 40, 45], desc: '罐頭哪裡最薄,他都教過:友軍承傷降低' },
@@ -1006,8 +1031,8 @@ export const CHARACTERS = {
     light: { name: '掃描脈衝槍', rw: '低功率相位雷射・光速直擊', type: 'beam',
       dmg: [13, 16, 20], rate: 10, mag: [40, 50, 60], reload: 1.8, range: 170, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.5, air: 1.0, building: 0.4 } },
-    heavy: { name: '標定脈衝砲', rw: 'EM 標定彈・初速 2500m/s', type: 'rail', mv: 2500, charge: [1.2, 1.05, 0.9],
-      dmg: [90, 120, 150], cd: [7, 6, 5], range: 340, emp: [0.8, 1.0, 1.2],
+    heavy: { name: '標定脈衝砲', rw: 'EM 標定彈・初速 2500m/s', type: 'rail', mv: 2500,
+      dmg: [53, 82, 122], mag: 2, reload: 8, range: 340, emp: [0.8, 1.0, 1.2],
       vs: { flesh: 0.8, armor: 1.0, air: 1.6, building: 0.5 } },
     skill: { name: '螢火掃描', fx: 'vision', vision: [5, 7, 9],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '在頻譜裡找蜂群的心跳:全隊限時無霧' },
@@ -1034,7 +1059,7 @@ export const CHARACTERS = {
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.3, building: 0.4 } },
     heavy: { name: '地獄火反裝甲彈', rw: 'AGM-114 縮裝・鎖定追蹤・初速 450m/s', type: 'missile', mv: 450,
-      dmg: [150, 195, 245], r: [12, 14, 16], cd: [9, 8, 7], range: 320, pen: [14, 18, 22],
+      dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
     skill: { name: '違約金條款', fx: 'dash', imp: [27, 33, 39],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '哪邊付錢都一樣快:沿視線爆發脫離' },
@@ -1049,8 +1074,8 @@ export const CHARACTERS = {
     light: { name: '7.62 通用機槍', rw: 'FN MAG・初速 840m/s', type: 'gun', mv: 840,
       dmg: [16, 20, 25], rate: 7, mag: [40, 48, 56], reload: 2.2, range: 195, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.8, air: 0.9, building: 0.5 } },
-    heavy: { name: '重型線圈加農砲', rw: '大口徑線性馬達砲・初速 1800m/s', type: 'rail', mv: 1800, charge: [1.8, 1.5, 1.3],
-      dmg: [160, 210, 260], cd: [9, 8, 7], range: 360, crit: 0.1, critX: 1.8, pen: [20, 25, 30],
+    heavy: { name: '重型線圈加農砲', rw: '大口徑線性馬達砲・初速 1800m/s', type: 'rail', mv: 1800,
+      dmg: [74, 109, 154], mag: 2, reload: 8, range: 360, crit: 0.1, critX: 1.8, pen: [20, 25, 30],
       vs: { flesh: 0.9, armor: 1.7, air: 0.4, building: 1.0 } },
     skill: { name: '掩體協議', fx: 'buff', target: 'self', mul: { dmgTaken: [0.6, 0.55, 0.5] },
       dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '雇主的貨要緊:承傷大減' },
@@ -1065,7 +1090,7 @@ export const CHARACTERS = {
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
     heavy: { name: '空投截擊彈', rw: 'APKWS 雷射導引・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
-      dmg: [120, 160, 200], r: [11, 13, 15], cd: [8, 7, 6], range: 300, pen: 8,
+      dmg: [62, 95, 137], r: [11, 13, 15], mag: 3, reload: 12, range: 300, pen: 8,
       vs: { flesh: 1.1, armor: 1.2, air: 1.2, building: 1.0 } },
     skill: { name: '戰地保單', fx: 'heal', target: 'team', r: 150, heal: [140, 200, 260],
       cd: [20, 18, 16], mp: [40, 45, 50], desc: '先修好再收錢:半徑內友軍裝甲回復' },
@@ -1080,7 +1105,7 @@ export const CHARACTERS = {
       dmg: [21, 26, 32], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
     heavy: { name: '游騎反器材砲', rw: 'NTW-20・初速 900m/s', type: 'gun', mv: 900,
-      dmg: [175, 230, 285], cd: [9, 8, 7], range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
+      dmg: [63, 92, 130], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
     skill: { name: '匿名發包', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '合約不留名:從感測網上消失(開火即現形)' },
@@ -1095,7 +1120,7 @@ export const CHARACTERS = {
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
       vs: { flesh: 1.2, armor: 1.0, air: 0.9, building: 0.6 } },
     heavy: { name: '追債者制導彈', rw: '射後鎖定制導彈・初速 400m/s', type: 'missile', mv: 400,
-      dmg: [150, 195, 245], r: [13, 15, 17], cd: [9, 8, 7], range: 330, pen: [12, 15, 18],
+      dmg: [50, 72, 103], r: [13, 15, 17], mag: 4, reload: 11, range: 330, pen: [12, 15, 18],
       vs: { flesh: 1.0, armor: 1.5, air: 0.5, building: 1.2 } },
     skill: { name: '斷路協議', fx: 'emp', r: 130, dur: [2.5, 3, 3.5], range: 250,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '欠債不還就斷電:指定區域敵軍武器離線' },
@@ -1112,7 +1137,7 @@ export const CHARACTERS = {
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
     heavy: { name: '集束子母彈', rw: 'CBU 縮裝・初速 400m/s', type: 'launcher', mv: 400,
-      dmg: [130, 170, 215], r: [16, 18, 20], cd: [10, 9, 8], range: 300, pen: 6,
+      dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
     skill: { name: '轉分包', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
       cd: [26, 23, 20], mp: [40, 45, 50], desc: '臨時轉包:火箭兵沿最近兵線加入' },
@@ -1127,7 +1152,7 @@ export const CHARACTERS = {
       dmg: [18, 23, 28], rate: 6.5, mag: [32, 40, 48], reload: 2.6, range: 210, crit: 0.05,
       vs: { flesh: 1.0, armor: 0.9, air: 1.6, building: 0.5 } },
     heavy: { name: '區域拒止電漿陣列', rw: '近迫電漿散射・扇形攔截', type: 'plasma', arc: [22, 25, 28],
-      dmg: [110, 145, 180], cd: [6, 5, 4], range: 264, pen: 8,
+      dmg: [46, 73, 111], mag: 3, reload: 7, range: 264, pen: 8,
       vs: { flesh: 0.8, armor: 1.0, air: 2.2, building: 0.3 } },
     skill: { name: '拒止穹頂', fx: 'intercept', r: [160, 200, 240],
       cd: [16, 14, 12], mp: [30, 35, 40], desc: '一手交錢一手交貨:清空半徑內來襲飛彈' },
@@ -1144,7 +1169,7 @@ export const CHARACTERS = {
       dmg: [24, 30, 37], rate: 3.2, mag: [18, 22, 26], reload: 2.0, range: 200, crit: 0.16, critX: 1.9,
       vs: { flesh: 1.4, armor: 0.6, air: 1.0, building: 0.4 } },
     heavy: { name: '反器材長槍', rw: 'AMR 縮裝・初速 900m/s', type: 'gun', mv: 900,
-      dmg: [190, 250, 315], cd: [10, 9, 8], range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
+      dmg: [61, 89, 126], mag: 3, reload: 9, range: 390, crit: 0.2, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
     skill: { name: '預付訂金', fx: 'dash', imp: [28, 34, 40],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '訂金到帳就位:沿視線瞬間位移' },
@@ -1164,7 +1189,7 @@ export const ECON = {
   // DOTA 式陣亡罰金:每 1 秒重生倒數,額外自玩家共用金錢扣 $10(不透支)。只罰玩家英雄/無人機。
   DEATH_PENALTY_PER_S: 10,
   ASSIST: { F: 0.25, TTL_S: 10 },
-  // 重武器每發電力 = 該武器 cd 秒 × 此值 ×(武器精通折減)⇒ 持續火力的耗電率全武器一致
+  // 重武器「持續火力耗電率」(每秒);每發電力由 heavyMpCost 依彈夾週期均攤,全武器一致(見 heavyMpCost)
   HEAVY_MP_PER_CD: 2.0,
   // 英雄賞金:機甲/變形機甲全額;無人機(單機,2026-07-17)≈ 機甲 ×SQUAD.HP_F(生存值 80% → 150)
   BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 150, robot: 190, morph: 190 },
@@ -1188,9 +1213,13 @@ export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
 export const masteryF = (track, lvl) => 1 - ECON.UPGRADES[track].step * (lvl || 0);
 /** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
 export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
-/** 重武器每發電力(解析後 def;wmLvl = 武器精通等級)。輕武器不耗電。 */
-export const heavyMpCost = (def, wmLvl) =>
-  Math.round((def.reload || 0) * ECON.HEAVY_MP_PER_CD * masteryF('wm', wmLvl));
+/** 重武器每發電力(解析後 def;wmLvl = 武器精通等級)。輕武器不耗電。
+ *  2026-07-18 彈夾制:一個彈夾週期 = mag/rate + reload 秒,週期總耗電 = 週期 × HEAVY_MP_PER_CD × 精通,
+ *  均攤到每發 ⇒「持續火力耗電率」= HEAVY_MP_PER_CD/s,全武器一致且不因彈夾大小漂移(mag=1 時 ≈ 舊值)。 */
+export const heavyMpCost = (def, wmLvl) => {
+  const mag = def.mag || 1, cycle = (def.reload || 0) + mag / (def.rate || 3);
+  return Math.round(cycle / mag * ECON.HEAVY_MP_PER_CD * masteryF('wm', wmLvl));
+};
 
 // ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----
 export const UNITS = {
@@ -1417,6 +1446,9 @@ export const GAME = {
   WAVE_EXTRAS: ['rocketeer', 'howitzer', 'tank', 'heli'],
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
   AIM_SIGHT_MULT: 1.6,        // 瞄準模式視野加成(狙擊模式看得更遠)
+  // 狙擊模式(右鍵)持續按住左鍵達此秒數 → 觸發機種專屬能力(無人機護衛自殺機 / 機甲重砲 / 變形機甲餌機)。
+  // 短按/連按照常開火;達門檻才觸發能力,能力各有獨立 CD(2026-07-18)。純客戶端輸入計時。
+  SNIPE_HOLD_S: 0.5,
   // 玩家可操作機體的射程上限比例:射程 = min(基準×HEROIC, sight×(重武器再×AIM_SIGHT_MULT)×此值)。
   // 恆 < 1 ⇒ 射程一定小於視野;見 rangeCap()。
   RANGE_SIGHT_F: 0.9,

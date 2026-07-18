@@ -26,7 +26,7 @@ import { BattleSim, waveInterval } from '../server/sim.js';
 const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
 const WAVE = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];   // 編制唯一真相住 data.js
 
-/** 角色某槽位對某目標的持續 DPS(含換彈 / CD;重武器 = mag 1 + reload = cd) */
+/** 角色某槽位對某目標的持續 DPS(含換彈:輕/重武器一律 mag 發 / reload 秒;2026-07-18 重武器改彈夾 2~5 + 裝填 6~15s) */
 const slotDps = (ch, slot, tk) => {
   const w = heroWeapon(ch, slot, 1, true);
   if (!w) return 0;

@@ -6,7 +6,7 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore, tierVal,
-  vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, heroArmor, BOT_KILL_SCORE, isBotId,
+  vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
   ALTITUDE, altF, isGunnery,
@@ -992,20 +992,22 @@ export class BattleSim {
    */
   _gateFire(h, id, def, lenient) {
     const now = this.t;
+    // 重砲傾洩窗(非變形機甲重砲模式):此窗內重武器解除射速閘與電力門檻,傾洩剩餘彈夾
+    const barrage = id === 'heavy' && this._barraging(h);
     // 填彈完成 → 補滿
     if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
       h.ammo[id] = def.mag;
       h.reloadUntil[id] = 0;
     }
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
-    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
+    if (!barrage && now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
     if (h.ammo[id] <= 0) { h.reloadUntil[id] = now + this._reloadT(h, def); return false; }
     const mpc = id === 'heavy' ? heavyMpCost(def, h.upg?.wm) : 0;
-    if (mpc > 0 && h.mp < mpc) return false;   // 重武器電力不足:禁射(小隊電力共用,只扣一次)
+    if (mpc > 0 && !barrage && h.mp < mpc) return false;   // 重武器電力不足:禁射(重砲窗免電力;小隊電力共用,只扣一次)
     h.fireAt[id] = now;
     h.ammo[id]--;
-    if (mpc > 0) h.mp -= mpc;
+    if (mpc > 0 && !barrage) h.mp -= mpc;
     if (h.ammo[id] <= 0) h.reloadUntil[id] = now + this._reloadT(h, def);  // 打空自動填彈
     h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
     return true;
@@ -1023,11 +1025,15 @@ export class BattleSim {
     h.reloadUntil[wp.id] = this.t + this._reloadT(h, wp.def);
   }
 
-  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成;火力成長走武器品質 wq 的階級數值) */
+  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成 × 重砲模式加成;火力成長走武器品質 wq 的階級數值) */
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
-      * this._buffMul(h, 'dmg');
+      * this._buffMul(h, 'dmg')
+      * (def.id === 'heavy' && this._barraging(h) ? BARRAGE.DMG_F : 1);   // 重砲模式:重武器 +33%
   }
+
+  /** 重砲傾洩窗是否生效(非變形機甲重砲模式;_gateFire 解閘 / _heroDmg 加傷 / 射程驗證加程共用) */
+  _barraging(h) { return (h?.barrageUntil || 0) > this.t; }
 
   /** 空中判定:無人機/直升機/餌機/自殺機恆算飛行;其餘(機甲/變形/NPC)以高度 ≥ AA_MIN_ALT 論 */
   _airborne(e) {
@@ -1150,7 +1156,8 @@ export class BattleSim {
     if (wp.def.needAim && !h.aiming) return;   // 重武器需瞄準模式才能開火
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (d3 > wp.def.range * this._altRange(h, t, wp.def) * 1.25) return;   // 高度制空:對地拉遠/對高空無人機縮短
+    if (d3 > wp.def.range * this._altRange(h, t, wp.def) * 1.25
+        * (wp.id === 'heavy' && this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 高度制空:對地拉遠/對高空無人機縮短(重砲模式 +20% 射程)
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -1281,7 +1288,7 @@ export class BattleSim {
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
-    if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15) return;   // 著彈點超程(留彈道寬容)
+    if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15 * (this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
     this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side });
@@ -1320,7 +1327,8 @@ export class BattleSim {
         const tx = t.x - b.x, tz = t.z - b.z;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-        if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25) continue;   // 高度制空(散彈輕武器)
+        if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25
+            * (wp.id === 'heavy' && this._barraging(h) ? BARRAGE.RANGE_F : 1)) continue;   // 高度制空(散彈輕武器;重砲模式 +20%)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
@@ -1427,6 +1435,7 @@ export class BattleSim {
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     const def = this._bombDef(owner);
+    def.dmg = Math.round(def.dmg * SQUAD.KAMI.DMG_F);   // 護衛自殺機:傷害減半(2026-07-18)
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
     if (owner) this._blast(owner, def, k.x, k.z, k.y || 0);
     this._removeKami(k);
@@ -1464,7 +1473,7 @@ export class BattleSim {
    */
   heroDecoy(pid) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || h.kind === 'drone' || this.over) return;
+    if (!h || h.dead || h.kind !== 'morph' || this.over) return;   // 2026-07-18:餌機改變形機甲專屬(非變形機甲改重砲)
     const sq = h.sq;
     if (sq.decoy || this.t < sq.decoyCd) return;
     const t = this._lockedTarget(sq);
@@ -1474,10 +1483,28 @@ export class BattleSim {
       x: h.x, z: h.z, y: (h.y || 0) + DECOY.ALT, ry,
       hp: Math.max(1, Math.round(h.maxHp * DECOY.HP_F)),
       armor: 0, tid: t ? t.id : 0, lost: false, dieAt: this.t + DECOY.TTL_S,
+      bombType: MORPH_BOMB[h.ch] || 'fire', bombsLeft: DECOY.BOMB_MAX, nextBomb: 0,   // 沿途投彈(依機體類型)
     });
     sq.decoy = d;
     sq.decoyCd = this.t + DECOY.CD_S;
-    this.events.push({ e: 'decoy', pid, side: h.side, id: d.id, homing: t ? 1 : 0 });
+    this.events.push({ e: 'decoy', pid, side: h.side, id: d.id, homing: t ? 1 : 0, bomb: d.bombType });
+  }
+
+  /**
+   * 重砲模式(2026-07-18;非變形機甲:狙擊模式長按左鍵)。開一個 BARRAGE.DUR 秒的傾洩窗:
+   * 此窗內重武器解除射速閘與電力門檻(客戶端 0.5s 內傾洩剩餘彈夾),傷害 ×DMG_F、射程 ×RANGE_F;
+   * 獨立於彈夾裝填的 CD_S 冷卻。加成結算在 _gateFire(解閘)/_heroDmg(傷害)/各射程驗證處(_barraging)。
+   */
+  heroBarrage(pid) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || h.kind !== 'robot' || this.over) return;   // 非變形機甲專屬
+    if (!h.aiming) return;                        // 必須在狙擊模式
+    if (this.t < (h.barrageCd || 0)) return;      // 冷卻中(靜默丟棄)
+    // 彈夾空 / 裝填中 → 無彈可傾洩(重砲窗解射速閘/電力,但不解裝填閘),不啟動以免白吃 30s CD
+    if ((h.reloadUntil?.heavy || 0) > this.t || h.ammo?.heavy === 0) return;
+    h.barrageCd = this.t + BARRAGE.CD_S;
+    h.barrageUntil = this.t + BARRAGE.DUR;
+    this.events.push({ e: 'barrage', pid, side: h.side });
   }
 
   /**
@@ -1495,6 +1522,13 @@ export class BattleSim {
         d.lost = true;
         d.tid = 0;                                   // 失聯 = 失去火控,不再追蹤
         this.events.push({ e: 'decoyLost', pid: sq.pid, id: d.id });
+      }
+
+      // 沿途投彈:敵入 BOMB_R(餌機攻擊範圍)才開始丟,間隔 BOMB_GAP、單次任務最多 BOMB_MAX 枚
+      if ((d.bombsLeft || 0) > 0 && this.t >= (d.nextBomb || 0) && this._decoyEnemyNear(d, DECOY.BOMB_R)) {
+        this._decoyBomb(d, owner);
+        d.bombsLeft--;
+        d.nextBomb = this.t + DECOY.BOMB_GAP;
       }
 
       const t = d.tid ? this.ents.get(d.tid) : null;
@@ -1668,6 +1702,43 @@ export class BattleSim {
     this.ents.delete(d.id);
     const sq = this.squads.get(d.pid);
     if (sq && sq.decoy === d) sq.decoy = null;
+  }
+
+  /** 餌機攻擊範圍內是否有敵方戰鬥單位(沿途投彈的觸發條件:敵入範圍才丟) */
+  _decoyEnemyNear(d, r) {
+    for (const e of this.ents.values()) {
+      if (e.side === d.side || !e.side || e.neutral || e.decoy || e.kami || e.gar || e.hp <= 0) continue;
+      if (e.hero && e.dead) continue;
+      if (dist2d(e.x, e.z, d.x, d.z) <= r) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 餌機投下一枚炸彈(依機體類型:燃燒/凍結/毒霧/雷爆,見 DECOY_BOMB)。
+   * 直擊爆風走 _blast(記主機甲火力升級/助攻/擊殺);附加狀態復用既有 bleed/slow/EMP/stun 欄位
+   * (與 _applyCC 同一批狀態縫),純狀態貢獻另補 asst 戳記(輔助角色收入)。
+   */
+  _decoyBomb(d, owner) {
+    if (!owner) return;
+    const b = DECOY_BOMB[d.bombType] || DECOY_BOMB.fire;
+    const def = { dmg: DECOY.BOMB_DMG, r: DECOY.BOMB_BLAST_R, pen: 6, vs: DECOY.vs };
+    this.events.push({ e: 'decoyBomb', x: d.x, z: d.z, y: d.y || 0, r: def.r, side: d.side, bomb: d.bombType });
+    this._blast(owner, def, d.x, d.z, d.y || 0);   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用)
+    // 附加狀態:效果半徑內的敵方單位(建築/中立/無敵幀免疫,比照 _applyCC)
+    const rr = def.r * 1.5;
+    for (const t of [...this.ents.values()]) {
+      if (t.side === d.side || !t.side || t.neutral || t.decoy || t.kami || t.gar || t.hp <= 0) continue;
+      if (t.hero && t.dead) continue;
+      if (t.kind === 'tower' || t.kind === 'base' || t.kind === 'bunker') continue;   // 工事免控場/狀態
+      if (t.hero && (t.invUntil || 0) > this.t) continue;
+      if (dist2d(t.x, t.z, d.x, d.z) > rr) continue;
+      (t.asst ||= {})[owner.pid] = this.t;   // 純狀態貢獻也記助攻
+      if (b.dot) t.bleed = { dps: b.dot, until: this.t + (b.dur || 4), pen: 6, pid: owner.pid };   // 燃燒/毒霧 DoT
+      if (b.slow) { t.slowUntil = Math.max(t.slowUntil || 0, this.t + (b.dur || 3)); t.slowF = Math.min(t.slowF ?? 1, b.slow); }   // 凍結/毒霧 減速(取較強 = 較小)
+      if (b.emp) t.empUntil = Math.max(t.empUntil || 0, this.t + b.emp);   // 雷爆:武器離線(英雄與 NPC 皆吃)
+      if (b.stun) t.stunUntil = Math.max(t.stunUntil || 0, this.t + b.stun);   // 雷爆:短暫麻痺
+    }
   }
 
   // ---------- 招式(小招 Q / 大招 E:解鎖階級 + CD + 電力 MP,全部伺服器結算)----------
@@ -2236,7 +2307,7 @@ export class BattleSim {
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
-    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null; b.barrageUntil = 0;
     if (soloWipe) {
       b.mp = b.maxMp;
       b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;
@@ -2827,7 +2898,7 @@ export class BattleSim {
       o.pid = e.pid; o.y = Math.round(e.y * 10) / 10; o.ry = Math.round(e.ry * 100) / 100;
       if (e.lost) o.lost = 1;
     }
-    if (e.kami) {   // 自殺攻擊機:客戶端要姿態 + 角色(縮小 1/3 渲染成該角色的無人機)
+    if (e.kami) {   // 護衛自殺機衝出:客戶端要姿態 + 角色(縮小 SIZE_F 渲染成該角色的無人機)
       o.pid = e.pid; o.ch = e.ch; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
     }
     if (e.hero) {
@@ -2845,12 +2916,14 @@ export class BattleSim {
         o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
                  Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
       }
-      // 機甲餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
-      if (e.sq && e.kind !== 'drone') {
+      // 變形機甲餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
+      if (e.sq && e.kind === 'morph') {
         o.dcd = Math.max(0, Math.round((e.sq.decoyCd - this.t) * 10) / 10);
         o.dc = !e.sq.decoy && o.dcd === 0 ? 1 : 0;
       }
-      // 無人機自殺攻擊機:F 鍵冷卻倒數(HUD)—— 只跟主視野機發一份
+      // 非變形機甲:重砲模式冷卻倒數(HUD)—— 只跟主視野機發一份
+      if (o.act && e.kind === 'robot') o.bcd = Math.max(0, Math.round(((e.barrageCd || 0) - this.t) * 10) / 10);
+      // 無人機護衛自殺機:CD 倒數(HUD;歸零 = 兩架護衛機重現)—— 只跟主視野機發一份
       if (o.act && e.sq && e.kind === 'drone') o.kcd = Math.max(0, Math.round((e.sq.kamiCd - this.t) * 10) / 10);
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;
       if ((e.stealthUntil || 0) > this.t) o.st = Math.round((e.stealthUntil - this.t) * 10) / 10;

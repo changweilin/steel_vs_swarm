@@ -440,8 +440,9 @@ wss.on('connection', (ws) => {
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
     if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z, m.y); return; }   // y = 對空引爆高度(sim 夾範圍)
     if (m.t === 'plasma' && client.side) { b.heroPlasma(clientId, m.dx, m.dz, m.slot); return; }
-    if (m.t === 'kami' && client.side) { b.heroKamikaze(clientId); return; }   // 無人機 F:釋放自殺攻擊機
-    if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }
+    if (m.t === 'kami' && client.side) { b.heroKamikaze(clientId); return; }   // 無人機:狙擊長按左鍵 → 護衛自殺機衝出
+    if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }     // 變形機甲:狙擊長按左鍵 → 餌機(沿途投彈)
+    if (m.t === 'barrage' && client.side) { b.heroBarrage(clientId); return; } // 非變形機甲:狙擊長按左鍵 → 重砲模式
     if (m.t === 'swap' && client.side) { b.heroSwap(clientId, m.i); return; }
     if (m.t === 'lock' && client.side) { b.heroLock(clientId, m.id); return; }
     if (m.t === 'civ' && client.side) { b.civInteract(clientId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
