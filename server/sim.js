@@ -412,7 +412,8 @@ export class BattleSim {
       for (let i = 0; i < types.length; i++) { r -= w[i]; if (r <= 0) return types[i]; }
       return types[0];
     };
-    this.hazBlockers = [];   // 阻擋型座標(牆段間距檢查用)
+    this.hazBlockers = [];   // 阻擋型座標(連通性/牆段間距檢查用)
+    this._hazAll = [];       // 所有危險區圓 {x,z,r,block,wall}(規則 #1:任兩危險區不重疊,同牆除外)
     const want = F.HAZ_PER_LANE * this.lanes.length;
     let placed = 0;
     for (let tries = 0; tries < want * 20 && placed < want; tries++) {
@@ -426,17 +427,19 @@ export class BattleSim {
       const dir = Math.random() < 0.5 ? -1 : 1;
       const off = F.HAZ_LANE_MIN + (F.HAZ_LANE_MAX - F.HAZ_LANE_MIN) * Math.pow(Math.random(), F.HAZ_EDGE_BIAS);
       const n = 1 + Math.floor(Math.random() * F.CLUSTER_MAX);
-      const wallStart = this.hazBlockers.length;   // 牆內可緊靠,牆之間才查縫隙
+      const wall = this._hazAll.length;   // 牆 id:同牆(短牆設計)容許緊靠,不同牆不得重疊
       for (let k = 0; k < n && placed < want; k++) {
         const x = p.x + p.nx * dir * off + (Math.random() - 0.5) * def.r * 3;
         const z = p.z + p.nz * dir * off + (Math.random() - 0.5) * def.r * 3;
-        if (!this._hazOk(x, z, def, wallStart)) continue;
-        const sc = Math.round((0.75 + Math.random() * 0.6) * 100) / 100;   // 每次生成隨機差異化
+        const sc = Math.round((0.75 + Math.random() * 0.6) * 100) / 100;   // 每次生成隨機差異化(半徑感知,先算再驗)
+        if (!this._hazOk(x, z, def, sc, wall)) continue;
+        const r = def.r * sc;
         this._add({
           kind: type, side: null, neutral: true, haz: true, x, z, sc,
           hp: def.hp ? Math.round(def.hp * sc) : 1, inv: !def.hp,
         });
-        if (def.block) this.hazBlockers.push([x, z, def.r * sc]);
+        if (def.block) this.hazBlockers.push([x, z, r]);
+        this._hazAll.push({ x, z, r, block: !!def.block, wall });
         placed++;
       }
     }
@@ -448,22 +451,32 @@ export class BattleSim {
     return x - r >= b.minX && x + r <= b.maxX && z - r >= b.minZ && z + r <= b.maxZ;
   }
 
-  _hazOk(x, z, def, wallStart = Infinity) {
+  /** 危險區圓(中心 + 邊緣八點)是否觸及水域/沼澤(_wetAt 唯一縫;未上傳網格恆 0 → headless no-op) */
+  _hazOnWet(x, z, r) {
+    if (this._wetAt(x, z) > 0) return true;
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      if (this._wetAt(x + Math.cos(ang) * r, z + Math.sin(ang) * r) > 0) return true;
+    }
+    return false;
+  }
+
+  _hazOk(x, z, def, sc, wall = Infinity) {
     const F = FIELD;
-    if (!this._inBounds(x, z, def.r)) return false;                  // 不落在地形外/空氣牆外
-    // 2026-07-19:改半徑感知 —— 障礙「邊緣」(中心距 − def.r)須離兵線 ≥ HAZ_LANE_MIN,
-    // 否則 fire(r12)/flood(r20)等大半徑危險區在最小中心距時邊緣已伸進 14m 走廊(干擾兵線)。
-    if (this._distToLanes(x, z) - def.r < F.HAZ_LANE_MIN) return false;
+    const r = def.r * sc;
+    if (!this._inBounds(x, z, r)) return false;                     // 不落在地形外/空氣牆外
+    // 2026-07-19:半徑感知 —— 障礙「邊緣」(中心距 − r)須離兵線 ≥ HAZ_LANE_MIN(大半徑危險區不侵 14m 走廊)。
+    if (this._distToLanes(x, z) - r < F.HAZ_LANE_MIN) return false;
     for (const side of ['SWARM', 'STEEL']) {
       const [bx, bz] = this.basePos[side];
       if (dist2d(x, z, bx, bz) < F.HAZ_BASE_CLEAR) return false;
     }
-    if (def.block) {
-      const upto = Math.min(wallStart, this.hazBlockers.length);
-      for (let i = 0; i < upto; i++) {
-        const [ox, oz] = this.hazBlockers[i];
-        if (dist2d(x, z, ox, oz) < F.HAZ_GAP) return false;          // 保證通行縫隙
-      }
+    // (規則 #1)不落在水域/沼澤(火場燒在湖裡 = 錯);(規則 #1)不與其他牆的危險區重疊(火/淹水等非阻擋型一併納入)。
+    if (this._hazOnWet(x, z, r)) return false;
+    for (const h of this._hazAll || []) {
+      if (h.wall === wall) continue;                                // 同牆(短牆設計)容許緊靠
+      const need = (def.block && h.block) ? Math.max(F.HAZ_GAP, r + h.r) : r + h.r;   // 阻擋牆間留通行縫;其餘只需不重疊
+      if (dist2d(x, z, h.x, h.z) < need) return false;
     }
     return true;
   }

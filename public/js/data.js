@@ -236,6 +236,14 @@ export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', bui
 // (F 鍵自殺攻擊機引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
 // bomb.dmg 為三階陣列(2026-07-18 起):傷害吃無人機武器品質階級(wq → abil.light 1/2/3),
 // 由 sim._bombDef() 以 tierVal 解析。Lv1 = 原值 240(不變),升階才增威(自殺攻擊隨武器等級成長)。
+// ---- 全際「reach」比例尺(2026-07-19 規則 #4)----
+// 使用者定案:地圖/尺寸不動,改「全單位射程 / 視野 / 移速」統一減半 ⇒ 相對塔射程縮半,
+// 兵線塞得下兩個 ≤80% 重疊的塔環(塔射程 310→155 ⇒ SEP 372→186 < 兵線 906~1442)。
+// **只縮「reach / 感知 / 移動 / 制空高度門檻」**;不動實體尺寸(SOLDIER_H)、AoE/障礙半徑、地圖佈局距離、比率(HEROIC/RANGE_SIGHT_F)。
+// 套用縫:heroWeapon/heroAbility(英雄武器招式射程)+ 下方 UNITS/WEAPONS/GAME/ALTITUDE/EVASION 統一縮放塊。
+// **可一鍵還原**:改回 1 即回到原尺度(記得同步 e2e #INC-104 高度常數)。移速減半 ⇒ 對戰時長約 ×2(節奏刻意拉長)。
+export const COMBAT_SCALE = 0.5;
+
 export const WEAPONS = {
   rgun:   { name: '重型機槍',   dmg: 26,  rate: 4.5, range: 220, mag: 48, reload: 2.2, pen: 0,  vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
   // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
@@ -556,6 +564,7 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   return {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
     dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1) * squad,
+    // w.range 已於下方統一縮放塊 ×COMBAT_SCALE(source 縮 reach);rangeCap 隨 UNITS.sight 同步縮 ⇒ 相對關係不變
     range: heroic ? Math.min(w.range * HEROIC.range, rangeCap(kind, slot)) : w.range,
     rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
     mag: t(w.mag ?? 1),
@@ -579,8 +588,8 @@ export function heroAbility(ch, slot, lvl = 1) {
     id: slot, name: a.name, fx: a.fx, desc: a.desc,
     cd: t(a.cd), mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
     dmg: t(a.dmg ?? 0), heal: t(a.heal ?? 0), count: t(a.count ?? 1),
-    range: t(a.range ?? 0), imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),
-    unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0),
+    range: t(a.range ?? 0) * COMBAT_SCALE, imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
+    unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
     pen: t(a.pen ?? 0),
@@ -1543,15 +1552,39 @@ GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MIN
 // 塔距 = 射程重疊率的唯一推導處(見 GAME.TOWER_OVERLAP)
 GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
 
+// ---- 全際 reach 縮放(規則 #4,見 COMBAT_SCALE;唯一縫,MUST NOT 在別處二次縮)----
+// 統一縮「射程 / 視野 / 移速 / 制空高度門檻 / 速度門檻」× COMBAT_SCALE;**不動** 實體尺寸、AoE/障礙半徑、
+// 地圖佈局距離(走廊/淨空/生成偏移/雷區)、比率(HEROIC/RANGE_SIGHT_F/AIM_SIGHT_MULT)。放在所有相關定義與
+// 推導(bounty/drone/base.guns/MINES/SEP —— 皆非 range/sight/speed)之後、solveTowerSites 前;函式在呼叫期讀 UNITS,故縮值即時生效。
+{
+  const CS = COMBAT_SCALE;
+  for (const u of Object.values(UNITS)) {
+    for (const key of ['range', 'sight', 'speed', 'fly', 'vspeed', 'jump']) if (typeof u[key] === 'number') u[key] *= CS;
+    if (typeof u.sam?.range === 'number') u.sam.range *= CS;    // 塔防空飛彈射程
+    if (typeof u.guns?.range === 'number') u.guns.range *= CS;  // 主堡加裝砲(derive 自塔,獨立縮)
+  }
+  for (const w of Object.values(WEAPONS)) if (typeof w.range === 'number') w.range *= CS;   // NPC 武器射程(留 blast r/AoE)
+  // 英雄武器基準射程(scalar;heroWeapon 讀此 source ⇒ 玩家英雄與 NPC 基準一致縮;招式 range/vision 走 heroAbility 輸出縮)
+  for (const c of Object.values(CHARACTERS)) for (const slot of ['light', 'heavy'])
+    if (typeof c[slot]?.range === 'number') c[slot].range *= CS;
+  ALTITUDE.REF_M *= CS;
+  for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
+  EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
+}
+
 /**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
- * lanes: [[x,z], …][] — 兵線折線(世界公尺;index 0 = SWARM 主堡端)。
+ * lanes: [[x,z], …][] — 兵線折線(世界公尺;每條 index 0 = SWARM 主堡端、末端 = STEEL 主堡端)。
  * 回傳 lanes.map(sites[]),每個 site = { frac, SWARM:{x,z,nx,nz}, STEEL:{…} };
- * 實際砲塔 = site 沿法線 ±TOWER_SIDE_OFF 各一座。
+ * 實際砲塔 = site 沿法線 ±TOWER_SIDE_OFF 各一座。每條兵線 1~2 個塔位(前塔恆有、後塔 best-effort)。
  *
- * 規則(2026-07-13):**最前線那一組**沿兵線前後搜到「敵我最近兩塔直線距離 ≈ R×TOWER_SEP_F」
- * (= 射程重疊 TOWER_OVERLAP、且 > R 故不對射);後方塔組維持「只往己方主堡收」的舊守衛。
- * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。
+ * 規則 #4(2026-07-19 使用者定奪)—— **per-lane**(跨兵線在共用主堡/中線的聚攏屬 DOTA 拓樸固有,只防疊不強制):
+ *   - **前線敵我雙砲塔**:維持射程重疊 80%(爭中線,invariant ②;敵我對距 ≈ SEP = R×TOWER_SEP_F)。同陣營跨兵線前塔僅防
+ *     物理疊塔(≥ STACK,非 ≥SEP;多線在中線本就匯聚)——修陽明山 L3 兩塔 4m 疊塔。前塔↔己方主堡不設限(短兵線固有)。
+ *   - **後方己方雙砲塔點**:與**己方**主堡、與**同兵線**前塔的射程重疊率 ≤ 80%(後塔↔該兩者最近距離 ≥ SEP),
+ *     且對全場塔 ≥ STACK 不疊。**不捨棄**(塔數不變⇒平衡不動):兵線太短塞不下 ≤80% → 取重疊最小的合法位(best-effort)。
+ *   - 真正 ≤80% 全達成需兵線 ≥ ~5·SEP;現尺度多數兵線做不到 → 靠放大地圖(降 REAL_SCALE)拉長兵線(見 GEO_SCALE_VER)。
+ * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。稽核:tools/audit_map_rules.mjs。
  */
 export function solveTowerSites(lanes) {
   const R = UNITS.tower.range, SEP = R * GAME.TOWER_SEP_F, OFF = GAME.TOWER_SIDE_OFF;
@@ -1569,9 +1602,21 @@ export function solveTowerSites(lanes) {
     };
     return { total, at };
   };
-  const placed = [];   // 已定案的砲塔(跨兵線也要守距離){ side, x, z }
-  const out = [];
-  for (const pts of lanes) {
+  // 主堡 = 兵線共用端點(每條 index 0 = SWARM、末端 = STEEL);只約束「後塔↔主堡 ≤80%」,不約束前塔。
+  const ep = lanes[0] || [];
+  const bases = ep.length
+    ? [{ x: ep[0][0], z: ep[0][1] }, { x: ep[ep.length - 1][0], z: ep[ep.length - 1][1] }]
+    : [];
+  const STACK = 2 * OFF + 10;   // 同陣營不同塔位最近塔距下限(> 同塔位左右塔 2·OFF ⇒ 塔模型不互穿)
+  // 分陣營記錄已定案砲塔:**敵我**塔對一律 ≥ SEP(preserve invariant ② 前線 80% + 不對射,含跨兵線);
+  // **同陣營**塔對只防物理疊塔 ≥ STACK(中線/主堡聚攏屬 DOTA 拓樸固有)。
+  const placedS = [], placedT = [];
+  const nearest = (T, arr) => {   // 一組塔(左右 2 座)對 arr 內任一點的最近距離(空 arr → Infinity)
+    let m = Infinity;
+    for (const q of arr) for (const a of T) { const d = d2(a, q); if (d < m) m = d; }
+    return m;
+  };
+  const G = lanes.map((pts) => {
     const { total, at } = geom(pts);
     const site = (side, frac) => {
       const d = side === 'SWARM' ? total * frac : total * (1 - frac);
@@ -1581,51 +1626,61 @@ export function solveTowerSites(lanes) {
       return { x, z, nx: (bz - az) / len, nz: -(bx - ax) / len };
     };
     const towers = (p) => [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s }));
-    // 這個 frac 下,敵我最近兩塔的直線距離(含跨兵線已定案的塔)
-    const minGap = (pS, pT) => {
+    return { site, towers };
+  });
+  const push = (S, T) => { for (const t of S) placedS.push(t); for (const t of T) placedT.push(t); };
+  const pairGap = (S, T) => {   // 當前敵我兩組塔的最近距離(前線爭中線目標 ≈ SEP)
+    let m = Infinity;
+    for (const a of S) for (const b of T) { const d = d2(a, b); if (d < m) m = d; }
+    return m;
+  };
+  // 趟 1:前線(爭中線,永不捨棄)。**敵我對距 opp**(含當前對 + 跨兵線敵塔)MUST ≥ SEP(不對射);
+  //   同陣營跨兵線只防疊塔 same ≥ STACK。① opp≥SEP 且 same≥STACK 中「當前對 og 最貼 SEP」⇒ 重疊剛好 80%;
+  //   ② 匯聚使 opp 全<SEP → same≥STACK 中 opp 最大(對射最少);③ 連 same 都難 → min(opp,same) 最大(修陽明山 L3 4m)。
+  const frontSites = [];
+  for (const { site, towers } of G) {
+    let front = null, anti = null, fb = null;
+    for (let f = GAME.TOWER_MIN_FRAC; f <= GAME.TOWER_MAX_FRAC + 1e-9; f += 0.002) {
+      const pS = site('SWARM', f), pT = site('STEEL', f);
       const S = towers(pS), T = towers(pT);
-      let m = Infinity;
-      for (const a of S) for (const b of T) m = Math.min(m, d2(a, b));
-      for (const q of placed) {
-        const mine = q.side === 'STEEL' ? S : T;
-        for (const a of mine) m = Math.min(m, d2(a, q));
-      }
-      return m;
-    };
-    const sites = [];
-    for (let j = 0; j < GAME.TOWER_FRACS.length; j++) {
-      const frac0 = GAME.TOWER_FRACS[j];
-      const front = j === GAME.TOWER_FRACS.length - 1;
-      let best = null;
-      if (front) {
-        // 前線:全區間掃描,取「≥ SEP 且最貼近 SEP」的 frac ⇒ 重疊率剛好 TOWER_OVERLAP
-        let bestGap = Infinity;
-        for (let f = GAME.TOWER_MIN_FRAC; f <= GAME.TOWER_MAX_FRAC + 1e-9; f += 0.002) {
-          const pS = site('SWARM', f), pT = site('STEEL', f);
-          const gap = minGap(pS, pT);
-          if (gap >= SEP && gap < bestGap) { best = { f, pS, pT }; bestGap = gap; }
-        }
-      } else {
-        // 後方:從 frac0 往己方主堡收,第一個滿足距離的即定案(維持原設計的沿線位置)
-        for (let f = frac0; f >= GAME.TOWER_MIN_FRAC - 1e-9; f -= 0.002) {
-          const pS = site('SWARM', f), pT = site('STEEL', f);
-          if (minGap(pS, pT) < SEP) continue;
-          best = { f, pS, pT };
-          break;
-        }
-      }
-      if (!best) {           // 兵線太短:退到下限(接受重疊超標,總比塔疊在一起好)
-        const f = GAME.TOWER_MIN_FRAC;
-        best = { f, pS: site('SWARM', f), pT: site('STEEL', f) };
-      }
-      for (const [side, p] of [['SWARM', best.pS], ['STEEL', best.pT]]) {
-        for (const t of towers(p)) placed.push({ side, x: t.x, z: t.z });
-      }
-      sites.push({ frac: best.f, SWARM: best.pS, STEEL: best.pT });
+      const opp = Math.min(pairGap(S, T), nearest(S, placedT), nearest(T, placedS));   // 全敵我對距
+      const same = Math.min(nearest(S, placedS), nearest(T, placedT));                 // 同陣營跨兵線
+      const og = pairGap(S, T);
+      const e = { f, pS, pT, og, opp };
+      if (opp >= SEP - 1e-6 && same >= STACK - 1e-6 && (!front || og < front.og)) front = e;
+      if (same >= STACK - 1e-6 && (!anti || opp > anti.opp)) anti = e;
+      const combo = Math.min(opp, same);
+      if (!fb || combo > fb.combo) fb = { ...e, combo };
     }
-    out.push(sites);
+    const fe = front || anti || fb;
+    push(towers(fe.pS), towers(fe.pT));
+    frontSites.push({ frac: fe.f, SWARM: fe.pS, STEEL: fe.pT });
   }
-  return out;
+  // 趟 2:後方(己方防線,per-lane;不捨棄 ⇒ 塔數不變、平衡不動):後塔↔己方主堡、後塔↔同兵線己方前塔 重疊 ≤80%(sep ≥ SEP);
+  //   敵我對距 opp ≥ SEP(不對射)、同陣營 same ≥ STACK(不疊)。① sep≥SEP 最貼主堡位(防禦縱深);② 短兵線 → sep 最大(重疊最小);
+  //   ③ 皆難 → min(sep,opp,same) 最大。跨兵線後塔在共用主堡附近本就聚攏(固有,只防疊)。
+  return frontSites.map((frontSite, li) => {
+    const { site, towers } = G[li];
+    const fS = towers(frontSite.SWARM), fT = towers(frontSite.STEEL);   // 己方前塔
+    let strict = null, spread = null, fb = null;
+    for (let f = GAME.TOWER_MIN_FRAC; f < frontSite.frac - 1e-6; f += 0.002) {
+      const pS = site('SWARM', f), pT = site('STEEL', f);
+      const S = towers(pS), T = towers(pT);
+      const sep = Math.min(nearest(S, [bases[0]]), nearest(S, fS), nearest(T, [bases[1]]), nearest(T, fT));
+      const opp = Math.min(nearest(S, placedT), nearest(T, placedS));
+      const same = Math.min(nearest(S, placedS), nearest(T, placedT));
+      if (opp >= SEP - 1e-6 && same >= STACK - 1e-6) {
+        const e = { pS, pT, f, sep };
+        if (sep >= SEP - 1e-6 && !strict) strict = e;
+        if (!spread || sep > spread.sep) spread = e;
+      }
+      const combo = Math.min(sep, opp, same);
+      if (!fb || combo > fb.combo) fb = { pS, pT, f, combo };
+    }
+    const pick = strict || spread || fb;
+    if (pick) { push(towers(pick.pS), towers(pick.pT)); return [{ frac: pick.f, SWARM: pick.pS, STEEL: pick.pT }, frontSite]; }
+    return [frontSite];
+  });
 }
 
 // ---- 地形呈現(解析度 + 主要道路外海拔放大)----

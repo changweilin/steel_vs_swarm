@@ -7,8 +7,11 @@ import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, QUAL, masteryF, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
-  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD,
+  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE,
 } from '../public/js/data.js';
+
+// #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
+const HI_ALT = Math.round(250 * COMBAT_SCALE);
 
 /** 清掉第三方野營(游擊隊/民兵):與本節無關的 sim 直測要確定性,不能吃野營流彈 */
 function purgeCamps(sim) {
@@ -16,7 +19,7 @@ function purgeCamps(sim) {
   sim.camps = [];
 }
 
-const URL = 'ws://localhost:8620';
+const URL = process.env.WS_URL || 'ws://localhost:8620';
 const log = (...a) => console.log(...a);
 let failed = false;
 const assert = (cond, msg) => {
@@ -100,12 +103,12 @@ log('— sim:角色系統(24 陣營角 + 8 傭兵 × 專屬武器/招式 × 三�
         if (!a || !(a.cd > 0) || !(a.mp > 0)) dataOk = false;
       }
     }
-    // #INC-104:e2e 從 y=250 高空垂直射擊 → 輕武器英雄射程 ×1.25 必須 > 250
-    if (heroWeapon(id, 'light', 1).range * 1.25 <= 250) rangeOk = false;
+    // #INC-104:e2e 從 y=HI_ALT 高空垂直射擊 → 輕武器英雄射程 ×1.25 必須 > HI_ALT(隨 COMBAT_SCALE 縮)
+    if (heroWeapon(id, 'light', 1).range * 1.25 <= HI_ALT) rangeOk = false;
   }
   assert(dataOk, '28 角 × 4 招 × 3 階資料完整(傷害/射程/CD/MP 皆為正值)');
   assert(tierOk, '三階升級傷害遞增');
-  assert(rangeOk, '全部輕武器英雄射程 ×1.25 > 250(高空射擊測試相容,#INC-104)');
+  assert(rangeOk, `全部輕武器英雄射程 ×1.25 > ${HI_ALT}(高空射擊測試相容,#INC-104)`);
   // t03 輕武器基準 170 → ×1.2 = 204 < robot/drone 的 rangeCap,不會被夾,可驗純倍率
   const wn = heroWeapon('t03', 'light', 1, false), wh = heroWeapon('t03', 'light', 1, true);
   assert(Math.abs(wh.range / wn.range - HEROIC.range) < 1e-9 && Math.abs(wh.dmg / wn.dmg - HEROIC.dmg) < 1e-9,
@@ -129,8 +132,8 @@ log('— sim:玩家射程恆小於視野(rangeCap;重武器吃狙擊視角加成
   assert(rangeCap('robot', 'heavy') > rangeCap('robot', 'light'),
     '重武器需開狙擊視角,射程上限跟著視野放大');
   assert(clamped > 0, `${clamped} 支武器被射程上限夾住(遠程狙擊不再打霧裡的東西)`);
-  assert(heroWeapon('t01', 'light', 1).range * 1.25 > 250,
-    '夾住後仍滿足 #INC-104(y=250 高空垂直射擊)');
+  assert(heroWeapon('t01', 'light', 1).range * 1.25 > HI_ALT,
+    `夾住後仍滿足 #INC-104(y=${HI_ALT} 高空垂直射擊)`);
 }
 
 log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面雙型態)+ 陣亡購買 —');
@@ -949,7 +952,7 @@ assert(creeps.length === wavePer * 2, `第一波小兵 ${wavePer * 2} 隻(1線×
 
 log('— 英雄移動 + 射擊 —');
 const target = snapWave.ents.find((e) => e.k === 'soldier' && e.s === 'STEEL');
-host.send({ t: 'pos', x: target.x, y: 250, z: target.z, ry: 0 });
+host.send({ t: 'pos', x: target.x, y: HI_ALT, z: target.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 300));
 const hp0 = target.hp;
 for (let i = 0; i < 6; i++) {
@@ -967,7 +970,7 @@ assert(!t2 || t2.hp < hp0, `射擊生效(${hp0} → ${t2 ? t2.hp : '陣亡'})`);
 log('— 射速上限(狂發 hit 不會全吃)—');
 const t3 = spec.snaps.at(-1).ents.find((e) => e.k === 'howitzer' && e.s === 'STEEL');   // 無霧視角找目標(host 視野外)
 if (t3) {
-  host.send({ t: 'pos', x: t3.x, y: 250, z: t3.z, ry: 0 });
+  host.send({ t: 'pos', x: t3.x, y: HI_ALT, z: t3.z, ry: 0 });
   await new Promise((r) => setTimeout(r, 250));
   const before = (host.snaps.at(-1).ents.find((e) => e.id === t3.id) || {}).hp ?? t3.hp;
   for (let i = 0; i < 50; i++) host.send({ t: 'hit', id: t3.id });
@@ -980,7 +983,7 @@ if (t3) {
 }
 
 log('— 重武器 CD(瞄準 + 著彈回報;CD 中連發被拒)—');
-host.send({ t: 'pos', x: target.x, y: 250, z: target.z, ry: 0 });   // 回到著彈點正上方(射程內)
+host.send({ t: 'pos', x: target.x, y: HI_ALT, z: target.z, ry: 0 });   // 回到著彈點正上方(射程內)
 const boomsBefore = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 host.send({ t: 'aim', on: true });
 await new Promise((r) => setTimeout(r, 200));
@@ -996,7 +999,7 @@ const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e 
 const dies0 = droneDies();
 // 移到高空(250 > SAM 240)避免被塔擊落干擾,再按 F 釋放自殺攻擊機
 const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
-host.send({ t: 'pos', x: foeTower.x, y: 250, z: foeTower.z, ry: 0 });
+host.send({ t: 'pos', x: foeTower.x, y: HI_ALT, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
 // 累計不同 id(自殺機撲擊敵塔 → 會邊飛邊死,任一瞬間的快照未必同時看到兩架 → 用累計 id 才穩)
 const kamiIds = () => { const s = new Set();
@@ -1052,7 +1055,7 @@ log('— 勝負(重武器溫壓火箭高空拆堡:反建築 ×2.0 + 破甲)—')
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
 const t0 = Date.now();
 const iv = setInterval(() => {
-  host.send({ t: 'pos', x: steelBase.x, y: 250, z: steelBase.z, ry: 0 });
+  host.send({ t: 'pos', x: steelBase.x, y: HI_ALT, z: steelBase.z, ry: 0 });
   host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
   host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
 }, 300);
