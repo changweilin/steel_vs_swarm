@@ -1702,6 +1702,53 @@ export function solveTowerSites(lanes) {
   });
 }
 
+/**
+ * 砲塔佈局規則稽核(規則 #4 的**唯一結算縫**)—— 給定兵線(遊戲公尺),跑 solveTowerSites 後
+ * 檢查所有塔↔塔 / 塔↔主堡的射程重疊,回傳是否合規 + 各項最壞值。稽核工具、自訂地圖掃描
+ * (mapSelect)、伺服器 validateBattleConfig、烘焙工具**共用這一支**,MUST NOT 各寫一套。
+ *   合規 = 無「殘餘 >80%」(後塔↔己方主堡 / 後塔↔同兵線己方前塔 / 相鄰兵線同陣營塔)且無物理疊塔(≥ STACK)。
+ *   敵我前線塔重疊 ≤80% 是固有設計(invariant ②,solveTowerSites 保證),不算殘餘。
+ * lanes: [[x,z], …][](遊戲公尺;index 0 = SWARM 端、末端 = STEEL 端,與 solveTowerSites 同)。
+ */
+export function towerLayoutAudit(lanes) {
+  const R = UNITS.tower.range, OFF = GAME.TOWER_SIDE_OFF;
+  const BASE_R = Math.max(UNITS.base.range, UNITS.base.guns.range);
+  const STACK = 2 * OFF + 10;
+  const overlapPct = (d, ra, rb) => Math.max(0, (ra + rb - d) / Math.min(ra, rb)) * 100;
+  const sites = solveTowerSites(lanes);
+  const ep = lanes[0] || [];
+  const structs = [];
+  if (ep.length) {
+    const baseXY = { SWARM: { x: ep[0][0], z: ep[0][1] }, STEEL: { x: ep[ep.length - 1][0], z: ep[ep.length - 1][1] } };
+    for (const side of ['SWARM', 'STEEL']) structs.push({ side, role: 'base', li: -1, r: BASE_R, pts: [baseXY[side]] });
+  }
+  for (let li = 0; li < sites.length; li++) {
+    sites[li].forEach((st, idx) => {
+      const role = idx === sites[li].length - 1 ? 'front' : 'rear';
+      for (const side of ['SWARM', 'STEEL']) {
+        const p = st[side];
+        structs.push({ side, role, li, r: R, pts: [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s })) });
+      }
+    });
+  }
+  const minTD = (A, B) => { let m = Infinity; for (const a of A.pts) for (const b of B.pts) m = Math.min(m, Math.hypot(a.x - b.x, a.z - b.z)); return m; };
+  let residual = 0, minStack = Infinity, worstRB = 0, worstRF = 0, worstAdj = 0, oppFront = 0;
+  for (let i = 0; i < structs.length; i++) for (let j = i + 1; j < structs.length; j++) {
+    const a = structs[i], b = structs[j];
+    if (a.li === b.li && a.role === b.role && a.side === b.side) continue;   // 同塔位左右塔
+    const d = minTD(a, b), pct = overlapPct(d, a.r, b.r);
+    const rear = a.role === 'rear' ? a : b.role === 'rear' ? b : null;
+    const other = rear === a ? b : a;
+    if (rear && other.role === 'base' && rear.side === other.side) { worstRB = Math.max(worstRB, pct); if (pct > 81) residual++; }
+    else if (rear && other.role === 'front' && rear.side === other.side && rear.li === other.li) { worstRF = Math.max(worstRF, pct); if (pct > 81) residual++; }
+    if (a.role !== 'base' && b.role !== 'base' && a.side === b.side && Math.abs(a.li - b.li) === 1) { worstAdj = Math.max(worstAdj, pct); if (pct > 81) residual++; }
+    if (a.role === 'front' && b.role === 'front' && a.side !== b.side && a.li === b.li) oppFront = Math.max(oppFront, pct);
+    if (a.role !== 'base' && b.role !== 'base') minStack = Math.min(minStack, d);
+  }
+  const stackBad = minStack < STACK - 1;
+  return { ok: residual === 0 && !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront };
+}
+
 // ---- 地形呈現(解析度 + 主要道路外海拔放大)----
 // GRID_N/ELEV_ZOOM 純渲染;AMP_* 會改 heightAt(單位貼地)故列為平衡值住這裡。
 export const TERRAIN = {

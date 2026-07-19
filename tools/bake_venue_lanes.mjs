@@ -4,8 +4,15 @@
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit }
   from '../public/js/data.js';
+
+// 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
+const SC_GAME = 1 / MAPGEO.REAL_SCALE, EARTH_M = 6371000;
+const llToGame = (lat, lng, c) => [
+  (lng - c.lng) * Math.PI / 180 * EARTH_M * Math.cos(c.lat * Math.PI / 180) * SC_GAME,
+  (lat - c.lat) * Math.PI / 180 * EARTH_M * SC_GAME,
+];
 
 const CACHE = new URL('./.osm_cache/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
@@ -285,9 +292,14 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
+  // 砲塔規則合規(規則 #4):跑與 runtime 同一換算的 towerLayoutAudit ⇒ 選址時就偏好「砲塔佈局合規」的方位
+  const A = [g.LA[aIdx], g.LN[aIdx]], B = [g.LA[bIdx], g.LN[bIdx]];
+  const cc = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
+  const ta = towerLayoutAudit(lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc))));
   return {
     bearing, aIdx, bIdx, lanes,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
+    resid: ta.residual + (ta.stackBad ? 1000 : 0),   // 疊塔視為重罰(絕不選)
     score: tacticalScore(sinu, tpk, mo),
   };
 }
@@ -320,7 +332,9 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         for (const off of OFFSET_FRACS) {
           const r = tryBearing(g, aIdx, i * 5, L, off);
           if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
-          if (r && (!best || r.score > best.score)) best = r;
+          // 詞典序:先「砲塔規則殘餘少」(規則 #4 合規優先),同殘餘再取戰術評分高。
+          // 合規是**偏好非硬門檻**:全方位皆不合規時仍取殘餘最小者(不放棄該 L,行為等同舊版最佳努力)。
+          if (r && (!best || r.resid < best.resid || (r.resid === best.resid && r.score > best.score))) best = r;
         }
       }
       if (!best) {
@@ -329,13 +343,16 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         continue;
       }
       byL[L] = { g, ...best };
-      log(`  L=${L} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)}`);
+      log(`  L=${L} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}`);
     }
     const hits = Object.keys(byL).length;
     if (!hits) continue;
-    // 取「真實道路兵線可用的 L 數」最多的錨點;同分取先列者
-    if (!picked || hits > Object.keys(picked.byL).length) picked = { anchor, byL, ways: ways.length, g };
-    if (hits === 3) break;
+    // 取錨點:先「規則 #4 合規的 L 數」最多,再「真實道路可用 L 數」最多;同分取先列者。
+    const conf = Object.values(byL).filter((b) => b.resid === 0).length;
+    if (!picked || conf > picked.conf || (conf === picked.conf && hits > Object.keys(picked.byL).length)) {
+      picked = { anchor, byL, ways: ways.length, g, conf };
+    }
+    if (hits === 3 && conf === 3) break;   // 完美(全 L 真實道路且全合規)才提前收手
   }
   if (!picked) { report.push(`${id}: ❌ 全 L 皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
   out[id] = picked;

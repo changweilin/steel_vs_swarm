@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
-import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv, BOT_DIFF, DEFAULT_BOT_DIFF } from '../public/js/data.js';
+import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv, BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit } from '../public/js/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -155,6 +155,18 @@ function roomListPayload() {
 }
 
 /** 開房前的戰場設定驗證:回傳錯誤訊息或 null */
+// 兵線(lat/lng)→ 遊戲公尺(原點任取,towerLayoutAudit 只用相對距離)。與 mapSelect / 烘焙同一換算。
+const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
+function lanesToGame(lanes) {
+  const o = lanes[0]?.[0];
+  if (!o) return null;
+  const cosO = Math.cos(o[0] * Math.PI / 180);
+  return lanes.map((lane) => lane.map(([lat, lng]) => [
+    (lng - o[1]) * Math.PI / 180 * EARTH_M * cosO * SC_GAME,
+    (lat - o[0]) * Math.PI / 180 * EARTH_M * SC_GAME,
+  ]));
+}
+
 function validateBattleConfig(cfg, teamSize) {
   const L = lanesFor(teamSize);
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
@@ -162,6 +174,9 @@ function validateBattleConfig(cfg, teamSize) {
   if (!(cfg.distM >= cfg.diagM * 0.8)) {
     return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
   }
+  // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
+  const game = lanesToGame(cfg.lanes);
+  if (!game || !towerLayoutAudit(game).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
   return null;
 }
 

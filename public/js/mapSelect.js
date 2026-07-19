@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, towerLayoutAudit } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -33,6 +33,16 @@ function destPoint(origin, bearingDeg, d) {
   return [origin[0] + dLat, origin[1] + dLng];
 }
 function midPoint(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
+
+// 砲塔規則合規(規則 #4):兵線(lat/lng)→ 遊戲公尺,跑 data.js 的唯一結算縫 towerLayoutAudit。
+// 只用相對距離 ⇒ 原點任取(這裡用兵線起點)。與烘焙 / 伺服器 validateBattleConfig / 稽核共用同一支。
+const SC_GAME = 1 / MAPGEO.REAL_SCALE;
+function laneRuleOK(lanes) {
+  const o = lanes[0]?.[0];
+  if (!o) return false;
+  const game = lanes.map((lane) => lane.map((p) => { const [x, z] = toMeters(p, o); return [x * SC_GAME, z * SC_GAME]; }));
+  return towerLayoutAudit(game).ok;
+}
 
 /** 折線重合率:網格佔用率(相對較短一條)。cell 由 overlapCellM(L) 依地圖尺度給定 */
 function overlapRatio(laneA, laneB, origin, cell) {
@@ -390,6 +400,9 @@ export class MapSelect {
       if (!ok) continue;
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
+      // 砲塔規則(規則 #4):此推薦點的兵線幾何會讓 solveTowerSites 佈出「殘餘 >80% / 疊塔」→ 淘汰
+      // (自訂地圖與預設場地同標準;伺服器 validateBattleConfig 再把關一次)。
+      if (!laneRuleOK(lanes)) continue;
 
       const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
       cand.tactics = lanesTactics(lanes, A, maxOverlap);
