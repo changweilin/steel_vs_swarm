@@ -1583,6 +1583,8 @@ GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
  *     物理疊塔(≥ STACK,非 ≥SEP;多線在中線本就匯聚)——修陽明山 L3 兩塔 4m 疊塔。前塔↔己方主堡不設限(短兵線固有)。
  *   - **後方己方雙砲塔點**:與**己方**主堡、與**同兵線**前塔的射程重疊率 ≤ 80%(後塔↔該兩者最近距離 ≥ SEP),
  *     且對全場塔 ≥ STACK 不疊。**不捨棄**(塔數不變⇒平衡不動):兵線太短塞不下 ≤80% → 取重疊最小的合法位(best-effort)。
+ *   - **相鄰兵線雙砲塔點**(|Δli|=1,同陣營,前/後皆算,2026-07-19 追加):射程重疊率 ≤ 80%(最近距離 ≥ SEP),best-effort;
+ *     非相鄰兵線(如 L3 上↔下,中路隔開)仍只防物理疊塔 ≥ STACK。相鄰約束**絕不覆蓋敵我前線 opp≥SEP**(invariant ②):塞不下時退回舊行為(frontNoAdj/spreadNoAdj),塔數與 ② 不回歸。
  *   - 真正 ≤80% 全達成需兵線 ≥ ~5·SEP;現尺度多數兵線做不到 → 靠放大地圖(降 REAL_SCALE)拉長兵線(見 GEO_SCALE_VER)。
  * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。稽核:tools/audit_map_rules.mjs。
  */
@@ -1610,10 +1612,17 @@ export function solveTowerSites(lanes) {
   const STACK = 2 * OFF + 10;   // 同陣營不同塔位最近塔距下限(> 同塔位左右塔 2·OFF ⇒ 塔模型不互穿)
   // 分陣營記錄已定案砲塔:**敵我**塔對一律 ≥ SEP(preserve invariant ② 前線 80% + 不對射,含跨兵線);
   // **同陣營**塔對只防物理疊塔 ≥ STACK(中線/主堡聚攏屬 DOTA 拓樸固有)。
-  const placedS = [], placedT = [];
+  const placedS = [], placedT = [];   // 已定案砲塔(帶 li = 所屬兵線)
   const nearest = (T, arr) => {   // 一組塔(左右 2 座)對 arr 內任一點的最近距離(空 arr → Infinity)
     let m = Infinity;
     for (const q of arr) for (const a of T) { const d = d2(a, q); if (d < m) m = d; }
+    return m;
+  };
+  // **相鄰兵線**(|Δli| = 1)同陣營塔的最近距離 —— 用於「相鄰兵線雙砲塔點重疊 ≤80%(≥ SEP)」規則。
+  // 只看 arr 內 li 與當前兵線相鄰者;非相鄰(如 L3 的上↔下)仍只由 nearest(…)≥STACK 防疊。
+  const nearestAdj = (T, arr, li) => {
+    let m = Infinity;
+    for (const q of arr) { if (Math.abs(q.li - li) !== 1) continue; for (const a of T) { const d = d2(a, q); if (d < m) m = d; } }
     return m;
   };
   const G = lanes.map((pts) => {
@@ -1628,57 +1637,67 @@ export function solveTowerSites(lanes) {
     const towers = (p) => [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s }));
     return { site, towers };
   });
-  const push = (S, T) => { for (const t of S) placedS.push(t); for (const t of T) placedT.push(t); };
+  const push = (li, S, T) => { for (const t of S) placedS.push({ x: t.x, z: t.z, li }); for (const t of T) placedT.push({ x: t.x, z: t.z, li }); };
   const pairGap = (S, T) => {   // 當前敵我兩組塔的最近距離(前線爭中線目標 ≈ SEP)
     let m = Infinity;
     for (const a of S) for (const b of T) { const d = d2(a, b); if (d < m) m = d; }
     return m;
   };
-  // 趟 1:前線(爭中線,永不捨棄)。**敵我對距 opp**(含當前對 + 跨兵線敵塔)MUST ≥ SEP(不對射);
-  //   同陣營跨兵線只防疊塔 same ≥ STACK。① opp≥SEP 且 same≥STACK 中「當前對 og 最貼 SEP」⇒ 重疊剛好 80%;
-  //   ② 匯聚使 opp 全<SEP → same≥STACK 中 opp 最大(對射最少);③ 連 same 都難 → min(opp,same) 最大(修陽明山 L3 4m)。
+  // 趟 1:前線(爭中線,永不捨棄)。硬底線(絕不為軟規則犧牲):**敵我對距 opp**(含當前對 + 跨兵線敵塔)MUST ≥ SEP(不對射,invariant ②)、
+  //   非相鄰同陣營 sameAll ≥ STACK(不疊)。**相鄰兵線同陣營 sameAdj**(|Δli|=1)偏好 ≥ SEP(重疊 ≤80%,使用者新增規則,優先滿足)。
+  //   ① front:opp≥SEP 且 sameAdj≥SEP 中「og 最貼 SEP」⇒ 敵我 80% 且相鄰兵線 ≤80%;
+  //   ② frontNoAdj:相鄰兵線塞不下 ≤80% 時退回「只保 opp≥SEP(② 不破)、相鄰 best-effort」= 舊行為,② 與塔數不回歸;
+  //   ③ anti:匯聚使 opp 全<SEP → sameAll≥STACK 中 opp 最大;④ fb:連疊都難 → min(opp,sameAll,sameAdj) 最大。L1 無相鄰 ⇒ sameAdj=∞ ⇒ 退化為純 min og。
   const frontSites = [];
-  for (const { site, towers } of G) {
-    let front = null, anti = null, fb = null;
+  for (let li = 0; li < G.length; li++) {
+    const { site, towers } = G[li];
+    let front = null, frontNoAdj = null, anti = null, fb = null;
     for (let f = GAME.TOWER_MIN_FRAC; f <= GAME.TOWER_MAX_FRAC + 1e-9; f += 0.002) {
       const pS = site('SWARM', f), pT = site('STEEL', f);
       const S = towers(pS), T = towers(pT);
       const opp = Math.min(pairGap(S, T), nearest(S, placedT), nearest(T, placedS));   // 全敵我對距
-      const same = Math.min(nearest(S, placedS), nearest(T, placedT));                 // 同陣營跨兵線
+      const sameAll = Math.min(nearest(S, placedS), nearest(T, placedT));              // 全同陣營跨兵線(防疊)
+      const sameAdj = Math.min(nearestAdj(S, placedS, li), nearestAdj(T, placedT, li)); // 相鄰兵線同陣營(≤80%)
       const og = pairGap(S, T);
-      const e = { f, pS, pT, og, opp };
-      if (opp >= SEP - 1e-6 && same >= STACK - 1e-6 && (!front || og < front.og)) front = e;
-      if (same >= STACK - 1e-6 && (!anti || opp > anti.opp)) anti = e;
-      const combo = Math.min(opp, same);
+      const e = { f, pS, pT, og };
+      const oppOk = opp >= SEP - 1e-6 && sameAll >= STACK - 1e-6;
+      if (oppOk && sameAdj >= SEP - 1e-6 && (!front || og < front.og)) front = e;   // 首選:② + 相鄰 ≤80%,og 貼 SEP
+      if (oppOk && (!frontNoAdj || og < frontNoAdj.og)) frontNoAdj = e;             // 保底:相鄰塞不下時守住 ②(= 舊行為)
+      if (sameAll >= STACK - 1e-6 && (!anti || opp > anti.opp)) anti = { ...e, opp };
+      const combo = Math.min(opp, sameAll, sameAdj);
       if (!fb || combo > fb.combo) fb = { ...e, combo };
     }
-    const fe = front || anti || fb;
-    push(towers(fe.pS), towers(fe.pT));
+    const fe = front || frontNoAdj || anti || fb;
+    push(li, towers(fe.pS), towers(fe.pT));
     frontSites.push({ frac: fe.f, SWARM: fe.pS, STEEL: fe.pT });
   }
-  // 趟 2:後方(己方防線,per-lane;不捨棄 ⇒ 塔數不變、平衡不動):後塔↔己方主堡、後塔↔同兵線己方前塔 重疊 ≤80%(sep ≥ SEP);
-  //   敵我對距 opp ≥ SEP(不對射)、同陣營 same ≥ STACK(不疊)。① sep≥SEP 最貼主堡位(防禦縱深);② 短兵線 → sep 最大(重疊最小);
-  //   ③ 皆難 → min(sep,opp,same) 最大。跨兵線後塔在共用主堡附近本就聚攏(固有,只防疊)。
+  // 趟 2:後方(己方防線,per-lane;不捨棄 ⇒ 塔數不變、平衡不動)。硬底線:敵我對距 opp ≥ SEP(不對射)、非相鄰同陣營 sameAll ≥ STACK(不疊)。
+  //   軟目標(皆 ≥ SEP ⇒ ≤80%):sep = 後塔↔己方主堡/同兵線前塔、sameAdj = 後塔↔**相鄰兵線**同陣營塔(前/後皆算,使用者新增規則,優先滿足)。
+  //   ① strict:sep≥SEP 且 sameAdj≥SEP 時取最貼主堡(防禦縱深);② spread:相鄰塞得下(sameAdj≥SEP)時 sep 最大;
+  //   ③ spreadNoAdj:相鄰塞不下時退回舊行為(只保 opp/sameAll,sep 最大);④ fb:皆難 → min(sep,opp,sameAll,sameAdj) 最大。
   return frontSites.map((frontSite, li) => {
     const { site, towers } = G[li];
     const fS = towers(frontSite.SWARM), fT = towers(frontSite.STEEL);   // 己方前塔
-    let strict = null, spread = null, fb = null;
+    let strict = null, spread = null, spreadNoAdj = null, fb = null;
     for (let f = GAME.TOWER_MIN_FRAC; f < frontSite.frac - 1e-6; f += 0.002) {
       const pS = site('SWARM', f), pT = site('STEEL', f);
       const S = towers(pS), T = towers(pT);
       const sep = Math.min(nearest(S, [bases[0]]), nearest(S, fS), nearest(T, [bases[1]]), nearest(T, fT));
       const opp = Math.min(nearest(S, placedT), nearest(T, placedS));
-      const same = Math.min(nearest(S, placedS), nearest(T, placedT));
-      if (opp >= SEP - 1e-6 && same >= STACK - 1e-6) {
-        const e = { pS, pT, f, sep };
-        if (sep >= SEP - 1e-6 && !strict) strict = e;
-        if (!spread || sep > spread.sep) spread = e;
+      const sameAll = Math.min(nearest(S, placedS), nearest(T, placedT));
+      const sameAdj = Math.min(nearestAdj(S, placedS, li), nearestAdj(T, placedT, li));   // 相鄰兵線同陣營(前/後皆算)
+      if (opp >= SEP - 1e-6 && sameAll >= STACK - 1e-6) {
+        if (!spreadNoAdj || sep > spreadNoAdj.sep) spreadNoAdj = { pS, pT, f, sep };       // 舊行為保底(相鄰塞不下時)
+        if (sameAdj >= SEP - 1e-6) {                                                       // 相鄰兵線 ≤80% 優先
+          if (sep >= SEP - 1e-6 && !strict) strict = { pS, pT, f };
+          if (!spread || sep > spread.sep) spread = { pS, pT, f, sep };
+        }
       }
-      const combo = Math.min(sep, opp, same);
+      const combo = Math.min(sep, opp, sameAll, sameAdj);
       if (!fb || combo > fb.combo) fb = { pS, pT, f, combo };
     }
-    const pick = strict || spread || fb;
-    if (pick) { push(towers(pick.pS), towers(pick.pT)); return [{ frac: pick.f, SWARM: pick.pS, STEEL: pick.pT }, frontSite]; }
+    const pick = strict || spread || spreadNoAdj || fb;
+    if (pick) { push(li, towers(pick.pS), towers(pick.pT)); return [{ frac: pick.f, SWARM: pick.pS, STEEL: pick.pT }, frontSite]; }
     return [frontSite];
   });
 }

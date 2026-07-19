@@ -31,7 +31,7 @@ export const VENUES = [
   // ---- 裸露地單一(≥80%)----
   { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 } },   // Nazlet El-Semman
   { id: 'uluru',      name: '澳洲・烏魯魯巨岩',       country: '🇦🇺', type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, mix: { bare: 0.95, green: 0.05 } },   // Yulara(L3 無解 → synth)
-  { id: 'atacama',    name: '智利・阿塔卡馬月亮谷',   country: '🇨🇱', type: '裸露地', ll: [-22.909569, -68.200042], bearing: 350, mix: { bare: 1 } },                   // San Pedro(L3 無解 → synth)
+  { id: 'phoenix',    name: '鳳凰城・索諾拉沙漠',     country: '🇺🇸', type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, mix: { bare: 0.7, urban: 0.3 } },      // 西鳳凰城沙漠格柵
   { id: 'hehuanshan', name: '合歡山・箭竹草原',       country: '🇹🇼', type: '裸露地', ll: [23.965067, 120.967128], bearing: 25, mix: { bare: 0.8, green: 0.2 } },      // 埔里鎮
 
   // ---- 水體 / 濕地為主 ----
@@ -42,7 +42,7 @@ export const VENUES = [
 
   // ---- 混合型 ----
   { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 } },
-  { id: 'sydney',     name: '雪梨・歌劇院港灣',       country: '🇦🇺', type: '混合', ll: [-33.870079, 151.207018], bearing: 265, mix: { urban: 0.5, water: 0.35, green: 0.15 } },   // CBD(歌劇院在岬角)
+  { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
   { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
 ];
