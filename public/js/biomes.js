@@ -4221,8 +4221,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
       for (const p of splitWaterPieces(pts, terrain)) {
         if (p.wet !== true || p.length < 2) continue;
-        const m = p[(p.length / 2) | 0];
-        if (deckIdx(m[0], m[1]) != null) continue;   // 真橋已覆蓋,不重蓋
+        // 覆蓋率去重(取代單一中點驗;#2 倫敦泡水結構修):OSRM 導航兵線與 OSM 橋 way 常斜交/橫向
+        // 不完全重合 —— 中點落在真橋上、兩端漂出橋面的兵線用單點驗會「整段誤判已覆蓋」而略過,
+        // 兵線實走段就無 deck → NPC 沒入水。改逐點統計真橋覆蓋率:近乎全覆蓋(≥ COVER)才略過;
+        // 否則整段補「全跨」橋面(單一連續可站立 deck,乾地兩端 smoothstep 引道)。
+        // MUST NOT 改成「只補未覆蓋子段」:deckAt 讓橋端降回水面,子段接縫會與相鄰真橋橋面差
+        // 一整個 BRIDGE_RISE 高差(垂直台階、上不去);全跨橋維持 _surf 連續,重疊處僅輕微 z-fight,
+        // 且只在「本來就泡水的破損段」發生(健康全覆蓋段覆蓋率 100% → 不觸發 → 無新增 z-fight)。
+        let covered = 0;
+        for (const pt of p) if (deckIdx(pt[0], pt[1]) != null) covered++;
+        if (covered / p.length >= WATER.DECK_COVER) continue;   // 近乎全被真橋覆蓋,不重蓋
         wetWays.push({ tags: { highway: 'primary' }, geometry: p.map(([x, z]) => worldToLL(x, z, center)) });
       }
     }

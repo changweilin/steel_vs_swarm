@@ -4567,7 +4567,14 @@ export class BattleClient {
       // 兵線走上高架橋時小兵/敵機自然走在橋面上,從橋下經過的則照舊踩地形。
       const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
       const gy = this._surf(nx, nz, cur.y - lift);
-      const ny = gy + lift;
+      let ny = gy + lift;
+      // 兵線過水必有橋(#2 倫敦泡水保底):真實 OSM 橋面 deck 是窄帶,OSRM 導航兵線幾何抽稀後可能
+      // 側向漂出 deck ± DECK_MARGIN → 貼地取樣落回河床(< waterY)→ 地面 NPC 沒入水面下。
+      // 地面小兵設計上過水一律走橋、不會游泳,故在此夾住腳底不低於水面:漏建/錯位橋面時 NPC
+      // 至多浮在水面而非泡在水裡。純客戶端渲染,伺服器權威 y 不受影響(A1 相容);英雄/飛行體不夾
+      // (英雄可涉水吃凍結、飛行體本在空中)。waterY==null(無水盤)時 no-op。
+      const wy = this.terrain.waterY;
+      if (wy != null && !ent.hero && !ent.flies && ny < wy) ny = wy;
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
       if (ent.decoy || ent.kami) {

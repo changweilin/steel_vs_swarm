@@ -499,9 +499,12 @@ export const grenadeBuildingMul = (def, kind) =>
 // (biomes.js buildRoads);RAMP_M:自動橋段向兩岸乾地各外延的引道長(斜坡出入口)。
 // 2026-07-19 水沼可通行改制:深水不再是牆(FULL_D 全滅頂深度、SLOW_MIN 最深減速倍率);
 // SHORE/SWAMP_BAND = terrainEnvCode 水/沼分類界;GRID_M = 主機上傳水沼遮罩格粒(伺服器 AI 迴避)。
+// DECK_COVER(2026-07-20):兵線跨水段「已被真 OSM 橋 deck 覆蓋率」達此比例才略過補橋;
+// 未達則整段補「全跨」橋面(biomes.js 兵線跨水補橋去重,取代舊單中點驗)。< 1.0 容忍端點量化誤差。
 export const WATER = {
   LEVEL: 0.3, WADE_M: 1.2, SLOW: 0.5, SPAN_MIN_M: 18, RAMP_M: 24,
   FULL_D: 5.0, SLOW_MIN: 0.25, SHORE: 0.05, SWAMP_BAND: 2.2, GRID_M: 20,
+  DECK_COVER: 0.9,
 };
 
 // ---- 地形環境效果(2026-07-19;水域/沼澤/火場對移動與狀態的影響)----
