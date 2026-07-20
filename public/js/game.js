@@ -3034,13 +3034,29 @@ export class BattleClient {
     if (!def) return;
     const rng = def.range * this._altRangeMul(def);   // 高度制空:高空無人機對地拉遠鎖定/射程
     const { ent, point } = this._resolveAim(rng);
-    // 射程閘門在客戶端先擋一次(伺服器仍會複驗);準星沒掃到敵人 → 解除光暈
-    if (!ent || ent.side === this.side || ent.neutral || !point
-        || this.pos.distanceTo(point) > rng) {
-      this._clearLockGlow();
+    // 準星精確掃到射程內敵方 → 回報鎖定(伺服器仍會複驗)
+    if (ent && ent.side !== this.side && !ent.neutral && point && this.pos.distanceTo(point) <= rng) {
+      this.net.send({ t: 'lock', id: ent.id });
       return;
     }
-    this.net.send({ t: 'lock', id: ent.id });
+    // 黏著鎖定:交戰後座 / 敵機閃避 / 中心單射線穿過機甲四肢縫隙時,射線會瞬間掃空 —— 若既有鎖定
+    // 目標仍存活、在射程、位於準星小錐內且視線未被障礙擋住,維持鎖定不閃斷(敵機頭上光暈不再忽明忽滅)。
+    if (this._lockId != null && this._stickyLock(rng)) { this.net.send({ t: 'lock', id: this._lockId }); return; }
+    this._clearLockGlow();
+  }
+
+  /** 黏著鎖定判定:既有鎖定目標(this._lockId)仍為射程內、準星錐內(~8°)、無障礙遮擋的存活敵方 */
+  _stickyLock(rng) {
+    const t = this.ents.get(this._lockId);
+    if (!t || t.dead || !t.mesh.visible || t.side === this.side || t.neutral) return false;
+    const c = t.mesh.position.clone();
+    c.y += (t.dimTop != null ? t.dimTop - t.dimH * 0.5 : 2);   // 瞄機體幾何中心
+    if (this.pos.distanceTo(c) > rng * 1.1) return false;      // 出射程(留一成寬容)
+    const ro = this.camera.position, to = c.clone().sub(ro), d = to.length();
+    const fwd = this.camera.getWorldDirection(new THREE.Vector3());
+    if (fwd.angleTo(to) > 0.14) return false;                  // 準星錐(~8°)外
+    const dB = this._obstHitT(ro.x, ro.y, ro.z, c.x, c.y, c.z);
+    return dB == null || dB >= d - 1;                          // 障礙擋在目標前 = 失去火控
   }
 
   // ---------------- 餌機(機甲 F:分離發射)----------------
@@ -3482,15 +3498,17 @@ export class BattleClient {
   }
 
   _tryFire(now) {
-    if (!this.side || this.dead || !this.firing || this.shopOpen || !this.ch) return;
+    if (!this.side || this.dead || this.shopOpen || !this.ch) return;
+    const { id, def, st } = this._curWeapon();
+    if (!def || !st) return;
+    // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%。
+    // 觸發手勢是「狙擊模式長按右鍵」→ 窗內逐幀自動擊發清空彈夾,不需另按住開火鍵(否則彈夾根本不會傾洩)。
+    const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
+    if (!this.firing && !barraging) return;
     if (this.empLeft > 0) {
       if (now - (this._empWarnAt || 0) > 1.5) { this._empWarnAt = now; this.hud.feed?.('⚡ 武器離線(遭電磁癱瘓)!'); }
       return;
     }
-    const { id, def, st } = this._curWeapon();
-    if (!def || !st) return;
-    // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%
-    const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
     const rMul = barraging ? BARRAGE.RANGE_F : 1;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }

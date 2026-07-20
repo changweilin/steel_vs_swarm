@@ -402,7 +402,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     for (const b of botHero.sq.bodies) sim.ents.delete(b.id);
   }
 
-  log('— sim:無敵幀(蓄力跳/變形中段 1s 免傷 + 20s CD;無人機被拒)—');
+  log('— sim:無敵幀(蓄力跳/變形中段 1s 免傷 + 15s CD;無人機被拒)—');
   {
     const rb = sim.heroes.get('p_r');
     sim.heroIframe('p_r');

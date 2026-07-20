@@ -2063,7 +2063,7 @@ export class BattleSim {
     }
   }
 
-  /** 無敵幀(蓄力跳躍 / 變形中段):客戶端在中段時點請求,伺服器驗 20s CD 後給 1s 免傷。
+  /** 無敵幀(蓄力跳躍 / 變形中段):客戶端在中段時點請求,伺服器驗 15s CD 後給 1s 免傷。
    *  時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用;蜂群無人機無此機制。 */
   heroIframe(pid) {
     const h = this.heroes.get(pid);
