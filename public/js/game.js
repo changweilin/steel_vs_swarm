@@ -254,8 +254,9 @@ export class BattleClient {
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
     this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
-    this.aiming = false;              // 右鍵點一下切換瞄準(拉近視角、切換重武器)
-    this._aimFired = false;           // 狙擊模式重武器半自動:本次按住是否已擊發一發(阻止連射,長按改觸發專屬招)
+    this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
+    this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickSnipeAbility / _onMouseUp)
+    this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
 
     this._initScene();
     this._initLanes();
@@ -1895,7 +1896,7 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)改「狙擊模式長按左鍵」觸發
+          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)改「狙擊模式長按右鍵」觸發
           // (見 _tickSnipeAbility);F 鍵停用(2026-07-18)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
@@ -1925,16 +1926,23 @@ export class BattleClient {
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
       if (e.button === 2) {
-        // 右鍵點一下切換:一般 ⇄ 狙擊模式(拉近視角、解鎖熱兵器)。
-        // 非瞄準狀態下若當前武器打空 → 改為換彈夾(保留原快捷),不誤切模式。
-        const { id, st } = this._curWeapon();
-        if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
-        else this._setAiming(!this.aiming);
+        // 右鍵按住起算:達門檻 → 狙擊模式專屬招(見 _tickSnipeAbility);短按放開 → 切換模式(見 _onMouseUp)。
+        // 切換與出招以「按住時長」區分,互不衝突。
+        this._rmbDownAt = performance.now() / 1000;
+        this._rmbAbilityFired = false;
       }
     };
     this._onMouseUp = (e) => {
       if (e.button === 0) this.firing = false;
-      // 右鍵改為點一下切換模式(見 _onMouseDown),放開不再退出瞄準
+      if (e.button === 2) {
+        const pressed = this._rmbDownAt > 0, fired = this._rmbAbilityFired;
+        this._rmbDownAt = 0; this._rmbAbilityFired = false;
+        if (!pressed || fired) return;   // 未真正按下(指標未鎖)或長按已出招 → 不切換模式
+        // 短按放開 = 切換一般 ⇄ 狙擊模式(未瞄準且當前武器打空 → 改換彈夾,保留原快捷)
+        const { id, st } = this._curWeapon();
+        if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
+        else this._setAiming(!this.aiming);
+      }
     };
     this.canvas.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
@@ -2214,7 +2222,7 @@ export class BattleClient {
   }
 
   /** 無人機兩架常駐護衛自殺機(純客戶端外觀:外觀同主機、SIZE_F 體型、貼身兩側)。
-   *  觸發前不是 sim 實體(不可鎖定/受傷);狙擊長按左鍵衝出時交給 sim 的 kami 實體渲染,
+   *  觸發前不是 sim 實體(不可鎖定/受傷);狙擊長按右鍵衝出時交給 sim 的 kami 實體渲染,
    *  自爆後 kamiCd 歸零才重現(見 _updateEscorts 的顯隱判定)。 */
   _buildDroneEscorts(ent) {
     ent.escorts = [];
@@ -3489,9 +3497,6 @@ export class BattleClient {
     // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%
     const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
     const rMul = barraging ? BARRAGE.RANGE_F : 1;
-    // 狙擊模式重武器改半自動:一次按住只擊發一發,不連射(連射交由重砲傾洩窗)。
-    // 續按不再補槍,改由 _tickSnipeAbility 於長按門檻觸發機種專屬招(自殺機/重砲/餌機)。
-    if (id === 'heavy' && !barraging && this._aimFired) return;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (!barraging && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
@@ -3538,7 +3543,6 @@ export class BattleClient {
       this._setRailCharge(false);
     }
     this.lastFireAt[id] = now;
-    if (id === 'heavy' && !barraging) this._aimFired = true;   // 半自動:記下本次按住已擊發,續按不再連射
     st.ammo--;
     if (mpc > 0 && !barraging) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電(重砲窗免電力);快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
@@ -3781,7 +3785,7 @@ export class BattleClient {
    * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
    */
   /**
-   * 無人機護衛自殺機(2026-07-18;狙擊模式長按左鍵):兩架常駐護衛機衝出撲擊(各半傷、3 倍速)。
+   * 無人機護衛自殺機(2026-07-18;狙擊模式長按右鍵):兩架常駐護衛機衝出撲擊(各半傷、3 倍速)。
    * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵;自爆後 CD 結束才重現。
    */
   _launchKamikaze() {
@@ -3796,21 +3800,19 @@ export class BattleClient {
     this.hud.feed?.(`💥 ${SQUAD.KAMI.N} 架護衛自殺機衝出!`);
   }
 
-  /** 狙擊模式(右鍵)持續按住左鍵達 GAME.SNIPE_HOLD_S → 觸發機種專屬能力。
-   *  短按/連按照常開火;達門檻才觸發,一次按住只觸發一次(放開或退出狙擊即重置)。 */
+  /** 狙擊模式長按右鍵達 GAME.SNIPE_HOLD_S → 觸發機種專屬招(自殺機 / 重砲 / 餌機)。
+   *  短按右鍵 = 切換模式(見 _onMouseUp);達門檻才出招,一次按住只觸發一次,
+   *  觸發後放開不再切換 → 切換與出招互不衝突。左鍵射擊獨立(狙擊模式重武器照常連射)。 */
   _tickSnipeAbility(now) {
-    if (!this.side || this.dead || this.shopOpen || !this.aiming || !this.firing) {
-      this._snipeHoldAt = 0; this._snipeFired = false; return;
-    }
-    if (!this._snipeHoldAt) { this._snipeHoldAt = now; this._snipeFired = false; return; }
-    if (this._snipeFired || now - this._snipeHoldAt < GAME.SNIPE_HOLD_S) return;
-    this._snipeFired = true;
+    if (!this.side || this.dead || this.shopOpen || !this.aiming || !this._rmbDownAt || this._rmbAbilityFired) return;
+    if (now - this._rmbDownAt < GAME.SNIPE_HOLD_S) return;
+    this._rmbAbilityFired = true;
     if (this.isDrone) this._launchKamikaze();
     else if (this.isMorph) this._launchDecoy();
     else this._launchBarrage();
   }
 
-  /** 重砲模式(非變形機甲:狙擊長按左鍵):送請求 + 開本地傾洩窗(0.5s 內快速傾洩剩餘重武器彈夾,
+  /** 重砲模式(非變形機甲:狙擊長按右鍵):送請求 + 開本地傾洩窗(0.5s 內快速傾洩剩餘重武器彈夾,
    *  傷害 +33%、射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage)。 */
   _launchBarrage() {
     if (this.isDrone || this.isMorph || this.dead || !this.side) return;
@@ -3861,7 +3863,7 @@ export class BattleClient {
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      // 機種專屬能力(狙擊模式長按左鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
+      // 機種專屬能力(狙擊模式長按右鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
       kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
       decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
       barrage: (!this.isDrone && !this.isMorph) ? { cd: this.barrageCd || 0 } : null,
@@ -4460,9 +4462,8 @@ export class BattleClient {
     if (!this.firing) {
       if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
       this._burstN = {};
-      this._aimFired = false;   // 放開左鍵:重置半自動閘,下次扣扳機可再擊發一發
     }
-    this._tickSnipeAbility(now);   // 狙擊模式長按左鍵 → 機種專屬能力(在 _tryFire 之前判定手勢)
+    this._tickSnipeAbility(now);   // 狙擊模式長按右鍵 → 機種專屬能力(在 _tryFire 之前判定手勢)
     this._tryFire(now);
     this._tickLock(now);
   }
