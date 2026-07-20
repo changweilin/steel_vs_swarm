@@ -3041,24 +3041,37 @@ export class BattleClient {
       this.net.send({ t: 'lock', id: ent.id });
       return;
     }
-    // 黏著鎖定:交戰後座 / 敵機閃避 / 中心單射線穿過機甲四肢縫隙時,射線會瞬間掃空 —— 若既有鎖定
-    // 目標仍存活、在射程、位於準星小錐內且視線未被障礙擋住,維持鎖定不閃斷(敵機頭上光暈不再忽明忽滅)。
-    if (this._lockId != null && this._stickyLock(rng)) { this.net.send({ t: 'lock', id: this._lockId }); return; }
+    // ② 錐形瞄準輔助:中心單射線常穿過 humanoid 四肢縫隙,或狙擊模式移動靠近時準星微偏 → 射線瞬間掃空。
+    //    取準星小錐內、射程內、視線無遮擋的敵方英雄(遲滯優先既有鎖定),維持/取得鎖定不閃斷。
+    const soft = this._coneAcquire(rng);
+    if (soft) { this.net.send({ t: 'lock', id: soft.id }); return; }
     this._clearLockGlow();
   }
 
-  /** 黏著鎖定判定:既有鎖定目標(this._lockId)仍為射程內、準星錐內(~8°)、無障礙遮擋的存活敵方 */
-  _stickyLock(rng) {
-    const t = this.ents.get(this._lockId);
-    if (!t || t.dead || !t.mesh.visible || t.side === this.side || t.neutral) return false;
-    const c = t.mesh.position.clone();
-    c.y += (t.dimTop != null ? t.dimTop - t.dimH * 0.5 : 2);   // 瞄機體幾何中心
-    if (this.pos.distanceTo(c) > rng * 1.1) return false;      // 出射程(留一成寬容)
-    const ro = this.camera.position, to = c.clone().sub(ro), d = to.length();
+  /** 錐形瞄準輔助 + 黏著:準星錐(~8°)內、射程內、`_obstHitT` 無遮擋的存活敵方英雄;
+   *  既有鎖定仍合格則優先保留(遲滯,防忽明忽滅)。只鎖英雄(NPC/塔體型大,精確射線本就打得中)。 */
+  _coneAcquire(rng) {
+    const ro = this.camera.position;
     const fwd = this.camera.getWorldDirection(new THREE.Vector3());
-    if (fwd.angleTo(to) > 0.14) return false;                  // 準星錐(~8°)外
-    const dB = this._obstHitT(ro.x, ro.y, ro.z, c.x, c.y, c.z);
-    return dB == null || dB >= d - 1;                          // 障礙擋在目標前 = 失去火控
+    const CONE = 0.14;   // ~8°
+    const score = (ent) => {   // 合格回傳夾角(rad;越小越正對),不合格回 -1
+      if (!ent || ent.side === this.side || ent.neutral || !ent.hero || !ent.mesh.visible || ent.dead) return -1;
+      const c = ent.mesh.position.clone();
+      c.y += (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 2);   // 瞄機體幾何中心
+      if (this.pos.distanceTo(c) > rng) return -1;                     // 出射程
+      const to = c.clone().sub(ro), ang = fwd.angleTo(to);
+      if (ang > CONE) return -1;                                       // 錐外
+      const dB = this._obstHitT(ro.x, ro.y, ro.z, c.x, c.y, c.z);
+      return (dB != null && dB < to.length() - 1) ? -1 : ang;          // 障礙擋在目標前 = 失去火控
+    };
+    const cur = this._lockId != null ? this.ents.get(this._lockId) : null;
+    if (cur && score(cur) >= 0) return cur;                            // 遲滯:既有鎖定仍在錐內不切換
+    let best = null, bestAng = CONE + 1;
+    for (const ent of this.ents.values()) {
+      const a = score(ent);
+      if (a >= 0 && a < bestAng) { best = ent; bestAng = a; }
+    }
+    return best;
   }
 
   // ---------------- 餌機(機甲 F:分離發射)----------------
@@ -3829,12 +3842,20 @@ export class BattleClient {
    *  傷害 +33%、射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage)。 */
   _launchBarrage() {
     if (this.isDrone || this.isMorph || this.dead || !this.side) return;
-    if ((this.barrageCd || 0) > 0.05) {
-      this.hud.feed?.(`🎯 重砲整備中(${(this.barrageCd || 0).toFixed(0)}s)`);
+    const now = performance.now() / 1000;
+    // CD 閘門取「伺服器 bcd」與「本地時戳」兩者較大者 —— 樂觀 barrageCd 可能被在途舊快照(server 尚未處理
+    // 本次請求)的 bcd=0 洗掉,單靠它會讓 30s CD 內誤判就緒;本地 _barrageCdUntil 時戳補住這個空窗。
+    const cdLeft = Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - now);
+    if (cdLeft > 0.05) {
+      this.hud.feed?.(`🎯 重砲整備中(${cdLeft.toFixed(0)}s)`);
       return;
     }
-    this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(下一份快照的 bcd 校正)
-    this._barrageUntil = performance.now() / 1000 + BARRAGE.DUR;
+    // 無彈可傾洩(裝填中 / 空夾)→ 不啟動(與伺服器 heroBarrage 同條件,免白吃 CD;亦免本地時戳誤鎖 30s)
+    const hv = this.wstate?.heavy;
+    if (!hv || hv.reloadEnd > 0 || hv.ammo <= 0) { this.hud.feed?.('🎯 重砲需先裝填彈夾'); return; }
+    this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(HUD;下一份快照的 bcd 校正)
+    this._barrageCdUntil = now + BARRAGE.CD_S;              // 本地 CD 時戳(不被在途舊快照 bcd 洗掉)
+    this._barrageUntil = now + BARRAGE.DUR;
     this.trauma = Math.min(1, this.trauma + 0.4);
     this.net.send({ t: 'barrage' });
     this.hud.feed?.('💥 重砲模式:傾洩彈夾!');
@@ -3879,7 +3900,9 @@ export class BattleClient {
       // 機種專屬能力(狙擊模式長按右鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
       kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
       decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
-      barrage: (!this.isDrone && !this.isMorph) ? { cd: this.barrageCd || 0 } : null,
+      // 重砲 CD 取「伺服器 bcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,HUD 不會瞬閃「就緒」
+      barrage: (!this.isDrone && !this.isMorph)
+        ? { cd: Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - performance.now() / 1000) } : null,
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
     };
   }
