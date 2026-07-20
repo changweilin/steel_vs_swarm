@@ -2002,8 +2002,10 @@ export class BattleClient {
       }
       if (e.k === 'kami') { ent.heroY = e.y ?? 0; ent.ry = e.ry ?? 0; }
       if (e.k === 'civilian') { ent.fo = !!e.fo; ent.fl = !!e.fl; }   // 跟隨/逃離旗標(頭頂提示)
-      // 第三方碉堡進視野 = 情報永久留存:記位置(量化去重),小地圖離開視野後仍標示
-      if (e.k === 'bunker') this._seenBunkers.set(`${Math.round(e.x)},${Math.round(e.z)}`, { x: e.x, z: e.z, side: e.s });
+      // 第三方碉堡進視野 = 情報永久留存:記位置(量化去重),小地圖離開視野後仍標示。
+      // MUST 存 three 世界座標(z = −e.z);_world2mm 與其他標記(ent.mesh.position / this.pos)同框,
+      // 舊版直接存 sim 的 e.z 未翻軸 → 標記畫在 Z 鏡像位置(看似「離開後就不見」)。
+      if (e.k === 'bunker') { const bz = -e.z; this._seenBunkers.set(`${Math.round(e.x)},${Math.round(bz)}`, { x: e.x, z: bz, side: e.s }); }
       if (HERO_KINDS.has(e.k)) {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -3254,7 +3256,6 @@ export class BattleClient {
     // 蓄力/騰空狀態一律歸零(robot 蓄力中陣亡 → 重生殘留 charge 會立刻誤觸蓄力跳)
     this.charge = 0;
     this._lowG = false;
-    this._ifSent = false;
     if (this.isMorph) {
       this.flight = false;
       this.baseFov = UNITS.morph.fov;
@@ -3290,24 +3291,24 @@ export class BattleClient {
   }
 
   // ---------------- 機甲蓄力跳躍(2026-07-16;robot 限定,常數住 data.js CJUMP)----------------
-  /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進;騰空低重力 + 低阻力 = 太空漫步;中段請求無敵幀 */
-  _chargeJump() {
+  /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進(距離 ∝ 機體速度);騰空低重力 = 太空漫步;起跳離地即請求無敵幀 */
+  _chargeJump(u) {
     const k = this.charge;
     this.vy = CJUMP.V * k * this._modF('jump');
-    this._cjV = this.vy;      // 中段判定基準(升速衰減過半 = 請求無敵幀)
     this._lowG = true;
-    this._ifSent = false;
     const look = this.camera.getWorldDirection(new THREE.Vector3());
     look.y = 0;
     if (look.lengthSq() > 0) look.normalize();
-    this.vel.x += look.x * CJUMP.FWD * k;
-    this.vel.z += look.z * CJUMP.FWD * k;
+    const fwd = u.speed * this._modF('speed') * CJUMP.FWD_F * k;   // 前向彈射初速 ∝ 機體速度 ⇒ 最大距離同比
+    this.vel.x += look.x * fwd;
+    this.vel.z += look.z * fwd;
     this.trauma = Math.min(1, this.trauma + 0.25);
+    this._reqIframe();   // 起跳離地即 1s 無敵(伺服器驗 IFRAME.CD)
     shockRing(this.scene, this.effects, this.pos.x, this.pos.y, this.pos.z, 5, 0xbfe6ff);
     this.hud.feed?.('🦿 蓄力跳躍!(騰空低重力滑行)');
   }
 
-  /** 請求無敵幀(蓄力跳/變形中段):時長與 20s CD 由伺服器 heroIframe 權威把關,
+  /** 請求無敵幀(蓄力跳起跳離地 / 變形起飛):時長與 15s CD 由伺服器 heroIframe 權威把關,
    *  這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
   _reqIframe() {
     const now = performance.now() / 1000;
@@ -4336,29 +4337,32 @@ export class BattleClient {
       if ((this.stunLeft || 0) > 0) {
         this.charge = 0;
       } else if (this.isMorph) {
-        // 蓄力跳:按住 Space 蓄力 → 放開時蓄力足夠即彈射變形為飛行型,不足只是小跳
+        // 蓄力跳:按住 Space 蓄力 → 放開時蓄力足夠且變形起飛未冷卻即彈射變形為飛行型,否則只是小跳
         if (onGround && this.keys.Space) {
           this.charge = Math.min(1, this.charge + dt / MORPH.CHARGE_S);
         } else if (this.charge > 0) {
-          if (onGround && this.charge >= MORPH.JUMP_MIN) this._morphLaunch(gy);
-          else if (onGround) { this.vy = u.jump * this._modF('jump'); this.charge = 0; }
-          else this.charge = 0;
+          if (onGround && this.charge >= MORPH.JUMP_MIN && now >= (this._morphCd || 0)) {
+            this._morphLaunch(gy); this._morphCd = now + MORPH.CD;   // 變形起飛:15s CD
+          } else if (onGround) {
+            if (this.charge >= MORPH.JUMP_MIN) this.hud.feed?.(`🛫 變形起飛冷卻中(${Math.ceil((this._morphCd || 0) - now)}s)`);
+            this.vy = u.jump * this._modF('jump'); this.charge = 0;
+          } else this.charge = 0;
         }
       } else if (onGround && this.keys.Space) {
         // 機甲蓄力跳躍(2026-07-16,CJUMP;robot 限定):長按 Space 蓄力 → 放開彈射高跳,
         // 騰空低重力 = 太空漫步;蓄力不足 = 普通小跳。與 morph 共用 this.charge(下蹲/減速一致)。
         this.charge = Math.min(1, this.charge + dt / CJUMP.CHARGE_S);
       } else if (!this.isMorph && this.charge > 0) {
-        if (onGround && this.charge >= CJUMP.MIN) this._chargeJump();
-        else if (onGround) this.vy = u.jump * this._modF('jump');
+        if (onGround && this.charge >= CJUMP.MIN && now >= (this._cjumpCd || 0)) {
+          this._chargeJump(u); this._cjumpCd = now + CJUMP.CD;   // 蓄力跳躍:15s CD
+        } else if (onGround && this.charge >= CJUMP.MIN) {
+          this.vy = u.jump * this._modF('jump');
+          this.hud.feed?.(`🦿 蓄力跳冷卻中(${Math.ceil((this._cjumpCd || 0) - now)}s)`);
+        } else if (onGround) this.vy = u.jump * this._modF('jump');
         this.charge = 0;
       }
-      // 蓄力跳騰空吃低重力(月面滯空);「中段」= 升速衰減過半時請求無敵幀(伺服器驗 20s CD)
+      // 蓄力跳騰空吃低重力(月面滯空);無敵幀已於起跳離地(_chargeJump / _morphLaunch)請求
       this.vy -= 24 * (this._lowG ? CJUMP.GRAV_F : 1) * dt;
-      if (this._lowG && !this._ifSent && this.vy <= (this._cjV || 0) * 0.5) {
-        this._ifSent = true;
-        this._reqIframe();
-      }
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; this._lowG = false; }
       this.roll += (0 - this.roll) * Math.min(1, dt * 6);

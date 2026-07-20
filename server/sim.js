@@ -859,7 +859,17 @@ export class BattleSim {
     }
   }
 
-  /** 第三方移動:撤回/尋堡 > 追擊(視野內、射程外)> 歸位駐守;吃控場折速、繞阻擋障礙 */
+  /** 記仇目標:被攻擊後鎖定攻擊者 THIRD.AGGRO_TTL 秒(脫離視野仍追);過期/陣亡/匿蹤/同陣營 → 清除。
+   *  追擊本身的越界撤回由 _tpBehave 的 TETHER_M 繫繩把關(追過頭即 ret 撤回)。 */
+  _tpAggroTarget(e) {
+    const t = e.aggro;
+    if (!t) return null;
+    if (this.t - (e.aggroAt || 0) > THIRD.AGGRO_TTL || t.hp <= 0 || t.dead
+        || t.side === e.side || (t.stealthUntil || 0) > this.t) { e.aggro = null; return null; }
+    return t;
+  }
+
+  /** 第三方移動:撤回/尋堡 > 追擊(記仇攻擊者 > 視野內射程外)> 歸位駐守;吃控場折速、繞阻擋障礙 */
   _tpMove(e, u, dt) {
     const camp = this.camps?.[e.ci];
     if (!camp || e.gar) return;
@@ -873,8 +883,9 @@ export class BattleSim {
     let tx, tz, arrive = 2;
     if (e.ret || e.seek) { tx = camp.x; tz = camp.z; arrive = e.seek ? 5 : THIRD.HOME_R * 0.6; }
     else {
-      // 追擊:武器射程外、但視野內的敵人(繫繩由 _tpBehave 把關,追過頭就撤回)
-      const chase = this._acquireTarget(e, { range: u.sight ?? u.range, wid: u.wid });
+      // 追擊:優先「記仇的攻擊者」(被打後即使脫離視野仍持續追);否則沿用「視野內、射程外」的一般追擊;
+      // 兩者皆繫繩由 _tpBehave 把關(追過 TETHER_M 就撤回);都沒有 → 回駐守位。
+      const chase = this._tpAggroTarget(e) || this._acquireTarget(e, { range: u.sight ?? u.range, wid: u.wid });
       if (chase) { tx = chase.x; tz = chase.z; arrive = Math.max(6, u.range * 0.7); }
       else { [tx, tz] = this._campHome(camp, e.slot); }
     }
@@ -2145,6 +2156,11 @@ export class BattleSim {
     }
     // 助攻貢獻戳記(2026-07-17):英雄對敵方目標造成傷害 = 貢獻;_kill 結算時複驗時效/距離
     if (by && by.hero && by.side !== t.side) (t.asst ||= {})[by.pid] = this.t;
+    // 第三方機動 NPC 被攻擊 → 記仇追擊攻擊者(脫離視野仍持續 THIRD.AGGRO_TTL 秒;追擊受 TETHER_M 繫繩上限)。
+    // 駐守中(t.gar)已於開頭免傷早退 ⇒ 此處必為出堡機動單位;碉堡不動故排除。
+    if (t.tp && t.kind !== 'bunker' && by && by.side && by.side !== t.side && !by.neutral) {
+      t.aggro = by; t.aggroAt = this.t;
+    }
     let dealt;   // 實際造成的護盾 + 裝甲損耗(吸血結算基準)
     if (t.hero) {
       dmg *= this._buffMul(t, 'dmgTaken');   // 複合裝甲詞綴 / 護盾類招式
