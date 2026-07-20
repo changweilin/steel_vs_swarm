@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, towerLayoutAudit } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, towerLayoutAudit, laneSeparationAudit } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -41,7 +41,7 @@ function laneRuleOK(lanes) {
   const o = lanes[0]?.[0];
   if (!o) return false;
   const game = lanes.map((lane) => lane.map((p) => { const [x, z] = toMeters(p, o); return [x * SC_GAME, z * SC_GAME]; }));
-  return towerLayoutAudit(game).ok;
+  return towerLayoutAudit(game).ok && laneSeparationAudit(game).ok;   // 規則:兵線互不接觸/交叉
 }
 
 /** 折線重合率:網格佔用率(相對較短一條)。cell 由 overlapCellM(L) 依地圖尺度給定 */

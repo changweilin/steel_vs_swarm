@@ -7,7 +7,7 @@
 // 完整 battleConfig(合成兵線),不需要 OSRM 掃描即可開房;
 // 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
-import { MAPGEO, lanesFor, targetDistFor } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, laneSeparationAudit } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 
 // ll = 兵線起點(SWARM 主堡)。**必須是有導航路網的道路節點**:兵線一律取自現實道路
@@ -55,6 +55,18 @@ function distMeters(a, b) {
   const x = (b[1] - a[1]) * Math.PI / 180 * R_EARTH * Math.cos(a[0] * Math.PI / 180);
   const z = (b[0] - a[0]) * Math.PI / 180 * R_EARTH;
   return Math.hypot(x, z);
+}
+
+// baked 兵線(lat/lng)是否合「互不接觸/交叉」規則:轉遊戲公尺跑 data.js 唯一結算縫。
+// 非合規(尺度版本更迭殘留 / 手改)視同無 baked → venueConfig 退回 synthLane(server 亦會拒非合規)。
+const SC_GAME = 1 / MAPGEO.REAL_SCALE;
+function bakedLanesSeparated(entry) {
+  const o = entry.bases[0], cosO = Math.cos(o[0] * Math.PI / 180);
+  const game = entry.lanes.map((l) => l.map(([la, ln]) => [
+    (ln - o[1]) * Math.PI / 180 * R_EARTH * cosO * SC_GAME,
+    (la - o[0]) * Math.PI / 180 * R_EARTH * SC_GAME,
+  ]));
+  return laneSeparationAudit(game).ok;
 }
 
 function destPoint([lat, lng], bearingDeg, d) {
@@ -142,7 +154,8 @@ export function venueConfig(venue, teamSize) {
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
 
-  const baked = VENUE_LANES[venue.id]?.[L];
+  const bakedRaw = VENUE_LANES[venue.id]?.[L];
+  const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;
   if (baked) {
     [A, B] = baked.bases.map((p) => [...p]);

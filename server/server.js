@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
-import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv, BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit } from '../public/js/data.js';
+import { SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, charsOf, lanesFor, resolveEnv, BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit } from '../public/js/data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -177,6 +177,8 @@ function validateBattleConfig(cfg, teamSize) {
   // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
   const game = lanesToGame(cfg.lanes);
   if (!game || !towerLayoutAudit(game).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
+  // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
+  if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
   return null;
 }
 

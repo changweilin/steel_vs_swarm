@@ -4,7 +4,7 @@
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, laneSeparationAudit }
   from '../public/js/data.js';
 
 // 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
@@ -289,6 +289,8 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   if (mo > MAPGEO.MAX_OVERLAP) return { fail: 'overlap', ov: mo };
 
   const s = 1 / MAPGEO.REAL_SCALE;
+  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)
+  if (!laneSeparationAudit(lanes.map((l) => l.xz.map(([x, z]) => [x * s, z * s]))).ok) return { fail: 'touch' };
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
@@ -371,7 +373,8 @@ let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 由 tools/bake_venue_lanes.mjs 產生:Overpass 真實道路路網 → 邊不相交最短路徑。
 // 每條兵線的每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線 100% 與現實導航路線相符。
 // 通過的規則(與互動式選址流程相同):兩堡距離 ≥ 對角線 ${MAPGEO.MIN_DIST_FRAC * 100}%、
-// 任兩線重合率 ≤ ${MAPGEO.MAX_OVERLAP}(判定網格 overlapCellM(L))、單線繞路 ≤ 2.2×直線距離。
+// 任兩線重合率 ≤ ${MAPGEO.MAX_OVERLAP}(判定網格 overlapCellM(L))、單線繞路 ≤ 2.2×直線距離、
+// 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
 // bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
 export const VENUE_LANES = {\n`;
 for (const [id, v] of Object.entries(out)) {

@@ -96,6 +96,15 @@ export const MAPGEO = {
   // > 此值 = 路線繞回頭路折返主堡過多(側翼 via-point 偶會把路徑吸回起點),生成階段淘汰。
   // 與 MAX_OVERLAP 同性質(生成時硬門檻,伺服器不複驗;見 laneBacktrackFrac)。
   MAX_BACKTRACK: 0.20,
+  // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
+  // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
+  // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
+  // 伺服器/烘焙無高程,一律保守把「2D 相交」視為接觸(全禁)。結算縫 = laneSeparationAudit(),
+  // bake 硬門檻、mapSelect / server validateBattleConfig 複驗、audit_lane_sep 稽核共用同一支。
+  // LANE_MIN_SEP_M 為**遊戲公尺**(與 towerLayoutAudit 同框);40 遊戲公尺 = 20m 真實世界(REAL_SCALE 0.5)。
+  // SKIP 校準:synthLane 中段最近間距 ~114 遊戲公尺(> 40 甚多)⇒ 降級一定合規。
+  LANE_MIN_SEP_M: 40,
+  LANE_SEP_SKIP_FRAC: 0.15,
   CANDIDATE_BEARINGS: 12,
   MAX_CANDIDATES: 4,
   // 路徑戰術指標(Diablo DRLG 思想:走廊要彎、要有轉角,拒絕一眼看穿的直線)——
@@ -206,6 +215,61 @@ export function laneBacktrackFrac(pts) {
     prev = s;
   }
   return back / straight;
+}
+
+/**
+ * 兵線互不接觸/交叉稽核(規則,2026-07-20:全禁,含立體交叉)。
+ * lanes:[[ [x,z],… ],…] 遊戲公尺(與 towerLayoutAudit 同框;A=lanes[0][0]、B=lanes[0] 末點)。
+ *   ① 最近距離(接觸):排除兩座主堡的共享扇出段(進度 t∈[SKIP,1−SKIP] 之外豁免——
+ *      三線由同一主堡收斂到共享端點不可避免地貼近),中段最近距離 MUST ≥ MAPGEO.LANE_MIN_SEP_M。
+ *   ② 交叉:**全線不套豁免**(端點接觸不算,由 segX 端點守衛排除)。收斂到共享堡是「接觸」可容許,
+ *      但兩線「換邊」= 交叉,即使在近堡處也是真交叉,MUST 0。橋/隧立體交叉亦禁(無高程,保守視為接觸)。
+ * 回傳 { ok, minGap, crosses }。單/零兵線恆 ok(L1 無鄰線)。
+ * 折線最近距離取「雙向 vertex→segment」最小值即精確(不相交時最近點必落在某端點對段上)。
+ */
+export function laneSeparationAudit(lanes) {
+  if (!lanes || lanes.length < 2) return { ok: true, minGap: Infinity, crosses: 0 };
+  const SEP = MAPGEO.LANE_MIN_SEP_M, SK = MAPGEO.LANE_SEP_SKIP_FRAC;
+  const A = lanes[0][0], B = lanes[0][lanes[0].length - 1];
+  const vx = B[0] - A[0], vz = B[1] - A[1], straight = Math.hypot(vx, vz) || 1;
+  const ux = vx / straight, uz = vz / straight;
+  const prog = (p) => ((p[0] - A[0]) * ux + (p[1] - A[1]) * uz) / straight;
+  const mid = (t) => t >= SK && t <= 1 - SK;
+  const ptSeg = (px, py, ax, ay, bx, by) => {
+    const ex = bx - ax, ey = by - ay, L2 = ex * ex + ey * ey || 1;
+    let t = ((px - ax) * ex + (py - ay) * ey) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    return Math.hypot(px - (ax + ex * t), py - (ay + ey * t));
+  };
+  const segX = (a, b, c, d) => {          // 兩段真相交回交點,否則 null(端點接觸不算)
+    const r1 = b[0] - a[0], r2 = b[1] - a[1], s1 = d[0] - c[0], s2 = d[1] - c[1];
+    const den = r1 * s2 - r2 * s1; if (!den) return null;
+    const t = ((c[0] - a[0]) * s2 - (c[1] - a[1]) * s1) / den;
+    const u = ((c[0] - a[0]) * r2 - (c[1] - a[1]) * r1) / den;
+    return (t > 1e-6 && t < 1 - 1e-6 && u > 1e-6 && u < 1 - 1e-6) ? [a[0] + t * r1, a[1] + t * r2] : null;
+  };
+  let minGap = Infinity, crosses = 0;
+  for (let i = 0; i < lanes.length; i++) {
+    for (let j = i + 1; j < lanes.length; j++) {
+      const P = lanes[i], Q = lanes[j];
+      const scan = (vs, segs) => {
+        for (const v of vs) {
+          if (!mid(prog(v))) continue;
+          for (let s = 1; s < segs.length; s++) {
+            if (!mid(prog(segs[s - 1])) && !mid(prog(segs[s]))) continue;   // 兩端點皆在豁免帶 → 跳過
+            const d = ptSeg(v[0], v[1], segs[s - 1][0], segs[s - 1][1], segs[s][0], segs[s][1]);
+            if (d < minGap) minGap = d;
+          }
+        }
+      };
+      scan(P, Q); scan(Q, P);
+      for (let a = 1; a < P.length; a++) {
+        for (let b = 1; b < Q.length; b++) {
+          if (segX(P[a - 1], P[a], Q[b - 1], Q[b])) crosses++;   // 交叉不套豁免帶(近堡換邊亦禁)
+        }
+      }
+    }
+  }
+  return { ok: crosses === 0 && minGap >= SEP, minGap, crosses };
 }
 
 /** 0~1 路徑戰術評分:太直重扣、過度繞路不加分、兵線越分離越好 */
