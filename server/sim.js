@@ -5,8 +5,8 @@
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
-  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, QUAL, VITALS, armorMul, killScore, tierVal,
-  vsMult, upgradePrice, masteryF, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
+  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
+  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
   ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX,
@@ -1000,11 +1000,12 @@ export class BattleSim {
       decoy: null, decoyCd: 0,       // 機甲餌機:目前在空中的那架 / 掛點重新組合完成的時刻
       kamis: [], kamiCd: 0,          // 無人機自殺攻擊機:目前在空中的那些 / F 鍵冷卻到期時刻
       ps: {                          // 共用玩家狀態(見 SQUAD_SHARED)
-        // 八軌升級(2026-07-17):wq/aq 品質(連動 abil)+ 六條通用強化(見 ECON.UPGRADES)
-        money: ECON.START, upg: { wq: 0, aq: 0, wm: 0, am: 0, hp: 0, ar: 0, sp: 0, ch: 0 },
+        // 八軌升級(2026-07-20 面向改制):4 戰鬥面向(lw/hw/sk/ult,推進 abil 階)+ 4 防禦系統(見 ECON.UPGRADES)
+        money: ECON.START, upg: { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 },
         ammo: {}, reloadUntil: {}, fireAt: {}, buffs: {},
         mp, maxMp: mp, mpRegen: u.mpRegen,
-        abil: { light: 1, heavy: 1, skill: 0, ult: 0 },
+        // 招式開場即 Lv1 可用(2026-07-20;不再需擊殺數解鎖)
+        abil: { light: 1, heavy: 1, skill: 1, ult: 1 },
         acd: { skill: 0, ult: 0 }, kn: 0,
         mods: [],                    // 招式增益 [{k, m, until}]
         empUntil: 0, stealthUntil: 0, aiming: false, lastBurst: 0,
@@ -1121,14 +1122,14 @@ export class BattleSim {
     return def ? { id, def } : null;
   }
 
-  /** 填彈/冷卻時間:武器基準 × 招式增益 × 武器精通折減(客戶端 HUD 同一條公式) */
+  /** 填彈/冷卻時間:武器基準 × 招式增益(2026-07-20:填彈折減併入武器階級,無獨立精通;客戶端 HUD 同一條公式) */
   _reloadT(h, def) {
-    return def.reload * this._buffMul(h, 'reload') * masteryF('wm', h.upg?.wm);
+    return def.reload * this._buffMul(h, 'reload');
   }
 
   /**
    * 開火判定:射速上限、填彈中禁射、彈夾耗盡自動填彈。
-   * 重武器擊發需電力(heavyMpCost;武器精通折減)—— 電力不足視同禁射。
+   * 重武器擊發需電力(heavyMpCost,隨重武器階級)—— 電力不足視同禁射。
    * lenient=true 給網路延遲寬容(真人客戶端);bot 用嚴格射速。
    */
   _gateFire(h, id, def, lenient) {
@@ -1144,7 +1145,7 @@ export class BattleSim {
     if (!barrage && now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
     if (h.ammo[id] <= 0) { h.reloadUntil[id] = now + this._reloadT(h, def); return false; }
-    const mpc = id === 'heavy' ? heavyMpCost(def, h.upg?.wm) : 0;
+    const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
     if (mpc > 0 && !barrage && h.mp < mpc) return false;   // 重武器電力不足:禁射(重砲窗免電力;小隊電力共用,只扣一次)
     h.fireAt[id] = now;
     h.ammo[id]--;
@@ -1166,7 +1167,7 @@ export class BattleSim {
     h.reloadUntil[wp.id] = this.t + this._reloadT(h, wp.def);
   }
 
-  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成 × 重砲模式加成;火力成長走武器品質 wq 的階級數值) */
+  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成 × 重砲模式加成;火力成長走武器面向 lw/hw 的階級數值) */
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
       * this._buffMul(h, 'dmg')
@@ -1568,7 +1569,7 @@ export class BattleSim {
   }
 
   /**
-   * 自殺攻擊/自毀炸彈定義:傷害吃無人機武器品質階級(wq → owner.abil.light 1/2/3,以 tierVal 解析),
+   * 自殺攻擊/自毀炸彈定義:傷害吃無人機輕武器階級(lw → owner.abil.light 1~4,以 tierVal 解析,Lv4 外推),
    * 其餘(半徑/破甲/vs)照 UNITS.drone.bomb。owner 缺值/無 abil → 底階(Lv1 = 原值,向後相容)。
    */
   _bombDef(owner) {
@@ -1924,9 +1925,8 @@ export class BattleSim {
     if ((h.acd[slot] || 0) > this.t) return;           // 冷卻中
     if (this._jammed(h)) return;                       // 電磁癱瘓:招式一併離線
     const A = heroAbility(h.ch, slot, lvl);
-    // 招式精通:電力消耗與冷卻同吃折減(數值唯一住 data.js masteryF)
-    const amF = masteryF('am', h.upg?.am);
-    const mpc = Math.round(A ? A.mp * amF : 0);
+    // 2026-07-20:招式冷卻/電力隨招式階級(小招 sk / 大招 ult)成長,無獨立精通折減
+    const mpc = Math.round(A ? A.mp : 0);
     if (!A || h.mp < mpc) return;                      // 電力不足
     // 指向型招式:目標點夾在射程內(FPS/DOTA 施法距離)
     if (A.range && x != null) {
@@ -1937,7 +1937,7 @@ export class BattleSim {
       }
     } else { x = h.x; z = h.z; }
     h.mp -= mpc;
-    h.acd[slot] = this.t + A.cd * amF;
+    h.acd[slot] = this.t + A.cd;
     if (A.fx !== 'stealth' && A.fx !== 'vision') h.stealthUntil = 0;   // 出手即現形
     // 一隊只回傳主視野那架當代表:招式增益(mods)是小隊共用的,推三次會疊三倍
     const allies = (r) => [...this.heroes.values()].filter((a) =>
@@ -2087,66 +2087,48 @@ export class BattleSim {
     }
   }
 
-  // ---------- 經濟:購買(八軌;品質 wq/aq 吃擊殺數門檻,六條通用強化只吃金錢)----------
-  /** item: 'wq'|'aq'(品質,見 QUAL)或 'wm'|'am'|'hp'|'ar'|'sp'|'ch'(見 ECON.UPGRADES)。回傳錯誤訊息或 null */
+  // ---------- 經濟:購買(八軌;2026-07-20 全軌固定單價,4 戰鬥面向 + 4 防禦系統,無擊殺門檻)----------
+  /** item: 'lw'|'hw'|'sk'|'ult'(戰鬥面向,推進 abil 階)或 'hp'|'ar'|'sp'|'ch'(防禦系統)。回傳錯誤訊息或 null */
   buy(pid, item) {
     const h = this.heroes.get(pid);
     // 陣亡等待重生也能購買(DOTA 慣例;重生點/死亡畫面補升級)
     if (!h || this.over) return '目前無法購買';
     // hasOwn:item 是客戶端原字串,'toString' 等原型鏈鍵名會取到繼承函式(truthy)
-    // → price NaN → 共用 ps.money 污染成 NaN = 八軌全免。QUAL 分支同理。
+    // → price NaN → 共用 ps.money 污染成 NaN = 八軌全免。
     const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
-    if (up) {
-      const lvl = h.upg[item] || 0;
-      if (lvl >= up.max) return `${up.name} 已滿級`;
-      const price = upgradePrice(up, lvl);
-      if (h.money < price) return `資金不足(${up.name} 需 $${price})`;
-      h.money -= price;
-      h.upg[item] = lvl + 1;
-      if (item === 'hp') {
-        const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hp));
-        for (const b of this._bodies(h)) {       // 機殼升級套用到小隊每一架
-          if (!b.dead) b.hp += nm - b.maxHp;     // 陣亡中只擴上限,重生時 hp = maxHp
-          b.maxHp = nm;
-        }
-      } else if (item === 'sp') {
-        const nm = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + up.step * h.upg.sp));
-        for (const b of this._bodies(h)) {
-          if (!b.dead) b.sp += nm - b.maxSp;
-          b.maxSp = nm;
-        }
-      } else if (item === 'ar') {
-        // 護甲是絕對值疊加(armorMul 曲線);不影響體型(heroTargetH 只看角色 mods.armor)。
-        // 基底走 heroArmor()(無人機已等比縮放)—— 與 _add 生成同一個縫,升級才不會把縮放洗掉。
-        const na = heroArmor(h.ch) + up.step * h.upg.ar;
-        for (const b of this._bodies(h)) b.armor = na;
+    if (!up) return '沒有這項商品';
+    const lvl = h.upg[item] || 0;
+    if (lvl >= up.max) return `${up.name} 已滿級`;
+    const price = upgradePrice(up, lvl);
+    if (h.money < price) return `資金不足(${up.name} 需 $${price})`;
+    h.money -= price;
+    h.upg[item] = lvl + 1;
+    if (up.abil) {
+      // 戰鬥面向:直接推進該武器/招式階級(開場 Lv1 → 升 3 次到 Lv4)
+      h.abil[up.abil] = 1 + h.upg[item];
+      if (up.abil === 'light' || up.abil === 'heavy') {   // 升階可能加大彈夾:清空該槽計數,_gateFire 視為新彈夾
+        delete h.ammo[up.abil]; delete h.reloadUntil[up.abil];
       }
-      this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
-      return null;
-    }
-    const q = Object.hasOwn(QUAL, item) ? QUAL[item] : null;
-    if (q) {
-      // 品質:wq 連動輕+重武器階級(Lv1 自帶)、aq 連動小招+大招(Lv1 才解鎖)
-      const cur = h.upg[item] || 0;
-      const tier = item === 'wq' ? cur + 1 : cur;    // 目前 abil 階(wq 底階 1、aq 底階 0)
-      if (tier >= 3) return `${q.name} 已滿階`;
-      const needK = q.kills[tier];
-      const cost = q.cost[tier];
-      if (h.kn < needK) return `擊殺數不足(${q.name} Lv.${tier + 1} 需 ${needK} 擊殺,目前 ${h.kn})`;
-      if (h.money < cost) return `資金不足(${q.name} Lv.${tier + 1} 需 $${cost})`;
-      h.money -= cost;
-      h.upg[item] = cur + 1;
-      if (item === 'wq') {
-        h.abil.light = h.abil.heavy = 1 + h.upg.wq;
-        // 升階可能加大彈夾:清空計數,_gateFire 下次視為新彈夾
-        h.ammo = {}; h.reloadUntil = {};
-      } else {
-        h.abil.skill = h.abil.ult = h.upg.aq;
+    } else if (item === 'hp') {
+      const nm = Math.round(UNITS[h.kind].hp * (CHARACTERS[h.ch].mods?.hp ?? 1) * (1 + up.step * h.upg.hp));
+      for (const b of this._bodies(h)) {       // 機殼升級套用到小隊每一架
+        if (!b.dead) b.hp += nm - b.maxHp;     // 陣亡中只擴上限,重生時 hp = maxHp
+        b.maxHp = nm;
       }
-      this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
-      return null;
+    } else if (item === 'sp') {
+      const nm = Math.round(UNITS[h.kind].shield * (CHARACTERS[h.ch].mods?.sp ?? 1) * (1 + up.step * h.upg.sp));
+      for (const b of this._bodies(h)) {
+        if (!b.dead) b.sp += nm - b.maxSp;
+        b.maxSp = nm;
+      }
+    } else if (item === 'ar') {
+      // 護甲是絕對值疊加(armorMul 曲線);不影響體型(heroTargetH 只看角色 mods.armor)。
+      // 基底走 heroArmor()(無人機已等比縮放)—— 與 _add 生成同一個縫,升級才不會把縮放洗掉。
+      const na = heroArmor(h.ch) + up.step * h.upg.ar;
+      for (const b of this._bodies(h)) b.armor = na;
     }
-    return '沒有這項商品';
+    this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
+    return null;
   }
 
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
@@ -2768,6 +2750,7 @@ export class BattleSim {
       if (this._distToLanes(x, z) < R.LANE_MIN) continue;            // 非兵線位置
       if (!this._farFromStructures(x, z, R.BASE_CLEAR, 0)) continue; // 不投在主堡/重生點
       if (this.hazBlockers.some(([hx, hz, hr]) => dist2d(x, z, hx, hz) < hr + R.PICK_R)) continue;   // 不投進障礙裡
+      if (this._terrainBlocked(x, z)) continue;                      // 不投在火場/水域/沼澤/淹水區(2026-07-20)
       return { x, z };
     }
     return null;

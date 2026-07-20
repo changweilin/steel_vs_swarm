@@ -5,7 +5,7 @@
 import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, QUAL,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
@@ -857,7 +857,7 @@ function charDetailHTML(id) {
         ${charAbilityRow(id, 'skill', 'Q')}
         ${charAbilityRow(id, 'ult', 'E')}
       </div>
-      <div class="cd-foot">數值為 Lv1 → Lv2 → Lv3(擊殺數 + 金錢於戰場升級);已含英雄倍率(射程 ×1.2、威力 ×1.5)。</div>
+      <div class="cd-foot">數值為 Lv1 → Lv2 → Lv3 → Lv4(戰場金錢升級,開場 Lv1);已含英雄倍率(射程 ×1.2、威力 ×1.5)。</div>
     </div>
     </div>`;
 }
@@ -1579,7 +1579,7 @@ function makeHud() {
         abEl('abUlt', 'abUltName', 'abUltCd', w.ult);
         $('moneyText').textContent = Math.floor(w.money);
         $('knText').textContent = w.kn;
-        $('shopHint').textContent = 'B 升級(擊殺+金錢)';
+        $('shopHint').textContent = 'B 升級(金錢固定單價)';
       }
       const cdEl = $('burstCd');
       cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
@@ -1694,7 +1694,7 @@ function makeHud() {
   };
 }
 
-// ================= 升級工坊(B 鍵開關;招式升級 = 擊殺數 + 金錢,隨處可買)=================
+// ================= 升級工坊(B 鍵開關;八軌全金錢固定單價,隨處可買;2026-07-20 面向改制)=================
 function renderShop(open, st) {
   const ov = $('shopOverlay');
   ov.style.display = open ? '' : 'none';
@@ -1720,46 +1720,33 @@ function renderShop(open, st) {
     d.textContent = t;
     box.appendChild(d);
   };
-  const c = st.ch && CHARACTERS[st.ch];
-  if (c) {
-    head(`🎖 品質升級 —「${c.code}」${c.machine}(輕+重武器 / 小招+大招 連動升階;需擊殺數 + 金錢)`);
-    // 武器品質:一次升輕 + 重兩把(Lv1 自帶);招式品質:一次升小招 + 大招(Lv1 才解鎖)
-    const qualRow = (id, tier, names, keys, nextInfo, unlockNote) => {
-      const q = QUAL[id];
-      const full = tier >= 3;
-      const needK = full ? null : q.kills[tier];
-      const price = full ? null : q.cost[tier];
-      const kOk = !full && st.kn >= needK;
-      row(
-        `<b>${q.name}</b> <span class="tag dim">${names}・${keys}</span> Lv.${tier}/3`,
-        price, kOk && st.money >= price, () => st.buy(id),
-        full ? '已滿階'
-          : `${kOk ? '✅' : '☠'} 需 ${needK} 擊殺(目前 ${st.kn})${unlockNote}${nextInfo ? ' ・ ' + nextInfo : ''}`,
-      );
-    };
-    {
-      const tier = 1 + (st.upg.wq || 0);
-      let next = '';
-      if (tier < 3) {
-        const nl = heroWeapon(st.ch, 'light', tier + 1);
-        const nh = heroWeapon(st.ch, 'heavy', tier + 1);
-        next = `下一階:${nl.name} 傷害 ${Math.round(nl.dmg)}/彈夾 ${nl.mag} ・ ${nh.name} 傷害 ${Math.round(nh.dmg)}`;
-      }
-      qualRow('wq', tier, `${c.light.name}+${c.heavy.name}`, '左鍵/右鍵瞄準', next, '');
+  // 下一階數值預覽(戰鬥面向:輕/重武器 → 傷害/彈夾/填彈;小招/大招 → CD/電力/傷害)
+  const facetNext = (slot, nextTier) => {
+    if (slot === 'light' || slot === 'heavy') {
+      const w = heroWeapon(st.ch, slot, nextTier);
+      return `下一階:傷害 ${Math.round(w.dmg)} ・ 彈夾 ${w.mag} ・ 填彈 ${(+w.reload).toFixed(1)}s`;
     }
-    {
-      const tier = st.upg.aq || 0;
-      let next = '';
-      if (tier < 3) {
-        const ns = heroAbility(st.ch, 'skill', tier + 1);
-        const nu = heroAbility(st.ch, 'ult', tier + 1);
-        next = `下一階:${ns.name} CD ${ns.cd}s/${ns.mp}MP ・ ${nu.name} CD ${nu.cd}s/${nu.mp}MP`;
-      }
-      qualRow('aq', tier, `${c.skill.name}+${c.ult.name}`, 'Q/E', next, tier === 0 ? ' ・ 解鎖後按 Q/E 施放' : '');
+    const a = heroAbility(st.ch, slot, nextTier);
+    return `下一階:CD ${(+a.cd).toFixed(0)}s ・ ${Math.round(a.mp)}MP${a.dmg ? ` ・ 傷害 ${Math.round(a.dmg)}` : ''}`;
+  };
+  const c = st.ch && CHARACTERS[st.ch];
+  const KEYS = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
+  if (c) {
+    head(`🎖 戰鬥強化 —「${c.code}」${c.machine}(輕/重武器・小招/大招,開場 Lv1 → 升 3 次到 Lv4)`);
+    for (const [id, up] of Object.entries(ECON.UPGRADES)) {
+      if (!up.abil) continue;
+      const upg = st.upg[id] || 0;           // 已購步數(0~3);目前階級 = 1 + upg
+      const tier = 1 + upg, full = upg >= up.max;
+      const price = full ? null : upgradePrice(up, upg);
+      const nm = c[up.abil]?.name || up.desc;
+      row(`<b>${up.name}</b> <span class="tag dim">${nm}・${KEYS[up.abil]}</span> Lv.${tier}/4`,
+        price, !full && st.money >= price, () => st.buy(id),
+        full ? '已滿階(Lv4)' : facetNext(up.abil, tier + 1));
     }
   }
-  head('⬆️ 通用強化(隨處可買,立即生效;精通影響消耗與冷卻、充能影響護盾/電力回速)');
+  head('⬆️ 防禦/系統強化(隨處可買,立即生效;充能影響護盾/電力回速)');
   for (const [id, up] of Object.entries(ECON.UPGRADES)) {
+    if (up.abil) continue;
     const lvl = st.upg[id] || 0;
     const full = lvl >= up.max;
     const price = full ? null : upgradePrice(up, lvl);

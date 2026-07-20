@@ -298,8 +298,8 @@ export const CLASS_NAME = { flesh: '肉體', armor: '裝甲', air: '飛行', bui
 // ---- NPC 熱兵器(小兵/塔用;vs = 對目標類型加成,pen = 破甲值)----
 // 英雄武器改住 CHARACTERS(每名角色專屬輕/重武器);bomb = 無人機自帶重型炸彈
 // (F 鍵自殺攻擊機引爆或高速撞擊引爆,座機同歸於盡 → 無人機重生無冷卻)。
-// bomb.dmg 為三階陣列(2026-07-18 起):傷害吃無人機武器品質階級(wq → abil.light 1/2/3),
-// 由 sim._bombDef() 以 tierVal 解析。Lv1 = 原值 240(不變),升階才增威(自殺攻擊隨武器等級成長)。
+// bomb.dmg 為階級陣列(2026-07-18 起):傷害吃無人機輕武器階級(lw 面向 → abil.light 1~4),
+// 由 sim._bombDef() 以 tierVal 解析(Lv4 外推)。Lv1 = 原值 240(不變),升階才增威(自殺攻擊隨武器等級成長)。
 // ---- 全際「reach」比例尺(2026-07-19 規則 #4)----
 // 使用者定案:地圖/尺寸不動,改「全單位射程 / 視野 / 移速」統一減半 ⇒ 相對塔射程縮半,
 // 兵線塞得下兩個 ≤80% 重疊的塔環(塔射程 310→155 ⇒ SEP 372→186 < 兵線 906~1442)。
@@ -589,22 +589,25 @@ export const TERRAIN_FX = {
 // MAX_SLAB:上傳橋面/隧道天花薄板段數上限(#1;橋面 deck 段可達數千,取足量)。
 export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000 };
 
-// ---- 品質養成(2026-07-17 八軌改制;擊殺數解鎖 + 金錢購買)----
-// 「武器品質」一次升輕+重兩把(Lv1 自帶)、「招式品質」一次升小招+大招(Lv1 才解鎖)。
-// kills/cost[i] = 升到 Lv(i+1) 的門檻;擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。
-// 成本與 ECON.UPGRADES 一起受「10 分鐘升滿」預算約束(npm run bal ③),改任一價 MUST 重跑。
-export const QUAL = {
-  wq: { name: '武器品質', kills: [0, 9, 20],  cost: [0, 250, 400] },
-  aq: { name: '招式品質', kills: [6, 18, 32], cost: [150, 250, 400] },
-};
+// ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----
+// 擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。升級全改「金錢階梯單價」(隨等級遞增,見 ECON.UPGRADES / upgradePrice)。
 export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
 // 電腦玩家(bot;含駕駛傭兵變形機甲的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
 export const BOT_KILL_SCORE = 3;
 export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
 
-// 三階數值取值:陣列 = [Lv1, Lv2, Lv3];純量 = 各階相同
-export const tierVal = (v, lvl = 1) =>
-  Array.isArray(v) ? v[Math.max(0, Math.min(v.length - 1, lvl - 1))] : v;
+// 階級數值取值:陣列 = [Lv1, Lv2, Lv3, …];純量 = 各階相同。
+// 2026-07-20 四面向升級(開場 Lv1 → 可升到 Lv4):超出資料階(Lv4+)沿「最後一段成長」線性外推 —
+// 單一推導縫,免手寫 32 角色 × 每欄位的第 4 階(CLAUDE.md §2.1「推導值 MUST NOT 手寫」)。
+// 遞增欄位(dmg/mag/rate)續增、遞減欄位(cd/reload/mul 折減)續減,夾 ≥0。
+export const tierVal = (v, lvl = 1) => {
+  if (!Array.isArray(v)) return v;
+  const n = v.length, i = lvl - 1;
+  if (i <= 0) return v[0];
+  if (i < n) return v[i];
+  const step = v[n - 1] - (v[n - 2] ?? v[n - 1]);   // 末段增量;長度 1 → step 0(純量化,不外推)
+  return Math.max(0, v[n - 1] + step * (i - (n - 1)));
+};
 
 /**
  * 玩家可操作機體的射程上限 = 視野 × RANGE_SIGHT_F(恆 < 視野:打不到看不到的東西)。
@@ -1287,30 +1290,35 @@ export const ECON = {
   BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 150, robot: 190, morph: 190 },
   BOUNTY_DPS_S: 8,     // 戰力公式的 DPS 權重(秒):value = EHP + DPS × 此值
   BOUNTY_F: 0.12,      // 戰力 → 金錢的匯率(10 分鐘升滿預算的主旋鈕)
-  // 八軌之六:通用強化(隨處可買;wq/aq 品質二軌住 QUAL,要吃擊殺數門檻)。
-  // 攻防曲線一致(2026-07-17 校準):滿級攻擊成長 ≈ ×2.2(品質 + 精通)、
-  // 防禦成長 ≈ ×2.1(hp/sp ×1.8 + 護甲 +30 → 對塔承傷 ×1.22)—— 改 step MUST 重跑 bal ④。
+  // ---- 八軌強化(2026-07-20 面向改制;全軌統一階梯定價 UPG_BASE+UPG_INC×lvl、開場 + 升 3 次)----
+  // 4 戰鬥面向(帶 abil 欄):直接推進該武器/招式階級,開場 Lv1 → 升 3 次到 Lv4;成長走該武器/招式
+  //   的 3 階數組 + tierVal 第 4 階外推(傷害/射速/彈夾/冷卻「全面」提升),不再有獨立精通旋鈕。
+  // 4 防禦/系統(step 制):開場 Lv0 → 升 3 次。攻防曲線於 npm run bal ④ 校準,改 step/max MUST 重跑。
   UPGRADES: {
-    wm: { name: '武器精通', desc: '武器冷卻/填彈 −8%、重武器電力消耗 −8%', max: 5, step: 0.08, base: 30, inc: 10 },
-    am: { name: '招式精通', desc: '招式冷卻與電力消耗 −8%', max: 5, step: 0.08, base: 30, inc: 10 },
-    hp: { name: '裝甲強化', desc: '裝甲上限 +16%', max: 5, step: 0.16, base: 30, inc: 10 },
-    ar: { name: '複合裝甲', desc: '護甲值 +6', max: 5, step: 6, base: 30, inc: 10 },
-    sp: { name: '護盾強化', desc: '護盾上限 +16%', max: 5, step: 0.16, base: 30, inc: 10 },
-    ch: { name: '充能系統', desc: '護盾/電力回復速度提升(滿級 = 現役最高規格)', max: 5, base: 30, inc: 10 },
+    lw:  { name: '輕武器強化', abil: 'light', desc: '輕武器全面提升(傷害/射速/彈夾)', max: 3 },
+    hw:  { name: '重武器強化', abil: 'heavy', desc: '重武器全面提升(傷害/裝填/破甲)', max: 3 },
+    sk:  { name: '小招強化',   abil: 'skill', desc: '小招全面提升(威力/冷卻/範圍)',   max: 3 },
+    ult: { name: '大招強化',   abil: 'ult',   desc: '大招全面提升(威力/冷卻/範圍)',   max: 3 },
+    hp:  { name: '裝甲強化', desc: '裝甲上限 +27%/級', max: 3, step: 0.27 },
+    ar:  { name: '複合裝甲', desc: '護甲值 +10/級',    max: 3, step: 10 },
+    sp:  { name: '護盾強化', desc: '護盾上限 +27%/級', max: 3, step: 0.27 },
+    ch:  { name: '充能系統', desc: '護盾/電力回復速度提升(滿級 = 現役最高規格)', max: 3 },
   },
+  // 全軌統一階梯單價:price(lvl) = BASE + INC × 該軌現有等級 —— 隨等級遞增(Lv0→1=75、1→2=125、2→3=175)。
+  // 八軌全滿 = 24×BASE + 24×INC = $3000(≈ 10 分鐘收入,見 npm run bal ③);改任一值 MUST 重跑 bal。
+  UPG_BASE: 75, UPG_INC: 50,
   CHARGE_MIN: 0.4,     // 充能 Lv0 的回復速度比例(滿級 = 1.0 = VITALS.SP_REGEN_PS / mpRegen 現值)
 };
-export const upgradePrice = (u, lvl) => u.base + u.inc * lvl;
-/** 精通折減(track: 'wm'|'am'):冷卻/填彈/電力消耗 × 此倍率 */
-export const masteryF = (track, lvl) => 1 - ECON.UPGRADES[track].step * (lvl || 0);
+/** 升級單價:全軌統一階梯 = BASE + INC × 該軌現有等級 lvl(2026-07-20;隨等級遞增) */
+export const upgradePrice = (u, lvl) => ECON.UPG_BASE + ECON.UPG_INC * (lvl || 0);
 /** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
 export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
-/** 重武器每發電力(解析後 def;wmLvl = 武器精通等級)。輕武器不耗電。
- *  2026-07-18 彈夾制:一個彈夾週期 = mag/rate + reload 秒,週期總耗電 = 週期 × HEAVY_MP_PER_CD × 精通,
- *  均攤到每發 ⇒「持續火力耗電率」= HEAVY_MP_PER_CD/s,全武器一致且不因彈夾大小漂移(mag=1 時 ≈ 舊值)。 */
-export const heavyMpCost = (def, wmLvl) => {
+/** 重武器每發電力(解析後 def)。輕武器不耗電。彈夾週期 = mag/rate + reload 秒,週期總耗電 =
+ *  週期 × HEAVY_MP_PER_CD,均攤到每發 ⇒「持續火力耗電率」= HEAVY_MP_PER_CD/s(mag=1 時 ≈ 舊值)。
+ *  2026-07-20:電力折減併入重武器階級(reload/mag 隨階變),取消獨立武器精通折減。 */
+export const heavyMpCost = (def) => {
   const mag = def.mag || 1, cycle = (def.reload || 0) + mag / (def.rate || 3);
-  return Math.round(cycle / mag * ECON.HEAVY_MP_PER_CD * masteryF('wm', wmLvl));
+  return Math.round(cycle / mag * ECON.HEAVY_MP_PER_CD);
 };
 
 // ---- 單位數值(armor = 護甲值,吃 armorMul 減免;英雄另有 shield/mp 基準)----

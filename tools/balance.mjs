@@ -10,16 +10,18 @@
 // ② 最前線敵我砲塔:射程重疊 TOWER_OVERLAP(0.8)且互不在對方射程內(d = 1.2R > R)。
 //    對全部預設場地 × 1/2/3 線實際起一份 BattleSim,量最近的一對敵我塔。
 //
-// ③ 10 分鐘升滿(2026-07-17 八軌經濟):單一兵線 30% 擊殺 + 40% 助攻(×ASSIST.F)
-//    的 10 分鐘賞金收入 + 開局資金 ≈ 八軌全滿總價(±10%);擊殺數門檻亦須先於金錢滿足。
+// ③ 10 分鐘升滿(2026-07-20 面向經濟):單一兵線 30% 擊殺 + 40% 助攻(×ASSIST.F)
+//    的 10 分鐘賞金收入 + 開局資金 ≈ 八軌全滿總價(8 軌 × 各 max 級 × 固定單價,±10%;無擊殺門檻)。
 //
 // ④ 滿級單推同塔位雙塔:八軌全滿的玩家攻擊一組塔位。
 //    機甲/變形機甲(單機)= 近戰互轟模型(前段雙塔回擊、殺一座後單塔;無距離衰減/
 //    無招式/無爆擊/護盾持續受擊不回復)⇒ 平均「剛好」活著拆完(剩 0~20% EHP)。
 //    無人機(單機)= 站外圍攻模型:重武器射程 > 砲塔(311m 外零承傷、含距離衰減)⇒
 //    驗每台重武器射程確實 > 塔 + 機種平均拆完兩座 ≤ 站外時間預算(單機 DPS ⇒ 較慢但不承傷)。
-import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, QUAL, upgradePrice, masteryF, chargeF,
-  killScore, armorMul, vsMult, heroWeapon, charKind, heroArmor, EVASION, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, chargeF, upgradePrice,
+  armorMul, vsMult, heroWeapon, charKind, heroArmor, EVASION, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+
+const MAX_TIER = 1 + ECON.UPGRADES.lw.max;   // 戰鬥面向滿級階(開場 Lv1 + 升 max 次)= Lv4
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim, waveInterval } from '../server/sim.js';
 
@@ -112,35 +114,32 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   const comp = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];
   const waveBounty = comp.reduce((s, k) => s + ECON.BOUNTY[k], 0);
   const income = ECON.START + (KILL_R + ASSIST_R * ECON.ASSIST.F) * waves * waveBounty;
+  // 八軌全滿 = 8 軌各級階梯單價 upgradePrice(u,lvl) 之和(2026-07-20;無擊殺門檻,隨等級遞增)
   const totalCost = Object.values(ECON.UPGRADES)
-    .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0)
-    + QUAL.wq.cost[1] + QUAL.wq.cost[2] + QUAL.aq.cost[0] + QUAL.aq.cost[1] + QUAL.aq.cost[2];
+    .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0);
   const ratio = totalCost / income;
-  // 擊殺數門檻:30% 擊殺累積的 kn 必須先於金錢滿足最高門檻(aq Lv3)
-  const waveKn = comp.reduce((s, k) => s + killScore(k), 0);
-  const knBudget = KILL_R * waves * waveKn;
-  const knMax = Math.max(...QUAL.wq.kills, ...QUAL.aq.kills);
-  const okE = ratio >= 0.9 && ratio <= 1.1 && knBudget >= knMax;
+  const okE = ratio >= 0.9 && ratio <= 1.1;
   if (!okE) fail++;
   console.log(`\n③ 10 分鐘升滿 — 目標:八軌總價 ≈ 收入預算(±10%)\n`);
   console.log(`${okE ? '✅' : '❌'} ${waves} 波 × 波賞金 $${waveBounty} × 有效分成 ${(KILL_R + ASSIST_R * ECON.ASSIST.F).toFixed(2)}`
-    + ` + 開局 $${ECON.START} = 預算 $${Math.round(income)};八軌總價 $${totalCost}(比 ${(ratio * 100).toFixed(1)}%)`
-    + `;擊殺數 ${knBudget.toFixed(0)} ≥ 最高門檻 ${knMax}`);
+    + ` + 開局 $${ECON.START} = 預算 $${Math.round(income)};八軌總價 $${totalCost}(階梯 $${ECON.UPG_BASE}+$${ECON.UPG_INC}×lvl,比 ${(ratio * 100).toFixed(1)}%)`);
 }
 
 // ---------- ④ 滿級單推同塔位雙塔 ----------
 {
   const U = ECON.UPGRADES;
-  const wmF = masteryF('wm', U.wm.max);
-  const STANDOFF_BUDGET_S = 180;   // 無人機站外攻堅:機種平均拆完兩座的時間預算
+  // 無人機站外攻堅:機種平均拆完兩座的時間預算。2026-07-20 面向改制取消武器精通(reload ×0.6)後,
+  // 純量填彈的重武器在滿級(Lv4 品質但無填彈折減)持續 DPS 較舊制低 ~15% → 預算 180→200s;
+  // 這是「站外龜拆」模型的平均值(防空/反甲特化 vs.building≤0.5 的機種本就拆得慢,設計容許)。
+  const STANDOFF_BUDGET_S = 200;
   // 機甲/變形機甲(單機):近戰互轟 —— 前段雙塔回擊、殺一座後單塔
   const maxPush = (ch) => {
     const kind = charKind(ch), u = UNITS[kind], m = CHARACTERS[ch].mods || {};
-    let dps = 0;   // 品質 Lv3 + 精通滿級 的對塔 DPS(pen 折進 armorMul)
+    let dps = 0;   // 輕/重武器滿級(Lv4)對塔 DPS(pen 折進 armorMul;2026-07-20 無精通,填彈折減併入階級)
     for (const slot of ['light', 'heavy']) {
-      const w = heroWeapon(ch, slot, 3, true);
+      const w = heroWeapon(ch, slot, MAX_TIER, true);
       if (!w) continue;
-      const cycle = w.mag / (w.rate || 3) + w.reload * wmF;
+      const cycle = w.mag / (w.rate || 3) + w.reload;
       dps += w.dmg * vsMult(w, 'tower') * grenadeBuildingMul(w, 'tower')
         * armorMul(UNITS.tower.armor, w.pen) * w.mag / cycle;
     }
@@ -165,8 +164,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   // 重武器 × 距離衰減;fan 電漿在射程末端貼 FAN_FLOOR = 刻意「碰得到、拆得慢」
   const standoff = (ch) => {
     const d = UNITS.tower.range + 1;
-    const w = heroWeapon(ch, 'heavy', 3, true);
-    const cycle = w.mag / (w.rate || 3) + w.reload * wmF;
+    const w = heroWeapon(ch, 'heavy', MAX_TIER, true);
+    const cycle = w.mag / (w.rate || 3) + w.reload;
     const dps = w.dmg * vsMult(w, 'tower') * grenadeBuildingMul(w, 'tower')
       * armorMul(UNITS.tower.armor, w.pen) * dmgFalloff(w, d) * w.mag / cycle * SQUAD.N;
     return { reach: w.range > d, t2: 2 * UNITS.tower.hp / dps };

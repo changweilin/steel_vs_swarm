@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
-  CHARACTERS, charsOf, heroWeapon, heroAbility, QUAL, masteryF, chargeF, heavyMpCost,
+  CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE,
 } from '../public/js/data.js';
@@ -168,7 +168,7 @@ log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面
   a.money = 999;
   sim._damage(a, 99999, null, 999);
   assert(a.dead, '測試前置:傭兵陣亡');
-  assert(sim.buy('p_ma', 'wm') === null && a.upg.wm === 1, '陣亡等待重生仍可購買升級');
+  assert(sim.buy('p_ma', 'hw') === null && a.upg.hw === 1, '陣亡等待重生仍可購買升級');
   assert(sim.buy('p_ma', 'hp') === null && a.hp === 0, '陣亡買裝甲強化只擴上限(重生才回滿)');
 }
 
@@ -435,23 +435,28 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
   assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
 
-  log('— sim:八軌養成(品質吃擊殺數 + 金錢;精通/充能影響消耗與回復)—');
+  log('— sim:八軌養成(2026-07-20 面向改制:開場 Lv1、階梯單價隨等級遞增、無擊殺門檻、Lv4 外推)—');
   dr.money = 9999; dr.kn = 0;
-  assert(/擊殺數不足/.test(sim.buy('p_d', 'aq') || ''), '擊殺數不足 → 解鎖招式品質被拒');
-  dr.kn = QUAL.aq.kills[0];
-  assert(sim.buy('p_d', 'aq') === null && dr.abil.skill === 1 && dr.abil.ult === 1,
-    `${QUAL.aq.kills[0]} 擊殺 + $${QUAL.aq.cost[0]} → 招式品質 Lv1(小招+大招一起解鎖)`);
-  dr.kn = QUAL.wq.kills[1];
-  assert(sim.buy('p_d', 'wq') === null && dr.abil.light === 2 && dr.abil.heavy === 2,
-    '武器品質升 Lv.2(輕+重連動,擊殺+金錢)');
+  assert(dr.abil.skill === 1 && dr.abil.ult === 1, '招式開場即 Lv1 可用(無需擊殺解鎖)');
+  // 輕/重武器為獨立面向:kn=0 也能買(無擊殺門檻)
+  assert(sim.buy('p_d', 'lw') === null && dr.abil.light === 2 && dr.abil.heavy === 1,
+    '輕武器強化升 Lv.2(只動輕武器,重武器不變)');
+  assert(sim.buy('p_d', 'hw') === null && dr.abil.heavy === 2, '重武器強化升 Lv.2(獨立面向)');
   const dmgL2 = heroWeapon('s01', 'light', 2).dmg;
   assert(dmgL2 > heroWeapon('s01', 'light', 1).dmg, `升階後傷害提升(${heroWeapon('s01', 'light', 1).dmg} → ${dmgL2})`);
+  assert(sim.buy('p_d', 'sk') === null && dr.abil.skill === 2 && dr.abil.ult === 1,
+    '小招強化升 Lv.2(只動小招,大招不變)');
+  // Lv4 外推:輕武器買到滿級(upg.lw 1 → 3 ⇒ abil.light = 4),第 4 階數值沿末段成長外推 > Lv3
+  sim.buy('p_d', 'lw'); sim.buy('p_d', 'lw');
+  assert(dr.abil.light === 4 && heroWeapon('s01', 'light', 4).dmg > heroWeapon('s01', 'light', 3).dmg,
+    '輕武器可升到 Lv4(第 4 階外推,傷害 > Lv3)');
+  assert(/已滿級/.test(sim.buy('p_d', 'lw') || ''), 'Lv4 後滿級,再買被拒');
   dr.mp = dr.maxMp;
-  const A1 = heroAbility('s01', 'skill', 1);
+  const A1 = heroAbility('s01', 'skill', dr.abil.skill);
   const mp0 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
-  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === Math.round(A1.mp * masteryF('am', dr.upg.am)),
-    `施放小招:CD、電力 -${Math.round(A1.mp * masteryF('am', dr.upg.am))}MP(招式精通折減)`);
+  assert(dr.acd.skill > sim.t && Math.round(mp0 - dr.mp) === Math.round(A1.mp),
+    `施放小招:CD、電力 -${Math.round(A1.mp)}MP(隨招式階級,無精通折減)`);
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
   assert(dr.mp === mp1, 'CD 中重複施放被拒(電力未扣)');
@@ -476,8 +481,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     sim.tick(0.5); sim.tick(0.5);
     assert(rb2.money === $t0, '被動收入停發(金錢只來自擊殺/助攻/物資)');
     const whv = heroWeapon('t05', 'heavy', 1);
-    const cost = heavyMpCost(whv, rb2.upg.wm);
-    assert(cost > 0, `重武器每發耗電 ${cost}MP(= cd ${whv.reload}s × ${ECON.HEAVY_MP_PER_CD} × 精通折減)`);
+    const cost = heavyMpCost(whv);
+    assert(cost > 0, `重武器每發耗電 ${cost}MP(彈夾週期 × ${ECON.HEAVY_MP_PER_CD}/s 均攤)`);
     rb2.mp = cost - 1;
     rb2.aiming = true;
     const foe2 = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 20, z: rb2.z, hp: 9999 });
@@ -1043,13 +1048,13 @@ const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z:
 const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
 const richSnap = await host.wait((c) => {
   const me = meOf(c);
-  return me && me.$ >= 30 ? me : null;   // 30 = 最便宜強化的 Lv1 價;START 200 + 擊殺賞金必然足夠
+  return me && me.$ >= ECON.UPG_BASE ? me : null;   // 首級階梯價 = UPG_BASE;START 200 ≥ 之,必然足夠
 }, 30000);
-assert(richSnap.$ >= 30, `開局資金 + 擊殺賞金累積 $${richSnap.$}(無被動收入)`);
-host.send({ t: 'buy', item: 'wm' });
-await host.wait((c) => (meOf(c)?.up?.wm || 0) >= 1, 5000);
+assert(richSnap.$ >= ECON.UPG_BASE, `開局資金 + 擊殺賞金累積 $${richSnap.$}(無被動收入)`);
+host.send({ t: 'buy', item: 'hw' });
+await host.wait((c) => (meOf(c)?.up?.hw || 0) >= 1, 5000);
 clearInterval(homeIv);
-assert(true, '武器精通 Lv.1(快照 up 同步)');
+assert(true, '重武器強化 Lv.1(快照 up 同步)');
 
 log('— 勝負(重武器溫壓火箭高空拆堡:反建築 ×2.0 + 破甲)—');
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');

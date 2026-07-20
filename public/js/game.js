@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, QUAL, masteryF, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altF, isGunnery, TERRAIN_FX,
 } from './data.js';
@@ -235,14 +235,14 @@ export class BattleClient {
     this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
-    this.abil = { light: 1, heavy: 1, skill: 0, ult: 0 };
+    this.abil = { light: 1, heavy: 1, skill: 1, ult: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
     this.wdef = {};                   // slot -> 解析後武器數值(含英雄倍率與階級)
     this.wstate = {};                 // slot -> { ammo, reloadEnd }(本地 HUD;伺服器另行把關)
     this.lastFireAt = { light: 0, heavy: 0 };
     this.bullets = [];                // 彈道學子彈(初速 mv + 重力,射程上限)
     this._setChar(this.ch || null);
     this.money = 0;
-    this.upg = { wq: 0, aq: 0, wm: 0, am: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
+    this.upg = { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this.kn = 0;                      // 擊殺數(招式解鎖門檻)
@@ -2064,7 +2064,7 @@ export class BattleClient {
           if (this.shopOpen) {
             const u = this.upg;
             const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
-              + ['wq', 'aq', 'wm', 'am', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',');
+              + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',');
             if (sig !== this._shopSig) { this._shopSig = sig; this.hud.shop?.(true, this._shopState()); }
           }
         }
@@ -2893,9 +2893,9 @@ export class BattleClient {
       }
     } else if (ev.e === 'buy') {
       if (ev.pid === this.youId && ev.lvl != null) {
-        const name = (QUAL[ev.item] || ECON.UPGRADES[ev.item])?.name || ev.item;
-        // wq 底階 1(Lv1 自帶):顯示階級 = 已購步數 + 1
-        this.hud.feed?.(`⬆️ ${name} Lv.${ev.item === 'wq' ? ev.lvl + 1 : ev.lvl}`);
+        const up = ECON.UPGRADES[ev.item];
+        // 戰鬥面向(abil = 1 + upg):顯示階級 = 已購步數 + 1;防禦系統直接顯示 Lv
+        this.hud.feed?.(`⬆️ ${up?.name || ev.item} Lv.${up?.abil ? ev.lvl + 1 : ev.lvl}`);
       }
     } else if (ev.e === 'assist') {
       if (ev.pid === this.youId) this.hud.feed?.(`🤝 助攻 +$${ev.v}`);
@@ -3165,23 +3165,18 @@ export class BattleClient {
   _optimisticBuy(item) {
     const applied = (() => {
       const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
-      if (up) {
-        const lvl = this.upg[item] || 0;
-        if (lvl >= up.max) return false;
-        const price = upgradePrice(up, lvl);
-        if (this.money < price) return false;
-        this.money -= price; this.upg[item] = lvl + 1;
-        return true;
+      if (!up) return false;
+      const lvl = this.upg[item] || 0;
+      if (lvl >= up.max) return false;
+      const price = upgradePrice(up, lvl);
+      if (this.money < price) return false;
+      this.money -= price; this.upg[item] = lvl + 1;
+      // 戰鬥面向:同步樂觀推進 abil 階(權威快照會校正);光/重武器另重算武器數值
+      if (up.abil) {
+        this.abil[up.abil] = 1 + this.upg[item];
+        if (up.abil === 'light' || up.abil === 'heavy') this._setChar(this.ch, true);
       }
-      const q = Object.hasOwn(QUAL, item) ? QUAL[item] : null;
-      if (q) {
-        const cur = this.upg[item] || 0;
-        const tier = item === 'wq' ? cur + 1 : cur;
-        if (tier >= 3 || this.kn < q.kills[tier] || this.money < q.cost[tier]) return false;
-        this.money -= q.cost[tier]; this.upg[item] = cur + 1;
-        return true;
-      }
-      return false;
+      return true;
     })();
     if (applied && this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
     this.net.send({ t: 'buy', item });
@@ -3333,8 +3328,8 @@ export class BattleClient {
     const def = this.wdef[wid], st = this.wstate[wid];
     if (!def || !st || st.reloadEnd > 0 || st.ammo >= def.mag) return;
     st.ammo = 0;
-    // 武器精通:填彈/冷卻折減(伺服器 _reloadT 同一條公式)
-    st.reloadEnd = performance.now() / 1000 + def.reload * masteryF('wm', this.upg?.wm);
+    // 填彈/冷卻時長 = 武器階級解析後的 reload(2026-07-20:折減併入階級,伺服器 _reloadT 同一條)
+    st.reloadEnd = performance.now() / 1000 + def.reload;
     if (this.net) this.net.send({ t: 'reload', w: wid });
     this.hud.feed?.(wid === 'heavy' ? `⏳ ${def.name} 冷卻中…` : `🔄 ${def.name} 填彈中…`);
   }
@@ -3503,7 +3498,7 @@ export class BattleClient {
     if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
     if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
-    const mpc = id === 'heavy' ? heavyMpCost(def, this.upg?.wm) : 0;
+    const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
     if (!barraging && mpc > 0 && this.mp < mpc) {
       if (now - (this._mpWarnAt || 0) > 1.5) { this._mpWarnAt = now; this.hud.feed?.(`🔋 電力不足(【${def.name}】每發需 ${mpc} MP)`); }
       return;
@@ -3740,13 +3735,12 @@ export class BattleClient {
   // ---------------- 招式(Q 小招 / E 大招:解鎖 + CD + 電力,伺服器結算)----------------
   _castAbility(slot) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
-    const lvl = this.abil[slot] || 0;
-    const A = lvl ? heroAbility(this.ch, slot, lvl) : heroAbility(this.ch, slot, 1);
-    if (!lvl) { this.hud.feed?.(`🔒【${A.name}】尚未解鎖(B 商店:招式品質 ${QUAL.aq.kills[0]} 擊殺 + $${QUAL.aq.cost[0]})`); return; }
+    const lvl = this.abil[slot] || 1;   // 招式開場即 Lv1(2026-07-20;不再有未解鎖狀態)
+    const A = heroAbility(this.ch, slot, lvl);
     const cdLeft = this.cds[slot === 'skill' ? 0 : 1] || 0;
     if (cdLeft > 0) { this.hud.feed?.(`⏳【${A.name}】冷卻中(${cdLeft.toFixed(0)}s)`); return; }
-    // 招式精通:電力消耗折減(伺服器 heroCast 同一條公式)
-    const mpc = Math.round(A.mp * masteryF('am', this.upg?.am));
+    // 招式電力隨招式階級(sk/ult)成長(2026-07-20:無獨立精通折減;伺服器 heroCast 同一條)
+    const mpc = Math.round(A.mp);
     if (this.mp < mpc) { this.hud.feed?.(`🔋 電力不足(【${A.name}】需 ${mpc} MP)`); return; }
     if (this.empLeft > 0) { this.hud.feed?.('⚡ 系統離線(遭電磁癱瘓),無法施放!'); return; }
     // 指向型招式:準星與地形/單位交點為目標落點(超程由伺服器夾回射程)
@@ -3851,10 +3845,10 @@ export class BattleClient {
       };
     };
     const abHud = (slot, idx) => {
-      const lvl = this.abil[slot] || 0;
-      const A = heroAbility(this.ch, slot, lvl || 1);
-      const mpc = Math.round(A.mp * masteryF('am', this.upg?.am));   // 招式精通折減後的實際耗電
-      return { name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc, ready: lvl > 0 && (this.cds[idx] || 0) <= 0 && this.mp >= mpc };
+      const lvl = this.abil[slot] || 1;
+      const A = heroAbility(this.ch, slot, lvl);
+      const mpc = Math.round(A.mp);   // 招式電力(隨階級,無精通折減)
+      return { name: A.name, lvl, cd: this.cds[idx] || 0, mp: mpc, ready: (this.cds[idx] || 0) <= 0 && this.mp >= mpc };
     };
     return {
       money: this.money, atBase: this._atBase(),
@@ -5094,8 +5088,8 @@ export class BattleClient {
       const cur = this._curWeapon();
       let reloadOff = { dz: 0, dy: 0, rx: 0 };
       if (cur.def && cur.st && cur.st.reloadEnd > 0) {
-        // 進度分母要吃武器精通折減後的實際填彈時長,否則動作提前結束定格
-        const rl = cur.def.reload * masteryF('wm', this.upg?.wm);
+        // 進度分母 = 武器階級解析後的填彈時長(2026-07-20:無精通折減),否則動作提前結束定格
+        const rl = cur.def.reload;
         const p = 1 - Math.max(0, cur.st.reloadEnd - now) / rl;
         reloadOff = this._reloadAnimOffset(cur.def, p);
       }

@@ -3,15 +3,15 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, ECON, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
 const RETREAT_HP = 0.32;                    // 低於 32% 裝甲撤退
 const RESUME_HP = 0.85;                     // 回血到 85% 再出擊
 
-// 消費優先序(八軌):先解鎖招式品質,再武器品質,攻防強化交錯(sim.buy 會擋擊殺數/資金不足)
-const BUY_ORDER = ['aq', 'wq', 'wm', 'hp', 'sp', 'ar', 'am', 'ch'];
+// 消費優先序(八軌,2026-07-20 面向):先重/輕武器,再大/小招,攻防交錯(sim.buy 會擋資金不足/已滿級)
+const BUY_ORDER = ['hw', 'lw', 'ult', 'sk', 'hp', 'sp', 'ar', 'ch'];
 
 export class BotBrain {
   /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線;diffKey: 難度(新手/低/中/高) */
@@ -68,12 +68,12 @@ export class BotBrain {
     const target = this._acquire(h);
     if (this.state !== 'RETREAT') this.state = target ? 'ENGAGE' : 'PUSH';
 
-    // 經濟:優先解鎖/升級招式品質,再武器/通用強化(擊殺數/資金門檻由 sim.buy 把關)
-    if (h.money >= 30 && sim.t - (this._buyAt || 0) > 4) {
+    // 經濟:依 BUY_ORDER 逐項升級(全軌固定單價,資金/滿級門檻由 sim.buy 把關)
+    if (h.money >= ECON.UPG_BASE && sim.t - (this._buyAt || 0) > 4) {
       this._buyAt = sim.t;
       for (const item of BUY_ORDER) {
-        // 不使用招式的難度(新手/低):不買招式品質/精通,把錢留給武器/防禦強化
-        if (!this.diff.ability && (item === 'aq' || item === 'am')) continue;
+        // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
+        if (!this.diff.ability && (item === 'sk' || item === 'ult')) continue;
         if (sim.buy(this.pid, item) === null) break;
       }
     }
