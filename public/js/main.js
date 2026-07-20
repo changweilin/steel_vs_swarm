@@ -1442,6 +1442,7 @@ async function enterLoading(cfg) {
     const decks = biomes.userData.decks || [];
     app.terrain.deckY = deckY;
     app.terrain.tunnelAt = tunnelAt;
+    app.terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
     // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上 ③否則地表
     app.terrain.surfaceAt = (x, z, curY) => {
       const h = app.terrain.heightAt(x, z);
@@ -1479,9 +1480,16 @@ async function enterLoading(cfg) {
         .map((b) => [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]);
       const cor = (biomes.userData.gradeCorridors || []).slice(0, 2400)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
+      // 橋面/隧道天花水平薄板(#1):deck ribbon(ty=1)+ 隧道 ribbon(ty=2),sim 座標(z 北 = −three z)。
+      // 伺服器 _slabBlocked 判「兩端同 ribbon 且分屬板體兩側」擋彈道/LOS —— 補圓柱(occ)之外的水平板缺口。
+      const decks = biomes.userData.decks || [], tunnels = biomes.userData.tunnels || [];
+      const slabs = [
+        ...decks.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 1]),
+        ...tunnels.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2]),
+      ].slice(0, LOS.MAX_SLAB);
       // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。
-      app.net.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain) });
+      app.net.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs });
     }
     app.net.send({ t: 'loaded' });
   } catch (e) {

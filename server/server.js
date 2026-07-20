@@ -438,7 +438,7 @@ wss.on('connection', (ws) => {
       // 通常先於開戰抵達(存房間,startBattle 套用);房主是觀戰者時可能晚到 → 直接套用進行中的 sim
       // (LOS 即時生效;走廊內障礙從快照消失,客戶端自動收掉)。非房主來源一律丟棄。
       if (clientId === room.hostId && m.occ) {
-        room.world = { occ: m.occ, cor: m.cor, wet: m.wet };   // wet:水沼粗網格(中立單位佈點/移動迴避)
+        room.world = { occ: m.occ, cor: m.cor, wet: m.wet, slabs: m.slabs };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS)
         if (room.battle) room.battle.setWorld(room.world);
       }
       return;
@@ -450,7 +450,7 @@ wss.on('connection', (ws) => {
       if (m.t === 'leaveRoom') { leaveRoom(client, room, clientId); room = null; client = null; }
       return;
     }
-    if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry, m.wet); return; }
+    if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry, m.wet, m.lev); return; }
     if (m.t === 'aim' && client.side) { b.heroAim(clientId, m.on); return; }
     if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }

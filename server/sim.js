@@ -33,6 +33,14 @@ export function llToMeters(lat, lng, center) {
 }
 
 function dist2d(ax, az, bx, bz) { return Math.hypot(ax - bx, az - bz); }
+/** 點 (px,pz) 是否落在 slab ribbon 中心線 [s0,s1]→[s2,s3] 的半寬 hw 內(#1 橋面/隧道天花 LOS)*/
+function ptOnRibbon(px, pz, s) {
+  const ex = s[2] - s[0], ez = s[3] - s[1], L2 = ex * ex + ez * ez || 1;
+  let t = ((px - s[0]) * ex + (pz - s[1]) * ez) / L2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const dx = px - (s[0] + ex * t), dz = pz - (s[1] + ez * t);
+  return dx * dx + dz * dz <= s[4] * s[4];
+}
 
 export class BattleSim {
   /**
@@ -123,7 +131,71 @@ export class BattleSim {
       cor.push([x1, z1, x2, z2, Math.min(20, Math.max(2, hw)), tun ? 1 : 0]);
     }
     if (cor.length) this._pruneCorridors(cor);
+    this._ingestSlabs(w);
     this._rebuildLosGrid();
+  }
+
+  /**
+   * 橋面/隧道天花水平薄板(#1):main.js 房主上傳的 ribbon 平面段 [x1,z1,x2,z2,hw,ty](sim 座標,
+   * ty=1 橋面 / 2 隧道天花)。柵格化進 _slabGrid(LOS.CELL_M 格),供 _slabBlocked / _slabLevAt 查。
+   * 未上傳(e2e/headless)→ _slabGrid 不存在 → slab 遮蔽停用,LOS 行為與舊版一致(確定性斷言不變)。
+   */
+  _ingestSlabs(w) {
+    const raw = Array.isArray(w.slabs) ? w.slabs.slice(0, LOS.MAX_SLAB) : [];
+    const C = LOS.CELL_M, grid = new Map();
+    let n = 0;
+    for (const s of raw) {
+      if (!Array.isArray(s) || s.length < 6) continue;
+      const x1 = +s[0], z1 = +s[1], x2 = +s[2], z2 = +s[3], hw = Math.min(20, Math.max(1, +s[4])), ty = +s[5];
+      if (![x1, z1, x2, z2, hw].every(Number.isFinite) || (ty !== 1 && ty !== 2)) continue;
+      const seg = [x1, z1, x2, z2, hw, ty];
+      const i0 = Math.floor((Math.min(x1, x2) - hw) / C), i1 = Math.floor((Math.max(x1, x2) + hw) / C);
+      const j0 = Math.floor((Math.min(z1, z2) - hw) / C), j1 = Math.floor((Math.max(z1, z2) + hw) / C);
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+        const k = (i + 32768) * 65536 + (j + 32768);
+        let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(seg);
+      }
+      n++;
+    }
+    if (n) this._slabGrid = grid;
+  }
+
+  /** 該點所在結構層(0 地面 / 1 橋面 / 2 隧道):由 ribbon 歸屬推定(NPC/bot/飛行體用)。 */
+  _slabLevAt(x, z) {
+    const g = this._slabGrid;
+    if (!g) return 0;
+    const C = LOS.CELL_M;
+    const arr = g.get((Math.floor(x / C) + 32768) * 65536 + (Math.floor(z / C) + 32768));
+    if (!arr) return 0;
+    for (const s of arr) if (ptOnRibbon(x, z, s)) return s[5];
+    return 0;
+  }
+
+  /** 單位所在層:真人英雄用客戶端回報 lev;地面工事恆 0;其餘(小兵/飛行/bot)由 ribbon 推定。 */
+  _unitLev(e) {
+    if (!e) return 0;
+    if (e.kind === 'tower' || e.kind === 'base') return 0;
+    if (e.hero && e.lev != null) return e.lev;
+    return this._slabLevAt(e.x, e.z);
+  }
+
+  /**
+   * 橋面/隧道天花薄板遮蔽:兩端點落在同一 ribbon 且分屬板體兩側(一端在該層、另一端不在)→ 板體
+   * 隔在中間,擋。用「同 ribbon + 層不符」而非絕對 y(伺服器無地形高程、回報 y 為離站立表面高,
+   * 橋上/橋下皆 ≈0 無法區辨)。刻意保守:僅「橋上 ↔ 正下方」一組會擋,側向射擊不誤擋(under-block)。
+   */
+  _slabBlocked(ax, az, bx, bz, ea, eb) {
+    const g = this._slabGrid;
+    const C = LOS.CELL_M;
+    const arr = g.get((Math.floor(ax / C) + 32768) * 65536 + (Math.floor(az / C) + 32768));
+    if (!arr) return false;                       // A 不靠任何 ribbon → 規則不成立(需兩端同 ribbon)
+    let levA = -1, levB = -1;
+    for (const s of arr) {
+      if (!ptOnRibbon(ax, az, s) || !ptOnRibbon(bx, bz, s)) continue;   // 需兩端同 ribbon
+      if (levA < 0) { levA = this._unitLev(ea); levB = this._unitLev(eb); }
+      if ((levA === s[5]) !== (levB === s[5])) return true;
+    }
+    return false;
   }
 
   /**
@@ -232,7 +304,9 @@ export class BattleSim {
    * 圓柱已按半徑外擴登記進所有重疊格 ⇒ 只訪線格即完備;跨格圓柱會重測,冪等且比配置 Set 去重便宜
    * —— MUST NOT 加回 per-call Set/字串鍵(V8 minor GC 會吃掉 tick 預算)。
    */
-  _losBlocked(ax, az, ay, bx, bz, by) {
+  _losBlocked(ax, az, ay, bx, bz, by, ea, eb) {
+    // 橋面/隧道天花水平薄板(#1):兩端同 ribbon 且分屬板體兩側 → 擋(未上傳 slabs 則 _slabGrid 不存在,no-op)
+    if (this._slabGrid && ea && eb && this._slabBlocked(ax, az, bx, bz, ea, eb)) return true;
     if (this._losDirty) { this._losDirty = false; this._rebuildLosGrid(); }   // 障礙被擊毀後的懶重建
     const grid = this._losGrid;
     if (!grid) return false;
@@ -1032,7 +1106,7 @@ export class BattleSim {
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     // 實體障礙後的目標沒有火控解(與 heroHit 同一條 LOS 規則)
-    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return;
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return;
     sq.lock = targetId;
     sq.lockAt = this.t;
     this.events.push({ e: 'lock', pid, side: sq.side, tid: targetId, tpid: t.pid ?? null });
@@ -1173,7 +1247,7 @@ export class BattleSim {
     return v;
   }
 
-  heroPos(pid, x, y, z, ry, wet) {
+  heroPos(pid, x, y, z, ry, wet, lev) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     // 瞬時移速(閃避判定用):this.t 只在 tick 前進(8Hz),同一 tick 內多次回報 dt=0 略過。
@@ -1186,6 +1260,7 @@ export class BattleSim {
     // 環境改變即重置滯留計時(_wetT);沼澤扣血/停恢復、水域停電力/凍結 CD 換彈 皆在 tick 依此結算。
     const w = wet === 1 || wet === 2 ? wet : 0;
     if (w !== (h.wet || 0)) { h.wet = w; h.wetT = this.t; }
+    h.lev = lev === 1 || lev === 2 ? lev : 0;   // 所在結構層(0 地面 / 1 橋面 / 2 隧道):slab LOS 用(#1)
   }
 
   /** 目標(僚機跟隨領機,故以領機瞬時移速判定)是否移動中 */
@@ -1235,7 +1310,7 @@ export class BattleSim {
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
     // 實體障礙遮蔽:射手自己的彈道被建物/神木/巨岩擋住 = 打不到(客戶端彈道已擋,此為防作弊複驗;
     // 偵察脈衝給的是「情報」,不會讓砲彈穿牆 —— 不吃 pulse 旁路)
-    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return;
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     // 定位標記(招式追加效果 mark):下一擊必中(無視閃避)必爆(強制爆擊);一擊即耗
     const marked = (h.markUntil || 0) > this.t;
@@ -1273,7 +1348,7 @@ export class BattleSim {
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d3 > def.range * this._altRange(b, t, def) * 1.25) continue;   // 高度制空(見 heroHit)
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
-      if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
+      if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
       this.events.push({ e: 'shot', pid: b.pid, slot: def.id, from: [b.x, b.z], to: [t.x, t.z],
         ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: b.side });
@@ -1325,7 +1400,7 @@ export class BattleSim {
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
     if (d3 > wp.def.range * this._altRange(h, t, wp.def)) return false;   // 高度制空(見 heroHit)
     // 電腦玩家不能透視:彈道被實體障礙擋住 = 不開火(與真人 heroHit 同一條 LOS 規則)
-    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) return false;
+    if (this._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), h, t)) return false;
     if (!this._gateFire(h, wp.id, wp.def, false)) return false;
     h._shotN = (h._shotN || 0) + 1;
     // pid/slot:客戶端據此解析 bot 英雄機體的 rig 槍口錨 + 標記開火動畫(後座/射姿,與真人 tracer 同路)
@@ -1404,7 +1479,7 @@ export class BattleSim {
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
-        if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t))) continue;
+        if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
         this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(b, t, wp.def), b, wp.def.pen);
       }
     }
@@ -2903,7 +2978,7 @@ export class BattleSim {
       // 塔/NPC 不能透視:實體障礙(建物/神木/巨岩)後的目標不列入鎖定(看不到就不能射擊)。
       // LOS trace 只付給「會成為新 best」的候選(running-minimum 惰性驗證;被擋者不更新
       // bestD ⇒ 結果 = 未被擋候選中折算距離最小者,與逐一檢查完全相同,trace 數期望 ~O(ln n))
-      if (this._losGrid && this._losBlocked(e.x, e.z, this._eyeY(e), t.x, t.z, this._tgtY(t))) continue;
+      if (this._losGrid && this._losBlocked(e.x, e.z, this._eyeY(e), t.x, t.z, this._tgtY(t), e, t)) continue;
       bestD = d; best = t;
     }
     return best;

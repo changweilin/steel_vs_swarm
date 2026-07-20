@@ -411,6 +411,47 @@ export class BattleClient {
   }
 
   /**
+   * 線段 vs 水平薄板(橋面 / 隧道天花):回傳最近穿越距離(沿線段),沒穿回 null。
+   * 橋墩等垂直障礙走 _blockerHitT(圓柱);這裡補「橋面/天花」這種水平薄板 —— 只走 surfaceAt/
+   * ceilingAt 管移動碰撞、原本不擋彈道/LOS 的缺口(#1)。沿射線 ~SLAB_STEP 取樣查 deckY/tunnelAt
+   * (絕對世界 y):橋面板體 = [deckY − deckUnder, deckY],此步 y 區間與板體重疊 = 穿越;隧道 = 射線
+   * 跨越天花 cy(上方實體山體)。沿橋面走(全程高於頂面)/ 橋下走(全程低於底緣)不擋,唯穿越才擋。
+   * 伺服器以 lev bit + ribbon 權威複驗(_losBlocked);此處是客戶端彈道本體。
+   */
+  _slabHitT(ax, ay, az, bx, by, bz) {
+    const t = this.terrain;
+    if (!t.deckY && !t.tunnelAt) return null;
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    const len = Math.hypot(dx, dy, dz);
+    if (len < 1e-3) return null;
+    const n = Math.min(240, Math.max(1, Math.ceil(len / 2)));   // ~2m 取樣、上限 240(≈480m)
+    const du = t.deckUnder || 1.2;
+    let py = ay;
+    for (let s = 1; s <= n; s++) {
+      const f = s / n;
+      const x = ax + dx * f, y = ay + dy * f, z = az + dz * f;
+      const yLo = Math.min(py, y), yHi = Math.max(py, y);
+      if (t.deckY) {
+        const d = t.deckY(x, z);                                 // 站立 margin 不吃:用實際橋面 ribbon
+        if (d != null && yLo <= d && yHi >= d - du) return (s - 0.5) / n * len;
+      }
+      if (t.tunnelAt) {
+        const tn = t.tunnelAt(x, z);
+        if (tn && yHi !== yLo && (py - tn.ceil) * (y - tn.ceil) <= 0) return (s - 0.5) / n * len;
+      }
+      py = y;
+    }
+    return null;
+  }
+
+  /** 彈道遮擋合併:垂直圓柱(_blockerHitT)∪ 水平薄板(_slabHitT),回較近命中距;皆無回 null。 */
+  _obstHitT(ax, ay, az, bx, by, bz) {
+    const a = this._blockerHitT(ax, ay, az, bx, by, bz);
+    const b = this._slabHitT(ax, ay, az, bx, by, bz);
+    return a == null ? b : b == null ? a : Math.min(a, b);
+  }
+
+  /**
    * 站得住的表面高度 = 地形 ∪ 高架橋面(main.js 掛上的 terrain.surfaceAt)。
    * curY = 該物體目前的高度:高過橋面一個台階內 → 站在橋上;更低 → 從橋下經過踩地形。
    * 玩家物理、位置回報、NPC/敵機貼地渲染全走這一個縫。
@@ -3412,7 +3453,7 @@ export class BattleClient {
     const hits = this.raycaster.intersectObjects([...targets, ...missileMeshes, this.terrain.mesh], true);
     const rEnd = this.raycaster.ray.at(far, new THREE.Vector3());
     const ro = this.raycaster.ray.origin;
-    const dBlock = this._blockerHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
+    const dBlock = this._obstHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
     for (const h of hits) {
       if (dBlock != null && dBlock < h.distance) break;   // 障礙更近:落到下方的障礙回傳
       let o = h.object;
@@ -3652,7 +3693,7 @@ export class BattleClient {
         }
         // 實體障礙擋彈(建物/神木/巨岩/橋墩):障礙柱比 mesh 命中更近 → 彈頭止於障礙,
         // 不穿越造成傷害(伺服器 heroHit 另有 LOS 複驗,這裡是彈道本體)。
-        const dB = this._blockerHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
+        const dB = this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
         if (dB != null && (!hit || dB < prev.distanceTo(hit.point))) {
           hit = { point: prev.clone().addScaledVector(seg.clone().divideScalar(len), dB), terrain: true };
         }
@@ -4399,6 +4440,11 @@ export class BattleClient {
       const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
       const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.FULL_D) : sy;
       this._altAG = this.pos.y - sEff;   // 離站立表面高度(與回報 y 同源;高度制空 _altRangeMul 用)
+      // 所在結構層(#1 slab LOS):2 隧道內(天花之下)/ 1 橋面上(站立面高於地表一截)/ 0 地面。
+      // 伺服器 y 為離站立表面高(橋上/橋下皆 ≈0 無法區辨),故另回報此層供 _slabBlocked 判板體兩側。
+      const th = this.terrain.heightAt(this.pos.x, this.pos.z);
+      const tn = this.terrain.tunnelAt?.(this.pos.x, this.pos.z);
+      const lev = (tn && this.pos.y < tn.ceil) ? 2 : (sy > th + 1) ? 1 : 0;
       this.net.send({
         t: 'pos',
         x: Math.round(this.pos.x * 10) / 10,
@@ -4406,6 +4452,7 @@ export class BattleClient {
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
         wet: this._env.code,   // 身處環境(0 乾 / 1 水 / 2 沼):伺服器結算沼澤扣血/水域凍結 CD 換彈
+        lev,
       });
     }
     // 放開開火鍵:取消磁軌/穩定蓄力(不耗彈)、連射計數歸零(下次扣扳機重新起算 N 連發)

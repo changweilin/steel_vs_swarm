@@ -522,7 +522,8 @@ export const TERRAIN_FX = {
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。
 // EYE_M/TGT_M:射手眼高 / 目標身高取樣(地面單位);TOWER_EYE_M:塔的砲位高(塔身 26m,砲位過半);
 // THRU_M:穿越障礙圓柱的弦長門檻(< 門檻 = 貼牆擦邊,不算遮蔽);MAX_OCC:上傳障礙數上限。
-export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64 };
+// MAX_SLAB:上傳橋面/隧道天花薄板段數上限(#1;橋面 deck 段可達數千,取足量)。
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000 };
 
 // ---- 品質養成(2026-07-17 八軌改制;擊殺數解鎖 + 金錢購買)----
 // 「武器品質」一次升輕+重兩把(Lv1 自帶)、「招式品質」一次升小招+大招(Lv1 才解鎖)。
