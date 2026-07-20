@@ -4723,6 +4723,10 @@ export class BattleClient {
     this._mmSeen.width = w; this._mmSeen.height = h;
     this._mmFog = document.createElement('canvas');
     this._mmFog.width = w; this._mmFog.height = h;
+    // 每個視野源的獨立遮蔽罩(先畫視野圓、再挖掉障礙陰影),再合成進 seen/fog —— 用暫存畫布隔離,
+    // destination-out 挖陰影才不會誤刪其他源已照亮的區域。
+    this._mmScr = document.createElement('canvas');
+    this._mmScr.width = w; this._mmScr.height = h;
     this._pulseUntil = 0;   // 全隊無霧脈衝(偵察中繼站/偵察招式)到期時刻:迷霧全掀
     this._mmLanes = this._gradeLanes();   // 兵線分級取樣(地面/高架橋/地下道)— 一次算好
     // 已探索的第三方碉堡:一旦進過視野就永久標示(即使離開視野、被摧毀待重建也保留位置)。
@@ -4841,6 +4845,43 @@ export class BattleClient {
     return out;
   }
 
+  /**
+   * 視野源(vx,vz,半徑 r)被障礙圓柱擋出的陰影多邊形(小地圖座標),供迷霧挖除。
+   * 障礙 = terrain.blockers(建物/神木/巨岩/橋墩),半徑取 min(60, r) 與伺服器上傳 occ 對齊
+   * ⇒ 小地圖迷霧的遮蔽與伺服器 _losBlocked 用同一份圓柱幾何,「看得到的地方才亮」一致。
+   * 每柱兩條切線之外(遠端)= 本影:自切點沿切線方向延伸出視野外,由暫存罩的視野圓自然裁掉。
+   * 高度不入帳:伺服器對「地面觀察者→地面目標」任何有碰撞的柱皆擋(眼高/目標高皆低於柱頂),
+   * 這裡對齊地面偵測語意,一律當不透明圓 —— 寧可多霧(躲掩體者完全不可檢測)也不漏。
+   */
+  _mmShadows(vx, vz, r, w, h) {
+    const bl = this.terrain.blockers;
+    if (!bl || !bl.length) return null;
+    const out = [];
+    const FAR = r * 2;   // 遠端延伸(超出視野圓,溢出部分被暫存罩裁掉)
+    for (const b of bl) {
+      const br = Math.min(60, b.r);
+      if (br < 0.5) continue;
+      const dx = b.x - vx, dz = b.z - vz;
+      const d = Math.hypot(dx, dz);
+      if (d <= br) continue;          // 光源在障礙內 → 不投影
+      if (d - br >= r) continue;       // 障礙整體在視野外
+      if (br / d < 0.02) continue;     // 角徑過小(≈1°)→ 陰影可忽略
+      const th = Math.atan2(dz, dx);
+      const al = Math.asin(br / d);    // 切線半張角
+      const tD = Math.sqrt(d * d - br * br);   // 切點距離
+      const a0 = th - al, a1 = th + al;
+      const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+      out.push([
+        this._world2mm(vx + c0 * tD, vz + s0 * tD, w, h),
+        this._world2mm(vx + c0 * FAR, vz + s0 * FAR, w, h),
+        this._world2mm(vx + c1 * FAR, vz + s1 * FAR, w, h),
+        this._world2mm(vx + c1 * tD, vz + s1 * tD, w, h),
+      ]);
+      if (out.length >= 96) break;     // 密集市區防爆:上限 96 柱
+    }
+    return out;
+  }
+
   _world2mm(x, z, w, h) {
     const fx = (x - this.terrain.minX) / (this.terrain.maxX - this.terrain.minX);
     const fz = (z - this.terrain.minZ) / (this.terrain.maxZ - this.terrain.minZ);
@@ -4864,13 +4905,40 @@ export class BattleClient {
       const pulse = now < this._pulseUntil;   // 偵察脈衝:全隊無霧(鏡像 snapshotFor 的 pulse 旁路)
       const vis = this._mmVision();
       const sctx = this._mmSeen.getContext('2d');
-      sctx.fillStyle = '#fff';
-      if (pulse) sctx.fillRect(0, 0, w, h);   // 脈衝看過的全圖進「已探索」
-      for (const [vx, vz, r] of vis) {   // 已探索累積(整場保留:走過的地圖記得住)
-        const [mx, my] = this._world2mm(vx, vz, w, h);
-        sctx.beginPath(); sctx.ellipse(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), 0, 0, 7); sctx.fill();
-      }
-      if (!pulse) {
+      // 每源在暫存罩上先畫視野圓、再挖掉障礙陰影(_mmShadows),隔離後才合成 —— 建物/神木/巨岩背後
+      // 的本影維持迷霧,與伺服器 _losBlocked 過濾單位同一份圓柱幾何(躲掩體者完全不可檢測)。
+      const scc = this._mmScr.getContext('2d');
+      const shadows = pulse ? null : vis.map(([vx, vz, r]) => this._mmShadows(vx, vz, r, w, h));
+      const drawReveal = (mx, my, rx, ry, soft, polys) => {
+        scc.globalCompositeOperation = 'source-over';
+        scc.clearRect(0, 0, w, h);
+        if (soft) {                    // 目前視野:柔邊漸層(縮放座標系畫橢圓)
+          scc.save(); scc.translate(mx, my); scc.scale(1, ry / rx);
+          const grad = scc.createRadialGradient(0, 0, rx * 0.72, 0, 0, rx);
+          grad.addColorStop(0, 'rgba(0,0,0,1)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+          scc.fillStyle = grad; scc.beginPath(); scc.arc(0, 0, rx, 0, 7); scc.fill(); scc.restore();
+        } else {                       // 已探索累積:硬邊實心橢圓
+          scc.fillStyle = '#fff';
+          scc.beginPath(); scc.ellipse(mx, my, rx, ry, 0, 0, 7); scc.fill();
+        }
+        if (polys && polys.length) {   // 挖掉障礙本影(僅動本源暫存罩,不誤刪他源已照亮區)
+          scc.globalCompositeOperation = 'destination-out';
+          for (const p of polys) {
+            scc.beginPath(); scc.moveTo(p[0][0], p[0][1]);
+            for (let k = 1; k < p.length; k++) scc.lineTo(p[k][0], p[k][1]);
+            scc.closePath(); scc.fill();
+          }
+        }
+      };
+      if (pulse) { sctx.globalCompositeOperation = 'source-over'; sctx.fillStyle = '#fff'; sctx.fillRect(0, 0, w, h); }  // 脈衝看過的全圖進「已探索」
+      else {
+        sctx.globalCompositeOperation = 'source-over';
+        for (let n = 0; n < vis.length; n++) {   // 已探索累積(整場保留:走過的地圖記得住,陰影區從未照亮不入帳)
+          const [vx, vz, r] = vis[n];
+          const [mx, my] = this._world2mm(vx, vz, w, h);
+          drawReveal(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), false, shadows[n]);
+          sctx.drawImage(this._mmScr, 0, 0);
+        }
         const f = this._mmFog.getContext('2d');
         f.globalCompositeOperation = 'source-over';
         f.globalAlpha = 1;
@@ -4881,18 +4949,12 @@ export class BattleClient {
         f.globalAlpha = 0.5;
         f.drawImage(this._mmSeen, 0, 0);   // 已探索:掀掉一半暗紗
         f.globalAlpha = 1;
-        for (const [vx, vz, r] of vis) {   // 目前視野:全亮(柔邊;縮放座標系畫橢圓漸層)
+        for (let n = 0; n < vis.length; n++) {   // 目前視野:全亮(柔邊 − 障礙陰影)
+          const [vx, vz, r] = vis[n];
           const [mx, my] = this._world2mm(vx, vz, w, h);
-          const rx = Math.max(6, r * scX), ry = Math.max(6, r * scZ);
-          f.save();
-          f.translate(mx, my);
-          f.scale(1, ry / rx);
-          const grad = f.createRadialGradient(0, 0, rx * 0.72, 0, 0, rx);
-          grad.addColorStop(0, 'rgba(0,0,0,1)');
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
-          f.fillStyle = grad;
-          f.beginPath(); f.arc(0, 0, rx, 0, 7); f.fill();
-          f.restore();
+          drawReveal(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), true, shadows[n]);
+          f.globalCompositeOperation = 'destination-out';
+          f.drawImage(this._mmScr, 0, 0);
         }
         ctx.drawImage(this._mmFog, 0, 0);
       }
