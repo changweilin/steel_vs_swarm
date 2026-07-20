@@ -254,7 +254,8 @@ export class BattleClient {
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
     this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
-    this.aiming = false;              // 按住右鍵瞄準(拉近視角、切換重武器)
+    this.aiming = false;              // 右鍵點一下切換瞄準(拉近視角、切換重武器)
+    this._aimFired = false;           // 狙擊模式重武器半自動:本次按住是否已擊發一發(阻止連射,長按改觸發專屬招)
 
     this._initScene();
     this._initLanes();
@@ -1924,20 +1925,16 @@ export class BattleClient {
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
       if (e.button === 2) {
-        // 右鍵雙功能:彈藥空了 → 換彈夾;有彈時 → 按住瞄準(拉近視角、解鎖熱兵器)
+        // 右鍵點一下切換:一般 ⇄ 狙擊模式(拉近視角、解鎖熱兵器)。
+        // 非瞄準狀態下若當前武器打空 → 改為換彈夾(保留原快捷),不誤切模式。
         const { id, st } = this._curWeapon();
-        if (st && st.ammo <= 0 && st.reloadEnd <= 0) {
-          this._rmbReloaded = true;
-          this._startReload(id);
-        } else {
-          this._rmbReloaded = false;
-          this._setAiming(true);
-        }
+        if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
+        else this._setAiming(!this.aiming);
       }
     };
     this._onMouseUp = (e) => {
       if (e.button === 0) this.firing = false;
-      if (e.button === 2) { if (!this._rmbReloaded) this._setAiming(false); this._rmbReloaded = false; }
+      // 右鍵改為點一下切換模式(見 _onMouseDown),放開不再退出瞄準
     };
     this.canvas.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
@@ -3301,7 +3298,7 @@ export class BattleClient {
   }
 
   // ---------------- 射擊(彈道學:初速 mv + 重力 9.81,射程上限)----------------
-  /** 目前武器:平時 = 輕武器,按住右鍵瞄準 = 重武器(CD 型) */
+  /** 目前武器:平時 = 輕武器,右鍵切換瞄準 = 重武器(CD 型) */
   _curWeapon() {
     const id = this.aiming && this.wdef.heavy ? 'heavy' : 'light';
     return { id, def: this.wdef[id], st: this.wstate[id] };
@@ -3492,6 +3489,9 @@ export class BattleClient {
     // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%
     const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
     const rMul = barraging ? BARRAGE.RANGE_F : 1;
+    // 狙擊模式重武器改半自動:一次按住只擊發一發,不連射(連射交由重砲傾洩窗)。
+    // 續按不再補槍,改由 _tickSnipeAbility 於長按門檻觸發機種專屬招(自殺機/重砲/餌機)。
+    if (id === 'heavy' && !barraging && this._aimFired) return;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (!barraging && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
@@ -3538,6 +3538,7 @@ export class BattleClient {
       this._setRailCharge(false);
     }
     this.lastFireAt[id] = now;
+    if (id === 'heavy' && !barraging) this._aimFired = true;   // 半自動:記下本次按住已擊發,續按不再連射
     st.ammo--;
     if (mpc > 0 && !barraging) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電(重砲窗免電力);快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
@@ -3768,7 +3769,7 @@ export class BattleClient {
     return Math.max(0, st.reloadEnd - performance.now() / 1000);
   }
 
-  /** 瞄準模式(按住右鍵):拉近視角、切換重武器(伺服器另行把關開火權限) */
+  /** 瞄準模式(右鍵點一下切換):拉近視角、切換重武器(伺服器另行把關開火權限) */
   _setAiming(on) {
     if (!this.side || this.aiming === on) return;
     this.aiming = on;
@@ -4426,7 +4427,7 @@ export class BattleClient {
     this.camera.rotateZ(this.roll + shR);
     this._cameraDeClip();   // 鏡頭防穿模:貼牆時退回障礙外緣,不看穿建物/神木/巨岩
 
-    // 瞄準縮放:按住右鍵拉近視角(FOV 越小越像瞄準鏡)
+    // 瞄準縮放:右鍵切換拉近視角(FOV 越小越像瞄準鏡)
     const wantFov = this.aiming ? (UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : this.baseFov;
     if (Math.abs(this.camera.fov - wantFov) > 0.05) {
       this.camera.fov += (wantFov - this.camera.fov) * Math.min(1, dt * 10);
@@ -4459,6 +4460,7 @@ export class BattleClient {
     if (!this.firing) {
       if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
       this._burstN = {};
+      this._aimFired = false;   // 放開左鍵:重置半自動閘,下次扣扳機可再擊發一發
     }
     this._tickSnipeAbility(now);   // 狙擊模式長按左鍵 → 機種專屬能力(在 _tryFire 之前判定手勢)
     this._tryFire(now);
