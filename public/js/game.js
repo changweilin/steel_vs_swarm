@@ -222,6 +222,7 @@ export class BattleClient {
     this.floods = [];                // 淹水區(機甲減速判定)
     this.fires = [];                 // 火場(滯留視野霧化判定;傷害由伺服器結算)
     this._fireDwell = 0;             // 火場滯留累計秒(離開後較快消散 → 視野漸清)
+    this._swampDwell = 0;            // 沼澤滯留累計秒(越陷越深 → 移動漸慢至 1/8;離開即歸零)
     this._env = { code: 0, depth: 0 }; // 領機當幀環境(0 乾 / 1 水 / 2 沼;每幀 _envAt 更新)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
@@ -2620,7 +2621,12 @@ export class BattleClient {
   _terrainSlowF() {
     const e = this._env;
     if (!e || e.code === 0) return 1;
-    if (e.code === 2) return TERRAIN_FX.SWAMP_SLOW;
+    if (e.code === 2) {
+      // 沼澤越陷越深:進場 SWAMP_SLOW,滯留 SWAMP_SLOW_FULL_S 秒後線性降到 SWAMP_SLOW_MIN(1/8)
+      const { SWAMP_SLOW, SWAMP_SLOW_MIN, SWAMP_SLOW_FULL_S } = TERRAIN_FX;
+      const k = Math.min(1, (this._swampDwell || 0) / SWAMP_SLOW_FULL_S);
+      return SWAMP_SLOW + (SWAMP_SLOW_MIN - SWAMP_SLOW) * k;
+    }
     // 水域:至少涉水基準 WATER.SLOW(含影像水色偵測、淺水/無海平面盤的內陸水,depth 可能為 0),
     // 深水再依深度插值到 SLOW_MIN(全滅頂)—— 確保任何水域都減速,不會出現「客戶端不減速但伺服器已凍結」的不一致。
     return Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
@@ -2629,6 +2635,8 @@ export class BattleClient {
   /** 火場滯留 → 視野漸霧化(feature 6;純客戶端表現,傷害由伺服器 _tickHazards 結算)。
    *  進火場累積、離場 2× 速消散;滯留超過 FIRE_FOG_S 起霧、FIRE_FOG_MAX_S 達最濃。 */
   _updateEnvFog(dt) {
+    // 沼澤滯留計時(_env 已於本幀 _updatePlayer 開頭更新):留在沼澤累加、離開即歸零 → 移動漸慢
+    this._swampDwell = (this._env?.code === 2) ? (this._swampDwell || 0) + dt : 0;
     let inFire = false;
     if (!this._flying()) {
       for (const f of this.fires) {
@@ -3130,7 +3138,7 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
-    this._fireDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0 };   // 死亡:清火場霧化(_updatePlayer 已早退不再更新)
+    this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0 };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關

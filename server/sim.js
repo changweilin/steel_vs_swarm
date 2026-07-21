@@ -2144,7 +2144,7 @@ export class BattleSim {
   }
 
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
-  _damage(t, dmg, by, pen = 0) {
+  _damage(t, dmg, by, pen = 0, floorHp = 0) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
@@ -2179,11 +2179,32 @@ export class BattleSim {
       dealt = Math.min(t.hp, dmg);
     }
     this._vamp(by, dealt);
+    if (floorHp) {
+      // 環境傷害硬地板(沼澤:最多扣到剩 floorHp 滴,不致死)。只作下限、不回血 ——
+      // 早已低於地板者(戰鬥打到瀕死)保持原血,不被沼澤拉高;亦不 _kill。
+      t.hp = Math.max(t.hp - dmg, Math.min(t.hp, floorHp));
+      return;
+    }
     t.hp -= dmg;
     if (t.hp <= 0) {
       t.hp = 0;
       this._kill(t, by);
     }
+  }
+
+  /** 火場灼傷(feature 6 調整):同時扣護盾/HP,依「最大值比例」拆分 → 兩池同步見底;HP 份不吃裝甲。
+   *  仍受減傷詞綴(dmgTaken)與無敵幀影響;可致死(走 _kill,環境傷害不記擊殺信用)。
+   *  MUST NOT 改回 _damage —— 那是護盾先扣的循序結算,與本需求的並行扣血相斥。 */
+  _fireBurn(h, amt) {
+    if (this.over || h.hp <= 0 || h.inv || h.gar) return;
+    if (h.hero && (h.invUntil || 0) > this.t) return;
+    const maxSp = h.maxSp || 0, maxHp = h.maxHp || 0, denom = maxSp + maxHp;
+    if (denom <= 0) return;
+    amt *= this._buffMul(h, 'dmgTaken');
+    h.lastHitAt = this.t;   // 灼傷 = 進入戰鬥:護盾脫戰回復重新計時
+    h.sp = Math.max(0, (h.sp || 0) - amt * maxSp / denom);
+    h.hp -= amt * maxHp / denom;   // 不吃裝甲:依最大值比例,與護盾同步見底
+    if (h.hp <= 0) { h.hp = 0; this._kill(h, null); }
   }
 
   /** 吸血(招式追加效果 vamp):攻擊者按「實際造成傷害 × 比例」回復自身裝甲 */
@@ -2383,8 +2404,9 @@ export class BattleSim {
             b.hp = Math.min(b.maxHp, b.hp + UNITS[b.kind].regen * dt);
           }
         }
-        // 沼澤滯留:緩慢扣血(走 _damage,護盾先擋;null 攻擊者 = 不記擊殺信用)
-        if (bSwamp && this.t - (hh.wetT || 0) >= TERRAIN_FX.SWAMP_DRAIN_S) this._damage(b, TERRAIN_FX.SWAMP_DRAIN_PS * dt, null);
+        // 沼澤滯留:緩慢扣血(火災 1/3 速率,走 _damage 護盾先擋;null 攻擊者 = 不記擊殺信用;
+        // floorHp=1 硬地板 → 最多扣到剩 1 滴不致死)
+        if (bSwamp && this.t - (hh.wetT || 0) >= TERRAIN_FX.SWAMP_DRAIN_S) this._damage(b, TERRAIN_FX.SWAMP_DRAIN_PS * dt, null, 0, 1);
       }
       if (hh.dead) this._promote(sq);   // 全滅後第一架回歸 → 接管主視野
     }
@@ -2682,7 +2704,7 @@ export class BattleSim {
       for (const h of this._allBodies()) {
         if (h.dead || (h.y || 0) > fireDef.maxY) continue;
         if (dist2d(h.x, h.z, f.x, f.z) > fireDef.r * (f.sc || 1)) continue;
-        this._damage(h, fireDef.dot * dt, null);
+        this._fireBurn(h, fireDef.dot * dt);   // 同時扣護盾/HP(依最大值比例,不吃裝甲)
         if ((h._burnAt || 0) + 2 < this.t) {   // 事件節流:每 2 秒提示一次
           h._burnAt = this.t;
           this.events.push({ e: 'burn', pid: h.pid, x: f.x, z: f.z });

@@ -1693,8 +1693,16 @@ function makeHud() {
       void el.offsetWidth;
       el.classList.add('on');
     },
-    // 火場滯留視野霧化(2026-07-19;game.js 每幀推 0~1 濃度,離場漸清)—— 純表現,傷害由伺服器結算
-    envFog: (v) => { $('envFog').style.opacity = String(Math.max(0, Math.min(1, v || 0))); },
+    // 火場滯留視野霧化(2026-07-19;game.js 每幀推 0~1 濃度,離場漸清)—— 純表現,傷害由伺服器結算。
+    // 越濃越嚴重:邊緣全黑(CSS 漸層)+ 中央漸模糊(backdrop blur)+ 狙擊視野縮圈(--scope-r)。
+    envFog: (v) => {
+      const f = Math.max(0, Math.min(1, v || 0));
+      const el = $('envFog');
+      el.style.opacity = String(f);
+      const blur = f > 0 ? `blur(${(f * 6).toFixed(2)}px)` : '';   // 離場移除 → 不留 backdrop 合成層(效能)
+      el.style.backdropFilter = blur; el.style.webkitBackdropFilter = blur;
+      document.body.style.setProperty('--scope-r', `${(40 - f * 22).toFixed(1)}vmin`);   // 40vmin → 18vmin
+    },
     // 陣亡殉爆過場:on=過場期間紅警邊框開關;flash=額外觸發一次全屏白閃(高潮/觸地);比照 hitmark 的 remove→reflow→add 重觸發
     deathCine: (on, flash) => {
       $('deathAlert').classList.toggle('on', !!on);

@@ -578,11 +578,13 @@ export const WATER = {
 
 // ---- 地形環境效果(2026-07-19;水域/沼澤/火場對移動與狀態的影響)----
 // 移動減速純客戶端(領機客戶端權威);狀態結算純伺服器(客戶端只回報身處環境 env)。
-// SWAMP_SLOW:沼澤固定移動倍率(水域改用深度插值);_DRAIN_S/_PS:滯留門檻與每秒扣血(走 _damage,護盾先擋);
+// SWAMP_SLOW:沼澤進場移動倍率;滯留越久越陷 → SWAMP_SLOW_FULL_S 秒後線性降到 SWAMP_SLOW_MIN(1/8;純客戶端)。
+// SWAMP_DRAIN_S:扣血起算門檻;SWAMP_DRAIN_PS:每秒扣血 = 火災 dot × SWAMP_DRAIN_FIRE_FRAC(HAZARDS 後推導,勿手寫),
+//   走 _damage(護盾先擋、剩餘吃裝甲),但硬地板 1 滴不致死(sim floorHp)。
 // WATER_FREEZE_S:水域滯留多久後凍結換彈/招式冷卻;FIRE_FOG_S/_MAX_S:火場滯留視野霧化起訖(純客戶端)。
 export const TERRAIN_FX = {
-  SWAMP_SLOW: 0.5,
-  SWAMP_DRAIN_S: 3, SWAMP_DRAIN_PS: 8,
+  SWAMP_SLOW: 0.5, SWAMP_SLOW_MIN: 1 / 8, SWAMP_SLOW_FULL_S: 6,
+  SWAMP_DRAIN_S: 3, SWAMP_DRAIN_FIRE_FRAC: 1 / 3, SWAMP_DRAIN_PS: 0,   // PS 由 HAZARDS.fire.dot 推導(見下方回填)
   WATER_FREEZE_S: 3,
   FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
 };
@@ -1868,6 +1870,9 @@ export const HAZARDS = {
   sacredtree:   { name: '神木',       biome: 'green', r: 9,   block: true, hp: 520, salvage: 0.75, hgt: 26 },
   boulder:      { name: '巨石',       biome: 'bare',  r: 8,   block: true, hp: 420, salvage: 0.7,  hgt: 13 },
 };
+
+// 沼澤扣血速率 = 火災 dot 的 SWAMP_DRAIN_FIRE_FRAC(1/3)—— 推導值回填(MUST NOT 手寫;單一真相 = 火災 dot)。
+TERRAIN_FX.SWAMP_DRAIN_PS = HAZARDS.fire.dot * TERRAIN_FX.SWAMP_DRAIN_FIRE_FRAC;
 
 // ---- 危險區生成參數(伺服器 sim._seedField)----
 export const FIELD = {

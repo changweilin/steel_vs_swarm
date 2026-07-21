@@ -474,12 +474,14 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   background: radial-gradient(ellipse at center, transparent 42%, rgba(190, 20, 24, 0.55) 100%);
 }
-/* 火場滯留視野霧化:煙塵暖灰暈影,中央保留一圈可視,opacity 由 game.js 依滯留時間推(0~1);
-   z 8 同 hurt-vig(HUD 之下,不擋 HUD);transition 讓濃度平滑漸變 = 漸漸霧化/漸清 */
+/* 火場滯留視野霧化:opacity 由 game.js 依滯留時間推(0~1)。越濃越嚴重 —— 邊緣全黑、中央漸模糊
+   (backdrop-filter blur 由 main.js 依濃度即時設,離場移除以省合成層)。z 8 同 hurt-vig(HUD 之下,不擋 HUD);
+   transition 只放 opacity(blur 每幀由 JS 驅動,勿與 CSS transition 相爭)。 */
 .env-fog {
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;
   transition: opacity 0.35s ease-out;
-  background: radial-gradient(ellipse at center, rgba(86, 78, 66, 0) 22%, rgba(74, 66, 56, 0.9) 100%);
+  background: radial-gradient(ellipse at center,
+    rgba(60, 52, 44, 0) 18%, rgba(40, 34, 28, 0.72) 55%, #000 92%);
 }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
