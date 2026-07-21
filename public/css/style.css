@@ -462,6 +462,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 }
 .crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; transform: translateX(-50%); clip-path: polygon(0 0, 100% 0, 100% 34%, 0 34%, 0 66%, 100% 66%, 100% 100%, 0 100%); }
 .crosshair::after { top: 50%; left: 0; height: 1px; width: 100%; transform: translateY(-50%); clip-path: polygon(0 0, 34% 0, 34% 100%, 0 100%, 66% 0, 100% 0, 100% 100%, 66% 100%); }
+/* 狙擊模式(瞄準)準星加粗放大 1.5x,讓遠距離目標仍清楚可辨 */
+body.aiming .crosshair { width: 39px; height: 39px; }
+body.aiming .crosshair::before { width: 2px; }
+body.aiming .crosshair::after { height: 2px; }
 .hitmark {
   position: absolute; inset: -8px; border: 2px solid var(--railW); border-radius: 0;
   transform: rotate(45deg) scale(1.6); opacity: 0;

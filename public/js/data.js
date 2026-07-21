@@ -578,12 +578,13 @@ export const WATER = {
 
 // ---- 地形環境效果(2026-07-19;水域/沼澤/火場對移動與狀態的影響)----
 // 移動減速純客戶端(領機客戶端權威);狀態結算純伺服器(客戶端只回報身處環境 env)。
-// SWAMP_SLOW:沼澤進場移動倍率;滯留越久越陷 → SWAMP_SLOW_FULL_S 秒後線性降到 SWAMP_SLOW_MIN(1/8;純客戶端)。
+// SWAMP_SLOW:沼澤進場移動倍率(1/4);滯留越久越陷 → 到 SWAMP_DRAIN_S(扣血起算門檻)線性降到
+//   SWAMP_SLOW_MIN(1/8;純客戶端)—— 減速探底與開始扣血同時發生,單一門檻不重複手寫。
 // SWAMP_DRAIN_S:扣血起算門檻;SWAMP_DRAIN_PS:每秒扣血 = 火災 dot × SWAMP_DRAIN_FIRE_FRAC(HAZARDS 後推導,勿手寫),
 //   走 _damage(護盾先擋、剩餘吃裝甲),但硬地板 1 滴不致死(sim floorHp)。
 // WATER_FREEZE_S:水域滯留多久後凍結換彈/招式冷卻;FIRE_FOG_S/_MAX_S:火場滯留視野霧化起訖(純客戶端)。
 export const TERRAIN_FX = {
-  SWAMP_SLOW: 0.5, SWAMP_SLOW_MIN: 1 / 8, SWAMP_SLOW_FULL_S: 6,
+  SWAMP_SLOW: 1 / 4, SWAMP_SLOW_MIN: 1 / 8,
   SWAMP_DRAIN_S: 3, SWAMP_DRAIN_FIRE_FRAC: 1 / 3, SWAMP_DRAIN_PS: 0,   // PS 由 HAZARDS.fire.dot 推導(見下方回填)
   WATER_FREEZE_S: 3,
   FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
@@ -1347,7 +1348,7 @@ export const UNITS = {
   tank:      { name: '主戰坦克', hp: 390, armor: 18, dmg: 39, range: 150, rate: 0.6, speed: 12, sight: 200, bounty: 4, wid: 'siege' },
   // 舊兵種資料保留(不再於一般波次生成,供召喚/測試沿用)
   apc:     { name: '裝甲車', hp: 320,  armor: 10, dmg: 22, range: 100, rate: 0.9, speed: 11, sight: 170, bounty: 2, wid: 'rgun' },
-  // 建築(防禦塔兼防空:對高空無人機發射追蹤飛彈;飛彈本身可被擊毀)
+  // 建築(防禦塔)
   // range 310(2026-07-12):**恆大於所有玩家輕武器(最大 243 = drone sight 270 × RANGE_SIGHT_F)
   // 與所有 NPC(最大 220 = 榴彈兵)**,且 > 輕武器射程 + 同塔位左右塔間距(2×TOWER_SIDE_OFF)
   // ⇒ 打其中一座塔,必定同時吃到另一座的覆蓋火力。改 sight/RANGE_SIGHT_F/TOWER_SIDE_OFF
@@ -1355,8 +1356,7 @@ export const UNITS = {
   // hp/armor(2026-07-12):兩位機甲玩家(lvl1,無人干擾)集火單塔 ≈ 13~14s 拆掉,
   // 期間兩座塔的回擊 ≈ 1.8 × 機甲 EHP(981)⇒ 剛好擊殺一位、把另一位壓到 ~20%。
   // 推導:towerHp = 1.8 × heroEHP × heroDPS / towerDPS。改任一邊 MUST 重算(tools 的 _bal 推導)。
-  tower:   { name: '防禦塔', hp: 1800, armor: 30, dmg: 65, range: 310, rate: 1.0, speed: 0,  sight: 310,
-             sam: { name: '防空飛彈', dmg: 130, range: 240, cd: 4, speed: 120, hp: 40, pen: 8 } },
+  tower:   { name: '防禦塔', hp: 1800, armor: 30, dmg: 65, range: 310, rate: 1.0, speed: 0,  sight: 310 },
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
@@ -1645,7 +1645,6 @@ GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
   const CS = COMBAT_SCALE;
   for (const u of Object.values(UNITS)) {
     for (const key of ['range', 'sight', 'speed', 'fly', 'vspeed', 'jump']) if (typeof u[key] === 'number') u[key] *= CS;
-    if (typeof u.sam?.range === 'number') u.sam.range *= CS;    // 塔防空飛彈射程
     if (typeof u.guns?.range === 'number') u.guns.range *= CS;  // 主堡加裝砲(derive 自塔,獨立縮)
   }
   for (const w of Object.values(WEAPONS)) if (typeof w.range === 'number') w.range *= CS;   // NPC 武器射程(留 blast r/AoE)

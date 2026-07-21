@@ -929,11 +929,8 @@ function unitWeaponList(kind) {
     case 'rocketeer': { const w = WEAPONS.rocket; return [launcher('主武', w.name, w)]; }
     case 'howitzer': { const w = WEAPONS.siege; return [launcher('主武', '手持榴彈槍', w)]; }   // 步兵化:顯示名改手持,數值同 siege 表
     case 'tank': { const w = WEAPONS.siege; return [launcher('主砲', '滑膛戰車砲', w)]; }
-    case 'tower': {
-      const s = u.sam;
-      return [gun('主砲', '防禦砲塔', { dmg: u.dmg, rate: u.rate, range: u.range }),
-        { label: '防空', name: s.name, type: 'missile', dmg: s.dmg, rate: +(1 / (s.cd || 4)).toFixed(2), range: s.range, r: 0 }];
-    }
+    case 'tower':
+      return [gun('主砲', '防禦砲塔', { dmg: u.dmg, rate: u.rate, range: u.range })];
     case 'base': {
       const g = u.guns;
       return [gun('主砲', '主堡火砲', { dmg: u.dmg, rate: u.rate, range: u.range }),

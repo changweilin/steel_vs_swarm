@@ -1118,7 +1118,7 @@ const hbSpec = await client('hbSpec');
 hbSpec.send({ t: 'joinRoom', pin: hb.sync.lobby.pin, name: '觀戰者', mode: 'spectator' });
 await hbSpec.wait((c) => c.sync);
 hb.send({ t: 'pickSide', side: 'SWARM' });
-hb.send({ t: 'pickChar', ch: 's02' });   // 固定無人機:後面的防空飛彈測試要高空無人機
+hb.send({ t: 'pickChar', ch: 's02' });   // 固定角色,結果穩定可重現
 hb.send({ t: 'addBot', side: 'STEEL' });
 hb.send({ t: 'addBot', side: 'STEEL' });
 hb.send({ t: 'addBot', side: 'STEEL' });   // 第 3 個超過 2 席應被拒
@@ -1137,7 +1137,6 @@ await hb.wait((c) => c.battleConfig);
 hb.send({ t: 'loaded' });   // 只需真人載入完成即可開戰(bot 不用載地形)
 await hb.wait((c) => c.snaps.length > 3, 8000);
 await hbSpec.wait((c) => c.snaps.length > 3, 8000);
-const sb = hb.snaps.at(-1);
 const sbSpec = hbSpec.snaps.at(-1);   // 無霧視角:才看得到對面(STEEL)的 bot
 const isBot = (e) => typeof e.pid === 'string' && e.pid.startsWith('b') && e.act;
 const botHero = sbSpec.ents.find(isBot);   // bot 角色隨機,機體可能是無人機(傭兵)
@@ -1147,26 +1146,6 @@ await new Promise((r) => setTimeout(r, 3500));
 const botHero2 = hbSpec.snaps.at(-1).ents.find((e) => e.pid === botHero.pid && e.act);
 const movedM = botHero2 ? Math.hypot(botHero2.x - bp0.x, botHero2.z - bp0.z) : 999;
 assert(movedM > 10, `bot 沿兵線推進(3.5 秒移動 ${movedM.toFixed(0)}m)`);
-
-log('— 防空飛彈(高空無人機被鎖定追擊)—');
-const twr = sb.ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
-const meHp0 = sb.ents.find((e) => e.pid === hb.sync.youId && e.act).hp;
-const flyIv = setInterval(() => hb.send({ t: 'pos', x: twr.x, y: 120, z: twr.z, ry: 0 }), 200);
-const samSnap = await hb.wait((c) => {
-  const s = c.snaps.at(-1);
-  return (s.sm && s.sm.length) ? s : null;
-}, 12000);
-assert(samSnap.sm.length > 0, `防空飛彈升空(${samSnap.sm.length} 枚,3D 追蹤中)`);
-const samEv = hb.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'sam');
-assert(samEv && samEv.tpid === hb.sync.youId, 'sam 事件帶鎖定目標 pid(客戶端可警告)');
-await hb.wait((c) => {
-  const me = c.snaps.at(-1).ents.find((e) => e.pid === hb.sync.youId && e.act);
-  return me && (me.hp < meHp0 || me.dead);
-}, 15000);
-clearInterval(flyIv);
-assert(true, '飛彈/塔防命中:高空無人機受損');
-const samBoom = hb.snaps.flatMap((s) => s.ev || []).find((e) => e.e === 'boom' && e.sam);
-if (samBoom) assert(samBoom.y > 40, `空中近炸事件帶高度(y=${samBoom.y.toFixed?.(0) ?? samBoom.y}m,客戶端爆炸衝擊用)`);
 hb.ws.close(); hbSpec.ws.close();
 
 log(failed ? '\n❌ 有測試失敗' : '\n🎉 全部通過');

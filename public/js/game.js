@@ -2622,9 +2622,9 @@ export class BattleClient {
     const e = this._env;
     if (!e || e.code === 0) return 1;
     if (e.code === 2) {
-      // 沼澤越陷越深:進場 SWAMP_SLOW,滯留 SWAMP_SLOW_FULL_S 秒後線性降到 SWAMP_SLOW_MIN(1/8)
-      const { SWAMP_SLOW, SWAMP_SLOW_MIN, SWAMP_SLOW_FULL_S } = TERRAIN_FX;
-      const k = Math.min(1, (this._swampDwell || 0) / SWAMP_SLOW_FULL_S);
+      // 沼澤越陷越深:進場 SWAMP_SLOW(1/4),滯留到 SWAMP_DRAIN_S(開始扣血)線性降到 SWAMP_SLOW_MIN(1/8)
+      const { SWAMP_SLOW, SWAMP_SLOW_MIN, SWAMP_DRAIN_S } = TERRAIN_FX;
+      const k = Math.min(1, (this._swampDwell || 0) / SWAMP_DRAIN_S);
       return SWAMP_SLOW + (SWAMP_SLOW_MIN - SWAMP_SLOW) * k;
     }
     // 水域:至少涉水基準 WATER.SLOW(含影像水色偵測、淺水/無海平面盤的內陸水,depth 可能為 0),
@@ -4594,7 +4594,7 @@ export class BattleClient {
     if (!tur) return;
     // 開火過(shot 事件)優先咬住「實際攻擊目標」,其次追蹤最近敵人 —— 砲口朝攻擊方向
     const aim = ent._aimAt && now < ent._aimAt.until ? ent._aimAt : null;
-    const t = aim ? null : this._nearestEnemy(ent, now, UNITS.tower.sam.range);   // 追蹤半徑同防空飛彈射程
+    const t = aim ? null : this._nearestEnemy(ent, now, UNITS.tower.range);   // 追蹤半徑同砲塔射程
     let wantYaw, wantPitch;
     if (aim || t) {
       const p = aim || (t.isSelf ? this.pos : t.mesh.position);

@@ -2446,7 +2446,6 @@ export class BattleSim {
       if (e.hero || e.neutral || e.decoy || e.kami || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
-      if (u.sam) this._tryLaunchSam(e, u.sam, dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
       if (e.tp) this._tpBehave(e, dt);   // 第三方:駐守回血/進出碉堡/繫繩旗標(開火與移動之外的狀態機)
       // 駐守碉堡:射孔限制,射程 ×GAR_RANGE_F(其餘規格照舊)
@@ -2847,30 +2846,6 @@ export class BattleSim {
     const reward = AIRDROP.REWARDS[Math.floor(Math.random() * AIRDROP.REWARDS.length)];
     this.events.push({ e: 'airdrop', pid: body.pid, side: body.side, x: a.x, z: a.z, sz: a.s,
       ...this._grantReward(body, reward, a.mul) });
-  }
-
-  // ---------- 防空飛彈(對高空無人機的 3D 追蹤彈)----------
-  _tryLaunchSam(e, sam, dt) {
-    e.samCd = Math.max(0, (e.samCd ?? 0) - dt);
-    if (e.samCd > 0) return;
-    let best = null, bestD = Infinity;
-    for (const h of this._allBodies()) {   // 小隊每一架都可能被塔 SAM 鎖定
-      // 變形機甲飛行型態同樣是防空目標(下方 AA_MIN_ALT 高度閘門擋掉地面型)
-      if (h.side === e.side || h.dead || (h.kind !== 'drone' && h.kind !== 'morph')) continue;
-      if ((h.stealthUntil || 0) > this.t) continue;      // 匿蹤中不被防空鎖定
-      const y = h.y || 0;
-      if (y < GAME.AA_MIN_ALT) continue;                 // 低飛交給塔砲
-      const d = Math.hypot(h.x - e.x, h.z - e.z, y);
-      if (d <= sam.range && d < bestD) { bestD = d; best = h; }
-    }
-    if (!best) return;
-    e.samCd = sam.cd;
-    this.missiles.push({
-      id: nextEntId++, byId: e.id, side: e.side, tid: best.id, tpid: best.pid,
-      x: e.x, z: e.z, y: 18, speed: sam.speed, dmg: sam.dmg, pen: sam.pen, hp: sam.hp, ttl: 12,
-      ox: e.x, oy: 18, oz: e.z, range: sam.range,   // 目標飛出塔的防空射程 → 失鎖直飛
-    });
-    this.events.push({ e: 'sam', from: [e.x, e.z], side: e.side, tpid: best.pid });
   }
 
   /**
