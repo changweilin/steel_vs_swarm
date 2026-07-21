@@ -1526,7 +1526,7 @@ function enterGame() {
     : '觀戰模式';
   $('pauseHelp').innerHTML = app.mySide
     ? (heroKind === 'drone'
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 令兩架常駐護衛自殺機衝出(各半傷、3 倍速撲擊、吸走敵方導引飛彈,CD 30s、自爆後重現) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用護衛機拆塔清群!'
+      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 戰鬥中按 Space 飛行=完美迴避(向上飛+1s 無敵,CD 30s) ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 令兩架常駐護衛自殺機衝出(各半傷、3 倍速撲擊、吸走敵方導引飛彈,CD 30s、自爆後重現) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用護衛機拆塔清群!'
       : heroKind === 'morph'
       ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 分離餌機(沿途投彈:依機體類型燃燒/凍結/毒霧/雷爆,有鎖定就追蹤,CD 30s) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
       : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 重砲模式(0.5s 傾洩剩餘彈夾、傷害 +33% 射程 +20%,CD 30s) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
@@ -1577,6 +1577,15 @@ function makeHud() {
         };
         abEl('abSkill', 'abSkillName', 'abSkillCd', w.skill);
         abEl('abUlt', 'abUltName', 'abUltCd', w.ult);
+        // 空白鍵機動能力 CD(完美迴避 / 蓄力跳躍 / 升空變形):就緒亮綠、冷卻顯示秒數
+        const mob = w.mobil;
+        if (mob) {
+          $('abMobilName').textContent = mob.name;
+          $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
+          $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
+        }
+        // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
+        document.body.classList.toggle('aiming', !!w.aiming);
         $('moneyText').textContent = Math.floor(w.money);
         $('knText').textContent = w.kn;
         $('shopHint').textContent = 'B 升級(金錢固定單價)';

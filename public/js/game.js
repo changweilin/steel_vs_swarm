@@ -2030,7 +2030,10 @@ export class BattleClient {
           // 受傷暈影:自機總量(裝甲+護盾)較上一快照下降 = 被擊 → 閃紅暈影;
           // 重生/補血的上升不觸發;換主視野(_takeOver 清 _prevVital)不誤觸
           const vital = this.hp + this.sp;
-          if (this._prevVital != null && vital < this._prevVital - 0.5 && !e.dead) this.hud.hurt?.();
+          if (this._prevVital != null && vital < this._prevVital - 0.5 && !e.dead) {
+            this.hud.hurt?.();
+            this._lastHurtAt = performance.now() / 1000;   // 被攻擊時戳(無人機完美迴避的戰鬥狀態判定)
+          }
           this._prevVital = vital;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
           this.money = e.$ ?? this.money;
@@ -3321,8 +3324,19 @@ export class BattleClient {
     this.hud.feed?.('🦿 蓄力跳躍!(騰空低重力滑行)');
   }
 
-  /** 請求無敵幀(蓄力跳起跳離地 / 變形起飛):時長與 15s CD 由伺服器 heroIframe 權威把關,
-   *  這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
+  // ---------------- 無人機完美迴避(2026-07-21;drone 限定,常數住 data.js IFRAME)----------------
+  /** 戰鬥中按空白鍵飛行:向上迴避衝刺 + 起飛離地當下請求 1s 無敵(伺服器驗 30s CD);本地 _dodgeCd 樂觀閘門 + HUD */
+  _perfectDodge(u, now) {
+    this._dodgeCd = now + IFRAME.DRONE_CD;   // 樂觀本地 CD(HUD + 客戶端閘門;伺服器 heroIframe 為權威後盾)
+    this.vel.y += u.vspeed;                   // 向上迴避衝刺(疊在正常爬升上)
+    this.trauma = Math.min(1, this.trauma + 0.3);
+    this._reqIframe();
+    shockRing(this.scene, this.effects, this.pos.x, this.pos.y, this.pos.z, 6, 0x8fd7ff);
+    this.hud.feed?.('🛡️ 完美迴避!(向上飛・1s 無敵)');
+  }
+
+  /** 請求無敵幀(蓄力跳 / 升空變形起跳離地 / 無人機完美迴避):時長與 CD 由伺服器 heroIframe 權威把關
+   *  (機甲/傭兵 15s、無人機 30s),這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
   _reqIframe() {
     const now = performance.now() / 1000;
     if (now < (this._ifReqAt || 0) + 1.5) return;
@@ -3904,6 +3918,10 @@ export class BattleClient {
       barrage: (!this.isDrone && !this.isMorph)
         ? { cd: Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - performance.now() / 1000) } : null,
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
+      // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
+      mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
+        : this.isMorph ? { name: '升空變形', cd: Math.max(0, (this._morphCd || 0) - now) }
+          : { name: '蓄力跳躍', cd: Math.max(0, (this._cjumpCd || 0) - now) },
     };
   }
 
@@ -4320,6 +4338,17 @@ export class BattleClient {
         * ccF * this._modF('speed'));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
+      // 無人機完美迴避(2026-07-21):戰鬥狀態(近 COMBAT_S 秒攻擊或被攻擊)下按空白鍵飛行 →
+      //   向上飛的同時 1s 無敵,30s CD。空白鍵上升邊觸發(避免每幀連發);伺服器 heroIframe 為 CD/免傷權威。
+      if (this.isDrone) {
+        if (this.keys.Space && !this._spaceWas) {
+          const inCombat = now - Math.max(this.lastFireAt.light || 0, this.lastFireAt.heavy || 0) < IFRAME.COMBAT_S
+            || now - (this._lastHurtAt || 0) < IFRAME.COMBAT_S;
+          if (inCombat && now >= (this._dodgeCd || 0)) this._perfectDodge(u, now);
+          else if (inCombat) this.hud.feed?.(`🛡️ 完美迴避冷卻中(${Math.ceil((this._dodgeCd || 0) - now)}s)`);
+        }
+        this._spaceWas = this.keys.Space;
+      }
       if (this.keys.Space) target.y += u.vspeed * ccF;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);

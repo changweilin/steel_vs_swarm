@@ -2074,13 +2074,14 @@ export class BattleSim {
     }
   }
 
-  /** 無敵幀(蓄力跳躍 / 變形中段):客戶端在中段時點請求,伺服器驗 15s CD 後給 1s 免傷。
-   *  時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用;蜂群無人機無此機制。 */
+  /** 無敵幀(蓄力跳躍 / 升空變形起跳離地 / 無人機完美迴避):客戶端於起跳離地當下請求,
+   *  伺服器驗 CD 後給 1s 免傷。時長/CD 皆夾在伺服器(data.js IFRAME)—— 客戶端只能決定何時用。
+   *  CD 依機種:機甲/傭兵 = IFRAME.CD(15s);無人機完美迴避 = IFRAME.DRONE_CD(30s)。 */
   heroIframe(pid) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || this.over || h.kind === 'drone') return;
+    if (!h || h.dead || this.over) return;
     if ((h.iframeCdUntil || 0) > this.t) return;
-    h.iframeCdUntil = this.t + IFRAME.CD;
+    h.iframeCdUntil = this.t + (h.kind === 'drone' ? IFRAME.DRONE_CD : IFRAME.CD);
     h.invUntil = this.t + IFRAME.DUR;
     this.events.push({ e: 'iframe', pid, side: h.side, dur: IFRAME.DUR });
   }

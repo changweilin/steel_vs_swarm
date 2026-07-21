@@ -315,6 +315,9 @@
   <div id="deathFlash" class="death-flash"></div>
   <div id="deathAlert" class="death-alert"></div>
 
+  <!-- 狙擊模式(瞄準)可視遮罩:中央正圓可見、外圈全黑不可見(body.aiming 時顯示) -->
+  <div id="scopeVig" class="scope-vig"></div>
+
   <div class="crosshair"><div id="hitmark" class="hitmark"></div></div>
   <!-- 被敵方準星鎖定:紅色脈動警示(sim 廣播 lock 事件時亮起) -->
   <div id="lockWarn" class="lock-warn">⚠ 你已被鎖定</div>
@@ -333,6 +336,8 @@
       <div class="ab-row">
         <div class="ab-box" id="abSkill"><span class="ab-key">Q</span><span class="ab-name" id="abSkillName">—</span><span class="ab-cd" id="abSkillCd"></span></div>
         <div class="ab-box" id="abUlt"><span class="ab-key">E</span><span class="ab-name" id="abUltName">—</span><span class="ab-cd" id="abUltCd"></span></div>
+        <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 傭兵=升空變形(CD 顯示) -->
+        <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
       <div class="money-box">$ <span id="moneyText">0</span> ・ KILL <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
     </div>

@@ -402,7 +402,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     for (const b of botHero.sq.bodies) sim.ents.delete(b.id);
   }
 
-  log('— sim:無敵幀(蓄力跳/變形中段 1s 免傷 + 15s CD;無人機被拒)—');
+  log('— sim:無敵幀(起跳離地 1s 免傷;機甲/傭兵 15s CD、無人機完美迴避 30s CD)—');
   {
     const rb = sim.heroes.get('p_r');
     sim.heroIframe('p_r');
@@ -412,11 +412,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(rb.hp === hp0 && rb.sp === sp0, '無敵幀期間 _damage 免傷(護盾/裝甲皆不動)');
     const inv0 = rb.invUntil;
     sim.heroIframe('p_r');
-    assert(rb.invUntil === inv0, `CD ${IFRAME.CD}s 內再請求被拒(免傷視窗不重置)`);
-    rb.invUntil = 0;   // 清場:不影響後續傷害測試
+    assert(rb.invUntil === inv0, `機甲 CD ${IFRAME.CD}s 內再請求被拒(免傷視窗不重置)`);
+    rb.invUntil = 0; rb.iframeCdUntil = 0;   // 清場:不影響後續傷害測試
+    // 無人機完美迴避(2026-07-21):請求被接受 → 1s 免傷,CD = DRONE_CD(30s),CD 內再請求被拒
     const dr2 = sim.heroes.get('p_d');
     sim.heroIframe('p_d');
-    assert(!((dr2.invUntil || 0) > sim.t), '蜂群無人機請求無敵幀一律被拒');
+    assert((dr2.invUntil || 0) > sim.t, '無人機完美迴避:請求被接受 → 1s 免傷');
+    assert(Math.abs((dr2.iframeCdUntil || 0) - (sim.t + IFRAME.DRONE_CD)) < 1e-6, `無人機完美迴避 CD = ${IFRAME.DRONE_CD}s`);
+    const dinv0 = dr2.invUntil;
+    sim.heroIframe('p_d');
+    assert(dr2.invUntil === dinv0, `無人機 CD ${IFRAME.DRONE_CD}s 內再請求被拒(免傷視窗不重置)`);
+    dr2.invUntil = 0; dr2.iframeCdUntil = 0;   // 清場
   }
 
   log('— sim:雙層 HP(護盾脫戰回復 / 裝甲只能回堡或招式修)+ 電力 —');

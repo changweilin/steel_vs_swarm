@@ -484,6 +484,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 
+/* 狙擊模式(瞄準)可視遮罩:中央正圓可見、外圈全黑不可見。radial-gradient 用 circle + vmin →
+   不隨螢幕長寬比變成橢圓,恆為正圓。z 7:壓在 HUD(10)、hurt/env 暈影(8)之下 ——
+   不擋 HUD、周邊受傷/火場暈影仍疊其上,只黑掉 3D 周邊視野。body.aiming 時由 main.js 切顯示。 */
+.scope-vig {
+  position: absolute; inset: 0; z-index: 7; pointer-events: none; display: none;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) calc(var(--scope-r, 40vmin) - 2px),
+    rgba(150, 200, 230, 0.4) calc(var(--scope-r, 40vmin) - 2px),
+    rgba(150, 200, 230, 0.4) var(--scope-r, 40vmin),
+    #000 var(--scope-r, 40vmin));
+}
+body.aiming .scope-vig { display: block; }
+
 /* 陣亡殉爆白閃:高潮/觸地瞬間全屏過曝,0.4s 淡出(重觸發同 hurt/hitmark 手法)。z 29:蓋過 HUD(10)
    與倒數頁(20),但壓在商店(30)之下 —— 陣亡購物時不被白閃打斷 */
 .death-flash { position: absolute; inset: 0; z-index: 29; pointer-events: none; opacity: 0; background: #fff; }

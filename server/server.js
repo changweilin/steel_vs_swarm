@@ -301,6 +301,13 @@ wss.on('connection', (ws) => {
       const err = validateBattleConfig(cfg, teamSize);
       if (err) { send(ws, { t: 'error', msg: err }); return; }
       cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
+      // 地圖雙邊位置陣營隨機(2026-07-21):50% 機率對調兩主堡的陣營歸屬。同步反轉每條兵線的點序,
+      // 維持 sim 約定「lane[0]≈bases.SWARM 主堡端」;反轉+換標只變點序不動幾何 → 兵線分離/塔位稽核不受影響。
+      // 伺服器定案一次、隨 battleConfig 廣播全房 → 地形/出生/小地圖全客戶端一致。
+      if (Math.random() < 0.5) {
+        const t = cfg.bases.SWARM; cfg.bases.SWARM = cfg.bases.STEEL; cfg.bases.STEEL = t;
+        cfg.lanes = cfg.lanes.map((l) => l.slice().reverse());
+      }
       cfg.teamSize = teamSize;
       const pin = genPin();
       client = { ws, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
