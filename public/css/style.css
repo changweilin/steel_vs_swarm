@@ -287,6 +287,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .pin-join .row { margin-top: 8px; }
 .foot-note { color: #4d5c66; font-size: 10px; letter-spacing: 2px; z-index: 3; text-align: center; font-family: var(--mono); }
 
+/* ---------- 關於我(首頁最下方)---------- */
+.about-me { text-align: center; z-index: 3; margin-top: 4px; }
+.about-name {
+  font-family: var(--serif); font-weight: 700; font-size: 14px; letter-spacing: 4px;
+  color: var(--dim);
+}
+.about-line { font-size: 12px; letter-spacing: 1px; color: var(--dim); margin-top: 4px; }
+.about-line.about-en { font-family: var(--mono); font-style: italic; }
+.about-src { font-size: 10px; letter-spacing: 1px; color: #4d5c66; font-family: var(--mono); margin-top: 2px; }
+.about-links { display: flex; justify-content: center; gap: 14px; margin-top: 10px; }
+.about-links a {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--dim); font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  text-decoration: none; transition: color 0.12s;
+}
+.about-links a:hover { color: var(--railW); }
+.about-links svg { width: 14px; height: 14px; }
+
 /* ---------- 房間列表 ---------- */
 .room-list { display: flex; flex-direction: column; gap: 6px; max-height: 32vh; overflow: auto; }
 .room-empty { color: var(--dim); text-align: center; padding: 14px; font-size: 13px; font-family: var(--mono); letter-spacing: 2px; }
