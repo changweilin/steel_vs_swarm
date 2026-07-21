@@ -4,6 +4,7 @@
   "description": "無人戰略:鋼鐵與蜂群 — 真實世界地圖上的無人機 vs 機器人 DOTA+FPS 對戰",
   "type": "module",
   "main": "server/server.js",
+  "license": "Apache-2.0",
   "scripts": {
     "start": "node server/server.js",
     "dev": "node server/server.js --port 8620",
