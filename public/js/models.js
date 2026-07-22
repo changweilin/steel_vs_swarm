@@ -429,6 +429,16 @@ function buildDrone(side, vis = null, ch = null) {
     nose.rotation.y = Math.PI / 4;
     nose.position.set(0, -0.08, 0.35);
     tilt.add(nose);
+    // 楔形艙側進氣柵(貼合楔面收斂角,微凸分割線):「馬達壽命以場計」= 暴力風冷的速度機殼標配
+    for (const sx of [-1, 1]) {
+      const gr = bx(tilt, 0.02, 0.12, 0.4, sx * 0.36, -0.06, 0.15, PAL.deep, { metalness: 0.7 });
+      gr.rotation.y = -sx * 0.22;   // 前緣內收跟楔面同角(反號會前緣外翹)
+    }
+    // FC/4-in-1 ESC 疊層(架在楔尾、兩層碳板間的 6S 電力室)+ 狀態呼吸燈:
+    // 穿越機的機架就是為了露出這疊板而存在 —— 「電調超規壓榨」的本體
+    bx(tilt, 0.5, 0.06, 0.28, 0, -0.2, -0.66, 0x1d2126, { metalness: 0.5 });
+    bx(tilt, 0.42, 0.05, 0.24, 0, -0.12, -0.66, 0x14171a, { metalness: 0.6 });
+    bx(tilt, 0.05, 0.03, 0.02, 0.12, -0.08, -0.6, accent, { emissive: accent, emissiveIntensity: 1.8 });
   } else if (bodyKind === 'sphere') {
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.62, 12, 9), mat(shell, { metalness: 0.5 }));
     ball.scale.y = 0.72;
@@ -451,6 +461,45 @@ function buildDrone(side, vis = null, ch = null) {
     cyl(tilt, 0.014, 0.014, 0.16, 5, 0, -0.48, 0.62, 0x14171a);
     bx(tilt, 0.03, 0.06, 0.03, 0, -0.56, 0.62, PAL.deep, { metalness: 0.7 });
     bx(tilt, 0.03, 0.03, 0.08, 0, -0.58, 0.65, PAL.deep, { metalness: 0.7 });
+    // 絞車導纜架(立柱生根絞盤、導纜滾輪橫置柱底):軍規吊掛必有導纜架,否則側風割纜
+    for (const sx of [-1, 1]) bx(tilt, 0.025, 0.14, 0.025, sx * 0.09, -0.47, 0.66, 0x1a1d20, { metalness: 0.7 });
+    const fl = cyl(tilt, 0.02, 0.02, 0.16, 6, 0, -0.53, 0.66, PAL.deep, { metalness: 0.8 });
+    fl.rotation.z = Math.PI / 2;
+    // 球身醫療徽記圓盤(白底 + 綠十字,貼在球腹最寬點 = 兩層碳板間的可見帶正中):
+    // Zipline 語彙的白天識別 —— 燈只管夜間,「漆上去的十字」才是章程宣告;
+    // 盤面 MUST 凸出球面最寬處(0.62),否則側視整片被球弧吞掉;noPaint = 不吃 flag 花紋
+    for (const sx of [-1, 1]) {
+      const rg = new THREE.Group();
+      rg.position.set(sx * 0.585, -0.08, 0);
+      rg.rotation.z = -sx * Math.PI / 2;   // 局部 +y 指向球外側
+      tilt.add(rg);
+      const disc = cyl(rg, 0.19, 0.19, 0.06, 16, 0, 0.01, 0, 0xf2f5f7);
+      const cr1 = bx(rg, 0.3, 0.03, 0.09, 0, 0.05, 0, 0x39d98a);
+      const cr2 = bx(rg, 0.09, 0.03, 0.3, 0, 0.05, 0, 0x39d98a);
+      for (const m of [disc, cr1, cr2]) m.userData.noPaint = true;
+    }
+    // 恆溫艙冷排鰭(右側單側 = 改裝件;內緣沒入艙壁):「恆溫是給血漿的」要有制冷機構外露才可信
+    for (let i = 0; i < 3; i++)
+      bx(tilt, 0.08, 0.015, 0.16, 0.235, -0.34 - i * 0.06, -0.45, PAL.mid, { metalness: 0.7 });
+    // 球尾排氣柵(逐排隨球面內收、微凸艙面):冷排的排風路徑,把「恆溫」機能閉環
+    bx(tilt, 0.24, 0.025, 0.03, 0, -0.06, -0.635, PAL.deep, { metalness: 0.7 });
+    bx(tilt, 0.24, 0.025, 0.03, 0, -0.14, -0.63, PAL.deep, { metalness: 0.7 });
+    bx(tilt, 0.24, 0.025, 0.03, 0, -0.22, -0.605, PAL.deep, { metalness: 0.7 });
+    // 血袋投放尾門(開在恆溫指示燈正下方,貼合膠囊尾蓋弧度)+ 門把:血袋從尾門投放的 Zipline 語彙
+    const bdoor = bx(tilt, 0.14, 0.14, 0.02, 0, -0.38, -0.82, dim(accent, 0.85));
+    bdoor.rotation.x = 0.35;   // 正號上緣前傾貼尾蓋(負號會上緣懸空)
+    const bknob = bx(tilt, 0.05, 0.015, 0.02, 0, -0.33, -0.82, PAL.deep);
+    bknob.rotation.x = 0.35;
+    // 機頂醫療頻閃燈(與腹側綠十字同色的固定識別燈,不掛 glows):醫療機頂綠閃 = 對空「勿擊」宣告
+    const mstrobe = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), mat(0x39d98a, { emissive: 0x2fd07f, emissiveIntensity: 1.8 }));
+    mstrobe.position.set(0, 0.475, 0.3);   // 半沉電池綁帶頂,收在下層槳掃掠面之下
+    tilt.add(mstrobe);
+    // 著陸探照燈(殼根沒入球腹、照向前下方吊點):夜間 CASEVAC 吊掛要照明
+    const lampH = cyl(tilt, 0.05, 0.06, 0.07, 8, -0.16, -0.38, 0.46, PAL.deep, { metalness: 0.7 });
+    lampH.rotation.x = -1.1;
+    const lampF = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), mat(0xfff4d6, { emissive: 0xfff4d6, emissiveIntensity: 1.6 }));
+    lampF.position.set(-0.16, -0.41, 0.49);
+    tilt.add(lampF);
   } else if (bodyKind === 'slab') {
     bx(tilt, 1.85, 0.34, 1.45, 0, -0.1, 0, shell, { metalness: 0.6 });
     // 車庫搶修痕跡:三塊補丁板微斜貼裝(手工補焊感,「墜地後還能修」的視覺證據)
@@ -460,6 +509,15 @@ function buildDrone(side, vis = null, ch = null) {
     p2.rotation.y = -0.15;
     const p3 = bx(tilt, 0.03, 0.2, 0.36, 0.93, -0.08, 0.15, dim(accent, 0.7));
     p3.rotation.y = 0.12;
+    // 側裝甲焊補板(左右各一)+ 上緣焊道:頂面補丁補完側面 —— 焊道與焊縫環同色 = 同一把焊槍
+    const p4 = bx(tilt, 0.03, 0.22, 0.4, -0.94, -0.1, 0.3, PAL.lite);
+    p4.rotation.y = -0.08;
+    const w4 = bx(tilt, 0.025, 0.035, 0.42, -0.945, 0.02, 0.3, dim(accent, 0.6));
+    w4.rotation.y = -0.08;
+    const p5 = bx(tilt, 0.03, 0.2, 0.36, 0.94, -0.12, -0.45, PAL.mid);
+    p5.rotation.y = 0.1;
+    const w5 = bx(tilt, 0.025, 0.035, 0.38, 0.945, 0.02, -0.45, dim(accent, 0.6));
+    w5.rotation.y = 0.1;
     // 機腹前緣夜襲熱像雲台(下視球艙,不是 FPV 姿態鏡頭)
     cyl(tilt, 0.05, 0.05, 0.12, 6, 0, -0.32, 0.62, 0x14171a);   // 吊柱
     const gb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), mat(PAL.deep, { metalness: 0.5 }));
@@ -468,6 +526,12 @@ function buildDrone(side, vis = null, ch = null) {
     const ir = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.1 }));
     ir.position.set(0, -0.46, 0.72);
     tilt.add(ir);
+    // 熱像雲台防撞籠:斜柱頂端沒入機腹生根、柱底前伸接保險桿護住鏡頭 —— 墜過的機才會給雲台加籠
+    for (const sx of [-1, 1]) {
+      const gpost = bx(tilt, 0.03, 0.35, 0.03, sx * 0.19, -0.405, 0.72, 0x1c1f22);
+      gpost.rotation.x = -0.605;   // 頂沒入 slab 底、底外傾接桿(正號會頂懸空)
+    }
+    bx(tilt, 0.4, 0.03, 0.03, 0, -0.53, 0.82, 0x1c1f22);   // 前保險桿(閃開 ir 鏡與武器莢)
   } else if (bodyKind === 'frame') {
     // 鏤空競速架:只有側軌,看得到立柱
     for (const sx of [-1, 1]) bx(tilt, 0.1, 0.3, 1.75, sx * 0.62, -0.1, 0.02, carbonLt);
@@ -480,6 +544,16 @@ function buildDrone(side, vis = null, ch = null) {
     for (const z of [-0.6, 0.3]) bx(tilt, 1.28, 0.32, 0.12, 0, 0.32, z, dim(accent, 0.85));   // 綁帶加寬包住雙包外緣
     const cb = cyl(tilt, 0.035, 0.035, 0.6, 6, 0.34, 0.18, 0.5, 0x14171a);   // 粗電纜:右電池前緣斜落機身
     cb.rotation.x = -0.9;   // 頂端沒入電池前段、底端沒入碳板(正號會懸空)
+    // 雙電池並聯線 + XT90 對接頭:兩包各自出線在中央溝槽對接 —— 「雙電池並列」要有電氣收尾才成立
+    const jl = cyl(tilt, 0.03, 0.03, 0.5, 6, 0, 0.42, -0.15, 0x14171a);   // 兩端沒入電池內壁;落在兩綁帶之間
+    jl.rotation.z = Math.PI / 2;
+    bx(tilt, 0.09, 0.06, 0.07, 0, 0.45, -0.15, dim(accent, 0.9));         // XT90 騎在線上
+    // 夜襲防撞頻閃燈(固定白閃識別燈,比照航行燈慣例不掛 glows):夜間任務機的唯一對空識別
+    bx(tilt, 0.06, 0.04, 0.06, -0.34, 0.49, -0.7, 0xfff4d6, { emissive: 0xffffff, emissiveIntensity: 2.0 });
+    // 第二短天線(控制/圖傳雙鏈路 = 雙天線剪影):根沒入電池後段、尾向斜出,不與長鞭同點
+    const ant2 = cyl(tilt, 0.025, 0.03, 0.45, 5, 0.28, 0.36, -0.62, 0x14171a);
+    ant2.rotation.x = -0.55;   // 負號向後仰(正號會前傾撞綁帶)
+    ant2.rotation.z = -0.35;
   } else {
     bx(tilt, 0.72, 0.3, 1.3, 0, 0.32, -0.12, 0x1d2126, { metalness: 0.5 });
     for (const z of [-0.6, 0.3]) bx(tilt, 0.78, 0.32, 0.12, 0, 0.32, z, dim(accent, 0.85));
@@ -493,6 +567,23 @@ function buildDrone(side, vis = null, ch = null) {
     const xt = cyl(tilt, 0.03, 0.03, 0.28, 6, 0.2, 0.36, -0.72, 0x14171a);   // 電源辮線向後下垂
     xt.rotation.x = 1.2;
     bx(tilt, 0.08, 0.06, 0.09, 0.2, 0.3, -0.86, dim(accent, 0.9));           // XT60 接頭
+    // VTX 圖傳盒 + 雙層散熱鰭 + 同軸線接向鞭根:「圖傳超規壓榨延遲」的視覺證據 = 超大散熱鰭,
+    // 三根天線終於有生根的盒子(x 偏左避開 XT60 辮線)
+    bx(tilt, 0.2, 0.12, 0.26, -0.14, 0.32, -0.82, 0x1d2126, { metalness: 0.6 });
+    bx(tilt, 0.22, 0.015, 0.2, -0.14, 0.388, -0.84, 0x14171a, { metalness: 0.8 });
+    bx(tilt, 0.22, 0.015, 0.2, -0.14, 0.418, -0.84, 0x14171a, { metalness: 0.8 });
+    const coax2 = cyl(tilt, 0.015, 0.015, 0.2, 5, -0.07, 0.415, -0.9, 0x14171a);
+    coax2.rotation.z = -0.85;   // 一端貼盒頂、一端跨到鞭天線根
+    coax2.rotation.x = -0.95;
+    // 頂置 HD 運動相機(仰角刻意淺於 FPV 鏡頭 = 巡航拍攝角):電競文化每場拍集錦,綁電池頂是行規
+    const gopro = bx(tilt, 0.18, 0.13, 0.16, 0, 0.55, 0.42, PAL.dark, { metalness: 0.4 });
+    gopro.rotation.x = -0.25;
+    const glens = cyl(tilt, 0.045, 0.045, 0.03, 8, 0, 0.555, 0.505, PAL.deep, { metalness: 0.6 });
+    glens.rotation.x = Math.PI / 2;
+    const geye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 5), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+    geye.position.set(0, 0.555, 0.52);
+    tilt.add(geye);
+    bx(tilt, 0.2, 0.03, 0.06, 0, 0.62, 0.42, dim(accent, 0.85));   // 相機綁帶(與電池綁帶同語彙)
   }
   // FPV 鏡頭(前傾 20° 主色鏡片 = 姿態錨點)+ 尾部 VTX 天線
   const cam = bx(tilt, 0.4, 0.34, 0.24, 0, 0.1, 0.85, shell);
@@ -573,6 +664,18 @@ function buildDrone(side, vis = null, ch = null) {
       boom.rotation.set(0, Math.atan2(-az, ax), Math.PI / 2);
       const weld = cyl(tilt, 0.11, 0.11, 0.05, 6, ax * 0.5, -0.14, az * 0.5, dim(accent, 0.6));
       weld.rotation.copy(boom.rotation);
+      // 沿臂外露線束(只做對角兩臂 = 手工不對稱):ESC 盒騎在套管上、三相線貼頂、束帶 ×2 綁死
+      // —— 野戰拼裝機的電調與線材從不藏進殼內
+      if (i === 0 || i === 3) {
+        const esc = bx(tilt, 0.2, 0.06, 0.12, ax * 0.63, -0.03, az * 0.63, 0x1d2126, { metalness: 0.5 });
+        esc.rotation.y = Math.atan2(-az, ax);   // 長軸沿臂,盒底沉入套管頂面
+        const wire = cyl(tilt, 0.022, 0.022, 1.0, 5, ax * 0.7, -0.04, az * 0.7, 0x14171a);
+        wire.rotation.set(0, Math.atan2(-az, ax), Math.PI / 2);   // 外端收在馬達鐘前、內端沒入機身
+        for (const f of [0.72, 0.88]) {   // 束帶箍住套管+線束,避開臂中點焊縫環
+          const zip = cyl(tilt, 0.125, 0.125, 0.035, 6, ax * f, -0.14, az * f, 0x14171a);
+          zip.rotation.copy(boom.rotation);
+        }
+      }
     }
     // 可拆貨架:縱軌以吊架立柱生根 slab 底板、橫檔連接兩軌;軌下懸掛迫擊砲彈
     // (彈體尾翼外露 = 夜襲轟炸機的招牌掛載;x=0 置中,不碰 x±0.34 的武器雙莢)
@@ -581,6 +684,15 @@ function buildDrone(side, vis = null, ch = null) {
       for (const z of [-0.55, 0.45]) bx(tilt, 0.05, 0.4, 0.05, sx * 0.13, -0.45, z, 0x1c1f22);   // 吊架立柱
     }
     for (const z of [-0.6, 0, 0.6]) bx(tilt, 0.62, 0.05, 0.06, 0, -0.62, z, PAL.mid);     // 橫檔
+    // 貨架斜拉筋:後對自縱軌外張斜上抵下碳板底緣、前對沿 x=±0.13 縱平面前拉(閃開武器莢與彈頭)
+    // —— 農噴貨架是「栓上去的」,斜拉筋是可拆件的結構語言,也解掉細立柱吊重彈的懸空感
+    for (const sx of [-1, 1]) {
+      const rbrace = cyl(tilt, 0.018, 0.018, 0.42, 5, sx * 0.29, -0.49, -0.685, 0x1c1f22);
+      rbrace.rotation.z = -sx * 0.93;
+      rbrace.rotation.x = -0.28;   // 前後傾角兩側同號(鏡像只在 z 旋),鏡像 x 旋會外甩懸空
+      const fbrace = cyl(tilt, 0.018, 0.018, 0.39, 5, sx * 0.13, -0.49, 0.7, 0x1c1f22);
+      fbrace.rotation.x = 0.87;    // 正號頂端前傾抵碳板(負號會後仰懸空)
+    }
     for (const z of [-0.35, 0.35]) {
       bx(tilt, 0.04, 0.14, 0.04, 0, -0.72, z, PAL.dark);                                  // 吊耳
       const c = cyl(tilt, 0.09, 0.11, 0.5, 8, 0, -0.85, z, PAL.lite, { metalness: 0.5 }); // 彈體
@@ -599,12 +711,19 @@ function buildDrone(side, vis = null, ch = null) {
     const mast = cyl(tilt, 0.1, 0.12, 0.9, 8, 0, 0.55, 0, 0x14171a);
     mast.rotation.x = 0;
     // 傾斜盤 + 槳距連桿(架在兩層槳之間 —— 共軸機的機構識別全靠外露的旋翼頭)
-    cyl(tilt, 0.16, 0.16, 0.06, 8, 0, 0.5, 0, PAL.dark, { metalness: 0.8 });
+    cyl(tilt, 0.16, 0.16, 0.06, 8, 0, 0.68, 0, PAL.dark, { metalness: 0.8 });
     for (const sx of [-1, 1]) {
-      const link = cyl(tilt, 0.018, 0.018, 0.16, 5, sx * 0.13, 0.62, 0.03, 0x23262a);
+      const link = cyl(tilt, 0.018, 0.018, 0.16, 5, sx * 0.13, 0.76, 0.03, 0x23262a);
       link.rotation.z = -sx * 0.2;   // 盤緣斜上接上層旋翼頭
     }
-    for (const y of [0.35, 0.7]) {
+    // 下層傾斜盤 + 連桿(2026-07-22 整修):下層槳也要變距 —— 只有上層有機構會被行家一眼看穿;
+    // 兩層槳同步上移(0.35/0.7 → 0.55/0.85),修掉舊制下層槳掃進電池箱體的穿模
+    cyl(tilt, 0.15, 0.15, 0.05, 8, 0, 0.49, 0, PAL.dark, { metalness: 0.8 });
+    for (const sx of [-1, 1]) {
+      const link = cyl(tilt, 0.018, 0.018, 0.08, 5, sx * 0.11, 0.525, 0.03, 0x23262a);
+      link.rotation.z = -sx * 0.25;   // 環緣斜上指向下層旋翼頭
+    }
+    for (const y of [0.55, 0.85]) {
       const prop = new THREE.Group();
       prop.position.y = y;
       tilt.add(prop);
@@ -626,7 +745,15 @@ function buildDrone(side, vis = null, ch = null) {
   } else {
     // 競速 true-X:收緊軸距放大槳身比(小架大槳);觀戰 fallback 維持 1.5
     const rq = bodyKind === 'wedge' ? 1.32 : 1.5;
-    for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) addRotor(sx * rq, sz * rq);
+    for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+      addRotor(sx * rq, sz * rq);
+      // 臂底隊色 LED 條(純識別燈,MUST NOT 掛 glows):競速賽規靠隊色判讀,
+      // 夜賽底光是「那台粉紅的」招牌 —— 壓坡時四臂軌跡一眼可讀
+      if (bodyKind === 'wedge') {
+        const led = bx(tilt, 1.05, 0.02, 0.06, sx * 0.73, -0.2, sz * 0.73, accent, { emissive: accent, emissiveIntensity: 2.0 });
+        led.rotation.y = Math.atan2(-sz * rq, sx * rq);   // 與臂同向,頂面貼臂底
+      }
+    }
   }
   g.userData.spin = props; // 每幀旋轉
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.06, top: 30, heavy: heavyRig,
@@ -721,12 +848,21 @@ function buildFixedWing(side, vis, ch = null) {
       bx(tilt, 0.16, 0.13, 0.5, sx * 0.62, wingY, 0.05, dark, { metalness: 0.6 });    // 翼桁接合整流罩
       bx(tilt, 0.07, 0.62, 0.42, sx * 0.62, wingY + 0.3, -1.95, lite);                // 垂尾
       bx(tilt, 0.08, 0.14, 0.3, sx * 0.62, wingY + 0.62, -1.98, accent, { emissive: accent, emissiveIntensity: 0.8 });
+      // 尾桁接管節環 —— frame 機體的可拆桁架關節表達
+      const bring = cyl(tilt, 0.07, 0.07, 0.06, 6, sx * 0.62, wingY, -0.55, PAL.deep, { metalness: 0.7 });
+      bring.rotation.x = Math.PI / 2;
+      // 副翼伺服鼓包 —— RQ-7 翼下伺服整流罩,實機辨識點
+      bx(tilt, 0.1, 0.05, 0.2, sx * 0.85, 0.115, 0.0, dim(accent, 0.7), { metalness: 0.5 });
     }
     bx(tilt, 1.24, 0.06, 0.4, 0, wingY + 0.5, -1.95, lite);                           // 水平尾
     // 尾桁間偶極天線陣 —— 空腔就是為了掛這排耳朵(橫桿兩端沒入尾桁內側面生根)
     bx(tilt, 1.2, 0.035, 0.035, 0, wingY, -1.62, PAL.dark, { metalness: 0.6 });
     for (const xx of [-0.38, 0, 0.38])
       bx(tilt, 0.025, 0.2, 0.07, xx, wingY - 0.13, -1.62, accent, { emissive: accent, emissiveIntensity: 0.5 });
+    // 對數週期第二排 —— 振子由前到後遞減長度,單排不成陣、兩排才是 SIGINT 的頻譜語彙
+    bx(tilt, 1.2, 0.035, 0.035, 0, wingY, -1.25, PAL.dark, { metalness: 0.6 });
+    for (const xx of [-0.38, 0, 0.38])
+      bx(tilt, 0.025, 0.28, 0.07, xx, 0.01, -1.25, accent, { emissive: accent, emissiveIntensity: 0.5 });
     mkProp(-1.40, 2, 0.9);
     // 馬達尾錐整流罩:前端沒入機尾帽、後端銜接槳轂 = 推進槳生根
     const fair = cyl(tilt, 0.24, 0.1, 0.32, 10, 0, 0.02, -1.1, dark, { metalness: 0.6 });
@@ -737,6 +873,21 @@ function buildFixedWing(side, vis, ch = null) {
     cn.position.set(0, -0.31, -0.15);
     tilt.add(cn);
     bx(tilt, 0.02, 0.03, 0.5, 0.09, -0.31, -0.15, accent, { emissive: accent, emissiveIntensity: 0.7 });
+    // canoe 腹鰭測向刀天線 —— SIGINT canoe 從不孤立,成對測向
+    bx(tilt, 0.02, 0.09, 0.14, 0, -0.40, 0.05, PAL.dark, { metalness: 0.6 }).rotation.x = -0.3;
+    bx(tilt, 0.02, 0.09, 0.14, 0, -0.40, -0.35, PAL.dark, { metalness: 0.6 }).rotation.x = 0.3;
+    // SATCOM 蘑菇頂 —— RQ-7 背部上行鏈路鼓包,「訊號機」的天眼
+    const sat = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), mat(PAL.lite, { metalness: 0.4 }));
+    sat.scale.set(1, 0.5, 1);
+    sat.position.set(0, 0.35, 0.4);
+    tilt.add(sat);
+    // 背脊桁條板 —— 素膠囊切出 razorback 面板分割,兌現 body 'frame'
+    bx(tilt, 0.26, 0.05, 0.85, 0, 0.30, -0.15, PAL.lite, { metalness: 0.5 });
+    // 引擎冷卻進氣+排氣短管 —— 推進槳前的引擎要呼吸(車庫機務感)
+    bx(tilt, 0.14, 0.08, 0.24, 0, 0.30, -0.7, PAL.dark, { metalness: 0.6 });
+    bx(tilt, 0.1, 0.05, 0.03, 0, 0.30, -0.57, 0x14171a);
+    const exh = cyl(tilt, 0.025, 0.03, 0.2, 6, 0.2, -0.12, -0.82, 0x14171a, { metalness: 0.8 });
+    exh.rotation.x = Math.PI / 2 - 0.25;
     // 機鼻測向刀片天線 —— SIGINT 機的觸角(斜後傾,基座沒入機鼻蒙皮)
     for (const sx of [-1, 1]) bx(tilt, 0.018, 0.15, 0.2, sx * 0.12, 0.3, 0.7, PAL.dark, { metalness: 0.6 }).rotation.x = -0.5;
     tipLight(span / 2 - 0.1, 0.15);
@@ -747,7 +898,27 @@ function buildFixedWing(side, vis, ch = null) {
       wg.rotation.y = sx * 0.22;                                                      // 後掠
       bx(wg, 0.5, 0.06, 0.44, sx * 0.55, 0.02, -0.04, dim(accent, 0.85));             // 識別帶(隨翼後掠)
       bx(wg, 0.05, 0.26, 0.3, sx * (span / 4 - 0.04), 0.12, -0.05, dark, { metalness: 0.6 });   // 翼尖上折小翼
+      // 副翼傳動:扭力桿+搖臂盤+寶石軸 —— 與 V 尾 rod/rk/scr 同語彙,把錶芯輪系鋪滿全機
+      const trod = cyl(wg, 0.012, 0.012, 0.5, 5, -sx * 0.2, -0.05, -0.1, 0x23262a, { metalness: 0.85 });
+      trod.rotation.z = Math.PI / 2;
+      cyl(wg, 0.045, 0.045, 0.03, 8, sx * 0.1, -0.05, -0.12, PAL.deep, { metalness: 0.85 });
+      const jw = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 5), mat(accent, { emissive: accent, emissiveIntensity: 0.6 }));
+      jw.position.set(sx * 0.1, -0.07, -0.12);
+      wg.add(jw);
+      // 天鉤回收鉤 —— ScanEagle 無跑道、翼尖掛繩回收,原型第一識別
+      bx(wg, 0.03, 0.05, 0.16, sx * (span / 4 - 0.04), 0.27, 0.1, PAL.deep, { metalness: 0.8 });
+      bx(wg, 0.03, 0.04, 0.05, sx * (span / 4 - 0.04), 0.23, 0.19, PAL.deep);
+      // 錶背觀察窗 —— 鐘匠的透明錶背蓋:表圈+八稜齒輪盤(純識別發光,不進 glows)
+      const bez = cyl(tilt, 0.095, 0.095, 0.03, 12, sx * 0.285, 0.04, 0.35, PAL.deep, { metalness: 0.85 });
+      bez.rotation.z = Math.PI / 2;
+      const dial = cyl(tilt, 0.06, 0.06, 0.035, 8, sx * 0.30, 0.04, 0.35, dim(accent, 0.8), { metalness: 0.8, emissive: accent, emissiveIntensity: 0.35 });
+      dial.rotation.z = Math.PI / 2;
     }
+    // 擺輪飛輪 —— 錶芯輪系半沉機背外露,精密儀器感的主視覺
+    const bal = cyl(tilt, 0.11, 0.11, 0.05, 12, 0, 0.26, -0.45, PAL.deep, { metalness: 0.85 });
+    bal.rotation.z = Math.PI / 2;
+    const rim = cyl(tilt, 0.122, 0.122, 0.02, 12, 0, 0.26, -0.45, dim(accent, 0.75), { metalness: 0.8 });
+    rim.rotation.z = Math.PI / 2;
     bx(tilt, 0.16, 0.14, 1.3, 0, 0, -0.85, dark, { metalness: 0.6 });                 // 尾桁
     // 拆翼快拆軸 —— 鐘匠的關節環與軸端蓋(橫貫翼根前緣,軸頂微凸翼面)
     const hg = cyl(tilt, 0.055, 0.055, 0.5, 8, 0, wingY + 0.03, 0.42, PAL.deep, { metalness: 0.85 });
@@ -769,6 +940,8 @@ function buildFixedWing(side, vis, ch = null) {
       scr.position.set(sx * 0.28, 0.32, -1.08);
       tilt.add(scr);
       bx(fin, 0.18, 0.08, 0.44, sx * 0.24, 0.02, 0, accent, { emissive: accent, emissiveIntensity: 0.8 });
+      // V 尾關節防塵罩 —— 包住 fin 根與尾桁接合、蓋掉推桿下端消失點(精密機構怕塵)
+      bx(tilt, 0.14, 0.12, 0.18, sx * 0.1, 0.12, -1.1, PAL.dark, { metalness: 0.4 }).rotation.z = sx * 0.8;
     }
     // ScanEagle 鼻端慣性穩定光電轉塔 —— 轉塔就是鼻尖
     const eo = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mat(PAL.dark, { metalness: 0.6 }));
@@ -786,6 +959,10 @@ function buildFixedWing(side, vis, ch = null) {
     for (const sx of [-1, 1]) {
       const mw = bx(tilt, span / 2, 0.07, 0.6, sx * span / 4, wingY, -0.45, lite, { metalness: 0.5 });
       mw.rotation.y = sx * 0.35;                                                      // 後掠
+      // 筒射摺疊翼鉸線 —— Harop 是筒射遊蕩彈,翼中段的摺疊鉸線是原型第一識別
+      bx(mw, 0.05, 0.085, 0.62, sx * 0.15, 0, 0, PAL.deep, { metalness: 0.8 });
+      const hng = cyl(mw, 0.035, 0.035, 0.07, 6, sx * 0.15, 0, 0.31, PAL.deep, { metalness: 0.8 });
+      hng.rotation.x = Math.PI / 2;                                                   // 鉸鏈筒凸在前緣
       bx(mw, 0.05, 0.34, 0.44, sx * (span / 4 - 0.04), -0.15, -0.06, dark, { metalness: 0.6 });   // Harop 式翼尖下折小翼
       // 翼尖電戰吊艙 —— 急轉時維持指向的耳朵(前端 accent 端帽 = 干擾波束指向器)
       const pod = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.34, 4, 8), mat(PAL.dark, { metalness: 0.7 }));
@@ -795,11 +972,24 @@ function buildFixedWing(side, vis, ch = null) {
       const emit = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 0.8 }));
       emit.position.set(sx * (span / 4 - 0.05), 0.02, 0.34);
       mw.add(emit);
+      // 干擾線圈環 ×2 —— 電戰吊艙外箍的螺旋天線,壓制波束的機能細節
+      for (const zz of [0.02, 0.22]) {
+        const coil = cyl(mw, 0.075, 0.075, 0.02, 8, sx * (span / 4 - 0.05), 0.02, zz, dim(accent, 0.7), { metalness: 0.7 });
+        coil.rotation.x = Math.PI / 2;
+      }
       bx(mw, 0.45, 0.06, 0.46, sx * (span / 4 - 0.2), 0.02, 0, dim(accent, 0.85));
       bx(tilt, 0.3, 0.26, 0.5, sx * 0.42, -0.16, -0.5, dark, { metalness: 0.7 });     // 側進氣口
+      // 進氣唇緣(暗色開口)+ 附面層分離板 —— 實心盒讀成會呼吸的進氣道
+      bx(tilt, 0.24, 0.2, 0.05, sx * 0.42, -0.16, -0.245, 0x14171a, { metalness: 0.85 });
+      bx(tilt, 0.02, 0.26, 0.3, sx * 0.25, -0.16, -0.4, PAL.deep, { metalness: 0.7 });
+      // 楔形頰板 chine —— 兌現 body 'wedge':Harop 稜線機鼻剪影
+      bx(tilt, 0.5, 0.06, 0.9, sx * 0.26, -0.04, 0.75, shell, { metalness: 0.6 }).rotation.y = sx * 0.18;
       // LERX —— 鴨翼與主翼側視連成一體的前緣延伸(貼機身蒙皮外側)
       bx(tilt, 0.07, 0.035, 1.15, sx * 0.3, 0.16, 0.35, lite, { metalness: 0.5 }).rotation.y = sx * 0.1;
     }
+    // 腹側收發分置刀天線 —— 「全頻壓制」與背脊三片刀天線成上下對(機尾收分處貼腹)
+    bx(tilt, 0.018, 0.14, 0.18, 0, -0.245, -0.7, PAL.dark, { metalness: 0.6 }).rotation.x = 0.6;
+    bx(tilt, 0.018, 0.14, 0.18, 0, -0.20, -1.0, PAL.dark, { metalness: 0.6 }).rotation.x = 0.6;
     // 鴨翼在鼻尖左右分離、帶上反(Harop 佈局;內緣沒入機身生根)
     for (const sx of [-1, 1]) {
       const cnr = bx(tilt, 0.52, 0.04, 0.28, sx * 0.42, 0.06, 1.05, lite, { metalness: 0.5 });
@@ -809,14 +999,30 @@ function buildFixedWing(side, vis, ch = null) {
     // 電戰刀片天線陣 —— 背脊斜置三片,基座沒入機背蒙皮
     for (const zz of [0.55, 0.15, -0.25]) bx(tilt, 0.02, 0.18, 0.26, 0, 0.34, zz, PAL.dark, { metalness: 0.6 }).rotation.x = -0.55;
     bx(tilt, 0.07, 0.6, 0.5, 0, 0.42, -1.0, lite);                                    // 垂尾
+    // 方向舵分板 —— 比垂尾微寬的獨立舵面,一整塊板切出層次
+    bx(tilt, 0.078, 0.5, 0.18, 0, 0.4, -1.17, dim(lite, 0.82), { metalness: 0.5 });
     bx(tilt, 0.08, 0.16, 0.34, 0, 0.72, -1.05, accent, { emissive: accent, emissiveIntensity: 0.8 });
     mkJet(-1.35);
+    // 噴口花瓣裙 —— 外擴讀成可調噴口,jet 機種的推力視覺補完
+    const skt = cyl(tilt, 0.19, 0.23, 0.12, 10, 0, 0, -1.52, 0x14171a, { metalness: 0.85 });
+    skt.rotation.x = Math.PI / 2;
     tipLight(span / 2 * 0.94, -0.9, wingY + 0.06);
   } else if (W === 'zero') {
     // 零式(A6M):星型引擎整流罩 + 三葉牽引槳 + 橢圓低單翼 + 氣泡艙罩 + 單垂尾/水平尾
     const cowl = cyl(tilt, 0.42, 0.36, 0.55, 12, 0, -0.02, 1.2, dark, { metalness: 0.75 });
     cowl.rotation.x = Math.PI / 2;
     cyl(cowl, 0.3, 0.3, 0.6, 12, 0, 0, 0, 0x14171a);                                  // 進氣環內壁
+    // 栄星型引擎正面 —— 牽引槳機第一眼是進氣環裡的七具放射氣缸(確定性迴圈)
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * Math.PI * 2;
+      const cylr = cyl(tilt, 0.05, 0.05, 0.16, 6, Math.cos(a) * 0.19, -0.02 + Math.sin(a) * 0.19, 1.32, 0x1c2126, { metalness: 0.8 });
+      cylr.rotation.z = a + Math.PI / 2;                                              // 長軸轉成放射向
+    }
+    const gbox = cyl(tilt, 0.1, 0.13, 0.1, 8, 0, -0.02, 1.44, 0x23262a, { metalness: 0.8 });
+    gbox.rotation.x = Math.PI / 2;                                                    // 減速器機匣環(填唇口與槳轂之間)
+    // 汽化器上唇進氣口 —— A6M2 的招牌識別
+    bx(tilt, 0.16, 0.07, 0.28, 0, 0.40, 1.12, PAL.mid, { metalness: 0.6 });
+    bx(tilt, 0.12, 0.04, 0.03, 0, 0.41, 1.26, 0x14171a);
     // 栄引擎排氣短管(整流罩後緣下側,斜向後下)
     for (const sx of [-1, 1]) {
       const ex = cyl(tilt, 0.035, 0.04, 0.22, 6, sx * 0.36, -0.14, 0.92, 0x14171a, { metalness: 0.8 });
@@ -832,6 +1038,12 @@ function buildFixedWing(side, vis, ch = null) {
       bx(outer, span * 0.1, 0.06, 0.5, sx * span * 0.08, 0.02, -0.02, dim(accent, 0.85));
       // 翼內 20mm 機砲已拆除(2026-07-22 規則 5:無功能裝飾砲管不留 —— 功能武裝在翼下莢艙)
       bx(inner, 0.3, 0.1, 0.36, sx * span * 0.06, -0.14, -0.1, 0x23262a);             // 主輪整流罩
+      // 襟翼分板 —— 內翼後緣下方微凸,讀成放下的開縫襟翼
+      bx(tilt, 0.6, 0.035, 0.2, sx * 0.5, -0.21, -0.3, dim(lite, 0.82), { metalness: 0.5 });
+      if (sx < 0) {   // 左翼單根皮托管(掛 outer 隨上反後掠;前端凸出前緣 = 標準翼前緣皮托)
+        const pt = cyl(outer, 0.012, 0.012, 0.4, 5, -0.25, 0, 0.33, PAL.deep, { metalness: 0.8 });
+        pt.rotation.x = Math.PI / 2;
+      }
     }
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), mat(accent, { transparent: true, opacity: 0.55, emissive: accent, emissiveIntensity: 0.5 }));
     canopy.scale.set(0.8, 0.7, 1.9);
@@ -845,9 +1057,16 @@ function buildFixedWing(side, vis, ch = null) {
     const tp = cyl(tilt, 0.24, 0.05, 0.75, 10, 0, 0.02, -1.4, shell, { metalness: 0.6 });
     tp.rotation.x = Math.PI / 2;
     bx(tilt, 0.07, 0.68, 0.7, 0, 0.42, -1.35, lite);                                  // 垂尾
+    // 方向舵分板+調整片 —— 一整塊垂尾切出舵面層次,accent 調整片兼識別
+    bx(tilt, 0.078, 0.6, 0.22, 0, 0.4, -1.61, dim(lite, 0.85), { metalness: 0.5 });
+    bx(tilt, 0.082, 0.14, 0.06, 0, 0.22, -1.66, dim(accent, 0.85));
     bx(tilt, 0.1, 0.2, 0.34, 0, 0.78, -1.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
     bx(tilt, 1.5, 0.05, 0.45, 0, 0.06, -1.4, lite, { metalness: 0.5 });               // 水平尾
     bx(tilt, 0.12, 0.16, 0.24, 0, -0.1, -1.55, 0x23262a);                             // 尾輪
+    // 著艦鉤 —— 「艦戰」身分的唯一硬證據(前端沒入尾錐腹面、鉤尖朝後下)
+    const ahk = cyl(tilt, 0.018, 0.018, 0.42, 5, 0, -0.14, -1.35, PAL.deep, { metalness: 0.8 });
+    ahk.rotation.x = Math.PI / 2 - 0.35;
+    bx(tilt, 0.03, 0.06, 0.04, 0, -0.23, -1.56, PAL.deep);                            // 鉤爪
     // 機腹落下增槽 —— 零式長航程的標誌掛載(中線掛帶 ×2)
     const tk = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.55, 4, 8), mat(PAL.lite, { metalness: 0.5 }));
     tk.rotation.x = Math.PI / 2;
@@ -868,11 +1087,25 @@ function buildFixedWing(side, vis, ch = null) {
       // LERX —— 三角翼與機身融成一體的前緣延伸(前端伸向機鼻側)
       bx(tilt, 0.07, 0.04, 1.0, sx * 0.3, wingY, 0.65, lite, { metalness: 0.5 }).rotation.y = sx * 0.16;
       bx(w1, span / 4, 0.06, 0.62, sx * span / 8, 0.02, -0.3, dim(accent, 0.85));
-      bx(w1, 0.06, 0.42, 0.5, sx * (span / 2 - 0.06), 0.2, -0.45, dark);              // 端板小翼
+      // 端板小翼:w1 局部半寬 = span/4,x 用 span/4 基準才落在翼尖(span/2 會懸空一倍翼展)
+      bx(w1, 0.06, 0.42, 0.5, sx * (span / 4 - 0.03), 0.2, -0.45, dark);              // 端板小翼
+      // 靜電放電刷 —— 三角翼後緣的 static wick,高速機標配(凸出後緣的細刺)
+      const wick = cyl(w1, 0.008, 0.008, 0.14, 4, sx * 0.52, 0, -0.72, PAL.deep, { metalness: 0.7 });
+      wick.rotation.x = Math.PI / 2;
     }
     bx(tilt, 0.5, 0.16, 0.6, 0, 0.3, -0.35, dark, { metalness: 0.7 });                // 背部進氣口
+    bx(tilt, 0.44, 0.12, 0.05, 0, 0.30, -0.06, 0x14171a, { metalness: 0.85 });        // 進氣嘴(暗色開口=會呼吸)
     // dorsal duct 隆線:背部進氣道沿機背延伸接進尾噴口
     bx(tilt, 0.3, 0.13, 0.85, 0, 0.28, -0.85, dark, { metalness: 0.7 });
+    // RATO 起飛助推器 —— Tu-141 拖車筒射+固態助推的起飛儀式(掛帶包覆、噴口朝後下,非槍管)
+    const rato = cyl(tilt, 0.085, 0.1, 0.55, 8, 0, -0.33, -1.05, PAL.dark, { metalness: 0.6 });
+    rato.rotation.x = Math.PI / 2 - 0.12;
+    const rnoz = cyl(tilt, 0.05, 0.085, 0.1, 8, 0, -0.365, -1.36, 0x14171a, { metalness: 0.85 });
+    rnoz.rotation.x = Math.PI / 2 - 0.12;
+    bx(tilt, 0.24, 0.03, 0.06, 0, -0.26, -0.95, PAL.deep, { metalness: 0.6 });        // 掛帶
+    // 回收傘艙門 —— 傘降回收;代號「歸鄉」,每次任務結束都要回家的那扇門
+    bx(tilt, 0.26, 0.02, 0.44, 0, -0.285, -0.5, dim(shell, 0.88), { metalness: 0.5 });
+    bx(tilt, 0.08, 0.015, 0.08, 0, -0.297, -0.5, dim(accent, 0.8));                   // 開傘標記
     // Tu-141 大後掠中央垂尾(根部沒入隆線生根)+ 尾頂識別燈
     const vf = bx(tilt, 0.05, 0.46, 0.62, 0, 0.38, -1.0, lite, { metalness: 0.5 });
     vf.rotation.x = -0.42;                                                            // 頂端向 -z 後掠
@@ -885,10 +1118,18 @@ function buildFixedWing(side, vis, ch = null) {
     dm.position.set(0, 0.36, 0.55);
     tilt.add(dm);
     cyl(tilt, 0.105, 0.105, 0.04, 10, 0, 0.35, 0.55, PAL.deep, { metalness: 0.8 });   // 觀測窗座環
+    // 星敏遮光罩 —— astrotracker 白天觀星靠遮光筒,「抬頭看星星」的機構化(罩口與球頂齊平)
+    cyl(tilt, 0.1, 0.12, 0.09, 10, 0, 0.40, 0.55, PAL.deep, { metalness: 0.8 });
+    // 背鰭刀天線 —— 高速偵察機背脊的資料鏈(基座沒入機背蒙皮,落在星圖板與進氣嘴之間)
+    bx(tilt, 0.018, 0.11, 0.2, 0, 0.37, 0.08, PAL.dark, { metalness: 0.6 }).rotation.x = -0.45;
     mkJet(-1.25, 0.2);
+    // 噴口花瓣裙 —— 與 s03 同語彙的可調噴口(收在焰環之前)
+    const skirt = cyl(tilt, 0.17, 0.21, 0.12, 10, 0, 0, -1.42, 0x14171a, { metalness: 0.85 });
+    skirt.rotation.x = Math.PI / 2;
     // 星圖蝕刻識別板 —— 微光星座板,夜戰遠觀即識(貼背脊艙蓋頂)
     bx(tilt, 0.26, 0.02, 0.3, 0, 0.36, 0.32, dim(accent, 0.6), { emissive: accent, emissiveIntensity: 0.25 });
-    tipLight(span / 2 * 0.85, -1.0, wingY + 0.3);
+    // 翼尖燈落回翼尖頂面(已反算 w1 後掠 0.5:世界 (±0.99,−0.85) = w1 局部 (0.54,−0.33))
+    tipLight(0.99, -0.85, 0.215);
   }
   // 武裝(2026-07-16 改版):翼下硬點左右分裝 —— 左莢輕武器、右莢重武器(異型雙莢 + 掛架);
   // 輕重同型(s03 相控陣 beam×beam)= 機腹單一發射器,外圈陣列環為重模式(一具切換兩模)。
@@ -1029,6 +1270,18 @@ function buildAvianDrone(side, vis, ch = null) {
           const rib = bx(outer, P.span * 0.4, 0.05, 0.07, sgn * P.span * 0.2, 0, -0.2 - i * 0.45 * bs, dark, { metalness: 0.6 });
           rib.rotation.y = sgn * (0.18 + i * 0.16);
         }
+        // 翼摺液壓缸:兩端同在 w 節點內 = 隨拍翼整體動不拉伸(單端錨原則);
+        // 外端貼內翼骨梁頂、內端浮空當活塞頭
+        const ram = cyl(w, 0.033, 0.033, 0.5, 6, sgn * 0.44, 0.10, 0.16, PAL.dark, { metalness: 0.8 });
+        ram.rotation.z = sgn * 1.35;
+        // 翼梢編隊燈(掛 outer 隨外翼甩;純識別燈,不進 glows)
+        bx(outer, 0.06, 0.02, 0.12, sgn * 1.9, 0.06, 0.14, accent, { emissive: accent, emissiveIntensity: 1.0 });
+      }
+      if (C === 'ptero') {   // 翼膜指骨肋(比照 dragon 翼指骨梁):大片翼膜的張力可讀;掛 w/outer 隨拍翼
+        const r1 = bx(w, P.span * 0.4, 0.035, 0.05, sgn * P.span * 0.2, 0, -0.33, dark, { metalness: 0.6 });
+        r1.rotation.y = sgn * 0.28;
+        const r2 = bx(outer, P.span * 0.32, 0.03, 0.045, sgn * P.span * 0.16, 0, -0.28, dark, { metalness: 0.6 });
+        r2.rotation.y = sgn * 0.30;
       }
       const spike = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.4, 5), mat(0xd8dde2, { metalness: 0.7 }));
       spike.position.set(sgn * P.span * 0.45, 0, 0.14);
@@ -1158,6 +1411,49 @@ function buildAvianDrone(side, vis, ch = null) {
     }
     // rig.wpn light:散件掛 tilt → ref=tilt;槍口環 m2 在 tilt z=+1.33bs、機匣 +0.72bs ⇒ 槍口在 +z 端
     wpnL = { nodes: beeLN, ref: tilt, muz: lMuz.n, fwd: 'z' };
+    // ---- 蜂后指揮節點載荷(2026-07-22):位階與中繼硬體 —— 冠環/SATCOM/算力/供能管線可讀化 ----
+    // 冠環:斜戴半沒入頭球、穿過三單眼構成冠冕 = 皇冠級位階識別(純識別燈,不進 glows)
+    const crown = cyl(tilt, 0.115 * bs, 0.115 * bs, 0.025, 12, 0, 0.475 * bs, 1.02 * bs, accent,
+      { emissive: accent, emissiveIntensity: 0.35, metalness: 0.6 });
+    crown.rotation.x = -0.55;
+    // 翅基動力鉸座 ×4:外推至胸球表面,透明翅膜根部沒入鉸座 = 蜻蜓式翅根致動器
+    // (翅本體 w 三軸每幀被 stepAerial 全覆寫,鉸座 MUST 建在 tilt 上,不掛 w)
+    for (const sgn of [-1, 1]) {
+      cyl(tilt, 0.078 * bs, 0.078 * bs, 0.1, 8, sgn * 0.52 * bs, 0.22 * bs, 0.2 * bs, PAL.deep, { metalness: 0.8 })
+        .rotation.z = Math.PI / 2;
+      cyl(tilt, 0.078 * bs, 0.078 * bs, 0.1, 8, sgn * 0.495 * bs, 0.22 * bs, -0.35 * bs, PAL.deep, { metalness: 0.8 })
+        .rotation.z = Math.PI / 2;
+    }
+    // 胸背刀型天線 ×2(MANET 中繼):後掠,座落背脊裝甲頂面
+    for (const sx of [-1, 1]) {
+      const blade = bx(tilt, 0.02, 0.1, 0.14, sx * 0.14 * bs, 0.5 * bs, 0.2 * bs, PAL.dark, { metalness: 0.5 });
+      blade.rotation.x = -0.15;
+    }
+    // 算力莢(載重 = 算力):半埋錐腹頂面前段,散熱鰭 ×3 + 狀態燈(識別燈,不進 glows)
+    bx(tilt, 0.24 * bs, 0.09 * bs, 0.3 * bs, 0, 0.35 * bs, -0.78 * bs, PAL.dark, { metalness: 0.6 });
+    for (const fx of [-0.07, 0, 0.07])
+      bx(tilt, 0.018, 0.05, 0.26 * bs, fx * bs, 0.42 * bs, -0.78 * bs, PAL.deep, { metalness: 0.7 });
+    bx(tilt, 0.03, 0.02, 0.02, 0.08 * bs, 0.36 * bs, -0.64 * bs, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    // SATCOM 半球罩:下半埋入第一、二節腹環之間的腹背面
+    const sat = new THREE.Mesh(new THREE.SphereGeometry(0.08 * bs, 10, 8), mat(PAL.lite, { metalness: 0.3 }));
+    sat.position.set(0, 0.35 * bs, -1.26 * bs);
+    tilt.add(sat);
+    // 蜂腰供能管 ×2 + 接線盒 ×2:前端埋背脊裝甲下、後端下傾收進腹面
+    // (胸腹雙球皆 tilt 靜態子節點,剛性跨接安全 —— 蜂腰不是活動關節)
+    for (const sx of [-1, 1]) {
+      const duct = cyl(tilt, 0.02, 0.02, 0.62, 6, sx * 0.12 * bs, 0.40 * bs, -0.60 * bs, PAL.deep, { metalness: 0.8 });
+      duct.rotation.x = Math.PI / 2 - 0.08;
+      bx(tilt, 0.06, 0.06, 0.06, sx * 0.12 * bs, 0.37 * bs, -0.88 * bs, PAL.deep, { metalness: 0.7 });
+    }
+    // 螫針節環 ×2:環徑略大於該剖面錐徑 = 伸縮節套視覺,不增針長
+    for (const [rr, rz] of [[0.07, -2.17], [0.048, -2.26]])
+      cyl(tilt, rr * bs, rr * bs, 0.04, 8, 0, -0.07 * bs, rz * bs, PAL.deep, { metalness: 0.85 })
+        .rotation.x = Math.PI / 2;
+    // 腹面設備托盤(Matrice 腹艙):上緣沒入胸球底,避開頦下機槍與火箭巢吊掛短柱
+    bx(tilt, 0.3 * bs, 0.05, 0.5 * bs, 0, -0.49 * bs, 0.05 * bs, PAL.dark, { metalness: 0.6 });
+    // 右舷編號徽板:比照 ptero 空白布章(塗裝管線跳過 = 留白徽記位)
+    const beeBadge = bx(tilt, 0.02, 0.09 * bs, 0.14 * bs, 0.57 * bs, 0.04 * bs, 0.3 * bs, dim(accent, 0.55));
+    beeBadge.userData.noPaint = true;
   } else if (C === 'eagle') {
     // 鉤喙猛禽頭 + 頦下雙管 + 折收雙爪 + 扇尾
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.3 * bs, 10, 8), mat(plate, { metalness: 0.5 }));
@@ -1196,6 +1492,7 @@ function buildAvianDrone(side, vis, ch = null) {
       foot.position.set(sx * 0.26 * bs, -0.6 * bs, 0.4);
       tilt.add(foot);
       cyl(foot, 0.07 * bs, 0.1 * bs, 0.34, 6, 0, 0.12, -0.04, 0x30373f, { metalness: 0.7 });   // 蹠骨(鱗甲)
+      cyl(foot, 0.10, 0.11, 0.09, 8, 0, 0.22, -0.04, dim(plate, 0.9), { metalness: 0.3 });     // 腿羽環(羽褲收口:羽腿與金屬蹠骨的獸/機質感過渡)
       const talon = (tx, tz, ry) => {
         const t = new THREE.Group();
         t.position.set(tx, -0.06, tz);
@@ -1211,6 +1508,19 @@ function buildAvianDrone(side, vis, ch = null) {
       talon(sx * 0.12 * bs, 0.02, sx * 0.6);
       talon(sx * -0.1 * bs, 0.02, sx * -0.5);
       talon(0, -0.14, Math.PI);                                                                 // 後趾:反向合鉗
+      // 跗蹠液壓缸:上端埋大腿外下緣、下端埋蹠骨頂(thigh/foot 皆 tilt 靜態子節點,可實跨)
+      const tarsusRam = cyl(tilt, 0.018, 0.018, 0.24, 6, sx * 0.31, -0.46, 0.33, PAL.deep, { metalness: 0.85 });
+      tarsusRam.rotation.x = -0.5;
+      tarsusRam.rotation.z = sx * -0.12;
+      // 獵鷹頰紋板(malar stripe):貼頭球面斜置 = 隼科面部識別,補頭部裸球的分版
+      const malar = bx(tilt, 0.025, 0.12, 0.05, sx * 0.22, 0.21, 1.19, PAL.deep, { metalness: 0.4 });
+      malar.rotation.y = sx * -0.6;
+      malar.rotation.z = sx * 0.2;
+      // 胸前彈帶(紳士備彈):半埋胸球前表面的外掛霰彈 —— 彈藥可見比照 podWeapon missile 範式,非假槍管;
+      // 深一階色 + 多露 0.03 才不會糊進同色胸甲
+      for (const [ex, ez] of [[0.10, 0.94], [0.22, 0.89]])
+        cyl(tilt, 0.028, 0.028, 0.1, 6, sx * ex, -0.06, ez, dim(accent, 0.62), { metalness: 0.7 })
+          .rotation.x = Math.PI / 2;
     }
     for (let i = -2; i <= 2; i++)   // 扇尾:羽片放射扇(羽根聚尾根、中央尾羽主色;尾不撲動,直掛 tilt 不進 wings)
       feather(tilt, (0.95 - Math.abs(i) * 0.07) * bs, 0.2 * bs, 0, 0.012 * Math.abs(i), -0.72 * bs,
@@ -1224,6 +1534,21 @@ function buildAvianDrone(side, vis, ch = null) {
     eagleLN.push(hinge);
     eagleLN.push(bx(tilt, 0.31 * bs, 0.04 * bs, 0.08, 0, -0.3 * bs, 0.68 * bs, dim(accent, 0.75)));
     eagleLN.push(bx(tilt, 0.22 * bs, 0.05 * bs, 0.3, 0, -0.25 * bs, 0.42 * bs, dim(accent, 0.8)));   // 彈艙蓋識別
+    // Purdey 紳士獵槍補件(2026-07-22):護木/頂桿/準星珠 —— 木件與瞄具,非槍管,不涉 muzzles
+    bx(tilt, 0.16, 0.05, 0.42, 0, -0.375, 0.95, dim(accent, 0.45), { metalness: 0.1 });   // 胡桃木前護木(低金屬度深色 = 木件,accent 衍生不硬編木色)
+    bx(tilt, 0.026, 0.018, 0.11, 0, -0.248, 0.44, PAL.deep, { metalness: 0.8 });          // 開閂頂桿(中折槍的簽名操作件)
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), mat(dim(accent, 0.95), { metalness: 0.8 }));
+    bead.position.set(0, -0.262, 1.13);   // 槍管間肋條前端準星珠
+    tilt.add(bead);
+    // 背部摺收共軸槳轂(coax 血統):滑翔獵手 = 槳收起,四葉全指後貼脊
+    cyl(tilt, 0.065, 0.065, 0.06, 8, 0, 0.49, -0.08, PAL.deep, { metalness: 0.8 });
+    for (const [by, ry] of [[0.535, 0.08], [0.558, 0.2]]) for (const sx of [-1, 1]) {
+      const bl = bx(tilt, 0.05, 0.013, 0.5, sx * -0.022, by, -0.32, PAL.deep, { metalness: 0.7 });
+      bl.rotation.y = sx * ry;
+    }
+    // 盾形家徽板:flag 花紋之上保留純色徽記(比照 ptero 布章 noPaint 範式)
+    const armorial = bx(tilt, 0.12, 0.012, 0.16, 0.14, 0.465, -0.45, dim(accent, 0.7));
+    armorial.userData.noPaint = true;
     // rig.wpn light:散件掛 tilt → ref=tilt;槍口環 bm 在 tilt z=+1.22bs、機匣 +0.5bs ⇒ 槍口在 +z 端
     wpnL = { nodes: eagleLN, ref: tilt, muz: lMuz.n, fwd: 'z' };
     // 重武器(獵狐飛彈,launcher):翼下羽毛飛彈掛架(6 枚)擊發齊閃
@@ -1330,6 +1655,38 @@ function buildAvianDrone(side, vis, ch = null) {
     dart.rotation.x = -Math.PI / 2;
     dart.position.set(0, 0.02, -1.68 * bs);
     tilt.add(dart);
+    // ---- MQ-9 / coax 雙血統補件(2026-07-22):攔截機的旋翼痕跡與長航感測語彙 ----
+    // 喙背撞擊補強脊:『唯一武裝是它自己』的結構語彙(硬化脊非槍管,不涉 muzzles)
+    const anvil = bx(tilt, 0.045, 0.06, 1.1, 0, 0.385 * bs, 2.0 * bs, PAL.deep, { metalness: 0.85 });
+    anvil.rotation.x = 0.03;   // 隨錐面收分微下傾
+    // 顱側頰板 ×2 + 冠頂板:裸方盒 → 內構 + 外裝甲板的雙層感
+    for (const sx of [-1, 1])
+      bx(tilt, 0.02, 0.2 * bs, 0.4 * bs, sx * 0.18 * bs, 0.34 * bs, 1.0 * bs, dim(plate, 0.85), { metalness: 0.5 });
+    bx(tilt, 0.3 * bs, 0.02, 0.44 * bs, 0, 0.5 * bs, 1.03 * bs, dim(plate, 0.9), { metalness: 0.5 });
+    // 側視 SAR 天線板 ×2(MQ-9 感測線):微凸出機身球側面,位於左舷布章下方
+    for (const sx of [-1, 1])
+      bx(tilt, 0.02, 0.15 * bs, 0.55 * bs, sx * 0.58 * bs, -0.155 * bs, 0.055 * bs, PAL.dark, { metalness: 0.6 });
+    // 背部摺收共軸旋翼組(coax 血統):滑翔省電 = 槳收起,四葉全指後貼脊
+    cyl(tilt, 0.075, 0.075, 0.05, 8, 0, 0.49 * bs, -0.13 * bs, PAL.deep, { metalness: 0.8 });
+    for (const [by, ry] of [[0.52, 0.08], [0.545, 0.2]]) for (const sx of [-1, 1]) {
+      const bl = bx(tilt, 0.05, 0.014, 0.55, sx * -0.022, by * bs, -0.44 * bs, PAL.deep, { metalness: 0.7 });
+      bl.rotation.y = sx * ry;
+    }
+    // MQ-9 式 V 尾 + 腹鰭:根部沒入尾桁,已驗清開尾股膜與尾鏢
+    for (const sx of [-1, 1]) {
+      const vt = bx(tilt, 0.02, 0.26, 0.34, sx * 0.06, 0.10, -1.28 * bs, plate, { metalness: 0.5 });
+      vt.rotation.z = sx * -0.5;   // 根部沒入桁頂角、尖端上外張
+    }
+    bx(tilt, 0.02, 0.12, 0.26, 0, -0.06, -1.36 * bs, plate, { metalness: 0.5 });
+    // 感測轉塔方位環(MTS-B 迴旋機構):套在轉塔球上極
+    cyl(tilt, 0.155, 0.155, 0.035, 12, 0, -0.30 * bs, 0.8 * bs, PAL.deep, { metalness: 0.8 });
+    // 爪莢抓握液壓缸 ×2:單端錨貼腿中段 + 斜置(左莢是 heavy pivot,MUST NOT 觸莢體)
+    for (const sx of [-1, 1]) {
+      const ram = cyl(tilt, 0.018, 0.018, 0.3, 6, sx * 0.28 * bs, -0.51 * bs, -0.08, PAL.deep, { metalness: 0.85 });
+      ram.rotation.x = -0.62;
+    }
+    // GPS 圓餅天線(背脊裝甲板前段)
+    cyl(tilt, 0.055, 0.055, 0.03, 10, 0, 0.487 * bs, 0.28 * bs, PAL.lite, { metalness: 0.3 });
   } else {
     // 機械龍:長頸雙角;張口 = 上顎/下顎間露出口腔飛彈巢(口射飛彈)
     // 機械龍蛇頸:三節收分圓柱串接 + 節間平端關節環(軸向沿軀體→頭連線,末節正好接上頭群組)
@@ -1362,6 +1719,16 @@ function buildAvianDrone(side, vis, ch = null) {
       horn.rotation.x = -2.3;
       head.add(horn);
     }
+    // 供彈鏈可讀化(2026-07-22):彈艙在胸、經喉上膛 —— 環艙 → 喉管 → 口腔巢連成一條線
+    const feedRing = cyl(tilt, 0.24 * bs, 0.24 * bs, 0.15, 10, 0, 0.345 * bs, 0.59 * bs, PAL.dark, { metalness: 0.7 });
+    feedRing.rotation.x = 0.95;   // 與蛇頸同軸的頸基環座(攔截彈出胸處)
+    const feedDuct = cyl(tilt, 0.055, 0.055, 0.7, 8, 0, 0.42 * bs, 0.975 * bs, PAL.deep, { metalness: 0.8 });
+    feedDuct.rotation.x = 0.95;   // 沿頸腹面半埋入頸節,兩端分別沒入胸球前上面與顱底
+    for (const sx of [-1, 1]) {   // 顎鉸鏈盤:與頰側 VLS 開閂艙門同一套「開閂機械」語彙
+      const hj = cyl(head, 0.05 * bs, 0.05 * bs, 0.035, 8, sx * 0.14 * bs, -0.15 * bs, 0.18 * bs, PAL.deep, { metalness: 0.85 });
+      hj.rotation.z = Math.PI / 2;
+    }
+    bx(head, 0.34 * bs, 0.05 * bs, 0.09 * bs, 0, 0.26 * bs, 0.36 * bs, PAL.dark, { metalness: 0.6 });   // 眉甲板(半埋顱殼頂,壓出怒視陰影)
     // 胸前相控陣雷達板(鐵穹之眼):板面朝前上 = 對空搜索角,嵌進胸球前緣生根;2×2 偶數陣元
     const radar = bx(tilt, 0.55 * bs, 0.42 * bs, 0.07, 0, 0.05 * bs, 0.86 * bs, PAL.dark, { metalness: 0.7 });
     radar.rotation.x = -0.4;
@@ -1380,8 +1747,20 @@ function buildAvianDrone(side, vis, ch = null) {
     }
     const throatGlow = bx(head, 0.18 * bs, 0.1 * bs, 0.12, 0, -0.08 * bs, 0.18 * bs, accent, { emissive: accent, emissiveIntensity: 1.0 });
     dragonHN.push(throatGlow);
+    // 口腔巢十字分隔肋(鐵穹發射箱矩陣格框):貼四管壁;彈數仍 2×2 偶數,雙發齊射節奏不動
+    bx(head, 0.018, 0.21 * bs, 0.25 * bs, 0, -0.03 * bs, 0.48 * bs, 0x111418, { metalness: 0.8 });
+    bx(head, 0.19 * bs, 0.018, 0.25 * bs, 0, -0.03 * bs, 0.48 * bs, 0x111418, { metalness: 0.8 });
+    // 背脊散熱格柵 ×2 + 熱燒燈條 ×2(plasma 示能):燈條進 heavyRig.glow ——
+    // 蓄力時背脊隨喉部一起燒紅、擊發強閃(吃現成 stepCombatFx 驅動);
+    // 後段格柵貼合向尾收低的球面 → y 取低一階,不照抄前段高度
+    const dorsalStrips = [];
+    for (const [gz, gy, sy] of [[-0.08, 0.48, 0.50], [-0.55, 0.42, 0.44]]) {
+      bx(tilt, 0.15 * bs, 0.025, 0.26 * bs, 0, gy * bs, gz * bs, PAL.deep, { metalness: 0.7 });
+      dorsalStrips.push(bx(tilt, 0.11 * bs, 0.012, 0.2 * bs, 0, sy * bs, gz * bs, accent, { emissive: accent, emissiveIntensity: 0.5 }));
+    }
     // 重武器(防空散射矩陣,plasma):口腔飛彈巢 + 喉部充能光共同構成噴發前兆
-    heavyRig = { glow: [...dragonTips.map((mesh) => ({ mesh, base: 1.6 })), { mesh: throatGlow, base: 1.0 }], pivot: [] };
+    heavyRig = { glow: [...dragonTips.map((mesh) => ({ mesh, base: 1.6 })), { mesh: throatGlow, base: 1.0 },
+      ...dorsalStrips.map((mesh) => ({ mesh, base: 0.5 }))], pivot: [] };
     hMuz = { n: throatGlow, r: 0.12 };
     // rig.wpn heavy:散件掛 head → ref=head;彈尖 tip 在 head z=+0.66bs、管身 +0.5bs ⇒ 槍口在 +z 端
     wpnH = { nodes: dragonHN, ref: head, muz: throatGlow, fwd: 'z' };
@@ -1434,6 +1813,11 @@ function buildAvianDrone(side, vis, ch = null) {
       ts.position.set(0, h * bs * 0.5, -len * 0.5);
       seg.add(ts);
       tNode = seg;
+    }
+    for (let i = 1; i < 4; i++) {   // 尾節關節環:掛進各節根部重疊帶 —— whipTail 甩尾時遮住節間裸縫(機械龍的脊椎軸承)
+      const tr = [0.30, 0.22, 0.155][i - 1];
+      const jring = cyl(tailSegs[i], tr, tr, 0.06, 10, 0, 0, 0.03, PAL.deep, { metalness: 0.75 });
+      jring.rotation.x = Math.PI / 2;
     }
     for (const fz of [-0.1, -1.0]) {   // 尾鰭(舵面,掛在第三節,隨尾梢一起甩,不再是與尾巴脫節的靜態掛件)
       const fin = bx(tailSegs[2], 0.06, 0.5 * bs, 0.6 * bs, 0, 0.3 * bs, fz * bs, dark, { metalness: 0.6 });
@@ -1558,6 +1942,8 @@ function buildBeastMech(side, vis) {
         } },
         { len: hipY * 0.28, base: S * 0.12, k: S * 0.3, d: 0.16, draw: (l) => {
           cyl(l, 0.2 * B, 0.24 * B, hipY * 0.32, 8, 0, -hipY * 0.15, 0, hull);
+          // 膝關節防塵環:套在樞軸原點、隨屈曲同轉,蓋住第一/二節接縫(象柱腿的裸接補件)
+          cyl(l, 0.22 * B, 0.24 * B, 0.12, 8, 0, 0, 0, PAL.deep, { metalness: 0.7 });
         } },
         { len: hipY * 0.12, base: -S * 0.1, k: -S * 0.24, d: 0.45, draw: (l) => {
           cyl(l, 0.24 * B, 0.28 * B, hipY * 0.14, 8, 0, -hipY * 0.07, 0, hullDk);  // 蹠節(踝)
@@ -1576,6 +1962,9 @@ function buildBeastMech(side, vis) {
         } },
         { len: hipY * 0.3, base: S * 0.34, k: S * 0.5, d: 0.15, draw: (l) => {
           cyl(l, 0.07 * B, 0.09 * B, hipY * 0.38, 8, 0, -hipY * 0.18, front ? -0.04 : 0.08, hullDk); // 圓柱管骨
+          // 管骨液壓阻尼(「扣扳機那一刻絕對靜止」的機構本體):單端錨+斜置近似,MUST NOT 動 stepper
+          const dpr = cyl(l, 0.022 * B, 0.022 * B, hipY * 0.26, 6, 0, -hipY * 0.10, front ? -0.10 : 0.12, PAL.deep, { metalness: 0.9 });
+          dpr.rotation.x = front ? 0.32 : -0.32;
         } },
         { len: hipY * 0.12, base: -S * 0.3, k: -S * 0.4, d: 0.42, draw: (l) => {
           cyl(l, 0.1 * B, 0.12 * B, hipY * 0.14, 8, 0, -hipY * 0.07, 0.02, hull);   // 繫部(球節)
@@ -1603,6 +1992,9 @@ function buildBeastMech(side, vis) {
           // 膝部致動器轂:掛在第二節樞軸原點,隨屈曲一起轉、盤面外露不脫節
           const kn = cyl(l, 0.13 * B, 0.13 * B, 0.11, 12, sx * 0.12 * B, 0, 0, 0x23262a, { metalness: 0.85 });
           kn.rotation.z = Math.PI / 2;
+          // 膝液壓缸:單端錨在小腿節 + 斜置近似指向大腿(雙端錨會被 flexChain 拉伸 —— MUST NOT 為它動 stepper)
+          const hyd = cyl(l, 0.028, 0.028, hipY * 0.30, 6, sx * 0.04, -hipY * 0.10, front ? -0.13 : 0.15, PAL.deep, { metalness: 0.9 });
+          hyd.rotation.x = front ? 0.42 : -0.42;
         } },
         { len: hipY * 0.12, base: -S * 0.4, k: -S * 0.45, d: 0.42, draw: (l) => {
           cyl(l, 0.08 * B, 0.09 * B, hipY * 0.16, 8, 0, -hipY * 0.08, 0.02, hull);   // 蹠骨(掌節)
@@ -1631,6 +2023,21 @@ function buildBeastMech(side, vis) {
       bx(chest, 0.07, 0.34 * B, 0.62, sx * 0.8 * B, 0.12, -0.36, PAL.deep, { metalness: 0.7 });
       for (const zz of [-0.58, -0.36, -0.14]) bx(chest, 0.1, 0.1 * B, 0.12, sx * 0.83 * B, 0.12, zz, 0x23262a, { metalness: 0.8 });
     }
+    // 前防撞感測保險桿(Vision 60 前莢語彙):胸廓是膠囊、前端收圓,桿位沿曲面內縮到 z=1.30
+    // 才咬得住殼(規格 z=1.52 在膠囊上是懸空);兩枚避障感測燈疊在桿上緣 = 獵殺機的「看路」硬體
+    bx(chest, 1.05 * B, 0.14, 0.10, 0, -0.40 * B, 1.30, PAL.deep, { metalness: 0.7 });
+    for (const sx of [-1, 1]) {
+      const sl = cyl(chest, 0.045 * B, 0.045 * B, 0.03, 8, sx * 0.35 * B, -0.30 * B, 1.36, accent, { emissive: accent, emissiveIntensity: 0.9 });
+      sl.rotation.x = Math.PI / 2;   // 純識別燈(不掛 glows)
+    }
+    // 肩甲斜板(Zoids 肩罩):底緣埋進胸殼、頂緣外傾成擋泥板 —— 前腿髖甲(x0.55~0.93)內側,不進擺程
+    for (const sx of [-1, 1]) {
+      const sp = bx(chest, 0.07, 0.45, 0.8, sx * 0.62 * B, 0.55 * B, 0.30, dim(plate, 0.92), { metalness: 0.6 });
+      sp.rotation.z = sx * -0.45;
+    }
+    // 腹掛電池/酬載模組:吊在胸腹曲面正下方(z 前移到 0.35 讓後端貼殼不懸空)+ 前緣狀態燈
+    bx(chest, 0.85 * B, 0.24 * B, 1.0, 0, -0.66 * B, 0.35, PAL.dark, { metalness: 0.55 });
+    bx(chest, 0.08, 0.05, 0.05, 0.28 * B, -0.66 * B, 0.72, accent, { emissive: accent, emissiveIntensity: 0.7 });
     // 胸腹平面接合:脊椎波讓前後兩段相對俯仰,圓角端對圓角端會張口 ——
     // 接縫以「平端」關節環覆蓋(跟著胸段動,蓋住縫;接合處不圓角)
     const hcol = cyl(chest, 0.56 * B, 0.56 * B, 0.62, 14, 0, 0.02, -0.5, dim(hull, 0.82), { metalness: 0.6 });
@@ -1639,6 +2046,9 @@ function buildBeastMech(side, vis) {
     bx(chest, 1.62 * B, 0.16, 0.5, 0, 0.32 * B, 1.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
     neck.position.set(0, 0.55 * B, 1.45);
     chest.add(neck);
+    // 頸關節防塵環:掛頸樞軸 → stepQuad 反屈頸 ±0.28 rad 時隨頸同動,恆蓋住胸頸縫
+    const nring = cyl(neck, 0.30 * B, 0.33 * B, 0.22, 10, 0, 0.12, -0.18, dim(hull, 0.75), { metalness: 0.5 });
+    nring.rotation.x = Math.PI / 2;
     bx(neck, 0.65 * B, 0.55 * B, 0.8, 0, 0.15, 0.25, hullDk);
     head.position.set(0, 0.42 * B, 0.7);
     neck.add(head);
@@ -1663,6 +2073,10 @@ function buildBeastMech(side, vis) {
     bx(spine, 0.5 * B, 0.4, 1.2, 0.25 * B, 0.95 * B, -0.5, 0x2b3138, { metalness: 0.6 });
     const barrel = cyl(spine, 0.09, 0.12, 3.6, 8, 0.25 * B, 1.15 * B, 0.9, 0x14171a, { metalness: 0.85 });
     barrel.rotation.x = Math.PI / 2;
+    // 砲管熱護套 + 瓦斯塊:掛 barrel 子件(隨 heavyRig.pivot 後座同動)—— 補掉裸管段的空窗;
+    // barrel 局部 −z = 世界上方(rotation.x=π/2 之後),瓦斯塊故意放 −z 讓它立在管背
+    cyl(barrel, 0.135, 0.135, 0.7, 8, 0, -0.35, 0, PAL.deep, { metalness: 0.7 });
+    bx(barrel, 0.07, 0.12, 0.07, 0, 0.02, -0.10, PAL.deep, { metalness: 0.8 });
     cyl(barrel, 0.16, 0.16, 0.85, 10, 0, 0.55, 0, 0x23262a, { metalness: 0.75 });   // 消音套筒(輕模式)
     const houndLMuz = cyl(barrel, 0.17, 0.17, 0.06, 10, 0, 1.0, 0, accent,
       { emissive: accent, emissiveIntensity: 0.6 });                               // 消音段口識別環(輕武器擊發閃光)
@@ -1689,6 +2103,14 @@ function buildBeastMech(side, vis) {
     bx(spine, 0.52 * B, 0.1, 0.72, -0.35 * B, 1.06 * B, -1.1, dim(accent, 0.8));
     // 肩掛雙管飛彈莢已拆除(2026-07-22 規則 5:無功能裝飾砲管不留 —— 功能武裝 = 背載長砲雙模)
     bx(spine, 0.45 * B, 0.14, 0.4, -0.05 * B, 1.0 * B, -0.85, 0x23262a, { metalness: 0.7 });   // 供彈橋(彈箱 → 砲膛)
+    // 後臀散熱百葉:斜臥在背板後緣的排氣片列(y 貼板頂 —— 規格 y0.74B 在此高度懸空,壓回板面)
+    for (const sx of [-1, 1]) for (const xx of [0.30, 0.48]) {
+      const lv = bx(spine, 0.05, 0.06, 0.45, sx * xx * B, 0.70 * B, -1.62, PAL.deep, { metalness: 0.7 });
+      lv.rotation.x = -0.25;
+    }
+    // 尾部航行燈:半埋臀部膠囊曲面(規格 z−2.0 已在殼外,內縮到 −1.75 曲面上);純識別燈
+    for (const sx of [-1, 1])
+      bx(spine, 0.06, 0.06, 0.04, sx * 0.55 * B, 0.28 * B, -1.75, accent, { emissive: accent, emissiveIntensity: 0.8 });
     // 犬尾:多節圓柱串接(節身收分 + 節間關節環)
     tail.position.set(0, 0.35 * B, -1.95);
     cyl(tail, 0.12 * B, 0.1 * B, P.tailLen, 8, 0, 0, -P.tailLen / 2, hullDk).rotation.x = Math.PI / 2;
@@ -1706,6 +2128,9 @@ function buildBeastMech(side, vis) {
       bx(spine, 0.44 * B, 0.06, 0.4, sx * 0.62 * B, 0.38 * B, -0.6, 0x23262a, { metalness: 0.7 });
     }
     bx(spine, 1.15 * B, 0.18, 1.8, 0, 0.6 * B, -0.85, dim(plate, 0.9));
+    // 馬臀航行燈:半埋臀部膠囊側面(規格 z−1.85 的截面已收窄到殼外,內縮到 −1.6 側腰);純識別燈
+    for (const sx of [-1, 1])
+      bx(spine, 0.05, 0.05, 0.04, sx * 0.57 * B, 0.28, -1.6, accent, { emissive: accent, emissiveIntensity: 0.6 });
     rbz(chest, 1.5 * B, 1.2 * B, 1.9, 0, 0.05, 0.35, hull, { metalness: 0.6 });
     // 胸腹平面接合環(見獵犬):蓋住脊椎波張開的圓角接縫 —— 馬軀移動不再前後分離
     const ccol = cyl(chest, 0.52 * B, 0.52 * B, 0.62, 14, 0, 0.0, -0.45, dim(hull, 0.82), { metalness: 0.6 });
@@ -1716,7 +2141,12 @@ function buildBeastMech(side, vis) {
     // 腰是根樞軸:只掛「腰塊」,胸/臂/槍/頭全部改掛下游節點,這樣腰一彎、上身整段跟著給。
     neck.position.set(0, 0.75 * B, 0.95);
     chest.add(neck);
+    // 腰部迴轉環(浮動槍架的迴轉基座):環本體靜掛馬背蓋住腰樞軸縫,腰彎在環內轉動
+    cyl(chest, 0.40, 0.40, 0.09, 14, 0, 0.66, 0.95, PAL.deep, { metalness: 0.8 });
+    cyl(chest, 0.41, 0.41, 0.03, 14, 0, 0.71, 0.95, dim(accent, 0.7));             // 上緣識別環
     bx(neck, 0.85 * B, 0.5, 0.6, 0, 0.2, 0, hullDk);                               // 腰
+    // 備用彈匣袋 ×2:腰塊前面兩側(陀螺艙 x±0.2 之外)—— 狙擊手的滿彈側掛
+    for (const sx of [-1, 1]) bx(neck, 0.16, 0.24, 0.08, sx * 0.34, 0.22, 0.33, PAL.dark, { metalness: 0.5 });
     // 陀螺穩定艙:腰前橫置慣性基準單元(圓筒殼 + 主色狀態環)—— 上身鎖平的「基準」本體
     const gyro = cyl(neck, 0.2 * B, 0.2 * B, 0.34, 12, 0, 0.16, 0.36, 0x1c2126, { metalness: 0.85 });
     gyro.rotation.x = Math.PI / 2;
@@ -1728,6 +2158,14 @@ function buildBeastMech(side, vis) {
     neck.add(humChest);
     bx(humChest, 1.05 * B, 0.9, 0.7, 0, 0.23, 0, hull, { metalness: 0.6 });        // 胸廓
     bx(humChest, 0.5 * B, 0.3, 0.14, 0, 0.33, 0.4, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    // 騎士胸甲前板(底緣 y0.10 高於槍身頂 0.05,不撞 rifle)+ 腹部折箱分節板:
+    // 錨在 humChest 側、下端懸掛蓋過腰塊頂 —— humChest 反向吸收馬軀起伏時如伸縮腹甲
+    bx(humChest, 0.70 * B, 0.50, 0.07, 0, 0.35, 0.38, dim(plate, 0.95), { metalness: 0.6 });
+    bx(humChest, 0.80 * B, 0.14, 0.06, 0, -0.30, 0.32, PAL.mid);
+    bx(humChest, 0.72 * B, 0.13, 0.06, 0, -0.44, 0.30, PAL.dark);
+    // 測風桅+風向標(狙擊手的環境感測):左肩後細桅,頂 y≈0.89 低於頭頂 1.26 不推 bbox
+    cyl(humChest, 0.015, 0.015, 0.50, 5, -0.52 * B, 0.62, -0.26, PAL.deep, { metalness: 0.8 });
+    bx(humChest, 0.16, 0.02, 0.03, -0.52 * B, 0.88, -0.26, PAL.deep);
     // 長槍端在胸前(槍口朝 +z):據槍射姿 —— 上身跟著 rider 分節穩定,槍口恆指前方。
     // 輕/重同型(gun×gun)→ 雙手持同一把,切換兩種模式:輕 = 消音卡賓段(整體式消音管),
     // 重 = 反器材長管段(制退器 + 栓動大威力)。瞄準鏡/彈匣/前握把/摺疊腳架強化辨識。
@@ -1760,6 +2198,10 @@ function buildBeastMech(side, vis) {
     const centaurSight = cyl(rifle, 0.065, 0.065, 0.05, 8, 0, 0.24, 0.44, accent,
       { emissive: accent, emissiveIntensity: 0.8 });
     centaurSight.rotation.x = Math.PI / 2;                                         // 物鏡(重武器蓄力發光)
+    // 雷射測距儀:rifle 子件(自動進 rig.wpn nodes → FPV 同源),緊貼瞄準鏡右側
+    bx(rifle, 0.07, 0.07, 0.16, 0.10, 0.20, 0.05, PAL.deep, { metalness: 0.8 });
+    const lrf = cyl(rifle, 0.03, 0.03, 0.02, 8, 0.10, 0.20, 0.14, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    lrf.rotation.x = Math.PI / 2;                                                  // 測距物鏡(純識別燈)
     // 重武器(白頭山反器材,gun):騎槍本體即重武器載體。槍身俯仰改由 gunR(gunPitch)
     // 每幀驅動 —— 行軍槍口微揚 ↔ 據槍水平、蓄力下壓抵肩(hv.gun)、擊發反向上跳;
     // pivot MUST 留空(gunPitch 是 rotation.x 的唯一寫入者,同 morph 手持規則)
@@ -1782,6 +2224,9 @@ function buildBeastMech(side, vis) {
     armSh = []; armEl = []; armBase = [];
     for (const sx of [-1, 1]) {
       bx(humChest, 0.5, 0.35, 0.6, sx * 0.75 * B, 0.58, 0, plate);                 // 墊肩
+      // 雙層墊肩頂板:外低內高的斜頂甲(y0.80 在臂擺程之上,肩樞軸 y0.43 不受影響)
+      const pt = bx(humChest, 0.55, 0.07, 0.65, sx * 0.75 * B, 0.80, 0.02, dim(plate, 0.9), { metalness: 0.6 });
+      pt.rotation.z = -sx * 0.15;
       const sh = new THREE.Group();
       sh.position.set(sx * 0.72 * B, 0.43, 0.12);
       humChest.add(sh);
@@ -1833,6 +2278,17 @@ function buildBeastMech(side, vis) {
       bx(chest, 0.08, 0.5 * B, 0.9, sx * 1.06 * B, -0.5 * B, -0.25, PAL.dark, { metalness: 0.55 });
       bx(chest, 0.1, 0.08, 0.9, sx * 1.08 * B, -0.26 * B, -0.25, dim(accent, 0.7));
     }
+    // 前拖鉤 ×2(發射箱卡車底盤語彙):胸殼是膠囊、前端收圓 —— 規格 z1.62 已在殼外,
+    // 內縮到 z1.3 讓鉤頂咬進殼底、鉤體垂出下緣;前腿在 x±0.95B(fz 1.2)不進擺程
+    for (const sx of [-1, 1])
+      bx(chest, 0.10 * B, 0.12 * B, 0.16, sx * 0.40 * B, -0.42 * B, 1.3, PAL.deep, { metalness: 0.8 });
+    // 前緣航行燈 ×2:半埋前肩曲面(規格 x0.75B/z1.68 已在膠囊殼外,內縮到曲面上);純識別燈
+    for (const sx of [-1, 1])
+      bx(chest, 0.06, 0.06, 0.04, sx * 0.62 * B, -0.15 * B, 1.35, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    // 排氣煙囪(左肩,與右肩 MG3 塔對稱配重;是排氣管不是槍管 —— 不進 muzzles/wpn):
+    // 基部沉進肩殼(y0.78B;規格 y1.05B 在曲面上懸空)、頂蓋壓簷
+    cyl(chest, 0.055 * B, 0.06 * B, 0.55, 8, -0.60 * B, 0.78 * B, 1.15, PAL.dark, { metalness: 0.7 });
+    bx(chest, 0.14, 0.05, 0.14, -0.60 * B, 0.78 * B + 0.30, 1.15, PAL.deep, { metalness: 0.7 });
     // (原背上水平背甲板已移除:純裝飾、非掛點,使用者指示 —— 背鰭本身即發射軌)
     // 胸腹平面接合環(見獵犬):側步搖擺 + 脊椎波下前後量體不張口
     const scol = cyl(chest, 0.7 * B, 0.7 * B, 0.72, 14, 0, 0.12, -0.62, dim(hull, 0.82), { metalness: 0.6 });
@@ -1851,6 +2307,9 @@ function buildBeastMech(side, vis) {
       if (big) {   // 洩焰導流板:發射鰭基部後方斜板(f 子節點,隨鰭展開一起走)
         const defl = bx(f, 0.45, 0.28, 0.05, 0, diag - h * 0.28, -0.14, PAL.deep, { metalness: 0.7 });
         defl.rotation.x = -0.5;
+        // 發射軌背板(Shahed 發射箱的滑軌框):垂直軌條貼鰭 +z 面、四聯裝管口自軌條穿出 ——
+        // 側視立刻讀出「骨板上鎖著發射軌」;掛 f 群組隨 heavyRig.pivot 展開同動(finAt 單一縫,四鰭自動一致)
+        bx(f, 0.20, h * 1.05, 0.05, 0, diag, 0.085, PAL.deep, { metalness: 0.7 });
       }
       const tips = [];
       if (big) {
@@ -1909,6 +2368,9 @@ function buildBeastMech(side, vis) {
     stegoLN.push(stegoLMuz);
     stegoLN.push(bx(chest, 0.24 * B, 0.26, 0.4, 0.34 * B, 0.8 * B, 1.0, hullDk, { metalness: 0.6 }));          // 彈鏈箱(內側掛)
     stegoLN.push(bx(chest, 0.25 * B, 0.08, 0.42, 0.34 * B, 0.95 * B, 1.0, dim(accent, 0.8)));                  // 彈箱蓋識別
+    // MG3 防盾半板 ×2:槍管兩側各一片、中央留槍管缺口;push 進 stegoLN(rig.wpn.light → FPV 同源)
+    for (const sx of [-1, 1])
+      stegoLN.push(bx(chest, 0.15 * B, 0.30, 0.05, 0.62 * B + sx * 0.13 * B, 0.85 * B, 1.36, PAL.mid, { metalness: 0.6 }));
     quadWeap = { light: 'N', heavy: 'N' };
     quadHvy = { chest: 0.04 };
     quadLGlow = [{ mesh: stegoLMuz, base: 0.7 }];
@@ -1938,6 +2400,11 @@ function buildBeastMech(side, vis) {
     head.add(beakS);
     bx(head, 0.24 * B, 0.14 * B, 0.5, 0, -0.2 * B, 0.85, 0x23262a);                  // 下顎
     bx(head, 0.44 * B, 0.09, 0.06, 0, 0.1 * B, 0.5, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    // 頭部光電感測眼 ×2:顱殼前緣 —— 巡飛彈平台的「看目標」硬體(現況只有眉光帶無眼);純識別燈
+    for (const sx of [-1, 1]) {
+      const se = cyl(head, 0.05 * B, 0.05 * B, 0.04, 8, sx * 0.20 * B, 0.06 * B, 0.58, accent, { emissive: accent, emissiveIntensity: 1.2 });
+      se.rotation.x = Math.PI / 2;
+    }
     // 重尾:多節圓柱串接,自臀部連續收分(根粗梢細),再接尾錘尖刺(thagomizer)
     tail.position.set(0, 0.34 * B, -2.05);
     for (let i = 0; i < 3; i++) {   // 尾根三節:圓柱節身 + 節間關節環
@@ -1979,6 +2446,20 @@ function buildBeastMech(side, vis) {
       rib.scale.z = 0.95;   // rotation.x 後局部 z 映到世界 y:對齊外套膜的 y 壓扁
     }
     bx(spine, 1.3 * B, 0.18, 1.6, 0, 1.25 * B, -0.3, dim(plate, 0.9));
+    // 外套膜後坡刀形天線 ×4(Krasukha 桅杆的低剖面化 —— 高桅會被 fitToHeight 縮機體,MUST NOT 立高桅):
+    // 底端埋進膜殼、頂端後掠出坡面;外側對比內側低一階、離背板遠一點(避免頂端縮進板影裡)
+    for (const sx of [-1, 1]) {
+      const k1 = bx(spine, 0.035, 0.42, 0.14, sx * 0.33 * B, 0.95 * B, -1.25, PAL.deep, { metalness: 0.7 });
+      k1.rotation.x = -0.55;
+      const k2 = bx(spine, 0.035, 0.36, 0.12, sx * 0.50 * B, 0.88 * B, -1.35, PAL.deep, { metalness: 0.7 });
+      k2.rotation.x = -0.55;
+    }
+    // 饋線導管 ×2(碟天線 → 胸部的供能管語彙):沿膜殼後坡斜貼(水平管會懸空,傾角跟坡走),
+    // 前端沒入背板下緣、後端指向 dishG 基座
+    for (const sx of [-1, 1]) {
+      const fd = cyl(spine, 0.035, 0.035, 0.9, 6, sx * 0.09, 1.24, -1.1, PAL.deep, { metalness: 0.6 });
+      fd.rotation.x = Math.PI / 2 - 0.45;
+    }
     // 碟形干擾天線:外套膜後坡基座(近平仰角)+ 三支撐桿 + 饋源燈,全件低於背板頂
     const dishG = new THREE.Group();
     dishG.position.set(0, 0.75 * B, -1.7);
@@ -1991,11 +2472,27 @@ function buildBeastMech(side, vis) {
       st.rotation.x = -Math.sin(i * 2.09) * 0.5;
     }
     cyl(dishG, 0.05 * B, 0.05 * B, 0.06, 8, 0, 0.3, 0, accent, { emissive: accent, emissiveIntensity: 1.2 });
+    bx(dishG, 0.30, 0.18, 0.24, 0, -0.10, 0.10, PAL.dark, { metalness: 0.7 });   // 碟背俯仰驅動座(隨碟同傾,碟不再懸浮)
     // 背板頂面內嵌 3×2 相控陣瓦片(貼平不增高,低剖面天線陣)
     for (let ix = -1; ix <= 1; ix++) for (const sz of [-0.55, 0.15])
       bx(spine, 0.32 * B, 0.05, 0.5, ix * 0.4 * B, 1.31 * B, sz - 0.3, dim(accent, 0.6), { emissive: accent, emissiveIntensity: 0.5 });
     bx(chest, 1.6 * B, 1.1 * B, 1.4, 0, 0.3, 0.3, hull, { metalness: 0.55 });
     bx(chest, 1.2 * B, 0.16, 0.4, 0, 0.05, 1.0, accent, { emissive: accent, emissiveIntensity: 0.9 });
+    // 胸前聲波發射盤 ×2(「電波歌姬」的揚聲器識別):正面才讀得到的電戰語彙;振膜為純識別燈
+    for (const sx of [-1, 1]) {
+      const spk = cyl(chest, 0.15 * B, 0.15 * B, 0.05, 12, sx * 0.42 * B, 0.55, 1.02, PAL.deep, { metalness: 0.7 });
+      spk.rotation.x = Math.PI / 2;
+      const mem = cyl(chest, 0.055 * B, 0.055 * B, 0.02, 10, sx * 0.42 * B, 0.55, 1.06, accent, { emissive: accent, emissiveIntensity: 1.0 });
+      mem.rotation.x = Math.PI / 2;
+    }
+    // 持武觸手根部球窩罩 ×4:靜掛胸箱、觸手在罩內轉動(章魚博士式肩球窩)——
+    // MUST NOT 掛 j0(會跟著 tentGuard 擺);位置 = wArm 根群組 a 的四個生根點
+    for (const [sx, sz] of [[-1, 0.55], [1, 0.55], [-1, -0.25], [1, -0.25]]) {
+      const sock = new THREE.Mesh(new THREE.SphereGeometry(0.20 * B, 10, 8), mat(PAL.mid, { metalness: 0.6 }));
+      sock.position.set(sx * 0.85 * B, 0.85 * B, sz);
+      sock.scale.set(1, 0.8, 1);
+      chest.add(sock);
+    }
     neck.position.set(0, 0.35, 0.75);
     chest.add(neck);
     head.position.set(0, 0.15 * B, 0.45);
@@ -2018,6 +2515,11 @@ function buildBeastMech(side, vis) {
       b1.rotation.x = 0.35 - Math.abs(i) * 0.08;
       const b2 = cyl(head, 0.03 * B, 0.05 * B, 0.4, 6, i * 0.18 * B, -0.72 * B, 0.55 * B, 0x23262a);
       b2.rotation.x = 0.6;
+      if (Math.abs(i) <= 1) {   // 中央三根鬚尖生物光(克蘇魯面鬚末梢;純識別燈)——位置 = b2 傾角 0.6 的下端
+        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.028 * B, 6, 5), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
+        tip.position.set(i * 0.18 * B, -1.0, 0.52);
+        head.add(tip);
+      }
     }
     // 四持武觸手(四爪步行已由 mkLeg 提供;此為上部四爪持武)——
     // 與觸手腿同一套五節多關節結構。2026-07-22 使用者指示「觸手朝前、持武器向前射擊」:
@@ -2219,12 +2721,30 @@ function buildBipedBeast(side, vis) {
   if (C === 'gorilla') {
     // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿(蹠行,膝微屈)----
     const mkLeg = (sx) => segLimb(g, [sx * 0.62, hipY, 0], [
-      { len: 1.0, draw: (l) => cyl(l, 0.28, 0.33, 1.0, 10, 0, -0.5, 0.02, hull, { metalness: 0.6 }) },
-      { len: 0.75, base: 0.1, k: 0.5, d: 0.15, draw: (l) => cyl(l, 0.24, 0.28, 0.9, 10, 0, -0.35, -0.02, hullDk) },
-      { len: 0, base: -0.06, k: -0.28, d: 0.5, draw: (l) => bx(l, 0.6, 0.3, 0.95, 0, -0.16, 0.1, 0x23262a) },
+      { len: 1.0, draw: (l) => {
+        cyl(l, 0.28, 0.33, 1.0, 10, 0, -0.5, 0.02, hull, { metalness: 0.6 });
+        // 大腿液壓缸(把上臂液壓破碎缸的拆除機具語彙延伸到承重腿):單端錨大腿節內斜置,
+        // MUST NOT 跨膝關節(兩端各錨會被步態拉伸)
+        cyl(l, 0.05, 0.05, 0.5, 6, 0, -0.3, 0.34, 0x2b3138, { metalness: 0.85 }).rotation.x = -0.18;
+        cyl(l, 0.025, 0.025, 0.4, 6, 0, -0.72, 0.42, 0xd8dde2, { metalness: 0.9 }).rotation.x = -0.18;
+      } },
+      { len: 0.75, base: 0.1, k: 0.5, d: 0.15, draw: (l) => {
+        cyl(l, 0.24, 0.28, 0.9, 10, 0, -0.35, -0.02, hullDk);
+        bx(l, 0.36, 0.55, 0.08, 0, -0.35, 0.28, hullDk, { metalness: 0.6 });       // 挖掘機脛前護板
+        cyl(l, 0.31, 0.31, 0.09, 10, 0, -0.62, -0.02, 0x23262a, { metalness: 0.8 });   // 踝束環(與右前臂束環呼應的關節防塵環)
+      } },
+      { len: 0, base: -0.06, k: -0.28, d: 0.5, draw: (l) => {
+        bx(l, 0.6, 0.3, 0.95, 0, -0.16, 0.1, 0x23262a);
+        bx(l, 0.56, 0.12, 0.2, 0, -0.1, 0.6, hullDk, { metalness: 0.6 });          // 前掌趾甲板(推土鏟前緣,與指節柱觸地語彙對稱)
+      } },
     ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
     bx(hips, 1.3, 0.6, 0.9, 0, 0.1, 0, joint, { metalness: 0.6 });                 // 骨盆
+    // 骨盆裝甲裙(低重心工程機具的胯部防護):寬 0.56 收在雙腿內緣之間,腿前後擺不掃到
+    const skF = bx(hips, 0.56, 0.4, 0.08, 0, -0.28, 0.48, hullDk, { metalness: 0.6 });
+    skF.rotation.x = 0.3;
+    const skB = bx(hips, 0.56, 0.4, 0.08, 0, -0.28, -0.48, dim(hullDk, 0.85), { metalness: 0.6 });
+    skB.rotation.x = -0.3;
     // 胸腹平面接合環:胸腔對轉/前傾時,圓角胸廓底不與骨盆張口(平端覆蓋)
     const gcol = cyl(chest, 0.5, 0.5, 0.55, 14, 0, 0.5, 0.05, dim(hull, 0.85), { metalness: 0.6 });
     gcol.scale.x = 1.5;
@@ -2244,6 +2764,20 @@ function buildBipedBeast(side, vis) {
     for (const s2 of [-1, 1]) for (const sy of [-1, 1])
       cyl(chest, 0.035, 0.035, 0.04, 6, s2 * 0.6, 1.32 + sy * 0.14, 0.77, 0xd8dde2, { metalness: 0.9 })
         .rotation.x = Math.PI / 2;
+    // 焊補丁甲板 ×2(「自己焊的」敘事:不同明度補板 = 戰地修補痕)—— 避開反應爐燈與鉚接橫甲板
+    bx(chest, 0.36, 0.28, 0.05, -0.52, 0.98, 0.74, dim(hull, 0.88), { metalness: 0.6 }).rotation.y = -0.2;
+    const wp2 = bx(chest, 0.3, 0.22, 0.05, 0.55, 0.68, 0.68, dim(hull, 0.8), { metalness: 0.6 });
+    wp2.rotation.x = -0.45;
+    wp2.rotation.y = 0.25;
+    // 側面吊裝扶手(俄式戰車側裙吊耳:步兵搭乘語彙)
+    for (const s2 of [-1, 1])
+      bx(chest, 0.05, 0.06, 0.6, s2 * 1.185, 1.66, -0.2, 0x2b3138, { metalness: 0.8 });
+    // 柴油排氣煙囪 ×2(向後上斜,與散熱柵同區呼應的重工柴油機語彙)
+    for (const s2 of [-1, 1])
+      cyl(chest, 0.09, 0.11, 0.45, 8, s2 * 0.45, 2.0, -0.5, 0x1c2126, { metalness: 0.8 }).rotation.x = -0.4;
+    // 肩球帽甲(鑄造帽緣 = Gundam 式面板分割,打破純球剪影):球心在臂樞軸旁 → 球面旋轉不變,chest 錨不漂移
+    for (const s2 of [-1, 1])
+      cyl(chest, 0.3, 0.52, 0.22, 12, s2 * 1.35, 2.05, 0.1, hullDk, { metalness: 0.6 });
     // 低伏頭(猩猩沒有頸:頭直接沉在肩之間 → neck 只是個短樞軸)
     neck.position.set(0, 1.6, 0.4);
     bx(head, 0.62, 0.5, 0.6, 0, 0.15, 0.15, plate, { metalness: 0.6 });            // 顱
@@ -2251,6 +2785,10 @@ function buildBipedBeast(side, vis) {
     const crest = bx(head, 0.1, 0.14, 0.46, 0, 0.44, 0.02, hullDk, { metalness: 0.6 });   // 矢狀嵴(後傾窄立板 = 大猩猩顱形剪影)
     crest.rotation.x = -0.12;
     bx(head, 0.46, 0.12, 0.06, 0, 0.22, 0.46, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    // 下顎吻甲 + 護柵(大猩猩吻部剪影 + 拳擊護齒):head 被凝視穩定驅動,子件恆隨動無穿模
+    bx(head, 0.5, 0.2, 0.16, 0, -0.04, 0.44, hullDk, { metalness: 0.6 });
+    for (const s2 of [-1, 1])
+      cyl(head, 0.02, 0.02, 0.16, 6, s2 * 0.1, -0.04, 0.53, 0xd8dde2, { metalness: 0.85 });
     // 巨臂:肩球 → 上臂 → 肘(武裝前臂)→ 腕(拳 / 砲口組)。
     // 指節行走(knuckle walk)是「真的」:臂長設計到指節觸地(肩高 3.45 ≈ 上臂 1.55 +
     // 前臂 1.82 + 拳)—— 前肢是承重前腳,擺動/載荷全由 stepBiped 的 knuckle 分支驅動
@@ -2283,6 +2821,7 @@ function buildBipedBeast(side, vis) {
             bx(pot, 0.26, 0.06, 0.2, Math.cos(th) * 0.55, -0.14, Math.sin(th) * 0.55, 0x30373f, { metalness: 0.6 }).rotation.y = -th;
           }
           cyl(pot, 0.78, 0.78, 0.06, 14, 0, -0.12, 0, accent, { emissive: accent, emissiveIntensity: 0.7 });
+          cyl(pot, 0.2, 0.24, 0.08, 10, 0, -0.2, 0, 0x2b3138, { metalness: 0.8 });    // 鍋心凸緣(盾牌 boss:強化「鍋=盾」中心構圖)
         }
       } },
       { len: 0, base: 0.1, k: 0.26, d: 0.62, draw: (a) => {
@@ -2352,6 +2891,8 @@ function buildBipedBeast(side, vis) {
     const mkLeg = (sx) => segLimb(g, [sx * 0.42, hipY, 0], [
       { len: 1.3, draw: (l) => {
         cyl(l, 0.12, 0.14, 1.3, 8, 0, -0.6, 0.1, hull);                            // 圓柱股節
+        // Cassie 股殼(反曲腿機器人的招牌寬扁整流殼):外側縱貼 —— 細管腿撐不起原型
+        bx(l, 0.07, 1.05, 0.4, sx * 0.16, -0.6, 0.1, plate, { metalness: 0.5 }).rotation.z = sx * 0.05;
         // 膝部導彈莢已拆除(2026-07-22 規則 5:無功能裝飾砲管不留)—— 改素面膝護板
         bx(l, 0.24, 0.3, 0.16, 0, -1.2, 0.18, hullDk);                             // 膝護板
       } },
@@ -2381,6 +2922,10 @@ function buildBipedBeast(side, vis) {
       } },
     ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
+    // 髖動力鼓(Cassie 三軸馬達鼓 = 裸髖關節的正解):掛 g 與腿樞軸同框不滑動 ——
+    // 股頂只轉不移,鼓殼恆罩住;hips 有 bob 位移故 MUST NOT 掛 hips
+    for (const s2 of [-1, 1])
+      cyl(g, 0.2, 0.2, 0.12, 10, s2 * 0.5, hipY, 0, hullDk, { metalness: 0.7 }).rotation.z = Math.PI / 2;
     bx(hips, 0.9, 0.45, 0.7, 0, 0.05, 0, joint);
     const bodyM = new THREE.Mesh(new THREE.SphereGeometry(0.85, 12, 9), mat(hull, { metalness: 0.55 }));
     bodyM.scale.set(0.85, 0.75, 1.15);
@@ -2401,6 +2946,10 @@ function buildBipedBeast(side, vis) {
     neck2.position.set(0, 0.9, 0.22);
     neck.add(neck2);
     bx(neck2, 0.18, 0.85, 0.2, 0, 0.25, 0.08, hull);
+    // 頸背纜線導管(長頸感測頭的供電/資料束 = 鳥頸「食道」機械化):分兩節各自節內錨定,
+    // 隨 S 頸各節擺動不拉伸
+    cyl(neck, 0.03, 0.03, 0.85, 6, 0, 0.45, -0.03, 0x23262a, { metalness: 0.7 }).rotation.x = 0.25;
+    cyl(neck2, 0.026, 0.026, 0.75, 6, 0, 0.25, -0.05, 0x23262a, { metalness: 0.7 });
     head.position.set(0, 0.72, 0.14);
     neck2.add(head);                                                                // 頭掛在頸第二節上
     bx(head, 0.34, 0.3, 0.5, 0, 0, 0, plate, { metalness: 0.6 });                  // 小頭
@@ -2410,6 +2959,9 @@ function buildBipedBeast(side, vis) {
     head.add(beak);
     bx(head, 0.28, 0.08, 0.06, 0, 0.08, 0.24, accent, { emissive: accent, emissiveIntensity: 1.6 });
     bx(head, 0.1, 0.3, 0.2, 0, 0.24, -0.18, accent);                               // 頂冠
+    // 頭頂光達感測筒(自駕試驗車 lidar puck:頭部即感測塔;head 有凝視穩定,子件隨動)
+    cyl(head, 0.07, 0.07, 0.06, 8, 0, 0.19, 0.05, 0x1c2126, { metalness: 0.7 });
+    cyl(head, 0.05, 0.05, 0.02, 8, 0, 0.225, 0.05, dim(accent, 0.9), { emissive: accent, emissiveIntensity: 0.5 });
     // 翼 = 臂:肩節(覆羽板 + 翼藏武裝)→ 腕節(初級飛羽),擺動時腕節延遲跟隨 = 半開翼的抖動。
     // 武裝左右對應(2026-07-17 使用者指示):右翼藏飛彈管(重武器:原型脈衝雷射矛,beam)、
     // 左翼藏線圈步槍(輕武器,rail)—— 輕武器「藏在另一邊的翅膀」與重武器鏡像對應,
@@ -2474,6 +3026,18 @@ function buildBipedBeast(side, vis) {
     dish.rotation.z = 0.42;
     dish.rotation.x = -0.3;                                                        // 斜仰朝前上
     cyl(dish, 0.1, 0.1, 0.08, 8, 0, 0.05, 0, accent, { emissive: accent, emissiveIntensity: 0.8 });   // 盤心饋源
+    // 相位陣列升級(素圓盤讀不出「相位陣列」):同心環 + 外緣加強圈 + 背面十字桁架肋 +
+    // 盤緣障礙警示燈(航行燈慣例固定紅,純識別不掛 glows)—— 全掛 dish 子節點,隨傾角恆共面
+    cyl(dish, 0.36, 0.36, 0.02, 16, 0, 0.045, 0, dim(plate, 0.9), { metalness: 0.6 });
+    cyl(dish, 0.5, 0.5, 0.03, 16, 0, -0.01, 0, hullDk, { metalness: 0.6 });
+    for (const ry of [0, Math.PI / 2])
+      bx(dish, 0.08, 0.04, 0.86, 0, -0.045, 0, 0x2b3138, { metalness: 0.7 }).rotation.y = ry;
+    bx(dish, 0.06, 0.04, 0.06, 0.44, 0.03, 0, 0xff5544, { emissive: 0xff3322, emissiveIntensity: 1.6 });
+    // 試車台敘事:背部檢修艙門(天天拆開修,右背與左肩雷達碟對稱配重)+
+    // 右舷飛測標定棋盤格(攝影測量標記:深色格對角排列,白機身自身為亮格)
+    bx(chest, 0.34, 0.05, 0.46, 0.33, 1.06, -0.12, dim(hull, 0.9), { metalness: 0.5 }).rotation.z = -0.4;
+    bx(chest, 0.05, 0.13, 0.13, 0.7, 0.72, 0.28, 0x111418);
+    bx(chest, 0.05, 0.13, 0.13, 0.72, 0.585, 0.145, 0x111418);
     bpWeap = { light: 'N', heavy: 'N' };   // 翼藏皆機載:後座走 _kickB
     bpHvy = { chest: 0.04 };
     bpLGlow = ostrichLW ? [{ mesh: ostrichLW, base: 0.8 }] : null;
@@ -2487,10 +3051,18 @@ function buildBipedBeast(side, vis) {
   } else if (C === 'trex') {
     // ---- 暴龍:水平體軸 + 巨顎藏無後座砲;Z 形趾行腿、小短臂,重尾配重 ----
     const mkLeg = (sx) => segLimb(g, [sx * 0.72, hipY, 0], [
-      { len: 1.1, draw: (l) => cyl(l, 0.29, 0.34, 1.15, 10, 0, -0.5, 0.1, hull, { metalness: 0.6 }) },
+      { len: 1.1, draw: (l) => {
+        cyl(l, 0.29, 0.34, 1.15, 10, 0, -0.5, 0.1, hull, { metalness: 0.6 });
+        // 巨股鼓甲(暴龍全身最大肌群;鑄造圓弧量體同時就是 T-72 鑄造砲塔語彙):
+        // 橢圓鼓包住素股柱,底不及膝
+        const th2 = cyl(l, 0.36, 0.4, 0.95, 10, 0, -0.38, 0.1, hull, { metalness: 0.6 });
+        th2.scale.z = 1.45;
+        th2.rotation.x = -0.12;
+      } },
       { len: 0.95, base: 0.4, k: 0.6, d: 0.15, draw: (l) => cyl(l, 0.2, 0.24, 1.0, 9, 0, -0.42, -0.1, hullDk) },
       { len: 0, base: -0.42, k: -0.5, d: 0.45, draw: (l) => {
         bx(l, 0.55, 0.28, 1.0, 0, -0.3, 0.2, 0x23262a);                            // 三趾足
+        bx(l, 0.42, 0.2, 0.12, 0, -0.02, 0.32, PAL.mid, { metalness: 0.6 }).rotation.x = 0.4;   // 踝前斜甲(趾行腿防塵,蓋掉素足接縫)
         for (let i = -1; i <= 1; i++) {
           const claw = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 5), mat(0xd8dde2, { metalness: 0.7 }));
           claw.rotation.x = Math.PI / 2;
@@ -2518,6 +3090,19 @@ function buildBipedBeast(side, vis) {
     for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++)
       bx(chest, 0.07, 0.2, 0.28, s2 * 0.66, 0.42, 1.05 - i * 0.34, PAL.mid, { metalness: 0.6 })
         .rotation.y = s2 * 0.12;
+    // 前胸備用履帶排(T-72 前裝甲掛履帶板 = 獸的護胸甲):貼胸膠囊下前緣,隨弧外傾
+    for (let i = 0; i < 3; i++)
+      bx(chest, 0.22, 0.1, 0.3, (i - 1) * 0.26, 0.1, 1.5, 0x23262a, { metalness: 0.7 }).rotation.x = 0.35;
+    // 指揮塔 IR 探照燈(T-72 Luna:指揮塔「原樣搬上去」就該連燈一起搬;純識別不掛 glows)
+    bx(chest, 0.08, 0.04, 0.04, 0.75, 1.16, 0.78, 0x2b3138, { metalness: 0.8 });
+    bx(chest, 0.15, 0.15, 0.12, 0.86, 1.16, 0.78, PAL.dark, { metalness: 0.7 });
+    cyl(chest, 0.055, 0.055, 0.02, 8, 0.86, 1.16, 0.85, dim(accent, 0.9), { emissive: accent, emissiveIntensity: 0.5 })
+      .rotation.x = Math.PI / 2;
+    // 潛渡通氣管收納(OPVT 平時捆在砲塔後:收納姿態沿右舷肩線,不增高)+ 管口環
+    cyl(chest, 0.05, 0.05, 1.1, 6, 0.66, 0.62, 1.0, dim(PAL.mid, 0.9), { metalness: 0.6 }).rotation.x = Math.PI / 2;
+    cyl(chest, 0.06, 0.06, 0.05, 6, 0.66, 0.62, 1.52, 0x111418, { metalness: 0.8 }).rotation.x = Math.PI / 2;
+    // 左舷排氣百葉(T-72 排氣口在左側翼板 —— 位置忠實,一塊深色百葉即成)
+    bx(chest, 0.06, 0.18, 0.46, -0.66, 0.62, 0.75, 0x1a1d20, { metalness: 0.7 }).rotation.y = -0.12;
     // 胸腹平面接合環:胸段對轉時圓角端不與骨盆張口
     const tcol = cyl(chest, 0.48, 0.48, 0.55, 12, 0, 0.42, 0.35, dim(hull, 0.82), { metalness: 0.6 });
     tcol.rotation.x = Math.PI / 2;
@@ -2554,8 +3139,18 @@ function buildBipedBeast(side, vis) {
     }
     const jaw = bx(head, 0.5, 0.2, 0.95, 0, -0.52, 0.62, 0x23262a);
     jaw.rotation.x = 0.42;                                                         // 下顎張開
+    for (let i = 0; i < 3; i++) {                                                  // 下齒列(掛 jaw 子節點隨張顎角度:上下齒相對才有咬合壓迫感)
+      const dt = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.13, 4), mat(0xe8ecef));
+      dt.position.set((i - 1) * 0.13, 0.11, 0.32);
+      jaw.add(dt);
+    }
     const gunT = cyl(head, 0.09, 0.11, 1.6, 8, 0, -0.12, 1.2, 0x111418, { metalness: 0.85 });
     gunT.rotation.x = Math.PI / 2;                                                 // 口腔無後座砲(重武器:無後座砲,launcher)
+    // 砲管熱護套(T-72 分段護套 + 中間束帶 = 坦克砲第一特徵;包覆既有真砲管,不動槍口):
+    // 掛 gunT 子節點 —— 隨 heavyRig.pivot 俯仰、FPV 武裝同源同步;cyl 軸沿 gunT 局部 y = 砲軸免旋轉
+    cyl(gunT, 0.135, 0.135, 0.5, 8, 0, 0.15, 0, PAL.mid, { metalness: 0.6 });
+    cyl(gunT, 0.135, 0.135, 0.5, 8, 0, -0.35, 0, PAL.mid, { metalness: 0.6 });
+    cyl(gunT, 0.15, 0.15, 0.05, 8, 0, -0.08, 0, 0x111418, { metalness: 0.8 });
     const muzT = cyl(head, 0.13, 0.13, 0.07, 8, 0, -0.12, 2.0, accent, { emissive: accent, emissiveIntensity: 1.3 });
     muzT.rotation.x = Math.PI / 2;
     // 文氏尾噴(無後座砲識別特徵):頭後方喇叭開口 —— 後噴抵銷後座力
@@ -2578,6 +3173,9 @@ function buildBipedBeast(side, vis) {
     bpWpnH = { nodes: [gunT, muzT, vent], ref: head, muz: muzT, fwd: 'z' };
     bx(head, 0.3, 0.14, 0.2, 0, -0.3, 0.5, accent, { emissive: accent, emissiveIntensity: 1.0 });   // 喉部充能
     bx(head, 0.6, 0.1, 0.08, 0, 0.34, 0.78, accent, { emissive: accent, emissiveIntensity: 1.6 });  // 眼列
+    bx(head, 0.7, 0.12, 0.16, 0, 0.44, 0.72, hullDk, { metalness: 0.6 }).rotation.x = 0.15;   // 鑄造眉拱(眶上脊 = 鑄造裝甲的觀瞄簷)
+    for (const s2 of [-1, 1])                                                      // 鼻孔排氣(暴龍鼻孔 = 引擎進排氣口,生物機械雙關)
+      cyl(head, 0.035, 0.035, 0.07, 6, s2 * 0.13, 0.14, 1.05, 0x1c2126, { metalness: 0.7 });
     // 小短臂:上臂 → 肘(前臂)→ 腕(二爪),永遠深屈在胸前(暴龍的招牌姿勢);
     // 腕的擺幅刻意極小 —— 短臂在奔跑時只是抓握狀微顫,不甩動
     const mkArm = (sx) => segLimb(chest, [sx * 0.62, 0.35, 1.55], [
@@ -2654,6 +3252,14 @@ function buildBipedBeast(side, vis) {
         const haunch = cyl(l, 0.26, 0.3, 1.0, 10, 0, -0.4, 0.05, hull, { metalness: 0.6 });
         haunch.rotation.x = -0.2;                                                  // 蓄力的粗股(橢圓柱)
         haunch.scale.z = 1.7;
+        // 大腿減重沖壓肋(輕量化外骨骼:同色系暗版分色在 cel 上讀成「開了孔的殼」,
+        // 不加真孔不加 poly)—— 兩條傾角相對 = 沖壓 V 形
+        bx(l, 0.05, 0.72, 0.14, sx * 0.29, -0.42, 0.28, dim(hull, 0.88)).rotation.x = -0.35;
+        bx(l, 0.05, 0.6, 0.14, sx * 0.29, -0.45, -0.12, dim(hull, 0.8)).rotation.x = 0.3;
+        // 髖後氣壓避震(彈跳機器人的落地緩衝行程,與脛後儲能簧串成完整儲能敘事):
+        // 單端錨大腿節內斜置,MUST NOT 跨髖/膝關節
+        cyl(l, 0.045, 0.045, 0.55, 6, sx * 0.12, -0.3, -0.42, 0x2b3138, { metalness: 0.85 }).rotation.x = 0.3;
+        cyl(l, 0.022, 0.022, 0.35, 6, sx * 0.12, -0.68, -0.55, 0xd8dde2, { metalness: 0.9 }).rotation.x = 0.3;
       } },
       { len: 0.8, base: 0.6, k: 0.72, d: 0.14, draw: (l) => {
         cyl(l, 0.11, 0.13, 0.95, 8, 0, -0.4, -0.1, hullDk);                        // 細脛圓柱
@@ -2669,6 +3275,7 @@ function buildBipedBeast(side, vis) {
         hb.rotation.x = 0.55;
         cyl(l, 0.04, 0.04, 0.05, 6, 0, -0.02, -0.24, 0x23262a, { metalness: 0.8 });
         bx(l, 0.32, 0.1, 0.3, 0, -0.06, 0.9, dim(accent, 0.8));                    // 足尖識別
+        bx(l, 0.03, 0.14, 0.85, sx * 0.18, -0.05, 0.35, dim(hull, 0.9));           // 長蹠外側刃板(刀鋒義肢 C 形板暗示,底緣高於觸地面)
       } },
     ], cl(sx));
     legL = mkLeg(-1); legR = mkLeg(1);
@@ -2684,6 +3291,19 @@ function buildBipedBeast(side, vis) {
     rcol.scale.x = 1.2;
     bx(chest, 0.6, 0.5, 0.16, 0, 0.55, 0.55, hullDk);                              // 育袋艙蓋
     bx(chest, 0.34, 0.12, 0.06, 0, 0.6, 0.66, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    // 分節腹甲(拳擊手的分節腹肌 = 可屈曲腹甲):沿膠囊弧逐片外傾,把素膠囊切出橫向面板線
+    bx(chest, 0.56, 0.1, 0.07, 0, 0.26, 0.52, dim(hull, 0.9)).rotation.x = 0.2;
+    bx(chest, 0.5, 0.1, 0.07, 0, 0.12, 0.48, dim(hull, 0.82)).rotation.x = 0.3;
+    // 育袋艙蓋快拆鎖扣 ×2(彈藥/工具艙:輕量機體一切可拆的機能主義)
+    for (const s2 of [-1, 1])
+      bx(chest, 0.08, 0.06, 0.05, s2 * 0.18, 0.34, 0.62, 0x23262a, { metalness: 0.7 });
+    // 拳擊聳肩護墊(收下顎聳肩的肩線):蓋住裸肩樞軸,強化格鬥剪影 —— 臂樞軸近旁不滑移
+    for (const s2 of [-1, 1]) {
+      const pad2 = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), mat(hullDk, { metalness: 0.6 }));
+      pad2.scale.set(1.15, 0.75, 1.15);
+      pad2.position.set(s2 * 0.63, 1.3, 0.3);
+      chest.add(pad2);
+    }
     neck.position.set(0, 1.35, 0.35);                                              // 短頸
     // 頸基護頸環:拳擊手護頸(吸收直拳反作用),平端環蓋住圓角胸頂與頭之間的裸接縫
     cyl(chest, 0.2, 0.23, 0.13, 10, 0, 1.28, 0.3, hullDk, { metalness: 0.6 });
@@ -2692,9 +3312,11 @@ function buildBipedBeast(side, vis) {
     for (let i = 0; i < 3; i++)                                                    // 拳擊護顎柵(三根細柱護住吻部下緣)
       cyl(head, 0.018, 0.018, 0.16, 6, (i - 1) * 0.08, 0.07, 0.4, 0xd8dde2, { metalness: 0.85 });
     bx(head, 0.32, 0.09, 0.06, 0, 0.35, 0.31, accent, { emissive: accent, emissiveIntensity: 1.6 });
+    bx(head, 0.44, 0.1, 0.1, 0, 0.47, 0.28, hullDk, { metalness: 0.6 });           // 拳擊頭盔眉拱(與護顎柵上下呼應成整套護具)
     for (const sx of [-1, 1]) {                                                    // 長耳
       const ear = bx(head, 0.1, 0.55, 0.16, sx * 0.16, 0.7, -0.03, hull);
       ear.rotation.z = sx * -0.15;
+      bx(ear, 0.06, 0.38, 0.03, 0, 0.04, 0.085, dim(accent, 0.45));                // 內耳廓分色(耳兼收訊天線的暗示:內襯=天線面)
     }
     // 拳擊架式:肘恆深屈把拳砲收在胸前,擺動時只小幅開合(不甩大臂);
     // 腕節 = 拳砲本體 —— 前臂是平舉的(幾何沿 +z),樞軸因此要用 piv 落在前臂末端而非 −y
@@ -2762,6 +3384,9 @@ function buildBipedBeast(side, vis) {
     mkTail(hips, [0, -0.1, -0.3], [[0], [0, -0.65, -1.15], [0, -0.6, -0.75]]);
     const t1 = cyl(tailSegs[0], 0.27, 0.22, 1.5, 10, 0, 0, -0.7, hull);
     t1.rotation.x = Math.PI / 2 - 0.35;
+    // 尾根氣簧(「第三條腿」著地尾的緩衝機構):與尾軸同傾沿上緣斜貼,掛尾根節 = 隨甩尾不拉伸
+    cyl(tailSegs[0], 0.03, 0.03, 0.6, 6, 0, 0.39, -0.47, 0x2b3138, { metalness: 0.85 }).rotation.x = Math.PI / 2 - 0.35;
+    cyl(tailSegs[0], 0.015, 0.015, 0.4, 6, 0, 0.22, -0.94, 0xd8dde2, { metalness: 0.9 }).rotation.x = Math.PI / 2 - 0.35;
     cyl(tailSegs[1], 0.23, 0.23, 0.1, 10, 0, 0, -0.06, 0x30373f, { metalness: 0.8 }).rotation.x = Math.PI / 2 - 0.55;
     const t2 = cyl(tailSegs[1], 0.2, 0.16, 1.4, 9, 0, 0, -0.7, hullDk);
     t2.rotation.x = Math.PI / 2 - 0.55;
@@ -2924,6 +3549,21 @@ function buildMorphMech(side, vis) {
     for (const sx of [-1, 1]) {
       const ss = bx(torso, 0.09, 0.35, 0.95, sx * 0.78 * B, -0.22, 0, PAL.deep, { metalness: 0.4 });
       ss.rotation.z = sx * 0.16;                                                        // 側板(貼膠囊側腹垂下)
+      // 充氣滾邊:氣墊裙下緣的充氣圓管 —— 一條滾邊立刻讀出 hovercraft
+      rbz(torso, 0.08, 0.08, 1.0, sx * 0.8 * B, -0.42, 0, PAL.deep, { metalness: 0.4 });
+      for (const oz of [-0.28, 0.28]) {
+        const rib = bx(torso, 0.03, 0.32, 0.07, sx * 0.82 * B, -0.24, oz, PAL.dark, { metalness: 0.4 });
+        rib.rotation.z = sx * 0.16;                                                     // 裙圍分節肋(氣墊裙是分節縫製的)
+      }
+    }
+    // 艉部推進導風扇(靜態槳板,比照 jet 翼下 ALQ-99 前例 —— MUST NOT 進 rotors):
+    // 氣墊艇的第一識別;地面藏在象臀後下方、飛行放平後恰好朝後 = 推進器
+    cyl(torso, 0.34 * B, 0.34 * B, 0.12, 12, 0, -0.55, -0.5, PAL.deep, { metalness: 0.6 });   // 外框環
+    cyl(torso, 0.29 * B, 0.29 * B, 0.05, 12, 0, -0.56, -0.5, 0x1c2126, { metalness: 0.7 });   // 內凹盤
+    cyl(torso, 0.06, 0.06, 0.1, 8, 0, -0.52, -0.5, 0x23262a);                                 // 轂
+    for (const ry of [0, 1.05]) {
+      const bl = bx(torso, 0.52, 0.045, 0.07, 0, -0.54, -0.5, 0x2a2e33, { metalness: 0.7 });
+      bl.rotation.y = ry;                                                                     // 靜態槳板(交叉成輻條感)
     }
   }
   bx(torso, 1.45 * B, 1.0, 0.95, 0, 0.82, 0.03, hull, { metalness: 0.6 });             // 胸艙
@@ -2935,6 +3575,12 @@ function buildMorphMech(side, vis) {
     for (const sx of [-1, 1]) {
       const cv = bx(torso, 0.3 * B, 0.09, 0.06, sx * 0.17 * B, 1.3, 0.5, dim(hull, 0.7));
       cv.rotation.z = sx * -0.5;
+    }
+    // 禮服雙排釦:吸血鬼貴族 = 雙排釦大衣的正面識別(釦面朝前;
+    // 高度全數收在腰部排氣口與胸前識別燈之間,不與兩者打架)
+    for (const sx of [-1, 1]) for (const by of [0.48, 0.62, 0.76]) {
+      const btn = cyl(torso, 0.03, 0.03, 0.04, 6, sx * 0.14 * B, by, 0.51, dim(accent, 0.9), { metalness: 0.7 });
+      btn.rotation.x = Math.PI / 2;
     }
   }
   bx(torso, 0.62 * B, 0.4, 0.24, 0, 1.3, 0.36, dim(hull, 0.85));                       // 領口/艙蓋
@@ -2968,6 +3614,19 @@ function buildMorphMech(side, vis) {
     bod.scale.set(1.22, 1, 0.85);   // 完整罩住方正胸艙(寬 1.46B、深 1.02)—— 圓臀融進尾根
     bod.position.set(0, 0.62, 0);
     torso.add(bod);
+    // 機身 chine 稜線:F-117/YF-23 的匿蹤第一特徵 —— 把頭部剪面語言接回素膠囊機身;
+    // 半沉入膠囊 = 生根,匿蹤原則不發光。m08(camo 同語系)位置壓低 = 貓科低伏
+    if (G === 'raptor') for (const sx of [-1, 1]) {
+      const ch = bx(torso, 0.05, 0.4, 1.15, sx * 0.74 * B, 0.62, 0, dim(hull, 0.85), { metalness: 0.55 });
+      ch.rotation.z = sx * 0.6;
+    }
+    if (G === 'panther') for (const sx of [-1, 1]) {
+      const ch = bx(torso, 0.05, 0.4, 1.1, sx * 0.66 * B, 0.5, -0.05, dim(hull, 0.85), { metalness: 0.5 });
+      ch.rotation.z = sx * 0.65;
+      // 肩胛甲板(Horizon 獸機語彙):素膠囊出現「肌群分版」;靜掛 torso,前肢在其下方擺動
+      const sc = bx(torso, 0.05, 0.4, 0.55, sx * 0.68 * B, 0.95, 0.25, dim(hull, 0.9), { metalness: 0.5 });
+      sc.rotation.z = sx * 0.3;
+    }
   }
   // 圓角鯨腹(利維坦/巨象):單一膠囊罩住方正胸艙 —— 飛鯨沒有直角;
   // 辨識交由背脊識別條承擔(在膠囊背面之外仍外露),背砲砲架沒入膠囊面內 = 生根不斷
@@ -3012,6 +3671,9 @@ function buildMorphMech(side, vis) {
       tusk.position.set(sx * 0.26 * B, -0.3, 0.5);
       tusk.rotation.x = 1.35;
       head.add(tusk);
+      // 象牙加固環:與牙同軸箍在牙根 —— 機械象牙是「鎖上去的工件」,金屬箍交代安裝方式
+      const tring = cyl(head, 0.085, 0.085, 0.06, 8, sx * 0.26 * B, -0.36, 0.2, PAL.deep, { metalness: 0.7 });
+      tring.rotation.x = 1.35;
     }
     trunk = new THREE.Group();
     trunk.position.set(0, -0.12, 0.34);
@@ -3056,6 +3718,11 @@ function buildMorphMech(side, vis) {
     nk.rotation.x = -0.22;                                                              // 頸筒(圓柱,根粗梢細)
     const nr = cyl(head, 0.17 * B, 0.17 * B, 0.08, 10, 0, -0.64, -0.16, 0x23262a, { metalness: 0.7 });
     nr.rotation.x = -0.22;                                                              // 頸根關節環(貼肩)
+    // 頜下 EO 感測窗(F-35 EOTS 語彙):匿蹤偵獵機「安靜地看」的視覺錨,吻尖正下方(不發光)
+    bx(head, 0.08 * B, 0.04, 0.1, 0, -0.16, 0.6, 0x0e1114, { metalness: 0.3 });
+    // 頸側短羽:頭→肩的羽毛過渡,補頸筒的裸露接縫(隨 head 補償運動,片短不掃肩)
+    for (const sx of [-1, 1])
+      feather(head, 0.26, 0.07, sx * 0.1 * B, -0.32, -0.2, 1.4, sx, dim(plate, 0.7), { metalness: 0.3 });
   } else if (F === 'beetle') {
     // 犀金龜:小顱 + Y 形犀角(地面衝角 / 飛行破風桅)
     bx(head, 0.36 * B, 0.3, 0.36, 0, 0.02, 0.04, plate, { metalness: 0.6 });            // 顱殼
@@ -3064,6 +3731,13 @@ function buildMorphMech(side, vis) {
     horn.position.set(0, 0.44, 0.32);
     horn.rotation.x = 0.9;
     head.add(horn);
+    // 犀角基座裝甲:角根加粗一圈,剪影從「天線」變「衝角」;也交代角是鎖上去的工件
+    const hbase = cyl(head, 0.12 * B, 0.15 * B, 0.18, 8, 0, 0.3, 0.17, PAL.deep, { metalness: 0.6 });
+    hbase.rotation.x = 0.9;
+    // 雙 35 搖架側板:快砲要有俯仰搖架 —— 側板把「槍浮在頭上」變「砲裝在座圈上」;
+    // 掛 head 本體(非 wpn 節點 ⇒ FPV 不複製:它是機體側機構不是武器),與槍管留淨距
+    for (const sx of [-1, 1])
+      bx(head, 0.04, 0.16, 0.44, sx * 0.27 * B, 0.12, 0.18, PAL.deep, { metalness: 0.7 });
     bx(head, 0.36 * B, 0.06, 0.16, 0, 0.84, 0.62, 0x2a2e33, { metalness: 0.7 });        // 角端分叉
     bx(head, 0.06, 0.32, 0.16, 0, 0.84, 0.62, 0x2a2e33, { metalness: 0.7 });            // 角端豎刃(與橫刃交叉成十字分叉)
     const hs = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), mat(accent, { emissive: accent, emissiveIntensity: 1.0 }));
@@ -3081,6 +3755,8 @@ function buildMorphMech(side, vis) {
     bx(head, 0.26 * B, 0.16, 0.2, 0, -0.06, 0.28, hullDk);                              // 圓吻
     const disc = cyl(head, 0.3 * B, 0.3 * B, 0.05, 12, 0, 0.08, 0.16, dim(plate, 0.75));
     disc.rotation.x = Math.PI / 2;                                                       // 面盤(貼臉淺盤)
+    const ruff = cyl(head, 0.33 * B, 0.33 * B, 0.03, 14, 0, 0.08, 0.13, dim(plate, 0.62));
+    ruff.rotation.x = Math.PI / 2;                                                       // 面盤羽緣(ruff):外圈深色一環把「梟臉」對比拉滿
     for (const sx of [-1, 1]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.6 }));
       eye.position.set(sx * 0.14 * B, 0.12, 0.24);
@@ -3095,6 +3771,12 @@ function buildMorphMech(side, vis) {
     const nk = cyl(head, 0.15 * B, 0.21 * B, 0.86, 10, 0, -0.44, -0.16, hullDk, { metalness: 0.55 });
     nk.rotation.x = -0.3;
     cyl(head, 0.22 * B, 0.22 * B, 0.09, 10, 0, -0.85, -0.34, 0x23262a, { metalness: 0.7 }).rotation.x = -0.3;  // 頸根關節環
+    // 頸背疊瓦鱗甲:梟的頸羽↔豹的頸背肌 —— 疊瓦板蓋住頸筒與頭殼的接縫(匿蹤不發光)
+    for (let i = 0; i < 3; i++) {
+      const scale = bx(head, (0.3 - i * 0.03) * B, 0.16, 0.05, 0, -0.25 - i * 0.2, -0.1 - i * 0.06,
+        dim(plate, i === 1 ? 0.7 : 0.9));
+      scale.rotation.x = -0.3;                                                           // 貼頸背斜度
+    }
   } else {
     bx(head, 0.56 * B, 0.4, 0.52, 0, 0.06, 0, hullDk);                                  // 機甲頭
     bx(head, 0.42 * B, 0.11, 0.08, 0, 0.1, 0.29, accent, { emissive: accent, emissiveIntensity: 1.5 });  // 面罩感測條
@@ -3105,6 +3787,13 @@ function buildMorphMech(side, vis) {
       bx(head, 0.24 * B, 0.2, 0.44, 0, -0.04, 0.5, hull, { metalness: 0.5 });            // 狼吻
       bx(head, 0.14 * B, 0.1, 0.1, 0, 0.0, 0.74, 0x23262a);                              // 鼻端
       bx(head, 0.2 * B, 0.04, 0.3, 0, -0.14, 0.52, 0xd8d4c8, { metalness: 0.6 });        // 上齒列
+      bx(head, 0.18 * B, 0.04, 0.26, 0, -0.19, 0.5, 0xd8d4c8, { metalness: 0.6 });       // 下齒列(上下錯開 0.05 = 咬合縫,張嘴獠牙的錯覺)
+      // 眉稜甲:狼人臉的兇相由眉稜決定 —— 面罩條是「機器人臉」,怒眉才是「狼臉」
+      for (const sx of [-1, 1]) {
+        const brow = bx(head, 0.18 * B, 0.05, 0.14, sx * 0.14 * B, 0.2, 0.26, plate, { metalness: 0.6 });
+        brow.rotation.x = -0.2;
+        brow.rotation.z = sx * -0.15;                                                    // 內高外低
+      }
       for (const sx of [-1, 1]) {
         const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 5), mat(plate, { metalness: 0.5 }));
         ear.position.set(sx * 0.2 * B, 0.3, -0.06);
@@ -3120,6 +3809,9 @@ function buildMorphMech(side, vis) {
         const sb = bx(head, 0.06, 0.3, 0.3, sx * 0.29 * B, 0.05, -0.1, plate, { metalness: 0.6 });
         sb.rotation.x = -0.35;
       }
+      // 單片眼鏡:圈住右眼段的環面 = 吸血鬼伯爵臉部的一筆剪影(純識別燈,不進 glows)
+      const mono = cyl(head, 0.1, 0.1, 0.035, 10, 0.14 * B, 0.1, 0.31, accent, { emissive: accent, emissiveIntensity: 0.4 });
+      mono.rotation.x = Math.PI / 2;
     }
   }
 
@@ -3400,13 +4092,32 @@ function buildMorphMech(side, vis) {
     abd.scale.set(1, 1, 0.75);
     abd.position.set(0, 0.6, -0.04);
     torso.add(abd);                                                                       // 圓角腹部(蓋住方正胸艙)
-    // Skyguard 射控雷達(前胸背板中線,鞘翅根之前):區域防空陣地必有的「眼」
-    cyl(torso, 0.14 * B, 0.18 * B, 0.12, 10, 0, 1.3, -0.02, PAL.dark, { metalness: 0.7 });   // 雷達座
-    const dish = cyl(torso, 0.18 * B, 0.18 * B, 0.04, 12, 0, 1.42, 0.06, plate, { metalness: 0.6 });
+    // Skyguard 射控雷達(前胸背板中線,鞘翅根之前):區域防空陣地必有的「眼」。
+    // 2026-07-22 放大 28% 並整組移到腹殼圓頂「上」表面(局部 −z = 世界上)——
+    // 原座標整組埋在腹殼膠囊裡看不見,撐不起「防空陣地」
+    const rmast = cyl(torso, 0.15 * B, 0.2 * B, 0.2, 10, 0, 1.38, -0.42, PAL.dark, { metalness: 0.7 });
+    rmast.rotation.x = -1.25;                                                             // 雷達座(≈ 世界豎直,根部生根圓頂)
+    const dish = cyl(torso, 0.23 * B, 0.23 * B, 0.04, 12, 0, 1.47, -0.6, plate, { metalness: 0.6 });
     dish.rotation.x = -0.5;                                                               // 淺盤(經 θg 放平後盤面世界朝前上)
     const dc = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 5), mat(accent, { emissive: accent, emissiveIntensity: 1.2 }));
-    dc.position.set(0, 1.45, 0.11);
+    dc.position.set(0, 1.52, -0.63);
     torso.add(dc);                                                                        // 盤心饋源點
+    // IFF 敵我識別天線列:雷達旁的天線排是真實 Skyguard 陣地配置
+    // (短桿,MUST NOT 加長撐 bbox;根部沉入殼面、梢端低於背脊識別條)
+    for (let k = 0; k < 3; k++) {
+      const iff = cyl(torso, 0.012, 0.012, 0.24, 4, -(0.24 + k * 0.06) * B, 1.36 - k * 0.06, -0.42, PAL.deep, { metalness: 0.7 });
+      iff.rotation.x = -1.25;                                                             // ≈ 世界豎直
+    }
+    // 鞘翅小盾片(scutellum):鞘翅基部的三角小盾是甲蟲背面解剖的必備件;
+    // 固定件不隨 ely 動 = 正確(真蟲小盾片不動);貼圓頂上表面微凸出
+    const scu = bx(torso, 0.16 * B, 0.14, 0.05, 0, 1.35, -0.575, PAL.deep, { metalness: 0.5 });
+    scu.rotation.z = Math.PI / 4;
+    // 彈艙門板:雙 35 的供彈在頸背 —— 艙門分割線交代彈鏈從哪來
+    // (移到頭後前圓頂兩翼:背側被鞘翅整片蓋住,只有這裡露得出艙門)
+    for (const sx of [-1, 1]) {
+      const door = bx(torso, 0.16 * B, 0.34, 0.025, sx * 0.22 * B, 1.5, -0.48, dim(hull, 0.8), { metalness: 0.5 });
+      door.rotation.y = sx * 0.35;                                                        // 貼圓頂弧面外傾
+    }
     for (const sgn of [-1, 1]) {
       const ely = new THREE.Group();
       ely.position.set(sgn * 0.1 * B, 1.3, -0.52);
@@ -3418,6 +4129,9 @@ function buildMorphMech(side, vis) {
       ely.add(sh);                                                                        // 圓角盾狀鞘翅
       for (let k = 0; k < 3; k++)                                                         // 鞘翅縱溝(甲蟲翅鞘的縱向刻紋,隨鞘翅開闔)
         bx(ely, 0.03, 1.05, 0.02, sgn * (0.14 + k * 0.11) * B, -0.66, 0.1, dim(plate, 0.78), { metalness: 0.6 });
+      // 鞘翅中縫條:閉合時左右兩條沿背中線脊夾出鞘翅縫(elytral suture)= 甲蟲識別第一線條;
+      // 掛 ely 隨 P poser 開閉。騎在鞘翅「上」面內緣(ely 局部 −z = 世界上;+z 是腹側看不見)
+      bx(ely, 0.03, 1.05, 0.035, sgn * 0.12, -0.66, -0.11, PAL.deep, { metalness: 0.5 });
       bx(ely, 0.5 * B, 0.12, 0.14, sgn * 0.28 * B, -1.34, 0.01, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 甲緣識別
     }
   }
@@ -3451,8 +4165,10 @@ function buildMorphMech(side, vis) {
     // 升力 = 機首桅旋翼(Y 字前端)+ 雙腿末端旋翼(mkLeg 的 heli 分支,Y 字兩後臂)。
     // 地面型態:機首桅向後折收貼背(槳葉收攏),與腿旋翼一起「收起」;
     // 飛行型態:軀幹放平(cruise)、桅反轉指天(−cruise)→ 槳盤水平、恰在機首前上方
-    mkRotor(torso, [0, 1.75, -0.45], [-1.2, 0, 0], [-cruise, 0, 0],
+    const mastRoot = mkRotor(torso, [0, 1.75, -0.45], [-1.2, 0, 0], [-cruise, 0, 0],
       3, 1.0 * (0.9 + 0.1 * B), 1, 0.5);
+    // 桅頂防撞燈(航空慣例白;純識別燈不進 glows/rotors,低於槳轂底不被槳葉掃到)
+    bx(mastRoot, 0.05, 0.05, 0.05, 0, 0.22, 0.1, 0xf5f2e8, { emissive: 0xf5f2e8, emissiveIntensity: 1.0 });
   }
 
   // ---- 腿:地面站立(獸型屈膝蹲伏)→ 飛行後收併攏 = 尾部發動機艙(Sheet 01)----
@@ -3486,6 +4202,30 @@ function buildMorphMech(side, vis) {
       beast ? 0.55 : 0.4, beast ? 0.92 : 0.85);
     if (CYLG) cyl(shin, 0.1 * B * CYLG, 0.13 * B * CYLG, 0.8, 8, 0, -0.4, -0.02, hullDk);  // 圓柱脛節
     else bx(shin, 0.3 * B, 0.8, 0.42, 0, -0.4, -0.02, hullDk);                          // 小腿
+    // —— 家族專屬腿部機能件(掛股/脛節點隨步態動;皆非 wpn 節點)——
+    if (G === 'elephant') {
+      // 後腿膝液壓缸(AT-AT 式柱腿的重機液壓;單端錨 + 斜置 —— 膝每幀屈伸,雙錨會被拉伸):
+      // 缸體錨股節、亮色桿芯錨脛節,屈膝時缸/芯自然錯動;膝縫再套防塵罩環
+      const hyd = cyl(leg, 0.05, 0.05, 0.55, 6, 0, -0.5, -0.34, 0x30373f, { metalness: 0.85 });
+      hyd.rotation.x = 0.3;
+      const rod = cyl(shin, 0.03, 0.03, 0.35, 6, 0, -0.12, -0.3, 0xd8d4c8, { metalness: 0.9 });
+      rod.rotation.x = 0.28;
+      cyl(shin, 0.19 * B, 0.21 * B, 0.18, 10, 0, 0.03, 0, PAL.deep, { metalness: 0.35 });   // 膝防塵罩環
+    } else if (G === 'raptor') {
+      // 脛節鱗甲板:馳龍跗蹠的角質鱗片 = 疊瓦裝甲(Horizon 獸機腿甲語彙),隨膝屈伸
+      const s1 = bx(shin, 0.16 * B, 0.3, 0.05, 0, -0.25, 0.2, dim(hullDk, 0.9), { metalness: 0.5 });
+      s1.rotation.x = -0.08;
+      const s2 = bx(shin, 0.14 * B, 0.26, 0.05, 0, -0.55, 0.18, dim(hullDk, 0.75), { metalness: 0.5 });
+      s2.rotation.x = -0.08;
+    } else if (G === 'wolf') {
+      // 跟腱桿:趾行「跟骨懸空」全靠跟腱 —— 亮色桿芯把後距突的力學交代完整
+      // (單端錨 shin;踝每幀 ±0.4 屈伸,雙錨會被拉伸,下端懸空近踝即可)
+      const ten = cyl(shin, 0.028, 0.028, 0.5, 6, 0, -0.55, -0.3, 0xd8d4c8, { metalness: 0.9 });
+      ten.rotation.x = -0.12;
+    } else if (G === 'panther') {
+      // 髖部甲板:豹後腿發力肌群的甲板化(掛股節隨步態擺動不穿模;匿蹤不發光)
+      bx(leg, 0.05, 0.55, 0.45, sx * 0.2 * B, -0.35, 0.08, dim(hull, 0.8), { metalness: 0.5 });
+    }
     // 踝(跗節)分節 —— 全型態一律有,不再把腳掌焊死在小腿上:
     // 人形趾行(狼人/猿猴)踝深屈踩趾、吸血鬼/負重型踩平;四足獸的跗節角走 QUAD[9]
     // (象柱腿近乎打直、迅猛龍/夜豹深折 = 趾行掠食者)。飛行一律腳尖繃直收進機艙。
@@ -3537,6 +4277,7 @@ function buildMorphMech(side, vis) {
         dew.position.set(0, 0.12, -0.2);
         dew.rotation.x = -2.6;
         ankle.add(dew);
+        cyl(ankle, 0.1 * B, 0.11 * B, 0.1, 8, 0, 0.06, 0, 0x23262a, { metalness: 0.4 });  // 踝防塵罩(蓋住脛/踝接縫,隨踝屈伸)
       }
     }
     noz(shin, 0.11, 0.14, 0.26, 0, -0.76, -0.28);                                       // 足底噴口(飛行朝後)
@@ -3547,6 +4288,10 @@ function buildMorphMech(side, vis) {
       // 左右反向旋轉互抵扭矩(dir = −sx),與機首旋翼合成三旋翼
       mkRotor(shin, [0, -0.72, -0.18], [-0.55, 0, 0],
         [-(cruise + 0.03), 0, 0], 3, 0.85 * (0.9 + 0.1 * B), -sx, 0.55);
+      // 旋翼臂航行燈(航空慣例硬編色:左紅右綠)—— 三旋翼的航空器身份在地面收攏時仍可辨;
+      // 純識別燈,不進 glows/rotors
+      const nc = sx < 0 ? 0xff3b30 : 0x35d07a;
+      bx(shin, 0.05, 0.05, 0.05, sx * 0.17 * B, -0.7, -0.15, nc, { emissive: nc, emissiveIntensity: 1.2 });
     }
     if (F === 'jet') {
       // 戰機雙發機艙 = 小腿:巡航主推 —— 移動時噴出尾焰(locomotion 依速度驅動)
@@ -3611,6 +4356,32 @@ function buildMorphMech(side, vis) {
       beast ? 0.22 : TILT ? 0.38 : 0.32, beast ? 0.58 : TILT ? 0.82 : 0.7);
     if (CYLG && !TILT) cyl(fore, 0.08 * B * CYLG, 0.11 * B * CYLG, limb[2], 8, 0, -limb[2] / 2, 0.02, hullDk);  // 圓柱前脛
     else bx(fore, 0.24 * B, limb[2], 0.3, 0, -limb[2] / 2, 0.02, hullDk);               // 前臂
+    // —— 家族專屬臂部細節(掛肩/前臂節點隨臂動;皆非 wpn 節點,不進 FPV)——
+    if (G === 'vampire') {
+      // 軍禮服肩章 + 反折亮色袖口:貴族軍官的第二/三筆(與既有肩甲同節點 = 隨臂動不穿模)
+      bx(a, 0.38 * B, 0.05, 0.44, 0, 0.225, 0, PAL.lite, { metalness: 0.6 });            // 肩章板
+      bx(a, 0.38 * B, 0.04, 0.06, 0, 0.2, 0.22, dim(accent, 0.85));                      // 肩章前緣飾條
+      bx(fore, 0.3 * B, 0.14, 0.36, 0, -0.5, 0.02, PAL.lite, { metalness: 0.5 });        // 禮服袖口(低於手掌,不碰手持武器)
+    } else if (G === 'elephant') {
+      // 前肢肘/腕防塵罩環:工程機具關節必有的橡膠罩,四腳同構的關節語彙一致
+      cyl(fore, 0.17 * B, 0.19 * B, 0.16, 10, 0, 0.03, 0.02, PAL.deep, { metalness: 0.35 });
+      cyl(fore, 0.15 * B, 0.17 * B, 0.12, 10, 0, -0.82, 0.02, PAL.deep, { metalness: 0.35 });
+    } else if (G === 'monkey') {
+      // 長臂液壓缸(掌行承重的機能交代;單端錨 —— 肘每幀屈伸,雙錨會被拉伸):
+      // 缸體錨上臂、亮色桿芯錨前臂,掛外側避開軀幹
+      const hyd = cyl(a, 0.04, 0.04, 0.8, 6, sx * 0.15 * B, -0.7, -0.12, 0x30373f, { metalness: 0.85 });
+      hyd.rotation.x = 0.12;
+      const rod = cyl(fore, 0.025, 0.025, 0.4, 6, sx * 0.13 * B, -0.25, -0.1, 0xd8d4c8, { metalness: 0.9 });
+      rod.rotation.x = 0.1;
+    } else if (G === 'raptor') {
+      // 前臂飛羽扇:真實馳龍前臂的飛羽,「始祖鳥↔迅猛龍」兩型態共用的一筆;
+      // 羽根錨前臂外側、羽尖向外後方(沿翼羽既有佈羽方向),收臂蓄勢姿不插軀幹
+      feather(fore, 0.3, 0.07, sx * 0.06 * B, -0.18, -0.14, 1.35, sx, 0x2a2e33, { metalness: 0.3 });
+      feather(fore, 0.26, 0.06, sx * 0.06 * B, -0.3, -0.16, 1.5, sx, dim(plate, 0.75), { metalness: 0.3 });
+    } else if (G === 'panther') {
+      // 前肢護腿墊:潛行步態的緩衝墊 =「安靜」的機能表達(匿蹤原則:不發光)
+      bx(fore, 0.04, 0.5, 0.3, sx * 0.14 * B, -0.4, 0.02, dim(hullDk, 0.9), { metalness: 0.4 });
+    }
     if (TILT) {
       // 臂外側翼面板(地面 = 臂甲;展開後 = 主翼弦面)+ 前緣識別條
       bx(a, 0.06, limb[1] + 0.2, 0.62, sx * 0.2 * B, -limb[1] / 2, 0.04, hull, { metalness: 0.6 });
@@ -3662,6 +4433,7 @@ function buildMorphMech(side, vis) {
       for (let i = -1; i <= 1; i++)
         bx(hand, 0.08 * B, 0.08, 0.26, i * 0.1 * B, -0.06, 0.4, 0xd8d4c8, { metalness: 0.6 });  // 指列
       bx(hand, 0.08 * B, 0.08, 0.2, sx * -0.17 * B, -0.06, 0.12, 0xd8d4c8, { metalness: 0.6 }); // 拇指(內側)
+      bx(hand, 0.26 * B, 0.05, 0.28, 0, 0.02, 0.08, PAL.lite, { metalness: 0.5 });       // 掌背護甲(指背著地的耐磨甲片,猩猩式前腳標配)
     } else {
       bx(hand, 0.2 * B, 0.2, 0.24, 0, -0.02, 0.04, 0x30373f);                            // 拳
       // 狼人:拳外再張三指利爪
@@ -3817,6 +4589,7 @@ function buildMorphMech(side, vis) {
       knee.rotation.x = 0.55;
       ml.add(knee);
       cyl(knee, 0.09 * B, 0.12 * B, 0.75, 8, 0, -0.36, 0, hullDk);                      // 中脛節
+      cyl(knee, 0.1 * B, 0.1 * B, 0.08, 8, 0, -0.02, 0, 0x23262a, { metalness: 0.7 });  // 中足膝關節環(前後足都有,補中足對的裸接縫;隨 midKnees 屈伸)
       // 跗節(獨立關節,MUST NOT 焊死在脛節上 —— 對照前後足的 ankle 皆為可獨立旋轉的 Group)
       const tarsusJ = new THREE.Group();
       tarsusJ.position.set(0, -0.88, 0.04);
@@ -3851,6 +4624,16 @@ function buildMorphMech(side, vis) {
       sp.rotation.z = sx * 0.5;
       torso.add(sp);                                                                    // 肩尖獠刺
     }
+    // 胸毛疊瓦板:狼人胸口蓬毛的賽璐璐解 = 大塊疊瓦(下緣外挑成瓦),不堆微 greeble;
+    // 頂片低於胸前識別燈、側緣讓開進氣口
+    const furs = [[0.72, 0.5, 0.52, dim(PAL.lite, 0.7)], [0.54, 0.66, 0.545, dim(PAL.lite, 0.85)], [0.38, 0.8, 0.57, PAL.lite]];
+    for (const [fw, fy, fz, fc] of furs) {
+      const fur = bx(torso, fw * B, 0.16, 0.05, 0, fy, fz, fc, { metalness: 0.4 });
+      fur.rotation.x = -0.15;
+    }
+    // 電戰散熱鰭列:干擾吊艙機是發熱大戶 —— 背包側面格柵鰭(Growler 的機能主義)
+    for (const sx of [-1, 1]) for (const oz of [-0.52, -0.68])
+      bx(torso, 0.03, 0.55, 0.09, sx * 0.49 * B, 0.75, oz, PAL.deep, { metalness: 0.6 });
   } else if (G === 'vampire') {
     // 吸血鬼(渡鴉):高豎立領 + 背脊整流罩 —— 2026-07-11 起披風雙翼移除,
     // 升力全數改由三旋翼提供(機首桅 + 雙腿末端;Y 字構型見 mkRotor / mkLeg 的 heli 分支)
@@ -3858,11 +4641,18 @@ function buildMorphMech(side, vis) {
       const col = bx(torso, 0.18, 1.0, 0.55, sx * 0.4 * B, 1.42, -0.3, plate, { metalness: 0.6 });
       col.rotation.z = sx * 0.2;                                                         // 高豎立領(左右領片)
       col.rotation.x = -0.08;
+      // 立領內襯:德古拉立領「外黑內紅」的貴族記號 —— 縮短縮窄貼領片內側面,同角不越緣
+      const lin = bx(torso, 0.04, 0.9, 0.5, sx * 0.33 * B, 1.44, -0.28, dim(accent, 0.7));
+      lin.rotation.z = sx * 0.2;
+      lin.rotation.x = -0.08;
     }
     const bk = bx(torso, 0.46 * B, 0.75, 0.13, 0, 1.5, -0.48, plate, { metalness: 0.6 });
     bk.rotation.x = -0.18;                                                               // 中央後領片(三片環抱後頸)
     bx(torso, 0.7 * B, 1.1, 0.14, 0, 0.5, -0.62, hullDk, { metalness: 0.5 });            // 背脊整流罩(收納機首桅)
     bx(torso, 0.5 * B, 0.12, 0.15, 0, 1.1, -0.63, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    // 桅收納卡榫:機首桅摺收「有機構在扣住」的機能感(整流罩頂緣兩側)
+    for (const sx of [-1, 1])
+      bx(torso, 0.09, 0.1, 0.16, sx * 0.2 * B, 1.06, -0.6, PAL.deep, { metalness: 0.7 });
     // 收攏的披風下擺:骨盆背面三片靜態裙板(落地即斗篷收起;飛行放平後成尾下整流)
     for (const sx of [-1, 1]) {
       const cp = bx(torso, 0.34 * B, 0.95, 0.08, sx * 0.28 * B, -0.55, -0.48, PAL.mid, { metalness: 0.5 });
@@ -3871,6 +4661,9 @@ function buildMorphMech(side, vis) {
     }
     const cloak = bx(torso, 0.3 * B, 1.05, 0.08, 0, -0.6, -0.54, dim(PAL.mid, 0.85));
     cloak.rotation.x = -0.14;                                                            // 中央長片
+    // 披風緣飾:主色滾邊收尾整個背面剪影(貼中央長片下緣、同傾角)
+    const hem = bx(torso, 0.3 * B, 0.08, 0.04, 0, -1.08, -0.575, dim(accent, 0.6));
+    hem.rotation.x = -0.14;
   } else if (G === 'atlas') {
     // 負重型:雙肩貨運掛架(轉包的貨都吊在上面)+ 腰際配重塊 = 前傾負重站姿的來源。
     // 武裝全數「掛載」在貨運架下(機體名就叫外包母艦 —— 手不持槍,手持圓盾=旋翼盤):
@@ -3888,6 +4681,13 @@ function buildMorphMech(side, vis) {
     }
     bx(torso, 0.86 * B, 0.08, 0.1, 0, 1.76, 0.18, plate, { metalness: 0.7 });            // 頂樑
     bx(torso, 0.3 * B, 0.05, 0.08, 0, 1.72, 0.24, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 頂樑工作燈
+    // 頂樑工地探照燈:與中央工作燈成一排 = 工地照明桁架(純識別燈不進 glows)
+    for (const sx of [-1, 1])
+      bx(torso, 0.09, 0.07, 0.07, sx * 0.36 * B, 1.79, 0.24, accent, { emissive: accent, emissiveIntensity: 0.6 });
+    // 背馱貨箱堆:母艦 = 永遠載著別人的貨 —— 中背雙蜂群巢之間的空位再馱兩箱(低於防滾籠頂樑)
+    bx(torso, 0.36 * B, 0.3, 0.3, 0, 1.27, -0.6, PAL.mid);                               // 箱一
+    bx(torso, 0.26 * B, 0.24, 0.26, 0.05 * B, 1.54, -0.58, dim(PAL.mid, 0.8));           // 箱二(略偏 = 隨手堆的貨)
+    bx(torso, 0.05, 0.62, 0.34, 0, 1.4, -0.6, PAL.deep, { metalness: 0.5 });             // 綁帶
     for (const sx of [-1, 1]) {
       const py = bx(torso, 0.5 * B, 0.5, 1.5, sx * 0.95 * B, 1.35, -0.35, plate, { metalness: 0.65 });
       py.rotation.z = sx * -0.12;                                                        // 掛載臂
@@ -3898,6 +4698,15 @@ function buildMorphMech(side, vis) {
         bx(torso, 0.37 * B, 0.62, 0.03, sx * 1.0 * B, 0.62, -0.8 + k * 0.11, dim(hull, 0.75), { metalness: 0.5 });
       for (const oz of [-0.92, -0.68])                                                   // 前後雙吊桿(貨櫃頂 → 臂底,跨過懸空間隙 = 吊掛不是焊死)
         cyl(torso, 0.025, 0.025, 0.32, 6, sx * 1.0 * B, 1.06, oz, 0x2a2e33, { metalness: 0.85 });
+      for (const ox of [-1, 1])                                                          // 貨櫃門鎖桿:垂直鎖桿 = 集裝箱第一識別,兩根就讀出「標箱」
+        bx(torso, 0.025, 0.64, 0.025, sx * 1.0 * B + ox * 0.06 * B, 0.62, -0.985, PAL.deep, { metalness: 0.7 });
+      for (const cz of [-0.9, -0.35, 0.2]) {                                             // 掛載臂繫留栓(cleat):碼頭吊臂邊緣的纜繩掛點,與臂同傾貼面
+        const cleat = bx(torso, 0.04, 0.08, 0.16, sx * 1.19 * B, 1.32, cz, PAL.deep, { metalness: 0.7 });
+        cleat.rotation.z = sx * -0.12;
+      }
+      const warn = bx(torso, 0.44 * B, 0.42, 0.03, sx * 0.95 * B, 1.35, 0.42, dim(accent, 0.8));
+      warn.rotation.z = sx * -0.12;                                                      // 臂端警示條(graffiti 塗裝疊上去 = 被貼過標語的碼頭設備)
+      bx(torso, 0.2 * B, 0.02, 0.14, sx * 0.95 * B, 1.565, -1.24, dim(accent, 0.85));    // 蜂群巢編號牌(發射管陣列的艙位編號)
       // 蜂群發射巢(掛載臂尾端延伸;summon 的視覺載體 —— 發射演出走既有 summon fx,不掛 glow/rig)
       bx(torso, 0.4 * B, 0.4, 0.32, sx * 0.95 * B, 1.35, -1.22, 0x23262a, { metalness: 0.7 });   // 巢殼
       for (const ox of [-0.09, 0.09]) for (const oy of [-0.09, 0.09]) {
@@ -3961,6 +4770,11 @@ function buildMorphMech(side, vis) {
     const gold = 0xe8b33a;
     cyl(head, 0.36 * B, 0.36 * B, 0.07, 14, 0, 0.2, 0, gold,
       { metalness: 0.85, emissive: gold, emissiveIntensity: 0.35 });                     // 金箍
+    // 猴耳廓:圓耳是猴臉剪影缺的最後一筆(金箍環帶下方,圓盤面朝外)
+    for (const sx of [-1, 1]) {
+      const ear = cyl(head, 0.09, 0.09, 0.035, 10, sx * 0.3 * B, 0.05, -0.02, PAL.lite, { metalness: 0.5 });
+      ear.rotation.z = Math.PI / 2;
+    }
     // 猴面:短圓吻(雷公嘴,圓角量體蓋過方下顎)+ 火眼金睛雙金眼(凸出面罩條之上/之前)
     rbz(head, 0.3 * B, 0.2, 0.28, 0, -0.08, 0.34, plate, { metalness: 0.5 });
     for (const sx of [-1, 1]) {
@@ -3998,6 +4812,19 @@ function buildMorphMech(side, vis) {
     const sk = bx(torso, 0.5 * B, 0.34, 0.09, 0, -0.24, 0.42, dim(gold, 0.7), { metalness: 0.5 });
     sk.rotation.x = -0.45;
     bx(torso, 0.9 * B, 0.1, 0.06, 0, -0.06, 0.46, accent, { emissive: accent, emissiveIntensity: 0.8 });
+    // 虎皮裙側片:正面一片不成「裙」,側包兩片補齊(外撇角讓開步態)
+    for (const sx of [-1, 1]) {
+      const sk2 = bx(torso, 0.2 * B, 0.28, 0.07, sx * 0.48 * B, -0.22, 0.3, dim(gold, 0.7), { metalness: 0.5 });
+      sk2.rotation.x = -0.35;
+      sk2.rotation.y = sx * 0.55;
+    }
+    // 搶修工具匣(左側,與右側械爪成對 =「左工具右手臂」的維修工位;強化戰場搶修車身份)
+    bx(torso, 0.2 * B, 0.34, 0.16, -0.52 * B, 0.85, -0.62, PAL.mid, { metalness: 0.5 });     // 工具匣
+    bx(torso, 0.21 * B, 0.06, 0.02, -0.52 * B, 0.95, -0.53, dim(accent, 0.85));              // 匣面警示條
+    cyl(torso, 0.05, 0.05, 0.24, 8, -0.42 * B, 0.95, -0.7, dim(accent, 0.7), { metalness: 0.6 });  // 焊炬瓶(外移避開光翼根機構盒)
+    // 帳房側掛袋:隨身帳冊/零件袋吊在腰際 —— 後勤/貨運身份的碼頭工人語彙
+    bx(torso, 0.16 * B, 0.22, 0.1, -0.6 * B, 0.28, -0.08, PAL.deep, { metalness: 0.3 });     // 袋體
+    bx(torso, 0.17 * B, 0.07, 0.02, -0.6 * B, 0.36, -0.02, dim(gold, 0.7));                  // 袋蓋
   }
 
   // ---- 悟空光之翼(命運鋼彈 Spec II + 宙斯裝備式):背後兩束「不揮動」的噴焰翼 ——
@@ -4054,6 +4881,13 @@ function buildMorphMech(side, vis) {
       ring.rotation.x = Math.PI / 2;                                                    // 節間關節環
       tailSegs.push(t);
       cur = t;
+    }
+    // 尾梢毛簇:狼尾收尾的毛簇剪影(錐尖向後下,隨 whipTail 甩動);電戰不自曝故不發光
+    for (const [ox, tc] of [[-0.03, 0x2a2e33], [0.03, dim(hull, 0.8)]]) {
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.22, 5), mat(tc, { metalness: 0.4 }));
+      tuft.position.set(ox, 0.02, -0.58);
+      tuft.rotation.x = -1.9;
+      cur.add(tuft);
     }
   }
   if (G === 'monkey') {
@@ -4157,6 +4991,8 @@ function buildMorphMech(side, vis) {
     } else if (G === 'panther') {
       // 夜豹長鞭尾(急轉配重):兩節圓柱串接 + 發光尾梢環
       cyl(tail, 0.06 * B, 0.05 * B, 0.8, 8, 0, 0, -0.4, hullDk).rotation.x = Math.PI / 2;
+      // 尾根消音套環:鞭尾根部的線束防磨套,把尾與臀的接縫收乾淨(隨尾根甩動)
+      cyl(tail, 0.075 * B, 0.075 * B, 0.12, 8, 0, 0, -0.06, PAL.deep, { metalness: 0.4 }).rotation.x = Math.PI / 2;
       const t2 = new THREE.Group();
       t2.position.set(0, 0, -0.8);
       tail.add(t2);
@@ -4361,18 +5197,24 @@ function buildRobotMech(side, vis) {
           cyl(l, 0.06, 0.06, 0.78, 6, ox, -0.4, -0.42, 0x23262a, { metalness: 0.85 }).rotation.x = -0.18;
         bx(l, 0.74, 0.92, 0.82, 0, -0.6, -0.04, armor, { metalness: 0.6 });       // 小腿(外擴)
         bx(l, 0.5, 0.4, 0.22, 0, -0.66, -0.46, armorDk);                          // 腿肚配重
+        bx(l, 0.6, 0.28, 0.46, 0, -1.0, 0.14, armorDk);                           // 踝部防塵護罩(淺罩;足擺幅小,不被腳背頂穿)
       } },
       { len: 0, base: 0.02, k: -0.3, d: 0.55, draw: (l) => {
         bx(l, 0.76, 0.32, 1.3, 0, -0.18, 0.2, joint);                             // 巨足
         bx(l, 0.78, 0.16, 0.36, 0, -0.12, 0.84, armorDk);                         // 腳尖甲
+        bx(l, 0.5, 0.22, 0.2, 0, -0.14, -0.5, armorDk);                           // 腳跟配重板(前尖後跟的戰靴剪影)
       } },
     ], sx < 0 ? legChainL : legChainR);
     legL = mkLeg(-1); legR = mkLeg(1);
     hips.position.y = hipY;
     bx(hips, 1.3, 0.6, 1.0, 0, 0.05, 0, joint, { metalness: 0.6 });               // 骨盆
+    bx(hips, 0.9, 0.4, 0.12, 0, -0.05, 0.55, armorDk);                            // 車首下裝甲(補正面空蕩的胯部;淺板避開大腿前掃)
+    bx(hips, 0.18, 0.14, 0.1, 0, -0.26, 0.52, joint, { metalness: 0.7 });         // 牽引鉤(戰車車體語彙)
     for (const sx of [-1, 1]) {
       const skirt = bx(hips, 0.6, 0.8, 0.7, sx * 0.85, -0.16, 0, armor);          // 大裙甲
       skirt.rotation.z = sx * 0.2;
+      for (const oy of [-0.18, 0.18])                                             // 裙甲 ERA 反應塊(掛 skirt 隨傾角走,零對位成本)
+        bx(skirt, 0.1, 0.3, 0.5, sx * 0.31, oy, 0, armorDk, { metalness: 0.6 });
     }
     bx(chest, 1.9, 1.5, 1.5, 0, 1.1, 0, armor, { metalness: 0.6 });               // 桶狀胸廓
     // 乘員艙蛋形凸甲:胸腹正面隆起的蛋,層層疊甲把駕駛艙包成一顆蛋
@@ -4380,6 +5222,12 @@ function buildRobotMech(side, vis) {
     egg.scale.set(1.2, 1.05, 0.75);
     egg.position.set(0, 1.0, 0.6);
     chest.add(egg);
+    // T-14 乘員艙語彙:蛋殼不是一體成型 —— 分模線 + 頂部周視潛望鏡,把光蛋讀成「可打開的裝甲艙」
+    const seam = cyl(chest, 0.60, 0.60, 0.05, 14, 0, 1.32, 0.60, joint, { metalness: 0.7 });
+    seam.scale.set(1.25, 1, 0.78);                                                // 艙蓋分模線(橢圓環半嵌蛋殼截面)
+    bx(chest, 0.14, 0.09, 0.16, 0, 1.52, 0.80, joint, { metalness: 0.6 });        // 車長周視潛望鏡(乘員艙唯一對外的眼睛)
+    for (const sx of [-1, 1])
+      bx(chest, 0.12, 0.08, 0.14, sx * 0.2, 1.48, 0.85, joint, { metalness: 0.6 });  // 乘員潛望鏡對(蛋頂前坡)
     for (const sx of [-1, 1])                                                     // 左右護頸圍甲(填滿肩谷,頭沉在雙肩之間)
       bx(chest, 0.34, 0.42, 0.66, sx * 0.6, 1.92, 0.06, armorDk, { metalness: 0.6 });
     // 圓形反應爐(嵌在乘員艙蛋甲正面):外圈金屬環框 + 圓盤發光核
@@ -4390,6 +5238,10 @@ function buildRobotMech(side, vis) {
     bx(chest, 1.4, 0.9, 0.6, 0, 1.75, -0.7, armorDk);                             // 背部散熱堆
     for (let i = 0; i < 4; i++)                                                   // 直立散熱柵(縱柵貼散熱堆背面)
       bx(chest, 0.2, 0.86, 0.1, -0.51 + i * 0.34, 1.75, -1.04, dark, { metalness: 0.7 });
+    for (const sx of [-1, 1]) {                                                   // 排氣管(柴油重機甲的背面識別;管口朝後下,非槍管)
+      const ex = cyl(chest, 0.09, 0.09, 0.5, 8, sx * 0.58, 1.35, -0.95, dark, { metalness: 0.7 });
+      ex.rotation.x = 0.35;
+    }
     // 圓弧巨肩(球體 = 動畫感的過裝甲肩)
     let bastionMuzzle = null;   // 右手斧砲的膛口(重武器擊發強閃),手部建構時填入
     let bastionLMuz = null;     // 左手重機槍槍口識別燈(輕武器擊發閃光)
@@ -4400,11 +5252,15 @@ function buildRobotMech(side, vis) {
         pad.position.set(sx * 0.18, 0.18, 0);
         a.add(pad);
         bx(a, 0.62, 0.14, 0.78, sx * 0.18, 0.6, 0, dim(accent, 0.85));            // 肩頂識別甲
+        bx(a, 0.52, 0.3, 0.1, sx * 0.18, -0.18, 0.62, armorDk, { metalness: 0.6 });  // 肩甲前緣下垂護簷(層疊肩,不是單顆光球)
         bx(a, 0.34, 0.7, 0.38, 0, -0.32, 0, joint);                               // 細上臂軸
       } },
       { len: 1.0, base: -0.15, k: -0.42, d: 0.35, draw: (a) => {
         bx(a, 0.68, 1.0, 0.78, 0, -0.5, 0.02, armor, { metalness: 0.6 });         // 巨前臂(粗於上臂)
         bx(a, 0.2, 0.7, 0.4, sx * 0.42, -0.5, -0.1, armorDk);                     // 前臂外掛甲
+        const fhyd = cyl(a, 0.06, 0.06, 0.6, 6, -sx * 0.2, -0.35, 0.44, 0x23262a, { metalness: 0.85 });
+        fhyd.rotation.x = -0.3;                                                   // 前臂外露液壓缸(單端錨+斜置,不跨肘樞軸)
+        cyl(a, 0.09, 0.09, 0.08, 8, -sx * 0.2, -0.08, 0.36, joint, { metalness: 0.8 });  // 缸頭環
       } },
       { len: 0, base: 0, k: 0.2, d: 0.7, draw: (a) => {
         bx(a, 0.5, 0.44, 0.5, 0, -0.24, 0.04, dark);                              // 巨拳
@@ -4515,6 +5371,7 @@ function buildRobotMech(side, vis) {
         bx(l, 0.42, 0.3, 0.5, 0, -0.02, 0.12, dim(accent, 0.7));                  // 尖膝甲
         sinew(l, 1.4, 0, -0.66, -0.04);
         bx(l, 0.3, 1.15, 0.36, 0, -0.66, 0.02, armor, { metalness: 0.7 });        // 細長小腿
+        bx(l, 0.1, 0.9, 0.08, 0, -0.66, 0.24, PAL.lite, { metalness: 0.9 });      // 脛前亮刃(硬邊高光稜線,細腿遠距仍有銳利直線)
         bx(l, 0.16, 0.7, 0.3, sx * 0.2, -0.9, -0.16, armorDk);                    // 腿肚推進鰭
       } },
       { len: 0, base: 0.04, k: -0.34, d: 0.55, draw: (l) => {
@@ -4529,6 +5386,8 @@ function buildRobotMech(side, vis) {
     // 倒三角上胸(EVA 式):一整塊「底邊在上、尖端朝下」的三角柱 —— 底邊就是肩線,
     // 底邊兩端點就是雙肩、直接承接雙臂;自肩線向下收斂到腰只剩尖端(微截平接脊柱)。
     bx(chest, 0.42, 1.0, 0.7, 0, 0.95, 0.0, armor, { metalness: 0.7 });           // 窄腰心柱(接三角尖端)
+    for (const sx of [-1, 1])                                                     // 窄腰側肋(EVA 細腰是一節節肋甲,不是一根方柱)
+      bx(chest, 0.07, 0.75, 0.55, sx * 0.25, 0.95, 0.02, armorDk);
     const tri = new THREE.Shape();
     tri.moveTo(-1.32, 2.42);
     tri.lineTo(1.32, 2.42);                                                       // 底邊(上緣)= 肩線
@@ -4555,9 +5414,17 @@ function buildRobotMech(side, vis) {
       const trim = bx(piv, 0.32, 0.16, 0.92, 0, 0.78, 0, dim(accent, 0.85),
         { emissive: accent, emissiveIntensity: 0.9 });                            // 莢頂識別條(蓄力發光)
       binderTrims.push(trim);
+      // binder 細節 MUST 掛 piv 才會跟著蓄力展翼(掛 chest 會在 deploy 時脫隊)
+      bx(piv, 0.05, 1.0, 0.7, sx * 0.19, 0.1, 0, armorDk);                        // 外側凹槽板(武器艙的面板分割,不是一片光板)
+      bx(piv, 0.32, 0.28, 0.94, 0, -0.58, 0, joint);                              // 底部收束楔(包住底緣配重,立板不再像紙片)
+      bx(piv, 0.24, 0.06, 0.05, 0, 0.42, 0.47, dark, { metalness: 0.7 });         // 前面通風暗槽(與莢頂發光條對比)
       binderPivots.push({ obj: piv, rest: { x: 0, y: 0, z: 0 }, deploy: { x: 0, y: sx * 0.5, z: 0 } });
     }
+    cyl(chest, 0.34, 0.34, 0.05, 12, 0, 1.62, 0.5, joint, { metalness: 0.7 })
+      .rotation.x = Math.PI / 2;                                                  // 核心金屬座環(發光核不直接長在裝甲上)
     bx(chest, 0.44, 0.44, 0.24, 0, 1.62, 0.52, accent, { emissive: accent, emissiveIntensity: 1.3 });  // 核心
+    for (const yy of [1.7, 1.35, 1.0])                                            // 脊椎神經插栓列(連接埠下方;腦機介面的本業在背面)
+      cyl(chest, 0.1, 0.1, 0.12, 8, 0, yy, -0.5, joint, { metalness: 0.8 }).rotation.x = Math.PI / 2;
     bx(chest, 0.7, 0.6, 0.5, 0, 2.1, -0.55, armorDk);                             // 背部連接埠
     const usok = cyl(chest, 0.17, 0.17, 0.16, 10, 0, 2.1, -0.86, 0x14171a, { metalness: 0.85 });
     usok.rotation.x = Math.PI / 2;                                                // 臍帶纜圓形插座(電源臍帶的接口)
@@ -4578,6 +5445,7 @@ function buildRobotMech(side, vis) {
         bx(a, 0.32, 0.24, 0.36, 0, -0.02, 0, joint);                              // 肘關節
         sinew(a, 1.35, 0, -0.66, 0);
         bx(a, 0.24, 1.2, 0.28, 0, -0.64, 0.02, armor, { metalness: 0.7 });        // 細長前臂(加長)
+        bx(a, 0.3, 0.28, 0.34, 0, -1.12, 0.02, armorDk, { metalness: 0.7 });      // 腕部收束護腕(肌腱缸自此入鞘;不越腕樞軸)
       } },
       { len: 0, base: 0, k: 0.24, d: 0.6, draw: (a) => {
         bx(a, 0.24, 0.28, 0.3, 0, -0.14, 0.02, dark);                             // 掌
@@ -4661,6 +5529,10 @@ function buildRobotMech(side, vis) {
     horn.position.set(0, 0.5, 0.1);
     horn.rotation.x = -0.25;
     head.add(horn);                                                                // 額角
+    for (const sx of [-1, 1])                                                      // 頰側甲(單眼窄臉的面板分割)
+      bx(head, 0.1, 0.2, 0.3, sx * 0.24, 0.06, 0.08, armorDk, { metalness: 0.7 });
+    bx(head, 0.3, 0.06, 0.05, 0, 0.2, -0.27, dim(accent, 0.8),
+      { emissive: accent, emissiveIntensity: 0.6 });                               // 後腦識別條(靜態識別燈,MUST NOT 掛 glows)
 
   } else if (PR === 'aegis') {
     // ---- 塔盾攔截機:左臂方盾、右前臂速射砲、雙肩垂直發射彈艙(防禦姿態) ----
@@ -4676,6 +5548,7 @@ function buildRobotMech(side, vis) {
       { len: 1.1, base: 0.06, k: 0.55, d: 0.15, draw: (l) => {
         bx(l, 0.6, 0.32, 0.66, 0, -0.04, 0.1, armorDk);                           // 膝甲
         bx(l, 0.5, 1.0, 0.58, 0, -0.6, -0.02, armor, { metalness: 0.6 });         // 小腿
+        bx(l, 0.42, 0.8, 0.08, 0, -0.58, 0.33, armorDk);                          // 脛前護甲(盾線步兵的護脛)
         for (const oy of [-0.35, -0.75])                                          // 腿側攔截彈匣
           cyl(l, 0.07, 0.07, 0.4, 6, sx * 0.3, oy, -0.24, 0x14171a, { metalness: 0.8 }).rotation.x = Math.PI / 2;
       } },
@@ -4696,6 +5569,14 @@ function buildRobotMech(side, vis) {
     for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++)                        // 陣面收發單元
       bx(chest, 0.1, 0.1, 0.04, (j - 1) * 0.26, 1.58 + i * 0.2, 0.49 + i * 0.07,
         dim(accent, 0.85), { emissive: accent, emissiveIntensity: 0.6 });
+    for (const sx of [-1, 1])                                                      // 胸側 IFF 識別燈(防空最怕誤擊友軍;靜態,不掛 glows)
+      bx(chest, 0.08, 0.08, 0.06, sx * 0.62, 1.0, 0.56, dim(accent, 0.9), { emissive: accent, emissiveIntensity: 0.8 });
+    // Pantsir 彈炮合一 = 雙雷達:胸前相控陣(搜索)+ 背部追蹤雷達盤 —— 背視角的臉;
+    // 陣面板是靜態識別發光,MUST NOT 掛 heavyRig.glow(擊發脈動只屬於 VLS 管口)
+    const trad = cyl(chest, 0.34, 0.34, 0.08, 12, 0, 1.62, -0.64, armorDk, { metalness: 0.7 });
+    trad.rotation.x = 1.05;                                                        // 追蹤雷達盤(對空面朝後上)
+    const tf = bx(chest, 0.42, 0.32, 0.03, 0, 1.65, -0.68, dim(accent, 0.85), { emissive: accent, emissiveIntensity: 0.5 });
+    tf.rotation.x = 1.05;                                                          // 追蹤陣面板
     // 雙肩垂直發射彈艙(攔截彈 VLS:每側 2×3 發射管口朝上)—— 造型與重武器(攔截者飛彈)天生一致,
     // 原地轉為功能性掛點:發射管口在擊發瞬間齊閃,不需另掛新量體。
     const vlsCells = [];
@@ -4703,6 +5584,8 @@ function buildRobotMech(side, vis) {
     for (const sx of [-1, 1]) {
       const vls = bx(chest, 0.66, 0.62, 0.78, sx * 1.0, 1.85, -0.1, armorDk, { metalness: 0.65 });
       vlsBoxes.push(vls);
+      for (const oz of [-0.2, 0.2])                                                // 側掛再裝填彈筒(攔截彈永遠不夠用;不高出箱頂、無發光管口)
+        cyl(vls, 0.08, 0.08, 0.5, 8, sx * 0.41, 0, oz, dark, { metalness: 0.75 });
       for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) {
         cyl(vls, 0.1, 0.1, 0.44, 6, (i - 0.5) * 0.28, 0.16, (j - 1) * 0.24, 0x14171a, { metalness: 0.8 });   // 外露發射筒身(半埋箱體、筒口朝天)
         vlsCells.push(cyl(vls, 0.09, 0.09, 0.1, 6, (i - 0.5) * 0.28, 0.42, (j - 1) * 0.24, accent,
@@ -4763,6 +5646,10 @@ function buildRobotMech(side, vis) {
           bx(sh, 0.1, 3.0, 0.24, sx * 0.14, 0, -0.9, armorDk);
           bx(sh, 0.12, 2.5, 0.2, sx * 0.16, 0, 0, accent, { emissive: accent, emissiveIntensity: 0.8 });  // 縱肋
           bx(sh, 0.12, 0.2, 1.5, sx * 0.16, 0.5, 0, accent, { emissive: accent, emissiveIntensity: 0.8 }); // 橫肋
+          bx(sh, 0.06, 1.7, 1.2, sx * 0.13, 0.25, 0, armorDk, { metalness: 0.6 }); // 附加裝甲層(複合雙層盾面;薄於發光肋 → 十字肋仍凸出)
+          bx(sh, 0.06, 0.2, 0.66, sx * 0.17, 0.95, 0.3, dark, { metalness: 0.3 }); // 觀察窗(持盾兵躲在盾後看世界的那道縫)
+          for (const oy of [-1.22, 1.22]) for (const oz of [-0.72, 0.72])          // 盾角防撞塊(立地駐鋤砸出來的耐用感)
+            bx(sh, 0.1, 0.28, 0.28, sx * 0.15, oy, oz, joint, { metalness: 0.7 });
         }
       } },
       { len: 0, base: 0, k: 0.2, d: 0.62, draw: (a) => {
@@ -4780,6 +5667,7 @@ function buildRobotMech(side, vis) {
     // 頭:雙感測窗 + 側耳雷達
     head.position.set(0, 2.15, 0.06);
     bx(head, 0.5, 0.42, 0.52, 0, 0.08, 0, armorDk, { metalness: 0.6 });
+    bx(head, 0.44, 0.08, 0.14, 0, 0.24, 0.22, armorDk);                            // 前額遮光簷(一直在對空看的射手帽簷;零增高)
     for (const sx of [-1, 1]) {
       bx(head, 0.14, 0.12, 0.08, sx * 0.13, 0.1, 0.28, accent, { emissive: accent, emissiveIntensity: 1.6 });
       const ear = cyl(head, 0.14, 0.14, 0.06, 10, sx * 0.3, 0.12, -0.02, dim(accent, 0.7));
@@ -4823,12 +5711,19 @@ function buildRobotMech(side, vis) {
     hips.position.y = hipY;
     rslab(hips, 0.66, 1.15, 0.6, 0, 0.02, 0, joint, { metalness: 0.7 })
       .rotation.z = Math.PI / 2;                                                    // 圓角骨盆(橫置)
+    for (const sx of [-1, 1])                                                       // 髖關節橫軸環(半埋骨盆端;bob 相對位移 ≤0.09 由半埋吸收)
+      cyl(hips, 0.17, 0.17, 0.26, 10, sx * 0.55, 0, 0, joint, { metalness: 0.8 }).rotation.z = Math.PI / 2;
     cyl(hips, 0.52, 0.52, 0.2, 12, 0, 0.28, -0.04, joint, { metalness: 0.8 });      // 胸腹平端關節環(墊住骨盆↔身軀圓角接縫不張口)
     const body = rslab(chest, 1.5, 2.3, 0.95, 0, 1.28, -0.06, armor);               // 圓角矩形身軀
     body.rotation.x = -0.1;                                                          // 微拱背
+    rslab(chest, 0.7, 1.2, 0.9, 0, 0.35, -0.02, armorDk).rotation.z = Math.PI / 2;  // 腹部第二節板(橫置:體節語彙自四肢貫通到軀幹)
     rslab(chest, 1.08, 1.6, 0.92, 0, 1.32, 0.1, dim(armor, 1.08));                  // 前胸圓角板
+    for (const sx of [-1, 1])                                                        // 肩關節橫軸環:stepBiped 擺臂軸(rotation.x)有了看得見的軸
+      cyl(chest, 0.16, 0.16, 0.3, 10, sx * 0.62, 2.0, -0.05, joint, { metalness: 0.8 }).rotation.z = Math.PI / 2;
+    cyl(chest, 0.24, 0.24, 0.09, 12, 0, 2.44, 0.02, joint, { metalness: 0.75 });     // 頸基座環(頭是武器塔,塔要有座圈;內徑留頸轉餘裕)
     for (const sx of [-1, 1])                                                       // 胸前縱肋線(胸甲分割,夾著中央紋章縱列)
       rslab(chest, 0.09, 1.24, 0.08, sx * 0.38, 1.3, 0.58, armorDk);
+    rslab(chest, 0.52, 1.3, 0.05, 0, 1.54, 0.57, dim(armor, 0.94));                 // 紋章艙蓋框(同色暗半階的面板分割;光點鑲進蓋框)
     for (let i = 0; i < 3; i++)                                                      // 胸口紋章(縱列光點)
       cyl(chest, 0.07, 0.07, 0.1, 8, 0, 1.88 - i * 0.34, 0.58, accent, { emissive: accent, emissiveIntensity: 1.2 })
         .rotation.x = Math.PI / 2;
@@ -4840,9 +5735,19 @@ function buildRobotMech(side, vis) {
         dome.position.y = 0.1;
         a.add(dome);                                                                 // 圓肩甲
         seg2(a, 0.5, 1.2, 0.42, armor, armorDk);                                     // 上臂節
+        const op = rslab(a, 0.36, 0.9, 0.1, sx * 0.3, -0.55, 0.02, armorDk);
+        op.rotation.y = Math.PI / 2;                                                 // 上臂外側圓角護板(體節疊拼補側向第二層次)
       } },
       { len: 1.35, base: -0.26, k: -0.55, d: 0.3, draw: (a) => seg2(a, 0.44, 1.35, 0.38, armor, armorDk) },  // 前臂節(長臂垂地:自然下垂指尖過膝)
-      { len: 0.92, base: -0.22, k: -0.36, d: 0.48, draw: (a) => seg2(a, 0.38, 0.92, 0.32, armorDk, armor) }, // 腕節
+      { len: 0.92, base: -0.22, k: -0.36, d: 0.48, draw: (a) => {
+        seg2(a, 0.38, 0.92, 0.32, armorDk, armor);                                   // 腕節
+        if (sx < 0) {
+          // 左腕 RF 測向環(右腕持槍 → 不對稱 = 機能分工):舉臂「聽」頻譜的道具;
+          // 細識別環是靜態 emissive,MUST NOT 進 glows —— 發光戰鬥語彙只屬於眉心與槍口
+          cyl(a, 0.26, 0.26, 0.09, 12, 0, -0.55, 0.02, joint, { metalness: 0.8 });
+          cyl(a, 0.27, 0.27, 0.03, 12, 0, -0.49, 0.02, dim(accent, 0.85), { emissive: accent, emissiveIntensity: 0.6 });
+        }
+      } },
       { len: 0, base: -0.08, k: -0.26, d: 0.66, draw: (a) => {
         for (let i = -1; i <= 1; i++) {
           const fg = rslab(a, 0.13, 0.56, 0.16, i * 0.14, -0.28, 0.03, dark);
@@ -4891,6 +5796,8 @@ function buildRobotMech(side, vis) {
     for (const sx of [-1, 1]) {
       const ant = bx(head, 0.05, 0.6, 0.05, sx * 0.2, 0.9, -0.14, armorDk);
       ant.rotation.z = sx * 0.3;                                                     // 測向天線對(掃描機的本業)
+      cyl(head, 0.13, 0.13, 0.06, 12, sx * 0.39, 0.32, 0.02, joint, { metalness: 0.75 })
+        .rotation.z = Math.PI / 2;                                                   // 頭側耳盤(Laputa 的圓耳 = 收音孔:先聽見)
     }
     // 重武器(標定脈衝砲):不新增背部/肩部掛件(設計意圖:巨兵背後乾淨)——
     // 蓄力/擊發全靠眉心射口本身的發光強度變化表現。
