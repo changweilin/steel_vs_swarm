@@ -75,6 +75,7 @@ const app = {
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
   terrain: null,
+  pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
   battleCfg: null,
   phaseShown: null,
   roomPoll: null,
@@ -235,6 +236,7 @@ function renderVenues() {
 
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
 function selectVenue(v) {
+  warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, app.teamSize);
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
@@ -258,6 +260,7 @@ function renderFavsOpenRoom() {
     b.className = 'venue-btn fav';
     b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
     b.onclick = () => {
+      warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
       savePrefs({ teamSize: f.teamSize });
@@ -354,6 +357,7 @@ function renderVenuesOpen() {
 
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
+  warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
   const cfg = venueConfig(v, app.teamSize);
   app.venueSelOpen = v;
   app.favCfg = cfg;
@@ -627,6 +631,7 @@ function renderRoom() {
   $('roomMapInfo').textContent = cfg
     ? `📍 ${cfg.placeName} ・ ${N}v${N} ・ ${cfg.lanes.length} 條兵線 ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
     : '';
+  renderPreloadStatus();   // 地圖預建進度(獨立元素,見 startPrebuild)
 
   renderBotDiff(lb);
 
@@ -1381,6 +1386,115 @@ function renderCharPick(me) {
   if (app.modalRole) { fillModalPanels(app.modalRole); renderModalPicks(); }   // 放大視窗開啟中 → 同步刷新
 }
 
+// ================= 地圖預建(固定項目提前)=================
+// battleConfig 開房時已全部定案(伺服器 createRoom:resolveEnv 隨機定案 + 50% 主堡對調 + teamSize),
+// 因此「只依賴 cfg 的固定工程」(模型預載 → 地形 → 地貌 → 站立索引)在房間階段就先建;
+// 遊戲準備(loading)只剩等待預建 + 玩家/隨機項目(隨機背景圖、房主 world 上傳、loaded 握手)。
+// 預建結果單次使用:進過戰鬥的地形會被不可逆變異(碉堡淨空 clearAround 縮零建物 + splice blockers),
+// enterLoading 消費後即清 app.pre,再戰回房(phase 'room' sync)自動重新預建。
+let _modelsReady = null;   // preloadModels 單航班(函式本身無重複守衛,重複呼叫會整批重抓 GLB)
+function warmModels(onProg) {
+  if (!_modelsReady) _modelsReady = preloadModels(onProg);
+  return _modelsReady;
+}
+
+function prebuildKey(cfg) {
+  // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
+  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes]);
+}
+
+/** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
+function renderPreloadStatus() {
+  const el = $('roomPreload');
+  if (!el) return;
+  const pre = app.pre;
+  el.textContent = !pre ? ''
+    : pre.error ? '⚠️ 戰場預載失敗(開戰時自動重試)'
+    : pre.terrain ? '✅ 戰場已預載完成,開戰即入場'
+    : `⏳ 戰場預載 ${Math.round(pre.prog * 100)}% ・ ${pre.label}`;
+}
+
+/**
+ * 啟動(或沿用)地圖預建。冪等:同 key(同房同圖)重複呼叫回傳同一份在途/完成的預建。
+ * 失敗不外拋(記在 pre.error,房間 UI 不受影響);enterLoading 消費時會重建一次,再失敗才顯示錯誤。
+ * 被換掉的舊預建不必 dispose:從未 render 的 group 只佔 CPU 記憶體(GPU 上傳發生在首次 render),交給 GC。
+ */
+function startPrebuild(cfg) {
+  const key = prebuildKey(cfg);
+  if (app.pre && app.pre.key === key && !app.pre.error) return app.pre;
+  const pre = { key, prog: 0, label: '', terrain: null, ud: null, error: null, onProg: null };
+  const setP = (f, label) => {
+    pre.prog = f; pre.label = label;
+    pre.onProg?.(f, label);
+    if (app.phaseShown === 'room') renderPreloadStatus();
+  };
+  pre.promise = (async () => {
+    setP(0.02, '載入 3D 模型(Quaternius CC0)…');
+    await warmModels((f) => setP(0.02 + f * 0.16, '載入 3D 模型(Quaternius CC0)…'));
+    const terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
+    const biomes = await buildBiomes(cfg, terrain, (f, label) => setP(0.60 + f * 0.36, label));
+    terrain.group.add(biomes);
+    terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
+    terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
+    terrain.clearBuildingsAround = biomes.userData.clearAround || null;   // 碉堡淨空:移除重疊建物(game.js 碉堡進場時呼叫)
+    // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
+    // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
+    const deckY = makeDeckIndex(biomes.userData.decks);
+    const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil } | null
+    terrain.deckY = deckY;
+    terrain.tunnelAt = tunnelAt;
+    terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
+    terrain.deckMargin = DECK_MARGIN; // 站立查詢側向容差(game.js NPC 水上站橋與 surfaceAt 同一值)
+    // 大型障礙物頂面站立索引(建物/神木/巨岩;2026-07-22):碉堡淨空拆樓後 MUST 重建(game.js 呼叫)
+    let blockerTop = makeBlockerTopIndex(terrain.blockers);
+    terrain.blockerTopAt = (x, z, m) => blockerTop(x, z, m);
+    terrain.rebuildBlockerTops = () => { blockerTop = makeBlockerTopIndex(terrain.blockers); };
+    const BLK_MARGIN = 0.6;   // 頂緣站立容差(遠小於 DECK_MARGIN:屋頂/岩頂邊緣走位餘裕,不誇張懸空)
+    // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上
+    //           ③大型障礙物頂(curY 貼近頂面)= 站頂上 ④否則地表
+    terrain.surfaceAt = (x, z, curY) => {
+      const h = terrain.heightAt(x, z);
+      if (curY == null) return h;
+      const tn = tunnelAt(x, z);
+      if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
+      const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
+      // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
+      let s = h;
+      if (d != null && d > h && (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H)) s = d;
+      // 障礙物頂:只吃 mount 台階測試(curY >= 頂 − DECK_STEP;從上方落下/跳上/飛降才成立)。
+      // MUST NOT 抄橋的第二條款(底緣淨空 < MAX_MECH_H 強制上頂)—— 建物皆接地,該條恆真
+      // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。
+      const bt = blockerTop(x, z, BLK_MARGIN);
+      if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
+      return s;
+    };
+    // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
+    terrain.ceilingAt = (x, z, curY) => {
+      let c = null;
+      const tn = tunnelAt(x, z);
+      if (tn && curY < tn.ceil) c = tn.ceil;                       // 洞內天花板
+      const d = deckY(x, z);
+      if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~DECK_UNDER)
+        const under = d - DECK_UNDER;
+        // 只有「真能鑽過去的高架段」(底緣淨空 ≥ 最大機體)才擋頭;引道低架段不擋 → 交給 surfaceAt 上橋,免卡死
+        if (under - terrain.heightAt(x, z) >= MAX_MECH_H && (c == null || under < c)) c = under;
+      }
+      return c;
+    };
+    pre.ud = biomes.userData;
+    pre.terrain = terrain;
+    if (app.phaseShown === 'room') renderPreloadStatus();
+    return terrain;
+  })();
+  pre.promise.catch((e) => {
+    console.warn('地圖預建失敗(開戰時自動重試):', e);
+    pre.error = e;
+    if (app.phaseShown === 'room') renderPreloadStatus();
+  });
+  app.pre = pre;
+  return pre;
+}
+
 // ================= 載入 + 開戰 =================
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
@@ -1424,60 +1538,24 @@ async function enterLoading(cfg) {
     $('loadLabel').textContent = label;
   };
   try {
-    setP(0.02, '載入 3D 模型(Quaternius CC0)…');
-    await preloadModels((f) => setP(f * 0.18, '載入 3D 模型(Quaternius CC0)…'));
-    app.terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
-    const biomes = await buildBiomes(cfg, app.terrain, (f, label) => setP(0.60 + f * 0.36, label));
-    app.terrain.group.add(biomes);
-    app.terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
-    app.terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
-    app.terrain.clearBuildingsAround = biomes.userData.clearAround || null;   // 碉堡淨空:移除重疊建物(game.js 碉堡進場時呼叫)
-    // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
-    // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
-    const deckY = makeDeckIndex(biomes.userData.decks);
-    const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil } | null
-    const decks = biomes.userData.decks || [];
-    app.terrain.deckY = deckY;
-    app.terrain.tunnelAt = tunnelAt;
-    app.terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
-    app.terrain.deckMargin = DECK_MARGIN; // 站立查詢側向容差(game.js NPC 水上站橋與 surfaceAt 同一值)
-    // 大型障礙物頂面站立索引(建物/神木/巨岩;2026-07-22):碉堡淨空拆樓後 MUST 重建(game.js 呼叫)
-    let blockerTop = makeBlockerTopIndex(app.terrain.blockers);
-    app.terrain.blockerTopAt = (x, z, m) => blockerTop(x, z, m);
-    app.terrain.rebuildBlockerTops = () => { blockerTop = makeBlockerTopIndex(app.terrain.blockers); };
-    const BLK_MARGIN = 0.6;   // 頂緣站立容差(遠小於 DECK_MARGIN:屋頂/岩頂邊緣走位餘裕,不誇張懸空)
-    // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上
-    //           ③大型障礙物頂(curY 貼近頂面)= 站頂上 ④否則地表
-    app.terrain.surfaceAt = (x, z, curY) => {
-      const h = app.terrain.heightAt(x, z);
-      if (curY == null) return h;
-      const tn = tunnelAt(x, z);
-      if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
-      const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
-      // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
-      let s = h;
-      if (d != null && d > h && (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H)) s = d;
-      // 障礙物頂:只吃 mount 台階測試(curY >= 頂 − DECK_STEP;從上方落下/跳上/飛降才成立)。
-      // MUST NOT 抄橋的第二條款(底緣淨空 < MAX_MECH_H 強制上頂)—— 建物皆接地,該條恆真
-      // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。
-      const bt = blockerTop(x, z, BLK_MARGIN);
-      if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
-      return s;
-    };
-    // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
-    app.terrain.ceilingAt = (x, z, curY) => {
-      let c = null;
-      const tn = tunnelAt(x, z);
-      if (tn && curY < tn.ceil) c = tn.ceil;                       // 洞內天花板
-      const d = deckY(x, z);
-      if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~DECK_UNDER)
-        const under = d - DECK_UNDER;
-        // 只有「真能鑽過去的高架段」(底緣淨空 ≥ 最大機體)才擋頭;引道低架段不擋 → 交給 surfaceAt 上橋,免卡死
-        if (under - app.terrain.heightAt(x, z) >= MAX_MECH_H && (c == null || under < c)) c = under;
-      }
-      return c;
-    };
-    const st = biomes.userData.stats;
+    // 固定項目(模型/地形/地貌/站立索引)已於房間階段預建(startPrebuild);此處只等它完成。
+    // 沒命中(觀戰中途加入/斷線重連直達 loading、房間階段預建失敗)= 現在才建,行為同舊流程。
+    let pre = startPrebuild(cfg);
+    pre.onProg = setP;
+    setP(pre.prog || 0.02, pre.label || '載入 3D 模型(Quaternius CC0)…');
+    try {
+      await pre.promise;
+    } catch {
+      // 預建失敗多半是暫時性網路(高程/影像/OSM 限流):清掉重建一次,再失敗才進外層錯誤顯示
+      app.pre = null;
+      pre = startPrebuild(cfg);
+      pre.onProg = setP;
+      await pre.promise;
+    }
+    app.terrain = pre.terrain;
+    const ud = pre.ud;
+    app.pre = null;   // 單次使用:進戰鬥的地形會被變異(碉堡拆樓 splice blockers),再戰回房時重新預建
+    const st = ud.stats;
     setP(0.97, `等待其他指揮官…(植被 ${st.veg}・建物 ${st.buildings}` +
       `${st.roads ? `・道路 ${st.roads} 段` : ''}${st.rails ? `・鐵路 ${st.rails} 段` : ''}${st.falls ? `・瀑布 ${st.falls}` : ''}${st.osm ? '・OSM 圖資' : ''})`);
     // 障礙視線遮蔽 + 立體交通走廊上傳(2026-07-15;房主一份,伺服器驗證上限並於開戰時套用):
@@ -1486,13 +1564,13 @@ async function enterLoading(cfg) {
     // 座標轉 sim 系(z 北 = −three z)。e2e/無瀏覽器對局不會上傳 → LOS 遮蔽自動停用(行為不變)。
     if (app.isHost) {
       const rd = (v) => Math.round(v * 10) / 10;
-      const occ = (biomes.userData.blockers || []).slice(0, LOS.MAX_OCC)
+      const occ = (ud.blockers || []).slice(0, LOS.MAX_OCC)
         .map((b) => [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]);
-      const cor = (biomes.userData.gradeCorridors || []).slice(0, 2400)
+      const cor = (ud.gradeCorridors || []).slice(0, 2400)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
       // 橋面/隧道天花水平薄板(#1):deck ribbon(ty=1)+ 隧道 ribbon(ty=2),sim 座標(z 北 = −three z)。
       // 伺服器 _slabBlocked 判「兩端同 ribbon 且分屬板體兩側」擋彈道/LOS —— 補圓柱(occ)之外的水平板缺口。
-      const decks = biomes.userData.decks || [], tunnels = biomes.userData.tunnels || [];
+      const decks = ud.decks || [], tunnels = ud.tunnels || [];
       const slabs = [
         ...decks.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 1]),
         ...tunnels.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2]),
@@ -1838,6 +1916,9 @@ function onSync(m) {
     $('shopOverlay').style.display = 'none';
     delete $('overOverlay').dataset.done;
     if (app.mapSel) { app.mapSel.destroy(); app.mapSel = null; }   // 設定畫面用完即收
+    // 固定項目提前(2026-07-22):開房/入房/再戰回房時 battleConfig 已定案 → 房間階段就預建地圖。
+    // sync 會重播多次,startPrebuild 以 key 冪等;劇情戰役同樣受益(early return 前先觸發)。
+    if (m.lobby.battleConfig) startPrebuild(m.lobby.battleConfig);
     // 劇情戰役:不顯示配對房 UI,自動完成選陣營/角色/準備/開戰(只跑一次)
     if (app.story) { if (!app.story.launched) launchStoryBattle(); return; }
     if (app.phaseShown !== 'room') show('room');
