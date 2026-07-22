@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, ECON, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -172,7 +172,12 @@ export class BotBrain {
       if (hv.type === 'launcher' || hv.type === 'missile') {
         // 對空引爆高度:目標是飛行機體(英雄/直升機)就在其高度炸(火箭筒對空)
         const ty = t.hero || t.kind === 'heli' ? (t.y || 0) : 0;
-        if (Math.random() >= this.diff.aimErr) this.sim.heroBurst(this.pid, t.x, t.z, ty);
+        // 彈道被大型障礙擋住 = 不發射(真人的火箭由客戶端彈道擋牆、落點回報在牆前;
+        // bot 沒有客戶端彈道,這裡補上與 botFire 同一條 LOS 規則,否則火箭穿建物直接命中)
+        if (Math.random() >= this.diff.aimErr
+          && !this.sim._losBlocked(h.x, h.z, (h.y || 0) + LOS.EYE_M, t.x, t.z, this.sim._tgtY(t), h, t)) {
+          this.sim.heroBurst(this.pid, t.x, t.z, ty);
+        }
       } else if (hv.type === 'plasma') {
         this.sim.heroPlasma(this.pid, t.x - h.x, t.z - h.z);
       } else this._fire(t.id, 'heavy');

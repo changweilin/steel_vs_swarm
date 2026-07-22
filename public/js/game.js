@@ -1740,8 +1740,9 @@ export class BattleClient {
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
       const len = def.range * this._altRangeMul(def) * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
-      beamLine(this.scene, this.effects, muzzle, end, col, plasma ? { ttl: 0.24, w: 0.16 } : { ttl: 0.12, w: 0.07 });
-      starburst(this.scene, this.effects, end.x, end.y, end.z, plasma ? 3 : 1.5, col);
+      const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
+      beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 } : { ttl: 0.12, w: 0.07 });
+      starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, plasma ? 3 : 1.5, col);
     }
   }
 
@@ -1780,11 +1781,18 @@ export class BattleClient {
     // 站在高架橋面上時,橋面「下方」街廓的建物(基座低於腳下一截)不推擠 —— 高架路飛越街廓,
     // 否則橋下高樓的碰撞柱垂直涵蓋橋面高度 → 走在橋上會被橋下建物側推撞下橋(#INC 高架橋掉橋)。
     const surfHere = this._surf(this.pos.x, this.pos.z, this.pos.y);
-    const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0;
+    // onDeck = 真的站在高架橋面(deck ribbon 上,查 deckY 對得上站立面),不是任何「高於地表
+    // 的站立面」—— 站障礙物頂(建物/神木/巨岩,2026-07-22 起可站)時 MUST NOT 吃橋面豁免,
+    // 否則「基座低於腳下 3m」的鄰樓(含更高的樓)全部不推擠 = 從屋頂側向走進鄰棟破圖
+    const dkY = this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0);
+    const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0
+      && dkY != null && Math.abs(surfHere - dkY) < 0.6;
     this._surfHere = surfHere; this._onDeck = onDeck;   // 供 _cameraDeClip 共用(免重算)
     for (const b of this.terrain.blockers || []) {
       if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
-      if (myBot > b.y + b.h || myTop < b.y) continue;
+      // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
+      // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
+      if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
       if (b.hw2 != null) {
         // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
         const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
@@ -2265,7 +2273,10 @@ export class BattleClient {
     if (this._bldCleared.has(key)) return;
     this._bldCleared.add(key);
     const removed = this.terrain.clearBuildingsAround?.(wx, wz, R);
-    if (removed) this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);   // 碰撞柱與視覺一致(A6)
+    if (removed) {
+      this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);   // 碰撞柱與視覺一致(A6)
+      this.terrain.rebuildBlockerTops?.();   // 頂面站立索引同步重建(拆掉的樓不留幽靈站立面)
+    }
   }
 
   // 主堡治癒光環:標出 HERO_HEAL_R 範圍(貼地環,陣營色,緩慢脈動)
@@ -2648,6 +2659,38 @@ export class BattleClient {
     this.hud.envFog?.(Math.max(0, Math.min(1, (this._fireDwell - FIRE_FOG_S) / (FIRE_FOG_MAX_S - FIRE_FOG_S))));
   }
 
+  /**
+   * 水下/沼澤視野變色(2026-07-22,純表現層):鏡頭「眼位」沒入水面下 → 藍色帷幕,依沒入深度
+   * 插值到近黑(FULL_D×2 ≈ 10m 滿檔);沒入點屬沼澤帶 → 混濁紫黑。判定用最終 camera.position
+   * (非 _env.depth —— 那是腳下站立面深度,淺水站立眼在水上時會誤觸),陣亡過場鏡頭墜水 /
+   * 觀戰潛水同樣生效。沼澤本身無水面高(高程在水面之上),另以「站沼滯留」推混濁紫氣
+   * (越陷越深越濁,與 _terrainSlowF 同一把 _swampDwell 尺)—— 沼澤的「混濁」隨深陷可見化。
+   * 每幀重算、無狀態殘留(死亡/重生/離水自然歸零)。
+   */
+  _updateWaterVeil() {
+    if (!this.hud.waterVeil) return;
+    const t = this.terrain;
+    let v = null;
+    if (t) {
+      const cam = this.camera.position;
+      const wy = t.waterY;
+      if (wy != null && cam.y < wy) {
+        const code = terrainEnvCode(t, cam.x, cam.z);
+        if (code) {
+          const k = Math.min(1, (wy - cam.y) / (WATER.FULL_D * 2));
+          const mixc = (a, b) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+          v = code === 2
+            ? { c: mixc([96, 66, 128], [22, 10, 34]), a: 0.55 + 0.42 * k }   // 沼澤水下:混濁紫 → 紫黑
+            : { c: mixc([26, 92, 142], [3, 8, 14]), a: 0.42 + 0.53 * k };    // 水下:藍 → 黑
+        }
+      } else if (this._env?.code === 2 && !this._flying() && !this.dead) {
+        const k = Math.min(1, (this._swampDwell || 0) / TERRAIN_FX.SWAMP_DRAIN_S);
+        if (k > 0.02) v = { c: [98, 72, 124], a: 0.08 + 0.24 * k };   // 站沼:泥沼濁氣漸濃(淡紫)
+      }
+    }
+    this.hud.waterVeil(v);
+  }
+
   _updateMissiles(dt) {
     for (const ms of this.samMeshes.values()) {
       const p = ms.mesh.position;
@@ -2930,7 +2973,8 @@ export class BattleClient {
         for (let k = -2; k <= 2; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
           const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
-          beamLine(this.scene, this.effects, from, end, pcol, heavy ? { ttl: 0.26, w: 0.22 } : { ttl: 0.2, w: 0.09 });
+          const clip = this._clipBeam(from, end);   // 扇形焰舌不畫穿牆(伺服器逐目標 LOS 已擋傷害)
+          beamLine(this.scene, this.effects, from, clip.to, pcol, heavy ? { ttl: 0.26, w: 0.22 } : { ttl: 0.2, w: 0.09 });
         }
         // 扇形武器不走 tracer 訊息 → 在此標記射手開火動畫(電漿噴湧的後座/射姿)
         this._markFire(ev.pid, heavy ? 'heavy' : 'light', performance.now() / 1000);
@@ -2943,10 +2987,11 @@ export class BattleClient {
       const to = new THREE.Vector3(tx, this.terrain.heightAt(tx, tz) + (ev.ty || 0) + 2, tz);
       const t0 = performance.now() / 1000;
       if (ev.pid != null) {
-        // bot 英雄 / 僚機齊射:走真人 tracer 同一條槍口/後座路徑
+        // bot 英雄 / 僚機齊射:走真人 tracer 同一條槍口/後座路徑(曳光被障礙截斷,火花打在障礙面)
         const from = this._entMuzzle(ev.pid, ev.slot,
           new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + 2, fz));
-        this._shotFx(from, to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
+        const clip = this._clipBeam(from, to);
+        this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
         this._markFire(ev.pid, ev.slot, t0);
       } else {
         const ent = ev.id != null ? this.ents.get(ev.id) : null;
@@ -2959,7 +3004,12 @@ export class BattleClient {
         const { col, hot } = this._shotCols(ev.side);
         starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
         if (ev.kind === 'howitzer') this._arcTracer(from, to, col, ent);
-        else beamLine(this.scene, this.effects, from, to, col, { ttl: 0.11, w: 0.06 });
+        else {
+          // NPC/塔/主堡曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
+          const clip = this._clipBeam(from, to);
+          beamLine(this.scene, this.effects, from, clip.to, col, { ttl: 0.11, w: 0.06 });
+          if (clip.cut) starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col);
+        }
       }
     } else if (ev.e === 'wave') {
       this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊(含攻擊直升機)`);
@@ -2973,10 +3023,12 @@ export class BattleClient {
     // 起點解析成射手機體的 rig 槍口錨(找不到才用訊息座標)—— 曳光從對方手上/背上的槍管射出
     const from = this._entMuzzle(m.pid, m.slot,
       new THREE.Vector3(m.from[0], m.from[1], m.from[2]));
+    // 他人曳光同吃障礙截斷(對方客戶端已擋彈道,這裡的 60m 示意曳光也不可畫穿牆)
+    const clip = this._clipBeam(from, new THREE.Vector3(m.to[0], m.to[1], m.to[2]));
     this._shotFx(
       from,
-      new THREE.Vector3(m.to[0], m.to[1], m.to[2]),
-      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit },
+      clip.to,
+      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut },
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000);
@@ -3473,7 +3525,10 @@ export class BattleClient {
         from.x + dx * s,
         from.y + (to.y - from.y) * s + 4 * h * s * (1 - s),
         from.z + dz * s);
-      beamLine(this.scene, this.effects, prev, p, col, { ttl: 0.3, w: 0.05 });
+      // 拋物線逐段吃障礙截斷:弧線打進建物/神木/巨岩即止於面上(火花),不畫穿體
+      const clip = this._clipBeam(prev, p);
+      beamLine(this.scene, this.effects, prev, clip.to, col, { ttl: 0.3, w: 0.05 });
+      if (clip.cut) { starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col); break; }
       prev = p;
     }
     const gp = ent?.mesh?.userData?.rig?.gunR;
@@ -3939,6 +3994,21 @@ export class BattleClient {
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
     this.scene.add(line);
     this.effects.push({ obj: line, ttl, fade: (o, f) => { o.material.opacity = 0.9 * f; } });
+  }
+
+  /**
+   * 曳光遮蔽截斷(2026-07-22):NPC/塔/主堡/bot/他人開火視覺與伺服器 LOS 對齊 ——
+   * 伺服器判「可射」仍可能因幾何不同形(occ r/h 夾制、THRU_M 擦邊放行、y 離地近似、
+   * 射點用 ent 座標非實際槍口)讓客戶端全精度下的束線削過障礙;一律以本端 _obstHitT
+   * (圓柱 ∪ 橋面/天花薄板)把 to 夾短到障礙面(cut=true 時呼叫端在截斷點畫火花)。
+   * 純表現層 —— 傷害結算在伺服器,不受影響。
+   */
+  _clipBeam(from, to) {
+    const d = this._obstHitT(from.x, from.y, from.z, to.x, to.y, to.z);
+    if (d == null) return { to, cut: false };
+    const len = from.distanceTo(to) || 1;
+    if (d >= len) return { to, cut: false };
+    return { to: from.clone().lerp(to, Math.max(0, (d - 0.2) / len)), cut: true };
   }
 
   /** 陣營射擊配色(曳光主色 / 槍口熱芯);第三方(GUER/MILI)走各自識別色 */
@@ -4517,13 +4587,20 @@ export class BattleClient {
       // y = 離「站立表面」的高度(橋上算 0):伺服器的地面型/防空判定不會因為站上橋面而誤判;
       // 深水處的站立表面 = 水面 − 全滅頂深(泡在水裡的機體是地面單位,不是空中目標)
       const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      const sEff = this.terrain.waterY != null ? Math.max(sy, this.terrain.waterY - WATER.FULL_D) : sy;
-      this._altAG = this.pos.y - sEff;   // 離站立表面高度(與回報 y 同源;高度制空 _altRangeMul 用)
-      // 所在結構層(#1 slab LOS):2 隧道內(天花之下)/ 1 橋面上(站立面高於地表一截)/ 0 地面。
-      // 伺服器 y 為離站立表面高(橋上/橋下皆 ≈0 無法區辨),故另回報此層供 _slabBlocked 判板體兩側。
       const th = this.terrain.heightAt(this.pos.x, this.pos.z);
       const tn = this.terrain.tunnelAt?.(this.pos.x, this.pos.z);
-      const lev = (tn && this.pos.y < tn.ceil) ? 2 : (sy > th + 1) ? 1 : 0;
+      const inTun = !!(tn && this.pos.y < tn.ceil);
+      // 所在結構層(#1 slab LOS):2 隧道內 / 1 真・橋面(deck ribbon 對得上站立面)/ 0 地面。
+      // 伺服器 y 為離站立表面高(橋上/橋下皆 ≈0 無法區辨),故另回報此層供 _slabBlocked 判板體兩側。
+      // 站障礙物頂(建物/神木/巨岩,2026-07-22 可站立)≠ 橋層:屋頂不是 slab ribbon,回報 lev=0,
+      // 且 y 基準改「地形」—— 伺服器把障礙視為 [0,h] 圓柱,離地高回報讓射手眼位越過自身柱頂,
+      // 站樓頂開火才不會被自己腳下那根 occ 柱誤判遮蔽(高度制空加成隨之生效 = 高地俯射,物理一致)。
+      const dY2 = !inTun && sy > th + 1 ? this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0) : null;
+      const onBridge = dY2 != null && Math.abs(sy - dY2) < 0.6;
+      const yRef = (!inTun && !onBridge && sy > th + 1) ? th : sy;   // 障礙物頂 → 地形基準
+      const sEff = this.terrain.waterY != null ? Math.max(yRef, this.terrain.waterY - WATER.FULL_D) : yRef;
+      this._altAG = this.pos.y - sEff;   // 離基準面高度(與回報 y 同源;高度制空 _altRangeMul 用)
+      const lev = inTun ? 2 : onBridge ? 1 : 0;
       this.net.send({
         t: 'pos',
         x: Math.round(this.pos.x * 10) / 10,
@@ -5185,6 +5262,7 @@ export class BattleClient {
       }
       this.cockpit.visible = !this.dead || !!this._deathSeq;   // 過場期間保留座艙,隨鏡頭傾倒/翻滾(第一人稱殉爆)
     }
+    this._updateWaterVeil();   // 水下/沼澤視野變色(最終 camera 定案後、render 前)
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
     this.renderer.render(this.scene, this.camera);

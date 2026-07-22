@@ -395,14 +395,16 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
       if (blocked.has(cellKey(gx, gz))) continue;
       const gy = terrain.heightAt(gx, gz);
-      if (gy < 0.4) continue;
+      // 水域/沼澤不長神木(terrainEnvCode 確定性純函式;群落中心的 classify 有 55% mix 改寫
+      // 可能把水色點洗成 green、株散 ±82m 也會越到濕地 —— 這裡是最後把關)
+      if (gy < 0.4 || terrainEnvCode(terrain, gx, gz) !== 0) continue;
       const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
         tx: (rnd() - 0.5) * 0.05, tz: (rnd() - 0.5) * 0.05,
       });
-      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1 });
+      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1 });   // std:頂部可站立(surfaceAt)
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
       trunks.push([gx, gz, def.r * s + 8]);       // 巨幹半徑可 >10m 網格;+8 淨距 = 樹冠不貼建物牆面
       // 巨木表面特徵:掛在樹幹側面(幹半徑隨高度收窄),世界尺寸與樹齡脫鉤
@@ -1510,6 +1512,10 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
       || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) continue;
     let gy = terrain.heightAt(x, z);
     if (gy < 0.4) continue;
+    // 水域/沼澤不放巨岩:佔地大(r 可 ~20m+),中心 + 腳印周圈四向一併驗(rnd 已抽完,序列安全)
+    if (terrainEnvCode(terrain, x, z) !== 0
+      || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
+        .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
     if (!areaFree(blocked, x, z, r + 6)) continue;
     if (placedM.some((p) => Math.hypot(x - p.x, z - p.z) < r + p.r + 70)) continue;
     if (!synth) named++;
@@ -1525,7 +1531,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
     blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
-    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2 });
+    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2, std: 1 });   // std:頂部可站立(surfaceAt)
     placedM.push({ x, z, r });
   }
   return placedM.length;
@@ -2757,6 +2763,52 @@ export function makeTunnelIndex(tunnels) {
   };
 }
 
+/**
+ * 大型障礙物「頂面」站立索引(2026-07-22):建物(bld,含裙樓/地標)與神木/巨岩(std)頂部
+ * 可站立 —— 與橋面同一套 mount 語意(main.js surfaceAt 的 curY >= top − DECK_STEP 台階測試)。
+ * 查詢 (x, z, margin) → footprint 含此點的最高頂(b.y + b.h),無則 null;margin 只放寬水平
+ * 邊緣(貼頂緣不掉落),建物走 hw2/hd2/ry 有向盒、其餘走 r 圓柱 —— 與 _collide 同一份幾何。
+ * 橋墩/門洞柱/封路障礙不登記(無 bld/std 旗標):橋墩頂緊貼橋底緣(縫 1.2m 塞不下機體)、
+ * 封路障礙頂距地僅 ~2m(落在 mount 台階內,會變成「走過去自動跨上」= 封路失效)。
+ * 碉堡淨空 clearAround 會 in-place splice blockers —— MUST 經 terrain.rebuildBlockerTops 重建。
+ */
+export function makeBlockerTopIndex(blockers) {
+  const CELL = 16;
+  const grid = new Map();
+  const key = (i, j) => `${i},${j}`;
+  for (const b of blockers || []) {
+    if (!b.bld && !b.std) continue;
+    const r = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;
+    const i0 = Math.floor((b.x - r - 1) / CELL), i1 = Math.floor((b.x + r + 1) / CELL);
+    const j0 = Math.floor((b.z - r - 1) / CELL), j1 = Math.floor((b.z + r + 1) / CELL);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const k = key(i, j);
+        let arr = grid.get(k);
+        if (!arr) { arr = []; grid.set(k, arr); }
+        arr.push(b);
+      }
+    }
+  }
+  if (!grid.size) return () => null;
+  return (x, z, margin = 0) => {
+    const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
+    if (!arr) return null;
+    let best = null;
+    for (const b of arr) {
+      if (b.hw2 != null) {
+        const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+        const rx = x - b.x, rz = z - b.z;
+        const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 −ry,與 _collide 同式)
+        if (Math.abs(lx) > b.hw2 + margin || Math.abs(lz) > b.hd2 + margin) continue;
+      } else if (Math.hypot(x - b.x, z - b.z) > b.r + margin) continue;
+      const top = b.y + b.h;
+      if (best === null || top > best) best = top;
+    }
+    return best;
+  };
+}
+
 // ---- 鐵路 / 捷運(圖資 way):道碴 + 雙軌 + 行駛中的低多邊形列車 ----
 // 高度一致性(2026-07-18):OSM 常把一條連續鐵軌切成「地面 way + `bridge` way」,舊版對整條
 // way 套固定 lift(高架 8m / 地面 0.35m)→ 接點瞬間垂直跳 8m,鐵軌看起來斷掉。改為**逐頂點
@@ -3098,7 +3150,8 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
       const x = e.x0 + e.dx * d + nx * inset;
       const z = e.z0 + e.dz * d + nz * inset;
       const h = terrain.heightAt(x, z);
-      if (h < 0.4) continue;   // 水面缺口:水面本身就是邊界
+      // 水面/濕地缺口:水面本身就是邊界;沼澤帶也不種邊界樓/神木牆/巨岩(水沼上禁大型障礙物)
+      if (h < 0.4 || terrainEnvCode(terrain, x, z) !== 0) continue;
       const avail = occ.room(x, z) - 1;   // 與既有物(含邊界鄰居/邊緣 OSM 樓)的可用半徑
       const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
       if (biome === 'urban') {
@@ -3266,7 +3319,7 @@ function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
       const ox = cx + dx * 6, oz = cz + dz * 6;
       if (placed.some((p) => Math.hypot(ox - p[0], oz - p[1]) < 30)) continue;   // 同路口去重
       const gy = terrain.heightAt(ox, oz);
-      if (gy < 0.4) continue;
+      if (gy < 0.4 || terrainEnvCode(terrain, ox, oz) !== 0) continue;   // 水域/沼澤不放封路障礙
       const g = new THREE.Group();
       const kind = kindKeys[Math.floor(rnd() * kindKeys.length)];
       const or2 = KINDS[kind](g, rnd);
@@ -3360,6 +3413,7 @@ function densifyUrban({ generic, blocked, terrain, rnd, inb, occ }) {
         if (x < terrain.minX + inb || x > terrain.maxX - inb
           || z < terrain.minZ + inb || z > terrain.maxZ - inb) continue;
         if (terrain.heightAt(x, z) <= 0.4) continue;              // 水面
+        if (terrainEnvCode(terrain, x, z) !== 0) continue;        // 水域/沼澤不補間建物(抽樣已完,序列安全)
         // occ 用外接圓(不穿模),blocked 用內縮圓(牆面不侵走廊)— 與 OSM 建物同一套判準
         const r = Math.hypot(w, d) / 2;
         if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) continue;
@@ -3488,6 +3542,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
       continue;
     }
+    // 內陸影像水域(高於海平面盤、靠衛星水色判定):classify 的 mix 55% 改寫可能把水點
+    // 洗成 green 而種樹進河面 —— 比照水體處理(偶發岸邊蘆葦)。沼澤(code 2)保留 wet 分支植被。
+    if (terrainEnvCode(terrain, x, z) === 1) {
+      if (rnd() < 0.06) put('reed', x, z, 0.8 + rnd() * 0.6);
+      continue;
+    }
     const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (biome === 'water') continue;
     if (biome === 'urban') {
@@ -3604,7 +3664,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     !blocked.has(cellKey(x, z))
     && x > terrain.minX + inb && x < terrain.maxX - inb
     && z > terrain.minZ + inb && z < terrain.maxZ - inb
-    && terrain.heightAt(x, z) > 0.4;
+    && terrain.heightAt(x, z) > 0.4
+    && terrainEnvCode(terrain, x, z) === 0;   // 水域/沼澤不蓋建物(單一縫:OSM 建物/地標/離線街區共用)
 
   if (osm && osm.length) {
     onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
@@ -4205,6 +4266,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 拼圖類型與衛星圖資相符;classifyAt 僅作 classifyPureAt 缺席時的備援
 
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
+    // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
+    envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd,
   });
 

@@ -491,6 +491,13 @@ body.aiming .crosshair::after { height: 2px; }
 .hitmark.on { animation: hitPop 0.2s steps(4); }
 @keyframes hitPop { 0% { opacity: 1; transform: rotate(45deg) scale(0.6); } 100% { opacity: 0; transform: rotate(45deg) scale(1.6); } }
 
+/* 水下/沼澤視野變色:視線低於水面 → 藍(越深越黑)、沼澤 → 混濁紫。z 6 = 「世界的顏色」層,
+   壓在狙擊遮罩(7)/受傷・火場暈影(8)/HUD(10)之下;顏色與 opacity 逐幀由 game.js 推,
+   MUST NOT 加 transition(每幀依深度即時插值,CSS 過渡會鈍化)。 */
+.water-veil {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none; opacity: 0;
+}
+
 /* 受傷暈影:被擊瞬間全屏邊緣紅光閃爍(在準星/HUD 之下,只染畫面周邊不擋中央視線) */
 .hurt-vig {
   position: absolute; inset: 0; z-index: 8; pointer-events: none; opacity: 0;

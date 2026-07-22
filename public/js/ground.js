@@ -441,11 +441,11 @@ const PAINTERS = {
     g.lineWidth = 4;                                    // 起跑/終點線:橫跨直道
     g.beginPath(); g.moveTo(S * 0.72, OUT); g.lineTo(S * 0.72, OUT + LANES * LW); g.stroke();
   },
-  marsh(g, S, rnd) {                                   // 濕地泥灘:積水塊 + 蘆葦筆觸
-    g.fillStyle = vary(0x63604a, rnd); g.fillRect(0, 0, S, S);
+  marsh(g, S, rnd) {                                   // 濕地泥灘:混濁紫水窪 + 蘆葦筆觸(沼澤識別色 = 濁紫)
+    g.fillStyle = vary(0x5d5647, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 8; i++) {
       const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 16;
-      g.fillStyle = 'rgba(125,147,156,0.65)'; brushBlob(g, x, y, r, rnd);
+      g.fillStyle = 'rgba(128,106,150,0.65)'; brushBlob(g, x, y, r, rnd);
       g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1.4;
       g.beginPath(); g.arc(x, y, r * 0.85, 3.4, 5.0); g.stroke();
     }
@@ -462,6 +462,33 @@ const PAINTERS = {
     for (let i = 0; i < 8; i++) {                      // 水下暗影:水深錯落
       g.fillStyle = `rgba(30,52,58,${0.15 + rnd() * 0.15})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);
+    }
+  },
+  watertile(g, S, rnd) {                               // 水域(淺):亮藍波光弧 + 岸沫點 —— 一眼可辨「這是水」
+    g.fillStyle = vary(0x2f6f96, rnd, 8); g.fillRect(0, 0, S, S);
+    g.lineCap = 'round';
+    for (let i = 0; i < 16; i++) {                     // 波光弧(同向排列 = 水流感)
+      const x = rnd() * S, y = rnd() * S, r = 8 + rnd() * 16;
+      g.strokeStyle = `rgba(210,236,255,${0.35 + rnd() * 0.3})`; g.lineWidth = 1.6 + rnd();
+      g.beginPath(); g.arc(x, y, r, Math.PI * 1.1, Math.PI * 1.65); g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.28)';
+    for (let i = 0; i < 26; i++) g.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 3, 1.5);   // 碎浪沫
+    g.fillStyle = 'rgba(24,58,84,0.30)';
+    for (let i = 0; i < 6; i++) brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);   // 水色深斑
+  },
+  deepwater(g, S, rnd) {                               // 水域(深):暗藍底 + 稀疏天光 —— 與淺水同語彙、更深沉
+    g.fillStyle = vary(0x1c4560, rnd, 8); g.fillRect(0, 0, S, S);
+    g.fillStyle = 'rgba(190,224,246,0.16)';
+    for (let i = 0; i < 8; i++) g.fillRect(rnd() * S, rnd() * S, 12 + rnd() * 26, 1.6);  // 稀疏天光
+    for (let i = 0; i < 9; i++) {                      // 深水暗湧
+      g.fillStyle = `rgba(10,28,42,${0.18 + rnd() * 0.16})`;
+      brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 18, rnd);
+    }
+    g.lineCap = 'round'; g.strokeStyle = 'rgba(150,196,224,0.22)'; g.lineWidth = 1.4;
+    for (let i = 0; i < 6; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 14;
+      g.beginPath(); g.arc(x, y, r, Math.PI * 1.15, Math.PI * 1.55); g.stroke();
     }
   },
   // ======== 綠地擴充 ========
@@ -901,8 +928,11 @@ const DEFS = {
   parking:      { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.10, fam: 'rectUrban' },
   court:        { shape: 'rect', uv: 'fit', aspect: 0.54, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
   track:        { shape: 'rect', uv: 'fit', aspect: 0.5, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
-  marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, green: true, fam: 'wetFam' },
-  lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, fam: 'wetFam' },
+  marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, green: true, fam: 'wetFam', aq: 1 },
+  lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, fam: 'wetFam', aq: 1 },
+  // — 水域專屬底毯(aq:灘線/水面高度淘汰放行,頂點高夾到水面上;terrainEnvCode===1 專用)—
+  watertile:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, aq: 1 },
+  deepwater:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, aq: 1 },
   // — 綠地擴充:竹林/枯朽森林/伐木業/棚架農業 —
   arrowbamboo:  { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.50, green: true, fam: 'blobGreen' },
   deadwood:     { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'deadFam' },
@@ -961,6 +991,7 @@ const CARPET = {
           'deadforest', 'mud', 'scree'],
   urban: ['concrete', 'pavement', 'lawn', 'brick', 'concrete', 'park', 'pavement'],
   wet:   ['marsh', 'marsh', 'lotus'],
+  water: ['watertile'],   // 水域專屬(深水格由 cellKeyAt 依水深改配 deepwater,不走雜訊輪替)
   alpine: ['plateau', 'scree', 'icefield', 'steppe', 'plateau'],
 };
 // 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落 /
@@ -983,7 +1014,7 @@ const FAMS = {
 const SIZE = {
   turf: [9, 10], meadow: [10, 12], bushfield: [8, 8], flowerfield: [10, 8], orchard: [11, 8],
   lawn: [8, 8], wild: [10, 12], gravel: [8, 9], sand: [11, 12], mud: [8, 9],
-  crackedearth: [11, 10], redsoil: [10, 9], marsh: [8, 8], lotus: [8, 6],
+  crackedearth: [11, 10], redsoil: [10, 9], marsh: [8, 8], lotus: [8, 6], watertile: [10, 8], deepwater: [10, 8],
   paddy: [13, 8], dryfield: [12, 8], teafield: [12, 6], veggiefield: [10, 6], concrete: [9, 7], brick: [7, 6],
   pavement: [8, 6], parking: [14, 4], court: [16, 3], track: [15, 3],
   arrowbamboo: [10, 8], deadwood: [11, 10], deadforest: [12, 10], fallenlogs: [9, 8],
@@ -1237,8 +1268,10 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
  * @param opts.blockers   建物碰撞柱(patch 避開建物)
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, blockers, season, seed, rnd }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
+  const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
+  const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
   const buckets = new Map();   // `${sub}#${variant}` -> 幾何桶
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
@@ -1247,8 +1280,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ry:null = 隨機朝向;傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向)
   const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
     if (detCount >= detCap || isBlocked(px, pz)) return;
-    const y = terrain.heightAt(px, pz);
-    if (y < 0.4) return;
+    let y = terrain.heightAt(px, pz);
+    if (y < 0.4) {
+      if (!AQ_DET.has(type)) return;                   // 水生細節(蘆葦/荷葉)放行:貼水面擺放
+      if (terrain.waterY != null) y = Math.max(y, terrain.waterY);
+    }
     const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
     det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? rnd() * Math.PI * 2,
                      tx: (rnd() - 0.5) * 2 * tl, tz: (rnd() - 0.5) * 2 * tl, tint: tintHex });
@@ -1293,6 +1329,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
   const zoneAt = (x, z) => {
+    // 水/沼優先走 envCode(與伺服器遮罩/涉水判定同一規則 = WYSIWYG):
+    // 水域回 'water'(無特徵 patch 清單 ⇒ 任何場所拼圖不得落水),沼澤回 'wet'(啟用濕地特徵)
+    const ec = envAt(x, z);
+    if (ec === 1) return 'water';
+    if (ec === 2) return 'wet';
     let zn = classifyPure(x, z);
     if ((zn === 'green' || zn === 'bare') && terrain.heightAt(x, z) > alpineH) zn = 'alpine';
     return zn;
@@ -1322,9 +1363,18 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   //   懸崖(>0.75)→ '!' 不鋪(頂投影 UV 在近垂直面會拉絲,露地形岩面較自然,
   //                  鄰格外溢淡出補縫);中坡(>0.28)→ 強制 bare(山坡不會是停車場)
   //   低窪綠地(水面 +2.2m 內)→ wet(河岸蘆葦帶)
-  const cellKeyAt = (i, j) => {                         // `${sub}#${variant}` / '!' / null(水)
+  const cellKeyAt = (i, j) => {                         // `${sub}#${variant}` / '!' / null(不鋪)
     const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
     const hC = terrain.heightAt(cx, cz);
+    // 底毯用 3 變體(vs 特徵層 4;draw call 可控);大面積反重複交給 wash 雜訊 + 鏡射 UV
+    const variant = Math.min(2, (vnoise(cx * 0.0025, cz * 0.0025, seed ^ 0x7E11) * 3) | 0);
+    // 水/沼專屬拼圖(2026-07-22,envCode 與伺服器遮罩同一規則 = WYSIWYG):
+    // 水域(1)必鋪水拼圖(免坡度/灘線淘汰 —— 水面是平的,易辨識優先);依水深配淺/深款。
+    const ec = envAt(cx, cz);
+    if (ec === 1) {
+      const wy = terrain.waterY;
+      return `${wy != null && hC < wy - 2.5 ? 'deepwater' : 'watertile'}#${variant}`;
+    }
     const slope = Math.max(
       Math.abs(terrain.heightAt(cx + cell, cz) - hC),
       Math.abs(terrain.heightAt(cx, cz + cell) - hC)) / cell;
@@ -1335,16 +1385,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       votes[zn0] = (votes[zn0] || 0) + 1;
     }
     let zn = Object.keys(votes).reduce((a, b) => (votes[b] > votes[a] ? b : a));
-    if (zn === 'water') return null;
+    if (zn === 'water') return null;   // envCode 判乾但影像多數決仍水色(灰帶):留空露衛星底圖
     if (slope > 0.28 && zn !== 'wet') zn = 'bare';
-    // 河岸蘆葦帶:只在「地圖真的有水面」(minH<0.5 才會放水)且貼近水面高度時
-    if (zn === 'green' && hC < 2.2 && terrain.minH < 0.5) zn = 'wet';
+    // 沼澤(2)一律鋪濕地拼圖(取代舊「green 且 hC<2.2 且 minH<0.5」私規則 —— 與 envCode 統一)
+    if (ec === 2) zn = 'wet';
     if ((zn === 'green' || zn === 'bare') && hC > alpineH) zn = 'alpine';
     const list = carpetLists[zn];
     if (!list) return null;
     const t = Math.min(0.999, Math.max(0, (vnoise(cx * 0.006, cz * 0.006, seed) - 0.5) * 2.2 + 0.5));
-    // 底毯用 3 變體(vs 特徵層 4;draw call 可控);大面積反重複交給 wash 雜訊 + 鏡射 UV
-    const variant = Math.min(2, (vnoise(cx * 0.0025, cz * 0.0025, seed ^ 0x7E11) * 3) | 0);
     return `${list[(t * list.length) | 0]}#${variant}`;
   };
   // cell 幾何:3×3 貼地網格(邊中點 = 共用角點的中點 → 相鄰 cell 完全同點,水密;
@@ -1357,8 +1405,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const G = [P0, mid(P0, P1), P1,
                mid(P3, P0), mid(mid(P0, P1), mid(P3, P2)), mid(P1, P2),
                P3, mid(P3, P2), P2];
-    const hs = G.map(([px, pz]) => terrain.heightAt(px, pz));
-    if (Math.min(...hs) < 0.45) return null;            // 岸際留空 = 灘線,不鋪下水
+    const sub0 = key.slice(0, key.indexOf('#'));
+    const aq = !!DEFS[sub0].aq;                         // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
+    let hs = G.map(([px, pz]) => terrain.heightAt(px, pz));
+    if (!aq && Math.min(...hs) < 0.45) return null;     // 岸際留空 = 灘線,不鋪下水
+    if (aq && terrain.waterY != null) hs = hs.map((hh) => Math.max(hh, terrain.waterY + 0.05));
     const [aA, aB, aC, aD] = alphas || [1, 1, 1, 1];
     const AL = [aA, (aA + aB) / 2, aB,
                 (aD + aA) / 2, (aA + aB + aC + aD) / 4, (aB + aC) / 2,
@@ -1481,7 +1532,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       if (h < mn) mn = h;
       if (h > mx) mx = h;
     }
-    if (mn < 0.45 || mx - mn > r * def.slope) return false;
+    if ((mn < 0.45 && !def.aq) || mx - mn > r * def.slope) return false;   // 水生拼圖(marsh/lotus/魚塭)可貼岸線
     for (const bl of blockers) {
       const dx = x - bl.x, dz = z - bl.z, rr = bl.r + r * 0.7;
       if (dx * dx + dz * dz < rr * rr) return false;
@@ -1637,6 +1688,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     else if (sub === 'redsoil') { scatter('pebble', 2, 0.5, 0.4); scatter('tuft', 1, 0.5, 0.3); scatter('weed', 1, 0.6, 0.3); }
     else if (sub === 'marsh') scatter('reed', 8 + (rnd() * 6 | 0), 0.8, 0.6);
     else if (sub === 'lotus') { scatter('lotuspad', 12 + (rnd() * 8 | 0), 0.8, 0.8); scatter('reed', 4, 0.7, 0.5); }
+    else if (sub === 'watertile') { if (rnd() < 0.35) scatter('reed', 2 + (rnd() * 3 | 0), 0.8, 0.5); }   // 淺水零星蘆葦(deepwater 全空)
     // — 綠地擴充 —
     else if (sub === 'arrowbamboo') { scatter('bamboo', 9 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.4); }
     else if (sub === 'deadwood') { scatter('snag', 5 + (rnd() * 4 | 0), 0.8, 0.7); scatter('log', 2, 0.7, 0.4); scatter('pebble', 2, 0.5, 0.4); }

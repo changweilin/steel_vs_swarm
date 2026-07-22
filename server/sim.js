@@ -2854,10 +2854,16 @@ export class BattleSim {
    * (still 有近炸引信,撞上算它走運),ttl 到期自毀。飛出射程 = 逃掉了。
    */
   _tickMissiles(dt) {
+    // 大型障礙物攔截:本步位移線段撞上 occ 圓柱(建物/神木/巨岩/橋墩)→ 就地引爆自毀。
+    // 無 world 上傳(e2e/headless)→ _losGrid 不存在 → no-op(降級縫,與其他 LOS 入口同模式);
+    // A7 失鎖直線規則不變(失鎖後照樣會撞牆),slab 薄板不查(飛彈無 lev 語意,圓柱已涵蓋橋墩)。
+    const hitObst = (ox, oz, oy, m) => this._losGrid
+      && this._losBlocked(ox, oz, oy, m.x, m.z, m.y);
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
       m.ttl -= dt;
       if (m.ttl <= 0) { this.missiles.splice(i, 1); continue; }
+      const ox = m.x, oy = m.y, oz = m.z;
       const step = m.speed * dt;
       // 導引飛彈吸附(2026-07-17):目標是「有存活自殺攻擊機的無人機玩家」→ 改追最近的自殺機
       // (吸走砲火);自殺機炸掉/被擊落後其 tid 失效 → 下方目標消失分支使飛彈自毀。
@@ -2892,6 +2898,10 @@ export class BattleSim {
           m.vx = dx / d * m.speed; m.vy = dy / d * m.speed; m.vz = dz / d * m.speed;
         } else {
           m.x += dx / d * step; m.y += dy / d * step; m.z += dz / d * step;
+          if (hitObst(ox, oz, oy, m)) {
+            this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: m.side, sam: true });
+            this.missiles.splice(i, 1);
+          }
           continue;
         }
       } else if (!m.lost) {
@@ -2902,6 +2912,10 @@ export class BattleSim {
       m.x += (m.vx || 0) * dt;
       m.y += (m.vy || 0) * dt;
       m.z += (m.vz || 0) * dt;
+      if (hitObst(ox, oz, oy, m)) {
+        this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: m.side, sam: true });
+        this.missiles.splice(i, 1);
+      }
     }
   }
 

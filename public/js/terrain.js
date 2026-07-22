@@ -371,7 +371,8 @@ export async function buildTerrain(cfg, onProgress) {
     waterY = WATER.LEVEL;
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(worldW, worldH),
-      new THREE.MeshToonMaterial({ color: 0x1a4a6a, gradientMap: toonGradient(), transparent: true, opacity: 0.82 }),
+      // DoubleSide:視線沒入水下時抬頭仍看得到水面(單面會被背面剔除 = 水下憑空無水)
+      new THREE.MeshToonMaterial({ color: 0x1a4a6a, gradientMap: toonGradient(), transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);

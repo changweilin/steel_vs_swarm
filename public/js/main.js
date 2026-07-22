@@ -15,7 +15,7 @@ import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain } from './terrain.js';
-import { buildBiomes, makeDeckIndex, makeTunnelIndex, terrainEnvCode } from './biomes.js';
+import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -1440,16 +1440,28 @@ async function enterLoading(cfg) {
     app.terrain.deckY = deckY;
     app.terrain.tunnelAt = tunnelAt;
     app.terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
-    // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上 ③否則地表
+    // 大型障礙物頂面站立索引(建物/神木/巨岩;2026-07-22):碉堡淨空拆樓後 MUST 重建(game.js 呼叫)
+    let blockerTop = makeBlockerTopIndex(app.terrain.blockers);
+    app.terrain.blockerTopAt = (x, z, m) => blockerTop(x, z, m);
+    app.terrain.rebuildBlockerTops = () => { blockerTop = makeBlockerTopIndex(app.terrain.blockers); };
+    const BLK_MARGIN = 0.6;   // 頂緣站立容差(遠小於 DECK_MARGIN:屋頂/岩頂邊緣走位餘裕,不誇張懸空)
+    // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上
+    //           ③大型障礙物頂(curY 貼近頂面)= 站頂上 ④否則地表
     app.terrain.surfaceAt = (x, z, curY) => {
       const h = app.terrain.heightAt(x, z);
       if (curY == null) return h;
       const tn = tunnelAt(x, z);
       if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
       const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
-      if (d == null || d <= h) return h;
       // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
-      return (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H) ? d : h;
+      let s = h;
+      if (d != null && d > h && (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H)) s = d;
+      // 障礙物頂:只吃 mount 台階測試(curY >= 頂 − DECK_STEP;從上方落下/跳上/飛降才成立)。
+      // MUST NOT 抄橋的第二條款(底緣淨空 < MAX_MECH_H 強制上頂)—— 建物皆接地,該條恆真
+      // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。
+      const bt = blockerTop(x, z, BLK_MARGIN);
+      if (bt != null && bt > s && curY >= bt - DECK_STEP) s = bt;
+      return s;
     };
     // 天花碰撞面:回傳「玩家頭頂上方最近的不可穿越面」——地下道天花 或 橋面底緣(在其下方時)。無則回 null。
     app.terrain.ceilingAt = (x, z, curY) => {
@@ -1699,6 +1711,14 @@ function makeHud() {
       const blur = f > 0 ? `blur(${(f * 6).toFixed(2)}px)` : '';   // 離場移除 → 不留 backdrop 合成層(效能)
       el.style.backdropFilter = blur; el.style.webkitBackdropFilter = blur;
       document.body.style.setProperty('--scope-r', `${(40 - f * 22).toFixed(1)}vmin`);   // 40vmin → 18vmin
+    },
+    // 水下/沼澤視野變色(2026-07-22;game.js 每幀依鏡頭沒入深度推 {c:[r,g,b], a} 或 null)。
+    // 專屬 div(z 6,壓在狙擊遮罩/受傷/火場之下 = 「世界的顏色」層);無 transition,逐幀插值即時。
+    waterVeil: (v) => {
+      const el = $('waterVeil');
+      if (!v) { el.style.opacity = '0'; return; }
+      el.style.opacity = v.a.toFixed(3);
+      el.style.background = `rgb(${v.c[0] | 0},${v.c[1] | 0},${v.c[2] | 0})`;
     },
     // 陣亡殉爆過場:on=過場期間紅警邊框開關;flash=額外觸發一次全屏白閃(高潮/觸地);比照 hitmark 的 remove→reflow→add 重觸發
     deathCine: (on, flash) => {
