@@ -390,6 +390,7 @@ export const SQUAD = {
   KAMI: {
     N: 2, HP_F: 1 / 3, SIZE_F: 1 / 2, SPEED_MUL: 3, CD_S: 30,
     DMG_F: 0.5,       // 自殺攻擊傷害減半(每架護衛機爆風 = _bombDef × 此值)
+    DEATH_F: 0.5,     // 被擊毀時原地引爆(2026-07-22 使用者需求):傷害與半徑各取正常撲擊爆風的 50%
     SPREAD: 0.55,     // 衝出時前方左右散開角(弧度,≈32°)
     FWD: 8, SIDE: 5,  // 衝出生成點:前置 / 側置偏移(公尺)
     TURN: 3.2,        // 追蹤限轉率(弧度/秒;比餌機敏捷)
@@ -446,10 +447,11 @@ export const MORPH_BOMB = {
   m05: 'thunder', m06: 'fire',   m07: 'freeze', m08: 'poison',
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
-// ---- 重砲模式(2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
-// 0.5 秒內傾洩重武器剩餘彈夾(此窗解除射速閘與電力門檻),傷害 +33%、射程 +20%;
+// ---- 重砲模式(巨炮;2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
+// 0.5 秒內傾洩重武器剩餘彈夾(此窗解除射速閘與電力門檻),傷害 ×DMG_F、射程 +20%;
 // 獨立於彈夾裝填的 30s 冷卻。伺服器以 h.barrageUntil 窗結算加成(見 sim.heroBarrage / _heroDmg / heroHit)。
-export const BARRAGE = { DUR: 0.5, DMG_F: 1.33, RANGE_F: 1.20, CD_S: 30 };
+// DMG_F 2.0 = 巨炮強化 +100%(2026-07-22 使用者需求;巨炮砲彈另加氣旋噴射視覺,見 game.js _cycloneJet)。
+export const BARRAGE = { DUR: 0.5, DMG_F: 2.0, RANGE_F: 1.20, CD_S: 30 };
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)

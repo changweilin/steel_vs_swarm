@@ -254,6 +254,93 @@ export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false }
   return m;
 }
 
+/**
+ * 餌機投彈的拋擲彈體(2026-07-22):依機體類型上色 + 專屬造型的手榴彈。
+ * 幾何原點置中(呼叫端逐幀 tumble 自旋);不自行加入場景。
+ * type: 'fire'|'freeze'|'poison'|'thunder'  color: DECOY_BOMB[type].color(彈殼識別色)
+ */
+export function decoyBombMesh(type, color = 0xff6a2a) {
+  const g = new THREE.Group();
+  const dark = new THREE.Color(color).multiplyScalar(0.55).getHex();
+  // 彈殼(圓潤彈體)+ 頂部保險蓋(引信)
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8),
+    toonMat(dark, { celMetal: true, emissive: color, emissiveIntensity: 0.35 }));
+  body.scale.y = 1.15;
+  g.add(body);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.22, 8), toonMat(0x2b3239, { celMetal: true }));
+  cap.position.y = 0.46;
+  g.add(cap);
+  const lever = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.34, 0.12), toonMat(0x9aa2a8, { celMetal: true }));
+  lever.position.set(0.14, 0.42, 0);
+  g.add(lever);
+  // 類型專屬識別造型(投擲中一眼可辨)
+  if (type === 'fire') {
+    // 燃燒彈:頂部竄出的加法火苗
+    const fl = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.4, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffb457, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    fl.position.y = 0.72; fl.userData.noOutline = true;
+    g.add(fl);
+  } else if (type === 'freeze') {
+    // 凍結彈:放射冰晶尖刺
+    for (let i = 0; i < 5; i++) {
+      const sh = new THREE.Mesh(new THREE.TetrahedronGeometry(0.16),
+        toonMat(0xbfeaff, { emissive: 0x8fd8ff, emissiveIntensity: 0.5 }));
+      const a = (i / 5) * Math.PI * 2;
+      sh.position.set(Math.cos(a) * 0.42, 0.05 + Math.sin(i * 2) * 0.12, Math.sin(a) * 0.42);
+      sh.scale.set(1, 1.7, 1);
+      g.add(sh);
+    }
+  } else if (type === 'poison') {
+    // 毒霧彈:側掛三顆毒氣囊
+    for (let i = 0; i < 3; i++) {
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6),
+        toonMat(0x6fbf46, { emissive: 0x8fe36a, emissiveIntensity: 0.45 }));
+      const a = (i / 3) * Math.PI * 2;
+      bulb.position.set(Math.cos(a) * 0.4, -0.05, Math.sin(a) * 0.4);
+      g.add(bulb);
+    }
+  } else if (type === 'thunder') {
+    // 雷爆彈:上下電極針
+    for (let i = 0; i < 2; i++) {
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.02, 0.5, 6),
+        toonMat(0xfff3a0, { emissive: 0xffe14f, emissiveIntensity: 0.7 }));
+      rod.position.set((i ? 0.24 : -0.24), 0.3, 0);
+      rod.rotation.z = (i ? -1 : 1) * 0.4;
+      g.add(rod);
+    }
+  }
+  outlinify(g, 0.03);
+  return g;
+}
+
+/**
+ * 氣旋噴射尾流(2026-07-22 巨炮砲彈):附掛在砲彈子體(+z 朝前)底下的旋轉渦輪葉片 + 熾亮尾焰。
+ * 呼叫端逐幀轉 rotation.z(自旋)並另撒螺旋煙圈(見 game._updateBullets 的 cyclone 分支);
+ * 純加法混色、userData.noOutline。回傳 Group(不自行加入場景)。
+ */
+export function cycloneJet(color = 0xffd27a) {
+  const g = new THREE.Group();
+  g.userData.noOutline = true;
+  const mat = () => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  // 3 片後掠渦輪葉:繞行進軸環列 → 自旋即成氣旋
+  for (let i = 0; i < 3; i++) {
+    const vane = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 1.4), mat());
+    const a = (i / 3) * Math.PI * 2;
+    vane.position.set(Math.cos(a) * 0.32, Math.sin(a) * 0.32, -0.3);
+    vane.rotation.z = a;
+    vane.rotation.y = 0.6;   // 後掠角:葉面斜切氣流
+    g.add(vane);
+  }
+  // 熾亮尾焰(比一般彈體尾焰長且亮)
+  const jet = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.5, 10),
+    new THREE.MeshBasicMaterial({ color: 0xfff0c0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }));
+  jet.rotation.x = -Math.PI / 2;   // 錐尖朝 -z(尾部)
+  jet.position.z = -1.0;
+  jet.userData.noOutline = true;
+  g.add(jet);
+  return g;
+}
+
 /** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用) */
 export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 } = {}) {
   const dir = to.clone().sub(from);

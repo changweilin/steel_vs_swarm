@@ -19,7 +19,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 
@@ -240,6 +240,8 @@ export class BattleClient {
     this._recoilSlowF = 0.5;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
+    this._decoyBombs = [];           // 餌機投彈的「拋擲彈體」動畫(2026-07-22;落地才引爆演出,依類型上色)
+    this._barragePids = new Map();   // 他人重砲(巨炮)開窗時戳:pid → until(氣旋噴射曳光轉播)
     this._wdefCache = new Map();     // 他人武器 def 快取(ch:slot → heroWeapon Lv1)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
     this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
@@ -2872,9 +2874,12 @@ export class BattleClient {
     } else if (ev.e === 'boom') {
       const [x, z] = [ev.x, -ev.z];
       const y = this.terrain.heightAt(x, z) + (ev.y != null ? ev.y : 2);   // 防空飛彈在空中炸
-      this._explosion(x, y, z, ev.r * 0.8, ev.sam ? 0xff7744 : 0xffaa33);
+      // 自殺攻擊機被擊毀的原地半爆(2026-07-22):熾橙火球 + 迸射火星,讀感 = 無人機殉爆
+      const col = ev.kami ? 0xff7a2a : (ev.sam ? 0xff7744 : 0xffaa33);
+      this._explosion(x, y, z, ev.r * 0.8, col);
       // AoE:放射衝擊環擴張到傷害半徑邊界(貼地),空中炸點只留星爆
-      if ((ev.y ?? 0) < 12) shockRing(this.scene, this.effects, x, this.terrain.heightAt(x, z), z, ev.r, 0xffd27a);
+      if ((ev.y ?? 0) < 12) shockRing(this.scene, this.effects, x, this.terrain.heightAt(x, z), z, ev.r, ev.kami ? 0xffb066 : 0xffd27a);
+      if (ev.kami) this._emberBurst(x, y + 1, z, 12, 3);
       this._applyBlast(x, y, z, ev.r);
       if (ev.mine && ev.tpid === this.youId) this.hud.feed?.('💣 你踩到地雷了!非正規路線佈有雷區!');
       if (ev.mid != null) {   // 觸發的地雷:移除微凸起
@@ -2882,14 +2887,9 @@ export class BattleClient {
         if (bump) { this.scene.remove(bump); this.mineMeshes.delete(ev.mid); }
       }
     } else if (ev.e === 'decoyBomb') {
-      // 變形機甲餌機沿途投彈:依機體類型上色的爆風 + 地環(燃燒橙/凍結藍/毒霧綠/雷爆黃)
-      const [x, z] = [ev.x, -ev.z];
-      const gy = this.terrain.heightAt(x, z);
-      const y = gy + (ev.y != null ? ev.y : 2);
-      const col = (DECOY_BOMB[ev.bomb] || DECOY_BOMB.fire).color;
-      this._explosion(x, y, z, ev.r * 0.9, col);
-      shockRing(this.scene, this.effects, x, gy, z, ev.r * 1.6, col);
-      this._applyBlast(x, y, z, ev.r);
+      // 變形機甲餌機投彈(沿途 / 被擊毀補投,2026-07-22):拋擲一枚依機體類型上色/造型的炸彈,
+      // 翻滾墜落 + 拖尾 → 落地才引爆(依類型的地面演出)。伺服器傷害在事件當下即結算(純視覺延後)。
+      this._spawnDecoyBomb(ev.x, -ev.z, ev.y != null ? ev.y : 8, ev.bomb || 'fire', ev.r || 14);
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
@@ -3001,6 +3001,9 @@ export class BattleClient {
       }
     } else if (ev.e === 'decoyLost') {
       if (ev.pid === this.youId) this.hud.feed?.(`📡 餌機超出 ${DECOY.LINK_M}m,鏈路中斷`);
+    } else if (ev.e === 'barrage') {
+      // 重砲(巨炮)開窗:記射手時戳,讓其後短暫窗內的視覺彈體掛上氣旋噴射尾流(自己那份在 _tryFire 判)
+      if (ev.pid !== this.youId) this._barragePids.set(ev.pid, performance.now() / 1000 + BARRAGE.DUR + 0.3);
     } else if (ev.e === 'cast') {
       // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
       const c = CHARACTERS[ev.ch];
@@ -3120,7 +3123,7 @@ export class BattleClient {
           // bot 重武器(heroBurst 補發的 shot):彈藥同源 —— 與真人 tracer 同一顆視覺彈體;
           // launcher 彈道砲管仰角與射向一致(規則 1)
           d3.normalize();
-          this._spawnVisShell(from, d3, def, ev.side, sh.ch);
+          this._spawnVisShell(from, d3, def, ev.side, sh.ch, this._isBarraging(ev.pid));
           this._muzzleBurst(from, true, ev.side);
           if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, d3);
         } else {
@@ -3172,7 +3175,7 @@ export class BattleClient {
         const dir = to0.clone().sub(from);
         if (dir.lengthSq() > 0.01) {
           dir.normalize();
-          this._spawnVisShell(from, dir, def, m.side, shooter.ch);
+          this._spawnVisShell(from, dir, def, m.side, shooter.ch, this._isBarraging(m.pid));
           this._muzzleBurst(from, true, m.side);
           // 拋物線武器(launcher 彈道)砲管仰角與發射方向一致(規則 1;missile 導引不回寫)
           if (def.type === 'launcher') this._aimHeavyBarrel(m.pid, dir);
@@ -3223,8 +3226,16 @@ export class BattleClient {
     return d;
   }
 
+  /** 他人是否處於重砲(巨炮)開窗內(barrage 事件記的時戳;過期即清) */
+  _isBarraging(pid) {
+    const until = this._barragePids.get(pid);
+    if (until == null) return false;
+    if (until < performance.now() / 1000) { this._barragePids.delete(pid); return false; }
+    return true;
+  }
+
   /** 他人重武器的視覺彈體(純表現層:直線+重力近似,不結算;真實爆點由伺服器 boom 事件呈現) */
-  _spawnVisShell(from, dir, def, side, ch) {
+  _spawnVisShell(from, dir, def, side, ch, barrage = false) {
     const mesh = projectileMesh(def, {
       col: this._shotCols(side).col,
       hue: CHARACTERS[ch]?.visual?.hue ?? 0xffd27a,
@@ -3236,6 +3247,7 @@ export class BattleClient {
     this._visShells.push({
       pos: from.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
       dist: 0, max: (def.range || 300) * 1.35, mesh,
+      cyclone: barrage ? this._attachCyclone(mesh, side) : null, cycAcc: 0, cycCol: this._shotCols(side).col,
     });
   }
 
@@ -3260,7 +3272,208 @@ export class BattleClient {
       }
       b.mesh.position.copy(b.pos);
       if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+      if (b.cyclone) this._spinCyclone(b, dt);
     }
+  }
+
+  // ---------------- 氣旋噴射(巨炮砲彈尾流,2026-07-22)----------------
+  /** 建立氣旋渦輪並掛在砲彈子體底下;回傳群組(逐幀由 _spinCyclone 自旋 + 撒螺旋煙圈) */
+  _attachCyclone(mesh, side) {
+    const cyc = cycloneJet(this._shotCols(side).col);
+    mesh.add(cyc);
+    return cyc;
+  }
+
+  /** 氣旋自旋 + 沿行進軸撒外旋螺旋煙圈(讀感 = 氣旋捲動);b.cycAcc 節流撒點,b.cycCol 陣營色 */
+  _spinCyclone(b, dt) {
+    b.cyclone.rotation.z += dt * 26;                 // 高速自旋
+    b.cycAcc = (b.cycAcc || 0) + dt;
+    if (b.cycAcc < 0.03) return;
+    b.cycAcc = 0;
+    // 行進軸的兩條正交向量 → 在垂直於航向的平面上取旋轉相位,撒一顆略微外旋的加法煙點
+    const dir = b.vel.clone().normalize();
+    const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const rx = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const ry = new THREE.Vector3().crossVectors(dir, rx).normalize();
+    const ph = (b.cycPh = (b.cycPh || 0) + 1.1);     // 相位遞進 → 螺旋
+    const rad = 0.9;
+    const off = rx.clone().multiplyScalar(Math.cos(ph) * rad).addScaledVector(ry, Math.sin(ph) * rad);
+    const p = b.pos.clone().addScaledVector(dir, -0.6).add(off);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this._fireTex(), color: b.cycCol || 0xffd27a,
+      transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sp.userData.noOutline = true;
+    sp.position.copy(p);
+    sp.scale.setScalar(1.5);
+    this.scene.add(sp);
+    // 切向速度(繞航向旋轉)+ 略外擴,快速淡出 → 拖成氣旋螺旋
+    const tang = rx.clone().multiplyScalar(-Math.sin(ph)).addScaledVector(ry, Math.cos(ph)).multiplyScalar(9)
+      .addScaledVector(off.clone().normalize(), 3).addScaledVector(dir, -6);
+    this.effects.push({
+      obj: sp, ttl: 0.32,
+      fade: (o, f, dtt) => { o.position.addScaledVector(tang, dtt); o.scale.setScalar(1.5 + (1 - f) * 2.2); o.material.opacity = 0.85 * f; },
+      dispose: () => sp.material.dispose(),
+    });
+  }
+
+  // ---------------- 餌機投彈拋擲動畫(2026-07-22)----------------
+  /** 拋擲一枚依機體類型上色/造型的炸彈:自餌機高度翻滾墜落 + 拖尾 → 落地引爆(_updateDecoyBombs 驅動) */
+  _spawnDecoyBomb(x, z, alt, type, r) {
+    const gy = this.terrain.heightAt(x, z);
+    const col = (DECOY_BOMB[type] || DECOY_BOMB.fire).color;
+    const mesh = decoyBombMesh(type, col);
+    const startY = gy + Math.max(4, alt);
+    mesh.position.set(x, startY, z);
+    this.scene.add(mesh);
+    this._decoyBombs.push({
+      mesh, type, col, r, gy,
+      pos: new THREE.Vector3(x, startY, z),
+      // 幾近垂直投放(微隨機水平擾動,落點貼近伺服器爆點);初速略下拋
+      vel: new THREE.Vector3((Math.random() - 0.5) * 4, -2, (Math.random() - 0.5) * 4),
+      spin: new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3),
+      trailAcc: 0,
+    });
+  }
+
+  /** 拋擲彈體逐幀:重力墜落 + 翻滾 + 類型拖尾;觸地(或逾時)→ 引爆演出 */
+  _updateDecoyBombs(dt) {
+    for (let i = this._decoyBombs.length - 1; i >= 0; i--) {
+      const b = this._decoyBombs[i];
+      b.vel.y -= BALLISTIC.G * 1.6 * dt;   // 略重的墜落感
+      b.pos.addScaledVector(b.vel, dt);
+      b.mesh.position.copy(b.pos);
+      b.mesh.rotation.x += b.spin.x * dt;
+      b.mesh.rotation.y += b.spin.y * dt;
+      b.mesh.rotation.z += b.spin.z * dt;
+      b.gy = this.terrain.heightAt(b.pos.x, b.pos.z);
+      // 類型拖尾(節流):燃燒/雷爆 = 加法火星,凍結/毒霧 = 柔煙
+      b.trailAcc += dt;
+      if (b.trailAcc >= 0.045) {
+        b.trailAcc = 0;
+        const additive = b.type === 'fire' || b.type === 'thunder';
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: additive ? this._fireTex() : this._smokeTex(), color: b.col,
+          transparent: true, opacity: additive ? 0.9 : 0.6, depthWrite: false,
+          blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+        sp.userData.noOutline = true;
+        sp.position.set(b.pos.x, b.pos.y + 0.2, b.pos.z);
+        sp.scale.setScalar(additive ? 1.0 : 1.4);
+        this.scene.add(sp);
+        this.effects.push({
+          obj: sp, ttl: 0.4,
+          fade: (o, f) => { o.material.opacity = (additive ? 0.9 : 0.6) * f; o.scale.setScalar((additive ? 1.0 : 1.4) * (1 + (1 - f))); },
+          dispose: () => sp.material.dispose(),
+        });
+      }
+      if (b.pos.y <= b.gy + 0.5) {
+        b.mesh.parent && this.scene.remove(b.mesh);
+        this._decoyBombLandFx(b.pos.x, b.gy, b.pos.z, b.type, b.col, b.r);
+        this._decoyBombs.splice(i, 1);
+      }
+    }
+  }
+
+  /** 落地引爆:依類型上色的火球 + 地環 + 衝擊波,再疊類型專屬地面演出 */
+  _decoyBombLandFx(x, gy, z, type, col, r) {
+    const y = gy + 1.2;
+    this._explosion(x, y, z, r * 0.9, col);
+    shockRing(this.scene, this.effects, x, gy, z, r * 1.6, col);
+    this._applyBlast(x, y, z, r);
+    if (type === 'fire') {
+      this._emberBurst(x, y, z, 14, 4);
+    } else if (type === 'freeze') {
+      for (let k = 0; k < 8; k++) {   // 迸射冰晶(慢速、淺藍)
+        const a = Math.random() * Math.PI * 2, d = 1 + Math.random() * r * 0.5;
+        starburst(this.scene, this.effects, x + Math.cos(a) * d, gy + 0.6 + Math.random() * 2, z + Math.sin(a) * d, 1.6, 0xbfeaff);
+      }
+    } else if (type === 'poison') {
+      for (let k = 0; k < 4; k++) this._crashSmoke(x + (Math.random() - 0.5) * r, gy + 0.5, z + (Math.random() - 0.5) * r, 1.3);
+      for (let k = 0; k < 3; k++) starburst(this.scene, this.effects, x + (Math.random() - 0.5) * r, gy + 1 + Math.random() * 2, z + (Math.random() - 0.5) * r, 2.0, 0x9be36a);
+    } else if (type === 'thunder') {
+      for (let k = 0; k < 6; k++) {   // 放射電弧
+        const a = (k / 6) * Math.PI * 2, d = r * (0.6 + Math.random() * 0.5);
+        const to = new THREE.Vector3(x + Math.cos(a) * d, gy + 0.5 + Math.random() * 2, z + Math.sin(a) * d);
+        beamLine(this.scene, this.effects, new THREE.Vector3(x, y, z), to, 0xffe14f, { ttl: 0.18, w: 0.06 });
+      }
+    }
+  }
+
+  // ---------------- 榴彈拋物線瞄準指示(2026-07-22)----------------
+  /** launcher(榴彈/火箭)型武器在瞄準時,畫出預測拋物線虛線 + 落點環;非拋物線武器隱藏。
+   *  純客戶端瞄準輔助:與 _updateBullets 同一組 mv/重力積分,終點吃地形/障礙/射程截斷。 */
+  _updateArcGuide() {
+    const showable = !this.dead && !this.shopOpen && this.side && this.ch && this.aiming;
+    const { def } = this._curWeapon();
+    if (!showable || !def || def.type !== 'launcher' || !this.gunGroup) { if (this._arcGuide) this._arcGuide.group.visible = false; return; }
+    this._ensureArcGuide();
+    const ag = this._arcGuide;
+    ag.group.visible = true;
+    this.camera.updateMatrixWorld();
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const from = this.gunGroup.localToWorld(this._muzzle.clone());
+    const max = def.range * this._altRangeMul(def) * ((this._barrageUntil || 0) > performance.now() / 1000 ? BARRAGE.RANGE_F : 1);
+    // 逐步積分(與彈道同 G),寫入預配置緩衝;終點吃地形/障礙/射程
+    // lineDistance 自算進預配置緩衝 —— 不呼叫 line.computeLineDistances()(它每幀重建 attribute 洩漏 buffer)
+    const arr = ag.arr, ld = ag.ld, MAXP = ag.maxp;
+    let n = 0;
+    const put = (v, d) => { if (n < MAXP) { arr[n * 3] = v.x; arr[n * 3 + 1] = v.y; arr[n * 3 + 2] = v.z; ld[n] = d; n++; } };
+    put(from, 0);
+    const p = from.clone(), v = dir.clone().multiplyScalar(def.mv || 600);
+    const step = 0.03;
+    let dist = 0, impact = null;
+    const prev = new THREE.Vector3();
+    for (let i = 0; i < MAXP - 1; i++) {
+      prev.copy(p);
+      v.y -= BALLISTIC.G * step;
+      p.addScaledVector(v, step);
+      dist += prev.distanceTo(p);
+      let hit = p.y <= this.terrain.heightAt(p.x, p.z);
+      const dB = this._obstHitT(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+      if (dB != null) { p.copy(prev).addScaledVector(v.clone().normalize(), dB); hit = true; }
+      put(p, dist);
+      if (hit || dist >= max) { impact = p.clone(); break; }
+    }
+    const geo = ag.line.geometry;
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.lineDistance.needsUpdate = true;
+    geo.setDrawRange(0, n);
+    geo.computeBoundingSphere();
+    const col = this._shotCols(this.side).col;
+    ag.line.material.color.setHex(col);
+    if (impact) {
+      ag.marker.visible = true;
+      ag.marker.position.set(impact.x, this.terrain.heightAt(impact.x, impact.z) + 0.3, impact.z);
+      ag.marker.material.color.setHex(col);
+    } else ag.marker.visible = false;
+  }
+
+  /** 懶建拋物線指示物件(虛線 + 落點環,預配置緩衝持久重用;避免每幀重建 attribute 洩漏 GPU buffer) */
+  _ensureArcGuide() {
+    if (this._arcGuide) return;
+    const MAXP = 264;
+    const arr = new Float32Array(MAXP * 3);
+    const ld = new Float32Array(MAXP);
+    const geo = new THREE.BufferGeometry();
+    const posAttr = new THREE.BufferAttribute(arr, 3);
+    posAttr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('position', posAttr);
+    const ldAttr = new THREE.BufferAttribute(ld, 1);
+    ldAttr.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('lineDistance', ldAttr);
+    geo.setDrawRange(0, 0);
+    const group = new THREE.Group();
+    group.userData.noOutline = true;
+    const line = new THREE.Line(geo,
+      new THREE.LineDashedMaterial({ color: 0xffd27a, dashSize: 2.2, gapSize: 1.6, transparent: true, opacity: 0.9, depthWrite: false }));
+    line.userData.noOutline = true;
+    const marker = new THREE.Mesh(
+      new THREE.RingGeometry(1.4, 2.0, 24),
+      new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+    marker.rotation.x = -Math.PI / 2;
+    marker.userData.noOutline = true;
+    group.add(line); group.add(marker);
+    this.scene.add(group);
+    this._arcGuide = { group, line, marker, arr, ld, maxp: MAXP };
   }
 
   /** 重武器(rail 類)蓄力狀態:純視覺轉播(同 onTracer),驅動射手第三人稱機體的掛點動畫 —
@@ -3969,7 +4182,8 @@ export class BattleClient {
       slot: id, aoe, r: def.r || 0,
       pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
       dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
-
+      // 巨炮傾洩窗內的重武器砲彈掛氣旋噴射尾流(2026-07-22)
+      cyclone: barraging ? this._attachCyclone(mesh, this.side) : null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
       mv: def.mv || 600, guide: !!def.guide, homing,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
@@ -4062,6 +4276,7 @@ export class BattleClient {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
         if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+        if (b.cyclone) this._spinCyclone(b, dt);
         continue;
       }
       this.scene.remove(b.mesh);
@@ -5501,6 +5716,8 @@ export class BattleClient {
     this._updateBullets(dt);
     this._updateMissiles(dt);
     this._updateVisShells(dt);
+    this._updateDecoyBombs(dt);       // 餌機投彈拋擲動畫(2026-07-22)
+    this._updateArcGuide();           // 榴彈拋物線瞄準指示(2026-07-22)
     this._updateLaneArrows(now);
     this._updateMines(now);
     this._updateLoot(dt, now);

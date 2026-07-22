@@ -1566,7 +1566,7 @@ export class BattleSim {
 
   /**
    * 每 tick:鎖定目標無效則自動索敵 → 限轉率撲擊(3 倍速)→ 近炸 / 燃料耗盡自爆。
-   * 爆風算主機頭上(吃火力升級/招式增益,擊殺記給它);被擊落則只消失、不引爆。
+   * 爆風算主機頭上(吃火力升級/招式增益,擊殺記給它);被擊毀則原地半爆(見 _kill → _kamiDeathBoom)。
    */
   _tickKamis(dt) {
     const K = SQUAD.KAMI;
@@ -1615,6 +1615,21 @@ export class BattleSim {
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
     if (owner) this._blast(owner, def, k.x, k.z, k.y || 0, this._unitLev(k));   // 爆點層 = 自殺機所在層
     this._removeKami(k);
+  }
+
+  /**
+   * 自殺攻擊機被擊毀(2026-07-22 使用者需求):原地以正常撲擊爆風的 50% 傷害與半徑引爆
+   * (舊版被擊落只消失、不引爆)。爆點仍算主機頭上(吃其火力升級/增益,擊殺記給它);
+   * 客戶端 boom 事件帶 kami 旗標 → 播殉爆演出。呼叫端(_kill)另行 _removeKami。
+   */
+  _kamiDeathBoom(k) {
+    const sq = this.squads.get(k.pid);
+    const owner = sq ? sq.bodies[sq.act] : null;
+    const def = this._bombDef(owner);
+    def.dmg = Math.round(def.dmg * SQUAD.KAMI.DMG_F * SQUAD.KAMI.DEATH_F);   // 半傷再取半
+    def.r = def.r * SQUAD.KAMI.DEATH_F;                                      // 半徑減半
+    this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side, kami: 1 });
+    if (owner) this._blast(owner, def, k.x, k.z, k.y || 0, this._unitLev(k));
   }
 
   _removeKami(k) {
@@ -2292,11 +2307,15 @@ export class BattleSim {
         }
       }
     }
-    if (t.decoy) {   // 餌機被擊落:誘餌任務達成,不引爆(引爆只在自爆/近炸)
+    if (t.decoy) {   // 餌機被擊落:誘餌任務達成,不自爆;但尚有未投完的炸彈 → 原地補投一枚(2026-07-22)
+      const sq = this.squads.get(t.pid);
+      const owner = sq ? sq.bodies[sq.act] : null;
+      if (owner && (t.bombsLeft || 0) > 0) { t.bombsLeft--; this._decoyBomb(t, owner); }
       this._removeDecoy(t);
       return;
     }
-    if (t.kami) {   // 自殺攻擊機被擊落:任務失敗,只消失、不引爆(引爆只在撲擊近炸/燃料耗盡)
+    if (t.kami) {   // 自殺攻擊機被擊毀(2026-07-22):原地以 50% 傷害與半徑引爆(舊版只消失、不引爆)
+      this._kamiDeathBoom(t);
       this._removeKami(t);
       return;
     }
