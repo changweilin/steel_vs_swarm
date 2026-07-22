@@ -1909,6 +1909,7 @@ export class BattleSim {
     for (const e of this.ents.values()) {
       if (e.side === d.side || !e.side || e.neutral || e.decoy || e.kami || e.gar || e.hp <= 0) continue;
       if (e.hero && e.dead) continue;
+      if (this._airborne(e)) continue;   // 投擲範圍偵測只針對地面單位(不對空中無人機/直升機/升空機甲丟彈)
       if (dist2d(e.x, e.z, d.x, d.z) <= r) return true;
     }
     return false;

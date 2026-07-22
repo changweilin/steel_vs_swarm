@@ -8,7 +8,7 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { toonGradient } from './hazards.js';
-import { MAPGEO, TERRAIN, GAME, WATER, battleBBox } from './data.js';
+import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites } from './data.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
@@ -312,6 +312,46 @@ export async function buildTerrain(cfg, onProgress) {
     }
   }
 
+  // ---- 兵線砲塔外接寬度內強制乾地(2026-07-22 使用者需求)----
+  // 同塔位左右兩座砲塔(沿法線 ±TOWER_SIDE_OFF)之間的外接帶,一律抬到「水面 + 沼澤帶」之上 →
+  // 砲塔與其交戰區絕不落在水域/沼澤(否則塔/駐軍泡水、拆塔戰在河裡打)。抬升直接寫進最終
+  // heights[](幾何 / heightAt / 水面盤自動遮蔽 / bakeWetGrid 上傳的伺服器迴避網格全部同步受益);
+  // 衛星影像「藍色」分支不吃高程,另由 inDryBand 遮罩在 terrainEnvCode/isWaterPt 消除 → WYSIWYG 完全乾地。
+  let dryBand = null;
+  {
+    const lanesW = (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center)));
+    if (lanesW.some((l) => l.length >= 2)) {
+      const OFF = GAME.TOWER_SIDE_OFF, BAND_R = 16, SKIRT = 14;   // BAND_R 半徑涵蓋塔基 + 走位餘裕;SKIRT 裙帶漸回原地表(免斷崖)
+      const segs = [];
+      for (const laneSites of solveTowerSites(lanesW)) {
+        for (const site of laneSites) {
+          for (const cp of [site.SWARM, site.STEEL]) {   // 左右塔連線(外接寬度沿法線 ±OFF)= 抬升膠囊中軸
+            segs.push([cp.x - cp.nx * OFF, cp.z - cp.nz * OFF, cp.x + cp.nx * OFF, cp.z + cp.nz * OFF]);
+          }
+        }
+      }
+      if (segs.length) {
+        const DRY = WATER.LEVEL + WATER.SWAMP_BAND + 0.5;   // 抬到沼澤分類界(waterY + SWAMP_BAND)之上
+        minH = Infinity; maxH = -Infinity;
+        for (let i = 0; i < N; i++) {
+          const z = minZ + (maxZ - minZ) * i / (N - 1);
+          for (let j = 0; j < N; j++) {
+            const x = minX + (maxX - minX) * j / (N - 1);
+            const k = i * N + j;
+            const dd = distToSegs(x, z, segs);
+            if (dd < BAND_R + SKIRT && heights[k] < DRY) {
+              const w = 1 - smooth01((dd - BAND_R) / SKIRT);   // 帶內全抬(w=1)、裙帶外緣漸回原高(w=0)
+              if (w > 0) heights[k] += (DRY - heights[k]) * w;
+            }
+            if (heights[k] < minH) minH = heights[k];
+            if (heights[k] > maxH) maxH = heights[k];
+          }
+        }
+        dryBand = (px, pz) => distToSegs(px, pz, segs) <= BAND_R;   // 保證乾地區間(不含裙帶):供影像藍色分支遮罩
+      }
+    }
+  }
+
   // ---- BufferGeometry ----
   const geo = new THREE.BufferGeometry();
   const pos = new Float32Array(N * N * 3);
@@ -477,5 +517,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, carveTunnels, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback };
+  return { group, mesh, heightAt, carveTunnels, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
 }

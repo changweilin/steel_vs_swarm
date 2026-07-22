@@ -429,7 +429,7 @@ export const DECOY = {
   vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
   // 沿途投彈(2026-07-18):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
   // 單枚 = 直擊 BOMB_DMG(略高於輕武器)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
-  BOMB_R: 90, BOMB_MAX: 3, BOMB_GAP: 0.9, BOMB_DMG: 34, BOMB_BLAST_R: 14,
+  BOMB_R: 90, BOMB_MAX: 5, BOMB_GAP: 0.9, BOMB_DMG: 34, BOMB_BLAST_R: 14,
 };
 /** 餌機自爆的爆風定義(交給 sim._blast;與 WEAPONS 同形) */
 export const decoyBlast = () => ({ dmg: DECOY.DMG, r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs });
@@ -458,7 +458,9 @@ export const VITALS = {
   AR_K: 120,           // 護甲減免曲線常數
   CRIT_X: 1.6,         // 預設爆擊倍率
 };
-export const BALLISTIC = { G: 9.81 };   // 彈道重力(真實值;武器 mv = 初速 m/s)
+// G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
+// 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
+export const BALLISTIC = { G: 9.81, LAUNCH_MV: 100 };
 export const armorMul = (ar, pen = 0) => {
   const a = Math.max(0, (ar || 0) - (pen || 0));
   return 1 - a / (a + VITALS.AR_K);

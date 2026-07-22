@@ -1842,7 +1842,7 @@ export class BattleClient {
    * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
    */
-  _fanBlast(muzzle, dir, def) {
+  _fanBlast(muzzle, dir, def, barraging = false) {
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(dir, up).normalize();
     const half = (def.arc || 15) * Math.PI / 180;
@@ -1850,18 +1850,20 @@ export class BattleClient {
     const col = plasma
       ? (this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff)
       : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff);
-    const blades = plasma ? 7 : 9;
+    const blades = (plasma ? 7 : 9) + (barraging ? 4 : 0);   // 巨炮:離子扇加葉數(更密更亮)
+    const wF = barraging ? 1.9 : 1, rF = barraging ? BARRAGE.RANGE_F : 1;   // 巨炮:更寬 + 射程 +20%(對齊伺服器加程)
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
+    if (barraging) shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 3.8, col);
     for (let i = 0; i < blades; i++) {
       const f = blades === 1 ? 0 : (i / (blades - 1)) * 2 - 1;          // −1..1 橫向
       const dk = dir.clone()
         .applyAxisAngle(up, half * f)
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
-      const len = def.range * this._altRangeMul(def) * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      const len = def.range * this._altRangeMul(def) * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
-      beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 } : { ttl: 0.12, w: 0.07 });
-      starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, plasma ? 3 : 1.5, col);
+      beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24 * (barraging ? 1.5 : 1), w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
+      starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, (plasma ? 3 : 1.5) * (barraging ? 1.7 : 1), col);
     }
   }
 
@@ -3095,12 +3097,16 @@ export class BattleClient {
         const up = new THREE.Vector3(0, 1, 0);
         const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
         const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
+        const bar = heavy && this._isBarraging(ev.pid);   // 巨炮離子扇:更寬更亮 + 射程 +20%(2026-07-22)
+        const wF = bar ? 1.9 : 1, kMax = bar ? 4 : 2;
         this._muzzleBurst(from, heavy, ev.side);
-        for (let k = -2; k <= 2; k++) {
-          const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / 2));
-          const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
+        if (bar) shockRing(this.scene, this.effects, from.x, from.y, from.z, 3.8, pcol);
+        for (let k = -kMax; k <= kMax; k++) {
+          const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / kMax));
+          const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8 * (bar ? BARRAGE.RANGE_F : 1));
           const clip = this._clipBeam(from, end);   // 扇形焰舌不畫穿牆(伺服器逐目標 LOS 已擋傷害)
-          beamLine(this.scene, this.effects, from, clip.to, pcol, heavy ? { ttl: 0.26, w: 0.22 } : { ttl: 0.2, w: 0.09 });
+          beamLine(this.scene, this.effects, from, clip.to, pcol, heavy ? { ttl: 0.26 * (bar ? 1.5 : 1), w: 0.22 * wF } : { ttl: 0.2, w: 0.09 });
+          if (bar) starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 3.2, pcol);
         }
         // 扇形武器不走 tracer 訊息 → 在此標記射手開火動畫(電漿噴湧的後座/射姿)
         this._markFire(ev.pid, heavy ? 'heavy' : 'light', performance.now() / 1000);
@@ -3121,14 +3127,13 @@ export class BattleClient {
         const d3 = to.clone().sub(from);
         if (def && (def.type === 'launcher' || def.type === 'missile') && d3.lengthSq() > 0.01) {
           // bot 重武器(heroBurst 補發的 shot):彈藥同源 —— 與真人 tracer 同一顆視覺彈體;
-          // launcher 彈道砲管仰角與射向一致(規則 1)
-          d3.normalize();
-          this._spawnVisShell(from, d3, def, ev.side, sh.ch, this._isBarraging(ev.pid));
+          // launcher 拋物線命中目標,砲管仰角與實際發射角一致(規則 1)
+          const ldir = this._spawnVisShell(from, to, def, ev.side, sh.ch, this._isBarraging(ev.pid));
           this._muzzleBurst(from, true, ev.side);
-          if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, d3);
+          if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, ldir);
         } else {
           const clip = this._clipBeam(from, to);
-          this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
+          this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true, barrage: ev.slot === 'heavy' && this._isBarraging(ev.pid) });
         }
         this._markFire(ev.pid, ev.slot, t0, { x: tx, z: tz, y: to.y });
       } else {
@@ -3174,11 +3179,10 @@ export class BattleClient {
       if (def && (def.type === 'launcher' || def.type === 'missile')) {
         const dir = to0.clone().sub(from);
         if (dir.lengthSq() > 0.01) {
-          dir.normalize();
-          this._spawnVisShell(from, dir, def, m.side, shooter.ch, this._isBarraging(m.pid));
+          const ldir = this._spawnVisShell(from, to0, def, m.side, shooter.ch, this._isBarraging(m.pid));
           this._muzzleBurst(from, true, m.side);
-          // 拋物線武器(launcher 彈道)砲管仰角與發射方向一致(規則 1;missile 導引不回寫)
-          if (def.type === 'launcher') this._aimHeavyBarrel(m.pid, dir);
+          // 拋物線武器(launcher)砲管仰角與實際發射角一致(規則 1;missile 導引不回寫)
+          if (def.type === 'launcher') this._aimHeavyBarrel(m.pid, ldir);
           this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
           return;
         }
@@ -3189,7 +3193,7 @@ export class BattleClient {
     this._shotFx(
       from,
       clip.to,
-      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut },
+      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut, barrage: m.slot === 'heavy' && this._isBarraging(m.pid) },
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
@@ -3235,20 +3239,46 @@ export class BattleClient {
   }
 
   /** 他人重武器的視覺彈體(純表現層:直線+重力近似,不結算;真實爆點由伺服器 boom 事件呈現) */
-  _spawnVisShell(from, dir, def, side, ch, barrage = false) {
+  /** 彈道初速:榴彈/火箭(launcher)拋物線武器降速(→ BALLISTIC.LAUNCH_MV),讓拋物線軌跡明顯;
+   *  其餘武器用真實 mv。純客戶端視覺(伺服器不模擬彈道),與瞄準虛線 _updateArcGuide 同一組值。 */
+  _shotV0(def) {
+    const v0 = def.mv || 600;
+    return def.type === 'launcher' ? Math.min(v0, BALLISTIC.LAUNCH_MV) : v0;
+  }
+
+  /** 拋物線發射初速向量:自 from 以速率 v0 拋擲命中 to(取低伸弧解);射程不足則 45° 盡力(視覺落短仍呈拋物)。 */
+  _lobVel(from, to, v0) {
+    const hx = to.x - from.x, hz = to.z - from.z;
+    const L = Math.hypot(hx, hz) || 1e-3;
+    const dy = to.y - from.y, g = BALLISTIC.G, v2 = v0 * v0;
+    const disc = v2 * v2 - g * (g * L * L + 2 * dy * v2);
+    let vh, vy;
+    if (disc < 0) { vh = v0 * Math.SQRT1_2; vy = v0 * Math.SQRT1_2; }   // 射不到:45° 盡力
+    else { const tan = (v2 - Math.sqrt(disc)) / (g * L), cos = 1 / Math.sqrt(1 + tan * tan); vh = v0 * cos; vy = v0 * cos * tan; }
+    return new THREE.Vector3((hx / L) * vh, vy, (hz / L) * vh);
+  }
+
+  /** 他人/bot 重武器視覺彈體。launcher 走拋物線命中 to(慢速明顯弧),其餘直指;回傳實際發射方向(供砲管仰角回寫)。 */
+  _spawnVisShell(from, to, def, side, ch, barrage = false) {
+    const v0 = this._shotV0(def);
+    const vel = def.type === 'launcher'
+      ? this._lobVel(from, to, v0)                              // 榴彈/火箭:拋物線命中目標
+      : to.clone().sub(from).normalize().multiplyScalar(v0);   // 飛彈/動能:直指目標(近似,純視覺)
+    const ldir = vel.clone().normalize();
     const mesh = projectileMesh(def, {
       col: this._shotCols(side).col,
       hue: CHARACTERS[ch]?.visual?.hue ?? 0xffd27a,
       heavy: true,
     });
     mesh.position.copy(from);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), ldir);
     this.scene.add(mesh);
     this._visShells.push({
-      pos: from.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
+      pos: from.clone(), vel,
       dist: 0, max: (def.range || 300) * 1.35, mesh,
       cyclone: barrage ? this._attachCyclone(mesh, side) : null, cycAcc: 0, cycCol: this._shotCols(side).col,
     });
+    return ldir;
   }
 
   /** 視覺彈體逐幀積分:重力下墜 + 地形/實體障礙截斷(解析判定,純視覺不進 A6 raycast 目標) */
@@ -3418,7 +3448,7 @@ export class BattleClient {
     let n = 0;
     const put = (v, d) => { if (n < MAXP) { arr[n * 3] = v.x; arr[n * 3 + 1] = v.y; arr[n * 3 + 2] = v.z; ld[n] = d; n++; } };
     put(from, 0);
-    const p = from.clone(), v = dir.clone().multiplyScalar(def.mv || 600);
+    const p = from.clone(), v = dir.clone().multiplyScalar(this._shotV0(def));
     const step = 0.03;
     let dist = 0, impact = null;
     const prev = new THREE.Vector3();
@@ -4145,7 +4175,7 @@ export class BattleClient {
     if (def.fan) {
       // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
       // 本地畫扇形彈著(近距密、遠距散),slot 分輕(散彈)/ 重(電漿)。
-      this._fanBlast(muzzle, dir, def);
+      this._fanBlast(muzzle, dir, def, barraging);   // 巨炮傾洩窗:離子扇加寬加亮 + 射程 +20%(2026-07-22)
       this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id });   // three z 南 → 模擬 z 北
       return;
     }
@@ -4154,9 +4184,20 @@ export class BattleClient {
       // 定向能:光速直擊(無彈道下墜),仍受射程限制;光束短暫駐留 = 持續穩定輸出感
       const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul);   // 高度制空(重砲 +20%)
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
-      this._tracer(muzzle, point, col, 0.35);
-      this._muzzleBurst(muzzle, id === 'heavy', this.side);
-      starburst(this.scene, this.effects, point.x, point.y, point.z, id === 'heavy' ? 3.4 : 2.2, col);
+      if (barraging) {
+        // 巨炮離子束(2026-07-22:光束類增加動畫效果範圍與亮度):粗亮束 + 熾芯 + 槍口衝擊環 + 大落點爆
+        const hot = this._shotCols(this.side).hot;
+        beamLine(this.scene, this.effects, muzzle, point, col, { ttl: 0.5, w: 0.5 });
+        beamLine(this.scene, this.effects, muzzle, point, hot, { ttl: 0.4, w: 0.22 });
+        this._muzzleBurst(muzzle, true, this.side);
+        shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 4.2, col);
+        starburst(this.scene, this.effects, point.x, point.y, point.z, 5.5, col);
+        starburst(this.scene, this.effects, point.x, point.y, point.z, 3.0, hot);
+      } else {
+        this._tracer(muzzle, point, col, 0.35);
+        this._muzzleBurst(muzzle, id === 'heavy', this.side);
+        starburst(this.scene, this.effects, point.x, point.y, point.z, id === 'heavy' ? 3.4 : 2.2, col);
+      }
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
       if (missileId != null) { this.net.send({ t: 'hitMissile', id: missileId, w: id }); this._hitFeedback(def, null, point); }
       else if (ent) { this.net.send({ t: 'hit', id: ent.id, w: id }); this._hitFeedback(def, ent, point); }
@@ -4180,11 +4221,11 @@ export class BattleClient {
       ? this._lockId : null;
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
-      pos: muzzle.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
+      pos: muzzle.clone(), vel: dir.clone().multiplyScalar(this._shotV0(def)),
       dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
       // 巨炮傾洩窗內的重武器砲彈掛氣旋噴射尾流(2026-07-22)
       cyclone: barraging ? this._attachCyclone(mesh, this.side) : null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: def.mv || 600, guide: !!def.guide, homing,
+      mv: this._shotV0(def), guide: !!def.guide, homing,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -4479,12 +4520,17 @@ export class BattleClient {
    * heavy 重武器一律比 light 更粗、更亮、更持久、槍口爆更大 —— 第一/第三人稱皆適用。
    * @param opts.heavy 重武器  @param opts.side 陣營  @param opts.impact `to` 是真實命中點(才畫落點火花)
    */
-  _shotFx(from, to, { heavy = false, side, impact = false } = {}) {
+  _shotFx(from, to, { heavy = false, side, impact = false, barrage = false } = {}) {
     const { col, hot } = this._shotCols(side);
     this._muzzleBurst(from, heavy, side);
+    const wF = barrage ? 2.2 : 1, tF = barrage ? 1.5 : 1;   // 巨炮(光束/動能重砲):更粗更亮更持久 + 落點大爆
     beamLine(this.scene, this.effects, from, to, col,
-      heavy ? { ttl: 0.30, w: 0.30 } : { ttl: 0.13, w: 0.075 });
-    if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18, w: 0.11 });  // 高熱內芯
+      heavy ? { ttl: 0.30 * tF, w: 0.30 * wF } : { ttl: 0.13, w: 0.075 });
+    if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18 * tF, w: 0.11 * wF });  // 高熱內芯
+    if (barrage) {
+      shockRing(this.scene, this.effects, from.x, from.y, from.z, 4.0, col);
+      starburst(this.scene, this.effects, to.x, to.y, to.z, 4.5, hot);
+    }
     if (impact) starburst(this.scene, this.effects, to.x, to.y, to.z, heavy ? 4.2 : 1.6, col);
   }
 

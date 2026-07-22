@@ -1987,6 +1987,7 @@ function worldToLL(x, z, center) {
 
 /** 水面判定(高程低於水面 或 衛星影像水色;純色規則不吃場地 mix、不耗共享 rnd)*/
 function isWaterPt(terrain, x, z) {
+  if (terrain.inDryBand?.(x, z)) return false;   // 兵線砲塔外接帶:強制乾地(壓過影像藍色水色,見 terrain.js 抬升)
   if (terrain.heightAt(x, z) < WATER.LEVEL + 0.05) return true;
   const c = terrain.sampleColor?.(x, z);
   return !!c && c[2] > c[0] + 14 && c[2] > c[1] + 6;
@@ -2000,6 +2001,7 @@ function isWaterPt(terrain, x, z) {
  * 沼澤:近水低地綠植(高程在水面上 SWAMP_BAND 內、非人工鋪面),比照 ground.js 濕地促進。
  */
 export function terrainEnvCode(terrain, x, z) {
+  if (terrain.inDryBand?.(x, z)) return 0;   // 兵線砲塔外接帶:強制乾地(壓過影像藍色分支,見 terrain.js 抬升)
   const h = terrain.heightAt(x, z);
   const wy = terrain.waterY;
   const c = terrain.sampleColor?.(x, z);
