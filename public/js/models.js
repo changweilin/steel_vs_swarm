@@ -226,14 +226,23 @@ function jetFlame(parent, r, len, x, y, z, accent) {
 }
 
 // ---------- 武器元件工具(gunKit,2026-07-16 起)----------
+// rig.wpn(2026-07-22 FPV 武裝同源):FPV 座艙複製第三人稱武裝的唯一來源。
+// { light|heavy: { nodes:[Object3D...], ref:Object3D, muz:Object3D|null, fwd:'z'|'-z'|'y'|'-y'|'x'|'-x' } | null }
+// nodes = 該武器「外觀完整」的節點集(MUST NOT 含機體軀幹/頭/翼/尾本體);
+// ref   = 表達 nodes 相對排列的參考框:單根武器 = 該武器群組根自身(此時 nodes=[root]、fwd 為武器局部軸);
+//         散件武器 = 其共同軀幹節點(head/chest/tilt…,消費端以 ref.matrixWorld⁻¹×node.matrixWorld 烘相對變換);
+// muz   = 槍口節點(通常 = rig.muzzles 同一節點);
+// fwd   = 在 ref 框架中「槍尾→槍口」的軸向。
+// 輕重同一具(同型雙模)= light 與 heavy 指向同一組 nodes/ref,只有 muz 不同。
 /**
  * 依武器 type 建「機匣 + 供彈 + 槍管 + 制退/聚焦」俱全的莢艙武器
  * (無人機腹掛/翼掛、爪莢、背載小塔共用;獨立機種的手持/嘴砲仍各自建模)。
  * 幾何一律沿局部 +z 朝前(呼叫端旋轉/擺位群組決定掛向);供彈結構與槍管同軸是硬規則。
+ * export(2026-07-22):FPV 座艙在 rig.wpn 缺登記時的退路 builder(game.js 消費)。
  * @param w 武器定義(data.js CHARACTERS[ch].light|heavy;查無時退回 {type:'gun'})
  * @returns { g 群組, muz 槍口節點(rig.muzzles 錨/槍口燈本體), glows 蓄力發光件 [{mesh,base}] }
  */
-function podWeapon(parent, w, accent, PAL, { L = 1.0, R = 0.08, x = 0, y = 0, z = 0 } = {}) {
+export function podWeapon(parent, w, accent, PAL, { L = 1.0, R = 0.08, x = 0, y = 0, z = 0 } = {}) {
   const ty = w?.type || 'gun';
   const g = new THREE.Group();
   g.position.set(x, y, z);
@@ -624,7 +633,10 @@ function buildDrone(side, vis = null, ch = null) {
     // 機載武器:後座走 _kickB 打進機身(stepAerial 機鼻上仰脈衝、蓄力反向微壓)
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.05 },
     lightGlow: [{ mesh: lp.muz, base: lp.muz.material.emissiveIntensity }],
-    muzzles: { light: { n: lp.muz, r: 0.075 }, heavy: { n: hp.muz, r: 0.12 } } };
+    muzzles: { light: { n: lp.muz, r: 0.075 }, heavy: { n: hp.muz, r: 0.12 } },
+    // rig.wpn:左莢輕/右莢重皆 podWeapon 單根(幾何一律沿局部 +z 朝前,muz z>0)
+    wpn: { light: { nodes: [lp.g], ref: lp.g, muz: lp.muz, fwd: 'z' },
+      heavy: { nodes: [hp.g], ref: hp.g, muz: hp.muz, fwd: 'z' } } };
   return g;
 }
 
@@ -908,6 +920,11 @@ function buildFixedWing(side, vis, ch = null) {
     glow: hGlow,
     pivot: [{ obj: hp.g, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.1, y: 0, z: 0 } }],
   };
+  // rig.wpn:皆 podWeapon 單根(幾何一律沿局部 +z 朝前,muz z>0)。
+  // 同型(lp===hp 機腹單莢一具雙模)= 同一組 nodes/ref,只有 muz 不同(輕 = 透鏡、重 = 陣列環);
+  // 異型 = 左翼莢輕 / 右翼莢重,各自 ref=自身根
+  const wpnL = { nodes: [lp.g], ref: lp.g, muz: lp.muz, fwd: 'z' };
+  const wpnH = { nodes: lp === hp ? wpnL.nodes : [hp.g], ref: hp.g, muz: hMuz, fwd: 'z' };
   g.userData.spin = props;
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.05, top: 30,
     level: 1,                            // 定翼機:巡航機身水平,不隨前速前傾(旋翼機才傾轉)
@@ -915,7 +932,8 @@ function buildFixedWing(side, vis, ch = null) {
     heavy: heavyRig,
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.04 },   // 機載:後座走 _kickB(stepAerial)
     lightGlow: [{ mesh: lp.muz, base: lp.muz.material.emissiveIntensity }],
-    muzzles: { light: { n: lp.muz, r: 0.06 }, heavy: { n: hMuz, r: 0.1 } } };
+    muzzles: { light: { n: lp.muz, r: 0.06 }, heavy: { n: hMuz, r: 0.1 } },
+    wpn: { light: wpnL, heavy: wpnH } };   // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
   return g;
 }
 
@@ -958,6 +976,7 @@ function buildAvianDrone(side, vis, ch = null) {
   // ---- 翼:內翼 w + 外翼 outer 樞軸(拍翼由 locomotion stepAerial 驅動)----
   const membrane = { transparent: true, opacity: 0.5, emissive: accent, emissiveIntensity: 0.3 };
   const eagleTips = [];   // 翼下羽毛飛彈掛架彈尖(重武器:獵狐飛彈,launcher)
+  const eagleFms = [];    // 翼下飛彈掛架群組 ×6(rig.wpn 節點集:掛架 + 彈尖整組)
   const mkWing = (sgn, z0, pair = 0) => {
     const w = new THREE.Group();
     w.position.set(sgn * 0.42 * bs, 0.22 * bs, z0);
@@ -994,6 +1013,7 @@ function buildAvianDrone(side, vis, ch = null) {
         tip.position.z = 0.4;
         fm.add(tip);
         eagleTips.push(tip);
+        eagleFms.push(fm);
       }
       for (let i = 0; i < 5; i++)   // 初級飛羽扇(腕點:長羽、掠角大 = 翼尖指狀分岔)
         feather(outer, P.span * (0.46 - i * 0.04), 0.16 * bs, 0, i * 0.015, -0.04 - i * 0.03,
@@ -1034,6 +1054,7 @@ function buildAvianDrone(side, vis, ch = null) {
   let heavyRig = { glow: [], pivot: [] };   // 重武器掛點(依生物分支填入)
   // 輕武器欄位(2026-07-16 起,依生物分支填入):輕/重異型 = 兩具分開的武裝結構
   let lightGlow = null, lMuz = null, hMuz = null;
+  let wpnL = null, wpnH = null;   // rig.wpn(FPV 武裝同源;依生物分支填入,契約見 podWeapon 上方)
   if (C === 'bee') {
     // 頭:大複眼 ×2 + 觸角;節腹琥珀環紋;螫針 = 砲管(尾部後向武器)
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.36 * bs, 10, 8), mat(mid, { metalness: 0.5 }));
@@ -1085,6 +1106,7 @@ function buildAvianDrone(side, vis, ch = null) {
     // 重武器(70mm 導引火箭巢,launcher):螫針中管 + 環列六管火箭巢 —— 管口火箭彈尖可見
     // (彈藥與發射管同軸),擊發齊閃;蓄力 = 整巢後仰展開、擊發反向
     const nestTips = [{ mesh: muz, base: 1.3 }];
+    const beeHN = [sting, barrel, muz];   // rig.wpn 節點集:螫針火箭巢散件(掛 tilt)
     for (let i = 0; i < 6; i++) {
       const th = i / 6 * Math.PI * 2, nx = Math.cos(th) * 0.12, ny = -0.08 + Math.sin(th) * 0.12;
       const t = cyl(tilt, 0.03, 0.03, 0.42, 6, nx, ny, -2.35 * bs, 0x111418, { metalness: 0.8 });
@@ -1095,6 +1117,7 @@ function buildAvianDrone(side, vis, ch = null) {
       tip.position.set(nx, ny, -2.58 * bs);
       tilt.add(tip);
       nestTips.push({ mesh: tip, base: 0.8 });
+      beeHN.push(t, tip);
     }
     heavyRig = {
       glow: nestTips,
@@ -1102,6 +1125,8 @@ function buildAvianDrone(side, vis, ch = null) {
     };
     // fxOnly:螫針朝後 —— 焰球掛在巢口,但曳光起點不用它(後向錨畫到前方目標會穿過蜂體)
     hMuz = { n: muz, r: 0.09, fxOnly: 1 };
+    // rig.wpn heavy:散件掛 tilt → ref=tilt;巢口 muz 在 tilt z=−2.59bs、螫針根 −2.1bs ⇒ 槍尾→槍口沿 −z
+    wpnH = { nodes: beeHN, ref: tilt, muz, fwd: '-z' };
     // 三對摺收蟲足(飛行收姿):基節近水平向外、脛節近水平後摺貼腹 —— 蜂不是無足飛彈
     for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
       const cx = cyl(tilt, 0.026, 0.032, 0.24, 5, sx * 0.26 * bs, -0.16 * bs, (0.5 - 0.35 * i) * bs, 0x14171a);
@@ -1111,9 +1136,10 @@ function buildAvianDrone(side, vis, ch = null) {
       tb.rotation.x = 1.15;
     }
     // 輕武器(雙聯 5.56 機槍艙):頦下前向雙管莢 + 彈鏈箱 —— 與後向火箭巢分開(異型雙武裝)
-    bx(tilt, 0.26 * bs, 0.15 * bs, 0.42, 0, -0.24 * bs, 0.72 * bs, 0x23262a, { metalness: 0.7 });      // 機匣
-    bx(tilt, 0.14 * bs, 0.12 * bs, 0.3, 0.2 * bs, -0.2 * bs, 0.6 * bs, PAL.dark, { metalness: 0.6 });  // 彈鏈箱(側掛)
-    bx(tilt, 0.15 * bs, 0.03 * bs, 0.31, 0.2 * bs, -0.13 * bs, 0.6 * bs, dim(accent, 0.8));            // 彈箱蓋識別
+    const beeLN = [];   // rig.wpn 節點集:頦下雙聯機槍莢散件(掛 tilt)
+    beeLN.push(bx(tilt, 0.26 * bs, 0.15 * bs, 0.42, 0, -0.24 * bs, 0.72 * bs, 0x23262a, { metalness: 0.7 }));      // 機匣
+    beeLN.push(bx(tilt, 0.14 * bs, 0.12 * bs, 0.3, 0.2 * bs, -0.2 * bs, 0.6 * bs, PAL.dark, { metalness: 0.6 }));  // 彈鏈箱(側掛)
+    beeLN.push(bx(tilt, 0.15 * bs, 0.03 * bs, 0.31, 0.2 * bs, -0.13 * bs, 0.6 * bs, dim(accent, 0.8)));            // 彈箱蓋識別
     lightGlow = [];
     for (const sx of [-1, 1]) {
       const b = cyl(tilt, 0.028, 0.032, 0.52, 6, sx * 0.07 * bs, -0.24 * bs, 1.05 * bs, 0x111418, { metalness: 0.85 });
@@ -1123,7 +1149,10 @@ function buildAvianDrone(side, vis, ch = null) {
       m2.rotation.x = Math.PI / 2;
       lightGlow.push({ mesh: m2, base: 0.8 });
       if (sx > 0) lMuz = { n: m2, r: 0.06 };
+      beeLN.push(b, m2);
     }
+    // rig.wpn light:散件掛 tilt → ref=tilt;槍口環 m2 在 tilt z=+1.33bs、機匣 +0.72bs ⇒ 槍口在 +z 端
+    wpnL = { nodes: beeLN, ref: tilt, muz: lMuz.n, fwd: 'z' };
   } else if (C === 'eagle') {
     // 鉤喙猛禽頭 + 頦下雙管 + 折收雙爪 + 扇尾
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.3 * bs, 10, 8), mat(plate, { metalness: 0.5 }));
@@ -1137,6 +1166,7 @@ function buildAvianDrone(side, vis, ch = null) {
     for (const sgn of [-1, 1]) for (let i = 0; i < 2; i++)
       feather(tilt, 0.42 * bs, 0.15 * bs, sgn * 0.12 * bs, (0.42 - i * 0.05) * bs, 0.78 * bs,
         1.15 + i * 0.25, sgn, i ? dim(plate, 0.9) : dim(accent, 0.8), { metalness: 0.35 });
+    const eagleLN = [];   // rig.wpn 節點集:頦下雙管霰彈散件(雙膛 + 機匣/鉸鏈,掛 tilt)
     for (const sx of [-1, 1]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08 * bs, 8, 6), mat(accent, { emissive: accent, emissiveIntensity: 1.5 }));
       eye.position.set(sx * 0.17 * bs, 0.38 * bs, 1.12 * bs);
@@ -1153,6 +1183,7 @@ function buildAvianDrone(side, vis, ch = null) {
       bm.rotation.x = Math.PI / 2;
       (lightGlow || (lightGlow = [])).push({ mesh: bm, base: 0.8 });
       if (sx > 0) lMuz = { n: bm, r: 0.07 };
+      eagleLN.push(b, bm);
       // 強力雙爪:羽腿(粗大腿)+ 鱗甲蹠骨 + 三趾前爪 + 後趾(hallux),爪尖內勾成鉗
       const thigh = cyl(tilt, 0.13 * bs, 0.16 * bs, 0.4, 8, sx * 0.24 * bs, -0.34 * bs, 0.28, plate, { metalness: 0.4 });
       thigh.rotation.x = 0.45;
@@ -1180,16 +1211,22 @@ function buildAvianDrone(side, vis, ch = null) {
       feather(tilt, (0.95 - Math.abs(i) * 0.07) * bs, 0.2 * bs, 0, 0.012 * Math.abs(i), -0.72 * bs,
         Math.PI / 2 + i * 0.16, 1, i === 0 ? accent : mid, { metalness: 0.3 });
     // 雙管霰彈的機匣/彈藥箱(胸腹下,供彈與雙膛同線)
-    bx(tilt, 0.3 * bs, 0.16 * bs, 0.4, 0, -0.34 * bs, 0.5 * bs, 0x23262a, { metalness: 0.7 });
+    eagleLN.push(bx(tilt, 0.3 * bs, 0.16 * bs, 0.4, 0, -0.34 * bs, 0.5 * bs, 0x23262a, { metalness: 0.7 }));
     // Purdey 並列雙管工藝:槍管間肋條 + 折開式鉸鏈(橫軸 = 中折點,橫跨雙膛)+ 機匣雕花識別帶
-    bx(tilt, 0.03, 0.04, 0.5, 0, -0.27 * bs, 0.9 * bs, 0x111418, { metalness: 0.8 });
+    eagleLN.push(bx(tilt, 0.03, 0.04, 0.5, 0, -0.27 * bs, 0.9 * bs, 0x111418, { metalness: 0.8 }));
     const hinge = cyl(tilt, 0.045 * bs, 0.045 * bs, 0.3 * bs, 8, 0, -0.31 * bs, 0.62 * bs, 0x30373f, { metalness: 0.85 });
     hinge.rotation.z = Math.PI / 2;
-    bx(tilt, 0.31 * bs, 0.04 * bs, 0.08, 0, -0.3 * bs, 0.68 * bs, dim(accent, 0.75));
-    bx(tilt, 0.22 * bs, 0.05 * bs, 0.3, 0, -0.25 * bs, 0.42 * bs, dim(accent, 0.8));   // 彈艙蓋識別
+    eagleLN.push(hinge);
+    eagleLN.push(bx(tilt, 0.31 * bs, 0.04 * bs, 0.08, 0, -0.3 * bs, 0.68 * bs, dim(accent, 0.75)));
+    eagleLN.push(bx(tilt, 0.22 * bs, 0.05 * bs, 0.3, 0, -0.25 * bs, 0.42 * bs, dim(accent, 0.8)));   // 彈艙蓋識別
+    // rig.wpn light:散件掛 tilt → ref=tilt;槍口環 bm 在 tilt z=+1.22bs、機匣 +0.5bs ⇒ 槍口在 +z 端
+    wpnL = { nodes: eagleLN, ref: tilt, muz: lMuz.n, fwd: 'z' };
     // 重武器(獵狐飛彈,launcher):翼下羽毛飛彈掛架(6 枚)擊發齊閃
     heavyRig = { glow: eagleTips.map((mesh) => ({ mesh, base: 1.2 })), pivot: [] };
     hMuz = eagleTips.length ? { n: eagleTips[0], r: 0.08 } : null;
+    // rig.wpn heavy:fm ×6 掛在拍翼群組 w 內 → ref=tilt(消費端經 matrixWorld 烘回 tilt 框);
+    // 彈尖 tip 在 fm 局部 z=+0.4(fm/w 無靜態旋轉)⇒ 槍口在 +z 端
+    wpnH = eagleFms.length ? { nodes: eagleFms, ref: tilt, muz: eagleTips[0], fwd: 'z' } : null;
   } else if (C === 'ptero') {
     // 後掠頭冠 + 長喙;吊掛雙爪各抓一具槍莢(爪握槍砲)
     // 胸骨撞擊龍骨:腹面縱貫刃脊 —— 全機唯一的武裝是它自己(撞擊攔截的結構補強)
@@ -1250,6 +1287,8 @@ function buildAvianDrone(side, vis, ch = null) {
         m2.rotation.x = Math.PI / 2;
         lightGlow = [{ mesh: m2, base: 0.9 }];
         lMuz = { n: m2, r: 0.08 };
+        // rig.wpn light:右爪軌道步槍莢單根 → ref=pod 自身;槍口環 m2 在 pod 局部 z=+0.75 ⇒ fwd +z
+        wpnL = { nodes: [pod], ref: pod, muz: m2, fwd: 'z' };
       } else {
         // 左爪攔截彈莢:導軌 + 雙彈(彈體/十字尾翼/導引頭)—— 彈藥外掛可見
         bx(pod, 0.1, 0.12, 1.0, 0, 0.1, 0, PAL.mid, { metalness: 0.6 });
@@ -1269,6 +1308,8 @@ function buildAvianDrone(side, vis, ch = null) {
           hMuz = { n: nose, r: 0.08 };
         }
         pteroHvyPivot.push({ obj: pod, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.15, y: 0, z: 0 } });
+        // rig.wpn heavy:左爪攔截彈莢單根 → ref=pod 自身;導引頭 nose 在 pod 局部 z=+0.49 ⇒ fwd +z
+        wpnH = { nodes: [pod], ref: pod, muz: hMuz.n, fwd: 'z' };
       }
       for (const a of [-1, 0, 1]) {   // 三指握爪扣住莢體
         const claw = bx(tilt, 0.05, 0.3, 0.07, sx * 0.28 * bs + a * 0.11, -0.58 * bs, 0.1, 0x30373f);
@@ -1323,28 +1364,35 @@ function buildAvianDrone(side, vis, ch = null) {
       bx(radar, 0.09 * bs, 0.09 * bs, 0.02, ax * bs, ay * bs, 0.045, accent, { emissive: accent, emissiveIntensity: 0.8 });
     // 口腔飛彈巢:2×2 管口(彈尖主色發光)+ 喉部充能光
     const dragonTips = [];
+    const dragonHN = [];   // rig.wpn 節點集:口腔飛彈巢散件(管身 + 彈尖 + 喉部充能,掛 head)
     for (const [ox, oy] of [[-0.07, 0.02], [0.07, 0.02], [-0.07, -0.08], [0.07, -0.08]]) {
       const cell = cyl(head, 0.045 * bs, 0.045 * bs, 0.3, 6, ox * bs, oy * bs, 0.5 * bs, 0x111418, { metalness: 0.8 });
       cell.rotation.x = Math.PI / 2;
       const tip = cyl(head, 0.03 * bs, 0.03 * bs, 0.05, 6, ox * bs, oy * bs, 0.66 * bs, accent, { emissive: accent, emissiveIntensity: 1.6 });
       tip.rotation.x = Math.PI / 2;
       dragonTips.push(tip);
+      dragonHN.push(cell, tip);
     }
     const throatGlow = bx(head, 0.18 * bs, 0.1 * bs, 0.12, 0, -0.08 * bs, 0.18 * bs, accent, { emissive: accent, emissiveIntensity: 1.0 });
+    dragonHN.push(throatGlow);
     // 重武器(防空散射矩陣,plasma):口腔飛彈巢 + 喉部充能光共同構成噴發前兆
     heavyRig = { glow: [...dragonTips.map((mesh) => ({ mesh, base: 1.6 })), { mesh: throatGlow, base: 1.0 }], pivot: [] };
     hMuz = { n: throatGlow, r: 0.12 };
+    // rig.wpn heavy:散件掛 head → ref=head;彈尖 tip 在 head z=+0.66bs、管身 +0.5bs ⇒ 槍口在 +z 端
+    wpnH = { nodes: dragonHN, ref: head, muz: throatGlow, fwd: 'z' };
     // 輕武器(25mm 空爆機砲):頦下單管 + 同軸彈鼓(掛在頭群組下,隨頭轉向)—— 與口腔電漿巢分開
     const dChin = cyl(head, 0.05 * bs, 0.058 * bs, 0.75 * bs, 6, 0, -0.34 * bs, 0.3 * bs, 0x111418, { metalness: 0.85 });
     dChin.rotation.x = Math.PI / 2;
     const dDrum = cyl(head, 0.1 * bs, 0.1 * bs, 0.16 * bs, 8, 0, -0.34 * bs, -0.02 * bs, PAL.dark, { metalness: 0.65 });
     dDrum.rotation.x = Math.PI / 2;   // 彈鼓與砲管同軸(供彈直上膛)
-    bx(head, 0.06 * bs, 0.06 * bs, 0.1 * bs, 0.08 * bs, -0.28 * bs, 0.08 * bs, 0x23262a, { metalness: 0.7 });   // 供彈橋
+    const dFeed = bx(head, 0.06 * bs, 0.06 * bs, 0.1 * bs, 0.08 * bs, -0.28 * bs, 0.08 * bs, 0x23262a, { metalness: 0.7 });   // 供彈橋
     const dMuz = cyl(head, 0.065 * bs, 0.065 * bs, 0.05, 6, 0, -0.34 * bs, 0.7 * bs, accent,
       { emissive: accent, emissiveIntensity: 0.8 });
     dMuz.rotation.x = Math.PI / 2;
     lightGlow = [{ mesh: dMuz, base: 0.8 }];
     lMuz = { n: dMuz, r: 0.07 };
+    // rig.wpn light:散件掛 head → ref=head;槍口環 dMuz 在 head z=+0.7bs、彈鼓 −0.02bs ⇒ 槍口在 +z 端
+    wpnL = { nodes: [dChin, dDrum, dFeed, dMuz], ref: head, muz: dMuz, fwd: 'z' };
     // 摺收後肢(wyvern 飛航收姿):大腿前傾、脛骨後摺貼腹、三趾爪朝前 —— 飛龍不是無腿的飛彈卡車
     for (const sx of [-1, 1]) {
       const th = cyl(tilt, 0.08 * bs, 0.1 * bs, 0.42 * bs, 7, sx * 0.34 * bs, -0.26 * bs, -0.2 * bs, mid, { metalness: 0.6 });
@@ -1395,7 +1443,8 @@ function buildAvianDrone(side, vis, ch = null) {
   g.userData.rig = { kind: 'aerial', tilt, tiltY0: 1.3, bob: 0.1, top: 30, wings, insect: C === 'bee', tailSegs, heavy: heavyRig,
     // 機載武器:後座走 _kickB(stepAerial 機身反應);槍口燈/錨依生物分支登記
     weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.05 },
-    lightGlow, muzzles: { light: lMuz, heavy: hMuz } };
+    lightGlow, muzzles: { light: lMuz, heavy: hMuz },
+    wpn: { light: wpnL, heavy: wpnH } };   // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
   return g;
 }
 
@@ -1566,6 +1615,7 @@ function buildBeastMech(side, vis) {
   let quadWeap = null, quadHvy = null, quadLGlow = null;   // 戰鬥動畫欄位(centaur 手持;其餘機載 'N')
   let quadGunR = null;                              // 騎槍俯仰(僅 centaur:行軍微揚 ↔ 據槍水平)
   let quadMuzL = null, quadMuzH = null;             // 槍口錨(rig.muzzles:曳光起點/槍口焰)
+  let quadWpnL = null, quadWpnH = null;             // rig.wpn(FPV 武裝同源;契約見 podWeapon 上方)
   if (C === 'hound') {
     // ---- 機械獵犬:修長犬軀(圓角矩形量體 —— 真獸沒有直角)+ 立耳吻部;背揹反器材長砲 ----
     rbz(spine, 1.4 * B, 1.1 * B, 2.3, 0, 0.05, -0.9, hullDk, { metalness: 0.6 });
@@ -1623,6 +1673,11 @@ function buildBeastMech(side, vis) {
     quadLGlow = [{ mesh: houndLMuz, base: 0.6 }];
     quadMuzL = { n: houndLMuz, r: 0.15 };
     quadMuzH = { n: houndMuz, r: 0.15 };
+    // rig.wpn:同型一管雙模 → 同一組 nodes/ref,只有 muz 不同。消音套筒/制退器/兩模膛口皆
+    // barrel 子節點自然涵蓋;膛口在 barrel 局部 +y 端(houndLMuz y=1.0、houndMuz y=1.87)⇒ fwd 'y'
+    const houndNodes = [barrel];
+    quadWpnL = { nodes: houndNodes, ref: barrel, muz: houndLMuz, fwd: 'y' };
+    quadWpnH = { nodes: houndNodes, ref: barrel, muz: houndMuz, fwd: 'y' };
     bx(spine, 0.2, 0.16, 0.5, 0.25 * B, 1.42 * B, -0.3, 0x1c2126);                 // 觀瞄鏡體
     bx(spine, 0.12, 0.08, 0.14, 0.25 * B, 1.42 * B, 0.0, accent, { emissive: accent, emissiveIntensity: 1.2 });
     bx(spine, 0.5 * B, 0.35, 0.7, -0.35 * B, 0.85 * B, -1.1, hullDk);              // 彈藥箱
@@ -1720,6 +1775,11 @@ function buildBeastMech(side, vis) {
     quadLGlow = [{ mesh: centaurLGlow, base: 0.6 }];
     quadMuzL = { n: centaurLGlow, r: 0.11 };
     quadMuzH = { n: centaurHMuz, r: 0.09 };
+    // rig.wpn:同型雙手長槍(一把雙模)→ 同一組 nodes/ref;消音管/長管/兩模膛口/瞄具皆
+    // rifle 子節點;膛口在 rifle 局部 +z 端(centaurLGlow z=1.44、centaurHMuz z=2.74)⇒ fwd 'z'
+    const centaurNodes = [rifle];
+    quadWpnL = { nodes: centaurNodes, ref: rifle, muz: centaurLGlow, fwd: 'z' };
+    quadWpnH = { nodes: centaurNodes, ref: rifle, muz: centaurHMuz, fwd: 'z' };
     // 持槍雙臂(不再是垂臂):肩樞軸 → 上臂前伸下壓 → 前臂折向槍身 ——
     // 右手扣握把(槍身後段)、左手前伸托護木;雙手把長槍鎖死在胸前的備射姿勢。
     // sh/el 存進 armSh/armEl + 記下建構時的基準角(armBase),讓 stepQuad 能疊加待機微顫
@@ -1837,22 +1897,34 @@ function buildBeastMech(side, vis) {
     };
     // 輕武器(防衛機槍 MG3,gun):右前肩背載小塔 —— 機匣 + 槍管(散熱環)+ 彈鏈箱(2026-07-16 補齊);
     // 塔座直接生根在胸背裝甲上(背載武器 MUST 連回軀體,不浮空)
-    bx(chest, 0.4 * B, 0.3, 0.55, 0.62 * B, 0.62 * B, 1.05, 0x2b3138, { metalness: 0.6 });      // 塔座
-    bx(chest, 0.3 * B, 0.24, 0.5, 0.62 * B, 0.85 * B, 1.05, 0x23262a, { metalness: 0.7 });      // 機匣
+    const stegoLN = [];   // rig.wpn 節點集:MG3 小塔散件(掛 chest)
+    stegoLN.push(bx(chest, 0.4 * B, 0.3, 0.55, 0.62 * B, 0.62 * B, 1.05, 0x2b3138, { metalness: 0.6 }));      // 塔座
+    stegoLN.push(bx(chest, 0.3 * B, 0.24, 0.5, 0.62 * B, 0.85 * B, 1.05, 0x23262a, { metalness: 0.7 }));      // 機匣
     const sBarrel = cyl(chest, 0.05, 0.055, 1.1, 6, 0.62 * B, 0.85 * B, 1.85, 0x111418, { metalness: 0.85 });
     sBarrel.rotation.x = Math.PI / 2;
-    for (const zz of [1.6, 1.9, 2.2])                                                            // 散熱套筒環
-      cyl(chest, 0.07, 0.07, 0.06, 6, 0.62 * B, 0.85 * B, zz, 0x30373f, { metalness: 0.78 }).rotation.x = Math.PI / 2;
+    stegoLN.push(sBarrel);
+    for (const zz of [1.6, 1.9, 2.2]) {                                                          // 散熱套筒環
+      const hr = cyl(chest, 0.07, 0.07, 0.06, 6, 0.62 * B, 0.85 * B, zz, 0x30373f, { metalness: 0.78 });
+      hr.rotation.x = Math.PI / 2;
+      stegoLN.push(hr);
+    }
     const stegoLMuz = cyl(chest, 0.065, 0.065, 0.05, 6, 0.62 * B, 0.85 * B, 2.42, accent,
       { emissive: accent, emissiveIntensity: 0.7 });
     stegoLMuz.rotation.x = Math.PI / 2;                                                          // 槍口識別環(擊發閃光)
-    bx(chest, 0.24 * B, 0.26, 0.4, 0.34 * B, 0.8 * B, 1.0, hullDk, { metalness: 0.6 });          // 彈鏈箱(內側掛)
-    bx(chest, 0.25 * B, 0.08, 0.42, 0.34 * B, 0.95 * B, 1.0, dim(accent, 0.8));                  // 彈箱蓋識別
+    stegoLN.push(stegoLMuz);
+    stegoLN.push(bx(chest, 0.24 * B, 0.26, 0.4, 0.34 * B, 0.8 * B, 1.0, hullDk, { metalness: 0.6 }));          // 彈鏈箱(內側掛)
+    stegoLN.push(bx(chest, 0.25 * B, 0.08, 0.42, 0.34 * B, 0.95 * B, 1.0, dim(accent, 0.8)));                  // 彈箱蓋識別
     quadWeap = { light: 'N', heavy: 'N' };
     quadHvy = { chest: 0.04 };
     quadLGlow = [{ mesh: stegoLMuz, base: 0.7 }];
     quadMuzL = { n: stegoLMuz, r: 0.07 };
     quadMuzH = stegoTips.length ? { n: stegoTips[0], r: 0.06 } : null;
+    // rig.wpn light:散件掛 chest → ref=chest;槍口環在 chest z=+2.42、機匣 +1.05 ⇒ 槍口在 +z 端
+    quadWpnL = { nodes: stegoLN, ref: chest, muz: stegoLMuz, fwd: 'z' };
+    // rig.wpn heavy:四片發射鰭 f 散件 —— finA/finB 掛 chest、finC/finD 掛 spine,
+    // 實際共同父節點 = spine(chest 是 spine 子節點)→ ref=spine;彈尖 tip 在 f 局部
+    // z=+0.26、管身 +0.13(f/chest 皆無靜態旋轉)⇒ 槍口在 +z 端
+    quadWpnH = { nodes: [finA.f, finB.f, finC.f, finD.f], ref: spine, muz: stegoTips[0], fwd: 'z' };
     // 長頸低伸:胸廓 → 頸以三節逐段收分(不再是一截突兀的短方塊),頭部拉長成喙吻
     neck.position.set(0, -0.05, 1.5);
     chest.add(neck);
@@ -2028,6 +2100,11 @@ function buildBeastMech(side, vis) {
     quadLGlow = [{ mesh: tGunL.glowMesh, base: 1.2 }, { mesh: tGunR.glowMesh, base: 1.2 }];
     quadMuzL = { n: tGunR.glowMesh, r: 0.12 };
     quadMuzH = { n: tOrb.glowMesh, r: 0.16 };
+    // rig.wpn:三具 tipP 分掛三條觸手、橫跨整個體寬 —— 若整組登記,FPV 定尺會把聯集
+    // 縮到一排小點(2026-07-22 稽核 frac=1.00 打回)。座艙的觸手只握一具 ⇒ 輕=右槍莢單根、
+    // 重=orb 諧振器單根,各自 ref=自身 tipP(透鏡 glowMesh 在 tipP 局部 z=+0.74 ⇒ fwd 'z')
+    quadWpnL = { nodes: [tGunR.tipP], ref: tGunR.tipP, muz: tGunR.glowMesh, fwd: 'z' };
+    quadWpnH = { nodes: [tOrb.tipP], ref: tOrb.tipP, muz: tOrb.glowMesh, fwd: 'z' };
     // 尾已移除(使用者指示):克蘇魯不再拖曳後觸手尾。tail/tail2 群組留空,
     // stepQuad 的 whipTail 空轉 → 無任何視覺輸出(不必動 rig 合約與空值守衛)
   }
@@ -2052,6 +2129,7 @@ function buildBeastMech(side, vis) {
     weap: quadWeap, hvy: quadHvy, lightGlow: quadLGlow,   // 開火後座/蓄力反向/槍口閃光(全生物分支)
     gunR: quadGunR,          // 騎槍俯仰(僅 centaur:stepQuad rider 的 gunPitch 消費)
     muzzles: { light: quadMuzL, heavy: quadMuzH },   // 槍口錨:曳光起點/槍口焰(makeUnit 掛焰)
+    wpn: { light: quadWpnL, heavy: quadWpnH },       // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
     humChest, humNeck,       // 人馬上身分節樞軸(僅 centaur 非 null):腰→胸→頸逐節反向吸收馬軀起伏
     hipsY0: hipY, stride: P.stride, top: P.top ?? 10,
     // 各生物專屬步態參數(見 BEAST 表):側步/小跑/觸手輪 + 體側搖擺/彈跳/俯仰幅;
@@ -2134,6 +2212,7 @@ function buildBipedBeast(side, vis) {
   let bpWeap = null, bpHvy = null, bpLGlow = null;   // 戰鬥動畫欄位(roo/trex 手持;其餘機載 'N')
   let bpMuzL = null, bpMuzH = null;                  // 槍口錨(rig.muzzles:曳光起點/槍口焰)
   let bpGunR = null, bpGunL = null, bpAim = null;    // 手持/肩扛武器俯仰(gunPitch)+ 射擊姿勢(aimPose)
+  let bpWpnL = null, bpWpnH = null;                  // rig.wpn(FPV 武裝同源;契約見 podWeapon 上方)
 
   if (C === 'gorilla') {
     // ---- 猩猩:聳背厚胸 + 巨臂武裝(右旋轉機砲 / 左鑄鐵鍋盾);短粗腿(蹠行,膝微屈)----
@@ -2251,6 +2330,11 @@ function buildBipedBeast(side, vis) {
     bpMuzL = { n: gLm, r: 0.2 };
     bpMuzH = { n: gCore, r: 0.12 };
     bpGunR = { g: sg, rest: 0.12, aim: 0 };   // 肩扛砲俯仰:chest 子層鏈上無其他俯仰 ⇒ rest 微下壓、aim 水平
+    // rig.wpn:同組複合武器(三管霰彈 + 電漿噴口同座)單根 sg → 同一組 nodes/ref,只有 muz 不同;
+    // 槍口皆在 sg 局部 +z 端(gLm z=0.86、gCore z=0.82,機匣 −0.32)⇒ fwd 'z'
+    const gorillaNodes = [sg];
+    bpWpnL = { nodes: gorillaNodes, ref: sg, muz: gLm, fwd: 'z' };
+    bpWpnH = { nodes: gorillaNodes, ref: sg, muz: gCore, fwd: 'z' };
     // 指節行走:手是前腳,不入手持列(文件明載)—— 後座走 _kickB 打進胸腔 + 肩砲槍口上跳
     bpWeap = { light: 'N', heavy: 'N' };
     bpHvy = { chest: 0.06, gun: 0.08 };
@@ -2326,6 +2410,7 @@ function buildBipedBeast(side, vis) {
     // 舊背載線圈步槍已拆除(槍口一律朝前 +z,收在覆羽板之下)
     const ostrichTips = [];   // 右翼飛彈管口(重)
     let ostrichLW = null;     // 左翼線圈槍口(輕)
+    const ostrichHN = [], ostrichLN = [];   // rig.wpn 節點集:右翼飛彈管散件 / 左翼線圈步槍散件
     const mkArm = (sx) => segLimb(chest, [sx * 0.68, 0.75, 0.15], [
       { len: 0.72, draw: (a) => {
         const wing = bx(a, 0.14, 0.75, 1.5, sx * 0.05, -0.35, -0.25, plate, { metalness: 0.5 });
@@ -2339,18 +2424,23 @@ function buildBipedBeast(side, vis) {
             const t = cyl(a, 0.04, 0.04, 0.05, 6, sx * -0.02, -0.58, 0.43 - i * 0.42, accent, { emissive: accent, emissiveIntensity: 1.3 });
             t.rotation.x = Math.PI / 2;
             ostrichTips.push(t);
+            ostrichHN.push(c, t);
           }
         } else {
           // 左翼線圈步槍:電容機匣 + 加速管 + 線圈環 ×2 + 槍口環,位置與右翼飛彈管鏡像
-          bx(a, 0.16, 0.22, 0.42, sx * -0.02, -0.5, -0.28, hullDk, { metalness: 0.7 });   // 電容機匣
+          ostrichLN.push(bx(a, 0.16, 0.22, 0.42, sx * -0.02, -0.5, -0.28, hullDk, { metalness: 0.7 }));   // 電容機匣
           const ob = cyl(a, 0.035, 0.042, 1.05, 6, sx * -0.02, -0.58, 0.3, 0x111418, { metalness: 0.85 });
           ob.rotation.x = Math.PI / 2;                                                    // 加速管
-          for (const zz of [0.12, 0.48])
-            cyl(a, 0.07, 0.07, 0.05, 8, sx * -0.02, -0.58, zz, accent, { emissive: accent, emissiveIntensity: 0.6 })
-              .rotation.x = Math.PI / 2;                                                  // 加速線圈環
+          ostrichLN.push(ob);
+          for (const zz of [0.12, 0.48]) {                                                // 加速線圈環
+            const cr = cyl(a, 0.07, 0.07, 0.05, 8, sx * -0.02, -0.58, zz, accent, { emissive: accent, emissiveIntensity: 0.6 });
+            cr.rotation.x = Math.PI / 2;
+            ostrichLN.push(cr);
+          }
           ostrichLW = cyl(a, 0.055, 0.055, 0.05, 8, sx * -0.02, -0.58, 0.85, accent,
             { emissive: accent, emissiveIntensity: 0.8 });
           ostrichLW.rotation.x = Math.PI / 2;                                             // 槍口環(擊發閃光)
+          ostrichLN.push(ostrichLW);
         }
       } },
       { len: 0.5, base: -0.25, k: -0.5, d: 0.4, draw: (a) => {
@@ -2383,6 +2473,11 @@ function buildBipedBeast(side, vis) {
     bpLGlow = ostrichLW ? [{ mesh: ostrichLW, base: 0.8 }] : null;
     bpMuzL = ostrichLW ? { n: ostrichLW, r: 0.06 } : null;
     bpMuzH = ostrichTips.length ? { n: ostrichTips[0], r: 0.05 } : null;
+    // rig.wpn:兩翼武裝皆散件、掛在 segLimb 翼臂節內 → ref=chest(消費端經 matrixWorld 烘回);
+    // 左翼槍口環在翼節 z=+0.85、機匣 −0.28 ⇒ +z;右翼彈尖 t 在管身 c 前方 +0.13(z=0.43 vs 0.3)⇒ +z
+    // (翼臂第一節無靜態 base 旋轉,+z 即 chest 前向)
+    bpWpnL = ostrichLN.length ? { nodes: ostrichLN, ref: chest, muz: ostrichLW, fwd: 'z' } : null;
+    bpWpnH = ostrichHN.length ? { nodes: ostrichHN, ref: chest, muz: ostrichTips[0] || null, fwd: 'z' } : null;
   } else if (C === 'trex') {
     // ---- 暴龍:水平體軸 + 巨顎藏無後座砲;Z 形趾行腿、小短臂,重尾配重 ----
     const mkLeg = (sx) => segLimb(g, [sx * 0.72, hipY, 0], [
@@ -2472,6 +2567,9 @@ function buildBipedBeast(side, vis) {
     bpWeap = { light: 'R', heavy: 'N' };   // 輕武器手持(右)、嘴砲機載:後座走 _kickB
     bpHvy = { chest: 0.06 };
     bpMuzH = { n: muzT, r: 0.13 };
+    // rig.wpn heavy:口腔無後座砲散件(砲管/膛口/文氏尾噴)皆掛 head → ref=head;
+    // 膛口 muzT 在 head z=+2.0、砲管 +1.2、尾噴 −0.35 ⇒ 槍口在 +z 端
+    bpWpnH = { nodes: [gunT, muzT, vent], ref: head, muz: muzT, fwd: 'z' };
     bx(head, 0.3, 0.14, 0.2, 0, -0.3, 0.5, accent, { emissive: accent, emissiveIntensity: 1.0 });   // 喉部充能
     bx(head, 0.6, 0.1, 0.08, 0, 0.34, 0.78, accent, { emissive: accent, emissiveIntensity: 1.6 });  // 眼列
     // 小短臂:上臂 → 肘(前臂)→ 腕(二爪),永遠深屈在胸前(暴龍的招牌姿勢);
@@ -2505,6 +2603,9 @@ function buildBipedBeast(side, vis) {
           bpGunR = { g: tg, rest: 1.2, aim: 1.15 };
           bpLGlow = [{ mesh: trexLMuz, base: 0.8 }];
           bpMuzL = { n: trexLMuz, r: 0.08 };
+          // rig.wpn light:右手 DShKM 單根 tg(機匣/雙管/彈鏈箱/握把皆其子節點)→ ref=tg;
+          // 雙管口識別環 trexLMuz 在 tg 局部 z=+0.8、機匣 −0.04 ⇒ fwd 'z'
+          bpWpnL = { nodes: [tg], ref: tg, muz: trexLMuz, fwd: 'z' };
         } else {
           for (const o of [-0.05, 0.06]) bx(a, 0.05, 0.14, 0.08, o, -0.16, 0.06, 0x30373f); // 二爪(左手保留)
           // 腕背後掠鞭天線(短前肢兼指揮天線):基座球 + 鞭桿(上後外三向掠出,讓開胸前緣)+ 桿梢燈
@@ -2606,7 +2707,7 @@ function buildBipedBeast(side, vis) {
         // 輕/重異型 = 一手一具:左腕 = 5.8 突擊步槍雙管(下插彈匣供彈);
         // 右腕 = 熔核直拳砲(plasma:拳面裝甲 + 磁約束光核 + 熔核導管,貼身直擊)
         if (sx > 0) {
-          bx(a, 0.32, 0.34, 0.16, 0, 0, 0.16, 0x30373f, { metalness: 0.8 });       // 拳面裝甲
+          const fistP = bx(a, 0.32, 0.34, 0.16, 0, 0, 0.16, 0x30373f, { metalness: 0.8 });   // 拳面裝甲
           const core = cyl(a, 0.1, 0.1, 0.07, 8, 0, 0, 0.27, accent, { emissive: accent, emissiveIntensity: 1.2 });
           core.rotation.x = Math.PI / 2;                                           // 磁約束光核(蓄力增亮/擊發強閃)
           const cd1 = bx(a, 0.06, 0.05, 0.34, -0.12, 0.12, 0.0, dim(accent, 0.7),
@@ -2618,6 +2719,9 @@ function buildBipedBeast(side, vis) {
             pivot: [],   // 直拳動態全由 punch 原型(hv.armR 大幅)表現,拳砲不另掛 pivot
           };
           bpMuzH = { n: core, r: 0.12 };
+          // rig.wpn heavy:熔核直拳砲散件(拳面裝甲/光核/雙導管)直掛腕節 a → ref=該腕節;
+          // 光核 core 在腕節 z=+0.27、拳面 +0.16、導管 0.0 ⇒ 拳面/槍口在 +z 端
+          bpWpnH = { nodes: [fistP, core, cd1, cd2], ref: a, muz: core, fwd: 'z' };
         } else {
           // 左腕雙管步槍艙(2026-07-17 槍口朝前化):拳擊架式的前臂上抬(肘 −0.95),
           // 雙管改掛可俯仰槍架 lg —— gunPitch 以 +0.95 抵銷手臂鏈上抬 ⇒ 據槍/行軍槍口
@@ -2637,6 +2741,9 @@ function buildBipedBeast(side, vis) {
           bpGunL = { g: lg, rest: 1.0, aim: 0.95 };
           bpLGlow = [{ mesh: muz, base: 1.2 }];   // 左腕槍口(輕武器擊發閃光)
           bpMuzL = { n: muz, r: 0.07 };
+          // rig.wpn light:左腕雙管步槍艙單根 lg(雙管/彈匣皆其子節點)→ ref=lg;
+          // 槍口環 muz 在 lg 局部 z=+0.32、彈匣 +0.02 ⇒ fwd 'z'
+          bpWpnL = { nodes: [lg], ref: lg, muz, fwd: 'z' };
         }
       } },
     ], ca(sx));
@@ -2672,6 +2779,7 @@ function buildBipedBeast(side, vis) {
     weap: bpWeap, hvy: bpHvy, lightGlow: bpLGlow,   // 戰鬥動畫(roo/trex 手持;gorilla 肩扛;其餘機載 'N')
     gunR: bpGunR, gunL: bpGunL, aimPose: bpAim,     // 武器俯仰(gunPitch)+ 戰鬥姿勢(stepBiped aimPose)
     muzzles: { light: bpMuzL, heavy: bpMuzH },      // 槍口錨:曳光起點/槍口焰(makeUnit 掛焰)
+    wpn: { light: bpWpnL, heavy: bpWpnH },          // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
   };
   return g;
 }
@@ -2751,6 +2859,7 @@ function buildMorphMech(side, vis) {
   let morphGunR = null, morphGunL = null, morphLMuz = null, atlasLGlow = null;
   let morphLGlow = null;                        // 輕武器槍口燈列(獸型/多燈機種覆寫)
   let morphMuzL = null, morphMuzH = null;       // 槍口錨(rig.muzzles:曳光起點/槍口焰)
+  let morphWpnL = null, morphWpnH = null;       // rig.wpn(FPV 武裝同源;契約見 podWeapon 上方)
   const P = (grp, a, b, s0, s1) => { const p = { g: grp, a, b, s0, s1, t: 0 }; parts.push(p); return p; };
   const vent = (parent, w, h, d, x, y, z) => {
     const v = bx(parent, w, h, d, x, y, z, 0x1c2126, { emissive: 0xff8a3c, emissiveIntensity: 0.15 });
@@ -3014,11 +3123,15 @@ function buildMorphMech(side, vis) {
       // 輕武器(FN MAG 通用機槍,gun):象鼻端管 —— 鼻端嘴砲,隨象鼻逐幀擺動;供彈環匣沿鼻軸
       const tg = cyl(trunkTip, 0.05, 0.056, 0.55, 6, 0, -0.05, 0.52, 0x111418, { metalness: 0.85 });
       tg.rotation.x = Math.PI / 2;
-      cyl(trunkTip, 0.085, 0.085, 0.2, 8, 0, -0.05, 0.28, 0x23262a, { metalness: 0.7 }).rotation.x = Math.PI / 2;  // 供彈環匣
+      const eFeed = cyl(trunkTip, 0.085, 0.085, 0.2, 8, 0, -0.05, 0.28, 0x23262a, { metalness: 0.7 });  // 供彈環匣
+      eFeed.rotation.x = Math.PI / 2;
       const eMuz = cyl(trunkTip, 0.07, 0.07, 0.05, 6, 0, -0.05, 0.82, accent, { emissive: accent, emissiveIntensity: 0.8 });
       eMuz.rotation.x = Math.PI / 2;
       morphLGlow = [{ mesh: eMuz, base: 0.8 }];
       morphMuzL = { n: eMuz, r: 0.08 };
+      // rig.wpn light:象鼻端散件(管身/供彈環匣/槍口環)掛 trunkTip → ref=trunkTip;
+      // 槍口環 eMuz 在 trunkTip z=+0.82、環匣 +0.28 ⇒ 槍口在 +z 端
+      morphWpnL = { nodes: [tg, eFeed, eMuz], ref: trunkTip, muz: eMuz, fwd: 'z' };
       // 重武器(重型線圈加農砲,rail;charge 1.8s 最長蓄力):背載大線圈砲 —— 砲架生根背脊、
       // 線圈環蓄力增亮、蓄力砲身上仰瞄準/擊發反向坐底(戰艦主砲式跨頭前伸)
       const cc = new THREE.Group();
@@ -3039,12 +3152,16 @@ function buildMorphMech(side, vis) {
         pivot: [{ obj: cc, rest: { x: 0.28, y: 0, z: 0 }, deploy: { x: 0.16, y: 0, z: 0 } }],
       };
       morphMuzH = { n: eHMuz, r: 0.15 };
+      // rig.wpn heavy:背載線圈砲單根 cc(砲架/機匣/線圈/膛口皆其子節點)→ ref=cc;
+      // 膛口 eHMuz 在 cc 局部 y=+2.98、機匣 +0.55(加速砲身 +y 前向)⇒ fwd 'y'
+      morphWpnH = { nodes: [cc], ref: cc, muz: eHMuz, fwd: 'y' };
     } else if (F === 'archo') {
       // 迅猛龍雙模狙擊(輕/重同型 gun×gun):2026-07-17 自嘴砲移到雙手 ——
       // 雙手托一把切換兩模式(同型 = 雙手一把的文件規則),建模住 mkArm 的 raptor 分支
     } else if (F === 'beetle') {
       // 輕武器(雙 35 快砲,gun):犀角兩側並列雙管 + 共構機匣(頸背彈鏈供彈)
       morphLGlow = [];
+      const beetleLN = [];   // rig.wpn 節點集:雙 35 快砲散件(掛 head)
       for (const s2 of [-1, 1]) {
         const b35 = cyl(head, 0.05, 0.055, 0.85, 6, s2 * 0.2 * B, 0.12, 0.45, 0x111418, { metalness: 0.85 });
         b35.rotation.x = Math.PI / 2;
@@ -3052,24 +3169,34 @@ function buildMorphMech(side, vis) {
         m35.rotation.x = Math.PI / 2;
         morphLGlow.push({ mesh: m35, base: 0.8 });
         if (s2 > 0) morphMuzL = { n: m35, r: 0.08 };
+        beetleLN.push(b35, m35);
       }
-      bx(head, 0.52 * B, 0.16, 0.3, 0, 0.12, 0.04, 0x23262a, { metalness: 0.7 });        // 共構機匣
-      bx(head, 0.22 * B, 0.12, 0.22, 0, 0.06, -0.2, hullDk, { metalness: 0.6 });         // 彈鏈供彈匣(頸背)
+      beetleLN.push(bx(head, 0.52 * B, 0.16, 0.3, 0, 0.12, 0.04, 0x23262a, { metalness: 0.7 }));        // 共構機匣
+      beetleLN.push(bx(head, 0.22 * B, 0.12, 0.22, 0, 0.06, -0.2, hullDk, { metalness: 0.6 }));         // 彈鏈供彈匣(頸背)
+      // rig.wpn light:散件掛 head → ref=head;槍口環 m35 在 head z=+0.9、機匣 +0.04 ⇒ 槍口在 +z 端(已驗證)
+      morphWpnL = { nodes: beetleLN, ref: head, muz: morphMuzL.n, fwd: 'z' };
       // 重武器(區域拒止電漿陣列,plasma;GUN_MOUNT 強制 mouth):顎下三噴口陣 + 磁約束光核 + 燃料罐
       const bCores = [];
+      const beetleHN = [];   // rig.wpn 節點集:電漿三噴口陣散件(掛 head)
       for (const ox of [-0.12, 0, 0.12]) {
-        cyl(head, 0.045, 0.06, 0.3, 8, ox * B, -0.16, 0.3, 0x1c2126, { metalness: 0.8 }).rotation.x = Math.PI / 2;
+        const bNoz = cyl(head, 0.045, 0.06, 0.3, 8, ox * B, -0.16, 0.3, 0x1c2126, { metalness: 0.8 });
+        bNoz.rotation.x = Math.PI / 2;
         const core = cyl(head, 0.05, 0.05, 0.05, 8, ox * B, -0.16, 0.48, accent, { emissive: accent, emissiveIntensity: 1.0 });
         core.rotation.x = Math.PI / 2;
         bCores.push({ mesh: core, base: 1.0 });
+        beetleHN.push(bNoz, core);
       }
       const bTank = new THREE.Mesh(new THREE.CapsuleGeometry(0.1 * B, 0.3, 4, 8),
         mat(dim(accent, 0.75), { emissive: accent, emissiveIntensity: 0.4 }));
       bTank.rotation.x = Math.PI / 2;
       bTank.position.set(0, -0.3, 0.0);
       head.add(bTank);                                                                    // 燃料罐(沿噴軸後掛)
+      beetleHN.push(bTank);
       heavyRig = { glow: [...bCores, { mesh: bTank, base: 0.4 }], pivot: [] };
       morphMuzH = { n: bCores[1].mesh, r: 0.1 };
+      // rig.wpn heavy:散件掛 head → ref=head;光核 core 在 head z=+0.48、噴口 +0.3、燃料罐 0.0
+      // ⇒ 噴發方向在 +z 端(已驗證)
+      morphWpnH = { nodes: beetleHN, ref: head, muz: bCores[1].mesh, fwd: 'z' };
     } else {
       // owl/panther:背載消音狙擊(輕/重同型 gun×gun = 一管雙模)—— 低伏槍架貼背
       // (夜豹匍匐剪影):消音精準段(VSS)+ 反器材長管段(AMR)+ 瞄準鏡;
@@ -3094,6 +3221,11 @@ function buildMorphMech(side, vis) {
       morphLGlow = [{ mesh: pLMuz, base: 0.7 }];
       morphMuzL = { n: pLMuz, r: 0.09 };
       morphMuzH = { n: pHMuz, r: 0.07 };
+      // rig.wpn:同型一管雙模單根 pg(機匣沿 +y 前向)→ 同一組 nodes/ref,只有 muz 不同;
+      // 兩模膛口在 pg 局部 +y 端(pLMuz y=1.28、pHMuz y=2.12,機匣 +0.35)⇒ fwd 'y'
+      const pgNodes = [pg];
+      morphWpnL = { nodes: pgNodes, ref: pg, muz: pLMuz, fwd: 'y' };
+      morphWpnH = { nodes: pgNodes, ref: pg, muz: pHMuz, fwd: 'y' };
     }
   }
 
@@ -3572,6 +3704,9 @@ function buildMorphMech(side, vis) {
           morphLMuz = cyl(gg, 0.11, 0.11, 0.06, 10, 0, 1.4, 0, accent,
             { emissive: accent, emissiveIntensity: 0.7 });
         }
+        // rig.wpn light:右手速射砲單根 gg(管束/軸轂/供彈匣皆其子節點)→ ref=gg;
+        // 槍口環 morphLMuz 在 gg 局部 y=+1.34(M134)/+1.4(GAU-19),機匣 +0.02 ⇒ fwd 'y'(已驗證局部 +y)
+        morphWpnL = { nodes: [gg], ref: gg, muz: morphLMuz, fwd: 'y' };
       } else {
         // ── 左手重武器(雙槍的另一手):渡鴉地獄火雙聯管 / 清算日追債者四聯彈匣箱 ──
         const gg = new THREE.Group();
@@ -3604,6 +3739,9 @@ function buildMorphMech(side, vis) {
         // 再掛 pivot 會互相覆寫 —— 武器俯仰的唯一寫入者是 gunPitch
         heavyRig = { glow: cells.map((mesh) => ({ mesh, base: 0.9 })), pivot: [] };
         morphMuzH = { n: cells[0], r: 0.1 };
+        // rig.wpn heavy:左手發射器單根 gg → ref=gg;管口/膛口 cells 在 gg 局部 y=+0.88(地獄火)
+        // /+0.74(追債者),發射器框 +0.35 ⇒ fwd 'y'(已驗證局部 +y)
+        morphWpnH = { nodes: [gg], ref: gg, muz: cells[0], fwd: 'y' };
       }
     } else if (sx > 0 && G === 'raptor') {
       // 迅猛龍雙手托雙模狙擊(2026-07-17 自嘴砲移到雙手;同型 = 雙手一把切換兩模式):
@@ -3630,6 +3768,11 @@ function buildMorphMech(side, vis) {
       morphLGlow = [{ mesh: rLMuz, base: 0.7 }];
       morphMuzL = { n: rLMuz, r: 0.07 };
       morphMuzH = { n: rHMuz, r: 0.06 };
+      // rig.wpn:同型雙手一把(雙模狙擊)單根 gg → 同一組 nodes/ref,只有 muz 不同;
+      // 兩模膛口在 gg 局部 +y 端(rLMuz y=0.8、rHMuz y=1.68,機匣 +0.06;槍身沿 +y)⇒ fwd 'y'
+      const raptorNodes = [gg];
+      morphWpnL = { nodes: raptorNodes, ref: gg, muz: rLMuz, fwd: 'y' };
+      morphWpnH = { nodes: raptorNodes, ref: gg, muz: rHMuz, fwd: 'y' };
     }
     return { arm: a, fore, hand };
   };
@@ -3759,6 +3902,9 @@ function buildMorphMech(side, vis) {
           atlasLGlow.push({ mesh: mz, base: 0.7 });                                      // 槍口燈(擊發閃光)
           bx(mg, 0.08, 0.3, 0.2, ox, -0.26, -0.05, 0x2b3138, { metalness: 0.7 });        // 彈匣
         }
+        // rig.wpn light:右架雙聯機槍莢單根 mg(機匣/雙管/彈匣皆其子節點)→ ref=mg;
+        // 槍口燈 mz 在 mg 局部 z=+1.04、雙管 +0.6、機匣 −0.1 ⇒ fwd 'z'
+        morphWpnL = { nodes: [mg], ref: mg, muz: atlasLGlow[0].mesh, fwd: 'z' };
       } else {
         // 左架集束布撒器:方箱 + 2×3 布撒膛口(發光)+ 俯仰樞軸(蓄力上仰、擊發反向)。
         // 外層 dispP 走變形時窗(飛行轉到背部朝前)、內層 disp 留給 heavy.pivot ——
@@ -3783,6 +3929,9 @@ function buildMorphMech(side, vis) {
           pivot: [{ obj: disp, rest: { x: 0, y: 0, z: 0 }, deploy: { x: -0.18, y: 0, z: 0 } }],
         };
         morphMuzH = { n: cells[0], r: 0.07 };
+        // rig.wpn heavy:外觀完整根 = 內層 disp(布撒箱/頂蓋/膛口全在其子樹;外層 dispP 只是
+        // 變形時窗的空 poser 節點)→ ref=disp;膛口 cells 在 disp 局部 z=+0.38、箱體 −0.05 ⇒ fwd 'z'
+        morphWpnH = { nodes: [disp], ref: disp, muz: cells[0], fwd: 'z' };
       }
     }
   } else if (G === 'monkey') {
@@ -3821,6 +3970,9 @@ function buildMorphMech(side, vis) {
     staffMuz.rotation.x = Math.PI / 2;                                                   // 槍口環(前端金箍內圈)
     morphLGlow = [{ mesh: staffMuz, base: 0.9 }];
     morphMuzL = { n: staffMuz, r: 0.1 };
+    // rig.wpn light:如意棒單根 staffG(棒身/金箍/電容匣皆其子節點)→ ref=staffG;
+    // 槍口環 staffMuz 在 staffG 局部 z=+1.14(棒身沿 +z 朝前、電容匣 −0.35)⇒ fwd 'z'
+    morphWpnL = { nodes: [staffG], ref: staffG, muz: staffMuz, fwd: 'z' };
     // 虎皮裙腰甲:前腰片(下緣外撇讓開掌行深前傾的大腿)+ 腰帶識別
     const sk = bx(torso, 0.5 * B, 0.34, 0.09, 0, -0.24, 0.42, dim(gold, 0.7), { metalness: 0.5 });
     sk.rotation.x = -0.45;
@@ -3904,8 +4056,8 @@ function buildMorphMech(side, vis) {
     const tip = tailSegs[4];
     const tailGun = cyl(tip, 0.16 * B, 0.19 * B, 1.0, 8, 0, 0, -0.95, 0x1a1d20, { metalness: 0.85 });
     tailGun.rotation.x = Math.PI / 2;                                                    // 砲身
-    cyl(tip, 0.21 * B, 0.21 * B, 0.2, 8, 0, 0, -0.62, hullDk, { metalness: 0.7 })
-      .rotation.x = Math.PI / 2;                                                        // 砲尾機匣
+    const tailBreech = cyl(tip, 0.21 * B, 0.21 * B, 0.2, 8, 0, 0, -0.62, hullDk, { metalness: 0.7 });
+    tailBreech.rotation.x = Math.PI / 2;                                                 // 砲尾機匣
     const tailRing = cyl(tip, 0.13 * B, 0.13 * B, 0.1, 8, 0, 0, -1.44, accent, { emissive: accent, emissiveIntensity: 1.6 });
     tailRing.rotation.x = Math.PI / 2;                                                   // 砲口充能環
     heavyRig = {
@@ -3913,6 +4065,9 @@ function buildMorphMech(side, vis) {
       pivot: [...heavyRig.pivot, { obj: tailGun, rest: { x: Math.PI / 2, y: 0, z: 0 }, deploy: { x: Math.PI / 2 + 0.15, y: 0, z: 0 } }],
     };
     morphMuzH = { n: tailRing, r: 0.15 };
+    // rig.wpn heavy:尾梢巨砲散件(砲身/砲尾機匣/充能環)共同父節點 = 尾梢節 tip
+    // (tailRing 掛 tip 不掛 tailGun)→ ref=tip;充能環 z=−1.44、機匣 −0.62 ⇒ 槍口在 −z 端
+    morphWpnH = { nodes: [tailGun, tailBreech, tailRing], ref: tip, muz: tailRing, fwd: '-z' };
   }
 
   // ---- 尾(四足獸配重,mobility_plan Task 2.2):幾何沿 −Z 打造(站姿自然朝後)。
@@ -4069,6 +4224,7 @@ function buildMorphMech(side, vis) {
         : atlasLGlow?.length ? { n: atlasLGlow[0].mesh, r: 0.08 } : null),
       heavy: morphMuzH,
     },
+    wpn: { light: morphWpnL, heavy: morphWpnH },   // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
   };
   return g;
 }
@@ -4154,6 +4310,7 @@ function buildRobotMech(side, vis) {
   //   lightGlow = [{ mesh, base }] 輕武器槍口識別燈(開火閃光)
   let weap = null, hvy = null, gunR = null, gunL = null, lightGlow = null;
   let muzzles = null;   // 槍口錨 { light:{n,r}, heavy:{n,r} }:曳光起點/槍口焰(makeUnit 掛焰)
+  let wpnL = null, wpnH = null;   // rig.wpn(FPV 武裝同源;依 proto 分支填入,契約見 podWeapon 上方)
 
   if (PR === 'bastion') {
     // ---- 過裝甲重拳:所有量體堆在外層裝甲上,關節是縮在裡面的細軸 ----
@@ -4259,6 +4416,9 @@ function buildRobotMech(side, vis) {
           }
           bx(axe, 0.1, 2.3, 0.58, sx * 0.52, 0, 0.72, dim(accent, 0.95));              // 斧刃前緣識別(月牙輪廓亮線)
           bx(axe, 0.14, 0.9, 0.5, sx * 0.3, 0, -0.5, dark, { metalness: 0.7 });        // 斧背反刃(鉤)
+          // rig.wpn heavy:右手斧砲單根 gl(轉輪彈倉/砲管/斧刃皆其子節點)→ ref=gl;
+          // 膛口 bastionMuzzle 在 gl 局部 y=+3.32、後膛托 +0.12(gl-local +y = 前方)⇒ fwd 'y'
+          wpnH = { nodes: [gl], ref: gl, muz: bastionMuzzle, fwd: 'y' };
         } else {
           // ── 左手 12.7 同軸重機槍(Kord 式,輕武器):輕/重異型 → 雙槍 —— 左手輕武器與
           // 右手斧砲成對舉槍(dual-wield 射姿);散熱套筒 + 彈鏈箱 + 提把 + 制退器。
@@ -4278,6 +4438,9 @@ function buildRobotMech(side, vis) {
           bx(gl, 0.4, 0.5, 0.34, sx * 0.32, 0.16, 0.02, armor, { metalness: 0.6 }); // 彈鏈箱(外側掛)
           bx(gl, 0.34, 0.1, 0.3, sx * 0.32, 0.44, 0.02, dim(accent, 0.8));          // 彈箱蓋識別
           bx(gl, 0.08, 0.5, 0.12, 0, 0.35, -0.3, 0x23262a, { metalness: 0.7 });     // 提把
+          // rig.wpn light:左手 Kord 單根 gl(機匣/槍管/彈鏈箱皆其子節點)→ ref=gl;
+          // 槍口燈 bastionLMuz 在 gl 局部 y=+2.28、機匣 +0.1(gl-local +y = 前方)⇒ fwd 'y'
+          wpnL = { nodes: [gl], ref: gl, muz: bastionLMuz, fwd: 'y' };
         }
       } },
     ], sx < 0 ? armChainL : armChainR);
@@ -4426,6 +4589,12 @@ function buildRobotMech(side, vis) {
           bayo.position.set(0, 6.35, 0);
           lance.add(bayo);
           bx(lance, 0.05, 0.9, 0.34, 0, 5.95, 0, dim(accent, 0.9), { metalness: 0.8 });  // 刺槍側刃
+          // rig.wpn:同型雙手一把(rail×rail)單根 lance → 同一組 nodes/ref,只有 muz 不同;
+          // 副槍口 lanceSub 在 lance 局部 y=+1.88、主砲膛口 lanceHMuz y=+5.79、後膛托 +0.15
+          // (lance-local +y = 前方)⇒ fwd 'y'
+          const lanceNodes = [lance];
+          wpnL = { nodes: lanceNodes, ref: lance, muz: lanceSub, fwd: 'y' };
+          wpnH = { nodes: lanceNodes, ref: lance, muz: lanceHMuz, fwd: 'y' };
         }
       } },
     ], sx < 0 ? armChainL : armChainR);
@@ -4501,8 +4670,10 @@ function buildRobotMech(side, vis) {
     // 雙肩垂直發射彈艙(攔截彈 VLS:每側 2×3 發射管口朝上)—— 造型與重武器(攔截者飛彈)天生一致,
     // 原地轉為功能性掛點:發射管口在擊發瞬間齊閃,不需另掛新量體。
     const vlsCells = [];
+    const vlsBoxes = [];   // rig.wpn 節點集:雙肩 VLS 箱 ×2(筒身/管口皆其子節點)
     for (const sx of [-1, 1]) {
       const vls = bx(chest, 0.66, 0.62, 0.78, sx * 1.0, 1.85, -0.1, armorDk, { metalness: 0.65 });
+      vlsBoxes.push(vls);
       for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) {
         cyl(vls, 0.1, 0.1, 0.44, 6, (i - 0.5) * 0.28, 0.16, (j - 1) * 0.24, 0x14171a, { metalness: 0.8 });   // 外露發射筒身(半埋箱體、筒口朝天)
         vlsCells.push(cyl(vls, 0.09, 0.09, 0.1, 6, (i - 0.5) * 0.28, 0.42, (j - 1) * 0.24, accent,
@@ -4510,6 +4681,9 @@ function buildRobotMech(side, vis) {
       }
     }
     heavyRig = { glow: vlsCells.map((mesh) => ({ mesh, base: 1.0 })), pivot: [] };
+    // rig.wpn heavy:雙肩 VLS 散件(vls 箱 ×2,十二管 cells 皆在其子樹內)掛 chest → ref=chest;
+    // 管口朝上(+y)是 VLS 的本體特徵 —— fwd 刻意登記 'z'(機體前向)保持直立,FPV 原樣呈現朝上的 VLS
+    wpnH = { nodes: vlsBoxes, ref: chest, muz: vlsCells[0], fwd: 'z' };
     let aegisMuz = null;   // 右前臂速射砲砲口(輕武器擊發閃光),手臂建構時填入
     const mkArm = (sx) => segLimb(chest, [sx * 0.98, 1.7, 0], [
       { len: 0.78, draw: (a) => {
@@ -4542,6 +4716,9 @@ function buildRobotMech(side, vis) {
           aegisMuz.rotation.x = Math.PI / 2;                                        // 砲口識別燈(擊發閃光)
           bx(gg, 0.14, 0.1, 0.6, 0, 0.16, -0.1, 0x23262a, { metalness: 0.7 });     // 供彈滑槽(連向供彈箱)
           bx(a, 0.3, 0.34, 0.4, 0, -0.2, -0.32, armorDk);                          // 供彈箱
+          // rig.wpn light:右前臂速射砲單根 gg(雙管/護筒/制退器皆其子節點)→ ref=gg;
+          // 砲口燈 aegisMuz 在 gg 局部 z=+1.6、雙管 +0.55(+z 砲管)⇒ fwd 'z'(已驗證)
+          wpnL = { nodes: [gg], ref: gg, muz: aegisMuz, fwd: 'z' };
         } else {
           // 左前臂 = 方形塔盾(盾面外掛;邊框 + 主色十字肋)
           const sh = new THREE.Group();
@@ -4662,6 +4839,9 @@ function buildRobotMech(side, vis) {
           colMuz.position.set(0, 1.44, 0);
           gg.add(colMuz);                                                             // 槍口光核(擊發閃光)
           rslab(gg, 0.1, 0.3, 0.1, 0, 0.55, -0.2, dim(accent, 0.8));                  // 頂部圓角照門
+          // rig.wpn light:右手掃描脈衝槍單根 gg(機匣/射束管/聚焦環皆其子節點)→ ref=gg;
+          // 槍口光核 colMuz 在 gg 局部 y=+1.44、射束管 +0.95、機匣 +0.3(手持局部 +y = 前方)⇒ fwd 'y'
+          wpnL = { nodes: [gg], ref: gg, muz: colMuz, fwd: 'y' };
         }
       } },
     ], sx < 0 ? armChainL : armChainR);
@@ -4686,6 +4866,9 @@ function buildRobotMech(side, vis) {
     // 重武器(標定脈衝砲):不新增背部/肩部掛件(設計意圖:巨兵背後乾淨)——
     // 蓄力/擊發全靠眉心射口本身的發光強度變化表現。
     heavyRig = { glow: [{ mesh: browCannon, base: 1.4 }], pivot: [] };
+    // rig.wpn heavy:眉心脈衝砲口單件(掛 head)→ ref=head;browCannon 在 head z=+0.26(額前緣,
+    // cyl rotation.x=π/2 管軸沿 z)、發射方向即頭部前向 ⇒ fwd 'z'(已驗證)
+    wpnH = { nodes: [browCannon], ref: head, muz: browCannon, fwd: 'z' };
     // 單手槍射姿(輕武器手持、重武器機體固定 → 只舉右臂;左臂自由交還步態)
     aimPose = { rShoulderX: -0.8, rElbowX: -0.35 };
     weap = { light: 'R', heavy: 'N' };
@@ -4707,6 +4890,7 @@ function buildRobotMech(side, vis) {
     heavy: heavyRig, aimPose,
     weap, hvy, gunR, gunL, lightGlow,   // 手持武器戰鬥動畫(見上方欄位說明)
     muzzles,                            // 槍口錨:曳光起點/槍口焰(makeUnit 掛焰)
+    wpn: { light: wpnL, heavy: wpnH },  // rig.wpn:FPV 武裝同源(契約見 podWeapon 上方)
   };
   return g;
 }

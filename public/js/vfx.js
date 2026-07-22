@@ -8,7 +8,7 @@
 // 特效物件全部走 game.js 的 effects 陣列({ obj, ttl, fade(o, f, dt) },
 // f = 剩餘壽命比例 1→0),不自帶迴圈。
 import * as THREE from 'three';
-import { toonMat } from './toon.js';
+import { toonMat, outlinify } from './toon.js';
 
 // ---------------- canvas 貼圖(快取)----------------
 const _texCache = new Map();
@@ -172,6 +172,86 @@ export function starburst(scene, effects, x, y, z, r, color = 0xffe27a) {
       o.material.opacity = f;
     },
   });
+}
+
+/**
+ * 彈體工廠(2026-07-22 彈藥同源):自機 FPV 彈道、他人重武器視覺彈道、展示台重武器演出、
+ * 伺服器 SAM 飛彈全部吃這一顆 —— 彈藥外觀只准在這裡定義(單一縫,與 podWeapon 掛架上的
+ * 外露彈藥同語彙:彈身淺灰 / 彈頭角色識別色發光 / X 尾翼 / 尾焰)。
+ * 幾何一律 +z 朝前(呼叫端以 setFromUnitVectors((0,0,1), dir) 對準航向);不自行加入場景。
+ * @param def 武器定義(heroWeapon 輸出或 {type})
+ * @param opts.col 陣營曳光色(動能彈)  @param opts.hue 角色識別色(彈頭)  @param opts.heavy 重武器
+ */
+export function projectileMesh(def, { col = 0xffd27a, hue = col, heavy = false } = {}) {
+  const ty = def?.type || 'gun';
+  const jetFlame = (g, z, r) => {   // 尾焰:加法混色小球(描邊剔除),飛行中恆亮
+    const jet = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 8, 6),
+      new THREE.MeshBasicMaterial({
+        color: 0xffc36b, transparent: true, opacity: 0.9,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }),
+    );
+    jet.position.z = z;
+    jet.scale.z = 1.8;
+    jet.userData.noOutline = true;
+    g.add(jet);
+  };
+  if (ty === 'missile') {
+    // 飛彈:彈身 + 發光導引頭 + 十字尾翼(對稱薄盒兩片斜置即成 X)
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.05, 8), toonMat(0xcfd6dd, { celMetal: true }));
+    body.rotation.x = Math.PI / 2;
+    g.add(body);
+    const nose = new THREE.Mesh(
+      new THREE.ConeGeometry(0.095, 0.3, 8),
+      toonMat(new THREE.Color(hue).multiplyScalar(0.9).getHex(), { emissive: hue, emissiveIntensity: 0.9 }),
+    );
+    nose.rotation.x = Math.PI / 2;
+    nose.position.z = 0.66;
+    g.add(nose);
+    for (let i = 0; i < 2; i++) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.34, 0.2), toonMat(0x39424b));
+      fin.position.z = -0.42;
+      fin.rotation.z = Math.PI / 4 + i * Math.PI / 2;
+      g.add(fin);
+    }
+    outlinify(g, 0.03);
+    jetFlame(g, -0.6, 0.11);
+    return g;
+  }
+  if (ty === 'launcher') {
+    // 火箭/榴彈:短粗彈身 + 外露彈頭(podWeapon 溫壓彈頭同語彙)+ 小尾翼
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.6, 8), toonMat(0x39424b, { celMetal: true }));
+    body.rotation.x = Math.PI / 2;
+    g.add(body);
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 8, 6),
+      toonMat(new THREE.Color(hue).multiplyScalar(0.9).getHex(), { emissive: hue, emissiveIntensity: 0.5 }),
+    );
+    head.scale.z = 1.5;
+    head.position.z = 0.36;
+    g.add(head);
+    for (let i = 0; i < 2; i++) {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.26, 0.14), toonMat(0x2b3239));
+      fin.position.z = -0.26;
+      fin.rotation.z = Math.PI / 4 + i * Math.PI / 2;
+      g.add(fin);
+    }
+    outlinify(g, 0.03);
+    jetFlame(g, -0.42, 0.09);
+    return g;
+  }
+  // 動能彈(gun/rail):曳光條 —— 與第三人稱曳光束同色;重武器(反器材/磁軌)更長更亮
+  const m = new THREE.Mesh(
+    heavy ? new THREE.BoxGeometry(0.14, 0.14, 2.2) : new THREE.BoxGeometry(0.09, 0.09, 1.4),
+    new THREE.MeshBasicMaterial(heavy
+      ? { color: col, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }
+      : { color: col }),
+  );
+  m.userData.noOutline = true;
+  return m;
 }
 
 /** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用) */

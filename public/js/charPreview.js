@@ -14,7 +14,7 @@ import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js'
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight } from './toon.js';
-import { starburst, shockRing, beamLine } from './vfx.js';
+import { starburst, shockRing, beamLine, projectileMesh } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 
 const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
@@ -437,11 +437,10 @@ export class CharPreview {
         const T = 1.2;
         const v = boomPos.clone().sub(m);
         const side = fwd.clone().cross(up).normalize();
-        const proj = new THREE.Mesh(
-          new THREE.CylinderGeometry(R * 0.02, R * 0.035, R * 0.18, 6),
-          new THREE.MeshBasicMaterial({ color: hue }),
-        );
-        proj.quaternion.setFromUnitVectors(up, fwd);
+        // 彈藥同源(2026-07-22):與戰場 FPV/第三人稱同一顆 projectileMesh(+z 朝前),依包圍球定尺
+        const proj = projectileMesh(w, { col: hue, hue });
+        proj.scale.setScalar(R * 0.09);
+        proj.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd);
         proj.position.copy(m);
         this.scene.add(proj);
         const weaving = w.type === 'missile';

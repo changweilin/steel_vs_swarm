@@ -13,13 +13,13 @@ import {
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
-import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID } from './models.js';
+import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 
@@ -101,6 +101,30 @@ const DEF_ANCHOR = {
   wing: { x: 0.9, y: -0.22, z: -1.0, s: 1.0 },
   claw: { x: 0.42, y: -0.72, z: -1.05, s: 0.9 },
 };
+// 重武器掛點(2026-07-22 FPV 武裝同源):FPV 重武器模型的掛點(輕武器沿用 GUN_MOUNT)。
+// 手持機種(rig.weap 'L'/'R'/'B')優先走 hand 不查此表;查無 → 沿用該機體輕武器掛點。
+// 對齊第三人稱建模位置:aegis 雙肩 VLS/colossus 眉心砲/stego 背鰭/elephant 背載加農/monkey 尾砲 = back,
+// trex 口腔無後座砲/dragon 口腔飛彈巢/beetle 顎下電漿陣 = mouth,eagle/ostrich 翼掛 = wing。
+const HEAVY_MOUNT = {
+  aegis: 'back', colossus: 'back', trex: 'mouth', stego: 'back', hound: 'back',
+  gorilla: 'back', ostrich: 'wing', cthulhu: 'tentacle',
+  elephant: 'back', monkey: 'back', panther: 'back', beetle: 'mouth',
+  bee: 'body', eagle: 'wing', dragon: 'mouth', ptero: 'claw',
+};
+/** gunMount 的鍵解析(morph 地面/飛行體態、drone 擬態獸;與 gunMount 內部同一條規則) */
+function mountKey(vis, kind, air) {
+  if (kind === 'morph') return air ? vis.flight : vis.ground;
+  if (kind === 'drone') return vis.form === 'avian' ? vis.creature : null;
+  return vis.proto || vis.creature;
+}
+// rig.wpn.fwd(武器在自身/參考框的前向軸)→ FPV 前向(-z)的修正旋轉
+const WPN_FWD_ROT = {
+  z: [0, Math.PI, 0], '-z': [0, 0, 0],
+  y: [-Math.PI / 2, 0, 0], '-y': [Math.PI / 2, 0, 0],
+  x: [0, Math.PI / 2, 0], '-x': [0, -Math.PI / 2, 0],
+};
+// 座艙武器目標長度(公尺,依掛點;× 錨點口徑倍率 s)—— 第三人稱武裝縮放進座艙的定尺基準
+const COCK_WLEN = { hand: 1.25, tentacle: 1.05, mouth: 1.1, back: 1.25, body: 0.9, wing: 0.85, claw: 0.85 };
 // 重武器 third-person 掛點動畫(2026-07-13;2026-07-15 移居 locomotion.js stepCombatFx):
 // ent.heavyFx / ent.fireFx 事件驅動的蓄力/擊發/後座/射姿動畫全數住 stepCombatFx ——
 // 戰場(這裡)與選角展示台(charPreview)共用同一條,MUST NOT 在 game.js 另寫一份。
@@ -215,6 +239,8 @@ export class BattleClient {
     this._recoilMoveUntil = 0;      // 位移懲罰有效到此時間
     this._recoilSlowF = 0.5;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
+    this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
+    this._wdefCache = new Map();     // 他人武器 def 快取(ch:slot → heroWeapon Lv1)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
     this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
     this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
@@ -676,36 +702,54 @@ export class BattleClient {
     else if (this.isMorph) anchors = this._buildMorphCockpit(g, mk, accent, vis);
     else anchors = this._buildMechCockpit(g, mk, accent, vis);
 
-    // 輕武器:掛點依機體構造(手持 / 觸手 / 嘴砲 / 背載 / 機身 / 機翼 / 爪掛)
-    const wtype = c?.light?.type || 'gun';
+    // 武裝(2026-07-22 同源改制):FPV 武器 = 複製第三人稱機體的武裝子樹(models.js rig.wpn 登記),
+    // 輕/重兩把與第三人稱一樣「同時可見」;瞄準只切換作用中的槍口(_syncCockpitWeapon)。
+    // 缺登記(GLB 覆蓋等)退回 podWeapon 依 def.type 重建 —— 同一條外觀語彙,不再有通用機槍。
+    // 拋棄式參照機體:只取 rig(從未 render = 無 GPU 資源,交給 GC;複本共享其幾何/材質故 MUST NOT dispose)
+    const unit3p = makeUnit(`hero:${this.heroKind}`, this.side, { ch: this.ch }).group;
+    unit3p.updateMatrixWorld(true);
+    const rig3p = unit3p.userData.rig || {};
+    const wpn = rig3p.wpn || {};
+    this._muzzles = { G: {}, A: {} };
+    this._mountAudit = {};
+    // 輕重同一具(同型雙模:hound/centaur/seraph/cthulhu/panther/raptor/同型機腹莢…)= 只建一次,兩槍口同複本
+    const sameRoot = wpn.light?.nodes?.[0] && wpn.light.nodes[0] === wpn.heavy?.nodes?.[0];
+    const jobs = sameRoot ? [['light', 'heavy']] : [['light'], ['heavy']];
     if (this.isMorph) {
       // 變形機甲:兩型態各一套武裝(地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙),隨變形整組切換
       this._gunG = new THREE.Group();
       this._gunA = new THREE.Group();
-      this._muzzleG = this._buildCockpitGun(
-        mk, accent, wtype, gunMount(vis, 'morph', false, wtype), this._gunG, anchors.ground);
-      this._muzzleA = this._buildCockpitGun(
-        mk, accent, wtype, gunMount(vis, 'morph', true, wtype), this._gunA, anchors.air);
-      this._gunA.visible = false;
       this.gunGroup.add(this._gunG, this._gunA);
-      this._muzzle = this._muzzleG;
+      for (const slots of jobs) {
+        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunG, anchors.ground, false));
+        Object.assign(this._muzzles.A, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunA, anchors.air, true));
+      }
+      this._gunA.visible = false;
     } else {
-      this._muzzle = this._buildCockpitGun(
-        mk, accent, wtype, gunMount(vis, this.heroKind, this.isDrone, wtype), this.gunGroup, anchors);
+      for (const slots of jobs) {
+        Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this.gunGroup, anchors, this.isDrone));
+      }
     }
+    this._muzzle = this._muzzles.G.light || this._muzzles.G.heavy;
 
-    // 槍口焰(開火瞬間顯示):掛在武器群下,位置每次開火從當前 _muzzle 更新
-    this.flash = mk(new THREE.SphereGeometry(0.09, 6, 5), 0xffd27a,
-      { emissive: 0xffb347, emissiveIntensity: 3, transparent: true, opacity: 0.95 });
+    // 槍口焰(開火瞬間顯示):與第三人稱焰球同語彙(加法混色暖白,attachMuzzleFlames 的 FPV 對應物);
+    // 位置隨作用中槍口走(_syncCockpitWeapon)
+    this.flash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.09, 8, 6),
+      new THREE.MeshBasicMaterial({
+        color: 0xffe9b0, transparent: true, opacity: 0.9,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }),
+    );
+    this.flash.userData.noOutline = true;
+    this.flash.userData.noPaint = true;
     this.flash.position.copy(this._muzzle);
     this.flash.visible = false;
     this.gunGroup.add(this.flash);
     this._gunBaseZ = this.gunGroup.position.z;
 
     g.add(this.gunGroup);
-    g.userData.mount = this.isMorph
-      ? `${gunMount(vis, 'morph', false, wtype)}/${gunMount(vis, 'morph', true, wtype)}`
-      : gunMount(vis, this.heroKind, this.isDrone, wtype);   // 稽核用:這具機體的武器掛點
+    g.userData.mount = `${this._mountAudit.light || '?'}/${this._mountAudit.heavy || '?'}`;   // 稽核用:輕/重武器掛點
     paintUnit(g, vis, this.side, tone);   // 性格花紋:與機體同一份程序貼圖(MUST 在 outlinify 之前)
     outlinify(g, 0.012);                  // 座艙近距離,細描邊即可(≈2px)
     this.cockpit = g;
@@ -713,18 +757,23 @@ export class BattleClient {
   }
 
   /**
-   * 變形機甲:型態決定看到哪一組自身結構 + 哪一套武裝。
-   * 槍口(_muzzle)跟著換 —— 彈道與槍口焰都從新掛點射出(地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙)。
+   * 座艙武裝同步(2026-07-22 同源改制):
+   * 變形機甲隨型態切換整組結構+武裝;所有機種隨瞄準狀態切換「作用中槍口」(輕⇄重)——
+   * 輕/重武器與第三人稱一樣同時可見,只有彈道起點與槍口焰跟著當前武器走。
    */
-  _syncMorphCockpit() {
-    if (!this.cockAir) return;
+  _syncCockpitWeapon() {
     const fly = !!this.flight;
-    this.cockAir.visible = fly;
-    this.cockGround.visible = !fly;
-    this._gunA.visible = fly;
-    this._gunG.visible = !fly;
-    const mz = fly ? this._muzzleA : this._muzzleG;
-    if (this._muzzle !== mz) { this._muzzle = mz; this.flash.position.copy(mz); }
+    if (this.cockAir) {
+      this.cockAir.visible = fly;
+      this.cockGround.visible = !fly;
+      this._gunA.visible = fly;
+      this._gunG.visible = !fly;
+    }
+    const set = (this.isMorph && fly) ? this._muzzles?.A : this._muzzles?.G;
+    if (!set) return;
+    const id = this.aiming && this.wdef?.heavy ? 'heavy' : 'light';   // 與 _curWeapon 同一條選槽規則
+    const mz = set[id] || set.light || set.heavy;
+    if (mz && this._muzzle !== mz) { this._muzzle = mz; this.flash.position.copy(mz); }
   }
 
   /** 週期擺動件(撲翼/觸手/尾):註冊後由 tick 以正弦驅動 */
@@ -1148,7 +1197,7 @@ export class BattleClient {
         g.add(ear);
       }
     } else if (creature === 'cthulhu') {
-      // 觸手面部:四條觸手在視窗周圍蠕動(靜止也動);持械那條由 _buildCockpitGun 另外長出來
+      // 觸手面部:四條觸手在視窗周圍蠕動(靜止也動);持械那條由 _cockMountStruct 另外長出來
       jaw(0.5, 0.2, 0.5, -1.05, -0.7);
       const spread = [[-0.42, -0.46], [0.42, -0.46], [-0.24, -0.62], [0.24, -0.62]];
       spread.forEach(([x, y], i) => {
@@ -1500,82 +1549,153 @@ export class BattleClient {
   }
 
   /**
-   * 輕武器外觀:**掛點(mount)決定它長在機體哪裡,機構(type)決定它長什麼樣**。
+   * 輕/重武器座艙掛載(2026-07-22 同源改制):
+   * **掛點(mount)決定長在機體哪裡;外觀直接複製第三人稱武裝子樹(models.js rig.wpn 登記)**,
+   * 缺登記退回 podWeapon 依 def.type 建同語彙莢艙 —— 展示台/戰場/座艙三處武器同源。
    * 掛點錨由座艙 builder 提供(它才知道自己的頭顱/機翼/手臂在哪);缺錨時退回 DEF_ANCHOR。
-   * @returns 該武器的槍口局部座標(gunGroup 空間;bullets 與槍口焰共用)
+   * 異型雙持(雙手/雙莢/雙翼)左右分掛(與第三人稱同約定:左輕右重;rig.weap 'L'/'R' 優先);
+   * 同型雙模(slots 含輕+重)只建一次,回傳兩個槍口。
+   * @returns {Object} 每 slot 的槍口局部座標(gunGroup 空間;彈道與槍口焰共用)
    */
-  _buildCockpitGun(mk, accent, type, mount, parent, anchors) {
+  _mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, parent, anchors, air) {
+    const slot0 = slots[0];
+    const both = slots.length > 1;
+    const cdef = CHARACTERS[this.ch]?.[slot0] || {};   // 原始武器定義(只取 type/fan,不受 _setChar 內部順序影響)
+    const wtype = cdef.type || 'gun';
+    const kindArg = this.isMorph ? 'morph' : this.heroKind;
+    const handSide = rig3p.weap?.[slot0];
+    // 掛點:輕武器沿用 gunMount;地面重武器優先手持邊(rig.weap 'L'/'R'/'B'),否則查 HEAVY_MOUNT;
+    // 飛行型態(morph 空中/無人機)輕重共用同族硬點,由左右分掛區分
+    let mount;
+    if (slot0 === 'heavy' && !both && !air) {
+      mount = (handSide === 'L' || handSide === 'R' || handSide === 'B') ? 'hand'
+        : (HEAVY_MOUNT[mountKey(vis, kindArg, air)] || gunMount(vis, kindArg, air, wtype));
+      if (wtype === 'plasma' && mount === 'back') mount = 'mouth';   // 電漿一律口噴(與 gunMount 同規則)
+    } else {
+      mount = gunMount(vis, kindArg, air, wtype);
+    }
+    // 左右分掛:hand/tentacle 依第三人稱持手邊;雙莢/翼/爪 = 左輕右重(buildDrone/buildFixedWing 同約定)
+    let sideSign = 0;
+    if (mount === 'hand' || mount === 'tentacle') sideSign = handSide === 'L' ? -1 : 1;
+    else if (mount === 'body' || mount === 'wing' || mount === 'claw') sideSign = both ? 0 : (slot0 === 'light' ? -1 : 1);
     const a = (anchors && anchors[mount]) || DEF_ANCHOR[mount] || DEF_ANCHOR.body;
     const s = a.s ?? 1.0;
-    // 掛載機構(手臂/砲塔基座/觸手根)一律往武器後方長,但 MUST NOT 越過近場:
-    // z > -0.55 的件離鏡頭不到半公尺,會整片糊在畫面上(實測手臂/砲座曾佔掉半個螢幕)。
-    const zb = (v) => Math.min(v, -0.55);
+    const ax = sideSign !== 0 ? Math.abs(a.x) * sideSign
+      : (both && (mount === 'body' || mount === 'wing' || mount === 'claw')) ? 0 : a.x;
+    // 輕重同掛點(dragon 頦下砲+口腔巢 / stego 背塔+背鰭):重武器上抬後移,重現第三人稱上下疊放
+    let ay = a.y, az = a.z;
+    if (slot0 === 'heavy' && !both && sideSign === 0
+      && mount === gunMount(vis, kindArg, air, CHARACTERS[this.ch]?.light?.type || 'gun')) {
+      ay += 0.26; az -= 0.1;
+    }
+    // 掛載機構(臂/觸手/喉管/砲座支柱/翼下掛架/爪/吊莢座)
+    this._cockMountStruct(mk, mount, { x: ax, y: ay, z: az, s }, sideSign || 1, parent);
+    // 武器本體:複製第三人稱武裝子樹;缺登記退回 podWeapon(幾何 +z 朝前 → 轉 π 朝 -z)
+    const set = wpn[slot0] || (both ? wpn[slots[1]] : null);
+    const wrap = new THREE.Group();
+    parent.add(wrap);
+    const LEN = (COCK_WLEN[mount] ?? 1.0) * s;
+    const muzNodes = {};
+    let cloned = null;
+    if (set?.nodes?.length && set.ref) cloned = this._cloneWpnSet(set);
+    if (cloned) {
+      const rot = WPN_FWD_ROT[set.fwd || 'z'] || WPN_FWD_ROT.z;
+      const inner = new THREE.Group();
+      inner.rotation.set(rot[0], rot[1], rot[2]);
+      inner.add(cloned.grp);
+      wrap.add(inner);
+      for (const sl of slots) muzNodes[sl] = (wpn[sl]?.muz && cloned.pairs.get(wpn[sl].muz)) || null;
+    } else {
+      const inner = new THREE.Group();
+      inner.rotation.y = Math.PI;
+      wrap.add(inner);
+      const pw = podWeapon(inner, cdef, accent, PAL, { L: LEN * 0.75, R: slot0 === 'heavy' ? 0.1 : 0.07 });
+      for (const sl of slots) muzNodes[sl] = pw.muz;
+    }
+    // 量測定尺 + 置位:前端朝 -z、包圍盒對齊錨點;近場保護(任何件不越過 z = -0.55,免糊滿畫面)
+    const bb = new THREE.Box3().setFromObject(wrap);
+    const size = bb.getSize(new THREE.Vector3());
+    // 背載散件對(雙肩 VLS/四背鰭)橫跨左右 → X 預算收緊,整組貼住砲座不外擴到畫面中央
+    const xBudget = (mount === 'back' && cloned && set.nodes.length > 1 ? 0.55 : 0.9) * s;
+    const sc = Math.min(
+      LEN / Math.max(size.z, 0.05),
+      (0.62 * s) / Math.max(size.y, 0.05),
+      xBudget / Math.max(size.x, 0.05),
+    );
+    wrap.scale.setScalar(sc);
+    const c0 = bb.getCenter(new THREE.Vector3()).multiplyScalar(sc);
+    wrap.position.set(ax - c0.x, ay - c0.y, Math.min(-0.55 - bb.max.z * sc, az - c0.z));
+    // 背載:武器底緣坐上砲座基座頂(浮空的 VLS/背鰭/加農看起來沒有機體接點 —— 2026-07-22 稽核打回)
+    if (mount === 'back') wrap.position.y += (ay - 0.02) - (wrap.position.y + bb.min.y * sc);
+    // 槍口(gunGroup 局部座標):複本槍口節點實位;查無節點退回包圍盒前緣中心
+    this.gunGroup.updateMatrixWorld(true);
+    const out = {};
+    for (const sl of slots) {
+      out[sl] = muzNodes[sl]
+        ? muzNodes[sl].getWorldPosition(new THREE.Vector3())
+        : new THREE.Vector3(ax, ay, wrap.position.z + bb.min.z * sc - 0.05);
+      this._mountAudit[sl] = mount;
+    }
+    return out;
+  }
 
-    // 武器本體(不含掛載機構):回傳槍口座標
-    const weapon = (x, y, z, sc, bare = false) => {
-      if (!bare) {
-        const recv = mk(new THREE.BoxGeometry(0.16 * sc, 0.14 * sc, 0.55 * sc), 0x3c444d);
-        recv.position.set(x, y, z);
-        parent.add(recv);
-      }
-      if (type === 'beam' || type === 'rail' || type === 'plasma') {
-        // 能量武器:粗短炮管 + 主色聚焦環(電漿的環更大 = 扇形噴口)
-        const wide = type === 'plasma' ? 1.5 : 1;
-        const tube = mk(new THREE.CylinderGeometry(0.05 * sc * wide, 0.06 * sc, 0.6 * sc, 8), 0x30373f, { metalness: 0.85 });
-        tube.rotation.x = Math.PI / 2;
-        tube.position.set(x, y + 0.02, z - 0.35 * sc);
-        parent.add(tube);
-        const coil = mk(new THREE.TorusGeometry(0.07 * sc * wide, 0.018, 6, 12), accent,
-          { emissive: accent, emissiveIntensity: 1.6 });
-        coil.position.set(x, y + 0.02, z - 0.62 * sc);
-        parent.add(coil);
-        return new THREE.Vector3(x, y + 0.02, z - 0.75 * sc);
-      }
-      if (type === 'launcher' || type === 'missile') {
-        // 發射器:大口徑短筒(火箭/榴彈/飛彈)
-        const tube = mk(new THREE.CylinderGeometry(0.075 * sc, 0.08 * sc, 0.7 * sc, 10), 0x2b3239, { metalness: 0.7 });
-        tube.rotation.x = Math.PI / 2;
-        tube.position.set(x, y + 0.02, z - 0.4 * sc);
-        parent.add(tube);
-        const lip = mk(new THREE.CylinderGeometry(0.09 * sc, 0.09 * sc, 0.08, 10), 0x272c31);
-        lip.rotation.x = Math.PI / 2;
-        lip.position.set(x, y + 0.02, z - 0.75 * sc);
-        parent.add(lip);
-        return new THREE.Vector3(x, y + 0.02, z - 0.85 * sc);
-      }
-      // 槍械:細長槍管 + 制退器
-      const barrel = mk(new THREE.CylinderGeometry(0.03 * sc, 0.035 * sc, 0.8 * sc, 8), 0x30373f, { metalness: 0.85 });
-      barrel.rotation.x = Math.PI / 2;
-      barrel.position.set(x, y + 0.02, z - 0.45 * sc);
-      parent.add(barrel);
-      const brake = mk(new THREE.CylinderGeometry(0.05 * sc, 0.05 * sc, 0.12, 8), 0x272c31);
-      brake.rotation.x = Math.PI / 2;
-      brake.position.set(x, y + 0.02, z - 0.85 * sc);
-      parent.add(brake);
-      return new THREE.Vector3(x, y + 0.02, z - 0.95 * sc);
+  /**
+   * 複製 rig.wpn 登記的武裝子樹:以 ref.matrixWorld⁻¹ × node.matrixWorld 烘相對變換 →
+   * 散件武器(嘴砲/背鰭/翼掛)保持第三人稱排列。剔除描邊殼(寬度是機體尺度烤死的,
+   * 座艙統一重描)與待機槍口焰(隱形死件);複本共享來源幾何/材質(已含 paintUnit 塗裝)
+   * → 標 noPaint 避免座艙塗裝二次上色。來源機體從未 render,幾何/材質由複本續用,MUST NOT dispose。
+   */
+  _cloneWpnSet(set) {
+    const grp = new THREE.Group();
+    const pairs = new Map();   // 原節點 → 複本節點(槍口對應查找)
+    const refInv = set.ref.matrixWorld.clone().invert();
+    const walk = (o, cl) => {
+      pairs.set(o, cl);
+      for (let i = 0; i < o.children.length; i++) walk(o.children[i], cl.children[i]);
     };
+    for (const node of set.nodes) {
+      if (!node) continue;
+      const cl = node.clone(true);
+      walk(node, cl);
+      const rel = new THREE.Matrix4().multiplyMatrices(refInv, node.matrixWorld);
+      rel.decompose(cl.position, cl.quaternion, cl.scale);
+      grp.add(cl);
+    }
+    if (!grp.children.length) return null;
+    const dead = [];
+    grp.traverse((o) => { if (o.userData.isOutline || (!o.visible && o.userData.noOutline)) dead.push(o); });
+    for (const o of dead) o.parent?.remove(o);
+    grp.traverse((o) => { if (o.isMesh) o.userData.noPaint = true; });
+    return { grp, pairs };
+  }
 
+  /** 掛載機構(手臂/觸手/喉管/砲座支柱/翼下掛架/爪/吊莢座):只建結構,不建武器本體。
+   *  a.x 已含左右符號;sx = 鏡射符號(額外偏移與傾角用)。
+   *  z > -0.55 的件離鏡頭不到半公尺會整片糊在畫面上(實測手臂/砲座曾佔掉半個螢幕),一律夾回。 */
+  _cockMountStruct(mk, mount, a, sx, parent) {
+    const s = a.s ?? 1.0;
+    const zb = (v) => Math.min(v, -0.55);
     if (mount === 'hand') {
       // 手持:上臂 → 前臂 → 握把,武器在手上(人形機甲 / 有手的仿生體 / 騎士)
       const upper = mk(new THREE.CylinderGeometry(0.11 * s, 0.13 * s, 0.6 * s, 8), 0x5b6772);
-      upper.rotation.set(0.9, 0, -0.25);
-      upper.position.set(a.x + 0.28 * s, a.y - 0.42 * s, zb(a.z + 0.5 * s));
+      upper.rotation.set(0.9, 0, -0.25 * sx);
+      upper.position.set(a.x + 0.28 * s * sx, a.y - 0.42 * s, zb(a.z + 0.5 * s));
       parent.add(upper);
       const fore = mk(new THREE.CylinderGeometry(0.09 * s, 0.11 * s, 0.62 * s, 8), 0x4b545e);
-      fore.rotation.set(1.35, 0, -0.12);
-      fore.position.set(a.x + 0.12 * s, a.y - 0.24 * s, zb(a.z + 0.22 * s));
+      fore.rotation.set(1.35, 0, -0.12 * sx);
+      fore.position.set(a.x + 0.12 * s * sx, a.y - 0.24 * s, zb(a.z + 0.22 * s));
       parent.add(fore);
       const hand = mk(new THREE.BoxGeometry(0.16 * s, 0.16 * s, 0.2 * s), 0x39424b);
       hand.position.set(a.x, a.y - 0.1 * s, zb(a.z + 0.02));
       parent.add(hand);
-      return weapon(a.x, a.y, a.z, s);
+      return;
     }
     if (mount === 'tentacle') {
-      // 觸手持械:多節觸手從右下卷上來握住武器(靜止也蠕動)
+      // 觸手持械:多節觸手從下側卷上來握住武器(靜止也蠕動)
       let node = parent;
       for (let i = 0; i < 4; i++) {
         const seg = new THREE.Group();
-        seg.position.set(i === 0 ? a.x + 0.34 : 0, i === 0 ? a.y - 0.62 : 0.1, i === 0 ? zb(a.z + 0.45) : -0.22);
+        seg.position.set(i === 0 ? a.x + 0.34 * sx : 0, i === 0 ? a.y - 0.62 : 0.1, i === 0 ? zb(a.z + 0.45) : -0.22);
         const m = mk(new THREE.CylinderGeometry(0.09 - i * 0.012, 0.11 - i * 0.012, 0.26, 7), 0x4b545e);
         m.rotation.x = Math.PI / 2;
         m.position.z = -0.1;
@@ -1584,62 +1704,51 @@ export class BattleClient {
         this._flap(seg, 'x', -0.16, 0.09, 0.4, i * 0.9);   // 眼鏡蛇預備式的微蠕動
         node = seg;
       }
-      return weapon(a.x, a.y, a.z, s);
+      return;
     }
     if (mount === 'mouth') {
-      // 嘴砲:砲管從自己的口中/鼻端伸出(無握把、無槍機 —— 它就是機體的一部分)
+      // 嘴砲:喉管從自己的口中/鼻端接出(無握把、無槍機 —— 武器就是機體的一部分)
       const throat = mk(new THREE.CylinderGeometry(0.1 * s, 0.14 * s, 0.3 * s, 8), 0x39424b);
       throat.rotation.x = Math.PI / 2;
       throat.position.set(a.x, a.y, a.z + 0.2 * s);
       parent.add(throat);
-      return weapon(a.x, a.y, a.z, s, true);
+      return;
     }
     if (mount === 'back') {
-      // 背載砲塔(無手仿生體):基座在頸背,砲管越過頭顱上方朝前。
-      // 支柱 MUST 連回畫面下緣的頸背 —— 否則砲塔看起來浮在空中(沒有機體接點)。
+      // 背載砲塔(無手仿生體/肩扛/背載加農):基座在頸背,支柱 MUST 連回畫面下緣的頸背
+      // —— 否則砲塔看起來浮在空中(沒有機體接點)。
       const bz = zb(a.z + 0.4 * s);
       const base = mk(new THREE.BoxGeometry(0.34 * s, 0.26 * s, 0.4 * s), 0x46505b);
       base.position.set(a.x, a.y - 0.12 * s, bz);
       parent.add(base);
-      const napeP = new THREE.Vector3(a.x * 0.8, -0.6, -0.7);            // 右肩接點(砲塔不是浮空的)
+      const napeP = new THREE.Vector3(a.x * 0.8, -0.6, -0.7);            // 肩背接點(砲塔不是浮空的)
       const top = new THREE.Vector3(a.x, a.y - 0.3 * s, bz);
       const mid = napeP.clone().lerp(top, 0.5);
       const mast = mk(new THREE.CylinderGeometry(0.06 * s, 0.09 * s, napeP.distanceTo(top), 8), 0x39424b);
       mast.position.copy(mid);
       mast.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), top.clone().sub(napeP).normalize());
       parent.add(mast);
-      return weapon(a.x, a.y, a.z, s);
+      return;
     }
     if (mount === 'wing') {
-      // 機翼固定:左右翼各一具硬點掛架(對稱),槍口取右側
-      let mz = null;
-      for (const sx of [-1, 1]) {
-        const pylon = mk(new THREE.BoxGeometry(0.1 * s, 0.2 * s, 0.26 * s), 0x46505b);
-        pylon.position.set(sx * a.x, a.y + 0.16 * s, a.z + 0.3 * s);
-        parent.add(pylon);
-        const m = weapon(sx * a.x, a.y, a.z, s);
-        if (sx > 0) mz = m;
-      }
-      return mz;
+      // 機翼硬點掛架(該側單具;異型雙掛「左輕右重」由呼叫端分兩次建)
+      const pylon = mk(new THREE.BoxGeometry(0.1 * s, 0.2 * s, 0.26 * s), 0x46505b);
+      pylon.position.set(a.x, a.y + 0.16 * s, a.z + 0.3 * s);
+      parent.add(pylon);
+      return;
     }
     if (mount === 'claw') {
-      // 爪掛槍莢:雙爪各抓一具(翼龍),槍口取右側
-      let mz = null;
-      for (const sx of [-1, 1]) {
-        const claw = mk(new THREE.CylinderGeometry(0.03 * s, 0.05 * s, 0.3 * s, 5), 0x5b6772);
-        claw.rotation.z = sx * 0.35;
-        claw.position.set(sx * a.x, a.y + 0.2 * s, a.z + 0.25 * s);
-        parent.add(claw);
-        const m = weapon(sx * a.x, a.y, a.z, s);
-        if (sx > 0) mz = m;
-      }
-      return mz;
+      // 爪掛槍莢(該側單爪;翼龍雙爪 = 呼叫端左輕右重各建一次)
+      const claw = mk(new THREE.CylinderGeometry(0.03 * s, 0.05 * s, 0.3 * s, 5), 0x5b6772);
+      claw.rotation.z = sx * 0.35;
+      claw.position.set(a.x, a.y + 0.2 * s, a.z + 0.25 * s);
+      parent.add(claw);
+      return;
     }
-    // body:機身固定(旋翼無人機吊艙 / 直升機短翼掛架)
+    // body:機身固定吊莢座(旋翼無人機吊艙 / 直升機短翼掛架)
     const pod = mk(new THREE.BoxGeometry(0.26 * s, 0.16 * s, 0.3 * s), 0x3d454e);
     pod.position.set(a.x, a.y + 0.1 * s, zb(a.z + 0.3 * s));
     parent.add(pod);
-    return weapon(a.x, a.y, a.z, s);
   }
 
   // ---------------- 物理:爆炸衝擊 / 碰撞 ----------------
@@ -2470,11 +2579,9 @@ export class BattleClient {
       seen.add(s.id);
       let ms = this.samMeshes.get(s.id);
       if (!ms) {
-        const mesh = new THREE.Mesh(
-          new THREE.ConeGeometry(0.35, 2.2, 6),
-          toonMat(0xd8dde2, { emissive: 0xff6633, emissiveIntensity: 0.7, celMetal: true }),
-        );
-        outlinify(mesh, 0.05);
+        // 彈藥同源(2026-07-22):塔射防空飛彈與英雄飛彈同一顆 projectileMesh(放大 1.55 = 舊 SAM 長度)
+        const mesh = projectileMesh({ type: 'missile' }, { hue: 0xff6633 });
+        mesh.scale.setScalar(1.55);
         this.scene.add(mesh);
         ms = { mesh, tgt: new THREE.Vector3(), prev: new THREE.Vector3() };
         const y0 = this.terrain.heightAt(s.x, -s.z) + s.y;
@@ -2698,7 +2805,8 @@ export class BattleClient {
       // 朝飛行方向 + 煙尾
       const dir = ms.tgt.clone().sub(ms.prev);
       if (dir.lengthSq() > 0.5) {
-        ms.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+        // projectileMesh 幾何 +z 朝前(舊 SAM 錐是 +y;2026-07-22 彈藥同源後統一 +z)
+        ms.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir.normalize());
       }
       ms.smoke = (ms.smoke || 0) + dt;
       if (ms.smoke > 0.06) {
@@ -3023,8 +3131,24 @@ export class BattleClient {
     // 起點解析成射手機體的 rig 槍口錨(找不到才用訊息座標)—— 曳光從對方手上/背上的槍管射出
     const from = this._entMuzzle(m.pid, m.slot,
       new THREE.Vector3(m.from[0], m.from[1], m.from[2]));
+    const to0 = new THREE.Vector3(m.to[0], m.to[1], m.to[2]);
+    // 彈藥同源(2026-07-22):launcher/missile 在他人畫面也是「飛行彈體」(重力彈道,純視覺)
+    // 而非直線光束 —— pid→ent.ch 解析射手武器 def,與自機 FPV 同一顆 projectileMesh。
+    if (m.slot === 'heavy') {
+      const shooter = this._heroEntByPid(m.pid);
+      const def = shooter ? this._heroDefOf(shooter.ch, 'heavy') : null;
+      if (def && (def.type === 'launcher' || def.type === 'missile')) {
+        const dir = to0.clone().sub(from);
+        if (dir.lengthSq() > 0.01) {
+          this._spawnVisShell(from, dir.normalize(), def, m.side, shooter.ch);
+          this._muzzleBurst(from, true, m.side);
+          this._markFire(m.pid, m.slot, performance.now() / 1000);
+          return;
+        }
+      }
+    }
     // 他人曳光同吃障礙截斷(對方客戶端已擋彈道,這裡的 60m 示意曳光也不可畫穿牆)
-    const clip = this._clipBeam(from, new THREE.Vector3(m.to[0], m.to[1], m.to[2]));
+    const clip = this._clipBeam(from, to0);
     this._shotFx(
       from,
       clip.to,
@@ -3032,6 +3156,62 @@ export class BattleClient {
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000);
+  }
+
+  /** 以 pid 找英雄 ent(有 ch 才算 —— 解析射手武器 def 用) */
+  _heroEntByPid(pid) {
+    if (pid == null) return null;
+    for (const ent of this.ents.values()) if (ent.pid === pid && ent.ch) return ent;
+    return null;
+  }
+
+  /** 他人武器 def 解析(heroWeapon Lv1;純視覺用 type/mv/range,不涉結算)—— 依 ch:slot 快取 */
+  _heroDefOf(ch, slot) {
+    if (!ch || !CHARACTERS[ch]) return null;
+    const key = `${ch}:${slot}`;
+    let d = this._wdefCache.get(key);
+    if (!d) { d = heroWeapon(ch, slot, 1, true); this._wdefCache.set(key, d); }
+    return d;
+  }
+
+  /** 他人重武器的視覺彈體(純表現層:直線+重力近似,不結算;真實爆點由伺服器 boom 事件呈現) */
+  _spawnVisShell(from, dir, def, side, ch) {
+    const mesh = projectileMesh(def, {
+      col: this._shotCols(side).col,
+      hue: CHARACTERS[ch]?.visual?.hue ?? 0xffd27a,
+      heavy: true,
+    });
+    mesh.position.copy(from);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    this.scene.add(mesh);
+    this._visShells.push({
+      pos: from.clone(), vel: dir.clone().multiplyScalar(def.mv || 600),
+      dist: 0, max: (def.range || 300) * 1.35, mesh,
+    });
+  }
+
+  /** 視覺彈體逐幀積分:重力下墜 + 地形/實體障礙截斷(解析判定,純視覺不進 A6 raycast 目標) */
+  _updateVisShells(dt) {
+    for (let i = this._visShells.length - 1; i >= 0; i--) {
+      const b = this._visShells[i];
+      const prev = b.pos.clone();
+      b.vel.y -= BALLISTIC.G * dt;
+      b.pos.addScaledVector(b.vel, dt);
+      const seg = b.pos.clone().sub(prev);
+      const len = seg.length();
+      b.dist += len;
+      let hit = b.pos.y <= this.terrain.heightAt(b.pos.x, b.pos.z);
+      const dB = len > 0.01 ? this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z) : null;
+      if (dB != null) { b.pos.copy(prev).addScaledVector(seg.clone().divideScalar(len), dB); hit = true; }
+      if (hit || b.dist >= b.max) {
+        starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
+        this.scene.remove(b.mesh);
+        this._visShells.splice(i, 1);
+        continue;
+      }
+      b.mesh.position.copy(b.pos);
+      if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+    }
   }
 
   /** 重武器(rail 類)蓄力狀態:純視覺轉播(同 onTracer),驅動射手第三人稱機體的掛點動畫 —
@@ -3708,15 +3888,17 @@ export class BattleClient {
 
     // 彈道學子彈:初速 mv(真實參數)+ 重力下墜;超出射程即失效(FPS/DOTA 射程上限)
     // launcher/missile 皆為 AoE 戰鬥部;missile 帶著發射瞬間的準星鎖定 → 飛行中自動追蹤
+    // 彈體同源(2026-07-22):與第三人稱/展示台同一顆 projectileMesh(飛彈=彈體+尾翼+導引頭、
+    // 火箭=外露彈頭、動能=曳光條);曳光色 = 第三人稱曳光束同色(_shotCols)
     const aoe = def.type === 'launcher' || def.type === 'missile';
-    const mesh = aoe
-      ? this._bombMesh(0x50585f)
-      : new THREE.Mesh(
-        new THREE.BoxGeometry(0.09, 0.09, 1.4),
-        new THREE.MeshBasicMaterial({ color: this.side === 'SWARM' ? 0xffd24a : 0x7fd8ff }),
-      );
-    if (!aoe) this.scene.add(mesh);
+    const mesh = projectileMesh(def, {
+      col: this._shotCols(this.side).col,
+      hue: CHARACTERS[this.ch]?.visual?.hue ?? 0xffd27a,
+      heavy: id === 'heavy',
+    });
+    this.scene.add(mesh);
     mesh.position.copy(muzzle);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
     const homing = def.type === 'missile' && this._lockId != null && this.ents.has(this._lockId)
       ? this._lockId : null;
     this.bullets.push({
@@ -3814,7 +3996,8 @@ export class BattleClient {
       const done = hit || b.dist >= b.max;
       if (!done) {
         b.mesh.position.copy(b.pos);
-        if (!b.aoe) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+        // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
+        if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
         continue;
       }
       this.scene.remove(b.mesh);
@@ -3940,16 +4123,6 @@ export class BattleClient {
     this.trauma = Math.min(1, this.trauma + 0.4);
     this.net.send({ t: 'barrage' });
     this.hud.feed?.('💥 重砲模式:傾洩彈夾!');
-  }
-
-  _bombMesh(color) {
-    const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 8, 6),
-      toonMat(color, { emissive: 0xff5522, emissiveIntensity: 0.4, celMetal: true }),
-    );
-    outlinify(m, 0.05);
-    this.scene.add(m);
-    return m;
   }
 
   /** HUD 資料:輕/重武器 / 招式 / 資源(彈藥為本地 HUD,與伺服器小幅漂移是 by design) */
@@ -5225,6 +5398,7 @@ export class BattleClient {
     this._updateEnts(dt, now);
     this._updateBullets(dt);
     this._updateMissiles(dt);
+    this._updateVisShells(dt);
     this._updateLaneArrows(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
@@ -5253,7 +5427,7 @@ export class BattleClient {
       for (const p of this.cockpitSpin) p.rotation.y += dt * 55;
       for (const p of this.cockpitSpinZ) p.rotation.z += dt * 30;
       for (const f of this.cockpitFlap) f.o.rotation[f.ax] = f.base + f.amp * Math.sin(ct * f.hz * 6.283 + f.ph);
-      this._syncMorphCockpit();
+      this._syncCockpitWeapon();
       this.weaponKick = Math.max(0, this.weaponKick - dt * 9);
       const cur = this._curWeapon();
       let reloadOff = { dz: 0, dy: 0, rx: 0 };
