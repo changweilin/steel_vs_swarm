@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { toonGradient } from './hazards.js';
 import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites } from './data.js';
+import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
@@ -82,7 +83,10 @@ async function fetchElevTerrarium(bbox, onProgress) {
   await Promise.all(
     Array.from({ length: total }, (_, i) => {
       const cx = i % cols, cy = Math.floor(i / cols);
-      return loadImage(TERRARIUM(z, tx0 + cx, ty0 + cy)).then((img) => {
+      const url = TERRARIUM(z, tx0 + cx, ty0 + cy);
+      // 單磚失敗重試一次:高程是全有全無(任一磚失敗 → 整組換 open-meteo 粗網格,
+      // 高度場整個不同 → 兵線跨水判定逐局漂移),盡量守住主來源
+      return loadImage(url).catch(() => loadImage(url)).then((img) => {
         ctx.drawImage(img, cx * 256, cy * 256);
         onProgress?.(++done / total);
       });
@@ -155,17 +159,20 @@ async function fetchImagery(bbox, onProgress) {
   ctx.fillStyle = '#20262c';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   let done = 0;
+  let fails = 0;
   const total = cols * rows;
   await Promise.all(
     Array.from({ length: total }, (_, i) => {
       const cx = i % cols, cy = Math.floor(i / cols);
-      return loadImage(IMAGERY(z, tx0 + cx, ty0 + cy))
+      const url = IMAGERY(z, tx0 + cx, ty0 + cy);
+      return loadImage(url).catch(() => loadImage(url))   // 單磚重試一次
         .then((img) => ctx.drawImage(img, cx * 256, cy * 256))
-        .catch(() => {})   // 缺磚就留底色
+        .catch(() => { fails++; })   // 缺磚就留底色
         .finally(() => onProgress?.(++done / total));
     }),
   );
-  return { canvas, z, tx0, ty0 };
+  // complete:零缺磚才算完整拼接 —— 快取只准定案完整影像(缺磚底色會讓水色分類永久帶洞)
+  return { canvas, z, tx0, ty0, complete: fails === 0 };
 }
 
 // ---- 衛星影像賽璐璐化(botw_plan Task 2.1):寬筆刷低通 + 色階量化 + 飽和提升 ----
@@ -205,26 +212,62 @@ export async function buildTerrain(cfg, onProgress) {
   const center = cfg.center;
 
   onProgress?.(0.02, '下載高程資料…');
-  let sampleElev;
+  // 高程網格快取(geocache.js):同 bbox 首次由主來源(terrarium)完整取樣成功即定案入庫
+  // (raw N×N,平滑/AMP/乾地帶處理前)。之後每場直接取用 → 高度場逐局位元級一致,
+  // 兵線跨水段/橋數不再隨「terrarium vs open-meteo」來源切換浮動(倫敦橋數 1~3 案根因之一)。
+  // 備援來源結果 MUST NOT 入庫 —— 一次網路顛簸不能把 33×33 粗高程永久定案。
+  const elevKey = geoKey('elev', 1, bbox, `n${GRID_N}`);
+  let rawElev = await geoGet(elevKey);
   let usedFallback = false;
-  try {
-    sampleElev = await fetchElevTerrarium(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料…'));
-  } catch {
-    usedFallback = true;
-    sampleElev = await fetchElevOpenMeteo(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
+  if (!(rawElev instanceof Float32Array) || rawElev.length !== GRID_N * GRID_N) {
+    let sampleElev;
+    try {
+      sampleElev = await fetchElevTerrarium(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料…'));
+    } catch {
+      usedFallback = true;
+      sampleElev = await fetchElevOpenMeteo(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
+    }
+    rawElev = new Float32Array(GRID_N * GRID_N);
+    for (let i = 0; i < GRID_N; i++) {         // 取樣網格 MUST 與下方 heights 網格同一組經緯點
+      const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (GRID_N - 1);
+      for (let j = 0; j < GRID_N; j++) {
+        const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (GRID_N - 1);
+        const h = sampleElev(lat, lng);
+        rawElev[i * GRID_N + j] = Number.isFinite(h) ? h : 0;
+      }
+    }
+    if (!usedFallback) geoPut(elevKey, rawElev);
   }
 
   onProgress?.(0.34, '下載衛星影像…');
+  // 衛星影像快取:原始像素(stylize 前)整塊入庫,只有「零缺磚」的完整拼接才定案 ——
+  // 缺磚底色入庫會讓水色/地被分類永久帶洞。命中時以 putImageData 重建 canvas,
+  // 之後的取樣/賽璐璐化/貼圖管線與網路版全同。
+  const imgKey = geoKey('img', 1, bbox);
   let imagery = null;
-  try {
-    imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
-  } catch { /* 沒有貼圖就用素色 */ }
+  let idata = null;
+  const cachedImg = await geoGet(imgKey);
+  if (cachedImg?.data?.length === cachedImg?.w * cachedImg?.h * 4) {
+    const canvas = document.createElement('canvas');
+    canvas.width = cachedImg.w; canvas.height = cachedImg.h;
+    canvas.getContext('2d').putImageData(new ImageData(cachedImg.data, cachedImg.w, cachedImg.h), 0, 0);
+    imagery = { canvas, z: cachedImg.z, tx0: cachedImg.tx0, ty0: cachedImg.ty0 };
+    idata = cachedImg.data;
+  } else {
+    try {
+      imagery = await fetchImagery(bbox, (f) => onProgress?.(0.34 + f * 0.30, '下載衛星影像…'));
+    } catch { /* 沒有貼圖就用素色 */ }
+  }
 
   // 影像取樣(世界公尺 → 經緯度 → mercator 像素):biomes.js 地被分類用
   let sampleColor = null;
   if (imagery) {
-    const ictx = imagery.canvas.getContext('2d');
-    const idata = ictx.getImageData(0, 0, imagery.canvas.width, imagery.canvas.height).data;
+    if (!idata) {
+      idata = imagery.canvas.getContext('2d').getImageData(0, 0, imagery.canvas.width, imagery.canvas.height).data;
+      if (imagery.complete) {
+        geoPut(imgKey, { w: imagery.canvas.width, h: imagery.canvas.height, z: imagery.z, tx0: imagery.tx0, ty0: imagery.ty0, data: idata });
+      }
+    }
     const iw = imagery.canvas.width, ih = imagery.canvas.height;
     sampleColor = (x, z) => {
       // 遊戲世界公尺 → 真實公尺(×REAL_SCALE)→ 經緯度(llToWorld 的逆運算)
@@ -248,18 +291,13 @@ export async function buildTerrain(cfg, onProgress) {
   const worldW = maxX - minX, worldH = maxZ - minZ;
 
   const N = GRID_N;
-  const heights = new Float32Array(N * N);
+  // rawElev = 上方定案的 N×N 原始高程(i:z 方向北→南 = maxLat→minLat;快取命中或現抓皆同一組網格點)
+  const heights = new Float32Array(rawElev);
   let minH = Infinity, maxH = -Infinity;
-  for (let i = 0; i < N; i++) {           // i:z 方向(北→南 = minZ→maxZ = maxLat→minLat)
-    const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (N - 1);
-    for (let j = 0; j < N; j++) {
-      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1);
-      let h = sampleElev(lat, lng);
-      if (!Number.isFinite(h)) h = 0;
-      heights[i * N + j] = h;
-      if (h < minH) minH = h;
-      if (h > maxH) maxH = h;
-    }
+  for (let k = 0; k < N * N; k++) {
+    const h = heights[k];
+    if (h < minH) minH = h;
+    if (h > maxH) maxH = h;
   }
   // 輕度 3×3 平滑(terrainViewer 的 hole-aware blur 簡化版)
   const sm = new Float32Array(heights);

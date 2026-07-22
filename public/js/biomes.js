@@ -27,6 +27,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ENV, solveTowerSites, WATER, MAPGEO, LOS } from './data.js';
 import { llToWorld } from './terrain.js';
+import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { buildGroundCover } from './ground.js';
 
@@ -1585,6 +1586,12 @@ const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km
 async function fetchOsmFeatures(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const nBld = quotaOf(bboxKm2(bbox), 850, 400, 1200);
+  // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
+  // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
+  // 鍵含查詢額度:額度常數改版自然失效重抓。
+  const ckey = geoKey('osmF', 1, bbox, `q${nBld}`);
+  const cached = await geoGet(ckey);
+  if (cached) return cached;
   const q = `[out:json][timeout:9];`
     + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
@@ -1612,7 +1619,11 @@ async function fetchOsmFeatures(bbox) {
             if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
           }
         }
-        return { buildings, rails, falls, crossings };
+        const res = { buildings, rails, falls, crossings };
+        // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
+        // 不拷貝會把「該局變異後」的資料定案
+        if (!data.remark) geoPut(ckey, structuredClone(res));
+        return res;
       } catch {
         if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
       }
@@ -1629,6 +1640,8 @@ async function fetchOsmFeatures(bbox) {
  */
 async function fetchOsmRoads(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
+  // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
   // 兩級查詢、各自額度(2026-07-17 巴黎道路消失案):單一 `out geom 300` 在密路網市區
   // (巴黎 L3 bbox 實測 1533 條 way)截掉八成道路,且 Overpass 依 id 序輸出 —— 主幹道
   // 一樣被犧牲。車道級與小徑分開給額(隨 bbox 面積縮放),幹道永不被 footway/path 擠掉。
@@ -1636,6 +1649,9 @@ async function fetchOsmRoads(bbox) {
   const km2 = bboxKm2(bbox);
   const nMain = quotaOf(km2, 150, 150, 600);
   const nMinor = quotaOf(km2, 1300, 400, 1600);
+  const ckey = geoKey('osmR', 1, bbox, `q${nMain}-${nMinor}`);
+  const cached = await geoGet(ckey);
+  if (cached?.length) return cached;
   const q = `[out:json][timeout:15];`
     + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
     + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`;
@@ -1651,7 +1667,11 @@ async function fetchOsmRoads(bbox) {
         for (const el of data.elements || []) {
           if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
         }
-        if (roads.length) return roads;   // 空結果(部分逾時)也換鏡像
+        if (roads.length) {   // 空結果(部分逾時)也換鏡像
+          // 深拷貝理由同 fetchOsmFeatures:mergeGradeChains/way._tun 會就地變異 way 物件
+          if (!data.remark) geoPut(ckey, structuredClone(roads));
+          return roads;
+        }
       } catch {
         if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
       }
@@ -1660,6 +1680,15 @@ async function fetchOsmRoads(bbox) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * OSM 補抓(main.js 房間階段重試用):只發兩個 Overpass 查詢,不建任何幾何。
+ * 命中 geocache 即回(零網路);成功結果由 fetcher 自身定案入庫 → 之後的
+ * buildBiomes(重建預建或下一場)直接命中快取。回傳 [features|null, roads|null]。
+ */
+export function warmOsm(bbox) {
+  return Promise.all([fetchOsmFeatures(bbox), fetchOsmRoads(bbox)]);
 }
 
 // ---- 道路(圖資 way):有寬度的賽璐璐路面,主/次分級 + 依地貌變色 ----
@@ -4558,6 +4587,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     rails: railLines,
     falls: fallsBuilt,
     osm: !!(osm && osm.length),
+    osmRoads: !!(osmRoads && osmRoads.length),   // 路網查詢是否成功(false = 兵線備援;main.js 房間補抓依據)
   };
   // 碉堡淨空(反應式):碉堡進場時 game.js 呼叫。移除「與碉堡淨空區重疊」的建物(縮 0 隱形)+ 地標(整棟隱藏),
   // 並同步清掉這些建物/地標「自己的」碰撞柱(bld 標記)——植被/巨岩/橋墩(非建物)一律保留機體與碰撞。

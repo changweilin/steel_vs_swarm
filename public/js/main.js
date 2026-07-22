@@ -14,8 +14,8 @@ import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
-import { buildTerrain } from './terrain.js';
-import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode } from './biomes.js';
+import { buildTerrain, battleBBox } from './terrain.js';
+import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm } from './biomes.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -1414,6 +1414,43 @@ function renderPreloadStatus() {
     : `⏳ 戰場預載 ${Math.round(pre.prog * 100)}% ・ ${pre.label}`;
 }
 
+// ---- OSM 房間階段補抓(2026-07-23,單航班)----
+// 開房當下 Overpass 恰被限流 → 該房預建走兵線/程序備援,且殘缺結果不入 geocache。
+// 玩家還坐在房間選角 → 用這段等待期間隔 90s 背景重試(限流是分鐘級),成功即由 fetcher
+// 定案入庫;若仍在房間階段且同 key,清 pre 重建(全走快取,秒級)= 第一場就拿到完整圖資;
+// 已開戰則至少下一場命中快取。MUST NOT 在「選場地點擊」就發 Overpass —— 瀏覽場地連點會把
+// 分鐘級限流額度燒光,反而害正式開房抓不到(3D 模型是靜態 CDN 才適合選定即暖)。
+let _osmRetry = null;
+function cancelOsmRetry() {
+  if (_osmRetry?.timer) clearTimeout(_osmRetry.timer);
+  _osmRetry = null;
+}
+function scheduleOsmRetry(cfg, key) {
+  if (_osmRetry?.key === key) return;   // 同房已排程
+  cancelOsmRetry();
+  const st = { key, tries: 0, timer: null };
+  _osmRetry = st;
+  const attempt = async () => {
+    if (_osmRetry !== st) return;   // 已被換房/取消
+    st.tries++;
+    let feats = null, roads = null;
+    try { [feats, roads] = await warmOsm(battleBBox(cfg)); } catch { /* 缺席照走備援 */ }
+    if (_osmRetry !== st) return;
+    if (feats && roads?.length) {
+      _osmRetry = null;
+      if (app.phaseShown === 'room' && app.pre?.key === key) {
+        // 冪等 key 會擋重建 → 先清再建;loading 在途消費握著舊 pre 參照,不受影響
+        app.pre = null;
+        startPrebuild(cfg);
+      }
+      return;
+    }
+    if (st.tries < 2) st.timer = setTimeout(attempt, 90000);
+    else _osmRetry = null;
+  };
+  st.timer = setTimeout(attempt, 90000);
+}
+
 /**
  * 啟動(或沿用)地圖預建。冪等:同 key(同房同圖)重複呼叫回傳同一份在途/完成的預建。
  * 失敗不外拋(記在 pre.error,房間 UI 不受影響);enterLoading 消費時會重建一次,再失敗才顯示錯誤。
@@ -1483,6 +1520,9 @@ function startPrebuild(cfg) {
     };
     pre.ud = biomes.userData;
     pre.terrain = terrain;
+    // Overpass 任一查詢失敗(建物 osm / 路網 osmRoads)→ 房間等待期間背景補抓;齊全則取消殘留排程
+    if (!pre.ud.stats?.osm || !pre.ud.stats?.osmRoads) scheduleOsmRetry(cfg, key);
+    else cancelOsmRetry();
     if (app.phaseShown === 'room') renderPreloadStatus();
     return terrain;
   })();
