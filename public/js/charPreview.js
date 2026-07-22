@@ -336,8 +336,9 @@ export class CharPreview {
    *  登記的實際槍口)—— 光束/焰舌從手上/背上的槍管射出;查無錨退回概略點(機體正前腰高) */
   _muzzle(slot = 'light') {
     const mz = this.unit?.userData?.rig?.muzzles?.[slot];
-    // 變形機甲飛行型武器收攏(錨指地面型槍口)、後向 fxOnly 錨(蜂后螫針)→ 退回概略點,與戰場同語意
-    if (mz?.n && !mz.fxOnly && !(this.morphM > 0.4)) return mz.n.getWorldPosition(new THREE.Vector3());
+    // 飛行型態錨照用(與戰場 _entMuzzle 同語意,2026-07-22 對齊):手持機種雙臂前伸、
+    // 肩扛機種轉背部,槍口在飛行中一樣朝航向;fxOnly 後向錨才退概略點
+    if (mz?.n && !mz.fxOnly) return mz.n.getWorldPosition(new THREE.Vector3());
     const v = new THREE.Vector3(0, this.targetY * 1.15, this.size.z * 0.55);
     return this.holder.localToWorld(v);
   }
@@ -460,6 +461,16 @@ export class CharPreview {
         if (w.guide) beamLine(this.scene, this.effects, m, boomPos, 0xff5a5a, { ttl: 0.9, w: R * 0.008 });
         this.holder.position.z -= R * 0.06;
         this._fireCue(true);
+        // 拋物線槍管仰角(2026-07-22 規則 1 展示台閉環):launcher 出膛切線角回寫 gunPitch
+        // (與戰場 game._aimHeavyBarrel 同號約定:仰角向上 = rotation.x 減小;missile 導引不回寫)
+        if (!weaving) {
+          const rig = this.unit?.userData?.rig;
+          const gp = rig?.weap?.heavy === 'L' ? rig?.gunL : rig?.gunR;
+          if (gp) {
+            gp.aim0 ??= gp.aim;
+            gp.aim = gp.aim0 - Math.atan2(v.y + 0.45 * R * Math.PI, Math.hypot(v.x, v.z) || 1);
+          }
+        }
         A.boomAt = A.t + T;
         A.boomPos = boomPos;
         A.fired = 1;

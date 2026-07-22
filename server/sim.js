@@ -1458,6 +1458,15 @@ export class BattleSim {
     if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15 * (this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
+    // bot 重武器「發射端」視覺(2026-07-22 規則 3):真人開火自帶 tracer 訊息轉播,
+    // bot 沒有 → 只剩落點 boom = 發射瞬間無槍口焰/彈體離架。補發 shot 事件
+    // (客戶端 pid 分支解析槍口錨 → launcher/missile 畫視覺彈體 + 槍口爆 + 後座)
+    if (isBotId(pid)) {
+      this.events.push({
+        e: 'shot', pid, slot: 'heavy', from: [h.x, h.z], to: [x, z],
+        ty: Math.round(y || 0), side: h.side,
+      });
+    }
     this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side });
     this._blast(h, wp.def, x, z, y, lev);
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
@@ -2482,10 +2491,14 @@ export class BattleSim {
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
-          // ty = 空中目標高度(直升機/英雄),曳光才不會打在目標腳下的地面
+          // ty = 空中目標高度(直升機/英雄),曳光才不會打在目標腳下的地面;
+          // oy = 射手離地高(直升機):迷霧邊緣查無 mesh 時曳光退路不再從地面射出;
+          // gi(主堡本體砲):兩門砲口輪替,不與 _tickBaseGuns 的 0 號砲搶同一根砲管
           this.events.push({
             e: 'shot', id: e.id, kind: e.kind, from: [e.x, e.z], to: [target.x, target.z],
             ty: (target.hero || target.decoy || target.kind === 'heli') ? Math.round(target.y || 0) : 0,
+            ...(e.kind === 'heli' ? { oy: Math.round(e.y || 0) } : {}),
+            ...(e.kind === 'base' ? { gi: (e._gN = ((e._gN || 0) + 1) % 2) } : {}),
             side: e.side,
           });
         }

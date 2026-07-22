@@ -126,12 +126,14 @@ const FX_K = 10;                      // 彈簧阻尼:目標值突變也不瞬�
 export function stepCombatFx(ent, now, dt) {
   const rig = ent.mesh?.userData?.rig;
   if (!rig || dt <= 0) return;
-  const C = ent.cfx || (ent.cfx = { aim: 0, kL: 0, kR: 0, kB: 0, chg: 0, lg: 0, fireT: -1, aimUntil: -1 });
+  const C = ent.cfx || (ent.cfx = { aim: 0, hA: 0, kL: 0, kR: 0, kB: 0, chg: 0, lg: 0, fireT: -1, aimUntil: -1, hUntil: -1 });
   // 開火事件邊緣觸發(以 t0 去重):一次後座脈衝 + 展開射姿保持窗
   const fx = ent.fireFx;
   if (fx && fx.t0 !== C.fireT) {
     C.fireT = fx.t0;
     C.aimUntil = Math.max(C.aimUntil, fx.t0 + AIM_HOLD_S);
+    // 重武器專屬射姿窗(_aimH):驅動「重武器指向攻擊方向」的機構級瞄準(如 monkey 尾砲前捲)
+    if (fx.slot === 'heavy') C.hUntil = Math.max(C.hUntil ?? -1, fx.t0 + AIM_HOLD_S);
     // 幅度接 RECOIL 三級分級(makeUnit 依 data.js recoilTier 換算成 rig.kickAmp 倍率)
     const amp = (fx.slot === 'heavy' ? 1.0 : 0.45) * ((rig.kickAmp || S0)[fx.slot] ?? 1);
     const side = (rig.weap || S0)[fx.slot] || 'R';   // 'L'|'R'|'B' 持手;'N' = 機載(機身後座)
@@ -149,17 +151,19 @@ export function stepCombatFx(ent, now, dt) {
       chgT = Math.min(1, el / HEAVY_CHARGE_ASSUME_S);
       glowT = chgT;
       C.aimUntil = Math.max(C.aimUntil, now + 0.4);   // 蓄力中就進射姿
+      C.hUntil = Math.max(C.hUntil ?? -1, now + 0.4);
     } else if (el <= HEAVY_FIRE_HOLD_S) { chgT = -1; glowT = 2; }
     else ent.heavyFx = null;   // 尖峰過後交還阻尼衰減
   }
   const k = 1 - Math.exp(-FX_K * dt);
   C.chg += (chgT - C.chg) * k;
   C.aim = damp(C.aim, now < C.aimUntil ? 1 : 0, now < C.aimUntil ? 9 : 3.5, dt);
+  C.hA = damp(C.hA || 0, now < (C.hUntil ?? -1) ? 1 : 0, now < (C.hUntil ?? -1) ? 6 : 3, dt);
   C.kL = damp(C.kL, 0, 7, dt);
   C.kR = damp(C.kR, 0, 7, dt);
   C.kB = damp(C.kB || 0, 0, 7, dt);
   C.lg = damp(C.lg, 0, 10, dt);
-  rig._aim = C.aim; rig._kickL = C.kL; rig._kickR = C.kR; rig._kickB = C.kB; rig._chg = C.chg;
+  rig._aim = C.aim; rig._aimH = C.hA; rig._kickL = C.kL; rig._kickR = C.kR; rig._kickB = C.kB; rig._chg = C.chg;
   // 重武器掛點:蓄力 glow 增亮 / pivot 朝 deploy 展開;擊發 glow 強閃、pivot 以 −0.85 反向過衝
   // (蓄力怎麼展開,擊發就怎麼反向甩回 = 「蓄力動畫與開火相反」的通則,全機種共用)
   if (rig.heavy) {
@@ -878,6 +882,15 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 變形活動度(|dm/dt| 平滑):進行中排氣口增亮,完成後自然歸零
   L.act = damp(L.act || 0, clamp(Math.abs(m - prev) / dt * 4, 0, 1), 5, dt);
   rig.pose(m);   // 分段姿勢插值(基底;以下全部疊加其上)
+  // 尾砲瞄準前捲(monkey 尾梢巨砲):重武器交戰(rig._aimH,stepCombatFx 的重武器射姿保持窗)
+  // 把尾鏈子集重新 pose 到飛行前捲位 —— 蠍式過頂、砲口轉向正前;飛行(m=1)本就前捲。
+  // 地面 torso 站姿比巡航直挺,殘餘仰角(rig.tailAimComp = cruise − stance)由末節補回 → 砲口壓到水平
+  if (rig.tailPose) {
+    const ha = Math.max(m, rig._aimH || 0);
+    rig.tailPose(ha);
+    if (rig.tailAimComp && rig.tailSegs)
+      rig.tailSegs[rig.tailSegs.length - 1].rotation.x += rig.tailAimComp * Math.max(0, (rig._aimH || 0) - m);
+  }
   // 體軸「直立度」uprightK:由目前姿勢的軀幹前傾推得(貓/龍/猴掌行近水平 → 趨 0.15;
   // 吸血鬼/亞特拉斯直立 → 趨 1)。起步撲身/煞停後仰的「俯衝」只給直立體軸 —— 已經近水平的獸型
   // 再往前壓就變臉朝地,牠們的加減速改由步幅、垂直起伏與脊椎波表現。
@@ -1016,6 +1029,13 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
       rig.trunkTip.rotation.y += idle * Math.sin(now * 0.9 - 0.6) * 0.12 + Math.sin(L.ph * 0.5 - 0.4) * 0.08 * a;
       rig.trunkTip.rotation.x += idle * Math.sin(now * 1.1 - 1.2) * 0.06;
     }
+    // 象鼻槍交戰抬鼻(2026-07-22 規則 1):靜止(交戰)/開火保持把鼻管抬到據槍角
+    // (rig.trunkAim,models.js 解算)→ 鼻端槍口水平朝前;行軍交還下垂擺動、飛行由 pose 收平
+    if (rig.trunkAim && rig.trunkTip) {
+      const ta = clamp(idle + (rig._aim || 0), 0, 1) * (1 - m);
+      rig.trunk.rotation.x += (rig.trunkAim[0] - rig.trunk.rotation.x) * ta;
+      rig.trunkTip.rotation.x += (rig.trunkAim[1] - rig.trunkTip.rotation.x) * ta;
+    }
   }
   // 軀幹動態:地面前傾/加減速預備、飛行壓坡入彎 + 巡航俯仰、懸停浮沉
   const topAir = rig.topAir || 30;
@@ -1032,9 +1052,11 @@ function stepMorph(L, rig, dt, now, ent, vFwd, vLat, speed, yawRate) {
   // 驅動四肢的圓周襲步(拱背才是 gallop 的引擎);+ 地面爆發前撲/急停後坐、飛行揚翼(flare)煞停
   const archPulse = Math.sin(L.ph) * 0.22 * galF * a;
   // 開火軀幹搖:蓄力抵肩/擊發反向 + 每發後座震(手持 _kickL/R 與機載 _kickB 都打進軀幹);
-  // 存成 cbt → 下方頭部補償一併反吃,開火中頭仍鎖平(僅留殘量 = 衝擊感)
-  const cbt = (cChg * (cHv.chest || 0)
-    - (Math.max(cKL, cKR) + (rig._kickB || 0)) * 0.05) * (1 - m);
+  // 存成 cbt → 下方頭部補償一併反吃,開火中頭仍鎖平(僅留殘量 = 衝擊感)。
+  // 2026-07-22 規則 4:後座項不再 ×(1−m)—— 飛行型態開火同樣有機身俯仰脈衝
+  // (對齊 stepAerial 的機鼻上仰語意);蓄力軀幹搖仍屬地面據槍演出,照舊 gated
+  const cbt = cChg * (cHv.chest || 0)
+    - (Math.max(cKL, cKR) + (rig._kickB || 0)) * 0.05;
   rig.torso.rotation.x += L.pitch + archPulse
     + (L.srg * 0.07 - L.brk * 0.08) * uprightK - L.flr * 0.06    // 俯衝 × uprightK(水平體軸收斂);flare 屬飛行不縮
     + cbt;

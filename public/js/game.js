@@ -1565,18 +1565,26 @@ export class BattleClient {
     const kindArg = this.isMorph ? 'morph' : this.heroKind;
     const handSide = rig3p.weap?.[slot0];
     // 掛點:輕武器沿用 gunMount;地面重武器優先手持邊(rig.weap 'L'/'R'/'B'),否則查 HEAVY_MOUNT;
-    // 飛行型態(morph 空中/無人機)輕重共用同族硬點,由左右分掛區分
+    // 飛行型態(morph 空中/無人機)輕重共用同族硬點,由左右分掛區分。
+    // backPair = 輕重「雙肩分扛」(gorilla 2026-07-22):兩件都在 back 錨 → 左右鏡射分掛,
+    // 且電漿破例不改口噴(第三人稱就長在左肩,FPV 同源)
+    const hHand2 = ['L', 'R', 'B'].includes(rig3p.weap?.heavy);
+    const heavyM = (!air && hHand2) ? 'hand'
+      : (HEAVY_MOUNT[mountKey(vis, kindArg, air)] || gunMount(vis, kindArg, air, CHARACTERS[this.ch]?.heavy?.type || 'gun'));
+    const backPair = !air && heavyM === 'back'
+      && gunMount(vis, kindArg, air, CHARACTERS[this.ch]?.light?.type || 'gun') === 'back';
     let mount;
     if (slot0 === 'heavy' && !both && !air) {
-      mount = (handSide === 'L' || handSide === 'R' || handSide === 'B') ? 'hand'
-        : (HEAVY_MOUNT[mountKey(vis, kindArg, air)] || gunMount(vis, kindArg, air, wtype));
-      if (wtype === 'plasma' && mount === 'back') mount = 'mouth';   // 電漿一律口噴(與 gunMount 同規則)
+      mount = heavyM;
+      if (wtype === 'plasma' && mount === 'back' && !backPair) mount = 'mouth';   // 電漿口噴(雙肩分扛破例)
     } else {
       mount = gunMount(vis, kindArg, air, wtype);
     }
-    // 左右分掛:hand/tentacle 依第三人稱持手邊;雙莢/翼/爪 = 左輕右重(buildDrone/buildFixedWing 同約定)
+    // 左右分掛:hand/tentacle 依第三人稱持手邊;雙莢/翼/爪 = 左輕右重(buildDrone/buildFixedWing
+    // 同約定);雙肩分扛 back 對 = 右輕左重(對齊 buildBipedBeast gorilla 第三人稱)
     let sideSign = 0;
     if (mount === 'hand' || mount === 'tentacle') sideSign = handSide === 'L' ? -1 : 1;
+    else if (mount === 'back' && backPair && !both) sideSign = slot0 === 'light' ? 1 : -1;
     else if (mount === 'body' || mount === 'wing' || mount === 'claw') sideSign = both ? 0 : (slot0 === 'light' ? -1 : 1);
     const a = (anchors && anchors[mount]) || DEF_ANCHOR[mount] || DEF_ANCHOR.body;
     const s = a.s ?? 1.0;
@@ -2112,7 +2120,7 @@ export class BattleClient {
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
-      if (!ent.hero && !ent.decoy && !ent.isStatic) { ent.mesh.visible = !e.gar; if (ent.aura) ent.aura.visible = ent.mesh.visible; }
+      if (!ent.hero && !ent.decoy && !ent.isStatic) { ent.gar = !!e.gar; ent.mesh.visible = !e.gar; if (ent.aura) ent.aura.visible = ent.mesh.visible; }
       if (e.k === 'decoy') {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
@@ -2944,6 +2952,13 @@ export class BattleClient {
       starburst(this.scene, this.effects, ev.x, this.terrain.heightAt(ev.x, -ev.z) + 9, -ev.z,
         8, ev.side ? SIDES[ev.side].color : 0x66ffe0);
     } else if (ev.e === 'sam') {
+      // 發射端視覺(2026-07-22 規則 3):防空陣地發射點火光 + 揚塵 —— 飛彈不再憑空出現
+      if (ev.from) {
+        const sx = ev.from[0], sz = -ev.from[1];
+        const sy = this.terrain.heightAt(sx, sz) + 2;
+        starburst(this.scene, this.effects, sx, sy, sz, 2.2, 0xffc79a);
+        starburst(this.scene, this.effects, sx, sy + 1.5, sz, 1.2, 0xffe9c8);
+      }
       if (ev.tpid === this.youId) {
         this.hud.feed?.(ev.ambush
           ? '🚨 匿蹤防空陣地開火!命中即墜毀,快擊落飛彈或回兵線走廊!'
@@ -3098,20 +3113,36 @@ export class BattleClient {
         // bot 英雄 / 僚機齊射:走真人 tracer 同一條槍口/後座路徑(曳光被障礙截斷,火花打在障礙面)
         const from = this._entMuzzle(ev.pid, ev.slot,
           new THREE.Vector3(fx, this.terrain.heightAt(fx, fz) + 2, fz));
-        const clip = this._clipBeam(from, to);
-        this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
-        this._markFire(ev.pid, ev.slot, t0);
+        const sh = ev.slot === 'heavy' ? this._heroEntByPid(ev.pid) : null;
+        const def = sh ? this._heroDefOf(sh.ch, 'heavy') : null;
+        const d3 = to.clone().sub(from);
+        if (def && (def.type === 'launcher' || def.type === 'missile') && d3.lengthSq() > 0.01) {
+          // bot 重武器(heroBurst 補發的 shot):彈藥同源 —— 與真人 tracer 同一顆視覺彈體;
+          // launcher 彈道砲管仰角與射向一致(規則 1)
+          d3.normalize();
+          this._spawnVisShell(from, d3, def, ev.side, sh.ch);
+          this._muzzleBurst(from, true, ev.side);
+          if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, d3);
+        } else {
+          const clip = this._clipBeam(from, to);
+          this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
+        }
+        this._markFire(ev.pid, ev.slot, t0, { x: tx, z: tz, y: to.y });
       } else {
         const ent = ev.id != null ? this.ents.get(ev.id) : null;
         const from = this._npcMuzzle(ent, ev, fx, fz);
         if (ent) {
           ent._aimAt = { x: tx, z: tz, y: to.y, until: t0 + 2.5 };   // 交戰面向:槍口朝攻擊方向
           if (ent.isStatic) ent._turKick = 1;                // 塔/主堡:砲塔後座
-          else ent.fireFx = { t0, slot: 'light' };           // 一般單位:stepCombatFx 後座 + 槍口焰
+          else {
+            ent.fireFx = { t0, slot: 'light' };              // 一般單位:stepCombatFx 後座 + 槍口焰
+            if (ent.mesh.userData.turret) ent._turKick = 1;  // 車載砲塔:砲管另補上撇後座
+          }
         }
         const { col, hot } = this._shotCols(ev.side);
         starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
-        if (ev.kind === 'howitzer') this._arcTracer(from, to, col, ent);
+        // 拋物線曳光:榴彈兵 + 坦克攻城砲(wid 'siege' 彈道學拋物線)—— 砲管仰角與弧線一致
+        if (ev.kind === 'howitzer' || ev.kind === 'tank') this._arcTracer(from, to, col, ent);
         else {
           // NPC/塔/主堡曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
           const clip = this._clipBeam(from, to);
@@ -3140,9 +3171,12 @@ export class BattleClient {
       if (def && (def.type === 'launcher' || def.type === 'missile')) {
         const dir = to0.clone().sub(from);
         if (dir.lengthSq() > 0.01) {
-          this._spawnVisShell(from, dir.normalize(), def, m.side, shooter.ch);
+          dir.normalize();
+          this._spawnVisShell(from, dir, def, m.side, shooter.ch);
           this._muzzleBurst(from, true, m.side);
-          this._markFire(m.pid, m.slot, performance.now() / 1000);
+          // 拋物線武器(launcher 彈道)砲管仰角與發射方向一致(規則 1;missile 導引不回寫)
+          if (def.type === 'launcher') this._aimHeavyBarrel(m.pid, dir);
+          this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
           return;
         }
       }
@@ -3155,7 +3189,22 @@ export class BattleClient {
       { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut },
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
-    this._markFire(m.pid, m.slot, performance.now() / 1000);
+    this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
+  }
+
+  /** 手持重武器(launcher 彈道)砲管仰角回寫:發射方向的仰角調整 gunPitch 目標角。
+   *  aim0 = 建模解算的水平據槍角(首次寫入時快取);仰角向上 = rotation.x 減小,
+   *  與 _arcTracer 的 comp − atan 同號約定 —— 拋物線武器的槍管角度與射擊角度一致。 */
+  _aimHeavyBarrel(pid, dir) {
+    const elev = Math.atan2(dir.y, Math.hypot(dir.x, dir.z) || 1);
+    for (const ent of this.ents.values()) {
+      if (ent.pid !== pid || ent.isSelf) continue;
+      const rig = ent.mesh?.userData?.rig;
+      const gp = rig?.weap?.heavy === 'L' ? rig?.gunL : rig?.gunR;
+      if (!gp) continue;
+      gp.aim0 ??= gp.aim;
+      gp.aim = gp.aim0 - elev;
+    }
   }
 
   /** 以 pid 找英雄 ent(有 ch 才算 —— 解析射手武器 def 用) */
@@ -3655,12 +3704,15 @@ export class BattleClient {
    *  一個 pid 底下可能有三架(蜂群小隊)—— 全數標記,僚機齊射的視覺一致。
    *  重武器擊發同步標記 heavyFx(掛點反向過衝/槍口焰):bot 英雄沒有 heavyFire 訊息,
    *  只靠 shot 事件走到這裡,不標記就看不到重武器的擊發演出。 */
-  _markFire(pid, slot, t0) {
+  _markFire(pid, slot, t0, aim) {
     if (pid == null) return;
     for (const ent of this.ents.values()) {
       if (ent.pid !== pid || ent.isSelf) continue;
       ent.fireFx = { t0, slot: slot === 'heavy' ? 'heavy' : 'light' };
       if (slot === 'heavy') ent.heavyFx = { phase: 'fire', t0 };
+      // 交戰面向(2026-07-22 規則 1):記下攻擊目標 —— 靜止的 bot/僚機在 _updateEnts
+      // 轉身面向它(槍口朝攻擊方向;移動中照舊面向移動方向)
+      if (aim) ent._aimAt = { x: aim.x, z: aim.z, y: aim.y, until: t0 + 2.5 };
     }
   }
 
@@ -3668,13 +3720,13 @@ export class BattleClient {
    *  其餘 = rig.muzzles.light 錨;查無錨(舊模型/駐守碉堡隱藏)退回訊息座標 + 機體高度概略。 */
   _npcMuzzle(ent, ev, fx, fz) {
     if (ent && ent.mesh.visible) {
-      if (ent.kind === 'tower') {
-        const ms = ent.mesh.userData.turretMuzzles;
-        if (ms?.length) {
-          ent._mzi = ((ent._mzi ?? -1) + 1) % ms.length;   // 雙管/六管輪替擊發
-          return ms[ent._mzi].getWorldPosition(new THREE.Vector3());
-        }
-      } else if (ent.kind === 'base') {
+      const ms = ent.mesh.userData.turretMuzzles;
+      if (ms?.length) {
+        // 多槍口輪替擊發:塔(雙管/六管)與直升機(左右莢/側掛雙槍)共用同一條
+        ent._mzi = ((ent._mzi ?? -1) + 1) % ms.length;
+        return ms[ent._mzi].getWorldPosition(new THREE.Vector3());
+      }
+      if (ent.kind === 'base') {
         const mz = ent.gunMuzzles?.[ev.gi ?? 0];
         if (mz) {
           // 記下本發目標:_updateEnts 把該門砲管平滑轉向它(槍口朝攻擊方向)
@@ -3686,13 +3738,22 @@ export class BattleClient {
         if (mz?.n) return mz.n.getWorldPosition(new THREE.Vector3());
       }
     }
+    // 駐守碉堡的步槍兵(gar:機體隱藏在工事裡):曳光自「面向目標的射孔」射出,
+    // 不再從碉堡中心上方憑空冒出(規則 3;碉堡射孔高度 ≈ 1.9m、八角主體外緣半徑 ≈ 3.0)
+    if (ent?.gar && !ent.mesh.visible) {
+      const dx = ev.to[0] - fx, dz = -ev.to[1] - fz;
+      const d = Math.hypot(dx, dz) || 1;
+      const gy0 = this.terrain.heightAt(fx, fz);
+      return new THREE.Vector3(fx + dx / d * 3.0, gy0 + 1.9, fz + dz / d * 3.0);
+    }
     const gy = this.terrain.heightAt(fx, fz);
     const oy = ev.oy ?? (ent ? (ent.mesh.position.y - gy) + ent.dimH * 0.6 : 2);
     return new THREE.Vector3(fx, gy + oy, fz);
   }
 
-  /** 拋物線曳光(榴彈兵):多段短束沿彈道畫弧,並把「出膛切線角」回寫射手砲管仰角
-   *  (rig.gunR.aim,gunPitch 每幀消費)—— 拋物線武器的槍口角度與射擊角度一致。 */
+  /** 拋物線曳光(榴彈兵/坦克攻城砲):多段短束沿彈道畫弧,並把「出膛切線角」回寫射手 ——
+   *  手持榴彈槍走 rig.gunR.aim(gunPitch 每幀消費);車載砲塔走 ent._arcPitch
+   *  (_aimVehicleTurret 的 pitch 節點消費)—— 拋物線武器的槍口角度與射擊角度一致。 */
   _arcTracer(from, to, col, ent) {
     const dx = to.x - from.x, dz = to.z - from.z;
     const d = Math.hypot(dx, dz) || 1;
@@ -3711,8 +3772,11 @@ export class BattleClient {
       if (clip.cut) { starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col); break; }
       prev = p;
     }
+    const ang = Math.atan(((to.y - from.y) + 4 * h) / d);
     const gp = ent?.mesh?.userData?.rig?.gunR;
-    if (gp) gp.aim = (gp.comp || 0) - Math.atan(((to.y - from.y) + 4 * h) / d);
+    if (gp) gp.aim = (gp.comp || 0) - ang;
+    else if (ent?.mesh?.userData?.turret?.userData?.pitch)
+      ent._arcPitch = { v: ang, until: performance.now() / 1000 + 2.5 };
   }
 
   _tickWeapons(now) {
@@ -4906,13 +4970,43 @@ export class BattleClient {
     const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
     // 有敵人:砲管咬住攻擊目標(任意方向,含車後);無敵人:歸中對齊車頭 = 前進方向。
     // 純視覺,命中仍由伺服器結算。
-    let wantLocal = 0;
+    let wantLocal = 0, wantPitch = 0;
     if (aim || t) {
       const p = aim || (t.isSelf ? this.pos : t.mesh.position);
       const world = Math.atan2(p.x - ent.mesh.position.x, p.z - ent.mesh.position.z);
       wantLocal = wrap(world - ent.mesh.rotation.y);
+      const dx = p.x - ent.mesh.position.x, dz = p.z - ent.mesh.position.z;
+      const turY = tur.getWorldPosition(new THREE.Vector3()).y;
+      wantPitch = Math.atan2(((p.y ?? turY) - turY), Math.hypot(dx, dz) || 1);
     }
     tur.rotation.y += wrap(wantLocal - tur.rotation.y) * Math.min(1, dt * 5);
+    // 砲管俯仰(2026-07-22 規則 1):有 pitch 節點的車砲把砲管指向目標仰角;
+    // 拋物線攻城砲(tank 'siege')的「出膛仰角」由 _arcTracer 逐發回寫 _arcPitch 優先 ——
+    // 砲管角度與實際彈道弧線一致
+    const pit = tur.userData?.pitch;
+    if (pit) {
+      const arc = ent._arcPitch && now < ent._arcPitch.until ? ent._arcPitch.v : null;
+      const wp = Math.max(-Math.PI / 6, Math.min(Math.PI / 3, arc ?? wantPitch));
+      pit.rotation.x += (-wp - pit.rotation.x) * Math.min(1, dt * 4);
+      // 開火後座(shot 事件標 _turKick):砲管上撇一記、指數回穩(同塔砲語意)
+      if (ent._turKick > 0.01) {
+        pit.rotation.x -= ent._turKick * 0.06;
+        ent._turKick *= Math.max(0, 1 - dt * 5);
+      }
+    }
+  }
+
+  /** 共軛俯仰槍架(直升機頜砲/側掛槍/莢艙):機身朝向照舊(移動=航向、停懸=面向目標),
+   *  槍架只補「對目標的垂直仰角」—— 對地射擊槍口下壓,曳光與槍管同一條線(規則 1 的俯仰半邊)。 */
+  _aimGunTilt(ent, piv, dt, now) {
+    const aim = ent._aimAt && now < ent._aimAt.until ? ent._aimAt : null;
+    let want = 0;
+    if (aim) {
+      const py = piv.getWorldPosition(new THREE.Vector3()).y;
+      const d = Math.hypot(aim.x - ent.mesh.position.x, aim.z - ent.mesh.position.z) || 1;
+      want = Math.max(-1.1, Math.min(0.5, Math.atan2((aim.y ?? py) - py, d)));
+    }
+    piv.rotation.x += (-want - piv.rotation.x) * Math.min(1, dt * 4);
   }
 
   _updateEnts(dt, now) {
@@ -4970,6 +5064,11 @@ export class BattleClient {
         // ry 是「相機朝向」慣例(前方 = -z),機體模型一律朝 +z(見 buildRobotMech 腳尖/駕駛艙)
         // → 直接套用會讓所有英雄(含 bot)倒著走。差 π。
         wantYaw = ent.ry + Math.PI;
+        // 交戰面向(2026-07-22 規則 1):靜止中開火的僚機/bot 面向實際攻擊目標
+        // (_markFire 記 _aimAt)—— 齊射不再側著身;移動中照舊面向 ry(伺服器權威朝向)
+        const adx = ent.tgt.x - cur.x, adz = ent.tgt.z - cur.z;
+        if (adx * adx + adz * adz <= 0.04 && ent._aimAt && now < ent._aimAt.until)
+          wantYaw = Math.atan2(ent._aimAt.x - cur.x, ent._aimAt.z - cur.z);
       } else {
         // NPC 沒有伺服器方位,靠插值殘差推朝向。殘差 ≈ 速度/插值增益(小兵 6 m/s → 僅 0.7m),
         // 門檻設 0.5(距離平方)等於永遠不轉向 — 全場小兵一律朝 +z。改用 0.2m 門檻。
@@ -5001,6 +5100,9 @@ export class BattleClient {
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);
+      // 共軛俯仰槍架(直升機):槍管補對目標仰角
+      const gt = ent.mesh.userData.gunTilt;
+      if (gt) this._aimGunTilt(ent, gt, dt, now);
       // 戰鬥開火/蓄力動畫(locomotion stepCombatFx):由 fireFx/heavyFx 事件推導 rig 驅動場
       // (射姿保持/後座脈衝/蓄力反向)+ 直接驅動掛點 glow/pivot 與槍口閃光 ——
       // MUST 在 stepLocomotion 之前呼叫,本幀步態才吃得到驅動場
