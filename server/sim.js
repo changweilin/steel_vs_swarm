@@ -171,11 +171,19 @@ export class BattleSim {
     return 0;
   }
 
-  /** 單位所在層:真人英雄用客戶端回報 lev;地面工事恆 0;其餘(小兵/飛行/bot)由 ribbon 推定。 */
+  /** 單位所在層:真人英雄用客戶端回報 lev;地面工事恆 0;其餘(小兵/飛行/bot)由 ribbon 推定。
+   *  2026-07-22 兩個 ribbon 誤判修正(2D ribbon 分不出「隧道內」vs「覆蓋段山頂上方」):
+   *  ①飛行體(波次機/直升機/自殺機/餌機)飛行高度 ≥ 隧道淨空 ⇒ 洞內塞不下,必在山體上方
+   *    = 地面層(否則飛越隧道上空的機體被判「洞內」,與洞內單位對射不吃 slab 遮蔽=穿頂互打);
+   *  ②無 lane 的地面第三方(中立營地/工事)只可能佈在覆蓋段山頂(_pruneCorridors 已清洞內
+   *    第三方)= 地面層;兵線單位(有 lane,含召喚)才會真的走進洞內。 */
   _unitLev(e) {
     if (!e) return 0;
     if (e.kind === 'tower' || e.kind === 'base') return 0;
     if (e.hero && e.lev != null) return e.lev;
+    const fly = !!(UNITS[e.kind]?.fly || e.kind === 'heli' || e.kami || e.decoy);
+    if (fly && (e.y || 0) >= LOS.TUN_CLEAR_M) return 0;
+    if (!fly && !e.hero && e.lane == null) return 0;
     return this._slabLevAt(e.x, e.z);
   }
 
@@ -1438,11 +1446,12 @@ export class BattleSim {
    * y(2026-07-17 火箭筒對空):彈頭直擊空中目標時客戶端回報引爆高度 →
    * 爆風在高空結算(_blast 的 3D 距離)⇒ 火箭筒/榴彈可對空;缺值 = 地面引爆(向後相容)。
    */
-  heroBurst(pid, x, z, y = 0) {
+  heroBurst(pid, x, z, y = 0, lev = 0) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     if (this._jammed(h)) return;
     y = Number.isFinite(y) ? Math.max(0, Math.min(400, y)) : 0;   // 引爆高度夾範圍(防作弊)
+    lev = lev === 2 ? 2 : lev === 1 ? 1 : 0;   // 爆點結構層(客戶端彈道回報;_blast 隧道垂直隔離用)
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
@@ -1450,12 +1459,12 @@ export class BattleSim {
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
     this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side });
-    this._blast(h, wp.def, x, z, y);
+    this._blast(h, wp.def, x, z, y, lev);
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
       if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
-      this._blast(b, wp.def, x, z, y);
+      this._blast(b, wp.def, x, z, y, lev);
     }
   }
 
@@ -1595,7 +1604,7 @@ export class BattleSim {
     const def = this._bombDef(owner);
     def.dmg = Math.round(def.dmg * SQUAD.KAMI.DMG_F);   // 護衛自殺機:傷害減半(2026-07-18)
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
-    if (owner) this._blast(owner, def, k.x, k.z, k.y || 0);
+    if (owner) this._blast(owner, def, k.x, k.z, k.y || 0, this._unitLev(k));   // 爆點層 = 自殺機所在層
     this._removeKami(k);
   }
 
@@ -1618,7 +1627,7 @@ export class BattleSim {
   _boom(b) {
     const def = this._bombDef(b);
     this.events.push({ e: 'boom', x: b.x, z: b.z, y: b.y || 0, r: def.r, side: b.side });
-    this._blast(b, def, b.x, b.z, b.y || 0);
+    this._blast(b, def, b.x, b.z, b.y || 0, this._unitLev(b));   // 爆點層 = 自毀機所在層
     b.dash = 0;
     b.hp = 0;
     this._kill(b, null);
@@ -1891,7 +1900,7 @@ export class BattleSim {
     const b = DECOY_BOMB[d.bombType] || DECOY_BOMB.fire;
     const def = { dmg: DECOY.BOMB_DMG, r: DECOY.BOMB_BLAST_R, pen: 6, vs: DECOY.vs };
     this.events.push({ e: 'decoyBomb', x: d.x, z: d.z, y: d.y || 0, r: def.r, side: d.side, bomb: d.bombType });
-    this._blast(owner, def, d.x, d.z, d.y || 0);   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用)
+    this._blast(owner, def, d.x, d.z, d.y || 0, this._unitLev(d));   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用);爆點層 = 餌機所在層
     // 附加狀態:效果半徑內的敵方單位(建築/中立/無敵幀免疫,比照 _applyCC)
     const rr = def.r * 1.5;
     for (const t of [...this.ents.values()]) {
@@ -1985,7 +1994,8 @@ export class BattleSim {
         const rr = i === 0 ? 0 : Math.random() * (A.scatter || A.r * 2);
         const ix = x + Math.cos(ang) * rr, iz = z + Math.sin(ang) * rr;
         this.events.push({ e: 'boom', x: ix, z: iz, r: A.r, side: h.side });
-        this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen }, ix, iz, 0);
+        // 空襲自天而降 → 爆點恆為地面層(lev 0):砸在隧道覆蓋段上方不會隔著山體炸到洞內
+        this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen }, ix, iz, 0, 0);
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
@@ -2090,9 +2100,16 @@ export class BattleSim {
    *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。
    *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,
    *  高空直擊/同高度自爆才炸得到 —— 與英雄/餌機同一條 3D 規則。 */
-  _blast(h, def, x, z, y) {
+  /**
+   * lev(2026-07-22 隧道垂直隔離):爆心所在結構層(0 地面/1 橋面/2 隧道內;null = 不查層)。
+   * 爆心與目標分屬「隧道內/外」⇒ 山體/天花隔在中間,爆風不越層 —— A11「爆風不吃 LOS 遮蔽」
+   * 是水平繞射近似,MUST NOT 引申成可以穿透垂直岩盤/天花。lev 為 null 的呼叫端(導引飛彈
+   * 著彈)已由鎖定時的 slab LOS 把關,維持舊行為。
+   */
+  _blast(h, def, x, z, y, lev = null) {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
+      if (lev != null && this._slabGrid && ((this._unitLev(t) === 2) !== (lev === 2))) continue;
       const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy || t.kind === 'heli' ? (t.y || 0) : 0));
       const f = blastFalloff(def.r, d);
       if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);

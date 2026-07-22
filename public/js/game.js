@@ -3828,7 +3828,11 @@ export class BattleClient {
         this._explosion(p.x, by, p.z, (b.r || 12) * 0.8, 0xffaa33);
         this._applyBlast(p.x, by, p.z, b.r || 12);   // 太近開砲,自己也會被衝擊波掀飛
         // y = 離地引爆高度(對空:直擊飛行目標時在其高度炸;sim._blast 吃 3D 距離)
-        this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10) });   // three z 南 → 模擬 z 北
+        // lev = 爆點結構層(sim 隧道垂直隔離):彈道已被 _slabHitT 擋在天花外,
+        //       故「世界 y 低於天花」只會發生在真的從洞口打進去的彈頭
+        const btn = this.terrain.tunnelAt?.(p.x, p.z);
+        this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10),
+          lev: btn && by < btn.ceil ? 2 : 0 });   // three z 南 → 模擬 z 北
       } else if (hit?.missileId != null) {
         this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
         this._hitFeedback(def, null, p);
@@ -4534,7 +4538,9 @@ export class BattleClient {
 
     // 天花碰撞:地下道天花板 / 高架橋底緣 —— 頭頂(pos.y + 機高)不得穿過。ceilingAt 只在「人在其下方」時回值,
     // 站上方地表 / 橋面時回 null → 不受影響(上方照常通行)。
-    const ceil = this.terrain.ceilingAt?.(this.pos.x, this.pos.z, this.pos.y);
+    // 查詢高度取 min(位移前, 位移後):蓄力跳/大 dt 單幀跨越天花時,位移後 y 已在天花之上,
+    // 事後查詢回 null = 誤判已在上層 → 直接站上山頂穿模;以位移前高度評估即無此洞。
+    const ceil = this.terrain.ceilingAt?.(this.pos.x, this.pos.z, Math.min(py0, this.pos.y));
     if (ceil != null) {
       const cap = ceil - this.selfH - 0.2;   // 頭頂留餘裕,機高由角色動態推導(最大機甲亦保證淨空)
       if (this.pos.y > cap) {

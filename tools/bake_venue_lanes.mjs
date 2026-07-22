@@ -42,6 +42,9 @@ const ANCHORS_ALL = {
   tamsui: [[25.1680, 121.4450], [25.1720, 121.4400]],         // 淡水市區
   okavango: [[-19.9833, 23.4167]],                            // Maun
   rio: [[-22.9700, -43.1850], [-22.9519, -43.2105]],
+  // 金龍隧道西南口外(金龍路)/ 東北口外(金湖路)。L1 兩堡僅 ~481 真實公尺、隧道 ~195m:
+  // 錨點 MUST 貼隧道軸且距洞口 ~130m,B 才不會被吸進隧道內部或繞上別的街廓
+  jinlong: [[25.0838, 121.5846], [25.0873, 121.5895]],
   barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // 巴塞隆納 Eixample 格柵(臨地中海)
   london: [[51.5007, -0.1246]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
@@ -225,6 +228,14 @@ function overlapXZ(a, b, cell) {
 // 側移目標檔位:與 mapSelect 的 OFFSET_FRACS 同一組(近→遠)
 const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 
+// 指定場地限定方位角扇區(度,[起, 迄] 順時針含跨 0°;**逐錨點**一份扇區清單):
+// 兵線軸向必須對準特定地標才有測試意義(如 jinlong:兩錨沿隧道軸對向,兵線才會穿
+// 金龍隧道山體;全向暴搜會挑分數更高的街廓方位,兵線就繞開隧道了)。未列場地 = 全向。
+const BEARING_SECTORS = {
+  jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
+};
+const inSector = (br, [a, b]) => ((br - a + 360) % 360) <= ((b - a + 360) % 360);
+
 function tryBearing(g, aIdx, bearing, L, offFrac) {
   const realD = realDistFor(L);
   const { X, Z, n } = g;
@@ -330,7 +341,9 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
       const why = {};
       let bestOv = 9;
       // 方位角每 5° × 三檔側移目標:離線暴搜,不放過任何一組能全線走真實道路的解
+      const sectors = BEARING_SECTORS[id]?.[anchors.indexOf(anchor)];
       for (let i = 0; i < 72; i++) {
+        if (sectors && !sectors.some((s) => inSector(i * 5, s))) continue;
         for (const off of OFFSET_FRACS) {
           const r = tryBearing(g, aIdx, i * 5, L, off);
           if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }

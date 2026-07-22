@@ -397,15 +397,18 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   /**
-   * 地下道洞口開挖(2026-07-15):**只開挖approaches / 敞開段**,深山段完全不動 →
+   * 地下道洞口開挖(2026-07-15;2026-07-22 改制):**只開挖 approaches / 敞開段**,深山段完全不動 →
    * 天花板上方的山體地表保持原樣(照常鋪地被拼圖)。
    * runs: [{ pts:[[x,z]…], floors:[y…] }](floors = 該點的平直路面高度)。
-   * 規則:近走廊(≤ hw+3)且原地表低於「路面 + clear + 1」(= 山體不夠高、藏不住天花板的敞開/洞口段)→
-   *       壓到路面高 = 露出可通行的路;山體夠高處(covered)保持原地表不挖。
+   * 呼叫端(biomes.js)只送「敞開補集」折線(覆蓋段/縫合蓋廊段不送)—— 本函式對送進來的
+   * 走廊一律開挖,規則:原地表低於「路面 + clear + 1」(藏不住天花板)才動。
+   * 剖面:路廊(≤ hw+1)全深壓到路面高;向外至 hw+7 以 smoothstep 漸束回原地表 =
+   * 斜壁路塹,而非舊版垂直斷崖(拉伸三角形布幕 = 破圖主因之一)。
    */
   function carveTunnels(runs, { clear = 8, hw = 9 } = {}) {
     if (!runs?.length) return;
-    const near = hw + 3;
+    const full = hw + 1;
+    const near = hw + 7;
     const proj = (x, z, r) => {                       // 最近段 + 內插路面高
       let bd = Infinity, bf = 0;
       for (let i = 0; i < r.pts.length - 1; i++) {
@@ -427,7 +430,11 @@ export async function buildTerrain(cfg, onProgress) {
         for (const r of runs) {
           const p = proj(x, z, r);
           if (p.d > near) continue;
-          if (orig < p.floor + clear + 1) target = Math.min(target, p.floor);   // 敞開/洞口段才挖
+          if (orig < p.floor + clear + 1) {   // 藏不住天花板的敞開/洞口段才挖
+            const t = p.d <= full ? 0 : (p.d - full) / (near - full);
+            const w = t * t * (3 - 2 * t);    // smoothstep:路廊全深、外緣歸零 = 斜壁
+            target = Math.min(target, p.floor + (orig - p.floor) * w);
+          }
         }
         if (target < orig) heights[k] = target;
       }
@@ -436,6 +443,37 @@ export async function buildTerrain(cfg, onProgress) {
     for (let k = 0; k < N * N; k++) posAttr.array[k * 3 + 1] = heights[k];
     posAttr.needsUpdate = true;
     geo.computeVertexNormals();
+    // 開挖走廊影像重繪(2026-07-22):衛星影像在走廊上是原地物(深色森林/建物照片陰影),
+    // 被拉伸貼到挖出的路塹壁/溝底上就是整片黑色色塊(看似破圖)。沿走廊把畫布塗成開挖
+    // 岩土色 —— sampleColor 已於 stylize 前快照原始像素(idata),此處純視覺,
+    // 不影響地被分類、不耗共享 rnd。
+    if (imagery && mat?.map) {
+      const ictx = imagery.canvas.getContext('2d');
+      const toPx = (x, z) => {
+        const lng = center.lng + x * MAPGEO.REAL_SCALE / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
+        const lat = center.lat + (-z) * MAPGEO.REAL_SCALE / R_EARTH * 180 / Math.PI;
+        return [(lon2tx(lng, imagery.z) - imagery.tx0) * 256, (lat2ty(lat, imagery.z) - imagery.ty0) * 256];
+      };
+      const [ox] = toPx(0, 0), [tx] = toPx(10, 0);
+      const pxPerM = Math.abs(tx - ox) / 10 || 1;
+      ictx.save();
+      ictx.lineCap = 'round';
+      ictx.lineJoin = 'round';
+      for (const r of runs) {
+        for (const [color, w] of [['#877c6a', (near + 1.5) * 2], ['#948a76', hw * 2]]) {
+          ictx.strokeStyle = color;
+          ictx.lineWidth = Math.max(2, w * pxPerM);
+          ictx.beginPath();
+          r.pts.forEach(([x, z], i) => {
+            const [px, py] = toPx(x, z);
+            if (i === 0) ictx.moveTo(px, py); else ictx.lineTo(px, py);
+          });
+          ictx.stroke();
+        }
+      }
+      ictx.restore();
+      mat.map.needsUpdate = true;
+    }
   }
 
   onProgress?.(1, '地形完成');
