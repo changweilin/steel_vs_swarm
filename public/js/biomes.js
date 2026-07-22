@@ -51,7 +51,14 @@ const VEG_SCALE = {
   conifer2: 1.5, conifer3: 1.45, conifer4: 1.5,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
 };
-const OVERPASS = 'https://overpass-api.de/api/interpreter';
+// Overpass 鏡像輪替(2026-07-22 倫敦橋數浮動案):主站限流(429/504)是圖資逐局忽有忽無的
+// 主因之一 —— 限流回應是即時的,換鏡像重試幾乎不吃載入時間預算;逾時(abort)才放棄。
+// 與 tools/bake_venue_lanes.mjs 同一組鏡像。
+const OVERPASS_URLS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
 
 // ---- 決定性亂數(mulberry32):全房間共享同一片地貌 ----
 function mulberry32(seed) {
@@ -1586,25 +1593,30 @@ async function fetchOsmFeatures(bbox) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
-    const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const buildings = [], rails = [], falls = [], crossings = [];
-    for (const el of data.elements || []) {
-      const tags = el.tags || {};
-      if (el.type === 'way' && el.geometry && tags.railway) {
-        rails.push({ tags, geometry: el.geometry });
-      } else if (el.type === 'node' && tags.railway === 'level_crossing') {
-        crossings.push({ lat: el.lat, lng: el.lon, tags });
-      } else if (el.type === 'node' && tags.waterway === 'waterfall') {
-        falls.push({ lat: el.lat, lng: el.lon, tags });
-      } else {
-        const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
-        if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
+    for (const url of OVERPASS_URLS) {
+      try {
+        const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
+        if (!resp.ok) continue;   // 限流/伺服器錯誤:即時回應,換鏡像
+        const data = await resp.json();
+        const buildings = [], rails = [], falls = [], crossings = [];
+        for (const el of data.elements || []) {
+          const tags = el.tags || {};
+          if (el.type === 'way' && el.geometry && tags.railway) {
+            rails.push({ tags, geometry: el.geometry });
+          } else if (el.type === 'node' && tags.railway === 'level_crossing') {
+            crossings.push({ lat: el.lat, lng: el.lon, tags });
+          } else if (el.type === 'node' && tags.waterway === 'waterfall') {
+            falls.push({ lat: el.lat, lng: el.lon, tags });
+          } else {
+            const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
+            if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
+          }
+        }
+        return { buildings, rails, falls, crossings };
+      } catch {
+        if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
       }
     }
-    return { buildings, rails, falls, crossings };
-  } catch {
     return null;
   } finally {
     clearTimeout(timer);
@@ -1630,15 +1642,20 @@ async function fetchOsmRoads(bbox) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
-    const resp = await fetch(OVERPASS, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const roads = [];
-    for (const el of data.elements || []) {
-      if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
+    for (const url of OVERPASS_URLS) {
+      try {
+        const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
+        if (!resp.ok) continue;   // 限流/伺服器錯誤:即時回應,換鏡像
+        const data = await resp.json();
+        const roads = [];
+        for (const el of data.elements || []) {
+          if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
+        }
+        if (roads.length) return roads;   // 空結果(部分逾時)也換鏡像
+      } catch {
+        if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
+      }
     }
-    return roads.length ? roads : null;
-  } catch {
     return null;
   } finally {
     clearTimeout(timer);
@@ -1793,7 +1810,8 @@ function roadPropMeshes(group, parts, items) {
  * 節點鍵取 6 位小數(≈0.11m)= OSM 節點同一性;分岔(同節點 ≥3 條同類 way)不併,保守維持原樣。
  */
 function mergeGradeChains(roads) {
-  const out = roads.filter((w) => !((w.tags?.tunnel || w.tags?.bridge) && w.geometry?.length >= 2));
+  const plain = roads.filter((w) => !((w.tags?.tunnel || w.tags?.bridge) && w.geometry?.length >= 2));
+  const out = [];
   for (const kind of ['tunnel', 'bridge']) {
     // tunnel 優先歸隧道鏈:同時掛兩種 tag 的 way 不會進兩類
     const ways = roads.filter((w) => w.tags?.[kind] && !(kind === 'bridge' && w.tags.tunnel) && w.geometry?.length >= 2);
@@ -1843,7 +1861,87 @@ function mergeGradeChains(roads) {
       out.push({ tags: { ...w.tags }, geometry: chain });
     }
   }
-  return out;
+  // 鏈排在前(2026-07-22 倫敦橋數浮動案):buildRoads 的 maxRuns 截斷依陣列序,舊版鏈排尾端
+  // 使密路網市區的橋/隧道整批優先被犧牲(泰晤士河真橋忽有忽無)。立體結構是兵線與地標
+  // 關鍵物件,MUST 先建。
+  return out.concat(plain);
+}
+
+// ---- 橋樑單層原則(2026-07-22 倫敦上下兩層橋案)----
+// 每座橋的 deck 高度剖面由「自己鏈端點的地表高」內插(deckAt),兩座側向重疊的橋剖面
+// 幾乎必然不同 → 玩家看到上下兩層 + 兩套欄杆/橋墩。重疊來源有二,各修一刀:
+//  ① OSM 雙向分離車道:兩條平行 bridge way 各建一座 ≥PASS_W 寬的橋 → dedupeParallelBridges
+//  ② 兵線跨水補橋疊在真橋上 → dropLaneBridges(兵線走廊內真橋剔除,補橋是唯一結算)
+// 皆為純幾何確定性判定,不耗共享 rnd。
+
+/** 橋 way 的 deck 半寬(與 buildRoads 2134 行同一夾制) */
+const bridgeHw = (tags) => Math.max(roadWidth(tags || {}) / 2, PASS_W / 2);
+
+/** pts(世界座標折線取樣點)落在 poly 折線側向 threshold 內的比例(0~1) */
+function overlapFrac(pts, poly, threshold) {
+  if (!pts.length || poly.length < 2) return 0;
+  const t2 = threshold * threshold;
+  let hit = 0;
+  for (const [x, z] of pts) {
+    let inside = false;
+    for (let i = 1; i < poly.length && !inside; i++) {
+      const [ax, az] = poly[i - 1], [bx, bz] = poly[i];
+      const ex = bx - ax, ez = bz - az;
+      const L2 = ex * ex + ez * ez || 1;
+      const t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / L2));
+      const dx = x - (ax + ex * t), dz = z - (az + ez * t);
+      if (dx * dx + dz * dz < t2) inside = true;
+    }
+    if (inside) hit++;
+  }
+  return hit / pts.length;
+}
+
+/** ①平行雙幅去重:兩條 bridge 鏈側向大面積重疊(短鏈 ≥60% 取樣點落在長鏈 hw 和之內)→ 只留長鏈 */
+function dedupeParallelBridges(roads, center) {
+  const brs = [];
+  roads.forEach((w, i) => {
+    if (!w.tags?.bridge || w.tags.tunnel || !(w.geometry?.length >= 2)) return;
+    const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
+    let len = 0;
+    for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, z] of pts) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    brs.push({ i, pts, len, hw: bridgeHw(w.tags), minX, maxX, minZ, maxZ });
+  });
+  brs.sort((a, b) => b.len - a.len);   // 長者優先保留(確定性:len 相同時維持插入序)
+  const drop = new Set();
+  for (let a = 0; a < brs.length; a++) {
+    const A = brs[a];
+    if (drop.has(A.i)) continue;
+    for (let b = a + 1; b < brs.length; b++) {
+      const B = brs[b];
+      if (drop.has(B.i)) continue;
+      const th = A.hw + B.hw;
+      if (B.minX > A.maxX + th || B.maxX < A.minX - th || B.minZ > A.maxZ + th || B.maxZ < A.minZ - th) continue;
+      if (overlapFrac(B.pts, A.pts, th) >= 0.6) drop.add(B.i);
+    }
+  }
+  return drop.size ? roads.filter((_, i) => !drop.has(i)) : roads;
+}
+
+/**
+ * ②兵線走廊內真橋剔除:兵線跨水段一律自建全跨補橋(引道錨點在兵線上,NPC 沿線必上得去),
+ * 與其側向大面積重疊(≥35% 取樣點)的真 OSM 橋剔除 → 同處恆單層。
+ * X 形斜交(重疊比例低)保留 —— 立體交叉是現實存在的結構,只有平行堆疊才是破圖。
+ */
+function dropLaneBridges(roads, wetPieces, center) {
+  if (!wetPieces.length) return roads;
+  return roads.filter((w) => {
+    if (!w.tags?.bridge || w.tags.tunnel || !(w.geometry?.length >= 2)) return true;
+    const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
+    const th = bridgeHw(w.tags) + PASS_W / 2;
+    for (const piece of wetPieces) if (overlapFrac(pts, piece, th) >= 0.35) return false;
+    return true;
+  });
 }
 
 /** 世界公尺 → 經緯度(llToWorld 逆運算;兵線跨水補橋的偽 way 用)*/
@@ -1961,6 +2059,12 @@ function markGradeCorridors(roads, terrain, center, blocked) {
         if (run.length < 2) continue;
         const wet = run.wet === true;
         if (!bridge && !tunnel && !wet) continue;   // 一般乾地路段不是立體結構
+        // 沉錨橋碎片:與 buildRoads 同步跳過(該段不建橋 → 也不登記走廊/淨空);
+        // 閾值 MUST 用「沒入水下 1m」(岸壁高程可低到 ~0.1,見 buildRoads 同名註解)
+        const sunk = (p) => terrain.heightAt(p[0], p[1]) < WATER.LEVEL - 1.0;
+        if (!tunnel && (bridge
+          ? (sunk(run[0]) || sunk(run[run.length - 1]))
+          : wet && sunk(run[0]) && sunk(run[run.length - 1]))) continue;
         const hw = (bridge || wet) ? Math.max(hwWay, PASS_W / 2) : hwWay;
         const kind = tunnel ? 'tun' : 'bridge';
         const cum = [0];
@@ -2130,6 +2234,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       for (const run of pieces) {
       if (run.length < 2) continue;
       const brg = bridge || run.wet === true;
+      // 沉錨橋碎片不建(2026-07-22 倫敦雙層橋案):錨點高程沒入水下 ≥1m = 斷鏈/邊界裁切殘片
+      // (步橋鏈常在河面上的分岔節點斷開,mergeGradeChains 保守不併)—— 河床錨把 hA/hB 拖沉,
+      // 剖面沉成貼水浮板、疊在真橋之下 = 上下兩層(倫敦實測:斷點錨 h=−2.48)。
+      // 閾值紀律:岸壁/碼頭高程可低到 ~0.1(倫敦),用 isWaterPt 或 WATER.LEVEL 當閾值會把
+      // 真橋岸錨整批誤殺(實測 decks 1034→308);影像藍色也不可靠(斷點常在他橋正下方,像素
+      // 是橋面灰/缺磚底色)。「沒入水面下整整 1m」才是河床專屬特徵。寧缺勿錯:
+      //  - bridge way:任一錨沉即整段跳過(OSM 斷鏈的典型形態是單端斷在河面上);
+      //  - wet 自動橋:錨點是演算法外延的乾地,僅「雙端皆沉」(折線被邊界裁切)才跳過
+      //    —— 兵線跨水補橋因此永不受此刀影響。
+      const sunk = (p) => terrain.heightAt(p[0], p[1]) < WATER.LEVEL - 1.0;
+      if (brg && (bridge
+        ? (sunk(run[0]) || sunk(run[run.length - 1]))
+        : (sunk(run[0]) && sunk(run[run.length - 1])))) continue;
       // 跨水自動橋段夾通行寬(PASS_W):橋是兵線可能走的結構物;乾段維持原路寬
       const hw = brg ? Math.max(hwWay, PASS_W / 2) : hwWay;
       const mid = run[(run.length / 2) | 0];
@@ -2157,7 +2274,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
         const t = Math.min(1, s / 24, (total - s) / 24);   // s∈[0,total] 故 t 已夾 [0,1]
         const ramp = t * t * (3 - 2 * t);                  // smoothstep:兩端切線為 0,免三角函式
         const yLine = hA + (hB - hA) * (s / (total || 1)) + BRIDGE_RISE * ramp;
-        const floor = run.wet ? WATER.LEVEL + 0.9 : -Infinity;
+        // 水面下限給「全部橋 run」(2026-07-22;deckAt 只在 brg run 被呼叫):真 OSM 橋斷鏈/被邊界
+        // 裁切時端點可能落在河面上,hA/hB 取到水面高 → 舊版(僅 run.wet 有下限)剖面中段沉貼水面。
+        // 乾地高架此下限低於地表,max 無感。
+        const floor = WATER.LEVEL + 0.9;
         return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT, floor);
       };
       // 地下道:平直路面(兩端洞口地表高的內插)= 洞內在山體之下、洞口與地表齊平的通行道路
@@ -3454,14 +3574,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ②隧道敞開段與橋樑走廊先進 blocked → 建物/巨木/巨石等障礙不會生成在地下道/隧道內與橋下淨空。
   // 此區全程不耗共享 rnd(fetch/合併/開挖/走廊皆確定性)⇒ 佈局亂數序列與舊版一致。
   onProgress?.(0.03, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
-  let osmData = null, osmRoads = null;
-  if (terrain.sampleColor) [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  // OSM 抓取不再以影像成敗為前提(2026-07-22 倫敦橋數浮動案):舊版 `if (terrain.sampleColor)`
+  // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
+  // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
+  let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
   const osm = osmData?.buildings || null;
   // 隧道/橋樑分段合併(2026-07-15 二修):OSM 常把一條隧道/橋切成多條 way,共用節點
   // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表
   // (Λ 形斷面、覆蓋斷開、接縫殘留岩階 = 洞內隱形牆)。共端點的同類 way MUST 先併成
   // 完整鏈,carveTunnels 與 buildRoads 共用同一份 → 剖面一致、洞口 = 鏈的真端點。
-  if (osmRoads?.length) osmRoads = mergeGradeChains(osmRoads);
+  // 合併後平行雙幅橋去重(單層原則 ①)。
+  if (osmRoads?.length) osmRoads = dedupeParallelBridges(mergeGradeChains(osmRoads), center);
   // 地下道洞口開挖(真・下沉版):**只開挖敞開段/洞口**,深山段地表保持原樣(照常鋪地被拼圖)。
   // 路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。
   const tunnelRuns = [];
@@ -3494,12 +3617,35 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
     if (tunnelRuns.length) terrain.carveTunnels(tunnelRuns, { clear: TUN.CLEAR, hw: TUN.HW });
   }
+  // ---- 兵線跨水段定案(2026-07-22 確定性改制;開挖後計算,高度已定案,不耗共享 rnd)----
+  // 兵線是遊戲性關鍵路徑:跨水段的橋 MUST 與兵線幾何一樣確定,不得依賴 Overpass 逐局回傳
+  // (舊版 DECK_COVER 覆蓋率去重 → 真橋忽有忽無時兵線橋數 1~4 浮動、部分覆蓋時全跨補橋
+  // 疊在真橋上 = 上下兩層)。此處每個兵線泡水段一律預定一座全跨補橋(引道錨點 ±RAMP_M 在
+  // 兵線上,NPC 沿線走 smoothstep 引道自然上橋),並剔除兵線走廊內側向重疊的真橋(單層原則 ②)。
+  // osmRoads 失敗時兵線本身就是 roadInput,buildRoads 已為泡水段建橋 → 兩條路徑橋數一致。
+  const laneWetWays = [];
+  if (osmRoads?.length && cfg.lanes?.length) {
+    const wetPieces = [];
+    for (const lane of cfg.lanes) {
+      const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
+      for (const p of splitWaterPieces(pts, terrain)) {
+        if (p.wet === true && p.length >= 2) wetPieces.push(p);
+      }
+    }
+    if (wetPieces.length) {
+      osmRoads = dropLaneBridges(osmRoads, wetPieces, center);
+      for (const p of wetPieces) {
+        laneWetWays.push({ tags: { highway: 'primary' }, geometry: p.map(([x, z]) => worldToLL(x, z, center)) });
+      }
+    }
+  }
   // 道路輸入在此定案(離線備援 = 兵線當主要道路):走廊計算與 buildRoads MUST 吃同一份
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
-  // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)
-  const gradeCorridors = markGradeCorridors(roadInput, terrain, center, blocked);
+  // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
+  // 兵線補橋走廊一併登記(提前到地物散布之前 → 橋下淨空與真橋同等待遇)。
+  const gradeCorridors = markGradeCorridors(roadInput.concat(laneWetWays), terrain, center, blocked);
 
   // ---- 散佈植被 ----
   const areaKm2 = terrain.worldW * terrain.worldH / 1e6;
@@ -4274,35 +4420,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
   onProgress?.(0.9, '鋪設道路路面…');
   const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
-  // ---- 兵線跨水補橋(2026-07-15):兵線不在 OSM 路網上(合成側翼/離線弧)時,跨水段一樣
-  // MUST 有高架橋 —— 道路(兵線)通過大面積水域一定要建橋。只補「泡水且尚無真橋 deck 覆蓋」
-  // 的兵線段(偽 way 只含該泡水段,不重畫乾地路面 = 不與既有街道 z-fight)。
-  if (osmRoads?.length && cfg.lanes?.length) {
-    const deckIdx = makeDeckIndex(roadRes.decks);
-    const wetWays = [];
-    for (const lane of cfg.lanes) {
-      const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
-      for (const p of splitWaterPieces(pts, terrain)) {
-        if (p.wet !== true || p.length < 2) continue;
-        // 覆蓋率去重(取代單一中點驗;#2 倫敦泡水結構修):OSRM 導航兵線與 OSM 橋 way 常斜交/橫向
-        // 不完全重合 —— 中點落在真橋上、兩端漂出橋面的兵線用單點驗會「整段誤判已覆蓋」而略過,
-        // 兵線實走段就無 deck → NPC 沒入水。改逐點統計真橋覆蓋率:近乎全覆蓋(≥ COVER)才略過;
-        // 否則整段補「全跨」橋面(單一連續可站立 deck,乾地兩端 smoothstep 引道)。
-        // MUST NOT 改成「只補未覆蓋子段」:deckAt 讓橋端降回水面,子段接縫會與相鄰真橋橋面差
-        // 一整個 BRIDGE_RISE 高差(垂直台階、上不去);全跨橋維持 _surf 連續,重疊處僅輕微 z-fight,
-        // 且只在「本來就泡水的破損段」發生(健康全覆蓋段覆蓋率 100% → 不觸發 → 無新增 z-fight)。
-        let covered = 0;
-        for (const pt of p) if (deckIdx(pt[0], pt[1]) != null) covered++;
-        if (covered / p.length >= WATER.DECK_COVER) continue;   // 近乎全被真橋覆蓋,不重蓋
-        wetWays.push({ tags: { highway: 'primary' }, geometry: p.map(([x, z]) => worldToLL(x, z, center)) });
-      }
-    }
-    if (wetWays.length) {
-      const laneRes = buildRoads(group, wetWays, terrain, center, mix, rnd, season);
-      roadRes.decks.push(...laneRes.decks);
-      roadRes.cols.push(...laneRes.cols);
-      gradeCorridors.push(...markGradeCorridors(wetWays, terrain, center, blocked));
-    }
+  // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段
+  // 一律建全跨橋。不再查真橋覆蓋率(舊 DECK_COVER 去重使兵線橋數隨 Overpass 逐局浮動,
+  // 部分覆蓋時全跨補橋疊在殘缺真橋上 = 上下兩層);與兵線走廊側向重疊的真橋已於
+  // dropLaneBridges 剔除,此處恆單層。MUST NOT 改成「只補未覆蓋子段」:deckAt 讓橋端降回
+  // 水面,子段接縫會差一整個 BRIDGE_RISE 高差(垂直台階、上不去);全跨橋維持 _surf 連續。
+  // 走廊/淨空已於 gradeCorridors 一併登記,此處只補 decks/cols。
+  if (osmRoads?.length && laneWetWays.length) {
+    const laneRes = buildRoads(group, laneWetWays, terrain, center, mix, rnd, season);
+    roadRes.decks.push(...laneRes.decks);
+    roadRes.cols.push(...laneRes.cols);
   }
   const roadsBuilt = roadRes.built;
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)

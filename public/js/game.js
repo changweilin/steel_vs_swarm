@@ -4771,13 +4771,18 @@ export class BattleClient {
       const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
       const gy = this._surf(nx, nz, cur.y - lift);
       let ny = gy + lift;
-      // 兵線過水必有橋(#2 倫敦泡水保底):真實 OSM 橋面 deck 是窄帶,OSRM 導航兵線幾何抽稀後可能
-      // 側向漂出 deck ± DECK_MARGIN → 貼地取樣落回河床(< waterY)→ 地面 NPC 沒入水面下。
-      // 地面小兵設計上過水一律走橋、不會游泳,故在此夾住腳底不低於水面:漏建/錯位橋面時 NPC
-      // 至多浮在水面而非泡在水裡。純客戶端渲染,伺服器權威 y 不受影響(A1 相容);英雄/飛行體不夾
+      // 兵線過水必走橋(#2 倫敦泡水保底 + 2026-07-22 棘輪修):地面小兵設計上過水一律走橋、
+      // 不會游泳。surfaceAt 的 mount 台階(curY ≥ deck − DECK_STEP)是單向棘輪 —— 生成抖動/
+      // 塔推擠/迷霧刪重建(curY 以裸地形重播種)把 y 落到水面後,永遠爬不回 7.5m 高的橋面。
+      // 故泡水點(ny < waterY)上方查得到 deck 就直接貼橋:泡水點不存在「橋下通行」的合法情境;
+      // 乾地高架下 ny ≥ waterY 不進此分支,照舊可鑽橋下。查無 deck 才退回浮水面保底(漏建/錯位
+      // 橋面時至多浮在水面)。純客戶端渲染,伺服器權威 y 不受影響(A1 相容);英雄/飛行體不夾
       // (英雄可涉水吃凍結、飛行體本在空中)。waterY==null(無水盤)時 no-op。
       const wy = this.terrain.waterY;
-      if (wy != null && !ent.hero && !ent.flies && ny < wy) ny = wy;
+      if (wy != null && !ent.hero && !ent.flies && ny < wy) {
+        const d = this.terrain.deckY?.(nx, nz, this.terrain.deckMargin || 0);
+        ny = (d != null && d > wy) ? d : wy;
+      }
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
       if (ent.decoy || ent.kami) {
