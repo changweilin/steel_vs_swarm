@@ -1868,7 +1868,7 @@ export class BattleClient {
   }
 
   /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
-  _collide() {
+  _collide(px0, pz0) {
     const fly = this._flying();
     const H = this.selfH;
     const myR = H * (fly ? SELF_F.flyR : SELF_F.groundR);
@@ -1909,38 +1909,113 @@ export class BattleClient {
     const onDeck = surfHere > this.terrain.heightAt(this.pos.x, this.pos.z) + 1.0
       && dkY != null && Math.abs(surfHere - dkY) < 0.6;
     this._surfHere = surfHere; this._onDeck = onDeck;   // 供 _cameraDeClip 共用(免重算)
-    for (const b of this.terrain.blockers || []) {
-      if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
-      // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
-      // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
-      if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
-      if (b.hw2 != null) {
-        // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
-        const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
-        const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
-        const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
-        const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
-        if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) continue;  // 盒外
-        const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);    // 各軸穿透深度 → 沿最小穿透軸推出
-        let dlx = 0, dlz = 0;
-        if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
-        const dwx = dlx * cs - dlz * sn, dwz = dlx * sn + dlz * cs;   // local→world(繞 +ry)
-        this.pos.x += dwx; this.pos.z += dwz;
-        const nl = Math.hypot(dwx, dwz) || 1, nx = dwx / nl, nz = dwz / nl;
+
+    // 掃掠防穿透(2026-07-23):高速擊退 / 掉幀大 dt 會讓本幀位移「終點」落在障礙另一側 —— push-out
+    // 只查終點重疊,穿到另一側就偵測不到 → 破圖穿透。先沿位移 P0(px0,pz0)→P1(pos)掃掠,夾在「首個
+    // 真正被橫越(P0/P1 皆在外、線段進入)障礙」的前緣;正常慢速貼牆(終點落在障礙內)不觸發,交由
+    // 下方 push-out 沿牆滑。與 push-out 共用同一垂直閘 + onDeck 豁免。px0/pz0 缺(舊呼叫)則跳過。
+    if (px0 != null) this._sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop);
+
+    // push-out:密集街廓單趟推擠可能把機體從 A 推進 B(殘留重疊)→ 至多 3 趟收斂(穩定即止)
+    for (let pass = 0; pass < 3; pass++) {
+      let moved = false;
+      for (const b of this.terrain.blockers || []) {
+        if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
+        // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
+        // ε 0.1 併吞原嚴格不等式的 myBot > top 分支
+        if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
+        if (b.hw2 != null) {
+          // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
+          const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+          const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
+          const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
+          const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
+          if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) continue;  // 盒外
+          const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);    // 各軸穿透深度 → 沿最小穿透軸推出
+          let dlx = 0, dlz = 0;
+          if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
+          const dwx = dlx * cs - dlz * sn, dwz = dlx * sn + dlz * cs;   // local→world(繞 +ry)
+          this.pos.x += dwx; this.pos.z += dwz; moved = true;
+          const nl = Math.hypot(dwx, dwz) || 1, nx = dwx / nl, nz = dwz / nl;
+          const into = this.vel.x * nx + this.vel.z * nz;
+          if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
+          continue;
+        }
+        const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
+        const d = Math.hypot(dx, dz);
+        const min = myR + b.r;
+        if (d >= min || d === 0) continue;
+        const nx = dx / d, nz = dz / d;
+        this.pos.x += nx * (min - d);
+        this.pos.z += nz * (min - d);
+        moved = true;
         const into = this.vel.x * nx + this.vel.z * nz;
-        if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
-        continue;
+        if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞神木/巨岩/橋墩:吃掉速度分量
       }
-      const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
-      const d = Math.hypot(dx, dz);
-      const min = myR + b.r;
-      if (d >= min || d === 0) continue;
-      const nx = dx / d, nz = dz / d;
-      this.pos.x += nx * (min - d);
-      this.pos.z += nz * (min - d);
-      const into = this.vel.x * nx + this.vel.z * nz;
-      if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞神木/巨岩/橋墩:吃掉速度分量
+      if (!moved) break;
     }
+  }
+
+  /**
+   * 掃掠防穿透:沿本幀水平位移 P0(px0,pz0)→P1(this.pos)檢查機體圓盤(半徑 myR)是否「單幀橫越」
+   * 任一障礙。push-out 只查終點重疊,故高速擊退 / 掉幀大 dt 穿到另一側時偵測不到 → 破圖。此處求「首個
+   * 真正被橫越(P0 與 P1 皆在障礙外、進入參數 ∈(0,1])障礙」的進入點,夾住 pos 於其前緣(留 SKIN),
+   * 吃掉沿位移方向的速度;隨後 push-out 解殘留 + 切向。終點落在障礙內(正常慢速貼牆)不觸發 → 手感不變。
+   * 垂直閘 / onDeck 豁免與 push-out 同式;幾何式與 _blockerHitT / 盒推擠一致(圓柱 & 有向盒各一條)。
+   */
+  _sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop) {
+    const dx = this.pos.x - px0, dz = this.pos.z - pz0;
+    const len2 = dx * dx + dz * dz;
+    if (len2 < 1e-4) return;                          // 幾乎沒位移 → 交給 push-out
+    const len = Math.sqrt(len2);
+    const SKIN = 0.3;                                 // 停在前緣再退一截,免貼面
+    let bestT = Infinity;
+    for (const b of this.terrain.blockers || []) {
+      if (onDeck && b.y < surfHere - 3) continue;
+      if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
+      let tEnter = null;
+      // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd≤0)push-out 沿中心→P1 反向推 =
+      // 退回進入側 → 交給 push-out 沿牆滑(手感不變);遠半(fwd>0)push-out 會把機體推出「另一側」
+      // = 半穿透,故此處夾在進入面。終點在外(fwd 恆 >0 的真穿越)一律夾。
+      const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
+      if (b.hw2 != null) {
+        const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+        const ex = b.hw2 + myR, ez = b.hd2 + myR;
+        const o0x = (px0 - b.x) * cs + (pz0 - b.z) * sn, o0z = -(px0 - b.x) * sn + (pz0 - b.z) * cs;
+        if (Math.abs(o0x) < ex && Math.abs(o0z) < ez) continue;    // P0 已在盒內 → push-out 脫出
+        const p1x = (this.pos.x - b.x) * cs + (this.pos.z - b.z) * sn;
+        const p1z = -(this.pos.x - b.x) * sn + (this.pos.z - b.z) * cs;
+        if (Math.abs(p1x) < ex && Math.abs(p1z) < ez && fwd <= 0) continue;   // 終點在盒內近半 → push-out 沿牆滑
+        const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;     // 位移轉盒 local
+        let tmin = -Infinity, tmax = Infinity, ok = true;
+        for (const [o, u, e] of [[o0x, ux, ex], [o0z, uz, ez]]) {
+          if (Math.abs(u) < 1e-9) { if (o < -e || o > e) { ok = false; break; } continue; }
+          let t1 = (-e - o) / u, t2 = (e - o) / u; if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+          tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+        }
+        if (ok && tmax >= tmin && tmin > 0 && tmin <= 1) tEnter = tmin;
+      } else {
+        const R = b.r + myR;                          // 圓柱:2D 射線 × 圓(半徑外擴機體)
+        const ox = px0 - b.x, oz = pz0 - b.z;
+        if (ox * ox + oz * oz <= R * R) continue;     // P0 已在圓內 → push-out 脫出
+        const e1x = this.pos.x - b.x, e1z = this.pos.z - b.z;
+        if (e1x * e1x + e1z * e1z <= R * R && fwd <= 0) continue;  // 終點在圓內近半 → push-out 沿牆滑
+        const c = ox * ox + oz * oz - R * R;
+        const B2 = 2 * (ox * dx + oz * dz);
+        const disc = B2 * B2 - 4 * len2 * c;
+        if (disc < 0) continue;
+        const t0 = (-B2 - Math.sqrt(disc)) / (2 * len2);
+        if (t0 > 0 && t0 <= 1) tEnter = t0;
+      }
+      if (tEnter != null && tEnter < bestT) bestT = tEnter;
+    }
+    if (bestT === Infinity) return;                    // 無穿越
+    const t = Math.max(0, bestT - SKIN / len);         // 夾在前緣(留 skin,不越回 P0 之前)
+    this.pos.x = px0 + dx * t;
+    this.pos.z = pz0 + dz * t;
+    const ux = dx / len, uz = dz / len;                // 吃掉沿位移方向(正面撞牆)的速度
+    const into = this.vel.x * ux + this.vel.z * uz;
+    if (into > 0) { this.vel.x -= into * ux; this.vel.z -= into * uz; }
   }
 
   /**
@@ -5048,8 +5123,8 @@ export class BattleClient {
       }
     }
 
-    // 碰撞:不能穿過單位 / 塔 / 主堡
-    this._collide();
+    // 碰撞:不能穿過單位 / 塔 / 主堡 / 建物 / 神木 / 巨岩(px0,pz0 = 本幀位移起點,供掃掠防穿透)
+    this._collide(px0, pz0);
 
     // 邊界(地形範圍內縮 40m)
     this.pos.x = Math.max(this.terrain.minX + 40, Math.min(this.terrain.maxX - 40, this.pos.x));
