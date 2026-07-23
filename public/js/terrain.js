@@ -554,6 +554,126 @@ export async function buildTerrain(cfg, onProgress) {
     }
   }
 
+  /**
+   * 洞口打洞(2026-07-23 洞口透明化):把「戳進隧道斷面」的地形三角形從**繪製 index** 移除,
+   * `heights[]` 與 position 屬性一律不動 —— heightAt / 碰撞 / 迷霧 LOS / bakeWetGrid 全讀 heights
+   * 陣列,不讀三角形 ⇒ 這是**純視覺**開洞:單位照樣走不過山、砲火照樣打不穿(33b3c54 命脈不動)。
+   * 刪除條件三合一(缺一不可,缺了就是破頂或黑洞):
+   *   ① 任一頂點落在斷面走廊內(|側向 offset| ≤ hw、進洞深度 0.5 ~ depth);
+   *   ② 三角形有部分高過路面(整片在路面之下 = 被路面緞帶蓋著看不見,留著);
+   *   ③ 三角形有部分低於天花(整片在天花之上 = 山體本體,留著 ⇒ 高空俯瞰不破頂)。
+   * 亦即只刪「覆蓋轉換處那一圈把隧道斷面塞住的拉伸崖面(土牆)」。
+   * 地被層(拼圖底毯 / 細節實例)是**獨立圖層**,不一起讓開的話洞口望進去仍是一坡草皮貼在崖面上
+   * —— 故 covers 一併吃同一把尺(單一縫:判定只有這一份,地形與地被不可能對不齊)。
+   * @param bores [{x,z,ry,hw,depth,floorY,slope,clear,lift}];ry:局部 +Z = 洞外方向,slope = 每公尺進洞的路面高變化
+   * @param covers 地被層 Object3D 陣列(Mesh 打洞 / InstancedMesh 縮零實例)
+   * @returns { rims, touched } —— rims[i] = 該 bore 的洞緣邊 [[ax,ay,az,bx,by,bz]…](世界座標,建
+   *   collar 裙面用);touched[i] = 該 bore 的走廊內是否真有東西被刪掉(**含被鄰座 bore 認領的**:
+   *   平行雙孔隧道兩座門洞相距僅數公尺、bore 大幅重疊,重疊區三角形只會被第一座認領 —— 呼叫端
+   *   若拿 rims 判「打洞是否成功」會誤判第二座失敗而掛回黑暗面,那片黑板就正好擋在第一座洞口後面)
+   */
+  function punchPortalHoles(bores, covers = []) {
+    const rims = (bores || []).map(() => []);
+    const touched = (bores || []).map(() => false);
+    if (!bores?.length) return { rims, touched };
+    const B = bores.map((b) => ({ ...b, ca: Math.cos(b.ry), sa: Math.sin(b.ry), far2: (b.depth + b.hw + 24) ** 2 }));
+    /** 點是否落在該 bore 的斷面走廊內(不含高度判定) */
+    const inBore = (b, x, z) => {
+      const dx = x - b.x, dz = z - b.z;
+      if (dx * dx + dz * dz > b.far2) return false;
+      const lx = dx * b.ca - dz * b.sa, lz = dx * b.sa + dz * b.ca;
+      return Math.abs(lx) <= b.hw && lz <= -0.5 && lz >= -b.depth;
+    };
+    /** 該 bore 在此點深度的路面高(隧道路面是平直內插,slope 為定值) */
+    const floorAt = (b, x, z) => b.floorY
+      + b.slope * Math.min(b.depth, Math.max(0, -((x - b.x) * b.sa + (z - b.z) * b.ca)));
+    /**
+     * 通用打洞:index 就地壓實(寫入游標恆 ≤ 讀取游標,不會覆蓋未讀資料)+ drawRange 收尾 ——
+     * 不重配緩衝、不動 position/normal。回傳 own 陣列(供地形取洞緣)或 null。
+     */
+    const punchGeo = (g) => {
+      const index = g.getIndex();
+      if (!index) return null;
+      const tri = index.array, triN = (tri.length / 3) | 0;
+      const P = g.getAttribute('position').array;
+      const own = new Int16Array(triN).fill(-1);
+      let cut = 0;
+      for (let t = 0; t < triN; t++) {
+        const i0 = tri[t * 3] * 3, i1 = tri[t * 3 + 1] * 3, i2 = tri[t * 3 + 2] * 3;
+        const yLo = Math.min(P[i0 + 1], P[i1 + 1], P[i2 + 1]);
+        const yHi = Math.max(P[i0 + 1], P[i1 + 1], P[i2 + 1]);
+        const mx = (P[i0] + P[i1] + P[i2]) / 3, mz = (P[i0 + 2] + P[i1 + 2] + P[i2 + 2]) / 3;
+        for (let k = 0; k < B.length; k++) {
+          const b = B[k];
+          // ① 任一頂點在走廊內(三角形直徑 < 走廊寬,故「跨越但無頂點在內」不成立)
+          if (!inBore(b, P[i0], P[i0 + 2]) && !inBore(b, P[i1], P[i1 + 2]) && !inBore(b, P[i2], P[i2 + 2])) continue;
+          const fy = floorAt(b, mx, mz);
+          if (yHi <= fy + b.lift + 0.15) continue;      // ② 全在路面之下
+          if (yLo >= fy + b.clear + 0.25) continue;     // ③ 全在天花之上
+          touched[k] = true;                            // 重疊 bore 全部記帳(認領只給第一座)
+          if (own[t] < 0) { own[t] = k; cut++; }
+        }
+      }
+      if (!cut) return null;
+      return { own, tri, triN, P, index, g };
+    };
+    const compact = (r) => {
+      let w = 0;
+      for (let t = 0; t < r.triN; t++) {
+        if (r.own[t] >= 0) continue;
+        r.tri[w++] = r.tri[t * 3]; r.tri[w++] = r.tri[t * 3 + 1]; r.tri[w++] = r.tri[t * 3 + 2];
+      }
+      r.index.needsUpdate = true;
+      r.g.setDrawRange(0, w);
+    };
+    // ---- 地被層:Mesh 打洞、InstancedMesh 縮零(實例幾何共用,MUST NOT 動它的 index)----
+    const M = new THREE.Matrix4();
+    for (const o of covers) {
+      if (o.isInstancedMesh) {
+        let hit = false;
+        for (let i = 0; i < o.count; i++) {
+          o.getMatrixAt(i, M);
+          const e = M.elements, x = e[12], y = e[13], z = e[14];
+          if (e[0] === 0 && e[5] === 0) continue;      // 已縮零
+          let k = -1;
+          for (let j = 0; j < B.length && k < 0; j++) if (inBore(B[j], x, z)) k = j;
+          if (k < 0) continue;
+          const b = B[k], fy = floorAt(b, x, z);
+          if (y <= fy + b.lift + 0.15 || y >= fy + b.clear + 0.25) continue;
+          M.makeScale(0, 0, 0); o.setMatrixAt(i, M); hit = true;
+        }
+        if (hit) o.instanceMatrix.needsUpdate = true;
+      } else if (o.isMesh) {
+        const r = punchGeo(o.geometry);
+        if (r) compact(r);
+      }
+    }
+    // ---- 地形本體:打洞 + 取洞緣(collar 貼補用)----
+    const res = punchGeo(geo);
+    if (!res) return { rims, touched };
+    const { own, tri, triN, P } = res;
+    // 洞緣 = 只被一個「被刪三角形」用到的邊(被兩個用到 = 洞內部)。MUST 在 index 壓實之前算。
+    const NV = N * N, em = new Map();
+    for (let t = 0; t < triN; t++) {
+      const k = own[t];
+      if (k < 0) continue;
+      const v = [tri[t * 3], tri[t * 3 + 1], tri[t * 3 + 2]];
+      for (let e = 0; e < 3; e++) {
+        const p = v[e], q = v[(e + 1) % 3];
+        const key = p < q ? p * NV + q : q * NV + p;
+        const rec = em.get(key);
+        if (rec) rec.n++; else em.set(key, { n: 1, p, q, b: k });
+      }
+    }
+    for (const r of em.values()) {
+      if (r.n !== 1) continue;
+      rims[r.b].push([P[r.p * 3], P[r.p * 3 + 1], P[r.p * 3 + 2], P[r.q * 3], P[r.q * 3 + 1], P[r.q * 3 + 2]]);
+    }
+    // 舊法線保留:洞緣少了幾片面的平均法線差異肉眼不可辨,重算反而多跑一輪 N²
+    compact(res);
+    return { rims, touched };
+  }
+
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, carveTunnels, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, carveTunnels, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
 }

@@ -2163,7 +2163,7 @@ function markGradeCorridors(roads, terrain, center, blocked) {
   return corridors;
 }
 
-function buildRoads(group, roads, terrain, center, mix, rnd, season) {
+function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []) {
   const inb = 4;
   const buckets = new Map();   // `${biome}|${main}` -> { color, pos, nrm, col, uv, idx, base }
   const bucketOf = (biome, main) => {
@@ -2182,14 +2182,17 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
   // 標線合併幾何(頂點色 = 黃/白):雙黃線/白虛線/路緣邊線/斑馬線全進同一 draw call
   const mark = { pos: [], nrm: [], col: [], idx: [], base: 0 };
   const MARK_Y = [1.0, 0.78, 0.28], MARK_W = [0.95, 0.96, 0.9];   // 標線黃 / 標線白
-  // hM = 該截面最高點(標線跟路面吃同一條夾高規則,才不會沉進被抬高的路面下)
-  const putMark = (vx, vz, lift2, c, hM = -Infinity) => {
-    mark.pos.push(vx, Math.max(terrain.heightAt(vx, vz), hM - CLAMP) + lift2, vz);
+  // hM = 該截面最高點(標線跟路面吃同一條夾高規則,才不會沉進被抬高的路面下)。
+  // yB ≠ null 時直接以它為基準(結構隧道:路面在山體之下,貼地取樣會把標線畫到山頂;
+  // 平直剖面無橫坡,夾高規則本來就用不上)。
+  const putMark = (vx, vz, lift2, c, hM = -Infinity, yB = null) => {
+    mark.pos.push(vx, (yB ?? Math.max(terrain.heightAt(vx, vz), hM - CLAMP)) + lift2, vz);
     mark.nrm.push(0, 1, 0);
     mark.col.push(...c);
   };
-  // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫);hw2 = 路半寬(夾高取樣)
-  const emitLine = (run, hw2, lift2, off, w, c) => {
+  // 沿折線的縱向實線:偏移 off、寬 w(雙黃線 = 兩次呼叫);hw2 = 路半寬(夾高取樣);
+  // yBAt(i) = 該頂點的路面基準高(結構隧道用,回 null 走貼地)
+  const emitLine = (run, hw2, lift2, off, w, c, yBAt = null) => {
     const nP = run.length, k0 = mark.base;
     for (let i = 0; i < nP; i++) {
       const [x, z] = run[i];
@@ -2197,11 +2200,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       let dx = b2[0] - a[0], dz = b2[1] - a[1];
       const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
       const px = dz, pz = -dx;
-      const hM = Math.max(terrain.heightAt(x + px * hw2, z + pz * hw2),
-                          terrain.heightAt(x - px * hw2, z - pz * hw2));
+      const yB = yBAt ? yBAt(i) : null;
+      const hM = yB !== null ? -Infinity
+        : Math.max(terrain.heightAt(x + px * hw2, z + pz * hw2),
+                   terrain.heightAt(x - px * hw2, z - pz * hw2));
       // 頂點序:大偏移在前(與路面quad同向繞行 → 面朝 +y,不會背面剔除消失)
-      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c, hM);
-      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c, hM);
+      putMark(x + px * (off + w / 2), z + pz * (off + w / 2), lift2, c, hM, yB);
+      putMark(x + px * (off - w / 2), z + pz * (off - w / 2), lift2, c, hM, yB);
     }
     for (let i = 0; i < nP - 1; i++) {
       const k = k0 + i * 2;
@@ -2318,6 +2323,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       // 乾段(splitWaterPieces 已逐點判定無泡水跨距)中點取到水色 = 河岸取樣誤差,
       // 整段丟棄會讓沿河街道憑空消失(2026-07-17 巴黎塞納河岸案)→ 退回城市路面色。
       if (biome === 'water' && !brg) biome = 'urban';
+      // 結構隧道恆為柏油(2026-07-23):中點取樣落在**覆蓋段上方的山體**影像上(森林/裸岩),
+      // 分類會判成綠地/裸露地 → 隧道鋪成泥土路(使用者實測金龍隧道)。隧道是工程結構物,
+      // 現實中不存在土石路面 —— 與上面「橋段取到水色」同一道理,直接定調柏油。
+      if (strc) biome = 'urban';
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       const cum = [0];
@@ -2464,7 +2473,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
             if (portals.length >= 12) break;
             if (!ok) continue;
             const [ex, ez, ddx, ddz] = at(s);
-            portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1 });
+            // hw/slope/depth 供洞口打洞 + collar(punchPortalHoles):slope = 每公尺「進洞」的路面高
+            // 變化(進洞方向 = 局部 −Z);depth 夾到本區間長度,兩端洞的走廊最多在遠端相接不越界。
+            portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1,
+                           hw, slope: tFloorAt(s + sgn) - tFloorAt(s), depth: Math.min(e1 - e0, 40) });
           }
         }
       }
@@ -2551,34 +2563,40 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
           }
         }
       }
-      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫;
-      //      結構隧道不畫 —— putMark 貼地取樣會把標線畫到覆蓋段上方的山頂)----
-      if (!brg && !strc && biome === 'urban' && hw >= 2) {
+      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫)----
+      // 結構隧道(2026-07-23 起)照畫:洞內是柏油車道,沒有標線的隧道很出戲。**MUST** 走
+      // yBAt 基準高(= 隧道平直路面 tFloorAt,與路面緞帶同源),回退貼地取樣會把標線畫到
+      // 覆蓋段上方的山頂(舊版索性整段跳過就是為了躲這個坑)。
+      const markYB = strc ? (i) => tFloorAt(cum[i]) : null;
+      if (!brg && biome === 'urban' && hw >= 2) {
         if (main) {
           if (arterial) {                        // 幹道:雙黃實線分向
-            emitLine(run, hw, 0.58, 0.33, 0.2, MARK_Y);
-            emitLine(run, hw, 0.58, -0.33, 0.2, MARK_Y);
+            emitLine(run, hw, 0.58, 0.33, 0.2, MARK_Y, markYB);
+            emitLine(run, hw, 0.58, -0.33, 0.2, MARK_Y, markYB);
           } else {                               // 次要道:單白虛線
             for (let s = 5; s + 3.2 < total; s += 9.5) {
               const k = mark.base;
               for (const d of [s, s + 3.2]) {
                 const [ex, ez, ddx, ddz] = at(d);
                 const qx = ddz, qz = -ddx;
-                const hM = Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
-                                    terrain.heightAt(ex - qx * hw, ez - qz * hw));
-                putMark(ex + qx * 0.28, ez + qz * 0.28, 0.58, MARK_W, hM);
-                putMark(ex - qx * 0.28, ez - qz * 0.28, 0.58, MARK_W, hM);
+                const yB = strc ? tFloorAt(d) : null;
+                const hM = yB !== null ? -Infinity
+                  : Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
+                             terrain.heightAt(ex - qx * hw, ez - qz * hw));
+                putMark(ex + qx * 0.28, ez + qz * 0.28, 0.58, MARK_W, hM, yB);
+                putMark(ex - qx * 0.28, ez - qz * 0.28, 0.58, MARK_W, hM, yB);
               }
               mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
               mark.base += 4;
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
-          emitLine(run, hw, 0.56, hw * 0.78, 0.18, MARK_W);
-          emitLine(run, hw, 0.56, -hw * 0.78, 0.18, MARK_W);
+          emitLine(run, hw, 0.56, hw * 0.78, 0.18, MARK_W, markYB);
+          emitLine(run, hw, 0.56, -hw * 0.78, 0.18, MARK_W, markYB);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
-        if (main && lamps.length < 380) {
+        // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體)
+        if (!strc && main && lamps.length < 380) {
           let side = rnd() < 0.5 ? 1 : -1;
           for (let s = 14 + rnd() * 10; s < total - 8 && lamps.length < 380; s += 40) {
             const [ex, ez, ddx, ddz] = at(s);
@@ -2819,8 +2837,83 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
     capM.frustumCulled = false;
     group.add(capM);
   }
-  // ---- 隧道門洞:額牆 + 黑洞面 + 兩翼擋土牆(嵌進山壁,面朝來路)----
-  for (const p of portals) {
+  // ---- 洞口透明化(2026-07-23):地形打洞 + collar 貼補 ----
+  // 洞口望進去原本是一面土牆 —— 覆蓋轉換處的地形斷面(一格寬、從路面高拉到山高的陡面),
+  // 橫在天花以下、兩側牆之間,側牆天花都遮不到,舊版只能靠一片黑色暗面正面擋住(= 一片黑板)。
+  // 改制:把「戳進隧道斷面」的地形三角形從**繪製 index** 刪掉(heights[] 不動 ⇒ 碰撞/LOS/
+  // heightAt 完全不受影響,純視覺),洞外即直接看見真實內部(路面/牆/天花/照明往深處延伸)。
+  // 刪出來的洞緣是規則方格(格線對齊、純幾何無 rnd ⇒ 跨客戶端同一個洞),與斜向 bore 之間的
+  // 鋸齒縫由 collar 漏斗裙補死:
+  //   外環 = 洞緣頂點本身(與地形共用同一組座標 ⇒ 逐點水密,不可能有縫);
+  //   內環 = 把洞緣點「夾制」到隧道斷面矩形上(夾制連續 ⇒ 內環是貼在管身表面的封閉曲線)。
+  // ⇒ 任一條視線不是打到地形、就是打到 collar、再不然就是進到管內看見隧道,沒有第四種可能。
+  const punch = portals.length && terrain.punchPortalHoles
+    ? terrain.punchPortalHoles(portals.map((p) => ({
+      x: p.x, z: p.z, ry: p.ry, hw: p.hw, depth: p.depth,
+      floorY: p.y, slope: p.slope, clear: TUN.CLEAR, lift: ROAD_LIFT,
+    })), covers)
+    : { rims: [], touched: [] };
+  const rims = punch.rims;
+  if (rims.some((r) => r.length)) {
+    const collar = { pos: [], nrm: [], idx: [], base: 0 };
+    const INSET = 0.15;   // 內環往管內壓一點點 ⇒ 與牆/天花是「重疊」而非「對縫」,公差再差也無縫可漏
+    for (const [pi, p] of portals.entries()) {
+      const rim = rims[pi];
+      if (!rim?.length) continue;
+      const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
+      const xMax = p.hw - INSET;
+      // 洞緣點 → 隧道斷面矩形(地板~天花 × ±hw)上的對應點;縱向也夾在管身範圍內
+      // (管身只存在於 −depth ≤ z ≤ 0,投到管外 = 貼到不存在的面 = 漏)
+      const proj = (x, y, z) => {
+        const dx = x - p.x, dz = z - p.z;
+        const lx = dx * ca - dz * sa;
+        const lz = Math.min(-0.2, Math.max(-p.depth, dx * sa + dz * ca));
+        const fy = p.y + p.slope * (-lz);
+        const qx = Math.max(-xMax, Math.min(xMax, lx));
+        const qy = Math.max(fy, Math.min(fy + TUN.CLEAR - INSET, y));
+        return [p.x + qx * ca + lz * sa, qy, p.z - qx * sa + lz * ca];
+      };
+      // 視線側參考點:洞口上方 —— 洞是朝「門洞方向 + 上方」開的,法線一律朝這側(打光才對)
+      const eye = [p.x, p.y + TUN.CLEAR + 12, p.z];
+      for (const [ax, ay, az, bx, by, bz] of rim) {
+        const [ux, uy, uz] = proj(ax, ay, az);
+        const [vx, vy, vz] = proj(bx, by, bz);
+        // 兩端都退化(洞緣本來就落在管身斷面內,如路面下方那圈)= 零面積裙,跳過
+        if (Math.abs(ax - ux) + Math.abs(ay - uy) + Math.abs(az - uz)
+          + Math.abs(bx - vx) + Math.abs(by - vy) + Math.abs(bz - vz) < 0.02) continue;
+        let nx = (by - ay) * (vz - az) - (bz - az) * (vy - ay);
+        let ny = (bz - az) * (vx - ax) - (bx - ax) * (vz - az);
+        let nz = (bx - ax) * (vy - ay) - (by - ay) * (vx - ax);
+        const nl = Math.hypot(nx, ny, nz);
+        if (nl < 1e-6) continue;
+        nx /= nl; ny /= nl; nz /= nl;
+        const cxm = (ax + bx + ux + vx) / 4, cym = (ay + by + uy + vy) / 4, czm = (az + bz + uz + vz) / 4;
+        if (nx * (eye[0] - cxm) + ny * (eye[1] - cym) + nz * (eye[2] - czm) < 0) { nx = -nx; ny = -ny; nz = -nz; }
+        const k = collar.base;
+        for (const v of [[ax, ay, az], [bx, by, bz], [vx, vy, vz], [ux, uy, uz]]) {
+          collar.pos.push(v[0], v[1], v[2]); collar.nrm.push(nx, ny, nz);
+        }
+        collar.idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+        collar.base += 4;
+      }
+    }
+    if (collar.idx.length) {
+      const cgeo = new THREE.BufferGeometry();
+      cgeo.setAttribute('position', new THREE.Float32BufferAttribute(collar.pos, 3));
+      cgeo.setAttribute('normal', new THREE.Float32BufferAttribute(collar.nrm, 3));
+      cgeo.setIndex(collar.idx);
+      // 材質沿用門洞混凝土(同一座洞口的額牆/翼牆/collar 是同一構造物)。DoubleSide:collar 恆在
+      // 管身**之外**(外環在地形上、內環貼管壁),幾何上不可能橫跨斷面 ⇒ 不會重演「暗面 DoubleSide
+      // = 出洞黑牆」那一坑;反過來單面若有一片繞行判錯就是一個看穿的破洞,取水密不取單面。
+      const cm = new THREE.Mesh(cgeo, envMat(0x9a958c, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+      cm.frustumCulled = false;
+      cm.userData.noOutline = true;
+      group.add(cm);
+    }
+  }
+  // ---- 隧道門洞:額牆 + 兩翼擋土牆(嵌進山壁,面朝來路)----
+  for (const [pi, p] of portals.entries()) {
     const g = new THREE.Group();
     const W = Math.max(6, p.w), H2 = Math.max(6.5, p.h || 6.5);   // 門洞高 ≥ 隧道淨空(最大機甲進得去)
     const wallM = envMat(0x9a958c, { wash: 0.4, cool: 0.45 });
@@ -2840,13 +2933,16 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season) {
       wing.rotation.y = s * 0.5;
       g.add(wing);
     }
-    // 洞口暗面(2026-07-22):嵌在開口內側、只朝外(FrontSide)—— 從洞外看是進深的黑暗洞身,
-    // 遮住覆蓋轉換面的拉伸地形布幕(門洞後面原本直接是一面土牆 = 破圖);從洞內向外看
-    // 背面剔除不存在,出洞視野不被擋。無碰撞,照樣走得進去(維持「真的洞」原則)。
-    const mouth = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.6, H2 - 1.2),
-      envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0 }));
-    mouth.position.set(0, (H2 - 1.2) / 2, -1.3);
-    g.add(mouth);
+    // 洞口暗面(2026-07-22;2026-07-23 退居備援):嵌在開口內側、只朝外(FrontSide)遮住覆蓋
+    // 轉換面的拉伸地形布幕。洞口打洞成功時土牆已不存在、collar 接手封邊 ⇒ 這片黑板多餘且
+    // 正是「洞外一片黑」的元凶,不掛。**只有打洞落空**(terrain 無 punchPortalHoles / 該座洞沒有
+    // 可刪的崖面三角形)才降級掛回去 —— 寧可黑,不可露出土牆(§4 失敗策略 = 降級不例外)。
+    if (!punch.touched[pi]) {
+      const mouth = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.6, H2 - 1.2),
+        envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0 }));
+      mouth.position.set(0, (H2 - 1.2) / 2, -1.3);
+      g.add(mouth);
+    }
     // 洞口警示條紋(黃黑相間,貼在洞頂上緣):標示通行淨空邊界
     const stripeN = 8, stripeSpan = W - 1.6, stripeW = stripeSpan / stripeN;
     for (let si = 0; si < stripeN; si++) {
@@ -4566,6 +4662,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   onProgress?.(0.88, '鋪設地表覆蓋層…');
   const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
   const grnd = mulberry32(gseed ^ 0x51AB);
+  const gcStart = group.children.length;   // 洞口打洞用:此後加入 group 的都是地被層(底毯拼圖 + 細節實例)
   const ground = buildGroundCover(group, terrain, {
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
     classifyAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), mix, grnd),
@@ -4580,7 +4677,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
   onProgress?.(0.9, '鋪設道路路面…');
-  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season);
+  // 地被層一併送進 buildRoads:洞口打洞時地形與地被拼圖/細節 MUST 用同一把尺讓開,
+  // 只挖地形的話洞口望進去仍是一坡貼在崖面上的草皮拼圖(地被是獨立圖層)。
+  const coverMeshes = group.children.slice(gcStart);
+  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes);
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段
   // 一律建全跨橋。不再查真橋覆蓋率(舊 DECK_COVER 去重使兵線橋數隨 Overpass 逐局浮動,
   // 部分覆蓋時全跨補橋疊在殘缺真橋上 = 上下兩層);與兵線走廊側向重疊的真橋已於
