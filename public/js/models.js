@@ -6,7 +6,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
-import { SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo, CIVILIANS } from './data.js';
+import {
+  SIDES, CHARACTERS, recoilTier, THIRD, isThirdSide, sideInfo, CIVILIANS,
+  SOLDIER_H, MORPH_HUMANOID, heroTargetH, TARGET_H,
+} from './data.js';
 import { toonMat, toonify, outlinify } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 
@@ -26,50 +29,12 @@ export const MODEL_MANIFEST = Object.assign({
   'base:STEEL':   'assets/models/quaternius/structure.glb',     // 鋼鐵主堡(工業塔)
 }, (typeof window !== 'undefined' && window.MODEL_MANIFEST_EXTRA) || {});
 
-// ---- 尺度基準(2026-07-10 改制)----
-// 步兵 = 真人身高 SOLDIER_H,是全遊戲唯一的「身高單位」。人員/載具/建物一律用真實世界
-// 公稱尺寸,不再有超尺度倍率(舊制步兵 3.2m,建物/植被便得靠 biomes.js OVER ×1.8 補回比例)。
-export const SOLDIER_H = 1.8;
-
-// 機體尺寸(2026-07-12 改制,相對真人身高):
-//   機甲 / 變形機甲(不分型態)= 150%~250%、無人機 = 75%~150%。
-// 倍率仍隨 mods.armor 在該機種護甲區間內線性內插:
-// 高防禦 = 更巨大 = 剪影更大 = 更容易被命中(命中是客戶端對 mesh raycast,體型直接生效)。
-const HERO_SIZE = {
-  robot: { armor: [12, 26], mul: [1.5, 2.5] },
-  morph: { armor: [5, 24], mul: [1.5, 2.5] },
-  drone: { armor: [3, 12], mul: [0.75, 1.5] },
-};
-const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)—— 但不得跌破機種下限
-// 變形機甲的人形地面型(vis.ground):其餘值一律四足獸型
-export const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
-
-/** 英雄機體顯示高度(公尺):依角色護甲值在機種區間內插 */
-export function heroTargetH(kind, ch) {
-  const S = HERO_SIZE[kind];
-  if (!S) return SOLDIER_H * 4;
-  const c = CHARACTERS[ch];
-  const armor = c?.mods?.armor;
-  const t = armor == null ? 0.5 : clamp01((armor - S.armor[0]) / (S.armor[1] - S.armor[0]));
-  const h = SOLDIER_H * (S.mul[0] + (S.mul[1] - S.mul[0]) * t);
-  // 獸型矮化:機甲看 visual.form;變形機甲看 visual.ground(非人形即四足獸,體長換高度)。
-  // 矮化後 MUST 夾回機種區間下限 —— 機甲/變形機甲不分型態都要 ≥ 150% 真人身高。
-  const quad = c?.visual?.form === 'beast'
-    || (c?.visual?.ground && !MORPH_HUMANOID.has(c.visual.ground));
-  return quad ? Math.max(SOLDIER_H * S.mul[0], h * BEAST_H_F) : h;
-}
-
-// 非英雄單位顯示高度(公尺;fitToHeight 自動縮放)。人員/載具 = 真實世界尺寸;
-// 塔/主堡是虛構工事,維持既有的地標級量體。
-const TARGET_H = {
-  // decoy:fitToHeight 量的是「高度」— 餌機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
-  decoy: 1.4,
-  'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
-  'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
-  tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
-  bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
-  civ: SOLDIER_H,   // 平民/間諜(真人身高)
-};
+// ---- 尺度基準 / 機體高度 ----
+// 2026-07-23 起實體高度住 `data.js`(SOLDIER_H / HERO_SIZE / heroTargetH / TARGET_H):
+// 伺服器 `_blast`/`_lanceHits` 的命中量體(打到哪個部位就在那裡結算)與這裡的顯示高度
+// **MUST 是同一把尺** —— 渲染縮放與命中判定分家 = 看得到打不到。本檔只做 re-export,
+// 既有 `import { SOLDIER_H, heroTargetH, MORPH_HUMANOID } from './models.js'` 呼叫端不動。
+export { SOLDIER_H, heroTargetH, MORPH_HUMANOID };
 
 const loader = new GLTFLoader();
 const cache = {};   // key -> { scene, animations } 或 null(載入失敗)

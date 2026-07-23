@@ -56,6 +56,12 @@
   **MUST NOT** 手寫逐武器分類表,也 MUST NOT 在結算/演出端各自比對 `def.type`。
 - 直線貫穿的演出唯一入口 `_lanceVisual()`(自機/他人/bot 共用);圓柱粗細 **MUST** 取 `lanceR(def)`
   = 伺服器實際判定半徑(看到多粗就是打到多粗,MUST NOT 為了好看放大)。
+- 拋物線武器(`trajClass==='lob'`)的火控解只住 `game.js _lobAim()`(每幀在擊發前定案 `this._lobFc`):
+  出膛向量、瞄準虛線、鎖定光暈、FPV 砲管仰角**共用同一份**,MUST NOT 在擊發/繪製端各解一次。
+  光暈亮不亮 = `_arcTrace` 的 `minD ≤ BALLISTIC.LOB_TOL`(彈道真的通過瞄準點),MUST NOT 退回準星直射線判定。
+- 機體高度只住 `data.js`(`SOLDIER_H`/`HERO_SIZE`/`heroTargetH()`/`TARGET_H`,`models.js` 只 re-export):
+  同一把尺同時餵渲染縮放(`fitToHeight`)與**伺服器命中量體** `hitH()`(`sim._bodySpan/_bodyDy` 的機體垂直帶)。
+  爆風/貫穿 **MUST** 量到垂直帶最近點,MUST NOT 只取單位底部或單一取樣點(打中塔頂/頭部會判成十幾公尺外)。
 - 共用視覺入口唯一:`spawnCastFx()`(招式 3D 演出)、`stepCombatFx()`(開火動畫)、`terrain.surfaceAt()`(站立表面)— 戰場與展示台/各呼叫端 **MUST NOT** 各寫一套。
 
 ### 2.2 狀態鍵與迴圈粒度
@@ -139,6 +145,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 |---|---|
 | 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` |
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
+| `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`(榴彈火控解) | 瀏覽器真開房冒煙:同一目標三個高度各射一發,`bullet.vel` MUST 等於 `_lobFc.vel`、爆點高度 MUST 對上瞄準高度;弧高 MUST 隨距離變(40m ≈ 0.2m / 172m ≈ 3.7m);合成稜線擋道 MUST `ok:false` 且不送 `lock` |
+| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中 |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗(`[#INC-104]` 輕武器 NPC 基準 range MUST ≥170;t01/s02 是確定性指定角 MUST 保持 crit:0;s02 heavy MUST 保持 launcher)+ 重驗「塔 310 > 所有輕武器/NPC」壓制不等式與「所有重武器 > 塔 310」不等式 |
 | 骨架/關節/步態 | 全角色 rig 稽核 + `node tools/audit_cast_jump.mjs` |
 | 武裝掛點/槍口 | `audit_muzzle.mjs` 範式(32 英雄 + NPC 四陣營) |

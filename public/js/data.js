@@ -463,8 +463,24 @@ export const VITALS = {
 // 對空彈射模式(2026-07-23 使用者需求):launcher 準星錐(AA_CONE 弧度)內掃到飛行類目標
 // (TARGET_CLASS 'air':無人機/直升機/餌機)即改用高初速 AA_MV —— 拋物線吊射打不到會動的飛行單位,
 // 高速平直彈道才有火控意義(射程/傷害不變,只換初速 ⇒ 純客戶端彈道,伺服器仍只驗落點)。
+// AA_MV 720(原 340;使用者「再更快更直」):實際初速取 min(武器真實 mv, AA_MV) ——
+// 彈射模式 = **全裝藥直射**,砲彈跑該武器的真實初速(152mm 650 / 無後座砲 435 / 集束彈 400),
+// 只有真實初速本就慢的溫壓火箭(120)維持慢速。MUST NOT 改成無視 mv 的固定值(超過真實初速)。
 // AA_ALT:他人視覺彈體(_spawnVisShell)無法得知對方準星,改以「落點離地高度」推定對空射擊。
-export const BALLISTIC = { G: 9.81, LAUNCH_MV: 100, AA_MV: 340, AA_CONE: 0.14, AA_ALT: 10 };
+// ---- 榴彈火控解(2026-07-23 使用者需求:彈道要隨距離與仰角改變,遵守真實彈道學)----
+// 拋物線武器(trajClass 'lob')不再沿準星直射:game.js `_lobAim()` 解「以 LAUNCH_MV 命中準星落點」
+// 的拋射角(低伸解;被地形/障礙擋住才換高角度解 = 真實榴彈砲的高角度越頂射擊)⇒ 出膛仰角、
+// 弧高、飛行時間全隨目標距離/高差自然改變,而不是一條固定曲線。
+// LOB_TOL:積分落點與瞄準點的容差(公尺)—— 超過即「拋物線未對準」:落點環轉警示色、
+//   鎖定光暈不亮(使用者規則「射程光暈要在拋物線對準時才亮」)。
+// LOB_SUP_MAX:FPV 砲管跟著抬的超高仰角上限(rad,≈51°)—— 只夾視覺,不夾彈道解。
+// LOB_CHARGE:裝藥號數(相對全裝藥的初速比)。低伸解被稜線/建物擋住就降一號 —— 初速降低 ⇒
+//   命中同一點所需仰角自動抬高、弧線變高,這是真實榴彈砲越過遮蔽物的作法(不是另發明一套曲射)。
+//   MUST NOT 改用「高角度解」(同初速的另一個根):現尺度下那是 85° 迫砲彈,飛行 20 秒沒有戰術意義。
+export const BALLISTIC = {
+  G: 9.81, LAUNCH_MV: 100, AA_MV: 720, AA_CONE: 0.14, AA_ALT: 10,
+  LOB_TOL: 3.5, LOB_SUP_MAX: 0.70, LOB_CHARGE: [1, 0.78, 0.6, 0.46],
+};
 export const armorMul = (ar, pen = 0) => {
   const a = Math.max(0, (ar || 0) - (pen || 0));
   return 1 - a / (a + VITALS.AR_K);
@@ -684,6 +700,68 @@ export const TERRAIN_FX = {
 // TUN_CLEAR_M:隧道路面→天花淨空(遊戲公尺)。單一縫:biomes.js 建洞(TUN.CLEAR)與
 // sim.js 飛行體所在層推定(_unitLev:飛行高度 ≥ 淨空 ⇒ 必在山體上方,非洞內)共用。
 export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8 };
+
+// ================= 機體實體高度 / 命中量體(2026-07-10 尺度基準;2026-07-23 移入本檔)=================
+// 步兵 = 真人身高 SOLDIER_H,是全遊戲唯一的「身高單位」。人員/載具/建物一律用真實世界
+// 公稱尺寸,不再有超尺度倍率(舊制步兵 3.2m,建物/植被便得靠 biomes.js OVER ×1.8 補回比例)。
+// **住在 data.js 的理由**:這組值同時是「渲染縮放」(models.js fitToHeight)與「伺服器命中量體」
+// (sim._blast/_lanceHits 的垂直帶 —— 打到機體哪個部位就在那裡結算)。兩端 MUST 共用同一把尺,
+// 各寫一份 = 看得到卻打不到。models.js 只做 re-export,呼叫端不動。
+export const SOLDIER_H = 1.8;
+
+// 機體尺寸(2026-07-12 改制,相對真人身高):
+//   機甲 / 變形機甲(不分型態)= 150%~250%、無人機 = 75%~150%。
+// 倍率仍隨 mods.armor 在該機種護甲區間內線性內插:
+// 高防禦 = 更巨大 = 剪影更大 = 更容易被命中(命中是客戶端對 mesh raycast,體型直接生效)。
+export const HERO_SIZE = {
+  robot: { armor: [12, 26], mul: [1.5, 2.5] },
+  morph: { armor: [5, 24], mul: [1.5, 2.5] },
+  drone: { armor: [3, 12], mul: [0.75, 1.5] },
+};
+const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)—— 但不得跌破機種下限
+// 變形機甲的人形地面型(vis.ground):其餘值一律四足獸型
+export const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
+
+/** 英雄機體顯示高度(公尺):依角色護甲值在機種區間內插 */
+export function heroTargetH(kind, ch) {
+  const S = HERO_SIZE[kind];
+  if (!S) return SOLDIER_H * 4;
+  const c = CHARACTERS[ch];
+  const armor = c?.mods?.armor;
+  const t = armor == null ? 0.5 : Math.max(0, Math.min(1, (armor - S.armor[0]) / (S.armor[1] - S.armor[0])));
+  const h = SOLDIER_H * (S.mul[0] + (S.mul[1] - S.mul[0]) * t);
+  // 獸型矮化:機甲看 visual.form;變形機甲看 visual.ground(非人形即四足獸,體長換高度)。
+  // 矮化後 MUST 夾回機種區間下限 —— 機甲/變形機甲不分型態都要 ≥ 150% 真人身高。
+  const quad = c?.visual?.form === 'beast'
+    || (c?.visual?.ground && !MORPH_HUMANOID.has(c.visual.ground));
+  return quad ? Math.max(SOLDIER_H * S.mul[0], h * BEAST_H_F) : h;
+}
+
+// 非英雄單位顯示高度(公尺;models.js fitToHeight 自動縮放)。人員/載具 = 真實世界尺寸;
+// 塔/主堡是虛構工事,維持既有的地標級量體。
+export const TARGET_H = {
+  // decoy:fitToHeight 量的是「高度」— 餌機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
+  decoy: 1.4,
+  'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
+  'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
+  tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
+  bunker: 5.2,   // 第三方碉堡(低矮工事;駐守 3 名步槍兵的量體)
+  civ: SOLDIER_H,   // 平民/間諜(真人身高)
+};
+
+/**
+ * 命中量體高度(公尺,站立表面以上):爆風/貫穿判定的「機體垂直帶 = [腳底, 腳底 + hitH]」。
+ * 使用者規則(2026-07-23):瞄準物件的哪個部位,就用那個部位的碰撞結果判定命中 ——
+ * MUST NOT 只拿單位底部(腳下光圈)當唯一取樣點:26m 高的塔被打中塔頂、10m 機甲被爆頭,
+ * 若量到腳底就會落在爆風衰減帶外 = 打中了卻不痛。伺服器 sim._blast / _lanceHits 唯一入口。
+ */
+export function hitH(e) {
+  if (!e) return SOLDIER_H;
+  if (e.hero) return heroTargetH(e.kind, e.ch);
+  if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 44;
+  if (e.civ) return TARGET_H.civ;
+  return TARGET_H[`creep:${e.kind}`] ?? TARGET_H[e.kind] ?? SOLDIER_H * 1.6;
+}
 
 // ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----
 // 擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。升級全改「金錢階梯單價」(隨等級遞增,見 ECON.UPGRADES / upgradePrice)。

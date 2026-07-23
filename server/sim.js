@@ -9,7 +9,7 @@ import {
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE,
-  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
+  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
   ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX,
 } from '../public/js/data.js';
 
@@ -398,6 +398,21 @@ export class BattleSim {
   _tgtY(e) {
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
     return (e.hero || e.kind === 'heli' || e.decoy || e.kami ? (e.y || 0) : 0) + LOS.TGT_M;
+  }
+
+  /** 機體垂直帶(離地):[腳底, 腳底 + 實體高度]。飛行體的腳底 = 回報高度,地面單位 = 0。 */
+  _bodySpan(e) {
+    const y0 = (e.hero || e.kind === 'heli' || e.decoy || e.kami ? (e.y || 0) : 0);
+    return [y0, y0 + hitH(e)];
+  }
+
+  /**
+   * 爆點/射線高 y 到「機體垂直帶」的距離(帶內 = 0)。使用者規則:打中哪個部位就在那裡結算 ——
+   * 舊制一律量到單位底部(腳下光圈),塔頂/機甲頭部的直擊會被算成十幾公尺外的邊緣爆風。
+   */
+  _bodyDy(e, y) {
+    const [y0, y1] = this._bodySpan(e);
+    return y < y0 ? y0 - y : (y > y1 ? y - y1 : 0);
   }
 
   // ---------- 危險區(Diablo 式隨機生成:地雷 + 障礙物 + 匿蹤防空陣地 + 中繼站)----------
@@ -1599,7 +1614,9 @@ export class BattleSim {
         perp = Math.hypot(tx, tz);
       } else {
         s = tx * ux + tz * uz;                                 // 水平投影軸距
-        if (Math.abs(oy + slope * s - ty) > band) continue;    // 垂直帶(見上方幾何近似說明)
+        // 垂直帶(見上方幾何近似說明):比對的是**機體整條垂直帶**而非單一取樣點 ——
+        // 26m 的塔 / 10m 的機甲被瞄準頭部時,單點取樣(_tgtY)會讓整條射線判成落空。
+        if (this._bodyDy(t, oy + slope * s) > band) continue;
         perp = Math.hypot(tx - ux * s, tz - uz * s);
       }
       if (s < 0 || s > maxS || perp > R) continue;
@@ -2290,7 +2307,7 @@ export class BattleSim {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
       if (lev != null && this._slabGrid && ((this._unitLev(t) === 2) !== (lev === 2))) continue;
-      const d = Math.hypot(x - t.x, z - t.z, y - (t.hero || t.decoy || t.kind === 'heli' ? (t.y || 0) : 0));
+      const d = Math.hypot(x - t.x, z - t.z, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
       if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);
     }
