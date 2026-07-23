@@ -4521,6 +4521,46 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   }
 
+  // ---- 道路朝向索引(2026-07-23):整齊度高的拼圖/物件沿最近道路方向擺放 ----
+  // 粗網格存道路取樣點方位角(atLocal 平面角);查詢取半徑內最近樣本。
+  // 純視覺(地被層 orient 擲骰用),不進碰撞/權威;roadInput 已於開頭定案
+  // (含離線兵線備援),圖資成敗兩條路徑皆有方位可查。查詢不消耗任何 rnd。
+  const RD_CELL = 24, RD_R2 = 46 * 46;   // 46 遊戲公尺內有路才算「順路」;±2 格覆蓋此半徑
+  const rdGrid = new Map();
+  for (const way of roadInput) {
+    const g = way.geometry || [];
+    for (let i = 1; i < g.length; i++) {
+      const [x0, z0] = llToWorld(g[i - 1].lat, g[i - 1].lon, center);
+      const [x1, z1] = llToWorld(g[i].lat, g[i].lon, center);
+      const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
+      if (len < 1e-3) continue;
+      const a = Math.atan2(dz, dx);
+      const n = Math.ceil(len / (RD_CELL * 0.5));   // 每 ~12m 取樣一點
+      for (let s = 0; s <= n; s++) {
+        const px = x0 + dx * s / n, pz = z0 + dz * s / n;
+        const k = `${Math.round(px / RD_CELL)},${Math.round(pz / RD_CELL)}`;
+        let arr = rdGrid.get(k);
+        if (!arr) { arr = []; rdGrid.set(k, arr); }
+        arr.push([px, pz, a]);
+      }
+    }
+  }
+  const roadDirAt = (x, z) => {
+    const ci = Math.round(x / RD_CELL), cj = Math.round(z / RD_CELL);
+    let best = RD_R2, ba = null;
+    for (let j = cj - 2; j <= cj + 2; j++) {
+      for (let i = ci - 2; i <= ci + 2; i++) {
+        const arr = rdGrid.get(`${i},${j}`);
+        if (!arr) continue;
+        for (const p of arr) {
+          const d = (p[0] - x) ** 2 + (p[1] - z) ** 2;
+          if (d < best) { best = d; ba = p[2]; }
+        }
+      }
+    }
+    return ba;
+  };
+
   // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
   // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
   onProgress?.(0.88, '鋪設地表覆蓋層…');
@@ -4535,7 +4575,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
-    blockers, season, seed: gseed, rnd: grnd,
+    blockers, season, seed: gseed, rnd: grnd, roadDirAt,
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
@@ -4579,6 +4619,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     megaliths: megalithsBuilt,
     ground: ground.patches,
     groundDetails: ground.details,
+    groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,

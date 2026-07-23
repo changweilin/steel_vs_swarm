@@ -24,6 +24,9 @@
 //      (VIS_R)內同款「地表#變體」只准出現一次,同款用罄輪替其他變體/地表
 //   5. 特徵層分區走純圖資分類(classifyPure,不吃場地 mix 隨機改寫)→
 //      球場/停車場只落市區、水田/果園只落綠地、沙漠/碎石只落裸露地
+//   6. 整齊度沿路對齊(2026-07-23):每型拼圖/物件帶 reg(0..1)整齊規律程度,
+//      越規律越高機率沿最近道路方向擺放(DEFS.reg / REG 表 + opts.roadDirAt),
+//      其餘機率(或附近無路)維持隨機朝向;自然件 reg=0 恆隨機
 // 手法與 buildRoads 同族:貼地多邊形 + 程序生成 canvas 筆刷貼圖 + 頂點色墨線,
 // 每「地表×變體」合併成單一 Mesh(常數 draw call);細節物件全 InstancedMesh。
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
@@ -905,66 +908,68 @@ const PAINTERS = {
 // shape:blob=不規則色塊 / rect=田塊、場地;uv:'fit'=單張鋪滿(否則世界投影 tile)
 // edge:'fade'=外圈 alpha 淡出融入地形(自然類)/ 'ink'=硬邊墨線(人造類)
 // slope:允許的高差/半徑比;rim:外圈隆起(田埂);fam:延伸擺放家族
+// reg:整齊規律程度(0..1)= 放置時沿最近道路方向整齊擺放的機率(orient());
+//     其餘機率、或附近無路 → 隨機朝向。人造耕地/場地高,自然色塊 0 恆隨機
 const DEFS = {
-  turf:         { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, green: true, fam: 'blobGreen' },
-  meadow:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.45, green: true, fam: 'blobGreen' },
-  bushfield:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.40, green: true, fam: 'blobGreen' },
-  flowerfield:  { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.35, green: true, fam: 'blobGreen' },
-  orchard:      { shape: 'blob', uvS: 1 / 20, edge: 'fade', slope: 0.30, green: true, fam: 'blobGreen' },
-  teafield:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.22, green: true, fam: 'rectFarm' },
-  veggiefield:  { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, green: true, fam: 'rectFarm' },
-  paddy:        { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.09, rim: 0.5, green: true, fam: 'rectFarm' },
-  dryfield:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.14, rim: 0.35, fam: 'rectFarm' },
-  wild:         { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'blobBare' },
-  gravel:       { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.40, fam: 'blobBare' },
-  sand:         { shape: 'blob', uvS: 1 / 18, edge: 'fade', slope: 0.35, fam: 'blobBare' },
-  mud:          { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.30, fam: 'blobBare' },
-  crackedearth: { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, fam: 'blobBare' },
-  redsoil:      { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.40, fam: 'blobBare' },
-  lawn:         { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.30, green: true },
-  concrete:     { shape: 'rect', uvS: 1 / 16, aspect: 0.8, edge: 'ink', slope: 0.14, fam: 'rectUrban' },
-  brick:        { shape: 'rect', uvS: 1 / 8, aspect: 0.8, edge: 'ink', slope: 0.12 },
-  pavement:     { shape: 'blob', uvS: 1 / 8, edge: 'ink', slope: 0.20 },
-  parking:      { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.10, fam: 'rectUrban' },
-  court:        { shape: 'rect', uv: 'fit', aspect: 0.54, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
-  track:        { shape: 'rect', uv: 'fit', aspect: 0.5, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
-  marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, green: true, fam: 'wetFam', aq: 1 },
-  lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, fam: 'wetFam', aq: 1 },
+  turf:         { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, reg: 0, green: true, fam: 'blobGreen' },
+  meadow:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.45, reg: 0, green: true, fam: 'blobGreen' },
+  bushfield:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.40, reg: 0, green: true, fam: 'blobGreen' },
+  flowerfield:  { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.35, reg: 0.15, green: true, fam: 'blobGreen' },
+  orchard:      { shape: 'blob', uvS: 1 / 20, edge: 'fade', slope: 0.30, reg: 0.45, green: true, fam: 'blobGreen' },
+  teafield:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.22, reg: 0.8, green: true, fam: 'rectFarm' },
+  veggiefield:  { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.8, green: true, fam: 'rectFarm' },
+  paddy:        { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.09, rim: 0.5, reg: 0.8, green: true, fam: 'rectFarm' },
+  dryfield:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.14, rim: 0.35, reg: 0.7, fam: 'rectFarm' },
+  wild:         { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'blobBare' },
+  gravel:       { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.40, reg: 0, fam: 'blobBare' },
+  sand:         { shape: 'blob', uvS: 1 / 18, edge: 'fade', slope: 0.35, reg: 0, fam: 'blobBare' },
+  mud:          { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.30, reg: 0, fam: 'blobBare' },
+  crackedearth: { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, reg: 0, fam: 'blobBare' },
+  redsoil:      { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.40, reg: 0, fam: 'blobBare' },
+  lawn:         { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.30, reg: 0.2, green: true },
+  concrete:     { shape: 'rect', uvS: 1 / 16, aspect: 0.8, edge: 'ink', slope: 0.14, reg: 0.75, fam: 'rectUrban' },
+  brick:        { shape: 'rect', uvS: 1 / 8, aspect: 0.8, edge: 'ink', slope: 0.12, reg: 0.7 },
+  pavement:     { shape: 'blob', uvS: 1 / 8, edge: 'ink', slope: 0.20, reg: 0.6 },
+  parking:      { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.10, reg: 0.95, fam: 'rectUrban' },
+  court:        { shape: 'rect', uv: 'fit', aspect: 0.54, edge: 'ink', slope: 0.08, reg: 0.9, fam: 'rectUrban' },
+  track:        { shape: 'rect', uv: 'fit', aspect: 0.5, edge: 'ink', slope: 0.08, reg: 0.9, fam: 'rectUrban' },
+  marsh:        { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.25, reg: 0, green: true, fam: 'wetFam', aq: 1 },
+  lotus:        { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.15, reg: 0, fam: 'wetFam', aq: 1 },
   // — 水域專屬底毯(aq:灘線/水面高度淘汰放行,頂點高夾到水面上;terrainEnvCode===1 專用)—
-  watertile:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, aq: 1 },
-  deepwater:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, aq: 1 },
+  watertile:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, reg: 0, aq: 1 },
+  deepwater:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 1.0, reg: 0, aq: 1 },
   // — 綠地擴充:竹林/枯朽森林/伐木業/棚架農業 —
-  arrowbamboo:  { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.50, green: true, fam: 'blobGreen' },
-  deadwood:     { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'deadFam' },
-  fallenlogs:   { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.45, green: true, fam: 'deadFam' },
-  clearcut:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, fam: 'deadFam' },
-  lumberyard:   { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.20, fam: 'deadFam' },
-  rottencabin:  { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.25, green: true, fam: 'ruinFam' },
-  vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, green: true, fam: 'rectFarm' },
-  greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, fam: 'rectFarm' },
+  arrowbamboo:  { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.50, reg: 0, green: true, fam: 'blobGreen' },
+  deadwood:     { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'deadFam' },
+  fallenlogs:   { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.45, reg: 0, green: true, fam: 'deadFam' },
+  clearcut:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, reg: 0.2, fam: 'deadFam' },
+  lumberyard:   { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.20, reg: 0.65, fam: 'deadFam' },
+  rottencabin:  { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.25, reg: 0.3, green: true, fam: 'ruinFam' },
+  vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, reg: 0.85, green: true, fam: 'rectFarm' },
+  greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, reg: 0.9, fam: 'rectFarm' },
   // — 裸露地擴充:遺跡/死林/乾草原/廢耕/產業 —
-  deadforest:   { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, fam: 'deadFam' },
-  slabruin:     { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.45, fam: 'ruinFam' },
-  steppe:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.50, green: true, fam: 'alpFam' },
-  abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, fam: 'rectFarm' },
-  saltpan:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.06, fam: 'panFam' },
-  quarry:       { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.45, fam: 'digFam' },
+  deadforest:   { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'deadFam' },
+  slabruin:     { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.45, reg: 0.15, fam: 'ruinFam' },
+  steppe:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.50, reg: 0, green: true, fam: 'alpFam' },
+  abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, reg: 0.55, fam: 'rectFarm' },
+  saltpan:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.06, reg: 0.85, fam: 'panFam' },
+  quarry:       { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.45, reg: 0.5, fam: 'digFam' },
   // — 高地(相對高程分區;冬季裸露地也混入冰原)—
-  plateau:      { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.60, fam: 'alpFam' },
-  icefield:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, fam: 'alpFam' },
-  scree:        { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.80, fam: 'alpFam' },
+  plateau:      { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.60, reg: 0, fam: 'alpFam' },
+  icefield:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.40, reg: 0, fam: 'alpFam' },
+  scree:        { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.80, reg: 0, fam: 'alpFam' },
   // — 市區擴充:工業/服務/休憩設施 —
-  construction: { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.20, fam: 'digFam' },
-  gasstation:   { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
-  park:         { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.30, green: true, fam: 'blobGreen' },
-  plaza:        { shape: 'rect', uv: 'fit', aspect: 0.85, edge: 'ink', slope: 0.08, fam: 'rectUrban' },
-  scrapyard:    { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.15, fam: 'yardFam' },
-  containeryard:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, fam: 'yardFam' },
-  cemetery:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.18, green: true },
-  solarfarm:    { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, fam: 'solarFam' },
-  helipad:      { shape: 'rect', uv: 'fit', aspect: 1.0, edge: 'ink', slope: 0.06 },
+  construction: { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.20, reg: 0.7, fam: 'digFam' },
+  gasstation:   { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, reg: 0.95, fam: 'rectUrban' },
+  park:         { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.30, reg: 0.15, green: true, fam: 'blobGreen' },
+  plaza:        { shape: 'rect', uv: 'fit', aspect: 0.85, edge: 'ink', slope: 0.08, reg: 0.9, fam: 'rectUrban' },
+  scrapyard:    { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.15, reg: 0.55, fam: 'yardFam' },
+  containeryard:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.08, reg: 0.9, fam: 'yardFam' },
+  cemetery:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.18, reg: 0.85, green: true },
+  solarfarm:    { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.9, fam: 'solarFam' },
+  helipad:      { shape: 'rect', uv: 'fit', aspect: 1.0, edge: 'ink', slope: 0.06, reg: 0.6 },
   // — 濕地擴充 —
-  fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, fam: 'panFam' },
+  fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, reg: 0.8, fam: 'panFam' },
 };
 // 分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有)
 // 特徵層分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有):
@@ -1187,6 +1192,18 @@ const TILT = {
   miscanthus: 0.24, weed: 0.3, cabbage: 0.12, billboard: 0.04, planter: 0.05, hoop: 0.03,
 };
 
+// 每型 3D 物件的整齊規律程度(0..1)= 隨機朝向路徑改為「沿最近道路方向擺放」的
+// 機率(addDetail 經 orient() 擲骰;rows()/固定 ry 呼叫端已對齊 patch 軸,不經此表)。
+// 人造直線件(貨櫃/太陽能板/看板/長凳/墓碑/拱棚)高;自然件與旋轉對稱件 0 恆隨機。
+const REG = {
+  tuft: 0, rice: 0, reed: 0, bush: 0, pebble: 0, hay: 0.3, sapling: 0, flower: 0, lotuspad: 0,
+  bamboo: 0, snag: 0, charsnag: 0, log: 0.15, stump: 0, logpile: 0.6, plank: 0.4, cabin: 0.7,
+  fencepost: 0.2, vinerow: 0.9, ghouse: 0.85, slab: 0.1, iceshard: 0, rockflat: 0, saltmound: 0,
+  pipe: 0.5, spoil: 0, barrier: 0.75, canopy: 0.9, pump: 0.9, container: 0.9, carwreck: 0.45,
+  solarpanel: 0.9, bench: 0.8, headstone: 0.85, boulder: 0, drybush: 0, drum: 0.2, crate: 0.5,
+  miscanthus: 0, weed: 0, cabbage: 0, billboard: 0.85, planter: 0.6, hoop: 0.9,
+};
+
 function bucketOf(buckets, key) {
   let b = buckets.get(key);
   if (!b) { b = { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0 }; buckets.set(key, b); }
@@ -1267,8 +1284,10 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
  *                            拼圖類型才與衛星影像相符(球場限市區/水田限綠地/碎石限裸露地)
  * @param opts.blockers   建物碰撞柱(patch 避開建物)
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
+ * @param opts.roadDirAt  (x,z)=>最近道路方位角(rad,atLocal 平面角)或 null(附近無路);
+ *                        整齊件沿路擺放用,可缺席 = 全部隨機朝向(行為同舊版)
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -1277,7 +1296,21 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
   let detCap = FEAT_DETAIL;   // 特徵層先用配額,底毯撒佈前放寬到 MAX_DETAIL
-  // ry:null = 隨機朝向;傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向)
+  // 整齊度 → 沿路對齊:reg = 該型拼圖/物件沿最近道路方向擺放的機率,其餘機率
+  // (或附近無路)隨機朝向。亂數紀律(§2.3):固定先抽兩枚再決策 —— 對齊與否
+  // 不改變 rnd 消耗序列;roadDirAt 本身不吃 rnd。回傳 atLocal 平面角。
+  let aligned = 0;   // 沿路對齊次數(拼圖 + 物件;冒煙稽核用)
+  const orient = (x, z, reg, halfTurn) => {
+    const ra = rnd() * (halfTurn ? Math.PI : Math.PI * 2);   // 隨機朝向候選(固定枚數)
+    const roll = rnd();                                       // 對齊擲骰(固定枚數)
+    if (!reg || !roadDirAt || roll >= reg) return ra;
+    const a = roadDirAt(x, z);
+    if (a == null) return ra;
+    aligned++;
+    return a;
+  };
+  // ry:null = 依 REG[type] 整齊度擲骰(沿路對齊或隨機朝向);
+  // 傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向),不經整齊度擲骰
   const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
     if (detCount >= detCap || isBlocked(px, pz)) return;
     let y = terrain.heightAt(px, pz);
@@ -1286,7 +1319,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       if (terrain.waterY != null) y = Math.max(y, terrain.waterY);
     }
     const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
-    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? rnd() * Math.PI * 2,
+    // atLocal 平面角 → three.js rotation.y 取負(同 rows 的 ry=-rot 慣例)
+    det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? -orient(px, pz, REG[type] || 0, false),
                      tx: (rnd() - 0.5) * 2 * tl, tz: (rnd() - 0.5) * 2 * tl, tint: tintHex });
     detCount++;
   };
@@ -1572,7 +1606,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         } else {
           r2 = (SIZE[sub2][0] + rnd() * SIZE[sub2][1]) * RSCALE;
           const th = rnd() * Math.PI * 2, dist = (r + r2) * 0.86;   // 邊緣小比例交疊:fade 邊互融(> SEP_F)
-          nx2 = x + Math.cos(th) * dist; nz2 = z + Math.sin(th) * dist; rot2 = rnd() * Math.PI;
+          nx2 = x + Math.cos(th) * dist; nz2 = z + Math.sin(th) * dist;
+          rot2 = orient(nx2, nz2, def2.reg, true);   // 鄰塊各自依整齊度擲骰(rect 拼布已同 rot 延伸)
         }
         const v2 = freeVariant(sub2, nx2, nz2, variant);
         if (v2 >= 0) tryPatch(nx2, nz2, sub2, v2, r2, rot2, depth + 1);
@@ -1768,7 +1803,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const v = freeVariant(sub, x, z, v0);
       if (v < 0) continue;
       const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
-      if (tryPatch(x, z, sub, v, r, rnd() * Math.PI, 0)) break;
+      if (tryPatch(x, z, sub, v, r, orient(x, z, DEFS[sub].reg, true), 0)) break;
     }
   }
 
@@ -1873,5 +1908,5 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       group.add(m);
     }
   }
-  return { patches: placed, details: detCount, cells: landCells.length };
+  return { patches: placed, details: detCount, cells: landCells.length, aligned };
 }
