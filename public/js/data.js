@@ -559,6 +559,22 @@ export function recoilName(w, slot, fan = !!w.fan || w.type === 'plasma') {
   return '中';
 }
 
+// ---- 鏡頭震動 trauma(2026-07-23:發射感 + 震波作用範圍)----
+// 純客戶端手感(同 RECOIL,伺服器不涉入)⇒ bal/e2e 不受影響。
+// trauma 每秒衰減 1.4、以平方驅動噪聲(game.js _updatePlayer),故連發會自然疊成持續轟鳴。
+//   FIRE       每發開火的基礎震動(再乘 RECOIL.kick 分級倍率)
+//   HEAVY_F    重武器槽的額外倍率:重砲擊發要有頓挫感,輕武器維持原本的細碎抖動
+//   BARRAGE_F  巨炮傾洩窗內每發再乘的倍率
+//   KAMI / DECOY / BARRAGE  三種狙擊長按機種招(自殺機 / 餌機 / 重砲)的發射震動
+//   BLAST_F    爆炸震波(鏡頭震動 + 掀飛推力)的作用半徑 = 該武器攻擊半徑 × 此值。
+//              MUST NOT 改回「固定下限 + 倍數放大」—— 使用者指示震波不可無限遠傳遞,
+//              震波範圍就是該武器的攻擊範圍(爆點核心的推力/震動強度不變,只是邊界收到 r)。
+export const SHAKE = {
+  FIRE: 0.03, HEAVY_F: 3.0, BARRAGE_F: 1.3,   // 重武器單發 0.22~0.41(依 kick 2.4~4.5);傾洩窗連發疊到上限 = 巨炮轟鳴
+  KAMI: 0.6, DECOY: 0.5, BARRAGE: 0.55,
+  BLAST_F: 1,
+};
+
 // 榴彈 / 火箭(launcher)對建築的額外傷害加成(使用者指示「榴彈類武器對建築物傷害強化」)。
 // 疊在武器自身 vs.building 之上,只在 launcher 型命中建築(塔/主堡/障礙)時生效 ——
 // 攻城武器拆建築更快,但對兵員/裝甲/空中目標不變。套用點唯一:sim._heroDmg()。

@@ -9,7 +9,7 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altF, isGunnery, TERRAIN_FX,
+  ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -1763,13 +1763,15 @@ export class BattleClient {
 
   // ---------------- 物理:爆炸衝擊 / 碰撞 ----------------
   /** 爆炸衝擊波:把自己(座機)往外推 + 鏡頭震動。強度隨距離平方衰減、隨爆炸半徑(能量)遞增 —
-   *  近炸猛烈、遠處迅速歸零;同距離下大爆炸比小爆炸更晃(符合爆壓物理直覺)。 */
+   *  近炸猛烈、遠處迅速歸零;同距離下大爆炸比小爆炸更晃(符合爆壓物理直覺)。
+   *  作用半徑 = 該武器攻擊半徑 r × SHAKE.BLAST_F(2026-07-23 使用者指示:震波不可無限遠傳遞),
+   *  超出即完全無感 —— MUST NOT 加回固定下限或倍數放大。 */
   _applyBlast(x, y, z, r) {
     if (!this.side || this.dead) return;
     const eye = this.camera.position;
     const d = Math.hypot(eye.x - x, eye.y - y, eye.z - z);
-    const R = Math.max(20, r * 3);   // 影響半徑正比於爆炸半徑:越大的爆炸波及越遠
-    if (d > R) return;
+    const R = r * SHAKE.BLAST_F;
+    if (!(R > 0) || d > R) return;
     const f = 1 - d / R;
     const k = f * f;                 // 平方衰減(距離越遠震動掉得越快)
     const eScale = Math.min(1.6, Math.max(0.4, r / 12));   // 爆炸半徑代表能量:小彈少晃、重砲/主堡更晃
@@ -3074,6 +3076,8 @@ export class BattleClient {
       }
     } else if (ev.e === 'decoy') {
       if (ev.pid === this.youId) {
+        // 餌機(轟炸機)彈射分離:掛點瞬間抽離的機體震動(伺服器確認才震,請求被拒不會誤震)
+        this.trauma = Math.min(1, this.trauma + SHAKE.DECOY);
         this.hud.feed?.(ev.homing ? '🚀 餌機分離:追蹤鎖定目標!' : '🛰️ 餌機分離:直飛偵察中(無法操舵)');
       }
     } else if (ev.e === 'decoyLost') {
@@ -4237,7 +4241,9 @@ export class BattleClient {
     const airF = fly ? RECOIL.AIR_F : 1;                                 // 空中位移懲罰減半(使用者指示)
     this.recoil.p += (prof.climb ?? (id === 'heavy' ? 0.033 : 0.011));   // 準星上踢(開火停止後快速回穩)
     this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
-    this.trauma = Math.min(1, this.trauma + 0.03 * (prof.kick ?? 1));
+    // 鏡頭震動:重砲擊發要有頓挫感(輕武器維持細碎抖動),巨炮傾洩窗內每發再放大 → 連發疊成持續轟鳴
+    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1)
+      * (id === 'heavy' ? SHAKE.HEAVY_F : 1) * (barraging ? SHAKE.BARRAGE_F : 1));
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
@@ -4479,7 +4485,7 @@ export class BattleClient {
       this.hud.feed?.(`🛠️ 護衛自殺機整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
       return;
     }
-    this.trauma = 0.6;
+    this.trauma = Math.min(1, this.trauma + SHAKE.KAMI);   // 護衛機彈射的推背感
     this.kamiCd = SQUAD.KAMI.CD_S;   // 樂觀本地冷卻(下一份快照的 kcd 會校正)
     this.net.send({ t: 'kami' });
     this.hud.feed?.(`💥 ${SQUAD.KAMI.N} 架護衛自殺機衝出!`);
@@ -4515,7 +4521,7 @@ export class BattleClient {
     this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(HUD;下一份快照的 bcd 校正)
     this._barrageCdUntil = now + BARRAGE.CD_S;              // 本地 CD 時戳(不被在途舊快照 bcd 洗掉)
     this._barrageUntil = now + BARRAGE.DUR;
-    this.trauma = Math.min(1, this.trauma + 0.4);
+    this.trauma = Math.min(1, this.trauma + SHAKE.BARRAGE);   // 重砲展開的機體震動
     this.net.send({ t: 'barrage' });
     this.hud.feed?.('💥 重砲模式:傾洩彈夾!');
   }
