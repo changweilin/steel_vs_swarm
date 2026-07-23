@@ -42,6 +42,27 @@ function ptOnRibbon(px, pz, s) {
   return dx * dx + dz * dz <= s[4] * s[4];
 }
 
+/**
+ * 隧道側牆判定:洞內端 (ix,iz) → 洞外端 (ox,oz) 的線段,在隧道 ribbon 局部矩形
+ * [0,L]×[−hw,hw](L=軸長、hw=半寬)中,是「先由側牆(|d|=hw)離開」還是「先由洞口
+ * (s=0 / s=L)離開」。側牆先離開 = 穿山體岩盤 → 擋;洞口先離開 = 沿軸出洞口 → 放行
+ * (隧道兵線正常對射)。Liang–Barsky:洞內端在框內,比較沿軸 / 垂距兩維各自離框的 τ,
+ * 較小者即實際離開的那條邊。伺服器無地形高程,以此 2D 幾何近似「山體擋線」。
+ */
+function tunnelSideExit(ix, iz, ox, oz, s) {
+  const x1 = s[0], z1 = s[1], hw = s[4];
+  const ux = s[2] - x1, uz = s[3] - z1;
+  const L = Math.hypot(ux, uz) || 1;
+  const nx = ux / L, nz = uz / L;                    // 軸向單位向量
+  const spI = (ix - x1) * nx + (iz - z1) * nz;       // 洞內端:沿軸座標
+  const dpI = -(ix - x1) * nz + (iz - z1) * nx;      // 洞內端:垂距
+  const ds = ((ox - x1) * nx + (oz - z1) * nz) - spI;
+  const dd = (-(ox - x1) * nz + (oz - z1) * nx) - dpI;
+  const tS = ds > 0 ? (L - spI) / ds : ds < 0 ? -spI / ds : Infinity;          // 離洞口(s=0/L)之 τ
+  const tD = dd > 0 ? (hw - dpI) / dd : dd < 0 ? (-hw - dpI) / dd : Infinity;   // 離側牆(|d|=hw)之 τ
+  return tD < tS;                                    // 側牆先離開 → 穿岩體 → 擋
+}
+
 export class BattleSim {
   /**
    * battleConfig(由房主客戶端在選址後送上來):
@@ -188,20 +209,31 @@ export class BattleSim {
   }
 
   /**
-   * 橋面/隧道天花薄板遮蔽:兩端點落在同一 ribbon 且分屬板體兩側(一端在該層、另一端不在)→ 板體
-   * 隔在中間,擋。用「同 ribbon + 層不符」而非絕對 y(伺服器無地形高程、回報 y 為離站立表面高,
-   * 橋上/橋下皆 ≈0 無法區辨)。刻意保守:僅「橋上 ↔ 正下方」一組會擋,側向射擊不誤擋(under-block)。
+   * 橋面/隧道天花薄板遮蔽:
+   *  ①隧道(ty=2)側牆/山體:一端在洞內(lev 2)、一端在洞外,且射線由「側牆」而非「洞口」穿出
+   *    → 岩盤擋(tunnelSideExit)。以洞內端所在 cell 取其 ribbon(洞內端必落在自身 cell),
+   *    沿軸經洞口穿出不擋(隧道兵線正常對射),側/上方一律擋 —— 砲塔/小兵/英雄穿牆一併封死。
+   *  ②橋面/隧道天花薄板(under-block):兩端同 ribbon 且層不符(僅「橋上 ↔ 正下方」一組)→ 擋;
+   *    側向射擊不誤擋(橋 ty=1 只走這條,行為與舊版一致)。
+   * 用「同 ribbon + 層不符」而非絕對 y(伺服器無地形高程、回報 y 為離站立表面高,橋上/橋下皆 ≈0)。
    */
   _slabBlocked(ax, az, bx, bz, ea, eb) {
     const g = this._slabGrid;
     const C = LOS.CELL_M;
+    const levA = this._unitLev(ea), levB = this._unitLev(eb);
+    // ① 隧道側牆:恰一端在洞內 → 以洞內端 ribbon 判「側牆穿出」
+    if ((levA === 2) !== (levB === 2)) {
+      const ix = levA === 2 ? ax : bx, iz = levA === 2 ? az : bz;
+      const ox = levA === 2 ? bx : ax, oz = levA === 2 ? bz : az;
+      const arrI = g.get((Math.floor(ix / C) + 32768) * 65536 + (Math.floor(iz / C) + 32768));
+      if (arrI) for (const s of arrI) {
+        if (s[5] === 2 && ptOnRibbon(ix, iz, s) && tunnelSideExit(ix, iz, ox, oz, s)) return true;
+      }
+    }
+    // ② 薄板 under-block:需兩端同 ribbon(A 之 cell 查起)
     const arr = g.get((Math.floor(ax / C) + 32768) * 65536 + (Math.floor(az / C) + 32768));
-    if (!arr) return false;                       // A 不靠任何 ribbon → 規則不成立(需兩端同 ribbon)
-    let levA = -1, levB = -1;
-    for (const s of arr) {
-      if (!ptOnRibbon(ax, az, s) || !ptOnRibbon(bx, bz, s)) continue;   // 需兩端同 ribbon
-      if (levA < 0) { levA = this._unitLev(ea); levB = this._unitLev(eb); }
-      if ((levA === s[5]) !== (levB === s[5])) return true;
+    if (arr) for (const s of arr) {
+      if (ptOnRibbon(ax, az, s) && ptOnRibbon(bx, bz, s) && ((levA === s[5]) !== (levB === s[5]))) return true;
     }
     return false;
   }
