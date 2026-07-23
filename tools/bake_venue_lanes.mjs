@@ -3,8 +3,10 @@
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
+// 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
+// #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, laneSeparationAudit }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit }
   from '../public/js/data.js';
 
 // 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
@@ -88,6 +90,7 @@ async function overpassRoads(id, lat, lng, radius) {
 function buildGraph(ways, origin) {
   const idx = new Map();          // "lat,lng" -> i
   const X = [], Z = [], LA = [], LN = [], adj = [];
+  const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
   const cosO = Math.cos(origin[0] * d2r);
   const nid = (la, ln) => {
     const k = `${la.toFixed(6)},${ln.toFixed(6)}`;
@@ -103,6 +106,7 @@ function buildGraph(ways, origin) {
   };
   for (const w of ways) {
     if (!w.geometry) continue;
+    const tun = !!w.tags?.tunnel;
     for (let i = 1; i < w.geometry.length; i++) {
       const a = w.geometry[i - 1], b = w.geometry[i];
       const u = nid(a.lat, a.lon), v = nid(b.lat, b.lon);
@@ -110,9 +114,10 @@ function buildGraph(ways, origin) {
       const len = Math.hypot(X[u] - X[v], Z[u] - Z[v]);
       adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
       adj[v].push(u, len);
+      if (tun) { tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`); }
     }
   }
-  return { X, Z, LA, LN, adj, n: X.length };
+  return { X, Z, LA, LN, adj, n: X.length, tunE };
 }
 
 class MinHeap {
@@ -208,6 +213,46 @@ function simplifyIdx(pts, tol) {
   return outIdx;
 }
 
+// ---- 規則 #5 輸入:完整節點路徑上的 tunnel 邊 → 簡化兵線(遊戲公尺)上的弧長區間 ----
+// 兵線頂點經 Douglas-Peucker 簡化過,隧道端點未必留在頂點上 ⇒ 投影取弧長。
+// 相鄰段 ≤ SPAN_GAP 縫成同一座洞(雙孔/分段 way);同 tools/audit_lane_grade_sep.mjs。
+const SPAN_GAP = 36;
+function tunSpansOf(g, full, gpts, cc) {
+  const cum = [0];
+  for (let i = 1; i < gpts.length; i++) cum.push(cum[i - 1] + Math.hypot(gpts[i][0] - gpts[i - 1][0], gpts[i][1] - gpts[i - 1][1]));
+  const arcOf = (i) => {
+    const [px, py] = llToGame(g.LA[i], g.LN[i], cc);
+    let best = Infinity, bs = 0;
+    for (let k = 1; k < gpts.length; k++) {
+      const [ax, ay] = gpts[k - 1], [bx, by] = gpts[k];
+      const ex = bx - ax, ey = by - ay, L2 = ex * ex + ey * ey || 1;
+      let t = ((px - ax) * ex + (py - ay) * ey) / L2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(px - (ax + ex * t), py - (ay + ey * t));
+      if (d < best) { best = d; bs = cum[k - 1] + t * Math.hypot(ex, ey); }
+    }
+    return bs;
+  };
+  const raw = [];
+  let cur = null;
+  for (let i = 1; i < full.length; i++) {
+    if (g.tunE.has(`${full[i - 1]}:${full[i]}`)) {
+      const sa = arcOf(full[i - 1]), sb = arcOf(full[i]);
+      const lo = Math.min(sa, sb), hi = Math.max(sa, sb);
+      if (!cur) cur = [lo, hi];
+      else { cur[0] = Math.min(cur[0], lo); cur[1] = Math.max(cur[1], hi); }
+    } else if (cur) { raw.push(cur); cur = null; }
+  }
+  if (cur) raw.push(cur);
+  const out = [];
+  for (const s of raw.sort((p, q) => p[0] - q[0])) {
+    const last = out[out.length - 1];
+    if (last && s[0] - last[1] <= SPAN_GAP) last[1] = Math.max(last[1], s[1]);
+    else out.push([...s]);
+  }
+  return out;
+}
+
 function overlapXZ(a, b, cell) {
   const gridOf = (lane) => {
     const s = new Set();
@@ -285,7 +330,7 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     const xz = keep.map((k) => all[k]);
     let s = 0;
     for (const q of idx) s += lat(q);
-    return { xz, idx, lat: s / idx.length };
+    return { xz, idx, full: p, lat: s / idx.length };   // full = 未簡化節點路徑(規則 #5 取隧道邊用)
   };
 
   const lanes = [];
@@ -308,11 +353,16 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   // 砲塔規則合規(規則 #4):跑與 runtime 同一換算的 towerLayoutAudit ⇒ 選址時就偏好「砲塔佈局合規」的方位
   const A = [g.LA[aIdx], g.LN[aIdx]], B = [g.LA[bIdx], g.LN[bIdx]];
   const cc = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
-  const ta = towerLayoutAudit(lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc))));
+  const lanesGame = lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc)));
+  const ta = towerLayoutAudit(lanesGame);
+  // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
+  // 隧道段取圖資 tunnel way 全長(上界;執行期只有地形蓋得住的段落才成洞)⇒ 選線期寧可保守。
+  const tt = towerTunnelAudit(lanesGame, lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc)));
   return {
     bearing, aIdx, bIdx, lanes,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
     resid: ta.residual + (ta.stackBad ? 1000 : 0),   // 疊塔視為重罰(絕不選)
+    tunBad: tt.bad.length,                           // 規則 #5 違規塔數(0 = 合規)
     score: tacticalScore(sinu, tpk, mo),
   };
 }
@@ -347,9 +397,13 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         for (const off of OFFSET_FRACS) {
           const r = tryBearing(g, aIdx, i * 5, L, off);
           if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
-          // 詞典序:先「砲塔規則殘餘少」(規則 #4 合規優先),同殘餘再取戰術評分高。
-          // 合規是**偏好非硬門檻**:全方位皆不合規時仍取殘餘最小者(不放棄該 L,行為等同舊版最佳努力)。
-          if (r && (!best || r.resid < best.resid || (r.resid === best.resid && r.score > best.score))) best = r;
+          // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
+          // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
+          // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
+          // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
+          if (r && (!best || r.tunBad < best.tunBad
+            || (r.tunBad === best.tunBad && (r.resid < best.resid
+              || (r.resid === best.resid && r.score > best.score))))) best = r;
         }
       }
       if (!best) {
@@ -358,12 +412,13 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         continue;
       }
       byL[L] = { g, ...best };
-      log(`  L=${L} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}`);
+      log(`  L=${L} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}` +
+        (best.tunBad ? ` ⚠️洞內塔違規=${best.tunBad}` : ''));
     }
     const hits = Object.keys(byL).length;
     if (!hits) continue;
-    // 取錨點:先「規則 #4 合規的 L 數」最多,再「真實道路可用 L 數」最多;同分取先列者。
-    const conf = Object.values(byL).filter((b) => b.resid === 0).length;
+    // 取錨點:先「規則 #4/#5 合規的 L 數」最多,再「真實道路可用 L 數」最多;同分取先列者。
+    const conf = Object.values(byL).filter((b) => b.resid === 0 && b.tunBad === 0).length;
     if (!picked || conf > picked.conf || (conf === picked.conf && hits > Object.keys(picked.byL).length)) {
       picked = { anchor, byL, ways: ways.length, g, conf };
     }

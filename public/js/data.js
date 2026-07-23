@@ -1579,6 +1579,12 @@ export const GAME = {
   TOWER_MAX_FRAC: 0.45,       // 塔位沿線搜尋上限(不得越過戰場中線)
   // 塔位橫向偏移(公尺):每個塔位在兵線左右各一座,砲塔不擋路、交叉火力涵蓋走廊
   TOWER_SIDE_OFF: 15,
+  // 規則 #5(2026-07-23 使用者定奪):兵線穿隧道/地下道時,落在**覆蓋段內**的砲塔至少要有
+  // 這個比例的射程伸出洞口之外 ⇒ 塔到最近洞口的沿線距離 ≤ range ×(1 − 此值)。
+  // 動機:隧道側牆對 LOS 全擋(sim._slabBlocked),埋在山體深處的塔只能沿 9m 洞內走廊對射;
+  // 敵我前線塔一深一淺時淺的那座單方面壓制(現尺度 range 155 < 深塔距洞口 161 = 連洞口都打不到)。
+  // 判定縫 = towerTunnelAudit();稽核 tools/audit_lane_grade_sep.mjs、選線 tools/bake_venue_lanes.mjs。
+  TOWER_TUNNEL_OUT_F: 0.2,
   // 直射武器的鎖定天花板(公尺):高過此高度的飛行單位塔砲/小兵打不到(交給 SAM)。
   // MUST 與 range 脫鉤 —— 綁 range×0.9 的話,塔射程一拉高就會把 #INC-104 的 y=250 高空機也鎖住。
   GUN_CEIL_M: 170,
@@ -1836,6 +1842,44 @@ export function towerLayoutAudit(lanes) {
   }
   const stackBad = minStack < STACK - 1;
   return { ok: residual === 0 && !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront };
+}
+
+/**
+ * 砲塔 × 隧道洞口稽核(規則 #5 的**唯一結算縫**)—— 落在隧道覆蓋段內的砲塔,
+ * 沿兵線到最近洞口的距離 d MUST ≤ range ×(1 − GAME.TOWER_TUNNEL_OUT_F),
+ * 即「至少 TOWER_TUNNEL_OUT_F 比例的射程涵蓋到洞口外」。
+ * lanes: 同 solveTowerSites(遊戲公尺);tunSpans[li] = [[s0,s1]…] 該兵線的隧道覆蓋弧長區間
+ *   (遊戲公尺,沿兵線自 SWARM 端起算;該線無隧道給 [] 或省略)。
+ * **隧道資料只在離線期存在**(覆蓋區間 = 圖資 tunnel way × 地形高度,見 biomes.tunnelCoverIntervals),
+ * 開局時 solveTowerSites 手上只有兵線 ⇒ 本規則是**選線期**的判定(烘焙/稽核),
+ * MUST NOT 改成執行期挪塔 —— 伺服器與客戶端拿不到同一份洞口資料,塔位會分家。
+ */
+export function towerTunnelAudit(lanes, tunSpans = []) {
+  const need = UNITS.tower.range * (1 - GAME.TOWER_TUNNEL_OUT_F);
+  const sites = solveTowerSites(lanes);
+  const bad = [];
+  let worst = 0, inside = 0;
+  for (let li = 0; li < sites.length; li++) {
+    const spans = tunSpans[li] || [];
+    if (!spans.length) continue;
+    const pts = lanes[li] || [];
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    sites[li].forEach((st, idx) => {
+      const role = idx === sites[li].length - 1 ? 'front' : 'rear';   // 末項 = 前線塔(見 solveTowerSites 回傳序)
+      for (const side of ['SWARM', 'STEEL']) {
+        const s = side === 'SWARM' ? total * st.frac : total * (1 - st.frac);
+        for (const [a, b] of spans) {
+          if (s < a || s > b) continue;
+          inside++;
+          const d = Math.min(s - a, b - s);
+          if (d > worst) worst = d;
+          if (d > need + 1e-6) bad.push({ li, role, side, s, d });
+        }
+      }
+    });
+  }
+  return { ok: bad.length === 0, need, worst, inside, bad };
 }
 
 // ---- 地形呈現(解析度 + 主要道路外海拔放大)----

@@ -47,6 +47,7 @@
 
 - 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只住 `data.js`;sim.js/game.js **MUST NOT** 硬編碼。
 - **推導值 MUST NOT 手寫**:賞金表(戰力公式推導)、`UNITS.drone.hp` 與 `SQUAD.DMG`(由 `SQUAD.BUFF` derive)、`UNITS.bunker.hp`(= 塔一半)、塔位(`solveTowerSites()`,sim 與 biomes 共用)、`MINES.PER_LANE` 與 `AA_SITE.range`(等面積公式)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)。
+- 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
 - 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
 - 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
 - 共用視覺入口唯一:`spawnCastFx()`(招式 3D 演出)、`stepCombatFx()`(開火動畫)、`terrain.surfaceAt()`(站立表面)— 戰場與展示台/各呼叫端 **MUST NOT** 各寫一套。
@@ -135,6 +136,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 武裝掛點/槍口 | `audit_muzzle.mjs` 範式(32 英雄 + NPC 四陣營) |
 | `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 冒煙:建 `BattleSim` 數 `sim.camps.length`(基準 L1 2/2、L2 4/4、L3 6/6) |
 | `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js` |
+| `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 
