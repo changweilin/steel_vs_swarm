@@ -10,7 +10,7 @@ import {
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
-  ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX,
+  ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX, offGround, airUnit,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -2837,8 +2837,12 @@ export class BattleSim {
   _tickMines() {
     const M = GAME.MINES;
     for (const h of this.heroes.values()) {
-      // 機甲恆貼地會踩雷;變形機甲只有地面型態(回報高度 y ≈ 0)會踩,飛行型不觸發
-      const grounded = h.kind === 'robot' || (h.kind === 'morph' && (h.y || 0) <= MORPH.GROUND_Y);
+      // 機甲會踩雷,但**蓄力跳躍高過一般跳躍頂點的區間 = 空中狀態**(airUnit)不觸發
+      // ——「小跳跳不過雷區、蓄力跳才過得去」是刻意的門檻,見 data.js AIR;
+      // 變形機甲照舊只有地面型態(回報高度 y ≤ MORPH.GROUND_Y)會踩,飛行型不觸發。
+      const grounded = h.kind === 'robot'
+        ? !airUnit(h.kind, h.y)
+        : (h.kind === 'morph' && (h.y || 0) <= MORPH.GROUND_Y);
       if (h.dead || !grounded) continue;
       if ((h.thirdCd || 0) > this.t) continue;   // 第三方打擊冷卻中(踩雷/被伏擊共用,3 分鐘)
       for (let i = this.mines.length - 1; i >= 0; i--) {
@@ -2923,7 +2927,9 @@ export class BattleSim {
     const fireDef = HAZARDS.fire;
     for (const f of this._fires || []) {
       for (const h of this._allBodies()) {
-        if (h.dead || (h.y || 0) > fireDef.maxY) continue;
+        // 2026-07-23:地面機甲跳躍/蓄力跳躍**離地期間不吃地面火場**(offGround;水域/沼澤同理,
+        // 走客戶端 wet=0 回報)。飛行機種照舊吃 maxY 以下的煙柱高度規則,平衡不動。
+        if (h.dead || (h.y || 0) > fireDef.maxY || offGround(h.kind, h.y)) continue;
         if (dist2d(h.x, h.z, f.x, f.z) > fireDef.r * (f.sc || 1)) continue;
         this._fireBurn(h, fireDef.dot * dt);   // 同時扣護盾/HP(依最大值比例,不吃裝甲)
         if ((h._burnAt || 0) + 2 < this.t) {   // 事件節流:每 2 秒提示一次

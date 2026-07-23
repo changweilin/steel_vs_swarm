@@ -147,6 +147,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
 | `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`(榴彈火控解) | 瀏覽器真開房冒煙:同一目標三個高度各射一發,`bullet.vel` MUST 等於 `_lobFc.vel`、爆點高度 MUST 對上瞄準高度;弧高 MUST 隨距離變(40m ≈ 0.2m / 172m ≈ 3.7m);合成稜線擋道 MUST `ok:false` 且不送 `lock` |
 | `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中 |
+| `AIR`(GRAV/OFF_GROUND/KINDS)/`envTrigger`/`TERRAIN_FX.*_EYE_F`(騰空豁免 / 空中狀態 / 地形異常門檻) | headless 直測:`airUnitY('robot')` MUST = `jumpApex(UNITS.robot.jump)`(**普通小跳實測頂點 MUST < 此值** ⇒ 小跳仍踩雷、蓄力跳不踩)+ 火場 y=0 灼傷 / y>ε 免疫、**無人機 y=10 MUST 仍灼傷**(飛行機種吃 `fire.maxY`,平衡不動)+ `heroPos` wet=2 扣血 / 騰空 wet=0 立即停。瀏覽器真開房(有水域場地,如倫敦泰晤士)同步泵幀迴圈:深水 code=1、淺灘/沼澤帶上緣 code=0、跳躍中 air 幀 code 全 0 |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗(`[#INC-104]` 輕武器 NPC 基準 range MUST ≥170;t01/s02 是確定性指定角 MUST 保持 crit:0;s02 heavy MUST 保持 launcher)+ 重驗「塔 310 > 所有輕武器/NPC」壓制不等式與「所有重武器 > 塔 310」不等式 |
 | 骨架/關節/步態 | 全角色 rig 稽核 + `node tools/audit_cast_jump.mjs` |
 | 武裝掛點/槍口 | `audit_muzzle.mjs` 範式(32 英雄 + NPC 四陣營) |

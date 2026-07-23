@@ -355,10 +355,32 @@ export const MORPH = {
   GROUND_Y: 2,       // 伺服器:y ≤ 此值視為地面型(踩雷判定)
   CD: 15,            // 變形起飛(蓄力彈射)冷卻(秒;客戶端閘門,與 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
 };
+// ---- 騰空/空中狀態(2026-07-23;跳躍脫離地面效果的唯一縫)----
+// GRAV:地面機體跳躍重力(game.js 物理與下方頂點推導共用,MUST NOT 各寫一份 24)。
+// OFF_GROUND:離地 ε(與 game.js onGround 同一個門檻)。
+// 兩條高度線,語意不同 MUST NOT 混用:
+//   ①offGround(y):**離地** —— 跳躍/蓄力跳躍騰空期間不吃地面傷害(火場/水域/沼澤),
+//     客戶端 _envAt 據此回報 wet=0、伺服器 _tickHazards 據此跳過火場灼傷。
+//   ②airUnitY(kind):**空中狀態** = 該機種「一般跳躍」的頂點高 jumpApex(UNITS[kind].jump)——
+//     蓄力跳躍高過此線的區間視同空中單位(不踩地雷)。普通小跳的解析頂點**恰好等於此線**、
+//     逐幀積分實測再低一截(robot:門檻 0.4219 vs 實測 0.38~0.40)⇒ 小跳永遠跳不過雷區、
+//     只有蓄力跳過得去(刻意)。MUST NOT 手寫門檻數字,改 UNITS[].jump / COMBAT_SCALE / GRAV 即同步;
+//     也 MUST NOT 為了「讓小跳也能跳過」把門檻調低 —— 那條線就是拿來分辨兩種跳躍的。
+// 適用機種僅地面機甲(robot/morph);飛行機種另有各自的高度規則(AA_MIN_ALT / fire.maxY),不走這條。
+export const AIR = { GRAV: 24, OFF_GROUND: 0.05, KINDS: new Set(['robot', 'morph']) };
+/** 初速 v 的跳躍頂點高(公尺) */
+export const jumpApex = (v) => (v * v) / (2 * AIR.GRAV);
+/** 該機種「一般跳躍」頂點 = 空中狀態門檻(蓄力跳躍超過此高度即視同空中單位) */
+export const airUnitY = (kind) => jumpApex(UNITS[kind]?.jump || 0);
+/** 地面機甲是否騰空(離地即成立;y = 回報的離站立表面高) */
+export const offGround = (kind, y) => AIR.KINDS.has(kind) && (y || 0) > AIR.OFF_GROUND;
+/** 地面機甲是否進入空中狀態(蓄力跳躍高過一般跳躍頂點) */
+export const airUnit = (kind, y) => AIR.KINDS.has(kind) && (y || 0) > airUnitY(kind);
+
 // ---- 機甲蓄力跳躍(2026-07-16;kind:'robot' 限定 —— morph 的長按 Space 已被變形彈射佔用)----
 // 長按 Space 蓄力 → 放開彈射高跳,騰空吃低重力係數 GRAV_F(月面/太空漫步的滯空感);
 // 蓄力不足 = 普通小跳。純客戶端物理(位置本就客戶端回報);y 判定規則不變 ——
-// 滿蓄頂點 ≈ V²/(2×24×GRAV_F) ≈ 27m < GAME.AA_MIN_ALT(40),單靠蓄力跳不進 SAM 空域;
+// 滿蓄頂點 ≈ V²/(2×AIR.GRAV×GRAV_F) ≈ 27m < GAME.AA_MIN_ALT(40),單靠蓄力跳不進 SAM 空域;
 // 疊加跳躍增益(leap)越過 40m 時照吃塔 SAM(刻意風險)。
 export const CJUMP = {
   CHARGE_S: 0.9,     // 蓄滿秒數
@@ -685,12 +707,31 @@ export const WATER = {
 // SWAMP_DRAIN_S:扣血起算門檻;SWAMP_DRAIN_PS:每秒扣血 = 火災 dot × SWAMP_DRAIN_FIRE_FRAC(HAZARDS 後推導,勿手寫),
 //   走 _damage(護盾先擋、剩餘吃裝甲),但硬地板 1 滴不致死(sim floorHp)。
 // WATER_FREEZE_S:水域滯留多久後凍結換彈/招式冷卻;FIRE_FOG_S/_MAX_S:火場滯留視野霧化起訖(純客戶端)。
+// WATER_EYE_F / SWAMP_EYE_F:異常狀態的觸發眼位係數(2026-07-23,見 envTrigger)。
 export const TERRAIN_FX = {
   SWAMP_SLOW: 1 / 4, SWAMP_SLOW_MIN: 1 / 8,
   SWAMP_DRAIN_S: 3, SWAMP_DRAIN_FIRE_FRAC: 1 / 3, SWAMP_DRAIN_PS: 0,   // PS 由 HAZARDS.fire.dot 推導(見下方回填)
   WATER_FREEZE_S: 3,
   FIRE_FOG_S: 2.5, FIRE_FOG_MAX_S: 8,
+  WATER_EYE_F: 1, SWAMP_EYE_F: 1 / 2,
 };
+
+/**
+ * 地形異常狀態觸發(2026-07-23;唯一縫 —— 客戶端 _envAt 與水下帷幕共用同一把尺)。
+ * 舊制「踩到水/沼格子就觸發」會讓 0.3m 淺灘也凍結電子系統,與「眼位沒入水面才變色」的水下帷幕
+ * 對不上。新制改以**機體視線(座艙眼位)高度 vs 觸發水平面**判定 —— 看得到水下才算泡水(WYSIWYG):
+ *   水域:眼位(footY + eyeH × WATER_EYE_F)低於水面 waterY
+ *   沼澤:眼位一半(footY + eyeH × SWAMP_EYE_F)低於沼澤面 = waterY + WATER.SWAMP_BAND
+ *         (沼澤帶上緣,與 terrainEnvCode 的分類界同一個數字,MUST NOT 另寫)
+ * ⇒ 跳躍/蓄力跳躍把眼位抬離水平面的那段時間,異常狀態自然解除(呼叫端無需另設計時器)。
+ * ground = terrainEnvCode 的地表分類(0 乾 / 1 水 / 2 沼);footY = 站立面絕對高;eyeH = 眼位離站立面高。
+ */
+export function envTrigger(ground, waterY, footY, eyeH) {
+  if (!ground || waterY == null) return 0;
+  const eyeF = ground === 1 ? TERRAIN_FX.WATER_EYE_F : TERRAIN_FX.SWAMP_EYE_F;
+  const planeY = ground === 1 ? waterY : waterY + WATER.SWAMP_BAND;
+  return footY + eyeH * eyeF < planeY ? ground : 0;
+}
 
 // ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。

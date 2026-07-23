@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
-  WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
+  WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE, TARGET_CLASS,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf,
 } from './data.js';
@@ -252,7 +252,7 @@ export class BattleClient {
     this.fires = [];                 // 火場(滯留視野霧化判定;傷害由伺服器結算)
     this._fireDwell = 0;             // 火場滯留累計秒(離開後較快消散 → 視野漸清)
     this._swampDwell = 0;            // 沼澤滯留累計秒(越陷越深 → 移動漸慢至 1/8;離開即歸零)
-    this._env = { code: 0, depth: 0 }; // 領機當幀環境(0 乾 / 1 水 / 2 沼;每幀 _envAt 更新)
+    this._env = { code: 0, depth: 0, ground: 0, air: false }; // 領機當幀環境(每幀 _envAt 更新;見該函式)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
@@ -2799,9 +2799,9 @@ export class BattleClient {
     }
   }
 
-  /** 淹水區:地面機體深水行進大幅減速(限制但不封鎖;飛行型態不受影響) */
+  /** 淹水區:地面機體深水行進大幅減速(限制但不封鎖;飛行型態/騰空不受影響) */
   _zoneSlow() {
-    if (this._flying()) return 1;
+    if (this._flying() || this._env?.air) return 1;
     for (const f of this.floods) {
       if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) {
         const now = performance.now() / 1000;
@@ -2816,29 +2816,52 @@ export class BattleClient {
   }
 
   /**
-   * 領機當幀環境(0 乾 / 1 水 / 2 沼)+ 水深(公尺)。與 biomes.terrainEnvCode 同規則
-   * (WYSIWYG),另加飛行 / 橋面結構物豁免:站在橋面/結構物上(表面高於地形 >1.2m)= 乾地。
+   * 座艙眼位離機體底的高度(公尺)。唯一縫:_updatePlayer 末段的相機 eye 與 _envAt 的
+   * 「視線高度 vs 觸發水平面」共用同一式 —— 蓄力下蹲(CROUCH_M)一併計入,所以蓄力時
+   * 眼位真的會沉進水面/沼面,狀態判定與畫面一致。
+   */
+  _eyeH() {
+    const vw = heroView(this.heroKind, this.ch, this._flying());
+    return this.selfH * vw.e
+      - (!this._flying() ? this.charge * (this.isMorph ? MORPH.CROUCH_M : CJUMP.CROUCH_M) : 0);
+  }
+
+  /**
+   * 領機當幀環境。回傳 { code, depth, ground, air }:
+   *  - ground:腳下地表分類(0 乾 / 1 水 / 2 沼,biomes.terrainEnvCode 同規則 WYSIWYG)——
+   *    驅動「涉水/陷沼」移動減速,只看有沒有踩在水沼裡。
+   *  - code:**地形異常狀態**(0/1/2)= ground 再過 data.envTrigger 的視線高度制門檻 ——
+   *    驅動 wet 回報(伺服器凍結/扣血)、水下帷幕、沼澤滯留。淺灘/沼澤邊緣眼位在水平面之上
+   *    ⇒ code 0,不再「踩到就凍結」。
+   *  - air:騰空(跳躍/蓄力跳躍離地)—— 一律當乾地零狀態,即「跳躍期間不吃地面傷害」。
+   * 飛行型態、站在橋面/結構物上(表面高於地形 >1.2m)同樣視為乾地。
    * 每幀 _updatePlayer 開頭算一次存 this._env;移動減速、pos 回報、火場霧化皆讀它。
    */
   _envAt() {
-    if (this._flying()) return { code: 0, depth: 0 };
+    const DRY = { code: 0, depth: 0, ground: 0, air: false };
+    if (this._flying()) return DRY;
     const x = this.pos.x, z = this.pos.z;
     const s = this._surf(x, z, this.pos.y);
-    if (s - this.terrain.heightAt(x, z) > 1.2) return { code: 0, depth: 0 };   // 橋面/結構物 = 乾
-    const code = terrainEnvCode(this.terrain, x, z);
     const wy = this.terrain.waterY;
-    const depth = code === 1 && wy != null ? Math.max(0, wy - s) : 0;
-    return { code, depth };
+    // 站立面(深水的有效地板 = 水面 − FULL_D,與 _updatePlayer 的 gy 同式):離地即騰空
+    const floor = wy != null ? Math.max(s, wy - WATER.FULL_D) : s;
+    if (this.pos.y - floor > AIR.OFF_GROUND) return { ...DRY, air: true };
+    if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物 = 乾
+    const ground = terrainEnvCode(this.terrain, x, z);
+    const depth = ground === 1 && wy != null ? Math.max(0, wy - s) : 0;
+    return { code: envTrigger(ground, wy, floor, this._eyeH()), depth, ground, air: false };
   }
 
   /**
    * 地形環境移動減速(2026-07-19;取代舊 _waterSlowF)。水域:速度隨深度線性內插
    * 1.0(岸邊)→ SLOW_MIN(全滅頂 FULL_D);沼澤:固定 SWAMP_SLOW。飛行型態不受影響。
+   * 讀 ground(腳下地表)而非 code(異常狀態):**淺灘照樣涉水變慢**,只是不再觸發電子失效;
+   * 騰空(air)時 ground 已為 0 ⇒ 跳躍期間無涉水阻力(與低重力滑行一致)。
    */
   _terrainSlowF() {
     const e = this._env;
-    if (!e || e.code === 0) return 1;
-    if (e.code === 2) {
+    if (!e || e.ground === 0) return 1;
+    if (e.ground === 2) {
       // 沼澤越陷越深:進場 SWAMP_SLOW(1/4),滯留到 SWAMP_DRAIN_S(開始扣血)線性降到 SWAMP_SLOW_MIN(1/8)
       const { SWAMP_SLOW, SWAMP_SLOW_MIN, SWAMP_DRAIN_S } = TERRAIN_FX;
       const k = Math.min(1, (this._swampDwell || 0) / SWAMP_DRAIN_S);
@@ -2852,10 +2875,11 @@ export class BattleClient {
   /** 火場滯留 → 視野漸霧化(feature 6;純客戶端表現,傷害由伺服器 _tickHazards 結算)。
    *  進火場累積、離場 2× 速消散;滯留超過 FIRE_FOG_S 起霧、FIRE_FOG_MAX_S 達最濃。 */
   _updateEnvFog(dt) {
-    // 沼澤滯留計時(_env 已於本幀 _updatePlayer 開頭更新):留在沼澤累加、離開即歸零 → 移動漸慢
+    // 沼澤滯留計時(_env 已於本幀 _updatePlayer 開頭更新):陷沼(異常狀態)才累加、離開即歸零 → 移動漸慢
     this._swampDwell = (this._env?.code === 2) ? (this._swampDwell || 0) + dt : 0;
+    // 騰空(跳躍/蓄力跳躍)不吃火場:與伺服器 _tickHazards 的離地豁免同一條規則
     let inFire = false;
-    if (!this._flying()) {
+    if (!this._flying() && !this._env?.air) {
       for (const f of this.fires) {
         if (Math.hypot(this.pos.x - f.x, this.pos.z - f.z) <= f.r) { inFire = true; break; }
       }
@@ -2868,7 +2892,8 @@ export class BattleClient {
   /**
    * 水下/沼澤視野變色(2026-07-22,純表現層):鏡頭「眼位」沒入水面下 → 藍色帷幕,依沒入深度
    * 插值到近黑(FULL_D×2 ≈ 10m 滿檔);沒入點屬沼澤帶 → 混濁紫黑。判定用最終 camera.position
-   * (非 _env.depth —— 那是腳下站立面深度,淺水站立眼在水上時會誤觸),陣亡過場鏡頭墜水 /
+   * (非 _env.depth —— 那是腳下站立面深度,淺水站立眼在水上時會誤觸;2026-07-23 起 _envAt 的
+   * 異常狀態改用同一把「眼位 vs 水平面」尺,見 data.envTrigger ⇒ 畫面變色與狀態生效同進同出),陣亡過場鏡頭墜水 /
    * 觀戰潛水同樣生效。沼澤本身無水面高(高程在水面之上),另以「站沼滯留」推混濁紫氣
    * (越陷越深越濁,與 _terrainSlowF 同一把 _swampDwell 尺)—— 沼澤的「混濁」隨深陷可見化。
    * 每幀重算、無狀態殘留(死亡/重生/離水自然歸零)。
@@ -3944,7 +3969,7 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
-    this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0 };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
+    this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
@@ -5449,7 +5474,7 @@ export class BattleClient {
         this.charge = 0;
       }
       // 蓄力跳騰空吃低重力(月面滯空);無敵幀已於起跳離地(_chargeJump / _morphLaunch)請求
-      this.vy -= 24 * (this._lowG ? CJUMP.GRAV_F : 1) * dt;
+      this.vy -= AIR.GRAV * (this._lowG ? CJUMP.GRAV_F : 1) * dt;
       this.pos.y += this.vy * dt;
       if (this.pos.y < gy) { this.pos.y = gy; this.vy = 0; this._lowG = false; }
       this.roll += (0 - this.roll) * Math.min(1, dt * 6);
@@ -5523,8 +5548,7 @@ export class BattleClient {
     // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
     // 蓄力中重心下沉(鏡頭跟著蹲)。
     const vw = heroView(this.heroKind, this.ch, this._flying());
-    const eye = this.selfH * vw.e
-      - (!this._flying() ? this.charge * (this.isMorph ? MORPH.CROUCH_M : CJUMP.CROUCH_M) : 0);
+    const eye = this._eyeH();          // 單一縫:地形異常狀態的視線高度判定共用同一式
     const headF = this.selfH * vw.f;   // 沿正面方向前移(three:-z 為前)
     this.camera.position.copy(this.pos).add(
       new THREE.Vector3(-Math.sin(this.yaw) * headF, eye, -Math.cos(this.yaw) * headF));
@@ -5566,7 +5590,8 @@ export class BattleClient {
         y: Math.round(this._altAG * 10) / 10,
         z: Math.round(-this.pos.z * 10) / 10,
         ry: Math.round(this.yaw * 100) / 100,
-        wet: this._env.code,   // 身處環境(0 乾 / 1 水 / 2 沼):伺服器結算沼澤扣血/水域凍結 CD 換彈
+        wet: this._env.code,   // 地形異常狀態(0 無 / 1 水 / 2 沼):伺服器結算沼澤扣血/水域凍結 CD 換彈。
+                               // 視線高度制 + 騰空歸零(見 _envAt)⇒ 跳躍/蓄力跳躍期間回報 0 = 狀態解除
         lev,
       });
     }
