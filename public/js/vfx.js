@@ -365,6 +365,144 @@ export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 
   });
 }
 
+// ================= 直線貫穿(line)/ 扇形離子(fan)的範圍演出 =================
+// 使用者定案(2026-07-23):「根據砲彈類型要明顯做出範圍傷害的效果動畫」;
+// 光束類參考鋼彈動畫(熾白內芯 + 飽和外暈 + 沿軸行進的能量環 + 落點綻放),
+// 離子類參考哥吉拉離子吐息(噴口錐 + 螺旋纏繞能量帶 + 末端灼燒)。
+// 兩者都吃 game.js 的 effects 陣列,不自帶迴圈;一律 additive + noOutline(A14 toon 描邊排除)。
+
+/** 加法混色材質(能量體共用;不參與描邊、不寫深度) */
+function energyMat(color, opacity = 0.85) {
+  return new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+}
+/** 沿 from→to 架一根圓柱(回傳 Mesh,已定位定向;len<0.01 回傳 null) */
+function axisCylinder(from, to, r, color, opacity) {
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  if (len < 0.01) return null;
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10, 1, true), energyMat(color, opacity));
+  m.position.copy(from).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  m.userData.noOutline = true;
+  return m;
+}
+
+/**
+ * 光束砲(鋼彈式 mega beam / beam rifle):
+ *   熾白內芯 + 飽和外暈雙層圓柱(外暈收縮、內芯延遲熄滅)+ 槍口衝擊環 +
+ *   沿軸「行進」的能量環(rings 個,由槍口衝向落點)+ 落點綻放。
+ * r = 圓柱半徑(= 伺服器 LANCE.R 的貫穿半徑)⇒ **看到多粗就是打到多粗**,不是裝飾。
+ */
+export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5, rings = 4, core = 0xffffff } = {}) {
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  if (len < 0.01) return;
+  const axis = dir.clone().normalize();
+  // 外暈:與貫穿半徑同寬,由滿寬收細 = 能量潰散
+  const halo = axisCylinder(from, to, r, color, 0.42);
+  if (halo) {
+    scene.add(halo);
+    effects.push({ obj: halo, ttl, fade(o, f) { o.material.opacity = 0.42 * f; o.scale.x = o.scale.z = 0.25 + 0.75 * f; } });
+  }
+  // 熾白內芯:細、亮、撐得比外暈久一點(鋼彈光束的「殘光」)
+  const cm = axisCylinder(from, to, r * 0.28, core, 0.95);
+  if (cm) {
+    scene.add(cm);
+    effects.push({ obj: cm, ttl: ttl * 1.15, fade(o, f) { o.material.opacity = 0.95 * f * f; o.scale.x = o.scale.z = 0.2 + 0.8 * f; } });
+  }
+  // 槍口衝擊環(面向射線)+ 沿軸行進的能量環
+  for (let i = 0; i <= rings; i++) {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.55, r * 0.95, 24), energyMat(i === 0 ? core : color, 0.9));
+    ring.userData.noOutline = true;
+    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis);
+    ring.position.copy(from);
+    scene.add(ring);
+    const t0 = i / (rings + 1);                 // 出發位置:沿軸等距排開 = 連續脈衝感
+    const life = ttl * (i === 0 ? 0.45 : 0.9);
+    effects.push({
+      obj: ring, ttl: life,
+      fade(o, f) {
+        const p = Math.min(1, t0 + (1 - f) * 1.15);
+        o.position.copy(from).addScaledVector(axis, p * len);
+        o.scale.setScalar(1 + p * 0.9);          // 越飛越張(能量發散)
+        o.material.opacity = 0.9 * f;
+      },
+    });
+  }
+  starburst(scene, effects, to.x, to.y, to.z, r * 1.6, core);
+  starburst(scene, effects, to.x, to.y, to.z, r * 2.4, color);
+}
+
+/**
+ * 離子吐息(哥吉拉式 atomic breath;扇形離子重武器的主噴流):
+ *   噴口錐(近粗遠細的能量喉)+ coil 條螺旋纏繞的能量帶(繞射線旋進)+ 末端灼燒綻放。
+ * 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 這裡以噴口最粗、末端收束把它畫出來。
+ */
+export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45, coil = 3, core = 0xffffff } = {}) {
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  if (len < 0.01) return;
+  const axis = dir.clone().normalize();
+  // 噴口喉:錐形(**槍口端最粗、末端收束**)—— 這是吐息與雷射最大的外形差異,
+  // 同時也是扇形「越近越強」(fanFalloff)的可視化。
+  const throat = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.30, r * 1.7, len, 14, 1, true), energyMat(color, 0.45));
+  throat.position.copy(from).addScaledVector(dir, 0.5);
+  throat.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+  throat.userData.noOutline = true;
+  scene.add(throat);
+  effects.push({ obj: throat, ttl, fade(o, f) { o.material.opacity = 0.45 * f; o.scale.x = o.scale.z = 0.45 + 0.55 * f; } });
+  // 熾芯
+  const cm = axisCylinder(from, to, r * 0.24, core, 0.9);
+  if (cm) {
+    scene.add(cm);
+    effects.push({ obj: cm, ttl: ttl * 0.85, fade(o, f) { o.material.opacity = 0.9 * f * f; } });
+  }
+  const up = Math.abs(axis.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  const nx = new THREE.Vector3().crossVectors(axis, up).normalize();
+  const nz = new THREE.Vector3().crossVectors(axis, nx).normalize();
+  // 螺旋纏繞能量帶:沿軸切段的小球排成螺線並逐幀旋進 = 吐息的翻騰感。
+  // 螺線半徑刻意**大於喉部**(1.05→1.9×)⇒ 從側面看得到能量帶繞在噴流外,不是貼在管壁上的點。
+  const SEG = 10;
+  for (let c = 0; c < coil; c++) {
+    const ph0 = (c / coil) * Math.PI * 2;
+    for (let i = 0; i < SEG; i++) {
+      const t0 = (i + 0.5) / SEG;
+      const bead = new THREE.Mesh(new THREE.SphereGeometry(r * (0.42 - 0.26 * t0), 7, 5), energyMat(c === 0 ? core : color, 0.8));
+      bead.userData.noOutline = true;
+      scene.add(bead);
+      const rad = r * (1.9 - 1.35 * t0);          // 螺線半徑隨距離收束(吐息越遠越集中)
+      effects.push({
+        obj: bead, ttl: ttl * (0.7 + 0.3 * t0),
+        fade(o, f) {
+          const ph = ph0 + t0 * Math.PI * 3 + (1 - f) * 7;   // 旋進
+          o.position.copy(from).addScaledVector(axis, t0 * len)
+            .addScaledVector(nx, Math.cos(ph) * rad).addScaledVector(nz, Math.sin(ph) * rad);
+          o.material.opacity = 0.8 * f;
+        },
+      });
+    }
+  }
+  // 放電弧:自噴流表面往外劈的短折線(離子吐息的招牌;近噴口最密最長)
+  for (let i = 0; i < 7; i++) {
+    const t0 = (i + 0.4) / 7;
+    const ph = i * 2.3;
+    const rad = r * (1.9 - 1.35 * t0);
+    const p0 = from.clone().addScaledVector(axis, t0 * len)
+      .addScaledVector(nx, Math.cos(ph) * rad).addScaledVector(nz, Math.sin(ph) * rad);
+    const p1 = p0.clone()
+      .addScaledVector(nx, Math.cos(ph + 0.6) * r * (1.5 - t0))
+      .addScaledVector(nz, Math.sin(ph + 0.6) * r * (1.5 - t0))
+      .addScaledVector(axis, (0.5 - (i % 2)) * r);
+    const arc = axisCylinder(p0, p1, r * 0.07, core, 0.9);
+    if (arc) { scene.add(arc); effects.push({ obj: arc, ttl: ttl * 0.45, fade(o, f) { o.material.opacity = 0.9 * f; } }); }
+  }
+  starburst(scene, effects, to.x, to.y, to.z, r * 2.0, core);
+  starburst(scene, effects, from.x, from.y, from.z, r * 1.7, core);   // 噴口綻放
+}
+
 /** AoE 衝擊環:貼地放射環,250ms 擴張到傷害半徑邊界後消散 */
 export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
   const ring = new THREE.Mesh(

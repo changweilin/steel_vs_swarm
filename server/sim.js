@@ -8,6 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
+  aoeClass, lanceR, LANCE,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed,
   ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX,
 } from '../public/js/data.js';
@@ -1468,6 +1469,23 @@ export class BattleSim {
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(h, t, wp.def), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
+    // 直線貫穿(line 類重武器):bot 也吃同一條範圍規則 —— 主目標之後的「順路」目標依序衰減。
+    // 主目標本身已於上方全額結算,故這裡跳過它(貫穿序 i 仍沿用整條射線的名次)。
+    if (aoeClass(wp.def) === 'line') {
+      const oy = (h.y || 0) + LOS.EYE_M;
+      const hx = t.x - h.x, hz = t.z - h.z, hy = this._tgtY(t) - oy;
+      const hl = Math.hypot(hx, hz, hy) || 1;
+      const hits = this._lanceHits(h, wp.def, h.x, h.z, oy, hx / hl, hz / hl, hy / hl,
+        wp.def.range * this._altRange(h, t, wp.def));
+      for (let i = 0; i < hits.length; i++) {
+        const k = hits[i];
+        if (k.t === t) continue;
+        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3)
+          * this._altDmg(h, k.t, wp.def) * LANCE.DECAY ** i;
+        this._applyHitEmp(h, wp.def, k.t);
+        this._damage(k.t, kd, h, wp.def.pen);
+      }
+    }
     this._echo(h, t, wp.def);
     return true;
   }
@@ -1547,6 +1565,111 @@ export class BattleSim {
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
       dx, dz, r: wp.def.range, arc: wp.def.arc || 15, slot: slot === 'light' ? 'light' : 'heavy' });
+  }
+
+  /**
+   * 直線貫穿命中列表(line 類重武器:beam 光束 / rail 電磁彈射 / gun 反器材砲)。
+   * 回傳沿射線由近至遠排序的敵方單位(至多 LANCE.MAX 個),供呼叫端逐一套貫穿衰減。
+   *
+   * 幾何近似(刻意):圓柱判定取**水平**垂距 + 一條垂直帶 —— 伺服器無地形高程,
+   * y 的語意是「離站立表面高」,射線的絕對高度算不出來(見 _losBlocked 同一組近似)。
+   * 垂直帶用客戶端回報的 dy 外推射線高度,寬容 R × LANCE.VBAND_F;
+   * 真正的遮蔽仍由逐目標 _losBlocked 把關(與 heroPlasma 同一條規則)。
+   */
+  _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len) {
+    const R = lanceR(def);
+    const band = R * LANCE.VBAND_F;
+    const hd = Math.hypot(dx, dz);
+    // 近乎垂直的射線(仰俯角 > 81°:對正上方的無人機開火)水平投影會退化 —— 改以高度差當軸向。
+    const vert = hd < 0.15;
+    const ux = vert ? 0 : dx / hd, uz = vert ? 0 : dz / hd;   // 水平單位向量
+    const slope = vert ? 0 : dy / hd;                          // 每水平公尺的爬升
+    const maxS = vert ? len : len * hd;                        // 軸向長度(水平模式取射線的水平投影長)
+    const sy = dy >= 0 ? 1 : -1;
+    const pulse = this.visionUntil?.[shooter.side] > this.t;
+    const src = this._visionSources(shooter.side);
+    const out = [];
+    for (const t of this.ents.values()) {
+      if (t.side === shooter.side || t.gar || (t.hero && t.dead)) continue;
+      const ty = this._tgtY(t);
+      const tx = t.x - ox, tz = t.z - oz;
+      let s, perp;
+      if (vert) {
+        s = (ty - oy) * sy;                                    // 垂直射線:軸向 = 高度差
+        perp = Math.hypot(tx, tz);
+      } else {
+        s = tx * ux + tz * uz;                                 // 水平投影軸距
+        if (Math.abs(oy + slope * s - ty) > band) continue;    // 垂直帶(見上方幾何近似說明)
+        perp = Math.hypot(tx - ux * s, tz - uz * s);
+      }
+      if (s < 0 || s > maxS || perp > R) continue;
+      if (!pulse && !this._visibleTo(t, shooter.side, src)) continue;
+      if (this._losBlocked(ox, oz, oy, t.x, t.z, ty, shooter, t)) continue;
+      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy) });
+    }
+    out.sort((a, b) => a.s - b.s);
+    return out.length > LANCE.MAX ? out.slice(0, LANCE.MAX) : out;
+  }
+
+  /**
+   * 直線貫穿攻擊(aoeClass 'line':beam / rail / gun 重武器)。客戶端回報射線:
+   *   o = [x, z, y] 槍口(sim 座標,y = 離站立表面高)、d = [dx, dz, dy] 單位方向、len = 射線長
+   *   (已被本端地形/障礙截斷 —— 伺服器再夾一次射程 ×1.25 寬容)。
+   * 命中判定全在伺服器:圓柱內、射程內、迷霧可見、LOS 未遮蔽的敵方單位全數受創,
+   * 依沿線先後套 LANCE.DECAY^i(首個全額 ⇒ 單體 DPS 與 heroHit 相同,bal 不變式不受影響)。
+   * 一發只扣一次彈藥/電力/射速 —— 與 heroPlasma(扇形)、heroBurst(爆炸)同一條「AoE 一發一結算」。
+   */
+  heroLance(pid, o, d, len) {
+    const h = this.heroes.get(pid);
+    if (!h || h.dead || this.over) return;
+    if (this._jammed(h)) return;
+    if (!Array.isArray(o) || !Array.isArray(d)) return;
+    const ox = +o[0], oz = +o[1], oy = +o[2];
+    let dx = +d[0], dz = +d[1], dy = +d[2];
+    if (![ox, oz, oy, dx, dz, dy, +len].every(Number.isFinite)) return;
+    const wp = this._heroWeapon(h, 'heavy');
+    if (!wp || aoeClass(wp.def) !== 'line') return;
+    if (wp.def.needAim && !h.aiming) return;
+    // 槍口必須在自己身邊(防作弊:不能從任意座標放一條線)
+    if (dist2d(h.x, h.z, ox, oz) > 12) return;
+    const dl = Math.hypot(dx, dz, dy) || 1;
+    dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
+    const rMul = this._barraging(h) ? BARRAGE.RANGE_F : 1;
+    const max = Math.min(Math.max(0, +len), wp.def.range * 1.25 * rMul);
+    if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    for (const b of this._bodies(h)) {
+      if (b.dead) continue;
+      // 僚機以各自位置沿同射向貫穿(與 heroPlasma 同構;N=1 時只有本機)
+      const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
+      const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
+      for (let i = 0; i < hits.length; i++) {
+        const { t, d3 } = hits[i];
+        if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25 * rMul) continue;   // 高度制空
+        const dmg = this._rollCrit(b, wp.def,
+          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(b, t, wp.def)
+          * LANCE.DECAY ** i, t);
+        this._applyHitEmp(b, wp.def, t);
+        this._damage(t, dmg, b, wp.def.pen);
+      }
+    }
+    // 來襲防空飛彈也在圓柱內被打穿(取代 hitMissile 那條單體路徑 —— line 類一發只過一次
+    // _gateFire,若客戶端另送 hitMissile 會重複扣彈)。判定同 hitMissile:射程 ×1.25、掉血歸零即擊落。
+    for (let i = this.missiles.length - 1; i >= 0; i--) {
+      const m = this.missiles[i];
+      if (m.side === h.side) continue;
+      const mx = m.x - ox, mz = m.z - oz, my = m.y - oy;
+      const s = mx * dx + mz * dz + my * dy;
+      if (s < 0 || s > max) continue;
+      if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def)) continue;
+      const d3 = Math.hypot(mx, mz, my);
+      if (d3 > wp.def.range * 1.25 * rMul) continue;
+      m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);
+      if (m.hp <= 0) {
+        this.missiles.splice(i, 1);
+        this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: h.side, sam: true });
+        h.money += ECON.BOUNTY.missile;
+      }
+    }
   }
 
   /**

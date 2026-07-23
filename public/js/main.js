@@ -6,6 +6,7 @@ import { Net } from './net.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
+  aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
@@ -770,8 +771,13 @@ function charWeaponRow(id, slot, key) {
   if (raw.crit) bits.push(`爆擊 ${Math.round(w(1).crit * 100)}%×${w(1).critX}`);
   if (raw.emp) bits.push(`癱瘓 ${tri((l) => w(l).emp, 1)}s`);
   // 機制標籤(2026-07-11 武器多元化):一眼看出這把的操作手感
+  // 範圍攻擊 / 彈道分類(2026-07-23):經 aoeClass/trajClass 唯一分類縫,MUST NOT 在此重判 type
+  const cls = aoeClass(w(1));
+  if (cls) bits.push(AOE_NAME[cls] + (cls === 'line' ? ` ⌀${(lanceR(w(1)) * 2).toFixed(1)}m` : ''));
+  bits.push(TRAJ_NAME[trajClass(w(1))]);
+  const arm = armingOf(w(1));
+  if (arm) bits.push(`最短距離 ${arm.m}m`);
   if (raw.arc) bits.push(`扇形 ±${tri((l) => w(l).arc)}°`);
-  if (raw.guide) bits.push('雷射導引');
   if (raw.type === 'missile') bits.push('鎖定追蹤');
   bits.push(`後座力 ${recoilName(raw, slot === 'heavy' ? 'heavy' : 'light')}`);
   return `<div class="cd-row" data-slot="${slot}" title="點擊播放施展動畫">

@@ -507,6 +507,69 @@ export function blastFalloff(r, d) {
   return ((r * 1.8 - d) / (r * 1.3)) ** 0.75;
 }
 
+// ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
+// 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。
+//   blast 爆炸傷害:球形超壓(launcher 榴彈/火箭、missile 飛彈)→ sim._blast + blastFalloff
+//   fan   扇形傷害:越近越強、無貫穿(plasma 離子、fan:true 霰彈)→ sim.heroPlasma + fanFalloff
+//   line  直線傷害:沿射線的圓柱貫穿(beam 光束、rail 電磁彈射、gun 反器材砲)→ sim.heroLance
+// **唯一分類縫 = aoeClass(def)**;sim / game.js / HUD 一律經此判定,MUST NOT 各自比對 def.type
+// (第二份 type 比對 = 三分類分家)。輕武器(非扇形)不屬任何一類 —— 仍是單體直擊 heroHit,
+// 本規則只約束重武器(def.id === 'heavy')。
+/** 重武器範圍攻擊類別:'blast' | 'fan' | 'line';非扇形輕武器回傳 null(單體直擊) */
+export function aoeClass(def) {
+  if (!def) return null;
+  if (def.fan || def.type === 'plasma') return 'fan';            // 扇形(散彈輕武器亦然)
+  if (def.id !== 'heavy') return null;                            // 非扇形輕武器 = 單體直擊
+  if (def.type === 'launcher' || def.type === 'missile') return 'blast';
+  return 'line';                                                  // beam / rail / gun(反器材砲)
+}
+export const AOE_NAME = { blast: '爆炸傷害', fan: '扇形傷害', line: '直線貫穿' };
+
+// ---- 直線貫穿(line)參數 ----
+// R:圓柱半徑(公尺,實體尺寸 ⇒ 與 AoE 半徑同樣不吃 COMBAT_SCALE)。光束最粗(定向能發散)、
+//   電磁彈射次之、反器材砲最細(單顆穿甲彈的破壞管道)。
+// DECAY:每貫穿一名目標,後續目標傷害 ×此值。**首個目標恆為全額** ⇒ 單體 DPS 與舊 heroHit 相同,
+//   npm run bal 的四不變式(全部只模型化 1v1)不受影響 —— MUST NOT 改成首發也衰減。
+// MAX:單發最多貫穿目標數(防一條線掃穿整條兵線)。
+export const LANCE = {
+  R: { beam: 3.6, rail: 2.8, gun: 2.2 },
+  DECAY: 0.75,
+  MAX: 6,
+  VBAND_F: 2.2,   // 垂直帶寬容 = R × 此值(伺服器無地形高程,射線高度只能近似 —— 見 sim.heroLance)
+};
+export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
+
+// ---- 彈道五分類(2026-07-23 使用者定案)----
+//   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
+//   flat  高初速近似直線:動能彈(gun/rail,mv 900~2500)—— 本質仍是拋物線,只是彈道極平
+//   line  完全直線:光速/準光速直擊(beam 光束、plasma 離子)—— 無重力下墜
+//   guide 雷射導引:launcher + guide:1,FPV 有導引雷射指向準星目標,彈體騎波修正
+//   fnf   射後不理:missile,離架後自行追蹤發射瞬間的鎖定目標
+// **唯一分類縫 = trajClass(def)**(與 aoeClass 同框,MUST NOT 在別處重寫 type 判斷)。
+export function trajClass(def) {
+  if (!def) return null;
+  if (def.type === 'beam' || def.type === 'plasma' || def.fan) return 'line';
+  if (def.type === 'missile') return 'fnf';
+  if (def.guide) return 'guide';
+  if (def.type === 'launcher') return 'lob';
+  return 'flat';
+}
+export const TRAJ_NAME = {
+  lob: '低初速拋物線', flat: '高初速近似直線', line: '完全直線',
+  guide: '雷射導引', fnf: '射後不理',
+};
+// ---- 導引/射後不理武器的「最短距離」(軌跡修正期)----
+// 使用者規則:「後兩者會有最短距離,最短距離內還在軌跡修正期,命中率較低」。
+// 離架後 m 公尺內:導引/追蹤尚未接手(引信未解保險 / 導引頭未鎖定),彈體帶初期散布 spread
+// (弧度,離架瞬間一次性隨機偏角)⇒ 貼臉開導引彈會打歪,拉開距離才發揮。
+// 伺服器不模擬彈道 ⇒ 此為**純客戶端**規則(與 RECOIL / BALLISTIC 同層;伺服器仍只驗落點)。
+// m 為遊戲公尺(已是 COMBAT_SCALE 後的尺度,與 def.range 同單位)。
+export const ARMING = {
+  guide: { m: 45, spread: 0.055 },   // 雷射導引:騎波修正需要一段飛行距離
+  fnf:   { m: 60, spread: 0.075 },   // 射後不理:發射後才鎖定 + 引信解保險
+};
+export const armingOf = (def) => ARMING[trajClass(def)] || null;
+
 // ---- 後座力機制(2026-07-14:輕/重武器各三階,依武器原型分派)----
 // 純客戶端手感:game.js 依「當前手上武器」的 def.recoil 套用位移懲罰 + 準星上踢 + 開火節奏。
 // 伺服器不涉入(位移本就客戶端回報,防作弊仍走 heroHit 射程/迷霧驗證)⇒ bal/e2e 不受影響。
@@ -768,6 +831,9 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //   missile  飛彈:發射時有準星鎖定 → 自動追蹤該目標近炸;無鎖定 = 直飛(AoE 戰鬥部)
 //   beam     定向能:光速直擊無下墜,穩定輸出;吃大氣消光;emp 附帶 = 電磁癱瘓控場
 //   plasma   電漿:扇形 arc(半角度°)大面積,範圍內敵人全數命中(伺服器結算),消散快、射程短
+// 重武器範圍攻擊三分類(blast/fan/line)與彈道五分類(lob/flat/line/guide/fnf)見上方
+//   aoeClass() / trajClass() —— 重武器一律屬於三分類之一,rail/gun/beam 重武器走 sim.heroLance
+//   圓柱貫穿(輕武器不變,仍是單體 heroHit)。
 // 扇形武器(fan:電漿 / 散彈 shotgun):dmgFalloff 走 fanFalloff(越近越高)、sim.heroPlasma 錐判定。
 // 輕武器類型(2026-07-13 多元化;2026-07-14 開放散彈):launcher/missile 在 heroBurst、
 //   plasma/fan 在 heroPlasma —— heroPlasma 已收 slot 參數,故「散彈輕武器(fan:true)」可經

@@ -50,6 +50,12 @@
 - 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
 - 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
 - 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
+- 重武器範圍攻擊三分類(`aoeClass()` → blast 爆炸 / fan 扇形 / line 直線貫穿)與彈道五分類
+  (`trajClass()` → lob / flat / line / guide / fnf)只住 `data.js`,由 `def.type`/`fan`/`guide` **推導**;
+  sim(`heroBurst`/`heroPlasma`/`heroLance`)、game.js 演出、HUD 說明**共用同一支**,
+  **MUST NOT** 手寫逐武器分類表,也 MUST NOT 在結算/演出端各自比對 `def.type`。
+- 直線貫穿的演出唯一入口 `_lanceVisual()`(自機/他人/bot 共用);圓柱粗細 **MUST** 取 `lanceR(def)`
+  = 伺服器實際判定半徑(看到多粗就是打到多粗,MUST NOT 為了好看放大)。
 - 共用視覺入口唯一:`spawnCastFx()`(招式 3D 演出)、`stepCombatFx()`(開火動畫)、`terrain.surfaceAt()`(站立表面)— 戰場與展示台/各呼叫端 **MUST NOT** 各寫一套。
 
 ### 2.2 狀態鍵與迴圈粒度
@@ -84,6 +90,7 @@
 | A9 | 客戶端 `wstate` 彈藥與伺服器小幅漂移是 **by design**(miss 不回報);**MUST NOT**「修正」 |
 | A10 | 迷霧是伺服器端快照過濾;客戶端 **MUST NOT** 對單位標記二次遮蔽 |
 | A11 | 爆風 `_blast` 刻意不吃 LOS 遮蔽(繞射近似);**MUST NOT**「補完」 |
+| A18 | 直線貫穿 `heroLance` 的圓柱判定是「水平垂距 + 垂直帶」而非純 3D 垂距(伺服器無地形高程、y = 離站立表面高);**MUST NOT**「修正」成 3D —— 高低差地形會讓整條射線落空。line 類重武器一發只過一次 `_gateFire`,客戶端 **MUST NOT** 另送 `hitMissile`(飛彈擊落已併進圓柱掃描) |
 | A12 | `[#INC-103]` 無人機重生的 `deadTick` 跨 tick 守衛 **MUST NOT** 以「優化延遲」為由移除 |
 | A13 | `[#INC-105]` 中立 ents(`side:null, neutral:true`):`_acquireTarget`/`_acquire`/tick 主迴圈三處 **MUST** skip neutral,否則 `UNITS[kind]` undefined 直接炸 |
 | A14 | `[#INC-106]` toon 三階 ramp 暗部 **MUST NOT** 調低於 102;材質一律走 `toon.js mat()` 包裝(MeshToonMaterial 無 roughness/metalness) |
@@ -131,6 +138,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 改動 | 驗證 |
 |---|---|
 | 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` |
+| `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗(`[#INC-104]` 輕武器 NPC 基準 range MUST ≥170;t01/s02 是確定性指定角 MUST 保持 crit:0;s02 heavy MUST 保持 launcher)+ 重驗「塔 310 > 所有輕武器/NPC」壓制不等式與「所有重武器 > 塔 310」不等式 |
 | 骨架/關節/步態 | 全角色 rig 稽核 + `node tools/audit_cast_jump.mjs` |
 | 武裝掛點/槍口 | `audit_muzzle.mjs` 範式(32 英雄 + NPC 四陣營) |

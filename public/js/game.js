@@ -10,6 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE, TARGET_CLASS,
+  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -19,7 +20,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 
@@ -1856,6 +1857,15 @@ export class BattleClient {
     const wF = barraging ? 1.9 : 1, rF = barraging ? BARRAGE.RANGE_F : 1;   // 巨炮:更寬 + 射程 +20%(對齊伺服器加程)
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
     if (barraging) shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 3.8, col);
+    // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶。
+    // 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 噴口最粗、末端收束就是它的可視化。
+    if (plasma) {
+      const core = this._shotCols(this.side).hot;
+      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, def.range * this._altRangeMul(def) * rF * 0.82));
+      ionBreath(this.scene, this.effects, muzzle, clip.to, col,
+        { r: 2.2 * wF, ttl: 0.45 * (barraging ? 1.4 : 1), coil: barraging ? 4 : 3, core });
+      shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
+    }
     for (let i = 0; i < blades; i++) {
       const f = blades === 1 ? 0 : (i / (blades - 1)) * 2 - 1;          // −1..1 橫向
       const dk = dir.clone()
@@ -3180,6 +3190,13 @@ export class BattleClient {
         const wF = bar ? 1.9 : 1, kMax = bar ? 4 : 2;
         this._muzzleBurst(from, heavy, ev.side);
         if (bar) shockRing(this.scene, this.effects, from.x, from.y, from.z, 3.8, pcol);
+        // 他人的離子吐息(與自機 _fanBlast 同一支 ionBreath —— 共用視覺入口,不另寫一套)
+        if (heavy) {
+          const core = this._shotCols(ev.side).hot;
+          const clip = this._clipBeam(from, from.clone().addScaledVector(dir3, (ev.r || 150) * 0.82 * (bar ? BARRAGE.RANGE_F : 1)));
+          ionBreath(this.scene, this.effects, from, clip.to, pcol,
+            { r: 2.2 * wF, ttl: 0.45 * (bar ? 1.4 : 1), coil: bar ? 4 : 3, core });
+        }
         for (let k = -kMax; k <= kMax; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / kMax));
           const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8 * (bar ? BARRAGE.RANGE_F : 1));
@@ -3210,6 +3227,10 @@ export class BattleClient {
           const ldir = this._spawnVisShell(from, to, def, ev.side, sh.ch, this._isBarraging(ev.pid));
           this._muzzleBurst(from, true, ev.side);
           if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, ldir);
+        } else if (def && aoeClass(def) === 'line') {
+          // bot 的直線貫穿重武器:與真人 tracer 同一支 _lanceVisual(圓柱粗細 = 貫穿半徑)
+          this._lanceVisual(from, this._clipBeam(from, to).to, def, ev.side, this._isBarraging(ev.pid));
+          this._muzzleBurst(from, true, ev.side);
         } else {
           const clip = this._clipBeam(from, to);
           this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true, barrage: ev.slot === 'heavy' && this._isBarraging(ev.pid) });
@@ -3255,6 +3276,13 @@ export class BattleClient {
     if (m.slot === 'heavy') {
       const shooter = this._heroEntByPid(m.pid);
       const def = shooter ? this._heroDefOf(shooter.ch, 'heavy') : null;
+      // 直線貫穿(beam/rail/gun 重武器):他人畫面同樣看得到圓柱貫穿的粗細 = 危險區(規則可讀性)
+      if (def && aoeClass(def) === 'line') {
+        this._lanceVisual(from, this._clipBeam(from, to0).to, def, m.side, this._isBarraging(m.pid));
+        this._muzzleBurst(from, true, m.side);
+        this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
+        return;
+      }
       if (def && (def.type === 'launcher' || def.type === 'missile')) {
         const dir = to0.clone().sub(from);
         if (dir.lengthSq() > 0.01) {
@@ -3560,7 +3588,11 @@ export class BattleClient {
   _updateArcGuide() {
     const showable = !this.dead && !this.shopOpen && this.side && this.ch && this.aiming;
     const { def } = this._curWeapon();
-    if (!showable || !def || def.type !== 'launcher' || !this.gunGroup) { if (this._arcGuide) this._arcGuide.group.visible = false; return; }
+    // 雷射導引(trajClass 'guide')改由 _updateGuideLaser 指示 —— 彈體解保險後就騎波不吃重力,
+    // 再畫拋物線虛線是錯的指示,兩者互斥。
+    if (!showable || !def || def.type !== 'launcher' || trajClass(def) === 'guide' || !this.gunGroup) {
+      if (this._arcGuide) this._arcGuide.group.visible = false; return;
+    }
     this._ensureArcGuide();
     const ag = this._arcGuide;
     ag.group.visible = true;
@@ -4205,6 +4237,133 @@ export class BattleClient {
     }
   }
 
+  // ---------------- 直線貫穿(aoeClass 'line':beam / rail / gun 重武器;2026-07-23)----------------
+  /**
+   * 回報射線給伺服器 heroLance(唯一權威),回傳本地估算的貫穿目標(由近至遠)供 HUD 回饋。
+   * 座標轉換:three z 南 → 模擬 z 北(取負);y 一律送「離站立表面高」(與 {t:'pos'} 的 _altAG 同源)。
+   * oy 由呼叫端在**擊發當下**取樣後傳入 —— 動能彈飛行 0.1~0.4 秒才定案落點,拿當幀高度會漂。
+   */
+  _sendLance(from, to, def, oy = null) {
+    const seg = to.clone().sub(from);
+    const len = seg.length();
+    if (len < 0.01) return [];
+    const d = seg.clone().divideScalar(len);
+    const y = oy != null ? oy : (this._altAG || 0) + (from.y - this.pos.y);
+    const q = (v) => Math.round(v * 1000) / 1000;
+    this.net?.send({
+      t: 'lance',
+      o: [Math.round(from.x * 10) / 10, Math.round(-from.z * 10) / 10, Math.round(y * 10) / 10],
+      d: [q(d.x), q(-d.z), q(d.y)],
+      len: Math.round(len * 10) / 10,
+    });
+    return this._lancePierced(from, to, lanceR(def));
+  }
+
+  /** 射線圓柱內的敵方單位(純本地估算:傷害數字/命中標記;伺服器另有迷霧 + LOS 複驗)*/
+  _lancePierced(from, to, r) {
+    const seg = to.clone().sub(from);
+    const len = seg.length() || 1;
+    const d = seg.clone().divideScalar(len);
+    const rel = new THREE.Vector3();
+    const out = [];
+    for (const ent of this.ents.values()) {
+      if (ent.isSelf || ent.side === this.side || !ent.mesh.visible) continue;
+      rel.copy(ent.mesh.position).sub(from);
+      const s = rel.dot(d);
+      if (s < 0 || s > len) continue;
+      // 大機體吃自身碰撞半徑(伺服器是點判定 + 垂直帶,這裡補回視覺體積的落差)
+      if (rel.addScaledVector(d, -s).length() > r + (ent.heroCol?.r || 0) * 0.5) continue;
+      out.push({ ent, s });
+    }
+    out.sort((a, b) => a.s - b.s);
+    return out.slice(0, LANCE.MAX).map((k) => k.ent);
+  }
+
+  /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY(與伺服器 heroLance 同一條公式) */
+  _lanceFeedback(def, ents, point) {
+    if (!ents.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
+    this.hud.hitmark?.();
+    for (let i = 0; i < ents.length; i++) {
+      const ent = ents[i];
+      const p = ent.mesh.position;
+      if (this._lockId === ent.id) this._flashLockGlow();
+      starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, i === 0 ? 2.8 : 2.0, 0xfff2b8);
+      const mult = vsMult(def, ent.kind);
+      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * LANCE.DECAY ** i);
+      damageNumber(this.scene, this.effects,
+        p.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: i === 0 && mult >= 1.5 });
+    }
+  }
+
+  /**
+   * 貫穿彈道演出(自機與他人共用):
+   *   beam  → 鋼彈式光束(熾白內芯 + 外暈 + 行進能量環);
+   *   rail/gun → 高速穿透通道(細亮曳光柱 + 兩端衝擊環 —— 空氣被撕開的彈道)。
+   * 圓柱半徑一律取 lanceR(def) ⇒ **看到多粗就是打到多粗**,不是裝飾性放大。
+   */
+  _lanceVisual(from, to, def, side, barrage = false) {
+    const { col, hot } = this._shotCols(side);
+    const r = lanceR(def) * (barrage ? 1.5 : 1);
+    if (def.type === 'beam') {
+      const bcol = side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+      gundamBeam(this.scene, this.effects, from, to, bcol,
+        { r, ttl: barrage ? 0.62 : 0.5, rings: barrage ? 6 : 4, core: hot });
+      shockRing(this.scene, this.effects, from.x, from.y, from.z, r * (barrage ? 1.7 : 1.15), bcol);
+      return;
+    }
+    beamLine(this.scene, this.effects, from, to, col, { ttl: 0.26, w: r * 0.45 });
+    beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.16, w: r * 0.16 });
+    shockRing(this.scene, this.effects, from.x, from.y, from.z, r * 1.2, hot);
+    starburst(this.scene, this.effects, to.x, to.y, to.z, r * 1.5, col);
+  }
+
+  /**
+   * 雷射導引武器(trajClass 'guide')的第一人稱導引雷射:瞄準時自槍口射出一條指向準星目標的
+   * 細雷射 + 落點十字環 —— 彈體離架後就是騎這條波修正航向(見 _updateBullets 的 guide 分支)。
+   * 逐幀更新故 **MUST NOT** 每幀重建幾何:單一持久 Mesh 以 position/scale/quaternion 驅動
+   * (與 _arcGuide 的預配置緩衝同一條紀律)。
+   */
+  _updateGuideLaser() {
+    const showable = this.side && !this.dead && !this.shopOpen && this.aiming;
+    const { def } = showable ? this._curWeapon() : {};
+    if (!showable || !def || trajClass(def) !== 'guide' || !this.gunGroup) {
+      if (this._gLaser) this._gLaser.group.visible = false;
+      return;
+    }
+    if (!this._gLaser) this._ensureGuideLaser();
+    const g = this._gLaser;
+    g.group.visible = true;
+    this.camera.updateMatrixWorld();
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const from = this.gunGroup.localToWorld(this._muzzle.clone());
+    const { point } = this._resolveAim(def.range * this._altRangeMul(def));
+    const seg = point.clone().sub(from);
+    const len = Math.max(0.5, seg.length());
+    g.beam.position.copy(from).addScaledVector(seg, 0.5);
+    g.beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), seg.clone().normalize());
+    g.beam.scale.set(1, len, 1);
+    g.ring.position.copy(point).addScaledVector(dir, -0.4);
+    g.ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    // 導引窗:最短距離(ARMING.guide.m)內彈體仍在軌跡修正期 —— 環變紅示警「太近,會打歪」
+    const armed = len >= ARMING.guide.m;
+    g.ring.material.color.setHex(armed ? 0xff5f4a : 0xffd24a);
+    g.ring.scale.setScalar(armed ? 1 : 1.5 + 0.4 * Math.sin(performance.now() / 90));
+  }
+
+  _ensureGuideLaser() {
+    if (this._gLaser) return;
+    const group = new THREE.Group();
+    group.userData.noOutline = true;
+    const mat = (c, o) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 5, 1, true), mat(0xff5f4a, 0.55));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.72, 20), mat(0xff5f4a, 0.9));
+    ring.material.side = THREE.DoubleSide;
+    beam.userData.noOutline = ring.userData.noOutline = true;
+    group.add(beam, ring);
+    this.scene.add(group);
+    this._gLaser = { group, beam, ring };
+  }
+
   _tryFire(now) {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const { id, def, st } = this._curWeapon();
@@ -4313,25 +4472,26 @@ export class BattleClient {
     }
 
     if (def.type === 'beam') {
-      // 定向能:光速直擊(無彈道下墜),仍受射程限制;光束短暫駐留 = 持續穩定輸出感
+      // 定向能:光速直擊(trajClass 'line',無彈道下墜),仍受射程限制。
       const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul);   // 高度制空(重砲 +20%)
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
-      if (barraging) {
-        // 巨炮離子束(2026-07-22:光束類增加動畫效果範圍與亮度):粗亮束 + 熾芯 + 槍口衝擊環 + 大落點爆
-        const hot = this._shotCols(this.side).hot;
-        beamLine(this.scene, this.effects, muzzle, point, col, { ttl: 0.5, w: 0.5 });
-        beamLine(this.scene, this.effects, muzzle, point, hot, { ttl: 0.4, w: 0.22 });
-        this._muzzleBurst(muzzle, true, this.side);
-        shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 4.2, col);
-        starburst(this.scene, this.effects, point.x, point.y, point.z, 5.5, col);
-        starburst(this.scene, this.effects, point.x, point.y, point.z, 3.0, hot);
-      } else {
-        this._tracer(muzzle, point, col, 0.35);
-        this._muzzleBurst(muzzle, id === 'heavy', this.side);
-        starburst(this.scene, this.effects, point.x, point.y, point.z, id === 'heavy' ? 3.4 : 2.2, col);
-      }
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
-      if (missileId != null) { this.net.send({ t: 'hitMissile', id: missileId, w: id }); this._hitFeedback(def, null, point); }
+      // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
+      // 這裡 MUST NOT 另送 hitMissile(會重複扣彈藥/電力)。
+      if (missileId != null && aoeClass(def) !== 'line') this.net.send({ t: 'hitMissile', id: missileId, w: id });
+      if (aoeClass(def) === 'line') {
+        // 重武器光束 = 圓柱貫穿(伺服器 heroLance 沿射線結算全部目標);鋼彈式演出見 _lanceVisual
+        this._lanceVisual(muzzle, point, def, this.side, barraging);
+        this._muzzleBurst(muzzle, true, this.side);
+        const oy = (this._altAG || 0) + (muzzle.y - this.pos.y);
+        this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy), point);
+        return;
+      }
+      // 輕武器光束:不屬重武器三分類 —— 維持單體直擊(heroHit)
+      this._tracer(muzzle, point, col, 0.35);
+      this._muzzleBurst(muzzle, false, this.side);
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+      if (missileId != null) this._hitFeedback(def, null, point);
       else if (ent) { this.net.send({ t: 'hit', id: ent.id, w: id }); this._hitFeedback(def, ent, point); }
       return;
     }
@@ -4341,6 +4501,7 @@ export class BattleClient {
     // 彈體同源(2026-07-22):與第三人稱/展示台同一顆 projectileMesh(飛彈=彈體+尾翼+導引頭、
     // 火箭=外露彈頭、動能=曳光條);曳光色 = 第三人稱曳光束同色(_shotCols)
     const aoe = def.type === 'launcher' || def.type === 'missile';
+    const pierce = aoeClass(def) === 'line';   // rail 電磁彈射 / gun 反器材砲重武器:圓柱貫穿(不停在第一個目標)
     const mesh = projectileMesh(def, {
       col: this._shotCols(this.side).col,
       hue: CHARACTERS[this.ch]?.visual?.hue ?? 0xffd27a,
@@ -4352,13 +4513,18 @@ export class BattleClient {
     const homing = def.type === 'missile' && this._lockId != null && this.ents.has(this._lockId)
       ? this._lockId : null;
     const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
+    // 最短距離(軌跡修正期):導引/射後不理武器離架後 arm.m 內導引尚未接手,且帶一次性初期散布
+    // ⇒ 貼臉開導引彈會偏(命中率較低),拉開距離後導引/追蹤才把偏差修回來。
+    const arm = armingOf(def);
+    const fdir = arm ? this._armSpread(dir, arm.spread) : dir;
     this.bullets.push({
-      slot: id, aoe, r: def.r || 0,
-      pos: muzzle.clone(), vel: dir.clone().multiplyScalar(v0),
+      slot: id, aoe, pierce, r: def.r || 0,
+      pos: muzzle.clone(), vel: fdir.clone().multiplyScalar(v0),
       dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
+      oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       // 巨炮傾洩窗內的重武器砲彈掛氣旋噴射尾流(2026-07-22)
       cyclone: barraging ? this._attachCyclone(mesh, this.side) : null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: v0, guide: !!def.guide, homing,
+      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, barrage: barraging,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -4370,6 +4536,15 @@ export class BattleClient {
       to: [muzzle.x + dir.x * 60, muzzle.y + dir.y * 60, muzzle.z + dir.z * 60],
       slot: id,
     });
+  }
+
+  /** 軌跡修正期的初期散布:在 dir 周圍的圓錐內取一個隨機偏角(離架瞬間一次性,之後由導引修正) */
+  _armSpread(dir, spread) {
+    const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const nx = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const nz = new THREE.Vector3().crossVectors(dir, nx).normalize();
+    const a = Math.random() * Math.PI * 2, m = Math.tan(Math.random() * spread);
+    return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
 
   /** 彈道模擬:逐幀積分 + 線段 raycast(高初速子彈一幀飛 10m+,用線段補內插) */
@@ -4398,11 +4573,14 @@ export class BattleClient {
         b.homing = null; tgt = null;
         this.hud.feed?.('📡 目標脫離射程:飛彈失鎖(直線飛行)');
       }
-      if (tgt) {
+      // 最短距離(軌跡修正期):離架 b.arm 公尺內導引/追蹤尚未接手 —— 只吃重力直飛,
+      // 離架時的初期散布(_armSpread)因此無法被修正 ⇒ 近距離命中率較低(使用者定案規則)。
+      const armed = b.dist >= (b.arm || 0);
+      if (tgt && armed) {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = tgt.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)).sub(b.pos).normalize();
         steer(b, want, 3.2);
-      } else if (b.guide && this.aiming && b.slot === 'heavy') {
+      } else if (armed && b.guide && this.aiming && b.slot === 'heavy') {
         // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正
         const ro = this.camera.position;
         const rd = this.camera.getWorldDirection(new THREE.Vector3());
@@ -4429,8 +4607,10 @@ export class BattleClient {
         for (const h of hits) {
           let o = h.object;
           while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
-          if (o && o.userData.missileId != null) { hit = { point: h.point, missileId: o.userData.missileId }; break; }
-          if (o && o.userData.kind) { hit = { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o) }; break; }
+          // 貫穿彈(aoeClass 'line'):單位不擋彈道,只有地形/障礙才終止 —— 圓柱內的目標
+          // 由伺服器 heroLance 一次結算(這裡不逐個回報,避免同一發送出多筆傷害)
+          if (o && o.userData.missileId != null) { if (b.pierce) continue; hit = { point: h.point, missileId: o.userData.missileId }; break; }
+          if (o && o.userData.kind) { if (b.pierce) continue; hit = { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o) }; break; }
           hit = { point: h.point, terrain: true };
           break;
         }
@@ -4469,6 +4649,11 @@ export class BattleClient {
         const btn = this.terrain.tunnelAt?.(p.x, p.z);
         this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10),
           lev: btn && by < btn.ceil ? 2 : 0 });   // three z 南 → 模擬 z 北
+      } else if (b.pierce) {   // (貫穿彈的 missileId 分支不會成立:_updateBullets 已讓飛彈不擋彈道)
+        // 直線貫穿:落點定案(地形/障礙/射程終點)才回報整條射線,伺服器沿圓柱一次結算全部目標。
+        // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
+        this._lanceVisual(b.origin, p, def, this.side, b.barrage);
+        this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy), p);
       } else if (hit?.missileId != null) {
         this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
         this._hitFeedback(def, null, p);
@@ -5898,6 +6083,7 @@ export class BattleClient {
     this._updateVisShells(dt);
     this._updateDecoyBombs(dt);       // 餌機投彈拋擲動畫(2026-07-22)
     this._updateArcGuide();           // 榴彈拋物線瞄準指示(2026-07-22)
+    this._updateGuideLaser();         // 雷射導引武器的第一人稱導引雷射(2026-07-23)
     this._updateLaneArrows(now);
     this._updateMines(now);
     this._updateLoot(dt, now);
