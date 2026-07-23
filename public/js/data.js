@@ -460,7 +460,11 @@ export const VITALS = {
 };
 // G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
 // 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
-export const BALLISTIC = { G: 9.81, LAUNCH_MV: 100 };
+// 對空彈射模式(2026-07-23 使用者需求):launcher 準星錐(AA_CONE 弧度)內掃到飛行類目標
+// (TARGET_CLASS 'air':無人機/直升機/餌機)即改用高初速 AA_MV —— 拋物線吊射打不到會動的飛行單位,
+// 高速平直彈道才有火控意義(射程/傷害不變,只換初速 ⇒ 純客戶端彈道,伺服器仍只驗落點)。
+// AA_ALT:他人視覺彈體(_spawnVisShell)無法得知對方準星,改以「落點離地高度」推定對空射擊。
+export const BALLISTIC = { G: 9.81, LAUNCH_MV: 100, AA_MV: 340, AA_CONE: 0.14, AA_ALT: 10 };
 export const armorMul = (ar, pen = 0) => {
   const a = Math.max(0, (ar || 0) - (pen || 0));
   return 1 - a / (a + VITALS.AR_K);

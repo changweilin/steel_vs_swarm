@@ -9,7 +9,7 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE,
+  ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE, TARGET_CLASS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -3319,10 +3319,12 @@ export class BattleClient {
 
   /** 他人重武器的視覺彈體(純表現層:直線+重力近似,不結算;真實爆點由伺服器 boom 事件呈現) */
   /** 彈道初速:榴彈/火箭(launcher)拋物線武器降速(→ BALLISTIC.LAUNCH_MV),讓拋物線軌跡明顯;
-   *  其餘武器用真實 mv。純客戶端視覺(伺服器不模擬彈道),與瞄準虛線 _updateArcGuide 同一組值。 */
-  _shotV0(def) {
+   *  其餘武器用真實 mv。純客戶端視覺(伺服器不模擬彈道),與瞄準虛線 _updateArcGuide 同一組值。
+   *  aa = 對空彈射模式(見 _updateAaMode):改用 BALLISTIC.AA_MV,彈道拉成高速近直線。 */
+  _shotV0(def, aa = false) {
     const v0 = def.mv || 600;
-    return def.type === 'launcher' ? Math.min(v0, BALLISTIC.LAUNCH_MV) : v0;
+    if (def.type !== 'launcher') return v0;
+    return Math.min(v0, aa ? BALLISTIC.AA_MV : BALLISTIC.LAUNCH_MV);
   }
 
   /** 拋物線發射初速向量:自 from 以速率 v0 拋擲命中 to(取低伸弧解);射程不足則 45° 盡力(視覺落短仍呈拋物)。 */
@@ -3339,9 +3341,11 @@ export class BattleClient {
 
   /** 他人/bot 重武器視覺彈體。launcher 走拋物線命中 to(慢速明顯弧),其餘直指;回傳實際發射方向(供砲管仰角回寫)。 */
   _spawnVisShell(from, to, def, side, ch, barrage = false) {
-    const v0 = this._shotV0(def);
+    // 對空彈射:拿不到對方準星,改以落點離地高度推定(> AA_ALT = 打空中目標)→ 同樣走高速近直線
+    const aa = def.type === 'launcher' && to.y - this.terrain.heightAt(to.x, to.z) > BALLISTIC.AA_ALT;
+    const v0 = this._shotV0(def, aa);
     const vel = def.type === 'launcher'
-      ? this._lobVel(from, to, v0)                              // 榴彈/火箭:拋物線命中目標
+      ? this._lobVel(from, to, v0)                              // 榴彈/火箭:拋物線命中目標(彈射模式初速高 ⇒ 解自然拉平)
       : to.clone().sub(from).normalize().multiplyScalar(v0);   // 飛彈/動能:直指目標(近似,純視覺)
     const ldir = vel.clone().normalize();
     const mesh = projectileMesh(def, {
@@ -3507,6 +3511,49 @@ export class BattleClient {
     }
   }
 
+  // ---------------- 榴彈對空彈射模式(2026-07-23)----------------
+  /**
+   * launcher(榴彈/火箭)準星掃到飛行單位 → 切「彈射模式」:初速拉到 BALLISTIC.AA_MV,
+   * 彈道變成高速近直線(拋物線吊射對會動的飛行目標毫無火控意義)。射程/傷害/彈藥全不變。
+   * **唯一判定縫**:每幀在 `_tickWeapons`(擊發)之前更新 `this._aaAim`,擊發與瞄準虛線
+   * 消費同一份結果 ⇒ 所見即所射;MUST NOT 在擊發處另做一次掃描(兩份會分家)。
+   */
+  _updateAaMode() {
+    const def = (this.side && !this.dead && !this.shopOpen) ? this._curWeapon().def : null;
+    const on = !!def && def.type === 'launcher'
+      && !!this._aaTarget(def.range * this._altRangeMul(def));
+    if (on === this._aaAim) return;
+    this._aaAim = on;
+    const now = performance.now() / 1000;
+    if (on && now - (this._aaFeedAt || 0) > 4) {   // 準星掃過機群會反覆切換,提示節流
+      this._aaFeedAt = now;
+      this.hud.feed?.('🎯 對空彈射模式:切換為高速平射彈道');
+    }
+  }
+
+  /** 準星錐(BALLISTIC.AA_CONE ≈ 8°)內、射程內、無障礙遮擋的飛行類敵方單位(TARGET_CLASS 'air');
+   *  取最正對的一個。純本地瞄準輔助(不送伺服器、不影響結算),逐幀跑故一律用純量運算不配置向量。 */
+  _aaTarget(rng) {
+    const ro = this.camera.position;
+    const fwd = this.camera.getWorldDirection(this._aaFwd || (this._aaFwd = new THREE.Vector3()));
+    let best = null, bestAng = BALLISTIC.AA_CONE;
+    for (const ent of this.ents.values()) {
+      if (TARGET_CLASS[ent.kind] !== 'air') continue;   // 先過最便宜的條件(每幀掃全場)
+      if (ent.side === this.side || ent.neutral || ent.dead || !ent.mesh.visible) continue;
+      const p = ent.mesh.position;
+      const cy = p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5);   // 瞄機體幾何中心
+      const dx = p.x - ro.x, dy = cy - ro.y, dz = p.z - ro.z;
+      const d = Math.hypot(dx, dy, dz);
+      if (d > rng || d < 1e-3) continue;
+      const ang = Math.acos(Math.max(-1, Math.min(1, (fwd.x * dx + fwd.y * dy + fwd.z * dz) / d)));
+      if (ang >= bestAng) continue;
+      const dB = this._obstHitT(ro.x, ro.y, ro.z, p.x, cy, p.z);
+      if (dB != null && dB < d - 1) continue;   // 障礙擋在目標前 = 沒有火控
+      best = ent; bestAng = ang;
+    }
+    return best;
+  }
+
   // ---------------- 榴彈拋物線瞄準指示(2026-07-22)----------------
   /** launcher(榴彈/火箭)型武器在瞄準時,畫出預測拋物線虛線 + 落點環;非拋物線武器隱藏。
    *  純客戶端瞄準輔助:與 _updateBullets 同一組 mv/重力積分,終點吃地形/障礙/射程截斷。 */
@@ -3527,7 +3574,8 @@ export class BattleClient {
     let n = 0;
     const put = (v, d) => { if (n < MAXP) { arr[n * 3] = v.x; arr[n * 3 + 1] = v.y; arr[n * 3 + 2] = v.z; ld[n] = d; n++; } };
     put(from, 0);
-    const p = from.clone(), v = dir.clone().multiplyScalar(this._shotV0(def));
+    const aa = !!this._aaAim;   // 對空彈射:同一顆初速 ⇒ 虛線就是實際彈道(高速近直線)
+    const p = from.clone(), v = dir.clone().multiplyScalar(this._shotV0(def, aa));
     const step = 0.03;
     let dist = 0, impact = null;
     const prev = new THREE.Vector3();
@@ -3547,11 +3595,14 @@ export class BattleClient {
     geo.attributes.lineDistance.needsUpdate = true;
     geo.setDrawRange(0, n);
     geo.computeBoundingSphere();
-    const col = this._shotCols(this.side).col;
+    const col = aa ? 0x9adfff : this._shotCols(this.side).col;   // 彈射模式:換冷色調示意「平射對空」
     ag.line.material.color.setHex(col);
     if (impact) {
       ag.marker.visible = true;
-      ag.marker.position.set(impact.x, this.terrain.heightAt(impact.x, impact.z) + 0.3, impact.z);
+      // 對空的攔截點在半空(投影到地面會落在遠方山腳,讀不出交會位置)→ 環直接畫在彈道終點
+      const gy = this.terrain.heightAt(impact.x, impact.z);
+      ag.marker.position.set(impact.x,
+        aa && impact.y - gy > BALLISTIC.AA_ALT ? impact.y : gy + 0.3, impact.z);
       ag.marker.material.color.setHex(col);
     } else ag.marker.visible = false;
   }
@@ -4300,13 +4351,14 @@ export class BattleClient {
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
     const homing = def.type === 'missile' && this._lockId != null && this.ents.has(this._lockId)
       ? this._lockId : null;
+    const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
     this.bullets.push({
       slot: id, aoe, r: def.r || 0,
-      pos: muzzle.clone(), vel: dir.clone().multiplyScalar(this._shotV0(def)),
+      pos: muzzle.clone(), vel: dir.clone().multiplyScalar(v0),
       dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
       // 巨炮傾洩窗內的重武器砲彈掛氣旋噴射尾流(2026-07-22)
       cyclone: barraging ? this._attachCyclone(mesh, this.side) : null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: this._shotV0(def), guide: !!def.guide, homing,
+      mv: v0, guide: !!def.guide, homing,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -5836,6 +5888,7 @@ export class BattleClient {
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
 
+    this._updateAaMode();             // 榴彈對空彈射模式:MUST 在 _tickWeapons(擊發)之前定案
     this._tickWeapons(now);
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
