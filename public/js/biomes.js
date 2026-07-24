@@ -1870,62 +1870,113 @@ function roadPropMeshes(group, parts, items) {
  * 每半段各自拿「端點地表高」內插路面/橋面,剖面會在結構中段爬回地表(洞內隱形牆、橋面中垂)。
  * 節點鍵取 6 位小數(≈0.11m)= OSM 節點同一性;分岔(同節點 ≥3 條同類 way)不併,保守維持原樣。
  */
+// 方向連續性:雙孔隧道/雙幅橋常共用洞口節點 —— 只准「順向接續」的 way 相併,倒鉤(平行孔折返)
+// 不併,否則 U/V 形鏈的路面內插會整段錯掉。回傳 our 出向 · 對方入向的 cos。
+function dirDot(a, b, c, d) {
+  const kx = 111320 * Math.cos(a.lat * Math.PI / 180), ky = 110540;
+  const v1 = [(b.lon - a.lon) * kx, (b.lat - a.lat) * ky];
+  const v2 = [(d.lon - c.lon) * kx, (d.lat - c.lat) * ky];
+  const l1 = Math.hypot(...v1) || 1, l2 = Math.hypot(...v2) || 1;
+  return (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2);
+}
+
+/**
+ * way 串鏈的共用走訪(mergeGradeChains 橋隧鏈 / joinWaterRouteWays 跨水路線**共用這一支**):
+ * 以「共用端點節點」為邊,是否接起來由 canJoin(cur, next, dot) 決定。
+ * 回傳 [{tags, geometry}](每條鏈一項,鏈序 = 種子序)。節點鍵取 6 位小數(≈0.11m)= OSM 節點同一性。
+ * branchDot = null(橋隧鏈):節點上恰有 2 條候選才續行 —— 分岔/真洞口保守不併(平行雙孔共用洞口節點)。
+ * branchDot = 數值(跨水路線):分岔節點也准續行,但只取 dot ≥ 該值的「最順向」那條(街道 T/十字
+ * 路口的直行續段);degree 2 時兩者行為逐項相同。
+ */
+function chainWays(ways, canJoin, branchDot = null) {
+  const key = (p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+  const endMap = new Map();   // 節點鍵 -> [{w, end}](end: 0=頭 1=尾)
+  for (const w of ways) {
+    for (const [k, end] of [[key(w.geometry[0]), 0], [key(w.geometry[w.geometry.length - 1]), 1]]) {
+      if (!endMap.has(k)) endMap.set(k, []);
+      endMap.get(k).push({ w, end });
+    }
+  }
+  const used = new Set();
+  const out = [];
+  for (const w of ways) {
+    if (used.has(w)) continue;
+    used.add(w);
+    let chain = [...w.geometry];
+    for (const fwd of [true, false]) {
+      let cur = w, guard = 0;
+      while (guard++ < 60) {
+        const endPt = fwd ? chain[chain.length - 1] : chain[0];
+        const here = endMap.get(key(endPt)) || [];
+        if (branchDot == null && here.length !== 2) break;   // 真洞口/橋台或分岔:停
+        const ours = fwd ? [chain[chain.length - 2] || chain[0], endPt] : [chain[1] || chain[0], chain[0]];
+        let best = null;
+        for (const e of here) {
+          if (used.has(e.w)) continue;
+          const g = [...e.w.geometry];
+          if (e.end === (fwd ? 1 : 0)) g.reverse();          // 對準接續方向
+          const theirs = fwd ? [g[0], g[1]] : [g[g.length - 1], g[g.length - 2]];
+          const dot = fwd ? dirDot(ours[0], ours[1], theirs[0], theirs[1])
+            : dirDot(ours[1], ours[0], theirs[1], theirs[0]);
+          if (branchDot != null && here.length > 2 && dot < branchDot) continue;   // 分岔:只接最順向的直行段
+          if (!canJoin(cur, e.w, dot)) continue;
+          if (!best || dot > best.dot) best = { w: e.w, g, dot };
+        }
+        if (!best) break;
+        used.add(best.w);
+        cur = best.w;
+        chain = fwd ? chain.concat(best.g.slice(1)) : best.g.slice(0, -1).concat(chain);
+      }
+    }
+    out.push({ tags: { ...w.tags }, geometry: chain });
+  }
+  return out;
+}
+
 function mergeGradeChains(roads) {
   const plain = roads.filter((w) => !((w.tags?.tunnel || w.tags?.bridge) && w.geometry?.length >= 2));
   const out = [];
   for (const kind of ['tunnel', 'bridge']) {
     // tunnel 優先歸隧道鏈:同時掛兩種 tag 的 way 不會進兩類
     const ways = roads.filter((w) => w.tags?.[kind] && !(kind === 'bridge' && w.tags.tunnel) && w.geometry?.length >= 2);
-    const key = (p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
-    // 方向連續性:雙孔隧道/雙幅橋常共用洞口節點 —— 只准「順向接續」(夾角 < ~80°)的 way
-    // 相併,倒鉤(平行孔折返)不併,否則 U/V 形鏈的路面內插會整段錯掉。
-    const dirDot = (a, b, c, d) => {
-      const kx = 111320 * Math.cos(a.lat * Math.PI / 180), ky = 110540;
-      const v1 = [(b.lon - a.lon) * kx, (b.lat - a.lat) * ky];
-      const v2 = [(d.lon - c.lon) * kx, (d.lat - c.lat) * ky];
-      const l1 = Math.hypot(...v1) || 1, l2 = Math.hypot(...v2) || 1;
-      return (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2);
-    };
-    const endMap = new Map();   // 節點鍵 -> [{w, end}](end: 0=頭 1=尾)
-    for (const w of ways) {
-      for (const [k, end] of [[key(w.geometry[0]), 0], [key(w.geometry[w.geometry.length - 1]), 1]]) {
-        if (!endMap.has(k)) endMap.set(k, []);
-        endMap.get(k).push({ w, end });
-      }
-    }
-    const used = new Set();
-    for (const w of ways) {
-      if (used.has(w)) continue;
-      used.add(w);
-      let chain = [...w.geometry];
-      for (const fwd of [true, false]) {
-        let guard = 0;
-        while (guard++ < 60) {
-          const endPt = fwd ? chain[chain.length - 1] : chain[0];
-          const here = endMap.get(key(endPt)) || [];
-          if (here.length !== 2) break;                      // 真洞口/橋台或分岔:停
-          const next = here.find((e) => !used.has(e.w));
-          if (!next) break;
-          const g = [...next.w.geometry];
-          if (next.end === (fwd ? 1 : 0)) g.reverse();       // 對準接續方向
-          // 順向接續才併:our 出向 vs 對方入向
-          const ours = fwd ? [chain[chain.length - 2] || chain[0], endPt] : [chain[1] || chain[0], chain[0]];
-          const theirs = fwd ? [g[0], g[1]] : [g[g.length - 1], g[g.length - 2]];
-          const dot = fwd ? dirDot(ours[0], ours[1], theirs[0], theirs[1])
-            : dirDot(ours[1], ours[0], theirs[1], theirs[0]);
-          if (dot < 0.17) break;                             // 倒鉤(平行孔折返)不併
-          used.add(next.w);
-          if (fwd) chain = chain.concat(g.slice(1));
-          else chain = g.slice(0, -1).concat(chain);
-        }
-      }
-      out.push({ tags: { ...w.tags }, geometry: chain });
-    }
+    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17));   // 倒鉤(平行孔折返)不併
   }
   // 鏈排在前(2026-07-22 倫敦橋數浮動案):buildRoads 的 maxRuns 截斷依陣列序,舊版鏈排尾端
   // 使密路網市區的橋/隧道整批優先被犧牲(泰晤士河真橋忽有忽無)。立體結構是兵線與地標
   // 關鍵物件,MUST 先建。
   return out.concat(plain);
+}
+
+/**
+ * 跨水路線的 way 串接(2026-07-24 使用者需求「一條路線上的兩座橋不要太靠近,太靠近就直接連在一起」)。
+ * OSM 把一條連續街道切成多條 way,而 splitWaterPieces 是**逐 way(逐 run)**判泡水段 ——
+ * 夾在兩段泡水 way 之間的短 way(威尼斯實測 17m / 23m / 34m)自成一個乾段,兩側各建一座橋
+ * ⇒ 下橋隨即又上橋的 V 形谷。先把「共用端點、順向、同分級」的 way 串成一條再交給
+ * splitWaterPieces,兩段泡水就落在**同一個 run**,由其 JOIN_M 規則併成一座連續橋;
+ * 橋面剖面(deckAt)也只在真正的兩端起降。
+ * **只在接點兩側至少一條沾水時才串**,且一條都沒串到就原樣回傳 ⇒ 無水地圖的 way 陣列逐項不變
+ * (rnd 序列 / 建物植被佈局零影響)。橋/隧道 way 不在候選內(已由 mergeGradeChains 併鏈,
+ * 且 way._tun 的逐 run 索引不可打亂)。
+ */
+function joinWaterRouteWays(roads, terrain, center) {
+  const isCand = (w) => !w.tags?.bridge && !w.tags?.tunnel && w.geometry?.length >= 2;
+  const cand = roads.filter(isCand);
+  if (cand.length < 2) return roads;
+  const wetWay = new Map();   // way -> 是否有泡水取樣點(densify 後判,與 splitWaterPieces 同一把尺)
+  let anyWet = false;
+  for (const w of cand) {
+    const pts = densify(w.geometry.map((g) => llToWorld(g.lat, g.lon, center)), ROAD_SEG);
+    const wet = pts.some(([x, z]) => isWaterPt(terrain, x, z));
+    wetWay.set(w, wet);
+    anyWet ||= wet;
+  }
+  if (!anyWet) return roads;   // 無水地圖:原陣列原封不動
+  // 街道網格的直角轉角也是 degree-2 節點 ⇒ 方向門檻比橋隧鏈(0.17)嚴,只串大致續行的
+  const chains = chainWays(cand, (a, b, dot) => dot >= 0.5
+    && a.tags.highway === b.tags.highway
+    && (wetWay.get(a) || wetWay.get(b)), 0.85);
+  if (chains.length === cand.length) return roads;   // 一條都沒串到 ⇒ 完全無副作用
+  return chains.concat(roads.filter((w) => !isCand(w)));
 }
 
 // ---- 橋樑單層原則(2026-07-22 倫敦上下兩層橋案)----
@@ -2041,18 +2092,65 @@ export function terrainEnvCode(terrain, x, z) {
 }
 
 /**
+ * 沼澤水平面(2026-07-24 使用者需求「沼澤跟水域一樣有水平線,視線低於水平線呈現暗紫色」):
+ * 水域有 terrain.js 的 waterY 藍色水盤;沼澤同理在 **swampY = waterY + SWAMP_BAND**(= terrainEnvCode
+ * 沼澤分類界,單一縫 MUST NOT 另寫數字)鋪一片暗紫濁沼半透明盤。視線沒入此面下 →
+ * game._updateWaterVeil 暗紫帷幕(判定共用同一條 swampY 線)。
+ * **只在沼澤格(terrainEnvCode 2)出面** —— 不覆蓋水域(水盤在更低的 waterY,紫盤蓋上去會把水變紫)、
+ * 不覆蓋乾地。DoubleSide:沒入面下抬頭仍見濁面(同水盤)。純視覺、不進 raycast(game.js 只打
+ * terrain.mesh)、透明材質 outlinify 自動跳過。純幾何格取樣、不耗共享 rnd(佈局序列不受影響)。
+ */
+function buildSwampSurface(group, terrain) {
+  const wy = terrain.waterY;
+  if (wy == null) return;
+  const swampY = wy + WATER.SWAMP_BAND;
+  const { minX, maxX, minZ, maxZ } = terrain;
+  const cols = Math.min(320, Math.max(1, Math.ceil((maxX - minX) / 10)));   // ~10m 格(紫盤是濁沼,不需更細)
+  const rows = Math.min(320, Math.max(1, Math.ceil((maxZ - minZ) / 10)));
+  const cw = (maxX - minX) / cols, ch = (maxZ - minZ) / rows;
+  const pos = [], nrm = [], idx = [];
+  let base = 0;
+  for (let i = 0; i < rows; i++) {
+    const z0 = minZ + i * ch, z1 = z0 + ch, cz = z0 + ch / 2;
+    for (let j = 0; j < cols; j++) {
+      const x0 = minX + j * cw, x1 = x0 + cw, cx = x0 + cw / 2;
+      if (terrainEnvCode(terrain, cx, cz) !== 2) continue;
+      pos.push(x0, swampY, z0, x1, swampY, z0, x1, swampY, z1, x0, swampY, z1);
+      for (let k = 0; k < 4; k++) nrm.push(0, 1, 0);   // 水平面法線恆朝上(平坦,免 computeVertexNormals)
+      idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+      base += 4;
+    }
+  }
+  if (!idx.length) return;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({
+    color: 0x4a3358, gradientMap: toonGradient(), transparent: true, opacity: 0.72, side: THREE.DoubleSide,
+  }));
+  mesh.frustumCulled = false;
+  mesh.userData.noOutline = true;
+  group.add(mesh);
+}
+
+/**
  * 大面積水域自動高架橋(2026-07-15):非橋/非隧道道路的連續泡水段 ≥ WATER.SPAN_MIN_M
  * 即整段升級為高架橋 —— 機體無法下深水(game.js),道路通過大面積水域一定要有橋。
  * 泡水區間向兩岸乾地各外延 WATER.RAMP_M 當引道錨點(deckAt 的 24m 緩坡落在乾地上 = 斜坡出入口,
  * 不是階梯);太短的泡水段(淺灘/窄溝)不蓋橋,照舊涉水。回傳折線陣列,每條掛 .wet 旗標,
  * 邊界頂點前後段共享 = 橋頭與地面路無縫銜接。buildRoads 與 markGradeCorridors 共用(MUST 同一份規則)。
+ * inclSwamp(2026-07-24 使用者需求「兵線通過沼澤時也要造橋」):沼澤(terrainEnvCode 2)也算泡水 →
+ *   兵線跨沼段一律升橋,機體不必踩進暗紫濁沼(否則電子失效/滯留,同水域)。**只兵線路徑傳 true**
+ *   (real OSM 道路維持水域限定,免濕地圖每條小徑都長出短橋);橋面 deckAt 抬升 BRIDGE_RISE 恆
+ *   高過沼面 waterY+SWAMP_BAND。
  */
-function splitWaterPieces(run, terrain) {
+function splitWaterPieces(run, terrain, inclSwamp = false) {
   const n = run.length;
   if (n < 2) { run.wet = false; return [run]; }
   const cum = [0];
   for (let i = 1; i < n; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
-  const wet = run.map(([x, z]) => isWaterPt(terrain, x, z));
+  const wet = run.map(([x, z]) => inclSwamp ? terrainEnvCode(terrain, x, z) !== 0 : isWaterPt(terrain, x, z));
   const spans = [];
   for (let i = 0; i < n; i++) {
     if (!wet[i]) continue;
@@ -2062,12 +2160,26 @@ function splitWaterPieces(run, terrain) {
     i = j;
   }
   if (!spans.length) { run.wet = false; return [run]; }
-  // 引道外延 + 相鄰跨距合併(重疊即併,不留 <RAMP_M 的碎地面段)
+  // 引道外延 + 相鄰跨距合併(重疊即併,不留 <RAMP_M 的碎地面段)。
+  // 2026-07-24 使用者需求「一條路線上的兩座橋不要太靠近,太靠近就直接連在一起」:合併門檻自
+  // 「重疊」放寬到「兩跨之間的乾地塞不下一趟下坡 + 上坡」(deckAt 兩端各 RAMP_M 的 smoothstep
+  // 引道)—— 塞不下 = 中間那段路只可能是個 V 形谷(下橋隨即又上橋),直接併成一座連續橋。
+  // **中間乾地高過橋面抬升一半就不併**:那是真的陸地/丘陵,併了會讓橋面爬上山脊(deckAt 夾在
+  // 地表之上,不會埋進土裡,但整座橋會變成貼著山走的怪帶子)—— 該處兩座橋分開才是對的。
+  const JOIN_M = WATER.RAMP_M * 2;                       // 推導值:下坡 + 上坡,MUST NOT 手寫
+  const gapLow = (a, b) => {
+    for (let i = 0; i < n; i++) {
+      if (cum[i] < a) continue;
+      if (cum[i] > b) break;
+      if (terrain.heightAt(run[i][0], run[i][1]) > WATER.LEVEL + BRIDGE_RISE * 0.5) return false;
+    }
+    return true;   // a > b(兩跨引道本就重疊)⇒ 無取樣點 ⇒ 恆真 = 舊版行為
+  };
   const merged = [];
   for (const [a, b] of spans) {
     const s0 = Math.max(0, a - WATER.RAMP_M), s1 = Math.min(cum[n - 1], b + WATER.RAMP_M);
     const last = merged[merged.length - 1];
-    if (last && s0 <= last[1]) last[1] = Math.max(last[1], s1);
+    if (last && s0 <= last[1] + JOIN_M && gapLow(last[1], s0)) last[1] = Math.max(last[1], s1);
     else merged.push([s0, s1]);
   }
   const idxOf = (s) => { let i = 0; while (i < n - 1 && cum[i + 1] <= s) i++; return i; };
@@ -2097,7 +2209,7 @@ function splitWaterPieces(run, terrain) {
  * 邊界裁切/細分/拆段 MUST 與 buildRoads 同一套(inb=4 / ROAD_SEG / splitWaterPieces),
  * 否則走廊跟實際結構對不上。不耗共享 rnd(佈局序列不受影響)。
  */
-function markGradeCorridors(roads, terrain, center, blocked) {
+function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) {
   const corridors = [];
   const inb = 4;
   for (const way of roads || []) {
@@ -2122,7 +2234,7 @@ function markGradeCorridors(roads, terrain, center, blocked) {
       // 不是立體結構 → 不登記走廊/淨空(與 buildRoads 的一般道路處理一致)
       const tw = tunnel ? (way._tun?.[ri] ?? { intervals: [] }) : null;
       const strc = !!tw && tw.intervals.length > 0;
-      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain);
+      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
       for (const run of pieces) {
         if (run.length < 2) continue;
         const wet = run.wet === true;
@@ -2163,7 +2275,7 @@ function markGradeCorridors(roads, terrain, center, blocked) {
   return corridors;
 }
 
-function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []) {
+function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = [], inclSwamp = false) {
   const inb = 4;
   const buckets = new Map();   // `${biome}|${main}` -> { color, pos, nrm, col, uv, idx, base }
   const bucketOf = (biome, main) => {
@@ -2297,7 +2409,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 無覆蓋(平坦市區掛 tunnel tag)= 一般道路:貼地剖面、可跨水補橋、不立門洞不開挖。
       const tw = tunnel ? (way._tun?.[ri] ?? { intervals: [] }) : null;
       const strc = !!tw && tw.intervals.length > 0;
-      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain);
+      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
       for (const run of pieces) {
       if (run.length < 2) continue;
       const brg = bridge || run.wet === true;
@@ -3947,7 +4059,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const wetPieces = [];
     for (const lane of cfg.lanes) {
       const pts = densify(lane.map(([lat, lng]) => llToWorld(lat, lng, center)), ROAD_SEG);
-      for (const p of splitWaterPieces(pts, terrain)) {
+      for (const p of splitWaterPieces(pts, terrain, true)) {   // 兵線跨沼段也升橋(inclSwamp)
         if (p.wet === true && p.length >= 2) wetPieces.push(p);
       }
     }
@@ -3958,13 +4070,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
   }
+  // 跨水路線 way 串接(一條路線上太靠近的兩座橋直接連成一座):MUST 排在 roadInput 定案**之前**
+  // —— markGradeCorridors 與 buildRoads 吃同一份 way 陣列,分家的話走廊會與實際橋面對不上。
+  if (osmRoads?.length) osmRoads = joinWaterRouteWays(osmRoads, terrain, center);
   // 道路輸入在此定案(離線備援 = 兵線當主要道路):走廊計算與 buildRoads MUST 吃同一份
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
   // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
-  // 兵線補橋走廊一併登記(提前到地物散布之前 → 橋下淨空與真橋同等待遇)。
-  const gradeCorridors = markGradeCorridors(roadInput.concat(laneWetWays), terrain, center, blocked);
+  // 兵線補橋走廊一併登記(提前到地物散布之前 → 橋下淨空與真橋同等待遇)。分兩趟:真 OSM 道路
+  // 維持水域限定(inclSwamp=false),兵線補橋 + 離線兵線 roadInput 吃 inclSwamp(跨沼也造橋);
+  // blocked 兩趟累加同一 Set。
+  const laneMode = !osmRoads?.length;   // 離線:roadInput = 兵線本身 ⇒ 也吃 inclSwamp
+  const gradeCorridors = [
+    ...markGradeCorridors(roadInput, terrain, center, blocked, laneMode),
+    ...markGradeCorridors(laneWetWays, terrain, center, blocked, true),
+  ];
 
   // ---- 散佈植被 ----
   const areaKm2 = terrain.worldW * terrain.worldH / 1e6;
@@ -4782,7 +4903,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 地被層一併送進 buildRoads:洞口打洞時地形與地被拼圖/細節 MUST 用同一把尺讓開,
   // 只挖地形的話洞口望進去仍是一坡貼在崖面上的草皮拼圖(地被是獨立圖層)。
   const coverMeshes = group.children.slice(gcStart);
-  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes);
+  buildSwampSurface(group, terrain);   // 沼澤水平面(暗紫濁沼盤;視線沒入 → _updateWaterVeil 帷幕)
+  // 離線備援(roadInput = 兵線本身)吃 inclSwamp ⇒ 跨沼段也升橋;真 OSM 道路維持水域限定
+  const roadRes = buildRoads(group, roadInput, terrain, center, mix, rnd, season, coverMeshes, !osmRoads?.length);
   // ---- 兵線跨水補橋(2026-07-22 確定性改制,幾何定案於前段 laneWetWays):每個兵線泡水段
   // 一律建全跨橋。不再查真橋覆蓋率(舊 DECK_COVER 去重使兵線橋數隨 Overpass 逐局浮動,
   // 部分覆蓋時全跨補橋疊在殘缺真橋上 = 上下兩層);與兵線走廊側向重疊的真橋已於
@@ -4790,7 +4913,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 水面,子段接縫會差一整個 BRIDGE_RISE 高差(垂直台階、上不去);全跨橋維持 _surf 連續。
   // 走廊/淨空已於 gradeCorridors 一併登記,此處只補 decks/cols。
   if (osmRoads?.length && laneWetWays.length) {
-    const laneRes = buildRoads(group, laneWetWays, terrain, center, mix, rnd, season);
+    const laneRes = buildRoads(group, laneWetWays, terrain, center, mix, rnd, season, [], true);   // 兵線補橋含跨沼段
     roadRes.decks.push(...laneRes.decks);
     roadRes.cols.push(...laneRes.cols);
   }
