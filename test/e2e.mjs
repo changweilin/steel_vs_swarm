@@ -172,6 +172,47 @@ log('— sim:傭兵變形機甲(雙陣營可選;HP/火力同機甲;飛行/地面
   assert(sim.buy('p_ma', 'hp') === null && a.hp === 0, '陣亡買裝甲強化只擴上限(重生才回滿)');
 }
 
+log('— sim:爆風不穿透橋面/隧道天花(#1 slab 垂直隔離;所有 AoE 攻擊共用 _slabSep)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  // 注入一段橋面 ribbon(ty=1)與一段隧道天花 ribbon(ty=2);sim 座標,遠離兵線/工事避免流彈
+  const ox = 4000, oz = 4000;
+  sim._ingestSlabs({ slabs: [
+    [ox, oz, ox + 120, oz, 8, 1],              // 橋面:x 軸向,半寬 8
+    [ox, oz + 400, ox + 120, oz + 400, 8, 2],  // 隧道天花:平行另一段
+  ] });
+  assert(!!sim._slabGrid, 'slab 網格建立(_ingestSlabs)');
+  // 受測敵方機體(hero,帶明確 lev):放在爆點正下/同層/側旁
+  const mk = (x, z, lev) => sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+    x, z, y: 0, hp: 600, armor: 0, sp: 0, maxSp: 0, lev, buffs: {}, mods: [] });
+  const owner = sim.addHero('SWARM', 'p_bl', 'm01');   // 傭兵(雙陣營通用),爆風記在它頭上
+  const def = { dmg: 300, r: 40, pen: 0 };             // 半徑 40 > 各測點距離
+  const bx = ox + 60, bz = oz;                          // 爆點落在橋面 ribbon 上
+  // ── 橋面:爆心在橋面(lev 1)──
+  const onBridge = mk(bx, bz, 1);           // 同層(橋上)→ 應受創
+  const underBridge = mk(bx, bz, 0);        // 正下方地面(lev 0)→ 橋板隔開,免傷
+  const besideBridge = mk(bx, bz + 24, 0);  // 橋旁地面(off-ribbon,半寬 8 外)→ 側向溢流照炸
+  sim._blast(owner, def, bx, bz, 0, 1);
+  assert(onBridge.hp < onBridge.maxHp, '橋面爆風命中同層(橋上)目標');
+  assert(underBridge.hp === underBridge.maxHp, '橋面爆風不穿透橋板打到正下方地面目標');
+  assert(besideBridge.hp < besideBridge.maxHp, '橋旁地面(非正下方)仍受側向爆風(不誤擋)');
+  // ── 隧道:爆心在洞內(lev 2)──
+  const tx = ox + 60, tz = oz + 400;
+  const inTunnel = mk(tx, tz, 2);           // 洞內同層 → 受創
+  const outTunnel = mk(tx, tz, 0);          // 洞外(山體/天花隔開)→ 免傷
+  sim._blast(owner, def, tx, tz, 0, 2);
+  assert(inTunnel.hp < inTunnel.maxHp, '隧道內爆風命中同在洞內目標');
+  assert(outTunnel.hp === outTunnel.maxHp, '洞內爆風不穿山體/天花波及洞外目標');
+  // ── 迴歸:未上傳 slab(headless 常態)→ _slabSep 全放行,行為不變 ──
+  const bare = new BattleSim(fakeBattleConfig(1));
+  const bareOwner = bare.addHero('SWARM', 'p_bl2', 'm01');
+  const bareT = bare._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+    x: 5000, z: 5000, y: 0, hp: 600, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+  bare._blast(bareOwner, def, 5000, 5000, 0, 1);
+  assert(bareT.hp < bareT.maxHp, '未上傳 slab 時爆風不受層隔(headless 迴歸,確定性斷言不變)');
+}
+
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 {
   const sim = new BattleSim(fakeBattleConfig(1));

@@ -2064,7 +2064,7 @@ export class BattleSim {
     const sq = this.squads.get(d.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: DECOY.R, side: d.side });
-    if (owner) this._blast(owner, decoyBlast(), d.x, d.z, d.y);
+    if (owner) this._blast(owner, decoyBlast(), d.x, d.z, d.y, this._unitLev(d));   // 爆點層 = 餌機所在層(不穿橋面/隧道天花)
     // 2026-07-19:自爆(燃料耗盡/近炸)時尚有未投完的炸彈 → 原地補投一枚(復用單一投彈縫,記主機甲)
     if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner); }
     this._removeDecoy(d);
@@ -2293,20 +2293,36 @@ export class BattleSim {
     this.events.push({ e: 'iframe', pid, side: h.side, dur: IFRAME.DUR });
   }
 
+  /**
+   * 爆風垂直隔離(2026-07-22 隧道 → 2026-07-24 橋面天花一併封死):爆心層 lev 與目標層被結構板
+   * 隔開 ⇒ 爆風不越層。A11「爆風不吃 LOS 遮蔽」是**水平**繞射近似,MUST NOT 引申成可以穿透
+   * 垂直岩盤/隧道天花/橋面板。伺服器無高程,以「lev 位元 + ribbon 疊放」近似垂直層(見 _slabBlocked)。
+   *  ①隧道(任一端 lev 2):岩體/天花包覆,洞內↔洞外互不波及 —— 身處洞內即隔絕,不需 ribbon。
+   *  ②橋面(lev 1↔0):僅「正上方↔正下方」被橋面板隔開 —— 爆心與目標同落一條 ty=1 ribbon;
+   *    側向溢流照炸(與 _slabBlocked ② under-block 同判定,不誤擋橋旁地面單位)。
+   * lev 為 null(導引飛彈著彈)已由鎖定時的 slab LOS 把關,回傳 false 維持舊行為。
+   */
+  _slabSep(lev, x, z, t) {
+    if (lev == null || !this._slabGrid) return false;
+    const tl = this._unitLev(t);
+    if (tl === lev) return false;                        // 同層 → 無板隔開
+    if (tl === 2 || lev === 2) return true;              // 隧道:洞內↔洞外
+    const C = LOS.CELL_M;                                // 橋面 1↔0:爆心與目標同落一條橋面 ribbon 才隔
+    const arr = this._slabGrid.get((Math.floor(x / C) + 32768) * 65536 + (Math.floor(z / C) + 32768));
+    if (arr) for (const s of arr) {
+      if (s[5] === 1 && ptOnRibbon(x, z, s) && ptOnRibbon(t.x, t.z, s)) return true;
+    }
+    return false;
+  }
+
   /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
    *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。
-   *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,
-   *  高空直擊/同高度自爆才炸得到 —— 與英雄/餌機同一條 3D 規則。 */
-  /**
-   * lev(2026-07-22 隧道垂直隔離):爆心所在結構層(0 地面/1 橋面/2 隧道內;null = 不查層)。
-   * 爆心與目標分屬「隧道內/外」⇒ 山體/天花隔在中間,爆風不越層 —— A11「爆風不吃 LOS 遮蔽」
-   * 是水平繞射近似,MUST NOT 引申成可以穿透垂直岩盤/天花。lev 為 null 的呼叫端(導引飛彈
-   * 著彈)已由鎖定時的 slab LOS 把關,維持舊行為。
-   */
+   *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,高空直擊/同高度
+   *  自爆才炸得到。lev = 爆心結構層(0 地面/1 橋面/2 隧道內;null = 不查層),經 _slabSep 封住穿頂/穿板。 */
   _blast(h, def, x, z, y, lev = null) {
     for (const t of [...this.ents.values()]) {
       if (t.side === h.side || (t.hero && t.dead)) continue;
-      if (lev != null && this._slabGrid && ((this._unitLev(t) === 2) !== (lev === 2))) continue;
+      if (this._slabSep(lev, x, z, t)) continue;
       const d = Math.hypot(x - t.x, z - t.z, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
       if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);
