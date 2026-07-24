@@ -2666,7 +2666,9 @@ export class BattleClient {
       ent.shield = shield;
       this.shields.add(shield);
     }
-    group.position.set(e.x, this.terrain.heightAt(e.x, -e.z), -e.z);
+    // 橋上砲塔:蓋在橋面墩座台上(biomes buildTowerBridgePads 定案;查無 = 一般貼地塔)
+    if (e.k === 'tower') ent.padY = this.terrain.towerPadY?.(e.x, -e.z) ?? null;
+    group.position.set(e.x, ent.padY ?? this.terrain.heightAt(e.x, -e.z), -e.z);
     if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
     else if (isThirdSide(e.s)) this._addRangeRing(ent, e);   // 第三方(GUER/MILI)戰鬥單位與碉堡:貼地射程光暈
     if (e.k === 'bunker') this._clearAroundBunker(e);        // 碉堡淨空:移除重疊建物 + 清同區碰撞柱
@@ -5991,7 +5993,7 @@ export class BattleClient {
         continue;
       }
       if (ent.isStatic) {
-        const y = this.terrain.heightAt(ent.tgt.x, ent.tgt.z);
+        const y = ent.padY ?? this.terrain.heightAt(ent.tgt.x, ent.tgt.z);   // padY:橋上砲塔的墩座台面
         ent.mesh.position.set(ent.tgt.x, y, ent.tgt.z);
         if (ent.kind === 'tower') this._aimTurret(ent, dt, now);
         if (ent.kind === 'base') this._aimBaseGuns(ent, dt, now);

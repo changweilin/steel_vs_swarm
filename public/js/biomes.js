@@ -25,7 +25,7 @@
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ENV, solveTowerSites, WATER, MAPGEO, LOS } from './data.js';
+import { ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
@@ -2992,6 +2992,108 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   return { built, decks, tunnels: tunnelSegs, cols, portals };
 }
 
+// ---- 兵線砲塔跨橋墩座(2026-07-24 使用者需求)----
+// 砲塔立在兵線兩側 ±TOWER_SIDE_OFF(15m);兵線跨水/跨谷段那裡只有橋,舊版砲塔一律貼地 heightAt
+// ⇒ 塔沉在橋面之下(河床/橋下街廓),與走在橋上的兵線分家。改制:與橋重疊的砲塔**蓋在橋面上**,
+// 自橋面外緣伸出一塊墩座台(凸出橋寬之外)承載塔身,台下以往外擴張(上窄下寬 + 擴張墩帽)的
+// 橋墩落地支撐。
+// 唯一縫紀律:塔位走 data.js solveTowerSites(與 sim._spawnStructures 同一支,座標逐點對得上)、
+// 橋面走 roadRes.decks(真橋 + 兵線補橋皆已併入)⇒ 客戶端墩座與伺服器塔位不會分家,
+// game.js 只查 towerPadY 取高度,MUST NOT 另寫一套「塔在不在橋上」的判定。
+// 純視覺 + 客戶端物理(台面進 decks 站立面 / 墩身進 cols 碰撞柱);伺服器無地形高程,權威層不受影響。
+// 不消耗共享 rnd(純幾何)⇒ 建物/植被佈局序列不變。
+const TOWER_PAD_R = 10.5;    // 墩座台面半徑(遊戲公尺):> 砲塔基墩外接半徑 ~8 + 走位餘裕
+const TOWER_PAD_T = 1.4;     // 台面板厚(≥ DECK_UNDER 1.2,與橋面底緣語意一致)
+const TOWER_PAD_SINK = 0.02; // 台面繪製下沉量:與橋面路面 quad 錯開,避免共面 z-fighting
+const TOWER_PAD_DIRF = 0.6;  // 橋段方向 × 兵線切線的 |cos| 下限:濾掉「剛好經過附近的別條橋」
+const TOWER_PAD_LONG = 1.0;  // 縱向容差(同 makeDeckIndex 的 LONG_TOL):橋頭之外不算重疊
+function buildTowerBridgePads(group, lanesW, decks, terrain, cols) {
+  const pads = [];
+  if (!decks.length || !lanesW.length) return pads;
+  const newDecks = [];   // 本輪台面:掃描完才併回 decks(免後面的塔吸附到前一座塔的墩座台)
+  const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
+  const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
+  for (const laneSites of solveTowerSites(lanesW)) {
+    for (const site of laneSites) {
+      for (const cp of [site.SWARM, site.STEEL]) {
+        const tgx = -cp.nz, tgz = cp.nx;   // 兵線切線(法線轉 90°)
+        // 判定錨在**兵線中心點**(= 兵線此處走在橋上),不是逐塔找最近橋:倫敦實測同一塔位的
+        // 左右塔會各自吸附到相鄰的平行橋(真橋 + 補橋),橋面高差 5.6m ⇒ 一高一低。錨在中心點後
+        // 兩座塔共用同一段橋(同高度、同外法線)= 對稱,且不會被旁邊「剛好平行」的高架橋撈走。
+        let brg = null;
+        for (const d of decks) {
+          let ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+          const len = Math.hypot(ex, ez);
+          if (len < 0.5) continue;
+          ex /= len; ez /= len;
+          if (Math.abs(ex * tgx + ez * tgz) < TOWER_PAD_DIRF) continue;   // 不順著兵線 = 不是兵線走的橋
+          const tRaw = ((cp.x - d.x1) * ex + (cp.z - d.z1) * ez) / len;
+          const over = (tRaw < 0 ? -tRaw : tRaw > 1 ? tRaw - 1 : 0) * len;
+          if (over > TOWER_PAD_LONG) continue;
+          const lat = (cp.x - d.x1) * ez - (cp.z - d.z1) * ex;   // 帶號側向距離(右法線 = (ez, −ex))
+          if (Math.abs(lat) > d.hw) continue;                    // 兵線中心 MUST 真的落在橋面上
+          if (brg && Math.abs(lat) >= Math.abs(brg.lat)) continue;
+          const t = Math.max(0, Math.min(1, tRaw));
+          brg = { lat, hw: d.hw, ex, ez, y: d.y1 + (d.y2 - d.y1) * t };
+        }
+        if (!brg) continue;   // 兵線此處不在橋上 ⇒ 兩座塔照舊貼地
+        const dy = brg.y;
+        for (const s of [-1, 1]) {
+          const tx = cp.x + cp.nx * GAME.TOWER_SIDE_OFF * s;
+          const tz = cp.z + cp.nz * GAME.TOWER_SIDE_OFF * s;
+          let { ex, ez } = brg;
+          const hw = brg.hw;
+          // 塔的側向距離 = 兵線中心側距 + 側偏量投影到橋法線(兵線法線與橋法線近乎平行,夾角 ≤53°)
+          let lat = brg.lat + GAME.TOWER_SIDE_OFF * s * (cp.nx * ez - cp.nz * ex);
+          if (Math.abs(lat) > hw + TOWER_PAD_R) continue;   // 構不到台面(理論上不會發生,防呆)
+          // 塔基地面高過橋面 = 塔站在橋上方的山坡(不是同一層)⇒ 照舊貼地,不蓋墩座
+          let gy = terrain.heightAt(tx, tz);
+          if (dy < gy - 0.5) continue;
+          const R6 = TOWER_PAD_R * 0.6;
+          for (const [ox, oz] of [[R6, 0], [-R6, 0], [0, R6], [0, -R6]]) gy = Math.min(gy, terrain.heightAt(tx + ox, tz + oz));
+          if (lat < 0) { ex = -ex; ez = -ez; lat = -lat; }   // 翻轉橋軸 ⇒ 右法線恆指向砲塔那側
+          const nx = ez, nz = -ex;                            // 外法線
+          const fx = tx - nx * lat, fz = tz - nz * lat;       // 橋中心線上的垂足
+          const ry = Math.atan2(ex, ez);                      // local +x → 外法線、local +z → 橋軸(同橋墩帽)
+          // 台面內緣壓進橋面之下 0.6m(被路面 quad 蓋住)⇒ 與橋面銜接無縫。**MUST NOT** 讓台面往
+          // 橋心多伸(舊版 lat − PAD_R):橋面路面 quad 就畫在 deckAt,同高疊上去 = 整條車道 z-fighting。
+          const vIn = hw - 0.6, vOut = lat + TOWER_PAD_R;     // 外緣 = 凸出橋寬之外的部分
+          pads.push({ x: tx, z: tz, y: dy });
+          if (vOut <= hw - 0.5) continue;                     // 整座塔本來就落在橋面內 ⇒ 不必加台
+          // 台面:自橋面外緣伸出的矩形板。繪製頂面再沉 TOWER_PAD_SINK(與路面非共面,免 z-fighting);
+          // 站立面仍記 dy = 橋面高 ⇒ 上橋 → 上台面沒有台階。
+          const slab = new THREE.Mesh(new THREE.BoxGeometry(vOut - vIn, TOWER_PAD_T, TOWER_PAD_R * 2), slabM);
+          slab.position.set(fx + nx * (vIn + vOut) / 2, dy - TOWER_PAD_SINK - TOWER_PAD_T / 2, fz + nz * (vIn + vOut) / 2);
+          slab.rotation.y = ry;
+          group.add(slab);
+          newDecks.push({ x1: fx + nx * vIn, z1: fz + nz * vIn, y1: dy,      // 站立面 = 橋面高(與橋無台階)
+                          x2: fx + nx * vOut, z2: fz + nz * vOut, y2: dy, hw: TOWER_PAD_R });
+          // 墩身:台面底緣 → 地表(埋 0.6);上窄下寬 + 擴張墩帽,重量看得出往外撐開
+          const top = dy - TOWER_PAD_SINK - TOWER_PAD_T, base = gy - 0.6;   // top = 台面底緣
+          if (top - base < 1.2) continue;                     // 橋面幾乎貼地(引道段)⇒ 台面即基座,不立墩
+          const capH = Math.min(2.2, (top - base) * 0.5);
+          const cap = new THREE.Mesh(new THREE.CylinderGeometry(TOWER_PAD_R * 0.9, TOWER_PAD_R * 0.45, capH, 8), pierM);
+          cap.position.set(tx, top - capH / 2, tz);
+          cap.rotation.y = Math.PI / 8;
+          group.add(cap);
+          const shaftH = top - capH - base;
+          if (shaftH > 0.5) {
+            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(TOWER_PAD_R * 0.45, TOWER_PAD_R * 0.62, shaftH, 8), pierM);
+            shaft.position.set(tx, base + shaftH / 2, tz);
+            shaft.rotation.y = Math.PI / 8;
+            group.add(shaft);
+          }
+          // 碰撞柱:柱頂 MUST 封在台面「底緣」(同橋墩紀律)—— 封到台面上表面的話,
+          // 站在墩座台上的機體 myBot == 柱頂,_collide 的垂直閘不會跳過 → 被隱形柱側推下橋。
+          cols.push({ x: tx, z: tz, y: base, r: TOWER_PAD_R * 0.62 + 0.25, h: top - base });
+        }
+      }
+    }
+  }
+  decks.push(...newDecks);
+  return pads;
+}
+
 /**
  * 橋面高度查詢:把橋面小段丟進均勻網格,回傳 deckY(x, z) —— 沒有橋面回 null。
  * 多層橋重疊時取最高面(上層橋才是站得住的那一面)。
@@ -4692,7 +4794,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     roadRes.decks.push(...laneRes.decks);
     roadRes.cols.push(...laneRes.cols);
   }
+  // ---- 兵線砲塔跨橋墩座:與橋重疊的砲塔改蓋在橋面上(台面 + 往外擴張的橋墩)----
+  // MUST 排在兩次 buildRoads 之後(真橋 + 兵線補橋的 decks 都併齊了才判「塔在不在橋上」),
+  // 且排在 blockers.push(roadRes.cols) 之前(墩身碰撞柱走同一條路徑)。
+  const towerPads = buildTowerBridgePads(
+    group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
+    roadRes.decks, terrain, roadRes.cols);
   const roadsBuilt = roadRes.built;
+  group.userData.towerPads = towerPads;   // 橋上砲塔落位高度(main.js → terrain.towerPadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)
   group.userData.tunnels = roadRes.tunnels;   // 地下道路面 + 天花(main.js → terrain.tunnelAt/ceilingAt)
   group.userData.portals = roadRes.portals;   // 洞口門洞(稽核/冒煙測試用:數量與位置驗證)

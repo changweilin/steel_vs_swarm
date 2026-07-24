@@ -1487,6 +1487,13 @@ function startPrebuild(cfg) {
     terrain.deckY = deckY;
     terrain.tunnelAt = tunnelAt;
     terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
+    // 橋上砲塔墩座台面高度:與橋重疊的砲塔改站橋面(biomes buildTowerBridgePads = 唯一縫)。
+    // 塔位兩端共用 solveTowerSites ⇒ 座標逐點相同,查表用小容差即可(≤24 筆,線性掃描)。
+    const towerPads = biomes.userData.towerPads || [];
+    terrain.towerPadY = (x, z) => {
+      for (const p of towerPads) if (Math.abs(p.x - x) < 2 && Math.abs(p.z - z) < 2) return p.y;
+      return null;
+    };
     terrain.deckMargin = DECK_MARGIN; // 站立查詢側向容差(game.js NPC 水上站橋與 surfaceAt 同一值)
     // 大型障礙物頂面站立索引(建物/神木/巨岩;2026-07-22):碉堡淨空拆樓後 MUST 重建(game.js 呼叫)
     let blockerTop = makeBlockerTopIndex(terrain.blockers);
