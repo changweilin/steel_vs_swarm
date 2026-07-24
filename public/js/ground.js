@@ -1286,8 +1286,10 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
  * @param opts.season / opts.seed / opts.rnd  決定性環境參數
  * @param opts.roadDirAt  (x,z)=>最近道路方位角(rad,atLocal 平面角)或 null(附近無路);
  *                        整齊件沿路擺放用,可缺席 = 全部隨機朝向(行為同舊版)
+ * @param opts.roadClear  (x,z)=>是否落在道路走廊上(bool);特徵拼圖避開路面免 3D 件戳穿,
+ *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadClear }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -1556,6 +1558,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (placed >= target) return false;
     if (x < terrain.minX + inb || x > terrain.maxX - inb || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
     if (isBlocked(x, z)) return false;
+    if (roadClear?.(x, z)) return false;   // 道路走廊上不鋪特徵拼圖(免細節件戳穿路面);與 isBlocked 同位、首個 rnd() 前 = 確定性不變
     const zn = zoneAt(x, z);
     if (!subZones.get(sub)?.has(zn)) return false;   // 類型必須與所在圖資分區相符
     const def = DEFS[sub];

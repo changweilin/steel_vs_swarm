@@ -2416,7 +2416,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   const ceilSegs = [];     // 地下道不透明天花板小段(覆蓋段;擋住山體底面)
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
-  const nodeArms = new Map();   // key -> { x, z, arms, hw, dirs: [[dx,dz]…] }
+  // dirs/armHw 逐臂平行(同一 push);main = 任一臂為主幹道 → 填面/縮減取主幹柏油色
+  const nodeArms = new Map();   // key -> { x, z, arms, hw, main, dirs: [[dx,dz]…], armHw: [] }
   const lights = [], lamps = [], roadTrees = [];   // 3D 附屬件實例
   // 建路段數上限隨地圖真實面積縮放(2026-07-17):固定 600 是第二層截斷 —— 查詢額度
   // 提高後照樣只畫前 600 段。計數單位是拆段後的 run(≈ way × 1.2~1.5,邊界裁切/跨水拆段),
@@ -2447,16 +2448,18 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         let rec = nodeArms.get(key);
         if (!rec) {
           const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
-          rec = { x, z, arms: 0, hw: 0, dirs: [] };
+          rec = { x, z, arms: 0, hw: 0, main: false, dirs: [], armHw: [] };
           nodeArms.set(key, rec);
         }
         rec.arms += (i === 0 || i === n - 1) ? 1 : 2;
         rec.hw = Math.max(rec.hw, hwWay);
-        for (const j of [i - 1, i + 1]) {          // 各臂方向(指向鄰節點)
+        rec.main = rec.main || main;
+        for (const j of [i - 1, i + 1]) {          // 各臂方向(指向鄰節點)+ 該臂半寬(縮減用)
           if (j < 0 || j >= n) continue;
           const [ax, az] = llToWorld(way.geometry[j].lat, way.geometry[j].lon, center);
           const dl = Math.hypot(ax - rec.x, az - rec.z) || 1;
           rec.dirs.push([(ax - rec.x) / dl, (az - rec.z) / dl]);
+          rec.armHw.push(hwWay);
         }
       }
     }
@@ -2755,25 +2758,39 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 覆蓋段上方的山頂(舊版索性整段跳過就是為了躲這個坑)。
       const markYB = strc ? (i) => tFloorAt(cum[i]) : null;
       if (!brg && biome === 'urban' && hw >= 2) {
+        // 白虛線通用鋪法:偏移 off(0 = 中線)。off=0 逐位元同舊版中線(±0.28 = 0.56 寬)
+        const dashLine = (off) => {
+          for (let s = 5; s + 3.2 < total; s += 9.5) {
+            const k = mark.base;
+            for (const d of [s, s + 3.2]) {
+              const [ex, ez, ddx, ddz] = at(d);
+              const qx = ddz, qz = -ddx;
+              const yB = strc ? tFloorAt(d) : null;
+              const hM = yB !== null ? -Infinity
+                : Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
+                           terrain.heightAt(ex - qx * hw, ez - qz * hw));
+              putMark(ex + qx * (off + 0.28), ez + qz * (off + 0.28), 0.58, MARK_W, hM, yB);
+              putMark(ex + qx * (off - 0.28), ez + qz * (off - 0.28), 0.58, MARK_W, hM, yB);
+            }
+            mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+            mark.base += 4;
+          }
+        };
         if (main) {
+          // 車道數由既有寬度推導(單一縫,不硬編各路):main 恆 ≥ 雙線道
+          const lanes = Math.max(2, Math.round(hw * 2 / 3.2));
           if (arterial) {                        // 幹道:雙黃實線分向
             emitLine(run, hw, 0.58, 0.33, 0.2, MARK_Y, markYB);
             emitLine(run, hw, 0.58, -0.33, 0.2, MARK_Y, markYB);
           } else {                               // 次要道:單白虛線
-            for (let s = 5; s + 3.2 < total; s += 9.5) {
-              const k = mark.base;
-              for (const d of [s, s + 3.2]) {
-                const [ex, ez, ddx, ddz] = at(d);
-                const qx = ddz, qz = -ddx;
-                const yB = strc ? tFloorAt(d) : null;
-                const hM = yB !== null ? -Infinity
-                  : Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
-                             terrain.heightAt(ex - qx * hw, ez - qz * hw));
-                putMark(ex + qx * 0.28, ez + qz * 0.28, 0.58, MARK_W, hM, yB);
-                putMark(ex - qx * 0.28, ez - qz * 0.28, 0.58, MARK_W, hM, yB);
-              }
-              mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
-              mark.base += 4;
+            dashLine(0);
+          }
+          // 四線道以上:每向 nHalf 車道 → nHalf−1 條同向車道分隔白虛線(壓在路緣線內)
+          if (lanes >= 4) {
+            const nHalf = Math.round(lanes / 2);
+            for (let k = 1; k < nHalf; k++) {
+              const off = hw * k / nHalf;
+              if (off + 0.28 < hw * 0.78) { dashLine(off); dashLine(-off); }
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
@@ -2864,6 +2881,63 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     }
   }
 
+  // ---- 路口填面 + 寬度縮減(2026-07-24):道路是各自獨立緞帶,只靠共用 OSM 節點重疊 ——
+  // 路口內角的三角楔形露地、寬窄路對接的邊緣落差都無填補幾何。此處對車行節點補道路色面片
+  // (進路面桶 → 同色同材質,與緞帶內部重疊不可見,只補露地/落差)。純幾何零 rnd;classify 傳
+  // mix=null(同斑馬線迴圈)不消耗共享序列。橋/隧節點本就不入 nodeArms。繞行朝 +Y(依緞帶截面推導)。
+  const fillLift = (vx, vz, hMax) => Math.max(terrain.heightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT;
+  for (const rec of nodeArms.values()) {
+    if (rec.hw < 2) continue;
+    let mode = 0;                                  // 3 = 路口圓面 / 2 = 寬度縮減梯形
+    if (rec.arms >= 3) mode = 3;
+    else if (rec.arms === 2 && rec.armHw.length === 2) {
+      const [d0, d1] = rec.dirs, [hw0, hw1] = rec.armHw;
+      // 兩臂近反向(直線穿過)且半寬差顯著 → 一條路收窄成另一條
+      if (Math.abs(hw0 - hw1) > 0.6 && d0[0] * d1[0] + d0[1] * d1[1] < -0.7) mode = 2;
+    }
+    if (!mode) continue;
+    const biome = classify(terrain.sampleColor?.(rec.x, rec.z), terrain.heightAt(rec.x, rec.z), null, rnd);
+    if (biome === 'water') continue;               // 河面節點(橋另建),不鋪路面
+    const b = bucketOf(biome, rec.main);
+    if (mode === 3) {
+      // 扇形圓面:半徑 = 節點最大臂半寬;中心 + N 段緣點,取樣最高地表夾高(坡地不浮不沉)
+      const R = rec.hw, N = 10;
+      let hMax = terrain.heightAt(rec.x, rec.z);
+      for (let k = 0; k < N; k++) {
+        const a = k / N * Math.PI * 2;
+        hMax = Math.max(hMax, terrain.heightAt(rec.x + Math.cos(a) * R, rec.z + Math.sin(a) * R));
+      }
+      const c0 = b.base;
+      b.pos.push(rec.x, fillLift(rec.x, rec.z, hMax), rec.z);
+      b.nrm.push(0, 1, 0); b.uv.push(rec.x / 9, rec.z / 9); b.col.push(1, 1, 1);
+      for (let k = 0; k <= N; k++) {
+        const a = k / N * Math.PI * 2;
+        const vx = rec.x + Math.cos(a) * R, vz = rec.z + Math.sin(a) * R;
+        b.pos.push(vx, fillLift(vx, vz, hMax), vz);
+        b.nrm.push(0, 1, 0); b.uv.push(vx / 9, vz / 9); b.col.push(1, 1, 1);
+      }
+      for (let k = 0; k < N; k++) b.idx.push(c0, c0 + 2 + k, c0 + 1 + k);   // (心, 緣k+1, 緣k) → 朝 +Y
+      b.base += N + 2;
+    } else {
+      // 縮減梯形:統一以 d0 為軸,前 T 截面寬 hw0、後 T 截面寬 hw1(d1≈−d0)
+      const [d0] = rec.dirs, [hw0, hw1] = rec.armHw;
+      const T = Math.min(6, Math.max(hw0, hw1) * 1.5);
+      const px = d0[1], pz = -d0[0];
+      const s0x = rec.x + d0[0] * T, s0z = rec.z + d0[1] * T;
+      const s1x = rec.x - d0[0] * T, s1z = rec.z - d0[1] * T;
+      const hMax = Math.max(terrain.heightAt(s0x, s0z), terrain.heightAt(s1x, s1z), terrain.heightAt(rec.x, rec.z));
+      const P = [[s0x + px * hw0, s0z + pz * hw0], [s0x - px * hw0, s0z - pz * hw0],
+                 [s1x + px * hw1, s1z + pz * hw1], [s1x - px * hw1, s1z - pz * hw1]];
+      const c0 = b.base;
+      for (const [vx, vz] of P) {
+        b.pos.push(vx, fillLift(vx, vz, hMax), vz);
+        b.nrm.push(0, 1, 0); b.uv.push(vx / 9, vz / 9); b.col.push(1, 1, 1);
+      }
+      b.idx.push(c0, c0 + 2, c0 + 1, c0 + 1, c0 + 2, c0 + 3);   // 反向繞行 → 朝 +Y
+      b.base += 4;
+    }
+  }
+
   // ---- 路面 Mesh(每「地貌×主次」一個 draw call;柏油/泥土/礫石材質塗層)----
   for (const b of buckets.values()) {
     if (!b.idx.length) continue;
@@ -2873,8 +2947,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
     geo.setIndex(b.idx);
+    // polygonOffset:把路面往鏡頭拉,恆蓋過地被拼貼(橫坡路塹段夾到 hMax−0.7 時與地被同高不 z-fight)
     const m = new THREE.Mesh(geo, envMat(b.color, {
       map: roadTex(b.tex), vertexColors: true, wash: 0.55, cool: 0.5, rim: 0,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     }));
     m.frustumCulled = false;
     m.renderOrder = 1;
@@ -2888,7 +2964,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(mark.nrm, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(mark.col, 3));
     geo.setIndex(mark.idx);
-    const m = new THREE.Mesh(geo, envMat(0xf2edda, { vertexColors: true, wash: 0.15, cool: 0.3, rim: 0 }));
+    // 標線 offset 比路面更強(−3 < −2)→ 恆畫在路面之上,不與被拉近的路面 z-fight
+    const m = new THREE.Mesh(geo, envMat(0xf2edda, { vertexColors: true, wash: 0.15, cool: 0.3, rim: 0,
+      polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }));
     m.frustumCulled = false;
     m.renderOrder = 2;
     m.userData.noOutline = true;
@@ -4954,6 +5032,46 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return ba;
   };
 
+  // ---- 道路走廊遮罩(2026-07-24):地被特徵拼圖/細節避開路面走廊 ⇒ 3D 件(作物/碎石/攤位)
+  // 不再坐在路面上戳穿(需求「道路恆在其他地貌之上」)。獨立線段索引(不吃 rdGrid 的 12m 稀疏取樣,
+  // 否則窄路遮罩會呈串珠縫),逐段點到線段距離 + 半寬 margin。64m 桶;純視覺查詢,零共享 rnd。----
+  const RM_CELL = 64;
+  const rmGrid = new Map();
+  const rmAdd = (x1, z1, x2, z2, hw) => {
+    const i0 = Math.floor(Math.min(x1, x2) / RM_CELL), i1 = Math.floor(Math.max(x1, x2) / RM_CELL);
+    const j0 = Math.floor(Math.min(z1, z2) / RM_CELL), j1 = Math.floor(Math.max(z1, z2) / RM_CELL);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const k = `${i},${j}`;
+      let arr = rmGrid.get(k); if (!arr) { arr = []; rmGrid.set(k, arr); }
+      arr.push([x1, z1, x2, z2, hw]);
+    }
+  };
+  for (const way of roadInput) {
+    const g = way.geometry || [];
+    const hw = roadWidth(way.tags) / 2;
+    for (let i = 1; i < g.length; i++) {
+      const [x0, z0] = llToWorld(g[i - 1].lat, g[i - 1].lon, center);
+      const [x1, z1] = llToWorld(g[i].lat, g[i].lon, center);
+      rmAdd(x0, z0, x1, z1, hw);
+    }
+  }
+  const roadClearAt = (x, z) => {
+    const ci = Math.floor(x / RM_CELL), cj = Math.floor(z / RM_CELL);
+    for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+      const arr = rmGrid.get(`${i},${j}`);
+      if (!arr) continue;
+      for (const s of arr) {
+        const ex = s[2] - s[0], ez = s[3] - s[1];
+        const L2 = ex * ex + ez * ez || 1;
+        let t = ((x - s[0]) * ex + (z - s[1]) * ez) / L2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const dx = x - (s[0] + ex * t), dz = z - (s[1] + ez * t), r = s[4] + 1.5;
+        if (dx * dx + dz * dz < r * r) return true;
+      }
+    }
+    return false;
+  };
+
   // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
   // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
   onProgress?.(0.88, '鋪設地表覆蓋層…');
@@ -4969,7 +5087,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
-    blockers, season, seed: gseed, rnd: grnd, roadDirAt,
+    blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadClear: roadClearAt,
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
