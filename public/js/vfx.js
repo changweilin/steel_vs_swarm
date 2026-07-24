@@ -695,6 +695,193 @@ export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {
   });
 }
 
+// ---------------- 損傷特效(冒煙 / 裂痕 / 失火)----------------
+// 建築/單位受損視覺化,兩階遞進:
+//   階段1(HP ≤ LIGHT_F):淺灰煙 + 暗色裂痕
+//   階段2(HP ≤ HEAVY_F):濃黑煙 + 熾裂痕 + 火舌 + 飛濺火星(破損失火)
+// 純客戶端表現層 —— 不進 sim / raycast(A6);掛在 ent.mesh 底下隨機體移動/旋轉/顯隱,
+// _removeEnt 移除 mesh 時一併消失。動畫由 game.js 每幀呼叫 userData.update(dt, now)。
+export const DMG_FX = { LIGHT_F: 0.5, HEAVY_F: 0.25 };
+
+/** 軟邊煙團貼圖(快取):中心不透明 → 外緣淡出 */
+function smokeTexture() {
+  if (_texCache.has('smoke')) return _texCache.get('smoke');
+  const S = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const gr = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,0.95)');
+  gr.addColorStop(0.5, 'rgba(255,255,255,0.45)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, S, S);
+  const tex = new THREE.CanvasTexture(cv);
+  _texCache.set('smoke', tex);
+  return tex;
+}
+
+/** 裂痕貼圖(快取):透明底上一組由中心放射的鋸齒白線(材質 color 決定明暗:暗色=裂縫、加色橙=熾裂) */
+function crackTexture() {
+  if (_texCache.has('crack')) return _texCache.get('crack');
+  const S = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  const cx = S / 2, cy = S / 2;
+  ctx.strokeStyle = '#fff';
+  ctx.lineCap = 'round';
+  // 三條主裂縫,各自鋸齒延伸並分岔
+  for (let i = 0; i < 3; i++) {
+    const a0 = (i / 3) * Math.PI * 2 + (i * 1.7);
+    ctx.lineWidth = 6 - i;
+    let x = cx, y = cy, a = a0;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    const seg = 5 + (i % 2);
+    for (let s = 0; s < seg; s++) {
+      a += (Math.sin(i * 3.1 + s * 2.3)) * 0.7;
+      const step = S * 0.11;
+      x += Math.cos(a) * step; y += Math.sin(a) * step;
+      ctx.lineTo(x, y);
+      if (s === 2) {   // 分岔一支
+        const bx = x + Math.cos(a + 1.1) * step * 1.4, by = y + Math.sin(a + 1.1) * step * 1.4;
+        ctx.moveTo(x, y); ctx.lineTo(bx, by); ctx.moveTo(x, y);
+      }
+    }
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  _texCache.set('crack', tex);
+  return tex;
+}
+
+/**
+ * 受損特效群組。dims = 呼叫端量好的基準包圍盒 { r 半徑, top 頂高, h 全高 }。
+ * 回傳 Group 掛在 ent.mesh 底下;setStage(1|2) 切階、update(dt, now) 逐幀動畫。
+ */
+export function makeDamageFx({ r = 2, top = 3, h = 3 }) {
+  const g = new THREE.Group();
+  g.userData.noOutline = true;
+  const rr = Math.max(0.8, r);
+  const plumeH = Math.min(20, Math.max(3, h * 1.3));
+
+  // --- 煙柱:錯開相位循環上升的軟邊 sprite ---
+  const smokeBaseY = top * 0.55, smokeTex = smokeTexture();
+  const smoke = [];
+  for (let i = 0; i < 4; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: smokeTex, transparent: true, opacity: 0, depthWrite: false,
+    }));
+    sp.userData.ph = i / 4;                        // 相位 0..1(錯開)
+    sp.userData.jx = (Math.random() - 0.5) * rr;
+    sp.userData.jz = (Math.random() - 0.5) * rr;
+    g.add(sp);
+    smoke.push(sp);
+  }
+
+  // --- 裂痕:貼在機體外緣、朝外的鋸齒白線板(材質 color 上暗) ---
+  const crackTex = crackTexture();
+  const cracks = [], hotCracks = [];
+  const CN = 5;
+  for (let i = 0; i < CN; i++) {
+    const a = (i / CN) * Math.PI * 2 + Math.random() * 0.8;
+    const y = top * (0.3 + Math.random() * 0.45);
+    const w = rr * (0.4 + Math.random() * 0.28), ht = h * (0.2 + Math.random() * 0.18);
+    const px = Math.cos(a) * rr * 0.44, pz = Math.sin(a) * rr * 0.44;   // 貼近軸心:窄身機體的裂痕不飄出輪廓外
+    const mkPlane = (color, additive) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, ht), new THREE.MeshBasicMaterial({
+        map: crackTex, color, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+        blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      }));
+      m.position.set(px, y, pz);
+      m.rotation.set((Math.random() - 0.5) * 0.7, Math.atan2(px, pz), (Math.random() - 0.5) * 1.5);
+      return m;
+    };
+    const dark = mkPlane(0x141416, false);
+    g.add(dark); cracks.push(dark);
+    const hot = mkPlane(0xff5a1e, true);   // 熾裂(階段2疊在暗裂之上)
+    hot.visible = false;
+    g.add(hot); hotCracks.push(hot);
+  }
+
+  // --- 火舌(階段2):機體中下段閃爍的圓錐 ---
+  const flames = [];
+  const flameBaseY = top * 0.28;
+  for (let i = 0; i < 3; i++) {
+    const fh = h * (0.28 + Math.random() * 0.18);
+    const f = new THREE.Mesh(new THREE.ConeGeometry(rr * (0.18 + Math.random() * 0.1), fh, 6),
+      new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffa826 : 0xff5a1e, transparent: true, opacity: 0.85, depthWrite: false }));
+    const a = Math.random() * Math.PI * 2, d = rr * Math.random() * 0.55;
+    f.userData.h0 = fh;
+    f.userData.baseY = flameBaseY;
+    f.userData.px = Math.cos(a) * d; f.userData.pz = Math.sin(a) * d;
+    f.userData.ph = Math.random() * Math.PI * 2;
+    f.position.set(f.userData.px, flameBaseY + fh / 2, f.userData.pz);
+    f.visible = false;
+    g.add(f);
+    flames.push(f);
+  }
+
+  // --- 火星(階段2):additive 小亮點,快速循環上飄 ---
+  const embers = [], emberTex = glowTexture();
+  for (let i = 0; i < 5; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: emberTex, color: 0xffb24a, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    sp.scale.setScalar(rr * 0.28);
+    sp.userData.ph = Math.random();
+    sp.userData.jx = (Math.random() - 0.5) * rr;
+    sp.userData.jz = (Math.random() - 0.5) * rr;
+    sp.userData.spd = 0.7 + Math.random() * 0.5;
+    sp.visible = false;
+    g.add(sp);
+    embers.push(sp);
+  }
+
+  g.userData.stage = 1;
+  g.userData.setStage = (s) => {
+    g.userData.stage = s;
+    const heavy = s >= 2;
+    for (const f of flames) f.visible = heavy;
+    for (const hc of hotCracks) hc.visible = heavy;
+    for (const em of embers) em.visible = heavy;
+    // 暗裂:階段1露前 3 道,階段2全露(破損加劇)
+    cracks.forEach((c, i) => { c.visible = heavy || i < 3; });
+  };
+
+  g.userData.update = (dt, now) => {
+    const heavy = g.userData.stage >= 2;
+    // 煙:濃黑(重傷)/ 淺灰(輕傷),循環上升淡出
+    const smCol = heavy ? 0x2a2a2e : 0x6f757c;
+    const opMax = heavy ? 0.62 : 0.44, scEnd = rr * (heavy ? 1.9 : 1.3);
+    for (const sp of smoke) {
+      sp.userData.ph = (sp.userData.ph + dt * 0.33) % 1;
+      const p = sp.userData.ph;
+      sp.position.set(sp.userData.jx * (0.4 + p), smokeBaseY + p * plumeH, sp.userData.jz * (0.4 + p));
+      sp.scale.setScalar(rr * 0.5 + p * scEnd);
+      sp.material.opacity = opMax * Math.sin(p * Math.PI);
+      sp.material.color.setHex(smCol);
+    }
+    if (!heavy) return;
+    for (const f of flames) {
+      const k = 0.7 + 0.35 * Math.sin(now * 9 + f.userData.ph) + 0.12 * Math.sin(now * 23 + f.userData.ph * 2);
+      f.scale.set(1, k, 1);
+      f.position.y = f.userData.baseY + f.userData.h0 * k / 2;
+    }
+    for (const em of embers) {
+      em.userData.ph = (em.userData.ph + dt * em.userData.spd) % 1;
+      const p = em.userData.ph;
+      em.position.set(em.userData.jx * (0.3 + p), flameBaseY + p * plumeH * 0.9, em.userData.jz * (0.3 + p));
+      em.material.opacity = 0.9 * (1 - p);
+    }
+    for (const hc of hotCracks) hc.material.opacity = 0.55 + 0.35 * Math.sin(now * 6 + hc.position.y);
+  };
+
+  g.userData.setStage(1);
+  return g;
+}
+
 // ---------------- 準星鎖定光暈(常駐,由 game.js 掛/卸)----------------
 /**
  * 掛在目標 mesh 底下的鎖定光暈:脈動的加成混合光球 + 腳下旋轉環。

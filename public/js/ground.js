@@ -1535,11 +1535,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     return false;
   };
-  const regPatch = (x, z, re, key) => {
+  const regPatch = (x, z, re, key, ink) => {
     const gk = `${Math.floor(x / PCELL)},${Math.floor(z / PCELL)}`;
     let arr = pGrid.get(gk);
     if (!arr) { arr = []; pGrid.set(gk, arr); }
-    arr.push({ x, z, re });
+    arr.push({ x, z, re, ink });   // ink = 規律結構拼圖(edge:'ink'):邊界物件避開其覆蓋範圍
     let ps = keyPos.get(key);
     if (!ps) { ps = []; keyPos.set(key, ps); }
     ps.push({ x, z });
@@ -1578,12 +1578,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const rEff = rEffOf(def, r);
     if (overlapPs(x, z, rEff)) return false;
 
-    const lift = 0.12 + rnd() * 0.05;            // patch 間微錯層防 z-fighting(< 道路 0.18)
+    // 圖層顯示優先(使用者定):規律拼圖(edge:'ink')疊在不規律拼圖之上,兩者皆遠低於道路(ROAD_LIFT 0.45)
+    const lift = (def.edge === 'ink' ? 0.15 : 0.11) + rnd() * 0.02;   // 單一 rnd():確定性序列不變
     const pt = [0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24];   // 每塊色調抖動
     const b = bucketOf(buckets, `${sub}#${variant}`);
     if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd);
     else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd);
-    regPatch(x, z, rEff, `${sub}#${variant}`);
+    regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink');
     placed++;
 
     scatterDetails(sub, x, z, r, rot, def, zn);
@@ -1843,6 +1844,131 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       // 外溢在透明佇列裡必須早於特徵 patch / 特效(renderOrder 0)繪製,
       // 否則 depthWrite 會把後畫的底層擋掉出現描圈破洞
       if (spillPass) m.renderOrder = -2;
+      m.frustumCulled = false;
+      m.userData.noOutline = true;
+      group.add(m);
+    }
+  }
+
+  // ==== 邊界遮蔽物(2026-07-24 使用者需求)====
+  // 不同地貌/拼圖區塊交界(= 底毯 cell 的抖動角點邊,即可見拼接縫)擺長條人造/自然物,
+  // 遮住拼接的不連續感:樹籬(hedge)/矮牆(stonewall)/圍籬(fence)/堤防(dike),依交界兩側
+  // coarse 分區選型。與地被同契約:純視覺、無碰撞、不描邊、不進 raycast(空地照常通行);
+  // 合併成單一 Mesh(每型 1 draw call)且與底毯/特徵拼圖同樣進 coverMeshes → 洞口一併打洞。
+  // 決定性只吃 seed + 格索引雜湊(不動用共享 rnd 序列、不用 Math.random)⇒ §2.3 佈局不變、跨客戶端一致。
+  {
+    const subCoarse = new Map();
+    for (const zn in carpetLists) for (const s of carpetLists[zn]) if (!subCoarse.has(s)) subCoarse.set(s, zn);
+    subCoarse.set('watertile', 'water'); subCoarse.set('deepwater', 'water');
+    const subOf = (key) => key.slice(0, key.indexOf('#'));
+    const coarseOf = (key) => (key && key !== '!') ? (subCoarse.get(subOf(key)) || 'green') : null;
+    const ehash = (a, b, c) => {
+      let n = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2246822519) ^ seed) | 0;
+      n = Math.imul(n ^ (n >>> 13), 1274126177);
+      return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+    };
+    const snB = ENV.seasons[season] || ENV.seasons.summer;
+    // w 底寬 / wt 頂寬(梯形收頂)/ h 高 / jit 頂高抖動比(樹籬蓬亂)/ color
+    const KINDS = {
+      hedge:     { w: 1.15, wt: 0.72, h: 1.5,  jit: 0.55, color: snB.foliage },
+      fence:     { w: 0.16, wt: 0.16, h: 1.25, jit: 0.0,  color: 0x6b5138 },
+      stonewall: { w: 0.55, wt: 0.42, h: 1.0,  jit: 0.14, color: 0x8f8c83 },
+      dike:      { w: 2.4,  wt: 1.1,  h: 0.85, jit: 0.1,  color: 0x6e5c3f },
+    };
+    const PROB = { hedge: 0.42, fence: 0.32, stonewall: 0.3, dike: 0.55 };
+    const pickKind = (za, zb, h) => {
+      if (!za || !zb || za === 'water' || zb === 'water') return null;   // 水邊交給 buildWaterEdges 泡沫/潮間帶
+      const has = (z) => za === z || zb === z;
+      if (has('wet')) return 'dike';                          // 濕地↔旱地 → 堤防
+      if (has('alpine')) return h < 0.45 ? 'stonewall' : null; // 高地岩坡少量石牆(其餘不擺,岩地無田界)
+      if (has('urban')) return h < 0.6 ? 'stonewall' : 'fence'; // 市區界 → 矮牆/圍籬
+      if (has('bare')) return h < 0.55 ? 'stonewall' : 'hedge'; // 荒地↔綠地 → 矮牆/樹籬
+      return h < 0.6 ? 'hedge' : 'fence';                      // 綠地↔綠地(含農田拼布不同款)→ 田界樹籬/圍籬
+    };
+    const bB = {};
+    for (const k in KINDS) bB[k] = { pos: [], nrm: [], idx: [], base: 0 };
+    const wy = terrain.waterY;
+    const okPt = (x, z) => !isBlocked(x, z) && !(roadClear && roadClear(x, z))
+      && terrain.heightAt(x, z) > (wy != null ? wy + 0.15 : 0.45);
+    // 規律結構拼圖(edge:'ink' 球場/停車場/農田/廣場…)覆蓋範圍:邊界物件一律避開,不切穿整齊區塊
+    // (使用者回報「球場/停車場上放邊界拼圖很亂」)。查特徵拼圖登錄 pGrid 的 ink 標記。
+    const onRegular = (x, z) => {
+      const R = MAXRE * SEP_F;
+      const i0 = Math.floor((x - R) / PCELL), i1 = Math.floor((x + R) / PCELL);
+      const j0 = Math.floor((z - R) / PCELL), j1 = Math.floor((z + R) / PCELL);
+      for (let jj = j0; jj <= j1; jj++) for (let ii = i0; ii <= i1; ii++) {
+        const arr = pGrid.get(`${ii},${jj}`);
+        if (!arr) continue;
+        for (const p of arr) if (p.ink && (p.x - x) ** 2 + (p.z - z) ** 2 < p.re * p.re) return true;
+      }
+      return false;
+    };
+    const emitRidge = (b, A, Bp, kd, ei, ej, ed) => {
+      const dx = Bp[0] - A[0], dz = Bp[1] - A[1], len = Math.hypot(dx, dz) || 1;
+      const pxv = -dz / len, pzv = dx / len;                   // 單位法向(垂直於邊)
+      const spans = Math.max(1, Math.round(len / 5));
+      const w2 = kd.w / 2, wt2 = kd.wt / 2;
+      const nrm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+      const NL = nrm([-pxv, 0.25, -pzv]), NR = nrm([pxv, 0.25, pzv]);       // 側面外法線(略朝上,倒角)
+      const NLt = nrm([-pxv * 0.4, 1, -pzv * 0.4]), NRt = nrm([pxv * 0.4, 1, pzv * 0.4]);
+      const first = b.base;
+      let prev = null;
+      for (let s = 0; s <= spans; s++) {
+        const t = s / spans, cx = A[0] + dx * t, cz = A[1] + dz * t;
+        const gy = terrain.heightAt(cx, cz) - 0.12;           // 底埋入地表,無縫接地
+        const topY = gy + kd.h * (1 + (ehash(ei * 131 + s, ej * 197, ed) - 0.5) * kd.jit);
+        const idx0 = b.base;
+        const push = (px, py, pz, n) => { b.pos.push(px, py, pz); b.nrm.push(n[0], n[1], n[2]); };
+        push(cx - pxv * w2, gy, cz - pzv * w2, NL);           // 0 Lb
+        push(cx + pxv * w2, gy, cz + pzv * w2, NR);           // 1 Rb
+        push(cx - pxv * wt2, topY, cz - pzv * wt2, NLt);      // 2 Lt
+        push(cx + pxv * wt2, topY, cz + pzv * wt2, NRt);      // 3 Rt
+        b.base += 4;
+        if (prev != null) {
+          const a0 = prev, c0 = idx0;
+          b.idx.push(a0, a0 + 2, c0, c0, a0 + 2, c0 + 2);           // 左側面
+          b.idx.push(a0 + 1, c0 + 1, a0 + 3, a0 + 3, c0 + 1, c0 + 3); // 右側面
+          b.idx.push(a0 + 2, a0 + 3, c0 + 2, c0 + 2, a0 + 3, c0 + 3); // 頂面
+        }
+        prev = idx0;
+      }
+      b.idx.push(first, first + 1, first + 3, first, first + 3, first + 2);   // 端面封口(DoubleSide,繞向不拘)
+      b.idx.push(prev, prev + 3, prev + 1, prev, prev + 2, prev + 3);
+    };
+    const consider = (k0, k1, A, Bp, i, j, ed) => {
+      if (!k1 || k1 === '!' || subOf(k1) === subOf(k0)) return;   // 同款 = 無縫;'!'/空 = 崖/未鋪,交由外溢淡出
+      const za = coarseOf(k0), zb = coarseOf(k1);
+      // 使用者定案:邊界物件「只在不同類型地貌交會的邊界」擺 —— 同地貌內的換款(含農田/球場/停車場等
+      // 規律區塊)一律不擺,避免整齊區塊被切亂。跨地貌交界(za≠zb)才是要遮的拼接不連續。
+      if (za === zb) return;
+      const kind = pickKind(za, zb, ehash(i, j, ed === 1 ? 11 : 37));
+      if (!kind || ehash(i, j, ed === 1 ? 23 : 41) >= PROB[kind]) return;
+      // 沿線密取樣(每 ~3m):任一點落在道路走廊 / 建物 / 水面 / 規律結構拼圖上 → 整段不擺。
+      // 道路為最高優先(ROAD_LIFT 0.45)不可被 3D 邊界物遮住(「道路沒出現」修正);規律區塊保持完整。
+      const dx = Bp[0] - A[0], dz = Bp[1] - A[1];
+      const steps = Math.max(2, Math.ceil((Math.hypot(dx, dz) || 1) / 3));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps, px = A[0] + dx * t, pz = A[1] + dz * t;
+        if (!okPt(px, pz) || onRegular(px, pz)) return;
+      }
+      emitRidge(bB[kind], A, Bp, KINDS[kind], i, j, ed);
+    };
+    for (let j = 0; j < gnz; j++) {
+      for (let i = 0; i < gnx; i++) {
+        const k0 = keys[j * gnx + i];
+        if (!k0 || k0 === '!') continue;
+        if (i + 1 < gnx) consider(k0, keys[j * gnx + i + 1], cornerAt(i + 1, j), cornerAt(i + 1, j + 1), i, j, 1);
+        if (j + 1 < gnz) consider(k0, keys[(j + 1) * gnx + i], cornerAt(i, j + 1), cornerAt(i + 1, j + 1), i, j, 2);
+      }
+    }
+    for (const kind in bB) {
+      const b = bB[kind];
+      if (!b.idx.length) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+      geo.setIndex(b.idx);
+      const m = new THREE.Mesh(geo, envMat(KINDS[kind].color, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide }));
       m.frustumCulled = false;
       m.userData.noOutline = true;
       group.add(m);

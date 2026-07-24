@@ -2208,6 +2208,123 @@ function buildSwampSurface(group, terrain) {
   group.add(mesh);
 }
 
+// 水岸泡沫貼圖(快取):透明底上的柔白氣泡群,近乎各向同性 —— 任意朝向的岸線都讀作浪花。
+let _foamTex = null;
+function shoreFoamTex() {
+  if (_foamTex) return _foamTex;
+  const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const ctx = cv.getContext('2d');
+  for (let i = 0; i < 80; i++) {
+    const x = Math.random() * S, y = Math.random() * S, r = 1.5 + Math.random() * 5.5;
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, `rgba(255,255,255,${0.5 + Math.random() * 0.4})`);
+    rg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;   // offset 漂移(浪花微光)靠 wrap
+  _foamTex = tex;
+  return tex;
+}
+
+/**
+ * 水岸波浪 + 沼澤潮間帶(2026-07-24 使用者需求「水域與陸地邊界加波浪,沼澤與陸地邊界加潮間帶」)。
+ * 以 terrainEnvCode 一趟格點掃描(~8m,共用同一份 code 網格)找兩種邊界格,產兩帶:
+ *   - **波浪泡沫**:水域(1)緊鄰乾地(0)的格 → 貼在 waterY 上方的半透明泡沫片(動態:潮汐呼吸 +
+ *     微浮沉 + 泡沫紋理漂移),掛在岸線內側、略向岸上外擴蓋住格縫。
+ *   - **潮間帶**:沼澤(2)與乾地(0)交界兩側的格 → 隨地形起伏的濕泥帶(靜態)。
+ * 與 buildSwampSurface 同紀律:純視覺不進 raycast(game.js 只打 terrain.mesh)、透明材質不描邊、
+ * 純幾何格取樣不耗共享 rnd(§2.3 佈局序列不受影響;泡沫貼圖 Math.random 只染像素、不進散布路徑)。
+ * 波浪動畫 push 進 dynamics(group.userData.update → terrain.biomesUpdate → game.js 每幀)。
+ * wy==null(無水域)= 無岸也無沼澤(terrainEnvCode 沼澤分類本身要求 wy!=null),直接略過。
+ */
+function buildWaterEdges(group, terrain, dynamics) {
+  const wy = terrain.waterY;
+  if (wy == null) return;
+  const { minX, maxX, minZ, maxZ } = terrain;
+  const cols = Math.min(256, Math.max(1, Math.ceil((maxX - minX) / 8)));
+  const rows = Math.min(256, Math.max(1, Math.ceil((maxZ - minZ) / 8)));
+  const cw = (maxX - minX) / cols, ch = (maxZ - minZ) / rows;
+  // 一趟預算全格 code(避免逐格再對 4 鄰居重算 terrainEnvCode)
+  const code = new Uint8Array(cols * rows);
+  const ccx = new Float32Array(cols), ccz = new Float32Array(rows);
+  for (let j = 0; j < cols; j++) ccx[j] = minX + (j + 0.5) * cw;
+  for (let i = 0; i < rows; i++) ccz[i] = minZ + (i + 0.5) * ch;
+  for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++)
+    code[i * cols + j] = terrainEnvCode(terrain, ccx[j], ccz[i]);
+  const at = (i, j) => (i < 0 || j < 0 || i >= rows || j >= cols) ? 0 : code[i * cols + j];
+  const nbr = (i, j, want) => at(i - 1, j) === want || at(i + 1, j) === want || at(i, j - 1) === want || at(i, j + 1) === want;
+
+  const fp = [], fnrm = [], fuv = [], fidx = []; let fb = 0;   // 泡沫(平貼 waterY)
+  const tp = [], tidx = []; let tb = 0;                         // 潮間帶(隨地形)
+  const EXP = 0.55;   // 泡沫片向外擴(蓋格縫、往岸上舔一點)
+  for (let i = 0; i < rows; i++) {
+    const z0 = minZ + i * ch, z1 = z0 + ch;
+    for (let j = 0; j < cols; j++) {
+      const x0 = minX + j * cw, x1 = x0 + cw;
+      const c = code[i * cols + j];
+      // 波浪 = 水域的可見邊緣:水格緊鄰「非水」(乾地 0 或沼澤 2)。近岸常是 水→沼→乾 三層,
+      // 水直接鄰乾地反而少見(僅陡岸/碼頭),故 MUST 含 nbr(2),否則泡沫只零星出現在淺灘小島。
+      if (c === 1 && (nbr(i, j, 0) || nbr(i, j, 2))) {
+        const ex = cw * EXP, ez = ch * EXP;
+        const a0 = x0 - ex, a1 = x1 + ex, b0 = z0 - ez, b1 = z1 + ez;
+        fp.push(a0, wy, b0, a1, wy, b0, a1, wy, b1, a0, wy, b1);
+        for (let k = 0; k < 4; k++) fnrm.push(0, 1, 0);
+        fuv.push(0, 0, 1, 0, 1, 1, 0, 1);
+        fidx.push(fb, fb + 2, fb + 1, fb, fb + 3, fb + 2);
+        fb += 4;
+      }
+      if ((c === 2 && nbr(i, j, 0)) || (c === 0 && nbr(i, j, 2))) {
+        const yy = (x, z) => terrain.heightAt(x, z) + 0.06;   // 略抬離地表免 z-fight
+        tp.push(x0, yy(x0, z0), z0, x1, yy(x1, z0), z0, x1, yy(x1, z1), z1, x0, yy(x0, z1), z1);
+        tidx.push(tb, tb + 2, tb + 1, tb, tb + 3, tb + 2);
+        tb += 4;
+      }
+    }
+  }
+
+  // 波浪泡沫 mesh(平貼水面,動態)
+  if (fidx.length) {
+    const foamTex = shoreFoamTex();
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(fp, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(fnrm, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(fuv, 2));
+    geo.setIndex(fidx);
+    const mat = new THREE.MeshToonMaterial({
+      map: foamTex, color: 0xdff4ff, gradientMap: toonGradient(),
+      transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.frustumCulled = false;
+    mesh.userData.noOutline = true;
+    mesh.renderOrder = 1;        // 疊在水盤之上
+    mesh.position.y = 0.1;       // 首幀就浮在 waterY 上方(dynamics 尚未跑時免與水盤 z-fight)
+    group.add(mesh);
+    let t = 0;
+    dynamics.push((dt) => {
+      t += dt;
+      mat.opacity = 0.36 + 0.2 * Math.sin(t * 1.6);          // 潮汐呼吸
+      mesh.position.y = 0.1 + Math.sin(t * 1.2) * 0.05;      // 波浪微浮沉
+      foamTex.offset.x = (foamTex.offset.x + dt * 0.05) % 1; // 泡沫漂移微光
+    });
+  }
+
+  // 潮間帶 mesh(隨地形起伏,靜態濕泥帶)
+  if (tidx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3));
+    geo.setIndex(tidx);
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, new THREE.MeshToonMaterial({
+      color: 0x5f533c, gradientMap: toonGradient(), transparent: true, opacity: 0.55, side: THREE.DoubleSide,   // 濕泥色(潮間帶)
+    }));
+    mesh.frustumCulled = false;
+    mesh.userData.noOutline = true;
+    group.add(mesh);
+  }
+}
+
 /**
  * 大面積水域自動高架橋(2026-07-15):非橋/非隧道道路的連續泡水段 ≥ WATER.SPAN_MIN_M
  * 即整段升級為高架橋 —— 機體無法下深水(game.js),道路通過大面積水域一定要有橋。
@@ -5127,6 +5244,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
   onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
+  buildWaterEdges(group, terrain, dynamics);   // 水岸波浪(動態)+ 沼澤潮間帶(靜態)
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
   if (dynamics.length) {

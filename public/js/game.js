@@ -20,7 +20,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
@@ -277,6 +277,7 @@ export class BattleClient {
     this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
     this.mineMeshes = new Map();     // 地雷微凸起(field 訊息一次同步)
     this.flamers = new Set();        // 火場(火舌閃爍動畫)
+    this.damaged = new Set();        // 受損機體/建築(冒煙/裂痕/失火,逐幀動畫)
     this.floods = [];                // 淹水區(機甲減速判定)
     this.fires = [];                 // 火場(滯留視野霧化判定;傷害由伺服器結算)
     this._fireDwell = 0;             // 火場滯留累計秒(離開後較快消散 → 視野漸清)
@@ -2531,6 +2532,7 @@ export class BattleClient {
         }
       }
       this._updateHpBar(ent);
+      this._updateDamageStage(ent);
     }
     // 移除消失的單位
     for (const [id, ent] of this.ents) {
@@ -2817,6 +2819,7 @@ export class BattleClient {
     if (ent.shield) this.shields.delete(ent.shield);
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
+    this.damaged.delete(ent);
     if (ent.escorts) for (const es of ent.escorts) { this.scene.remove(es.mesh); this.spinners.delete(es.mesh); }
     this.ents.delete(id);
   }
@@ -2883,6 +2886,42 @@ export class BattleClient {
       ent.barSfg.scale.x = Math.max(0.001, sfrac);
       ent.barSfg.position.x = -(1 - sfrac) * ent.barW / 2;
       ent.barSfg.visible = sfrac > 0;
+    }
+  }
+
+  /**
+   * 受損視覺化(vfx makeDamageFx):依快照 HP 比例掛/卸兩階特效(1=冒煙+裂痕、2=失火+破損)。
+   * 純表現層,只驅動視覺;跳過自機(FPV 機體隱藏)/中立物/平民/餌機/自殺機(體型縮放或短命)。
+   * 用 dimTop/dimH/dimR(spawn 時基準包圍盒,已排除護盾殼/血條)量體 —— 與血條/標記同一把尺。
+   */
+  _updateDamageStage(ent) {
+    if (ent.isSelf || ent.neutral || ent.civ || ent.decoy || ent.kami) return;
+    if (!ent.max || ent.max <= 0) return;
+    let stage = 0;
+    if (!ent.dead) {
+      const frac = ent.hp / ent.max;
+      if (frac <= DMG_FX.HEAVY_F) stage = 2;
+      else if (frac <= DMG_FX.LIGHT_F) stage = 1;
+    }
+    if (stage === (ent.dmgStage || 0)) return;
+    ent.dmgStage = stage;
+    if (stage === 0) {
+      if (ent.dmgFx) { ent.mesh.remove(ent.dmgFx); ent.dmgFx = null; }
+      this.damaged.delete(ent);
+      return;
+    }
+    if (!ent.dmgFx) {
+      ent.dmgFx = makeDamageFx({ r: ent.dimR || 2, top: ent.dimTop || 3, h: ent.dimH || 3 });
+      ent.mesh.add(ent.dmgFx);
+      this.damaged.add(ent);
+    }
+    ent.dmgFx.userData.setStage(stage);
+  }
+
+  /** 受損特效逐幀動畫(煙上升/火舌閃爍/火星飄散);機體不可見(陣亡/駐守)時略過 */
+  _updateDamageFx(dt, now) {
+    for (const ent of this.damaged) {
+      if (ent.mesh.visible) ent.dmgFx.userData.update(dt, now);
     }
   }
 
@@ -6498,6 +6537,7 @@ export class BattleClient {
     this._updateMines(now);
     this._updateLoot(dt, now);
     this._updateAirdrop(dt, now);
+    this._updateDamageFx(dt, now);
     this._updateEffects(dt);
     for (const s of this.shields) s.userData.update(dt);
     if (this._auras) for (const ent of this._auras) {   // 補血光環 / 第三方射程環:緩慢脈動
