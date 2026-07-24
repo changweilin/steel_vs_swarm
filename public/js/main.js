@@ -23,6 +23,7 @@ import { CharPreview } from './charPreview.js';
 import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
+import { GameAudio } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -75,12 +76,21 @@ const app = {
   storyPilot: null,     // 簡報中選定的出戰主駕
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
   battle: null,         // BattleClient
+  audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
   terrain: null,
   pre: null,            // 地圖預建(startPrebuild):房間階段先建好的固定項目,enterLoading 消費後清空
   battleCfg: null,
   phaseShown: null,
   roomPoll: null,
 };
+
+// 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
+app.audio = new GameAudio();
+app.audio.setScene('menu');
+// UI 點按音(委派;同時是解鎖手勢的一環)。真實按鈕才響,避免整頁亂點刷音。
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('.btn, button')) app.audio?.ui('click');
+}, true);
 
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
@@ -1642,6 +1652,7 @@ async function enterLoading(cfg) {
 function enterGame() {
   if (app.battle || !app.terrain) return;
   show('game');
+  app.audio?.setScene('battle');   // 進戰場 → 切戰鬥 BGM(離開由 BattleClient.dispose 交還大廳)
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
@@ -1654,6 +1665,7 @@ function enterGame() {
     ch: myCh,
     net: app.net,
     terrain: app.terrain,
+    audio: app.audio,
     hud,
   });
   if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
@@ -1931,6 +1943,17 @@ $('leaveGameBtn')?.addEventListener('click', () => location.reload());
 // 戰場選單(暫停):繼續 / 離開戰場
 $('resumeBtn')?.addEventListener('click', () => app.battle?._setPaused(false));
 $('pauseLeaveBtn')?.addEventListener('click', () => leaveBattle());
+
+// 音效設定(暫停選單):靜音切換 + 音量;開啟選單時同步 UI 到目前狀態
+function syncAudioUi() {
+  const mb = $('muteBtn'), vs = $('volSlider');
+  if (!mb || !vs || !app.audio) return;
+  mb.textContent = app.audio.muted ? '🔇 靜音' : '🔊 音效';
+  vs.value = String(Math.round(app.audio.master * 100));
+}
+$('muteBtn')?.addEventListener('click', () => { app.audio?.toggleMute(); syncAudioUi(); });
+$('volSlider')?.addEventListener('input', (e) => { app.audio?.setMaster(e.target.value / 100); if (app.audio?.muted) { app.audio.toggleMute(); syncAudioUi(); } });
+syncAudioUi();   // 反映持久化的音量/靜音狀態
 
 // 劇情戰役
 $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });

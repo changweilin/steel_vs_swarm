@@ -23,6 +23,7 @@ import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
+// audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
 const KIND_KEY = {
   soldier: 'creep:soldier', apc: 'creep:apc', tank: 'creep:tank',
@@ -3186,6 +3187,7 @@ export class BattleClient {
   }
 
   _onEvent(ev) {
+    this.audio?.onEvent(ev, this.camera, this.youId);   // 遠端事件音效(單一縫;略過自身已本地播過的音)
     if (ev.e === 'die') {
       if (ev.kind === 'civilian') {   // 平民非機械:輕量倒地演出,不炸開(擊殺報酬走 civkill 事件)
         const [cx, cz] = [ev.x, -ev.z], cy = this.terrain.heightAt(cx, cz) + 1;
@@ -4817,6 +4819,7 @@ export class BattleClient {
       this._setRailCharge(false);
     }
     this.lastFireAt[id] = now;
+    this.audio?.fire(def, id, this.side);   // 自機開火音(真實 def → 精確音色;閘門全過才播)
     st.ammo--;
     if (mpc > 0 && !barraging) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電(重砲窗免電力);快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
@@ -6666,6 +6669,7 @@ export class BattleClient {
 
   dispose() {
     this.disposed = true;
+    this.audio?.setScene('menu');   // 離開戰場 → BGM 交還大廳(audio 為 app 層物件,不在此銷毀)
     this.cutin?.dispose();
     this.envFx?.dispose();
     cancelAnimationFrame(this._raf);
