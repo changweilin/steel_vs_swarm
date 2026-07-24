@@ -1973,6 +1973,7 @@ bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
 bindSwitch('setLowPower', (on) => {
   try { localStorage.setItem('svs_lowpower', on ? '1' : '0'); } catch { /* 私密模式忽略 */ }
   app.battle?.setLowPower();
+  app.audio?.setLowPower(on);   // 低功耗也套音效:射擊/爆炸退合成 + 關移動環境音
 });
 $('setSfxVol')?.addEventListener('input', (e) => {
   const v = Number(e.target.value); $('setSfxVal').textContent = `${v}%`;

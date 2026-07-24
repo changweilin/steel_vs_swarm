@@ -23,6 +23,10 @@ const _MASTER_DEF = 0.8;     // 預設主音量
 const _SFX_DEF = 0.9;        // 音效相對音量
 const _BGM_DEF = 0.42;       // 背景音樂相對音量(壓在音效之下)
 const _LS_KEY = 'svs_audio'; // localStorage 設定鍵
+const _LOWP_KEY = 'svs_lowpower'; // 低功耗旗標(與 game.js 算圖降階共用單一真相)
+// 移動環境音(程序循環;每類別僅 1 個常駐聲道 = 最多 4 聲道,低功耗全關)。
+// 各類別基準音量(壓得比開火/爆炸低,只當「戰場在動」的環境床)。
+const _MOVE = { rotor: 0.5, engine: 0.42, wingflap: 0.34, stomp: 0.5 };
 
 // Layer 2 樣本清單(放進 public/audio/ 即自動啟用;缺檔則走程序合成)。
 // 「音質最吃樣本」的重點槽才掛檔;其餘(命中/招式/UI…)一律程序合成。
@@ -30,10 +34,17 @@ const _LS_KEY = 'svs_audio'; // localStorage 設定鍵
 const SFX_MANIFEST = {
   explosion: 'audio/sfx/explosion.ogg',         // 大型爆炸(拆塔/坦克/主堡)
   explosion_small: 'audio/sfx/explosion_small.ogg', // 小型爆炸/殉爆/地雷
+  // 2026-07-24 開火樣本(使用者定案「一般模式射擊用真實樣本」;皆 CC0《50 Sci-Fi SFX》;
+  // 缺檔/低功耗自動退回 Layer 1 合成)。彈道分類(_fireId)命中這些槽即優先播樣本。
+  fire_gun: 'audio/sfx/fire_gun.ogg',                 // 重機炮/實彈(shoot_01)
+  fire_light_ballistic: 'audio/sfx/fire_light_ballistic.ogg', // 鋼鐵輕武器(shoot_02)
+  fire_beam: 'audio/sfx/fire_beam.ogg',               // 定向能光束(retro_laser_02)
+  fire_light_energy: 'audio/sfx/fire_light_energy.ogg', // 蜂群雷射(retro_laser_01)
+  fire_missile: 'audio/sfx/fire_missile.ogg',         // 導引飛彈/火箭(rocket_01)
 };
 const BGM_MANIFEST = {
-  menu: 'audio/bgm/menu.ogg',
-  battle: 'audio/bgm/battle.ogg',
+  menu: 'audio/bgm/menu.ogg',      // CC0《Meadow Thoughts》Écrivain(沉靜豎琴)
+  battle: 'audio/bgm/battle.mp3',  // CC0《Battle Theme A》cynicmusic(戰鬥旋律;mp3 無 ogg 版)
 };
 
 const _clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
@@ -52,6 +63,13 @@ export class GameAudio {
     this._unlocked = false;
     this._bgm = {};          // name → { el, ok }
     this._bgmFade = null;    // BGM 淡入淡出計時器
+    this._bgmGrace = null;   // 真曲載入寬限計時(逾時仍無檔 → 起程序備援)
+    this._proc = null;       // 程序旋律備援引擎(僅真曲缺檔/decode 失敗時運轉)
+    this._move = {};         // 移動環境音常駐聲道:cat → { g, sp, rate[] }
+    // 低功耗旗標(單一真相 = localStorage svs_lowpower,與 game.js 算圖降階同鍵):
+    // 開 = 射擊/爆炸走 Layer 1 合成 + 關閉移動環境音(使用者定案「低功耗用合成音」)。
+    this.lowPower = false;
+    try { this.lowPower = localStorage.getItem(_LOWP_KEY) === '1'; } catch { /* noop */ }
 
     // 設定持久化:音效(SFX)/ 音樂(BGM)各自獨立音量與開關;相容舊版單一 {master,muted}
     const saved = this._load();
@@ -108,6 +126,8 @@ export class GameAudio {
     window.removeEventListener('pointerdown', this._onGesture);
     window.removeEventListener('keydown', this._onGesture);
     clearInterval(this._bgmFade);
+    clearTimeout(this._bgmGrace);
+    this._procStop();
     for (const b of Object.values(this._bgm)) { try { b.el.pause(); } catch { /* noop */ } }
     try { this._ctx?.close(); } catch { /* noop */ }
     this._dead = true;
@@ -123,6 +143,12 @@ export class GameAudio {
     if (this._unlocked && this._scene) this._applyScene(this._scene);
     else this._applyVolume();
   }
+  /** 低功耗切換(與 game.js 共用 svs_lowpower 旗標;main.js 的 setLowPower switch 一併呼叫此處)。
+   *  開 → 射擊/爆炸退合成 + 立即靜掉移動環境音;不動 BGM(串流本就低耗)。 */
+  setLowPower(on) {
+    this.lowPower = !!on;
+    if (this.lowPower) this._stopMove();   // 立刻收掉常駐移動聲道
+  }
   _applyVolume() {
     if (this._master) this._master.gain.value = 1;               // 主匯流排恆 1,音量各聲道自理
     if (this._sfx) this._sfx.gain.value = this.sfxOn ? this.sfxVol : 0;
@@ -130,6 +156,8 @@ export class GameAudio {
     for (const [name, b] of Object.entries(this._bgm)) {
       if (b.ok) b.el.volume = (name === this._scene && this.bgmOn) ? this.bgmVol : 0;
     }
+    // 程序旋律備援走 WebAudio 匯流排,音量跟 BGM 聲道一起走
+    if (this._proc && this._ctx) this._proc.out.gain.setTargetAtTime(this.bgmOn ? this.bgmVol : 0, this._ctx.currentTime, 0.15);
   }
 
   // ---- Layer 2 樣本載入(失敗靜默,退合成)----
@@ -247,7 +275,15 @@ export class GameAudio {
   _applyScene(name) {
     // 交叉淡出:目標曲淡入至音樂音量,其餘淡出至 0
     clearInterval(this._bgmFade);
+    clearTimeout(this._bgmGrace);
     const target = this.bgmVol;
+    const fileOk = this._bgm[name]?.ok;
+    // 程序備援:真曲就緒或關音樂 → 收掉;真曲尚未就緒 → 給寬限,逾時仍無檔才起備援
+    // (避免正常載入期間先響一下合成旋律再被真曲蓋掉;缺檔/decode 失敗才真的頂上)。
+    if (fileOk || !this.bgmOn) this._procStop();
+    else this._bgmGrace = setTimeout(() => {
+      if (this._scene === name && !this._bgm[name]?.ok && this.bgmOn && this._unlocked) this._procStart(name);
+    }, 1400);
     for (const [n, b] of Object.entries(this._bgm)) {
       if (!b.ok) continue;
       if (n === name && this.bgmOn) { b.el.play().catch(() => {}); }
@@ -312,7 +348,8 @@ export class GameAudio {
     if (t - last < _DEDUP_S) return;         // 去重窗內收斂
     this._last.set(id, t);
     if (this._active >= _MAX_VOICES) return; // 發聲上限
-    if (this._buffers[id]) this._playSample(id, gain, pan);
+    // 低功耗 = 一律走 Layer 1 合成(所有樣本槽都有對應合成 case,故必有聲);一般模式有樣本優先。
+    if (!this.lowPower && this._buffers[id]) this._playSample(id, gain, pan);
     else this._synth(id, gain, pan);
   }
 
@@ -502,6 +539,149 @@ export class GameAudio {
         o.connect(g); this._adsr(g, t, P * 0.45, 0.01, 0.24); o.start(t); o.stop(t + 0.26); this._count(0.28); break;
       }
       default: { try { g.disconnect(); } catch { /* noop */ } break; }
+    }
+  }
+
+  // ================= 移動環境音(程序循環)=================
+  // 連續/週期音,不同於一次性事件音:每類別只建「一個常駐聲道」(rotor/engine/wingflap/stomp),
+  // 靠 game.js 每幀挑「最近的移動源」餵 setMove(音量/平移/速率)—— 靜止則音量歸零(聲道續存)。
+  // 全部程序合成 loop(無縫、音高隨速度變、最多 4 聲道),比一次性樣本更適合連續音且更省。
+
+  /** 取得/惰性建立某類別的常駐聲道;低功耗時不建。回傳 { g, sp, rate[] }。 */
+  _moveVoice(cat) {
+    if (this._dead || !this._ctx || this.lowPower) return null;
+    if (this._move[cat]) return this._move[cat];
+    const ctx = this._ctx;
+    const g = ctx.createGain(); g.gain.value = 0.0001;
+    let sp = null;
+    if (ctx.createStereoPanner) { sp = ctx.createStereoPanner(); sp.pan.value = 0; g.connect(sp); sp.connect(this._sfx); }
+    else g.connect(this._sfx);
+    const rate = [];   // { p: AudioParam, base } —— setMove 依速度縮放(引擎轉速/葉片斬波速)
+    // 斬波器:噪源經帶通後,用 LFO 對增益做 0↔1 開合(旋翼葉片拍擊/振翅/履帶震動的節奏感)
+    const chopped = (srcFilter, lfoType, lfoHz, addRate) => {
+      const chop = ctx.createGain(); chop.gain.value = 0.5;
+      const lfo = ctx.createOscillator(); lfo.type = lfoType; lfo.frequency.value = lfoHz;
+      const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(chop.gain);
+      srcFilter.connect(chop); chop.connect(g); lfo.start();
+      if (addRate) rate.push({ p: lfo.frequency, base: lfoHz });
+    };
+    if (cat === 'engine') {                          // 引擎轟鳴:鋸齒基頻 + 低頻噪(穩定不斬波)
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 46;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 240;
+      o.connect(lp); lp.connect(g); o.start(); rate.push({ p: o.frequency, base: 46 });
+      const n = this._noiseSrc(); const nlp = ctx.createBiquadFilter(); nlp.type = 'lowpass'; nlp.frequency.value = 150;
+      const ng = ctx.createGain(); ng.gain.value = 0.45; n.connect(nlp); nlp.connect(ng); ng.connect(g); n.start();
+    } else if (cat === 'rotor') {                    // 旋翼:寬噪帶通 + 快速方波斬波(葉片斬)
+      const n = this._noiseSrc(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 520; bp.Q.value = 0.7;
+      n.connect(bp); n.start(); chopped(bp, 'square', 15, true); rate.push({ p: bp.frequency, base: 520 });
+    } else if (cat === 'wingflap') {                 // 振翅:較高空氣感噪 + 較慢正弦斬波(拍翼)
+      const n = this._noiseSrc(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 0.9;
+      n.connect(bp); n.start(); chopped(bp, 'sine', 8, true); rate.push({ p: bp.frequency, base: 1100 });
+    } else {                                          // stomp 重機具震地:極低頻轟隆 + 慢震(踏步/履帶)
+      const n = this._noiseSrc(); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 95;
+      n.connect(lp); n.start(); chopped(lp, 'sine', 2.6, true);
+    }
+    return (this._move[cat] = { g, sp, rate });
+  }
+
+  /** 每幀由 game.js 呼叫:gain 為 0..1「存在感」(距離×密度×移動),此處乘上類別基準音量
+   *  (_MOVE = 各類別響度的單一調校縫);gain≈0 時不會硬建聲道。 */
+  setMove(cat, gain, pan = 0, rate = 1) {
+    if (this._dead || !this._ctx || this.lowPower) return;
+    const v = gain > 0.002 ? this._moveVoice(cat) : this._move[cat];
+    if (!v) return;
+    const t = this._ctx.currentTime;
+    v.g.gain.setTargetAtTime(Math.max(0.0001, _clamp(gain, 0, 1) * (_MOVE[cat] || 0.4)), t, 0.14);
+    if (v.sp) v.sp.pan.setTargetAtTime(_clamp(pan, -1, 1), t, 0.14);
+    const r = _clamp(rate, 0.5, 1.8);
+    for (const it of v.rate) it.p.setTargetAtTime(it.base * r, t, 0.14);
+  }
+
+  /** 低功耗切換或離場:把所有常駐移動聲道靜音(聲道保留,下次再拉起)。 */
+  _stopMove() {
+    if (!this._ctx) return;
+    const t = this._ctx.currentTime;
+    for (const v of Object.values(this._move)) v.g.gain.setTargetAtTime(0.0001, t, 0.1);
+  }
+
+  // ================= 程序旋律備援 BGM =================
+  // 僅在真曲「缺檔 / 取回失敗 / decode 失敗」時頂上(檔在就永不啟動 = 零額外開銷)。
+  // 前瞻排程(setInterval 每 30ms 排到 +0.25s):貝斯 + 和弦墊 + 主旋律琶音(+ battle 鼓組)。
+
+  _procStart(mood) {
+    if (this._dead || !this._ctx || (this._proc && this._proc.mood === mood)) return;
+    this._procStop();
+    const ctx = this._ctx;
+    const out = ctx.createGain(); out.gain.value = 0.0001; out.connect(this._master);
+    out.gain.exponentialRampToValueAtTime(Math.max(0.0002, this.bgmOn ? this.bgmVol : 0.0002), ctx.currentTime + 1.5);
+    const cfg = mood === 'battle'
+      ? { bpm: 128, root: 45, scale: [0, 3, 5, 7, 10], prog: [0, 5, 7, 3], drums: true,  lead: 'sawtooth', pad: 'triangle' }  // A2 小調:緊張
+      : { bpm: 74,  root: 48, scale: [0, 2, 4, 7, 9], prog: [9, 5, 0, 7], drums: false, lead: 'triangle', pad: 'sine' };      // C3 大調五聲:沉靜
+    const proc = { mood, out, cfg, step: 0, next: ctx.currentTime + 0.08, timer: null };
+    proc.timer = setInterval(() => this._procTick(proc), 30);
+    this._proc = proc;
+  }
+
+  _procStop() {
+    const p = this._proc; if (!p) return;
+    this._proc = null;
+    clearInterval(p.timer);
+    try {
+      const t = this._ctx.currentTime;
+      p.out.gain.cancelScheduledValues(t);
+      p.out.gain.setTargetAtTime(0.0001, t, 0.25);
+      setTimeout(() => { try { p.out.disconnect(); } catch { /* noop */ } }, 700);
+    } catch { /* noop */ }
+  }
+
+  _procTick(proc) {
+    if (this._dead) { clearInterval(proc.timer); return; }
+    const ctx = this._ctx, cfg = proc.cfg;
+    const six = 60 / cfg.bpm / 4;                    // 十六分音符秒長
+    const ahead = ctx.currentTime + 0.25;
+    while (proc.next < ahead) {
+      const t = proc.next, s = proc.step;
+      const bar = Math.floor(s / 16) % cfg.prog.length;
+      const chord = cfg.root + cfg.prog[bar];
+      if (s % 16 === 0) for (const iv of [0, 7, 12]) this._procNote(proc, chord + iv, t, six * 15, 0.085, cfg.pad, 0.35);  // 和弦墊
+      if (s % 4 === 0) this._procNote(proc, chord - 12, t, six * 3.6, 0.32, cfg.pad, 0.02);                                // 貝斯(每拍)
+      if (s % 2 === 0) {                                                                                                    // 主旋律琶音(每八分)
+        const deg = cfg.scale[(s / 2 + bar * 2) % cfg.scale.length];
+        this._procNote(proc, chord + 12 + deg, t, six * 1.7, 0.12, cfg.lead, 0.01);
+      }
+      if (cfg.drums) {
+        if (s % 4 === 0) this._procDrum(proc, t, 'kick');
+        if (s % 4 === 2) this._procDrum(proc, t, 'snare');
+        if (s % 2 === 1) this._procDrum(proc, t, 'hat');
+      }
+      proc.step++; proc.next += six;
+    }
+  }
+
+  _procNote(proc, midi, t, dur, peak, wave, atk) {
+    const ctx = this._ctx;
+    const o = ctx.createOscillator(); o.type = wave; o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(proc.out);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  _procDrum(proc, t, kind) {
+    const ctx = this._ctx, out = proc.out;
+    if (kind === 'kick') {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.12);
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.18);
+    } else {                                          // snare / hat 走噪(高通差在轉角頻率與時長)
+      const n = this._noiseSrc(); const f = ctx.createBiquadFilter();
+      f.type = 'highpass'; f.frequency.value = kind === 'snare' ? 1400 : 6000;
+      const pk = kind === 'snare' ? 0.15 : 0.05, d = kind === 'snare' ? 0.14 : 0.05;
+      const g = ctx.createGain(); g.gain.setValueAtTime(pk, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t + d + 0.02);
     }
   }
 }

@@ -6121,6 +6121,8 @@ export class BattleClient {
         }
       }
       cur.set(nx, ny, nz);
+      // 水平移動速率(m/s):餵移動環境音的音量/音高(_updateMoveAudio);瞬移幀不計
+      ent._moveSpd = (!snapped && dt > 0) ? Math.hypot(nx - px, nz - pz) / dt : (ent._moveSpd || 0) * 0.6;
       // 無人機兩架貼身護衛自殺機(顯隱依 kami 冷卻);切離自機視角的機體補建護衛(spawn 時是自機故未建)
       if (ent.kind === 'drone' && !ent.escorts) this._buildDroneEscorts(ent);
       if (ent.escorts) this._updateEscorts(ent);
@@ -6141,6 +6143,66 @@ export class BattleClient {
       // 敵方單位:頭上掛對方陣營主視覺的箭頭(在快照裡 = 已進入我方視野)
       if (ent.civ) this._civMark(ent, dt, now);   // 平民:不分我方/敵方都掛陣營箭頭(外觀只能分辨陣營)
       else if (this.side && ent.side && ent.side !== this.side) this._enemyMark(ent, dt, now);
+    }
+  }
+
+  /** 單位的移動音類別(rotor 旋翼 / engine 引擎 / wingflap 振翅 / stomp 重機具震地);無 = 不發聲。
+   *  NPC 依兵種;英雄(含變形機甲)依 visual + 當前騰空狀態(落地=踏地、升空=依飛行型)。 */
+  _moveCat(ent) {
+    const k = ent.kind;
+    if (k === 'heli') return 'rotor';
+    if (k === 'tank') return 'engine';
+    if (k === 'drone') return 'wingflap';            // 蜂群無人機 = 拍翼/嗡鳴
+    if (k === 'soldier' || ent.civ) return null;     // 步兵/平民非重機具,不進環境床
+    if (ent.hero && ent.ch) {
+      const v = CHARACTERS[ent.ch]?.visual || {};
+      if (ent.flies || (ent.heroY || 0) > 3) {       // 升空:依飛行型
+        const fl = v.flight;
+        if (fl === 'heli' || fl === 'tilt') return 'rotor';
+        if (fl === 'jet' || fl === 'uav') return 'engine';
+        return 'wingflap';                           // archo/owl/levi/beetle 等鳥翼/膜翼 → 拍翼氣流
+      }
+      return 'stomp';                                // 落地的機甲/獸型 = 踏地
+    }
+    return null;
+  }
+
+  /** 每幀:掃全場,每類別挑「最近的可聞移動源」餵 audio.setMove(存在感/平移/速率)。
+   *  低功耗全關(audio.setMove 內亦擋);單位靜止則音量趨近 0(聲道續存)。純表現層。 */
+  _updateMoveAudio() {
+    const a = this.audio;
+    if (!a || a.lowPower || a._dead) return;
+    const cl = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+    const MAXD = 200, REF = 32;
+    const cam = this.camera.position, e = this.camera.matrixWorld.elements;  // 世界右向量 = 矩陣第一欄
+    const best = { rotor: null, engine: null, wingflap: null, stomp: null };
+    const cnt = { rotor: 0, engine: 0, wingflap: 0, stomp: 0 };
+    for (const ent of this.ents.values()) {
+      if (ent.isSelf || ent.isStatic || ent.dead || !ent.mesh.visible) continue;
+      const cat = this._moveCat(ent);
+      if (!cat) continue;
+      const p = ent.mesh.position;
+      const dx = p.x - cam.x, dz = p.z - cam.z, dy = p.y - cam.y;
+      const d = Math.sqrt(dx * dx + dz * dz + dy * dy);
+      if (d > MAXD) continue;
+      cnt[cat]++;
+      const b = best[cat];
+      if (!b || d < b.d) best[cat] = { d, dx, dz, spd: ent._moveSpd || 0 };
+    }
+    for (const cat of ['rotor', 'engine', 'wingflap', 'stomp']) {
+      const b = best[cat];
+      if (!b) { a.setMove(cat, 0, 0, 1); continue; }
+      const dist = REF / (REF + b.d);                                  // 距離衰減
+      const dens = cl(0.55 + cnt[cat] * 0.14, 0.55, 1);                // 密度:場上越多同類越響
+      // 地面型(引擎/踏地)靜止仍有怠速底噪但小;飛行型(旋翼/翅膀)本就常動
+      const moveGate = (cat === 'stomp' || cat === 'engine')
+        ? cl(0.35 + b.spd * 0.09, 0.35, 1)
+        : cl(0.5 + b.spd * 0.05, 0.5, 1);
+      const presence = cl(dist * dens * moveGate, 0, 1);               // 0..1;類別基準響度在 audio 端乘
+      const hl = Math.hypot(b.dx, b.dz) || 1;
+      const pan = cl((e[0] * b.dx + e[2] * b.dz) / hl, -1, 1);
+      const rate = cl(0.8 + b.spd * 0.05, 0.7, 1.5);                   // 速度→音高/斬波速
+      a.setMove(cat, presence, pan, rate);
     }
   }
 
@@ -6527,6 +6589,7 @@ export class BattleClient {
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
+    this._updateMoveAudio();          // 移動環境音(旋翼/引擎/振翅/震地;低功耗自動全關)
     this._updateBullets(dt);
     this._updateMissiles(dt);
     this._updateVisShells(dt);
@@ -6715,6 +6778,7 @@ export class BattleClient {
   dispose() {
     this.disposed = true;
     this.audio?.setScene('menu');   // 離開戰場 → BGM 交還大廳(audio 為 app 層物件,不在此銷毀)
+    this.audio?._stopMove();        // 移動環境音聲道靜音(離場後 _updateMoveAudio 不再餵值 → 需主動收)
     this.cutin?.dispose();
     this.envFx?.dispose();
     cancelAnimationFrame(this._raf);
