@@ -963,7 +963,7 @@ export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
     side: 'SWARM', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
-    visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'bee', paint: 'minimal' },
+    visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'bee', paint: 'natflag', flag: [0xffd700, 0x0057b7] },
     mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
     light: { name: '雙聯 5.56 機槍艙', rw: 'FN Minimi・初速 915m/s', type: 'gun', mv: 915,
       dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
@@ -979,7 +979,7 @@ export const CHARACTERS = {
   },
   s02: {
     side: 'SWARM', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
-    visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'graffiti' },
+    visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'minimal' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
       // crit MUST 為 0:s02 是 e2e 指定角,輕武器傷害要確定性(#INC-104;t01 同)
@@ -1029,7 +1029,7 @@ export const CHARACTERS = {
   },
   s05: {
     side: 'SWARM', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
-    visual: { hue: 0xff6fb0, frame: 'quad', body: 'wedge', paint: 'graffiti' },
+    visual: { hue: 0xff6fb0, frame: 'quad', body: 'wedge', paint: 'minimal' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.1, speed: 1.2, armor: 3 },
     light: { name: '微型軌道轉輪砲', rw: '實驗性線性感應馬達・初速 1400m/s', type: 'rail', mv: 1400,
       dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
@@ -1162,7 +1162,7 @@ export const CHARACTERS = {
   // ================= 鋼鐵陣營(機甲)=================
   t01: {
     side: 'STEEL', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
-    visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion', paint: 'flag' },
+    visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion', paint: 'natflag', flag: [0xffffff, 0x0039a6, 0xd52b1e] },
     mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 22 },
     light: { name: '12.7 同軸重機槍', rw: 'Kord・初速 860m/s', type: 'gun', mv: 860,
       dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
@@ -1197,7 +1197,7 @@ export const CHARACTERS = {
   },
   t03: {
     side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
-    visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'graffiti' },
+    visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'minimal' },
     mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
     light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
       dmg: [36, 45, 56], rate: 2.4, mag: [8, 10, 12], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
@@ -1229,7 +1229,7 @@ export const CHARACTERS = {
   },
   t05: {
     side: 'STEEL', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
-    visual: { hue: 0xf2f2f2, pod: 'dish', form: 'biped', creature: 'ostrich', paint: 'minimal' },
+    visual: { hue: 0xf2f2f2, pod: 'dish', form: 'biped', creature: 'ostrich', paint: 'solid' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.05, armor: 18 },
     light: { name: '原型軌道步槍', rw: '實驗性線圈砲・初速 1500m/s', type: 'rail', mv: 1500,
       dmg: [16, 20, 25], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 200, crit: 0.06,
@@ -1244,7 +1244,7 @@ export const CHARACTERS = {
   },
   t06: {
     side: 'STEEL', name: '陸小川', code: '小川', machine: '「輕功」高機動機甲',
-    visual: { hue: 0xffb84d, pod: 'none', form: 'biped', creature: 'roo', paint: 'graffiti' },
+    visual: { hue: 0xffb84d, pod: 'none', form: 'biped', creature: 'roo', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
     light: { name: '5.8 突擊步槍', rw: 'QBZ-191・初速 930m/s', type: 'gun', mv: 930,
       dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
@@ -1277,7 +1277,7 @@ export const CHARACTERS = {
   },
   t08: {
     side: 'STEEL', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰機甲',
-    visual: { hue: 0xffc7dd, pod: 'dish', form: 'beast', creature: 'cthulhu', paint: 'tattoo' },
+    visual: { hue: 0xffc7dd, pod: 'dish', form: 'beast', creature: 'cthulhu', paint: 'sakura' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 12 },
     light: { name: '共鳴脈衝步槍', rw: '聲電複合雷射・光速直擊', type: 'beam',
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
@@ -1366,7 +1366,7 @@ export const CHARACTERS = {
   //  B 類 擬態翼 ↔ 四足獸:m02 levi↔elephant、m04 archo↔raptor、m07 beetle、m08 owl↔panther
   m01: {
     side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
-    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'minimal' },
+    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xd52b1e, 0xffffff, 0x171796] },
     mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
@@ -1444,7 +1444,7 @@ export const CHARACTERS = {
   },
   m06: {
     side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
-    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'graffiti' },
+    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'totem' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,

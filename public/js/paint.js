@@ -91,11 +91,32 @@ function fillPts(ctx, pts) {
   ctx.fill();
 }
 
-// pattern → { tile(每個機體身高的重複次數), draw(ctx, palette, rnd) }
+// ---- 花紋分類(2026-07-24 塗裝改制)----
+// 使用者定案:除迷彩外全部改掉。三種取向:
+//  A. 徽記(map:'single', front:true)—— 圖騰/刺青/旗幟只在機體正面顯眼處貼「一枚完整徽記」,
+//     其餘裝甲純色(靠透明底 + ClampToEdge:徽記外一律無貼花 → 露出角色純色裝甲)。
+//  B. 國旗塗裝(map:'single', front:false)—— 體色貼近該國國旗者,以國旗配色橫帶纏滿全機。
+//     色帶取自 data.js 各角色 visual.flag(單一真相;此處不硬編國旗)。
+//  C. 覆蓋型(map:'tile')—— 迷彩(camo)與淡櫻吹雪(sakura)整機平鋪。
+// pattern → { map, tile?(tile), frac?/yOff?/front?(single), draw(ctx, P, rnd, opts) }
+//   純單色(solid)不進本表:paintUnit 直接 early-return 不掛任何貼花。
+
+// 五芒星(徽記共用)
+function star(ctx, cx, cy, R, ratio = 0.42) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5;
+    const r = i % 2 ? R * ratio : R;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
 const PATTERNS = {
-  // 極簡:大面留白,只有乾淨的分色帶與細分割線(制式塗裝)
+  // 雙色:大面純色 + 一條乾淨分色帶與細分割線(制式塗裝;「單色或雙色」的雙色版)
   minimal: {
-    tile: 1.0,
+    map: 'tile', tile: 1.0,
     draw(ctx, P) {
       ctx.fillStyle = css(P.ink);
       ctx.fillRect(0, 150, TEX, 26);                       // 主分色帶
@@ -105,9 +126,9 @@ const PATTERNS = {
       for (const y of [46, 210]) ctx.fillRect(0, y, TEX, 4);  // 面板分割線
     },
   },
-  // 迷彩:三階不規則斑塊(近似 flecktarn 的疏密分佈)
+  // 迷彩:三階不規則斑塊(近似 flecktarn 的疏密分佈)—— 唯一維持整機平鋪的花紋
   camo: {
-    tile: 2.4,
+    map: 'tile', tile: 2.4,
     draw(ctx, P, rnd) {
       const layers = [[P.ink2, 30, 34], [P.ink, 22, 26], [P.hot, 10, 14]];
       for (const [c, n, r] of layers) {
@@ -119,130 +140,130 @@ const PATTERNS = {
       }
     },
   },
-  // 塗鴉:主色噴漆潑塊 + 白色亂筆 tag + 噴點(街頭/自行補漆的機體)
-  graffiti: {
-    tile: 1.7,
-    draw(ctx, P, rnd) {
-      ctx.fillStyle = css(P.hot);
-      for (let i = 0; i < 5; i++) {
-        const pts = blobPts(rnd, rnd() * TEX, rnd() * TEX, 26 + rnd() * 30, 9);
-        tiled(ctx, () => fillPts(ctx, pts));
-      }
-      ctx.strokeStyle = css(P.paper);                      // 反差色亂筆(亮機用深墨、深機用亮墨)
-      ctx.lineWidth = 7;
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 6; i++) {
-        const x0 = rnd() * TEX, y0 = rnd() * TEX;
-        const c = [x0 + 60 - rnd() * 120, y0 - 50, x0 + 70, y0 + 60 - rnd() * 40, x0 + 40 - rnd() * 90, y0 + 70];
-        tiled(ctx, () => {
-          ctx.beginPath();
-          ctx.moveTo(x0, y0);
-          ctx.bezierCurveTo(c[0], c[1], c[2], c[3], c[4], c[5]);
-          ctx.stroke();
-        });
-      }
-      ctx.fillStyle = css(P.ink);
-      for (let i = 0; i < 90; i++) {                       // 噴罐飛沫
-        const x = rnd() * TEX, y = rnd() * TEX, r = 1 + rnd() * 3;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    },
-  },
-  // 紋身:細線描的流動曲線(刺青/手抄詩/電路走線的共同語彙)
-  tattoo: {
-    tile: 1.9,
-    draw(ctx, P, rnd) {
-      ctx.lineCap = 'round';
-      for (let k = 0; k < 7; k++) {
-        const y0 = rnd() * TEX, amp = 20 + rnd() * 40, f = 1 + Math.floor(rnd() * 3);
-        ctx.strokeStyle = css(k % 3 === 0 ? P.hot : P.ink);
-        ctx.lineWidth = k % 3 === 0 ? 4 : 6;
-        tiled(ctx, () => {
-          ctx.beginPath();
-          for (let x = 0; x <= TEX; x += 8) {
-            const y = y0 + Math.sin((x / TEX) * Math.PI * 2 * f + k) * amp;
-            if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-        });
-      }
-      ctx.fillStyle = css(P.ink);                           // 線間的小點(針刺感)
-      for (let i = 0; i < 40; i++) {
-        const x = rnd() * TEX, y = rnd() * TEX;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    },
-  },
-  // 圖騰:幾何帶狀紋(三角齒列 + 菱形 + 同心圓眼)—— 民族紋樣/部隊徽記
+  // 圖騰(單一主徽):民族紋樣圓盤徽章 —— 對比底盤 + 墨色三角齒圈 + 同心圓眼 + 色心菱形。
+  // 徽記全走 paper↔ink 的明暗對(色版天生的高對比對),確保單色機身上仍一眼可辨(顯眼)。
   totem: {
-    tile: 1.5,
+    map: 'single', front: true, frac: 0.5, yOff: 0.1,
     draw(ctx, P) {
-      ctx.fillStyle = css(P.ink);
-      ctx.fillRect(0, 96, TEX, 64);                         // 主紋帶底
-      ctx.fillStyle = css(P.hot);
-      for (let i = 0; i < 8; i++) {                         // 三角齒列(上下對咬)
-        const x = i * 32;
-        ctx.beginPath();
-        ctx.moveTo(x, 100); ctx.lineTo(x + 16, 126); ctx.lineTo(x + 32, 100);
-        ctx.closePath(); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(x + 16, 156); ctx.lineTo(x + 32, 130); ctx.lineTo(x + 48, 156);
+      const cx = 128, cy = 128;
+      ctx.fillStyle = css(P.paper);                         // 對比底盤(與裝甲取反的明暗)
+      ctx.beginPath(); ctx.arc(cx, cy, 96, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 10; ctx.strokeStyle = css(P.ink);     // 外環
+      ctx.beginPath(); ctx.arc(cx, cy, 88, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = css(P.ink);                           // 三角齒圈(朝內,墨色高對比)
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const a2 = ((i + 0.5) / 16) * Math.PI * 2;
+        const p = (r, ang) => [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r];
+        const [x0, y0] = p(80, a), [x1, y1] = p(80, ((i + 1) / 16) * Math.PI * 2), [x2, y2] = p(56, a2);
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2);
         ctx.closePath(); ctx.fill();
       }
-      ctx.strokeStyle = css(P.ink2);
-      ctx.lineWidth = 7;
-      for (const cy of [34, 222]) for (let i = 0; i < 4; i++) {   // 同心圓眼
-        const cx = 32 + i * 64;
-        for (const r of [10, 20]) {
+      ctx.lineWidth = 7; ctx.strokeStyle = css(P.ink);      // 同心圓眼
+      for (const r of [30, 44]) { ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.fillStyle = css(P.hot);                           // 中央菱形(角色色 pop)
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 22); ctx.lineTo(cx + 16, cy); ctx.lineTo(cx, cy + 22); ctx.lineTo(cx - 16, cy);
+      ctx.closePath(); ctx.fill();
+    },
+  },
+  // 刺青(單一主徽):對稱線描羽紋徽章 —— 對比橢圓底 + 墨色羽線 + 色心寶石
+  tattoo: {
+    map: 'single', front: true, frac: 0.52, yOff: 0.08,
+    draw(ctx, P) {
+      const cx = 128, cy = 128;
+      ctx.fillStyle = css(P.paper);                         // 對比橢圓底盤
+      ctx.beginPath(); ctx.ellipse(cx, cy, 56, 80, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 6; ctx.strokeStyle = css(P.ink);
+      ctx.beginPath(); ctx.ellipse(cx, cy, 50, 74, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const s of [-1, 1]) {                            // 左右對稱羽線(墨色)
+        ctx.strokeStyle = css(P.ink); ctx.lineWidth = 9;
+        for (let k = 0; k < 3; k++) {
           ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.moveTo(cx, 100 + k * 18);
+          ctx.bezierCurveTo(cx + s * 40, 80 + k * 16, cx + s * (66 - k * 8), 108 + k * 14, cx + s * (40 - k * 12), 160 + k * 6);
           ctx.stroke();
         }
       }
-    },
-  },
-  // 旗幟:大面橫帶 + 星徽(國旗/家徽/軍旗)
-  flag: {
-    tile: 0.95,
-    draw(ctx, P) {
-      ctx.fillStyle = css(P.hot);
-      ctx.fillRect(0, 0, TEX, 92);
-      ctx.fillStyle = css(P.ink);
-      ctx.fillRect(0, 92, TEX, 26);
-      ctx.fillStyle = css(P.paper);
-      ctx.fillRect(0, 118, TEX, 60);
-      ctx.fillStyle = css(P.ink);                           // 星徽(五芒)
-      const cx = TEX / 2, cy = 148, R = 24;
+      ctx.fillStyle = css(P.hot);                           // 中軸寶石(菱形,角色色)
       ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const a = -Math.PI / 2 + i * Math.PI / 5;
-        const r = i % 2 ? R * 0.42 : R;
-        const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(cx, 82); ctx.lineTo(cx + 18, 118); ctx.lineTo(cx, 154); ctx.lineTo(cx - 18, 118);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = css(P.ink);                           // 中軸針點
+      for (const y of [74, 162, 176]) { ctx.beginPath(); ctx.arc(cx, y, 4, 0, Math.PI * 2); ctx.fill(); }
     },
   },
+  // 旗幟(單一主徽):盾形軍徽 —— 墨色盾面 + 對比橫帶 + 色心星 + 對比盾框
+  flag: {
+    map: 'single', front: true, frac: 0.5, yOff: 0.06,
+    draw(ctx, P) {
+      const cx = 128;
+      const shield = () => {
+        ctx.beginPath();
+        ctx.moveTo(cx - 70, 62); ctx.lineTo(cx + 70, 62); ctx.lineTo(cx + 70, 150);
+        ctx.quadraticCurveTo(cx + 70, 196, cx, 214);
+        ctx.quadraticCurveTo(cx - 70, 196, cx - 70, 150);
+        ctx.closePath();
+      };
+      shield(); ctx.fillStyle = css(P.ink); ctx.fill();     // 盾面(墨色,高對比)
+      ctx.save(); shield(); ctx.clip();                     // 橫帶(裁進盾內,對比色)
+      ctx.fillStyle = css(P.paper); ctx.fillRect(cx - 70, 116, 140, 28);
+      ctx.restore();
+      ctx.fillStyle = css(P.hot); star(ctx, cx, 94, 28); ctx.fill();  // 星(角色色 pop)
+      shield(); ctx.lineWidth = 9; ctx.strokeStyle = css(P.paper); ctx.stroke();  // 盾框(對比色,深底也跳出)
+    },
+  },
+  // 淡櫻吹雪:整機平鋪、疏落的五瓣櫻 + 飄落單瓣(淡色近裝甲 → 低對比「淡淡」)
+  sakura: {
+    map: 'tile', tile: 1.9,
+    draw(ctx, P, rnd) {
+      const petal = (x, y, r, rot, col) => {                // 單片花瓣(缺口淚滴)
+        ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+        ctx.fillStyle = css(col);
+        ctx.beginPath();
+        ctx.moveTo(0, r);
+        ctx.quadraticCurveTo(r * 0.72, r * 0.3, r * 0.34, -r * 0.7);
+        ctx.quadraticCurveTo(0, -r * 0.5, -r * 0.34, -r * 0.7);
+        ctx.quadraticCurveTo(-r * 0.72, r * 0.3, 0, r);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      };
+      const blossom = (x, y, r, col) => {                   // 五瓣櫻
+        for (let i = 0; i < 5; i++) petal(x, y, r, (i / 5) * Math.PI * 2, col);
+      };
+      for (let i = 0; i < 5; i++) {                         // 幾朵完整櫻花(淡)
+        const c = i % 2 ? P.ink2 : P.ink;
+        tiled(ctx, () => blossom(rnd() * TEX, rnd() * TEX, 12 + rnd() * 8, c));
+      }
+      for (let i = 0; i < 14; i++) {                        // 飄落單瓣(吹雪)
+        const x = rnd() * TEX, y = rnd() * TEX, r = 6 + rnd() * 6, rot = rnd() * Math.PI * 2;
+        tiled(ctx, () => petal(x, y, r, rot, P.ink));
+      }
+    },
+  },
+  // 國旗塗裝(natflag)不進本表:走 paintUnit 的 paintNationalLivery() 逐件實色重染,
+  // 非三平面貼圖 —— 每個物件單一顏色、依體積 80/20 分主色/配色(使用者定案)。
 };
 
 export const PAINT_PATTERNS = Object.keys(PATTERNS);
 
-/** 生成(或取快取)花紋貼圖;seed 取 hue → 同角色每次開局圖樣一致(不用 Math.random) */
-function paintTexture(pattern, pal, hue, tone) {
-  const key = `${pattern}:${hue}:${tone}`;
+/**
+ * 生成(或取快取)花紋貼圖;seed 取 hue → 同角色每次開局圖樣一致(不用 Math.random)。
+ * single 徽記/國旗塗裝用 ClampToEdge:貼花窗外一律取透明邊 → 不重複、露出純色裝甲。
+ */
+function paintTexture(pattern, pal, hue, tone, opts) {
+  const single = PATTERNS[pattern].map === 'single';
+  const flagKey = opts && opts.flag ? opts.flag.join('-') : '';
+  const key = `${pattern}:${hue}:${tone}:${flagKey}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const cv = document.createElement('canvas');
   cv.width = cv.height = TEX;
   const ctx = cv.getContext('2d');
-  PATTERNS[pattern].draw(ctx, pal, mulberry32((hue >>> 0) ^ 0x9e3779b9));
+  PATTERNS[pattern].draw(ctx, pal, mulberry32((hue >>> 0) ^ 0x9e3779b9), opts);
   const tex = new THREE.CanvasTexture(cv);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.wrapS = tex.wrapT = single ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
   cache.set(key, tex);
@@ -251,31 +272,126 @@ function paintTexture(pattern, pal, hue, tone) {
 
 const _box = new THREE.Box3();
 const _size = new THREE.Vector3();
+const _ctr = new THREE.Vector3();
+const _mb = new THREE.Box3();
+const _msz = new THREE.Vector3();
+const _mc = new THREE.Vector3();
+
+/** 可上漆件:排除描邊殼、透明件(旋翼/膜翼)、發光件(識別燈/推進器/砲口)、noPaint 徽章。 */
+function paintMat(o) {
+  if (!o.isMesh || o.userData.isOutline || o.userData.noPaint) return null;
+  const m = Array.isArray(o.material) ? o.material[0] : o.material;
+  if (!m?.isMeshToonMaterial || m.transparent) return null;
+  if (m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) > 0.05 && (m.emissiveIntensity ?? 1) >= 0.5) return null;
+  return m;
+}
+
+/**
+ * 國旗塗裝:逐件實色重染(非貼圖)。使用者定案「體積佔比 80% 的物件染主色、其餘 20% 染配色,
+ * 每個物件單一顏色」。做法:可上漆件依 root 空間包圍盒體積由大到小排序,累積體積達總量 80%
+ * 之前的(即最大的一批件)全染 flag[0] 主色;其餘小件輪替 flag[1..] 配色。發光識別條照舊跳過。
+ */
+function paintNationalLivery(root, inv, flag, pal) {
+  const cols = (flag && flag.length) ? flag : [pal.main, pal.lite];
+  const items = [];
+  let total = 0;
+  root.traverse((o) => {
+    const m = paintMat(o);
+    if (!m) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    _mb.copy(o.geometry.boundingBox).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+    _mb.getSize(_msz);
+    const vol = Math.max(1e-4, _msz.x * _msz.y * _msz.z);
+    items.push({ m, vol });
+    total += vol;
+  });
+  items.sort((a, b) => b.vol - a.vol);
+  const accents = cols.length > 1 ? cols.slice(1) : cols;
+  let acc = 0, ai = 0;
+  for (const it of items) {
+    const col = acc < 0.8 * total ? cols[0] : accents[ai++ % accents.length];  // 前 80% 體積 → 主色
+    acc += it.vol;
+    it.m.color.set(col);
+  }
+  return root;
+}
+
+/**
+ * 徽記(單一主徽):在「完整平面、無配件插入」的裝甲板上貼一枚徽章。
+ * 做法:於指定顯眼面(直立機甲 +Z / 橫置機種 +Y)挑一片「面積大且薄(= 平板)」的外緣件,
+ * 只把徽記貼到那一片 mesh 上(其餘件完全不上漆)—— 徽記因此不會被相鄰配件戳破/分割。
+ * @param axis 面軸:1 = +Y 頂面、2 = +Z 正面
+ */
+function paintEmblemPlate(root, inv, tex, axis) {
+  let best = null, bestScore = -1;
+  root.traverse((o) => {
+    const m = paintMat(o);
+    if (!m) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    const Ml = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    _mb.copy(o.geometry.boundingBox).applyMatrix4(Ml);
+    _mb.getSize(_msz); _mb.getCenter(_mc);
+    const inPlane = axis === 2 ? _msz.x * _msz.y : _msz.x * _msz.z;   // 板面面積(垂直於面軸)
+    const thick = axis === 2 ? _msz.z : _msz.y;                       // 沿面軸厚度(越薄越像平板)
+    const outer = axis === 2 ? _mc.z : _mc.y;                         // 越外(前/上)越優先
+    if (inPlane < 0.03) return;
+    // 面積大 + 薄 + 靠外;`* Ml` 使 outer 與 inPlane 同在 root 空間可比較
+    const score = (inPlane / (1 + 2.4 * thick)) * (1 + 0.6 * Math.max(0, outer));
+    if (score > bestScore) {
+      bestScore = score;
+      const ipB = axis === 2 ? _msz.y : _msz.z;                        // 面內另一軸(x 為共通軸)
+      best = { m, mat: Ml, cx: _mc.x, cy: _mc.y, cz: _mc.z, ews: 0.82 * Math.min(_msz.x, ipB) };
+    }
+  });
+  if (!best) return root;
+  const scale = 1 / best.ews;
+  const pre = new THREE.Matrix4().makeTranslation(
+    0.5 * best.ews - best.cx, 0.5 * best.ews - best.cy, 0.5 * best.ews - best.cz);
+  const M = new THREE.Matrix4().multiplyMatrices(pre, best.mat);
+  const face = axis === 2 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
+  applyPaint(best.m, { tex, matrix: M, scale, face });
+  return root;
+}
 
 /**
  * 把角色花紋塗到已建好的機體上(fitToHeight / outlinify 之前呼叫)。
- * 跳過:描邊外殼、透明件(旋翼/膜翼)、發光件(識別燈/推進器/砲口)—— 花紋不吃掉辨識訊號。
+ * 三條路徑(以 vis.paint 決定):
+ *   solid    —— 不上漆,露出角色裝甲色。
+ *   natflag  —— 逐件實色重染(paintNationalLivery,80/20 體積分主色/配色)。
+ *   徽記      —— 只貼一片最平的外緣板(paintEmblemPlate),其餘純色。
+ *   覆蓋型    —— 迷彩/雙色/櫻吹雪整機三平面平鋪。
  * @param root  builder 回傳的 Group(尚未進場景;matrixWorld = 自身局部座標)
  * @param tone  'light' | 'dark'(需與 builder 取色版時同一個值)
  */
 export function paintUnit(root, vis, side, tone = 'light') {
-  const pattern = PATTERNS[vis?.paint] ? vis.paint : 'minimal';
+  const want = vis?.paint;
+  if (want === 'solid') return root;                        // 純單色:不掛任何貼花
   const pal = heroPalette(vis, side, tone);
-  const hue = vis?.hue ?? SIDES[side]?.color ?? 0xffffff;
-  const tex = paintTexture(pattern, pal, hue, tone);
   root.updateMatrixWorld(true);
-  const h = _box.setFromObject(root).getSize(_size).y || 1;
-  const scale = PATTERNS[pattern].tile / h;   // 花紋重複頻率以機體身高為單位 → 大小機體看起來一樣密
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  if (want === 'natflag') return paintNationalLivery(root, inv, vis?.flag, pal);
+
+  const pattern = PATTERNS[want] ? want : 'minimal';
+  const P = PATTERNS[pattern];
+  const hue = vis?.hue ?? SIDES[side]?.color ?? 0xffffff;
+  const tex = paintTexture(pattern, pal, hue, tone, { flag: vis?.flag });
+  _box.setFromObject(root);
+  const h = _box.getSize(_size).y || 1;
+
+  if (P.map === 'single') {                                 // 徽記:貼單一平板
+    // 直立機甲(高度為最大軸)取 +Z 胸甲;橫置飛行器/獸型取 +Y 頂面/背脊。
+    const axis = h < 0.9 * Math.max(_size.x, _size.z) ? 1 : 2;
+    return paintEmblemPlate(root, inv, tex, axis);
+  }
+
+  const scale = P.tile / h;                                 // 覆蓋型:整機平鋪(重複頻率以身高為單位)
   root.traverse((o) => {
-    if (!o.isMesh || o.userData.isOutline || o.userData.noPaint) return;
-    const m = Array.isArray(o.material) ? o.material[0] : o.material;
-    if (!m?.isMeshToonMaterial || m.transparent) return;
-    if (m.emissive && (m.emissive.r + m.emissive.g + m.emissive.b) > 0.05 && (m.emissiveIntensity ?? 1) >= 0.5) return;
+    const m = paintMat(o);
+    if (!m) return;
     // 靜止姿勢下「這個 mesh 的局部座標 → 機體根座標」的固定矩陣:
     // 花紋因此烤死在裝甲板上(關節旋轉不改變它),而不是投影在世界空間。
     const M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
-    applyPaint(m, { tex, matrix: M, scale });
+    applyPaint(m, { tex, matrix: M, scale, face: null });
   });
   return root;
 }

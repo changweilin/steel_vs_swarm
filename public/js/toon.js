@@ -53,6 +53,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (moss) defines.CEL_MOSS = '';
   if (cool > 0) defines.CEL_COOL = '';
   if (paint) defines.CEL_PAINT = '';
+  // 單一主徽(totem/tattoo/flag)只貼一面朝外的顯眼裝甲:用 rig 空間法線與指定朝向(paint.face,
+  // 直立機甲取 +Z 胸甲、橫置飛行器取 +Y 頂面)的夾角把貼花閘在該半球,避免三平面投影
+  // 在機體背面/底面鏡像出第二枚徽記(使用者要求「一個完整的」)。
+  if (paint?.face) defines.CEL_PAINT_GATE = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
   mat.defines = defines;
   mat.userData.celOpts = { metal, rim, wash, moss, cool, paint };
@@ -66,6 +70,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uPaintTex = { value: paint?.tex ?? null };
     shader.uniforms.uPaintM = { value: paint?.matrix ?? new THREE.Matrix4() };
     shader.uniforms.uPaintS = { value: paint?.scale ?? 1 };
+    shader.uniforms.uPaintFace = { value: paint?.face ?? new THREE.Vector3(0, 0, 1) };
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', `
         #ifdef CEL_WP
@@ -135,6 +140,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
                   + texture2D( uPaintTex, vPaintP.xz ) * pw.y
                   + texture2D( uPaintTex, vPaintP.xy ) * pw.z;
           float pa = smoothstep( 0.4, 0.62, pc.a );
+          #ifdef CEL_PAINT_GATE
+          // 只在朝 uPaintFace 的半球顯現;背面/底面淡出 → 全機唯一一枚徽記。
+          pa *= smoothstep( 0.02, 0.4, dot( normalize( vPaintN ), uPaintFace ) );
+          #endif
           diffuseColor.rgb = mix( diffuseColor.rgb, pc.rgb / max( pc.a, 0.001 ), pa );
         }
         #endif`)
@@ -167,6 +176,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         uniform float uCelMossAmt;
         #ifdef CEL_PAINT
         uniform sampler2D uPaintTex;
+        uniform vec3 uPaintFace;
         varying vec3 vPaintP;
         varying vec3 vPaintN;
         #endif
@@ -184,7 +194,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         void main() {`);
   };
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${rim}`;
   return mat;
 }
 
