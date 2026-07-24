@@ -362,7 +362,7 @@ export class BattleClient {
   // ---------------- 場景 ----------------
   _initScene() {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(this._dpr());   // 低功耗模式(svs_lowpower)夾到 1
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
     this.scene = new THREE.Scene();
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
@@ -2429,6 +2429,11 @@ export class BattleClient {
       if (!this.dead) this.canvas?.requestPointerLock?.();
     }
   }
+
+  /** 目標像素比:低功耗模式(localStorage svs_lowpower)夾到 1,否則上限 2 */
+  _dpr() { return localStorage.getItem('svs_lowpower') === '1' ? 1 : Math.min(window.devicePixelRatio, 2); }
+  /** 設定頁「低功耗模式」即時套用(main.js 已寫入 localStorage,此處只重設像素比與尺寸)*/
+  setLowPower() { this.renderer.setPixelRatio(this._dpr()); this._onResize(); }
 
   // ---------------- 快照同步 ----------------
   onSnap(m) { this._snapQueue = m; }

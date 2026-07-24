@@ -53,10 +53,17 @@ export class GameAudio {
     this._bgm = {};          // name → { el, ok }
     this._bgmFade = null;    // BGM 淡入淡出計時器
 
-    // 設定(音量/靜音)持久化
+    // 設定持久化:音效(SFX)/ 音樂(BGM)各自獨立音量與開關;相容舊版單一 {master,muted}
     const saved = this._load();
-    this.master = saved.master ?? _MASTER_DEF;
-    this.muted = saved.muted ?? false;
+    if (saved.sfxVol != null) {
+      this.sfxVol = _clamp(saved.sfxVol, 0, 1);
+      this.bgmVol = _clamp(saved.bgmVol ?? _BGM_DEF, 0, 1);
+      this.sfxOn = saved.sfxOn ?? true;
+      this.bgmOn = saved.bgmOn ?? true;
+    } else {                                   // 舊版 master/muted → 拆成雙聲道(音效沿用 master、音樂取預設)
+      const m = saved.master ?? _MASTER_DEF, on = !(saved.muted ?? false);
+      this.sfxVol = m; this.bgmVol = _BGM_DEF; this.sfxOn = on; this.bgmOn = on;
+    }
 
     // 首次使用者手勢(autoplay 政策)才建/恢復 AudioContext 並啟動 BGM。
     this._onGesture = () => this.unlock();
@@ -69,7 +76,7 @@ export class GameAudio {
     try { return JSON.parse(localStorage.getItem(_LS_KEY)) || {}; } catch { return {}; }
   }
   _save() {
-    try { localStorage.setItem(_LS_KEY, JSON.stringify({ master: this.master, muted: this.muted })); } catch { /* 私密模式忽略 */ }
+    try { localStorage.setItem(_LS_KEY, JSON.stringify({ sfxVol: this.sfxVol, bgmVol: this.bgmVol, sfxOn: this.sfxOn, bgmOn: this.bgmOn })); } catch { /* 私密模式忽略 */ }
   }
 
   // ---- 生命週期 ----
@@ -106,15 +113,22 @@ export class GameAudio {
     this._dead = true;
   }
 
-  // ---- 音量/靜音 ----
-  setMaster(v) { this.master = _clamp(v, 0, 1); this._applyVolume(); this._save(); }
-  toggleMute() { this.muted = !this.muted; this._applyVolume(); this._save(); return this.muted; }
+  // ---- 音量/開關(音效 SFX 與 音樂 BGM 各自獨立)----
+  setSfx(v) { this.sfxVol = _clamp(v, 0, 1); this._applyVolume(); this._save(); }
+  setBgm(v) { this.bgmVol = _clamp(v, 0, 1); this._applyVolume(); this._save(); }
+  setSfxOn(on) { this.sfxOn = !!on; this._applyVolume(); this._save(); }
+  setBgmOn(on) {
+    this.bgmOn = !!on; this._save();
+    // 音樂開關要真正啟停當前曲(播放/暫停由 _applyScene 的交叉淡出處理)
+    if (this._unlocked && this._scene) this._applyScene(this._scene);
+    else this._applyVolume();
+  }
   _applyVolume() {
-    const m = this.muted ? 0 : this.master;
-    if (this._master) this._master.gain.value = m;
+    if (this._master) this._master.gain.value = 1;               // 主匯流排恆 1,音量各聲道自理
+    if (this._sfx) this._sfx.gain.value = this.sfxOn ? this.sfxVol : 0;
     // BGM 走 HTMLAudioElement,單獨套音量(串流不經 WebAudio 匯流排)
     for (const [name, b] of Object.entries(this._bgm)) {
-      if (b.ok) b.el.volume = (name === this._scene && !this.muted) ? this.master * _BGM_DEF : 0;
+      if (b.ok) b.el.volume = (name === this._scene && this.bgmOn) ? this.bgmVol : 0;
     }
   }
 
@@ -231,18 +245,18 @@ export class GameAudio {
   }
 
   _applyScene(name) {
-    // 交叉淡出:目標曲淡入至 BGM 音量,其餘淡出至 0
+    // 交叉淡出:目標曲淡入至音樂音量,其餘淡出至 0
     clearInterval(this._bgmFade);
-    const target = this.master * _BGM_DEF;
+    const target = this.bgmVol;
     for (const [n, b] of Object.entries(this._bgm)) {
       if (!b.ok) continue;
-      if (n === name && !this.muted) { b.el.play().catch(() => {}); }
+      if (n === name && this.bgmOn) { b.el.play().catch(() => {}); }
     }
     this._bgmFade = setInterval(() => {
       let done = true;
       for (const [n, b] of Object.entries(this._bgm)) {
         if (!b.ok) continue;
-        const want = (n === name && !this.muted) ? target : 0;
+        const want = (n === name && this.bgmOn) ? target : 0;
         const cur = b.el.volume;
         const nv = cur + _clamp(want - cur, -0.04, 0.04);
         b.el.volume = _clamp(nv, 0, 1);

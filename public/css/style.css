@@ -909,6 +909,56 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .pause-title { font-family: var(--serif); font-size: 30px; font-weight: 900; letter-spacing: 10px; color: var(--railS); }
 .pause-note { font-size: 12px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
 
+/* ── 戰場選單分頁(選單 / 設定 / 說明)── */
+.pause-tabs { display: flex; gap: 6px; justify-content: center; }
+.pause-tab {
+  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 12px; letter-spacing: 3px;
+  padding: 7px 20px; color: var(--dim); background: rgba(8, 12, 17, 0.9);
+  border: 1px solid var(--line); clip-path: var(--notch-sm);
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.pause-tab:hover:not(.on) { color: var(--text); border-color: var(--line-strong); }
+.pause-tab.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+.pause-page { display: flex; flex-direction: column; gap: 14px; }
+.pause-page[hidden] { display: none; }
+.pause-back { align-self: center; }
+
+/* ── 設定:各類開關(switch)+ 音量滑桿 ── */
+.set-list { display: flex; flex-direction: column; gap: 14px; text-align: left; min-width: min(468px, 84vw); padding: 4px 0; }
+.set-row { display: flex; align-items: center; gap: 12px; }
+.set-label { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--text); min-width: 92px; }
+.set-slider { flex: 1; accent-color: var(--railS); cursor: pointer; }
+.set-val { font-family: var(--mono); font-size: 11px; color: var(--dim); min-width: 42px; text-align: right; }
+.set-hint { font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+.switch {
+  position: relative; width: 46px; height: 22px; flex: none; cursor: pointer; padding: 0;
+  border: 1px solid var(--line); background: rgba(8, 12, 17, 0.9); clip-path: var(--notch-sm);
+  transition: background 0.14s, border-color 0.14s;
+}
+.switch > span {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+  background: var(--dim); transition: left 0.14s, background 0.14s;
+}
+.switch[aria-checked="true"] { background: rgba(var(--railS-rgb), 0.26); border-color: var(--railS); }
+.switch[aria-checked="true"] > span { left: 26px; background: var(--railS); }
+
+/* ── 說明:類別分頁 + 內文清單 ── */
+.help-cats { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.help-cat {
+  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+  padding: 5px 13px; color: var(--dim); background: rgba(8, 12, 17, 0.9);
+  border: 1px solid var(--line); clip-path: var(--notch-sm);
+  transition: color 0.12s, border-color 0.12s;
+}
+.help-cat:hover:not(.on) { color: var(--text); border-color: var(--line-strong); }
+.help-cat.on { color: var(--railS); border-color: var(--railS); box-shadow: inset 0 0 0 1px var(--railS); }
+.help-body {
+  text-align: left; max-height: 46vh; overflow-y: auto; padding-right: 6px;
+  display: flex; flex-direction: column; gap: 13px; min-width: min(468px, 84vw);
+}
+.help-item-h { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--railS); }
+.help-item-p { font-size: 12px; line-height: 1.85; color: var(--text); border-left: 2px solid var(--line); padding-left: 10px; margin-top: 3px; }
+
 /* ---------- 房間 N 席位 ---------- */
 .room-map-info { font-size: 12px; color: var(--ok); margin-top: 4px; font-family: var(--mono); letter-spacing: 1px; }
 .side-slots { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }

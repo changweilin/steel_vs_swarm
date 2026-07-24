@@ -393,15 +393,51 @@
   <div id="pauseOverlay" class="overlay" style="display:none">
     <div class="overlay-box pause-box">
       <div class="pause-title">戰場選單</div>
-      <div class="pause-note">伺服器仍在持續模擬 —— 這不是真正的暫停,離開將退回大廳。</div>
-      <div class="pause-help" id="pauseHelp"></div>
-      <div class="row" style="justify-content:center;gap:10px;align-items:center;margin:4px 0 10px">
-        <button id="muteBtn" class="btn small" type="button">🔊 音效</button>
-        <input id="volSlider" type="range" min="0" max="100" step="1" style="width:170px" aria-label="音量">
+      <div class="pause-tabs" id="pauseTabs">
+        <button class="pause-tab on" type="button" data-page="menu">選單</button>
+        <button class="pause-tab" type="button" data-page="settings">設定</button>
+        <button class="pause-tab" type="button" data-page="help">說明</button>
       </div>
-      <div class="row" style="justify-content:center">
-        <button id="resumeBtn" class="btn big steel-btn">▶ 繼續戰鬥</button>
-        <button id="pauseLeaveBtn" class="btn">⨯ 離開戰場</button>
+
+      <!-- 分頁:選單(繼續 / 離開 + 操作提示)-->
+      <div class="pause-page" data-page="menu">
+        <div class="pause-note">伺服器仍在持續模擬 —— 這不是真正的暫停,離開將退回大廳。</div>
+        <div class="pause-help" id="pauseHelp"></div>
+        <div class="row" style="justify-content:center">
+          <button id="resumeBtn" class="btn big steel-btn">▶ 繼續戰鬥</button>
+          <button id="pauseLeaveBtn" class="btn">⨯ 離開戰場</button>
+        </div>
+      </div>
+
+      <!-- 分頁:設定(音效 / 音樂雙聲道 + 低功耗等各類開關)-->
+      <div class="pause-page" data-page="settings" hidden>
+        <div class="set-list">
+          <div class="set-row">
+            <span class="set-label">音效</span>
+            <button id="setSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
+            <input id="setSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
+            <span class="set-val" id="setSfxVal">0%</span>
+          </div>
+          <div class="set-row">
+            <span class="set-label">音樂</span>
+            <button id="setBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
+            <input id="setBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
+            <span class="set-val" id="setBgmVal">0%</span>
+          </div>
+          <div class="set-row">
+            <span class="set-label">低功耗模式</span>
+            <button id="setLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
+            <span class="set-hint">降低算圖解析度以省電、提升幀率</span>
+          </div>
+        </div>
+        <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
+      </div>
+
+      <!-- 分頁:說明(依類別分頁的完整遊戲說明)-->
+      <div class="pause-page" data-page="help" hidden>
+        <div class="help-cats" id="helpCats"></div>
+        <div class="help-body" id="helpBody"></div>
+        <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
       </div>
     </div>
   </div>

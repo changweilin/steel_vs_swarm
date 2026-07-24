@@ -24,6 +24,7 @@ import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, remove
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
+import { CONTROLS_BY_KIND, HELP } from './help.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -1677,14 +1678,9 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
-  $('pauseHelp').innerHTML = app.mySide
-    ? (heroKind === 'drone'
-      ? 'W/S 沿視線飛 ・ A/D 橫移 ・ Space/C 升降 ・ 戰鬥中按 Space 飛行=完美迴避(向上飛+1s 無敵,CD 30s) ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器(準星鎖定) ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 令兩架常駐護衛自殺機衝出(各半傷、3 倍速撲擊、吸走敵方導引飛彈,CD 30s、自爆後重現) ・ R 填彈 ・ B 升級 ・ 單機機動求生,善用護衛機拆塔清群!'
-      : heroKind === 'morph'
-      ? '地面:WASD 移動 ・ 按住 Space 蓄力 → 放開彈射變形飛行 ・ 飛行:W/S 沿視線飛、A/D 橫移、Space/C 升降、觸地變形回地面型 ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 分離餌機(沿途投彈:依機體類型燃燒/凍結/毒霧/雷爆,有鎖定就追蹤,CD 30s) ・ R 填彈 ・ B 升級 ・ 地面小心地雷、高空小心防空!'
-      : 'WASD 移動 ・ Space 跳 ・ Shift 衝刺 ・ 左鍵 輕武器 ・ 右鍵切換 瞄準+重武器 ・ Q 小招 ・ E 大招 ・ 狙擊模式長按右鍵 重砲模式(0.5s 傾洩剩餘彈夾、傷害 +33% 射程 +20%,CD 30s) ・ R 填彈 ・ B 升級 ・ 偏離兵線小心地雷!')
-    : 'WASD 移動 ・ Space/C 升降 ・ Shift 加速(觀戰自由視角)';
-  $('pauseHelp').innerHTML += ' ・ ESC 戰場選單/離開';
+  // 操作提示唯一來源 = help.js CONTROLS_BY_KIND(說明頁與此共用)
+  const ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
+  $('pauseHelp').textContent = `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
   toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
 }
 
@@ -1820,8 +1816,8 @@ function makeHud() {
       }
       document.exitPointerLock?.();
     },
-    // 戰場選單(暫停):game.js 於指標解鎖時推狀態
-    pause: (on) => { $('pauseOverlay').style.display = on ? '' : 'none'; },
+    // 戰場選單(暫停):game.js 於指標解鎖時推狀態。每次開啟回到「選單」頁並同步設定 UI 到目前狀態
+    pause: (on) => { $('pauseOverlay').style.display = on ? '' : 'none'; if (on) { switchPausePage('menu'); syncSettingsUi(); } },
     // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
     locked: (on) => $('lockWarn').classList.toggle('on', !!on),
     // 平民互動提示:info={cs 陣營, self 是否我方, follow 是否跟隨中} 或 null(離開互動範圍)
@@ -1944,16 +1940,65 @@ $('leaveGameBtn')?.addEventListener('click', () => location.reload());
 $('resumeBtn')?.addEventListener('click', () => app.battle?._setPaused(false));
 $('pauseLeaveBtn')?.addEventListener('click', () => leaveBattle());
 
-// 音效設定(暫停選單):靜音切換 + 音量;開啟選單時同步 UI 到目前狀態
-function syncAudioUi() {
-  const mb = $('muteBtn'), vs = $('volSlider');
-  if (!mb || !vs || !app.audio) return;
-  mb.textContent = app.audio.muted ? '🔇 靜音' : '🔊 音效';
-  vs.value = String(Math.round(app.audio.master * 100));
+// ── 戰場選單分頁切換(選單 / 設定 / 說明);返回鈕與分頁鈕共用 data-page ──
+function switchPausePage(page) {
+  document.querySelectorAll('#pauseTabs .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
+  document.querySelectorAll('#pauseOverlay .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
 }
-$('muteBtn')?.addEventListener('click', () => { app.audio?.toggleMute(); syncAudioUi(); });
-$('volSlider')?.addEventListener('input', (e) => { app.audio?.setMaster(e.target.value / 100); if (app.audio?.muted) { app.audio.toggleMute(); syncAudioUi(); } });
-syncAudioUi();   // 反映持久化的音量/靜音狀態
+document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').forEach((b) => {
+  b.addEventListener('click', () => { switchPausePage(b.dataset.page); app.audio?.ui('click'); });
+});
+
+// ── 設定:各類開關 helper(switch 以 aria-checked 記狀態)──
+function setSwitch(id, on) { $(id)?.setAttribute('aria-checked', on ? 'true' : 'false'); }
+function bindSwitch(id, apply) {
+  $(id)?.addEventListener('click', () => {
+    const on = $(id).getAttribute('aria-checked') !== 'true';
+    setSwitch(id, on); apply(on); app.audio?.ui('click');
+  });
+}
+// 開啟設定頁時把 UI 同步到目前(持久化的)狀態
+function syncSettingsUi() {
+  const a = app.audio;
+  if (a) {
+    setSwitch('setSfxOn', a.sfxOn); setSwitch('setBgmOn', a.bgmOn);
+    const sv = $('setSfxVol'), bv = $('setBgmVol');
+    if (sv) { sv.value = String(Math.round(a.sfxVol * 100)); $('setSfxVal').textContent = `${sv.value}%`; }
+    if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
+  }
+  setSwitch('setLowPower', localStorage.getItem('svs_lowpower') === '1');
+}
+bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
+bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
+bindSwitch('setLowPower', (on) => {
+  try { localStorage.setItem('svs_lowpower', on ? '1' : '0'); } catch { /* 私密模式忽略 */ }
+  app.battle?.setLowPower();
+});
+$('setSfxVol')?.addEventListener('input', (e) => {
+  const v = Number(e.target.value); $('setSfxVal').textContent = `${v}%`;
+  app.audio?.setSfx(v / 100); if (v > 0 && !app.audio?.sfxOn) { app.audio.setSfxOn(true); setSwitch('setSfxOn', true); }
+});
+$('setBgmVol')?.addEventListener('input', (e) => {
+  const v = Number(e.target.value); $('setBgmVal').textContent = `${v}%`;
+  app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch('setBgmOn', true); }
+});
+
+// ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
+function renderHelpCat(cat) {
+  document.querySelectorAll('#helpCats .help-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === cat.id));
+  $('helpBody').innerHTML = cat.items.map((it) =>
+    `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(it.p)}</div></div>`).join('');
+  $('helpBody').scrollTop = 0;
+}
+(function buildHelpTabs() {
+  const cats = $('helpCats'); if (!cats) return;
+  cats.innerHTML = HELP.map((c, i) =>
+    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(c.label)}</button>`).join('');
+  cats.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
+    renderHelpCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
+  }));
+  renderHelpCat(HELP[0]);
+})();
 
 // 劇情戰役
 $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
