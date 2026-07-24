@@ -325,20 +325,31 @@ export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
 // 護甲減免(DOTA 曲線):實效護甲 a = max(0, 護甲 − 破甲),減免 = a / (a + AR_K)。
 // 爆擊(FPS):武器 crit 機率 × critX 倍率(未定義用 CRIT_X),僅直擊武器,AoE 不爆。
 export const HEROIC = { range: 1.2, dmg: 1.5 };
-// ---- 高度制空修正(2026-07-17)----
-// 無人機飛越高:地面槍械對它越無力、它自身槍械對地越強(制空優勢)。純作用於「輕武器 / 機槍類直射」,
-// 對空↔對地互為反向,f = clamp(無人機離地高度 / REF_M, 0, 1):
-//   地面單位 → 高空無人機:傷害 ×(1 − DMG·f)、射程 ×(1 − RANGE·f)
-//   高空無人機 → 地面目標:傷害 ×(1 + DMG·f)、射程 ×(1 + RANGE·f)
-// REF_M = 40(= GAME.AA_MIN_ALT 進入 SAM 空域的高度);傷害差距上限 33%、射程 16%。
-export const ALTITUDE = { REF_M: 40, DMG: 0.33, RANGE: 0.16 };
-export const altF = (y) => Math.max(0, Math.min(1, (y || 0) / ALTITUDE.REF_M));
-// 是否「輕武器 / 機槍類直射武器」:英雄輕武器(含散彈/電漿輕武器,全算)、機槍型重武器(type gun)、
-// NPC 直射機槍(rgun:無爆風 r、非瞄準、射速 ≥2;NPC 武器無 id/type 欄以資辨識)。
-export const isGunnery = (def) => !!def && (
-  def.id === 'light' || def.type === 'gun'
-  || (def.id == null && def.type == null && !def.r && !def.needAim && (def.rate || 0) >= 2)
-);
+// ---- 高度差空戰修正(2026-07-25 使用者需求;取代舊「無人機制空 ±傷害/射程」)----
+// 判定「雙方視線點的絕對高程差」dh —— 地形 / 跳躍 / 飛行造成的高差**全部**計入(英雄由客戶端回報
+// 絕對視線高程 ay;塔/主堡取砲位視線高 LOS.TOWER_EYE_M;小兵取離地小視線高)。
+// **沒有高度差(|dh| ≤ 1 個砲塔高)= 無任何加成** ⇒ 同高對射與 npm run bal 的靜態 1v1 完全不受影響。
+// 效果**全部落在「較高的一方」**(高地換視野與機動,不換爆發):
+//   +射程 / +閃避率;但「攻擊時」爆率/爆傷↓、「受到攻擊時」爆率/爆傷↑。
+// 強度係數 s 隨 |dh| 由「1 個砲塔高」線性升到「3 個砲塔高(TIERS)」封頂;砲塔高 = TARGET_H.tower(推導不手寫)。
+// 封頂效果:+25% 射程、+10% 閃避、攻擊爆率 ×0.5、攻擊爆傷加成 ×0.5、受擊爆率 ×2、受擊爆傷加成 +50%。
+// 爆擊只作用於直擊武器(heroHit/heroLance _rollCrit);招式不吃高度差/閃避/爆擊(見 sim.heroCast → _blast)。
+export const ALTITUDE = {
+  TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
+  RANGE: 0.25,         // 較高方 +射程(封頂)
+  DODGE: 0.10,         // 較高方 +閃避率(封頂)
+  ATK_CRIT_RATE: 0.5,  // 較高方攻擊時:爆率 ×(1 − 此值·s)  → 封頂 ×0.5
+  ATK_CRIT_DMG: 0.5,   // 較高方攻擊時:爆傷加成 ×(1 − 此值·s)→ 封頂 ×0.5(暴傷 −50%)
+  RCV_CRIT_RATE: 1.0,  // 較高方受擊時:爆率 ×(1 + 此值·s)  → 封頂 ×2
+  RCV_CRIT_DMG: 0.5,   // 較高方受擊時:爆傷加成 ×(1 + 此值·s)→ 封頂 +50%
+};
+/** 觸發門檻/一階高度 = 一個砲塔高(公尺,實體高不吃 COMBAT_SCALE);推導不手寫 */
+export const altTier = () => TARGET_H.tower;
+/** 高度差強度係數 s ∈ [0,1]:|dh| 由 1 個砲塔高線性升到 TIERS 個砲塔高封頂;未達門檻 = 0(無加成) */
+export const altScale = (dh) => {
+  const T = altTier(), a = Math.abs(dh || 0);
+  return Math.max(0, Math.min(1, (a - T) / (T * (ALTITUDE.TIERS - 1))));
+};
 // SQUAD:蜂群玩家 = 單架無人機(2026-07-17 起;舊制為 N 架小隊,現 N=1)。
 // 生存值(HP/護盾/護甲)= 機甲平均的 HP_F(80%);傷害 = 機甲全額(DMG=1,單機不折)。
 // 傷害折算仍住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
@@ -470,15 +481,29 @@ export const MORPH_BOMB = {
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 // ---- 重砲模式(巨炮;2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
-// 0.5 秒內傾洩重武器剩餘彈夾(此窗解除射速閘與電力門檻),傷害 ×DMG_F、射程 +20%;
+// 0.5 秒內傾洩重武器剩餘彈夾(DUR 窗解除射速閘與電力門檻),傷害 ×DMG_F、射程 ×RANGE_F;
 // 獨立於彈夾裝填的 30s 冷卻。伺服器以 h.barrageUntil 窗結算加成(見 sim.heroBarrage / _heroDmg / heroHit)。
-// DMG_F 2.0 = 巨炮強化 +100%(2026-07-22 使用者需求;巨炮砲彈另加氣旋噴射視覺,見 game.js _cycloneJet)。
-export const BARRAGE = { DUR: 0.5, DMG_F: 2.0, RANGE_F: 1.20, CD_S: 30 };
+// DMG_F 2.0 = 巨炮強化 ×2 傷害(2026-07-22 使用者需求;巨炮砲彈另加氣旋噴射視覺,見 game.js _cycloneJet)。
+// DMG_GRACE(2026-07-25 使用者回報「巨炮沒有傷害」修正):傾洩窗 DUR 是「多快能把彈夾打完」,
+//   但榴彈/火箭/飛彈是**拋射彈**,離膛後要飛一段才落點回報 heroBurst/heroLance —— 舊制傷害加成/射速閘/
+//   射程驗證全在**落點時刻**以 barrageUntil(DUR 窗)判定,彈體落地時窗早已過期 ⇒ ①2× 加成掉回原傷、
+//   ②射速閘重新生效讓同一輪傾洩的第 2 發起被擋(實測:一輪 3 發榴彈只有 1 發、且只造成原傷)。修正 =
+//   傷害/射速/電力/射程的加成窗延長 DMG_GRACE 秒涵蓋彈體飛行時間(_barragingDmg;彈夾此時已空且裝填中,
+//   不會有非傾洩的重武器射擊誤吃加成)。DUR 仍只管客戶端傾洩節奏,MUST NOT 用它判落點加成。
+export const BARRAGE = { DUR: 0.5, DMG_F: 2.0, RANGE_F: 1.20, CD_S: 30, DMG_GRACE: 3.5 };
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
   AR_K: 120,           // 護甲減免曲線常數
-  CRIT_X: 1.6,         // 預設爆擊倍率
+  CRIT_X: 1.6,         // 預設爆擊倍率(未指定 critX 的基準;heroWeapon 仍以 CRITX_MIN 夾下限)
+  // ---- 暴擊下限 + 升級成長(2026-07-25 使用者需求:所有(英雄)武器 crit ≥5% / critX ≥2.0)----
+  // 「根據武器類型和升級程度個別調整」:各武器原 crit/critX 保留為**類型基準**(狙擊高、機槍低),
+  // 於 heroWeapon() 夾下限後再依階級線性成長 —— 單一縫,MUST NOT 逐武器手寫第 4 階或改 32 角資料。
+  // 爆擊仍只作用於直擊武器(heroHit/heroLance _rollCrit);AoE(爆炸/扇形)與招式不爆(見 §req4)。
+  CRIT_MIN: 0.05,      // 暴擊率下限
+  CRITX_MIN: 2.0,      // 暴擊倍率下限(= 暴擊傷害 +100%)
+  CRIT_PER_LVL: 0.01,  // 每升一階暴擊率成長
+  CRITX_PER_LVL: 0.05, // 每升一階暴擊倍率成長
 };
 // G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
 // 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
@@ -855,7 +880,10 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
     rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
     mag: t(w.mag ?? 1),
     reload: t(w.cd ?? w.reload ?? 2),
-    r: t(w.r), pen: t(w.pen ?? 0), crit: t(w.crit ?? 0), critX: w.critX ?? VITALS.CRIT_X,
+    r: t(w.r), pen: t(w.pen ?? 0),
+    // 暴擊:類型基準(w.crit/critX)夾下限(CRIT_MIN/CRITX_MIN)後,依階級線性成長(見 VITALS 上方註)
+    crit: Math.max(VITALS.CRIT_MIN, t(w.crit ?? 0)) + VITALS.CRIT_PER_LVL * (lvl - 1),
+    critX: Math.max(VITALS.CRITX_MIN, w.critX ?? VITALS.CRIT_X) + VITALS.CRITX_PER_LVL * (lvl - 1),
     emp: t(w.emp ?? 0),
     charge: t(w.charge ?? 0), guide: !!w.guide, arc: t(w.arc ?? 0),
     fan: !!w.fan || w.type === 'plasma',   // 扇形武器(散彈 / 電漿):錐狀判定 + 越近越高衰減
@@ -982,7 +1010,8 @@ export const CHARACTERS = {
     visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'minimal' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
-      // crit MUST 為 0:s02 是 e2e 指定角,輕武器傷害要確定性(#INC-104;t01 同)
+      // crit 0 = 類型基準(重機槍低暴擊);2026-07-25 起 heroWeapon() 夾 CRIT_MIN 5% ⇒ 實戰 ≥5%。
+      // e2e 的 s02/t01 確定性傷害斷言改用 Math.random 樁固定不觸發暴擊(不再依賴 crit:0)。
       dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
       vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
     // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
@@ -1867,7 +1896,7 @@ GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
   // 英雄武器基準射程(scalar;heroWeapon 讀此 source ⇒ 玩家英雄與 NPC 基準一致縮;招式 range/vision 走 heroAbility 輸出縮)
   for (const c of Object.values(CHARACTERS)) for (const slot of ['light', 'heavy'])
     if (typeof c[slot]?.range === 'number') c[slot].range *= CS;
-  ALTITUDE.REF_M *= CS;
+  // 高度差空戰門檻 = 砲塔實體高(不吃 reach 縮放,與 AoE/實體尺寸同類);故此塊不縮 ALTITUDE。
   for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
 }

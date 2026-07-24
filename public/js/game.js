@@ -9,7 +9,7 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altF, isGunnery, TERRAIN_FX, SHAKE, TARGET_CLASS,
+  ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -4475,11 +4475,18 @@ export class BattleClient {
     return { id, def: this.wdef[id], st: this.wstate[id] };
   }
 
-  /** 高度制空(客戶端):高空無人機的輕/機槍武器對地射程拉遠(伺服器 _altRange 同步驗證);
-   *  以「離站立表面高度 _altAG」求 f(與回報 y 同源)。其餘機體 = 1。 */
+  /** 高度差空戰(客戶端;取代舊無人機制空):射手視線點高過「前方目標區地表」達門檻 → +射程
+   *  (較高方封頂 +ALTITUDE.RANGE)。伺服器 sim._altRange 以雙方視線點精算並複驗 —— 客戶端取
+   *  「基礎射程處前方地表」為目標高程近似,寬鬆(飛行/俯瞰坡下都放行),不擋合法遠射;過遠落點伺服器複驗擋掉。 */
   _altRangeMul(def) {
-    if (!def || !this.isDrone || !isGunnery(def)) return 1;
-    return 1 + ALTITUDE.RANGE * altF(this._altAG || 0);
+    if (!def || !this.side || this.dead || !this.terrain) return 1;
+    const eyeY = this.camera.position.y;                       // 視線點絕對高程(相機眼位)
+    const dir = this.camera.getWorldDirection(this._altFwd || (this._altFwd = new THREE.Vector3()));
+    const ref = def.range || 0;                                // 基礎射程處前方地表 ≈ 目標高程
+    const gy = this.terrain.heightAt(this.pos.x + dir.x * ref, this.pos.z + dir.z * ref);
+    const dh = eyeY - (gy + LOS.TGT_M);
+    if (dh <= 0) return 1;
+    return 1 + ALTITUDE.RANGE * altScale(dh);
   }
 
   /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
@@ -5879,6 +5886,7 @@ export class BattleClient {
         wet: this._env.code,   // 地形異常狀態(0 無 / 1 水 / 2 沼):伺服器結算沼澤扣血/水域凍結 CD 換彈。
                                // 視線高度制 + 騰空歸零(見 _envAt)⇒ 跳躍/蓄力跳躍期間回報 0 = 狀態解除
         lev,
+        ay: Math.round((this.pos.y + eye) * 10) / 10,   // 絕對視線高程(地形+跳躍+飛行;高度差空戰 sim._sightY 用)
       });
     }
     // 放開開火鍵:取消磁軌/穩定蓄力(不耗彈)、連射計數歸零(下次扣扳機重新起算 N 連發)

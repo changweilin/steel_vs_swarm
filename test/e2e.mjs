@@ -230,6 +230,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(sim.fieldPayload().mines.every((m) => m.length === 3), 'fieldPayload 地雷格式 [x,z,id]');
 
   log('— sim:武器克制 × 護甲減免 + 彈夾上限 —');
+  // 2026-07-25 起所有武器暴擊率 ≥5%(見 data.VITALS.CRIT_MIN),t01 輕武器已非 crit:0 →
+  // 這兩段「確定性傷害」斷言改以 Math.random 樁固定不觸發暴擊/閃避(0.999 ≥ 任何 crit ≤ 0.28)。
+  const _rnd0 = Math.random; Math.random = () => 0.999;
   const wl = heroWeapon('t01', 'light', 1);
   const dummy = sim._add({ kind: 'soldier', side: 'SWARM', x: rb.x + 10, z: rb.z, hp: UNITS.soldier.hp });
   sim.t += 1;   // 越過射速下限
@@ -248,6 +251,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
+  Math.random = _rnd0;
 
   log('— sim:單架無人機(共用玩家狀態 / 生存值 80% / 傷害同機甲 / 射程高約 1/8)—');
   const dr = sim.addHero('SWARM', 'p_d', 's01');

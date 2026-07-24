@@ -459,7 +459,7 @@ wss.on('connection', (ws) => {
       if (m.t === 'leaveRoom') { leaveRoom(client, room, clientId); room = null; client = null; }
       return;
     }
-    if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry, m.wet, m.lev); return; }
+    if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay); return; }
     if (m.t === 'aim' && client.side) { b.heroAim(clientId, m.on); return; }
     if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
     if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }

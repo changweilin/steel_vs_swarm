@@ -10,7 +10,7 @@ import {
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
-  ALTITUDE, altF, isGunnery, WATER, TERRAIN_FX, offGround, airUnit,
+  ALTITUDE, altScale, WATER, TERRAIN_FX, offGround, airUnit,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -1201,8 +1201,9 @@ export class BattleSim {
    */
   _gateFire(h, id, def, lenient) {
     const now = this.t;
-    // 重砲傾洩窗(非變形機甲重砲模式):此窗內重武器解除射速閘與電力門檻,傾洩剩餘彈夾
-    const barrage = id === 'heavy' && this._barraging(h);
+    // 重砲傾洩窗(非變形機甲重砲模式):此窗內重武器解除射速閘與電力門檻,傾洩剩餘彈夾。
+    // 用加成窗(DUR + GRACE)而非 DUR:拋射彈落點才回報 _gateFire,DUR 早過會讓同輪第 2 發起被射速閘擋掉。
+    const barrage = id === 'heavy' && this._barragingDmg(h);
     // 填彈完成 → 補滿
     if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
       h.ammo[id] = def.mag;
@@ -1238,11 +1239,18 @@ export class BattleSim {
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
       * this._buffMul(h, 'dmg')
-      * (def.id === 'heavy' && this._barraging(h) ? BARRAGE.DMG_F : 1);   // 重砲模式:重武器 +33%
+      * (def.id === 'heavy' && this._barragingDmg(h) ? BARRAGE.DMG_F : 1);   // 重砲模式:重武器 ×2(加成窗涵蓋彈體飛行)
   }
 
-  /** 重砲傾洩窗是否生效(非變形機甲重砲模式;_gateFire 解閘 / _heroDmg 加傷 / 射程驗證加程共用) */
+  /** 重砲傾洩窗(DUR)是否生效:純客戶端傾洩節奏用途,目前無伺服器結算讀它 —— 保留為語意錨。 */
   _barraging(h) { return (h?.barrageUntil || 0) > this.t; }
+
+  /** 重砲加成窗(DUR + DMG_GRACE):涵蓋拋射彈飛行時間,落點才回報的榴彈/火箭/飛彈仍吃 2× 傷害/解射速閘/
+   *  加程驗證(見 BARRAGE.DMG_GRACE)。彈夾此時已空且裝填中,不會有非傾洩重武器射擊誤吃加成。 */
+  _barragingDmg(h) {
+    const bu = h?.barrageUntil || 0;
+    return bu > 0 && bu + BARRAGE.DMG_GRACE > this.t;
+  }
 
   /** 空中判定:無人機/直升機/餌機/自殺機恆算飛行;其餘(機甲/變形/NPC)以高度 ≥ AA_MIN_ALT 論 */
   _airborne(e) {
@@ -1251,28 +1259,45 @@ export class BattleSim {
   }
 
   /**
-   * 高度制空「傷害」乘數(見 data.js ALTITUDE):只作用於輕武器/機槍類直射,對空↔對地反向。
-   *   高空無人機 → 地面:×(1 + DMG·f)  /  地面單位 → 高空無人機:×(1 − DMG·f)  /  其餘 = 1
+   * 機體「視線點」絕對高程(高度差空戰用,見 data.js ALTITUDE)。英雄取客戶端回報的絕對視線高程 ay
+   * (地形+跳躍+飛行皆含;缺值 = bot/測試,退回離地眼高近似);塔/主堡取砲位視線高(高聳工事);小兵取離地小視線高。
+   * 註:伺服器為 2D 平面無地形高程,NPC/塔以離地眼高近似(地形基準視為 0)—— 動態飛行/跳躍(英雄 ay)精確。
    */
-  _altDmg(shooter, target, def) {
-    if (!shooter || !target || !isGunnery(def)) return 1;
-    if (shooter.kind === 'drone' && !this._airborne(target)) return 1 + ALTITUDE.DMG * altF(shooter.y);
-    if (target.kind === 'drone' && !this._airborne(shooter)) return 1 - ALTITUDE.DMG * altF(target.y);
-    return 1;
+  _sightY(e) {
+    if (!e) return 0;
+    if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
+    if (e.hero) return e.ay != null ? e.ay : (e.y || 0) + LOS.EYE_M;
+    if (e.kind === 'heli' || e.decoy || e.kami) return (e.y || 0) + LOS.EYE_M;
+    return (e.y || 0) + LOS.TGT_M;
   }
 
-  /** 高度制空「射程」乘數(見 _altDmg):高空無人機對地拉遠、地面對高空無人機縮短 */
-  _altRange(shooter, target, def) {
-    if (!shooter || !target || !isGunnery(def)) return 1;
-    if (shooter.kind === 'drone' && !this._airborne(target)) return 1 + ALTITUDE.RANGE * altF(shooter.y);
-    if (target.kind === 'drone' && !this._airborne(shooter)) return 1 - ALTITUDE.RANGE * altF(target.y);
-    return 1;
+  /** 高度差「射程」乘數:較高的一方 +射程(封頂 +RANGE);同高/較低 = 1(見 data.js ALTITUDE) */
+  _altRange(shooter, target) {
+    if (!shooter || !target) return 1;
+    const dh = this._sightY(shooter) - this._sightY(target);
+    if (dh <= 0) return 1;                    // 只有較高的一方拉遠射程
+    return 1 + ALTITUDE.RANGE * altScale(dh);
   }
 
-  /** 爆擊擲骰(FPS:直擊武器限定,AoE 不爆);爆中推事件給客戶端跳橘字 */
+  /** 高度差「爆擊」乘數 {rate, dmg}(施加在 shooter→target 這一擊):較高方攻擊時爆率/爆傷↓、受擊時↑ */
+  _altCrit(shooter, target) {
+    if (!shooter || !target) return { rate: 1, dmg: 1 };
+    const dh = this._sightY(shooter) - this._sightY(target);
+    const s = altScale(dh);
+    if (s <= 0) return { rate: 1, dmg: 1 };
+    if (dh > 0) return { rate: 1 - ALTITUDE.ATK_CRIT_RATE * s, dmg: 1 - ALTITUDE.ATK_CRIT_DMG * s };  // 較高方向下攻擊
+    return { rate: 1 + ALTITUDE.RCV_CRIT_RATE * s, dmg: 1 + ALTITUDE.RCV_CRIT_DMG * s };              // 較高方受下方仰攻
+  }
+
+  /**
+   * 爆擊擲骰(FPS:直擊武器限定,AoE 不爆);爆中推事件給客戶端跳橘字。
+   * 高度差(_altCrit):爆率 ×rate;爆傷**加成部分**(critX − 1)×dmg —— 較高方攻擊時弱化、受擊時強化。
+   */
   _rollCrit(h, def, dmg, t) {
-    if (!def.crit || Math.random() >= def.crit) return dmg;
-    const v = dmg * (def.critX || VITALS.CRIT_X);
+    if (!def.crit) return dmg;
+    const ac = this._altCrit(h, t);
+    if (Math.random() >= def.crit * ac.rate) return dmg;
+    const v = dmg * (1 + ((def.critX || VITALS.CRIT_X) - 1) * ac.dmg);
     this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(v) });
     return v;
   }
@@ -1315,7 +1340,7 @@ export class BattleSim {
     return v;
   }
 
-  heroPos(pid, x, y, z, ry, wet, lev) {
+  heroPos(pid, x, y, z, ry, wet, lev, ay) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     // 瞬時移速(閃避判定用):this.t 只在 tick 前進(8Hz),同一 tick 內多次回報 dt=0 略過。
@@ -1324,6 +1349,8 @@ export class BattleSim {
     const dt = this.t - h._posT;
     if (dt > 0) { h._spd = Math.hypot(x - h.x, z - h.z) / dt; h._posT = this.t; }
     h.x = x; h.y = y; h.z = z; h.ry = ry;
+    // 絕對視線高程(地形+跳躍+飛行;高度差空戰 _sightY 用)—— 位置本就客戶端權威,ay 同屬輸入。缺值退回離地眼高近似。
+    if (Number.isFinite(ay)) h.ay = ay;
     // 領機身處環境(0 乾 / 1 水 / 2 沼;客戶端偵測回報 —— 位置本就客戶端權威,env 同屬輸入非狀態改寫)。
     // 環境改變即重置滯留計時(_wetT);沼澤扣血/停恢復、水域停電力/凍結 CD 換彈 皆在 tick 依此結算。
     const w = wet === 1 || wet === 2 ? wet : 0;
@@ -1342,14 +1369,20 @@ export class BattleSim {
    * 條件:目標是英雄機體 + 有效機動 > MOBILITY_MIN + 移動中;飛行單位額外加成。
    * 只有英雄機體具閃避(NPC 移速 ≤ 20,永遠不符合) ⇒ 玩家打小兵不受影響。
    */
-  _dodges(t) {
+  _dodges(t, shooter) {
     if (!t || !t.hero) return false;
     // 完美迴避(招式追加效果 dodge):生效期間直射武器必閃,不吃機動/移動門檻
     if (this._buffVal(t, 'dodge') > 0) return true;
     const flying = t.kind === 'drone' || (t.y || 0) >= GAME.AA_MIN_ALT;
     const mob = heroMobility(t.kind, CHARACTERS[t.ch]?.mods, flying);
     if (mob <= EVASION.MOBILITY_MIN || !this._isMoving(t)) return false;
-    return Math.random() < EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0);
+    let p = EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0);
+    // 高度差:目標比射手高過門檻 → +閃避率(較高方 +DODGE 封頂;見 data.js ALTITUDE)
+    if (shooter) {
+      const dh = this._sightY(t) - this._sightY(shooter);
+      if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);
+    }
+    return Math.random() < p;
   }
 
   /** 瞄準模式切換(按住右鍵):熱兵器(rocket/railgun/siege 等)需瞄準中才能開火 */
@@ -1384,13 +1417,13 @@ export class BattleSim {
     const marked = (h.markUntil || 0) > this.t;
     if (marked) h.markUntil = 0;
     // 閃避(輕武器直射):機動機體移動中可能整發閃開(僚機齊射仍各自擲骰)
-    if (!marked && wp.def.id === 'light' && this._dodges(t)) {
+    if (!marked && wp.def.id === 'light' && this._dodges(t, h)) {
       this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
       this._echo(h, t, wp.def);
       return;
     }
-    // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)
-    let dmg = this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(h, t, wp.def);
+    // 物理衰減:動能存速 / 大氣消光,按實際射擊距離折傷害(dmgFalloff 依 type 分模型)。高度差不改基礎傷害(見 §3)。
+    let dmg = this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3);
     if (marked) {
       dmg *= wp.def.critX || VITALS.CRIT_X;
       this.events.push({ e: 'crit', pid: h.pid, x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, v: Math.round(dmg) });
@@ -1420,8 +1453,8 @@ export class BattleSim {
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
       this.events.push({ e: 'shot', pid: b.pid, slot: def.id, from: [b.x, b.z], to: [t.x, t.z],
         ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: b.side });
-      if (def.id === 'light' && this._dodges(t)) continue;   // 閃避:僚機這一發也被閃開
-      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3) * this._altDmg(b, t, def), t);
+      if (def.id === 'light' && this._dodges(t, b)) continue;   // 閃避:僚機這一發也被閃開
+      const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
       this._damage(t, dmg, b, def.pen);
     }
@@ -1476,12 +1509,12 @@ export class BattleSim {
       this.events.push({ e: 'shot', pid, slot: wp.id, from: [h.x, h.z], to: [t.x, t.z],
         ty: (t.hero || t.decoy || t.kind === 'heli') ? Math.round(t.y || 0) : 0, side: h.side });
     }
-    if (wp.def.id === 'light' && this._dodges(t)) {
+    if (wp.def.id === 'light' && this._dodges(t, h)) {
       this.events.push({ e: 'dodge', x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
       this._echo(h, t, wp.def);
       return true;
     }
-    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(h, t, wp.def), t);
+    const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
     this._damage(t, dmg, h, wp.def.pen);
     // 直線貫穿(line 類重武器):bot 也吃同一條範圍規則 —— 主目標之後的「順路」目標依序衰減。
@@ -1495,8 +1528,7 @@ export class BattleSim {
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
-        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3)
-          * this._altDmg(h, k.t, wp.def) * LANCE.DECAY ** i;
+        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * LANCE.DECAY ** i;
         this._applyHitEmp(h, wp.def, k.t);
         this._damage(k.t, kd, h, wp.def.pen);
       }
@@ -1520,7 +1552,7 @@ export class BattleSim {
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
-    if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15 * (this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程)
+    if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15 * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程,加成窗涵蓋彈體飛行)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
     // bot 重武器「發射端」視覺(2026-07-22 規則 3):真人開火自帶 tracer 訊息轉播,
@@ -1569,13 +1601,13 @@ export class BattleSim {
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
         if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25
-            * (wp.id === 'heavy' && this._barraging(h) ? BARRAGE.RANGE_F : 1)) continue;   // 高度制空(散彈輕武器;重砲模式 +20%)
+            * (wp.id === 'heavy' && this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) continue;   // 高度制空(散彈輕武器;重砲模式 +20%)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
         if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(b, t, wp.def), b, wp.def.pen);
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3), b, wp.def.pen);
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -1651,7 +1683,7 @@ export class BattleSim {
     if (dist2d(h.x, h.z, ox, oz) > 12) return;
     const dl = Math.hypot(dx, dz, dy) || 1;
     dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
-    const rMul = this._barraging(h) ? BARRAGE.RANGE_F : 1;
+    const rMul = this._barragingDmg(h) ? BARRAGE.RANGE_F : 1;
     const max = Math.min(Math.max(0, +len), wp.def.range * 1.25 * rMul);
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     for (const b of this._bodies(h)) {
@@ -1663,8 +1695,7 @@ export class BattleSim {
         const { t, d3 } = hits[i];
         if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25 * rMul) continue;   // 高度制空
         const dmg = this._rollCrit(b, wp.def,
-          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * this._altDmg(b, t, wp.def)
-          * LANCE.DECAY ** i, t);
+          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
         this._damage(t, dmg, b, wp.def.pen);
       }
@@ -2692,10 +2723,10 @@ export class BattleSim {
           const wd = WEAPONS[u.wid];
           // 閃避:小兵的直射槍械(無爆風 r = 機槍/步槍)可被移動中的機動機體閃開;
           // 火箭/榴彈/塔砲(有 r 或塔/主堡)是 AoE / 制式火砲,不可閃。
-          if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target)) {
+          if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target, e)) {
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
-            this._damage(target, u.dmg * this._altDmg(e, target, wd), e, wd?.pen || 0);   // 高度制空:地面槍械對高空無人機減傷
+            this._damage(target, u.dmg, e, wd?.pen || 0);   // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
