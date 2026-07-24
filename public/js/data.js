@@ -1013,7 +1013,7 @@ export const CHARACTERS = {
   },
   s04: {
     side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
-    visual: { hue: 0x8fd14f, body: 'box', form: 'fixed', wing: 'zero', paint: 'flag' },
+    visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'flag' },  // 純黃:讓出黃綠,素色+盾徽
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
     light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [16, 14, 12],
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
@@ -1094,7 +1094,7 @@ export const CHARACTERS = {
   },
   s09: {
     side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
-    visual: { hue: 0x5a8a4a, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'flag' },
+    visual: { hue: 0xd0602f, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'flag' },  // 鏽橙:讓出綠,素色+盾徽
     mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
     light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: [18, 16, 14],
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
@@ -1260,7 +1260,7 @@ export const CHARACTERS = {
   },
   t07: {
     side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
-    visual: { hue: 0x6d7a68, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'camo' },
+    visual: { hue: 0x3fae4a, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'minimal' },  // 翡翠綠+雙色制式帶
     mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
     light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
@@ -1412,7 +1412,7 @@ export const CHARACTERS = {
   },
   m04: {
     side: 'MERC', kind: 'morph', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵可變機甲',
-    visual: { hue: 0xb59ce8, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'camo' },
+    visual: { hue: 0xd24fb4, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'totem' },  // 洋紅+圖騰徽:與夜豹(m08 紫)脫鉤,改素色+徽章
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 13 },
     light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
       dmg: [21, 26, 32], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
@@ -1427,7 +1427,7 @@ export const CHARACTERS = {
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰可變機甲',
-    visual: { hue: 0xe0a13a, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'tattoo' },
+    visual: { hue: 0x5551cc, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'tattoo' },  // 靛藍:讓出橙金,素色+刺青徽
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19 線圈化改裝・初速 1300m/s', type: 'rail', mv: 1300,
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,
