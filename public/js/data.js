@@ -1013,7 +1013,7 @@ export const CHARACTERS = {
   },
   s04: {
     side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
-    visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'flag' },  // 純黃:讓出黃綠,素色+盾徽
+    visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'hinomaru' },  // 純黃素色;雙翼正反面各一枚紅日
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
     light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [16, 14, 12],
       dmg: [34, 42, 52], rate: 2.2, mag: [7, 8, 10], reload: 2.6, range: 170, crit: 0.10, critX: 1.5,
@@ -1094,7 +1094,7 @@ export const CHARACTERS = {
   },
   s09: {
     side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
-    visual: { hue: 0xd0602f, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'flag' },  // 鏽橙:讓出綠,素色+盾徽
+    visual: { hue: 0xd0602f, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'split', split: 'shade' },  // 鏽橙同色系:反蔭(含翅膀)—— 面朝上=背深、面朝下=腹淺
     mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
     light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: [18, 16, 14],
       dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
@@ -1260,7 +1260,7 @@ export const CHARACTERS = {
   },
   t07: {
     side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
-    visual: { hue: 0x3fae4a, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'minimal' },  // 翡翠綠+雙色制式帶
+    visual: { hue: 0x3fae4a, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'split', split: 'y', splitAt: 0.63 },  // 翡翠綠同色系:人身(上)亮/馬身(下)暗
     mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
     light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
@@ -1427,7 +1427,7 @@ export const CHARACTERS = {
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '清算', machine: '「清算日」電戰可變機甲',
-    visual: { hue: 0x5551cc, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'tattoo' },  // 靛藍:讓出橙金,素色+刺青徽
+    visual: { hue: 0x5551cc, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'split', split: 'x', splitFlip: true },  // 靛藍同色系:機體右半(-x)亮/左半暗
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19 線圈化改裝・初速 1300m/s', type: 'rail', mv: 1300,
       dmg: [19, 24, 30], rate: 6, mag: [36, 44, 52], reload: 2.4, range: 200, crit: 0.06,

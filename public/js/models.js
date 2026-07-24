@@ -997,6 +997,7 @@ function buildFixedWing(side, vis, ch = null) {
     for (const sx of [-1, 1]) {
       // 橢圓低單翼:內翼厚弦 + 外翼收分上反(翼端主色識別帶)
       const inner = bx(tilt, span * 0.3, 0.09, 0.95, sx * span * 0.16, -0.16, 0.1, lite, { metalness: 0.5 });
+      inner.userData.hinomaru = true;   // 標記機翼面 → paint.js paintWingRoundel 於頂/底各蓋一枚紅日(雙翼正反面)
       const outer = bx(tilt, span * 0.22, 0.07, 0.62, sx * span * 0.4, -0.1, 0.02, lite, { metalness: 0.5 });
       outer.rotation.z = sx * -0.12;                                                   // 上反角
       outer.rotation.y = sx * 0.12;                                                    // 前緣微後掠(橢圓翼收分)

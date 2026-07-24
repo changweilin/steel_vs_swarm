@@ -354,10 +354,108 @@ function paintEmblemPlate(root, inv, tex, axis) {
 }
 
 /**
+ * 空間兩色分(split):同色系,逐頂點染「亮/暗」兩階,走頂點色(material.color = 白 × 頂點色)。
+ * ⇒ 分界不受 mesh 邊界限制、跨件一刀切;跨界三角形由頂點色內插成柔和接縫。發光識別條/透明件不動。
+ * 兩種判準:
+ *   位置分 split:'x'|'y'|'z' —— 依頂點在該軸的絕對位置切亮/暗(狼人左右、人馬上下)。
+ *   反蔭   split:'shade'    —— 依「面朝上/下」(頂點法線 y),朝上→暗、朝下→亮、側面→中間調。
+ *                             整機每個面(含薄翼的翼頂/翼底)各自 countershade,不看絕對高度。
+ * @param vis.splitAt 0..1(位置分:分界在該軸 bbox 的比例,預設 0.5);vis.splitFlip 反轉亮暗側。
+ */
+function paintAxisSplit(root, inv, vis) {
+  const shade = vis?.split === 'shade';
+  const ax = vis?.split === 'x' ? 0 : vis?.split === 'z' ? 2 : 1;
+  const key = ['x', 'y', 'z'][ax];
+  const frac = vis?.splitAt ?? 0.5;
+  const flip = !!vis?.splitFlip;
+  _c.set(vis?.hue ?? 0x9aa3ad).getHSL(_hsl);
+  const hi = new THREE.Color().setHSL(_hsl.h, Math.min(0.72, _hsl.s), 0.6);          // 亮階(同色系)
+  const lo = new THREE.Color().setHSL(_hsl.h, Math.min(0.85, _hsl.s * 1.15), 0.09);  // 暗階(同色系)
+  let plane = 0;
+  if (!shade) { _box.setFromObject(root); plane = _box.min[key] + frac * (_box.max[key] - _box.min[key]); }
+  const v = new THREE.Vector3();
+  const nm = new THREE.Matrix3();
+  root.traverse((o) => {
+    const m = paintMat(o);
+    if (!m) return;
+    const M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);   // mesh 局部 → 機體根
+    const pos = o.geometry.attributes.position;
+    let na = o.geometry.attributes.normal;
+    if (shade && !na) { o.geometry.computeVertexNormals(); na = o.geometry.attributes.normal; }
+    if (shade) nm.getNormalMatrix(M);
+    const col = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      let t;   // 0 → 亮(hi);1 → 暗(lo)
+      if (shade) {
+        v.fromBufferAttribute(na, i).applyMatrix3(nm).normalize();
+        const up = flip ? -v.y : v.y;                        // 面朝上量([-1,1])
+        t = Math.min(1, Math.max(0, (up + 0.4) / 0.8));      // 朝上→暗、朝下→亮、側面→中間調
+      } else {
+        v.fromBufferAttribute(pos, i).applyMatrix4(M);
+        t = ((v.getComponent(ax) >= plane) !== flip) ? 0 : 1;
+      }
+      col[i * 3] = hi.r + (lo.r - hi.r) * t;
+      col[i * 3 + 1] = hi.g + (lo.g - hi.g) * t;
+      col[i * 3 + 2] = hi.b + (lo.b - hi.b) * t;
+    }
+    o.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    m.color.set(0xffffff);                                   // 白底 × 頂點色 = 純亮/暗色(cel 明暗照舊疊)
+    m.vertexColors = true;
+    m.needsUpdate = true;
+  });
+  return root;
+}
+
+// 日之丸貼花(紅日:白邊 + 紅心;白邊確保任何機色上都讀得出)。單張快取。
+let _roundelTex = null;
+function roundelTexture() {
+  if (_roundelTex) return _roundelTex;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = TEX;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#f5f7fa';
+  ctx.beginPath(); ctx.arc(128, 128, 92, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c8102e';
+  ctx.beginPath(); ctx.arc(128, 128, 80, 0, Math.PI * 2); ctx.fill();
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;         // 圓外透明 → 露機身色、不重複
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return (_roundelTex = tex);
+}
+
+/**
+ * 零式:機身純色 + 於標記機翼(userData.hinomaru)各蓋一枚紅日。
+ * 每片翼各自置中投影(沿 Y 三平面 → 頂/底面都現)⇒ 雙翼正反面共四枚。face:null 不閘半球。
+ */
+function paintWingRoundel(root, inv) {
+  const tex = roundelTexture();
+  root.traverse((o) => {
+    if (!o.userData?.hinomaru) return;
+    const m = paintMat(o);
+    if (!m) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    const Ml = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    _mb.copy(o.geometry.boundingBox).applyMatrix4(Ml);
+    _mb.getSize(_msz); _mb.getCenter(_mc);
+    const ews = 0.9 * Math.min(_msz.x, _msz.z);              // 圓形不變形:x/z 同 scale,取窄邊(翼弦)當日徑基準
+    const scale = 1 / ews;
+    const pre = new THREE.Matrix4().makeTranslation(
+      0.5 * ews - _mc.x, 0.5 * ews - _mc.y, 0.5 * ews - _mc.z);
+    const M = new THREE.Matrix4().multiplyMatrices(pre, Ml);
+    // flat = +Y:只在翼頂/翼底(與 Y 軸平行的面)顯現,側緣不溢色 → 正反面各一枚、機腹不沾紅。
+    applyPaint(m, { tex, matrix: M, scale, flat: new THREE.Vector3(0, 1, 0) });
+  });
+  return root;
+}
+
+/**
  * 把角色花紋塗到已建好的機體上(fitToHeight / outlinify 之前呼叫)。
  * 三條路徑(以 vis.paint 決定):
  *   solid    —— 不上漆,露出角色裝甲色。
  *   natflag  —— 逐件實色重染(paintNationalLivery,80/20 體積分主色/配色)。
+ *   split    —— 同色系空間兩色分(頂點色:人馬上下 / 狼人左右 / 獵鷹前後)。
+ *   hinomaru —— 純色機身 + 標記機翼頂/底各一枚紅日(零式)。
  *   徽記      —— 只貼一片最平的外緣板(paintEmblemPlate),其餘純色。
  *   覆蓋型    —— 迷彩/雙色/櫻吹雪整機三平面平鋪。
  * @param root  builder 回傳的 Group(尚未進場景;matrixWorld = 自身局部座標)
@@ -370,6 +468,8 @@ export function paintUnit(root, vis, side, tone = 'light') {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
   if (want === 'natflag') return paintNationalLivery(root, inv, vis?.flag, pal);
+  if (want === 'split') return paintAxisSplit(root, inv, vis);
+  if (want === 'hinomaru') return paintWingRoundel(root, inv);
 
   const pattern = PATTERNS[want] ? want : 'minimal';
   const P = PATTERNS[pattern];

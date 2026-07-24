@@ -57,6 +57,9 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 直立機甲取 +Z 胸甲、橫置飛行器取 +Y 頂面)的夾角把貼花閘在該半球,避免三平面投影
   // 在機體背面/底面鏡像出第二枚徽記(使用者要求「一個完整的」)。
   if (paint?.face) defines.CEL_PAINT_GATE = '';
+  // 平面閘(hinomaru):只在與 paint.flat 軸「平行」的面(頂+底兩面,|N·軸| 大)顯現 →
+  // 抑制三平面投影在薄件側緣(垂直面)的溢色。與 GATE(單一半球)互斥。
+  if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
   mat.defines = defines;
   mat.userData.celOpts = { metal, rim, wash, moss, cool, paint };
@@ -70,7 +73,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uPaintTex = { value: paint?.tex ?? null };
     shader.uniforms.uPaintM = { value: paint?.matrix ?? new THREE.Matrix4() };
     shader.uniforms.uPaintS = { value: paint?.scale ?? 1 };
-    shader.uniforms.uPaintFace = { value: paint?.face ?? new THREE.Vector3(0, 0, 1) };
+    shader.uniforms.uPaintFace = { value: paint?.face ?? paint?.flat ?? new THREE.Vector3(0, 0, 1) };
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', `
         #ifdef CEL_WP
@@ -144,6 +147,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           // 只在朝 uPaintFace 的半球顯現;背面/底面淡出 → 全機唯一一枚徽記。
           pa *= smoothstep( 0.02, 0.4, dot( normalize( vPaintN ), uPaintFace ) );
           #endif
+          #ifdef CEL_PAINT_FLAT
+          // 只在與 uPaintFace 軸平行的面(頂+底,|N·軸| 大)顯現 → 薄件側緣不溢色。
+          pa *= smoothstep( 0.5, 0.82, abs( dot( normalize( vPaintN ), uPaintFace ) ) );
+          #endif
           diffuseColor.rgb = mix( diffuseColor.rgb, pc.rgb / max( pc.a, 0.001 ), pa );
         }
         #endif`)
@@ -194,7 +201,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         void main() {`);
   };
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${rim}`;
   return mat;
 }
 
