@@ -360,14 +360,77 @@ const GIANT_DEFS = {
   ] },
 };
 
-// ---- 巨木表面特徵(鳥巢/樹屋/附生植物/垂藤):與植被同管線 InstancedMesh ----
+// 神木吃四季:綠色主導(g 為最大通道)的樹冠/苔蘚/地衣零件自動標記 'gleaf' → 季節疊色
+// (保留樹種色相與冠層層次);紅褐樹幹/板根/剝皮絲帶(R 主導)不動。>65m 巨樹皆常綠,
+// 故用常綠專屬 tint(SEASON_GIANT_TINT,非闊葉橘紅),見 seasonColor。單一縫、免逐零件手標。
+for (const def of Object.values(GIANT_DEFS)) for (const p of def.parts) {
+  const c = p.c; if (c == null) continue;
+  const r = c >> 16 & 255, g = c >> 8 & 255, b = c & 255;
+  if (g > r && g >= b) p.key = 'gleaf';
+}
+
+// ---- 巨木表面特徵(鳥巢/山蘇/蟻窩/蜂窩/樹屋/垂藤):與植被同管線 InstancedMesh ----
 // 放置時把「樹幹半徑 + 掛載高度」烤進實例座標(item.x/y/z),零件只做小幅局部偏移;
 // item.s ≈ 1 與樹齡脫鉤 → 特徵在任何體格的巨木上世界尺寸恆定。
+//
+// 支撐枝單一縫 bough():近水平側枝(faceOut,local +x = 徑向外),根粗梢細 + 梢端雙叉上揚
+// + 葉簇(key:'foliage' 吃季節色)。巢/蕨/窩/蜂巢/藤枝皆疊在同一份枝相上,payload 各自加掛;
+// 改枝的粗細/分叉/葉量只需動這裡一處。梢端雙叉靠 rz=π/2+δ(上揚)× rx=±φ(左右分)splay。
+const bough = () => [
+  { g: cyl(0.28, 0.13, 2.8, 6), y: 0, px: 0.65, rz: Math.PI / 2, c: 0x5a4632 },                                    // 主枝(根粗梢細)
+  { g: cyl(0.12, 0.05, 1.5, 5), y: 0.2, px: 1.55, pz: 0.12, rx: 0.8, rz: Math.PI / 2 + 0.35, c: 0x5a4632 },        // 梢上叉(+z 上揚)
+  { g: cyl(0.12, 0.05, 1.4, 5), y: 0.2, px: 1.55, pz: -0.12, rx: -0.85, rz: Math.PI / 2 + 0.3, c: 0x5a4632 },      // 梢下叉(−z 上揚)
+  { g: cyl(0.09, 0.04, 1.1, 4), y: 0.32, px: 2.05, rz: Math.PI / 2 + 0.22, c: 0x5a4632 },                          // 中央續枝
+  { g: ico(0.75), y: 0.7, px: 2.5, pz: 0.42, sy: 0.8, key: 'foliage', c: 0x4f7a3c },                               // 梢端葉簇(季節色)
+  { g: ico(0.66), y: 0.62, px: 2.5, pz: -0.42, sy: 0.8, key: 'foliage', c: 0x4f7a3c },
+  { g: ico(0.6), y: 0.95, px: 2.75, sy: 0.8, key: 'foliage', c: 0x4f7a3c },
+];
 const GIANT_DECO = {
-  gnest:     { parts: [{ g: new THREE.TorusGeometry(0.85, 0.3, 5, 8), y: 0.15, rx: Math.PI / 2, c: 0x6a5138 },
-                       { g: ico(0.2), y: 0.26, px: 0.25, c: 0xf2ead6 },
-                       { g: ico(0.2), y: 0.26, px: -0.2, pz: 0.2, c: 0xf6efdc },
-                       { g: cone(0.28, 0.75, 4), y: 0.62, pz: -0.35, c: 0x4a586a }] },       // 停棲的鳥
+  // 鳥巢生在枝梢叉口(px≈1.25),不貼主幹;巢杯/蛋/鳥疊在 bough 上。
+  gnest:     { parts: [...bough(),
+                       { g: new THREE.TorusGeometry(0.85, 0.3, 5, 8), y: 0.2, px: 1.25, rx: Math.PI / 2, c: 0x6a5138 },
+                       { g: ico(0.2), y: 0.3, px: 1.45, c: 0xf2ead6 },
+                       { g: ico(0.2), y: 0.3, px: 1.08, pz: 0.18, c: 0xf6efdc },
+                       { g: cone(0.28, 0.75, 4), y: 0.66, px: 1.05, pz: -0.32, c: 0x4a586a }] },      // 停棲的鳥
+  // 山蘇(鳥巢蕨):枝上腐植土墊(根系聚積腐植)+ 蓮座長葉。funnel 正解 = 葉「底聚頂展」:
+  // 每片葉底端聚於共同基點 B=(1.2,0.35,0),沿葉軸 d 外展上翹(中心 = B + (h/2)·d,故不中間交叉)。
+  // 方位角 a → tz=-cos·k, tx=sin·k;葉軸 d=(-sin tz, cos tz·cos tx, cos tz·sin tx),k 控展開角。
+  epiphyte:  { parts: [...bough(),
+                       { g: ico(0.62), y: 0.12, px: 1.2, sy: 0.42, c: 0x4a3b28 },                                  // 腐植土墊
+                       { g: ico(0.46), y: 0.16, px: 0.86, sy: 0.42, c: 0x40331f },
+                       { g: ico(0.42), y: 0.4, px: 1.2, sy: 0.5, key: 'foliage', c: 0x4f7a3c },                    // 蓮座心(葉基叢)
+                       ...Array.from({ length: 11 }, (_, i) => {
+                         const a = i / 11 * Math.PI * 2, k = 0.72, h = 1.55 - (i % 3) * 0.12;
+                         const tz = -Math.cos(a) * k, tx = Math.sin(a) * k;
+                         const dx = -Math.sin(tz), dy = Math.cos(tz) * Math.cos(tx), dz = Math.cos(tz) * Math.sin(tx);
+                         return { g: cone(0.13, h, 4), px: 1.2 + dx * h / 2, y: 0.35 + dy * h / 2, pz: dz * h / 2,
+                                  rx: tx, rz: tz, key: 'foliage', c: [0x4f7a3c, 0x5c8a46, 0x567a40][i % 3] };
+                       })] },
+  // 蟻窩:褐色紙質蟻碳窩裹住枝身中段
+  antnest:   { parts: [...bough(),
+                       { g: ico(0.62), y: 0.05, px: 0.95, sy: 1.15, c: 0x4a3524 },
+                       { g: ico(0.4), y: 0.1, px: 1.35, sy: 1.1, c: 0x53402c },
+                       { g: ico(0.34), y: -0.05, px: 0.7, sy: 1.05, c: 0x40301f }] },
+  // 蜂窩:垂吊於枝下(y<0),頂錐接枝、巢體垂墜;底部露出六角蜂巢面(comb,朝下)。
+  // comb = 六角柱蜂窩排列:中央 1 + 環 6,環距 = 兩倍邊心距(≈0.26)恰好貼合成網格。
+  beehive:   { parts: [...bough(),
+                       { g: cone(0.5, 0.7, 7), y: -0.35, px: 1.35, c: 0xb99860 },                                  // 頂錐(接枝)
+                       { g: ico(0.56), y: -0.92, px: 1.35, sy: 1.15, c: 0xc7a56b },                                // 巢體(紙質外殼)
+                       { g: cyl(0.58, 0.5, 0.28, 7), y: -1.52, px: 1.35, c: 0xbf9c63 },                            // 巢底承盤
+                       ...Array.from({ length: 7 }, (_, i) => {
+                         const a = (i - 1) / 6 * Math.PI * 2, r = i === 0 ? 0 : 0.26;
+                         return { g: cyl(0.145, 0.145, 0.2, 6), y: -1.72,
+                                  px: 1.35 + Math.cos(a) * r, pz: Math.sin(a) * r,
+                                  c: i % 2 ? 0xd9b869 : 0xcdaa5c };
+                       }),
+                       { g: ico(0.07), y: -1.2, px: 1.35, pz: 0.56, c: 0x2a2018 }] },                              // 巢口
+  // 一般葉枝:只有 bough(豐富枝相);vinebranch 再垂掛攀藤
+  branch:    { parts: bough() },
+  vinebranch:{ parts: [...bough(),
+                       { g: cyl(0.05, 0.09, 3.2, 4), y: -1.5, px: 1.7, pz: 0.3, c: 0x567a40 },                     // 垂藤
+                       { g: cyl(0.04, 0.07, 2.4, 4), y: -1.1, px: 2.3, pz: -0.2, c: 0x5c8a46 },
+                       { g: ico(0.28), y: -2.9, px: 1.7, pz: 0.3, sy: 0.7, key: 'foliage', c: 0x4f7a3c },          // 藤端葉
+                       { g: ico(0.22), y: -2.1, px: 2.3, pz: -0.2, sy: 0.7, key: 'foliage', c: 0x5c8a46 }] },
   treehouse: { parts: [{ g: new THREE.BoxGeometry(3.6, 0.4, 3.6), y: 0, c: 0x7a5a3c },       // 平台
                        { g: new THREE.BoxGeometry(2.2, 1.9, 2.0), y: 1.15, c: 0x8a6a48 },    // 小屋
                        { g: cone(2.0, 1.4, 4), y: 2.8, c: 0x6e4a38 },                        // 屋頂
@@ -375,10 +438,7 @@ const GIANT_DECO = {
                        { g: new THREE.BoxGeometry(0.5, 4.5, 0.14), y: -2.4, pz: 1.5, c: 0x6a4e34 },   // 垂降木梯
                        { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: 1.2, c: 0x6a4e34 },         // 斜撐
                        { g: cyl(0.14, 0.6, 1.4, 4), y: -0.9, px: -1.2, c: 0x6a4e34 }] },
-  epiphyte:  { parts: [{ g: ico(0.95), y: 0, sy: 0.5, c: 0x4f7a3c },                         // 鳥巢蕨簇
-                       { g: ico(0.55), y: 0.1, px: 0.6, sy: 0.55, c: 0x5c8a46 },
-                       { g: cone(0.5, 1.6, 5), y: -0.9, rx: Math.PI, c: 0x567a40 }] },       // 垂根
-  vine:      { parts: [{ g: cyl(0.07, 0.14, 7, 4), y: -3.5, c: 0x567a40 },                   // 垂掛藤蔓
+  vine:      { parts: [{ g: cyl(0.07, 0.14, 7, 4), y: -3.5, c: 0x567a40 },                   // 主幹垂掛藤蔓
                        { g: ico(0.4), y: -7, sy: 0.6, c: 0x4f7a3c },
                        { g: ico(0.3), y: -4.6, px: 0.3, sy: 0.6, c: 0x5c8a46 }] },
 };
@@ -417,21 +477,29 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       trunks.push([gx, gz, def.r * s + 8]);       // 巨幹半徑可 >10m 網格;+8 淨距 = 樹冠不貼建物牆面
       // 巨木表面特徵:掛在樹幹側面(幹半徑隨高度收窄),世界尺寸與樹齡脫鉤
       const trunkR = (yy) => def.r * s * (1 - 0.72 * yy / (def.h * s));
-      const hang = (dtype, frac, ds) => {
+      const hang = (dtype, frac, ds, faceOut = false) => {
         const ha = rnd() * Math.PI * 2;
         const hy = def.h * s * frac;
-        const rr = trunkR(hy) + 0.3;
+        // faceOut:錨點落在樹皮表面、零件 local +x 指徑向外(枝根埋入、巢懸枝梢)
+        const rr = trunkR(hy) + (faceOut ? 0 : 0.3);
+        const jry = rnd() * Math.PI * 2;   // 保留亂數消耗序(確定性:faceOut 也照抽不跳號)
         (items[dtype] ??= []).push({
           x: gx + Math.cos(ha) * rr, y: gy + hy, z: gz + Math.sin(ha) * rr,
-          s: ds, ry: rnd() * Math.PI * 2,
+          s: ds, ry: faceOut ? -ha : jry,
         });
       };
-      // 掛載高度停在樹冠底緣以下(各樹種冠層約自 40% 樹高起),特徵才不被樹冠吞掉
-      if (rnd() < 0.4) hang('gnest', 0.28 + rnd() * 0.14, 0.9 + rnd() * 0.7);
+      // 掛載高度停在樹冠底緣以下(各樹種冠層約自 40% 樹高起),特徵才不被樹冠吞掉;
+      // 巢/蕨/窩/蜂巢/枝 皆 faceOut 生於近水平側枝,樹屋維持平台式(自帶斜撐)。
+      if (rnd() < 0.4) hang('gnest', 0.28 + rnd() * 0.14, 0.9 + rnd() * 0.7, true);
+      if (rnd() < 0.35) hang('epiphyte', 0.24 + rnd() * 0.2, 0.85 + rnd() * 0.6, true);   // 山蘇(鳥巢蕨)
+      if (rnd() < 0.16) hang('antnest', 0.3 + rnd() * 0.12, 0.9 + rnd() * 0.5, true);     // 蟻窩
+      if (rnd() < 0.2) hang('beehive', 0.32 + rnd() * 0.12, 0.85 + rnd() * 0.5, true);    // 蜂窩(垂吊)
       if (rnd() < 0.2) hang('treehouse', 0.16 + rnd() * 0.14, 0.9 + rnd() * 0.4);
-      const nEp = Math.floor(rnd() * 3);
-      for (let e = 0; e < nEp; e++) hang('epiphyte', 0.12 + rnd() * 0.28, 0.8 + rnd() * 0.8);
-      if (rnd() < 0.5) hang('vine', 0.38 + rnd() * 0.12, 0.8 + rnd() * 0.6);
+      // 一般葉枝(豐富枝相):1~2 根,部分隨機再掛攀藤
+      const nBr = 1 + Math.floor(rnd() * 2);
+      for (let b = 0; b < nBr; b++)
+        hang(rnd() < 0.45 ? 'vinebranch' : 'branch', 0.2 + rnd() * 0.32, 0.85 + rnd() * 0.6, true);
+      if (rnd() < 0.35) hang('vine', 0.38 + rnd() * 0.12, 0.8 + rnd() * 0.6);   // 主幹垂藤(保留)
       added++; trees++;
     }
     for (const [tx, tz, tr] of trunks) blockArea(blocked, tx, tz, tr);   // 建物/小植被避開整根巨幹
@@ -454,6 +522,10 @@ const NATURE_MANIFEST = {
 };
 // 葉片的季節色偏(乘在貼圖上;樹幹不動)
 const SEASON_LEAF_TINT = { spring: 0xd9ffd0, summer: 0xffffff, autumn: 0xffab5e, winter: 0xc9d6da };
+// 神木常綠樹冠季節疊色(乘在樹種色上;常綠不轉橘紅 → 春嫩黃綠、夏原色、秋偏金、冬霜青)
+const SEASON_GIANT_TINT = { spring: 0xe4f2be, summer: 0xffffff, autumn: 0xd8b06a, winter: 0xb2c2c6 };
+const mulHex = (a, b) => ((((a >> 16 & 255) * (b >> 16 & 255) / 255) | 0) << 16)
+  | ((((a >> 8 & 255) * (b >> 8 & 255) / 255) | 0) << 8) | (((a & 255) * (b & 255) / 255) | 0);
 
 /** gltf → 正規化零件(高度=1、底部貼地),材質轉 toon 並保留貼圖 */
 function extractNatureParts(gltf, season) {
@@ -545,6 +617,8 @@ function seasonColor(key, fixed, season) {
   if (key === 'foliage') return s.foliage;
   if (key === 'grass') return s.grass;
   if (key === 'conifer') return season === 'winter' ? 0x8fa89a : 0x2f6b34;
+  // 'gleaf' = 神木樹冠:疊季節 tint 在樹種原色上(保留色相/層次,常綠不轉橘紅)
+  if (key === 'gleaf') return mulHex(fixed ?? 0x4f7a3c, SEASON_GIANT_TINT[season] ?? 0xffffff);
   return fixed ?? 0x777777;
 }
 
