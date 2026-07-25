@@ -24,7 +24,8 @@ import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, remove
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, HELP } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
+import { installTouchUI, TOUCH, saveTouchPrefs, applyLefty } from './mobile.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -85,12 +86,17 @@ const app = {
   roomPoll: null,
 };
 
+// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape / .touch-lefty,
+// 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
+const TOUCH_UI = installTouchUI();
+
 // 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
 app.audio = new GameAudio();
 app.audio.setScene('menu');
 // UI 點按音(委派;同時是解鎖手勢的一環)。真實按鈕才響,避免整頁亂點刷音。
+// 觸控操控層的戰鬥鈕(射擊/瞄準/招式…)排除在外 —— 那些有自己的武器音效,再疊 UI 音會變成連發噪音。
 document.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('.btn, button')) app.audio?.ui('click');
+  if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
 
 function show(screen) {
@@ -1678,10 +1684,16 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
-  // 操作提示唯一來源 = help.js CONTROLS_BY_KIND(說明頁與此共用)
+  // 操作提示唯一來源 = help.js(桌機 CONTROLS_BY_KIND / 觸控版 TOUCH_CONTROLS;說明頁與此共用)
   const ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
-  $('pauseHelp').textContent = `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
-  toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
+  $('pauseHelp').textContent = TOUCH_UI
+    ? `${TOUCH_CONTROLS[ctrlKey]} ・ ☰ 開戰場選單`
+    : `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
+  // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
+  if (TOUCH_UI) $('shopHint').textContent = '';
+  toast(TOUCH_UI
+    ? '左拇指拖曳移動 ・ 右拇指射擊 ・ 空處拖曳轉視角 ・ ☰ 選單(可開陀螺儀)'
+    : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4600);
 }
 
 function makeHud() {
@@ -1825,8 +1837,14 @@ function makeHud() {
       const el = $('civPrompt');
       if (!info) { el.classList.remove('on'); return; }
       const s = sideInfo(info.cs);
+      // 觸控版:鍵位提示直接換成兩顆 data-act 鈕(靠近才存在 ⇒ 離開範圍隨提示一起收,不留孤兒鈕)。
+      // 動作照舊走 BattleClient._cmd,與桌機 G/H 同一個派發縫。
+      const btn = (act, t) => `<button class="civ-btn" type="button" data-act="${act}">${t}</button>`;
+      const keys = TOUCH_UI
+        ? (info.follow ? `跟隨中 ${btn('civAway', '驅趕')}` : `${btn('civFollow', '跟隨')}${btn('civAway', '驅趕')}`)
+        : (info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕');
       el.innerHTML = `<span class="civ-fac" style="color:${s.color}">◈ ${esc(s.name)}平民 ${info.self ? '(我方)' : '(敵方)'}</span>`
-        + `<span class="civ-hint">${info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕'}</span>`;
+        + `<span class="civ-hint">${keys}</span>`;
       el.classList.add('on');
     },
     hitmark: () => {
@@ -1967,6 +1985,14 @@ function syncSettingsUi() {
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
   }
   setSwitch('setLowPower', localStorage.getItem('svs_lowpower') === '1');
+  // 觸控/陀螺儀(觸控版才顯示;開關真值 = mobile.js TOUCH,陀螺儀是否真的在跑以 TouchControls 為準)
+  setSwitch('setGyro', !!app.battle?.touch?.gyro?.active || (TOUCH.gyro && !app.battle));
+  setSwitch('setGyroInv', TOUCH.gyroInvert);
+  setSwitch('setLefty', TOUCH.lefty);
+  setSwitch('setHaptic', TOUCH.haptic);
+  const gs = $('setGyroSens'), ls = $('setLookSens');
+  if (gs) { gs.value = String(Math.round(TOUCH.gyroSens * 100)); $('setGyroSensVal').textContent = `${gs.value}%`; }
+  if (ls) { ls.value = String(Math.round(TOUCH.lookSens * 100)); $('setLookSensVal').textContent = `${ls.value}%`; }
 }
 bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
 bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
@@ -1981,6 +2007,26 @@ $('setSfxVol')?.addEventListener('input', (e) => {
 $('setBgmVol')?.addEventListener('input', (e) => {
   const v = Number(e.target.value); $('setBgmVal').textContent = `${v}%`;
   app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch('setBgmOn', true); }
+});
+
+// ── 設定:觸控 / 陀螺儀(真值住 mobile.js TOUCH;此處只是 UI 委派)──
+// 陀螺儀開關 MUST 經 TouchControls.setGyro() —— iOS 13+ 需在使用者手勢中要求權限,
+// 且拒絕時要能把開關扳回關閉(直接寫 TOUCH.gyro 會出現「開著但沒在動」的假狀態)。
+bindSwitch('setGyro', async (on) => {
+  const tc = app.battle?.touch;
+  if (tc) { const ok = await tc.setGyro(on); setSwitch('setGyro', ok); return; }
+  TOUCH.gyro = on; saveTouchPrefs();   // 尚未進戰場:只記偏好,進場時自動套用
+});
+bindSwitch('setGyroInv', (on) => { TOUCH.gyroInvert = on; saveTouchPrefs(); });
+bindSwitch('setHaptic', (on) => { TOUCH.haptic = on; saveTouchPrefs(); });
+bindSwitch('setLefty', (on) => applyLefty(on));
+$('setGyroSens')?.addEventListener('input', (e) => {
+  const v = Number(e.target.value); $('setGyroSensVal').textContent = `${v}%`;
+  TOUCH.gyroSens = v / 100; saveTouchPrefs();
+});
+$('setLookSens')?.addEventListener('input', (e) => {
+  const v = Number(e.target.value); $('setLookSensVal').textContent = `${v}%`;
+  TOUCH.lookSens = v / 100; saveTouchPrefs();
 });
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──

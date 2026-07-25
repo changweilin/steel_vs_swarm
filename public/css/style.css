@@ -1432,3 +1432,363 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   transition: background-image 0.5s ease-in-out;
 }
 
+
+/* ============================================================================
+   手機 / 平板:觸控操控層 + 直式(ori-portrait)/ 橫式(ori-landscape)版型特化
+   ----------------------------------------------------------------------------
+   啟用條件:body.touch-ui(由 js/mobile.js installTouchUI() 依裝置判定掛上;
+   localStorage svs_touchui='1' 可在桌機強制驗版型)。設計原則:
+     ① 3D 視野是主角 —— 控件一律半透明、貼四角,中央 1/3 與準星四周不放任何實體件。
+     ② 拇指可達 —— 觸控目標 ≥ 44px;左拇指移動、右拇指射擊/瞄準,招式列貼右下拇指弧。
+     ③ 不做第二套 HUD —— 招式/填彈鈕就是既有 .ab-box / .wpn-box(名稱與 CD 已在其中),
+        只放大並開 pointer-events;MUST NOT 另做一份會與 HUD 分家的鈕。
+     ④ 視野角度 MUST NOT 隨版型改(全機種 fov 68,見 /CLAUDE.md A8)——
+        直式只是水平視野較窄,故以 .tl-rotate 建議橫握,而不是偷偷改 FOV。
+   安全區:一律以 env(safe-area-inset-*) 內縮(挖孔/劉海/手勢條)。
+   ============================================================================ */
+
+body.touch-ui {
+  --tl-sl: env(safe-area-inset-left, 0px);
+  --tl-sr: env(safe-area-inset-right, 0px);
+  --tl-sb: env(safe-area-inset-bottom, 0px);
+  --tl-st: env(safe-area-inset-top, 0px);
+  --tl-stick-r: 62px;       /* 蘑菇頭半徑(JS 以 offsetWidth/2 讀取同一個值,勿只改一邊)*/
+  --tl-fire: 96px;          /* 射擊鈕直徑 */
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-ui #game { touch-action: none; }
+body.touch-ui #gameCanvas { cursor: default; }
+body.touch-ui [hidden] { display: none !important; }
+/* 桌機隱藏觸控專屬設定;觸控版隱藏鍵鼠專屬提示 */
+.touch-only { display: none; }
+body.touch-ui .touch-only { display: flex; }
+body.touch-ui .set-sub.touch-only { display: block; }
+body:not(.touch-ui) .touch-layer { display: none; }
+.set-sub {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 3px; color: var(--railW);
+  border-bottom: 1px solid rgba(var(--railW-rgb), 0.3); padding-bottom: 3px; margin-top: 4px;
+}
+
+/* ---------- 觸控層骨架 ---------- */
+/* z 9:MUST 壓在 HUD(10)**之下** —— #tlLook 是整屏的拖曳視角層,若疊在 HUD 上會吃掉
+   被特化成按鈕的 HUD 方塊(.ab-box / .wpn-box)的點擊。HUD 其餘部件本來就 pointer-events:none,
+   事件會直接穿透到本層,故壓在下面不影響操作;疊層(商店/陣亡/選單 20+)照舊完全蓋掉控件。 */
+.touch-layer { position: absolute; inset: 0; z-index: 9; pointer-events: none; }
+.tl-look { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
+
+/* 虛擬蘑菇頭作用區:浮動原點(手指落點即圓心)。區域本身透明,只有落指才顯示圓盤 */
+.tl-zone { position: absolute; pointer-events: auto; touch-action: none; }
+.tl-stick {
+  position: absolute; left: 50%; top: 50%; margin: 0;
+  width: calc(var(--tl-stick-r) * 2); height: calc(var(--tl-stick-r) * 2);
+  transform: translate(-50%, -50%);
+  opacity: 0.28; transition: opacity 0.12s;
+}
+.tl-stick.on { transform: none; opacity: 1; }   /* 落指後由 JS 寫 left/top(相對作用區),不再置中 */
+.tl-stick .tl-ring {
+  position: absolute; inset: 0; border: 2px solid rgba(var(--railS-rgb), 0.55); border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(6, 10, 15, 0.34) 60%, rgba(var(--railS-rgb), 0.14) 100%);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.5);
+}
+.tl-knob {
+  position: absolute; left: 50%; top: 50%; width: 46%; height: 46%;
+  margin: -23% 0 0 -23%;
+  border: 2px solid var(--railS-hot); border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, rgba(var(--railS-rgb), 0.85), rgba(8, 14, 20, 0.9) 78%);
+  box-shadow: 0 0 14px rgba(var(--railS-rgb), 0.45);
+}
+.tl-zone-hint {
+  position: absolute; left: 0; right: 0; bottom: 4px; text-align: center;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--dim);
+  line-height: 1.5; opacity: 0.75; pointer-events: none;
+}
+.tl-zone-hint i { font-size: 9px; opacity: 0.7; }
+.tl-stick.on ~ .tl-zone-hint { opacity: 0; }
+
+/* ---------- 動作鈕 ---------- */
+.tl-cluster { position: absolute; pointer-events: none; }
+.tl-btn, .tl-tool {
+  pointer-events: auto; touch-action: none; cursor: pointer;
+  font: inherit; color: var(--text);
+  background: rgba(6, 10, 15, 0.62); border: 1px solid var(--line-strong);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-shadow: 0 1px 2px #000;
+  transition: background 0.08s, border-color 0.08s, transform 0.08s;
+}
+.tl-btn { position: absolute; border-radius: 50%; gap: 1px; }
+.tl-btn .tl-ic { font-size: 20px; line-height: 1; color: var(--railW); }
+.tl-btn .tl-lb { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; }
+.tl-btn .tl-lb i { display: block; font-size: 8px; opacity: 0.6; letter-spacing: 0; }
+.tl-btn.press, .tl-tool.press {
+  background: rgba(var(--railW-rgb), 0.32); border-color: var(--railW-hot); transform: scale(0.94);
+}
+.tl-fire {
+  width: var(--tl-fire); height: var(--tl-fire); right: 0; bottom: 0;
+  border-width: 2px; border-color: rgba(255, 68, 54, 0.75);
+  background: radial-gradient(circle at 50% 42%, rgba(255, 68, 54, 0.28), rgba(6, 10, 15, 0.7) 74%);
+}
+.tl-fire .tl-ic { color: #ff8d80; font-size: 26px; }
+.tl-aim {
+  width: calc(var(--tl-fire) * 0.78); height: calc(var(--tl-fire) * 0.78);
+  right: calc(var(--tl-fire) * 1.02); bottom: calc(var(--tl-fire) * 0.34);
+}
+body.aiming .tl-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.22); }
+/* 升降鈕(飛行機種/觀戰)直接疊在射擊鈕正上方:同一根拇指上下切換,不與招式列搶位 */
+.tl-dive, .tl-rise {
+  width: calc(var(--tl-fire) * 0.62); height: calc(var(--tl-fire) * 0.62);
+  right: calc(var(--tl-fire) * 0.19); bottom: calc(var(--tl-fire) * 1.08);
+}
+.tl-rise { bottom: calc(var(--tl-fire) * 1.78); }
+/* 觀戰(無下降鈕以外的機體鈕)時上升鈕落到下降鈕的位置 */
+.tl-dive[hidden] ~ .tl-rise { bottom: calc(var(--tl-fire) * 1.08); }
+
+/* 工具列:方角小鈕(與圓形的「戰鬥手勢鈕」分家,避免誤按) */
+.tl-tools { position: absolute; display: flex; gap: 5px; pointer-events: none; }
+.tl-tool {
+  min-width: 46px; min-height: 40px; padding: 0 8px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  clip-path: var(--notch-sm);
+}
+.tl-tool.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); }
+/* 平民互動鈕:長在 #civPrompt 裡(main.js 依觸控版渲染),隨提示一起出現/消失。
+   容器 .civ-prompt 仍是 pointer-events:none,只有鈕本身吃事件(見 #game [data-act] 規則)。 */
+.civ-btn {
+  font: inherit; font-family: var(--mono); font-size: 12px; letter-spacing: 1px; cursor: pointer;
+  margin-left: 8px; padding: 7px 14px; min-height: 40px;
+  color: var(--railW); background: rgba(6, 10, 15, 0.85); border: 1px solid var(--railW);
+  clip-path: var(--notch-sm);
+}
+.civ-btn.press { background: rgba(var(--railW-rgb), 0.3); color: #05070a; }
+
+/* 直式持握提示 */
+.tl-rotate {
+  position: absolute; left: 50%; top: 42%; transform: translateX(-50%);
+  pointer-events: auto; display: none;
+  max-width: 88vw; text-align: center;
+  padding: 8px 16px; background: rgba(6, 10, 15, 0.92); border: 1px solid var(--railW);
+  clip-path: var(--notch-sm);
+  font-family: var(--mono); font-size: 11px; line-height: 1.7; letter-spacing: 1px; color: var(--railW);
+}
+.tl-rotate.on { display: block; animation: feedIn 0.2s steps(3); }
+
+/* ---------- HUD 觸控特化:方塊變按鈕 ---------- */
+/* .hud-bottom 整層 pointer-events:none —— 只有 data-act 的方塊開放點擊(其餘照舊不吃事件) */
+body.touch-ui #game [data-act] { pointer-events: auto; touch-action: none; }
+body.touch-ui .ab-box {
+  min-width: 60px; min-height: 58px; padding: 5px 4px;
+  background: rgba(6, 10, 15, 0.62); border-width: 1px;
+}
+body.touch-ui .ab-box .ab-key { font-size: 12px; padding: 1px 5px; }
+body.touch-ui .ab-box .ab-name { font-size: 10px; }
+body.touch-ui .ab-row { gap: 7px; }
+body.touch-ui .wpn-box { min-height: 40px; gap: 8px; font-size: 11px; white-space: nowrap; overflow: hidden; }
+body.touch-ui .hud-side { font-size: 10px; letter-spacing: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* 桌機鍵盤提示在觸控版無意義 */
+body.touch-ui .shop-hint { display: none; }
+body.touch-ui .dead-hint { font-size: 10px; }
+
+/* ---------- 橫式(建議持握):左拇指移動、右拇指戰鬥 ---------- */
+body.touch-ui.ori-landscape .hud-top { padding: 6px 10px; padding-left: calc(10px + var(--tl-sl)); padding-right: calc(10px + var(--tl-sr)); }
+body.touch-ui.ori-landscape .base-bar { max-width: 34vw; }
+body.touch-ui.ori-landscape .wave-box { font-size: 10px; padding: 4px 10px; letter-spacing: 2px; }
+
+/* .hud-bottom 改成整屏定位框:機體數據移左上、招式列與填彈移右下拇指弧,小地圖移右上 */
+body.touch-ui .hud-bottom {
+  inset: 0; padding: 0; background: none; display: block; pointer-events: none;
+}
+body.touch-ui .hud-bottom > * { position: absolute; }
+body.touch-ui.ori-landscape .hud-self {
+  left: calc(8px + var(--tl-sl)); top: calc(44px + var(--tl-st));
+  width: 178px; min-width: 0; max-width: none;
+}
+body.touch-ui.ori-landscape #minimap {
+  right: calc(8px + var(--tl-sr)); top: calc(90px + var(--tl-st));
+  width: 118px; height: 118px;
+}
+body.touch-ui.ori-landscape .kill-feed {
+  right: auto; left: calc(196px + var(--tl-sl)); top: calc(46px + var(--tl-st)); align-items: flex-start;
+}
+body.touch-ui.ori-landscape .kill-feed div { border-right: 0; border-left: 3px solid var(--danger); font-size: 11px; }
+body.touch-ui.ori-landscape .tl-tools {
+  right: calc(8px + var(--tl-sr)); top: calc(42px + var(--tl-st));
+}
+/* 招式列/填彈從 .hud-self 抽出,直排在射擊鈕左側(HTML 未動,只換定位)。
+   橫排會在 667×375 這種小橫式壓進蘑菇頭作用區(招式鈕之間的縫會誤觸發蘑菇頭)⇒ 一律直排,
+   寬度只吃一顆鈕。MUST 用 position:fixed —— .hud-self 本身已 absolute,absolute 會以它為包含塊而不是整屏。 */
+body.touch-ui.ori-landscape .hud-self .ab-row {
+  position: fixed; right: calc(var(--tl-fire) * 2.05 + var(--tl-sr)); bottom: calc(10px + var(--tl-sb));
+  left: auto; top: auto; flex-direction: column; gap: 6px;
+}
+body.touch-ui.ori-landscape .hud-self .wpn-box {
+  position: fixed; right: calc(var(--tl-fire) * 2.05 + var(--tl-sr)); bottom: calc(198px + var(--tl-sb));
+  width: 142px;
+}
+body.touch-ui.ori-landscape .ab-box { min-width: 56px; min-height: 56px; }
+body.touch-ui.ori-landscape .tl-zone {
+  left: var(--tl-sl); bottom: 0; width: 42%; height: 60%;
+}
+body.touch-ui.ori-landscape .tl-cluster {
+  right: calc(10px + var(--tl-sr)); bottom: calc(12px + var(--tl-sb));
+  width: calc(var(--tl-fire) * 2); height: calc(var(--tl-fire) * 1.8);
+}
+
+/* ---------- 直式:控件收進下緣操控帶,3D 視野留給上半屏 ----------
+   直式的垂直預算很緊(360×640 只有 640px 可分):上緣主堡條 → 小地圖/戰報 → 工具列 → 機體數據
+   → 招式列 → 操控帶,每一段都定額。--tl-band 是操控帶高度,同時是招式列/數據列/暗底漸層的基準,
+   MUST 只改這一個變數(改成多處各寫一個百分比,版型就會在小螢幕互相壓到)。 */
+body.touch-ui.ori-portrait { --tl-fire: 84px; --tl-stick-r: 56px; --tl-band: 32%; }
+/* 矮直式(360×640 這類):32% 的操控帶會把機體數據列頂到工具列上 ⇒ 帶高再讓 3%。
+   操控帶最小可用高度 = 射擊鈕 84 + 上下留白 ≈ 110px,29% × 640 = 186px 仍有餘裕。 */
+@media (orientation: portrait) and (max-height: 720px) {
+  body.touch-ui.ori-portrait { --tl-band: 29%; }
+}
+/* 上緣:主堡條改上下堆疊(橫排在窄屏會擠成一團) */
+body.touch-ui.ori-portrait .hud-top {
+  flex-direction: column; align-items: stretch; gap: 4px;
+  padding: calc(6px + var(--tl-st)) 8px 6px;
+}
+body.touch-ui.ori-portrait .base-bar { max-width: none; }
+body.touch-ui.ori-portrait .base-bar.steel { flex-direction: row-reverse; }
+body.touch-ui.ori-portrait .base-label { font-size: 10px; letter-spacing: 2px; }
+body.touch-ui.ori-portrait .wave-box { align-self: center; font-size: 10px; padding: 3px 12px; }
+body.touch-ui.ori-portrait .hud-self {
+  left: 8px; bottom: calc(var(--tl-band) + 68px + var(--tl-sb)); width: calc(100% - 16px);
+  min-width: 0; max-width: none; gap: 2px;
+}
+body.touch-ui.ori-portrait .wpn-box { min-height: 40px; }
+body.touch-ui.ori-portrait #minimap {
+  right: 8px; top: calc(104px + var(--tl-st)); width: 84px; height: 84px;
+}
+/* 戰報:小地圖左側、限高 3 則(prepend 最新在最上 ⇒ 溢出裁掉的是最舊的) */
+body.touch-ui.ori-portrait .kill-feed {
+  top: calc(106px + var(--tl-st)); right: 100px; left: 8px; align-items: flex-end;
+  font-size: 11px; max-height: 80px; overflow: hidden;
+}
+/* 工具列:小地圖下方的單一橫排(直排 7 顆會一路壓到機體數據列)⇒ 鈕面壓小以塞進一行 */
+body.touch-ui.ori-portrait .tl-tools {
+  left: 8px; right: 8px; top: calc(196px + var(--tl-st)); justify-content: flex-start; gap: 4px;
+}
+body.touch-ui.ori-portrait .tl-tools { flex-wrap: nowrap; overflow: hidden; }
+body.touch-ui.ori-portrait .tl-tools .tl-tool {
+  min-width: 44px; min-height: 44px; padding: 0 3px; font-size: 10px; letter-spacing: 0;
+}
+/* 直式下緣操控帶:壓一層暗底,讓控件與地景分離 */
+body.touch-ui.ori-portrait .touch-layer::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--tl-band) + var(--tl-sb));
+  background: linear-gradient(0deg, rgba(3, 5, 8, 0.86) 0%, rgba(3, 5, 8, 0.5) 62%, transparent 100%);
+  pointer-events: none;
+}
+/* 招式列橫排貼在操控帶上緣(fixed:同橫式,不受 .hud-self 包含塊限制);填彈維持在數據列內
+   —— 直式寬度夠,整條 .wpn-box 就是個滿寬的填彈鈕。 */
+body.touch-ui.ori-portrait .hud-self .ab-row {
+  position: fixed; left: 8px; right: 8px; bottom: calc(var(--tl-band) + 6px + var(--tl-sb)); top: auto;
+  justify-content: center;
+}
+body.touch-ui.ori-portrait .hud-self .wpn-box { width: auto; }
+body.touch-ui.ori-portrait .tl-zone {
+  left: var(--tl-sl); bottom: 0; width: 52%; height: var(--tl-band);
+}
+body.touch-ui.ori-portrait .tl-cluster {
+  right: 8px; bottom: calc(10px + var(--tl-sb));
+  width: calc(var(--tl-fire) * 1.9); height: calc(var(--tl-fire) * 1.7);
+}
+/* 直式平民提示(內含觸控鈕):貼在操控帶上緣、蘑菇頭作用區的上方空白 ——
+   直式的中段全被機體數據列佔滿,擺 46% 會整塊蓋在護盾/裝甲條上。 */
+body.touch-ui.ori-portrait .civ-prompt {
+  top: auto; bottom: calc(var(--tl-band) - 58px + var(--tl-sb));
+}
+body.touch-ui.ori-portrait .lock-warn { top: 30%; }
+
+/* ---------- 左手模式:蘑菇頭與戰鬥鈕左右鏡像 ---------- */
+body.touch-ui.touch-lefty .tl-zone { left: auto; right: var(--tl-sr); }
+body.touch-ui.touch-lefty .tl-cluster {
+  right: auto; left: calc(10px + var(--tl-sl)); transform: scaleX(-1);
+}
+body.touch-ui.touch-lefty .tl-cluster .tl-btn { transform: scaleX(-1); }   /* 鈕面文字不鏡像 */
+body.touch-ui.touch-lefty .tl-cluster .tl-btn.press { transform: scaleX(-1) scale(0.94); }
+body.touch-ui.ori-landscape.touch-lefty .hud-self { left: auto; right: calc(8px + var(--tl-sr)); }
+body.touch-ui.ori-landscape.touch-lefty #minimap { right: auto; left: calc(8px + var(--tl-sl)); }
+body.touch-ui.ori-landscape.touch-lefty .kill-feed { left: auto; right: calc(196px + var(--tl-sr)); align-items: flex-end; }
+body.touch-ui.ori-landscape.touch-lefty .tl-tools { right: auto; left: calc(8px + var(--tl-sl)); }
+body.touch-ui.ori-landscape.touch-lefty .hud-self .ab-row { right: auto; left: calc(var(--tl-fire) * 2.05 + var(--tl-sl)); }
+body.touch-ui.ori-landscape.touch-lefty .hud-self .wpn-box { right: auto; left: calc(var(--tl-fire) * 2.05 + var(--tl-sl)); }
+body.touch-ui.ori-portrait.touch-lefty .tl-cluster { left: 8px; }
+body.touch-ui.ori-portrait.touch-lefty #minimap { right: auto; left: 8px; }
+body.touch-ui.ori-portrait.touch-lefty .kill-feed { right: auto; left: 112px; align-items: flex-start; }
+body.touch-ui.ori-portrait.touch-lefty .tl-tools { left: auto; right: 8px; align-items: flex-end; }
+
+/* ---------- 疊層(選單/商店/陣亡/結束)在手機上的可讀性 ---------- */
+body.touch-ui .overlay-box {
+  padding: 18px 16px; gap: 10px;
+  max-width: calc(100vw - 16px - var(--tl-sl) - var(--tl-sr));
+  max-height: calc(100vh - 16px - var(--tl-st) - var(--tl-sb));
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+}
+body.touch-ui .set-list { min-width: 0; width: 100%; gap: 12px; }
+body.touch-ui .set-row { flex-wrap: wrap; gap: 8px; }
+body.touch-ui .set-label { min-width: 84px; font-size: 12px; }
+body.touch-ui .set-hint { flex: 1 0 100%; }
+body.touch-ui .set-slider { min-width: 120px; height: 26px; }
+body.touch-ui .switch { width: 54px; height: 28px; }
+body.touch-ui .switch > span { width: 22px; height: 22px; }
+body.touch-ui .switch[aria-checked="true"] > span { left: 28px; }
+body.touch-ui .pause-tab { padding: 9px 16px; font-size: 12px; }
+body.touch-ui .help-cat { padding: 8px 12px; font-size: 11px; }
+body.touch-ui .btn { min-height: 44px; }
+body.touch-ui .shop-item { padding: 10px; gap: 8px; }
+body.touch-ui .shop-box { max-width: calc(100vw - 16px); }
+body.touch-ui .dead-cam { width: min(74vw, 420px); }
+body.touch-ui .pause-title { font-size: 22px; letter-spacing: 6px; }
+body.touch-ui .over-title { font-size: 28px; letter-spacing: 6px; }
+body.touch-ui .dead-title { font-size: 22px; letter-spacing: 5px; }
+
+/* 直式疊層:面板佔滿寬度、按鈕列改直排(橫排在 360px 寬會擠爆) */
+body.touch-ui.ori-portrait .overlay-box { width: calc(100vw - 12px); }
+body.touch-ui.ori-portrait .overlay-box .row { flex-direction: column; align-items: stretch; }
+body.touch-ui.ori-portrait .overlay-box .row .btn { width: 100%; }
+/* 橫式疊層:高度吃緊 → 內距再壓、標題縮小 */
+/* 平民互動提示(內含觸控鈕):橫式改貼左下、限寬,只覆蓋蘑菇頭作用區的上緣空白。
+   MUST 避開右下的招式直排 —— 提示層 z 11 > HUD 10,壓上去會變成按到「跟隨/驅趕」而不是招式。
+   提示底板本身是 pointer-events:none(只有兩顆鈕吃事件)⇒ 疊在蘑菇頭區上不影響拖曳。 */
+body.touch-ui.ori-landscape .civ-prompt {
+  left: 8px; transform: none; top: auto;
+  bottom: calc(var(--tl-fire) * 1.45 + var(--tl-sb));
+  max-width: min(320px, 46%); white-space: normal;
+}
+body.touch-ui.ori-landscape .overlay-box { padding: 12px 18px; gap: 8px; }
+body.touch-ui.ori-landscape .pause-title { font-size: 18px; }
+body.touch-ui.ori-landscape .set-list { gap: 8px; }
+
+/* ---------- 大廳 / 開房 / 房間 / 選角:觸控版與窄屏 ---------- */
+body.touch-ui .screen { -webkit-overflow-scrolling: touch; }
+body.touch-ui .center-screen { align-items: flex-start; padding: calc(8px + var(--tl-st)) 8px calc(8px + var(--tl-sb)); overflow-y: auto; }
+body.touch-ui .panel { max-width: 100%; }
+body.touch-ui .btn, body.touch-ui .ts-btn, body.touch-ui .venue-grid button { min-height: 44px; }
+body.touch-ui input, body.touch-ui select { min-height: 42px; font-size: 16px; }   /* 16px:iOS 聚焦不自動放大 */
+body.touch-ui .about-me { position: static; margin-top: 14px; }
+body.touch-ui .scanlines { display: none; }   /* 省 GPU:手機不畫掃描線疊層 */
+
+body.touch-ui.ori-portrait .lobby-actions { flex-direction: column; }
+body.touch-ui.ori-portrait .lobby-actions .btn { width: 100%; }
+body.touch-ui.ori-portrait .side-cards { flex-direction: column; }
+body.touch-ui.ori-portrait .side-vs { display: none; }
+body.touch-ui.ori-portrait .char-pick { grid-template-columns: 1fr; }
+body.touch-ui.ori-portrait .room-actions { flex-direction: column; }
+body.touch-ui.ori-portrait .room-actions .btn { width: 100%; }
+body.touch-ui.ori-portrait #mapbuilder { flex-direction: column; }
+body.touch-ui.ori-portrait #leafletMap { min-height: 46vh; }
+body.touch-ui.ori-portrait .map-panel { max-height: 52vh; }
+body.touch-ui.ori-landscape .char-pick { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .foot-note { display: none; }
+
+/* 無 hover 裝置::hover 態會「黏」在最後點過的元素上(看起來像選中了另一顆鈕)⇒ 明確還原成基準態,
+   MUST NOT 用 initial/unset —— 那會連基準底色一起清掉(:hover 特異度高於 .btn 基準規則)。 */
+@media (hover: none) {
+  .btn:hover:not(:disabled) { background: rgba(14, 21, 29, 0.95); color: var(--text); border-color: var(--line); }
+  .shop-item:hover { background: rgba(4, 7, 11, 0.7); border-left-color: var(--railS-dark); }
+  .pause-tab:hover:not(.on), .help-cat:hover:not(.on) { color: var(--dim); border-color: var(--line); }
+}

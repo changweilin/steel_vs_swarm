@@ -2,7 +2,11 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 手機:禁縮放/雙擊放大(戰場觸控要吃掉所有手勢)+ 挖孔螢幕安全區(CSS env(safe-area-inset-*)) -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>無人戰略:鋼鐵與蜂群 — Drone Tactics: Steel vs. Swarm</title>
 <link rel="icon" href="favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -356,17 +360,59 @@
       <div class="spbar"><div id="spBar" class="spbar-fill"></div><span id="spText" class="sp-text"></span></div>
       <div class="hpbar"><div id="hpBar" class="hpbar-fill"></div><span id="hpText" class="hp-text"></span></div>
       <div class="mpbar"><div id="mpBar" class="mpbar-fill"></div><span id="mpText" class="mp-text"></span></div>
-      <div class="wpn-box"><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
+      <!-- data-act:觸控版把既有 HUD 方塊直接特化成按鈕(名稱/CD/就緒色已在此顯示,不另做一份鈕)。
+           桌機無 TouchControls 綁事件 ⇒ 這些屬性完全惰性,見 js/mobile.js。 -->
+      <div class="wpn-box" data-act="reload"><span id="wpnName"></span><span id="wpnAmmo" class="wpn-ammo"></span></div>
       <div class="burst-box"><span id="burstName">重武器</span> <span id="burstCd" class="burst-cd">就緒</span></div>
       <div class="ab-row">
-        <div class="ab-box" id="abSkill"><span class="ab-key">Q</span><span class="ab-name" id="abSkillName">—</span><span class="ab-cd" id="abSkillCd"></span></div>
-        <div class="ab-box" id="abUlt"><span class="ab-key">E</span><span class="ab-name" id="abUltName">—</span><span class="ab-cd" id="abUltCd"></span></div>
+        <div class="ab-box" id="abSkill" data-act="skill"><span class="ab-key">Q</span><span class="ab-name" id="abSkillName">—</span><span class="ab-cd" id="abSkillCd"></span></div>
+        <div class="ab-box" id="abUlt" data-act="ult"><span class="ab-key">E</span><span class="ab-name" id="abUltName">—</span><span class="ab-cd" id="abUltCd"></span></div>
         <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 傭兵=升空變形(CD 顯示) -->
-        <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
+        <div class="ab-box" id="abMobil" data-act="jump"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
       <div class="money-box">$ <span id="moneyText">0</span> ・ KILL <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
     </div>
     <canvas id="minimap" width="220" height="220"></canvas>
+  </div>
+
+  <!-- ===== 觸控操控層(手機/平板;桌機 hidden)=====
+       事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
+       #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
+       直式/橫式版型差異全在 css/style.css(body.ori-portrait / .ori-landscape),此處只有一份骨架。 -->
+  <div id="touchLayer" class="touch-layer" hidden>
+    <div id="tlLook" class="tl-look"></div>
+
+    <!-- 左拇指:浮動虛擬蘑菇頭(手指落點即圓心;推到底 = 衝刺) -->
+    <div id="tlMoveZone" class="tl-zone">
+      <div id="tlStick" class="tl-stick"><span class="tl-ring"></span><div id="tlKnob" class="tl-knob"></div></div>
+      <div class="tl-zone-hint">拖曳移動<br><i>推到底 = 衝刺</i></div>
+    </div>
+
+    <!-- 右拇指:射擊 / 瞄準(長按 = 機種專屬絕招)/ 下降(飛行機種) -->
+    <div class="tl-cluster">
+      <button class="tl-btn tl-fire" type="button" data-act="fire"><span class="tl-ic">✥</span><span class="tl-lb">射擊</span></button>
+      <button class="tl-btn tl-aim" type="button" data-act="aim"><span class="tl-ic">◎</span><span class="tl-lb">瞄準<i>長按絕招</i></span></button>
+      <button class="tl-btn tl-dive" type="button" data-act="dive" hidden><span class="tl-ic">▼</span><span class="tl-lb">下降</span></button>
+      <!-- 上升鈕:只在觀戰自由視角出現(參戰時「機動/上升」用的是 HUD 的 #abMobil 方塊,它另帶 CD 顯示) -->
+      <button class="tl-btn tl-rise" type="button" data-act="jump" hidden><span class="tl-ic">▲</span><span class="tl-lb">上升</span></button>
+    </div>
+
+    <!-- 工具列:選單 / 升級 / 小地圖 / 換機(無人機)/ 陀螺儀 / 全螢幕 / 左手模式 -->
+    <div class="tl-tools">
+      <button class="tl-tool" type="button" data-act="menu" aria-label="戰場選單">☰</button>
+      <button class="tl-tool" type="button" data-act="shop">升級</button>
+      <button class="tl-tool" type="button" data-act="map">地圖</button>
+      <button class="tl-tool" type="button" data-act="swap" hidden>換機</button>
+      <button class="tl-tool" type="button" data-act="gyro">陀螺</button>
+      <button class="tl-tool" type="button" data-act="full">全螢幕</button>
+      <button class="tl-tool" type="button" data-act="lefty">左手</button>
+    </div>
+
+    <!-- 平民互動的「跟隨 / 驅趕」不在此層:觸控版直接把 #civPrompt 的按鍵提示換成兩顆鈕
+         (見 main.js hud.civPrompt)—— 直式的垂直空間排不下第三個控件群,且提示就在視線落點上更好按。 -->
+
+    <!-- 直式持握提示(視野角度 MUST NOT 隨版型改 —— 直式水平視野本來就窄,建議橫握;點擊消失) -->
+    <div class="tl-rotate" id="tlRotate">▤ 建議橫向持握 —— 直式水平視野較窄(全機種視角一律 68°)</div>
   </div>
 
   <!-- 主堡軍械庫(B) -->
@@ -428,6 +474,39 @@
             <span class="set-label">低功耗模式</span>
             <button id="setLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
             <span class="set-hint">降低算圖解析度以省電、提升幀率</span>
+          </div>
+
+          <!-- 觸控/陀螺儀(僅觸控版顯示;桌機以 body.touch-ui 隱藏整區) -->
+          <div class="set-sub touch-only">▎觸控操控</div>
+          <div class="set-row touch-only">
+            <span class="set-label">陀螺儀瞄準</span>
+            <button id="setGyro" class="switch" type="button" role="switch" aria-checked="false" aria-label="陀螺儀瞄準開關"><span></span></button>
+            <span class="set-hint">轉動手機微調準星(與拖曳視角可同時使用)</span>
+          </div>
+          <div class="set-row touch-only">
+            <span class="set-label">陀螺靈敏度</span>
+            <input id="setGyroSens" class="set-slider" type="range" min="40" max="250" step="5" aria-label="陀螺儀靈敏度">
+            <span class="set-val" id="setGyroSensVal">100%</span>
+          </div>
+          <div class="set-row touch-only">
+            <span class="set-label">陀螺垂直反轉</span>
+            <button id="setGyroInv" class="switch" type="button" role="switch" aria-checked="false" aria-label="陀螺儀垂直反轉開關"><span></span></button>
+            <span class="set-hint">抬起手機 = 向下看</span>
+          </div>
+          <div class="set-row touch-only">
+            <span class="set-label">拖曳靈敏度</span>
+            <input id="setLookSens" class="set-slider" type="range" min="40" max="250" step="5" aria-label="拖曳視角靈敏度">
+            <span class="set-val" id="setLookSensVal">100%</span>
+          </div>
+          <div class="set-row touch-only">
+            <span class="set-label">左手模式</span>
+            <button id="setLefty" class="switch" type="button" role="switch" aria-checked="false" aria-label="左手模式開關"><span></span></button>
+            <span class="set-hint">蘑菇頭與動作鈕左右鏡像</span>
+          </div>
+          <div class="set-row touch-only">
+            <span class="set-label">觸覺回饋</span>
+            <button id="setHaptic" class="switch" type="button" role="switch" aria-checked="true" aria-label="觸覺回饋開關"><span></span></button>
+            <span class="set-hint">按鈕震動(裝置不支援則無感)</span>
           </div>
         </div>
         <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
