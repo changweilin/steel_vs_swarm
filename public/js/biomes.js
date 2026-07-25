@@ -51,6 +51,7 @@ const VEG_SCALE = {
   bamboo: 1.5, broadleaf: 1.45, birch: 1.4, conifer: 1.5, deadtree: 1.35, mangrove: 1.3,
   conifer2: 1.5, conifer3: 1.45, conifer4: 1.5,
   shrub: 1.2, silvergrass: 1.15, arrowbamboo: 1.2, succulent: 1.15, reed: 1.1,
+  sapling: 1.2, redcap: 1.15, browncap: 1.1, parasol: 1.2, toadstool: 1.1,
 };
 // Overpass 鏡像輪替(2026-07-22 倫敦橋數浮動案):主站限流(429/504)是圖資逐局忽有忽無的
 // 主因之一 —— 限流回應是即時的,換鏡像重試幾乎不吃載入時間預算;逾時(abort)才放棄。
@@ -214,6 +215,34 @@ const VEG_DEFS = {
                          { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // 支柱根
                          { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
   reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a }] },
+  // ---- 神木林床層(森林分層最底層):樹苗 + 各式香菇 ----
+  // 分層邏輯:神木冠層 → 中小型同科喬木(sub-canopy,沿用 conifer*/broadleaf/birch)
+  // → 樹苗/灌木叢(shrub)/各式香菇(林床)。香菇無 key(不吃季節葉色):固定菌色,
+  // 蕈柄淺、蕈傘各異即「各品種」;蕈傘用壓扁 ico(低多邊形半球)貼合日漫 toon 風。
+  sapling:     { parts: [{ g: cyl(0.05, 0.09, 1.6, 5), y: 0.8, c: 0x6b4a2f },
+                         { g: cyl(0.04, 0.06, 0.9, 4), y: 1.5, c: 0x5f452c },      // 細分枝
+                         { g: ico(0.55), y: 1.65, key: 'foliage', sy: 0.9 },
+                         { g: ico(0.36), y: 2.05, key: 'foliage', sy: 0.85 }] },   // 疊層幼冠
+  redcap:      { parts: [{ g: cyl(0.16, 0.24, 1.1, 7), y: 0.55, c: 0xf2ece0 },     // 乳白蕈柄
+                         { g: cyl(0.82, 0.5, 0.14, 10), y: 1.02, c: 0xf5ecd8 },    // 傘底菌褶承盤
+                         { g: ico(0.95), y: 1.28, sy: 0.52, c: 0xc0392b },         // 半球紅傘(毒鵝膏式)
+                         { g: ico(0.14), y: 1.55, pz: 0.42, c: 0xfbf6ea },         // 白斑
+                         { g: ico(0.13), y: 1.6, px: 0.38, pz: -0.2, c: 0xfbf6ea },
+                         { g: ico(0.12), y: 1.52, px: -0.44, c: 0xfbf6ea }] },
+  browncap:    { parts: [{ g: cyl(0.2, 0.3, 0.8, 7), y: 0.4, c: 0xd9c3a0 },        // 矮胖蕈柄
+                         { g: cyl(0.9, 0.58, 0.1, 10), y: 0.86, c: 0xe4d6b8 },     // 菌褶
+                         { g: ico(1.05), y: 1.0, sy: 0.4, c: 0x7a4a2c }] },        // 扁圓褐傘(牛肝菌/香菇感)
+  parasol:     { parts: [{ g: cyl(0.08, 0.12, 1.7, 6), y: 0.85, c: 0xe8dcc4 },    // 細長蕈柄
+                         { g: cone(0.62, 0.55, 9), y: 1.9, c: 0xb79063 },          // 錐形陽傘
+                         { g: ico(0.24), y: 2.12, sy: 0.7, c: 0xa07c4e }] },       // 傘心凸頂
+  toadstool:   { parts: [{ g: cyl(0.06, 0.09, 0.55, 5), y: 0.28, c: 0xe4d2b0 },   // 蜜環菌叢:一叢高低錯落小菇
+                         { g: ico(0.26), y: 0.62, sy: 0.6, c: 0xd9a441 },
+                         { g: cyl(0.05, 0.08, 0.42, 5), y: 0.21, px: 0.42, pz: 0.18, c: 0xe4d2b0 },
+                         { g: ico(0.2), y: 0.48, px: 0.42, pz: 0.18, sy: 0.6, c: 0xd7a94f },
+                         { g: cyl(0.05, 0.07, 0.36, 5), y: 0.18, px: -0.36, pz: 0.24, c: 0xe4d2b0 },
+                         { g: ico(0.18), y: 0.42, px: -0.36, pz: 0.24, sy: 0.6, c: 0xcf9a3a },
+                         { g: cyl(0.04, 0.06, 0.3, 5), y: 0.15, px: 0.1, pz: -0.4, c: 0xe4d2b0 },
+                         { g: ico(0.15), y: 0.36, px: 0.1, pz: -0.4, sy: 0.6, c: 0xdcae52 }] },
   // 邊界巨岩簇(裸露地邊界帶專用;InstancedMesh 管線,公稱 ~5m × s 1.4~3.4 → 7~17m)
   borderrock:  { parts: [{ g: ico(2.4), y: 1.4, c: 0x8f8878 },
                          { g: ico(1.7), y: 0.9, px: 2.2, sy: 0.75, c: 0x7d786c },
@@ -443,6 +472,9 @@ const GIANT_DECO = {
                        { g: ico(0.3), y: -4.6, px: 0.3, sy: 0.6, c: 0x5c8a46 }] },
 };
 
+// 針葉神木(配針葉幼樹)vs 闊葉神木(euc/meranti/dinizia,配闊葉幼樹):林下同科喬木分流
+const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwania']);
+
 /** 綠地神木群落:同一樹種成群、株高各異;樹幹登記碰撞柱(障礙 + 隱蔽) */
 function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
   const species = Object.keys(GIANT_DEFS);
@@ -500,6 +532,34 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       for (let b = 0; b < nBr; b++)
         hang(rnd() < 0.45 ? 'vinebranch' : 'branch', 0.2 + rnd() * 0.32, 0.85 + rnd() * 0.6, true);
       if (rnd() < 0.35) hang('vine', 0.38 + rnd() * 0.12, 0.8 + rnd() * 0.6);   // 主幹垂藤(保留)
+      // ---- 林下分層:中小型同科喬木(sub-canopy)→ 樹苗/灌木叢/各式香菇(林床)----
+      // 環樹基佈點;體格 = 神木零頭(msz/fsz 為體格分數,drop() 再乘 VEG_SCALE)。
+      // 抽樣紀律(§2.3):角度/距離/選型/體格先抽定,blocked/水域淘汰放在抽樣之後,
+      // 落點才 push(比照上方神木本體迴圈:淘汰只吃前段亂數,不跳號)。
+      const trunkOut = def.r * s;
+      const midPool = CONIFER_GIANTS.has(type)
+        ? ['conifer', 'conifer2', 'conifer3', 'conifer4']
+        : ['broadleaf', 'birch'];
+      const floorPool = ['sapling', 'shrub', 'redcap', 'browncap', 'parasol', 'toadstool', 'toadstool'];
+      const drop = (t, ux, uz, uy, sc) => {
+        (items[t] ??= []).push({
+          x: ux, y: uy, z: uz, s: sc * (VEG_SCALE[t] || 1),
+          ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
+        });
+      };
+      const scatterRing = (pool, count, rMin, rSpan, szMin, szSpan) => {
+        for (let u = 0; u < count; u++) {
+          const ua = rnd() * Math.PI * 2, ud = trunkOut + rMin + rnd() * rSpan;
+          const ut = pool[Math.floor(rnd() * pool.length)], usz = szMin + rnd() * szSpan;
+          const ux = gx + Math.cos(ua) * ud, uz = gz + Math.sin(ua) * ud;
+          if (blocked.has(cellKey(ux, uz))) continue;
+          const uy = terrain.heightAt(ux, uz);
+          if (uy < 0.4 || terrainEnvCode(terrain, ux, uz) !== 0) continue;
+          drop(ut, ux, uz, uy, usz);
+        }
+      };
+      scatterRing(midPool, 1 + Math.floor(rnd() * 3), 4, 26, 0.32, 0.34);    // 1~3 株中小型同科喬木
+      scatterRing(floorPool, 3 + Math.floor(rnd() * 4), 3, 40, 0.6, 0.5);    // 3~6 叢樹苗/灌木/香菇
       added++; trees++;
     }
     for (const [tx, tz, tr] of trunks) blockArea(blocked, tx, tz, tr);   // 建物/小植被避開整根巨幹
@@ -4642,6 +4702,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       bamboo: 2.2, broadleaf: 3.2, birch: 2.6, conifer: 2.2, deadtree: 2.4, mangrove: 2.8,
       conifer2: 2.4, conifer3: 1.4, conifer4: 3.0,
       shrub: 1.2, silvergrass: 0.9, arrowbamboo: 1.0, succulent: 0.8, reed: 0.8,
+      sapling: 1.0, redcap: 0.6, browncap: 0.6, parasol: 0.5, toadstool: 0.5,
     };
     for (const type in items) {
       // 神木不濾:已進 blocked(建物 areaFree 會避開),且登記了碰撞柱,拔掉會留隱形牆
