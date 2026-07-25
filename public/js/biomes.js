@@ -4250,7 +4250,7 @@ function makeOccupancy() {
  * 補出的建物與 OSM 建物走同一條路徑登記 blockers,碰撞/隱蔽一致。
  * rnd 為 mulberry32 且每格消耗固定枚數(檢查一律放在抽樣之後)⇒ 全房間各客戶端結果相同。
  */
-function densifyUrban({ generic, blocked, terrain, rnd, inb, occ }) {
+function densifyUrban({ generic, blocked, terrain, rnd, inb, occ, roadFacing }) {
   if (!generic.length) return 0;
   // occ 為全建物共用占位網格(OSM/離線/地標已在收錄時登記),此處只續用
 
@@ -4268,7 +4268,7 @@ function densifyUrban({ generic, blocked, terrain, rnd, inb, occ }) {
         const d = (commercial ? 16 + rnd() * 16 : 10 + rnd() * 12) * OVER.bldXZ;
         const h = Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap);
         const jx = (rnd() - 0.5) * 2.4, jz = (rnd() - 0.5) * 2.4;   // 沿街微抖動
-        const ry = s.ry + (rnd() - 0.5) * 0.12;
+        const jry = s.ry + (rnd() - 0.5) * 0.12;   // 抽樣先做保序列;實際朝向於落點後定
         const v = Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length);
         const vacant = rnd() < INFILL.skip;
         if (vacant) continue;
@@ -4285,6 +4285,7 @@ function densifyUrban({ generic, blocked, terrain, rnd, inb, occ }) {
         if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) continue;
         if (!areaFree(blocked, x, z, r * 0.75)) continue;
         occ.add(x, z, Math.max(w, d) / 2);
+        const ry = roadFacing ? (roadFacing(x, z) ?? jry) : jry;   // 門朝最近道路;深街廓無鄰路 → 沿種子朝向(巷弄成直線)
         generic.push({ x, z, w, d, h, ry, commercial, v });
         added++;
       }
@@ -4526,37 +4527,38 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       a.push([x1, z1, x2, z2]);
     }
   };
-  if (osmRoads?.length) {
-    for (const way of osmRoads) {
-      if (way.tags?.tunnel || way.tags?.bridge) continue;
-      const hw = roadWidth(way.tags) / 2;
-      let px = null, pz = 0;
-      for (const p of way.geometry || []) {
-        const [x, z] = llToWorld(p.lat, p.lon, center);
-        if (px !== null) {
-          const seg = Math.hypot(x - px, z - pz);
-          const n = Math.max(1, Math.ceil(seg / Math.max(hw * 1.2, 6)));
-          for (let k = 1; k <= n; k++) {
-            const sx = px + (x - px) * (k - 1) / n, sz = pz + (z - pz) * (k - 1) / n;
-            const ex = px + (x - px) * k / n, ez = pz + (z - pz) * k / n;
-            occ.add(ex, ez, hw);
-            segBucketAdd(sx, sz, ex, ez);
-          }
-        } else {
-          occ.add(x, z, hw);
+  // 建物朝向/占位吃 roadInput(線上 = OSM 道路、離線 = 兵線當街道)⇒ 兩模式建物皆能門朝街
+  for (const way of roadInput) {
+    if (way.tags?.tunnel || way.tags?.bridge) continue;
+    const hw = roadWidth(way.tags) / 2;
+    let px = null, pz = 0;
+    for (const p of way.geometry || []) {
+      const [x, z] = llToWorld(p.lat, p.lon, center);
+      if (px !== null) {
+        const seg = Math.hypot(x - px, z - pz);
+        const n = Math.max(1, Math.ceil(seg / Math.max(hw * 1.2, 6)));
+        for (let k = 1; k <= n; k++) {
+          const sx = px + (x - px) * (k - 1) / n, sz = pz + (z - pz) * (k - 1) / n;
+          const ex = px + (x - px) * k / n, ez = pz + (z - pz) * k / n;
+          occ.add(ex, ez, hw);
+          segBucketAdd(sx, sz, ex, ez);
         }
-        px = x; pz = z;
+      } else {
+        occ.add(x, z, hw);
       }
+      px = x; pz = z;
     }
   }
   /**
-   * 最近道路段的沿路朝向(建物局部 x 軸對齊道路方向;查無 → null 由呼叫端 fallback)。
-   * toW 轉換下局部 x 軸的世界向量 = (cos ry, −sin ry) ⇒ ry = atan2(−dz, dx)。
-   * 掃 ±1 桶(最壞覆蓋 64m)—— 沿街建物離路遠小於此,街廓深處查無就隨機,符合直覺。
+   * 最近道路段的「門面朝向」(2026-07-25 使用者需求「建築門口一定對準道路」)。
+   * 建物 local +x 沿道路切線(順著道路方向整齊排列)、local +z = 門/正立面。取「朝路法線」(-dz,dx)
+   * 並選指向最近路點的那一側 ⇒ 門朝街(不朝街背)、立面平行街道。ry 使世界 +z=(sinθ,cosθ) 對上該法線
+   * ⇒ θ=atan2(n.x,n.z)(法線恰朝路時等同舊 atan2(-dz,dx),背街時翻 180° —— 立面仍平行街、+x 仍沿路)。
+   * 掃 ±1 桶(64m);沿街建物離路遠小於此,街廓深處查無 → null 由呼叫端 fallback(隨機/沿種子)。
    */
   const nearestRoadAngle = (x, z) => {
     const ci = Math.floor(x / SEG_C), cj = Math.floor(z / SEG_C);
-    let bd = Infinity, ang = null;
+    let bd = Infinity, nx = 0, nz = 0;
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         const a = roadSegIdx.get(`${ci + i},${cj + j}`);
@@ -4567,12 +4569,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           if (!l2) continue;
           let t = ((x - x1) * dx + (z - z1) * dz) / l2;
           t = t < 0 ? 0 : t > 1 ? 1 : t;
-          const d = Math.hypot(x - (x1 + dx * t), z - (z1 + dz * t));
-          if (d < bd) { bd = d; ang = Math.atan2(-dz, dx); }
+          const qx = x1 + dx * t, qz = z1 + dz * t;   // 最近路點
+          const d = Math.hypot(x - qx, z - qz);
+          if (d < bd) {
+            bd = d;
+            const s = ((-dz) * (qx - x) + dx * (qz - z)) >= 0 ? 1 : -1;   // 朝路法線的一側
+            nx = -dz * s; nz = dx * s;
+          }
         }
       }
     }
-    return ang;
+    return bd === Infinity ? null : Math.atan2(nx, nz);
   };
 
   const tryPlace = (x, z) =>
@@ -4639,7 +4646,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return;
       if (!occ.free(x, z, Math.max(w, d) / 2, 1)) return;
       occ.add(x, z, Math.max(w, d) / 2);
-      const rndRy = rnd() * Math.PI;   // 先抽保序列固定;離線無路網時 nearestRoadAngle 恆 null
+      const rndRy = rnd() * Math.PI;   // 先抽保序列固定;附近無路(街廓深處)時 nearestRoadAngle 回 null 才用
       generic.push({
         x, z, w, d,
         h: Math.min((commercial ? 24 + rnd() * 40 : 7 + rnd() * 9) * OVER.bldH, OVER.bldCap),
@@ -4651,7 +4658,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)
   if (generic.length) {
-    const n = densifyUrban({ generic, blocked, terrain, rnd, inb, occ });
+    const n = densifyUrban({ generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
     if (n) onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
   }
 
