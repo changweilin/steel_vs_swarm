@@ -90,6 +90,9 @@ npm start
 > **自訂連接埠 · Custom port**:`node server/server.js --port 9000`
 > ⚠️ PowerShell 的 `PORT=x` 前綴語法無效,請一律使用 `--port` 參數。
 > *Use the `--port` flag; the `PORT=x` prefix does not work in PowerShell.*
+>
+> **手機遊玩(需 HTTPS 才有陀螺儀)· Mobile play**:`npm run mobile`(= `--https`,自簽憑證)。
+> 詳見 [操作說明 → 📱 手機 / 平板](#-手機--平板--virtual-gamepad--gyro)。
 
 ---
 
@@ -131,22 +134,36 @@ npm start
 - **機甲 · Mech**:HP 高、彈夾大、可加購 2 件熱兵器;**重生有冷卻**。
 - **無人機 · Drone**:速度快、視野廣、垂直機動;彈夾小、可加購 1 件;**重生無冷卻**(神風玩法)。
 
-### 📱 手機 / 平板 · Touch & Gyro
+### 📱 手機 / 平板 · Virtual Gamepad & Gyro
 
-開啟網頁即自動切換觸控版(無需安裝);直式與橫式皆可玩,**橫式為建議持握**。
-*Touch UI activates automatically on phones/tablets. Both portrait and landscape are supported; landscape is recommended.*
+開啟網頁即自動切換觸控版(無需安裝),配置照實體搖桿;直式與橫式**各有專屬排版**,橫式為建議持握。
+*Touch UI activates automatically on phones/tablets, laid out like a physical gamepad. Portrait and landscape each get their own layout; landscape is recommended.*
 
-| 操作 · Action | 觸控版 · Touch |
+| 鍵位 · Button | 功能 · Action |
 |---|---|
-| **移動 · Move** | 左拇指區拖曳(手指落點即蘑菇頭圓心,類比速度;**推到底 = 衝刺**) |
-| **視角 · Look** | 畫面空處拖曳;開啟**陀螺儀**後可轉動手機微調準星(相對模式,兩者可疊加) |
-| **射擊 / 瞄準 · Fire / Aim** | 右下 射擊鈕;瞄準鈕短按 = 切換瞄準+重武器,**瞄準中長按 = 機種專屬絕招** |
-| **招式 / 填彈 · Skills / Reload** | 直接點 HUD 上的小招 / 大招 / 機動 / 武器列(名稱與冷卻就顯示在鈕面上) |
-| **升降 · Ascend / Descend** | 飛行機種:機動鈕上升、下降鈕下降(觀戰自由視角同) |
-| **其他 · Misc** | 工具列:☰ 戰場選單 ・ 升級 ・ 地圖 ・ 換機(無人機)・ 陀螺 ・ 全螢幕 ・ 左手模式 |
+| **類比十字鍵 · D-pad** | 移動(外觀十字、判定類比:輕推慢走、**推到底 = 衝刺**) |
+| **A** | 射擊(輕武器 / 狙擊模式下為重武器) |
+| **B** | 跳躍(機甲長按蓄力高跳)/ 上升(飛行機種・觀戰) |
+| **X / Y** | 小招 / 大招(冷卻與就緒直接顯示在鈕面) |
+| **L / R** | 填彈 / 狙擊模式(短按切換,**長按 = 機種專屬絕招**) |
+| **ZL / ZR** | 下降(飛行機種・觀戰)/ 切換僚機視野(無人機) |
+| **HOME / ⊟ / ◫** | 戰場選單(等同 ESC)/ 商店 / 小地圖放大 |
+| **轉視角 · Look** | 畫面空處拖曳;開啟**陀螺儀**後轉動手機即轉動準星(兩者可疊加) |
 
-陀螺儀靈敏度、垂直反轉、拖曳靈敏度、左手模式、觸覺回饋皆可在**戰場選單 → 設定**調整(自動記憶)。
-iOS 13+ 首次開啟陀螺儀需允許「動作與方向」權限。視角角度全機種一律 68°,**不隨持握方向改變**。
+角色數據與小地圖各據一角,**搖桿不會遮住它們**(版型幾何量測有此斷言)。
+陀螺儀靈敏度、垂直反轉、拖曳靈敏度、左手模式(左右鏡像)、觸覺回饋皆可在**戰場選單 → 設定**調整(自動記憶)。
+
+> **⚠ 陀螺儀需要安全連線(HTTPS)**
+> 瀏覽器只在 secure context(`https://` 或 `localhost`)提供方向感測資料 —— 用
+> `http://<區網 IP>:8620` 從手機連,感測器會**靜默不作動**(沒有錯誤、沒有權限提示)。
+> 請改用:
+> ```bash
+> npm run mobile        # = node server/server.js --https(首次會用系統 openssl 生自簽憑證到 .certs/)
+> ```
+> 手機連 `https://<區網 IP>:8620`,對自簽憑證的警告選「繼續前往」即可。
+> iOS 13+ 另需在按下陀螺開關時允許「動作與方向」權限。設定頁的陀螺狀態列會直接寫出目前卡在哪一關。
+
+視角角度全機種一律 68°,**不隨持握方向改變**;直式的水平視野本來就較窄,追求視野請橫握。
 
 ---
 
@@ -165,7 +182,7 @@ steel_vs_swarm/
 │       ├── data.js        # 全遊戲平衡數值唯一真相(伺服器直接 import)
 │       ├── main.js        # 畫面流程(大廳/配對/選址/載入/戰鬥)
 │       ├── game.js        # BattleClient:FPV 座艙、物理、快照插值、彈道、命中回報
-│       ├── mobile.js      # 手機/平板:觸控虛擬蘑菇頭 + 陀螺儀瞄準 + 直式/橫式版型
+│       ├── mobile.js      # 手機/平板:虛擬搖桿(類比十字鍵 + ABXY/LR)+ 陀螺儀瞄準 + 直式/橫式版型
 │       ├── help.js        # 操作提示與遊戲說明文字(鍵鼠版 / 觸控版)
 │       ├── net.js         # WebSocket 客戶端(斷線重連)
 │       ├── mapSelect.js   # 真實地圖選點 + 主堡推薦演算法

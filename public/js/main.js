@@ -25,7 +25,7 @@ import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
-import { installTouchUI, TOUCH, saveTouchPrefs, applyLefty } from './mobile.js';
+import { installTouchUI, TOUCH, saveTouchPrefs, applyLefty, gyroBlockedReason } from './mobile.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -1692,8 +1692,21 @@ function enterGame() {
   // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
   if (TOUCH_UI) $('shopHint').textContent = '';
   toast(TOUCH_UI
-    ? '左拇指拖曳移動 ・ 右拇指射擊 ・ 空處拖曳轉視角 ・ ☰ 選單(可開陀螺儀)'
+    ? '左手十字鍵移動 ・ A 射擊 / R 狙擊 ・ 空處拖曳轉視角 ・ HOME 選單(設定可開陀螺儀)'
     : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4600);
+}
+
+/**
+ * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 小招 / Y 大招 / B 機動)。
+ * 狀態的唯一計算來源是 makeHud().self 裡那份 w(角色數據欄同源),這裡只搬字與 class。
+ */
+function padMirror(act, cd, ready, locked) {
+  for (const b of document.querySelectorAll(`#touchLayer [data-act="${act}"]`)) {
+    const el = b.querySelector('.gb-cd');
+    if (el) el.textContent = cd > 0.05 ? `${cd.toFixed(0)}s` : '';
+    b.classList.toggle('ready', !!ready);
+    b.classList.toggle('locked', !!locked);
+  }
 }
 
 function makeHud() {
@@ -1744,6 +1757,13 @@ function makeHud() {
           $('abMobilName').textContent = mob.name;
           $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
           $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
+        }
+        // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
+        // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
+        if (TOUCH_UI) {
+          padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
+          padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
+          if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
         document.body.classList.toggle('aiming', !!w.aiming);
@@ -1993,6 +2013,9 @@ function syncSettingsUi() {
   const gs = $('setGyroSens'), ls = $('setLookSens');
   if (gs) { gs.value = String(Math.round(TOUCH.gyroSens * 100)); $('setGyroSensVal').textContent = `${gs.value}%`; }
   if (ls) { ls.value = String(Math.round(TOUCH.lookSens * 100)); $('setLookSensVal').textContent = `${ls.value}%`; }
+  // 陀螺儀狀態(運作中 / 需 HTTPS / 裝置沒送資料…):戰場中問 TouchControls,大廳則只做靜態檢查
+  const gh = $('setGyroHint');
+  if (gh) gh.textContent = app.battle?.touch?.gyroStatus?.() ?? (gyroBlockedReason() || '未啟用');
 }
 bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
 bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
@@ -2016,6 +2039,10 @@ bindSwitch('setGyro', async (on) => {
   const tc = app.battle?.touch;
   if (tc) { const ok = await tc.setGyro(on); setSwitch('setGyro', ok); return; }
   TOUCH.gyro = on; saveTouchPrefs();   // 尚未進戰場:只記偏好,進場時自動套用
+  const why = gyroBlockedReason();
+  if (on && why) { setSwitch('setGyro', false); TOUCH.gyro = false; saveTouchPrefs(); toast(why, 6000); }
+  const gh = $('setGyroHint');
+  if (gh) gh.textContent = why || (TOUCH.gyro ? '已記憶:進戰場自動啟用' : '未啟用');
 });
 bindSwitch('setGyroInv', (on) => { TOUCH.gyroInvert = on; saveTouchPrefs(); });
 bindSwitch('setHaptic', (on) => { TOUCH.haptic = on; saveTouchPrefs(); });

@@ -18,7 +18,7 @@ const OVERRIDE_KEY = 'svs_touchui';   // '1' 強制觸控版 / '0' 強制桌機�
 const SETTINGS_KEY = 'svs_touch';
 
 /** 有觸控硬體(不代表要用觸控版:二合一筆電也有觸控螢幕) */
-export function touchCapable() {
+function touchCapable() {
   return (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
 }
 
@@ -40,14 +40,6 @@ export function isTouchUI() {
   return (coarse && noHover) || small;
 }
 
-/** 觸控版強制開關(設定頁用;需重新載入才會重建輸入層) */
-export function setTouchUIOverride(v) {
-  try {
-    if (v == null) localStorage.removeItem(OVERRIDE_KEY);
-    else localStorage.setItem(OVERRIDE_KEY, v ? '1' : '0');
-  } catch { /* 私密模式忽略 */ }
-}
-
 /* ---------------- 設定(持久化;陀螺儀/靈敏度/左手模式)---------------- */
 
 // 靈敏度基準:touch 每像素轉多少弧度、gyro 1:1(1.0 = 手機轉幾度視角就轉幾度)。
@@ -57,8 +49,8 @@ export const LOOK = {
   GYRO_BASE: 1.0,         // 陀螺儀增益基準(1 = 物理 1:1)
   GYRO_DEAD: 0.00035,     // 陀螺儀死區(rad/event):濾掉手持微顫
   GYRO_JUMP: 0.5,         // 單次事件超過此弧度視為姿態跳變(轉螢幕/失準)→ 重設基準不套用
-  SPRINT_MAG: 0.92,       // 蘑菇頭推到此比例以上 = 衝刺(等同 Shift)
-  STICK_DEAD: 0.16,       // 蘑菇頭死區(比例)
+  SPRINT_MAG: 0.92,       // 類比十字鍵推到此比例以上 = 衝刺(等同 Shift)
+  STICK_DEAD: 0.16,       // 類比十字鍵死區(比例)
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, Number.isFinite(+v) ? +v : a));
@@ -78,7 +70,7 @@ export const TOUCH = {
   gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
   gyroInvert: false,  // 陀螺儀垂直反轉
   lookSens: 1.0,      // 拖曳視角靈敏度倍率(0.4~2.5)
-  lefty: false,       // 左手模式(蘑菇頭與動作鈕左右鏡像)
+  lefty: false,       // 左手模式(十字鍵與 ABXY 左右鏡像)
   haptic: true,       // 觸覺回饋(navigator.vibrate,不支援即無感)
 };
 
@@ -138,7 +130,7 @@ export function installTouchUI() {
   return on;
 }
 
-/** 左手模式即時套用(設定頁用;鏡像純 CSS,蘑菇頭區域由 CSS 定位 → 無需重建) */
+/** 左手模式即時套用(設定頁用;鏡像純 CSS,十字鍵位置由 CSS 定位、圓心每次落指重算 → 無需重建) */
 export function applyLefty(on) {
   TOUCH.lefty = !!on;
   document.body.classList.toggle('touch-lefty', document.body.classList.contains('touch-ui') && TOUCH.lefty);
@@ -167,30 +159,55 @@ const ZEE = new THREE.Vector3(0, 0, 1);
 const Q_UP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
 
 /**
- * 陀螺儀輔助瞄準(相對模式)。
- * 絕對映射(手機朝哪、視角就朝哪)在 FPS 不可用 —— 要轉身 180° 就得整個人轉半圈;
+ * 陀螺儀能不能用的事前檢查(**這是「完全沒反應」的第一嫌疑犯**)。
+ * 瀏覽器只在 **secure context**(https / localhost)才派送 deviceorientation:
+ * 用 `http://<區網 IP>:8620` 從手機開,事件**靜默不派送** —— 沒有錯誤、沒有權限提示、沒有 log,
+ * 就是不動。伺服器請改用 `npm run mobile`(= `--https`,自簽憑證,見 server.js ensureCert)。
+ * 回傳 null = 可以試;字串 = 不可能成功的原因(直接顯示給玩家,MUST NOT 靜默失敗)。
+ */
+export function gyroBlockedReason() {
+  if (!window.isSecureContext) {
+    return `陀螺儀需要 HTTPS 才會有感測器資料(目前是 ${location.protocol}//${location.hostname})`
+      + ' —— 伺服器請改用 npm run mobile(= --https)';
+  }
+  if (!window.DeviceOrientationEvent) return '此瀏覽器不支援 DeviceOrientationEvent';
+  return null;
+}
+
+/**
+ * 陀螺儀輔助瞄準(相對模式)—— 轉動手機 = 轉動準星朝向。
+ * 絕對映射(手機朝哪、準星就朝哪)在 FPS 不可用 —— 要轉身 180° 就得整個人轉半圈;
  * 故取**每次事件的姿態差**疊加到視角上(= 主機遊戲的陀螺輔助),與拖曳視角可同時作用、互不重設。
  * 螢幕旋轉角納入四元數補正 ⇒ 直式/橫式(含反向橫式)軸向自動正確,MUST NOT 改成手動換軸。
+ *
+ * 事件來源兩種都聽:`deviceorientation`(相對,較普及)與 `deviceorientationabsolute`
+ * (Chrome/Android 的絕對版)。**先到者贏**並記在 `source`,之後只吃同一種 ——
+ * 兩種混用會讓姿態差在不同基準間跳。
  */
 class Gyro {
-  constructor(onLook) {
+  constructor(onLook, onFail) {
     this.onLook = onLook;
+    this.onFail = onFail;               // (reason) => void:確定收不到資料時回報(UI 要把開關扳回關閉)
     this.active = false;
     this.granted = false;
+    this.source = null;                 // 實際在用的事件名(診斷用)
+    this.events = 0;                    // 收到的事件數(診斷用:0 = 感測器沒在送)
+    this.usable = 0;                    // 其中含有效角度的筆數
     this._q = new THREE.Quaternion();
     this._q0 = new THREE.Quaternion();
     this._e = new THREE.Euler();
     this._f = new THREE.Vector3();
     this._have = false;
     this._yaw = 0; this._pitch = 0;
-    this._onOri = (ev) => this._read(ev);
+    this._onOri = (ev) => this._read(ev, 'deviceorientation');
+    this._onAbs = (ev) => this._read(ev, 'deviceorientationabsolute');
     this._reset = () => { this._have = false; };   // 轉螢幕 → 丟掉基準,下一個事件重新起算
   }
 
   /** iOS 13+ 需在使用者手勢中要求權限;其他平台直接可用 */
   async request() {
+    if (gyroBlockedReason()) return false;
     const D = window.DeviceOrientationEvent;
-    if (!D) return false;
     if (typeof D.requestPermission === 'function') {
       try { this.granted = (await D.requestPermission()) === 'granted'; } catch { this.granted = false; }
     } else this.granted = true;
@@ -201,24 +218,53 @@ class Gyro {
     if (this.active) return;
     this.active = true;
     this._have = false;
+    this.source = null; this.events = 0; this.usable = 0;
     window.addEventListener('deviceorientation', this._onOri);
+    window.addEventListener('deviceorientationabsolute', this._onAbs);
     window.addEventListener('orientationchange', this._reset);
     window.screen?.orientation?.addEventListener?.('change', this._reset);
+    // 看門狗:感測器不作動時瀏覽器不會報錯,只會什麼都不發生 ——
+    // 沒有這條,玩家看到的就是「開關是綠的但完全沒反應」。
+    clearTimeout(this._wdT);
+    this._wdT = setTimeout(() => {
+      if (!this.active) return;
+      if (this.usable > 0) return;
+      const why = this.events === 0
+        ? '裝置沒有送出方向感測資料(可能無陀螺儀,或系統/瀏覽器關閉了動作感測權限)'
+        : '方向感測資料無效(裝置回報的角度為空值)';
+      this.onFail?.(why);
+    }, 1800);
   }
 
   stop() {
+    clearTimeout(this._wdT);
     if (!this.active) return;
     this.active = false;
     this._have = false;
     window.removeEventListener('deviceorientation', this._onOri);
+    window.removeEventListener('deviceorientationabsolute', this._onAbs);
     window.removeEventListener('orientationchange', this._reset);
     window.screen?.orientation?.removeEventListener?.('change', this._reset);
   }
 
-  _read(ev) {
-    if (ev.alpha == null || ev.beta == null || ev.gamma == null) return;
+  /** 目前狀態一句話(設定頁提示 + 除錯用) */
+  status() {
+    if (!this.active) return gyroBlockedReason() || '未啟用';
+    if (this.usable > 0) return `運作中(${this.source},已收 ${this.events} 筆)`;
+    return this.events ? '收到事件但角度為空值' : '等待感測器資料…';
+  }
+
+  _read(ev, src) {
+    if (!this.active) return;
+    if (this.source && this.source !== src) return;   // 兩種事件都在送 → 只認先到的那種
+    this.events++;
+    // beta/gamma 是傾角(必要);alpha 是水平朝向,少數裝置無磁力計會給 null ——
+    // 這時**不能整筆丟掉**(那就等於陀螺儀全滅),alpha 當 0 仍可靠 beta/gamma 取得俯仰與側傾。
+    if (ev.beta == null || ev.gamma == null) return;
+    if (!this.source) this.source = src;
+    this.usable++;
     const d2r = Math.PI / 180;
-    this._e.set(ev.beta * d2r, ev.alpha * d2r, -ev.gamma * d2r, 'YXZ');
+    this._e.set(ev.beta * d2r, (ev.alpha ?? 0) * d2r, -ev.gamma * d2r, 'YXZ');
     this._q.setFromEuler(this._e);
     this._q.multiply(Q_UP);
     this._q.multiply(this._q0.setFromAxisAngle(ZEE, -screenAngle() * d2r));
@@ -242,15 +288,17 @@ class Gyro {
 
 /* ---------------- 觸控操控 ---------------- */
 
-// 機動鈕(空白鍵)逐機種標籤:與 help.js 的操作說明同義,但這裡只需要單字(鈕面寬度有限)。
-const MOBIL_GLYPH = { drone: '升', morph: '躍', mech: '躍', robot: '躍' };
+// B 鍵(空白鍵機動能力)逐機種鈕面字樣:與 help.js 的操作說明同義,鈕面寬度有限故取兩字。
+// 變形機甲兩種型態共用 B(地面蓄力變形彈射 / 飛行中上升)⇒ 鈕面寫「躍/升」,細節看角色數據欄。
+const MOBIL_LABEL = { drone: '上升', morph: '躍/升', mech: '跳躍', robot: '跳躍' };
 
 /**
- * 戰場觸控操控。由 BattleClient._initInput() 在觸控版時建立,dispose() 時銷毀。
+ * 戰場虛擬搖桿。由 BattleClient._initInput() 在觸控版時建立,dispose() 時銷毀。
  * DOM 掛點全部在 index.html 的 #touchLayer(靜態骨架 + data-act),本檔只綁事件:
- *   - #tlLook     :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
- *   - #tlMoveZone :虛擬蘑菇頭作用區(浮動原點 —— 手指落點即圓心)
- *   - [data-act]  :動作鈕(含被特化成按鈕的 HUD 方塊:小招/大招/機動/填彈)
+ *   - #tlLook  :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
+ *   - #tlDpad  :虛擬**類比**十字鍵 —— 外觀十字、判定類比(圓心固定 = 鍵盤中心,偏移量 = 推杆量)
+ *   - [data-act]:搖桿鈕(ABXY / L・ZL / R・ZR / HOME・⊟・◫ 與陀螺/全螢幕/左手)
+ * 角色數據(.hud-self)與小地圖(#minimap)是純顯示,**MUST NOT** 被搖桿覆蓋(版型量測有斷言)。
  */
 export class TouchControls {
   constructor(client) {
@@ -258,23 +306,25 @@ export class TouchControls {
     this.axis = { f: 0, r: 0, mag: 0 };   // 移動輸入(_moveAxis 讀;鍵盤未按時才生效)
     this.layer = document.getElementById('touchLayer');
     this.lookPad = document.getElementById('tlLook');
-    this.moveZone = document.getElementById('tlMoveZone');
-    this.stick = document.getElementById('tlStick');
+    this.dpad = document.getElementById('tlDpad');
     this.knob = document.getElementById('tlKnob');
     this._lookId = null;
     this._lookX = 0; this._lookY = 0;
-    this._stickId = null;
-    this._cx = 0; this._cy = 0; this._r = 60;
-    this._held = new Map();   // pointerId → act(按住型動作鈕:射擊/瞄準/機動)
-    this.gyro = new Gyro((dy, dp) => this._gyroLook(dy, dp));
+    this._padId = null;
+    this._cx = 0; this._cy = 0; this._r = 70;
+    this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / B 跳躍 / ZL 下降)
+    this.gyro = new Gyro(
+      (dy, dp) => this._gyroLook(dy, dp),
+      (why) => this._gyroDead(why),
+    );
 
     if (this.layer) this.layer.hidden = false;
     this._bindLook();
-    this._bindStick();
+    this._bindDpad();
     this._bindButtons();
     this._bindRotateHint();
     this.setKind(client.heroKind);
-    if (TOUCH.gyro) this.setGyro(true, true);   // 記憶開啟:靜默續用(iOS 若未授權會自行退回關閉)
+    if (TOUCH.gyro) this.setGyro(true, true);   // 記憶開啟:靜默續用(不可用時 onFail 會自行關掉)
     this._syncGyroBtn();
   }
 
@@ -315,67 +365,72 @@ export class TouchControls {
     return !!(c.paused || c.shopOpen || c._gameOver);
   }
 
-  /* ---- 移動:浮動虛擬蘑菇頭 ---- */
-  _bindStick() {
-    if (!this.moveZone || !this.stick) return;
-    const place = (x, y) => {
-      const zr = this.moveZone.getBoundingClientRect();
-      this._r = (this.stick.offsetWidth || 120) / 2;
-      // 圓心夾在作用區內(貼邊落指也要有完整行程)
-      this._cx = clamp(x, zr.left + this._r, zr.right - this._r);
-      this._cy = clamp(y, zr.top + this._r, zr.bottom - this._r);
-      this.stick.style.left = `${this._cx - zr.left - this._r}px`;
-      this.stick.style.top = `${this._cy - zr.top - this._r}px`;
-      this.stick.classList.add('on');
-    };
-    this._onStickDown = (e) => {
-      if (this._stickId !== null || this._blocked()) return;
-      this._stickId = e.pointerId;
-      place(e.clientX, e.clientY);
-      this._stickMove(e.clientX, e.clientY);
-      capture(this.moveZone, e.pointerId);
+  /* ---- 移動:虛擬類比十字鍵 ---- */
+  // 外觀是十字鍵、判定是類比搖桿:圓心固定在鍵盤中心(不像蘑菇頭那樣浮動 —— 十字鍵的中心就是它自己),
+  // 觸點到圓心的偏移量 = 推杆量 ⇒ 輕推慢走、推到底衝刺。方向片依實際軸值亮起(玩家看得出走哪邊)。
+  _bindDpad() {
+    if (!this.dpad) return;
+    this._onPadDown = (e) => {
+      if (this._padId !== null || this._blocked()) return;
+      this._padId = e.pointerId;
+      const r = this.dpad.getBoundingClientRect();
+      this._cx = r.left + r.width / 2;
+      this._cy = r.top + r.height / 2;
+      this._r = r.width / 2 || 70;
+      this._padMove(e.clientX, e.clientY);
+      capture(this.dpad, e.pointerId);
       e.preventDefault();
       e.stopPropagation();
     };
-    this._onStickMove = (e) => {
-      if (e.pointerId !== this._stickId) return;
-      this._stickMove(e.clientX, e.clientY);
+    this._onPadMove = (e) => {
+      if (e.pointerId !== this._padId) return;
+      this._padMove(e.clientX, e.clientY);
       e.preventDefault();
     };
-    this._onStickUp = (e) => {
-      if (e.pointerId !== this._stickId) return;
-      this._stickId = null;
+    this._onPadUp = (e) => {
+      if (e.pointerId !== this._padId) return;
+      this._padId = null;
       this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0;
-      this.stick.classList.remove('on');
-      this.stick.style.removeProperty('left');
-      this.stick.style.removeProperty('top');
-      if (this.knob) this.knob.style.transform = '';
+      this._padPaint();
       this.client._cmd('sprint', false);
     };
-    this.moveZone.addEventListener('pointerdown', this._onStickDown);
-    this.moveZone.addEventListener('pointermove', this._onStickMove);
-    this.moveZone.addEventListener('pointerup', this._onStickUp);
-    this.moveZone.addEventListener('pointercancel', this._onStickUp);
+    this.dpad.addEventListener('pointerdown', this._onPadDown);
+    this.dpad.addEventListener('pointermove', this._onPadMove);
+    this.dpad.addEventListener('pointerup', this._onPadUp);
+    this.dpad.addEventListener('pointercancel', this._onPadUp);
   }
 
-  _stickMove(x, y) {
+  _padMove(x, y) {
     const dx = x - this._cx, dy = y - this._cy;
     const len = Math.hypot(dx, dy);
-    const k = len > this._r ? this._r / len : 1;                 // 拉出圓外 → 夾在邊緣
-    if (this.knob) this.knob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
     let mag = Math.min(1, len / this._r);
     // 死區 → 重新拉伸到 0~1(免得手指微動就爬行)
     mag = mag < LOOK.STICK_DEAD ? 0 : (mag - LOOK.STICK_DEAD) / (1 - LOOK.STICK_DEAD);
-    if (mag <= 0 || len < 0.001) { this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0; return; }
-    this.axis.f = -dy / len * mag;   // 螢幕上 = 前進
-    this.axis.r = dx / len * mag;
-    this.axis.mag = mag;
+    if (mag <= 0 || len < 0.001) { this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0; }
+    else {
+      this.axis.f = -dy / len * mag;   // 螢幕上 = 前進
+      this.axis.r = dx / len * mag;
+      this.axis.mag = mag;
+    }
+    this._padPaint(dx, dy, len);
     this.client._cmd('sprint', mag >= LOOK.SPRINT_MAG);
+  }
+
+  /** 方向片高亮 + 中央 hub 位移(純視覺回饋;軸值已在 _padMove 定案) */
+  _padPaint(dx = 0, dy = 0, len = 0) {
+    const a = this.axis, on = a.mag > 0;
+    const k = on && len > this._r ? this._r / len : 1;
+    if (this.knob) this.knob.style.transform = on ? `translate(${dx * k * 0.55}px, ${dy * k * 0.55}px)` : '';
+    const cl = this.dpad.classList;
+    const T = 0.32;   // 方向片亮起門檻:斜推時兩片同亮
+    cl.toggle('on-up', a.f > T); cl.toggle('on-dn', a.f < -T);
+    cl.toggle('on-rt', a.r > T); cl.toggle('on-lf', a.r < -T);
+    cl.toggle('on-run', a.mag >= LOOK.SPRINT_MAG);
   }
 
   /* ---- 動作鈕 ---- */
   _bindButtons() {
-    // 按住型:射擊 / 瞄準(長按 = 機種專屬絕招)/ 機動(蓄力跳)/ 下降
+    // 按住型:A 射擊 / R 狙擊(長按 = 機種專屬絕招)/ B 跳躍(蓄力跳)/ ZL 下降
     const HOLD = new Set(['fire', 'aim', 'jump', 'dive']);
     this._onBtnDown = (e) => {
       const el = e.target.closest?.('[data-act]');
@@ -403,7 +458,7 @@ export class TouchControls {
       this.client._cmd(act, false);
       document.querySelectorAll(`[data-act="${act}"].press`).forEach((n) => n.classList.remove('press'));
     };
-    // 委派在 document 上:HUD 方塊(小招/大招/機動/填彈)與觸控層的鈕共用同一條派發路徑
+    // 委派在 document 上:搖桿鈕與 #civPrompt 裡的平民鈕共用同一條派發路徑
     document.addEventListener('pointerdown', this._onBtnDown, true);
     document.addEventListener('pointerup', this._onBtnUp, true);
     document.addEventListener('pointercancel', this._onBtnUp, true);
@@ -445,69 +500,86 @@ export class TouchControls {
     if (TOUCH.haptic) { try { navigator.vibrate?.(ms); } catch { /* 不支援即無感 */ } }
   }
 
-  /* ---- 陀螺儀開關(設定頁與觸控層鈕共用這一個縫)---- */
+  /* ---- 陀螺儀開關(設定頁與搖桿的「陀螺」鈕共用這一個縫)---- */
+  // 失敗一律**講原因**:陀螺儀最常見的故障是 http 下瀏覽器根本不派送感測器事件,
+  // 而那是完全靜默的(沒錯誤、沒權限提示)⇒ 只要不可用就把開關扳回關閉並把理由寫進戰報。
   async setGyro(on, silent = false) {
     if (on) {
+      const blocked = gyroBlockedReason();
+      if (blocked) {
+        TOUCH.gyro = false; saveTouchPrefs(); this._syncGyroBtn();
+        this.client.hud?.feed?.(`🧭 ${blocked}`);   // 這條 MUST NOT 靜默(silent 也要說)
+        return false;
+      }
       const ok = await this.gyro.request();
       if (!ok) {
         TOUCH.gyro = false; saveTouchPrefs(); this._syncGyroBtn();
-        if (!silent) this.client.hud?.feed?.('🧭 陀螺儀無法啟用(裝置不支援或未授權)');
+        this.client.hud?.feed?.('🧭 陀螺儀未取得授權(iOS 需允許「動作與方向」)');
         return false;
       }
       this.gyro.start();
       TOUCH.gyro = true;
-      if (!silent) this.client.hud?.feed?.('🧭 陀螺儀輔助瞄準:開啟(轉動手機微調準星)');
+      if (!silent) this.client.hud?.feed?.('🧭 陀螺儀瞄準:開啟(轉動手機即轉動準星)');
     } else {
       this.gyro.stop();
       TOUCH.gyro = false;
-      if (!silent) this.client.hud?.feed?.('🧭 陀螺儀輔助瞄準:關閉');
+      if (!silent) this.client.hud?.feed?.('🧭 陀螺儀瞄準:關閉');
     }
     saveTouchPrefs();
     this._syncGyroBtn();
     return TOUCH.gyro;
   }
 
+  /** 看門狗判定「開了但感測器沒在送」:自動關掉並說明,免得玩家對著綠燈的鈕猜半天 */
+  _gyroDead(why) {
+    this.gyro.stop();
+    TOUCH.gyro = false;
+    saveTouchPrefs();
+    this._syncGyroBtn();
+    this.client.hud?.feed?.(`🧭 陀螺儀已關閉:${why}`);
+  }
+
+  /** 陀螺儀狀態一句話(設定頁提示用) */
+  gyroStatus() { return this.gyro.status(); }
+
   _syncGyroBtn() {
-    document.querySelectorAll('[data-act="gyro"]').forEach((n) => n.classList.toggle('on', this.gyro.active));
+    document.querySelectorAll('[data-act="gyro"]').forEach((n) => {
+      n.classList.toggle('on', this.gyro.active);
+      n.classList.toggle('off', !this.gyro.active && !!gyroBlockedReason());
+    });
     document.querySelectorAll('[data-act="lefty"]').forEach((n) => n.classList.toggle('on', TOUCH.lefty));
+    const hint = document.getElementById('setGyroHint');
+    if (hint) hint.textContent = this.gyro.status();
   }
 
   /**
-   * 逐機種鈕面特化。三件事:
-   *   ① HUD 招式方塊的鍵位字改成觸控字樣(Q/E/␣ 在手機上沒有意義,但就緒色塊要留)。
-   *   ② 下降鈕只在飛行機種(無人機/變形機甲)或觀戰自由視角出現。
-   *   ③ 上升鈕只給觀戰(參戰時上升 = HUD #abMobil 方塊,它另帶 CD;不做第二顆同功能鈕)。
-   *   ④ 換機鈕只給無人機三機小隊。
+   * 逐機種鈕面特化:
+   *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
+   *   ② ZL 下降只在飛行機種(無人機/變形機甲)與觀戰自由視角出現。
+   *   ③ ZR 換機只給無人機三機小隊。
+   *   ④ 觀戰沒有座機:A/R/⊟/HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
+   *      HOME 亦然 —— `_setPaused` 對 side=null 直接 return,桌機觀戰同樣沒有 ESC 選單)。
    */
   setKind(kind) {
     const spec = !kind;                          // 觀戰自由視角(無機體)
-    const key = (sel, t) => { const n = document.querySelector(sel); if (n) n.textContent = t; };
-    key('#abMobil .ab-key', MOBIL_GLYPH[kind] || '躍');
-    key('#abSkill .ab-key', '小');
-    key('#abUlt .ab-key', '大');
+    const mob = MOBIL_LABEL[kind] || MOBIL_LABEL.mech;
+    const bf = document.querySelector('.gb-b .gb-f');
+    if (bf) bf.textContent = spec ? '上升' : mob;
     const fly = spec || kind === 'drone' || kind === 'morph';
-    document.querySelectorAll('.tl-dive').forEach((n) => { n.hidden = !fly; });
-    document.querySelectorAll('.tl-rise').forEach((n) => { n.hidden = !spec; });
+    document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
-    // 觀戰沒有座機:戰鬥類鈕一律收掉(_cmd 對 side=null 本來就不受理,留著只會誤按)。
-    // ☰ 一併收 —— 戰場選單 `_setPaused` 本來就對 side=null 直接 return(桌機觀戰也沒有 ESC 選單),
-    // 留一顆按了沒反應的鈕比沒有更糟;觀戰要離開走瀏覽器重載,與桌機同。
-    document.querySelectorAll('.tl-fire, .tl-aim, [data-act="shop"], [data-act="menu"]')
+    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"]')
       .forEach((n) => { n.hidden = spec; });
+    document.body.classList.toggle('tl-spec', spec);
   }
 
   /** 凍結輸入(開選單/商店時由 _setPaused 呼叫):放掉所有按住狀態,免得放手事件被吃掉後卡住 */
   reset() {
     this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0;
-    this._lookId = null; this._stickId = null;
+    this._lookId = null; this._padId = null;
     for (const act of this._held.values()) this.client._cmd(act, false);
     this._held.clear();
-    this.stick?.classList.remove('on');
-    // 浮動原點的 left/top 是 inline 寫上去的:收起時 MUST 一併清掉,否則 .on 移除後
-    // 基準規則的 translate(-50%,-50%) 會配上舊 inline 座標 → 圓盤停在偏移位置
-    this.stick?.style.removeProperty('left');
-    this.stick?.style.removeProperty('top');
-    if (this.knob) this.knob.style.transform = '';
+    if (this.dpad) this._padPaint();
     document.querySelectorAll('#game [data-act].press').forEach((n) => n.classList.remove('press'));
   }
 
@@ -522,11 +594,11 @@ export class TouchControls {
       this.lookPad.removeEventListener('pointerup', this._onLookUp);
       this.lookPad.removeEventListener('pointercancel', this._onLookUp);
     }
-    if (this.moveZone) {
-      this.moveZone.removeEventListener('pointerdown', this._onStickDown);
-      this.moveZone.removeEventListener('pointermove', this._onStickMove);
-      this.moveZone.removeEventListener('pointerup', this._onStickUp);
-      this.moveZone.removeEventListener('pointercancel', this._onStickUp);
+    if (this.dpad) {
+      this.dpad.removeEventListener('pointerdown', this._onPadDown);
+      this.dpad.removeEventListener('pointermove', this._onPadMove);
+      this.dpad.removeEventListener('pointerup', this._onPadUp);
+      this.dpad.removeEventListener('pointercancel', this._onPadUp);
     }
     document.removeEventListener('pointerdown', this._onBtnDown, true);
     document.removeEventListener('pointerup', this._onBtnUp, true);

@@ -2,6 +2,8 @@
 // HTTP 靜態檔 + WebSocket 房間配對(架構改自 ai_tycoon/server/server.js)
 // + 戰場權威模擬(server/sim.js,8Hz tick)。
 import http from 'http';
+import https from 'https';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -26,6 +28,11 @@ function argVal(...names) {
   return undefined;
 }
 const PORT = argVal('--port', '-p') || process.env.PORT || 8620;
+// `--https`:用自簽憑證起 TLS。手機陀螺儀**必須**要這個 ——
+// 瀏覽器只在 secure context(https 或 localhost)才送 deviceorientation 事件,
+// 用 http://<區網 IP> 開的話感測器**靜默不作動**(沒有錯誤、沒有權限提示,就是不動)。
+const USE_HTTPS = process.argv.slice(2).some((a) => a === '--https' || a === '--tls');
+const CERT_DIR = path.join(__dirname, '..', '.certs');   // 已入 .gitignore(自簽私鑰 MUST NOT 進版控)
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -38,7 +45,43 @@ const MIME = {
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav',
 };
 
-const httpServer = http.createServer((req, res) => {
+/** 本機所有非內部 IPv4(自簽憑證的 SAN + 區網網址共用一份) */
+function lanIps() {
+  const out = [];
+  const ifaces = os.networkInterfaces();
+  for (const name in ifaces) {
+    for (const i of ifaces[name]) if (i.family === 'IPv4' && !i.internal) out.push(i.address);
+  }
+  return out;
+}
+
+/**
+ * 自簽憑證(`--https` 用):`.certs/{key,cert}.pem`,缺了就用系統 openssl 生一張 10 年期的。
+ * SAN 帶上 localhost + 127.0.0.1 + 當下所有區網 IP —— 手機直接連 IP 才不會被判憑證主體不符
+ * (仍會有「不安全連線」警告:自簽憑證沒有 CA 背書,點「繼續前往」即可,secure context 照樣成立)。
+ * 沒有 openssl 就回 null,呼叫端退回 http 並印出說明 —— 不因此讓伺服器起不來。
+ * **MUST NOT** 把生成的私鑰寫進版控(見 .gitignore)。
+ */
+function ensureCert() {
+  const key = path.join(CERT_DIR, 'key.pem'), cert = path.join(CERT_DIR, 'cert.pem');
+  if (fs.existsSync(key) && fs.existsSync(cert)) return { key: fs.readFileSync(key), cert: fs.readFileSync(cert) };
+  const san = ['DNS:localhost', 'IP:127.0.0.1', ...lanIps().map((ip) => `IP:${ip}`)].join(',');
+  try {
+    fs.mkdirSync(CERT_DIR, { recursive: true });
+    execFileSync('openssl', [
+      'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '3650',
+      '-keyout', key, '-out', cert,
+      '-subj', '/CN=steel-vs-swarm',
+      '-addext', `subjectAltName=${san}`,
+    ], { stdio: 'ignore' });
+    console.log(`  ✓ 已生成自簽憑證(${CERT_DIR});SAN:${san}`);
+    return { key: fs.readFileSync(key), cert: fs.readFileSync(cert) };
+  } catch {
+    return null;
+  }
+}
+
+const handler = (req, res) => {
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
   const filePath = path.join(PUBLIC_DIR, path.normalize(urlPath));
@@ -53,7 +96,12 @@ const httpServer = http.createServer((req, res) => {
     });
     res.end(data);
   });
-});
+};
+
+// TLS 起不來(沒 openssl)就退回 http:伺服器照樣能跑,只是手機陀螺儀不會動(見 ensureCert 註解)
+const tls = USE_HTTPS ? ensureCert() : null;
+const SECURE = !!tls;
+const httpServer = SECURE ? https.createServer(tls, handler) : http.createServer(handler);
 
 // ---------------- 房間管理 ----------------
 /**
@@ -115,14 +163,8 @@ function addBotToSide(room, side) {
 }
 
 function lanUrls() {
-  const urls = [];
-  const ifaces = os.networkInterfaces();
-  for (const name in ifaces) {
-    for (const i of ifaces[name]) {
-      if (i.family === 'IPv4' && !i.internal) urls.push(`http://${i.address}:${PORT}`);
-    }
-  }
-  return urls;
+  const proto = SECURE ? 'https' : 'http';
+  return lanIps().map((ip) => `${proto}://${ip}:${PORT}`);
 }
 
 /** 大廳列表(公開房直接給 PIN 一鍵加入;私人房要輸入 PIN) */
@@ -528,7 +570,15 @@ wss.on('connection', (ws) => {
 httpServer.listen(PORT, () => {
   console.log('==============================================');
   console.log('  無人戰略:鋼鐵與蜂群  Drone Tactics: Steel vs. Swarm');
-  console.log(`  本機:  http://localhost:${PORT}`);
+  console.log(`  本機:  ${SECURE ? 'https' : 'http'}://localhost:${PORT}`);
   for (const u of lanUrls()) console.log(`  區網:  ${u}`);
+  if (USE_HTTPS && !SECURE) {
+    console.log('  ⚠ --https 需要系統 openssl 來生自簽憑證,找不到 ⇒ 已退回 http。');
+  }
+  if (!SECURE) {
+    // 手機陀螺儀最常見的「完全沒反應」就是這個:http://<區網 IP> 不是 secure context
+    console.log('  ℹ 手機陀螺儀瞄準需要 secure context:請改用  npm start -- --https');
+    console.log('     (自簽憑證會有一次「不安全連線」警告,點繼續前往即可;http 下感測器靜默不作動)');
+  }
   console.log('==============================================');
 });

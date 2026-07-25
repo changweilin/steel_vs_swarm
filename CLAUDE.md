@@ -156,6 +156,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
-| `mobile.js`(觸控/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②手機版型幾何量測:直式/橫式 × 無人機/機甲/觀戰,控件不出界、戰鬥手勢鈕互不重疊、觸控目標 ≥ 44×40 ③真機冒煙:虛擬蘑菇頭類比推進、拖曳視角、陀螺儀開關(iOS 需權限)、左手模式鏡像、轉向後畫布不拉伸 |
+| `mobile.js`(虛擬搖桿/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②版型幾何量測:直式/橫式 × 無人機/機甲/變形/觀戰 —— 控件不出界、**搖桿不覆蓋 `.hud-self` 與 `#minimap`**、控件互不重疊、ABXY 圓心距 ≥ 兩半徑和(d ≤ 41.4% 外框)、觸控目標 ≥ 44×40 ③真機冒煙:類比十字鍵推進量、拖曳視角、左手模式鏡像、轉向後畫布不拉伸 |
+| 陀螺儀相關(`Gyro`/`gyroBlockedReason`/`--https`) | **MUST 用 `https`(或 localhost)實測** —— `http://<區網 IP>` 不是 secure context,瀏覽器靜默不派送 `deviceorientation`,在那裡測永遠是「沒反應」。跑 `npm run mobile` 後手機連 `https://`:轉手機 → 準星同向轉動;另驗 insecure origin 下開關會自動扳回並寫出原因(不得靜默) |
 
 **e2e 結構備忘**:前段 import `BattleSim` 直測(`_add` 的測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下要「看到」敵方 MUST 另開 `mode:'spectator'` client 偵察。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
