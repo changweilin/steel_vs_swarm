@@ -3107,6 +3107,21 @@ export class BattleClient {
   }
 
   /**
+   * 變形機甲的濕地浮台面(2026-07-25;唯一縫):水域回水面 waterY、沼澤回沼面 swampY
+   * (= waterY + SWAMP_BAND,與 buildSwampSurface / 水下帷幕同一條線)、乾地回 null(照常規地面/涉水)。
+   * 變形機甲兩棲不潛水/不陷沼 —— 地面型停駐、觸地變形、蓄力彈射一律以此浮台為地板:
+   *   ①觸地變形停在**可見濕地表面**(WYSIWYG,非水底);②彈射初速的 +1m 抬升能真正脫離 LAND_M 觸地區
+   *   (舊制淺水的地面 gy = 河床沉在水面下,+1m 被水深吃掉 ⇒ 彈射下一幀即觸地變形回地面)。
+   * 只在 isMorph 時呼叫(其餘機種維持涉水沉至 FULL_D / 無人機水面下限)。
+   */
+  _wetSurfaceY(x, z) {
+    const wy = this.terrain.waterY;
+    if (wy == null) return null;
+    const code = terrainEnvCode(this.terrain, x, z);
+    return code === 1 ? wy : code === 2 ? wy + WATER.SWAMP_BAND : null;
+  }
+
+  /**
    * 領機當幀環境。回傳 { code, depth, ground, air }:
    *  - ground:腳下地表分類(0 乾 / 1 水 / 2 沼,biomes.terrainEnvCode 同規則 WYSIWYG)——
    *    驅動「涉水/陷沼」移動減速,只看有沒有踩在水沼裡。
@@ -3123,8 +3138,10 @@ export class BattleClient {
     const x = this.pos.x, z = this.pos.z;
     const s = this._surf(x, z, this.pos.y);
     const wy = this.terrain.waterY;
-    // 站立面(深水的有效地板 = 水面 − FULL_D,與 _updatePlayer 的 gy 同式):離地即騰空
-    const floor = wy != null ? Math.max(s, wy - WATER.FULL_D) : s;
+    // 站立面(深水的有效地板 = 水面 − FULL_D,與 _updatePlayer 的 gy 同式):離地即騰空。
+    // 變形機甲兩棲浮台(水面/沼面)⇒ 停駐於濕地表面時不誤判為「離地 FULL_D」的騰空,狀態/減速與地板一致。
+    const wetY = this.isMorph ? this._wetSurfaceY(x, z) : null;
+    const floor = wetY != null ? wetY : (wy != null ? Math.max(s, wy - WATER.FULL_D) : s);
     if (this.pos.y - floor > AIR.OFF_GROUND) return { ...DRY, air: true };
     if (s - this.terrain.heightAt(x, z) > 1.2) return DRY;   // 橋面/結構物 = 乾
     const ground = terrainEnvCode(this.terrain, x, z);
@@ -5709,8 +5726,11 @@ export class BattleClient {
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
       this.pos.addScaledVector(this.vel, dt);
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
-      // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水
-      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS;
+      // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水。
+      // 變形機甲兩棲浮台(水面/沼面)由 _wetSurfaceY 統一 ⇒ 觸地變形停在可見濕地表面(見該函式)。
+      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
+      const gy = wetY != null ? wetY
+        : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS);
       // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
       // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
@@ -5735,7 +5755,11 @@ export class BattleClient {
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 水中有效地板(2026-07-19 可涉水改制):可下沉至「水面 − FULL_D(全滅頂深)」→ 深水可涉、
       // 過深則半浮於 FULL_D(頭沒入水),不無限沉海床;淺水踩實際河床。深水不再是牆(passable 已放行)。
-      const gy = this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.FULL_D) : gyS;
+      // 變形機甲例外:兩棲不潛水,地面型停在濕地表面浮台(_wetSurfaceY)⇒ 觸地變形不沉水底、
+      // 蓄力彈射從水面/沼面起跳(修正淺水/沼澤「彈射即觸地」與「落地判水底」)。
+      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
+      const gy = wetY != null ? wetY
+        : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.FULL_D) : gyS);
       this.vy = this.vy ?? 0;
       const onGround = this.pos.y <= gy + 0.05;
       // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
@@ -5874,7 +5898,11 @@ export class BattleClient {
       const dY2 = !inTun && sy > th + 1 ? this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0) : null;
       const onBridge = dY2 != null && Math.abs(sy - dY2) < 0.6;
       const yRef = (!inTun && !onBridge && sy > th + 1) ? th : sy;   // 障礙物頂 → 地形基準
-      const sEff = this.terrain.waterY != null ? Math.max(yRef, this.terrain.waterY - WATER.FULL_D) : yRef;
+      // 變形機甲兩棲浮台:停在濕地表面(水面/沼面)⇒ 回報 y≈0 = 地面型(踩雷/型態判定一致),
+      // 不因涉水沉至 FULL_D 而誤報離地高;乾地/橋面/障礙頂維持 yRef 抬升(高度制空)。
+      const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
+      const sEff = wetY != null ? wetY
+        : (this.terrain.waterY != null ? Math.max(yRef, this.terrain.waterY - WATER.FULL_D) : yRef);
       this._altAG = this.pos.y - sEff;   // 離基準面高度(與回報 y 同源;高度制空 _altRangeMul 用)
       const lev = inTun ? 2 : onBridge ? 1 : 0;
       this.net.send({
