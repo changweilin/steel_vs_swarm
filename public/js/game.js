@@ -627,6 +627,68 @@ export class BattleClient {
     this._arrowE = new THREE.Euler(0, 0, 0, 'YXZ');   // 先轉向(Y)再依坡度俯仰(X)
     this._arrowP = new THREE.Vector3();
     this._arrowS = new THREE.Vector3(1, 1, 1);
+    this._buildLaneSurf();   // 兵線貼地剖面場(NPC 站位穩定種子 + 小地圖分級共用同一份)
+  }
+
+  /**
+   * 兵線貼地剖面場(唯一縫,取代 NPC 站位的逐幀棘輪):對每條兵線「從線頭沿線行進式取樣」——
+   * 帶「上一步表面高 + 1.2」問 surfaceAt ⇒ 上橋段落在橋面、穿隧道段落在隧道路面、其餘地面。
+   * 靜態地形/橋/隧建圖後不再變 ⇒ 這份剖面算一次存進空間網格,供兩處共用:
+   *   ① _updateEnts 兵線小兵/敵機貼地:以最近取樣高當 surfaceAt 的 curY 種子 —— 不再吃
+   *      迷霧刪重建(裸地形重播種,curY 落地形上方山體)/重生瞬移/插值橫移汙染的 cur.y,
+   *      故隧道小兵不再彈上山頂(天花)、陸橋小兵不再掉到橋下(使用者回報症狀的根因)。
+   *   ② _gradeLanes 小地圖分級(同一份取樣;MUST NOT 再 march 一次,否則兩份剖面分家)。
+   * 兵線中段互距 MUST ≥ MAPGEO.LANE_MIN_SEP_M(40)且不交叉(audit_lane_sep 稽核)⇒ 半徑 R
+   * 內取「最近」取樣必屬小兵自己那條線,不會誤吸鄰線;查無取樣(離線 > R,如繞塔遠側)則回
+   * null → 退回原逐幀棘輪(空曠地無立體歧義,棘輪本就安全)。
+   */
+  _buildLaneSurf() {
+    const SEG = 4, R = 20, CELL = 20;   // 取樣間距 / 查詢半徑(< LANE_MIN_SEP 40 ⇒ 取最近仍屬本線)
+    const grid = new Map();
+    const surf = [];
+    for (const raw of this.lanePts) {
+      const pts = raw.map((p) => [p.x, p.z]);
+      if (pts.length < 2) { surf.push(null); continue; }
+      const cum = [0];
+      for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+      const total = cum[cum.length - 1];
+      const at = (s) => {
+        let i = 1;
+        while (i < pts.length - 1 && cum[i] < s) i++;
+        const f = (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+      };
+      const samples = [];
+      let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
+      for (let s = 0; s <= total; s += SEG) {
+        const [sx, sz] = at(Math.min(s, total));
+        py = this._surf(sx, sz, py + 1.2);
+        const smp = { x: sx, z: sz, y: py };
+        samples.push(smp);
+        const gk = `${Math.floor(sx / CELL)},${Math.floor(sz / CELL)}`;
+        let arr = grid.get(gk);
+        if (!arr) { arr = []; grid.set(gk, arr); }
+        arr.push(smp);
+      }
+      surf.push({ samples });
+    }
+    this._laneSurf = surf;
+    const R2 = R * R;
+    // (x, z) → 最近兵線取樣的表面高;離所有兵線 > R 回 null(呼叫端退回逐幀棘輪)
+    this._laneSurfAt = (x, z) => {
+      const i0 = Math.floor((x - R) / CELL), i1 = Math.floor((x + R) / CELL);
+      const j0 = Math.floor((z - R) / CELL), j1 = Math.floor((z + R) / CELL);
+      let best = null, bd = R2;
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+        const arr = grid.get(`${i},${j}`);
+        if (!arr) continue;
+        for (const s of arr) {
+          const dd = (s.x - x) * (s.x - x) + (s.z - z) * (s.z - z);
+          if (dd < bd) { bd = dd; best = s.y; }
+        }
+      }
+      return best;
+    };
   }
 
   /**
@@ -6102,10 +6164,18 @@ export class BattleClient {
         nx = cur.x + (ent.tgt.x - cur.x) * k;
         nz = cur.z + (ent.tgt.z - cur.z) * k;
       }
-      // 貼地取樣吃橋面:以「上一幀的表面高度」當作判斷依據(離地高度 heroY 要先扣掉),
-      // 兵線走上高架橋時小兵/敵機自然走在橋面上,從橋下經過的則照舊踩地形。
+      // 貼地取樣吃橋面/隧道:主陣營兵線小兵/敵機改以「兵線貼地剖面場」的最近取樣高當 surfaceAt
+      // 種子(_buildLaneSurf 從線頭穩定 march,不吃迷霧刪重建/重生瞬移/插值橫移汙染的 cur.y)⇒
+      // 隧道段一定落在洞內、陸橋段一定落在橋面。離線遠(繞塔遠側等)查無取樣 → 退回逐幀棘輪(cur.y)。
+      // 第三方(GUER/MILI)可駐守隧道正上方山頂 ⇒ 只主陣營(SWARM/STEEL)兵線單位吃剖面場,
+      // 免把山頂的第三方吸進洞內;英雄自由走位、飛行體本在空中 → 一律退回棘輪。
       const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
-      const gy = this._surf(nx, nz, cur.y - lift);
+      let curSeed = cur.y - lift;
+      if (!ent.hero && !ent.flies && (ent.side === 'SWARM' || ent.side === 'STEEL')) {
+        const laneY = this._laneSurfAt?.(nx, nz);
+        if (laneY != null) curSeed = laneY + 1.2;   // +1.2:維持上橋 mount 台階 + 洞內 curY<ceil(同 march 配方)
+      }
+      const gy = this._surf(nx, nz, curSeed);
       let ny = gy + lift;
       // 兵線過水必走橋(#2 倫敦泡水保底 + 2026-07-22 棘輪修):地面小兵設計上過水一律走橋、
       // 不會游泳。surfaceAt 的 mount 台階(curY ≥ deck − DECK_STEP)是單向棘輪 —— 生成抖動/
@@ -6302,42 +6372,24 @@ export class BattleClient {
   }
 
   /**
-   * 兵線立體交通分級(小地圖圖例):沿線行進式取樣(帶上一步高度問 surfaceAt,
-   * 與 _initLanes 的箭頭剖面同一套規則)—— 站上橋面 = bridge、進洞內 = tunnel、其餘地面。
+   * 兵線立體交通分級(小地圖圖例):**消費 _buildLaneSurf 的同一份兵線貼地剖面**(單一縫,
+   * MUST NOT 再自行 march 一次)—— 逐取樣依高度回判:洞內 = tunnel、橋面 = bridge、其餘 ground。
    * 回傳每條線的 [{x, z, grade}] 取樣序列(世界座標,_drawMinimap 轉小地圖再分段畫虛線)。
    */
   _gradeLanes() {
-    const SEG = 6;
-    return this.lanePts.map((raw) => {
-      const pts = raw.map((p) => [p.x, p.z]);
-      if (pts.length < 2) return [];
-      const cum = [0];
-      for (let i = 1; i < pts.length; i++) {
-        cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-      }
-      const total = cum[cum.length - 1];
-      const at = (s) => {
-        let i = 1;
-        while (i < pts.length - 1 && cum[i] < s) i++;
-        const f = (s - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
-        return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
-      };
-      const out = [];
-      let py = this.terrain.heightAt(pts[0][0], pts[0][1]);
-      for (let s = 0; s <= total; s += SEG) {
-        const [sx, sz] = at(Math.min(s, total));
-        py = this._surf(sx, sz, py + 1.2);
+    return (this._laneSurf || []).map((ls) => {
+      if (!ls) return [];
+      return ls.samples.map(({ x, z, y }) => {
         let grade = 'ground';
-        const tn = this.terrain.tunnelAt?.(sx, sz);
-        if (tn && py + 1.2 < tn.ceil && Math.abs(py - tn.floor) < 0.6) {
+        const tn = this.terrain.tunnelAt?.(x, z);
+        if (tn && y + 1.2 < tn.ceil && Math.abs(y - tn.floor) < 0.6) {
           grade = 'tunnel';
         } else {
-          const d = this.terrain.deckY?.(sx, sz);
-          if (d != null && d > this.terrain.heightAt(sx, sz) + 0.5 && Math.abs(py - d) < 0.6) grade = 'bridge';
+          const d = this.terrain.deckY?.(x, z);
+          if (d != null && d > this.terrain.heightAt(x, z) + 0.5 && Math.abs(y - d) < 0.6) grade = 'bridge';
         }
-        out.push({ x: sx, z: sz, grade });
-      }
-      return out;
+        return { x, z, grade };
+      });
     });
   }
 
