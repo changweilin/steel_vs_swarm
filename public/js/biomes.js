@@ -5178,6 +5178,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const rdGrid = new Map();
   for (const way of roadInput) {
     const g = way.geometry || [];
+    const hw = roadWidth(way.tags) / 2;   // 道路半寬 → roadRankAt 分級來源(每 way 一次)
     for (let i = 1; i < g.length; i++) {
       const [x0, z0] = llToWorld(g[i - 1].lat, g[i - 1].lon, center);
       const [x1, z1] = llToWorld(g[i].lat, g[i].lon, center);
@@ -5190,7 +5191,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         const k = `${Math.round(px / RD_CELL)},${Math.round(pz / RD_CELL)}`;
         let arr = rdGrid.get(k);
         if (!arr) { arr = []; rdGrid.set(k, arr); }
-        arr.push([px, pz, a]);
+        arr.push([px, pz, a, hw]);
       }
     }
   }
@@ -5210,6 +5211,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     return ba;
   };
 
+  // ---- 道路分級(2026-07-25):最近取樣點半寬正規化 0..1。純視覺查詢,零 rnd、不進碰撞 ----
+  // 規律拼圖依「所對齊道路分級」抬高 lift(大馬路 > 小馬路);與 roadDirAt 共用 rdGrid(取樣點第四欄 hw)
+  const RANK_HW0 = 2, RANK_HW1 = 12;   // 半寬 2m→0(footway/service);12m→1(寬幹道,clamp)
+  const roadRankAt = (x, z) => {
+    const ci = Math.round(x / RD_CELL), cj = Math.round(z / RD_CELL);
+    let best = RD_R2, hw = null;
+    for (let j = cj - 2; j <= cj + 2; j++) for (let i = ci - 2; i <= ci + 2; i++) {
+      const arr = rdGrid.get(`${i},${j}`); if (!arr) continue;
+      for (const p of arr) { const d = (p[0] - x) ** 2 + (p[1] - z) ** 2; if (d < best) { best = d; hw = p[3]; } }
+    }
+    if (hw == null) return null;
+    const r = (hw - RANK_HW0) / (RANK_HW1 - RANK_HW0);
+    return r < 0 ? 0 : r > 1 ? 1 : r;
+  };
+
   // ---- 道路走廊遮罩(2026-07-24):地被特徵拼圖/細節避開路面走廊 ⇒ 3D 件(作物/碎石/攤位)
   // 不再坐在路面上戳穿(需求「道路恆在其他地貌之上」)。獨立線段索引(不吃 rdGrid 的 12m 稀疏取樣,
   // 否則窄路遮罩會呈串珠縫),逐段點到線段距離 + 半寬 margin。64m 桶;純視覺查詢,零共享 rnd。----
@@ -5224,14 +5240,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       arr.push([x1, z1, x2, z2, hw]);
     }
   };
+  const roadPolys = [];   // 沿街規律陣列走訪源:[世界折線 pts, 半寬 hw];roadInput 已 geocache 定案 ⇒ 跨客戶端同序
   for (const way of roadInput) {
     const g = way.geometry || [];
+    if (g.length < 2) continue;
     const hw = roadWidth(way.tags) / 2;
-    for (let i = 1; i < g.length; i++) {
-      const [x0, z0] = llToWorld(g[i - 1].lat, g[i - 1].lon, center);
-      const [x1, z1] = llToWorld(g[i].lat, g[i].lon, center);
-      rmAdd(x0, z0, x1, z1, hw);
-    }
+    const pts = g.map((p) => llToWorld(p.lat, p.lon, center));
+    roadPolys.push([pts, hw]);
+    for (let i = 1; i < pts.length; i++) rmAdd(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], hw);
   }
   const roadClearAt = (x, z) => {
     const ci = Math.floor(x / RM_CELL), cj = Math.floor(z / RM_CELL);
@@ -5265,7 +5281,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     classifyPureAt: (x, z) => classify(terrain.sampleColor?.(x, z), terrain.heightAt(x, z), null, grnd),
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
-    blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadClear: roadClearAt,
+    blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----

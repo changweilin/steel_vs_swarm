@@ -27,6 +27,16 @@
 //   6. 整齊度沿路對齊(2026-07-23):每型拼圖/物件帶 reg(0..1)整齊規律程度,
 //      越規律越高機率沿最近道路方向擺放(DEFS.reg / REG 表 + opts.roadDirAt),
 //      其餘機率(或附近無路)維持隨機朝向;自然件 reg=0 恆隨機
+// 規律/不規律雙軌拼貼(2026-07-25 使用者需求):
+//   7. 規律結構(ink rect、reg≥0.7:停車場/球場/太陽能板/稻田/農田)沿道路兩側主動鋪
+//      「連續等尺寸格陣」(layRegularArrays + opts.roadPolys):鎖路向、同陣列共 rot、法線
+//      偏移讓開路面 → 街廓般整齊;近路規律型交陣列,遠路/無路退回主迴圈隨機散佈。
+//   8. 不規律(自然:草木/風沙碎石)走準晶體概念(qcVal 五向平面波、十重對稱非週期):
+//      底毯角點位移(cornerAt,保 (i,j) 純函數 = 水密)+ 選格群聚(cellKeyAt)+ 主散佈
+//      候選點陣(全循環雙射走訪)+ 細節 blue-noise 微推(qcNudge)皆吃同一場 → 無方格重複感。
+//   9. 圖層交會分級(lift):底毯 < 外溢 < 不規律 fade < 規律 ink,規律再依所對齊道路分級
+//      (opts.roadRank)抬高 = 大馬路 > 小馬路,整體仍 < 道路;規律↔規律 overlapPs 全分離
+//      (INK_SEP_F)不破壞結構完整性(停車場不疊球場)。
 // 手法與 buildRoads 同族:貼地多邊形 + 程序生成 canvas 筆刷貼圖 + 頂點色墨線,
 // 每「地表×變體」合併成單一 Mesh(常數 draw call);細節物件全 InstancedMesh。
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
@@ -43,6 +53,7 @@ const VARIANTS = 6;        // 每種地表的貼圖變體數(變體貼圖惰性�
 const RSCALE = 1.3;        // 特徵 patch 半徑全域放大
 const VIS_R = 300;         // 反重複半徑 = 英雄最大視野(UNITS.drone.sight)
 const SEP_F = 0.85;        // 拼圖間距係數(圓近似):d ≥ (r1+r2)×0.85,僅容邊緣小比例交疊
+const INK_SEP_F = 1.06;    // 規律結構(edge:'ink')↔ 規律結構完全分離係數(1.0=相切;+6% 結構間隙,不切穿整齊區塊,如停車場不疊球場)
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -1289,7 +1300,7 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
  * @param opts.roadClear  (x,z)=>是否落在道路走廊上(bool);特徵拼圖避開路面免 3D 件戳穿,
  *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadClear }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -1331,6 +1342,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const area = terrain.worldW * terrain.worldH / 1e6;
   const target = Math.max(140, Math.min(1800, Math.round(area * 420)));
   let placed = 0;
+  let arraysN = 0;   // 沿街規律陣列落塊數(冒煙稽核用;patches 含此數)
 
   // ---- 高地/季節分區:量測全場高程「起伏」(絕對海拔無意義,高原城市會誤判),
   // 相對高處改鋪高原/岩屑/冰原 ----
@@ -1379,19 +1391,64 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 角點位置只由「格點索引雜湊」決定 → 相鄰 cell 引用同一角點,拼面天生水密;
   // 抖動幅度 ±0.45 格(不足半格,拓撲不翻面)讓交界呈手繪碎形而非直線格線。
   const carpetBuckets = new Map(), spillBuckets = new Map();
-  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 < 外溢 < 特徵 patch(0.12+)< 道路(0.18)
+  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 0.100 < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
   const gnx = Math.ceil(terrain.worldW / cell), gnz = Math.ceil(terrain.worldH / cell);
-  const cornH = (i, j, s) => {
+  // ==== 準晶體場(quasicrystal;不規律拼貼的非週期骨架;底毯角點/選格/細節共用縫)====
+  // 5 向平面波和(方向 kπ/5 → 十重對稱 = 各向同性、非週期)。純函數:同 seed 同座標 ⇒ 同值,
+  // 全房間/跨客戶端一致(§2.3);相位由 seed 導 → 每圖不同、同房相同。零 rnd / 零 Math.random(A4)。
+  // 以波數 w 縮放同一支餵三尺度:角點去格化(粗)、底毯選格群聚(中)、細節 blue-noise(細)。
+  const QC_N = 5;
+  const QC_DIR = [];
+  for (let k = 0; k < QC_N; k++) QC_DIR.push([Math.cos(k * Math.PI / QC_N), Math.sin(k * Math.PI / QC_N)]);
+  const QC_PH = QC_DIR.map((_, k) => {
+    let n = (seed ^ Math.imul(k + 1, 0x9E3779B1)) | 0;
+    n = Math.imul(n ^ (n >>> 15), 0x2C1B3C6D);
+    return ((n ^ (n >>> 13)) >>> 0) / 4294967296 * Math.PI * 2;
+  });
+  // 場值 ∈[-1,1] 嚴格(N 道 cos /N)→ 角點位移可精確編列 ±0.45 預算
+  const qcVal = (x, z, w) => {
+    let s = 0;
+    for (let k = 0; k < QC_N; k++) s += Math.cos(w * (QC_DIR[k][0] * x + QC_DIR[k][1] * z) + QC_PH[k]);
+    return s / QC_N;
+  };
+  // ∇場單位向量(指向最近波峰);近平坦回 [0,0]
+  const qcGrad = (x, z, w) => {
+    let gx = 0, gz = 0;
+    for (let k = 0; k < QC_N; k++) {
+      const s = -Math.sin(w * (QC_DIR[k][0] * x + QC_DIR[k][1] * z) + QC_PH[k]);
+      gx += s * QC_DIR[k][0]; gz += s * QC_DIR[k][1];
+    }
+    const m = Math.hypot(gx, gz);
+    return m < 1e-6 ? [0, 0] : [gx / m, gz / m];
+  };
+  // 細節 blue-noise 微推:白噪落點沿最近峰偏置 0.7m(<¼ 波長 → 去叢聚不硬吸);純函數,不吃 rnd
+  const DET_QC_W = (2 * Math.PI) / 2.6;
+  const qcNudge = (px, pz) => { const [gx, gz] = qcGrad(px, pz, DET_QC_W); return [px + gx * 0.7, pz + gz * 0.7]; };
+  const QC_SEL_W = 0.035;   // 底毯 subtype 群聚調變波數(世界波長 ≈ 180m)
+
+  const cornH = (i, j, s) => {                          // 手繪顆粒(疊在準晶體場上加碎形細節)
     let n = ((i * 374761393 + j * 668265263) ^ (seed ^ s)) | 0;
     n = Math.imul(n ^ (n >>> 13), 1274126177);
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   };
+  // 角點位移 = 準晶體場(主 ±0.34)+ cornH 顆粒(次 ±0.10),輸入格點索引 (i,j) → 天生 (i,j) 純函數
+  // ⇒ 相鄰 cell 共用角索引 ⇒ 同位移 ⇒ 水密。dz 取座標偏移的第二組準晶體樣本解耦。合計振幅 0.44<0.45,
+  // clampD 再保險 ⇒ 相鄰角最壞相向 0.88<1.0,拓撲不翻面。快取(i,j)→[x,z]:省重算 + 共用角位元相同保證。
+  const QC_CORN_W = 1.75, QC_CORN_A = 0.34, QC_CORN_G = 0.20;
+  const clampD = (d) => (d < -0.45 ? -0.45 : d > 0.45 ? 0.45 : d);
+  const _cornCache = new Map();
   const cornerAt = (i, j) => {
-    const x = terrain.minX + i * cell + (cornH(i, j, 0x9E37) - 0.5) * cell * 0.9;
-    const z = terrain.minZ + j * cell + (cornH(i, j, 0x85EB) - 0.5) * cell * 0.9;
-    return [Math.min(terrain.maxX, Math.max(terrain.minX, x)),
-            Math.min(terrain.maxZ, Math.max(terrain.minZ, z))];
+    const ck = i * 65536 + j;
+    let c = _cornCache.get(ck);
+    if (c) return c;
+    const dx = clampD(QC_CORN_A * qcVal(i, j, QC_CORN_W) + QC_CORN_G * (cornH(i, j, 0x9E37) - 0.5)) * cell;
+    const dz = clampD(QC_CORN_A * qcVal(i + 8123.5, j + 2971.3, QC_CORN_W) + QC_CORN_G * (cornH(i, j, 0x85EB) - 0.5)) * cell;
+    const x = terrain.minX + i * cell + dx, z = terrain.minZ + j * cell + dz;
+    c = [Math.min(terrain.maxX, Math.max(terrain.minX, x)),
+         Math.min(terrain.maxZ, Math.max(terrain.minZ, z))];
+    _cornCache.set(ck, c);
+    return c;
   };
   // 低頻水彩 wash(連續函數 → 跨 cell 無階差;botw_plan Task 2.1 的反重複手段)
   const wash = (x, z) => 0.88 + (vnoise(x * 0.011, z * 0.011, seed ^ 0x5A5A) - 0.5) * 0.34;
@@ -1428,7 +1485,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if ((zn === 'green' || zn === 'bare') && hC > alpineH) zn = 'alpine';
     const list = carpetLists[zn];
     if (!list) return null;
-    const t = Math.min(0.999, Math.max(0, (vnoise(cx * 0.006, cz * 0.006, seed) - 0.5) * 2.2 + 0.5));
+    let t = (vnoise(cx * 0.006, cz * 0.006, seed) - 0.5) * 2.2 + 0.5;
+    if (zn !== 'urban') t += qcVal(cx, cz, QC_SEL_W) * 0.30;   // 不規律 zone 疊準晶體 → 群聚邊界非週期
+    t = Math.min(0.999, Math.max(0, t));
     return `${list[(t * list.length) | 0]}#${variant}`;
   };
   // cell 幾何:3×3 貼地網格(邊中點 = 共用角點的中點 → 相鄰 cell 完全同點,水密;
@@ -1510,8 +1569,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const keyPos = new Map();               // 'sub#variant' -> [{x,z}]:同款反重複
   // 有效半徑:rect 以等面積圓近似(半寬 × √aspect),blob 直接用 r
   const rEffOf = (def, r) => def.shape === 'rect' ? r * Math.sqrt(def.aspect || 0.7) : r;
-  const overlapPs = (x, z, re) => {
-    const R = (re + MAXRE) * SEP_F;
+  const overlapPs = (x, z, re, isInk) => {
+    const R = (re + MAXRE) * (isInk ? INK_SEP_F : SEP_F);   // isInk 用較大搜尋半徑免漏掉全分離鄰居
     const i0 = Math.floor((x - R) / PCELL), i1 = Math.floor((x + R) / PCELL);
     const j0 = Math.floor((z - R) / PCELL), j1 = Math.floor((z + R) / PCELL);
     for (let j = j0; j <= j1; j++) {
@@ -1519,7 +1578,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const arr = pGrid.get(`${i},${j}`);
         if (!arr) continue;
         for (const p of arr) {
-          const dx = p.x - x, dz = p.z - z, rr = (re + p.re) * SEP_F;
+          const f = (isInk && p.ink) ? INK_SEP_F : SEP_F;   // 規律↔規律完全分離;其餘容邊緣小交疊
+          const dx = p.x - x, dz = p.z - z, rr = (re + p.re) * f;
           if (dx * dx + dz * dz < rr * rr) return true;
         }
       }
@@ -1576,10 +1636,17 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     // 拼圖不疊置:與既有特徵拼圖圓近似間距,僅容邊緣小比例交疊(fade 邊互融)
     const rEff = rEffOf(def, r);
-    if (overlapPs(x, z, rEff)) return false;
+    if (overlapPs(x, z, rEff, def.edge === 'ink' && depth === 0)) return false;   // 獨立規律結構對既有規律零互疊
 
-    // 圖層顯示優先(使用者定):規律拼圖(edge:'ink')疊在不規律拼圖之上,兩者皆遠低於道路(ROAD_LIFT 0.45)
-    const lift = (def.edge === 'ink' ? 0.15 : 0.11) + rnd() * 0.02;   // 單一 rnd():確定性序列不變
+    // 圖層優先(使用者定):規律(ink)疊不規律(fade)之上;規律再依所對齊道路分級抬高(大馬路>小馬路),
+    // 整體仍 < 道路 0.18。rank 為決定性查詢(不吃 rnd);每分支恰一枚 rnd。ink_min .135 > fade_max .124 恆成立。
+    let lift;
+    if (def.edge === 'ink') {
+      const rk = roadRank ? (roadRank(x, z) ?? 0) : 0;
+      lift = 0.135 + rk * 0.033 + rnd() * 0.004;
+    } else {
+      lift = 0.110 + rnd() * 0.014;
+    }
     const pt = [0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24];   // 每塊色調抖動
     const b = bucketOf(buckets, `${sub}#${variant}`);
     if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd);
@@ -1655,7 +1722,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           px = x + Math.cos(th) * rr; pz = z + Math.sin(th) * rr;
         }
         const tint = tintPick ? tintPick[(rnd() * tintPick.length) | 0] : null;
-        addDetail(type, px, pz, s0 + rnd() * sv, tint);
+        const [jpx, jpz] = qcNudge(px, pz);           // 準晶體 blue-noise 位移:去叢聚/去重複,純函數不動 rnd 序列
+        addDetail(type, jpx, jpz, s0 + rnd() * sv, tint);
       }
     };
     // 對齊列陣:沿 patch 局部軸整齊排列;ry=-rot 使 3D 件與貼圖行列同向
@@ -1790,20 +1858,88 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     else if (sub === 'fishpond') scatter('reed', 6, 0.7, 0.4);
   }
 
-  // ---- 主散佈迴圈 ----
-  // 分區走純圖資分類(classifyPure):場所類型與衛星影像相符 —— 球場/停車場
-  // 只落市區、水田/果園只落綠地、碎石/鹽田只落裸露地(場地 mix 不再改寫)
-  for (let a = 0, tries = target * 4; a < tries && placed < target; a++) {
-    const x = terrain.minX + inb + rnd() * (terrain.worldW - inb * 2);
-    const z = terrain.minZ + inb + rnd() * (terrain.worldH - inb * 2);
+  // ==== 沿街連續規律陣列(2026-07-25 使用者需求「規律拼貼順著道路整齊排列」)====
+  // 規律結構型(ink rect、reg≥ARR_MINREG:停車場/球場/太陽能板/稻田/農田…)沿道路兩側(法線偏移讓開
+  // 路面)鋪成連續等尺寸格陣,朝向鎖道路角、同陣列共 rot ⇒ 無接歪。決定性:錨點沿 roadPolys(geocache
+  // 定案、跨客戶端同序)以固定步距推進;變體走決定性輪替。tryPatch depth=2 ⇒ 無家族延伸、overlapPs 走
+  // SEP_F(陣列 tile 相接不重疊,獨立結構才對它們全分離)。無道路圖資 → 不鋪(規律型退回主迴圈隨機散佈)。
+  const ARR_MINREG = 0.7;
+  const arrayable = new Set(Object.keys(DEFS).filter(
+    (s) => DEFS[s].edge === 'ink' && DEFS[s].shape === 'rect' && (DEFS[s].reg || 0) >= ARR_MINREG));
+  const arrPools = {};
+  for (const zn in zoneLists) arrPools[zn] = zoneLists[zn].filter((s) => arrayable.has(s));
+  const layRegularArrays = () => {
+    if (!roadPolys?.length) return;
+    const ARR_MARGIN = 3, ARR_GAP = 1.6, ARR_DEPTH = 2, ARR_MINSTEP = 28, ARR_FREQ = 0.004;
+    const arrCap = Math.round(target * 0.55);            // 陣列最多吃 55% 配額,其餘留主迴圈填不規律
+    const dropAt = (px, pz, a, hw, station) => {
+      const zn = zoneAt(px, pz);
+      const pool = arrPools[zn];
+      if (!pool || !pool.length) return ARR_MINSTEP;     // 水域/高地/無候選 → 空推進
+      const t = Math.min(0.999, Math.max(0, (vnoise(px * ARR_FREQ, pz * ARR_FREQ, seed ^ 0x1A77) - 0.5) * 2 + 0.5));
+      const sub = pool[(t * pool.length) | 0], def = DEFS[sub];
+      const r = SIZE[sub][0] * RSCALE;                   // 固定半徑(不抖):同陣列等尺寸才對齊
+      const d = 2 * r * (def.aspect || 0.7);
+      const stepA = 2 * r + ARR_GAP, stepP = d + ARR_GAP, off0 = hw + ARR_MARGIN + d / 2;
+      const ca = Math.cos(a), sa = Math.sin(a), nx = -sa, nz = ca;   // 道路法線
+      for (let side = -1; side <= 1; side += 2) {
+        for (let c = 0; c < ARR_DEPTH; c++) {
+          if (placed >= arrCap) return stepA;
+          const off = off0 + c * stepP;
+          const tx = px + nx * side * off, tz = pz + nz * side * off;
+          const variant = (station * 2 + c * 3 + (side > 0 ? 1 : 0)) % VARIANTS;   // 決定性變體輪替(同陣列不死板同款)
+          if (tryPatch(tx, tz, sub, variant, r, a, 2)) arraysN++;   // depth=2:鎖路向、無家族延伸、overlapPs 走 SEP_F
+        }
+      }
+      return stepA;
+    };
+    for (const [pts, hw] of roadPolys) {
+      if (placed >= arrCap) break;
+      let carry = 0, station = 0;
+      for (let si = 1; si < pts.length; si++) {
+        const x0 = pts[si - 1][0], z0 = pts[si - 1][1];
+        const dx = pts[si][0] - x0, dz = pts[si][1] - z0, segLen = Math.hypot(dx, dz);
+        if (segLen < 1e-3) continue;
+        const ux = dx / segLen, uz = dz / segLen, a = Math.atan2(dz, dx);
+        let dcur = carry;
+        while (dcur < segLen) {
+          if (placed >= arrCap) return;
+          dcur += dropAt(x0 + ux * dcur, z0 + uz * dcur, a, hw, station++);
+        }
+        carry = dcur - segLen;                           // 跨段連續推進(街廓不因節點斷開)
+      }
+    }
+  };
+  layRegularArrays();
+
+  // ---- 不規律主散佈:準晶體點陣候選 + tryPatch(近路規律型讓給沿街陣列)----
+  // 候選由均勻 rnd 改「準晶體全循環走訪」(去格化 blue-noise、非週期不重複);保留完整 zone 清單內層重試,
+  // 分區仍走純圖資分類(球場只落市區、水田只落綠地…)。qStride⊥nCells ⇒ 走訪為雙射(每格恰訪一次)。
+  const qcArea = terrain.worldW * terrain.worldH;
+  const qs = Math.max(18, Math.min(40, Math.sqrt(qcArea / Math.max(1, target * 4))));
+  const QC_PT_W = (2 * Math.PI) / (qs * 1.7);
+  const qcPoint = (cx, cz) => { const [gx, gz] = qcGrad(cx, cz, QC_PT_W); return [cx + gx * qs * 0.42, cz + gz * qs * 0.42]; };
+  const nqx = Math.ceil(terrain.worldW / qs), nqz = Math.ceil(terrain.worldH / qs);
+  const nCells = nqx * nqz;
+  const gcd = (m, n) => { while (n) { const t = m % n; m = n; n = t; } return m; };
+  let qStride = Math.max(1, Math.round(nCells * 0.61803));   // 黃金步幅、與 nCells 互質 ⇒ 全循環雙射走訪
+  while (gcd(qStride, nCells) !== 1) qStride++;
+  const qOff = (seed >>> 0) % Math.max(1, nCells);
+  for (let a = 0; a < nCells && placed < target; a++) {
+    const idx = (qOff + a * qStride) % nCells;
+    const gi = idx % nqx, gj = (idx / nqx) | 0;
+    const cx = terrain.minX + (gi + 0.5) * qs, cz = terrain.minZ + (gj + 0.5) * qs;
+    const [qx, qz] = qcPoint(cx, cz);
+    const x = qx + (rnd() - 0.5) * qs * 0.2;              // 固定 2 枚 rnd(破殘餘對稱;淘汰前抽 = 序列穩定)
+    const z = qz + (rnd() - 0.5) * qs * 0.2;
     const zones = zoneLists[zoneAt(x, z)];
     if (!zones) continue;
-    // 分區雜訊挑 subtype(區域風貌仍連貫);視野內同款用罄 → 輪替變體/其他地表
     const t = Math.min(0.999, Math.max(0, (vnoise(x * 0.006, z * 0.006, seed) - 0.5) * 2.2 + 0.5));
     const zi = (t * zones.length) | 0;
     const v0 = Math.min(VARIANTS - 1, (vnoise(x * 0.0025, z * 0.0025, seed ^ 0x7E11) * VARIANTS) | 0);
     for (let s = 0; s < zones.length; s++) {
       const sub = zones[(zi + s) % zones.length];
+      if (roadPolys?.length && arrayable.has(sub) && roadDirAt?.(x, z) != null) continue;   // 近路規律型 → 已交陣列
       const v = freeVariant(sub, x, z, v0);
       if (v < 0) continue;
       const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
@@ -1811,14 +1947,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
 
-  // ---- 底毯細節:剩餘配額均勻撒進大片空地(仍避開兵線走廊/建物)----
+  // ---- 底毯細節:剩餘配額撒進大片空地(準晶體疏密,不留隨機禿斑;仍避開兵線走廊/建物)----
   detCap = MAX_DETAIL;
   const remain = MAX_DETAIL - detCount;
   if (remain > 60 && landCells.length) {
     const pDet = Math.min(0.3, remain / (landCells.length * 5));
+    const CAR_QC_W = (2 * Math.PI) / (cell * 3);
     for (const [cx2, cz2, key] of landCells) {
       if (detCount >= MAX_DETAIL) break;
-      if (rnd() >= pDet) continue;
+      const q = 0.5 + 0.5 * qcVal(cx2, cz2, CAR_QC_W);     // [0,1] 準晶體疏密調變(峰密谷疏,去隨機禿斑)
+      if (rnd() >= pDet * (0.35 + 1.3 * q)) continue;       // 先抽 1 枚;E[0.35+1.3q]=1 ⇒ 總量不變
       const sub = key.slice(0, key.indexOf('#'));
       scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub], zoneAt(cx2, cz2));
     }
@@ -2037,5 +2175,5 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       group.add(m);
     }
   }
-  return { patches: placed, details: detCount, cells: landCells.length, aligned };
+  return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN };
 }
