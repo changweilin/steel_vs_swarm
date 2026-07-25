@@ -1476,8 +1476,19 @@ body:not(.touch-ui) .touch-layer { display: none; }
 /* ---------- 虛擬搖桿骨架 ---------- */
 /* z 9:MUST 壓在 HUD(10)**之下** —— #tlLook 是整屏的拖曳視角層,疊在 HUD 上會吃掉
    角色數據/小地圖的顯示層級;HUD 各部件本來就 pointer-events:none,事件照樣穿透到本層。
-   疊層(商店/陣亡/選單 20+)照舊完全蓋掉搖桿。 */
-.touch-layer { position: absolute; inset: 0; z-index: 9; pointer-events: none; }
+   疊層(商店/陣亡/選單 20+)照舊完全蓋掉搖桿。
+   position **MUST 是 fixed**:節點住在 body 層(不在 #game 內),這樣大廳的搖桿試玩才摸得到。 */
+.touch-layer { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+
+/* 保險尺寸:搖桿的寬高與定位全靠 --tl-dpad / --tl-gp 與 .ori-* 版型段。
+   萬一 body 少掛了 ori class(例如版型判定沒跑到),var() 會失效 → 十字鍵/ABXY 會塌成 0×0 =
+   「看不到虛擬搖桿」。這裡給 body.touch-ui 一份預設值當底,MUST NOT 移除。 */
+body.touch-ui { --tl-dpad: 140px; --tl-gp: 148px; --tl-band: 32%; }
+body.touch-ui .tl-dpad { left: 8px; bottom: 8px; }
+body.touch-ui .tl-gp { right: 8px; bottom: 8px; }
+body.touch-ui .tl-sh-l { left: 8px; bottom: calc(var(--tl-dpad) + 16px); }
+body.touch-ui .tl-sh-r { right: 8px; bottom: calc(var(--tl-gp) + 16px); }
+body.touch-ui .tl-sys { left: 8px; top: 46px; }
 .tl-look { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
 
 /* ===== 左手:虛擬類比十字鍵 =====
@@ -1589,6 +1600,34 @@ body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--rai
 }
 .civ-btn.press { background: rgba(var(--railW-rgb), 0.3); color: #05070a; }
 body.touch-ui #game [data-act], body.touch-ui .civ-btn { pointer-events: auto; touch-action: none; }
+
+/* ---------- 搖桿試玩(大廳)---------- */
+/* 試玩時觸控層要浮到大廳面板之上;讀值面板再高一階,並固定在上方不擋拇指區。 */
+body.tl-test .touch-layer { z-index: 45; display: block; }
+body.tl-test .touch-layer::before { content: none; }   /* 大廳沒有 3D 背景,不畫操控帶暗底 */
+/* 壓暗大廳的底:MUST 掛在 body 的 ::after(z 44,搖桿之下)——
+   若把底色放在 .touch-test(z 46)上,暗色會蓋在搖桿鈕上把鈕壓灰 */
+body.tl-test::after {
+  content: ''; position: fixed; inset: 0; z-index: 44; pointer-events: none;
+  background: rgba(3, 5, 8, 0.82);
+}
+.touch-test {
+  position: fixed; inset: 0; z-index: 46; pointer-events: none;
+}
+.touch-test[hidden] { display: none; }
+.tt-read {
+  position: absolute; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 16px));
+  padding: 10px 14px; background: rgba(6, 10, 15, 0.96); border: 1px solid var(--railS);
+  clip-path: var(--notch-sm);
+  font-family: var(--mono); font-size: 11px; line-height: 1.75; letter-spacing: 0; color: var(--text);
+}
+.tt-read b { color: var(--railW); }
+#ttDone {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(50% - 22px); pointer-events: auto; z-index: 47;
+}
 
 /* 直式持握提示 */
 .tl-rotate {
@@ -1748,6 +1787,28 @@ body.touch-ui.touch-lefty.ori-portrait .tl-sh-l { left: auto; right: 8px; }
 body.touch-ui.touch-lefty.ori-portrait .tl-sh-r { right: auto; left: 8px; }
 body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
 body.touch-ui.touch-lefty.ori-portrait .kill-feed { right: 8px; left: 100px; align-items: flex-start; }
+
+/* ---------- 手機操控面板(大廳)---------- */
+.touch-box { text-align: left; max-width: min(600px, 94vw); }
+.tset-diag {
+  display: flex; flex-direction: column; gap: 2px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0;
+  border-left: 2px solid var(--line); padding-left: 8px;
+}
+.tset-drow { display: grid; grid-template-columns: 14px 1fr auto; gap: 6px; align-items: baseline; color: var(--dim); }
+.tset-drow > span:first-child { color: var(--ok); }
+.tset-drow.bad > span:first-child { color: var(--danger); }
+.tset-drow.bad { color: var(--danger); }
+.tset-drow b { color: var(--text); font-weight: 400; }
+.tset-drow i { grid-column: 2 / -1; font-size: 10px; opacity: 0.7; font-style: normal; }
+/* 分段開關(自動 / 強制開 / 強制關) */
+.tset-seg { display: flex; gap: 4px; }
+.tset-segb {
+  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  min-height: 40px; padding: 0 12px; color: var(--dim);
+  background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
+}
+.tset-segb.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
 
 /* ---------- 疊層(選單/商店/陣亡/結束)在手機上的可讀性 ---------- */
 body.touch-ui .overlay-box {

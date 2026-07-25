@@ -25,7 +25,10 @@ import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
-import { installTouchUI, TOUCH, saveTouchPrefs, applyLefty, gyroBlockedReason } from './mobile.js';
+import {
+  installTouchUI, touchCapable, touchDiagnostics,
+  renderTouchSettings, syncTouchSettings, openTouchTest, closeTouchTest,
+} from './mobile.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -2005,17 +2008,9 @@ function syncSettingsUi() {
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
   }
   setSwitch('setLowPower', localStorage.getItem('svs_lowpower') === '1');
-  // 觸控/陀螺儀(觸控版才顯示;開關真值 = mobile.js TOUCH,陀螺儀是否真的在跑以 TouchControls 為準)
-  setSwitch('setGyro', !!app.battle?.touch?.gyro?.active || (TOUCH.gyro && !app.battle));
-  setSwitch('setGyroInv', TOUCH.gyroInvert);
-  setSwitch('setLefty', TOUCH.lefty);
-  setSwitch('setHaptic', TOUCH.haptic);
-  const gs = $('setGyroSens'), ls = $('setLookSens');
-  if (gs) { gs.value = String(Math.round(TOUCH.gyroSens * 100)); $('setGyroSensVal').textContent = `${gs.value}%`; }
-  if (ls) { ls.value = String(Math.round(TOUCH.lookSens * 100)); $('setLookSensVal').textContent = `${ls.value}%`; }
-  // 陀螺儀狀態(運作中 / 需 HTTPS / 裝置沒送資料…):戰場中問 TouchControls,大廳則只做靜態檢查
-  const gh = $('setGyroHint');
-  if (gh) gh.textContent = app.battle?.touch?.gyroStatus?.() ?? (gyroBlockedReason() || '未啟用');
+  // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
+  renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
+  syncTouchSettings();
 }
 bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
 bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
@@ -2030,30 +2025,6 @@ $('setSfxVol')?.addEventListener('input', (e) => {
 $('setBgmVol')?.addEventListener('input', (e) => {
   const v = Number(e.target.value); $('setBgmVal').textContent = `${v}%`;
   app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch('setBgmOn', true); }
-});
-
-// ── 設定:觸控 / 陀螺儀(真值住 mobile.js TOUCH;此處只是 UI 委派)──
-// 陀螺儀開關 MUST 經 TouchControls.setGyro() —— iOS 13+ 需在使用者手勢中要求權限,
-// 且拒絕時要能把開關扳回關閉(直接寫 TOUCH.gyro 會出現「開著但沒在動」的假狀態)。
-bindSwitch('setGyro', async (on) => {
-  const tc = app.battle?.touch;
-  if (tc) { const ok = await tc.setGyro(on); setSwitch('setGyro', ok); return; }
-  TOUCH.gyro = on; saveTouchPrefs();   // 尚未進戰場:只記偏好,進場時自動套用
-  const why = gyroBlockedReason();
-  if (on && why) { setSwitch('setGyro', false); TOUCH.gyro = false; saveTouchPrefs(); toast(why, 6000); }
-  const gh = $('setGyroHint');
-  if (gh) gh.textContent = why || (TOUCH.gyro ? '已記憶:進戰場自動啟用' : '未啟用');
-});
-bindSwitch('setGyroInv', (on) => { TOUCH.gyroInvert = on; saveTouchPrefs(); });
-bindSwitch('setHaptic', (on) => { TOUCH.haptic = on; saveTouchPrefs(); });
-bindSwitch('setLefty', (on) => applyLefty(on));
-$('setGyroSens')?.addEventListener('input', (e) => {
-  const v = Number(e.target.value); $('setGyroSensVal').textContent = `${v}%`;
-  TOUCH.gyroSens = v / 100; saveTouchPrefs();
-});
-$('setLookSens')?.addEventListener('input', (e) => {
-  const v = Number(e.target.value); $('setLookSensVal').textContent = `${v}%`;
-  TOUCH.lookSens = v / 100; saveTouchPrefs();
 });
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
@@ -2072,6 +2043,40 @@ function renderHelpCat(cat) {
   }));
   renderHelpCat(HELP[0]);
 })();
+
+// ── 大廳:手機操控面板(診斷 + 設定 + 搖桿試玩)──
+// 存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認到底有沒有生效。
+function renderTouchDiag() {
+  const box = $('touchDiag');
+  if (!box) return;
+  box.innerHTML = touchDiagnostics().map((d) => {
+    const val = d.v === true ? '是' : d.v === false ? '否' : esc(String(d.v));
+    return `<div class="tset-drow${d.ok ? '' : ' bad'}"><span>${d.ok ? '✓' : '✗'}</span>`
+      + `<b>${esc(d.k)}</b><span>${val}</span>`
+      + `<i>${esc(d.note || '')}</i></div>`;
+  }).join('');
+}
+function openTouchPanel() {
+  renderTouchSettings($('lobbyTouchMount'), { onNotice: toast });
+  syncTouchSettings();
+  renderTouchDiag();
+  $('touchOverlay').style.display = '';
+}
+$('touchSetupBtn')?.addEventListener('click', openTouchPanel);
+$('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.display = 'none'; });
+$('touchOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'touchOverlay') $('touchOverlay').style.display = 'none'; });
+// 搖桿試玩:用**真的** TouchControls + 假 client(與戰鬥同一條程式路徑),讀值面板即時顯示軸值/視角/按鍵
+$('touchTestBtn')?.addEventListener('click', () => {
+  $('touchOverlay').style.display = 'none';
+  $('touchTest').hidden = false;
+  openTouchTest($('ttRead'));
+});
+$('ttDone')?.addEventListener('click', () => {
+  closeTouchTest();
+  $('touchTest').hidden = true;
+  openTouchPanel();
+  syncTouchSettings();
+});
 
 // 劇情戰役
 $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
@@ -2126,6 +2131,12 @@ function onSync(m) {
   } else if (phase === 'game' || phase === 'over') {
     if (app.terrain && !app.battle) enterGame();
   }
+}
+
+// 觸控硬體(或已強制開啟觸控版)才顯示大廳入口 —— 桌機不需要這顆鈕
+if (touchCapable() || TOUCH_UI) {
+  const b = $('touchSetupBtn');
+  if (b) b.style.display = '';
 }
 
 window.addEventListener('DOMContentLoaded', () => {

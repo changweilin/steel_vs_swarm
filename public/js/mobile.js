@@ -17,27 +17,79 @@ import * as THREE from 'three';
 const OVERRIDE_KEY = 'svs_touchui';   // '1' 強制觸控版 / '0' 強制桌機版 / 未設 = 自動
 const SETTINGS_KEY = 'svs_touch';
 
-/** 有觸控硬體(不代表要用觸控版:二合一筆電也有觸控螢幕) */
-function touchCapable() {
+/** 有觸控硬體(不代表要用觸控版:二合一筆電也有觸控螢幕)。大廳據此決定是否顯示「手機操控」入口 */
+export function touchCapable() {
   return (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
 }
 
 /**
+ * 強制覆寫的來源:**網址參數 `?touch=1` / `?touch=0` 優先**,其次 localStorage。
+ * 手機上沒有 devtools ⇒ 只能設 localStorage 的覆寫等於不存在;網址參數才是玩家真的能用的逃生門。
+ * 讀到參數就順手寫進 localStorage,之後同一台裝置不必再帶參數。
+ */
+function overrideFlag() {
+  let v = null;
+  try {
+    const q = new URLSearchParams(location.search).get('touch');
+    if (q === '1' || q === 'on') v = '1';
+    else if (q === '0' || q === 'off') v = '0';
+    else if (q === 'auto') v = '';
+    if (v !== null) {
+      if (v === '') localStorage.removeItem(OVERRIDE_KEY);
+      else localStorage.setItem(OVERRIDE_KEY, v);
+      return v || null;
+    }
+  } catch { /* 私密模式忽略 */ }
+  try { return localStorage.getItem(OVERRIDE_KEY); } catch { return null; }
+}
+
+/** 觸控版強制開關(設定面板用;寫入後需重新載入才會重建輸入層) */
+export function setTouchUIOverride(v) {
+  try {
+    if (v == null) localStorage.removeItem(OVERRIDE_KEY);
+    else localStorage.setItem(OVERRIDE_KEY, v ? '1' : '0');
+  } catch { /* 私密模式忽略 */ }
+}
+export function touchUIOverride() { return overrideFlag(); }
+
+/**
  * 是否採用觸控版 UI:觸控硬體 + (無精準指標/無 hover,或短邊 ≤ 820px)。
- * localStorage `svs_touchui` 可強制覆寫(桌機開發除錯用:設 '1' 就能在電腦上驗版型)。
+ * 可用 `?touch=1` / `?touch=0`(或 localStorage `svs_touchui`)強制覆寫。
  */
 export function isTouchUI() {
-  try {
-    const o = localStorage.getItem(OVERRIDE_KEY);
-    if (o === '1') return true;
-    if (o === '0') return false;
-  } catch { /* 私密模式忽略 */ }
+  const o = overrideFlag();
+  if (o === '1') return true;
+  if (o === '0') return false;
   if (!touchCapable()) return false;
   const mm = window.matchMedia;
   const coarse = mm ? mm('(pointer: coarse)').matches : true;
   const noHover = mm ? !mm('(any-hover: hover)').matches : true;
   const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 820;
   return (coarse && noHover) || small;
+}
+
+/**
+ * 觸控/陀螺儀自我診斷:判定用到的每一項原始值 + 結論。
+ * 大廳「手機操控」面板逐項顯示 —— 「沒反應」時要能一眼看出卡在哪一關,MUST NOT 只給一個布林。
+ */
+export function touchDiagnostics() {
+  const mm = (q) => { try { return window.matchMedia(q).matches; } catch { return null; } };
+  return [
+    { k: '安全連線(陀螺儀必要)', v: window.isSecureContext, ok: !!window.isSecureContext,
+      note: `${location.protocol}//${location.host}` },
+    { k: '方向感測 API', v: !!window.DeviceOrientationEvent, ok: !!window.DeviceOrientationEvent,
+      note: typeof window.DeviceOrientationEvent?.requestPermission === 'function' ? '需要授權(iOS)' : '免授權' },
+    { k: '觸控硬體', v: `maxTouchPoints=${navigator.maxTouchPoints || 0}`, ok: touchCapable() },
+    { k: '粗指標 pointer:coarse', v: mm('(pointer: coarse)'), ok: mm('(pointer: coarse)') === true },
+    { k: '無 hover any-hover:none', v: mm('(any-hover: hover)') === false, ok: mm('(any-hover: hover)') === false },
+    { k: '螢幕短邊 ≤ 820', v: `${window.screen?.width}×${window.screen?.height}`,
+      ok: Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 820 },
+    { k: '強制覆寫', v: overrideFlag() === '1' ? '強制開' : overrideFlag() === '0' ? '強制關' : '自動', ok: true },
+    { k: '結論:觸控版', v: isTouchUI(), ok: isTouchUI(),
+      note: isTouchUI() ? '虛擬搖桿會在戰鬥中出現' : '可用網址加 ?touch=1 強制開啟' },
+    { k: 'body class', v: [...document.body.classList].filter((c) => c.startsWith('touch') || c.startsWith('ori')).join(' ') || '(無)',
+      ok: document.body.classList.contains('touch-ui') },
+  ];
 }
 
 /* ---------------- 設定(持久化;陀螺儀/靈敏度/左手模式)---------------- */
@@ -199,6 +251,8 @@ class Gyro {
     this._f = new THREE.Vector3();
     this._have = false;
     this._yaw = 0; this._pitch = 0;
+    this.last = null;                   // 最後一筆原始 {alpha,beta,gamma}(診斷/試玩讀值用)
+    this.accYaw = 0; this.accPitch = 0; // 累計輸出角度(度):轉手機時這兩個數字會跑
     this._onOri = (ev) => this._read(ev, 'deviceorientation');
     this._onAbs = (ev) => this._read(ev, 'deviceorientationabsolute');
     this._reset = () => { this._have = false; };   // 轉螢幕 → 丟掉基準,下一個事件重新起算
@@ -219,6 +273,7 @@ class Gyro {
     this.active = true;
     this._have = false;
     this.source = null; this.events = 0; this.usable = 0;
+    this.accYaw = 0; this.accPitch = 0; this.last = null;
     window.addEventListener('deviceorientation', this._onOri);
     window.addEventListener('deviceorientationabsolute', this._onAbs);
     window.addEventListener('orientationchange', this._reset);
@@ -263,6 +318,7 @@ class Gyro {
     if (ev.beta == null || ev.gamma == null) return;
     if (!this.source) this.source = src;
     this.usable++;
+    this.last = { alpha: ev.alpha, beta: ev.beta, gamma: ev.gamma };
     const d2r = Math.PI / 180;
     this._e.set(ev.beta * d2r, (ev.alpha ?? 0) * d2r, -ev.gamma * d2r, 'YXZ');
     this._q.setFromEuler(this._e);
@@ -282,7 +338,138 @@ class Gyro {
     const g = LOOK.GYRO_BASE * TOUCH.gyroSens;
     const oy = Math.abs(dy) < LOOK.GYRO_DEAD ? 0 : dy * g;
     const op = Math.abs(dp) < LOOK.GYRO_DEAD ? 0 : dp * g * (TOUCH.gyroInvert ? -1 : 1);
-    if (oy || op) this.onLook(oy, op);
+    if (oy || op) {
+      this.accYaw += oy * 180 / Math.PI;
+      this.accPitch += op * 180 / Math.PI;
+      this.onLook(oy, op);
+    }
+  }
+}
+
+/* ---------------- 現役實例 + 設定表(大廳面板與戰場設定頁共用)---------------- */
+
+let _active = null;   // 目前生效的 TouchControls(戰場的或試玩的);設定面板據此把開關導到對的實例
+/** 目前生效的虛擬搖桿實例(沒有就是 null) */
+export function activeTouch() { return _active; }
+
+/**
+ * 觸控設定表 —— **設定 UI 的唯一真相**。大廳「手機操控」面板與戰場選單設定頁
+ * 兩處都用同一份渲染(見 main.js renderTouchSettings),MUST NOT 各寫一份 DOM。
+ */
+export const TOUCH_SETTINGS = [
+  { key: 'gyro', type: 'switch', label: '陀螺儀瞄準', hint: '轉動手機即轉動準星(與拖曳視角可同時使用)', status: true },
+  { key: 'gyroSens', type: 'range', label: '陀螺靈敏度', min: 40, max: 250 },
+  { key: 'gyroInvert', type: 'switch', label: '陀螺垂直反轉', hint: '抬起手機 = 向下看' },
+  { key: 'lookSens', type: 'range', label: '拖曳靈敏度', min: 40, max: 250 },
+  { key: 'lefty', type: 'switch', label: '左手模式', hint: '十字鍵與 ABXY 左右鏡像' },
+  { key: 'haptic', type: 'switch', label: '觸覺回饋', hint: '按鈕震動(裝置不支援則無感)' },
+];
+
+/**
+ * 陀螺儀開關唯一入口(大廳面板 / 戰場設定頁 / 搖桿上的「陀螺」鈕全走這裡)。
+ * 有現役實例就交給它(權限、看門狗、鈕面同步都在那);沒有就只記偏好,進場再套用。
+ * 回傳實際結果 —— **不可用時一定回 false**,呼叫端據此把開關扳回去。
+ */
+export async function setGyroPref(on) {
+  if (_active) return _active.setGyro(on);
+  if (on && gyroBlockedReason()) { TOUCH.gyro = false; saveTouchPrefs(); return false; }
+  TOUCH.gyro = !!on;
+  saveTouchPrefs();
+  return TOUCH.gyro;
+}
+
+/** 陀螺儀狀態一句話(沒有現役實例時做靜態檢查) */
+export function gyroStatusText() {
+  if (_active) return _active.gyroStatus();
+  return gyroBlockedReason() || (TOUCH.gyro ? '已記憶:進戰場自動啟用' : '未啟用');
+}
+
+/* ---------------- 設定 UI:唯一一份渲染器 + 同步器 ---------------- */
+// 大廳「手機操控」面板與戰場選單設定頁掛不同的 mount,但 DOM 與事件只有這一份 ——
+// MUST NOT 在 index.html 或 main.js 另寫一組觸控設定列(兩份一定會漂)。
+
+const _mounts = [];
+const _esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const MODE_LABEL = { auto: '自動', on: '強制開', off: '強制關' };
+
+/**
+ * 把觸控設定列渲染進 mount(冪等:同一個 mount 只建一次)。
+ * opts.onNotice(msg) —— 需要提示玩家時呼叫(main.js 傳 toast);不給就靜默。
+ */
+export function renderTouchSettings(mount, opts = {}) {
+  if (!mount || mount.dataset.built) return;
+  mount.dataset.built = '1';
+  const notice = opts.onNotice || (() => {});
+  const uid = (k) => `${mount.id}__${k}`;
+
+  // 觸控版強制開關:手機沒有 devtools ⇒ 這是玩家唯一能自救的地方(另有網址 ?touch=1)
+  const modeRow = document.createElement('div');
+  modeRow.className = 'set-row';
+  modeRow.innerHTML = '<span class="set-label">觸控版</span><span class="tset-seg">'
+    + ['auto', 'on', 'off'].map((m) => `<button class="tset-segb" type="button" data-mode="${m}">${MODE_LABEL[m]}</button>`).join('')
+    + '</span><span class="set-hint">切換後需重新載入頁面才會重建操控層(也可在網址加 ?touch=1)</span>';
+  mount.appendChild(modeRow);
+  for (const b of modeRow.querySelectorAll('.tset-segb')) {
+    b.addEventListener('click', () => {
+      setTouchUIOverride(b.dataset.mode === 'auto' ? null : b.dataset.mode === 'on');
+      syncTouchSettings();
+      notice('已變更觸控版設定 —— 請重新載入頁面套用', 5000);
+    });
+  }
+
+  for (const d of TOUCH_SETTINGS) {
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    if (d.type === 'switch') {
+      row.innerHTML = `<span class="set-label">${_esc(d.label)}</span>`
+        + `<button class="switch" type="button" role="switch" aria-checked="false" id="${uid(d.key)}"`
+        + ` aria-label="${_esc(d.label)}"><span></span></button>`
+        + `<span class="set-hint">${_esc(d.hint || '')}`
+        + `${d.status ? ' ・ 狀態:<b class="tset-stat"></b>' : ''}</span>`;
+      row.querySelector('.switch').addEventListener('click', async () => {
+        const el = document.getElementById(uid(d.key));
+        const on = el.getAttribute('aria-checked') !== 'true';
+        if (d.key === 'gyro') {
+          const ok = await setGyroPref(on);
+          if (on && !ok) notice(gyroBlockedReason() || gyroStatusText(), 6000);
+        } else if (d.key === 'lefty') applyLefty(on);
+        else { TOUCH[d.key] = on; saveTouchPrefs(); }
+        syncTouchSettings();
+      });
+    } else {
+      row.innerHTML = `<span class="set-label">${_esc(d.label)}</span>`
+        + `<input class="set-slider" type="range" min="${d.min}" max="${d.max}" step="5" id="${uid(d.key)}"`
+        + ` aria-label="${_esc(d.label)}">`
+        + `<span class="set-val" id="${uid(d.key)}_v">100%</span>`;
+      row.querySelector('input').addEventListener('input', (e) => {
+        TOUCH[d.key] = Number(e.target.value) / 100;
+        saveTouchPrefs();
+        document.getElementById(`${uid(d.key)}_v`).textContent = `${e.target.value}%`;
+      });
+    }
+    mount.appendChild(row);
+  }
+  _mounts.push(mount);
+}
+
+/** 把所有已渲染的觸控設定 UI 同步到目前(持久化的)狀態 + 陀螺儀即時狀態 */
+export function syncTouchSettings() {
+  const status = gyroStatusText();
+  const mode = touchUIOverride() === '1' ? 'on' : touchUIOverride() === '0' ? 'off' : 'auto';
+  for (const mount of _mounts) {
+    for (const b of mount.querySelectorAll('.tset-segb')) b.classList.toggle('on', b.dataset.mode === mode);
+    for (const d of TOUCH_SETTINGS) {
+      const el = document.getElementById(`${mount.id}__${d.key}`);
+      if (!el) continue;
+      if (d.type === 'switch') el.setAttribute('aria-checked', TOUCH[d.key] ? 'true' : 'false');
+      else {
+        el.value = String(Math.round(TOUCH[d.key] * 100));
+        const v = document.getElementById(`${mount.id}__${d.key}_v`);
+        if (v) v.textContent = `${el.value}%`;
+      }
+    }
+    for (const n of mount.querySelectorAll('.tset-stat')) n.textContent = status;
   }
 }
 
@@ -318,6 +505,7 @@ export class TouchControls {
       (why) => this._gyroDead(why),
     );
 
+    _active = this;
     if (this.layer) this.layer.hidden = false;
     this._bindLook();
     this._bindDpad();
@@ -584,6 +772,7 @@ export class TouchControls {
   }
 
   dispose() {
+    if (_active === this) _active = null;
     this.gyro.stop();
     clearTimeout(this._rotT);
     if (this._onRot) window.removeEventListener('resize', this._onRot);
@@ -606,3 +795,62 @@ export class TouchControls {
     if (this.layer) this.layer.hidden = true;
   }
 }
+
+/* ---------------- 搖桿試玩(大廳:不進戰場也能驗)---------------- */
+
+// 用**真的** TouchControls 配一個假 client:走的是與戰鬥完全相同的程式路徑,
+// 所以「試玩會動、戰鬥不會動」才有診斷價值(反之亦然)。MUST NOT 為試玩另寫一套輸入。
+let _test = null;
+
+/** 開始試玩:顯示觸控層 + 讀值面板;回傳 stop 函式 */
+export function openTouchTest(readEl) {
+  if (_test) return _test.stop;
+  const acts = [];
+  const mock = {
+    heroKind: 'drone', side: 'SWARM', paused: false, shopOpen: false, _gameOver: false, dead: false,
+    yaw: 0, pitch: 0,
+    hud: { feed: (t) => { acts.unshift(t); acts.length = Math.min(acts.length, 4); } },
+    _applyLook(dYaw, dPitch) {
+      this.yaw += dYaw;
+      this.pitch = clamp(this.pitch + dPitch, -1.45, 1.45);
+    },
+    _cmd(act, down) {
+      if (act === 'sprint' && !down) return;
+      acts.unshift(`${act}${down === false ? ' ↑' : ' ↓'}`);
+      acts.length = Math.min(acts.length, 4);
+    },
+  };
+  // 試玩期間 MUST 確保 body 有 touch-ui + 一個 ori class:搖桿的尺寸/定位全靠它們的 CSS 變數,
+  // 少了就會塌成 0×0(在觸控筆電上「自動判定 = 桌機版」時就會踩到)。離開試玩再還原。
+  const addedUI = !document.body.classList.contains('touch-ui');
+  if (addedUI) document.body.classList.add('touch-ui');
+  syncOrientation();
+  document.body.classList.add('tl-test');
+  const tc = new TouchControls(mock);
+  const deg = (r) => (r * 180 / Math.PI).toFixed(1);
+  let raf = 0;
+  const draw = () => {
+    const g = tc.gyro;
+    const raw = g.last ? `α ${(g.last.alpha ?? 0).toFixed(0)}° β ${g.last.beta.toFixed(0)}° γ ${g.last.gamma.toFixed(0)}°` : '—';
+    readEl.innerHTML = `<b>搖桿試玩</b>(這裡有反應 = 觸控層正常)`
+      + `<div>十字鍵 前後 <b>${tc.axis.f.toFixed(2)}</b> 左右 <b>${tc.axis.r.toFixed(2)}</b> 推杆量 <b>${tc.axis.mag.toFixed(2)}</b></div>`
+      + `<div>視角 yaw <b>${deg(mock.yaw)}°</b> pitch <b>${deg(mock.pitch)}°</b></div>`
+      + `<div>陀螺 <b>${g.status()}</b></div>`
+      + `<div>感測原始值 ${raw} ・ 累計 yaw ${g.accYaw.toFixed(1)}° pitch ${g.accPitch.toFixed(1)}°</div>`
+      + `<div>按鍵 ${acts.length ? acts.join(' ・ ') : '—'}</div>`;
+    raf = requestAnimationFrame(draw);
+  };
+  draw();
+  const stop = () => {
+    cancelAnimationFrame(raf);
+    tc.dispose();
+    document.body.classList.remove('tl-test');
+    if (addedUI) document.body.classList.remove('touch-ui');
+    _test = null;
+  };
+  _test = { stop, tc };
+  return stop;
+}
+
+/** 結束試玩(沒在試玩就什麼都不做) */
+export function closeTouchTest() { _test?.stop(); }

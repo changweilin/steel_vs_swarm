@@ -55,6 +55,8 @@
     </div>
     <div id="roomList" class="room-list"></div>
     <button id="refreshRoomsBtn" class="btn">↻ 重新整理列表</button>
+    <!-- 手機操控設定與自我診斷:觸控裝置才顯示(main.js 依 touchCapable() 決定) -->
+    <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控 / 陀螺儀設定</button>
     <details class="pin-join">
       <summary>用 PIN 直接加入</summary>
       <div class="row">
@@ -375,62 +377,6 @@
     <canvas id="minimap" width="220" height="220"></canvas>
   </div>
 
-  <!-- ===== 觸控操控層 = 虛擬搖桿(手機/平板;桌機 hidden)=====
-       事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
-       #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
-       配置照實體搖桿:左手類比十字鍵、右手 ABXY 菱形、上緣 L/ZL・R/ZR 肩鍵、系統鍵(HOME/⊟/◫)。
-       **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
-       直式/橫式版型差異全在 css/style.css(body.ori-portrait / .ori-landscape),此處只有一份骨架。 -->
-  <div id="touchLayer" class="touch-layer" hidden>
-    <div id="tlLook" class="tl-look"></div>
-
-    <!-- 左手:虛擬類比十字鍵(外觀是十字鍵,判定是類比 —— 偏移量 = 推杆量,推到底 = 衝刺)。
-         方向片會依實際軸值亮起(on-up/on-dn/on-lf/on-rt 由 mobile.js 掛)。 -->
-    <div id="tlDpad" class="tl-dpad" aria-label="移動方向鍵">
-      <span class="tl-dp-plate"></span>
-      <b class="tl-dir dir-up">▲</b>
-      <b class="tl-dir dir-dn">▼</b>
-      <b class="tl-dir dir-lf">◀</b>
-      <b class="tl-dir dir-rt">▶</b>
-      <span class="tl-dp-hub" id="tlKnob"></span>
-    </div>
-
-    <!-- 右手:ABXY 菱形(Switch 方位:X 上 / Y 左 / A 右 / B 下)。
-         A 射擊 ・ B 跳躍(機動)・ X 小招 ・ Y 大招;招式的名稱與冷卻由 main.js 一併鏡射進 .gb-cd。 -->
-    <div class="tl-gp">
-      <button class="tl-gb gb-x" type="button" data-act="skill"><i class="gb-k">X</i><span class="gb-f">小招</span><span class="gb-cd"></span></button>
-      <button class="tl-gb gb-y" type="button" data-act="ult"><i class="gb-k">Y</i><span class="gb-f">大招</span><span class="gb-cd"></span></button>
-      <button class="tl-gb gb-a" type="button" data-act="fire"><i class="gb-k">A</i><span class="gb-f">射擊</span></button>
-      <button class="tl-gb gb-b" type="button" data-act="jump"><i class="gb-k">B</i><span class="gb-f">跳躍</span><span class="gb-cd"></span></button>
-    </div>
-
-    <!-- 肩鍵:L 填彈 / ZL 下降(飛行機種)・ R 狙擊模式(短按切換、長按絕招) / ZR 換機(無人機) -->
-    <div class="tl-sh tl-sh-l">
-      <button class="tl-gb gb-sh" type="button" data-act="reload"><i class="gb-k">L</i><span class="gb-f">填彈</span></button>
-      <button class="tl-gb gb-sh" type="button" data-act="dive" hidden><i class="gb-k">ZL</i><span class="gb-f">下降</span></button>
-    </div>
-    <div class="tl-sh tl-sh-r">
-      <button class="tl-gb gb-sh" type="button" data-act="swap" hidden><i class="gb-k">ZR</i><span class="gb-f">換機</span></button>
-      <button class="tl-gb gb-sh gb-aim" type="button" data-act="aim"><i class="gb-k">R</i><span class="gb-f">狙擊<em>長按絕招</em></span></button>
-    </div>
-
-    <!-- 系統鍵:HOME 戰場選單(等同 ESC)・ ⊟ 商店 ・ ◫ 小地圖 ・ 陀螺/全螢幕/左手模式 -->
-    <div class="tl-sys">
-      <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
-      <button class="tl-sysb" type="button" data-act="shop">⊟ 商店</button>
-      <button class="tl-sysb" type="button" data-act="map">◫ 地圖</button>
-      <button class="tl-sysb" type="button" data-act="gyro">陀螺</button>
-      <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
-      <button class="tl-sysb" type="button" data-act="lefty">左手</button>
-    </div>
-
-    <!-- 平民互動的「跟隨 / 驅趕」不在此層:觸控版直接把 #civPrompt 的按鍵提示換成兩顆鈕
-         (見 main.js hud.civPrompt)—— 提示就在視線落點上更好按,也不必再排一組控件。 -->
-
-    <!-- 直式持握提示(視野角度 MUST NOT 隨版型改 —— 直式水平視野本來就窄,建議橫握;點擊消失) -->
-    <div class="tl-rotate" id="tlRotate">▤ 建議橫向持握 —— 直式水平視野較窄(全機種視角一律 68°)</div>
-  </div>
-
   <!-- 主堡軍械庫(B) -->
   <div id="shopOverlay" class="overlay shop-overlay" style="display:none">
     <div class="overlay-box shop-box">
@@ -492,39 +438,10 @@
             <span class="set-hint">降低算圖解析度以省電、提升幀率</span>
           </div>
 
-          <!-- 觸控/陀螺儀(僅觸控版顯示;桌機以 body.touch-ui 隱藏整區) -->
+          <!-- 觸控/陀螺儀:內容由 main.js renderTouchSettings() 注入(與大廳「手機操控」面板共用
+               同一份設定表,MUST NOT 在兩處各寫一份 DOM)。桌機以 .touch-only 隱藏整區。 -->
           <div class="set-sub touch-only">▎觸控操控</div>
-          <div class="set-row touch-only">
-            <span class="set-label">陀螺儀瞄準</span>
-            <button id="setGyro" class="switch" type="button" role="switch" aria-checked="false" aria-label="陀螺儀瞄準開關"><span></span></button>
-            <!-- 狀態實話實說:http 下瀏覽器根本不派送感測器事件(靜默失效),這行會直接寫出原因 -->
-            <span class="set-hint">轉動手機即轉動準星(與拖曳視角可同時使用)・ 狀態:<b id="setGyroHint">未啟用</b></span>
-          </div>
-          <div class="set-row touch-only">
-            <span class="set-label">陀螺靈敏度</span>
-            <input id="setGyroSens" class="set-slider" type="range" min="40" max="250" step="5" aria-label="陀螺儀靈敏度">
-            <span class="set-val" id="setGyroSensVal">100%</span>
-          </div>
-          <div class="set-row touch-only">
-            <span class="set-label">陀螺垂直反轉</span>
-            <button id="setGyroInv" class="switch" type="button" role="switch" aria-checked="false" aria-label="陀螺儀垂直反轉開關"><span></span></button>
-            <span class="set-hint">抬起手機 = 向下看</span>
-          </div>
-          <div class="set-row touch-only">
-            <span class="set-label">拖曳靈敏度</span>
-            <input id="setLookSens" class="set-slider" type="range" min="40" max="250" step="5" aria-label="拖曳視角靈敏度">
-            <span class="set-val" id="setLookSensVal">100%</span>
-          </div>
-          <div class="set-row touch-only">
-            <span class="set-label">左手模式</span>
-            <button id="setLefty" class="switch" type="button" role="switch" aria-checked="false" aria-label="左手模式開關"><span></span></button>
-            <span class="set-hint">蘑菇頭與動作鈕左右鏡像</span>
-          </div>
-          <div class="set-row touch-only">
-            <span class="set-label">觸覺回饋</span>
-            <button id="setHaptic" class="switch" type="button" role="switch" aria-checked="true" aria-label="觸覺回饋開關"><span></span></button>
-            <span class="set-hint">按鈕震動(裝置不支援則無感)</span>
-          </div>
+          <div class="touch-only" id="pauseTouchMount" style="flex-direction:column;gap:12px"></div>
         </div>
         <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
       </div>
@@ -550,6 +467,86 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ===== 觸控操控層 = 虛擬搖桿(手機/平板;桌機 hidden)=====
+     **MUST 留在 body 層**(position:fixed)—— 放在 #game 內就只有戰鬥畫面看得到,
+     大廳的「手機操控」面板就沒辦法讓玩家先試搖桿/驗陀螺儀(前科:玩家回報「沒看到虛擬搖桿」)。
+     事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
+     #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
+     配置照實體搖桿:左手類比十字鍵、右手 ABXY 菱形、上緣 L/ZL・R/ZR 肩鍵、系統鍵(HOME/⊟/◫)。
+     **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
+     直式/橫式版型差異全在 css/style.css(body.ori-portrait / .ori-landscape),此處只有一份骨架。 -->
+<div id="touchLayer" class="touch-layer" hidden>
+  <div id="tlLook" class="tl-look"></div>
+
+  <!-- 左手:虛擬類比十字鍵(外觀是十字鍵,判定是類比 —— 偏移量 = 推杆量,推到底 = 衝刺)。
+       方向片會依實際軸值亮起(on-up/on-dn/on-lf/on-rt 由 mobile.js 掛)。 -->
+  <div id="tlDpad" class="tl-dpad" aria-label="移動方向鍵">
+    <span class="tl-dp-plate"></span>
+    <b class="tl-dir dir-up">▲</b>
+    <b class="tl-dir dir-dn">▼</b>
+    <b class="tl-dir dir-lf">◀</b>
+    <b class="tl-dir dir-rt">▶</b>
+    <span class="tl-dp-hub" id="tlKnob"></span>
+  </div>
+
+  <!-- 右手:ABXY 菱形(Switch 方位:X 上 / Y 左 / A 右 / B 下)。
+       A 射擊 ・ B 跳躍(機動)・ X 小招 ・ Y 大招;招式的名稱與冷卻由 main.js 一併鏡射進 .gb-cd。 -->
+  <div class="tl-gp">
+    <button class="tl-gb gb-x" type="button" data-act="skill"><i class="gb-k">X</i><span class="gb-f">小招</span><span class="gb-cd"></span></button>
+    <button class="tl-gb gb-y" type="button" data-act="ult"><i class="gb-k">Y</i><span class="gb-f">大招</span><span class="gb-cd"></span></button>
+    <button class="tl-gb gb-a" type="button" data-act="fire"><i class="gb-k">A</i><span class="gb-f">射擊</span></button>
+    <button class="tl-gb gb-b" type="button" data-act="jump"><i class="gb-k">B</i><span class="gb-f">跳躍</span><span class="gb-cd"></span></button>
+  </div>
+
+  <!-- 肩鍵:L 填彈 / ZL 下降(飛行機種)・ R 狙擊模式(短按切換、長按絕招) / ZR 換機(無人機) -->
+  <div class="tl-sh tl-sh-l">
+    <button class="tl-gb gb-sh" type="button" data-act="reload"><i class="gb-k">L</i><span class="gb-f">填彈</span></button>
+    <button class="tl-gb gb-sh" type="button" data-act="dive" hidden><i class="gb-k">ZL</i><span class="gb-f">下降</span></button>
+  </div>
+  <div class="tl-sh tl-sh-r">
+    <button class="tl-gb gb-sh" type="button" data-act="swap" hidden><i class="gb-k">ZR</i><span class="gb-f">換機</span></button>
+    <button class="tl-gb gb-sh gb-aim" type="button" data-act="aim"><i class="gb-k">R</i><span class="gb-f">狙擊<em>長按絕招</em></span></button>
+  </div>
+
+  <!-- 系統鍵:HOME 戰場選單(等同 ESC)・ ⊟ 商店 ・ ◫ 小地圖 ・ 陀螺/全螢幕/左手模式 -->
+  <div class="tl-sys">
+    <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
+    <button class="tl-sysb" type="button" data-act="shop">⊟ 商店</button>
+    <button class="tl-sysb" type="button" data-act="map">◫ 地圖</button>
+    <button class="tl-sysb" type="button" data-act="gyro">陀螺</button>
+    <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
+    <button class="tl-sysb" type="button" data-act="lefty">左手</button>
+  </div>
+
+  <!-- 平民互動的「跟隨 / 驅趕」不在此層:觸控版直接把 #civPrompt 的按鍵提示換成兩顆鈕
+       (見 main.js hud.civPrompt)—— 提示就在視線落點上更好按,也不必再排一組控件。 -->
+
+  <!-- 直式持握提示(視野角度 MUST NOT 隨版型改 —— 直式水平視野本來就窄,建議橫握;點擊消失) -->
+  <div class="tl-rotate" id="tlRotate">▤ 建議橫向持握 —— 直式水平視野較窄(全機種視角一律 68°)</div>
+</div>
+
+<!-- ========= 手機操控面板(大廳;診斷 + 設定 + 搖桿試玩)=========
+     存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認「到底有沒有生效」。
+     這裡把判定結果逐項攤開(secure context / 觸控硬體 / 指標種類 / 螢幕),
+     並可直接開陀螺儀看即時讀值、按「試玩搖桿」用真的 TouchControls 操作一遍。 -->
+<div id="touchOverlay" class="overlay" style="display:none">
+  <div class="overlay-box touch-box">
+    <div class="panel-head">▍手機操控 / 陀螺儀</div>
+    <div class="tset-diag" id="touchDiag"></div>
+    <div class="set-list" id="lobbyTouchMount"></div>
+    <div class="row" style="justify-content:center">
+      <button id="touchTestBtn" class="btn steel-btn">🎮 試玩搖桿</button>
+      <button id="touchCloseBtn" class="btn">← 返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- 搖桿試玩讀值(試玩模式時浮在觸控層上方;顯示軸值/視角/按鍵,直接看得出有沒有反應) -->
+<div id="touchTest" class="touch-test" hidden>
+  <div class="tt-read" id="ttRead"></div>
+  <button id="ttDone" class="btn small">✓ 完成試玩</button>
 </div>
 
 <div id="toast" class="toast"></div>
