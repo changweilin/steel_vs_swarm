@@ -19,14 +19,16 @@ const VIEWS = [
 ];
 const KINDS = ['drone', 'mech', 'morph', 'spec'];
 
-// 四分區的量測對象:A 機體資訊 / M 小地圖 / L 左手控件 / R 右手控件 + 兩個會長大的提示層
+// 四分區的量測對象:A 機體資訊 / M 小地圖 / L 左手控件(移動搖桿 + 十字鍵 + 直條)/
+// R 右手控件(ABXY + 視角搖桿 + 直條)+ 兩個會長大的提示層
 const SEL = {
-  A: '.hud-self', M: '#minimap', dpad: '#tlDpad', gp: '.tl-gp',
-  shl: '.tl-sh-l', shr: '.tl-sh-r', sysl: '.tl-sys-l', sysr: '.tl-sys-r',
+  A: '.hud-self', M: '#minimap',
+  stick: '#tlStick', dpad: '#tlDpad', gp: '.tl-gp', rstick: '#tlRStick',
+  sysl: '.tl-sys-l', sysr: '.tl-sys-r',
   feed: '#killFeed', civ: '#civPrompt',
 };
 // 觸控目標下限 44×40(見 /CLAUDE.md 驗證矩陣)
-const TAP = ['.tl-sysb', '.tl-sh .tl-gb', '.tl-gp .tl-gb'];
+const TAP = ['.tl-sysb', '.tl-gp .tl-gb', '.tl-dp-b'];
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('觸控版型稽核');

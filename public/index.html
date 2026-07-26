@@ -192,6 +192,7 @@
 <!-- 世界觀・序章(長篇敘事閱讀)-->
 <div id="worldOverlay" class="overlay" style="display:none">
   <div class="overlay-box world-box">
+    <button class="ov-close" type="button" aria-label="關閉" data-ovclose="worldCloseBtn">✕</button>
     <div class="panel-head">▍世界觀・序章 — 誰都負擔得起的戰爭</div>
     <div class="world-body" id="worldBody"></div>
     <div class="row" style="justify-content:center">
@@ -203,6 +204,7 @@
 <!-- 劇情簡報(選定章節後跳出:圖文並茂長篇 + 選主駕;出擊 = 自動部署開戰)-->
 <div id="storyBrief" class="overlay" style="display:none">
   <div class="overlay-box story-brief-box">
+    <button class="ov-close" type="button" aria-label="關閉" data-ovclose="storyBriefCloseBtn">✕</button>
     <div class="story-brief-body" id="storyBriefBody"></div>
     <div class="row" style="justify-content:center">
       <button id="storyFightBtn" class="btn big steel-btn">▶▶ 出擊</button>
@@ -380,6 +382,7 @@
   <!-- 主堡軍械庫(B) -->
   <div id="shopOverlay" class="overlay shop-overlay" style="display:none">
     <div class="overlay-box shop-box">
+      <button class="ov-close" type="button" aria-label="關閉" data-ovclose="shopCloseBtn">✕</button>
       <div class="panel-head">▍升級工坊 <span id="shopMoney" class="shop-money"></span></div>
       <div id="shopItems" class="shop-items"></div>
       <div class="shop-note">金錢只來自擊殺 / 助攻 / 戰場物資(無自動收入):賞金對應目標難度,助攻 = 賞金 ¼(造成傷害或負面狀態才算;離開可視半徑 10 秒後失效)。品質升級另需擊殺數:小兵 1 ・ 坦克/直升機 2 ・ 塔 3 ・ 英雄 4</div>
@@ -400,6 +403,7 @@
   <!-- 戰場選單(ESC / 切走視窗:指標解鎖時跳出)-->
   <div id="pauseOverlay" class="overlay" style="display:none">
     <div class="overlay-box pause-box">
+      <button class="ov-close" type="button" aria-label="關閉" data-ovclose="resumeBtn">✕</button>
       <div class="pause-title">戰場選單</div>
       <div class="pause-tabs" id="pauseTabs">
         <button class="pause-tab on" type="button" data-page="menu">選單</button>
@@ -475,7 +479,8 @@
      事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
      #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
      **四分區版型(A / M / L / R)**:A = 機體資訊(.hud-self)、M = 小地圖(#minimap)、
-     L = 左手控件(十字鍵 + L/ZL 肩鍵 + 戰局系統鍵)、R = 右手控件(ABXY + ZR/R 肩鍵 + 裝置系統鍵)。
+     L / R = 左右手控件,內部再照實體手把(Switch / PS5 / Xbox)排位 ——
+     **左上移動搖桿、左下十字鍵、右上 ABXY、右下視角搖桿**,肩鍵與系統鍵貼各區內側直條。
      橫式 = 左右兩直欄(A 上 / L 下、M 上 / R 下),直式 = 上緣資訊帶(A 左 / M 右)+ 下緣操控帶(L 左 / R 右);
      兩者的中央一律留給 3D 戰場,**MUST NOT** 把任何控件放進中央。
      **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
@@ -483,47 +488,48 @@
 <div id="touchLayer" class="touch-layer" hidden>
   <div id="tlLook" class="tl-look"></div>
 
-  <!-- 左手:虛擬類比十字鍵(外觀是十字鍵,判定是類比 —— 偏移量 = 推杆量,推到底 = 衝刺)。
-       方向片會依實際軸值亮起(on-up/on-dn/on-lf/on-rt 由 mobile.js 掛)。 -->
-  <div id="tlDpad" class="tl-dpad" aria-label="移動方向鍵">
-    <span class="tl-dp-plate"></span>
-    <b class="tl-dir dir-up">▲</b>
-    <b class="tl-dir dir-dn">▼</b>
-    <b class="tl-dir dir-lf">◀</b>
-    <b class="tl-dir dir-rt">▶</b>
-    <span class="tl-dp-hub" id="tlKnob"></span>
+  <!-- ===== L 區(左手)===== 依實體手把(Switch / PS5 / Xbox)排位:**左上類比搖桿、左下十字鍵**。
+       類比搖桿 = 移動(輕推慢走、推到底衝刺);十字鍵四向是「按鍵」不是移動 ——
+       上 ⊟ 商店 / 下 陀螺儀開關,左右兩向**先做好版位但不接功能**(.reserved,保留給未來的快捷)。 -->
+  <div id="tlStick" class="tl-stick tl-stick-move" aria-label="移動搖桿">
+    <span class="tl-st-ring"></span>
+    <span class="tl-st-knob" id="tlStickKnob"></span>
+  </div>
+  <div id="tlDpad" class="tl-dpad" aria-label="十字鍵">
+    <button class="tl-dp-b dir-up" type="button" data-act="shop" aria-label="商店">⊟</button>
+    <button class="tl-dp-b dir-rt reserved" type="button" aria-disabled="true" aria-label="未使用">・</button>
+    <button class="tl-dp-b dir-dn" type="button" data-act="gyro" aria-label="陀螺儀開關">陀螺</button>
+    <button class="tl-dp-b dir-lf reserved" type="button" aria-disabled="true" aria-label="未使用">・</button>
   </div>
 
-  <!-- 右手:ABXY 菱形(Switch 方位:X 上 / Y 左 / A 右 / B 下)。
-       A 射擊 ・ B 跳躍(機動)・ X 小招 ・ Y 大招;招式的名稱與冷卻由 main.js 一併鏡射進 .gb-cd。 -->
+  <!-- ===== R 區(右手)===== **右上 ABXY 菱形、右下視角類比搖桿**。
+       ABXY 走 Switch 方位(X 上 / Y 左 / A 右 / B 下):A 射擊 ・ B 跳躍(機動)・ X 小招 ・ Y 大招;
+       招式名稱與冷卻由 main.js 一併鏡射進 .gb-cd。視角搖桿與「空處拖曳」並存,兩者都走 _applyLook。 -->
   <div class="tl-gp">
     <button class="tl-gb gb-x" type="button" data-act="skill"><i class="gb-k">X</i><span class="gb-f">小招</span><span class="gb-cd"></span></button>
     <button class="tl-gb gb-y" type="button" data-act="ult"><i class="gb-k">Y</i><span class="gb-f">大招</span><span class="gb-cd"></span></button>
     <button class="tl-gb gb-a" type="button" data-act="fire"><i class="gb-k">A</i><span class="gb-f">射擊</span></button>
     <button class="tl-gb gb-b" type="button" data-act="jump"><i class="gb-k">B</i><span class="gb-f">跳躍</span><span class="gb-cd"></span></button>
   </div>
-
-  <!-- 肩鍵:L 填彈 / ZL 下降(飛行機種)・ R 狙擊模式(短按切換、長按絕招) / ZR 陀螺儀開關。
-       ZR 給陀螺儀(預設開啟,隨時一鍵收放)—— 原本掛在 ZR 的「換機」是無人機專屬、
-       且屬於低頻操作,改放 R 區系統鍵列。 -->
-  <div class="tl-sh tl-sh-l">
-    <button class="tl-gb gb-sh" type="button" data-act="reload"><i class="gb-k">L</i><span class="gb-f">填彈</span></button>
-    <button class="tl-gb gb-sh" type="button" data-act="dive" hidden><i class="gb-k">ZL</i><span class="gb-f">下降</span></button>
-  </div>
-  <div class="tl-sh tl-sh-r">
-    <button class="tl-gb gb-sh gb-gyro" type="button" data-act="gyro"><i class="gb-k">ZR</i><span class="gb-f">陀螺</span></button>
-    <button class="tl-gb gb-sh gb-aim" type="button" data-act="aim"><i class="gb-k">R</i><span class="gb-f">狙擊<em>長按絕招</em></span></button>
+  <div id="tlRStick" class="tl-stick tl-stick-look" aria-label="視角搖桿">
+    <span class="tl-st-ring"></span>
+    <span class="tl-st-knob" id="tlRStickKnob"></span>
   </div>
 
-  <!-- 系統鍵:**左右分家**(L 區戰局鍵 / R 區裝置鍵)——「虛擬手把與各種按鍵左右拆分為 L/R」。
-       L:HOME 戰場選單(等同 ESC)・ ⊟ 商店 ・ ◫ 小地圖 ・ R:陀螺 / 全螢幕 / 左手模式。
-       橫式排成直條(貼在各自握把內側)、直式排成橫列(貼在操控帶上緣),版型在 style.css。 -->
+  <!-- ===== 肩鍵 + 系統鍵:各自貼在該區的**內側直條**(橫式)/ 操控帶上緣(直式)=====
+       實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖 ——
+       故改排在四分區各自的內側,仍屬 L / R 區,且不吃搖桿與十字鍵的拇指停位。
+       L 條:L 填彈 ・ ZL 下降(飛行機種)・ HOME 戰場選單 ・ ◫ 小地圖
+       R 條:R 狙擊(短按切換、長按絕招)・ ZR 陀螺儀 ・ ⇄ 換機(無人機)・ 全螢幕 ・ 左手 -->
   <div class="tl-sys tl-sys-l">
+    <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
+    <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>
     <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
-    <button class="tl-sysb" type="button" data-act="shop">⊟商店</button>
     <button class="tl-sysb" type="button" data-act="map">◫地圖</button>
   </div>
   <div class="tl-sys tl-sys-r">
+    <button class="tl-sysb gb-aim" type="button" data-act="aim">R 狙擊</button>
+    <button class="tl-sysb" type="button" data-act="gyro">ZR 陀螺</button>
     <button class="tl-sysb" type="button" data-act="swap" hidden>⇄換機</button>
     <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
@@ -542,6 +548,7 @@
      並可直接開陀螺儀看即時讀值、按「試玩搖桿」用真的 TouchControls 操作一遍。 -->
 <div id="touchOverlay" class="overlay" style="display:none">
   <div class="overlay-box touch-box">
+    <button class="ov-close" type="button" aria-label="關閉" data-ovclose="touchCloseBtn">✕</button>
     <div class="panel-head">▍手機操控 / 陀螺儀</div>
     <div class="tset-diag" id="touchDiag"></div>
     <div class="set-list" id="lobbyTouchMount"></div>

@@ -26,7 +26,7 @@ import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
 import {
-  installTouchUI, touchCapable, touchDiagnostics,
+  installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, openTouchTest, closeTouchTest,
 } from './mobile.js';
 
@@ -1695,7 +1695,7 @@ function enterGame() {
   // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
   if (TOUCH_UI) $('shopHint').textContent = '';
   toast(TOUCH_UI
-    ? '左手十字鍵移動 ・ A 射擊 / R 狙擊 ・ 空處拖曳轉視角 ・ ZR 陀螺儀開關(預設開;轉不動改設定的「陀螺來源」)・ HOME 選單'
+    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處拖曳)・ A 射擊 / R 狙擊 ・ 十字鍵上 ⊟ 商店 / 下 陀螺 ・ HOME 選單'
     : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4600);
 }
 
@@ -2007,7 +2007,7 @@ function syncSettingsUi() {
     if (sv) { sv.value = String(Math.round(a.sfxVol * 100)); $('setSfxVal').textContent = `${sv.value}%`; }
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
   }
-  setSwitch('setLowPower', localStorage.getItem('svs_lowpower') === '1');
+  setSwitch('setLowPower', lowPower());   // 未設定過:手機預設開(唯一真相在 mobile.js)
   // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
   renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
   syncTouchSettings();
@@ -2015,7 +2015,7 @@ function syncSettingsUi() {
 bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
 bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
 bindSwitch('setLowPower', (on) => {
-  try { localStorage.setItem('svs_lowpower', on ? '1' : '0'); } catch { /* 私密模式忽略 */ }
+  setLowPowerPref(on);
   app.battle?.setLowPower();
   app.audio?.setLowPower(on);   // 低功耗也套音效:射擊/爆炸退合成 + 關移動環境音
 });
@@ -2063,6 +2063,12 @@ function openTouchPanel() {
   renderTouchDiag();
   $('touchOverlay').style.display = '';
 }
+// 疊層右上角的 ✕:**一律轉呼叫該視窗既有的關閉鈕**(data-ovclose 指向那顆鈕的 id)——
+// 關閉的副作用(解除暫停 / 收商店 / 停試玩…)只准有一份實作,MUST NOT 在這裡各寫一次。
+for (const x of document.querySelectorAll('[data-ovclose]')) {
+  x.addEventListener('click', () => $(x.dataset.ovclose)?.click());
+}
+
 $('touchSetupBtn')?.addEventListener('click', openTouchPanel);
 $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.display = 'none'; });
 $('touchOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'touchOverlay') $('touchOverlay').style.display = 'none'; });

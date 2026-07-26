@@ -15,6 +15,9 @@
 import { trajClass } from './data.js';
 
 // ---- 調校常數(純客戶端手感,非平衡數值;伺服器不 import 本檔) ----
+// 低功耗旗標的唯一真相住 mobile.js(localStorage svs_lowpower;手機未設定過 = 預設開)
+import { lowPower } from './mobile.js';
+
 const _MAX_VOICES = 24;      // 同時發聲上限(超過即丟棄新音,防齊射爆量)
 const _MAX_DIST = 240;       // 超過此距離的事件音直接剔除(公尺)
 const _REF_DIST = 26;        // 增益衰減參考距離
@@ -23,7 +26,6 @@ const _MASTER_DEF = 0.8;     // 預設主音量
 const _SFX_DEF = 0.9;        // 音效相對音量
 const _BGM_DEF = 0.42;       // 背景音樂相對音量(壓在音效之下)
 const _LS_KEY = 'svs_audio'; // localStorage 設定鍵
-const _LOWP_KEY = 'svs_lowpower'; // 低功耗旗標(與 game.js 算圖降階共用單一真相)
 // 移動環境音(程序循環;每類別僅 1 個常駐聲道 = 最多 4 聲道,低功耗全關)。
 // 各類別基準音量(壓得比開火/爆炸低,只當「戰場在動」的環境床)。
 const _MOVE = { rotor: 0.5, engine: 0.42, wingflap: 0.34, stomp: 0.5 };
@@ -68,8 +70,9 @@ export class GameAudio {
     this._move = {};         // 移動環境音常駐聲道:cat → { g, sp, rate[] }
     // 低功耗旗標(單一真相 = localStorage svs_lowpower,與 game.js 算圖降階同鍵):
     // 開 = 射擊/爆炸走 Layer 1 合成 + 關閉移動環境音(使用者定案「低功耗用合成音」)。
-    this.lowPower = false;
-    try { this.lowPower = localStorage.getItem(_LOWP_KEY) === '1'; } catch { /* noop */ }
+    // 讀值 MUST 走 mobile.js lowPower() —— 「沒設定過」在手機上要吃「預設開」,
+    // 直接比對 localStorage === '1' 會讓手機的預設值失效(音效仍走取樣、環境音仍開)。
+    this.lowPower = lowPower();
 
     // 設定持久化:音效(SFX)/ 音樂(BGM)各自獨立音量與開關;相容舊版單一 {master,muted}
     const saved = this._load();

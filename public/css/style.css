@@ -629,6 +629,23 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   padding: 34px 42px; text-align: center; display: flex; flex-direction: column; gap: 14px;
   max-width: min(640px, 92vw);
 }
+/* 疊層右上角關閉鍵:所有可關閉的 .overlay-box 共用一顆 ✕(手機上「那顆返回鈕在哪」很不直覺)。
+   MUST 疊在 box 的框內、不吃內距 —— 內容區有自己的捲動,放進流內會被捲走。 */
+.ov-close {
+  position: absolute; top: 6px; right: 8px; z-index: 3;
+  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 15px; line-height: 1;
+  width: 34px; height: 34px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--dim); background: rgba(8, 12, 17, 0.8); border: 1px solid var(--line);
+  clip-path: var(--notch-sm);
+  transition: color 0.1s, border-color 0.1s, background 0.1s;
+}
+.ov-close:hover { color: var(--text); border-color: var(--railW); }
+.ov-close:active { background: rgba(var(--railW-rgb), 0.28); color: #05070a; }
+/* 觸控版放大到可靠的觸控目標(44×44),並讓出上方內距免得壓到標題 */
+body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 4px; right: 4px; }
+body.touch-ui .overlay-box { padding-top: 26px; }
+
 .overlay-box::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   box-shadow: inset 0 0 0 4px rgba(122, 158, 178, 0.07);
@@ -1490,17 +1507,34 @@ body:not(.touch-ui) .touch-layer { display: none; }
    萬一 body 少掛了 ori class(例如版型判定沒跑到),var() 會失效 → 十字鍵/ABXY 會塌成 0×0 =
    「看不到虛擬搖桿」。這裡給 body.touch-ui 一份預設值當底,MUST NOT 移除。 */
 body.touch-ui {
-  --tl-dpad: 140px; --tl-gp: 148px; --tl-band: 252px;
-  --tl-sysw: 52px;    /* 系統鍵直條寬(橫式);直式排橫列時不用 */
-  --tl-shw: 130px;    /* 肩鍵列最寬態(L + ZL 兩顆);欄寬推導用 */
-  --tl-info: 165px;   /* 直式上緣資訊帶(A 機體資訊 + M 小地圖)高 */
+  /* 控件尺寸(逐版型覆寫):四分區內部照實體手把排位 —— 左上移動搖桿 / 左下十字鍵 /
+     右上 ABXY / 右下視角搖桿,肩鍵與系統鍵貼各區內側直條。 */
+  --tl-stick: 100px;   /* 移動搖桿直徑(左上) */
+  --tl-dpadw: 44px;    /* 十字鍵**單臂**寬(左下;外框 = 臂 × 3)*/
+  --tl-dpadh: 40px;    /* 十字鍵單臂高 */
+  --tl-dpad: calc(var(--tl-dpadw) * 3);   /* 外框寬(欄寬/定位推導用)*/
+  --tl-gp: 120px;      /* ABXY 菱形外框(右上) */
+  --tl-rstick: 100px;  /* 視角搖桿直徑(右下) */
+  --tl-sysw: 52px;     /* 肩鍵/系統鍵直條寬 */
+  --tl-edge: 8px;      /* 控件離螢幕邊的內距 */
+  --tl-gap: 14px;      /* 握把與內側直條之間的間隙 */
+  --tl-band: 252px;    /* 直式操控帶高 */
+  --tl-info: 165px;    /* 直式上緣資訊帶(A + M)高 */
+  /* 握把區實寬 = 該區最寬的一件;欄寬再加上內側直條。**MUST 用推導** ——
+     手寫欄寬會在某個尺寸下讓直條壓到搖桿(前科:矮螢幕縮小握把後肩鍵列變成最寬的一列)。 */
+  --tl-gripl: max(var(--tl-stick), var(--tl-dpad));
+  --tl-gripr: max(var(--tl-gp), var(--tl-rstick));
+  --tl-coll: calc(var(--tl-gripl) + 6px + var(--tl-sysw));
+  --tl-colr: calc(var(--tl-gripr) + 6px + var(--tl-sysw));
 }
+/* 保險定位:少掛 ori class 時仍看得到控件(見上方保險尺寸的說明) */
 body.touch-ui .tl-dpad { left: 8px; bottom: 8px; }
-body.touch-ui .tl-gp { right: 8px; bottom: 8px; }
-body.touch-ui .tl-sh-l { left: 8px; bottom: calc(var(--tl-dpad) + 16px); }
-body.touch-ui .tl-sh-r { right: 8px; bottom: calc(var(--tl-gp) + 16px); }
-body.touch-ui .tl-sys-l { left: 8px; bottom: calc(var(--tl-dpad) + 66px); }
-body.touch-ui .tl-sys-r { right: 8px; bottom: calc(var(--tl-gp) + 66px); }
+body.touch-ui .tl-stick-move { left: 8px; bottom: calc(var(--tl-dpadh) * 3 + 14px); }
+body.touch-ui .tl-stick-look { right: 8px; bottom: 8px; }
+body.touch-ui .tl-gp { right: 8px; bottom: calc(var(--tl-rstick) + 14px); }
+body.touch-ui .tl-sys-l { left: calc(var(--tl-gripl) + 14px); bottom: 8px; }
+body.touch-ui .tl-sys-r { right: calc(var(--tl-gripr) + 14px); bottom: 8px; }
+
 .tl-look { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
 /* 疊層(戰場選單 / 商店 / 結束畫面)開著:整層收起。
    `#game` 是 position:fixed ⇒ **它本身就是一個堆疊脈絡**,疊層寫的 z 20 只在它內部有效;
@@ -1508,48 +1542,68 @@ body.touch-ui .tl-sys-r { right: 8px; bottom: calc(var(--tl-gp) + 66px); }
    (症狀:選單/商店開了以後任何按鍵都沒反應、也關不掉)。由 mobile.js syncBlocked() 掛 class。 */
 body.tl-off .touch-layer { display: none !important; }
 
-/* ===== 左手:虛擬類比十字鍵 =====
-   外觀是十字鍵(四片方向 + 中央 hub),判定是類比:圓心固定在鍵盤中心,
-   觸點偏移量 = 推杆量(輕推慢走、推到底衝刺)。方向片由 mobile.js 依實際軸值加 on-* 亮起。 */
-.tl-dpad {
+/* ===== 類比搖桿(左上移動 / 右下視角)=====
+   照實體手把排位:圓盤 + 桿頭,圓心固定(不浮動)。推杆量 = 觸點到圓心的距離比例,
+   移動 → 輕推慢走、推到底衝刺;視角 → 推杆量對應每秒轉速(積分在 mobile.js tick)。 */
+.tl-stick {
   position: absolute; pointer-events: auto; touch-action: none;
-  width: var(--tl-dpad); height: var(--tl-dpad);
   opacity: var(--tl-alpha); transition: opacity 0.1s;
 }
-/* 推桿中(任一方向片亮起)= 提亮:on-* 掛在 .tl-dpad 自己身上,故不需要 :has() */
-.tl-dpad.on-up, .tl-dpad.on-dn, .tl-dpad.on-lf, .tl-dpad.on-rt { opacity: var(--tl-alpha-on); }
-.tl-dp-plate {
+.tl-stick.on { opacity: var(--tl-alpha-on); }
+.tl-stick-move { width: var(--tl-stick); height: var(--tl-stick); }
+.tl-stick-look { width: var(--tl-rstick); height: var(--tl-rstick); }
+.tl-st-ring {
   position: absolute; inset: 0; border-radius: 50%;
   border: 2px solid rgba(var(--railS-rgb), 0.42);
   background: radial-gradient(circle at 50% 42%, rgba(10, 16, 22, 0.62) 52%, rgba(var(--railS-rgb), 0.12) 100%);
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.55);
 }
-/* 四片方向:十字排列,各佔 34%(切角方塊 = 終端風十字鍵) */
-.tl-dir {
-  position: absolute; width: 34%; height: 34%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: calc(var(--tl-dpad) * 0.13); font-style: normal; line-height: 1;
-  color: rgba(var(--railS-rgb), 0.72);
-  background: rgba(8, 13, 19, 0.72); border: 1px solid rgba(var(--railS-rgb), 0.4);
-  clip-path: var(--notch-sm);
-  transition: background 0.06s, color 0.06s, border-color 0.06s;
-}
-.dir-up { left: 33%; top: 0; }
-.dir-dn { left: 33%; bottom: 0; }
-.dir-lf { left: 0; top: 33%; }
-.dir-rt { right: 0; top: 33%; }
-.tl-dpad.on-up .dir-up, .tl-dpad.on-dn .dir-dn,
-.tl-dpad.on-lf .dir-lf, .tl-dpad.on-rt .dir-rt {
-  background: rgba(var(--railS-rgb), 0.42); color: #04080b; border-color: var(--railS-hot);
-}
-/* 推到底(衝刺)整個底盤轉暖色:一眼看得出在衝 */
-.tl-dpad.on-run .tl-dp-plate { border-color: var(--railW-hot); box-shadow: inset 0 0 24px rgba(var(--railW-rgb), 0.3); }
-.tl-dp-hub {
-  position: absolute; left: 50%; top: 50%; width: 26%; height: 26%; margin: -13% 0 0 -13%;
+/* 推到底(移動搖桿 = 衝刺)整個底盤轉暖色:一眼看得出在衝 */
+.tl-stick.on-run .tl-st-ring { border-color: var(--railW-hot); box-shadow: inset 0 0 24px rgba(var(--railW-rgb), 0.3); }
+.tl-st-knob {
+  position: absolute; left: 50%; top: 50%; width: 42%; height: 42%; margin: -21% 0 0 -21%;
   border-radius: 50%; border: 2px solid var(--railS-hot);
   background: radial-gradient(circle at 38% 32%, rgba(var(--railS-rgb), 0.8), rgba(8, 14, 20, 0.92) 78%);
   box-shadow: 0 0 12px rgba(var(--railS-rgb), 0.4);
 }
+/* 視角搖桿用暖色(與移動的冷色分家:兩支長得一樣時很容易推錯) */
+.tl-stick-look .tl-st-ring { border-color: rgba(var(--railW-rgb), 0.42); }
+.tl-stick-look .tl-st-knob {
+  border-color: var(--railW-hot);
+  background: radial-gradient(circle at 38% 32%, rgba(var(--railW-rgb), 0.8), rgba(8, 14, 20, 0.92) 78%);
+  box-shadow: 0 0 12px rgba(var(--railW-rgb), 0.4);
+}
+
+/* ===== 十字鍵(左下)=====
+   這套配置裡十字鍵是**四顆按鍵**不是移動(移動在左上搖桿):上 ⊟ 商店 / 下 陀螺儀,
+   左右兩向先做好版位但不接功能(.reserved)—— 版位先佔住,之後接快捷不必再動版型。 */
+/* 外框 **MUST 由臂長推導**(3 格 × 臂):臂本身就是一個合格觸控目標(≥ 44×40),
+   而十字型排法要零重疊,臂寬只能佔外框 1/3 —— 反過來用百分比切外框,臂一定會小於 44×40。 */
+.tl-dpad {
+  position: absolute; pointer-events: none;
+  width: calc(var(--tl-dpadw) * 3); height: calc(var(--tl-dpadh) * 3);
+}
+.tl-dp-b {
+  position: absolute; width: var(--tl-dpadw); height: var(--tl-dpadh); padding: 0;
+  pointer-events: auto; touch-action: none; cursor: pointer; font: inherit;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1; letter-spacing: 0;
+  color: rgba(var(--railS-rgb), 0.85);
+  background: rgba(8, 13, 19, 0.72); border: 1px solid rgba(var(--railS-rgb), 0.4);
+  clip-path: var(--notch-sm);
+  opacity: var(--tl-alpha);
+  transition: background 0.07s, color 0.07s, border-color 0.07s, opacity 0.07s;
+}
+.dir-up { left: var(--tl-dpadw); top: 0; }
+.dir-dn { left: var(--tl-dpadw); bottom: 0; }
+.dir-lf { left: 0; top: var(--tl-dpadh); }
+.dir-rt { right: 0; top: var(--tl-dpadh); }
+.tl-dp-b.press { background: rgba(var(--railS-rgb), 0.42); color: #04080b; border-color: var(--railS-hot); opacity: var(--tl-alpha-on); }
+.tl-dp-b.on { border-color: var(--ok); color: var(--ok); opacity: var(--tl-alpha-on); }
+.tl-dp-b.off { border-color: rgba(255, 68, 54, 0.6); color: var(--danger); opacity: var(--tl-alpha-on); }
+/* 保留未用:看得見(玩家知道這裡有鍵位)但明顯是停用態,且**仍吃事件** ——
+   不吃的話點下去會穿到 #tlLook 變成轉視角,比沒有按鈕更怪。 */
+.tl-dp-b.reserved { color: var(--line-strong); border-style: dashed; cursor: default; opacity: calc(var(--tl-alpha) * 0.6); }
 
 /* ===== 搖桿鈕(ABXY / 肩鍵)===== */
 .tl-gp { position: absolute; width: var(--tl-gp); height: var(--tl-gp); pointer-events: none; }
@@ -1593,14 +1647,9 @@ body.tl-off .touch-layer { display: none !important; }
 .gb-x .gb-k, .gb-y .gb-k { color: var(--railW); }
 .gb-b .gb-k { color: var(--railS-hot); }
 
-/* 肩鍵:L/ZL 左、R/ZR 右;方角長條(與圓形的 ABXY 分家,不會誤按) */
-.tl-sh { position: absolute; display: flex; gap: 6px; pointer-events: none; }
-.tl-sh .tl-gb {
-  min-width: 62px; min-height: 44px; padding: 0 8px;
-  clip-path: var(--notch-sm);
-}
-.tl-sh .gb-k { font-size: 13px; color: var(--railW); }
-body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); opacity: var(--tl-alpha-on); }
+/* 肩鍵不再是獨立容器:L/ZL 與 R/ZR 併入各自區的系統鍵直條(見下方 .tl-sys)——
+   實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖。 */
+body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); opacity: var(--tl-alpha-on); color: var(--railW); }
 
 /* ===== 系統鍵(L 區:HOME / ⊟ 商店 / ◫ 地圖 ・ R 區:陀螺 / 全螢幕 / 左手)=====
    兩組分屬 L/R 分區,排列方向逐版型切換(橫式直條貼握把內側、直式橫列貼操控帶上緣)。 */
@@ -1693,23 +1742,18 @@ body.touch-ui .shop-hint { display: none; }
 body.touch-ui .dead-hint { font-size: 10px; }
 
 /* ================= 橫式:左右兩直欄(A 上 / L 下 ・ M 上 / R 下)=================
-   左欄 = A 機體資訊(上)+ L 控件(下:系統鍵直條 + L/ZL 肩鍵 + 類比十字鍵);
-   右欄 = M 小地圖(上)+ R 控件(下:系統鍵直條 + ZR/R 肩鍵 + ABXY)。
+   左欄 = A 機體資訊(上)+ L 控件(下:**左上移動搖桿、左下十字鍵** + 內側 L/ZL/HOME/地圖 直條);
+   右欄 = M 小地圖(上)+ R 控件(下:**右上 ABXY、右下視角搖桿** + 內側 R/ZR/換機/全螢幕/左手 直條)。
    兩欄之間的整片中央 **MUST** 淨空給 3D 戰場(戰報/平民提示只准落在中央帶的上緣)。
-   欄寬 = 握把件 + 系統鍵直條(--tl-sysw),系統鍵貼欄的**內側** ⇒ 十字鍵/ABXY 仍在最外下角(拇指自然停位)。 */
+   直條貼欄的**內側** ⇒ 搖桿與十字鍵仍在最外下角(拇指自然停位)。 */
 body.touch-ui.ori-landscape {
-  --tl-dpad: 128px;
-  --tl-gp: 140px;
-  --tl-sysw: 52px;
-  /* 握把區實寬 = max(十字鍵/ABXY 直徑, 肩鍵列寬) —— 矮螢幕把握把縮小後,**肩鍵列才是最寬的那一列**,
-     用直徑當欄寬會讓系統鍵直條壓到肩鍵(667×375 實測過)。 */
-  --tl-gripl: max(var(--tl-dpad), var(--tl-shw));
-  --tl-gripr: max(var(--tl-gp), var(--tl-shw));
-  --tl-coll: calc(var(--tl-gripl) + 6px + var(--tl-sysw));   /* 左欄寬 */
-  --tl-colr: calc(var(--tl-gripr) + 6px + var(--tl-sysw));   /* 右欄寬 */
+  --tl-stick: 104px;
+  --tl-gp: 124px;
+  --tl-rstick: 104px;
 }
-@media (orientation: landscape) and (max-height: 380px) {
-  body.touch-ui.ori-landscape { --tl-dpad: 118px; --tl-gp: 130px; }
+/* 375~400 高的橫式:垂直預算最緊(A 只剩約 150px),控件同步收一階 */
+@media (orientation: landscape) and (max-height: 400px) {
+  body.touch-ui.ori-landscape { --tl-stick: 80px; --tl-gp: 120px; --tl-rstick: 92px; }
 }
 body.touch-ui.ori-landscape .hud-top {
   padding: 5px 10px; padding-left: calc(10px + var(--tl-sl)); padding-right: calc(10px + var(--tl-sr));
@@ -1722,17 +1766,17 @@ body.touch-ui .hud-bottom { inset: 0; padding: 0; background: none; display: blo
 body.touch-ui .hud-bottom > * { position: absolute; }
 /* A 機體資訊:左欄上段(寬度 = 整個左欄,與下方控件切齊成一直欄) */
 body.touch-ui.ori-landscape .hud-self {
-  left: calc(8px + var(--tl-sl)); top: calc(36px + var(--tl-st));
+  left: calc(8px + var(--tl-sl)); top: calc(34px + var(--tl-st));
   width: var(--tl-coll); min-width: 0; max-width: none;
   gap: 1px;   /* 直欄高度吃緊:667×375 上 A 只剩約 150px 可用(見版型量測) */
 }
 /* M 小地圖:右欄上段 */
 body.touch-ui.ori-landscape #minimap {
-  right: calc(8px + var(--tl-sr)); top: calc(36px + var(--tl-st)); width: 116px; height: 116px;
+  right: calc(8px + var(--tl-sr)); top: calc(36px + var(--tl-st)); width: 104px; height: 104px;
 }
-/* 系統鍵:各自欄的**內側直條** —— 十字鍵/ABXY 仍佔最外下角(拇指自然停位) */
+/* 肩鍵 + 系統鍵:各自欄的**內側直條**(由下往上長,故 DOM 序即由上而下的 L→ZL→HOME→地圖) */
 body.touch-ui.ori-landscape .tl-sys { flex-direction: column; width: var(--tl-sysw); }
-body.touch-ui.ori-landscape .tl-sysb { width: 100%; min-width: 0; }
+body.touch-ui.ori-landscape .tl-sysb { width: 100%; min-width: 0; font-size: 9px; padding: 0 2px; }
 body.touch-ui.ori-landscape .tl-sys-l {
   left: calc(var(--tl-gripl) + 14px + var(--tl-sl)); bottom: calc(8px + var(--tl-sb));
 }
@@ -1746,42 +1790,70 @@ body.touch-ui.ori-landscape .kill-feed {
   align-items: center; max-height: 44px; overflow: hidden;
 }
 body.touch-ui.ori-landscape .kill-feed div { border-right: 0; border-left: 3px solid var(--danger); font-size: 11px; }
+/* 左下十字鍵 / 其上的移動搖桿(十字鍵水平置中於搖桿之下,兩者切齊成一支握把) */
 body.touch-ui.ori-landscape .tl-dpad {
-  left: calc(8px + var(--tl-sl)); bottom: calc(8px + var(--tl-sb));
+  left: calc(8px + max(0px, (var(--tl-stick) - var(--tl-dpad)) / 2) + var(--tl-sl)); bottom: calc(8px + var(--tl-sb));
+}
+/* 十字鍵與搖桿之間只留 10px:667×375 的左欄裡,A 機體資訊(壓縮後約 128px)與這一疊
+   合起來剛好用滿 375 —— 這個間隙是最後的調節餘裕,放大 MUST 重跑版型量測。 */
+body.touch-ui.ori-landscape .tl-stick-move {
+  left: calc(8px + max(0px, (var(--tl-dpad) - var(--tl-stick)) / 2) + var(--tl-sl));
+  bottom: calc(var(--tl-dpadh) * 3 + 10px + var(--tl-sb));
+}
+/* 右下視角搖桿 / 其上的 ABXY */
+body.touch-ui.ori-landscape .tl-stick-look {
+  right: calc(8px + max(0px, (var(--tl-gp) - var(--tl-rstick)) / 2) + var(--tl-sr)); bottom: calc(8px + var(--tl-sb));
 }
 body.touch-ui.ori-landscape .tl-gp {
-  right: calc(8px + var(--tl-sr)); bottom: calc(8px + var(--tl-sb));
+  right: calc(8px + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2) + var(--tl-sr)); bottom: calc(var(--tl-rstick) + 14px + var(--tl-sb));
 }
-/* 肩鍵:各自握把的**正上方**(欄內堆疊)。舊版被迫排在握把內側,是因為角色數據欄橫跨了
-   整個上緣、底緣離拇指區只剩約 40px;四分區把 A / M 收進左右直欄後,欄的上段自然讓出
-   這一列的高度 ⇒ 肩鍵回到握把上方仍不壓到 A(量測有此斷言)。 */
-body.touch-ui.ori-landscape .tl-sh-l {
-  left: calc(8px + var(--tl-sl)); bottom: calc(var(--tl-dpad) + 14px + var(--tl-sb));
-}
-body.touch-ui.ori-landscape .tl-sh-r {
-  right: calc(8px + var(--tl-sr)); bottom: calc(var(--tl-gp) + 14px + var(--tl-sb));
-}
-/* 平民互動提示(內含觸控鈕):置中放在準星上方的空帶。MUST 避開搖桿 —— 提示層 z 11 > 搖桿 9,
+/* A 機體資訊在橫式的**壓縮版**:左欄上段只有約 120px 可用(下方是移動搖桿 + 十字鍵兩層),
+   故字級與條高再收一階。**MUST NOT** 改成隱藏整列 —— 招式名稱/重武器 CD 沒有第二個顯示處
+   (鈕面只鏡射冷卻數字,不含名稱)。 */
+body.touch-ui.ori-landscape .hud-side { font-size: 9px; letter-spacing: 1px; }
+body.touch-ui.ori-landscape .squad-row { gap: 2px; }
+body.touch-ui.ori-landscape .hpbar,
+body.touch-ui.ori-landscape .spbar,
+body.touch-ui.ori-landscape .mpbar { height: 10px; }
+body.touch-ui.ori-landscape .hp-text,
+body.touch-ui.ori-landscape .sp-text,
+body.touch-ui.ori-landscape .mp-text { font-size: 9px; letter-spacing: 0; }
+body.touch-ui.ori-landscape .wpn-box { padding: 0 5px; font-size: 10px; }
+body.touch-ui.ori-landscape .ab-row { gap: 3px; }
+body.touch-ui.ori-landscape .burst-box,
+body.touch-ui.ori-landscape .money-box { font-size: 9px; }
+body.touch-ui.ori-landscape .ab-box { padding: 1px 3px; }
+body.touch-ui.ori-landscape .ab-box .ab-key,
+body.touch-ui.ori-landscape .ab-box .ab-name,
+body.touch-ui.ori-landscape .ab-box .ab-cd { font-size: 8px; }
+
+/* 平民互動提示(內含觸控鈕):置中放在準星上方的中央帶。MUST 避開搖桿 —— 提示層 z 11 > 搖桿 9,
    壓上去會變成按到「跟隨/驅趕」而不是搖桿鈕。提示底板 pointer-events:none,只有鈕吃事件。 */
 body.touch-ui.ori-landscape .civ-prompt {
   left: 50%; transform: translateX(-50%); top: calc(96px + var(--tl-st)); bottom: auto;
   max-width: min(320px, 34%); white-space: normal;
 }
 
-/* ================= 直式:控件收進下緣操控帶 =================
+/* ================= 直式:上緣資訊帶 + 下緣操控帶 =================
    垂直預算(上→下):主堡條 → **資訊帶**(A 機體資訊左 / M 小地圖右)→ 中央 3D 戰場
-   → **操控帶**(L:系統鍵/肩鍵/十字鍵 ・ R:系統鍵/肩鍵/ABXY)。
-   兩個帶高各自只有一個變數:--tl-info(上)與 --tl-band(下),
-   MUST 只改這兩個 —— 多處各寫百分比會在 360×640 互相壓到。
-   --tl-band **MUST** 由 --tl-dpad 推導(帶內是十字鍵 + 肩鍵 + 系統鍵三列),寫死百分比會在矮螢幕溢出。 */
+   → **操控帶**(L:移動搖桿 + 十字鍵 + 內側直條 ・ R:ABXY + 視角搖桿 + 內側直條)。
+   兩個帶高各自只有一個變數:--tl-info(上)與 --tl-band(下),MUST 只改這兩個。
+   --tl-band **MUST** 由控件尺寸推導(帶內是搖桿 + ABXY 兩層),寫死百分比會在矮螢幕溢出。 */
 body.touch-ui.ori-portrait {
-  --tl-dpad: 150px;
-  --tl-gp: 158px;
-  --tl-band: calc(var(--tl-dpad) + 112px);
+  --tl-stick: 104px;
+  --tl-gp: 124px;
+  --tl-rstick: 104px;
+  --tl-band: max(calc(var(--tl-gp) + var(--tl-rstick) + 22px),
+                 calc(var(--tl-dpadh) * 3 + var(--tl-stick) + 22px));
   --tl-info: 165px;
 }
 @media (orientation: portrait) and (max-height: 720px) {
-  body.touch-ui.ori-portrait { --tl-dpad: 128px; --tl-gp: 136px; }
+  body.touch-ui.ori-portrait { --tl-stick: 96px; --tl-gp: 120px; --tl-rstick: 96px; }
+}
+/* 360 寬的直式:十字鍵(132)+ ABXY(120)+ 兩條直條已經吃滿整個寬度 ⇒ 邊距/間隙/直條寬同步收到最小。
+   ABXY 外框 **MUST ≥ 116** —— 鈕直徑是外框的 38%,再小就低於 44px 觸控目標。 */
+@media (orientation: portrait) and (max-width: 400px) {
+  body.touch-ui.ori-portrait { --tl-sysw: 44px; --tl-gp: 116px; --tl-edge: 6px; --tl-gap: 4px; }
 }
 /* 上緣:主堡條改上下堆疊(橫排在窄屏會擠成一團) */
 body.touch-ui.ori-portrait .hud-top {
@@ -1792,10 +1864,6 @@ body.touch-ui.ori-portrait .base-bar { max-width: none; }
 body.touch-ui.ori-portrait .base-bar.steel { flex-direction: row-reverse; }
 body.touch-ui.ori-portrait .base-label { font-size: 10px; letter-spacing: 2px; }
 body.touch-ui.ori-portrait .wave-box { align-self: center; font-size: 10px; padding: 3px 12px; }
-/* 系統鍵:操控帶最上緣的左右兩橫列(L 戰局鍵 / R 裝置鍵);鈕面壓小以各自塞進半寬 */
-body.touch-ui.ori-portrait .tl-sys { justify-content: flex-start; gap: 4px; overflow: hidden; }
-body.touch-ui.ori-portrait .tl-sys-r { justify-content: flex-end; }
-body.touch-ui.ori-portrait .tl-sysb { min-width: 44px; min-height: 44px; padding: 0 3px; font-size: 10px; }
 /* 上緣資訊帶:A 機體資訊(左)+ M 小地圖(右),同一列切齊 */
 body.touch-ui.ori-portrait .hud-self {
   left: 8px; top: calc(80px + var(--tl-st));
@@ -1821,21 +1889,38 @@ body.touch-ui.ori-portrait .touch-layer::before {
   background: linear-gradient(0deg, rgba(3, 5, 8, 0.86) 0%, rgba(3, 5, 8, 0.5) 62%, transparent 100%);
   pointer-events: none;
 }
-body.touch-ui.ori-portrait .tl-dpad { left: 8px; bottom: calc(8px + var(--tl-sb)); }
-body.touch-ui.ori-portrait .tl-gp { right: 6px; bottom: calc(4px + var(--tl-sb)); }
-/* 肩鍵與系統鍵:各自握把正上方兩列(L 靠左、R 靠右;直式寬度排不下「握把內側」那種橫列) */
-body.touch-ui.ori-portrait .tl-sh-l { left: 8px; bottom: calc(var(--tl-dpad) + 14px + var(--tl-sb)); }
-body.touch-ui.ori-portrait .tl-sh-r { right: 8px; bottom: calc(var(--tl-gp) + 10px + var(--tl-sb)); }
-body.touch-ui.ori-portrait .tl-sys-l { left: 8px; bottom: calc(var(--tl-dpad) + 64px + var(--tl-sb)); }
-body.touch-ui.ori-portrait .tl-sys-r { right: 8px; bottom: calc(var(--tl-gp) + 60px + var(--tl-sb)); }
-body.touch-ui.ori-portrait .tl-sh .tl-gb { min-width: 56px; }
+/* L 區:十字鍵貼底、移動搖桿在其上(與橫式同一支握把結構,只是整組收進操控帶) */
+body.touch-ui.ori-portrait .tl-dpad {
+  left: calc(var(--tl-edge) + max(0px, (var(--tl-stick) - var(--tl-dpad)) / 2)); bottom: calc(8px + var(--tl-sb));
+}
+body.touch-ui.ori-portrait .tl-stick-move {
+  left: calc(var(--tl-edge) + max(0px, (var(--tl-dpad) - var(--tl-stick)) / 2)); bottom: calc(var(--tl-dpadh) * 3 + 14px + var(--tl-sb));
+}
+/* R 區:視角搖桿貼底、ABXY 在其上 */
+body.touch-ui.ori-portrait .tl-stick-look {
+  right: calc(var(--tl-edge) + max(0px, (var(--tl-gp) - var(--tl-rstick)) / 2)); bottom: calc(8px + var(--tl-sb));
+}
+body.touch-ui.ori-portrait .tl-gp {
+  right: calc(var(--tl-edge) + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2)); bottom: calc(var(--tl-rstick) + 14px + var(--tl-sb));
+}
+/* 直條同橫式貼各區內側(直式寬度足夠,沿用直排 ⇒ 兩種持握的鍵位順序一致,不必重新找鍵) */
+body.touch-ui.ori-portrait .tl-sys { flex-direction: column; width: var(--tl-sysw); }
+body.touch-ui.ori-portrait .tl-sysb { width: 100%; min-width: 0; min-height: 40px; padding: 0 2px; font-size: 9px; }
+body.touch-ui.ori-portrait .tl-sys-l { left: calc(var(--tl-edge) + var(--tl-gripl) + var(--tl-gap)); bottom: calc(8px + var(--tl-sb)); }
+body.touch-ui.ori-portrait .tl-sys-r { right: calc(var(--tl-edge) + var(--tl-gripr) + var(--tl-gap)); bottom: calc(8px + var(--tl-sb)); }
 body.touch-ui.ori-portrait .lock-warn { top: 26%; }
 
-/* ---------- 左手模式:整個 L / R 分區左右鏡像(含各自的系統鍵直條與 A / M)---------- */
-body.touch-ui.touch-lefty.ori-landscape .tl-dpad { left: auto; right: calc(8px + var(--tl-sr)); }
-body.touch-ui.touch-lefty.ori-landscape .tl-gp { right: auto; left: calc(8px + var(--tl-sl)); }
-body.touch-ui.touch-lefty.ori-landscape .tl-sh-l { left: auto; right: calc(8px + var(--tl-sr)); }
-body.touch-ui.touch-lefty.ori-landscape .tl-sh-r { right: auto; left: calc(8px + var(--tl-sl)); }
+/* ---------- 左手模式:整個 L / R 分區左右鏡像(含各自的直條與 A / M)---------- */
+body.touch-ui.touch-lefty .tl-dpad, body.touch-ui.touch-lefty .tl-stick-move { left: auto; }
+body.touch-ui.touch-lefty .tl-gp, body.touch-ui.touch-lefty .tl-stick-look { right: auto; }
+body.touch-ui.touch-lefty.ori-landscape .tl-dpad {
+  right: calc(8px + max(0px, (var(--tl-stick) - var(--tl-dpad)) / 2) + var(--tl-sr));
+}
+body.touch-ui.touch-lefty.ori-landscape .tl-stick-move { right: calc(8px + max(0px, (var(--tl-dpad) - var(--tl-stick)) / 2) + var(--tl-sr)); }
+body.touch-ui.touch-lefty.ori-landscape .tl-stick-look {
+  left: calc(8px + max(0px, (var(--tl-gp) - var(--tl-rstick)) / 2) + var(--tl-sl));
+}
+body.touch-ui.touch-lefty.ori-landscape .tl-gp { left: calc(8px + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2) + var(--tl-sl)); }
 body.touch-ui.touch-lefty.ori-landscape .tl-sys-l {
   left: auto; right: calc(var(--tl-gripl) + 14px + var(--tl-sr));
 }
@@ -1847,12 +1932,12 @@ body.touch-ui.touch-lefty.ori-landscape #minimap { right: auto; left: calc(8px +
 body.touch-ui.touch-lefty.ori-landscape .kill-feed {
   left: calc(var(--tl-colr) + 20px + var(--tl-sl)); right: calc(var(--tl-coll) + 20px + var(--tl-sr));
 }
-body.touch-ui.touch-lefty.ori-portrait .tl-dpad { left: auto; right: 8px; }
-body.touch-ui.touch-lefty.ori-portrait .tl-gp { right: auto; left: 6px; }
-body.touch-ui.touch-lefty.ori-portrait .tl-sh-l { left: auto; right: 8px; }
-body.touch-ui.touch-lefty.ori-portrait .tl-sh-r { right: auto; left: 8px; }
-body.touch-ui.touch-lefty.ori-portrait .tl-sys-l { left: auto; right: 8px; justify-content: flex-end; }
-body.touch-ui.touch-lefty.ori-portrait .tl-sys-r { right: auto; left: 8px; justify-content: flex-start; }
+body.touch-ui.touch-lefty.ori-portrait .tl-dpad { right: calc(var(--tl-edge) + max(0px, (var(--tl-stick) - var(--tl-dpad)) / 2)); }
+body.touch-ui.touch-lefty.ori-portrait .tl-stick-move { right: calc(var(--tl-edge) + max(0px, (var(--tl-dpad) - var(--tl-stick)) / 2)); }
+body.touch-ui.touch-lefty.ori-portrait .tl-stick-look { left: calc(var(--tl-edge) + max(0px, (var(--tl-gp) - var(--tl-rstick)) / 2)); }
+body.touch-ui.touch-lefty.ori-portrait .tl-gp { left: calc(var(--tl-edge) + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2)); }
+body.touch-ui.touch-lefty.ori-portrait .tl-sys-l { left: auto; right: calc(var(--tl-edge) + var(--tl-gripl) + var(--tl-gap)); }
+body.touch-ui.touch-lefty.ori-portrait .tl-sys-r { right: auto; left: calc(var(--tl-edge) + var(--tl-gripr) + var(--tl-gap)); }
 body.touch-ui.touch-lefty.ori-portrait .hud-self { left: auto; right: 8px; }
 body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
 

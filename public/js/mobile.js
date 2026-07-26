@@ -108,8 +108,10 @@ export const LOOK = {
   GYRO_DT_MAX: 0.1,       // devicemotion 單筆積分上限(秒):事件延遲時不讓準星暴衝
   GYRO_YAW_DEAD: 0.012,   // 「水平軸死了」判定:俯仰已轉這麼多(rad)…
   GYRO_YAW_PROOF: 0.18,   // …但水平累計仍不到 GYRO_YAW_DEAD ⇒ 無磁力計 → 改走 devicemotion
-  SPRINT_MAG: 0.92,       // 類比十字鍵推到此比例以上 = 衝刺(等同 Shift)
-  STICK_DEAD: 0.16,       // 類比十字鍵死區(比例)
+  SPRINT_MAG: 0.92,       // 移動搖桿推到此比例以上 = 衝刺(等同 Shift)
+  STICK_DEAD: 0.16,       // 類比搖桿死區(比例;兩支共用)
+  LOOK_RAD_S: 2.5,        // 視角搖桿推到底的轉速(rad/s ≈ 143°/s,比照主機手把)
+  LOOK_CURVE: 1.7,        // 視角搖桿的響應曲線指數(>1 = 小推更細膩、推到底才全速)
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, Number.isFinite(+v) ? +v : a));
@@ -151,6 +153,24 @@ export function saveTouchPrefs() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(TOUCH)); } catch { /* 私密模式忽略 */ }
 }
 loadTouchPrefs();
+
+/* ---------------- 低功耗模式(算圖降階 + 合成音效)---------------- */
+// 旗標的**唯一真相** = localStorage `svs_lowpower`,game.js `_dpr()`、audio.js、設定頁三處共讀。
+// 手機/平板 **預設開啟**:GPU 與電量都吃緊,滿解析度算圖在中階機上直接掉幀。
+// 「沒設定過」與「設成 0」MUST 分開 —— 前者才吃預設值,後者是玩家明確關掉,不可被預設蓋回去。
+const LOWP_KEY = 'svs_lowpower';
+
+/** 低功耗是否生效(未設定過 → 觸控版預設開、桌機預設關) */
+export function lowPower() {
+  let v = null;
+  try { v = localStorage.getItem(LOWP_KEY); } catch { /* 私密模式忽略 */ }
+  return v === null ? isTouchUI() : v === '1';
+}
+
+/** 低功耗開關(設定頁用;寫入後即為明確偏好,不再吃預設值) */
+export function setLowPower(on) {
+  try { localStorage.setItem(LOWP_KEY, on ? '1' : '0'); } catch { /* 私密模式忽略 */ }
+}
 
 /* ---------------- 版型:觸控版 class + 直式/橫式追蹤 ---------------- */
 
@@ -202,13 +222,18 @@ export function applyLefty(on) {
   saveTouchPrefs();
 }
 
-/** 全螢幕切換(手機瀏覽器工具列會吃掉一大截畫面;附帶嘗試鎖橫向,不支援即靜默) */
+/**
+ * 全螢幕切換(手機瀏覽器工具列會吃掉一大截畫面)。
+ * 方向鎖 **MUST 跟著玩家當下的持握**,MUST NOT 一律鎖橫向 —— 直式玩家按全螢幕會被硬轉成橫式,
+ * 等於「直式不能用全螢幕」。橫握 → 鎖 landscape、直握 → 鎖 portrait,兩種持握都進得了全螢幕。
+ */
 export async function toggleFullscreen() {
   try {
     if (!document.fullscreenElement) {
       await (document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
         ?? document.documentElement.webkitRequestFullscreen?.());
-      try { await window.screen?.orientation?.lock?.('landscape'); } catch { /* iOS 不支援 */ }
+      const want = document.body.classList.contains('ori-portrait') ? 'portrait' : 'landscape';
+      try { await window.screen?.orientation?.lock?.(want); } catch { /* iOS 不支援 */ }
     } else {
       try { window.screen?.orientation?.unlock?.(); } catch { /* 同上 */ }
       await (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.());
@@ -667,8 +692,10 @@ const MOBIL_LABEL = { drone: '上升', morph: '躍/升', mech: '跳躍', robot: 
  * 戰場虛擬搖桿。由 BattleClient._initInput() 在觸控版時建立,dispose() 時銷毀。
  * DOM 掛點全部在 index.html 的 #touchLayer(靜態骨架 + data-act),本檔只綁事件:
  *   - #tlLook  :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
- *   - #tlDpad  :虛擬**類比**十字鍵 —— 外觀十字、判定類比(圓心固定 = 鍵盤中心,偏移量 = 推杆量)
- *   - [data-act]:搖桿鈕(ABXY / L・ZL / R・ZR / HOME・⊟・◫ 與陀螺/全螢幕/左手)
+ *   - #tlStick :移動類比搖桿(左上;圓心固定 = 搖桿中心,偏移量 = 推杆量)
+ *   - #tlRStick:視角類比搖桿(右下;推杆量 → 每秒轉速,與拖曳並存)
+ *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(⊟ 商店 / 陀螺),左右兩向保留未用
+ *   - [data-act]:動作鈕(ABXY / 肩鍵與系統鍵直條)
  * 角色數據(.hud-self)與小地圖(#minimap)是純顯示,**MUST NOT** 被搖桿覆蓋(版型量測有斷言)。
  */
 export class TouchControls {
@@ -677,13 +704,12 @@ export class TouchControls {
     this.axis = { f: 0, r: 0, mag: 0 };   // 移動輸入(_moveAxis 讀;鍵盤未按時才生效)
     this.layer = document.getElementById('touchLayer');
     this.lookPad = document.getElementById('tlLook');
-    this.dpad = document.getElementById('tlDpad');
-    this.knob = document.getElementById('tlKnob');
     this._lookId = null;
     this._lookX = 0; this._lookY = 0;
-    this._padId = null;
-    this._cx = 0; this._cy = 0; this._r = 70;
     this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / B 跳躍 / ZL 下降)
+    // 兩支類比搖桿共用同一份判定(_bindStick):移動的推杆量餵 axis,視角的推杆量餵每幀轉速。
+    this.moveStick = null;
+    this.lookStick = null;
     this.gyro = new Gyro(
       (dy, dp) => this._gyroLook(dy, dp),
       (why) => this._gyroDead(why),
@@ -692,7 +718,7 @@ export class TouchControls {
     _active = this;
     if (this.layer) this.layer.hidden = false;
     this._bindLook();
-    this._bindDpad();
+    this._bindSticks();
     this._bindButtons();
     this._bindRotateHint();
     this._off = false;
@@ -751,6 +777,23 @@ export class TouchControls {
    * 故 MUST 用「疊層開著就收起搖桿」這條。陣亡頁**不收** —— 那頁沒有自己的按鈕,
    * 玩家得靠搖桿的 ⊟ 商店買升級(收掉就等於卡死在倒數畫面)。
    */
+  /**
+   * 每幀入口(game.js 主迴圈呼叫)。**兩件事只有這一個縫**:
+   *   ① 疊層開關 → 收起/放回整層(見 syncBlocked)
+   *   ② 視角搖桿積分 → 推杆量 × 轉速 × dt 疊進 `_applyLook`
+   * 視角搖桿是**持續**輸入(按著就一直轉),故 MUST 在幀迴圈積分,MUST NOT 在 pointermove 裡算
+   * ——— 手指不動就收不到事件,視角會停住,那是「拖曳」不是「搖桿」。
+   */
+  tick(dt) {
+    this.syncBlocked();
+    const st = this.lookStick;
+    if (!st || st.mag <= 0 || this._blocked()) return;
+    // 響應曲線:小推細膩、推到底才全速(比照主機手把;線性推杆在 FPS 上很難微調)
+    const sp = LOOK.LOOK_RAD_S * TOUCH.lookSens * Math.pow(st.mag, LOOK.LOOK_CURVE) * dt;
+    const ux = st.x / st.mag, uy = st.y / st.mag;   // st.x/y 已含推杆量,取單位方向再乘曲線速度
+    this.client._applyLook(-ux * sp, uy * sp);      // 右推 = 向右轉(yaw 減);上推 = 抬頭
+  }
+
   syncBlocked() {
     const off = this._blocked();
     if (off === this._off) return;
@@ -760,67 +803,73 @@ export class TouchControls {
     document.body.classList.toggle('tl-off', off);
   }
 
-  /* ---- 移動:虛擬類比十字鍵 ---- */
-  // 外觀是十字鍵、判定是類比搖桿:圓心固定在鍵盤中心(不像蘑菇頭那樣浮動 —— 十字鍵的中心就是它自己),
-  // 觸點到圓心的偏移量 = 推杆量 ⇒ 輕推慢走、推到底衝刺。方向片依實際軸值亮起(玩家看得出走哪邊)。
-  _bindDpad() {
-    if (!this.dpad) return;
-    this._onPadDown = (e) => {
-      if (this._padId !== null || this._blocked()) return;
-      this._padId = e.pointerId;
-      const r = this.dpad.getBoundingClientRect();
-      this._cx = r.left + r.width / 2;
-      this._cy = r.top + r.height / 2;
-      this._r = r.width / 2 || 70;
-      this._padMove(e.clientX, e.clientY);
-      capture(this.dpad, e.pointerId);
+  /* ---- 類比搖桿(移動 / 視角)---- */
+  // 排位照實體手把(Switch / PS5 / Xbox):**左上移動搖桿、右下視角搖桿**;
+  // 十字鍵(左下)在這套配置裡是「四顆按鍵」,走 _bindButtons 的 data-act 委派,不在此處。
+  //
+  // 兩支搖桿 **MUST 共用這一份判定** —— 死區、推杆量正規化、圓心量測、指標捕捉只有一套實作;
+  // 差別只在 onVec 拿推杆量去做什麼(移動 → 寫 axis 給 _moveAxis;視角 → 存起來由 tick 積分)。
+  _bindStick(el, knob, onVec) {
+    if (!el) return null;
+    const st = { el, knob, id: null, cx: 0, cy: 0, r: 70, x: 0, y: 0, mag: 0 };
+    // 圓心每次落指才量:CSS 版型(直/橫式、左手鏡像)會改位置,快取住就會整支偏掉
+    const move = (cx, cy) => {
+      const dx = cx - st.cx, dy = cy - st.cy;
+      const len = Math.hypot(dx, dy);
+      let mag = Math.min(1, len / st.r);
+      // 死區 → 重新拉伸到 0~1(免得手指微動就爬行/緩慢飄視角)
+      mag = mag < LOOK.STICK_DEAD ? 0 : (mag - LOOK.STICK_DEAD) / (1 - LOOK.STICK_DEAD);
+      if (mag <= 0 || len < 0.001) { st.x = 0; st.y = 0; st.mag = 0; }
+      else { st.x = dx / len * mag; st.y = -dy / len * mag; st.mag = mag; }   // y 向上為正
+      this._stickPaint(st);
+      onVec(st);
+    };
+    st.onDown = (e) => {
+      if (st.id !== null || this._blocked()) return;
+      st.id = e.pointerId;
+      const r = el.getBoundingClientRect();
+      st.cx = r.left + r.width / 2;
+      st.cy = r.top + r.height / 2;
+      st.r = r.width / 2 || 70;
+      move(e.clientX, e.clientY);
+      capture(el, e.pointerId);
       e.preventDefault();
       e.stopPropagation();
     };
-    this._onPadMove = (e) => {
-      if (e.pointerId !== this._padId) return;
-      this._padMove(e.clientX, e.clientY);
-      e.preventDefault();
+    st.onMove = (e) => { if (e.pointerId === st.id) { move(e.clientX, e.clientY); e.preventDefault(); } };
+    st.onUp = (e) => {
+      if (e.pointerId !== st.id) return;
+      st.id = null; st.x = 0; st.y = 0; st.mag = 0;
+      this._stickPaint(st);
+      onVec(st);
     };
-    this._onPadUp = (e) => {
-      if (e.pointerId !== this._padId) return;
-      this._padId = null;
-      this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0;
-      this._padPaint();
-      this.client._cmd('sprint', false);
-    };
-    this.dpad.addEventListener('pointerdown', this._onPadDown);
-    this.dpad.addEventListener('pointermove', this._onPadMove);
-    this.dpad.addEventListener('pointerup', this._onPadUp);
-    this.dpad.addEventListener('pointercancel', this._onPadUp);
+    el.addEventListener('pointerdown', st.onDown);
+    el.addEventListener('pointermove', st.onMove);
+    el.addEventListener('pointerup', st.onUp);
+    el.addEventListener('pointercancel', st.onUp);
+    return st;
   }
 
-  _padMove(x, y) {
-    const dx = x - this._cx, dy = y - this._cy;
-    const len = Math.hypot(dx, dy);
-    let mag = Math.min(1, len / this._r);
-    // 死區 → 重新拉伸到 0~1(免得手指微動就爬行)
-    mag = mag < LOOK.STICK_DEAD ? 0 : (mag - LOOK.STICK_DEAD) / (1 - LOOK.STICK_DEAD);
-    if (mag <= 0 || len < 0.001) { this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0; }
-    else {
-      this.axis.f = -dy / len * mag;   // 螢幕上 = 前進
-      this.axis.r = dx / len * mag;
-      this.axis.mag = mag;
+  _bindSticks() {
+    this.moveStick = this._bindStick(
+      document.getElementById('tlStick'), document.getElementById('tlStickKnob'),
+      (st) => {
+        this.axis.f = st.y; this.axis.r = st.x; this.axis.mag = st.mag;
+        this.client._cmd('sprint', st.mag >= LOOK.SPRINT_MAG);
+      });
+    this.lookStick = this._bindStick(
+      document.getElementById('tlRStick'), document.getElementById('tlRStickKnob'),
+      () => { /* 視角是**持續**輸入:實際套用在 tick(dt),這裡只留推杆量 */ });
+  }
+
+  /** 桿頭位移 + 推到底的衝刺高亮(純視覺回饋;軸值已在 _bindStick 定案) */
+  _stickPaint(st) {
+    if (st.knob) {
+      st.knob.style.transform = st.mag > 0
+        ? `translate(${st.x * st.r * 0.42}px, ${-st.y * st.r * 0.42}px)` : '';
     }
-    this._padPaint(dx, dy, len);
-    this.client._cmd('sprint', mag >= LOOK.SPRINT_MAG);
-  }
-
-  /** 方向片高亮 + 中央 hub 位移(純視覺回饋;軸值已在 _padMove 定案) */
-  _padPaint(dx = 0, dy = 0, len = 0) {
-    const a = this.axis, on = a.mag > 0;
-    const k = on && len > this._r ? this._r / len : 1;
-    if (this.knob) this.knob.style.transform = on ? `translate(${dx * k * 0.55}px, ${dy * k * 0.55}px)` : '';
-    const cl = this.dpad.classList;
-    const T = 0.32;   // 方向片亮起門檻:斜推時兩片同亮
-    cl.toggle('on-up', a.f > T); cl.toggle('on-dn', a.f < -T);
-    cl.toggle('on-rt', a.r > T); cl.toggle('on-lf', a.r < -T);
-    cl.toggle('on-run', a.mag >= LOOK.SPRINT_MAG);
+    st.el.classList.toggle('on', st.mag > 0);
+    st.el.classList.toggle('on-run', st.mag >= LOOK.SPRINT_MAG);
   }
 
   /* ---- 動作鈕 ---- */
@@ -986,11 +1035,15 @@ export class TouchControls {
   /** 凍結輸入(開選單/商店時由 _setPaused 呼叫):放掉所有按住狀態,免得放手事件被吃掉後卡住 */
   reset() {
     this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0;
-    this._lookId = null; this._padId = null;
+    this._lookId = null;
+    for (const st of [this.moveStick, this.lookStick]) {
+      if (!st) continue;
+      st.id = null; st.x = 0; st.y = 0; st.mag = 0;
+      this._stickPaint(st);
+    }
     for (const act of this._held.values()) this.client._cmd(act, false);
     this._held.clear();
-    if (this.dpad) this._padPaint();
-    document.querySelectorAll('#game [data-act].press').forEach((n) => n.classList.remove('press'));
+    document.querySelectorAll('[data-act].press').forEach((n) => n.classList.remove('press'));
   }
 
   dispose() {
@@ -1006,11 +1059,12 @@ export class TouchControls {
       this.lookPad.removeEventListener('pointerup', this._onLookUp);
       this.lookPad.removeEventListener('pointercancel', this._onLookUp);
     }
-    if (this.dpad) {
-      this.dpad.removeEventListener('pointerdown', this._onPadDown);
-      this.dpad.removeEventListener('pointermove', this._onPadMove);
-      this.dpad.removeEventListener('pointerup', this._onPadUp);
-      this.dpad.removeEventListener('pointercancel', this._onPadUp);
+    for (const st of [this.moveStick, this.lookStick]) {
+      if (!st) continue;
+      st.el.removeEventListener('pointerdown', st.onDown);
+      st.el.removeEventListener('pointermove', st.onMove);
+      st.el.removeEventListener('pointerup', st.onUp);
+      st.el.removeEventListener('pointercancel', st.onUp);
     }
     document.removeEventListener('pointerdown', this._onBtnDown, true);
     document.removeEventListener('pointerup', this._onBtnUp, true);
@@ -1053,6 +1107,7 @@ export function openTouchTest(readEl) {
   const deg = (r) => (r * 180 / Math.PI).toFixed(1);
   let raf = 0;
   const draw = () => {
+    tc.tick(1 / 60);          // 試玩也要跑幀迴圈 —— 視角搖桿是持續輸入,不跑 tick 就完全沒反應
     const g = tc.gyro;
     const L = g.last;
     const raw = !L ? '—'
@@ -1060,7 +1115,8 @@ export function openTouchTest(readEl) {
         ? `ω x ${L.rateX.toFixed(1)} y ${L.rateY.toFixed(1)} z ${L.rateZ.toFixed(1)} °/s ・ dt ${(L.dt * 1000).toFixed(0)}ms`
         : `α ${L.alpha == null ? '—(無磁力計)' : L.alpha.toFixed(0) + '°'} β ${L.beta.toFixed(0)}° γ ${L.gamma.toFixed(0)}°`;
     readEl.innerHTML = `<b>搖桿試玩</b>(這裡有反應 = 觸控層正常)`
-      + `<div>十字鍵 前後 <b>${tc.axis.f.toFixed(2)}</b> 左右 <b>${tc.axis.r.toFixed(2)}</b> 推杆量 <b>${tc.axis.mag.toFixed(2)}</b></div>`
+      + `<div>移動搖桿 前後 <b>${tc.axis.f.toFixed(2)}</b> 左右 <b>${tc.axis.r.toFixed(2)}</b> 推杆量 <b>${tc.axis.mag.toFixed(2)}</b></div>`
+      + `<div>視角搖桿 左右 <b>${(tc.lookStick?.x ?? 0).toFixed(2)}</b> 上下 <b>${(tc.lookStick?.y ?? 0).toFixed(2)}</b></div>`
       + `<div>視角 yaw <b>${deg(mock.yaw)}°</b> pitch <b>${deg(mock.pitch)}°</b></div>`
       + `<div>陀螺 <b>${g.status()}</b></div>`
       + `<div>感測原始值 ${raw} ・ 累計 yaw ${g.accYaw.toFixed(1)}° pitch ${g.accPitch.toFixed(1)}°</div>`

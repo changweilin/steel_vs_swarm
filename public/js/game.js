@@ -23,7 +23,7 @@ import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
-import { isTouchUI, TouchControls } from './mobile.js';
+import { isTouchUI, lowPower, TouchControls } from './mobile.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
 const KIND_KEY = {
@@ -2565,8 +2565,8 @@ export class BattleClient {
     }
   }
 
-  /** 目標像素比:低功耗模式(localStorage svs_lowpower)夾到 1,否則上限 2 */
-  _dpr() { return localStorage.getItem('svs_lowpower') === '1' ? 1 : Math.min(window.devicePixelRatio, 2); }
+  /** 目標像素比:低功耗模式夾到 1,否則上限 2(旗標唯一真相 = mobile.js lowPower(),手機預設開)*/
+  _dpr() { return lowPower() ? 1 : Math.min(window.devicePixelRatio, 2); }
   /** 設定頁「低功耗模式」即時套用(main.js 已寫入 localStorage,此處只重設像素比與尺寸)*/
   setLowPower() { this.renderer.setPixelRatio(this._dpr()); this._onResize(); }
 
@@ -6739,10 +6739,11 @@ export class BattleClient {
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
 
-    // 觸控版:疊層(選單/商店/結束)開著就收起虛擬搖桿。每幀同步而非只在切換點呼叫 ——
-    // 疊層的開關散在 _setPaused / _toggleShop / 結束事件三處,漏接一處就會回到「疊層點不動」
-    // 的狀態(見 mobile.js syncBlocked 的堆疊脈絡說明)。狀態沒變時該函式直接早退。
-    this.touch?.syncBlocked();
+    // 觸控版每幀入口:①疊層(選單/商店/結束)開著就收起虛擬搖桿 ②視角搖桿積分。
+    // 兩件事都 MUST 在幀迴圈做 —— 疊層的開關散在 _setPaused / _toggleShop / 結束事件三處,
+    // 漏接一處就會回到「疊層點不動」(見 mobile.js syncBlocked 的堆疊脈絡說明);
+    // 視角搖桿則是持續輸入,只在 pointermove 算的話手指不動就會停住。
+    this.touch?.tick(dt);
 
     this._updateAaMode();             // 榴彈對空彈射模式:MUST 在 _tickWeapons(擊發)之前定案
     this._lobAim();                   // 榴彈火控解(消費 _aaEnt):同樣 MUST 在擊發之前 —— 所見即所射
