@@ -1454,6 +1454,12 @@ body.touch-ui {
   --tl-st: env(safe-area-inset-top, 0px);
   /* 搖桿尺寸逐版型定義(見橫式/直式段):--tl-dpad 十字鍵直徑、--tl-gp ABXY 菱形外框、
      --tl-band 直式操控帶高度。此處只放安全區,免得兩處各有一份預設值互相蓋。 */
+  /* 控件透明度唯一縫(2026-07-26):靜置半透明 —— 搖桿疊在 3D 戰場上,看得穿才不會把
+     腳下的地形/敵人吃掉;按住或推桿時提亮到不透明,「有沒有按到」一眼可辨。
+     調透明度 MUST 只改這兩個值 —— 各控件散寫 opacity 會讓按壓回饋的對比逐鈕不一致
+     (十字鍵原本 .82、ABXY/肩鍵/系統鍵則完全沒設,只靠底色 alpha,三者本來就不同調)。 */
+  --tl-alpha: 0.55;
+  --tl-alpha-on: 1;
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
@@ -1497,8 +1503,10 @@ body.touch-ui .tl-sys { left: 8px; top: 46px; }
 .tl-dpad {
   position: absolute; pointer-events: auto; touch-action: none;
   width: var(--tl-dpad); height: var(--tl-dpad);
-  opacity: 0.82;
+  opacity: var(--tl-alpha); transition: opacity 0.1s;
 }
+/* 推桿中(任一方向片亮起)= 提亮:on-* 掛在 .tl-dpad 自己身上,故不需要 :has() */
+.tl-dpad.on-up, .tl-dpad.on-dn, .tl-dpad.on-lf, .tl-dpad.on-rt { opacity: var(--tl-alpha-on); }
 .tl-dp-plate {
   position: absolute; inset: 0; border-radius: 50%;
   border: 2px solid rgba(var(--railS-rgb), 0.42);
@@ -1539,15 +1547,17 @@ body.touch-ui .tl-sys { left: 8px; top: 46px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
   background: rgba(8, 13, 19, 0.66); border: 1px solid var(--line-strong);
   text-shadow: 0 1px 2px #000;
-  transition: background 0.07s, border-color 0.07s, transform 0.07s;
+  opacity: var(--tl-alpha);
+  transition: background 0.07s, border-color 0.07s, transform 0.07s, opacity 0.07s;
 }
 .tl-gb .gb-k { font-family: var(--mono); font-weight: 700; font-style: normal; line-height: 1; }
 .tl-gb .gb-f { font-size: 9px; letter-spacing: 0; line-height: 1.1; opacity: 0.9; }
 .tl-gb .gb-f em { display: block; font-size: 7px; font-style: normal; opacity: 0.62; }
 .tl-gb .gb-cd { font-family: var(--mono); font-size: 9px; color: var(--danger); line-height: 1; min-height: 0; }
-.tl-gb.press { background: rgba(var(--railW-rgb), 0.34); border-color: var(--railW-hot); transform: scale(0.93); }
+.tl-gb.press { background: rgba(var(--railW-rgb), 0.34); border-color: var(--railW-hot); transform: scale(0.93); opacity: var(--tl-alpha-on); }
 .tl-gb.ready { border-color: var(--ok); }
-.tl-gb.locked { opacity: 0.42; }
+/* 未解鎖:比靜置再淡一半(靜置本身已半透明,沿用舊的固定 .42 會幾乎看不出「鎖住」的差別) */
+.tl-gb.locked { opacity: calc(var(--tl-alpha) * 0.5); }
 
 /* ABXY 菱形(Switch 方位:X 上 / Y 左 / A 右 / B 下)。A = 射擊,落在拇指自然停位。
    直徑 **MUST ≤ 41.4% 外框**:菱形相鄰兩鈕的圓心距 = √2·(W−d)/2,要 ≥ d 才不重疊
@@ -1572,7 +1582,7 @@ body.touch-ui .tl-sys { left: 8px; top: 46px; }
   clip-path: var(--notch-sm);
 }
 .tl-sh .gb-k { font-size: 13px; color: var(--railW); }
-body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); }
+body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); opacity: var(--tl-alpha-on); }
 
 /* ===== 系統鍵(HOME / ⊟ 商店 / ◫ 地圖 / 陀螺 / 全螢幕 / 左手)===== */
 .tl-sys { position: absolute; display: flex; gap: 5px; pointer-events: none; flex-wrap: nowrap; }
@@ -1582,12 +1592,13 @@ body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--rai
   font-family: var(--mono); font-size: 10px; letter-spacing: 0; color: var(--dim);
   background: rgba(8, 13, 19, 0.7); border: 1px solid var(--line);
   clip-path: var(--notch-sm);
-  transition: color 0.1s, border-color 0.1s, background 0.1s;
+  opacity: var(--tl-alpha);
+  transition: color 0.1s, border-color 0.1s, background 0.1s, opacity 0.1s;
 }
-.tl-sysb.press { background: rgba(var(--railW-rgb), 0.3); color: #05070a; border-color: var(--railW-hot); }
-.tl-sysb.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); }
+.tl-sysb.press { background: rgba(var(--railW-rgb), 0.3); color: #05070a; border-color: var(--railW-hot); opacity: var(--tl-alpha-on); }
+.tl-sysb.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); opacity: var(--tl-alpha-on); }
 /* 陀螺儀「不可能啟用」(非 HTTPS / 裝置不支援):斜紋警示,點下去會把原因寫進戰報 */
-.tl-sysb.off { color: var(--danger); border-color: rgba(255, 68, 54, 0.6); }
+.tl-sysb.off { color: var(--danger); border-color: rgba(255, 68, 54, 0.6); opacity: var(--tl-alpha-on); }
 .tl-sysb.off::after { content: ' ⚠'; }
 
 /* 平民互動鈕:長在 #civPrompt 裡(main.js 依觸控版渲染),隨提示一起出現/消失。
