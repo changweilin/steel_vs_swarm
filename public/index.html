@@ -474,7 +474,10 @@
      大廳的「手機操控」面板就沒辦法讓玩家先試搖桿/驗陀螺儀(前科:玩家回報「沒看到虛擬搖桿」)。
      事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
      #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
-     配置照實體搖桿:左手類比十字鍵、右手 ABXY 菱形、上緣 L/ZL・R/ZR 肩鍵、系統鍵(HOME/⊟/◫)。
+     **四分區版型(A / M / L / R)**:A = 機體資訊(.hud-self)、M = 小地圖(#minimap)、
+     L = 左手控件(十字鍵 + L/ZL 肩鍵 + 戰局系統鍵)、R = 右手控件(ABXY + R/ZR 肩鍵 + 裝置系統鍵)。
+     橫式 = 左右兩直欄(A 上 / L 下、M 上 / R 下),直式 = 上緣資訊帶(A 左 / M 右)+ 下緣操控帶(L 左 / R 右);
+     兩者的中央一律留給 3D 戰場,**MUST NOT** 把任何控件放進中央。
      **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
      直式/橫式版型差異全在 css/style.css(body.ori-portrait / .ori-landscape),此處只有一份骨架。 -->
 <div id="touchLayer" class="touch-layer" hidden>
@@ -510,11 +513,15 @@
     <button class="tl-gb gb-sh gb-aim" type="button" data-act="aim"><i class="gb-k">R</i><span class="gb-f">狙擊<em>長按絕招</em></span></button>
   </div>
 
-  <!-- 系統鍵:HOME 戰場選單(等同 ESC)・ ⊟ 商店 ・ ◫ 小地圖 ・ 陀螺/全螢幕/左手模式 -->
-  <div class="tl-sys">
+  <!-- 系統鍵:**左右分家**(L 區戰局鍵 / R 區裝置鍵)——「虛擬手把與各種按鍵左右拆分為 L/R」。
+       L:HOME 戰場選單(等同 ESC)・ ⊟ 商店 ・ ◫ 小地圖 ・ R:陀螺 / 全螢幕 / 左手模式。
+       橫式排成直條(貼在各自握把內側)、直式排成橫列(貼在操控帶上緣),版型在 style.css。 -->
+  <div class="tl-sys tl-sys-l">
     <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
-    <button class="tl-sysb" type="button" data-act="shop">⊟ 商店</button>
-    <button class="tl-sysb" type="button" data-act="map">◫ 地圖</button>
+    <button class="tl-sysb" type="button" data-act="shop">⊟商店</button>
+    <button class="tl-sysb" type="button" data-act="map">◫地圖</button>
+  </div>
+  <div class="tl-sys tl-sys-r">
     <button class="tl-sysb" type="button" data-act="gyro">陀螺</button>
     <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>

@@ -1,0 +1,215 @@
+// ============ 陀螺儀輸入鏈稽核(兩條感測路徑 + 自動切換)============
+// 用途:改 `mobile.js` 的 `Gyro` / `LOOK.GYRO_*` / 感測來源後,用**合成事件**驗證:
+//   ① deviceorientation(融合姿態):alpha→水平、beta→俯仰,軸向分離且增益 1:1
+//   ② devicemotion(角速度):投影到畫面軸再積分,與 ① **同號**(兩條路徑手感一致),
+//      且螢幕旋轉角會自動補正(橫式下換成另一個裝置軸提供水平)
+//   ③ 自動切換:方向感測收不到 / 缺水平朝向(無磁力計)時改走角速度;鎖死來源就不偷換
+//   ④ 兩條都不通 → 關閉開關並把原因寫進戰報(MUST NOT 靜默)
+//   ⑤ 不可用時的「陀螺」鈕(.off)按下去仍要寫出理由
+//
+// 真機仍 MUST 實測(見 /CLAUDE.md 驗證矩陣:https + 轉手機看準星),
+// 這支只保證**程式邏輯與軸向**不退化 —— 合成事件測不出感測器本身有沒有在動。
+// 跑法:`node tools/audit_gyro.mjs`
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
+
+// three 走 CDN importmap,沙箱/CI 常被擋 ⇒ 攔截該網址換成等價 stub(只需 mobile.js 用到的四個 API)
+const THREE_STUB = `
+const cp = (a, b) => ({
+  x: a.x * b.w + a.w * b.x + a.y * b.z - a.z * b.y,
+  y: a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+  z: a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+  w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+});
+export class Vector3 {
+  constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  applyQuaternion(q) {
+    const { x: vx, y: vy, z: vz } = this;
+    const tx = 2 * (q.y * vz - q.z * vy), ty = 2 * (q.z * vx - q.x * vz), tz = 2 * (q.x * vy - q.y * vx);
+    this.x = vx + q.w * tx + q.y * tz - q.z * ty;
+    this.y = vy + q.w * ty + q.z * tx - q.x * tz;
+    this.z = vz + q.w * tz + q.x * ty - q.y * tx;
+    return this;
+  }
+}
+export class Euler {
+  constructor() { this.x = 0; this.y = 0; this.z = 0; this.order = 'XYZ'; }
+  set(x, y, z, order) { this.x = x; this.y = y; this.z = z; this.order = order; return this; }
+}
+export class Quaternion {
+  constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; }
+  setFromAxisAngle(axis, angle) {
+    const h = angle / 2, s = Math.sin(h);
+    this.x = axis.x * s; this.y = axis.y * s; this.z = axis.z * s; this.w = Math.cos(h);
+    return this;
+  }
+  setFromEuler(e) {
+    if (e.order !== 'YXZ') throw new Error('stub 只實作 YXZ');
+    const c1 = Math.cos(e.x / 2), c2 = Math.cos(e.y / 2), c3 = Math.cos(e.z / 2);
+    const s1 = Math.sin(e.x / 2), s2 = Math.sin(e.y / 2), s3 = Math.sin(e.z / 2);
+    this.x = s1 * c2 * c3 + c1 * s2 * s3;
+    this.y = c1 * s2 * c3 - s1 * c2 * s3;
+    this.z = c1 * c2 * s3 - s1 * s2 * c3;
+    this.w = c1 * c2 * c3 + s1 * s2 * s3;
+    return this;
+  }
+  multiply(q) { const r = cp(this, q); this.x = r.x; this.y = r.y; this.z = r.z; this.w = r.w; return this; }
+}
+`;
+
+const chromium = await chromiumOrNull();
+if (!chromium) skipNoPlaywright('陀螺儀稽核');
+
+const srv = await serve();
+const PAGE = `<!doctype html><html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}<\/script>
+</head><body>
+<div id="touchLayer" hidden><div id="tlLook"></div><div id="tlDpad"><span id="tlKnob"></span></div>
+<button class="tl-sysb" type="button" data-act="gyro">陀螺</button></div>
+<script type="module">
+import * as M from '/js/mobile.js';
+window.M = M;
+window.looks = []; window.feeds = [];
+// 假 client:走的是與戰鬥完全相同的 _applyLook 派發路徑(見 mobile.js 檔頭三個共用縫)
+const mock = {
+  heroKind: 'drone', side: 'SWARM', paused: false, shopOpen: false, _gameOver: false, dead: false,
+  yaw: 0, pitch: 0,
+  hud: { feed: (t) => window.feeds.push(t) },
+  _applyLook(dy, dp) { window.looks.push([dy, dp]); this.yaw += dy; this.pitch += dp; },
+  _cmd() {},
+};
+window.mkTc = () => { window.tc = new M.TouchControls(mock); return true; };
+window.ready = true;
+<\/script></body></html>`;
+
+const browser = await chromium.launch({ executablePath: chromePath() });
+const page = await browser.newPage({ viewport: { width: 844, height: 390 } });
+await page.route('https://unpkg.com/three@0.160.0/build/three.module.js', (r) =>
+  r.fulfill({ status: 200, contentType: 'text/javascript', body: THREE_STUB }));
+await page.route(`${srv.url}__gyro.html`, (r) =>
+  r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: PAGE }));
+page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
+await page.goto(`${srv.url}__gyro.html`);
+await page.waitForFunction(() => window.ready === true, null, { timeout: 8000 });
+
+let pass = 0, fail = 0;
+const t = (name, ok, extra = '') => {
+  if (ok) { pass++; console.log(`  ✓ ${name}`); } else { fail++; console.log(`  ✗ ${name} ${extra}`); }
+};
+const deg = (r) => r * 180 / Math.PI;
+
+// 每個案例重建一個 TouchControls ⇒ Gyro 從乾淨狀態起算(權限直接標記為已授權)
+const setup = (src) => page.evaluate((src) => {
+  window.tc?.dispose();
+  window.looks = []; window.feeds = [];
+  window.M.TOUCH.gyro = true; window.M.TOUCH.gyroSrc = src;
+  window.M.TOUCH.gyroSens = 1; window.M.TOUCH.gyroInvert = false;
+  window.mkTc();
+  window.tc.gyro.granted = true;
+  window.tc.gyro.start();
+}, src);
+const ori = (a, b, g) => page.evaluate(([a, b, g]) => {
+  const ev = new Event('deviceorientation');
+  Object.assign(ev, { alpha: a, beta: b, gamma: g });
+  window.dispatchEvent(ev);
+}, [a, b, g]);
+const motion = (rx, ry, rz, interval = 1000 / 60) => page.evaluate(([rx, ry, rz, interval]) => {
+  const ev = new Event('devicemotion');
+  Object.assign(ev, { rotationRate: { beta: rx, gamma: ry, alpha: rz }, interval });
+  window.dispatchEvent(ev);
+}, [rx, ry, rz, interval]);
+const sum = () => page.evaluate(() => window.looks.reduce((a, l) => [a[0] + l[0], a[1] + l[1]], [0, 0]));
+const setAngle = (a) => page.evaluate((a) => {
+  Object.defineProperty(window.screen.orientation, 'angle', { get: () => a, configurable: true });
+}, a);
+
+console.log('\n■ 路徑 ① deviceorientation(融合姿態)');
+await setup('orient');
+await ori(0, 90, 0);      // 基準:直式手持(beta 90 = 螢幕面向使用者)
+await ori(20, 90, 0);     // alpha +20 = 水平左轉 20°
+let [dy, dp] = await sum();
+t('alpha +20° → yaw +20°(1:1)', Math.abs(deg(dy) - 20) < 0.5, `實得 ${deg(dy).toFixed(2)}°`);
+t('alpha 只動水平、俯仰不動', Math.abs(deg(dp)) < 0.5, `實得 ${deg(dp).toFixed(2)}°`);
+
+await setup('orient');
+await ori(0, 90, 0);
+await ori(0, 75, 0);      // beta 90→75:頂端前傾,相機朝機背 ⇒ 俯視
+[dy, dp] = await sum();
+t('beta −15° → pitch −15°(俯視)', Math.abs(deg(dp) + 15) < 0.5, `實得 ${deg(dp).toFixed(2)}°`);
+t('beta 只動俯仰、水平不動', Math.abs(deg(dy)) < 0.5, `實得 ${deg(dy).toFixed(2)}°`);
+
+await setup('orient');
+await page.evaluate(() => { window.M.TOUCH.gyroInvert = true; });
+await ori(0, 90, 0); await ori(0, 75, 0);
+[dy, dp] = await sum();
+t('垂直反轉 → pitch 反號', deg(dp) > 14 && deg(dp) < 16, `實得 ${deg(dp).toFixed(2)}°`);
+await page.evaluate(() => { window.M.TOUCH.gyroInvert = false; });
+
+console.log('\n■ 路徑 ② devicemotion(角速度;無磁力計也能用)');
+await setup('motion');
+await motion(0, 0, 0);                  // 第一筆只當基準(dt 還不可信)
+await motion(0, 60, 0, 1000 / 60);      // 繞裝置 y(直式 = 畫面上方軸)60°/s × 1/60s = 1°
+[dy, dp] = await sum();
+t('繞畫面上方軸 → yaw(左轉為正,與 ① 同號)', Math.abs(deg(dy) - 1) < 0.02, `實得 ${deg(dy).toFixed(3)}°`);
+t('水平不汙染俯仰', Math.abs(deg(dp)) < 0.001, `實得 ${deg(dp).toFixed(4)}°`);
+
+await setup('motion');
+await motion(0, 0, 0);
+await motion(-60, 0, 0, 1000 / 60);     // rotationRate.beta 為負 = beta 下降 ⇒ 俯視(對上 ①)
+[dy, dp] = await sum();
+t('繞畫面右軸 → pitch 與 ① 同號(俯視)', Math.abs(deg(dp) + 1) < 0.02, `實得 ${deg(dp).toFixed(3)}°`);
+
+await setup('motion');
+await setAngle(90);                     // 橫式:畫面上方軸改成裝置 +x ⇒ 水平改由 rotationRate.beta 提供
+await motion(0, 0, 0);
+await motion(60, 0, 0, 1000 / 60);
+[dy] = await sum();
+t('橫式 90°:軸向自動補正(裝置 x → yaw)', Math.abs(deg(dy) - 1) < 0.02, `實得 ${deg(dy).toFixed(3)}°`);
+await setAngle(0);
+
+console.log('\n■ 自動切換(auto)');
+await setup('auto');
+await page.waitForTimeout(2100);
+let st = await page.evaluate(() => ({ path: window.tc.gyro.path, on: window.M.TOUCH.gyro }));
+t('方向感測 0 筆 → 自動改走角速度', st.path === 'motion', JSON.stringify(st));
+t('切換過程不關閉陀螺儀', st.on === true, JSON.stringify(st));
+await motion(0, 0, 0); await motion(0, 60, 0, 1000 / 60);
+[dy] = await sum();
+t('切換後角速度真的推得動準星', Math.abs(deg(dy) - 1) < 0.02, `實得 ${deg(dy).toFixed(3)}°`);
+
+await setup('auto');
+await ori(null, 90, 0);
+for (let i = 1; i <= 20; i++) await ori(null, 90 - i, 0);   // 有事件、有俯仰,但 alpha 恆 null
+st = await page.evaluate(() => ({ path: window.tc.gyro.path, note: window.tc.gyro.note }));
+t('alpha 恆 null(無磁力計)→ 偵測水平軸死亡並改走角速度', st.path === 'motion', JSON.stringify(st));
+await motion(0, 0, 0); await motion(0, 60, 0, 1000 / 60);
+const after = await page.evaluate(() => window.looks.at(-1));
+t('改走角速度後水平可動', Math.abs(deg(after[0]) - 1) < 0.02, `實得 ${deg(after[0]).toFixed(3)}°`);
+
+await setup('orient');
+await page.waitForTimeout(2100);
+st = await page.evaluate(() => ({ note: window.tc.gyro.note, on: window.M.TOUCH.gyro, feeds: window.feeds }));
+t('鎖死方向感測 → 不偷偷換路徑', st.note === '' && st.feeds.some((f) => f.includes('方向感測')), JSON.stringify(st));
+t('收不到資料 → 關閉開關並講原因', st.on === false && st.feeds.some((f) => f.includes('陀螺儀')), JSON.stringify(st.feeds));
+
+await setup('auto');
+await page.waitForTimeout(3600);
+st = await page.evaluate(() => ({ on: window.M.TOUCH.gyro, feeds: window.feeds }));
+t('auto 兩條都不通 → 關閉並講原因', st.on === false && st.feeds.length > 0, JSON.stringify(st.feeds));
+
+console.log('\n■ 不可用狀態(.off)的「陀螺」鈕');
+const tapped = await page.evaluate(async () => {
+  window.tc?.dispose(); window.feeds = [];
+  window.mkTc();
+  const btn = document.querySelector('[data-act="gyro"]');
+  btn.classList.add('off');
+  btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+  await new Promise((r) => setTimeout(r, 50));
+  return window.feeds.length;
+});
+t('.off 的陀螺鈕按下去會寫出理由(不再靜默)', tapped > 0, `feeds=${tapped}`);
+
+await browser.close();
+srv.close();
+console.log(fail ? `\n✗ ${pass} 通過 / ${fail} 失敗` : `\n✓ 陀螺儀輸入鏈 ${pass} 項全通過`);
+process.exit(fail ? 1 : 0);
