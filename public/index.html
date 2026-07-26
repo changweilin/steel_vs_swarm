@@ -475,7 +475,7 @@
      事件全由 js/mobile.js TouchControls 綁定,動作一律經 data-act → BattleClient._cmd()。
      #tlLook 壓在最底層吃「拖曳視角」;控件在其上,自行 stopPropagation。
      **四分區版型(A / M / L / R)**:A = 機體資訊(.hud-self)、M = 小地圖(#minimap)、
-     L = 左手控件(十字鍵 + L/ZL 肩鍵 + 戰局系統鍵)、R = 右手控件(ABXY + R/ZR 肩鍵 + 裝置系統鍵)。
+     L = 左手控件(十字鍵 + L/ZL 肩鍵 + 戰局系統鍵)、R = 右手控件(ABXY + ZR/R 肩鍵 + 裝置系統鍵)。
      橫式 = 左右兩直欄(A 上 / L 下、M 上 / R 下),直式 = 上緣資訊帶(A 左 / M 右)+ 下緣操控帶(L 左 / R 右);
      兩者的中央一律留給 3D 戰場,**MUST NOT** 把任何控件放進中央。
      **MUST NOT** 蓋住 .hud-self(角色數據)與 #minimap(小地圖)—— 版型量測有此斷言。
@@ -503,13 +503,15 @@
     <button class="tl-gb gb-b" type="button" data-act="jump"><i class="gb-k">B</i><span class="gb-f">跳躍</span><span class="gb-cd"></span></button>
   </div>
 
-  <!-- 肩鍵:L 填彈 / ZL 下降(飛行機種)・ R 狙擊模式(短按切換、長按絕招) / ZR 換機(無人機) -->
+  <!-- 肩鍵:L 填彈 / ZL 下降(飛行機種)・ R 狙擊模式(短按切換、長按絕招) / ZR 陀螺儀開關。
+       ZR 給陀螺儀(預設開啟,隨時一鍵收放)—— 原本掛在 ZR 的「換機」是無人機專屬、
+       且屬於低頻操作,改放 R 區系統鍵列。 -->
   <div class="tl-sh tl-sh-l">
     <button class="tl-gb gb-sh" type="button" data-act="reload"><i class="gb-k">L</i><span class="gb-f">填彈</span></button>
     <button class="tl-gb gb-sh" type="button" data-act="dive" hidden><i class="gb-k">ZL</i><span class="gb-f">下降</span></button>
   </div>
   <div class="tl-sh tl-sh-r">
-    <button class="tl-gb gb-sh" type="button" data-act="swap" hidden><i class="gb-k">ZR</i><span class="gb-f">換機</span></button>
+    <button class="tl-gb gb-sh gb-gyro" type="button" data-act="gyro"><i class="gb-k">ZR</i><span class="gb-f">陀螺</span></button>
     <button class="tl-gb gb-sh gb-aim" type="button" data-act="aim"><i class="gb-k">R</i><span class="gb-f">狙擊<em>長按絕招</em></span></button>
   </div>
 
@@ -522,7 +524,7 @@
     <button class="tl-sysb" type="button" data-act="map">◫地圖</button>
   </div>
   <div class="tl-sys tl-sys-r">
-    <button class="tl-sysb" type="button" data-act="gyro">陀螺</button>
+    <button class="tl-sysb" type="button" data-act="swap" hidden>⇄換機</button>
     <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
   </div>

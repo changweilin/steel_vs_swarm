@@ -6739,6 +6739,11 @@ export class BattleClient {
 
     if (this._snapQueue) { this._applySnap(this._snapQueue); this._snapQueue = null; }
 
+    // 觸控版:疊層(選單/商店/結束)開著就收起虛擬搖桿。每幀同步而非只在切換點呼叫 ——
+    // 疊層的開關散在 _setPaused / _toggleShop / 結束事件三處,漏接一處就會回到「疊層點不動」
+    // 的狀態(見 mobile.js syncBlocked 的堆疊脈絡說明)。狀態沒變時該函式直接早退。
+    this.touch?.syncBlocked();
+
     this._updateAaMode();             // 榴彈對空彈射模式:MUST 在 _tickWeapons(擊發)之前定案
     this._lobAim();                   // 榴彈火控解(消費 _aaEnt):同樣 MUST 在擊發之前 —— 所見即所射
     this._tickWeapons(now);

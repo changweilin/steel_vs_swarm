@@ -65,7 +65,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}<\/script>
 </head><body>
 <div id="touchLayer" hidden><div id="tlLook"></div><div id="tlDpad"><span id="tlKnob"></span></div>
-<button class="tl-sysb" type="button" data-act="gyro">陀螺</button></div>
+<button class="tl-gb gb-sh gb-gyro" type="button" data-act="gyro"><i class="gb-k">ZR</i><span class="gb-f">陀螺</span></button></div>
 <script type="module">
 import * as M from '/js/mobile.js';
 window.M = M;
@@ -196,6 +196,48 @@ await setup('auto');
 await page.waitForTimeout(3600);
 st = await page.evaluate(() => ({ on: window.M.TOUCH.gyro, feeds: window.feeds }));
 t('auto 兩條都不通 → 關閉並講原因', st.on === false && st.feeds.length > 0, JSON.stringify(st.feeds));
+
+console.log('\n■ 預設開啟 + ZR 一鍵收放');
+t('TOUCH.gyro 預設值為開', await page.evaluate(() => window.M.TOUCH.gyro === true || localStorage.getItem('svs_touch') !== null));
+// ZR 按一下 → 關;再按一下 → 開(走的是 _local → setGyro 這一個縫)
+const zr = await page.evaluate(async () => {
+  window.tc?.dispose();
+  window.M.TOUCH.gyro = true; window.M.TOUCH.gyroSrc = 'motion';
+  window.mkTc();
+  window.tc.gyro.granted = true;
+  await window.tc.setGyro(true, true);
+  const tap = async () => {
+    document.querySelector('[data-act="gyro"]')
+      .dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+    await new Promise((r) => setTimeout(r, 40));
+    return { active: window.tc.gyro.active, pref: window.M.TOUCH.gyro,
+             on: document.querySelector('[data-act="gyro"]').classList.contains('on') };
+  };
+  const a = await tap(), b = await tap();
+  return { start: true, off: a, back: b };
+});
+t('ZR 按一下關閉陀螺儀', zr.off.active === false && zr.off.pref === false, JSON.stringify(zr.off));
+t('ZR 再按一下重新開啟', zr.back.active === true && zr.back.pref === true, JSON.stringify(zr.back));
+t('ZR 鈕面反映開關狀態(.on)', zr.off.on === false && zr.back.on === true, JSON.stringify([zr.off.on, zr.back.on]));
+
+// iOS:靜默(非使用者手勢)啟用時 MUST NOT 去要權限 —— 要了會被拒,連帶把預設開啟的偏好關掉
+const ios = await page.evaluate(async () => {
+  window.tc?.dispose();
+  const D = window.DeviceOrientationEvent;
+  let asked = false;
+  D.requestPermission = () => { asked = true; return Promise.reject(new Error('not a gesture')); };
+  window.M.TOUCH.gyro = true;
+  window.mkTc();
+  window.tc.gyro.granted = false;
+  window.feeds = [];
+  const ret = await window.tc.setGyro(true, true);       // silent = 進場自動套用偏好
+  const out = { asked, ret, pref: window.M.TOUCH.gyro, feeds: [...window.feeds] };
+  delete D.requestPermission;
+  return out;
+});
+t('iOS 靜默啟用不在非手勢中要權限', ios.asked === false, JSON.stringify(ios));
+t('待授權時保留「預設開啟」的偏好', ios.pref === true && ios.ret === true, JSON.stringify(ios));
+t('待授權時提示玩家按 ZR', ios.feeds.some((f) => f.includes('ZR')), JSON.stringify(ios.feeds));
 
 console.log('\n■ 不可用狀態(.off)的「陀螺」鈕');
 const tapped = await page.evaluate(async () => {

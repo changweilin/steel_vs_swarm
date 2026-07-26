@@ -103,6 +103,7 @@
 | A15 | `[#INC-109]` 直升機 creep **刻意未接** 塔 SAM/防空飛彈系統(以 pid 查找,heli 無 pid);**MUST NOT**「補完」這條接線 |
 | A16 | SkinnedMesh 量尺寸 **MUST** 用 `computeBoundingBox()` 並關 `frustumCulled`;`outlinify()` MUST 跳過透明材質與 `userData.noOutline` |
 | A17 | FPV 座艙掛在 camera 底下 — camera 本身 **MUST** `scene.add`,忘了整個座艙不見 |
+| A19 | 觸控版疊層(戰場選單/商店/結束畫面)開著時 **MUST** 整層收起 `#touchLayer`(`mobile.js syncBlocked()`)。`#game` 是 `position: fixed` ⇒ **本身就是堆疊脈絡**,疊層寫的 z 20 只在它內部有效;住在 body 的搖桿層(z 9)實際壓在整個 `#game` 之上,滿版 `#tlLook` 又吃事件 ⇒ 疊層任何按鍵都按不到、也關不掉。**MUST NOT** 改用調 z-index「修」(脈絡外找不到介於畫布與疊層之間的層級)|
 
 ---
 
@@ -156,8 +157,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
-| `mobile.js`(虛擬搖桿/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②`node tools/audit_touch_layout.mjs`(48 組:6 尺寸 × 4 機種 × 左右手)—— **四分區 A 機體資訊 / M 小地圖 / L 左手控件 / R 右手控件零重疊**、控件不出界、ABXY 圓心距 ≥ 兩半徑和(d ≤ 41.4% 外框)、觸控目標 ≥ 44×40 ③真機冒煙:類比十字鍵推進量、拖曳視角、左手模式鏡像、轉向後畫布不拉伸 |
+| `mobile.js`(虛擬搖桿/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②`node tools/audit_touch_layout.mjs`(48 組:6 尺寸 × 4 機種 × 左右手)—— **四分區 A 機體資訊 / M 小地圖 / L 左手控件 / R 右手控件零重疊**、控件不出界、ABXY 圓心距 ≥ 兩半徑和(d ≤ 41.4% 外框)、觸控目標 ≥ 44×40 ③**疊層可點性**(同一支腳本):`#touchLayer` 未收起時疊層鈕 MUST 被 `#tlLook` 擋住、掛上 `body.tl-off` 後三顆鈕 MUST 都點得到(見 A19)④真機冒煙:類比十字鍵推進量、拖曳視角、左手模式鏡像、轉向後畫布不拉伸 |
 | `#touchLayer` 的**節點位置**或 `--tl-dpad`/`--tl-gp`/`.ori-*` 版型段 | 搖桿節點 **MUST 留在 body 層**(`position: fixed`)—— 放進 `#game` 就只有戰鬥看得到(前科:玩家回報「沒看到虛擬搖桿」)。尺寸/定位全靠那幾個 CSS 變數,**MUST 保留 `body.touch-ui` 的保險預設值**,否則少掛 ori class 就塌成 0×0。改完 MUST 跑大廳端對端量測(真手機 profile + **不設覆寫**):入口鈕→診斷→設定列→試玩搖桿有實際尺寸 |
-| 陀螺儀相關(`Gyro`/`gyroBlockedReason`/`TOUCH.gyroSrc`/`LOOK.GYRO_*`/`--https`) | ①`node tools/audit_gyro.mjs`(18 項合成事件):兩條感測路徑(`deviceorientation` 融合姿態 / `devicemotion` 角速度)軸向分離且增益 1:1、**俯仰 MUST 同號**(相機朝機背 ⇒ beta 由 90 降到 0 = 俯視,對應 `rotationRate.beta` 為負)、橫式軸向自動補正、三種自動切換(收不到 → 換路徑 / alpha 恆 null → 換路徑 / 鎖死來源不偷換)、兩條都不通才關閉並講原因 ②**MUST 用 `https`(或 localhost)真機實測** —— `http://<區網 IP>` 不是 secure context,瀏覽器靜默不派送感測事件,在那裡測永遠是「沒反應」。跑 `npm run mobile` 後手機連 `https://`:轉手機 → 準星同向轉動;無磁力計的機器 MUST 驗自動切到「角速度」後水平轉得動 |
+| 陀螺儀相關(`Gyro`/`gyroBlockedReason`/`TOUCH.gyroSrc`/`LOOK.GYRO_*`/`--https`) | ①`node tools/audit_gyro.mjs`(18 項合成事件):兩條感測路徑(`deviceorientation` 融合姿態 / `devicemotion` 角速度)軸向分離且增益 1:1、**俯仰 MUST 同號**(相機朝機背 ⇒ beta 由 90 降到 0 = 俯視,對應 `rotationRate.beta` 為負)、橫式軸向自動補正、三種自動切換(收不到 → 換路徑 / alpha 恆 null → 換路徑 / 鎖死來源不偷換)、兩條都不通才關閉並講原因 ②預設開啟 + ZR 一鍵收放:ZR 按一下關/再按一下開且鈕面 `.on` 跟著走、**iOS 靜默啟用 MUST NOT 在非使用者手勢中要權限**(要了會被拒,連帶把「預設開啟」的偏好一起關掉 ⇒ 保留偏好並提示按 ZR)③**MUST 用 `https`(或 localhost)真機實測** —— `http://<區網 IP>` 不是 secure context,瀏覽器靜默不派送感測事件,在那裡測永遠是「沒反應」。跑 `npm run mobile` 後手機連 `https://`:轉手機 → 準星同向轉動;無磁力計的機器 MUST 驗自動切到「角速度」後水平轉得動 |
 
 **e2e 結構備忘**:前段 import `BattleSim` 直測(`_add` 的測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下要「看到」敵方 MUST 另開 `mode:'spectator'` client 偵察。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
