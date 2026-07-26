@@ -135,6 +135,36 @@ for (const v of VIEWS) {
       }
     }
   }
+  // ── 疊層可點性回歸 ──────────────────────────────────────────────
+  // `#game` 是 position:fixed ⇒ 本身就是堆疊脈絡,疊層的 z 20 只在它內部有效;
+  // 住在 body 的 #touchLayer(z 9)實際上壓在整個 #game 之上,滿版的 #tlLook 會吃掉
+  // 疊層的每一次點擊(症狀:選單/商店開了以後任何按鍵都沒反應、也關不掉)。
+  // 故 mobile.js syncBlocked() 會在疊層開著時整層收起 —— 這裡驗「收起後點得到、沒收起就點不到」。
+  const ov = await page.evaluate(() => {
+    document.body.classList.remove('touch-lefty');
+    document.getElementById('pauseOverlay').style.display = '';
+    const hit = (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return 'missing';
+      const b = el.getBoundingClientRect();
+      if (!b.width) return 'zero';
+      const h = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return el.contains(h) || h === el ? 'ok' : `<${h?.tagName.toLowerCase()} id=${h?.id}>`;
+    };
+    const before = ['#resumeBtn', '#pauseLeaveBtn', '.pause-tab'].map(hit);
+    document.body.classList.add('tl-off');          // = syncBlocked() 收起搖桿
+    const after = ['#resumeBtn', '#pauseLeaveBtn', '.pause-tab'].map(hit);
+    document.body.classList.remove('tl-off');
+    document.getElementById('pauseOverlay').style.display = 'none';
+    return { before, after };
+  });
+  cases++;
+  const stuck = ov.before.filter((r) => r !== 'ok').length;
+  const free = ov.after.every((r) => r === 'ok');
+  if (!free) { bad++; console.log(`✗ ${v.n} 疊層按鈕收起搖桿後仍點不到:${JSON.stringify(ov.after)}`); }
+  else if (!stuck) { bad++; console.log(`✗ ${v.n} 疊層在**未**收起搖桿時就點得到 —— 斷言失去意義,請確認 #touchLayer 的堆疊關係是否已改變`); }
+  else if (verbose) console.log(`✓ ${v.n} 疊層:未收起被 ${ov.before[0]} 擋住、收起後三顆鈕都點得到`);
+
   await page.close();
 }
 await browser.close();

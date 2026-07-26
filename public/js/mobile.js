@@ -129,7 +129,7 @@ export const GYRO_SRC = ['auto', 'orient', 'motion'];
 export const GYRO_SRC_LABEL = { auto: '自動', orient: '方向', motion: '角速度' };
 
 export const TOUCH = {
-  gyro: false,        // 陀螺儀輔助瞄準
+  gyro: true,         // 陀螺儀輔助瞄準(**預設開啟**;戰場以 ZR 一鍵收放)
   gyroSrc: 'auto',    // 感測來源:auto 自動 / orient 方向感測 / motion 角速度(見 Gyro)
   gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
   gyroInvert: false,  // 陀螺儀垂直反轉
@@ -292,6 +292,17 @@ class Gyro {
     this._onMotion = (ev) => this._readMotion(ev);
     // 轉螢幕 → 丟掉基準,下一個事件重新起算(兩條路徑都要:軸向補正跟著螢幕角走)
     this._reset = () => { this._have = false; this._mt = 0; };
+  }
+
+  /**
+   * 還需不需要跟使用者要權限(iOS 13+)。**預設開啟後這支很關鍵** ——
+   * iOS 的 `requestPermission()` 只在使用者手勢中可靠,進場自動啟用那條路徑不是手勢,
+   * 硬要就是被拒 ⇒ 開關被扳回關閉並寫進偏好,玩家等於「預設開啟」從來沒生效過。
+   */
+  needsPermission() {
+    if (this.granted) return false;
+    return typeof window.DeviceOrientationEvent?.requestPermission === 'function'
+      || typeof window.DeviceMotionEvent?.requestPermission === 'function';
   }
 
   /**
@@ -684,6 +695,8 @@ export class TouchControls {
     this._bindDpad();
     this._bindButtons();
     this._bindRotateHint();
+    this._off = false;
+    this.syncBlocked();
     this.setKind(client.heroKind);
     if (TOUCH.gyro) this.setGyro(true, true);   // 記憶開啟:靜默續用(不可用時 onFail 會自行關掉)
     this._syncGyroBtn();
@@ -724,6 +737,27 @@ export class TouchControls {
   _blocked() {
     const c = this.client;
     return !!(c.paused || c.shopOpen || c._gameOver);
+  }
+
+  /**
+   * 疊層(戰場選單 / 商店 / 結束畫面)開著時**整層收起來**。由主迴圈每幀呼叫,狀態沒變就早退。
+   *
+   * 這不只是「畫面乾淨」——**沒有這條,疊層上的按鈕一顆都按不到**:
+   *   `#game` 是 `position: fixed`,而 fixed **本身就會建立堆疊脈絡**(z-index: auto 也一樣),
+   *   所以 `#game` 整棵子樹在根脈絡裡等同 z 0 —— 疊層寫的 z 20 只在 `#game` 內部有意義。
+   *   本層(z 9)住在 body,於是**壓在整個 #game 之上**,而 `#tlLook` 又是滿版 `pointer-events: auto`
+   *   ⇒ 疊層的每一次點擊都被搖桿層吃掉:選單/商店開了以後任何按鍵都沒反應、也關不掉。
+   * 單靠調 z-index 修不了(#game 是一個脈絡,外面找不到「介於畫布與疊層之間」的層級),
+   * 故 MUST 用「疊層開著就收起搖桿」這條。陣亡頁**不收** —— 那頁沒有自己的按鈕,
+   * 玩家得靠搖桿的 ⊟ 商店買升級(收掉就等於卡死在倒數畫面)。
+   */
+  syncBlocked() {
+    const off = this._blocked();
+    if (off === this._off) return;
+    this._off = off;
+    if (off) this.reset();                       // 收起前先放掉按住中的鈕(收起後收不到 pointerup)
+    if (this.layer) this.layer.hidden = off;
+    document.body.classList.toggle('tl-off', off);
   }
 
   /* ---- 移動:虛擬類比十字鍵 ---- */
@@ -876,6 +910,14 @@ export class TouchControls {
         this.client.hud?.feed?.(`🧭 ${blocked}`);   // 這條 MUST NOT 靜默(silent 也要說)
         return false;
       }
+      // 靜默啟用(進場自動套用偏好)+ 尚未授權:**MUST NOT** 在這裡要權限 ——
+      // 那不是使用者手勢,iOS 會直接拒,結果是把「預設開啟」的偏好也一併關掉。
+      // 保留偏好、把 ZR 留在待授權狀態,並告訴玩家按一下就好。
+      if (silent && this.gyro.needsPermission()) {
+        this._syncGyroBtn();
+        this.client.hud?.feed?.('🧭 陀螺儀待授權:按一下 ZR 允許「動作與方向」');
+        return TOUCH.gyro;
+      }
       // 已授權過就不再要一次 —— iOS 的 requestPermission 只在使用者手勢中可靠,
       // 從設定頁/記憶開啟等非手勢路徑重複呼叫反而可能被拒。
       const ok = this.gyro.granted || await this.gyro.request();
@@ -923,7 +965,8 @@ export class TouchControls {
    * 逐機種鈕面特化:
    *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
    *   ② ZL 下降只在飛行機種(無人機/變形機甲)與觀戰自由視角出現。
-   *   ③ ZR 換機只給無人機三機小隊。
+   *   ③ 換機(R 區系統鍵)只給無人機三機小隊;ZR 是陀螺儀開關,**全機種與觀戰都保留**
+   *      (觀戰自由視角同樣吃 _applyLook,陀螺一樣有用)。
    *   ④ 觀戰沒有座機:A/R/⊟/HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
    *      HOME 亦然 —— `_setPaused` 對 side=null 直接 return,桌機觀戰同樣沒有 ESC 選單)。
    */
@@ -952,6 +995,7 @@ export class TouchControls {
 
   dispose() {
     if (_active === this) _active = null;
+    document.body.classList.remove('tl-off');   // 收起狀態 MUST 跟著銷毀清掉(大廳試玩會重建本層)
     this.gyro.stop();
     clearTimeout(this._rotT);
     if (this._onRot) window.removeEventListener('resize', this._onRot);

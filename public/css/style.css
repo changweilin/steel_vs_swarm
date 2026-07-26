@@ -1502,6 +1502,11 @@ body.touch-ui .tl-sh-r { right: 8px; bottom: calc(var(--tl-gp) + 16px); }
 body.touch-ui .tl-sys-l { left: 8px; bottom: calc(var(--tl-dpad) + 66px); }
 body.touch-ui .tl-sys-r { right: 8px; bottom: calc(var(--tl-gp) + 66px); }
 .tl-look { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
+/* 疊層(戰場選單 / 商店 / 結束畫面)開著:整層收起。
+   `#game` 是 position:fixed ⇒ **它本身就是一個堆疊脈絡**,疊層寫的 z 20 只在它內部有效;
+   本層 z 9 住在 body,實際上壓在整個 #game 之上,滿版的 #tlLook 會吃掉疊層的每一次點擊
+   (症狀:選單/商店開了以後任何按鍵都沒反應、也關不掉)。由 mobile.js syncBlocked() 掛 class。 */
+body.tl-off .touch-layer { display: none !important; }
 
 /* ===== 左手:虛擬類比十字鍵 =====
    外觀是十字鍵(四片方向 + 中央 hub),判定是類比:圓心固定在鍵盤中心,
@@ -1562,6 +1567,13 @@ body.touch-ui .tl-sys-r { right: 8px; bottom: calc(var(--tl-gp) + 66px); }
 .tl-gb .gb-cd { font-family: var(--mono); font-size: 9px; color: var(--danger); line-height: 1; min-height: 0; }
 .tl-gb.press { background: rgba(var(--railW-rgb), 0.34); border-color: var(--railW-hot); transform: scale(0.93); opacity: var(--tl-alpha-on); }
 .tl-gb.ready { border-color: var(--ok); }
+/* 作用中 / 不可用:與系統鍵同一套語意(ZR 陀螺儀開關現在是肩鍵,狀態一樣要看得出來)。
+   兩者都吃 --tl-alpha-on —— 作用中與警示 MUST NOT 跟著靜置透明度變淡。 */
+.tl-gb.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); opacity: var(--tl-alpha-on); }
+.tl-gb.on .gb-k { color: var(--ok); }
+.tl-gb.off { color: var(--danger); border-color: rgba(255, 68, 54, 0.6); opacity: var(--tl-alpha-on); }
+.tl-gb.off .gb-k { color: var(--danger); }
+.tl-gb.off .gb-f::after { content: ' ⚠'; }
 /* 未解鎖:比靜置再淡一半(靜置本身已半透明,沿用舊的固定 .42 會幾乎看不出「鎖住」的差別) */
 .tl-gb.locked { opacity: calc(var(--tl-alpha) * 0.5); }
 
