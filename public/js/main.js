@@ -24,7 +24,11 @@ import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, remove
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, HELP } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
+import {
+  installTouchUI, touchCapable, touchDiagnostics,
+  renderTouchSettings, syncTouchSettings, openTouchTest, closeTouchTest,
+} from './mobile.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -85,12 +89,17 @@ const app = {
   roomPoll: null,
 };
 
+// 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape / .touch-lefty,
+// 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
+const TOUCH_UI = installTouchUI();
+
 // 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
 app.audio = new GameAudio();
 app.audio.setScene('menu');
 // UI 點按音(委派;同時是解鎖手勢的一環)。真實按鈕才響,避免整頁亂點刷音。
+// 觸控操控層的戰鬥鈕(射擊/瞄準/招式…)排除在外 —— 那些有自己的武器音效,再疊 UI 音會變成連發噪音。
 document.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('.btn, button')) app.audio?.ui('click');
+  if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
 
 function show(screen) {
@@ -1678,10 +1687,29 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
-  // 操作提示唯一來源 = help.js CONTROLS_BY_KIND(說明頁與此共用)
+  // 操作提示唯一來源 = help.js(桌機 CONTROLS_BY_KIND / 觸控版 TOUCH_CONTROLS;說明頁與此共用)
   const ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
-  $('pauseHelp').textContent = `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
-  toast('點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4000);
+  $('pauseHelp').textContent = TOUCH_UI
+    ? `${TOUCH_CONTROLS[ctrlKey]} ・ ☰ 開戰場選單`
+    : `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
+  // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
+  if (TOUCH_UI) $('shopHint').textContent = '';
+  toast(TOUCH_UI
+    ? '左手十字鍵移動 ・ A 射擊 / R 狙擊 ・ 空處拖曳轉視角 ・ HOME 選單(設定可開陀螺儀)'
+    : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4600);
+}
+
+/**
+ * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 小招 / Y 大招 / B 機動)。
+ * 狀態的唯一計算來源是 makeHud().self 裡那份 w(角色數據欄同源),這裡只搬字與 class。
+ */
+function padMirror(act, cd, ready, locked) {
+  for (const b of document.querySelectorAll(`#touchLayer [data-act="${act}"]`)) {
+    const el = b.querySelector('.gb-cd');
+    if (el) el.textContent = cd > 0.05 ? `${cd.toFixed(0)}s` : '';
+    b.classList.toggle('ready', !!ready);
+    b.classList.toggle('locked', !!locked);
+  }
 }
 
 function makeHud() {
@@ -1732,6 +1760,13 @@ function makeHud() {
           $('abMobilName').textContent = mob.name;
           $('abMobilCd').textContent = mob.cd > 0.05 ? `${mob.cd.toFixed(0)}s` : '就緒';
           $('abMobil').classList.toggle('ready', mob.cd <= 0.05);
+        }
+        // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
+        // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
+        if (TOUCH_UI) {
+          padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
+          padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
+          if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
         document.body.classList.toggle('aiming', !!w.aiming);
@@ -1825,8 +1860,14 @@ function makeHud() {
       const el = $('civPrompt');
       if (!info) { el.classList.remove('on'); return; }
       const s = sideInfo(info.cs);
+      // 觸控版:鍵位提示直接換成兩顆 data-act 鈕(靠近才存在 ⇒ 離開範圍隨提示一起收,不留孤兒鈕)。
+      // 動作照舊走 BattleClient._cmd,與桌機 G/H 同一個派發縫。
+      const btn = (act, t) => `<button class="civ-btn" type="button" data-act="${act}">${t}</button>`;
+      const keys = TOUCH_UI
+        ? (info.follow ? `跟隨中 ${btn('civAway', '驅趕')}` : `${btn('civFollow', '跟隨')}${btn('civAway', '驅趕')}`)
+        : (info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕');
       el.innerHTML = `<span class="civ-fac" style="color:${s.color}">◈ ${esc(s.name)}平民 ${info.self ? '(我方)' : '(敵方)'}</span>`
-        + `<span class="civ-hint">${info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕'}</span>`;
+        + `<span class="civ-hint">${keys}</span>`;
       el.classList.add('on');
     },
     hitmark: () => {
@@ -1967,6 +2008,9 @@ function syncSettingsUi() {
     if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
   }
   setSwitch('setLowPower', localStorage.getItem('svs_lowpower') === '1');
+  // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
+  renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
+  syncTouchSettings();
 }
 bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
 bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
@@ -2000,6 +2044,40 @@ function renderHelpCat(cat) {
   }));
   renderHelpCat(HELP[0]);
 })();
+
+// ── 大廳:手機操控面板(診斷 + 設定 + 搖桿試玩)──
+// 存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認到底有沒有生效。
+function renderTouchDiag() {
+  const box = $('touchDiag');
+  if (!box) return;
+  box.innerHTML = touchDiagnostics().map((d) => {
+    const val = d.v === true ? '是' : d.v === false ? '否' : esc(String(d.v));
+    return `<div class="tset-drow${d.ok ? '' : ' bad'}"><span>${d.ok ? '✓' : '✗'}</span>`
+      + `<b>${esc(d.k)}</b><span>${val}</span>`
+      + `<i>${esc(d.note || '')}</i></div>`;
+  }).join('');
+}
+function openTouchPanel() {
+  renderTouchSettings($('lobbyTouchMount'), { onNotice: toast });
+  syncTouchSettings();
+  renderTouchDiag();
+  $('touchOverlay').style.display = '';
+}
+$('touchSetupBtn')?.addEventListener('click', openTouchPanel);
+$('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.display = 'none'; });
+$('touchOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'touchOverlay') $('touchOverlay').style.display = 'none'; });
+// 搖桿試玩:用**真的** TouchControls + 假 client(與戰鬥同一條程式路徑),讀值面板即時顯示軸值/視角/按鍵
+$('touchTestBtn')?.addEventListener('click', () => {
+  $('touchOverlay').style.display = 'none';
+  $('touchTest').hidden = false;
+  openTouchTest($('ttRead'));
+});
+$('ttDone')?.addEventListener('click', () => {
+  closeTouchTest();
+  $('touchTest').hidden = true;
+  openTouchPanel();
+  syncTouchSettings();
+});
 
 // 劇情戰役
 $('storyBtn')?.addEventListener('click', () => { myName(); enterStory(); });
@@ -2054,6 +2132,12 @@ function onSync(m) {
   } else if (phase === 'game' || phase === 'over') {
     if (app.terrain && !app.battle) enterGame();
   }
+}
+
+// 觸控硬體(或已強制開啟觸控版)才顯示大廳入口 —— 桌機不需要這顆鈕
+if (touchCapable() || TOUCH_UI) {
+  const b = $('touchSetupBtn');
+  if (b) b.style.display = '';
 }
 
 window.addEventListener('DOMContentLoaded', () => {

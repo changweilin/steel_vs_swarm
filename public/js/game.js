@@ -23,6 +23,7 @@ import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
+import { isTouchUI, TouchControls } from './mobile.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
 const KIND_KEY = {
@@ -2096,10 +2097,28 @@ export class BattleClient {
   /** 目前是否為飛行機體(無人機恆飛;變形機甲僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
 
+  /**
+   * 移動輸入唯一縫:回傳 { f 前後, r 左右, mag 推杆量, boost 衝刺 }。
+   * 鍵盤 WASD(±1 數位)與觸控虛擬蘑菇頭(0~1 類比)在此收束成同一組軸值 ——
+   * 移動結算端(地面/飛行/觀戰三處)MUST 只讀這支,MUST NOT 各自去讀 this.keys.KeyW。
+   * 蘑菇頭推到底(≥ SPRINT_MAG)等同按住 Shift;有鍵盤輸入時以鍵盤為準(桌機行為完全不變)。
+   */
+  _moveAxis() {
+    const k = this.keys;
+    let f = (k.KeyW ? 1 : 0) - (k.KeyS ? 1 : 0);
+    let r = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0);
+    let boost = !!(k.ShiftLeft || k.ShiftRight);
+    const t = this.touch?.axis;
+    if (!f && !r && t && t.mag > 0) { f = t.f; r = t.r; }
+    const mag = Math.hypot(f, r);
+    return { f, r, mag, boost };
+  }
+
   /** 玩家是否有移動輸入(高後座重武器的「停穩才能開火」判定) */
   _moveInput() {
     const k = this.keys;
-    return !!(k.KeyW || k.KeyA || k.KeyS || k.KeyD || k.Space || k.KeyC || k.ControlLeft);
+    if (k.Space || k.KeyC || k.ControlLeft) return true;
+    return this._moveAxis().mag > 0.02;
   }
 
   /** 開火中位移懲罰係數(stop=0 / slow=slowF / 其餘=1);飛行機體套 AIR_F 折扣(空中減半) */
@@ -2430,33 +2449,21 @@ export class BattleClient {
 
     this._onMouseMove = (e) => {
       if (document.pointerLockElement !== this.canvas) return;
-      this.yaw -= e.movementX * 0.0023;
-      this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch - e.movementY * 0.0023));
+      this._applyLook(-e.movementX * 0.0023, -e.movementY * 0.0023);
     };
     document.addEventListener('mousemove', this._onMouseMove);
 
     this._onMouseDown = (e) => {
+      if (this.touch) return;                       // 觸控版:相容用滑鼠事件不參與(避免與觸控層雙送)
       if (!this.side || this.shopOpen) return;
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
       if (e.button === 0) this.firing = true;
-      if (e.button === 2) {
-        // 右鍵按住起算:達門檻 → 狙擊模式專屬招(見 _tickSnipeAbility);短按放開 → 切換模式(見 _onMouseUp)。
-        // 切換與出招以「按住時長」區分,互不衝突。
-        this._rmbDownAt = performance.now() / 1000;
-        this._rmbAbilityFired = false;
-      }
+      if (e.button === 2) this._rmbDown();
     };
     this._onMouseUp = (e) => {
+      if (this.touch) return;
       if (e.button === 0) this.firing = false;
-      if (e.button === 2) {
-        const pressed = this._rmbDownAt > 0, fired = this._rmbAbilityFired;
-        this._rmbDownAt = 0; this._rmbAbilityFired = false;
-        if (!pressed || fired) return;   // 未真正按下(指標未鎖)或長按已出招 → 不切換模式
-        // 短按放開 = 切換一般 ⇄ 狙擊模式(未瞄準且當前武器打空 → 改換彈夾,保留原快捷)
-        const { id, st } = this._curWeapon();
-        if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
-        else this._setAiming(!this.aiming);
-      }
+      if (e.button === 2) this._rmbUp();
     };
     this.canvas.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
@@ -2466,6 +2473,7 @@ export class BattleClient {
     // 戰場選單:指標鎖定 = 交戰;解鎖(ESC / 切走視窗)= 跳出暫停選單(繼續 / 離開)。
     // 用 pointerlockchange 而非 ESC keydown —— 指標鎖定時瀏覽器會吃掉那顆 ESC 的 keydown。
     this._onPlc = () => {
+      if (this.touch) return;                       // 觸控版無指標鎖定:選單一律走 ☰ 鈕(_cmd('menu'))
       const locked = document.pointerLockElement === this.canvas;
       if (locked) {
         this._everLocked = true;
@@ -2476,6 +2484,68 @@ export class BattleClient {
       }
     };
     document.addEventListener('pointerlockchange', this._onPlc);
+
+    // 觸控版(手機/平板):建虛擬蘑菇頭 + 動作鈕 + 陀螺儀。輸入一律經 _applyLook/_moveAxis/_cmd
+    // 三個共用縫,MUST NOT 讓 mobile.js 直接改 yaw/keys/firing(見 mobile.js 檔頭)。
+    if (isTouchUI()) this.touch = new TouchControls(this);
+  }
+
+  /**
+   * 視角套用唯一縫(弧度增量)。滑鼠 movement、觸控拖曳、陀螺儀三種來源共用 ——
+   * 俯仰夾制只准住這裡,MUST NOT 在各輸入端各夾一次。
+   */
+  _applyLook(dYaw, dPitch) {
+    this.yaw += dYaw;
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
+  }
+
+  /** 右鍵/瞄準鈕「按下」:達門檻 → 狙擊模式專屬招(見 _tickSnipeAbility);短按放開 → 切換模式(見 _rmbUp)。
+   *  切換與出招以「按住時長」區分,互不衝突。 */
+  _rmbDown() {
+    this._rmbDownAt = performance.now() / 1000;
+    this._rmbAbilityFired = false;
+  }
+
+  /** 右鍵/瞄準鈕「放開」:短按 = 切換一般 ⇄ 狙擊模式;長按已出招則不切換 */
+  _rmbUp() {
+    const pressed = this._rmbDownAt > 0, fired = this._rmbAbilityFired;
+    this._rmbDownAt = 0; this._rmbAbilityFired = false;
+    if (!pressed || fired) return;   // 未真正按下(指標未鎖)或長按已出招 → 不切換模式
+    // 未瞄準且當前武器打空 → 改換彈夾,保留原快捷
+    const { id, st } = this._curWeapon();
+    if (!this.aiming && st && st.ammo <= 0 && st.reloadEnd <= 0) this._startReload(id);
+    else this._setAiming(!this.aiming);
+  }
+
+  /**
+   * 動作派發唯一縫(act 名稱 + 按下/放開)。觸控鈕全部走這裡,與鍵盤/滑鼠共用同一組方法 ——
+   * MUST NOT 讓觸控層自行呼叫 _castAbility/_toggleShop 等內部方法(兩套操作分家就是 bug)。
+   * 按住型:fire / aim / jump / dive / sprint;點擊型:其餘(down=true 才動作)。
+   */
+  _cmd(act, down) {
+    if (act === 'menu') { if (down && !this._gameOver) this._setPaused(!this.paused); return; }
+    if (this.paused) return;
+    // 純移動類:觀戰自由視角也要能升降/加速(_updateSpectator 讀同一組 keys)
+    if (act === 'jump') { this.keys.Space = !!down; return; }
+    if (act === 'dive') { this.keys.KeyC = !!down; return; }
+    if (act === 'sprint') { this.keys.ShiftLeft = !!down; return; }
+    if (!this.side) return;
+    // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例),與 KeyB 同條件
+    if (act === 'shop') { if (down) this._toggleShop(); return; }
+    if (act === 'map') { if (down) this.minimapBig = !this.minimapBig; return; }
+    if (this.shopOpen) return;
+    if (act === 'swap') { if (down && this.isDrone) this._swapDrone(null); return; }   // 陣亡中也能切存活僚機
+    if (this.dead) { this.firing = false; return; }
+    switch (act) {
+      case 'fire': this.firing = !!down; break;
+      case 'aim': down ? this._rmbDown() : this._rmbUp(); break;
+      case 'skill': if (down) this._castAbility('skill'); break;
+      case 'ult': if (down) this._castAbility('ult'); break;
+      case 'reload': if (down) this._startReload(); break;
+      case 'civFollow': if (down) this._civAct('follow'); break;
+      case 'civAway': if (down) this._civAct('away'); break;
+      default: break;
+    }
   }
 
   /** 戰場選單開關;伺服器持續模擬(多人不是真暫停),此處只凍結本機輸入 + 叫出選單 */
@@ -2484,12 +2554,14 @@ export class BattleClient {
     this.paused = on;
     if (on) {
       this.keys = {}; this.firing = false;
+      this.touch?.reset();      // 觸控:放掉所有按住中的鈕(選單蓋住後收不到 pointerup 會卡住)
       this.hud.pause?.(true);
       document.exitPointerLock?.();
     } else {
       this.hud.pause?.(false);
       // 陣亡倒數中「繼續」= 回到陣亡頁(不需鎖定指標);存活時才重新鎖定進入交戰
-      if (!this.dead) this.canvas?.requestPointerLock?.();
+      // 觸控版無指標鎖定(改由觸控層直接吃事件),不必也不能鎖
+      if (!this.dead && !this.touch) this.canvas?.requestPointerLock?.();
     }
   }
 
@@ -5742,13 +5814,11 @@ export class BattleClient {
     const u = UNITS[this.heroKind];
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const boost = this.keys.ShiftLeft || this.keys.ShiftRight ? 1.35 : 1;
-    const move = new THREE.Vector3();
-    if (this.keys.KeyW) move.add(fwd);
-    if (this.keys.KeyS) move.sub(fwd);
-    if (this.keys.KeyD) move.add(right);
-    if (this.keys.KeyA) move.sub(right);
-    if (move.lengthSq() > 0) move.normalize();
+    // 移動軸一律經 _moveAxis(鍵盤 ±1 / 觸控類比共用);對角線鍵盤輸入 mag=√2 → 夾回 1(與舊版 normalize 等價)
+    const ax = this._moveAxis();
+    const boost = ax.boost ? 1.35 : 1;
+    const move = new THREE.Vector3().addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
+    if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
 
     if (this._flying()) {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
@@ -5759,15 +5829,13 @@ export class BattleClient {
         Math.sin(this.pitch),
         -Math.cos(this.yaw) * Math.cos(this.pitch),
       );
-      const target = new THREE.Vector3();
-      if (this.keys.KeyW) target.add(look);
-      if (this.keys.KeyS) target.sub(look);
-      if (this.keys.KeyD) target.add(right);
-      if (this.keys.KeyA) target.sub(right);
+      // look 與 right 互為正交單位向量 ⇒ target 長度 = 推杆量;>1(鍵盤對角線)才夾回 1
+      const target = new THREE.Vector3().addScaledVector(look, ax.f).addScaledVector(right, ax.r);
       // 控場:垂直升降同樣折速(麻痺 = 禁移動含爬升/下降,否則被暈仍可垂直脫離)
       const ccF = this._ccMoveF();
-      if (target.lengthSq() > 0) target.normalize().multiplyScalar(spd * boost * this._recoilMoveF(now, true)
-        * ccF * this._modF('speed'));
+      const tmag = target.length();
+      if (tmag > 0) target.multiplyScalar(spd * boost * this._recoilMoveF(now, true)
+        * ccF * this._modF('speed') / Math.max(1, tmag));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
       // 無人機完美迴避(2026-07-21):戰鬥狀態(近 COMBAT_S 秒攻擊或被攻擊)下按空白鍵飛行 →
@@ -5993,11 +6061,11 @@ export class BattleClient {
     // 觀戰:自由飛行
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const sp = 120 * (this.keys.ShiftLeft ? 3 : 1);
-    if (this.keys.KeyW) this.pos.addScaledVector(fwd, sp * dt);
-    if (this.keys.KeyS) this.pos.addScaledVector(fwd, -sp * dt);
-    if (this.keys.KeyD) this.pos.addScaledVector(right, sp * dt);
-    if (this.keys.KeyA) this.pos.addScaledVector(right, -sp * dt);
+    const ax = this._moveAxis();
+    const sp = 120 * (ax.boost ? 3 : 1);
+    const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
+    this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
+    this.pos.addScaledVector(right, ax.r * k * sp * dt);
     if (this.keys.Space) this.pos.y += sp * dt;
     if (this.keys.KeyC) this.pos.y -= sp * dt;
     this.camera.position.copy(this.pos);
@@ -6878,6 +6946,8 @@ export class BattleClient {
     window.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('contextmenu', this._onCtx);
     document.removeEventListener('pointerlockchange', this._onPlc);
+    this.touch?.dispose();
+    this.touch = null;
     document.exitPointerLock?.();
     this.renderer.dispose();
   }
