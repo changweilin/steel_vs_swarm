@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node server/server.js --port 8620",
+    "mobile": "node server/server.js --https",
     "test": "node test/e2e.mjs",
     "sim": "node test/simrun.mjs",
     "bal": "node tools/balance.mjs"

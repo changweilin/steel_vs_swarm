@@ -156,5 +156,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
+| `mobile.js`(虛擬搖桿/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②版型幾何量測:直式/橫式 × 無人機/機甲/變形/觀戰 —— 控件不出界、**搖桿不覆蓋 `.hud-self` 與 `#minimap`**、控件互不重疊、ABXY 圓心距 ≥ 兩半徑和(d ≤ 41.4% 外框)、觸控目標 ≥ 44×40 ③真機冒煙:類比十字鍵推進量、拖曳視角、左手模式鏡像、轉向後畫布不拉伸 |
+| `#touchLayer` 的**節點位置**或 `--tl-dpad`/`--tl-gp`/`.ori-*` 版型段 | 搖桿節點 **MUST 留在 body 層**(`position: fixed`)—— 放進 `#game` 就只有戰鬥看得到(前科:玩家回報「沒看到虛擬搖桿」)。尺寸/定位全靠那幾個 CSS 變數,**MUST 保留 `body.touch-ui` 的保險預設值**,否則少掛 ori class 就塌成 0×0。改完 MUST 跑大廳端對端量測(真手機 profile + **不設覆寫**):入口鈕→診斷→設定列→試玩搖桿有實際尺寸 |
+| 陀螺儀相關(`Gyro`/`gyroBlockedReason`/`--https`) | **MUST 用 `https`(或 localhost)實測** —— `http://<區網 IP>` 不是 secure context,瀏覽器靜默不派送 `deviceorientation`,在那裡測永遠是「沒反應」。跑 `npm run mobile` 後手機連 `https://`:轉手機 → 準星同向轉動;另驗 insecure origin 下開關會自動扳回並寫出原因(不得靜默) |
 
 **e2e 結構備忘**:前段 import `BattleSim` 直測(`_add` 的測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下要「看到」敵方 MUST 另開 `mode:'spectator'` client 偵察。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
