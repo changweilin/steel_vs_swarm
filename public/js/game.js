@@ -10,7 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS,
-  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf,
+  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -4126,10 +4126,10 @@ export class BattleClient {
    */
   _lobAim() {
     const fc = this._lobFc || (this._lobFc = {
-      on: false, ok: false, aa: false, high: false, ent: null, v0: 0, sup: 0, n: 0,
+      on: false, ok: false, aa: false, high: false, close: false, ent: null, v0: 0, sup: 0, n: 0,
       aim: new THREE.Vector3(), vel: new THREE.Vector3(), impact: new THREE.Vector3(), hasImpact: false,
     });
-    fc.on = false; fc.ok = false; fc.ent = null; fc.sup = 0;
+    fc.on = false; fc.ok = false; fc.ent = null; fc.sup = 0; fc.close = false;
     const { id, def } = this._curWeapon();
     // 雷射導引(trajClass 'guide')由 _updateGuideLaser 指示 —— 彈體解保險後騎波不吃重力,
     // 走拋物線火控是錯的指示,兩者互斥。
@@ -4185,6 +4185,14 @@ export class BattleClient {
     fc.n = arc.n;
     fc.hasImpact = !!arc.impact;
     if (arc.impact) fc.impact.copy(arc.impact);
+    // 最小安全射程警示(純 HUD 建議;命中/自損由伺服器結算):落點近於 lobMinRange ⇒ 太近,
+    // 開砲會落在自身爆風內(無差別波及友軍 + 自損)。以「射手 → 落點/瞄準點」水平+垂直距離判定。
+    const mr = lobMinRange(def);
+    fc.close = mr > 0 && from.distanceTo(fc.hasImpact ? fc.impact : fc.aim) < mr;
+    if (fc.close && this.hud?.feed && (this._lobWarnAt || 0) < performance.now() - 1500) {
+      this._lobWarnAt = performance.now();
+      this.hud.feed('⚠️ 太近!低於最小安全射程,爆風將無差別波及友軍與自身');
+    }
     // 砲口實際指向 = 火控解的出膛角(FPV 砲管跟著抬,所見即所射)
     const fwdY = this.camera.getWorldDirection(this._lobFwd || (this._lobFwd = new THREE.Vector3())).y;
     fc.sup = Math.max(-0.35, Math.min(BALLISTIC.LOB_SUP_MAX,
@@ -4246,8 +4254,8 @@ export class BattleClient {
     geo.attributes.lineDistance.needsUpdate = true;
     geo.setDrawRange(0, fc.n);
     geo.computeBoundingSphere();
-    // 未對準 = 警示紅(彈道打不到準星指的地方);彈射模式冷色;高角度曲射琥珀色
-    const col = !fc.ok ? 0xff6a6a : fc.aa ? 0x9adfff : fc.high ? 0xffd24a : this._shotCols(this.side).col;
+    // 太近 = 危險紅(落在自身爆風內,無差別+自損)優先;未對準 = 警示紅;彈射模式冷色;高角度曲射琥珀色
+    const col = fc.close ? 0xff2020 : !fc.ok ? 0xff6a6a : fc.aa ? 0x9adfff : fc.high ? 0xffd24a : this._shotCols(this.side).col;
     ag.line.material.color.setHex(col);
     if (fc.hasImpact) {
       ag.marker.visible = true;

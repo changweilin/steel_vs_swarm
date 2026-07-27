@@ -577,9 +577,13 @@ export const VITALS = {
 // LOB_CHARGE:裝藥號數(相對全裝藥的初速比)。低伸解被稜線/建物擋住就降一號 —— 初速降低 ⇒
 //   命中同一點所需仰角自動抬高、弧線變高,這是真實榴彈砲越過遮蔽物的作法(不是另發明一套曲射)。
 //   MUST NOT 改用「高角度解」(同初速的另一個根):現尺度下那是 85° 迫砲彈,飛行 20 秒沒有戰術意義。
+// LOB_MIN_F:榴彈類(trajClass 'lob')最小安全射程 = 爆風半徑 × 此係數(2026-07-27 使用者需求)。
+//   落點近於此距離 ⇒ 射手落在自身爆風內:改為「無差別」波及(不分敵我 + 自身)並自損。
+//   **推導不手寫**:min 射程隨各武器爆風半徑走(見 lobMinRange),此處只放單一係數。
+//   1.5 = 邊界(落點 = 1.5r)自損約 33% 爆風傷、越近越高;導引/射後不理武器不吃(已有 ARMING 散布)。
 export const BALLISTIC = {
   G: 9.81, LAUNCH_MV: 100, AA_MV: 720, AA_CONE: 0.14, AA_ALT: 10,
-  LOB_TOL: 3.5, LOB_SUP_MAX: 0.70, LOB_CHARGE: [1, 0.78, 0.6, 0.46],
+  LOB_TOL: 3.5, LOB_SUP_MAX: 0.70, LOB_CHARGE: [1, 0.78, 0.6, 0.46], LOB_MIN_F: 1.5,
 };
 export const armorMul = (ar, pen = 0) => {
   const a = Math.max(0, (ar || 0) - (pen || 0));
@@ -696,6 +700,14 @@ export const ARMING = {
   fnf:   { m: 60, spread: 0.075 },   // 射後不理:發射後才鎖定 + 引信解保險
 };
 export const armingOf = (def) => ARMING[trajClass(def)] || null;
+
+// ---- 榴彈類最小安全射程(2026-07-27 使用者需求;伺服器與客戶端 HUD 共用同一縫)----
+// 只約束 trajClass 'lob'(launcher 無導引:溫壓火箭 / 152 榴彈砲 / 無後座砲 / 集束子母彈)——
+// 這正是「榴彈類」。導引/射後不理是自導武器(已有 ARMING 軌跡修正期散布),不在此列。
+// 落點與射手的距離 < lobMinRange(def) ⇒ 伺服器 _blast 改「無差別」(不分敵我 + 波及自身),
+// 自損量由既有 blastFalloff(def.r, 距離)自然導出(越貼近爆心自損越重);≥ 此距離則照常只傷敵。
+// **推導不手寫**:= 爆風半徑 def.r × BALLISTIC.LOB_MIN_F(改係數自動跟著走);非 lob 回 0。
+export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r || 0) * BALLISTIC.LOB_MIN_F : 0);
 
 // ---- 後座力機制(2026-07-14:輕/重武器各三階,依武器原型分派)----
 // 純客戶端手感:game.js 依「當前手上武器」的 def.recoil 套用位移懲罰 + 準星上踢 + 開火節奏。
