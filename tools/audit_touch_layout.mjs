@@ -111,7 +111,19 @@ for (const v of VIEWS) {
                              (gb[i].top + gb[i].bottom) / 2 - (gb[j].top + gb[j].bottom) / 2);
         if (d + 0.5 < (gb[i].width + gb[j].width) / 2) abxy = false;
       }
-      return { r, small, abxy };
+      // 肩鍵/扳機逐列左右對應:L ⇄ R 同一列、ZL ⇄ ZR 同一列,且 ZL/ZR 在 L/R **下方**。
+      // ZL(僅飛行機種)與 ⇄換機(僅無人機)會 hidden ⇒ 用 grid-row 固定列,這裡驗它真的沒塌陷。
+      const rowOf = (sel) => {
+        const el = document.querySelector(sel);
+        if (!el || el.hidden || el.offsetParent === null) return null;
+        const b = el.getBoundingClientRect();
+        return { t: b.top, b: b.bottom };
+      };
+      const pad = {
+        L: rowOf('.tl-sys-l [data-act="reload"]'), ZL: rowOf('.tl-sys-l [data-act="dive"]'),
+        R: rowOf('.tl-sys-r [data-act="aim"]'), ZR: rowOf('.tl-sys-r [data-act="gyro"]'),
+      };
+      return { r, small, abxy, pad };
     }, { SEL, TAP });
 
     cases++;
@@ -127,6 +139,15 @@ for (const v of VIEWS) {
     }
     for (const s of out.small) msgs.push(`觸控目標過小 ${s}`);
     if (!out.abxy) msgs.push('ABXY 圓心距不足');
+    // 肩鍵/扳機逐列對應(見 index.html #touchLayer 的 .tl-sys 註解)
+    const P = out.pad;
+    const align = (a, b) => a && b && Math.abs(a.t - b.t) <= 1.5;
+    if (P.L && P.R && !align(P.L, P.R)) msgs.push(`L / R 不同列(top ${Math.round(P.L.t)} vs ${Math.round(P.R.t)})`);
+    if (P.ZL && P.ZR && !align(P.ZL, P.ZR)) msgs.push(`ZL / ZR 不同列(top ${Math.round(P.ZL.t)} vs ${Math.round(P.ZR.t)})`);
+    if (P.ZR && P.R && P.ZR.t < P.R.b - 1) msgs.push('ZR MUST 排在 R 下方');
+    if (P.ZL && P.L && P.ZL.t < P.L.b - 1) msgs.push('ZL MUST 排在 L 下方');
+    // ZL 隱藏(地面機甲)時 ZR 的列位 MUST 不變 —— 驗 grid 列沒有塌陷
+    if (!P.ZL && P.ZR && P.R && Math.abs(P.ZR.t - P.R.b) > 8) msgs.push('ZL 隱藏後 ZR 的列位跑掉(grid 列塌陷?)');
 
     if (msgs.length) { bad++; console.log(`✗ ${tag}\n    ${msgs.join('\n    ')}`); }
     else if (verbose) console.log(`✓ ${tag}`);

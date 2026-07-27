@@ -630,21 +630,28 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
   max-width: min(640px, 92vw);
 }
 /* 疊層右上角關閉鍵:所有可關閉的 .overlay-box 共用一顆 ✕(手機上「那顆返回鈕在哪」很不直覺)。
-   MUST 疊在 box 的框內、不吃內距 —— 內容區有自己的捲動,放進流內會被捲走。 */
+   MUST 疊在 box 的框內、不吃內距 —— 內容區有自己的捲動,放進流內會被捲走。
+   **位置 MUST 避開 clip-path 的斜切角**:`--notch` 從右上角斜切 14px,舊值 top 6 / right 8 讓 ✕
+   的右上角正好落在切線上 → 鈕被削掉一角、看起來像沒有關閉鍵。故內縮到 top 10 / right 12。 */
 .ov-close {
-  position: absolute; top: 6px; right: 8px; z-index: 3;
+  position: absolute; top: 10px; right: 12px; z-index: 3;
   cursor: pointer; font: inherit; font-family: var(--mono); font-size: 15px; line-height: 1;
   width: 34px; height: 34px; padding: 0;
   display: flex; align-items: center; justify-content: center;
-  color: var(--dim); background: rgba(8, 12, 17, 0.8); border: 1px solid var(--line);
+  color: var(--text); background: rgba(8, 12, 17, 0.92); border: 1px solid var(--line-strong);
   clip-path: var(--notch-sm);
   transition: color 0.1s, border-color 0.1s, background 0.1s;
 }
 .ov-close:hover { color: var(--text); border-color: var(--railW); }
 .ov-close:active { background: rgba(var(--railW-rgb), 0.28); color: #05070a; }
-/* 觸控版放大到可靠的觸控目標(44×44),並讓出上方內距免得壓到標題 */
-body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 4px; right: 4px; }
-body.touch-ui .overlay-box { padding-top: 26px; }
+/* 觸控版放大到可靠的觸控目標(44×44) */
+body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; right: 10px; }
+/* **✕ 的落點 MUST 由內容讓出來**(玩家回報「彈出視窗的資訊被關閉鍵遮住」)——
+   ✕ 是 position:absolute,不佔流內空間,所以標題列/色條/浮右的金錢統計都會鑽到它底下。
+   凡是掛了 .ov-close 的框都掛 `.has-close`,由這裡統一預留上緣;
+   `.story-brief-box` 刻意**不掛** —— 它第一件是全幅過場立繪,留白會破圖,而 ✕ 只壓到裝飾角標。 */
+.overlay-box.has-close { padding-top: 52px; }
+/* 觸控版的對應值住「疊層在手機上的可讀性」那一段 —— 那裡有 padding 簡寫會把這條蓋回去 */
 
 .overlay-box::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
@@ -1152,16 +1159,18 @@ body.touch-ui .overlay-box { padding-top: 26px; }
 .bio-modal-box {
   position: relative; width: min(1040px, 96vw); max-height: 94vh; overflow-y: auto;
   background: rgba(6, 10, 15, 0.98); border: 1px solid var(--line); clip-path: var(--notch);
-  padding: 20px 22px;
+  /* 上緣讓出 .bio-modal-close 的落點(見 .ov-close 註解:✕ 是 absolute,不讓內容就會被壓住)*/
+  padding: 42px 22px 20px;
 }
 /* 立繪欄要夠寬才看得到全身照(來源圖近正方形構圖,頭到腳全入鏡);窄欄只會擠成一條窄長條 */
 .bio-modal-body { display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 760px) { .bio-modal-body { grid-template-columns: 1fr; } }
 .bio-modal-close {
-  position: absolute; right: 8px; top: 8px; z-index: 1;
-  font-family: var(--mono); font-size: 13px; color: var(--dim); background: rgba(4, 7, 11, 0.9);
-  border: 1px solid var(--line); border-radius: 0; width: 26px; height: 26px; cursor: pointer;
+  position: absolute; right: 12px; top: 10px; z-index: 2;
+  font-family: var(--mono); font-size: 15px; color: var(--text); background: rgba(4, 7, 11, 0.94);
+  border: 1px solid var(--line-strong); border-radius: 0; width: 34px; height: 34px; cursor: pointer;
 }
+body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .bio-modal-close:hover { color: var(--fg); border-color: var(--railS); }
 .bio-portrait { position: relative; align-self: start; }
 .bio-portrait img { width: 100%; border-radius: 0; display: block; background: #05070a; border: 1px solid var(--line); }
@@ -1199,7 +1208,8 @@ body.touch-ui .overlay-box { padding-top: 26px; }
 .stage-modal[hidden] { display: none; }
 .stage-modal-box {
   position: relative; width: min(1180px, 97vw); max-height: 94vh; overflow-y: auto;
-  background: rgba(6, 10, 15, 0.98); border: 1px solid var(--line); clip-path: var(--notch); padding: 16px 20px;
+  background: rgba(6, 10, 15, 0.98); border: 1px solid var(--line); clip-path: var(--notch);
+  padding: 42px 20px 16px;   /* 上緣讓出 .bio-modal-close 的落點 */
 }
 .stage-modal-title { font-family: var(--serif); font-size: 17px; font-weight: 900; color: var(--fg); letter-spacing: 2px; margin: 0 34px 10px 0; }
 .stage-modal-title .dim { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--dim); }
@@ -1528,6 +1538,7 @@ body.touch-ui {
   --tl-gp: 120px;      /* ABXY 菱形外框(右上) */
   --tl-rstick: 100px;  /* 視角搖桿直徑(右下) */
   --tl-sysw: 52px;     /* 肩鍵/系統鍵直條寬 */
+  --tl-sysh: 40px;     /* 肩鍵/系統鍵直條**每列高**(grid 固定列高 ⇒ 左右兩條逐列對齊)*/
   --tl-edge: 8px;      /* 控件離螢幕邊的內距 */
   --tl-gap: 14px;      /* 握把與內側直條之間的間隙 */
   --tl-band: 252px;    /* 直式操控帶高 */
@@ -1663,11 +1674,22 @@ body.tl-off .touch-layer { display: none !important; }
    實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖。 */
 body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); opacity: var(--tl-alpha-on); color: var(--railW); }
 
-/* ===== 系統鍵(L 區:HOME / ⊟ 商店 / ◫ 地圖 ・ R 區:陀螺 / 全螢幕 / 左手)=====
-   兩組分屬 L/R 分區,排列方向逐版型切換(橫式直條貼握把內側、直式橫列貼操控帶上緣)。 */
-.tl-sys { position: absolute; display: flex; gap: 4px; pointer-events: none; flex-wrap: nowrap; }
+/* ===== 肩鍵 + 系統鍵直條(L 區:L / ZL / HOME / 全螢幕 ・ R 區:R / ZR / ⇄換機 / 左手)=====
+   **逐列左右對應(2026-07-27)**:第 1 列 L ⇄ R、第 2 列 ZL ⇄ ZR,與實體手把「肩鍵在上、
+   扳機在下」一致,由上往下排。作法是 grid 固定 4 列 + 逐鈕指定 `grid-row` ——
+   **MUST NOT 退回 flex** :ZL(僅飛行機種)與 ⇄換機(僅無人機)會 `hidden`,
+   flex 下後面的鈕會往上遞補,ZL/ZR 就對不齊,而且鍵位還會隨機種漂移。
+   兩條列數 MUST 相同(各 4),否則貼底對齊時第 1 列的高度就不一樣。 */
+.tl-sys {
+  position: absolute; display: grid; gap: 4px; pointer-events: none;
+  grid-template-rows: repeat(4, var(--tl-sysh));
+}
+.tl-sys > .tl-sysb:nth-child(1) { grid-row: 1; }
+.tl-sys > .tl-sysb:nth-child(2) { grid-row: 2; }
+.tl-sys > .tl-sysb:nth-child(3) { grid-row: 3; }
+.tl-sys > .tl-sysb:nth-child(4) { grid-row: 4; }
 .tl-sysb {
-  pointer-events: auto; touch-action: none; cursor: pointer; font: inherit;
+  pointer-events: auto; touch-action: none; cursor: pointer; font: inherit; white-space: nowrap;
   min-width: 46px; min-height: 40px; padding: 0 5px;
   font-family: var(--mono); font-size: 10px; letter-spacing: 0; color: var(--dim);
   background: rgba(8, 13, 19, 0.7); border: 1px solid var(--line);
@@ -1786,8 +1808,8 @@ body.touch-ui.ori-landscape .hud-self {
 body.touch-ui.ori-landscape #minimap {
   right: calc(8px + var(--tl-sr)); top: calc(36px + var(--tl-st)); width: 104px; height: 104px;
 }
-/* 肩鍵 + 系統鍵:各自欄的**內側直條**(由下往上長,故 DOM 序即由上而下的 L→ZL→HOME→地圖) */
-body.touch-ui.ori-landscape .tl-sys { flex-direction: column; width: var(--tl-sysw); }
+/* 肩鍵 + 系統鍵:各自欄的**內側直條**(貼底、4 列固定 ⇒ 由上而下 L→ZL→HOME→全螢幕,右條逐列對應)*/
+body.touch-ui.ori-landscape .tl-sys { width: var(--tl-sysw); }
 body.touch-ui.ori-landscape .tl-sysb { width: 100%; min-width: 0; font-size: 9px; padding: 0 2px; }
 body.touch-ui.ori-landscape .tl-sys-l {
   left: calc(var(--tl-gripl) + 14px + var(--tl-sl)); bottom: calc(8px + var(--tl-sb));
@@ -1916,7 +1938,7 @@ body.touch-ui.ori-portrait .tl-gp {
   right: calc(var(--tl-edge) + max(0px, (var(--tl-rstick) - var(--tl-gp)) / 2)); bottom: calc(var(--tl-rstick) + 14px + var(--tl-sb));
 }
 /* 直條同橫式貼各區內側(直式寬度足夠,沿用直排 ⇒ 兩種持握的鍵位順序一致,不必重新找鍵) */
-body.touch-ui.ori-portrait .tl-sys { flex-direction: column; width: var(--tl-sysw); }
+body.touch-ui.ori-portrait .tl-sys { width: var(--tl-sysw); }
 body.touch-ui.ori-portrait .tl-sysb { width: 100%; min-width: 0; min-height: 40px; padding: 0 2px; font-size: 9px; }
 body.touch-ui.ori-portrait .tl-sys-l { left: calc(var(--tl-edge) + var(--tl-gripl) + var(--tl-gap)); bottom: calc(8px + var(--tl-sb)); }
 body.touch-ui.ori-portrait .tl-sys-r { right: calc(var(--tl-edge) + var(--tl-gripr) + var(--tl-gap)); bottom: calc(8px + var(--tl-sb)); }
@@ -2011,6 +2033,10 @@ body.touch-ui.ori-portrait .overlay-box .row .btn {
 body.touch-ui.ori-portrait .overlay-box .row .btn.big { font-size: 14px; letter-spacing: 3px; }
 /* 橫式疊層:高度吃緊 → 內距再壓、標題縮小 */
 body.touch-ui.ori-landscape .overlay-box { padding: 12px 18px; gap: 8px; }
+/* ✕ 的落點:MUST 排在上面幾條 padding 簡寫**之後** —— 同特異度時後者勝,
+   寫在前面的話 `body.touch-ui .overlay-box { padding: 18px 16px }` 會把上內距扳回去、內容又鑽到 ✕ 底下。 */
+body.touch-ui .overlay-box.has-close { padding-top: 58px; }
+body.touch-ui.ori-landscape .overlay-box.has-close { padding-top: 56px; }
 body.touch-ui.ori-landscape .pause-title { font-size: 18px; }
 body.touch-ui.ori-landscape .set-list { gap: 8px; }
 

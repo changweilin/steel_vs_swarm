@@ -191,7 +191,7 @@
 
 <!-- 世界觀・序章(長篇敘事閱讀)-->
 <div id="worldOverlay" class="overlay" style="display:none">
-  <div class="overlay-box world-box">
+  <div class="overlay-box world-box has-close">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="worldCloseBtn">✕</button>
     <div class="panel-head">▍世界觀・序章 — 誰都負擔得起的戰爭</div>
     <div class="world-body" id="worldBody"></div>
@@ -381,7 +381,7 @@
 
   <!-- 主堡軍械庫(B) -->
   <div id="shopOverlay" class="overlay shop-overlay" style="display:none">
-    <div class="overlay-box shop-box">
+    <div class="overlay-box shop-box has-close">
       <button class="ov-close" type="button" aria-label="關閉" data-ovclose="shopCloseBtn">✕</button>
       <div class="panel-head">▍升級工坊 <span id="shopMoney" class="shop-money"></span></div>
       <div id="shopItems" class="shop-items"></div>
@@ -402,7 +402,7 @@
 
   <!-- 戰場選單(ESC / 切走視窗:指標解鎖時跳出)-->
   <div id="pauseOverlay" class="overlay" style="display:none">
-    <div class="overlay-box pause-box">
+    <div class="overlay-box pause-box has-close">
       <button class="ov-close" type="button" aria-label="關閉" data-ovclose="resumeBtn">✕</button>
       <div class="pause-title">戰場選單</div>
       <div class="pause-tabs" id="pauseTabs">
@@ -519,19 +519,24 @@
   <!-- ===== 肩鍵 + 系統鍵:各自貼在該區的**內側直條**(橫式)/ 操控帶上緣(直式)=====
        實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖 ——
        故改排在四分區各自的內側,仍屬 L / R 區,且不吃搖桿與十字鍵的拇指停位。
-       L 條:L 填彈 ・ ZL 下降(飛行機種)・ HOME 戰場選單 ・ ◫ 小地圖
-       R 條:R 狙擊(短按切換、長按絕招)・ ZR 陀螺儀 ・ ⇄ 換機(無人機)・ 全螢幕 ・ 左手 -->
+
+       **兩條直條 MUST 逐列左右對應(2026-07-27)**:由上往下第 1 列 = L / R(肩鍵)、
+       第 2 列 = ZL / ZR(扳機),與實體手把「L 在上、ZL 在下」的相對位置一致;
+       第 3、4 列才是各自的系統鍵。兩條**列數相同(4)**且用 CSS grid 指定 `grid-row`,
+       所以 ZL(僅飛行機種)/ ⇄ 換機(僅無人機)隱藏時**列不會塌陷**,對應關係恆成立。
+       欄位順序 MUST NOT 隨機種改動 —— 換機種就找不到鍵了。
+         L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 全螢幕
+         R 條:① R 狙擊(短按切換、長按絕招)② ZR 陀螺儀 ③ ⇄ 換機(無人機)④ 左手 -->
   <div class="tl-sys tl-sys-l">
     <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
     <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>
     <button class="tl-sysb" type="button" data-act="menu" aria-label="戰場選單">HOME</button>
-    <button class="tl-sysb" type="button" data-act="map">◫地圖</button>
+    <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
   </div>
   <div class="tl-sys tl-sys-r">
     <button class="tl-sysb gb-aim" type="button" data-act="aim">R 狙擊</button>
     <button class="tl-sysb" type="button" data-act="gyro">ZR 陀螺</button>
     <button class="tl-sysb" type="button" data-act="swap" hidden>⇄換機</button>
-    <button class="tl-sysb" type="button" data-act="full">全螢幕</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
   </div>
 
@@ -547,7 +552,7 @@
      這裡把判定結果逐項攤開(secure context / 觸控硬體 / 指標種類 / 螢幕),
      並可直接開陀螺儀看即時讀值、按「試玩搖桿」用真的 TouchControls 操作一遍。 -->
 <div id="touchOverlay" class="overlay" style="display:none">
-  <div class="overlay-box touch-box">
+  <div class="overlay-box touch-box has-close">
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="touchCloseBtn">✕</button>
     <div class="panel-head">▍手機操控 / 陀螺儀</div>
     <div class="tset-diag" id="touchDiag"></div>
