@@ -1113,7 +1113,7 @@ const CFX = {
   // ---- 鋼鐵 ----
   t01: { skill: { a: 'circle', m: 'frost' },              ult: { a: 'zone', m: 'frost' } },
   t02: { skill: { a: 'dash', m: 'rune' },                 ult: { a: 'atfield', m: 'hex', c: 0xffa94f } },
-  t03: { skill: { a: 'dome', m: 'shield', c: 0xffa94f },  ult: { a: 'aura', m: 'flame' } },
+  t03: { skill: { a: 'dome', m: 'shield', c: 0xffa94f },  ult: { a: 'zone', m: 'flame' } },
   t04: { skill: { a: 'veil', m: 'wing' },                 ult: { a: 'aura', m: 'reticle', c: 0xff5a4a } },
   t05: { skill: { a: 'heal', m: 'gear' },                 ult: { a: 'gate', m: 'gear' } },
   t06: { skill: { a: 'dash', m: 'flame', c: 0xff7a3d },   ult: { a: 'slash', m: 'fist' } },
