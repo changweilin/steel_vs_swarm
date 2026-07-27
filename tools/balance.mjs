@@ -1,5 +1,5 @@
 // ============ 平衡稽核(離線,純 Node,無依賴):`npm run bal` ============
-// 四條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
+// 五條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
 //
 // ① 一波 NPC = 玩家 60% EHP
 //    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + WAVE_EXTRAS(火箭兵/榴彈兵/坦克/攻擊直升機)。
@@ -18,8 +18,23 @@
 //    無招式/無爆擊/護盾持續受擊不回復)⇒ 平均「剛好」活著拆完(剩 0~20% EHP)。
 //    無人機(單機)= 站外圍攻模型:重武器射程 > 砲塔(311m 外零承傷、含距離衰減)⇒
 //    驗每台重武器射程確實 > 塔 + 機種平均拆完兩座 ≤ 站外時間預算(單機 DPS ⇒ 較慢但不承傷)。
-import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, chargeF, upgradePrice,
+//
+// ⑤ 對進戰勝率(2026-07-27 使用者原則:「戰力平衡策略須考量**攻擊距離**與**高度差**;
+//    測試時要考慮**從遠處移動到進入射程**,平均**不同高度差**的勝率」)。
+//    ①~④ 都是「同高度、近距平台、不移動」的靜態模型 —— 射程與高度差對結果毫無作用。
+//    ⑤ 補上這兩個維度:1v1 自射程外接近 → 進入射程 → 拉鋸 → 定點互轟,並在
+//    ±3 個砲塔高的高度差上對稱掃描取平均勝率(模型見 tools/duel.mjs,唯一縫)。
+//    a 陣營對稱:SWARM vs STEEL 全對局平均勝率 50% ±SIDE_TOL
+//    b 機種對稱:三機種各自 vs 全體的平均勝率 50% ±KIND_TOL
+//    c 高度差中性:較高方平均勝率 50% ±HIGH_TOL —— 高地換的是視野與機動,不該直接換勝負
+//    d 角色離群:非豁免角色的平均勝率 ∈ [CH_LO, CH_HI];豁免一律具名附理由(見 DUEL_EXEMPT)
+//    e 射程壓制上限:接近期單方面挨打的損失 ≤ 對手初始 EHP 的 FREE_MAX
+//       —— 射程差可以換到先手,但不該在對手還沒進場前就分出勝負。
+import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, EVASION, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
+
+const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
 
 const MAX_TIER = 1 + ECON.UPGRADES.lw.max;   // 戰鬥面向滿級階(開場 Lv1 + 升 max 次)= Lv4
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -197,6 +212,86 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   if (!sustain) fail++;
   console.log(`${sustain ? '✅' : '❌'} 滿級電力:回充 ${(UNITS.robot.mpRegen * chargeF(U.ch.max)).toFixed(1)}/s`
     + ` ≥ 重武器持續耗電 ${ECON.HEAVY_MP_PER_CD}/s(攻堅不斷火)`);
+}
+
+// ---------- ⑤ 對進戰勝率(攻擊距離 × 高度差)----------
+{
+  const SIDE_TOL = 0.05, KIND_TOL = 0.05, HIGH_TOL = 0.03;   // 陣營 / 機種 / 較高方的容差
+  const CH_LO = 0.20, CH_HI = 0.80;                          // 單一角色的勝率上下界
+  const FREE_MAX = 0.40;                                     // 接近期單方面損失上限(對手初始 EHP 比例)
+  // 具名豁免:對進戰模型**只算武器**(與 ①/④ 同基準,不含招式)—— 下列角色的戰力主體是
+  // 模型算不到的招式,硬把武器數值拉到區間內反而會讓他們在實戰中過強。豁免 MUST 附理由。
+  const DUEL_EXEMPT = {
+    t03: '「大鍋」鑄鐵鍋盾承傷 ×0.55(CD 16s / 持續 4s)+ 開鍋 傷害 ×1.4・裝填 ×0.8・吸血 —— 生存與爆發全在招式',
+    s10: '「白噪音」訊號矛每發附帶 EMP 1.5~2.5s(對手武器離線)+ 大招 EMP —— 實際輸出是「讓對方不能輸出」',
+    s04: '「Kashi」突進機動(CD 12s 位移)是貼身扇形武器的到位手段 —— 模型不模擬位移招式 ⇒ 永遠貼不上',
+  };
+  const chs = Object.keys(CHARACTERS);
+  const F = Object.fromEntries(chs.map((c) => [c, fighter(c)]));
+  const sweep = dhSweep();
+  const rate = {}, free = {};
+  for (const a of chs) {
+    rate[a] = {}; free[a] = {};
+    for (const b of chs) {
+      if (a === b) continue;
+      const r = duelSweep(F[a], F[b], sweep);
+      rate[a][b] = r.win; free[a][b] = r.free;
+    }
+  }
+  const mean = (v) => v.reduce((s, x) => s + x, 0) / v.length;
+  const avg = Object.fromEntries(chs.map((a) => [a, mean(Object.values(rate[a]))]));
+  const of = (k) => chs.filter((c) => charKind(c) === k);
+  console.log(`\n⑤ 對進戰勝率 — 自射程外接近 → 進場 → 拉鋸 → 互轟;高度差 ±${DUEL.DH_MAX_F} 個砲塔高`
+    + `(${sweep.length} 點對稱掃描)取平均\n`);
+
+  // a 陣營對稱
+  const side = mean(of('drone').flatMap((a) => of('robot').map((b) => rate[a][b])));
+  const okS = Math.abs(side - 0.5) <= SIDE_TOL;
+  if (!okS) fail++;
+  console.log(`${okS ? '✅' : '❌'} 陣營對稱  SWARM vs STEEL ${(side * 100).toFixed(1)}%`
+    + `(目標 50±${SIDE_TOL * 100}pp;${of('drone').length * of('robot').length} 組對局)`);
+
+  // b 機種對稱
+  for (const k of ['drone', 'robot', 'morph']) {
+    const v = mean(of(k).map((c) => avg[c]));
+    const okK = Math.abs(v - 0.5) <= KIND_TOL;
+    if (!okK) fail++;
+    console.log(`${okK ? '✅' : '❌'} 機種對稱  ${k.padEnd(6)} vs 全體 ${(v * 100).toFixed(1)}%(目標 50±${KIND_TOL * 100}pp)`);
+  }
+
+  // c 高度差中性(較高方 = dh > 0 的那一側)
+  let hw = 0, hn = 0;
+  for (const dh of sweep.filter((x) => x > 0)) for (const a of chs) for (const b of chs) {
+    if (a === b) continue;
+    hw += duel(F[a], F[b], dh).win; hn++;
+  }
+  const high = hw / hn;
+  const okH = Math.abs(high - 0.5) <= HIGH_TOL;
+  if (!okH) fail++;
+  console.log(`${okH ? '✅' : '❌'} 高度差中性 較高方 ${(high * 100).toFixed(1)}%(目標 50±${HIGH_TOL * 100}pp)`
+    + ` — 高地換視野與機動(+${(ALT_R * 100).toFixed(0)}% 射程 / +${(ALT_D * 100).toFixed(0)}% 閃避),不換勝負`);
+
+  // d 角色離群(具名豁免除外)
+  const bad = chs.filter((c) => !DUEL_EXEMPT[c] && (avg[c] < CH_LO || avg[c] > CH_HI));
+  if (bad.length) fail++;
+  const sorted = chs.slice().sort((a, b) => avg[a] - avg[b]);
+  console.log(`${bad.length ? '❌' : '✅'} 角色離群  ${chs.length - Object.keys(DUEL_EXEMPT).length} 名受檢角色全在`
+    + ` ${CH_LO * 100}~${CH_HI * 100}%${bad.length ? ` — 出界:${bad.map((c) => `${c} ${(avg[c] * 100).toFixed(0)}%`).join('、')}` : ''}`
+    + `  [最低 ${sorted[0]} ${(avg[sorted[0]] * 100).toFixed(0)}% / 最高 ${sorted[sorted.length - 1]}`
+    + ` ${(avg[sorted[sorted.length - 1]] * 100).toFixed(0)}%]`);
+  for (const [c, why] of Object.entries(DUEL_EXEMPT))
+    console.log(`   ⚪ 豁免 ${c} ${(avg[c] * 100).toFixed(0)}%(模型只算武器):${why}`);
+
+  // e 射程壓制上限
+  let mx = 0, mxPair = '';
+  for (const a of chs) for (const b of chs) {
+    if (a === b) continue;
+    if (free[a][b] > mx) { mx = free[a][b]; mxPair = `${a}→${b}`; }
+  }
+  const okF = mx <= FREE_MAX;
+  if (!okF) fail++;
+  console.log(`${okF ? '✅' : '❌'} 射程壓制  接近期單方面損失最大 ${(mx * 100).toFixed(1)}% EHP`
+    + `(${mxPair};上限 ${FREE_MAX * 100}%)`);
 }
 
 console.log(fail ? '\n❌ 平衡稽核未通過' : '\n🎉 平衡稽核通過');
