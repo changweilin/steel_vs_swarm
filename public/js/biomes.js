@@ -30,6 +30,7 @@ import { llToWorld } from './terrain.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { buildGroundCover } from './ground.js';
+import { vegPartXform } from './xform.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -197,7 +198,7 @@ const VEG_DEFS = {
                          { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
                          { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
                          { g: cone(0.5, 2.0, 5), y: 8.6, key: 'conifer' }] },
-  conifer4:    { parts: [{ g: cyl(0.24, 0.36, 3.4), y: 1.7, c: 0x66492e },      // 雪松:平展層枝盤
+  conifer4:    { parts: [{ g: cyl(0.12, 0.36, 8.2), y: 4.1, c: 0x66492e },      // 雪松:平展層枝盤
                          { g: cyl(2.6, 3.1, 0.9, 8), y: 3.0, key: 'conifer' },
                          { g: cyl(2.0, 2.5, 0.85, 8), y: 4.6, key: 'conifer' },
                          { g: cyl(1.4, 1.9, 0.8, 8), y: 6.1, key: 'conifer' },
@@ -207,7 +208,7 @@ const VEG_DEFS = {
                          { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8 }] },      // 抽穗的芒花
   arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a },
                          { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44 }] },
-  shrub:       { parts: [{ g: ico(0.9), y: 0.8, key: 'foliage', sy: 0.8 },
+  shrub:       { parts: [{ g: ico(0.9), y: 0.6, key: 'foliage', sy: 0.8 },
                          { g: ico(0.6), y: 1.3, key: 'foliage', sy: 0.75 }] },
   succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 },
                          { g: cyl(0.28, 0.4, 0.7, 6), y: 1.1, c: 0x8cae82 }] },
@@ -303,21 +304,21 @@ const GIANT_DEFS = {
     { g: cyl(0.9, 1.6, 28, 6), y: 72, c: 0xe3dac8 },
     { g: cyl(0.16, 0.2, 12, 4), y: 20, px: 2.1, c: 0x9a8a76 },   // 剝落樹皮絲帶
     { g: cyl(0.14, 0.18, 10, 4), y: 44, px: -2.0, pz: 0.8, rz: 0.12, c: 0xa89884 },
-    { g: cyl(0.15, 0.19, 11, 4), y: 60, px: 1.6, pz: -1.2, rz: -0.1, c: 0xb0a28c },
-    { g: ico(3.5), y: 70, px: 4.5, sy: 0.6, c: 0x86985e },       // 低位側簇(銀綠;內緣貼幹,無枝可錨)
+    { g: cyl(0.15, 0.19, 11, 4), y: 60, px: 1.2, pz: -0.9, rz: -0.1, c: 0xb0a28c },
+    { g: ico(3.5), y: 70, px: 3.2, sy: 0.6, c: 0x86985e },       // 低位側簇(銀綠;內緣貼幹,無枝可錨)
     { g: cyl(0.5, 0.9, 18, 5), y: 80, px: 3.5, rz: -0.55, c: 0xcfc4b0 },  // 側枝外端朝上
     { g: cyl(0.5, 0.8, 16, 5), y: 76, px: -3.2, rz: 0.6, c: 0xd6ccba },
     { g: ico(7), y: 90, sy: 0.7, c: 0x5c7a4a },
     { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, c: 0x738a52 },      // 橄欖偏黃簇(桉葉銀綠層次)
     { g: ico(5), y: 80, px: -8, sy: 0.65, c: 0x5c7a4a },
-    { g: ico(4.5), y: 83, pz: 5.2, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
+    { g: ico(4.5), y: 83, pz: 4.5, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
     { g: ico(4), y: 96, c: 0x7a9058 },
   ] },
   dougfir:  { h: 100, r: 2.5, parts: [
     { g: cyl(2.5, 4.0, 6, 7), y: 3, c: 0x5d4027 },
     { g: cyl(1.8, 2.6, 42, 7), y: 27, c: 0x694a2d },
     { g: cyl(2.52, 2.62, 8, 7), y: 13, c: 0x49663a },            // 樹幹苔蘚環帶
-    { g: ico(3.2), y: 34, pz: 5, sy: 0.55, c: 0x3a7a52 },
+    { g: ico(3.2), y: 34, pz: 4.4, sy: 0.55, c: 0x3a7a52 },
     { g: cone(11, 22, 8), y: 52, c: 0x2f5e40 },
     { g: cone(9, 20, 8), y: 65, c: 0x35684a },
     { g: cone(7, 18, 7), y: 78, c: 0x2f5e40 },
@@ -325,8 +326,8 @@ const GIANT_DEFS = {
     { g: cone(2, 11, 6), y: 99, c: 0x2f5e40 },
     { g: ico(4), y: 46, px: 6, sy: 0.6, c: 0x35684a },
     { g: ico(4), y: 42, px: -6, sy: 0.6, c: 0x2f5e40 },
-    { g: cone(1.2, 5, 4), y: 48, px: 7.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿
-    { g: cone(1.0, 4, 4), y: 60, px: -6.5, rx: Math.PI, c: 0x8aa876 },
+    { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
+    { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
   ] },
   sitka:    { h: 96, r: 2.3, parts: [
     { g: cyl(2.3, 3.7, 5, 7), y: 2.5, c: 0x59452f },
@@ -336,11 +337,11 @@ const GIANT_DEFS = {
     { g: cone(6, 16, 7), y: 78, c: 0x3d6a5e },
     { g: cone(3.5, 15, 6), y: 89, c: 0x467567 },
     { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, c: 0x3d6a5e },
-    { g: ico(3.8), y: 41, px: -5.5, sy: 0.55, c: 0x467567 },
+    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, c: 0x467567 },
     { g: ico(3.2), y: 44, pz: 5.5, sy: 0.55, c: 0x3d6a5e },
     { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
-    { g: cone(0.9, 3.6, 4), y: 62, px: -5.5, rx: Math.PI, c: 0x9db89d },
-    { g: ico(3), y: 88, px: 4, sy: 0.6, c: 0x529272 },           // 頂部亮青簇
+    { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
+    { g: ico(3), y: 88, px: 3.2, sy: 0.6, c: 0x529272 },         // 頂部亮青簇
   ] },
   meranti:  { h: 95, r: 2.5, parts: [
     { g: cone(3.0, 10, 3), y: 5, px: 2.3, c: 0x8a7354 },         // 板根鰭(鰭尖貼回幹面)
@@ -356,7 +357,7 @@ const GIANT_DEFS = {
     { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x57994a },
     { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x4a8a3e },
     { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
-    { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.8, rz: 0.02, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
+    { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
     { g: ico(5), y: 92, px: 4, sy: 0.55, c: 0x63a850 },          // 突出主冠的受光新葉
   ] },
   taiwania: { h: 86, r: 2.1, parts: [
@@ -368,7 +369,7 @@ const GIANT_DEFS = {
     { g: cone(3.2, 11, 6), y: 77, c: 0x347050 },
     { g: cone(1.6, 9, 5), y: 85, c: 0x2c6242 },
     { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, c: 0x347050 },
-    { g: ico(3.5), y: 34, px: -4.5, sy: 0.65, c: 0x2c6242 },
+    { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, c: 0x2c6242 },
     { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
   ] },
@@ -380,7 +381,7 @@ const GIANT_DEFS = {
     { g: cyl(1.0, 1.7, 18, 6), y: 61, c: 0xa07a54 },
     { g: cyl(0.5, 0.9, 15, 5), y: 70, px: 4.5, rz: -0.75, c: 0x846248 },  // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
     { g: cyl(0.5, 0.9, 15, 5), y: 72, px: -4.5, rz: 0.75, c: 0x846248 },
-    { g: cyl(0.4, 0.7, 12, 5), y: 73.3, pz: 4, rx: 1.0, c: 0x7a5a40 },
+    { g: cyl(0.4, 0.7, 12, 5), y: 72, pz: 5.0, rx: 1.0, c: 0x7a5a40 },
     { g: ico(11), y: 80, sy: 0.5, c: 0x4f8a44 },                 // 傘狀平頂冠(突出主林冠)
     { g: ico(7), y: 77, px: 9, sy: 0.45, c: 0x5c9a50 },
     { g: ico(7), y: 78, px: -9, sy: 0.45, c: 0x468040 },
@@ -456,10 +457,10 @@ const GIANT_DECO = {
   // 一般葉枝:只有 bough(豐富枝相);vinebranch 再垂掛攀藤
   branch:    { parts: bough() },
   vinebranch:{ parts: [...bough(),
-                       { g: cyl(0.05, 0.09, 3.2, 4), y: -1.5, px: 1.7, pz: 0.3, c: 0x567a40 },                     // 垂藤
-                       { g: cyl(0.04, 0.07, 2.4, 4), y: -1.1, px: 2.3, pz: -0.2, c: 0x5c8a46 },
-                       { g: ico(0.28), y: -2.9, px: 1.7, pz: 0.3, sy: 0.7, key: 'foliage', c: 0x4f7a3c },          // 藤端葉
-                       { g: ico(0.22), y: -2.1, px: 2.3, pz: -0.2, sy: 0.7, key: 'foliage', c: 0x5c8a46 }] },
+                       { g: cyl(0.05, 0.09, 3.2, 4), y: -1.5, px: 1.7, pz: 0.1, c: 0x567a40 },                     // 垂藤
+                       { g: cyl(0.04, 0.07, 2.4, 4), y: -0.85, px: 2.2, pz: -0.06, c: 0x5c8a46 },
+                       { g: ico(0.28), y: -2.9, px: 1.7, pz: 0.1, sy: 0.7, key: 'foliage', c: 0x4f7a3c },          // 藤端葉
+                       { g: ico(0.22), y: -1.85, px: 2.2, pz: -0.06, sy: 0.7, key: 'foliage', c: 0x5c8a46 }] },
   treehouse: { parts: [{ g: new THREE.BoxGeometry(3.6, 0.4, 3.6), y: 0, c: 0x7a5a3c },       // 平台
                        { g: new THREE.BoxGeometry(2.2, 1.9, 2.0), y: 1.15, c: 0x8a6a48 },    // 小屋
                        { g: cone(2.0, 1.4, 4), y: 2.8, c: 0x6e4a38 },                        // 屋頂
@@ -686,7 +687,7 @@ function seasonColor(key, fixed, season) {
 function buildVegMeshes(type, items, season) {
   const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const meshes = [];
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
   for (const part of def.parts) {
@@ -694,14 +695,12 @@ function buildVegMeshes(type, items, season) {
     const mat = toonMat(seasonColor(part.key, part.c, season));
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
     items.forEach((it, i) => {
-      // 微傾斜(每棵站姿不同)+ 零件自身傾角(神木枝幹斜出)
-      E.set((it.tx || 0) + (part.rx || 0), it.ry, (it.tz || 0) + (part.rz || 0));
-      Q.setFromEuler(E);
-      // 零件距軸心偏移(px/pz)隨整棵樹的朝向 ry 旋轉
-      const px = part.px || 0, pz = part.pz || 0;
-      const ca = Math.cos(it.ry), sa = Math.sin(it.ry);
-      P.set(it.x + (px * ca + pz * sa) * it.s, it.y + part.y * it.s, it.z + (-px * sa + pz * ca) * it.s);
-      S.set(it.s, it.s * (part.sy || 1), it.s);
+      // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
+      // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)
+      const { pos, quat, scl } = vegPartXform(part, it);
+      P.set(pos[0], pos[1], pos[2]);
+      Q.set(quat[0], quat[1], quat[2], quat[3]);
+      S.set(scl[0], scl[1], scl[2]);
       M.compose(P, Q, S);
       m.setMatrixAt(i, M);
       // 每實例隨機差異化:RGB 各自抖動 = 明度 + 色相同時變化,不像複製貼上
