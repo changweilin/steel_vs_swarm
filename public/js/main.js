@@ -2089,55 +2089,68 @@ function bindSwitch(id, apply) {
     setSwitch(id, on); apply(on); app.audio?.ui('click');
   });
 }
-// 開啟設定頁時把 UI 同步到目前(持久化的)狀態
-function syncSettingsUi() {
+// 音效/音樂/低功耗設定同時住兩處:戰場暫停選單(前綴 'set')與大廳設定疊層(前綴 'lset')。
+// 狀態的唯一真相是 app.audio / lowPower —— 兩份 UI 只是兩個視圖,開啟時各自 sync 回真相。
+function syncAudioSwitches(p) {
   const a = app.audio;
   if (a) {
-    setSwitch('setSfxOn', a.sfxOn); setSwitch('setBgmOn', a.bgmOn);
-    const sv = $('setSfxVol'), bv = $('setBgmVol');
-    if (sv) { sv.value = String(Math.round(a.sfxVol * 100)); $('setSfxVal').textContent = `${sv.value}%`; }
-    if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $('setBgmVal').textContent = `${bv.value}%`; }
+    setSwitch(`${p}SfxOn`, a.sfxOn); setSwitch(`${p}BgmOn`, a.bgmOn);
+    const sv = $(`${p}SfxVol`), bv = $(`${p}BgmVol`);
+    if (sv) { sv.value = String(Math.round(a.sfxVol * 100)); $(`${p}SfxVal`).textContent = `${sv.value}%`; }
+    if (bv) { bv.value = String(Math.round(a.bgmVol * 100)); $(`${p}BgmVal`).textContent = `${bv.value}%`; }
   }
-  setSwitch('setLowPower', lowPower());   // 未設定過:手機預設開(唯一真相在 mobile.js)
+  setSwitch(`${p}LowPower`, lowPower());   // 未設定過:手機預設開(唯一真相在 mobile.js)
+}
+// 一份綁定邏輯套兩處前綴;控件改動一律寫進 app.audio / lowPower(單一真相),只回寫自己那份 UI。
+function bindSettingsControls(p) {
+  bindSwitch(`${p}SfxOn`, (on) => app.audio?.setSfxOn(on));
+  bindSwitch(`${p}BgmOn`, (on) => app.audio?.setBgmOn(on));
+  bindSwitch(`${p}LowPower`, (on) => {
+    setLowPowerPref(on);
+    app.battle?.setLowPower();
+    app.audio?.setLowPower(on);   // 低功耗也套音效:射擊/爆炸退合成 + 關移動環境音
+  });
+  $(`${p}SfxVol`)?.addEventListener('input', (e) => {
+    const v = Number(e.target.value); $(`${p}SfxVal`).textContent = `${v}%`;
+    app.audio?.setSfx(v / 100); if (v > 0 && !app.audio?.sfxOn) { app.audio.setSfxOn(true); setSwitch(`${p}SfxOn`, true); }
+  });
+  $(`${p}BgmVol`)?.addEventListener('input', (e) => {
+    const v = Number(e.target.value); $(`${p}BgmVal`).textContent = `${v}%`;
+    app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch(`${p}BgmOn`, true); }
+  });
+}
+bindSettingsControls('set');
+bindSettingsControls('lset');
+// 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
+function syncSettingsUi() {
+  syncAudioSwitches('set');
   // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
   renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
   syncTouchSettings();
 }
-bindSwitch('setSfxOn', (on) => app.audio?.setSfxOn(on));
-bindSwitch('setBgmOn', (on) => app.audio?.setBgmOn(on));
-bindSwitch('setLowPower', (on) => {
-  setLowPowerPref(on);
-  app.battle?.setLowPower();
-  app.audio?.setLowPower(on);   // 低功耗也套音效:射擊/爆炸退合成 + 關移動環境音
-});
-$('setSfxVol')?.addEventListener('input', (e) => {
-  const v = Number(e.target.value); $('setSfxVal').textContent = `${v}%`;
-  app.audio?.setSfx(v / 100); if (v > 0 && !app.audio?.sfxOn) { app.audio.setSfxOn(true); setSwitch('setSfxOn', true); }
-});
-$('setBgmVol')?.addEventListener('input', (e) => {
-  const v = Number(e.target.value); $('setBgmVal').textContent = `${v}%`;
-  app.audio?.setBgm(v / 100); if (v > 0 && !app.audio?.bgmOn) { app.audio.setBgmOn(true); setSwitch('setBgmOn', true); }
-});
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
 // **鍵位敘述隨輸入裝置自動切換**:TOUCH_UI(= mobile.js isTouchUI(),與 pauseHelp 同一個旗標)
 // 決定拿 `p`(鍵盤滑鼠)還是 `pTouch`(虛擬搖桿),取字串一律經 help.js 的 helpItemP/helpCatLabel ——
 // **MUST NOT** 在這裡另寫 if(touch) 的字串分支(那就變成第二份操作說明)。
-function renderHelpCat(cat) {
-  document.querySelectorAll('#helpCats .help-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === cat.id));
-  $('helpBody').innerHTML = cat.items.map((it) =>
-    `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(helpItemP(it, TOUCH_UI))}</div></div>`).join('');
-  $('helpBody').scrollTop = 0;
-}
-(function buildHelpTabs() {
-  const cats = $('helpCats'); if (!cats) return;
-  cats.innerHTML = HELP.map((c, i) =>
+// 一份說明渲染套進任一對容器(戰場暫停選單 + 大廳疊層共用,MUST NOT 各寫一份)。
+function mountHelp(catsEl, bodyEl) {
+  if (!catsEl || !bodyEl) return;
+  const renderCat = (cat) => {
+    catsEl.querySelectorAll('.help-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === cat.id));
+    bodyEl.innerHTML = cat.items.map((it) =>
+      `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(helpItemP(it, TOUCH_UI))}</div></div>`).join('');
+    bodyEl.scrollTop = 0;
+  };
+  catsEl.innerHTML = HELP.map((c, i) =>
     `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI))}</button>`).join('');
-  cats.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
-    renderHelpCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
+  catsEl.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
+    renderCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
   }));
-  renderHelpCat(HELP[0]);
-})();
+  renderCat(HELP[0]);
+}
+mountHelp($('helpCats'), $('helpBody'));            // 戰場暫停選單
+mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));  // 大廳:設定 / 說明疊層
 
 // ── 大廳:手機操控面板(診斷 + 設定 + 搖桿試玩)──
 // 存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認到底有沒有生效。
@@ -2165,6 +2178,26 @@ for (const x of document.querySelectorAll('[data-ovclose]')) {
 
 $('touchSetupBtn')?.addEventListener('click', openTouchPanel);
 $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.display = 'none'; });
+
+// ── 大廳:設定 / 說明疊層(開場即可開;分頁內容與戰場暫停選單共用同一批渲染函式)──
+function switchLobbyPage(page) {
+  document.querySelectorAll('#lobbyMenu .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
+  document.querySelectorAll('#lobbyMenu .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
+}
+function openLobbyMenu(page) {
+  syncAudioSwitches('lset');
+  renderTouchSettings($('lobbyMenuTouchMount'), { onNotice: toast });   // 桌機由 .touch-only 隱藏整區
+  syncTouchSettings();
+  switchLobbyPage(page);
+  $('lobbyMenu').style.display = '';
+}
+$('lobbySettingsBtn')?.addEventListener('click', () => { openLobbyMenu('settings'); app.audio?.ui('click'); });
+$('lobbyHelpBtn')?.addEventListener('click', () => { openLobbyMenu('help'); app.audio?.ui('click'); });
+$('lobbyMenuCloseBtn')?.addEventListener('click', () => { $('lobbyMenu').style.display = 'none'; });
+$('lobbyMenu')?.addEventListener('click', (e) => { if (e.target.id === 'lobbyMenu') $('lobbyMenu').style.display = 'none'; });
+document.querySelectorAll('#lobbyMenuTabs .pause-tab').forEach((b) => {
+  b.addEventListener('click', () => { switchLobbyPage(b.dataset.page); app.audio?.ui('click'); });
+});
 $('touchOverlay')?.addEventListener('click', (e) => { if (e.target.id === 'touchOverlay') $('touchOverlay').style.display = 'none'; });
 // 搖桿試玩:用**真的** TouchControls + 假 client(與戰鬥同一條程式路徑),讀值面板即時顯示軸值/視角/按鍵
 $('touchTestBtn')?.addEventListener('click', () => {

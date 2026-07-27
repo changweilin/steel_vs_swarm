@@ -163,7 +163,7 @@ for (const v of VIEWS) {
     // ✕ 是 position:absolute(不佔流內空間)⇒ 標題色條 / 浮右統計會鑽到它底下。
     // `.story-brief-box` 刻意例外(第一件是全幅過場立繪,留白會破圖,✕ 只壓到裝飾角標)。
     out.ovclose = {};
-    for (const id of ['pauseOverlay', 'shopOverlay', 'worldOverlay', 'touchOverlay']) {
+    for (const id of ['pauseOverlay', 'shopOverlay', 'worldOverlay', 'touchOverlay', 'lobbyMenu']) {
       const ov = document.getElementById(id); if (!ov) continue;
       ov.style.display = '';
       const bx = ov.querySelector('.overlay-box');

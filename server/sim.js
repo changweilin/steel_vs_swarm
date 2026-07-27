@@ -3371,9 +3371,14 @@ export class BattleSim {
       // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
       o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
       if (o.act) {
-        o.$ = Math.floor(e.money); o.up = e.upg;                 // 經濟(客戶端 HUD / 商店)
+        // 升級/招式階級 MUST 傳「值快照」不可傳權威物件本身:單機模式(LocalNet)不經 JSON
+        // 序列化 —— 快照直接以參考傳到客戶端。客戶端 `this.upg = e.up` 後樂觀購買會 mutate
+        // 這個物件,若是同一份就地污染伺服器的 h.upg ⇒ 每買一次雙重遞增,三階軌兩次就滿(單機
+        // 才會、連線因 JSON 複製而正常 = 使用者回報的「有時候升級只有 2 階」)。展開成新物件斷開參考;
+        // WS 路徑 JSON.stringify 後位元級不變。abil 同理(客戶端雖已 spread,seam 一併收口不留地雷)。
+        o.$ = Math.floor(e.money); o.up = { ...e.upg };           // 經濟(客戶端 HUD / 商店)
         o.mp = Math.floor(e.mp); o.mm = e.maxMp;                 // 電力(招式資源)
-        o.ab = e.abil; o.kn = e.kn;                              // 招式階級 / 擊殺數
+        o.ab = { ...e.abil }; o.kn = e.kn;                        // 招式階級 / 擊殺數
         o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
                  Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
       }
