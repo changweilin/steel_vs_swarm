@@ -881,7 +881,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,長按右鍵令其衝出(一般/狙擊模式皆可,各半傷、自爆後 30s 重現)。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,長按右鍵令其衝出(一般/狙擊模式皆可,兩架合計 = 一份絕招傷害,自爆後 30s 重現)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">

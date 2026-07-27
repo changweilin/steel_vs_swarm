@@ -6,7 +6,8 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
-  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, decoyBlast, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
+  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
+  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
@@ -1239,7 +1240,9 @@ export class BattleSim {
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
       * this._buffMul(h, 'dmg')
-      * (def.id === 'heavy' && this._barragingDmg(h) ? BARRAGE.DMG_F : 1);   // 重砲模式:重武器 ×2(加成窗涵蓋彈體飛行)
+      // 重砲模式:每發倍率由機種絕招預算 ÷ 整夾爆發推導(整夾 ≈ 追加一份預算,與另兩招等值;
+      // 加成窗涵蓋彈體飛行時間,見 _barragingDmg)
+      * (def.id === 'heavy' && this._barragingDmg(h) ? barrageDmgF(def, h?.abil) : 1);
   }
 
   /** 重砲傾洩窗(DUR)是否生效:純客戶端傾洩節奏用途,目前無伺服器結算讀它 —— 保留為語意錨。 */
@@ -1801,20 +1804,21 @@ export class BattleSim {
   }
 
   /**
-   * 自殺攻擊/自毀炸彈定義:傷害吃無人機輕武器階級(lw → owner.abil.light 1~4,以 tierVal 解析,Lv4 外推),
-   * 其餘(半徑/破甲/vs)照 UNITS.drone.bomb。owner 缺值/無 abil → 底階(Lv1 = 原值,向後相容)。
+   * 自爆攻擊的爆風定義(2026-07-27 改制):傷害改吃「機種絕招傷害預算」——
+   * 隨**輕/重武器綜合等級**成長,且與轟炸餌機/重砲模式同額(見 data.js SPECIAL)。
+   * solo=true = 主機自毀撞擊(一架機體吃整份預算);否則 = 單架護衛自殺機(N 架均分)。
+   * 半徑/破甲/vs 仍照 UNITS.drone.bomb;owner 缺值/無 abil → 綜合 Lv1(向後相容)。
    */
-  _bombDef(owner) {
-    const base = WEAPONS[UNITS.drone.bomb];
-    return { ...base, dmg: tierVal(base.dmg, owner?.abil?.light || 1) };
+  _bombDef(owner, solo = false) {
+    const abil = owner?.abil;
+    return solo ? selfBoomBlast(abil) : kamiBlast(abil);
   }
 
   /** 自殺攻擊機引爆:重型炸彈爆風(同餌機:算主機頭上,吃其火力升級/增益,擊殺記給它) */
   _kamiBoom(k) {
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
-    const def = this._bombDef(owner);
-    def.dmg = Math.round(def.dmg * SQUAD.KAMI.DMG_F);   // 護衛自殺機:傷害減半(2026-07-18)
+    const def = this._bombDef(owner);   // 每架 = 絕招預算 / KAMI.N(N 架打完 = 一份完整預算)
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side });
     if (owner) this._blast(owner, def, k.x, k.z, k.y || 0, this._unitLev(k));   // 爆點層 = 自殺機所在層
     this._removeKami(k);
@@ -1829,8 +1833,8 @@ export class BattleSim {
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     const def = this._bombDef(owner);
-    def.dmg = Math.round(def.dmg * SQUAD.KAMI.DMG_F * SQUAD.KAMI.DEATH_F);   // 半傷再取半
-    def.r = def.r * SQUAD.KAMI.DEATH_F;                                      // 半徑減半
+    def.dmg = Math.round(def.dmg * SQUAD.KAMI.DEATH_F);   // 撲擊爆風的 50%
+    def.r = def.r * SQUAD.KAMI.DEATH_F;                   // 半徑減半
     this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: def.r, side: k.side, kami: 1 });
     if (owner) this._blast(owner, def, k.x, k.z, k.y || 0, this._unitLev(k));
   }
@@ -1850,9 +1854,9 @@ export class BattleSim {
     return t;
   }
 
-  /** 單機自毀引爆:不給任何一方擊殺數;傷害同吃武器品質階級(見 _bombDef) */
+  /** 單機自毀引爆:不給任何一方擊殺數;傷害同吃機種絕招預算(整份;見 _bombDef) */
   _boom(b) {
-    const def = this._bombDef(b);
+    const def = this._bombDef(b, true);
     this.events.push({ e: 'boom', x: b.x, z: b.z, y: b.y || 0, r: def.r, side: b.side });
     this._blast(b, def, b.x, b.z, b.y || 0, this._unitLev(b));   // 爆點層 = 自毀機所在層
     b.dash = 0;
@@ -2095,7 +2099,8 @@ export class BattleSim {
     const sq = this.squads.get(d.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: DECOY.R, side: d.side });
-    if (owner) this._blast(owner, decoyBlast(), d.x, d.z, d.y, this._unitLev(d));   // 爆點層 = 餌機所在層(不穿橋面/隧道天花)
+    // 撞擊爆風 = 絕招預算 × DECOY_IMPACT(隨主機甲輕/重武器綜合等級成長);爆點層 = 餌機所在層(不穿橋面/隧道天花)
+    if (owner) this._blast(owner, decoyBlast(owner.abil), d.x, d.z, d.y, this._unitLev(d));
     // 2026-07-19:自爆(燃料耗盡/近炸)時尚有未投完的炸彈 → 原地補投一枚(復用單一投彈縫,記主機甲)
     if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner); }
     this._removeDecoy(d);
@@ -2126,7 +2131,7 @@ export class BattleSim {
   _decoyBomb(d, owner) {
     if (!owner) return;
     const b = DECOY_BOMB[d.bombType] || DECOY_BOMB.fire;
-    const def = { dmg: DECOY.BOMB_DMG, r: DECOY.BOMB_BLAST_R, pen: 6, vs: DECOY.vs };
+    const def = decoyBombBlast(owner.abil);   // 單枚 = 預算的非撞擊部分 / BOMB_MAX(同吃綜合武器等級)
     this.events.push({ e: 'decoyBomb', x: d.x, z: d.z, y: d.y || 0, r: def.r, side: d.side, bomb: d.bombType });
     this._blast(owner, def, d.x, d.z, d.y || 0, this._unitLev(d));   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用);爆點層 = 餌機所在層
     // 附加狀態:效果半徑內的敵方單位(建築/中立/無敵幀免疫,比照 _applyCC)

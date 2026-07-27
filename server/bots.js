@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, isThirdSide } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -19,9 +19,14 @@ export class BotBrain {
     this.sim = sim;
     this.pid = pid;
     this.side = side;
-    this.diff = botDiffOf(diffKey);   // { aimErr, heavy, ability }
+    this.diff = botDiffOf(diffKey);   // { aimErr, heavy, ability, gap, react }
     this.lane = laneIdx % sim.lanes.length;
     this.state = 'PUSH';
+    // ---- 操作節奏(見 _op)----
+    this._opAt = {};    // 各類操作的下次可用時戳(sim.t)
+    this._opNext = 0;   // 全域手速閘:下次可以做「任何」操作的時戳
+    this._tid = 0;      // 目前咬住的目標 id(兩次掃描之間保持不變 —— 人不會每幀重選目標)
+    this._aimAt = 0;    // 反應時間:換目標後準星拉到位、可以開火的時戳
     this.prog = 0;                          // 沿兵線進度(公尺,從己方端起算)
     this.alt = CRUISE_ALT.min + Math.random() * (CRUISE_ALT.max - CRUISE_ALT.min);
     this.jitter = [(Math.random() - 0.5) * 24, (Math.random() - 0.5) * 24];
@@ -48,10 +53,44 @@ export class BotBrain {
     return (h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed) * this._ccF(h);
   }
 
-  /** 開火(含難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
+  /**
+   * 操作節流(**唯一縫**;2026-07-27):難度決定「每項操作切換的時間間隔」——
+   *   ①全域手速閘 `diff.gap`:一次只能做一件事,任兩次操作之間 ≥ gap(最高難度 0.15s ≈ 400 APM);
+   *   ②該類操作自身的切換間隔 `botOpGap(diff, kind)` = gap × BOT_OPS[kind]。
+   * 回傳 true = 這一拍可以做這項操作,並就地記時戳 ⇒ 呼叫端 MUST 在「真的要執行」時才問。
+   * 持續開火不走這裡(扳機是按住的,不是每發重按一次;射速由 sim 的武器 rate 把關)。
+   */
+  _op(kind) {
+    const t = this.sim.t;
+    if (t < this._opNext || t < (this._opAt[kind] || 0)) return false;
+    this._opAt[kind] = t + botOpGap(this.diff, kind);
+    this._opNext = t + this.diff.gap;
+    return true;
+  }
+
+  /** 開火(含反應時間 + 難度瞄準誤差:擲骰射偏則本發落空,不造成傷害)。難度越低 aimErr 越大。 */
   _fire(tid, slot) {
+    if (this.sim.t < this._aimAt) return false;   // 換目標後準星還沒拉上去(反應時間)
     if (Math.random() < this.diff.aimErr) return false;
     return this.sim.botFire(this.pid, tid, slot);
+  }
+
+  /**
+   * 目標維持/切換:掃描選敵是一項操作(`scan`),兩次掃描之間**咬住同一個目標**;
+   * 目標失效(死亡/脫離/匿蹤)才立即放掉。換到新目標 → 加一段反應時間(`diff.react`)才開得了火。
+   */
+  _target(h) {
+    let t = this._tid ? this.sim.ents.get(this._tid) : null;
+    if (t && (t.hp <= 0 || t.side === h.side || t.neutral || t.gar
+      || (t.hero && (t.dead || (t.stealthUntil || 0) > this.sim.t)))) { t = null; this._tid = 0; }
+    if (t && Math.hypot(h.x - t.x, h.z - t.z) > this._gun(h).range * 1.15) { t = null; this._tid = 0; }
+    if (!this._op('scan')) return t;                  // 手速/掃描間隔未到:維持現有目標
+    const nt = this._acquire(h);
+    if ((nt ? nt.id : 0) !== this._tid) {
+      this._tid = nt ? nt.id : 0;
+      if (nt) this._aimAt = this.sim.t + this.diff.react;   // 新目標:反應時間 + 拉準星
+    }
+    return nt;
   }
 
   update(dt) {
@@ -62,15 +101,17 @@ export class BotBrain {
 
     const u = UNITS[h.kind];
     const frac = h.hp / h.maxHp;
-    if (this.state !== 'RETREAT' && frac < RETREAT_HP) this.state = 'RETREAT';
-    if (this.state === 'RETREAT' && frac >= RESUME_HP) { this.state = 'PUSH'; this.prog = 0; }
+    // 撤退/回頭是「下決心」型的操作(不是看到血條就瞬間轉身)⇒ 吃 state 間隔,難度越低越晚察覺。
+    // ENGAGE/PUSH 不另外收費:它只是「眼前有沒有目標」的結果,目標本身已由 scan + react 節流過。
+    if (this.state !== 'RETREAT' && frac < RETREAT_HP && this._op('state')) this.state = 'RETREAT';
+    if (this.state === 'RETREAT' && frac >= RESUME_HP && this._op('state')) { this.state = 'PUSH'; this.prog = 0; }
 
-    const target = this._acquire(h);
+    const target = this._target(h);
     if (this.state !== 'RETREAT') this.state = target ? 'ENGAGE' : 'PUSH';
 
-    // 經濟:依 BUY_ORDER 逐項升級(全軌固定單價,資金/滿級門檻由 sim.buy 把關)
-    if (h.money >= ECON.UPG_BASE && sim.t - (this._buyAt || 0) > 4) {
-      this._buyAt = sim.t;
+    // 經濟:依 BUY_ORDER 逐項升級(階梯單價,資金/滿級門檻由 sim.buy 把關)。
+    // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
+    if (h.money >= ECON.UPG_BASE && this._op('buy')) {
       for (const item of BUY_ORDER) {
         // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
         if (!this.diff.ability && (item === 'sk' || item === 'ult')) continue;
@@ -142,7 +183,7 @@ export class BotBrain {
       if ((A.fx === 'heal' && hurt)
         || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
         || (A.fx === 'stealth' && this.state === 'RETREAT')) {
-        this.sim.heroCast(this.pid, slot);
+        if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // 按 Q/E 是一項操作
       }
     }
   }
@@ -167,7 +208,11 @@ export class BotBrain {
     const hv = heroWeapon(h.ch, 'heavy', h.abil.heavy, true);
     const packed = [...this.sim.ents.values()].filter((e2) =>
       e2.side !== h.side && !e2.neutral && Math.hypot(e2.x - t.x, e2.z - t.z) <= (hv.r || 10) * 1.5).length;
-    if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)) {
+    // 切瞄準模式 + 打一發重武器 = 一項操作(`weapon`):難度越低,輕/重武器切換越遲鈍。
+    // 裝填中/空夾就別付這格手速(打不出來的按鍵不該排擠掃描與招式;比照招式的 _ready 先驗再花)
+    const hvReady = !((h.reloadUntil?.heavy || 0) > this.sim.t || h.ammo?.heavy === 0);
+    if (this.diff.heavy && (packed >= 3 || t.kind === 'tower' || t.kind === 'base' || t.hero)
+      && hvReady && this.sim.t >= this._aimAt && this._op('weapon')) {
       h.aiming = true;   // 重武器需瞄準模式,bot 開火前直接切換(無真人輸入)
       if (hv.type === 'launcher' || hv.type === 'missile') {
         // 對空引爆高度:目標是飛行機體(英雄/直升機)就在其高度炸(火箭筒對空)
@@ -184,15 +229,16 @@ export class BotBrain {
     }
 
     // 攻擊型招式:對準目標丟(strike/emp/summon;範圍/MP/CD 由 sim 把關)。低/新手難度不使用招式。
+    // 每次施放吃一格 `ability` 間隔 —— 真人不可能同一瞬間把 Q 跟 E 一起按下去。
     if (this.diff.ability) for (const slot of ['skill', 'ult']) {
       const A = this._ready(h, slot);
       if (!A) continue;
-      if ((A.fx === 'strike' || A.fx === 'emp') && packed >= 3) this.sim.heroCast(this.pid, slot, t.x, t.z);
-      else if (A.fx === 'summon' || A.fx === 'vision') this.sim.heroCast(this.pid, slot, t.x, t.z);
-      else if (A.fx === 'buff' && A.mul?.dmg) this.sim.heroCast(this.pid, slot);
-      else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) {
-        this.sim.heroCast(this.pid, slot);
-      }
+      const cast = (aimed) => this._op('ability')
+        && (aimed ? this.sim.heroCast(this.pid, slot, t.x, t.z) : this.sim.heroCast(this.pid, slot));
+      if ((A.fx === 'strike' || A.fx === 'emp') && packed >= 3) cast(true);
+      else if (A.fx === 'summon' || A.fx === 'vision') cast(true);
+      else if (A.fx === 'buff' && A.mul?.dmg) cast(false);
+      else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) cast(false);
     }
 
     // 無人機自殺攻擊機:貼近建築或敵群密集時釋放(先鎖定目標,自殺機直接撲擊;CD 由 sim 把關)
@@ -203,7 +249,10 @@ export class BotBrain {
         && Math.hypot(e2.x - h.x, e2.z - h.z, (h.y || 0)) <= b.r * 2).length;
       const onStruct = (t.kind === 'tower' || t.kind === 'base')
         && Math.hypot(t.x - h.x, t.z - h.z, h.y || 0) <= b.r * 3;
-      if (near >= 3 || onStruct) {
+      // 機種絕招(長按右鍵)= 一項操作,吃 `special` 間隔;CD 仍由 sim 把關,
+      // 但冷卻中不付這格手速(30s CD 內每 0.75s 空按一次會吃掉近兩成的操作額度)
+      const kamiReady = this.sim.t >= (h.sq?.kamiCd || 0);
+      if ((near >= 3 || onStruct) && kamiReady && this._op('special')) {
         this.sim.heroLock(this.pid, t.id);
         this.sim.heroKamikaze(this.pid);
       }

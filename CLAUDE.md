@@ -50,6 +50,12 @@
 - 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
 - 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
 - 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
+- 三個**機種絕招**(自爆攻擊 / 轟炸餌機 / 重砲模式)的傷害只住 `data.js` 的 `SPECIAL` 區塊:一次絕招的**總傷害預算**
+  = `specialBudget(abil)`(隨**輕/重武器綜合等級** = 兩軌平均成長,可為分數階 ⇒ **MUST NOT** 丟進 `tierVal`),
+  三招各自把同一份預算切給自己的投射數(`kamiBlast`/`selfBoomBlast`/`decoyBlast`/`decoyBombBlast`/`barrageDmgF`)。
+  **MUST NOT** 在 sim/game/HUD 手寫任一招的傷害常數,也 MUST NOT 讓某一招退回吃單一武器軌(那就是三招失衡的舊病)。
+- 電腦玩家的**操作節奏**只住 `data.js`(`BOT_DIFF[].gap`/`react` + `BOT_OPS` + `botOpGap()`),節流判定只住 `bots.js _op()`;
+  **MUST NOT** 在 bots.js 各處另寫 tick 計數式節流。持續開火**刻意不吃手速閘**(扳機是按住的),只吃反應時間。
 - 重武器範圍攻擊三分類(`aoeClass()` → blast 爆炸 / fan 扇形 / line 直線貫穿)與彈道五分類
   (`trajClass()` → lob / flat / line / guide / fnf)只住 `data.js`,由 `def.type`/`fan`/`guide` **推導**;
   sim(`heroBurst`/`heroPlasma`/`heroLance`)、game.js 演出、HUD 說明**共用同一支**,
@@ -150,6 +156,9 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 改動 | 驗證 |
 |---|---|
 | 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` |
+| `SPECIAL`/`BARRAGE.DMG_MIN\|MAX`/`SQUAD.KAMI.N`/`DECOY.BOMB_MAX`(機種絕招傷害預算與切分) | e2e「機種絕招三招同預算」段(三招在綜合 Lv1/2.5/4 的總傷害互差 ≤2%、32 角重砲倍率全在夾制區間、整夾追加 = 一份預算)+ `npm run bal`(bal **刻意不含**三招 burst ⇒ 四不變式應不動,動了就是把加成套進了持續 DPS 路徑) |
+| `BOT_DIFF[].gap\|react`/`BOT_OPS`/`bots.js _op()`(電腦難度操作節奏) | e2e「電腦難度操作節奏」段(難度單調、最高難度對齊頂尖 FPS 電競 0.15s、全類操作合計 ≤ 手速上限、反應時間內不開火)+ `npm run sim`(headless 對局跑得完、無例外)+ 沙包輸出探針(90s 輸出 MUST 隨難度單調遞增) |
+| `ECON.UPG_BASE\|UPG_INC\|UPG_L3`(八軌階梯單價) | `npm run bal` ③(收入 ≈ 八軌全滿 ±10%;第三階改 200 後餘裕僅 1.7 個百分點)+ e2e「八軌升級第三階單價」段 |
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
 | `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`(榴彈火控解) | 瀏覽器真開房冒煙:同一目標三個高度各射一發,`bullet.vel` MUST 等於 `_lobFc.vel`、爆點高度 MUST 對上瞄準高度;弧高 MUST 隨距離變(40m ≈ 0.2m / 172m ≈ 3.7m);合成稜線擋道 MUST `ok:false` 且不送 `lock` |
 | `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中 |

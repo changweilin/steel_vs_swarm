@@ -5333,7 +5333,8 @@ export class BattleClient {
    * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
    */
   /**
-   * 無人機護衛自殺機(2026-07-18;狙擊模式長按右鍵):兩架常駐護衛機衝出撲擊(各半傷、3 倍速)。
+   * 無人機護衛自殺機(2026-07-18;狙擊模式長按右鍵):兩架常駐護衛機衝出撲擊(3 倍速,
+   * 各造成機種絕招預算的 1/N —— 兩架打完 = 一份完整預算,與重砲/餌機等值,見 data.js SPECIAL)。
    * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵;自爆後 CD 結束才重現。
    */
   _launchKamikaze() {
@@ -5372,7 +5373,8 @@ export class BattleClient {
   }
 
   /** 重砲模式(非變形機甲:狙擊長按右鍵):送請求 + 開本地傾洩窗(0.5s 內快速傾洩剩餘重武器彈夾,
-   *  傷害 +33%、射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage)。 */
+   *  整夾追加一份「機種絕招傷害預算」(隨輕/重武器綜合等級成長,與自殺機/餌機等值,見 data.js SPECIAL)、
+   *  射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage / barrageDmgF)。 */
   _launchBarrage() {
     if (this.isDrone || this.isMorph || this.dead || !this.side) return;
     const now = performance.now() / 1000;
