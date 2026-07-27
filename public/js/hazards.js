@@ -118,7 +118,7 @@ const BUILDERS = {
       mesh(car, box(1.8, 0.85, 3.9), paint, 0, 0.85, 0);
       mesh(car, box(1.6, 0.62, 1.9), new THREE.Color(paint).multiplyScalar(0.85), 0, 1.55, -0.25);
       for (const [sx, sz] of [[-1, -1.3], [-1, 1.3], [1, -1.3], [1, 1.3]]) {
-        const w = mesh(car, cyl(0.34, 0.34, 0.25, 8), 0x1c1f22, sx * 0.95, 0.42, sz);
+        const w = mesh(car, cyl(0.34, 0.34, 0.25, 8), 0x1c1f22, sx * 0.95, 0.34, sz);   // 軸心 = 輪半徑 → 觸地
         w.rotation.z = Math.PI / 2;
       }
       const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : r * (0.4 + rnd() * 0.5);
@@ -172,9 +172,9 @@ const BUILDERS = {
         Math.cos(a) * r * 0.8, 0.1, Math.sin(a) * r * 0.8);
       slab.rotation.set((rnd() - 0.5) * 0.9, a, (rnd() - 0.3) * 0.5);
     }
-    if (rnd() < 0.5) {   // 半截掉進去的路燈
-      const pole = mesh(g, cyl(0.07, 0.09, 4.5), 0x6d757c, r * 0.3, 1.2, 0);
-      pole.rotation.z = 0.9 + rnd() * 0.4;
+    if (rnd() < 0.5) {   // 半截掉進去的路燈(傾角/高度取「下端一定沉到地平面以下」的組合)
+      const pole = mesh(g, cyl(0.07, 0.09, 4.5), 0x6d757c, r * 0.3, 0.9, 0);
+      pole.rotation.z = 0.7 + rnd() * 0.4;
     }
   },
 
@@ -225,16 +225,19 @@ const BUILDERS = {
       const d = r * (t * 1.2 - 0.2);
       const spread = r * 0.5 * (1 - t * 0.5);
       // 新崩的土石不長苔;鑿刻碎面 + 泥/岩兩色系交錯 = 手繪土石流
-      const rock = rockMesh(g, 0.9 + rnd() * 1.6, rnd, jitterColor(rnd() < 0.6 ? 0x76604a : 0x7d7f82, rnd, 0.02, 0.12),
+      // 落石軸心高度綁自身尺寸(ico 最低頂點 = 0.851r × scale.y):寫成固定 0.4~1.1
+      // 會讓小石塊整顆浮在土石流上方
+      const size = 0.9 + rnd() * 1.6;
+      const rock = rockMesh(g, size, rnd, jitterColor(rnd() < 0.6 ? 0x76604a : 0x7d7f82, rnd, 0.02, 0.12),
         Math.cos(dirA) * d + (rnd() - 0.5) * spread,
-        0.4 + rnd() * 0.7,
+        size * (0.28 + rnd() * 0.14),
         Math.sin(dirA) * d + (rnd() - 0.5) * spread, null);
       rock.scale.y = 0.55 + rnd() * 0.3;
       rock.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
     }
-    for (let i = 0; i < 3; i++) {   // 被沖倒的樹
+    for (let i = 0; i < 3; i++) {   // 被沖倒的樹(軸心 ≈ 幹半徑 → 橫躺觸地,不浮在土石上方)
       const log = mesh(g, cyl(0.14, 0.2, 3 + rnd() * 2), 0x5c452e,
-        (rnd() - 0.5) * r * 1.4, 0.35, (rnd() - 0.5) * r * 1.4);
+        (rnd() - 0.5) * r * 1.4, 0.18, (rnd() - 0.5) * r * 1.4);
       log.rotation.set(Math.PI / 2 + (rnd() - 0.5) * 0.4, rnd() * 3, 0);
     }
   },
@@ -259,19 +262,25 @@ const BUILDERS = {
     const trunk = mesh(g, cyl(0.35 + rnd() * 0.2, 0.55 + rnd() * 0.2, len, 7), jitterColor(0x6b4a2f, rnd), 0, 0.6, 0,
       { moss: { color: 0x6a8a4c, amount: 0.7 } });   // 橫躺樹幹朝天側著苔(投影自動貼上緣)
     trunk.rotation.set(Math.PI / 2, 0, dirA);
-    const rootX = Math.cos(dirA + Math.PI / 2) * len * 0.5, rootZ = Math.sin(dirA - Math.PI / 2) * len * 0.5;
-    const root = mesh(g, cyl(1.3, 0.4, 0.7, 8), 0x54412e, -rootX, 0.9, -rootZ);
+    // 幹軸單一縫:rotation(π/2, 0, dirA) 的局部 +y 在世界是 (−sin dirA, 0, cos dirA)
+    // (three 的 Euler 'XYZ' = Rx·Ry·Rz)。根盤/殘枝/枯葉團一律沿這條軸擺,MUST NOT 各自
+    // 手寫 cos(dirA+π/2) / sin(dirA−π/2) —— 後者的 z 分量正負相反(等於沿鏡射軸擺),
+    // 只有 cos dirA ≈ 0 時才碰巧對得上,其餘角度整組零件飄在樹幹旁邊
+    // (2026-07-27「樹幹與樹根沒接好」同一類病灶,見 A26)。
+    const along = (t) => [-Math.sin(dirA) * len * t, Math.cos(dirA) * len * t];
+    const [rootX, rootZ] = along(-0.5);              // 根端 = 幹軸的 −y 端(粗的那頭)
+    const root = mesh(g, cyl(1.3, 0.4, 0.7, 8), 0x54412e, rootX, 0.9, rootZ);
     root.rotation.set(Math.PI / 2, 0, dirA);
     for (let i = 0; i < 3 + rnd() * 3; i++) {
-      const t = rnd() - 0.5;
-      const br = mesh(g, cyl(0.06, 0.1, 1 + rnd() * 1.4, 5), 0x5c452e,
-        Math.cos(dirA + Math.PI / 2) * len * t, 0.8 + rnd() * 0.5, Math.sin(dirA - Math.PI / 2) * len * t);
+      const [bx, bz] = along(rnd() - 0.5);
+      // 殘枝中心必須落在幹身之內(幹軸 y = 0.6、半徑 0.35~0.75)才不會有半數枝條
+      // 隨機轉出去後整根飄在樹幹上方
+      const br = mesh(g, cyl(0.06, 0.1, 1 + rnd() * 1.4, 5), 0x5c452e, bx, 0.5 + rnd() * 0.4, bz);
       br.rotation.set(rnd() * 2, rnd() * 3, rnd() * 2);
     }
     if (rnd() < 0.7) {   // 殘留枯葉團
-      const t = rnd() * 0.4 + 0.1;
-      mesh(g, ico(1.2 + rnd() * 0.8), 0x9c8a3c,
-        Math.cos(dirA + Math.PI / 2) * len * t, 1.3, Math.sin(dirA - Math.PI / 2) * len * t).scale.y = 0.7;
+      const [lx, lz] = along(rnd() * 0.4 + 0.1);
+      mesh(g, ico(1.2 + rnd() * 0.8), 0x9c8a3c, lx, 1.05, lz).scale.y = 0.7;   // 團心壓在幹身內
     }
   },
 
@@ -279,17 +288,22 @@ const BUILDERS = {
   sacredtree(g, r, rnd) {
     const H = 20 + rnd() * 8;                       // 主幹高(含 sc 可達 ~38m,遠超現實同座標樹木)
     const tR = r * 0.42;                            // 主幹半徑(粗壯:視覺佔地貼近碰撞半徑 r)
+    // 主幹收分的單一縫:樹皮上的一切(板根/樹瘤/氣根/注連繩/紙垂)都以「該高度的幹半徑」
+    // 為錨。MUST NOT 拿基部 tR 當通用半徑 —— 幹身往上收 38%,用基部半徑掛件會越掛越浮。
+    const trunkR = (y) => tR * (1 - 0.38 * Math.min(1, Math.max(0, y / H)));
     const bark = jitterColor(0x5e4630, rnd, 0.02, 0.08);
     const mossy = { color: 0x64854a, amount: 0.6 };  // 老樹陰面著苔(朝上面投影)
     const trunk = mesh(g, cyl(tR * 0.62, tR, H, 9), bark, 0, H / 2, 0);
     trunk.rotation.y = rnd() * Math.PI;
-    // 板根裙:環繞主幹的放射狀鰭板(巨木的視覺錨點,外緣 ≈ 碰撞半徑)
+    // 板根裙:環繞主幹的放射狀鰭板(內緣埋進幹身、外緣 ≈ 碰撞半徑 r)。
+    // 徑向 = `rotation.y = -a`;`-a + π/2` 是**切向** —— 鰭板會變成圍著樹幹的一圈柵欄,
+    // 與幹身之間整圈開縫(2026-07-27「神木樹幹與樹根沒接好」的成因,見 A26)。
     const fins = 5 + Math.floor(rnd() * 3);
     for (let i = 0; i < fins; i++) {
       const a = (i / fins) * Math.PI * 2 + rnd() * 0.5;
       const fin = mesh(g, box(tR * 2.0, 3.2 + rnd() * 2.2, 0.55), new THREE.Color(bark).multiplyScalar(0.9),
         Math.cos(a) * tR * 1.4, 1.6, Math.sin(a) * tR * 1.4, { moss: mossy });
-      fin.rotation.y = -a + Math.PI / 2;
+      fin.rotation.y = -a;
       fin.rotation.z = (rnd() - 0.5) * 0.15;
     }
     // 根丘:板根外圈的隆起土丘,把「不可通行」的地面範圍畫出來
@@ -300,23 +314,29 @@ const BUILDERS = {
       mound.scale.y = 0.45;
       mound.rotation.y = rnd() * 3;
     }
-    // 樹瘤 + 垂落氣根
+    // 樹瘤 + 垂落氣根(錨半徑取該高度的幹半徑:樹瘤半埋、氣根上端貼皮往下沒入幹身)
     for (let i = 0; i < 4; i++) {
       const a = rnd() * Math.PI * 2, y = H * (0.15 + rnd() * 0.5);
+      const kR = trunkR(y);
       mesh(g, ico(0.5 + rnd() * 0.6), new THREE.Color(bark).offsetHSL(0, 0, -0.04),
-        Math.cos(a) * tR * 0.85, y, Math.sin(a) * tR * 0.85);
+        Math.cos(a) * kR * 0.85, y, Math.sin(a) * kR * 0.85);
       if (rnd() < 0.6) {
         const vine = mesh(g, cyl(0.05, 0.09, y * 0.7, 5), 0x4e5a38,
-          Math.cos(a) * tR * 1.15, y - y * 0.35, Math.sin(a) * tR * 1.15);
+          Math.cos(a) * kR, y - y * 0.35, Math.sin(a) * kR);
         vine.rotation.z = (rnd() - 0.5) * 0.2;
       }
     }
-    // 注連繩:神木的識別記號(繩環 + 紙垂)
-    const rope = mesh(g, new THREE.TorusGeometry(tR * 0.95, 0.14, 5, 12), 0xd8c894, 0, H * 0.22, 0);
+    // 注連繩:神木的識別記號(繩環壓進樹皮 + 紙垂綁在繩上)
+    // 繩環半徑取「該高度幹半徑的邊心距」(九邊形幹身的平面 = 0.94R):繩身在稜線處沒入、
+    // 在平面處露出 = 勒進樹皮的繩子;紙垂則掛在繩心半徑上,與繩身相交才不會飄在旁邊。
+    const ropeY = H * 0.22, ropeR = trunkR(ropeY) * 0.94;
+    const rope = mesh(g, new THREE.TorusGeometry(ropeR, 0.14, 5, 12), 0xd8c894, 0, ropeY, 0);
     rope.rotation.x = Math.PI / 2;
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + 0.4;
-      mesh(g, box(0.22, 0.7, 0.05), 0xf4f0e6, Math.cos(a) * tR * 0.98, H * 0.22 - 0.5, Math.sin(a) * tR * 0.98);
+      const shide = mesh(g, box(0.22, 0.7, 0.05), 0xf4f0e6,
+        Math.cos(a) * ropeR, ropeY - 0.3, Math.sin(a) * ropeR);
+      shide.rotation.y = -a + Math.PI / 2;   // 紙面朝外 = 長邊沿切向(與板根的徑向剛好差 90°)
     }
     // 多層樹冠:由大到小疊三~四層(壓扁 ico,每層色相微差 → 手繪層次)
     const layers = 3 + (rnd() < 0.5 ? 1 : 0);
@@ -384,33 +404,47 @@ const BUILDERS = {
   /** 匿蹤防空陣地:迷彩偽裝網 + 飛彈發射架 + 沙包圈 */
   aasite(g, r, rnd) {
     const R = 5.5;
-    // 沙包圈
+    // 沙包圈:長邊沿環的切向(`rotation.y = -a + π/2`;寫成 `a` 會是鏡射角 —— 繞一圈
+    // 在徑向與切向之間交錯)。第二層壓在下層那袋正上方,MUST NOT 用 y 交錯堆疊
+    // (舊版 `0.25 + (i%2)*0.4` 讓半數沙包整袋浮空 0.4m)。
     const n = 10;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
       const bag = mesh(g, box(1.1, 0.5, 0.6), jitterColor(0x9a8c62, rnd, 0.01, 0.08),
-        Math.cos(a) * R * 0.85, 0.25 + (i % 2) * 0.4, Math.sin(a) * R * 0.85);
-      bag.rotation.y = a;
+        Math.cos(a) * R * 0.85, 0.25, Math.sin(a) * R * 0.85);
+      bag.rotation.y = -a + Math.PI / 2;
+      if (i % 3 === 0) {
+        const up = mesh(g, box(1.0, 0.46, 0.56), jitterColor(0x9a8c62, rnd, 0.01, 0.08),
+          Math.cos(a) * R * 0.85, 0.71, Math.sin(a) * R * 0.85);
+        up.rotation.y = -a + Math.PI / 2 + 0.25;
+      }
     }
-    // 發射架:斜置飛彈管 ×3
+    // 發射架:斜置飛彈管 ×3。基座貼地(y = 半高);管與彈頭沿同一條傾倒軸
+    // u = (0, cos TILT, sin TILT) 推算 —— 管尾正好落進基座內、彈頭同軸疊在管口,
+    // MUST NOT 手寫兩組座標(舊版彈頭偏離管軸 0.4m、管尾懸在基座邊緣外)。
     const rack = new THREE.Group();
-    mesh(rack, box(2.4, 0.5, 2.0), 0x4a523e, 0, 0.55, 0);
+    mesh(rack, box(2.4, 0.5, 2.0), 0x4a523e, 0, 0.25, 0);
+    const TILT = -0.9, uy = Math.cos(TILT), uz = Math.sin(TILT);
+    const cy = 0.25 + 1.7 * uy, cz = 0.6 + 1.7 * uz;      // 管心:管尾埋在基座裡(y 0.25 / z 0.6)
     for (let i = -1; i <= 1; i++) {
-      const tube = mesh(rack, cyl(0.22, 0.22, 3.4, 8), 0x39412f, i * 0.6, 1.6, 0);
-      tube.rotation.x = -0.9;
-      const tip = mesh(rack, cone(0.22, 0.5, 8), 0x8f9a86, i * 0.6, 2.95, -1.06);
-      tip.rotation.x = -0.9;
+      const tube = mesh(rack, cyl(0.22, 0.22, 3.4, 8), 0x39412f, i * 0.6, cy, cz);
+      tube.rotation.x = TILT;
+      const tip = mesh(rack, cone(0.22, 0.5, 8), 0x8f9a86,
+        i * 0.6, cy + 1.89 * uy, cz + 1.89 * uz);         // 1.7 + 0.25 − 0.06:錐底埋進管口
+      tip.rotation.x = TILT;
     }
     rack.rotation.y = rnd() * Math.PI * 2;
     g.add(rack);
-    // 偽裝網:半透明迷彩傘(低伏,難遠距辨識)
-    const net = mesh(g, cyl(R * 1.05, R * 0.55, 1.6, 9), jitterColor(0x5d6b46, rnd, 0.04, 0.08),
-      0, 2.2, 0, { transparent: true, opacity: 0.85 });
-    net.scale.y = 0.65;
-    for (let i = 0; i < 6; i++) {   // 網上的偽裝色塊
-      const a = rnd() * Math.PI * 2;
+    // 偽裝網:半透明迷彩帳(低伏,難遠距辨識)。下緣落地、上緣罩住發射架 ——
+    // MUST NOT 做成上寬下窄的漏斗(舊版整頂浮在半空 1.7m,四周全是縫)。
+    const NET_H = 3.0, NET_LO = R * 1.05, NET_HI = R * 0.42;
+    const net = mesh(g, cyl(NET_HI, NET_LO, NET_H, 9), jitterColor(0x5d6b46, rnd, 0.04, 0.08),
+      0, NET_H / 2, 0, { transparent: true, opacity: 0.85 });
+    for (let i = 0; i < 6; i++) {   // 網上的偽裝色塊(半徑隨帳面收分,貼在網皮上)
+      const a = rnd() * Math.PI * 2, hy = 0.5 + rnd() * 1.8;
+      const rr = NET_LO + (NET_HI - NET_LO) * (hy / NET_H);   // 圓心落在網皮上 = 色塊跨過網面
       mesh(g, ico(0.55 + rnd() * 0.4), rnd() < 0.5 ? 0x6f7d50 : 0x8a7a4e,
-        Math.cos(a) * R * 0.7, 2.6 + rnd() * 0.4, Math.sin(a) * R * 0.7).scale.y = 0.4;
+        Math.cos(a) * rr, hy, Math.sin(a) * rr).scale.y = 0.4;
     }
   },
 
@@ -418,11 +452,13 @@ const BUILDERS = {
   relay(g, r, rnd) {
     mesh(g, cyl(2.4, 2.8, 0.7, 8), 0x4a5158, 0, 0.35, 0);                 // 基座
     mesh(g, cyl(0.28, 0.42, 7.5, 6), 0x7a848c, 0, 4.4, 0);                // 天線塔
-    for (let i = 0; i < 3; i++) {                                          // 斜撐
+    for (let i = 0; i < 3; i++) {                                          // 斜撐:上端頂住塔身
       const a = (i / 3) * Math.PI * 2 + rnd();
       const leg = mesh(g, cyl(0.12, 0.12, 4.2, 5), 0x606a72,
         Math.cos(a) * 1.5, 2.0, Math.sin(a) * 1.5);
-      leg.rotation.set(Math.sin(a) * 0.45, 0, -Math.cos(a) * 0.45);
+      // 傾角符號決定上端往哪倒:(−sin a, 0, +cos a) = 上端收向軸心(斜撐該有的樣子);
+      // 寫成 (+sin a, 0, −cos a) 上端會朝外開,頂端離塔身 2m 全懸空
+      leg.rotation.set(-Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5);
     }
     const dish = mesh(g, cone(1.5, 0.9, 10), 0xb8c4cc, 0, 7.2, 0);         // 碟形天線
     dish.rotation.x = -1.1;
