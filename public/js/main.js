@@ -2,7 +2,11 @@
 // 畫面流程:connect(大廳)→ mapbuilder(建地圖:隊伍規模/場地/選址,存入最愛)
 //          → openroom(開戰時刻:從最愛挑地圖 + 房名/公開性/環境 → 開房)
 //          → room(配對,每陣營 N 席)→ loading(地形+地貌建構)→ game → over
-import { Net } from './net.js';
+import { makeNet } from './net.js';
+import {
+  LINK_MODES, LINK_MODE_KEYS, netMode, setNetMode, soloOnly,
+  cloudUrl, setCloudUrl, modeReady,
+} from './netmode.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
@@ -118,8 +122,82 @@ function toast(msg, ms = 3200) {
   toast._t = setTimeout(() => el.classList.remove('on'), ms);
 }
 
+// ================= 連線機制(雲端 / 區網 Tailscale / 單機)=================
+// 【單一真相縫】模式判定全在 netmode.js;本節只做「畫出來 + 換了就重建傳輸層」。
+// **MUST NOT** 在別處另寫 `if (單機)` 的分支或鈕面文案 —— 那就變成第二份模式表。
+
+/** 訊息 handler 表:三種機制**共用同一份**(協定相同,差的只是傳輸層) */
+const NET_HANDLERS = {
+  sync: (m) => onSync(m),
+  rooms: (m) => renderRooms(m.rooms),
+  error: (m) => {
+    toast(`⚠️ ${m.msg}`);
+    // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
+    if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
+    // 劇情部署被拒 → 清狀態退回章節列表
+    if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
+  },
+  info: (m) => toast(m.msg),
+  battleConfig: (m) => enterLoading(m.config),
+  // 危險區靜態資料(地雷等):可能比 BattleClient 早到,先暫存
+  field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
+  snap: (m) => app.battle?.onSnap(m),
+  tracer: (m) => app.battle?.onTracer(m),
+  heavyCharge: (m) => app.battle?.onHeavyCharge(m),
+  heavyFire: (m) => app.battle?.onHeavyFire(m),
+  reconnect: () => {
+    const tk = sessionStorage.getItem('svs_token');
+    if (tk) app.net?.sendNow({ t: 'reattach', token: tk });
+    app.net?.flushQueue();
+  },
+};
+
+/** 建立/重建傳輸層。切模式時 WebSocket ⇄ 瀏覽器內模擬無法熱切,一律整條重來 */
+function connectNet() {
+  app.net?.kill();
+  app.net = makeNet(NET_HANDLERS);
+  if (!app.net) {
+    // 目前只有一種情況:雲端模式還沒填節點網址(見 netmode.js modeReady)
+    renderRooms([]);
+    return;
+  }
+  refreshRooms();
+}
+
+function renderLinkModes() {
+  const cur = netMode();
+  const locked = soloOnly();
+  for (const key of LINK_MODE_KEYS) {
+    const b = $(`link_${key}`);
+    if (!b) continue;
+    const m = LINK_MODES[key];
+    b.textContent = `${m.icon} ${m.label}`;   // 鈕面文字的真相在 LINK_MODES(index.html 那份只是版型量測用的副本)
+    b.classList.toggle('on', key === cur);
+    b.disabled = locked && key !== cur;
+    b.onclick = () => {
+      if (!setNetMode(key)) return;
+      sessionStorage.removeItem('svs_token');   // 舊機制的座位憑證帶到新機制只會換來一則「座位已失效」
+      renderLinkModes();
+      connectNet();
+    };
+  }
+  const hint = $('linkHint');
+  if (hint) {
+    hint.textContent = locked
+      ? `${LINK_MODES[cur].hint} 本站台是靜態單機版,沒有可連線的伺服器。`
+      : LINK_MODES[cur].hint;
+  }
+  // 雲端才要填節點網址;單機沒有遠端戰區可加入 → 整區收起
+  const cloudRow = $('cloudRow');
+  if (cloudRow) cloudRow.style.display = cur === 'cloud' ? '' : 'none';
+  const join = $('joinArea');
+  if (join) join.style.display = cur === 'solo' ? 'none' : '';
+  if (cur === 'cloud' && $('cloudUrl')) $('cloudUrl').value = cloudUrl();
+  if (cur === 'cloud' && !modeReady('cloud')) toast('請先填入雲端節點網址,再建立或加入戰區');
+}
+
 // ================= 大廳 =================
-function refreshRooms() { app.net.send({ t: 'listRooms' }); }
+function refreshRooms() { app.net?.send({ t: 'listRooms' }); }
 
 function renderRooms(list) {
   const box = $('roomList');
@@ -150,10 +228,10 @@ function renderRooms(list) {
         ? (document.querySelector('input[name=joinMode]:checked')?.value || 'player')
         : 'spectator';
       if (r.pin) {
-        app.net.send({ t: 'joinRoom', pin: r.pin, name: myName(), mode });
+        app.net?.send({ t: 'joinRoom', pin: r.pin, name: myName(), mode });
       } else {
         const pin = prompt('私人戰區,請輸入 4 位數 PIN:');
-        if (pin) app.net.send({ t: 'joinRoom', pin, name: myName(), mode });
+        if (pin) app.net?.send({ t: 'joinRoom', pin, name: myName(), mode });
       }
     };
     box.appendChild(row);
@@ -531,6 +609,7 @@ function startStoryChapter(i) {
   const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
   const v = VENUES.find((x) => x.id === ch.venueId);
   if (!v) { toast('⚠️ 找不到戰場資料'); return; }
+  if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
   const cfg = venueConfig(v, ch.teamSize);
   cfg.env = { ...ch.env };
   const pilot = app.storyPilot || sc.heroes[0];
@@ -540,7 +619,7 @@ function startStoryChapter(i) {
   $('storyBrief').style.display = 'none';
   $('storyDeploy').style.display = '';
   $('storyDeploy').textContent = `⚙ 部署中:${sc.title}(${v.name})…`;
-  app.net.send({
+  app.net?.send({
     t: 'createRoom', name: myName(), roomName: sc.title, isPublic: false,
     teamSize: ch.teamSize, botDiff: STORY_DIFF[i] || 'medium', battleConfig: cfg,
   });
@@ -567,7 +646,7 @@ function launchStoryBattle() {
 
 /** 退出劇情戰役(勝負已定或中途離開):收掉單人房,回到章節選擇(重繪解鎖狀態) */
 function exitStoryBattle() {
-  app.net.send({ t: 'leaveRoom' });
+  app.net?.send({ t: 'leaveRoom' });
   if (app.battle) { app.battle.dispose(); app.battle = null; }
   app.terrain = null;
   app.lobby = null;
@@ -584,7 +663,7 @@ function exitStoryBattle() {
 /** 離開戰場(暫停選單「離開戰場」共用):劇情 → 回章節;一般對戰 → 退回大廳 */
 function leaveBattle() {
   if (app.story) { exitStoryBattle(); return; }
-  app.net.send({ t: 'leaveRoom' });
+  app.net?.send({ t: 'leaveRoom' });
   sessionStorage.removeItem('svs_token');
   location.reload();
 }
@@ -615,6 +694,7 @@ $('goMapBuilderBtn')?.addEventListener('click', () => enterMapBuilder());
 $('createRoomBtn')?.addEventListener('click', () => {
   const cfg = app.favCfg;
   if (!cfg) return;
+  if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
   $('createRoomBtn').disabled = true;
   $('openRoomStatus').textContent = '建立戰區…';
   cfg.env = {
@@ -622,7 +702,7 @@ $('createRoomBtn')?.addEventListener('click', () => {
     time: $('envTime').value,
     weather: $('envWeather').value,
   };
-  app.net.send({
+  app.net?.send({
     t: 'createRoom',
     name: myName(),
     roomName: $('roomNameInput').value.trim(),
@@ -691,8 +771,8 @@ function renderRoom() {
         div.innerHTML = `<span class="slot-name">${c.isHost ? '◆ ' : ''}${c.isBot ? '▣ ' : ''}${esc(c.name)}</span> ${chTag}<span class="slot-ready">${c.ready ? '●' : '○'}${c.connected === false ? ' ✕' : ''}</span>`;
         div.onclick = () => { app.charTarget = c.id; renderRoom(); };
         // 自己:X 才離座(點格子只是選取,不再離座);電腦(房主):X 移除
-        if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net.send({ t: 'pickSide', side: null })));
-        else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦', () => app.net.send({ t: 'removeBot', id: c.id })));
+        if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net?.send({ t: 'pickSide', side: null })));
+        else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦', () => app.net?.send({ t: 'removeBot', id: c.id })));
       } else {
         // 空位:入座 + 加電腦玩家,兩顆按鈕同寬
         div.className = 'slot empty';
@@ -700,14 +780,14 @@ function renderRoom() {
           const join = document.createElement('button');
           join.className = 'slot-btn';
           join.textContent = '＋ 入座';
-          join.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'pickSide', side }); };
+          join.onclick = (e) => { e.stopPropagation(); app.net?.send({ t: 'pickSide', side }); };
           div.appendChild(join);
         }
         if (app.isHost) {
           const add = document.createElement('button');
           add.className = 'slot-btn';
           add.textContent = '＋ 電腦';
-          add.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'addBot', side }); };
+          add.onclick = (e) => { e.stopPropagation(); app.net?.send({ t: 'addBot', side }); };
           div.appendChild(add);
         }
         if (!div.childElementCount) div.innerHTML = '<span class="slot-empty-label">—— 空位 ——</span>';
@@ -757,7 +837,7 @@ function renderBotDiff(lb) {
   }
   sel.onchange = () => {
     savePrefs({ botDiff: sel.value });
-    app.net.send({ t: 'setRoomConfig', botDiff: sel.value });
+    app.net?.send({ t: 'setRoomConfig', botDiff: sel.value });
   };
   row.appendChild(sel);
   const hint = document.createElement('span');
@@ -1218,7 +1298,7 @@ function unbindStageControls() {
 /** 選角(角色格 onclick 與放大視窗角色格共用):唯讀對象不可選;送 pickChar/setBotChar 後即時換展示 */
 function selectChar(id) {
   if (!app.pickEditable) return;
-  app.net.send(app.pickIsSelf ? { t: 'pickChar', ch: id } : { t: 'setBotChar', id: app.pickSubject.id, ch: id });
+  app.net?.send(app.pickIsSelf ? { t: 'pickChar', ch: id } : { t: 'setBotChar', id: app.pickSubject.id, ch: id });
   showCharDetail(id, app.pickSide);
 }
 /** 放大視窗內的角色 + NPC 選擇格(req:放大頁面也出現選擇)。角色格僅在可選角(自己/房主代選)時出現。 */
@@ -1658,9 +1738,9 @@ async function enterLoading(cfg) {
       ].slice(0, LOS.MAX_SLAB);
       // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。
-      app.net.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs });
+      app.net?.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs });
     }
-    app.net.send({ t: 'loaded' });
+    app.net?.send({ t: 'loaded' });
   } catch (e) {
     console.error(e);
     setP(1, `❌ 地形建構失敗:${e.message}(檢查網路後重新整理)`);
@@ -1984,7 +2064,7 @@ $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false
 
 $('backRoomBtn')?.addEventListener('click', () => {
   if (app.story) { exitStoryBattle(); return; }   // 劇情:回章節選擇(重繪解鎖狀態)
-  app.net.send({ t: 'backToRoom' });
+  app.net?.send({ t: 'backToRoom' });
 });
 $('leaveGameBtn')?.addEventListener('click', () => location.reload());
 
@@ -2169,30 +2249,15 @@ window.addEventListener('DOMContentLoaded', () => {
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 
-  app.net = new Net({
-    sync: onSync,
-    rooms: (m) => renderRooms(m.rooms),
-    error: (m) => {
-      toast(`⚠️ ${m.msg}`);
-      // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
-      if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
-      // 劇情部署被拒 → 清狀態退回章節列表
-      if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
-    },
-    info: (m) => toast(m.msg),
-    battleConfig: (m) => enterLoading(m.config),
-    // 危險區靜態資料(地雷等):可能比 BattleClient 早到,先暫存
-    field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
-    snap: (m) => app.battle?.onSnap(m),
-    tracer: (m) => app.battle?.onTracer(m),
-    heavyCharge: (m) => app.battle?.onHeavyCharge(m),
-    heavyFire: (m) => app.battle?.onHeavyFire(m),
-    reconnect: () => {
-      const tk = sessionStorage.getItem('svs_token');
-      if (tk) app.net.sendNow({ t: 'reattach', token: tk });
-      app.net.flushQueue();
-    },
-  });
+  renderLinkModes();
+  connectNet();
+  $('cloudApplyBtn').onclick = () => {
+    const u = setCloudUrl($('cloudUrl').value);
+    if (!u) { toast('節點網址無效,請填 wss://主機名 或 https://主機名'); return; }
+    $('cloudUrl').value = u;
+    toast(`連線到雲端節點 ${u}`);
+    connectNet();
+  };
 
   $('mapBuilderBtn').onclick = () => { myName(); enterMapBuilder(); };
   $('openRoomBtn').onclick = () => { myName(); enterOpenRoom(); };
@@ -2201,18 +2266,18 @@ window.addEventListener('DOMContentLoaded', () => {
     const pin = $('joinPin').value.trim();
     if (pin.length !== 4) { toast('請輸入 4 位數 PIN'); return; }
     const mode = document.querySelector('input[name=joinMode]:checked')?.value || 'player';
-    app.net.send({ t: 'joinRoom', pin, name: myName(), mode });
+    app.net?.send({ t: 'joinRoom', pin, name: myName(), mode });
   };
 
   // 入座/離座改由槽位內的「＋ 入座」按鈕與自己槽位的 ✕ 處理(見 renderRoom),
   // 整卡不再綁 pickSide —— 點卡片/槽位是「選取檢視角色」,不會誤觸換陣營。
   $('readyBtn').onclick = () => {
     const me = app.lobby?.clients.find((c) => c.id === app.youId);
-    app.net.send({ t: 'setReady', ready: !me?.ready });
+    app.net?.send({ t: 'setReady', ready: !me?.ready });
   };
-  $('startBattleBtn').onclick = () => app.net.send({ t: 'startBattle' });
+  $('startBattleBtn').onclick = () => app.net?.send({ t: 'startBattle' });
   $('leaveRoomBtn').onclick = () => {
-    app.net.send({ t: 'leaveRoom' });
+    app.net?.send({ t: 'leaveRoom' });
     sessionStorage.removeItem('svs_token');
     location.reload();
   };

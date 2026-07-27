@@ -12,6 +12,7 @@
 **架構型態:Server-Authoritative Monolith(權威伺服器單體)**
 
 - **心智模型(MUST 內化)**:伺服器是唯一真相。HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只做三件事 — 送輸入與命中回報、渲染 8Hz 快照插值、跑表現層彈道/物理。
+- **三種遊戲機制**(雲端伺服器 / 區網 Tailscale / 單機)只換**傳輸層**,不換架構:房間邏輯共用 `server/rooms.js`(`RoomHub`),權威模擬共用 `server/sim.js`。單機 = **把伺服器整支搬進瀏覽器分頁**(RoomHub 在分頁裡跑),客戶端一樣只送輸入、收 8Hz 快照 —— **MUST NOT** 為了單機另寫一套「客戶端自己算」的路徑。
 - **MUST NOT**:任何「客戶端先改狀態再同步」的實作。
 - 防作弊驗證(射程 ×1.25 複驗、迷霧 `_visibleTo`、LOS `_losBlocked`、高度夾制)只住伺服器,**MUST NOT** 搬到客戶端。
 
@@ -29,12 +30,14 @@
 
 | 路徑 | 職責 |
 |---|---|
-| `server/server.js` | HTTP 靜態檔 + WS 房間/配對 + 8Hz 快照廣播 + bot 管理 |
+| `server/server.js` | **傳輸層**:HTTP 靜態檔 + WebSocket + `/healthz`(雲端與區網共用;單機完全用不到) |
+| `server/rooms.js` | `RoomHub` 房間/配對/8Hz 戰鬥生命週期 — **三種機制共用同一份**,故 MUST 保持瀏覽器可執行 |
 | `server/sim.js` | `BattleSim` 權威模擬核心(single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家狀態機(推線/交戰/撤退) |
 | `public/js/data.js` | 全遊戲平衡數值唯一真相;**伺服器直接 import 這支客戶端檔** |
 | `public/js/*.js` | 渲染/FPV/輸入/HUD(檔案地圖見 `public/js/.claude.md`) |
-| `tools/` | 離線工具:平衡驗證、兵線烘烤、稽核腳本、LOGO 管線 |
+| `tools/` | 離線工具:平衡驗證、兵線烘烤、稽核腳本、單機版打包(`build_solo.mjs`)、LOGO 管線 |
+| `.github/workflows/` | 回歸驗證 CI + 單機特化版自動部署到 GitHub Pages |
 | `test/e2e.mjs` | 前段 `BattleSim` 確定性單元測試 + 後段 WebSocket 端對端,約 60 項斷言 |
 | `reference/` | 上游唯讀副本 — **MUST NOT** 修改,只准參考 |
 
@@ -68,6 +71,10 @@
 - 機體高度只住 `data.js`(`SOLDIER_H`/`HERO_SIZE`/`heroTargetH()`/`TARGET_H`,`models.js` 只 re-export):
   同一把尺同時餵渲染縮放(`fitToHeight`)與**伺服器命中量體** `hitH()`(`sim._bodySpan/_bodyDy` 的機體垂直帶)。
   爆風/貫穿 **MUST** 量到垂直帶最近點,MUST NOT 只取單位底部或單一取樣點(打中塔頂/頭部會判成十幾公尺外)。
+- **連線機制**(雲端 / 區網 / 單機)的判定只住 `data.js` 之外的 `netmode.js`:模式解析、雲端節點網址正規化、
+  `wsUrl()` 全在那一支;傳輸層一律經 `net.js makeNet()` 取得(WebSocket 或瀏覽器內主機)。
+  `main.js` **MUST NOT** 自己 `new Net()`、自己看 `location.host`、或另寫 `if (單機)` 的文案分支。
+  鈕面文字的真相在 `LINK_MODES`,`index.html` 那份靜態副本只為版型量測而存在(一致性由稽核把關)。
 - 共用視覺入口唯一:`spawnCastFx()`(招式 3D 演出)、`stepCombatFx()`(開火動畫)、`terrain.surfaceAt()`(站立表面)— 戰場與展示台/各呼叫端 **MUST NOT** 各寫一套。
 
 ### 2.2 狀態鍵與迴圈粒度
@@ -117,6 +124,7 @@
 | A23 | `#tlLook` 空處開火手勢:出口只有 `_setLookFire()` → `_cmd('fire')`,**MUST NOT** 直接改 `client.firing`。判定 **MUST 先要求一次完整輕點**(不然單指拖曳轉視角會誤擊發),**長按路徑 MUST 在幀迴圈判定**(手指不動收不到 `pointermove`),且 A 鈕與本手勢共用 `firing` ⇒ 兩邊放手都要先確認對方沒按著 |
 | A24 | 小地圖「已探索」累積罩 `_mmSeen` 與底圖 `_mmBase` 的座標框 **MUST 恆為全圖**(`_world2mmFull`),**MUST NOT** 跟著顯示窗(周遭/全部)跑 —— 那是整場累積的持久資料,框一變先前探索過的區域就整片錯位;周遭模式改用九參數 `drawImage` 裁切。連帶 `_mmShadows()` **MUST 回傳世界座標**(同一組陰影要畫進兩個座標框)|
 | A26 | 程序生成零件的**擺位方向與旋轉方向 MUST 同調**,且錨點半徑 **MUST 取「該高度的錨體半徑」**。三種反覆出現的病灶(2026-07-27「神木樹幹與樹根沒接好」整批):①**差 90°** —— 環形佈件的 `rotation.y = -a` 是**徑向**(板根鰭/斜撐/枝),`-a + π/2` 是**切向**(沙包圈/紙垂);寫錯那一圈零件會變成「圍著主體的柵欄」,與主體之間整圈開縫。②**差一個正負號** —— 沿某個軸擺件時 **MUST 由該軸的實際世界向量推**(`rotation.set(π/2, 0, dirA)` 的局部 +y = `(−sin dirA, 0, cos dirA)`,Euler 'XYZ' = Rx·Ry·Rz),**MUST NOT** 手寫 `cos(a+π/2)` / `sin(a−π/2)` 這種鏡射式;傾角符號同理(斜撐上端該收向軸心)。③**拿基部半徑當通用半徑** —— 幹身/塔身有收分,掛件一律經 `trunkR(y)` 類的單一縫。連帶:堆疊件 **MUST NOT** 用 y 交錯偽裝第二層(半數會整件浮空),躺地件軸心高度 **MUST** = 自身半徑。**改任何程序生成零件的擺位/旋轉/尺寸,MUST 跑 `node tools/audit_object_joints.mjs`** |
+| A28 | **三種遊戲機制的兩條線 MUST NOT 斷**。①**瀏覽器可執行**:`server/rooms.js` / `sim.js` / `bots.js` 會被單機版直接載進瀏覽器分頁,**MUST NOT** import 任何 Node 內建模組,也 MUST NOT 用 `process.*` / `Buffer` / `require()` —— 加一行就只有單機版炸、伺服器版照跑。②**URL 佈局鏡射**:瀏覽器看到的路徑 **MUST** 鏡射儲存庫佈局(`/public/**` + `/server/*.js`,`/` 302 到 `/public/`),dev 伺服器與 `tools/build_solo.mjs` 出的是同一套。理由是 import 鏈 `public/js/localhost.js → ../../server/rooms.js → ../public/js/data.js` 只有在鏡射佈局下才會讓 `data.js` 是**同一個模組實例** —— 佈局一改就變成兩份平衡數值(而且不會報錯)。單機版離場 **MUST** `hub.shutdown()` 停掉 8Hz tick(否則背景空轉吃電)。稽核 `node tools/audit_net_modes.mjs` + `node tools/audit_solo_boot.mjs` |
 | A27 | 實例的朝向 `ry` 與站姿微傾斜 `tx/tz` **MUST** 當剛體整株套用(`xform.js vegPartXform` 單一縫),**MUST NOT** 併進逐零件的歐拉角 —— Euler 'XYZ' 把 ry 夾在中間,任何 `rx ≠ 0` 的零件(枝梢雙叉/垂掛松蘿/蜂窩)方向會隨朝向被攪亂而位移只吃水平旋轉;微傾斜若逐零件繞自身中心轉,樹幹分段會互相剪切錯位。接合完成度 **MUST** 與 `ry`/`tx`/`tz` 無關 |
 
 ---
@@ -143,6 +151,10 @@
 
 ```bash
 npm start            # server on http://localhost:8620(--port <n> 覆寫;PowerShell 的 PORT=x 前綴無效)
+npm run lan          # 區網 / Tailscale 對戰(--https;印出區網 + Tailscale + MagicDNS 網址)
+npm run cloud        # 雲端節點($PORT 監聽、/healthz、--max-rooms 戰區上限)
+npm run build:solo   # 打包單機特化版到 dist/(純檔案複製,無 bundler;GitHub Actions 同一支)
+npm run audit:net    # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射)
 npm test             # node test/e2e.mjs,約 60 項斷言(不會自動啟動伺服器!)
 npm run bal          # 平衡四不變式:①一波 NPC = 玩家 60% EHP ②前線敵我塔重疊 80% 且不對射
                      #              ③單線 30% 擊殺/40% 助攻 10 分鐘 ≈ 八軌升滿 ④滿級單推同塔位雙塔剩 0~20%
@@ -176,6 +188,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 | **地形射線**(`terrain.rayTerrain`/`markTriDead`/`punchPortalHoles`/`TERRAIN.GRID_N`)| `node tools/audit_terrain_ray.mjs`(11 項離線直測):與「暴力掃完全部三角形」逐條比對 —— 命中/未命中一致、命中距離 Δt < 1e-3、命中點 y 與 `heightAt` 同源、**打洞後穿洞射線不再被擋且仍與基準一致**、射點在圖外/平行軸/far 太短等邊界。**加速比應在兩位數以上**(退回個位數 = 網格行進退化成整圖掃描) |
 | **表現層資源生命週期**(`_takeProjectile`/`_dropBullet`/`_freeEffect`/`FX_MAX`/`markShared`/`disposeTree`/`unitGeo`/`_dpr`/`antialias`)| ①`node tools/audit_gpu_lifecycle.mjs`(34 項靜態規則):地形不回 raycast 目標、彈體/特效不得只 `scene.remove`、共用幾何全數 `markShared`、高頻特效不重配幾何、觸控填充率設定(桌機行為不得回歸)②瀏覽器真開房冒煙:持續開火 60s 後 DevTools **Memory → GPU/JS heap 不得單調上升**,`renderer.info.memory.{geometries,textures}` 應在上限內震盪而非持續增加 ③改 fade 回呼的 scale 時 MUST 目視光束粗細(單位幾何的 scale **就是半徑**,舊版是純比例 —— 漏乘 `r` 會讓光束變成 1m 細線)|
+| **三種遊戲機制**(`server/rooms.js`・`server/server.js` 路由・`public/js/netmode.js`・`net.js makeNet`・`localhost.js`・`tools/build_solo.mjs`・`.github/workflows/*`)| ①`node tools/audit_net_modes.mjs`(約 60 項靜態規則 + netmode 直測):三支瀏覽器端伺服器模組無 Node 內建 import、`server.js` 不自己 new BattleSim/BotBrain、`main.js` 不自己 `new Net()`、dev 白名單 = build 複製清單、`index.html` 靜態鈕面 = `LINK_MODES`、節點網址正規化(含 `ftp:` 一律拒絕)②`node tools/audit_solo_boot.mjs`(真瀏覽器,不載 three):鏡射佈局下 import 鏈成立、**`data.js` 只有一個模組實例**、瀏覽器內跑完一局收得到快照、`kill()` 後 tick 停止 ③`npm test` 的「單機機制:瀏覽器內 RoomHub 迴路」段(驗證與伺服器同標準、自動補電腦玩家、`shutdown()` 收乾淨)④WS 端對端全段 MUST 全綠(rooms.js 抽離後行為 MUST 不變)⑤`node tools/audit_ui_layout.mjs`(連線機制三選一同列、鈕面不溢出)|
 | **程序生成物件零件擺位**(`hazards.js BUILDERS` / `biomes.js` 的 `VEG_DEFS`・`GIANT_DEFS`・`GIANT_DECO` / `xform.js vegPartXform`)| `node tools/audit_object_joints.mjs`(解析式接合稽核,約 5300 個接合:20 種障礙物 × 8 seed × sc 0.75/1/1.35 + 8 種神木 + 16 種植被 + 9 種巨木特徵,各驗正株與「轉向+微傾」)—— 每個接合在**接合方向的法平面上取兩個互相正交的觀察角**量縫,四條硬失敗 FLOAT / PARTIAL / DETACHED / ISOLATED(見 A26/A27 與該檔檔頭)。合法的接合型態(主人/貼面/中心貫穿/橫躺觸地)有 rescue,豁免一律附理由。**改完 MUST 順手做反向驗證**:把改動故意寫回錯的那一版,稽核 MUST 失敗(否則等於沒驗到) |
 | 小地圖顯示範圍(`mmMode`/`_mmWindow`/`_world2mm`/`_world2mmFull`/`_mmShadows`/`MM_NEAR`) | ①`node tools/audit_minimap_view.mjs`(16 項離線直測):full 模式 `_world2mm` MUST 與 `_world2mmFull` 完全一致(舊行為不得回歸)、near 模式半徑 = `sight × AIM_SIGHT_MULT × PAD` 且自機置中、貼邊夾制不出圖、地圖小於顯示窗時該軸退回全圖、`_world2mmFull` MUST NOT 隨模式改變(見 A24) ②瀏覽器真開房冒煙:M / 十字鍵右切換後底圖與標記同框(單位不飄)、切回全部時**先前探索過的迷霧位置不變** |
 | 機種絕招觸發條件(`GAME.ABILITY_HOLD_S`/`_tickHoldAbility`/`_fireHoldAbility`/`_rmbUp`) | 瀏覽器真開房冒煙:①**一般模式**長按右鍵 MUST 出招且**放開後不切進狙擊模式** ②狙擊模式長按同樣出招 ③短按右鍵仍是切換模式(彈夾空時仍走換彈)④觸控 ZR 出同一招且鈕面顯示 CD ⑤三機種各驗一次(自殺機/重砲/餌機) |

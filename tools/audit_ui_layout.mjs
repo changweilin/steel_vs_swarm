@@ -121,6 +121,9 @@ for (const v of VIEWS) {
       scrollTop: document.getElementById('connect').scrollTop,
     };
     for (const k of ['mapBuilderBtn', 'openRoomBtn', 'storyBtn']) out.fits[k] = fits(`#${k}`);
+    // 連線機制三選一(雲端 / 區網 / 單機):直式同樣 MUST 左右並排(見 /CLAUDE.md A20)
+    out.link = { cloud: box('#link_cloud'), lan: box('#link_lan'), solo: box('#link_solo') };
+    for (const k of ['link_cloud', 'link_lan', 'link_solo']) out.fits[k] = fits(`#${k}`);
     out.hoverflow = {};
     const noHScroll = (id) => { const e = document.getElementById(id); return e.scrollWidth <= e.clientWidth + 1; };
     out.hoverflow.connect = noHScroll('connect');
@@ -194,6 +197,12 @@ for (const v of VIEWS) {
   // 首屏可見度只在直式斷言:橫式高度只有 375,題頭壓縮後仍不可能把整個面板塞進一屏(捲動是正常的)
   if (r.portrait) ok(L.story && L.story.b <= r.vh, `「劇情戰役」在首屏內(bottom ${Math.round(L.story?.b)} ≤ ${r.vh})`);
   ok(L.story && L.story.h >= 44, `入口鈕觸控高度 ≥44(${Math.round(L.story?.h)})`);
+
+  // 1.5)連線機制三選一 MUST 同列(桌機左右並排 ⇒ 直式也左右並排,窄屏只准收窄欄寬 + 降字級)
+  const K = r.link;
+  ok(sameRow(K.cloud, K.lan) && sameRow(K.lan, K.solo), '連線機制三選一同列(雲端 / 區網 / 單機)');
+  ok(leftOf(K.cloud, K.lan) && leftOf(K.lan, K.solo), '連線機制三選一由左至右不重疊');
+  ok(K.solo && K.solo.r <= r.vw + 0.5, '連線機制列不出界');
 
   // 2)陣營卡 MUST 左右並排(STEEL 左 / SWARM 右)
   const R = r.room;

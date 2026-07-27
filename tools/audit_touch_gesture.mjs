@@ -26,7 +26,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <div id="touchLayer" hidden><div id="tlLook"></div>
 <button class="tl-gb gb-a" type="button" data-act="fire">A</button></div>
 <script type="module">
-import * as M from '/js/mobile.js';
+import * as M from '/public/js/mobile.js';
 window.M = M;
 window.cmds = []; window.looks = [];
 // 假 client:走的是與戰鬥完全相同的 _cmd / _applyLook 派發路徑(見 mobile.js 檔頭三個共用縫)

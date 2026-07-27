@@ -23,7 +23,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <div id="touchLayer" hidden><div id="tlLook"></div><div id="tlDpad"><span id="tlKnob"></span></div>
 <button class="tl-dp-b dir-dn" type="button" data-act="gyro">陀螺</button></div>
 <script type="module">
-import * as M from '/js/mobile.js';
+import * as M from '/public/js/mobile.js';
 window.M = M;
 window.looks = []; window.feeds = [];
 // 假 client:走的是與戰鬥完全相同的 _applyLook 派發路徑(見 mobile.js 檔頭三個共用縫)

@@ -4,6 +4,7 @@
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
+import { RoomHub } from '../server/rooms.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
@@ -996,6 +997,52 @@ log('— sim:第三方軍隊(佈營淨空 / 迷霧隱藏 / 碉堡駐守 / 繫繩
   sim._tickCamps(THIRD.UNIT_RESPAWN_S + 1);
   assert(c0.pool.length === 0 && campEnts(0).length === THIRD.COMP[c0.type].length,
     '碉堡回來後單位恢復倒數並重生歸隊');
+}
+
+// ================= 單機機制:瀏覽器內 RoomHub 迴路(不經 WebSocket)=================
+// 單機版(GitHub Pages 靜態站台)= 瀏覽器直接 new 同一支 RoomHub,傳輸層換成同分頁的函式呼叫。
+// 這一段用完全相同的方式跑完整局:開房 → 選陣營 → 準備 → 開戰 → 收快照 → 收攤。
+// 這裡跑得通 ⇒ 單機特化版跑得通(客戶端只是把 `send` 接到 `sess.recv`,見 public/js/localhost.js)。
+log('\n— 單機機制:瀏覽器內 RoomHub 迴路 —');
+{
+  const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 0 });
+  const inbox = [];
+  const sess = hub.attach((m) => inbox.push(m));
+  const last = (t) => [...inbox].reverse().find((m) => m.t === t);
+  const snapCount = () => inbox.filter((m) => m.t === 'snap').length;
+
+  // 驗證與伺服器同標準(單機不是「免驗證」的旁路)
+  sess.recv({ t: 'createRoom', name: '單機指揮官', teamSize: 1, battleConfig: fakeBattleConfig(3) });
+  assert(/兵線/.test(last('error')?.msg || ''), '單機:兵線數不符同樣被拒絕(與伺服器同一支驗證)');
+
+  sess.recv({ t: 'createRoom', name: '單機指揮官', roomName: '離線演習', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  const sync = last('sync');
+  assert(/^\d{4}$/.test(sync?.lobby?.pin || ''), `單機:開出房間(PIN ${sync?.lobby?.pin})`);
+  assert(sync.lobby.urls.length === 0, '單機:不廣播任何加入網址(沒有伺服器可連)');
+  assert(hub.stats().rooms === 1, '單機:hub 統計得到房間數');
+
+  sess.recv({ t: 'pickSide', side: 'SWARM' });
+  sess.recv({ t: 'setReady', ready: true });
+  sess.recv({ t: 'startBattle' });
+  assert(!!last('battleConfig'), '單機:開戰指令送回 battleConfig(客戶端據此建地形)');
+  const lobbyAfter = last('sync').lobby;
+  assert(lobbyAfter.clients.filter((c) => c.isBot).length === 1, '單機:人數不足自動補電腦玩家到滿編');
+
+  sess.recv({ t: 'loaded' });
+  assert(!!last('field'), '單機:收到危險區靜態資料(地雷等只發一次)');
+  await new Promise((r) => setTimeout(r, 600));
+  assert(snapCount() >= 3, `單機:8Hz 快照持續送達(${snapCount()} 份)`);
+  const solo = last('snap');
+  assert(solo.ents.some((e) => e.k === 'base') && solo.ents.some((e) => e.k === 'tower'),
+    '單機:快照含主堡與防禦塔(權威模擬確實在瀏覽器端跑起來)');
+  assert(solo.ents.some((e) => e.pid === sess.id && e.act), '單機:自機英雄在場');
+
+  // 收攤:MUST 停掉 8Hz tick —— 玩家切回連線模式後若還在跑,就是背景空轉吃電
+  hub.shutdown();
+  const n = snapCount();
+  await new Promise((r) => setTimeout(r, 400));
+  assert(snapCount() === n, '單機:shutdown 後 tick 完全停止(不留背景迴圈)');
+  assert(hub.stats().rooms === 0, '單機:shutdown 後房間清空');
 }
 
 // ================= WebSocket 端對端 =================

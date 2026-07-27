@@ -22,7 +22,7 @@ const report = await page.evaluate(async () => {
   const THREE = await import('three');
 
   // ---- 從真實原始碼抽 GIANT_DEFS(避免手抄漂移)----
-  const src = await (await fetch('/js/biomes.js')).text();
+  const src = await (await fetch('/public/js/biomes.js')).text();
   const m = src.match(/const GIANT_DEFS = \{[\s\S]*?\n\};/);
   if (!m) return { error: '抽不到 GIANT_DEFS' };
   const cyl = (r1, r2, h, n = 5) => ({ kind: 'cyl', r1, r2, h, g: new THREE.CylinderGeometry(r1, r2, h, n) });

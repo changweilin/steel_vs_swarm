@@ -280,6 +280,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .divider::before, .divider::after {
   content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line), transparent);
 }
+/* 連線機制三選一(雲端 / 區網 Tailscale / 單機):三顆恆同列。
+   窄屏只收窄欄寬 + 降一階字級,**MUST NOT** 改成直排(見 /CLAUDE.md A20)。 */
+.link-modes { gap: 8px; }
+.link-btn { flex: 1 1 0; min-width: 0; padding: 9px 6px; font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+.link-hint { color: var(--dim); font-size: 11px; line-height: 1.6; text-align: center; }
+.link-cloud input { flex: 1 1 0; min-width: 0; font-size: 12px; }
+@media (max-width: 760px) {
+  .link-btn { font-size: 11px; letter-spacing: 0; padding: 9px 4px; }
+  .link-hint { font-size: 10px; }
+}
+
 .join-mode { display: flex; gap: 18px; justify-content: center; color: var(--dim); font-size: 13px; }
 .join-mode input { accent-color: var(--railW); }
 .pin-join summary { color: var(--dim); cursor: pointer; font-size: 12px; font-family: var(--mono); letter-spacing: 1px; }

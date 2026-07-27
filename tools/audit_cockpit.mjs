@@ -24,8 +24,8 @@ await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
 
 const rep = await page.evaluate(async ({ PARTS, ONLY }) => {
   const THREE = await import('three');
-  const { BattleClient, COCKPIT } = await import('/js/game.js');
-  const { CHARACTERS, charKind } = await import('/js/data.js');
+  const { BattleClient, COCKPIT } = await import('/public/js/game.js');
+  const { CHARACTERS, charKind } = await import('/public/js/data.js');
 
   const W = 640, H = 360, ASPECT = W / H;
   const FOV = 68;                       // A8:全機種 68(MUST NOT 差異化)
