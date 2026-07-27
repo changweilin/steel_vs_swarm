@@ -79,7 +79,7 @@ for (const v of VIEWS) {
       document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
       document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
       const spec = kind === 'spec';
-      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"]')
+      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"]')
         .forEach((n) => { n.hidden = spec; });
       document.body.classList.toggle('tl-spec', spec);
     }, { kind, lefty });
@@ -111,7 +111,7 @@ for (const v of VIEWS) {
                              (gb[i].top + gb[i].bottom) / 2 - (gb[j].top + gb[j].bottom) / 2);
         if (d + 0.5 < (gb[i].width + gb[j].width) / 2) abxy = false;
       }
-      // 肩鍵/扳機逐列左右對應:L ⇄ R 同一列、ZL ⇄ ZR 同一列,且 ZL/ZR 在 L/R **下方**。
+      // 肩鍵/扳機逐列左右對應:L ⇄ R 同一列、ZL ⇄ ZR 絕招 同一列,且 ZL/ZR 在 L/R **下方**。
       // ZL(僅飛行機種)與 ⇄換機(僅無人機)會 hidden ⇒ 用 grid-row 固定列,這裡驗它真的沒塌陷。
       const rowOf = (sel) => {
         const el = document.querySelector(sel);
@@ -121,9 +121,14 @@ for (const v of VIEWS) {
       };
       const pad = {
         L: rowOf('.tl-sys-l [data-act="reload"]'), ZL: rowOf('.tl-sys-l [data-act="dive"]'),
-        R: rowOf('.tl-sys-r [data-act="aim"]'), ZR: rowOf('.tl-sys-r [data-act="gyro"]'),
+        R: rowOf('.tl-sys-r [data-act="aim"]'), ZR: rowOf('.tl-sys-r [data-act="special"]'),
       };
-      return { r, small, abxy, pad };
+      // 十字鍵:上 ⊟ 商店 / 下 陀螺 / 右 地圖(左向保留)。陀螺開關 MUST 只有這一顆 ——
+      // 2026-07-27 ZR 改給機種絕招後,兩顆同功能的鈕就是兩處要同步的狀態。
+      const dpadActs = [...document.querySelectorAll('#tlDpad .tl-dp-b')].map((n) => n.dataset.act || '');
+      const gyroBtns = document.querySelectorAll('[data-act="gyro"]').length;
+      const sysGyro = document.querySelectorAll('.tl-sys [data-act="gyro"]').length;
+      return { r, small, abxy, pad, dpadActs, gyroBtns, sysGyro };
     }, { SEL, TAP });
 
     cases++;
@@ -148,6 +153,11 @@ for (const v of VIEWS) {
     if (P.ZL && P.L && P.ZL.t < P.L.b - 1) msgs.push('ZL MUST 排在 L 下方');
     // ZL 隱藏(地面機甲)時 ZR 的列位 MUST 不變 —— 驗 grid 列沒有塌陷
     if (!P.ZL && P.ZR && P.R && Math.abs(P.ZR.t - P.R.b) > 8) msgs.push('ZL 隱藏後 ZR 的列位跑掉(grid 列塌陷?)');
+    // 十字鍵鍵位與「陀螺開關只有一顆」
+    if (!out.dpadActs.includes('map')) msgs.push('十字鍵缺少小地圖範圍鍵(data-act="map")');
+    if (!out.dpadActs.includes('gyro')) msgs.push('十字鍵缺少陀螺儀開關(data-act="gyro")');
+    if (out.sysGyro > 0) msgs.push('系統鍵直條仍有陀螺儀開關 —— 開關只准住十字鍵下(見 index.html #touchLayer)');
+    if (out.gyroBtns !== 1) msgs.push(`陀螺儀開關有 ${out.gyroBtns} 顆(MUST 恰好 1)`);
 
     if (msgs.length) { bad++; console.log(`✗ ${tag}\n    ${msgs.join('\n    ')}`); }
     else if (verbose) console.log(`✓ ${tag}`);

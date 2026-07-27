@@ -10,52 +10,8 @@
 // 真機仍 MUST 實測(見 /CLAUDE.md 驗證矩陣:https + 轉手機看準星),
 // 這支只保證**程式邏輯與軸向**不退化 —— 合成事件測不出感測器本身有沒有在動。
 // 跑法:`node tools/audit_gyro.mjs`
-import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
+import { chromiumOrNull, chromePath, serve, skipNoPlaywright, THREE_STUB } from './pw.mjs';
 
-// three 走 CDN importmap,沙箱/CI 常被擋 ⇒ 攔截該網址換成等價 stub(只需 mobile.js 用到的四個 API)
-const THREE_STUB = `
-const cp = (a, b) => ({
-  x: a.x * b.w + a.w * b.x + a.y * b.z - a.z * b.y,
-  y: a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-  z: a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
-  w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
-});
-export class Vector3 {
-  constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
-  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
-  applyQuaternion(q) {
-    const { x: vx, y: vy, z: vz } = this;
-    const tx = 2 * (q.y * vz - q.z * vy), ty = 2 * (q.z * vx - q.x * vz), tz = 2 * (q.x * vy - q.y * vx);
-    this.x = vx + q.w * tx + q.y * tz - q.z * ty;
-    this.y = vy + q.w * ty + q.z * tx - q.x * tz;
-    this.z = vz + q.w * tz + q.x * ty - q.y * tx;
-    return this;
-  }
-}
-export class Euler {
-  constructor() { this.x = 0; this.y = 0; this.z = 0; this.order = 'XYZ'; }
-  set(x, y, z, order) { this.x = x; this.y = y; this.z = z; this.order = order; return this; }
-}
-export class Quaternion {
-  constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; }
-  setFromAxisAngle(axis, angle) {
-    const h = angle / 2, s = Math.sin(h);
-    this.x = axis.x * s; this.y = axis.y * s; this.z = axis.z * s; this.w = Math.cos(h);
-    return this;
-  }
-  setFromEuler(e) {
-    if (e.order !== 'YXZ') throw new Error('stub 只實作 YXZ');
-    const c1 = Math.cos(e.x / 2), c2 = Math.cos(e.y / 2), c3 = Math.cos(e.z / 2);
-    const s1 = Math.sin(e.x / 2), s2 = Math.sin(e.y / 2), s3 = Math.sin(e.z / 2);
-    this.x = s1 * c2 * c3 + c1 * s2 * s3;
-    this.y = c1 * s2 * c3 - s1 * c2 * s3;
-    this.z = c1 * c2 * s3 - s1 * s2 * c3;
-    this.w = c1 * c2 * c3 + s1 * s2 * s3;
-    return this;
-  }
-  multiply(q) { const r = cp(this, q); this.x = r.x; this.y = r.y; this.z = r.z; this.w = r.w; return this; }
-}
-`;
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('陀螺儀稽核');
@@ -65,7 +21,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}<\/script>
 </head><body>
 <div id="touchLayer" hidden><div id="tlLook"></div><div id="tlDpad"><span id="tlKnob"></span></div>
-<button class="tl-sysb" type="button" data-act="gyro">ZR 陀螺</button></div>
+<button class="tl-dp-b dir-dn" type="button" data-act="gyro">陀螺</button></div>
 <script type="module">
 import * as M from '/js/mobile.js';
 window.M = M;
@@ -197,9 +153,10 @@ await page.waitForTimeout(3600);
 st = await page.evaluate(() => ({ on: window.M.TOUCH.gyro, feeds: window.feeds }));
 t('auto 兩條都不通 → 關閉並講原因', st.on === false && st.feeds.length > 0, JSON.stringify(st.feeds));
 
-console.log('\n■ 預設開啟 + ZR 一鍵收放');
+console.log('\n■ 預設開啟 + 十字鍵下「陀螺」一鍵收放');
 t('TOUCH.gyro 預設值為開', await page.evaluate(() => window.M.TOUCH.gyro === true || localStorage.getItem('svs_touch') !== null));
-// ZR 按一下 → 關;再按一下 → 開(走的是 _local → setGyro 這一個縫)
+// 陀螺鈕按一下 → 關;再按一下 → 開(走的是 _local → setGyro 這一個縫)。
+// 2026-07-27 這顆從 ZR 搬到十字鍵下(ZR 改給機種絕招),但走的仍是同一個 data-act。
 const zr = await page.evaluate(async () => {
   window.tc?.dispose();
   window.M.TOUCH.gyro = true; window.M.TOUCH.gyroSrc = 'motion';
@@ -216,9 +173,9 @@ const zr = await page.evaluate(async () => {
   const a = await tap(), b = await tap();
   return { start: true, off: a, back: b };
 });
-t('ZR 按一下關閉陀螺儀', zr.off.active === false && zr.off.pref === false, JSON.stringify(zr.off));
-t('ZR 再按一下重新開啟', zr.back.active === true && zr.back.pref === true, JSON.stringify(zr.back));
-t('ZR 鈕面反映開關狀態(.on)', zr.off.on === false && zr.back.on === true, JSON.stringify([zr.off.on, zr.back.on]));
+t('陀螺鈕按一下關閉陀螺儀', zr.off.active === false && zr.off.pref === false, JSON.stringify(zr.off));
+t('陀螺鈕再按一下重新開啟', zr.back.active === true && zr.back.pref === true, JSON.stringify(zr.back));
+t('陀螺鈕鈕面反映開關狀態(.on)', zr.off.on === false && zr.back.on === true, JSON.stringify([zr.off.on, zr.back.on]));
 
 // iOS:靜默(非使用者手勢)啟用時 MUST NOT 去要權限 —— 要了會被拒,連帶把預設開啟的偏好關掉
 const ios = await page.evaluate(async () => {
@@ -237,7 +194,8 @@ const ios = await page.evaluate(async () => {
 });
 t('iOS 靜默啟用不在非手勢中要權限', ios.asked === false, JSON.stringify(ios));
 t('待授權時保留「預設開啟」的偏好', ios.pref === true && ios.ret === true, JSON.stringify(ios));
-t('待授權時提示玩家按 ZR', ios.feeds.some((f) => f.includes('ZR')), JSON.stringify(ios.feeds));
+// 提示 MUST 指到真的存在的那顆鈕 —— 舊版寫「按一下 ZR」,ZR 改成絕招後就是把玩家指去按絕招
+t('待授權時提示玩家按十字鍵下的陀螺鈕', ios.feeds.some((f) => f.includes('十字鍵')), JSON.stringify(ios.feeds));
 
 console.log('\n■ 不可用狀態(.off)的「陀螺」鈕');
 const tapped = await page.evaluate(async () => {

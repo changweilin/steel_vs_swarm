@@ -490,14 +490,16 @@
 
   <!-- ===== L 區(左手)===== 依實體手把(Switch / PS5 / Xbox)排位:**左上類比搖桿、左下十字鍵**。
        類比搖桿 = 移動(輕推慢走、推到底衝刺);十字鍵四向是「按鍵」不是移動 ——
-       上 ⊟ 商店 / 下 陀螺儀開關,左右兩向**先做好版位但不接功能**(.reserved,保留給未來的快捷)。 -->
+       上 ⊟ 商店 / 下 陀螺儀開關 / 右 小地圖範圍(周遭 ⇄ 全部,等同鍵盤 M),
+       左向**先做好版位但不接功能**(.reserved,保留給未來的快捷)。
+       陀螺儀開關**只住這裡**(2026-07-27 起 ZR 改給機種絕招)—— 兩顆同功能的鈕就是兩處要同步的狀態。 -->
   <div id="tlStick" class="tl-stick tl-stick-move" aria-label="移動搖桿">
     <span class="tl-st-ring"></span>
     <span class="tl-st-knob" id="tlStickKnob"></span>
   </div>
   <div id="tlDpad" class="tl-dpad" aria-label="十字鍵">
     <button class="tl-dp-b dir-up" type="button" data-act="shop" aria-label="商店">⊟</button>
-    <button class="tl-dp-b dir-rt reserved" type="button" aria-disabled="true" aria-label="未使用">・</button>
+    <button class="tl-dp-b dir-rt" type="button" data-act="map" aria-label="小地圖範圍:周遭 / 全部">地圖</button>
     <button class="tl-dp-b dir-dn" type="button" data-act="gyro" aria-label="陀螺儀開關">陀螺</button>
     <button class="tl-dp-b dir-lf reserved" type="button" aria-disabled="true" aria-label="未使用">・</button>
   </div>
@@ -526,7 +528,12 @@
        所以 ZL(僅飛行機種)/ ⇄ 換機(僅無人機)隱藏時**列不會塌陷**,對應關係恆成立。
        欄位順序 MUST NOT 隨機種改動 —— 換機種就找不到鍵了。
          L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 全螢幕
-         R 條:① R 狙擊(短按切換、長按絕招)② ZR 陀螺儀 ③ ⇄ 換機(無人機)④ 左手 -->
+         R 條:① R 狙擊(短按切換、長按絕招)② ZR 絕招 ③ ⇄ 換機(無人機)④ 左手
+
+       **ZR = 機種絕招(2026-07-27,原為陀螺儀開關)**:陀螺儀是「設定」不是「戰鬥動作」,
+       擺在扳機位等於把整場只會按一兩次的開關放在最好按的地方 —— 開關留在十字鍵下即可。
+       扳機位改給自殺機 / 重砲 / 餌機:那本來只有「長按 R」一條路,長按期間視角還在動,
+       貼身遭遇最需要它的時候最難按。ZR 與長按 R 共用同一個派發縫(game.js `_fireHoldAbility`)。 -->
   <div class="tl-sys tl-sys-l">
     <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
     <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>
@@ -535,7 +542,7 @@
   </div>
   <div class="tl-sys tl-sys-r">
     <button class="tl-sysb gb-aim" type="button" data-act="aim">R 狙擊</button>
-    <button class="tl-sysb" type="button" data-act="gyro">ZR 陀螺</button>
+    <button class="tl-sysb tl-sysb-cd" type="button" data-act="special" aria-label="機種絕招">ZR 絕招<span class="gb-cd"></span></button>
     <button class="tl-sysb" type="button" data-act="swap" hidden>⇄換機</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
   </div>

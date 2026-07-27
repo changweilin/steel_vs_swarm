@@ -112,6 +112,14 @@ export const LOOK = {
   STICK_DEAD: 0.16,       // 類比搖桿死區(比例;兩支共用)
   LOOK_RAD_S: 2.5,        // 視角搖桿推到底的轉速(rad/s ≈ 143°/s,比照主機手把)
   LOOK_CURVE: 1.7,        // 視角搖桿的響應曲線指數(>1 = 小推更細膩、推到底才全速)
+  // 空處「雙擊後按住 / 拖曳 = 射擊」的手勢門檻(見 TouchControls._bindLook)。
+  // 這是給「不想把拇指移到 A 鈕」的玩家的第二條開火路徑,判定 MUST 嚴到不會誤觸:
+  // 單指拖曳轉視角(最常做的事)絕不可以變成開火,故一定要先有一次**完整的輕點**。
+  TAP_MS: 260,            // 一次「輕點」的上限時長(超過就是按住,不算點)
+  TAP_SLOP_PX: 16,        // 一次「輕點」允許的位移(超過就是拖曳,不算點)
+  TAP_GAP_MS: 300,        // 兩點之間的最大間隔(超過就不是雙擊)
+  TAP_FIRE_MS: 130,       // 第二點按住多久開始射擊(**長按**路徑;純雙擊放開不開火)
+  TAP_FIRE_PX: 8,         // 第二點拖多遠開始射擊(**拖曳**路徑;比 SLOP 小,一動就認)
 };
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, Number.isFinite(+v) ? +v : a));
@@ -131,7 +139,7 @@ export const GYRO_SRC = ['auto', 'orient', 'motion'];
 export const GYRO_SRC_LABEL = { auto: '自動', orient: '方向', motion: '角速度' };
 
 export const TOUCH = {
-  gyro: true,         // 陀螺儀輔助瞄準(**預設開啟**;戰場以 ZR 一鍵收放)
+  gyro: true,         // 陀螺儀輔助瞄準(**預設開啟**;戰場以十字鍵下的「陀螺」鈕一鍵收放)
   gyroSrc: 'auto',    // 感測來源:auto 自動 / orient 方向感測 / motion 角速度(見 Gyro)
   gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
   gyroInvert: false,  // 陀螺儀垂直反轉
@@ -694,7 +702,7 @@ const MOBIL_LABEL = { drone: '上升', morph: '躍/升', mech: '跳躍', robot: 
  *   - #tlLook  :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
  *   - #tlStick :移動類比搖桿(左上;圓心固定 = 搖桿中心,偏移量 = 推杆量)
  *   - #tlRStick:視角類比搖桿(右下;推杆量 → 每秒轉速,與拖曳並存)
- *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(⊟ 商店 / 陀螺),左右兩向保留未用
+ *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(上 ⊟ 商店 / 下 陀螺 / 右 小地圖範圍),左向保留未用
  *   - [data-act]:動作鈕(ABXY / 肩鍵與系統鍵直條)
  * 角色數據(.hud-self)與小地圖(#minimap)是純顯示,**MUST NOT** 被搖桿覆蓋(版型量測有斷言)。
  */
@@ -706,6 +714,11 @@ export class TouchControls {
     this.lookPad = document.getElementById('tlLook');
     this._lookId = null;
     this._lookX = 0; this._lookY = 0;
+    // 空處雙擊開火手勢(見 _bindLook):上一次輕點的結束時刻/位置、本次按壓的起點與判定狀態
+    this._tapAt = 0; this._tapX = 0; this._tapY = 0;
+    this._downAt = 0; this._downX = 0; this._downY = 0;
+    this._fireArm = false;    // 本次按壓是「雙擊的第二點」⇒ 按久或拖動就開火
+    this._lookFire = false;   // 本手勢目前正在開火(放開才收)
     this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / B 跳躍 / ZL 下降)
     // 兩支類比搖桿共用同一份判定(_bindStick):移動的推杆量餵 axis,視角的推杆量餵每幀轉速。
     this.moveStick = null;
@@ -728,13 +741,32 @@ export class TouchControls {
     this._syncGyroBtn();
   }
 
-  /* ---- 視角:拖曳 ---- */
+  /* ---- 視角:拖曳(+ 空處雙擊開火手勢)---- */
+  /**
+   * `#tlLook` 是滿版的「沒有控件的空處」,原本只吃拖曳視角。這裡再疊一個**雙擊開火**手勢:
+   * **輕點一下 → 再按下去不放(或直接拖)= 持續射擊**,放開即停;拖曳期間視角照常跟著轉,
+   * 所以「邊瞄邊打」是同一根拇指、不必移到 A 鈕。
+   *
+   * 判定 MUST 先要求一次**完整的輕點**(短於 TAP_MS 且位移小於 TAP_SLOP_PX),
+   * 第二點再等 TAP_FIRE_MS 或拖過 TAP_FIRE_PX 才真的開火 —— 少了哪一段,
+   * 「單指拖曳轉視角」這個每秒都在做的動作都會變成誤擊發。純雙擊(點兩下就放開)刻意不開火:
+   * 那個手勢在觸控介面上太容易由捲動/誤觸產生。
+   *
+   * 開火一律走 `client._cmd('fire', …)`(與 A 鈕、鍵鼠同一個派發縫),
+   * MUST NOT 直接改 `client.firing`。
+   */
   _bindLook() {
     if (!this.lookPad) return;
     this._onLookDown = (e) => {
       if (this._lookId !== null || this._blocked()) return;
       this._lookId = e.pointerId;
       this._lookX = e.clientX; this._lookY = e.clientY;
+      const now = performance.now();
+      // 這一點算不算「雙擊的第二點」:上一次輕點剛結束、且落在同一個位置附近
+      this._fireArm = this._tapAt > 0 && now - this._tapAt <= LOOK.TAP_GAP_MS
+        && Math.hypot(e.clientX - this._tapX, e.clientY - this._tapY) <= LOOK.TAP_SLOP_PX;
+      this._tapAt = 0;   // 用掉就清:MUST NOT 讓一次輕點連續配對出好幾發(點三下 = 一次雙擊,不是兩次)
+      this._downAt = now; this._downX = e.clientX; this._downY = e.clientY;
       capture(this.lookPad, e.pointerId);
       e.preventDefault();
     };
@@ -743,15 +775,45 @@ export class TouchControls {
       const dx = e.clientX - this._lookX, dy = e.clientY - this._lookY;
       this._lookX = e.clientX; this._lookY = e.clientY;
       if (this._blocked()) return;
+      // 拖曳路徑:第二點一動就開火(門檻比輕點的 SLOP 小 ⇒ 「雙擊後拖曳」不必等時間)
+      if (this._fireArm && !this._lookFire
+        && Math.hypot(e.clientX - this._downX, e.clientY - this._downY) >= LOOK.TAP_FIRE_PX) {
+        this._setLookFire(true);
+      }
       const s = LOOK.TOUCH_RAD_PX * TOUCH.lookSens;
       this.client._applyLook(-dx * s, -dy * s);
       e.preventDefault();
     };
-    this._onLookUp = (e) => { if (e.pointerId === this._lookId) this._lookId = null; };
+    this._onLookUp = (e) => {
+      if (e.pointerId !== this._lookId) return;
+      this._lookId = null;
+      const now = performance.now();
+      // 這一次按壓夠短、夠不動 ⇒ 記成一次「輕點」,供下一次落指配對成雙擊。
+      // 已經在開火的手勢不算輕點(不然放開就又武裝好下一發)。
+      const tap = !this._lookFire && now - this._downAt <= LOOK.TAP_MS
+        && Math.hypot(e.clientX - this._downX, e.clientY - this._downY) <= LOOK.TAP_SLOP_PX;
+      this._tapAt = tap && !this._fireArm ? now : 0;
+      this._tapX = this._downX; this._tapY = this._downY;
+      this._fireArm = false;
+      this._setLookFire(false);
+    };
     this.lookPad.addEventListener('pointerdown', this._onLookDown);
     this.lookPad.addEventListener('pointermove', this._onLookMove);
     this.lookPad.addEventListener('pointerup', this._onLookUp);
     this.lookPad.addEventListener('pointercancel', this._onLookUp);
+  }
+
+  /**
+   * 空處手勢的開火開關。**放開時的 `fire,false` 要先確認 A 鈕沒被按著** ——
+   * 兩條路徑共用同一個 `firing` 旗標,不檢查的話「A 按著 + 空處手勢放開」會把射擊直接切斷。
+   */
+  _setLookFire(on) {
+    if (on === this._lookFire) return;
+    if (on && this._blocked()) return;
+    this._lookFire = on;
+    if (!on && [...this._held.values()].includes('fire')) return;   // A 鈕仍按著 → 不代 A 放手
+    this.client._cmd('fire', on);
+    if (on) this._haptic(6);
   }
 
   _gyroLook(dy, dp) {
@@ -786,12 +848,23 @@ export class TouchControls {
    */
   tick(dt) {
     this.syncBlocked();
+    this._tickLookFire();
     const st = this.lookStick;
     if (!st || st.mag <= 0 || this._blocked()) return;
     // 響應曲線:小推細膩、推到底才全速(比照主機手把;線性推杆在 FPS 上很難微調)
     const sp = LOOK.LOOK_RAD_S * TOUCH.lookSens * Math.pow(st.mag, LOOK.LOOK_CURVE) * dt;
     const ux = st.x / st.mag, uy = st.y / st.mag;   // st.x/y 已含推杆量,取單位方向再乘曲線速度
     this.client._applyLook(-ux * sp, uy * sp);      // 右推 = 向右轉(yaw 減);上推 = 抬頭
+  }
+
+  /**
+   * 空處雙擊手勢的**長按**路徑:手指按著不動就收不到 pointermove ⇒ 「按住多久」MUST 在幀迴圈判定
+   * (與視角搖桿同理)。疊層開起來時順手收掉射擊 —— 收起整層後就收不到 pointerup 了。
+   */
+  _tickLookFire() {
+    if (this._lookFire && this._blocked()) { this._setLookFire(false); return; }
+    if (!this._fireArm || this._lookFire || this._lookId === null) return;
+    if (performance.now() - this._downAt >= LOOK.TAP_FIRE_MS) this._setLookFire(true);
   }
 
   syncBlocked() {
@@ -903,7 +976,8 @@ export class TouchControls {
       const act = this._held.get(e.pointerId);
       if (!act) return;
       this._held.delete(e.pointerId);
-      this.client._cmd(act, false);
+      // A 放手時空處手勢還在射擊 → 不送 fire↑(兩條路徑共用同一個 firing 旗標,見 _setLookFire)
+      if (!(act === 'fire' && this._lookFire)) this.client._cmd(act, false);
       document.querySelectorAll(`[data-act="${act}"].press`).forEach((n) => n.classList.remove('press'));
     };
     // 委派在 document 上:搖桿鈕與 #civPrompt 裡的平民鈕共用同一條派發路徑
@@ -961,10 +1035,10 @@ export class TouchControls {
       }
       // 靜默啟用(進場自動套用偏好)+ 尚未授權:**MUST NOT** 在這裡要權限 ——
       // 那不是使用者手勢,iOS 會直接拒,結果是把「預設開啟」的偏好也一併關掉。
-      // 保留偏好、把 ZR 留在待授權狀態,並告訴玩家按一下就好。
+      // 保留偏好、把「陀螺」鈕留在待授權狀態,並告訴玩家按一下就好。
       if (silent && this.gyro.needsPermission()) {
         this._syncGyroBtn();
-        this.client.hud?.feed?.('🧭 陀螺儀待授權:按一下 ZR 允許「動作與方向」');
+        this.client.hud?.feed?.('🧭 陀螺儀待授權:按一下十字鍵下的「陀螺」鈕允許「動作與方向」');
         return TOUCH.gyro;
       }
       // 已授權過就不再要一次 —— iOS 的 requestPermission 只在使用者手勢中可靠,
@@ -1014,10 +1088,10 @@ export class TouchControls {
    * 逐機種鈕面特化:
    *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
    *   ② ZL 下降只在飛行機種(無人機/變形機甲)與觀戰自由視角出現。
-   *   ③ 換機(R 區系統鍵)只給無人機三機小隊;ZR 是陀螺儀開關,**全機種與觀戰都保留**
-   *      (觀戰自由視角同樣吃 _applyLook,陀螺一樣有用)。
-   *   ④ 觀戰沒有座機:A/R/⊟/HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
+   *   ③ 換機(R 區系統鍵)只給無人機三機小隊。
+   *   ④ 觀戰沒有座機:A / R / ZR 絕招 / ⊟ / HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
    *      HOME 亦然 —— `_setPaused` 對 side=null 直接 return,桌機觀戰同樣沒有 ESC 選單)。
+   *      **十字鍵的陀螺與地圖不收** —— 觀戰自由視角同樣吃 _applyLook,也同樣看小地圖。
    */
   setKind(kind) {
     const spec = !kind;                          // 觀戰自由視角(無機體)
@@ -1027,7 +1101,7 @@ export class TouchControls {
     const fly = spec || kind === 'drone' || kind === 'morph';
     document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
-    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"]')
+    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"]')
       .forEach((n) => { n.hidden = spec; });
     document.body.classList.toggle('tl-spec', spec);
   }
@@ -1036,6 +1110,8 @@ export class TouchControls {
   reset() {
     this.axis.f = 0; this.axis.r = 0; this.axis.mag = 0;
     this._lookId = null;
+    this._setLookFire(false);            // 空處手勢的射擊也要放掉(收起整層後收不到 pointerup)
+    this._fireArm = false; this._tapAt = 0;
     for (const st of [this.moveStick, this.lookStick]) {
       if (!st) continue;
       st.id = null; st.x = 0; st.y = 0; st.mag = 0;
@@ -1048,6 +1124,7 @@ export class TouchControls {
 
   dispose() {
     if (_active === this) _active = null;
+    this._lookFire = false; this._fireArm = false; this._tapAt = 0;
     document.body.classList.remove('tl-off');   // 收起狀態 MUST 跟著銷毀清掉(大廳試玩會重建本層)
     this.gyro.stop();
     clearTimeout(this._rotT);
