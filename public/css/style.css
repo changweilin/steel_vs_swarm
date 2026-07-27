@@ -1598,8 +1598,9 @@ body.tl-off .touch-layer { display: none !important; }
 }
 
 /* ===== 十字鍵(左下)=====
-   這套配置裡十字鍵是**四顆按鍵**不是移動(移動在左上搖桿):上 ⊟ 商店 / 下 陀螺儀,
-   左右兩向先做好版位但不接功能(.reserved)—— 版位先佔住,之後接快捷不必再動版型。 */
+   這套配置裡十字鍵是**四顆按鍵**不是移動(移動在左上搖桿):上 ⊟ 商店 / 下 陀螺儀 /
+   右 小地圖範圍(周遭 ⇄ 全部,等同鍵盤 M),左向先做好版位但不接功能(.reserved)
+   —— 版位先佔住,之後接快捷不必再動版型。 */
 /* 外框 **MUST 由臂長推導**(3 格 × 臂):臂本身就是一個合格觸控目標(≥ 44×40),
    而十字型排法要零重疊,臂寬只能佔外框 1/3 —— 反過來用百分比切外框,臂一定會小於 44×40。 */
 .tl-dpad {
@@ -1627,6 +1628,9 @@ body.tl-off .touch-layer { display: none !important; }
 /* 保留未用:看得見(玩家知道這裡有鍵位)但明顯是停用態,且**仍吃事件** ——
    不吃的話點下去會穿到 #tlLook 變成轉視角,比沒有按鈕更怪。 */
 .tl-dp-b.reserved { color: var(--line-strong); border-style: dashed; cursor: default; opacity: calc(var(--tl-alpha) * 0.6); }
+/* 小地圖「周遭」模式亮燈:狀態的唯一真相是 game.js 的 `mmMode`,經 body class 落到鈕面
+   (比照 `body.aiming .gb-aim`)—— 觸控層不必知道有這個模式,也不必自己記一份開關狀態。 */
+body.mm-near .tl-dp-b[data-act="map"] { border-color: var(--ok); color: var(--ok); opacity: var(--tl-alpha-on); }
 
 /* ===== 搖桿鈕(ABXY / 肩鍵)===== */
 .tl-gp { position: absolute; width: var(--tl-gp); height: var(--tl-gp); pointer-events: none; }
@@ -1644,7 +1648,7 @@ body.tl-off .touch-layer { display: none !important; }
 .tl-gb .gb-cd { font-family: var(--mono); font-size: 9px; color: var(--danger); line-height: 1; min-height: 0; }
 .tl-gb.press { background: rgba(var(--railW-rgb), 0.34); border-color: var(--railW-hot); transform: scale(0.93); opacity: var(--tl-alpha-on); }
 .tl-gb.ready { border-color: var(--ok); }
-/* 作用中 / 不可用:與系統鍵同一套語意(ZR 陀螺儀開關現在是肩鍵,狀態一樣要看得出來)。
+/* 作用中 / 不可用:與系統鍵同一套語意(十字鍵下的陀螺儀開關、ZR 絕招的冷卻都要看得出來)。
    兩者都吃 --tl-alpha-on —— 作用中與警示 MUST NOT 跟著靜置透明度變淡。 */
 .tl-gb.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); opacity: var(--tl-alpha-on); }
 .tl-gb.on .gb-k { color: var(--ok); }
@@ -1674,7 +1678,7 @@ body.tl-off .touch-layer { display: none !important; }
    實體手把的肩鍵在握把頂端,但手機橫握時那個位置正好是 A 機體資訊 / M 小地圖。 */
 body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--railW-rgb), 0.24); opacity: var(--tl-alpha-on); color: var(--railW); }
 
-/* ===== 肩鍵 + 系統鍵直條(L 區:L / ZL / HOME / 全螢幕 ・ R 區:R / ZR / ⇄換機 / 左手)=====
+/* ===== 肩鍵 + 系統鍵直條(L 區:L / ZL / HOME / 全螢幕 ・ R 區:R / ZR 絕招 / ⇄換機 / 左手)=====
    **逐列左右對應(2026-07-27)**:第 1 列 L ⇄ R、第 2 列 ZL ⇄ ZR,與實體手把「肩鍵在上、
    扳機在下」一致,由上往下排。作法是 grid 固定 4 列 + 逐鈕指定 `grid-row` ——
    **MUST NOT 退回 flex** :ZL(僅飛行機種)與 ⇄換機(僅無人機)會 `hidden`,
@@ -1697,6 +1701,13 @@ body.aiming .gb-aim { border-color: var(--railW-hot); background: rgba(var(--rai
   opacity: var(--tl-alpha);
   transition: color 0.1s, border-color 0.1s, background 0.1s, opacity 0.1s;
 }
+/* ZR 絕招:鈕面要帶冷卻秒數(main.js padMirror 鏡射進 .gb-cd)⇒ 這一顆改直排兩行。
+   .gb-cd 是空字串時不佔高度,就緒時與其他系統鍵等高 —— 不會因為冷卻跳字讓整條直條抖動。 */
+.tl-sysb-cd { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+.tl-sysb-cd .gb-cd { font-size: 9px; color: var(--danger); line-height: 1; }
+.tl-sysb.ready { border-color: var(--ok); color: var(--ok); }
+/* 未解鎖 / 不可用(比照 .tl-gb.locked):比靜置再淡一半 */
+.tl-sysb.locked { opacity: calc(var(--tl-alpha) * 0.5); }
 .tl-sysb.press { background: rgba(var(--railW-rgb), 0.3); color: #05070a; border-color: var(--railW-hot); opacity: var(--tl-alpha-on); }
 .tl-sysb.on { border-color: var(--ok); color: var(--ok); background: rgba(169, 221, 107, 0.14); opacity: var(--tl-alpha-on); }
 /* 陀螺儀「不可能啟用」(非 HTTPS / 裝置不支援):斜紋警示,點下去會把原因寫進戰報 */

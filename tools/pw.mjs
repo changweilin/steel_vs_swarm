@@ -67,3 +67,54 @@ export function skipNoPlaywright(what) {
   console.log(`⏭  跳過${what}:找不到 playwright(開發機請 npm i -g playwright)`);
   process.exit(0);
 }
+
+/**
+ * three 的等價 stub(**只實作 mobile.js 用到的四個 API**)。
+ * three 走 CDN importmap,沙箱/CI 常被擋 ⇒ 量測時攔截該網址換成這一份;
+ * 兩支觸控稽核(audit_gyro / audit_touch_gesture)**共用同一份** —— 各留一份就會漂。
+ * 用法:page.route(THREE_CDN, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: THREE_STUB }))
+ */
+export const THREE_CDN = 'https://unpkg.com/three@0.160.0/build/three.module.js';
+export const THREE_STUB = `
+const cp = (a, b) => ({
+  x: a.x * b.w + a.w * b.x + a.y * b.z - a.z * b.y,
+  y: a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+  z: a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+  w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+});
+export class Vector3 {
+  constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  applyQuaternion(q) {
+    const { x: vx, y: vy, z: vz } = this;
+    const tx = 2 * (q.y * vz - q.z * vy), ty = 2 * (q.z * vx - q.x * vz), tz = 2 * (q.x * vy - q.y * vx);
+    this.x = vx + q.w * tx + q.y * tz - q.z * ty;
+    this.y = vy + q.w * ty + q.z * tx - q.x * tz;
+    this.z = vz + q.w * tz + q.x * ty - q.y * tx;
+    return this;
+  }
+}
+export class Euler {
+  constructor() { this.x = 0; this.y = 0; this.z = 0; this.order = 'XYZ'; }
+  set(x, y, z, order) { this.x = x; this.y = y; this.z = z; this.order = order; return this; }
+}
+export class Quaternion {
+  constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; }
+  setFromAxisAngle(axis, angle) {
+    const h = angle / 2, s = Math.sin(h);
+    this.x = axis.x * s; this.y = axis.y * s; this.z = axis.z * s; this.w = Math.cos(h);
+    return this;
+  }
+  setFromEuler(e) {
+    if (e.order !== 'YXZ') throw new Error('stub 只實作 YXZ');
+    const c1 = Math.cos(e.x / 2), c2 = Math.cos(e.y / 2), c3 = Math.cos(e.z / 2);
+    const s1 = Math.sin(e.x / 2), s2 = Math.sin(e.y / 2), s3 = Math.sin(e.z / 2);
+    this.x = s1 * c2 * c3 + c1 * s2 * s3;
+    this.y = c1 * s2 * c3 - s1 * c2 * s3;
+    this.z = c1 * c2 * s3 - s1 * s2 * c3;
+    this.w = c1 * c2 * c3 + s1 * s2 * s3;
+    return this;
+  }
+  multiply(q) { const r = cp(this, q); this.x = r.x; this.y = r.y; this.z = r.z; this.w = r.w; return this; }
+}
+`;

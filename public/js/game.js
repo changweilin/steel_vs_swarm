@@ -232,6 +232,15 @@ function factionMarkTex(side) {
 // 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
 const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
 
+// 小地圖「周遭」模式(KeyM / 觸控十字鍵右切換)的顯示窗尺寸。純顯示層常數,不是平衡數值 ⇒ 住這裡不進 data.js。
+// 半徑取「自機視野 × 瞄準加成 × PAD」:**瞄準加成恆計入**,否則一進狙擊模式地圖就跟著縮放,
+// 看地圖的人會暈;固定成最大可視範圍,切不切瞄準都是同一個尺度。
+const MM_NEAR = {
+  PAD: 1.15,     // 視野外再留一圈餘裕(邊緣剛進視野的目標不會貼在框線上)
+  MIN_R: 140,    // 半徑下限(公尺):視野極短的機種也不至於縮到看不出方位
+  SPEC_R: 420,   // 觀戰自由視角無座機 ⇒ 沒有 sight 可取,用固定半徑
+};
+
 export class BattleClient {
   /**
    * opts: { canvas, minimapCanvas, cfg, side(可 null=觀戰), youId, net, terrain, hud }
@@ -316,7 +325,7 @@ export class BattleClient {
     this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
     this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
-    this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickSnipeAbility / _onMouseUp)
+    this._rmbDownAt = 0;              // 右鍵按下時刻(0 = 未按);達門檻 → 出招,短按放開 → 切換模式(見 _tickHoldAbility / _rmbUp)
     this._rmbAbilityFired = false;    // 本次按住右鍵是否已觸發專屬招(觸發後放開不再切換模式 → 切換/出招互不衝突)
 
     this._initScene();
@@ -2417,6 +2426,9 @@ export class BattleClient {
   _initInput() {
     this._onKey = (e) => {
       if (this.paused) return;   // 戰場選單開啟:凍結所有輸入(keys 已清空 ⇒ 機體停住)
+      // 小地圖顯示範圍切換:純顯示層,**不設 this.side 門檻**(觀戰同樣看小地圖),
+      // 也不受陣亡限制(倒數中看戰況正是要用的時候)。觸控版走十字鍵右(_cmd('map'))。
+      if (e.type === 'keydown' && e.code === 'KeyM') this._toggleMmMode();
       if (e.type === 'keydown' && this.side) {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
@@ -2428,8 +2440,8 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)改「狙擊模式長按右鍵」觸發
-          // (見 _tickSnipeAbility);F 鍵停用(2026-07-18)
+          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)以「長按右鍵」觸發,
+          // 一般模式與狙擊模式皆可(見 _tickHoldAbility,2026-07-27);F 鍵停用(2026-07-18)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
           if (e.code === 'KeyH') this._civAct('away');
@@ -2498,7 +2510,7 @@ export class BattleClient {
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
   }
 
-  /** 右鍵/瞄準鈕「按下」:達門檻 → 狙擊模式專屬招(見 _tickSnipeAbility);短按放開 → 切換模式(見 _rmbUp)。
+  /** 右鍵/瞄準鈕「按下」:達門檻 → 機種專屬招(見 _tickHoldAbility,一般/狙擊模式皆可);短按放開 → 切換模式(見 _rmbUp)。
    *  切換與出招以「按住時長」區分,互不衝突。 */
   _rmbDown() {
     this._rmbDownAt = performance.now() / 1000;
@@ -2524,6 +2536,8 @@ export class BattleClient {
   _cmd(act, down) {
     if (act === 'menu') { if (down && !this._gameOver) this._setPaused(!this.paused); return; }
     if (this.paused) return;
+    // 小地圖顯示範圍:純顯示層,觀戰/陣亡皆可切(與 KeyM 同一條件,見 _initInput)
+    if (act === 'map') { if (down) this._toggleMmMode(); return; }
     // 純移動類:觀戰自由視角也要能升降/加速(_updateSpectator 讀同一組 keys)
     if (act === 'jump') { this.keys.Space = !!down; return; }
     if (act === 'dive') { this.keys.KeyC = !!down; return; }
@@ -2540,6 +2554,8 @@ export class BattleClient {
       case 'skill': if (down) this._castAbility('skill'); break;
       case 'ult': if (down) this._castAbility('ult'); break;
       case 'reload': if (down) this._startReload(); break;
+      // ZR 絕招鈕:與「長按右鍵 / 長按 R」同一個派發縫(_fireHoldAbility),MUST NOT 在此另寫機種分派
+      case 'special': if (down) this._fireHoldAbility(); break;
       case 'civFollow': if (down) this._civAct('follow'); break;
       case 'civAway': if (down) this._civAct('away'); break;
       default: break;
@@ -5332,13 +5348,24 @@ export class BattleClient {
     this.hud.feed?.(`💥 ${SQUAD.KAMI.N} 架護衛自殺機衝出!`);
   }
 
-  /** 狙擊模式長按右鍵達 GAME.SNIPE_HOLD_S → 觸發機種專屬招(自殺機 / 重砲 / 餌機)。
-   *  短按右鍵 = 切換模式(見 _onMouseUp);達門檻才出招,一次按住只觸發一次,
+  /** 長按右鍵 / 觸控 R 達 GAME.ABILITY_HOLD_S → 觸發機種專屬招(自殺機 / 重砲 / 餌機)。
+   *  **一般模式與狙擊模式皆可觸發**(2026-07-27):舊版加了 `this.aiming` 這道門,等於得先短按切到
+   *  狙擊模式才長得出招 —— 貼身遭遇時那一次切換就是來不及的原因。現在兩種模式共用這一條判定。
+   *  短按右鍵仍 = 切換模式(見 _rmbUp);達門檻才出招,一次按住只觸發一次,
    *  觸發後放開不再切換 → 切換與出招互不衝突。左鍵射擊獨立(狙擊模式重武器照常連射)。 */
-  _tickSnipeAbility(now) {
-    if (!this.side || this.dead || this.shopOpen || !this.aiming || !this._rmbDownAt || this._rmbAbilityFired) return;
-    if (now - this._rmbDownAt < GAME.SNIPE_HOLD_S) return;
-    this._rmbAbilityFired = true;
+  _tickHoldAbility(now) {
+    if (!this.side || this.dead || this.shopOpen || !this._rmbDownAt || this._rmbAbilityFired) return;
+    if (now - this._rmbDownAt < GAME.ABILITY_HOLD_S) return;
+    this._fireHoldAbility();
+  }
+
+  /**
+   * 機種專屬招的**唯一派發縫**:長按右鍵 / 觸控 R(_tickHoldAbility)與 ZR 絕招鈕(_cmd('special'))
+   * 都走這裡。MUST NOT 在任一輸入端各自比對 isDrone/isMorph —— 那就是第二份機種分派表。
+   */
+  _fireHoldAbility() {
+    if (!this.side || this.dead || this.shopOpen) return;
+    this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
     if (this.isDrone) this._launchKamikaze();
     else if (this.isMorph) this._launchDecoy();
     else this._launchBarrage();
@@ -6050,7 +6077,7 @@ export class BattleClient {
       if (this._railAt || this._steadyAt) { this._railAt = 0; this._steadyAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
       this._burstN = {};
     }
-    this._tickSnipeAbility(now);   // 狙擊模式長按右鍵 → 機種專屬能力(在 _tryFire 之前判定手勢)
+    this._tickHoldAbility(now);    // 長按右鍵 → 機種專屬能力(一般/狙擊模式皆可;在 _tryFire 之前判定手勢)
     this._tryFire(now);
     this._tickLock(now);
   }
@@ -6419,6 +6446,10 @@ export class BattleClient {
   _initMinimap() {
     this.mmCtx = this.minimapCanvas.getContext('2d');
     this._mmLast = 0;
+    // 顯示範圍:'full' 全圖(預設,與舊版相同)/ 'near' 周遭(以自機為中心,涵蓋視野可見範圍)。
+    // 切換走 KeyM 或觸控十字鍵右(兩者共用 _toggleMmMode)。
+    this.mmMode = 'full';
+    this._mmWin = null;   // 本幀的世界顯示窗(_mmWindow() 每次繪製前定案;_world2mm 讀它)
     const w = this.minimapCanvas.width, h = this.minimapCanvas.height;
     this._mmBase = this._bakeMmBase(w, h);   // 底圖 = 原始圖資地形(一次性烤好,之後只 drawImage)
     // 戰爭迷霧:已探索累積遮罩 + 每 tick 重組的迷霧層(觀戰 side=null 無霧,鏡像伺服器規則)
@@ -6531,14 +6562,18 @@ export class BattleClient {
   }
 
   /**
-   * 視野源(vx,vz,半徑 r)被障礙圓柱擋出的陰影多邊形(小地圖座標),供迷霧挖除。
+   * 視野源(vx,vz,半徑 r)被障礙圓柱擋出的陰影多邊形(**世界座標**),供迷霧挖除。
    * 障礙 = terrain.blockers(建物/神木/巨岩/橋墩),半徑取 min(60, r) 與伺服器上傳 occ 對齊
    * ⇒ 小地圖迷霧的遮蔽與伺服器 _losBlocked 用同一份圓柱幾何,「看得到的地方才亮」一致。
    * 每柱兩條切線之外(遠端)= 本影:自切點沿切線方向延伸出視野外,由暫存罩的視野圓自然裁掉。
    * 高度不入帳:伺服器對「地面觀察者→地面目標」任何有碰撞的柱皆擋(眼高/目標高皆低於柱頂),
    * 這裡對齊地面偵測語意,一律當不透明圓 —— 寧可多霧(躲掩體者完全不可檢測)也不漏。
+   *
+   * **回傳世界座標而非小地圖座標**:同一組陰影要被畫進兩個不同的座標系 —— 「已探索」累積罩恆為
+   * 全圖框(_world2mmFull),而目前視野的迷霧層跟著顯示窗走(_world2mm,周遭模式會縮放)。
+   * 在這裡就轉成畫布座標的話,兩者只能對上一個,另一個的陰影會整片錯位。
    */
-  _mmShadows(vx, vz, r, w, h) {
+  _mmShadows(vx, vz, r) {
     const bl = this.terrain.blockers;
     if (!bl || !bl.length) return null;
     const out = [];
@@ -6557,20 +6592,59 @@ export class BattleClient {
       const a0 = th - al, a1 = th + al;
       const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
       out.push([
-        this._world2mm(vx + c0 * tD, vz + s0 * tD, w, h),
-        this._world2mm(vx + c0 * FAR, vz + s0 * FAR, w, h),
-        this._world2mm(vx + c1 * FAR, vz + s1 * FAR, w, h),
-        this._world2mm(vx + c1 * tD, vz + s1 * tD, w, h),
+        [vx + c0 * tD, vz + s0 * tD],
+        [vx + c0 * FAR, vz + s0 * FAR],
+        [vx + c1 * FAR, vz + s1 * FAR],
+        [vx + c1 * tD, vz + s1 * tD],
       ]);
       if (out.length >= 96) break;     // 密集市區防爆:上限 96 柱
     }
     return out;
   }
 
+  /**
+   * 小地圖顯示範圍切換(周遭 ⇄ 全部)。鍵盤 M 與觸控十字鍵右共用這一支 ——
+   * MUST NOT 在任一輸入端自己翻旗標(舊版的 `minimapBig` 就是只有寫、沒有讀的死旗標)。
+   * 鈕面亮燈走 body class(比照 `body.aiming .gb-aim`),觸控層不必知道有這個模式。
+   */
+  _toggleMmMode() {
+    this.mmMode = this.mmMode === 'near' ? 'full' : 'near';
+    this._mmLast = 0;   // 立刻重畫(小地圖是 5Hz,不歸零的話按下去要等一下才有反應)
+    document.body.classList.toggle('mm-near', this.mmMode === 'near');
+    this.hud?.feed?.(this.mmMode === 'near' ? '🗺️ 小地圖:周遭(視野範圍)' : '🗺️ 小地圖:全部(整張戰場)');
+  }
+
+  /**
+   * 本幀的世界顯示窗 { x0, z0, x1, z1 }。full = 整張戰場(與舊版相同);
+   * near = 以自機為中心、邊長 2r 的方窗(r 見 MM_NEAR)。
+   * 方窗貼齊地圖邊界(不讓顯示窗跑到圖外留空白),故靠近邊界時自機不再置中 —— 這是刻意的。
+   */
+  _mmWindow() {
+    const t = this.terrain;
+    if (this.mmMode !== 'near') return { x0: t.minX, z0: t.minZ, x1: t.maxX, z1: t.maxZ };
+    const sight = (this.heroKind && UNITS[this.heroKind]?.sight) || MM_NEAR.SPEC_R;
+    const r = Math.max(MM_NEAR.MIN_R, sight * GAME.AIM_SIGHT_MULT * MM_NEAR.PAD);
+    // 地圖比顯示窗還小的軸向 → 該軸退回全圖(不然會放大到超出邊界)
+    const hw = Math.min(r, (t.maxX - t.minX) / 2), hh = Math.min(r, (t.maxZ - t.minZ) / 2);
+    const cx = Math.max(t.minX + hw, Math.min(t.maxX - hw, this.pos.x));
+    const cz = Math.max(t.minZ + hh, Math.min(t.maxZ - hh, this.pos.z));
+    return { x0: cx - hw, z0: cz - hh, x1: cx + hw, z1: cz + hh };
+  }
+
+  /** 世界 → 小地圖畫布(**目前顯示窗**;標記/兵線/目前視野都用這支) */
   _world2mm(x, z, w, h) {
-    const fx = (x - this.terrain.minX) / (this.terrain.maxX - this.terrain.minX);
-    const fz = (z - this.terrain.minZ) / (this.terrain.maxZ - this.terrain.minZ);
-    return [fx * w, fz * h];
+    const v = this._mmWin || this._mmWindow();
+    return [(x - v.x0) / (v.x1 - v.x0) * w, (z - v.z0) / (v.z1 - v.z0) * h];
+  }
+
+  /**
+   * 世界 → 小地圖畫布(**恆為全圖框**)。「已探索」累積罩 `_mmSeen` 是整場累積的持久資料,
+   * 座標框 MUST NOT 隨顯示窗改變 —— 跟著窗跑的話,每切一次模式先前探索過的區域就整片錯位。
+   * 周遭模式改在合成迷霧時裁切這張全圖罩(見 _drawMinimap 的 drawImage 九參數版)。
+   */
+  _world2mmFull(x, z, w, h) {
+    const t = this.terrain;
+    return [(x - t.minX) / (t.maxX - t.minX) * w, (z - t.minZ) / (t.maxZ - t.minZ) * h];
   }
 
   _drawMinimap(now) {
@@ -6578,23 +6652,31 @@ export class BattleClient {
     this._mmLast = now;
     const ctx = this.mmCtx;
     const w = this.minimapCanvas.width, h = this.minimapCanvas.height;
-    ctx.drawImage(this._mmBase, 0, 0);   // 底圖:原始圖資地形
+    const v = this._mmWin = this._mmWindow();   // 本幀顯示窗:_world2mm 與底圖裁切共用同一份
+    // 底圖:原始圖資地形。周遭模式取全圖框裡對應的那一塊放大(底圖只烤全圖一次,見 _bakeMmBase)
+    const [bx0, bz0] = this._world2mmFull(v.x0, v.z0, w, h);
+    const [bx1, bz1] = this._world2mmFull(v.x1, v.z1, w, h);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(this._mmBase, bx0, bz0, bx1 - bx0, bz1 - bz0, 0, 0, w, h);
     // 戰爭迷霧(觀戰無迷霧):未探索近全黑、已探索留暗紗、目前視野全亮。
     // 迷霧只壓底圖 —— 兵線(已知情報)與單位(快照本身就是伺服器迷霧過濾後的結果,
     // 塔/主堡恆可見)一律畫在迷霧之上,與伺服器可見性規則一致。
     if (this.side) {
       // 視野圈按 x/z 各自比例尺畫橢圓 —— battleBBox 是兵線包絡聯集,非恆正方形,
-      // 正圓會與逐軸縮放的單位標記在被拉伸的軸向上對不齊
-      const scX = w / (this.terrain.maxX - this.terrain.minX);
-      const scZ = h / (this.terrain.maxZ - this.terrain.minZ);
+      // 正圓會與逐軸縮放的單位標記在被拉伸的軸向上對不齊。
+      // **兩套比例尺**:F = 全圖框(已探索累積罩用)、V = 目前顯示窗(迷霧層用),周遭模式兩者不同。
+      const scXF = w / (this.terrain.maxX - this.terrain.minX);
+      const scZF = h / (this.terrain.maxZ - this.terrain.minZ);
+      const scXV = w / (v.x1 - v.x0), scZV = h / (v.z1 - v.z0);
       const pulse = now < this._pulseUntil;   // 偵察脈衝:全隊無霧(鏡像 snapshotFor 的 pulse 旁路)
       const vis = this._mmVision();
       const sctx = this._mmSeen.getContext('2d');
       // 每源在暫存罩上先畫視野圓、再挖掉障礙陰影(_mmShadows),隔離後才合成 —— 建物/神木/巨岩背後
       // 的本影維持迷霧,與伺服器 _losBlocked 過濾單位同一份圓柱幾何(躲掩體者完全不可檢測)。
       const scc = this._mmScr.getContext('2d');
-      const shadows = pulse ? null : vis.map(([vx, vz, r]) => this._mmShadows(vx, vz, r, w, h));
-      const drawReveal = (mx, my, rx, ry, soft, polys) => {
+      const shadows = pulse ? null : vis.map(([vx, vz, r]) => this._mmShadows(vx, vz, r));
+      // toMm = 本次要畫進哪個座標框(全圖罩 / 顯示窗迷霧層);陰影是世界座標,在這裡才落地
+      const drawReveal = (mx, my, rx, ry, soft, polys, toMm) => {
         scc.globalCompositeOperation = 'source-over';
         scc.clearRect(0, 0, w, h);
         if (soft) {                    // 目前視野:柔邊漸層(縮放座標系畫橢圓)
@@ -6609,19 +6691,22 @@ export class BattleClient {
         if (polys && polys.length) {   // 挖掉障礙本影(僅動本源暫存罩,不誤刪他源已照亮區)
           scc.globalCompositeOperation = 'destination-out';
           for (const p of polys) {
-            scc.beginPath(); scc.moveTo(p[0][0], p[0][1]);
-            for (let k = 1; k < p.length; k++) scc.lineTo(p[k][0], p[k][1]);
+            const q = p.map(([wx, wz]) => toMm(wx, wz));
+            scc.beginPath(); scc.moveTo(q[0][0], q[0][1]);
+            for (let k = 1; k < q.length; k++) scc.lineTo(q[k][0], q[k][1]);
             scc.closePath(); scc.fill();
           }
         }
       };
+      const toFull = (x, z) => this._world2mmFull(x, z, w, h);
+      const toView = (x, z) => this._world2mm(x, z, w, h);
       if (pulse) { sctx.globalCompositeOperation = 'source-over'; sctx.fillStyle = '#fff'; sctx.fillRect(0, 0, w, h); }  // 脈衝看過的全圖進「已探索」
       else {
         sctx.globalCompositeOperation = 'source-over';
         for (let n = 0; n < vis.length; n++) {   // 已探索累積(整場保留:走過的地圖記得住,陰影區從未照亮不入帳)
           const [vx, vz, r] = vis[n];
-          const [mx, my] = this._world2mm(vx, vz, w, h);
-          drawReveal(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), false, shadows[n]);
+          const [mx, my] = toFull(vx, vz);
+          drawReveal(mx, my, Math.max(6, r * scXF), Math.max(6, r * scZF), false, shadows[n], toFull);
           sctx.drawImage(this._mmScr, 0, 0);
         }
         const f = this._mmFog.getContext('2d');
@@ -6632,12 +6717,13 @@ export class BattleClient {
         f.fillRect(0, 0, w, h);
         f.globalCompositeOperation = 'destination-out';
         f.globalAlpha = 0.5;
-        f.drawImage(this._mmSeen, 0, 0);   // 已探索:掀掉一半暗紗
+        // 已探索:掀掉一半暗紗。全圖罩裁出顯示窗那一塊(full 模式即整張,等同舊版的 drawImage(0,0))
+        f.drawImage(this._mmSeen, bx0, bz0, bx1 - bx0, bz1 - bz0, 0, 0, w, h);
         f.globalAlpha = 1;
         for (let n = 0; n < vis.length; n++) {   // 目前視野:全亮(柔邊 − 障礙陰影)
           const [vx, vz, r] = vis[n];
-          const [mx, my] = this._world2mm(vx, vz, w, h);
-          drawReveal(mx, my, Math.max(6, r * scX), Math.max(6, r * scZ), true, shadows[n]);
+          const [mx, my] = toView(vx, vz);
+          drawReveal(mx, my, Math.max(6, r * scXV), Math.max(6, r * scZV), true, shadows[n], toView);
           f.globalCompositeOperation = 'destination-out';
           f.drawImage(this._mmScr, 0, 0);
         }
@@ -6723,6 +6809,15 @@ export class BattleClient {
       ctx.closePath(); ctx.fill();
       ctx.restore();
     }
+    // 目前顯示範圍(左下角):兩種模式的畫面在市區可能長得很像 —— 沒有這一行,
+    // 玩家會以為地圖壞了而不是自己切過模式。周遭模式另加標尺寬度(公尺)當比例尺。
+    const label = this.mmMode === 'near' ? `周遭 ${Math.round(v.x1 - v.x0)}m` : '全部';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(4, 7, 11, 0.72)';
+    ctx.fillRect(2, h - 14, ctx.measureText(label).width + 8, 13);
+    ctx.fillStyle = this.mmMode === 'near' ? '#a9dd6b' : 'rgba(255,255,255,0.78)';
+    ctx.fillText(label, 6, h - 3);
   }
 
   // ---------------- 主迴圈 ----------------
@@ -6952,6 +7047,7 @@ export class BattleClient {
     document.removeEventListener('pointerlockchange', this._onPlc);
     this.touch?.dispose();
     this.touch = null;
+    document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
     document.exitPointerLock?.();
     this.renderer.dispose();
   }

@@ -881,7 +881,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,狙擊模式長按右鍵令其衝出(各半傷、自爆後 30s 重現)。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,長按右鍵令其衝出(一般/狙擊模式皆可,各半傷、自爆後 30s 重現)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
@@ -1703,8 +1703,8 @@ function enterGame() {
   // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
   if (TOUCH_UI) $('shopHint').textContent = '';
   toast(TOUCH_UI
-    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處拖曳)・ A 射擊 / R 狙擊 ・ 十字鍵上 ⊟ 商店 / 下 陀螺 ・ HOME 選單'
-    : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單', 4600);
+    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 絕招 ・ 十字鍵 上 ⊟ 商店 / 下 陀螺 / 右 地圖 ・ HOME 選單'
+    : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍', 4600);
 }
 
 /**
@@ -1747,7 +1747,8 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // 狙擊模式長按右鍵:無人機 = 護衛自殺機;變形機甲 = 餌機(沿途投彈);非變形機甲 = 重砲模式
+        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 護衛自殺機;變形機甲 = 餌機(沿途投彈);非變形機甲 = 重砲模式
+        const abCd = w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.barrage ? (w.barrage.cd || 0) : 0;
         const abTag = w.kami ? (w.kami.cd > 0.05 ? `(護衛機 ${w.kami.cd.toFixed(0)}s)` : `(護衛機 ×${w.kami.n} 就緒)`)
           : w.decoy ? (w.decoy.ready ? '(餌機就緒)' : `(餌機 ${w.decoy.cd.toFixed(0)}s)`)
           : w.barrage ? (w.barrage.cd > 0.05 ? `(重砲 ${w.barrage.cd.toFixed(0)}s)` : '(重砲就緒)')
@@ -1775,6 +1776,8 @@ function makeHud() {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
+          // ZR 絕招:CD 與「(重砲 12s)」那一段同源(abCd),搖桿只是鏡子
+          padMirror('special', abCd, abCd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)
         document.body.classList.toggle('aiming', !!w.aiming);
