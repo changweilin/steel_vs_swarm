@@ -346,3 +346,24 @@ export function outlinify(root, width = 0.08) {
   }
   return root;
 }
+
+// ---------------- 一次性物件的 GPU 資源回收(唯一縫)----------------
+// three 的 WebGLRenderer 以 `geometry.dispose()` / `material.dispose()` 事件釋放顯示卡上的緩衝:
+// 只 `scene.remove()` 不 dispose,緩衝會一直留著。特效/彈體是**每發數十顆**的一次性物件,
+// 漏掉就是「打越久越卡」(手機顯存吃緊後更明顯)。
+//
+// 共用幾何(單位圓柱/單位球/碎塊池…)整場只有一份,MUST NOT dispose —— 一旦誤放,
+// 之後所有借用同一份幾何的物件都會變空白。故共用幾何一律先 `markShared()` 註冊,
+// 回收時依此跳過。**castfx.js / vfx.js / game.js 共用這一支**,MUST NOT 各寫一份。
+const _sharedGeo = new Set();
+/** 註冊「整場共用、永不釋放」的幾何;回傳原幾何(方便 `markShared(new …Geometry())` 串接) */
+export function markShared(geo) { _sharedGeo.add(geo); return geo; }
+/** 一次性物件樹的資源回收:幾何(非共用)+ 材質;貼圖一律不動(皆為快取共用) */
+export function disposeTree(root) {
+  root.traverse((o) => {
+    // Sprite.geometry 是 three 全域共用的一份,MUST NOT dispose(會打到全 app 的 sprite)
+    if (!o.isSprite && o.geometry && !_sharedGeo.has(o.geometry)) o.geometry.dispose();
+    const m = o.material;
+    if (m) (Array.isArray(m) ? m : [m]).forEach((x) => x?.dispose());
+  });
+}

@@ -474,6 +474,105 @@ export async function buildTerrain(cfg, onProgress) {
       : d + (c - d) * (1 - fj) + (b - d) * (1 - fi); // 三角形 (b, c, d)
   }
 
+  // ---- 地形射線(解析版;取代 three Mesh.raycast 的逐三角掃描)----
+  // 地形是**高度場**:193² 網格 = 73,728 個三角形,three 的 Mesh.raycast 每次都整批線性掃完
+  // (包圍球/盒對「射點就在圖內」的射線一律通過,far 不參與剪枝)⇒ 每顆子彈每幀 ~1ms(桌機)、
+  // 手機 3~6 倍 —— 這正是「開火就掉幀」的主因。改走 Amanatides–Woo 網格行進:只測射線真正
+  // 穿過的格子(一顆子彈一幀約 1~4 格 = 2~8 個三角形),**同一組三角形、同一條 Möller–Trumbore**
+  // ⇒ 命中點與舊版逐面掃描完全一致,不是近似。
+  //
+  // `punchPortalHoles` 會把隧道洞口的三角形從 index 刪掉(彈道要能打進洞內)—— 高度場本身沒有
+  // 「洞」的概念,故一併記帳被刪的三角形(triDead),行進時跳過,與網格保持同形。
+  const CELLS = (N - 1) * (N - 1);
+  let triDead = null;   // Uint8Array(CELLS*2);null = 尚未打洞(全存活)
+  /** 標記某原始三角形已被打洞刪除(t 序:cell*2 + 0/1,對應 (a,c,b) / (b,c,d)) */
+  function markTriDead(v0, v1, v2) {
+    const lo = Math.min(v0, v1, v2), hi = Math.max(v0, v1, v2);
+    const mid = v0 + v1 + v2 - lo - hi;
+    // (a, a+1, a+N) = 上三角(a,c,b);(a+1, a+N, a+N+1) = 下三角(b,c,d)
+    const upper = mid - lo === 1;
+    const a = upper ? lo : lo - 1;
+    const i = (a / N) | 0, j = a % N;
+    if (i < 0 || j < 0 || i >= N - 1 || j >= N - 1) return;
+    if (!triDead) triDead = new Uint8Array(CELLS * 2);
+    triDead[(i * (N - 1) + j) * 2 + (upper ? 0 : 1)] = 1;
+  }
+
+  const DX = (maxX - minX) / (N - 1);   // 格寬(公尺)
+  const DZ = (maxZ - minZ) / (N - 1);
+  /** 單一三角形 Möller–Trumbore(頂點以格點索引給);回傳 t 或 -1 */
+  function triHit(ox, oy, oz, dx, dy, dz, far, k0, k1, k2) {
+    const ax = minX + (k0 % N) * DX, ay = heights[k0], az = minZ + ((k0 / N) | 0) * DZ;
+    const e1x = minX + (k1 % N) * DX - ax, e1y = heights[k1] - ay, e1z = minZ + ((k1 / N) | 0) * DZ - az;
+    const e2x = minX + (k2 % N) * DX - ax, e2y = heights[k2] - ay, e2z = minZ + ((k2 / N) | 0) * DZ - az;
+    const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x;
+    const det = e1x * px + e1y * py + e1z * pz;
+    if (det > -1e-10 && det < 1e-10) return -1;
+    const inv = 1 / det;
+    const tx = ox - ax, ty = oy - ay, tz = oz - az;
+    const u = (tx * px + ty * py + tz * pz) * inv;
+    if (u < 0 || u > 1) return -1;
+    const qx = ty * e1z - tz * e1y, qy = tz * e1x - tx * e1z, qz = tx * e1y - ty * e1x;
+    const v = (dx * qx + dy * qy + dz * qz) * inv;
+    if (v < 0 || u + v > 1) return -1;
+    const t = (e2x * qx + e2y * qy + e2z * qz) * inv;
+    return (t > 1e-4 && t <= far) ? t : -1;
+  }
+
+  /**
+   * 地形射線求交。dir **MUST 已正規化**;回傳 { t, x, y, z } 或 null。
+   * 呼叫端(game.js 彈道/準星)以此取代把 `terrain.mesh` 丟進 raycaster 的做法。
+   */
+  function rayTerrain(ox, oy, oz, dx, dy, dz, far) {
+    // ① 先把射線夾進地形 XZ 邊界(射點可能在圖外)
+    let t0 = 0, t1 = far;
+    for (const [o, d, lo, hi] of [[ox, dx, minX, maxX], [oz, dz, minZ, maxZ]]) {
+      if (Math.abs(d) < 1e-9) { if (o < lo || o > hi) return null; continue; }
+      let ta = (lo - o) / d, tb = (hi - o) / d;
+      if (ta > tb) { const s = ta; ta = tb; tb = s; }
+      if (ta > t0) t0 = ta;
+      if (tb < t1) t1 = tb;
+      if (t0 > t1) return null;
+    }
+    // ② Amanatides–Woo:逐格行進,只測射線真的穿過的格
+    const eps = 1e-6;
+    let gj = (ox + dx * (t0 + eps) - minX) / DX, gi = (oz + dz * (t0 + eps) - minZ) / DZ;
+    let j = Math.max(0, Math.min(N - 2, Math.floor(gj)));
+    let i = Math.max(0, Math.min(N - 2, Math.floor(gi)));
+    const sj = dx > 0 ? 1 : dx < 0 ? -1 : 0;
+    const si = dz > 0 ? 1 : dz < 0 ? -1 : 0;
+    const tdj = sj ? Math.abs(DX / dx) : Infinity;
+    const tdi = si ? Math.abs(DZ / dz) : Infinity;
+    // 下一次跨格邊界的 t(以射線參數計)
+    let tnj = sj ? t0 + ((sj > 0 ? (j + 1) * DX : j * DX) + minX - (ox + dx * t0)) / dx : Infinity;
+    let tni = si ? t0 + ((si > 0 ? (i + 1) * DZ : i * DZ) + minZ - (oz + dz * t0)) / dz : Infinity;
+    for (let guard = 0; guard < 4096; guard++) {
+      const cell = i * (N - 1) + j;
+      const a = i * N + j, b = a + 1, c = a + N, d2 = c + 1;
+      let best = -1;
+      if (!triDead || !triDead[cell * 2]) {          // 上三角 (a, c, b)
+        const t = triHit(ox, oy, oz, dx, dy, dz, t1, a, c, b);
+        if (t >= 0) best = t;
+      }
+      if (!triDead || !triDead[cell * 2 + 1]) {      // 下三角 (b, c, d)
+        const t = triHit(ox, oy, oz, dx, dy, dz, t1, b, c, d2);
+        if (t >= 0 && (best < 0 || t < best)) best = t;
+      }
+      if (best >= 0) return { t: best, x: ox + dx * best, y: oy + dy * best, z: oz + dz * best };
+      // 前進到下一格
+      if (tnj < tni) {
+        if (tnj > t1) return null;
+        j += sj; tnj += tdj;
+        if (j < 0 || j > N - 2) return null;
+      } else {
+        if (tni > t1) return null;
+        i += si; tni += tdi;
+        if (i < 0 || i > N - 2) return null;
+      }
+    }
+    return null;
+  }
+
   /**
    * 地下道洞口開挖(2026-07-15;2026-07-22 改制):**只開挖 approaches / 敞開段**,深山段完全不動 →
    * 天花板上方的山體地表保持原樣(照常鋪地被拼圖)。
@@ -652,6 +751,11 @@ export async function buildTerrain(cfg, onProgress) {
     const res = punchGeo(geo);
     if (!res) return { rims, touched };
     const { own, tri, triN, P } = res;
+    // 解析射線(rayTerrain)與網格同形:被刪的三角形一併記帳,行進時跳過 ——
+    // 否則彈道會被「已經不存在的洞口面」擋住(打不進隧道)。MUST 在 index 壓實之前算。
+    for (let t = 0; t < triN; t++) {
+      if (own[t] >= 0) markTriDead(tri[t * 3], tri[t * 3 + 1], tri[t * 3 + 2]);
+    }
     // 洞緣 = 只被一個「被刪三角形」用到的邊(被兩個用到 = 洞內部)。MUST 在 index 壓實之前算。
     const NV = N * N, em = new Map();
     for (let t = 0; t < triN; t++) {
@@ -675,5 +779,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, carveTunnels, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, rayTerrain, carveTunnels, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
 }

@@ -20,6 +20,7 @@
 // 純視覺:不讀 sim 狀態、不影響判定;貼圖快取共用(dispose 只釋放 per-cast 幾何/材質)。
 import * as THREE from 'three';
 import { CHARACTERS, SIDES } from './data.js';
+import { markShared, disposeTree } from './toon.js';
 
 const TAU = Math.PI * 2;
 
@@ -431,13 +432,12 @@ function circleTex(motif) {
 }
 
 // ---------------- 幾何/材質共用件 ----------------
-// 共用幾何(MUST NOT dispose;disposeTree 依 _sharedGeo 跳過)
-const PLANE = new THREE.PlaneGeometry(2, 2);                                  // 邊長 2 = 半徑 1
-const CYL = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true);                 // 單位光柱
-const OCT = new THREE.RingGeometry(0.82, 1, 8, 1);                            // 八角環(絕對領域)
-const DOME = new THREE.SphereGeometry(1, 24, 10, 0, TAU, 0, Math.PI / 2);     // 半球
-const SHELL = new THREE.SphereGeometry(1, 20, 12);                            // 相位殼
-const _sharedGeo = new Set([PLANE, CYL, OCT, DOME, SHELL]);
+// 共用幾何(MUST NOT dispose;經 toon.js markShared 註冊,disposeTree 依此跳過)
+const PLANE = markShared(new THREE.PlaneGeometry(2, 2));                                  // 邊長 2 = 半徑 1
+const CYL = markShared(new THREE.CylinderGeometry(1, 1, 1, 12, 1, true));                 // 單位光柱
+const OCT = markShared(new THREE.RingGeometry(0.82, 1, 8, 1));                            // 八角環(絕對領域)
+const DOME = markShared(new THREE.SphereGeometry(1, 24, 10, 0, TAU, 0, Math.PI / 2));     // 半球
+const SHELL = markShared(new THREE.SphereGeometry(1, 20, 12));                            // 相位殼
 
 const M = (map, color, o = 1) => {
   const m = new THREE.MeshBasicMaterial({
@@ -464,15 +464,6 @@ function fadeAll(group, k) {
   group.traverse((o) => {
     const m = o.material;
     if (m && m.userData.o != null) m.opacity = m.userData.o * k;
-  });
-}
-
-function disposeTree(root) {
-  root.traverse((o) => {
-    // Sprite.geometry 是 three 全域共用的一份,MUST NOT dispose(會打到全 app 的 sprite)
-    if (!o.isSprite && o.geometry && !_sharedGeo.has(o.geometry)) o.geometry.dispose();
-    const m = o.material;
-    if (m) (Array.isArray(m) ? m : [m]).forEach((x) => x?.dispose());
   });
 }
 
@@ -951,8 +942,7 @@ function fxDash(scene, effects, P) {
       gh.o.material.opacity = gh.o.material.userData.o * k;
       if (k <= 0) {
         g.remove(gh.o);
-        if (!gh.o.isSprite && gh.o.geometry && !_sharedGeo.has(gh.o.geometry)) gh.o.geometry.dispose();
-        gh.o.material.dispose();
+        disposeTree(gh.o);   // 共用幾何由 toon.js markShared 註冊表跳過
         ghosts.splice(i, 1);
       }
     }
