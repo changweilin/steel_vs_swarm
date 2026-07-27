@@ -254,7 +254,7 @@ npm run cloud      # 雲端節點($PORT 監聽、/healthz、戰區上限)
 npm run build:solo # 打包單機特化版到 dist/(純檔案複製,無 bundler)
 npm test           # node test/e2e.mjs,約 70+ 項斷言(不會自動啟動伺服器)
 npm run sim        # headless 加速模擬完整 bot 對局(平衡/難度壓測)
-npm run bal        # 平衡不變式驗證(兵種戰力、塔位重疊、經濟曲線、拆塔剩血)
+npm run bal        # 平衡不變式驗證(兵種戰力、塔位重疊、經濟曲線、拆塔剩血、對進戰勝率)
 npm run audit:net  # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射)
 ```
 

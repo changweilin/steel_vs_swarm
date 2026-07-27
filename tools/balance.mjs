@@ -1,5 +1,5 @@
 // ============ 平衡稽核(離線,純 Node,無依賴):`npm run bal` ============
-// 四條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
+// 六條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
 //
 // ① 一波 NPC = 玩家 60% EHP
 //    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + WAVE_EXTRAS(火箭兵/榴彈兵/坦克/攻擊直升機)。
@@ -18,8 +18,29 @@
 //    無招式/無爆擊/護盾持續受擊不回復)⇒ 平均「剛好」活著拆完(剩 0~20% EHP)。
 //    無人機(單機)= 站外圍攻模型:重武器射程 > 砲塔(311m 外零承傷、含距離衰減)⇒
 //    驗每台重武器射程確實 > 塔 + 機種平均拆完兩座 ≤ 站外時間預算(單機 DPS ⇒ 較慢但不承傷)。
-import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, chargeF, upgradePrice,
-  armorMul, vsMult, heroWeapon, charKind, heroArmor, EVASION, grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+//
+// ⑤ 對進戰勝率(2026-07-27 使用者原則:「戰力平衡策略須考量**攻擊距離**與**高度差**;
+//    測試時要考慮**從遠處移動到進入射程**,平均**不同高度差**的勝率」)。
+//    ①~④ 都是「同高度、近距平台、不移動」的靜態模型 —— 射程與高度差對結果毫無作用。
+//    ⑤ 補上這兩個維度:1v1 自射程外接近 → 進入射程 → 拉鋸 → 定點互轟,並在
+//    ±3 個砲塔高的高度差上對稱掃描取平均勝率(模型見 tools/duel.mjs,唯一縫)。
+//    a 陣營對稱:SWARM vs STEEL 全對局平均勝率 50% ±SIDE_TOL
+//    b 機種對稱:三機種各自 vs 全體的平均勝率 50% ±KIND_TOL
+//    c 高度差中性:較高方平均勝率 50% ±HIGH_TOL —— 高地換的是視野與機動,不該直接換勝負
+//    d 角色離群:非豁免角色的平均勝率 ∈ [CH_LO, CH_HI];豁免一律具名附理由(見 DUEL_EXEMPT)
+//    e 射程壓制上限:接近期單方面挨打的損失 ≤ 對手初始 EHP 的 FREE_MAX
+//       —— 射程差可以換到先手,但不該在對手還沒進場前就分出勝負。
+//
+// ⑥ 招式配置 ← 武器射程剖面(2026-07-27 使用者定案:「扇形武器優先配置拉敵人 / 快速進場退場 /
+//    匿蹤暗殺等、控場或走位的大小招」)。扇形武器沒有近距平台、實用交戰帶最短,拿到站樁型套件
+//    (承傷減免 / 治療 / 召喚 / 攔截)等於貼不上就一項都兌現不了。雙扇形 MUST 兩招都是貼身套件、
+//    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
+import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
+  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
+  grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
+
+const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
 
 const MAX_TIER = 1 + ECON.UPGRADES.lw.max;   // 戰鬥面向滿級階(開場 Lv1 + 升 max 次)= Lv4
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -197,6 +218,126 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   if (!sustain) fail++;
   console.log(`${sustain ? '✅' : '❌'} 滿級電力:回充 ${(UNITS.robot.mpRegen * chargeF(U.ch.max)).toFixed(1)}/s`
     + ` ≥ 重武器持續耗電 ${ECON.HEAVY_MP_PER_CD}/s(攻堅不斷火)`);
+}
+
+// ---------- ⑤ 對進戰勝率(攻擊距離 × 高度差)----------
+{
+  const SIDE_TOL = 0.05, KIND_TOL = 0.05, HIGH_TOL = 0.03;   // 陣營 / 機種 / 較高方的容差
+  const CH_LO = 0.20, CH_HI = 0.80;                          // 單一角色的勝率上下界
+  const FREE_MAX = 0.40;                                     // 接近期單方面損失上限(對手初始 EHP 比例)
+  // 具名豁免:對進戰模型**只算武器**(與 ①/④ 同基準,不含招式)—— 下列角色的戰力主體是
+  // 模型算不到的招式,硬把武器數值拉到區間內反而會讓他們在實戰中過強。豁免 MUST 附理由。
+  const DUEL_EXEMPT = {
+    t03: '「大鍋」鍋蓋開道(dash 進場)+ 開鍋(strike 拉近)—— 戰力主體是把敵人帶進扇形甜蜜點,模型不模擬位移與拉近',
+    s10: '「白噪音」訊號矛每發附帶 EMP 1.5~2.5s(對手武器離線)+ 大招 EMP —— 實際輸出是「讓對方不能輸出」',
+    s04: '「Kashi」突進機動(CD 12s 位移)是貼身扇形武器的到位手段 —— 模型不模擬位移招式 ⇒ 永遠貼不上',
+  };
+  const chs = Object.keys(CHARACTERS);
+  const F = Object.fromEntries(chs.map((c) => [c, fighter(c)]));
+  const sweep = dhSweep();
+  const rate = {}, free = {};
+  for (const a of chs) {
+    rate[a] = {}; free[a] = {};
+    for (const b of chs) {
+      if (a === b) continue;
+      const r = duelSweep(F[a], F[b], sweep);
+      rate[a][b] = r.win; free[a][b] = r.free;
+    }
+  }
+  const mean = (v) => v.reduce((s, x) => s + x, 0) / v.length;
+  const avg = Object.fromEntries(chs.map((a) => [a, mean(Object.values(rate[a]))]));
+  const of = (k) => chs.filter((c) => charKind(c) === k);
+  console.log(`\n⑤ 對進戰勝率 — 自射程外接近 → 進場 → 拉鋸 → 互轟;高度差 ±${DUEL.DH_MAX_F} 個砲塔高`
+    + `(${sweep.length} 點對稱掃描)取平均\n`);
+
+  // a 陣營對稱
+  const side = mean(of('drone').flatMap((a) => of('robot').map((b) => rate[a][b])));
+  const okS = Math.abs(side - 0.5) <= SIDE_TOL;
+  if (!okS) fail++;
+  console.log(`${okS ? '✅' : '❌'} 陣營對稱  SWARM vs STEEL ${(side * 100).toFixed(1)}%`
+    + `(目標 50±${SIDE_TOL * 100}pp;${of('drone').length * of('robot').length} 組對局)`);
+
+  // b 機種對稱
+  for (const k of ['drone', 'robot', 'morph']) {
+    const v = mean(of(k).map((c) => avg[c]));
+    const okK = Math.abs(v - 0.5) <= KIND_TOL;
+    if (!okK) fail++;
+    console.log(`${okK ? '✅' : '❌'} 機種對稱  ${k.padEnd(6)} vs 全體 ${(v * 100).toFixed(1)}%(目標 50±${KIND_TOL * 100}pp)`);
+  }
+
+  // c 高度差中性(較高方 = dh > 0 的那一側)
+  let hw = 0, hn = 0;
+  for (const dh of sweep.filter((x) => x > 0)) for (const a of chs) for (const b of chs) {
+    if (a === b) continue;
+    hw += duel(F[a], F[b], dh).win; hn++;
+  }
+  const high = hw / hn;
+  const okH = Math.abs(high - 0.5) <= HIGH_TOL;
+  if (!okH) fail++;
+  console.log(`${okH ? '✅' : '❌'} 高度差中性 較高方 ${(high * 100).toFixed(1)}%(目標 50±${HIGH_TOL * 100}pp)`
+    + ` — 高地換視野與機動(+${(ALT_R * 100).toFixed(0)}% 射程 / +${(ALT_D * 100).toFixed(0)}% 閃避),不換勝負`);
+
+  // d 角色離群(具名豁免除外)
+  const bad = chs.filter((c) => !DUEL_EXEMPT[c] && (avg[c] < CH_LO || avg[c] > CH_HI));
+  if (bad.length) fail++;
+  const sorted = chs.slice().sort((a, b) => avg[a] - avg[b]);
+  console.log(`${bad.length ? '❌' : '✅'} 角色離群  ${chs.length - Object.keys(DUEL_EXEMPT).length} 名受檢角色全在`
+    + ` ${CH_LO * 100}~${CH_HI * 100}%${bad.length ? ` — 出界:${bad.map((c) => `${c} ${(avg[c] * 100).toFixed(0)}%`).join('、')}` : ''}`
+    + `  [最低 ${sorted[0]} ${(avg[sorted[0]] * 100).toFixed(0)}% / 最高 ${sorted[sorted.length - 1]}`
+    + ` ${(avg[sorted[sorted.length - 1]] * 100).toFixed(0)}%]`);
+  for (const [c, why] of Object.entries(DUEL_EXEMPT))
+    console.log(`   ⚪ 豁免 ${c} ${(avg[c] * 100).toFixed(0)}%(模型只算武器):${why}`);
+
+  // e 射程壓制上限
+  let mx = 0, mxPair = '';
+  for (const a of chs) for (const b of chs) {
+    if (a === b) continue;
+    if (free[a][b] > mx) { mx = free[a][b]; mxPair = `${a}→${b}`; }
+  }
+  const okF = mx <= FREE_MAX;
+  if (!okF) fail++;
+  console.log(`${okF ? '✅' : '❌'} 射程壓制  接近期單方面損失最大 ${(mx * 100).toFixed(1)}% EHP`
+    + `(${mxPair};上限 ${FREE_MAX * 100}%)`);
+}
+
+// ---------- ⑥ 招式配置 ← 武器射程剖面 ----------
+// 使用者定案(2026-07-27):「扇形武器優先配置拉敵人 / 快速進場退場 / 匿蹤暗殺等、
+// 控場或走位的大小招」。扇形武器沒有近距平台、實用交戰帶最短(見 data.js FAN_MUZZLE),
+// 拿到手的若是站樁型套件(承傷減免 / 治療 / 召喚 / 攔截),貼不上的時候一項都兌現不了 ——
+// ⑤ 的角色離群列上,扇形使用者長年墊底就是這麼來的。
+// **雙扇形 vs 單扇形分開要求**:兩把武器都是扇形(s04/t03)= 純貼身機體,兩招都 MUST 是貼身套件;
+// 只有一把扇形(s07/m07 的重武器是電漿、輕武器仍是中距槍械)= 半貼身,至少一招即可 ——
+// 這兩名的小招(攔截領域 / 拒止穹頂)是 lore.js 裡 bio・expertise・bond・proto 四欄的人設核心,
+// **刻意不動**:規則是「優先配置」,不是「拿角色識別去換一格達標」。
+{
+  // 貼身套件 = 突進 / 匿蹤 / 走位增益 / 控場打擊(add 的家族分類見 data.js CHARACTERS 檔頭)
+  const CLOSE_ADD = { buff: ['haste', 'leap', 'dodge'], strike: ['pull', 'stun', 'slow', 'confuse'] };
+  const isClose = (a) => !!a && (a.fx === 'dash' || a.fx === 'stealth'
+    || (CLOSE_ADD[a.fx] || []).includes(a.add?.fx));
+  const DENSITY_F = 2;   // 「優先配置」的量化下限:扇形使用者的人均持有 ≥ 非扇形 × 此值
+  const chs = Object.keys(CHARACTERS);
+  const fanN = (c) => ['light', 'heavy'].filter((s) => heroWeapon(c, s, 1, true)?.fan).length;
+  const closeN = (c) => ['skill', 'ult'].filter((s) => isClose(heroAbility(c, s, 1))).length;
+  const fans = chs.filter((c) => fanN(c) > 0);
+  console.log('\n⑥ 招式配置 ← 武器射程剖面 — 扇形武器優先配置貼身套件(突進/匿蹤/走位/控場)\n');
+
+  const bad = fans.filter((c) => closeN(c) < (fanN(c) === 2 ? 2 : 1));
+  if (bad.length) fail++;
+  for (const c of fans) {
+    const need = fanN(c) === 2 ? 2 : 1, got = closeN(c);
+    const kit = ['skill', 'ult'].map((s) => {
+      const a = heroAbility(c, s, 1);
+      return `${isClose(a) ? '✔' : '✘'}${a.name}(${a.fx}${a.add ? '+' + a.add.fx : ''})`;
+    }).join('  ');
+    console.log(`${got >= need ? '✅' : '❌'} ${c} ${fanN(c) === 2 ? '雙扇形' : '單扇形'}`
+      + `(需 ${need}/2,實得 ${got}/2)  ${kit}`);
+  }
+  const avgOf = (cs) => cs.reduce((s, c) => s + closeN(c), 0) / cs.length;
+  const fanAvg = avgOf(fans), restAvg = avgOf(chs.filter((c) => !fanN(c)));
+  const okD = fanAvg >= restAvg * DENSITY_F;
+  if (!okD) fail++;
+  console.log(`${okD ? '✅' : '❌'} 優先配置密度  扇形 ${fans.length} 名人均 ${fanAvg.toFixed(2)} 招`
+    + ` ≥ 非扇形 ${chs.length - fans.length} 名人均 ${restAvg.toFixed(2)} × ${DENSITY_F}`);
 }
 
 console.log(fail ? '\n❌ 平衡稽核未通過' : '\n🎉 平衡稽核通過');

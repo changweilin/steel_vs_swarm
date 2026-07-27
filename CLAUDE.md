@@ -53,6 +53,13 @@
 - 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
 - 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
 - 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
+  扇形曲線的槍口係數 `FAN_MUZZLE` **MUST NOT 手寫** —— 由 `FALLOFF.PLATEAU` 推導(= 在別人的近距平台邊界上恰好滿額)。
+- **陣營對抗係數的對稱化只住 `data.js` 的 `CLASS_SYM` 推導區塊**:英雄對英雄時蜂群恆吃自家武器的 `vs.armor`、
+  鋼鐵/傭兵恆吃自家的 `vs.air`,兩張手訂風味表合計起來並不對稱。校正係數由持續 DPS 推導後**整組等比**套回,
+  **MUST NOT** 逐武器手改 `vs` 去湊平衡(32 角一改就漂移);逐角色的戰力調整請改該角色的 `dmg` 階梯。
+- **對進戰(接近 → 進場 → 互轟 → 高度差掃描)的模型只住 `tools/duel.mjs`**,`tools/balance.mjs` ⑤ 匯入使用;
+  MUST NOT 在別處另寫第二份對局模型。模型**只算武器**(與 ①/④ 同基準,不含招式)—— 這是刻意的:
+  只模擬一半的招式家族(自身增益/打擊)會系統性偏袒那一半,故一律不算,尾端的招式導向角色改走具名豁免。
 - 三個**機種絕招**(自爆攻擊 / 轟炸餌機 / 重砲模式)的傷害只住 `data.js` 的 `SPECIAL` 區塊:一次絕招的**總傷害預算**
   = `specialBudget(abil)`(隨**輕/重武器綜合等級** = 兩軌平均成長,可為分數階 ⇒ **MUST NOT** 丟進 `tierVal`),
   三招各自把同一份預算切給自己的投射數(`kamiBlast`/`selfBoomBlast`/`decoyBlast`/`decoyBombBlast`/`barrageDmgF`)。
@@ -156,8 +163,12 @@ npm run cloud        # 雲端節點($PORT 監聽、/healthz、--max-rooms 戰區
 npm run build:solo   # 打包單機特化版到 dist/(純檔案複製,無 bundler;GitHub Actions 同一支)
 npm run audit:net    # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射)
 npm test             # node test/e2e.mjs,約 60 項斷言(不會自動啟動伺服器!)
-npm run bal          # 平衡四不變式:①一波 NPC = 玩家 60% EHP ②前線敵我塔重疊 80% 且不對射
+npm run bal          # 平衡六不變式:①一波 NPC = 玩家 60% EHP ②前線敵我塔重疊 80% 且不對射
                      #              ③單線 30% 擊殺/40% 助攻 10 分鐘 ≈ 八軌升滿 ④滿級單推同塔位雙塔剩 0~20%
+                     #              ⑤對進戰勝率(自射程外接近 → 進場 → 互轟,±3 砲塔高對稱掃描取平均):
+                     #                陣營/機種/較高方皆 ≈50%、角色不離群、接近期單方面損失 ≤40% EHP
+                     #              ⑥招式配置 ← 武器射程剖面:扇形武器優先配置貼身套件
+                     #                (突進/匿蹤/走位增益/控場打擊),雙扇形 2/2、單扇形 ≥1、密度 ≥ 非扇形 ×2
 npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓測)
 ```
 
@@ -170,7 +181,9 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 
 | 改動 | 驗證 |
 |---|---|
-| 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` |
+| 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal`(五條全綠;動角色武器 MUST 一併看 ⑤ 的角色離群列) |
+| **角色大小招的 `fx` / `add`**(招式家族配置) | `npm run bal` ⑥ —— 扇形武器沒有近距平台、實用交戰帶最短,拿到站樁型套件(承傷減免/治療/召喚/攔截)等於貼不上就一項都兌現不了。**雙扇形 MUST 兩招都是貼身套件**(突進 dash / 匿蹤 stealth / 走位增益 buff+haste\|leap\|dodge / 控場打擊 strike+pull\|stun\|slow\|confuse),**單扇形 MUST 至少一招**,另驗密度(扇形人均 ≥ 非扇形 ×2)。**MUST NOT** 為了湊達標去換掉 lore 人設核心的招式(s07 攔截領域 / m07 拒止穹頂刻意保留在 1/2)|
+| **對進戰模型**(`tools/duel.mjs`)/ `ALTITUDE.*` / `FAN_FLOOR`・`FAN_MUZZLE`・`fanFalloff` / `CLASS_SYM.K`(陣營對抗係數對稱化) | `npm run bal` ⑤ —— ⓐ陣營 SWARM vs STEEL 50±5pp ⓑ三機種各 50±5pp ⓒ**較高方 50±3pp**(高地換視野與機動、不換勝負;舊 ALTITUDE 值只有 48.3% = 搶高地淨虧損)ⓓ非豁免角色 ∈ 20~80%(豁免 MUST 具名附理由 —— 模型**只算武器**,招式導向角色會沉在尾端)ⓔ接近期單方面損失 ≤40% EHP。**改 `CLASS_SYM.K` MUST 同時看 ① 三機種**(校正落在跨陣營那一欄,但波次含坦克 ⇒ ① 會微動;K=1 完全對稱會讓陣營勝率衝到 59%,校準值 0.5)|
 | `SPECIAL`/`BARRAGE.DMG_MIN\|MAX`/`SQUAD.KAMI.N`/`DECOY.BOMB_MAX`(機種絕招傷害預算與切分) | e2e「機種絕招三招同預算」段(三招在綜合 Lv1/2.5/4 的總傷害互差 ≤2%、32 角重砲倍率全在夾制區間、整夾追加 = 一份預算)+ `npm run bal`(bal **刻意不含**三招 burst ⇒ 四不變式應不動,動了就是把加成套進了持續 DPS 路徑) |
 | `BOT_DIFF[].gap\|react`/`BOT_OPS`/`bots.js _op()`(電腦難度操作節奏) | e2e「電腦難度操作節奏」段(難度單調、最高難度對齊頂尖 FPS 電競 0.15s、全類操作合計 ≤ 手速上限、反應時間內不開火)+ `npm run sim`(headless 對局跑得完、無例外)+ 沙包輸出探針(90s 輸出 MUST 隨難度單調遞增) |
 | `ECON.UPG_BASE\|UPG_INC\|UPG_L3`(八軌階梯單價) | `npm run bal` ③(收入 ≈ 八軌全滿 ±10%;第三階改 200 後餘裕僅 1.7 個百分點)+ e2e「八軌升級第三階單價」段 |

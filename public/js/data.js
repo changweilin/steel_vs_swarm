@@ -334,16 +334,20 @@ export const HEROIC = { range: 1.2, dmg: 1.5 };
 // 效果**全部落在「較高的一方」**(高地換視野與機動,不換爆發):
 //   +射程 / +閃避率;但「攻擊時」爆率/爆傷↓、「受到攻擊時」爆率/爆傷↑。
 // 強度係數 s 隨 |dh| 由「1 個砲塔高」線性升到「3 個砲塔高(TIERS)」封頂;砲塔高 = TARGET_H.tower(推導不手寫)。
-// 封頂效果:+25% 射程、+10% 閃避、攻擊爆率 ×0.5、攻擊爆傷加成 ×0.5、受擊爆率 ×2、受擊爆傷加成 +50%。
+// 封頂效果:+25% 射程、+10% 閃避、攻擊爆率 ×0.65、攻擊爆傷加成 ×0.65、受擊爆率 ×1.7、受擊爆傷加成 +35%。
 // 爆擊只作用於直擊武器(heroHit/heroLance _rollCrit);招式不吃高度差/閃避/爆擊(見 sim.heroCast → _blast)。
 export const ALTITUDE = {
   TIERS: 3,             // |dh| 達「3 個砲塔高」時效果封頂(門檻在 1 個砲塔高)
   RANGE: 0.25,         // 較高方 +射程(封頂)
   DODGE: 0.10,         // 較高方 +閃避率(封頂)
-  ATK_CRIT_RATE: 0.5,  // 較高方攻擊時:爆率 ×(1 − 此值·s)  → 封頂 ×0.5
-  ATK_CRIT_DMG: 0.5,   // 較高方攻擊時:爆傷加成 ×(1 − 此值·s)→ 封頂 ×0.5(暴傷 −50%)
-  RCV_CRIT_RATE: 1.0,  // 較高方受擊時:爆率 ×(1 + 此值·s)  → 封頂 ×2
-  RCV_CRIT_DMG: 0.5,   // 較高方受擊時:爆傷加成 ×(1 + 此值·s)→ 封頂 +50%
+  // 爆擊代價四項於 2026-07-27 整組 ×0.7 重新校準(原 0.5/0.5/1.0/0.5)——
+  // 對進戰模型(`npm run bal` ⑤)量到舊值讓「較高方勝率」只有 48.3%:+25% 射程只在接近期兌現、
+  // +10% 閃避只擋輕武器直射,兩者合計買不回「攻擊爆擊砍半 + 受擊爆率翻倍」的代價 ⇒ **搶高地是淨虧損**,
+  // 與設計意圖(高地換視野與機動、不換爆發 ⇒ 期望勝負應為**中性**)相反。整組等比縮放保留原本的效果形狀。
+  ATK_CRIT_RATE: 0.35, // 較高方攻擊時:爆率 ×(1 − 此值·s)  → 封頂 ×0.65
+  ATK_CRIT_DMG: 0.35,  // 較高方攻擊時:爆傷加成 ×(1 − 此值·s)→ 封頂 ×0.65
+  RCV_CRIT_RATE: 0.7,  // 較高方受擊時:爆率 ×(1 + 此值·s)  → 封頂 ×1.7
+  RCV_CRIT_DMG: 0.35,  // 較高方受擊時:爆傷加成 ×(1 + 此值·s)→ 封頂 +35%
 };
 /** 觸發門檻/一階高度 = 一個砲塔高(公尺,實體高不吃 COMBAT_SCALE);推導不手寫 */
 export const altTier = () => TARGET_H.tower;
@@ -607,10 +611,21 @@ export function dmgFalloff(def, d) {
 }
 // 扇形武器(散彈槍 / 電漿):無近距平台 —— 槍口傷害最高,隨距離線性遞減到射程末端的 FAN_FLOOR。
 // 這正是「射程偏短、越近傷害越高」的手感(使用者指示);射程本就短(近戰武器)。
-export const FAN_FLOOR = 0.25;
+// ---- 槍口係數 FAN_MUZZLE(2026-07-27;對進戰模型 `npm run bal` ⑤ 校出來的結構性短少)----
+// 舊式曲線由 1.0 起跌 ⇒ 扇形武器**在任何距離都不到滿額**,而其他武器在 PLATEAU(35% 射程)內是滿額的;
+// 武器基準 dmg 卻是照滿額訂的(bal ① 不套衰減) ⇒ 六把扇形武器的使用者實戰輸出普遍短少四~五成
+// (改制前 6 名扇形使用者的對進戰平均勝率 27.4%,雙扇形的 t03 / s04 更只有 5.5% / 3.0% —— 形同廢角)。
+// 修法**不動使用者指定的曲線形狀**(仍是無平台的斜線、越近越高),只把斜線抬到
+// 「在別人的近距平台邊界 FALLOFF.PLATEAU 上恰好等於滿額」⇒ 比那更近才高於滿額、更遠仍照舊衰減。
+// **推導不手寫**:改 FALLOFF.PLATEAU 此值自動跟著走。
+// FAN_FLOOR 同時 0.25 → 0.45:扇形武器的**實用交戰帶整段落在射程末端**(交戰距離由雙方輕武器
+// 射程決定,而扇形射程本來就短)⇒ 舊保底等於「長期以 25% 傷害作戰」。連帶 bal ④ 最差站外拆塔
+// (s07 防空散射矩陣)787s → 437s。
+export const FAN_FLOOR = 0.45;
+export const FAN_MUZZLE = 1 / (1 - FALLOFF.PLATEAU);
 export function fanFalloff(range, d) {
   if (!range) return 1;
-  return Math.max(FAN_FLOOR, 1 - d / range);
+  return Math.max(FAN_FLOOR, FAN_MUZZLE * (1 - d / range));
 }
 /** 爆風超壓衰減:核心(≤0.5r)全傷,外圍隨距離急降、1.8r 歸零(取代舊二段式 1/0.4) */
 export function blastFalloff(r, d) {
@@ -1061,13 +1076,13 @@ export const CHARACTERS = {
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
       // crit 0 = 類型基準(重機槍低暴擊);2026-07-25 起 heroWeapon() 夾 CRIT_MIN 5% ⇒ 實戰 ≥5%。
       // e2e 的 s02/t01 確定性傷害斷言改用 Math.random 樁固定不觸發暴擊(不再依賴 crit:0)。
-      dmg: [20, 25, 31], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
+      dmg: [17, 21, 26], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
       vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
     // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
     // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
     // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
     heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
-      dmg: [70, 104, 148], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
+      dmg: [60, 88, 126], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
@@ -1210,10 +1225,10 @@ export const CHARACTERS = {
     visual: { hue: 0xd8c690, frame: 'wing', body: 'frame', form: 'fixed', wing: 'vtail', paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.05, mp: 1.05, speed: 0.95, armor: 8 },
     light: { name: '精密聚焦雷射步槍', rw: '低散射固態雷射・光速直擊', type: 'beam',
-      dmg: [22, 27, 33], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
+      dmg: [17, 21, 25], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
       vs: { flesh: 1.1, armor: 1.3, air: 1.0, building: 0.6 } },
     heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'rail', mv: 2000,
-      dmg: [79, 114, 163], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
+      dmg: [61, 88, 126], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
     skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
       add: { fx: 'mark', dur: [4, 5, 6] },
@@ -1261,10 +1276,10 @@ export const CHARACTERS = {
     visual: { hue: 0xcfd8ff, pod: 'none', proto: 'seraph', paint: 'minimal' },
     mods: { hp: 0.9, sp: 1.3, mp: 1.2, speed: 1.15, armor: 14 },
     light: { name: '高斯衝鋒槍', rw: '實驗性 EM 線圈・初速 1100m/s', type: 'rail', mv: 1100,
-      dmg: [15, 19, 23], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
+      dmg: [14, 18, 21], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
       vs: { flesh: 1.2, armor: 0.9, air: 1.1, building: 0.5 } },
     heavy: { name: '同步狙擊砲', rw: 'EM 加速穿甲彈・初速 1500m/s', type: 'rail', mv: 1500,
-      dmg: [78, 115, 168], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
+      dmg: [72, 107, 156], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
     skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
@@ -1283,21 +1298,29 @@ export const CHARACTERS = {
     heavy: { name: '電漿噴焰', rw: '磁化電漿投射・扇形噴焰', type: 'plasma', arc: [15, 17, 19],
       dmg: [49, 72, 102], mag: 3, reload: 7, range: 264, pen: 12,
       vs: { flesh: 1.6, armor: 1.1, air: 0.3, building: 1.4 } },
+    // 雙扇形(霰彈 + 電漿噴焰)= 全機種最短的交戰帶,又是最慢的機體 ⇒ 兩招都給貼身套件
+    // (2026-07-27 使用者原則:扇形武器優先配置拉敵人/進場退場/匿蹤、控場或走位的大小招;稽核 bal ⑥)。
+    // 舊制「承傷減免 + 傷害增益吸血」是站樁包:貼不上的時候一項都兌現不了,對進戰(bal ⑤)長年墊底。
+    // 小招保留鑄鐵鍋盾本體(機體左前臂真的掛著那口鍋,見 models.js gorilla)並補上衝鋒 ——
+    // lore 寫的就是「頂著那口鑄鐵鍋盾一路撞進去」,承傷減免 + 加速正是這句話的機制化;
+    // 大招從自身增益改成把敵人捲進鍋裡的範圍打擊,直接把目標帶進扇形武器的甜蜜點。
     skill: { name: '鑄鐵鍋盾', fx: 'buff', target: 'self', mul: { dmgTaken: [0.55, 0.5, 0.45] },
-      dur: [4, 5, 6], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋架起:承傷大減' },
-    ult: { name: '開鍋!', fx: 'buff', target: 'self', mul: { dmg: [1.4, 1.5, 1.6], reload: [0.8, 0.75, 0.7] },
-      add: { fx: 'vamp', f: [0.15, 0.2, 0.25] },
-      dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '懲戒營主廚火力全開,打到就是吃到(吸血)' },
+      add: { fx: 'haste', f: [1.35, 1.45, 1.55] },
+      dur: [5, 6, 7], cd: [16, 14, 12], mp: [30, 35, 40], desc: '左臂鑄鐵鍋一橫,頂著彈幕加速撞進去(承傷大減 + 衝鋒)' },
+    ult: { name: '開鍋!', fx: 'strike', count: [2, 3, 4], dmg: [88, 110, 138], r: 14, scatter: 18,
+      add: { fx: 'pull', imp: [24, 30, 36] },
+      range: 160, pen: 10, cd: [75, 65, 55], mp: [80, 90, 100], vs: { flesh: 1.5, armor: 1.1 },
+      desc: '掀鍋!滾燙熱浪炸開,周圍的全給我捲進來(拉近)' },
   },
   t04: {
     side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
     visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'hound', paint: 'camo' },
     mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
     light: { name: '消音 DMR', rw: 'VSS Vintorez 9×39・初速 295m/s', type: 'gun', mv: 295,
-      dmg: [24, 30, 37], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
+      dmg: [21, 27, 33], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.4, armor: 0.8, air: 1.0, building: 0.5 } },
     heavy: { name: '14.5 反器材砲', rw: 'KPV・初速 1000m/s', type: 'gun', mv: 1000,
-      dmg: [64, 94, 132], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
+      dmg: [57, 84, 118], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '灰色迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從所有感測器上消失(開火即現形)' },
@@ -1697,6 +1720,44 @@ UNITS.bunker.hp = Math.round(UNITS.tower.hp / 2);   // 碉堡 HP = 砲塔一半(
   // 初始無人機平均總血量(護盾+裝甲)—— 防空伏擊傷害 = 此值 /3(見 GAME 之後的 AA_AMBUSH.DMG derive)
   SQUAD.DRONE_AVG_HP = avg(dch.map((c) =>
     UNITS.drone.hp * (CHARACTERS[c].mods?.hp ?? 1) + UNITS.drone.shield * (CHARACTERS[c].mods?.sp ?? 1)));
+}
+// ---- 陣營對抗係數對稱化(2026-07-27 使用者原則:戰力平衡須考量攻擊距離與高度差)----
+// 對進戰模型(tools/duel.mjs / `npm run bal` ⑤)量到的**結構性偏差**:英雄對英雄時,
+// SWARM 英雄恆是 air 類機體、STEEL/MERC 英雄恆是 armor 類 ⇒ 蜂群實際吃到的是自家武器的 `vs.armor`,
+// 鋼鐵/傭兵吃到的是自家武器的 `vs.air`。兩張表各自逐武器手訂風味值(光束對空好、榴彈對甲好),
+// 合計起來卻不對稱 —— 蜂群把加成大量點在 vs.air(對上機甲永遠用不到),持續火力先天矮一截,
+// 於是「選哪個陣營」本身就先決定了一部分勝負。
+// 校正縫 = 此處:把兩邊「對敵方陣營機體類別的持續火力平均」往**幾何中點**拉,係數由 DPS 推導
+// (**MUST NOT** 手寫逐武器 vs —— 那就是 32 角一改就漂移的老病)。各武器之間的相對風味完全保留
+// (整組等比縮放),且**只動跨陣營的那一欄** ⇒ 對 NPC(flesh/building)與同類目標的數值不受影響。
+// K = 對稱化強度(1 = 完全對稱到中點)。**校準錨 = bal ⑤ 陣營勝率 50%**:K=1 會衝到 59% ——
+// 蜂群另有射程(輕 122 vs 108 / 重 194 vs 173)、機動與閃避優勢,那些優勢原本正是被不對稱的
+// vs 表隱性抵銷掉的;K=0.5 校出 50.3%(逐角色火力再微調後現值 52.7%,仍在 50±5pp 內)。
+// 改 K 或任何角色武器 dmg/mag/rate/cd/vs MUST 重跑 `npm run bal`
+// (校正落在跨陣營那一欄,但波次含坦克(armor)⇒ ① 的三機種剩餘率會跟著微動)。
+export const CLASS_SYM = { K: 0.5, SWARM_ARMOR_F: 1, STEEL_AIR_F: 1 };
+{
+  // 持續火力權重 = 彈夾週期攤平的每秒發數(與 bal ①/④、duel.mjs 同一個簡化)
+  const rps = (w) => {
+    const mag = tierVal(w.mag ?? 1, 1), rate = tierVal(w.rate ?? 3, 1);
+    return mag / (mag / rate + tierVal(w.cd ?? w.reload ?? 2, 1));
+  };
+  const out = (cs, cls) => cs.reduce((s, c) => s + ['light', 'heavy'].reduce((v, slot) => {
+    const w = CHARACTERS[c][slot];
+    return w ? v + tierVal(w.dmg, 1) * rps(w) * (w.vs?.[cls] ?? 1) : v;
+  }, 0), 0) / cs.length;
+  const swarm = Object.keys(CHARACTERS).filter((c) => charKind(c) === 'drone');
+  const steel = Object.keys(CHARACTERS).filter((c) => charKind(c) !== 'drone');
+  const oS = out(swarm, 'armor'), oT = out(steel, 'air');
+  const mid = Math.sqrt(oS * oT);                       // 幾何中點:兩邊等比對調,總火力水位不漂移
+  CLASS_SYM.SWARM_ARMOR_F = (mid / oS) ** CLASS_SYM.K;
+  CLASS_SYM.STEEL_AIR_F = (mid / oT) ** CLASS_SYM.K;
+  for (const [cs, cls, f] of [[swarm, 'armor', CLASS_SYM.SWARM_ARMOR_F], [steel, 'air', CLASS_SYM.STEEL_AIR_F]]) {
+    for (const c of cs) for (const slot of ['light', 'heavy']) {
+      const w = CHARACTERS[c][slot];
+      if (w) (w.vs ||= {})[cls] = Math.round((w.vs[cls] ?? 1) * f * 1000) / 1000;
+    }
+  }
 }
 // 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
