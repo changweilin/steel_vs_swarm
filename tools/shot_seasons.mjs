@@ -17,7 +17,7 @@ await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async () => {
   const THREE = await import('three');
-  const src = await (await fetch('/js/biomes.js')).text();
+  const src = await (await fetch('/public/js/biomes.js')).text();
   const cyl = (r1, r2, h, n = 5) => new THREE.CylinderGeometry(r1, r2, h, n);
   const cone = (r, h, n = 5) => new THREE.ConeGeometry(r, h, n);
   const ico = (r) => new THREE.IcosahedronGeometry(r, 0);

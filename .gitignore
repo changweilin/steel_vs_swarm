@@ -3,3 +3,7 @@ tools/.osm_cache/
 
 # `npm start -- --https` 生成的自簽憑證(含私鑰,MUST NOT 入版控;刪掉會重新生成)
 .certs/
+
+# `npm run build:solo` 產出的單機特化版(純複製,隨時可重生;GitHub Actions 也會自己打包)
+dist/
+

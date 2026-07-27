@@ -48,22 +48,41 @@
       <button id="storyBtn" class="btn big story-btn">◈ 劇情戰役</button>
     </div>
 
-    <div class="divider">─── 加入現有戰區 ───</div>
-    <div class="join-mode">
-      <label><input type="radio" name="joinMode" value="player" checked> ◆ 參戰</label>
-      <label><input type="radio" name="joinMode" value="spectator"> ◇ 觀戰</label>
+    <!-- 連線機制:雲端 / 區網 Tailscale / 單機。
+         鈕面文字的**真相是 netmode.js 的 LINK_MODES**,main.js 進場時會覆寫這三顆的 textContent;
+         這裡照抄一份是為了讓版型稽核(main.js 沒跑時)量得到真實鈕寬 —— 兩份是否一致由
+         `node tools/audit_net_modes.mjs` 把關,MUST NOT 只改一邊。 -->
+    <div class="divider">─── 連線機制 ───</div>
+    <div class="row link-modes" id="linkModes">
+      <button id="link_cloud" class="btn link-btn">☁ 雲端伺服器</button>
+      <button id="link_lan" class="btn link-btn">🛰 區網對戰</button>
+      <button id="link_solo" class="btn link-btn">🖥 單機模式</button>
     </div>
-    <div id="roomList" class="room-list"></div>
-    <button id="refreshRoomsBtn" class="btn">↻ 重新整理</button>
+    <div id="linkHint" class="link-hint"></div>
+    <div class="row link-cloud" id="cloudRow" style="display:none">
+      <input id="cloudUrl" placeholder="wss://節點網址" autocomplete="off" spellcheck="false">
+      <button id="cloudApplyBtn" class="btn">↯ 連線</button>
+    </div>
+
+    <!-- 加入現有戰區:單機模式沒有遠端戰區可加入,main.js 會整區收起 -->
+    <div id="joinArea">
+      <div class="divider">─── 加入現有戰區 ───</div>
+      <div class="join-mode">
+        <label><input type="radio" name="joinMode" value="player" checked> ◆ 參戰</label>
+        <label><input type="radio" name="joinMode" value="spectator"> ◇ 觀戰</label>
+      </div>
+      <div id="roomList" class="room-list"></div>
+      <button id="refreshRoomsBtn" class="btn">↻ 重新整理</button>
+      <details class="pin-join">
+        <summary>用 PIN 直接加入</summary>
+        <div class="row">
+          <input id="joinPin" placeholder="4 位數 PIN" inputmode="numeric" maxlength="4">
+          <button id="joinBtn" class="btn">▶ 加入</button>
+        </div>
+      </details>
+    </div>
     <!-- 手機操控設定與自我診斷:觸控裝置才顯示(main.js 依 touchCapable() 決定) -->
     <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控</button>
-    <details class="pin-join">
-      <summary>用 PIN 直接加入</summary>
-      <div class="row">
-        <input id="joinPin" placeholder="4 位數 PIN" inputmode="numeric" maxlength="4">
-        <button id="joinBtn" class="btn">▶ 加入</button>
-      </div>
-    </details>
   </div>
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 

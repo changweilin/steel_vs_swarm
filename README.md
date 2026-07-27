@@ -19,12 +19,13 @@
 1. [專案簡介 · Introduction](#專案簡介--introduction)
 2. [核心功能 · Features](#核心功能--features)
 3. [系統需求與安裝 · Prerequisites & Installation](#系統需求與安裝--prerequisites--installation)
-4. [快速上手 · Quick Start](#快速上手--quick-start)
-5. [操作說明 · Controls](#操作說明--controls)
-6. [專案架構 · Project Structure](#專案架構--project-structure)
-7. [開發與測試 · Development & Testing](#開發與測試--development--testing)
-8. [外部資料來源 · External Data Sources](#外部資料來源--external-data-sources)
-9. [授權條款 · License](#授權條款--license)
+4. [三種遊戲機制 · Three Play Modes](#三種遊戲機制--three-play-modes)
+5. [快速上手 · Quick Start](#快速上手--quick-start)
+6. [操作說明 · Controls](#操作說明--controls)
+7. [專案架構 · Project Structure](#專案架構--project-structure)
+8. [開發與測試 · Development & Testing](#開發與測試--development--testing)
+9. [外部資料來源 · External Data Sources](#外部資料來源--external-data-sources)
+10. [授權條款 · License](#授權條款--license)
 
 ---
 
@@ -93,6 +94,29 @@ npm start
 >
 > **手機遊玩(需 HTTPS 才有陀螺儀)· Mobile play**:`npm run mobile`(= `--https`,自簽憑證)。
 > 詳見 [操作說明 → 📱 手機 / 平板](#-手機--平板--virtual-gamepad--gyro)。
+
+---
+
+## 三種遊戲機制 · Three Play Modes
+
+遊戲內容三者完全相同,差別只在**權威伺服器住在哪裡**。大廳的「連線機制」三選一即時切換,選擇會記在瀏覽器裡。
+*Same game, three places the authoritative server can live. Switch in the lobby; the choice is remembered.*
+
+| 機制 · Mode | 權威模擬在哪 | 誰能一起玩 | 啟動方式 |
+|---|---|---|---|
+| ☁ **雲端伺服器** | 雲端節點的 Node 行程 | 網路上任何人(網址 + PIN) | `npm run cloud` |
+| 🛰 **區網對戰** | 開房那台主機 | 同區網,或同一個 Tailscale tailnet | `npm run lan` |
+| 🖥 **單機模式** | **你的瀏覽器分頁** | 只有你(對手是電腦玩家) | 什麼都不用,可離線 |
+
+- **雲端**:平台終止 TLS、`$PORT` 監聽、`/healthz` 健康檢查、`--max-rooms` 戰區上限;附 `Dockerfile`。
+  玩家在大廳填節點網址(可直接貼 `https://…`,自動換成 `wss://`)。
+- **區網 / Tailscale**:`npm run lan` 會印出區網位址、Tailscale 位址(CGNAT 段 `100.64.0.0/10`)與 MagicDNS 名。
+  雙方加入同一個 tailnet 就能跨網對戰 —— 免開防火牆通訊埠、免固定 IP、免 port forwarding。
+- **單機**:權威模擬 `server/sim.js` 直接跑在瀏覽器裡(**不是**客戶端自己算 —— 是把伺服器整支搬進分頁)。
+  GitHub Actions 會把儲存庫打包成靜態站台部署到 GitHub Pages(`npm run build:solo` 可本機重現),
+  開網址就能玩,不需要任何伺服器。
+
+完整部署與連線指南見 **[`docs/deploy.md`](docs/deploy.md)**。
 
 ---
 
@@ -177,7 +201,8 @@ npm start
 ```
 steel_vs_swarm/
 ├── server/
-│   ├── server.js      # HTTP 靜態檔 + WS 房間/配對 + 8Hz 快照廣播 + bot 管理
+│   ├── server.js      # 傳輸層:HTTP 靜態檔 + WebSocket + /healthz(雲端與區網共用)
+│   ├── rooms.js       # RoomHub:房間/配對/8Hz 戰鬥生命週期 — 三種機制共用同一份
 │   ├── sim.js         # BattleSim:權威模擬核心(唯一真相 / single source of truth)
 │   └── bots.js        # BotBrain:電腦玩家狀態機(推線/交戰/撤退)
 ├── public/
@@ -189,7 +214,9 @@ steel_vs_swarm/
 │       ├── game.js        # BattleClient:FPV 座艙、物理、快照插值、彈道、命中回報
 │       ├── mobile.js      # 手機/平板:虛擬搖桿(類比十字鍵 + ABXY/LR)+ 陀螺儀瞄準 + 直式/橫式版型
 │       ├── help.js        # 操作提示與遊戲說明文字(鍵鼠版 / 觸控版)
-│       ├── net.js         # WebSocket 客戶端(斷線重連)
+│       ├── net.js         # 傳輸層入口 makeNet():WebSocket(雲端/區網)或瀏覽器內主機(單機)
+│       ├── netmode.js     # 連線機制唯一真相(cloud / lan / solo 解析與節點網址)
+│       ├── localhost.js   # 單機模式:把 RoomHub 跑在瀏覽器分頁裡
 │       ├── mapSelect.js   # 真實地圖選點 + 主堡推薦演算法
 │       ├── venues.js      # 預設場地 + 我的最愛
 │       ├── venueLanes.js  # 離線烘烤的真實道路兵線
@@ -199,12 +226,14 @@ steel_vs_swarm/
 │       ├── locomotion.js  # 步態/開火/施法/跳躍動畫
 │       ├── environment.js # 季節/日夜/天氣
 │       └── ...            # castfx / hazards / vfx / toon / paint / hud 等
-├── tools/             # 離線工具:平衡驗證、兵線烘烤、稽核腳本、LOGO 管線
+├── tools/             # 離線工具:平衡驗證、兵線烘烤、稽核腳本、單機版打包、LOGO 管線
 ├── test/
 │   ├── e2e.mjs        # BattleSim 單元測試 + WebSocket 端對端(約 60+ 斷言)
 │   └── simrun.mjs     # headless 加速模擬(平衡/難度壓測)
 ├── reference/         # 上游唯讀副本(mapping_elf / ai_tycoon)— 僅供參考
-├── docs/              # 角色與劇情文件
+├── .github/workflows/ # 回歸驗證 CI + 單機版自動部署到 GitHub Pages
+├── docs/              # 角色與劇情文件 + 三種機制的部署指南(deploy.md)
+├── Dockerfile         # 雲端節點容器(node:22-alpine,無 build step)
 ├── package.json
 └── LICENSE            # Apache License 2.0
 ```
@@ -218,11 +247,15 @@ steel_vs_swarm/
 ## 開發與測試 · Development & Testing
 
 ```bash
-npm start   # 啟動伺服器 http://localhost:8620(--port <n> 覆寫)
-npm run dev # 同 start,固定 --port 8620
-npm test    # node test/e2e.mjs,約 60+ 項斷言(不會自動啟動伺服器)
-npm run sim # headless 加速模擬完整 bot 對局(平衡/難度壓測)
-npm run bal # 平衡不變式驗證(兵種戰力、塔位重疊、經濟曲線、拆塔剩血)
+npm start          # 啟動伺服器 http://localhost:8620(--port <n> 覆寫)
+npm run dev        # 同 start,固定 --port 8620
+npm run lan        # 區網 / Tailscale 對戰(--https,印出可連的區網與 Tailscale 網址)
+npm run cloud      # 雲端節點($PORT 監聽、/healthz、戰區上限)
+npm run build:solo # 打包單機特化版到 dist/(純檔案複製,無 bundler)
+npm test           # node test/e2e.mjs,約 70+ 項斷言(不會自動啟動伺服器)
+npm run sim        # headless 加速模擬完整 bot 對局(平衡/難度壓測)
+npm run bal        # 平衡不變式驗證(兵種戰力、塔位重疊、經濟曲線、拆塔剩血)
+npm run audit:net  # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射)
 ```
 
 > **測試注意 · Testing note**:`npm test` 僅是 WebSocket client,**不會自動重啟伺服器**。

@@ -18,9 +18,9 @@ await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async () => {
   const THREE = await import('three');
-  const { makeUnit } = await import('/js/models.js');
-  const { stepLocomotion, stepCombatFx } = await import('/js/locomotion.js');
-  const { CHARACTERS, charKind } = await import('/js/data.js');
+  const { makeUnit } = await import('/public/js/models.js');
+  const { stepLocomotion, stepCombatFx } = await import('/public/js/locomotion.js');
+  const { CHARACTERS, charKind } = await import('/public/js/data.js');
 
   const Z = new THREE.Vector3(0, 0, 1);
   const out = [];

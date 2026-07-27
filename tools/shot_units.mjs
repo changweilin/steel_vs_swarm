@@ -25,10 +25,10 @@ await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async ({ idsArg, SIZE }) => {
   const THREE = await import('three');
-  const { makeUnit, heroTargetH } = await import('/js/models.js');
-  const { stepLocomotion, stepCombatFx } = await import('/js/locomotion.js');
-  const { CHARACTERS, charKind } = await import('/js/data.js');
-  const { updateCelLight, setCelSun } = await import('/js/toon.js');
+  const { makeUnit, heroTargetH } = await import('/public/js/models.js');
+  const { stepLocomotion, stepCombatFx } = await import('/public/js/locomotion.js');
+  const { CHARACTERS, charKind } = await import('/public/js/data.js');
+  const { updateCelLight, setCelSun } = await import('/public/js/toon.js');
 
   const ids = idsArg === 'all' ? Object.keys(CHARACTERS) : idsArg.split(',');
   const canvas = document.createElement('canvas');
