@@ -41,7 +41,7 @@
 
   <div class="panel connect-box">
     <div class="panel-head">▍指揮官登入</div>
-    <input id="myName" placeholder="你的代號(最多 16 字)" maxlength="16">
+    <input id="myName" placeholder="你的代號" maxlength="16">
     <div class="row lobby-actions">
       <button id="mapBuilderBtn" class="btn big swarm-btn">◇ 建立地圖</button>
       <button id="openRoomBtn" class="btn big steel-btn">▶ 開戰時刻</button>
@@ -54,9 +54,9 @@
       <label><input type="radio" name="joinMode" value="spectator"> ◇ 觀戰</label>
     </div>
     <div id="roomList" class="room-list"></div>
-    <button id="refreshRoomsBtn" class="btn">↻ 重新整理列表</button>
+    <button id="refreshRoomsBtn" class="btn">↻ 重新整理</button>
     <!-- 手機操控設定與自我診斷:觸控裝置才顯示(main.js 依 touchCapable() 決定) -->
-    <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控 / 陀螺儀設定</button>
+    <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控</button>
     <details class="pin-join">
       <summary>用 PIN 直接加入</summary>
       <div class="row">
@@ -115,7 +115,7 @@
       <button id="resetSiteBtn" class="btn">↺ 重新選點</button>
     </div>
     <div class="row">
-      <button id="goOpenRoomBtn" class="btn steel-btn">開戰時刻(選已存地圖)→</button>
+      <button id="goOpenRoomBtn" class="btn steel-btn">開戰時刻 →</button>
       <button id="backLobbyBtn" class="btn">← 返回大廳</button>
     </div>
   </div>
@@ -151,7 +151,7 @@
     </div>
 
     <div class="row">
-      <input id="roomNameInput" placeholder="戰區名稱(可留白)" maxlength="16">
+      <input id="roomNameInput" placeholder="戰區名稱" maxlength="16">
       <label class="chk"><input type="checkbox" id="createPublic" checked> 公開</label>
     </div>
 
@@ -165,7 +165,7 @@
     </div>
 
     <div id="openRoomStatus" class="map-status">先從上面挑一張已存的地圖。</div>
-    <button id="createRoomBtn" class="btn big swarm-btn" disabled>▶ 建立戰區(開房)</button>
+    <button id="createRoomBtn" class="btn big swarm-btn" disabled>▶ 建立戰區</button>
     <button id="backFromOpenRoomBtn" class="btn">← 返回大廳</button>
   </div>
 </div>
@@ -181,7 +181,7 @@
       <button class="ss-btn ss-swarm" data-side="SWARM">▼ 同盟 蜂群</button>
     </div>
     <p class="story-blurb" id="storyBlurb"></p>
-    <button id="worldBtn" class="btn small world-btn">◈ 世界觀・序章 — 誰都負擔得起的戰爭</button>
+    <button id="worldBtn" class="btn small world-btn">◈ 世界觀・序章</button>
     <div class="story-chapters" id="storyChapters"></div>
     <div class="story-progress" id="storyProgress"></div>
     <div id="storyDeploy" class="map-status" style="display:none"></div>
@@ -269,13 +269,13 @@
   </div>
   <!-- 準備/開戰/離開:置於軍團(陣營)選擇正下方 -->
   <div class="row room-actions">
-    <button id="readyBtn" class="btn big" disabled>◆ 準備完成</button>
+    <button id="readyBtn" class="btn big" disabled>◆ 準備</button>
     <button id="startBattleBtn" class="btn big steel-btn" disabled>▶▶ 開戰</button>
     <button id="leaveRoomBtn" class="btn">離開</button>
   </div>
   <!-- 選角(入座後出現;不選 = 開戰隨機) -->
   <div class="char-section" id="charSection" style="display:none">
-    <div class="panel-head" id="charSectionHead">▍選擇角色(不選 = 隨機)</div>
+    <div class="panel-head" id="charSectionHead">▍選擇角色</div>
     <div class="char-pick">
       <div class="char-grid" id="charGrid"></div>
       <div class="char-detail" id="charDetail"></div>
@@ -295,7 +295,7 @@
   </div>
   <div class="spec-list" id="specList"></div>
   <p class="room-hint" id="roomHint"></p>
-  <p class="room-note">點陣營卡片入座/離座;房主可在空位補「電腦玩家」單人開戰。小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿兵線推進。</p>
+  <p class="room-note">點陣營卡片入座/離座;房主可在空位補「＋ 電腦」單人開戰。小兵皆為人類部隊:步兵 / 裝甲車 / 坦克,沿兵線推進。</p>
 </div>
 
 <!-- ========= 載入 ========= -->
@@ -386,7 +386,7 @@
       <div class="panel-head">▍升級工坊 <span id="shopMoney" class="shop-money"></span></div>
       <div id="shopItems" class="shop-items"></div>
       <div class="shop-note">金錢只來自擊殺 / 助攻 / 戰場物資(無自動收入):賞金對應目標難度,助攻 = 賞金 ¼(造成傷害或負面狀態才算;離開可視半徑 10 秒後失效)。品質升級另需擊殺數:小兵 1 ・ 坦克/直升機 2 ・ 塔 3 ・ 英雄 4</div>
-      <button id="shopCloseBtn" class="btn">關閉(B / ESC)</button>
+      <button id="shopCloseBtn" class="btn">關閉</button>
     </div>
   </div>
 
@@ -466,7 +466,7 @@
       <div class="over-sub" id="overSub"></div>
       <div class="over-stats" id="overStats"></div>
       <div class="row" style="justify-content:center">
-        <button id="backRoomBtn" class="btn big">◀ 返回戰區(再來一場)</button>
+        <button id="backRoomBtn" class="btn big">◀ 返回戰區</button>
         <button id="leaveGameBtn" class="btn">離開</button>
       </div>
     </div>
@@ -553,7 +553,7 @@
     <div class="tset-diag" id="touchDiag"></div>
     <div class="set-list" id="lobbyTouchMount"></div>
     <div class="row" style="justify-content:center">
-      <button id="touchTestBtn" class="btn steel-btn">🎮 試玩搖桿</button>
+      <button id="touchTestBtn" class="btn steel-btn">🎮 試玩</button>
       <button id="touchCloseBtn" class="btn">← 返回</button>
     </div>
   </div>

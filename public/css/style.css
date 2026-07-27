@@ -695,10 +695,16 @@ body.touch-ui .overlay-box { padding-top: 26px; }
 .toast::after { content: none; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ---------- 手機 ---------- */
+/* ---------- 手機 / 窄視窗(非觸控裝置也吃這段;觸控版另有 body.touch-ui.ori-* 特化)----------
+   陣營卡 MUST 維持左右並排(STEEL 左 / SWARM 右 = 主視覺方位),窄屏只收窄不換向 ——
+   換成上下堆疊會讓「左藍右黃」的對抗語意消失,也和桌機的操作位置對不上。 */
 @media (max-width: 760px) {
-  .side-cards { flex-direction: column; }
+  .side-cards { flex-wrap: nowrap; gap: 8px; }
+  .side-card { flex: 1 1 0; width: auto; min-width: 0; padding: 14px 10px 12px; }
   .side-vs { display: none; }
+  .side-emblem .crest { width: 66px; height: 66px; }
+  .side-name { font-size: 15px; letter-spacing: 3px; }
+  .side-hero { font-size: 10px; letter-spacing: 0; }
   .hud-bottom { flex-wrap: wrap; }
   #minimap { width: 140px; height: 140px; }
   .sysbar { display: none; }
@@ -1051,9 +1057,15 @@ body.touch-ui .overlay-box { padding-top: 26px; }
 .cd-empty span { font-size: 10px; }
 /* 展示台下方:立繪 + 簡歷雙欄 */
 .cd-lower { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; margin-top: 10px; }
-@media (max-width: 640px) { .cd-lower { grid-template-columns: 1fr; } }
 /* 左欄(頭像 + 小展示台)捲動時固定 */
 .cd-art { align-self: start; position: sticky; top: 0; z-index: 1; }
+/* 窄屏塌成單欄:**MUST 同時解除 .cd-art 的 sticky**,且此段 MUST 排在上面那條 sticky 之後 ——
+   媒體查詢不加特異度,寫在前面會被後面的 .cd-art 蓋回去。單欄時左欄在簡歷「上方」而非「旁邊」,
+   sticky 會讓不透明的頭像/展示台黏在捲動容器頂端、直接蓋掉下面的詳細說明(玩家回報「說明被擋住」)。 */
+@media (max-width: 640px) {
+  .cd-lower { grid-template-columns: 1fr; }
+  .cd-art { position: static; }
+}
 .cd-portrait { position: relative; }
 .cd-portrait img {
   width: 100%; border-radius: 0; display: block; background: #05070a; border: 1px solid var(--line);
@@ -1988,10 +2000,15 @@ body.touch-ui .pause-title { font-size: 22px; letter-spacing: 6px; }
 body.touch-ui .over-title { font-size: 28px; letter-spacing: 6px; }
 body.touch-ui .dead-title { font-size: 22px; letter-spacing: 5px; }
 
-/* 直式疊層:面板佔滿寬度、按鈕列改直排(橫排在 360px 寬會擠爆) */
+/* 直式疊層:面板佔滿寬度;按鈕列**維持橫排**(見下方「直式版型」段的並排原則)——
+   鈕面文字已全面精簡(去掉括號補述),兩顆並排在 360px 寬仍有 ≥44px 觸控高度;
+   真的塞不下才由 flex-wrap 換行,而不是一律改直排。 */
 body.touch-ui.ori-portrait .overlay-box { width: calc(100vw - 12px); }
-body.touch-ui.ori-portrait .overlay-box .row { flex-direction: column; align-items: stretch; }
-body.touch-ui.ori-portrait .overlay-box .row .btn { width: 100%; }
+body.touch-ui.ori-portrait .overlay-box .row { flex-wrap: wrap; justify-content: center; gap: 8px; }
+body.touch-ui.ori-portrait .overlay-box .row .btn {
+  flex: 1 1 42%; min-width: 0; padding-left: 8px; padding-right: 8px; letter-spacing: 2px;
+}
+body.touch-ui.ori-portrait .overlay-box .row .btn.big { font-size: 14px; letter-spacing: 3px; }
 /* 橫式疊層:高度吃緊 → 內距再壓、標題縮小 */
 body.touch-ui.ori-landscape .overlay-box { padding: 12px 18px; gap: 8px; }
 body.touch-ui.ori-landscape .pause-title { font-size: 18px; }
@@ -2006,16 +2023,95 @@ body.touch-ui input, body.touch-ui select { min-height: 42px; font-size: 16px; }
 body.touch-ui .about-me { position: static; margin-top: 14px; }
 body.touch-ui .scanlines { display: none; }   /* 省 GPU:手機不畫掃描線疊層 */
 
-body.touch-ui.ori-portrait .lobby-actions { flex-direction: column; }
-body.touch-ui.ori-portrait .lobby-actions .btn { width: 100%; }
-body.touch-ui.ori-portrait .side-cards { flex-direction: column; }
+/* ============================================================================
+   直式(手機直握)版型:**與桌機同構,不換向**(2026-07-27 改版)
+   ----------------------------------------------------------------------------
+   舊版把大廳三鈕、陣營卡、房間動作列、疊層按鈕列全部 `flex-direction: column`,
+   造成兩個回報:
+     ① **「手機版沒看到劇情模式的按鍵」** —— 直排把第三顆「◈ 劇情戰役」推到摺線以下,
+        再加上大廳題頭(logo 268 + 標題 118 + 副標)在 360×640 上就吃掉 526px,
+        面板整個在畫面外 ⇒ 玩家根本捲不到那顆鈕。
+     ② **操作直覺不一致** —— 同一顆鈕在桌機是左右並排、在手機變上下堆疊,肌肉記憶對不上。
+   原則(MUST):**桌機左右並排的區塊/按鍵,直式一律維持左右並排**,靠「收窄欄寬 + 降一階字級」
+   塞進去,而不是換方向;真的塞不下才交給 flex-wrap 換行。
+   例外只有一個:選角的「頭像牆 ▏詳細說明」—— 詳細說明是長篇繁中文字,壓到 ~190px 寬會不可讀,
+   故只有這一組改上下排(頭像牆在上、說明在下、兩者都吃滿寬),而說明**內部**的頭像與展示台
+   則改成左右並排(玩家指定)。
+   ============================================================================ */
+
+/* ---- 大廳題頭:直式壓縮,讓三顆入口鈕落在首屏 ---- */
+body.touch-ui.ori-portrait .game-logo { width: min(320px, 66vw); }
+body.touch-ui.ori-portrait .mast-tag { display: none; }
+body.touch-ui.ori-portrait .title { font-size: clamp(30px, 9vw, 48px); letter-spacing: 5px; }
+body.touch-ui.ori-portrait .title-sub { font-size: 12px; letter-spacing: 6px; margin-top: 8px; }
+body.touch-ui.ori-portrait .title-sub .dim { display: none; }
+body.touch-ui.ori-portrait .masthead .subtitle { display: none; }
+body.touch-ui.ori-portrait .foot-note { display: none; }
+
+/* ---- 大廳三入口(建立地圖 / 開戰時刻 / 劇情戰役):MUST 同列 ---- */
+body.touch-ui.ori-portrait .lobby-actions { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+body.touch-ui.ori-portrait .lobby-actions .btn.big {
+  flex: 1 1 0; width: auto; min-width: 0; white-space: nowrap;
+  padding: 12px 4px; font-size: 13px; letter-spacing: 1px;
+}
+
+/* ---- 陣營卡:STEEL ▏SWARM 左右對抗(與桌機、logo、底圖方位一致)---- */
+body.touch-ui.ori-portrait .side-cards { flex-direction: row; flex-wrap: nowrap; gap: 8px; width: 100%; }
+body.touch-ui.ori-portrait .side-card { flex: 1 1 0; width: auto; min-width: 0; padding: 12px 8px 10px; gap: 5px; }
 body.touch-ui.ori-portrait .side-vs { display: none; }
-body.touch-ui.ori-portrait .char-pick { grid-template-columns: 1fr; }
-body.touch-ui.ori-portrait .room-actions { flex-direction: column; }
-body.touch-ui.ori-portrait .room-actions .btn { width: 100%; }
+body.touch-ui.ori-portrait .side-emblem .crest { width: 58px; height: 58px; }
+body.touch-ui.ori-portrait .side-name { font-size: 14px; letter-spacing: 2px; }
+body.touch-ui.ori-portrait .side-en { display: none; }
+body.touch-ui.ori-portrait .side-hero { font-size: 10px; letter-spacing: 0; }
+body.touch-ui.ori-portrait .slot { font-size: 12px; padding: 5px 6px; }
+/* 空位的「入座 / 電腦」維持同列(鈕面精簡後半寬卡也塞得下);
+   **MUST NOT 改成 flex-direction: column** —— `.slot-btn` 是 `flex: 1 1 0`,
+   直排時 basis 0 會落在**高度**上,兩顆鈕被壓進 `.slot` 的 min-height 32px 裡各剩 ~11px(字被切一半)。 */
+body.touch-ui .slot-btn { min-height: 36px; }
+
+/* ---- 房間動作列(準備 / 開戰 / 離開):MUST 同列 ----
+   `.room-actions` 是 `.center-screen`(align-items: center)的直接子代 ⇒ **寬度不會被拉滿**,
+   子項用 `flex: 1 1 0` 時整列會縮成 shrink-to-fit 的窄條、鈕面文字溢出方框。MUST 給定寬度。 */
+body.touch-ui.ori-portrait .room-actions { flex-direction: row; flex-wrap: wrap; gap: 6px; width: 100%; }
+body.touch-ui.ori-portrait .room-actions .btn {
+  flex: 1 1 0; width: auto; min-width: 0; white-space: nowrap;
+  padding: 12px 4px; font-size: 13px; letter-spacing: 1px;
+}
+
+/* ---- 選角:頭像牆(上,吃滿寬)+ 詳細說明(下,吃滿寬)---- */
+/* 寬度改吃滿容器:基準值 `min(1060px, 96vw)` 加上 .center-screen 的 8px 內距後
+   在 360 寬會超出 ~2px,整個房間畫面就多一條橫向捲軸。 */
+body.touch-ui.ori-portrait .char-section { width: 100%; padding: 8px 8px 10px; }
+body.touch-ui.ori-portrait .char-pick { grid-template-columns: 1fr; gap: 8px; }
+body.touch-ui.ori-portrait .char-grid { grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); max-height: 33vh; }
+body.touch-ui.ori-portrait .char-av { width: 48px; height: 48px; }
+/* 說明區不再自己捲:整頁捲動更順手,也不會出現「面板內還有一層捲軸」的雙層捲動 */
+body.touch-ui.ori-portrait .char-detail { max-height: none; overflow: visible; }
+body.touch-ui.ori-portrait .cd-lower { grid-template-columns: 1fr; gap: 8px; }
+/* 頭像 ▏展示台 左右並排(玩家指定);**MUST 解除 sticky** —— 單欄下不透明的頭像會蓋住說明 */
+body.touch-ui.ori-portrait .cd-art-char {
+  position: static; display: grid; gap: 8px; align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-areas: 'por stage' 'hint stage';
+}
+body.touch-ui.ori-portrait .cd-art-char > .cd-portrait { grid-area: por; }
+body.touch-ui.ori-portrait .cd-art-char > .cd-arthint { grid-area: hint; margin-top: 4px; }
+body.touch-ui.ori-portrait .cd-art-char > #stageBottom { grid-area: stage; align-self: stretch; }
+body.touch-ui.ori-portrait .cd-art-char > #stageBottom .cd-stage.small { height: 100%; min-height: 168px; margin-top: 0; }
+/* NPC 圖鑑卡的 .cd-art 只有展示台一件 → 維持桌機的「展示台 ▏數據」左右並排 */
+body.touch-ui.ori-portrait .unit-detail-lower { grid-template-columns: 124px minmax(0, 1fr); }
+body.touch-ui.ori-portrait .unit-grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
+
+/* ---- 跳出視窗:桌機並排的兩欄,直式收窄後仍並排 ---- */
+body.touch-ui.ori-portrait .bio-modal-body { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr); gap: 10px; }
+body.touch-ui.ori-portrait .stage-modal-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+body.touch-ui.ori-portrait .stage-modal-pick { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ---- 建立地圖:面板 + 2D 地圖(直式只能上下,地圖需要完整高度)---- */
 body.touch-ui.ori-portrait #mapbuilder { flex-direction: column; }
 body.touch-ui.ori-portrait #leafletMap { min-height: 46vh; }
 body.touch-ui.ori-portrait .map-panel { max-height: 52vh; }
+
 body.touch-ui.ori-landscape .char-pick { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
 body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .foot-note { display: none; }
 
