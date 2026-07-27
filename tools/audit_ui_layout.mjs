@@ -154,7 +154,31 @@ for (const v of VIEWS) {
       resume: box('#resumeBtn'), leave: box('#pauseLeaveBtn'), boxw: box('.pause-box'),
     };
     for (const k of ['resumeBtn', 'pauseLeaveBtn']) out.fits[k] = fits(`#${k}`);
-    hide('pauseOverlay'); hide('game');
+    hide('pauseOverlay');
+
+    // ---- 疊層右上角 ✕:MUST 存在、MUST NOT 壓住任何內容 ----
+    // ✕ 是 position:absolute(不佔流內空間)⇒ 標題色條 / 浮右統計會鑽到它底下。
+    // `.story-brief-box` 刻意例外(第一件是全幅過場立繪,留白會破圖,✕ 只壓到裝飾角標)。
+    out.ovclose = {};
+    for (const id of ['pauseOverlay', 'shopOverlay', 'worldOverlay', 'touchOverlay']) {
+      const ov = document.getElementById(id); if (!ov) continue;
+      ov.style.display = '';
+      const bx = ov.querySelector('.overlay-box');
+      const x = ov.querySelector('.ov-close');
+      if (!x) { out.ovclose[id] = { hasClose: false }; ov.style.display = 'none'; continue; }
+      const xb = x.getBoundingClientRect();
+      const covered = [];
+      for (const el of bx.querySelectorAll('*')) {
+        if (el === x || x.contains(el) || !el.textContent.trim() || el.children.length) continue;
+        const b = el.getBoundingClientRect();
+        if (b.width < 2 || b.height < 2) continue;
+        if (b.right <= xb.left || b.left >= xb.right || b.bottom <= xb.top || b.top >= xb.bottom) continue;
+        covered.push(el.textContent.trim().slice(0, 14));
+      }
+      out.ovclose[id] = { hasClose: true, w: xb.width, h: xb.height, covered };
+      ov.style.display = 'none';
+    }
+    hide('game');
     return out;
   }, CHAR_SKELETON);
 
@@ -204,6 +228,14 @@ for (const v of VIEWS) {
   ok(sameRow(P.resume, P.leave), '戰場選單:繼續 / 離開同列');
   ok(leftOf(P.resume, P.leave), '戰場選單:繼續 / 離開不重疊');
   ok(P.resume && P.resume.h >= 44, `戰場選單鈕觸控高度 ≥44(${Math.round(P.resume?.h)})`);
+
+  // 6)疊層右上角 ✕:存在、觸控目標夠大、且沒有內容被壓在底下
+  for (const [id, c] of Object.entries(r.ovclose)) {
+    ok(c.hasClose, `#${id} MUST 有右上角關閉鍵 ✕`);
+    if (!c.hasClose) continue;
+    ok(c.w >= 34 && c.h >= 34, `#${id} 的 ✕ 夠大(${Math.round(c.w)}×${Math.round(c.h)})`);
+    ok(c.covered.length === 0, `#${id} 的 ✕ 沒有壓住內容${c.covered.length ? `:${c.covered.join('、')}` : ''}`);
+  }
 
   await page.close();
 }

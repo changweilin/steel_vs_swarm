@@ -2417,7 +2417,6 @@ export class BattleClient {
   _initInput() {
     this._onKey = (e) => {
       if (this.paused) return;   // 戰場選單開啟:凍結所有輸入(keys 已清空 ⇒ 機體停住)
-      if (e.type === 'keydown' && e.code === 'KeyM') this.minimapBig = !this.minimapBig;
       if (e.type === 'keydown' && this.side) {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
@@ -2532,7 +2531,6 @@ export class BattleClient {
     if (!this.side) return;
     // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例),與 KeyB 同條件
     if (act === 'shop') { if (down) this._toggleShop(); return; }
-    if (act === 'map') { if (down) this.minimapBig = !this.minimapBig; return; }
     if (this.shopOpen) return;
     if (act === 'swap') { if (down && this.isDrone) this._swapDrone(null); return; }   // 陣亡中也能切存活僚機
     if (this.dead) { this.firing = false; return; }

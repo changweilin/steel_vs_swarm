@@ -24,7 +24,7 @@ import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, remove
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel } from './help.js';
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, openTouchTest, closeTouchTest,
@@ -1122,9 +1122,14 @@ function fillModalPanels(role) {
   $('stageModalTitle').innerHTML = stageTitleHTML(st.subject);
   $('stageModalInfo').innerHTML = stageInfoHTML(st.subject);
   $('stageModalKit').innerHTML = stageKitHTML(st);
+  // 演示提示同樣隨輸入裝置切換(桌機講鍵位,觸控講「點哪一列」)
   $('stageModalKeys').innerHTML = st.subject.type === 'char'
-    ? '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 循環跑速'
-    : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊';
+    ? (TOUCH_UI
+      ? '<b>操作演示</b>　點武器 / 招式列演出 ・ 拖曳旋轉 ・ 雙指縮放 ・ 點「跑速」鈕循環'
+      : '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 循環跑速')
+    : (TOUCH_UI
+      ? '<b>操作演示</b>　點下方武器列演出攻擊 ・ 拖曳旋轉 ・ 雙指縮放'
+      : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊');
 }
 function activeStage() { return app.modalRole ? app.stages[app.modalRole] : null; }
 /** 把放大視窗裡的 shell 歸位到它的內嵌 home,還原放大鈕字樣 */
@@ -2032,16 +2037,19 @@ $('setBgmVol')?.addEventListener('input', (e) => {
 });
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
+// **鍵位敘述隨輸入裝置自動切換**:TOUCH_UI(= mobile.js isTouchUI(),與 pauseHelp 同一個旗標)
+// 決定拿 `p`(鍵盤滑鼠)還是 `pTouch`(虛擬搖桿),取字串一律經 help.js 的 helpItemP/helpCatLabel ——
+// **MUST NOT** 在這裡另寫 if(touch) 的字串分支(那就變成第二份操作說明)。
 function renderHelpCat(cat) {
   document.querySelectorAll('#helpCats .help-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === cat.id));
   $('helpBody').innerHTML = cat.items.map((it) =>
-    `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(it.p)}</div></div>`).join('');
+    `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(helpItemP(it, TOUCH_UI))}</div></div>`).join('');
   $('helpBody').scrollTop = 0;
 }
 (function buildHelpTabs() {
   const cats = $('helpCats'); if (!cats) return;
   cats.innerHTML = HELP.map((c, i) =>
-    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(c.label)}</button>`).join('');
+    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI))}</button>`).join('');
   cats.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
     renderHelpCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
   }));
