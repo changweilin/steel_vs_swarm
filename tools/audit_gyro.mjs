@@ -65,7 +65,7 @@ const PAGE = `<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}<\/script>
 </head><body>
 <div id="touchLayer" hidden><div id="tlLook"></div><div id="tlDpad"><span id="tlKnob"></span></div>
-<button class="tl-gb gb-sh gb-gyro" type="button" data-act="gyro"><i class="gb-k">ZR</i><span class="gb-f">陀螺</span></button></div>
+<button class="tl-sysb" type="button" data-act="gyro">ZR 陀螺</button></div>
 <script type="module">
 import * as M from '/js/mobile.js';
 window.M = M;
