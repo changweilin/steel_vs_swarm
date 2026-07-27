@@ -692,7 +692,7 @@ function renderRoom() {
         div.onclick = () => { app.charTarget = c.id; renderRoom(); };
         // 自己:X 才離座(點格子只是選取,不再離座);電腦(房主):X 移除
         if (c.id === app.youId) div.appendChild(slotX('離開座位', () => app.net.send({ t: 'pickSide', side: null })));
-        else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦玩家', () => app.net.send({ t: 'removeBot', id: c.id })));
+        else if (c.isBot && app.isHost) div.appendChild(slotX('移除電腦', () => app.net.send({ t: 'removeBot', id: c.id })));
       } else {
         // 空位:入座 + 加電腦玩家,兩顆按鈕同寬
         div.className = 'slot empty';
@@ -706,7 +706,7 @@ function renderRoom() {
         if (app.isHost) {
           const add = document.createElement('button');
           add.className = 'slot-btn';
-          add.textContent = '＋ 電腦玩家';
+          add.textContent = '＋ 電腦';
           add.onclick = (e) => { e.stopPropagation(); app.net.send({ t: 'addBot', side }); };
           div.appendChild(add);
         }
@@ -723,7 +723,7 @@ function renderRoom() {
 
   const readyBtn = $('readyBtn');
   readyBtn.disabled = !me?.side;
-  readyBtn.textContent = me?.ready ? '取消準備' : '✔ 準備完成';
+  readyBtn.textContent = me?.ready ? '取消' : '✔ 準備';
   readyBtn.classList.toggle('on', !!me?.ready);
 
   const startBtn = $('startBattleBtn');
@@ -731,9 +731,9 @@ function renderRoom() {
   const players = lb.clients.filter((c) => c.mode === 'player' && c.side);
   const allReady = players.length > 0 && players.every((c) => c.ready);
   startBtn.disabled = !allReady;
-  startBtn.textContent = players.length < 2 ? '⚔️ 開戰(單人練習)' : `⚔️ 開戰(${players.length} 位指揮官)`;
+  startBtn.textContent = '⚔️ 開戰';
   $('roomHint').textContent = app.isHost
-    ? (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備完成」後,由你開戰。')
+    ? (allReady ? '全員就緒,可以開戰!' : '各自選好陣營並按「準備」後,由你開戰。')
     : '等待房主開戰…';
 }
 
@@ -866,8 +866,10 @@ function charDetailHTML(id) {
   const kindLabel = kindLabelOf(kind);
   // 展示台 #charStage 由 showCharDetail 直接插進 #charDetail 頂端(大)或 #stageBottom(小,頭像下方)。
   // 大圖必須是 #charDetail 的直接子代,sticky 才能在整個捲動容器內固定(套 wrapper 會被限制在 wrapper 內)。
+  // `.cd-art-char` 專供角色卡:手機直式時這一區改「頭像 ▏展示台」左右並排(見 style.css 直式段);
+  // NPC 卡的 .cd-art 只有展示台一件,故不掛此 class(掛了會多出一欄空白)。
   return `<div class="cd-lower">
-    <div class="cd-art">
+    <div class="cd-art cd-art-char">
       <div class="cd-portrait">
         <img src="${portraitURL(id)}" alt="${esc(c.name)}">
         <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
@@ -1007,7 +1009,7 @@ function buildStage(role) {
   const shell = document.createElement('div');
   shell.className = 'cd-stage small';
   shell.innerHTML = `
-    <button class="cd-morph-btn" hidden>✈ 切換飛行型態</button>
+    <button class="cd-morph-btn" hidden>✈ 變形</button>
     <div class="cd-stage-tr">
       <button class="cd-size-btn">⤢ 放大</button>
     </div>
@@ -1033,7 +1035,7 @@ function buildStage(role) {
     else runClickT = setTimeout(() => { runClickT = null; preview.cycleRun(1); }, 250);
   };
   q('.cd-size-btn').onclick = () => toggleStageModal(role);
-  q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 切換地面型態' : '✈ 切換飛行型態'; };
+  q('.cd-morph-btn').onclick = (e) => { e.currentTarget.textContent = preview.toggleMorph() ? '⬇ 變形' : '✈ 變形'; };
   preview.onMove = () => syncRun();   // cycleRun / 雙擊 / W / setChar 重置 → 單鍵標籤跟著切
   app.stages[role] = st;
   return st;
@@ -1048,7 +1050,7 @@ function mountStageInline(role, subject, homeEl) {
   st.home = homeEl;
   const shell = st.shell;
   const isMorph = subject.type === 'char' && charKind(subject.id) === 'morph';
-  const mb = shell.querySelector('.cd-morph-btn'); mb.hidden = !isMorph; mb.textContent = '✈ 切換飛行型態';
+  const mb = shell.querySelector('.cd-morph-btn'); mb.hidden = !isMorph; mb.textContent = '✈ 變形';
   const run = shell.querySelector('.cd-run');
   run.style.display = subject.type === 'unit' ? 'none' : '';   // NPC/建築不做移動演示
   st.syncRun?.();   // 重掛內嵌 → 依 preview.runMode(setChar 已重置 idle)刷新單鍵標籤
@@ -1278,7 +1280,8 @@ const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武�
 function unitDetailHTML(kind, side) {
   const u = UNITS[kind];
   const list = unitWeaponList(kind);
-  return `<div class="cd-lower">
+  // NPC 卡沒有立繪,.cd-art 只有展示台一件 ⇒ 掛 `unit-detail-lower` 讓手機直式維持「展示台 ▏數據」兩欄
+  return `<div class="cd-lower unit-detail-lower">
     <div class="cd-art"><div id="unitStageBottom" class="unit-stage-mount"></div></div>
     <div class="cd-body">
       <div class="unit-name">${esc(u.name)} <span class="dim">${esc(sideName(side))} ・ ${esc(unitClassLabel(kind))}</span></div>
@@ -1374,8 +1377,8 @@ function renderCharPick(me) {
   const whoLabel = isSelf ? '你' : `${subject.isBot ? '▣ ' : ''}${esc(subject.name)}`;
 
   $('charSectionHead').innerHTML = editable
-    ? (isSelf ? '▍選擇你的角色(不選 = 隨機)' : `▍替 ${whoLabel} 選擇角色(不選 = 隨機)`)
-    : `▍檢視 ${whoLabel} 的角色(唯讀 —— 點自己的區塊可選角)`;
+    ? (isSelf ? '▍選擇你的角色' : `▍替 ${whoLabel} 選擇角色`)
+    : `▍檢視 ${whoLabel} 的角色`;
 
   const grid = $('charGrid');
   grid.style.display = editable ? '' : 'none';
@@ -1772,7 +1775,7 @@ function makeHud() {
         document.body.classList.toggle('aiming', !!w.aiming);
         $('moneyText').textContent = Math.floor(w.money);
         $('knText').textContent = w.kn;
-        $('shopHint').textContent = 'B 升級(金錢固定單價)';
+        $('shopHint').textContent = 'B 升級';
       }
       const cdEl = $('burstCd');
       cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
@@ -1843,11 +1846,11 @@ function makeHud() {
       const back = $('backRoomBtn');
       if (chapter) {
         back.style.display = '';
-        back.textContent = won && app.story.index + 1 < STORY.length ? '◀ 返回劇情(下一章已解鎖)' : '◀ 返回劇情';
+        back.textContent = '◀ 返回劇情';
         if (won) toast(app.story.index + 1 < STORY.length ? '🎖 通關!已解鎖下一個戰場' : '🏆 全戰線肅清!劇情戰役全數通關', 4200);
       } else {
         back.style.display = app.isHost ? '' : 'none';
-        back.textContent = '◀ 返回戰區(再來一場)';
+        back.textContent = '◀ 返回戰區';
       }
       document.exitPointerLock?.();
     },
