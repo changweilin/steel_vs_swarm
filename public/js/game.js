@@ -17,7 +17,7 @@ import { terrainEnvCode } from './biomes.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './models.js';
 import { applyEnvironment } from './environment.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight } from './toon.js';
+import { toonMat, outlinify, updateCelLight, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
@@ -183,6 +183,15 @@ const heroView = (kind, ch, flying) => {
 };
 const LANE_COLORS = [0xe6c34a, 0xe05c4a, 0x4ac3e6];
 
+// ---- 每幀熱路徑的共用暫存(彈道/準星每幀跑數十次,一次一顆 new 就是 GC 抖動的來源)----
+// 唯一紀律:**只准在同一個同步區塊內用完即丟**,MUST NOT 存進 bullets/effects 等跨幀結構。
+const _ZERO2 = new THREE.Vector2(0, 0);        // 準星 NDC(恆為畫面中心)
+const _NO_HITS = [];                           // 空命中列表(免得每次 raycast 都配一個)
+const _TMP_A = new THREE.Vector3();
+const _TMP_B = new THREE.Vector3();
+const _TMP_C = new THREE.Vector3();
+const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
+
 // ---- 敵方標示:走進視野的敵人頭上掛「對方陣營主視覺」的下指箭頭(spotted marker)----
 // 主視覺 = 陣營識別色 + 徽記幾何(STEEL 鋼鐵三角 / SWARM 蜂群倒三角,同 logo 語彙)。
 // 迷霧是伺服器過濾的:快照裡出現 = 已進入視野,所以「有 mesh 就該有標示」。
@@ -240,6 +249,16 @@ const MM_NEAR = {
   MIN_R: 140,    // 半徑下限(公尺):視野極短的機種也不至於縮到看不出方位
   SPEC_R: 420,   // 觀戰自由視角無座機 ⇒ 沒有 sight 可取,用固定半徑
 };
+
+// ---- 表現層資源上限(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
+// 一次扇形擊發就吐 20~30 個特效物件;連發 + 多人同框時 `effects` 會長到數百,
+// 每幀逐個 fade 就是純 CPU 負擔。超量砍最舊(它們本來就快淡出,肉眼幾乎無感)。
+const FX_MAX = 260;
+// 同型彈體的池深:同時在空中的同型彈遠少於此,超量代表換過武器 → 真的釋放
+const PROJ_POOL_MAX = 24;
+// 觸控裝置的像素比上限:手機 DPR 常見 2.5~3.5,照單全收等於算 6~12 倍於邏輯解析度的像素,
+// 行動 GPU 是**填充率**瓶頸 ⇒ 高功耗模式一樣掉幀。1.5 已看不出鋸齒差(還有 FXAA 級的 DPR 抗鋸齒)。
+const TOUCH_DPR_MAX = 1.5;
 
 export class BattleClient {
   /**
@@ -372,7 +391,15 @@ export class BattleClient {
 
   // ---------------- 場景 ----------------
   _initScene() {
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    // antialias(MSAA)在行動 GPU 上是**頻寬**成本:tile 記憶體不夠時整個 render pass 會退化,
+    // 而手機本來就有 ≥1.5 的像素比在做超取樣 ⇒ 觸控裝置一律關掉,肉眼差異極小、幀率差異很大。
+    // stencil/depth:本專案沒有模板測試需求,關掉可省一份 tile 附件。
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: !isTouchUI(),
+      stencil: false,
+      powerPreference: 'high-performance',
+    });
     this.renderer.setPixelRatio(this._dpr());   // 低功耗模式(svs_lowpower)夾到 1
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
     this.scene = new THREE.Scene();
@@ -2579,8 +2606,19 @@ export class BattleClient {
     }
   }
 
-  /** 目標像素比:低功耗模式夾到 1,否則上限 2(旗標唯一真相 = mobile.js lowPower(),手機預設開)*/
-  _dpr() { return lowPower() ? 1 : Math.min(window.devicePixelRatio, 2); }
+  /**
+   * 目標像素比。低功耗模式夾到 1;否則桌機上限 2、**觸控裝置上限 1.5**。
+   * (旗標唯一真相 = mobile.js lowPower(),手機預設開)
+   *
+   * 為什麼觸控要另夾:手機 devicePixelRatio 普遍 2.5~3.5,舊版 `min(dpr, 2)` 在高功耗模式下
+   * 等於每幀算 4 倍於邏輯解析度的像素,再疊上 MSAA 的解析頻寬 —— 行動 GPU 是**填充率/頻寬**
+   * 瓶頸而非三角形瓶頸,這正是「高功耗模式很 lag」的直接原因。1.5 對 5~6 吋螢幕已足夠銳利。
+   */
+  _dpr() {
+    if (lowPower()) return 1;
+    const dpr = window.devicePixelRatio || 1;
+    return Math.min(dpr, isTouchUI() ? TOUCH_DPR_MAX : 2);
+  }
   /** 設定頁「低功耗模式」即時套用(main.js 已寫入 localStorage,此處只重設像素比與尺寸)*/
   setLowPower() { this.renderer.setPixelRatio(this._dpr()); this._onResize(); }
 
@@ -3121,7 +3159,7 @@ export class BattleClient {
       ms.tgt.set(s.x, this.terrain.heightAt(s.x, -s.z) + s.y, -s.z);
     }
     for (const [id, ms] of this.samMeshes) {
-      if (!seen.has(id)) { this.scene.remove(ms.mesh); this.samMeshes.delete(id); }
+      if (!seen.has(id)) { this.scene.remove(ms.mesh); disposeTree(ms.mesh); this.samMeshes.delete(id); }
     }
   }
 
@@ -3864,13 +3902,9 @@ export class BattleClient {
       ? this._lobVel(from, to, v0)                              // 榴彈/火箭:拋物線命中目標(彈射模式初速高 ⇒ 解自然拉平)
       : to.clone().sub(from).normalize().multiplyScalar(v0);   // 飛彈/動能:直指目標(近似,純視覺)
     const ldir = vel.clone().normalize();
-    const mesh = projectileMesh(def, {
-      col: this._shotCols(side).col,
-      hue: CHARACTERS[ch]?.visual?.hue ?? 0xffd27a,
-      heavy: true,
-    });
+    const mesh = this._takeProjectile(def, true, side, ch);   // 同池:他人彈體與自機彈體共用回收路徑
     mesh.position.copy(from);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), ldir);
+    mesh.quaternion.setFromUnitVectors(_FWD_Z, ldir);
     this.scene.add(mesh);
     this._visShells.push({
       pos: from.clone(), vel,
@@ -3895,12 +3929,12 @@ export class BattleClient {
       if (dB != null) { b.pos.copy(prev).addScaledVector(seg.clone().divideScalar(len), dB); hit = true; }
       if (hit || b.dist >= b.max) {
         starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
-        this.scene.remove(b.mesh);
+        this._dropBullet(b);
         this._visShells.splice(i, 1);
         continue;
       }
       b.mesh.position.copy(b.pos);
-      if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+      if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, seg.normalize());
       if (b.cyclone) this._spinCyclone(b, dt);
     }
   }
@@ -3996,6 +4030,7 @@ export class BattleClient {
       }
       if (b.pos.y <= b.gy + 0.5) {
         b.mesh.parent && this.scene.remove(b.mesh);
+        disposeTree(b.mesh);   // decoyBombMesh 每顆都是新幾何/材質(含描邊外殼)⇒ 落地即釋放
         this._decoyBombLandFx(b.pos.x, b.gy, b.pos.z, b.type, b.col, b.r);
         this._decoyBombs.splice(i, 1);
       }
@@ -4805,33 +4840,91 @@ export class BattleClient {
     }
   }
 
+  /**
+   * 射線目標的**廣相過濾**(唯一縫:準星解析與彈道共用)。
+   * 舊版把「所有可見敵方 mesh」整批丟進 `intersectObjects(…, true)` —— 每個 mesh 遞迴進數十個
+   * 子件、每個子件再逐三角測試,而射線通常一個單位都沒碰到。這裡先用「線段到包圍球」的
+   * 解析距離篩掉絕大多數,只把真正可能命中的 mesh 交給 raycaster 做精確判定
+   * ⇒ **命中結果不變**(包圍球是保守外包),只是不再為不可能的目標付逐三角成本。
+   */
+  _rayCandidates(ro, rd, far, out) {
+    out.length = 0;
+    for (const ent of this.ents.values()) {
+      if (ent.side === this.side || !ent.mesh.visible) continue;
+      const c = ent.heroCol || BattleClient.COLLIDER[ent.kind] || (ent.colR ? { r: ent.colR, h: ent.colH || 6 } : null);
+      const cr = c ? c.r : 12, chh = (c ? c.h : 12) * 0.5;
+      const p = ent.mesh.position;
+      // 包圍球:圓心抬到機體中段,半徑含 1.3 倍餘裕(動畫/骨架外擴、飛行體 heroY 位移)
+      const R = Math.hypot(cr, chh) * 1.3 + 2;
+      const ex = p.x - ro.x, ey = p.y + chh - ro.y, ez = p.z - ro.z;
+      let s = ex * rd.x + ey * rd.y + ez * rd.z;
+      if (s < -R || s > far + R) continue;
+      s = s < 0 ? 0 : s > far ? far : s;
+      const dx = ex - rd.x * s, dy = ey - rd.y * s, dz = ez - rd.z * s;
+      if (dx * dx + dy * dy + dz * dz > R * R) continue;
+      out.push(ent.mesh);
+    }
+    for (const [mid, ms] of this.samMeshes) {
+      const p = ms.mesh.position;
+      const ex = p.x - ro.x, ey = p.y - ro.y, ez = p.z - ro.z;
+      let s = ex * rd.x + ey * rd.y + ez * rd.z;
+      if (s < -6 || s > far + 6) continue;
+      s = s < 0 ? 0 : s > far ? far : s;
+      const dx = ex - rd.x * s, dy = ey - rd.y * s, dz = ez - rd.z * s;
+      if (dx * dx + dy * dy + dz * dz > 36) continue;
+      ms.mesh.userData.missileId = mid;
+      out.push(ms.mesh);
+    }
+    return out;
+  }
+
+  /**
+   * 地形射線(唯一縫):走 `terrain.rayTerrain` 的解析網格行進,**不再**把 `terrain.mesh`
+   * 丟進 raycaster。地形是 193² 高度場 = 73,728 個三角形,three 的 `Mesh.raycast` 每次都整批
+   * 線性掃完(包圍球/盒對「射點在圖內」的射線一律通過,`far` 不參與剪枝)⇒ 每顆子彈每幀約
+   * 1ms(桌機;手機 3~6 倍),飛行中的子彈一多就整幀卡死 —— 這是「開火更 lag、低功耗也 lag」
+   * 的主因(純 CPU 成本,調像素比救不了)。解析版只測射線真的穿過的格,**同一組三角形、
+   * 同一條 Möller–Trumbore ⇒ 命中點完全一致**(見 tools/audit_terrain_ray.mjs)。
+   * @returns 命中距離(公尺)或 null
+   */
+  _terrainHitT(ro, rd, far) {
+    const r = this.terrain.rayTerrain?.(ro.x, ro.y, ro.z, rd.x, rd.y, rd.z, far);
+    return r ? r.t : null;
+  }
+
   /** 準星射線命中解析:回傳 { point, ent, missileId }(共用:beam 直擊 / 招式落點) */
   _resolveAim(far) {
-    this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+    this.raycaster.setFromCamera(_ZERO2, this.camera);
     this.raycaster.far = far;
-    const targets = [];
-    for (const ent of this.ents.values()) {
-      if (ent.side !== this.side && ent.mesh.visible) targets.push(ent.mesh);
-    }
-    const missileMeshes = [];
-    for (const [mid, ms] of this.samMeshes) { ms.mesh.userData.missileId = mid; missileMeshes.push(ms.mesh); }
-    // 只對單位/飛彈與地形網格做 raycast(地貌植被是純視覺,不擋子彈也不吃效能);
-    // 建物/神木/巨岩等「有物理碰撞的障礙」另以解析圓柱判定(_blockerHitT)——
+    const ro = this.raycaster.ray.origin, rd = this.raycaster.ray.direction;
+    // 只對單位/飛彈做 raycast(地貌植被是純視覺,不擋子彈也不吃效能);地形走解析高度場
+    // (_terrainHitT);建物/神木/巨岩等「有物理碰撞的障礙」另以解析圓柱判定(_blockerHitT)——
     // 準星射線先撞到障礙 → 視同打在障礙上(看不到的單位就不能射擊/鎖定,beam/招式落點同樣被擋)。
-    const hits = this.raycaster.intersectObjects([...targets, ...missileMeshes, this.terrain.mesh], true);
+    const targets = this._rayCandidates(ro, rd, far, this._rayBuf || (this._rayBuf = []));
+    const hits = targets.length ? this.raycaster.intersectObjects(targets, true) : _NO_HITS;
     const rEnd = this.raycaster.ray.at(far, new THREE.Vector3());
-    const ro = this.raycaster.ray.origin;
     const dBlock = this._obstHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
+    const dTerr = this._terrainHitT(ro, rd, far);
+    // 地形/障礙都是解析距離:比它們更遠的單位命中一律不算(舊版靠 hits 已排序 + break 達成同效)
+    const dStop = Math.min(dBlock ?? Infinity, dTerr ?? Infinity);
     for (const h of hits) {
-      if (dBlock != null && dBlock < h.distance) break;   // 障礙更近:落到下方的障礙回傳
+      if (h.distance > dStop) break;
       let o = h.object;
       while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
       if (o && o.userData.missileId != null) return { point: h.point, ent: null, missileId: o.userData.missileId };
-      if (o && o.userData.kind) return { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o), missileId: null };
-      return { point: h.point, ent: null, missileId: null };   // 地形
+      if (o && o.userData.kind) return { point: h.point, ent: this._entByMesh(o), missileId: null };
+      return { point: h.point, ent: null, missileId: null };   // 無 kind 標記的目標:照舊當落點
     }
-    if (dBlock != null) return { point: this.raycaster.ray.at(dBlock, new THREE.Vector3()), ent: null, missileId: null };
+    if (dStop < Infinity) {
+      return { point: this.raycaster.ray.at(dStop, new THREE.Vector3()), ent: null, missileId: null };
+    }
     return { point: rEnd, ent: null, missileId: null };
+  }
+
+  /** mesh → ent 反查(舊版每次命中都 `[...this.ents.values()].find(…)` 重建整份陣列) */
+  _entByMesh(mesh) {
+    for (const en of this.ents.values()) if (en.mesh === mesh) return en;
+    return undefined;
   }
 
   /** 命中回饋:星爆 + 準星標記 + 本地估算傷害數字(伺服器仍是權威) */
@@ -5117,11 +5210,7 @@ export class BattleClient {
     const pierce = aoeClass(def) === 'line';   // rail 電磁彈射 / gun 反器材砲重武器:圓柱貫穿(不停在第一個目標)
     // 拋物線武器:出膛向量取本幀火控解(_lobAim 已於擊發前定案)—— 不是沿準星直射
     const lobFc = trajClass(def) === 'lob' && this._lobFc?.on ? this._lobFc : null;
-    const mesh = projectileMesh(def, {
-      col: this._shotCols(this.side).col,
-      hue: CHARACTERS[this.ch]?.visual?.hue ?? 0xffd27a,
-      heavy: id === 'heavy',
-    });
+    const mesh = this._takeProjectile(def, id === 'heavy');
     this.scene.add(mesh);
     mesh.position.copy(muzzle);
     const homing = def.type === 'missile' && this._lockId != null && this.ents.has(this._lockId)
@@ -5158,6 +5247,47 @@ export class BattleClient {
     });
   }
 
+  // ---------------- 彈體物件池(2026-07-27)----------------
+  /**
+   * 自機彈體是**全遊戲配置最頻繁的 3D 物件**:一把 rate 8 的輕武器按住就是每秒 8 顆,
+   * 而一顆 `projectileMesh('missile')` = Group(彈身/彈頭/兩片尾翼 + 描邊外殼 ×4 + 尾焰)
+   * ≈ 9 個 mesh、9 份新幾何、9 份新材質。舊版擊中後只 `scene.remove` ⇒ 幾何/材質全數留在 GPU 上
+   * (three 要 dispose 才釋放)⇒ 打越久顯存越脹、手機越卡。
+   *
+   * 彈體除了 position/quaternion 之外**沒有任何個體狀態**,因此可以整顆重複使用:
+   * 以「武器型別 + 輕重 + 配色」為鍵分池,擊中即歸還。MUST NOT 在別處自行 `projectileMesh()`
+   * 進 `this.bullets` —— 那條路徑不會回池,leak 就從那裡漏回來。
+   */
+  _takeProjectile(def, heavy, side = this.side, ch = this.ch) {
+    const col = this._shotCols(side).col;
+    const hue = CHARACTERS[ch]?.visual?.hue ?? 0xffd27a;
+    const key = `${def?.type || 'gun'}|${heavy ? 1 : 0}|${col}|${hue}`;
+    const pool = this._projPool || (this._projPool = new Map());
+    const free = pool.get(key);
+    if (free && free.length) {
+      const m = free.pop();
+      m.scale.set(1, 1, 1);
+      m.visible = true;
+      return m;
+    }
+    const m = projectileMesh(def, { col, hue, heavy });
+    m.userData.poolKey = key;
+    return m;
+  }
+
+  /** 彈體歸還(命中/逾程):自場景摘下,附掛的氣旋尾流獨立回收(那份是每發新建的) */
+  _dropBullet(b) {
+    const m = b.mesh;
+    this.scene.remove(m);
+    if (b.cyclone) { m.remove(b.cyclone); disposeTree(b.cyclone); b.cyclone = null; }
+    const key = m.userData.poolKey;
+    const pool = this._projPool;
+    if (!key || !pool) { disposeTree(m); return; }
+    const free = pool.get(key) || pool.set(key, []).get(key);
+    // 池深上限:同型彈體同時在空中的數量有限,超量就真的釋放(避免換武器後留一堆殭屍)
+    if (free.length < PROJ_POOL_MAX) free.push(m); else disposeTree(m);
+  }
+
   /** 軌跡修正期的初期散布:在 dir 周圍的圓錐內取一個隨機偏角(離架瞬間一次性,之後由導引修正) */
   _armSpread(dir, spread) {
     const up = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
@@ -5167,25 +5297,30 @@ export class BattleClient {
     return dir.clone().addScaledVector(nx, m * Math.cos(a)).addScaledVector(nz, m * Math.sin(a)).normalize();
   }
 
-  /** 彈道模擬:逐幀積分 + 線段 raycast(高初速子彈一幀飛 10m+,用線段補內插) */
+  /**
+   * 彈道模擬:逐幀積分 + 線段判定(高初速子彈一幀飛 10m+,用線段補內插)。
+   *
+   * **效能紀律(2026-07-27)**:本迴圈是「開火就掉幀」的主現場 —— 舊版對**每顆子彈每幀**
+   * 做一次 `intersectObjects([…全部敵方 mesh…, terrain.mesh], true)`,其中 `terrain.mesh`
+   * 是 193² 高度場共 73,728 個三角形,three 每次都整批線性掃完。改制後:
+   *   ① 地形走解析網格行進(`_terrainHitT`,只測射線穿過的格,命中點完全一致)
+   *   ② 單位先過包圍球廣相(`_rayCandidates`),通常一個候選都不剩
+   *   ③ 暫存向量共用(`_TMP_*`),不再每顆子彈每幀配 5~8 顆 Vector3
+   * MUST NOT 為了「寫起來順」把 `terrain.mesh` 加回 raycast 目標(見 /CLAUDE.md A6 效能條)。
+   */
   _updateBullets(dt) {
     if (!this.bullets.length) return;
-    const targets = [];
-    for (const ent of this.ents.values()) {
-      if (ent.side !== this.side && ent.mesh.visible) targets.push(ent.mesh);
-    }
-    for (const [mid, ms] of this.samMeshes) { ms.mesh.userData.missileId = mid; targets.push(ms.mesh); }
-    targets.push(this.terrain.mesh);
+    const cand = this._bulletBuf || (this._bulletBuf = []);
     // 轉向助手:等速改向(推力彈體),每秒最大轉角 maxTurn(弧度)
     const steer = (b, want, maxTurn) => {
-      const cur = b.vel.clone().normalize();
+      const cur = _TMP_C.copy(b.vel).normalize();
       const ang = cur.angleTo(want);
       if (ang > 1e-4) cur.lerp(want, Math.min(1, maxTurn * dt / ang)).normalize();
       b.vel.copy(cur.multiplyScalar(b.mv));
     };
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
-      const prev = b.pos.clone();
+      const prev = _TMP_B.copy(b.pos);
       // 失鎖規則(與伺服器 _tickMissiles 同一條):目標/導引點跑出「攻擊範圍」(以發射點為圓心)
       // → 導引失效,之後只沿當下航向直線飛(吃重力),不再追擊。
       let tgt = b.homing ? this.ents.get(b.homing) : null;
@@ -5198,14 +5333,14 @@ export class BattleClient {
       const armed = b.dist >= (b.arm || 0);
       if (tgt && armed) {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
-        const want = tgt.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)).sub(b.pos).normalize();
-        steer(b, want, 3.2);
+        const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
+        steer(b, want.sub(b.pos).normalize(), 3.2);
       } else if (armed && b.guide && this.aiming && b.slot === 'heavy') {
         // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正
         const ro = this.camera.position;
-        const rd = this.camera.getWorldDirection(new THREE.Vector3());
-        const along = Math.max(20, b.pos.clone().sub(ro).dot(rd) + 40);
-        const gp = ro.clone().addScaledVector(rd, along);
+        const rd = this.camera.getWorldDirection(_TMP_C);
+        const along = Math.max(20, _TMP_A.copy(b.pos).sub(ro).dot(rd) + 40);
+        const gp = _TMP_A.copy(ro).addScaledVector(rd, along);
         if (gp.distanceTo(b.origin) > b.max) {
           b.guide = false;                     // 導引點出了射程 → 雷射導引失效
           b.vel.y -= BALLISTIC.G * dt;
@@ -5216,29 +5351,43 @@ export class BattleClient {
         b.vel.y -= BALLISTIC.G * dt;                  // 重力下墜(拋物線彈道)
       }
       b.pos.addScaledVector(b.vel, dt);
-      const seg = b.pos.clone().sub(prev);
+      const seg = _TMP_A.copy(b.pos).sub(prev);
       const len = seg.length();
       b.dist += len;
       let hit = null;
+      let hitDist = Infinity;
       if (len > 0.01) {
-        this.raycaster.set(prev, seg.clone().normalize());
-        this.raycaster.far = len + 0.3;
-        const hits = this.raycaster.intersectObjects(targets, true);
-        for (const h of hits) {
-          let o = h.object;
-          while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
-          // 貫穿彈(aoeClass 'line'):單位不擋彈道,只有地形/障礙才終止 —— 圓柱內的目標
-          // 由伺服器 heroLance 一次結算(這裡不逐個回報,避免同一發送出多筆傷害)
-          if (o && o.userData.missileId != null) { if (b.pierce) continue; hit = { point: h.point, missileId: o.userData.missileId }; break; }
-          if (o && o.userData.kind) { if (b.pierce) continue; hit = { point: h.point, ent: [...this.ents.values()].find((en) => en.mesh === o) }; break; }
-          hit = { point: h.point, terrain: true };
-          break;
+        const dir = seg.divideScalar(len);          // seg 就地正規化(之後只當方向用)
+        const far = len + 0.3;
+        // 地形:解析高度場行進(舊版把 terrain.mesh 丟進 raycaster = 每顆子彈每幀掃 73,728 面)
+        const dT = this._terrainHitT(prev, dir, far);
+        if (dT != null) {
+          hit = { point: prev.clone().addScaledVector(dir, dT), terrain: true };
+          hitDist = dT;
         }
-        // 實體障礙擋彈(建物/神木/巨岩/橋墩):障礙柱比 mesh 命中更近 → 彈頭止於障礙,
+        // 單位/飛彈:先過包圍球廣相(通常 0 個候選),再交給 raycaster 做精確判定
+        this._rayCandidates(prev, dir, far, cand);
+        if (cand.length) {
+          this.raycaster.set(prev, dir);
+          this.raycaster.far = far;
+          for (const h of this.raycaster.intersectObjects(cand, true)) {
+            if (h.distance >= hitDist) break;       // 地形更近 → 單位不算
+            let o = h.object;
+            while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
+            // 貫穿彈(aoeClass 'line'):單位不擋彈道,只有地形/障礙才終止 —— 圓柱內的目標
+            // 由伺服器 heroLance 一次結算(這裡不逐個回報,避免同一發送出多筆傷害)
+            if (o && o.userData.missileId != null) { if (b.pierce) continue; hit = { point: h.point, missileId: o.userData.missileId }; hitDist = h.distance; break; }
+            if (o && o.userData.kind) { if (b.pierce) continue; hit = { point: h.point, ent: this._entByMesh(o) }; hitDist = h.distance; break; }
+            hit = { point: h.point, terrain: true }; hitDist = h.distance;
+            break;
+          }
+        }
+        // 實體障礙擋彈(建物/神木/巨岩/橋墩):障礙柱比上述命中更近 → 彈頭止於障礙,
         // 不穿越造成傷害(伺服器 heroHit 另有 LOS 複驗,這裡是彈道本體)。
         const dB = this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z);
-        if (dB != null && (!hit || dB < prev.distanceTo(hit.point))) {
-          hit = { point: prev.clone().addScaledVector(seg.clone().divideScalar(len), dB), terrain: true };
+        if (dB != null && dB < hitDist) {
+          hit = { point: prev.clone().addScaledVector(dir, dB), terrain: true };
+          hitDist = dB;
         }
       }
       // 追蹤飛彈近炸引信:貼近鎖定目標即引爆(戰鬥部 AoE 由伺服器 heroBurst 結算)
@@ -5249,11 +5398,12 @@ export class BattleClient {
       if (!done) {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
-        if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), seg.normalize());
+        // seg 在 len > 0.01 的分支已就地正規化;此處只補 0.001~0.01 的極短段
+        if (len > 0.001) b.mesh.quaternion.setFromUnitVectors(_FWD_Z, len > 0.01 ? seg : seg.normalize());
         if (b.cyclone) this._spinCyclone(b, dt);
         continue;
       }
-      this.scene.remove(b.mesh);
+      this._dropBullet(b);
       this.bullets.splice(i, 1);
       const p = hit?.point || b.pos;
       const def = this.wdef[b.slot];
@@ -5529,7 +5679,26 @@ export class BattleClient {
     });
   }
 
+  /**
+   * 一次性特效的**回收唯一縫**。舊版只 `scene.remove` 就算了 —— three 的 WebGLRenderer 以
+   * `geometry.dispose()` / `material.dispose()` 事件釋放 GPU 緩衝,沒呼叫就一直留在顯示卡上:
+   * 一場十分鐘、每發十幾條光束的對局會累積出上萬份殭屍緩衝,手機顯存吃緊後就是「打越久越卡」。
+   * 共用幾何(vfx/castfx 的單位體、碎塊池)由 `toon.js markShared` 註冊,`disposeTree` 自動跳過;
+   * 特效自帶 `dispose()` 者(材質池/專屬資源)優先走自己那條。
+   */
+  _freeEffect(e) {
+    this.scene.remove(e.obj);
+    if (e.dispose) e.dispose(); else disposeTree(e.obj);
+  }
+
   _updateEffects(dt) {
+    // 上限保險:扇形武器一次擊發就吐 20~30 個特效,連發 + 多人同框時清單會爆長
+    // (每幀逐個 fade = 純 CPU)。超量時先砍最舊的 —— 舊特效本來就快淡出,肉眼幾乎無感。
+    const over = this.effects.length - FX_MAX;
+    if (over > 0) {
+      for (let i = 0; i < over; i++) this._freeEffect(this.effects[i]);
+      this.effects.splice(0, over);
+    }
     for (let i = this.effects.length - 1; i >= 0; i--) {
       const e = this.effects[i];
       e.ttl -= dt;
@@ -5537,8 +5706,7 @@ export class BattleClient {
       const f = Math.max(0, e.ttl / (e.ttl + e.age));
       e.fade?.(e.obj, f, dt);
       if (e.ttl <= 0) {
-        this.scene.remove(e.obj);
-        e.dispose?.();   // 一次性 canvas 貼圖(傷害數字)釋放 GPU 資源
+        this._freeEffect(e);
         this.effects.splice(i, 1);
       }
     }
@@ -6932,7 +7100,10 @@ export class BattleClient {
         out.push({ ent, tag: '餌機' });
       }
     }
-    return out.sort((a, b) => a.ent.si - b.ent.si).slice(0, 2);
+    // 每個小螢幕 = **再繪一次整個場景**(scissor 只縮小填充範圍,幾何照樣整批送出);
+    // 蜂群兩架僚機 ⇒ 一幀畫三次場景。低功耗模式(手機預設開)收成 1 個,主視野幀率優先。
+    // 高功耗/桌機維持 2 個,行為不變。
+    return out.sort((a, b) => a.ent.si - b.ent.si).slice(0, lowPower() ? 1 : 2);
   }
 
   /**
@@ -7051,6 +7222,15 @@ export class BattleClient {
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
     document.exitPointerLock?.();
+    // 離場清帳:一次性特效 / 飛行中彈體 / 彈體池全部釋放 GPU 資源。
+    // 不釋放的話「回大廳再開一局」會把上一局的殭屍緩衝一路帶著走(共用幾何由註冊表跳過)。
+    for (const e of this.effects) this._freeEffect(e);
+    this.effects.length = 0;
+    for (const list of [this.bullets, this._visShells, this._decoyBombs]) {
+      for (const b of list || []) { this.scene.remove(b.mesh); disposeTree(b.mesh); }
+      if (list) list.length = 0;
+    }
+    if (this._projPool) { for (const l of this._projPool.values()) for (const m of l) disposeTree(m); this._projPool = null; }
     this.renderer.dispose();
   }
 }

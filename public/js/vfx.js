@@ -8,7 +8,7 @@
 // 特效物件全部走 game.js 的 effects 陣列({ obj, ttl, fade(o, f, dt) },
 // f = 剩餘壽命比例 1→0),不自帶迴圈。
 import * as THREE from 'three';
-import { toonMat, outlinify } from './toon.js';
+import { toonMat, outlinify, markShared } from './toon.js';
 
 // ---------------- canvas 貼圖(快取)----------------
 const _texCache = new Map();
@@ -101,8 +101,18 @@ function sparkTexture() {
   return tex;
 }
 
-/** 浮動傷害數字貼圖(不快取:數值多變,小畫布便宜) */
+/**
+ * 浮動傷害數字貼圖(**快取**:同一把武器打同一種目標,數字重複率極高)。
+ * 舊版每次命中都新建 canvas + CanvasTexture ⇒ 每發一次 GPU 貼圖上傳,持續開火時
+ * 在手機上就是可見的頓挫。快取上限 240 筆(逾量整批清空 —— 傷害數字是短命特效,
+ * 清掉最多只是下一次重畫一張)。
+ */
+const _numTex = new Map();
 function numberTexture(num, color) {
+  const key = `${num}|${color}`;
+  const hit = _numTex.get(key);
+  if (hit) return hit;
+  if (_numTex.size >= 240) { for (const t of _numTex.values()) t.dispose(); _numTex.clear(); }
   const cv = document.createElement('canvas');
   cv.width = 128; cv.height = 64;
   const ctx = cv.getContext('2d');
@@ -117,8 +127,33 @@ function numberTexture(num, color) {
   ctx.fillText(String(num), 64, 34);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
+  _numTex.set(key, tex);
   return tex;
 }
+
+// ---------------- 共用單位幾何(能量體)----------------
+// 光束/曳光/貫穿圓柱是**每發數十顆**的高頻特效(扇形武器一次擊發就 9~13 條)。
+// 舊版每條都 `new THREE.CylinderGeometry(w, w, len, …)` ⇒ 每發配置並上傳十幾份頂點緩衝,
+// 又因為移除時沒 dispose 而留在 GPU 上累積。改用「單位圓柱(r=1, h=1,原點置中)+ scale」:
+// 幾何全域共用一份、永不重配,粗細/長度全靠 scale 表達。
+// **MUST NOT** 對這些共用幾何呼叫 dispose(整場共用一份)。
+const _UP = new THREE.Vector3(0, 1, 0);
+const _FWD = new THREE.Vector3(0, 0, 1);
+const _unitGeo = new Map();
+const unitGeo = (key, make) => {
+  let g = _unitGeo.get(key);
+  // markShared:註冊給 toon.js disposeTree ⇒ 一次性特效回收時只放材質,不會誤放這份共用幾何
+  if (!g) _unitGeo.set(key, g = markShared(make()));
+  return g;
+};
+/** 單位圓柱(r=1, h=1, 開口):scale = (粗, 長, 粗) */
+const unitCylinder = (seg) => unitGeo(`cyl${seg}`, () => new THREE.CylinderGeometry(1, 1, 1, seg, 1, true));
+/** 單位噴口錐(離子吐息喉部:槍口端粗、末端細) */
+const unitThroat = () => unitGeo('throat', () => new THREE.CylinderGeometry(0.30, 1.7, 1, 14, 1, true));
+/** 單位球(能量珠) */
+const unitBead = () => unitGeo('bead', () => new THREE.SphereGeometry(1, 7, 5));
+/** 單位環(能量環 / 衝擊環;內外徑比例固定,靠 scale 定大小) */
+const unitRing = (key, ri, ro, seg) => unitGeo(key, () => new THREE.RingGeometry(ri, ro, seg));
 
 // ---------------- 特效 ----------------
 const POP_BIG = ['BOOM!!', 'KA-BOOM!', 'CRASH!!', 'WRECKED!'];
@@ -347,20 +382,22 @@ export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 
   const len = dir.length();
   if (len < 0.01) return;
   const beam = new THREE.Mesh(
-    new THREE.CylinderGeometry(w, w, len, 6, 1, true),
+    unitCylinder(6),   // 共用單位圓柱:粗細/長度靠 scale(不再每條配一份幾何)
     new THREE.MeshBasicMaterial({
       color, transparent: true, opacity: 0.85,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }),
   );
+  beam.scale.set(w, len, w);
+  beam.userData.noOutline = true;
   beam.position.copy(from).addScaledVector(dir, 0.5);
-  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  beam.quaternion.setFromUnitVectors(_UP, dir.normalize());
   scene.add(beam);
   effects.push({
     obj: beam, ttl,
     fade(o, f) {
       o.material.opacity = 0.85 * f;
-      o.scale.x = o.scale.z = 0.3 + 0.7 * f;   // 光束冷卻收細
+      o.scale.x = o.scale.z = w * (0.3 + 0.7 * f);   // 光束冷卻收細
     },
   });
 }
@@ -378,14 +415,15 @@ function energyMat(color, opacity = 0.85) {
     blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
   });
 }
-/** 沿 from→to 架一根圓柱(回傳 Mesh,已定位定向;len<0.01 回傳 null) */
+/** 沿 from→to 架一根圓柱(回傳 Mesh,已定位定向;len<0.01 回傳 null;幾何共用單位圓柱) */
 function axisCylinder(from, to, r, color, opacity) {
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return null;
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10, 1, true), energyMat(color, opacity));
+  const m = new THREE.Mesh(unitCylinder(10), energyMat(color, opacity));
+  m.scale.set(r, len, r);
   m.position.copy(from).addScaledVector(dir, 0.5);
-  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  m.quaternion.setFromUnitVectors(_UP, dir.clone().normalize());
   m.userData.noOutline = true;
   return m;
 }
@@ -402,23 +440,26 @@ export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5
   if (len < 0.01) return;
   const axis = dir.clone().normalize();
   // 外暈:與貫穿半徑同寬,由滿寬收細 = 能量潰散
+  // 幾何一律共用單位體 ⇒ scale 內含半徑 r(舊版把 r 烤進幾何,fade 的 scale 才是純比例)
   const halo = axisCylinder(from, to, r, color, 0.42);
   if (halo) {
     scene.add(halo);
-    effects.push({ obj: halo, ttl, fade(o, f) { o.material.opacity = 0.42 * f; o.scale.x = o.scale.z = 0.25 + 0.75 * f; } });
+    effects.push({ obj: halo, ttl, fade(o, f) { o.material.opacity = 0.42 * f; o.scale.x = o.scale.z = r * (0.25 + 0.75 * f); } });
   }
   // 熾白內芯:細、亮、撐得比外暈久一點(鋼彈光束的「殘光」)
-  const cm = axisCylinder(from, to, r * 0.28, core, 0.95);
+  const cr = r * 0.28;
+  const cm = axisCylinder(from, to, cr, core, 0.95);
   if (cm) {
     scene.add(cm);
-    effects.push({ obj: cm, ttl: ttl * 1.15, fade(o, f) { o.material.opacity = 0.95 * f * f; o.scale.x = o.scale.z = 0.2 + 0.8 * f; } });
+    effects.push({ obj: cm, ttl: ttl * 1.15, fade(o, f) { o.material.opacity = 0.95 * f * f; o.scale.x = o.scale.z = cr * (0.2 + 0.8 * f); } });
   }
   // 槍口衝擊環(面向射線)+ 沿軸行進的能量環
   for (let i = 0; i <= rings; i++) {
-    const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.55, r * 0.95, 24), energyMat(i === 0 ? core : color, 0.9));
+    const ring = new THREE.Mesh(unitRing('beamRing', 0.55, 0.95, 24), energyMat(i === 0 ? core : color, 0.9));
     ring.userData.noOutline = true;
-    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis);
+    ring.quaternion.setFromUnitVectors(_FWD, axis);
     ring.position.copy(from);
+    ring.scale.setScalar(r);
     scene.add(ring);
     const t0 = i / (rings + 1);                 // 出發位置:沿軸等距排開 = 連續脈衝感
     const life = ttl * (i === 0 ? 0.45 : 0.9);
@@ -427,7 +468,7 @@ export function gundamBeam(scene, effects, from, to, color, { r = 3.6, ttl = 0.5
       fade(o, f) {
         const p = Math.min(1, t0 + (1 - f) * 1.15);
         o.position.copy(from).addScaledVector(axis, p * len);
-        o.scale.setScalar(1 + p * 0.9);          // 越飛越張(能量發散)
+        o.scale.setScalar(r * (1 + p * 0.9));    // 越飛越張(能量發散)
         o.material.opacity = 0.9 * f;
       },
     });
@@ -448,12 +489,13 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
   const axis = dir.clone().normalize();
   // 噴口喉:錐形(**槍口端最粗、末端收束**)—— 這是吐息與雷射最大的外形差異,
   // 同時也是扇形「越近越強」(fanFalloff)的可視化。
-  const throat = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.30, r * 1.7, len, 14, 1, true), energyMat(color, 0.45));
+  const throat = new THREE.Mesh(unitThroat(), energyMat(color, 0.45));
+  throat.scale.set(r, len, r);
   throat.position.copy(from).addScaledVector(dir, 0.5);
-  throat.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+  throat.quaternion.setFromUnitVectors(_UP, axis);
   throat.userData.noOutline = true;
   scene.add(throat);
-  effects.push({ obj: throat, ttl, fade(o, f) { o.material.opacity = 0.45 * f; o.scale.x = o.scale.z = 0.45 + 0.55 * f; } });
+  effects.push({ obj: throat, ttl, fade(o, f) { o.material.opacity = 0.45 * f; o.scale.x = o.scale.z = r * (0.45 + 0.55 * f); } });
   // 熾芯
   const cm = axisCylinder(from, to, r * 0.24, core, 0.9);
   if (cm) {
@@ -470,7 +512,8 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
     const ph0 = (c / coil) * Math.PI * 2;
     for (let i = 0; i < SEG; i++) {
       const t0 = (i + 0.5) / SEG;
-      const bead = new THREE.Mesh(new THREE.SphereGeometry(r * (0.42 - 0.26 * t0), 7, 5), energyMat(c === 0 ? core : color, 0.8));
+      const bead = new THREE.Mesh(unitBead(), energyMat(c === 0 ? core : color, 0.8));
+      bead.scale.setScalar(r * (0.42 - 0.26 * t0));
       bead.userData.noOutline = true;
       scene.add(bead);
       const rad = r * (1.9 - 1.35 * t0);          // 螺線半徑隨距離收束(吐息越遠越集中)
@@ -506,12 +549,13 @@ export function ionBreath(scene, effects, from, to, color, { r = 2.2, ttl = 0.45
 /** AoE 衝擊環:貼地放射環,250ms 擴張到傷害半徑邊界後消散 */
 export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.72, 1.0, 40),
+    unitRing('shock', 0.72, 1.0, 40),   // 內外徑固定 → 整場共用一份幾何
     new THREE.MeshBasicMaterial({
       color, transparent: true, opacity: 0.95,
       side: THREE.DoubleSide, depthWrite: false,
     }),
   );
+  ring.userData.noOutline = true;
   ring.rotation.x = -Math.PI / 2;
   ring.position.set(x, y + 0.6, z);
   ring.scale.setScalar(r * 0.15);
@@ -545,8 +589,8 @@ export function damageNumber(scene, effects, pos, dmg, { big = false } = {}) {
       o.position.x += vx * dt;
       o.material.opacity = f < 0.5 ? f / 0.5 : 1;
     },
-    // 傷害數字貼圖每發都是新 canvas,移除時要釋放 GPU 資源
-    dispose() { mat.map.dispose(); mat.dispose(); },
+    // 貼圖已改為快取共用(numberTexture),MUST NOT 在這裡 dispose —— 只釋放本次的材質
+    dispose() { mat.dispose(); },
   });
 }
 
@@ -677,6 +721,9 @@ export function debrisBurst(scene, effects, x, y, z, { big = false, accent } = {
   const groundY = y - 2;
   effects.push({
     obj: g, ttl: big ? 1.4 : 1.0,
+    // 碎塊的幾何與材質是模組級共用池(_chunkGeos/_chunkMats)⇒ 回收時什麼都不能 dispose;
+    // 只有 accent 那份是本次新建的,單獨釋放。
+    dispose: () => accMat?.dispose(),
     fade(o, f, dt) {
       for (const c of chunks) {
         c.vel.y -= 32 * dt;
