@@ -9,7 +9,7 @@ import {
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  aoeClass, lanceR, LANCE,
+  aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
   ALTITUDE, altScale, WATER, TERRAIN_FX, offGround, airUnit,
 } from '../public/js/data.js';
@@ -1555,9 +1555,14 @@ export class BattleSim {
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
-    if (dist2d(h.x, h.z, x, z) > wp.def.range * 1.15 * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程,加成窗涵蓋彈體飛行)
+    const dImp = dist2d(h.x, h.z, x, z);
+    if (dImp > wp.def.range * 1.15 * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程,加成窗涵蓋彈體飛行)
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
+    // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
+    // (不分敵我,波及友軍 + 自身),自損量由 blastFalloff 自然導出。決策以回報射手 h 定案、整組僚機齊射一致套用。
+    const minR = lobMinRange(wp.def);
+    const tooClose = minR > 0 && dImp < minR;
     // bot 重武器「發射端」視覺(2026-07-22 規則 3):真人開火自帶 tracer 訊息轉播,
     // bot 沒有 → 只剩落點 boom = 發射瞬間無槍口焰/彈體離架。補發 shot 事件
     // (客戶端 pid 分支解析槍口錨 → launcher/missile 畫視覺彈體 + 槍口爆 + 後座)
@@ -1567,13 +1572,13 @@ export class BattleSim {
         ty: Math.round(y || 0), side: h.side,
       });
     }
-    this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side });
-    this._blast(h, wp.def, x, z, y, lev);
+    this.events.push({ e: 'boom', x, z, y, r: wp.def.r, side: h.side, ...(tooClose ? { self: 1 } : {}) });
+    this._blast(h, wp.def, x, z, y, lev, tooClose);
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
       if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
-      this._blast(b, wp.def, x, z, y, lev);
+      this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
 
@@ -2355,13 +2360,17 @@ export class BattleSim {
    *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。
    *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,高空直擊/同高度
    *  自爆才炸得到。lev = 爆心結構層(0 地面/1 橋面/2 隧道內;null = 不查層),經 _slabSep 封住穿頂/穿板。 */
-  _blast(h, def, x, z, y, lev = null) {
+  // friendly=true(榴彈太近的無差別模式):不濾己方 ⇒ 波及友軍與射手自身(皆登記在 ents)。
+  // 同陣營目標以 by=null 結算(比照地雷 _tickMines):不吸血、不記助攻/仇恨/賞金,但傷害照吃(自損)。
+  _blast(h, def, x, z, y, lev = null, friendly = false) {
     for (const t of [...this.ents.values()]) {
-      if (t.side === h.side || (t.hero && t.dead)) continue;
+      if (t.hero && t.dead) continue;
+      const same = t.side === h.side;
+      if (same && !friendly) continue;
       if (this._slabSep(lev, x, z, t)) continue;
       const d = Math.hypot(x - t.x, z - t.z, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
-      if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, h, def.pen);
+      if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, same ? null : h, def.pen);
     }
   }
 

@@ -3293,6 +3293,12 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       floorY: p.y, slope: p.slope, clear: TUN.CLEAR, lift: ROAD_LIFT,
     })), covers)
     : { rims: [], touched: [] };
+  // 打洞能力是否具備(2026-07-27 金龍隧道「出入口只有一側」修復):punchPortalHoles 的 touched[pi]=true
+  // ⟺ 該洞斷面走廊內真有橫塞的土牆三角形(且已被刪穿)。touched[pi]=false 只可能是「該洞本來就沒有
+  // 土牆」= 已是開口。舊碼 `!punch.touched[pi]` 把後者也掛上黑色暗面 ⇒ 把本來開著的洞口封成黑牆
+  // (單機山體隧道很常見一端覆蓋淺、無崖面可刪 ⇒ 那一側整片黑 = 使用者看到的「只有一側出入口」)。
+  // 正解:暗面只是「terrain 完全無打洞能力」時的降級布幕;能打洞時一律不掛(有牆→已打穿+collar 封邊、無牆→本就開)。
+  const punched = !!(portals.length && terrain.punchPortalHoles);
   const rims = punch.rims;
   if (rims.some((r) => r.length)) {
     const collar = { pos: [], nrm: [], idx: [], base: 0 };
@@ -3373,11 +3379,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       wing.rotation.y = s * 0.5;
       g.add(wing);
     }
-    // 洞口暗面(2026-07-22;2026-07-23 退居備援):嵌在開口內側、只朝外(FrontSide)遮住覆蓋
-    // 轉換面的拉伸地形布幕。洞口打洞成功時土牆已不存在、collar 接手封邊 ⇒ 這片黑板多餘且
-    // 正是「洞外一片黑」的元凶,不掛。**只有打洞落空**(terrain 無 punchPortalHoles / 該座洞沒有
-    // 可刪的崖面三角形)才降級掛回去 —— 寧可黑,不可露出土牆(§4 失敗策略 = 降級不例外)。
-    if (!punch.touched[pi]) {
+    // 洞口暗面(2026-07-22;2026-07-23 退居備援;2026-07-27 收斂為「無打洞能力」才掛):嵌在開口內側、
+    // 只朝外(FrontSide)遮住覆蓋轉換面的拉伸地形布幕。能打洞時土牆已不存在(collar 封邊)或本來就沒有土牆
+    // ⇒ 這片黑板多餘,且正是「洞外一片黑 / 某側出入口封死」的元凶,一律不掛。**只有 terrain 完全無
+    // punchPortalHoles 能力**(整批降級)才掛回 —— 寧可黑,不可露出土牆(§4 失敗策略 = 降級不例外)。
+    if (!punched) {
       const mouth = new THREE.Mesh(new THREE.PlaneGeometry(W - 1.6, H2 - 1.2),
         envMat(0x0e1013, { wash: 0, cool: 0.1, rim: 0 }));
       mouth.position.set(0, (H2 - 1.2) / 2, -1.3);
@@ -3447,6 +3453,10 @@ const TOWER_PAD_T = 1.4;     // 台面板厚(≥ DECK_UNDER 1.2,與橋面底緣�
 const TOWER_PAD_SINK = 0.02; // 台面繪製下沉量:與橋面路面 quad 錯開,避免共面 z-fighting
 const TOWER_PAD_DIRF = 0.6;  // 橋段方向 × 兵線切線的 |cos| 下限:濾掉「剛好經過附近的別條橋」
 const TOWER_PAD_LONG = 1.0;  // 縱向容差(同 makeDeckIndex 的 LONG_TOL):橋頭之外不算重疊
+// 塔基座橋墩級障礙(2026-07-27 使用者需求「橋上砲塔基座對玩家與 NPC 也要能支撐與障礙,同等於橋墩與橋面」):
+// 墩座面(dy)高度立一根碰撞柱進 cols → blockers(客戶端移動/彈道)+ 伺服器 occ(LOS)⇒ 擋移動 + 擋砲火/視線。
+const TOWER_BASE_R = TOWER_PAD_R * 0.62 + 0.25;   // 半徑 = 墩身(與下方橋墩連續一柱);< 台面半徑 ⇒ 台面外圈仍站得上
+const TOWER_BASE_H = 8;                            // 墩座面以上阻擋高度:涵蓋所有地面機體(掩體),且 < LOS.TOWER_EYE_M(14)⇒ 塔仍可被遠程擊毀、塔自身射擊不被自家基座擋
 function buildTowerBridgePads(group, lanesW, decks, terrain, cols) {
   const pads = [];
   if (!decks.length || !lanesW.length) return pads;
@@ -3499,7 +3509,10 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols) {
           // 橋心多伸(舊版 lat − PAD_R):橋面路面 quad 就畫在 deckAt,同高疊上去 = 整條車道 z-fighting。
           const vIn = hw - 0.6, vOut = lat + TOWER_PAD_R;     // 外緣 = 凸出橋寬之外的部分
           pads.push({ x: tx, z: tz, y: dy });
-          if (vOut <= hw - 0.5) continue;                     // 整座塔本來就落在橋面內 ⇒ 不必加台
+          // 塔基座橋墩級障礙:所有橋上塔一律補(含未凸出橋面的),y=dy(墩座面)⇒ _collide 的 onDeck 豁免
+          // 不跳過(b.y 非 < 站立面−3),站台面的機體被推出塔基;彈道經 _blockerHitT、伺服器 LOS 經 occ 一併擋。
+          cols.push({ x: tx, z: tz, y: dy, r: TOWER_BASE_R, h: TOWER_BASE_H });
+          if (vOut <= hw - 0.5) continue;                     // 整座塔本來就落在橋面內 ⇒ 不必加台(基座障礙已補)
           // 台面:自橋面外緣伸出的矩形板。繪製頂面再沉 TOWER_PAD_SINK(與路面非共面,免 z-fighting);
           // 站立面仍記 dy = 橋面高 ⇒ 上橋 → 上台面沒有台階。
           const slab = new THREE.Mesh(new THREE.BoxGeometry(vOut - vIn, TOWER_PAD_T, TOWER_PAD_R * 2), slabM);
@@ -3523,9 +3536,10 @@ function buildTowerBridgePads(group, lanesW, decks, terrain, cols) {
             shaft.rotation.y = Math.PI / 8;
             group.add(shaft);
           }
-          // 碰撞柱:柱頂 MUST 封在台面「底緣」(同橋墩紀律)—— 封到台面上表面的話,
+          // 墩身碰撞柱(墩座面「底緣」以下):柱頂 MUST 封在台面底緣(同橋墩紀律)—— 封到台面上表面的話,
           // 站在墩座台上的機體 myBot == 柱頂,_collide 的垂直閘不會跳過 → 被隱形柱側推下橋。
-          cols.push({ x: tx, z: tz, y: base, r: TOWER_PAD_R * 0.62 + 0.25, h: top - base });
+          // (墩座面以上的塔基座障礙由上方 TOWER_BASE 柱負責;兩者半徑同 TOWER_BASE_R = 連續一柱。)
+          cols.push({ x: tx, z: tz, y: base, r: TOWER_BASE_R, h: top - base });
         }
       }
     }

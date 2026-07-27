@@ -12,6 +12,7 @@ import {
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
+  BALLISTIC, lobMinRange,
 } from '../public/js/data.js';
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
@@ -215,6 +216,45 @@ log('— sim:爆風不穿透橋面/隧道天花(#1 slab 垂直隔離;所有 AoE 
     x: 5000, z: 5000, y: 0, hp: 600, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
   bare._blast(bareOwner, def, 5000, 5000, 0, 1);
   assert(bareT.hp < bareT.maxHp, '未上傳 slab 時爆風不受層隔(headless 迴歸,確定性斷言不變)');
+}
+
+log('— sim:榴彈類最小射程 → 太近則無差別波及友軍 + 自損(2026-07-27)—');
+{
+  // ① lobMinRange 推導:只 trajClass 'lob' 非零(= 爆風半徑 × LOB_MIN_F);其餘一律 0
+  assert(lobMinRange({ type: 'launcher', r: 20 }) === 20 * BALLISTIC.LOB_MIN_F, 'lobMinRange:榴彈(launcher 無導引)= 爆風半徑 × LOB_MIN_F');
+  assert(lobMinRange({ type: 'launcher', guide: 1, r: 20 }) === 0, 'lobMinRange:導引 launcher 不吃(trajClass guide,已有 ARMING)');
+  assert(lobMinRange({ type: 'missile', r: 20 }) === 0, 'lobMinRange:飛彈不吃(trajClass fnf,自導武器)');
+  assert(lobMinRange({ type: 'gun', r: 5 }) === 0, 'lobMinRange:直擊/輕武器不吃');
+  assert(lobMinRange({ type: 'plasma', fan: true, r: 5 }) === 0, 'lobMinRange:扇形不吃');
+  // 152 榴彈砲(t01)實際武器解析後 def.r 為純量 ⇒ lobMinRange 良好定義且 > 0
+  assert(lobMinRange(heroWeapon('t01', 'heavy', 1)) > 0, 'lobMinRange:t01 152榴彈砲(解析後)> 0');
+
+  const def = { dmg: 300, r: 40, pen: 0 };   // 半徑 40:射手/友軍/敵方三點皆在爆風內
+  // ② friendly=true(落點近於最小射程):敵我 + 射手自身皆受創
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  const owner = sim.addHero('STEEL', 'p_lob', 't01');
+  owner.x = 4000; owner.z = 4000;   // 遠離工事/兵線,隔離其他 ent
+  const ally = sim._add({ kind: 'soldier', side: 'STEEL', x: owner.x + 6, z: owner.z, y: 0, hp: UNITS.soldier.hp });
+  const foe = sim._add({ kind: 'soldier', side: 'SWARM', x: owner.x + 6, z: owner.z + 6, y: 0, hp: UNITS.soldier.hp });
+  const ohp0 = owner.hp + (owner.sp || 0);
+  sim._blast(owner, def, owner.x, owner.z, 0, null, true);
+  assert(owner.hp + (owner.sp || 0) < ohp0, '無差別模式:射手自身受創(自損)');
+  assert(ally.hp < UNITS.soldier.hp, '無差別模式:友軍被波及(不分敵我)');
+  assert(foe.hp < UNITS.soldier.hp, '無差別模式:敵方照樣受創');
+
+  // ③ friendly=false(≥ 最小射程,正常模式):只傷敵,友軍/自身無傷(迴歸:一般榴彈行為不變)
+  const sim2 = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim2);
+  const owner2 = sim2.addHero('STEEL', 'p_lob2', 't01');
+  owner2.x = 4000; owner2.z = 4000;
+  const ally2 = sim2._add({ kind: 'soldier', side: 'STEEL', x: owner2.x + 6, z: owner2.z, y: 0, hp: UNITS.soldier.hp });
+  const foe2 = sim2._add({ kind: 'soldier', side: 'SWARM', x: owner2.x + 6, z: owner2.z + 6, y: 0, hp: UNITS.soldier.hp });
+  const ohp2 = owner2.hp + (owner2.sp || 0);
+  sim2._blast(owner2, def, owner2.x, owner2.z, 0, null, false);
+  assert(owner2.hp + (owner2.sp || 0) === ohp2, '正常模式:射手自身不受傷(同陣營濾除)');
+  assert(ally2.hp === UNITS.soldier.hp, '正常模式:友軍不被波及');
+  assert(foe2.hp < UNITS.soldier.hp, '正常模式:敵方受創(一般榴彈行為不變)');
 }
 
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
