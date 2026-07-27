@@ -83,6 +83,13 @@
     </div>
     <!-- 手機操控設定與自我診斷:觸控裝置才顯示(main.js 依 touchCapable() 決定) -->
     <button id="touchSetupBtn" class="btn" style="display:none">📱 手機操控</button>
+
+    <!-- 開場即可打開設定 / 說明(內容與戰場暫停選單同一份,經共用函式渲染,MUST NOT 各寫一份)-->
+    <div class="divider">─── 設定與說明 ───</div>
+    <div class="row lobby-sys">
+      <button id="lobbySettingsBtn" class="btn">⚙ 設定</button>
+      <button id="lobbyHelpBtn" class="btn">❔ 說明</button>
+    </div>
   </div>
   <footer class="foot-note">2D 地圖 / 3D 地形引擎:mapping_elf ・ 房間系統:ai_tycoon ・ 3D 模型:Quaternius (CC0)</footer>
 
@@ -586,6 +593,56 @@
     <div class="row" style="justify-content:center">
       <button id="touchTestBtn" class="btn steel-btn">🎮 試玩</button>
       <button id="touchCloseBtn" class="btn">← 返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========= 大廳:設定 / 說明疊層(開場即可開;內容與戰場暫停選單同一份)=========
+     設定的音效/音樂/低功耗開關以 `lset` 前綴鏡射暫停頁的 `set` 前綴,經 main.js 的
+     bindSettingsControls / syncAudioSwitches 共用同一份邏輯(單一真相 = app.audio / lowPower);
+     觸控設定與說明分頁一律走共用 renderTouchSettings / mountHelp,MUST NOT 各寫一份。 -->
+<div id="lobbyMenu" class="overlay" style="display:none">
+  <div class="overlay-box pause-box has-close">
+    <button class="ov-close" type="button" aria-label="關閉" data-ovclose="lobbyMenuCloseBtn">✕</button>
+    <div class="pause-title">設定與說明</div>
+    <div class="pause-tabs" id="lobbyMenuTabs">
+      <button class="pause-tab on" type="button" data-page="settings">設定</button>
+      <button class="pause-tab" type="button" data-page="help">說明</button>
+    </div>
+
+    <!-- 分頁:設定 -->
+    <div class="pause-page" data-page="settings">
+      <div class="set-list">
+        <div class="set-row">
+          <span class="set-label">音效</span>
+          <button id="lsetSfxOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音效開關"><span></span></button>
+          <input id="lsetSfxVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音效音量">
+          <span class="set-val" id="lsetSfxVal">0%</span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">音樂</span>
+          <button id="lsetBgmOn" class="switch" type="button" role="switch" aria-checked="true" aria-label="音樂開關"><span></span></button>
+          <input id="lsetBgmVol" class="set-slider" type="range" min="0" max="100" step="1" aria-label="音樂音量">
+          <span class="set-val" id="lsetBgmVal">0%</span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">低功耗模式</span>
+          <button id="lsetLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
+          <span class="set-hint">降低算圖解析度與音效以省電、提升幀率</span>
+        </div>
+        <div class="set-sub touch-only">▎觸控操控</div>
+        <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
+      </div>
+    </div>
+
+    <!-- 分頁:說明 -->
+    <div class="pause-page" data-page="help" hidden>
+      <div class="help-cats" id="lobbyHelpCats"></div>
+      <div class="help-body" id="lobbyHelpBody"></div>
+    </div>
+
+    <div class="row" style="justify-content:center">
+      <button id="lobbyMenuCloseBtn" class="btn small">← 返回</button>
     </div>
   </div>
 </div>

@@ -494,6 +494,29 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(total === 3200, `八軌全滿總價 $${total}(8 ×(75+125+200))`);
   }
 
+  log('— sim:升級快照傳「值」不傳權威物件參考(單機不經 JSON;否則客戶端樂觀購買雙重遞增 → 兩次就滿)—');
+  {
+    const sim = new BattleSim(fakeBattleConfig(1));
+    const h = sim.addHero('SWARM', 'pu', 's01');
+    const snap = sim._serializeEnt(h);
+    assert(snap.up !== h.upg && snap.ab !== h.abil, '_serializeEnt 的 up/ab 是新物件(非權威參考)');
+    snap.up.lw = 99; snap.ab.light = 99;                        // 模擬客戶端 mutate 快照那份
+    assert(h.upg.lw === 0 && h.abil.light === 1, 'mutate 快照不污染伺服器權威 upg/abil');
+    // 單機真實路徑:每次購買前「客戶端 this.upg = e.up」再樂觀 +1,伺服器再權威結算一次。
+    // 修復前 e.up === h.upg ⇒ 樂觀 +1 就地污染權威 ⇒ 伺服器再 +1 = 雙重遞增,三階軌兩次就滿。
+    h.money = 99999;
+    let presses = 0;
+    while ((h.upg.lw || 0) < ECON.UPGRADES.lw.max && presses < 10) {
+      presses++;
+      const clientUpg = sim._serializeEnt(h).up;               // this.upg = e.up
+      clientUpg.lw = (clientUpg.lw || 0) + 1;                   // 客戶端樂觀 +1(不得污染權威)
+      sim.buy('pu', 'lw');                                     // 伺服器權威購買
+    }
+    assert(presses === ECON.UPGRADES.lw.max,
+      `單機輕武器升滿需按 ${ECON.UPGRADES.lw.max} 次(實得 ${presses};修復前雙重遞增只需 2 次 = 使用者回報的「升級只有 2 階」)`);
+    assert(h.abil.light === 1 + ECON.UPGRADES.lw.max, `升滿後 abil.light = ${h.abil.light}(= Lv${h.abil.light})`);
+  }
+
   log('— data:電腦難度操作節奏(每項操作切換間隔;最高難度 = 頂尖 FPS 電競數值)—');
   {
     const keys = BOT_DIFF_KEYS;
