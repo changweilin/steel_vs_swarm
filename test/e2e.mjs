@@ -3,11 +3,14 @@
 //            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 勝負 → 回房保留地圖
 import WebSocket from 'ws';
 import { BattleSim } from '../server/sim.js';
+import { BotBrain } from '../server/bots.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE,
+  SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
+  upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
 } from '../public/js/data.js';
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
@@ -305,18 +308,18 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(!sim.ents.has(victim.id), '自殺機撲擊近炸(重型炸彈爆風)炸死孤立敵兵');
   assert(!sim.ents.has(k0.id) && !sq.kamis.includes(k0), '自殺機引爆後移除');
   assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺賞金記主機 +$${Math.round(dr.money - $kill0)}`);
-  // 半傷驗證(2026-07-18):護衛機爆風 = 重型炸彈 × KAMI.DMG_F(0.5)
-  assert(Math.abs(SQUAD.KAMI.DMG_F - 0.5) < 1e-9, `護衛機傷害減半常數 DMG_F=${SQUAD.KAMI.DMG_F}`);
+  // 傷害驗證(2026-07-27 改制):每架護衛機爆風 = 機種絕招預算 / KAMI.N(N 架打完 = 一份完整預算)
   if (sq.kamis.length) {
     const k1 = sq.kamis[0];
     const beef = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x - 400, z: dr.z - 400, y: 0, hp: 9999 });
     k1.x = beef.x; k1.z = beef.z; k1.y = 0; k1.tid = beef.id;
     const bhp0 = beef.hp;
     sim._tickKamis(0.05);
-    const bombLv1 = tierVal(WEAPONS.bomb.dmg, dr.abil?.light || 1);
-    const expHalf = bombLv1 * SQUAD.KAMI.DMG_F * WEAPONS.bomb.vs.flesh * armorMul(UNITS.soldier.armor, WEAPONS.bomb.pen);
-    assert(Math.abs((bhp0 - beef.hp) - expHalf) < 2,
-      `護衛機近炸半傷 ${(bhp0 - beef.hp).toFixed(0)} ≈ 重彈 ${bombLv1} ×${SQUAD.KAMI.DMG_F} × 肉體 ${WEAPONS.bomb.vs.flesh} × 護甲減免(${expHalf.toFixed(0)})`);
+    const kd = kamiBlast(dr.abil);
+    const expOne = kd.dmg * WEAPONS.bomb.vs.flesh * armorMul(UNITS.soldier.armor, WEAPONS.bomb.pen);
+    assert(Math.abs((bhp0 - beef.hp) - expOne) < 2,
+      `護衛機近炸 ${(bhp0 - beef.hp).toFixed(0)} ≈ 絕招預算 ${Math.round(specialBudget(dr.abil))}/${SQUAD.KAMI.N}`
+      + ` × 肉體 ${WEAPONS.bomb.vs.flesh} × 護甲減免(${expOne.toFixed(0)})`);
     if (sim.ents.has(beef.id)) sim.ents.delete(beef.id);
   }
   for (const k of [...sq.kamis]) sim._removeKami(k);   // 收掉剩餘護衛機
@@ -394,11 +397,12 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     d2.dieAt = sim.t - 1;
     sim._tickDecoys(0.05);
     assert(!msq.decoy, '燃料耗盡 → 自爆並清場');
-    assert(!sim.ents.has(near.id), `自爆爆風(${DECOY.DMG} × 肉體 ${DECOY.vs.flesh})炸死近旁敵兵`);
+    assert(!sim.ents.has(near.id),
+      `自爆爆風(${decoyBlast(mo.abil).dmg} × 肉體 ${DECOY.vs.flesh})炸死近旁敵兵`);
     assert(LOCK.TTL > 0 && DECOY.CD_S > 0, '鎖定時效 / 餌機冷卻皆為正值');
   }
 
-  log('— sim:非變形機甲重砲模式(狙擊長按左鍵:傾洩彈夾 / +33% 傷害 / +20% 射程 / 獨立 CD)—');
+  log('— sim:非變形機甲重砲模式(狙擊長按左鍵:傾洩彈夾 / 追加一份絕招預算 / +20% 射程 / 獨立 CD)—');
   {
     const rb3 = sim.heroes.get('p_r');
     rb3.dead = false; rb3.hp = rb3.maxHp; rb3.mp = rb3.maxMp; rb3.x = 0; rb3.z = 0; rb3.y = 0;
@@ -417,12 +421,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     rb3.reloadUntil = {};
     sim.heroBarrage('p_r');
     assert((rb3.barrageUntil || 0) > sim.t && (rb3.barrageCd || 0) > sim.t, '重砲開窗 + 進入獨立 CD');
-    // 傷害加成:重武器 ×DMG_F(其他倍率相同 → 比值 = DMG_F)
-    const whv = heroWeapon('t01', 'heavy', rb3.abil.heavy || 1, true);
+    // 傷害加成:重武器 ×barrageDmgF(其他倍率相同 → 比值 = 該倍率;2026-07-27 起由絕招預算推導)
+    const whv = heroWeapon('t01', 'heavy', rb3.abil.heavy || 1, true);   // id 已是 'heavy'
+    const expF = barrageDmgF(whv, rb3.abil);
     const buffed = sim._heroDmg(rb3, whv, 'tank');
     rb3.barrageUntil = 0;
     const plain = sim._heroDmg(rb3, whv, 'tank');
-    assert(Math.abs(buffed / plain - BARRAGE.DMG_F) < 1e-6, `重砲傷害 ×${BARRAGE.DMG_F}(實測 ${(buffed / plain).toFixed(2)})`);
+    assert(Math.abs(buffed / plain - expF) < 1e-6, `重砲傷害 ×${expF.toFixed(2)}(實測 ${(buffed / plain).toFixed(2)})`);
+    assert(expF >= BARRAGE.DMG_MIN - 1e-9 && expF <= BARRAGE.DMG_MAX + 1e-9,
+      `重砲每發倍率夾在 ${BARRAGE.DMG_MIN}~${BARRAGE.DMG_MAX}`);
+    assert(Math.abs((expF - 1) * whv.dmg * whv.mag - specialBudget(rb3.abil)) < 1,
+      `整夾傾洩的追加傷害 = 一份絕招預算 $${Math.round(specialBudget(rb3.abil))}`);
     // 傾洩:窗內解射速閘,一口氣打完整個彈夾
     rb3.barrageUntil = sim.t + BARRAGE.DUR;
     rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {}; rb3.mp = rb3.maxMp;
@@ -431,6 +440,115 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     for (let i = 0; i < wp.def.mag + 3; i++) if (sim._gateFire(rb3, 'heavy', wp.def, true)) fired++;
     assert(fired === wp.def.mag, `重砲窗內解射速閘,一口氣傾洩整個彈夾 ${wp.def.mag} 發(實際 ${fired})`);
     rb3.barrageUntil = 0; rb3.barrageCd = 0; rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
+  }
+
+  log('— data:機種絕招三招同預算 + 隨輕/重武器綜合等級成長(2026-07-27)—');
+  {
+    const L1 = { light: 1, heavy: 1 }, L4 = { light: 4, heavy: 4 }, MIX = { light: 4, heavy: 1 };
+    assert(specialTier(L1) === 1 && specialTier(L4) === 4, '綜合等級 = 輕/重兩軌平均(Lv1/Lv4)');
+    assert(specialTier(MIX) === 2.5, `輕 4 / 重 1 → 綜合 2.5 分數階(實得 ${specialTier(MIX)})`);
+    assert(Math.abs(specialTier({ light: 4, heavy: 1 }) - specialTier({ light: 1, heavy: 4 })) < 1e-9,
+      '兩軌對稱:只點輕武器與只點重武器的綜合等級相同');
+    assert(specialTier(undefined) === 1 && specialTier({}) === 1, 'abil 缺值 → 綜合 Lv1(向後相容)');
+    assert(specialBudget(L4) > specialBudget(MIX) && specialBudget(MIX) > specialBudget(L1),
+      `預算隨綜合等級單調成長($${Math.round(specialBudget(L1))} → $${Math.round(specialBudget(MIX))}`
+      + ` → $${Math.round(specialBudget(L4))})`);
+    assert(Math.abs(specialBudget(L4) / specialBudget(L1) - (1 + SPECIAL.PER_LVL * 3)) < 1e-9,
+      `綜合 Lv4 = Lv1 ×${(1 + SPECIAL.PER_LVL * 3).toFixed(2)}`);
+    // 三招在同一綜合等級下的「一次絕招總傷害」等值(±2%,只差四捨五入)
+    for (const abil of [L1, MIX, L4]) {
+      const budget = specialBudget(abil);
+      const kami = kamiBlast(abil).dmg * SQUAD.KAMI.N;
+      const decoy = decoyBlast(abil).dmg + decoyBombBlast(abil).dmg * DECOY.BOMB_MAX;
+      const solo = selfBoomBlast(abil).dmg;
+      for (const [name, tot] of [['自爆攻擊', kami], ['轟炸餌機', decoy], ['主機自毀', solo]]) {
+        assert(Math.abs(tot - budget) <= budget * 0.02,
+          `綜合 Lv${specialTier(abil)} ${name}總傷害 ${Math.round(tot)} ≈ 預算 ${Math.round(budget)}`);
+      }
+      // 重砲:整夾傾洩的追加傷害 = 同一份預算(未被夾制的武器);夾到上下限者只驗夾制生效
+      const hw = heroWeapon('t01', 'heavy', abil.heavy, true);
+      const add = (barrageDmgF(hw, abil) - 1) * hw.dmg * hw.mag;
+      assert(Math.abs(add - budget) <= budget * 0.02
+        || barrageDmgF(hw, abil) === BARRAGE.DMG_MAX || barrageDmgF(hw, abil) === BARRAGE.DMG_MIN,
+        `綜合 Lv${specialTier(abil)} 重砲整夾追加 ${Math.round(add)} ≈ 預算 ${Math.round(budget)}`);
+    }
+    // 32 角色全數落在夾制區間內(沒有任何一把重武器的重砲倍率失控)
+    const fs = Object.keys(CHARACTERS).map((ch) => barrageDmgF(heroWeapon(ch, 'heavy', 1, true), L1));
+    assert(fs.every((f) => f >= BARRAGE.DMG_MIN - 1e-9 && f <= BARRAGE.DMG_MAX + 1e-9),
+      `32 角重砲倍率全在 ${BARRAGE.DMG_MIN}~${BARRAGE.DMG_MAX}(實測 ${Math.min(...fs).toFixed(2)}~${Math.max(...fs).toFixed(2)})`);
+  }
+
+  log('— data:八軌升級第三階單價 = $200(2026-07-27)—');
+  {
+    for (const [key, up] of Object.entries(ECON.UPGRADES)) {
+      assert(upgradePrice(up, UPG_L3_LVL) === ECON.UPG_L3,
+        `${key}(${up.name})第三階 $${upgradePrice(up, UPG_L3_LVL)} = $${ECON.UPG_L3}`);
+    }
+    assert(ECON.UPG_L3 === 200, `第三階單價常數 = $200(實得 $${ECON.UPG_L3})`);
+    assert(upgradePrice(ECON.UPGRADES.lw, 0) === ECON.UPG_BASE
+      && upgradePrice(ECON.UPGRADES.lw, 1) === ECON.UPG_BASE + ECON.UPG_INC,
+      `前兩階仍走階梯 $${ECON.UPG_BASE} / $${ECON.UPG_BASE + ECON.UPG_INC}`);
+    const total = Object.values(ECON.UPGRADES)
+      .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0);
+    assert(total === 3200, `八軌全滿總價 $${total}(8 ×(75+125+200))`);
+  }
+
+  log('— data:電腦難度操作節奏(每項操作切換間隔;最高難度 = 頂尖 FPS 電競數值)—');
+  {
+    const keys = BOT_DIFF_KEYS;
+    for (const k of keys) {
+      const D = BOT_DIFF[k];
+      assert(D.gap > 0 && D.react > 0, `${D.name}:手速 ${D.gap}s / 反應 ${D.react}s 皆為正值`);
+    }
+    for (let i = 1; i < keys.length; i++) {
+      const lo = BOT_DIFF[keys[i - 1]], hi = BOT_DIFF[keys[i]];
+      assert(hi.gap < lo.gap && hi.react < lo.react,
+        `難度越高手速/反應越快(${lo.name} ${lo.gap}s/${lo.react}s → ${hi.name} ${hi.gap}s/${hi.react}s)`);
+    }
+    const top = BOT_DIFF.high;
+    assert(top.gap <= 0.15 + 1e-9 && top.react <= 0.20 + 1e-9 && top.react >= 0.15 - 1e-9,
+      `最高難度對齊頂尖 FPS 電競:反應 ${top.react}s(150~200ms)、手速 ${top.gap}s(≈400 APM)`);
+    assert(top.gap >= GAME.TICK_MS / 1000 * 0.8,
+      `最高難度仍受限(gap ${top.gap}s 不低於伺服器 tick ${GAME.TICK_MS}ms 的量級 = 人類頂點,不是無限手速)`);
+    for (const op of Object.keys(BOT_OPS)) {
+      assert(botOpGap(top, op) < botOpGap(BOT_DIFF.novice, op),
+        `${op}:高難度切換間隔 ${botOpGap(top, op).toFixed(2)}s < 新手 ${botOpGap(BOT_DIFF.novice, op).toFixed(2)}s`);
+      assert(botOpGap(top, op) >= top.gap - 1e-9, `${op}:單項間隔 ≥ 全域手速閘`);
+    }
+    assert(Math.abs(botOpGap(top, 'buy') - 4.05) < 0.01,
+      `高難度巡店間隔 ${botOpGap(top, 'buy').toFixed(2)}s ≈ 舊硬編碼 4s`);
+    assert(botOpGap(top, '不存在的操作') === top.gap, '未列名的操作 = 一次基本操作(× 1)');
+
+    // 實際節流行為(BotBrain._op 是唯一縫):以假 sim 推時鐘,數 10 秒內准許的操作數
+    const fake = { t: 0, lanes: sim.lanes };
+    const countOps = (key, op) => {
+      const brain = new BotBrain(fake, 'bx', 'STEEL', 0, key);
+      let n = 0;
+      for (fake.t = 0; fake.t < 10; fake.t += GAME.TICK_MS / 1000) if (brain._op(op)) n++;
+      return n;
+    };
+    let prev = Infinity;
+    for (const k of [...keys].reverse()) {          // high → novice
+      const n = countOps(k, 'scan');
+      assert(n < prev, `${BOT_DIFF[k].name}:10 秒內掃描選敵 ${n} 次(難度越低次數越少)`);
+      prev = n;
+    }
+    // 全域手速閘:不同類操作也互相排擠(一次只能做一件事)
+    {
+      const brain = new BotBrain(fake, 'bx', 'STEEL', 0, 'high');
+      let n = 0;
+      for (fake.t = 0; fake.t < 10; fake.t += GAME.TICK_MS / 1000) {
+        for (const op of ['scan', 'weapon', 'ability', 'special', 'state', 'buy']) if (brain._op(op)) n++;
+      }
+      assert(n <= Math.ceil(10 / BOT_DIFF.high.gap),
+        `最高難度 10 秒內全類操作合計 ${n} 次 ≤ 手速上限 ${Math.ceil(10 / BOT_DIFF.high.gap)} 次(≈400 APM)`);
+    }
+    // 反應時間:換目標後的 react 秒內開不了火(連 sim.botFire 都不會被呼叫)
+    {
+      const brain = new BotBrain(fake, 'bx', 'STEEL', 0, 'high');
+      fake.t = 0; brain._aimAt = BOT_DIFF.high.react;
+      assert(brain._fire(1, 'light') === false, `反應時間 ${BOT_DIFF.high.react}s 內不開火(準星還沒拉到目標上)`);
+    }
   }
 
   log('— sim:擊殺電腦玩家只算 3 分 —');

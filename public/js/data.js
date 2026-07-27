@@ -313,7 +313,9 @@ export const WEAPONS = {
   // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
   // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
   rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
-  bomb:   { name: '重型炸彈',   dmg: [240, 300, 360], r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
+  // bomb 只留「彈體規格」(半徑/破甲/vs);**傷害刻意不住這裡** —— 2026-07-27 起自爆攻擊與另兩招
+  // (餌機/重砲)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
+  bomb:   { name: '重型炸彈',   r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
 };
 export const vsMult = (wd, kind) => wd.vs?.[TARGET_CLASS[kind]] ?? 1;
@@ -417,12 +419,12 @@ export const SQUAD = {
   DRONE_AVG_HP: 0,    // 初始無人機平均總血量(護盾+裝甲;UNITS 之後 derive)→ 防空伏擊傷害 = 此值 /3
   // ── 護衛自殺攻擊機(2026-07-18 重設計)──
   //  兩架 1/2 體型、外觀同主機的護衛機常駐主機兩側;觸發前不可被鎖定/受傷(純客戶端貼身外觀,不在 sim)。
-  //  「狙擊模式長按右鍵」觸發:兩架同時衝出,以主機 3 倍速撲擊,各造成 DMG_F 倍(半傷)重型炸彈爆風;
+  //  「狙擊模式長按右鍵」觸發:兩架同時衝出,以主機 3 倍速撲擊,各造成機種絕招預算 1/N 的重型炸彈爆風;
   //  自爆後需等滿 CD_S 秒才重新出現(客戶端以 kamiCd 判定顯隱)。敵方導引飛彈會被衝出的護衛機吸走砲火
   //  (見 sim._tickKamis / _tickMissiles)。觸發改狙擊長按右鍵(舊 F 鍵)。
   KAMI: {
     N: 2, HP_F: 1 / 3, SIZE_F: 1 / 2, SPEED_MUL: 3, CD_S: 30,
-    DMG_F: 0.5,       // 自殺攻擊傷害減半(每架護衛機爆風 = _bombDef × 此值)
+    // 傷害不再手寫折半係數:每架 = 機種絕招預算 / N(見 kamiBlast);N 架打完 = 一份完整預算。
     DEATH_F: 0.5,     // 被擊毀時原地引爆(2026-07-22 使用者需求):傷害與半徑各取正常撲擊爆風的 50%
     SPREAD: 0.55,     // 衝出時前方左右散開角(弧度,≈32°)
     FWD: 8, SIDE: 5,  // 衝出生成點:前置 / 側置偏移(公尺)
@@ -458,14 +460,14 @@ export const DECOY = {
   CD_S: 30,         // 冷卻(自發射瞬間起算;歸零 = 掛點重新組合出一架)
   BOOM_M: 6,        // 追蹤命中的近炸引信半徑
   SIGHT: 200,       // 偵察視野(僅連線中回傳)
-  DMG: 260, R: 20, PEN: 10,
+  // 撞擊/投彈的**傷害不住這裡**(2026-07-27):與另兩招共用機種絕招傷害預算,
+  // 由 decoyBlast()/decoyBombBlast() 推導(見 SPECIAL);此處只留彈體規格(半徑/破甲/vs)。
+  R: 20, PEN: 10,
   vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
   // 沿途投彈(2026-07-18):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
-  // 單枚 = 直擊 BOMB_DMG(略高於輕武器)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
-  BOMB_R: 90, BOMB_MAX: 5, BOMB_GAP: 0.9, BOMB_DMG: 34, BOMB_BLAST_R: 14,
+  // 單枚 = 直擊爆風(預算的非撞擊部分均分)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
+  BOMB_R: 90, BOMB_MAX: 5, BOMB_GAP: 0.9, BOMB_BLAST_R: 14, BOMB_PEN: 6,
 };
-/** 餌機自爆的爆風定義(交給 sim._blast;與 WEAPONS 同形) */
-export const decoyBlast = () => ({ dmg: DECOY.DMG, r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs });
 // ---- 餌機沿途投彈:依機體類型的效果(復用 sim 既有 bleed/slow/EMP/stun,無新狀態欄位)----
 // fire/poison 走 bleed 逐體 DoT(owner 記功)、freeze 走 slow 減速、thunder 走 EMP(武器離線)+ stun 麻痺。
 export const DECOY_BOMB = {
@@ -481,16 +483,63 @@ export const MORPH_BOMB = {
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 // ---- 重砲模式(巨炮;2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
-// 0.5 秒內傾洩重武器剩餘彈夾(DUR 窗解除射速閘與電力門檻),傷害 ×DMG_F、射程 ×RANGE_F;
+// 0.5 秒內傾洩重武器剩餘彈夾(DUR 窗解除射速閘與電力門檻),傷害 ×barrageDmgF()、射程 ×RANGE_F;
 // 獨立於彈夾裝填的 30s 冷卻。伺服器以 h.barrageUntil 窗結算加成(見 sim.heroBarrage / _heroDmg / heroHit)。
-// DMG_F 2.0 = 巨炮強化 ×2 傷害(2026-07-22 使用者需求;巨炮砲彈另加氣旋噴射視覺,見 game.js _cycloneJet)。
+// 每發傷害倍率 2026-07-27 起**不再是固定 ×2**:改由機種絕招傷害預算 ÷ 整夾爆發推導(見 barrageDmgF)——
+// 整夾傾洩完 = 追加一份與自爆攻擊/轟炸餌機同額的預算,單發爆發低的重武器倍率自然較高(三招因此等值);
+// 夾在 [DMG_MIN, DMG_MAX] 之間(32 把重武器整夾爆發差距約 2 倍,不夾會讓極端武器倍率失控)。
 // DMG_GRACE(2026-07-25 使用者回報「巨炮沒有傷害」修正):傾洩窗 DUR 是「多快能把彈夾打完」,
 //   但榴彈/火箭/飛彈是**拋射彈**,離膛後要飛一段才落點回報 heroBurst/heroLance —— 舊制傷害加成/射速閘/
 //   射程驗證全在**落點時刻**以 barrageUntil(DUR 窗)判定,彈體落地時窗早已過期 ⇒ ①2× 加成掉回原傷、
 //   ②射速閘重新生效讓同一輪傾洩的第 2 發起被擋(實測:一輪 3 發榴彈只有 1 發、且只造成原傷)。修正 =
 //   傷害/射速/電力/射程的加成窗延長 DMG_GRACE 秒涵蓋彈體飛行時間(_barragingDmg;彈夾此時已空且裝填中,
 //   不會有非傾洩的重武器射擊誤吃加成)。DUR 仍只管客戶端傾洩節奏,MUST NOT 用它判落點加成。
-export const BARRAGE = { DUR: 0.5, DMG_F: 2.0, RANGE_F: 1.20, CD_S: 30, DMG_GRACE: 3.5 };
+export const BARRAGE = { DUR: 0.5, DMG_MIN: 1.5, DMG_MAX: 3.0, RANGE_F: 1.20, CD_S: 30, DMG_GRACE: 3.5 };
+
+// ---- 機種絕招傷害(2026-07-27 使用者需求;三招共用同一份傷害預算 = 唯一縫)----
+// 三招 = 無人機「自爆攻擊」(護衛自殺機 / 主機自毀撞擊)、變形機甲「轟炸餌機」、非變形機甲「重砲模式」;
+// 三者共用同一顆鍵(長按右鍵 / 觸控 ZR,見 game.js _fireHoldAbility)與同一段 30s CD,威力理應等值。
+// 舊制三招各自為政:自爆吃輕武器階(240→420)、餌機固定值(260 + 5×34,完全不隨升級成長)、
+// 重砲固定 ×2(實得加成 = 整夾爆發,隨重武器階 ~265→~730)⇒ 同一格絕招的期望傷害差到三倍。
+// 新制:一次絕招的**總傷害預算** = BASE ×(1 + PER_LVL ×(綜合等級 − 1)),
+//   綜合等級 = (輕武器階 + 重武器階) / 2 —— 絕招是機體整套武裝的爆發,兩條武器軌都算數,
+//   故等級可為 x.5 的**分數階** ⇒ MUST NOT 丟進 tierVal(三階數組只吃整數階,分數會回傳 undefined)。
+// 三招各自把同一份預算切給自己的投射數:
+//   自爆 = KAMI.N 架均分(主機自毀撞擊 = 一架機體吃整份);
+//   餌機 = 撞擊自爆 DECOY_IMPACT,其餘均分給 DECOY.BOMB_MAX 枚沿途投彈;
+//   重砲 = 整夾傾洩的**追加**傷害(每發倍率 = 1 + 預算 ÷ 整夾爆發,夾在 BARRAGE.DMG_MIN~MAX)。
+// BASE 300 ≈ 舊制三者的中位(自爆 240 / 餌機 430 / 重砲加成 ~265),PER_LVL 0.45 ⇒ 綜合 Lv4 = ×2.35
+// (對齊重武器整夾爆發 Lv1→Lv4 的成長)。**MUST NOT** 在 sim/game/HUD 另寫任一招的傷害常數。
+export const SPECIAL = {
+  BASE: 300,          // 綜合 Lv1 一次絕招的總傷害預算(三招同額)
+  PER_LVL: 0.45,      // 每 +1 綜合等級的線性成長(綜合 Lv4 = ×2.35)
+  DECOY_IMPACT: 0.6,  // 餌機:撞擊自爆佔預算的比例(其餘均分給沿途投彈)
+};
+/** 輕/重武器綜合等級(= 兩軌平均,可為 x.5 分數階;缺值以 Lv1 計) */
+export const specialTier = (abil) => ((abil?.light || 1) + (abil?.heavy || 1)) / 2;
+/** 綜合等級成長倍率(線性) */
+export const specialMul = (abil) => 1 + SPECIAL.PER_LVL * (specialTier(abil) - 1);
+/** 一次機種絕招的總傷害預算 */
+export const specialBudget = (abil) => SPECIAL.BASE * specialMul(abil);
+/** 自爆攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑/破甲/vs 沿用重型炸彈規格) */
+export const kamiBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil) / SQUAD.KAMI.N) });
+/** 自爆攻擊:主機自毀撞擊引爆(單一機體 = 整份預算) */
+export const selfBoomBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil)) });
+/** 轟炸餌機:撞擊自爆的爆風 */
+export const decoyBlast = (abil) => ({
+  dmg: Math.round(specialBudget(abil) * SPECIAL.DECOY_IMPACT), r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs,
+});
+/** 轟炸餌機:沿途投彈單枚的爆風(預算的非撞擊部分均分 BOMB_MAX 枚) */
+export const decoyBombBlast = (abil) => ({
+  dmg: Math.round(specialBudget(abil) * (1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX),
+  r: DECOY.BOMB_BLAST_R, pen: DECOY.BOMB_PEN, vs: DECOY.vs,
+});
+/** 重砲模式:每發傷害倍率 —— 整夾(mag 發)傾洩完 ≈ 追加一份預算;夾在 [DMG_MIN, DMG_MAX] */
+export const barrageDmgF = (def, abil) => {
+  const burst = (def?.dmg || 0) * (def?.mag || 1);
+  if (!(burst > 0)) return BARRAGE.DMG_MIN;
+  return Math.min(BARRAGE.DMG_MAX, Math.max(BARRAGE.DMG_MIN, 1 + specialBudget(abil) / burst));
+};
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
@@ -1551,13 +1600,17 @@ export const ECON = {
     sp:  { name: '護盾強化', desc: '護盾上限 +27%/級', max: 3, step: 0.27 },
     ch:  { name: '充能系統', desc: '護盾/電力回復速度提升(滿級 = 現役最高規格)', max: 3 },
   },
-  // 全軌統一階梯單價:price(lvl) = BASE + INC × 該軌現有等級 —— 隨等級遞增(Lv0→1=75、1→2=125、2→3=175)。
-  // 八軌全滿 = 24×BASE + 24×INC = $3000(≈ 10 分鐘收入,見 npm run bal ③);改任一值 MUST 重跑 bal。
-  UPG_BASE: 75, UPG_INC: 50,
+  // 全軌統一階梯單價:price(lvl) = BASE + INC × 該軌現有等級 —— 隨等級遞增(Lv0→1=75、1→2=125),
+  // **第三階(lvl 2→3)一律 UPG_L3**(2026-07-27 使用者需求:所有升級的第三階金額都改成 200)。
+  // 八軌全滿 = 8 ×(75+125+200) = $3200(≈ 10 分鐘收入,見 npm run bal ③);改任一值 MUST 重跑 bal。
+  UPG_BASE: 75, UPG_INC: 50, UPG_L3: 200,
   CHARGE_MIN: 0.4,     // 充能 Lv0 的回復速度比例(滿級 = 1.0 = VITALS.SP_REGEN_PS / mpRegen 現值)
 };
-/** 升級單價:全軌統一階梯 = BASE + INC × 該軌現有等級 lvl(2026-07-20;隨等級遞增) */
-export const upgradePrice = (u, lvl) => ECON.UPG_BASE + ECON.UPG_INC * (lvl || 0);
+/** 「第三階」的 lvl 索引(0-based:Lv2 → Lv3 這一次購買) */
+export const UPG_L3_LVL = 2;
+/** 升級單價:全軌統一階梯 = BASE + INC × 該軌現有等級 lvl;**第三階(lvl=2)固定 UPG_L3 = 200**
+ *  (2026-07-27 使用者需求)。八軌共用這一支 —— MUST NOT 在商店 UI / sim.buy 另寫價格。 */
+export const upgradePrice = (u, lvl) => ((lvl || 0) === UPG_L3_LVL ? ECON.UPG_L3 : ECON.UPG_BASE + ECON.UPG_INC * (lvl || 0));
 /** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
 export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
 /** 重武器每發電力(解析後 def)。輕武器不耗電。彈夾週期 = mag/rate + reload 秒,週期總耗電 =
@@ -2247,15 +2300,32 @@ export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
 // aimErr:每發輕/重武器「射偏」機率(命中結算前擲骰,越高越常打空 → 瞄準越差)。
 // heavy:是否使用重武器;ability:是否施放招式。新手只用輕武器,低難度不用招式。
 // 消費(sim.buy)亦依此裁剪:不用招式者不解鎖招式,把錢投在武器/強化。
+//
+// ---- 操作節奏(2026-07-27 使用者需求:依難度限制「每項操作切換」的時間間隔)----
+// 舊制 bot 每個 tick 都能重新決策(= 無限手速 + 零反應時間),難度差只有「準不準」一項。
+// 新制兩顆旋鈕(bots.js `_op()` 是唯一節流縫,MUST NOT 在別處另寫 tick 計數式節流):
+//   gap   = 全域手速上限 —— 任兩次操作之間的最短間隔(秒);一次只能做一件事。
+//   react = 反應時間 —— 目標換人(新目標入視野)到準星拉上去可以開火的延遲(秒)。
+// 各類操作另有自己的切換間隔 = gap × BOT_OPS[操作](見 botOpGap):
+//   掃描選敵 / 切重武器 / 施放招式 / 機種絕招 / 行為狀態切換 / 開商店。
+// 最高難度對齊**頂尖 FPS 電競選手實測值**:視覺刺激→扣扳機的反應時間 150~200ms、
+// 有效操作約 400 APM ⇒ 兩者都取 0.15s。伺服器 tick 為 GAME.TICK_MS(125ms)⇒ 高難度幾乎不設限
+// (就是人類手速的頂點),往下每一級明顯遲鈍:中 ≈ 熟練玩家、低 ≈ 一般玩家、新手 ≈ 生手。
+// 持續開火**不算切換操作**(扳機是按住的,不是每發重按一次)⇒ 不吃 gap,射速仍由 sim 的武器 rate 把關。
 export const BOT_DIFF = {
-  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false },
-  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false },
-  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true },
-  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true },
+  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70 },
+  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45 },
+  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28 },
+  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15 },
 };
+// 各類操作的切換間隔 = 該難度 gap × 此倍數(1 = 一次基本操作)。
+// buy 27 ⇒ 高難度 ≈ 4.1s,與 2026-07-27 之前的硬編碼 4s 巡店節奏一致(其餘難度按手速等比放慢)。
+export const BOT_OPS = { scan: 2, weapon: 3, ability: 4, special: 5, state: 4, buy: 27 };
 export const BOT_DIFF_KEYS = ['novice', 'low', 'medium', 'high'];
 export const DEFAULT_BOT_DIFF = 'medium';
 export const botDiffOf = (key) => BOT_DIFF[key] || BOT_DIFF[DEFAULT_BOT_DIFF];
+/** 某難度下某類操作的最短切換間隔(秒);未列名的操作 = 一次基本操作(× 1) */
+export const botOpGap = (D, op) => (D?.gap ?? BOT_DIFF[DEFAULT_BOT_DIFF].gap) * (BOT_OPS[op] ?? 1);
 
 // ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
 export const ENV = {
