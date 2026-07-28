@@ -139,6 +139,7 @@ function buildGraph(ways, origin) {
   const idx = new Map();          // "lat,lng" -> i
   const X = [], Z = [], LA = [], LN = [], adj = [];
   const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
+  const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
   const cosO = Math.cos(origin[0] * d2r);
   const nid = (la, ln) => {
     const k = `${la.toFixed(6)},${ln.toFixed(6)}`;
@@ -155,6 +156,7 @@ function buildGraph(ways, origin) {
   for (const w of ways) {
     if (!w.geometry) continue;
     const tun = !!w.tags?.tunnel;
+    const brg = !!w.tags?.bridge && !tun;
     for (let i = 1; i < w.geometry.length; i++) {
       const a = w.geometry[i - 1], b = w.geometry[i];
       const u = nid(a.lat, a.lon), v = nid(b.lat, b.lon);
@@ -163,9 +165,10 @@ function buildGraph(ways, origin) {
       adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
       adj[v].push(u, len);
       if (tun) { tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`); }
+      if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
     }
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE };
+  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE };
 }
 
 class MinHeap {
@@ -324,6 +327,9 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 // 指定場地限定方位角扇區(度,[起, 迄] 順時針含跨 0°;**逐錨點**一份扇區清單):
 // 兵線軸向必須對準特定地標才有測試意義(如 jinlong:兩錨沿隧道軸對向,兵線才會穿
 // 金龍隧道山體;全向暴搜會挑分數更高的街廓方位,兵線就繞開隧道了)。未列場地 = 全向。
+// 這些場地是「兵線要踩上高架橋」的測試場地 ⇒ 選線時先比「踩在橋上的長度」,再走原本的排序。
+// 一般場地不受影響(集合外的 id 完全走舊路徑)。
+const PREFER_BRIDGE = new Set(['parkave']);
 const BEARING_SECTORS = {
   jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
   // Park Avenue 高架軸 ~32°:南錨(E40th 起坡)→東北;北錨(E46th 落地)→西南。
@@ -409,8 +415,17 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
   // 隧道段取圖資 tunnel way 全長(上界;執行期只有地形蓋得住的段落才成洞)⇒ 選線期寧可保守。
   const tt = towerTunnelAudit(lanesGame, lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc)));
+  // 兵線實際踩在橋樑邊上的長度(遊戲公尺):PREFER_BRIDGE 場地用它當首要偏好 ——
+  // 「純陸域高架橋」的測試場地要的就是兵線真的走在橋面上,一般的戰術評分不會特意去挑高架。
+  let brgLen = 0;
+  for (const l of lanes) {
+    for (let i = 1; i < l.full.length; i++) {
+      const u = l.full[i - 1], v = l.full[i];
+      if (g.brgE?.has(`${u}:${v}`)) brgLen += Math.hypot(g.X[u] - g.X[v], g.Z[u] - g.Z[v]) * s;
+    }
+  }
   return {
-    bearing, aIdx, bIdx, lanes,
+    bearing, aIdx, bIdx, lanes, brgLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
     resid: ta.residual + (ta.stackBad ? 1000 : 0),   // 疊塔視為重罰(絕不選)
     tunBad: tt.bad.length,                           // 規則 #5 違規塔數(0 = 合規)
@@ -452,9 +467,15 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
           // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
           // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
           // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
-          if (r && (!best || r.tunBad < best.tunBad
+          if (r && PREFER_BRIDGE.has(id)
+            && (!best || r.brgLen > best.brgLen + 1
+              || (Math.abs(r.brgLen - best.brgLen) <= 1 && (r.tunBad < best.tunBad
+                || (r.tunBad === best.tunBad && (r.resid < best.resid
+                  || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
+          if (r && !PREFER_BRIDGE.has(id) && (!best || r.tunBad < best.tunBad
             || (r.tunBad === best.tunBad && (r.resid < best.resid
               || (r.resid === best.resid && r.score > best.score))))) best = r;
+          // ↑ 一般場地的排序(規則 #5 → 規則 #4 → 戰術評分)不動
         }
       }
       if (!best) {
