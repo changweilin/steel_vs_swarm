@@ -55,6 +55,9 @@ const ANCHORS_ALL = {
   parkave: [[40.75005, -73.97940], [40.75500, -73.97530]],
   barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // 巴塞隆納 Eixample 格柵(臨地中海)
   london: [[51.5007, -0.1246]],
+  // ② 地下道的測試場地:市民大道沿線的車行地下道群(L1 bbox 內圖資有 8 條 tunnel way,
+  // 是掃到最密的一區)。兩個候選原點沿市民大道排開,實際選線由 PREFER_TUNNEL 決定。
+  civicblvd: [[25.0470, 121.5180], [25.0492, 121.5232]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
 };
 
@@ -331,6 +334,10 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 // 這些場地是「兵線要踩上高架橋」的測試場地 ⇒ 選線時先比「踩在橋上的長度」,再走原本的排序。
 // 一般場地不受影響(集合外的 id 完全走舊路徑)。
 const PREFER_BRIDGE = new Set(['parkave']);
+// 同理:「兵線要走進地下道」的測試場地 ⇒ 先比「踩在 tunnel way 上的長度」。
+// 註:平地地下道現行引擎不生成(見 docs/lane_scenarios.md),這裡挑的是**圖資上**的地下道段,
+// 供引擎支援下沉剖面後直接成立;現在開這張圖看到的是一般街道。
+const PREFER_TUNNEL = new Set(['civicblvd']);
 const BEARING_SECTORS = {
   jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
   // parkave 不夾方位角:改由 PREFER_BRIDGE 的「踩在橋上長度」自己挑(夾了反而把能上橋的
@@ -417,15 +424,17 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   const tt = towerTunnelAudit(lanesGame, lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc)));
   // 兵線實際踩在橋樑邊上的長度(遊戲公尺):PREFER_BRIDGE 場地用它當首要偏好 ——
   // 「純陸域高架橋」的測試場地要的就是兵線真的走在橋面上,一般的戰術評分不會特意去挑高架。
-  let brgLen = 0;
+  let brgLen = 0, tunLen = 0;
   for (const l of lanes) {
     for (let i = 1; i < l.full.length; i++) {
       const u = l.full[i - 1], v = l.full[i];
-      if (g.brgE?.has(`${u}:${v}`)) brgLen += Math.hypot(g.X[u] - g.X[v], g.Z[u] - g.Z[v]) * s;
+      const seg = Math.hypot(g.X[u] - g.X[v], g.Z[u] - g.Z[v]) * s;
+      if (g.brgE?.has(`${u}:${v}`)) brgLen += seg;
+      if (g.tunE?.has(`${u}:${v}`)) tunLen += seg;
     }
   }
   return {
-    bearing, aIdx, bIdx, lanes, brgLen,
+    bearing, aIdx, bIdx, lanes, brgLen, tunLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
     resid: ta.residual + (ta.stackBad ? 1000 : 0),   // 疊塔視為重罰(絕不選)
     tunBad: tt.bad.length,                           // 規則 #5 違規塔數(0 = 合規)
@@ -467,12 +476,17 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
           // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
           // 兩者皆是**偏好非硬門檻**:全方位皆不合規時仍取最小者(不放棄該 L,行為等同舊版最佳努力)。
           // 無隧道的場地 tunBad 恆 0 ⇒ 排序退化為舊版,選線結果不動。
+          if (r && PREFER_TUNNEL.has(id)
+            && (!best || r.tunLen > best.tunLen + 1
+              || (Math.abs(r.tunLen - best.tunLen) <= 1 && (r.tunBad < best.tunBad
+                || (r.tunBad === best.tunBad && (r.resid < best.resid
+                  || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
           if (r && PREFER_BRIDGE.has(id)
             && (!best || r.brgLen > best.brgLen + 1
               || (Math.abs(r.brgLen - best.brgLen) <= 1 && (r.tunBad < best.tunBad
                 || (r.tunBad === best.tunBad && (r.resid < best.resid
                   || (r.resid === best.resid && r.score > best.score))))))) { best = r; continue; }
-          if (r && !PREFER_BRIDGE.has(id) && (!best || r.tunBad < best.tunBad
+          if (r && !PREFER_BRIDGE.has(id) && !PREFER_TUNNEL.has(id) && (!best || r.tunBad < best.tunBad
             || (r.tunBad === best.tunBad && (r.resid < best.resid
               || (r.resid === best.resid && r.score > best.score))))) best = r;
           // ↑ 一般場地的排序(規則 #5 → 規則 #4 → 戰術評分)不動
