@@ -8,14 +8,15 @@
 //
 // 資料來源與執行期完全同源:
 //   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
-//   - 路網/鐵路/平交道:Overpass,查詢字串與 `biomes.js fetchOsmRoads/fetchOsmFeatures` 同一份
+//   - 路網/鐵路/平交道:Overpass,查詢字串與 `biomes.js fetchOsmRoads/fetchOsmFeatures` 同一份;
+//     Overpass 的公共鏡像對雲端 IP 幾乎一律拒絕 ⇒ 全掛時退到 OSM 官方 API 的 /map(見 OSM_API)
 //   - 高程:AWS terrarium 磚(= `terrain.js` 主來源),再走同一條「3×3 平滑 → 兵線外 AMP 放大
 //     → 塔位乾地帶抬升」管線,故本工具的 heightAt 與遊戲內地形同形。
 //   - 隧道覆蓋/明隧道判定:**直接執行 `biomes.js` 的函式原文**(tunnelCoverIntervals /
 //     tunnelWallProfile;抽原文的理由同 audit_open_tunnel.mjs —— biomes.js 的 three 走 CDN
 //     importmap,Node 端 import 不了,另抄一份公式則永遠會通過)。
 //
-// 網路:第一次跑會抓 Overpass + terrarium,結果寫進 `tools/.scen_cache/`(之後純離線可重跑)。
+// 網路:第一次跑會抓圖資 + terrarium 高程,結果寫進 `tools/.scen_cache/`(之後純離線可重跑)。
 // 用法:node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
 // 退出碼:0 = 七種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -330,9 +331,61 @@ async function overpass(q) {
   return null;
 }
 
+// ---- 備援圖資來源:OSM 官方 API 的 /map(2026-07-28)----
+// 為什麼要備援:Overpass 的公共鏡像對雲端 IP(CI runner、開發沙箱)幾乎一律拒絕 ——
+// 實測 runner 上三個鏡像全數失敗,整支稽核只剩不需要圖資的 ⑦ 能判。官方 /map 走的是
+// 另一套基礎設施,回傳該 bbox 的**全部**原始資料(node/way),本工具要的 way 幾何與標籤都在裡面。
+// 與執行期的差別只有「沒有 Overpass 的 out N 額度上限」⇒ 這裡看到的是**超集**:
+// L1 bbox 只有 ~0.28 km²,執行期額度(幹道 150 / 小徑 400)遠大於實際 way 數,兩者實務上等價;
+// 真要卡到額度也只會讓遊戲少畫幾條小徑,不影響本稽核判定的橋/隧道/鐵路。
+const OSM_API = 'https://api.openstreetmap.org/api/0.6/map';
+const DRIVE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$/;
+const RAIL_KIND = /^(rail|subway|light_rail|monorail|narrow_gauge|tram)$/;
+
+/** 極簡 OSM XML 解析(A2:不新增依賴)—— 只取 node 座標、way 的 nd/tag */
+function parseOsmXml(xml) {
+  const nodes = new Map(), ways = [], crossings = [];
+  const attr = (s, k) => { const m = new RegExp(`${k}="([^"]*)"`).exec(s); return m ? m[1] : null; };
+  const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  // <node .../>(自閉)或 <node ...> … </node>(含 tag)
+  for (const m of xml.matchAll(/<node\s([^>]*?)(\/>|>([\s\S]*?)<\/node>)/g)) {
+    const id = attr(m[1], 'id'), lat = +attr(m[1], 'lat'), lon = +attr(m[1], 'lon');
+    if (!id || !Number.isFinite(lat)) continue;
+    nodes.set(id, [lat, lon]);
+    if (m[3] && /k="railway"\s+v="level_crossing"/.test(m[3])) crossings.push({ lat, lng: lon });
+  }
+  for (const m of xml.matchAll(/<way\s([^>]*?)>([\s\S]*?)<\/way>/g)) {
+    const body = m[2], tags = {};
+    for (const t of body.matchAll(/<tag k="([^"]*)" v="([^"]*)"\s*\/>/g)) tags[unesc(t[1])] = unesc(t[2]);
+    const geometry = [];
+    for (const n of body.matchAll(/<nd ref="(\d+)"\s*\/>/g)) {
+      const p = nodes.get(n[1]);
+      if (p) geometry.push({ lat: p[0], lon: p[1] });
+    }
+    if (geometry.length >= 2) ways.push({ tags, geometry });
+  }
+  return { ways, crossings };
+}
+
+async function osmApi(bbox) {
+  const url = `${OSM_API}?bbox=${bbox.minLng.toFixed(5)},${bbox.minLat.toFixed(5)},`
+    + `${bbox.maxLng.toFixed(5)},${bbox.maxLat.toFixed(5)}`;
+  for (let a = 0; a < 3; a++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(REQ_MS) });
+      if (r.ok) return parseOsmXml(await r.text());
+      if (!RETRYABLE.has(r.status)) return null;      // 400 = bbox 太大 / 403 = 出口封鎖:不重試
+    } catch { /* 逾時/連線層失敗:重試 */ }
+    await sleep(3000 * (a + 1));
+  }
+  return null;
+}
+
 /**
  * 一個場地一次查詢(道路 + 鐵路 + 平交道節點):語句與額度逐條對齊 biomes.js 的
  * fetchOsmRoads / fetchOsmFeatures,只是併進同一個請求少一趟往返(Overpass 是這支的瓶頸)。
+ * Overpass 全掛(雲端 IP 常態)時退到官方 /map,見上方 OSM_API 註解。
  */
 async function osmFor(id, bbox) {
   const f = join(CACHE, `${id}_L1.json`);
@@ -345,12 +398,24 @@ async function osmFor(id, bbox) {
     + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`);
-  if (!els) return null;
-  const out = {
-    roads: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.highway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
-    rails: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.railway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
-    crossings: els.filter((e) => e.type === 'node' && e.tags?.railway === 'level_crossing').map((e) => ({ lat: e.lat, lng: e.lon })),
-  };
+  let out = null;
+  if (els) {
+    out = {
+      src: 'overpass',
+      roads: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.highway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
+      rails: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.railway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
+      crossings: els.filter((e) => e.type === 'node' && e.tags?.railway === 'level_crossing').map((e) => ({ lat: e.lat, lng: e.lon })),
+    };
+  } else {
+    const api = await osmApi(bbox);
+    if (!api) return null;
+    out = {
+      src: 'osm-api',
+      roads: api.ways.filter((w) => DRIVE_HW.test(w.tags.highway || '')),
+      rails: api.ways.filter((w) => RAIL_KIND.test(w.tags.railway || '')),
+      crossings: api.crossings,
+    };
+  }
   writeFileSync(f, JSON.stringify(out));
   return out;
 }
@@ -476,8 +541,8 @@ async function scanVenue(v) {
   }
 
   const osm = await osmFor(v.id, bbox);
-  if (!osm) { res.error = 'Overpass 取不到路網(限流/無網路)'; return res; }
-  res.osm = { roads: osm.roads.length, rails: osm.rails.length, crossings: osm.crossings.length };
+  if (!osm) { res.error = '取不到路網(Overpass 與 OSM API 皆不可達)'; return res; }
+  res.osm = { src: osm.src || 'overpass', roads: osm.roads.length, rails: osm.rails.length, crossings: osm.crossings.length };
 
   // ---- ①③⑤⑥ 結構 way(隧道/橋)----
   for (const way of osm.roads) {
@@ -600,6 +665,7 @@ for (const v of list) {
     return `${label.slice(0, 2)}${h.name ? h.name : ''}${h.len ? ` ${h.len}m` : ''}${k === 'highGround' ? ` +${h.peak}m` : ''}`;
   }).join('、');
   console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
+    + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`);
 }
 
