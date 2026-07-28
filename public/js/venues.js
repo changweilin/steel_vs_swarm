@@ -70,7 +70,7 @@ export const VENUES = [
   { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'gallery', 'highGround'] },   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)
   // 測試場地(2026-07-28 使用者需求):Park Avenue 高架繞行中央車站,**底下是街道不是水域** ——
   // 「純陸域高架橋」的教科書例子(倫敦 Westminster Bridge 是跨水橋,不算)。
-  { id: 'parkave',    name: '紐約・中央車站高架',     country: '🇺🇸', type: '市區', ll: [40.750500, -73.977200], bearing: 20,  mix: { urban: 0.95, green: 0.05 } },
+  { id: 'parkave',    name: '紐約・中央車站高架',     country: '🇺🇸', type: '市區', ll: [40.750050, -73.979400], bearing: 35,  mix: { urban: 0.95, green: 0.05 } },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
   { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓

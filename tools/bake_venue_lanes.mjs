@@ -8,6 +8,8 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit }
   from '../public/js/data.js';
+// 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
+import { VENUE_LANES } from '../public/js/venueLanes.js';
 
 // 兵線 lat/lng → 遊戲公尺(中心相對;與 audit_map_rules / runtime 同一換算 ⇒ 烘焙期的規則判定與最終稽核一致)
 const SC_GAME = 1 / MAPGEO.REAL_SCALE, EARTH_M = 6371000;
@@ -47,8 +49,9 @@ const ANCHORS_ALL = {
   // 金龍隧道西南口外(金龍路)/ 東北口外(金湖路)。L1 兩堡僅 ~481 真實公尺、隧道 ~195m:
   // 錨點 MUST 貼隧道軸且距洞口 ~130m,B 才不會被吸進隧道內部或繞上別的街廓
   jinlong: [[25.0838, 121.5846], [25.0873, 121.5895]],
-  // Park Avenue 高架(繞中央車站的環形高架,底下全是街道)：南端 E40th / 北端 E46th,相距 ~530m
-  parkave: [[40.7505, -73.9772], [40.7545, -73.9757]],
+  // Park Avenue 高架(繞中央車站的環形高架,底下全是街道)：兩個候選原點壓在高架南北兩端
+  // (南端 Park Ave × E40th 起坡處 / 北端 Park Ave × E46th 落地處)
+  parkave: [[40.75005, -73.97940], [40.75500, -73.97530]],
   barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // 巴塞隆納 Eixample 格柵(臨地中海)
   london: [[51.5007, -0.1246]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
@@ -490,6 +493,21 @@ let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
 // bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
 export const VENUE_LANES = {\n`;
+// ONLY= 只烤指定場地時,**其餘場地的既有兵線 MUST 原樣保留** —— 這支一律重寫整份
+// venueLanes.js,少了這段就會把沒烤到的場地整批清空(2026-07-28 實測:ONLY=parkave
+// 之後其餘 22 個場地全數退回 synthLane 合成弧,場景掃描結果整個變樣)。
+const keep = ONLY.length ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS)) : [];
+for (const [id, byL] of keep) {
+  js += `  ${id}: {\n`;
+  for (const L of [1, 2, 3]) {
+    const e = byL[L];
+    if (!e) continue;
+    js += `    ${L}: { bearing: ${e.bearing}, maxOverlap: ${e.maxOverlap},\n`;
+    js += `      bases: [[${e.bases[0][0]},${e.bases[0][1]}],[${e.bases[1][0]},${e.bases[1][1]}]],\n`;
+    js += `      lanes: [\n        ${e.lanes.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
+  }
+  js += `  },\n`;
+}
 for (const [id, v] of Object.entries(out)) {
   js += `  ${id}: {\n`;
   for (const L of [1, 2, 3]) {
