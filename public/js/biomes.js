@@ -1838,7 +1838,11 @@ const PASS_W = 16;
 //   CLEAR  路面到天花板的淨空(> 最大機甲 真人1.8×250%≈4.5m + 餘裕)⇒ 天花板夠高、最大機甲通過不卡。
 //   HW     隧道路面半寬(> PASS_W/2,雙機並行);ROOF_T 天花板厚度。
 //   覆蓋門檻:山體地表 ≥ 路面 + CLEAR + ROOF_T 才算「洞內」(天花板藏得進山體);否則是敞開洞口段。
-const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+// PORTAL_MAX/LAMP_MAX:全圖門洞/隧道照明的資源上限(具名旋鈕,取代舊硬編 12/120)——
+//   舊 12 上限在含多座隧道的密市區把排序在後的洞口砍掉,該洞既不打洞也不掛暗面 ⇒ 露出戳進
+//   斷面的原始地形土牆正面擋住視線(= 使用者「遠方看不到出入口」);舊 120 燈上限用罄後長/後段
+//   隧道遠端全黑。門洞是輕量 Group、punch 成本受 depth≤40/hw 有界,提高上限只增建圖成本、不動幾何縫。
+const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -2021,11 +2025,34 @@ function dirDot(a, b, c, d) {
  * branchDot = 數值(跨水路線):分岔節點也准續行,但只取 dot ≥ 該值的「最順向」那條(街道 T/十字
  * 路口的直行續段);degree 2 時兩者行為逐項相同。
  */
-function chainWays(ways, canJoin, branchDot = null) {
+function chainWays(ways, canJoin, branchDot = null, snapTol = 0) {
   const key = (p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`;
+  // 端點鄰近聚類(snapTol>0,2026-07-28 相接兩橋接縫下沉修):相接但未共 OSM 節點(端點座標相差
+  // <snapTol 公尺)的鏈也能續接 —— deckAt 只在真正外端把橋面降回地面,消除假端點處的 V 形谷。
+  // 確定性:唯一端點依 key 排序後單鏈接聚類、每群取字典序最小 key 當代表(先建者=最小);純幾何、
+  // 無 rnd、不動抽樣枚數 ⇒ 跨客戶端逐位元一致。degree-2 與 dirDot 守衛照舊,真立體交叉/分岔不誤併。
+  let nkey = key;
+  if (snapTol > 0) {
+    const uniq = new Map();
+    for (const w of ways) for (const p of [w.geometry[0], w.geometry[w.geometry.length - 1]]) {
+      if (!uniq.has(key(p))) uniq.set(key(p), p);
+    }
+    const rep = new Map(), clusters = [];   // clusters: [{ rep:key, pts:[{lat,lon}] }]
+    for (const k of [...uniq.keys()].sort()) {
+      const p = uniq.get(k);
+      const kx = 111320 * Math.cos(p.lat * Math.PI / 180), ky = 110540;
+      let host = null;
+      for (const c of clusters) {
+        if (c.pts.some((q) => Math.hypot((p.lon - q.lon) * kx, (p.lat - q.lat) * ky) <= snapTol)) { host = c; break; }
+      }
+      if (host) { host.pts.push(p); rep.set(k, host.rep); }
+      else { clusters.push({ rep: k, pts: [p] }); rep.set(k, k); }
+    }
+    nkey = (p) => rep.get(key(p)) ?? key(p);
+  }
   const endMap = new Map();   // 節點鍵 -> [{w, end}](end: 0=頭 1=尾)
   for (const w of ways) {
-    for (const [k, end] of [[key(w.geometry[0]), 0], [key(w.geometry[w.geometry.length - 1]), 1]]) {
+    for (const [k, end] of [[nkey(w.geometry[0]), 0], [nkey(w.geometry[w.geometry.length - 1]), 1]]) {
       if (!endMap.has(k)) endMap.set(k, []);
       endMap.get(k).push({ w, end });
     }
@@ -2040,7 +2067,7 @@ function chainWays(ways, canJoin, branchDot = null) {
       let cur = w, guard = 0;
       while (guard++ < 60) {
         const endPt = fwd ? chain[chain.length - 1] : chain[0];
-        const here = endMap.get(key(endPt)) || [];
+        const here = endMap.get(nkey(endPt)) || [];
         if (branchDot == null && here.length !== 2) break;   // 真洞口/橋台或分岔:停
         const ours = fwd ? [chain[chain.length - 2] || chain[0], endPt] : [chain[1] || chain[0], chain[0]];
         let best = null;
@@ -2066,13 +2093,17 @@ function chainWays(ways, canJoin, branchDot = null) {
   return out;
 }
 
+// 橋鏈端點鄰近聚類距離(公尺):相接但未共 OSM 節點的兩橋併成一條(見 chainWays snapTol)。
+// = 半個車道,遠小於 PASS_W/2=8 ⇒ 不會跨接到不相干的橋。隧道維持 0(精確節點),放寬會擾動
+// tunnelCoverIntervals/洞口落點與規則 #5,且平行雙孔靠精確比對保守不併。
+const BRIDGE_SNAP_M = 2.5;
 function mergeGradeChains(roads) {
   const plain = roads.filter((w) => !((w.tags?.tunnel || w.tags?.bridge) && w.geometry?.length >= 2));
   const out = [];
   for (const kind of ['tunnel', 'bridge']) {
     // tunnel 優先歸隧道鏈:同時掛兩種 tag 的 way 不會進兩類
     const ways = roads.filter((w) => w.tags?.[kind] && !(kind === 'bridge' && w.tags.tunnel) && w.geometry?.length >= 2);
-    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17));   // 倒鉤(平行孔折返)不併
+    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17, null, kind === 'bridge' ? BRIDGE_SNAP_M : 0));   // 倒鉤(平行孔折返)不併;橋端點鄰近聚類
   }
   // 鏈排在前(2026-07-22 倫敦橋數浮動案):buildRoads 的 maxRuns 截斷依陣列序,舊版鏈排尾端
   // 使密路網市區的橋/隧道整批優先被犧牲(泰晤士河真橋忽有忽無)。立體結構是兵線與地標
@@ -2164,6 +2195,46 @@ function dedupeParallelBridges(roads, center) {
     if (drop.has(A.i)) continue;
     for (let b = a + 1; b < brs.length; b++) {
       const B = brs[b];
+      if (drop.has(B.i)) continue;
+      const th = A.hw + B.hw;
+      if (B.minX > A.maxX + th || B.maxX < A.minX - th || B.minZ > A.maxZ + th || B.maxZ < A.minZ - th) continue;
+      if (overlapFrac(B.pts, A.pts, th) >= 0.6) drop.add(B.i);
+    }
+  }
+  return drop.size ? roads.filter((_, i) => !drop.has(i)) : roads;
+}
+
+/**
+ * 平行雙孔隧道去重(2026-07-28 金龍隧道「兩端洞口 3 vs 2 不對稱」根因):橋有 dedupeParallelBridges
+ * 的單層原則,隧道**沒有對應刀**。金龍同一座山有多條重疊 tunnel way(2 車道 + 2 footway 近乎逐點
+ * 重合 + 2 service),進 buildRoads 後 footway/service 被 hw=max(roadWidth/2, PASS_W/2)=8 撐成 16m 大洞
+ * 疊在車道孔上,各自在兩端立門洞,不同 way 子集在兩山面解出的門數不同 = 使用者看到的不對稱。
+ * 邏輯完全鏡射 dedupeParallelBridges(長者保留、overlapFrac ≥ 0.6 才剔、AABB 早退、穩定排序 = 確定性):
+ * 與更長 way 側向大面積重合的短 way(footway/service)剔除;互距 > 帶寬的真雙孔車道(overlapFrac < 0.6)
+ * 雙雙保留 ⇒ 兩端各 2 孔對稱。整條 way 保留或整條剔除,不打亂倖存 way 的逐 run way._tun 索引。
+ * MUST 排在 carve 指派 way._tun 之前(呼叫端在 mergeGradeChains/dedupeParallelBridges 之後、carve 之前)。
+ */
+function dedupeParallelTunnels(roads, center) {
+  const tns = [];
+  roads.forEach((w, i) => {
+    if (!w.tags?.tunnel || !(w.geometry?.length >= 2)) return;
+    const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
+    let len = 0;
+    for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, z] of pts) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    tns.push({ i, pts, len, hw: bridgeHw(w.tags), minX, maxX, minZ, maxZ });   // bridgeHw = max(roadWidth/2, PASS_W/2) = 結構通行半寬
+  });
+  tns.sort((a, b) => b.len - a.len);   // 長者優先保留(確定性:len 相同時維持插入序)
+  const drop = new Set();
+  for (let a = 0; a < tns.length; a++) {
+    const A = tns[a];
+    if (drop.has(A.i)) continue;
+    for (let b = a + 1; b < tns.length; b++) {
+      const B = tns[b];
       if (drop.has(B.i)) continue;
       const th = A.hw + B.hw;
       if (B.minX > A.maxX + th || B.maxX < A.minX - th || B.minZ > A.maxZ + th || B.maxZ < A.minZ - th) continue;
@@ -2541,6 +2612,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 路面貼地規則:非橋樑截面「各自貼地,但夾在同截面最高點 −0.7m 之上」——
   // 橫坡路段路面切進山壁(路塹感)而不是被地形吞掉;抬升量 0.45 > 地被(0.07~0.18)
   const ROAD_LIFT = 0.45, CLAMP = 0.7;
+  const AVOID_MIN = 1.5;   // 每側避車道邊帶最小寬:窄於此不鋪(過寬才畫人行道/槽化線)
   // 標線合併幾何(頂點色 = 黃/白):雙黃線/白虛線/路緣邊線/斑馬線全進同一 draw call
   const mark = { pos: [], nrm: [], col: [], idx: [], base: 0 };
   const MARK_Y = [1.0, 0.78, 0.28], MARK_W = [0.95, 0.96, 0.9];   // 標線黃 / 標線白
@@ -2581,6 +2653,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   const rail = { pos: [], nrm: [], idx: [], base: 0 };
   const girder = { pos: [], nrm: [], idx: [], base: 0 };
   const soffit = { pos: [], nrm: [], idx: [], base: 0 };
+  // 避車道:結構通行寬 > 真實車道寬時的邊帶視覺(2026-07-28)。純視覺 — 不進 raycast、不登記 decks/
+  // blockers、不動伺服器碰撞寬(整條 hw 仍可通行);幹道鋪白色槽化斜線(進 mark 桶)、住宅/人行橋鋪
+  // 灰色人行道實體帶(walk 桶)。依道路分級自動選(arterial → hatch,其餘 → walk)。純幾何、零 rnd。
+  const walk = { pos: [], nrm: [], idx: [], base: 0 };
   const piers = [], portals = [];
   // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)+ 天花照明(InstancedMesh)
   const wall = { pos: [], nrm: [], idx: [], base: 0 };
@@ -2681,6 +2757,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         : (sunk(run[0]) && sunk(run[run.length - 1])))) continue;
       // 跨水自動橋段/結構隧道夾通行寬(PASS_W):兵線可能走的結構物;乾段維持原路寬
       const hw = (brg || strc) ? Math.max(hwWay, PASS_W / 2) : hwWay;
+      // 真實車道半寬 laneHw(供標線與避車道邊帶用):結構通行寬 hw 為遊戲性夾到 ≥8,車道本身常窄得多。
+      // avoidHw = 每側「太寬、該畫避車道」的差額。通行寬 hw / decks / 牆 / 走廊 / 伺服器碰撞一律不動 ——
+      // 只是把中央車道漆成真實寬(接縫與外部一般路等寬、無縫)、兩側差額鋪避車道視覺(見下方 walk/hatch 段)。
+      const laneHw = roadWidth(way.tags) / 2;
+      const avoidHw = (brg || strc) ? Math.max(0, hw - laneHw) : 0;
       const mid = run[(run.length / 2) | 0];
       let biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
       // 橋樑就是為了跨越水面而存在 —— 橋段中點取樣落在水色上是常態(河/運河正下方),
@@ -2822,20 +2903,20 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           wall.base += nP * 2;
         }
         // 橫樑 + 天花燈:僅覆蓋區間內(含縫合蓋廊段 —— 蓋廊也有頂,照樣掛樑燈)
-        for (let s = 6; s < total - 4 && beams.length < 120; s += 12) {
+        for (let s = 6; s < total - 4 && beams.length < TUN.LAMP_MAX; s += 12) {
           if (!covS(s)) continue;
           const [ex, ez, ddx, ddz] = at(s);
           beams.push({ x: ex, z: ez, y: tFloorAt(s) + TUN.CLEAR - 0.35, ry: Math.atan2(ddx, ddz), w: hw * 2 + 2 });
-          if (ceilLamps.length < 120) ceilLamps.push({ x: ex, z: ez, y: tFloorAt(s) + TUN.CLEAR - 0.95, ry: Math.atan2(ddx, ddz) });
+          if (ceilLamps.length < TUN.LAMP_MAX) ceilLamps.push({ x: ex, z: ez, y: tFloorAt(s) + TUN.CLEAR - 0.95, ry: Math.atan2(ddx, ddz) });
         }
         // 洞口門洞:立在圍裙外緣(覆蓋轉換面前方 APRON 處)= 站在崖前而非埋進崖裡,位置在
         // 道路中心線上、沿道路軸向、面朝敞開側 —— 出入口永遠沿著道路進出。覆蓋貼齊 run 端
         // (邊界裁切/覆蓋到頭)側沒有引道,不立門。y 取路面基準(舊版取地表高,斷鏈端點會懸空)。
         for (let vi = 0; vi < iv.length; vi++) {
-          if (portals.length >= 12) break;
+          if (portals.length >= TUN.PORTAL_MAX) break;
           const [c0, c1] = iv[vi], [e0, e1] = ivx[vi];
           for (const [s, sgn, ok] of [[e0, 1, c0 >= 4], [e1, -1, c1 <= total - 4]]) {
-            if (portals.length >= 12) break;
+            if (portals.length >= TUN.PORTAL_MAX) break;
             if (!ok) continue;
             const [ex, ez, ddx, ddz] = at(s);
             // hw/slope/depth 供洞口打洞 + collar(punchPortalHoles):slope = 每公尺「進洞」的路面高
@@ -2928,6 +3009,59 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           }
         }
       }
+      // ---- 避車道(2026-07-28 使用者需求「太寬的地方畫人行道或槽化線做為避車道」)----
+      // 結構通行寬 hw(≥8)減真實車道寬 laneHw 的差額 avoidHw,每側鋪成避車道邊帶。依道路分級自動選:
+      // 幹道(arterial)鋪白色槽化斜線導流區(45°,進 mark 桶與標線同批 draw call);其餘鋪灰色人行道
+      // 實體帶(walk 桶,略抬 0.12 = 路緣高)。純視覺:通行寬 / decks / 牆 / 走廊 / 伺服器碰撞完全不動 ——
+      // 整條 hw 仍可通行,只是視覺上中央是等於外部路寬的車道、兩側是避車道。高度基準與路面截面同源
+      // (結構 tFloorAt+ROAD_LIFT / 橋 deckAt,皆取中心 x,z ⇒ 平),固定步長迴圈、零共享 rnd。
+      if ((brg || strc) && avoidHw >= AVOID_MIN) {
+        const perpAt = (i) => {
+          const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
+          let dx = c[0] - a[0], dz = c[1] - a[1];
+          const l = Math.hypot(dx, dz) || 1;
+          return [dz / l, -dx / l];
+        };
+        const roadY = (i) => strc ? tFloorAt(cum[i]) + ROAD_LIFT : deckAt(cum[i], run[i][0], run[i][1]);
+        if (arterial) {
+          // 槽化線:每側沿弧長每 HSTEP 一道由車道緣(laneHw)斜向結構緣(hw)的白條(≈45°、寬 0.36)
+          const HSTEP = 3.4, inHw = laneHw + 0.2, outHw = hw - 0.2;
+          for (const side of [1, -1]) {
+            for (let s = 4; s + 2 < total; s += HSTEP) {
+              const [ax, az, adx, adz] = at(s);
+              const qx = adz, qz = -adx;
+              const skew = Math.min(HSTEP, total - s - 0.5);
+              const [bx, bz] = at(s + skew);
+              const ix = ax + qx * inHw * side, iz = az + qz * inHw * side;   // 內端 = 車道緣
+              const ox = bx + qx * outHw * side, oz = bz + qz * outHw * side;  // 外端 = 結構緣(偏 skew ⇒ 斜)
+              const yTop = (strc ? tFloorAt(s) + ROAD_LIFT : deckAt(s, ax, az)) + 0.13;
+              let ex = ox - ix, ez = oz - iz; const el = Math.hypot(ex, ez) || 1; ex /= el; ez /= el;
+              const wx = ez * 0.18, wz = -ex * 0.18;   // 條寬的法向半量(頂點序仿 dashLine:大偏移在前 → 朝 +Y)
+              const k = mark.base;
+              mark.pos.push(ix + wx, yTop, iz + wz, ix - wx, yTop, iz - wz,
+                            ox + wx, yTop, oz + wz, ox - wx, yTop, oz - wz);
+              for (let v = 0; v < 4; v++) { mark.nrm.push(0, 1, 0); mark.col.push(...MARK_W); }
+              mark.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+              mark.base += 4;
+            }
+          }
+        } else {
+          // 人行道:每側沿 run 鋪一條由 laneHw 到 hw 的灰色實體帶(DoubleSide ⇒ 免管繞行朝向)
+          const inHw = laneHw + 0.1, outHw = hw - 0.1;
+          for (const side of [1, -1]) {
+            const k0 = walk.base;
+            for (let i = 0; i < nP; i++) {
+              const [px, pz] = perpAt(i);
+              const yW = roadY(i) + 0.12;
+              walk.pos.push(run[i][0] + px * inHw * side, yW, run[i][1] + pz * inHw * side,
+                            run[i][0] + px * outHw * side, yW, run[i][1] + pz * outHw * side);
+              walk.nrm.push(0, 1, 0, 0, 1, 0);
+            }
+            for (let i = 0; i < nP - 1; i++) { const k = k0 + i * 2; walk.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+            walk.base += nP * 2;
+          }
+        }
+      }
       // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫)----
       // 結構隧道(2026-07-23 起)照畫:洞內是柏油車道,沒有標線的隧道很出戲。**MUST** 走
       // yBAt 基準高(= 隧道平直路面 tFloorAt,與路面緞帶同源),回退貼地取樣會把標線畫到
@@ -2953,11 +3087,14 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           }
         };
         if (main) {
-          // 車道數由既有寬度推導(單一縫,不硬編各路):main 恆 ≥ 雙線道
-          const lanes = Math.max(2, Math.round(hw * 2 / 3.2));
+          // 標線鋪在「真實車道寬」而非結構通行寬:結構(隧道)避車道生效時用 laneHw,否則(一般路)= hw。
+          // 修掉「16m 隧道被畫成 5 車道鋪滿」;路緣線落在真實車道外緣、與外部一般路對齊,邊帶交給避車道。
+          const mHw = avoidHw >= AVOID_MIN ? laneHw : hw;
+          // 車道數由車道寬推導(單一縫,不硬編各路):main 恆 ≥ 雙線道
+          const lanes = Math.max(2, Math.round(mHw * 2 / 3.2));
           if (arterial) {                        // 幹道:雙黃實線分向
-            emitLine(run, hw, 0.58, 0.33, 0.2, MARK_Y, markYB);
-            emitLine(run, hw, 0.58, -0.33, 0.2, MARK_Y, markYB);
+            emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB);
+            emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB);
           } else {                               // 次要道:單白虛線
             dashLine(0);
           }
@@ -2965,13 +3102,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           if (lanes >= 4) {
             const nHalf = Math.round(lanes / 2);
             for (let k = 1; k < nHalf; k++) {
-              const off = hw * k / nHalf;
-              if (off + 0.28 < hw * 0.78) { dashLine(off); dashLine(-off); }
+              const off = mHw * k / nHalf;
+              if (off + 0.28 < mHw * 0.78) { dashLine(off); dashLine(-off); }
             }
           }
           // 路緣白邊線(車道外側,墨帶內)
-          emitLine(run, hw, 0.56, hw * 0.78, 0.18, MARK_W, markYB);
-          emitLine(run, hw, 0.56, -hw * 0.78, 0.18, MARK_W, markYB);
+          emitLine(run, mHw, 0.56, mHw * 0.78, 0.18, MARK_W, markYB);
+          emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
         // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體)
@@ -3146,6 +3283,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     m.frustumCulled = false;
     m.renderOrder = 2;
     m.userData.noOutline = true;
+    group.add(m);
+  }
+  // ---- 避車道人行道(灰色實體帶,雙面;結構通行寬 > 車道寬時鋪在兩側邊帶)----
+  if (walk.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(walk.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(walk.nrm, 3));
+    geo.setIndex(walk.idx);
+    const m = new THREE.Mesh(geo, envMat(0x8a867e, { wash: 0.3, cool: 0.35, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    m.renderOrder = 1;
     group.add(m);
   }
   // ---- 高架橋欄杆(直立緞帶,雙面)----
@@ -4343,8 +4493,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表
   // (Λ 形斷面、覆蓋斷開、接縫殘留岩階 = 洞內隱形牆)。共端點的同類 way MUST 先併成
   // 完整鏈,carveTunnels 與 buildRoads 共用同一份 → 剖面一致、洞口 = 鏈的真端點。
-  // 合併後平行雙幅橋去重(單層原則 ①)。
-  if (osmRoads?.length) osmRoads = dedupeParallelBridges(mergeGradeChains(osmRoads), center);
+  // 合併後平行雙幅橋去重(單層原則 ①)+ 平行雙孔隧道去重(footway/service 疊在車道孔上 → 洞口不對稱)。
+  // 兩刀皆排在 carve 指派 way._tun(下方)之前 ⇒ carve/buildRoads/markGradeCorridors 三消費端吃同一份去重集。
+  if (osmRoads?.length) osmRoads = dedupeParallelTunnels(dedupeParallelBridges(mergeGradeChains(osmRoads), center), center);
   // 地下道洞口開挖(真・下沉版;2026-07-22 覆蓋區間改制):**只開挖敞開補集**(引道/長峽谷),
   // 覆蓋段與縫合蓋廊段地表原樣保留。路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。
   // 覆蓋區間(tunnelCoverIntervals)在「開挖前」高度上計算一次,掛到 way._tun 供
