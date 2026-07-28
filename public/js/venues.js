@@ -10,10 +10,35 @@
 import { MAPGEO, lanesFor, targetDistFor, laneSeparationAudit } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 
+/**
+ * 1v1(L1)兵線立體場景標記(2026-07-28 使用者需求:七種場景各要有一張預設地圖可測)。
+ * 鍵 = 場景代號,值 = 中文短名(**MUST NOT 進鈕面**,只走 title 提示 —— 見 A20 鈕面不加補述)。
+ * 標記 MUST 由 `node tools/audit_lane_scenarios.mjs` 實測產生/複驗,不得手寫臆測:
+ * 該工具吃與執行期同源的兵線/路網/高程,標記與實測不符即紅字。
+ */
+export const SCEN_LABEL = {
+  tunnel: '地下道',
+  bridge: '高架橋',
+  gallery: '明隧道',
+  crossing: '平交道',
+  underBridge: '穿越橋下',
+  overTunnel: '穿越洞頂',
+  highGround: '側翼高地',
+};
+
+/** 場地提示文字(地貌 + 1v1 兵線場景):大廳與開房兩處場地清單共用同一份,MUST NOT 各寫一套 */
+export function venueTip(v) {
+  const BIO = { green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' };
+  const bio = `地貌:${Object.entries(v.mix).map(([k, f]) => `${BIO[k]} ${Math.round(f * 100)}%`).join('・')}`;
+  const sc = (v.scen || []).map((k) => SCEN_LABEL[k]).filter(Boolean);
+  return sc.length ? `${bio}\n1v1 兵線:${sc.join('・')}` : bio;
+}
+
 // ll = 兵線起點(SWARM 主堡)。**必須是有導航路網的道路節點**:兵線一律取自現實道路
 // (見 venueLanes.js),路網不足的自然景點一律把錨點移到鄰近的聚落/園區道路,
 // 地貌 mix 不變(視覺仍是森林/沙漠/濕地)。改 ll MUST 重跑 scratchpad/bake3.mjs。
 // bearing 只在該場地某個 L 沒有預算資料、退回 synthLane 時才用得到。
+// scen = 該場地 **1v1 兵線**實測走得到的立體場景(見 SCEN_LABEL;由場景稽核工具產生)。
 export const VENUES = [
   // ---- 市區單一(≥80%)----
   { id: 'taipei101',  name: '台北・101 信義計畫區',   country: '🇹🇼', type: '市區', ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 } },

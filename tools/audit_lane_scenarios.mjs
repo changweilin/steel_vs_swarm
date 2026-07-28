@@ -22,8 +22,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { VENUES, venueConfig } from '../public/js/venues.js';
-import { MAPGEO, TERRAIN, WATER, GAME, UNITS, TARGET_H, altTier, battleBBox, solveTowerSites } from '../public/js/data.js';
+import { VENUES, venueConfig, SCEN_LABEL } from '../public/js/venues.js';
+import { MAPGEO, TERRAIN, WATER, GAME, LOS, UNITS, TARGET_H, altTier, battleBBox, solveTowerSites } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CACHE = join(ROOT, 'tools', '.scen_cache');
@@ -68,7 +68,7 @@ function pickConst(name, fallbackMap = {}) {
   return Object.fromEntries(m[1].replace(/\/\/.*$/gm, '').split(',').map((s) => s.trim()).filter(Boolean)
     .map((s) => { const [k, v] = s.split(':').map((t) => t.trim()); return [k, k in fallbackMap ? fallbackMap[k] : +v]; }));
 }
-const TUN = pickConst('TUN', { CLEAR: 8 });              // CLEAR = LOS.TUN_CLEAR_M
+const TUN = pickConst('TUN', { CLEAR: LOS.TUN_CLEAR_M });   // TUN.CLEAR 的單一縫住 data.js
 const ROAD_W = pickConst('ROAD_W');
 const PASS_W = +/const PASS_W = (\d+)/.exec(bsrc)[1];
 const ROAD_SEG = +/const ROAD_SEG = (\d+)/.exec(bsrc)[1];
@@ -142,7 +142,7 @@ function decodePng(buf) {
 async function getBuf(url, tries = 4) {
   for (let a = 0; a < tries; a++) {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
       if (r.ok) return Buffer.from(await r.arrayBuffer());
     } catch { /* 重試 */ }
     await sleep(800 * (a + 1));
@@ -297,10 +297,12 @@ async function overpass(q) {
   for (let round = 0; round < 3; round++) {
     for (const url of OVERPASS) {
       try {
+        // Node 的 fetch **沒有預設逾時**:少了 signal,一條半死的連線會把整支稽核掛在那裡
         const r = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: 'data=' + encodeURIComponent(q),
+          signal: AbortSignal.timeout(90000),
         });
         if (!r.ok) { retryable = retryable || RETRYABLE.has(r.status); continue; }
         const d = await r.json();
@@ -551,20 +553,26 @@ const SCEN = [
   ['overTunnel', '⑥ 穿越地下道上方'],
   ['highGround', '⑦ 一側高於一座砲塔'],
 ];
+{ // 場景代號 MUST 與 venues.js 的 SCEN_LABEL 同集合(標記與判定分家 = 標了卻沒人驗)
+  const a = SCEN.map(([k]) => k).sort().join(','), b = Object.keys(SCEN_LABEL).sort().join(',');
+  if (a !== b) throw new Error(`場景代號與 venues.js SCEN_LABEL 不一致:\n  稽核 ${a}\n  標記 ${b}`);
+}
 
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
 console.log(`1v1(L1)兵線立體場景稽核 —— 場地 ${list.length}、砲塔高 ${TARGET_H.tower}m、`
   + `側向掃描 ${SIDE_MAX} 遊戲公尺(塔射程 ${UNITS.tower.range})\n`);
 const results = [];
 for (const v of list) {
+  const t0 = Date.now();
   const r = await scanVenue(v);
+  r.secs = ((Date.now() - t0) / 1000).toFixed(0);
   results.push(r);
   const marks = SCEN.map(([k]) => (r.hits[k] ? '●' : '·')).join(' ');
   const detail = SCEN.filter(([k]) => r.hits[k]).map(([k, label]) => {
     const h = r.hits[k];
     return `${label.slice(0, 2)}${h.name ? h.name : ''}${h.len ? ` ${h.len}m` : ''}${k === 'highGround' ? ` +${h.peak}m` : ''}`;
   }).join('、');
-  console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  `
+  console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`);
 }
 
@@ -583,6 +591,24 @@ for (const [k, label] of SCEN) {
   pick[k] = hit[0].id;
   console.log(`  ${label}:${hit[0].id}(${hit[0].name})　其他:${hit.slice(1).map((r) => r.id).join('、') || '—'}`);
 }
+// ---- venues.js 的 scen 標記 MUST 對得上實測(標記是給玩家看的提示,不能是臆測)----
+// 只在「整批掃描且該場地確實取得圖資」時比對:--only= 或 Overpass 掛掉時無從判定漏標。
+let tagBad = 0;
+if (!ONLY.length) {
+  console.log('\nvenues.js scen 標記複驗:');
+  for (const r of results) {
+    if (r.error) { console.log(`  ⚠️ ${r.id}:${r.error} —— 無法複驗標記`); continue; }
+    const want = SCEN.map(([k]) => k).filter((k) => r.hits[k]);
+    const have = VENUES.find((v) => v.id === r.id).scen || [];
+    const extra = have.filter((k) => !want.includes(k)), miss = want.filter((k) => !have.includes(k));
+    if (!extra.length && !miss.length) continue;
+    tagBad++;
+    console.log(`  ❌ ${r.id}:${extra.length ? `多標 ${extra.join('、')}` : ''}`
+      + `${extra.length && miss.length ? ' / ' : ''}${miss.length ? `漏標 ${miss.join('、')}` : ''}`
+      + `　實測 = [${want.join(', ')}]`);
+  }
+  if (!tagBad) console.log('  ✓ 全數相符');
+}
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify({ results, pick }, null, 2));
-console.log(`\n總結:${SCEN.length - missing}/${SCEN.length} 種場景有預設場地`);
-process.exit(missing ? 1 : 0);
+console.log(`\n總結:${SCEN.length - missing}/${SCEN.length} 種場景有預設場地、標記不符 ${tagBad}`);
+process.exit(missing || tagBad ? 1 : 0);
