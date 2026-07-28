@@ -32,12 +32,15 @@ import { BattleSim } from '../server/sim.js';
 import { SOLDIER_H, HERO_SIZE, MAPGEO } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const climbSrc = readFileSync(join(ROOT, 'public', 'js', 'climb.js'), 'utf8');
-const gameSrc = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
-const mainSrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
-const simSrc = readFileSync(join(ROOT, 'server', 'sim.js'), 'utf8');
-const helpSrc = readFileSync(join(ROOT, 'public', 'js', 'help.js'), 'utf8');
-const biomeSrc = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+// LF 正規化:git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。全檔的跨行切片標記(DRAW、pickMethod
+// 的 `\n  }\n`、箭頭區塊的 `\n}\n`、_stepClimb 的正則)一律以 `\n` 書寫,不正規化就只在 Linux 綠。
+const read = (...p) => readFileSync(join(ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+const climbSrc = read('public', 'js', 'climb.js');
+const gameSrc = read('public', 'js', 'game.js');
+const mainSrc = read('public', 'js', 'main.js');
+const simSrc = read('server', 'sim.js');
+const helpSrc = read('public', 'js', 'help.js');
+const biomeSrc = read('public', 'js', 'biomes.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };

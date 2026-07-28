@@ -15,7 +15,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+// LF 正規化:git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。下方跨行切片標記(B1 的 `\n   * …`、
+// H1 的 `\n  }`)一律以 `\n` 書寫,不正規化就只在 Linux 綠、Windows 紅。
+const src = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8').replace(/\r\n/g, '\n');
 
 // ---- 抽出 rayTerrain 區塊(含 triDead / markTriDead / triHit)----
 const B0 = src.indexOf('  // ---- 地形射線(解析版');
