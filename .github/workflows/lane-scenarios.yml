@@ -54,7 +54,7 @@ jobs:
 
       - name: 掃描結果 JSON
         if: always()
-        run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results)console.log(r.id, JSON.stringify(r.hits), r.overTunnelCand?('cand='+JSON.stringify(r.overTunnelCand)):'', r.osm?JSON.stringify(r.osm):r.error||'')" || echo '(無 scen.json)'
+        run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results)console.log(r.id, JSON.stringify(r.hits), r.hits2Water?('water='+JSON.stringify(r.hits2Water)):'', r.flatTunnel?('flat='+JSON.stringify(r.flatTunnel)):'', r.landBridgeCand?('landbr='+JSON.stringify(r.landBridgeCand)):'', r.osm?JSON.stringify(r.osm):r.error||'')" || echo '(無 scen.json)'
 
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}

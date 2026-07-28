@@ -634,6 +634,21 @@ async function scanVenue(v) {
     }
   }
 
+  // ---- ② 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
+  // 用途:② 目前只有跨水橋時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上陸域高架橋」。
+  for (const w of osm.roads) {
+    if (!w.tags.bridge || w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    const wpts = w.geometry.map((p) => llToWorld(p.lat, p.lon, center));
+    if (spansWater(wpts)) continue;
+    let len = 0;
+    for (let i = 1; i < wpts.length; i++) len += Math.hypot(wpts[i][0] - wpts[i - 1][0], wpts[i][1] - wpts[i - 1][1]);
+    if (len < ON_MIN) continue;
+    const d = Math.round(Math.min(...wpts.map((p) => ptPoly(p, laneD))));
+    if (!res.landBridgeCand || d < res.landBridgeCand.d) {
+      res.landBridgeCand = { name: w.tags.name || w.tags.highway, len: Math.round(len), d };
+    }
+  }
+
   // ---- ⑥ 的候選診斷:bbox 內有沒有「任一車行道從覆蓋段隧道上方跨過」----
   // ⑥ 要的是**兵線**從洞頂走過,可遇不可求;這裡順手回報「這張地圖上存不存在這種交叉、
   // 離兵線多遠」,好判斷「換個錨點/方位角重烤兵線」有沒有機會把 ⑥ 湊出來(離兵線越近越有機會)。
@@ -762,6 +777,7 @@ for (const v of list) {
     + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
     + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
+    + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
     + `${r.flatTunnel ? `　平地隧道(執行期不成洞):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
