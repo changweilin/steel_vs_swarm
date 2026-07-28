@@ -338,6 +338,9 @@ async function overpass(q) {
 // 與執行期的差別只有「沒有 Overpass 的 out N 額度上限」⇒ 這裡看到的是**超集**:
 // L1 bbox 只有 ~0.28 km²,執行期額度(幹道 150 / 小徑 400)遠大於實際 way 數,兩者實務上等價;
 // 真要卡到額度也只會讓遊戲少畫幾條小徑,不影響本稽核判定的橋/隧道/鐵路。
+// 能「載著兵線走」的道路類別 = 烘焙兵線用的車行道(tools/bake_venue_lanes.mjs 的 DRIVABLE)。
+// 兵線是車行路線 ⇒ 人行地下道/人行空橋**不可能**是兵線本身走的那一條,只可能是它上/下方的結構。
+const LANE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service)(_link)?$/;
 const OSM_API = 'https://api.openstreetmap.org/api/0.6/map';
 const DRIVE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$/;
 const RAIL_KIND = /^(rail|subway|light_rail|monorail|narrow_gauge|tram)$/;
@@ -503,6 +506,11 @@ async function scanVenue(v) {
   const center = cfg.center;
   const laneW = cfg.lanes[0].map(([lat, lng]) => llToWorld(lat, lng, center));
   const laneD = densify(laneW, ROAD_SEG), laneCum = arcOf(laneD);
+  // 兵線頂點就是 OSM 路網節點(venueLanes.js 烘焙時取自真實道路)⇒ 「兵線是否**走在**這條 way 上」
+  // 用共用節點判定最紮實:純看 2D 距離會把「正下方的人行地下道 / 正上方的空橋」誤判成同一條路。
+  const k6 = (lat, lng) => `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  const laneKeys = new Set(cfg.lanes[0].map(([lat, lng]) => k6(lat, lng)));
+  const sharesNode = (way) => way.geometry.some((p) => laneKeys.has(k6(p.lat, p.lon)));
 
   // ---- ⑦ 側向高地(不需要 OSM;altTier() = 一座砲塔高 = 高度差加成門檻)----
   {
@@ -555,8 +563,9 @@ async function scanVenue(v) {
     const onLen = runs.reduce((s, [a, b]) => s + (b - a), 0);
     const name = way.tags.name || way.tags.highway;
 
+    const canCarry = LANE_HW.test(way.tags.highway || '') && sharesNode(way);
     if (isBrg) {
-      if (onLen >= ON_MIN) {                       // ② 兵線走在橋面上
+      if (onLen >= ON_MIN && canCarry) {           // ② 兵線走在橋面上(車行橋 + 共用節點)
         const cur = res.hits.bridge;
         if (!cur || onLen > cur.len) res.hits.bridge = { name, len: Math.round(onLen) };
       } else {                                     // ⑤ 兵線從橋下鑽過(純幾何交叉)
@@ -573,7 +582,7 @@ async function scanVenue(v) {
     if (!tr || !tr.intervals.length) continue;
     const covIdx = new Set();
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covIdx.add(i);
-    if (onLen >= ON_MIN) {
+    if (onLen >= ON_MIN && canCarry) {
       // ① 地下道:重疊段要真的落在覆蓋區間內(否則只是走在引道上)
       let covLen = 0;
       for (let i = 1; i < laneD.length; i++) {
@@ -600,14 +609,30 @@ async function scanVenue(v) {
           }
         }
       }
-    } else {
-      // ⑥ 穿越地下道上方:兵線與隧道走廊幾何交叉,且交點落在覆蓋段(洞頂)
-      for (let i = 1; i < laneD.length && !res.hits.overTunnel; i++) {
+    } else if (!sharesNode(way)) {
+      // ⑥ 穿越地下道上方:兵線不在這條隧道上(不共節點)卻與它的覆蓋段重疊或交叉
+      //   —— 橫過去 = 從洞頂穿越;平行重疊 = 走在洞頂上。兩種都是「兵線上方/下方分層」的測試場景。
+      let over = null;
+      for (let i = 1; i < laneD.length && !over; i++) {
         for (let j = 1; j < tr.pts.length; j++) {
           if (!segCross(laneD[i - 1], laneD[i], tr.pts[j - 1], tr.pts[j])) continue;
-          if (covIdx.has(j) || covIdx.has(j - 1)) { res.hits.overTunnel = { name }; break; }
+          if (covIdx.has(j) || covIdx.has(j - 1)) { over = { name, how: '橫越' }; break; }
         }
       }
+      if (!over && onLen >= ON_MIN) {
+        // 平行重疊:重疊段要落在覆蓋區間內才算「洞頂」
+        for (let i = 1; i < laneD.length && !over; i++) {
+          const mid = [(laneD[i][0] + laneD[i - 1][0]) / 2, (laneD[i][1] + laneD[i - 1][1]) / 2];
+          if (ptPoly(mid, tr.pts) > hw + ROAD_SEG) continue;
+          let k = 0, best = Infinity;
+          for (let m = 0; m < tr.pts.length; m++) {
+            const d = Math.hypot(mid[0] - tr.pts[m][0], mid[1] - tr.pts[m][1]);
+            if (d < best) { best = d; k = m; }
+          }
+          if (covIdx.has(k)) over = { name, how: '洞頂並行' };
+        }
+      }
+      if (over && !res.hits.overTunnel) res.hits.overTunnel = over;
     }
   }
 
