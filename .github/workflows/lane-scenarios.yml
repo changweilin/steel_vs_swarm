@@ -5,10 +5,6 @@
 name: 兵線場景掃描
 
 on:
-  # 暫時的推送觸發:沙箱沒有 Overpass/terrarium 出口,靠 runner 跑掃描取結果。
-  # 掃描定案後 MUST 移除這段(這支不該隨每次推送去打別人的伺服器)。
-  push:
-    branches: [claude/1v1-map-scenarios-test-obzl6w]
   workflow_dispatch:
     inputs:
       only:
@@ -20,7 +16,7 @@ on:
         required: false
         default: ''
 
-# 同時只跑一份掃描:新的推送取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
+# 同時只跑一份掃描:新的觸發取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
 concurrency:
   group: lane-scenarios
   cancel-in-progress: true
