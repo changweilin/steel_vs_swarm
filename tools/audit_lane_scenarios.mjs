@@ -634,6 +634,28 @@ async function scanVenue(v) {
     }
   }
 
+  // ---- ① 的候選診斷:bbox 內「執行期真的成洞」的車行隧道 + 它的覆蓋厚度----
+  // 使用者要的 ① 是「地下道感」= 短、覆蓋薄(從路面到山體頂只有十來公尺)、周邊地形平坦;
+  // 金龍隧道那種厚覆蓋是「山體隧道」。厚度取覆蓋段的中位數(路面上方地表高 − 路面高)。
+  for (const w of osm.roads) {
+    if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    const tr = tunnelRunOf(w, center, heightAt);
+    if (!tr || !tr.intervals.length) continue;
+    const th = [];
+    for (const [, , ia, ib] of tr.intervals) {
+      for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
+    }
+    if (!th.length) continue;
+    th.sort((a, b) => a - b);
+    const covLen = tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0);
+    const d = Math.round(Math.min(...tr.pts.map((p) => ptPoly(p, laneD))));
+    const cand = { name: w.tags.name || w.tags.highway, len: Math.round(covLen),
+                   thick: Math.round(th[th.length >> 1]), d };
+    // 首選「覆蓋最薄」的那條(最像地下道);同厚度取離兵線近的
+    if (!res.tunnelCand || cand.thick < res.tunnelCand.thick
+        || (cand.thick === res.tunnelCand.thick && d < res.tunnelCand.d)) res.tunnelCand = cand;
+  }
+
   // ---- ② 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
   // 用途:② 目前只有跨水橋時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上陸域高架橋」。
   for (const w of osm.roads) {
@@ -779,6 +801,7 @@ for (const v of list) {
     + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
     + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
     + `${r.flatTunnel ? `　平地隧道(執行期不成洞):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
+    + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/厚 ${r.tunnelCand.thick}m 離兵線 ${r.tunnelCand.d}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
 
