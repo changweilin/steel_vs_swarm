@@ -610,29 +610,15 @@ async function scanVenue(v) {
         }
       }
     } else if (!sharesNode(way)) {
-      // ⑥ 穿越地下道上方:兵線不在這條隧道上(不共節點)卻與它的覆蓋段重疊或交叉
-      //   —— 橫過去 = 從洞頂穿越;平行重疊 = 走在洞頂上。兩種都是「兵線上方/下方分層」的測試場景。
-      let over = null;
-      for (let i = 1; i < laneD.length && !over; i++) {
+      // ⑥ 穿越地下道上方:兵線不在這條隧道上(不共節點)且**橫越**它的覆蓋段 = 從洞頂走過去。
+      // 只認「橫越」:平行並行的另一個孔(例如同一座山的人行孔)在高度場上與兵線同層,
+      // 不是「上下分層」的測試場景 —— 那條規則放進來會讓 jinlong 的人行孔誤判成 ⑥。
+      for (let i = 1; i < laneD.length && !res.hits.overTunnel; i++) {
         for (let j = 1; j < tr.pts.length; j++) {
           if (!segCross(laneD[i - 1], laneD[i], tr.pts[j - 1], tr.pts[j])) continue;
-          if (covIdx.has(j) || covIdx.has(j - 1)) { over = { name, how: '橫越' }; break; }
+          if (covIdx.has(j) || covIdx.has(j - 1)) { res.hits.overTunnel = { name }; break; }
         }
       }
-      if (!over && onLen >= ON_MIN) {
-        // 平行重疊:重疊段要落在覆蓋區間內才算「洞頂」
-        for (let i = 1; i < laneD.length && !over; i++) {
-          const mid = [(laneD[i][0] + laneD[i - 1][0]) / 2, (laneD[i][1] + laneD[i - 1][1]) / 2];
-          if (ptPoly(mid, tr.pts) > hw + ROAD_SEG) continue;
-          let k = 0, best = Infinity;
-          for (let m = 0; m < tr.pts.length; m++) {
-            const d = Math.hypot(mid[0] - tr.pts[m][0], mid[1] - tr.pts[m][1]);
-            if (d < best) { best = d; k = m; }
-          }
-          if (covIdx.has(k)) over = { name, how: '洞頂並行' };
-        }
-      }
-      if (over && !res.hits.overTunnel) res.hits.overTunnel = over;
     }
   }
 
