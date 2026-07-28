@@ -12,6 +12,8 @@
 //   Ⅲ **有向盒遮蔽兩端同判**:客戶端 `game.js _blockerHitT` 與伺服器 `sim.js _losBlocked` 對同一個盒
 //     同一條線段 MUST 給同一個答案(牆角 / 細長樓側面 / 正面),含 sim 座標鏡射(z 反號 ⇒ ry 反號)
 //   Ⅳ 靜態規則(單一縫 / A21 / A25 / 純客戶端)
+//   Ⅴ 上下兩端提示箭頭:尺寸相對兵線 chevron 縮小、朝向(底端朝上 / 頂端朝下)、
+//     擺位基底正交且右手(A26)、動畫掛在既有的 dynamics 桶
 //
 // 為什麼用「抽原文」而不是 import:`climb.js` 與 `game.js` 的 three 走 CDN importmap,Node 端解析不了;
 // 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。
@@ -484,6 +486,134 @@ console.log('\n=== Ⅳ 靜態規則(單一縫 / A21 / A25 / 純客戶端)===');
   ok(/if \(o\.length >= 8\)/.test(simSrc), 'Ⅳ sim.js _losBlocked 以「占位長度 ≥ 8」判有向盒(舊格式圓柱行為不變)');
   ok(/const r = b\.hw2 != null \? Math\.hypot\(b\.hw2, b\.hd2\) : b\.r;/.test(gameSrc),
     'Ⅳ _buildBlockGrid 登記半徑用**外接**對角(內切會漏登記貼牆角的格)');
+}
+
+console.log('\n=== Ⅴ 上下兩端提示箭頭(執行 climb.js 的發射器原文)===');
+
+// buildClimbArrows 只用到 THREE 的一小撮 API,故以最小替身執行**真正的原文**
+// (另抄一份矩陣公式就永遠會通過;makeBasis/setPosition 的定義是 three 的公開契約)。
+function loadArrows() {
+  const P0 = climbSrc.indexOf('export const CLIMB_ARROW = {');
+  const P1 = climbSrc.indexOf('function buildClimbArrows(g, list) {');
+  const P2 = climbSrc.indexOf('\n}\n', P1) + 2;
+  if (P0 < 0 || P1 < 0 || P2 <= P1) throw new Error('climb.js 找不到提示箭頭區塊');
+  const body = (climbSrc.slice(P0, climbSrc.indexOf('\n\n', P0)) + '\n' + climbSrc.slice(P1, P2))
+    .replace(/^export /gm, '');
+  class V3 {
+    constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+    set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+    crossVectors(a, b) {
+      return this.set(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+    }
+    multiplyScalar(k) { return this.set(this.x * k, this.y * k, this.z * k); }
+  }
+  class M4 {
+    constructor() { this.e = new Array(16).fill(0); this.e[15] = 1; }
+    makeBasis(x, y, z) {
+      this.e = [x.x, x.y, x.z, 0, y.x, y.y, y.z, 0, z.x, z.y, z.z, 0, 0, 0, 0, 1];
+      return this;
+    }
+    setPosition(v) { this.e[12] = v.x; this.e[13] = v.y; this.e[14] = v.z; return this; }
+  }
+  const THREE = {
+    Vector3: V3, Matrix4: M4,
+    BoxGeometry: class { translate() { return this; } },
+    MeshBasicMaterial: class { constructor(o) { Object.assign(this, o); } },
+    InstancedMesh: class {
+      constructor(geo, mat, n) { this.geo = geo; this.mat = mat; this.count = n; this.userData = {}; this.mtx = []; this.instanceMatrix = {}; }
+      setMatrixAt(i, m) { this.mtx[i] = m.e.slice(); }
+    },
+  };
+  return new Function('THREE', 'markShared', 'UNIT',
+    `${body}\nreturn { CLIMB_ARROW, buildClimbArrows };`)(THREE, (x) => x, {});
+}
+const AR = loadArrows();
+const A = AR.CLIMB_ARROW;
+{
+  // 兵線 chevron 的桿長/張角(game.js _initLanes)—— 「縮到適當大小」是相對它定義的
+  const LANE_BAR = +/const BAR_L = ([\d.]+), SPREAD = ([\d.]+);/.exec(gameSrc)[1];
+  const LANE_SP = +/const BAR_L = [\d.]+, SPREAD = ([\d.]+);/.exec(gameSrc)[1];
+  ok(A.BAR < LANE_BAR * 0.45 && A.BAR > LANE_BAR * 0.2,
+    `Ⅴ 桿長 MUST 明顯短於兵線 chevron(攀爬 ${A.BAR}m vs 兵線 ${LANE_BAR}m,期望 0.2~0.45 倍)`);
+  ok(near(A.SPREAD, LANE_SP, 1e-9), `Ⅴ 半張角 MUST 與兵線同(${A.SPREAD})—— 縮的是尺寸不是語彙`);
+  ok(A.T <= 0.15, `Ⅴ 桿厚 ${A.T}m = 貼片(不是空中的立體箭頭)`);
+
+  // 建一組:一棟朝 +X 的樓 + 一棵神木,兩端各 N 支 chevron × 2 根桿
+  const B = bld(0, 0, 40, 40, 40);
+  const routes = planClimbRoutes({ blockers: [B, tree(400, 0, 8, 50)], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 });
+  ok(routes.length === 2, 'Ⅴ 測試場地產出 2 條路線');
+  const g = { userData: {}, add(m) { (this.kids ??= []).push(m); } };
+  AR.buildClimbArrows(g, routes);
+  const [up, dn] = g.kids;
+  ok(g.kids.length === 2, 'Ⅴ 上行 / 下行各一個 InstancedMesh(2 個 draw call)');
+  ok(up.count === routes.length * A.N * 2 && dn.count === up.count,
+    `Ⅴ 每端 N=${A.N} 支 chevron × 2 根桿 × ${routes.length} 條路線(實得 ${up.count} / ${dn.count})`);
+  ok(up.mat.color === A.UP && dn.mat.color === A.DOWN, 'Ⅴ 上行青綠 / 下行琥珀(兩端一眼分得出方向)');
+  ok(typeof g.userData.update === 'function', 'Ⅴ 動畫掛在 group.userData.update(併進 biomes 既有的 dynamics 桶)');
+
+  // 解出每根桿的基底與位置:three Matrix4 為 column-major
+  const cols = (e) => ({
+    X: { x: e[0], y: e[1], z: e[2] }, Y: { x: e[4], y: e[5], z: e[6] },
+    Z: { x: e[8], y: e[9], z: e[10] }, P: { x: e[12], y: e[13], z: e[14] },
+  });
+  const len = (v) => Math.hypot(v.x, v.y, v.z);
+  const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+  const cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+
+  let orthoBad = 0, handBad = 0, faceBad = 0, lenBad = 0;
+  for (const mesh of [up, dn]) {
+    for (const e of mesh.mtx) {
+      const { X, Y, Z } = cols(e);
+      if (Math.abs(dot(X, Y)) > 1e-9 || Math.abs(dot(Y, Z)) > 1e-9 || Math.abs(dot(X, Z)) > 1e-9) orthoBad++;
+      const c = cross(X, Y);                       // 右手系:X × Y MUST 同向於 Z(不得鏡射)
+      if (dot(c, Z) <= 0) handBad++;
+      if (Math.abs(len(Y) - A.T) > 1e-9) faceBad++;          // 厚度軸 = 向外法線,恆為 T
+      if (len(Z) > A.BAR + 1e-9 || len(Z) < A.BAR * 0.3) lenBad++;   // 桿長 ≤ BAR(脹縮只會縮)
+    }
+  }
+  ok(orthoBad === 0, `Ⅴ 擺位基底 MUST 正交(違規 ${orthoBad} 根)`);
+  ok(handBad === 0, `Ⅴ 擺位基底 MUST 是右手系(鏡射會讓貼片翻面;違規 ${handBad} 根)`);
+  ok(faceBad === 0, `Ⅴ 厚度軸 MUST = 向外法線且不隨脹縮改變(違規 ${faceBad} 根)`);
+  ok(lenBad === 0, `Ⅴ 桿長 MUST 夾在 BAR 以內(違規 ${lenBad} 根)`);
+
+  // 朝向:桿自頂點往「後方」延伸 d = −Z ⇒ 上行的 d.y MUST < 0(頂點朝上)、下行 MUST > 0
+  const upBad = up.mtx.filter((e) => -cols(e).Z.y >= 0).length;
+  const dnBad = dn.mtx.filter((e) => -cols(e).Z.y <= 0).length;
+  ok(upBad === 0, `Ⅴ 底端 chevron 頂點 MUST 朝上(這裡可以上去;違規 ${upBad} 根)`);
+  ok(dnBad === 0, `Ⅴ 頂端 chevron 頂點 MUST 朝下(這裡可以下來;違規 ${dnBad} 根)`);
+  // 同一支的兩根桿 MUST 對稱(左右各張開 SPREAD)⇒ 兩兩配對的 Z 垂直分量相同、水平分量相反
+  const zs = up.mtx.map((e) => cols(e).Z);
+  ok(near(zs[0].y, zs[1].y, 1e-9) && near(zs[0].x, -zs[1].x, 1e-9) && near(zs[0].z, -zs[1].z, 1e-9),
+    'Ⅴ 同一支 chevron 的兩根桿 MUST 對稱張開(差正負號 = 變成折線而不是 ㄑ,見 A26)');
+
+  // 位置:底端自 y0+FOOT 起往上、頂端自 y1+HEAD 起往下;水平一律落在攀爬軸外 OUT
+  const rmap = new Map(routes.map((r) => [`${r.x.toFixed(3)}`, r]));
+  const posOk = (mesh, dir) => mesh.mtx.every((e) => {
+    const { P } = cols(e);
+    const r = routes.reduce((best, q) => {
+      const d = Math.hypot(q.x + q.nx * A.OUT - P.x, q.z + q.nz * A.OUT - P.z);
+      return !best || d < best.d ? { r: q, d } : best;
+    }, null);
+    if (!r || r.d > 1e-6) return false;                       // 水平 MUST 恰在「軸 + OUT·法線」
+    const y0 = dir > 0 ? r.r.y0 + A.FOOT : r.r.y1 + A.HEAD;
+    return dir > 0 ? (P.y >= y0 - 1e-9 && P.y <= y0 + A.RUN + 1e-9)
+                   : (P.y <= y0 + 1e-9 && P.y >= y0 - A.RUN - 1e-9);
+  });
+  ok(rmap.size >= 1 && posOk(up, 1), `Ⅴ 底端箭頭 MUST 自 y0+${A.FOOT}m 起、在 ${A.RUN}m 循環內往上流`);
+  ok(posOk(dn, -1), `Ⅴ 頂端箭頭 MUST 自 y1+${A.HEAD}m 起、在 ${A.RUN}m 循環內往下流`);
+  ok(A.OUT > 0, 'Ⅴ 箭頭 MUST 落在攀爬軸再往外(不與長梯/抓點/繩本體疊在一起)');
+
+  // 動畫:推進後位置 MUST 改變且仍在同一個循環窗口內(不會飄走)
+  const before = up.mtx.map((e) => cols(e).P.y);
+  g.userData.update(0.5);
+  const after = up.mtx.map((e) => cols(e).P.y);
+  ok(before.some((v, i) => Math.abs(v - after[i]) > 1e-6), 'Ⅴ update(dt) MUST 真的推動箭頭(流動感)');
+  ok(posOk(up, 1) && posOk(dn, -1), 'Ⅴ 推進後仍夾在各自的循環窗口內(不會沿著牆飄走)');
+
+  // 靜態:biomes 併進既有 dynamics 桶,game.js MUST NOT 另開第二條更新迴圈
+  ok(/dynamics\.push\(climbMesh\.userData\.update\)/.test(biomeSrc),
+    'Ⅴ biomes.js MUST 把箭頭動畫併進既有的 dynamics 桶(火車/瀑布同一條路徑)');
+  ok(!/climbArrow|CLIMB_ARROW/.test(gameSrc), 'Ⅴ game.js MUST NOT 另寫一份箭頭更新迴圈');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 攀爬路線稽核:${pass} 通過 / ${fail} 失敗`);

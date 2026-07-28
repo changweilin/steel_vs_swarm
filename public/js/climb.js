@@ -47,6 +47,29 @@ export const CLIMB = {
   KNOT: 1.6,         // 技術繩繩結間距
 };
 
+/**
+ * 上下兩端的提示箭頭(2026-07-28 使用者需求「類似兵線但縮到適當大小」)。
+ * 沿用兵線的「ㄑ 字形 chevron + 沿行進方向流動 + 脹縮」語彙(`game.js _initLanes`),
+ * 但**尺寸縮到約 1/3**(桿長 5.5 → 1.9m)且**立在垂直面上** —— 兵線是貼地路標,攀爬是垂直通道,
+ * 箭頭的行進方向本來就是上/下。底端一組**朝上**(這裡可以上去)、頂端一組**朝下**(這裡可以下來)。
+ * 兩色分工:上行青綠、下行琥珀 —— MUST NOT 用兵線的三條線色(那組色是「往敵方主堡推」的語意)。
+ */
+export const CLIMB_ARROW = {
+  BAR: 1.9,          // 桿長(兵線 5.5 的約 1/3)
+  W: 0.5,            // 桿寬
+  T: 0.1,            // 桿厚(貼片,不是立體箭頭)
+  SPREAD: 0.62,      // chevron 半張角(與兵線同一個張角 ⇒ 認得出是同一套語彙)
+  OUT: 0.55,         // 自攀爬軸再往外推(不與長梯/抓點/繩本體疊在一起)
+  RUN: 4.2,          // 流動循環長度(公尺)
+  SPD: 2.6,          // 流動速度(m/s)
+  N: 3,              // 每端幾支(相位均分 ⇒ 連續的流動感)
+  FOOT: 1.5,         // 底端起算高(離地;約機體胸高,走過去就看得到)
+  HEAD: 1.4,         // 頂端起算高(頂面之上;站在屋頂邊緣往外看得到,地面抬頭也看得到)
+  FADE: 0.7,         // 循環兩端的淡入淡出距離(公尺)
+  UP: 0x8ef0c0,      // 上行(青綠)
+  DOWN: 0xffc45a,    // 下行(琥珀)
+};
+
 /** 結構型別 → 攀爬設施(使用者列舉的三種,對應真實世界的做法) */
 export const CLIMB_KIND = { bld: 'ladder', rock: 'holds', tree: 'rope' };
 export const CLIMB_LABEL = { ladder: '長梯', holds: '攀岩抓點', rope: '垂降技術繩' };
@@ -293,5 +316,75 @@ export function buildClimbMeshes(routes) {
   add(holds, unitIco(), mats.holds);
   add(ropes, unitCyl(), mats.rope);
   add(anchors, unitBox(), mats.anchor);
+  buildClimbArrows(g, list);
   return g;
+}
+
+/**
+ * 上下兩端的提示箭頭(見 `CLIMB_ARROW`)。掛在同一個 group 底下,動畫函式放進
+ * `group.userData.update(dt)` —— `biomes.js` 把它併進既有的 `dynamics` 桶(火車/瀑布同一條路徑),
+ * `main.js → terrain.biomesUpdate → game.js` 每幀驅動,**MUST NOT** 在 game.js 另開第二條更新迴圈。
+ *
+ * 姿態由三個世界向量直接組基底(A26:擺位方向與旋轉方向同調,**MUST NOT** 手寫歐拉角鏡射式):
+ *   桿的延伸方向 `d`(自頂點往後)= −行進方向·cos(SPREAD) ± 切向·sin(SPREAD);
+ *   幾何自頂點朝 local −z 延伸 ⇒ **Z 軸 = −d**;貼片正面朝外 ⇒ **Y 軸 = 向外法線**;X = Y × Z。
+ */
+function buildClimbArrows(g, list) {
+  const A = CLIMB_ARROW;
+  const bars = { up: [], down: [] };            // 逐根桿的靜態資料(位置每幀重算)
+  for (const r of list) {
+    const tx = -r.nz, tz = r.nx;                // 切向(與向外法線正交的水平向量)
+    const ax = r.x + r.nx * A.OUT, az = r.z + r.nz * A.OUT;
+    for (const [key, dir, y0] of [['up', 1, r.y0 + A.FOOT], ['down', -1, r.y1 + A.HEAD]]) {
+      for (let i = 0; i < A.N; i++) {
+        for (const s of [-1, 1]) {              // chevron 的左右兩根桿
+          bars[key].push({ ax, az, y0, dir, s, tx, tz, nx: r.nx, nz: r.nz, ph: (i / A.N) * A.RUN });
+        }
+      }
+    }
+  }
+  if (!bars.up.length) return;
+
+  // 單位桿:自頂點朝 local −z 延伸(與兵線 chevron 同一款幾何,只是尺寸縮到約 1/3)
+  const geo = (UNIT.bar ??= markShared(new THREE.BoxGeometry(1, 1, 1).translate(0, 0, -0.5)));
+  const mk = (color, n) => {
+    const im = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity: 0.9, depthWrite: false,
+    }), n);
+    im.frustumCulled = false;
+    im.renderOrder = 3;              // 與兵線箭頭同層:壓在地物之上但不遮 HUD
+    im.userData.noOutline = true;
+    g.add(im);
+    return im;
+  };
+  const im = { up: mk(A.UP, bars.up.length), down: mk(A.DOWN, bars.down.length) };
+
+  const M = new THREE.Matrix4();
+  const X = new THREE.Vector3(), Y = new THREE.Vector3(), Z = new THREE.Vector3(), P = new THREE.Vector3();
+  const cs = Math.cos(A.SPREAD), sn = Math.sin(A.SPREAD);
+  let t = 0;
+  const step = (dt) => {
+    t += dt;
+    for (const key of ['up', 'down']) {
+      const arr = bars[key], mesh = im[key];
+      for (let i = 0; i < arr.length; i++) {
+        const b = arr[i];
+        const flow = (t * A.SPD + b.ph) % A.RUN;                 // 沿行進方向前送後回捲
+        const edge = Math.min(1, flow / A.FADE, (A.RUN - flow) / A.FADE);
+        const sc = 0.35 + 0.65 * Math.max(0, edge);              // 兩端淡入淡出(縮小)
+        // 行進方向 u = (0, dir, 0)、切向 t = (tx, 0, tz);桿自頂點往後延伸 d = −u·cos + s·t·sin,
+        // 幾何朝 local −z 延伸 ⇒ Z = −d(已是單位向量,且與水平法線 Y 正交 ⇒ 兩個 normalize 都省得掉)
+        Z.set(-b.s * b.tx * sn, b.dir * cs, -b.s * b.tz * sn);
+        Y.set(b.nx, 0, b.nz);
+        X.crossVectors(Y, Z);
+        Z.multiplyScalar(A.BAR * sc); X.multiplyScalar(A.W * sc); Y.multiplyScalar(A.T);
+        P.set(b.ax, b.y0 + b.dir * flow, b.az);
+        M.makeBasis(X, Y, Z).setPosition(P);
+        mesh.setMatrixAt(i, M);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  };
+  step(0);                                        // 首幀就位(還沒進戰場也不會是一堆疊在原點的桿)
+  g.userData.update = step;
 }

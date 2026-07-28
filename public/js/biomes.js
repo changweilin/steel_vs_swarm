@@ -5828,15 +5828,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   buildWaterEdges(group, terrain, dynamics);   // 水岸波浪(動態)+ 沼澤潮間帶(靜態)
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
-  if (dynamics.length) {
-    group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
-  }
 
   // ---- 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩;2026-07-28)----
   // 約三成的建築/巨石/神木掛一條「地面 ↔ 頂端」的垂直通道,讓地面機種爬上去立足射擊。
   // MUST 排在**所有** blockers.push 之後 —— 地面端的「無障礙那一側」要看得到橋墩/門洞柱/封路
   // 障礙,少一批就會把梯腳擺進別的結構裡。規劃與幾何都住 climb.js(唯一縫),此處只接線。
   // 亂數走**專屬 seed**(不動既有 rnd/grnd 序列 ⇒ 植被/建物/道路佈局逐位元不變)。
+  // 上下兩端的提示箭頭是動態的(chevron 沿上/下方向流動)⇒ 併進既有的 dynamics 桶,
+  // 走火車/瀑布同一條 `group.userData.update` 路徑,**MUST NOT** 在 game.js 另開第二條更新迴圈。
   onProgress?.(0.95, '架設攀爬路線…');
   const climbs = planClimbRoutes({
     blockers,
@@ -5846,8 +5845,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     rnd: mulberry32(gseed ^ 0x0C11B),
   });
   const climbMesh = buildClimbMeshes(climbs);
-  if (climbMesh) group.add(climbMesh);
+  if (climbMesh) {
+    group.add(climbMesh);
+    if (climbMesh.userData.update) dynamics.push(climbMesh.userData.update);
+  }
   group.userData.climbs = climbs;   // main.js → terrain.climbs / climbAt → game.js 攀爬狀態機
+
+  if (dynamics.length) {
+    group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
+  }
 
   onProgress?.(1, '地貌完成');
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
