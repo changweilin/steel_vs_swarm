@@ -1,10 +1,15 @@
 // ============ 1v1 兵線立體場景稽核(離線;找測試用預設場地)============
 // 用途:回答「哪一個預設場地的 **1v1(L1)兵線**上,真的走得到某種立體交通場景」——
 // 供手動測試七種情境各挑一張預設地圖:
-//   ① 地下道(兵線走進山體隧道)              ② 地面高架橋(兵線走在橋面上)
+//   ① 地下道(兵線走進隧道的覆蓋段)          ② 地面高架橋(兵線走在**純陸域**橋面上)
 //   ③ 明隧道(隧道側向土牆藏不住結構那一側)  ④ 平交道(兵線與地面鐵軌平面交會)
 //   ⑤ 穿越高架橋底部(兵線從橋下鑽過)        ⑥ 穿越地下道上方(兵線從洞頂走過)
-//   ⑦ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻)
+//   ⑦ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
+//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉)
+//
+// 兩個附帶診斷(不是場景,但選場地時要看):
+//   跨水橋   兵線走在橋上但橋跨的是水域 —— ② 刻意不收(使用者要純陸域高架橋)
+//   平地隧道 圖資掛 tunnel 但地形平坦 ⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路(不開挖、不立門洞)
 //
 // 資料來源與執行期完全同源:
 //   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
@@ -344,6 +349,7 @@ const LANE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|reside
 const OSM_API = 'https://api.openstreetmap.org/api/0.6/map';
 const DRIVE_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|track|path|footway|pedestrian)$/;
 const RAIL_KIND = /^(rail|subway|light_rail|monorail|narrow_gauge|tram)$/;
+const WATER_KIND = /^(river|stream|canal|drain|ditch)$/;
 
 /** 極簡 OSM XML 解析(A2:不新增依賴)—— 只取 node 座標、way 的 nd/tag */
 function parseOsmXml(xml) {
@@ -391,7 +397,7 @@ async function osmApi(bbox) {
  * Overpass 全掛(雲端 IP 常態)時退到官方 /map,見上方 OSM_API 註解。
  */
 async function osmFor(id, bbox) {
-  const f = join(CACHE, `${id}_L1.json`);
+  const f = join(CACHE, `${id}_L1v2.json`);   // v2:加抓水道(橋跨水/跨陸判定)
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const km2 = bboxKm2(bbox);
@@ -400,6 +406,7 @@ async function osmFor(id, bbox) {
     + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
     + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
+    + `way["waterway"~"^(river|stream|canal|drain|ditch)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`);
   let out = null;
   if (els) {
@@ -407,6 +414,7 @@ async function osmFor(id, bbox) {
       src: 'overpass',
       roads: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.highway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
       rails: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.railway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
+      waters: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.waterway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
       crossings: els.filter((e) => e.type === 'node' && e.tags?.railway === 'level_crossing').map((e) => ({ lat: e.lat, lng: e.lon })),
     };
   } else {
@@ -416,6 +424,7 @@ async function osmFor(id, bbox) {
       src: 'osm-api',
       roads: api.ways.filter((w) => DRIVE_HW.test(w.tags.highway || '')),
       rails: api.ways.filter((w) => RAIL_KIND.test(w.tags.railway || '')),
+      waters: api.ways.filter((w) => WATER_KIND.test(w.tags.waterway || '')),
       crossings: api.crossings,
     };
   }
@@ -512,45 +521,31 @@ async function scanVenue(v) {
   const laneKeys = new Set(cfg.lanes[0].map(([lat, lng]) => k6(lat, lng)));
   const sharesNode = (way) => way.geometry.some((p) => laneKeys.has(k6(p.lat, p.lon)));
 
-  // ---- ⑦ 側向高地(不需要 OSM;altTier() = 一座砲塔高 = 高度差加成門檻)----
-  {
-    const T = altTier();
-    const gain = [[], []];
-    for (let i = 0; i < laneD.length; i++) {
-      const a = laneD[Math.max(0, i - 1)], c = laneD[Math.min(laneD.length - 1, i + 1)];
-      let dx = c[0] - a[0], dz = c[1] - a[1];
-      const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-      const base = heightAt(laneD[i][0], laneD[i][1]);
-      [1, -1].forEach((side, si) => {
-        const nx = dz * side, nz = -dx * side;
-        let best = -Infinity;
-        for (let d = SIDE_STEP; d <= SIDE_MAX; d += SIDE_STEP) {
-          best = Math.max(best, heightAt(laneD[i][0] + nx * d, laneD[i][1] + nz * d) - base);
-        }
-        gain[si].push(best);
-      });
-    }
-    let bestRun = 0, peak = -Infinity, bestSide = 0;
-    gain.forEach((g, si) => {
-      let s0 = null;
-      for (let i = 0; i < g.length; i++) {
-        peak = Math.max(peak, g[i]);
-        if (g[i] >= T) {
-          if (s0 === null) s0 = laneCum[i];
-          const run = laneCum[i] - s0;
-          if (run > bestRun) { bestRun = run; bestSide = si ? -1 : 1; }
-        } else s0 = null;
-      }
-    });
-    if (bestRun >= SIDE_RUN_MIN) {
-      res.hits.highGround = { len: Math.round(bestRun), peak: Math.round(peak), side: bestSide };
-    }
-    res.peakSide = Math.round(peak);
-  }
-
   const osm = await osmFor(v.id, bbox);
   if (!osm) { res.error = '取不到路網(Overpass 與 OSM API 皆不可達)'; return res; }
-  res.osm = { src: osm.src || 'overpass', roads: osm.roads.length, rails: osm.rails.length, crossings: osm.crossings.length };
+  res.osm = { src: osm.src || 'overpass', roads: osm.roads.length, rails: osm.rails.length,
+    waters: (osm.waters || []).length, crossings: osm.crossings.length };
+
+  // 兵線上「踩在立體結構上」的弧長區間(橋面 / 隧道含引道):⑦ 的側翼高地要扣掉這些段,
+  // 使用者要的是**一般道路**上的高地對峙,不是站在橋上或洞裡比高度。
+  const structArcs = [];
+
+  // 橋跨的是水域還是陸域(2026-07-28 使用者需求:② 要**純陸域**高架橋):
+  //   ①與圖資水道相交,或②橋下地表沉在水/沼面之下 —— 兩者任一即判水域。
+  // 第二條是為了抓沒被畫成 waterway 的湖/潟湖/海灣(遊戲端的 splitWaterPieces 也是看高程與水色)。
+  const WET_Y = WATER.LEVEL + WATER.SWAMP_BAND;
+  const waterWays = (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, center)));
+  const spansWater = (wpts) => {
+    for (let i = 1; i < wpts.length; i++) {
+      for (const wp of waterWays) {
+        for (let j = 1; j < wp.length; j++) {
+          if (segCross(wpts[i - 1], wpts[i], wp[j - 1], wp[j])) return '水道';
+        }
+      }
+    }
+    for (const p of densify(wpts, ROAD_SEG)) if (heightAt(p[0], p[1]) <= WET_Y) return '水面';
+    return null;
+  };
 
   // ---- ①③⑤⑥ 結構 way(隧道/橋)----
   for (const way of osm.roads) {
@@ -565,9 +560,16 @@ async function scanVenue(v) {
 
     const canCarry = LANE_HW.test(way.tags.highway || '') && sharesNode(way);
     if (isBrg) {
-      if (onLen >= ON_MIN && canCarry) {           // ② 兵線走在橋面上(車行橋 + 共用節點)
-        const cur = res.hits.bridge;
-        if (!cur || onLen > cur.len) res.hits.bridge = { name, len: Math.round(onLen) };
+      if (onLen >= ON_MIN && canCarry) {           // 兵線走在橋面上(車行橋 + 共用節點)
+        structArcs.push(...runs);
+        const wet = spansWater(wpts);
+        if (wet) {                                 // 跨水橋:記錄但不算 ②(使用者要純陸域高架橋)
+          const cur = res.hits2Water;
+          if (!cur || onLen > cur.len) res.hits2Water = { name, len: Math.round(onLen), wet };
+        } else {                                   // ② 地面高架橋 = 純陸域上方
+          const cur = res.hits.bridge;
+          if (!cur || onLen > cur.len) res.hits.bridge = { name, len: Math.round(onLen) };
+        }
       } else {                                     // ⑤ 兵線從橋下鑽過(純幾何交叉)
         for (let i = 1; i < laneD.length && !res.hits.underBridge; i++) {
           for (let j = 1; j < wpts.length; j++) {
@@ -579,7 +581,17 @@ async function scanVenue(v) {
     }
     // 隧道:先問「執行期真的成洞嗎」(平坦市區掛 tunnel tag 不立結構)
     const tr = tunnelRunOf(way, center, heightAt);
-    if (!tr || !tr.intervals.length) continue;
+    if (!tr || !tr.intervals.length) {
+      // 圖資是地下道,但地形平坦 ⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路(不開挖、不立門洞)。
+      // 這正是「平地地下道」在現行高度場設計下建不出來的證據,列出來供評估。
+      if (onLen >= ON_MIN && canCarry) {
+        const cur = res.flatTunnel;
+        if (!cur || onLen > cur.len) res.flatTunnel = { name, len: Math.round(onLen) };
+        structArcs.push(...runs);
+      }
+      continue;
+    }
+    if (onLen >= ON_MIN && canCarry) structArcs.push(...runs);
     const covIdx = new Set();
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covIdx.add(i);
     if (onLen >= ON_MIN && canCarry) {
@@ -653,6 +665,46 @@ async function scanVenue(v) {
     }
   }
 
+  // ---- ⑦ 側翼高地(altTier() = 一座砲塔高 = 高度差加成門檻)----
+  // 2026-07-28 使用者需求:**扣掉隧道/地下道/高架橋段** —— 站在橋面上或洞裡比高度不是這個場景要的,
+  // 要的是「一般道路的兵線,單側地形高過一座砲塔」。structArcs = 兵線踩在立體結構上的弧長區間。
+  {
+    const T = altTier();
+    const onStruct = (sArc) => structArcs.some(([a, b]) => sArc >= a - ROAD_SEG && sArc <= b + ROAD_SEG);
+    const gain = [[], []];
+    for (let i = 0; i < laneD.length; i++) {
+      const a = laneD[Math.max(0, i - 1)], c = laneD[Math.min(laneD.length - 1, i + 1)];
+      let dx = c[0] - a[0], dz = c[1] - a[1];
+      const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const base = heightAt(laneD[i][0], laneD[i][1]);
+      [1, -1].forEach((side, si) => {
+        const nx = dz * side, nz = -dx * side;
+        let best = -Infinity;
+        for (let d = SIDE_STEP; d <= SIDE_MAX; d += SIDE_STEP) {
+          best = Math.max(best, heightAt(laneD[i][0] + nx * d, laneD[i][1] + nz * d) - base);
+        }
+        gain[si].push(best);
+      });
+    }
+    let bestRun = 0, peak = -Infinity, bestSide = 0;
+    gain.forEach((g, si) => {
+      let s0 = null;
+      for (let i = 0; i < g.length; i++) {
+        if (onStruct(laneCum[i])) { s0 = null; continue; }   // 結構段整段跳過(含引道)
+        peak = Math.max(peak, g[i]);
+        if (g[i] >= T) {
+          if (s0 === null) s0 = laneCum[i];
+          const run = laneCum[i] - s0;
+          if (run > bestRun) { bestRun = run; bestSide = si ? -1 : 1; }
+        } else s0 = null;
+      }
+    });
+    if (bestRun >= SIDE_RUN_MIN) {
+      res.hits.highGround = { len: Math.round(bestRun), peak: Math.round(peak), side: bestSide };
+    }
+    res.peakSide = Number.isFinite(peak) ? Math.round(peak) : null;
+  }
+
   // ---- ④ 平交道(圖資 railway=level_crossing 節點落在兵線上)----
   for (const c of osm.crossings) {
     const p = llToWorld(c.lat, c.lng, center);
@@ -709,6 +761,8 @@ for (const v of list) {
   console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
     + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
+    + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
+    + `${r.flatTunnel ? `　平地隧道(執行期不成洞):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
 

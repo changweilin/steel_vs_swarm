@@ -5,6 +5,10 @@
 name: 兵線場景掃描
 
 on:
+  # 暫時的推送觸發(第二輪:純陸域高架橋 / 一般道路高地 / 平地隧道診斷)——
+  # 沙箱沒有圖資出口,靠 runner 取結果;定案後 MUST 再移除。
+  push:
+    branches: [claude/1v1-map-scenarios-test-obzl6w]
   workflow_dispatch:
     inputs:
       only:
