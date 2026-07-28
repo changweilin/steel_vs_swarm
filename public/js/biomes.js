@@ -31,6 +31,7 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform } from './xform.js';
+import { planClimbRoutes, buildClimbMeshes } from './climb.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -505,7 +506,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
         ry: rnd() * Math.PI * 2,
         tx: (rnd() - 0.5) * 0.05, tz: (rnd() - 0.5) * 0.05,
       });
-      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1 });   // std:頂部可站立(surfaceAt)
+      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree' });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
       trunks.push([gx, gz, def.r * s + 8]);       // 巨幹半徑可 >10m 網格;+8 淨距 = 樹冠不貼建物牆面
       // 巨木表面特徵:掛在樹幹側面(幹半徑隨高度收窄),世界尺寸與樹齡脫鉤
@@ -1672,7 +1673,7 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
     blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
-    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2, std: 1 });   // std:頂部可站立(surfaceAt)
+    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2, std: 1, cl: 'rock' });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
     placedM.push({ x, z, r });
   }
   return placedM.length;
@@ -5282,7 +5283,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
-          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, hw2: b.w / 2, hd2: b.d / 2, ry: b.ry });
+          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld', hw2: b.w / 2, hd2: b.d / 2, ry: b.ry });
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
@@ -5304,7 +5305,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const ph = Math.max(6, b.h * 0.12);
             inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC });
             // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
-            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8 });
+            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8 });
           }
           if (!commercial && b.h >= 14 && rnd() < 0.4) {        // 中層住宅:角落梯間塔(佔地內、突出屋頂)
             const tw = Math.min(b.w, b.d) * 0.3;
@@ -5669,7 +5670,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       const footR = Math.max(
         Math.hypot(bb.max.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.max.x - lm.x, bb.min.z - lm.z),
         Math.hypot(bb.min.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.min.x - lm.x, bb.min.z - lm.z));
-      blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: Math.max(col.r * sc, footR), h: col.h * sc + 1, bld: 1 });
+      blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: Math.max(col.r * sc, footR), h: col.h * sc + 1, bld: 1, cl: 'bld' });
     }
   }
 
@@ -5827,6 +5828,29 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   buildWaterEdges(group, terrain, dynamics);   // 水岸波浪(動態)+ 沼澤潮間帶(靜態)
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
+
+  // ---- 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩;2026-07-28)----
+  // 約三成的建築/巨石/神木掛一條「地面 ↔ 頂端」的垂直通道,讓地面機種爬上去立足射擊。
+  // MUST 排在**所有** blockers.push 之後 —— 地面端的「無障礙那一側」要看得到橋墩/門洞柱/封路
+  // 障礙,少一批就會把梯腳擺進別的結構裡。規劃與幾何都住 climb.js(唯一縫),此處只接線。
+  // 亂數走**專屬 seed**(不動既有 rnd/grnd 序列 ⇒ 植被/建物/道路佈局逐位元不變)。
+  // 上下兩端的提示箭頭是動態的(chevron 沿上/下方向流動)⇒ 併進既有的 dynamics 桶,
+  // 走火車/瀑布同一條 `group.userData.update` 路徑,**MUST NOT** 在 game.js 另開第二條更新迴圈。
+  onProgress?.(0.95, '架設攀爬路線…');
+  const climbs = planClimbRoutes({
+    blockers,
+    heightAt: (x, z) => terrain.heightAt(x, z),
+    envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
+    bounds: { minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ },
+    rnd: mulberry32(gseed ^ 0x0C11B),
+  });
+  const climbMesh = buildClimbMeshes(climbs);
+  if (climbMesh) {
+    group.add(climbMesh);
+    if (climbMesh.userData.update) dynamics.push(climbMesh.userData.update);
+  }
+  group.userData.climbs = climbs;   // main.js → terrain.climbs / climbAt → game.js 攀爬狀態機
+
   if (dynamics.length) {
     group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
   }
@@ -5847,6 +5871,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     roads: roadsBuilt,
     roadBlocks: roadBlockN,
     boundary: boundaryN,
+    climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
     rails: railLines,
     falls: fallsBuilt,
     osm: !!(osm && osm.length),
@@ -5878,6 +5903,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     for (let i = blk.length - 1; i >= 0; i--) {
       const b = blk[i];
       if (b.bld && Math.hypot(b.x - wx, b.z - wz) - (b.r || 0) < r) { blk.splice(i, 1); removed = true; }
+    }
+    // 攀爬路線同步清掉:樓沒了梯子不能留在空中(路線持有 blocker 參照 ⇒ 直接比對即可)。
+    // 幾何是 InstancedMesh 不逐條拆(碉堡淨空區內的殘留梯子由建物一併消失時的視覺落差承擔),
+    // 但**可攀爬性 MUST 立刻失效** —— 否則爬上去會站在一棟隱形樓的屋頂上。
+    if (removed && climbs.length) {
+      const live = new Set(blk);
+      // 相鄰相接的那一條同時吃兩座結構:低者被拆掉 ⇒ 下端落腳點懸空,一併撤掉
+      for (let i = climbs.length - 1; i >= 0; i--) {
+        const c = climbs[i];
+        if (!live.has(c.b) || (c.link && !live.has(c.link))) climbs.splice(i, 1);
+      }
     }
     return removed;
   };

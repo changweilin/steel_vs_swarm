@@ -137,9 +137,21 @@ export class BattleSim {
     const occ = [];
     for (const o of Array.isArray(w.occ) ? w.occ.slice(0, LOS.MAX_OCC) : []) {
       if (!Array.isArray(o) || o.length < 4) continue;
-      const [x, z, r, h] = o.map(Number);
+      const [x, z, r, h] = o.slice(0, 4).map(Number);
       if (![x, z, r, h].every(Number.isFinite)) continue;
-      occ.push([x, z, Math.min(60, Math.max(0.5, r)), Math.min(300, Math.max(1, h))]);
+      const e = [x, z, Math.min(60, Math.max(0.5, r)), Math.min(300, Math.max(1, h))];
+      // 有向盒(建物)多帶 hw2/hd2/ry:圓仍是 broad-phase(r = 外接半對角),命中改逐盒判 ——
+      // MUST 與客戶端 `game.js _blockerHitT` 是**同一個**幾何體,否則客戶端算命中、伺服器算被擋,
+      // 傷害會靜默蒸發(2026-07-28「打不到建築」同一族病灶)。缺欄位 = 舊格式圓柱,行為不變。
+      if (o.length >= 7) {
+        const [hw2, hd2, ry] = o.slice(4, 7).map(Number);
+        if ([hw2, hd2, ry].every(Number.isFinite) && hw2 > 0 && hd2 > 0) {
+          // cos/sin 在收料時算好存進來:_losBlocked 是 8Hz × 逐目標 × 逐格的熱路徑,
+          // 每次重算三角函數等於白燒 tick 預算(與「MUST NOT 加回 per-call Set」同一條紀律)
+          e.push(Math.min(60, hw2), Math.min(60, hd2), Math.cos(ry), Math.sin(ry));
+        }
+      }
+      occ.push(e);
     }
     // 碉堡淨空:清掉與野營重疊(BLD_CLEAR_R 內)的遮蔽柱 —— 客戶端已移除這些重疊建物,
     // 伺服器 LOS 同步不再當它們擋線(setWorld 契約:上傳資料只能「減少」遮蔽,合規)。
@@ -379,6 +391,29 @@ export class BattleSim {
           const sq = Math.sqrt(disc);
           let t0 = (-B2 - sq) / (2 * A2), t1 = (-B2 + sq) / (2 * A2);
           if (t1 < 0 || t0 > 1) continue;
+          // 有向盒(建物,占位含 hw2/hd2/cos/sin):圓只是 broad-phase(r = 外接半對角),
+          // 真正的穿越區間改逐盒 slab 求 —— 與客戶端 `_blockerHitT` 同一個幾何體(見 setWorld)。
+          // 舊格式(神木/巨岩/橋墩/sim 自己的阻擋障礙)長度 4,直接沿用圓,行為逐位元不變。
+          if (o.length >= 8) {
+            const hw2 = o[4], hd2 = o[5], cs = o[6], sn = o[7];
+            const olx = ox * cs + oz * sn, olz = -ox * sn + oz * cs;      // world→local(繞 −ry)
+            const ulx = dx * cs + dz * sn, ulz = -dx * sn + dz * cs;
+            let bmin = -Infinity, bmax = Infinity, ok = true;
+            // 逐軸 slab,手動展開(熱路徑不配置暫存陣列);len ≥ 1e-6 ⇒ 兩軸不會同時退化
+            if (ulx < -1e-9 || ulx > 1e-9) {
+              let s0 = (-hw2 - olx) / ulx, s1 = (hw2 - olx) / ulx;
+              if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+              bmin = s0; bmax = s1;
+            } else if (olx < -hw2 || olx > hw2) ok = false;
+            if (ok && (ulz < -1e-9 || ulz > 1e-9)) {
+              let s0 = (-hd2 - olz) / ulz, s1 = (hd2 - olz) / ulz;
+              if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+              if (s0 > bmin) bmin = s0;
+              if (s1 < bmax) bmax = s1;
+            } else if (ok && (olz < -hd2 || olz > hd2)) ok = false;
+            if (!ok || bmax < bmin || bmax < 0 || bmin > 1) continue;
+            t0 = bmin; t1 = bmax;
+          }
           t0 = Math.max(0, t0); t1 = Math.min(1, t1);
           if ((t1 - t0) * len < LOS.THRU_M) continue;        // 擦邊不擋
           const y0 = ay + (by - ay) * t0, y1 = ay + (by - ay) * t1;

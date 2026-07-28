@@ -21,6 +21,7 @@ import { avatarURL, portraitURL } from './portraits.js';
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain, battleBBox } from './terrain.js';
 import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm } from './biomes.js';
+import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
@@ -1607,6 +1608,12 @@ function startPrebuild(cfg) {
     let blockerTop = makeBlockerTopIndex(terrain.blockers);
     terrain.blockerTopAt = (x, z, m) => blockerTop(x, z, m);
     terrain.rebuildBlockerTops = () => { blockerTop = makeBlockerTopIndex(terrain.blockers); };
+    // 攀爬路線(長梯/攀岩抓點/垂降技術繩;climb.js 唯一縫):地面機種的垂直通道。
+    // 碉堡淨空拆樓後 MUST 一併重建(clearAround 已就地 splice 掉該樓的路線,索引要跟上)。
+    terrain.climbs = biomes.userData.climbs || [];
+    let climbIdx = makeClimbIndex(terrain.climbs);
+    terrain.climbAt = (x, z, y) => climbIdx(x, z, y);
+    terrain.rebuildClimbs = () => { climbIdx = makeClimbIndex(terrain.climbs); };
     const BLK_MARGIN = 0.6;   // 頂緣站立容差(遠小於 DECK_MARGIN:屋頂/岩頂邊緣走位餘裕,不誇張懸空)
     // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上
     //           ③大型障礙物頂(curY 貼近頂面)= 站頂上 ④否則地表
@@ -1725,8 +1732,16 @@ async function enterLoading(cfg) {
     // 座標轉 sim 系(z 北 = −three z)。e2e/無瀏覽器對局不會上傳 → LOS 遮蔽自動停用(行為不變)。
     if (app.isHost) {
       const rd = (v) => Math.round(v * 10) / 10;
-      const occ = (ud.blockers || []).slice(0, LOS.MAX_OCC)
-        .map((b) => [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]);
+      // 有向盒(建物 hw2/hd2/ry)多帶三欄 —— 伺服器 _losBlocked 與客戶端 _blockerHitT MUST 用**同一個**
+      // 幾何體(2026-07-28「所有方向皆可抵擋射擊」):純圓柱 r = 0.8×半對角 兩頭都不對 ——
+      // 牆角外露(對角方向打得穿看得見的牆)、細長樓的側面又外擴(離牆十幾公尺的空氣擋彈)。
+      // 兩端分家的代價不是「差一點」而是靜默丟包:客戶端算命中、伺服器算被擋 ⇒ 傷害無聲蒸發。
+      // 廣相仍走圓:盒的 r MUST 改成**外接**半對角(內切圓會讓牆角被 broad-phase 提早剔掉)。
+      // ry 在 sim 座標(z=−three z)要反號:繞 Y 軸的旋轉在 z 鏡射下換手性。
+      const occ = (ud.blockers || []).slice(0, LOS.MAX_OCC).map((b) => (b.hw2 != null
+        ? [rd(b.x), rd(-b.z), rd(Math.min(60, Math.hypot(b.hw2, b.hd2))), rd(Math.min(300, b.h)),
+           rd(b.hw2), rd(b.hd2), Math.round(-b.ry * 1e3) / 1e3]
+        : [rd(b.x), rd(-b.z), rd(Math.min(60, b.r)), rd(Math.min(300, b.h))]));
       const cor = (ud.gradeCorridors || []).slice(0, 2400)
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
       // 橋面/隧道天花水平薄板(#1):deck ribbon(ty=1)+ 隧道 ribbon(ty=2),sim 座標(z 北 = −three z)。

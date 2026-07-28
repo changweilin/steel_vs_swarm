@@ -35,6 +35,7 @@ jobs:
           node tools/audit_lance_hit.mjs
           node tools/audit_open_tunnel.mjs
           node tools/audit_underpass.mjs
+          node tools/audit_climb.mjs
 
       - name: 平衡四不變式
         run: npm run bal
