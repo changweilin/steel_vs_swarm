@@ -1,16 +1,19 @@
 // ============ 1v1 兵線立體場景稽核(離線;找測試用預設場地)============
 // 用途:回答「哪一個預設場地的 **1v1(L1)兵線**上,真的走得到某種立體交通場景」——
 // 供手動測試七種情境各挑一張預設地圖:
-//   ① 地下道(兵線走進隧道的覆蓋段)          ② 地面高架橋(兵線走在**純陸域**橋面上)
-//   ③ 明隧道(隧道側向土牆藏不住結構那一側)  ④ 平交道(兵線與地面鐵軌平面交會)
-//   ⑤ 穿越高架橋底部(兵線從橋下鑽過)        ⑥ 穿越地下道上方(兵線從洞頂走過)
-//   ⑦ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
-//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉:洞裡量到的側向高差是「地下道的深度」,
+//   ① 隧道(山體):道路平坦,鑽進突起的地形 —— 深度來自山
+//   ② 地下道(平地下穿):地形平坦,路面一端往下、另一端上來 —— 深度來自挖。
+//      **現行引擎不生成**(見下方 KNOWN_GAP),稽核只列圖資上的候選段
+//   ③ 地面高架橋(兵線走在**純陸域**橋面上)  ④ 明隧道(側向土牆藏不住結構那一側)
+//   ⑤ 平交道(兵線與地面鐵軌平面交會)        ⑥ 穿越高架橋底部(兵線從橋下鑽過)
+//   ⑦ 穿越地下道上方(兵線從洞頂走過)
+//   ⑧ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
+//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉:洞裡量到的側向高差是「地下道/隧道的深度」,
 //      不是可以佔領的戰術高地)
 //
 // 兩個附帶診斷(不是場景,但選場地時要看):
 //   跨水橋   兵線走在橋上但橋跨的是水域 —— ② 刻意不收(使用者要純陸域高架橋)
-//   平地隧道 圖資掛 tunnel 但地形平坦 ⇒ 路面沉不下去(深度 0)⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路
+//   地下道候選 圖資掛 tunnel 但地形平坦 ⇒ 路面沉不下去(深度 0)⇒ buildRoads 當一般道路(= ② 的候選)
 //
 // 資料來源與執行期完全同源:
 //   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
@@ -587,6 +590,8 @@ async function scanVenue(v) {
       // 圖資是地下道,但地形平坦 ⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路(不開挖、不立門洞)。
       // 這正是「平地地下道」在現行高度場設計下建不出來的證據,列出來供評估。
       if (onLen >= ON_MIN && canCarry) {
+        // 圖資上這段就是地下道(路面該下沉),只是引擎不生成 ⇒ 記成 ② 的候選,不記成 hits:
+        // 標記代表「遊戲裡真的走得到」,這裡走得到的是一條普通街道。
         const cur = res.flatTunnel;
         if (!cur || onLen > cur.len) res.flatTunnel = { name, len: Math.round(onLen) };
         structArcs.push(...runs);
@@ -803,15 +808,25 @@ if (ARG.probe) {
 }
 
 // ---- 主流程 ----
+// 隧道與地下道是**兩種東西**,判定與分類一律分開(2026-07-28 使用者指示):
+//   隧道   道路平坦,鑽進突起的地形 —— 深度來自「山」。現行引擎唯一做得出來的那種。
+//   地下道 地形平坦,路面一端往下、另一端再上來 —— 深度來自「挖」。
+//          現行引擎的隧道路面 = 兩端洞口地表高的直線內插 ⇒ 平地上路面 = 地表 = 深度 0,
+//          永遠達不到最小深度(淨空 8m + 頂板 1m)⇒ buildRoads 當一般道路。
+//          故 `underpass` 是**已知缺口**(KNOWN_GAP):不會有任何場地,換地圖也解不了,
+//          稽核照樣列出候選(圖資上真的是地下道的路段),但不因它紅字。
 const SCEN = [
-  ['tunnel', '① 地下道'],
-  ['bridge', '② 地面高架橋'],
-  ['gallery', '③ 明隧道'],
-  ['crossing', '④ 平交道'],
-  ['underBridge', '⑤ 穿越高架橋底部'],
-  ['overTunnel', '⑥ 穿越地下道上方'],
-  ['highGround', '⑦ 一側高於一座砲塔'],
+  ['tunnel', '① 隧道(山體)'],
+  ['underpass', '② 地下道(平地下穿)'],
+  ['bridge', '③ 地面高架橋'],
+  ['gallery', '④ 明隧道'],
+  ['crossing', '⑤ 平交道'],
+  ['underBridge', '⑥ 穿越高架橋底部'],
+  ['overTunnel', '⑦ 穿越地下道上方'],
+  ['highGround', '⑧ 一側高於一座砲塔'],
 ];
+// 引擎尚未生成的場景:報告但不計入「缺場地」(換地圖解不了,要改引擎)
+const KNOWN_GAP = new Map([['underpass', '引擎尚未生成:平地隧道路面不下沉(深度 0)⇒ 當一般道路']]);
 { // 場景代號 MUST 與 venues.js 的 SCEN_LABEL 同集合(標記與判定分家 = 標了卻沒人驗)
   const a = SCEN.map(([k]) => k).sort().join(','), b = Object.keys(SCEN_LABEL).sort().join(',');
   if (a !== b) throw new Error(`場景代號與 venues.js SCEN_LABEL 不一致:\n  稽核 ${a}\n  標記 ${b}`);
@@ -848,7 +863,7 @@ for (const v of list) {
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
     + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
     + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
-    + `${r.flatTunnel ? `　平地隧道(執行期不成洞):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
+    + `${r.flatTunnel ? `　②地下道候選(引擎不生成):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
     + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/深 ${r.tunnelCand.depth}m 離兵線 ${r.tunnelCand.d}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
@@ -858,6 +873,13 @@ let missing = 0;
 const pick = {};
 for (const [k, label] of SCEN) {
   const hit = results.filter((r) => r.hits[k]);
+  if (KNOWN_GAP.has(k)) {                       // 已知缺口:列候選,不計入缺場地
+    const cand = results.filter((r) => r.flatTunnel)
+      .map((r) => `${r.id}(${r.flatTunnel.name} ${r.flatTunnel.len}m)`);
+    console.log(`  ${label}:⚠️ ${KNOWN_GAP.get(k)}`);
+    console.log(`      圖資上是地下道的兵線段(引擎支援後即成立):${cand.join('、') || '(無)'}`);
+    continue;
+  }
   if (!hit.length) { missing++; console.log(`  ${label}:❌ 沒有任何預設場地 —— 需新增測試場地`); continue; }
   // 首選 = 該場景「量」最大的場地(隧道/橋取長度、高地取連續長度、平交道取最近)
   const score = (r) => {
@@ -875,7 +897,7 @@ if (!ONLY.length && !skipped) {
   console.log('\nvenues.js scen 標記複驗:');
   for (const r of results) {
     if (r.error) { console.log(`  ⚠️ ${r.id}:${r.error} —— 無法複驗標記`); continue; }
-    const want = SCEN.map(([k]) => k).filter((k) => r.hits[k]);
+    const want = SCEN.map(([k]) => k).filter((k) => !KNOWN_GAP.has(k) && r.hits[k]);
     const have = VENUES.find((v) => v.id === r.id).scen || [];
     const extra = have.filter((k) => !want.includes(k)), miss = want.filter((k) => !have.includes(k));
     if (!extra.length && !miss.length) continue;
@@ -887,6 +909,7 @@ if (!ONLY.length && !skipped) {
   if (!tagBad) console.log('  ✓ 全數相符');
 }
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify({ results, pick }, null, 2));
-console.log(`\n總結:${SCEN.length - missing}/${SCEN.length} 種場景有預設場地、標記不符 ${tagBad}`
+const NEED = SCEN.length - KNOWN_GAP.size;   // 已知缺口不列入分母(換地圖解不了)
+console.log(`\n總結:${NEED - missing}/${NEED} 種場景有預設場地(另 ${KNOWN_GAP.size} 種為引擎已知缺口)、標記不符 ${tagBad}`
   + `${skipped ? `、未掃 ${skipped} 個場地(時間預算)` : ''}`);
 process.exit(missing || tagBad || skipped ? 1 : 0);

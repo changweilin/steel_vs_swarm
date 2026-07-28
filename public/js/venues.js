@@ -17,7 +17,11 @@ import { VENUE_LANES } from './venueLanes.js';
  * 該工具吃與執行期同源的兵線/路網/高程,標記與實測不符即紅字。
  */
 export const SCEN_LABEL = {
-  tunnel: '地下道',
+  // 隧道與地下道是兩種東西:隧道 = 道路平坦鑽進山體(深度來自山);
+  // 地下道 = 平地上路面下沉再上來(深度來自挖)。現行引擎只生成前者,
+  // 故 underpass 沒有任何場地會標到它(稽核列為已知缺口,見 tools/audit_lane_scenarios.mjs)。
+  tunnel: '山體隧道',
+  underpass: '地下道',
   bridge: '高架橋',
   gallery: '明隧道',
   crossing: '平交道',
