@@ -5,11 +5,12 @@
 //   ③ 明隧道(隧道側向土牆藏不住結構那一側)  ④ 平交道(兵線與地面鐵軌平面交會)
 //   ⑤ 穿越高架橋底部(兵線從橋下鑽過)        ⑥ 穿越地下道上方(兵線從洞頂走過)
 //   ⑦ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
-//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉)
+//      **只算一般道路段** —— 橋面/隧道/引道一律扣掉:洞裡量到的側向高差是「地下道的深度」,
+//      不是可以佔領的戰術高地)
 //
 // 兩個附帶診斷(不是場景,但選場地時要看):
 //   跨水橋   兵線走在橋上但橋跨的是水域 —— ② 刻意不收(使用者要純陸域高架橋)
-//   平地隧道 圖資掛 tunnel 但地形平坦 ⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路(不開挖、不立門洞)
+//   平地隧道 圖資掛 tunnel 但地形平坦 ⇒ 路面沉不下去(深度 0)⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路
 //
 // 資料來源與執行期完全同源:
 //   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
@@ -635,9 +636,11 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ① 的候選診斷:bbox 內「執行期真的成洞」的車行隧道 + 它的覆蓋厚度----
-  // 使用者要的 ① 是「地下道感」= 短、覆蓋薄(從路面到山體頂只有十來公尺)、周邊地形平坦;
-  // 金龍隧道那種厚覆蓋是「山體隧道」。厚度取覆蓋段的中位數(路面上方地表高 − 路面高)。
+  // ---- ① 的候選診斷:bbox 內「執行期真的成洞」的車行隧道 + 它的**深度**----
+  // 「地表高 − 路面高」在高度場上同時是「上方有多少土」與「路面沉在地表之下多深」——
+  // 語意上是**深度**(2026-07-28 使用者指正):地下道的關鍵尺寸是路面下沉多少,不是頂上多厚。
+  // 使用者要的 ① 是「地下道感」= 短、**淺**(路面只沉十來公尺就出來)、周邊地形平坦;
+  // 金龍隧道那種深覆蓋是「山體隧道」。深度取覆蓋段的中位數。
   for (const w of osm.roads) {
     if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const tr = tunnelRunOf(w, center, heightAt);
@@ -651,10 +654,10 @@ async function scanVenue(v) {
     const covLen = tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0);
     const d = Math.round(Math.min(...tr.pts.map((p) => ptPoly(p, laneD))));
     const cand = { name: w.tags.name || w.tags.highway, len: Math.round(covLen),
-                   thick: Math.round(th[th.length >> 1]), d };
-    // 首選「覆蓋最薄」的那條(最像地下道);同厚度取離兵線近的
-    if (!res.tunnelCand || cand.thick < res.tunnelCand.thick
-        || (cand.thick === res.tunnelCand.thick && d < res.tunnelCand.d)) res.tunnelCand = cand;
+                   depth: Math.round(th[th.length >> 1]), d };
+    // 首選「最淺」的那條(路面沉得越少越像地下道);同深度取離兵線近的
+    if (!res.tunnelCand || cand.depth < res.tunnelCand.depth
+        || (cand.depth === res.tunnelCand.depth && d < res.tunnelCand.d)) res.tunnelCand = cand;
   }
 
   // ---- ② 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
@@ -704,8 +707,10 @@ async function scanVenue(v) {
   }
 
   // ---- ⑦ 側翼高地(altTier() = 一座砲塔高 = 高度差加成門檻)----
-  // 2026-07-28 使用者需求:**扣掉隧道/地下道/高架橋段** —— 站在橋面上或洞裡比高度不是這個場景要的,
-  // 要的是「一般道路的兵線,單側地形高過一座砲塔」。structArcs = 兵線踩在立體結構上的弧長區間。
+  // 2026-07-28 使用者需求:**扣掉隧道/地下道/高架橋段**。理由是語意:在地下道裡側面地形之所以
+  // 「比兵線高」,只是因為**路面沉得深**(那個高度差就是地下道的深度),不是可以佔領的戰術高地;
+  // 站在橋面上比更沒有意義。要的是「一般道路的兵線,單側地形高過一座砲塔」。
+  // structArcs = 兵線踩在立體結構上的弧長區間(含引道)。
   {
     const T = altTier();
     const onStruct = (sArc) => structArcs.some(([a, b]) => sArc >= a - ROAD_SEG && sArc <= b + ROAD_SEG);
@@ -781,11 +786,11 @@ async function probePoint(lat, lng, label) {
     th.sort((a, b) => a - b);
     found.push({ name: w.tags.name || w.tags.highway,
       len: Math.round(tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0)),
-      thick: Math.round(th[th.length >> 1]) });
+      depth: Math.round(th[th.length >> 1]) });
   }
-  const real = found.filter((f) => !f.flat).sort((a, b) => a.thick - b.thick);
+  const real = found.filter((f) => !f.flat).sort((a, b) => a.depth - b.depth);
   console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、成洞 ${real.length} 條`
-    + (real.length ? `　最薄:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/厚${f.thick}m`).join('、')}` : '')
+    + (real.length ? `　最淺:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/深${f.depth}m`).join('、')}` : '')
     + (found.length - real.length ? `　平地不成洞 ${found.length - real.length} 條` : ''));
 }
 
@@ -844,7 +849,7 @@ for (const v of list) {
     + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
     + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
     + `${r.flatTunnel ? `　平地隧道(執行期不成洞):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
-    + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/厚 ${r.tunnelCand.thick}m 離兵線 ${r.tunnelCand.d}m` : ''}`
+    + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/深 ${r.tunnelCand.depth}m 離兵線 ${r.tunnelCand.d}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
 
