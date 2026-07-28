@@ -43,6 +43,12 @@ const TUN = Object.fromEntries(
   tunSrc[1].replace(/\/\/.*$/gm, '').split(',').map((s) => s.trim()).filter(Boolean)
     .map((s) => { const [k, v] = s.split(':').map((t) => t.trim()); return [k, v === 'LOS.TUN_CLEAR_M' ? 8 : +v]; }),
 );
+const undSrc = /const UND = \{([\s\S]*?)\};/.exec(src);
+if (!undSrc) throw new Error('找不到 UND 旋鈕(biomes.js 結構已變?)');
+const UND = Object.fromEntries(
+  undSrc[1].replace(/\/\/.*$/gm, '').split(',').map((s) => s.trim()).filter(Boolean)
+    .map((s) => { const [k, v] = s.split(':').map((t) => t.trim()); return [k, +v]; }),
+);
 const P0 = src.indexOf('const TUN_WALL_SAMP');
 const P1 = src.indexOf('\n}', src.indexOf('function tunnelWallProfile(')) + 2;
 if (P0 < 0 || P1 <= P0) throw new Error('找不到 tunnelWallProfile 區塊');
@@ -155,17 +161,21 @@ const EMIT = src.slice(B0, B1);
 for (const need of ['tunnelWallProfile(run, floorsV, covV', 'const galBase =', 'buts.push(', 'const RW = hw + TUN.EAVE']) {
   if (!EMIT.includes(need)) throw new Error(`抽出的構件區塊缺少 ${need}`);
 }
-const emit = new Function('TUN', 'tunnelWallProfile', 'run', 'nP', 'cum', 'hw', 'tFloorAt', 'covS', 'terrain',
-  'ceilOf', 'wall', 'buts', 'galRoof', `${EMIT}\nreturn { galP, floorsV, covV };`);
+// under/tBaseAt/UND/cope 是地下道(平地下穿)那一路的參數 —— 本稽核一律以 under=false 跑,
+// 亦即「山體隧道 = 舊行為」;地下道自己的幾何由 tools/audit_underpass.mjs 驗。
+const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'hw', 'tFloorAt', 'tBaseAt',
+  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'buts', 'galRoof', 'cope',
+  `${EMIT}\nreturn { galP, floorsV, covV };`);
 
 /** 跑一次發射器;回傳三個桶 + profile */
 function build(heightAt, { cov = () => true, floor = FLOOR } = {}) {
   const cum2 = pts.map((p) => p[0]);                       // 沿 +X 直線 ⇒ 弧長 = x
   const wall = { pos: [], nrm: [], idx: [], base: 0 }, buts = [];
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
-  const out = emit(TUN, tunnelWallProfile, pts, pts.length, cum2, HW, () => floor, cov,
-    { heightAt }, (s) => floor + TUN.CLEAR, wall, buts, galRoof);
-  return { ...out, wall, buts, galRoof, cum: cum2 };
+  const cope = { pos: [], nrm: [], idx: [], base: 0 };
+  const out = emit(TUN, UND, tunnelWallProfile, pts, pts.length, cum2, HW, () => floor, () => floor, cov,
+    { heightAt }, (s) => floor + TUN.CLEAR, false, wall, buts, galRoof, cope);
+  return { ...out, wall, buts, galRoof, cope, cum: cum2 };
 }
 const TOPY = FLOOR + TUN.CLEAR + TUN.ROOF_T;               // 頂板頂面(= ceilOf + ROOF_T)
 const wallV = (b) => Array.from({ length: b.wall.pos.length / 3 }, (_, k) =>
@@ -233,8 +243,9 @@ const CLIFF = FLOOR - 6;
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   // 側坡:沿 side +1 法線那半邊挖低 ⇒ 只有該側是明隧道
   const heightAt = (x, z) => ((x - diag[0][0]) * nx + (z - diag[0][1]) * nz > 1 ? CLIFF : TOPY + 25);
-  const r = emit(TUN, tunnelWallProfile, diag, diag.length, cum2, HW, () => FLOOR, () => true,
-    { heightAt }, () => FLOOR + TUN.CLEAR, wall, buts, galRoof);
+  const cope = { pos: [], nrm: [], idx: [], base: 0 };
+  const r = emit(TUN, UND, tunnelWallProfile, diag, diag.length, cum2, HW, () => FLOOR, () => FLOOR, () => true,
+    { heightAt }, () => FLOOR + TUN.CLEAR, false, wall, buts, galRoof, cope);
   ok(r.galP[0].every((g) => g.open) && r.galP[1].every((g) => !g.open), 'Ⅱ-c 斜向:只有低側判成明隧道');
   const off = (x, z, i) => (x - diag[i][0]) * nx + (z - diag[i][1]) * nz;   // 沿法線的側向位移
   const lat = (x, z, i) => (x - diag[i][0]) * 0.8 + (z - diag[i][1]) * 0.6; // 沿切線的位移(應為 0)
@@ -258,7 +269,10 @@ const CLIFF = FLOOR - 6;
 const S0 = src.indexOf('      if (strc && total > 8) {');
 const S1 = src.indexOf('      // ---- 高架橋外觀', S0);
 const STRC = src.slice(S0, S1);
-ok(/const galP = \[1, -1\]\.map\(\(side\) => tunnelWallProfile\(/.test(STRC), 'Ⅲ 明隧道判定 MUST 走 tunnelWallProfile 單一縫');
+ok(/const galP = \[1, -1\]\.map\(\(side\) => \{[\s\S]{0,400}?tunnelWallProfile\(run, floorsV, covV/.test(STRC),
+  'Ⅲ 明隧道判定 MUST 走 tunnelWallProfile 單一縫');
+ok(/return under \? prof\.map\(\(g\) => \(\{ \.\.\.g, open: false \}\)\) : prof;/.test(STRC),
+  'Ⅲ 地下道 MUST 一律非明隧道(它的頂是沒被開挖的原地表;引道轉換帶的碗緣會讓體檢誤判)');
 ok((STRC.match(/galBase\(i, g\)/g) || []).length >= 2, 'Ⅲ 牆緞帶與扶壁 MUST 共用 galBase(各寫一份就會分家)');
 ok(/buts\.length >= TUN\.BUT_MAX/.test(STRC), 'Ⅲ 扶壁 MUST 吃全圖實例上限 BUT_MAX');
 ok(!/cols\.push\([^)]*\bb(?:ut)?\./.test(src.slice(src.indexOf('if (buts.length)'))),

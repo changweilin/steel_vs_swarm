@@ -1883,6 +1883,100 @@ function tunnelCoverIntervals(pts, cum, floors, heightAt) {
     .filter(([a, b]) => cum[b] - cum[a] >= TUN_COV_MIN)
     .map(([a, b]) => [cum[a], cum[b], a, b]);
 }
+// ---- 地下道(平地下穿;2026-07-28 使用者需求)----
+// 隧道與地下道是**兩種東西**:隧道 = 道路平坦、鑽進突起的地形(深度來自山);
+// 地下道 = 地形平坦、路面自一端下沉、穿過去後另一端再爬回地表(深度來自挖)。
+// 舊制的隧道路面是「兩端洞口地表高的直線內插」⇒ 平地上下沉量恆 0、永遠藏不住天花板
+// ⇒ 整條當一般道路(2026-07-28 之前的已知缺口:圖資明明是地下道,遊戲裡只有一條平街)。
+//
+// 改制沿用隧道那一整套(**零分支**:牆/天花/橫樑/照明/門洞/打洞/走廊/slab 全部共用) ——
+// 只換一件事:**路面剖面**。平坦 tunnel way 改吃「下沉剖面」:
+//   ① 兩端各往外延伸一段**引道**(沿端點切線,夾在圖界內),路面以 smoothstep 自地表沉到 −sink;
+//   ② 中段是平底 ⇒ **原地表(完全不開挖)**自然高過 路面 + CLEAR + ROOF_T
+//      ⇒ tunnelCoverIntervals 照原判定判成覆蓋段 = 洞段(頂上就是原本那片地/那條橫向道路);
+//   ③ 引道段落在敞開補集 ⇒ carveTunnels 照原規則開挖成路塹(斜壁 + 影像重繪),
+//      洞口那面橫塞斷面的土牆由 punchPortalHoles 打穿(= 出入口的「可穿透透明牆」)。
+// 兩者共用同一條命脈的代價是零:sink=0 時 tunFloorAt 逐位元退回舊公式(山體隧道行為不動)。
+//
+// MARGIN    覆蓋餘裕:地表微起伏時洞段才不會被判斷開(下沉量 MUST > CLEAR + ROOF_T + 微起伏)
+// SINK_MAX  下沉上限:再深就不是地下道,是把平地挖成峽谷 ⇒ 放棄(§4 寧缺勿錯)
+// GRADE     引道目標縱坡;GRADE_MAX 空間不足時可壓到的最大縱坡(更陡就放棄)。
+//           smoothstep 的峰值斜率 = 1.5 × sink / ramp ⇒ ramp = 1.5 × sink / grade(引道長由此推導,MUST NOT 手寫)
+// BOX_MIN   平底洞段最短長度:短於此不成洞
+// EDGE      引道外端距圖界的最小餘裕(引道不得延伸出地圖)
+// COPE      引道路塹的**邊緣修飾**帶寬:自牆頂往外鋪到地表的平頂緣石(MUST ≥ carveTunnels 的
+//           邊坡外緣 hw+7,否則開挖斜坡會從緣石外緣露出來 = 路邊一道土溝)
+// KERB      引道護欄高:牆頂高出地表這麼多(從外面看是「一般路面 → 緣石 → 護欄 → 下沉車道」)
+const UND = { MARGIN: 1.2, SINK_MAX: 18, GRADE: 0.12, GRADE_MAX: 0.22, BOX_MIN: 24, EDGE: 6, COPE: 8, KERB: 0.45 };
+// 准建地下道的道路分級:**只有車行道**。人行地下道(footway/path + tunnel)在圖資裡極常見,
+// 照建的話會為了一條人行步道在廣場上挖出 16m 寬、10m 深的壕溝 —— 現實中那是窄樓梯通道。
+// (山體隧道不受此限:那是地形本來就高過路面,不是我們挖出來的。)
+const UND_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|(motorway|trunk|primary|secondary|tertiary)_link)$/;
+/**
+ * 隧道/地下道的路面高(**單一縫**:carve 指派、buildRoads 路面/牆/標線/門洞、markGradeCorridors
+ * 走廊淨空四個消費端 MUST 共用這一支,分家就是「牆與路面錯層」)。
+ *   山體隧道(sink 不存在或 0):兩端洞口地表高的直線內插 —— 逐位元同 2026-07-28 之前。
+ *   地下道(sink > 0):同一條直線基準再減去 smoothstep 下沉剖面(兩端引道、中段平底)。
+ * @param tw   way._tun[ri] 記錄:{ hA, hB, sink?, ramp? }
+ * @param sunk false = 只要「基準線」(= 未下沉的地表道路高):引道護欄頂/緣石帶要對齊一般路面
+ */
+function tunFloorAt(tw, s, total, sunk = true) {
+  const base = tw.hA + (tw.hB - tw.hA) * (s / (total || 1));
+  if (!sunk || !tw.sink) return base;
+  const r = tw.ramp || 1;
+  const t = Math.max(0, Math.min(1, s / r, (total - s) / r));
+  return base - tw.sink * (t * t * (3 - 2 * t));   // smoothstep:坡頂/坡底切線皆為 0 ⇒ 與一般道路 C1 連續
+}
+/**
+ * 地下道規劃(單一縫;純幾何、零 rnd ⇒ 跨客戶端同一份)。
+ * 輸入是**裁切後、densify 前**的世界折線;回傳 null = 不建地下道(呼叫端退回一般道路,
+ * 即 2026-07-28 之前的行為)。回傳物件即 way._tun 記錄所需的全部欄位。
+ * 放棄條件(§4 失敗策略 = 降級不例外,寧缺勿錯):
+ *   ①非車行道 ②要挖得比 SINK_MAX 還深 ③引道擠不出 GRADE_MAX 以內的縱坡
+ *   ④走廊碰到水域(泡水的地下道 = 水底隧道,不是這裡要做的東西)⑤平底洞段短於 BOX_MIN
+ */
+function underpassPlan(raw, tags, heightAt, opt) {
+  if (!raw || raw.length < 2) return null;
+  if (!UND_HW.test(tags?.highway || '')) return null;
+  const arc = (p) => { const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return c; };
+  // ① 下沉量:在**未延伸**的折線上量「直線剖面還差多少才藏得住天花板」的最大值。
+  //    平坦地形 ⇒ 恆等於 CLEAR + ROOF_T + MARGIN;地表起伏處自動加深,洞段才不會中途斷開。
+  const p0 = densify(raw, ROAD_SEG), c0 = arc(p0), t0 = c0[c0.length - 1] || 1;
+  const gA = heightAt(p0[0][0], p0[0][1]), gB = heightAt(p0[p0.length - 1][0], p0[p0.length - 1][1]);
+  let sink = TUN.CLEAR + TUN.ROOF_T + UND.MARGIN;
+  for (let i = 0; i < p0.length; i++) {
+    const lin = gA + (gB - gA) * (c0[i] / t0);
+    const need = lin + TUN.CLEAR + TUN.ROOF_T + UND.MARGIN - heightAt(p0[i][0], p0[i][1]);
+    if (need > sink) sink = need;
+  }
+  if (sink > UND.SINK_MAX) return null;
+  // ② 引道長:由下沉量與縱坡推導(MUST NOT 手寫);兩端各沿端點切線外延,夾在圖界內。
+  //    延伸不足的那一端不是失敗 —— 引道會改往 way 內部吃(下方 ramp 夾制),只是洞段變短。
+  const want = 1.5 * sink / UND.GRADE, least = 1.5 * sink / UND.GRADE_MAX;
+  const grow = (p, q) => {
+    let dx = p[0] - q[0], dz = p[1] - q[1];
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    let t = want;
+    if (dx > 1e-6) t = Math.min(t, (opt.maxX - p[0]) / dx);
+    else if (dx < -1e-6) t = Math.min(t, (opt.minX - p[0]) / dx);
+    if (dz > 1e-6) t = Math.min(t, (opt.maxZ - p[1]) / dz);
+    else if (dz < -1e-6) t = Math.min(t, (opt.minZ - p[1]) / dz);
+    return t > 1 ? [p[0] + dx * t, p[1] + dz * t] : null;
+  };
+  const n = raw.length;
+  const head = grow(raw[0], raw[1]), tail = grow(raw[n - 1], raw[n - 2]);
+  const ext = [...(head ? [head] : []), ...raw, ...(tail ? [tail] : [])];
+  const pts = densify(ext, ROAD_SEG), cum = arc(pts), total = cum[cum.length - 1] || 1;
+  const ramp = Math.min(want, (total - UND.BOX_MIN) / 2);
+  if (ramp < least) return null;
+  const hA = heightAt(pts[0][0], pts[0][1]), hB = heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+  for (const p of pts) if (heightAt(p[0], p[1]) <= WATER.LEVEL + WATER.SWAMP_BAND) return null;
+  const tw = { hA, hB, sink, ramp };
+  const floors = cum.map((s) => tunFloorAt(tw, s, total));
+  const intervals = tunnelCoverIntervals(pts, cum, floors, heightAt);
+  if (intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0) < UND.BOX_MIN) return null;
+  return { ...tw, pts, cum, total, floors, intervals };
+}
 const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形格 ~8.3m,三枚取樣已跨格)
 /**
  * 隧道側向土牆體檢 → 明隧道判定(單一縫,2026-07-28)。
@@ -1940,6 +2034,11 @@ function roadWidth(tags) {
   const lanes = parseInt(tags.lanes, 10) || 0;
   return lanes ? Math.max(base, lanes * 3.2) : base;   // 寬度依圖資車道數
 }
+/**
+ * 立體結構(橋/隧道/地下道)的通行半寬 —— **單一縫**:buildRoads 的路面/牆、markGradeCorridors
+ * 的走廊、carveTunnels 的開挖剖面共用這一支。分家的後果是開挖寬度小於路面寬度 ⇒ 路面兩緣埋進土裡。
+ */
+const strucHw = (tags) => Math.max(roadWidth(tags) / 2, PASS_W / 2);
 // 路面顏色(cel-shaded):城市柏油 / 綠地泥土 / 裸露地礫石;主/次略有深淺
 function roadColor(biome, main) {
   if (biome === 'urban') return main ? 0x3a3f45 : 0x4a4640;
@@ -2608,11 +2707,13 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
     if (cur.length >= 2) runs.push(cur);
     for (let ri = 0; ri < runs.length; ri++) {
       const raw = runs[ri];
-      // 結構性隧道 = 有覆蓋區間(way._tun 由開挖階段以同一裁切幾何算好);無覆蓋 = 平面市區路,
-      // 不是立體結構 → 不登記走廊/淨空(與 buildRoads 的一般道路處理一致)
+      // 結構隧道/地下道 = 有覆蓋區間(way._tun 由開挖階段算好,含地下道的下沉剖面);
+      // 兩者都建不成 = 平面市區路,不是立體結構 → 不登記走廊/淨空(與 buildRoads 一致)
       const tw = tunnel ? (way._tun?.[ri] ?? { intervals: [] }) : null;
       const strc = !!tw && tw.intervals.length > 0;
-      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
+      // 結構隧道/地下道 MUST 吃 way._tun 存下的那一份折線(地下道含兩端引道延伸段)
+      const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
+        : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
       for (const run of pieces) {
         if (run.length < 2) continue;
         const wet = run.wet === true;
@@ -2623,14 +2724,11 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
         if (!strc && (bridge
           ? (sunk(run[0]) || sunk(run[run.length - 1]))
           : wet && sunk(run[0]) && sunk(run[run.length - 1]))) continue;
-        const hw = (bridge || wet || strc) ? Math.max(hwWay, PASS_W / 2) : hwWay;
+        const hw = (bridge || wet || strc) ? strucHw(way.tags || {}) : hwWay;
         const kind = strc ? 'tun' : 'bridge';
         const cum = [0];
         for (let i = 1; i < run.length; i++) cum.push(cum[i - 1] + Math.hypot(run[i][0] - run[i - 1][0], run[i][1] - run[i - 1][1]));
         const total = cum[cum.length - 1] || 1;
-        // 結構隧道 MUST 用開挖前錨點(way._tun 存檔)—— 開挖後端點重算會與剖面小幅分家
-        const hA = strc ? tw.hA : terrain.heightAt(run[0][0], run[0][1]);
-        const hB = strc ? tw.hB : terrain.heightAt(run[run.length - 1][0], run[run.length - 1][1]);
         // 走廊小段(12m 粗化,上傳量減半)
         for (let i = 0; i + 1 < run.length; i += 2) {
           const j = Math.min(run.length - 1, i + 2);
@@ -2642,7 +2740,7 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
         for (let i = 0; i < run.length; i++) {
           const [x, z] = run[i];
           if (kind === 'tun') {
-            const floor = hA + (hB - hA) * (cum[i] / total);
+            const floor = tunFloorAt(tw, cum[i], total);   // 山體隧道 = 平直;地下道 = 下沉剖面
             if (terrain.heightAt(x, z) >= floor + TUN.CLEAR + TUN.ROOF_T) continue;   // 覆蓋段
           }
           blockArea(blocked, x, z, hw + 4);
@@ -2722,6 +2820,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // facade 本身沿用同一條擋土牆緞帶(只是底緣落地、頂緣拉到頂板),不另開一份牆幾何。
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const buts = [];
+  // 地下道引道的**邊緣修飾**(2026-07-28):牆頂 → 外側地表的平頂緣石帶。carveTunnels 的路塹是
+  // hw+1 全深、外擴到 hw+7 收回地表的斜壁,不修飾的話從外面看是路邊憑空一道土溝;鋪一條與
+  // 一般路面同高的緣石帶把斜壁蓋掉,銜接處就與周邊街廓齊平。純視覺,不進 raycast/碰撞。
+  const cope = { pos: [], nrm: [], idx: [], base: 0 };
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
   const cols = [];   // 結構碰撞柱(橋墩/門洞立柱/翼牆)→ blockers(game.js _collide 推擠,不可重疊)
@@ -2795,11 +2897,16 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 先細分成 ≤ ROAD_SEG 的小段,每個新頂點各自貼地。
       // 大面積水域自動高架橋(2026-07-15):非橋/非結構隧道 way 先依泡水段拆段(splitWaterPieces),
       // 泡水段以 brg=true 走橋樑管線(橋面/欄杆/邊梁/底板/橋墩/decks 碰撞全套)。
-      // 結構性隧道 = 有覆蓋區間(way._tun,開挖階段以同一裁切+densify 幾何算好);
-      // 無覆蓋(平坦市區掛 tunnel tag)= 一般道路:貼地剖面、可跨水補橋、不立門洞不開挖。
+      // 結構隧道/地下道 = 有覆蓋區間(way._tun,開挖階段算好:山體隧道吃平直剖面、
+      // 平坦市區的 tunnel way 吃 underpassPlan 的下沉剖面);兩者都建不成 = 一般道路:
+      // 貼地剖面、可跨水補橋、不立門洞不開挖(= 2026-07-28 之前平坦 tunnel way 的唯一下場)。
       const tw = tunnel ? (way._tun?.[ri] ?? { intervals: [] }) : null;
       const strc = !!tw && tw.intervals.length > 0;
-      const pieces = (bridge || strc) ? [densify(raw, ROAD_SEG)] : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
+      const under = strc && !!tw.sink;   // 地下道(平地下穿)= 下沉剖面 + 兩端引道
+      // 結構隧道/地下道 MUST 吃 way._tun 存下的那一份折線:地下道的折線含兩端**引道延伸段**
+      // (圖資的 tunnel way 只畫覆蓋段,引道是我們接出去的),重算 densify(raw) 會少掉引道。
+      const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
+        : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
       for (const run of pieces) {
       if (run.length < 2) continue;
       const brg = bridge || run.wet === true;
@@ -2817,7 +2924,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         ? (sunk(run[0]) || sunk(run[run.length - 1]))
         : (sunk(run[0]) && sunk(run[run.length - 1])))) continue;
       // 跨水自動橋段/結構隧道夾通行寬(PASS_W):兵線可能走的結構物;乾段維持原路寬
-      const hw = (brg || strc) ? Math.max(hwWay, PASS_W / 2) : hwWay;
+      const hw = (brg || strc) ? strucHw(way.tags) : hwWay;
       // 真實車道半寬 laneHw(供標線與避車道邊帶用):結構通行寬 hw 為遊戲性夾到 ≥8,車道本身常窄得多。
       // avoidHw = 每側「太寬、該畫避車道」的差額。通行寬 hw / decks / 牆 / 走廊 / 伺服器碰撞一律不動 ——
       // 只是把中央車道漆成真實寬(接縫與外部一般路等寬、無縫)、兩側差額鋪避車道視覺(見下方 walk/hatch 段)。
@@ -2842,8 +2949,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 高架橋橋面:兩端地面高的直線內插 + 端點 24m 緩坡爬升淨空 —— 橋面是水平的,
       // 不跟著河谷/窪地起伏;地形突起處仍夾在地表之上(不鑽土)。24m 連續內插 = 出入口
       // 是斜坡不是階梯。跨水橋另夾「水面 + 0.9m」下限:錨點萬一泡水,橋面也不沉入水中。
-      // 結構隧道 MUST 用開挖前錨點(way._tun 存檔):開挖後端點重算會與 carve 的 floors
+      // 結構隧道/地下道 MUST 用開挖前錨點(way._tun 存檔):開挖後端點重算會與 carve 的 floors
       // 小幅分家(路面/牆/門洞整體偏移)。橋/一般路照舊取當下地表。
+      // (此處的 hA/hB 只餵橋面 deckAt;隧道/地下道的路面一律走 tunFloorAt 單一縫。)
       const hA = strc ? tw.hA : terrain.heightAt(run[0][0], run[0][1]);
       const hB = strc ? tw.hB : terrain.heightAt(run[nP - 1][0], run[nP - 1][1]);
       const deckAt = (s, gx, gz) => {
@@ -2860,8 +2968,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         const floor = WATER.LEVEL + 0.9;
         return Math.max(yLine, terrain.heightAt(gx, gz) + ROAD_LIFT, floor);
       };
-      // 地下道:平直路面(兩端洞口地表高的內插)= 洞內在山體之下、洞口與地表齊平的通行道路
-      const tFloorAt = (s) => hA + (hB - hA) * (s / (total || 1));
+      // 隧道/地下道路面(單一縫 tunFloorAt):山體隧道 = 兩端洞口地表高的平直內插(洞內在山體
+      // 之下、洞口與地表齊平);地下道 = 同一條基準線再減 smoothstep 下沉剖面(兩端引道、中段平底)。
+      const tFloorAt = (s) => tunFloorAt(tw, s, total);
+      // 基準線(未下沉)= 該處的一般地表道路高:地下道引道的護欄頂與緣石帶要對齊它才「與一般道路對齊」
+      const tBaseAt = (s) => tunFloorAt(tw, s, total, false);
       for (let i = 0; i < nP; i++) {
         const [x, z] = run[i];
         const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
@@ -2952,8 +3063,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 明隧道的側面在現實中也是實心擋土 facade(不是柱列),遮蔽語意與埋在山裡的側牆一致。
         const floorsV = cum.map((s) => tFloorAt(s));
         const covV = cum.map((s) => covS(s));
-        const galP = [1, -1].map((side) => tunnelWallProfile(run, floorsV, covV,
-          (x, z) => terrain.heightAt(x, z), hw, side));
+        // 地下道恆非明隧道:它的「頂」是原本那片**沒被開挖的平地**(路面沉在地表之下),
+        // 側向土牆厚度天生管夠。體檢照跑(法線 nx/nz 是牆/緣石共用的那一份),但 open 一律歸零 ——
+        // 引道轉換帶被開挖的碗緣會讓體檢誤判成明隧道,平地上憑空長出外露頂板與扶壁。
+        const galP = [1, -1].map((side) => {
+          const prof = tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side);
+          return under ? prof.map((g) => ({ ...g, open: false })) : prof;
+        });
         const galAny = (i) => galP[0][i].open || galP[1][i].open;
         // facade 落地基準(單一縫:牆緞帶與扶壁共用)—— 沉到側坡地表最低點之下 0.8m,
         // 坡面與牆之間不留看穿的縫;埋在土裡的部分不花額外頂點(同一條緞帶只是拉長)。
@@ -2968,7 +3084,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             const g = prof[i];
             const vx = x + g.nx * hw, vz = z + g.nz * hw;
             const yF = g.open ? galBase(i, g) : floorsV[i] - 0.3;
-            const yT = !covV[i] ? yF + 0.15
+            // 敞開段:山體隧道收成零高(引道兩側是原生山壁,牆立起來反而擋在崖面外);
+            // 地下道則相反 —— 引道是我們挖出來的路塹,MUST 立擋土牆頂到**地表基準 + 護欄高**,
+            // 開挖斜壁藏到牆後,從外面看就是「一般路面 → 緣石帶 → 護欄 → 下沉車道」。
+            const yT = !covV[i] ? (under ? tBaseAt(cum[i]) + UND.KERB : yF + 0.15)
               : g.open ? ceilOf(cum[i]) + TUN.ROOF_T
                 : ceilOf(cum[i]) + 0.2;
             wall.pos.push(vx, yF, vz, vx, yT, vz);
@@ -3024,6 +3143,30 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             }
           }
         }
+        // ---- 地下道引道的邊緣修飾(2026-07-28 使用者需求「處理邊緣修飾,與一般道路對齊」)----
+        // 引道段兩側各鋪一條自牆頂往外 COPE 寬、與**一般路面同高**(= 未下沉的基準線)的緣石帶,
+        // 把 carveTunnels 的開挖斜壁蓋掉:從外面看是平整街廓一路鋪到護欄邊,而不是路邊一道土溝。
+        // COPE MUST ≥ 開挖外緣 hw+7 − hw,否則斜壁會從緣石外緣露出來。純視覺(不進 raycast/碰撞/走廊)。
+        if (under) {
+          for (const prof of galP) {
+            const k0 = cope.base;
+            let seg = 0;
+            for (let i = 0; i + 1 < nP; i++) {
+              if (covV[i] && covV[i + 1]) continue;   // 洞段頂上是原地表,不必也不該鋪
+              for (const j of [i, i + 1]) {
+                const g = prof[j], y = tBaseAt(cum[j]) + 0.06;
+                for (const d of [hw, hw + UND.COPE]) {
+                  cope.pos.push(run[j][0] + g.nx * d, y, run[j][1] + g.nz * d);
+                  cope.nrm.push(0, 1, 0);
+                }
+              }
+              const k = k0 + seg * 4;
+              cope.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+              seg++;
+            }
+            cope.base += seg * 4;
+          }
+        }
         // 橫樑 + 天花燈:僅覆蓋區間內(含縫合蓋廊段 —— 蓋廊也有頂,照樣掛樑燈)
         for (let s = 6; s < total - 4 && beams.length < TUN.LAMP_MAX; s += 12) {
           if (!covS(s)) continue;
@@ -3043,8 +3186,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             const [ex, ez, ddx, ddz] = at(s);
             // hw/slope/depth 供洞口打洞 + collar(punchPortalHoles):slope = 每公尺「進洞」的路面高
             // 變化(進洞方向 = 局部 −Z);depth 夾到本區間長度,兩端洞的走廊最多在遠端相接不越界。
+            // slope 取**整段走廊的平均**而非洞口處的瞬時斜率:平直剖面(山體隧道)兩者恆等,
+            // 地下道的下沉剖面是曲線,拿洞口瞬時斜率往深處線性外推會偏掉好幾公尺。
+            const depth = Math.min(e1 - e0, 40);
+            const sIn = Math.max(0, Math.min(total, s + sgn * depth));
             portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1,
-                           hw, slope: tFloorAt(s + sgn) - tFloorAt(s), depth: Math.min(e1 - e0, 40) });
+                           hw, depth,
+                           slope: sIn === s ? 0 : (tFloorAt(sIn) - tFloorAt(s)) / Math.abs(sIn - s) });
           }
         }
       }
@@ -3475,6 +3623,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     // polygonOffset:頂板頂面與「剛好等高的地表」在轉換帶會擦身而過(明隧道判定門檻正是
     // 地表 < 頂板頂面),不推一點點就是一條閃爍的接縫。
     const m = new THREE.Mesh(geo, envMat(0x9a958c, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  // ---- 地下道引道緣石帶(邊緣修飾):與一般路面同高的平頂帶,蓋住開挖斜壁 ----
+  // polygonOffset 同 galRoof:緣石帶與「剛好等高的地表」在外緣會擦身而過,不推一點點就是閃爍接縫。
+  if (cope.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(cope.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(cope.nrm, 3));
+    geo.setIndex(cope.idx);
+    const m = new THREE.Mesh(geo, envMat(0x8b8880, { wash: 0.4, cool: 0.4, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
     m.frustumCulled = false;
     m.userData.noOutline = true;
@@ -4677,23 +4838,37 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
       if (cur2.length >= 2) wruns.push(cur2);
       way._tun = [];
+      const hAt = (x, z) => terrain.heightAt(x, z);
+      const hwWay = strucHw(way.tags);   // 開挖剖面 MUST 用該路自己的通行寬(單一縫,見 strucHw)
       for (const raw2 of wruns) {
-        const pts = densify(raw2, ROAD_SEG);
-        const cum = [0];
-        for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-        const tot = cum[cum.length - 1] || 1;
-        const hA = terrain.heightAt(pts[0][0], pts[0][1]), hB = terrain.heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
-        const floors = cum.map((s) => hA + (hB - hA) * (s / tot));   // 平直路面
-        const iv = tunnelCoverIntervals(pts, cum, floors, (x, z) => terrain.heightAt(x, z));
-        // hA/hB 一併存檔:buildRoads 的 tFloorAt MUST 用「開挖前」錨點(開挖後重算會小幅分家)
-        way._tun.push({ intervals: iv.map(([a, b]) => [a, b]), hA, hB });
-        if (!iv.length) continue;   // 全程藏不住天花板(平坦市區)= 一般道路,不開挖
+        let pts = densify(raw2, ROAD_SEG);
+        const arc = (p) => { const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return c; };
+        let cum = arc(pts);
+        let tot = cum[cum.length - 1] || 1;
+        let rec = { hA: hAt(pts[0][0], pts[0][1]), hB: hAt(pts[pts.length - 1][0], pts[pts.length - 1][1]) };
+        let floors = cum.map((s) => tunFloorAt(rec, s, tot));   // 山體隧道:平直路面
+        let iv = tunnelCoverIntervals(pts, cum, floors, hAt);
+        // 平坦市區的 tunnel way(直線剖面藏不住天花板)= **地下道**:改吃下沉剖面 + 兩端引道,
+        // 成立的話後續一切(開挖/牆/天花/門洞/走廊)與山體隧道走同一條路 —— 見 underpassPlan。
+        if (!iv.length) {
+          const up = underpassPlan(raw2, way.tags, hAt, {
+            minX: terrain.minX + UND.EDGE, maxX: terrain.maxX - UND.EDGE,
+            minZ: terrain.minZ + UND.EDGE, maxZ: terrain.maxZ - UND.EDGE,
+          });
+          if (up) { ({ pts, cum, total: tot, floors, intervals: iv } = up); rec = { hA: up.hA, hB: up.hB, sink: up.sink, ramp: up.ramp }; }
+        }
+        // 幾何與錨點一併存檔:buildRoads / markGradeCorridors MUST 吃**同一份**折線與剖面
+        // (地下道的折線含兩端引道延伸段,重算 densify(raw) 只會拿到沒有引道的舊折線)。
+        // hA/hB 是「開挖前」錨點 —— 開挖後重算會與 carve 的 floors 小幅分家。
+        way._tun.push({ ...rec, intervals: iv.map(([a, b]) => [a, b]), pts, hw: hwWay });
+        if (!iv.length) continue;   // 既不是山體隧道也建不成地下道 = 一般道路,不開挖
         // 敞開補集:[run 頭, 首覆蓋起點] + 各覆蓋區間之間 + [末覆蓋終點, run 尾]
+        // (地下道 = 兩端引道;山體隧道 = 引道/長峽谷)
         const bounds = [0, ...iv.flatMap(([, , ia, ib]) => [ia, ib]), pts.length - 1];
         for (let k = 0; k + 1 < bounds.length; k += 2) {
           const a = bounds[k], b = bounds[k + 1];
           if (b - a < 1) continue;
-          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1) });
+          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1), hw: hwWay });
         }
       }
     }
