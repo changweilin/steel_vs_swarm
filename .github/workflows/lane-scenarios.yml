@@ -5,10 +5,6 @@
 name: 兵線場景掃描
 
 on:
-  # 暫時的推送觸發(第二輪:純陸域高架橋 / 一般道路高地 / 平地隧道診斷)——
-  # 沙箱沒有圖資出口,靠 runner 取結果;定案後 MUST 再移除。
-  push:
-    branches: [claude/1v1-map-scenarios-test-obzl6w]
   workflow_dispatch:
     inputs:
       only:
@@ -17,6 +13,10 @@ on:
         default: ''
       bake:
         description: '掃描前先重烤這些場地的兵線(逗號分隔;留空 = 不重烤)'
+        required: false
+        default: ''
+      probe:
+        description: '隧道候選探測點(lat,lng,名稱;以分號分隔;留空 = 不探測)'
         required: false
         default: ''
 
@@ -48,12 +48,6 @@ jobs:
         if: ${{ inputs.bake != '' }}
         run: ONLY='${{ inputs.bake }}' node tools/bake_venue_lanes.mjs
 
-      # 新場地的兵線烘焙(推送觸發時固定烤這些;定案後連同推送觸發一起移除)
-      - name: 烤新測試場地兵線
-        if: ${{ github.event_name == 'push' }}
-        continue-on-error: true
-        run: ONLY=parkave node tools/bake_venue_lanes.mjs
-
       - name: 兵線場景掃描
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --max-min=14 --json=scen.json
@@ -62,16 +56,11 @@ jobs:
         if: always()
         run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results)console.log(r.id, JSON.stringify(r.hits), r.hits2Water?('water='+JSON.stringify(r.hits2Water)):'', r.flatTunnel?('flat='+JSON.stringify(r.flatTunnel)):'', r.landBridgeCand?('landbr='+JSON.stringify(r.landBridgeCand)):'', r.tunnelCand?('tuncand='+JSON.stringify(r.tunnelCand)):'', r.osm?JSON.stringify(r.osm):r.error||'')" || echo '(無 scen.json)'
 
-      # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道(地下道感)
+      # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道。手動觸發時用 probe 輸入自訂點位。
       - name: 隧道候選探測
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ inputs.probe != '' }}
         continue-on-error: true
-        run: |
-          node tools/audit_lane_scenarios.mjs --probe='40.7800,-73.9690,紐約中央公園79街橫貫道;40.7715,-73.9735,紐約中央公園65街橫貫道;35.0092,135.7898,京都蹴上;25.0925,121.5455,台北自強隧道;48.8600,2.2930,巴黎河岸下穿;25.0470,121.5180,台北市民大道;35.6640,139.7300,東京六本木;41.3900,2.1550,巴塞隆納'
-
-      - name: 新場地兵線 diff(複製回儲存庫用)
-        if: ${{ github.event_name == 'push' }}
-        run: git --no-pager diff -- public/js/venueLanes.js | head -60
+        run: node tools/audit_lane_scenarios.mjs --probe='${{ inputs.probe }}'
 
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}
