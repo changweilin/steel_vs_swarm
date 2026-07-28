@@ -1,0 +1,48 @@
+# ============ 1v1 兵線立體場景掃描(手動觸發;需要外網)============
+# `tools/audit_lane_scenarios.mjs` 要抓 Overpass 路網 + AWS terrarium 高程 —— 開發沙箱常沒有
+# 這兩個出口,故另開一支手動 workflow 在有外網的 runner 上跑,結果印在 job log 與 artifact。
+# 回歸驗證(ci.yml)刻意不含這支:外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+name: 兵線場景掃描
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: '只掃指定場地(逗號分隔;留空 = 全部)'
+        required: false
+        default: ''
+      bake:
+        description: '掃描前先重烤這些場地的兵線(逗號分隔;留空 = 不重烤)'
+        required: false
+        default: ''
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 重烤指定場地兵線
+        if: ${{ inputs.bake != '' }}
+        run: ONLY='${{ inputs.bake }}' node tools/bake_venue_lanes.mjs
+
+      - name: 兵線場景掃描
+        continue-on-error: true
+        run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --json=scen.json
+
+      - name: 兵線重烤結果(diff)
+        if: ${{ inputs.bake != '' }}
+        run: git --no-pager diff --stat && git --no-pager diff public/js/venueLanes.js | head -400
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lane-scenarios
+          path: |
+            scen.json
+            public/js/venueLanes.js
+          if-no-files-found: warn
