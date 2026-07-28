@@ -290,51 +290,66 @@ const bboxKm2 = (b) => (b.maxLat - b.minLat) * 111.32 * (b.maxLng - b.minLng) * 
   * Math.cos((b.minLat + b.maxLat) / 2 * Math.PI / 180);
 const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km2 * perKm2)));
 
-// 限流(429/504)才值得等著重試;403/405 = 出口政策擋掉(沙箱/公司網路),等再久也一樣 ⇒ 立刻放棄
+// 逾時/放棄紀律(2026-07-28 實測:runner 上一輪掃描跑了 45 分鐘還沒完):
+//   - 每次請求 REQ_MS 硬逾時(Node 的 fetch **沒有預設逾時**,半死的連線會把整支稽核掛住);
+//   - 鏡像連續失敗 DEAD_N 次即整輪除名(限流的站不會下一個場地就突然變好,別再逐場地重試它);
+//   - 每個查詢最多 ROUNDS 輪;403/405 這種出口政策封鎖不重試(沙箱/公司網路,等再久都一樣)。
+const REQ_MS = 45000, DEAD_N = 2, ROUNDS = 2;
 const RETRYABLE = new Set([429, 502, 503, 504]);
+const fails = new Map();
 async function overpass(q) {
   let retryable = false;
-  for (let round = 0; round < 3; round++) {
+  for (let round = 0; round < ROUNDS; round++) {
     for (const url of OVERPASS) {
+      if ((fails.get(url) || 0) >= DEAD_N) continue;
       try {
-        // Node 的 fetch **沒有預設逾時**:少了 signal,一條半死的連線會把整支稽核掛在那裡
         const r = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: 'data=' + encodeURIComponent(q),
-          signal: AbortSignal.timeout(90000),
+          signal: AbortSignal.timeout(REQ_MS),
         });
-        if (!r.ok) { retryable = retryable || RETRYABLE.has(r.status); continue; }
+        if (!r.ok) {
+          fails.set(url, (fails.get(url) || 0) + 1);
+          retryable = retryable || RETRYABLE.has(r.status);
+          continue;
+        }
         const d = await r.json();
         if (d.remark) { retryable = true; continue; }   // 伺服器截斷/逾時:換鏡像重抓
+        fails.set(url, 0);
         return d.elements || [];
-      } catch { retryable = true; }                     // 連線層失敗:可能只是抖動
+      } catch {                                          // 連線層失敗/逾時
+        fails.set(url, (fails.get(url) || 0) + 1);
+        retryable = true;
+      }
     }
     if (!retryable) return null;
     retryable = false;
-    await sleep(4000 * (round + 1));
+    await sleep(3000 * (round + 1));
   }
   return null;
 }
 
+/**
+ * 一個場地一次查詢(道路 + 鐵路 + 平交道節點):語句與額度逐條對齊 biomes.js 的
+ * fetchOsmRoads / fetchOsmFeatures,只是併進同一個請求少一趟往返(Overpass 是這支的瓶頸)。
+ */
 async function osmFor(id, bbox) {
   const f = join(CACHE, `${id}_L1.json`);
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const km2 = bboxKm2(bbox);
   const nMain = quotaOf(km2, 150, 150, 600), nMinor = quotaOf(km2, 1300, 400, 1600);
-  const roads = await overpass(`[out:json][timeout:60];`
+  const els = await overpass(`[out:json][timeout:40];`
     + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
-    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`);
-  if (!roads) return null;
-  const feats = await overpass(`[out:json][timeout:60];`
+    + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`);
-  if (!feats) return null;
+  if (!els) return null;
   const out = {
-    roads: roads.filter((e) => e.type === 'way' && e.geometry && e.tags?.highway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
-    rails: feats.filter((e) => e.type === 'way' && e.geometry && e.tags?.railway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
-    crossings: feats.filter((e) => e.type === 'node' && e.tags?.railway === 'level_crossing').map((e) => ({ lat: e.lat, lng: e.lon })),
+    roads: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.highway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
+    rails: els.filter((e) => e.type === 'way' && e.geometry && e.tags?.railway).map((e) => ({ tags: e.tags, geometry: e.geometry })),
+    crossings: els.filter((e) => e.type === 'node' && e.tags?.railway === 'level_crossing').map((e) => ({ lat: e.lat, lng: e.lon })),
   };
   writeFileSync(f, JSON.stringify(out));
   return out;

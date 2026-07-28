@@ -20,6 +20,11 @@ on:
         required: false
         default: ''
 
+# 同時只跑一份掃描:新的推送取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
+concurrency:
+  group: lane-scenarios
+  cancel-in-progress: true
+
 jobs:
   scan:
     runs-on: ubuntu-latest
