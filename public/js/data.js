@@ -96,6 +96,11 @@ export const MAPGEO = {
   // > 此值 = 路線繞回頭路折返主堡過多(側翼 via-point 偶會把路徑吸回起點),生成階段淘汰。
   // 與 MAX_OVERLAP 同性質(生成時硬門檻,伺服器不複驗;見 laneBacktrackFrac)。
   MAX_BACKTRACK: 0.20,
+  // 兵線「接近 180° 迴轉」上限(度,2026-07-28 使用者需求):沿主軸重取樣後,任一處局部
+  // 航向反轉 ≥ 此角度 = 掉頭迴轉 → 生成期硬門檻淘汰(側翼 via / REUSE 重罰偶會逼出「上橋
+  // 再折回」式掉頭)。與 laneTacticsXZ 同一組取樣語彙(TACTICS.SEG_M 步長,避免 OSRM 密集
+  // 頂點鋸齒誤判)。結算縫 = laneUTurnAudit();bake 硬門檻、mapSelect 複驗共用同一支。
+  UTURN_MAX_DEG: 150,
   // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
   // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
   // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
@@ -215,6 +220,66 @@ export function laneBacktrackFrac(pts) {
     prev = s;
   }
   return back / straight;
+}
+
+/**
+ * 兵線「接近 180° 迴轉」偵測(公尺平面 [x,z] 陣列,2026-07-28 使用者需求「不可接近 180 度迴轉」)。
+ * 沿折線以 TACTICS.SEG_M 等距重取樣,取相鄰兩段航向的反轉角(0~180°)最大值;≥ MAPGEO.UTURN_MAX_DEG
+ * = 掉頭迴轉。**MUST 走重取樣**(與 laneTacticsXZ 同一組):OSRM/圖資的密集折線,相鄰微段夾角
+ * 是量測雜訊而非真的掉頭,逐頂點量會誤判。pts 同一尺度即可(角度無單位)。
+ * 回傳 { ok, maxDeg, at }(at = 迴轉處沿線距離,無則 -1)。
+ */
+export function laneUTurnAudit(pts) {
+  const seg = MAPGEO.TACTICS.SEG_M;
+  if (!pts || pts.length < 3) return { ok: true, maxDeg: 0, at: -1 };
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = cum[cum.length - 1];
+  const at = (d) => {
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  };
+  let prevHead = null, maxDeg = 0, atMax = -1;
+  for (let d = seg; d <= total; d += seg) {
+    const p0 = at(d - seg), p1 = at(d);
+    const head = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+    if (prevHead != null) {
+      let dh = Math.abs(head - prevHead);
+      if (dh > Math.PI) dh = Math.PI * 2 - dh;               // 取 0~π 的較小夾角
+      const deg = dh * 180 / Math.PI;
+      if (deg > maxDeg) { maxDeg = deg; atMax = d - seg; }
+    }
+    prevHead = head;
+  }
+  return { ok: maxDeg < MAPGEO.UTURN_MAX_DEG, maxDeg, at: atMax };
+}
+
+/**
+ * 兵線「橋/隧只能從出入口進出」稽核(生成期圖論,2026-07-28 使用者需求
+ * 「一旦進入高架橋/隧道/地下道,只能從出入口進出,不可從側邊出入」)。
+ * 輸入為沿兵線**節點路徑**的兩組布林(bake 由 OSM 圖建立、與節點索引對齊):
+ *   struc[k] = 第 k 段(節點 k−1 → k)是否為橋/隧結構邊(k = 1..m;struc[0] 佔位不用);
+ *   portal[i] = 節點 i 是否為某結構 way 的端點(= 真實匝道/洞口,唯一合法出入口)。
+ * 規則:任一結構連續段的**進入 / 離開節點 MUST 是 portal**(或兵線兩端主堡 = 天然出入口),
+ *   不得由結構 way 中間節點側切上/下橋。地下道在圖資上即 tunnel way,與隧道同一組結構旗標。
+ * **只有離線 bake 的 OSM 圖有逐邊結構旗標**;mapSelect 走 OSRM 真實道路路徑,拓樸上本就
+ *   只能從匝道/洞口進出,天然守此規則(故不在 mapSelect 複驗)。
+ * 回傳 { ok, at }(at = 首個違規節點索引,無則 −1)。
+ */
+export function laneStructEntryAudit(struc, portal) {
+  const m = struc.length - 1;                                // 節點 0..m;段 k 連 節點 k−1→k
+  for (let k = 1; k <= m; k++) {
+    if (!struc[k]) continue;
+    const prevS = k > 1 && struc[k - 1];
+    const nextS = k < m && struc[k + 1];
+    // 進入結構段(前一段非結構)⇒ 進入節點 full[k−1] MUST 是 portal(k−1 = 0 = 兵線起點,豁免)
+    if (!prevS && k - 1 > 0 && !portal[k - 1]) return { ok: false, at: k - 1 };
+    // 離開結構段(後一段非結構)⇒ 離開節點 full[k] MUST 是 portal(k = m = 兵線終點,豁免)
+    if (!nextS && k < m && !portal[k]) return { ok: false, at: k };
+  }
+  return { ok: true, at: -1 };
 }
 
 /**
