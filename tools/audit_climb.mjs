@@ -14,6 +14,8 @@
 //   Ⅳ 靜態規則(單一縫 / A21 / A25 / 純客戶端)
 //   Ⅴ 上下兩端提示箭頭:尺寸相對兵線 chevron 縮小、朝向(底端朝上 / 頂端朝下)、
 //     擺位基底正交且右手(A26)、動畫掛在既有的 dynamics 桶
+//   Ⅵ 相鄰結構相接:七成機率 / 設施架在較高者 / 下端落腳在較低者的屋頂 /
+//     四條硬約束(相鄰距離・高差・抓握距離・第三者擋道)/ A→B 與 B→A 只留一條
 //
 // 為什麼用「抽原文」而不是 import:`climb.js` 與 `game.js` 的 three 走 CDN importmap,Node 端解析不了;
 // 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。
@@ -91,7 +93,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
 {
   const list = [];
   for (let i = 0; i < 400; i++) list.push(bld((i % 20) * 200 - 2000, Math.floor(i / 20) * 200 - 2000, 24, 18, 30));
-  const r = plan(list);
+  const r = plan(list).filter((q) => !q.link);   // 抽樣率只算地面路線(相鄰相接是額外的)
   const share = r.length / list.length;
   ok(share > 0.24 && share < 0.36, `① 抽樣率 ≈ CLIMB.SHARE(實測 ${(share * 100).toFixed(1)}%,期望 30±6pp)`);
   ok(list.every(climbCandidate), '① 400 棟皆為合格候選(高度窗口內、bld 旗標)');
@@ -125,9 +127,12 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   const same = [...A].filter((k) => !drop.has(k)).every((k) => B.has(k)) && [...B].every((k) => A.has(k));
   ok(same, '③ 淘汰候選 MUST NOT 擾動其餘抽樣結果(每候選固定 2 枚亂數)');
 
-  const lateRnd = loadCore((s) => s
-    .replace('    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    if (!climbCandidate(b)) continue;\n    if (pick >= CLIMB.SHARE) continue;',
-      '    if (!climbCandidate(b)) continue;\n    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    if (pick >= CLIMB.SHARE) continue;'));
+  const DRAW = '    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    const linkRoll = rnd();\n';
+  const lateRnd = loadCore((s) => {
+    if (!s.includes(DRAW)) throw new Error('③ 對照組:抽樣區塊原文找不到(改過就要同步改稽核)');
+    return s.replace(`${DRAW}    if (!climbCandidate(b)) continue;\n    if (pick >= CLIMB.SHARE) continue;`,
+      `    if (!climbCandidate(b)) continue;\n${DRAW}    if (pick >= CLIMB.SHARE) continue;`);
+  });
   const setL = (rs) => new Set(rs.map((r) => `${r.b.x},${r.b.z}`));
   const A2 = setL(lateRnd.planClimbRoutes({ blockers: base, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: mulberry32(99) }));
   const B2 = setL(lateRnd.planClimbRoutes({ blockers: short, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: mulberry32(99) }));
@@ -285,7 +290,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
 {
   const list = [];
   for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) list.push(bld(i * 36 - 180, j * 36 - 180, 20, 16, 26));
-  const rs = plan(list, { seed: 31337 });
+  const rs = plan(list, { seed: 31337 }).filter((q) => !q.link);
   const share = rs.length / list.length;
   ok(share > 0.2, `⑬b 密集街廓(pitch 36m)MUST 仍有約三成掛得上(實測 ${(share * 100).toFixed(0)}%)`);
   // 每條梯腳與**其他**建物盒面的距離 MUST ≥ CLEAR_R(規劃時的承諾要在成品上成立)
@@ -614,6 +619,119 @@ const A = AR.CLIMB_ARROW;
   ok(/dynamics\.push\(climbMesh\.userData\.update\)/.test(biomeSrc),
     'Ⅴ biomes.js MUST 把箭頭動畫併進既有的 dynamics 桶(火車/瀑布同一條路徑)');
   ok(!/climbArrow|CLIMB_ARROW/.test(gameSrc), 'Ⅴ game.js MUST NOT 另寫一份箭頭更新迴圈');
+}
+
+console.log('\n=== Ⅵ 相鄰結構相接(執行 climb.js 原文)===');
+{
+  // 場地:一棟 40m 高的樓,東側緊貼(表面距 2m)一棟 20m 高的樓 —— 高差 20m > LINK_DROP
+  const mkPair = (gap, hiH, loH) => {
+    const HI = bld(0, 0, 40, 40, hiH);                     // 面 x = ±20
+    const LO = bld(20 + gap + 15, 0, 30, 30, loH);         // 面 x = 20+gap
+    return [HI, LO];
+  };
+  const one = (bs, seed = 0) => planClimbRoutes({
+    blockers: bs, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: seed === 0 ? () => 0 : mulberry32(seed),
+  });
+
+  {
+    const [HI, LO] = mkPair(2, 40, 20);
+    const rs = one([HI, LO]);
+    const links = rs.filter((r) => r.link);
+    ok(links.length === 1, `Ⅵ 相鄰(表面距 2m)+ 高差 20m ⇒ MUST 架出 1 條相接路線(實得 ${links.length})`);
+    const L = links[0];
+    ok(L && L.b === HI && L.link === LO, 'Ⅵ 設施 MUST 架在**較高者**的牆面上、接到較低者');
+    ok(L && near(L.y1, HI.y + HI.h) && near(L.y0, LO.y + LO.h),
+      'Ⅵ 上端 = 高者頂面、下端 = **低者頂面**(兩端都是 blockerTopAt 的回傳值)');
+    ok(L && near(Math.abs(L.x - HI.x) - HI.hw2, CLIMB.OFF, 1e-6),
+      'Ⅵ 攀爬軸仍離高者表面恰為 OFF(與一般路線同一把尺)');
+    ok(L && L.nx > 0.9, 'Ⅵ 架設面 MUST 是「面向鄰居」的那一面');
+    // 下端落腳點:MUST 在低者的水平輪廓內(不然放手就從兩棟之間的縫掉到地面)
+    ok(L && Math.abs(L.bx - LO.x) <= LO.hw2 + 1e-6 && Math.abs(L.bz - LO.z) <= LO.hd2 + 1e-6,
+      'Ⅵ 下端落腳點 MUST 落在低者的屋頂輪廓內');
+    ok(L && Math.hypot(L.bx - L.x, L.bz - L.z) < CLIMB.GRAB_R,
+      `Ⅵ 落腳點與攀爬軸的水平距離 MUST < GRAB_R(${CLIMB.GRAB_R}m)—— 站在低頂上要抓得到`);
+    ok(L && L.kind === CLIMB_KIND[HI.cl], 'Ⅵ 設施型別跟著**架設面所屬的結構**走');
+    // 抓握索引:站在低者屋頂上 MUST 抓得到這條
+    const at = makeClimbIndex(rs);
+    ok(at(L.bx, L.bz, L.y0) === L, 'Ⅵ 站在低者屋頂的落腳點上 MUST 抓得到相接路線');
+  }
+
+  // ① 太遠不算相鄰
+  {
+    const [HI, LO] = mkPair(CLIMB.LINK_GAP + 1.5, 40, 20);
+    ok(one([HI, LO]).filter((r) => r.link).length === 0,
+      `Ⅵ 表面距 > LINK_GAP(${CLIMB.LINK_GAP}m)MUST 不相接(從低頂搆不到高牆上的梯子)`);
+    // 抓握距離是**獨立**的一道閘:把 LINK_GAP 開到很大,遠處仍 MUST 不相接
+    const wide = loadCore((t) => t.replace('  LINK_GAP: 3.0,', '  LINK_GAP: 30,'));
+    const run = (bs) => wide.planClimbRoutes({ blockers: bs, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })
+      .filter((r) => r.link).length;
+    ok(run(mkPair(8, 40, 20)) === 0, 'Ⅵ 就算放寬 LINK_GAP,落腳點超出 GRAB_R MUST 仍不相接(抓握閘獨立生效)');
+    ok(run(mkPair(2, 40, 20)) === 1, 'Ⅵ 對照:同一支放寬版在真正相鄰時仍架得出來(不是整支被關掉)');
+  }
+  // ② 高差不足 = 一階台階,不是通道
+  {
+    const [HI, LO] = mkPair(2, 40, 40 - CLIMB.LINK_DROP + 1);
+    ok(one([HI, LO]).filter((r) => r.link).length === 0,
+      `Ⅵ 兩頂高差 < LINK_DROP(${CLIMB.LINK_DROP}m)MUST 不相接`);
+  }
+  // ③ 鄰居不是「頂面站得住」的結構(橋墩/封路障礙)⇒ 不相接
+  {
+    const [HI] = mkPair(2, 40, 20);
+    const pier = { x: 37, z: 0, y: 19, r: 15, h: 21 };     // 無 bld/std 旗標
+    ok(one([HI, pier]).filter((r) => r.link).length === 0,
+      'Ⅵ 鄰居沒有 bld/std 旗標(橋墩/封路障礙)MUST 不相接 —— 頂面本來就站不住');
+  }
+  // ④ 第三座結構擋在通道上
+  {
+    const [HI, LO] = mkPair(2, 40, 20);
+    const wall = { x: 24, z: 0, y: 19, r: 3, h: 40, std: 1, cl: 'rock' };   // 卡在兩棟之間、頂到 40m
+    ok(one([HI, LO, wall]).filter((r) => r.link).length === 0,
+      'Ⅵ 通道上有第三座結構 MUST 不相接(§4 寧缺勿錯)');
+  }
+  // ⑤ A→B 與 B→A 只留一條(兩棟都抽中時不得長出兩條同樣的路線)
+  {
+    const [HI, LO] = mkPair(2, 40, 20);
+    const rs = one([HI, LO]);                              // rnd 恆 0 ⇒ 兩棟都抽中、兩次都擲出相接
+    ok(rs.filter((r) => !r.link).length === 2, 'Ⅵ 兩棟都掛得上地面路線(對照:相接不是取代)');
+    ok(rs.filter((r) => r.link).length === 1, 'Ⅵ A→B 與 B→A MUST 去重成一條');
+  }
+  // ⑥ 七成機率:**逐結構**擲骰(需求文字就是「一個有路線的結構…有 7 成機率…相接」)。
+  //    量測要隔離掉「兩棟都抽中 ⇒ 兩次獨立擲骰、去重後合成 1−0.3² = 91%」這個複合效應,
+  //    故把鄰居壓到 MIN_H 以下(不是候選、拿不到自己的地面路線,但仍是合法的相接目標)
+  //    ⇒ 每對恰好一次擲骰,link / ground 就是那 7 成本身。
+  {
+    const bs = [];
+    const N = 400;
+    for (let i = 0; i < N; i++) {
+      const cx = (i % 20) * 190 - 1900, cz = Math.floor(i / 20) * 190 - 1900;
+      bs.push(bld(cx, cz, 40, 40, 40));                     // 候選(高)
+      bs.push(bld(cx + 37, cz, 30, 30, CLIMB.MIN_H - 1));   // 非候選(矮)但仍是 bld ⇒ 可當相接目標
+    }
+    const rs = one(bs, 20260728);
+    const ground = rs.filter((r) => !r.link).length;
+    const link = rs.filter((r) => r.link).length;
+    ok(rs.every((r) => !r.link || r.b.h === 40), 'Ⅵ 矮鄰居 MUST 沒有自己的地面路線(隔離成立)');
+    const rate = link / ground;
+    ok(rate > CLIMB.LINK - 0.10 && rate < CLIMB.LINK + 0.10,
+      `Ⅵ 逐結構相接率 ≈ CLIMB.LINK(實測 ${(rate * 100).toFixed(1)}%,期望 ${(CLIMB.LINK * 100)}±10pp;${link}/${ground})`);
+    // 反向對照:機率寫死成 1 ⇒ 每條地面路線都該長出一條相接
+    const always = loadCore((t) => t.replace('  LINK: 0.7,', '  LINK: 1,'));
+    const all = always.planClimbRoutes({ blockers: bs, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260728) });
+    const nAll = all.filter((r) => r.link).length, gAll = all.filter((r) => !r.link).length;
+    ok(nAll === gAll && nAll > link, `Ⅵ 反向對照:LINK 寫死 1 ⇒ 每條地面路線都相接(${link}/${ground} → ${nAll}/${gAll})`);
+  }
+
+  // ⑦ 下端落腳點是路線自帶的 bx/bz,game.js 落地時 MUST 用它(不然從縫裡掉到地面)
+  ok(/this\.pos\.set\(r\.bx, r\.y0, r\.bz\)/.test(gameSrc),
+    'Ⅵ game.js 下端落地 MUST 用 r.bx/r.bz(相接路線的落腳點在低者屋頂,不是攀爬軸)');
+  ok(/c\.link && !live\.has\(c\.link\)/.test(biomeSrc),
+    'Ⅵ 碉堡淨空拆掉低者時 MUST 一併撤掉相接路線(下端落腳點會懸空)');
+  // 一般地面路線的 bx/bz = 攀爬軸本身(行為與舊版相同)
+  {
+    const rs = one([bld(0, 0, 40, 40, 40)]);
+    ok(rs.length === 1 && near(rs[0].bx, rs[0].x) && near(rs[0].bz, rs[0].z),
+      'Ⅵ 一般地面路線的 bx/bz MUST = 攀爬軸(舊行為不得回歸)');
+  }
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 攀爬路線稽核:${pass} 通過 / ${fail} 失敗`);

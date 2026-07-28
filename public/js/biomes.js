@@ -5909,7 +5909,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 但**可攀爬性 MUST 立刻失效** —— 否則爬上去會站在一棟隱形樓的屋頂上。
     if (removed && climbs.length) {
       const live = new Set(blk);
-      for (let i = climbs.length - 1; i >= 0; i--) if (!live.has(climbs[i].b)) climbs.splice(i, 1);
+      // 相鄰相接的那一條同時吃兩座結構:低者被拆掉 ⇒ 下端落腳點懸空,一併撤掉
+      for (let i = climbs.length - 1; i >= 0; i--) {
+        const c = climbs[i];
+        if (!live.has(c.b) || (c.link && !live.has(c.link))) climbs.splice(i, 1);
+      }
     }
     return removed;
   };

@@ -1,6 +1,8 @@
 // ============ 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩)—— 唯一真相縫 ============
 // 需求(2026-07-28):隨機挑選約三成的**建築 / 巨石 / 神木**,對應加上一條連通「地面 ↔ 頂端」
 // 的攀爬路線,讓地面機種爬上爬下、上到頂端立足射擊。地面端 MUST 落在無障礙的那一側。
+// 追加:上下兩端加提示箭頭(類似兵線但縮到適當大小);已掛路線的結構若有**相鄰**結構,
+// 七成機率在相鄰處再架一條把兩者的頂面接起來。
 //
 // **為什麼是獨立一支**:路線同時被三個消費端讀 ——
 //   ① `biomes.js` 生成期(規劃 + 建 3D 幾何)
@@ -17,8 +19,11 @@
 //   - 攀爬軸 MUST 落在結構碰撞體**之外** `OFF` 公尺:`game.js _collide` 的推擠半徑上限 =
 //     最大機體高 × SELF_F.groundR = (SOLDIER_H × 2.5) × 0.317 ≈ 1.43m,`OFF` 大於它 ⇒ 攀爬途中
 //     機體本來就不與碰撞盒重疊,**不需要**在 _collide 開任何豁免洞(開了就等於在牆裡走路)。
-//   - 確定性(A4):抽樣與方位起相位一律走傳入的 `rnd`(mulberry32),**每個候選固定消耗 2 枚**、
+//   - 確定性(A4):抽樣 / 方位起相位 / 相鄰相接一律走傳入的 `rnd`(mulberry32),**每個候選固定消耗 3 枚**、
 //     淘汰檢查一律排在抽樣**之後** —— 否則佈局序列會跨客戶端分歧。
+//   - **相鄰相接**(2026-07-28 追加):已掛路線的結構若有相鄰結構,七成機率再架一條把兩者的**頂面**
+//     接起來。那條路線的資料形狀與一般路線**完全相同**(`y0` 換成低者的頂面高、`bx/bz` 換成低頂落腳點)
+//     ⇒ 抓握索引 / 攀爬狀態機 / 提示箭頭一行都不必改。MUST NOT 為它另開第二種路線型別。
 //
 // 純表現層 + 客戶端移動:伺服器不參與(位置本就客戶端權威),故 `npm run bal` / e2e 天然不受影響。
 
@@ -42,6 +47,13 @@ export const CLIMB = {
   STEP: 3.0,         // 地面端最大高差(相對結構基座地表):斜坡上的那一側不算「無障礙」
   AZ: 16,            // 側向候選方位數(22.5° 一格)
   TOP_STEP: 2.2,     // 登頂後往結構內側踏進的距離(踏上頂面,不停在邊緣)
+  // ---- 相鄰結構相接(2026-07-28 使用者需求)----
+  // 已經掛了路線的結構,若「相鄰」還有另一座建築/巨石/神木,七成機率在相鄰處再架一條把兩者的
+  // **頂面**接起來 —— 上得去之後不必回地面就能換棟推進(高處連成一片)。
+  LINK: 0.7,         // 相接機率
+  LINK_GAP: 3.0,     // 「相鄰」= 兩者表面最短距離 ≤ 此值(> 這個距離,從低頂伸手就搆不到高牆上的梯子)
+  LINK_DROP: 5,      // 兩頂高差門檻:低於此不是通道而是一階台階,不值得架
+  LINK_STEP: 1.6,    // 低頂落腳點自鄰體表面往內踏進(比 TOP_STEP 短 ⇒ 抓握距離撐得住,見 GRAB_R 夾制)
   RUNG: 0.62,        // 長梯踏桿間距
   HOLD: 1.15,        // 攀岩抓點間距
   KNOT: 1.6,         // 技術繩繩結間距
@@ -119,8 +131,9 @@ export function climbCandidate(b) {
  * @param heightAt  (x,z) → 地表高
  * @param envCodeAt (x,z) → 0 乾 / 1 水 / 2 沼(地面端 MUST 是乾地)
  * @param bounds    { minX, maxX, minZ, maxZ }
- * @param rnd       mulberry32(確定性;每個候選固定消耗 2 枚)
- * @returns 路線陣列 [{ b, kind, x, z, nx, nz, fx, fz, y0, y1, tx, tz }]
+ * @param rnd       mulberry32(確定性;每個候選固定消耗 3 枚)
+ * @returns 路線陣列 [{ b, kind, x, z, nx, nz, fx, fz, y0, y1, bx, bz, tx, tz }];
+ *          相鄰相接的那一條另帶 `link`(接到的低者)與 `pair`(去重鍵)
  */
 export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) {
   const list = blockers || [];
@@ -137,31 +150,50 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
       }
     }
   }
-  /** (x,z) 到「其他碰撞體」表面的最短距離(自己不算);全空回 Infinity */
-  const clearance = (x, z, self, yLo, yHi) => {
+  /** (x,z) 到某個碰撞體表面的最短距離(體內為負) */
+  const surfDist = (o, x, z) => {
+    if (o.hw2 == null) return Math.hypot(x - o.x, z - o.z) - o.r;
+    const cs = Math.cos(o.ry), sn = Math.sin(o.ry);
+    const rx = x - o.x, rz = z - o.z;
+    const lx = Math.abs(rx * cs + rz * sn) - o.hw2, lz = Math.abs(-rx * sn + rz * cs) - o.hd2;
+    return Math.hypot(Math.max(0, lx), Math.max(0, lz)) + Math.min(0, Math.max(lx, lz));
+  };
+  /** (x,z) 到「其他碰撞體」表面的最短距離(self / self2 不算);全空回 Infinity */
+  const clearance = (x, z, self, yLo, yHi, self2) => {
     const arr = grid.get(Math.floor(x / CELL) * 65536 + Math.floor(z / CELL));
     if (!arr) return Infinity;
     let best = Infinity;
     for (const o of arr) {
-      if (o === self) continue;
+      if (o === self || o === self2) continue;
       if (o.y + o.h < yLo || o.y > yHi) continue;          // 垂直不重疊 = 不擋這條通道
-      let d;
-      if (o.hw2 != null) {
-        const cs = Math.cos(o.ry), sn = Math.sin(o.ry);
-        const rx = x - o.x, rz = z - o.z;
-        const lx = Math.abs(rx * cs + rz * sn) - o.hw2, lz = Math.abs(-rx * sn + rz * cs) - o.hd2;
-        d = Math.hypot(Math.max(0, lx), Math.max(0, lz)) + Math.min(0, Math.max(lx, lz));
-      } else d = Math.hypot(x - o.x, z - o.z) - o.r;
+      const d = surfDist(o, x, z);
       if (d < best) best = d;
     }
     return best;
   };
+  /** b 周邊 pad 公尺內登記過的碰撞體(掃 b 的 bbox 擴張範圍,去重);相鄰判定用 */
+  const nearby = (b, pad) => {
+    const rr = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + pad;
+    const i0 = Math.floor((b.x - rr) / CELL), i1 = Math.floor((b.x + rr) / CELL);
+    const j0 = Math.floor((b.z - rr) / CELL), j1 = Math.floor((b.z + rr) / CELL);
+    const out = new Set();
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        const arr = grid.get(i * 65536 + j);
+        if (arr) for (const o of arr) if (o !== b) out.add(o);
+      }
+    }
+    return out;
+  };
 
   const routes = [];
+  const linked = new Set();   // 已相接的結構對(高者 → 低者),避免 A→B 與 B→A 生成兩條同樣的路線
   for (const b of list) {
-    // 抽樣紀律(A4/§2.3):**先抽固定 2 枚**(抽中與否、方位起相位),淘汰檢查一律排在抽樣之後
+    // 抽樣紀律(A4/§2.3):**先抽固定 3 枚**(抽中與否、方位起相位、相鄰相接),
+    // 淘汰檢查一律排在抽樣之後。第三枚即使沒掛成路線也照抽 ⇒ 每個候選的消耗量恆定。
     const pick = rnd();
     const phase = rnd() * Math.PI * 2;
+    const linkRoll = rnd();
     if (!climbCandidate(b)) continue;
     if (pick >= CLIMB.SHARE) continue;
 
@@ -193,11 +225,72 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
       fx: best.fx, fz: best.fz,               // 結構表面附著點
       y0: best.gy,                            // 地面端
       y1,                                     // 頂端(= surfaceAt 認得的站立面)
+      bx: best.x, bz: best.z,                 // 下端落腳點(地面路線 = 攀爬軸本身)
       tx: best.fx - best.nx * step,           // 登頂落腳點(結構內側)
       tz: best.fz - best.nz * step,
     });
+
+    // ---- 相鄰結構相接(七成機率)----
+    if (linkRoll < CLIMB.LINK) {
+      const link = planLink(b, { nearby, clearance, surfDist, bounds, linked });
+      if (link) { routes.push(link); linked.add(link.pair); }
+    }
   }
   return routes;
+}
+
+/**
+ * 把「已掛路線的結構 b」與**相鄰**結構的頂面接起來:設施架在**較高者**的牆面上,下端落腳在
+ * 較低者的**屋頂**(而不是地面)—— 資料形狀與一般路線完全相同(`y0` 換成低頂高、`bx/bz` 換成
+ * 低頂落腳點),故 `makeClimbIndex` / `game.js _stepClimb` / 提示箭頭**一行都不必改**。
+ *
+ * 幾何硬約束(不滿足就不架 —— §4 寧缺勿錯):
+ *   ① 兩者表面距離 ≤ `LINK_GAP`(真的相鄰;太遠的話從低頂根本搆不到高牆上的梯子)
+ *   ② 兩頂高差 ≥ `LINK_DROP`(低於此是一階台階,不是垂直通道)
+ *   ③ 低頂落腳點與攀爬軸的水平距離 < `GRAB_R`(**站在低頂上要抓得到**;這條是①的真正理由)
+ *   ④ 攀爬軸在 [低頂, 高頂] 區間內不被第三座結構擋住、且不出圖界
+ * 設施型別跟著**架設面所屬的結構**走(神木 → 技術繩、巨石 → 抓點、建物 → 長梯),與一般路線同一張表。
+ */
+function planLink(b, { nearby, clearance, surfDist, bounds, linked }) {
+  let best = null;
+  for (const o of nearby(b, CLIMB.LINK_GAP)) {
+    if (!o.bld && !o.std) continue;                                  // 只接「頂面站得住」的結構
+    const [H, L] = (b.y + b.h) >= (o.y + o.h) ? [b, o] : [o, b];     // H 高者(架設面)/ L 低者(落腳)
+    const y1 = H.y + H.h, y0 = L.y + L.h;
+    if (y1 - y0 < CLIMB.LINK_DROP) continue;                         // ② 高差不足
+    const pair = `${H.x},${H.z},${H.h}|${L.x},${L.z},${L.h}`;
+    if (linked.has(pair)) continue;                                  // A→B 與 B→A 只留一條
+    const dx = L.x - H.x, dz = L.z - H.z;
+    if (!dx && !dz) continue;                                        // 同心(不該發生)
+    const a = Math.atan2(dz, dx);
+    const sp = surfacePoint(H, a);                                   // 高者面向低者的那一面
+    const gap = surfDist(L, sp.fx, sp.fz);                           // ① 兩表面距離(重疊為負)
+    if (gap > CLIMB.LINK_GAP) continue;
+    const x = sp.fx + sp.nx * CLIMB.OFF, z = sp.fz + sp.nz * CLIMB.OFF;
+    if (x < bounds.minX + 45 || x > bounds.maxX - 45 || z < bounds.minZ + 45 || z > bounds.maxZ - 45) continue;
+    // 低頂落腳點:自低者「面向攀爬軸」的那一面往內踏進(細瘦結構夾在 rad×0.8 內)
+    const lp = surfacePoint(L, Math.atan2(z - L.z, x - L.x));
+    const lstep = Math.min(CLIMB.LINK_STEP, lp.rad * 0.8);
+    const bx = lp.fx - lp.nx * lstep, bz = lp.fz - lp.nz * lstep;
+    if (Math.hypot(bx - x, bz - z) > CLIMB.GRAB_R - 0.2) continue;    // ③ 站在低頂上抓不到 → 不架
+    if (clearance(x, z, H, y0, y1, L) < CLIMB.CLEAR_R) continue;      // ④ 第三座結構擋在通道上
+    // 高差最大的那一位優先(爬得最有價值);嚴格大於 ⇒ 同分取先掃到的,序列確定
+    if (!best || y1 - y0 > best.drop) best = { H, L, y0, y1, sp, x, z, bx, bz, pair, drop: y1 - y0 };
+  }
+  if (!best) return null;
+  const step = Math.min(CLIMB.TOP_STEP, best.sp.rad * 0.8);
+  return {
+    b: best.H, link: best.L, pair: best.pair,
+    kind: CLIMB_KIND[best.H.cl] || 'ladder',
+    x: best.x, z: best.z,
+    nx: best.sp.nx, nz: best.sp.nz,
+    fx: best.sp.fx, fz: best.sp.fz,
+    y0: best.y0,                              // 下端 = 低者的頂面(= blockerTopAt 的回傳值)
+    y1: best.y1,                              // 上端 = 高者的頂面
+    bx: best.bx, bz: best.bz,                 // 下端落腳點(低者屋頂內側)
+    tx: best.sp.fx - best.sp.nx * step,       // 上端落腳點(高者屋頂內側)
+    tz: best.sp.fz - best.sp.nz * step,
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -4762,8 +4762,10 @@ export class BattleClient {
       this._climb = null; this._climbOff = now + 0.4;
       return false;
     }
-    if (this.pos.y <= r.y0) {                                  // 落地:回一般地面物理
-      this.pos.y = r.y0;
+    if (this.pos.y <= r.y0) {
+      // 下端落地:回一般地面物理。落腳點是路線自帶的 `bx/bz` —— 一般路線 = 攀爬軸本身(原地),
+      // **相鄰相接的那一條 = 較低那座結構的屋頂內側**(不然放手就從兩棟之間的縫掉到地面)。
+      this.pos.set(r.bx, r.y0, r.bz);
       this._climb = null; this._climbOff = now + 0.35;
       return false;
     }
