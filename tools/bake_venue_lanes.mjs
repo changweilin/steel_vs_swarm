@@ -6,7 +6,7 @@
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneStructEntryAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -144,6 +144,7 @@ function buildGraph(ways, origin) {
   const X = [], Z = [], LA = [], LN = [], adj = [];
   const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
   const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
+  const portalN = new Set();      // 橋/隧 way 的端點節點 = 出入口(portal):規則「只能從出入口進出」
   const cosO = Math.cos(origin[0] * d2r);
   const nid = (la, ln) => {
     const k = `${la.toFixed(6)},${ln.toFixed(6)}`;
@@ -171,8 +172,15 @@ function buildGraph(ways, origin) {
       if (tun) { tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`); }
       if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
     }
+    // 結構 way 的頭尾幾何節點 = 出入口(portal):真實匝道/洞口只接在結構兩端,
+    // way 中間節點若被兵線側切上/下橋 = 「從側邊出入」(規則禁止,見 laneStructEntryAudit)。
+    if (tun || brg) {
+      const g0 = w.geometry[0], gN = w.geometry[w.geometry.length - 1];
+      portalN.add(nid(g0.lat, g0.lon));
+      portalN.add(nid(gN.lat, gN.lon));
+    }
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE };
+  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE, portalN };
 }
 
 class MinHeap {
@@ -387,11 +395,22 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     let back = 0, pr = prog(p[0]);
     for (let k = 1; k < p.length; k++) { const pg = prog(p[k]); if (pg < pr) back += pr - pg; pr = pg; }
     if (back > MAPGEO.MAX_BACKTRACK) { why = 'backtrack'; return null; }
-    banPath(used, p, n);                                      // 標記已用邊(下一條會被 REUSE_PEN 重罰)
+    // 規則(2026-07-28):橋/隧只能從出入口(結構 way 端點 portalN)進出,不可從側邊上/下橋。
+    // struc 對齊節點路徑 p:段 k 連 p[k−1]→p[k];portal = p[i] 是否為結構端點(見 laneStructEntryAudit)。
+    const struc = new Array(p.length);
+    struc[0] = false;
+    for (let k = 1; k < p.length; k++) struc[k] = g.tunE.has(`${p[k - 1]}:${p[k]}`) || g.brgE.has(`${p[k - 1]}:${p[k]}`);
+    if (!laneStructEntryAudit(struc, p.map((nd) => g.portalN.has(nd))).ok) { why = 'sideEntry'; return null; }
     const all = p.map((i) => [X[i], Z[i]]);
     const keep = simplifyIdx(all, 3);
     const idx = keep.map((k) => p[k]);                        // 簡化後仍全是 OSM 道路節點
     const xz = keep.map((k) => all[k]);
+    // 規則(2026-07-28):兵線不可接近 180° 迴轉(側翼 via / REUSE 重罰偶會逼出上橋再折回式掉頭)。
+    // xz 是真實公尺(buildGraph 用地球半徑),laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在
+    // 遊戲公尺語意下 ⇒ 換算後再判(× 1/REAL_SCALE;此處在 s 宣告前被呼叫,不能用 s,直接取 MAPGEO)。
+    const gs = 1 / MAPGEO.REAL_SCALE;
+    if (!laneUTurnAudit(xz.map(([x, z]) => [x * gs, z * gs])).ok) { why = 'uturn'; return null; }
+    banPath(used, p, n);                                      // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;
     for (const q of idx) s += lat(q);
     return { xz, idx, full: p, lat: s / idx.length };   // full = 未簡化節點路徑(規則 #5 取隧道邊用)

@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, towerLayoutAudit, laneSeparationAudit } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, towerLayoutAudit, laneSeparationAudit } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -395,8 +395,13 @@ export class MapSelect {
       const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
       // 折返門檻(同 bake / MAPGEO.MAX_BACKTRACK):任一兵線往主堡折返超標 → 淘汰此推薦點
       const maxBt = Math.max(...lanes.map((lane) => laneBacktrackFrac(lane.map((c) => toMeters(c, A)))));
+      // 迴轉門檻(同 bake / MAPGEO.UTURN_MAX_DEG):任一兵線接近 180° 掉頭 → 淘汰(規則 2026-07-28)。
+      // 規則「橋/隧只能從出入口進出」不在此複驗:OSRM 走真實道路路徑,拓樸上本就只能從匝道/洞口進出。
+      // toMeters 回真實公尺;laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在遊戲公尺語意 ⇒ × 1/REAL_SCALE。
+      const uSc = 1 / MAPGEO.REAL_SCALE;
+      const maxUturn = Math.max(...lanes.map((lane) => laneUTurnAudit(lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; })).maxDeg));
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
-        && maxBt <= MAPGEO.MAX_BACKTRACK;
+        && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG;
       if (!ok) continue;
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
