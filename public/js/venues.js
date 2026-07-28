@@ -10,26 +10,55 @@
 import { MAPGEO, lanesFor, targetDistFor, laneSeparationAudit } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 
+/**
+ * 1v1(L1)兵線立體場景標記(2026-07-28 使用者需求:七種場景各要有一張預設地圖可測)。
+ * 鍵 = 場景代號,值 = 中文短名(**MUST NOT 進鈕面**,只走 title 提示 —— 見 A20 鈕面不加補述)。
+ * 標記 MUST 由 `node tools/audit_lane_scenarios.mjs` 實測產生/複驗,不得手寫臆測:
+ * 該工具吃與執行期同源的兵線/路網/高程,標記與實測不符即紅字。
+ */
+export const SCEN_LABEL = {
+  // 隧道與地下道是兩種東西:隧道 = 道路平坦鑽進山體(深度來自山);
+  // 地下道 = 平地上路面下沉再上來(深度來自挖)。現行引擎只生成前者,
+  // 故 underpass 沒有任何場地會標到它(稽核列為已知缺口,見 tools/audit_lane_scenarios.mjs)。
+  tunnel: '山體隧道',
+  underpass: '地下道',
+  bridge: '高架橋',
+  gallery: '明隧道',
+  crossing: '平交道',
+  underBridge: '穿越橋下',
+  overTunnel: '穿越洞頂',
+  highGround: '側翼高地',
+};
+
+/** 場地提示文字(地貌 + 1v1 兵線場景):大廳與開房兩處場地清單共用同一份,MUST NOT 各寫一套 */
+export function venueTip(v) {
+  const BIO = { green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' };
+  const bio = `地貌:${Object.entries(v.mix).map(([k, f]) => `${BIO[k]} ${Math.round(f * 100)}%`).join('・')}`;
+  const sc = (v.scen || []).map((k) => SCEN_LABEL[k]).filter(Boolean);
+  return sc.length ? `${bio}\n1v1 兵線:${sc.join('・')}` : bio;
+}
+
 // ll = 兵線起點(SWARM 主堡)。**必須是有導航路網的道路節點**:兵線一律取自現實道路
 // (見 venueLanes.js),路網不足的自然景點一律把錨點移到鄰近的聚落/園區道路,
 // 地貌 mix 不變(視覺仍是森林/沙漠/濕地)。改 ll MUST 重跑 scratchpad/bake3.mjs。
 // bearing 只在該場地某個 L 沒有預算資料、退回 synthLane 時才用得到。
+// scen = 該場地 **1v1 兵線**實測走得到的立體場景(見 SCEN_LABEL;由場景稽核工具產生)。
 export const VENUES = [
   // ---- 市區單一(≥80%)----
-  { id: 'taipei101',  name: '台北・101 信義計畫區',   country: '🇹🇼', type: '市區', ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 } },
-  { id: 'shibuya',    name: '東京・澀谷十字路口',     country: '🇯🇵', type: '市區', ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 } },
+  { id: 'taipei101',  name: '台北・101 信義計畫區',   country: '🇹🇼', type: '市區', ll: [25.034009, 121.563871], bearing: 190, mix: { urban: 0.85, green: 0.1, water: 0.05 }, scen: ['underBridge', 'highGround'] },
+  { id: 'shibuya',    name: '東京・澀谷十字路口',     country: '🇯🇵', type: '市區', ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 }, scen: ['underBridge', 'overTunnel'] },
   { id: 'manhattan',  name: '紐約・曼哈頓中城',       country: '🇺🇸', type: '市區', ll: [40.754938, -73.984047], bearing: 30,  mix: { urban: 0.85, green: 0.15 } },
   { id: 'paris',      name: '巴黎・艾菲爾鐵塔',       country: '🇫🇷', type: '市區', ll: [48.859026, 2.293461],   bearing: 95,  mix: { urban: 0.8, green: 0.15, water: 0.05 } },
   { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.497891, 127.027621], bearing: 150, mix: { urban: 0.9, green: 0.1 } },
 
   // ---- 綠地單一(≥80%)----
-  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 } },   // 天母(南麓路網)
+  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'] },   // 天母(南麓路網)
   { id: 'aokigahara',  name: '富士山麓・青木原樹海',  country: '🇯🇵', type: '綠地', ll: [35.497619, 138.754966], bearing: 260, mix: { green: 0.9, bare: 0.1 } },      // 河口湖町
-  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 } },      // Freudenstadt
+  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 }, scen: ['crossing'] },      // Freudenstadt
   { id: 'yosemite',    name: '優勝美地・谷地',        country: '🇺🇸', type: '綠地', ll: [37.748470, -119.588441], bearing: 85, mix: { green: 0.8, bare: 0.15, water: 0.05 } },   // 谷底環道(L3 無解 → synth)
 
   // ---- 裸露地單一(≥80%)----
-  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 } },   // Nazlet El-Semman
+  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 }, scen: ['underBridge', 'highGround'] },   // Nazlet El-Semman
   { id: 'uluru',      name: '澳洲・烏魯魯巨岩',       country: '🇦🇺', type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, mix: { bare: 0.95, green: 0.05 } },   // Yulara(L3 無解 → synth)
   { id: 'phoenix',    name: '鳳凰城・索諾拉沙漠',     country: '🇺🇸', type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, mix: { bare: 0.7, urban: 0.3 } },      // 西鳳凰城沙漠格柵
   { id: 'hehuanshan', name: '合歡山・箭竹草原',       country: '🇹🇼', type: '裸露地', ll: [23.965067, 120.967128], bearing: 25, mix: { bare: 0.8, green: 0.2 } },      // 埔里鎮
@@ -41,10 +70,14 @@ export const VENUES = [
   { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.983022, 23.416720], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 } },   // Maun
 
   // ---- 混合型 ----
-  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 } },
-  { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 } },   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)
+  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 }, scen: ['highGround'] },
+  { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'gallery', 'highGround'] },   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)
+  // ② 地下道的測試場地(2026-07-28):市民大道沿線車行地下道群 —— L1 bbox 內圖資有 8 條
+  // tunnel way,是掃到最密的一區。**注意**:平地地下道現行引擎不生成(路面沉不下去,
+  // 見 docs/lane_scenarios.md),故不標 scen;引擎支援下沉剖面後這張圖即成立。
+  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.047000, 121.518000], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },
+  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['underBridge'] },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
 ];
 

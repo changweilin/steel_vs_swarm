@@ -1,6 +1,9 @@
 # 預設場地兵線預算工具的 Overpass 回應快取(可重新抓取,勿入版控)
 tools/.osm_cache/
 
+# 兵線場景稽核的 Overpass / terrarium 高程磚快取(同上,可重新抓取)
+tools/.scen_cache/
+
 # `npm start -- --https` 生成的自簽憑證(含私鑰,MUST NOT 入版控;刪掉會重新生成)
 .certs/
 

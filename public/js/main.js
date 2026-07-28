@@ -24,7 +24,7 @@ import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terra
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
-import { VENUES, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { VENUES, venueTip, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
@@ -327,7 +327,7 @@ function renderVenues() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    b.title = `地貌:${Object.entries(v.mix).map(([k, f]) => `${{ green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' }[k]} ${Math.round(f * 100)}%`).join('・')}`;
+    b.title = venueTip(v);
     b.onclick = () => selectVenue(v);
     grid.appendChild(b);
   }
@@ -448,7 +448,7 @@ function renderVenuesOpen() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    b.title = `地貌:${Object.entries(v.mix).map(([k, f]) => `${{ green: '綠地', bare: '裸露', urban: '市區', water: '水體', wet: '濕地' }[k]} ${Math.round(f * 100)}%`).join('・')}`;
+    b.title = venueTip(v);
     b.onclick = () => selectVenueOpen(v);
     grid.appendChild(b);
   }
