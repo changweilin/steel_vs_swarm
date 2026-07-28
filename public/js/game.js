@@ -24,6 +24,7 @@ import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, 
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls } from './mobile.js';
+import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
 const KIND_KEY = {
@@ -432,13 +433,18 @@ export class BattleClient {
     this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);
   }
 
-  /** 障礙柱 → 64m 均勻網格(彈道線段只掃沿途格) */
+  /**
+   * 障礙體 → 64m 均勻網格(彈道線段只掃沿途格)。
+   * 登記半徑 MUST 用**外接**(建物取盒對角 hypot(hw2,hd2),非 0.8×半對角的內切近似)——
+   * 內切半徑會讓貼牆角的格子漏登記,盒判定再準也掃不到那顆(見 _cameraDeClip 同一條前科)。
+   */
   _buildBlockGrid(blockers) {
     const C = 64;
     const grid = new Map();
     blockers.forEach((b) => {
-      const i0 = Math.floor((b.x - b.r) / C), i1 = Math.floor((b.x + b.r) / C);
-      const j0 = Math.floor((b.z - b.r) / C), j1 = Math.floor((b.z + b.r) / C);
+      const r = b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r;
+      const i0 = Math.floor((b.x - r) / C), i1 = Math.floor((b.x + r) / C);
+      const j0 = Math.floor((b.z - r) / C), j1 = Math.floor((b.z + r) / C);
       for (let i = i0; i <= i1; i++) {
         for (let j = j0; j <= j1; j++) {
           const k = `${i},${j}`;
@@ -452,9 +458,14 @@ export class BattleClient {
   }
 
   /**
-   * 線段 vs 障礙圓柱(建物/神木/巨岩/橋墩):回傳最近命中距離(沿線段),沒打到回 null。
-   * 圓柱 = _collide 同一份碰撞柱(x, z, y 基座, r, h)—— 側面進入與自上而下打頂面都算。
-   * 有物理障礙的物件不可讓砲火穿越;植被(無碰撞)照舊不擋彈。
+   * 線段 vs 障礙體(建物/神木/巨岩/橋墩):回傳最近命中距離(沿線段),沒打到回 null。
+   * 橫斷面 = _collide 同一份碰撞體:**建物走有向盒**(hw2/hd2/ry)、其餘走圓柱(r);
+   * 側面進入與自上而下打頂面都算。有物理障礙的物件不可讓砲火穿越;植被(無碰撞)照舊不擋彈。
+   *
+   * **2026-07-28「所有方向皆可抵擋射擊」**:舊制建物一律以 r = 0.8×半對角 的圓柱近似,兩頭都不對 ——
+   * ①牆角外露在圓外 ⇒ 對角線方向的砲火穿過**看得見的牆**;②細長樓的圓比盒寬 ⇒ 側面十幾公尺外的
+   * 空氣擋彈。改吃 `_collide`/`_cameraDeClip` 已在用的有向盒 ⇒ 撞得到 = 打得到 = 看得到,三者同一把尺。
+   * 圓仍是 broad-phase(盒的 r MUST 是**外接**半對角,見 main.js occ 上傳處的同一條註)。
    */
   _blockerHitT(ax, ay, az, bx, by, bz) {
     if (!this._blockGrid) return null;
@@ -472,22 +483,43 @@ export class BattleClient {
         for (const b of a) {
           if (seen.has(b)) continue;
           seen.add(b);
-          // 2D 射線 × 圓:|A + t·D − O|² = r²
-          const ox = ax - b.x, oz = az - b.z;
           const A2 = dx * dx + dz * dz;
-          const B2 = 2 * (ox * dx + oz * dz);
-          const C2 = ox * ox + oz * oz - b.r * b.r;
           let t0, t1;
-          if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在圓內
-            if (C2 > 0) continue;
-            t0 = 0; t1 = 1;
+          if (b.hw2 != null) {
+            // 有向盒:射線在盒 local frame 走 slab(與 _cameraDeClip clampBox / _sweepBlockers 同式)
+            const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+            const ox = ax - b.x, oz = az - b.z;
+            const olx = ox * cs + oz * sn, olz = -ox * sn + oz * cs;
+            if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在盒內
+              if (Math.abs(olx) > b.hw2 || Math.abs(olz) > b.hd2) continue;
+              t0 = 0; t1 = 1;
+            } else {
+              const ulx = dx * cs + dz * sn, ulz = -dx * sn + dz * cs;
+              let tmin = -Infinity, tmax = Infinity, ok = true;
+              for (const [o, u, e] of [[olx, ulx, b.hw2], [olz, ulz, b.hd2]]) {
+                if (Math.abs(u) < 1e-9) { if (o < -e || o > e) { ok = false; break; } continue; }
+                let s0 = (-e - o) / u, s1 = (e - o) / u; if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+                tmin = Math.max(tmin, s0); tmax = Math.min(tmax, s1);
+              }
+              if (!ok || tmax < tmin || tmax < 0 || tmin > 1) continue;
+              t0 = tmin; t1 = tmax;
+            }
           } else {
-            const disc = B2 * B2 - 4 * A2 * C2;
-            if (disc < 0) continue;
-            const sq = Math.sqrt(disc);
-            t0 = (-B2 - sq) / (2 * A2);
-            t1 = (-B2 + sq) / (2 * A2);
-            if (t1 < 0 || t0 > 1) continue;
+            // 2D 射線 × 圓:|A + t·D − O|² = r²
+            const ox = ax - b.x, oz = az - b.z;
+            const B2 = 2 * (ox * dx + oz * dz);
+            const C2 = ox * ox + oz * oz - b.r * b.r;
+            if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在圓內
+              if (C2 > 0) continue;
+              t0 = 0; t1 = 1;
+            } else {
+              const disc = B2 * B2 - 4 * A2 * C2;
+              if (disc < 0) continue;
+              const sq = Math.sqrt(disc);
+              t0 = (-B2 - sq) / (2 * A2);
+              t1 = (-B2 + sq) / (2 * A2);
+              if (t1 < 0 || t0 > 1) continue;
+            }
           }
           const yTop = b.y + b.h;
           // 側面進入:入點高度落在柱身區間
@@ -2917,6 +2949,7 @@ export class BattleClient {
     if (removed) {
       this._blockGrid = this._buildBlockGrid(this.terrain.blockers || []);   // 碰撞柱與視覺一致(A6)
       this.terrain.rebuildBlockerTops?.();   // 頂面站立索引同步重建(拆掉的樓不留幽靈站立面)
+      this.terrain.rebuildClimbs?.();        // 攀爬路線索引同步重建(拆掉的樓不留通往空中的梯子)
     }
   }
 
@@ -4466,6 +4499,7 @@ export class BattleClient {
     this.dead = true;
     this.firing = false;
     this.aiming = false;
+    this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
@@ -4669,6 +4703,72 @@ export class BattleClient {
     this._reqIframe();
     shockRing(this.scene, this.effects, this.pos.x, this.pos.y, this.pos.z, 6, 0x8fd7ff);
     this.hud.feed?.('🛡️ 完美迴避!(向上飛・1s 無敵)');
+  }
+
+  // ---------------- 攀爬(長梯 / 攀岩抓點 / 垂降技術繩;2026-07-28)----------------
+  // 路線規劃、抓握半徑、上下速度、登頂落腳點全部住 `climb.js`(唯一縫);這裡只做「輸入 → 狀態機」。
+  // **地面機種專屬**:飛行型態自己飛得上去,掛上去只會變成一條慢速上升的軌道。
+  //
+  // 為什麼不需要在 `_collide` 開豁免:攀爬軸 MUST 落在碰撞體外 `CLIMB.OFF`(> 最大機體碰撞半徑),
+  // 爬的過程機體本來就不與盒/柱重疊。登頂那一步是「同一幀把 y 設到頂面 + xz 踏進結構內側」——
+  // 推擠與掃掠的垂直閘(`myBot >= b.y + b.h − 0.1`)天然跳過,MUST NOT 為此另加旗標判斷。
+
+  /**
+   * 攀爬狀態機。回傳 true = 本幀由攀爬接管移動(呼叫端跳過地面/飛行物理)。
+   * 掛上條件:地面機種 + 抓握範圍內 + **推杆朝著路線**(不然沿街跑過梯腳就被黏住);
+   * 上下 = 前後推杆(觸控搖桿同一條,MUST NOT 另開鈕 —— 見 A21/A22 的第二份輸入分支之戒)。
+   */
+  _stepClimb(dt, now, move, ax, u) {
+    const T = this.terrain;
+    if (!T.climbAt || this._flying() || this.dead) { this._climb = null; return false; }
+    let r = this._climb;
+    // 自癒守衛:被瞬移/重生/大幅擊退甩離路線時 MUST 自己脫手 —— 否則下一幀的水平吸附會把機體
+    // 從半張地圖外拉回梯子上(狀態機的持有者是 pos,不是反過來)
+    if (r && (Math.hypot(this.pos.x - r.x, this.pos.z - r.z) > CLIMB.GRAB_R * 2
+      || this.pos.y < r.y0 - 2 || this.pos.y > r.y1 + 2)) { this._climb = null; r = null; }
+    if (!r) {
+      if (now < (this._climbOff || 0)) return false;          // 剛脫手:同一顆梯子不立刻重新黏上
+      const cand = T.climbAt(this.pos.x, this.pos.z, this.pos.y);
+      if (!cand) return false;
+      // 意圖判定:推杆要有朝向攀爬軸的分量。地面端(往結構走)與頂端(走到屋頂邊緣)
+      // 剛好是相反的兩個方向,故 MUST 用「指向軸」的向量而非法線 —— 用法線就會有一端永遠掛不上。
+      const gx = cand.x - this.pos.x, gz = cand.z - this.pos.z;
+      const gl = Math.hypot(gx, gz);
+      // 已經站在軸上(方向向量退化)改看「前進推杆」= 上攀意圖 —— MUST NOT 無條件掛上:
+      // 從梯底放手落地後若還按著後退,會在「掛上 → 立刻掉出底端」之間空轉,人黏在梯腳走不掉。
+      if (gl > 1.2 ? (move.x * gx + move.z * gz) / gl <= 0.25 : ax.f <= 0.25) return false;
+      r = this._climb = cand;
+      this.charge = 0; this.vy = 0; this._lowG = false;
+      this.hud.feed?.(`🧗 ${CLIMB_LABEL[r.kind]}:推前進上攀 / 後退下降,跳躍鍵脫手`);
+    }
+    // 脫手跳離:向外彈開 + 小跳(機甲的 Space 蓄力跳在攀爬中改作用為脫手,不留第二顆鍵)
+    if (this.keys.Space) {
+      this.vel.x += r.nx * CLIMB.KICK; this.vel.z += r.nz * CLIMB.KICK;
+      this.vy = (u?.jump || 8) * 0.5;
+      this._climb = null; this._climbOff = now + 0.5;
+      return false;
+    }
+    // 垂直位移:前後推杆 × 攀爬速度 × 控場係數(麻痺 = 掛在原地不動,不是掉下去)
+    this.pos.y += ax.f * CLIMB.SPD * this._ccMoveF() * this._modF('speed') * dt;
+    // 水平吸附到攀爬軸(被爆風/後座推開後自己回到梯子上)
+    const k = Math.min(1, dt * 10);
+    this.pos.x += (r.x - this.pos.x) * k;
+    this.pos.z += (r.z - this.pos.z) * k;
+    this.vel.x *= Math.exp(-dt * 6); this.vel.z *= Math.exp(-dt * 6); this.vel.y = 0;
+    this.vy = 0;
+    if (this.pos.y >= r.y1) {
+      // 登頂:落腳點在結構內側(climb.js 已按該方向半徑夾制),高度取頂面 = surfaceAt 的 mount 台階
+      this.pos.set(r.tx, r.y1, r.tz);
+      this._climb = null; this._climbOff = now + 0.4;
+      return false;
+    }
+    if (this.pos.y <= r.y0) {                                  // 落地:回一般地面物理
+      this.pos.y = r.y0;
+      this._climb = null; this._climbOff = now + 0.35;
+      return false;
+    }
+    this.roll += (0 - this.roll) * Math.min(1, dt * 6);
+    return true;
   }
 
   /** 請求無敵幀(蓄力跳 / 升空變形起跳離地 / 無人機完美迴避):時長與 CD 由伺服器 heroIframe 權威把關
@@ -6047,7 +6147,13 @@ export class BattleClient {
     const move = new THREE.Vector3().addScaledVector(fwd, ax.f).addScaledVector(right, ax.r);
     if (ax.mag > 1) move.multiplyScalar(1 / ax.mag);
 
-    if (this._flying()) {
+    // 攀爬(長梯/攀岩抓點/垂降技術繩)接管:掛在梯上時不吃重力、不吃地面加速,其餘(結構物硬碰撞 /
+    // 天花 / _collide / 邊界 / 回報)照走下方共用路徑 —— MUST NOT 為攀爬另開一條位置回報。
+    const climbing = this._stepClimb(dt, now, move, ax, u);
+
+    if (climbing) {
+      // 攀爬中:位移已由 _stepClimb 定案(垂直沿路線、水平吸附到攀爬軸)
+    } else if (this._flying()) {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
       // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形機甲飛行型態用 fly 巡航速度。
       const spd = this.isMorph ? u.fly : u.speed;
@@ -6765,8 +6871,10 @@ export class BattleClient {
 
   /**
    * 視野源(vx,vz,半徑 r)被障礙圓柱擋出的陰影多邊形(**世界座標**),供迷霧挖除。
-   * 障礙 = terrain.blockers(建物/神木/巨岩/橋墩),半徑取 min(60, r) 與伺服器上傳 occ 對齊
-   * ⇒ 小地圖迷霧的遮蔽與伺服器 _losBlocked 用同一份圓柱幾何,「看得到的地方才亮」一致。
+   * 障礙 = terrain.blockers(建物/神木/巨岩/橋墩),半徑取 min(60, b.r)。建物的真正遮蔽體是**有向盒**
+   * (2026-07-28 起彈道 `_blockerHitT` 與伺服器 `_losBlocked` 皆改吃盒),此處**刻意**維持圓近似:
+   * 陰影是逐柱兩條切線圍出的扇形,換成盒得逐柱求輪廓四點,而這一層是**純顯示**的地圖罩 ——
+   * 單位標記本來就由伺服器快照過濾(A10),罩畫寬畫窄都不影響誰看得到誰。高度不入帳同理。
    * 每柱兩條切線之外(遠端)= 本影:自切點沿切線方向延伸出視野外,由暫存罩的視野圓自然裁掉。
    * 高度不入帳:伺服器對「地面觀察者→地面目標」任何有碰撞的柱皆擋(眼高/目標高皆低於柱頂),
    * 這裡對齊地面偵測語意,一律當不透明圓 —— 寧可多霧(躲掩體者完全不可檢測)也不漏。
