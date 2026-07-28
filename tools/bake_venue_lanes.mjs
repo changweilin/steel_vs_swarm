@@ -332,9 +332,8 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
 const PREFER_BRIDGE = new Set(['parkave']);
 const BEARING_SECTORS = {
   jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
-  // Park Avenue 高架軸 ~32°:南錨(E40th 起坡)→東北;北錨(E46th 落地)→西南。
-  // 不夾方位角的話暴搜會挑到往南的街廓(實測 br=145°,整段離開高架)。
-  parkave: [[[15, 55]], [[195, 235]]],
+  // parkave 不夾方位角:改由 PREFER_BRIDGE 的「踩在橋上長度」自己挑(夾了反而把能上橋的
+  // 方位角排除掉 —— 實測夾 195~235° 時兵線只擦過高架 4m,沒真的走上去)。
 };
 const inSector = (br, [a, b]) => ((br - a + 360) % 360) <= ((b - a + 360) % 360);
 
