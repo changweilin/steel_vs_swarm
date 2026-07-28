@@ -51,6 +51,9 @@
 - 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只住 `data.js`;sim.js/game.js **MUST NOT** 硬編碼。
 - **推導值 MUST NOT 手寫**:賞金表(戰力公式推導)、`UNITS.drone.hp` 與 `SQUAD.DMG`(由 `SQUAD.BUFF` derive)、`UNITS.bunker.hp`(= 塔一半)、塔位(`solveTowerSites()`,sim 與 biomes 共用)、`MINES.PER_LANE` 與 `AA_SITE.range`(等面積公式)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)。
 - 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
+- 隧道「側向土牆藏不藏得住結構」的判定(= **明隧道**改制)只住 `biomes.js tunnelWallProfile()`:落地 facade / 外露頂板 / 女兒牆 / 扶壁四個構件共用同一份 `open`(該側改明隧道)、`gy`(側坡地表最低點)、`nx/nz`(側向法線)。
+  **MUST NOT** 在擺位端各自再算一次中央差分法線(取樣方向與擺位方向一分家就是 A26 那類「差 90°/差正負號」);facade 落地基準只准有 `galBase` 一份。
+  明隧道是**純表現層**:通行寬 `hw` / `tunnelSegs` / `ceilSegs` / 走廊 / `cols` 一律不動 ⇒ 伺服器 slab(側牆全擋 LOS)、砲塔規則 #5、平衡與 e2e 天然不受影響 —— 現實中的明隧道側面本來就是實心擋土 facade(不是柱列),遮蔽語意與埋在山裡的側牆一致,**MUST NOT** 為了「看起來通透」改成開放柱列(那就是看得到卻打不到)。
 - 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
 - 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
   扇形曲線的槍口係數 `FAN_MUZZLE` **MUST NOT 手寫** —— 由 `FALLOFF.PLATEAU` 推導(= 在別人的近距平台邊界上恰好滿額)。
@@ -205,6 +208,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 冒煙:建 `BattleSim` 數 `sim.camps.length`(基準 L1 2/2、L2 4/4、L3 6/6) |
 | `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js` |
 | `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
+| **明隧道**(`biomes.js tunnelWallProfile`/`TUN.WALL_MIN\|EAVE\|PARAPET\|BUT_GAP\|BUT_MAX`/牆緞帶 `yF`・`yT`/`galBase`/外露頂板・女兒牆・扶壁) | `node tools/audit_open_tunnel.mjs`(51 項:Ⅰ 判定直測 + Ⅱ **執行 biomes.js 真正的發射器原文**逐頂點量幾何 + Ⅲ 純表現層靜態規則)—— **深埋隧道 MUST 逐點與舊制相同**(牆 = 路面−0.3 ~ 天花+0.2、不長頂板扶壁 = 舊行為不得回歸)、單邊薄只改**那一側**、挖穿時 facade 底緣 MUST 沉到側坡地表之下、頂板半寬 MUST = `hw + EAVE` 且 `EAVE > 0.6`(蓋過天花板小段)、扶壁的 local +X MUST = 擺位用的側向法線(A26)、`tunnelSegs`/`ceilSegs`/`hw`/`cols` MUST 不動。**改完 MUST 反向驗證**:把判定寫回「一律判成明隧道」/扶壁朝向差 90°/擺位差正負號/簷口窄於 0.6,稽核 MUST 在對應條目紅字 |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 | **地形射線**(`terrain.rayTerrain`/`markTriDead`/`punchPortalHoles`/`TERRAIN.GRID_N`)| `node tools/audit_terrain_ray.mjs`(11 項離線直測):與「暴力掃完全部三角形」逐條比對 —— 命中/未命中一致、命中距離 Δt < 1e-3、命中點 y 與 `heightAt` 同源、**打洞後穿洞射線不再被擋且仍與基準一致**、射點在圖外/平行軸/far 太短等邊界。**加速比應在兩位數以上**(退回個位數 = 網格行進退化成整圖掃描) |
