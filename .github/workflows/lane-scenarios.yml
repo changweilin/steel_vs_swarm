@@ -36,13 +36,21 @@ jobs:
         with:
           node-version: '22'
 
+      # Overpass/terrarium 的回應快取:跨 run 續跑用。公共 Overpass 節點排隊時單場地要等上
+      # 一分鐘,一次 job 掃不完 22 個場地 —— 有快取就能「每跑一次補上幾個場地」直到掃完。
+      - uses: actions/cache@v4
+        with:
+          path: tools/.scen_cache
+          key: scen-cache-${{ github.run_id }}
+          restore-keys: scen-cache-
+
       - name: 重烤指定場地兵線
         if: ${{ inputs.bake != '' }}
         run: ONLY='${{ inputs.bake }}' node tools/bake_venue_lanes.mjs
 
       - name: 兵線場景掃描
         continue-on-error: true
-        run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --json=scen.json
+        run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --max-min=14 --json=scen.json
 
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}

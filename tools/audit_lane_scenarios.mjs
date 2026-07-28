@@ -573,11 +573,23 @@ const SCEN = [
   if (a !== b) throw new Error(`場景代號與 venues.js SCEN_LABEL 不一致:\n  稽核 ${a}\n  標記 ${b}`);
 }
 
+// 整支時間預算(分鐘;0 = 不限)。Overpass 公共節點排隊時單一場地可能等上一分鐘,
+// 22 個場地跑成一小時的 CI job 誰也看不到中途進度 ⇒ 超時就把剩下的場地標成「未掃」,
+// 先把已完成的印出來。快取(.scen_cache)保留 ⇒ 下一次接著跑就會補完。
+const MAX_MS = (+(ARG['max-min'] || 0)) * 60000;
+const T_START = Date.now();
+
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
 console.log(`1v1(L1)兵線立體場景稽核 —— 場地 ${list.length}、砲塔高 ${TARGET_H.tower}m、`
   + `側向掃描 ${SIDE_MAX} 遊戲公尺(塔射程 ${UNITS.tower.range})\n`);
 const results = [];
+let skipped = 0;
 for (const v of list) {
+  if (MAX_MS && Date.now() - T_START > MAX_MS) {
+    skipped++;
+    console.log(`${(v.id + ' ').padEnd(15, '·')} ⏭ 時間預算用盡,未掃(快取保留,下次接著跑)`);
+    continue;
+  }
   const t0 = Date.now();
   const r = await scanVenue(v);
   r.secs = ((Date.now() - t0) / 1000).toFixed(0);
@@ -609,7 +621,7 @@ for (const [k, label] of SCEN) {
 // ---- venues.js 的 scen 標記 MUST 對得上實測(標記是給玩家看的提示,不能是臆測)----
 // 只在「整批掃描且該場地確實取得圖資」時比對:--only= 或 Overpass 掛掉時無從判定漏標。
 let tagBad = 0;
-if (!ONLY.length) {
+if (!ONLY.length && !skipped) {
   console.log('\nvenues.js scen 標記複驗:');
   for (const r of results) {
     if (r.error) { console.log(`  ⚠️ ${r.id}:${r.error} —— 無法複驗標記`); continue; }
@@ -625,5 +637,6 @@ if (!ONLY.length) {
   if (!tagBad) console.log('  ✓ 全數相符');
 }
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify({ results, pick }, null, 2));
-console.log(`\n總結:${SCEN.length - missing}/${SCEN.length} 種場景有預設場地、標記不符 ${tagBad}`);
-process.exit(missing || tagBad ? 1 : 0);
+console.log(`\n總結:${SCEN.length - missing}/${SCEN.length} 種場景有預設場地、標記不符 ${tagBad}`
+  + `${skipped ? `、未掃 ${skipped} 個場地(時間預算)` : ''}`);
+process.exit(missing || tagBad || skipped ? 1 : 0);
