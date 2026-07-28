@@ -5,6 +5,10 @@
 name: 兵線場景掃描
 
 on:
+  # 暫時的推送觸發:沙箱沒有 Overpass/terrarium 出口,靠 runner 跑掃描取結果。
+  # 掃描定案後 MUST 移除這段(這支不該隨每次推送去打別人的伺服器)。
+  push:
+    branches: [claude/1v1-map-scenarios-test-obzl6w]
   workflow_dispatch:
     inputs:
       only:
