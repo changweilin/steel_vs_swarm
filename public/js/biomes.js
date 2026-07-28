@@ -1842,7 +1842,15 @@ const PASS_W = 16;
 //   舊 12 上限在含多座隧道的密市區把排序在後的洞口砍掉,該洞既不打洞也不掛暗面 ⇒ 露出戳進
 //   斷面的原始地形土牆正面擋住視線(= 使用者「遠方看不到出入口」);舊 120 燈上限用罄後長/後段
 //   隧道遠端全黑。門洞是輕量 Group、punch 成本受 depth≤40/hw 有界,提高上限只增建圖成本、不動幾何縫。
-const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+// 明隧道(gallery / rock shed;2026-07-28 使用者需求)旋鈕 —— 覆蓋判定只看**中心線**藏不藏得住
+//   天花板,側向的土牆厚度沒人管:山腰蜿蜒路 / 縫合蓋廊段 / 引道開挖擦邊處,單邊土牆可能只剩
+//   幾公尺甚至被挖穿 ⇒ 側牆與天花板憑空浮在山坡上、坡面與結構之間一道看穿到洞內的縫。
+//   WALL_MIN 側向土牆最小厚度:自隧道邊緣往外量這麼遠,地表 MUST 全程高過頂板頂面(藏得住結構);
+//            任一取樣點沒到 = 該側改明隧道(外露頂板 + 落地擋土 facade + 扶壁)。
+//   EAVE     外露頂板較通行寬多挑出的簷口(MUST > 天花板小段的 +0.6,否則天花板邊緣露在簷外)。
+//   PARAPET  女兒牆高;BUT_GAP 扶壁間距;BUT_MAX 全圖扶壁實例上限(與 LAMP_MAX 同性質的資源閘)。
+const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
+              WALL_MIN: 7, EAVE: 0.8, PARAPET: 0.5, BUT_GAP: 9, BUT_MAX: 300 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -1874,6 +1882,55 @@ function tunnelCoverIntervals(pts, cum, floors, heightAt) {
   return merged
     .filter(([a, b]) => cum[b] - cum[a] >= TUN_COV_MIN)
     .map(([a, b]) => [cum[a], cum[b], a, b]);
+}
+const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形格 ~8.3m,三枚取樣已跨格)
+/**
+ * 隧道側向土牆體檢 → 明隧道判定(單一縫,2026-07-28)。
+ * `tunnelCoverIntervals` 只逐點問「**中心線**上方的地表藏不藏得住天花板」—— 藏得住就當洞內,
+ * 兩側牆整段立起、天花板墊在山體底下。但側向沒人管:單邊土牆薄到剩幾公尺(山腰蜿蜒路)、
+ * 被引道開挖擦掉、或本來就是縫合蓋廊段(地表比天花還低)時,從外面看就是一片混凝土浮在
+ * 山坡上,坡面與結構之間一道直接看穿到洞內的縫。這種地方現實中蓋的是**明隧道**:
+ * 結構自己站在地面上,有外露頂板、落地的擋土 facade、扶壁。
+ *
+ * 判定純幾何(逐頂點、逐側、無 `rnd` ⇒ 跨客戶端同一份):自隧道邊緣往外量 `TUN.WALL_MIN`,
+ * 任一取樣點的地表低於**頂板頂面**(路面 + CLEAR + ROOF_T)= 這一側藏不住 ⇒ 該側改明隧道。
+ * **只在覆蓋段判**(敞開段/洞口的牆本來就收成零高,見 buildRoads)。
+ *
+ * 回傳逐頂點 `{ open, gy, nx, nz }`:
+ *   open  該側改明隧道;**膨脹一格** —— 單點抖動會在山壁裡留下一段 6m 長的孤立 facade。
+ *   gy    側坡地表最低點(facade 落地基準),取前後一格的窗口最小值:頂點間距 ROAD_SEG=6m
+ *         大於側向取樣距,單點值會在窪處讓 facade 底緣漏出一道縫。
+ *   nx/nz 該側的側向單位法線(= 牆面緞帶用的同一組)—— facade / 頂板 / 扶壁**共用這一份**,
+ *         各自再算一次中央差分就是第二個縫(擺位與取樣方向一分家,牆就量錯坡)。
+ * @param side +1 / −1
+ */
+function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
+  const n = pts.length;
+  const raw = [];
+  for (let i = 0; i < n; i++) {
+    const [x, z] = pts[i];
+    const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)];
+    let dx = c[0] - a[0], dz = c[1] - a[1];
+    const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+    const nx = dz * side, nz = -dx * side;
+    const top = floors[i] + TUN.CLEAR + TUN.ROOF_T;   // 頂板頂面 = 土牆該蓋過的高度
+    let gy = Infinity, thin = false;
+    // 取樣點含**兩端**(牆面外 0.5m ~ WALL_MIN 整數點):`d += SAMP` 那種寫法會在最後一步
+    // 越界而漏掉最外圈,實際只量到 5.5m —— 門檻寫 7 卻量 5.5 = 旋鈕失真。
+    const nS = Math.max(2, Math.ceil((TUN.WALL_MIN - 0.5) / TUN_WALL_SAMP) + 1);
+    for (let k = 0; k < nS; k++) {
+      const d = hw + 0.5 + (TUN.WALL_MIN - 0.5) * k / (nS - 1);
+      const h = heightAt(x + nx * d, z + nz * d);
+      if (h < gy) gy = h;
+      if (h < top) thin = true;
+    }
+    raw.push({ thin, gy, nx, nz });
+  }
+  return raw.map((r, i) => ({
+    open: !!cov[i] && (r.thin || !!raw[i - 1]?.thin || !!raw[i + 1]?.thin),
+    gy: Math.min(r.gy, raw[i - 1]?.gy ?? Infinity, raw[i + 1]?.gy ?? Infinity),
+    nx: r.nx, nz: r.nz,
+  }));
 }
 // 高架橋橋面在兩端地面之上的抬升量(公尺):淨空 > 最大機甲(~4.5m)+ 餘裕 ⇒ 機甲從橋下通過不卡;
 // 橋面底緣另登記為天花碰撞(game.js),機甲跳不穿橋。
@@ -2661,6 +2718,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)+ 天花照明(InstancedMesh)
   const wall = { pos: [], nrm: [], idx: [], base: 0 };
   const beams = [], ceilLamps = [];
+  // 明隧道(2026-07-28):土牆藏不住結構的那一側 —— 外露頂板 + 女兒牆(緞帶)、扶壁(InstancedMesh)。
+  // facade 本身沿用同一條擋土牆緞帶(只是底緣落地、頂緣拉到頂板),不另開一份牆幾何。
+  const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
+  const buts = [];
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
   const cols = [];   // 結構碰撞柱(橋墩/門洞立柱/翼牆)→ blockers(game.js _collide 推擠,不可重疊)
@@ -2885,22 +2946,83 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             ceilSegs.push({ x1, z1, cy1: ceilOf(o0), x2, z2, cy2: ceilOf(o1), hw: hw + 0.6 });
           }
         }
-        // 兩側牆(路面 → 天花):覆蓋段立起,敞開段(洞口)收成零高不破圖
-        for (const side of [1, -1]) {
+        // 明隧道體檢(2026-07-28 使用者需求):逐頂點/逐側量側向土牆厚度,藏不住結構的那一側
+        // 改明隧道。**純表現層** —— 通行寬 hw / tunnelSegs(路面+天花碰撞)/ ceilSegs / 走廊 /
+        // 門洞一律不動 ⇒ 伺服器 slab(側牆全擋 LOS)、砲塔規則 #5、bal/e2e 全不受影響:
+        // 明隧道的側面在現實中也是實心擋土 facade(不是柱列),遮蔽語意與埋在山裡的側牆一致。
+        const floorsV = cum.map((s) => tFloorAt(s));
+        const covV = cum.map((s) => covS(s));
+        const galP = [1, -1].map((side) => tunnelWallProfile(run, floorsV, covV,
+          (x, z) => terrain.heightAt(x, z), hw, side));
+        const galAny = (i) => galP[0][i].open || galP[1][i].open;
+        // facade 落地基準(單一縫:牆緞帶與扶壁共用)—— 沉到側坡地表最低點之下 0.8m,
+        // 坡面與牆之間不留看穿的縫;埋在土裡的部分不花額外頂點(同一條緞帶只是拉長)。
+        const galBase = (i, g) => Math.min(floorsV[i] - 0.3, g.gy - 0.8);
+        // 兩側牆(路面 → 天花):覆蓋段立起,敞開段(洞口)收成零高不破圖。
+        // 明隧道側:同一條緞帶改當「落地擋土 facade」—— 底緣落到側坡地表之下、頂緣拉到頂板頂面
+        // (與外露頂板齊平,頂板再往外挑 EAVE 當簷口),外面看就是一座蓋在地面上的明隧道。
+        for (const prof of galP) {          // galP[0] = side +1、galP[1] = side −1(法線已含在 prof)
           const k0 = wall.base;
           for (let i = 0; i < nP; i++) {
             const [x, z] = run[i];
-            const a = run[Math.max(0, i - 1)], c = run[Math.min(nP - 1, i + 1)];
-            let dx = c[0] - a[0], dz = c[1] - a[1];
-            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
-            const vx = x + dz * hw * side, vz = z - dx * hw * side;
-            const yF = tFloorAt(cum[i]) - 0.3;
-            const yT = covS(cum[i]) ? ceilOf(cum[i]) + 0.2 : yF + 0.15;
+            const g = prof[i];
+            const vx = x + g.nx * hw, vz = z + g.nz * hw;
+            const yF = g.open ? galBase(i, g) : floorsV[i] - 0.3;
+            const yT = !covV[i] ? yF + 0.15
+              : g.open ? ceilOf(cum[i]) + TUN.ROOF_T
+                : ceilOf(cum[i]) + 0.2;
             wall.pos.push(vx, yF, vz, vx, yT, vz);
-            wall.nrm.push(-dz * side, 0, dx * side, -dz * side, 0, dx * side);
+            wall.nrm.push(-g.nx, 0, -g.nz, -g.nx, 0, -g.nz);
           }
           for (let i = 0; i < nP - 1; i++) { const k = k0 + i * 2; wall.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
           wall.base += nP * 2;
+          // 扶壁(buttress):明隧道段每 BUT_GAP 一支,自 facade 底緣頂到簷口。一整片平板混凝土
+          // 貼在山坡上不像結構物,扶壁是明隧道最好認的外觀特徵。**純視覺,不登記碰撞柱** ——
+          // 它們站在 facade 外側的坡面上,通行走廊在牆內側,登記了只會在山坡上多出隱形障礙。
+          let nextS = 0;
+          for (let i = 0; i < nP; i++) {
+            const g = prof[i];
+            if (!g.open || cum[i] < nextS || buts.length >= TUN.BUT_MAX) continue;
+            nextS = cum[i] + TUN.BUT_GAP;
+            const D = 0.9, off = hw + D / 2 - 0.15;   // 外挑深度 / 柱心離中線(略埋進牆面不留縫)
+            buts.push({ x: run[i][0] + g.nx * off, z: run[i][1] + g.nz * off,
+                        y0: galBase(i, g), y1: ceilOf(cum[i]) + TUN.ROOF_T,
+                        ry: Math.atan2(-g.nz, g.nx), d: D, w: 1.6 });
+          }
+        }
+        // 明隧道外露頂板 + 女兒牆(「明」的那一面):不透明天花板只是一片零厚度、朝下的板,
+        // 上面本來靠山體當屋頂;土牆藏不住的地方(單邊薄/挖穿/縫合蓋廊段)從外面與高空看
+        // 就是天花板邊緣與土坡之間的一道縫。補一塊有厚度的頂板(頂面 = 路面 + CLEAR + ROOF_T,
+        // 較通行寬外挑 EAVE 當簷口,MUST 蓋過 ceilSegs 的 hw+0.6),明隧道側再立女兒牆。
+        // 只在有明隧道側的小段建 —— 深埋段的頂板永遠在山體裡,建了也只是多幾個三角形。
+        {
+          const RW = hw + TUN.EAVE;
+          const topAt = (i) => ceilOf(cum[i]) + TUN.ROOF_T;
+          const quad = (c4, nrm) => {
+            const k = galRoof.base;
+            for (const c of c4) { galRoof.pos.push(c[0], c[1], c[2]); galRoof.nrm.push(nrm[0], nrm[1], nrm[2]); }
+            galRoof.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+            galRoof.base += 4;
+          };
+          for (let i = 0; i + 1 < nP; i++) {                                    // 頂面(兩側各外挑 EAVE)
+            if (!(covV[i] || covV[i + 1]) || !(galAny(i) || galAny(i + 1))) continue;
+            const A = galP[0][i], B = galP[0][i + 1], tA = topAt(i), tB = topAt(i + 1);
+            quad([[run[i][0] + A.nx * RW, tA, run[i][1] + A.nz * RW],
+                  [run[i][0] - A.nx * RW, tA, run[i][1] - A.nz * RW],
+                  [run[i + 1][0] + B.nx * RW, tB, run[i + 1][1] + B.nz * RW],
+                  [run[i + 1][0] - B.nx * RW, tB, run[i + 1][1] - B.nz * RW]], [0, 1, 0]);
+          }
+          // 女兒牆:該側兩端都是明隧道才立(轉換處的半段正好埋進山壁,看不到)
+          for (const prof of galP) {
+            for (let i = 0; i + 1 < nP; i++) {
+              if (!prof[i].open || !prof[i + 1].open) continue;
+              const A = prof[i], B = prof[i + 1], tA = topAt(i), tB = topAt(i + 1);
+              quad([[run[i][0] + A.nx * RW, tA, run[i][1] + A.nz * RW],
+                    [run[i][0] + A.nx * RW, tA + TUN.PARAPET, run[i][1] + A.nz * RW],
+                    [run[i + 1][0] + B.nx * RW, tB, run[i + 1][1] + B.nz * RW],
+                    [run[i + 1][0] + B.nx * RW, tB + TUN.PARAPET, run[i + 1][1] + B.nz * RW]], [A.nx, 0, A.nz]);
+            }
+          }
         }
         // 橫樑 + 天花燈:僅覆蓋區間內(含縫合蓋廊段 —— 蓋廊也有頂,照樣掛樑燈)
         for (let s = 6; s < total - 4 && beams.length < TUN.LAMP_MAX; s += 12) {
@@ -3341,6 +3463,41 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     m.frustumCulled = false;
     m.userData.noOutline = true;
     group.add(m);
+  }
+  // ---- 明隧道外露頂板 + 女兒牆(2026-07-28):土牆藏不住結構的段落,從外面/高空看見的是
+  // 完整的結構物頂面(而非零厚度的天花板邊緣與土坡之間的縫)。材質沿用門洞/collar 的混凝土
+  // —— 明隧道與洞口在現實中就是同一座構造物,同色才連得起來。----
+  if (galRoof.idx.length) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(galRoof.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(galRoof.nrm, 3));
+    geo.setIndex(galRoof.idx);
+    // polygonOffset:頂板頂面與「剛好等高的地表」在轉換帶會擦身而過(明隧道判定門檻正是
+    // 地表 < 頂板頂面),不推一點點就是一條閃爍的接縫。
+    const m = new THREE.Mesh(geo, envMat(0x9a958c, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    group.add(m);
+  }
+  // ---- 明隧道扶壁:facade 外側每 BUT_GAP 一支的立肋(純視覺,不登記碰撞柱)----
+  if (buts.length) {
+    const btM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+      envMat(0x938e85, { wash: 0.4, cool: 0.45 }), buts.length);
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+    const P = new THREE.Vector3(), S = new THREE.Vector3();
+    buts.forEach((b, i) => {
+      E.set(0, b.ry, 0); Q.setFromEuler(E);
+      P.set(b.x, (b.y0 + b.y1) / 2, b.z);
+      S.set(b.d, Math.max(0.5, b.y1 - b.y0), b.w);
+      M.compose(P, Q, S);
+      btM.setMatrixAt(i, M);
+    });
+    btM.instanceMatrix.needsUpdate = true;
+    btM.castShadow = false;
+    btM.frustumCulled = false;
+    btM.userData.noOutline = true;
+    group.add(btM);
   }
   // ---- 地下道不透明天花板:覆蓋段的頂板(擋住上方山體底面,從洞內抬頭看是天花而非穿幫的山體背面)----
   if (ceilSegs.length) {
