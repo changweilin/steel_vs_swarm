@@ -32,6 +32,7 @@ jobs:
           node tools/audit_gpu_lifecycle.mjs
           node tools/audit_minimap_view.mjs
           node tools/audit_object_joints.mjs
+          node tools/audit_lance_hit.mjs
 
       - name: 平衡四不變式
         run: npm run bal

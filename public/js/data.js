@@ -659,16 +659,27 @@ export const AOE_NAME = { blast: '爆炸傷害', fan: '扇形傷害', line: '直
 // ---- 直線貫穿(line)參數 ----
 // R:圓柱半徑(公尺,實體尺寸 ⇒ 與 AoE 半徑同樣不吃 COMBAT_SCALE)。光束最粗(定向能發散)、
 //   電磁彈射次之、反器材砲最細(單顆穿甲彈的破壞管道)。
+//   2026-07-28 使用者需求「擴大圓柱形的傷害判定範圍」:整組 ×1.5(3.6/2.8/2.2 → 5.4/4.2/3.3),
+//   機種間的粗細階梯(beam > rail > gun)維持不變。**演出跟著走**:_lanceVisual 一律取 lanceR(def)
+//   ⇒ 看到多粗就是打到多粗(A18 / 「動畫範圍須一致」)。**判定半徑 = R + 目標自身水平量體 hitR(t)**
+//   (見 sim._lanceHits)—— 純點判定連 7m 半徑的砲塔都打不中。
+//   平衡不動:bal 四不變式只模型化 1v1,首個目標恆為全額 ⇒ 加粗只改「順路掃到幾個」。
 // DECAY:每貫穿一名目標,後續目標傷害 ×此值。**首個目標恆為全額** ⇒ 單體 DPS 與舊 heroHit 相同,
 //   npm run bal 的四不變式(全部只模型化 1v1)不受影響 —— MUST NOT 改成首發也衰減。
 // MAX:單發最多貫穿目標數(防一條線掃穿整條兵線)。
+// BARRAGE_F:重砲模式(傾洩窗)的圓柱加粗係數。**原本只存在於演出端**(game.js _lanceVisual
+//   畫 1.5 倍粗),伺服器仍用原半徑結算 ⇒ 巨炮開下去「看到的比打到的粗 50%」,正是使用者回報的
+//   「打不到單位」之一。收進本縫後兩端同步(A18「看到多粗就是打到多粗」)。
 export const LANCE = {
-  R: { beam: 3.6, rail: 2.8, gun: 2.2 },
+  R: { beam: 5.4, rail: 4.2, gun: 3.3 },
   DECAY: 0.75,
   MAX: 6,
-  VBAND_F: 2.2,   // 垂直帶寬容 = R × 此值(伺服器無地形高程,射線高度只能近似 —— 見 sim.heroLance)
+  VBAND_F: 2.2,     // 垂直帶寬容 = R × 此值(伺服器無地形高程,射線高度只能近似 —— 見 sim.heroLance)
+  BARRAGE_F: 1.5,   // 重砲模式加粗(與 BARRAGE.RANGE_F 同層:傾洩窗的火力展開)
 };
-export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
+/** 貫穿圓柱半徑(公尺);barrage = 重砲傾洩窗 ⇒ 判定與演出**同時**加粗 */
+export const lanceR = (def, barrage = false) =>
+  (LANCE.R[def?.type] ?? LANCE.R.gun) * (barrage ? LANCE.BARRAGE_F : 1);
 
 // ---- 彈道五分類(2026-07-23 使用者定案)----
 //   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
@@ -903,6 +914,34 @@ export function hitH(e) {
   if (e.kind === 'base') return TARGET_H[`base:${e.side}`] ?? 44;
   if (e.civ) return TARGET_H.civ;
   return TARGET_H[`creep:${e.kind}`] ?? TARGET_H[e.kind] ?? SOLDIER_H * 1.6;
+}
+
+// ---- 命中量體「水平半徑」(2026-07-28 使用者回報「直線攻擊重武器常常打不到單位,特別是建築」)----
+// hitH 是同一把尺的**垂直**版;本組是**水平**版。舊制 _lanceHits 只拿單位的中心「點」比對圓柱,
+// 半徑 7m 的砲塔 / 20m 的主堡打在牆面上就離中心 5~18m ⇒ 明明打中了卻整發落空(建築尤其明顯,
+// 因為體積最大)。伺服器貫穿判定與客戶端碰撞/本地估算 MUST 共用這一支,各寫一份 = 看得到卻打不到。
+// **英雄不手寫**:半徑正比機體實高(HERO_HIT_R × heroTargetH),與體型綁角色護甲的規則同源 ——
+// 巨大機甲既難閃也難躲(係數沿用 game.js 舊 heroCollider 的觀感校準值)。
+export const HERO_HIT_R = { robot: 0.43, morph: 0.43, drone: 0.80 };
+// 非英雄單位/工事的水平半徑(公尺,真實世界公稱尺寸的一半;塔/主堡維持既有碰撞量體)
+export const TARGET_R = {
+  decoy: 1.1,
+  'creep:soldier': 0.6, 'creep:rocketeer': 0.6, 'creep:howitzer': 0.6,
+  'creep:apc': 1.6, 'creep:tank': 1.9, 'creep:heli': 3.0,
+  tower: 7, 'base:SWARM': 20, 'base:STEEL': 20,
+  bunker: 3.4,
+  civ: 0.6,
+};
+/**
+ * 命中量體水平半徑(公尺):貫穿圓柱/碰撞圓柱的「機體橫向量體」。
+ * 查無者退回 SOLDIER_H × 0.5(人員級量體)—— 寧可小,不要無端放大不明物件。
+ */
+export function hitR(e) {
+  if (!e) return SOLDIER_H * 0.5;
+  if (e.hero) return heroTargetH(e.kind, e.ch) * (HERO_HIT_R[e.kind] ?? 0.43);
+  if (e.kind === 'base') return TARGET_R[`base:${e.side}`] ?? 20;
+  if (e.civ) return TARGET_R.civ;
+  return TARGET_R[`creep:${e.kind}`] ?? TARGET_R[e.kind] ?? SOLDIER_H * 0.5;
 }
 
 // ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----

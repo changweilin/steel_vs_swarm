@@ -377,14 +377,15 @@ export function cycloneJet(color = 0xffd27a) {
 }
 
 /** 能量光束:兩點間的發光圓柱(雷射/磁軌/電漿焰舌;展示台與戰場共用) */
-export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 } = {}) {
+// op:不透明度(預設 0.85)。滿寬的貫穿通道要壓低,否則整根實心柱子會把畫面糊掉。
+export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08, op = 0.85 } = {}) {
   const dir = to.clone().sub(from);
   const len = dir.length();
   if (len < 0.01) return;
   const beam = new THREE.Mesh(
     unitCylinder(6),   // 共用單位圓柱:粗細/長度靠 scale(不再每條配一份幾何)
     new THREE.MeshBasicMaterial({
-      color, transparent: true, opacity: 0.85,
+      color, transparent: true, opacity: op,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }),
   );
@@ -396,7 +397,7 @@ export function beamLine(scene, effects, from, to, color, { ttl = 0.4, w = 0.08 
   effects.push({
     obj: beam, ttl,
     fade(o, f) {
-      o.material.opacity = 0.85 * f;
+      o.material.opacity = op * f;
       o.scale.x = o.scale.z = w * (0.3 + 0.7 * f);   // 光束冷卻收細
     },
   });

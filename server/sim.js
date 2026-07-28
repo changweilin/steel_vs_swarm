@@ -10,7 +10,7 @@ import {
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange,
-  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH,
+  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   ALTITUDE, altScale, WATER, TERRAIN_FX, offGround, airUnit,
 } from '../public/js/data.js';
 
@@ -1526,8 +1526,9 @@ export class BattleSim {
       const oy = (h.y || 0) + LOS.EYE_M;
       const hx = t.x - h.x, hz = t.z - h.z, hy = this._tgtY(t) - oy;
       const hl = Math.hypot(hx, hz, hy) || 1;
+      // 射線長維持 bot 自己的射程判定(上方 _botFire 未含 BARRAGE.RANGE_F),只有圓柱粗細吃傾洩窗
       const hits = this._lanceHits(h, wp.def, h.x, h.z, oy, hx / hl, hz / hl, hy / hl,
-        wp.def.range * this._altRange(h, t, wp.def));
+        wp.def.range * this._altRange(h, t, wp.def), this._barragingDmg(h));
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
@@ -1630,9 +1631,16 @@ export class BattleSim {
    * y 的語意是「離站立表面高」,射線的絕對高度算不出來(見 _losBlocked 同一組近似)。
    * 垂直帶用客戶端回報的 dy 外推射線高度,寬容 R × LANCE.VBAND_F;
    * 真正的遮蔽仍由逐目標 _losBlocked 把關(與 heroPlasma 同一條規則)。
+   *
+   * 判定量體(2026-07-28,使用者回報「常常打不到單位,特別是建築」)——兩處舊病:
+   *   ① **目標是點**:半徑 R 的圓柱只比對單位中心,7m 半徑的砲塔 / 20m 的主堡打在牆面上
+   *      離中心 5~18m ⇒ 明明命中卻整發落空。改為 R + hitR(t)(垂直帶的水平版,見 data.js)。
+   *   ② **射線被目標自己截斷**:客戶端回報的 len 止於「彈道終點」—— beam 的準星射線、
+   *      動能彈的落點都停在目標**近側表面**,而目標中心在那之後 ⇒ s > maxS 判成落空。
+   *      改為量到「線段上最近點」(s 夾制到 [0, maxS])而非要求中心落在線段內。
    */
-  _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len) {
-    const R = lanceR(def);
+  _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len, barrage = false) {
+    const R = lanceR(def, barrage);
     const band = R * LANCE.VBAND_F;
     const hd = Math.hypot(dx, dz);
     // 近乎垂直的射線(仰俯角 > 81°:對正上方的無人機開火)水平投影會退化 —— 改以高度差當軸向。
@@ -1648,21 +1656,28 @@ export class BattleSim {
       if (t.side === shooter.side || t.gar || (t.hero && t.dead)) continue;
       const ty = this._tgtY(t);
       const tx = t.x - ox, tz = t.z - oz;
+      const rr = R + hitR(t);                                  // 圓柱半徑 + 目標自身水平量體
       let s, perp;
       if (vert) {
         s = (ty - oy) * sy;                                    // 垂直射線:軸向 = 高度差
         perp = Math.hypot(tx, tz);
       } else {
         s = tx * ux + tz * uz;                                 // 水平投影軸距
-        // 垂直帶(見上方幾何近似說明):比對的是**機體整條垂直帶**而非單一取樣點 ——
-        // 26m 的塔 / 10m 的機甲被瞄準頭部時,單點取樣(_tgtY)會讓整條射線判成落空。
-        if (this._bodyDy(t, oy + slope * s) > band) continue;
         perp = Math.hypot(tx - ux * s, tz - uz * s);
       }
-      if (s < 0 || s > maxS || perp > R) continue;
+      // 軸向:量到**線段**(而非無限長軸)—— 中心落在線段外時夾回端點再量,
+      // 目標近側表面就是彈道終點的情形(建築/大機體)才不會被判成落空。
+      const sc = s < 0 ? 0 : (s > maxS ? maxS : s);
+      if (!vert) {
+        // 垂直帶(見上方幾何近似說明):比對的是**機體整條垂直帶**而非單一取樣點 ——
+        // 26m 的塔 / 10m 的機甲被瞄準頭部時,單點取樣(_tgtY)會讓整條射線判成落空。
+        if (this._bodyDy(t, oy + slope * sc) > band) continue;
+        if (s !== sc) perp = Math.hypot(tx - ux * sc, tz - uz * sc);
+      }
+      if (Math.hypot(perp, s - sc) > rr) continue;
       if (!pulse && !this._visibleTo(t, shooter.side, src)) continue;
       if (this._losBlocked(ox, oz, oy, t.x, t.z, ty, shooter, t)) continue;
-      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy) });
+      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy) });   // 排序用**原始**軸距,貫穿先後才對
     }
     out.sort((a, b) => a.s - b.s);
     return out.length > LANCE.MAX ? out.slice(0, LANCE.MAX) : out;
@@ -1698,7 +1713,7 @@ export class BattleSim {
       if (b.dead) continue;
       // 僚機以各自位置沿同射向貫穿(與 heroPlasma 同構;N=1 時只有本機)
       const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
-      const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
+      const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max, rMul !== 1);
       for (let i = 0; i < hits.length; i++) {
         const { t, d3 } = hits[i];
         if (d3 > wp.def.range * this._altRange(b, t, wp.def) * 1.25 * rMul) continue;   // 高度制空
@@ -1714,9 +1729,9 @@ export class BattleSim {
       const m = this.missiles[i];
       if (m.side === h.side) continue;
       const mx = m.x - ox, mz = m.z - oz, my = m.y - oy;
-      const s = mx * dx + mz * dz + my * dy;
-      if (s < 0 || s > max) continue;
-      if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def)) continue;
+      const s0 = mx * dx + mz * dz + my * dy;
+      const s = s0 < 0 ? 0 : (s0 > max ? max : s0);   // 量到線段最近點(與 _lanceHits 同一條規則)
+      if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def, rMul !== 1)) continue;
       const d3 = Math.hypot(mx, mz, my);
       if (d3 > wp.def.range * 1.25 * rMul) continue;
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);

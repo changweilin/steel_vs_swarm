@@ -70,14 +70,21 @@
   (`trajClass()` → lob / flat / line / guide / fnf)只住 `data.js`,由 `def.type`/`fan`/`guide` **推導**;
   sim(`heroBurst`/`heroPlasma`/`heroLance`)、game.js 演出、HUD 說明**共用同一支**,
   **MUST NOT** 手寫逐武器分類表,也 MUST NOT 在結算/演出端各自比對 `def.type`。
-- 直線貫穿的演出唯一入口 `_lanceVisual()`(自機/他人/bot 共用);圓柱粗細 **MUST** 取 `lanceR(def)`
-  = 伺服器實際判定半徑(看到多粗就是打到多粗,MUST NOT 為了好看放大)。
+- 直線貫穿的演出唯一入口 `_lanceVisual()`(自機/他人/bot 共用);圓柱粗細 **MUST** 取 `lanceR(def, barrage)`
+  = 伺服器實際判定半徑(看到多粗就是打到多粗,MUST NOT 為了好看放大)。**重砲傾洩窗的加粗
+  MUST 也走這一支**(`LANCE.BARRAGE_F`)—— 前科:演出端自己寫 `barrage ? 1.5 : 1`,伺服器沒跟上,
+  巨炮開下去有一半的粗度是空頭支票(2026-07-28「打不到單位」病灶之一)。
 - 拋物線武器(`trajClass==='lob'`)的火控解只住 `game.js _lobAim()`(每幀在擊發前定案 `this._lobFc`):
   出膛向量、瞄準虛線、鎖定光暈、FPV 砲管仰角**共用同一份**,MUST NOT 在擊發/繪製端各解一次。
   光暈亮不亮 = `_arcTrace` 的 `minD ≤ BALLISTIC.LOB_TOL`(彈道真的通過瞄準點),MUST NOT 退回準星直射線判定。
 - 機體高度只住 `data.js`(`SOLDIER_H`/`HERO_SIZE`/`heroTargetH()`/`TARGET_H`,`models.js` 只 re-export):
   同一把尺同時餵渲染縮放(`fitToHeight`)與**伺服器命中量體** `hitH()`(`sim._bodySpan/_bodyDy` 的機體垂直帶)。
   爆風/貫穿 **MUST** 量到垂直帶最近點,MUST NOT 只取單位底部或單一取樣點(打中塔頂/頭部會判成十幾公尺外)。
+- 機體**水平半徑**同理只住 `data.js` 的 `hitR()`(`HERO_HIT_R` × `heroTargetH` 推導 + `TARGET_R` 查表)——
+  這是 `hitH()` 的水平版。**貫穿圓柱判定 MUST 是 `lanceR(def) + hitR(t)`**,MUST NOT 只比對單位中心座標
+  (2026-07-28:砲塔半徑 7m / 主堡 20m,純點判定 ⇒ 打在建築牆面上整發落空 = 使用者回報的「打不到建築」)。
+  客戶端 `game.js` 的 `COLLIDER` / `heroCollider()` **MUST** 由 `hitR`/`hitH` 推導 —— 碰撞量體與命中量體
+  分家就是「撞得到卻打不到」;但該表**鍵集** MUST NOT 隨 `TARGET_R` 增列而擴張(會讓直升機/碉堡突然擋路)。
 - **連線機制**(雲端 / 區網 / 單機)的判定只住 `data.js` 之外的 `netmode.js`:模式解析、雲端節點網址正規化、
   `wsUrl()` 全在那一支;傳輸層一律經 `net.js makeNet()` 取得(WebSocket 或瀏覽器內主機)。
   `main.js` **MUST NOT** 自己 `new Net()`、自己看 `location.host`、或另寫 `if (單機)` 的文案分支。
@@ -117,7 +124,7 @@
 | A9 | 客戶端 `wstate` 彈藥與伺服器小幅漂移是 **by design**(miss 不回報);**MUST NOT**「修正」 |
 | A10 | 迷霧是伺服器端快照過濾;客戶端 **MUST NOT** 對單位標記二次遮蔽 |
 | A11 | 爆風 `_blast` 刻意不吃 LOS 遮蔽(繞射近似);**MUST NOT**「補完」 |
-| A18 | 直線貫穿 `heroLance` 的圓柱判定是「水平垂距 + 垂直帶」而非純 3D 垂距(伺服器無地形高程、y = 離站立表面高);**MUST NOT**「修正」成 3D —— 高低差地形會讓整條射線落空。line 類重武器一發只過一次 `_gateFire`,客戶端 **MUST NOT** 另送 `hitMissile`(飛彈擊落已併進圓柱掃描) |
+| A18 | 直線貫穿 `heroLance` 的圓柱判定是「水平垂距 + 垂直帶」而非純 3D 垂距(伺服器無地形高程、y = 離站立表面高);**MUST NOT**「修正」成 3D —— 高低差地形會讓整條射線落空。line 類重武器一發只過一次 `_gateFire`,客戶端 **MUST NOT** 另送 `hitMissile`(飛彈擊落已併進圓柱掃描)。**判定量體(2026-07-28)**:半徑 **MUST** 是 `lanceR(def) + hitR(t)`(目標不是點 —— 見 §2.1),軸距 **MUST** 量到**線段上最近點**(`s` 夾制到 `[0, maxS]`)而非要求目標中心落在線段內 —— 客戶端回報的 `len` 止於彈道終點,而彈道終點就是目標的**近側表面**,要求中心落在線段內等於「打中了才判成沒打中」。**排序仍 MUST 用原始 `s`**(夾制值會把所有外溢目標並列在端點,貫穿衰減序就亂了)。連帶:貫穿光束的準星射線 `_resolveAim(far, pierce=true)` **MUST NOT** 停在第一個單位上(停了就只剩「打到誰都沒傷害」) |
 | A12 | `[#INC-103]` 無人機重生的 `deadTick` 跨 tick 守衛 **MUST NOT** 以「優化延遲」為由移除 |
 | A13 | `[#INC-105]` 中立 ents(`side:null, neutral:true`):`_acquireTarget`/`_acquire`/tick 主迴圈三處 **MUST** skip neutral,否則 `UNITS[kind]` undefined 直接炸 |
 | A14 | `[#INC-106]` toon 三階 ramp 暗部 **MUST NOT** 調低於 102;材質一律走 `toon.js mat()` 包裝(MeshToonMaterial 無 roughness/metalness) |
@@ -188,8 +195,9 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `BOT_DIFF[].gap\|react`/`BOT_OPS`/`bots.js _op()`(電腦難度操作節奏) | e2e「電腦難度操作節奏」段(難度單調、最高難度對齊頂尖 FPS 電競 0.15s、全類操作合計 ≤ 手速上限、反應時間內不開火)+ `npm run sim`(headless 對局跑得完、無例外)+ 沙包輸出探針(90s 輸出 MUST 隨難度單調遞增) |
 | `ECON.UPG_BASE\|UPG_INC\|UPG_L3`(八軌階梯單價) | `npm run bal` ③(收入 ≈ 八軌全滿 ±10%;第三階改 200 後餘裕僅 1.7 個百分點)+ e2e「八軌升級第三階單價」段 |
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
+| **直線貫穿命中判定**(`_lanceHits` 幾何 / `LANCE.R\|BARRAGE_F\|VBAND_F` / `lanceR` / `hitR`・`TARGET_R`・`HERO_HIT_R` / `_resolveAim` 的 `pierce` / `_lancePierced`) | `node tools/audit_lance_hit.mjs`(27 項離線直測):**打在塔身側面(離塔心 5m)MUST 命中、完全打偏 MUST 落空**、**射線止於目標近側表面 MUST 命中**(len < 到中心距離)、長度不足/背後 MUST 落空、貫穿序與 `DECAY^i` 逐項對上公式、垂直帶塔頂命中·帶外落空、**傾洩窗加粗 MUST 生效於伺服器結算**(演出的 1.5 倍粗不得是空頭支票)、友軍/駐守不列入。**改完 MUST 做反向驗證**:把 `_lanceHits` 寫回舊制(點判定 + 中心須落在線段內),稽核 MUST 在對應兩條紅字 |
 | `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`(榴彈火控解) | 瀏覽器真開房冒煙:同一目標三個高度各射一發,`bullet.vel` MUST 等於 `_lobFc.vel`、爆點高度 MUST 對上瞄準高度;弧高 MUST 隨距離變(40m ≈ 0.2m / 172m ≈ 3.7m);合成稜線擋道 MUST `ok:false` 且不送 `lock` |
-| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中 |
+| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中。**動 `hitR`/`TARGET_R`/`HERO_HIT_R`(水平量體)MUST 一併跑 `node tools/audit_lance_hit.mjs`** —— 那組值同時是 `game.js COLLIDER` 的碰撞半徑 |
 | `AIR`(GRAV/OFF_GROUND/KINDS)/`envTrigger`/`TERRAIN_FX.*_EYE_F`(騰空豁免 / 空中狀態 / 地形異常門檻) | headless 直測:`airUnitY('robot')` MUST = `jumpApex(UNITS.robot.jump)`(**普通小跳實測頂點 MUST < 此值** ⇒ 小跳仍踩雷、蓄力跳不踩)+ 火場 y=0 灼傷 / y>ε 免疫、**無人機 y=10 MUST 仍灼傷**(飛行機種吃 `fire.maxY`,平衡不動)+ `heroPos` wet=2 扣血 / 騰空 wet=0 立即停。瀏覽器真開房(有水域場地,如倫敦泰晤士)同步泵幀迴圈:深水 code=1、淺灘/沼澤帶上緣 code=0、跳躍中 air 幀 code 全 0 |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗(`[#INC-104]` 輕武器 NPC 基準 range MUST ≥170;t01/s02 是確定性指定角 MUST 保持 crit:0;s02 heavy MUST 保持 launcher)+ 重驗「塔 310 > 所有輕武器/NPC」壓制不等式與「所有重武器 > 塔 310」不等式 |
 | 骨架/關節/步態 | 全角色 rig 稽核 + `node tools/audit_cast_jump.mjs` |
