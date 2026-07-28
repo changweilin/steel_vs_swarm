@@ -576,7 +576,9 @@ export async function buildTerrain(cfg, onProgress) {
   /**
    * 地下道洞口開挖(2026-07-15;2026-07-22 改制):**只開挖 approaches / 敞開段**,深山段完全不動 →
    * 天花板上方的山體地表保持原樣(照常鋪地被拼圖)。
-   * runs: [{ pts:[[x,z]…], floors:[y…] }](floors = 該點的平直路面高度)。
+   * runs: [{ pts:[[x,z]…], floors:[y…], hw? }](floors = 該點的路面高度;hw = 該段自己的通行半寬,
+   * 省略則吃選項的預設值 —— 地下道/隧道的通行寬取自圖資車道數,寬過預設 9 的話固定值會讓
+   * 路面兩緣落在沒開挖到的斜坡裡 = 路面邊緣被土埋住)。
    * 呼叫端(biomes.js)只送「敞開補集」折線(覆蓋段/縫合蓋廊段不送)—— 本函式對送進來的
    * 走廊一律開挖,規則:原地表低於「路面 + clear + 1」(藏不住天花板)才動。
    * 剖面:路廊(≤ hw+1)全深壓到路面高;向外至 hw+7 以 smoothstep 漸束回原地表 =
@@ -584,8 +586,8 @@ export async function buildTerrain(cfg, onProgress) {
    */
   function carveTunnels(runs, { clear = 8, hw = 9 } = {}) {
     if (!runs?.length) return;
-    const full = hw + 1;
-    const near = hw + 7;
+    const fullOf = (r) => (r.hw ?? hw) + 1;
+    const nearOf = (r) => (r.hw ?? hw) + 7;
     const proj = (x, z, r) => {                       // 最近段 + 內插路面高
       let bd = Infinity, bf = 0;
       for (let i = 0; i < r.pts.length - 1; i++) {
@@ -605,6 +607,7 @@ export async function buildTerrain(cfg, onProgress) {
         const k = i * N + j, orig = heights[k];
         let target = Infinity;
         for (const r of runs) {
+          const full = fullOf(r), near = nearOf(r);
           const p = proj(x, z, r);
           if (p.d > near) continue;
           if (orig < p.floor + clear + 1) {   // 藏不住天花板的敞開/洞口段才挖
@@ -637,7 +640,7 @@ export async function buildTerrain(cfg, onProgress) {
       ictx.lineCap = 'round';
       ictx.lineJoin = 'round';
       for (const r of runs) {
-        for (const [color, w] of [['#877c6a', (near + 1.5) * 2], ['#948a76', hw * 2]]) {
+        for (const [color, w] of [['#877c6a', (nearOf(r) + 1.5) * 2], ['#948a76', (r.hw ?? hw) * 2]]) {
           ictx.strokeStyle = color;
           ictx.lineWidth = Math.max(2, w * pxPerM);
           ictx.beginPath();

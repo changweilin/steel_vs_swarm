@@ -1,9 +1,9 @@
 // ============ 1v1 兵線立體場景稽核(離線;找測試用預設場地)============
 // 用途:回答「哪一個預設場地的 **1v1(L1)兵線**上,真的走得到某種立體交通場景」——
-// 供手動測試七種情境各挑一張預設地圖:
+// 供手動測試八種情境各挑一張預設地圖:
 //   ① 隧道(山體):道路平坦,鑽進突起的地形 —— 深度來自山
-//   ② 地下道(平地下穿):地形平坦,路面一端往下、另一端上來 —— 深度來自挖。
-//      **現行引擎不生成**(見下方 KNOWN_GAP),稽核只列圖資上的候選段
+//   ② 地下道(平地下穿):地形平坦,路面一端往下、另一端上來 —— 深度來自挖
+//      (2026-07-28 起引擎會生成:`biomes.js underpassPlan` 把平坦 tunnel way 改吃下沉剖面)
 //   ③ 地面高架橋(兵線走在**純陸域**橋面上)  ④ 明隧道(側向土牆藏不住結構那一側)
 //   ⑤ 平交道(兵線與地面鐵軌平面交會)        ⑥ 穿越高架橋底部(兵線從橋下鑽過)
 //   ⑦ 穿越地下道上方(兵線從洞頂走過)
@@ -12,8 +12,9 @@
 //      不是可以佔領的戰術高地)
 //
 // 兩個附帶診斷(不是場景,但選場地時要看):
-//   跨水橋   兵線走在橋上但橋跨的是水域 —— ② 刻意不收(使用者要純陸域高架橋)
-//   地下道候選 圖資掛 tunnel 但地形平坦 ⇒ 路面沉不下去(深度 0)⇒ buildRoads 當一般道路(= ② 的候選)
+//   跨水橋   兵線走在橋上但橋跨的是水域 —— ③ 刻意不收(使用者要純陸域高架橋)
+//   落空地下道 圖資掛 tunnel、地形也平坦,但 underpassPlan 放棄(人行道 / 引道空間不足 /
+//            要挖到 SINK_MAX 以上 / 走廊碰水)⇒ 仍當一般道路,列出來供評估
 //
 // 資料來源與執行期完全同源:
 //   - 兵線/主堡/bbox:`venues.js venueConfig(v, 1)` + `data.js battleBBox`(teamSize=1 ⇒ L=1)
@@ -21,14 +22,14 @@
 //     Overpass 的公共鏡像對雲端 IP 幾乎一律拒絕 ⇒ 全掛時退到 OSM 官方 API 的 /map(見 OSM_API)
 //   - 高程:AWS terrarium 磚(= `terrain.js` 主來源),再走同一條「3×3 平滑 → 兵線外 AMP 放大
 //     → 塔位乾地帶抬升」管線,故本工具的 heightAt 與遊戲內地形同形。
-//   - 隧道覆蓋/明隧道判定:**直接執行 `biomes.js` 的函式原文**(tunnelCoverIntervals /
-//     tunnelWallProfile;抽原文的理由同 audit_open_tunnel.mjs —— biomes.js 的 three 走 CDN
-//     importmap,Node 端 import 不了,另抄一份公式則永遠會通過)。
+//   - 隧道覆蓋/地下道規劃/明隧道判定:**直接執行 `biomes.js` 的函式原文**(tunnelCoverIntervals /
+//     tunFloorAt / underpassPlan / tunnelWallProfile;抽原文的理由同 audit_open_tunnel.mjs ——
+//     biomes.js 的 three 走 CDN importmap,Node 端 import 不了,另抄一份公式則永遠會通過)。
 //
 // 網路:第一次跑會抓圖資 + terrarium 高程,結果寫進 `tools/.scen_cache/`(之後純離線可重跑)。
 // 用法:node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
 //      node tools/audit_lane_scenarios.mjs --probe='25.09,121.54,自強隧道;40.78,-73.97,中央公園'  ← 找新場地用
-// 退出碼:0 = 七種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
+// 退出碼:0 = 八種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
@@ -80,6 +81,7 @@ function pickConst(name, fallbackMap = {}) {
     .map((s) => { const [k, v] = s.split(':').map((t) => t.trim()); return [k, k in fallbackMap ? fallbackMap[k] : +v]; }));
 }
 const TUN = pickConst('TUN', { CLEAR: LOS.TUN_CLEAR_M });   // TUN.CLEAR 的單一縫住 data.js
+const UND = pickConst('UND');
 const ROAD_W = pickConst('ROAD_W');
 const PASS_W = +/const PASS_W = (\d+)/.exec(bsrc)[1];
 const ROAD_SEG = +/const ROAD_SEG = (\d+)/.exec(bsrc)[1];
@@ -101,6 +103,9 @@ const tunnelCoverIntervals = evalBlock('function tunnelCoverIntervals(', 'tunnel
   { TUN_GAP_CLOSE, TUN_COV_MIN });
 const tunnelWallProfile = evalBlock('const TUN_WALL_SAMP', 'tunnelWallProfile');
 const densify = evalBlock('function densify(', 'densify');
+// 地下道規劃(平坦 tunnel way 的下沉剖面)—— 與遊戲同一份原文
+const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
+  { ROAD_SEG, WATER, densify, tunnelCoverIntervals });
 const roadWidth = (tags) => {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
@@ -479,8 +484,13 @@ const SIDE_MAX = +(ARG.side || 300);
 const SIDE_STEP = 10;
 const SIDE_RUN_MIN = 60;  // 高地要連續涵蓋這麼長的兵線才算「一側有高地」
 
-/** 結構 way 的覆蓋區間(遊戲公尺弧長)+ densify 後的世界折線;非隧道回 intervals:[] */
-function tunnelRunOf(way, center, heightAt) {
+/**
+ * 結構 way 的覆蓋區間(遊戲公尺弧長)+ densify 後的世界折線;建不成結構回 intervals:[]。
+ * 兩種結構共用這一支(判定順序與 biomes.js 的 carve 指派完全相同):
+ *   直線剖面藏得住天花板 → **山體隧道**(under:false);
+ *   藏不住(平地)→ 交給 underpassPlan 試 **地下道**(under:true,折線含兩端引道延伸段)。
+ */
+function tunnelRunOf(way, center, heightAt, hf) {
   const raw = way.geometry.map((p) => llToWorld(p.lat, p.lon, center));
   if (raw.length < 2) return null;
   const pts = densify(raw, ROAD_SEG);
@@ -489,7 +499,13 @@ function tunnelRunOf(way, center, heightAt) {
   const hA = heightAt(pts[0][0], pts[0][1]), hB = heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
   const floors = cum.map((s) => hA + (hB - hA) * (s / tot));
   const intervals = tunnelCoverIntervals(pts, cum, floors, heightAt);
-  return { pts, cum, floors, intervals };
+  if (intervals.length || !hf) return { pts, cum, floors, intervals, under: false };
+  const up = underpassPlan(raw, way.tags, heightAt, {
+    minX: hf.minX + UND.EDGE, maxX: hf.maxX - UND.EDGE,
+    minZ: hf.minZ + UND.EDGE, maxZ: hf.maxZ - UND.EDGE,
+  });
+  if (!up) return { pts, cum, floors, intervals, under: false };
+  return { pts: up.pts, cum: up.cum, floors: up.floors, intervals: up.intervals, under: true, sink: up.sink };
 }
 
 /** 兵線與 way 的同向重疊區間(兵線弧長 [s0,s1] 陣列) */
@@ -516,7 +532,8 @@ async function scanVenue(v) {
   const bbox = battleBBox(cfg);
   const sampleElev = await elevSampler(bbox);
   if (!sampleElev) { res.error = '高程磚下載失敗'; return res; }
-  const { heightAt } = buildHeightField(cfg, bbox, sampleElev);
+  const hf = buildHeightField(cfg, bbox, sampleElev);
+  const { heightAt } = hf;
   const center = cfg.center;
   const laneW = cfg.lanes[0].map(([lat, lng]) => llToWorld(lat, lng, center));
   const laneD = densify(laneW, ROAD_SEG), laneCum = arcOf(laneD);
@@ -584,14 +601,13 @@ async function scanVenue(v) {
       }
       continue;
     }
-    // 隧道:先問「執行期真的成洞嗎」(平坦市區掛 tunnel tag 不立結構)
-    const tr = tunnelRunOf(way, center, heightAt);
+    // 隧道/地下道:先問「執行期真的成洞嗎」(山體藏得住 → 隧道;平地 → 試挖地下道)
+    const tr = tunnelRunOf(way, center, heightAt, hf);
     if (!tr || !tr.intervals.length) {
-      // 圖資是地下道,但地形平坦 ⇒ 覆蓋區間為空 ⇒ buildRoads 當一般道路(不開挖、不立門洞)。
-      // 這正是「平地地下道」在現行高度場設計下建不出來的證據,列出來供評估。
+      // 圖資是地下道,山體藏不住、underpassPlan 也放棄(人行道 / 引道空間不足 / 太深 / 碰水)
+      // ⇒ buildRoads 當一般道路。列出來供評估,不記成 hits(標記代表「遊戲裡真的走得到」,
+      // 這裡走得到的是一條普通街道)。
       if (onLen >= ON_MIN && canCarry) {
-        // 圖資上這段就是地下道(路面該下沉),只是引擎不生成 ⇒ 記成 ② 的候選,不記成 hits:
-        // 標記代表「遊戲裡真的走得到」,這裡走得到的是一條普通街道。
         const cur = res.flatTunnel;
         if (!cur || onLen > cur.len) res.flatTunnel = { name, len: Math.round(onLen) };
         structArcs.push(...runs);
@@ -602,7 +618,7 @@ async function scanVenue(v) {
     const covIdx = new Set();
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covIdx.add(i);
     if (onLen >= ON_MIN && canCarry) {
-      // ① 地下道:重疊段要真的落在覆蓋區間內(否則只是走在引道上)
+      // ①/② 洞段:重疊段要真的落在覆蓋區間內(否則只是走在引道上)
       let covLen = 0;
       for (let i = 1; i < laneD.length; i++) {
         const mid = [(laneD[i][0] + laneD[i - 1][0]) / 2, (laneD[i][1] + laneD[i - 1][1]) / 2];
@@ -615,11 +631,15 @@ async function scanVenue(v) {
         if (covIdx.has(k)) covLen += laneCum[i] - laneCum[i - 1];
       }
       if (covLen >= ON_MIN) {
-        const cur = res.hits.tunnel;
-        if (!cur || covLen > cur.len) res.hits.tunnel = { name, len: Math.round(covLen) };
-        // ③ 明隧道:同一條隧道的側向土牆體檢(biomes.js 唯一結算縫)
+        // 山體隧道 = ①、地下道 = ②(深度來自山還是來自挖,是兩種場景)
+        const key = tr.under ? 'underpass' : 'tunnel';
+        const cur = res.hits[key];
+        if (!cur || covLen > cur.len) res.hits[key] = { name, len: Math.round(covLen) };
+        // ④ 明隧道:同一條隧道的側向土牆體檢(biomes.js 唯一結算縫)。
+        // 地下道不在此列 —— 它的頂是沒被開挖的原地表,buildRoads 一律把 open 歸零(見 A29)。
         const cov = tr.pts.map((_, i) => covIdx.has(i));
         for (const side of [1, -1]) {
+          if (tr.under) break;
           const prof = tunnelWallProfile(tr.pts, tr.floors, cov, heightAt, TUN.HW, side);
           const n = prof.filter((g) => g.open).length;
           if (n) {
@@ -648,8 +668,15 @@ async function scanVenue(v) {
   // 金龍隧道那種深覆蓋是「山體隧道」。深度取覆蓋段的中位數。
   for (const w of osm.roads) {
     if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
-    const tr = tunnelRunOf(w, center, heightAt);
+    const tr = tunnelRunOf(w, center, heightAt, hf);
     if (!tr || !tr.intervals.length) continue;
+    if (tr.under) {                       // 地下道走 ② 的候選清單(深度來自挖,不是山)
+      const covLen2 = tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0);
+      const d2 = Math.round(Math.min(...tr.pts.map((p) => ptPoly(p, laneD))));
+      const c2 = { name: w.tags.name || w.tags.highway, len: Math.round(covLen2), depth: Math.round(tr.sink), d: d2 };
+      if (!res.underCand || d2 < res.underCand.d) res.underCand = c2;
+      continue;
+    }
     const th = [];
     for (const [, , ia, ib] of tr.intervals) {
       for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
@@ -687,7 +714,7 @@ async function scanVenue(v) {
     const tunRuns = [];
     for (const w of osm.roads) {
       if (!w.tags.tunnel || w.geometry.length < 2) continue;
-      const tr = tunnelRunOf(w, center, heightAt);
+      const tr = tunnelRunOf(w, center, heightAt, hf);
       if (!tr || !tr.intervals.length) continue;
       const cov = new Set();
       for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) cov.add(i);
@@ -778,25 +805,28 @@ async function probePoint(lat, lng, label) {
   if (!sampleElev) return console.log(`${label}:高程磚下載失敗`);
   const A = [lat, lng - dLng * 0.7], B = [lat, lng + dLng * 0.7];
   const cfg = { center: { lat, lng }, bases: { SWARM: A, STEEL: B }, lanes: [[A, B]], venue: { mix: { urban: 0.6 } } };
-  const { heightAt } = buildHeightField(cfg, bbox, sampleElev);
+  const hf = buildHeightField(cfg, bbox, sampleElev);
+  const { heightAt } = hf;
   const osm = await osmFor(`probe_${lat.toFixed(4)}_${lng.toFixed(4)}`, bbox);
   if (!osm) return console.log(`${label}:取不到路網`);
   const found = [];
   for (const w of osm.roads) {
     if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
-    const tr = tunnelRunOf(w, cfg.center, heightAt);
+    const tr = tunnelRunOf(w, cfg.center, heightAt, hf);
     if (!tr || !tr.intervals.length) { found.push({ name: w.tags.name || w.tags.highway, flat: true }); continue; }
     const th = [];
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
     th.sort((a, b) => a - b);
-    found.push({ name: w.tags.name || w.tags.highway,
+    found.push({ name: w.tags.name || w.tags.highway, under: tr.under,
       len: Math.round(tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0)),
       depth: Math.round(th[th.length >> 1]) });
   }
-  const real = found.filter((f) => !f.flat).sort((a, b) => a.depth - b.depth);
-  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、成洞 ${real.length} 條`
-    + (real.length ? `　最淺:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/深${f.depth}m`).join('、')}` : '')
-    + (found.length - real.length ? `　平地不成洞 ${found.length - real.length} 條` : ''));
+  const real = found.filter((f) => !f.flat && !f.under).sort((a, b) => a.depth - b.depth);
+  const und = found.filter((f) => f.under);
+  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、山體成洞 ${real.length} 條、地下道 ${und.length} 條`
+    + (real.length ? `　最淺山體洞:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/深${f.depth}m`).join('、')}` : '')
+    + (und.length ? `　地下道:${und.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m`).join('、')}` : '')
+    + (found.length - real.length - und.length ? `　平地不成洞 ${found.length - real.length - und.length} 條` : ''));
 }
 
 if (ARG.probe) {
@@ -809,12 +839,12 @@ if (ARG.probe) {
 
 // ---- 主流程 ----
 // 隧道與地下道是**兩種東西**,判定與分類一律分開(2026-07-28 使用者指示):
-//   隧道   道路平坦,鑽進突起的地形 —— 深度來自「山」。現行引擎唯一做得出來的那種。
+//   隧道   道路平坦,鑽進突起的地形 —— 深度來自「山」。
 //   地下道 地形平坦,路面一端往下、另一端再上來 —— 深度來自「挖」。
-//          現行引擎的隧道路面 = 兩端洞口地表高的直線內插 ⇒ 平地上路面 = 地表 = 深度 0,
-//          永遠達不到最小深度(淨空 8m + 頂板 1m)⇒ buildRoads 當一般道路。
-//          故 `underpass` 是**已知缺口**(KNOWN_GAP):不會有任何場地,換地圖也解不了,
-//          稽核照樣列出候選(圖資上真的是地下道的路段),但不因它紅字。
+//          2026-07-28 起引擎會生成:直線剖面藏不住天花板時改吃 `underpassPlan` 的下沉剖面
+//          (兩端接引道、中段平底),覆蓋判定與後續構件一律沿用隧道那一套。
+//          放棄的情形(人行道 / 引道空間不足 / 要挖到 SINK_MAX 以上 / 走廊碰水)仍當一般道路,
+//          在報告裡列成「落空地下道」。
 const SCEN = [
   ['tunnel', '① 隧道(山體)'],
   ['underpass', '② 地下道(平地下穿)'],
@@ -825,8 +855,9 @@ const SCEN = [
   ['overTunnel', '⑦ 穿越地下道上方'],
   ['highGround', '⑧ 一側高於一座砲塔'],
 ];
-// 引擎尚未生成的場景:報告但不計入「缺場地」(換地圖解不了,要改引擎)
-const KNOWN_GAP = new Map([['underpass', '引擎尚未生成:平地隧道路面不下沉(深度 0)⇒ 當一般道路']]);
+// 引擎尚未生成的場景:報告但不計入「缺場地」(換地圖解不了,要改引擎)。
+// 2026-07-28:`underpass` 已隨 underpassPlan 落地 ⇒ 此表清空(留著結構,下一個缺口照樣掛得上)。
+const KNOWN_GAP = new Map();
 { // 場景代號 MUST 與 venues.js 的 SCEN_LABEL 同集合(標記與判定分家 = 標了卻沒人驗)
   const a = SCEN.map(([k]) => k).sort().join(','), b = Object.keys(SCEN_LABEL).sort().join(',');
   if (a !== b) throw new Error(`場景代號與 venues.js SCEN_LABEL 不一致:\n  稽核 ${a}\n  標記 ${b}`);
@@ -863,7 +894,8 @@ for (const v of list) {
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
     + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
     + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
-    + `${r.flatTunnel ? `　②地下道候選(引擎不生成):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
+    + `${r.flatTunnel ? `　落空地下道(規劃放棄,仍是平街):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
+    + `${r.underCand ? `　②候選地下道:${r.underCand.name} 覆蓋 ${r.underCand.len}m/沉 ${r.underCand.depth}m 離兵線 ${r.underCand.d}m` : ''}`
     + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/深 ${r.tunnelCand.depth}m 離兵線 ${r.tunnelCand.d}m` : ''}`
     + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
@@ -880,7 +912,17 @@ for (const [k, label] of SCEN) {
     console.log(`      圖資上是地下道的兵線段(引擎支援後即成立):${cand.join('、') || '(無)'}`);
     continue;
   }
-  if (!hit.length) { missing++; console.log(`  ${label}:❌ 沒有任何預設場地 —— 需新增測試場地`); continue; }
+  if (!hit.length) {
+    missing++;
+    console.log(`  ${label}:❌ 沒有任何預設場地 —— 需新增測試場地`);
+    if (k === 'underpass') {   // 沒場地時把候選一起印出來:離兵線多遠、規劃有沒有落空,決定要不要重烤兵線
+      const cand = results.filter((r) => r.underCand).map((r) => `${r.id}(${r.underCand.name} ${r.underCand.len}m 離兵線 ${r.underCand.d}m)`);
+      const lost = results.filter((r) => r.flatTunnel).map((r) => `${r.id}(${r.flatTunnel.name})`);
+      console.log(`      bbox 內建得出來的地下道:${cand.join('、') || '(無)'}`);
+      console.log(`      規劃落空(仍是平街):${lost.join('、') || '(無)'}`);
+    }
+    continue;
+  }
   // 首選 = 該場景「量」最大的場地(隧道/橋取長度、高地取連續長度、平交道取最近)
   const score = (r) => {
     const h = r.hits[k];
