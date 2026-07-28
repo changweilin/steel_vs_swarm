@@ -10,7 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS,
-  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange,
+  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -36,11 +36,12 @@ const KIND_KEY = {
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
-const HERO_COL_R = { robot: 0.43, morph: 0.43, drone: 0.80 };
-const heroCollider = (kind, ch) => {
-  const h = heroTargetH(kind, ch);
-  return { r: h * (HERO_COL_R[kind] ?? 0.43), h: h * 1.08 };
-};
+// **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
+// 各寫一份就會「撞得到卻打不到」);高度沿用 heroTargetH ×1.08(頭頂餘裕)。
+const heroCollider = (kind, ch) => ({
+  r: hitR({ hero: true, kind, ch }),
+  h: heroTargetH(kind, ch) * 1.08,
+});
 // 自機碰撞/視點的身高比例(同樣校準自舊制:robot 6m→myR 1.9 / eye 3.4、drone 3m→myR 1.6)
 const SELF_F = {
   groundR: 0.317, groundTop: 0.70, eye: 0.567,
@@ -2122,10 +2123,13 @@ export class BattleClient {
   // 單位碰撞半徑 / 高度(公尺):玩家座機不能穿過單位與建築。
   // 人員/載具 = 真實世界尺寸(見 models.js TARGET_H);英雄機體體型綁角色護甲,
   // 故不查此表,改由 heroCollider() 依 heroTargetH 動態推導(見 _makeEnt 的 ent.heroCol)。
-  static COLLIDER = {
-    base: { r: 20, h: 46 }, tower: { r: 7, h: 26 },
-    tank: { r: 1.9, h: 2.8 }, apc: { r: 1.6, h: 2.7 }, soldier: { r: 0.6, h: 1.8 },
-  };
+  // **數值不手寫**:一律由 data.js 的 hitR / hitH 推導(伺服器貫穿判定同一把尺)。
+  // 鍵集 = 「會擋住玩家座機」的機種,MUST NOT 隨 TARGET_R 增列而擴張(那會讓直升機/碉堡
+  // 突然開始擋路);量體本身則永遠與命中判定同步。
+  static COLLIDER = Object.fromEntries(
+    [['base', 'STEEL'], ['tower'], ['tank'], ['apc'], ['soldier']].map(([kind, side]) =>
+      [kind, { r: hitR({ kind, side }), h: hitH({ kind, side }) }]),
+  );
 
   /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導 */
   get selfH() { return this.heroKind ? heroTargetH(this.heroKind, this.ch) : SOLDIER_H * 4; }
@@ -4900,15 +4904,20 @@ export class BattleClient {
     return r ? r.t : null;
   }
 
-  /** 準星射線命中解析:回傳 { point, ent, missileId }(共用:beam 直擊 / 招式落點) */
-  _resolveAim(far) {
+  /**
+   * 準星射線命中解析:回傳 { point, ent, missileId }(共用:beam 直擊 / 招式落點)。
+   * pierce = true(貫穿光束):單位不擋射線,只有地形/障礙才終止 —— 回報給伺服器的射線長
+   * 才涵蓋整條圓柱(止於第一個目標的表面 = 連它自己的中心都在射線之外,見 sim._lanceHits)。
+   */
+  _resolveAim(far, pierce = false) {
     this.raycaster.setFromCamera(_ZERO2, this.camera);
     this.raycaster.far = far;
     const ro = this.raycaster.ray.origin, rd = this.raycaster.ray.direction;
     // 只對單位/飛彈做 raycast(地貌植被是純視覺,不擋子彈也不吃效能);地形走解析高度場
     // (_terrainHitT);建物/神木/巨岩等「有物理碰撞的障礙」另以解析圓柱判定(_blockerHitT)——
     // 準星射線先撞到障礙 → 視同打在障礙上(看不到的單位就不能射擊/鎖定,beam/招式落點同樣被擋)。
-    const targets = this._rayCandidates(ro, rd, far, this._rayBuf || (this._rayBuf = []));
+    // 貫穿光束不吃單位 ⇒ 連逐三角 raycast 都不必付(A6 的效能紀律:能不掃就不掃)
+    const targets = pierce ? _NO_HITS : this._rayCandidates(ro, rd, far, this._rayBuf || (this._rayBuf = []));
     const hits = targets.length ? this.raycaster.intersectObjects(targets, true) : _NO_HITS;
     const rEnd = this.raycaster.ray.at(far, new THREE.Vector3());
     const dBlock = this._obstHitT(ro.x, ro.y, ro.z, rEnd.x, rEnd.y, rEnd.z);
@@ -4956,7 +4965,7 @@ export class BattleClient {
    * 座標轉換:three z 南 → 模擬 z 北(取負);y 一律送「離站立表面高」(與 {t:'pos'} 的 _altAG 同源)。
    * oy 由呼叫端在**擊發當下**取樣後傳入 —— 動能彈飛行 0.1~0.4 秒才定案落點,拿當幀高度會漂。
    */
-  _sendLance(from, to, def, oy = null) {
+  _sendLance(from, to, def, oy = null, barrage = false) {
     const seg = to.clone().sub(from);
     const len = seg.length();
     if (len < 0.01) return [];
@@ -4969,10 +4978,14 @@ export class BattleClient {
       d: [q(d.x), q(-d.z), q(d.y)],
       len: Math.round(len * 10) / 10,
     });
-    return this._lancePierced(from, to, lanceR(def));
+    return this._lancePierced(from, to, lanceR(def, barrage));
   }
 
-  /** 射線圓柱內的敵方單位(純本地估算:傷害數字/命中標記;伺服器另有迷霧 + LOS 複驗)*/
+  /**
+   * 射線圓柱內的敵方單位(純本地估算:傷害數字/命中標記;伺服器另有迷霧 + LOS 複驗)。
+   * 幾何 MUST 與伺服器 sim._lanceHits 同構:半徑 = r + 目標自身水平量體 hitR(ent),
+   * 軸距量到**線段**最近點(射線止於目標近側表面時,中心仍在線段外 —— 見該處註解)。
+   */
   _lancePierced(from, to, r) {
     const seg = to.clone().sub(from);
     const len = seg.length() || 1;
@@ -4983,13 +4996,17 @@ export class BattleClient {
       if (ent.isSelf || ent.side === this.side || !ent.mesh.visible) continue;
       rel.copy(ent.mesh.position).sub(from);
       const s = rel.dot(d);
-      if (s < 0 || s > len) continue;
-      // 大機體吃自身碰撞半徑(伺服器是點判定 + 垂直帶,這裡補回視覺體積的落差)
-      if (rel.addScaledVector(d, -s).length() > r + (ent.heroCol?.r || 0) * 0.5) continue;
+      const sc = s < 0 ? 0 : (s > len ? len : s);
+      if (rel.addScaledVector(d, -sc).length() > r + this._hitR(ent)) continue;
       out.push({ ent, s });
     }
     out.sort((a, b) => a.s - b.s);
     return out.slice(0, LANCE.MAX).map((k) => k.ent);
+  }
+
+  /** 單位水平量體(公尺):英雄已在 _makeEnt 由 heroCollider 推導,其餘查 data.js hitR */
+  _hitR(ent) {
+    return ent.heroCol ? ent.heroCol.r : hitR({ kind: ent.kind, side: ent.side, civ: ent.civ });
   }
 
   /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY(與伺服器 heroLance 同一條公式) */
@@ -5012,11 +5029,12 @@ export class BattleClient {
    * 貫穿彈道演出(自機與他人共用):
    *   beam  → 鋼彈式光束(熾白內芯 + 外暈 + 行進能量環);
    *   rail/gun → 高速穿透通道(細亮曳光柱 + 兩端衝擊環 —— 空氣被撕開的彈道)。
-   * 圓柱半徑一律取 lanceR(def) ⇒ **看到多粗就是打到多粗**,不是裝飾性放大。
+   * 圓柱半徑一律取 lanceR(def, barrage) ⇒ **看到多粗就是打到多粗**,不是裝飾性放大 ——
+   * 重砲傾洩窗的加粗也收在同一支(舊制只有這裡 ×1.5,伺服器沒跟上 = 看得到打不到)。
    */
   _lanceVisual(from, to, def, side, barrage = false) {
     const { col, hot } = this._shotCols(side);
-    const r = lanceR(def) * (barrage ? 1.5 : 1);
+    const r = lanceR(def, barrage);
     if (def.type === 'beam') {
       const bcol = side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       gundamBeam(this.scene, this.effects, from, to, bcol,
@@ -5024,7 +5042,9 @@ export class BattleClient {
       shockRing(this.scene, this.effects, from.x, from.y, from.z, r * (barrage ? 1.7 : 1.15), bcol);
       return;
     }
-    beamLine(this.scene, this.effects, from, to, col, { ttl: 0.26, w: r * 0.45 });
+    // 動能貫穿(rail/gun):外層通道**滿寬 = 判定半徑**(低透明度的破壞管道),內層是熾芯曳光。
+    // 舊制外層只有 0.45r ⇒ 玩家看到的是一條細線,實際判定卻寬一倍多,兩邊對不上。
+    beamLine(this.scene, this.effects, from, to, col, { ttl: 0.26, w: r, op: 0.28 });
     beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.16, w: r * 0.16 });
     shockRing(this.scene, this.effects, from.x, from.y, from.z, r * 1.2, hot);
     starburst(this.scene, this.effects, to.x, to.y, to.z, r * 1.5, col);
@@ -5187,7 +5207,11 @@ export class BattleClient {
 
     if (def.type === 'beam') {
       // 定向能:光速直擊(trajClass 'line',無彈道下墜),仍受射程限制。
-      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul);   // 高度制空(重砲 +20%)
+      // 貫穿光束(aoeClass 'line')的準星射線 MUST NOT 停在第一個單位身上(pierce)——
+      // 停下來的話回報給伺服器的 len 只到「目標近側表面」,而目標中心在那之後 ⇒ 整發落空,
+      // 更別說貫穿後排。與動能貫穿彈(_updateBullets 的 b.pierce)同一條規則:只有地形/障礙才終止。
+      const pierce = aoeClass(def) === 'line';
+      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul, pierce);   // 高度制空(重砲 +20%)
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
       // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
@@ -5198,7 +5222,7 @@ export class BattleClient {
         this._lanceVisual(muzzle, point, def, this.side, barraging);
         this._muzzleBurst(muzzle, true, this.side);
         const oy = (this._altAG || 0) + (muzzle.y - this.pos.y);
-        this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy), point);
+        this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy, barraging), point);
         return;
       }
       // 輕武器光束:不屬重武器三分類 —— 維持單體直擊(heroHit)
@@ -5431,7 +5455,7 @@ export class BattleClient {
         // 直線貫穿:落點定案(地形/障礙/射程終點)才回報整條射線,伺服器沿圓柱一次結算全部目標。
         // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
         this._lanceVisual(b.origin, p, def, this.side, b.barrage);
-        this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy), p);
+        this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy, b.barrage), p);
       } else if (hit?.missileId != null) {
         this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
         this._hitFeedback(def, null, p);
