@@ -5,9 +5,6 @@
 name: 兵線場景掃描
 
 on:
-  # 暫時的推送觸發:烤新測試場地(civicblvd)並複驗,定案後 MUST 移除。
-  push:
-    branches: [claude/1v1-map-scenarios-test-obzl6w]
   workflow_dispatch:
     inputs:
       only:
@@ -64,10 +61,6 @@ jobs:
         if: ${{ inputs.probe != '' }}
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs --probe='${{ inputs.probe }}'
-
-      - name: 新場地兵線 diff(複製回儲存庫用)
-        if: ${{ github.event_name == 'push' }}
-        run: git --no-pager diff -- public/js/venueLanes.js | head -40
 
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}
