@@ -883,13 +883,23 @@ log('— sim:障礙物生成(避開走廊/主堡)+ 防空陣地可擊毀 —');
   else assert(rb.money > $1, `現金物資入帳 +$${Math.round(rb.money - $1)}`);
   assert(sim.events.some((e) => e.e === 'loot' && e.pid === 'hz_r'), 'loot 事件帶 pid');
 
-  // 火場 DoT:低空/地面才吃(先扣護盾),高空免疫
+  // 火場 DoT(確定性):低空/地面才吃,依 maxSp:maxHp 比例同扣護盾/HP(HP 份不吃裝甲),高空免疫。
+  // 直接泵 hazard 子系統固定次數(不走整支 sim.tick)⇒ 不受波次/bot/回血/敵火汙染;總傷恰為 dot×時距。
+  // 歷來 flaky 真因非 CI tick 節奏:稍早拾取的隨機詞綴若擲中 hardened(dmgTaken 0.75)會把灼傷縮到 22.5 ⇒
+  // 清掉 buffs/mods 隔離之,並補滿雙池(無見底夾制)使 split 精確可驗。
   const fire = sim._add({ kind: 'fire', side: null, neutral: true, haz: true, inv: true, x: rb.x + 300, z: rb.z + 300, sc: 1, hp: 1 });
   sim._fires.push(fire);
-  rb.x = fire.x; rb.z = fire.z;
-  const vitF = rb.sp + rb.hp;
-  for (let i = 0; i < 8; i++) sim.tick(0.125);
-  assert(vitF - (rb.sp + rb.hp) > HAZARDS.fire.dot * 0.8, `火場灼傷 ${Math.round(vitF - (rb.sp + rb.hp))}/秒(先扣護盾)`);
+  rb.buffs = {}; rb.mods = [];                          // 隔離 loot 詞綴(dmgTaken)對灼傷的縮放
+  rb.sp = rb.maxSp; rb.hp = rb.maxHp;                   // 補滿雙池 ⇒ 無 Math.max(0,…) 夾制,兩份精確
+  rb.x = fire.x; rb.z = fire.z; rb.y = 0;               // 站進火場、貼地(y=0 ⇒ 不觸 offGround/maxY 豁免)
+  const spF = rb.sp, hpF = rb.hp, denom = rb.maxSp + rb.maxHp;
+  const BURN_DT = 0.125, BURN_N = 8;                    // 8 × 0.125 = 1 秒
+  const burnTot = HAZARDS.fire.dot * BURN_DT * BURN_N;  // = dot(每秒灼傷)
+  for (let i = 0; i < BURN_N; i++) sim._tickHazards(BURN_DT);
+  const spDrop = spF - rb.sp, hpDrop = hpF - rb.hp;
+  assert(Math.abs((spDrop + hpDrop) - burnTot) < 1e-6, `火場灼傷 ${Math.round(spDrop + hpDrop)}/秒(確定性總傷 = dot×時距)`);
+  assert(Math.abs(spDrop - burnTot * rb.maxSp / denom) < 1e-6, '灼傷護盾份 = 依 maxSp 比例(同扣護盾)');
+  assert(Math.abs(hpDrop - burnTot * rb.maxHp / denom) < 1e-6, 'HP 份 = 依 maxHp 比例(不吃裝甲)');
   // 高空免疫灼傷(先拔光防空陣地 + 敵方塔/主堡:塔射程 310 已能打到火場座標,
   // 留著會讓「高空不受灼傷」的血量斷言被塔砲/SAM 汙染)
   // (2026-07-12:塔射程 310 + 小兵強化後,火場座標已落在敵方火網內 → 只留火場,其餘敵方單位全清)
