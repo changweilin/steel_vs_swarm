@@ -23,13 +23,14 @@
 //
 // 網路:第一次跑會抓圖資 + terrarium 高程,結果寫進 `tools/.scen_cache/`(之後純離線可重跑)。
 // 用法:node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
+//      node tools/audit_lane_scenarios.mjs --probe='25.09,121.54,自強隧道;40.78,-73.97,中央公園'  ← 找新場地用
 // 退出碼:0 = 七種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VENUES, venueConfig, SCEN_LABEL } from '../public/js/venues.js';
-import { MAPGEO, TERRAIN, WATER, GAME, LOS, UNITS, TARGET_H, altTier, battleBBox, solveTowerSites } from '../public/js/data.js';
+import { MAPGEO, TERRAIN, WATER, GAME, LOS, UNITS, TARGET_H, altTier, battleBBox, sideMFor, solveTowerSites } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const CACHE = join(ROOT, 'tools', '.scen_cache');
@@ -752,6 +753,48 @@ async function scanVenue(v) {
     }
   }
   return res;
+}
+
+/**
+ * 探測模式(--probe=lat,lng[,名稱]):不需要 baked 兵線,只問「這個點周邊一張 L1 地圖裡,
+ * 有沒有執行期真的成洞的車行隧道、覆蓋多長多厚」。用來替 ①(地下道感 = 短、覆蓋薄)找新場地。
+ * bbox 與 L1 同尺寸;heightAt 用「東西向穿過該點的假兵線」餵 AMP(探測只需大略地形)。
+ */
+async function probePoint(lat, lng, label) {
+  const half = sideMFor(1) / 2 * MAPGEO.REAL_SCALE * MAPGEO.MAP_EXPAND;
+  const dLat = half / R_EARTH * 180 / Math.PI, dLng = half / (R_EARTH * Math.cos(d2r(lat))) * 180 / Math.PI;
+  const bbox = { minLat: lat - dLat, maxLat: lat + dLat, minLng: lng - dLng, maxLng: lng + dLng };
+  const sampleElev = await elevSampler(bbox);
+  if (!sampleElev) return console.log(`${label}:高程磚下載失敗`);
+  const A = [lat, lng - dLng * 0.7], B = [lat, lng + dLng * 0.7];
+  const cfg = { center: { lat, lng }, bases: { SWARM: A, STEEL: B }, lanes: [[A, B]], venue: { mix: { urban: 0.6 } } };
+  const { heightAt } = buildHeightField(cfg, bbox, sampleElev);
+  const osm = await osmFor(`probe_${lat.toFixed(4)}_${lng.toFixed(4)}`, bbox);
+  if (!osm) return console.log(`${label}:取不到路網`);
+  const found = [];
+  for (const w of osm.roads) {
+    if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    const tr = tunnelRunOf(w, cfg.center, heightAt);
+    if (!tr || !tr.intervals.length) { found.push({ name: w.tags.name || w.tags.highway, flat: true }); continue; }
+    const th = [];
+    for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
+    th.sort((a, b) => a - b);
+    found.push({ name: w.tags.name || w.tags.highway,
+      len: Math.round(tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0)),
+      thick: Math.round(th[th.length >> 1]) });
+  }
+  const real = found.filter((f) => !f.flat).sort((a, b) => a.thick - b.thick);
+  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、成洞 ${real.length} 條`
+    + (real.length ? `　最薄:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/厚${f.thick}m`).join('、')}` : '')
+    + (found.length - real.length ? `　平地不成洞 ${found.length - real.length} 條` : ''));
+}
+
+if (ARG.probe) {
+  for (const spec of ARG.probe.split(';')) {
+    const [la, ln, ...rest] = spec.split(',');
+    await probePoint(+la, +ln, rest.join(',') || spec);
+  }
+  process.exit(0);
 }
 
 // ---- 主流程 ----

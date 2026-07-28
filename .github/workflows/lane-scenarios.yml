@@ -48,6 +48,19 @@ jobs:
         if: ${{ inputs.bake != '' }}
         run: ONLY='${{ inputs.bake }}' node tools/bake_venue_lanes.mjs
 
+      # 新場地的兵線烘焙(推送觸發時固定烤這些;定案後連同推送觸發一起移除)
+      - name: 烤新測試場地兵線
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        run: ONLY=parkave node tools/bake_venue_lanes.mjs
+
+      # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道(地下道感)
+      - name: 隧道候選探測
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        run: |
+          node tools/audit_lane_scenarios.mjs --probe='40.7800,-73.9690,紐約中央公園79街橫貫道;40.7715,-73.9735,紐約中央公園65街橫貫道;35.0092,135.7898,京都蹴上;25.0925,121.5455,台北自強隧道;48.8600,2.2930,巴黎河岸下穿;25.0470,121.5180,台北市民大道;35.6640,139.7300,東京六本木;41.3900,2.1550,巴塞隆納'
+
       - name: 兵線場景掃描
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --max-min=14 --json=scen.json

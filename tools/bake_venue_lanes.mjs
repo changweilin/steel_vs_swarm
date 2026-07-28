@@ -47,6 +47,8 @@ const ANCHORS_ALL = {
   // 金龍隧道西南口外(金龍路)/ 東北口外(金湖路)。L1 兩堡僅 ~481 真實公尺、隧道 ~195m:
   // 錨點 MUST 貼隧道軸且距洞口 ~130m,B 才不會被吸進隧道內部或繞上別的街廓
   jinlong: [[25.0838, 121.5846], [25.0873, 121.5895]],
+  // Park Avenue 高架(繞中央車站的環形高架,底下全是街道)：南端 E40th / 北端 E46th,相距 ~530m
+  parkave: [[40.7505, -73.9772], [40.7545, -73.9757]],
   barcelona: [[41.3925, 2.1620], [41.3850, 2.1700]],          // 巴塞隆納 Eixample 格柵(臨地中海)
   london: [[51.5007, -0.1246]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
@@ -66,15 +68,17 @@ async function overpassRoads(id, lat, lng, radius) {
   const f = `${CACHE}/${id}.json`;
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
   const q = `[out:json][timeout:90];way["highway"~"^(${DRIVABLE})$"](around:${Math.round(radius)},${lat},${lng});out geom;`;
-  for (let a = 0; a < 9; a++) {
+  for (let a = 0; a < 6; a++) {
     const url = ENDPOINTS[a % ENDPOINTS.length];
     try {
       // Content-Type 必須明講:Node fetch 對字串 body 預設 text/plain,
       // Overpass 會把 "data=" 前綴當成查詢語法 → 406 Not Acceptable
+      // signal:Node 的 fetch 沒有預設逾時,半死的連線會把整支烘焙掛住
       const resp = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'data=' + encodeURIComponent(q),
+        signal: AbortSignal.timeout(60000),
       });
       if (!resp.ok) { log(`  overpass ${resp.status} @${new URL(url).host}, retry`); await sleep(3000 * (a + 1)); continue; }
       const d = await resp.json();
@@ -82,6 +86,47 @@ async function overpassRoads(id, lat, lng, radius) {
       writeFileSync(f, JSON.stringify(els));
       return els;
     } catch (e) { log('  overpass err', e.message); await sleep(3000 * (a + 1)); }
+  }
+  // 備援:OSM 官方 API 的 /map(2026-07-28)。Overpass 的公共鏡像對雲端 IP(CI runner /
+  // 開發沙箱)常態拒絕,沒有備援就烤不出新場地。/map 走另一套基礎設施、回傳該 bbox 的原始
+  // node/way,篩出 DRIVABLE 車行道後與 Overpass 回應同形(tags + geometry)。
+  const els = await osmApiRoads(lat, lng, radius);
+  if (els) { writeFileSync(f, JSON.stringify(els)); return els; }
+  return null;
+}
+
+/** OSM 官方 /map 備援:回傳與 Overpass `out geom` 同形的 way 陣列(只留車行道) */
+async function osmApiRoads(lat, lng, radius) {
+  const dLat = radius / 111320, dLng = radius / (111320 * Math.cos(lat * d2r));
+  const url = `https://api.openstreetmap.org/api/0.6/map?bbox=${(lng - dLng).toFixed(5)},${(lat - dLat).toFixed(5)},`
+    + `${(lng + dLng).toFixed(5)},${(lat + dLat).toFixed(5)}`;
+  const RE = new RegExp(`^(${DRIVABLE})$`);
+  for (let a = 0; a < 3; a++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(90000) });
+      if (!r.ok) { log(`  osm-api ${r.status}, retry`); await sleep(3000 * (a + 1)); continue; }
+      const xml = await r.text();
+      const nodes = new Map();
+      const attr = (s2, k) => { const m = new RegExp(`${k}="([^"]*)"`).exec(s2); return m ? m[1] : null; };
+      for (const m of xml.matchAll(/<node\s([^>]*?)(\/>|>[\s\S]*?<\/node>)/g)) {
+        const id2 = attr(m[1], 'id'), la = +attr(m[1], 'lat'), lo = +attr(m[1], 'lon');
+        if (id2 && Number.isFinite(la)) nodes.set(id2, { lat: la, lon: lo });
+      }
+      const out = [];
+      for (const m of xml.matchAll(/<way\s([^>]*?)>([\s\S]*?)<\/way>/g)) {
+        const body = m[2], tags = {};
+        for (const t of body.matchAll(/<tag k="([^"]*)" v="([^"]*)"\s*\/>/g)) tags[t[1]] = t[2];
+        if (!RE.test(tags.highway || '')) continue;
+        const geometry = [];
+        for (const n of body.matchAll(/<nd ref="(\d+)"\s*\/>/g)) {
+          const p = nodes.get(n[1]);
+          if (p) geometry.push({ lat: p.lat, lon: p.lon });
+        }
+        if (geometry.length >= 2) out.push({ type: 'way', tags, geometry });
+      }
+      log(`  osm-api 備援取得 ${out.length} 條車行道`);
+      return out.length ? out : null;
+    } catch (e) { log('  osm-api err', e.message); await sleep(3000 * (a + 1)); }
   }
   return null;
 }
