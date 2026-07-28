@@ -611,6 +611,37 @@ async function scanVenue(v) {
     }
   }
 
+  // ---- ⑥ 的候選診斷:bbox 內有沒有「任一車行道從覆蓋段隧道上方跨過」----
+  // ⑥ 要的是**兵線**從洞頂走過,可遇不可求;這裡順手回報「這張地圖上存不存在這種交叉、
+  // 離兵線多遠」,好判斷「換個錨點/方位角重烤兵線」有沒有機會把 ⑥ 湊出來(離兵線越近越有機會)。
+  {
+    const tunRuns = [];
+    for (const w of osm.roads) {
+      if (!w.tags.tunnel || w.geometry.length < 2) continue;
+      const tr = tunnelRunOf(w, center, heightAt);
+      if (!tr || !tr.intervals.length) continue;
+      const cov = new Set();
+      for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) cov.add(i);
+      tunRuns.push({ name: w.tags.name || w.tags.highway, tr, cov });
+    }
+    for (const t of tunRuns) {
+      for (const w of osm.roads) {
+        if (w.tags.tunnel || w.tags.bridge || w.geometry.length < 2) continue;
+        const rp = w.geometry.map((p) => llToWorld(p.lat, p.lon, center));
+        for (let i = 1; i < rp.length; i++) {
+          for (let j = 1; j < t.tr.pts.length; j++) {
+            if (!segCross(rp[i - 1], rp[i], t.tr.pts[j - 1], t.tr.pts[j])) continue;
+            if (!t.cov.has(j) && !t.cov.has(j - 1)) continue;
+            const d = ptPoly(rp[i], laneD);
+            if (!res.overTunnelCand || d < res.overTunnelCand.d) {
+              res.overTunnelCand = { road: w.tags.name || w.tags.highway, tunnel: t.name, d: Math.round(d) };
+            }
+          }
+        }
+      }
+    }
+  }
+
   // ---- ④ 平交道(圖資 railway=level_crossing 節點落在兵線上)----
   for (const c of osm.crossings) {
     const p = llToWorld(c.lat, c.lng, center);
@@ -666,7 +697,8 @@ for (const v of list) {
   }).join('、');
   console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
     + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
-    + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`);
+    + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
+    + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
 
 console.log('\n各場景可用的 1v1 預設場地:');

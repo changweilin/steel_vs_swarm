@@ -52,6 +52,10 @@ jobs:
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --max-min=14 --json=scen.json
 
+      - name: 掃描結果 JSON
+        if: always()
+        run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results)console.log(r.id, JSON.stringify(r.hits), r.overTunnelCand?('cand='+JSON.stringify(r.overTunnelCand)):'', r.osm?JSON.stringify(r.osm):r.error||'')" || echo '(無 scen.json)'
+
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}
         run: git --no-pager diff --stat && git --no-pager diff public/js/venueLanes.js | head -400
