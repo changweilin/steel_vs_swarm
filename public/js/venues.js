@@ -73,16 +73,16 @@ export const VENUES = [
   // ---- 混合型 ----
   { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 }, scen: ['highGround'] },
   { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'gallery', 'highGround'] },   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)
-  // ② 地下道的測試場地(2026-07-28):市民大道沿線車行地下道群 —— L1 bbox 內圖資有 8 條
-  // tunnel way,是掃到最密的一區。**注意**:平地地下道現行引擎不生成(路面沉不下去,
-  // 見 docs/lane_scenarios.md),故不標 scen;引擎支援下沉剖面後這張圖即成立。
+  // ② 的候選場地(2026-07-28 探測選定):市民大道沿線車行地下道群 —— L1 bbox 內圖資有 8 條
+  // tunnel way。2026-07-30 全量掃描實測:兵線走到的 60m 圖資地下道(service)underpassPlan
+  // 規劃放棄、仍是平街 ⇒ ② 不成立,不標 scen;② 的指定場地由 taroko 擔任。
   { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.047000, 121.518000], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
   // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,短隧道的側向
-  // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線:④ 明隧道 42m、② 地下道 171m(首個實測
-  // 走得到 ② 的預設場地)、① 35m、⑧ 662m/+416m(峽谷絕壁)。
+  // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線(2026-07-30 複掃):④ 明隧道 72m、
+  // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。
   { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'] },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['underBridge'] },
+  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },   // 2026-07-30 複掃:07-29 兵線重烤後不再從 Westminster Bridge 下方過 ⇒ 摘除 underBridge
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
 ];
 
