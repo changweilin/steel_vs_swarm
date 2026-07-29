@@ -1621,6 +1621,8 @@ function startPrebuild(cfg) {
       const h = terrain.heightAt(x, z);
       if (curY == null) return h;
       const tn = tunnelAt(x, z);
+      // open(地下道引道露天路塹)**刻意不濾**:捕捉讓單位站在精確的下沉剖面上(開挖後
+      // 網格內插只是近似),入洞沿兩端斜坡、跨溝者依實際地形落入溝內(視覺上那裡就是一道溝)
       if (tn && curY < tn.ceil) return tn.floor;   // 在天花之下 = 洞內,站路面(而非上方山體)
       const d = deckY(x, z, DECK_MARGIN);           // 站立查詢帶側向容差(貼緣不掉下)
       // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
@@ -1637,7 +1639,8 @@ function startPrebuild(cfg) {
     terrain.ceilingAt = (x, z, curY) => {
       let c = null;
       const tn = tunnelAt(x, z);
-      if (tn && curY < tn.ceil) c = tn.ceil;                       // 洞內天花板
+      // open 段(地下道引道露天路塹)無天花:頭上是天空,MUST NOT 用 ceil 當隱形蓋
+      if (tn && !tn.open && curY < tn.ceil) c = tn.ceil;           // 洞內天花板
       const d = deckY(x, z);
       if (d != null && curY < d - DECK_STEP) {                     // 橋下:橋面底緣(deck 厚 ~DECK_UNDER)
         const under = d - DECK_UNDER;
@@ -1746,10 +1749,13 @@ async function enterLoading(cfg) {
         .map((c) => [rd(c.x1), rd(-c.z1), rd(c.x2), rd(-c.z2), rd(c.hw), c.kind === 'tun' ? 1 : 0]);
       // 橋面/隧道天花水平薄板(#1):deck ribbon(ty=1)+ 隧道 ribbon(ty=2),sim 座標(z 北 = −three z)。
       // 伺服器 _slabBlocked 判「兩端同 ribbon 且分屬板體兩側」擋彈道/LOS —— 補圓柱(occ)之外的水平板缺口。
+      // open 段(地下道引道露天路塹)MUST NOT 上傳:它只服務客戶端站立/側壁閘,上傳成 ty=2
+      // 會讓伺服器把露天溝底當「洞內」(側牆全擋 LOS、爆風隔絕)—— 客戶端看得到打得到、
+      // 伺服器判被擋 = 傷害無聲蒸發(A18/A30 一族的兩端分家)。
       const decks = ud.decks || [], tunnels = ud.tunnels || [];
       const slabs = [
         ...decks.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 1]),
-        ...tunnels.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2]),
+        ...tunnels.filter((d) => !d.open).map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2]),
       ].slice(0, LOS.MAX_SLAB);
       // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。

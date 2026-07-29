@@ -2287,20 +2287,29 @@ function tunnelCoverIntervals(pts, cum, floors, heightAt) {
     .filter(([a, b]) => cum[b] - cum[a] >= TUN_COV_MIN)
     .map(([a, b]) => [cum[a], cum[b], a, b]);
 }
-// ---- 地下道(平地下穿;2026-07-28 使用者需求)----
+// ---- 地下道(平地下穿;2026-07-28 使用者需求;2026-07-29 引道改制「隧道方法」)----
 // 隧道與地下道是**兩種東西**:隧道 = 道路平坦、鑽進突起的地形(深度來自山);
-// 地下道 = 地形平坦、路面自一端下沉、穿過去後另一端再爬回地表(深度來自挖)。
+// 地下道 = **地形平坦、道路在地形之下**,路面自一端下沉、穿過去後另一端再爬回地表(深度來自挖)。
 // 舊制的隧道路面是「兩端洞口地表高的直線內插」⇒ 平地上下沉量恆 0、永遠藏不住天花板
 // ⇒ 整條當一般道路(2026-07-28 之前的已知缺口:圖資明明是地下道,遊戲裡只有一條平街)。
 //
-// 改制沿用隧道那一整套(**零分支**:牆/天花/橫樑/照明/門洞/打洞/走廊/slab 全部共用) ——
-// 只換一件事:**路面剖面**。平坦 tunnel way 改吃「下沉剖面」:
-//   ① 兩端各往外延伸一段**引道**(沿端點切線,夾在圖界內),路面以 smoothstep 自地表沉到 −sink;
-//   ② 中段是平底 ⇒ **原地表(完全不開挖)**自然高過 路面 + CLEAR + ROOF_T
-//      ⇒ tunnelCoverIntervals 照原判定判成覆蓋段 = 洞段(頂上就是原本那片地/那條橫向道路);
-//   ③ 引道段落在敞開補集 ⇒ carveTunnels 照原規則開挖成路塹(斜壁 + 影像重繪),
-//      洞口那面橫塞斷面的土牆由 punchPortalHoles 打穿(= 出入口的「可穿透透明牆」)。
-// 兩者共用同一條命脈的代價是零:sink=0 時 tunFloorAt 逐位元退回舊公式(山體隧道行為不動)。
+// 改制沿用隧道那一整套(牆/天花/橫樑/照明/門洞/打洞/走廊/slab 共用),差異收斂成三件事:
+//   ① **路面剖面**:平坦 tunnel way 改吃「下沉剖面」—— 兩端各往外延伸一段**引道**
+//      (沿端點切線,夾在圖界內,與外部一般道路對齊),路面以 smoothstep 自地表沉到 −sink;
+//      中段平底 ⇒ 原地表(完全不開挖)自然高過 路面 + CLEAR + ROOF_T
+//      ⇒ tunnelCoverIntervals 照原判定判成覆蓋段 = 洞段(頂上就是原本那片地/那條橫向道路)。
+//   ② **引道開挖剖面收窄成垂直路塹**(run.cut 旗標,carveTunnels):過渡帶只到 hw+CUT_W,
+//      山體隧道維持 hw+7 斜壁。出入口只在道路頭尾兩端 —— 舊 hw+7 緩斜壁在平地上是一圈
+//      走得下去的碗(= 從地下道**側面**挖出入口),收窄後路塹外的地表保持平坦,
+//      兩側只剩擋土牆 + 緣石帶,MUST NOT 再長出可通行的側向斜坡。
+//   ③ **引道另登記 open 物理段**(tunnelSegs open:true,見 buildRoads):surfaceAt 捕捉讓
+//      單位站在精確的下沉剖面上、_updatePlayer 的隧道側壁閘擋住從溝底爬牆側出 ——
+//      但 open 段 MUST NOT 上傳伺服器 slab、MUST NOT 擋彈道(_slabHitT)、MUST NOT 當天花
+//      (ceilingAt)、MUST NOT 回報 lev=2:露天路塹頭上是天空,不是隧道。
+//      洞口那面橫塞斷面的土牆照舊由 punchPortalHoles 打穿(= 出入口的「可穿透透明牆」),
+//      邊緣由 collar + 緣石帶修飾 —— 與山體隧道同一套洞口處理。
+// 共用同一條命脈的代價是零:sink=0 時 tunFloorAt 逐位元退回舊公式、run 無 cut 旗標時
+// carveTunnels 逐位元同舊剖面(山體隧道行為不動)。
 //
 // MARGIN    覆蓋餘裕:地表微起伏時洞段才不會被判斷開(下沉量 MUST > CLEAR + ROOF_T + 微起伏)
 // SINK_MAX  下沉上限:再深就不是地下道,是把平地挖成峽谷 ⇒ 放棄(§4 寧缺勿錯)
@@ -2309,7 +2318,7 @@ function tunnelCoverIntervals(pts, cum, floors, heightAt) {
 // BOX_MIN   平底洞段最短長度:短於此不成洞
 // EDGE      引道外端距圖界的最小餘裕(引道不得延伸出地圖)
 // COPE      引道路塹的**邊緣修飾**帶寬:自牆頂往外鋪到地表的平頂緣石(MUST ≥ carveTunnels 的
-//           邊坡外緣 hw+7,否則開挖斜坡會從緣石外緣露出來 = 路邊一道土溝)
+//           路塹過渡帶外緣 hw+CUT_W,並蓋住地形網格 ~8.3m 拉伸殘坡,否則殘坡會從緣石外緣露出來)
 // KERB      引道護欄高:牆頂高出地表這麼多(從外面看是「一般路面 → 緣石 → 護欄 → 下沉車道」)
 const UND = { MARGIN: 1.2, SINK_MAX: 18, GRADE: 0.12, GRADE_MAX: 0.22, BOX_MIN: 24, EDGE: 6, COPE: 8, KERB: 0.45 };
 // 准建地下道的道路分級:**只有車行道**。人行地下道(footway/path + tunnel)在圖資裡極常見,
@@ -3384,7 +3393,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 橋面碰撞面(main.js → terrain.decks → game.js 表面高度):橋是可以站上去的結構物
   const decks = [];
   const cols = [];   // 結構碰撞柱(橋墩/門洞立柱/翼牆)→ blockers(game.js _collide 推擠,不可重疊)
-  const tunnelSegs = [];   // 地下道小段:{路面 fy, 天花 cy, hw} → main.js surfaceAt(洞內站路面)+ 天花碰撞
+  const tunnelSegs = [];   // 隧道/地下道小段:{路面 fy, 天花 cy, hw, open?} → main.js surfaceAt(洞內站路面)
+                           // + 天花碰撞;open:true = 地下道引道露天路塹(只站立/側壁閘,不 slab/彈道/天花)
   const ceilSegs = [];     // 地下道不透明天花板小段(覆蓋段;擋住山體底面)
   // 路口偵測:OSM 共用節點 = 交叉口。arms = 進出交點的路臂數(端點 1、中途 2),
   // ≥3 才是路口;同時記各臂方向(斑馬線垂直路臂、紅綠燈立在轉角)
@@ -3613,6 +3623,32 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,
             });
             ceilSegs.push({ x1, z1, cy1: ceilOf(o0), x2, z2, cy2: ceilOf(o1), hw: hw + 0.6 });
+          }
+        }
+        // ---- 地下道引道 open 物理段(2026-07-29「隧道方法」改制 ③)----
+        // 引道(圍裙外的敞開補集)登記 open:true 的隧道段:①surfaceAt 捕捉(curY < ceil)讓
+        // 單位站在**精確的下沉剖面**上(而非開挖後網格內插的近似值),入洞/出洞只沿道路兩端
+        // C1 連續斜坡;②_updatePlayer 的隧道側壁閘(inTun0 + g > py0 + 2.6)擋住從溝底爬牆
+        // 側出 —— 出入口只在道路頭尾兩端。cy 沿用 ceilOf 同一條公式(與覆蓋段零分支),但
+        // open 段對其餘消費端 MUST 隱形:不上傳伺服器 slab(main.js 過濾 !d.open)、不擋彈道
+        // (_slabHitT)、不當天花(ceilingAt)、不回報 lev=2 —— 露天路塹頭上是天空,不是隧道。
+        // 山體隧道(under=false)MUST NOT 登記:它的敞開段是原生山谷地形,照舊踩 heightAt。
+        if (under) {
+          const openIv = [];
+          let sPrev = 0;
+          for (const [c0, c1] of ivx) { if (c0 - sPrev > 0.4) openIv.push([sPrev, c0]); sPrev = Math.max(sPrev, c1); }
+          if (total - sPrev > 0.4) openIv.push([sPrev, total]);
+          for (let i = 0; i < nP - 1; i++) {
+            const sA = cum[i], sB = cum[i + 1];
+            for (const [c0, c1] of openIv) {
+              const o0 = Math.max(sA, c0), o1 = Math.min(sB, c1);
+              if (o1 - o0 < 0.4) continue;
+              const [x1, z1] = at(o0), [x2, z2] = at(o1);
+              tunnelSegs.push({
+                x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
+                x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw, open: true,
+              });
+            }
           }
         }
         // 明隧道體檢(2026-07-28 使用者需求):逐頂點/逐側量側向土牆厚度,藏不住結構的那一側
@@ -4652,8 +4688,9 @@ export function makeDeckIndex(decks) {
 }
 
 /**
- * 地下道查詢:回傳 (x, z) 處的 { floor, ceil }(路面高 / 天花高)—— 不在任何地下道上回 null。
- * game.js/main.js 以「curY < ceil」判定人在洞內(站路面),否則走地表;天花另供頭部碰撞。
+ * 地下道查詢:回傳 (x, z) 處的 { floor, ceil, open }(路面高 / 天花高 / 露天引道旗標)——
+ * 不在任何地下道上回 null。game.js/main.js 以「curY < ceil」判定人在洞內(站路面),否則走
+ * 地表;天花另供頭部碰撞。open:true(地下道引道路塹)時天花/彈道/slab/lev 消費端 MUST 跳過。
  */
 export function makeTunnelIndex(tunnels) {
   if (!tunnels?.length) return () => null;
@@ -4687,7 +4724,9 @@ export function makeTunnelIndex(tunnels) {
       if (Math.abs(tRaw - t) * Math.sqrt(len2) > 0.75) continue;
       if (Math.hypot(x - (d.x1 + ex * t), z - (d.z1 + ez * t)) > d.hw) continue;
       const floor = d.fy1 + (d.fy2 - d.fy1) * t;
-      if (best === null || floor < best.floor) best = { floor, ceil: d.cy1 + (d.cy2 - d.cy1) * t };
+      // open = 地下道引道露天路塹(2026-07-29):只服務 surfaceAt 站立捕捉與移動側壁閘;
+      // 天花/彈道/slab/lev 消費端 MUST 以 !open 跳過(露天段頭上是天空,不是隧道)。
+      if (best === null || floor < best.floor) best = { floor, ceil: d.cy1 + (d.cy2 - d.cy1) * t, open: !!d.open };
     }
     return best;
   };
@@ -5448,12 +5487,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         way._tun.push({ ...rec, intervals: iv.map(([a, b]) => [a, b]), pts, hw: hwWay });
         if (!iv.length) continue;   // 既不是山體隧道也建不成地下道 = 一般道路,不開挖
         // 敞開補集:[run 頭, 首覆蓋起點] + 各覆蓋區間之間 + [末覆蓋終點, run 尾]
-        // (地下道 = 兩端引道;山體隧道 = 引道/長峽谷)
+        // (地下道 = 兩端引道;山體隧道 = 引道/長峽谷)。
+        // 地下道帶 cut 旗標:carveTunnels 把引道開挖收窄成垂直路塹(過渡帶 hw+CUT_W)——
+        // 出入口只在道路兩端,側面 MUST NOT 留下走得下去的開挖斜坡(見 UND 設計註解 ②)。
         const bounds = [0, ...iv.flatMap(([, , ia, ib]) => [ia, ib]), pts.length - 1];
         for (let k = 0; k + 1 < bounds.length; k += 2) {
           const a = bounds[k], b = bounds[k + 1];
           if (b - a < 1) continue;
-          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1), hw: hwWay });
+          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1), hw: hwWay, cut: !!rec.sink });
         }
       }
     }

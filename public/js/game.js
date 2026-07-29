@@ -569,7 +569,8 @@ export class BattleClient {
       }
       if (t.tunnelAt) {
         const tn = t.tunnelAt(x, z);
-        if (tn && yHi !== yLo && (py - tn.ceil) * (y - tn.ceil) <= 0) return (s - 0.5) / n * len;
+        // open 段(地下道引道露天路塹)頭上是天空,MUST NOT 當隱形天花擋彈道
+        if (tn && !tn.open && yHi !== yLo && (py - tn.ceil) * (y - tn.ceil) <= 0) return (s - 0.5) / n * len;
       }
       py = y;
     }
@@ -5606,10 +5607,11 @@ export class BattleClient {
         this._applyBlast(p.x, by, p.z, b.r || 12);   // 太近開砲,自己也會被衝擊波掀飛
         // y = 離地引爆高度(對空:直擊飛行目標時在其高度炸;sim._blast 吃 3D 距離)
         // lev = 爆點結構層(sim 隧道垂直隔離):彈道已被 _slabHitT 擋在天花外,
-        //       故「世界 y 低於天花」只會發生在真的從洞口打進去的彈頭
+        //       故「世界 y 低於天花」只會發生在真的從洞口打進去的彈頭。
+        //       open 段(地下道引道露天路塹)不算洞內 —— 露天溝裡的爆風不吃隧道隔絕。
         const btn = this.terrain.tunnelAt?.(p.x, p.z);
         this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10),
-          lev: btn && by < btn.ceil ? 2 : 0 });   // three z 南 → 模擬 z 北
+          lev: btn && !btn.open && by < btn.ceil ? 2 : 0 });   // three z 南 → 模擬 z 北
       } else if (b.pierce) {   // (貫穿彈的 missileId 分支不會成立:_updateBullets 已讓飛彈不擋彈道)
         // 直線貫穿:落點定案(地形/障礙/射程終點)才回報整條射線,伺服器沿圓柱一次結算全部目標。
         // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
@@ -6193,7 +6195,10 @@ export class BattleClient {
     if (this.dead) return;
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
-    // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)
+    // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
+    // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(下方 g > py0 + 2.6)正是「溝底
+    // 不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一(另一個是
+    // surfaceAt 站立捕捉);lev/彈道/天花那幾路才要濾 !open。
     const px0 = this.pos.x, pz0 = this.pos.z, py0 = this.pos.y;
     const tn0 = this.terrain.tunnelAt?.(px0, pz0);
     const inTun0 = !!(tn0 && py0 < tn0.ceil);
@@ -6411,7 +6416,9 @@ export class BattleClient {
       const sy = this._surf(this.pos.x, this.pos.z, this.pos.y);
       const th = this.terrain.heightAt(this.pos.x, this.pos.z);
       const tn = this.terrain.tunnelAt?.(this.pos.x, this.pos.z);
-      const inTun = !!(tn && this.pos.y < tn.ceil);
+      // open 段(地下道引道露天路塹)不是洞內:回報 lev=2 會吃 sim 的隧道隔絕(_slabSep ①
+      // 「任一端 lev 2 → 洞內外互不波及」),露天溝裡的單位會變成外部爆風打不到的鬼影
+      const inTun = !!(tn && !tn.open && this.pos.y < tn.ceil);
       // 所在結構層(#1 slab LOS):2 隧道內 / 1 真・橋面(deck ribbon 對得上站立面)/ 0 地面。
       // 伺服器 y 為離站立表面高(橋上/橋下皆 ≈0 無法區辨),故另回報此層供 _slabBlocked 判板體兩側。
       // 站障礙物頂(建物/神木/巨岩,2026-07-22 可站立)≠ 橋層:屋頂不是 slab ribbon,回報 lev=0,
@@ -6846,7 +6853,7 @@ export class BattleClient {
       return ls.samples.map(({ x, z, y }) => {
         let grade = 'ground';
         const tn = this.terrain.tunnelAt?.(x, z);
-        if (tn && y + 1.2 < tn.ceil && Math.abs(y - tn.floor) < 0.6) {
+        if (tn && !tn.open && y + 1.2 < tn.ceil && Math.abs(y - tn.floor) < 0.6) {   // open 引道 = 露天下沉段,照 ground 畫
           grade = 'tunnel';
         } else {
           const d = this.terrain.deckY?.(x, z);

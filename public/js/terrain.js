@@ -581,13 +581,16 @@ export async function buildTerrain(cfg, onProgress) {
    * 路面兩緣落在沒開挖到的斜坡裡 = 路面邊緣被土埋住)。
    * 呼叫端(biomes.js)只送「敞開補集」折線(覆蓋段/縫合蓋廊段不送)—— 本函式對送進來的
    * 走廊一律開挖,規則:原地表低於「路面 + clear + 1」(藏不住天花板)才動。
-   * 剖面:路廊(≤ hw+1)全深壓到路面高;向外至 hw+7 以 smoothstep 漸束回原地表 =
-   * 斜壁路塹,而非舊版垂直斷崖(拉伸三角形布幕 = 破圖主因之一)。
+   * 剖面:路廊(≤ hw+1)全深壓到路面高;向外以 smoothstep 漸束回原地表。過渡帶寬分兩路:
+   *   山體隧道(預設)到 hw+7 —— 斜壁路塹,而非舊版垂直斷崖(拉伸三角形布幕 = 破圖主因之一);
+   *   地下道引道(r.cut)到 hw+CUT_W —— 垂直路塹:平地上 hw+7 緩斜壁是一圈走得下去的碗
+   *   (= 從地下道側面挖出入口),收窄後路塹外地表保持平坦,側面只剩擋土牆(biomes.js)。
    */
+  const CUT_W = 2.5;   // 地下道路塹過渡帶寬(公尺):牆後藏崖;緣石帶 UND.COPE MUST 蓋得過它
   function carveTunnels(runs, { clear = 8, hw = 9 } = {}) {
     if (!runs?.length) return;
     const fullOf = (r) => (r.hw ?? hw) + 1;
-    const nearOf = (r) => (r.hw ?? hw) + 7;
+    const nearOf = (r) => (r.hw ?? hw) + (r.cut ? CUT_W : 7);
     const proj = (x, z, r) => {                       // 最近段 + 內插路面高
       let bd = Infinity, bf = 0;
       for (let i = 0; i < r.pts.length - 1; i++) {
