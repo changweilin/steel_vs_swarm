@@ -3624,6 +3624,14 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 在洞口殘留無頂縫隙(高視角俯瞰洞內的 dollhouse 穿幫)。
         // fy 記「可站立路面」= tFloorAt + ROAD_LIFT(與繪製路面同高;舊版記 tFloorAt,
         // 單位在洞內腳部半沉 0.45m)。
+        // 幾何側壁牆頂 by(2026-07-29 破口封堵):地下道**全長**(覆蓋段 + 圍裙 + 引道路塹)的
+        // 側面是擋土牆/洞壁,牆頂 = 基準線 + KERB(與引道擋土牆網格同一條線)。高度場網格
+        // (格距 ~8.2m)把垂直路塹雙線性攤成每步 ≤0.6m 的緩坡 ⇒ 單步 surfaceAt 高差閘在洞口
+        // 內側永不觸發(澀谷殘餘 8 破口的機制),側壁必須改幾何判定(makeTunnelIndex.wallCross)。
+        // 只有地下道帶 by;山體隧道 by=undefined(無幾何側壁,覆蓋段側面本來就是實心山體、
+        // 敞開段是原生山谷)⇒ 山體行為逐位元不變。純客戶端移動物理:slab 上傳只投影 x/z/hw,
+        // by 不出海(伺服器語意零漂移)。
+        const wallTopAt = under ? (s) => tBaseAt(s) + UND.KERB : () => undefined;
         for (let i = 0; i < nP - 1; i++) {
           const sA = cum[i], sB = cum[i + 1];
           for (const [c0, c1] of ivx) {
@@ -3633,6 +3641,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             tunnelSegs.push({
               x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
               x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,
+              by1: wallTopAt(o0), by2: wallTopAt(o1),
             });
             ceilSegs.push({ x1, z1, cy1: ceilOf(o0), x2, z2, cy2: ceilOf(o1), hw: hw + 0.6 });
           }
@@ -3659,6 +3668,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               tunnelSegs.push({
                 x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
                 x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw, open: true,
+                by1: wallTopAt(o0), by2: wallTopAt(o1),
               });
             }
           }
@@ -4719,7 +4729,7 @@ export function makeTunnelIndex(tunnels) {
       arr.push(n);
     }
   });
-  return (x, z) => {
+  const q = (x, z) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
@@ -4742,6 +4752,41 @@ export function makeTunnelIndex(tunnels) {
     }
     return best;
   };
+  // 幾何側壁(2026-07-29 破口封堵):步進 (x0,z0)→(x1,z1) 是否「由內跨出」某段地下道的
+  // ±hw 牆線、且擋土牆頂(by)高出腳下逾可跨步高。高度場網格(格距 ~8.2m)把垂直路塹
+  // 雙線性攤成每步 ≤0.6m 的緩坡 ⇒ 靠 surfaceAt 單步高差判側壁在洞口內側永不觸發,
+  // 幾何判定不吃地形取樣、與網格解析度無關。只擋**跨出**:跨入(從地表跳/落進路塹)照舊
+  // 放行 —— 牆頂與外側地表齊平(+KERB),物理上外進易、內出難。縱向超出段端 ±0.5m 不擋
+  //(鏈真端點 = 道路頭尾兩端,那裡才是出入口;引道淺端 by−y ≤ WALL_STEP 也自然放行)。
+  // 山體隧道段無 by(undefined)⇒ 整條 wallCross 對它恆 false,行為逐位元不變。
+  const WALL_STEP = 2.6;   // 可跨步高:與 game.js _updatePlayer 側壁閘同一門檻
+  q.wallCross = (x0, z0, x1, z1, y) => {
+    const seen = new Set();
+    for (const [px, pz] of [[x0, z0], [x1, z1]]) {
+      const arr = grid.get(key(Math.floor(px / CELL), Math.floor(pz / CELL)));
+      if (!arr) continue;
+      for (const n of arr) {
+        if (seen.has(n)) continue;
+        seen.add(n);
+        const d = tunnels[n];
+        if (d.by1 == null) continue;                       // 山體隧道:無幾何側壁
+        const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+        const len = Math.hypot(ex, ez) || 1;
+        const ux = ex / len, uz = ez / len;
+        const w0 = Math.abs((x0 - d.x1) * uz - (z0 - d.z1) * ux);   // 側向垂距
+        const w1 = Math.abs((x1 - d.x1) * uz - (z1 - d.z1) * ux);
+        if (w0 > d.hw || w1 <= d.hw) continue;             // 只攔「內 → 外」跨線
+        const f = (d.hw - w0) / (w1 - w0 || 1);            // 跨線點(沿步進線性內插)
+        const s = ((x0 + (x1 - x0) * f) - d.x1) * ux + ((z0 + (z1 - z0) * f) - d.z1) * uz;
+        if (s < -0.5 || s > len + 0.5) continue;           // 跨線點不在此段縱向範圍
+        const t = Math.max(0, Math.min(1, s / len));
+        const by = d.by1 + (d.by2 - d.by1) * t;
+        if (y + WALL_STEP < by) return true;               // 牆頂高出腳下逾可跨步高 = 撞牆
+      }
+    }
+    return false;
+  };
+  return q;
 }
 
 /**
