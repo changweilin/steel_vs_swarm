@@ -795,6 +795,8 @@ async function scanVenue(v) {
 /**
  * 探測模式(--probe=lat,lng[,名稱]):不需要 baked 兵線,只問「這個點周邊一張 L1 地圖裡,
  * 有沒有執行期真的成洞的車行隧道、覆蓋多長多厚」。用來替 ①(地下道感 = 短、覆蓋薄)找新場地。
+ * ④ 明隧道候選也在此體檢:對每條成洞山體隧道跑 `tunnelWallProfile`(與執行期同一縫)兩側,
+ * 報 open 點數 × ROAD_SEG = 明隧道段長 —— 判定與兵線無關(只吃地形與隧道軸),探測即可定案。
  * bbox 與 L1 同尺寸;heightAt 用「東西向穿過該點的假兵線」餵 AMP(探測只需大略地形)。
  */
 async function probePoint(lat, lng, label) {
@@ -817,14 +819,27 @@ async function probePoint(lat, lng, label) {
     const th = [];
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
     th.sort((a, b) => a - b);
+    // ④ 明隧道體檢:同 scanVenue 的判定縫(tunnelWallProfile),取兩側 open 點數較大者
+    let gal = 0, galSide = 0;
+    if (!tr.under) {
+      const covIdx = new Set();
+      for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covIdx.add(i);
+      const cov = tr.pts.map((_, i) => covIdx.has(i));
+      for (const side of [1, -1]) {
+        const n = tunnelWallProfile(tr.pts, tr.floors, cov, heightAt, TUN.HW, side).filter((g) => g.open).length;
+        if (n > gal) { gal = n; galSide = side; }
+      }
+    }
     found.push({ name: w.tags.name || w.tags.highway, under: tr.under,
       len: Math.round(tr.intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0)),
-      depth: Math.round(th[th.length >> 1]) });
+      depth: Math.round(th[th.length >> 1]), gal, galSide });
   }
   const real = found.filter((f) => !f.flat && !f.under).sort((a, b) => a.depth - b.depth);
   const und = found.filter((f) => f.under);
-  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、山體成洞 ${real.length} 條、地下道 ${und.length} 條`
+  const galHits = real.filter((f) => f.gal).sort((a, b) => b.gal - a.gal);
+  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、山體成洞 ${real.length} 條、地下道 ${und.length} 條、明隧道 ${galHits.length} 條`
     + (real.length ? `　最淺山體洞:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/深${f.depth}m`).join('、')}` : '')
+    + (galHits.length ? `　明隧道:${galHits.slice(0, 3).map((f) => `${f.name} open ${f.gal}點≈${Math.round(f.gal * ROAD_SEG)}m(side ${f.galSide},覆蓋${f.len}m)`).join('、')}` : '')
     + (und.length ? `　地下道:${und.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m`).join('、')}` : '')
     + (found.length - real.length - und.length ? `　平地不成洞 ${found.length - real.length - und.length} 條` : ''));
 }
