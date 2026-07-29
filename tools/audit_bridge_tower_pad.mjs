@@ -27,7 +27,7 @@ function loadCore(mutate = (s) => s) {
   if (P0 < 0 || P1 <= P0 || D0 < 0 || D1 <= D0) throw new Error('biomes.js 切片標記找不到');
   const body = mutate(src.slice(P0, P1) + '\n' + src.slice(D0, D1)).replace(/^export /gm, '');
   return new Function('GAME',
-    `${body}\nreturn { planTowerBridgePads, makeDeckIndex, TOWER_PAD_R, TOWER_PAD_AXIS, TOWER_BASE_R };`,
+    `${body}\nreturn { planTowerBridgePads, makeDeckIndex, TOWER_PAD_R, TOWER_PAD_AXIS, TOWER_PAD_OUT, TOWER_BASE_R };`,
   )(GAME);
 }
 
@@ -49,13 +49,21 @@ function walkPastBase(deckY, tx, tz) {
   while (d <= 40 && deckY(tx + d, tz, DECK_MARGIN) != null && deckY(tx - d, tz, DECK_MARGIN) != null) d += 0.25;
   return d;   // 首次掉出台緣的沿橋軸距離(自砲塔中心)
 }
+// 水側徑向走位帶(2026-07-29 修的核心):自砲塔沿「外法線(遠離橋心)」方向走,首次掉出台緣的距離。
+// dirx/dirz = 該塔朝水側的外法線;橋內側由主橋面接手,故只量朝水側這一維。
+function walkRadialOut(deckY, tx, tz, dirx, dirz) {
+  let d = 0;
+  while (d <= 40 && deckY(tx + dirx * d, tz + dirz * d, DECK_MARGIN) != null) d += 0.25;
+  return d;
+}
 
 // ---------------------------------------------------------------------------
 console.log('Ⅰ 墩座台幾何 + 常數');
 const C = loadCore();
-const { planTowerBridgePads, makeDeckIndex, TOWER_PAD_R, TOWER_PAD_AXIS, TOWER_BASE_R } = C;
+const { planTowerBridgePads, makeDeckIndex, TOWER_PAD_R, TOWER_PAD_AXIS, TOWER_PAD_OUT, TOWER_BASE_R } = C;
 ok(Math.abs(TOWER_BASE_R - (10.5 * 0.62 + 0.25)) < 1e-9, `TOWER_BASE_R 不變(碰撞/LOS 不動):${TOWER_BASE_R}`);
-ok(TOWER_PAD_AXIS > TOWER_PAD_R, `沿橋軸半長 TOWER_PAD_AXIS(${TOWER_PAD_AXIS})> 徑向 TOWER_PAD_R(${TOWER_PAD_R})`);
+ok(TOWER_PAD_AXIS > TOWER_PAD_R, `沿橋軸半長 TOWER_PAD_AXIS(${TOWER_PAD_AXIS})> 徑向舊值 TOWER_PAD_R(${TOWER_PAD_R})`);
+ok(TOWER_PAD_OUT > TOWER_PAD_R, `水側徑向 reach TOWER_PAD_OUT(${TOWER_PAD_OUT})> 舊值 TOWER_PAD_R(${TOWER_PAD_R})(2026-07-29 繞塔水側走位)`);
 
 const decks = straightBridge(8);
 const plan = planTowerBridgePads([CP], decks, terrain);
@@ -83,11 +91,14 @@ for (const s of [-1, 1]) {
     if (deckY(tx + rr * Math.cos(a), tz + rr * Math.sin(a), DECK_MARGIN) == null) holes++;
   }
   ok(holes === 0, `s=${s} 貼基座繞行整圈無掉點(holes=${holes})`);
+  // ③ 水側徑向走位帶 ≥ 基座半徑 + WALK(2026-07-29:繞塔水側走稍寬弧線不掉水;舊版只到 TOWER_PAD_R=10.5)
+  const rout = walkRadialOut(deckY, tx, tz, CP.nx * s, CP.nz * s);
+  ok(rout >= TOWER_BASE_R + WALK, `s=${s} 水側徑向走位帶 ${rout.toFixed(1)}m ≥ 基座 ${TOWER_BASE_R.toFixed(1)} + ${WALK}`);
 }
 
 // ---------------------------------------------------------------------------
 console.log('Ⅲ 邊界:砲塔整座落在寬橋內 ⇒ 不加外伸台(只補基座障礙柱)');
-const wide = straightBridge(30);   // hw=30 ⇒ vOut=15+10.5=25.5 ≤ 29.5 ⇒ 不加台
+const wide = straightBridge(34);   // hw=34 ⇒ vOut=15+16=31 ≤ 33.5 ⇒ 不加台(主橋面本身即夠寬繞行)
 const planW = planTowerBridgePads([CP], wide, terrain);
 ok(planW.slabs.length === 0, `寬橋不加外伸台面:slabs=${planW.slabs.length}`);
 ok(planW.cols.length === 2, `仍補基座障礙柱(每塔 1,無墩身):cols=${planW.cols.length}`);
@@ -111,6 +122,16 @@ for (const s of [-1, 1]) {
   }
 }
 ok(oldBad, '舊值(10.5)下沿橋軸走位帶 < 基座 + 8 ⇒ 對照組如預期不足(稽核有牙齒)');
+// TOWER_PAD_OUT 寫回舊值(=TOWER_PAD_R 10.5)⇒ 水側徑向走位帶不足(繞塔水側掉水)
+const ColdOut = loadCore((s) => s.replace('const TOWER_PAD_OUT = 16;', 'const TOWER_PAD_OUT = 10.5;'));
+const planOO = ColdOut.planTowerBridgePads([CP], straightBridge(8), terrain);
+const deckYOO = ColdOut.makeDeckIndex([...straightBridge(8), ...planOO.newDecks]);
+let outBad = false;
+for (const s of [-1, 1]) {
+  const tx = CP.x + CP.nx * GAME.TOWER_SIDE_OFF * s, tz = CP.z + CP.nz * GAME.TOWER_SIDE_OFF * s;
+  if (walkRadialOut(deckYOO, tx, tz, CP.nx * s, CP.nz * s) < ColdOut.TOWER_BASE_R + WALK) outBad = true;
+}
+ok(outBad, '舊值(10.5)下水側徑向走位帶 < 基座 + 8 ⇒ 對照組如預期不足(稽核有牙齒)');
 
 // ---------------------------------------------------------------------------
 console.log(`\n${fail === 0 ? '✅ 全綠' : '❌ 有紅字'}  pass=${pass} fail=${fail}`);

@@ -1832,6 +1832,12 @@ const ROAD_W = {
   pedestrian: 4, track: 3.5, footway: 2.4, path: 2.2,
 };
 const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
+// 步道級 way(2026-07-29 使用者定案「步道一律不建橋」):行人道/步徑/徒步區/階梯/單車道 ——
+// 兵線本就只走 DRIVABLE(bake 的 DRIVABLE 排除步道 ⇒「步道不納入兵線」天然成立)。這類 way MUST NOT
+// 走橋樑管線:①跨水段不自動升高架橋(否則沿岸步道如泰晤士河維多利亞堤岸被整條升橋,而非貼岸繞行 ——
+// skirtWaterClips 的橫跨偵測對長條沿岸步道會誤放行);②連 bridge=yes 的步橋也不建高架(退成貼地步徑)。
+// buildRoads 與 markGradeCorridors 兩消費端 MUST 共用此判定(否則走廊淨空與實際結構分家)。
+const PED_HW = /^(footway|path|pedestrian|steps|cycleway|bridleway)$/;
 // 橋面/地下道的最小通行寬度(遊戲公尺):機甲碰撞直徑約 4~5m,兩台並行 + 小兵夾縫仍有餘裕
 const PASS_W = 16;
 // 地下道(真・下沉,2026-07-15 改版):**不開挖地表**。隧道路面 = 兩端洞口地表高的平直內插道路,
@@ -2444,53 +2450,73 @@ function polylinesMeet(A, B, gap) {
 }
 
 /**
- * ③橋交會去重(2026-07-28 使用者需求「十字路口都有橋交會時只留一座橋,優先度:兵線>大馬路>小馬路」)。
- * 兩座橋**幾何相交/交會**(真正交叉,或端點貼近 ≤ CROSS_GAP)時只留高優先者,低優先者**整條剔除**。
- *   優先度:兵線補橋(wetPieces,恆最高)> 大馬路(roadWidth 大)> 小馬路(roadWidth 小)。
- * 與 dedupeParallelBridges(側向平行堆疊)互補:那支處理「疊在一起」,這支處理「交叉/交會」。
- * **使用者定奪含立體交叉**(不共節點的上下穿越也算交會)—— 與舊 dropLaneBridges「立體交叉保留」相反。
- * 純幾何確定性(穩定排序 + AABB 早退,不耗共享 rnd);MUST 排在 roadInput 定案前(carve 只碰 tunnel 不受影響,
- * 但 markGradeCorridors / buildRoads 三消費端須吃同一份去重集)。整條保留或整條剔除,不打亂倖存 way 的逐 run 索引。
+ * ③橋交會去重(2026-07-28 使用者需求「十字路口都有橋交會時只留一座橋」;2026-07-29 定案含**鐵路高架**)。
+ * 兩座橋**幾何相交/交會**時只留高優先者,低優先者**整條剔除**。
+ *   優先度:兵線補橋(wetPieces,恆最高)> **鐵路高架**(RAIL_RANK)> 大馬路(roadWidth 大)> 小馬路(roadWidth 小)。
+ *   ⇒ 鐵路×道路交會時**保留鐵路**(高架優先,使用者定案);鐵路×鐵路 → 長者保留;道路×道路 → 舊制。
+ * 鐵路走 fetchOsmFeatures/buildRails(bridge=yes 或 monorail 才升高架),故 rails 另傳入、另回傳過濾集。
+ * **交會容差不對稱**:兩方皆道路 → CROSS_GAP(含端點/T 字貼近 —— 道路已由 mergeGradeChains 併鏈,貼近 = 真 T 交會);
+ *   任一方是鐵路 → gap=0 **只認真正交叉**(鐵路**未**經 mergeGradeChains,同線相鄰段/junction 共端點會被 ≤2m 誤判成交會而砍斷整條鐵路)。
+ * 與 dedupeParallelBridges(側向平行堆疊)互補。純幾何確定性(穩定排序 + AABB 早退,不耗共享 rnd);
+ * MUST 排在 roadInput 定案前 + buildRails 之前(markGradeCorridors / buildRoads / buildRails 消費端吃同一份去重集)。
+ * 整條保留或整條剔除,不打亂倖存 way 的逐 run 索引。回傳 { roads, rails }(各自過濾集)。
  */
 const CROSS_GAP = 2;   // 交會判定容差(公尺):真正交叉恆 0;端點/T 字貼近 ≤2m 也算交會(平行堆疊已由 dedupeParallelBridges 處理)
-function dedupeCrossingBridges(roads, center, wetPieces = []) {
+const RAIL_RANK = 100; // 鐵路高架去重優先度:高於任何道路(motorway roadWidth ~12)⇒ 鐵路×道路保留鐵路
+function dedupeCrossingBridges(roads, center, wetPieces = [], rails = []) {
   const aabbOf = (pts) => {
     let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
     for (const [x, z] of pts) { if (x < a) a = x; if (x > b) b = x; if (z < c) c = z; if (z > d) d = z; }
     return [a, b, c, d];
   };
-  const gapFar = (p, q) => p[0] > q[1] + CROSS_GAP || p[1] < q[0] - CROSS_GAP || p[2] > q[3] + CROSS_GAP || p[3] < q[2] - CROSS_GAP;
+  const gapFar = (p, q, g) => p[0] > q[1] + g || p[1] < q[0] - g || p[2] > q[3] + g || p[3] < q[2] - g;
   const brs = [];
-  roads.forEach((w, i) => {
-    if (!w.tags?.bridge || w.tags.tunnel || !(w.geometry?.length >= 2)) return;
+  const add = (w, i, arr, rank) => {
     const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
     let len = 0;
     for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
-    brs.push({ i, pts, rank: roadWidth(w.tags), len, box: aabbOf(pts) });
+    brs.push({ i, arr, pts, rank, len, box: aabbOf(pts) });
+  };
+  roads.forEach((w, i) => {
+    if (!w.tags?.bridge || w.tags.tunnel || !(w.geometry?.length >= 2)) return;
+    add(w, i, 'road', roadWidth(w.tags));
   });
-  if (!brs.length) return roads;
-  const drop = new Set();
-  // ①兵線補橋恆勝:與任一兵線泡水段交會的真橋整條剔除(兵線是遊戲關鍵路徑,MUST 走在自己的補橋上)
+  // 鐵路高架 = bridge=yes 或 monorail(buildRails 對這兩者升高架 ⇒ 只有這兩者會與橋在空間交會)
+  rails.forEach((w, i) => {
+    if (!(w.tags?.bridge || w.tags?.railway === 'monorail') || !(w.geometry?.length >= 2)) return;
+    add(w, i, 'rail', RAIL_RANK);
+  });
+  if (!brs.length) return { roads, rails };
+  const dropRoad = new Set(), dropRail = new Set();
+  const isDrop = (b) => (b.arr === 'rail' ? dropRail : dropRoad).has(b.i);
+  const doDrop = (b) => (b.arr === 'rail' ? dropRail : dropRoad).add(b.i);
+  const meetGap = (aRail, bRail) => (aRail || bRail) ? 0 : CROSS_GAP;   // 任一鐵路 → 只認真正交叉
+  // ①兵線補橋恆勝:與任一兵線泡水段交會的橋(道路或鐵路)整條剔除(兵線是遊戲關鍵路徑)
   const laneBoxes = wetPieces.map(aabbOf);
   for (const B of brs) {
+    const g = B.arr === 'rail' ? 0 : CROSS_GAP;
     for (let k = 0; k < wetPieces.length; k++) {
-      if (gapFar(B.box, laneBoxes[k])) continue;
-      if (polylinesMeet(B.pts, wetPieces[k], CROSS_GAP)) { drop.add(B.i); break; }
+      if (gapFar(B.box, laneBoxes[k], g)) continue;
+      if (polylinesMeet(B.pts, wetPieces[k], g)) { doDrop(B); break; }
     }
   }
-  // ②真橋互相交會:高優先(roadWidth 大)保留、低優先整條剔除。等寬 → 長者保留 → 插入序(確定性,穩定排序)
-  const live = brs.filter((b) => !drop.has(b.i)).sort((a, b) => b.rank - a.rank || b.len - a.len || a.i - b.i);
+  // ②互相交會:高優先保留(rank desc:鐵路 > 道路)、低優先整條剔除。等 rank → 長者保留 → 插入序(確定性)
+  const live = brs.filter((b) => !isDrop(b)).sort((a, b) => b.rank - a.rank || b.len - a.len || a.i - b.i);
   for (let a = 0; a < live.length; a++) {
     const A = live[a];
-    if (drop.has(A.i)) continue;
+    if (isDrop(A)) continue;
     for (let b = a + 1; b < live.length; b++) {
       const B = live[b];
-      if (drop.has(B.i)) continue;
-      if (gapFar(A.box, B.box)) continue;
-      if (polylinesMeet(A.pts, B.pts, CROSS_GAP)) drop.add(B.i);   // A 優先度 ≥ B ⇒ 剔除 B
+      if (isDrop(B)) continue;
+      const g = meetGap(A.arr === 'rail', B.arr === 'rail');
+      if (gapFar(A.box, B.box, g)) continue;
+      if (polylinesMeet(A.pts, B.pts, g)) doDrop(B);   // A 優先度 ≥ B ⇒ 剔除 B
     }
   }
-  return drop.size ? roads.filter((_, i) => !drop.has(i)) : roads;
+  return {
+    roads: dropRoad.size ? roads.filter((_, i) => !dropRoad.has(i)) : roads,
+    rails: dropRail.size ? rails.filter((_, i) => !dropRail.has(i)) : rails,
+  };
 }
 
 /** 世界公尺 → 經緯度(llToWorld 逆運算;兵線跨水補橋的偽 way 用)*/
@@ -2847,10 +2873,11 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
       // 結構隧道/地下道 MUST 吃 way._tun 存下的那一份折線(地下道含兩端引道延伸段)
       const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
         : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
+      const ped = PED_HW.test(way.tags?.highway || '');   // 步道不建橋 ⇒ 也不登記橋走廊(與 buildRoads 同步)
       for (const run of pieces) {
         if (run.length < 2) continue;
         const wet = run.wet === true;
-        if (!bridge && !strc && !wet) continue;   // 一般乾地路段不是立體結構
+        if (!strc && (ped || (!bridge && !wet))) continue;   // 一般乾地路段 / 任何步道段:不是要登記的立體結構
         // 沉錨橋碎片:與 buildRoads 同步跳過(該段不建橋 → 也不登記走廊/淨空);
         // 閾值 MUST 用「沒入水下 1m」(岸壁高程可低到 ~0.1,見 buildRoads 同名註解)
         const sunk = (p) => terrain.heightAt(p[0], p[1]) < WATER.LEVEL - 1.0;
@@ -3040,9 +3067,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // (圖資的 tunnel way 只畫覆蓋段,引道是我們接出去的),重算 densify(raw) 會少掉引道。
       const pieces = strc ? [tw.pts] : bridge ? [densify(raw, ROAD_SEG)]
         : splitWaterPieces(densify(raw, ROAD_SEG), terrain, inclSwamp);
+      const ped = PED_HW.test(way.tags.highway);   // 步道一律不建橋(見 PED_HW):跨水段/bridge=yes 皆退成貼地步徑
       for (const run of pieces) {
       if (run.length < 2) continue;
-      const brg = bridge || run.wet === true;
+      const brg = !ped && (bridge || run.wet === true);
       // 沉錨橋碎片不建(2026-07-22 倫敦雙層橋案):錨點高程沒入水下 ≥1m = 斷鏈/邊界裁切殘片
       // (步橋鏈常在河面上的分岔節點斷開,mergeGradeChains 保守不併)—— 河床錨把 hA/hB 拖沉,
       // 剖面沉成貼水浮板、疊在真橋之下 = 上下兩層(倫敦實測:斷點錨 h=−2.48)。
@@ -4056,6 +4084,13 @@ const TOWER_PAD_R = 10.5;    // 墩座台面「徑向」半徑(遊戲公尺,朝�
 // surfaceAt 落回河面)。加長沿橋軸半長 ⇒ 砲塔左右各留充裕走位帶。純表現層(站立面 decks + 視覺板);
 // 碰撞柱半徑仍 TOWER_BASE_R(不變 ⇒ 伺服器 occ/LOS/平衡不動)。視覺板沿橋軸半寬同取此值(所見=所站)。
 const TOWER_PAD_AXIS = 15;
+// 墩座台面「朝橋外法線(水側)自砲塔往外伸出」的半長(2026-07-29 使用者回報「繞砲塔水側走位『左右兩座』仍會掉」修):
+// 跨河橋兩側砲塔都懸在橋緣外的水上懸臂;舊版台面外緣只到 lat + TOWER_PAD_R(= 砲塔往水側僅 10.5m),碰撞把玩家推到
+// 塔心 r≈8.5(myR + max(TOWER_BASE_R, COLLIDER.tower.r 7))⇒ 水側只剩 ~2m 走位帶。繞塔外側走稍寬弧線(orbit r>10.5)
+// 即掉出台緣落水/落岸(真機實測 orbit 12/14/16 掉 ~9m;貼碰撞環 r8.5 不掉 ⇒ PR#24 只放大沿橋軸而漏掉這一維)。
+// 與 TOWER_PAD_AXIS 同理:純表現層(站立面 decks + 視覺板)獨立放大水側伸展,**MUST NOT** 動 TOWER_BASE_R
+//(= 碰撞/伺服器 occ/LOS/平衡不動)。橋內側(朝橋心)由主橋面接手 ⇒ 只需放大朝水側這一維。
+const TOWER_PAD_OUT = 16;
 const TOWER_PAD_T = 1.4;     // 台面板厚(≥ DECK_UNDER 1.2,與橋面底緣語意一致)
 const TOWER_PAD_SINK = 0.02; // 台面繪製下沉量:與橋面路面 quad 錯開,避免共面 z-fighting
 const TOWER_PAD_DIRF = 0.6;  // 橋段方向 × 兵線切線的 |cos| 下限:濾掉「剛好經過附近的別條橋」
@@ -4103,7 +4138,7 @@ function planTowerBridgePads(cps, decks, terrain) {
       const hw = brg.hw;
       // 塔的側向距離 = 兵線中心側距 + 側偏量投影到橋法線(兵線法線與橋法線近乎平行,夾角 ≤53°)
       let lat = brg.lat + GAME.TOWER_SIDE_OFF * s * (cp.nx * ez - cp.nz * ex);
-      if (Math.abs(lat) > hw + TOWER_PAD_R) continue;   // 構不到台面(理論上不會發生,防呆)
+      if (Math.abs(lat) > hw + TOWER_PAD_OUT) continue;   // 構不到台面(理論上不會發生,防呆)
       // 塔基地面高過橋面 = 塔站在橋上方的山坡(不是同一層)⇒ 照舊貼地,不蓋墩座
       let gy = terrain.heightAt(tx, tz);
       if (dy < gy - 0.5) continue;
@@ -4115,7 +4150,7 @@ function planTowerBridgePads(cps, decks, terrain) {
       const ry = Math.atan2(ex, ez);                      // local +x → 外法線、local +z → 橋軸(同橋墩帽)
       // 台面內緣壓進橋面之下 0.6m(被路面 quad 蓋住)⇒ 與橋面銜接無縫。**MUST NOT** 讓台面往
       // 橋心多伸(舊版 lat − PAD_R):橋面路面 quad 就畫在 deckAt,同高疊上去 = 整條車道 z-fighting。
-      const vIn = hw - 0.6, vOut = lat + TOWER_PAD_R;     // 外緣 = 凸出橋寬之外的部分
+      const vIn = hw - 0.6, vOut = lat + TOWER_PAD_OUT;     // 外緣 = 凸出橋寬之外的部分(水側走位帶,見 TOWER_PAD_OUT)
       pads.push({ x: tx, z: tz, y: dy });
       // 塔基座橋墩級障礙:所有橋上塔一律補(含未凸出橋面的),y=dy(墩座面)⇒ _collide 的 onDeck 豁免
       // 不跳過(b.y 非 < 站立面−3),站台面的機體被推出塔基;彈道經 _blockerHitT、伺服器 LOS 經 occ 一併擋。
@@ -5047,9 +5082,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
   }
-  // ③橋交會去重(十字路口只留一座橋,優先度 兵線>大馬路>小馬路):真橋交叉/交會 → 低優先整條剔除。
-  // MUST 排在 roadInput 定案**之前**(markGradeCorridors 與 buildRoads 吃同一份去重集)。
-  if (osmRoads?.length) osmRoads = dedupeCrossingBridges(osmRoads, center, laneWetPieces);
+  // ③橋交會去重(十字路口只留一座橋,優先度 兵線>鐵路>大馬路>小馬路):橋交叉/交會 → 低優先整條剔除。
+  // 2026-07-29 起含**鐵路高架**(osmData.rails 一併去重,鐵路×道路保留鐵路)。MUST 排在 roadInput 定案
+  // **之前**(markGradeCorridors/buildRoads 吃 osmRoads)+ buildRails 之前(吃 osmData.rails)。
+  if (osmRoads?.length || osmData?.rails?.length) {
+    const dd = dedupeCrossingBridges(osmRoads || [], center, laneWetPieces, osmData?.rails || []);
+    if (osmRoads?.length) osmRoads = dd.roads;
+    if (osmData?.rails?.length) osmData.rails = dd.rails;
+  }
   // 跨水路線 way 串接(一條路線上太靠近的兩座橋直接連成一座):MUST 排在 roadInput 定案**之前**
   // —— markGradeCorridors 與 buildRoads 吃同一份 way 陣列,分家的話走廊會與實際橋面對不上。
   if (osmRoads?.length) osmRoads = joinWaterRouteWays(osmRoads, terrain, center);
