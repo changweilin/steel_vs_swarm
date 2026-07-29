@@ -218,6 +218,36 @@ log('— sim:爆風不穿透橋面/隧道天花(#1 slab 垂直隔離;所有 AoE 
   assert(bareT.hp < bareT.maxHp, '未上傳 slab 時爆風不受層隔(headless 迴歸,確定性斷言不變)');
 }
 
+log('— sim:隧道側牆 LOS(_slabBlocked ①)—— 交疊 ribbon 沿軸出洞口不誤擋(2026-07-29 澀谷)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  // 十字交疊雙隧道(澀谷髮夾/交疊走廊的抽象):A 沿 x 軸、B 沿 z 軸,交會於 (cx, cz)
+  const ox = 4000, oz = 4000, cx = ox + 100, cz = oz;
+  sim._ingestSlabs({ slabs: [
+    [ox, oz, ox + 200, oz, 8, 2],                    // 隧道 A:x 軸向,半寬 8
+    [cx, oz - 100, cx, oz + 100, 8, 2],              // 隧道 B:z 軸向,交疊於 A 中段
+  ] });
+  assert(!!sim._slabGrid, 'slab 網格建立(_ingestSlabs)');
+  const IN = { hero: true, lev: 2 };                 // 洞內端(客戶端回報 lev 2)
+  const OUT = { hero: true, lev: 0 };                // 洞外端(地面)
+  // ① 交疊區沿 B 軸出北洞口:穿 A 側牆但全程走在 B 走廊空腔內 → 放行(修正前 ANY-match 誤擋)
+  assert(!sim._slabBlocked(cx, cz, cx, cz + 150, IN, OUT),
+    '交疊區沿另一走廊軸出洞口:放行(隧道兵線對射不被岩盤誤吃)');
+  assert(!sim._slabBlocked(cx, cz + 150, cx, cz, OUT, IN),
+    '同一射線攻守互換同判(洞外 → 洞內沿軸):放行 = 洞內單位打得到也被打得到,無免傷掩體');
+  // ② 交疊區斜向穿出:A、B 皆判側牆 → 仍擋(岩盤遮蔽不因交疊鬆動)
+  assert(sim._slabBlocked(cx, cz, cx + 50, cz + 40, IN, OUT), '交疊區斜向穿雙側牆:仍擋');
+  assert(sim._slabBlocked(cx + 50, cz + 40, cx, cz, OUT, IN), '斜向穿雙側牆攻守互換同判:擋');
+  // ③ 單一 ribbon 段迴歸:非交疊處行為不變
+  assert(sim._slabBlocked(ox + 30, oz, ox + 30, oz + 60, IN, OUT), '單一隧道側向穿出:擋(舊行為不變)');
+  assert(!sim._slabBlocked(ox + 30, oz, ox - 60, oz, IN, OUT), '單一隧道沿軸出洞口:放行(舊行為不變)');
+  // ④ 兩端皆非 lev 2(lev 抖動的另一相位)→ 側牆規則不套用(既有設計:客戶端 lev 權威)
+  assert(!sim._slabBlocked(cx, cz, cx + 50, cz + 40, OUT, OUT), 'lev 0↔0 不觸發側牆規則(行為不變)');
+  // ⑤ _losBlocked 佈線:slab 判定先於障礙網格,headless(無 occ)亦生效
+  assert(sim._losBlocked(cx, cz, 2, cx + 50, cz + 40, 2, IN, OUT), '_losBlocked 佈線:側牆擋通過 slab 路徑');
+  assert(!sim._losBlocked(cx, cz, 2, cx, cz + 150, 2, IN, OUT), '_losBlocked 佈線:沿軸出洞口放行');
+}
+
 log('— sim:榴彈類最小射程 → 太近則無差別波及友軍 + 自損(2026-07-27)—');
 {
   // ① lobMinRange 推導:只 trajClass 'lob' 非零(= 爆風半徑 × LOB_MIN_F);其餘一律 0
