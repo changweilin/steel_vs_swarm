@@ -110,5 +110,21 @@ console.log('\n⑤ 觸控裝置的填充率設定');
   ok(/lowPower\(\)\) return 1/.test(G), '低功耗模式仍夾到 1(舊行為不得回歸)');
 }
 
+console.log('\n⑥ 自適應解析度調節器(觸控限定,天花板以下浮動)');
+{
+  ok(/const RES_GOV = \{/.test(G) && /_tickResGov\(/.test(G), '調節器存在(RES_GOV + _tickResGov)');
+  ok(/if \(isTouchUI\(\)\) this\._resGov =/.test(G), '只在觸控裝置啟用(桌機 _resGov 不存在 ⇒ 早退,行為不變)');
+  ok(/if \(!g \|\| !\(ms > 0\) \|\| ms > RES_GOV\.SPIKE_MS\) return/.test(G),
+    '尖峰幀過濾(GC / 載入 / 分頁切回不觸發降階)');
+  ok(/Math\.max\(RES_GOV\.MIN, /.test(G), '降階有下限 RES_GOV.MIN(不會無限降到糊)');
+  ok(/this\._resScale = Math\.min\(1, /.test(G), '升階上限 = 1(動態縮放 MUST NOT 突破 _dpr() 天花板)');
+  ok(/this\.renderer\.setPixelRatio\(this\._dpr\(\) \* this\._resScale\)/.test(G),
+    '像素比落地唯一出口 _applyRes(天花板 × 縮放,勿散寫 setPixelRatio)');
+  ok(/g\.cool = Math\.min\(RES_GOV\.COOL_MAX, g\.cool \* 2\)/.test(G),
+    '升階指數退避(能力邊界不震盪)');
+  // 落地出口唯一性:game.js 內 setPixelRatio 只准出現在 _initScene 初始化與 _applyRes 兩處
+  ok([...G.matchAll(/setPixelRatio\(/g)].length === 2, 'setPixelRatio 全檔僅 2 處(初始化 + _applyRes)');
+}
+
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
 process.exit(fail === 0 ? 0 : 1);

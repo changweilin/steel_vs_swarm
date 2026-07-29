@@ -261,6 +261,22 @@ const PROJ_POOL_MAX = 24;
 // 觸控裝置的像素比上限:手機 DPR 常見 2.5~3.5,照單全收等於算 6~12 倍於邏輯解析度的像素,
 // 行動 GPU 是**填充率**瓶頸 ⇒ 高功耗模式一樣掉幀。1.5 已看不出鋸齒差(還有 FXAA 級的 DPR 抗鋸齒)。
 const TOUCH_DPR_MAX = 1.5;
+// 自適應解析度(觸控限定):`_dpr()` 是畫質**天花板**(低功耗 1 / 觸控 1.5,稽核鎖定),
+// 調節器只在天花板以下浮動 —— 幀時撐不住就降算圖解析度換幀率,有餘裕就升回滿檔。
+// 手機 GPU 效能跨度極大(同一份場景在旗艦與中階機差 3 倍),固定像素比注定兩頭不討好:
+// 訂高了弱機掉幀、訂低了強機白白犧牲畫質;讓量測到的幀時自己決定,才同時兼顧速度與畫質。
+const RES_GOV = {
+  MIN: 0.7,        // 縮放下限(乘在 _dpr() 天花板上):再糊就影響瞄準辨識,寧可掉幀
+  STEP: 0.1,       // 每次調整一階(drawing buffer 重配有成本,小步走 + 冷卻防震盪)
+  HI_MS: 20,       // 平均幀時 > 20ms(< 50fps)⇒ 降一階
+  LO_MS: 17.2,     // 平均幀時 < 17.2ms(60Hz vsync 滿速)⇒ 有餘裕,升一階
+  HOLD_S: 0.8,     // 任兩次調整的最小間隔(也給 EMA 重新收斂的時間)
+  COOL_S: 3,       // 升階基礎冷卻(降階只吃 HOLD_S:掉幀要快救,畫質可以慢慢還)
+  FAIL_S: 6,       // 升階後這麼久內又被打回 ⇒ 判定「上不去」,升階冷卻翻倍
+  COOL_MAX: 24,    // 升階冷卻上限(避免在能力邊界永久震盪,也不至於永不再試)
+  SPIKE_MS: 80,    // 單幀尖峰(GC / 資源載入 / 分頁切回)不入帳,只看穩態
+  EMA: 0.1,        // 指數移動平均權重(時間常數約 10 幀)
+};
 
 export class BattleClient {
   /**
@@ -404,6 +420,9 @@ export class BattleClient {
     });
     this.renderer.setPixelRatio(this._dpr());   // 低功耗模式(svs_lowpower)夾到 1
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
+    // 自適應解析度調節器:只在觸控裝置啟用(桌機像素比行為完全不變,見 RES_GOV 註解)
+    this._resScale = 1;
+    if (isTouchUI()) this._resGov = { ema: (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2, last: 0, raiseAt: -1e9, cool: RES_GOV.COOL_S };
     this.scene = new THREE.Scene();
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
     // FPV 一律 UNITS[kind].fov = 68(2026-07-12 起全機種相同):同距離目標的視覺大小雙陣營必須一致,
@@ -2656,7 +2675,36 @@ export class BattleClient {
     return Math.min(dpr, isTouchUI() ? TOUCH_DPR_MAX : 2);
   }
   /** 設定頁「低功耗模式」即時套用(main.js 已寫入 localStorage,此處只重設像素比與尺寸)*/
-  setLowPower() { this.renderer.setPixelRatio(this._dpr()); this._onResize(); }
+  setLowPower() { this._applyRes(); }
+
+  /** 像素比落地的唯一出口:天花板 `_dpr()` × 動態縮放 `_resScale`(桌機恆為 1)*/
+  _applyRes() {
+    this.renderer.setPixelRatio(this._dpr() * this._resScale);
+    this._onResize();
+  }
+
+  /**
+   * 自適應解析度調節器(觸控限定;每幀餵入未夾制的原始幀時)。
+   * 規則:EMA 幀時 > HI_MS 降一階、< LO_MS 升一階;降階只受 HOLD_S 節流(掉幀要快救),
+   * 升階吃指數退避(升上去 FAIL_S 內又被打回 ⇒ 冷卻翻倍),避免在 GPU 能力邊界反覆震盪。
+   * 尖峰幀(GC / 載入 / 分頁切回的補償幀)不入帳 —— 調節器只回應穩態負載。
+   */
+  _tickResGov(ms, now) {
+    const g = this._resGov;
+    if (!g || !(ms > 0) || ms > RES_GOV.SPIKE_MS) return;
+    g.ema += (ms - g.ema) * RES_GOV.EMA;
+    if (now - g.last < RES_GOV.HOLD_S) return;
+    if (g.ema > RES_GOV.HI_MS && this._resScale > RES_GOV.MIN) {
+      this._resScale = Math.max(RES_GOV.MIN, +(this._resScale - RES_GOV.STEP).toFixed(2));
+      if (now - g.raiseAt < RES_GOV.FAIL_S) g.cool = Math.min(RES_GOV.COOL_MAX, g.cool * 2);
+    } else if (g.ema < RES_GOV.LO_MS && this._resScale < 1 && now - g.last >= g.cool) {
+      this._resScale = Math.min(1, +(this._resScale + RES_GOV.STEP).toFixed(2));
+      g.raiseAt = now;
+    } else return;
+    g.last = now;
+    g.ema = (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2;   // 調整後重新量測(舊均值屬於舊解析度)
+    this._applyRes();
+  }
 
   // ---------------- 快照同步 ----------------
   onSnap(m) { this._snapQueue = m; }
@@ -7193,8 +7241,10 @@ export class BattleClient {
   _loop() {
     if (this.disposed) return;
     this._raf = requestAnimationFrame(() => this._loop());
-    let dt = Math.min(0.1, this.clock.getDelta());
+    const raw = this.clock.getDelta();          // 未夾制幀時:自適應解析度要看真實負載
+    let dt = Math.min(0.1, raw);
     const now = performance.now() / 1000;
+    this._tickResGov(raw * 1000, now);          // 觸控限定(桌機 _resGov 為 undefined 直接早退)
 
     // Hitstop(頓點):拆塔/擊殺瞬間全域凍結 50~120ms 強調打擊重量,期間照常渲染
     if (this._hitstop > 0) { this._hitstop -= dt; dt = 0; }
