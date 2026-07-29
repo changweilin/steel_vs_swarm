@@ -49,28 +49,38 @@ jobs:
 
       # 場地清單:dispatch 用 inputs.only;push 觸發讀 .github/bake-request 內容
       - name: 解析場地清單
+        id: req
         run: |
           ONLY='${{ inputs.only }}'
+          GO=1
           # 請求檔只讀第一行(第二行起 = 重觸發 nonce:內容不變 push 不會觸發,改 nonce 即可重跑)
           if [ -z "$ONLY" ] && [ -f .github/bake-request ]; then ONLY=$(head -n1 .github/bake-request | tr -d '[:space:]'); fi
+          # push 觸發但湊不出清單(請求檔被刪/空)→ 跳過:全場地重烤成本高,MUST 只由
+          # workflow_dispatch 留空 only 明示觸發,不准由「刪檔」這種副作用觸發。
+          if [ "${{ github.event_name }}" = 'push' ] && [ -z "$ONLY" ]; then GO=0; echo '無請求清單 → 跳過重烤'; fi
           echo "ONLY=$ONLY" >> "$GITHUB_ENV"
+          echo "go=$GO" >> "$GITHUB_OUTPUT"
           echo "場地清單:${ONLY:-(全部)}"
 
       - name: 重烤兵線(報告見本步驟 log)
+        if: ${{ steps.req.outputs.go == '1' }}
         run: node tools/bake_venue_lanes.mjs
 
       # 重烤結果 MUST 先過離線規則稽核才准提交(#4 塔射程重疊 / 兵線分離 / #5 洞口涵蓋;
       # audit_lane_grade_sep 吃 bake 剛寫入的 tools/.osm_cache,在此環境天然可跑)
       - name: 規則稽核
+        if: ${{ steps.req.outputs.go == '1' }}
         run: |
           node tools/audit_map_rules.mjs
           node tools/audit_lane_sep.mjs
           node tools/audit_lane_grade_sep.mjs
 
       - name: 重烤差異
+        if: ${{ steps.req.outputs.go == '1' }}
         run: git --no-pager diff --stat
 
       - name: 提交回觸發分支
+        if: ${{ steps.req.outputs.go == '1' }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
@@ -81,6 +91,7 @@ jobs:
           }
 
       - uses: actions/upload-artifact@v4
+        if: ${{ steps.req.outputs.go == '1' }}
         with:
           name: bake-lanes
           path: public/js/venueLanes.js
