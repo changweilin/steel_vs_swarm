@@ -1,7 +1,7 @@
 // ============ 零件 × 實例 變換數學(純函式,零依賴)============
 // 植被/神木是「宣告式零件表 + 每株實例變換」組裝的:零件自帶 px/pz(距軸心偏移)、
 // y(高度)、rx/rz(枝幹傾角)、sy(縱向壓縮);實例自帶 x/y/z(落點)、s(體格)、
-// ry(朝向)、tx/tz(每株站姿微傾斜)。
+// ry(朝向)、tx/tz(每株站姿微傾斜)、dj(細節種子,見下)。
 //
 // 單一縫(§2.1):渲染端 biomes.js `buildVegMeshes` 與離線稽核 tools/audit_object_joints.mjs
 // **共用這一支**,零件接合的正確性才驗得到真品。
@@ -49,10 +49,31 @@ export function quatApply(q, v) {
   ];
 }
 
+// ---- 細節抖動(2026-07-29「自然物件別太對稱、太整齊」)----
+// dj = 每株細節種子(0~1,佈點時抽定;undefined/0 = 不抖,輸出與舊制逐位元一致)。
+// 只動兩個**不影響接合**的自由度:
+//   ① jr:水平半徑**只增不減**(縮放錨定零件中心,y 與 px/pz 偏移、縱向尺寸皆不動)——
+//      增肥只會把零件埋得更深,MUST NOT 改成雙向抖(縮小會拉開「名義上剛好貼合」的
+//      接合:桉樹貼幹葉簇/苔蘚簇一縮就 FLOAT,audit_object_joints 紅過)。
+//      樹冠/葉簇(有 key)+0~18%、結構件(幹/枝)+0~8%(演出半徑仍收在權威
+//      碰撞柱的餘裕內,原則 4);零件可帶 j 倍率(如 borderrock 岩塊 j:2)放大振幅。
+//   ② spin:繞零件**自身擠出軸**自轉(後乘四元數 = 局部軸,端點不動)——
+//      疊錐的面稜逐層錯開、ico 簇換剪影,同型兩株不再同一張剪影。
+//      **只給軸心零件(px/pz = 0)**:偏移件(貼幹葉簇/苔簇)的貼合靠特定朝向的
+//      頂點,自轉會把「剛好貼上」轉開(euc 貼幹簇 FLOAT 過,稽核紅字為證)。
+// MUST NOT 抖 y / px / pz / 縱向縮放(會拉開疊接縫);抖動只由(零件識別, dj)決定,
+// 與 ry/tx/tz 無關(A27 接合完成度不變式)。整數雜湊(不走 Math.sin)= 跨引擎逐位元一致。
+function hash01(i, j) {
+  let h = (Math.imul(i | 0, 0x9E3779B1) ^ Math.imul(j | 0, 0x85EBCA77)) | 0;
+  h = Math.imul(h ^ (h >>> 15), 0xC2B2AE3D);
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+}
+
 /**
  * 零件 × 實例 → 世界變換。
- * @param part { g, y, px, pz, rx, rz, sy }
- * @param it   { x, y, z, s, ry, tx, tz }
+ * @param part { g, y, px, pz, rx, rz, sy, key?, j? }
+ * @param it   { x, y, z, s, ry, tx, tz, dj? }
  * @returns { pos:[x,y,z], quat:[x,y,z,w], scl:[x,y,z] }
  */
 export function vegPartXform(part, it) {
@@ -60,9 +81,21 @@ export function vegPartXform(part, it) {
   // 實例剛體旋轉:朝向 ry 外層、站姿微傾斜內層(繞植株腳底)
   const qi = quatMul(quatFromEuler(0, it.ry || 0, 0), quatFromEuler(it.tx || 0, 0, it.tz || 0));
   const off = quatApply(qi, [(part.px || 0) * s, (part.y || 0) * s, (part.pz || 0) * s]);
+  let jr = 1, spin = 0;
+  if (it.dj) {
+    // 零件識別 = 量化的擺位鍵(同株各零件不同、同零件跨實例同鍵 → 差異全來自 dj)
+    const pid = Math.round((part.y || 0) * 8) * 131 + Math.round((part.px || 0) * 8) * 373
+              + Math.round((part.pz || 0) * 8) * 769;
+    const di = (it.dj * 8191) | 0;
+    const amp = (part.key ? 0.18 : 0.08) * (part.j || 1);
+    jr = 1 + hash01(pid, di) * amp;   // 只增不減(見檔頭:縮小會拉開貼合接合)
+    if (!(part.px || part.pz)) spin = (hash01(pid ^ 0x5bd1e99, di) - 0.5) * Math.PI * 2;   // 僅軸心零件(見檔頭)
+  }
+  let quat = quatMul(qi, quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0));
+  if (spin) quat = quatMul(quat, quatFromEuler(0, spin, 0));   // 後乘 = 繞自身軸,端點不動
   return {
     pos: [it.x + off[0], it.y + off[1], it.z + off[2]],
-    quat: quatMul(qi, quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0)),
-    scl: [s, s * (part.sy || 1), s],
+    quat,
+    scl: [s * jr, s * (part.sy || 1), s * jr],
   };
 }

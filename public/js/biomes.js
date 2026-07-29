@@ -6,8 +6,8 @@
 //   裸露地 — 芒草 / 箭竹 / 灌木 / 多肉植物
 //            + 巨岩地標:世界名岩取材(酋長岩/烏魯魯/大霸尖山…,MEGALITHS)
 //              與特徵基因合成岩(synthMegalith);岩上有電塔/石屋/疊石/鳥巢/斷崖樹
-//   市區   — 依 OSM 圖資設置建物(住宅/商辦/醫院/學校/車站/寺廟/教堂/
-//            清真寺/博物館/電塔/工廠),離線時退回程序生成街區;
+//   市區   — 依 OSM 圖資設置建物(住宅/商辦/醫院/學校/車站/寺廟/教堂/清真寺/
+//            博物館/電塔/工廠/城堡/燈塔/佛塔/體育場),離線時退回程序生成街區;
 //            一般建物分七款立面樣式(店面/陽台/帷幕/絲帶窗…)× 擴充色盤
 //   水體   — 不鋪地物(水面由 terrain.js 處理)
 //   濕地   — 紅樹林 / 蘆葦(僅低海拔成立)
@@ -246,16 +246,18 @@ const VEG_DEFS = {
                          { g: cyl(0.04, 0.06, 0.3, 5), y: 0.15, px: 0.1, pz: -0.4, c: 0xe4d2b0 },
                          { g: ico(0.15), y: 0.36, px: 0.1, pz: -0.4, sy: 0.6, c: 0xdcae52 }] },
   // 邊界巨岩簇(裸露地邊界帶專用;InstancedMesh 管線,公稱 ~5m × s 1.4~3.4 → 7~17m)
-  borderrock:  { parts: [{ g: ico(2.4), y: 1.4, c: 0x8f8878 },
-                         { g: ico(1.7), y: 0.9, px: 2.2, sy: 0.75, c: 0x7d786c },
-                         { g: ico(1.3), y: 0.7, px: -1.9, pz: 1.1, sy: 0.7, c: 0x968e7c },
-                         { g: cone(2.2, 1.8, 7), y: 0.9, pz: -1.6, c: 0x857e70 }] },
+  // j:2 = 細節抖動振幅加倍(xform.js dj):每簇岩塊大小/稜線各異,不再同一張剪影
+  borderrock:  { parts: [{ g: ico(2.4), y: 1.4, j: 2, c: 0x8f8878 },
+                         { g: ico(1.7), y: 0.9, px: 2.2, sy: 0.75, j: 2, c: 0x7d786c },
+                         { g: ico(1.3), y: 0.7, px: -1.9, pz: 1.1, sy: 0.7, j: 2, c: 0x968e7c },
+                         { g: cone(2.2, 1.8, 7), y: 0.9, pz: -1.6, j: 2, c: 0x857e70 }] },
 };
 
 // ---- 神木(全球實存 >65m 巨樹樹種;綠地超尺度地標植被)----
 //   紅杉(海岸紅杉 115m)/ 巨杉(世界爺 95m)/ 杏仁桉(澳洲王桉 100m)/
 //   花旗松(100m)/ 西加雲杉(97m)/ 黃柳桉(婆羅洲熱帶巨樹 100m)/ 台灣杉(90m)/
-//   亞馬遜天使樹(Dinizia excelsa 88m)
+//   亞馬遜天使樹(Dinizia excelsa 88m)/ 克林奇南洋杉(紐幾內亞 90m)/
+//   蜂樹(東南亞 Koompassia 88m)/ 智利柏(巴塔哥尼亞 Fitzroya 70m+)
 // 同一種神木成群聚落、株高各異(s = 0.75~1.10 → 公稱高的 75%~110%,即真實世界株高區間);
 // 每株多零件建模:板根/樹皮絲帶/斜出枝節/多層樹冠(px/pz = 距軸心偏移,
 // rx/rz = 枝幹傾角),樹幹登記碰撞柱 = 立體障礙與隱蔽。h/r = 公稱高/幹半徑。
@@ -280,6 +282,10 @@ const GIANT_DEFS = {
     { g: ico(5), y: 51, px: -6, sy: 0.8, c: 0x2e5c38 },
     { g: ico(4), y: 74, px: -8, sy: 0.7, c: 0x4a8a4e },          // 受光亮綠簇
     { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, c: 0x3b7042 },
+    // 樹種特徵配件(2026-07-29):毬果簇(紅杉小毬果掛冠緣;R 主導色不吃 gleaf 季節疊色,
+    // 錨在既有樹冠簇內 → 接合天然成立;各簇色抖動獨立,見 buildVegMeshes)
+    { g: ico(1.4), y: 55.5, px: 6.8, c: 0x6e4a30 },
+    { g: ico(1.2), y: 48.5, px: -6.5, c: 0x66452c },
   ] },
   sequoia:  { h: 92, r: 5.6, parts: [
     { g: cyl(5.6, 9.2, 9, 8), y: 4.5, c: 0x7d4a2e },
@@ -298,6 +304,8 @@ const GIANT_DEFS = {
     { g: ico(5), y: 55, pz: 7, c: 0x39683a },
     { g: cone(5, 10, 6), y: 89, c: 0x336033 },
     { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
+    { g: ico(1.3), y: 63.5, px: 8, c: 0x7a5230 },                // 世界爺毬果簇(冠緣)
+    { g: ico(1.1), y: 57.5, px: -8, c: 0x704b2c },
   ] },
   euc:      { h: 98, r: 2.6, parts: [
     { g: cyl(2.2, 3.6, 6, 7), y: 3, c: 0xcfc4b0 },
@@ -314,6 +322,8 @@ const GIANT_DEFS = {
     { g: ico(5), y: 80, px: -8, sy: 0.65, c: 0x5c7a4a },
     { g: ico(4.5), y: 83, pz: 4.5, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
     { g: ico(4), y: 96, c: 0x7a9058 },
+    { g: ico(1.5), y: 86, px: 9, c: 0xe9e2c8 },                  // 桉樹乳白花簇(冠緣,R≥G 不吃 gleaf)
+    { g: ico(1.3), y: 84.5, pz: 5, c: 0xe4dcc0 },
   ] },
   dougfir:  { h: 100, r: 2.5, parts: [
     { g: cyl(2.5, 4.0, 6, 7), y: 3, c: 0x5d4027 },
@@ -329,6 +339,8 @@ const GIANT_DEFS = {
     { g: ico(4), y: 42, px: -6, sy: 0.6, c: 0x2f5e40 },
     { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
     { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
+    { g: ico(1.1), y: 44.4, px: 6.4, c: 0x8a6244 },              // 花旗松垂毬果簇(側簇下緣)
+    { g: ico(1.0), y: 40.6, px: -6.4, c: 0x805b3e },
   ] },
   sitka:    { h: 96, r: 2.3, parts: [
     { g: cyl(2.3, 3.7, 5, 7), y: 2.5, c: 0x59452f },
@@ -343,6 +355,8 @@ const GIANT_DEFS = {
     { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
     { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
     { g: ico(3), y: 88, px: 3.2, sy: 0.6, c: 0x529272 },         // 頂部亮青簇
+    { g: ico(1.0), y: 44.8, px: 5.9, c: 0x9a7a52 },              // 西加雲杉淺褐毬果簇
+    { g: ico(0.9), y: 42.9, pz: 5.8, c: 0x92714a },
   ] },
   meranti:  { h: 95, r: 2.5, parts: [
     { g: cone(3.0, 10, 3), y: 5, px: 2.3, c: 0x8a7354 },         // 板根鰭(鰭尖貼回幹面)
@@ -360,6 +374,8 @@ const GIANT_DEFS = {
     { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
     { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
     { g: ico(5), y: 92, px: 4, sy: 0.55, c: 0x63a850 },          // 突出主冠的受光新葉
+    { g: ico(1.5), y: 75.5, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(橙紅雙翅果)
+    { g: ico(1.3), y: 76.8, pz: 9.5, c: 0xb8703f },
   ] },
   taiwania: { h: 86, r: 2.1, parts: [
     { g: cyl(2.1, 3.4, 5, 7), y: 2.5, c: 0x8a5a38 },             // 紅褐樹皮(台灣杉特徵)
@@ -373,6 +389,8 @@ const GIANT_DEFS = {
     { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, c: 0x2c6242 },
     { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
+    { g: ico(0.9), y: 36.6, px: 4.9, c: 0x8a5a38 },              // 台灣杉紅褐毬果簇
+    { g: ico(0.8), y: 48.9, pz: 5.3, c: 0x825332 },
   ] },
   dinizia:  { h: 88, r: 2.7, parts: [                            // 亞馬遜天使樹(Dinizia excelsa 88m)
     { g: cone(3.4, 11, 3), y: 5.5, px: 2.5, c: 0x7a5a40 },       // 高聳板根(鰭尖貼回幹面)
@@ -388,6 +406,55 @@ const GIANT_DEFS = {
     { g: ico(7), y: 78, px: -9, sy: 0.45, c: 0x468040 },
     { g: ico(6), y: 79, pz: 8.5, sy: 0.45, c: 0x549048 },
     { g: ico(5), y: 85, sy: 0.55, c: 0x86a45c },                 // 頂心黃綠新葉
+    { g: ico(1.3), y: 75.2, px: 9.5, c: 0x7a5434 },              // 天使樹豆莢簇(豆科莢果)
+    { g: ico(1.1), y: 77.5, pz: 9, c: 0x714d30 },
+  ] },
+  // ---- 2026-07-29 增補:三種世界地標巨樹(實存 >65m,剪影與現有八種互異)----
+  klinki:   { h: 90, r: 2.2, parts: [                            // 克林奇南洋杉(紐幾內亞 90m):下 2/3 淨幹 + 輪生枝盤
+    { g: cyl(2.2, 3.4, 5, 7), y: 2.5, c: 0x6a5138 },
+    { g: cyl(1.5, 2.2, 46, 7), y: 28, c: 0x75593c },             // 通直淨幹
+    { g: cyl(0.8, 1.5, 26, 6), y: 64, c: 0x7d6142 },
+    { g: cyl(2.25, 2.32, 4, 7), y: 20, c: 0x8f9a6e },            // 地衣環帶
+    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: 5.5, rz: -1.42, c: 0x6a5138 },   // 輪生近水平枝(梢端略朝上)
+    { g: cyl(0.35, 0.55, 11, 5), y: 62, px: -5.5, rz: 1.42, c: 0x6a5138 },
+    { g: cyl(0.3, 0.5, 9, 5), y: 68, pz: 4.5, rx: 1.4, c: 0x75593c },
+    { g: ico(2.6), y: 59, px: 10.2, sy: 0.5, c: 0x3a6b3a },      // 枝端扁平葉盤(南洋杉特徵)
+    { g: ico(2.6), y: 63, px: -10.2, sy: 0.5, c: 0x2f5e34 },
+    { g: ico(2.2), y: 69, pz: 8.5, sy: 0.5, c: 0x3a6b3a },
+    { g: cone(4.5, 14, 6), y: 84, c: 0x2f5e34 },                 // 頂梢窄錐冠
+    { g: ico(3), y: 76, px: 3.5, sy: 0.5, c: 0x35643a },
+    { g: ico(1.2), y: 59.5, px: 9.5, c: 0x7a5a34 },              // 克林奇大毬果簇(掛枝端葉盤)
+  ] },
+  tualang:  { h: 85, r: 2.8, parts: [                            // 蜂樹(東南亞 Koompassia 88m):灰白滑幹 + 突出傘冠 + 野蜂巢
+    { g: cone(3.6, 12, 3), y: 6, px: 2.6, c: 0x9a917e },         // 高聳板根(鰭尖貼回幹面)
+    { g: cone(3.6, 12, 3), y: 6, px: -1.3, pz: 2.25, c: 0xa39a86 },
+    { g: cone(3.6, 12, 3), y: 6, px: -1.3, pz: -2.25, c: 0x9a917e },
+    { g: cyl(1.8, 2.8, 50, 7), y: 29, c: 0xb3aa94 },             // 灰白滑幹(蜜蜂天敵爬不上去)
+    { g: cyl(1.0, 1.8, 20, 6), y: 64, c: 0xbcb29c },
+    { g: cyl(0.5, 0.9, 13, 5), y: 71, px: 4, rz: -0.8, c: 0xa39a86 },   // 側枝外端朝上
+    { g: cyl(0.5, 0.9, 13, 5), y: 73, px: -4, rz: 0.8, c: 0xa39a86 },
+    { g: ico(10), y: 80, sy: 0.5, c: 0x4f8a44 },                 // 傘狀突出冠
+    { g: ico(6.5), y: 77, px: 8.5, sy: 0.45, c: 0x5c9a50 },
+    { g: ico(6.5), y: 76, px: -8.5, sy: 0.45, c: 0x468040 },
+    { g: ico(5.5), y: 79, pz: 7.5, sy: 0.45, c: 0x549048 },      // z 向無側枝 → 內緣貼主冠
+    { g: ico(4.5), y: 84, sy: 0.55, c: 0x6fa050 },
+    { g: ico(1.3), y: 74.8, px: 9, c: 0x8a5a30 },                // 豆莢簇(蜂樹為豆科)
+    { g: ico(0.9), y: 55, px: 1.9, c: 0xd8b04a },                // 樹幹垂掛野巨蜂巢(蜂樹地標特徵)
+  ] },
+  alerce:   { h: 72, r: 2.4, parts: [                            // 智利柏(巴塔哥尼亞 Fitzroya 70m+):紅褐纖維皮窄錐塔
+    { g: cyl(2.4, 3.8, 6, 7), y: 3, c: 0x7d4a30 },
+    { g: cyl(1.6, 2.4, 34, 7), y: 23, c: 0x8a5434 },
+    { g: cyl(0.8, 1.6, 20, 6), y: 50, c: 0x935c38 },
+    { g: cyl(2.45, 2.52, 5, 7), y: 14, c: 0x49663a },            // 苔蘚環帶(溫帶雨林老樹)
+    { g: cone(6.5, 16, 7), y: 32, c: 0x2c5c40 },                 // 窄錐疊冠
+    { g: cone(5.5, 15, 7), y: 43, c: 0x336850 },
+    { g: cone(4.4, 14, 7), y: 53, c: 0x2c5c40 },
+    { g: cone(3.2, 13, 6), y: 62, c: 0x336850 },
+    { g: cone(1.8, 10, 5), y: 70, c: 0x2c5c40 },
+    { g: ico(2.6), y: 36, px: 3.8, sy: 0.6, c: 0x33684a },
+    { g: ico(2.4), y: 33, px: -3.6, sy: 0.6, c: 0x2c5c40 },
+    { g: cyl(0.2, 0.3, 5, 4), y: 72.5, c: 0x9a7a56 },            // 頂梢枯枝(千年老樹雷痕)
+    { g: ico(0.8), y: 30.5, pz: 4.2, c: 0x7a5434 },              // 小毬果簇
   ] },
 };
 
@@ -475,7 +542,7 @@ const GIANT_DECO = {
 };
 
 // 針葉神木(配針葉幼樹)vs 闊葉神木(euc/meranti/dinizia,配闊葉幼樹):林下同科喬木分流
-const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwania']);
+const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwania', 'klinki', 'alerce']);
 
 /** 綠地神木群落:同一樹種成群、株高各異;樹幹登記碰撞柱(障礙 + 隱蔽) */
 function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
@@ -505,6 +572,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
         tx: (rnd() - 0.5) * 0.05, tz: (rnd() - 0.5) * 0.05,
+        dj: rnd(),   // 細節種子(xform.js):冠層/枝節逐株走樣,同種不同貌
       });
       blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree' });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
@@ -547,6 +615,7 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
         (items[t] ??= []).push({
           x: ux, y: uy, z: uz, s: sc * (VEG_SCALE[t] || 1),
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,
+          dj: rnd(),
         });
       };
       const scatterRing = (pool, count, rMin, rSpan, szMin, szSpan) => {
@@ -648,7 +717,7 @@ function buildVegMeshesGlb(entry, items) {
   const tint = new THREE.Color();
   groups.forEach((list, vi) => {
     if (!list.length) return;
-    for (const part of entry.variants[vi].parts) {
+    entry.variants[vi].parts.forEach((part, pi) => {
       const m = new THREE.InstancedMesh(part.geo, part.mat, list.length);
       list.forEach(([it, gi], k) => {
         E.set(it.tx || 0, it.ry, it.tz || 0);
@@ -658,10 +727,12 @@ function buildVegMeshesGlb(entry, items) {
         S.set(sc, sc, sc);
         M.compose(P, Q, S);
         m.setMatrixAt(k, M);
-        const j1 = ((gi * 2654435761) >>> 0) % 100 / 100;
-        const j2 = ((gi * 1597334677) >>> 0) % 100 / 100;
-        const j3 = ((gi * 3812015801) >>> 0) % 100 / 100;
-        tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
+        // hash 併入零件序 pi:同株樹幹/葉叢的色抖各自獨立(與程序生成版同邏輯)
+        const kk = gi * 197 + pi * 3121 + 1;
+        const j1 = ((kk * 2654435761) >>> 0) % 100 / 100;
+        const j2 = ((kk * 1597334677) >>> 0) % 100 / 100;
+        const j3 = ((kk * 3812015801) >>> 0) % 100 / 100;
+        tint.setRGB(0.8 + j1 * 0.36, 0.8 + j2 * 0.36, 0.8 + j3 * 0.36);
         m.setColorAt(k, tint);
       });
       m.instanceMatrix.needsUpdate = true;
@@ -669,7 +740,7 @@ function buildVegMeshesGlb(entry, items) {
       m.castShadow = false;
       m.frustumCulled = false;
       meshes.push(m);
-    }
+    });
   });
   return meshes;
 }
@@ -691,7 +762,7 @@ function buildVegMeshes(type, items, season) {
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
-  for (const part of def.parts) {
+  def.parts.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     const mat = toonMat(seasonColor(part.key, part.c, season));
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
@@ -704,11 +775,20 @@ function buildVegMeshes(type, items, season) {
       S.set(scl[0], scl[1], scl[2]);
       M.compose(P, Q, S);
       m.setMatrixAt(i, M);
-      // 每實例隨機差異化:RGB 各自抖動 = 明度 + 色相同時變化,不像複製貼上
-      const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
-      const j2 = ((i * 1597334677) >>> 0) % 100 / 100;
-      const j3 = ((i * 3812015801) >>> 0) % 100 / 100;
-      tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
+      // 色彩細節隨機化(2026-07-29):hash 併入零件序 pi → 同株各零件抖動各自獨立
+      // (葉團層層異色、板根塊塊異調),不再整株同一支 tint。
+      // 葉/冠零件(key)振幅放大 = 明度連色相一起動;岩塊(j)次之;
+      // 結構件(幹/枝/根)只小幅動明度 + 極淡暖冷偏,保住樹種手調色版
+      const k = i * 197 + pi * 3121 + 1;
+      const j1 = ((k * 2654435761) >>> 0) % 100 / 100;
+      const j2 = ((k * 1597334677) >>> 0) % 100 / 100;
+      const j3 = ((k * 3812015801) >>> 0) % 100 / 100;
+      if (part.key) tint.setRGB(0.74 + j1 * 0.5, 0.74 + j2 * 0.5, 0.74 + j3 * 0.5);
+      else if (part.j) tint.setRGB(0.78 + j1 * 0.42, 0.78 + j2 * 0.42, 0.78 + j3 * 0.42);
+      else {
+        const l = 0.84 + j1 * 0.28;
+        tint.setRGB(l * (0.97 + j2 * 0.06), l, l * (0.97 + j3 * 0.06));
+      }
       m.setColorAt(i, tint);
     });
     m.instanceMatrix.needsUpdate = true;
@@ -716,7 +796,7 @@ function buildVegMeshes(type, items, season) {
     m.castShadow = false;
     m.frustumCulled = false;   // 實例散佈全圖,包圍球不可靠
     meshes.push(m);
-  }
+  });
   return meshes;
 }
 
@@ -838,6 +918,8 @@ const LANDMARK_COL = {
   hospital: { r: 11, h: 22 }, school: { r: 13, h: 11 }, station: { r: 14, h: 13 },
   temple: { r: 8, h: 13 }, church: { r: 9, h: 19 }, mosque: { r: 10, h: 14 },
   museum: { r: 12, h: 12 }, power: { r: 2.6, h: 42 }, factory: { r: 13, h: 12 },
+  castle: { r: 14, h: 24 }, lighthouse: { r: 6, h: 30 }, pagoda: { r: 8, h: 26 },
+  stadium: { r: 18, h: 13 },
 };
 
 const LANDMARKS = {
@@ -967,16 +1049,108 @@ const LANDMARKS = {
     pipe.rotation.z = Math.PI / 2; pipe.position.set(6, 5.5, -8); g.add(pipe);   // 連通管線
     g.add(box(6, 5, 0.6, 0x4a5058, 4, 0, 7.1));                 // 捲門
   },
+  // ---- 2026-07-29 增補:四種世界地標建築(builder 吃 rnd → 逐座變化,同巨岩準則)----
+  castle: (g, rnd) => {
+    // 歐洲石堡:主樓 + 四隅圓塔錐頂 + 雉堞圍牆 + 大門;塔高/主樓高/旗色逐座抽
+    const kh = 14 + rnd() * 5;
+    g.add(box(9, kh, 9, 0xb8b0a2));                             // 主樓
+    g.add(box(10, 1.2, 10, 0xa39a8a, 0, kh, 0));                // 主樓頂緣
+    for (const [sx, sz] of [[-9, -7], [9, -7], [-9, 7], [9, 7]]) {   // 四隅圓塔
+      const th = 10 + rnd() * 4;
+      const tw = new THREE.Mesh(cyl(1.9, 2.3, th, 8), bmat(0xb0a898));
+      tw.position.set(sx, th / 2, sz); g.add(tw);
+      const tr = new THREE.Mesh(cone(2.5, 3.2, 8), bmat(0x5f7d8c));
+      tr.position.set(sx, th + 1.6, sz); g.add(tr);             // 灰藍錐頂
+    }
+    for (const [w, d, x, z] of [[18, 1.4, 0, -7], [18, 1.4, 0, 7], [1.4, 14, -9, 0], [1.4, 14, 9, 0]]) {
+      g.add(box(w, 6, d, 0xaaa294, x, 0, z));                   // 圍牆
+      const along = Math.max(w, d), n = Math.floor(along / 2.4);
+      for (let i = 0; i < n; i++) {                             // 雉堞方齒
+        const t = -along / 2 + 1.2 + i * 2.4;
+        g.add(box(w > d ? 1.1 : 1.4, 1.1, w > d ? 1.4 : 1.1, 0xaaa294,
+          w > d ? t : x, 6, w > d ? z : t));
+      }
+    }
+    g.add(box(3.4, 4.5, 0.8, 0x4a3a2a, 0, 0, -7.4));            // 大門
+    const pole = new THREE.Mesh(cyl(0.1, 0.1, 5, 5), bmat(0x9aa2a8));
+    pole.position.set(0, kh + 3.5, 0); g.add(pole);
+    g.add(box(2.2, 1.2, 0.08, [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0],
+      1.2, kh + 4.4, 0));                                       // 主樓旗(徽色逐座抽)
+  },
+  lighthouse: (g, rnd) => {
+    // 燈塔:白塔身 + 紅環帶 + 迴廊燈室 + 看守小屋;高度/環帶數逐座抽
+    const h = 19 + rnd() * 6;
+    const tw = new THREE.Mesh(cyl(1.7, 2.6, h, 9), bmat(0xf0ece2));
+    tw.position.y = h / 2; g.add(tw);
+    const nB = 2 + (rnd() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nB; i++) {                              // 紅環帶(貼塔身)
+      const by = h * (0.18 + (i + rnd() * 0.3) * 0.55 / nB);
+      const br = 2.6 - 0.9 * (by / h);
+      const band = new THREE.Mesh(cyl(br + 0.04, br + 0.12, h * 0.13, 9), bmat(0xc9463a));
+      band.position.y = by; g.add(band);
+    }
+    const gal = new THREE.Mesh(cyl(2.3, 2.3, 0.5, 9), bmat(0x3a4046));
+    gal.position.y = h + 0.25; g.add(gal);                      // 迴廊台
+    const lamp = new THREE.Mesh(cyl(1.2, 1.3, 2.2, 8),
+      bmat(0xffe9b0, { emissive: new THREE.Color(0x8a6a10), emissiveIntensity: 1.2 }));
+    lamp.position.y = h + 1.6; g.add(lamp);                     // 燈室(常亮)
+    const cap = new THREE.Mesh(cone(1.7, 1.6, 8), bmat(0xc9463a));
+    cap.position.y = h + 3.5; g.add(cap);
+    const hx = 3.8 + rnd();
+    g.add(box(4.5, 3.2, 3.6, 0xe4ded0, hx, 0, 0));              // 看守小屋
+    g.add(box(5, 0.5, 4, 0x8a8274, hx, 3.2, 0));
+  },
+  pagoda: (g, rnd) => {
+    // 五重塔:方樓身逐層退縮 + 出簷四坡頂 + 金頂剎;層數 4~5 逐座抽
+    g.add(box(11, 1.2, 11, 0xb0a494));                          // 石台基
+    const tiers = 4 + (rnd() < 0.5 ? 1 : 0);
+    let y = 1.2, w = 8.4;
+    for (let t = 0; t < tiers; t++) {
+      g.add(box(w, 3, w, 0x8a3324, 0, y, 0));                   // 丹紅樓身
+      const roof = new THREE.Mesh(cone(w * 0.92, 2.1, 4), bmat(0x2e5a46));
+      roof.rotation.y = Math.PI / 4;
+      roof.position.y = y + 3.9; g.add(roof);                   // 出簷四坡頂(青銅綠)
+      y += 4.3; w *= 0.84;
+    }
+    const mast = new THREE.Mesh(cyl(0.16, 0.16, 3.6, 6), bmat(0xc7a13d));
+    mast.position.y = y + 1.4; g.add(mast);                     // 金頂剎
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(cyl(0.55 - i * 0.12, 0.55 - i * 0.12, 0.18, 8), bmat(0xc7a13d));
+      ring.position.y = y + 1 + i * 0.8; g.add(ring);           // 相輪
+    }
+  },
+  stadium: (g, rnd) => {
+    // 體育場:橢圓碗狀看台 + 頂圈遮棚 + 草坪 + 四座照明塔;殼色/橢圓比逐座抽
+    const sz = 0.72 + rnd() * 0.1;
+    const outer = new THREE.Mesh(cyl(15.5, 17, 7, 14), bmat([0xd8d3c8, 0xc4ccd8, 0xd6c8b8][(rnd() * 3) | 0]));
+    outer.scale.z = sz; outer.position.y = 3.5; g.add(outer);   // 碗殼
+    const rim = new THREE.Mesh(cyl(16.2, 15.8, 1.2, 14), bmat(0x6a7278));
+    rim.scale.z = sz; rim.position.y = 7.4; g.add(rim);         // 頂圈遮棚
+    const field = new THREE.Mesh(cyl(12.5, 12.5, 0.9, 14), bmat(0x4f8a44));
+    field.scale.z = sz; field.position.y = 8.4; g.add(field);   // 草坪(座落遮棚圈上緣,低多邊形近似)
+    for (const [sx, szn] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {   // 四座照明塔
+      const lp = new THREE.Mesh(cyl(0.25, 0.35, 12, 6), bmat(0x8d949a));
+      lp.position.set(sx * 15, 6, szn * 12 * sz); g.add(lp);
+      const lh = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.6, 0.5),
+        bmat(0xfff2c8, { emissive: new THREE.Color(0x8a7a30), emissiveIntensity: 1.0 }));
+      lh.position.set(sx * 15, 12.6, szn * 12 * sz);
+      lh.lookAt(0, 7, 0);                                       // 面向場心
+      g.add(lh);
+    }
+  },
 };
 
 // ---- 巨岩地標(裸露地;取材世界知名岩體/巨石遺跡)----
 // 酋長岩(優勝美地花崗岩壁)/ 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
 // 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣 /
-// 百內三塔(花崗岩尖塔群)/ 張家界石柱(石英砂岩方柱)。
+// 百內三塔(花崗岩尖塔群)/ 張家界石柱(石英砂岩方柱)/ 邁泰奧拉(修道院岩峰)/
+// 獅子岩(斯里蘭卡 Sigiriya)/ 佩特拉(岩鑿神殿立面)。
 // 公稱高即真實比例(×OVER.mega = 1;放置縮放後約 90~160m);col = 近似碰撞柱(× s),
 // s = 放置縮放區間。岩面走 envMat + 頂部苔蘚投影(botw_plan 岩石要點)。
 function rockMat(color, moss = 0) {
-  return envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
+  const m = envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
+  m.userData.rock = true;   // 岩面材質標記:placeMegaliths 逐顆調色只認這面旗(不動綠冠/木門等)
+  return m;
 }
 const MEGALITHS = {
   // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
@@ -989,9 +1163,12 @@ const MEGALITHS = {
     nose.position.set(20, 48, 8); nose.rotation.y = 0.5; g.add(nose);     // 鼻樑稜線
     const shoulder = new THREE.Mesh(new THREE.BoxGeometry(26, 64, 24), rockMat(0xd2ccbe, 0.35));
     shoulder.position.set(-24, 32, 4); shoulder.rotation.y = -0.35; g.add(shoulder);
-    for (let i = 0; i < 4; i++) {                                         // 垂直岩溝墨線
-      const streak = new THREE.Mesh(new THREE.BoxGeometry(1.6, 70 + rnd() * 30, 1.2), rockMat(0x8f8a7e));
-      streak.position.set(-16 + i * 10 + rnd() * 4, 52, 14.9); g.add(streak);
+    const nStreak = 3 + ((rnd() * 3) | 0);
+    for (let i = 0; i < nStreak; i++) {                                   // 垂直岩溝墨線(條數/粗細不定)
+      const streak = new THREE.Mesh(new THREE.BoxGeometry(1.1 + rnd() * 1.1, 70 + rnd() * 30, 1.2), rockMat(0x8f8a7e));
+      streak.position.set(-16 + i * 10 + rnd() * 4, 52, 14.9);
+      streak.rotation.z = (rnd() - 0.5) * 0.05;
+      g.add(streak);
     }
     const scree = new THREE.Mesh(cone(30, 14, 9), rockMat(0xb5ac9a));
     scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);              // 山腳碎石坡
@@ -1003,9 +1180,10 @@ const MEGALITHS = {
     dome.scale.set(1.5, 1.15, 0.9); dome.position.y = 4; g.add(dome);     // 長條圓頂單體岩
     const hump = new THREE.Mesh(new THREE.SphereGeometry(26, 10, 7), rockMat(0xc25c33));
     hump.scale.set(1.2, 0.55, 0.9); hump.position.set(66, 8, 6); g.add(hump);
-    for (let i = 0; i < 5; i++) {                                         // 平行侵蝕縱溝
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.8, 30 + rnd() * 10, 1.4), rockMat(0x8f3c22));
-      rib.position.set(-40 + i * 18, 22, 38 + rnd() * 3); rib.rotation.x = 0.55; g.add(rib);
+    const nRib = 4 + ((rnd() * 3) | 0);
+    for (let i = 0; i < nRib; i++) {                                      // 平行侵蝕縱溝(條數/粗細/間距不定)
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 1.2, 30 + rnd() * 10, 1.4), rockMat(0x8f3c22));
+      rib.position.set(-40 + i * 15 + rnd() * 6, 22, 38 + rnd() * 3); rib.rotation.x = 0.55; g.add(rib);
     }
   } },
   augustus: { col: { r: 80, h: 50 }, s: [0.9, 1.6],   // 主脊 sx1.7 → 實際外廓 ~78
@@ -1020,7 +1198,9 @@ const MEGALITHS = {
   } },
   dabajian: { col: { r: 40, h: 96 }, s: [0.8, 1.5],   // 含 44m 山體基座錐
     anchor: { topY: 97, topR: 12, side: { y: [34, 86], rx: 20, rz: 20, dome: false } },
-    build: (g) => {
+    // 逐層岩層半徑/稜線/軸心各異(2026-07-29):酒桶紋不再同心規整;
+    // 層高不動(anchor.topY = 97 由層高總和推得,抖高度會讓頂面特徵懸空)
+    build: (g, rnd) => {
     // 山體基座拉高:霸尖圓柱(r≈20)起於 y=30,錐體該處半徑 44×(1−30/58)=21 ≥ 柱半徑
     // —— 柱身與山體相接,不是擱在山尖上懸挑
     const base = new THREE.Mesh(cone(44, 58, 9), rockMat(0x7d7466, 0.45));
@@ -1029,113 +1209,317 @@ const MEGALITHS = {
     for (const [r, hh, cc] of [[20, 14, 0x6f6a62], [21, 4, 0x8a8274], [18.5, 13, 0x6f6a62],
                                [19.5, 4, 0x8a8274], [17, 12, 0x67625a], [18, 4, 0x8a8274],
                                [15.5, 11, 0x6f6a62]]) {
-      const stratum = new THREE.Mesh(cyl(r, r + 1.2, hh, 10), rockMat(cc, cc === 0x8a8274 ? 0.15 : 0));
-      stratum.position.y = y + hh / 2; y += hh; g.add(stratum);           // 水平岩層(酒桶紋)
+      const jr = r * (0.94 + rnd() * 0.09);
+      const stratum = new THREE.Mesh(cyl(jr, jr + 1.2 + rnd() * 0.8, hh, 10), rockMat(cc, cc === 0x8a8274 ? 0.15 : 0));
+      stratum.position.set((rnd() - 0.5) * 1.4, y + hh / 2, (rnd() - 0.5) * 1.4);
+      stratum.rotation.y = rnd() * Math.PI;                               // 十邊柱稜線逐層錯開
+      y += hh; g.add(stratum);                                            // 水平岩層(酒桶紋)
     }
-    const cap = new THREE.Mesh(cyl(13, 15.5, 5, 10), rockMat(0x7d7466, 0.5));
-    cap.position.y = y + 2.5; g.add(cap);                                 // 平坦霸頂
+    const cap = new THREE.Mesh(cyl(13 + rnd() * 1.2, 15.5 + rnd() * 1.2, 5, 10), rockMat(0x7d7466, 0.5));
+    cap.position.set((rnd() - 0.5) * 1.2, y + 2.5, (rnd() - 0.5) * 1.2);  // 平坦霸頂
+    cap.rotation.y = rnd() * Math.PI;
+    g.add(cap);
   } },
   moai: { col: { r: 16, h: 34 }, s: [1.0, 1.9],
     anchor: { topY: 3.4, topR: 13, side: null },
     build: (g, rnd) => {
     g.add(box(34, 3.4, 10, 0x7f7868));                                    // 阿胡祭壇石台
+    // 逐尊各異(2026-07-29):身高/胖瘦/頭型逐尊抽,鼻/眉/髮髻位置由身高頭高推導
+    // (尺寸變了接合不開縫);微傾 + 錯位 = 手鑿石像群,不是複製貼上
     for (let i = 0; i < 4; i++) {
-      const s = 0.85 + rnd() * 0.3;
+      const s = 0.82 + rnd() * 0.28;
       const m = new THREE.Group();
-      const body = new THREE.Mesh(cyl(3.2, 4.2, 14, 7), rockMat(0x8f8878));
-      body.position.y = 7; m.add(body);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(5.2, 9, 4.6), rockMat(0x968e7c));
-      head.position.y = 18.5; m.add(head);
-      const nose = new THREE.Mesh(new THREE.BoxGeometry(1.4, 4.5, 1.2), rockMat(0x8a8270));
-      nose.position.set(0, 18, 2.6); m.add(nose);                         // 長鼻
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(4.6, 1.2, 1.4), rockMat(0x7f7868));
-      brow.position.set(0, 21.5, 2.2); m.add(brow);                       // 眉脊
+      const bh = 12.5 + rnd() * 2.5;                                      // 身高
+      const body = new THREE.Mesh(cyl(2.9 + rnd() * 0.7, 3.9 + rnd() * 0.7, bh, 7), rockMat(0x8f8878));
+      body.position.y = bh / 2; m.add(body);
+      const hh = 7.8 + rnd() * 1.8, hw = 4.8 + rnd() * 0.9, hd = 4.3 + rnd() * 0.7;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(hw, hh, hd), rockMat(0x968e7c));
+      head.position.y = bh + hh / 2; m.add(head);
+      const nose = new THREE.Mesh(new THREE.BoxGeometry(1.2 + rnd() * 0.5, hh * 0.5, 1.2), rockMat(0x8a8270));
+      nose.position.set(0, bh + hh * 0.42, hd / 2 + 0.35); m.add(nose);   // 長鼻(依頭深貼面)
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(hw * 0.9, 1.1 + rnd() * 0.4, 1.4), rockMat(0x7f7868));
+      brow.position.set(0, bh + hh * 0.78, hd / 2 - 0.1); m.add(brow);    // 眉脊
       if (rnd() < 0.5) {
-        const pukao = new THREE.Mesh(cyl(2.6, 3.0, 3, 8), rockMat(0x9a4a3a));
-        pukao.position.y = 24.5; m.add(pukao);                            // 紅色普卡奧髮髻
+        const pukao = new THREE.Mesh(cyl(2.3 + rnd() * 0.6, 2.8 + rnd() * 0.5, 2 + rnd() * 0.9, 8), rockMat(0x9a4a3a));
+        pukao.position.y = bh + hh + 1.0; m.add(pukao);                   // 紅色普卡奧髮髻
       }
       m.scale.setScalar(s);
-      m.position.set(-12 + i * 8, 3.4, 0);
-      m.rotation.y = (rnd() - 0.5) * 0.2;
+      m.position.set(-12 + i * 8 + (rnd() - 0.5) * 1.6, 3.4, (rnd() - 0.5) * 1.6);
+      m.rotation.y = (rnd() - 0.5) * 0.35;                                // 各自望向略異方向
+      m.rotation.z = (rnd() - 0.5) * 0.05;                                // 千年沉降微傾
       g.add(m);
     }
   } },
   machupicchu: { col: { r: 42, h: 44 }, s: [1.0, 1.7],   // 底層梯田 64×52 半對角
     anchor: { topY: 35, topR: 11, side: { y: [5, 30], rx: 33, rz: 27, dome: true } },
-    build: (g) => {
-    let y = 0;
+    // 手築的不整齊(2026-07-29):每層梯田各自收放/錯位/微轉(底層定腳印不偏),
+    // 石屋逐間抽尺寸 —— 偏移收在層間退縮量內,上層不懸挑
+    build: (g, rnd) => {
+    let y = 0, first = true;
     for (const [w, d] of [[64, 52], [54, 44], [44, 36], [34, 28], [25, 20]]) {
-      const tier = new THREE.Mesh(new THREE.BoxGeometry(w, 7, d), rockMat(0x8d8672, 0.55));
-      tier.position.y = y + 3.5; g.add(tier);                             // 梯田層(頂面苔蘚投影=草坪)
-      y += 7;
+      const jw = w * (0.96 + rnd() * 0.06), jd = d * (0.96 + rnd() * 0.06);
+      const ox = first ? 0 : (rnd() - 0.5) * 2, oz = first ? 0 : (rnd() - 0.5) * 2;
+      const tier = new THREE.Mesh(new THREE.BoxGeometry(jw, 7, jd), rockMat(0x8d8672, 0.5 + rnd() * 0.15));
+      tier.position.set(ox, y + 3.5, oz);                                 // 梯田層(頂面苔蘚投影=草坪)
+      tier.rotation.y = (rnd() - 0.5) * 0.06;
+      g.add(tier);
+      y += 7; first = false;
     }
-    for (let i = 0; i < 3; i++) {                                         // 山頂石屋(疊石牆 + 茅草頂)
-      const hx = -8 + i * 8, hz = (i - 1) * 5;
-      const hut = new THREE.Mesh(new THREE.BoxGeometry(6, 4.5, 5), rockMat(0x9c9480));
-      hut.position.set(hx, y + 2.25, hz); g.add(hut);
-      const thatch = new THREE.Mesh(cone(4.4, 3.2, 4), rockMat(0xa9945e));
-      thatch.rotation.y = Math.PI / 4; thatch.scale.z = 0.8;
-      thatch.position.set(hx, y + 6.1, hz); g.add(thatch);
+    for (let i = 0; i < 3; i++) {                                         // 山頂石屋(疊石牆 + 茅草頂,間間不同)
+      const hx = -7 + i * 7 + (rnd() - 0.5) * 1.6, hz = (i - 1) * 5 + (rnd() - 0.5) * 1.6;
+      const hw = 5.2 + rnd() * 1.4, hht = 4 + rnd() * 1, hdp = 4.4 + rnd() * 1;
+      const hry = (rnd() - 0.5) * 0.3;
+      const hut = new THREE.Mesh(new THREE.BoxGeometry(hw, hht, hdp), rockMat(0x9c9480));
+      hut.position.set(hx, y + hht / 2, hz); hut.rotation.y = hry; g.add(hut);
+      const thatch = new THREE.Mesh(cone(hw * 0.72 + 0.6, 2.8 + rnd() * 0.8, 4), rockMat(0xa9945e));
+      thatch.rotation.y = Math.PI / 4 + hry; thatch.scale.z = 0.8;
+      thatch.position.set(hx, y + hht + 1.4, hz); g.add(thatch);
     }
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(2, 5, 18), rockMat(0x968e7a));
-    wall.position.set(11, y + 2.5, 0); g.add(wall);                       // 太陽神殿弧牆(直牆近似)
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(2, 4.5 + rnd() * 1, 15 + rnd() * 2), rockMat(0x968e7a));
+    wall.position.set(9.5, y + 2.2, (rnd() - 0.5) * 2);                   // 太陽神殿弧牆(直牆近似)
+    wall.rotation.y = (rnd() - 0.5) * 0.12;
+    g.add(wall);
   } },
   stonehenge: { col: { r: 24, h: 27 }, s: [1.1, 2.0],
     anchor: { topY: 0.2, topR: 12, side: null },   // 特徵落在石圈內地面
-    build: (g) => {
-    for (let i = 0; i < 10; i++) {                                        // 外環立石 + 楣石
-      const a = i / 10 * Math.PI * 2, r0 = 19;
-      const post = new THREE.Mesh(new THREE.BoxGeometry(4.6, 17, 3), rockMat(0x9b968a, 0.3));
-      post.position.set(Math.cos(a) * r0, 8.5, Math.sin(a) * r0);
-      post.rotation.y = -a + Math.PI / 2;
+    // 「不整齊」是巨石陣的本體(2026-07-29):每塊立石/楣石各自抽尺寸與微傾、環半徑逐塊
+    // 漂移、兩成楣石塌失、圈內外散倒伏殘石 —— 外廓上限收在 col(r24/h27)內,碰撞柱不動
+    build: (g, rnd) => {
+    const posts = [];
+    for (let i = 0; i < 10; i++) {                                        // 外環立石:塊塊不同
+      const a = i / 10 * Math.PI * 2 + (rnd() - 0.5) * 0.07;
+      const r0 = 19 + (rnd() - 0.5) * 2.4;
+      const ph = 14.5 + rnd() * 4;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(3.9 + rnd() * 1.5, ph, 2.5 + rnd() * 1.1),
+        rockMat([0x9b968a, 0x94907f, 0xa19c8e][(rnd() * 3) | 0], 0.2 + rnd() * 0.25));
+      post.position.set(Math.cos(a) * r0, ph / 2, Math.sin(a) * r0);
+      post.rotation.y = -a + Math.PI / 2 + (rnd() - 0.5) * 0.16;
+      post.rotation.x = (rnd() - 0.5) * 0.05;                             // 千年沉降微傾
+      post.rotation.z = (rnd() - 0.5) * 0.05;
       g.add(post);
-      if (i % 2 === 0) {
-        const am = a + Math.PI / 10;
-        const lintel = new THREE.Mesh(new THREE.BoxGeometry(13, 2.8, 3.4), rockMat(0x8f8a7c, 0.4));
-        lintel.position.set(Math.cos(am) * r0, 18.4, Math.sin(am) * r0);
-        lintel.rotation.y = -am + Math.PI / 2;
-        g.add(lintel);
-      }
+      posts.push({ a, r0, ph });
     }
-    for (const s of [-1, 1]) {                                            // 內圈大三石塔
-      const post = new THREE.Mesh(new THREE.BoxGeometry(4.8, 24, 3.4), rockMat(0xa39e90, 0.25));
-      post.position.set(s * 4.5, 12, 0); g.add(post);
+    for (let i = 0; i < 10; i += 2) {                                     // 楣石:架在兩鄰石上(取矮者頂,微沉咬合)
+      if (rnd() < 0.2) continue;                                          // 兩成塌失 = 遺跡缺口
+      const p1 = posts[i], p2 = posts[(i + 1) % 10];
+      const am = (p1.a + p2.a) / 2, rm = (p1.r0 + p2.r0) / 2;
+      const lh = 2.4 + rnd() * 0.9;
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(12 + rnd() * 2.5, lh, 3.1 + rnd() * 0.7),
+        rockMat(0x8f8a7c, 0.3 + rnd() * 0.2));
+      lintel.position.set(Math.cos(am) * rm, Math.min(p1.ph, p2.ph) + lh / 2 - 0.3, Math.sin(am) * rm);
+      lintel.rotation.y = -am + Math.PI / 2 + (rnd() - 0.5) * 0.1;
+      lintel.rotation.z = (rnd() - 0.5) * 0.04;
+      g.add(lintel);
     }
-    const bigLintel = new THREE.Mesh(new THREE.BoxGeometry(15, 3.2, 4), rockMat(0x9b968a, 0.35));
-    bigLintel.position.y = 25.6; g.add(bigLintel);
-    const altar = new THREE.Mesh(new THREE.BoxGeometry(6, 1.6, 3), rockMat(0x7f7a6e));
-    altar.position.y = 0.8; g.add(altar);
+    const th = [];
+    for (const s of [-1, 1]) {                                            // 內圈大三石塔:雙石同對不同高、互倚微傾
+      const hh = 21.5 + rnd() * 2.5;
+      const post = new THREE.Mesh(new THREE.BoxGeometry(4.2 + rnd() * 1.2, hh, 3.0 + rnd() * 0.8),
+        rockMat(0xa39e90, 0.25));
+      post.position.set(s * (4.2 + rnd() * 0.8), hh / 2, (rnd() - 0.5) * 1.6);
+      post.rotation.y = (rnd() - 0.5) * 0.14;
+      post.rotation.z = -s * rnd() * 0.03;
+      g.add(post);
+      th.push(hh);
+    }
+    const blh = 2.8 + rnd() * 0.7;
+    const bigLintel = new THREE.Mesh(new THREE.BoxGeometry(14 + rnd() * 2, blh, 3.6 + rnd() * 0.8),
+      rockMat(0x9b968a, 0.35));
+    bigLintel.position.y = Math.min(...th) + blh / 2 - 0.3;               // 架矮柱頂,高柱側咬進去
+    bigLintel.rotation.y = (rnd() - 0.5) * 0.1;
+    bigLintel.rotation.z = (rnd() - 0.5) * 0.05;
+    g.add(bigLintel);
+    const altar = new THREE.Mesh(new THREE.BoxGeometry(5 + rnd() * 2, 1.2 + rnd() * 0.8, 2.4 + rnd() * 1.2),
+      rockMat(0x7f7a6e, 0.3));
+    altar.position.set((rnd() - 0.5) * 3, 0.7, (rnd() - 0.5) * 3);
+    altar.rotation.y = rnd() * Math.PI;
+    g.add(altar);
+    const nF = 3 + ((rnd() * 3) | 0);
+    for (let i = 0; i < nF; i++) {                                        // 倒伏殘石:散落石圈內外
+      const a = rnd() * Math.PI * 2, d = 6 + rnd() * 15;
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(3 + rnd() * 3.5, 1.1 + rnd() * 0.9, 2 + rnd() * 1.4),
+        rockMat(0x8a8578, 0.4 + rnd() * 0.2));
+      slab.position.set(Math.cos(a) * d, 0.5, Math.sin(a) * d);
+      slab.rotation.set((rnd() - 0.5) * 0.12, rnd() * Math.PI, (rnd() - 0.5) * 0.12);
+      g.add(slab);
+    }
   } },
   torres: { col: { r: 34, h: 120 }, s: [0.8, 1.4],   // 塔群外緣 px20 + r13
     anchor: { topY: 28, topR: 2.5, side: { y: [26, 90], rx: 24, rz: 15, dome: false } },
     build: (g, rnd) => {
-    // 百內三塔:淺色花崗岩塔身 + 暗色角頁岩殘帽,底部共用碎石肩
+    // 百內三塔:淺色花崗岩塔身 + 暗色角頁岩殘帽,底部共用碎石肩。
+    // 2026-07-29:逐塔高矮胖瘦/站位/稜線各異(高度只往下抖,col.h = 120 仍涵蓋)
     for (const [px, h, r] of [[-18, 96, 11], [2, 120, 13], [20, 82, 10]]) {
-      const pz = (rnd() - 0.5) * 6;
-      const body = new THREE.Mesh(cyl(r * 0.45, r, h, 7), rockMat(0xd0c3ae, 0.12));
-      body.position.set(px, h / 2, pz); g.add(body);
-      const cap = new THREE.Mesh(cyl(r * 0.28, r * 0.48, h * 0.14, 6), rockMat(0x4e4a48));
-      cap.position.set(px, h * 0.98, pz); g.add(cap);
+      const jh = h * (0.88 + rnd() * 0.12), jr = r * (0.88 + rnd() * 0.2);
+      const jx = px + (rnd() - 0.5) * 3, pz = (rnd() - 0.5) * 6;
+      const body = new THREE.Mesh(cyl(jr * 0.45, jr, jh, 7), rockMat(0xd0c3ae, 0.12));
+      body.position.set(jx, jh / 2, pz);
+      body.rotation.y = rnd() * Math.PI;                                  // 七邊柱稜線各異
+      g.add(body);
+      const cap = new THREE.Mesh(cyl(jr * 0.28, jr * 0.48, jh * 0.14, 6), rockMat(0x4e4a48));
+      cap.position.set(jx, jh * 0.98, pz); g.add(cap);
     }
-    const shoulder = new THREE.Mesh(cone(30, 30, 8), rockMat(0x8f8474, 0.4));
-    shoulder.position.y = 15; g.add(shoulder);
+    const shH = 26 + rnd() * 7;
+    const shoulder = new THREE.Mesh(cone(26 + rnd() * 6, shH, 8), rockMat(0x8f8474, 0.4));
+    shoulder.position.y = shH / 2 - 1; g.add(shoulder);                   // 底緣微沉,坡地不懸空
   } },
   karst: { col: { r: 18, h: 104 }, s: [0.8, 1.4],
     anchor: { topY: 100, topR: 7, side: { y: [15, 85], rx: 9, rz: 8, dome: false } },
     build: (g, rnd) => {
-    // 張家界石柱:石英砂岩方柱疊層(上收 + 錯位微轉),崖頂綠冠環繞
+    // 張家界石柱:石英砂岩方柱疊層(上收 + 錯位微轉),崖頂綠冠環繞。
+    // 2026-07-29:逐層寬深/軸心各自抽(層高不動,anchor.topY = 100 由層高總和推得)
     let y = 0;
     const w0 = 22;
     for (const [i, hh] of [20, 16, 18, 15, 17, 14].entries()) {
       const f = 1 - i * 0.08;
-      const st = new THREE.Mesh(new THREE.BoxGeometry(w0 * f, hh, w0 * 0.85 * f),
+      const st = new THREE.Mesh(
+        new THREE.BoxGeometry(w0 * f * (0.92 + rnd() * 0.16), hh, w0 * 0.85 * f * (0.92 + rnd() * 0.16)),
         rockMat(i % 2 ? 0x8a7a5e : 0x7a6a50, i % 2 ? 0.12 : 0));
-      st.position.y = y + hh / 2; st.rotation.y = (rnd() - 0.5) * 0.24; y += hh; g.add(st);
+      st.position.set((rnd() - 0.5) * 2.4, y + hh / 2, (rnd() - 0.5) * 2.4);
+      st.rotation.y = (rnd() - 0.5) * 0.24; y += hh; g.add(st);
     }
-    for (const a of [0.4, 2.3, 4.4]) {   // 崖頂綠冠(頂緣三簇,中央留給石屋/疊石)
-      const crown = new THREE.Mesh(ico(5.5), toonMat(0x3f7a44));
-      crown.scale.y = 0.55;
-      crown.position.set(Math.cos(a) * 6.5, y + 1.5, Math.sin(a) * 5.5); g.add(crown);
+    for (const a of [0.4, 2.3, 4.4]) {   // 崖頂綠冠(頂緣三簇,中央留給石屋/疊石;簇簇不同)
+      const crown = new THREE.Mesh(ico(4.5 + rnd() * 2), toonMat(0x3f7a44));
+      crown.scale.y = 0.45 + rnd() * 0.2;
+      const ja = a + (rnd() - 0.5) * 0.5;
+      crown.position.set(Math.cos(ja) * (5.5 + rnd() * 2), y + 1.5, Math.sin(ja) * (4.5 + rnd() * 2)); g.add(crown);
+    }
+  } },
+  // ---- 2026-07-29 增補:三座世界地標岩體(逐顆 rnd 變異同前;外廓收在 col/anchor 內)----
+  meteora: { col: { r: 36, h: 88 }, s: [0.9, 1.5],
+    anchor: { topY: 78, topR: 8, side: { y: [12, 62], rx: 16, rz: 14, taper: 0.72 } },
+    // 邁泰奧拉(希臘):圓潤砂礫岩峰 + 崖頂修道院(紅瓦石屋/鐘塔)+ 伴峰。
+    // 層高固定(anchor.topY = 78 錨在頂台),變化放在半徑/軸心/伴峰/修道院配置
+    build: (g, rnd) => {
+    let y = 0;
+    const tones = [0x9a8f7c, 0x938774, 0xa29786];
+    for (const [f, hh] of [[1.3, 20], [1.12, 22], [1.0, 21], [0.9, 12]]) {   // 圓柱疊層砂礫岩(圓潤上收)
+      const r = 13.5 * f * (0.94 + rnd() * 0.12);
+      const st = new THREE.Mesh(cyl(r * 0.9, r, hh + 2, 9), rockMat(tones[(rnd() * 3) | 0], rnd() * 0.15));
+      st.position.set((rnd() - 0.5) * 2, y + hh / 2, (rnd() - 0.5) * 2);
+      st.rotation.y = rnd() * Math.PI;
+      y += hh; g.add(st);
+    }
+    const plat = new THREE.Mesh(cyl(8.5, 11, 3, 9), rockMat(0xa39884, 0.2));
+    plat.position.y = 76.5; g.add(plat);                                     // 頂台 75~78
+    const nHut = 1 + (rnd() < 0.6 ? 1 : 0);                                  // 修道院石屋(紅瓦雙坡頂)
+    for (let i = 0; i < nHut; i++) {
+      const hx = (i ? -1 : 1) * (1.5 + rnd() * 2), hz = (rnd() - 0.5) * 5;
+      const hw = 4.5 + rnd() * 1.6, hd = 3.6 + rnd() * 1.2, hh2 = 2.8 + rnd();
+      const hut = new THREE.Mesh(new THREE.BoxGeometry(hw, hh2, hd), rockMat(0xcfc4ae));
+      hut.position.set(hx, 78 + hh2 / 2, hz); hut.rotation.y = (rnd() - 0.5) * 0.5; g.add(hut);
+      const roof = new THREE.Mesh(cone(hw * 0.62, 1.8, 4), rockMat(0xa2543e));
+      roof.rotation.y = Math.PI / 4 + hut.rotation.y; roof.scale.z = 0.8;
+      roof.position.set(hx, 78 + hh2 + 0.9, hz); g.add(roof);                // 紅瓦頂
+    }
+    const bell = new THREE.Mesh(new THREE.BoxGeometry(1.8, 4.5, 1.8), rockMat(0xd8cfc0));
+    bell.position.set(5.5 + rnd(), 80.2, (rnd() - 0.5) * 4); g.add(bell);    // 鐘塔(頂台緣)
+    const bt = new THREE.Mesh(cone(1.6, 1.6, 4), rockMat(0xa2543e));
+    bt.rotation.y = Math.PI / 4; bt.position.set(bell.position.x, 83.2, bell.position.z); g.add(bt);
+    const cr = 7 + rnd() * 3, ch = 26 + rnd() * 14, ca = rnd() * Math.PI * 2;   // 伴峰(矮圓峰)
+    const cx2 = Math.cos(ca) * (19 + rnd() * 3), cz2 = Math.sin(ca) * (16 + rnd() * 3);
+    const comp = new THREE.Mesh(cyl(cr * 0.8, cr * 1.15, ch, 9), rockMat(tones[(rnd() * 3) | 0], 0.15 + rnd() * 0.2));
+    comp.position.set(cx2, ch / 2, cz2); comp.rotation.y = rnd() * Math.PI; g.add(comp);
+    const dome2 = new THREE.Mesh(new THREE.SphereGeometry(cr * 0.82, 9, 6), rockMat(0xa29786, 0.3));
+    dome2.scale.y = 0.55; dome2.position.set(cx2, ch, cz2); g.add(dome2);    // 伴峰圓頂
+    const nRib = 3 + ((rnd() * 3) | 0);                                      // 垂直侵蝕墨線
+    for (let i = 0; i < nRib; i++) {
+      const a = rnd() * Math.PI * 2, ry2 = 14 + rnd() * 34;
+      const rr = 13.5 * (ry2 < 20 ? 1.3 : ry2 < 42 ? 1.12 : 1.0) * 0.92;
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, 14 + rnd() * 12, 1.1), rockMat(0x7a7062));
+      rib.position.set(Math.cos(a) * rr, ry2, Math.sin(a) * rr);
+      rib.rotation.y = -a; g.add(rib);
+    }
+  } },
+  sigiriya: { col: { r: 48, h: 76 }, s: [0.8, 1.3],
+    anchor: { topY: 74, topR: 18, side: { y: [16, 56], rx: 42, rz: 27, taper: 0.88 } },
+    // 獅子岩(斯里蘭卡):陡壁孤丘 + 白鏡牆帶 + 頂上宮殿基座遺跡 + 山腳獅爪門 + 之字棧道
+    build: (g, rnd) => {
+    const sz = 0.62 + rnd() * 0.08;                                          // 橢圓斷面(z 壓扁)
+    const lower = new THREE.Mesh(cyl(40, 45, 54, 11), rockMat(0xa2765a, 0.18));
+    lower.scale.z = sz; lower.position.y = 27; lower.rotation.y = (rnd() - 0.5) * 0.3; g.add(lower);
+    const upper = new THREE.Mesh(cyl(34, 39, 18, 11), rockMat(0xaa7e60, 0.12));
+    upper.scale.z = sz; upper.position.y = 61; upper.rotation.y = (rnd() - 0.5) * 0.3; g.add(upper);
+    const cap = new THREE.Mesh(cyl(31, 34.5, 4, 11), rockMat(0x8a9a5e, 0.6));
+    cap.scale.z = sz; cap.position.y = 72; g.add(cap);                       // 頂台草坪(70~74)
+    const rw = (y2) => 45 - 5 * y2 / 54;                                     // 下段壁面半徑剖面
+    const mirror = new THREE.Mesh(cyl(rw(42.5) + 0.35, rw(37.5) + 0.35, 5, 11), rockMat(0xe8ddc2));
+    mirror.scale.z = sz; mirror.position.y = 40;
+    mirror.rotation.y = lower.rotation.y;   // 對齊岩體 11 邊形稜線(相對轉會讓帶子局部外浮)
+    g.add(mirror);                                                           // 白鏡牆環帶(貼壁)
+    const nW = 3 + ((rnd() * 3) | 0);                                        // 頂上宮殿基座遺跡(矮牆格局)
+    for (let i = 0; i < nW; i++) {
+      const wl = 8 + rnd() * 8;
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(wl, 1.3, 1.1), rockMat(0xc9b896, 0.2));
+      wall.position.set((rnd() - 0.5) * 22, 74.6, (rnd() - 0.5) * 14);
+      wall.rotation.y = (rnd() < 0.5 ? 0 : Math.PI / 2) + (rnd() - 0.5) * 0.15;
+      g.add(wall);
+    }
+    const pool = new THREE.Mesh(new THREE.BoxGeometry(6 + rnd() * 3, 0.9, 4 + rnd() * 2), rockMat(0x3a5a5e));
+    pool.position.set((rnd() - 0.5) * 10, 74.3, (rnd() - 0.5) * 8); g.add(pool);   // 宮殿蓄水池
+    for (const s of [-1, 1]) {                                               // 山腳獅爪門(北側雙巨爪)
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(4.5 + rnd(), 6.5 + rnd(), 4), rockMat(0xb98a62, 0.1));
+      claw.position.set(s * (6.5 + rnd()), 3.2, 45 * sz * 0.92); g.add(claw);
+      for (let t = -1; t <= 1; t++) {
+        const toe = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 1.6), rockMat(0xa8794f));
+        toe.position.set(claw.position.x + t * 1.5, 1.1, claw.position.z + 2.4);
+        g.add(toe);
+      }
+    }
+    const nS = 4 + ((rnd() * 3) | 0);                                        // 之字棧道(側壁淺色梯板)
+    for (let i = 0; i < nS; i++) {
+      const sy2 = 12 + i * (44 / nS) + rnd() * 3;
+      const step = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 7 + rnd() * 3), rockMat(0xd8c9a8));
+      step.position.set(rw(sy2) * 0.97, sy2, (i % 2 ? 1 : -1) * (4 + rnd() * 4) * sz);
+      g.add(step);
+    }
+  } },
+  petra: { col: { r: 46, h: 64 }, s: [0.9, 1.4],
+    anchor: { topY: 62, topR: 14, side: null },   // 沙漠砂岩,側壁不長樹
+    // 佩特拉卡茲尼神殿(約旦):玫瑰紅砂岩崖 + 岩鑿雙層柱廊立面(立面構件貼崖面微凸)
+    build: (g, rnd) => {
+    const cliff = new THREE.Mesh(new THREE.BoxGeometry(56, 62, 30), rockMat(0xb37360, 0.04));
+    cliff.position.y = 31; cliff.rotation.y = (rnd() - 0.5) * 0.06; g.add(cliff);
+    for (const s of [-1, 1]) {                                               // 兩翼岩體(峽谷壁)
+      const wh = 42 + rnd() * 12;
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(20 + rnd() * 3, wh, 26), rockMat(0xa8685a, 0.06));
+      wing.position.set(s * (29 + rnd() * 2), wh / 2, -5 - rnd() * 3);
+      wing.rotation.y = s * (0.28 + rnd() * 0.12); g.add(wing);
+    }
+    const F = 15;                                                            // 立面基準(崖正面)
+    for (const [w2, h2, z2] of [[30, 2, 3], [26, 2, 1.5]]) {                 // 入口台階
+      const stp = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, 6), rockMat(0xc08370));
+      stp.position.set(0, h2 / 2 + (z2 === 1.5 ? 2 : 0), F + z2 - 3); g.add(stp);
+    }
+    for (let i = 0; i < 6; i++) {                                            // 下層六柱柱廊
+      const col2 = new THREE.Mesh(cyl(1.0, 1.2, 13, 8), rockMat(0xc98d78));
+      col2.position.set(-12.5 + i * 5, 10.5, F - 0.2); g.add(col2);
+      const cap2 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1, 2.3), rockMat(0xc98d78));
+      cap2.position.set(-12.5 + i * 5, 17.5, F - 0.2); g.add(cap2);
+    }
+    const arch = new THREE.Mesh(new THREE.BoxGeometry(29, 2.4, 2.6), rockMat(0xc48776));
+    arch.position.set(0, 19.2, F - 0.3); g.add(arch);                        // 下層楣樑
+    const ped = new THREE.Mesh(cone(15, 4.6, 4), rockMat(0xbe8272));
+    ped.rotation.y = Math.PI / 4; ped.scale.z = 0.16;
+    ped.position.set(0, 22.6, F - 0.6); g.add(ped);                          // 三角楣
+    const door = new THREE.Mesh(new THREE.BoxGeometry(6, 9.5, 2), rockMat(0x2a1e1a));
+    door.position.set(0, 6.8, F - 1.2); g.add(door);                        // 幽深門洞
+    const tho = new THREE.Mesh(cyl(3.2, 3.4, 9, 8), rockMat(0xc98d78));
+    tho.position.set(0, 30, F - 0.8); g.add(tho);                            // 上層中央圓亭(半凸出崖面 = 岩鑿感)
+    const thr = new THREE.Mesh(cone(3.9, 3, 8), rockMat(0xb37360));
+    thr.position.set(0, 36, F - 0.8); g.add(thr);
+    for (const s of [-1, 1]) {                                               // 上層側龕樓 + 半楣
+      const nich = new THREE.Mesh(new THREE.BoxGeometry(6.5, 10, 3), rockMat(0xc08370));
+      nich.position.set(s * 10.5, 29.5, F - 1); g.add(nich);
+      const hp = new THREE.Mesh(cone(4.4, 2.6, 4), rockMat(0xbe8272));
+      hp.rotation.y = Math.PI / 4; hp.scale.z = 0.16;
+      hp.position.set(s * 10.5, 35.6, F + 0.1); g.add(hp);
+    }
+    const nRib = 3 + ((rnd() * 3) | 0);                                      // 崖面垂直風化墨線(立面以外;
+    for (let i = 0; i < nRib; i++) {                                         //  沉半深 —— 崖體微轉不會讓墨線外浮)
+      const rx2 = (rnd() < 0.5 ? -1 : 1) * (18 + rnd() * 8);
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, 20 + rnd() * 16, 1), rockMat(0x8f5a4c));
+      rib.position.set(rx2, 40 + rnd() * 12, F - 0.55); g.add(rib);
     }
   } },
 };
@@ -1662,6 +2046,15 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     if (placedM.some((p) => Math.hypot(x - p.x, z - p.z) < r + p.r + 70)) continue;
     if (!synth) named++;
     decorateMegalith(g, meta.anchor, rnd, s);
+    // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
+    // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
+    // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
+    const dH = (rnd() - 0.5) * 0.05, dS = (rnd() - 0.5) * 0.12, dL = (rnd() - 0.5) * 0.1;
+    g.traverse((o) => {
+      if (o.isMesh && o.material?.userData?.rock) {
+        o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
+      }
+    });
     bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
     g.scale.setScalar(s);
     // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空
@@ -1694,6 +2087,10 @@ function buildingType(tags) {
   if (tags.tourism === 'museum' || b === 'museum') return 'museum';
   if (tags.power === 'tower') return 'power';
   if (b === 'industrial' || b === 'factory' || b === 'warehouse') return 'factory';
+  if (tags.historic === 'castle' || b === 'castle') return 'castle';
+  if (tags.man_made === 'lighthouse' || b === 'lighthouse') return 'lighthouse';
+  if (b === 'pagoda') return 'pagoda';
+  if (b === 'stadium' || tags.leisure === 'stadium') return 'stadium';
   if (b === 'commercial' || b === 'office' || b === 'retail' || b === 'hotel' || b === 'apartments' && (+tags['building:levels'] || 0) >= 10) return 'commercial';
   return 'residential';
 }
@@ -4708,6 +5105,7 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
         (items.borderrock ??= []).push({
           x, y: h - 0.6, z, s,
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.1, tz: (rnd() - 0.5) * 0.1,
+          dj: rnd(),
         });
         occ.add(x, z, 3.6 * s);
       } else {   // green / wet → 神木牆
@@ -4720,6 +5118,7 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
         (items[sp] ??= []).push({
           x, y: h, z, s,
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.04, tz: (rnd() - 0.5) * 0.04,
+          dj: rnd(),
         });
         occ.add(x, z, rT * s + 6);
       }
@@ -5119,6 +5518,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       x, y: terrain.heightAt(x, z), z, s: s * (VEG_SCALE[type] || 1),   // 超尺度植被
       ry: rnd() * Math.PI * 2,
       tx: (rnd() - 0.5) * 0.09, tz: (rnd() - 0.5) * 0.09,   // 站姿微傾斜(每棵不同)
+      dj: rnd(),   // 細節種子(xform.js):零件半徑/自轉逐株走樣,針葉塔不再滿林同錐
     });
     placed++;
   };
@@ -5837,7 +6237,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
-    LANDMARKS[lm.type](g);
+    LANDMARKS[lm.type](g, rnd);   // rnd → 同型地標逐座變化(塔高/層數/徽色;巨岩準則)
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
     let sc = OVER.lm * (0.9 + rnd() * 0.25);
     // 山丘頂容不下就縮(同巨岩);地標縮太小不像公共建築 → 下限 0.55×

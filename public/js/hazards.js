@@ -115,8 +115,15 @@ const BUILDERS = {
     for (let i = 0; i < n; i++) {
       const car = new THREE.Group();
       const paint = jitterColor(paints[Math.floor(rnd() * paints.length)], rnd);
-      mesh(car, box(1.8, 0.85, 3.9), paint, 0, 0.85, 0);
-      mesh(car, box(1.6, 0.62, 1.9), new THREE.Color(paint).multiplyScalar(0.85), 0, 1.55, -0.25);
+      // 台台不同(2026-07-29):車身尺寸逐台抽、車頂塌陷程度各異(底緣貼車身頂,塌多低多少)
+      const bw = 1.7 + rnd() * 0.3, bh = 0.8 + rnd() * 0.15, bl = 3.5 + rnd() * 0.8;
+      mesh(car, box(bw, bh, bl), paint, 0, 0.85, 0);
+      const crush = 0.55 + rnd() * 0.4;                                   // 1 = 完好車頂、0.55 = 塌剩一半
+      const cab = mesh(car, box(bw * 0.9, 0.62, bl * 0.48),
+        new THREE.Color(paint).multiplyScalar(0.85),
+        0, 0.85 + bh / 2 + 0.31 * crush, -0.25 + (rnd() - 0.5) * 0.3);
+      cab.scale.y = crush;
+      cab.rotation.z = (rnd() - 0.5) * 0.16;                              // 塌得一邊高一邊低
       for (const [sx, sz] of [[-1, -1.3], [-1, 1.3], [1, -1.3], [1, 1.3]]) {
         const w = mesh(car, cyl(0.34, 0.34, 0.25, 8), 0x1c1f22, sx * 0.95, 0.34, sz);   // 軸心 = 輪半徑 → 觸地
         w.rotation.z = Math.PI / 2;
@@ -130,6 +137,13 @@ const BUILDERS = {
       );
       if (car.rotation.x > 2) car.position.y = 1.3;
       g.add(car);
+    }
+    // 脫落的輪胎:掉在殘骸群旁平躺(軸朝上、胎厚一半著地)
+    const nT = 1 + (rnd() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nT; i++) {
+      const a = rnd() * Math.PI * 2, d = r * (0.3 + rnd() * 0.6);
+      mesh(g, cyl(0.34, 0.34, 0.25, 8), 0x1c1f22, Math.cos(a) * d, 0.13, Math.sin(a) * d)
+        .rotation.y = rnd() * Math.PI;
     }
     // 散落碎片
     for (let i = 0; i < 5; i++) {
