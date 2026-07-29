@@ -571,9 +571,15 @@ for (const kind of hzKinds) {
 }
 
 // ---- 神木本體 / 一般植被(biomes.js;實例朝向與微傾斜都要驗)----
+// 細節抖動(xform.js dj 縫,2026-07-29):半徑抖動 + 繞自身軸自轉之下接合 MUST 仍成立
+// —— dj 是連續種子無法窮舉,抽三個相異種子取樣(每零件的抖動由 hash(零件識別, dj) 決定,
+// 不同 dj 掃到不同的振幅組合)。
 const INSTANCES = [
   { name: '正株', it: { x: 0, y: 0, z: 0, s: 1, ry: 0, tx: 0, tz: 0 } },
   { name: '轉向+微傾', it: { x: 0, y: 0, z: 0, s: 1, ry: 1.1, tx: 0.025, tz: -0.025 } },
+  { name: '抖動A', it: { x: 0, y: 0, z: 0, s: 1, ry: 0.7, tx: 0.02, tz: 0.01, dj: 0.137 } },
+  { name: '抖動B', it: { x: 0, y: 0, z: 0, s: 1, ry: 2.9, tx: -0.02, tz: 0.03, dj: 0.548 } },
+  { name: '抖動C', it: { x: 0, y: 0, z: 0, s: 1, ry: 4.4, tx: 0.01, tz: -0.03, dj: 0.923 } },
 ];
 for (const [group, table] of [['神木', defs.GIANT_DEFS], ['植被', defs.VEG_DEFS]]) {
   for (const [name, def] of Object.entries(table)) {
@@ -586,7 +592,7 @@ const BARK = halfSolid([-1, 0, 0], 0);
 for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   if (ONLY && !name.includes(ONLY)) continue;
   for (const inst of INSTANCES) {
-    const it = { ...inst.it, tx: 0, tz: 0 };   // 特徵件不吃植株微傾斜
+    const it = { ...inst.it, tx: 0, tz: 0, dj: 0 };   // 特徵件不吃植株微傾斜,也不吃細節抖動(世界尺寸恆定)
     report(`巨木特徵 ${name}(${inst.name})`, auditJoints(vegParts(def, it), [BARK]), '錨體=樹皮面');
   }
 }
