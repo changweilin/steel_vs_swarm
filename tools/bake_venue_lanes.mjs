@@ -411,8 +411,8 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     const gs = 1 / MAPGEO.REAL_SCALE;
     const gxz = xz.map(([x, z]) => [x * gs, z * gs]);
     if (!laneUTurnAudit(gxz).ok) { why = 'uturn'; return null; }
-    // 規則③(2026-07-29):帶號轉角累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內(順逆時針抵消;
-    // 繞圈/環繞式路線在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
+    // 規則③(2026-07-29):相對 A→B 主軸的帶號偏航累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內
+    // (順逆時針抵消;背對主軸走/繞圈在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
     if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
     banPath(used, p, n);                                      // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;

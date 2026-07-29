@@ -101,17 +101,18 @@ export const MAPGEO = {
   // 再折回」式掉頭)。與 laneTacticsXZ 同一組取樣語彙(TACTICS.SEG_M 步長,避免 OSRM 密集
   // 頂點鋸齒誤判)。結算縫 = laneUTurnAudit();bake 硬門檻、mapSelect 複驗共用同一支。
   UTURN_MAX_DEG: 150,
-  // 兵線「累積轉角」範圍(度,2026-07-29 使用者需求「轉彎角度累積不可超過範圍之外,順逆
-  // 時針轉向可抵消」):沿線帶號轉向角逐段累加(左轉正/右轉負,互相抵消),任一時刻累積值
-  // MUST 落在 ±此值內(繞圈/環繞式路線會累積出界;S 彎因抵消而合法)。與 UTURN_MAX_DEG
-  // 互相獨立:先偏轉後的單點大掉頭可以不出累積範圍(規則②攔);反之逐段小彎同向累積出界
-  // 而無任何單點大轉角(本規則攔)。
-  // 300 的校準(2026-07-29,拿 venueLanes 95 條真實道路兵線實測):城市路網天生蜿蜒,
-  // 累積分布 P50≈180°、P90≈273°,尾端在 299.7°→325.8° 有明顯斷層;取 300 恰只淘汰 4 條
-  // 「接近繞整圈」(326°~360°)的病態路線,其餘 91 條全數保留 —— 距成圈(360°)恆留 60°
-  // 餘裕。門檻 MUST < 360(否則繞圈不設防);再調整前 MUST 重跑分布實測 + 受影響場地重烤。
+  // 兵線「主軸偏航累積」範圍(度,2026-07-29 使用者需求「轉彎角度累積不可超過範圍之外,
+  // 順逆時針轉向可抵消」;同日改制:量測基準由「出發航向」改為「A→B 主軸」,門檻收緊至
+  // 150):以「首段航向 − 主軸」的帶號夾角為初值,沿線帶號轉向角逐段累加(左轉正/右轉負
+  // 互相抵消,**不回捲**:繞整圈累積過 360° 而非歸零),任一時刻 |偏航| MUST ≤ 此值 ——
+  // 語意:全程航向偏離主堡連線方向不得超過 150°(距完全反向 180° 留 30° 餘裕),出堡/
+  // 抵達的接駁段一樣受檢;繞圈因不回捲必然出界。與 UTURN_MAX_DEG 互相獨立(單點大掉頭
+  // vs 累積偏航,兩者皆有對方攔不到的案型)。
+  // 150 的校準(2026-07-29 拿 venueLanes 95 條真實道路兵線實測,相對主軸量測):偏航峰值
+  // P50≈126°、P75≈148°,150 保留約 3/4 既有真實路線(23/95 條超標、18/54 venue×L 需重烤)。
+  // 門檻 MUST < 180(≥180 = 允許完全背對主軸,語意破產);再調整前 MUST 重跑分布實測。
   // 結算縫 = laneTurnAccumAudit();bake 硬門檻、mapSelect 複驗共用同一支。
-  TURN_ACCUM_MAX_DEG: 300,
+  TURN_ACCUM_MAX_DEG: 150,
   // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
   // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
   // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
@@ -263,24 +264,26 @@ export function laneUTurnAudit(pts) {
 }
 
 /**
- * 兵線「累積轉角」稽核(公尺平面 [x,z] 陣列,2026-07-29 使用者需求
- * 「轉彎的角度累積起來不可超過範圍之外,順逆時針轉向可抵消」;範圍 =
- * ±MAPGEO.TURN_ACCUM_MAX_DEG,放寬校準依據見該常數註解)。
- * 沿折線以 TACTICS.SEG_M 等距重取樣(laneHeads),相鄰取樣航向的**帶號**轉角
- * (正規化到 (−π, π];左轉正/右轉負)逐段累加 —— 順逆時針互相抵消 ——
- * 任一時刻 |累積| 超出門檻 = 出界淘汰。
+ * 兵線「主軸偏航累積」稽核(公尺平面 [x,z] 陣列,2026-07-29 使用者需求
+ * 「轉彎的角度累積起來不可超過範圍之外,順逆時針轉向可抵消」;量測基準 = A→B 主軸,
+ * 範圍 = ±MAPGEO.TURN_ACCUM_MAX_DEG,校準依據見該常數註解)。
+ * 主軸 = pts[0] → 末點方位。以「首取樣段航向 − 主軸」的帶號夾角為初值,沿
+ * TACTICS.SEG_M 等距重取樣序列(laneHeads)逐段累加帶號轉角(正規化到 (−π, π];
+ * 左轉正/右轉負,順逆時針互相抵消,**不回捲** —— 繞整圈累積過 360° 而非歸零)。
+ * 任一時刻 |偏航| 超出門檻 = 出界淘汰;出堡/抵達接駁段(首尾取樣段)一樣受檢。
  * 恰好落在門檻上 MUST 算範圍**內**合法 ⇒ 門檻比較含微小浮點餘裕。
- * 回傳 { ok, maxAbsDeg, at }(at = 累積峰值處沿線距離,無則 -1)。
+ * 回傳 { ok, maxAbsDeg, at }(at = 偏航峰值處沿線距離,無則 -1)。
  */
 export function laneTurnAccumAudit(pts) {
   if (!pts || pts.length < 3) return { ok: true, maxAbsDeg: 0, at: -1 };
   const { heads } = laneHeads(pts);
-  let acc = 0, maxAbs = 0, atMax = -1;
+  if (!heads.length) return { ok: true, maxAbsDeg: 0, at: -1 };
+  const axis = Math.atan2(pts[pts.length - 1][1] - pts[0][1], pts[pts.length - 1][0] - pts[0][0]);
+  const norm = (a) => (a > Math.PI ? a - Math.PI * 2 : (a < -Math.PI ? a + Math.PI * 2 : a));
+  let acc = norm(heads[0].head - axis);
+  let maxAbs = Math.abs(acc) * 180 / Math.PI, atMax = heads[0].d;
   for (let j = 1; j < heads.length; j++) {
-    let dh = heads[j].head - heads[j - 1].head;
-    if (dh > Math.PI) dh -= Math.PI * 2;                     // 正規化到 (−π, π]:帶號最小轉角
-    else if (dh < -Math.PI) dh += Math.PI * 2;
-    acc += dh;
+    acc += norm(heads[j].head - heads[j - 1].head);
     const a = Math.abs(acc) * 180 / Math.PI;
     if (a > maxAbs) { maxAbs = a; atMax = heads[j].d; }
   }

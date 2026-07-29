@@ -65,7 +65,7 @@
 | 平衡數值 | `data.js` | 射程/傷害/經濟/波次/角色/招式全在此;sim/game MUST NOT 硬編碼;敘事文字去 `lore.js` |
 | 推導值 | 各推導式 | 賞金表、`UNITS.drone.hp`/`SQUAD.DMG`(← `SQUAD.BUFF`)、`UNITS.bunker.hp`(= 塔一半)、塔位 `solveTowerSites()`、`MINES.PER_LANE`/`AA_SITE.range`(等面積)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)、`FAN_MUZZLE`(← `FALLOFF.PLATEAU`)—— 一律 MUST NOT 手寫 |
 | 砲塔佈局規則 | `data.js towerLayoutAudit()`(#4 射程重疊)/`towerTunnelAudit()`(#5 洞口涵蓋) | 烘焙/mapSelect/伺服器/稽核共用;#5 MUST NOT 下放成執行期挪塔(兩端塔位會分家) |
-| 兵線導航規則 | `data.js laneUTurnAudit()`(U-turn)/`laneTurnAccumAudit()`(累積轉角 ±`TURN_ACCUM_MAX_DEG`,順逆抵消)/`laneStructEntryAudit()`(橋隧只走出入口) | 生成期硬門檻淘汰;規則①只在離線 bake(唯一有逐邊結構旗標);②③互相獨立,MUST NOT 以一代二 |
+| 兵線導航規則 | `data.js laneUTurnAudit()`(U-turn)/`laneTurnAccumAudit()`(主軸偏航累積 ±`TURN_ACCUM_MAX_DEG`,順逆抵消)/`laneStructEntryAudit()`(橋隧只走出入口) | 生成期硬門檻淘汰;規則①只在離線 bake(唯一有逐邊結構旗標);②③互相獨立,MUST NOT 以一代二 |
 | 隧道/地下道剖面 | `biomes.js tunFloorAt()` + `underpassPlan()` + `strucHw()` | 山體隧道 = 平直內插;地下道 = 同基準減 smoothstep 下沉。消費端 MUST 吃 `way._tun[ri].pts`(含引道延伸段) |
 | 明隧道判定 | `biomes.js tunnelWallProfile()` | 四構件共用同一份 `open/gy/nx,nz`;facade 基準只有 `galBase` 一份;純表現層(`hw`/segs/`cols` 不動);MUST NOT 改開放柱列(看得到卻打不到) |
 | 英雄武器/招式解析 | `heroWeapon()`/`heroAbility()` | HEROIC ×1.2/×1.5、SQUAD 折算、rangeCap 全在這;MUST NOT 二次乘算 |
@@ -199,7 +199,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js`(外網,㋓) |
 | 場地場景標記(`VENUES[].scen` 系) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含 |
 | `venueLanes.js` 重烤 / `TOWER_*` / `tower.range` | `audit_map_rules.mjs`(#4)+ `audit_lane_sep.mjs` + `audit_lane_grade_sep.mjs`(#5 洞內塔 ≥20% 射程涵蓋洞口外) |
-| 兵線導航規則(`UTURN_MAX_DEG`・`TURN_ACCUM_MAX_DEG`/三 audit/bake 閘門) | `audit_lane_navigation.mjs`(36 項);規則①③生效於既有場地需重烤(㋓) |
+| 兵線導航規則(`UTURN_MAX_DEG`・`TURN_ACCUM_MAX_DEG`/三 audit/bake 閘門) | `audit_lane_navigation.mjs`(35 項);規則①③生效於既有場地需重烤(㋓) |
 | 地下道(`underpassPlan`/`tunFloorAt`/`UND.*`/引道 `cut`・`open` 系) | `audit_underpass.mjs`(97 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件、引道垂直路塹 + open 段消費端閘門) |
 | 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(51 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |

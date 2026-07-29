@@ -2,7 +2,7 @@
 // 兵線導航三規則離線稽核:
 //   規則①「一旦進入高架橋/隧道/地下道,只能從出入口進出,不可從側邊出入」→ laneStructEntryAudit(圖論,2026-07-28)
 //   規則②「不可接近 180 度迴轉」                                        → laneUTurnAudit(幾何,2026-07-28)
-//   規則③「轉彎角度累積不可超過 ±90°(順逆時針轉向可抵消)」              → laneTurnAccumAudit(幾何,2026-07-29)
+//   規則③「主軸偏航累積不可超過範圍(順逆時針轉向可抵消,基準 = A→B 主軸)」→ laneTurnAccumAudit(幾何,2026-07-29)
 // 執行 data.js 真正的判定原文(bake_venue_lanes.mjs / mapSelect.js 生成期共用同一支)。
 // 含反向驗證:把規則故意鬆掉/寫壞的那一版餵進去,稽核 MUST 在對應條目紅字。
 // 用法:node tools/audit_lane_navigation.mjs
@@ -39,62 +39,68 @@ const loose = (pts) => laneUTurnAudit(pts).maxDeg < 180;   // 手動用 180° �
 ok('對照組:152° 在 180° 門檻下漏放(證明 150 門檻有作用)', loose(bent(152)) && !laneUTurnAudit(bent(152)).ok);
 ok('對照組:178° 在 180° 門檻下漏放', loose(bent(178)) && !laneUTurnAudit(bent(178)).ok);
 
-// ============ 規則③ 累積轉角 ±90°(laneTurnAccumAudit) ============
-// path(turns):由逐頂點帶號轉角(度,左轉正)展開折線;leg = 120(SEG_M 的整數倍,
-// 轉角恰落在取樣邊界 ⇒ 航向量測無跨角稀釋,角度斷言才準)。
-const path = (turns, leg = 120) => {
+// ============ 規則③ 主軸偏航累積(laneTurnAccumAudit) ============
+// byHeads(度陣列):依「逐段絕對航向」展開折線,每段 leg = 120(SEG_M 整數倍,轉角恰落在
+// 取樣邊界 ⇒ 航向量測無跨角稀釋);主軸 = 首點 → 末點方位,由航向組合自然決定。
+const byHeads = (hs, leg = 120) => {
   const pts = [[0, 0]];
-  let h = 0, x = 0, y = 0;
-  const step = () => { x += leg * Math.cos(h); y += leg * Math.sin(h); pts.push([x, y]); };
-  step();
-  for (const t of turns) { h += t * D2R; step(); }
+  let x = 0, y = 0;
+  for (const h of hs) { x += leg * Math.cos(h * D2R); y += leg * Math.sin(h * D2R); pts.push([x, y]); }
   return pts;
 };
 
-// 測資由門檻推導(調 TURN_ACCUM_MAX_DEG 免改稽核):step 三步走滿門檻、四步出界;
-// LIM < 360 保證 step ≤ 120 —— 單點恆低於規則②門檻(150°)與 path() 的 180° 幾何上限。
-const LIM = MAPGEO.TURN_ACCUM_MAX_DEG, STEP = LIM / 3;
-section('規則③ 累積轉角 ±' + LIM + '°(順逆時針可抵消)');
-ok('門檻 MUST < 360°(否則繞圈不設防)', LIM < 360);
-ok('直線不累積', laneTurnAccumAudit([[0, 0], [600, 0]]).ok && laneTurnAccumAudit([[0, 0], [600, 0]]).maxAbsDeg < 1);
+const LIM = MAPGEO.TURN_ACCUM_MAX_DEG;
+section('規則③ 主軸偏航累積 ±' + LIM + '°(順逆時針可抵消,基準 = A→B 主軸)');
+ok('門檻 MUST < 180°(≥180 = 允許完全背對主軸)', LIM < 180);
+ok('直線零偏航', laneTurnAccumAudit([[0, 0], [600, 0]]).ok && laneTurnAccumAudit([[0, 0], [600, 0]]).maxAbsDeg < 1);
 ok('平緩兩點(< 3 頂點防呆)恆合法', laneTurnAccumAudit([[0, 0], [10, 0]]).ok);
-ok('垂直街網單一 90° 直角轉合法', laneTurnAccumAudit(path([90])).ok);
-ok('累積走滿門檻(3×' + STEP + '°,範圍邊界)合法', laneTurnAccumAudit(path([STEP, STEP, STEP])).ok);
-ok('同向累積 4×' + STEP + '°(單點皆低於迴轉門檻)判出界', !laneTurnAccumAudit(path([STEP, STEP, STEP, STEP])).ok);
-ok('逆時針同向累積亦判出界(帶號對稱)', !laneTurnAccumAudit(path([-STEP, -STEP, -STEP, -STEP])).ok);
-ok('蛇行 ±' + STEP + '° 交錯(順逆抵消)恆合法', laneTurnAccumAudit(path([STEP, -STEP, STEP, -STEP, STEP, -STEP])).ok);
-ok('繞圈(4×90° = 360°)判出界', !laneTurnAccumAudit(path([90, 90, 90, 90])).ok);
-// 兩規則獨立:先偏 −70° 再 +155° 掉頭 —— 累積峰值 85° 在範圍內(本規則放行),
-// 局部 155° 反轉由規則②攔 ⇒ 規則③ MUST NOT 被當成規則②的替代品而移除任一方。
+// 基準正確性:L 型直角轉的主軸 = 對角線 45°,兩段各偏 ±45° —— 若誤用「出發航向」基準會量到 90°
+ok('L 型直角轉:偏航 = ±45°(證明基準是主軸,±0.5°)',
+  laneTurnAccumAudit(byHeads([0, 90])).ok && Math.abs(laneTurnAccumAudit(byHeads([0, 90])).maxAbsDeg - 45) < 0.5);
+// 大幅之字 ±80°(相對主軸)合法 —— 舊「出發航向」基準會把首段航向當 0,量到 160° 誤殺
+const zig80 = byHeads([80, -80, 80, -80, 80, -80]);
+ok('大幅之字 ±80°(順逆抵消 + 主軸置中)合法', laneTurnAccumAudit(zig80).ok);
+ok('出堡段即背對主軸(170° 接駁)判出界 —— 首取樣段一樣受檢',
+  !laneTurnAccumAudit(byHeads([170, 0, 0, 0, 0, 0])).ok);
+// 中途長段反向繞行:單點轉角 90/80/80/90 皆低於規則②門檻(規則②放行),偏航卻達 ~159° ——
+// 證明兩規則獨立、且累積制攔得住「無單點大轉角的繞行」。對照組 −120° 淺繞行(峰值 ~116°)合法。
+const detour = byHeads([0, 0, 0, 0, 0, 0, -90, -170, -90, 0, 0, 0, 0, 0, 0]);
+ok('中途反向繞行(單點皆低於規則②門檻)由本規則攔下',
+  laneUTurnAudit(detour).ok && !laneTurnAccumAudit(detour).ok);
+ok('中途淺繞行(−120° 未過門檻)合法',
+  laneTurnAccumAudit(byHeads([0, 0, 0, 0, 0, 0, -90, -120, -90, 0, 0, 0, 0, 0, 0])).ok);
+// 繞圈:偏航不回捲,轉滿一圈累積 360° 必然出界(即使首尾都順著主軸)
+ok('繞圈(0→90→180→270→0)判出界', !laneTurnAccumAudit(byHeads([0, 90, 180, 270, 0])).ok);
+// 兩規則獨立(另一向):−70° 後 +155° 單點掉頭 —— 偏航峰值 ~83° 在範圍內(本規則放行),
+// 由規則②攔 ⇒ 規則③ MUST NOT 被當成規則②的替代品而移除任一方。
 // (不用恰好 150°:atan2 量測有 1e-14 級浮點誤差,會卡在規則②的嚴格 < 門檻上。)
 ok('−70° 後 +155° 掉頭:規則③放行、規則②攔(互相獨立)',
-  laneTurnAccumAudit(path([-70, 155])).ok && !laneUTurnAudit(path([-70, 155])).ok);
-// 量測正確性:+45°+45° 的累積峰值 ≈ 90°(帶號總和,與門檻無關)
-ok('累積量測 = 帶號轉角總和(±0.5°)', Math.abs(laneTurnAccumAudit(path([45, 45])).maxAbsDeg - 90) < 0.5);
-// 重取樣防鋸齒:階梯狀短邊逐頂點 ±90° 交錯,宏觀朝 45° 前進,MUST NOT 誤判出界
-ok('階梯狀短邊(宏觀前進)不誤判', laneTurnAccumAudit(stair).ok);
+  laneTurnAccumAudit(byHeads([0, -70, 85])).ok && !laneUTurnAudit(byHeads([0, -70, 85])).ok);
+// 重取樣防鋸齒:階梯狀短邊逐頂點 ±90° 交錯,宏觀沿主軸 45° 前進,MUST NOT 誤判出界
+ok('階梯狀短邊(宏觀沿主軸前進)不誤判', laneTurnAccumAudit(stair).ok);
 
-// 反向驗證 A:若把「帶號累積」誤寫成「絕對值累積」(不可抵消),蛇行對照組會被誤殺 ——
-// 證明真正的實作靠帶號抵消放行它(蛇行對數推導:每對 ±60° 貢獻 |累積| 120°,湊到 > 門檻)。
+// 反向驗證 A:若把基準誤寫回「出發航向」(初值 0,不對齊主軸),大幅之字對照組會被誤殺
+// (首段 +80 被當 0,第二段量到 −160 出界)—— 證明真正的實作是對齊主軸後才累積。
 section('規則③ 反向驗證(壞版對照組 ⇒ 稽核紅字)');
-const absAccum = (pts) => {                                  // 壞版:|dh| 累加,順逆不抵消
-  let acc = 0;
+const headingRef = (pts) => {                                // 壞版:相對出發航向,初值 0
   const segs = [];
   for (let i = 1; i < pts.length; i++) segs.push(Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]));
+  let acc = 0, peak = 0;
   for (let i = 1; i < segs.length; i++) {
-    let dh = Math.abs(segs[i] - segs[i - 1]);
-    if (dh > Math.PI) dh = Math.PI * 2 - dh;
+    let dh = segs[i] - segs[i - 1];
+    if (dh > Math.PI) dh -= Math.PI * 2; else if (dh < -Math.PI) dh += Math.PI * 2;
     acc += dh;
+    if (Math.abs(acc) > peak) peak = Math.abs(acc);
   }
-  return acc * 180 / Math.PI;
+  return peak * 180 / Math.PI;
 };
-const zig = path(Array.from({ length: (Math.ceil(LIM / 120) + 1) * 2 }, (_, i) => (i % 2 ? -60 : 60)));
-ok('對照組:蛇行在「絕對值累積」壞版下誤殺(證明帶號抵消語意)',
-  absAccum(zig) > LIM && laneTurnAccumAudit(zig).ok);
-// 反向驗證 B:若門檻鬆到 2×LIM,四步累積案(4/3×LIM)就漏放 —— 證明現行門檻正是攔截點。
-const looseAccum = (pts) => laneTurnAccumAudit(pts).maxAbsDeg <= LIM * 2;   // 手動用雙倍門檻重判
-ok('對照組:4/3×LIM 累積在雙倍門檻下漏放(證明現行門檻有作用)',
-  looseAccum(path([STEP, STEP, STEP, STEP])) && !laneTurnAccumAudit(path([STEP, STEP, STEP, STEP])).ok);
+ok('對照組:大幅之字在「出發航向基準」壞版下誤殺(證明基準 = 主軸)',
+  headingRef(zig80) > LIM && laneTurnAccumAudit(zig80).ok);
+// 反向驗證 B:若門檻鬆到 360°,出堡反向案與繞圈案通通漏放 —— 證明現行門檻正是攔截點。
+const loose3 = (pts) => laneTurnAccumAudit(pts).maxAbsDeg <= 360;   // 手動用 360° 門檻重判
+ok('對照組:出堡反向 + 繞圈在 360° 門檻下漏放(證明 ' + LIM + ' 門檻有作用)',
+  loose3(byHeads([170, 0, 0, 0, 0, 0])) && !laneTurnAccumAudit(byHeads([170, 0, 0, 0, 0, 0])).ok
+  && loose3(byHeads([0, 90, 180, 270, 0])) && !laneTurnAccumAudit(byHeads([0, 90, 180, 270, 0])).ok);
 
 // ============ 規則① 橋/隧只能從出入口進出(laneStructEntryAudit) ============
 // struc[k] = 段 k(節點 k−1→k)是否結構邊;portal[i] = 節點 i 是否結構 way 端點。

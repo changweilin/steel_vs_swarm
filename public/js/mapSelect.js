@@ -401,8 +401,8 @@ export class MapSelect {
       const uSc = 1 / MAPGEO.REAL_SCALE;
       const gLanes = lanes.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
       const maxUturn = Math.max(...gLanes.map((lane) => laneUTurnAudit(lane).maxDeg));
-      // 累積轉角門檻(同 bake / MAPGEO.TURN_ACCUM_MAX_DEG):任一兵線帶號轉角累積出範圍
-      // → 淘汰此推薦點(規則 2026-07-29;判定縫 = laneTurnAccumAudit,不另比對門檻)。
+      // 主軸偏航門檻(同 bake / MAPGEO.TURN_ACCUM_MAX_DEG):任一兵線相對 A→B 主軸的帶號
+      // 偏航累積出範圍 → 淘汰此推薦點(規則 2026-07-29;判定縫 = laneTurnAccumAudit,不另比對門檻)。
       const accumOK = gLanes.every((lane) => laneTurnAccumAudit(lane).ok);
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
         && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
