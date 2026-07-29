@@ -18,8 +18,9 @@ import { VENUE_LANES } from './venueLanes.js';
  */
 export const SCEN_LABEL = {
   // 隧道與地下道是兩種東西:隧道 = 道路平坦鑽進山體(深度來自山);
-  // 地下道 = 平地上路面下沉再上來(深度來自挖)。現行引擎只生成前者,
-  // 故 underpass 沒有任何場地會標到它(稽核列為已知缺口,見 tools/audit_lane_scenarios.mjs)。
+  // 地下道 = 平地上路面下沉再上來(深度來自挖,2026-07-28 起引擎以 underpassPlan 生成)。
+  // 明隧道(gallery)是隧道的側向變體:覆蓋段的單邊土牆藏不住結構(tunnelWallProfile 判 open),
+  // 該側改成外露頂板 + 落地擋土 facade + 扶壁 —— 純表現層,通行/碰撞/LOS 與隧道相同。
   tunnel: '山體隧道',
   underpass: '地下道',
   bridge: '高架橋',
@@ -76,10 +77,10 @@ export const VENUES = [
   // tunnel way,是掃到最密的一區。**注意**:平地地下道現行引擎不生成(路面沉不下去,
   // 見 docs/lane_scenarios.md),故不標 scen;引擎支援下沉剖面後這張圖即成立。
   { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.047000, 121.518000], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
-  // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,三段短隧道
-  // 幾乎整條是明隧道(側向是立霧溪峽谷,土牆藏不住結構),彼此相距 ~400m,L1 兵線連穿多座。
-  // scen 標記待烘焙 + 場景掃描實測後補(標記 MUST 由實測產生)。
-  { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 } },
+  // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,短隧道的側向
+  // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線:④ 明隧道 42m、② 地下道 171m(首個實測
+  // 走得到 ② 的預設場地)、① 35m、⑧ 662m/+416m(峽谷絕壁)。
+  { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'] },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
   { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['underBridge'] },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
