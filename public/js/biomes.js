@@ -2259,6 +2259,15 @@ const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_M
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
 const TUN_GAP_CLOSE = 36, TUN_COV_MIN = 18;
+// 結構隧道資格(單一縫,2026-07-29 澀谷側壁破口案):山體隧道/地下道管線只收**戶外車行**
+// tunnel way;人行/自行車級(PED_HW)與室內通道(indoor,車站地下街)一律不進結構管線,
+// 攤平成一般小徑(§4 寧缺勿錯,與「步道不進橋樑管線」同一取捨)。前科:澀谷站 indoor
+// footway 閉環被判成山體隧道 —— 敞開補集以 hw+7 斜壁開挖 + 髮夾鄰腿走廊互相捕捉,把覆蓋段
+// 側壁挖成走得出去的破口(側壁閘「側向地表高差 >2.6m」的前提被自家開挖打破)。
+// 消費端 = carve 指派 way._tun 的入口(唯一結構開關;buildRoads/markGradeCorridors 皆以
+// way._tun[ri].intervals 判結構性)與 audit_lane_scenarios 場景判定 —— MUST NOT 另寫第二份。
+const strucTunnel = (tags) => !!tags?.tunnel && (tags.indoor == null || tags.indoor === 'no')
+  && !PED_HW.test(tags.highway || '');
 /**
  * 隧道覆蓋區間(單一縫,2026-07-22):carve 呼叫端 / buildRoads / markGradeCorridors 三個
  * 消費端 MUST 共用這一份分類,否則開挖、牆/天花、走廊的「洞口位置」互相對不上(舊版各自
@@ -2782,11 +2791,14 @@ function dedupeParallelBridges(roads, center) {
  * 與更長 way 側向大面積重合的短 way(footway/service)剔除;互距 > 帶寬的真雙孔車道(overlapFrac < 0.6)
  * 雙雙保留 ⇒ 兩端各 2 孔對稱。整條 way 保留或整條剔除,不打亂倖存 way 的逐 run way._tun 索引。
  * MUST 排在 carve 指派 way._tun 之前(呼叫端在 mergeGradeChains/dedupeParallelBridges 之後、carve 之前)。
+ * 候選 MUST 過 strucTunnel 資格閘:不合格 way(人行/室內)已不成洞,不參與去重、也 MUST NOT
+ * 以「長者優先」壓掉合格隧道(前科:澀谷 1178m footway 閉環把 90m 玉川通り trunk 整條剔除
+ * ⇒ 資格閘上線後洞與路雙雙蒸發);不合格 way 一律保留、攤平成一般小徑。
  */
 function dedupeParallelTunnels(roads, center) {
   const tns = [];
   roads.forEach((w, i) => {
-    if (!w.tags?.tunnel || !(w.geometry?.length >= 2)) return;
+    if (!strucTunnel(w.tags) || !(w.geometry?.length >= 2)) return;
     const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
     let len = 0;
     for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
@@ -5445,7 +5457,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const tunnelRuns = [];
   if (terrain.carveTunnels && osmRoads?.length) {
     for (const way of osmRoads) {
-      if (!way.tags?.tunnel) continue;
+      if (!strucTunnel(way.tags)) continue;   // 資格閘:人行/室內 tunnel way 不進結構管線
       // 邊界裁切 MUST 與 buildRoads 完全相同(inb=4、逐頂點丟棄切段)+ 同一 densify(ROAD_SEG)
       // —— 兩邊的 run 幾何逐點一致,覆蓋區間索引/路面剖面才對得上。
       const inb2 = 4;

@@ -200,8 +200,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 場地場景標記(`VENUES[].scen` 系) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含 |
 | `venueLanes.js` 重烤 / `TOWER_*` / `tower.range` | `audit_map_rules.mjs`(#4)+ `audit_lane_sep.mjs` + `audit_lane_grade_sep.mjs`(#5 洞內塔 ≥20% 射程涵蓋洞口外) |
 | 兵線導航規則(`UTURN_MAX_DEG`/兩 audit/bake 閘門) | `audit_lane_navigation.mjs`(22 項);規則①生效需重烤(㋓) |
-| 地下道(`underpassPlan`/`tunFloorAt`/`UND.*`/引道 `cut`・`open` 系) | `audit_underpass.mjs`(97 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件、引道垂直路塹 + open 段消費端閘門) |
-| 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(51 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
+| 地下道(`underpassPlan`/`tunFloorAt`/`UND.*`/引道 `cut`・`open` 系)/ 結構資格閘(`strucTunnel`) | `audit_underpass.mjs`(110 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件、引道垂直路塹 + open 段消費端閘門、Ⅵ 資格閘:人行/室內 tunnel 不成洞且去重候選同閘) |
+| 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(52 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 | 攀爬路線(`climb.js` 系) | `audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ(123 項)+ 真機冒煙(掛梯/推杆/登頂開火/跳離/箭頭辨識/相鄰相接) |

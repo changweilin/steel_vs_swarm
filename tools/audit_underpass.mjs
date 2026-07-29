@@ -33,6 +33,12 @@
 //   Ⅳ 開挖補集:引道挖得到、洞段不動;引道剖面 = 垂直路塹(cut 旗標)
 //   Ⅴ open 物理段:引道露天路塹(執行發射器原文)+ 消費端閘門(slab/彈道/天花/lev 濾 !open,
 //     surfaceAt 站立捕捉與移動側壁閘不濾)
+//   Ⅵ 結構隧道資格閘(2026-07-29 澀谷側壁破口案):strucTunnel 單一縫 —— 人行/自行車級
+//     (PED_HW)與室內(indoor)tunnel way MUST NOT 進結構管線(不開挖、不成洞、不建牆),
+//     攤平成一般小徑;車行(含 building_passage)照舊。carve 入口、dedupeParallelTunnels 候選
+//     與場景稽核 MUST 同吃這個閘(去重不閘 = 不合格長 way 壓掉合格隧道,洞與路雙雙蒸發)。
+//     前科:澀谷站 indoor footway 閉環被判成山體隧道,敞開補集 hw+7 斜壁開挖 + 髮夾鄰腿
+//     走廊互捕,把覆蓋段側壁挖成走得出去的破口(側壁閘「側向地表高差 >2.6m」前提被打破)。
 //
 // 為什麼用「抽原文」而不是 import:`biomes.js` 的 three 走 CDN importmap,Node 端解析不了;
 // 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。
@@ -42,7 +48,9 @@
 // **改完 MUST 做反向驗證**:把 underpassPlan 寫回舊制(平坦 tunnel way 一律回 null)、
 // 把引道牆頂寫回 `yF + 0.15`、把門洞 slope 寫回瞬時斜率、把 carveTunnels 的 hw 寫回固定值、
 // 把 nearOf 寫回一律 `hw + 7`、拿掉 open 段的 `open: true`、拿掉 slab 上傳的 `!d.open` 過濾、
-// 拿掉 game.js 任一處 `!tn.open` 閘門,稽核 MUST 在對應條目紅字。
+// 拿掉 game.js 任一處 `!tn.open` 閘門、把 carve 入口寫回裸 `tags.tunnel`、把 strucTunnel 的
+// PED_HW / indoor 檢查拿掉、把 dedupeParallelTunnels 候選寫回裸 `tags.tunnel`,
+// 稽核 MUST 在對應條目紅字。
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -404,7 +412,8 @@ function build(under = true, heightAt = null) {
     'Ⅲ 緣石帶 MUST NOT 登記碰撞柱(它鋪在牆外的地表上)');
   // 覆蓋段碰撞/天花:與山體隧道**逐字**同一條公式(無 under 分支、無 open 旗標)——
   // 伺服器 slab(main.js 過濾 !open 後上傳)與隧道同一套語意
-  ok(STRC.includes('tunnelSegs.push({\n              x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),\n              x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,\n            });'),
+  // 行尾容忍(\r?\n):Windows autocrlf 工作樹是 CRLF,\n 字面量 includes 必假陽性紅
+  ok(/tunnelSegs\.push\(\{\r?\n {14}x1, z1, fy1: tFloorAt\(o0\) \+ ROAD_LIFT, cy1: ceilOf\(o0\),\r?\n {14}x2, z2, fy2: tFloorAt\(o1\) \+ ROAD_LIFT, cy2: ceilOf\(o1\), hw,\r?\n {12}\}\);/.test(STRC),
     'Ⅲ 覆蓋段 tunnelSegs MUST 維持與隧道逐字共用的公式(無 under/open 分支)');
   ok((STRC.match(/ceilSegs\.push/g) || []).length === 1 && !/ceilSegs\.push[^\n]*(open|under)/.test(STRC),
     'Ⅲ ceilSegs(不透明天花)MUST 只有覆蓋段一份、不吃地下道分支');
@@ -484,6 +493,52 @@ function build(under = true, heightAt = null) {
     'Ⅴ pos 回報 lev MUST 濾 open(露天溝單位不是 lev=2 的洞內鬼影)');
   ok(/const inTun0 = !!\(tn0 && py0 < tn0\.ceil\);/.test(gsrc),
     'Ⅴ 移動側壁閘 MUST NOT 濾 open —— 溝底不能爬牆側出,出入口只在道路頭尾兩端');
+}
+
+// ---- Ⅵ 結構隧道資格閘(執行 biomes.js 原文;2026-07-29 澀谷側壁破口案)----
+{
+  const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\r?\n/.exec(src);
+  ok(!!m, 'Ⅵ biomes.js MUST 有 strucTunnel 資格閘(單一縫)');
+  if (m) {
+    const PED_HW = new Function(`return ${/const PED_HW = (\/[^\n]+\/);/.exec(src)[1]};`)();
+    const strucTunnel = new Function('PED_HW', `${m[0]}return strucTunnel;`)(PED_HW);
+    ok(strucTunnel({ tunnel: 'yes', highway: 'primary' }) === true,
+      'Ⅵ 戶外車行 tunnel MUST 過資格閘(山體隧道/地下道行為不變)');
+    ok(strucTunnel({ tunnel: 'building_passage', highway: 'unclassified' }) === true,
+      'Ⅵ 車行 building_passage MUST 過(市民大道地下道族不受影響)');
+    ok(strucTunnel({ tunnel: 'yes', highway: 'footway' }) === false,
+      'Ⅵ 人行 tunnel MUST NOT 成洞 —— 澀谷站地下街閉環曾把覆蓋段側壁挖成可走破口');
+    ok(strucTunnel({ tunnel: 'yes', highway: 'steps' }) === false
+      && strucTunnel({ tunnel: 'yes', highway: 'cycleway' }) === false,
+      'Ⅵ 階梯/自行車道 tunnel MUST NOT 成洞(PED_HW 全家族)');
+    ok(strucTunnel({ tunnel: 'yes', highway: 'primary', indoor: 'yes' }) === false,
+      'Ⅵ indoor tunnel MUST NOT 成洞(室內通道不是地形結構)');
+    ok(strucTunnel({ tunnel: 'yes', highway: 'primary', indoor: 'no' }) === true,
+      'Ⅵ indoor=no MUST 不誤傷');
+    ok(strucTunnel({ highway: 'footway' }) === false, 'Ⅵ 非 tunnel way 恆 false');
+    // 平行雙孔去重 MUST 同吃資格閘(執行原文 + 合成資料):不合格 way 不參與去重,
+    // MUST NOT 以「長者優先」壓掉合格隧道(前科:澀谷 footway 閉環把玉川通り trunk 整條剔除
+    // ⇒ 資格閘上線後洞與路雙雙蒸發);合格×合格的平行去重行為維持不變。
+    const dedupeParallelTunnels = evalBlock('const bridgeHw', 'dedupeParallelTunnels', {
+      densify, ROAD_SEG, strucTunnel,
+      llToWorld: (lat, lon) => [lon, lat], roadWidth: () => 8, PASS_W: 16,
+    });
+    const mkWay = (highway, x1) => ({ tags: { highway, tunnel: 'yes' },
+      geometry: [{ lat: 0, lon: 0 }, { lat: 0, lon: x1 }] });
+    ok(dedupeParallelTunnels([mkWay('trunk', 90), mkWay('footway', 106)], {}).length === 2,
+      'Ⅵ 較長的不合格 footway MUST NOT 壓掉合格 trunk 隧道(兩者皆保留:trunk 成洞、footway 攤平)');
+    ok(dedupeParallelTunnels([mkWay('primary', 100), mkWay('primary', 80)], {}).length === 1,
+      'Ⅵ 合格×合格平行雙孔去重 MUST 維持長者優先(原行為不變)');
+    ok(dedupeParallelTunnels([mkWay('footway', 100), mkWay('footway', 80)], {}).length === 2,
+      'Ⅵ 不合格×不合格 MUST 皆保留(攤平成小徑後不再是雙孔,無去重必要)');
+  }
+  // 消費端接線:carve 入口(way._tun 唯一結構開關)與場景稽核 MUST 走同一個閘
+  const CARVE = src.slice(src.indexOf('const tunnelRuns = [];'), src.indexOf('terrain.carveTunnels(tunnelRuns'));
+  ok(CARVE.length > 0 && /if \(!strucTunnel\(way\.tags\)\) continue;/.test(CARVE),
+    'Ⅵ carve 入口(way._tun 唯一寫入迴圈)MUST 用 strucTunnel(way.tags) 閘住,不得退回裸 tags.tunnel');
+  const ssrc = readFileSync(join(ROOT, 'tools', 'audit_lane_scenarios.mjs'), 'utf8');
+  ok((ssrc.match(/strucTunnel\(w(ay)?\.tags\)/g) || []).length >= 4,
+    'Ⅵ 場景稽核 MUST 同步吃 strucTunnel(①/⑦ 判定與候選診斷同源,否則稽核比執行期多洞)');
 }
 
 console.log(`\n地下道稽核:${pass} 綠 / ${fail} 紅`);
