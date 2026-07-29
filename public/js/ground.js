@@ -12,7 +12,9 @@
 // 雙層結構(2026-07-10 改制):
 //   底毯層 — 抖動網格把「全部陸地」鋪滿(不留衛星底圖空隙):角點以格點雜湊
 //            抖動且相鄰 cell 共用 → 水密無縫;地表種類由低頻雜訊分區指派成大片
-//            連續區域;異類交界再疊「外溢淡出」quad 做整格寬 cross-fade,無硬縫。
+//            連續區域;異類交界疊「角點隸屬度雙線性外溢」做兩格寬對稱 cross-fade
+//            (planSeamOverlays,含對角鄰格;2026-07-29 邊界鋸齒改制,詳該函式檔頭),
+//            過渡帶再以準晶體場擾動出手繪碎形邊,無硬縫、無 90° 階梯。
 //   特徵層 — 原 patch 散佈,降級為「場所」點綴(農田/球場/遺跡/工地…),
 //            疊在底毯上;fade 邊融入底毯、ink 邊讀作田埂/路緣,不再是磁磚縫。
 // 無縫拼接原則(避免大面積重複感,無限延伸;2026-07-12 反重複改制):
@@ -1285,6 +1287,54 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
   void rnd;
 }
 
+// ==== 異類交界外溢配置(2026-07-29 邊界鋸齒改制;唯一縫,稽核執行原文)====
+// 舊制 = 整格單向外溢:kA<kB 的一側把整張 cell 貼進「四鄰」鄰格(共享邊 α=1 → 對邊 0)。
+// 兩個結構性病灶就是使用者回報的「不同類型地貌邊界的不自然鋸齒」:
+//   ①交界輪廓被量化在 13m 級 cell 邊上,斜向邊界變成 90° 階梯狀鋸齒(角點抖動只能
+//     讓每段扭一下,消不掉階梯本身);②對角鄰格之間沒有任何淡出,階梯每個轉角都留
+//     一個硬缺口,鋸齒感被進一步強化(同格互疊的兩張外溢還會共面深度互吃)。
+// 新制 = 角點隸屬度雙線性淡出(dual-grid / marching-squares 語彙):
+//   角點對某 key 的權重 = 圍著該角點的四格中屬於該 key 的比例,分母只算「有毯格」
+//   (崖 '!' / 未鋪 null 不計 ⇒ 底毯淡出到崖面/圖界時交界角點權重收斂到 1,與不透明
+//   底毯無縫銜接);每格對每個「異類鄰 key」(含對角鄰)各發一張 α=角點權重的外溢格。
+//   兩側對稱互溢 ⇒ 交界中線恰為 50/50 混色;雙線性 0.5 等值線把 90° 階梯削成平滑
+//   斜線,對角權重把階梯轉角的缺口補齊;孤立單格(影像分類雜訊斑點)角點權重達
+//   0.75,自動被鄰區軟化吞掉。
+// 純函式(零 rnd / 零 Math.random,§2.3;不碰 THREE):輸入 keys 格網,輸出
+// [{ i, j, key, alphas }];alphas 對應 emitCell 四角 [P0(i,j), P1(i+1,j), P2(i+1,j+1), P3(i,j+1)]。
+export function planSeamOverlays(keys, gnx, gnz) {
+  const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
+  const solid = (k) => k != null && k !== '!';          // 有毯格才算隸屬度分母/外溢來源
+  const cornerW = (k, ci, cj) => {                      // 角點 (ci,cj) 由 (ci-1..ci, cj-1..cj) 四格圍繞
+    let n = 0, valid = 0;
+    for (const [oi, oj] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
+      const kk = keyAt(ci + oi, cj + oj);
+      if (solid(kk)) { valid++; if (kk === k) n++; }
+    }
+    return valid ? n / valid : 0;
+  };
+  const out = [];
+  for (let j = 0; j < gnz; j++) {
+    for (let i = 0; i < gnx; i++) {
+      const k0 = keyAt(i, j);
+      if (k0 == null) continue;                        // 未鋪格(水色灰帶/岸線)維持留空,不收外溢
+      const seen = new Set();                          // '!' 崖格可收外溢(淡出融入崖面)但不外溢
+      for (let oj = -1; oj <= 1; oj++) {
+        for (let oi = -1; oi <= 1; oi++) {
+          if (!oi && !oj) continue;
+          const kn = keyAt(i + oi, j + oj);
+          if (!solid(kn) || kn === k0 || seen.has(kn)) continue;
+          seen.add(kn);
+          const alphas = [cornerW(kn, i, j), cornerW(kn, i + 1, j),
+                          cornerW(kn, i + 1, j + 1), cornerW(kn, i, j + 1)];
+          if (alphas[0] || alphas[1] || alphas[2] || alphas[3]) out.push({ i, j, key: kn, alphas });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * 鋪設地被覆蓋層。加進 biomes group,回傳統計 { patches, details }。
  * @param group     biomes 的 THREE.Group
@@ -1391,8 +1441,18 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 角點位置只由「格點索引雜湊」決定 → 相鄰 cell 引用同一角點,拼面天生水密;
   // 抖動幅度 ±0.45 格(不足半格,拓撲不翻面)讓交界呈手繪碎形而非直線格線。
   const carpetBuckets = new Map(), spillBuckets = new Map();
-  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 0.100 < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
+  const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 [0.100,0.107] < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
+  // 外溢每 key 微升差(0~0.007,合計仍 < fade 下限 0.110):異 key 外溢在同一格互疊時
+  // 避免共面深度互吃(舊制後畫的整張被深度測試丟棄 = 交界轉角硬缺口);繪序(renderOrder)
+  // 依同一雜湊 ⇒ 低者先畫、高者後蓋,混色連續且跨客戶端決定性(§2.3,不吃 rnd)
+  const seamLift = (key) => {
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
+    return ((h >>> 3) % 8) * 0.001;
+  };
+  // 過渡帶手繪碎形擾動波數(世界波長 ≈ 1.6 cell:小於交界帶寬、大於頂點間距)
+  const SEAM_QC_W = (2 * Math.PI) / (cell * 1.6);
   const gnx = Math.ceil(terrain.worldW / cell), gnz = Math.ceil(terrain.worldH / cell);
   // ==== 準晶體場(quasicrystal;不規律拼貼的非週期骨架;底毯角點/選格/細節共用縫)====
   // 5 向平面波和(方向 kπ/5 → 十重對稱 = 各向同性、非週期)。純函數:同 seed 同座標 ⇒ 同值,
@@ -1511,14 +1571,22 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
                 aD, (aC + aD) / 2, aC];
     const sub = key.slice(0, key.indexOf('#'));
     const uvS = DEFS[sub].uvS || 1 / 12;
-    const lift = alphas ? SLIFT : CLIFT;
+    const lift = alphas ? SLIFT + seamLift(key) : CLIFT;
     const b = bucketOf(bmap, key);
     G.forEach(([px, pz], k) => {
       const w = wash(px, pz);
+      let a = AL[k];
+      if (alphas && a > 0 && a < 1) {
+        // 交界手繪碎形:過渡帶沿淡出梯度以準晶體場擾動,50/50 混色線長出次格級波紋,
+        // 消掉「等值線貼著格邊走」的直線感。band=α(1-α) 在端點 α=0/1 歸零 ⇒ 與不透明
+        // 底毯/淡出盡頭仍水密;純函數(世界座標+seed)⇒ 相鄰外溢格共用頂點同值不開縫(§2.3 零 rnd)
+        const band = a * (1 - a) * 4;
+        a = Math.min(1, Math.max(0, a + qcVal(px, pz, SEAM_QC_W) * 0.4 * band));
+      }
       b.pos.push(px, hs[k] + lift, pz);
       b.nrm.push(0, 1, 0);
       b.uv.push(px * uvS, pz * uvS);
-      b.col.push(w, w, w, AL[k]);
+      b.col.push(w, w, w, a);
     });
     for (let v = 0; v < 2; v++) {                       // 2×2 小格,面朝 +y
       for (let u = 0; u < 2; u++) {
@@ -1542,25 +1610,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       landCells.push([mid[0], mid[1], key]);
     }
   }
-  // 異類交界的外溢淡出:key 較小的一側把自己的貼圖「溢」進鄰 cell 一整格,
-  // 共享邊 alpha=1 → 對邊 alpha=0,跨材質 cross-fade 約一格寬,硬縫消失。
-  // 鄰格是陡坡('!')時單向外溢 → 底毯淡出融入崖面,不留硬邊。
-  // pair(A, B):A 在左/上。alpha 依「目標 cell 的共享邊」給 1、對邊給 0
-  const spillPair = (kA, kB, iB, jB, iA, jA, aIntoB, aIntoA) => {
-    if (!kA || !kB || kA === kB) return;
-    if (kA === '!') { if (kB !== '!') emitCell(spillBuckets, kB, iA, jA, aIntoA); return; }
-    if (kB === '!') { emitCell(spillBuckets, kA, iB, jB, aIntoB); return; }
-    if (kA < kB) emitCell(spillBuckets, kA, iB, jB, aIntoB);
-    else emitCell(spillBuckets, kB, iA, jA, aIntoA);
-  };
-  for (let j = 0; j < gnz; j++) {
-    for (let i = 0; i < gnx; i++) {
-      const k0 = keys[j * gnx + i];
-      if (!k0) continue;
-      if (i + 1 < gnx) spillPair(k0, keys[j * gnx + i + 1], i + 1, j, i, j, [1, 0, 0, 1], [0, 1, 1, 0]);
-      if (j + 1 < gnz) spillPair(k0, keys[(j + 1) * gnx + i], i, j + 1, i, j, [1, 1, 0, 0], [0, 0, 1, 1]);
-    }
-  }
+  // 異類交界(含對角)外溢:角點隸屬度雙線性淡出 —— 配置全住 planSeamOverlays
+  // (純函式,稽核執行原文;舊制單向整格外溢的鋸齒病灶見該函式檔頭),此處只發幾何。
+  // 兩側對稱互溢 + 對角補角 ⇒ 交界中線 = 50/50 混色的平滑等值線,90° 階梯縫消失。
+  for (const ov of planSeamOverlays(keys, gnx, gnz)) emitCell(spillBuckets, ov.key, ov.i, ov.j, ov.alphas);
 
   // ---- 特徵拼圖登錄:不疊置(邊緣小比例交疊)+ 視野內同款不重複 ----
   const MAXRE = 26;                       // 最大有效半徑(SIZE 上限 × RSCALE)
@@ -1980,8 +2033,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         transparent: spillPass,   // 外溢靠頂點 alpha 淡出;depthWrite 保持 true
       }));
       // 外溢在透明佇列裡必須早於特徵 patch / 特效(renderOrder 0)繪製,
-      // 否則 depthWrite 會把後畫的底層擋掉出現描圈破洞
-      if (spillPass) m.renderOrder = -2;
+      // 否則 depthWrite 會把後畫的底層擋掉出現描圈破洞。
+      // 同佇列內再依 seamLift 同一雜湊排序(低者先畫)⇒ 異 key 外溢互疊時
+      // 高者後蓋、深度不互吃,混色連續且決定性(範圍 [-2, -1.3] 仍恆 < 0)
+      if (spillPass) m.renderOrder = -2 + seamLift(key) * 100;
       m.frustumCulled = false;
       m.userData.noOutline = true;
       group.add(m);
