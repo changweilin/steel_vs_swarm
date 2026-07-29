@@ -76,6 +76,10 @@ export const VENUES = [
   // tunnel way,是掃到最密的一區。**注意**:平地地下道現行引擎不生成(路面沉不下去,
   // 見 docs/lane_scenarios.md),故不標 scen;引擎支援下沉剖面後這張圖即成立。
   { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.047000, 121.518000], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
+  // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,三段短隧道
+  // 幾乎整條是明隧道(側向是立霧溪峽谷,土牆藏不住結構),彼此相距 ~400m,L1 兵線連穿多座。
+  // scen 標記待烘焙 + 場景掃描實測後補(標記 MUST 由實測產生)。
+  { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 } },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
   { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['underBridge'] },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
