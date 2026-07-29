@@ -1458,13 +1458,43 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   for (const t in DETAIL_DEFS) det[t] = [];
   let detCount = 0;
   let detCap = FEAT_DETAIL;   // 特徵層先用配額,底毯撒佈前放寬到 MAX_DETAIL
+  // ==== 都市規劃格網方位(2026-07-29 使用者需求「球場/操場/停車場/太陽能板這類單獨
+  // 完整的區塊看起來沒有規劃 —— 盡可能跟道路一致的都市規劃」)====
+  // 舊病灶:roadDirAt 只在 46m 內有答案,更遠的規律結構退回完全隨機朝向;即使近路
+  // 還有 reg 擲骰(court 0.9 ⇒ 10% 隨機)—— 路邊一塊斜著擺的停車場就是「沒規劃」感。
+  // 新制:規律結構(edge:'ink')朝向**恆對齊**,三段退避 —— 近路(46m)取最近路向 →
+  // 離路擴大半徑(GRID_FAR)找同街區幹道 → 全圖格網主方位 gridA(道路線段長度加權的
+  // mod 90° 圓平均;地籍格網對 90° 旋轉對稱 ⇒ 取 4 倍角圓平均,垂直街道不互相抵銷)。
+  // 無圖資(roadPolys 空)→ gridA=null,退回隨機(離線備援行為不變)。零 rnd 純幾何。
+  const GRID_FAR_R2 = 220 * 220;
+  let gridA = null;
+  if (roadPolys?.length) {
+    let gsx = 0, gsz = 0;
+    for (const [pts] of roadPolys) {
+      for (let i = 1; i < pts.length; i++) {
+        const dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1];
+        const len = Math.hypot(dx, dz);
+        if (len < 1e-3) continue;
+        const a4 = Math.atan2(dz, dx) * 4;
+        gsx += Math.cos(a4) * len; gsz += Math.sin(a4) * len;
+      }
+    }
+    if (gsx * gsx + gsz * gsz > 1e-12) gridA = Math.atan2(gsz, gsx) / 4;
+  }
   // 整齊度 → 沿路對齊:reg = 該型拼圖/物件沿最近道路方向擺放的機率,其餘機率
-  // (或附近無路)隨機朝向。亂數紀律(§2.3):固定先抽兩枚再決策 —— 對齊與否
-  // 不改變 rnd 消耗序列;roadDirAt 本身不吃 rnd。回傳 atLocal 平面角。
+  // (或附近無路)隨機朝向;ink 規律結構不擲骰,恆走三段退避對齊(見上)。
+  // 亂數紀律(§2.3):兩分支都固定先抽兩枚再決策 —— 對齊與否不改變 rnd 消耗序列;
+  // roadDirAt / gridA 本身不吃 rnd。回傳 atLocal 平面角。
   let aligned = 0;   // 沿路對齊次數(拼圖 + 物件;冒煙稽核用)
-  const orient = (x, z, reg, halfTurn) => {
+  const orient = (x, z, reg, halfTurn, ink = false) => {
     const ra = rnd() * (halfTurn ? Math.PI : Math.PI * 2);   // 隨機朝向候選(固定枚數)
     const roll = rnd();                                       // 對齊擲骰(固定枚數)
+    if (ink) {                                                // 都市規劃件:恆對齊道路格網
+      const a = (roadDirAt ? (roadDirAt(x, z) ?? roadDirAt(x, z, GRID_FAR_R2)) : null) ?? gridA;
+      if (a == null) return ra;
+      aligned++;
+      return a;
+    }
     if (!reg || !roadDirAt || roll >= reg) return ra;
     const a = roadDirAt(x, z);
     if (a == null) return ra;
@@ -2105,7 +2135,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const v = freeVariant(sub, x, z, v0);
       if (v < 0) continue;
       const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
-      if (tryPatch(x, z, sub, v, r, orient(x, z, DEFS[sub].reg, true), 0)) break;
+      if (tryPatch(x, z, sub, v, r, orient(x, z, DEFS[sub].reg, true, DEFS[sub].edge === 'ink'), 0)) break;
     }
   }
 
