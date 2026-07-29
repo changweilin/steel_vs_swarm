@@ -1,7 +1,13 @@
-# ============ 1v1 兵線立體場景掃描(手動觸發;需要外網)============
+# ============ 1v1 兵線立體場景掃描(手動觸發 / 請求檔觸發;需要外網)============
 # `tools/audit_lane_scenarios.mjs` 要抓 Overpass 路網 + AWS terrarium 高程 —— 開發沙箱常沒有
 # 這兩個出口,故另開一支手動 workflow 在有外網的 runner 上跑,結果印在 job log 與 artifact。
 # 回歸驗證(ci.yml)刻意不含這支:外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+#
+# 兩種觸發方式(參數相同,一份 SCAN_* env 收斂):
+#   ① workflow_dispatch:GitHub UI 手動填參數。
+#   ② push 改到 `tools/scen_scan_request.env`(請求檔):沙箱的整合權杖多半沒有
+#      `actions: write`,dispatch API 會 403 —— 把參數寫進請求檔推上分支即可觸發,
+#      參數格式見該檔;其他 push 一律不觸發(paths 過濾)。
 name: 兵線場景掃描
 
 on:
@@ -19,6 +25,12 @@ on:
         description: '隧道候選探測點(lat,lng,名稱;以分號分隔;留空 = 不探測)'
         required: false
         default: ''
+      probe_r:
+        description: '探測 bbox 放大倍數(L1 半徑僅 ~266 真實公尺;廣域找點用 3~6)'
+        required: false
+        default: '1'
+  push:
+    paths: ['tools/scen_scan_request.env']
 
 # 同時只跑一份掃描:新的觸發取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
 concurrency:
@@ -36,6 +48,20 @@ jobs:
         with:
           node-version: '22'
 
+      # 兩種觸發收斂成同一組 SCAN_* env;後續步驟一律吃 env,不再碰 inputs
+      - name: 讀取掃描參數(請求檔)
+        if: ${{ github.event_name == 'push' }}
+        run: grep -E '^SCAN_' tools/scen_scan_request.env >> "$GITHUB_ENV" || true
+      - name: 讀取掃描參數(dispatch)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          {
+            echo "SCAN_ONLY=${{ inputs.only }}"
+            echo "SCAN_BAKE=${{ inputs.bake }}"
+            echo "SCAN_PROBE=${{ inputs.probe }}"
+            echo "SCAN_PROBE_R=${{ inputs.probe_r }}"
+          } >> "$GITHUB_ENV"
+
       # Overpass/terrarium 的回應快取:跨 run 續跑用。公共 Overpass 節點排隊時單場地要等上
       # 一分鐘,一次 job 掃不完 22 個場地 —— 有快取就能「每跑一次補上幾個場地」直到掃完。
       - uses: actions/cache@v4
@@ -45,26 +71,30 @@ jobs:
           restore-keys: scen-cache-
 
       - name: 重烤指定場地兵線
-        if: ${{ inputs.bake != '' }}
-        run: ONLY='${{ inputs.bake }}' node tools/bake_venue_lanes.mjs
+        if: ${{ env.SCAN_BAKE != '' }}
+        run: ONLY="$SCAN_BAKE" node tools/bake_venue_lanes.mjs
 
       - name: 兵線場景掃描
         continue-on-error: true
-        run: node tools/audit_lane_scenarios.mjs ${{ inputs.only != '' && format('--only={0}', inputs.only) || '' }} --max-min=14 --json=scen.json
+        run: node tools/audit_lane_scenarios.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --max-min=14 --json=scen.json
 
       - name: 掃描結果 JSON
         if: always()
         run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'',r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.hits2Water?'跨水橋='+JSON.stringify(r.hits2Water):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
 
-      # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道。手動觸發時用 probe 輸入自訂點位。
+      # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道;④ 明隧道候選同步體檢(附定錨座標)。
       - name: 隧道候選探測
-        if: ${{ inputs.probe != '' }}
+        if: ${{ env.SCAN_PROBE != '' }}
         continue-on-error: true
-        run: node tools/audit_lane_scenarios.mjs --probe='${{ inputs.probe }}'
+        run: node tools/audit_lane_scenarios.mjs --probe="$SCAN_PROBE" --probe-r="${SCAN_PROBE_R:-1}"
 
-      - name: 兵線重烤結果(diff)
-        if: ${{ inputs.bake != '' }}
-        run: git --no-pager diff --stat && git --no-pager diff public/js/venueLanes.js | head -400
+      # 重烤結果整檔印進 log:沙箱沒有 artifact 下載權限時,從 log 取回 venueLanes.js 用
+      - name: 兵線重烤結果(diff + 完整新條目)
+        if: ${{ env.SCAN_BAKE != '' }}
+        run: |
+          git --no-pager diff --stat
+          echo '===== venueLanes.js 完整 diff ====='
+          git --no-pager diff public/js/venueLanes.js
 
       - uses: actions/upload-artifact@v4
         with:

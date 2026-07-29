@@ -28,6 +28,7 @@ jobs:
         run: |
           node tools/audit_map_rules.mjs
           node tools/audit_lane_sep.mjs
+          node tools/audit_lane_navigation.mjs
           node tools/audit_terrain_ray.mjs
           node tools/audit_gpu_lifecycle.mjs
           node tools/audit_minimap_view.mjs

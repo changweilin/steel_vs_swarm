@@ -6,7 +6,7 @@
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneStructEntryAudit }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -17,6 +17,8 @@ const llToGame = (lat, lng, c) => [
   (lng - c.lng) * Math.PI / 180 * EARTH_M * Math.cos(c.lat * Math.PI / 180) * SC_GAME,
   (lat - c.lat) * Math.PI / 180 * EARTH_M * SC_GAME,
 ];
+// 寫出精度(六位小數 ≈ 0.1m):規則硬門檻與寫檔 MUST 用同一個捨入(見 tryBearing 分離閘)
+const r6 = (v) => +v.toFixed(6);
 
 const CACHE = new URL('./.osm_cache/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
@@ -58,6 +60,11 @@ const ANCHORS_ALL = {
   // ② 地下道的測試場地:市民大道沿線的車行地下道群(L1 bbox 內圖資有 8 條 tunnel way,
   // 是掃到最密的一區)。兩個候選原點沿市民大道排開,實際選線由 PREFER_TUNNEL 決定。
   civicblvd: [[25.0470, 121.5180], [25.0492, 121.5232]],
+  // ④ 明隧道的測試場地(2026-07-29 廣域探測選定):太魯閣峽谷 燕子口—錐麓段,台8線上
+  // 三段短隧道幾乎整條是明隧道(探測 open 72m/54m/96m,中點 121.5547/121.5537/121.5509),
+  // 彼此相距 ~400m,一條 L1 兵線可連穿多座。錨點 MUST 取探測回報的**路上座標**(峽谷路窄,
+  // 憑地名下錨會落在崖壁上「120m 內無道路節點」);首錨 = 最東那段明隧道中點,往西烤。
+  taroko: [[24.1712, 121.5547], [24.1712, 121.5560]],
   kyoto: [[35.0100, 135.7100], [35.0116, 135.6800]],          // 右京區街廓 / 嵐山
 };
 
@@ -345,9 +352,12 @@ const PREFER_BRIDGE = new Set(['parkave']);
 // 同理:「兵線要走進地下道」的測試場地 ⇒ 先比「踩在 tunnel way 上的長度」。
 // 註:平地地下道現行引擎不生成(見 docs/lane_scenarios.md),這裡挑的是**圖資上**的地下道段,
 // 供引擎支援下沉剖面後直接成立;現在開這張圖看到的是一般街道。
-const PREFER_TUNNEL = new Set(['civicblvd']);
+const PREFER_TUNNEL = new Set(['civicblvd', 'taroko']);
 const BEARING_SECTORS = {
   jinlong: [[[30, 80]], [[210, 260]]],   // 西南錨(金龍路)→東北;東北錨(金湖路)→西南(隧道軸 ~56°)
+  // taroko 兩錨都夾往西:東側是 656m 的靳珩隧道,PREFER_TUNNEL 不夾會整條兵線鑽進長隧道
+  // (洞內塔違規 ×3、明隧道只沾 36m);往西才是三段「幾乎整條明隧道」的短洞群
+  taroko: [[[235, 300]], [[235, 300]]],
   // parkave 不夾方位角:改由 PREFER_BRIDGE 的「踩在橋上長度」自己挑(夾了反而把能上橋的
   // 方位角排除掉 —— 實測夾 195~235° 時兵線只擦過高架 4m,沒真的走上去)。
 };
@@ -409,7 +419,11 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     // xz 是真實公尺(buildGraph 用地球半徑),laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在
     // 遊戲公尺語意下 ⇒ 換算後再判(× 1/REAL_SCALE;此處在 s 宣告前被呼叫,不能用 s,直接取 MAPGEO)。
     const gs = 1 / MAPGEO.REAL_SCALE;
-    if (!laneUTurnAudit(xz.map(([x, z]) => [x * gs, z * gs])).ok) { why = 'uturn'; return null; }
+    const gxz = xz.map(([x, z]) => [x * gs, z * gs]);
+    if (!laneUTurnAudit(gxz).ok) { why = 'uturn'; return null; }
+    // 規則③(2026-07-29):相對 A→B 主軸的帶號偏航累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內
+    // (順逆時針抵消;背對主軸走/繞圈在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
+    if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
     banPath(used, p, n);                                      // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;
     for (const q of idx) s += lat(q);
@@ -428,8 +442,18 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   if (mo > MAPGEO.MAX_OVERLAP) return { fail: 'overlap', ov: mo };
 
   const s = 1 / MAPGEO.REAL_SCALE;
-  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)
-  if (!laneSeparationAudit(lanes.map((l) => l.xz.map(([x, z]) => [x * s, z * s]))).ok) return { fail: 'touch' };
+  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)。
+  // MUST 判「寫出後」的幾何:六位小數捨入 lat/lng → llToGame(origin = 捨入後 bases[0],
+  // 與 audit_lane_sep 逐式相同)。圖平面座標(未捨入)在扇出帶的公分級貼近會與寫出幾何
+  // 不同判 —— 捨入讓兩線換邊變成交叉(2026-07-29 barcelona L3 實案:bake 閘綠、離線稽核紅
+  // → runner 拒絕提交)。判寫出幾何 = 兩端永遠同判(原則 3)。
+  const wr6 = (i) => [r6(g.LA[i]), r6(g.LN[i])];
+  const oW = wr6(aIdx);
+  const lanesWritten = lanes.map((l) => l.idx.map((i) => {
+    const [la, ln] = wr6(i);
+    return llToGame(la, ln, { lat: oW[0], lng: oW[1] });
+  }));
+  if (!laneSeparationAudit(lanesWritten).ok) return { fail: 'touch' };
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
@@ -541,7 +565,6 @@ log('\n---- 報告 ----');
 for (const r of report) log(r);
 log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
 
-const r6 = (v) => +v.toFixed(6);
 let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 由 tools/bake_venue_lanes.mjs 產生:Overpass 真實道路路網 → 邊不相交最短路徑。
 // 每條兵線的每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線 100% 與現實導航路線相符。

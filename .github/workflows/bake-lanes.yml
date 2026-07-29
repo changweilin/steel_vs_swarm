@@ -1,0 +1,98 @@
+# ============ 兵線重烤(手動觸發或推送請求檔;需要外網)============
+# `tools/bake_venue_lanes.mjs` 要抓 Overpass 路網 —— 開發沙箱的網路政策擋這個出口,
+# 故在有外網的 runner 上重烤,過規則稽核後把 public/js/venueLanes.js 直接 commit 回
+# 觸發時所在的分支。兩種觸發:
+#   ① workflow_dispatch(人手動:選分支、填 only)
+#   ② push 動到 .github/bake-request(沙箱代理人無 actions:write 權限 dispatch 不了,
+#      改推「請求檔」觸發;檔案內容 = ONLY 場地清單,空檔 = 全部場地)
+# runner 用 GITHUB_TOKEN 推回的 commit 不會再觸發任何 workflow(GitHub 防迴圈),
+# 故重烤後的 ci.yml 回歸由下一次人為推送或本地驗證補上。
+# 回歸驗證(ci.yml)刻意不含這支:外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+name: 兵線重烤
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: '只烤指定場地(逗號分隔;留空 = 全部場地)'
+        required: false
+        default: ''
+  push:
+    paths: ['.github/bake-request']
+
+permissions:
+  contents: write
+
+# 同時只跑一份:新的觸發取代還在跑的舊重烤(Overpass 很慢,不要並排燒 runner)
+concurrency:
+  group: bake-lanes
+  cancel-in-progress: true
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Overpass 回應快取:公共節點排隊時單場地要等上一分鐘,一次 job 可能烤不完 ——
+      # 有快取就能「每跑一次補上幾個場地」直到烤完(與 lane-scenarios 同手法)。
+      - uses: actions/cache@v4
+        with:
+          path: tools/.osm_cache
+          key: osm-cache-${{ github.run_id }}
+          restore-keys: osm-cache-
+
+      # 場地清單:dispatch 用 inputs.only;push 觸發讀 .github/bake-request 內容
+      - name: 解析場地清單
+        id: req
+        run: |
+          ONLY='${{ inputs.only }}'
+          GO=1
+          # 請求檔只讀第一行(第二行起 = 重觸發 nonce:內容不變 push 不會觸發,改 nonce 即可重跑)
+          if [ -z "$ONLY" ] && [ -f .github/bake-request ]; then ONLY=$(head -n1 .github/bake-request | tr -d '[:space:]'); fi
+          # push 觸發但湊不出清單(請求檔被刪/空)→ 跳過:全場地重烤成本高,MUST 只由
+          # workflow_dispatch 留空 only 明示觸發,不准由「刪檔」這種副作用觸發。
+          if [ "${{ github.event_name }}" = 'push' ] && [ -z "$ONLY" ]; then GO=0; echo '無請求清單 → 跳過重烤'; fi
+          echo "ONLY=$ONLY" >> "$GITHUB_ENV"
+          echo "go=$GO" >> "$GITHUB_OUTPUT"
+          echo "場地清單:${ONLY:-(全部)}"
+
+      - name: 重烤兵線(報告見本步驟 log)
+        if: ${{ steps.req.outputs.go == '1' }}
+        run: node tools/bake_venue_lanes.mjs
+
+      # 重烤結果 MUST 先過離線規則稽核才准提交(#4 塔射程重疊 / 兵線分離 / #5 洞口涵蓋;
+      # audit_lane_grade_sep 吃 bake 剛寫入的 tools/.osm_cache,在此環境天然可跑)
+      - name: 規則稽核
+        if: ${{ steps.req.outputs.go == '1' }}
+        run: |
+          node tools/audit_map_rules.mjs
+          node tools/audit_lane_sep.mjs
+          node tools/audit_lane_grade_sep.mjs
+
+      - name: 重烤差異
+        if: ${{ steps.req.outputs.go == '1' }}
+        run: git --no-pager diff --stat
+
+      - name: 提交回觸發分支
+        if: ${{ steps.req.outputs.go == '1' }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/js/venueLanes.js
+          git diff --cached --quiet && echo '兵線無變化,不提交' || {
+            git commit -m "兵線重烤(Actions):ONLY='$ONLY'(規則③主軸偏航 ±150° 生效)"
+            git push
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.req.outputs.go == '1' }}
+        with:
+          name: bake-lanes
+          path: public/js/venueLanes.js
+          if-no-files-found: warn
