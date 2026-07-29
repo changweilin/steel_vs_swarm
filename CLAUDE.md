@@ -1,7 +1,23 @@
 # 無人戰略:鋼鐵與蜂群 (Steel vs. Swarm) — 全域儲存庫準則
 
-> **本檔定位**:雙層情境系統的**全域層**(長期不變標準)。活躍模組層見 [`public/js/.claude.md`](public/js/.claude.md);逐日事故檔案庫與完整細節見 `CLAUDE.md`(本檔自其蒸餾,基準日 2026-07-18)。
+> **本檔定位**:雙層情境系統的**全域層**(長期不變標準)。活躍模組層見 [`public/js/.claude.md`](public/js/.claude.md);歷史細節見 `CLAUDE-orig0718.md`(2026-07-18 前逐日檔案庫)與 git 歷史。精煉基準日 2026-07-29。
 > 關鍵詞 **MUST / MUST NOT / SHOULD** 依 RFC-2119 解讀。違反 MUST NOT 條目 = 架構違規,直接退回。
+> **細節住哪裡**:本檔只記「原則、禁令、改什麼 → 驗什麼」。逐項斷言、幾何公式、邊界案例住各 `tools/audit_*.mjs` 的檔頭註解與斷言本身 —— 查細節先開稽核腳本,MUST NOT 憑記憶重建。
+
+---
+
+## 0. 核心原則(全部 MUST 內化;後文一切規則都是這十條的具體化)
+
+1. **伺服器唯一真相**:HP/傷害/彈藥/經濟/勝負全在 `server/sim.js` 結算。客戶端只做三件事 —— 送輸入與命中回報、渲染 8Hz 快照插值、跑表現層彈道/物理。MUST NOT 有任何「客戶端先改狀態再同步」;防作弊驗證(射程 ×1.25、迷霧、LOS、高度)只住伺服器。
+2. **單一真相縫(Single Seam)**:跨檔共用的邏輯與數值只准有**一個**結算點,發現第二份實作即是 bug;推導得出的值 MUST NOT 手寫。縫的索引見 §2。
+3. **兩端同量體**:碰撞、彈道、命中、LOS 在客戶端與伺服器 MUST 吃同一份幾何(同一個盒/圓柱/垂直帶/半徑)。兩端分家的代價不是「差一點」而是**靜默丟包** —— 客戶端算命中、伺服器算被擋,傷害無聲蒸發(A18/A30 一族)。
+4. **表現層歸表現層**:純視覺改動(材質/擺件/擋土牆/緣石/座艙)MUST NOT 動到權威幾何(通行寬/碰撞/LOS/平衡);反過來,演出取用的尺寸 MUST 來自權威值(看到多粗 = 打到多粗),MUST NOT 為了好看自己放大。
+5. **確定性**:場景佈局跨客戶端逐位元一致,散布路徑 MUST NOT 用 `Math.random()`(細則 §2.3)。
+6. **降級,不例外;寧缺勿錯**:外部服務掛掉走 fallback、取樣不到合法位置回 null 略過、伺服器對回報「驗證後靜默丟棄」(細則 §2.4、§4)。
+7. **真實世界尺度**:`SOLDIER_H`(1.8m)是唯一身高單位,MUST NOT 調回超尺度(細則 §2.5)。
+8. **三機制一架構**:雲端/區網/單機只換**傳輸層**不換架構;`rooms.js`/`sim.js`/`bots.js` MUST 保持瀏覽器可執行,URL 佈局 MUST 鏡射儲存庫佈局(細節見 A28)。
+9. **稽核為正 + 反向驗證**:本專案無 runtime logger;正確性防線 = 離線稽核(`tools/audit_*.mjs`,以 **執行原文** 驗真品)+ e2e + `npm run bal`。新增系統 SHOULD 同步補稽核而非加 log。**改任何有稽核的判定,改完 MUST 做反向驗證**:把判定故意寫回壞版/舊制,稽核 MUST 在對應條目紅字,否則等於沒驗到。
+10. **刻意設計 MUST NOT「補完」**:一批看似 bug 的行為是刻意取捨,修它就是引入 bug —— 彈藥漂移(A9)、爆風不吃 LOS(A11)、直升機不接塔 SAM(A15)、貫穿判定是 2D 而非 3D(A18)、對進戰模型只算武器(§2)、AoE 不爆擊(§4)。動手前先查 A 表。
 
 ---
 
@@ -9,12 +25,7 @@
 
 **產品**:瀏覽器 DOTA+FPS — 無人機陣營 (SWARM) vs 機甲陣營 (STEEL)。真實世界地圖選址 → OSRM/Overpass 取真實道路兵線 → 即時 3D 地形開戰。
 
-**架構型態:Server-Authoritative Monolith(權威伺服器單體)**
-
-- **心智模型(MUST 內化)**:伺服器是唯一真相。HP/傷害/彈藥/經濟/勝負全部在 `server/sim.js` 結算;客戶端只做三件事 — 送輸入與命中回報、渲染 8Hz 快照插值、跑表現層彈道/物理。
-- **三種遊戲機制**(雲端伺服器 / 區網 Tailscale / 單機)只換**傳輸層**,不換架構:房間邏輯共用 `server/rooms.js`(`RoomHub`),權威模擬共用 `server/sim.js`。單機 = **把伺服器整支搬進瀏覽器分頁**(RoomHub 在分頁裡跑),客戶端一樣只送輸入、收 8Hz 快照 —— **MUST NOT** 為了單機另寫一套「客戶端自己算」的路徑。
-- **MUST NOT**:任何「客戶端先改狀態再同步」的實作。
-- 防作弊驗證(射程 ×1.25 複驗、迷霧 `_visibleTo`、LOS `_losBlocked`、高度夾制)只住伺服器,**MUST NOT** 搬到客戶端。
+**架構型態:Server-Authoritative Monolith**。三種遊戲機制(雲端伺服器 / 區網 Tailscale / 單機)共用 `server/rooms.js`(`RoomHub`)與 `server/sim.js`;單機 = 把伺服器整支搬進瀏覽器分頁跑,客戶端一樣只送輸入、收 8Hz 快照 —— MUST NOT 為單機另寫「客戶端自己算」的路徑。
 
 **技術棧絕對規則**
 
@@ -24,148 +35,117 @@
 | 前端 | vanilla ES-module JS + Three.js 0.160(CDN importmap)。新函式庫一律 CDN importmap,且**先有離線 fallback 才准接** |
 | 建置 | **無 build step、無 bundler、無框架、無 TypeScript — MUST NOT 引入以上任何一項** |
 | 語言 | 註解與 UI 字串一律**繁體中文** |
-| 3D 資產 | CC0 開源模型優先(`MODEL_MANIFEST` + 程序生成 fallback 模式);法線貼圖 **MUST** 刪除並重寫 gltf 移除引用 |
+| 3D 資產 | CC0 開源模型優先(`MODEL_MANIFEST` + 程序生成 fallback);法線貼圖 **MUST** 刪除並重寫 gltf 移除引用 |
 
 **分層職責**
 
 | 路徑 | 職責 |
 |---|---|
-| `server/server.js` | **傳輸層**:HTTP 靜態檔 + WebSocket + `/healthz`(雲端與區網共用;單機完全用不到) |
-| `server/rooms.js` | `RoomHub` 房間/配對/8Hz 戰鬥生命週期 — **三種機制共用同一份**,故 MUST 保持瀏覽器可執行 |
+| `server/server.js` | 傳輸層:HTTP 靜態檔 + WebSocket + `/healthz`(單機完全用不到) |
+| `server/rooms.js` | `RoomHub` 房間/配對/8Hz 戰鬥生命週期 — 三機制共用,MUST 保持瀏覽器可執行 |
 | `server/sim.js` | `BattleSim` 權威模擬核心(single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家狀態機(推線/交戰/撤退) |
 | `public/js/data.js` | 全遊戲平衡數值唯一真相;**伺服器直接 import 這支客戶端檔** |
-| `public/js/climb.js` | 攀爬路線唯一真相(約三成建築/巨石/神木的「地面 ↔ 頂端」垂直通道):規劃 + 抓握索引 + 設施幾何 |
 | `public/js/*.js` | 渲染/FPV/輸入/HUD(檔案地圖見 `public/js/.claude.md`) |
-| `tools/` | 離線工具:平衡驗證、兵線烘烤、稽核腳本、單機版打包(`build_solo.mjs`)、LOGO 管線 |
-| `.github/workflows/` | 回歸驗證 CI + 單機特化版自動部署到 GitHub Pages |
+| `tools/` | 離線工具:平衡驗證、兵線烘烤、稽核腳本、單機版打包、LOGO 管線 |
+| `.github/workflows/` | 回歸驗證 CI + 單機特化版部署 GitHub Pages |
 | `test/e2e.mjs` | 前段 `BattleSim` 確定性單元測試 + 後段 WebSocket 端對端,約 60 項斷言 |
 | `reference/` | 上游唯讀副本 — **MUST NOT** 修改,只准參考 |
 
 ---
 
-## 2. 通用程式標準與慣例
+## 2. 通用標準與慣例
 
-### 2.1 單一真相縫(Single Seam)原則
-所有跨檔共用邏輯只准有**一個**結算點;發現第二份實作即是 bug:
+### 2.1 單一真相縫索引
 
-- 平衡數值(射程/傷害/經濟/波次/角色/招式)**MUST** 只住 `data.js`;sim.js/game.js **MUST NOT** 硬編碼。
-- **推導值 MUST NOT 手寫**:賞金表(戰力公式推導)、`UNITS.drone.hp` 與 `SQUAD.DMG`(由 `SQUAD.BUFF` derive)、`UNITS.bunker.hp`(= 塔一半)、塔位(`solveTowerSites()`,sim 與 biomes 共用)、`MINES.PER_LANE` 與 `AA_SITE.range`(等面積公式)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)。
-- 砲塔佈局規則的判定只准住 `data.js`:#4 射程重疊 `towerLayoutAudit()`、#5 隧道洞口 `towerTunnelAudit()`(洞內塔 MUST 有 ≥`TOWER_TUNNEL_OUT_F` 射程涵蓋洞口外)。烘焙/mapSelect/伺服器驗證/稽核工具**共用同一支**;#5 因隧道覆蓋區間只在客戶端地形期算得出,**MUST NOT** 下放成執行期挪塔(伺服器/客戶端塔位會分家)。
-- 隧道「側向土牆藏不藏得住結構」的判定(= **明隧道**改制)只住 `biomes.js tunnelWallProfile()`:落地 facade / 外露頂板 / 女兒牆 / 扶壁四個構件共用同一份 `open`(該側改明隧道)、`gy`(側坡地表最低點)、`nx/nz`(側向法線)。
-  **MUST NOT** 在擺位端各自再算一次中央差分法線(取樣方向與擺位方向一分家就是 A26 那類「差 90°/差正負號」);facade 落地基準只准有 `galBase` 一份。
-  明隧道是**純表現層**:通行寬 `hw` / `tunnelSegs` / `ceilSegs` / 走廊 / `cols` 一律不動 ⇒ 伺服器 slab(側牆全擋 LOS)、砲塔規則 #5、平衡與 e2e 天然不受影響 —— 現實中的明隧道側面本來就是實心擋土 facade(不是柱列),遮蔽語意與埋在山裡的側牆一致,**MUST NOT** 為了「看起來通透」改成開放柱列(那就是看得到卻打不到)。
-- **隧道與地下道共用同一條命脈,只換路面剖面**:剖面只住 `data.js` 之外的 `biomes.js tunFloorAt()`(山體隧道 = 兩端洞口地表高的直線內插;地下道 = 同一條基準線再減 smoothstep 下沉剖面),平坦 tunnel way 要不要改地下道只住 `underpassPlan()`。開挖指派 / `buildRoads` / `markGradeCorridors` 三個消費端 **MUST** 共用這一支,且 **MUST** 吃 `way._tun[ri].pts`(地下道的折線含兩端**引道延伸段**,重算 `densify(raw)` 會少掉引道)。結構通行半寬只住 `strucHw()`(開挖剖面與路面寬分家 ⇒ 路面兩緣埋進沒開挖到的斜坡)。
-- 英雄武器/招式解析一律經 `heroWeapon()`/`heroAbility()`(HEROIC ×1.2/×1.5、SQUAD 傷害折算、rangeCap 全在這一個縫),**MUST NOT** 在別處二次乘算。
-- 傷害衰減公式(`dmgFalloff`/`blastFalloff`/`fanFalloff`)只住 `data.js`,sim 結算與客戶端 HUD 共用。
-  扇形曲線的槍口係數 `FAN_MUZZLE` **MUST NOT 手寫** —— 由 `FALLOFF.PLATEAU` 推導(= 在別人的近距平台邊界上恰好滿額)。
-- **陣營對抗係數的對稱化只住 `data.js` 的 `CLASS_SYM` 推導區塊**:英雄對英雄時蜂群恆吃自家武器的 `vs.armor`、
-  鋼鐵/傭兵恆吃自家的 `vs.air`,兩張手訂風味表合計起來並不對稱。校正係數由持續 DPS 推導後**整組等比**套回,
-  **MUST NOT** 逐武器手改 `vs` 去湊平衡(32 角一改就漂移);逐角色的戰力調整請改該角色的 `dmg` 階梯。
-- **對進戰(接近 → 進場 → 互轟 → 高度差掃描)的模型只住 `tools/duel.mjs`**,`tools/balance.mjs` ⑤ 匯入使用;
-  MUST NOT 在別處另寫第二份對局模型。模型**只算武器**(與 ①/④ 同基準,不含招式)—— 這是刻意的:
-  只模擬一半的招式家族(自身增益/打擊)會系統性偏袒那一半,故一律不算,尾端的招式導向角色改走具名豁免。
-- 三個**機種絕招**(自爆攻擊 / 轟炸餌機 / 重砲模式)的傷害只住 `data.js` 的 `SPECIAL` 區塊:一次絕招的**總傷害預算**
-  = `specialBudget(abil)`(隨**輕/重武器綜合等級** = 兩軌平均成長,可為分數階 ⇒ **MUST NOT** 丟進 `tierVal`),
-  三招各自把同一份預算切給自己的投射數(`kamiBlast`/`selfBoomBlast`/`decoyBlast`/`decoyBombBlast`/`barrageDmgF`)。
-  **MUST NOT** 在 sim/game/HUD 手寫任一招的傷害常數,也 MUST NOT 讓某一招退回吃單一武器軌(那就是三招失衡的舊病)。
-- 電腦玩家的**操作節奏**只住 `data.js`(`BOT_DIFF[].gap`/`react` + `BOT_OPS` + `botOpGap()`),節流判定只住 `bots.js _op()`;
-  **MUST NOT** 在 bots.js 各處另寫 tick 計數式節流。持續開火**刻意不吃手速閘**(扳機是按住的),只吃反應時間。
-- 重武器範圍攻擊三分類(`aoeClass()` → blast 爆炸 / fan 扇形 / line 直線貫穿)與彈道五分類
-  (`trajClass()` → lob / flat / line / guide / fnf)只住 `data.js`,由 `def.type`/`fan`/`guide` **推導**;
-  sim(`heroBurst`/`heroPlasma`/`heroLance`)、game.js 演出、HUD 說明**共用同一支**,
-  **MUST NOT** 手寫逐武器分類表,也 MUST NOT 在結算/演出端各自比對 `def.type`。
-- 直線貫穿的演出唯一入口 `_lanceVisual()`(自機/他人/bot 共用);圓柱粗細 **MUST** 取 `lanceR(def, barrage)`
-  = 伺服器實際判定半徑(看到多粗就是打到多粗,MUST NOT 為了好看放大)。**重砲傾洩窗的加粗
-  MUST 也走這一支**(`LANCE.BARRAGE_F`)—— 前科:演出端自己寫 `barrage ? 1.5 : 1`,伺服器沒跟上,
-  巨炮開下去有一半的粗度是空頭支票(2026-07-28「打不到單位」病灶之一)。
-- 拋物線武器(`trajClass==='lob'`)的火控解只住 `game.js _lobAim()`(每幀在擊發前定案 `this._lobFc`):
-  出膛向量、瞄準虛線、鎖定光暈、FPV 砲管仰角**共用同一份**,MUST NOT 在擊發/繪製端各解一次。
-  光暈亮不亮 = `_arcTrace` 的 `minD ≤ BALLISTIC.LOB_TOL`(彈道真的通過瞄準點),MUST NOT 退回準星直射線判定。
-- 機體高度只住 `data.js`(`SOLDIER_H`/`HERO_SIZE`/`heroTargetH()`/`TARGET_H`,`models.js` 只 re-export):
-  同一把尺同時餵渲染縮放(`fitToHeight`)與**伺服器命中量體** `hitH()`(`sim._bodySpan/_bodyDy` 的機體垂直帶)。
-  爆風/貫穿 **MUST** 量到垂直帶最近點,MUST NOT 只取單位底部或單一取樣點(打中塔頂/頭部會判成十幾公尺外)。
-- 機體**水平半徑**同理只住 `data.js` 的 `hitR()`(`HERO_HIT_R` × `heroTargetH` 推導 + `TARGET_R` 查表)——
-  這是 `hitH()` 的水平版。**貫穿圓柱判定 MUST 是 `lanceR(def) + hitR(t)`**,MUST NOT 只比對單位中心座標
-  (2026-07-28:砲塔半徑 7m / 主堡 20m,純點判定 ⇒ 打在建築牆面上整發落空 = 使用者回報的「打不到建築」)。
-  客戶端 `game.js` 的 `COLLIDER` / `heroCollider()` **MUST** 由 `hitR`/`hitH` 推導 —— 碰撞量體與命中量體
-  分家就是「撞得到卻打不到」;但該表**鍵集** MUST NOT 隨 `TARGET_R` 增列而擴張(會讓直升機/碉堡突然擋路)。
-- **連線機制**(雲端 / 區網 / 單機)的判定只住 `data.js` 之外的 `netmode.js`:模式解析、雲端節點網址正規化、
-  `wsUrl()` 全在那一支;傳輸層一律經 `net.js makeNet()` 取得(WebSocket 或瀏覽器內主機)。
-  `main.js` **MUST NOT** 自己 `new Net()`、自己看 `location.host`、或另寫 `if (單機)` 的文案分支。
-  鈕面文字的真相在 `LINK_MODES`,`index.html` 那份靜態副本只為版型量測而存在(一致性由稽核把關)。
-- 共用視覺入口唯一:`spawnCastFx()`(招式 3D 演出)、`stepCombatFx()`(開火動畫)、`terrain.surfaceAt()`(站立表面)— 戰場與展示台/各呼叫端 **MUST NOT** 各寫一套。
+每列 = 一個縫。共通鐵律:消費端 MUST 全部走這個縫,MUST NOT 另寫第二份實作或在別處二次運算;**推導值 MUST NOT 手寫**。
+
+| 領域 | 唯一縫 | 要點 / 禁令 |
+|---|---|---|
+| 平衡數值 | `data.js` | 射程/傷害/經濟/波次/角色/招式全在此;sim/game MUST NOT 硬編碼;敘事文字去 `lore.js` |
+| 推導值 | 各推導式 | 賞金表、`UNITS.drone.hp`/`SQUAD.DMG`(← `SQUAD.BUFF`)、`UNITS.bunker.hp`(= 塔一半)、塔位 `solveTowerSites()`、`MINES.PER_LANE`/`AA_SITE.range`(等面積)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)、`FAN_MUZZLE`(← `FALLOFF.PLATEAU`)—— 一律 MUST NOT 手寫 |
+| 砲塔佈局規則 | `data.js towerLayoutAudit()`(#4 射程重疊)/`towerTunnelAudit()`(#5 洞口涵蓋) | 烘焙/mapSelect/伺服器/稽核共用;#5 MUST NOT 下放成執行期挪塔(兩端塔位會分家) |
+| 兵線導航規則 | `data.js laneUTurnAudit()`(U-turn)/`laneStructEntryAudit()`(橋隧只走出入口) | 生成期硬門檻淘汰;規則①只在離線 bake(唯一有逐邊結構旗標) |
+| 隧道/地下道剖面 | `biomes.js tunFloorAt()` + `underpassPlan()` + `strucHw()` | 山體隧道 = 平直內插;地下道 = 同基準減 smoothstep 下沉。消費端 MUST 吃 `way._tun[ri].pts`(含引道延伸段) |
+| 明隧道判定 | `biomes.js tunnelWallProfile()` | 四構件共用同一份 `open/gy/nx,nz`;facade 基準只有 `galBase` 一份;純表現層(`hw`/segs/`cols` 不動);MUST NOT 改開放柱列(看得到卻打不到) |
+| 英雄武器/招式解析 | `heroWeapon()`/`heroAbility()` | HEROIC ×1.2/×1.5、SQUAD 折算、rangeCap 全在這;MUST NOT 二次乘算 |
+| 傷害衰減 | `data.js dmgFalloff/blastFalloff/fanFalloff` | sim 結算與客戶端 HUD 共用 |
+| 陣營對抗對稱化 | `data.js CLASS_SYM` 推導區塊 | 校正係數整組等比套回;MUST NOT 逐武器手改 `vs` 湊平衡;個別角色改 `dmg` 階梯 |
+| 對進戰模型 | `tools/duel.mjs`(bal ⑤ 匯入) | **只算武器**是刻意的(只模擬一半招式家族會系統性偏袒);招式導向角色走具名豁免 |
+| 機種絕招預算 | `data.js SPECIAL` + `specialBudget()` | 總預算隨輕/重綜合等級(可分數階,MUST NOT 進 `tierVal`),三招各自切分;MUST NOT 手寫傷害常數或退回單一武器軌 |
+| bot 操作節奏 | `data.js BOT_DIFF/BOT_OPS/botOpGap()` + `bots.js _op()` | MUST NOT 另寫 tick 計數節流;持續開火刻意只吃反應時間、不吃手速閘 |
+| AoE / 彈道分類 | `data.js aoeClass()`(blast/fan/line)/`trajClass()`(lob/flat/line/guide/fnf) | 由 `def.type`/`fan`/`guide` 推導;sim/演出/HUD 共用;MUST NOT 手寫逐武器分類表 |
+| 貫穿演出 | `game.js _lanceVisual()` + `lanceR(def, barrage)` | 自機/他人/bot 共用;粗細 = 伺服器判定半徑(含 `LANCE.BARRAGE_F` 傾洩加粗,兩端 MUST 同步) |
+| 榴彈火控 | `game.js _lobAim()`(每幀定案 `_lobFc`) | 出膛向量/瞄準虛線/鎖定光暈/砲管仰角共用;光暈 = `_arcTrace minD ≤ LOB_TOL`,MUST NOT 退回直射線判定 |
+| 機體高度/半徑 | `data.js SOLDIER_H/HERO_SIZE/heroTargetH()/TARGET_H/hitH()` + `hitR()`(`HERO_HIT_R`/`TARGET_R`) | 同一把尺餵渲染縮放與伺服器命中量體;爆風/貫穿量到**垂直帶最近點**;貫穿半徑 = `lanceR(def) + hitR(t)`;`game.js COLLIDER` MUST 由 hitR/hitH 推導,但鍵集 MUST NOT 隨 `TARGET_R` 擴張 |
+| 攀爬路線 | `climb.js`(規劃/抓握索引/設施幾何) | 詳見 A31 |
+| 連線機制 | `netmode.js`(模式/網址/`wsUrl()`)+ `net.js makeNet()` | `main.js` MUST NOT 自己 `new Net()`/看 `location.host`/寫單機文案分支;鈕面真相 = `LINK_MODES` |
+| 共用視覺入口 | `spawnCastFx()`/`stepCombatFx()`/`terrain.surfaceAt()` | 戰場與展示台共用,MUST NOT 各寫一套 |
 
 ### 2.2 狀態鍵與迴圈粒度
-- 英雄以 **pid(連線 id)為鍵**存於 `heroes` Map;bot 用字串 pid(如 `'b1'`)。**MUST NOT** 改用陣列索引或 socket 物件當鍵。
-- 三機小隊共享狀態(金錢/電力/彈藥/招式)住 `sq.ps`,經 `_bindShared()` getter 掛回每架 ent。迴圈粒度 **MUST** 分清:`heroes.values()` = 一隊一次;`_allBodies()` = 每架一次。搞錯 = 收入三倍或增益疊三層。
+- 英雄以 **pid(連線 id)為鍵**存於 `heroes` Map(bot 用字串 pid 如 `'b1'`);MUST NOT 改用陣列索引或 socket 物件當鍵。
+- 小隊共享狀態(金錢/電力/彈藥/招式)住 `sq.ps`,經 `_bindShared()` getter 掛回每架 ent。迴圈粒度 MUST 分清:`heroes.values()` = 一隊一次;`_allBodies()` = 每架一次 —— 搞錯 = 收入三倍或增益疊三層。
 
 ### 2.3 確定性(Determinism)
-- 跨客戶端場景一致靠 `mulberry32`(戰場中心為種子);隨機散布 **MUST NOT** 用 `Math.random()`。
-- 抽樣紀律:每格消耗**固定枚數**亂數、淘汰檢查一律放在抽樣**之後**;**MUST NOT** 改成「淘汰就跳過抽樣」(佈局序列會跨客戶端分歧)。
+- 跨客戶端場景一致靠 `mulberry32`(戰場中心為種子);隨機散布 MUST NOT 用 `Math.random()`。
+- 抽樣紀律:每候選消耗**固定枚數**亂數、淘汰檢查一律排在抽樣**之後**;MUST NOT 改成「淘汰就跳過抽樣」(佈局序列跨客戶端分歧)。
 
 ### 2.4 外部服務防禦
-- OSRM / Overpass / AWS 地形磚 / Esri 影像皆會限流或掛掉:每條 fetch 路徑 **MUST** 保留程序生成 fallback(合成貝茲兵線、程序建物),改 fetch 邏輯時 **MUST NOT** 移除。
+- OSRM / Overpass / AWS 地形磚 / Esri 影像皆會限流或掛掉:每條 fetch 路徑 MUST 保留程序生成 fallback(合成貝茲兵線、程序建物),改 fetch 邏輯時 MUST NOT 移除。
 
 ### 2.5 世界尺度
-- `SOLDIER_H`(真人 1.8m)是全遊戲唯一身高單位;人員/載具/建物一律用真實世界公稱尺寸。英雄體型只准住 `heroTargetH()` 這一個縫。**MUST NOT** 為了「看起來大一點」調回超尺度。
-- 改 `REAL_SCALE` **MUST** 同步 +1 `GEO_SCALE_VER` 並重跑 `node tools/bake_venue_lanes.mjs`。
+- `SOLDIER_H`(真人 1.8m)是全遊戲唯一身高單位;人員/載具/建物一律用真實公稱尺寸,英雄體型只住 `heroTargetH()` 這一個縫。
+- 改 `REAL_SCALE` MUST 同步 +1 `GEO_SCALE_VER` 並重跑 `node tools/bake_venue_lanes.mjs`。
 
 ---
 
-## 3. 絕對反模式(DO NOT 清單,含事故編號)
+## 3. 絕對反模式(A 編號恆定,供跨檔引用)
 
 | # | 禁令 |
 |---|---|
-| A1 | **MUST NOT** 客戶端先改權威狀態;防作弊邏輯 MUST NOT 下放客戶端 |
-| A2 | **MUST NOT** 新增 npm 依賴 / build 工具 / TypeScript / 框架 |
-| A3 | **MUST NOT** 修改 `reference/` 內任何檔案 |
-| A4 | **MUST NOT** 在確定性散布路徑用 `Math.random()` |
-| A5 | **MUST NOT** 為重武器另發明第二套 CD 系統 — 唯一實作 = `mag:1 + reload=cd` |
-| A6 | 射擊 raycast **MUST** 只打單位;**地形走解析射線 `terrain.rayTerrain()`**,建物/神木/巨岩/橋墩走解析圓柱(`_blockerHitT`)。**MUST NOT** 把 `terrain.mesh` 加回 raycast 目標(2026-07-27:193² 高度場 = 73,728 面,three 的 `Mesh.raycast` 逐面線性掃且 `far` 不參與剪枝 ⇒ 每顆子彈每幀 1ms/桌機、手機 3~6 倍 = 開火掉幀主因),也 **MUST NOT** 把植被或建物 InstancedMesh 加進 raycast 目標(效能)、MUST NOT 讓砲火穿越有碰撞障礙 |
-| A25 | 一次性 3D 物件(彈體/特效)自場景移除時 **MUST** 釋放 GPU 資源 —— three 靠 `dispose()` 事件回收,只 `scene.remove()` 就是洩漏(打越久越卡,手機顯存吃緊後尤甚)。彈體走物件池 `_takeProjectile`/`_dropBullet`(自機與他人視覺彈體同池),特效走 `_freeEffect` → `toon.js disposeTree`。**共用幾何 MUST 經 `toon.js markShared()` 註冊**(否則整場共用的那份被放掉 ⇒ 所有借用者變空白);`disposeTree` 只准有一份實作(castfx/vfx/game 共用),**MUST NOT** 各寫一套。高頻特效(光束/環/能量珠/彈體)**MUST NOT** 每次 `new …Geometry()`,一律「單位幾何 + scale」 |
-| A7 | 飛彈失鎖規則(離開發射源射程 → 直線飛行)伺服器與客戶端共用;**MUST NOT** 無限追蹤 |
-| A8 | FOV 全機種一律 68(zoom 35);**MUST NOT** 用 FOV 做陣營/機種差異化 |
-| A9 | 客戶端 `wstate` 彈藥與伺服器小幅漂移是 **by design**(miss 不回報);**MUST NOT**「修正」 |
-| A10 | 迷霧是伺服器端快照過濾;客戶端 **MUST NOT** 對單位標記二次遮蔽 |
-| A11 | 爆風 `_blast` 刻意不吃 LOS 遮蔽(繞射近似);**MUST NOT**「補完」 |
-| A18 | 直線貫穿 `heroLance` 的圓柱判定是「水平垂距 + 垂直帶」而非純 3D 垂距(伺服器無地形高程、y = 離站立表面高);**MUST NOT**「修正」成 3D —— 高低差地形會讓整條射線落空。line 類重武器一發只過一次 `_gateFire`,客戶端 **MUST NOT** 另送 `hitMissile`(飛彈擊落已併進圓柱掃描)。**判定量體(2026-07-28)**:半徑 **MUST** 是 `lanceR(def) + hitR(t)`(目標不是點 —— 見 §2.1),軸距 **MUST** 量到**線段上最近點**(`s` 夾制到 `[0, maxS]`)而非要求目標中心落在線段內 —— 客戶端回報的 `len` 止於彈道終點,而彈道終點就是目標的**近側表面**,要求中心落在線段內等於「打中了才判成沒打中」。**排序仍 MUST 用原始 `s`**(夾制值會把所有外溢目標並列在端點,貫穿衰減序就亂了)。連帶:貫穿光束的準星射線 `_resolveAim(far, pierce=true)` **MUST NOT** 停在第一個單位上(停了就只剩「打到誰都沒傷害」) |
-| A12 | `[#INC-103]` 無人機重生的 `deadTick` 跨 tick 守衛 **MUST NOT** 以「優化延遲」為由移除 |
-| A13 | `[#INC-105]` 中立 ents(`side:null, neutral:true`):`_acquireTarget`/`_acquire`/tick 主迴圈三處 **MUST** skip neutral,否則 `UNITS[kind]` undefined 直接炸 |
-| A14 | `[#INC-106]` toon 三階 ramp 暗部 **MUST NOT** 調低於 102;材質一律走 `toon.js mat()` 包裝(MeshToonMaterial 無 roughness/metalness) |
-| A15 | `[#INC-109]` 直升機 creep **刻意未接** 塔 SAM/防空飛彈系統(以 pid 查找,heli 無 pid);**MUST NOT**「補完」這條接線 |
-| A16 | SkinnedMesh 量尺寸 **MUST** 用 `computeBoundingBox()` 並關 `frustumCulled`;`outlinify()` MUST 跳過透明材質與 `userData.noOutline` |
-| A17 | FPV 座艙掛在 camera 底下 — camera 本身 **MUST** `scene.add`,忘了整個座艙不見 |
-| A19 | 觸控版疊層(戰場選單/商店/結束畫面)開著時 **MUST** 整層收起 `#touchLayer`(`mobile.js syncBlocked()`)。`#game` 是 `position: fixed` ⇒ **本身就是堆疊脈絡**,疊層寫的 z 20 只在它內部有效;住在 body 的搖桿層(z 9)實際壓在整個 `#game` 之上,滿版 `#tlLook` 又吃事件 ⇒ 疊層任何按鍵都按不到、也關不掉。**MUST NOT** 改用調 z-index「修」(脈絡外找不到介於畫布與疊層之間的層級)|
-| A20 | 手機直式版型 **MUST NOT** 用「一律 `flex-direction: column`」把桌機的左右並排改成上下堆疊(前科:大廳三入口直排後,第三顆「劇情戰役」被推到摺線以下,玩家回報「沒看到劇情模式的按鍵」;同一顆鈕在桌機/手機位置不同也破壞操作直覺)。窄屏只准**收窄欄寬 + 降一階字級**,塞不下才交給 `flex-wrap` 換行。兩個相關陷阱:①改直排時 `flex: 1 1 0` 的 basis 會落在**高度**上(`.slot-btn` 被壓進 `min-height` 裡把字切一半);②`.center-screen` 是 `align-items: center|flex-start` ⇒ 直接子代的列**寬度不會被拉滿**,子項用 `flex: 1 1 0` 會讓整列縮成窄條、鈕面文字溢出 clip-path 方框 —— 該列 MUST 給定 `width: 100%`。稽核 `tools/audit_ui_layout.mjs` |
-| A21 | 操作說明的**裝置分支只准住 `help.js`**:條目多帶一份 `pTouch`(虛擬搖桿)、類別多帶 `labelTouch`,取字串一律經 `helpItemP()` / `helpCatLabel()`。**MUST NOT** 在 `main.js` 另寫 `if (TOUCH_UI) '...'` 的字串分支 —— 那就變成第二份操作說明,改鍵位時一定有一邊沒跟上。判定旗標與 `pauseHelp` 共用同一個(`mobile.js isTouchUI()`)|
-| A22 | 機種絕招(自殺機/重砲/餌機)的派發只准住 `game.js _fireHoldAbility()`:長按右鍵(`_tickHoldAbility`,**一般與狙擊模式皆可**)與觸控 ZR(`_cmd('special')`)共用同一支,**MUST NOT** 在任一輸入端各自比對 `isDrone`/`isMorph`。陀螺儀開關**只准有一顆鈕**(十字鍵下);同功能兩顆 = 兩處要同步的狀態 |
-| A23 | `#tlLook` 空處開火手勢:出口只有 `_setLookFire()` → `_cmd('fire')`,**MUST NOT** 直接改 `client.firing`。判定 **MUST 先要求一次完整輕點**(不然單指拖曳轉視角會誤擊發),**長按路徑 MUST 在幀迴圈判定**(手指不動收不到 `pointermove`),且 A 鈕與本手勢共用 `firing` ⇒ 兩邊放手都要先確認對方沒按著 |
-| A24 | 小地圖「已探索」累積罩 `_mmSeen` 與底圖 `_mmBase` 的座標框 **MUST 恆為全圖**(`_world2mmFull`),**MUST NOT** 跟著顯示窗(周遭/全部)跑 —— 那是整場累積的持久資料,框一變先前探索過的區域就整片錯位;周遭模式改用九參數 `drawImage` 裁切。連帶 `_mmShadows()` **MUST 回傳世界座標**(同一組陰影要畫進兩個座標框)|
-| A26 | 程序生成零件的**擺位方向與旋轉方向 MUST 同調**,且錨點半徑 **MUST 取「該高度的錨體半徑」**。三種反覆出現的病灶(2026-07-27「神木樹幹與樹根沒接好」整批):①**差 90°** —— 環形佈件的 `rotation.y = -a` 是**徑向**(板根鰭/斜撐/枝),`-a + π/2` 是**切向**(沙包圈/紙垂);寫錯那一圈零件會變成「圍著主體的柵欄」,與主體之間整圈開縫。②**差一個正負號** —— 沿某個軸擺件時 **MUST 由該軸的實際世界向量推**(`rotation.set(π/2, 0, dirA)` 的局部 +y = `(−sin dirA, 0, cos dirA)`,Euler 'XYZ' = Rx·Ry·Rz),**MUST NOT** 手寫 `cos(a+π/2)` / `sin(a−π/2)` 這種鏡射式;傾角符號同理(斜撐上端該收向軸心)。③**拿基部半徑當通用半徑** —— 幹身/塔身有收分,掛件一律經 `trunkR(y)` 類的單一縫。連帶:堆疊件 **MUST NOT** 用 y 交錯偽裝第二層(半數會整件浮空),躺地件軸心高度 **MUST** = 自身半徑。**改任何程序生成零件的擺位/旋轉/尺寸,MUST 跑 `node tools/audit_object_joints.mjs`** |
-| A28 | **三種遊戲機制的兩條線 MUST NOT 斷**。①**瀏覽器可執行**:`server/rooms.js` / `sim.js` / `bots.js` 會被單機版直接載進瀏覽器分頁,**MUST NOT** import 任何 Node 內建模組,也 MUST NOT 用 `process.*` / `Buffer` / `require()` —— 加一行就只有單機版炸、伺服器版照跑。②**URL 佈局鏡射**:瀏覽器看到的路徑 **MUST** 鏡射儲存庫佈局(`/public/**` + `/server/*.js`,`/` 302 到 `/public/`),dev 伺服器與 `tools/build_solo.mjs` 出的是同一套。理由是 import 鏈 `public/js/localhost.js → ../../server/rooms.js → ../public/js/data.js` 只有在鏡射佈局下才會讓 `data.js` 是**同一個模組實例** —— 佈局一改就變成兩份平衡數值(而且不會報錯)。單機版離場 **MUST** `hub.shutdown()` 停掉 8Hz tick(否則背景空轉吃電)。稽核 `node tools/audit_net_modes.mjs` + `node tools/audit_solo_boot.mjs` |
-| A27 | 實例的朝向 `ry` 與站姿微傾斜 `tx/tz` **MUST** 當剛體整株套用(`xform.js vegPartXform` 單一縫),**MUST NOT** 併進逐零件的歐拉角 —— Euler 'XYZ' 把 ry 夾在中間,任何 `rx ≠ 0` 的零件(枝梢雙叉/垂掛松蘿/蜂窩)方向會隨朝向被攪亂而位移只吃水平旋轉;微傾斜若逐零件繞自身中心轉,樹幹分段會互相剪切錯位。接合完成度 **MUST** 與 `ry`/`tx`/`tz` 無關 |
-| A29 | **地下道 MUST NOT 另開第二套結構**。平坦 tunnel way 改走下沉剖面後,覆蓋判定/開挖/牆/天花/橫樑/照明/門洞/打洞/走廊/伺服器 slab 一律**沿用山體隧道那一整套**,差別只有 `tunFloorAt` 的 `sink`(= 唯一旗標 `under`)。連帶三條:①地下道**恆非明隧道** —— 它的頂是沒被開挖的原地表,`tunnelWallProfile` 的 `open` MUST 一律歸零(引道轉換帶被開挖的碗緣會讓體檢誤判,平地上憑空長出外露頂板與扶壁);②引道的擋土牆與緣石帶是**純表現層**,MUST NOT 動 `hw`/`tunnelSegs`/`ceilSegs`/`cols`/走廊(伺服器 slab 與砲塔規則 #5 不得漂移);③門洞的 `slope`(打洞/collar 把路面往洞內線性外推)MUST 取**整段走廊平均**而非洞口瞬時斜率 —— 平直剖面下兩者恆等,曲線剖面下瞬時值會外推偏掉好幾公尺。稽核 `node tools/audit_underpass.mjs` |
-| A30 | **障礙的「碰撞 / 彈道 / 伺服器 LOS」MUST 是同一個橫斷面**(2026-07-28「所有方向皆可抵擋射擊」)。建物是**有向盒**(`hw2/hd2/ry`),`game.js _collide`・`_sweepBlockers`・`_cameraDeClip`・`_blockerHitT` 與 `sim.js _losBlocked` 一律走盒;圓(`b.r`)只准當 broad-phase,且**MUST 是外接半對角** —— 內切近似兩頭都不對:牆角外露(對角方向打得穿看得見的牆)、細長樓的圓比盒寬(離牆十幾公尺的空氣擋彈),連 `_buildBlockGrid` 的登記半徑用內切都會漏掉貼牆角的格。**兩端分家的代價不是「差一點」而是靜默丟包**:客戶端算命中、伺服器算被擋 ⇒ 傷害無聲蒸發(A18 那一族)。故 `main.js` 上傳 occ 時盒多帶 `hw2/hd2/−ry`(sim 座標 z 鏡射 ⇒ **ry MUST 反號**),`sim.setWorld` 收料時預算 `cos/sin`(8Hz 熱路徑 MUST NOT 逐次算三角函數)。小地圖迷霧罩 `_mmShadows` 是**具名例外**(純顯示、單位標記本就由伺服器過濾,見 A10)。稽核 `node tools/audit_climb.mjs` Ⅲ 段 |
-| A31 | **攀爬路線只准住 `climb.js`**(長梯 / 攀岩抓點 / 垂降技術繩)。候選集 = `bld`/`std` 旗標(與 `makeBlockerTopIndex`「頂面可站立」同一組判準)、頂端高 `y1` **MUST** = `b.y + b.h`(= `blockerTopAt` 的回傳值;差 0.1m 就是「爬到頂卻站不住」)、攀爬軸 **MUST** 落在碰撞體外 `CLIMB.OFF`(> 最大機體碰撞半徑,由 `data.js SOLDIER_H×HERO_SIZE` 推導,**MUST NOT** 手寫)—— 軸在體外 ⇒ **MUST NOT** 為攀爬在 `_collide` 開任何豁免旗標(開了就等於在牆裡走路)。上下移動 **MUST** 吃 `_moveAxis` 的前後推杆(觸控搖桿天然共用),**MUST NOT** 為攀爬新增按鍵或第二份操作說明(A21/A22)。抽樣 **MUST** 每候選固定消耗 3 枚亂數(抽中 / 方位起相位 / 相鄰相接)、淘汰檢查排在抽樣之後(§2.3);四面皆有障礙就不掛路線(§4 寧缺勿錯,MUST NOT 放寬約束硬塞)。**相鄰結構相接**(七成機率)MUST 沿用同一種路線型別 —— 設施架在**較高者**的牆面、`y0` 換成**較低者的頂面高**、`bx/bz` 換成低頂落腳點,**MUST NOT** 為它另開第二種路線資料或第二套狀態機;四條硬約束(表面距 ≤ `LINK_GAP` / 兩頂高差 ≥ `LINK_DROP` / 落腳點離軸 < `GRAB_R` / 通道上無第三座結構)缺一不架。`game.js` 下端落地 **MUST** 用 `r.bx/r.bz`(一般路線 = 攀爬軸本身),寫死成攀爬軸就會從兩棟之間的縫掉回地面。上下兩端的**提示箭頭**沿用兵線 chevron 語彙(同一個 `SPREAD`)但桿長縮到約 1/3、立在垂直面上(底端朝上 / 頂端朝下),動畫 **MUST** 併進 `biomes.js` 既有的 `dynamics` 桶(火車/瀑布同一條 `group.userData.update`),**MUST NOT** 在 `game.js` 另開第二條更新迴圈。稽核 `node tools/audit_climb.mjs` |
+| A1 | 客戶端 MUST NOT 先改權威狀態;防作弊邏輯 MUST NOT 下放(= 原則 1) |
+| A2 | MUST NOT 新增 npm 依賴 / build 工具 / TypeScript / 框架 |
+| A3 | MUST NOT 修改 `reference/` |
+| A4 | 確定性散布路徑 MUST NOT 用 `Math.random()` |
+| A5 | 重武器 CD 唯一實作 = `mag:1 + reload=cd`,MUST NOT 另發明第二套 |
+| A6 | 射擊 raycast 只打單位;地形走解析射線 `terrain.rayTerrain()`、建物/巨物走解析圓柱/盒(`_blockerHitT`)。MUST NOT 把 `terrain.mesh`/植被/建物 InstancedMesh 加進 raycast 目標(three 逐面線性掃 = 開火掉幀主因);MUST NOT 讓砲火穿越碰撞障礙 |
+| A7 | 飛彈失鎖(離開發射源射程 → 直線飛行)兩端共用;MUST NOT 無限追蹤 |
+| A8 | FOV 全機種一律 68(zoom 35);MUST NOT 用 FOV 做差異化 |
+| A9 | 客戶端 `wstate` 彈藥與伺服器小幅漂移 by design(miss 不回報);MUST NOT「修正」 |
+| A10 | 迷霧 = 伺服器快照過濾;客戶端 MUST NOT 二次遮蔽 |
+| A11 | 爆風 `_blast` 刻意不吃 LOS(繞射近似);MUST NOT「補完」 |
+| A12 | `[#INC-103]` 無人機重生 `deadTick` 跨 tick 守衛 MUST NOT 移除 |
+| A13 | `[#INC-105]` 中立 ents(`side:null`):`_acquireTarget`/`_acquire`/tick 主迴圈三處 MUST skip neutral,否則 `UNITS[kind]` undefined 直接炸 |
+| A14 | `[#INC-106]` toon 三階 ramp 暗部 MUST NOT 低於 102;材質一律走 `toon.js mat()` |
+| A15 | `[#INC-109]` 直升機 creep 刻意未接塔 SAM(以 pid 查找,heli 無 pid);MUST NOT「補完」 |
+| A16 | SkinnedMesh 量尺寸 MUST `computeBoundingBox()` + 關 `frustumCulled`;`outlinify()` 跳過透明材質與 `userData.noOutline` |
+| A17 | FPV 座艙掛在 camera 底下 — camera 本身 MUST `scene.add`,忘了整個座艙不見 |
+| A18 | 貫穿 `heroLance` 判定 = 水平垂距 + 垂直帶,MUST NOT「修正」成 3D(伺服器無地形高程,高低差會整條落空)。半徑 MUST = `lanceR(def) + hitR(t)`、軸距量**線段上最近點**(`s` 夾制)、排序用**原始 `s`**;準星 `_resolveAim(pierce=true)` MUST NOT 停在第一個單位;line 類一發只過一次 `_gateFire`,MUST NOT 另送 `hitMissile`。稽核 `audit_lance_hit.mjs` |
+| A19 | 觸控疊層開著 MUST 整層收起 `#touchLayer`(`syncBlocked()`)。`#game` 是 `position:fixed` 堆疊脈絡,body 層搖桿壓在其上 ⇒ MUST NOT 用調 z-index「修」 |
+| A20 | 手機直式 MUST NOT 一律 `flex-direction:column`(桌機並排 → 直排 = 按鍵被推出摺線、操作直覺破壞);只准收窄欄寬 + 降字級,塞不下才 `flex-wrap`。直排兩陷阱:`flex:1 1 0` 的 basis 落在高度、`.center-screen` 子列寬度不拉滿(MUST 給 `width:100%`)。稽核 `audit_ui_layout.mjs` |
+| A21 | 操作說明的裝置分支只住 `help.js`(`pTouch`/`labelTouch`,取字經 `helpItemP()`/`helpCatLabel()`);MUST NOT 在 `main.js` 另寫 `if (TOUCH_UI)` 字串分支;判定旗標 = `mobile.js isTouchUI()` |
+| A22 | 機種絕招派發只住 `game.js _fireHoldAbility()`(長按右鍵與觸控 ZR 共用);MUST NOT 在輸入端各自比對機種。同功能只准一顆鈕(前科:陀螺儀開關) |
+| A23 | `#tlLook` 空處開火出口只有 `_setLookFire()` → `_cmd('fire')`,MUST NOT 直接改 `client.firing`。MUST 先要求一次完整輕點、長按在幀迴圈判定、與 A 鈕互查 `firing` 才停火 |
+| A24 | 小地圖 `_mmSeen`/`_mmBase` 座標框 MUST 恆為全圖(`_world2mmFull`),MUST NOT 跟顯示窗跑(持久資料會整片錯位);`_mmShadows()` MUST 回世界座標 |
+| A25 | 一次性 3D 物件移除 MUST 釋放 GPU 資源(只 `scene.remove()` = 洩漏):彈體走物件池 `_takeProjectile`/`_dropBullet`、特效走 `_freeEffect` → `toon.js disposeTree`(唯一實作);共用幾何 MUST `markShared()` 註冊;高頻特效 MUST「單位幾何 + scale」不重配。稽核 `audit_gpu_lifecycle.mjs` |
+| A26 | 程序生成零件擺位方向與旋轉方向 MUST 同調、錨點半徑 MUST 取該高度的錨體半徑(`trunkR(y)` 類單一縫)。三大病灶:差 90°(徑向 vs 切向)、差正負號(MUST 由軸的實際世界向量推,不手寫鏡射式)、拿基部半徑當通用半徑。堆疊件 MUST NOT 用 y 交錯偽裝、躺地件軸心高 = 自身半徑。改擺位 MUST 跑 `audit_object_joints.mjs` |
+| A27 | 實例朝向 `ry` 與微傾斜 `tx/tz` MUST 當剛體整株套用(`xform.js vegPartXform` 單一縫),MUST NOT 併進逐零件歐拉角(Euler 'XYZ' 把 ry 夾在中間會攪亂方向);接合完成度 MUST 與 ry/tx/tz 無關 |
+| A28 | 三機制兩條線 MUST NOT 斷:①`rooms.js`/`sim.js`/`bots.js` MUST NOT import Node 內建、用 `process.*`/`Buffer`/`require()`(加一行只有單機炸);②URL 佈局 MUST 鏡射儲存庫佈局(`/public/**` + `/server/*.js`)—— 否則 `data.js` 變兩份模組實例且不報錯。單機離場 MUST `hub.shutdown()`。稽核 `audit_net_modes.mjs` + `audit_solo_boot.mjs` |
+| A29 | 地下道 MUST NOT 另開第二套結構 —— 沿用山體隧道整套,唯一差異 = `tunFloorAt` 的 `sink`(旗標 `under`)。地下道恆非明隧道(`open` 歸零);引道擋土牆/緣石帶純表現層;門洞 `slope` MUST 取走廊平均而非洞口瞬時斜率。稽核 `audit_underpass.mjs` |
+| A30 | 障礙的碰撞/彈道/伺服器 LOS MUST 同一橫斷面:建物 = 有向盒(`hw2/hd2/ry`),圓只准當 broad-phase 且 MUST 是外接半對角;occ 上傳時 `ry` MUST 反號(sim 座標 z 鏡射),`setWorld` 預算 cos/sin(8Hz 熱路徑)。`_mmShadows` 是具名例外(純顯示)。稽核 `audit_climb.mjs` Ⅲ |
+| A31 | 攀爬路線只住 `climb.js`。頂端 `y1` MUST = `b.y + b.h`;攀爬軸 MUST 在碰撞體外 `CLIMB.OFF`(推導值,> 最大機體碰撞半徑)⇒ `_collide` MUST NOT 開任何豁免;上下移動吃 `_moveAxis` 前後推杆,MUST NOT 新增按鍵(A21/A22);每候選固定 3 枚亂數、四面皆堵不掛(原則 5/6);相鄰相接沿用同一種路線型別(設施架較高者、`y0` = 低頂高),下端落地 MUST 用 `r.bx/r.bz`;箭頭動畫 MUST 併進 `biomes.js dynamics` 桶。稽核 `audit_climb.mjs` |
 
 ---
 
 ## 4. 錯誤處理與狀態管理
 
-**失敗策略 = 降級,不例外(no exception-driven flow)**
-- 外部 fetch 失敗 → 落到程序生成 fallback,遊戲照開。
-- 佈點取樣不到合法位置(野營/空投/地雷)→ **寧缺勿錯**:回傳 null 略過,MUST NOT 放寬約束硬塞。
-- 伺服器對客戶端回報一律「驗證後靜默丟棄」:`heroHit` 檢射程 ×1.25 + 迷霧視野 + LOS + 高度;驗不過就無效,不 throw、不回錯誤訊息。
+**失敗策略**:見原則 6(降級不例外、寧缺勿錯、驗證後靜默丟棄)。
 
 **權威狀態流**
-- 快照 8Hz;`snapshotFor(side)` 只過濾「單位」,塔/主堡/中立物恆可見;同 tick 三份快照(雙陣營 + 觀戰)共用一份 frame 快取(`_tickN`),events 只能清一次 — 動快照邏輯 **MUST** 維持此共用。
-- 雙層 HP:護盾(先扣、不吃護甲、脫戰後自然回復)→ 裝甲 hp(吃 `armorMul` 減免曲線)。爆擊只在直擊武器,AoE 不爆。
-- 擊殺分數:被擊殺者是 bot 一律 `BOT_KILL_SCORE`(3)— 刷 bot 不能速成招式,**MUST NOT** 移除此判定。
-- 房間流程:`createRoom` **MUST** 附合法預建 `battleConfig`(伺服器驗證);環境(季節×日夜×天氣)開房時 `resolveEnv` 定案進 `cfg.env` 全房一致,**MUST NOT** 客戶端各自重算。
-
-**可觀測性**
-- 本專案無集中 Logger 服務;正確性防線 = 離線稽核工具(`tools/audit_*.mjs`)+ e2e 斷言 + `npm run bal` 平衡不變式(見 §5)。新增系統 **SHOULD** 同步補對應稽核腳本,而非加 runtime log。
+- 快照 8Hz;`snapshotFor(side)` 只過濾「單位」,塔/主堡/中立物恆可見;同 tick 三份快照共用一份 frame 快取(`_tickN`),events 只能清一次 — 動快照邏輯 MUST 維持此共用。
+- 雙層 HP:護盾(先扣、不吃護甲、脫戰回復)→ 裝甲 hp(吃 `armorMul`)。爆擊只在直擊武器,AoE 不爆。
+- 擊殺 bot 一律 `BOT_KILL_SCORE`(3)— 刷 bot 不能速成招式,MUST NOT 移除。
+- `createRoom` MUST 附合法預建 `battleConfig`;環境由 `resolveEnv` 開房定案進 `cfg.env` 全房一致,MUST NOT 客戶端各自重算。
 
 ---
 
@@ -180,61 +160,67 @@ npm run audit:net    # 三種連線機制稽核(瀏覽器安全 / 單一真相�
 npm test             # node test/e2e.mjs,約 60 項斷言(不會自動啟動伺服器!)
 npm run bal          # 平衡六不變式:①一波 NPC = 玩家 60% EHP ②前線敵我塔重疊 80% 且不對射
                      #              ③單線 30% 擊殺/40% 助攻 10 分鐘 ≈ 八軌升滿 ④滿級單推同塔位雙塔剩 0~20%
-                     #              ⑤對進戰勝率(自射程外接近 → 進場 → 互轟,±3 砲塔高對稱掃描取平均):
-                     #                陣營/機種/較高方皆 ≈50%、角色不離群、接近期單方面損失 ≤40% EHP
-                     #              ⑥招式配置 ← 武器射程剖面:扇形武器優先配置貼身套件
-                     #                (突進/匿蹤/走位增益/控場打擊),雙扇形 2/2、單扇形 ≥1、密度 ≥ 非扇形 ×2
+                     #              ⑤對進戰勝率(陣營/機種/較高方皆 ≈50%、角色不離群、接近期損失 ≤40% EHP)
+                     #              ⑥招式配置 ← 武器射程剖面(扇形武器優先貼身套件)
 npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓測)
 ```
 
 **測試標準流程(MUST 逐步,#INC-101/102)**:
-1. `netstat -ano | grep :8620` — 檢視**全部** LISTENING 行(Windows SO_REUSEADDR 允許兩個 server 同時 LISTEN,連線被拆散)。
+1. `netstat -ano | grep :8620` — 檢視**全部** LISTENING(Windows SO_REUSEADDR 允許兩個 server 同時 LISTEN)。
 2. `taskkill` 所有監聽者(**含 npm 父進程**),確認 0 個 LISTENING。
-3. `node server/server.js` 起新伺服器 → `npm test`。`npm test` 只是 WS client,**沒重啟伺服器 = 測到舊程式碼還全綠**。
+3. `node server/server.js` 起新伺服器 → `npm test`。**沒重啟伺服器 = 測到舊程式碼還全綠**。
+
+**矩陣通則**(適用下表全部,不逐列重述):
+- ㋐ 改任何有離線稽核的判定 → 該稽核 MUST 全綠 **且 MUST 做反向驗證**(原則 9)。
+- ㋑ 稽核腳本以「執行原文」驗真品;詳細斷言看各腳本檔頭,本表只記入口與關鍵不變量。
+- ㋒ 純表現層改動 ⇒ `npm run bal`/e2e 天然不受影響,但相鄰稽核仍 MUST 全綠。
+- ㋓ 需外網(Overpass/OSRM)的項目沙箱跑不動 → 走 GitHub Actions / 真機;需真瀏覽器(CDN three)的冒煙待真機,MUST 在交付說明中標註未驗項。
 
 **改了什麼 → MUST 跑什麼**
 
 | 改動 | 驗證 |
 |---|---|
-| 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal`(五條全綠;動角色武器 MUST 一併看 ⑤ 的角色離群列) |
-| **角色大小招的 `fx` / `add`**(招式家族配置) | `npm run bal` ⑥ —— 扇形武器沒有近距平台、實用交戰帶最短,拿到站樁型套件(承傷減免/治療/召喚/攔截)等於貼不上就一項都兌現不了。**雙扇形 MUST 兩招都是貼身套件**(突進 dash / 匿蹤 stealth / 走位增益 buff+haste\|leap\|dodge / 控場打擊 strike+pull\|stun\|slow\|confuse),**單扇形 MUST 至少一招**,另驗密度(扇形人均 ≥ 非扇形 ×2)。**MUST NOT** 為了湊達標去換掉 lore 人設核心的招式(s07 攔截領域 / m07 拒止穹頂刻意保留在 1/2)|
-| **對進戰模型**(`tools/duel.mjs`)/ `ALTITUDE.*` / `FAN_FLOOR`・`FAN_MUZZLE`・`fanFalloff` / `CLASS_SYM.K`(陣營對抗係數對稱化) | `npm run bal` ⑤ —— ⓐ陣營 SWARM vs STEEL 50±5pp ⓑ三機種各 50±5pp ⓒ**較高方 50±3pp**(高地換視野與機動、不換勝負;舊 ALTITUDE 值只有 48.3% = 搶高地淨虧損)ⓓ非豁免角色 ∈ 20~80%(豁免 MUST 具名附理由 —— 模型**只算武器**,招式導向角色會沉在尾端)ⓔ接近期單方面損失 ≤40% EHP。**改 `CLASS_SYM.K` MUST 同時看 ① 三機種**(校正落在跨陣營那一欄,但波次含坦克 ⇒ ① 會微動;K=1 完全對稱會讓陣營勝率衝到 59%,校準值 0.5)|
-| `SPECIAL`/`BARRAGE.DMG_MIN\|MAX`/`SQUAD.KAMI.N`/`DECOY.BOMB_MAX`(機種絕招傷害預算與切分) | e2e「機種絕招三招同預算」段(三招在綜合 Lv1/2.5/4 的總傷害互差 ≤2%、32 角重砲倍率全在夾制區間、整夾追加 = 一份預算)+ `npm run bal`(bal **刻意不含**三招 burst ⇒ 四不變式應不動,動了就是把加成套進了持續 DPS 路徑) |
-| `BOT_DIFF[].gap\|react`/`BOT_OPS`/`bots.js _op()`(電腦難度操作節奏) | e2e「電腦難度操作節奏」段(難度單調、最高難度對齊頂尖 FPS 電競 0.15s、全類操作合計 ≤ 手速上限、反應時間內不開火)+ `npm run sim`(headless 對局跑得完、無例外)+ 沙包輸出探針(90s 輸出 MUST 隨難度單調遞增) |
-| `ECON.UPG_BASE\|UPG_INC\|UPG_L3`(八軌階梯單價) | `npm run bal` ③(收入 ≈ 八軌全滿 ±10%;第三階改 200 後餘裕僅 1.7 個百分點)+ e2e「八軌升級第三階單價」段 |
-| `aoeClass`/`trajClass`/`LANCE`/`ARMING`(範圍三分類 / 彈道五分類 / 貫穿半徑 / 最短距離) | 32 角分類覆蓋率(重武器全數歸類、輕武器不歸類)+ `heroLance` 貫穿衰減直測(首個全額、之後 `DECAY^i`)+ `npm run bal`(首發全額 ⇒ 四不變式應不動,動了就是衰減套錯位置) |
-| **直線貫穿命中判定**(`_lanceHits` 幾何 / `LANCE.R\|BARRAGE_F\|VBAND_F` / `lanceR` / `hitR`・`TARGET_R`・`HERO_HIT_R` / `_resolveAim` 的 `pierce` / `_lancePierced`) | `node tools/audit_lance_hit.mjs`(27 項離線直測):**打在塔身側面(離塔心 5m)MUST 命中、完全打偏 MUST 落空**、**射線止於目標近側表面 MUST 命中**(len < 到中心距離)、長度不足/背後 MUST 落空、貫穿序與 `DECAY^i` 逐項對上公式、垂直帶塔頂命中·帶外落空、**傾洩窗加粗 MUST 生效於伺服器結算**(演出的 1.5 倍粗不得是空頭支票)、友軍/駐守不列入。**改完 MUST 做反向驗證**:把 `_lanceHits` 寫回舊制(點判定 + 中心須落在線段內),稽核 MUST 在對應兩條紅字 |
-| `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`(榴彈火控解) | 瀏覽器真開房冒煙:同一目標三個高度各射一發,`bullet.vel` MUST 等於 `_lobFc.vel`、爆點高度 MUST 對上瞄準高度;弧高 MUST 隨距離變(40m ≈ 0.2m / 172m ≈ 3.7m);合成稜線擋道 MUST `ok:false` 且不送 `lock` |
-| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體 = 顯示高度) | headless 直測 `_blast`:機體垂直帶內任一高度同額、1.8r 外歸零、塔頂 = 塔底;`_lanceHits` 掃頭部高 MUST 命中。**動 `hitR`/`TARGET_R`/`HERO_HIT_R`(水平量體)MUST 一併跑 `node tools/audit_lance_hit.mjs`** —— 那組值同時是 `game.js COLLIDER` 的碰撞半徑 |
-| `AIR`(GRAV/OFF_GROUND/KINDS)/`envTrigger`/`TERRAIN_FX.*_EYE_F`(騰空豁免 / 空中狀態 / 地形異常門檻) | headless 直測:`airUnitY('robot')` MUST = `jumpApex(UNITS.robot.jump)`(**普通小跳實測頂點 MUST < 此值** ⇒ 小跳仍踩雷、蓄力跳不踩)+ 火場 y=0 灼傷 / y>ε 免疫、**無人機 y=10 MUST 仍灼傷**(飛行機種吃 `fire.maxY`,平衡不動)+ `heroPos` wet=2 扣血 / 騰空 wet=0 立即停。瀏覽器真開房(有水域場地,如倫敦泰晤士)同步泵幀迴圈:深水 code=1、淺灘/沼澤帶上緣 code=0、跳躍中 air 幀 code 全 0 |
-| 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗(`[#INC-104]` 輕武器 NPC 基準 range MUST ≥170;t01/s02 是確定性指定角 MUST 保持 crit:0;s02 heavy MUST 保持 launcher)+ 重驗「塔 310 > 所有輕武器/NPC」壓制不等式與「所有重武器 > 塔 310」不等式 |
-| 骨架/關節/步態 | 全角色 rig 稽核 + `node tools/audit_cast_jump.mjs` |
-| 武裝掛點/槍口 | `audit_muzzle.mjs` 範式(32 英雄 + NPC 四陣營) |
-| `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 冒煙:建 `BattleSim` 數 `sim.camps.length`(基準 L1 2/2、L2 4/4、L3 6/6) |
-| `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js` |
-| **場地場景標記**(`VENUES[].scen` / `SCEN_LABEL` / `venueTip` / 新增或搬動預設場地) | `node tools/audit_lane_scenarios.mjs`(1v1 兵線八種立體場景實測 + `scen` 標記複驗):**隧道(山體)與地下道(平地下穿)分開判定**(前者深度來自山、後者來自挖 —— 2026-07-28 起兩者都會生成)/ 地面高架橋(**MUST 是純陸域**,跨水橋另列診斷)/ 明隧道 / 平交道 / 穿越高架橋底部 / 穿越地下道上方 / 一側高於一座砲塔(`altTier()`;**只算一般道路段**,橋面/隧道/引道扣掉 —— 洞裡量到的高差是地下道的**深度**,不是戰術高地)。「兵線走在結構上」MUST 是車行道且與兵線**共用 OSM 節點**(純看 2D 距離會把正下方的人行地下道誤判成兵線自己走的那一條)。判定吃與執行期同源的輸入(`venueConfig(v,1)` 兵線、`biomes.js` 同一份 Overpass 查詢、`terrain.js` 的 terrarium 高程 + 同一條高度管線),隧道覆蓋/地下道規劃/明隧道**直接執行 `biomes.js` 函式原文**。**標記 MUST 由實測產生**(多標/漏標一律紅字)。需要外網 ⇒ 沙箱內跑不動時走 GitHub Actions 的「兵線場景掃描」workflow;`ci.yml` 刻意不含(不讓 PR 卡在 Overpass) |
-| `venueLanes.js`(重烤)/ `TOWER_*` / `tower.range` | `node tools/audit_map_rules.mjs`(規則 #4 重疊)+ `node tools/audit_lane_sep.mjs`(兵線不接觸)+ `node tools/audit_lane_grade_sep.mjs`(結構側面進出 + **規則 #5 隧道內塔 ≥20% 射程涵蓋洞口外**) |
-| **兵線導航規則**(`MAPGEO.UTURN_MAX_DEG` / `laneUTurnAudit` / `laneStructEntryAudit` / `bake_venue_lanes.mjs` 的 `portalN`・`take()` 兩閘門 / `mapSelect.js` 迴轉閘) | `node tools/audit_lane_navigation.mjs`(22 項:規則②直線/90°/148° 合法・152°/178°/reversal 判迴轉・階梯短邊不誤判・角度量測 ±0.5°;規則①全陸域/portal 進出合法・側切上下橋違規・兩端主堡豁免・違規索引)。兩規則生成期硬門檻淘汰、判定純住 `data.js`(離線可稽核,伺服器 sim/e2e/`npm run bal` 天然不受影響)。**規則①「橋/隧只從出入口進出」只在離線 bake**(唯一有 `tunE`/`brgE` 逐邊結構旗標;mapSelect 走 OSRM 真實道路拓樸上天然守此),**規則② U-turn 兩處共用**。**改完 MUST 反向驗證**:把 `laneUTurnAudit`/`laneStructEntryAudit` 任一打斷成恆合法,稽核 MUST 對應條目紅字(另建對照組:門檻鬆到 180° / 全節點當 portal ⇒ 違規漏放)。**規則①生效需重跑 `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js`(需 Overpass 外網 ⇒ CI/真機)**;沙箱無 `.osm_cache` 只驗判定原文 |
-| **地下道**(`biomes.js underpassPlan`/`tunFloorAt`/`UND.*`/`UND_HW`/`strucHw`/引道牆頂・緣石帶/門洞 `slope`/`terrain.js carveTunnels` 的逐段 `hw`) | `node tools/audit_underpass.mjs`(81 項:Ⅰ 剖面與規劃直測 + Ⅱ **執行 biomes.js 真正的發射器原文**逐頂點量幾何 + Ⅲ 純表現層與單一縫靜態規則 + Ⅳ 開挖補集與覆蓋判準互補)—— 下沉量 MUST > `CLEAR + ROOF_T`、**兩端引道 MUST 回到地表**(與一般道路對齊,且 smoothstep 兩端切線為 0 ⇒ 坡度也連續)、縱坡 MUST ≤ `GRADE_MAX`、剖面 MUST 是「降→平底→升」且平底段 ≥ `BOX_MIN`、四條放棄條件(人行道/太深/引道空間不足/碰水)MUST 各自退回一般道路、**山體隧道 MUST 逐位元不變**(`sink` 不存在 ⇒ `tunFloorAt` = 舊的平直內插;不鋪緣石帶;引道牆仍收成零高)。**改完 MUST 反向驗證**:把 `underpassPlan` 寫回一律 null / 引道牆頂寫回 `yF+0.15` / 緣石帶不吃 `under` 閘門 / 門洞 `slope` 寫回瞬時斜率 / `carveTunnels` 寫回固定 `hw`,稽核 MUST 在對應條目紅字 |
-| **明隧道**(`biomes.js tunnelWallProfile`/`TUN.WALL_MIN\|EAVE\|PARAPET\|BUT_GAP\|BUT_MAX`/牆緞帶 `yF`・`yT`/`galBase`/外露頂板・女兒牆・扶壁) | `node tools/audit_open_tunnel.mjs`(51 項:Ⅰ 判定直測 + Ⅱ **執行 biomes.js 真正的發射器原文**逐頂點量幾何 + Ⅲ 純表現層靜態規則)—— **深埋隧道 MUST 逐點與舊制相同**(牆 = 路面−0.3 ~ 天花+0.2、不長頂板扶壁 = 舊行為不得回歸)、單邊薄只改**那一側**、挖穿時 facade 底緣 MUST 沉到側坡地表之下、頂板半寬 MUST = `hw + EAVE` 且 `EAVE > 0.6`(蓋過天花板小段)、扶壁的 local +X MUST = 擺位用的側向法線(A26)、`tunnelSegs`/`ceilSegs`/`hw`/`cols` MUST 不動。**改完 MUST 反向驗證**:把判定寫回「一律判成明隧道」/扶壁朝向差 90°/擺位差正負號/簷口窄於 0.6,稽核 MUST 在對應條目紅字 |
+| 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` 全綠;動角色武器一併看 ⑤ 角色離群列 |
+| 角色大小招 `fx`/`add`(招式家族配置) | bal ⑥:雙扇形 MUST 兩招貼身、單扇形 ≥1、密度 ≥ 非扇形 ×2;s07/m07 具名豁免 MUST NOT 為湊標換掉 |
+| 對進戰模型(`duel.mjs`)/`ALTITUDE.*`/`FAN_*`/`CLASS_SYM.K` | bal ⑤:陣營與機種 50±5pp、**較高方 50±3pp**、非豁免角色 ∈ 20~80%、接近期損失 ≤40%。改 `K` 一併看 ①(校準值 0.5) |
+| `SPECIAL`/`BARRAGE.DMG_*`/`KAMI.N`/`DECOY.BOMB_MAX`(絕招預算) | e2e「機種絕招三招同預算」(三招總傷互差 ≤2%)+ bal 四不變式 MUST 不動(bal 刻意不含三招 burst) |
+| `BOT_DIFF`/`BOT_OPS`/`bots.js _op()` | e2e「電腦難度操作節奏」+ `npm run sim` + 沙包輸出 MUST 隨難度單調遞增 |
+| `ECON.UPG_*`(八軌階梯單價) | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
+| `aoeClass`/`trajClass`/`LANCE`/`ARMING` | 32 角分類覆蓋(重武器全歸類、輕武器不歸類)+ `heroLance` 衰減直測(首發全額、之後 `DECAY^i`)+ bal 不動 |
+| 直線貫穿命中判定(`_lanceHits`/`lanceR`/`hitR` 系) | `audit_lance_hit.mjs`(27 項;塔身側面命中、近側表面命中、傾洩加粗生效於伺服器) |
+| `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim` | 真機冒煙:`bullet.vel` = `_lobFc.vel`、爆點 = 瞄準高、弧高隨距離變、稜線擋道 `ok:false` 不送 lock |
+| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體) | headless `_blast` 直測(垂直帶內同額、1.8r 外歸零、塔頂 = 塔底);動 `hitR`/`TARGET_R` 一併跑 `audit_lance_hit.mjs`(同組值 = COLLIDER 碰撞半徑) |
+| `AIR`/`envTrigger`/`TERRAIN_FX`(騰空/地形異常) | headless 直測(小跳仍踩雷、蓄力跳不踩;無人機 y=10 仍灼傷;騰空 wet 立停)+ 真機水域冒煙 |
+| 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗:輕武器 NPC range ≥170(#INC-104)、t01/s02 crit:0、s02 heavy = launcher、「塔 310 > 所有輕武器」與「所有重武器 > 塔 310」雙不等式 |
+| 骨架/關節/步態 | 全角色 rig 稽核 + `audit_cast_jump.mjs` |
+| FPV 座艙取景(`COCKPIT`/`ndcH()`/`_buildCockpit` 系) | `audit_cockpit.mjs`(視野帶淨空、裝置 < 武器、消失點對準星;頂緣逐頂點投影量測) |
+| 武裝掛點/槍口 | `audit_muzzle.mjs`(32 英雄 + NPC 四陣營) |
+| `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 建 `BattleSim` 數 `sim.camps.length`(L1 2/2、L2 4/4、L3 6/6) |
+| `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js`(外網,㋓) |
+| 場地場景標記(`VENUES[].scen` 系) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含 |
+| `venueLanes.js` 重烤 / `TOWER_*` / `tower.range` | `audit_map_rules.mjs`(#4)+ `audit_lane_sep.mjs` + `audit_lane_grade_sep.mjs`(#5 洞內塔 ≥20% 射程涵蓋洞口外) |
+| 兵線導航規則(`UTURN_MAX_DEG`/兩 audit/bake 閘門) | `audit_lane_navigation.mjs`(22 項);規則①生效需重烤(㋓) |
+| 地下道(`underpassPlan`/`tunFloorAt`/`UND.*` 系) | `audit_underpass.mjs`(81 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件) |
+| 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(51 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
-| **攀爬路線**(`climb.js` 的 `CLIMB`/`planClimbRoutes`/`surfacePoint`/`makeClimbIndex`/`buildClimbMeshes`、`biomes.js` 的 `cl` 標記與呼叫點、`main.js terrain.climbAt`、`game.js _stepClimb`)| `node tools/audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ 段(123 項離線直測,**執行 climb.js 真正的原文**):抽樣率 ≈30% / 確定性 / **淘汰候選不得擾動其餘抽樣**(每候選固定 2 枚亂數)/ 高度窗口 / 三種設施 ← 三種結構 / **頂端 = `b.y+b.h`** / **地面端落在無障礙那一側**(三面被堵仍找得到第四面;四面皆堵則不掛)/ 水域・陡坡・圖界 / **攀爬軸離表面恰為 OFF 且 OFF > 最大機體碰撞半徑** / 登頂落腳點在輪廓內且不越過中心 / 密集街廓(pitch 36m)仍有三成掛得上;**Ⅴ 提示箭頭**(以最小 three 替身執行真正的發射器原文):桿長相對兵線 chevron 縮小且張角相同、底端朝上/頂端朝下、同一支的兩根桿對稱張開、擺位基底正交且**右手系**、厚度軸 = 向外法線、位置夾在各自的循環窗口內、`update(dt)` 真的推動且不飄走;**Ⅵ 相鄰相接**:設施架在較高者 / 兩端 = 兩座的頂面高 / 下端落腳點在低者輪廓內且離軸 < GRAB_R / 四條硬約束各自退回不架 / A→B 與 B→A 去重成一條 / **逐結構相接率 ≈ 70%**(以「鄰居壓到 MIN_H 以下」隔離掉兩棟都抽中的複合效應)。**改完 MUST 做反向驗證**:拿掉淨空檢查與「取最空側」排序、把抽樣改成「淘汰後才抽」、把 `TOP_STEP` 的夾制拿掉、把 `CLIMB.OFF` 歸零、箭頭的上下方向反號 / 基底鏡射 / 桿長照抄兵線 / 漏掉左右張角的正負號 / `ARROW.OUT` 歸零、相接的去重 / 高差門檻 / 旗標檢查 / 擋道檢查拿掉、設施架到較矮者、下端落腳點不踏進低頂,稽核 MUST 在對應條目紅字。另需**瀏覽器真開房冒煙**(沙箱無 CDN ⇒ 待真機):走到梯腳推前進即掛上、前後推杆上下、爬到頂自動踏上屋頂可開火、Space 脫手向外跳離、無人機/飛行型態掛不上、上下兩端的箭頭在遠處認得出來且不糊成一團、相鄰兩棟的頂面接得起來(自低頂推向高牆即掛上、放手落回低頂而非掉到地面)|
-| **障礙橫斷面**(`game.js _blockerHitT`・`_buildBlockGrid`、`main.js` 的 occ 上傳、`sim.js setWorld`・`_losBlocked` 的有向盒分支)| `node tools/audit_climb.mjs` Ⅲ 段:客戶端彈道與伺服器 LOS 對**同一個盒 + 同一條線段 MUST 同判** —— 對角線穿牆角擋、正面擋、繞過通、細長樓側面 12m 外通(舊制圓柱在此誤擋)、旋轉盒沿長軸擋/側向通(驗 **ry 反號**)、圓柱(神木/巨岩/橋墩)行為不變。**改完 MUST 做反向驗證**:把 `_blockerHitT` 或 `_losBlocked` 任一端寫回純圓柱、把上傳的 `ry` 不反號,稽核 MUST 在對應條目紅字(見 A30)|
-| **橋交會去重**(`biomes.js dedupeCrossingBridges`(回傳 `{roads, rails}`)/`polylinesMeet`/`CROSS_GAP`/`RAIL_RANK` + buildBiomes 呼叫點)| `node tools/audit_bridge_crossing.mjs`(16 項離線直測,**執行 biomes.js 原文**):兩橋幾何相交/交會 → 低優先者**整條剔除**,優先度 兵線補橋(`laneWetPieces`)>**鐵路高架(`RAIL_RANK`;bridge=yes 或 monorail)**>大馬路(`roadWidth` 大)>小馬路;平行不交會兩條都留(平行堆疊歸 `dedupeParallelBridges`)/ 等寬 → 長者保留 / 換順序仍依 rank。**含立體交叉**(使用者定案)。**鐵路(2026-07-29)**:`rails` 另傳入/另回傳過濾集(`osmData.rails` 就地換、`buildRails` 吃去重集);**鐵路×道路交會保留鐵路**(高架優先);**交會容差不對稱** —— 兩方皆道路 → `CROSS_GAP`(含端點/T 字貼近,道路已 merge 鏈),**任一方鐵路 → `gap=0` 只認真正交叉**(鐵路未 merge 鏈,端點貼近的同線段/junction 不得誤剔而砍斷鐵路)。MUST 排在 `roadInput` 定案前 + `buildRails` 之前。**改完 MUST 反向驗證**:把 `polylinesMeet` 改恆 false ⇒「道路交會失效」+「鐵路×道路交會失效」兩對照組紅字。**真機已複核**(Node 連 Overpass + in-page 注入 geocache):倫敦/澀谷 survivor rail×rail=rail×road=road×road=0、鐵路同線不砍|
-| **馬路橫切繞行**(`biomes.js skirtWaterClips`/`SKIRT_NEAR\|OPEN\|MAX\|STEP\|CROSS_MIN` + `splitWaterPieces` 的 `!inclSwamp` 呼叫)| `node tools/audit_water_skirt.mjs`(8 項離線直測,**執行 biomes.js 原文** + 合成地形):判定 = 垂向雙側量到乾地距 lo/hi —— **貼邊橫切 = 不對稱**(一側近岸 `lo<SKIRT_NEAR`、另一側開放水域 `hi≥SKIRT_OPEN`)MUST 內部貼邊頂點推到乾地繞行;**橫跨對岸 = 對稱/兩側皆近**(`lo≈hi` 恆非貼邊 ⇒ **含斜交穿越**)MUST 建橋不繞。直角穿越 + **45° 斜交 40m 河**(`SKIRT_OPEN>SKIRT_NEAR` 才保證斜交對稱穿越不被誤繞 —— 複審抓到的回歸)+ 連續橫跨型弧長 ≥ `SKIRT_CROSS_MIN` 才判整段建橋。**只作用真 OSM 道路**(`!inclSwamp`;兵線/離線備援/真 bridge=yes way 不繞)。**改完 MUST 反向驗證**:①`skirtWaterClips` 改 no-op ⇒「貼邊繞行」紅字 ②去掉「另一側開放」條件(回舊版單看近岸)⇒「斜交穿越」紅字。**步道一律不建橋(2026-07-29,`PED_HW`)**:沿岸長步道(如泰晤士河維多利亞堤岸)skirt 的橫跨偵測會誤放行整條 ⇒ 定案 footway/path/pedestrian/steps/cycleway/bridleway **不進橋樑管線**(`buildRoads` 的 `brg = !ped && …`、`markGradeCorridors` 同步 gate),跨水段/bridge=yes 皆退成貼地步徑;「步道不納入兵線」由 bake 的 `DRIVABLE` 天然成立。真機複核:倫敦 L3 步道橋 decks 由數百→0、真車道橋不動|
-| **橋上砲塔墩座台**(`biomes.js planTowerBridgePads`(純幾何單一縫)/`TOWER_PAD_AXIS`(沿橋軸)/`TOWER_PAD_OUT`(水側徑向)/`TOWER_PAD_R`/`TOWER_BASE_R`;`buildTowerBridgePads` 只建 mesh)| `node tools/audit_bridge_tower_pad.mjs`(23 項離線直測,**執行 biomes.js 原文** + `makeDeckIndex`):砲塔**沿橋軸**走位帶 ≥ 基座半徑 + 8m、**水側徑向**(`walkRadialOut`)走位帶 ≥ 基座半徑 + 8m(2026-07-29:PR#24 只放大沿橋軸 `TOWER_PAD_AXIS`,水側 `TOWER_PAD_R=10.5` 沒動 ⇒ 繞塔水側走 orbit r>10.5 掉水;新增 `TOWER_PAD_OUT=16`,`vOut = lat + TOWER_PAD_OUT`,橋內側由主橋面接手故只放大朝水側)、貼基座繞行整圈無掉點、`TOWER_BASE_R` 不變(碰撞/LOS/平衡不動)、寬橋內砲塔不加外伸台仍可繞行。**改完 MUST 反向驗證**:`TOWER_PAD_AXIS`/`TOWER_PAD_OUT` 各寫回舊值(10.5)⇒ 沿橋軸/水側走位帶不足兩對照組紅字。**真機已複核**(倫敦跨河橋 4 座砲塔 orbit r10~16 雙向 0 掉落)|
-| **地形射線**(`terrain.rayTerrain`/`markTriDead`/`punchPortalHoles`/`TERRAIN.GRID_N`)| `node tools/audit_terrain_ray.mjs`(11 項離線直測):與「暴力掃完全部三角形」逐條比對 —— 命中/未命中一致、命中距離 Δt < 1e-3、命中點 y 與 `heightAt` 同源、**打洞後穿洞射線不再被擋且仍與基準一致**、射點在圖外/平行軸/far 太短等邊界。**加速比應在兩位數以上**(退回個位數 = 網格行進退化成整圖掃描) |
-| **規律結構都市規劃朝向**(`ground.js` orient 的 ink 分支/`gridA`/`GRID_FAR_R2`、`biomes.js roadDirAt` 的 `r2` 參數)| `node tools/audit_ground_qc.mjs` ⑦(gridA **執行原文**):單幹道對齊、**垂直街道網不互相抵銷(mod 90° 的 4 倍角圓平均)**、長度加權、無圖資 null(離線備援退回隨機)、GRID_FAR > 46m、orient 兩分支固定抽 2 枚 rnd(§2.3 序列不變)、主迴圈 ink 恆對齊旗標、roadDirAt 掃描窗由半徑推導(預設 = 舊版 span 2)。**改完 MUST 反向驗證**:不傳 ink 旗標 / 摺疊寫回 1 倍角 / 掃描窗寫死,稽核 MUST 在對應條目紅字 |
-| **地貌交界外溢與交界樣式**(`ground.js planSeamOverlays`(純函式單一縫)/`SEAM_STYLES`・`SEAM_SOFT`(逐分區組合樣式表)/`seamAlpha`(頂點塑形)/`seamLift`/`SEAM_QC_W`/脊帶 `bandBuckets`)| `node tools/audit_ground_seam.mjs`(49 項離線直測,**執行 ground.js 原文**):直線交界兩側對稱互溢(共享邊角點 α=0.5)、**對角鄰格補角**(α=0.25;90° 階梯轉角無缺口)、孤格軟化(0.75)、崖('!')交界角點正規化到 α=1(與不透明底毯無階差)、null 不收不溢、共享角點 α 逐位元相同(水密)、與獨立鏡射實作全等、**45° 交界 0.5 等值線長度比 ≈1.0(舊制 cell 邊階梯 √2 = 鋸齒本體)**;**逐組合樣式**:市區交界 sharp 壓窄(人工邊界明確)/同分區異款預設柔和/雪線 dither 斑塊/生態交界**間歇中間樣態脊帶**(steppe・marsh・mud,兩 key 權重**乘積**對稱 ⇒ 三分區交點兩側同值、間歇閘吃**角點**座標、變體全圖固定 —— 三條水密不變式)、`seamAlpha` 全樣式端點恆定(α=0→0、1→1)、微升差/脊帶 lift < fade 下限 0.110、renderOrder 恆 <0、純函式零 rnd、`subCoarse` 分區表僅一份(與邊界遮蔽物共用)。內建對照組ⓐ只看四鄰 ⓑ正規化 /4 ⓒ脊帶單邊公式 ⓓ逐格閘門。**改完 MUST 反向驗證**:拿掉對角鄰 / 正規化寫回 /4 / 樣式表恆回 SOFT / 脊帶公式寫回單邊 w(1−w) / 間歇閘寫回逐格 / 脊帶變體寫回逐區換款 / band 擾動端點不歸零 / 微升差越界,稽核 MUST 在對應條目紅字 + `node tools/audit_ground_qc.mjs` 仍全綠 |
-| **表現層資源生命週期**(`_takeProjectile`/`_dropBullet`/`_freeEffect`/`FX_MAX`/`markShared`/`disposeTree`/`unitGeo`/`_dpr`/`antialias`)| ①`node tools/audit_gpu_lifecycle.mjs`(34 項靜態規則):地形不回 raycast 目標、彈體/特效不得只 `scene.remove`、共用幾何全數 `markShared`、高頻特效不重配幾何、觸控填充率設定(桌機行為不得回歸)②瀏覽器真開房冒煙:持續開火 60s 後 DevTools **Memory → GPU/JS heap 不得單調上升**,`renderer.info.memory.{geometries,textures}` 應在上限內震盪而非持續增加 ③改 fade 回呼的 scale 時 MUST 目視光束粗細(單位幾何的 scale **就是半徑**,舊版是純比例 —— 漏乘 `r` 會讓光束變成 1m 細線)|
-| **三種遊戲機制**(`server/rooms.js`・`server/server.js` 路由・`public/js/netmode.js`・`net.js makeNet`・`localhost.js`・`tools/build_solo.mjs`・`.github/workflows/*`)| ①`node tools/audit_net_modes.mjs`(約 60 項靜態規則 + netmode 直測):三支瀏覽器端伺服器模組無 Node 內建 import、`server.js` 不自己 new BattleSim/BotBrain、`main.js` 不自己 `new Net()`、dev 白名單 = build 複製清單、`index.html` 靜態鈕面 = `LINK_MODES`、節點網址正規化(含 `ftp:` 一律拒絕)②`node tools/audit_solo_boot.mjs`(真瀏覽器,不載 three):鏡射佈局下 import 鏈成立、**`data.js` 只有一個模組實例**、瀏覽器內跑完一局收得到快照、`kill()` 後 tick 停止 ③`npm test` 的「單機機制:瀏覽器內 RoomHub 迴路」段(驗證與伺服器同標準、自動補電腦玩家、`shutdown()` 收乾淨)④WS 端對端全段 MUST 全綠(rooms.js 抽離後行為 MUST 不變)⑤`node tools/audit_ui_layout.mjs`(連線機制三選一同列、鈕面不溢出)|
-| **程序生成物件零件擺位**(`hazards.js BUILDERS` / `biomes.js` 的 `VEG_DEFS`・`GIANT_DEFS`・`GIANT_DECO` / `xform.js vegPartXform`)| `node tools/audit_object_joints.mjs`(解析式接合稽核,約 5300 個接合:20 種障礙物 × 8 seed × sc 0.75/1/1.35 + 8 種神木 + 16 種植被 + 9 種巨木特徵,各驗正株與「轉向+微傾」)—— 每個接合在**接合方向的法平面上取兩個互相正交的觀察角**量縫,四條硬失敗 FLOAT / PARTIAL / DETACHED / ISOLATED(見 A26/A27 與該檔檔頭)。合法的接合型態(主人/貼面/中心貫穿/橫躺觸地)有 rescue,豁免一律附理由。**改完 MUST 順手做反向驗證**:把改動故意寫回錯的那一版,稽核 MUST 失敗(否則等於沒驗到) |
-| 小地圖顯示範圍(`mmMode`/`_mmWindow`/`_world2mm`/`_world2mmFull`/`_mmShadows`/`MM_NEAR`) | ①`node tools/audit_minimap_view.mjs`(16 項離線直測):full 模式 `_world2mm` MUST 與 `_world2mmFull` 完全一致(舊行為不得回歸)、near 模式半徑 = `sight × AIM_SIGHT_MULT × PAD` 且自機置中、貼邊夾制不出圖、地圖小於顯示窗時該軸退回全圖、`_world2mmFull` MUST NOT 隨模式改變(見 A24) ②瀏覽器真開房冒煙:M / 十字鍵右切換後底圖與標記同框(單位不飄)、切回全部時**先前探索過的迷霧位置不變** |
-| 機種絕招觸發條件(`GAME.ABILITY_HOLD_S`/`_tickHoldAbility`/`_fireHoldAbility`/`_rmbUp`) | 瀏覽器真開房冒煙:①**一般模式**長按右鍵 MUST 出招且**放開後不切進狙擊模式** ②狙擊模式長按同樣出招 ③短按右鍵仍是切換模式(彈夾空時仍走換彈)④觸控 ZR 出同一招且鈕面顯示 CD ⑤三機種各驗一次(自殺機/重砲/餌機) |
-| `mobile.js`(虛擬搖桿/陀螺儀)/ `_applyLook` / `_moveAxis` / `_cmd` / 觸控版 CSS | ①**桌機不得回歸**:鍵鼠開一局確認移動(含對角線速度)、滑鼠視角、右鍵短按切瞄準/長按絕招、ESC 選單全同舊版 ②`node tools/audit_touch_layout.mjs`(54 組:6 尺寸 × 4 機種 × 左右手 + 疊層可點性)—— **四分區 A 機體資訊 / M 小地圖 / L 左手控件 / R 右手控件零重疊**、控件不出界、**十字鍵 MUST 有 `map`(小地圖範圍)與 `gyro`(陀螺開關)且全層 `gyro` 恰好 1 顆**(見 A22)、**肩鍵/扳機直條逐列左右對應**(第 1 列 L ⇄ R、第 2 列 ZL ⇄ ZR 絕招,ZL/⇄換機 隱藏時列位 MUST NOT 遞補 ⇒ `.tl-sys` MUST 是固定 4 列的 grid + 逐鈕 `grid-row`,**MUST NOT 退回 flex**)、ABXY 圓心距 ≥ 兩半徑和(d ≤ 41.4% 外框 ⇒ **外框 MUST ≥ 116px** 才有 44px 觸控目標)、**十字鍵外框 MUST 由臂長推導**(3 格 × 臂;用百分比切外框的話臂一定 < 44×40)、觸控目標 ≥ 44×40 ③**疊層可點性**(同一支腳本):`#touchLayer` 未收起時疊層鈕 MUST 被 `#tlLook` 擋住、掛上 `body.tl-off` 後三顆鈕 MUST 都點得到(見 A19)④`node tools/audit_touch_gesture.mjs`(17 項合成指標事件,**空處手勢**):單指拖曳 MUST NOT 開火、純雙擊 MUST NOT 開火、輕點→按住 與 輕點→拖曳 兩條路徑都 MUST 開火且放開即停、間隔/時長邊界、A 鈕並用時兩邊都放開才停火、疊層開著不吃手勢 ⑤真機冒煙:類比十字鍵推進量、拖曳視角、左手模式鏡像、轉向後畫布不拉伸 |
-| `#touchLayer` 的**節點位置**或 `--tl-stick`/`--tl-dpadw|h`/`--tl-gp`/`--tl-rstick`/`.ori-*` 版型段 | 搖桿節點 **MUST 留在 body 層**(`position: fixed`)—— 放進 `#game` 就只有戰鬥看得到(前科:玩家回報「沒看到虛擬搖桿」)。尺寸/定位全靠那幾個 CSS 變數,**MUST 保留 `body.touch-ui` 的保險預設值**,否則少掛 ori class 就塌成 0×0。改完 MUST 跑大廳端對端量測(真手機 profile + **不設覆寫**):入口鈕→診斷→設定列→試玩搖桿有實際尺寸 |
-| **選單版型**:`style.css` 的 `body.touch-ui.ori-*` 選單段 / `@media (max-width: 760px)` / `.char-pick`/`.cd-lower`/`.cd-art` / 任何**鈕面文字** | `node tools/audit_ui_layout.mjs`(309 項:4 直式 + 2 橫式尺寸)—— ①**鈕面 MUST NOT 含括號補述**(掃 `index.html` 靜態鈕 + `main.js` 動態 `textContent` 與內嵌 `<button>`)②**桌機左右並排的區塊/按鍵,直式 MUST 維持左右並排**:大廳三入口同列且「劇情戰役」落在首屏、陣營卡 STEEL 左 / SWARM 右、房間動作列同列、疊層按鈕列同列 ③選角**頭像 ▏展示台 左右並排**,且 `.cd-art` **MUST 解除 sticky**(單欄時不透明的頭像會蓋掉詳細說明)④鈕面文字不溢出方框(`scrollWidth ≤ clientWidth`;clip-path 會直接把字裁掉)、畫面無橫向溢出 ⑤**每個可關閉疊層 MUST 有右上角 ✕ 且底下沒壓住內容** —— ✕ 是 `position: absolute` 不佔流內空間,框 MUST 掛 `.has-close` 讓出上緣(`.story-brief-box` 是唯一例外:第一件是全幅立繪)|
-| 陀螺儀相關(`Gyro`/`gyroBlockedReason`/`TOUCH.gyroSrc`/`LOOK.GYRO_*`/`--https`) | ①`node tools/audit_gyro.mjs`(18 項合成事件):兩條感測路徑(`deviceorientation` 融合姿態 / `devicemotion` 角速度)軸向分離且增益 1:1、**俯仰 MUST 同號**(相機朝機背 ⇒ beta 由 90 降到 0 = 俯視,對應 `rotationRate.beta` 為負)、橫式軸向自動補正、三種自動切換(收不到 → 換路徑 / alpha 恆 null → 換路徑 / 鎖死來源不偷換)、兩條都不通才關閉並講原因 ②預設開啟 + **十字鍵下「陀螺」鈕**一鍵收放(2026-07-27 起 ZR 改給機種絕招):按一下關/再按一下開且鈕面 `.on` 跟著走、**iOS 靜默啟用 MUST NOT 在非使用者手勢中要權限**(要了會被拒,連帶把「預設開啟」的偏好一起關掉 ⇒ 保留偏好並提示按那顆鈕 —— 提示文字 MUST 指到真的存在的鈕)③**MUST 用 `https`(或 localhost)真機實測** —— `http://<區網 IP>` 不是 secure context,瀏覽器靜默不派送感測事件,在那裡測永遠是「沒反應」。跑 `npm run mobile` 後手機連 `https://`:轉手機 → 準星同向轉動;無磁力計的機器 MUST 驗自動切到「角速度」後水平轉得動 |
+| 攀爬路線(`climb.js` 系) | `audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ(123 項)+ 真機冒煙(掛梯/推杆/登頂開火/跳離/箭頭辨識/相鄰相接) |
+| 障礙橫斷面(`_blockerHitT`/occ 上傳/`_losBlocked`) | `audit_climb.mjs` Ⅲ:兩端對同一盒同線段 MUST 同判(含 ry 反號、細長樓側面、圓柱不變) |
+| 橋交會去重(`dedupeCrossingBridges` 系) | `audit_bridge_crossing.mjs`(16 項;優先度 兵線 > 鐵路 > 大馬路 > 小馬路;鐵路容差 `gap=0` 只認真交叉) |
+| 馬路橫切繞行(`skirtWaterClips` 系) | `audit_water_skirt.mjs`(8 項;斜交對稱穿越 MUST 建橋不繞;步道一律不進橋樑管線 `PED_HW`) |
+| 橋上砲塔墩座(`planTowerBridgePads` 系) | `audit_bridge_tower_pad.mjs`(23 項;沿橋軸與水側走位帶 ≥ 基座 + 8m;`TOWER_BASE_R` 不變) |
+| 地形射線(`rayTerrain`/`punchPortalHoles` 系) | `audit_terrain_ray.mjs`(11 項;與暴力掃逐條一致;加速比 MUST 兩位數) |
+| 都市規劃朝向(`ground.js` orient/`gridA`) | `audit_ground_qc.mjs` ⑦(垂直街道網 mod 90° 摺疊不抵銷;orient 固定抽 2 枚 rnd) |
+| 地貌交界(`planSeamOverlays`/`SEAM_STYLES`/`seamAlpha`) | `audit_ground_seam.mjs`(49 項)+ `audit_ground_qc.mjs` 全綠 |
+| 小區域組合風格(`planEnclaves`/`ENCLAVE_STYLES`) | `audit_ground_enclave.mjs`(33 項;消費端 MUST NOT 硬編第二份組合表) |
+| 表現層資源生命週期(池/`markShared`/`disposeTree` 系) | `audit_gpu_lifecycle.mjs`(34 項)+ 真機 60s 開火 heap 不單調上升 + 目視光束粗細(scale 就是半徑) |
+| 三種遊戲機制(`rooms.js`/`netmode.js`/`build_solo` 系) | `audit_net_modes.mjs` + `audit_solo_boot.mjs`(`data.js` 單一模組實例)+ `npm test` 單機段與 WS 全段 + `audit_ui_layout.mjs` |
+| 程序生成物件擺位(`BUILDERS`/`VEG_DEFS`/`vegPartXform`) | `audit_object_joints.mjs`(約 5300 接合;FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗;豁免附理由) |
+| 小地圖顯示範圍(`mmMode`/`_world2mm*` 系) | `audit_minimap_view.mjs`(16 項)+ 真機切換冒煙(已探索迷霧不得錯位) |
+| 機種絕招觸發(`ABILITY_HOLD_S`/`_tickHoldAbility` 系) | 真機冒煙:一般/狙擊長按皆出招且不誤切模式、短按仍切換、ZR 同招顯 CD、三機種各一次 |
+| `mobile.js`/`_applyLook`/`_moveAxis`/`_cmd`/觸控 CSS | ①桌機 MUST 不回歸 ②`audit_touch_layout.mjs`(54 組;四分區零重疊、觸控目標 ≥44×40、`.tl-sys` 固定 grid)③疊層可點性 ④`audit_touch_gesture.mjs`(17 項)⑤真機冒煙 |
+| `#touchLayer` 節點位置 / `--tl-*` CSS 變數 | 搖桿 MUST 留 body 層 + 保留 `body.touch-ui` 保險預設值;真機大廳端對端量測(不設覆寫) |
+| 選單版型 / 任何鈕面文字 | `audit_ui_layout.mjs`(309 項;鈕面無括號補述、桌機並排直式維持並排、`.cd-art` 解除 sticky、疊層 ✕ 規則) |
+| 陀螺儀(`Gyro`/`gyroSrc`/`LOOK.GYRO_*`) | `audit_gyro.mjs`(18 項;兩感測路徑、俯仰同號、自動切換)+ **MUST 用 https/localhost 真機測**(非 secure context 靜默無感測事件) |
 
-**e2e 結構備忘**:前段 import `BattleSim` 直測(`_add` 的測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下要「看到」敵方 MUST 另開 `mode:'spectator'` client 偵察。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
+**e2e 結構備忘**:前段 import `BattleSim` 直測(測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下偵察 MUST 另開 `mode:'spectator'` client。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
