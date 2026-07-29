@@ -227,6 +227,9 @@ export class BattleSim {
    *  ①隧道(ty=2)側牆/山體:一端在洞內(lev 2)、一端在洞外,且射線由「側牆」而非「洞口」穿出
    *    → 岩盤擋(tunnelSideExit)。以洞內端所在 cell 取其 ribbon(洞內端必落在自身 cell),
    *    沿軸經洞口穿出不擋(隧道兵線正常對射),側/上方一律擋 —— 砲塔/小兵/英雄穿牆一併封死。
+   *    交疊 ribbon(髮夾雙腿/兩隧道相交)MUST 全數判側牆才擋:任一條判「沿軸出洞口」= 射線
+   *    走在該走廊的空腔內,照放行 —— ANY-match 會把沿另一走廊的合法對射誤判成穿岩盤,
+   *    lev 抖動下更疊成「看不到打不到」的免傷掩體(2026-07-29 澀谷交疊)。
    *  ②橋面/隧道天花薄板(under-block):兩端同 ribbon 且層不符(僅「橋上 ↔ 正下方」一組)→ 擋;
    *    側向射擊不誤擋(橋 ty=1 只走這條,行為與舊版一致)。
    * 用「同 ribbon + 層不符」而非絕對 y(伺服器無地形高程、回報 y 為離站立表面高,橋上/橋下皆 ≈0)。
@@ -235,13 +238,19 @@ export class BattleSim {
     const g = this._slabGrid;
     const C = LOS.CELL_M;
     const levA = this._unitLev(ea), levB = this._unitLev(eb);
-    // ① 隧道側牆:恰一端在洞內 → 以洞內端 ribbon 判「側牆穿出」
+    // ① 隧道側牆:恰一端在洞內 → 以洞內端全部所在 ribbon 判「側牆穿出」,全數側牆才擋
     if ((levA === 2) !== (levB === 2)) {
       const ix = levA === 2 ? ax : bx, iz = levA === 2 ? az : bz;
       const ox = levA === 2 ? bx : ax, oz = levA === 2 ? bz : az;
       const arrI = g.get((Math.floor(ix / C) + 32768) * 65536 + (Math.floor(iz / C) + 32768));
-      if (arrI) for (const s of arrI) {
-        if (s[5] === 2 && ptOnRibbon(ix, iz, s) && tunnelSideExit(ix, iz, ox, oz, s)) return true;
+      if (arrI) {
+        let side = false;   // 至少落在一條隧道 ribbon 上,且每一條都判「側牆穿出」
+        for (const s of arrI) {
+          if (s[5] !== 2 || !ptOnRibbon(ix, iz, s)) continue;
+          if (!tunnelSideExit(ix, iz, ox, oz, s)) { side = false; break; }   // 沿軸出洞口 → 放行
+          side = true;
+        }
+        if (side) return true;
       }
     }
     // ② 薄板 under-block:需兩端同 ribbon(A 之 cell 查起)
