@@ -51,29 +51,31 @@ const path = (turns, leg = 120) => {
   return pts;
 };
 
-section('規則③ 累積轉角 ±' + MAPGEO.TURN_ACCUM_MAX_DEG + '°(順逆時針可抵消)');
+// 測資由門檻推導(調 TURN_ACCUM_MAX_DEG 免改稽核):step 三步走滿門檻、四步出界;
+// LIM < 360 保證 step ≤ 120 —— 單點恆低於規則②門檻(150°)與 path() 的 180° 幾何上限。
+const LIM = MAPGEO.TURN_ACCUM_MAX_DEG, STEP = LIM / 3;
+section('規則③ 累積轉角 ±' + LIM + '°(順逆時針可抵消)');
+ok('門檻 MUST < 360°(否則繞圈不設防)', LIM < 360);
 ok('直線不累積', laneTurnAccumAudit([[0, 0], [600, 0]]).ok && laneTurnAccumAudit([[0, 0], [600, 0]]).maxAbsDeg < 1);
 ok('平緩兩點(< 3 頂點防呆)恆合法', laneTurnAccumAudit([[0, 0], [10, 0]]).ok);
-ok('垂直街網單一 90° 直角轉(範圍邊界)合法', laneTurnAccumAudit(path([90])).ok);
-ok('同向累積 60°+60°=120°(單點皆遠低於迴轉門檻)判出界', !laneTurnAccumAudit(path([60, 60])).ok);
-ok('逆時針同向累積 −60°−60° 亦判出界(帶號對稱)', !laneTurnAccumAudit(path([-60, -60])).ok);
-ok('蛇行 +60/−60/+60/−60(順逆抵消)合法', laneTurnAccumAudit(path([60, -60, 60, -60])).ok);
-ok('S 大彎 +85/−85/+85(抵消後不出界)合法', laneTurnAccumAudit(path([85, -85, 85])).ok);
-ok('單一 120° 大轉(低於迴轉門檻 150°,規則②放行)由本規則攔下',
-  laneUTurnAudit(path([120])).ok && !laneTurnAccumAudit(path([120])).ok);
-ok('繞圈(4×90°)判出界', !laneTurnAccumAudit(path([90, 90, 90, 90])).ok);
-// 兩規則獨立(另一向):先偏 −70° 再 +155° 掉頭 —— 累積峰值 85° 在範圍內(本規則放行),
+ok('垂直街網單一 90° 直角轉合法', laneTurnAccumAudit(path([90])).ok);
+ok('累積走滿門檻(3×' + STEP + '°,範圍邊界)合法', laneTurnAccumAudit(path([STEP, STEP, STEP])).ok);
+ok('同向累積 4×' + STEP + '°(單點皆低於迴轉門檻)判出界', !laneTurnAccumAudit(path([STEP, STEP, STEP, STEP])).ok);
+ok('逆時針同向累積亦判出界(帶號對稱)', !laneTurnAccumAudit(path([-STEP, -STEP, -STEP, -STEP])).ok);
+ok('蛇行 ±' + STEP + '° 交錯(順逆抵消)恆合法', laneTurnAccumAudit(path([STEP, -STEP, STEP, -STEP, STEP, -STEP])).ok);
+ok('繞圈(4×90° = 360°)判出界', !laneTurnAccumAudit(path([90, 90, 90, 90])).ok);
+// 兩規則獨立:先偏 −70° 再 +155° 掉頭 —— 累積峰值 85° 在範圍內(本規則放行),
 // 局部 155° 反轉由規則②攔 ⇒ 規則③ MUST NOT 被當成規則②的替代品而移除任一方。
 // (不用恰好 150°:atan2 量測有 1e-14 級浮點誤差,會卡在規則②的嚴格 < 門檻上。)
 ok('−70° 後 +155° 掉頭:規則③放行、規則②攔(互相獨立)',
   laneTurnAccumAudit(path([-70, 155])).ok && !laneUTurnAudit(path([-70, 155])).ok);
-// 量測正確性:+45°+45° 的累積峰值 ≈ 90°(門檻恰卡在此刻度上)
+// 量測正確性:+45°+45° 的累積峰值 ≈ 90°(帶號總和,與門檻無關)
 ok('累積量測 = 帶號轉角總和(±0.5°)', Math.abs(laneTurnAccumAudit(path([45, 45])).maxAbsDeg - 90) < 0.5);
 // 重取樣防鋸齒:階梯狀短邊逐頂點 ±90° 交錯,宏觀朝 45° 前進,MUST NOT 誤判出界
 ok('階梯狀短邊(宏觀前進)不誤判', laneTurnAccumAudit(stair).ok);
 
 // 反向驗證 A:若把「帶號累積」誤寫成「絕對值累積」(不可抵消),蛇行對照組會被誤殺 ——
-// 證明真正的實作靠帶號抵消放行它。
+// 證明真正的實作靠帶號抵消放行它(蛇行對數推導:每對 ±60° 貢獻 |累積| 120°,湊到 > 門檻)。
 section('規則③ 反向驗證(壞版對照組 ⇒ 稽核紅字)');
 const absAccum = (pts) => {                                  // 壞版:|dh| 累加,順逆不抵消
   let acc = 0;
@@ -86,12 +88,13 @@ const absAccum = (pts) => {                                  // 壞版:|dh| 累�
   }
   return acc * 180 / Math.PI;
 };
+const zig = path(Array.from({ length: (Math.ceil(LIM / 120) + 1) * 2 }, (_, i) => (i % 2 ? -60 : 60)));
 ok('對照組:蛇行在「絕對值累積」壞版下誤殺(證明帶號抵消語意)',
-  absAccum(path([60, -60, 60, -60])) > MAPGEO.TURN_ACCUM_MAX_DEG && laneTurnAccumAudit(path([60, -60, 60, -60])).ok);
-// 反向驗證 B:若門檻鬆到 180°,120° 累積案就漏放 —— 證明 90° 門檻正是攔截點。
-const looseAccum = (pts) => laneTurnAccumAudit(pts).maxAbsDeg <= 180;   // 手動用 180° 門檻重判
-ok('對照組:120° 累積在 180° 門檻下漏放(證明 90 門檻有作用)',
-  looseAccum(path([60, 60])) && !laneTurnAccumAudit(path([60, 60])).ok);
+  absAccum(zig) > LIM && laneTurnAccumAudit(zig).ok);
+// 反向驗證 B:若門檻鬆到 2×LIM,四步累積案(4/3×LIM)就漏放 —— 證明現行門檻正是攔截點。
+const looseAccum = (pts) => laneTurnAccumAudit(pts).maxAbsDeg <= LIM * 2;   // 手動用雙倍門檻重判
+ok('對照組:4/3×LIM 累積在雙倍門檻下漏放(證明現行門檻有作用)',
+  looseAccum(path([STEP, STEP, STEP, STEP])) && !laneTurnAccumAudit(path([STEP, STEP, STEP, STEP])).ok);
 
 // ============ 規則① 橋/隧只能從出入口進出(laneStructEntryAudit) ============
 // struc[k] = 段 k(節點 k−1→k)是否結構邊;portal[i] = 節點 i 是否結構 way 端點。
