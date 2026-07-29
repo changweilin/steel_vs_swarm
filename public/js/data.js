@@ -703,6 +703,20 @@ export function blastFalloff(r, d) {
   return ((r * 1.8 - d) / (r * 1.3)) ** 0.75;
 }
 
+// ---- 偏心傷害遞減(2026-07-29 使用者需求「所有武器範圍攻擊都有偏心傷害遞減」)----
+// 三類範圍攻擊(aoeClass)全數「命中量體中心滿額、偏離中心遞減」:
+//   blast:既有 blastFalloff(核心 ≤0.5r 全傷 → 1.8r 歸零)本身就是偏心遞減,不另設第二條曲線。
+//   fan  :frac = 水平夾角偏離錐軸的比例(0 = 正對錐軸,1 = 錐緣)→ sim.heroPlasma。
+//   line :frac = 垂距偏離圓柱軸的比例(0 = 正中,1 = 貼在 R + hitR(t) 邊緣)→ sim.heroLance/_lanceHits。
+// fan/line 共用同一條線性曲線,邊緣保底 AOE_EDGE。**正中滿額** ⇒ 對進戰模型(tools/duel.mjs)與
+// bal 不變式全數模型化「瞄準正中」的 1v1,天然不動;遞減只作用在錐緣/柱緣「順帶掃到」的偏心目標。
+// sim 結算與客戶端 HUD 估算(_lanceFeedback)MUST 共用本縫(§2.1,兩端分家 = 數字對不上)。
+export const AOE_EDGE = 0.5;
+/** 偏心倍率:frac = 偏離量 / 半寬(夾 [0,1]);正中 1.0,線性遞減到邊緣 AOE_EDGE */
+export function offAxisFalloff(frac) {
+  return 1 - (1 - AOE_EDGE) * Math.max(0, Math.min(1, frac));
+}
+
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
 // 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。
 //   blast 爆炸傷害:球形超壓(launcher 榴彈/火箭、missile 飛彈)→ sim._blast + blastFalloff

@@ -9,10 +9,10 @@ import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
-  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE,
+  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
-  BALLISTIC, lobMinRange,
+  BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
 } from '../public/js/data.js';
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
@@ -295,6 +295,47 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
+
+  log('— sim:射程閘門量到目標「近側表面」(_surfD3 = d3 − hitR;射程邊界打建築不再被靜默丟棄)—');
+  {
+    const rr = hitR(tw);
+    assert(rr >= 7, `砲塔水平量體 hitR = ${rr}m(彈著停在牆面,離中心就是這麼遠)`);
+    rb.ammo = {}; rb.fireAt = {}; rb.reloadUntil = {};
+    // 表面剛好壓在 ×1.25 寬容內(中心距離 = 射程 ×1.25 + hitR − 1):舊制量中心 ⇒ 這發被靜默丟棄
+    rb.x = tw.x + wl.range * 1.25 + rr - 1; rb.z = tw.z;
+    const hpEdge = tw.hp;
+    sim.t += 1;
+    sim.heroHit('p_r', tw.id);
+    assert(tw.hp < hpEdge, '表面在 ×1.25 寬容內(中心超界)命中(舊制以中心量距在此靜默丟棄)');
+    // 表面也超出 ×1.25 寬容 → 仍靜默丟棄(防作弊上限不因 hitR 無限放寬)
+    rb.x = tw.x + wl.range * 1.25 + rr + 5;
+    const hpOut = tw.hp;
+    sim.t += 1;
+    sim.heroHit('p_r', tw.id);
+    assert(tw.hp === hpOut, '表面超出 ×1.25 寬容仍被靜默丟棄(射程上限不動)');
+  }
+
+  log('— sim:範圍攻擊偏心傷害遞減(fan 扇形:偏離錐軸線性遞減到 AOE_EDGE;line 見 audit_lance_hit)—');
+  {
+    const fanCh = Object.keys(CHARACTERS).find((c) => heroWeapon(c, 'light', 1)?.fan);
+    assert(!!fanCh, `有扇形輕武器角色可測(${fanCh})`);
+    const wf = heroWeapon(fanCh, 'light', 1, true);
+    const fh = sim.addHero('SWARM', 'p_f', fanCh);
+    fh.x = 700; fh.z = 700; fh.y = 0;   // 遠離兵線/塔,避免流彈干擾
+    const arc = (wf.arc || 15) * Math.PI / 180;
+    const mkT = (ang) => sim._add({ kind: 'soldier', side: 'STEEL',
+      x: fh.x + 30 * Math.sin(ang), z: fh.z + 30 * Math.cos(ang), y: 0, hp: 99999 });
+    const tc = mkT(0), te = mkT(arc * 0.8);   // 正對錐軸 / 錐緣 80%(同距離 ⇒ 距離衰減互相抵銷)
+    sim.t += 5;
+    sim.heroPlasma('p_f', 0, 1, 'light');
+    const dc = 99999 - tc.hp, de = 99999 - te.hp;
+    assert(dc > 0 && de > 0, '錐內兩目標(正對錐軸 / 錐緣 80%)都命中');
+    const expF = offAxisFalloff(0.8);
+    assert(Math.abs(de / dc - expF) < 0.03,
+      `偏心遞減 ×${(de / dc).toFixed(3)}(期望 ${expF.toFixed(3)};正對錐軸滿額)`);
+    assert(Math.abs(offAxisFalloff(1) - AOE_EDGE) < 1e-9, `錐緣保底 = AOE_EDGE(${AOE_EDGE})`);
+    sim.ents.delete(tc.id); sim.ents.delete(te.id);   // 測試假人沒有 lane,tick 前先移除
+  }
   Math.random = _rnd0;
 
   log('— sim:單架無人機(共用玩家狀態 / 生存值 80% / 傷害同機甲 / 射程高約 1/8)—');
