@@ -106,6 +106,14 @@ const densify = evalBlock('function densify(', 'densify');
 // 地下道規劃(平坦 tunnel way 的下沉剖面)—— 與遊戲同一份原文
 const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
   { ROAD_SEG, WATER, densify, tunnelCoverIntervals });
+// 結構隧道資格 —— 與遊戲同一份原文(人行/室內 tunnel way 不進結構管線 ⇒ 不成洞;
+// 2026-07-29 澀谷側壁破口案)。①/⑦ 判定與候選診斷 MUST 同吃這個閘,否則稽核比執行期多洞。
+const PED_HW = new Function(`return ${/const PED_HW = (\/[^\n]+\/);/.exec(bsrc)[1]};`)();
+const strucTunnel = (() => {
+  const m = /const strucTunnel = \(tags\) =>[\s\S]*?;\r?\n/.exec(bsrc);
+  if (!m) throw new Error('biomes.js 找不到 strucTunnel');
+  return new Function('PED_HW', `${m[0]}return strucTunnel;`)(PED_HW);
+})();
 const roadWidth = (tags) => {
   const base = ROAD_W[tags.highway] || 4;
   const lanes = parseInt(tags.lanes, 10) || 0;
@@ -571,7 +579,7 @@ async function scanVenue(v) {
 
   // ---- ①③⑤⑥ 結構 way(隧道/橋)----
   for (const way of osm.roads) {
-    const isTun = !!way.tags.tunnel, isBrg = !!way.tags.bridge && !way.tags.tunnel;
+    const isTun = strucTunnel(way.tags), isBrg = !!way.tags.bridge && !way.tags.tunnel;
     if (!isTun && !isBrg) continue;
     const hw = strucHw(way.tags);
     const wpts = way.geometry.map((p) => llToWorld(p.lat, p.lon, center));
@@ -667,7 +675,7 @@ async function scanVenue(v) {
   // 使用者要的 ① 是「地下道感」= 短、**淺**(路面只沉十來公尺就出來)、周邊地形平坦;
   // 金龍隧道那種深覆蓋是「山體隧道」。深度取覆蓋段的中位數。
   for (const w of osm.roads) {
-    if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    if (!strucTunnel(w.tags) || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const tr = tunnelRunOf(w, center, heightAt, hf);
     if (!tr || !tr.intervals.length) continue;
     if (tr.under) {                       // 地下道走 ② 的候選清單(深度來自挖,不是山)
@@ -713,7 +721,7 @@ async function scanVenue(v) {
   {
     const tunRuns = [];
     for (const w of osm.roads) {
-      if (!w.tags.tunnel || w.geometry.length < 2) continue;
+      if (!strucTunnel(w.tags) || w.geometry.length < 2) continue;
       const tr = tunnelRunOf(w, center, heightAt, hf);
       if (!tr || !tr.intervals.length) continue;
       const cov = new Set();
@@ -816,7 +824,7 @@ async function probePoint(lat, lng, label) {
   if (!osm) return console.log(`${label}:取不到路網`);
   const found = [];
   for (const w of osm.roads) {
-    if (!w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    if (!strucTunnel(w.tags) || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const tr = tunnelRunOf(w, cfg.center, heightAt, hf);
     if (!tr || !tr.intervals.length) { found.push({ name: w.tags.name || w.tags.highway, flat: true }); continue; }
     const th = [];

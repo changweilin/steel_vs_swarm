@@ -6244,9 +6244,9 @@ export class BattleClient {
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
-    // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(下方 g > py0 + 2.6)正是「溝底
-    // 不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一(另一個是
-    // surfaceAt 站立捕捉);lev/彈道/天花那幾路才要濾 !open。
+    // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
+    // 正是「溝底不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一
+    //(另一個是 surfaceAt 站立捕捉);lev/彈道/天花那幾路才要濾 !open。
     const px0 = this.pos.x, pz0 = this.pos.z, py0 = this.pos.y;
     const tn0 = this.terrain.tunnelAt?.(px0, pz0);
     const inTun0 = !!(tn0 && py0 < tn0.ceil);
@@ -6375,6 +6375,10 @@ export class BattleClient {
     // 結構物硬碰撞(高架橋/地下道):機體與橋體/山體不可重疊 ——
     //  ①隧道側壁:洞內只能沿路面走到洞口。側向跨出走廊時 surfaceAt 會瞬移到上方山體
     //    (表面高度躍升 >2.6m)= 穿牆,一律擋下。
+    //  ①' 地下道幾何側壁(2026-07-29):引道垂直路塹被高度場網格(格距 ~8.2m)雙線性攤成
+    //    每步 ≤0.6m 的緩坡,①的單步高差在洞口內側永不觸發(澀谷殘餘破口的機制)——
+    //    改由 tunnelWallCross 幾何判定:步進跨出 ±hw 牆線且擋土牆頂高出腳下逾可跨步高
+    //    即擋(唯一縫 makeTunnelIndex;山體隧道無 by 恆放行,行為不變)。
     //  ②淨空不足:天花(橋面底緣/隧道天花板)與地面的夾縫塞不下機高 → 進不去(引道漸低段)。
     // 撞牆時逐軸嘗試滑行(沿牆保留另一軸位移),都不行才整步還原;
     // 位移前的位置若本來就違規(例外狀態)則放行,避免卡死。
@@ -6383,6 +6387,7 @@ export class BattleClient {
       const passable = (cx, cz) => {
         const g = this._surf(cx, cz, py0);
         if (inTun0 && g > py0 + 2.6) return false;                        // 隧道側壁/上方山體
+        if (this.terrain.tunnelWallCross?.(px0, pz0, cx, cz, py0)) return false;   // 地下道幾何側壁
         // 2026-07-19:深水不再是牆 —— 水域/沼澤可通行,依深度減速(_terrainSlowF),
         // 有效地板 = 水面 − FULL_D(可涉水橫渡河湖)。深水不再由此擋下。
         const ce = this.terrain.ceilingAt(cx, cz, py0);

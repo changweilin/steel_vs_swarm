@@ -2259,6 +2259,15 @@ const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_M
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
 const TUN_GAP_CLOSE = 36, TUN_COV_MIN = 18;
+// 結構隧道資格(單一縫,2026-07-29 澀谷側壁破口案):山體隧道/地下道管線只收**戶外車行**
+// tunnel way;人行/自行車級(PED_HW)與室內通道(indoor,車站地下街)一律不進結構管線,
+// 攤平成一般小徑(§4 寧缺勿錯,與「步道不進橋樑管線」同一取捨)。前科:澀谷站 indoor
+// footway 閉環被判成山體隧道 —— 敞開補集以 hw+7 斜壁開挖 + 髮夾鄰腿走廊互相捕捉,把覆蓋段
+// 側壁挖成走得出去的破口(側壁閘「側向地表高差 >2.6m」的前提被自家開挖打破)。
+// 消費端 = carve 指派 way._tun 的入口(唯一結構開關;buildRoads/markGradeCorridors 皆以
+// way._tun[ri].intervals 判結構性)與 audit_lane_scenarios 場景判定 —— MUST NOT 另寫第二份。
+const strucTunnel = (tags) => !!tags?.tunnel && (tags.indoor == null || tags.indoor === 'no')
+  && !PED_HW.test(tags.highway || '');
 /**
  * 隧道覆蓋區間(單一縫,2026-07-22):carve 呼叫端 / buildRoads / markGradeCorridors 三個
  * 消費端 MUST 共用這一份分類,否則開挖、牆/天花、走廊的「洞口位置」互相對不上(舊版各自
@@ -2782,11 +2791,14 @@ function dedupeParallelBridges(roads, center) {
  * 與更長 way 側向大面積重合的短 way(footway/service)剔除;互距 > 帶寬的真雙孔車道(overlapFrac < 0.6)
  * 雙雙保留 ⇒ 兩端各 2 孔對稱。整條 way 保留或整條剔除,不打亂倖存 way 的逐 run way._tun 索引。
  * MUST 排在 carve 指派 way._tun 之前(呼叫端在 mergeGradeChains/dedupeParallelBridges 之後、carve 之前)。
+ * 候選 MUST 過 strucTunnel 資格閘:不合格 way(人行/室內)已不成洞,不參與去重、也 MUST NOT
+ * 以「長者優先」壓掉合格隧道(前科:澀谷 1178m footway 閉環把 90m 玉川通り trunk 整條剔除
+ * ⇒ 資格閘上線後洞與路雙雙蒸發);不合格 way 一律保留、攤平成一般小徑。
  */
 function dedupeParallelTunnels(roads, center) {
   const tns = [];
   roads.forEach((w, i) => {
-    if (!w.tags?.tunnel || !(w.geometry?.length >= 2)) return;
+    if (!strucTunnel(w.tags) || !(w.geometry?.length >= 2)) return;
     const pts = densify(w.geometry.map((p) => llToWorld(p.lat, p.lon, center)), ROAD_SEG);
     let len = 0;
     for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
@@ -3612,6 +3624,14 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 在洞口殘留無頂縫隙(高視角俯瞰洞內的 dollhouse 穿幫)。
         // fy 記「可站立路面」= tFloorAt + ROAD_LIFT(與繪製路面同高;舊版記 tFloorAt,
         // 單位在洞內腳部半沉 0.45m)。
+        // 幾何側壁牆頂 by(2026-07-29 破口封堵):地下道**全長**(覆蓋段 + 圍裙 + 引道路塹)的
+        // 側面是擋土牆/洞壁,牆頂 = 基準線 + KERB(與引道擋土牆網格同一條線)。高度場網格
+        // (格距 ~8.2m)把垂直路塹雙線性攤成每步 ≤0.6m 的緩坡 ⇒ 單步 surfaceAt 高差閘在洞口
+        // 內側永不觸發(澀谷殘餘 8 破口的機制),側壁必須改幾何判定(makeTunnelIndex.wallCross)。
+        // 只有地下道帶 by;山體隧道 by=undefined(無幾何側壁,覆蓋段側面本來就是實心山體、
+        // 敞開段是原生山谷)⇒ 山體行為逐位元不變。純客戶端移動物理:slab 上傳只投影 x/z/hw,
+        // by 不出海(伺服器語意零漂移)。
+        const wallTopAt = under ? (s) => tBaseAt(s) + UND.KERB : () => undefined;
         for (let i = 0; i < nP - 1; i++) {
           const sA = cum[i], sB = cum[i + 1];
           for (const [c0, c1] of ivx) {
@@ -3621,6 +3641,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             tunnelSegs.push({
               x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
               x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,
+              by1: wallTopAt(o0), by2: wallTopAt(o1),
             });
             ceilSegs.push({ x1, z1, cy1: ceilOf(o0), x2, z2, cy2: ceilOf(o1), hw: hw + 0.6 });
           }
@@ -3647,6 +3668,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               tunnelSegs.push({
                 x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
                 x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw, open: true,
+                by1: wallTopAt(o0), by2: wallTopAt(o1),
               });
             }
           }
@@ -4707,7 +4729,7 @@ export function makeTunnelIndex(tunnels) {
       arr.push(n);
     }
   });
-  return (x, z) => {
+  const q = (x, z) => {
     const arr = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL)));
     if (!arr) return null;
     let best = null;
@@ -4730,6 +4752,41 @@ export function makeTunnelIndex(tunnels) {
     }
     return best;
   };
+  // 幾何側壁(2026-07-29 破口封堵):步進 (x0,z0)→(x1,z1) 是否「由內跨出」某段地下道的
+  // ±hw 牆線、且擋土牆頂(by)高出腳下逾可跨步高。高度場網格(格距 ~8.2m)把垂直路塹
+  // 雙線性攤成每步 ≤0.6m 的緩坡 ⇒ 靠 surfaceAt 單步高差判側壁在洞口內側永不觸發,
+  // 幾何判定不吃地形取樣、與網格解析度無關。只擋**跨出**:跨入(從地表跳/落進路塹)照舊
+  // 放行 —— 牆頂與外側地表齊平(+KERB),物理上外進易、內出難。縱向超出段端 ±0.5m 不擋
+  //(鏈真端點 = 道路頭尾兩端,那裡才是出入口;引道淺端 by−y ≤ WALL_STEP 也自然放行)。
+  // 山體隧道段無 by(undefined)⇒ 整條 wallCross 對它恆 false,行為逐位元不變。
+  const WALL_STEP = 2.6;   // 可跨步高:與 game.js _updatePlayer 側壁閘同一門檻
+  q.wallCross = (x0, z0, x1, z1, y) => {
+    const seen = new Set();
+    for (const [px, pz] of [[x0, z0], [x1, z1]]) {
+      const arr = grid.get(key(Math.floor(px / CELL), Math.floor(pz / CELL)));
+      if (!arr) continue;
+      for (const n of arr) {
+        if (seen.has(n)) continue;
+        seen.add(n);
+        const d = tunnels[n];
+        if (d.by1 == null) continue;                       // 山體隧道:無幾何側壁
+        const ex = d.x2 - d.x1, ez = d.z2 - d.z1;
+        const len = Math.hypot(ex, ez) || 1;
+        const ux = ex / len, uz = ez / len;
+        const w0 = Math.abs((x0 - d.x1) * uz - (z0 - d.z1) * ux);   // 側向垂距
+        const w1 = Math.abs((x1 - d.x1) * uz - (z1 - d.z1) * ux);
+        if (w0 > d.hw || w1 <= d.hw) continue;             // 只攔「內 → 外」跨線
+        const f = (d.hw - w0) / (w1 - w0 || 1);            // 跨線點(沿步進線性內插)
+        const s = ((x0 + (x1 - x0) * f) - d.x1) * ux + ((z0 + (z1 - z0) * f) - d.z1) * uz;
+        if (s < -0.5 || s > len + 0.5) continue;           // 跨線點不在此段縱向範圍
+        const t = Math.max(0, Math.min(1, s / len));
+        const by = d.by1 + (d.by2 - d.by1) * t;
+        if (y + WALL_STEP < by) return true;               // 牆頂高出腳下逾可跨步高 = 撞牆
+      }
+    }
+    return false;
+  };
+  return q;
 }
 
 /**
@@ -5445,7 +5502,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const tunnelRuns = [];
   if (terrain.carveTunnels && osmRoads?.length) {
     for (const way of osmRoads) {
-      if (!way.tags?.tunnel) continue;
+      if (!strucTunnel(way.tags)) continue;   // 資格閘:人行/室內 tunnel way 不進結構管線
       // 邊界裁切 MUST 與 buildRoads 完全相同(inb=4、逐頂點丟棄切段)+ 同一 densify(ROAD_SEG)
       // —— 兩邊的 run 幾何逐點一致,覆蓋區間索引/路面剖面才對得上。
       const inb2 = 4;

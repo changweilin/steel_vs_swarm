@@ -1595,6 +1595,10 @@ function startPrebuild(cfg) {
     const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil } | null
     terrain.deckY = deckY;
     terrain.tunnelAt = tunnelAt;
+    // 地下道幾何側壁(2026-07-29):_updatePlayer 側壁閘的第二道判定 —— 步進跨出 ±hw 牆線
+    // 且牆頂(基準線+KERB)高出腳下逾可跨步高即擋。網格把垂直路塹攤成緩坡後,單步
+    // surfaceAt 高差在洞口內側永不觸發,幾何判定與地形解析度無關(唯一縫在 makeTunnelIndex)。
+    terrain.tunnelWallCross = tunnelAt.wallCross || null;
     terrain.deckUnder = DECK_UNDER;   // 橋面板厚(game.js _slabHitT 判彈道穿板用)
     // 橋上砲塔墩座台面高度:與橋重疊的砲塔改站橋面(biomes buildTowerBridgePads = 唯一縫)。
     // 塔位兩端共用 solveTowerSites ⇒ 座標逐點相同,查表用小容差即可(≤24 筆,線性掃描)。
