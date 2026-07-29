@@ -281,6 +281,10 @@ const GIANT_DEFS = {
     { g: ico(5), y: 51, px: -6, sy: 0.8, c: 0x2e5c38 },
     { g: ico(4), y: 74, px: -8, sy: 0.7, c: 0x4a8a4e },          // 受光亮綠簇
     { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, c: 0x3b7042 },
+    // 樹種特徵配件(2026-07-29):毬果簇(紅杉小毬果掛冠緣;R 主導色不吃 gleaf 季節疊色,
+    // 錨在既有樹冠簇內 → 接合天然成立;各簇色抖動獨立,見 buildVegMeshes)
+    { g: ico(1.4), y: 55.5, px: 6.8, c: 0x6e4a30 },
+    { g: ico(1.2), y: 48.5, px: -6.5, c: 0x66452c },
   ] },
   sequoia:  { h: 92, r: 5.6, parts: [
     { g: cyl(5.6, 9.2, 9, 8), y: 4.5, c: 0x7d4a2e },
@@ -299,6 +303,8 @@ const GIANT_DEFS = {
     { g: ico(5), y: 55, pz: 7, c: 0x39683a },
     { g: cone(5, 10, 6), y: 89, c: 0x336033 },
     { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
+    { g: ico(1.3), y: 63.5, px: 8, c: 0x7a5230 },                // 世界爺毬果簇(冠緣)
+    { g: ico(1.1), y: 57.5, px: -8, c: 0x704b2c },
   ] },
   euc:      { h: 98, r: 2.6, parts: [
     { g: cyl(2.2, 3.6, 6, 7), y: 3, c: 0xcfc4b0 },
@@ -315,6 +321,8 @@ const GIANT_DEFS = {
     { g: ico(5), y: 80, px: -8, sy: 0.65, c: 0x5c7a4a },
     { g: ico(4.5), y: 83, pz: 4.5, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
     { g: ico(4), y: 96, c: 0x7a9058 },
+    { g: ico(1.5), y: 86, px: 9, c: 0xe9e2c8 },                  // 桉樹乳白花簇(冠緣,R≥G 不吃 gleaf)
+    { g: ico(1.3), y: 84.5, pz: 5, c: 0xe4dcc0 },
   ] },
   dougfir:  { h: 100, r: 2.5, parts: [
     { g: cyl(2.5, 4.0, 6, 7), y: 3, c: 0x5d4027 },
@@ -330,6 +338,8 @@ const GIANT_DEFS = {
     { g: ico(4), y: 42, px: -6, sy: 0.6, c: 0x2f5e40 },
     { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
     { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
+    { g: ico(1.1), y: 44.4, px: 6.4, c: 0x8a6244 },              // 花旗松垂毬果簇(側簇下緣)
+    { g: ico(1.0), y: 40.6, px: -6.4, c: 0x805b3e },
   ] },
   sitka:    { h: 96, r: 2.3, parts: [
     { g: cyl(2.3, 3.7, 5, 7), y: 2.5, c: 0x59452f },
@@ -344,6 +354,8 @@ const GIANT_DEFS = {
     { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
     { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
     { g: ico(3), y: 88, px: 3.2, sy: 0.6, c: 0x529272 },         // 頂部亮青簇
+    { g: ico(1.0), y: 44.8, px: 5.9, c: 0x9a7a52 },              // 西加雲杉淺褐毬果簇
+    { g: ico(0.9), y: 42.9, pz: 5.8, c: 0x92714a },
   ] },
   meranti:  { h: 95, r: 2.5, parts: [
     { g: cone(3.0, 10, 3), y: 5, px: 2.3, c: 0x8a7354 },         // 板根鰭(鰭尖貼回幹面)
@@ -361,6 +373,8 @@ const GIANT_DEFS = {
     { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
     { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
     { g: ico(5), y: 92, px: 4, sy: 0.55, c: 0x63a850 },          // 突出主冠的受光新葉
+    { g: ico(1.5), y: 75.5, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(橙紅雙翅果)
+    { g: ico(1.3), y: 76.8, pz: 9.5, c: 0xb8703f },
   ] },
   taiwania: { h: 86, r: 2.1, parts: [
     { g: cyl(2.1, 3.4, 5, 7), y: 2.5, c: 0x8a5a38 },             // 紅褐樹皮(台灣杉特徵)
@@ -374,6 +388,8 @@ const GIANT_DEFS = {
     { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, c: 0x2c6242 },
     { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
+    { g: ico(0.9), y: 36.6, px: 4.9, c: 0x8a5a38 },              // 台灣杉紅褐毬果簇
+    { g: ico(0.8), y: 48.9, pz: 5.3, c: 0x825332 },
   ] },
   dinizia:  { h: 88, r: 2.7, parts: [                            // 亞馬遜天使樹(Dinizia excelsa 88m)
     { g: cone(3.4, 11, 3), y: 5.5, px: 2.5, c: 0x7a5a40 },       // 高聳板根(鰭尖貼回幹面)
@@ -389,6 +405,8 @@ const GIANT_DEFS = {
     { g: ico(7), y: 78, px: -9, sy: 0.45, c: 0x468040 },
     { g: ico(6), y: 79, pz: 8.5, sy: 0.45, c: 0x549048 },
     { g: ico(5), y: 85, sy: 0.55, c: 0x86a45c },                 // 頂心黃綠新葉
+    { g: ico(1.3), y: 75.2, px: 9.5, c: 0x7a5434 },              // 天使樹豆莢簇(豆科莢果)
+    { g: ico(1.1), y: 77.5, pz: 9, c: 0x714d30 },
   ] },
 };
 
@@ -651,7 +669,7 @@ function buildVegMeshesGlb(entry, items) {
   const tint = new THREE.Color();
   groups.forEach((list, vi) => {
     if (!list.length) return;
-    for (const part of entry.variants[vi].parts) {
+    entry.variants[vi].parts.forEach((part, pi) => {
       const m = new THREE.InstancedMesh(part.geo, part.mat, list.length);
       list.forEach(([it, gi], k) => {
         E.set(it.tx || 0, it.ry, it.tz || 0);
@@ -661,10 +679,12 @@ function buildVegMeshesGlb(entry, items) {
         S.set(sc, sc, sc);
         M.compose(P, Q, S);
         m.setMatrixAt(k, M);
-        const j1 = ((gi * 2654435761) >>> 0) % 100 / 100;
-        const j2 = ((gi * 1597334677) >>> 0) % 100 / 100;
-        const j3 = ((gi * 3812015801) >>> 0) % 100 / 100;
-        tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
+        // hash 併入零件序 pi:同株樹幹/葉叢的色抖各自獨立(與程序生成版同邏輯)
+        const kk = gi * 197 + pi * 3121 + 1;
+        const j1 = ((kk * 2654435761) >>> 0) % 100 / 100;
+        const j2 = ((kk * 1597334677) >>> 0) % 100 / 100;
+        const j3 = ((kk * 3812015801) >>> 0) % 100 / 100;
+        tint.setRGB(0.8 + j1 * 0.36, 0.8 + j2 * 0.36, 0.8 + j3 * 0.36);
         m.setColorAt(k, tint);
       });
       m.instanceMatrix.needsUpdate = true;
@@ -672,7 +692,7 @@ function buildVegMeshesGlb(entry, items) {
       m.castShadow = false;
       m.frustumCulled = false;
       meshes.push(m);
-    }
+    });
   });
   return meshes;
 }
@@ -694,7 +714,7 @@ function buildVegMeshes(type, items, season) {
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
-  for (const part of def.parts) {
+  def.parts.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     const mat = toonMat(seasonColor(part.key, part.c, season));
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
@@ -707,11 +727,20 @@ function buildVegMeshes(type, items, season) {
       S.set(scl[0], scl[1], scl[2]);
       M.compose(P, Q, S);
       m.setMatrixAt(i, M);
-      // 每實例隨機差異化:RGB 各自抖動 = 明度 + 色相同時變化,不像複製貼上
-      const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
-      const j2 = ((i * 1597334677) >>> 0) % 100 / 100;
-      const j3 = ((i * 3812015801) >>> 0) % 100 / 100;
-      tint.setRGB(0.82 + j1 * 0.32, 0.82 + j2 * 0.32, 0.82 + j3 * 0.32);
+      // 色彩細節隨機化(2026-07-29):hash 併入零件序 pi → 同株各零件抖動各自獨立
+      // (葉團層層異色、板根塊塊異調),不再整株同一支 tint。
+      // 葉/冠零件(key)振幅放大 = 明度連色相一起動;岩塊(j)次之;
+      // 結構件(幹/枝/根)只小幅動明度 + 極淡暖冷偏,保住樹種手調色版
+      const k = i * 197 + pi * 3121 + 1;
+      const j1 = ((k * 2654435761) >>> 0) % 100 / 100;
+      const j2 = ((k * 1597334677) >>> 0) % 100 / 100;
+      const j3 = ((k * 3812015801) >>> 0) % 100 / 100;
+      if (part.key) tint.setRGB(0.74 + j1 * 0.5, 0.74 + j2 * 0.5, 0.74 + j3 * 0.5);
+      else if (part.j) tint.setRGB(0.78 + j1 * 0.42, 0.78 + j2 * 0.42, 0.78 + j3 * 0.42);
+      else {
+        const l = 0.84 + j1 * 0.28;
+        tint.setRGB(l * (0.97 + j2 * 0.06), l, l * (0.97 + j3 * 0.06));
+      }
       m.setColorAt(i, tint);
     });
     m.instanceMatrix.needsUpdate = true;
@@ -719,7 +748,7 @@ function buildVegMeshes(type, items, season) {
     m.castShadow = false;
     m.frustumCulled = false;   // 實例散佈全圖,包圍球不可靠
     meshes.push(m);
-  }
+  });
   return meshes;
 }
 
@@ -979,7 +1008,9 @@ const LANDMARKS = {
 // 公稱高即真實比例(×OVER.mega = 1;放置縮放後約 90~160m);col = 近似碰撞柱(× s),
 // s = 放置縮放區間。岩面走 envMat + 頂部苔蘚投影(botw_plan 岩石要點)。
 function rockMat(color, moss = 0) {
-  return envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
+  const m = envMat(color, { wash: 0.6, cool: 0.5, moss: moss ? { amount: moss } : null });
+  m.userData.rock = true;   // 岩面材質標記:placeMegaliths 逐顆調色只認這面旗(不動綠冠/木門等)
+  return m;
 }
 const MEGALITHS = {
   // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
@@ -1738,6 +1769,15 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     if (placedM.some((p) => Math.hypot(x - p.x, z - p.z) < r + p.r + 70)) continue;
     if (!synth) named++;
     decorateMegalith(g, meta.anchor, rnd, s);
+    // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
+    // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
+    // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
+    const dH = (rnd() - 0.5) * 0.05, dS = (rnd() - 0.5) * 0.12, dL = (rnd() - 0.5) * 0.1;
+    g.traverse((o) => {
+      if (o.isMesh && o.material?.userData?.rock) {
+        o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
+      }
+    });
     bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
     g.scale.setScalar(s);
     // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空
