@@ -1,7 +1,12 @@
-# ============ 兵線重烤(手動觸發;需要外網)============
+# ============ 兵線重烤(手動觸發或推送請求檔;需要外網)============
 # `tools/bake_venue_lanes.mjs` 要抓 Overpass 路網 —— 開發沙箱的網路政策擋這個出口,
 # 故在有外網的 runner 上重烤,過規則稽核後把 public/js/venueLanes.js 直接 commit 回
-# 觸發時所在的分支(workflow_dispatch 選哪個分支就推回哪個分支)。
+# 觸發時所在的分支。兩種觸發:
+#   ① workflow_dispatch(人手動:選分支、填 only)
+#   ② push 動到 .github/bake-request(沙箱代理人無 actions:write 權限 dispatch 不了,
+#      改推「請求檔」觸發;檔案內容 = ONLY 場地清單,空檔 = 全部場地)
+# runner 用 GITHUB_TOKEN 推回的 commit 不會再觸發任何 workflow(GitHub 防迴圈),
+# 故重烤後的 ci.yml 回歸由下一次人為推送或本地驗證補上。
 # 回歸驗證(ci.yml)刻意不含這支:外部服務會限流,不該讓 PR 卡在別人的伺服器上。
 name: 兵線重烤
 
@@ -12,6 +17,8 @@ on:
         description: '只烤指定場地(逗號分隔;留空 = 全部場地)'
         required: false
         default: ''
+  push:
+    paths: ['.github/bake-request']
 
 permissions:
   contents: write
@@ -40,8 +47,16 @@ jobs:
           key: osm-cache-${{ github.run_id }}
           restore-keys: osm-cache-
 
+      # 場地清單:dispatch 用 inputs.only;push 觸發讀 .github/bake-request 內容
+      - name: 解析場地清單
+        run: |
+          ONLY='${{ inputs.only }}'
+          if [ -z "$ONLY" ] && [ -f .github/bake-request ]; then ONLY=$(tr -d '[:space:]' < .github/bake-request); fi
+          echo "ONLY=$ONLY" >> "$GITHUB_ENV"
+          echo "場地清單:${ONLY:-(全部)}"
+
       - name: 重烤兵線(報告見本步驟 log)
-        run: ONLY='${{ inputs.only }}' node tools/bake_venue_lanes.mjs
+        run: node tools/bake_venue_lanes.mjs
 
       # 重烤結果 MUST 先過離線規則稽核才准提交(#4 塔射程重疊 / 兵線分離 / #5 洞口涵蓋;
       # audit_lane_grade_sep 吃 bake 剛寫入的 tools/.osm_cache,在此環境天然可跑)
@@ -60,7 +75,7 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add public/js/venueLanes.js
           git diff --cached --quiet && echo '兵線無變化,不提交' || {
-            git commit -m "兵線重烤(Actions):ONLY='${{ inputs.only }}'(規則③主軸偏航 ±150° 生效)"
+            git commit -m "兵線重烤(Actions):ONLY='$ONLY'(規則③主軸偏航 ±150° 生效)"
             git push
           }
 
