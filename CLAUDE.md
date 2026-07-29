@@ -213,7 +213,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 都市規劃朝向(`ground.js` orient/`gridA`) | `audit_ground_qc.mjs` ⑦(垂直街道網 mod 90° 摺疊不抵銷;orient 固定抽 2 枚 rnd) |
 | 地貌交界(`planSeamOverlays`/`SEAM_STYLES`/`seamAlpha`) | `audit_ground_seam.mjs`(49 項)+ `audit_ground_qc.mjs` 全綠 |
 | 小區域組合風格(`planEnclaves`/`ENCLAVE_STYLES`) | `audit_ground_enclave.mjs`(33 項;消費端 MUST NOT 硬編第二份組合表) |
-| 表現層資源生命週期(池/`markShared`/`disposeTree` 系) | `audit_gpu_lifecycle.mjs`(34 項)+ 真機 60s 開火 heap 不單調上升 + 目視光束粗細(scale 就是半徑) |
+| 表現層資源生命週期(池/`markShared`/`disposeTree` 系)/ 自適應解析度(`RES_GOV` 系) | `audit_gpu_lifecycle.mjs`(42 項)+ 真機 60s 開火 heap 不單調上升 + 目視光束粗細(scale 就是半徑) |
 | 三種遊戲機制(`rooms.js`/`netmode.js`/`build_solo` 系) | `audit_net_modes.mjs` + `audit_solo_boot.mjs`(`data.js` 單一模組實例)+ `npm test` 單機段與 WS 全段 + `audit_ui_layout.mjs` |
 | 程序生成物件擺位(`BUILDERS`/`VEG_DEFS`/`vegPartXform`) | `audit_object_joints.mjs`(約 5300 接合;FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗;豁免附理由) |
 | 小地圖顯示範圍(`mmMode`/`_world2mm*` 系) | `audit_minimap_view.mjs`(16 項)+ 真機切換冒煙(已探索迷霧不得錯位) |
