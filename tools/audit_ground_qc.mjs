@@ -2,8 +2,11 @@
 // 離線驗證不變式(buildGroundCover 需 THREE + canvas,無法直呼;full pipeline 走瀏覽器真開房)。
 // 驗:①底毯角點水密(pure(i,j))②位移 |d|≤0.45 不翻面 ③準晶體場決定性(同 seed 同值/異 seed 異值)
 //     ④主散佈點陣走訪雙射(qStride⊥nCells 每格恰一次)⑤ink 全分離係數 > 邊緣交疊係數
-//     ⑥細節疏密調變總量守恆(E[0.35+1.3q]=1)。node tools/audit_ground_qc.mjs
+//     ⑥細節疏密調變總量守恆(E[0.35+1.3q]=1)
+//     ⑦規律結構都市規劃朝向(2026-07-29:gridA 主方位執行原文 + ink 恆對齊三段退避靜態規則)
+// node tools/audit_ground_qc.mjs
 'use strict';
+import { readFileSync } from 'node:fs';
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
@@ -181,6 +184,68 @@ console.log('== ⑥ 細節疏密調變總量守恆(E[0.35+1.3q]=1, q=0.5+0.5·qc
   const mean = sum / N;
   (Math.abs(mean - 1) < 0.01) ? ok(`E[gate factor]=${mean.toFixed(4)} ≈ 1 → 細節總量守恆(不增 draw call/實例)`)
     : bad(`E[gate factor]=${mean.toFixed(4)} 偏離 1(總量會漂移)`);
+}
+
+console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太陽能板 ↔ 道路格網一致)==');
+{
+  const gsrc = readFileSync(new URL('../public/js/ground.js', import.meta.url), 'utf8');
+  const bsrc = readFileSync(new URL('../public/js/biomes.js', import.meta.url), 'utf8');
+  // —— 執行 gridA 原文(全圖格網主方位:道路線段長度加權的 mod 90° 圓平均)——
+  const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = Math\.atan2\(gsz, gsx\) \/ 4;\n  \}/);
+  if (!gm) bad('ground.js 找不到 gridA 主方位原文');
+  else {
+    const runGrid = (body, roadPolys) => new Function('roadPolys', `${body}\nreturn { GRID_FAR_R2, gridA };`)(roadPolys);
+    const deg = (d) => d * Math.PI / 180;
+    const road = (a, len, n = 4) => {   // 方位 a、總長 len 的折線
+      const pts = [];
+      for (let i = 0; i <= n; i++) pts.push([Math.cos(a) * len * i / n, Math.sin(a) * len * i / n]);
+      return [pts, 4];
+    };
+    const diff90 = (a, b) => {          // mod 90° 圓距(度)
+      let d = Math.abs(a - b) % 90;
+      return Math.min(d, 90 - d);
+    };
+    const g1 = runGrid(gm[0], [road(deg(25), 500)]);
+    diff90(g1.gridA * 180 / Math.PI, 25) < 0.5
+      ? ok(`單一 25° 幹道 → gridA=${(g1.gridA * 180 / Math.PI).toFixed(1)}°(mod 90° 對齊)`)
+      : bad(`gridA=${(g1.gridA * 180 / Math.PI).toFixed(1)}° ≠ 25°(mod 90°)`);
+    const g2 = runGrid(gm[0], [road(deg(25), 500), road(deg(115), 500), road(deg(-65), 300)]);
+    diff90(g2.gridA * 180 / Math.PI, 25) < 0.5
+      ? ok('垂直街道網(25°/115°/-65°)不互相抵銷 → 4 倍角圓平均仍回 25° 格網')
+      : bad(`垂直街道抵銷:gridA=${(g2.gridA * 180 / Math.PI).toFixed(1)}°`);
+    const g3 = runGrid(gm[0], [road(deg(30), 1000), road(deg(60), 10)]);
+    diff90(g3.gridA * 180 / Math.PI, 30) < 2
+      ? ok('長度加權:1000m 的 30° 幹道壓過 10m 支線')
+      : bad(`長度加權失效:gridA=${(g3.gridA * 180 / Math.PI).toFixed(1)}°`);
+    (runGrid(gm[0], []).gridA === null && runGrid(gm[0], null).gridA === null)
+      ? ok('無道路圖資 → gridA=null(離線備援退回隨機,行為不變)')
+      : bad('無圖資時 gridA 非 null');
+    g1.GRID_FAR_R2 > 46 * 46
+      ? ok(`離路擴大半徑 GRID_FAR ${Math.sqrt(g1.GRID_FAR_R2)}m > 近路 46m(找得到同街區幹道)`)
+      : bad('GRID_FAR 未大於近路半徑');
+    // 對照組:拿掉 4 倍角摺疊 → 垂直街道互相抵銷/平均偏斜,mod 90° 檢查必紅
+    const flat = gm[0].replace('Math.atan2(dz, dx) * 4', 'Math.atan2(dz, dx) * 1')
+                      .replace('Math.atan2(gsz, gsx) / 4', 'Math.atan2(gsz, gsx) / 1');
+    const gBad = runGrid(flat, [road(deg(25), 500), road(deg(115), 500)]);
+    (gBad.gridA === null || diff90(gBad.gridA * 180 / Math.PI, 25) >= 0.5)
+      ? ok('對照組:無摺疊的平均在垂直街道下失準(4 倍角檢查有牙)')
+      : bad('對照組:無摺疊版本竟仍正確(檢查驗不到東西)');
+  }
+  // —— 靜態規則:ink 恆對齊三段退避 / 亂數紀律 / roadDirAt 半徑參數 ——
+  const inkIdx = gsrc.indexOf('if (ink) {');
+  (inkIdx > 0 && gsrc.lastIndexOf('const ra = rnd()', inkIdx) > 0 && gsrc.lastIndexOf('const roll = rnd()', inkIdx) > 0
+    && gsrc.lastIndexOf('const ra = rnd()', inkIdx) < inkIdx && gsrc.lastIndexOf('const roll = rnd()', inkIdx) < inkIdx)
+    ? ok('orient:兩枚 rnd 恆在 ink 分支前抽好(對齊與否不改變 rnd 消耗序列,§2.3)')
+    : bad('orient 亂數紀律失守(ink 分支前未固定抽 2 枚)');
+  gsrc.includes('roadDirAt(x, z) ?? roadDirAt(x, z, GRID_FAR_R2)') && /\?\? gridA/.test(gsrc)
+    ? ok('ink 三段退避:近路路向 → 擴大半徑街區幹道 → 全圖格網主方位')
+    : bad('ink 三段退避鏈缺失');
+  gsrc.includes("orient(x, z, DEFS[sub].reg, true, DEFS[sub].edge === 'ink')")
+    ? ok('主散佈迴圈對 ink 規律結構恆走都市規劃朝向(不吃 reg 擲骰)')
+    : bad('主散佈迴圈未對 ink 傳遞恆對齊旗標');
+  (bsrc.includes('const roadDirAt = (x, z, r2 = RD_R2)') && bsrc.includes('Math.ceil(Math.sqrt(r2) / RD_CELL)'))
+    ? ok('biomes.js roadDirAt 半徑可覆寫且掃描窗由半徑推導(預設行為 = 舊版 span 2)')
+    : bad('roadDirAt 半徑參數/掃描窗推導缺失');
 }
 
 console.log(fail ? `\nFAIL(${fail} 項)` : '\nALL PASS');

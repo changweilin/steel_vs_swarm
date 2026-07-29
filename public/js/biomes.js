@@ -5892,11 +5892,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
   }
-  const roadDirAt = (x, z) => {
+  // r2 可覆寫(2026-07-29):規律結構「都市規劃朝向」離路仍要找得到同街區幹道 ——
+  // ground.js 以擴大半徑二次查詢;預設值行為與舊版逐位元相同(span=2)
+  const roadDirAt = (x, z, r2 = RD_R2) => {
     const ci = Math.round(x / RD_CELL), cj = Math.round(z / RD_CELL);
-    let best = RD_R2, ba = null;
-    for (let j = cj - 2; j <= cj + 2; j++) {
-      for (let i = ci - 2; i <= ci + 2; i++) {
+    const span = Math.ceil(Math.sqrt(r2) / RD_CELL);
+    let best = r2, ba = null;
+    for (let j = cj - span; j <= cj + span; j++) {
+      for (let i = ci - span; i <= ci + span; i++) {
         const arr = rdGrid.get(`${i},${j}`);
         if (!arr) continue;
         for (const p of arr) {
