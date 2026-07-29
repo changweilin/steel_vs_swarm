@@ -2691,6 +2691,7 @@ export class BattleClient {
         ent.si = e.si || 0;
         ent.kcd = e.kcd;   // 無人機護衛自殺機冷卻(其他客戶端據此顯隱貼身護衛機;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
+        ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
         // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
@@ -3708,11 +3709,13 @@ export class BattleClient {
         this.hud.hitmark?.();
       }
     } else if (ev.e === 'dodge') {
-      // 閃避(伺服器擲骰):在目標頭上跳「閃」——只畫鏡頭附近的,避免全場刷字
+      // 閃避(伺服器擲骰):自己的攻擊被閃 → 目標頭上跳「Miss」(自己的射擊回饋,
+      // 不吃旁觀距離上限 —— 射程邊界也要看得到);他人的閃避維持「閃」,只畫鏡頭附近的,避免全場刷字
       const wx = ev.x, wz = -ev.z, cam = this.camera.position;
-      if (Math.hypot(wx - cam.x, wz - cam.z) < 140) {
+      const mine = ev.pid != null && ev.pid === this.youId;
+      if (mine || Math.hypot(wx - cam.x, wz - cam.z) < 140) {
         const y = this.terrain.heightAt(wx, wz) + (ev.y || 0) + 3;
-        comicPop(this.scene, this.effects, wx, y, wz, { text: '閃', hue: 190 });
+        comicPop(this.scene, this.effects, wx, y, wz, mine ? { text: 'Miss', hue: 210 } : { text: '閃', hue: 190 });
       }
     } else if (ev.e === 'buy') {
       if (ev.pid === this.youId && ev.lvl != null) {
@@ -5053,6 +5056,12 @@ export class BattleClient {
     if (ent && this._lockId === ent.id) this._flashLockGlow();
     starburst(this.scene, this.effects, point.x, point.y, point.z, 2.6, 0xfff2b8);
     if (ent) {
+      // 無敵幀中的目標:伺服器 _damage 完全免傷 —— 跳灰字「-0」而非誤導性的滿額估算數字
+      if ((ent.inv || 0) > 0) {
+        damageNumber(this.scene, this.effects,
+          point.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+        return;
+      }
       const mult = vsMult(def, ent.kind);
       // 本地估算含距離物理衰減(伺服器結算同一條公式,HUD 數字才對得上;火力成長走武器品質階級)
       const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(point)));
@@ -5120,6 +5129,11 @@ export class BattleClient {
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
       starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, i === 0 ? 2.8 : 2.0, 0xfff2b8);
+      // 無敵幀目標:同 _hitFeedback,跳灰字 -0(伺服器免傷)
+      if ((ent.inv || 0) > 0) {
+        damageNumber(this.scene, this.effects, p.clone().add(new THREE.Vector3(0, 1.2, 0)), 0, { text: '-0' });
+        continue;
+      }
       const mult = vsMult(def, ent.kind);
       const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * LANCE.DECAY ** i);
       damageNumber(this.scene, this.effects,

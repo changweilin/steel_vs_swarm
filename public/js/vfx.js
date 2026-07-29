@@ -570,10 +570,11 @@ export function shockRing(scene, effects, x, y, z, r, color = 0xffd27a) {
   });
 }
 
-/** 浮動傷害數字:命中點上飄 + 微隨機橫移,0.6s 淡出 */
-export function damageNumber(scene, effects, pos, dmg, { big = false } = {}) {
+/** 浮動傷害數字:命中點上飄 + 微隨機橫移,0.6s 淡出。
+ *  text:覆寫顯示字面(灰字)—— 打無敵幀目標的「-0」等零傷害回饋用,與一般數字同一條快取。 */
+export function damageNumber(scene, effects, pos, dmg, { big = false, text = null } = {}) {
   const mat = new THREE.SpriteMaterial({
-    map: numberTexture(Math.round(dmg), big ? '#ff5f4a' : '#ffd94a'),
+    map: numberTexture(text ?? Math.round(dmg), text ? '#aab4bd' : (big ? '#ff5f4a' : '#ffd94a')),
     transparent: true, depthWrite: false, depthTest: false,
   });
   const sp = new THREE.Sprite(mat);
