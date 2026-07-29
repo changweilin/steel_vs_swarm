@@ -6,7 +6,7 @@
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
 // #4 射程重疊殘餘(towerLayoutAudit)—— 塔埋在山體裡只能沿洞內走廊對射,是功能性缺陷。
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneStructEntryAudit }
+import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tacticalScore, towerLayoutAudit, towerTunnelAudit, laneSeparationAudit, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit }
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
@@ -409,7 +409,11 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
     // xz 是真實公尺(buildGraph 用地球半徑),laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在
     // 遊戲公尺語意下 ⇒ 換算後再判(× 1/REAL_SCALE;此處在 s 宣告前被呼叫,不能用 s,直接取 MAPGEO)。
     const gs = 1 / MAPGEO.REAL_SCALE;
-    if (!laneUTurnAudit(xz.map(([x, z]) => [x * gs, z * gs])).ok) { why = 'uturn'; return null; }
+    const gxz = xz.map(([x, z]) => [x * gs, z * gs]);
+    if (!laneUTurnAudit(gxz).ok) { why = 'uturn'; return null; }
+    // 規則③(2026-07-29):帶號轉角累積 MUST 落在 ±TURN_ACCUM_MAX_DEG 內(順逆時針抵消;
+    // 繞圈/環繞式路線在此淘汰)。與迴轉閘同一組遊戲公尺取樣語彙。
+    if (!laneTurnAccumAudit(gxz).ok) { why = 'turnAccum'; return null; }
     banPath(used, p, n);                                      // 過閘後才標記已用邊(下一條被 REUSE_PEN 重罰)
     let s = 0;
     for (const q of idx) s += lat(q);

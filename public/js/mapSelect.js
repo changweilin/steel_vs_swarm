@@ -10,7 +10,7 @@
 //     - A、B 之間能建出 L 條路徑(真實道路,OSRM;L = ⌈N/2⌉),
 //       且任兩條路徑重合率 < 20%(= 80% 不重合)
 //  3. 房主點選推薦點 → 預覽兵線 → 確認後鎖定戰場。
-import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, towerLayoutAudit, laneSeparationAudit } from './data.js';
+import { MAPGEO, lanesFor, targetDistFor, overlapCellM, TEAM, laneTacticsXZ, tacticalScore, laneBacktrackFrac, laneUTurnAudit, laneTurnAccumAudit, towerLayoutAudit, laneSeparationAudit } from './data.js';
 import { synthLane } from './venues.js';
 
 const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -399,9 +399,13 @@ export class MapSelect {
       // 規則「橋/隧只能從出入口進出」不在此複驗:OSRM 走真實道路路徑,拓樸上本就只能從匝道/洞口進出。
       // toMeters 回真實公尺;laneUTurnAudit 的 SEG_M 取樣與 laneTacticsXZ 同在遊戲公尺語意 ⇒ × 1/REAL_SCALE。
       const uSc = 1 / MAPGEO.REAL_SCALE;
-      const maxUturn = Math.max(...lanes.map((lane) => laneUTurnAudit(lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; })).maxDeg));
+      const gLanes = lanes.map((lane) => lane.map((c) => { const [x, z] = toMeters(c, A); return [x * uSc, z * uSc]; }));
+      const maxUturn = Math.max(...gLanes.map((lane) => laneUTurnAudit(lane).maxDeg));
+      // 累積轉角門檻(同 bake / MAPGEO.TURN_ACCUM_MAX_DEG):任一兵線帶號轉角累積出
+      // ±90° 範圍 → 淘汰此推薦點(規則 2026-07-29;判定縫 = laneTurnAccumAudit,不另比對)。
+      const accumOK = gLanes.every((lane) => laneTurnAccumAudit(lane).ok);
       const ok = dist >= diagM * MAPGEO.MIN_DIST_FRAC && maxOverlap <= MAPGEO.MAX_OVERLAP
-        && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG;
+        && maxBt <= MAPGEO.MAX_BACKTRACK && maxUturn < MAPGEO.UTURN_MAX_DEG && accumOK;
       if (!ok) continue;
       // Part 3:沿線有高程資料且坡度超標 → 淘汰(避開現實陡坡道路)
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;

@@ -101,6 +101,13 @@ export const MAPGEO = {
   // 再折回」式掉頭)。與 laneTacticsXZ 同一組取樣語彙(TACTICS.SEG_M 步長,避免 OSRM 密集
   // 頂點鋸齒誤判)。結算縫 = laneUTurnAudit();bake 硬門檻、mapSelect 複驗共用同一支。
   UTURN_MAX_DEG: 150,
+  // 兵線「累積轉角」範圍(度,2026-07-29 使用者需求「轉彎角度累積不可超過 ±90°,順逆時針
+  // 轉向可抵消」):沿線帶號轉向角逐段累加(左轉正/右轉負,互相抵消),任一時刻累積值
+  // MUST 落在 ±此值內 —— 即航向偏離起始航向不得超過 90°(繞圈/環繞式路線會累積出界;
+  // S 彎因抵消而合法)。與 UTURN_MAX_DEG 互相獨立:先往一側偏 −70° 再 +150° 掉頭,累積
+  // 只到 +80° 不出界(規則②攔);反之逐段小彎同向累積 120° 而無任何單點大轉角(本規則攔)。
+  // 結算縫 = laneTurnAccumAudit();bake 硬門檻、mapSelect 複驗共用同一支。
+  TURN_ACCUM_MAX_DEG: 90,
   // 兵線互不接觸/交叉(規則,2026-07-20 定奪:全禁,含立體交叉)。同一 L 內任兩條兵線,排除
   // 兩座主堡的共享扇出段(沿 A→B 主軸進度落在 [SKIP,1−SKIP] 之外者豁免——三線由同一主堡扇出
   // 必於此帶收斂)後,中段最近距離 MUST ≥ LANE_MIN_SEP_M 且 2D 不得相交。橋/隧立體交叉亦禁:
@@ -174,32 +181,42 @@ export function battleBBox(cfg) {
 export function laneTacticsXZ(pts) {
   const T = MAPGEO.TACTICS;
   if (!pts || pts.length < 2) return { total: 0, straight: 1, sinuosity: 1, turns: [], turnsPerKm: 0 };
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) {
-    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  }
-  const total = cum[cum.length - 1];
+  const { total, heads } = laneHeads(pts);
   const straight = Math.hypot(pts[pts.length - 1][0] - pts[0][0], pts[pts.length - 1][1] - pts[0][1]) || 1;
+  const turns = [];
+  const minRad = T.TURN_MIN_DEG * Math.PI / 180;
+  for (let j = 1; j < heads.length; j++) {
+    let dh = Math.abs(heads[j].head - heads[j - 1].head);
+    if (dh > Math.PI) dh = Math.PI * 2 - dh;
+    if (dh >= minRad) turns.push(heads[j].d);
+  }
+  return { total, straight, sinuosity: total / straight, turns, turnsPerKm: turns.length / (total / 1000 || 1) };
+}
+
+/**
+ * 等距重取樣航向序列(TACTICS.SEG_M 步長)—— laneTacticsXZ / laneUTurnAudit /
+ * laneTurnAccumAudit 三個消費端共用的唯一實作。**MUST 走重取樣**:OSRM/圖資的密集折線,
+ * 相鄰微段夾角是量測雜訊而非宏觀航向,逐頂點量會誤判(規則 2026-07-28 同一組取樣語彙)。
+ * 回傳 { total, heads:[{ d, head }] }:heads[j] = 第 j 個取樣段(沿線 [d, d+SEG_M])的
+ * 航向(rad);d = 段起點沿線距離。尾端不足一步的殘段不取樣(刻意,與舊制逐位元一致)。
+ */
+function laneHeads(pts) {
+  const seg = MAPGEO.TACTICS.SEG_M;
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const total = cum[cum.length - 1];
   const at = (d) => {
     let i = 1;
     while (i < cum.length - 1 && cum[i] < d) i++;
     const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
     return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
   };
-  const turns = [];
-  const minRad = T.TURN_MIN_DEG * Math.PI / 180;
-  let prevHead = null;
-  for (let d = T.SEG_M; d <= total; d += T.SEG_M) {
-    const p0 = at(d - T.SEG_M), p1 = at(d);
-    const head = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
-    if (prevHead != null) {
-      let dh = Math.abs(head - prevHead);
-      if (dh > Math.PI) dh = Math.PI * 2 - dh;
-      if (dh >= minRad) turns.push(d - T.SEG_M);
-    }
-    prevHead = head;
+  const heads = [];
+  for (let d = seg; d <= total; d += seg) {
+    const p0 = at(d - seg), p1 = at(d);
+    heads.push({ d: d - seg, head: Math.atan2(p1[1] - p0[1], p1[0] - p0[0]) });
   }
-  return { total, straight, sinuosity: total / straight, turns, turnsPerKm: turns.length / (total / 1000 || 1) };
+  return { total, heads };
 }
 
 /**
@@ -224,36 +241,45 @@ export function laneBacktrackFrac(pts) {
 
 /**
  * 兵線「接近 180° 迴轉」偵測(公尺平面 [x,z] 陣列,2026-07-28 使用者需求「不可接近 180 度迴轉」)。
- * 沿折線以 TACTICS.SEG_M 等距重取樣,取相鄰兩段航向的反轉角(0~180°)最大值;≥ MAPGEO.UTURN_MAX_DEG
- * = 掉頭迴轉。**MUST 走重取樣**(與 laneTacticsXZ 同一組):OSRM/圖資的密集折線,相鄰微段夾角
- * 是量測雜訊而非真的掉頭,逐頂點量會誤判。pts 同一尺度即可(角度無單位)。
+ * 沿折線以 TACTICS.SEG_M 等距重取樣(laneHeads),取相鄰兩段航向的反轉角(0~180°)最大值;
+ * ≥ MAPGEO.UTURN_MAX_DEG = 掉頭迴轉。pts 同一尺度即可(角度無單位)。
  * 回傳 { ok, maxDeg, at }(at = 迴轉處沿線距離,無則 -1)。
  */
 export function laneUTurnAudit(pts) {
-  const seg = MAPGEO.TACTICS.SEG_M;
   if (!pts || pts.length < 3) return { ok: true, maxDeg: 0, at: -1 };
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  const total = cum[cum.length - 1];
-  const at = (d) => {
-    let i = 1;
-    while (i < cum.length - 1 && cum[i] < d) i++;
-    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
-    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
-  };
-  let prevHead = null, maxDeg = 0, atMax = -1;
-  for (let d = seg; d <= total; d += seg) {
-    const p0 = at(d - seg), p1 = at(d);
-    const head = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
-    if (prevHead != null) {
-      let dh = Math.abs(head - prevHead);
-      if (dh > Math.PI) dh = Math.PI * 2 - dh;               // 取 0~π 的較小夾角
-      const deg = dh * 180 / Math.PI;
-      if (deg > maxDeg) { maxDeg = deg; atMax = d - seg; }
-    }
-    prevHead = head;
+  const { heads } = laneHeads(pts);
+  let maxDeg = 0, atMax = -1;
+  for (let j = 1; j < heads.length; j++) {
+    let dh = Math.abs(heads[j].head - heads[j - 1].head);
+    if (dh > Math.PI) dh = Math.PI * 2 - dh;                 // 取 0~π 的較小夾角
+    const deg = dh * 180 / Math.PI;
+    if (deg > maxDeg) { maxDeg = deg; atMax = heads[j].d; }
   }
   return { ok: maxDeg < MAPGEO.UTURN_MAX_DEG, maxDeg, at: atMax };
+}
+
+/**
+ * 兵線「累積轉角」稽核(公尺平面 [x,z] 陣列,2026-07-29 使用者需求
+ * 「轉彎的角度累積起來不可超過 ±90° 的範圍之外,順逆時針轉向可抵消」)。
+ * 沿折線以 TACTICS.SEG_M 等距重取樣(laneHeads),相鄰取樣航向的**帶號**轉角
+ * (正規化到 (−π, π];左轉正/右轉負)逐段累加 —— 順逆時針互相抵消 ——
+ * 任一時刻 |累積| 超出 MAPGEO.TURN_ACCUM_MAX_DEG = 出界淘汰。
+ * 恰好 ±90°(垂直街網單一直角轉)落在範圍**內** MUST 合法 ⇒ 門檻比較含微小浮點餘裕。
+ * 回傳 { ok, maxAbsDeg, at }(at = 累積峰值處沿線距離,無則 -1)。
+ */
+export function laneTurnAccumAudit(pts) {
+  if (!pts || pts.length < 3) return { ok: true, maxAbsDeg: 0, at: -1 };
+  const { heads } = laneHeads(pts);
+  let acc = 0, maxAbs = 0, atMax = -1;
+  for (let j = 1; j < heads.length; j++) {
+    let dh = heads[j].head - heads[j - 1].head;
+    if (dh > Math.PI) dh -= Math.PI * 2;                     // 正規化到 (−π, π]:帶號最小轉角
+    else if (dh < -Math.PI) dh += Math.PI * 2;
+    acc += dh;
+    const a = Math.abs(acc) * 180 / Math.PI;
+    if (a > maxAbs) { maxAbs = a; atMax = heads[j].d; }
+  }
+  return { ok: maxAbs <= MAPGEO.TURN_ACCUM_MAX_DEG + 1e-9, maxAbsDeg: maxAbs, at: atMax };
 }
 
 /**

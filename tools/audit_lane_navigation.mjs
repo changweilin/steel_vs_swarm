@@ -1,11 +1,12 @@
 // tools/audit_lane_navigation.mjs
-// 兵線導航兩規則離線稽核(2026-07-28 使用者需求):
-//   規則①「一旦進入高架橋/隧道/地下道,只能從出入口進出,不可從側邊出入」→ laneStructEntryAudit(圖論)
-//   規則②「不可接近 180 度迴轉」                                        → laneUTurnAudit(幾何)
+// 兵線導航三規則離線稽核:
+//   規則①「一旦進入高架橋/隧道/地下道,只能從出入口進出,不可從側邊出入」→ laneStructEntryAudit(圖論,2026-07-28)
+//   規則②「不可接近 180 度迴轉」                                        → laneUTurnAudit(幾何,2026-07-28)
+//   規則③「轉彎角度累積不可超過 ±90°(順逆時針轉向可抵消)」              → laneTurnAccumAudit(幾何,2026-07-29)
 // 執行 data.js 真正的判定原文(bake_venue_lanes.mjs / mapSelect.js 生成期共用同一支)。
-// 含反向驗證:把規則故意鬆掉的那一版餵進去,稽核 MUST 在對應條目紅字。
+// 含反向驗證:把規則故意鬆掉/寫壞的那一版餵進去,稽核 MUST 在對應條目紅字。
 // 用法:node tools/audit_lane_navigation.mjs
-import { MAPGEO, laneUTurnAudit, laneStructEntryAudit } from '../public/js/data.js';
+import { MAPGEO, laneUTurnAudit, laneTurnAccumAudit, laneStructEntryAudit } from '../public/js/data.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond) => { if (cond) pass++; else { fail++; console.log('  ✗', name); } };
@@ -37,6 +38,60 @@ section('規則② 反向驗證(門檻若鬆到 180° ⇒ 對照組不再判迴�
 const loose = (pts) => laneUTurnAudit(pts).maxDeg < 180;   // 手動用 180° 門檻重判
 ok('對照組:152° 在 180° 門檻下漏放(證明 150 門檻有作用)', loose(bent(152)) && !laneUTurnAudit(bent(152)).ok);
 ok('對照組:178° 在 180° 門檻下漏放', loose(bent(178)) && !laneUTurnAudit(bent(178)).ok);
+
+// ============ 規則③ 累積轉角 ±90°(laneTurnAccumAudit) ============
+// path(turns):由逐頂點帶號轉角(度,左轉正)展開折線;leg = 120(SEG_M 的整數倍,
+// 轉角恰落在取樣邊界 ⇒ 航向量測無跨角稀釋,角度斷言才準)。
+const path = (turns, leg = 120) => {
+  const pts = [[0, 0]];
+  let h = 0, x = 0, y = 0;
+  const step = () => { x += leg * Math.cos(h); y += leg * Math.sin(h); pts.push([x, y]); };
+  step();
+  for (const t of turns) { h += t * D2R; step(); }
+  return pts;
+};
+
+section('規則③ 累積轉角 ±' + MAPGEO.TURN_ACCUM_MAX_DEG + '°(順逆時針可抵消)');
+ok('直線不累積', laneTurnAccumAudit([[0, 0], [600, 0]]).ok && laneTurnAccumAudit([[0, 0], [600, 0]]).maxAbsDeg < 1);
+ok('平緩兩點(< 3 頂點防呆)恆合法', laneTurnAccumAudit([[0, 0], [10, 0]]).ok);
+ok('垂直街網單一 90° 直角轉(範圍邊界)合法', laneTurnAccumAudit(path([90])).ok);
+ok('同向累積 60°+60°=120°(單點皆遠低於迴轉門檻)判出界', !laneTurnAccumAudit(path([60, 60])).ok);
+ok('逆時針同向累積 −60°−60° 亦判出界(帶號對稱)', !laneTurnAccumAudit(path([-60, -60])).ok);
+ok('蛇行 +60/−60/+60/−60(順逆抵消)合法', laneTurnAccumAudit(path([60, -60, 60, -60])).ok);
+ok('S 大彎 +85/−85/+85(抵消後不出界)合法', laneTurnAccumAudit(path([85, -85, 85])).ok);
+ok('單一 120° 大轉(低於迴轉門檻 150°,規則②放行)由本規則攔下',
+  laneUTurnAudit(path([120])).ok && !laneTurnAccumAudit(path([120])).ok);
+ok('繞圈(4×90°)判出界', !laneTurnAccumAudit(path([90, 90, 90, 90])).ok);
+// 兩規則獨立(另一向):先偏 −70° 再 +155° 掉頭 —— 累積峰值 85° 在範圍內(本規則放行),
+// 局部 155° 反轉由規則②攔 ⇒ 規則③ MUST NOT 被當成規則②的替代品而移除任一方。
+// (不用恰好 150°:atan2 量測有 1e-14 級浮點誤差,會卡在規則②的嚴格 < 門檻上。)
+ok('−70° 後 +155° 掉頭:規則③放行、規則②攔(互相獨立)',
+  laneTurnAccumAudit(path([-70, 155])).ok && !laneUTurnAudit(path([-70, 155])).ok);
+// 量測正確性:+45°+45° 的累積峰值 ≈ 90°(門檻恰卡在此刻度上)
+ok('累積量測 = 帶號轉角總和(±0.5°)', Math.abs(laneTurnAccumAudit(path([45, 45])).maxAbsDeg - 90) < 0.5);
+// 重取樣防鋸齒:階梯狀短邊逐頂點 ±90° 交錯,宏觀朝 45° 前進,MUST NOT 誤判出界
+ok('階梯狀短邊(宏觀前進)不誤判', laneTurnAccumAudit(stair).ok);
+
+// 反向驗證 A:若把「帶號累積」誤寫成「絕對值累積」(不可抵消),蛇行對照組會被誤殺 ——
+// 證明真正的實作靠帶號抵消放行它。
+section('規則③ 反向驗證(壞版對照組 ⇒ 稽核紅字)');
+const absAccum = (pts) => {                                  // 壞版:|dh| 累加,順逆不抵消
+  let acc = 0;
+  const segs = [];
+  for (let i = 1; i < pts.length; i++) segs.push(Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]));
+  for (let i = 1; i < segs.length; i++) {
+    let dh = Math.abs(segs[i] - segs[i - 1]);
+    if (dh > Math.PI) dh = Math.PI * 2 - dh;
+    acc += dh;
+  }
+  return acc * 180 / Math.PI;
+};
+ok('對照組:蛇行在「絕對值累積」壞版下誤殺(證明帶號抵消語意)',
+  absAccum(path([60, -60, 60, -60])) > MAPGEO.TURN_ACCUM_MAX_DEG && laneTurnAccumAudit(path([60, -60, 60, -60])).ok);
+// 反向驗證 B:若門檻鬆到 180°,120° 累積案就漏放 —— 證明 90° 門檻正是攔截點。
+const looseAccum = (pts) => laneTurnAccumAudit(pts).maxAbsDeg <= 180;   // 手動用 180° 門檻重判
+ok('對照組:120° 累積在 180° 門檻下漏放(證明 90 門檻有作用)',
+  looseAccum(path([60, 60])) && !laneTurnAccumAudit(path([60, 60])).ok);
 
 // ============ 規則① 橋/隧只能從出入口進出(laneStructEntryAudit) ============
 // struc[k] = 段 k(節點 k−1→k)是否結構邊;portal[i] = 節點 i 是否結構 way 端點。
