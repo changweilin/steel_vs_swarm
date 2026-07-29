@@ -356,7 +356,7 @@ async function overpass(q) {
 
 // ---- 備援圖資來源:OSM 官方 API 的 /map(2026-07-28)----
 // 為什麼要備援:Overpass 的公共鏡像對雲端 IP(CI runner、開發沙箱)幾乎一律拒絕 ——
-// 實測 runner 上三個鏡像全數失敗,整支稽核只剩不需要圖資的 ⑦ 能判。官方 /map 走的是
+// 實測 runner 上三個鏡像全數失敗,整支稽核只剩不需要圖資的 ⑧ 能判。官方 /map 走的是
 // 另一套基礎設施,回傳該 bbox 的**全部**原始資料(node/way),本工具要的 way 幾何與標籤都在裡面。
 // 與執行期的差別只有「沒有 Overpass 的 out N 額度上限」⇒ 這裡看到的是**超集**:
 // L1 bbox 只有 ~0.28 km²,執行期額度(幹道 150 / 小徑 400)遠大於實際 way 數,兩者實務上等價;
@@ -556,11 +556,11 @@ async function scanVenue(v) {
   res.osm = { src: osm.src || 'overpass', roads: osm.roads.length, rails: osm.rails.length,
     waters: (osm.waters || []).length, crossings: osm.crossings.length };
 
-  // 兵線上「踩在立體結構上」的弧長區間(橋面 / 隧道含引道):⑦ 的側翼高地要扣掉這些段,
+  // 兵線上「踩在立體結構上」的弧長區間(橋面 / 隧道含引道):⑧ 的側翼高地要扣掉這些段,
   // 使用者要的是**一般道路**上的高地對峙,不是站在橋上或洞裡比高度。
   const structArcs = [];
 
-  // 橋跨的是水域還是陸域(2026-07-28 使用者需求:② 要**純陸域**高架橋):
+  // 橋跨的是水域還是陸域(2026-07-28 使用者需求:③ 要**純陸域**高架橋):
   //   ①與圖資水道相交,或②橋下地表沉在水/沼面之下 —— 兩者任一即判水域。
   // 第二條是為了抓沒被畫成 waterway 的湖/潟湖/海灣(遊戲端的 splitWaterPieces 也是看高程與水色)。
   const WET_Y = WATER.LEVEL + WATER.SWAMP_BAND;
@@ -593,14 +593,14 @@ async function scanVenue(v) {
       if (onLen >= ON_MIN && canCarry) {           // 兵線走在橋面上(車行橋 + 共用節點)
         structArcs.push(...runs);
         const wet = spansWater(wpts);
-        if (wet) {                                 // 跨水橋:記錄但不算 ②(使用者要純陸域高架橋)
+        if (wet) {                                 // 跨水橋:記錄但不算 ③(使用者要純陸域高架橋)
           const cur = res.hits2Water;
           if (!cur || onLen > cur.len) res.hits2Water = { name, len: Math.round(onLen), wet };
-        } else {                                   // ② 地面高架橋 = 純陸域上方
+        } else {                                   // ③ 地面高架橋 = 純陸域上方
           const cur = res.hits.bridge;
           if (!cur || onLen > cur.len) res.hits.bridge = { name, len: Math.round(onLen) };
         }
-      } else {                                     // ⑤ 兵線從橋下鑽過(純幾何交叉)
+      } else {                                     // ⑥ 兵線從橋下鑽過(純幾何交叉)
         for (let i = 1; i < laneD.length && !res.hits.underBridge; i++) {
           for (let j = 1; j < wpts.length; j++) {
             if (segCross(laneD[i - 1], laneD[i], wpts[j - 1], wpts[j])) { res.hits.underBridge = { name }; break; }
@@ -657,9 +657,9 @@ async function scanVenue(v) {
         }
       }
     } else if (!sharesNode(way)) {
-      // ⑥ 穿越地下道上方:兵線不在這條隧道上(不共節點)且**橫越**它的覆蓋段 = 從洞頂走過去。
+      // ⑦ 穿越地下道上方:兵線不在這條隧道上(不共節點)且**橫越**它的覆蓋段 = 從洞頂走過去。
       // 只認「橫越」:平行並行的另一個孔(例如同一座山的人行孔)在高度場上與兵線同層,
-      // 不是「上下分層」的測試場景 —— 那條規則放進來會讓 jinlong 的人行孔誤判成 ⑥。
+      // 不是「上下分層」的測試場景 —— 那條規則放進來會讓 jinlong 的人行孔誤判成 ⑦。
       for (let i = 1; i < laneD.length && !res.hits.overTunnel; i++) {
         for (let j = 1; j < tr.pts.length; j++) {
           if (!segCross(laneD[i - 1], laneD[i], tr.pts[j - 1], tr.pts[j])) continue;
@@ -700,8 +700,8 @@ async function scanVenue(v) {
         || (cand.depth === res.tunnelCand.depth && d < res.tunnelCand.d)) res.tunnelCand = cand;
   }
 
-  // ---- ② 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
-  // 用途:② 目前只有跨水橋時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上陸域高架橋」。
+  // ---- ③ 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
+  // 用途:③ 目前只有跨水橋時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上陸域高架橋」。
   for (const w of osm.roads) {
     if (!w.tags.bridge || w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const wpts = w.geometry.map((p) => llToWorld(p.lat, p.lon, center));
@@ -715,9 +715,9 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ⑥ 的候選診斷:bbox 內有沒有「任一車行道從覆蓋段隧道上方跨過」----
-  // ⑥ 要的是**兵線**從洞頂走過,可遇不可求;這裡順手回報「這張地圖上存不存在這種交叉、
-  // 離兵線多遠」,好判斷「換個錨點/方位角重烤兵線」有沒有機會把 ⑥ 湊出來(離兵線越近越有機會)。
+  // ---- ⑦ 的候選診斷:bbox 內有沒有「任一車行道從覆蓋段隧道上方跨過」----
+  // ⑦ 要的是**兵線**從洞頂走過,可遇不可求;這裡順手回報「這張地圖上存不存在這種交叉、
+  // 離兵線多遠」,好判斷「換個錨點/方位角重烤兵線」有沒有機會把 ⑦ 湊出來(離兵線越近越有機會)。
   {
     const tunRuns = [];
     for (const w of osm.roads) {
@@ -746,7 +746,7 @@ async function scanVenue(v) {
     }
   }
 
-  // ---- ⑦ 側翼高地(altTier() = 一座砲塔高 = 高度差加成門檻)----
+  // ---- ⑧ 側翼高地(altTier() = 一座砲塔高 = 高度差加成門檻)----
   // 2026-07-28 使用者需求:**扣掉隧道/地下道/高架橋段**。理由是語意:在地下道裡側面地形之所以
   // 「比兵線高」,只是因為**路面沉得深**(那個高度差就是地下道的深度),不是可以佔領的戰術高地;
   // 站在橋面上比更沒有意義。要的是「一般道路的兵線,單側地形高過一座砲塔」。
@@ -923,12 +923,12 @@ for (const v of list) {
   console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
     + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
-    + `${r.hits2Water ? `　跨水橋(不算②):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
-    + `${r.landBridgeCand ? `　②候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
+    + `${r.hits2Water ? `　跨水橋(不算③):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
+    + `${r.landBridgeCand ? `　③候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
     + `${r.flatTunnel ? `　落空地下道(規劃放棄,仍是平街):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
     + `${r.underCand ? `　②候選地下道:${r.underCand.name} 覆蓋 ${r.underCand.len}m/沉 ${r.underCand.depth}m 離兵線 ${r.underCand.d}m` : ''}`
     + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/深 ${r.tunnelCand.depth}m 離兵線 ${r.tunnelCand.d}m` : ''}`
-    + `${r.overTunnelCand ? `　⑥候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
+    + `${r.overTunnelCand ? `　⑦候選:${r.overTunnelCand.road}×${r.overTunnelCand.tunnel} 離兵線 ${r.overTunnelCand.d}m` : ''}`);
 }
 
 console.log('\n各場景可用的 1v1 預設場地:');
