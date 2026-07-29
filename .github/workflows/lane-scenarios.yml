@@ -19,6 +19,10 @@ on:
         description: '隧道候選探測點(lat,lng,名稱;以分號分隔;留空 = 不探測)'
         required: false
         default: ''
+      probe_r:
+        description: '探測 bbox 放大倍數(L1 半徑僅 ~266 真實公尺;廣域找點用 3~6)'
+        required: false
+        default: '1'
 
 # 同時只跑一份掃描:新的觸發取代還在跑的舊掃描(Overpass 很慢,不要並排燒 runner)
 concurrency:
@@ -60,7 +64,7 @@ jobs:
       - name: 隧道候選探測
         if: ${{ inputs.probe != '' }}
         continue-on-error: true
-        run: node tools/audit_lane_scenarios.mjs --probe='${{ inputs.probe }}'
+        run: node tools/audit_lane_scenarios.mjs --probe='${{ inputs.probe }}' --probe-r='${{ inputs.probe_r }}'
 
       - name: 兵線重烤結果(diff)
         if: ${{ inputs.bake != '' }}
