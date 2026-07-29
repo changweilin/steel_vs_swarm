@@ -17,6 +17,8 @@ const llToGame = (lat, lng, c) => [
   (lng - c.lng) * Math.PI / 180 * EARTH_M * Math.cos(c.lat * Math.PI / 180) * SC_GAME,
   (lat - c.lat) * Math.PI / 180 * EARTH_M * SC_GAME,
 ];
+// 寫出精度(六位小數 ≈ 0.1m):規則硬門檻與寫檔 MUST 用同一個捨入(見 tryBearing 分離閘)
+const r6 = (v) => +v.toFixed(6);
 
 const CACHE = new URL('./.osm_cache/', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
@@ -432,8 +434,18 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   if (mo > MAPGEO.MAX_OVERLAP) return { fail: 'overlap', ov: mo };
 
   const s = 1 / MAPGEO.REAL_SCALE;
-  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)
-  if (!laneSeparationAudit(lanes.map((l) => l.xz.map(([x, z]) => [x * s, z * s]))).ok) return { fail: 'touch' };
+  // 兵線互不接觸/交叉硬門檻(全禁,含立體交叉;與 mapSelect / server / audit_lane_sep 同一支)。
+  // MUST 判「寫出後」的幾何:六位小數捨入 lat/lng → llToGame(origin = 捨入後 bases[0],
+  // 與 audit_lane_sep 逐式相同)。圖平面座標(未捨入)在扇出帶的公分級貼近會與寫出幾何
+  // 不同判 —— 捨入讓兩線換邊變成交叉(2026-07-29 barcelona L3 實案:bake 閘綠、離線稽核紅
+  // → runner 拒絕提交)。判寫出幾何 = 兩端永遠同判(原則 3)。
+  const wr6 = (i) => [r6(g.LA[i]), r6(g.LN[i])];
+  const oW = wr6(aIdx);
+  const lanesWritten = lanes.map((l) => l.idx.map((i) => {
+    const [la, ln] = wr6(i);
+    return llToGame(la, ln, { lat: oW[0], lng: oW[1] });
+  }));
+  if (!laneSeparationAudit(lanesWritten).ok) return { fail: 'touch' };
   let sinu = 0, tpk = 0;
   for (const l of lanes) { const t = laneTacticsXZ(l.xz.map(([x, z]) => [x * s, z * s])); sinu += t.sinuosity; tpk += t.turnsPerKm; }
   sinu /= L; tpk /= L;
@@ -545,7 +557,6 @@ log('\n---- 報告 ----');
 for (const r of report) log(r);
 log(`\n成功 ${Object.keys(out).length} / ${Object.keys(ANCHORS).length}`);
 
-const r6 = (v) => +v.toFixed(6);
 let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 由 tools/bake_venue_lanes.mjs 產生:Overpass 真實道路路網 → 邊不相交最短路徑。
 // 每條兵線的每個頂點都是 OSM 道路節點 ⇒ NPC 引導路線 100% 與現實導航路線相符。

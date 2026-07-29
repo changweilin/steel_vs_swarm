@@ -51,7 +51,8 @@ jobs:
       - name: 解析場地清單
         run: |
           ONLY='${{ inputs.only }}'
-          if [ -z "$ONLY" ] && [ -f .github/bake-request ]; then ONLY=$(tr -d '[:space:]' < .github/bake-request); fi
+          # 請求檔只讀第一行(第二行起 = 重觸發 nonce:內容不變 push 不會觸發,改 nonce 即可重跑)
+          if [ -z "$ONLY" ] && [ -f .github/bake-request ]; then ONLY=$(head -n1 .github/bake-request | tr -d '[:space:]'); fi
           echo "ONLY=$ONLY" >> "$GITHUB_ENV"
           echo "場地清單:${ONLY:-(全部)}"
 
