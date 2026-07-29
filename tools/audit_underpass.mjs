@@ -6,6 +6,13 @@
 // ⇒ 圖資明明是地下道,遊戲裡只有一條平街(2026-07-28 之前的已知缺口)。
 // 改制只換**路面剖面**(`underpassPlan` + `tunFloorAt`),牆/天花/橫樑/照明/門洞/打洞/走廊/
 // 伺服器 slab 一律沿用隧道那一整套 —— 本稽核就是驗這兩件事:剖面對不對、沿用有沒有斷。
+// 2026-07-29 引道改制(「隧道方法」):出入口只在道路頭尾兩端 ——
+//   ① 引道開挖收窄成垂直路塹(run.cut → carveTunnels 過渡帶 hw+CUT_W;山體隧道維持 hw+7):
+//      平地上 hw+7 緩斜壁是一圈走得下去的碗 = 從地下道**側面**挖出入口,MUST NOT 回歸;
+//   ② 引道登記 open 物理段(tunnelSegs open:true):只服務 surfaceAt 站立捕捉(站精確下沉
+//      剖面)與 _updatePlayer 隧道側壁閘(溝底不能爬牆側出);slab 上傳 / _slabHitT 彈道 /
+//      ceilingAt 天花 / lev 回報 MUST 濾 !open —— 露天路塹頭上是天空,漏濾 = 伺服器把露天溝
+//      當洞內(側牆全擋 LOS、爆風隔絕)= 兩端分家靜默丟包(A18/A30 一族)。
 //
 //   Ⅰ 剖面與規劃(真的執行 `biomes.js` 的 underpassPlan / tunFloorAt 原文)
 //     ① 平坦地形:舊制(直線剖面)覆蓋區間 MUST 為空(= 缺口本身);新制 MUST 建得出洞段
@@ -23,6 +30,9 @@
 //   Ⅲ 純表現層與單一縫(靜態規則)
 //     三個消費端共用 tunFloorAt / way._tun.pts、carveTunnels 吃逐段 hw、
 //     緣石帶不進 cols/tunnelSegs/ceilSegs/走廊(伺服器 slab 不得漂移)
+//   Ⅳ 開挖補集:引道挖得到、洞段不動;引道剖面 = 垂直路塹(cut 旗標)
+//   Ⅴ open 物理段:引道露天路塹(執行發射器原文)+ 消費端閘門(slab/彈道/天花/lev 濾 !open,
+//     surfaceAt 站立捕捉與移動側壁閘不濾)
 //
 // 為什麼用「抽原文」而不是 import:`biomes.js` 的 three 走 CDN importmap,Node 端解析不了;
 // 抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。
@@ -30,8 +40,9 @@
 // 退出碼:0 = 全綠;1 = 有紅字
 //
 // **改完 MUST 做反向驗證**:把 underpassPlan 寫回舊制(平坦 tunnel way 一律回 null)、
-// 把引道牆頂寫回 `yF + 0.15`、把門洞 slope 寫回瞬時斜率、把 carveTunnels 的 hw 寫回固定值,
-// 稽核 MUST 在對應條目紅字。
+// 把引道牆頂寫回 `yF + 0.15`、把門洞 slope 寫回瞬時斜率、把 carveTunnels 的 hw 寫回固定值、
+// 把 nearOf 寫回一律 `hw + 7`、拿掉 open 段的 `open: true`、拿掉 slab 上傳的 `!d.open` 過濾、
+// 拿掉 game.js 任一處 `!tn.open` 閘門,稽核 MUST 在對應條目紅字。
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,6 +51,8 @@ import { LOS, WATER } from '../public/js/data.js';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
 const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+const msrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
+const gsrc = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -57,6 +70,7 @@ const TUN = pickConst('TUN', { CLEAR: LOS.TUN_CLEAR_M });
 const UND = pickConst('UND');
 const ROAD_SEG = +/const ROAD_SEG = (\d+)/.exec(src)[1];
 const ROAD_LIFT = +/const ROAD_LIFT = ([\d.]+)/.exec(src)[1];
+const CUT_W = +(/const CUT_W = ([\d.]+)/.exec(tsrc)?.[1] ?? NaN);   // 地下道路塹過渡帶寬(terrain.js)
 const TUN_GAP_CLOSE = +/const TUN_GAP_CLOSE = (\d+)/.exec(src)[1];
 const TUN_COV_MIN = +/TUN_COV_MIN = (\d+)/.exec(src)[1];
 const evalBlock = (from, fnName, extra = {}) => {
@@ -282,7 +296,8 @@ function build(under = true, heightAt = null) {
   const lat = v.map((p) => Math.abs(p[2]));
   ok(lat.every((d) => Math.abs(d - HW) < 1e-9 || Math.abs(d - (HW + UND.COPE)) < 1e-9),
     'Ⅱ-b 緣石帶 MUST 自牆線(hw)鋪到 hw + COPE');
-  ok(UND.COPE >= 7, `Ⅱ-b COPE(${UND.COPE})MUST ≥ 7 —— carveTunnels 的開挖斜壁外緣就在 hw+7,窄了會露出土溝`);
+  ok(Number.isFinite(CUT_W) && UND.COPE >= CUT_W + 1,
+    `Ⅱ-b COPE(${UND.COPE})MUST ≥ CUT_W + 1(${CUT_W + 1})—— 蓋過垂直路塹過渡帶(hw+CUT_W)與地形網格拉伸殘坡`);
   ok(v.every((p) => Math.abs(p[1] - (b.bAt(Math.abs(p[0] - b.run[0][0])) + 0.06)) < 2),
     'Ⅱ-b 緣石帶高度 MUST 貼著基準線(與一般路面對齊)');
   // 逐段檢查:洞段(兩端都覆蓋)MUST NOT 鋪
@@ -345,6 +360,13 @@ function build(under = true, heightAt = null) {
   ok(keep, 'Ⅳ 洞段 MUST 一格都不開挖(挖了就是把平地鏟出天窗、頂上那條橫向道路跟著塌)');
   ok(Math.abs(TUN.ROOF_T - 1) < 1e-9,
     'Ⅳ ROOF_T MUST = 1 —— 開挖判準(路面 + clear + 1)與覆蓋判準(路面 + CLEAR + ROOF_T)靠它互補');
+  // 引道改制(2026-07-29):開挖剖面 = 垂直路塹 —— 出入口只在道路兩端,側面不可進出
+  ok(/tunnelRuns\.push\(\{ pts: [^\n]*hw: hwWay, cut: !!rec\.sink \}\)/.test(src),
+    'Ⅳ 地下道開挖 run MUST 帶 cut 旗標(引道垂直路塹;山體隧道 run 不帶)');
+  ok(/const nearOf = \(r\) => \(r\.hw \?\? hw\) \+ \(r\.cut \? CUT_W : 7\);/.test(tsrc),
+    'Ⅳ carveTunnels MUST 依 cut 收窄過渡帶,山體隧道維持 hw+7(逐位元不變)');
+  ok(Number.isFinite(CUT_W) && CUT_W < 7,
+    `Ⅳ CUT_W(${CUT_W})MUST < 7 —— 寫回 7 = 平地上又挖出一圈走得下去的碗(從側面挖出入口)`);
 }
 
 // ---- Ⅲ 純表現層與單一縫(靜態規則)----
@@ -373,18 +395,19 @@ function build(under = true, heightAt = null) {
     'Ⅲ 結構通行半寬 MUST 只有 strucHw 一份');
   ok((src.match(/strucHw\(/g) || []).length >= 3, 'Ⅲ buildRoads / markGradeCorridors / carve 指派 MUST 共用 strucHw');
   ok(/hw: hwWay/.test(src), 'Ⅲ 開挖 run MUST 帶自己的通行寬');
-  ok(/const fullOf = \(r\) => \(r\.hw \?\? hw\) \+ 1;/.test(tsrc) && /const nearOf = \(r\) => \(r\.hw \?\? hw\) \+ 7;/.test(tsrc),
+  ok(/const fullOf = \(r\) => \(r\.hw \?\? hw\) \+ 1;/.test(tsrc) && /const nearOf = \(r\) => \(r\.hw \?\? hw\) \+ \(r\.cut \? CUT_W : 7\);/.test(tsrc),
     'Ⅲ carveTunnels MUST 逐段吃 r.hw(固定值會讓寬路的路面兩緣埋進沒開挖到的斜坡)');
   // 純表現層:緣石帶/引道牆 MUST NOT 動碰撞/天花/走廊/通行寬
   const copeAt = STRC.indexOf('cope.pos.push(');
   ok(copeAt > 0, 'Ⅲ 緣石帶 MUST 在結構區塊內');
   ok(!/cols\.push/.test(STRC.slice(copeAt - 900, copeAt + 900)),
     'Ⅲ 緣石帶 MUST NOT 登記碰撞柱(它鋪在牆外的地表上)');
-  for (const name of ['tunnelSegs', 'ceilSegs']) {
-    const i0 = STRC.indexOf(`${name}.push`);
-    ok(i0 > 0 && !/\bunder\b|cope/.test(STRC.slice(i0, i0 + 400)),
-      `Ⅲ ${name}(碰撞/天花)MUST NOT 吃地下道分支 —— 伺服器 slab 與隧道同一套語意`);
-  }
+  // 覆蓋段碰撞/天花:與山體隧道**逐字**同一條公式(無 under 分支、無 open 旗標)——
+  // 伺服器 slab(main.js 過濾 !open 後上傳)與隧道同一套語意
+  ok(STRC.includes('tunnelSegs.push({\n              x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),\n              x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,\n            });'),
+    'Ⅲ 覆蓋段 tunnelSegs MUST 維持與隧道逐字共用的公式(無 under/open 分支)');
+  ok((STRC.match(/ceilSegs\.push/g) || []).length === 1 && !/ceilSegs\.push[^\n]*(open|under)/.test(STRC),
+    'Ⅲ ceilSegs(不透明天花)MUST 只有覆蓋段一份、不吃地下道分支');
   ok(!/hw = [^\n]*under/.test(STRC), 'Ⅲ 通行寬 hw MUST NOT 隨地下道改變(伺服器 slab / 規則 #5 不得漂移)');
   ok(/const under = strc && !!tw\.sink;/.test(src), 'Ⅲ 地下道判定 MUST 只看剖面有沒有下沉量(單一旗標)');
   ok(/const yT = !covV\[i\] \? \(under \? tBaseAt\(cum\[i\]\) \+ UND\.KERB : yF \+ 0\.15\)/.test(STRC),
@@ -403,6 +426,64 @@ function build(under = true, heightAt = null) {
     'Ⅲ UND_HW MUST NOT 含步道分級');
   ok(UND.MARGIN > 0, 'Ⅲ MARGIN MUST > 0(地表微起伏時洞段才不會被判斷開)');
   ok(UND.GRADE_MAX > UND.GRADE, 'Ⅲ GRADE_MAX MUST > 目標 GRADE');
+}
+
+// ---- Ⅴ open 物理段:引道露天路塹(執行 biomes.js 發射器原文)+ 消費端閘門 ----
+{
+  const O0 = src.indexOf('        // ---- 地下道引道 open 物理段');
+  const O1 = src.indexOf('        // 明隧道體檢', O0);
+  if (O0 < 0 || O1 <= O0) throw new Error('找不到 open 段區塊(結構已變?)');
+  const OPEN = src.slice(O0, O1);
+  // 行為:以平地基準案例跑一次發射器 —— open 段恰鋪滿圍裙外敞開補集、公式與覆蓋段同一條
+  const run = plan.pts, cum = plan.cum, nP = run.length, total = plan.total;
+  const fAt = (s) => tunFloorAt(plan, s, plan.total);
+  const cAt = (s) => fAt(s) + TUN.CLEAR;
+  const APRON = 8;
+  const ivx = plan.intervals.map(([c0, c1]) => [c0 >= 4 ? Math.max(0, c0 - APRON) : c0,
+                                                c1 <= total - 4 ? Math.min(total, c1 + APRON) : c1]);
+  const at = (d) => {
+    let i = 1; while (cum[i] < d && i < nP - 1) i++;
+    const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f];
+  };
+  const mk = (under) => {
+    const tunnelSegs = [];
+    new Function('under', 'ivx', 'cum', 'nP', 'total', 'at', 'tFloorAt', 'ceilOf', 'hw', 'ROAD_LIFT', 'tunnelSegs', OPEN)(
+      under, ivx, cum, nP, total, at, fAt, cAt, HW, ROAD_LIFT, tunnelSegs);
+    return tunnelSegs;
+  };
+  ok(mk(false).length === 0, 'Ⅴ 山體隧道(under=false)MUST NOT 登記 open 段(敞開段是原生山谷地形,照舊踩 heightAt)');
+  const segs = mk(true);
+  ok(segs.length > 0 && segs.every((s) => s.open === true && s.hw === HW),
+    'Ⅴ 引道段 MUST 全帶 open:true 且通行寬 hw 不變');
+  const segLen = segs.reduce((a, s) => a + Math.hypot(s.x2 - s.x1, s.z2 - s.z1), 0);
+  const covLen = ivx.reduce((a, [c0, c1]) => a + (c1 - c0), 0);
+  ok(Math.abs(segLen - (total - covLen)) < 3,
+    `Ⅴ open 段總長(${segLen.toFixed(1)}m)MUST ≈ 圍裙外敞開補集(${(total - covLen).toFixed(1)}m)—— 少了 = 引道站不上下沉剖面`);
+  // 測試場地沿 +X ⇒ 弧長 = x 位移,可逐段回推驗公式
+  const sOf = (x) => x - run[0][0];
+  ok(segs.every((s) => Math.abs(s.fy1 - (fAt(sOf(s.x1)) + ROAD_LIFT)) < 1e-6
+    && Math.abs(s.cy1 - cAt(sOf(s.x1))) < 1e-6),
+    'Ⅴ open 段 MUST 吃 tunFloorAt / ceilOf 同一條公式(路面 + ROAD_LIFT、天花 + CLEAR)');
+  ok(segs.every((s) => !ivx.some(([c0, c1]) => sOf(s.x1) > c0 + 0.5 && sOf(s.x1) < c1 - 0.5)),
+    'Ⅴ open 段 MUST NOT 疊進覆蓋段內部(覆蓋段的 slab/天花語意不得被 open 汙染)');
+  // 消費端閘門:makeTunnelIndex 單一縫傳遞;站立捕捉/側壁閘吃、slab 上傳/彈道/天花/lev 濾
+  ok(/best = \{ floor, ceil: d\.cy1 \+ \(d\.cy2 - d\.cy1\) \* t, open: !!d\.open \}/.test(src),
+    'Ⅴ makeTunnelIndex MUST 傳遞 open 旗標(消費端唯一資訊源)');
+  ok(/tunnels\.filter\(\(d\) => !d\.open\)\.map/.test(msrc),
+    'Ⅴ main.js slab 上傳 MUST 過濾 open 段 —— 露天路塹上傳成 ty=2 = 伺服器把溝底當洞內(兩端分家靜默丟包)');
+  ok(/if \(tn && !tn\.open && curY < tn\.ceil\) c = tn\.ceil;/.test(msrc),
+    'Ⅴ ceilingAt MUST 濾 open(露天段頭上是天空,不是隱形蓋)');
+  ok(/if \(tn && curY < tn\.ceil\) return tn\.floor;/.test(msrc),
+    'Ⅴ surfaceAt MUST NOT 濾 open —— 站立捕捉正是 open 段的存在理由(站精確下沉剖面)');
+  ok(/if \(tn && !tn\.open && yHi !== yLo/.test(gsrc),
+    'Ⅴ _slabHitT MUST 濾 open(露天段不擋彈道 —— 看得到就打得到)');
+  ok(/lev: btn && !btn\.open && by < btn\.ceil \? 2 : 0/.test(gsrc),
+    'Ⅴ 爆點 lev MUST 濾 open(露天溝裡的爆風不吃隧道隔絕)');
+  ok(/const inTun = !!\(tn && !tn\.open && this\.pos\.y < tn\.ceil\);/.test(gsrc),
+    'Ⅴ pos 回報 lev MUST 濾 open(露天溝單位不是 lev=2 的洞內鬼影)');
+  ok(/const inTun0 = !!\(tn0 && py0 < tn0\.ceil\);/.test(gsrc),
+    'Ⅴ 移動側壁閘 MUST NOT 濾 open —— 溝底不能爬牆側出,出入口只在道路頭尾兩端');
 }
 
 console.log(`\n地下道稽核:${pass} 綠 / ${fail} 紅`);

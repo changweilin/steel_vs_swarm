@@ -131,7 +131,7 @@
 | A26 | 程序生成零件擺位方向與旋轉方向 MUST 同調、錨點半徑 MUST 取該高度的錨體半徑(`trunkR(y)` 類單一縫)。三大病灶:差 90°(徑向 vs 切向)、差正負號(MUST 由軸的實際世界向量推,不手寫鏡射式)、拿基部半徑當通用半徑。堆疊件 MUST NOT 用 y 交錯偽裝、躺地件軸心高 = 自身半徑。改擺位 MUST 跑 `audit_object_joints.mjs` |
 | A27 | 實例朝向 `ry` 與微傾斜 `tx/tz` MUST 當剛體整株套用(`xform.js vegPartXform` 單一縫),MUST NOT 併進逐零件歐拉角(Euler 'XYZ' 把 ry 夾在中間會攪亂方向);接合完成度 MUST 與 ry/tx/tz 無關 |
 | A28 | 三機制兩條線 MUST NOT 斷:①`rooms.js`/`sim.js`/`bots.js` MUST NOT import Node 內建、用 `process.*`/`Buffer`/`require()`(加一行只有單機炸);②URL 佈局 MUST 鏡射儲存庫佈局(`/public/**` + `/server/*.js`)—— 否則 `data.js` 變兩份模組實例且不報錯。單機離場 MUST `hub.shutdown()`。稽核 `audit_net_modes.mjs` + `audit_solo_boot.mjs` |
-| A29 | 地下道 MUST NOT 另開第二套結構 —— 沿用山體隧道整套,唯一差異 = `tunFloorAt` 的 `sink`(旗標 `under`)。地下道恆非明隧道(`open` 歸零);引道擋土牆/緣石帶純表現層;門洞 `slope` MUST 取走廊平均而非洞口瞬時斜率。稽核 `audit_underpass.mjs` |
+| A29 | 地下道 MUST NOT 另開第二套結構 —— 沿用山體隧道整套,差異只有三個具名旗標:①剖面 = `tunFloorAt` 的 `sink`(旗標 `under`);②引道開挖 = 垂直路塹(run `cut` → `carveTunnels` 過渡帶 `hw+CUT_W`,山體隧道 MUST 維持 `hw+7`)—— 出入口只在道路頭尾兩端,側面 MUST NOT 留可通行開挖斜坡;③引道露天物理段(tunnelSegs `open:true`)只服務 surfaceAt 站立捕捉與移動側壁閘,slab 上傳/`_slabHitT` 彈道/`ceilingAt` 天花/lev 回報 MUST 濾 `!open`(漏濾 = 伺服器把露天溝當洞內 = 兩端分家靜默丟包)。地下道恆非明隧道(gallery `open` 歸零);引道擋土牆/緣石帶純表現層;門洞 `slope` MUST 取走廊平均而非洞口瞬時斜率。稽核 `audit_underpass.mjs` |
 | A30 | 障礙的碰撞/彈道/伺服器 LOS MUST 同一橫斷面:建物 = 有向盒(`hw2/hd2/ry`),圓只准當 broad-phase 且 MUST 是外接半對角;occ 上傳時 `ry` MUST 反號(sim 座標 z 鏡射),`setWorld` 預算 cos/sin(8Hz 熱路徑)。`_mmShadows` 是具名例外(純顯示)。稽核 `audit_climb.mjs` Ⅲ |
 | A31 | 攀爬路線只住 `climb.js`。頂端 `y1` MUST = `b.y + b.h`;攀爬軸 MUST 在碰撞體外 `CLIMB.OFF`(推導值,> 最大機體碰撞半徑)⇒ `_collide` MUST NOT 開任何豁免;上下移動吃 `_moveAxis` 前後推杆,MUST NOT 新增按鍵(A21/A22);每候選固定 3 枚亂數、四面皆堵不掛(原則 5/6);相鄰相接沿用同一種路線型別(設施架較高者、`y0` = 低頂高),下端落地 MUST 用 `r.bx/r.bz`;箭頭動畫 MUST 併進 `biomes.js dynamics` 桶。稽核 `audit_climb.mjs` |
 
@@ -200,7 +200,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 場地場景標記(`VENUES[].scen` 系) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含 |
 | `venueLanes.js` 重烤 / `TOWER_*` / `tower.range` | `audit_map_rules.mjs`(#4)+ `audit_lane_sep.mjs` + `audit_lane_grade_sep.mjs`(#5 洞內塔 ≥20% 射程涵蓋洞口外) |
 | 兵線導航規則(`UTURN_MAX_DEG`/兩 audit/bake 閘門) | `audit_lane_navigation.mjs`(22 項);規則①生效需重烤(㋓) |
-| 地下道(`underpassPlan`/`tunFloorAt`/`UND.*` 系) | `audit_underpass.mjs`(81 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件) |
+| 地下道(`underpassPlan`/`tunFloorAt`/`UND.*`/引道 `cut`・`open` 系) | `audit_underpass.mjs`(97 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件、引道垂直路塹 + open 段消費端閘門) |
 | 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(51 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
