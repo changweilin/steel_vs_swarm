@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
@@ -20,7 +20,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls } from './mobile.js';
@@ -3036,6 +3036,7 @@ export class BattleClient {
 
   _removeEnt(id, ent) {
     if (this._lockId === id) this._clearLockGlow();   // 光暈是目標 mesh 的子節點,別留下懸空參照
+    if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); this._rgPool?.push(ent._rgGlow); ent._rgGlow = null; }   // 射程光暈回收進池(共用材質,MUST NOT 隨 mesh 一起丟)
     this.scene.remove(ent.mesh);
     if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
     if (ent.guns) this.scene.remove(ent.guns);
@@ -4474,6 +4475,45 @@ export class BattleClient {
     pod.position.x = pod.userData.x0 - (1 - ent.podS) * 1.2;   // 分離時往外滑開
   }
 
+  /**
+   * 射程光暈(2026-07-29 使用者需求「武器範圍內所有敵人都會出現範圍光暈」):
+   * 目前手上武器射程內(量到目標近側表面 —— 與伺服器 _surfD3 同一把尺)的每個可見敵人
+   * 掛一枚淡色光暈;準星鎖定的目標維持既有較亮的 lockGlow(該 ent 跳過本層,不疊兩層)。
+   * 純表現層(迷霧由快照過濾 → mesh.visible 天然把關,A10 不涉)。
+   * A25:sprite 走物件池、全部共用同一份 SpriteMaterial 與快取光暈貼圖 —— 進出射程只是
+   * add/remove + 縮放,MUST NOT 每幀重配材質/貼圖;ent 移除時回收進池(_removeEnt)。
+   */
+  _updateRangeGlows() {
+    const pool = this._rgPool || (this._rgPool = []);
+    const drop = (ent) => {
+      if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); pool.push(ent._rgGlow); ent._rgGlow = null; }
+    };
+    const def = this.side && !this.dead ? this._curWeapon().def : null;
+    if (!def) { for (const ent of this.ents.values()) drop(ent); return; }
+    const rng = def.range * this._altRangeMul(def);
+    for (const ent of this.ents.values()) {
+      const inRange = !ent.isSelf && ent.side && ent.side !== this.side && !ent.neutral
+        && !ent.dead && !ent.gar && ent.mesh.visible && ent.id !== this._lockId
+        && this.pos.distanceTo(ent.mesh.position) - this._hitR(ent) <= rng;
+      if (!inRange) { drop(ent); continue; }
+      if (ent._rgGlow) continue;
+      if (!this._rgMat) {
+        this._rgMat = new THREE.SpriteMaterial({
+          map: glowTexture(), color: SIDES[this.side].color, transparent: true, opacity: 0.26,
+          blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+        });
+      }
+      const sp = pool.pop() || new THREE.Sprite(this._rgMat);
+      sp.userData.noOutline = true;
+      // 尺寸/定位與 lockGlow 的 halo 同一條規則:直徑 = 機體高/寬取大 ×1.15、貼機體幾何中心
+      const h = ent.dimH ?? 4, r = ent.dimR ?? 1.5, top = ent.dimTop ?? h;
+      sp.scale.setScalar(Math.max(3, Math.max(h, r * 2) * 1.15));
+      sp.position.set(0, top - h * 0.5, 0);
+      ent.mesh.add(sp);
+      ent._rgGlow = sp;
+    }
+  }
+
   /** 目前被自己鎖定的目標:加上脈動光暈 */
   _setLockGlow(ent) {
     if (this._lockId === ent.id) return;
@@ -5108,11 +5148,14 @@ export class BattleClient {
       rel.copy(ent.mesh.position).sub(from);
       const s = rel.dot(d);
       const sc = s < 0 ? 0 : (s > len ? len : s);
-      if (rel.addScaledVector(d, -sc).length() > r + this._hitR(ent)) continue;
-      out.push({ ent, s });
+      const rr = r + this._hitR(ent);
+      const dev = rel.addScaledVector(d, -sc).length();
+      if (dev > rr) continue;
+      // off = 偏心比例(與 sim._lanceHits 同構):估算數字套 offAxisFalloff 才與伺服器結算對得上
+      out.push({ ent, s, off: Math.min(1, dev / rr) });
     }
     out.sort((a, b) => a.s - b.s);
-    return out.slice(0, LANCE.MAX).map((k) => k.ent);
+    return out.slice(0, LANCE.MAX);
   }
 
   /** 單位水平量體(公尺):英雄已在 _makeEnt 由 heroCollider 推導,其餘查 data.js hitR */
@@ -5120,12 +5163,12 @@ export class BattleClient {
     return ent.heroCol ? ent.heroCol.r : hitR({ kind: ent.kind, side: ent.side, civ: ent.civ });
   }
 
-  /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY(與伺服器 heroLance 同一條公式) */
-  _lanceFeedback(def, ents, point) {
-    if (!ents.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
+  /** 貫穿命中回饋:首個目標全額,之後逐個 ×LANCE.DECAY × 偏心遞減 offAxisFalloff(與伺服器 heroLance 同一條公式) */
+  _lanceFeedback(def, hits, point) {
+    if (!hits.length) { starburst(this.scene, this.effects, point.x, point.y, point.z, 1.4, 0xcfc4a8); return; }
     this.hud.hitmark?.();
-    for (let i = 0; i < ents.length; i++) {
-      const ent = ents[i];
+    for (let i = 0; i < hits.length; i++) {
+      const { ent, off } = hits[i];
       const p = ent.mesh.position;
       if (this._lockId === ent.id) this._flashLockGlow();
       starburst(this.scene, this.effects, p.x, p.y + 1.4, p.z, i === 0 ? 2.8 : 2.0, 0xfff2b8);
@@ -5135,7 +5178,7 @@ export class BattleClient {
         continue;
       }
       const mult = vsMult(def, ent.kind);
-      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * LANCE.DECAY ** i);
+      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** i);
       damageNumber(this.scene, this.effects,
         p.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: i === 0 && mult >= 1.5 });
     }
@@ -7170,6 +7213,7 @@ export class BattleClient {
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
+    this._updateRangeGlows();         // 武器射程內所有敵人的範圍光暈(鎖定目標另有 lockGlow)
     this._updateMoveAudio();          // 移動環境音(旋翼/引擎/振翅/震地;低功耗自動全關)
     this._updateBullets(dt);
     this._updateMissiles(dt);

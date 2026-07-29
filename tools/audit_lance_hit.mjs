@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { BattleSim } from '../server/sim.js';
 import {
   UNITS, CHARACTERS, heroWeapon, aoeClass, lanceR, LANCE, MAPGEO, LOS, hitR, hitH, TARGET_R, dmgFalloff,
+  offAxisFalloff, AOE_EDGE,
 } from '../public/js/data.js';
 
 let failed = false;
@@ -167,6 +168,38 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   assert(Math.abs(r1 - exp1) < 0.02 && Math.abs(r2 - exp2) < 0.02,
     `貫穿衰減逐個 ×${LANCE.DECAY}(實測 ${r1.toFixed(3)}/${r2.toFixed(3)},期望 ${exp1.toFixed(3)}/${exp2.toFixed(3)})`);
   assert(hits.length <= LANCE.MAX, `單發貫穿數不超過 LANCE.MAX(${LANCE.MAX})`);
+}
+
+// ---------- ⑤b 偏心傷害遞減:正中滿額、貼邊 AOE_EDGE 保底(2026-07-29 使用者需求)----------
+{
+  const sim = sandbox();
+  const w = charWithHeavy('rail') || charWithHeavy('gun') || charWithHeavy('beam');
+  const h = sim.addHero('SWARM', 'p_o', w.id);
+  const oy = LOS.EYE_M;
+  const t = sim._add({ kind: 'soldier', side: 'STEEL', x: 0, z: 100, y: 0, hp: 999999, m: 999999 });
+  h.aiming = true; h.mp = h.maxMp = 9999;
+  sim._rollCrit = (b, def, dmg) => dmg;   // 爆擊是機率事件,本節只驗偏心遞減
+  const rr = lanceR(w.def) + hitR(t);
+  const shot = (x0) => {   // 沿 +z 開火,origin 橫移 x0 ⇒ 垂距(偏心量)恰為 x0
+    h.x = x0; h.z = 0; h.y = 0;
+    const hp0 = t.hp;
+    sim.t += 100;   // 越過射速/填彈(mag 打空自動填彈也在此完成)
+    sim.heroLance('p_o', [x0, 0, oy], [0, 1, 0], 400);
+    return hp0 - t.hp;
+  };
+  const dCenter = shot(0);
+  const off = rr * 0.8;
+  const dEdge = shot(off);
+  assert(dCenter > 0 && dEdge > 0, '正中與偏心(80% 半寬)兩發都命中(偏移仍在 R + hitR 內)');
+  // 期望比值 = 偏心遞減 × 兩發 d3 的距離衰減比(距離衰減與偏心遞減是兩條獨立的乘數)
+  const dy = sim._tgtY(t) - oy;
+  const exp = offAxisFalloff(off / rr)
+    * dmgFalloff(w.def, Math.hypot(off, 100, dy)) / dmgFalloff(w.def, Math.hypot(0, 100, dy));
+  const ratio = dEdge / dCenter;
+  assert(Math.abs(ratio - exp) < 0.02,
+    `偏心傷害遞減生效於伺服器結算:偏離軸心 ${off.toFixed(1)}m 傷害 ×${ratio.toFixed(3)}(期望 ${exp.toFixed(3)})`);
+  assert(offAxisFalloff(0) === 1 && Math.abs(offAxisFalloff(1) - AOE_EDGE) < 1e-9,
+    `曲線端點:正中 1.0 / 邊緣保底 ${AOE_EDGE}(bal/duel 全數模型化「瞄準正中」⇒ 不變式天然不動)`);
 }
 
 // ---------- ⑥ 垂直帶:塔頂/機體任一高度同額(hitH 垂直版不得回歸)----------

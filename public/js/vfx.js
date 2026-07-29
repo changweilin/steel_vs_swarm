@@ -988,8 +988,8 @@ export function lockGlow(target, color = 0xffffff, dims = null) {
   return g;
 }
 
-/** 徑向漸層光暈貼圖(快取) */
-function glowTexture() {
+/** 徑向漸層光暈貼圖(快取;lockGlow 與 game.js 射程光暈共用同一份 —— A25 整場共用,MUST NOT dispose) */
+export function glowTexture() {
   if (_texCache.has('glow')) return _texCache.get('glow');
   const S = 128;
   const cv = document.createElement('canvas');

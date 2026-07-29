@@ -8,7 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
-  dmgFalloff, blastFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
+  dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   ALTITUDE, altScale, WATER, TERRAIN_FX, offGround, airUnit,
@@ -1580,7 +1580,7 @@ export class BattleSim {
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
-        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * LANCE.DECAY ** i;
+        const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** i;
         this._applyHitEmp(h, wp.def, k.t);
         this._damage(k.t, kd, h, wp.def.pen);
       }
@@ -1664,7 +1664,11 @@ export class BattleSim {
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
         if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3), b, wp.def.pen);
+        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額;d2 極小的正上/正下視為正中)
+        const offF = d2 > 8
+          ? offAxisFalloff(Math.acos(Math.min(1, Math.max(-1, (tx * dx + tz * dz) / d2))) / ((wp.def.arc || 15) * Math.PI / 180))
+          : 1;
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen);
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -1722,10 +1726,12 @@ export class BattleSim {
         if (this._bodyDy(t, oy + slope * sc) > band) continue;
         if (s !== sc) perp = Math.hypot(tx - ux * sc, tz - uz * sc);
       }
-      if (Math.hypot(perp, s - sc) > rr) continue;
+      const dev = Math.hypot(perp, s - sc);                  // 偏離圓柱軸的量(含端點外溢)
+      if (dev > rr) continue;
       if (!pulse && !this._visibleTo(t, shooter.side, src)) continue;
       if (this._losBlocked(ox, oz, oy, t.x, t.z, ty, shooter, t)) continue;
-      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy) });   // 排序用**原始**軸距,貫穿先後才對
+      // off = 偏心比例(0 正中 / 1 貼邊):heroLance 據此套 offAxisFalloff(偏心傷害遞減)
+      out.push({ t, s, d3: Math.hypot(tx, tz, ty - oy), off: Math.min(1, dev / rr) });   // 排序用**原始**軸距,貫穿先後才對
     }
     out.sort((a, b) => a.s - b.s);
     return out.length > LANCE.MAX ? out.slice(0, LANCE.MAX) : out;
@@ -1763,10 +1769,10 @@ export class BattleSim {
       const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max, rMul !== 1);
       for (let i = 0; i < hits.length; i++) {
-        const { t, d3 } = hits[i];
+        const { t, d3, off } = hits[i];
         if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * 1.25 * rMul) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
         const dmg = this._rollCrit(b, wp.def,
-          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * LANCE.DECAY ** i, t);
+          this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
         this._damage(t, dmg, b, wp.def.pen);
       }
