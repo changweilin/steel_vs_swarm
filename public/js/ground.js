@@ -1434,6 +1434,117 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
   return out;
 }
 
+// ==== 多層次地貌:大區域中的小區域組合風格(2026-07-29 使用者需求)====
+// 「大區域中的小區域的樣貌風格不同」:同一種 coarse 分區,包在誰裡面就長成誰的樣子 ——
+//   市區內的小綠地 = 公園/私人庭園、小水域 = 公園埤塘/滯洪池、小裸露地 = 待建工地;
+//   綠地內的小市區 = 農村市集/村落、小水域 = 天然湖泊/堰塞湖;裸露地內的小綠地 = 綠洲、
+//   小市區 = 小鎮 …… 逐「內@外」組合查表(ENCLAVE_STYLES),查無 = 維持原分區清單。
+// planEnclaves = 包裹判定唯一縫(純函式:零 rnd / 零 Math.random / 零 THREE,§2.3;
+// 稽核 tools/audit_ground_enclave.mjs 執行原文):對 coarse 分區格網做 4-鄰連通元件,
+// 面積 ∈ [MIN_CELLS, MAX_CELLS] 且實心鄰格邊界的單一外側分區佔比 ≥ OUTER_MIN 的元件
+// = 被包裹的小區域(enclave),整個元件標上 `${內}@${外}` 樣式鍵。三條刻意設計:
+//   ①崖 '!' / 未鋪 null 不算邊界分母 —— 被崖圈住 ≠ 被誰包住(全崖邊界 = 不標);
+//   ②超過 MAX_CELLS 的元件照樣走訪完(標 seen)只是不標 —— 大區域維持本色、不重複掃描;
+//   ③外側分區不夠單一(< OUTER_MIN)不標 —— 交界犬牙的凸出部不是「被包住」;
+//   ④觸圖界不標 —— 貼著地圖邊的區域延伸到圖外、範圍不明,不算被包住(§4 寧缺勿錯;
+//     同時堵住「甜甜圈區域被自己包著的洞反標」:環外緣若在圖界上就直接淘汰)。
+// 消費端全在 buildGroundCover(樣式表 = 唯一真相,MUST NOT 在消費端硬編第二份組合表):
+//   底毯 cellKeyAt 換 carpet 清單、特徵層主散佈與沿街陣列換 feats 池、tryPatch 分區
+//   把關對 enclave 格內的樣式地表放行(僅限格內,不外漏)、watertile 細節依 det 換
+//   水生點綴(埤塘荷葉/天然湖蘆葦岸/荒漠湧泉)。純表現層:不動碰撞/raycast/伺服器。
+export const ENCLAVE = { MAX_CELLS: 160, MIN_CELLS: 2, OUTER_MIN: 0.6 };
+// carpet = 底毯清單(重複項 = 權重;subs MUST ∈ CARPET/ZONES 聯集,coarse 歸屬才查得到)
+// feats  = 特徵拼圖池(subs MUST ∈ DEFS 且有 SIZE);det = 水域點綴樣態(watertile 分支)
+export const ENCLAVE_STYLES = {
+  // — 市區內的小片異類 —
+  'green@urban': { name: '公園/私人庭園',
+    carpet: ['park', 'lawn', 'park', 'flowerfield', 'turf', 'lawn'],
+    feats:  ['park', 'flowerfield', 'park', 'veggiefield'] },
+  'bare@urban':  { name: '待建工地',
+    carpet: ['gravel', 'mud', 'gravel', 'crackedearth'],
+    feats:  ['construction', 'scrapyard', 'construction', 'containeryard'] },
+  'wet@urban':   { name: '公園荷塘/滯洪池畔',
+    carpet: ['lotus', 'marsh', 'lotus'],
+    feats:  ['lotus', 'park'] },
+  'water@urban': { name: '公園埤塘/滯洪池', det: 'pond' },
+  // — 綠地內 —
+  'urban@green': { name: '農村市集/村落',
+    carpet: ['brick', 'pavement', 'brick', 'lawn'],
+    feats:  ['plaza', 'veggiefield', 'greenhouse', 'gasstation'] },
+  'bare@green':  { name: '廢耕地/伐採跡地',
+    carpet: ['crackedearth', 'gravel', 'wild'],
+    feats:  ['abandonedfarm', 'clearcut', 'quarry', 'abandonedfarm'] },
+  'water@green': { name: '天然湖泊/堰塞湖', det: 'lake' },
+  'wet@green':   { name: '天然湖沼',
+    carpet: ['marsh', 'lotus', 'marsh'],
+    feats:  ['marsh', 'lotus'] },
+  // — 裸露地內 —
+  'green@bare':  { name: '綠洲',
+    carpet: ['turf', 'bushfield', 'flowerfield', 'turf'],
+    feats:  ['orchard', 'bushfield', 'flowerfield'] },
+  'urban@bare':  { name: '小鎮/驛站聚落',
+    carpet: ['brick', 'concrete', 'pavement'],
+    feats:  ['gasstation', 'parking', 'plaza', 'scrapyard'] },
+  'water@bare':  { name: '荒漠湧泉/鹹水湖', det: 'spring' },
+  'wet@bare':    { name: '鹽沼窪地',
+    carpet: ['marsh', 'marsh'],
+    feats:  ['saltpan', 'marsh'] },
+  // — 濕地內 —
+  'green@wet':   { name: '沙洲草澤島',
+    carpet: ['meadow', 'turf', 'bushfield'],
+    feats:  ['bushfield', 'flowerfield'] },
+  'urban@wet':   { name: '漁村埠頭',
+    carpet: ['brick', 'pavement'],
+    feats:  ['fishpond', 'plaza'] },
+  // — 高地相關(alpine 由相對高程觸發,孤峰/山中草甸天然形成 enclave)—
+  'green@alpine': { name: '高山草甸',
+    carpet: ['steppe', 'meadow', 'steppe', 'turf'],
+    feats:  ['steppe', 'flowerfield'] },
+  'alpine@green': { name: '孤峰岩場',
+    carpet: ['scree', 'plateau', 'scree'],
+    feats:  ['slabruin', 'quarry'] },
+};
+export function planEnclaves(zones, gnx, gnz, opts = {}) {
+  const { styles = ENCLAVE_STYLES, maxCells = ENCLAVE.MAX_CELLS,
+          minCells = ENCLAVE.MIN_CELLS, outerMin = ENCLAVE.OUTER_MIN } = opts;
+  const solid = (z) => z != null && z !== '!';
+  const out = new Array(gnx * gnz).fill(null);
+  const seen = new Uint8Array(gnx * gnz);
+  for (let j0 = 0; j0 < gnz; j0++) {
+    for (let i0 = 0; i0 < gnx; i0++) {
+      const idx0 = j0 * gnx + i0;
+      if (seen[idx0]) continue;
+      seen[idx0] = 1;
+      const zn = zones[idx0];
+      if (!solid(zn)) continue;
+      // 4-鄰連通元件(BFS);邊界計數 = 元件周長上每段「實心異類鄰格」各記一票(周長加權)
+      const comp = [idx0];
+      const border = Object.create(null);
+      let nb = 0, edge = false;
+      for (let q = 0; q < comp.length; q++) {
+        const idx = comp[q], ci = idx % gnx, cj = (idx / gnx) | 0;
+        if (ci === 0 || cj === 0 || ci === gnx - 1 || cj === gnz - 1) edge = true;
+        for (const [oi, oj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const ni = ci + oi, nj = cj + oj;
+          if (ni < 0 || nj < 0 || ni >= gnx || nj >= gnz) continue;
+          const nidx = nj * gnx + ni, znb = zones[nidx];
+          if (znb === zn) {
+            if (!seen[nidx]) { seen[nidx] = 1; comp.push(nidx); }
+          } else if (solid(znb)) { border[znb] = (border[znb] || 0) + 1; nb++; }
+        }
+      }
+      if (edge || comp.length < minCells || comp.length > maxCells || !nb) continue;
+      let outer = null, bestN = 0;
+      for (const z in border) if (border[z] > bestN) { bestN = border[z]; outer = z; }
+      if (bestN < nb * outerMin) continue;   // 外側不夠單一 = 交界犬牙,不是被包住
+      const key = `${zn}@${outer}`;
+      if (!styles[key]) continue;            // 查無組合 = 維持原分區樣貌
+      for (const idx of comp) out[idx] = key;
+    }
+  }
+  return out;
+}
+
 /**
  * 鋪設地被覆蓋層。加進 biomes group,回傳統計 { patches, details }。
  * @param group     biomes 的 THREE.Group
@@ -1650,18 +1761,15 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   //   懸崖(>0.75)→ '!' 不鋪(頂投影 UV 在近垂直面會拉絲,露地形岩面較自然,
   //                  鄰格外溢淡出補縫);中坡(>0.28)→ 強制 bare(山坡不會是停車場)
   //   低窪綠地(水面 +2.2m 內)→ wet(河岸蘆葦帶)
-  const cellKeyAt = (i, j) => {                         // `${sub}#${variant}` / '!' / null(不鋪)
+  // 底毯 coarse 分區(cellKeyAt 的分區半段;純函數零 rnd):'water' / '!' / null(不鋪)/ zone。
+  // 先整張算成 zoneGrid 再交 planEnclaves 判小區域包裹,cellKeyAt 吃預算好的 zn 選 sub。
+  const cellZoneAt = (i, j) => {
     const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
-    const hC = terrain.heightAt(cx, cz);
-    // 底毯用 3 變體(vs 特徵層 4;draw call 可控);大面積反重複交給 wash 雜訊 + 鏡射 UV
-    const variant = Math.min(2, (vnoise(cx * 0.0025, cz * 0.0025, seed ^ 0x7E11) * 3) | 0);
     // 水/沼專屬拼圖(2026-07-22,envCode 與伺服器遮罩同一規則 = WYSIWYG):
-    // 水域(1)必鋪水拼圖(免坡度/灘線淘汰 —— 水面是平的,易辨識優先);依水深配淺/深款。
+    // 水域(1)必鋪水拼圖(免坡度/灘線淘汰 —— 水面是平的,易辨識優先)。
     const ec = envAt(cx, cz);
-    if (ec === 1) {
-      const wy = terrain.waterY;
-      return `${wy != null && hC < wy - 2.5 ? 'deepwater' : 'watertile'}#${variant}`;
-    }
+    if (ec === 1) return 'water';
+    const hC = terrain.heightAt(cx, cz);
     const slope = Math.max(
       Math.abs(terrain.heightAt(cx + cell, cz) - hC),
       Math.abs(terrain.heightAt(cx, cz + cell) - hC)) / cell;
@@ -1677,7 +1785,19 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 沼澤(2)一律鋪濕地拼圖(取代舊「green 且 hC<2.2 且 minH<0.5」私規則 —— 與 envCode 統一)
     if (ec === 2) zn = 'wet';
     if ((zn === 'green' || zn === 'bare') && hC > alpineH) zn = 'alpine';
-    const list = carpetLists[zn];
+    return zn;
+  };
+  const cellKeyAt = (i, j, zn) => {                     // zn = zoneGrid 預算分區 → `${sub}#${variant}` / '!' / null
+    if (zn == null || zn === '!') return zn;
+    const cx = terrain.minX + (i + 0.5) * cell, cz = terrain.minZ + (j + 0.5) * cell;
+    // 底毯用 3 變體(vs 特徵層 4;draw call 可控);大面積反重複交給 wash 雜訊 + 鏡射 UV
+    const variant = Math.min(2, (vnoise(cx * 0.0025, cz * 0.0025, seed ^ 0x7E11) * 3) | 0);
+    if (zn === 'water') {                               // 依水深配淺/深款
+      const wy = terrain.waterY;
+      return `${wy != null && terrain.heightAt(cx, cz) < wy - 2.5 ? 'deepwater' : 'watertile'}#${variant}`;
+    }
+    // 多層次組合風格:被包在異類大區域裡的小區域換 enclave 專屬 carpet(唯一真相 ENCLAVE_STYLES)
+    const list = encRt.get(encGrid[j * gnx + i])?.style.carpet || carpetLists[zn];
     if (!list) return null;
     let t = (vnoise(cx * 0.006, cz * 0.006, seed) - 0.5) * 2.2 + 0.5;
     if (zn !== 'urban') t += qcVal(cx, cz, QC_SEL_W) * 0.30;   // 不規律 zone 疊準晶體 → 群聚邊界非週期
@@ -1732,11 +1852,29 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     b.base += 9;
     return G[4];
   };
+  // ==== 多層次地貌:整張 coarse 分區格網 → 小區域包裹判定(planEnclaves 唯一縫)====
+  // encGrid[cell] = `${內}@${外}` 樣式鍵或 null;encRt = 樣式執行期物件(set = 該樣式
+  // 允許的全部地表 —— tryPatch 放行閘,僅對 enclave 格生效,不讓樣式地表外漏到一般分區)
+  const zoneGrid = new Array(gnx * gnz).fill(null);
+  for (let j = 0; j < gnz; j++) for (let i = 0; i < gnx; i++) zoneGrid[j * gnx + i] = cellZoneAt(i, j);
+  const encGrid = planEnclaves(zoneGrid, gnx, gnz, {});
+  const encRt = new Map();
+  for (const k in ENCLAVE_STYLES) {
+    const st = ENCLAVE_STYLES[k];
+    encRt.set(k, { key: k, style: st, set: new Set([...(st.carpet || []), ...(st.feats || [])]) });
+  }
+  const encAt = (x, z) => {   // 世界座標 → enclave 執行期樣式(非 enclave = null;不吃 rnd)
+    const i = Math.floor((x - terrain.minX) / cell), j = Math.floor((z - terrain.minZ) / cell);
+    if (i < 0 || j < 0 || i >= gnx || j >= gnz) return null;
+    const k = encGrid[j * gnx + i];
+    return k ? encRt.get(k) : null;
+  };
+
   const keys = new Array(gnx * gnz).fill(null);
   const landCells = [];                                 // [x, z, key]:底毯細節撒佈用
   for (let j = 0; j < gnz; j++) {
     for (let i = 0; i < gnx; i++) {
-      const key = cellKeyAt(i, j);
+      const key = cellKeyAt(i, j, zoneGrid[j * gnx + i]);
       if (!key) continue;
       if (key === '!') { keys[j * gnx + i] = '!'; continue; }   // 陡坡:不鋪但記錄(供外溢補縫)
       const mid = emitCell(carpetBuckets, key, i, j, null);
@@ -1812,7 +1950,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (isBlocked(x, z)) return false;
     if (roadClear?.(x, z)) return false;   // 道路走廊上不鋪特徵拼圖(免細節件戳穿路面);與 isBlocked 同位、首個 rnd() 前 = 確定性不變
     const zn = zoneAt(x, z);
-    if (!subZones.get(sub)?.has(zn)) return false;   // 類型必須與所在圖資分區相符
+    const enc = encAt(x, z);
+    // 類型必須與所在圖資分區相符;enclave 格內另放行該組合樣式的地表(公園拼圖只准落在
+    // 「市區內的小綠地」格上,不會因此漏到整片綠地 —— 放行閘只看 encAt 命中的格)
+    if (!subZones.get(sub)?.has(zn) && !enc?.set.has(sub)) return false;
     const def = DEFS[sub];
     // 坡度/水面檢查:整塊落在陸地、高差在容許內(田與球場要平)
     let mn = Infinity, mx = -Infinity;
@@ -1846,7 +1987,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink');
     placed++;
 
-    scatterDetails(sub, x, z, r, rot, def, zn);
+    scatterDetails(sub, x, z, r, rot, def, zn, enc);
 
     // 家族延伸:農田拼布 / 運動園區 / 綠地群落(rect 沿軸毗鄰、blob 邊緣淡接);
     // 每鄰塊經 freeVariant 換款 → 拼布連片但視野內無同款重複
@@ -1882,7 +2023,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ---- 3D 細節(表面特徵輪廓)----
   // zn = 所在分區:同物件跨地貌形式不同(雜草/花/灌木 — 綠地大面積密集、
   // 市區/裸露地零星;貨櫃/太陽能板 — 裸露地大陣列、市區零星單件)
-  function scatterDetails(sub, x, z, r, rot, def, zn) {
+  function scatterDetails(sub, x, z, r, rot, def, zn, enc = null) {
     const w = r * 2, dp = r * 2 * (def.aspect || 0.7);
     const ca = Math.cos(rot), sa = Math.sin(rot);
     const atLocal = (lx, lz) => [x + lx * ca - lz * sa, z + lx * sa + lz * ca];
@@ -1987,7 +2128,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     else if (sub === 'redsoil') { scatter('pebble', 2, 0.5, 0.4); scatter('tuft', 1, 0.5, 0.3); scatter('weed', 1, 0.6, 0.3); }
     else if (sub === 'marsh') scatter('reed', 8 + (rnd() * 6 | 0), 0.8, 0.6);
     else if (sub === 'lotus') { scatter('lotuspad', 12 + (rnd() * 8 | 0), 0.8, 0.8); scatter('reed', 4, 0.7, 0.5); }
-    else if (sub === 'watertile') { if (rnd() < 0.35) scatter('reed', 2 + (rnd() * 3 | 0), 0.8, 0.5); }   // 淺水零星蘆葦(deepwater 全空)
+    else if (sub === 'watertile') {   // 淺水點綴依包裹情境換樣(deepwater 全空;det 住 ENCLAVE_STYLES):
+      // 市區埤塘/滯洪池 = 公園感荷葉;綠地天然湖 = 濃密蘆葦岸;荒漠湧泉 = 稀疏蘆葦;其餘零星蘆葦
+      const det = enc?.style.det;
+      if (det === 'pond') { scatter('lotuspad', 6 + (rnd() * 5 | 0), 0.8, 0.7); if (rnd() < 0.5) scatter('reed', 2, 0.8, 0.4); }
+      else if (det === 'lake') scatter('reed', 4 + (rnd() * 4 | 0), 0.8, 0.6);
+      else if (det === 'spring') { if (rnd() < 0.6) scatter('reed', 1 + (rnd() * 2 | 0), 0.8, 0.5); }
+      else if (rnd() < 0.35) scatter('reed', 2 + (rnd() * 3 | 0), 0.8, 0.5);
+    }
     // — 綠地擴充 —
     else if (sub === 'arrowbamboo') { scatter('bamboo', 9 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.4); }
     else if (sub === 'deadwood') { scatter('snag', 5 + (rnd() * 4 | 0), 0.8, 0.7); scatter('log', 2, 0.7, 0.4); scatter('pebble', 2, 0.5, 0.4); }
@@ -2066,7 +2214,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const arrCap = Math.round(target * 0.55);            // 陣列最多吃 55% 配額,其餘留主迴圈填不規律
     const dropAt = (px, pz, a, hw, station) => {
       const zn = zoneAt(px, pz);
-      const pool = arrPools[zn];
+      const enc = encAt(px, pz);
+      // enclave 內只鋪該組合樣式的規律結構(公園裡不長一般市區停車陣列);樣式無可陣列型 → 空推進
+      const pool = enc
+        ? (enc.arr ??= (enc.style.feats || []).filter((s) => arrayable.has(s)))
+        : arrPools[zn];
       if (!pool || !pool.length) return ARR_MINSTEP;     // 水域/高地/無候選 → 空推進
       const t = Math.min(0.999, Math.max(0, (vnoise(px * ARR_FREQ, pz * ARR_FREQ, seed ^ 0x1A77) - 0.5) * 2 + 0.5));
       const sub = pool[(t * pool.length) | 0], def = DEFS[sub];
@@ -2124,7 +2276,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const [qx, qz] = qcPoint(cx, cz);
     const x = qx + (rnd() - 0.5) * qs * 0.2;              // 固定 2 枚 rnd(破殘餘對稱;淘汰前抽 = 序列穩定)
     const z = qz + (rnd() - 0.5) * qs * 0.2;
-    const zones = zoneLists[zoneAt(x, z)];
+    // enclave 內主散佈改抽該組合樣式的 feats 池(水域 enclave 無 feats → 照舊走 zoneLists 淘汰)
+    const encM = encAt(x, z);
+    const zones = encM?.style.feats?.length ? encM.style.feats : zoneLists[zoneAt(x, z)];
     if (!zones) continue;
     const t = Math.min(0.999, Math.max(0, (vnoise(x * 0.006, z * 0.006, seed) - 0.5) * 2.2 + 0.5));
     const zi = (t * zones.length) | 0;
@@ -2150,7 +2304,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const q = 0.5 + 0.5 * qcVal(cx2, cz2, CAR_QC_W);     // [0,1] 準晶體疏密調變(峰密谷疏,去隨機禿斑)
       if (rnd() >= pDet * (0.35 + 1.3 * q)) continue;       // 先抽 1 枚;E[0.35+1.3q]=1 ⇒ 總量不變
       const sub = key.slice(0, key.indexOf('#'));
-      scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub], zoneAt(cx2, cz2));
+      scatterDetails(sub, cx2, cz2, cell * 0.55, rnd() * Math.PI * 2, DEFS[sub], zoneAt(cx2, cz2), encAt(cx2, cz2));
     }
   }
 
