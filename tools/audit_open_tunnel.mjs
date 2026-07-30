@@ -426,5 +426,86 @@ function fakeBattleConfig() {
   }
 }
 
+// ---- Ⅴ 明隧道地形整備(2026-07-31:落石棚強制覆蓋 / 柱外淨空帶 / 敞開段殘峰開挖)----
+// 以 terrain.js **執行原文**建 33² 合成高度場直測 carveTunnels / carveGalleryBands;
+// biomes 端的接線(強制覆蓋 / 同 tag 併鏈 / strip 收集)以靜態規則釘住。
+{
+  const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+  // ---- 靜態規則 ----
+  ok(/way\.tags\.tunnel === 'avalanche_protector' && tot >= TUN_COV_MIN/.test(src),
+    'Ⅴ tunnel=avalanche_protector MUST 整段強制覆蓋(落石棚的頂是建的不是山;短殘段仍剔)');
+  ok(/kind !== 'tunnel' \|\| a\.tags\?\.tunnel === b\.tags\?\.tunnel/.test(src),
+    'Ⅴ 隧道鏈 MUST 同 tunnel 值才併(混併 = 強制覆蓋旗標被種子 way 的 tags 吃掉)');
+  ok((src.match(/terrain\.carveGalleryBands\(/g) || []).length === 1,
+    'Ⅴ carveGalleryBands MUST 只有一個呼叫端(與 carveTunnels 同批、開挖前判定)');
+  ok(/tunnelWallProfile\(pts, floors, covV2, hAt, hwWay, side\)/.test(src),
+    'Ⅴ 淨空帶 strip MUST 走 tunnelWallProfile 單一縫(開挖前高度)');
+  ok(src.indexOf('galStrips.push') < src.indexOf('terrain.carveTunnels(tunnelRuns'),
+    'Ⅴ strip 收集 MUST 在 carveTunnels 執行之前(整批用開挖前高度判定)');
+  // ---- 執行原文:carveTunnels / carveGalleryBands ----
+  const c0 = tsrc.indexOf('  const CUT_W = 2.5;');
+  const cEnd = tsrc.indexOf('function punchPortalHoles');
+  const c1 = tsrc.lastIndexOf('/**', cEnd);
+  if (c0 < 0 || c1 <= c0) throw new Error('找不到 terrain 開挖區塊');
+  const CARVE = tsrc.slice(c0, c1);
+  const N2 = 33, MINX = -80, MAXX = 80, MINZ = -80, MAXZ = 80;   // 格距 5m
+  const mkTerr = (hf) => {
+    const heights = new Float32Array(N2 * N2);
+    for (let i = 0; i < N2; i++) for (let j = 0; j < N2; j++) {
+      heights[i * N2 + j] = hf(MINX + (MAXX - MINX) * j / (N2 - 1), MINZ + (MAXZ - MINZ) * i / (N2 - 1));
+    }
+    const geo = { getAttribute: () => ({ array: new Float32Array(N2 * N2 * 3) }), computeVertexNormals() {} };
+    const fns = new Function('N', 'minX', 'maxX', 'minZ', 'maxZ', 'heights', 'geo', 'imagery', 'mat', 'WATER', 'heightAt',
+      `${CARVE}\nreturn { carveTunnels, carveGalleryBands, gradeRoadBeds, carvedAt: (k) => !!carvedNodes?.[k] };`)(
+      N2, MINX, MAXX, MINZ, MAXZ, heights, geo, null, null, { LEVEL: -9999, SWAMP_BAND: 0 },
+      (x, z) => heights[Math.round((z - MINZ) / 5) * N2 + Math.round((x - MINX) / 5)]);
+    const at = (x, z) => heights[Math.round((z - MINZ) / 5) * N2 + Math.round((x - MINX) / 5)];
+    return { heights, at, ...fns };
+  };
+  const FLOOR2 = 20, ROOFTOP = FLOOR2 + TUN.CLEAR + TUN.ROOF_T;
+  const runPts = []; for (let x = -60; x <= 60; x += 6) runPts.push([x, 0]);
+  const runFloors = runPts.map(() => FLOOR2);
+  // Ⅴ-a 敞開段殘峰:高過門檻的節點 MUST 在 run 內部被無條件開挖;覆蓋端斜壁帶維持舊判準
+  {
+    const t = mkTerr((x, z) => {
+      if (Math.abs(x) < 3 && Math.abs(z) < 3) return 45;            // run 內部殘峰(≥ 門檻)
+      if (Math.abs(x - 55) < 3 && Math.abs(z) < 3) return 45;       // 覆蓋端保護帶內、路廊上的殘峰
+      if (Math.abs(x - 55) < 3 && Math.abs(z - 15) < 3) return 45;  // 覆蓋端保護帶內、斜壁帶的轉換崖
+      return FLOOR2 + 2;                                            // 其餘:略高於路面(舊判準本來就挖)
+    });
+    t.carveTunnels([{ pts: runPts, floors: runFloors, hw: 8, covA: false, covB: true }], { clear: TUN.CLEAR, hw: TUN.HW });
+    ok(Math.abs(t.at(0, 0) - FLOOR2) < 1e-6, 'Ⅴ-a run 內部殘峰 MUST 被無條件開挖到路面(否則是一道橫在路上的岩牆)');
+    ok(Math.abs(t.at(55, 0) - FLOOR2) < 1e-6, 'Ⅴ-a 覆蓋端保護帶內的**路廊**殘峰 MUST 照挖(崖可以留在路旁,不可以橫在路上)');
+    ok(Math.abs(t.at(55, 15) - 45) < 1e-6, 'Ⅴ-a 覆蓋端保護帶內的**斜壁帶**轉換崖 MUST 保留(門洞打洞 + collar 的基準面)');
+    ok(Math.abs(t.at(0, 25) - (FLOOR2 + 2)) < 1e-6, 'Ⅴ-a 走廊外 MUST 不動');
+  }
+  // Ⅴ-b 深埋不變式:全程低於門檻的地形,新舊規則 MUST 逐位元同結果(路廊壓到路面)
+  {
+    const t = mkTerr(() => FLOOR2 + 5);
+    t.carveTunnels([{ pts: runPts, floors: runFloors, hw: 8, covA: true, covB: true }], { clear: TUN.CLEAR, hw: TUN.HW });
+    ok(Math.abs(t.at(0, 0) - FLOOR2) < 1e-6 && Math.abs(t.at(0, 5) - FLOOR2) < 1e-6,
+      'Ⅴ-b 低於門檻的走廊 MUST 照舊全深開挖(新內部規則對舊行為零擾動)');
+  }
+  // Ⅴ-c 柱外淨空帶:開放側 [hw−0.5, hw+GAL_CLEAR_W] 的土脊 MUST 開到路面;外緣 taper;
+  //      對側/帶外/strip 端外/低於路面 MUST 不動(只降不升)
+  {
+    const berm = (z) => (z < -7 && z > -18 ? FLOOR2 + 4 : FLOOR2 - 6);
+    const t = mkTerr((x, z) => (z < -5 ? berm(z) : ROOFTOP + 20));   // z<0 = side +1(臨谷側);z>0 山體
+    const stripPts = []; for (let x = -30; x <= 30; x += 6) stripPts.push([x, 0]);
+    t.carveGalleryBands([{ pts: stripPts, floors: stripPts.map(() => FLOOR2), hw: 8, side: 1 }],
+      { clear: TUN.CLEAR, roofT: TUN.ROOF_T, clearW: TUN.GAL_CLEAR_W });
+    ok(Math.abs(t.at(0, -10) - FLOOR2) < 1e-6, 'Ⅴ-c 開放側帶內土脊 MUST 開挖到路面(柱間不再是一面土牆)');
+    ok(t.at(0, -15) < FLOOR2 + 4 - 0.5 && t.at(0, -15) > FLOOR2, 'Ⅴ-c 外緣 3m MUST smoothstep 收回原地表(不留直角土階)');
+    ok(Math.abs(t.at(0, 10) - (ROOFTOP + 20)) < 1e-6, 'Ⅴ-c 山體側 MUST 毫髮無傷(岩背不進 strip)');
+    ok(Math.abs(t.at(0, -25) - (FLOOR2 - 6)) < 1e-6, 'Ⅴ-c 帶外 MUST 不動');
+    ok(Math.abs(t.at(45, -10) - berm(-10)) < 1e-6, 'Ⅴ-c strip 端外 MUST 不動(端帽不外溢,轉換崖不被蝕)');
+    // 只降不升:路面高於帶內地表時 MUST 不填(openness 對這刀穩定的前提)
+    const t2 = mkTerr((x, z) => FLOOR2 - 3);
+    t2.carveGalleryBands([{ pts: stripPts, floors: stripPts.map(() => FLOOR2), hw: 8, side: 1 }],
+      { clear: TUN.CLEAR, roofT: TUN.ROOF_T, clearW: TUN.GAL_CLEAR_W });
+    ok(Math.abs(t2.at(0, -10) - (FLOOR2 - 3)) < 1e-6, 'Ⅴ-c 帶內低於路面 MUST 不動(只降不升,不憑空長路堤)');
+  }
+}
+
 console.log(`\n明隧道稽核:${pass} 綠 / ${fail} 紅`);
 process.exit(fail ? 1 : 0);

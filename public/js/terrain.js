@@ -587,21 +587,41 @@ export async function buildTerrain(cfg, onProgress) {
    *   (= 從地下道側面挖出入口),收窄後路塹外地表保持平坦,側面只剩擋土牆(biomes.js)。
    */
   const CUT_W = 2.5;   // 地下道路塹過渡帶寬(公尺):牆後藏崖;緣石帶 UND.COPE MUST 蓋得過它
+  // 覆蓋轉換端保護帶(公尺):敞開 run 與覆蓋段交界的最後這段維持舊判準(只挖藏不住天花板的
+  // 節點),保住「藏著洞口的轉換崖」—— 數值 = buildRoads 圍裙段 APRON(門洞立在崖前的那 8m)。
+  const PROT_M = 8;
+  // 開挖足跡:被隧道剖面/明隧道淨空帶動過的節點,gradeRoadBeds MUST NOT 再動
+  // (路基整平的目標高是「一般道路貼地剖面」,蓋回去就把開挖好的洞口/路塹重新填起來)。
+  let carvedNodes = null;
+  const markCarved = (k) => { (carvedNodes ??= new Uint8Array(N * N))[k] = 1; };
+  /** heights[] 改完批次回寫 position 屬性 + 重算法線(三個開挖/整地入口共用) */
+  function syncHeights() {
+    const posAttr = geo.getAttribute('position');
+    for (let k = 0; k < N * N; k++) posAttr.array[k * 3 + 1] = heights[k];
+    posAttr.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
   function carveTunnels(runs, { clear = 8, hw = 9 } = {}) {
     if (!runs?.length) return;
     const fullOf = (r) => (r.hw ?? hw) + 1;
     const nearOf = (r) => (r.hw ?? hw) + (r.cut ? CUT_W : 7);
-    const proj = (x, z, r) => {                       // 最近段 + 內插路面高
-      let bd = Infinity, bf = 0;
+    for (const r of runs) {                           // 弧長(轉換端保護帶判定用)
+      r._cum = [0];
+      for (let i = 1; i < r.pts.length; i++) {
+        r._cum.push(r._cum[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
+      }
+    }
+    const proj = (x, z, r) => {                       // 最近段 + 內插路面高 + 弧長位置
+      let bd = Infinity, bf = 0, bs = 0;
       for (let i = 0; i < r.pts.length - 1; i++) {
         const ax = r.pts[i][0], az = r.pts[i][1];
         const ex = r.pts[i + 1][0] - ax, ez = r.pts[i + 1][1] - az;
         const L2 = ex * ex + ez * ez || 1;
         let t = ((x - ax) * ex + (z - az) * ez) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
         const d = Math.hypot(x - (ax + ex * t), z - (az + ez * t));
-        if (d < bd) { bd = d; bf = r.floors[i] + (r.floors[i + 1] - r.floors[i]) * t; }
+        if (d < bd) { bd = d; bf = r.floors[i] + (r.floors[i + 1] - r.floors[i]) * t; bs = r._cum[i] + (r._cum[i + 1] - r._cum[i]) * t; }
       }
-      return { d: bd, floor: bf };
+      return { d: bd, floor: bf, s: bs };
     };
     for (let i = 0; i < N; i++) {
       const z = minZ + (maxZ - minZ) * i / (N - 1);
@@ -613,19 +633,25 @@ export async function buildTerrain(cfg, onProgress) {
           const full = fullOf(r), near = nearOf(r);
           const p = proj(x, z, r);
           if (p.d > near) continue;
-          if (orig < p.floor + clear + 1) {   // 藏不住天花板的敞開/洞口段才挖
+          // 敞開 run「內部」無條件開挖:覆蓋判定只看**中心線**逐 6m 取樣,走廊裡高過門檻的
+          // 殘峰(~8.3m 網格節點)舊判準會整根留下 = 一道橫在路上的岩牆(2026-07-31 太魯閣
+          // 兩洞口之間敞開段實測 +8.2m)。覆蓋轉換端 PROT_M 內只有**斜壁過渡帶**維持舊判準
+          // (保護門洞兩側/上方的轉換崖 —— 洞口打洞 + collar 靠它當基準面);路廊本體(≤ full)
+          // 恆無條件 —— 崖可以留在路旁,不可以橫在路上(單位出洞第一步就撞 3m 土階)。
+          // run 頭尾(接一般道路/圖界)無崖可保,一律內部。
+          const total = r._cum[r._cum.length - 1];
+          const inner = p.d <= full
+            || ((!r.covA || p.s > PROT_M) && (!r.covB || p.s < total - PROT_M));
+          if (inner || orig < p.floor + clear + 1) {
             const t = p.d <= full ? 0 : (p.d - full) / (near - full);
             const w = t * t * (3 - 2 * t);    // smoothstep:路廊全深、外緣歸零 = 斜壁
             target = Math.min(target, p.floor + (orig - p.floor) * w);
           }
         }
-        if (target < orig) heights[k] = target;
+        if (target < orig) { heights[k] = target; markCarved(k); }
       }
     }
-    const posAttr = geo.getAttribute('position');
-    for (let k = 0; k < N * N; k++) posAttr.array[k * 3 + 1] = heights[k];
-    posAttr.needsUpdate = true;
-    geo.computeVertexNormals();
+    syncHeights();
     // 開挖走廊影像重繪(2026-07-22):衛星影像在走廊上是原地物(深色森林/建物照片陰影),
     // 被拉伸貼到挖出的路塹壁/溝底上就是整片黑色色塊(看似破圖)。沿走廊把畫布塗成開挖
     // 岩土色 —— sampleColor 已於 stylize 前快照原始像素(idata),此處純視覺,
@@ -657,6 +683,127 @@ export async function buildTerrain(cfg, onProgress) {
       ictx.restore();
       mat.map.needsUpdate = true;
     }
+  }
+
+  /**
+   * 明隧道開放側柱外淨空帶(2026-07-31 使用者回報「柱子外的地形沒有完全淨空」):
+   * 開放側牆線外常橫著一道**低於頂板**的土脊(側坡殘丘,可高出路面 2~3m)—— 柱間看出去
+   * 是一面土牆、彈道也被擋。把 [hw−0.5, hw+clearW] 帶內、頂板以下的地形降到路面高
+   * (外緣 3m smoothstep 收回原地表)。與洞內打洞(punchPortalHoles)分工:
+   * 斷面**內**的楔形與山體相連,高度場挖不掉(拉伸陡面)只能刪繪製三角形;牆線**外**的
+   * 開放側地形往低處走,真開挖即可水密收乾淨(不需 collar、不留看穿的洞)。
+   * 只降不升、只動頂板以下 ⇒ tunnelWallProfile 的 thin/backed 取樣對這刀**穩定**
+   * (backed 只認 ≥ 頂板的點;被挖的點本來就 < 頂板)—— buildRoads 開挖後重算不翻面。
+   * strips: [{ pts, floors, hw, side }](tunnelWallProfile 判 open 的連續覆蓋段,逐側一條)
+   */
+  function carveGalleryBands(strips, { clear = 8, roofT = 1, clearW = 9 } = {}) {
+    if (!strips?.length) return;
+    let touched = false;
+    for (let i = 0; i < N; i++) {
+      const z = minZ + (maxZ - minZ) * i / (N - 1);
+      for (let j = 0; j < N; j++) {
+        const x = minX + (maxX - minX) * j / (N - 1);
+        const k = i * N + j, orig = heights[k];
+        let target = Infinity;
+        for (const st of strips) {
+          const inner = st.hw - 0.5, outer = st.hw + clearW;
+          let bd = Infinity, bf = 0, bo = 0;
+          for (let q = 0; q < st.pts.length - 1; q++) {
+            const ax = st.pts[q][0], az = st.pts[q][1];
+            const ex = st.pts[q + 1][0] - ax, ez = st.pts[q + 1][1] - az;
+            const L2 = ex * ex + ez * ez || 1;
+            const t = ((x - ax) * ex + (z - az) * ez) / L2;
+            if (t < 0 || t > 1) continue;   // 端帽不外溢:strip 端外接的是轉換崖/深覆蓋段,不得蝕
+            const px = x - (ax + ex * t), pz = z - (az + ez * t);
+            const d = Math.hypot(px, pz);
+            if (d >= bd) continue;
+            const L = Math.sqrt(L2);
+            bd = d;
+            bf = st.floors[q] + (st.floors[q + 1] - st.floors[q]) * t;
+            bo = (px * (ez / L) - pz * (ex / L)) * st.side;   // 側向有號偏移(nx=dz·side 同向)
+          }
+          if (bo < inner || bo > outer || bd === Infinity) continue;
+          // 不設「高過頂板不動」上限:開放側判定(thin && !backed)已擋掉岩背 —— 帶內殘餘的
+          // 高聳岩脊正是「明隧道穿著岩嘴蓋」的那一小段,不切掉柱間就是一面石壁(路塹式切齊)。
+          // 岩背側(backed)本來就不判 open ⇒ 不進 strip,山壁毫髮無傷。
+          const t2 = Math.max(0, (bo - (outer - 3)) / 3);
+          const w = t2 * t2 * (3 - 2 * t2);           // 外緣 smoothstep 收回原地表
+          target = Math.min(target, bf + (orig - bf) * w);
+        }
+        if (target < orig) { heights[k] = target; markCarved(k); touched = true; }
+      }
+    }
+    if (touched) syncHeights();
+  }
+
+  /**
+   * 道路路基整平(2026-07-31 使用者回報「兩側太陡時一邊懸空、一邊陷入地形」):
+   * 一般道路(非橋/非結構隧道)的路面緞帶「各自貼地 + 夾高 0.7m」扛不住陡橫坡 ——
+   * 橫向 10m 高差可達 6m+:下坡緣浮空、上坡緣連同格間地形鼓包整片埋進山壁,
+   * 也沒有平的地面可以踩(單位站的是裸地形 heightAt)。比照現實工程把走廊整成
+   * **切填平台**:走廊內(d ≤ hw)壓到中心線路面高、向外 taper 帶 smoothstep 收回原地表。
+   * 紀律:①填方上限 fillMax、超過再 0.5×fillMax 漸退歸零 —— 峽谷邊緣不築土壩;
+   * ②水域/沼澤節點(原高 ≤ 水面 + SWAMP_BAND)不動 —— 跨水段本來就走橋,岸線不得位移;
+   * ③隧道開挖足跡(carvedNodes)優先 —— 洞口路塹/剖面不得被整平蓋回去。
+   * 全程純幾何零 rnd;floors 於**修改前**整批取樣(跨 run 一致)。
+   * runs: [{ pts, hw }](呼叫端已裁切 + densify + 剔除泡水段/橋/結構/步道)
+   */
+  function gradeRoadBeds(runs, { taper = 6, fillMax = 12 } = {}) {
+    if (!runs?.length) return;
+    const bestW = new Float32Array(N * N);
+    const bestT = new Float32Array(N * N);
+    const DXg = (maxX - minX) / (N - 1), DZg = (maxZ - minZ) / (N - 1);
+    for (const r of runs) {
+      // 全深帶外擴半格:heightAt 是雙線性內插,路緣正下方的表面高混到 ~半格外的節點 ——
+      // 全深帶只到 hw 的話,路面緞帶跨距內的地表仍會被帶外節點拉出橫傾(整了等於沒整)。
+      const hwR = Math.max(r.hw ?? 2.5, 2.5) + Math.max(DXg, DZg) / 2;
+      const band = hwR + taper;
+      const floors = r.pts.map(([px, pz]) => heightAt(px, pz));   // 修改前的中心線剖面
+      for (let q = 0; q + 1 < r.pts.length; q++) {
+        const ax = r.pts[q][0], az = r.pts[q][1];
+        const bx = r.pts[q + 1][0], bz = r.pts[q + 1][1];
+        const jMin = Math.max(0, Math.floor((Math.min(ax, bx) - band - minX) / DXg));
+        const jMax = Math.min(N - 1, Math.ceil((Math.max(ax, bx) + band - minX) / DXg));
+        const iMin = Math.max(0, Math.floor((Math.min(az, bz) - band - minZ) / DZg));
+        const iMax = Math.min(N - 1, Math.ceil((Math.max(az, bz) + band - minZ) / DZg));
+        const ex = bx - ax, ez = bz - az, L2 = ex * ex + ez * ez || 1;
+        for (let i = iMin; i <= iMax; i++) {
+          const z = minZ + DZg * i;
+          for (let j = jMin; j <= jMax; j++) {
+            const x = minX + DXg * j;
+            let t = ((x - ax) * ex + (z - az) * ez) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const d = Math.hypot(x - (ax + ex * t), z - (az + ez * t));
+            if (d >= band) continue;
+            const u = d <= hwR ? 0 : (d - hwR) / taper;
+            const w = 1 - u * u * (3 - 2 * u);
+            const k = i * N + j;
+            // 每節點認**最近的那條路**(w 最大者):髮夾彎上下兩腿各自成台階,
+            // 混平均會把兩條路一起弄成半埋半浮
+            if (w > bestW[k]) { bestW[k] = w; bestT[k] = floors[q] + (floors[q + 1] - floors[q]) * t; }
+          }
+        }
+      }
+    }
+    let touched = false;
+    for (let k = 0; k < N * N; k++) {
+      const w = bestW[k];
+      if (!w || carvedNodes?.[k]) continue;
+      const orig = heights[k];
+      if (orig <= WATER.LEVEL + WATER.SWAMP_BAND) continue;
+      let delta = bestT[k] - orig;
+      if (delta > 0) {
+        if (delta >= fillMax * 1.5) continue;             // 深谷:不填(寧可維持現狀,不築壩)
+        if (delta > fillMax) {
+          const f = (delta - fillMax) / (fillMax * 0.5);
+          delta *= 1 - f * f * (3 - 2 * f);               // 超限漸退:路堤高度連續歸零
+        }
+      }
+      const ny = orig + delta * w;
+      if (Math.abs(ny - orig) < 1e-6) continue;
+      heights[k] = ny;
+      touched = true;
+    }
+    if (touched) syncHeights();
   }
 
   /**
@@ -785,5 +932,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, rayTerrain, carveTunnels, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
 }
