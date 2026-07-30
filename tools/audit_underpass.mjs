@@ -239,17 +239,22 @@ if (!plan) { console.error('  ✗ 平地基準案例規劃失敗,後續無法驗
 }
 
 // ---- Ⅱ 構件幾何(執行 biomes.js 真正的發射器原文)----
+// 2026-07-30 柱列改制後,體檢 preamble(floorsV/covV/galP)搬到碰撞段迴圈之前(tunnelSegs 要吃
+// gal 註記)—— 抽**兩段**連續原文縫合,跳過中間的 tunnelSegs/ceilSegs 迴圈(碰撞幾何,由本檔
+// Ⅲ~Ⅶ 的靜態規則與 slab 濾網斷言顧)。
 const B0 = src.indexOf('        const floorsV = cum.map((s) => tFloorAt(s));');
-const B1 = src.indexOf('        // 橫樑 + 天花燈', B0);
-if (B0 < 0 || B1 <= B0) throw new Error('找不到構件區塊');
-const EMIT = src.slice(B0, B1);
+const B0e = src.indexOf('        for (let i = 0; i < nP - 1; i++) {', B0);
+const C0 = src.indexOf('        // facade 落地基準', B0);
+const B1 = src.indexOf('        // 橫樑 + 天花燈', C0);
+if (B0 < 0 || B0e <= B0 || C0 <= B0e || B1 <= C0) throw new Error('找不到構件區塊');
+const EMIT = src.slice(B0, B0e) + src.slice(C0, B1);
 // 只擋「區塊被搬走/改名」(抽錯原文的話後面全部白驗);行為本身的回歸交給下面逐條 ok(),
 // 這樣把程式碼寫回舊版時看到的是具名紅字,而不是一句抽取失敗。
 if (!EMIT.includes('const galBase =')) throw new Error('抽出的構件區塊缺少 galBase(結構已變?)');
 const tunnelWallProfile = evalBlock('const TUN_WALL_SAMP', 'tunnelWallProfile');
 const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'hw', 'tFloorAt', 'tBaseAt',
-  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'buts', 'galRoof', 'cope',
-  `${EMIT}\nreturn { galP, floorsV, covV };`);
+  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope',
+  `${EMIT}\nreturn { galP, galMask, floorsV, covV };`);
 const HW = 9;
 /**
  * 以規劃好的地下道剖面跑一次發射器。
@@ -269,12 +274,12 @@ function build(under = true, heightAt = null) {
     }
     return covS(bs === Infinity ? 0 : x) ? G : Math.min(G, bf);
   };
-  const wall = { pos: [], nrm: [], idx: [], base: 0 }, buts = [];
+  const wall = { pos: [], nrm: [], idx: [], base: 0 }, galCols = [];
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
   const out = emit(TUN, UND, tunnelWallProfile, run, nP, cum, HW, fAt, bAt, covS,
-    { heightAt: heightAt || ((x) => carved(x)) }, (s) => fAt(s) + TUN.CLEAR, under, wall, buts, galRoof, cope);
-  return { ...out, wall, buts, galRoof, cope, run, cum, fAt, bAt, covS, nP };
+    { heightAt: heightAt || ((x) => carved(x)) }, (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope);
+  return { ...out, wall, galCols, galRoof, cope, run, cum, fAt, bAt, covS, nP };
 }
 
 // Ⅱ-a 地下道:引道擋土牆頂到「基準線 + KERB」、牆底在路面之下;洞段維持舊公式
@@ -298,9 +303,11 @@ function build(under = true, heightAt = null) {
   ok(okOpen, 'Ⅱ-a 引道擋土牆 MUST 自路面下 0.3 頂到「基準線 + KERB」(舊制的 yF+0.15 = 沒有牆)');
   ok(okCov, 'Ⅱ-a 洞段牆頂 MUST 維持舊公式(天花 + 0.2)');
   ok(v.every((p) => Math.abs(Math.abs(p[2]) - HW) < 1e-9), 'Ⅱ-a 牆面 MUST 貼在 ±hw');
-  ok(b.galRoof.idx.length === 0 && b.buts.length === 0,
-    'Ⅱ-a 地下道 MUST NOT 長出明隧道構件(外露頂板/扶壁)—— 它的頂是沒被開挖的原地表');
+  ok(b.galRoof.idx.length === 0 && b.galCols.length === 0,
+    'Ⅱ-a 地下道 MUST NOT 長出明隧道構件(外露頂板/柱列)—— 它的頂是沒被開挖的原地表');
   ok(b.galP.every((prof) => prof.every((g) => !g.open)), 'Ⅱ-a 地下道 MUST 全程 open=false');
+  ok(b.run.slice(0, -1).every((_, i) => b.galMask(i) === 0),
+    'Ⅱ-a 地下道 gal 遮罩 MUST 全 0(伺服器不得把引道側當可穿柱間)');
 }
 
 // Ⅱ-b 緣石帶(邊緣修飾):只鋪引道段、內緣貼牆、外緣蓋過開挖斜壁、與一般路面同高
@@ -420,10 +427,11 @@ function build(under = true, heightAt = null) {
     'Ⅲ 緣石帶 MUST NOT 登記碰撞柱(它鋪在牆外的地表上)');
   // 覆蓋段碰撞/天花:幾何欄位(fy/cy/hw)與山體隧道**逐字**同一條公式(無 under/open 分支);
   // 幾何側壁牆頂 by 只准經 wallTopAt 單一縫(山體隧道 = undefined ⇒ 逐位元不變)——
-  // 伺服器 slab(main.js 過濾 !open 後只投影 x/z/hw 上傳)與隧道同一套語意
+  // 伺服器 slab(main.js 過濾 !open 後只投影 x/z/hw 上傳)與隧道同一套語意;
+  // gal(2026-07-30 明隧道柱列)只是註記欄(地下道經 galP 歸零恆 0),幾何行 MUST 原樣。
   // 行尾容忍(\r?\n):Windows autocrlf 工作樹是 CRLF,\n 字面量 includes 必假陽性紅
-  ok(/tunnelSegs\.push\(\{\r?\n {14}x1, z1, fy1: tFloorAt\(o0\) \+ ROAD_LIFT, cy1: ceilOf\(o0\),\r?\n {14}x2, z2, fy2: tFloorAt\(o1\) \+ ROAD_LIFT, cy2: ceilOf\(o1\), hw,\r?\n {14}by1: wallTopAt\(o0\), by2: wallTopAt\(o1\),\r?\n {12}\}\);/.test(STRC),
-    'Ⅲ 覆蓋段 tunnelSegs MUST 維持與隧道逐字共用的幾何公式(fy/cy/hw 無 under/open 分支;by 只經 wallTopAt)');
+  ok(/tunnelSegs\.push\(\{\r?\n {14}x1, z1, fy1: tFloorAt\(o0\) \+ ROAD_LIFT, cy1: ceilOf\(o0\),\r?\n {14}x2, z2, fy2: tFloorAt\(o1\) \+ ROAD_LIFT, cy2: ceilOf\(o1\), hw,\r?\n {14}by1: wallTopAt\(o0\), by2: wallTopAt\(o1\),\r?\n {14}gal: galMask\(i\),[^\n]*\r?\n {12}\}\);/.test(STRC),
+    'Ⅲ 覆蓋段 tunnelSegs MUST 維持與隧道逐字共用的幾何公式(fy/cy/hw 無 under/open 分支;by 只經 wallTopAt;gal 只是註記)');
   ok(/const wallTopAt = under \? \(s\) => tBaseAt\(s\) \+ UND\.KERB : \(\) => undefined;/.test(STRC),
     'Ⅲ 牆頂 wallTopAt MUST 是唯一縫:地下道 = 基準線 + KERB(與引道擋土牆同一條線),山體隧道 = undefined');
   ok((STRC.match(/ceilSegs\.push/g) || []).length === 1 && !/ceilSegs\.push[^\n]*(open|under)/.test(STRC),
@@ -451,7 +459,7 @@ function build(under = true, heightAt = null) {
 // ---- Ⅴ open 物理段:引道露天路塹(執行 biomes.js 發射器原文)+ 消費端閘門 ----
 {
   const O0 = src.indexOf('        // ---- 地下道引道 open 物理段');
-  const O1 = src.indexOf('        // 明隧道體檢', O0);
+  const O1 = src.indexOf('        // facade 落地基準', O0);
   if (O0 < 0 || O1 <= O0) throw new Error('找不到 open 段區塊(結構已變?)');
   const OPEN = src.slice(O0, O1);
   // 行為:以平地基準案例跑一次發射器 —— open 段恰鋪滿圍裙外敞開補集、公式與覆蓋段同一條
@@ -574,8 +582,8 @@ function build(under = true, heightAt = null) {
     'Ⅶ main.js MUST 把 wallCross 接上 terrain.tunnelWallCross(唯一縫傳遞)');
   ok(/if \(this\.terrain\.tunnelWallCross\?\.\(px0, pz0, cx, cz, py0\)\) return false;/.test(gsrc),
     'Ⅶ game.js passable MUST 呼叫 tunnelWallCross(位移前 → 候選點、腳下高 py0)');
-  ok(msrc.includes('.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2])'),
-    'Ⅶ slab 上傳 MUST 只投影 x/z/hw(by 是客戶端移動物理,不出海 = 伺服器語意零漂移)');
+  ok(msrc.includes('.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2, d.gal || 0])'),
+    'Ⅶ slab 上傳 MUST 只投影 x/z/hw + gal 註記(by 是客戶端移動物理,不出海 = 伺服器語意零漂移;gal 由 audit_open_tunnel Ⅳ 驗語意)');
   // 行為:以平地基準案例建 tunnels(覆蓋段 + 圍裙 + open 引道,by 走 Ⅲ 鎖定的 wallTopAt 公式)
   const M0 = src.indexOf('export function makeTunnelIndex');
   const M1 = src.indexOf('\n}', M0) + 2;

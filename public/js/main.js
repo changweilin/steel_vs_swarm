@@ -1756,10 +1756,14 @@ async function enterLoading(cfg) {
       // open 段(地下道引道露天路塹)MUST NOT 上傳:它只服務客戶端站立/側壁閘,上傳成 ty=2
       // 會讓伺服器把露天溝底當「洞內」(側牆全擋 LOS、爆風隔絕)—— 客戶端看得到打得到、
       // 伺服器判被擋 = 傷害無聲蒸發(A18/A30 一族的兩端分家)。
+      // 第 7 欄 gal(2026-07-30 明隧道柱列):開放側位元遮罩(bit1 = 世界 side +1、bit2 = side −1),
+      // 伺服器 tunnelSideExit 對開放側穿出的射線/爆風放行(柱間透明可見可穿透,兩端同判)。
+      // 側別符號在 z 鏡射下**不換手**:偏移向量與軸向的 z 分量同時反號,垂距叉積符號不變
+      // (與 occ 的 ry 反號不同 —— 那是單一角度值;audit_open_tunnel Ⅳ 以真 sim 直測釘住)。
       const decks = ud.decks || [], tunnels = ud.tunnels || [];
       const slabs = [
         ...decks.map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 1]),
-        ...tunnels.filter((d) => !d.open).map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2]),
+        ...tunnels.filter((d) => !d.open).map((d) => [rd(d.x1), rd(-d.z1), rd(d.x2), rd(-d.z2), rd(d.hw), 2, d.gal || 0]),
       ].slice(0, LOS.MAX_SLAB);
       // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。

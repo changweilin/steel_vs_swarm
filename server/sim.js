@@ -47,9 +47,14 @@ function ptOnRibbon(px, pz, s) {
 /**
  * 隧道側牆判定:洞內端 (ix,iz) → 洞外端 (ox,oz) 的線段,在隧道 ribbon 局部矩形
  * [0,L]×[−hw,hw](L=軸長、hw=半寬)中,是「先由側牆(|d|=hw)離開」還是「先由洞口
- * (s=0 / s=L)離開」。側牆先離開 = 穿山體岩盤 → 擋;洞口先離開 = 沿軸出洞口 → 放行
- * (隧道兵線正常對射)。Liang–Barsky:洞內端在框內,比較沿軸 / 垂距兩維各自離框的 τ,
+ * (s=0 / s=L)離開」。Liang–Barsky:洞內端在框內,比較沿軸 / 垂距兩維各自離框的 τ,
  * 較小者即實際離開的那條邊。伺服器無地形高程,以此 2D 幾何近似「山體擋線」。
+ * 回傳離開分類(2026-07-30 明隧道柱列改制):
+ *   0 沿軸出洞口(隧道兵線正常對射,放行)
+ *   1 由實牆側穿出(穿山體岩盤/深埋側牆,擋)
+ *   2 由明隧道開放側穿出(柱間透明可見可穿透,放行)—— s[6] gal 位元遮罩,
+ *     bit1(值 1)= 垂距 + 側、bit2(值 2)= − 側;側別在 z 鏡射上傳下不換手
+ *     (偏移向量與軸向的 z 分量同時反號,叉積符號不變;audit_open_tunnel Ⅳ 直測)。
  */
 function tunnelSideExit(ix, iz, ox, oz, s) {
   const x1 = s[0], z1 = s[1], hw = s[4];
@@ -62,7 +67,8 @@ function tunnelSideExit(ix, iz, ox, oz, s) {
   const dd = (-(ox - x1) * nz + (oz - z1) * nx) - dpI;
   const tS = ds > 0 ? (L - spI) / ds : ds < 0 ? -spI / ds : Infinity;          // 離洞口(s=0/L)之 τ
   const tD = dd > 0 ? (hw - dpI) / dd : dd < 0 ? (-hw - dpI) / dd : Infinity;   // 離側牆(|d|=hw)之 τ
-  return tD < tS;                                    // 側牆先離開 → 穿岩體 → 擋
+  if (!(tD < tS)) return 0;                          // 洞口先離開(或未離框)→ 沿軸出洞口
+  return ((s[6] | 0) & (dd > 0 ? 1 : 2)) ? 2 : 1;    // 該側開放(gal)→ 柱間穿出;否則穿岩體
 }
 
 export class BattleSim {
@@ -171,8 +177,10 @@ export class BattleSim {
   }
 
   /**
-   * 橋面/隧道天花水平薄板(#1):main.js 房主上傳的 ribbon 平面段 [x1,z1,x2,z2,hw,ty](sim 座標,
-   * ty=1 橋面 / 2 隧道天花)。柵格化進 _slabGrid(LOS.CELL_M 格),供 _slabBlocked / _slabLevAt 查。
+   * 橋面/隧道天花水平薄板(#1):main.js 房主上傳的 ribbon 平面段 [x1,z1,x2,z2,hw,ty,gal?](sim 座標,
+   * ty=1 橋面 / 2 隧道天花;gal = 明隧道開放側位元遮罩,僅 ty=2 有意義,tunnelSideExit 對開放側
+   * 穿出的射線/爆風放行 —— 柱間透明可見可穿透,兩端同判)。柵格化進 _slabGrid(LOS.CELL_M 格),
+   * 供 _slabBlocked / _slabLevAt 查。
    * 未上傳(e2e/headless)→ _slabGrid 不存在 → slab 遮蔽停用,LOS 行為與舊版一致(確定性斷言不變)。
    */
   _ingestSlabs(w) {
@@ -183,7 +191,7 @@ export class BattleSim {
       if (!Array.isArray(s) || s.length < 6) continue;
       const x1 = +s[0], z1 = +s[1], x2 = +s[2], z2 = +s[3], hw = Math.min(20, Math.max(1, +s[4])), ty = +s[5];
       if (![x1, z1, x2, z2, hw].every(Number.isFinite) || (ty !== 1 && ty !== 2)) continue;
-      const seg = [x1, z1, x2, z2, hw, ty];
+      const seg = [x1, z1, x2, z2, hw, ty, ty === 2 ? ((+s[6] || 0) & 3) : 0];
       const i0 = Math.floor((Math.min(x1, x2) - hw) / C), i1 = Math.floor((Math.max(x1, x2) + hw) / C);
       const j0 = Math.floor((Math.min(z1, z2) - hw) / C), j1 = Math.floor((Math.max(z1, z2) + hw) / C);
       for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
@@ -224,11 +232,13 @@ export class BattleSim {
 
   /**
    * 橋面/隧道天花薄板遮蔽:
-   *  ①隧道(ty=2)側牆/山體:一端在洞內(lev 2)、一端在洞外,且射線由「側牆」而非「洞口」穿出
-   *    → 岩盤擋(tunnelSideExit)。以洞內端所在 cell 取其 ribbon(洞內端必落在自身 cell),
-   *    沿軸經洞口穿出不擋(隧道兵線正常對射),側/上方一律擋 —— 砲塔/小兵/英雄穿牆一併封死。
-   *    交疊 ribbon(髮夾雙腿/兩隧道相交)MUST 全數判側牆才擋:任一條判「沿軸出洞口」= 射線
-   *    走在該走廊的空腔內,照放行 —— ANY-match 會把沿另一走廊的合法對射誤判成穿岩盤,
+   *  ①隧道(ty=2)側牆/山體:一端在洞內(lev 2)、一端在洞外,且射線由「實牆側」而非「洞口/
+   *    明隧道開放側」穿出 → 岩盤擋(tunnelSideExit;開放側 = gal 遮罩,柱間透明可見可穿透,
+   *    2026-07-30 柱列改制與客戶端同判)。以洞內端所在 cell 取其 ribbon(洞內端必落在自身 cell),
+   *    沿軸經洞口穿出不擋(隧道兵線正常對射),實牆側/上方一律擋 —— 砲塔/小兵/英雄穿牆一併封死
+   *    (天花正上方 ↔ 洞內由 ② 同 ribbon 層不符把關,不因 ① 放行而漏)。
+   *    交疊 ribbon(髮夾雙腿/兩隧道相交)MUST 全數判實牆側才擋:任一條判「沿軸/開放側穿出」=
+   *    射線走在該走廊的空腔內或柱間,照放行 —— ANY-match 會把沿另一走廊的合法對射誤判成穿岩盤,
    *    lev 抖動下更疊成「看不到打不到」的免傷掩體(2026-07-29 澀谷交疊)。
    *  ②橋面/隧道天花薄板(under-block):兩端同 ribbon 且層不符(僅「橋上 ↔ 正下方」一組)→ 擋;
    *    側向射擊不誤擋(橋 ty=1 只走這條,行為與舊版一致)。
@@ -244,10 +254,10 @@ export class BattleSim {
       const ox = levA === 2 ? bx : ax, oz = levA === 2 ? bz : az;
       const arrI = g.get((Math.floor(ix / C) + 32768) * 65536 + (Math.floor(iz / C) + 32768));
       if (arrI) {
-        let side = false;   // 至少落在一條隧道 ribbon 上,且每一條都判「側牆穿出」
+        let side = false;   // 至少落在一條隧道 ribbon 上,且每一條都判「實牆側穿出」
         for (const s of arrI) {
           if (s[5] !== 2 || !ptOnRibbon(ix, iz, s)) continue;
-          if (!tunnelSideExit(ix, iz, ox, oz, s)) { side = false; break; }   // 沿軸出洞口 → 放行
+          if (tunnelSideExit(ix, iz, ox, oz, s) !== 1) { side = false; break; }   // 沿軸出洞口/開放側柱間 → 放行
           side = true;
         }
         if (side) return true;
@@ -2416,7 +2426,11 @@ export class BattleSim {
    * 爆風垂直隔離(2026-07-22 隧道 → 2026-07-24 橋面天花一併封死):爆心層 lev 與目標層被結構板
    * 隔開 ⇒ 爆風不越層。A11「爆風不吃 LOS 遮蔽」是**水平**繞射近似,MUST NOT 引申成可以穿透
    * 垂直岩盤/隧道天花/橋面板。伺服器無高程,以「lev 位元 + ribbon 疊放」近似垂直層(見 _slabBlocked)。
-   *  ①隧道(任一端 lev 2):岩體/天花包覆,洞內↔洞外互不波及 —— 身處洞內即隔絕,不需 ribbon。
+   *  ①隧道(任一端 lev 2):岩體/天花包覆,洞內↔洞外互不波及 —— 身處洞內即隔絕。
+   *    明隧道開放側例外(2026-07-30 柱列改制):洞內端所在的**每一條** ty=2 ribbon 都判
+   *    「由開放側(gal)穿出」才解除隔離 —— 柱間透明可見可穿透,爆風與直擊同判(兩端同量體);
+   *    沿軸出洞口維持舊隔離(A11 是水平繞射近似,不含洞口衍射),天花正上方 ↔ 洞內落在
+   *    「未離框 = 0」也維持隔離(頂板規則與一般隧道相同)。
    *  ②橋面(lev 1↔0):僅「正上方↔正下方」被橋面板隔開 —— 爆心與目標同落一條 ty=1 ribbon;
    *    側向溢流照炸(與 _slabBlocked ② under-block 同判定,不誤擋橋旁地面單位)。
    * lev 為 null(導引飛彈著彈)已由鎖定時的 slab LOS 把關,回傳 false 維持舊行為。
@@ -2424,11 +2438,22 @@ export class BattleSim {
   _slabSep(lev, x, z, t) {
     if (lev == null || !this._slabGrid) return false;
     const tl = this._unitLev(t);
+    const C = LOS.CELL_M;
     if (tl === lev) return false;                        // 同層 → 無板隔開
-    if (tl === 2 || lev === 2) return true;              // 隧道:洞內↔洞外
-    const C = LOS.CELL_M;                                // 橋面 1↔0:爆心與目標同落一條橋面 ribbon 才隔
+    if (tl === 2 || lev === 2) {                         // 隧道:洞內↔洞外(僅開放側柱間解除)
+      const ix = lev === 2 ? x : t.x, iz = lev === 2 ? z : t.z;
+      const ex = lev === 2 ? t.x : x, ez = lev === 2 ? t.z : z;
+      const arrI = this._slabGrid.get((Math.floor(ix / C) + 32768) * 65536 + (Math.floor(iz / C) + 32768));
+      let open = false;
+      if (arrI) for (const s of arrI) {
+        if (s[5] !== 2 || !ptOnRibbon(ix, iz, s)) continue;
+        if (tunnelSideExit(ix, iz, ex, ez, s) !== 2) { open = false; break; }
+        open = true;
+      }
+      if (!open) return true;
+    }
     const arr = this._slabGrid.get((Math.floor(x / C) + 32768) * 65536 + (Math.floor(z / C) + 32768));
-    if (arr) for (const s of arr) {
+    if (arr) for (const s of arr) {                      // 橋面 1↔0:爆心與目標同落一條橋面 ribbon 才隔
       if (s[5] === 1 && ptOnRibbon(x, z, s) && ptOnRibbon(t.x, t.z, s)) return true;
     }
     return false;
