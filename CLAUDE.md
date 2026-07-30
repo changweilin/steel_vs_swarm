@@ -76,11 +76,14 @@
 | bot 操作節奏 | `data.js BOT_DIFF/BOT_OPS/botOpGap()` + `bots.js _op()` | MUST NOT 另寫 tick 計數節流;持續開火刻意只吃反應時間、不吃手速閘 |
 | AoE / 彈道分類 | `data.js aoeClass()`(blast/fan/line)/`trajClass()`(lob/flat/line/guide/fnf) | 由 `def.type`/`fan`/`guide` 推導;sim/演出/HUD 共用;MUST NOT 手寫逐武器分類表 |
 | 貫穿演出 | `game.js _lanceVisual()` + `lanceR(def, barrage)` | 自機/他人/bot 共用;粗細 = 伺服器判定半徑(含 `LANCE.BARRAGE_F` 傾洩加粗,兩端 MUST 同步) |
-| 榴彈火控 | `game.js _lobAim()`(每幀定案 `_lobFc`) | 出膛向量/瞄準虛線/鎖定光暈/砲管仰角共用;光暈 = `_arcTrace minD ≤ LOB_TOL`,MUST NOT 退回直射線判定 |
+| 榴彈火控 | `game.js _lobAim()`(每幀定案 `_lobFc`)+ 逐級降裝藥階梯 `_lobLadder()` + 積分 `_arcTrace(…, draw)` | 出膛向量/瞄準虛線/鎖定光暈/砲管仰角共用;光暈 = `_arcTrace minD ≤ LOB_TOL`,MUST NOT 退回直射線判定。**階梯與積分只准一份**:`_lobAim`(draw=true 寫繪製緩衝)與射程光暈判定 `_reachable`(draw=false)MUST 同吃 `_lobLadder` —— 判定端另寫簡化積分 = 光暈與實際彈道分家 |
+| 射程閘門容差 | `data.js RANGE_TOL` + `altRangeMax()` | 伺服器複驗客戶端回報(命中/落點/射線)的網路寬容**只有一個值**;sim.js 每道射程閘門 MUST 吃它,MUST NOT 逐處手寫倍率。落點/爆點類閘門(`heroBurst`)拿不到目標實體 ⇒ 高度制空取 `altRangeMax()` 上限當誠實界(比客戶端 `_altRangeMul` 緊 = 高地合法彈著被靜默丟棄) |
+| 「打得到嗎」判定 | `data.js REACH_RULE`/`reachRule()` → `game.js _reachable()` | 射程光暈的唯一判據(**亮 = 打得到**)。逐彈道五類全覆蓋:`path` arc(火控階梯)/ray(直線段);`hit` blast(落點落在 `blastCoreR` 核心帶,**刻意不吃 LOS** ← A11)/clear(線段整段淨空,對齊伺服器 `_losBlocked`);`arm` = 導引/射後不理的軌跡修正期轉警示色。消費端 MUST NOT 自己比對 `trajClass`/`def.type` |
+| 爆風超壓帶 | `data.js BLAST`(`CORE`/`EDGE`/`EXP`)+ `blastCoreR()` | `blastFalloff` 與「打得到」判定共用同一組轉折點;曲線形狀不變,MUST NOT 在任一端手寫 0.5/1.8/1.3 |
 | 異常狀態致盲白幕 | `data.js CC_FLASH` + `ccFlashAlpha()`/`ccFlashDur()`;觸發 `game.js _blindFlash()` | 純表現層(狀態效果仍伺服器結算):光學/電子系狀態(emp/conf/stun)**上升沿**觸發,白幕長度固定 = `ccFlashDur()`,MUST NOT 隨狀態剩餘秒數延長;強度表 MUST NOT 收物理系(slow/bleed/mark);逐幀曲線唯一驅動 ⇒ `.cc-flash` MUST NOT 掛 CSS transition/animation |
 | 地形坡度移動 | `data.js SLOPE` + `slopeDeg()`/`slopeMoveF()`/`slopeBlocked()`;量測 `game.js _slopeDegAlong()` | 平緩帶 `EASE_DEG` = 兵線坡度限制 `MAPGEO.MAX_ROAD_GRADE_DEG`、阻擋角 = ×`BLOCK_F` 推導,兩者 MUST NOT 手寫(設計語意:**兵線走廊恆全速**,離開大路爬野山才減速)。坡度一律量**裸地形 `heightAt`**,MUST NOT 改量站立面 `_surf`(上橋引道會被 deckAt 捕捉成假峭壁);速度倍率吃固定前瞻 `PROBE_M`,MUST NOT 拿當幀位移(手感隨幀率浮動);三條豁免 = 飛行/騰空、人造鋪面(`STRUCT_M`)、零位移;**下坡一律不擋**、「爬不上去」MUST 由 `slopeBlocked` 表達而非倍率 0 |
 | 蓄力跳水平移速 | `data.js CJUMP.AIR_SPD_F` | 兩個消費端 MUST 同吃 —— 起跳彈射初速(`_chargeJump`)+ 騰空(`_lowG`)操縱移速;垂直項(`CJUMP.V`/`GRAV_F`)MUST NOT 吃(否則跳高/滯空一起變,滿蓄頂點會撞 `AA_MIN_ALT` 前提) |
-| 機體高度/半徑 | `data.js SOLDIER_H/HERO_SIZE/heroTargetH()/TARGET_H/hitH()` + `hitR()`(`HERO_HIT_R`/`TARGET_R`) | 同一把尺餵渲染縮放與伺服器命中量體;爆風/貫穿量到**垂直帶最近點**;貫穿半徑 = `lanceR(def) + hitR(t)`;`game.js COLLIDER` MUST 由 hitR/hitH 推導,但鍵集 MUST NOT 隨 `TARGET_R` 擴張 |
+| 機體高度/半徑 | `data.js SOLDIER_H/HERO_SIZE/heroTargetH()/TARGET_H/hitH()` + `hitR()`(`HERO_HIT_R`/`TARGET_R`) | 同一把尺餵渲染縮放與伺服器命中量體;**爆風/貫穿/射程閘門一律量到命中量體最近點**(水平 `hitR(t)` + 垂直帶 `_bodyDy`,兩軸同一把尺 —— `_blast` 只做垂直、水平仍量中心 = 榴彈直擊 20m 主堡牆面只吃約五成超壓);貫穿半徑 = `lanceR(def) + hitR(t)`;`game.js COLLIDER` MUST 由 hitR/hitH 推導,但鍵集 MUST NOT 隨 `TARGET_R` 擴張 |
 | 攀爬路線 | `climb.js`(規劃/抓握索引/設施幾何/`attachFaces()` 正面候選) | 詳見 A31 |
 | 巨岩表面落點 | `biomes.js rockProbe(g)`(`wallR`/`slope`/`topAt` 射線實測) | 貼壁(峭壁樹/岩菇/侵蝕溝/棧道)與頂面(石屋/疊石/鳥巢台/電塔)落點一律**實測真幾何**;多面體小面內縮 4~5%、疊層收分、崩落塊撐大外廓 ⇒ 手寫剖面公式(側壁橢圓 × dome/taper)一律算不準,MUST NOT 復辟 |
 | 圓形腳印落底 | `biomes.js sinkBaseY()` | 神木/邊界巨岩/巨岩/地標一律「中心 + 腳印周圈取最低」,寧可陷入山坡不懸空;MUST NOT 只取中心高度(下坡側整片浮空) |
@@ -194,8 +197,9 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `ECON.UPG_*`(八軌階梯單價) | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING` | 32 角分類覆蓋(重武器全歸類、輕武器不歸類)+ `heroLance` 衰減直測(首發全額、之後 `DECAY^i`)+ bal 不動 |
 | 直線貫穿命中判定(`_lanceHits`/`lanceR`/`hitR` 系) | `audit_lance_hit.mjs`(27 項;塔身側面命中、近側表面命中、傾洩加粗生效於伺服器) |
-| `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim` | 真機冒煙:`bullet.vel` = `_lobFc.vel`、爆點 = 瞄準高、弧高隨距離變、稜線擋道 `ok:false` 不送 lock |
-| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體) | headless `_blast` 直測(垂直帶內同額、1.8r 外歸零、塔頂 = 塔底);動 `hitR`/`TARGET_R` 一併跑 `audit_lance_hit.mjs`(同組值 = COLLIDER 碰撞半徑) |
+| `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim`/`_lobLadder`/`_arcTrace` | `audit_weapon_gate.mjs` Ⅳ・Ⅴ(階梯與積分只有一份、`_lobAim` 與 `_reachable` 同吃)+ 真機冒煙:`bullet.vel` = `_lobFc.vel`、爆點 = 瞄準高、弧高隨距離變、稜線擋道 `ok:false` 不送 lock |
+| 射程閘門容差 / 爆風量體 / 射程光暈可命中判定(`RANGE_TOL`・`altRangeMax`・`BLAST`/`blastCoreR`・`REACH_RULE`/`reachRule`・`sim._blast` 水平量體・`heroBurst` 落點閘門・`game._reachable`/`_updateRangeGlows`) | `audit_weapon_gate.mjs`(五段;Ⅰ 容差/超壓帶單一縫且推導不手寫、Ⅱ 兩端閘門同界 + 真 `BattleSim` 直測「range×1.20 落點不再被丟棄 / 超界仍丟棄」、Ⅲ `_blast` 量到近側表面(主堡牆面全額、EDGE 外歸零、人員級位移 <15%)、Ⅳ 五類彈道全覆蓋 + 消費端單一縫 + 積分唯一、Ⅴ `_reachable` 逐彈道行為直測)+ `npm run bal` 不動(四不變式不模型化爆風幾何)+ 真機冒煙(榴彈對著稜線後方的敵人不亮光暈、繞到側面亮、貼臉導引彈轉琥珀、直擊武器隔牆不亮) |
+| `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體) | headless `_blast` 直測(垂直帶內同額、EDGE·r 外歸零、塔頂 = 塔底);動 `hitR`/`TARGET_R` 一併跑 `audit_lance_hit.mjs` + `audit_weapon_gate.mjs` Ⅲ(同組值 = COLLIDER 碰撞半徑 + 爆風水平量體) |
 | `AIR`/`envTrigger`/`TERRAIN_FX`(騰空/地形異常) | headless 直測(小跳仍踩雷、蓄力跳不踩;無人機 y=10 仍灼傷;騰空 wet 立停)+ 真機水域冒煙 |
 | 地形坡度移動(`SLOPE`/`slopeDeg`/`slopeMoveF`/`slopeBlocked`・`_slopeDegAlong`/`_slopeMoveF`/`_updatePlayer` 移動段與 passable 閘)/ `MAPGEO.MAX_ROAD_GRADE_DEG` | `audit_slope_move.mjs`(63 項;Ⅰ 常數推導不手寫、Ⅱ 曲線平緩帶恆 1 → 上坡遞減/下坡遞增且夾制、**下坡一律不擋**、Ⅲ 合格兵線在遊戲空間 ≈8.2° < 平緩帶 ⇒ 推線走廊恆全速、Ⅳ 消費端單一縫、Ⅴ 合成高度場行為直測含橋面/隧道/騰空豁免)+ 真機冒煙(爬陡坡明顯變慢、峭壁上不去但可沿等高線橫走、下坡加速、上橋引道與洞口不被誤擋) |
 | 異常狀態致盲白幕(`CC_FLASH`/`ccFlashAlpha`/`_ccFeed`・`_blindFlash`・`_updateCcFlash`/`.cc-flash`)/ 蓄力跳水平移速(`CJUMP.AIR_SPD_F`/`_chargeJump`/騰空移動段) | `audit_cc_flash.mjs`(44 項;Ⅰ 曲線全白→漸淡→歸零、Ⅱ 強度表只收光學系、Ⅲ 觸發/衰減/清除各一處且都接上、Ⅳ 行為直測「當下更亮者勝」、Ⅴ 水平倍率兩端同吃且垂直不吃)+ 真機冒煙(被雷爆彈/EMP 招式命中畫面全白後漸淡、HUD 仍讀得到;蓄力跳同蓄力比例跳得更遠但高度不變) |

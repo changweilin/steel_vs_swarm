@@ -12,6 +12,7 @@ import {
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
+  reachRule, blastCoreR,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -36,6 +37,14 @@ const KIND_KEY = {
   kami: 'hero:drone', // 自殺攻擊機:渲染成該角色的無人機(_spawnUnit 縮小 1/3)
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
+// 彈道積分的最大取樣點數(≈3m/點 ⇒ 涵蓋約 790m 弧長)。繪製緩衝(_ensureArcGuide)與
+// 不繪製的可命中判定(_arcTrace draw=false)MUST 共用同一個上限,否則兩者會在長弧上分家。
+const ARC_MAXP = 264;
+// 射程光暈的評估節流(2026-07-30):光暈的判據從「距離夠近」升級成「這一發真的打得到」,
+// 而拋物線可行性要跑彈道積分 —— 全場敵人每幀重算會把 _lobAim 那條熱路徑再乘上敵人數。
+// 作法:每幀只評估固定枚數(拋物線積分貴 ⇒ 每幀 1 個;直線只是一條線段射線 ⇒ 每幀 6 個),
+// 結果快取 TTL 秒;換武器/重砲窗開關 ⇒ 整批作廢重評。尚未評估過的目標**不亮**(寧缺勿錯)。
+const RANGE_GLOW = { TTL_S: 0.4, ARC_PER_FRAME: 1, RAY_PER_FRAME: 6, SURF_TOL_M: 0.5 };
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
@@ -4363,23 +4372,10 @@ export class BattleClient {
     fc.on = true;
     fc.aa = !!this._aaAim;
     const base = this._shotV0(def, fc.aa);
-    // ② + ③ 逐級降裝藥(BALLISTIC.LOB_CHARGE):全裝藥低伸解 → 被地形/障礙擋住就降一號,
-    // 初速降低 ⇒ 命中同一點所需仰角自動抬高、弧線變高 —— 真實榴彈砲「選裝藥號數 + 高角度射擊」
-    // 越過稜線/建物的作法。降到打不到(射程包絡外)即停;出射程/無解的截斷降裝藥也沒用,不白跑積分。
-    const Z = BALLISTIC.LOB_CHARGE;
-    let arc = null, zi = 0;
-    for (let k = 0; k < Z.length; k++) {
-      const v = base * Z[k];
-      if (!this._lobSolve(from, fc.aim, v).ok) break;   // 該裝藥打不到:更低號更打不到
-      const a = this._arcTrace(from, this._lobVel(from, fc.aim, v), max, fc.aim);
-      arc = a; zi = k;
-      if (a.minD <= BALLISTIC.LOB_TOL) { fc.ok = true; break; }
-      if (a.cut !== 'block') break;
-    }
-    if (!arc) {   // 全裝藥都沒有實數解(超出射程包絡):畫 45° 盡力弧當落短指示
-      arc = this._arcTrace(from, this._lobVel(from, fc.aim, base), max, fc.aim);
-    }
-    fc.v0 = base * Z[zi];
+    // ② + ③ 逐級降裝藥:共用 `_lobLadder`(唯一縫)—— 射程光暈的可命中判定吃同一份階梯
+    const { ok, zi, arc } = this._lobLadder(from, fc.aim, max, base, BALLISTIC.LOB_TOL, true);
+    fc.ok = ok;
+    fc.v0 = base * BALLISTIC.LOB_CHARGE[zi];
     fc.high = zi > 0;
     fc.vel.copy(this._lobVel(from, fc.aim, fc.v0));
     fc.n = arc.n;
@@ -4400,19 +4396,52 @@ export class BattleClient {
   }
 
   /**
-   * 彈道積分(與 _updateBullets 同一組 G / 地形 / 障礙截斷規則):寫入 `_arcGuide` 預配置緩衝。
+   * 逐級降裝藥火控階梯(**唯一縫**):全裝藥低伸解 → 被地形/障礙擋住就降一號,初速降低 ⇒ 命中同一點
+   * 所需仰角自動抬高、弧線變高 —— 真實榴彈砲「選裝藥號數 + 高角度射擊」越過稜線/建物的作法
+   * (MUST NOT 改用同初速的高角度解:現尺度下那是 85° 迫砲彈,飛行 20 秒沒有戰術意義)。
+   * 降到打不到(射程包絡外)即停;出射程/無解的截斷降裝藥也沒用,不白跑積分。
+   *
+   * 回傳 { ok:tol 內對準了嗎, zi:定案的裝藥號數索引, arc:該次積分結果 }。
+   * **兩個消費端 MUST 吃這一份**:
+   *   ① `_lobAim` 的火控解(draw=true,寫繪製緩衝 → 虛線/落點環/砲管仰角/鎖定光暈)
+   *   ② `_reachable` 的射程光暈可命中判定(draw=false,不動繪製緩衝)
+   * 另寫一份簡化積分 = 光暈與實際彈道分家,又回到使用者回報的「光暈亮著卻沒命中」。
+   */
+  _lobLadder(from, aim, max, base, tol, draw) {
+    const Z = BALLISTIC.LOB_CHARGE;
+    let arc = null, zi = 0, ok = false;
+    for (let k = 0; k < Z.length; k++) {
+      const v = base * Z[k];
+      if (!this._lobSolve(from, aim, v).ok) break;   // 該裝藥打不到:更低號更打不到
+      const a = this._arcTrace(from, this._lobVel(from, aim, v), max, aim, draw);
+      arc = a; zi = k;
+      if (a.minD <= tol) { ok = true; break; }
+      if (a.cut !== 'block') break;
+    }
+    if (!arc && draw) {   // 全裝藥都沒有實數解(超出射程包絡):畫 45° 盡力弧當落短指示
+      arc = this._arcTrace(from, this._lobVel(from, aim, base), max, aim, true);
+    }
+    return { ok, zi, arc };
+  }
+
+  /**
+   * 彈道積分(與 _updateBullets 同一組 G / 地形 / 障礙截斷規則);draw=true 才寫入 `_arcGuide`
+   * 預配置緩衝(繪製用),判定路徑走 draw=false 以免踩壞正在顯示的瞄準虛線。
    * 回傳 { n:點數, impact:落點或 null, minD:彈道與瞄準點的最近距離, cut:截斷原因 }。
    * minD 即「拋物線有沒有對準」的判據 —— 解算保證彈道通過瞄準點,積分卻可能先被地形/障礙/
    * 射程終點截斷,截斷了就永遠靠不近(單位不擋積分:命中由伺服器結算,虛線只是指示)。
    * cut:'block' 撞地形/障礙(降裝藥抬高彈道可能越過)/ 'range' 射程終點 / 'pass' 飛過瞄準點 / null 緩衝用盡。
    * step 隨初速自適應(恆 ~3m/點):彈射模式 720m/s 若照 0.03s 走,一步 21m 會跳過整條稜線。
    */
-  _arcTrace(from, vel, max, aim) {
-    this._ensureArcGuide();
-    const ag = this._arcGuide, arr = ag.arr, ld = ag.ld, MAXP = ag.maxp;
+  _arcTrace(from, vel, max, aim, draw = true) {
+    if (draw) this._ensureArcGuide();
+    const ag = draw ? this._arcGuide : null;
+    const arr = ag?.arr, ld = ag?.ld, MAXP = ag ? ag.maxp : ARC_MAXP;
     let n = 0;
     // lineDistance 自算進預配置緩衝 —— 不呼叫 line.computeLineDistances()(它每幀重建 attribute 洩漏 buffer)
-    const put = (v, d) => { if (n < MAXP) { arr[n * 3] = v.x; arr[n * 3 + 1] = v.y; arr[n * 3 + 2] = v.z; ld[n] = d; n++; } };
+    const put = draw
+      ? (v, d) => { if (n < MAXP) { arr[n * 3] = v.x; arr[n * 3 + 1] = v.y; arr[n * 3 + 2] = v.z; ld[n] = d; n++; } }
+      : () => { n++; };
     put(from, 0);
     const p = from.clone(), v = vel.clone();
     const step = Math.min(0.03, 3 / Math.max(1, vel.length()));
@@ -4472,7 +4501,7 @@ export class BattleClient {
   /** 懶建拋物線指示物件(虛線 + 落點環,預配置緩衝持久重用;避免每幀重建 attribute 洩漏 GPU buffer) */
   _ensureArcGuide() {
     if (this._arcGuide) return;
-    const MAXP = 264;
+    const MAXP = ARC_MAXP;
     const arr = new Float32Array(MAXP * 3);
     const ld = new Float32Array(MAXP);
     const geo = new THREE.BufferGeometry();
@@ -4638,34 +4667,55 @@ export class BattleClient {
   }
 
   /**
-   * 射程光暈(2026-07-29 使用者需求「武器範圍內所有敵人都會出現範圍光暈」):
-   * 目前手上武器射程內(量到目標近側表面 —— 與伺服器 _surfD3 同一把尺)的每個可見敵人
-   * 掛一枚淡色光暈;準星鎖定的目標維持既有較亮的 lockGlow(該 ent 跳過本層,不疊兩層)。
-   * 純表現層(迷霧由快照過濾 → mesh.visible 天然把關,A10 不涉)。
-   * A25:sprite 走物件池、全部共用同一份 SpriteMaterial 與快取光暈貼圖 —— 進出射程只是
+   * 射程光暈(2026-07-29 使用者需求「武器範圍內所有敵人都會出現範圍光暈」;
+   * 2026-07-30 改制:光暈的語意由「距離夠近」升級成「**這一發真的打得到**」)。
+   *
+   * 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。舊制只量距離 —— 而榴彈能不能
+   * 命中還要看彈道解過不過得去(稜線/建物/射程包絡),直擊/貫穿武器則要看視線通不通
+   * (伺服器 heroHit/_lanceHits/heroPlasma 都有 `_losBlocked` 複驗)⇒ 光暈的語意比伺服器
+   * 實際結算寬,亮著卻打不到。改吃 `_reachable`(依 data.js reachRule() 逐彈道分派)後,
+   * 光暈與**同一份火控階梯/同一條射線**同源,亮 = 打得到。
+   *
+   * 三種光暈同時存在、語意不重疊:準星鎖定目標 = lockGlow(較亮,本層跳過不疊兩層)、
+   * 可命中 = 陣營色淡光暈、可命中但命中率低/會自損(榴彈最小安全射程內、導引彈軌跡修正期內)
+   * = 琥珀警示色。純表現層(迷霧由快照過濾 → mesh.visible 天然把關,A10 不涉)。
+   * A25:sprite 走物件池、共用兩份 SpriteMaterial 與快取光暈貼圖 —— 進出射程只是
    * add/remove + 縮放,MUST NOT 每幀重配材質/貼圖;ent 移除時回收進池(_removeEnt)。
    */
-  _updateRangeGlows() {
+  _updateRangeGlows(now) {
     const pool = this._rgPool || (this._rgPool = []);
     const drop = (ent) => {
       if (ent._rgGlow) { ent._rgGlow.parent?.remove(ent._rgGlow); pool.push(ent._rgGlow); ent._rgGlow = null; }
     };
-    const def = this.side && !this.dead ? this._curWeapon().def : null;
+    const cur = this.side && !this.dead ? this._curWeapon() : null;
+    const def = cur?.def;
     if (!def) { for (const ent of this.ents.values()) drop(ent); return; }
-    const rng = def.range * this._altRangeMul(def);
+    const rMul = cur.id === 'heavy' && (this._barrageUntil || 0) > now ? BARRAGE.RANGE_F : 1;
+    const rng = def.range * this._altRangeMul(def) * rMul;   // 與擊發同一組有效射程(高度制空 + 重砲窗)
+    const rule = reachRule(def);
+    // 換武器/重砲窗開關 ⇒ 快取的是「這把武器打不打得到」,整批作廢重評
+    const sig = `${cur.id}|${def.name}|${rMul}`;
+    if (sig !== this._rgSig) { this._rgSig = sig; for (const e of this.ents.values()) e._rgAt = 0; }
+    let budget = rule.path === 'arc' ? RANGE_GLOW.ARC_PER_FRAME : RANGE_GLOW.RAY_PER_FRAME;
     for (const ent of this.ents.values()) {
-      const inRange = !ent.isSelf && ent.side && ent.side !== this.side && !ent.neutral
+      // ① 便宜的候選閘(每幀全掃):敵方、活著、看得見、不是鎖定目標、近側表面在射程內
+      const cand = !ent.isSelf && ent.side && ent.side !== this.side && !ent.neutral
         && !ent.dead && !ent.gar && ent.mesh.visible && ent.id !== this._lockId
         && this.pos.distanceTo(ent.mesh.position) - this._hitR(ent) <= rng;
-      if (!inRange) { drop(ent); continue; }
-      if (ent._rgGlow) continue;
-      if (!this._rgMat) {
-        this._rgMat = new THREE.SpriteMaterial({
-          map: glowTexture(), color: SIDES[this.side].color, transparent: true, opacity: 0.26,
-          blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
-        });
+      if (!cand) { drop(ent); ent._rgAt = 0; continue; }
+      // ② 貴的可命中判定:攤提到多幀 + TTL 快取;本幀預算用完就沿用舊值,沒評估過的不亮
+      if (!(ent._rgAt > 0) || now - ent._rgAt > RANGE_GLOW.TTL_S) {
+        if (budget > 0) {
+          budget--;
+          const r = this._reachable(ent, def, rule, rng);
+          ent._rgAt = now; ent._rgOk = r.ok; ent._rgWarn = r.warn;
+        } else if (!(ent._rgAt > 0)) { drop(ent); continue; }
       }
-      const sp = pool.pop() || new THREE.Sprite(this._rgMat);
+      if (!ent._rgOk) { drop(ent); continue; }
+      const mat = ent._rgWarn ? this._rgMaterial(true) : this._rgMaterial(false);
+      if (ent._rgGlow) { ent._rgGlow.material = mat; continue; }
+      const sp = pool.pop() || new THREE.Sprite(mat);
+      sp.material = mat;
       sp.userData.noOutline = true;
       // 尺寸/定位與 lockGlow 的 halo 同一條規則:直徑 = 機體高/寬取大 ×1.15、貼機體幾何中心
       const h = ent.dimH ?? 4, r = ent.dimR ?? 1.5, top = ent.dimTop ?? h;
@@ -4674,6 +4724,61 @@ export class BattleClient {
       ent.mesh.add(sp);
       ent._rgGlow = sp;
     }
+  }
+
+  /** 射程光暈的兩份共用材質(A25:全場共用,MUST NOT 逐 ent 配置)。warn = 琥珀警示色。 */
+  _rgMaterial(warn) {
+    const key = warn ? '_rgMatWarn' : '_rgMat';
+    return this[key] || (this[key] = new THREE.SpriteMaterial({
+      map: glowTexture(), color: warn ? 0xffb03a : SIDES[this.side].color,
+      transparent: true, opacity: warn ? 0.32 : 0.26,
+      blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+    }));
+  }
+
+  /**
+   * 「這一發打得到嗎」——射程光暈的唯一判據,依 `data.js reachRule()` 逐彈道類型分派
+   * (五類 lob/guide/fnf/flat/line 全部住在那張表;此處 MUST NOT 再比對一次 def.type)。
+   *
+   *   path 'arc' 拋物線:跑**與 `_lobAim` 同一份**逐級降裝藥階梯(`_lobLadder`,draw=false)。
+   *   path 'ray' 直線:槍口 → 目標命中量體中心的線段,被地形/障礙截斷處即落點(`_layerHitT`)。
+   *   hit 'blast' 爆炸戰鬥部:落點落在**爆風核心帶**(blastCoreR + 目標水平量體)內才算打得到 ——
+   *        刻意不要求視線通:爆風不吃 LOS(A11 繞射近似),貼著掩體外側炸開照樣傷得到後面的人。
+   *   hit 'clear' 直擊/貫穿:線段 MUST 整段淨空到目標近側表面(伺服器 `_losBlocked` 同一條規則)。
+   *   arm 導引/射後不理:目標落在 `ARMING.m` 內 = 還在軌跡修正期,打得到但會偏 ⇒ 警示色不熄滅。
+   */
+  _reachable(ent, def, rule, rng) {
+    // 每幀最多評估 RANGE_GLOW.*_PER_FRAME 個目標,暫存向量仍預配置(與 _arcTrace 同一條紀律)
+    const from = this._rgFrom || (this._rgFrom = new THREE.Vector3());
+    const aim = this._rgAim || (this._rgAim = new THREE.Vector3());
+    if (this.gunGroup) this.gunGroup.localToWorld(from.copy(this._muzzle));
+    else from.copy(this.camera.position);
+    const p = ent.mesh.position;
+    // 瞄機體幾何中心(與 _aaTarget / _coneAcquire 同一條):打頭/打腳都算打中同一具機體
+    aim.set(p.x, p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5), p.z);
+    const hr = this._hitR(ent);
+    const full = from.distanceTo(aim);
+    const surf = Math.max(0, full - hr);   // 到近側表面(與伺服器 _surfD3 同一把尺)
+    if (rule.hit === 'blast') {
+      const tol = blastCoreR(def) + hr;    // 落點落在核心帶內 ⇒ 目標吃滿額爆風(blastFalloff)
+      let miss;                            // 落點與目標命中量體中心的距離
+      if (rule.path === 'arc') {
+        // 對空彈射模式(高初速近直線)在瞄到飛行單位時自動生效 ⇒ 判定要用同一個初速
+        const aa = TARGET_CLASS[ent.kind] === 'air';
+        const L = this._lobLadder(from, aim, rng, this._shotV0(def, aa), tol, false);
+        if (!L.arc) return { ok: false, warn: false };   // 全裝藥都超出射程包絡
+        miss = L.arc.minD;
+      } else {
+        const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
+        miss = cut == null ? 0 : Math.max(0, full - cut);   // 被牆截斷 ⇒ 落點離目標還有這麼遠
+      }
+      if (miss > tol) return { ok: false, warn: false };
+      const mr = lobMinRange(def);
+      const arm = rule.arm ? (armingOf(def)?.m || 0) : 0;
+      return { ok: true, warn: (mr > 0 && surf < mr) || (arm > 0 && surf < arm) };
+    }
+    const cut = this._layerHitT(from.x, from.y, from.z, aim.x, aim.y, aim.z);
+    return { ok: cut == null || cut >= surf - RANGE_GLOW.SURF_TOL_M, warn: false };
   }
 
   /** 目前被自己鎖定的目標:加上脈動光暈 */
@@ -7414,7 +7519,7 @@ export class BattleClient {
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);
-    this._updateRangeGlows();         // 武器射程內所有敵人的範圍光暈(鎖定目標另有 lockGlow)
+    this._updateRangeGlows(now);      // 射程內「打得到」的敵人才亮範圍光暈(鎖定目標另有 lockGlow)
     this._updateMoveAudio();          // 移動環境音(旋翼/引擎/振翅/震地;低功耗自動全關)
     this._updateBullets(dt);
     this._updateMissiles(dt);

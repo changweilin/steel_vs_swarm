@@ -455,6 +455,19 @@ export const altScale = (dh) => {
   const T = altTier(), a = Math.abs(dh || 0);
   return Math.max(0, Math.min(1, (a - T) / (T * (ALTITUDE.TIERS - 1))));
 };
+/**
+ * 高度制空射程加成的**上限**(推導不手寫)。用在「閘門的另一端拿不到目標實體」的場合 ——
+ * 榴彈/飛彈的落點是一個**點**,伺服器算不出 `dh`(_sightY 要兩個實體)⇒ 只能取機制上限當誠實界,
+ * 否則客戶端合法地以 `1 + ALTITUDE.RANGE` 拉遠射程打出去的那一發,會在伺服器被判超程靜默丟棄。
+ */
+export const altRangeMax = () => 1 + ALTITUDE.RANGE;
+// ---- 射程閘門的網路寬容(2026-07-30 收成單一縫)----
+// 伺服器複驗客戶端回報(命中/落點/射線)時放給網路延遲與彈道飛行時間的倍率。**唯一縫**:
+// sim.js 的每一道射程閘門 MUST 吃這一個值,MUST NOT 各處手寫倍率 —— 逐處手寫的下場是
+// heroBurst 曾經只給 1.15(其餘全是 1.25 且另乘 _altRange),高地上合法的榴彈落點落在
+// (1.15, 1.25 × altRangeMax] 這段窗口裡被「驗證後靜默丟棄」= 使用者回報的
+// 「光暈亮著、砲彈在敵人身上炸開,傷害卻是 0」(A30 靜默丟包家族)。
+export const RANGE_TOL = 1.25;
 // SQUAD:蜂群玩家 = 單架無人機(2026-07-17 起;舊制為 N 架小隊,現 N=1)。
 // 生存值(HP/護盾/護甲)= 機甲平均的 HP_F(80%);傷害 = 機甲全額(DMG=1,單機不折)。
 // 傷害折算仍住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
@@ -737,11 +750,17 @@ export function fanFalloff(range, d) {
   if (!range) return 1;
   return Math.max(FAN_FLOOR, FAN_MUZZLE * (1 - d / range));
 }
-/** 爆風超壓衰減:核心(≤0.5r)全傷,外圍隨距離急降、1.8r 歸零(取代舊二段式 1/0.4) */
+// 爆風超壓帶(唯一縫):CORE 倍半徑內全傷、EDGE 倍半徑外歸零、之間依 EXP 次方連續遞減。
+// 曲線本身不變(舊式硬寫 0.5 / 1.8 / 1.3 / 0.75,其中 1.3 = 1.8 − 0.5 是**推導值**),
+// 收成具名常數是因為「打得到嗎」的判定要取用核心帶(見 blastCoreR):兩處各寫一份魔數 = 分家。
+export const BLAST = { CORE: 0.5, EDGE: 1.8, EXP: 0.75 };
+/** 爆風核心半徑(公尺):落點落在目標的此半徑內 = 目標吃滿額爆風。射程光暈的「打得到」判據取此值。 */
+export const blastCoreR = (def) => (def?.r || 0) * BLAST.CORE;
+/** 爆風超壓衰減:核心(≤CORE·r)全傷,外圍隨距離急降、EDGE·r 歸零(取代舊二段式 1/0.4) */
 export function blastFalloff(r, d) {
-  if (d <= r * 0.5) return 1;
-  if (d >= r * 1.8) return 0;
-  return ((r * 1.8 - d) / (r * 1.3)) ** 0.75;
+  if (d <= r * BLAST.CORE) return 1;
+  if (d >= r * BLAST.EDGE) return 0;
+  return ((r * BLAST.EDGE - d) / (r * (BLAST.EDGE - BLAST.CORE))) ** BLAST.EXP;
 }
 
 // ---- 偏心傷害遞減(2026-07-29 使用者需求「所有武器範圍攻擊都有偏心傷害遞減」)----
@@ -839,6 +858,30 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // 自損量由既有 blastFalloff(def.r, 距離)自然導出(越貼近爆心自損越重);≥ 此距離則照常只傷敵。
 // **推導不手寫**:= 爆風半徑 def.r × BALLISTIC.LOB_MIN_F(改係數自動跟著走);非 lob 回 0。
 export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r || 0) * BALLISTIC.LOB_MIN_F : 0);
+
+// ================= 「打得到嗎」逐彈道判定規則(2026-07-30 使用者回報)=================
+// 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。病灶是**射程光暈只量距離**:
+// 距離在射程內就亮,而榴彈真正能不能命中還要看彈道解過不過得去(稜線/建物/射程包絡),
+// 直擊武器則要看視線通不通 —— 光暈的語意因此比伺服器實際結算寬,亮著卻打不到。
+// 修法是把「光暈亮 = 打得到」寫成**逐彈道類型的判定規則**,而不是在光暈那邊多加幾個 if:
+//   path  取得「這一發最後會落在哪」的方式
+//         'arc' = 拋物線火控階梯(逐級降裝藥,與 _lobAim 同一份積分)
+//         'ray' = 槍口→目標的直線段(被地形/障礙截斷處即落點)
+//   hit   落點到目標的判據
+//         'blast' = 落點落在爆風核心帶內(blastCoreR + 目標水平量體)⇒ 目標吃滿額爆風。
+//                   **刻意不要求視線通**:爆風不吃 LOS(A11 繞射近似),牆邊炸開照樣傷到牆後的人。
+//         'clear' = 直線必須整段淨空(伺服器 heroHit/_lanceHits/heroPlasma 都有 _losBlocked 複驗)
+//   arm   導引/射後不理的軌跡修正期(ARMING.m 內散布大、命中率低)⇒ 光暈轉警示色而非熄滅
+// **唯一分類縫**:消費端(game.js _updateRangeGlows)MUST 經 reachRule() 分派,
+// MUST NOT 自己比對 def.type / trajClass 再寫第二份規則表。五個彈道類別 MUST 全數列在此。
+export const REACH_RULE = {
+  lob:   { path: 'arc', hit: 'blast', arm: false },
+  guide: { path: 'ray', hit: 'blast', arm: true },
+  fnf:   { path: 'ray', hit: 'blast', arm: true },
+  flat:  { path: 'ray', hit: 'clear', arm: false },
+  line:  { path: 'ray', hit: 'clear', arm: false },
+};
+export const reachRule = (def) => REACH_RULE[trajClass(def)] || REACH_RULE.flat;
 
 // ---- 後座力機制(2026-07-14:輕/重武器各三階,依武器原型分派)----
 // 純客戶端手感:game.js 依「當前手上武器」的 def.recoil 套用位移懲罰 + 準星上踢 + 開火節奏。

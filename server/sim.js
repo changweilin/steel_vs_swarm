@@ -11,7 +11,7 @@ import {
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
-  ALTITUDE, altScale, WATER, TERRAIN_FX, offGround, airUnit,
+  ALTITUDE, altScale, altRangeMax, RANGE_TOL, WATER, TERRAIN_FX, offGround, airUnit,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -1225,7 +1225,7 @@ export class BattleSim {
     if (!wp) return;
     const ty = t.hero || t.kind === 'heli' || t.decoy ? (t.y || 0) : 0;
     // 量到近側表面(_surfD3):鎖定光暈的語意 = 「準星壓在表面上且打得到」,與 heroHit 閘門同一把尺
-    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * 1.25) return;
+    if (this._surfD3(Math.hypot(t.x - h.x, t.z - h.z, ty - (h.y || 0)), t) > wp.def.range * RANGE_TOL) return;
     // 迷霧內的目標不可鎖定(與 heroHit 同一條規則:看不見 = 沒有火控解)
     const pulse = this.visionUntil?.[h.side] > this.t;
     if (!pulse && !this._visibleTo(t, h.side, this._visionSources(h.side))) return;
@@ -1472,7 +1472,7 @@ export class BattleSim {
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * 1.25
+    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL
         * (wp.id === 'heavy' && this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 高度制空:對地拉遠/對高空無人機縮短(重砲模式 +20% 射程)
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
@@ -1517,7 +1517,7 @@ export class BattleSim {
       if (b === h || b.dead) continue;
       if (t.hp <= 0 || (t.hero && t.dead)) return;
       const d3 = Math.hypot(b.x - t.x, b.z - t.z, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-      if (this._surfD3(d3, t) > def.range * this._altRange(b, t, def) * 1.25) continue;   // 高度制空(見 heroHit);量到近側表面(_surfD3)
+      if (this._surfD3(d3, t) > def.range * this._altRange(b, t, def) * RANGE_TOL) continue;   // 高度制空(見 heroHit);量到近側表面(_surfD3)
       // 僚機自己的射線也吃障礙遮蔽(主機看得到不代表僚機那個角度打得到)
       if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
       // pid/slot:客戶端解析僚機槍口錨(_entMuzzle 取離訊息座標最近那架)+ 開火動畫
@@ -1541,13 +1541,13 @@ export class BattleSim {
     if (!wp || !wp.def.rate) return;
     if (wp.def.needAim && !h.aiming) return;
     const d3 = Math.hypot(h.x - m.x, h.z - m.z, (h.y || 0) - m.y);
-    if (d3 > wp.def.range * 1.25) return;
+    if (d3 > wp.def.range * RANGE_TOL) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     // 僚機同步射擊(單機傷害是 1/3,三機齊射才打得掉飛彈)
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
       const bd = Math.hypot(b.x - m.x, b.z - m.z, (b.y || 0) - m.y);
-      if (bd > wp.def.range * 1.25) continue;
+      if (bd > wp.def.range * RANGE_TOL) continue;
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, bd);
     }
     if (m.hp <= 0) {
@@ -1624,7 +1624,14 @@ export class BattleSim {
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
     if (wp.def.needAim && !h.aiming) return;
     const dImp = dist2d(h.x, h.z, x, z);
-    if (dImp > wp.def.range * 1.15 * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;   // 著彈點超程(留彈道寬容;重砲模式 +20% 射程,加成窗涵蓋彈體飛行)
+    // 著彈點超程閘門。上界 = 射程 × 高度制空上限 × 網路寬容 × 重砲窗 —— 三個因子都是**推導值**:
+    //   ・RANGE_TOL:與 heroHit/heroLance/heroPlasma 同一個縫(舊制此處獨自寫 1.15,比其餘閘門緊)
+    //   ・altRangeMax():落點是一個「點」,伺服器算不出射手與目標的高程差 ⇒ 只能取機制上限當誠實界。
+    //     客戶端的彈道上限本來就是 `range × _altRangeMul`(最高 1 + ALTITUDE.RANGE),閘門比它緊
+    //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
+    //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
+    const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
+    if (dImp > impCap * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
@@ -1645,7 +1652,7 @@ export class BattleSim {
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
-      if (dist2d(b.x, b.z, x, z) > wp.def.range * 1.15) continue;
+      if (dist2d(b.x, b.z, x, z) > impCap * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) continue;   // 僚機吃同一道閘門(同一縫,含重砲窗)
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
@@ -1676,7 +1683,7 @@ export class BattleSim {
         const tx = t.x - b.x, tz = t.z - b.z;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * 1.25
+        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL
             * (wp.id === 'heavy' && this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) continue;   // 高度制空(散彈輕武器;重砲模式 +20%);量到近側表面(_surfD3)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
@@ -1759,7 +1766,7 @@ export class BattleSim {
   /**
    * 直線貫穿攻擊(aoeClass 'line':beam / rail / gun 重武器)。客戶端回報射線:
    *   o = [x, z, y] 槍口(sim 座標,y = 離站立表面高)、d = [dx, dz, dy] 單位方向、len = 射線長
-   *   (已被本端地形/障礙截斷 —— 伺服器再夾一次射程 ×1.25 寬容)。
+   *   (已被本端地形/障礙截斷 —— 伺服器再夾一次射程 ×RANGE_TOL 寬容)。
    * 命中判定全在伺服器:圓柱內、射程內、迷霧可見、LOS 未遮蔽的敵方單位全數受創,
    * 依沿線先後套 LANCE.DECAY^i(首個全額 ⇒ 單體 DPS 與 heroHit 相同,bal 不變式不受影響)。
    * 一發只扣一次彈藥/電力/射速 —— 與 heroPlasma(扇形)、heroBurst(爆炸)同一條「AoE 一發一結算」。
@@ -1780,7 +1787,7 @@ export class BattleSim {
     const dl = Math.hypot(dx, dz, dy) || 1;
     dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
     const rMul = this._barragingDmg(h) ? BARRAGE.RANGE_F : 1;
-    const max = Math.min(Math.max(0, +len), wp.def.range * 1.25 * rMul);
+    const max = Math.min(Math.max(0, +len), wp.def.range * RANGE_TOL * rMul);
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
@@ -1789,7 +1796,7 @@ export class BattleSim {
       const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max, rMul !== 1);
       for (let i = 0; i < hits.length; i++) {
         const { t, d3, off } = hits[i];
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * 1.25 * rMul) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
+        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL * rMul) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
@@ -1797,7 +1804,7 @@ export class BattleSim {
       }
     }
     // 來襲防空飛彈也在圓柱內被打穿(取代 hitMissile 那條單體路徑 —— line 類一發只過一次
-    // _gateFire,若客戶端另送 hitMissile 會重複扣彈)。判定同 hitMissile:射程 ×1.25、掉血歸零即擊落。
+    // _gateFire,若客戶端另送 hitMissile 會重複扣彈)。判定同 hitMissile:射程 ×RANGE_TOL、掉血歸零即擊落。
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
       if (m.side === h.side) continue;
@@ -1806,7 +1813,7 @@ export class BattleSim {
       const s = s0 < 0 ? 0 : (s0 > max ? max : s0);   // 量到線段最近點(與 _lanceHits 同一條規則)
       if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def, rMul !== 1)) continue;
       const d3 = Math.hypot(mx, mz, my);
-      if (d3 > wp.def.range * 1.25 * rMul) continue;
+      if (d3 > wp.def.range * RANGE_TOL * rMul) continue;
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);
       if (m.hp <= 0) {
         this.missiles.splice(i, 1);
@@ -2459,7 +2466,7 @@ export class BattleSim {
     return false;
   }
 
-  /** 爆炸範圍傷害(3D 距離:高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
+  /** 爆炸範圍傷害(3D 距離,量到目標命中量體的最近點 = 水平 hitR + 垂直帶;高空引爆炸不到地面;只傷敵方;AoE 不吃爆擊)。
    *  外圍傷害走 blastFalloff:核心全傷、超壓隨距離連續衰減到 1.8r 歸零(物理化舊二段式)。
    *  直升機 2026-07-17 起計入巡航高度(對空化):地面炸點打不到 26m 高的直升機,高空直擊/同高度
    *  自爆才炸得到。lev = 爆心結構層(0 地面/1 橋面/2 隧道內;null = 不查層),經 _slabSep 封住穿頂/穿板。 */
@@ -2471,7 +2478,14 @@ export class BattleSim {
       const same = t.side === h.side;
       if (same && !friendly) continue;
       if (this._slabSep(lev, x, z, t)) continue;
-      const d = Math.hypot(x - t.x, z - t.z, this._bodyDy(t, y));
+      // 量到目標命中量體的**最近點**,水平與垂直同一把尺:垂直是 _bodyDy(垂直帶),
+      // 水平就該是 hitR(t)(水平量體;_surfD3 / _lanceHits 的 R + hitR(t) 同一支)。
+      // 舊制水平量到**中心**:半徑 20m 的主堡被榴彈直擊牆面時,爆心離中心就是 20m
+      // ⇒ r=16 的 152mm 榴彈只結算到 52% 超壓、r≤11 的直接歸零 —— 使用者回報「打不到建築」
+      // 的爆風版(與 2026-07-28 _lanceHits、2026-07-29 _surfD3 同一條病灶的最後一塊)。
+      // 砲塔(hitR 7)本就多半落在核心帶內,平衡位移極小;bal 四不變式不模型化爆風幾何。
+      const dh = Math.max(0, Math.hypot(x - t.x, z - t.z) - hitR(t));
+      const d = Math.hypot(dh, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
       if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, same ? null : h, def.pen);
     }
