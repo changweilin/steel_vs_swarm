@@ -2797,6 +2797,9 @@ export class BattleClient {
   onSnap(m) { this._snapQueue = m; }
 
   _applySnap(m) {
+    // 陣營小兵強化等級(伺服器權威;每側每兵線一個整數)—— MUST 在 ents 迴圈之前落地,
+    // 商店重繪簽章要讀得到本快照的值。
+    if (m.cu) this.creepUpg = m.cu;
     const seen = new Set();
     for (const e of m.ents) {
       seen.add(e.id);
@@ -2884,7 +2887,8 @@ export class BattleClient {
           if (this.shopOpen) {
             const u = this.upg;
             const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
-              + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',');
+              + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',')
+              + `|${(this.creepUpg?.[this.side] || []).join('.')}`;   // 陣營小兵強化(共用值,別人買了也要重繪)
             if (sig !== this._shopSig) { this._shopSig = sig; this.hud.shop?.(true, this._shopState()); }
           }
         }
@@ -3891,6 +3895,9 @@ export class BattleClient {
       }
     } else if (ev.e === 'assist') {
       if (ev.pid === this.youId) this.hud.feed?.(`🤝 助攻 +$${ev.v}`);
+    } else if (ev.e === 'creepUp') {
+      // 陣營小兵強化:同陣營全員都看得到(共用強化,不是只有出錢的人)
+      if (ev.side === this.side) this.hud.feed?.(`🐜 第 ${ev.lane + 1} 兵線小兵強化 LV${ev.lvl}${ev.pid === this.youId ? '' : '(隊友出資)'}`);
     } else if (ev.e === 'penalty') {
       if (ev.pid === this.youId && ev.v > 0) this.hud.feed?.(`💀 陣亡罰金 -$${ev.v}`);
     } else if (ev.e === 'plasma') {
@@ -4868,7 +4875,11 @@ export class BattleClient {
       money: this.money, upg: this.upg,
       ch: this.ch, ab: { ...this.abil }, kn: this.kn,
       kind: this.heroKind, atBase: this._atBase(),
+      // 陣營小兵強化:等級是同陣營共用的權威值(唯讀顯示),購買不做樂觀更新 —— 共用狀態
+      // 樂觀扣款會在別人同時買的時候顯示錯位,交給下一份 8Hz 快照校正即可。
+      creepUpg: [...(this.creepUpg?.[this.side] || [])],
       buy: (item) => this._optimisticBuy(item),
+      buyCreep: (lane) => this.net.send({ t: 'buy', item: 'creep', lane }),
     };
   }
 

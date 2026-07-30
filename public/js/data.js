@@ -2187,8 +2187,11 @@ export const sideInfo = (s) =>
 export const GAME = {
   TICK_MS: 125,               // 伺服器模擬 8Hz
   SNAP_MS: 125,               // 快照廣播 8Hz
-  // 波次節奏:前期慢(對線期長,英雄有時間補刀/囤錢),中後期逐波加速到 MIN_S
-  WAVE_PACE: { START_S: 34, MIN_S: 14, RAMP_FROM: 4, RAMP_TO: 14 },
+  // 波次節奏(2026-07-30 使用者定案:**爆兵頻率改成固定**,不再逐波加速)。
+  // WAVE_S = 20 的由來:舊制「34s 起,第 4~14 波線性加速到 14s」在 bal ③ 的 10 分鐘視窗內
+  // 出兵 27 波(540s / 27 ≈ 20.0s)—— 取同一個平均值,經濟校準(③ 的波數預算)不因改制位移。
+  // 改此值 MUST 重跑 `npm run bal`(③),且開場預置兵線的間距同步變動(見 waveSpacingM)。
+  WAVE_S: 20,
   FIRST_WAVE_DELAY_S: 0,      // 開局即出第一波(從主堡出發),不再空等對線
   WAVE_SPAWN_OFF_M: 34,       // 波次生成點離己方主堡的沿線距離:落在主路線上、出主堡外(base R 22)
   WAVE_COHESION_M: 26,        // 同波僚兵最大脫節距離:領先者原地等最慢的(交戰中除外)
@@ -2307,6 +2310,30 @@ GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
   for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
 }
+
+// ---- 波次編制 / 節奏的唯一推導處(sim._spawnWave・_prefillLanes・balance.mjs・e2e 共用)----
+/** 一波每兵線每側的固定編制(WAVE_SOLDIERS 名步槍兵 + WAVE_EXTRAS);MUST NOT 在任何消費端手抄。 */
+export const waveComp = () => [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];
+/** 波次行軍速度(m/s)= 編制中最慢者 —— 隊形凝聚(sim._waveAnchors)讓整波錨定最慢的那隻,
+ *  所以「一個出兵間隔的行軍距離」只能用最小速度算。MUST 於呼叫期讀 UNITS(速度吃 COMBAT_SCALE)。 */
+export const waveMarchSpeed = () => Math.min(...waveComp().map((k) => UNITS[k].speed));
+/** 相鄰兩波在兵線上的穩態間距(公尺)= 出兵間隔 × 行軍速度。
+ *  開場預置兵線(sim._prefillLanes)用它擺出「已經打了一陣子」的兵線密度,MUST NOT 手寫距離。 */
+export const waveSpacingM = () => GAME.WAVE_S * waveMarchSpeed();
+
+// ---- 陣營小兵強化(2026-07-30 使用者定案;八軌全滿後的無限金錢去化)----
+// **同陣營全玩家共用**(誰買都記在陣營帳上)、**不同兵線分開**(強化只作用於該條兵線的波次)。
+// LV 0(初始未強化)~ MAX,每階固定 PRICE —— 階梯單價與八軌的 upgradePrice 無關,MUST NOT 併軌。
+// 「全能力與陣亡提供的報酬成長率 = log(LV)」⇒ 倍率 creepUpgMul = 1 + log10(1 + LV):
+//   LV0 ×1.00(未強化)/ LV1 ×1.30 / LV10 ×2.04 / LV100 ×3.00。取 1+LV 是因為 log(0) 無定義,
+//   且要讓 LV0 恰好落在 ×1.00(未購買 = 原數值)。
+// 套用範圍(sim._creepMul 單一縫):hp / dmg / armor / 陣亡賞金(擊殺 + 助攻同吃)。
+//   **刻意不吃 range / sight / speed / rate**:射程會撞破「小兵射程一律 < 防禦塔」的設計底線
+//   (見 UNITS.tower)、移速會拆掉波次間距與凝聚錨定(waveSpacingM)、rate 與 dmg 疊乘會變成 ×9 DPS。
+export const CREEP_UPG = { MAX: 100, PRICE: 200 };
+/** 小兵強化倍率(全能力與賞金共用同一條曲線);超出 0~MAX 一律夾制。 */
+export const creepUpgMul = (lv) =>
+  1 + Math.log10(1 + Math.max(0, Math.min(CREEP_UPG.MAX, Math.floor(lv || 0))));
 
 /**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。

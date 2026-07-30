@@ -14,6 +14,7 @@ import {
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
+  CREEP_UPG, creepUpgMul,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -1917,8 +1918,9 @@ function makeHud() {
         bar.style.width = b ? `${Math.max(0, b.hp / b.max * 100)}%` : '0%';
       }
       if (stats) {
-        $('scoreSWARM').textContent = `擊殺 ${stats.SWARM.kills} ・ 補刀 ${stats.SWARM.creepKills}`;
-        $('scoreSTEEL').textContent = `擊殺 ${stats.STEEL.kills} ・ 補刀 ${stats.STEEL.creepKills}`;
+        // 助攻:賞金 ×ASSIST.F 的入帳筆數(2026-07-30 補上計分板欄位 —— 助攻收入本來就在發,只是看不見)
+        $('scoreSWARM').textContent = `擊殺 ${stats.SWARM.kills} ・ 助攻 ${stats.SWARM.assists ?? 0} ・ 補刀 ${stats.SWARM.creepKills}`;
+        $('scoreSTEEL').textContent = `擊殺 ${stats.STEEL.kills} ・ 助攻 ${stats.STEEL.assists ?? 0} ・ 補刀 ${stats.STEEL.creepKills}`;
       }
     },
     wave: (n, secs) => {
@@ -1958,8 +1960,8 @@ function makeHud() {
           ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
           : '戰役結束。';
       $('overStats').textContent =
-        `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
-        `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
+        `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/助攻 ${stats.SWARM.assists ?? 0}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
+        `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/助攻 ${stats.STEEL.assists ?? 0}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
       const back = $('backRoomBtn');
       if (chapter) {
         back.style.display = '';
@@ -2092,6 +2094,20 @@ function renderShop(open, st) {
     const price = full ? null : upgradePrice(up, lvl);
     row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
       price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '');
+  }
+  // ---- 陣營小兵強化(八軌全滿才解鎖;同陣營共用、不同兵線分開)----
+  // 解鎖門檻與伺服器 sim._upgAllMax 同一條規則:八軌**全部**到 max。
+  const allMax = Object.entries(ECON.UPGRADES).every(([k, u]) => (st.upg[k] || 0) >= u.max);
+  if (allMax && st.creepUpg?.length) {
+    head(`🐜 陣營小兵強化(同陣營共用・兵線分開;LV1~${CREEP_UPG.MAX},每階 $${CREEP_UPG.PRICE})`);
+    st.creepUpg.forEach((lvl, li) => {
+      const full = lvl >= CREEP_UPG.MAX;
+      const mul = creepUpgMul(lvl), next = creepUpgMul(lvl + 1);
+      row(`<b>第 ${li + 1} 兵線</b> LV${lvl}/${CREEP_UPG.MAX}`
+        + ` <span class="dim">全能力與陣亡賞金 ×${mul.toFixed(2)}</span>`,
+        full ? null : CREEP_UPG.PRICE, !full && st.money >= CREEP_UPG.PRICE, () => st.buyCreep(li),
+        full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`);
+    });
   }
 }
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));

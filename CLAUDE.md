@@ -70,6 +70,8 @@
 | 明隧道判定 | `biomes.js tunnelWallProfile()` | 構件共用同一份 `open/gy/nx,nz`;落地基準只有 `galBase` 一份;開放側 = 矮牆 + 連續柱列,柱間**透明可見可穿透**(2026-07-30 使用者定案):覆蓋段 tunnelSegs 附 `gal` 遮罩 → slab 第 7 欄 → 伺服器 `tunnelSideExit`/`_slabSep` 開放側放行,兩端 MUST 同判;幾何(`hw`/fy/cy/ceilSegs)MUST 與 gal 無關;柱列純視覺 MUST NOT 進 `cols`(伺服器無逐柱語意) |
 | 英雄武器/招式解析 | `heroWeapon()`/`heroAbility()` | HEROIC ×1.2/×1.5、SQUAD 折算、rangeCap 全在這;MUST NOT 二次乘算 |
 | 傷害衰減 | `data.js dmgFalloff/blastFalloff/fanFalloff` | sim 結算與客戶端 HUD 共用 |
+| 波次編制/節奏 | `data.js waveComp()`(固定編制)/`waveMarchSpeed()`(= 編制最慢者)/`waveSpacingM()`(= `GAME.WAVE_S` × 行軍速度)+ `sim.js waveInterval()` | 出兵間隔**固定**(2026-07-30;`GAME.WAVE_S`,不再逐波加速);開場預置兵線 `sim._prefillLanes()` 的間距 MUST 吃 `waveSpacingM()`,擺位與常規出兵共用 `_spawnLaneWave()`,MUST NOT 各寫一套。預置上限 = 該兵線**第一座砲塔**(`solveTowerSites` 回傳序末項的 frac);塔位 MUST 吃 `sim.towerSites` 那一份解,MUST NOT 再解一次 |
+| 陣營小兵強化 | `data.js CREEP_UPG`/`creepUpgMul()` + `sim.js _creepMul()`/`_bounty()` | 等級住 `sim.creepUpg[side][lane]`(**同陣營共用、兵線分開**);倍率於 `_spawnLaneWave` 生成當下寫進 `e.cu`(不追溯既有小兵),hp/dmg/armor/賞金四個消費端 MUST 吃同一份 `e.cu`。賞金(擊殺全額 + 助攻 ×`ASSIST.F`)只准經 `_bounty()`,MUST NOT 直接讀 `ECON.BOUNTY[kind]`。解鎖門檻 = 八軌全滿(`_upgAllMax()`,商店 UI 同判) |
 | 陣營對抗對稱化 | `data.js CLASS_SYM` 推導區塊 | 校正係數整組等比套回;MUST NOT 逐武器手改 `vs` 湊平衡;個別角色改 `dmg` 階梯 |
 | 對進戰模型 | `tools/duel.mjs`(bal ⑤ 匯入) | **只算武器**是刻意的(只模擬一半招式家族會系統性偏袒);招式導向角色走具名豁免 |
 | 機種絕招預算 | `data.js SPECIAL` + `specialBudget()` | 總預算隨輕/重綜合等級(可分數階,MUST NOT 進 `tierVal`),三招各自切分;MUST NOT 手寫傷害常數或退回單一武器軌 |
@@ -190,6 +192,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 改動 | 驗證 |
 |---|---|
 | 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` 全綠;動角色武器一併看 ⑤ 角色離群列 |
+| 出兵節奏 `GAME.WAVE_S` / 波次編制 `waveComp` / 開場預置 `_prefillLanes`・`_spawnLaneWave` | `npm run bal` ③(波數 × 波賞金 = 收入預算,±10%)+ e2e「出兵間隔固定 + 開場預置兵線」(6 項;間距 = 間隔 × 行軍速度、最前一波 ≤ 第一座砲塔、各波等距、波序為負)+ e2e「開局兵線」隻數(期望值 MUST 由同一份規則推出,不可手寫) |
+| 陣營小兵強化(`CREEP_UPG`/`creepUpgMul`/`_creepMul`/`_bounty`/`buy(…,'creep',lane)`) | e2e「陣營小兵強化」(11 項;曲線 1+log10(1+LV)、八軌未滿不解鎖、非法兵線被拒、共用/分兵線、hp・armor・賞金同吃 `e.cu`、快照帶等級)+ `npm run bal` 四不變式 MUST 不動(bal 模型是**未強化**的基準波次)+ 真機冒煙(八軌買滿商店才出現該區塊、隊友出資同陣營都看得到播報) |
 | 角色大小招 `fx`/`add`(招式家族配置) | bal ⑥:雙扇形 MUST 兩招貼身、單扇形 ≥1、密度 ≥ 非扇形 ×2;s07/m07 具名豁免 MUST NOT 為湊標換掉 |
 | 對進戰模型(`duel.mjs`)/`ALTITUDE.*`/`FAN_*`/`CLASS_SYM.K` | bal ⑤:陣營與機種 50±5pp、**較高方 50±3pp**、非豁免角色 ∈ 20~80%、接近期損失 ≤40%。改 `K` 一併看 ①(校準值 0.5) |
 | `SPECIAL`/`BARRAGE.DMG_*`/`KAMI.N`/`DECOY.BOMB_MAX`(絕招預算) | e2e「機種絕招三招同預算」(三招總傷互差 ≤2%)+ bal 四不變式 MUST 不動(bal 刻意不含三招 burst) |
