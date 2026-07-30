@@ -31,8 +31,9 @@ import * as THREE from 'three';
 import { markShared, envMat } from './toon.js';
 import { SOLDIER_H, HERO_SIZE } from './data.js';
 
-/** 最大機體碰撞半徑(公尺):機種身高上界 × game.js SELF_F.groundR —— OFF 的下界由它推導,MUST NOT 手寫 */
-const MAX_BODY_R = SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 0.317;
+/** 最大機體碰撞半徑(公尺):機種身高上界 × game.js SELF_F.groundR —— OFF 的下界由它推導,MUST NOT 手寫。
+ *  也是「設施離結構表面的縫」上限(biomes.js 巨岩正面實測 ATT_GAP):縫 ≤ 機體半徑 ⇒ 機體仍貼著設施 */
+export const MAX_BODY_R = SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 0.317;
 
 export const CLIMB = {
   SHARE: 0.3,        // 抽中比例(使用者需求「約 3 成」)
@@ -94,13 +95,23 @@ export const CLIMB_LABEL = { ladder: '長梯', holds: '攀岩抓點', rope: '垂
  * 自結構中心沿方位角 `a` 射出,求「表面交點 + 該面的向外法線 + 沿法線的半徑」。
  * 有向盒(建物 hw2/hd2/ry)走 slab 求出射參數並取決定面的法線;其餘(神木/巨岩)走圓柱。
  * 回傳 { fx, fz, nx, nz, rad }。
+ *
+ * **盒面朝向 MUST 與實例矩陣同調(2026-07-30 修)**:碰撞盒的 `ry` 與建物實例矩陣吃的是
+ * **同一個值**(`E.set(0, b.ry, 0)`),所以 local 軸的反解 MUST 是那個矩陣的反矩陣。
+ * three 的 `makeRotationY(θ)` 把 local (1,0,0) 轉到世界 (cosθ, 0, −sinθ) —— 方位是 **−θ**,
+ * 故 world→local 是「繞 −ry」= `(wx·cs − wz·sn, wx·sn + wz·cs)`,程式上以 `sn = −sin(ry)`
+ * 代入既有式子(同一組 cs/sn 也把 local→world 一起修正,兩個方向仍互為反解)。
+ * 寫成 `sn = +sin(ry)` 的舊版等於把盒子鏡射(差 2·ry):**看得見的牆在這裡、擋彈與掛梯的牆在
+ * 鏡射的那一邊** —— 45° 的樓就差 90°,長梯看起來斜插在牆邊(使用者回報「不要有其他角度」)。
+ * 客戶端 `_blockerHitT`/`_collide`/`_cameraDeClip` 與伺服器 `_losBlocked`(占位存 cos/−sin)
+ * MUST 同時吃這個慣例 —— 只改一邊 = 兩端分家靜默丟包(A30)。稽核 `audit_climb.mjs` Ⅲ/Ⅶ。
  */
 export function surfacePoint(b, a) {
   const dx = Math.cos(a), dz = Math.sin(a);
   if (b.hw2 == null) {
     return { fx: b.x + dx * b.r, fz: b.z + dz * b.r, nx: dx, nz: dz, rad: b.r };
   }
-  const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+  const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 見檔頭:sn 取 −sin 才與實例矩陣同調
   const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;      // world→local(繞 −ry)
   const tx = Math.abs(ux) < 1e-9 ? Infinity : b.hw2 / Math.abs(ux);
   const tz = Math.abs(uz) < 1e-9 ? Infinity : b.hd2 / Math.abs(uz);
@@ -112,6 +123,31 @@ export function surfacePoint(b, a) {
     nx: lnx * cs - lnz * sn, nz: lnx * sn + lnz * cs,
     rad: t,
   };
+}
+
+/**
+ * 可掛設施的「**正面**」候選(2026-07-30 使用者需求:長梯/攀岩抓點/垂降技術繩的正面
+ * MUST 面對建築/巨石/神木,不要有其他角度)。回傳陣列,每項與 `surfacePoint` 同形
+ * `{ fx, fz, nx, nz, rad }`,三種結構三種正面:
+ *   ① **有向盒**(建物/地標):四個面法線 + 該面**中心點**。MUST NOT 用「自中心沿任意方位射出的
+ *      交點」—— 那個點落在牆面上任何位置(含牆角),設施看起來就是斜插在牆邊。
+ *   ② **帶 `attA` 的結構**(巨岩:外廓不規則,碰撞圓與岩面不等距):只准生成期**實測驗過**的方位;
+ *      驗不過的巨岩一顆方位都不給 ⇒ 不掛路線(§4 寧缺勿錯,好過掛一條浮在空中的)。
+ *   ③ **圓柱**(神木):幹身是旋轉對稱體,任一徑向都是正面 —— 維持 16 方位掃描取最空的一側。
+ * `phase`(每候選固定抽的那一枚)只用來輪轉起掃順序,不改變候選集合。
+ */
+export function attachFaces(b, phase = 0) {
+  if (b.hw2 != null) {
+    // 面法線的世界方位:local +x = **−ry**、local +z = π/2 − ry(three Euler(0,ry,0) 的反解,
+    // 見 surfacePoint 檔頭)。沿面法線射出的 surfacePoint 交點**就是該面的中心點**
+    // (`rad` 剛好等於該軸半寬)⇒ 直接復用同一支幾何,MUST NOT 在這裡另寫第二份盒面公式。
+    const k0 = Math.floor(phase / (Math.PI / 2)) & 3;
+    return Array.from({ length: 4 }, (_, i) =>
+      surfacePoint(b, -b.ry + ((k0 + i) & 3) * Math.PI / 2));
+  }
+  // 逐方位自帶 gap/top(生成期實測):gap = 碰撞面到岩面的內縮量、top = 頂端處的剩餘縫
+  if (b.attA) return b.attA.map((f) => ({ ...surfacePoint(b, f.a), gap: f.gap, arm: f.top }));
+  return Array.from({ length: CLIMB.AZ }, (_, k) => surfacePoint(b, phase + k / CLIMB.AZ * Math.PI * 2));
 }
 
 /** 候選結構?= 頂面可站立的大型障礙(與 makeBlockerTopIndex 同一組旗標)且高度落在窗口內 */
@@ -200,9 +236,7 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
     const baseY = heightAt(b.x, b.z);
     const y1 = b.y + b.h;                     // = makeBlockerTopIndex 的頂面高(唯一縫)
     let best = null;
-    for (let k = 0; k < CLIMB.AZ; k++) {
-      const a = phase + k / CLIMB.AZ * Math.PI * 2;
-      const sp = surfacePoint(b, a);
+    for (const sp of attachFaces(b, phase)) {
       const x = sp.fx + sp.nx * CLIMB.OFF, z = sp.fz + sp.nz * CLIMB.OFF;
       if (x < bounds.minX + 45 || x > bounds.maxX - 45 || z < bounds.minZ + 45 || z > bounds.maxZ - 45) continue;
       const gy = heightAt(x, z);
@@ -223,6 +257,8 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
       x: best.x, z: best.z,                   // 攀爬軸(結構表面外 OFF)
       nx: best.nx, nz: best.nz,               // 向外法線
       fx: best.fx, fz: best.fz,               // 結構表面附著點
+      gap: best.gap || 0,                     // 碰撞面 → 實際可見岩面的內縮量(設施貼實體那一面)
+      arm: best.arm || 0,                     // 頂端處還差多少才碰到結構(頂端錨件的跨接臂長)
       y0: best.gy,                            // 地面端
       y1,                                     // 頂端(= surfaceAt 認得的站立面)
       bx: best.x, bz: best.z,                 // 下端落腳點(地面路線 = 攀爬軸本身)
@@ -262,8 +298,15 @@ function planLink(b, { nearby, clearance, surfDist, bounds, linked }) {
     if (linked.has(pair)) continue;                                  // A→B 與 B→A 只留一條
     const dx = L.x - H.x, dz = L.z - H.z;
     if (!dx && !dz) continue;                                        // 同心(不該發生)
-    const a = Math.atan2(dz, dx);
-    const sp = surfacePoint(H, a);                                   // 高者面向低者的那一面
+    const dl = Math.hypot(dx, dz);
+    // 高者**面向低者的那個正面**:候選集與一般路線同一支 attachFaces(同樣不准斜角),
+    // 取法線最朝向低者的那一面(MUST NOT 直接拿「指向低者的方位」去射盒面 —— 那會落在牆角)
+    let sp = null, dot = -Infinity;
+    for (const f of attachFaces(H)) {
+      const d = (f.nx * dx + f.nz * dz) / dl;
+      if (d > dot) { dot = d; sp = f; }
+    }
+    if (!sp || dot <= 0) continue;
     const gap = surfDist(L, sp.fx, sp.fz);                           // ① 兩表面距離(重疊為負)
     if (gap > CLIMB.LINK_GAP) continue;
     const x = sp.fx + sp.nx * CLIMB.OFF, z = sp.fz + sp.nz * CLIMB.OFF;
@@ -285,6 +328,7 @@ function planLink(b, { nearby, clearance, surfDist, bounds, linked }) {
     x: best.x, z: best.z,
     nx: best.sp.nx, nz: best.sp.nz,
     fx: best.sp.fx, fz: best.sp.fz,
+    gap: best.sp.gap || 0, arm: best.sp.arm || 0,
     y0: best.y0,                              // 下端 = 低者的頂面(= blockerTopAt 的回傳值)
     y1: best.y1,                              // 上端 = 高者的頂面
     bx: best.bx, bz: best.bz,                 // 下端落腳點(低者屋頂內側)
@@ -369,27 +413,42 @@ export function buildClimbMeshes(routes) {
     const ry = Math.atan2(r.nx, r.nz);          // local +z = 向外法線(擺位與旋轉同調)
     const H = Math.max(1, r.y1 - r.y0);
     const midY = (r.y0 + r.y1) / 2;
-    // 設施貼在結構表面外緣一點點(軸在表面外 OFF,設施本體貼牆 → 玩家爬在設施「外側」)
-    const sx = r.fx + r.nx * 0.35, sz = r.fz + r.nz * 0.35;
+    // 設施貼在結構表面外緣一點點(軸在表面外 OFF,設施本體貼牆 → 玩家爬在設施「外側」)。
+    // `gap` = 碰撞面到**可見實體面**的內縮量(巨岩:碰撞圓比岩面大;建物 = 0):設施吃它才會
+    // 真的靠在岩面上而不是浮在碰撞圈上;`gap ≤ 最大機體碰撞半徑`(生成期驗過)⇒ 機體仍貼著設施。
+    const off = 0.35 - r.gap;
+    const sx = r.fx + r.nx * off, sz = r.fz + r.nz * off;
+    // 頂端錨件的跨接臂:結構頂端比路線半徑細(神木幹身向上收窄)時,錨件 MUST 伸回結構上
+    // (否則「繩子吊在半空、上面什麼都沒有」)。arm = 頂端處還差多少,0 = 貼齊的結構。
+    const arm = Math.max(0, r.arm);
+    // 錨件由「咬進結構 0.2m」跨到「設施外側」:長度與中心位移一併由兩端推導,MUST NOT 手寫
+    const anch = (inner, outer, w, h) => {
+      const i0 = -(arm + inner), o0 = off + outer;   // 內端(咬進結構)/ 外端(蓋住設施),沿法線
+      const L = o0 - i0, c = (i0 + o0) / 2;
+      return { L, cx: r.fx + r.nx * c, cz: r.fz + r.nz * c, w, h };
+    };
     if (r.kind === 'ladder') {
       for (const s of [-1, 1]) {                // 兩根立桅
         put(rails, sx + -r.nz * s * 0.42, midY, sz + r.nx * s * 0.42, ry, 0.12, H, 0.12);
       }
       const n = Math.min(320, Math.floor(H / CLIMB.RUNG));
       for (let i = 1; i <= n; i++) put(rungs, sx, r.y0 + i * CLIMB.RUNG, sz, ry, 0.92, 0.09, 0.09);
-      put(anchors, sx + r.nx * 0.18, r.y1 + 0.55, sz + r.nz * 0.18, ry, 1.1, 1.1, 0.14);   // 頂端護框
+      const A = anch(0.2, 0.32, 1.1, 1.1);      // 頂端護框(跨接臂把框接回結構)
+      put(anchors, A.cx, r.y1 + 0.55, A.cz, ry, A.w, A.h, A.L);
     } else if (r.kind === 'holds') {
       const n = Math.min(200, Math.floor(H / CLIMB.HOLD));
       for (let i = 1; i <= n; i++) {            // 左右交錯的抓點(攀岩路線的手點/腳點)
         const s = i % 2 ? 1 : -1;
         put(holds, sx + -r.nz * s * 0.34, r.y0 + i * CLIMB.HOLD, sz + r.nx * s * 0.34, ry, 0.5, 0.34, 0.5);
       }
-      put(anchors, sx, r.y1 + 0.45, sz, ry, 0.8, 0.5, 0.35);                                // 頂端確保站
+      const A = anch(0.2, 0.15, 0.8, 0.5);      // 頂端確保站
+      put(anchors, A.cx, r.y1 + 0.45, A.cz, ry, A.w, A.h, A.L);
     } else {
       put(ropes, sx, midY, sz, ry, 0.16, H, 0.16);                                          // 主繩
       const n = Math.min(120, Math.floor(H / CLIMB.KNOT));
       for (let i = 1; i <= n; i++) put(anchors, sx, r.y0 + i * CLIMB.KNOT, sz, ry, 0.3, 0.16, 0.3);  // 繩結
-      put(anchors, sx + r.nx * 0.3, r.y1 + 0.4, sz + r.nz * 0.3, ry, 0.7, 0.28, 1.0);       // 頂端繩錨
+      const A = anch(0.2, 0.8, 0.7, 0.28);      // 頂端繩錨(懸臂樑:自幹身伸出來吊住主繩)
+      put(anchors, A.cx, r.y1 + 0.4, A.cz, ry, A.w, A.h, A.L);
     }
   }
 

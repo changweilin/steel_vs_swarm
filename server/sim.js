@@ -148,7 +148,7 @@ export class BattleSim {
         if ([hw2, hd2, ry].every(Number.isFinite) && hw2 > 0 && hd2 > 0) {
           // cos/sin 在收料時算好存進來:_losBlocked 是 8Hz × 逐目標 × 逐格的熱路徑,
           // 每次重算三角函數等於白燒 tick 預算(與「MUST NOT 加回 per-call Set」同一條紀律)
-          e.push(Math.min(60, hw2), Math.min(60, hd2), Math.cos(ry), Math.sin(ry));
+          e.push(Math.min(60, hw2), Math.min(60, hd2), Math.cos(ry), -Math.sin(ry));   // sn 存 −sin(與客戶端同一個 local 軸慣例)
         }
       }
       occ.push(e);

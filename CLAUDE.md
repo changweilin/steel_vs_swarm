@@ -78,7 +78,9 @@
 | 貫穿演出 | `game.js _lanceVisual()` + `lanceR(def, barrage)` | 自機/他人/bot 共用;粗細 = 伺服器判定半徑(含 `LANCE.BARRAGE_F` 傾洩加粗,兩端 MUST 同步) |
 | 榴彈火控 | `game.js _lobAim()`(每幀定案 `_lobFc`) | 出膛向量/瞄準虛線/鎖定光暈/砲管仰角共用;光暈 = `_arcTrace minD ≤ LOB_TOL`,MUST NOT 退回直射線判定 |
 | 機體高度/半徑 | `data.js SOLDIER_H/HERO_SIZE/heroTargetH()/TARGET_H/hitH()` + `hitR()`(`HERO_HIT_R`/`TARGET_R`) | 同一把尺餵渲染縮放與伺服器命中量體;爆風/貫穿量到**垂直帶最近點**;貫穿半徑 = `lanceR(def) + hitR(t)`;`game.js COLLIDER` MUST 由 hitR/hitH 推導,但鍵集 MUST NOT 隨 `TARGET_R` 擴張 |
-| 攀爬路線 | `climb.js`(規劃/抓握索引/設施幾何) | 詳見 A31 |
+| 攀爬路線 | `climb.js`(規劃/抓握索引/設施幾何/`attachFaces()` 正面候選) | 詳見 A31 |
+| 巨岩表面落點 | `biomes.js rockProbe(g)`(`wallR`/`slope`/`topAt` 射線實測) | 貼壁(峭壁樹/岩菇/侵蝕溝/棧道)與頂面(石屋/疊石/鳥巢台/電塔)落點一律**實測真幾何**;多面體小面內縮 4~5%、疊層收分、崩落塊撐大外廓 ⇒ 手寫剖面公式(側壁橢圓 × dome/taper)一律算不準,MUST NOT 復辟 |
+| 圓形腳印落底 | `biomes.js sinkBaseY()` | 神木/邊界巨岩/巨岩/地標一律「中心 + 腳印周圈取最低」,寧可陷入山坡不懸空;MUST NOT 只取中心高度(下坡側整片浮空) |
 | 連線機制 | `netmode.js`(模式/網址/`wsUrl()`)+ `net.js makeNet()` | `main.js` MUST NOT 自己 `new Net()`/看 `location.host`/寫單機文案分支;鈕面真相 = `LINK_MODES` |
 | 共用視覺入口 | `spawnCastFx()`/`stepCombatFx()`/`terrain.surfaceAt()` | 戰場與展示台共用,MUST NOT 各寫一套 |
 
@@ -133,8 +135,8 @@
 | A27 | 實例朝向 `ry` 與微傾斜 `tx/tz` MUST 當剛體整株套用(`xform.js vegPartXform` 單一縫),MUST NOT 併進逐零件歐拉角(Euler 'XYZ' 把 ry 夾在中間會攪亂方向);接合完成度 MUST 與 ry/tx/tz 無關 |
 | A28 | 三機制兩條線 MUST NOT 斷:①`rooms.js`/`sim.js`/`bots.js` MUST NOT import Node 內建、用 `process.*`/`Buffer`/`require()`(加一行只有單機炸);②URL 佈局 MUST 鏡射儲存庫佈局(`/public/**` + `/server/*.js`)—— 否則 `data.js` 變兩份模組實例且不報錯。單機離場 MUST `hub.shutdown()`。稽核 `audit_net_modes.mjs` + `audit_solo_boot.mjs` |
 | A29 | 地下道 MUST NOT 另開第二套結構 —— 沿用山體隧道整套,差異只有三個具名旗標:①剖面 = `tunFloorAt` 的 `sink`(旗標 `under`);②引道開挖 = 垂直路塹(run `cut` → `carveTunnels` 過渡帶 `hw+CUT_W`,山體隧道 MUST 維持 `hw+7`)—— 出入口只在道路頭尾兩端,側面 MUST NOT 留可通行開挖斜坡;③引道露天物理段(tunnelSegs `open:true`)只服務 surfaceAt 站立捕捉與移動側壁閘,slab 上傳/`_slabHitT` 彈道/`ceilingAt` 天花/lev 回報 MUST 濾 `!open`(漏濾 = 伺服器把露天溝當洞內 = 兩端分家靜默丟包)。側壁閘 = 單步高差 + **幾何牆線**(tunnelSegs `by` 牆頂 ← `wallTopAt` 單一縫、`makeTunnelIndex.wallCross`「由內跨出 ±hw 且牆頂高出腳下 >2.6m」即擋)—— 高度場網格會把垂直路塹攤成緩坡,單步高差在洞口內側永不觸發,MUST NOT 退回純高差判定;`by` 只住客戶端移動物理,slab 上傳 MUST NOT 帶出、山體隧道 MUST 無 `by`(恆放行)。地下道恆非明隧道(gallery `open` 歸零);引道擋土牆/緣石帶純表現層;門洞 `slope` MUST 取走廊平均而非洞口瞬時斜率。稽核 `audit_underpass.mjs` |
-| A30 | 障礙的碰撞/彈道/伺服器 LOS MUST 同一橫斷面:建物 = 有向盒(`hw2/hd2/ry`),圓只准當 broad-phase 且 MUST 是外接半對角;occ 上傳時 `ry` MUST 反號(sim 座標 z 鏡射),`setWorld` 預算 cos/sin(8Hz 熱路徑)。`_mmShadows` 是具名例外(純顯示)。稽核 `audit_climb.mjs` Ⅲ |
-| A31 | 攀爬路線只住 `climb.js`。頂端 `y1` MUST = `b.y + b.h`;攀爬軸 MUST 在碰撞體外 `CLIMB.OFF`(推導值,> 最大機體碰撞半徑)⇒ `_collide` MUST NOT 開任何豁免;上下移動吃 `_moveAxis` 前後推杆,MUST NOT 新增按鍵(A21/A22);每候選固定 3 枚亂數、四面皆堵不掛(原則 5/6);相鄰相接沿用同一種路線型別(設施架較高者、`y0` = 低頂高),下端落地 MUST 用 `r.bx/r.bz`;箭頭動畫 MUST 併進 `biomes.js dynamics` 桶。稽核 `audit_climb.mjs` |
+| A30 | 障礙的碰撞/彈道/伺服器 LOS MUST 同一橫斷面:建物**與地標**= 有向盒(`hw2/hd2/ry`),圓只准當 broad-phase 且 MUST 是外接半對角;occ 上傳時 `ry` MUST 反號(sim 座標 z 鏡射),`setWorld` 預算 cos/**−**sin(8Hz 熱路徑)。**盒面朝向 MUST 與實例矩陣同調**:`ry` 與 three `Euler(0,ry,0)` 吃同一個值 ⇒ local 軸反解一律 `sn = −sin(ry)`(寫 `+sin` = 盒子鏡射差 2·ry:看得見的牆在這裡、擋彈與掛梯的牆在另一邊)。`_mmShadows` 是具名例外(純顯示)。稽核 `audit_climb.mjs` Ⅲ/Ⅶ |
+| A31 | 攀爬路線只住 `climb.js`。**設施正面 MUST 面對結構**(`attachFaces()` 單一縫):有向盒只准四個面法線 + 面中心、巨岩只准生成期實測驗過的方位(`attA`;一個都沒有就不掛)、圓柱(神木)維持 16 方位;頂端錨件 MUST 以跨接臂接回結構(`arm`)。頂端 `y1` MUST = `b.y + b.h`;攀爬軸 MUST 在碰撞體外 `CLIMB.OFF`(推導值,> 最大機體碰撞半徑)⇒ `_collide` MUST NOT 開任何豁免;上下移動吃 `_moveAxis` 前後推杆,MUST NOT 新增按鍵(A21/A22);每候選固定 3 枚亂數、四面皆堵不掛(原則 5/6);相鄰相接沿用同一種路線型別(設施架較高者、`y0` = 低頂高),下端落地 MUST 用 `r.bx/r.bz`;箭頭動畫 MUST 併進 `biomes.js dynamics` 桶。稽核 `audit_climb.mjs` |
 
 ---
 
@@ -205,7 +207,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 明隧道(`tunnelWallProfile`/`TUN.*` 系) | `audit_open_tunnel.mjs`(52 項;**深埋隧道 MUST 逐點同舊制**、`hw`/segs/`cols` 不動) |
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
-| 攀爬路線(`climb.js` 系) | `audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ(123 項)+ 真機冒煙(掛梯/推杆/登頂開火/跳離/箭頭辨識/相鄰相接) |
+| 攀爬路線(`climb.js` 系;含 `attachFaces`/`attA`/錨件跨接臂) | `audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ・**Ⅶ**(140 項;Ⅶ = 正面規則 + 視覺/碰撞盒朝向同調 + 跨接臂)+ 真機冒煙(掛梯/推杆/登頂開火/跳離/箭頭辨識/相鄰相接) |
 | 障礙橫斷面(`_blockerHitT`/occ 上傳/`_losBlocked`) | `audit_climb.mjs` Ⅲ:兩端對同一盒同線段 MUST 同判(含 ry 反號、細長樓側面、圓柱不變、上下方向對稱) |
 | 塗層阻擋(`_slabHitT`/`_terrainSegT`/`_layerHitT`/`_blockerHitT` 垂直帶/爆點基準) | `audit_layer_block.mjs`(36 項;Ⅰ 天花與**路面**雙面 + open 放行 + 橋面同側不誤擋、Ⅱ 盒頂/盒底不分方向、Ⅲ MUST NOT 退回單面 `heightAt`、Ⅳ 洞內爆點基準取路面且 lev 只報 0/2) |
 | 橋交會去重(`dedupeCrossingBridges` 系) | `audit_bridge_crossing.mjs`(16 項;優先度 兵線 > 鐵路 > 大馬路 > 小馬路;鐵路容差 `gap=0` 只認真交叉) |
@@ -217,7 +219,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 小區域組合風格(`planEnclaves`/`ENCLAVE_STYLES`) | `audit_ground_enclave.mjs`(33 項;消費端 MUST NOT 硬編第二份組合表) |
 | 表現層資源生命週期(池/`markShared`/`disposeTree` 系)/ 自適應解析度(`RES_GOV` 系) | `audit_gpu_lifecycle.mjs`(42 項)+ 真機 60s 開火 heap 不單調上升 + 目視光束粗細(scale 就是半徑) |
 | 三種遊戲機制(`rooms.js`/`netmode.js`/`build_solo` 系) | `audit_net_modes.mjs` + `audit_solo_boot.mjs`(`data.js` 單一模組實例)+ `npm test` 單機段與 WS 全段 + `audit_ui_layout.mjs` |
-| 程序生成物件擺位(`BUILDERS`/`VEG_DEFS`/`vegPartXform`) | `audit_object_joints.mjs`(約 5300 接合;FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗;豁免附理由) |
+| 程序生成物件擺位(`BUILDERS`/`VEG_DEFS`/`vegPartXform`/`MEGALITHS`/`synthMegalith`/`decorateMegalith`/`rockProbe`) | `audit_object_joints.mjs`(`--seeds 8` 約 23000 接合;FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗;豁免附理由;巨岩段含「兩端支承」具名救援) |
 | 小地圖顯示範圍(`mmMode`/`_world2mm*` 系) | `audit_minimap_view.mjs`(16 項)+ 真機切換冒煙(已探索迷霧不得錯位) |
 | 機種絕招觸發(`ABILITY_HOLD_S`/`_tickHoldAbility` 系) | 真機冒煙:一般/狙擊長按皆出招且不誤切模式、短按仍切換、ZR 同招顯 CD、三機種各一次 |
 | `mobile.js`/`_applyLook`/`_moveAxis`/`_cmd`/觸控 CSS | ①桌機 MUST 不回歸 ②`audit_touch_layout.mjs`(54 組;四分區零重疊、觸控目標 ≥44×40、`.tl-sys` 固定 grid)③疊層可點性 ④`audit_touch_gesture.mjs`(17 項)⑤真機冒煙 |

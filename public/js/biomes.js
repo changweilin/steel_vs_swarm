@@ -31,7 +31,7 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform } from './xform.js';
-import { planClimbRoutes, buildClimbMeshes } from './climb.js';
+import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -563,11 +563,13 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
       const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
       if (blocked.has(cellKey(gx, gz))) continue;
-      const gy = terrain.heightAt(gx, gz);
+      const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
+      // 落底高度取「板根腳印周圈最低點」(sinkBaseY 單一縫):基部外擴約 1.6×幹半徑
+      // (基部喇叭口 + 板根鰭),只取中心高度的話,陡坡/巨岩崖邊的樹根會整片懸空。
+      const gy = sinkBaseY(terrain, gx, gz, def.r * s * 1.6);
       // 水域/沼澤不長神木(terrainEnvCode 確定性純函式;群落中心的 classify 有 55% mix 改寫
       // 可能把水色點洗成 green、株散 ±82m 也會越到濕地 —— 這裡是最後把關)
       if (gy < 0.4 || terrainEnvCode(terrain, gx, gz) !== 0) continue;
-      const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
@@ -1155,7 +1157,7 @@ function rockMat(color, moss = 0) {
 const MEGALITHS = {
   // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
   elcap: { col: { r: 38, h: 112 }, s: [0.8, 1.4],
-    anchor: { topY: 112, topR: 15, side: { y: [30, 95], rx: 28, rz: 17, dome: false } },
+    anchor: { topY: 112, topR: 15, side: { y: [30, 95] } },
     build: (g, rnd) => {
     const wall = new THREE.Mesh(new THREE.BoxGeometry(52, 112, 30), rockMat(0xc9c4b8, 0.3));
     wall.position.y = 56; wall.rotation.y = 0.06; g.add(wall);            // 主岩壁
@@ -1174,7 +1176,7 @@ const MEGALITHS = {
     scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);              // 山腳碎石坡
   } },
   uluru: { col: { r: 88, h: 62 }, s: [1.0, 1.7],   // 含東側低伏 hump(px 66 + r31)
-    anchor: { topY: 60, topR: 24, side: { y: [12, 42], rx: 74, rz: 44, dome: true } },
+    anchor: { topY: 60, topR: 24, side: { y: [12, 42] } },
     build: (g, rnd) => {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(50, 12, 8), rockMat(0xb3502e));
     dome.scale.set(1.5, 1.15, 0.9); dome.position.y = 4; g.add(dome);     // 長條圓頂單體岩
@@ -1187,7 +1189,7 @@ const MEGALITHS = {
     }
   } },
   augustus: { col: { r: 80, h: 50 }, s: [0.9, 1.6],   // 主脊 sx1.7 → 實際外廓 ~78
-    anchor: { topY: 46, topR: 22, side: { y: [8, 34], rx: 76, rz: 47, dome: true } },
+    anchor: { topY: 46, topR: 22, side: { y: [8, 34] } },
     build: (g) => {
     const ridge = new THREE.Mesh(new THREE.SphereGeometry(46, 11, 8), rockMat(0x9a6248, 0.45));
     ridge.scale.set(1.7, 0.95, 1.05); ridge.position.y = 2; g.add(ridge); // 主山脊(帶植被苔蘚)
@@ -1197,7 +1199,7 @@ const MEGALITHS = {
     toe.scale.set(1.3, 0.6, 1.0); toe.position.set(52, 4, 8); g.add(toe);
   } },
   dabajian: { col: { r: 40, h: 96 }, s: [0.8, 1.5],   // 含 44m 山體基座錐
-    anchor: { topY: 97, topR: 12, side: { y: [34, 86], rx: 20, rz: 20, dome: false } },
+    anchor: { topY: 97, topR: 12, side: { y: [34, 86] } },
     // 逐層岩層半徑/稜線/軸心各異(2026-07-29):酒桶紋不再同心規整;
     // 層高不動(anchor.topY = 97 由層高總和推得,抖高度會讓頂面特徵懸空)
     build: (g, rnd) => {
@@ -1251,7 +1253,7 @@ const MEGALITHS = {
     }
   } },
   machupicchu: { col: { r: 42, h: 44 }, s: [1.0, 1.7],   // 底層梯田 64×52 半對角
-    anchor: { topY: 35, topR: 11, side: { y: [5, 30], rx: 33, rz: 27, dome: true } },
+    anchor: { topY: 35, topR: 11, side: { y: [5, 30] } },
     // 手築的不整齊(2026-07-29):每層梯田各自收放/錯位/微轉(底層定腳印不偏),
     // 石屋逐間抽尺寸 —— 偏移收在層間退縮量內,上層不懸挑
     build: (g, rnd) => {
@@ -1299,15 +1301,20 @@ const MEGALITHS = {
       g.add(post);
       posts.push({ a, r0, ph });
     }
-    for (let i = 0; i < 10; i += 2) {                                     // 楣石:架在兩鄰石上(取矮者頂,微沉咬合)
+    // 楣石:架在兩鄰石上(取矮者頂,微沉咬合)。長度與朝向 MUST 由**兩石連線的實際世界向量**推
+    // (A26):立石環半徑逐塊漂移 ±1.2m ⇒ 弦長 9.4~14m、弦向與中點切線差可達 7°,
+    // 拿「中點方位的切線 + 固定長度 12~14.5m」擺就會有一端落在立石外面(實測到 5m 的縫)
+    for (let i = 0; i < 10; i += 2) {
       if (rnd() < 0.2) continue;                                          // 兩成塌失 = 遺跡缺口
       const p1 = posts[i], p2 = posts[(i + 1) % 10];
-      const am = (p1.a + p2.a) / 2, rm = (p1.r0 + p2.r0) / 2;
+      const x1 = Math.cos(p1.a) * p1.r0, z1 = Math.sin(p1.a) * p1.r0;
+      const x2 = Math.cos(p2.a) * p2.r0, z2 = Math.sin(p2.a) * p2.r0;
+      const dx = x2 - x1, dz = z2 - z1, span = Math.hypot(dx, dz);
       const lh = 2.4 + rnd() * 0.9;
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(12 + rnd() * 2.5, lh, 3.1 + rnd() * 0.7),
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(span + 2.6 + rnd() * 1.2, lh, 3.1 + rnd() * 0.7),
         rockMat(0x8f8a7c, 0.3 + rnd() * 0.2));
-      lintel.position.set(Math.cos(am) * rm, Math.min(p1.ph, p2.ph) + lh / 2 - 0.3, Math.sin(am) * rm);
-      lintel.rotation.y = -am + Math.PI / 2 + (rnd() - 0.5) * 0.1;
+      lintel.position.set((x1 + x2) / 2, Math.min(p1.ph, p2.ph) + lh / 2 - 0.3, (z1 + z2) / 2);
+      lintel.rotation.y = -Math.atan2(dz, dx);                            // local +x 對準兩石連線
       lintel.rotation.z = (rnd() - 0.5) * 0.04;
       g.add(lintel);
     }
@@ -1345,7 +1352,7 @@ const MEGALITHS = {
     }
   } },
   torres: { col: { r: 34, h: 120 }, s: [0.8, 1.4],   // 塔群外緣 px20 + r13
-    anchor: { topY: 28, topR: 2.5, side: { y: [26, 90], rx: 24, rz: 15, dome: false } },
+    anchor: { topY: 28, topR: 2.5, side: { y: [26, 90] } },
     build: (g, rnd) => {
     // 百內三塔:淺色花崗岩塔身 + 暗色角頁岩殘帽,底部共用碎石肩。
     // 2026-07-29:逐塔高矮胖瘦/站位/稜線各異(高度只往下抖,col.h = 120 仍涵蓋)
@@ -1364,7 +1371,7 @@ const MEGALITHS = {
     shoulder.position.y = shH / 2 - 1; g.add(shoulder);                   // 底緣微沉,坡地不懸空
   } },
   karst: { col: { r: 18, h: 104 }, s: [0.8, 1.4],
-    anchor: { topY: 100, topR: 7, side: { y: [15, 85], rx: 9, rz: 8, dome: false } },
+    anchor: { topY: 100, topR: 7, side: { y: [15, 85] } },
     build: (g, rnd) => {
     // 張家界石柱:石英砂岩方柱疊層(上收 + 錯位微轉),崖頂綠冠環繞。
     // 2026-07-29:逐層寬深/軸心各自抽(層高不動,anchor.topY = 100 由層高總和推得)
@@ -1387,7 +1394,7 @@ const MEGALITHS = {
   } },
   // ---- 2026-07-29 增補:三座世界地標岩體(逐顆 rnd 變異同前;外廓收在 col/anchor 內)----
   meteora: { col: { r: 36, h: 88 }, s: [0.9, 1.5],
-    anchor: { topY: 78, topR: 8, side: { y: [12, 62], rx: 16, rz: 14, taper: 0.72 } },
+    anchor: { topY: 78, topR: 8, side: { y: [12, 62] } },
     // 邁泰奧拉(希臘):圓潤砂礫岩峰 + 崖頂修道院(紅瓦石屋/鐘塔)+ 伴峰。
     // 層高固定(anchor.topY = 78 錨在頂台),變化放在半徑/軸心/伴峰/修道院配置
     build: (g, rnd) => {
@@ -1422,17 +1429,24 @@ const MEGALITHS = {
     comp.position.set(cx2, ch / 2, cz2); comp.rotation.y = rnd() * Math.PI; g.add(comp);
     const dome2 = new THREE.Mesh(new THREE.SphereGeometry(cr * 0.82, 9, 6), rockMat(0xa29786, 0.3));
     dome2.scale.y = 0.55; dome2.position.set(cx2, ch, cz2); g.add(dome2);    // 伴峰圓頂
-    const nRib = 3 + ((rnd() * 3) | 0);                                      // 垂直侵蝕墨線
+    // 垂直侵蝕墨線:貼壁半徑與內傾角**實測**(rockProbe)—— 疊層各自抽了半徑與軸心偏移、
+    // 九邊形小面又內縮 6%,拿「層別 × 0.92」推算會浮在壁外(實測前量到 2.1m 的縫)
+    const probe = rockProbe(g);
+    const nRib = 3 + ((rnd() * 3) | 0);
     for (let i = 0; i < nRib; i++) {
       const a = rnd() * Math.PI * 2, ry2 = 14 + rnd() * 34;
-      const rr = 13.5 * (ry2 < 20 ? 1.3 : ry2 < 42 ? 1.12 : 1.0) * 0.92;
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, 14 + rnd() * 12, 1.1), rockMat(0x7a7062));
-      rib.position.set(Math.cos(a) * rr, ry2, Math.sin(a) * rr);
-      rib.rotation.y = -a; g.add(rib);
+      const rh2 = 14 + rnd() * 12;
+      const rr = probe.wallR(0, 0, ry2, a);
+      if (rr == null) continue;
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, rh2, 1.1), rockMat(0x7a7062));
+      rib.position.set(Math.cos(a) * (rr - 0.65), ry2, Math.sin(a) * (rr - 0.65));
+      rib.rotation.y = -a;
+      rib.rotation.z = Math.atan(probe.slope(0, 0, ry2, a, rh2 / 2));   // 跟著砂礫岩上收的壁面內傾
+      g.add(rib);
     }
   } },
   sigiriya: { col: { r: 48, h: 76 }, s: [0.8, 1.3],
-    anchor: { topY: 74, topR: 18, side: { y: [16, 56], rx: 42, rz: 27, taper: 0.88 } },
+    anchor: { topY: 74, topR: 18, side: { y: [16, 56] } },
     // 獅子岩(斯里蘭卡):陡壁孤丘 + 白鏡牆帶 + 頂上宮殿基座遺跡 + 山腳獅爪門 + 之字棧道
     build: (g, rnd) => {
     const sz = 0.62 + rnd() * 0.08;                                          // 橢圓斷面(z 壓扁)
@@ -1466,11 +1480,19 @@ const MEGALITHS = {
         g.add(toe);
       }
     }
-    const nS = 4 + ((rnd() * 3) | 0);                                        // 之字棧道(側壁淺色梯板)
+    // 之字棧道(側壁淺色梯板):**貼壁半徑實測**(rockProbe)—— 岩體是 11 邊形 × z 壓扁的
+    // 橢圓斷面又整體微轉,拿 `rw()` 剖面推算會浮在小面內縮那一段外面(實測前量到 1.07m 的縫);
+    // 之字沿**方位**左右擺(local x = 徑向、z = 踏面長),MUST NOT 用固定 x + z 偏移(離壁越遠越浮)
+    const probe = rockProbe(g);
+    const nS = 4 + ((rnd() * 3) | 0);
     for (let i = 0; i < nS; i++) {
       const sy2 = 12 + i * (44 / nS) + rnd() * 3;
       const step = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 7 + rnd() * 3), rockMat(0xd8c9a8));
-      step.position.set(rw(sy2) * 0.97, sy2, (i % 2 ? 1 : -1) * (4 + rnd() * 4) * sz);
+      const aa = (i % 2 ? 1 : -1) * (0.1 + rnd() * 0.18);                    // 繞 +x 側左右擺
+      const rr = probe.wallR(0, 0, sy2, aa);
+      if (rr == null) continue;
+      step.position.set(Math.cos(aa) * (rr - 0.9), sy2, Math.sin(aa) * (rr - 0.9));   // 沉半塊(1.8/2)
+      step.rotation.y = -aa;
       g.add(step);
     }
   } },
@@ -1524,15 +1546,56 @@ const MEGALITHS = {
   } },
 };
 
+// ---- 巨岩表面實測探針(貼壁 / 頂面落點的唯一縫;2026-07-30)----
+// **為什麼是實測而不是公式**:岩體是多面體近似(11 邊形球 / 8~10 邊柱 / 二十面體塊),
+// 小面內縮 4~5% 半徑(r=50 的岩體就是 2m)、疊層逐段收分、崩落塊撐大外廓 —— 手寫剖面
+// 公式(側壁橢圓 × dome √(1−u²) / taper 線性)一律算不準,算差 1m 樹就浮在半空
+// (2026-07-30 使用者回報「巨石懸崖旁的樹沒接好」;稽核 audit_object_joints 巨岩段)。
+// A26 的「錨點半徑 MUST 取該高度的錨體半徑」在這裡的落實方式 = 射線量真幾何,
+// **MUST NOT** 在消費端另寫第二份剖面公式。
+// 用法:`rockProbe(g)` 於「岩體已建好、特徵還沒放上去」時取一次(g 尚未套放置變換 ⇒
+// 世界座標 = 岩體 local),回傳的三支查詢只射當下的岩體子物件(不會射到後放的特徵)。
+const _rcO = new THREE.Vector3(), _rcD = new THREE.Vector3(), _rc = new THREE.Raycaster();
+function rockProbe(g) {
+  g.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(g);
+  const far = Math.max(20, Math.hypot(bb.max.x - bb.min.x, bb.max.z - bb.min.z)) + 20;
+  const topY = bb.max.y + 20;
+  const body = g.children.slice();   // 岩體快照
+  const hit = (ox, oy, oz, dx, dy, dz, len) => {
+    _rc.far = len;
+    _rc.set(_rcO.set(ox, oy, oz), _rcD.set(dx, dy, dz));
+    const h = _rc.intersectObjects(body, true);
+    return h.length ? h[0].distance : null;
+  };
+  /** 側壁半徑:自 (px,pz) 沿方位 a、高度 y **由外向內**射(正面朝外的岩面才吃得到);null = 該處無岩體 */
+  const wallR = (px, pz, y, a) => {
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const t = hit(px + dx * far, y, pz + dz * far, -dx, 0, -dz, far * 2);
+    return t == null ? null : far - t;
+  };
+  return {
+    wallR,
+    /** 壁面斜率 |dr/dy|(每升 1m 內收幾 m):彎頭入壁角 / 溝棒內傾角共用 */
+    slope: (px, pz, y, a, dy = 2) => {
+      const r0 = wallR(px, pz, y, a), r1 = wallR(px, pz, y + dy, a);
+      return r0 == null || r1 == null ? 0 : Math.max(0, (r0 - r1) / dy);
+    },
+    /** 頂面高:自上方垂直下射;null = 該 (x,z) 沒有頂面(懸出岩體外) */
+    topAt: (x, z) => { const t = hit(x, topY, z, 0, -1, 0, topY * 2 + 40); return t == null ? null : topY - t; },
+  };
+}
+
 // ---- 巨岩表面特徵:高壓電塔 / 石砌屋 / 疊石堆 / 鳥巢(岩台)/ 峭壁樹·岩菇 ----
 // 在岩體 local 座標放置(隨岩體旋轉縮放),特徵自身尺寸 ÷ s 抵銷縮放 →
-// 世界尺寸恆定;anchor 描述可放置面:topY/topR 平頂;side = 單一側壁橢圓或
-// 「柱群」陣列(每柱 {px,pz,rx,rz,y,topY,dome|taper}),半徑隨高度收縮
-// (dome √(1−u²) / taper 線性)⇒ 特徵貼壁不懸空。
+// 世界尺寸恆定;anchor 描述可放置面:topY/topR 平頂(選尺寸用)、side = 可附著側壁
+// (單面或「柱群」陣列,每項 {px,pz,y:[lo,hi]})—— **落點高度與壁面半徑一律走 rockProbe 實測**。
 // 頂面特徵一律「塞不下就縮小到剛好」:sc = min(想要的, 頂面半徑/自身腳印),
-// 縮到下限仍塞不下才放棄;偏移量同步夾在「頂半徑 − 腳印」內。
+// 縮到下限仍塞不下才放棄;偏移量同步夾在「頂半徑 − 腳印」內,再由 `seat()` 實測腳印四角
+// 是否踩在同一片頂面上(圓頂/窄頂/疊石堆頂拿 topR 猜會半懸空)。
 function decorateMegalith(g, anchor, rnd, s) {
   if (!anchor) return;
+  const probe = rockProbe(g);
   const k = 1 / s;
   const put = (obj, x, y, z, sc = 1) => {
     obj.scale.multiplyScalar(sc * k);
@@ -1546,8 +1609,9 @@ function decorateMegalith(g, anchor, rnd, s) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.3, 5, 8), toonMat(0x6a5138));
     ring.rotation.x = Math.PI / 2; ring.position.y = 0.15; n.add(ring);
     for (let e = 0; e < 3; e++) {
+      // 蛋窩在巢底:ico 最低頂點在 −0.851r ⇒ 心高 = 0.851r 才剛好躺在巢盤上(抬高就是浮在巢裡)
       const egg = new THREE.Mesh(ico(0.2), toonMat(0xf2ead6));
-      egg.position.set((rnd() - 0.5) * 0.6, 0.22, (rnd() - 0.5) * 0.6);
+      egg.position.set((rnd() - 0.5) * 0.6, 0.17, (rnd() - 0.5) * 0.6);
       n.add(egg);
     }
     if (rnd() < 0.5) {
@@ -1630,13 +1694,30 @@ function decorateMegalith(g, anchor, rnd, s) {
     return sc >= lo ? sc : 0;
   };
   const margin = (sc, foot) => Math.max(0, anchor.topR - foot * sc / s);
+  // 頂面落座:回傳該 (x,z) 的**實測**頂面高;腳印四角任一射不到岩體、或比中心低超過
+  // SEAT_DROP(世界公尺)= 腳印懸出頂緣 ⇒ 回傳 null 不放(§4 寧缺勿錯)。
+  const SEAT_DROP = 1.0;
+  const seat = (x, z, footW, sc) => {
+    const y0 = probe.topAt(x, z);
+    if (y0 == null) return null;
+    const f = footW * sc / s;   // 世界腳印半徑 → 岩體 local
+    for (const [ox, oz] of [[f, 0], [-f, 0], [0, f], [0, -f]]) {
+      const yc = probe.topAt(x + ox, z + oz);
+      if (yc == null || (y0 - yc) * s > SEAT_DROP) return null;
+    }
+    return y0;
+  };
   if (topWorldY > 45 && rnd() < 0.5) {                       // 高壓電塔:夠高的頂才架線
     const sc = fit(0.55 + rnd() * 0.25, 8.5, 0.28);
     if (sc) {
-      const pylon = new THREE.Group();
-      LANDMARKS.power(pylon);
       const m = margin(sc, 8.5);
-      put(pylon, (rnd() - 0.5) * m, anchor.topY - 1, (rnd() - 0.5) * m, sc);
+      const px = (rnd() - 0.5) * m, pz = (rnd() - 0.5) * m;
+      const y = seat(px, pz, 8.5, sc);
+      if (y != null) {
+        const pylon = new THREE.Group();
+        LANDMARKS.power(pylon);
+        put(pylon, px, y - 1 / s, pz, sc);   // 塔腳沉 1m(世界)進岩面
+      }
     }
   }
   if (rnd() < 0.7) {                                         // 石砌屋 1~2 間
@@ -1647,7 +1728,9 @@ function decorateMegalith(g, anchor, rnd, s) {
       const h = stoneHut();
       h.rotation.y = rnd() * Math.PI * 2;
       const m = margin(sc, 3.2);
-      put(h, (rnd() - 0.5) * m, anchor.topY - 0.3, (rnd() - 0.5) * m, sc);
+      const px = (rnd() - 0.5) * m, pz = (rnd() - 0.5) * m;
+      const y = seat(px, pz, 3.2, sc);
+      if (y != null) put(h, px, y - 0.3 / s, pz, sc);
     }
   }
   if (rnd() < 0.7) {                                         // 疊石堆
@@ -1656,7 +1739,9 @@ function decorateMegalith(g, anchor, rnd, s) {
       const sc = fit(1 + rnd() * 0.8, 1.2, 0.45);
       if (!sc) break;
       const m = margin(sc, 1.2);
-      put(cairn(), (rnd() - 0.5) * m * 1.6, anchor.topY - 0.2, (rnd() - 0.5) * m * 1.6, sc);
+      const px = (rnd() - 0.5) * m * 1.6, pz = (rnd() - 0.5) * m * 1.6;
+      const y = seat(px, pz, 1.2, sc);
+      if (y != null) put(cairn(), px, y - 0.2 / s, pz, sc);
     }
   }
   {   // 鳥巢:先鋪一塊「平坦面朝正上」的岩台,鳥巢放台上(圓頂/窄頂也有水平落腳)
@@ -1664,18 +1749,22 @@ function decorateMegalith(g, anchor, rnd, s) {
     for (let i = 0; i < n; i++) {
       const sc = fit(1 + rnd() * 0.8, 2.0, 0.4);
       if (!sc) break;
+      const a = rnd() * Math.PI * 2;
+      const rr = Math.min(anchor.topR * 0.8, margin(sc, 2.0));   // 沿頂緣一圈,但不掉出頂面
+      const px = Math.cos(a) * rr, pz = Math.sin(a) * rr;
+      const y = seat(px, pz, 2.0, sc);
+      if (y == null) continue;
       const grp = new THREE.Group();
       const pad = new THREE.Mesh(cyl(1.5, 1.8, 0.55, 7), rockMat(0x8f8a80));
       pad.position.y = 0.28; grp.add(pad);
       const ne = nest();
       ne.position.y = 0.56; grp.add(ne);
       noOut(grp);
-      const a = rnd() * Math.PI * 2;
-      const rr = Math.min(anchor.topR * 0.8, margin(sc, 2.0));   // 沿頂緣一圈,但不掉出頂面
-      put(grp, Math.cos(a) * rr, anchor.topY - 0.35, Math.sin(a) * rr, sc);
+      put(grp, px, y - 0.35 / s, pz, sc);
     }
   }
-  // 峭壁樹/岩菇:side = 單一側壁或柱群陣列;半徑取「該柱該高度」的收縮值
+  // 峭壁樹/岩菇:side = 單一側壁或柱群陣列(只描述「可附著的柱心與高度帶」);
+  // 壁面半徑與斜率一律走 rockProbe 實測(MUST NOT 退回剖面公式 —— 見 rockProbe 檔頭)。
   const sides = Array.isArray(anchor.side) ? anchor.side : anchor.side ? [anchor.side] : [];
   if (sides.length) {
     const n = 2 + Math.floor(rnd() * 4);
@@ -1683,19 +1772,16 @@ function decorateMegalith(g, anchor, rnd, s) {
       const sd = sides[Math.floor(rnd() * sides.length)];
       const a = rnd() * Math.PI * 2;
       const y = sd.y[0] + rnd() * (sd.y[1] - sd.y[0]);
-      const topRef = sd.topY ?? anchor.topY;   // 柱群各柱自帶高度基準
-      const u = y / Math.max(1, topRef);
-      const f = sd.dome ? Math.sqrt(Math.max(0.08, 1 - u * u))
-        : sd.taper != null ? Math.max(0.08, 1 - (1 - sd.taper) * u) : 1;
-      const er = (sd.rx * sd.rz) / Math.hypot(sd.rz * Math.cos(a), sd.rx * Math.sin(a));   // 橢圓邊界半徑
+      const u = y / Math.max(1, anchor.topY);
       const mush = rnd() < (u < 0.4 ? 0.5 : 0.15);   // 低處背陰長菇,高處長松
-      // 入壁彎角依壁面斜率:m = |dr/dy|(壁面每升 1m 內收多少)。
-      // 直壁 m=0 → 90° 彎頭;球面肩部/斜壁 m 大 → 淺彎。
-      const m = sd.dome ? (er * u) / (Math.max(1, topRef) * Math.max(0.25, Math.sqrt(1 - u * u)))
-        : sd.taper != null ? er * (1 - sd.taper) / Math.max(1, topRef) : 0;
-      const t = cliffPlant(mush, Math.PI / 2 - Math.atan(m));
+      const sc = 0.8 + rnd() * 0.8;                  // 亂數照抽(淘汰排在抽樣之後 ⇒ 序列不漂)
+      const px = sd.px || 0, pz = sd.pz || 0;
+      const er = probe.wallR(px, pz, y, a);
+      if (er == null) continue;                      // 該方位沒有壁面(拱洞/柱間空隙)⇒ 不放
+      // 入壁彎角依**實測**壁面斜率:直壁 = 90° 彎頭、球面肩部/斜壁彎得少
+      const t = cliffPlant(mush, Math.PI / 2 - Math.atan(probe.slope(px, pz, y, a)));
       t.rotation.set(0, -a, 0);   // 只轉方位;彎的是水管基部,冠永遠朝上
-      put(t, (sd.px || 0) + Math.cos(a) * er * f * 0.99, y, (sd.pz || 0) + Math.sin(a) * er * f * 0.99, 0.8 + rnd() * 0.8);
+      put(t, px + Math.cos(a) * er, y, pz + Math.sin(a) * er, sc);
     }
   }
 }
@@ -1719,8 +1805,8 @@ function synthMegalith(g, rnd) {
                  'basalt', 'granite', 'marble'];
   const main = kinds[Math.floor(rnd() * kinds.length)];
   let H = 0, RX = 0, RZ = 0, topR = 6;
-  // 側壁錨點逐型定義(貼合主體輪廓;null = 該型側壁放不了樹)。
-  // MUST NOT 用最終 RX/RZ 當側壁橢圓:崩落岩塊/伴生圓丘會把包絡撐大,樹就懸在半空。
+  // 側壁錨點逐型定義(null = 該型側壁放不了樹):只描述**可附著的柱心 px/pz 與高度帶 y**,
+  // 壁面半徑與斜率一律由 `rockProbe` 實測 —— 手寫橢圓/收縮剖面永遠追不上多面體實際外廓。
   let sideDef = null, topYA = null, topRA = null;
   // 鑿面:斜切稜面貼在量體側緣,把圓弧/平板打成手雕硬邊(botw_plan Task 1.1)
   const chisel = (n, rx, rz, hh) => {
@@ -1738,7 +1824,7 @@ function synthMegalith(g, rnd) {
     const m = new THREE.Mesh(new THREE.SphereGeometry(r, 11, 8), rockMat(shade(0), moss));
     m.scale.set(sx, sy, sz); m.position.y = 3; g.add(m);
     H = 3 + r * sy; RX = r * sx; RZ = r * sz; topR = Math.min(RX, RZ) * 0.35;
-    sideDef = { y: [H * 0.22, H * 0.8], rx: RX, rz: RZ, dome: true };
+    sideDef = { y: [H * 0.22, H * 0.8] };
     chisel(2 + Math.floor(rnd() * 2), RX, RZ, H);
   } else if (main === 'slab') {
     const w = 30 + rnd() * 26, h = 70 + rnd() * 50, d = 16 + rnd() * 12;
@@ -1747,7 +1833,7 @@ function synthMegalith(g, rnd) {
     const nose = new THREE.Mesh(new THREE.BoxGeometry(w * 0.45, h * 0.8, d * 0.8), rockMat(shade(0.04), moss));
     nose.position.set(w * 0.36, h * 0.4, d * 0.2); nose.rotation.y = 0.45; g.add(nose);
     H = h; RX = w * 0.62; RZ = d * 0.8; topR = Math.min(w, d) * 0.32;
-    sideDef = { y: [H * 0.25, H * 0.75], rx: w * 0.52, rz: d * 0.56 };   // 貼牆面,不含鼻樑外擴
+    sideDef = { y: [H * 0.25, H * 0.75] };
     chisel(2 + Math.floor(rnd() * 3), RX, RZ, H * 0.8);
   } else if (main === 'tower') {
     const r0 = 17 + rnd() * 8, bh = 24 + rnd() * 14;
@@ -1765,7 +1851,7 @@ function synthMegalith(g, rnd) {
       if (!band) r *= 0.92;
     }
     H = y; RX = RZ = r0 * 2.0; topR = r * 0.85;   // footprint 含 2.2×r0 山腳崖錐
-    sideDef = { y: [bh, H * 0.85], rx: r0 * 1.05, rz: r0 * 1.05, taper: 0.62 };   // 沿岩層上收
+    sideDef = { y: [bh, H * 0.85] };   // 柱身段(崖錐以上)
   } else if (main === 'arch') {   // 天然岩拱:雙墩 + 頂樑 + 拱背圓丘
     const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
     const cols = [];
@@ -1773,7 +1859,7 @@ function synthMegalith(g, rnd) {
       const pier = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pw * 1.3), rockMat(shade(sgn * 0.03), moss));
       pier.position.set(sgn * span / 2, ph / 2, 0); pier.rotation.y = sgn * 0.15; g.add(pier);
       // 兩座橋墩各自是可附著側壁(內縮吃掉 ±0.15 微轉),樹菇長在墩壁不掛拱洞
-      cols.push({ px: sgn * span / 2, pz: 0, rx: pw * 0.46, rz: pw * 0.6, y: [ph * 0.15, ph * 0.8], topY: ph });
+      cols.push({ px: sgn * span / 2, pz: 0, y: [ph * 0.15, ph * 0.8] });
     }
     sideDef = cols;
     const beam = new THREE.Mesh(new THREE.BoxGeometry(span + pw * 1.6, pw * 0.9, pw * 1.1), rockMat(shade(0.05), moss));
@@ -1792,7 +1878,7 @@ function synthMegalith(g, rnd) {
       st.position.y = y + hh / 2; y += hh; g.add(st);
     }
     H = y; RX = RZ = r0 * 2.0; topR = r0 * 0.8;   // footprint 含 2.2×r0 裙狀崖錐
-    sideDef = { y: [H * 0.4, H * 0.9], rx: r0 * 1.1, rz: r0 * 1.1, taper: 0.92 };   // 疊層段近直壁
+    sideDef = { y: [H * 0.4, H * 0.9] };   // 疊層段(裙狀崖錐以上)
   } else if (main === 'hoodoo') {   // 風化蘑菇岩群:細腰石柱頂著過寬帽岩
     const n = 2 + Math.floor(rnd() * 3);
     const cols = [];
@@ -1807,7 +1893,7 @@ function synthMegalith(g, rnd) {
       // 頂錨綁「中央柱」帽岩頂面(特徵放置以原點為準;掛在群體最高點必懸空)
       if (i === 0) { topYA = h * 1.1; topRA = r * 1.1; }
       // 每根柱各自是一面可附著側壁(頸部上收 55%),樹菇/侵蝕溝貼各柱的壁
-      cols.push({ px, pz, rx: r * 0.98, rz: r * 0.98, y: [h * 0.15, h * 0.8], taper: 0.57, topY: h });
+      cols.push({ px, pz, y: [h * 0.15, h * 0.8] });
       H = Math.max(H, h * 1.1);
       RX = RZ = Math.max(RX, d + r * 1.5);
     }
@@ -1827,7 +1913,7 @@ function synthMegalith(g, rnd) {
       blade.rotation.z = (rnd() - 0.5) * 0.1;
       g.add(blade);
       // 每片刃岩自成一面側壁(略內縮吃掉微轉/微傾的誤差),樹菇貼刃面長
-      cols.push({ px, pz: bz, rx: w * 0.46, rz: d * 0.5, y: [h * 0.15, h * 0.7], topY: h });
+      cols.push({ px, pz: bz, y: [h * 0.15, h * 0.7] });
       H = Math.max(H, h);
       RX = Math.max(RX, Math.abs(px) + w);
       px += 14 + rnd() * 5;
@@ -1868,7 +1954,7 @@ function synthMegalith(g, rnd) {
       H = Math.max(H, h + 1.6);
     }
     RX = RZ = R0 + 5; topR = 3;
-    sideDef = { y: [H * 0.12, H * 0.6], rx: R0 + 2, rz: R0 + 2, taper: 0.5 };   // 柱束外壁
+    sideDef = { y: [H * 0.12, H * 0.6] };   // 柱束外壁(實測會落在該方位最外那根柱)
   } else if (main === 'granite') {   // 花崗岩 tor:大塊方料錯縫整齊疊置
     base.set([0xc9c4b8, 0xbdb2a0, 0xd2cabb, 0xb8b0a4][Math.floor(rnd() * 4)]);   // 淺色花崗岩
     const w0 = 30 + rnd() * 16, d0 = 22 + rnd() * 12;
@@ -1889,10 +1975,12 @@ function synthMegalith(g, rnd) {
         blk.rotation.y = (rnd() - 0.5) * 0.07;      // 整齊拼接:僅極小微轉
         g.add(blk);
       }
-      y += hh + 0.5;                                // 層間水平節理縫
+      // 層間 0.4m **交疊**:塊面確實互壓(留空 0.5m = 每層都懸在上一層之上;
+      // 「水平節理縫」的視覺靠逐層內收 f 與塊色深淺讀出來,不靠真的留一道空隙)
+      y += hh - 0.4;
     }
     H = y; RX = w0 * 0.62; RZ = d0 * 0.62; topR = Math.min(w0, d0) * 0.3;
-    sideDef = { y: [H * 0.15, H * 0.8], rx: w0 * 0.5, rz: d0 * 0.5, taper: 0.72 };
+    sideDef = { y: [H * 0.15, H * 0.8] };
   } else if (main === 'marble') {   // 大理岩堆:大小互異的渾圓岩塊互倚
     base.set([0xd8d3c8, 0xcfc8bc, 0xd4cdc4, 0xc8c4bc][Math.floor(rnd() * 4)]);   // 大理岩灰白
     const R0 = 14 + rnd() * 10;
@@ -1919,7 +2007,7 @@ function synthMegalith(g, rnd) {
     }
     topR = 3.5;
     topYA = H * 0.96; topRA = 3;
-    sideDef = { y: [H * 0.15, H * 0.7], rx: RX * 0.8, rz: RZ * 0.8, dome: true };
+    sideDef = { y: [H * 0.15, H * 0.7] };
   } else {   // spire 尖峰
     const r0 = 20 + rnd() * 10, h = 80 + rnd() * 45;
     const m = new THREE.Mesh(cone(r0, h, 8), rockMat(shade(0), moss));
@@ -1927,10 +2015,10 @@ function synthMegalith(g, rnd) {
     const m2 = new THREE.Mesh(cone(r0 * 0.6, h * 0.6, 7), rockMat(shade(0.05), moss));
     m2.position.set(r0 * 0.8, h * 0.3, 0); g.add(m2);
     H = h; RX = r0 * 1.5; RZ = r0 * 1.1; topR = 2;
-    sideDef = { y: [H * 0.15, H * 0.65], rx: r0, rz: r0, taper: 0.08 };   // 錐面線性收尖
+    sideDef = { y: [H * 0.15, H * 0.65] };   // 錐面
   }
-  // 以下崩落岩塊/伴生圓丘只擴 footprint(col);貼壁特徵(側樹/侵蝕溝)
-  // 一律走各分支已凍結的 sideDef,MUST NOT 改用撐大後的 RX/RZ(會懸空)
+  // 以下崩落岩塊/伴生圓丘只擴 footprint(col);貼壁特徵(側樹/侵蝕溝)的高度帶走各分支
+  // 已凍結的 sideDef,落點半徑一律實測 ⇒ 撐大後的 RX/RZ 不再有機會把特徵推到半空
   {   // 崩落岩塊:山腳鑿刻感碎岩(BOTW 手雕硬邊)
     const nB = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < nB; i++) {
@@ -1955,28 +2043,27 @@ function synthMegalith(g, rnd) {
     RX = Math.max(RX, Math.abs(Math.cos(a) * d) + r * 1.2);
     RZ = Math.max(RZ, Math.abs(Math.sin(a) * d) + r);
   }
-  // 侵蝕溝墨線:貼著側壁錨點放(單壁或柱群逐柱),半徑取「該柱該高度」的收縮值、
-  // 溝棒跟著壁面斜率內傾 → 斜壁(尖峰/岩層塔)與柱群(hoodoo/刃嶺/拱墩)都貼壁不懸空
+  // 侵蝕溝墨線:貼著側壁錨點放(單壁或柱群逐柱)。半徑與內傾角一律走 `rockProbe` **實測**
+  // (與峭壁樹同一個縫;手寫剖面公式會讓溝棒浮在小面內縮那一段外面 —— 實測前量到 5.3m 的縫)。
+  // 棒身 local +x = 徑向(ry = −a)⇒ 沉半深 = 0.8;內傾 MUST 走 `rotation.z`(Euler 'XYZ' 的
+  // z 最內層 = 繞**自身**切向軸),MUST NOT 用 rotation.x(最外層 = 繞世界 X,只有某些方位剛好對)。
   {
     const ribCols = Array.isArray(sideDef) ? sideDef : sideDef ? [sideDef] : [];
     if (ribCols.length && rnd() < 0.7) {
+      const probe = rockProbe(g);
       const n = 3 + Math.floor(rnd() * 4);
       for (let i = 0; i < n; i++) {
         const cSd = ribCols[Math.floor(rnd() * ribCols.length)];
-        const topRef = cSd.topY ?? H;
         const rh = (cSd.y[1] - cSd.y[0]) * (0.45 + rnd() * 0.35);
         const yc = cSd.y[0] + rh / 2 + rnd() * Math.max(0, cSd.y[1] - cSd.y[0] - rh);
-        const u = yc / Math.max(1, topRef);
-        const f = cSd.dome ? Math.sqrt(Math.max(0.08, 1 - u * u))
-          : cSd.taper != null ? Math.max(0.08, 1 - (1 - cSd.taper) * u) : 1;
         const a = rnd() * Math.PI * 2;
-        const er = (cSd.rx * cSd.rz) / Math.hypot(cSd.rz * Math.cos(a), cSd.rx * Math.sin(a));
+        const px = cSd.px || 0, pz = cSd.pz || 0;
+        const er = probe.wallR(px, pz, yc, a);
+        if (er == null) continue;
         const rib = new THREE.Mesh(new THREE.BoxGeometry(1.6, rh, 1.3), rockMat(shade(-0.1)));
-        const emb = cSd.dome ? 0.92 : 0.98;   // 球面弧度大,埋深一點免得棒端翹出
-        rib.position.set((cSd.px || 0) + Math.cos(a) * er * f * emb, yc, (cSd.pz || 0) + Math.sin(a) * er * f * emb);
+        rib.position.set(px + Math.cos(a) * (er - 0.8), yc, pz + Math.sin(a) * (er - 0.8));
         rib.rotation.y = -a;
-        rib.rotation.x = cSd.dome ? 0.4
-          : cSd.taper != null ? Math.atan(cSd.rx * (1 - cSd.taper) / Math.max(1, topRef)) : 0;
+        rib.rotation.z = Math.atan(probe.slope(px, pz, yc, a, Math.max(2, rh / 2)));
         g.add(rib);
       }
     }
@@ -1986,6 +2073,7 @@ function synthMegalith(g, rnd) {
     scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);
   }
   return {
+    main,   // 主體型別(給 audit_object_joints 標示是哪一型的接合出問題;放置端不讀)
     col: { r: Math.max(RX, RZ) + 4, h: H },
     anchor: { topY: topYA ?? H, topR: topRA ?? topR, side: sideDef },
   };
@@ -2002,6 +2090,21 @@ function flatRadiusAt(terrain, x, z, rMax, drop = 8) {
     }
   }
   return rMax;
+}
+
+/**
+ * 圓形腳印的「落底高度」:中心 + 腳印周圈取**最低**點(單一縫)。
+ * 佔地放大後坡地會露餡 —— 只取中心高度,下坡側的基部就整片懸空(神木板根/巨岩崖錐/
+ * 地標側翼都是幾公尺的腳印)。政策一律「寧可陷入山坡,不懸空」。
+ * 2026-07-30:神木群落原本只取中心高度 ⇒ 陡坡與巨岩崖邊的神木樹根浮在空中(使用者回報)。
+ */
+function sinkBaseY(terrain, x, z, r, n = 8) {
+  let gy = terrain.heightAt(x, z);
+  for (let k = 0; k < n; k++) {
+    const a = k / n * Math.PI * 2;
+    gy = Math.min(gy, terrain.heightAt(x + Math.cos(a) * r, z + Math.sin(a) * r));
+  }
+  return gy;
 }
 
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
@@ -2066,7 +2169,42 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
     blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
-    blockers.push({ x, z, y: gy - 2, r: r * 0.85, h: meta.col.h * s + 2, std: 1, cl: 'rock' });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+    // ---- 攀岩抓點的「正面」:逐方位**實測**岩面貼不貼碰撞圓(climb.js attachFaces ②)----
+    // 巨岩不是圓柱:碰撞圓涵蓋整個外廓(含崖錐/崩落塊/伴生丘),岩面常內縮十幾公尺 ⇒
+    // 抓點掛在碰撞圓上就是一整排浮在半空的樹脂塊(2026-07-30 使用者回報「正面必須面對巨石」)。
+    // 只留「整條路線高度帶內,岩面與碰撞面的縫都 ≤ ATT_GAP」的方位;一個都沒有 ⇒ attA 空陣列
+    // ⇒ 不掛路線(圓頂/崖錐型巨岩本來就架不出一條筆直貼壁的路線,寧缺勿錯)。
+    //
+    // **實測現況(2026-07-30,13 型 × 多種子)**:`col.r`(涵蓋整個外廓)× 0.85 與「高度帶內
+    // 壁面半徑」的差距是 4m(酋長岩)~60m(烏魯魯/桌山),故**目前所有巨岩都通不過**這一關
+    //  ⇒ 巨岩暫時不掛攀岩抓點。這是刻意的:掛上去就是一整排浮在 4~60m 空中的樹脂塊。
+    // 要讓巨岩重新掛得上,得先把碰撞體從「一顆涵蓋全外廓的圓柱」換成「主量體有向盒 +
+    // 外伸量體(崖錐/崩落塊/伴生丘)各自登記」—— 那是動權威幾何的獨立工項(A30 對建物已改完,
+    // 巨岩待補),本次不含。屆時只要碰撞面貼上壁面,這裡就會自動開始產出方位。
+    const colR = r * 0.85;                     // 碰撞半徑(世界)
+    const ATT_GAP = MAX_BODY_R;                // 縫上限(climb.js 單一縫):≤ 最大機體碰撞半徑 ⇒ 機體仍貼著設施
+    const attA = [];
+    {
+      const probe = rockProbe(g);              // g 已含表面特徵,但射線只吃岩體(rockProbe 內部快照)
+      const topL = meta.col.h;                 // 岩體 local 高度(路線頂端 = 碰撞柱頂)
+      const rot = g.rotation.y;
+      for (let k = 0; k < 16; k++) {
+        const aL = k / 16 * Math.PI * 2;        // 岩體 local 方位
+        let gap = 0, top = 0, okA = true;
+        for (let i = 0; i <= 4; i++) {
+          const yL = topL * (0.12 + 0.2 * i);   // 高度帶:12%~92%(貼地段被崖錐/碎石坡吃掉,不驗)
+          const rr = probe.wallR(0, 0, yL, aL);
+          if (rr == null) { okA = false; break; }
+          const d = colR - rr * s;              // 該高度的縫(世界公尺)
+          if (d > ATT_GAP) { okA = false; break; }
+          gap = Math.max(gap, Math.max(0, d));
+          if (i === 4) top = Math.max(0, d);
+        }
+        // local 方位 → 世界方位(three Euler(0,ry,0):local (cos a, sin a) → 方位 a − ry)
+        if (okA) attA.push({ a: aL - rot, gap, top });
+      }
+    }
+    blockers.push({ x, z, y: gy - 2, r: colR, h: meta.col.h * s + 2, std: 1, cl: 'rock', attA });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
     placedM.push({ x, z, r });
   }
   return placedM.length;
@@ -5199,7 +5337,7 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
         s *= Math.min(1, avail / (3.6 * s));   // 腳印 ~3.6×s
         if (s < 0.7) continue;
         (items.borderrock ??= []).push({
-          x, y: h - 0.6, z, s,
+          x, y: sinkBaseY(terrain, x, z, 3.6 * s) - 0.6, z, s,
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.1, tz: (rnd() - 0.5) * 0.1,
           dj: rnd(),
         });
@@ -5212,7 +5350,7 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
         s *= Math.min(1, avail / (rT * s + 6));
         if (s < 0.4) continue;
         (items[sp] ??= []).push({
-          x, y: h, z, s,
+          x, y: sinkBaseY(terrain, x, z, rT * s * 1.6), z, s,   // 板根腳印落底(見 sinkBaseY)
           ry: rnd() * Math.PI * 2, tx: (rnd() - 0.5) * 0.04, tz: (rnd() - 0.5) * 0.04,
           dj: rnd(),
         });
@@ -6350,18 +6488,28 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       gy = Math.min(gy, terrain.heightAt(lm.x + ox, lm.z + oz));
     }
     g.position.set(lm.x, gy - 0.3, lm.z);
+    // 碰撞橫斷面用的**局部**包圍盒 MUST 在套朝向之前量(此時 g 未旋轉 ⇒ 世界軸 = 局部軸);
+    // 量完才轉。轉完再 setFromObject 拿到的是旋轉後的世界 AABB,拿它當盒面就整個歪掉。
+    const lbb = new THREE.Box3().setFromObject(g);
     g.rotation.y = rnd() * Math.PI * 2;
     group.add(g);
     landmarkG.push({ g, x: lm.x, z: lm.z, r: (LANDMARK_COL[lm.type]?.r || 10) * sc });   // 碉堡淨空:整棟隱藏用
     const col = LANDMARK_COL[lm.type];
     if (col) {
-      // 地標是多箱體自訂幾何(主體 + 偏心側翼)+ 隨機朝向 → col.r 常內切於實際輪廓(側翼露在外),
-      // 玩家/鏡頭會鑽進側翼看穿牆。用整體包圍盒外接半徑當碰撞半徑(圓柱對旋轉不變,寧大不小)。
-      const bb = new THREE.Box3().setFromObject(g);
-      const footR = Math.max(
-        Math.hypot(bb.max.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.max.x - lm.x, bb.min.z - lm.z),
-        Math.hypot(bb.min.x - lm.x, bb.max.z - lm.z), Math.hypot(bb.min.x - lm.x, bb.min.z - lm.z));
-      blockers.push({ x: lm.x, z: lm.z, y: gy - 1, r: Math.max(col.r * sc, footR), h: col.h * sc + 1, bld: 1, cl: 'bld' });
+      // 地標是多箱體自訂幾何(主體 + 偏心側翼)+ 隨機朝向。碰撞橫斷面 MUST 是**有向盒**
+      // (A30:建物走 hw2/hd2/ry,圓只准當 broad-phase 且取外接半對角)—— 一直沿用的純圓柱
+      // 兩頭都不對:側翼那一側外露(打穿看得見的牆)、細長側又外擴(離牆十幾公尺的空氣擋彈),
+      // 長梯也只能架在那圈空氣上(2026-07-30:設施正面 MUST 貼著牆)。
+      // 盒心取局部包圍盒中心(偏心側翼靠盒心偏移吃進去),再依朝向轉回世界(three Euler(0,ry,0))。
+      const hw2 = Math.max(2, (lbb.max.x - lbb.min.x) / 2), hd2 = Math.max(2, (lbb.max.z - lbb.min.z) / 2);
+      const cx = (lbb.min.x + lbb.max.x) / 2 - lm.x, cz = (lbb.min.z + lbb.max.z) / 2 - lm.z;
+      const ca = Math.cos(g.rotation.y), sa = Math.sin(g.rotation.y);
+      blockers.push({
+        x: lm.x + cx * ca + cz * sa, z: lm.z - cx * sa + cz * ca,
+        y: gy - 1, h: col.h * sc + 1,   // 高度沿用 LANDMARK_COL(細長尖頂不該整段擋彈),只改橫斷面
+        bld: 1, cl: 'bld', hw2, hd2, ry: g.rotation.y,
+        r: Math.hypot(hw2, hd2),   // broad-phase:外接半對角(內切圓會讓盒角被提早剔掉)
+      });
     }
   }
 
