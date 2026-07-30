@@ -7,9 +7,10 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, barrageShots, barrageDur, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
   reachRule, blastCoreR,
@@ -351,6 +352,10 @@ export class BattleClient {
     this.isMorph = this.heroKind === 'morph';   // 傭兵變形機甲(飛行 ↔ 地面雙型態)
     this.flight = false;                        // morph:目前是否飛行型態
     this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
+    // 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT):爬升動力條 + 受擊掉高
+    this.lift = null;                           // 目前爬升動力(null = 尚未知電力上限 ⇒ 首幀補滿)
+    this._airSink = 0;                          // 受擊掉高:待落公尺數(逐幀以 _airSinkV 消化)
+    this._airSinkV = 0;                         // 待落公尺數的下降速率(= 待落總量 / FLIGHT.SINK_S)
 
     // 角色(專屬機體 + 輕/重武器 + 小招/大招);開房廣播帶 ch,快照亦會同步
     this.abil = { light: 1, heavy: 1, skill: 1, ult: 1 };   // 招式開場即 Lv1 可用(2026-07-20)
@@ -2851,6 +2856,7 @@ export class BattleClient {
           if (this._prevVital != null && vital < this._prevVital - 0.5 && !e.dead) {
             this.hud.hurt?.();
             this._lastHurtAt = performance.now() / 1000;   // 被攻擊時戳(無人機完美迴避的戰鬥狀態判定)
+            this._airSinkHit(this._prevVital - vital);     // 飛行機體受擊掉高(掉幅 ∝ 這次掉的護盾+裝甲)
           }
           this._prevVital = vital;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
@@ -3814,8 +3820,9 @@ export class BattleClient {
     } else if (ev.e === 'decoyLost') {
       if (ev.pid === this.youId) this.hud.feed?.(`📡 餌機超出 ${DECOY.LINK_M}m,鏈路中斷`);
     } else if (ev.e === 'barrage') {
-      // 重砲(巨炮)開窗:記射手時戳,讓其後短暫窗內的視覺彈體掛上氣旋噴射尾流(自己那份在 _tryFire 判)
-      if (ev.pid !== this.youId) this._barragePids.set(ev.pid, performance.now() / 1000 + BARRAGE.DUR + 0.3);
+      // 巨砲開窗:記射手時戳,讓其後短暫窗內的視覺彈體掛上氣旋噴射尾流(自己那份在 _tryFire 判)。
+      // 窗長由該輪發數推導(barrageDur,與伺服器同一支);缺 n 的舊訊息退回下限。
+      if (ev.pid !== this.youId) this._barragePids.set(ev.pid, performance.now() / 1000 + barrageDur(ev.n) + 0.3);
     } else if (ev.e === 'cast') {
       // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
       const c = CHARACTERS[ev.ch];
@@ -4354,7 +4361,7 @@ export class BattleClient {
     this.camera.updateMatrixWorld();
     const from = this.gunGroup.localToWorld(this._muzzle.clone());
     const max = def.range * this._altRangeMul(def)
-      * ((this._barrageUntil || 0) > performance.now() / 1000 ? BARRAGE.RANGE_F : 1);
+      * (this._barragingShot() ? BARRAGE.RANGE_F : 1);
     // ① 瞄準點(對空彈射沿用 _updateAaMode 掃到的那架,不另掃)
     const aaEnt = this._aaAim ? this._aaEnt : null;
     if (aaEnt && !aaEnt.dead && aaEnt.mesh.visible) {
@@ -4576,6 +4583,7 @@ export class BattleClient {
     this.firing = false;
     this._crashSent = false;
     this.trauma = 0.35;
+    this._airSink = 0;        // 換座機:掉高待落帳是上一具機體的,不跟著搬(_prevVital 同理)
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
@@ -4697,7 +4705,7 @@ export class BattleClient {
     const cur = this.side && !this.dead ? this._curWeapon() : null;
     const def = cur?.def;
     if (!def) { for (const ent of this.ents.values()) drop(ent); return; }
-    const rMul = cur.id === 'heavy' && (this._barrageUntil || 0) > now ? BARRAGE.RANGE_F : 1;
+    const rMul = cur.id === 'heavy' && this._barragingShot(now) ? BARRAGE.RANGE_F : 1;
     const rng = def.range * this._altRangeMul(def) * rMul;   // 與擊發同一組有效射程(高度制空 + 重砲窗)
     const rule = reachRule(def);
     // 換武器/重砲窗開關 ⇒ 快取的是「這把武器打不打得到」,整批作廢重評
@@ -4817,6 +4825,7 @@ export class BattleClient {
     this.firing = false;
     this.aiming = false;
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
+    this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
@@ -4858,6 +4867,8 @@ export class BattleClient {
     this.hud.deathCine?.(false);  // 熄紅框(#deadOverlay 由本幀 e.dead=false 的 hud.dead(null) 自動隱藏)
     this._spawnAt();
     this.vel.set(0, 0, 0);
+    this._airSink = 0;        // 重生:清掉高待落帳
+    this.lift = null;         // 重生:爬升動力補滿(首幀由 _stepLift 夾到上限)
     // 重生滿彈、重武器 CD 清空
     for (const [id, st] of Object.entries(this.wstate)) { st.ammo = this.wdef[id]?.mag ?? st.ammo; st.reloadEnd = 0; }
     this._crashSent = false;
@@ -5540,9 +5551,9 @@ export class BattleClient {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const { id, def, st } = this._curWeapon();
     if (!def || !st) return;
-    // 重砲傾洩窗(非變形機甲重砲模式):此窗內解除射速閘與電力門檻(0.5s 傾洩剩餘彈夾),射程 +20%。
-    // 觸發手勢是「狙擊模式長按右鍵」→ 窗內逐幀自動擊發清空彈夾,不需另按住開火鍵(否則彈夾根本不會傾洩)。
-    const barraging = id === 'heavy' && (this._barrageUntil || 0) > now;
+    // 巨砲(重砲模式)那一輪的砲彈:**不消耗一般重武器的彈夾** ⇒ 連帶解除射速閘/電力/裝填閘,射程 +20%。
+    // 觸發手勢是「狙擊模式長按右鍵」→ 窗內逐幀自動擊發打完該輪發數,不需另按住開火鍵(否則根本轟不出去)。
+    const barraging = id === 'heavy' && this._barragingShot(now);
     if (!this.firing && !barraging) return;
     if (this.empLeft > 0) {
       if (now - (this._empWarnAt || 0) > 1.5) { this._empWarnAt = now; this.hud.feed?.('⚡ 武器離線(遭電磁癱瘓)!'); }
@@ -5552,8 +5563,8 @@ export class BattleClient {
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
     if (!barraging && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
-    if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
-    if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
+    if (!barraging && st.reloadEnd > 0) return;                       // 填彈 / 冷卻中(巨砲不吃彈夾 ⇒ 裝填中照轟)
+    if (!barraging && st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
     const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
     if (!barraging && mpc > 0 && this.mp < mpc) {
@@ -5596,8 +5607,12 @@ export class BattleClient {
     }
     this.lastFireAt[id] = now;
     this.audio?.fire(def, id, this.side);   // 自機開火音(真實 def → 精確音色;閘門全過才播)
-    st.ammo--;
-    if (mpc > 0 && !barraging) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電(重砲窗免電力);快照回寫校正
+    // 巨砲那一輪:不扣彈夾、不扣電力(伺服器 _gateFire 同判),改扣該輪剩餘發數 —— 打完即收窗
+    if (barraging) this._barrageLeft = Math.max(0, (this._barrageLeft || 0) - 1);
+    else {
+      st.ammo--;
+      if (mpc > 0) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電;快照回寫校正
+    }
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
     // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
     if (prof.burst && !def.fan) {
@@ -5607,7 +5622,7 @@ export class BattleClient {
         this._settleUntil[id] = now + (prof.settle || 0.4);
       }
     }
-    if (st.ammo <= 0) this._startReload(id);
+    if (!barraging && st.ammo <= 0) this._startReload(id);
     // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
@@ -5999,9 +6014,10 @@ export class BattleClient {
     else this._launchBarrage();
   }
 
-  /** 重砲模式(非變形機甲:狙擊長按右鍵):送請求 + 開本地傾洩窗(0.5s 內快速傾洩剩餘重武器彈夾,
-   *  整夾追加一份「機種絕招傷害預算」(隨輕/重武器綜合等級成長,與自殺機/餌機等值,見 data.js SPECIAL)、
-   *  射程 +20%;伺服器權威把關 CD 與加成,見 sim.heroBarrage / barrageDmgF)。 */
+  /** 巨砲(重砲模式;非變形機甲:狙擊長按右鍵):送請求 + 開本地砲擊窗。
+   *  2026-07-30 改制:這一輪砲彈**不消耗一般重武器的彈夾**(免電力/射速/裝填閘)、每發 **100% 傷害**,
+   *  等值性由**發數** barrageShots()(絕招預算 ÷ 每發傷害)承擔;射程 +20%。
+   *  伺服器權威把關 CD、發數與免除窗(見 sim.heroBarrage / _gateFire / _barragingDmg)。 */
   _launchBarrage() {
     if (this.isDrone || this.isMorph || this.dead || !this.side) return;
     const now = performance.now() / 1000;
@@ -6012,15 +6028,23 @@ export class BattleClient {
       this.hud.feed?.(`🎯 重砲整備中(${cdLeft.toFixed(0)}s)`);
       return;
     }
-    // 無彈可傾洩(裝填中 / 空夾)→ 不啟動(與伺服器 heroBarrage 同條件,免白吃 CD;亦免本地時戳誤鎖 30s)
-    const hv = this.wstate?.heavy;
-    if (!hv || hv.reloadEnd > 0 || hv.ammo <= 0) { this.hud.feed?.('🎯 重砲需先裝填彈夾'); return; }
+    // 彈夾狀態**刻意不設閘**(與伺服器 heroBarrage 同條件):巨砲不吃彈夾,空夾/裝填中照樣轟。
+    const hvDef = this.wdef?.heavy;
+    if (!hvDef) return;
+    const n = barrageShots(hvDef, this.abil);
     this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(HUD;下一份快照的 bcd 校正)
     this._barrageCdUntil = now + BARRAGE.CD_S;              // 本地 CD 時戳(不被在途舊快照 bcd 洗掉)
-    this._barrageUntil = now + BARRAGE.DUR;
+    this._barrageLeft = n;                                  // 本輪剩餘發數(與伺服器 barrageLeft 同一份推導)
+    this._barrageUntil = now + barrageDur(n);
     this.trauma = Math.min(1, this.trauma + SHAKE.BARRAGE);   // 重砲展開的機體震動
     this.net.send({ t: 'barrage' });
-    this.hud.feed?.('💥 重砲模式:傾洩彈夾!');
+    this.hud.feed?.(`💥 巨砲齊射 ×${n} 發(不耗彈夾)!`);
+  }
+
+  /** 這一發是不是「巨砲那一輪」的砲彈 —— 客戶端唯一判據(對齊伺服器 _barragingDmg:窗內 **且** 發數未打完)。
+   *  免彈夾/免電力/解射速閘 + 射程 ×RANGE_F 的四個消費端 MUST 全吃這一支,MUST NOT 各自比對 `_barrageUntil`。 */
+  _barragingShot(now = performance.now() / 1000) {
+    return (this._barrageUntil || 0) > now && (this._barrageLeft || 0) > 0;
   }
 
   /** HUD 資料:輕/重武器 / 招式 / 資源(彈藥為本地 HUD,與伺服器小幅漂移是 by design) */
@@ -6048,13 +6072,19 @@ export class BattleClient {
       light: slotHud('light'), heavy: slotHud('heavy'),
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
+      // 爬升動力(飛行機體限定;非飛行狀態 = null ⇒ HUD 整條收起)。上限正比於電力,見 data.FLIGHT
+      lift: this._flying() ? { v: Math.max(0, this.lift ?? this._liftMax()), max: this._liftMax() } : null,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
       // 機種專屬能力(狙擊模式長按右鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
       kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
       decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
-      // 重砲 CD 取「伺服器 bcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,HUD 不會瞬閃「就緒」
+      // 巨砲 CD 取「伺服器 bcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,HUD 不會瞬閃「就緒」;
+      // left = 這一輪剩餘發數(窗內才 > 0;發數是與伺服器同一份推導,見 barrageShots)
       barrage: (!this.isDrone && !this.isMorph)
-        ? { cd: Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - performance.now() / 1000) } : null,
+        ? {
+          cd: Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - performance.now() / 1000),
+          left: this._barragingShot(now) ? (this._barrageLeft || 0) : 0,
+        } : null,
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
       mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
@@ -6473,6 +6503,46 @@ export class BattleClient {
     });
   }
 
+  // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
+  /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力) */
+  _liftMax() { return liftMax(this.maxMp || UNITS[this.heroKind]?.mp || 0); }
+
+  /**
+   * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
+   * (全速 = liftDrainPS ⇒ 滿動力撐 FLIGHT.DRAIN_S 秒);動力見底把上升分量歸零(= 爬不上去,
+   * 不是變慢),水平/下降/懸停不受影響。回速正比於電力回速 × 充能軌(liftRegen)。
+   */
+  _stepLift(dt, now, target, u) {
+    const lMax = this._liftMax();
+    if (this.lift == null || this.lift > lMax) this.lift = lMax;   // 首幀 / 電力上限變動 → 夾回上限
+    const vsp = Math.max(1e-6, u?.vspeed || 0);
+    if (target.y > 0) {
+      if (this.lift <= 0) {
+        target.y = 0;                                  // 動力耗盡:爬不上去(仍可懸停/下降/平飛)
+        if (now - (this._liftWarnAt || 0) > 3) {
+          this._liftWarnAt = now;
+          this.hud.feed?.('🪫 爬升動力耗盡:無法繼續上升(降低高度或稍候回充)');
+        }
+      } else {
+        this.lift = Math.max(0, this.lift
+          - liftDrainPS(this.maxMp || 0) * Math.min(1, target.y / vsp) * dt);
+      }
+    } else {
+      this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * dt);
+    }
+  }
+
+  /**
+   * 受擊掉高入帳(飛行機體限定):掉的總公尺數 ∝ 該次傷害(airSinkM 推導,MUST NOT 在此手寫係數)。
+   * 只記帳不直接改高度 —— 8Hz 快照一次入帳的傷害若直接扣 y,畫面上是瞬移;
+   * 逐幀以「待落總量 / FLIGHT.SINK_S」的速率消化 ⇒ **總掉幅只由傷害決定**,SINK_S 只管節奏。
+   */
+  _airSinkHit(dmg) {
+    if (!this._flying() || !(dmg > 0)) return;
+    this._airSink = (this._airSink || 0) + airSinkM(dmg);
+    this._airSinkV = this._airSink / FLIGHT.SINK_S;
+  }
+
   // ---------------- 玩家移動 ----------------
   _updatePlayer(dt, now) {
     if (!this.side) { this._updateSpectator(dt); return; }
@@ -6533,10 +6603,22 @@ export class BattleClient {
       }
       if (this.keys.Space) target.y += u.vspeed * ccF;
       if (this.keys.KeyC || this.keys.ControlLeft) target.y -= u.vspeed * ccF;
+      // 爬升動力(2026-07-30 使用者需求;唯一縫 data.js FLIGHT):**往上飛才耗動力** ——
+      // 耗速 ∝ 爬升率(全速爬升 = liftDrainPS ⇒ 滿動力恰好撐 FLIGHT.DRAIN_S 秒),
+      // 見底 = 爬不上去(上升分量歸零,水平/下降/懸停完全不受影響),不爬升即回充(∝ 電力回速)。
+      // 上限/回速皆正比於電力(伺服器權威的 maxMp 與充能軌等級)⇒ MUST NOT 在此手寫係數。
+      this._stepLift(dt, now, target, u);
       this.vel.x += (target.x - this.vel.x) * Math.min(1, dt * 4);
       this.vel.z += (target.z - this.vel.z) * Math.min(1, dt * 4);
       this.vel.y += (target.y - this.vel.y) * Math.min(1, dt * 4);
       this.pos.addScaledVector(this.vel, dt);
+      // 受擊掉高(2026-07-30 使用者需求):待落公尺數逐幀消化 —— 總掉幅 ∝ 傷害(airSinkM,
+      // 於快照偵測到掉血時入帳,見 _airSinkHit),SINK_S 只決定「掉多快」不改總量。
+      if (this._airSink > 0) {
+        const d = Math.min(this._airSink, this._airSinkV * dt);
+        this.pos.y -= d;
+        this._airSink -= d;
+      }
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水。
       // 變形機甲兩棲浮台(水面/沼面)由 _wetSurfaceY 統一 ⇒ 觸地變形停在可見濕地表面(見該函式)。
@@ -6552,6 +6634,7 @@ export class BattleClient {
       const lat = this.vel.x * right.x + this.vel.z * right.z;
       this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
     } else {
+      this._airSink = 0;   // 地面型態不掉高(變形機甲觸地即清帳,免落地後被舊帳往下拉)
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
       // 蓄力中重心下沉、移動減速(起跳預備動作;morph 變形彈射與 robot 蓄力跳共用 this.charge)
       const slowK = 1 - 0.6 * this.charge;

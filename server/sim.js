@@ -7,7 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
-  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
+  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -1266,23 +1266,31 @@ export class BattleSim {
    */
   _gateFire(h, id, def, lenient) {
     const now = this.t;
-    // 重砲傾洩窗(非變形機甲重砲模式):此窗內重武器解除射速閘與電力門檻,傾洩剩餘彈夾。
-    // 用加成窗(DUR + GRACE)而非 DUR:拋射彈落點才回報 _gateFire,DUR 早過會讓同輪第 2 發起被射速閘擋掉。
+    // 巨砲(重砲模式)那一輪的砲彈(2026-07-30 改制,見 data.BARRAGE):**不消耗一般重武器的彈夾**
+    // ⇒ 連帶不吃電力/射速閘/裝填閘(空夾、裝填中照樣轟得出去);傷害 100%(_heroDmg 已無倍率)。
+    // 用免除窗(barrageDur + DMG_GRACE)而非開窗長度本身:拋射彈落點才回報 _gateFire,
+    // 窗早過會讓同輪第 2 發起被射速閘擋掉。窗不會外溢的保證 = 發數 barrageLeft(逐發遞減)。
     const barrage = id === 'heavy' && this._barragingDmg(h);
-    // 填彈完成 → 補滿
+    // 填彈完成 → 補滿(巨砲不碰彈夾,但這一輪期間彈夾照樣自己裝填完)
     if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
       h.ammo[id] = def.mag;
       h.reloadUntil[id] = 0;
     }
+    if (barrage) {
+      h.barrageLeft = Math.max(0, (h.barrageLeft || 0) - 1);   // 發數是權威資源:歸零即窗關(_barragingDmg 同判)
+      h.fireAt[id] = now;
+      h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
+      return true;
+    }
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
-    if (!barrage && now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
+    if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
     if (h.ammo[id] <= 0) { h.reloadUntil[id] = now + this._reloadT(h, def); return false; }
     const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
-    if (mpc > 0 && !barrage && h.mp < mpc) return false;   // 重武器電力不足:禁射(重砲窗免電力;小隊電力共用,只扣一次)
+    if (mpc > 0 && h.mp < mpc) return false;   // 重武器電力不足:禁射(小隊電力共用,只扣一次)
     h.fireAt[id] = now;
     h.ammo[id]--;
-    if (mpc > 0 && !barrage) h.mp -= mpc;
+    if (mpc > 0) h.mp -= mpc;
     if (h.ammo[id] <= 0) h.reloadUntil[id] = now + this._reloadT(h, def);  // 打空自動填彈
     h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
     return true;
@@ -1300,23 +1308,22 @@ export class BattleSim {
     h.reloadUntil[wp.id] = this.t + this._reloadT(h, wp.def);
   }
 
-  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成 × 重砲模式加成;火力成長走武器面向 lw/hw 的階級數值) */
+  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成;火力成長走武器面向 lw/hw 的階級數值)。
+   *  巨砲 2026-07-30 起**每發 100% 傷害** ⇒ 這裡 MUST NOT 再乘任何重砲倍率(等值性改由發數承擔)。 */
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
-      * this._buffMul(h, 'dmg')
-      // 重砲模式:每發倍率由機種絕招預算 ÷ 整夾爆發推導(整夾 ≈ 追加一份預算,與另兩招等值;
-      // 加成窗涵蓋彈體飛行時間,見 _barragingDmg)
-      * (def.id === 'heavy' && this._barragingDmg(h) ? barrageDmgF(def, h?.abil) : 1);
+      * this._buffMul(h, 'dmg');
   }
 
-  /** 重砲傾洩窗(DUR)是否生效:純客戶端傾洩節奏用途,目前無伺服器結算讀它 —— 保留為語意錨。 */
+  /** 重砲開窗(barrageDur)是否生效:純客戶端傾洩節奏用途,目前無伺服器結算讀它 —— 保留為語意錨。 */
   _barraging(h) { return (h?.barrageUntil || 0) > this.t; }
 
-  /** 重砲加成窗(DUR + DMG_GRACE):涵蓋拋射彈飛行時間,落點才回報的榴彈/火箭/飛彈仍吃 2× 傷害/解射速閘/
-   *  加程驗證(見 BARRAGE.DMG_GRACE)。彈夾此時已空且裝填中,不會有非傾洩重武器射擊誤吃加成。 */
+  /** 這一發是不是「巨砲那一輪」的砲彈(免彈夾/電力/射速 + 射程 ×RANGE_F 的唯一判據):
+   *  免除窗(barrageDur + DMG_GRACE,涵蓋拋射彈飛行時間)**且**該輪發數未打完(barrageLeft > 0)。
+   *  兩個條件缺一不可 —— 只看窗 = 窗內無限開火(免彈免電),只看發數 = 窗過期後仍白吃。 */
   _barragingDmg(h) {
     const bu = h?.barrageUntil || 0;
-    return bu > 0 && bu + BARRAGE.DMG_GRACE > this.t;
+    return bu > 0 && bu + BARRAGE.DMG_GRACE > this.t && (h?.barrageLeft || 0) > 0;
   }
 
   /** 空中判定:無人機/直升機/餌機/自殺機恆算飛行;其餘(機甲/變形/NPC)以高度 ≥ AA_MIN_ALT 論 */
@@ -1998,20 +2005,24 @@ export class BattleSim {
   }
 
   /**
-   * 重砲模式(2026-07-18;非變形機甲:狙擊模式長按左鍵)。開一個 BARRAGE.DUR 秒的傾洩窗:
-   * 此窗內重武器解除射速閘與電力門檻(客戶端 0.5s 內傾洩剩餘彈夾),傷害 ×DMG_F、射程 ×RANGE_F;
-   * 獨立於彈夾裝填的 CD_S 冷卻。加成結算在 _gateFire(解閘)/_heroDmg(傷害)/各射程驗證處(_barraging)。
+   * 重砲模式(巨砲;2026-07-18;非變形機甲:狙擊模式長按右鍵)。2026-07-30 改制為**獨立一輪砲擊**:
+   * 開窗期間的重武器射擊**不消耗一般彈夾**(連帶免電力/射速/裝填閘)、每發 100% 傷害、射程 ×RANGE_F;
+   * 一輪的發數 = barrageShots()(絕招預算 ÷ 每發傷害),開窗長度 = barrageDur(發數);獨立 CD_S 冷卻。
+   * 結算三處:_gateFire(免除 + 發數遞減)/ _barragingDmg(唯一判據)/ 各射程驗證處。
+   * 彈夾狀態**刻意不再是前置條件** —— 巨砲不吃彈夾,空夾/裝填中正是最需要它的時候。
    */
   heroBarrage(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'robot' || this.over) return;   // 非變形機甲專屬
     if (!h.aiming) return;                        // 必須在狙擊模式
     if (this.t < (h.barrageCd || 0)) return;      // 冷卻中(靜默丟棄)
-    // 彈夾空 / 裝填中 → 無彈可傾洩(重砲窗解射速閘/電力,但不解裝填閘),不啟動以免白吃 30s CD
-    if ((h.reloadUntil?.heavy || 0) > this.t || h.ammo?.heavy === 0) return;
+    const wp = this._heroWeapon(h, 'heavy');
+    if (!wp) return;
+    const n = barrageShots(wp.def, h.abil);
     h.barrageCd = this.t + BARRAGE.CD_S;
-    h.barrageUntil = this.t + BARRAGE.DUR;
-    this.events.push({ e: 'barrage', pid, side: h.side });
+    h.barrageLeft = n;
+    h.barrageUntil = this.t + barrageDur(n);
+    this.events.push({ e: 'barrage', pid, side: h.side, n });
   }
 
   /**
@@ -2945,7 +2956,7 @@ export class BattleSim {
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
-    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null; b.barrageUntil = 0;
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null; b.barrageUntil = 0; b.barrageLeft = 0;
     if (soloWipe) {
       b.mp = b.maxMp;
       b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;

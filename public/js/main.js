@@ -15,6 +15,7 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
+  FLIGHT,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -1854,6 +1855,15 @@ function makeHud() {
         $('mpBar').style.width = `${Math.max(0, Math.min(100, w.mp / w.mm * 100))}%`;
         $('mpBar').classList.toggle('overcharge', mpo);
         $('mpText').textContent = `電力 ${Math.floor(w.mp)} / ${w.mm}${mpo ? ' ⚡' : ''}`;
+        // 爬升動力(飛行機體才有這條;地面機甲整條收起)—— 見底 = 爬不上去,橘紅警示
+        const lf = w.lift;
+        $('liftBox').classList.toggle('hidden', !lf);
+        if (lf) {
+          const p2 = lf.max > 0 ? lf.v / lf.max : 0;
+          $('liftBar').style.width = `${Math.max(0, Math.min(100, p2 * 100))}%`;
+          $('liftBar').classList.toggle('low', p2 <= FLIGHT.LOW_F);
+          $('liftText').textContent = `爬升動力 ${Math.round(p2 * 100)}%`;
+        }
         // 輕武器:彈藥 / 填彈(瞄準中 HUD 高亮重武器)
         const l = w.light;
         $('wpnName').textContent = `${l.name} Lv.${l.lvl}${w.emp > 0 ? ' ⚡離線' : ''}`;
@@ -1870,7 +1880,8 @@ function makeHud() {
         const abCd = w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.barrage ? (w.barrage.cd || 0) : 0;
         const abTag = w.kami ? (w.kami.cd > 0.05 ? `(護衛機 ${w.kami.cd.toFixed(0)}s)` : `(護衛機 ×${w.kami.n} 就緒)`)
           : w.decoy ? (w.decoy.ready ? '(餌機就緒)' : `(餌機 ${w.decoy.cd.toFixed(0)}s)`)
-          : w.barrage ? (w.barrage.cd > 0.05 ? `(重砲 ${w.barrage.cd.toFixed(0)}s)` : '(重砲就緒)')
+          : w.barrage ? (w.barrage.left > 0 ? `(巨砲齊射 ×${w.barrage.left})`
+            : w.barrage.cd > 0.05 ? `(巨砲 ${w.barrage.cd.toFixed(0)}s)` : '(巨砲就緒)')
           : '';
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${abTag}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)

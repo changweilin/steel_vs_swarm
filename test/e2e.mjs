@@ -10,7 +10,7 @@ import {
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, BARRAGE,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
-  SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
+  SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
@@ -515,44 +515,52 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(LOCK.TTL > 0 && DECOY.CD_S > 0, '鎖定時效 / 餌機冷卻皆為正值');
   }
 
-  log('— sim:非變形機甲重砲模式(狙擊長按左鍵:傾洩彈夾 / 追加一份絕招預算 / +20% 射程 / 獨立 CD)—');
+  log('— sim:巨砲(重砲模式;2026-07-30 改制:不消耗彈夾 / 每發 100% 傷害 / 發數 = 一份絕招預算)—');
   {
     const rb3 = sim.heroes.get('p_r');
     rb3.dead = false; rb3.hp = rb3.maxHp; rb3.mp = rb3.maxMp; rb3.x = 0; rb3.z = 0; rb3.y = 0;
-    rb3.barrageCd = 0; rb3.barrageUntil = 0;
+    rb3.barrageCd = 0; rb3.barrageUntil = 0; rb3.barrageLeft = 0;
     rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
-    // 只有非變形機甲能重砲
-    sim.heroBarrage('p_d'); assert(!((sim.heroes.get('p_d').barrageUntil || 0) > sim.t), '無人機不能重砲');
-    sim.heroBarrage('p_m'); assert(!((sim.heroes.get('p_m').barrageUntil || 0) > sim.t), '變形機甲不能重砲');
+    // 只有非變形機甲能巨砲
+    sim.heroBarrage('p_d'); assert(!((sim.heroes.get('p_d').barrageUntil || 0) > sim.t), '無人機不能巨砲');
+    sim.heroBarrage('p_m'); assert(!((sim.heroes.get('p_m').barrageUntil || 0) > sim.t), '變形機甲不能巨砲');
     // 需在狙擊模式
     rb3.aiming = false; sim.heroBarrage('p_r');
-    assert(!((rb3.barrageUntil || 0) > sim.t), '非狙擊模式不能重砲');
+    assert(!((rb3.barrageUntil || 0) > sim.t), '非狙擊模式不能巨砲');
     rb3.aiming = true;
-    // 彈夾裝填中無彈可傾洩 → 不啟動(免白吃 30s CD)
-    rb3.reloadUntil = { heavy: sim.t + 5 }; sim.heroBarrage('p_r');
-    assert(!((rb3.barrageUntil || 0) > sim.t) && !((rb3.barrageCd || 0) > sim.t), '彈夾裝填中觸發重砲無效(不白吃 CD)');
-    rb3.reloadUntil = {};
+    // 彈夾狀態不再是前置條件:巨砲不吃彈夾 ⇒ 裝填中/空夾照樣能轟(2026-07-30 使用者需求)
+    rb3.reloadUntil = { heavy: sim.t + 5 }; rb3.ammo = { heavy: 0 };
     sim.heroBarrage('p_r');
-    assert((rb3.barrageUntil || 0) > sim.t && (rb3.barrageCd || 0) > sim.t, '重砲開窗 + 進入獨立 CD');
-    // 傷害加成:重武器 ×barrageDmgF(其他倍率相同 → 比值 = 該倍率;2026-07-27 起由絕招預算推導)
-    const whv = heroWeapon('t01', 'heavy', rb3.abil.heavy || 1, true);   // id 已是 'heavy'
-    const expF = barrageDmgF(whv, rb3.abil);
-    const buffed = sim._heroDmg(rb3, whv, 'tank');
-    rb3.barrageUntil = 0;
-    const plain = sim._heroDmg(rb3, whv, 'tank');
-    assert(Math.abs(buffed / plain - expF) < 1e-6, `重砲傷害 ×${expF.toFixed(2)}(實測 ${(buffed / plain).toFixed(2)})`);
-    assert(expF >= BARRAGE.DMG_MIN - 1e-9 && expF <= BARRAGE.DMG_MAX + 1e-9,
-      `重砲每發倍率夾在 ${BARRAGE.DMG_MIN}~${BARRAGE.DMG_MAX}`);
-    assert(Math.abs((expF - 1) * whv.dmg * whv.mag - specialBudget(rb3.abil)) < 1,
-      `整夾傾洩的追加傷害 = 一份絕招預算 $${Math.round(specialBudget(rb3.abil))}`);
-    // 傾洩:窗內解射速閘,一口氣打完整個彈夾
-    rb3.barrageUntil = sim.t + BARRAGE.DUR;
-    rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {}; rb3.mp = rb3.maxMp;
+    assert((rb3.barrageUntil || 0) > sim.t && (rb3.barrageCd || 0) > sim.t,
+      '彈夾裝填中/空夾照樣開得出巨砲(巨砲不消耗一般重武器彈夾)');
     const wp = sim._heroWeapon(rb3, 'heavy');
+    const nShots = barrageShots(wp.def, rb3.abil);
+    assert(rb3.barrageLeft === nShots, `開窗即定案該輪發數 ${nShots} 發(barrageShots 單一縫)`);
+    assert(Math.abs((rb3.barrageUntil - sim.t) - barrageDur(nShots)) < 1e-9,
+      `開窗長度 = barrageDur(${nShots}) = ${barrageDur(nShots)}s(推導不手寫)`);
+    // 每發 100% 傷害:窗內窗外 _heroDmg 完全相同(MUST NOT 再乘任何重砲倍率)
+    const whv = heroWeapon('t01', 'heavy', rb3.abil.heavy || 1, true);   // id 已是 'heavy'
+    const inWin = sim._heroDmg(rb3, whv, 'tank');
+    rb3.barrageUntil = 0; rb3.barrageLeft = 0;
+    const plain = sim._heroDmg(rb3, whv, 'tank');
+    assert(Math.abs(inWin - plain) < 1e-9, `巨砲每發 100% 傷害(窗內 ${inWin.toFixed(1)} = 窗外 ${plain.toFixed(1)})`);
+    // 齊射:窗內解射速閘 + 不扣彈夾/電力,恰好打完該輪發數,之後回歸一般重武器規則
+    rb3.barrageCd = 0; rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {}; rb3.mp = rb3.maxMp;
+    sim.heroBarrage('p_r');
+    const ammo0 = wp.def.mag, mp0 = rb3.mp;
+    rb3.ammo = { heavy: ammo0 };
     let fired = 0;
-    for (let i = 0; i < wp.def.mag + 3; i++) if (sim._gateFire(rb3, 'heavy', wp.def, true)) fired++;
-    assert(fired === wp.def.mag, `重砲窗內解射速閘,一口氣傾洩整個彈夾 ${wp.def.mag} 發(實際 ${fired})`);
-    rb3.barrageUntil = 0; rb3.barrageCd = 0; rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
+    for (let i = 0; i < nShots + 3; i++) if (sim._gateFire(rb3, 'heavy', wp.def, true)) fired++;
+    assert(fired >= nShots, `巨砲窗內解射速閘,一口氣打完 ${nShots} 發(實際擊發 ${fired})`);
+    assert(rb3.barrageLeft === 0, '該輪發數打完歸零(發數是權威資源)');
+    assert(rb3.ammo.heavy >= ammo0 - (fired - nShots),
+      `巨砲那 ${nShots} 發不消耗一般重武器彈夾(彈夾 ${ammo0} → ${rb3.ammo.heavy})`);
+    assert(rb3.mp >= mp0 - heavyMpCost(wp.def) * (fired - nShots) - 1e-9,
+      '巨砲那一輪不耗電力(只有超出發數的一般重武器射擊才扣)');
+    // 發數打完 → 免除窗失效(即使時間窗還在):後續射擊回到扣彈夾的一般規則
+    assert(!sim._barragingDmg(rb3), '發數打完即窗關(_barragingDmg 同時看窗與發數)');
+    rb3.barrageUntil = 0; rb3.barrageCd = 0; rb3.barrageLeft = 0;
+    rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
   }
 
   log('— data:機種絕招三招同預算 + 隨輕/重武器綜合等級成長(2026-07-27)—');
@@ -578,17 +586,22 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
         assert(Math.abs(tot - budget) <= budget * 0.02,
           `綜合 Lv${specialTier(abil)} ${name}總傷害 ${Math.round(tot)} ≈ 預算 ${Math.round(budget)}`);
       }
-      // 重砲:整夾傾洩的追加傷害 = 同一份預算(未被夾制的武器);夾到上下限者只驗夾制生效
+      // 巨砲(2026-07-30 改制):整輪 = 發數 × 每發 100% 傷害 ≈ 同一份預算。
+      // 誤差上界 = 半發(發數只能是整數、每發傷害固定 100% —— 使用者定調,MUST NOT 縮放每發傷害去湊)
       const hw = heroWeapon('t01', 'heavy', abil.heavy, true);
-      const add = (barrageDmgF(hw, abil) - 1) * hw.dmg * hw.mag;
-      assert(Math.abs(add - budget) <= budget * 0.02
-        || barrageDmgF(hw, abil) === BARRAGE.DMG_MAX || barrageDmgF(hw, abil) === BARRAGE.DMG_MIN,
-        `綜合 Lv${specialTier(abil)} 重砲整夾追加 ${Math.round(add)} ≈ 預算 ${Math.round(budget)}`);
+      const tot = barrageShots(hw, abil) * hw.dmg;
+      assert(Math.abs(tot - budget) <= hw.dmg / 2 + 1e-6
+        || barrageShots(hw, abil) === BARRAGE.SHOTS_MAX || barrageShots(hw, abil) === BARRAGE.SHOTS_MIN,
+        `綜合 Lv${specialTier(abil)} 巨砲整輪 ${Math.round(tot)} ≈ 預算 ${Math.round(budget)}(誤差 ≤ 半發)`);
     }
-    // 32 角色全數落在夾制區間內(沒有任何一把重武器的重砲倍率失控)
-    const fs = Object.keys(CHARACTERS).map((ch) => barrageDmgF(heroWeapon(ch, 'heavy', 1, true), L1));
-    assert(fs.every((f) => f >= BARRAGE.DMG_MIN - 1e-9 && f <= BARRAGE.DMG_MAX + 1e-9),
-      `32 角重砲倍率全在 ${BARRAGE.DMG_MIN}~${BARRAGE.DMG_MAX}(實測 ${Math.min(...fs).toFixed(2)}~${Math.max(...fs).toFixed(2)})`);
+    // 32 角色全數落在夾制區間內(沒有任何一把重武器的巨砲發數失控)
+    const ns = Object.keys(CHARACTERS).map((ch) => barrageShots(heroWeapon(ch, 'heavy', 1, true), L1));
+    assert(ns.every((n) => n >= BARRAGE.SHOTS_MIN && n <= BARRAGE.SHOTS_MAX && Number.isInteger(n)),
+      `32 角巨砲發數全在 ${BARRAGE.SHOTS_MIN}~${BARRAGE.SHOTS_MAX} 且為整數(實測 ${Math.min(...ns)}~${Math.max(...ns)})`);
+    // 開窗長度隨發數單調不減(低幀率也打得完;MUST NOT 退回固定 DUR)
+    assert(barrageDur(BARRAGE.SHOTS_MAX) >= barrageDur(BARRAGE.SHOTS_MIN)
+      && barrageDur(BARRAGE.SHOTS_MAX) >= BARRAGE.SHOTS_MAX * BARRAGE.SHOT_GAP - 1e-9,
+      `開窗長度由發數推導(${BARRAGE.SHOTS_MIN} 發 ${barrageDur(BARRAGE.SHOTS_MIN)}s → ${BARRAGE.SHOTS_MAX} 發 ${barrageDur(BARRAGE.SHOTS_MAX)}s)`);
   }
 
   log('— data:八軌升級第三階單價 = $200(2026-07-27)—');

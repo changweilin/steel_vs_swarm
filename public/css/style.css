@@ -1333,6 +1333,22 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--mono); font-size: 8px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
 }
+/* 爬升動力條(飛行機體專屬;非飛行狀態整條收起 —— 地面機甲的版型不變) */
+.liftbar { position: relative; height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden; }
+.liftbar.hidden { display: none; }
+.liftbar-fill {
+  height: 100%; background: repeating-linear-gradient(90deg, #46b8a0 0 11px, rgba(5, 7, 10, 0.45) 11px 12px);
+  transition: width 0.15s steps(10);
+}
+/* 動力見底:爬不上去 —— 橘紅脈動,與「電力不足」的金色 overcharge 明確分色 */
+.liftbar-fill.low {
+  background: repeating-linear-gradient(90deg, #e07a3c 0 11px, rgba(80, 30, 5, 0.5) 11px 12px);
+  box-shadow: 0 0 6px #e07a3c; animation: mp-oc 0.9s ease-in-out infinite;
+}
+.lift-text {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 8px; font-weight: 700; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
+}
 
 /* 三機小隊狀態列(無人機專屬;V 循環切換、1~3 直選主視野) */
 .squad-row { display: flex; gap: 3px; }
@@ -1791,7 +1807,7 @@ body.touch-ui .hud-side {
   font-size: 10px; letter-spacing: 2px; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
-body.touch-ui .hpbar, body.touch-ui .spbar, body.touch-ui .mpbar { height: 13px; }
+body.touch-ui .hpbar, body.touch-ui .spbar, body.touch-ui .mpbar, body.touch-ui .liftbar { height: 13px; }
 body.touch-ui .hp-text, body.touch-ui .sp-text, body.touch-ui .mp-text { font-size: 10px; letter-spacing: 1px; }
 body.touch-ui .wpn-box { padding: 2px 6px; font-size: 11px; white-space: nowrap; overflow: hidden; }
 body.touch-ui .burst-box, body.touch-ui .money-box {
@@ -1879,7 +1895,8 @@ body.touch-ui.ori-landscape .hud-side { font-size: 9px; letter-spacing: 1px; }
 body.touch-ui.ori-landscape .squad-row { gap: 2px; }
 body.touch-ui.ori-landscape .hpbar,
 body.touch-ui.ori-landscape .spbar,
-body.touch-ui.ori-landscape .mpbar { height: 10px; }
+body.touch-ui.ori-landscape .mpbar,
+body.touch-ui.ori-landscape .liftbar { height: 10px; }
 body.touch-ui.ori-landscape .hp-text,
 body.touch-ui.ori-landscape .sp-text,
 body.touch-ui.ori-landscape .mp-text { font-size: 9px; letter-spacing: 0; }
