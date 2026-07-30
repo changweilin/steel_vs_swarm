@@ -133,6 +133,8 @@ const NET_HANDLERS = {
   sync: (m) => onSync(m),
   rooms: (m) => renderRooms(m.rooms),
   error: (m) => {
+    // 回連失敗(座位已失效:房間結束/清位逾期)→ 清掉過期憑證,免每次開頁都吃一次錯誤
+    if (m.code === 'reattach') sessionStorage.removeItem('svs_token');
     toast(`⚠️ ${m.msg}`);
     // 開房被拒(驗證失敗)→ 解鎖建立鈕讓房主重試
     if (app.phaseShown === 'openroom') $('createRoomBtn').disabled = !app.favCfg;
@@ -140,7 +142,9 @@ const NET_HANDLERS = {
     if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
   },
   info: (m) => toast(m.msg),
-  battleConfig: (m) => enterLoading(m.config),
+  // 對局中 WS 斷線重連,伺服器會補送 battleConfig:戰場還活著就不重建(快照恢復即續戰);
+  // 只有沒有現役戰場(初載/跳頁後回連/中途觀戰加入)才走載入流程
+  battleConfig: (m) => { if (!app.battle) enterLoading(m.config); },
   // 危險區靜態資料(地雷等):可能比 BattleClient 早到,先暫存
   field: (m) => { app.fieldMsg = m; app.battle?.onField(m); },
   snap: (m) => app.battle?.onSnap(m),
@@ -163,6 +167,11 @@ function connectNet() {
     renderRooms([]);
     return;
   }
+  // 中斷/網頁跳出後回連:同分頁座位憑證還在 → 先認回座位(排進佇列,連上就送;
+  // 伺服器重綁 send 並補送 battleConfig → 進入載入流程直達戰場)。
+  // 單機不留座(dropMs 0)憑證無意義;切換連線機制時憑證已清除(見 renderLinkModes)。
+  const tk = sessionStorage.getItem('svs_token');
+  if (tk && app.net.mode !== 'solo') app.net.send({ t: 'reattach', token: tk });
   refreshRooms();
 }
 
@@ -2313,6 +2322,9 @@ function onSync(m) {
       $('loadLabel').textContent = `等待:${waiting.join('、')} 載入地形…`;
     }
   } else if (phase === 'game' || phase === 'over') {
+    // 斷線/跳頁後回連直達戰局:renderRoom 不會跑,自己的陣營從 lobby 還原(觀戰者維持 null)
+    const me = m.lobby.clients.find((c) => c.id === app.youId);
+    if (me) app.mySide = me.side || null;
     if (app.terrain && !app.battle) enterGame();
   }
 }

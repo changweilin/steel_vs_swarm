@@ -65,6 +65,8 @@ export class RoomHub {
    *   log(msg)    → 記錄(伺服器給 console.log;單機給 no-op)
    *   maxRooms    → 房間數上限(0 = 不限)。雲端公開節點 MUST 設,免單一節點被開房洗掉
    *   dropMs      → 對局中斷線保留座位的毫秒數(單機可設 0:自己就是唯一玩家)
+   *   noHumanMs   → 對局中「全部真人(玩家+觀戰)都斷線/離開」持續這麼久 → 直接結束該場遊戲並清房
+   *                 (bot 對打沒人看是純空轉;座位 token 隨房失效,晚歸的回連會收到「座位已失效」)
    */
   constructor(opts = {}) {
     this.rooms = new Map();
@@ -72,6 +74,7 @@ export class RoomHub {
     this.log = opts.log || (() => {});
     this.maxRooms = opts.maxRooms || 0;
     this.dropMs = opts.dropMs ?? 10 * 60 * 1000;
+    this.noHumanMs = opts.noHumanMs ?? 60 * 1000;
     this._nextClientId = 1;
   }
 
@@ -172,8 +175,12 @@ export class RoomHub {
     room.clients.delete(clientId);
     if (room.clients.size === 0) {
       this.stopBattle(room);
-      this.rooms.delete(room.pin);
-      this.log(`🧹 房間 ${room.pin} 已清除`);
+      // PIN 可能已被回收再發(無真人逾時清房後 _genPin 會重用)—— 只刪仍指向本房的登記,
+      // 免得晚到的 dropMs 清位計時器把別人的新房從 PIN 表上踢掉
+      if (this.rooms.get(room.pin) === room) {
+        this.rooms.delete(room.pin);
+        this.log(`🧹 房間 ${room.pin} 已清除`);
+      }
       return;
     }
     if (room.hostId === clientId) {
@@ -210,10 +217,19 @@ export class RoomHub {
     const field = room.battle.fieldPayload();
     for (const c of room.clients.values()) c.send(field);
     let last = Date.now();
+    room.noHumanAt = 0;   // 對局中無真人計時(見下方檢查)
     room.tickTimer = setInterval(() => {
       const now = Date.now();
       const dt = Math.min(0.5, (now - last) / 1000);
       last = now;
+      // 無真人玩家逾時:全部真人(玩家+觀戰)都斷線/離開超過 noHumanMs → 直接結束該場遊戲。
+      // 斷線座位靠 dropMs 保留等回連;但整房都沒真人時 bot 對打是純空轉,一分鐘沒人回來就收掉。
+      if (this.noHumanMs > 0) {
+        const anyHuman = [...room.clients.values()].some((c) => c.connected !== false);
+        if (anyHuman) room.noHumanAt = 0;
+        else if (!room.noHumanAt) room.noHumanAt = now;
+        else if (now - room.noHumanAt >= this.noHumanMs) { this._endAbandoned(room); return; }
+      }
       for (const brain of room.botBrains) brain.update(dt);
       room.battle.tick(dt);
       // 霧戰爭:各陣營依己方視野收到不同過濾後的快照;觀戰者收無霧全局快照
@@ -237,6 +253,15 @@ export class RoomHub {
     if (room.tickTimer) { clearInterval(room.tickTimer); room.tickTimer = null; }
     room.botBrains = [];
     if (!keepPhase) room.battle = null;
+  }
+
+  /** 對局中無真人玩家逾時:直接結束該場遊戲並清房。
+      清空座位讓 dropMs 到期的清位計時器自然 no-op;token 隨房失效,晚歸的回連會收到「座位已失效」。 */
+  _endAbandoned(room) {
+    this.stopBattle(room);
+    if (this.rooms.get(room.pin) === room) this.rooms.delete(room.pin);
+    room.clients.clear();
+    this.log(`⏱ 房間 ${room.pin} 對局中無真人玩家逾 ${Math.round(this.noHumanMs / 1000)} 秒,已結束對局並清除`);
   }
 
   /** 雙方玩家都載入完地形 → 開戰(單人測試:一個玩家也可開) */
@@ -335,7 +360,8 @@ export class RoomHub {
             }
           }
         }
-        send({ t: 'error', msg: '重連失敗:座位已失效,請重新加入' });
+        // code:'reattach' → 客戶端據此清掉過期憑證(免每次開頁都吃一次錯誤),不影響其他錯誤處理
+        send({ t: 'error', code: 'reattach', msg: '重連失敗:座位已失效,請重新加入' });
         return;
       }
 

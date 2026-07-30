@@ -1268,6 +1268,48 @@ log('\n— 單機機制:瀏覽器內 RoomHub 迴路 —');
   assert(hub.stats().rooms === 0, '單機:shutdown 後房間清空');
 }
 
+// ================= 無真人玩家逾時:直接結束該場遊戲 =================
+// 對局中全部真人(玩家+觀戰)都斷線超過 noHumanMs → 收掉對局並清房(bot 對打沒人看是純空轉);
+// 期限內回連(reattach)則計時歸零、對局照常。正式伺服器 noHumanMs 預設 60 秒,這裡縮短快速驗證。
+log('\n— 對局中無真人玩家逾時 —');
+{
+  const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 60 * 1000, noHumanMs: 400 });
+  const inbox = [];
+  const sess = hub.attach((m) => inbox.push(m));
+  const last = (t) => [...inbox].reverse().find((m) => m.t === t);
+  sess.recv({ t: 'createRoom', name: '獨守指揮官', roomName: '空城計', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  sess.recv({ t: 'pickSide', side: 'SWARM' });
+  sess.recv({ t: 'setReady', ready: true });
+  sess.recv({ t: 'startBattle' });
+  sess.recv({ t: 'loaded' });
+  await new Promise((r) => setTimeout(r, 300));
+  assert(hub.stats().battles === 1, '前置:對局開打(1 真人 + 補滿電腦)');
+  const token = last('sync').token;
+
+  // 斷線後在期限內回連:座位還在(dropMs 保留)、無真人計時歸零,對局照常
+  sess.close();
+  await new Promise((r) => setTimeout(r, 200));
+  const inbox2 = [];
+  const sess2 = hub.attach((m) => inbox2.push(m));
+  sess2.recv({ t: 'reattach', token });
+  await new Promise((r) => setTimeout(r, 500));   // 已超過 noHumanMs:有真人回連就不得收房
+  assert(hub.stats().battles === 1, '期限內回連:對局保留(無真人計時歸零)');
+  assert(inbox2.some((m) => m.t === 'sync'), '回連認回原座位(補收 sync)');
+  assert(inbox2.some((m) => m.t === 'battleConfig'), '回連補收 battleConfig(客戶端據此重建地形)');
+  assert(inbox2.some((m) => m.t === 'snap'), '回連後 8Hz 快照恢復送達');
+
+  // 全部真人離線超過 noHumanMs:直接結束該場遊戲並清房(座位 token 隨房失效)
+  sess2.close();
+  await new Promise((r) => setTimeout(r, 800));
+  assert(hub.stats().rooms === 0 && hub.stats().battles === 0, '無真人玩家逾時:對局結束、房間清除');
+  const inbox3 = [];
+  const sess3 = hub.attach((m) => inbox3.push(m));
+  sess3.recv({ t: 'reattach', token });
+  const err = inbox3.find((m) => m.t === 'error');
+  assert(err?.code === 'reattach', '逾時後才回連:座位已失效(code=reattach,客戶端據此清掉過期憑證)');
+  hub.shutdown();
+}
+
 // ================= WebSocket 端對端 =================
 log('— 開房驗證(地圖必須先建立)—');
 const host = await client('host');
