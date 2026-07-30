@@ -33,6 +33,7 @@ import {
   RANGE_TOL, altRangeMax, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
+  shotV0, flightCapS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
@@ -266,7 +267,7 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
   const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
   ok(ARC_MAXP > 0, `game.js 的 ARC_MAXP 取得(${ARC_MAXP})`);
   const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
-  const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf };
+  const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0 };
   const M = (n) => pickMethod(n, G, env);
   // 樁:平地無障礙 → _layerHitT 由外部注入的 walls 決定
   const mkClient = (walls = []) => ({
@@ -369,6 +370,240 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     // 超出射程包絡(以極短的 max 模擬)→ 熄滅
     ok(!flat._reachable(mkEnt(rng * 0.9), def, rule, 30).ok,
       '榴彈:彈道被射程終點截斷 → 光暈熄滅');
+  }
+}
+
+// =================================================================================
+sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)同源');
+// ---------------------------------------------------------------------------------
+// 使用者 2026-07-30 回報:「雷射導引與射後不理常常有出現射程光暈卻沒命中對方」。
+// `REACH_RULE.guide/fnf` 的 `path:'ray'` 承諾的是「彈頭會被導引到目標」—— 這條承諾要成立,
+// 底下五件事全部 MUST 為真;舊制五件全破,而且每一件都是「靜默丟包」(玩家只看到零傷害)。
+{
+  // ---- ① 出膛初速只有一個縫(拋射武器吃吊射初速,不是砲口初速)----
+  const v0src = methodSrc('_shotV0', G);
+  ok(/return shotV0\(def, aa\);/.test(v0src) && !/Math\.min\(v0/.test(v0src) && !/\|\| 600/.test(v0src),
+    'game._shotV0 只是轉呼 data.shotV0(初速夾制不再有第二份實作)');
+  {
+    const lob = heavyOf('lob').def;
+    ok(shotV0(lob) === Math.min(lob.mv, BALLISTIC.LAUNCH_MV) && shotV0(lob) < lob.mv,
+      `拋射武器吃吊射初速 ${shotV0(lob)}m/s 而非砲口初速 ${lob.mv}m/s(取錯 = 飛行時間差數倍)`);
+    const fnf = heavyOf('fnf').def;
+    ok(shotV0(fnf) === fnf.mv, '非拋射武器就是自己的砲口初速');
+  }
+
+  // ---- ② 著彈才回報 ⇒ 擊發資格的閘門要能把時間軸換算回擊發時刻 ----
+  ok(/export const flightCapS = \(def\) =>\s*\(def \? def\.range \* altRangeMax\(\) \* RANGE_TOL \/ shotV0\(def\) : 0\);/.test(D),
+    'flightCapS 原文 = 落點閘門上界 ÷ shotV0(三個因子全推導,MUST NOT 手寫秒數)');
+  {
+    const slow = Object.keys(CHARACTERS)
+      .map((id) => heroWeapon(id, 'heavy', 1))
+      .filter((d) => d && (trajClass(d) === 'fnf' || trajClass(d) === 'guide'))
+      .reduce((a, d) => (flightCapS(d) > flightCapS(a) ? d : a));
+    ok(flightCapS(slow) > 1,
+      `最慢的導引彈頭滿射程要飛 ${flightCapS(slow).toFixed(2)}s(${slow.name})—— 這段時間裡玩家早就收鏡了`);
+  }
+  const aimSrc = methodSrc('heroAim', S);
+  ok(/if \(h\.aiming && !on\) h\.aimOffAt = this\.t;/.test(aimSrc), 'heroAim 記錄退出瞄準的時刻');
+  {
+    const burst = methodSrc('heroBurst', S);
+    ok(/this\.t - \(h\.aimOffAt \?\? -Infinity\) > flightCapS\(wp\.def\)/.test(burst),
+      'heroBurst 的需瞄準閘門給滿一整段飛行時間的寬容(推導自 flightCapS)');
+    ok(/const back = Math\.min\(dImp \/ shotV0\(wp\.def\), flightCapS\(wp\.def\)\);/.test(burst),
+      'heroBurst 由落點距離反推擊發時刻(上限仍是 flightCapS,不因客戶端謊報而失守)');
+    ok(/this\._gateFire\(h, wp\.id, wp\.def, true, back\)/.test(burst), '擊發閘門吃回推時刻');
+    const gate = methodSrc('_gateFire', S);
+    ok((gate.match(/now - back \+ this\._reloadT/g) || []).length === 2,
+      '_gateFire 的兩處裝填計時器都接回擊發時刻(打空 + 空夾補判)');
+    ok(/if \(now - \(h\.fireAt\[id\] \|\| 0\) < 1 \/ \(def\.rate/.test(gate),
+      '射速閘刻意仍量真實時鐘(著彈順序可能與擊發順序相反,回推時鐘量間隔會誤殺後到的那發)');
+  }
+  // 行為直測:真 BattleSim —— 合法離架後收鏡,彈頭 MUST 照樣結算;久到不可能是同一發才丟棄
+  {
+    const mk = (chId) => {
+      const sim = new BattleSim(fakeCfg());
+      purge(sim);
+      const h = sim.addHero('SWARM', 'p_f1', chId);
+      h.aiming = true; h.x = 3000; h.z = 3000; h.y = 0;
+      sim.t = 1000;
+      const wp = sim._heroWeapon(h, 'heavy');
+      const t = sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+        x: h.x + wp.def.range * 0.8, z: h.z, y: 0,
+        hp: 9000, maxHp: 9000, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+      return { sim, h, wp, t };
+    };
+    const chId = heavyOf('fnf').id;
+    const cap = flightCapS(heavyOf('fnf').def);
+    // ①-a 離架時在瞄準模式 → 飛行途中收鏡 → 著彈仍生效
+    { const { sim, h, t } = mk(chId);
+      sim.heroAim('p_f1', false);            // 收鏡(彈頭已經在天上)
+      sim.t += cap * 0.5;
+      sim.heroBurst('p_f1', t.x, t.z, 0, 0);
+      ok(t.hp < t.maxHp, `飛行途中退出瞄準模式 → 已離架的彈頭仍結算(舊制靜默丟棄,hp ${t.hp.toFixed(0)})`); }
+    // ①-b 收鏡久到超過最長飛行時間 → 這一發不可能是瞄準中打出去的 → 仍 MUST 丟棄
+    { const { sim, h, t } = mk(chId);
+      sim.heroAim('p_f1', false);
+      sim.t += cap + 1;
+      sim.heroBurst('p_f1', t.x, t.z, 0, 0);
+      ok(t.hp === t.maxHp, '收鏡超過最長飛行時間後才回報的爆點 → 仍靜默丟棄(防作弊上限不失守)'); }
+    // ②-a 裝填計時器接回擊發時刻:打空彈夾後,下一輪打**更近**的目標不再被吃掉。
+    //     客戶端的彈夾/裝填一向從**擊發**起算(平衡模型 duel.mjs 也只看 rate/reload);伺服器若從
+    //     著彈起算,整個週期就比客戶端晚一整段飛行時間 ⇒ 下一輪第一發只要打得比上一發近,
+    //     著彈時伺服器還在裝填 = 靜默丟棄。這裡的時間軸一律用**客戶端的**算法推,不讀伺服器狀態。
+    { const { sim, h, wp, t } = mk(chId);
+      const far = wp.def.range * 0.95, near = wp.def.range * 0.05;
+      const fFar = far / shotV0(wp.def), fNear = near / shotV0(wp.def);
+      let lastLaunch = 0;
+      for (let i = 0; i < wp.def.mag; i++) {          // 打空整個彈夾(全部打遠目標)
+        lastLaunch = sim.t;                            // 擊發時刻(客戶端時鐘)
+        sim.t += fFar;                                 // 飛過去
+        sim.heroBurst('p_f1', h.x + far, h.z, 0, 0);
+        sim.t += Math.max(0, 1 / wp.def.rate - fFar);
+      }
+      ok(h.ammo.heavy === 0 && h.reloadUntil.heavy > 0, '測試前置:彈夾打空並進入裝填');
+      const ready = lastLaunch + sim._reloadT(h, wp.def);   // 客戶端認定的可擊發時刻
+      const t2 = sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+        x: h.x + near, z: h.z, y: 0, hp: 9000, maxHp: 9000, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+      sim.t = ready + fNear;                           // 一裝填完就打近目標,飛行時間短很多
+      sim.heroBurst('p_f1', t2.x, t2.z, 0, 0);
+      ok(t2.hp < t2.maxHp,
+        `裝填後打更近的目標不再被靜默丟棄(遠彈飛 ${fFar.toFixed(2)}s / 近彈 ${fNear.toFixed(2)}s)`); }
+  }
+
+  // ---- ③ 射後不理真的會追蹤:MUST NOT 只認伺服器複驗過的 _lockId ----
+  {
+    const fire = methodSrc('_tryFire', G);
+    ok(/this\._aimTarget\(def\.range \* this\._altRangeMul\(def\) \* rMul\)\?\.id/.test(fire),
+      '_tryFire 的追蹤目標在拿不到 _lockId 時退回擊發當下的準星解(_aimTarget)');
+    ok(!/def\.type === 'missile' && this\._lockId != null/.test(fire),
+      '_tryFire 不再「只認 _lockId」(而射程光暈刻意排除 _lockId ⇒ 每個亮著的目標都保證不被追蹤)');
+    ok(/ent\.id !== this\._lockId/.test(methodSrc('_updateRangeGlows', G)),
+      '對照:_updateRangeGlows 確實把鎖定目標排除在射程光暈之外(鎖定另有 lockGlow)');
+    const at = methodSrc('_aimTarget', G);
+    ok(/this\._resolveAim\(rng\)/.test(at) && /this\._coneAcquire\(rng\)/.test(at) && /this\._lobFc/.test(at),
+      '_aimTarget 三段齊全(火控解 → 準星射線 → 錐形輔助)');
+    const tl = methodSrc('_tickLock', G);
+    ok(/this\._aimTarget\(/.test(tl) && !/this\._coneAcquire\(/.test(tl) && !/this\._resolveAim\(/.test(tl),
+      '_tickLock 改吃 _aimTarget(目標解析只有一份實作,擊發端與回報端同源)');
+  }
+
+  // ---- ④ 近炸引信量線段最近點、半徑與光暈承諾的 tol 同一式 ----
+  {
+    const ub = methodSrc('_updateBullets', G);
+    ok(!/Math\.max\(4, \(b\.r \|\| 0\) \* 0\.5\)/.test(ub),
+      '近炸引信不再手寫 max(4, r×0.5)(r×0.5 是手抄的 BLAST.CORE = 第二份實作)');
+    ok(/\(b\.core \|\| 0\) \+ this\._hitR\(tgt\)/.test(ub),
+      '引信半徑 = 爆風核心帶 + 目標水平量體(與 _reachable 的 blastCoreR(def) + hr 同一式)');
+    ok(/core: blastCoreR\(def\)/.test(methodSrc('_tryFire', G)), '核心帶於擊發當下由 blastCoreR 推導一次');
+    ok(/const s = l2 > 1e-9/.test(ub) && /Math\.max\(0, Math\.min\(1,/.test(ub),
+      '引信量的是**這一幀掃過的線段**上的最近點(夾制在 [0,1];點取樣會被高速彈跨過去)');
+    ok(/const spent = b\.seek \? b\.pos\.distanceTo\(b\.origin\) : b\.dist;/.test(ub),
+      '導引彈的射程包絡量直線(與失鎖判定/伺服器落點閘門/射程光暈三處同一把尺;航跡長恆長於直線)');
+    ok(/seek: !!arm/.test(methodSrc('_tryFire', G)), 'seek 旗標由 armingOf(def) 推導(導引/射後不理才有)');
+    ok(/dist >= max/.test(methodSrc('_arcTrace', G)),
+      '對照:無導引彈(拋物線瞄準虛線)仍量航跡長 —— 弧長本來就該算進射程消耗');
+  }
+
+  // ---- ⑤ 導引頭轉得過來:轉彎半徑上限只放寬不收緊 ----
+  {
+    ok(seekTurn(SEEK.HOME_W, 1) === SEEK.HOME_W && seekTurn(SEEK.RIDE_W, 1) === SEEK.RIDE_W,
+      'seekTurn 對慢彈逐位元回傳基礎角速度(既有手感零回歸)');
+    let widened = 0, narrowed = 0;
+    for (const id of Object.keys(CHARACTERS)) {
+      const def = heroWeapon(id, 'heavy', 1);
+      if (!def || !armingOf(def)) continue;
+      const v0 = shotV0(def);
+      for (const w of [SEEK.HOME_W, SEEK.RIDE_W]) {
+        if (seekTurn(w, v0) < w) narrowed++;
+        else if (seekTurn(w, v0) > w) widened++;
+      }
+    }
+    ok(narrowed === 0, `seekTurn 對任何武器都不收緊(收緊 ${narrowed} 例)`);
+    ok(widened > 0, `確實有轉不過來的導引頭被拉高角速度(${widened} 例;沒有 = 這道上限沒作用)`);
+    const ub = methodSrc('_updateBullets', G);
+    ok(/seekTurn\(SEEK\.HOME_W, b\.mv\)/.test(ub) && /seekTurn\(SEEK\.RIDE_W, b\.mv\)/.test(ub),
+      '_updateBullets 的兩處轉向都經 seekTurn(MUST NOT 手寫 rad/s)');
+    ok(!/, 3\.2\)/.test(ub) && !/, 2\.2\)/.test(ub), '_updateBullets 不再殘留手寫轉角常數');
+  }
+
+  // ---- ⑥ 行為直測:導引狀態下「光暈亮 = 打得到」逐武器逐距離成立 ----
+  // 本段是 `_updateBullets` 導引積分的**鏡射**(那支函式吃 three/scene/raycaster,Node 端抽不出來)。
+  // 鏡射一定要釘住,否則改了 game.js 這裡照樣全綠 —— 積分用到的每一個決策點都在上面 ④⑤ 以
+  // **執行原文**斷言過(兩處 seekTurn 呼叫、引信半徑式、線段最近點、seek 的直線包絡),再加下面
+  // 兩條導引點原文。任何一項被改掉,原文斷言先紅。
+  {
+    const ub = methodSrc('_updateBullets', G);
+    ok(/Math\.max\(20, _TMP_A\.copy\(b\.pos\)\.sub\(ro\)\.dot\(rd\) \+ 40\)/.test(ub),
+      '騎波導引點 = 準星射線上、彈體前方 40m(鏡射積分吃同一組數)');
+    ok(/const armed = b\.dist >= \(b\.arm \|\| 0\);/.test(ub), '解保險距離量的是航跡長 b.dist');
+
+    const sub3 = (a, b2) => [a[0] - b2[0], a[1] - b2[1], a[2] - b2[2]];
+    const len3 = (v) => Math.hypot(v[0], v[1], v[2]);
+    const nrm3 = (v) => { const l = len3(v) || 1; return v.map((x) => x / l); };
+    const dot3 = (a, b2) => a[0] * b2[0] + a[1] * b2[1] + a[2] * b2[2];
+    const segD = (p0, p1, c) => {          // 線段最近點距離(與引信同式)
+      const d = sub3(p1, p0), l2 = dot3(d, d);
+      const s = l2 > 1e-9 ? Math.max(0, Math.min(1, dot3(sub3(c, p0), d) / l2)) : 0;
+      return len3(sub3([p0[0] + d[0] * s, p0[1] + d[1] * s, p0[2] + d[2] * s], c));
+    };
+    /** mode:'home' 追蹤 / 'guide' 騎波 / 'dumb' 無導引(純重力)。回傳整段航程的最近通過距離 */
+    const fly = (def, dist, mode) => {
+      const v0 = shotV0(def), arm = armingOf(def).m, max = def.range, sp = armingOf(def).spread;
+      const eye = [0, 2, 0], tgt = [dist, 2, 0];
+      let pos = [...eye], vel = nrm3([Math.cos(sp), Math.sin(sp), 0]).map((x) => x * v0);
+      let travelled = 0, best = Infinity;
+      const dt = 1 / 60;
+      const turn = (want, w) => {          // game.js 的 steer():等速改向,每秒最大轉角 w
+        const cur = nrm3(vel);
+        const ang = Math.acos(Math.max(-1, Math.min(1, dot3(cur, want))));
+        const k = Math.min(1, w * dt / (ang || 1e-9));
+        vel = nrm3(cur.map((c, i) => c + (want[i] - c) * k)).map((x) => x * v0);
+      };
+      for (let i = 0; i < 20000; i++) {
+        const armed = travelled >= arm;
+        if (mode === 'home' && armed) {
+          turn(nrm3(sub3([tgt[0], tgt[1] + 1.5, tgt[2]], pos)), seekTurn(SEEK.HOME_W, v0));
+        } else if (mode === 'guide' && armed) {
+          const rd = nrm3(sub3(tgt, eye));
+          const along = Math.max(20, dot3(sub3(pos, eye), rd) + 40);
+          turn(nrm3(sub3(eye.map((e, k2) => e + rd[k2] * along), pos)), seekTurn(SEEK.RIDE_W, v0));
+        } else vel[1] -= BALLISTIC.G * dt;
+        const prev = [...pos];
+        pos = pos.map((p, k2) => p + vel[k2] * dt);
+        travelled += len3(sub3(pos, prev));
+        best = Math.min(best, segD(prev, pos, tgt));
+        if (pos[1] <= 0) break;
+        if ((mode === 'dumb' ? travelled : len3(sub3(pos, eye))) >= max) break;
+      }
+      return best;
+    };
+    const missGuided = [], notBetter = [], dumbMiss = [];
+    let n = 0, guns = 0;
+    for (const id of Object.keys(CHARACTERS)) {
+      const def = heroWeapon(id, 'heavy', 1);
+      if (!def || !armingOf(def)) continue;
+      guns++;
+      const mode = trajClass(def) === 'fnf' ? 'home' : 'guide';
+      const tol = blastCoreR(def) + hitR({ kind: 'robot' });
+      for (const f of [0.35, 0.5, 0.7, 0.85, 1.0]) {
+        const d = def.range * f;
+        if (d < armingOf(def).m * 1.15) continue;      // 軌跡修正期內本來就該打歪(光暈已轉警示色)
+        n++;
+        if (fly(def, d, mode) > tol) missGuided.push(`${id}@${(f * 100) | 0}%`);
+      }
+      // 滿射程對照:導引 MUST 嚴格優於無導引(否則「有沒有接手導引」根本不是差別所在)
+      const full = def.range;
+      const g = fly(def, full, mode), u = fly(def, full, 'dumb');
+      if (!(g < u)) notBetter.push(`${id}(導引 ${g.toFixed(1)} ≮ 無導引 ${u.toFixed(1)})`);
+      if (u > tol) dumbMiss.push(id);
+    }
+    ok(missGuided.length === 0,
+      `${n} 組(武器 × 距離)在導引狀態下全部落在爆風核心帶內(離群:${missGuided.join(' ') || '無'})`);
+    ok(notBetter.length === 0,
+      `${guns} 把導引/射後不理武器在滿射程都是「有導引明顯更準」(離群:${notBetter.join(' ') || '無'})`);
+    ok(dumbMiss.length >= guns - 1,
+      `對照:${dumbMiss.length}/${guns} 把在**沒有導引**時滿射程落到核心帶外`
+      + ' —— 這正是「追蹤目標不能只認 _lockId」的理由(舊制每個亮著光暈的目標都保證無導引)');
   }
 }
 

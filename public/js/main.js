@@ -2093,6 +2093,24 @@ function renderShop(open, st) {
   };
   const c = st.ch && CHARACTERS[st.ch];
   const KEYS = { light: '左鍵', heavy: '右鍵瞄準', skill: 'Q', ult: 'E' };
+  // ---- 陣營小兵強化(八軌全滿才解鎖;同陣營共用、不同兵線分開)----
+  // 解鎖門檻與伺服器 sim._upgAllMax 同一條規則:八軌**全部**到 max。
+  // **MUST 排在最前面**(2026-07-30 使用者回報「全部升級完畢後,沒看到升級小兵的選項」):
+  // .shop-box 是 max-height:86vh 的捲動容器,八軌 + 兩段標題就已經溢出一般筆電的視窗高度 ——
+  // 掛在最後面的新區塊整段落在摺線之外,而畫面上沒有任何捲動提示。解鎖的當下八軌**保證全滿**
+  // (那正是解鎖條件),上面那 8 列全是「已滿階」的死列 ⇒ 唯一還能買的東西本來就該排第一。
+  const allMax = Object.entries(ECON.UPGRADES).every(([k, u]) => (st.upg[k] || 0) >= u.max);
+  if (allMax && st.creepUpg?.length) {
+    head(`🐜 陣營小兵強化(同陣營共用・兵線分開;LV1~${CREEP_UPG.MAX},每階 $${CREEP_UPG.PRICE})`);
+    st.creepUpg.forEach((lvl, li) => {
+      const full = lvl >= CREEP_UPG.MAX;
+      const mul = creepUpgMul(lvl), next = creepUpgMul(lvl + 1);
+      row(`<b>第 ${li + 1} 兵線</b> LV${lvl}/${CREEP_UPG.MAX}`
+        + ` <span class="dim">全能力與陣亡賞金 ×${mul.toFixed(2)}</span>`,
+        full ? null : CREEP_UPG.PRICE, !full && st.money >= CREEP_UPG.PRICE, () => st.buyCreep(li),
+        full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`);
+    });
+  }
   if (c) {
     head(`🎖 戰鬥強化 —「${c.code}」${c.machine}(輕/重武器・小招/大招,開場 Lv1 → 升 3 次到 Lv4)`);
     for (const [id, up] of Object.entries(ECON.UPGRADES)) {
@@ -2114,20 +2132,6 @@ function renderShop(open, st) {
     const price = full ? null : upgradePrice(up, lvl);
     row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
       price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '');
-  }
-  // ---- 陣營小兵強化(八軌全滿才解鎖;同陣營共用、不同兵線分開)----
-  // 解鎖門檻與伺服器 sim._upgAllMax 同一條規則:八軌**全部**到 max。
-  const allMax = Object.entries(ECON.UPGRADES).every(([k, u]) => (st.upg[k] || 0) >= u.max);
-  if (allMax && st.creepUpg?.length) {
-    head(`🐜 陣營小兵強化(同陣營共用・兵線分開;LV1~${CREEP_UPG.MAX},每階 $${CREEP_UPG.PRICE})`);
-    st.creepUpg.forEach((lvl, li) => {
-      const full = lvl >= CREEP_UPG.MAX;
-      const mul = creepUpgMul(lvl), next = creepUpgMul(lvl + 1);
-      row(`<b>第 ${li + 1} 兵線</b> LV${lvl}/${CREEP_UPG.MAX}`
-        + ` <span class="dim">全能力與陣亡賞金 ×${mul.toFixed(2)}</span>`,
-        full ? null : CREEP_UPG.PRICE, !full && st.money >= CREEP_UPG.PRICE, () => st.buyCreep(li),
-        full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`);
-    });
   }
 }
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));

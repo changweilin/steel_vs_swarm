@@ -761,7 +761,20 @@ export const VITALS = {
 //   1.5 = 邊界(落點 = 1.5r)自損約 33% 爆風傷、越近越高;導引/射後不理武器不吃(已有 ARMING 散布)。
 export const BALLISTIC = {
   G: 9.81, LAUNCH_MV: 100, AA_MV: 720, AA_CONE: 0.14, AA_ALT: 10,
+  MV_FALLBACK: 600,   // 武器未標砲口初速時的預設(舊制寫死在 game._shotV0)
   LOB_TOL: 3.5, LOB_SUP_MAX: 0.70, LOB_CHARGE: [1, 0.78, 0.6, 0.46], LOB_MIN_F: 1.5,
+};
+/**
+ * 出膛初速(m/s)。**唯一縫**:客戶端 `game._shotV0`(彈道積分/火控/瞄準虛線)與
+ * `flightCapS`(伺服器把著彈時刻換算回擊發時刻)同吃 —— 兩邊各寫一份夾制的下場是
+ * 拋射武器的飛行時間被算成 `def.mv`(砲口初速 640m/s)而不是實際的吊射初速(100m/s),
+ * 差 6 倍 ⇒ 換算回來的擊發時刻整個失準。
+ * 拋射武器(launcher)不是照砲口初速直射的:一律夾到吊射 LAUNCH_MV(對空彈射模式 AA_MV);
+ * 其餘型別(飛彈/動能/光束)就是自己的砲口初速。
+ */
+export const shotV0 = (def, aa = false) => {
+  const v0 = def?.mv || BALLISTIC.MV_FALLBACK;
+  return def?.type === 'launcher' ? Math.min(v0, aa ? BALLISTIC.AA_MV : BALLISTIC.LAUNCH_MV) : v0;
 };
 export const armorMul = (ar, pen = 0) => {
   const a = Math.max(0, (ar || 0) - (pen || 0));
@@ -910,6 +923,20 @@ export const ARMING = {
 };
 export const armingOf = (def) => ARMING[trajClass(def)] || null;
 
+// ---- 導引頭的機動上限(2026-07-30 使用者回報「導引/射後不理常常光暈亮著卻沒命中」)----
+// 舊制在 `game._updateBullets` 手寫「每秒最大轉角」(追蹤 3.2 / 騎波 2.2 rad/s)。固定**角速度**
+// 的毛病是實際能不能修正航向看的是**轉彎半徑** = 初速 ÷ 角速度:初速 1000m/s 的微型攔截彈
+// 半徑 312m,比它自己的射程(194m)還大 —— 離架散布(ARMING.spread)注入的橫向偏差在整個射程
+// 內都拉不回來,實測導引狀態下滿射程恆差 5m 以上(> 爆風核心帶),光暈亮著卻永遠打不中。
+// 改成「角速度 **與** 轉彎半徑雙上限」:`max(基礎角速度, 初速 ÷ R_M)`。慢彈(初速 ≤ R_M × 基礎
+// 角速度)半徑本就遠小於 R_M ⇒ 逐位元維持舊值、手感零回歸;只有快到轉不過來的導引頭才被拉高。
+// **只放寬不收緊**是刻意的(MUST NOT 改成單純的 `初速 ÷ R_M`,那會讓慢速巡飛彈反而變鈍)。
+// R_M 由掃描定案:200m 是「能讓全部 8 把導引/射後不理武器在 35%~100% 射程全數命中」的**最寬**
+// 值(再放寬 s06 就回歸)⇒ 取最寬 = 對既有手感的擾動最小。伺服器不模擬彈道,bal/duel 不受影響。
+export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200 };
+/** 導引頭每秒最大轉角(rad/s):基礎角速度與「轉彎半徑不超過 R_M」兩個上限取寬者 */
+export const seekTurn = (w, v0) => Math.max(w, (v0 || 0) / SEEK.R_M);
+
 // ---- 榴彈類最小安全射程(2026-07-27 使用者需求;伺服器與客戶端 HUD 共用同一縫)----
 // 只約束 trajClass 'lob'(launcher 無導引:溫壓火箭 / 152 榴彈砲 / 無後座砲 / 集束子母彈)——
 // 這正是「榴彈類」。導引/射後不理是自導武器(已有 ARMING 軌跡修正期散布),不在此列。
@@ -917,6 +944,18 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // 自損量由既有 blastFalloff(def.r, 距離)自然導出(越貼近爆心自損越重);≥ 此距離則照常只傷敵。
 // **推導不手寫**:= 爆風半徑 def.r × BALLISTIC.LOB_MIN_F(改係數自動跟著走);非 lob 回 0。
 export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r || 0) * BALLISTIC.LOB_MIN_F : 0);
+
+// ---- 彈頭最長飛行時間(2026-07-30 使用者回報「導引/射後不理常常光暈亮著卻沒命中」)----
+// AoE 彈頭是**著彈**才回報(`sim.heroBurst`),而「擊發資格」(需瞄準 / 裝填 / 射速)是**擊發
+// 當下**才成立的狀態 —— 兩者之間隔著整段飛行時間。巡飛彈初速只有 90~100m/s,滿射程要飛 2~3.3
+// 秒:那一發合法離架之後,玩家右鍵退出狙擊模式、或彈夾在飛行途中打空進入裝填,伺服器就把已經
+// 在天上的彈頭「驗證後靜默丟棄」(A30 靜默丟包家族)。凡是拿**著彈時刻**去驗擊發資格的閘門,
+// MUST 用本值把時間軸換算回擊發時刻,MUST NOT 手寫秒數。
+// **推導不手寫**:= 落點閘門上界(range × altRangeMax × RANGE_TOL)÷ 出膛初速 —— 改射程/
+// 初速/容差都自動跟著走。初速一律經 `shotV0()` 這個縫取(拋射武器吃的是吊射初速 100m/s,
+// 不是砲口初速 640m/s;取錯差 6 倍)。
+export const flightCapS = (def) =>
+  (def ? def.range * altRangeMax() * RANGE_TOL / shotV0(def) : 0);
 
 // ================= 「打得到嗎」逐彈道判定規則(2026-07-30 使用者回報)=================
 // 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。病灶是**射程光暈只量距離**:
