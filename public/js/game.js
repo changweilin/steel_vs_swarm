@@ -10,6 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
+  SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -332,6 +333,7 @@ export class BattleClient {
     this._env = { code: 0, depth: 0, ground: 0, air: false }; // 領機當幀環境(每幀 _envAt 更新;見該函式)
     this._mineCheckAt = 0;
     this._floodWarnAt = 0;
+    this._slopeWarnAt = 0;           // 陡坡擋下的提示節流(8s;沿等高線滑得動就不算撞坡)
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
 
     // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
@@ -3518,6 +3520,36 @@ export class BattleClient {
     return Math.min(WATER.SLOW, 1 - (1 - WATER.SLOW_MIN) * Math.min(1, e.depth / WATER.FULL_D));
   }
 
+  /**
+   * 沿水平方向 (dx,dz) 的**帶號地形坡度**(度;+ 上坡 / − 下坡)。移動減速與「爬不上去」共用
+   * 這一支(唯一縫;倍率/阻擋角的規則住 data.js SLOPE)。三條豁免一律回 0(= 平地):
+   *   ①飛行型態 / 騰空(_env.air):腳沒踩在坡上 —— 跳過懸崖邊緣、飛越山脊 MUST NOT 被坡度擋
+   *   ②人造鋪面:站立面與裸地形高差 > SLOPE.STRUCT_M(橋面 / 隧道路面 / 屋頂)—— 工程結構不是山坡
+   *   ③位移量趨近 0
+   * 坡度一律量**裸地形 heightAt**,MUST NOT 改量站立面 _surf:_surf 在上橋捕捉(deckAt)與隧道
+   * 天花之下會整段跳階,拿它量坡度 = 上引道那一步被當成垂直峭壁,橋直接上不去。
+   */
+  _slopeDegAlong(x0, z0, y0, dx, dz) {
+    const run = Math.hypot(dx, dz);
+    const t = this.terrain;
+    if (run < 1e-4 || !t?.heightAt || this._flying() || this._env?.air) return 0;
+    const bare = (x, z) => Math.abs(this._surf(x, z, y0) - t.heightAt(x, z)) <= SLOPE.STRUCT_M;
+    if (!bare(x0, z0) || !bare(x0 + dx, z0 + dz)) return 0;
+    return slopeDeg(t.heightAt(x0 + dx, z0 + dz) - t.heightAt(x0, z0), run);
+  }
+
+  /**
+   * 地形坡度的移動速度倍率(2026-07-30 使用者需求):上坡減速、下坡加速,平緩帶(兵線坡度
+   * 限制 16° 內)恆 1。取樣走固定前瞻 SLOPE.PROBE_M —— MUST NOT 拿當幀位移量坡,否則同一道
+   * 坡在不同幀率下會量出不同陡度(手感隨掉幀浮動)。move 為移動方向(長度 ≤ 1 的推杆量)。
+   */
+  _slopeMoveF(move) {
+    const m = Math.hypot(move.x, move.z);
+    if (m < 1e-4) return 1;
+    const k = SLOPE.PROBE_M / m;
+    return slopeMoveF(this._slopeDegAlong(this.pos.x, this.pos.z, this.pos.y, move.x * k, move.z * k));
+  }
+
   /** 火場滯留 → 視野漸霧化(feature 6;純客戶端表現,傷害由伺服器 _tickHazards 結算)。
    *  進火場累積、離場 2× 速消散;滯留超過 FIRE_FOG_S 起霧、FIRE_FOG_MAX_S 達最濃。 */
   _updateEnvFog(dt) {
@@ -6411,8 +6443,10 @@ export class BattleClient {
       if ((this.confLeft || 0) > 0) { move.multiplyScalar(-1); this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
       // 蓄力跳騰空(_lowG)期間水平操縱移速 × CJUMP.AIR_SPD_F(與起跳彈射初速同一個縫)
       const airK = this._lowG ? CJUMP.AIR_SPD_F : 1;
+      // 地形坡度:上坡減速 / 下坡加速(平緩帶 = 兵線坡度限制內恆 1;騰空與人造鋪面回 1)
+      const slopeF = this._slopeMoveF(move);
       this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * airK * dt);
+        * slopeF * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
@@ -6471,18 +6505,27 @@ export class BattleClient {
     //    改由 tunnelWallCross 幾何判定:步進跨出 ±hw 牆線且擋土牆頂高出腳下逾可跨步高
     //    即擋(唯一縫 makeTunnelIndex;山體隧道無 by 恆放行,行為不變)。
     //  ②淨空不足:天花(橋面底緣/隧道天花板)與地面的夾縫塞不下機高 → 進不去(引道漸低段)。
+    //  ③陡坡(2026-07-30 使用者需求):上坡坡度超過 SLOPE.BLOCK_DEG 的裸地形爬不上去 ——
+    //    逐軸滑行順勢成了「沿等高線橫走」,只是上不去;下坡與騰空一律放行(見 _slopeDegAlong)。
     // 撞牆時逐軸嘗試滑行(沿牆保留另一軸位移),都不行才整步還原;
     // 位移前的位置若本來就違規(例外狀態)則放行,避免卡死。
-    if (this.terrain.ceilingAt) {
+    // 閘門條件由 ceilingAt 放寬成 heightAt(裸地形恆有):橋隧判定各自 optional,
+    // 沒有橋隧的地圖照樣要吃坡度③。
+    if (this.terrain.heightAt) {
       const hover = this._flying() ? (this.isMorph ? 0 : 2.5) : 0;
+      let slopeStop = false;
       const passable = (cx, cz) => {
         const g = this._surf(cx, cz, py0);
         if (inTun0 && g > py0 + 2.6) return false;                        // 隧道側壁/上方山體
         if (this.terrain.tunnelWallCross?.(px0, pz0, cx, cz, py0)) return false;   // 地下道幾何側壁
         // 2026-07-19:深水不再是牆 —— 水域/沼澤可通行,依深度減速(_terrainSlowF),
         // 有效地板 = 水面 − FULL_D(可涉水橫渡河湖)。深水不再由此擋下。
-        const ce = this.terrain.ceilingAt(cx, cz, py0);
+        const ce = this.terrain.ceilingAt?.(cx, cz, py0);
         if (ce != null && ce - this.selfH - 0.2 < g + hover) return false; // 夾縫 < 機高
+        // 攀爬中豁免:掛在梯/抓點上的位移是「沿路線垂直 + 水平吸附到攀爬軸」,那一小段水平位移
+        // 配上峭壁高差必然超標 —— 擋下來會連同 y 一起還原(見下方撞牆幀),等於整套攀爬失效。
+        // 陡壁的垂直通道本來就是攀爬路線在提供(A31),兩者 MUST NOT 互相否決。
+        if (!climbing && slopeBlocked(this._slopeDegAlong(px0, pz0, py0, cx - px0, cz - pz0))) { slopeStop = true; return false; }
         return true;
       };
       if (!passable(this.pos.x, this.pos.z) && passable(px0, pz0)) {
@@ -6499,6 +6542,11 @@ export class BattleClient {
         const gy2 = this._surf(cx, cz, py0);
         if (this._flying()) this.pos.y = Math.max(gy2 + hover, Math.min(gy2 + 320, this.pos.y));
         else if (this.pos.y < gy2) { this.pos.y = gy2; this.vy = 0; }
+      }
+      // 陡坡完全擋死(逐軸滑行也走不動)才提示:沿等高線橫走仍通 = 不算撞坡,別洗頻道
+      if (slopeStop && this.pos.x === px0 && this.pos.z === pz0 && now - this._slopeWarnAt > 8) {
+        this._slopeWarnAt = now;
+        this.hud.feed?.('⛰️ 坡度過陡:機甲爬不上去(繞緩坡或找攀爬路線)');
       }
     }
 
