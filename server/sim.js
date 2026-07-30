@@ -9,7 +9,7 @@ import {
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
-  aoeClass, lanceR, LANCE, lobMinRange,
+  aoeClass, lanceR, LANCE, lobMinRange, flightCapS, shotV0,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   ALTITUDE, altScale, altRangeMax, RANGE_TOL, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul,
@@ -1263,8 +1263,16 @@ export class BattleSim {
    * 開火判定:射速上限、填彈中禁射、彈夾耗盡自動填彈。
    * 重武器擊發需電力(heavyMpCost,隨重武器階級)—— 電力不足視同禁射。
    * lenient=true 給網路延遲寬容(真人客戶端);bot 用嚴格射速。
+   *
+   * back(秒):**回報延遲** —— AoE 彈頭是著彈才回報,這一發其實是 back 秒前擊發的。
+   *   只用來把**裝填計時器**接回擊發時刻:客戶端的彈夾/裝填一向從擊發當下起算(平衡模型
+   *   tools/duel.mjs 也只看 rate/reload,不含飛行時間),伺服器從著彈起算 = 整個週期比客戶端
+   *   晚 back 秒 ⇒ 下一輪第一發只要打在**比上一發更近**的目標,著彈時伺服器還在裝填 = 靜默丟棄
+   *   (巡飛彈的 back 在 0~3.3 秒之間浮動,幾乎每個裝填週期都中一次)。
+   *   **射速閘刻意仍量真實時鐘**:著彈順序可能與擊發順序相反(遠打完再打近),拿回推時鐘量
+   *   間隔會把後到的那一發誤判成「太快」而誤殺。
    */
-  _gateFire(h, id, def, lenient) {
+  _gateFire(h, id, def, lenient, back = 0) {
     const now = this.t;
     // 巨砲(重砲模式)那一輪的砲彈(2026-07-30 改制,見 data.BARRAGE):**不消耗一般重武器的彈夾**
     // ⇒ 連帶不吃電力/射速閘/裝填閘(空夾、裝填中照樣轟得出去);傷害 100%(_heroDmg 已無倍率)。
@@ -1285,13 +1293,13 @@ export class BattleSim {
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
-    if (h.ammo[id] <= 0) { h.reloadUntil[id] = now + this._reloadT(h, def); return false; }
+    if (h.ammo[id] <= 0) { h.reloadUntil[id] = now - back + this._reloadT(h, def); return false; }
     const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
     if (mpc > 0 && h.mp < mpc) return false;   // 重武器電力不足:禁射(小隊電力共用,只扣一次)
     h.fireAt[id] = now;
     h.ammo[id]--;
     if (mpc > 0) h.mp -= mpc;
-    if (h.ammo[id] <= 0) h.reloadUntil[id] = now + this._reloadT(h, def);  // 打空自動填彈
+    if (h.ammo[id] <= 0) h.reloadUntil[id] = now - back + this._reloadT(h, def);  // 打空自動填彈(接回擊發時刻)
     h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
     return true;
   }
@@ -1463,6 +1471,8 @@ export class BattleSim {
   heroAim(pid, on) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
+    // 退出瞄準的時刻(heroBurst 的飛行時間寬容用:已經合法離架的彈頭不該因為玩家收鏡而蒸發)
+    if (h.aiming && !on) h.aimOffAt = this.t;
     h.aiming = !!on;
   }
 
@@ -1638,7 +1648,11 @@ export class BattleSim {
     lev = lev === 2 ? 2 : lev === 1 ? 1 : 0;   // 爆點結構層(客戶端彈道回報;_blast 隧道垂直隔離用)
     const wp = this._heroWeapon(h, 'heavy');
     if (!wp || (wp.def.type !== 'launcher' && wp.def.type !== 'missile')) return;   // 飛彈也是 AoE 戰鬥部
-    if (wp.def.needAim && !h.aiming) return;
+    // 瞄準閘門量的是「擊發資格」,但爆點是**著彈**才回報 —— 兩者之間隔著整段飛行時間。
+    // 巡飛彈初速 90m/s、滿射程飛 3 秒以上:合法離架後玩家右鍵收鏡(很自然:開完砲就要移動),
+    // 這一發會在天上被靜默丟棄 = 使用者回報的「射後不理/雷射導引常常光暈亮著卻沒命中」。
+    // 寬容窗 = 這把武器的最長飛行時間(data.js flightCapS,推導不手寫);超過才算「收鏡後才開砲」。
+    if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > flightCapS(wp.def)) return;
     const dImp = dist2d(h.x, h.z, x, z);
     // 著彈點超程閘門。上界 = 射程 × 高度制空上限 × 網路寬容 × 重砲窗 —— 三個因子都是**推導值**:
     //   ・RANGE_TOL:與 heroHit/heroLance/heroPlasma 同一個縫(舊制此處獨自寫 1.15,比其餘閘門緊)
@@ -1648,7 +1662,10 @@ export class BattleSim {
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
     if (dImp > impCap * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;
-    if (!this._gateFire(h, wp.id, wp.def, true)) return;
+    // 這一發其實是「dImp ÷ 初速」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
+    // dImp 已被 impCap 夾住 ⇒ back 天然 ≤ flightCapS,不必再另設上限(客戶端謊報距離只會先撞超程閘)。
+    const back = Math.min(dImp / shotV0(wp.def), flightCapS(wp.def));
+    if (!this._gateFire(h, wp.id, wp.def, true, back)) return;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
     // (不分敵我,波及友軍 + 自身),自損量由 blastFalloff 自然導出。決策以回報射手 h 定案、整組僚機齊射一致套用。
