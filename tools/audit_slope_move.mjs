@@ -245,6 +245,18 @@ console.log('■ Ⅴ 行為直測(執行 game.js 原文:合成高度場 + 橋面
       mk({ grade: g, tunnel: SLOPE.STRUCT_M + 5 })._slopeDegAlong(0, 0, 0, 1, 0) === 0);
     t('鋪面高差在 STRUCT_M 以內仍照吃坡度(路面 lift 不當豁免用)',
       mk({ grade: g, deck: SLOPE.STRUCT_M * 0.5 })._slopeDegAlong(0, 0, 0, 1, 0) > 0);
+    // 洞內豁免(2026-07-31 使用者回報「進明隧道卡卡的」):明隧道段的側坡地表可與路面同高
+    //(高差閘抓不到),但 tunnelAt 捕捉(y < ceil)= 站的是結構路面 ⇒ 坡度一律歸零。
+    t('隧道天花之下(tunnelAt 捕捉)即使鋪面高差 < STRUCT_M 也歸零 —— 明隧道洞內不忽走忽卡', (() => {
+      const c = mk({ grade: g });
+      c.terrain.tunnelAt = () => ({ floor: 0, ceil: 8 });   // 高差 0(側坡地表 = 路面)仍豁免
+      return c._slopeDegAlong(0, 0, 0, 1, 0) === 0;
+    })());
+    t('天花之上(y ≥ ceil,站洞頂山體)不吃洞內豁免,坡度照量', (() => {
+      const c = mk({ grade: g });
+      c.terrain.tunnelAt = () => ({ floor: 0, ceil: 8 });
+      return c._slopeDegAlong(0, 0, 20, 1, 0) > 0;
+    })());
     t('零位移回 0(不除以 0)', mk({ grade: g })._slopeDegAlong(0, 0, 0, 0, 0) === 0);
     t('無 heightAt 的地形回 0(降級不例外)', (() => {
       const c = mk({ grade: g }); c.terrain = {};
