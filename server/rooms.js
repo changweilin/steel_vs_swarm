@@ -453,7 +453,7 @@ export class RoomHub {
       if (m.t === 'iframe' && client.side) { b.heroIframe(clientId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
       if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }
       if (m.t === 'buy' && client.side) {
-        const err = b.buy(clientId, m.item);
+        const err = b.buy(clientId, m.item, m.lane);   // lane 只有 item==='creep'(陣營小兵強化)會用到
         if (err) send({ t: 'error', msg: err });
         return;
       }

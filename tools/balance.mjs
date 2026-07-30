@@ -37,7 +37,7 @@
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
-  grenadeBuildingMul, dmgFalloff } from '../public/js/data.js';
+  grenadeBuildingMul, dmgFalloff, waveComp } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 
 const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
@@ -47,7 +47,7 @@ import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BattleSim, waveInterval } from '../server/sim.js';
 
 const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
-const WAVE = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];   // 編制唯一真相住 data.js
+const WAVE = waveComp();   // 編制唯一真相住 data.js(waveComp;MUST NOT 手抄)
 
 /** 角色某槽位對某目標的持續 DPS(含換彈:輕/重武器一律 mag 發 / reload 秒;2026-07-18 重武器改彈夾 2~5 + 裝填 6~15s) */
 const slotDps = (ch, slot, tk) => {
@@ -131,9 +131,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
 {
   const KILL_R = 0.30, ASSIST_R = 0.40, HORIZON = 600, TRAVEL = 60;   // TRAVEL:波次行軍+交戰折讓
   let t = 0, waves = 0;
-  for (let n = 1; t <= HORIZON - TRAVEL; n++) { waves++; t += waveInterval(n); }
-  const comp = [...Array(GAME.WAVE_SOLDIERS).fill('soldier'), ...GAME.WAVE_EXTRAS];
-  const waveBounty = comp.reduce((s, k) => s + ECON.BOUNTY[k], 0);
+  for (; t <= HORIZON - TRAVEL;) { waves++; t += waveInterval(); }   // 2026-07-30:出兵間隔固定
+  const waveBounty = waveComp().reduce((s, k) => s + ECON.BOUNTY[k], 0);
   const income = ECON.START + (KILL_R + ASSIST_R * ECON.ASSIST.F) * waves * waveBounty;
   // 八軌全滿 = 8 軌各級階梯單價 upgradePrice(u,lvl) 之和(2026-07-20;無擊殺門檻,隨等級遞增)
   const totalCost = Object.values(ECON.UPGRADES)

@@ -2,7 +2,7 @@
 //            → 開房前選圖 → 建房(含隊伍規模/環境)→ 選陣營(N 席)→ 選角
 //            → 準備 → 開戰載入 → 快照 → 彈道命中 → 招式養成 → 勝負 → 回房保留地圖
 import WebSocket from 'ws';
-import { BattleSim } from '../server/sim.js';
+import { BattleSim, waveInterval, cumLen } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
 import { RoomHub } from '../server/rooms.js';
 import {
@@ -13,6 +13,7 @@ import {
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageDmgF,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
+  waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
 } from '../public/js/data.js';
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
@@ -834,6 +835,84 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert((mark.empUntil || 0) > sim.t && mark.asst && mark.asst.p_e != null,
       '範圍 EMP(負面狀態)寫入助攻貢獻戳記');
     sim.ents.delete(mark.id);
+    // 補刀者**也是英雄**的路徑(舊測只驗非英雄補刀):擊殺者拿全額、其餘貢獻者拿 ASSIST.F
+    const ally = sim.addHero('STEEL', 'p_al', charsOf('STEEL')[0]);
+    const prey2 = sim._add({ kind: 'tank', side: 'SWARM', x: rb2.x + 24, z: rb2.z, hp: UNITS.tank.hp });
+    sim.t += 1;
+    sim._damage(prey2, 40, rb2);              // rb2 造成傷害 = 助攻貢獻
+    const $b0 = rb2.money, $k0 = ally.money;
+    sim._damage(prey2, 99999, ally);          // 另一名英雄補刀
+    assert(Math.round(ally.money - $k0) === ECON.BOUNTY.tank, `英雄補刀拿全額賞金 +$${Math.round(ally.money - $k0)}`);
+    assert(Math.abs((rb2.money - $b0) - ECON.BOUNTY.tank * ECON.ASSIST.F) < 1e-6,
+      `英雄補刀時助攻仍入帳 +$${(rb2.money - $b0).toFixed(2)}(= ${ECON.BOUNTY.tank} × ${ECON.ASSIST.F})`);
+    assert(sim.stats.STEEL.assists >= 1, '計分板助攻欄位累計(玩家看得見助攻在發)');
+    sim.heroes.delete('p_al'); sim.squads.delete('p_al');
+    for (const b of [...sim.ents.values()]) if (b.pid === 'p_al') sim.ents.delete(b.id);
+  }
+
+  log('— sim:出兵間隔固定 + 開場預置兵線(到第一座砲塔為止)—');
+  {
+    const iv = waveInterval();
+    assert(iv === GAME.WAVE_S && waveInterval(1) === waveInterval(99),
+      `出兵間隔固定 ${iv}s(不隨波次加速;GAME.WAVE_S 單一縫)`);
+    assert(Math.abs(waveSpacingM() - iv * waveMarchSpeed()) < 1e-9 && waveMarchSpeed() === Math.min(...waveComp().map((k) => UNITS[k].speed)),
+      `預置間距 ${waveSpacingM().toFixed(0)}m = 間隔 ${iv}s × 行軍速度 ${waveMarchSpeed()}m/s(編制最慢者,推導不手寫)`);
+    const ps = new BattleSim(fakeBattleConfig(1));
+    const KINDS = waveComp();
+    const pre = [...ps.ents.values()].filter((e) => KINDS.includes(e.kind) && e.wv < 0);
+    assert(pre.length > 0 && pre.length % (KINDS.length * 2) === 0,
+      `開場預置 ${pre.length / (KINDS.length * 2)} 波/線/側(雙方對稱)`);
+    const total = cumLen(ps.lanes[0]).at(-1);
+    const sites = ps.towerSites[0];
+    const limit = total * sites.at(-1).frac;   // 「第一座砲塔」= 最前線塔(solveTowerSites 回傳序末項)
+    const leads = [...new Set(pre.map((e) => e.wv))].sort((a, b) => b - a)
+      .map((wv) => Math.max(...pre.filter((e) => e.wv === wv).map((e) => e.prog)));
+    assert(Math.max(...leads) <= limit + 1e-6, `預置最前一波 ${Math.max(...leads).toFixed(0)}m ≤ 第一座砲塔 ${limit.toFixed(0)}m`);
+    assert(leads.every((p, i) => i === 0 || Math.abs(p - leads[i - 1] - waveSpacingM()) < 1e-6),
+      `預置各波沿兵線等距 ${waveSpacingM().toFixed(0)}m(對應出兵間隔)`);
+    assert(new Set(pre.map((e) => e.wv)).size === leads.length && !pre.some((e) => e.wv >= 0),
+      '預置波序為負(凝聚錨定桶不與開局第一波混同)');
+  }
+
+  log('— sim:陣營小兵強化(同陣營共用・兵線分開・成長率 log(LV))—');
+  {
+    const cs = new BattleSim(fakeBattleConfig(3));
+    purgeCamps(cs);
+    const a = cs.addHero('SWARM', 'p_c1', charsOf('SWARM')[0]);
+    const b = cs.addHero('SWARM', 'p_c2', charsOf('SWARM')[1]);
+    assert(creepUpgMul(0) === 1 && Math.abs(creepUpgMul(CREEP_UPG.MAX) - (1 + Math.log10(1 + CREEP_UPG.MAX))) < 1e-9,
+      `倍率曲線 1+log10(1+LV):LV0 ×1.00 → LV${CREEP_UPG.MAX} ×${creepUpgMul(CREEP_UPG.MAX).toFixed(2)}`);
+    a.money = 99999;
+    assert(cs.buy('p_c1', 'creep', 0) !== null, '八軌未滿級不得購買陣營小兵強化');
+    for (const [k, u] of Object.entries(ECON.UPGRADES)) a.upg[k] = u.max;
+    a.money = CREEP_UPG.PRICE * 2;
+    assert(cs.buy('p_c1', 'creep', 99) !== null && cs.buy('p_c1', 'creep', null) !== null, '非法兵線編號被拒');
+    const $c0 = a.money;
+    assert(cs.buy('p_c1', 'creep', 1) === null && cs.creepUpg.SWARM[1] === 1 && $c0 - a.money === CREEP_UPG.PRICE,
+      `每階 $${CREEP_UPG.PRICE}(LV1 到帳)`);
+    assert(cs.creepUpg.SWARM[0] === 0 && cs.creepUpg.SWARM[2] === 0 && cs.creepUpg.STEEL[1] === 0,
+      '不同兵線分開強化、敵方陣營不受影響');
+    // 同陣營共用:另一名玩家(八軌全滿)接著買同一條兵線 → 疊在同一個等級上
+    for (const [k, u] of Object.entries(ECON.UPGRADES)) b.upg[k] = u.max;
+    b.money = CREEP_UPG.PRICE;
+    assert(cs.buy('p_c2', 'creep', 1) === null && cs.creepUpg.SWARM[1] === 2, '同陣營全玩家共用同一份等級(隊友續購疊加)');
+    assert(cs.buy('p_c2', 'creep', 1) !== null, '資金不足被拒(不透支)');
+    // 生成當下定案:hp / dmg / armor / 賞金同吃倍率
+    cs.creepUpg.SWARM[2] = CREEP_UPG.MAX;
+    const mul = creepUpgMul(CREEP_UPG.MAX);
+    cs._spawnLaneWave(2, 'SWARM', 7, GAME.WAVE_SPAWN_OFF_M);
+    const up = [...cs.ents.values()].find((e) => e.wv === 7 && e.kind === 'tank');
+    const plain = cs._add({ kind: 'tank', side: 'STEEL', x: 1e5, z: 1e5, hp: UNITS.tank.hp });
+    assert(up.hp === Math.round(UNITS.tank.hp * mul) && Math.abs(up.cu - mul) < 1e-9,
+      `LV${CREEP_UPG.MAX} 小兵 hp ${up.hp}(= ${UNITS.tank.hp} × ${mul.toFixed(2)})`);
+    assert(Math.abs(cs._bounty(up) - ECON.BOUNTY.tank * mul) < 1e-9 && cs._bounty(plain) === ECON.BOUNTY.tank,
+      `陣亡賞金同步 ×${mul.toFixed(2)}(${ECON.BOUNTY.tank} → ${Math.round(cs._bounty(up))});未強化者不變`);
+    // 護甲值同吃倍率 ⇒ 同一發傷害打強化兵吃得更少
+    const hp0 = up.hp, hp1 = plain.hp;
+    cs._damage(up, 100, null, 0); cs._damage(plain, 100, null, 0);
+    assert(hp0 - up.hp < hp1 - plain.hp,
+      `護甲值同吃倍率(同一發 100 傷害:強化兵扣 ${(hp0 - up.hp).toFixed(1)} < 未強化 ${(hp1 - plain.hp).toFixed(1)})`);
+    assert(JSON.stringify(cs.snapshot().cu.SWARM) === JSON.stringify(cs.creepUpg.SWARM), '快照帶陣營小兵強化等級(商店唯讀顯示)');
   }
 
   log('— sim:非正規路線防空伏擊(需射程內有存活陣地)+ 飛彈可破壞 —');
@@ -1313,7 +1392,14 @@ const snapWave = spec.snaps.at(-1);   // 無霧視角:才看得到雙方全部�
 const WAVE_KINDS = ['soldier', ...GAME.WAVE_EXTRAS];
 const wavePer = GAME.WAVE_SOLDIERS + GAME.WAVE_EXTRAS.length;
 const creeps = snapWave.ents.filter((e) => WAVE_KINDS.includes(e.k) && isFaction(e));
-assert(creeps.length === wavePer * 2, `第一波小兵 ${wavePer * 2} 隻(1線×2方×${wavePer},含坦克;實際 ${creeps.length})`);
+// 2026-07-30 起開局兵線是**預先鋪好的**(_prefillLanes:沿兵線每 waveSpacingM 一波,到第一座砲塔為止)
+// ⇒ 期望值 MUST 由同一份規則推出,不可手寫。參照 sim 用同一份 battleConfig 建(確定性 ⇒ 波數相同)。
+const refSim = new BattleSim(spec.battleConfig);
+const refPre = [...refSim.ents.values()].filter((e) => WAVE_KINDS.includes(e.kind) && isFaction({ s: e.side })).length;
+const expectCreeps = refPre + wavePer * 2;   // 預置 + 開局第一波(FIRST_WAVE_DELAY_S = 0)
+assert(creeps.length === expectCreeps,
+  `開局兵線 ${expectCreeps} 隻(預置 ${refPre} + 第一波 ${wavePer * 2};1線×2方×${wavePer},含坦克;實際 ${creeps.length})`);
+assert(refPre > 0 && refPre % (wavePer * 2) === 0, `開場預置兵線 ${refPre / (wavePer * 2)} 波/線(雙方對稱,每波 ${wavePer} 隻)`);
 
 log('— 英雄移動 + 射擊 —');
 const target = snapWave.ents.find((e) => e.k === 'soldier' && e.s === 'STEEL');

@@ -112,11 +112,15 @@ export class BotBrain {
     // 經濟:依 BUY_ORDER 逐項升級(階梯單價,資金/滿級門檻由 sim.buy 把關)。
     // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
     if (h.money >= ECON.UPG_BASE && this._op('buy')) {
+      let bought = false;
       for (const item of BUY_ORDER) {
         // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
         if (!this.diff.ability && (item === 'sk' || item === 'ult')) continue;
-        if (sim.buy(this.pid, item) === null) break;
+        if (sim.buy(this.pid, item) === null) { bought = true; break; }
       }
+      // 八軌全滿後的去化:把錢投進**自己這條兵線**的陣營小兵強化(門檻/價格/上限由 sim.buy 把關)。
+      // 沒有這一段的話,滿裝 bot 的錢只會無限囤積,人類玩家單方面享有強化兵線。
+      if (!bought) sim.buy(this.pid, 'creep', this.lane);
     }
 
     // 自保/輔助類招式:低血時放治療/護盾,撤退時也用

@@ -12,6 +12,7 @@ import {
   aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   ALTITUDE, altScale, altRangeMax, RANGE_TOL, WATER, TERRAIN_FX, offGround, airUnit,
+  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -93,13 +94,18 @@ export class BattleSim {
     this.events = [];                 // 快照間累積的事件
     this.over = false;
     this.winner = null;
-    this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0 } };
+    this.stats = { SWARM: { kills: 0, deaths: 0, creepKills: 0, assists: 0 }, STEEL: { kills: 0, deaths: 0, creepKills: 0, assists: 0 } };
     this._tickN = 0;                   // 快照霧戰爭:同一 tick 內多次呼叫共用同一份事件/飛彈/物資
     this._frameTickN = -1;
+    // 陣營小兵強化等級(2026-07-30):**同陣營全玩家共用、不同兵線分開** ⇒ [side][laneIdx]。
+    // 權威只有這一份(_creepMul 是唯一讀取縫);客戶端商店讀快照的 cu 欄(唯讀顯示),
+    // 購買一律走 buy(pid, 'creep', lane)。長度於下方 this.lanes 定案後補齊。
+    this.creepUpg = { SWARM: [], STEEL: [] };
 
     // 兵線折線轉公尺;lane[laneIdx] 方向:SWARM 主堡 → STEEL 主堡
     this.lanes = config.lanes.map((line) =>
       line.map(([lat, lng]) => llToMeters(lat, lng, this.center)));
+    for (const s of ['SWARM', 'STEEL']) this.creepUpg[s] = new Array(this.lanes.length).fill(0);
     this.basePos = {
       SWARM: llToMeters(config.bases.SWARM[0], config.bases.SWARM[1], this.center),
       STEEL: llToMeters(config.bases.STEEL[0], config.bases.STEEL[1], this.center),
@@ -122,6 +128,7 @@ export class BattleSim {
     // 未提供(e2e/headless 或房主尚未上傳)→ _wetGrid 為空,_wetAt 恆 0,佈點行為與舊版一致。
     if (world) this._ingestWorldWet(world);
     this._spawnStructures();
+    this._prefillLanes();     // 開場預置兵線(MUST 在 _spawnStructures 之後:要用解出的第一座砲塔位置)
     this._seedField();
     this._seedCamps();
     this._seedCivilians();
@@ -1051,7 +1058,9 @@ export class BattleSim {
     }
     // 塔位一律走 data.js 的 solveTowerSites()(與 biomes 淨空同一個縫):
     // 最前線敵我塔的直線距離 = tower.range × TOWER_SEP_F(射程重疊 TOWER_OVERLAP、且不對射)。
-    const sites = solveTowerSites(this.lanes);
+    // 留存塔位(帶 frac):開場預置兵線 _prefillLanes 要「第一座砲塔」的沿線位置,
+    // MUST 吃同一份解(再解一次 = 第二份實作,兩邊會分家)。
+    const sites = this.towerSites = solveTowerSites(this.lanes);
     for (let li = 0; li < sites.length; li++) {
       for (const st of sites[li]) {
         for (const side of ['SWARM', 'STEEL']) {
@@ -2491,12 +2500,19 @@ export class BattleSim {
     }
   }
 
+  /** 八軌是否全滿(陣營小兵強化的解鎖門檻;唯一判定處,商店 UI 讀快照的 up 自行同判) */
+  _upgAllMax(h) {
+    return Object.entries(ECON.UPGRADES).every(([k, u]) => (h.upg[k] || 0) >= u.max);
+  }
+
   // ---------- 經濟:購買(八軌;2026-07-20 全軌固定單價,4 戰鬥面向 + 4 防禦系統,無擊殺門檻)----------
-  /** item: 'lw'|'hw'|'sk'|'ult'(戰鬥面向,推進 abil 階)或 'hp'|'ar'|'sp'|'ch'(防禦系統)。回傳錯誤訊息或 null */
-  buy(pid, item) {
+  /** item: 'lw'|'hw'|'sk'|'ult'(戰鬥面向,推進 abil 階)/ 'hp'|'ar'|'sp'|'ch'(防禦系統)
+   *  / 'creep'(陣營小兵強化,需帶 lane;八軌全滿才解鎖)。回傳錯誤訊息或 null */
+  buy(pid, item, lane = null) {
     const h = this.heroes.get(pid);
     // 陣亡等待重生也能購買(DOTA 慣例;重生點/死亡畫面補升級)
     if (!h || this.over) return '目前無法購買';
+    if (item === 'creep') return this._buyCreepUpg(h, lane);
     // hasOwn:item 是客戶端原字串,'toString' 等原型鏈鍵名會取到繼承函式(truthy)
     // → price NaN → 共用 ps.money 污染成 NaN = 八軌全免。
     const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
@@ -2535,6 +2551,28 @@ export class BattleSim {
     return null;
   }
 
+  /**
+   * 陣營小兵強化(2026-07-30 使用者定案):八軌全滿後解鎖的無限金錢去化。
+   * **同陣營全玩家共用**(等級記在 this.creepUpg[side][lane],誰買都是加在陣營帳上)、
+   * **不同兵線分開**(lane 指定要強化哪一條)。每階固定 CREEP_UPG.PRICE,LV 上限 CREEP_UPG.MAX。
+   * 已生成的小兵不追溯(倍率於 _spawnLaneWave 生成當下寫進 e.cu),下一波起生效。
+   */
+  _buyCreepUpg(h, lane) {
+    if (!this._upgAllMax(h)) return '八軌強化全滿後才解鎖陣營小兵強化';
+    // lane 是客戶端原值:null/undefined/'0x1' 一律當非法(Number(null) === 0 會誤買第一條兵線)
+    const li = typeof lane === 'number' || (typeof lane === 'string' && lane.trim() !== '') ? Number(lane) : NaN;
+    const arr = this.creepUpg?.[h.side];
+    if (!arr || !Number.isInteger(li) || li < 0 || li >= arr.length) return '沒有這條兵線';
+    const lvl = arr[li] || 0;
+    if (lvl >= CREEP_UPG.MAX) return `第 ${li + 1} 兵線小兵強化已滿級(LV${CREEP_UPG.MAX})`;
+    if (h.money < CREEP_UPG.PRICE) return `資金不足(小兵強化需 $${CREEP_UPG.PRICE})`;
+    h.money -= CREEP_UPG.PRICE;
+    arr[li] = lvl + 1;
+    // 全陣營共用 ⇒ 事件帶 side/lane(客戶端播報給同陣營全員,不是只有買的人)
+    this.events.push({ e: 'creepUp', pid: h.pid, side: h.side, lane: li, lvl: arr[li] });
+    return null;
+  }
+
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
   _damage(t, dmg, by, pen = 0, floorHp = 0) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
@@ -2567,7 +2605,8 @@ export class BattleSim {
       dmg = rem * armorMul(t.armor, pen);
       dealt = toShield + Math.min(t.hp, dmg);
     } else {
-      dmg *= armorMul(UNITS[t.kind]?.armor ?? 0, pen);
+      // 陣營小兵強化:護甲值同吃 t.cu(與 hp/dmg/賞金同一條曲線;無此欄的塔/主堡/第三方 ×1)
+      dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
       dealt = Math.min(t.hp, dmg);
     }
     this._vamp(by, dealt);
@@ -2606,6 +2645,13 @@ export class BattleSim {
     if (f > 0) by.hp = Math.min(by.maxHp, by.hp + dealt * f);
   }
 
+  /** 陣亡賞金(擊殺全額 / 助攻 ×ASSIST.F 共用的唯一縫)= 表列賞金 × 該單位生成時定案的
+   *  陣營小兵強化倍率(e.cu;未強化的單位沒有這個欄位 ⇒ ×1)。
+   *  「陣亡提供的報酬」與「全能力」同一條 log 曲線 —— 打得更硬的兵,賞金就更高。 */
+  _bounty(t) {
+    return (ECON.BOUNTY[t.kind] || 0) * (t.cu || 1);
+  }
+
   _kill(t, by) {
     const bySide = by?.side || null;
     this.events.push({ e: 'die', id: t.id, kind: t.kind, x: t.x, z: t.z, side: t.side, ...(t.hero || t.decoy ? { pid: t.pid } : {}) });
@@ -2628,7 +2674,7 @@ export class BattleSim {
     }
     // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
     if (by && by.hero && bySide !== t.side) {
-      by.money += (ECON.BOUNTY[t.kind] || 0) * this._buffMul(by, 'bounty');
+      by.money += this._bounty(t) * this._buffMul(by, 'bounty');
       // 擊殺數:招式解鎖/升級的門檻。電腦玩家(bot)只算 BOT_KILL_SCORE 分,不能靠刷 bot 速成。
       if (!t.neutral) by.kn += (t.hero && isBotId(t.pid)) ? BOT_KILL_SCORE : killScore(t.kind);
     }
@@ -2637,7 +2683,7 @@ export class BattleSim {
     // 戳記逾期 = 離開半徑(或陣亡)超過 TTL —— 此處只驗 TTL,不再看距離
     // (擊殺當下看距離會讓已失效的貢獻因重返半徑復活,違反規格)。
     if (t.asst) {
-      const bounty = ECON.BOUNTY[t.kind] || 0;
+      const bounty = this._bounty(t);
       for (const pid in t.asst) {
         if (!bounty) break;
         if (by && by.hero && pid === by.pid) continue;   // 擊殺者本人拿全額,不重複領助攻
@@ -2646,6 +2692,7 @@ export class BattleSim {
         if (this.t - t.asst[pid] > ECON.ASSIST.TTL_S) continue;
         const v = bounty * ECON.ASSIST.F * this._buffMul(a, 'bounty');
         a.money += v;
+        if (this.stats[a.side]) this.stats[a.side].assists++;   // 計分板「助攻」欄(玩家看得到入帳)
         this.events.push({ e: 'assist', pid, v: Math.round(v) });
       }
       t.asst = null;
@@ -2753,7 +2800,7 @@ export class BattleSim {
     // 波次
     if (this.t >= this.nextWaveAt) {
       this.wave++;
-      this.nextWaveAt = this.t + waveInterval(this.wave);
+      this.nextWaveAt = this.t + waveInterval();
       this._spawnWave();
     }
     // 空投物資(時間驅動;每分鐘一批,批量 ∝ 玩家數)
@@ -2857,7 +2904,8 @@ export class BattleSim {
           if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target, e)) {
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
-            this._damage(target, u.dmg, e, wd?.pen || 0);   // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
+            // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1)。高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
+            this._damage(target, u.dmg * (e.cu || 1), e, wd?.pen || 0);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -3325,33 +3373,71 @@ export class BattleSim {
     }
   }
 
+  /** 陣營小兵強化倍率(唯一縫):hp / dmg / armor / 陣亡賞金共用同一條 log 曲線。
+   *  第三方(GUER/MILI)與無兵線的單位查不到等級 ⇒ 恆 ×1。 */
+  _creepMul(side, lane) {
+    return creepUpgMul(this.creepUpg?.[side]?.[lane] ?? 0);
+  }
+
+  /**
+   * 下一波(或開場預置波)在單一兵線單一陣營的落位。**波次編制與擺位只有這一份實作** ——
+   * _spawnWave(常規出兵)與 _prefillLanes(開場預置)共用,MUST NOT 各寫一套。
+   * lead = 領隊的沿線進度(公尺,從己方端起算);其餘成員往己方端列隊錯開。
+   * 強化倍率在**生成當下**定案並存進 e.cu:同一波的數值不會因為中途買強化而追溯變動,
+   * 陣亡賞金(_bounty)也吃同一份 ⇒ 打得更硬的那一波,賞金就是更高的那一波。
+   */
+  _spawnLaneWave(li, side, wv, lead) {
+    const pts = this.lanes[li];
+    const cum = this._laneCum(li);
+    const total = cum[cum.length - 1];
+    const cu = this._creepMul(side, li);
+    waveComp().forEach((kind, i) => {
+      const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
+      const prog = lead - i * 6;
+      const d = side === 'SWARM' ? prog : total - prog;
+      const [sx, sz] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
+      this._add({
+        kind, side, lane: li, wv,
+        x: sx + jx, z: sz + jz,
+        y: kind === 'heli' ? GAME.HELI_ALT : 0,
+        hp: Math.round(UNITS[kind].hp * cu),
+        ...(cu > 1 ? { cu } : {}),   // ×1 不寫欄位:未強化的對局逐位元同舊制
+        prog,
+      });
+    });
+  }
+
   _spawnWave() {
     for (let li = 0; li < this.lanes.length; li++) {
-      for (const side of ['SWARM', 'STEEL']) {
-        const pts = this.lanes[li];
-        const cum = this._laneCum(li);
-        const total = cum[cum.length - 1];
-        const off = GAME.WAVE_SPAWN_OFF_M;   // 出生點落在主路線上、主堡外(領隊在 off,列隊向堡內錯開)
-        const comp = [];
-        for (let i = 0; i < GAME.WAVE_SOLDIERS; i++) comp.push('soldier');
-        comp.push(...GAME.WAVE_EXTRAS);   // 固定編制唯一真相住 data.js(2026-07-17 起含坦克)
-        comp.forEach((kind, i) => {
-          const jx = (Math.random() - 0.5) * 14, jz = (Math.random() - 0.5) * 14;
-          // 沿線進度(公尺,從己方端起算);領隊在 off 出主堡,其餘往堡內列隊錯開
-          const prog = off - i * 6;
-          const d = side === 'SWARM' ? prog : total - prog;
-          const [sx, sz] = pointAt(pts, cum, Math.max(0, Math.min(total, d)));
-          this._add({
-            kind, side, lane: li, wv: this.wave,
-            x: sx + jx, z: sz + jz,
-            y: kind === 'heli' ? GAME.HELI_ALT : 0,
-            hp: UNITS[kind].hp,
-            prog,
-          });
-        });
-      }
+      // 出生點落在主路線上、主堡外(領隊在 WAVE_SPAWN_OFF_M,列隊向堡內錯開)
+      for (const side of ['SWARM', 'STEEL']) this._spawnLaneWave(li, side, this.wave, GAME.WAVE_SPAWN_OFF_M);
     }
     this.events.push({ e: 'wave', n: this.wave });
+  }
+
+  /**
+   * 開場預置兵線(2026-07-30 使用者定案):開局時小兵**已經**沿兵線以固定間隔排開,
+   * 最遠到「第一座砲塔」(該兵線最前線塔)的沿線位置 —— 開局不再是兩邊空兵線對跑。
+   * 間隔 = waveSpacingM()(= 出兵間隔 × 波次行軍速度,data.js 單一縫)⇒ 預置隊形與
+   * 開打後的穩態隊形完全同density,第一波出堡時整條線的節奏就是接續的。
+   * 波序 wv 用**負數**往前推(−1 = 比第一波早一個間隔出發):凝聚錨定桶是 `side|lane|wv`,
+   * 用負數才不會把預置波與開局第一波併成同一波互相等待(_waveAnchors)。
+   */
+  _prefillLanes() {
+    const gap = waveSpacingM();
+    if (!(gap > 0)) return;
+    for (let li = 0; li < this.lanes.length; li++) {
+      const cum = this._laneCum(li);
+      const total = cum[cum.length - 1];
+      // 「第一座砲塔」= 該兵線最前線的塔位(solveTowerSites 回傳序末項);frac 自己方端起算 ⇒
+      // 兩陣營的預置上限沿線進度相同(對稱),MUST NOT 各自換算成絕對座標再比。
+      const sites = this.towerSites?.[li];
+      if (!sites?.length) continue;
+      const limit = total * sites[sites.length - 1].frac;
+      for (let k = 1; GAME.WAVE_SPAWN_OFF_M + k * gap <= limit; k++) {
+        for (const side of ['SWARM', 'STEEL']) this._spawnLaneWave(li, side, -k, GAME.WAVE_SPAWN_OFF_M + k * gap);
+      }
+    }
   }
 
   /** 主堡兩門大砲:各自冷卻、獨立索敵,砲塔級射程/傷害(數值 derive 自 tower,見 data.js)。 */
@@ -3628,6 +3714,8 @@ export class BattleSim {
     return {
       t: 'snap', time: Math.round(this.t),
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
+      // 陣營小兵強化等級(唯讀顯示;每側每兵線一個整數)—— 商店與 HUD 讀這份權威值,MUST NOT 客戶端自算
+      cu: { SWARM: [...this.creepUpg.SWARM], STEEL: [...this.creepUpg.STEEL] },
       ents, ev, sm, lt, ad, stats: this.stats, over: this.over, winner: this.winner,
     };
   }
@@ -3654,11 +3742,10 @@ export function cumLen(pts) {
   }
   return cum;
 }
-/** 第 n 波的出兵間隔:前期慢,RAMP_FROM→RAMP_TO 之間線性加速到 MIN_S */
-export function waveInterval(n) {
-  const P = GAME.WAVE_PACE;
-  const t = Math.max(0, Math.min(1, (n - P.RAMP_FROM) / (P.RAMP_TO - P.RAMP_FROM)));
-  return P.START_S + (P.MIN_S - P.START_S) * t;
+/** 出兵間隔(2026-07-30 使用者定案:**固定**,不再逐波加速)。
+ *  數值住 data.js GAME.WAVE_S(單一縫);sim / balance.mjs / 開場預置間距共用這一支。 */
+export function waveInterval() {
+  return GAME.WAVE_S;
 }
 
 export function pointAt(pts, cum, d) {
