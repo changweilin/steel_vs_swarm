@@ -2009,6 +2009,11 @@ function makeHud() {
       el.style.backdropFilter = blur; el.style.webkitBackdropFilter = blur;
       document.body.style.setProperty('--scope-r', `${(40 - f * 22).toFixed(1)}vmin`);   // 40vmin → 18vmin
     },
+    // 異常狀態致盲白幕(2026-07-30;game.js 每幀依 data.js ccFlashAlpha() 推 0~1)——
+    // 純表現層:狀態效果(禁移動/武器離線/操縱反轉)一律伺服器結算,這裡只負責「被閃到」的過曝。
+    ccFlash: (a) => {
+      $('ccFlash').style.opacity = Math.max(0, Math.min(1, a || 0)).toFixed(3);
+    },
     // 水下/沼澤視野變色(2026-07-22;game.js 每幀依鏡頭沒入深度推 {c:[r,g,b], a} 或 null)。
     // 專屬 div(z 6,壓在狙擊遮罩/受傷/火場之下 = 「世界的顏色」層);無 transition,逐幀插值即時。
     waterVeil: (v) => {

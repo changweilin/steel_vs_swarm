@@ -9,7 +9,7 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS,
+  ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -356,6 +356,9 @@ export class BattleClient {
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.stealthLeft = 0;
+    // 異常狀態致盲白幕(純表現層;常數/曲線住 data.js CC_FLASH):狀態上身瞬間全白 → 漸淡
+    this._ccFlashLeft = 0;            // 白幕剩餘秒數(由 ccFlashDur() 倒數)
+    this._ccFlashPeak = 0;            // 本次白幕的峰值不透明度(= 該狀態的致盲強度)
     this.shopOpen = false;
     this.paused = false;              // 戰場選單開啟中(凍結輸入)
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
@@ -2270,19 +2273,55 @@ export class BattleClient {
     return (this.slowLeft || 0) > 0 ? (this.slowF || 0.6) : 1;
   }
 
-  /** 控場/標記狀態的上升沿播報(比照 _empWarnAt 的自我節流模式;快照 8Hz 驅動) */
+  /**
+   * 控場/標記狀態的上升沿播報(比照 _empWarnAt 的自我節流模式;快照 8Hz 驅動)。
+   * 上升沿同時是**致盲白幕**的觸發點(第三參數 = data.js CC_FLASH.PEAK 的鍵;省略 = 不致盲):
+   * 光學/電子系狀態(雷爆閃光 emp / 纏擾致盲 conf / 電擊麻痺 stun)才白幕,物理系不白(見 CC_FLASH)。
+   */
   _ccFeed() {
-    const edge = (key, left, msg) => {
+    const edge = (key, left, msg, flash) => {
       const on = (left || 0) > 0;
-      if (on && !this[key]) this.hud.feed?.(msg);
+      if (on && !this[key]) {
+        this.hud.feed?.(msg);
+        if (flash) this._blindFlash(CC_FLASH.PEAK[flash]);
+      }
       this[key] = on;
     };
-    edge('_stunOn', this.stunLeft, '⛓️ 機體麻痺:動力系統離線(武器仍可運作)!');
+    edge('_stunOn', this.stunLeft, '⛓️ 機體麻痺:動力系統離線(武器仍可運作)!', 'stun');
     edge('_slowOn', this.slowLeft, '🕸️ 機體緩速:行動遲滯!');
-    edge('_confOn', this.confLeft, '💫 操縱混亂:控制訊號反轉!');
+    edge('_confOn', this.confLeft, '💫 操縱混亂:控制訊號反轉!', 'conf');
     edge('_bleedOn', this.bleedLeft, '🩸 裝甲破口:持續失血中!');
     edge('_markOn', this.markLeft, '🎯 定位完成:下一擊必中必爆!');
     edge('_invOn', this.invLeft, '🛡️ 相位護盾:1 秒無敵!');
+    // 電磁癱瘓(雷爆彈/EMP 招式)= 閃光彈本體:最強致盲。原本只在「試圖施放」時才有提示,
+    // 這裡補上上升沿播報,讓白幕與播報同一個縫(MUST NOT 在別處另判 empLeft 觸發白幕)。
+    edge('_empOn', this.empLeft, '⚡ 電磁閃光:武器系統離線(仍可移動)!', 'emp');
+  }
+
+  /**
+   * 觸發致盲白幕(唯一入口;peak = 該狀態致盲強度)。白幕長度固定 = ccFlashDur(),
+   * 不隨狀態剩餘秒數延長(見 data.js CC_FLASH)。重疊觸發時「當下更亮者勝」——
+   * 比現值暗的新狀態 MUST NOT 把正在全白的畫面打回較暗的峰值(閃到一半忽然變亮再變暗 = 假)。
+   */
+  _blindFlash(peak) {
+    if (!(peak > 0)) return;
+    if (peak >= ccFlashAlpha(this._ccFlashLeft, this._ccFlashPeak)) {
+      this._ccFlashLeft = ccFlashDur();
+      this._ccFlashPeak = peak;
+    }
+  }
+
+  /** 致盲白幕逐幀衰減 → 推 HUD(0 = 清晰);歸零那幀仍推一次 0,之後早退不再碰 DOM */
+  _updateCcFlash(dt) {
+    if (this._ccFlashLeft <= 0) return;
+    this._ccFlashLeft = Math.max(0, this._ccFlashLeft - dt);
+    this.hud.ccFlash?.(ccFlashAlpha(this._ccFlashLeft, this._ccFlashPeak));
+  }
+
+  /** 清除致盲白幕(陣亡/重生/換座機:白幕是上一具機體的感光反應,MUST NOT 留到下一條命) */
+  _clearCcFlash() {
+    this._ccFlashLeft = 0; this._ccFlashPeak = 0;
+    this.hud.ccFlash?.(0);
   }
 
   /**
@@ -4470,6 +4509,7 @@ export class BattleClient {
     this._crashSent = false;
     this.trauma = 0.35;
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
+    this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
   }
 
@@ -4634,6 +4674,7 @@ export class BattleClient {
     this.aiming = false;
     this._climb = null;   // 掛在梯上陣亡:狀態 MUST 清掉,否則重生後第一幀會被吸回原本那條路線
     this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
+    this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
@@ -4818,7 +4859,8 @@ export class BattleClient {
     const look = this.camera.getWorldDirection(new THREE.Vector3());
     look.y = 0;
     if (look.lengthSq() > 0) look.normalize();
-    const fwd = u.speed * this._modF('speed') * CJUMP.FWD_F * k;   // 前向彈射初速 ∝ 機體速度 ⇒ 最大距離同比
+    // 前向彈射初速 ∝ 機體速度 ⇒ 最大距離同比;× AIR_SPD_F = 蓄力跳水平移速加倍(唯一縫,騰空操縱同吃)
+    const fwd = u.speed * this._modF('speed') * CJUMP.FWD_F * CJUMP.AIR_SPD_F * k;
     this.vel.x += look.x * fwd;
     this.vel.z += look.z * fwd;
     this.trauma = Math.min(1, this.trauma + 0.25);
@@ -6289,6 +6331,7 @@ export class BattleClient {
     if (this.dead) return;
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
+    this._updateCcFlash(dt);     // 異常狀態致盲 → 全白後漸淡(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
     // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
     // 正是「溝底不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一
@@ -6366,8 +6409,10 @@ export class BattleClient {
       const slowK = 1 - 0.6 * this.charge;
       // 混亂(招式追加效果):操縱反轉 + 慢速航向漂移
       if ((this.confLeft || 0) > 0) { move.multiplyScalar(-1); this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
+      // 蓄力跳騰空(_lowG)期間水平操縱移速 × CJUMP.AIR_SPD_F(與起跳彈射初速同一個縫)
+      const airK = this._lowG ? CJUMP.AIR_SPD_F : 1;
       this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * dt);
+        * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦

@@ -526,6 +526,15 @@ body.aiming .crosshair::after { height: 2px; }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 
+/* 異常狀態致盲白幕:閃光彈(電磁)/纏擾致盲/電擊麻痺上身瞬間全屏過曝,之後漸淡回清晰。
+   opacity 由 game.js 每幀依 data.js ccFlashAlpha() 推(全白段 → smoothstep 淡出)⇒
+   MUST NOT 加 transition/animation(CSS 過渡會與逐幀曲線相爭,峰值被鈍化成「白得很慢」)。
+   z 9:蓋過受傷/火場暈影(8)與狙擊遮罩(7)—— 被閃到的是機體光學,連周邊暈影一起洗白;
+   但壓在 HUD(10)之下,血量/彈藥仍讀得到(比照 death-alert 的 z 9 理由)。 */
+.cc-flash {
+  position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: 0; background: #fff;
+}
+
 /* 狙擊模式(瞄準)可視遮罩:中央正圓可見、外圈全黑不可見。radial-gradient 用 circle + vmin →
    不隨螢幕長寬比變成橢圓,恆為正圓。z 7:壓在 HUD(10)、hurt/env 暈影(8)之下 ——
    不擋 HUD、周邊受傷/火場暈影仍疊其上,只黑掉 3D 周邊視野。body.aiming 時由 main.js 切顯示。 */
