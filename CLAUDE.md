@@ -109,6 +109,7 @@
 | A4 | 確定性散布路徑 MUST NOT 用 `Math.random()` |
 | A5 | 重武器 CD 唯一實作 = `mag:1 + reload=cd`,MUST NOT 另發明第二套 |
 | A6 | 射擊 raycast 只打單位;地形走解析射線 `terrain.rayTerrain()`、建物/巨物走解析圓柱/盒(`_blockerHitT`)。MUST NOT 把 `terrain.mesh`/植被/建物 InstancedMesh 加進 raycast 目標(three 逐面線性掃 = 開火掉幀主因);MUST NOT 讓砲火穿越碰撞障礙 |
+| A6b | **塗層雙面阻擋**:把上下空間隔開的實體面(地形高度場/橋面/隧道天花與**路面**/障礙頂面底面)MUST 不分方向截斷砲火 —— 往上往下同判,**透明可穿透處例外**(`punchPortalHoles` 打掉的三角形、地下道引道 `open` 段)。禁令兩條:①MUST NOT 用 `y <= heightAt(x,z)` 當彈道閘(那問「在地表以下」不是「穿過地表」:由下往上漏放、且不吃打洞 ⇒ 洞口變隱形山體),一律走 `_terrainSegT`→`_terrainHitT`;②障礙的垂直判定 MUST 是「穿越區間 ∩ 垂直帶」,MUST NOT 只驗入點高度或加掛 `dy < 0`(伺服器 `_losBlocked` 一向是區間語意 ⇒ 單向版 = 兩端分家靜默丟包)。爆點回報的離地基準 MUST 在洞內改取隧道路面(`heightAt` = 未開挖的山頂),但 `lev` **刻意只報 0/2** —— 橋面報 1 會被 `_slabSep` 判成「與橋上砲塔分屬板體兩側」= 塔對 AoE 免傷(前提:`sim._unitLev` 讓塔/主堡恆 0)。稽核 `audit_layer_block.mjs` |
 | A7 | 飛彈失鎖(離開發射源射程 → 直線飛行)兩端共用;MUST NOT 無限追蹤 |
 | A8 | FOV 全機種一律 68(zoom 35);MUST NOT 用 FOV 做差異化 |
 | A9 | 客戶端 `wstate` 彈藥與伺服器小幅漂移 by design(miss 不回報);MUST NOT「修正」 |
@@ -205,7 +206,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `SOLDIER_H`/`HERO_SIZE.mul`/`BRIDGE_RISE`/`TUN.CLEAR` | 重驗「淨空 > 最大機體 4.5m + 0.2 頭頂餘裕」 |
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 | 攀爬路線(`climb.js` 系) | `audit_climb.mjs` Ⅰ・Ⅱ・Ⅳ・Ⅴ・Ⅵ(123 項)+ 真機冒煙(掛梯/推杆/登頂開火/跳離/箭頭辨識/相鄰相接) |
-| 障礙橫斷面(`_blockerHitT`/occ 上傳/`_losBlocked`) | `audit_climb.mjs` Ⅲ:兩端對同一盒同線段 MUST 同判(含 ry 反號、細長樓側面、圓柱不變) |
+| 障礙橫斷面(`_blockerHitT`/occ 上傳/`_losBlocked`) | `audit_climb.mjs` Ⅲ:兩端對同一盒同線段 MUST 同判(含 ry 反號、細長樓側面、圓柱不變、上下方向對稱) |
+| 塗層阻擋(`_slabHitT`/`_terrainSegT`/`_layerHitT`/`_blockerHitT` 垂直帶/爆點基準) | `audit_layer_block.mjs`(36 項;Ⅰ 天花與**路面**雙面 + open 放行 + 橋面同側不誤擋、Ⅱ 盒頂/盒底不分方向、Ⅲ MUST NOT 退回單面 `heightAt`、Ⅳ 洞內爆點基準取路面且 lev 只報 0/2) |
 | 橋交會去重(`dedupeCrossingBridges` 系) | `audit_bridge_crossing.mjs`(16 項;優先度 兵線 > 鐵路 > 大馬路 > 小馬路;鐵路容差 `gap=0` 只認真交叉) |
 | 馬路橫切繞行(`skirtWaterClips` 系) | `audit_water_skirt.mjs`(8 項;斜交對稱穿越 MUST 建橋不繞;步道一律不進橋樑管線 `PED_HW`) |
 | 橋上砲塔墩座(`planTowerBridgePads` 系) | `audit_bridge_tower_pad.mjs`(23 項;沿橋軸與水側走位帶 ≥ 基座 + 8m;`TOWER_BASE_R` 不變) |

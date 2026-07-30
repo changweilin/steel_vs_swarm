@@ -502,8 +502,11 @@ function build(under = true, heightAt = null) {
     'Ⅴ surfaceAt MUST NOT 濾 open —— 站立捕捉正是 open 段的存在理由(站精確下沉剖面)');
   ok(/if \(tn && !tn\.open && yHi !== yLo/.test(gsrc),
     'Ⅴ _slabHitT MUST 濾 open(露天段不擋彈道 —— 看得到就打得到)');
-  ok(/lev: btn && !btn\.open && by < btn\.ceil \? 2 : 0/.test(gsrc),
+  ok(/const inTun = !!\(btn && !btn\.open && p\.y < btn\.ceil\);/.test(gsrc)
+    && /lev: inTun \? 2 : 0/.test(gsrc),
     'Ⅴ 爆點 lev MUST 濾 open(露天溝裡的爆風不吃隧道隔絕)');
+  ok(/const gy = inTun \? btn\.floor : this\.terrain\.heightAt\(p\.x, p\.z\);/.test(gsrc),
+    'Ⅴ 爆點離地基準 MUST 在洞內改取隧道路面 —— 覆蓋段山體未開挖,heightAt 會把爆點抬到山頂');
   ok(/const inTun = !!\(tn && !tn\.open && this\.pos\.y < tn\.ceil\);/.test(gsrc),
     'Ⅴ pos 回報 lev MUST 濾 open(露天溝單位不是 lev=2 的洞內鬼影)');
   ok(/const inTun0 = !!\(tn0 && py0 < tn0\.ceil\);/.test(gsrc),
