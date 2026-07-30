@@ -78,6 +78,7 @@
 | 貫穿演出 | `game.js _lanceVisual()` + `lanceR(def, barrage)` | 自機/他人/bot 共用;粗細 = 伺服器判定半徑(含 `LANCE.BARRAGE_F` 傾洩加粗,兩端 MUST 同步) |
 | 榴彈火控 | `game.js _lobAim()`(每幀定案 `_lobFc`) | 出膛向量/瞄準虛線/鎖定光暈/砲管仰角共用;光暈 = `_arcTrace minD ≤ LOB_TOL`,MUST NOT 退回直射線判定 |
 | 異常狀態致盲白幕 | `data.js CC_FLASH` + `ccFlashAlpha()`/`ccFlashDur()`;觸發 `game.js _blindFlash()` | 純表現層(狀態效果仍伺服器結算):光學/電子系狀態(emp/conf/stun)**上升沿**觸發,白幕長度固定 = `ccFlashDur()`,MUST NOT 隨狀態剩餘秒數延長;強度表 MUST NOT 收物理系(slow/bleed/mark);逐幀曲線唯一驅動 ⇒ `.cc-flash` MUST NOT 掛 CSS transition/animation |
+| 地形坡度移動 | `data.js SLOPE` + `slopeDeg()`/`slopeMoveF()`/`slopeBlocked()`;量測 `game.js _slopeDegAlong()` | 平緩帶 `EASE_DEG` = 兵線坡度限制 `MAPGEO.MAX_ROAD_GRADE_DEG`、阻擋角 = ×`BLOCK_F` 推導,兩者 MUST NOT 手寫(設計語意:**兵線走廊恆全速**,離開大路爬野山才減速)。坡度一律量**裸地形 `heightAt`**,MUST NOT 改量站立面 `_surf`(上橋引道會被 deckAt 捕捉成假峭壁);速度倍率吃固定前瞻 `PROBE_M`,MUST NOT 拿當幀位移(手感隨幀率浮動);三條豁免 = 飛行/騰空、人造鋪面(`STRUCT_M`)、零位移;**下坡一律不擋**、「爬不上去」MUST 由 `slopeBlocked` 表達而非倍率 0 |
 | 蓄力跳水平移速 | `data.js CJUMP.AIR_SPD_F` | 兩個消費端 MUST 同吃 —— 起跳彈射初速(`_chargeJump`)+ 騰空(`_lowG`)操縱移速;垂直項(`CJUMP.V`/`GRAV_F`)MUST NOT 吃(否則跳高/滯空一起變,滿蓄頂點會撞 `AA_MIN_ALT` 前提) |
 | 機體高度/半徑 | `data.js SOLDIER_H/HERO_SIZE/heroTargetH()/TARGET_H/hitH()` + `hitR()`(`HERO_HIT_R`/`TARGET_R`) | 同一把尺餵渲染縮放與伺服器命中量體;爆風/貫穿量到**垂直帶最近點**;貫穿半徑 = `lanceR(def) + hitR(t)`;`game.js COLLIDER` MUST 由 hitR/hitH 推導,但鍵集 MUST NOT 隨 `TARGET_R` 擴張 |
 | 攀爬路線 | `climb.js`(規劃/抓握索引/設施幾何/`attachFaces()` 正面候選) | 詳見 A31 |
@@ -196,6 +197,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | `BALLISTIC.LOB_*`/`AA_MV`/`_lobAim` | 真機冒煙:`bullet.vel` = `_lobFc.vel`、爆點 = 瞄準高、弧高隨距離變、稜線擋道 `ok:false` 不送 lock |
 | `hitH`/`TARGET_H`/`HERO_SIZE`(命中量體) | headless `_blast` 直測(垂直帶內同額、1.8r 外歸零、塔頂 = 塔底);動 `hitR`/`TARGET_R` 一併跑 `audit_lance_hit.mjs`(同組值 = COLLIDER 碰撞半徑) |
 | `AIR`/`envTrigger`/`TERRAIN_FX`(騰空/地形異常) | headless 直測(小跳仍踩雷、蓄力跳不踩;無人機 y=10 仍灼傷;騰空 wet 立停)+ 真機水域冒煙 |
+| 地形坡度移動(`SLOPE`/`slopeDeg`/`slopeMoveF`/`slopeBlocked`・`_slopeDegAlong`/`_slopeMoveF`/`_updatePlayer` 移動段與 passable 閘)/ `MAPGEO.MAX_ROAD_GRADE_DEG` | `audit_slope_move.mjs`(63 項;Ⅰ 常數推導不手寫、Ⅱ 曲線平緩帶恆 1 → 上坡遞減/下坡遞增且夾制、**下坡一律不擋**、Ⅲ 合格兵線在遊戲空間 ≈8.2° < 平緩帶 ⇒ 推線走廊恆全速、Ⅳ 消費端單一縫、Ⅴ 合成高度場行為直測含橋面/隧道/騰空豁免)+ 真機冒煙(爬陡坡明顯變慢、峭壁上不去但可沿等高線橫走、下坡加速、上橋引道與洞口不被誤擋) |
 | 異常狀態致盲白幕(`CC_FLASH`/`ccFlashAlpha`/`_ccFeed`・`_blindFlash`・`_updateCcFlash`/`.cc-flash`)/ 蓄力跳水平移速(`CJUMP.AIR_SPD_F`/`_chargeJump`/騰空移動段) | `audit_cc_flash.mjs`(44 項;Ⅰ 曲線全白→漸淡→歸零、Ⅱ 強度表只收光學系、Ⅲ 觸發/衰減/清除各一處且都接上、Ⅳ 行為直測「當下更亮者勝」、Ⅴ 水平倍率兩端同吃且垂直不吃)+ 真機冒煙(被雷爆彈/EMP 招式命中畫面全白後漸淡、HUD 仍讀得到;蓄力跳同蓄力比例跳得更遠但高度不變) |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e 重驗:輕武器 NPC range ≥170(#INC-104)、t01/s02 crit:0、s02 heavy = launcher、「塔 310 > 所有輕武器」與「所有重武器 > 塔 310」雙不等式 |
 | 骨架/關節/步態 | 全角色 rig 稽核 + `audit_cast_jump.mjs` |

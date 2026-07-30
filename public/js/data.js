@@ -965,6 +965,56 @@ export function envTrigger(ground, waterY, footY, eyeH) {
   return footY + eyeH * eyeF < planeY ? ground : 0;
 }
 
+// ---- 地形坡度移動(2026-07-30 使用者需求;地面單位的上坡/下坡唯一縫)----
+// 需求原文:「地面單位往某個傾斜度(跟兵線坡度限制有關的 16 度)的地形上坡移動時會減速,
+//   速度變化與陡峭度相關,陡到某個程度後就不可以爬上去;反過來,對應的坡度下坡會加速」。
+//
+// 平緩帶上限 EASE_DEG **就是**兵線坡度限制 `MAPGEO.MAX_ROAD_GRADE_DEG`(16°)——
+//   MUST NOT 手寫 16,改兵線限制即連動。設計語意:**推線走廊恆全速**(兵線走的是真實道路,
+//   坡度已被 maxLaneGrade 濾在 16° 內),離開兵線去爬野山才付代價 —— 坡度是「離開大路的代價」,
+//   不是對正常推進的普遍課稅。
+//   餘裕註記:兵線那 16° 量在**真實世界**(mapSelect maxLaneGrade 用真實公尺),而遊戲空間水平
+//   放大 1/REAL_SCALE 倍、高程不放大 ⇒ 同一條路在遊戲空間只剩 atan(tan16° × REAL_SCALE) ≈ 8.2°,
+//   離平緩帶上限還有近一倍餘裕(稽核 audit_slope_move.mjs Ⅳ 逐條盯住這條不變式)。
+// 阻擋角 BLOCK_DEG = EASE_DEG × BLOCK_F(推導,MUST NOT 手寫):超過即「爬不上去」——
+//   遊戲空間 32° ≈ 真實世界 57°,亦即只有峭壁擋人,一般山坡照樣爬得上去(只是慢)。
+//   垂直通道由攀爬路線(climb.js)提供,MUST NOT 為了「這面牆上不去」去調鬆這個角度。
+// 速度倍率在 [EASE_DEG, BLOCK_DEG] 之間線性內插:上坡 1 → UP_MIN_F、下坡 1 → DOWN_MAX_F
+//   (更陡的下坡夾在 DOWN_MAX_F —— **下坡永遠不擋**,否則陡坡上的機體會把自己鎖死)。
+// PROBE_M:量測移動速度倍率的前瞻距離(公尺)。MUST 與 dt/機體速度無關 —— 拿當幀位移量坡,
+//   低幀率量到的坡就會比高幀率陡(高度場雙線性內插在格內是線性的,但跨格會摺),手感隨幀率浮動。
+// STRUCT_M:「站在人造鋪面上」的高差門檻(站立面 vs 裸地形)。橋面/隧道路面/屋頂是工程結構,
+//   一律不吃坡度效果(與 _envAt 的「橋面/結構物 = 乾」同一條界線)。
+export const SLOPE = {
+  EASE_DEG: MAPGEO.MAX_ROAD_GRADE_DEG,   // 平緩帶(此角度內恆全速)= 兵線坡度限制
+  BLOCK_F: 2,                            // 阻擋角 = 平緩帶 × 此倍率
+  UP_MIN_F: 0.35,                        // 上坡到阻擋角前的最低速度倍率
+  DOWN_MAX_F: 1.25,                      // 下坡到阻擋角後的最高速度倍率(更陡亦夾在此)
+  PROBE_M: 2.5,                          // 速度倍率的前瞻取樣距離
+  STRUCT_M: 1.2,                         // 站立面高出/低於裸地形超過此值 = 人造鋪面(不吃坡度)
+  BLOCK_DEG: 0,                          // 推導回填(見下一行),MUST NOT 手寫
+};
+SLOPE.BLOCK_DEG = SLOPE.EASE_DEG * SLOPE.BLOCK_F;
+
+/** 帶號坡度角(度;+ 上坡 / − 下坡)。run 為水平距離(> 0),rise 為高程差。 */
+export const slopeDeg = (rise, run) => Math.atan2(rise, run) * 180 / Math.PI;
+
+/**
+ * 坡度 → 移動速度倍率(唯一縫;上坡減速 / 下坡加速,平緩帶內恆 1)。
+ * deg 為帶號坡度角(slopeDeg 的輸出)。回傳值恆 > 0 —— 「爬不上去」是 slopeBlocked 的事,
+ * MUST NOT 用倍率 0 表達(乘 0 只是原地不動,玩家分不出「很慢」與「上不去」,且斜向滑行會失效)。
+ */
+export function slopeMoveF(deg) {
+  const d = deg || 0;
+  const over = Math.abs(d) - SLOPE.EASE_DEG;
+  if (over <= 0) return 1;
+  const k = Math.min(1, over / (SLOPE.BLOCK_DEG - SLOPE.EASE_DEG));
+  return 1 + ((d > 0 ? SLOPE.UP_MIN_F : SLOPE.DOWN_MAX_F) - 1) * k;
+}
+
+/** 陡到爬不上去(**只擋上坡**:下坡一律放行,否則陡坡上的機體會把自己鎖死) */
+export const slopeBlocked = (deg) => (deg || 0) > SLOPE.BLOCK_DEG;
+
 // ---- 異常狀態致盲白幕(2026-07-30;純表現層唯一縫)----
 // 使用者需求:「閃光彈等異常狀態會使畫面一小段時間變白,之後漸漸淡去」。
 // 定位是**座艙光學被閃到的瞬時反應**(感光元件過曝),不是狀態計時器的可視化 ⇒
