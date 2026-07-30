@@ -7,7 +7,7 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
-  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur,
+  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -2611,10 +2611,11 @@ export class BattleSim {
       const toShield = Math.min(t.sp || 0, dmg);
       t.sp = (t.sp || 0) - toShield;
       let rem = dmg - toShield;
-      if (rem <= 0) { this._vamp(by, toShield); return; }
+      if (rem <= 0) { this._botAirSink(t, toShield); this._vamp(by, toShield); return; }
       // 第二層裝甲:護甲值減免(破甲抵銷)
       dmg = rem * armorMul(t.armor, pen);
       dealt = toShield + Math.min(t.hp, dmg);
+      this._botAirSink(t, dealt);   // 飛行機體受擊掉高(bot 專用;真人那份住客戶端物理)
     } else {
       // 陣營小兵強化:護甲值同吃 t.cu(與 hp/dmg/賞金同一條曲線;無此欄的塔/主堡/第三方 ×1)
       dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
@@ -2632,6 +2633,20 @@ export class BattleSim {
       t.hp = 0;
       this._kill(t, by);
     }
+  }
+
+  /**
+   * 飛行機體受擊掉高(2026-07-30 使用者需求)—— **bot 駕駛的那一半**。
+   * 真人的位置本就客戶端權威(見 heroPos),掉高住客戶端物理(game._airSinkHit);bot 沒有客戶端,
+   * 高度由 bots.js 直接寫 h.y ⇒ 同一條規則 MUST 在這裡補上,否則單人對戰只有玩家會被打掉高度。
+   * 掉幅公式共用 `airSinkM`(MUST NOT 在此手寫係數);量的是**實際損耗的護盾 + 裝甲**,與客戶端
+   * 以快照 vital 落差入帳同語意。NPC 直升機/餌機/自殺機刻意不套(伺服器腳本航線,掉高會陷進地形)。
+   */
+  _botAirSink(t, dealt) {
+    if (!t.hero || !isBotId(t.pid) || !(dealt > 0)) return;
+    const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
+    if (!flying) return;
+    t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));
   }
 
   /** 火場灼傷(feature 6 調整):同時扣護盾/HP,依「最大值比例」拆分 → 兩池同步見底;HP 份不吃裝甲。

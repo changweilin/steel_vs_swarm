@@ -106,9 +106,10 @@ console.log('■ Ⅱ 巨砲免除窗的兩端(伺服器不扣彈夾/電力 + 客
     && !/if \(barrage\)[\s\S]{0,420}?h\.ammo\[id\]--/.test(gate));
   t('sim._gateFire 的巨砲分支逐發遞減 barrageLeft(發數 = 權威資源)',
     /if \(barrage\) \{[\s\S]{0,300}?h\.barrageLeft = Math\.max\(0, \(h\.barrageLeft \|\| 0\) - 1\)/.test(gate));
-  const dmg = grab('_heroDmg', simSrc);
+  // 註解剝除 MUST 走 strip():_heroDmg 是一條乘法鏈,續行本身就以 `*` 開頭 ——
+  // 用「行首是 * 就當註解」剝會把**真正的程式碼**一起丟掉(復辟倍率也驗不出來)。
   t('sim._heroDmg MUST NOT 再乘任何重砲倍率(每發 100% 傷害)',
-    !/barrag/i.test(dmg.split('\n').filter((l) => !l.trim().startsWith('*') && !l.trim().startsWith('/')).join('\n')));
+    !/barrag/i.test(strip(grab('_heroDmg', simSrc))));
   const bd = grab('_barragingDmg', simSrc);
   t('sim._barragingDmg 同時看「窗」與「發數」(缺一即無限免費開火 / 窗過期仍白吃)',
     /barrageUntil/.test(bd) && /barrageLeft/.test(bd) && /DMG_GRACE/.test(bd));
@@ -196,8 +197,17 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('liftDrainPS / liftRegen 的唯一消費端 = _stepLift',
     count(code, 'liftDrainPS(') === 1 && count(code, 'liftRegen(') === 1
     && /liftDrainPS\(/.test(grab('_stepLift')) && /liftRegen\(/.test(grab('_stepLift')));
-  t('airSinkM 的唯一消費端 = _airSinkHit',
+  t('airSinkM 在客戶端的唯一消費端 = _airSinkHit',
     count(code, 'airSinkM(') === 1 && /airSinkM\(/.test(grab('_airSinkHit')));
+  // bot 沒有客戶端 ⇒ 伺服器補同一條規則(同一支 airSinkM);兩條扣血路徑(護盾全擋的早退 + 一般路徑)
+  // MUST 都掛到,漏掉早退那條 = 「還有護盾時打不掉高度」。
+  t('airSinkM 在伺服器的唯一消費端 = _botAirSink(bot 那一半)',
+    count(simCode, 'airSinkM(') === 1 && /airSinkM\(/.test(grab('_botAirSink', simSrc)));
+  t('_damage 的兩條扣血路徑都呼叫 _botAirSink(含護盾全擋的早退)',
+    count(strip(grab('_damage', simSrc)), 'this._botAirSink(') === 2);
+  t('_botAirSink 只作用於 bot 的飛行機體(真人由客戶端物理結算,套兩次會打架)',
+    /isBotId\(t\.pid\)/.test(grab('_botAirSink', simSrc))
+    && /kind === 'drone'/.test(grab('_botAirSink', simSrc)));
   t('_stepLift 只在飛行段呼叫一次,且排在速度積分之前',
     count(code, 'this._stepLift(') === 1
     && /this\._stepLift\(dt, now, target, u\);[\s\S]{0,200}?this\.vel\.y \+= \(target\.y - this\.vel\.y\)/.test(code));
@@ -299,6 +309,8 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
       return dropped;
     };
     t('一發 300 傷害的總掉幅 = airSinkM(300)', near(sink([300], 1 / 60), airSinkM(300), 1e-6));
+    t('連續受擊累加入帳(MUST NOT 覆寫 —— 那會讓連射只算最後一發)',
+      sink([100, 100, 100], 1 / 60) > sink([100], 1 / 60) * 2.5);
     t('分三發打完掉一樣多(掉幅是位移不是速度)',
       near(sink([100, 100, 100], 1 / 60), airSinkM(300), 1e-6));
     t('幀率不影響總掉幅(30fps 與 144fps 同值)',

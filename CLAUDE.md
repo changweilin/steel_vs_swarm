@@ -76,6 +76,8 @@
 | 陣營對抗對稱化 | `data.js CLASS_SYM` 推導區塊 | 校正係數整組等比套回;MUST NOT 逐武器手改 `vs` 湊平衡;個別角色改 `dmg` 階梯 |
 | 對進戰模型 | `tools/duel.mjs`(bal ⑤ 匯入) | **只算武器**是刻意的(只模擬一半招式家族會系統性偏袒);招式導向角色走具名豁免 |
 | 機種絕招預算 | `data.js SPECIAL` + `specialBudget()` | 總預算隨輕/重綜合等級(可分數階,MUST NOT 進 `tierVal`),三招各自切分;MUST NOT 手寫傷害常數或退回單一武器軌 |
+| 巨砲(重砲模式) | `data.js BARRAGE` + `barrageShots()`/`barrageDur()`;結算 `sim._gateFire`/`_barragingDmg`、客戶端 `game._barragingShot()` | 2026-07-30 改制:**不消耗一般重武器彈夾**(連帶免電力/射速/裝填閘)、每發 **100% 傷害** ⇒ `_heroDmg` MUST NOT 再乘任何重砲倍率、`_gateFire` 的重砲分支 MUST NOT 扣 ammo/mp。等值性(三招同預算)改由**發數**承擔(= 預算 ÷ 每發傷害),發數是**權威資源** `h.barrageLeft`(逐發遞減、歸零即窗關;只看時間窗 = 窗內無限免費開火)。開窗長度 MUST 由發數推導(`barrageDur`,固定 0.5s 在低幀率打不完 = 靜默少掉預算)|
+| 飛行動力學(受擊掉高 / 爬升動力) | `data.js FLIGHT` + `airSinkM()`/`liftMax()`/`liftRegen()`/`liftDrainPS()`;消費端 `game._airSinkHit()`/`_stepLift()` | 2026-07-30 使用者需求。①掉高 = **位移** ∝ 傷害,校準錨「打完平均護盾+裝甲 = `SINK_TOWERS` 個砲塔高」⇒ 係數由 `SQUAD.DRONE_AVG_HP` × `TARGET_H.tower` 推導(MUST NOT 手寫、MUST NOT 改成速度制或逐機體血量制);②動力只有**往上飛**消耗,耗速 = 上限 ÷ `DRAIN_S`(推導不手寫),上限/回速正比於電力(`maxMp` / `mpRegen`×`chargeF`),見底 = **爬不上去**(MUST NOT 改成減速,與 `slopeBlocked` 同語意)。位置本就客戶端權威 ⇒ 真人那半住客戶端物理;**bot 沒有客戶端**,掉高由 `sim._botAirSink()` 補上同一支 `airSinkM`(兩條扣血路徑都要掛,含護盾全擋的早退),真人 MUST NOT 在伺服器再套一次;NPC 直升機/餌機/自殺機(伺服器腳本航線)MUST NOT 套 |
 | bot 操作節奏 | `data.js BOT_DIFF/BOT_OPS/botOpGap()` + `bots.js _op()` | MUST NOT 另寫 tick 計數節流;持續開火刻意只吃反應時間、不吃手速閘 |
 | AoE / 彈道分類 | `data.js aoeClass()`(blast/fan/line)/`trajClass()`(lob/flat/line/guide/fnf) | 由 `def.type`/`fan`/`guide` 推導;sim/演出/HUD 共用;MUST NOT 手寫逐武器分類表 |
 | 貫穿演出 | `game.js _lanceVisual()` + `lanceR(def, barrage)` | 自機/他人/bot 共用;粗細 = 伺服器判定半徑(含 `LANCE.BARRAGE_F` 傾洩加粗,兩端 MUST 同步) |
@@ -197,7 +199,9 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 陣營小兵強化(`CREEP_UPG`/`creepUpgMul`/`_creepMul`/`_bounty`/`buy(…,'creep',lane)`) | e2e「陣營小兵強化」(11 項;曲線 1+log10(1+LV)、八軌未滿不解鎖、非法兵線被拒、共用/分兵線、hp・armor・賞金同吃 `e.cu`、快照帶等級)+ `npm run bal` 四不變式 MUST 不動(bal 模型是**未強化**的基準波次)+ 真機冒煙(八軌買滿商店才出現該區塊、隊友出資同陣營都看得到播報) |
 | 角色大小招 `fx`/`add`(招式家族配置) | bal ⑥:雙扇形 MUST 兩招貼身、單扇形 ≥1、密度 ≥ 非扇形 ×2;s07/m07 具名豁免 MUST NOT 為湊標換掉 |
 | 對進戰模型(`duel.mjs`)/`ALTITUDE.*`/`FAN_*`/`CLASS_SYM.K` | bal ⑤:陣營與機種 50±5pp、**較高方 50±3pp**、非豁免角色 ∈ 20~80%、接近期損失 ≤40%。改 `K` 一併看 ①(校準值 0.5) |
-| `SPECIAL`/`BARRAGE.DMG_*`/`KAMI.N`/`DECOY.BOMB_MAX`(絕招預算) | e2e「機種絕招三招同預算」(三招總傷互差 ≤2%)+ bal 四不變式 MUST 不動(bal 刻意不含三招 burst) |
+| `SPECIAL`/`BARRAGE.SHOTS_*`/`barrageShots`/`KAMI.N`/`DECOY.BOMB_MAX`(絕招預算) | e2e「機種絕招三招同預算」(自爆/餌機 ≤2%;巨砲整輪誤差 ≤ 半發 —— 整數發數 × 100% 傷害的離散化必然)+ bal 四不變式 MUST 不動(bal 刻意不含三招 burst) |
+| 巨砲改制(`BARRAGE`/`barrageShots`/`barrageDur`・`sim._gateFire` 重砲分支/`_barragingDmg`/`heroBarrage`・`game._barragingShot`/`_launchBarrage`/`_tryFire`) | `audit_flight_power.mjs` Ⅰ・Ⅱ(推導、兩端免除窗、100% 傷害、發數遞減、彈夾狀態不再是前置條件)+ e2e「巨砲」段(裝填中/空夾照樣開窗、窗內窗外 `_heroDmg` 相等、整輪不扣 ammo/mp、發數打完即窗關)+ 真機冒煙(空夾長按右鍵照樣齊射、HUD 顯示剩餘發數、齊射完彈夾發數不變) |
+| 飛行動力學(`FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`・`game._stepLift`/`_airSinkHit`/飛行段消化/`#liftBox`・`sim._botAirSink`) | `audit_flight_power.mjs` Ⅲ~Ⅵ(65 項;校準錨 = 打完平均護盾+裝甲掉 2 個砲塔高、掉幅是位移不隨幀率/分幾發變、5 秒耗盡且耗速 ∝ 爬升率、見底只鎖垂直、回充 ∝ 電力回速 × 充能軌、清帳點齊全)+ e2e「bot 飛行機體受擊掉高」(4 項)+ `npm run bal` 不動(bal 不模型化飛行高度)+ 真機冒煙(被集火時高度一路被壓下來、動力條見底爬不上去但仍可平飛/下降、地面機甲看不到動力條) |
 | `BOT_DIFF`/`BOT_OPS`/`bots.js _op()` | e2e「電腦難度操作節奏」+ `npm run sim` + 沙包輸出 MUST 隨難度單調遞增 |
 | `ECON.UPG_*`(八軌階梯單價) | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
 | `aoeClass`/`trajClass`/`LANCE`/`ARMING` | 32 角分類覆蓋(重武器全歸類、輕武器不歸類)+ `heroLance` 衰減直測(首發全額、之後 `DECAY^i`)+ bal 不動 |

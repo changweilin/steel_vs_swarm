@@ -13,6 +13,7 @@ import {
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
+  FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
 } from '../public/js/data.js';
 
@@ -513,6 +514,38 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(!sim.ents.has(near.id),
       `自爆爆風(${decoyBlast(mo.abil).dmg} × 肉體 ${DECOY.vs.flesh})炸死近旁敵兵`);
     assert(LOCK.TTL > 0 && DECOY.CD_S > 0, '鎖定時效 / 餌機冷卻皆為正值');
+  }
+
+  log('— sim:bot 飛行機體受擊掉高(真人那份住客戶端物理;掉幅 ∝ 實際護盾+裝甲損耗)—');
+  {
+    // bot 沒有客戶端 ⇒ 高度由伺服器寫;規則與客戶端共用同一支 airSinkM(MUST NOT 兩套係數)
+    const droneCh = charsOf('SWARM').find((c) => charKind(c) === 'drone');
+    const bot = sim.addHero('SWARM', 'b_air', droneCh);
+    bot.y = 200; bot.sp = bot.maxSp; bot.hp = bot.maxHp;
+    const foe = { side: 'STEEL', hero: false };
+    const sp0 = bot.sp;
+    sim._damage(bot, 100, foe, 0);
+    const lost1 = sp0 - bot.sp;
+    assert(Math.abs((200 - bot.y) - airSinkM(lost1)) < 1e-6,
+      `護盾階段:掉 ${(200 - bot.y).toFixed(2)}m = airSinkM(損耗 ${lost1.toFixed(0)})`);
+    // 打光護盾+裝甲 ⇒ 掉 FLIGHT.SINK_TOWERS 個砲塔高(校準錨;分多次打完累計相同)
+    const b2 = sim.addHero('SWARM', 'b_air2', droneCh);
+    b2.y = 500; b2.sp = b2.maxSp; b2.hp = b2.maxHp;
+    let guard = 0;
+    while (b2.hp > 0 && guard++ < 500) sim._damage(b2, 40, foe, 999);   // pen 999 = 無視護甲,損耗 = 傷害
+    const drop = 500 - b2.y;
+    const want = airSinkM((sim.heroes.get('b_air2')?.maxSp || 0) + 0);
+    assert(drop > want * 0.9,
+      `打光整條護盾+裝甲掉 ${drop.toFixed(0)}m ≈ ${FLIGHT.SINK_TOWERS} 個砲塔高等級(校準錨)`);
+    assert(b2.y >= 0, '掉高夾在地面(不會掉到地表以下)');
+    // 地面機體(非飛行)不掉高
+    const ground = sim.heroes.get('p_r');
+    ground.dead = false; ground.y = 0; ground.hp = ground.maxHp; ground.sp = ground.maxSp;
+    sim._damage(ground, 100, foe, 0);
+    assert((ground.y || 0) === 0, '地面機甲不掉高(規則只作用於飛行機體)');
+    sim.heroes.delete('b_air'); sim.heroes.delete('b_air2');
+    sim.squads.delete('b_air'); sim.squads.delete('b_air2');
+    for (const e of [...sim.ents.values()]) if (e.pid === 'b_air' || e.pid === 'b_air2') sim.ents.delete(e.id);
   }
 
   log('— sim:巨砲(重砲模式;2026-07-30 改制:不消耗彈夾 / 每發 100% 傷害 / 發數 = 一份絕招預算)—');
