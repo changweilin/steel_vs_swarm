@@ -2399,7 +2399,9 @@ const PASS_W = 16;
 //            交給 punchPortalHoles 清掉 —— 與 PORTAL_MAX 同性質的資源閘)。
 const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
               WALL_MIN: 7, NEAR_W: 3, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600,
-              GAL_BORE_MAX: 160 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+              GAL_BORE_MAX: 160, GAL_CLEAR_W: 9 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+// GAL_CLEAR_W:明隧道開放側柱外淨空帶寬(牆線外這段內、低於頂板的土脊開挖到路面;
+// 2026-07-31 太魯閣實測柱間視線被牆外 2~3m 殘丘擋在 13~17m ⇒ 帶寬取 9 蓋過實測殘丘)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -2852,7 +2854,11 @@ function mergeGradeChains(roads) {
   for (const kind of ['tunnel', 'bridge']) {
     // tunnel 優先歸隧道鏈:同時掛兩種 tag 的 way 不會進兩類
     const ways = roads.filter((w) => w.tags?.[kind] && !(kind === 'bridge' && w.tags.tunnel) && w.geometry?.length >= 2);
-    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17, null, kind === 'bridge' ? BRIDGE_SNAP_M : 0));   // 倒鉤(平行孔折返)不併;橋端點鄰近聚類
+    // 隧道鏈 MUST 同 tunnel 值才併(2026-07-31):tunnel=yes(山體隧道,覆蓋看地形)與
+    // tunnel=avalanche_protector(明隧道實體結構,整段強制覆蓋)是兩種結構;chainWays 併鏈
+    // 只保種子 way 的 tags,混併會讓落石棚被吸進山體隧道鏈(或反之)= 強制覆蓋旗標丟失。
+    // 太魯閣「隧道→明隧道→隧道」相接序列拆成三段結構,共用節點端 c0<4 不立門洞,接縫無害。
+    out.push(...chainWays(ways, (a, b, dot) => dot >= 0.17 && (kind !== 'tunnel' || a.tags?.tunnel === b.tags?.tunnel), null, kind === 'bridge' ? BRIDGE_SNAP_M : 0));   // 倒鉤(平行孔折返)不併;橋端點鄰近聚類
   }
   // 鏈排在前(2026-07-22 倫敦橋數浮動案):buildRoads 的 maxRuns 截斷依陣列序,舊版鏈排尾端
   // 使密路網市區的橋/隧道整批優先被犧牲(泰晤士河真橋忽有忽無)。立體結構是兵線與地標
@@ -5781,6 +5787,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 覆蓋區間(tunnelCoverIntervals)在「開挖前」高度上計算一次,掛到 way._tun 供
   // buildRoads / markGradeCorridors 共用 —— 開挖、牆/天花、走廊、門洞四者的洞口位置才一致。
   const tunnelRuns = [];
+  const galStrips = [];   // 明隧道開放側柱外淨空帶(與 tunnelRuns 同批收集、開挖前判定)
   if (terrain.carveTunnels && osmRoads?.length) {
     for (const way of osmRoads) {
       if (!strucTunnel(way.tags)) continue;   // 資格閘:人行/室內 tunnel way 不進結構管線
@@ -5810,6 +5817,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         let rec = { hA: hAt(pts[0][0], pts[0][1]), hB: hAt(pts[pts.length - 1][0], pts[pts.length - 1][1]) };
         let floors = cum.map((s) => tunFloorAt(rec, s, tot));   // 山體隧道:平直路面
         let iv = tunnelCoverIntervals(pts, cum, floors, hAt);
+        // 明隧道實體結構(OSM tunnel=avalanche_protector,2026-07-31):落石棚的頂是**建的**
+        // 不是山 —— 覆蓋判定 MUST NOT 依「地表藏得住天花板」(峽谷落石棚常整段裸露,舊制
+        // covPts=0 ⇒ 攤成一般道路 = 太魯閣台8線明隧道整段消失)。整條 run 直接視為覆蓋,
+        // 開放側 vs 岩背側仍由 tunnelWallProfile 幾何定奪(單一縫)——貼壁側整面牆、
+        // 臨谷側矮牆 + 柱列,和真明隧道一樣。
+        if (way.tags.tunnel === 'avalanche_protector' && tot >= TUN_COV_MIN) iv = [[0, tot, 0, pts.length - 1]];
         // 平坦市區的 tunnel way(直線剖面藏不住天花板)= **地下道**:改吃下沉剖面 + 兩端引道,
         // 成立的話後續一切(開挖/牆/天花/門洞/走廊)與山體隧道走同一條路 —— 見 underpassPlan。
         if (!iv.length) {
@@ -5828,15 +5841,37 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // (地下道 = 兩端引道;山體隧道 = 引道/長峽谷)。
         // 地下道帶 cut 旗標:carveTunnels 把引道開挖收窄成垂直路塹(過渡帶 hw+CUT_W)——
         // 出入口只在道路兩端,側面 MUST NOT 留下走得下去的開挖斜坡(見 UND 設計註解 ②)。
+        // covA/covB = run 頭/尾是否與覆蓋段交界:carveTunnels 只在交界端 PROT_M 內維持
+        // 「藏不住天花板才挖」舊判準(保護轉換崖),run 內部一律無條件開挖(殘峰 = 路上岩牆)。
         const bounds = [0, ...iv.flatMap(([, , ia, ib]) => [ia, ib]), pts.length - 1];
         for (let k = 0; k + 1 < bounds.length; k += 2) {
           const a = bounds[k], b = bounds[k + 1];
           if (b - a < 1) continue;
-          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1), hw: hwWay, cut: !!rec.sink });
+          tunnelRuns.push({ pts: pts.slice(a, b + 1), floors: floors.slice(a, b + 1), covA: k > 0, covB: k + 2 < bounds.length, hw: hwWay, cut: !!rec.sink });
+        }
+        // 明隧道開放側柱外淨空帶(2026-07-31):覆蓋段逐側跑 tunnelWallProfile(單一縫,
+        // **開挖前**高度 —— 本迴圈尚未呼叫 carveTunnels,輸入與覆蓋區間同一份),連續 open
+        // 段收成 strip 交給 carveGalleryBands。這刀只降不升、只動頂板以下 ⇒ buildRoads /
+        // markGradeCorridors 開挖後重算 profile 不翻面(backed 只認 ≥ 頂板的點)。地下道恆不判。
+        if (!rec.sink && terrain.carveGalleryBands) {
+          const covV2 = pts.map((_, vi) => iv.some(([, , ia, ib]) => vi >= ia && vi <= ib));
+          for (const side of [1, -1]) {
+            const prof = tunnelWallProfile(pts, floors, covV2, hAt, hwWay, side);
+            let s0 = -1;
+            for (let vi = 0; vi <= pts.length; vi++) {
+              const on = vi < pts.length && prof[vi].open;
+              if (on && s0 < 0) s0 = vi;
+              if (!on && s0 >= 0) {
+                if (vi - s0 >= 2) galStrips.push({ pts: pts.slice(s0, vi), floors: floors.slice(s0, vi), hw: hwWay, side });
+                s0 = -1;
+              }
+            }
+          }
         }
       }
     }
     if (tunnelRuns.length) terrain.carveTunnels(tunnelRuns, { clear: TUN.CLEAR, hw: TUN.HW });
+    if (galStrips.length) terrain.carveGalleryBands(galStrips, { clear: TUN.CLEAR, roofT: TUN.ROOF_T, clearW: TUN.GAL_CLEAR_W });
   }
   // ---- 兵線跨水段定案(2026-07-22 確定性改制;開挖後計算,高度已定案,不耗共享 rnd)----
   // 兵線是遊戲性關鍵路徑:跨水段的橋 MUST 與兵線幾何一樣確定,不得依賴 Overpass 逐局回傳
@@ -5875,6 +5910,41 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadInput = osmRoads?.length
     ? osmRoads
     : cfg.lanes.map((lane) => ({ tags: { highway: 'primary' }, geometry: lane.map(([lat, lng]) => ({ lat, lon: lng })) }));
+  // ---- 道路路基整平(2026-07-31 使用者回報「兩側太陡時一邊懸空、一邊陷入地形」)----
+  // 一般道路(非橋/非結構隧道/非步道)的乾地走廊橫向整成切填平台:上坡側切、下坡側填,
+  // 路面緞帶與單位站的 heightAt 才在同一個平面上。MUST 排在 markGradeCorridors / 地物散布 /
+  // buildRoads 之前(高度在此定案,下游全部取樣整平後地形);開挖足跡/水域紀律住
+  // terrain.gradeRoadBeds。裁切 + densify + 泡水切段 MUST 與 buildRoads 完全相同
+  // (inb=4 / ROAD_SEG / splitWaterPieces),否則整平走廊與實際路面錯位。零共享 rnd。
+  const laneModeG = !osmRoads?.length;
+  if (terrain.gradeRoadBeds && roadInput?.length) {
+    const gradeRuns = [];
+    const inbG = 4;
+    for (const way of roadInput) {
+      if (way.tags?.bridge) continue;                          // 橋:橋面自己是平的,地形不整
+      if (PED_HW.test(way.tags?.highway || '')) continue;      // 步道:1.5m 小徑不值得 8m 網格整地
+      const runsG = [];
+      let curG = [];
+      for (const gpt of way.geometry || []) {
+        const [x, z] = llToWorld(gpt.lat, gpt.lon, center);
+        if (x < terrain.minX + inbG || x > terrain.maxX - inbG || z < terrain.minZ + inbG || z > terrain.maxZ - inbG) {
+          if (curG.length >= 2) runsG.push(curG);
+          curG = [];
+          continue;
+        }
+        curG.push([x, z]);
+      }
+      if (curG.length >= 2) runsG.push(curG);
+      for (let ri = 0; ri < runsG.length; ri++) {
+        if (way.tags?.tunnel && way._tun?.[ri]?.intervals.length) continue;   // 結構隧道/地下道:carveTunnels 已處理整條 run
+        for (const piece of splitWaterPieces(densify(runsG[ri], ROAD_SEG), terrain, laneModeG)) {
+          if (piece.wet === true || piece.length < 2) continue;               // 泡水段走橋,不整地
+          gradeRuns.push({ pts: piece, hw: Math.max(carriageHw(way.tags || {}), 2.5) });
+        }
+      }
+    }
+    if (gradeRuns.length) terrain.gradeRoadBeds(gradeRuns);
+  }
   // 立體交通走廊:淨空(blocked)+ 上傳伺服器用小段(gradeCorridors);開挖後才算(高度已定案)。
   // 兵線補橋走廊一併登記(提前到地物散布之前 → 橋下淨空與真橋同等待遇)。分兩趟:真 OSM 道路
   // 維持水域限定(inclSwamp=false),兵線補橋 + 離線兵線 roadInput 吃 inclSwamp(跨沼也造橋);

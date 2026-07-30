@@ -43,6 +43,7 @@ jobs:
           node tools/audit_flight_power.mjs
           node tools/audit_slope_move.mjs
           node tools/audit_road_joint.mjs
+          node tools/audit_road_bed.mjs
 
       - name: 平衡四不變式
         run: npm run bal
