@@ -2384,15 +2384,17 @@ const PASS_W = 16;
 //   舊 12 上限在含多座隧道的密市區把排序在後的洞口砍掉,該洞既不打洞也不掛暗面 ⇒ 露出戳進
 //   斷面的原始地形土牆正面擋住視線(= 使用者「遠方看不到出入口」);舊 120 燈上限用罄後長/後段
 //   隧道遠端全黑。門洞是輕量 Group、punch 成本受 depth≤40/hw 有界,提高上限只增建圖成本、不動幾何縫。
-// 明隧道(gallery / rock shed;2026-07-28 使用者需求)旋鈕 —— 覆蓋判定只看**中心線**藏不藏得住
-//   天花板,側向的土牆厚度沒人管:山腰蜿蜒路 / 縫合蓋廊段 / 引道開挖擦邊處,單邊土牆可能只剩
-//   幾公尺甚至被挖穿 ⇒ 側牆與天花板憑空浮在山坡上、坡面與結構之間一道看穿到洞內的縫。
+// 明隧道(gallery / rock shed;2026-07-28 使用者需求 → 2026-07-30 柱列改制)旋鈕 —— 覆蓋判定只看
+//   **中心線**藏不藏得住天花板,側向的土牆厚度沒人管:山腰蜿蜒路 / 縫合蓋廊段 / 引道開挖擦邊處,
+//   單邊土牆可能只剩幾公尺甚至被挖穿 ⇒ 側牆與天花板憑空浮在山坡上、坡面與結構之間一道看穿到洞內的縫。
 //   WALL_MIN 側向土牆最小厚度:自隧道邊緣往外量這麼遠,地表 MUST 全程高過頂板頂面(藏得住結構);
-//            任一取樣點沒到 = 該側改明隧道(外露頂板 + 落地擋土 facade + 扶壁)。
-//   EAVE     外露頂板較通行寬多挑出的簷口(MUST > 天花板小段的 +0.6,否則天花板邊緣露在簷外)。
-//   PARAPET  女兒牆高;BUT_GAP 扶壁間距;BUT_MAX 全圖扶壁實例上限(與 LAMP_MAX 同性質的資源閘)。
+//            任一取樣點沒到 = 該側改明隧道:深埋側維持隧道牆,開放側 = 矮牆 + 連續柱列撐外露頂板,
+//            柱間**透明可見可穿透**(兩端同判:slab gal 遮罩讓伺服器 LOS/爆風同步放行,見 buildRoads)。
+//   EAVE     外露頂板較通行寬多挑出的簷口(MUST > 天花板小段的 hw+0.6,否則天花板邊緣露在簷外)。
+//   PARAPET  女兒牆高;SILL 開放側矮牆頂(路面起算的護欄牆,封住 facade 底縫、柱腳立其後);
+//   COL_GAP  柱列間距;COL_MAX 全圖柱列實例上限(與 LAMP_MAX 同性質的資源閘)。
 const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
-              WALL_MIN: 7, EAVE: 0.8, PARAPET: 0.5, BUT_GAP: 9, BUT_MAX: 300 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+              WALL_MIN: 7, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -3532,10 +3534,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)+ 天花照明(InstancedMesh)
   const wall = { pos: [], nrm: [], idx: [], base: 0 };
   const beams = [], ceilLamps = [];
-  // 明隧道(2026-07-28):土牆藏不住結構的那一側 —— 外露頂板 + 女兒牆(緞帶)、扶壁(InstancedMesh)。
-  // facade 本身沿用同一條擋土牆緞帶(只是底緣落地、頂緣拉到頂板),不另開一份牆幾何。
+  // 明隧道(2026-07-28 → 2026-07-30 柱列改制):土牆藏不住結構的那一側 —— 外露頂板 + 簷口封邊/
+  // 女兒牆(緞帶)、連續柱列(InstancedMesh;柱間透明可見可穿透)。矮牆沿用同一條擋土牆緞帶
+  // (底緣落地、頂緣收在路面 + SILL),不另開一份牆幾何。
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
-  const buts = [];
+  const galCols = [];
   // 地下道引道的**邊緣修飾**(2026-07-28):牆頂 → 外側地表的平頂緣石帶。carveTunnels 的路塹是
   // hw+1 全深、外擴到 hw+7 收回地表的斜壁,不修飾的話從外面看是路邊憑空一道土溝;鋪一條與
   // 一般路面同高的緣石帶把斜壁蓋掉,銜接處就與周邊街廓齊平。純視覺,不進 raycast/碰撞。
@@ -3770,6 +3773,27 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 敞開段是原生山谷)⇒ 山體行為逐位元不變。純客戶端移動物理:slab 上傳只投影 x/z/hw,
         // by 不出海(伺服器語意零漂移)。
         const wallTopAt = under ? (s) => tBaseAt(s) + UND.KERB : () => undefined;
+        // 明隧道體檢(2026-07-28 使用者需求 → 2026-07-30 柱列改制):逐頂點/逐側量側向土牆厚度,
+        // 藏不住結構的那一側改明隧道 —— 深埋側維持隧道牆,開放側改「矮牆 + 連續柱列」,柱間
+        // **透明可見可穿透**。可穿透 = 兩端同量體(原則 3):覆蓋段 tunnelSegs 逐段附 gal 開放側
+        // 位元遮罩(bit1 = side +1、bit2 = side −1),main.js 上傳 slab 第 7 欄,伺服器
+        // tunnelSideExit 對開放側穿出的射線/爆風放行;客戶端彈道本來就只擋天花/路面/地形,
+        // 開放側低地形自然可穿 ⇒ 看得到就打得到。幾何(hw / fy / cy / 走廊 / 門洞)一律不動:
+        // 伺服器 slab ribbon、砲塔規則 #5、bal/e2e 全不受影響。
+        const floorsV = cum.map((s) => tFloorAt(s));
+        const covV = cum.map((s) => covS(s));
+        // 地下道恆非明隧道:它的「頂」是原本那片**沒被開挖的平地**(路面沉在地表之下),
+        // 側向土牆厚度天生管夠。體檢照跑(法線 nx/nz 是牆/緣石共用的那一份),但 open 一律歸零 ——
+        // 引道轉換帶被開挖的碗緣會讓體檢誤判成明隧道,平地上憑空長出外露頂板與柱列。
+        const galP = [1, -1].map((side) => {
+          const prof = tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side);
+          return under ? prof.map((g) => ({ ...g, open: false })) : prof;
+        });
+        const galAny = (i) => galP[0][i].open || galP[1][i].open;
+        // 逐段開放側遮罩:任一端頂點 open 即記開放(偏向放行 —— 反向偏差是伺服器擋、客戶端
+        // 命中 = 傷害靜默蒸發的 A18/A30 一族)。地下道 galP 已歸零 ⇒ 遮罩恆 0。
+        const galMask = (i) => (galP[0][i].open || galP[0][i + 1]?.open ? 1 : 0)
+                             | (galP[1][i].open || galP[1][i + 1]?.open ? 2 : 0);
         for (let i = 0; i < nP - 1; i++) {
           const sA = cum[i], sB = cum[i + 1];
           for (const [c0, c1] of ivx) {
@@ -3780,6 +3804,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               x1, z1, fy1: tFloorAt(o0) + ROAD_LIFT, cy1: ceilOf(o0),
               x2, z2, fy2: tFloorAt(o1) + ROAD_LIFT, cy2: ceilOf(o1), hw,
               by1: wallTopAt(o0), by2: wallTopAt(o1),
+              gal: galMask(i),   // 明隧道開放側註記(只上傳 slab 第 7 欄;幾何欄位一律與 gal 無關)
             });
             ceilSegs.push({ x1, z1, cy1: ceilOf(o0), x2, z2, cy2: ceilOf(o1), hw: hw + 0.6 });
           }
@@ -3811,26 +3836,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             }
           }
         }
-        // 明隧道體檢(2026-07-28 使用者需求):逐頂點/逐側量側向土牆厚度,藏不住結構的那一側
-        // 改明隧道。**純表現層** —— 通行寬 hw / tunnelSegs(路面+天花碰撞)/ ceilSegs / 走廊 /
-        // 門洞一律不動 ⇒ 伺服器 slab(側牆全擋 LOS)、砲塔規則 #5、bal/e2e 全不受影響:
-        // 明隧道的側面在現實中也是實心擋土 facade(不是柱列),遮蔽語意與埋在山裡的側牆一致。
-        const floorsV = cum.map((s) => tFloorAt(s));
-        const covV = cum.map((s) => covS(s));
-        // 地下道恆非明隧道:它的「頂」是原本那片**沒被開挖的平地**(路面沉在地表之下),
-        // 側向土牆厚度天生管夠。體檢照跑(法線 nx/nz 是牆/緣石共用的那一份),但 open 一律歸零 ——
-        // 引道轉換帶被開挖的碗緣會讓體檢誤判成明隧道,平地上憑空長出外露頂板與扶壁。
-        const galP = [1, -1].map((side) => {
-          const prof = tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side);
-          return under ? prof.map((g) => ({ ...g, open: false })) : prof;
-        });
-        const galAny = (i) => galP[0][i].open || galP[1][i].open;
-        // facade 落地基準(單一縫:牆緞帶與扶壁共用)—— 沉到側坡地表最低點之下 0.8m,
+        // facade 落地基準(單一縫:矮牆緞帶與柱列共用)—— 沉到側坡地表最低點之下 0.8m,
         // 坡面與牆之間不留看穿的縫;埋在土裡的部分不花額外頂點(同一條緞帶只是拉長)。
         const galBase = (i, g) => Math.min(floorsV[i] - 0.3, g.gy - 0.8);
         // 兩側牆(路面 → 天花):覆蓋段立起,敞開段(洞口)收成零高不破圖。
-        // 明隧道側:同一條緞帶改當「落地擋土 facade」—— 底緣落到側坡地表之下、頂緣拉到頂板頂面
-        // (與外露頂板齊平,頂板再往外挑 EAVE 當簷口),外面看就是一座蓋在地面上的明隧道。
+        // 明隧道開放側(2026-07-30 柱列改制):同一條緞帶改當「落地矮牆」—— 底緣落到側坡地表
+        // 之下、頂緣只到路面 + SILL(護欄牆),牆上改由連續柱列撐天花板,柱間透明可見可穿透
+        // (深埋側維持整面隧道牆;伺服器經 slab gal 遮罩同步放行,見 tunnelSegs 註記)。
         for (const prof of galP) {          // galP[0] = side +1、galP[1] = side −1(法線已含在 prof)
           const k0 = wall.base;
           for (let i = 0; i < nP; i++) {
@@ -3842,25 +3854,26 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             // 地下道則相反 —— 引道是我們挖出來的路塹,MUST 立擋土牆頂到**地表基準 + 護欄高**,
             // 開挖斜壁藏到牆後,從外面看就是「一般路面 → 緣石帶 → 護欄 → 下沉車道」。
             const yT = !covV[i] ? (under ? tBaseAt(cum[i]) + UND.KERB : yF + 0.15)
-              : g.open ? ceilOf(cum[i]) + TUN.ROOF_T
+              : g.open ? floorsV[i] + TUN.SILL
                 : ceilOf(cum[i]) + 0.2;
             wall.pos.push(vx, yF, vz, vx, yT, vz);
             wall.nrm.push(-g.nx, 0, -g.nz, -g.nx, 0, -g.nz);
           }
           for (let i = 0; i < nP - 1; i++) { const k = k0 + i * 2; wall.idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
           wall.base += nP * 2;
-          // 扶壁(buttress):明隧道段每 BUT_GAP 一支,自 facade 底緣頂到簷口。一整片平板混凝土
-          // 貼在山坡上不像結構物,扶壁是明隧道最好認的外觀特徵。**純視覺,不登記碰撞柱** ——
-          // 它們站在 facade 外側的坡面上,通行走廊在牆內側,登記了只會在山坡上多出隱形障礙。
+          // 連續柱列:明隧道開放側每 COL_GAP 一支,自 facade 底緣(落地)頂到頂板頂面 ——
+          // 柱子撐起外露頂板,柱間就是「透明可見可穿透」的開口,是明隧道最好認的外觀特徵。
+          // **純視覺,不登記碰撞柱(cols)** —— 柱間本就可穿透,登記了反而在通行走廊邊緣
+          // 多出與伺服器判定分家的隱形障礙(伺服器 slab 開放側是整段放行,無逐柱語意)。
           let nextS = 0;
           for (let i = 0; i < nP; i++) {
             const g = prof[i];
-            if (!g.open || cum[i] < nextS || buts.length >= TUN.BUT_MAX) continue;
-            nextS = cum[i] + TUN.BUT_GAP;
-            const D = 0.9, off = hw + D / 2 - 0.15;   // 外挑深度 / 柱心離中線(略埋進牆面不留縫)
-            buts.push({ x: run[i][0] + g.nx * off, z: run[i][1] + g.nz * off,
+            if (!g.open || cum[i] < nextS || galCols.length >= TUN.COL_MAX) continue;
+            nextS = cum[i] + TUN.COL_GAP;
+            const D = 0.85, off = hw + D / 2 - 0.15;   // 柱深 / 柱心離中線(內緣略埋進牆線不留縫)
+            galCols.push({ x: run[i][0] + g.nx * off, z: run[i][1] + g.nz * off,
                         y0: galBase(i, g), y1: ceilOf(cum[i]) + TUN.ROOF_T,
-                        ry: Math.atan2(-g.nz, g.nx), d: D, w: 1.6 });
+                        ry: Math.atan2(-g.nz, g.nx), d: D, w: 0.85 });
           }
         }
         // 明隧道外露頂板 + 女兒牆(「明」的那一面):不透明天花板只是一片零厚度、朝下的板,
@@ -3885,14 +3898,16 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
                   [run[i + 1][0] + B.nx * RW, tB, run[i + 1][1] + B.nz * RW],
                   [run[i + 1][0] - B.nx * RW, tB, run[i + 1][1] - B.nz * RW]], [0, 1, 0]);
           }
-          // 女兒牆:該側兩端都是明隧道才立(轉換處的半段正好埋進山壁,看不到)
+          // 簷口封邊 + 女兒牆(一條帶):該側兩端都是明隧道才立(轉換處的半段正好埋進山壁,
+          // 看不到)。柱列改制後開放側上緣露出頂板橫斷面,封邊帶自**天花底面**(topAt − ROOF_T)
+          // 一路拉到女兒牆頂 —— 柱頂沒進封邊帶後緣,外觀 = 柱列頂著一道連續邊樑。
           for (const prof of galP) {
             for (let i = 0; i + 1 < nP; i++) {
               if (!prof[i].open || !prof[i + 1].open) continue;
               const A = prof[i], B = prof[i + 1], tA = topAt(i), tB = topAt(i + 1);
-              quad([[run[i][0] + A.nx * RW, tA, run[i][1] + A.nz * RW],
+              quad([[run[i][0] + A.nx * RW, tA - TUN.ROOF_T, run[i][1] + A.nz * RW],
                     [run[i][0] + A.nx * RW, tA + TUN.PARAPET, run[i][1] + A.nz * RW],
-                    [run[i + 1][0] + B.nx * RW, tB, run[i + 1][1] + B.nz * RW],
+                    [run[i + 1][0] + B.nx * RW, tB - TUN.ROOF_T, run[i + 1][1] + B.nz * RW],
                     [run[i + 1][0] + B.nx * RW, tB + TUN.PARAPET, run[i + 1][1] + B.nz * RW]], [A.nx, 0, A.nz]);
             }
           }
@@ -4395,13 +4410,13 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     m.userData.noOutline = true;
     group.add(m);
   }
-  // ---- 明隧道扶壁:facade 外側每 BUT_GAP 一支的立肋(純視覺,不登記碰撞柱)----
-  if (buts.length) {
+  // ---- 明隧道柱列:開放側每 COL_GAP 一支撐頂柱(純視覺,不登記碰撞柱;柱間可穿透)----
+  if (galCols.length) {
     const btM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-      envMat(0x938e85, { wash: 0.4, cool: 0.45 }), buts.length);
+      envMat(0x938e85, { wash: 0.4, cool: 0.45 }), galCols.length);
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
-    buts.forEach((b, i) => {
+    galCols.forEach((b, i) => {
       E.set(0, b.ry, 0); Q.setFromEuler(E);
       P.set(b.x, (b.y0 + b.y1) / 2, b.z);
       S.set(b.d, Math.max(0.5, b.y1 - b.y0), b.w);
