@@ -56,11 +56,11 @@ function loadCore(mutate = (s) => s) {
   if (P0 < 0 || P1 <= P0) throw new Error('climb.js 找不到純幾何段');
   const body = mutate(climbSrc.slice(P0, P1)).replace(/^export /gm, '');
   return new Function('MAX_BODY_R',
-    `${body}\nreturn { CLIMB, CLIMB_KIND, CLIMB_LABEL, surfacePoint, climbCandidate, planClimbRoutes, makeClimbIndex };`,
+    `${body}\nreturn { CLIMB, CLIMB_KIND, CLIMB_LABEL, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex };`,
   )(MAX_BODY_R);
 }
 const C = loadCore();
-const { CLIMB, CLIMB_KIND, surfacePoint, climbCandidate, planClimbRoutes, makeClimbIndex } = C;
+const { CLIMB, CLIMB_KIND, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex } = C;
 
 // mulberry32(與 biomes.js 同款;稽核要的是確定性,不是同一個 seed)
 const mulberry32 = (seed) => {
@@ -190,7 +190,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   ok(rs.length === 3, '⑦ rnd 恆 0(必中)+ 四周淨空 ⇒ 三個結構都掛得上');
   const outside = rs.every((r) => {
     if (r.b.hw2 != null) {
-      const cs = Math.cos(r.b.ry), sn = Math.sin(r.b.ry);
+      const cs = Math.cos(r.b.ry), sn = -Math.sin(r.b.ry);   // 與 surfacePoint 同慣例
       const rx = r.x - r.b.x, rz = r.z - r.b.z;
       const lx = Math.abs(rx * cs + rz * sn), lz = Math.abs(-rx * sn + rz * cs);
       // 盒外緣距離:落在某一面的正外側 ⇒ 該軸超出 hw2/hd2 恰好 OFF,另一軸仍在盒內
@@ -272,7 +272,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   const inside = rs.every((r) => {
     const b = r.b;
     if (b.hw2 != null) {
-      const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+      const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 與 surfacePoint 同慣例(見該函式檔頭)
       const rx = r.tx - b.x, rz = r.tz - b.z;
       return Math.abs(rx * cs + rz * sn) <= b.hw2 + 1e-6 && Math.abs(-rx * sn + rz * cs) <= b.hd2 + 1e-6;
     }
@@ -311,7 +311,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   for (let k = 0; k < 24; k++) {
     const a = k / 24 * Math.PI * 2;
     const sp = surfacePoint(b, a);
-    const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+    const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);
     const lx = (sp.fx - b.x) * cs + (sp.fz - b.z) * sn, lz = -(sp.fx - b.x) * sn + (sp.fz - b.z) * cs;
     const onFace = near(Math.abs(lx), b.hw2, 1e-9) ? Math.abs(lz) <= b.hd2 + 1e-9
       : near(Math.abs(lz), b.hd2, 1e-9) && Math.abs(lx) <= b.hw2 + 1e-9;
@@ -429,12 +429,14 @@ const bothAgree = (blockers, a, b, want, msg) => {
 
   // 旋轉盒:sim 座標 z 鏡射 ⇒ ry 反號(main.js 上傳的那一步)—— 兩端仍同判
   const rot = [bld(0, 0, 80, 10, 60, 0.6)];
-  // local→world(繞 +ry):x_w = lx·cos − lz·sin、z_w = lx·sin + lz·cos ⇒ 長軸(local +x)= (cos, sin)
-  const tX = Math.cos(0.6), tZ = Math.sin(0.6);             // 盒長軸方向
-  const pX = -Math.sin(0.6), pZ = Math.cos(0.6);            // 垂直長軸(local +z)
+  // local→world = 建物實例矩陣 three Euler(0,ry,0):x_w = lx·cos + lz·sin、z_w = −lx·sin + lz·cos
+  // ⇒ 長軸(local +x)= (cos, −sin)。**這一組向量就是「看得見的樓的長軸」**:寫成 (cos, +sin)
+  // 的舊版等於在驗一個鏡射的盒子(差 2·ry)—— 見 climb.js surfacePoint 檔頭
+  const tX = Math.cos(0.6), tZ = -Math.sin(0.6);            // 盒長軸方向
+  const pX = Math.sin(0.6), pZ = Math.cos(0.6);             // 垂直長軸(local +z)
   bothAgree(rot, [-tX * 60, 10, -tZ * 60], [tX * 60, 10, tZ * 60], true, '旋轉盒沿長軸穿越 MUST 擋(ry 反號後仍對齊)');
   bothAgree(rot, [-tX * 60 + pX * 14, 10, -tZ * 60 + pZ * 14], [tX * 60 + pX * 14, 10, tZ * 60 + pZ * 14], false,
-    '旋轉盒側向 14m 外(短半寬 5m)MUST 通 —— ry 沒反號的話伺服器會在這裡誤擋');
+    '旋轉盒側向 14m 外(短半寬 5m)MUST 通 —— ry 沒反號 / 盒面鏡射的話會在這裡誤擋');
 
   // 圓柱(神木/巨岩/橋墩)= 舊格式 4 欄,行為不得改變
   const trunk = [tree(0, 0, 12, 60)];
@@ -497,8 +499,8 @@ console.log('\n=== Ⅳ 靜態規則(單一縫 / A21 / A25 / 純客戶端)===');
   // 上傳格式:main.js 的 occ 與 sim.js 的 setWorld 對得上(4 欄圓柱 / 7 欄有向盒)
   ok(/rd\(b\.hw2\), rd\(b\.hd2\), Math\.round\(-b\.ry \* 1e3\) \/ 1e3/.test(mainSrc),
     'Ⅳ main.js occ 上傳:盒多帶 hw2/hd2/−ry(sim 座標 z 鏡射 ⇒ ry 反號)');
-  ok(/if \(o\.length >= 7\)/.test(simSrc) && /Math\.cos\(ry\), Math\.sin\(ry\)/.test(simSrc),
-    'Ⅳ sim.js setWorld 收 7 欄並預算 cos/sin(8Hz 熱路徑不重算三角函數)');
+  ok(/if \(o\.length >= 7\)/.test(simSrc) && /Math\.cos\(ry\), -Math\.sin\(ry\)/.test(simSrc),
+    'Ⅳ sim.js setWorld 收 7 欄並預算 cos/**−**sin(8Hz 熱路徑不重算三角函數;−sin = 盒面朝向慣例)');
   ok(/if \(o\.length >= 8\)/.test(simSrc), 'Ⅳ sim.js _losBlocked 以「占位長度 ≥ 8」判有向盒(舊格式圓柱行為不變)');
   ok(/const r = b\.hw2 != null \? Math\.hypot\(b\.hw2, b\.hd2\) : b\.r;/.test(gameSrc),
     'Ⅳ _buildBlockGrid 登記半徑用**外接**對角(內切會漏登記貼牆角的格)');
@@ -742,6 +744,92 @@ console.log('\n=== Ⅵ 相鄰結構相接(執行 climb.js 原文)===');
     const rs = one([bld(0, 0, 40, 40, 40)]);
     ok(rs.length === 1 && near(rs[0].bx, rs[0].x) && near(rs[0].bz, rs[0].z),
       'Ⅵ 一般地面路線的 bx/bz MUST = 攀爬軸(舊行為不得回歸)');
+  }
+}
+
+console.log('\n=== Ⅶ 設施「正面」規則:面對結構、不要有其他角度(2026-07-30 使用者需求)===');
+{
+  // ---- ① 有向盒:候選只有四個面法線,附著點是**面中心** ----
+  const B = bld(12, -7, 60, 24, 40, 0.83);
+  const faces = attachFaces(B);
+  ok(faces.length === 4, 'Ⅶ 有向盒的正面候選 MUST 恰好四個(四面牆),不是 16 個方位');
+  const cs = Math.cos(B.ry), sn = -Math.sin(B.ry);   // 與 surfacePoint 同慣例(見該函式檔頭)
+  const toLocal = (x, z) => [(x - B.x) * cs + (z - B.z) * sn, -(x - B.x) * sn + (z - B.z) * cs];
+  const centred = faces.every((f) => {
+    const [lx, lz] = toLocal(f.fx, f.fz);
+    // 面中心 = 一軸貼齊半寬、另一軸恰為 0(落在面上任意一點 ⇒ 斜插在牆邊)
+    return (near(Math.abs(lx), B.hw2, 1e-9) && near(lz, 0, 1e-9))
+        || (near(Math.abs(lz), B.hd2, 1e-9) && near(lx, 0, 1e-9));
+  });
+  ok(centred, 'Ⅶ 每個正面的附著點 MUST 是該面**中心**(牆角/面上任意點 = 設施斜插在牆邊)');
+  const axisAligned = faces.every((f) => {
+    const [lnx, lnz] = [f.nx * cs + f.nz * sn, -f.nx * sn + f.nz * cs];
+    return near(Math.abs(lnx) + Math.abs(lnz), 1, 1e-9)
+      && (near(Math.abs(lnx), 1, 1e-9) || near(Math.abs(lnz), 1, 1e-9));
+  });
+  ok(axisAligned, 'Ⅶ 正面法線 MUST 是盒的軸向(±local x / ±local z),不得是任意角度');
+  // 四個面各不相同、且成兩組相反 ⇒ 真的是四面牆
+  const dirs = faces.map((f) => `${f.nx.toFixed(3)},${f.nz.toFixed(3)}`);
+  ok(new Set(dirs).size === 4, 'Ⅶ 四個正面互不重複');
+
+  // ---- ② 規劃結果:每條盒結構路線的法線 MUST 是該結構的正面之一 ----
+  const list = [];
+  for (let i = 0; i < 60; i++) {
+    // 各棟不同朝向(0~π)+ 長寬比不同 ⇒ 鏡射慣例錯掉就對不上
+    list.push(bld((i % 8) * 90 - 360, Math.floor(i / 8) * 90 - 360, 30 + (i % 3) * 10, 14, 24 + (i % 4) * 6,
+                  (i / 60) * Math.PI));
+  }
+  const rs = plan(list, { seed: 4242 }).filter((r) => !r.link);
+  const onFace = rs.every((r) => attachFaces(r.b).some((f) =>
+    near(f.nx, r.nx, 1e-9) && near(f.nz, r.nz, 1e-9) && near(f.fx, r.fx, 1e-6) && near(f.fz, r.fz, 1e-6)));
+  ok(rs.length > 5 && onFace,
+    `Ⅶ ${rs.length} 條路線的附著點/法線 MUST 全部落在該結構的正面上(斜角一條都不准)`);
+
+  // ---- ③ 視覺 vs 碰撞盒朝向同調(本次修的根因)----
+  // 建物實例矩陣吃 three 的 Euler(0, ry, 0);biomes.js 把「局部 → 世界」寫在 `toW` 這一支
+  // (屋頂配件/煙囪/裙樓都靠它擺位)。碰撞盒的 local 軸反解 MUST 是它的反矩陣,否則
+  // **看得見的牆與擋彈/掛梯的牆差 2·ry**(45° 的樓就差 90°)。
+  ok(/const toW = \(ox, oz\) => \[b\.x \+ ox \* ca \+ oz \* sa, b\.z - ox \* sa \+ oz \* ca\]/.test(biomeSrc),
+    'Ⅶ biomes.js 的視覺擺位式 `toW` MUST 維持 three Euler(0,ry,0) 的展開(本節的對照組據此而立)');
+  const meshToW = (b, lx, lz) => {            // ← 與上一行驗過的 toW 同式(ca=cos(ry), sa=sin(ry))
+    const ca = Math.cos(b.ry), sa = Math.sin(b.ry);
+    return [b.x + lx * ca + lz * sa, b.z - lx * sa + lz * ca];
+  };
+  const sameWall = attachFaces(B).every((f) => {
+    const [lx, lz] = toLocal(f.fx, f.fz);                       // 碰撞盒認定的面中心(local)
+    const [wx, wz] = meshToW(B, lx, lz);                        // 同一個 local 點,用**視覺**矩陣擺回世界
+    return near(wx, f.fx, 1e-6) && near(wz, f.fz, 1e-6);
+  });
+  ok(sameWall, 'Ⅶ 碰撞盒的面中心 MUST 與**視覺**實例矩陣擺出的同一點重合(sn 寫成 +sin 就是鏡射盒)');
+
+  // ---- ④ 圓柱(神木):旋轉對稱 ⇒ 維持 16 方位;巨岩帶 attA 則只准實測驗過的方位 ----
+  ok(attachFaces(tree(0, 0, 8, 40), 0.3).length === CLIMB.AZ,
+    `Ⅶ 圓柱(神木)MUST 維持 ${CLIMB.AZ} 方位掃描(幹身旋轉對稱,任一徑向都是正面)`);
+  const rk = { ...rock(0, 0, 20, 40), attA: [{ a: 0.4, gap: 0.7, top: 1.1 }, { a: 2.9, gap: 0.2, top: 0 }] };
+  const af = attachFaces(rk, 1.1);
+  ok(af.length === 2 && near(af[0].gap, 0.7) && near(af[1].arm, 0),
+    'Ⅶ 巨岩:帶 attA 時 MUST 只回那些方位,並把逐方位實測的 gap/top 帶進路線');
+  const rkRoute = planClimbRoutes({ blockers: [rk], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })[0];
+  ok(rkRoute && near(rkRoute.gap, rkRoute.arm === 0 ? 0.2 : 0.7),
+    'Ⅶ 路線 MUST 沿用被選中那個正面的 gap(設施靠上岩面,不是浮在碰撞圈上)');
+  const noAtt = planClimbRoutes({ blockers: [{ ...rock(0, 0, 20, 40), attA: [] }], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 });
+  ok(noAtt.length === 0, 'Ⅶ 巨岩一個方位都驗不過(attA 空)⇒ MUST 不掛路線(寧缺勿錯,好過一條浮空的)');
+
+  // ---- ⑤ 頂端錨件的跨接臂:結構頂端比路線半徑細時 MUST 伸回結構上 ----
+  const P0 = climbSrc.indexOf('const anch = (inner, outer, w, h) => {');
+  const P1 = climbSrc.indexOf('\n    };', P0);
+  ok(P0 > 0 && P1 > P0, 'Ⅶ buildClimbMeshes MUST 保留頂端錨件的跨接臂 `anch()`(單一縫)');
+  if (P0 > 0) {
+    // 執行真正的原文:r/off/arm 由外層閉包提供 ⇒ 以最小替身注入
+    const mk = new Function('r', 'off', 'arm', `${climbSrc.slice(P0, P1 + 6)}\n    return anch;`);
+    for (const arm of [0, 3.4]) {
+      const r = { fx: 100, fz: 0, nx: 1, nz: 0 };
+      const off = 0.35, A = mk(r, off, arm)(0.2, 0.8, 0.7, 0.28);
+      const inner = A.cx - r.fx - A.L / 2;      // 錨件內端(沿法線、相對結構表面)
+      const outer = A.cx - r.fx + A.L / 2;
+      ok(near(inner, -(arm + 0.2), 1e-9) && near(outer, off + 0.8, 1e-9),
+        `Ⅶ 跨接臂(arm=${arm}):內端 MUST 咬進結構 0.2m、外端 MUST 蓋住設施(實測 ${inner.toFixed(2)}~${outer.toFixed(2)})`);
+    }
   }
 }
 

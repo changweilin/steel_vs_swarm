@@ -19,6 +19,11 @@
 //               零件樹連同 Group 嵌套變換一起解析。
 //   biomes.js   的 VEG_DEFS / GIANT_DEFS / GIANT_DECO(宣告式零件表)+
 //               xform.js 的 vegPartXform(實例變換單一縫)—— 驗的是渲染真的用的那份數學。
+//   biomes.js   的 MEGALITHS(名岩 12 座)/ synthMegalith(合成 11 型)/ decorateMegalith
+//               (峭壁樹·岩菇/石砌屋/疊石堆/鳥巢台/高壓電塔)—— 2026-07-30 納入:巨岩的
+//               貼壁與頂面落點是**推算**出來的,推錯一步整棵樹就浮在半空(使用者回報
+//               「巨石懸崖旁的樹沒接好」)。岩體的射線實測(`rockProbe`)以 RaycasterStub
+//               對真零件求交,故驗的是生成期真的會落在哪裡。
 //
 // 亂數紀律:樁件 jitterColor / chiselRock **必須消耗與真品相同枚數的 rnd**
 // (3 枚 / 42 枚),否則後續零件的擺位會整串漂掉,稽核就在驗一棵不存在的樹。
@@ -34,6 +39,9 @@
 //   竹葉冠 —— 端面比錨體寬,外緣本來就該騰空)/ 橫躺觸地(倒木、車輪)。
 //
 // 已知量不到的(靠 code review + 目視):
+//   ⓪ 兩端支承(樑:石楣/橫樑)有具名救援 —— 接合面沿某一軸的兩個相反端各自貼在**不同**
+//      錨體上即算接好(中段懸空是構造)。「不同錨體」MUST 保留:兩端貼同一個錨體正是
+//      「板根鰭誤轉成切向」的指紋。
 //   ① 兩端都該接合的構件(斜撐/繫桿):工具只要求「有一端接上」,
 //      斜撐頂端懸空判不出來 —— 見 hazards.js relay 斜撐的註解。
 //   ② 接觸判定以「頂點 + 面心取樣」近似:兩凸體只以側面貼側面相交(無取樣點互埋)
@@ -219,6 +227,38 @@ function localSolid(g) {
     }
     return { type: 'box', planes, ends, verts, samples };
   }
+  if (g.t === 'sphere') {
+    // three SphereGeometry(r, wSeg, hSeg):φ 繞 y 一圈、θ 自 +y 往下。**刻意建成多面體**
+    // 而不是理想球:貼壁特徵的錨點半徑用理想球半徑算,就會浮在「小面內縮」那一段的外面
+    // (12×8 段的赤道小面內縮 ≈ 5% 半徑,r=75 的岩體就是 4m 的縫)。
+    const { r, wSeg, hSeg } = g;
+    const V = [];
+    for (let iy = 0; iy <= hSeg; iy++) {
+      const th = iy / hSeg * Math.PI;
+      for (let ix = 0; ix <= wSeg; ix++) {
+        const ph = ix / wSeg * Math.PI * 2;
+        V.push([-r * Math.cos(ph) * Math.sin(th), r * Math.cos(th), r * Math.sin(ph) * Math.sin(th)]);
+      }
+    }
+    const at = (ix, iy) => V[iy * (wSeg + 1) + ix];
+    const planes = [];
+    const tri = (a, b, c) => {                       // 凸多面體 ⇒ sd = max(nᵢ·p − dᵢ),法向朝外(d > 0)
+      let nv = cross(sub(b, a), sub(c, a));
+      if (len(nv) < 1e-9) return;
+      nv = norm(nv);
+      let d = dot(nv, a);
+      if (d < 0) { nv = [-nv[0], -nv[1], -nv[2]]; d = -d; }
+      planes.push([nv[0], nv[1], nv[2], d]);
+    };
+    for (let iy = 0; iy < hSeg; iy++) for (let ix = 0; ix < wSeg; ix++) {
+      const a = at(ix, iy), b = at(ix, iy + 1), c = at(ix + 1, iy + 1), d2 = at(ix + 1, iy);
+      if (iy !== 0) tri(a, b, d2);
+      if (iy !== hSeg - 1) tri(b, c, d2);
+    }
+    const samples = V.filter((_, i) => i % 3 === 0);   // 取樣降頻:O(n²) 配對量不炸
+    return { type: 'sphere', planes, verts: V, samples: [...samples, [0, 0, 0]],
+             ends: [{ probes: samples, axis: null, center: [0, 0, 0], axial: false, r }] };
+  }
   if (g.t === 'ico') {
     const verts = ICO_V.map((v) => [v[0] * g.r, v[1] * g.r, v[2] * g.r]);
     // 球狀簇沒有擠出軸 ⇒ 不做正交視角判定,只驗「整團有沒有黏到別的零件」
@@ -258,6 +298,7 @@ function worldSolid(ls, xf, shell = false) {
     for (const q of planes) m = Math.max(m, q[0] * p[0] + q[1] * p[1] + q[2] * p[2] - q[3]);
     return m; };
   return {
+    planes,                       // 世界空間面集(射線實測樁件 RaycasterStub 也吃這一份)
     verts: ls.verts.map((v) => xfPoint(xf, v)),
     samples: (ls.samples ?? ls.verts).map((v) => xfPoint(xf, v)),
     vol: bboxVol(ls.verts.map((v) => xfPoint(xf, v))),
@@ -314,6 +355,9 @@ function auditJoints(parts, anchors = [], opt = {}) {
     if (self.subject === false) return;
     const others = solids.filter((_, j) => j !== i).map((s) => s.w).concat(anchors);
     const sdMin = (p) => { let m = Infinity; for (const o of others) m = Math.min(m, o.sd(p)); return m; };
+    /** 最貼近該點的錨體序號(判「兩端支承」是不是撐在**兩個不同**的東西上) */
+    const sdWho = (p) => { let m = Infinity, w = -1;
+      others.forEach((o, k) => { const d = o.sd(p); if (d < m) { m = d; w = k; } }); return w; };
     const tol = self.tol ?? TOL;
     // 球狀簇 / 環(無擠出軸):只驗「有沒有黏到東西」,兩正交視角不適用
     if (!self.ls.ends.some((e) => e.axial)) {
@@ -353,16 +397,27 @@ function auditJoints(parts, anchors = [], opt = {}) {
                      mid: sdMin(xfPoint(self.xf, end.center)),                  // 端面中心是否被貫穿
                      viewA: Math.max(dirGap(AX[0]), dirGap(AX[2])),             // 沿局部 x 看 → 量 ±z
                      viewB: Math.max(dirGap(AX[1]), dirGap(AX[3])) };           // 沿局部 z 看 → 量 ±x
+      // 兩端支承(樑):接合面沿某一軸的**兩個相反端**各自貼在**不同**的錨體上 —— 石楣架在兩根
+      // 立石上、橫樑跨兩柱,中段懸空是構造本身,不是接合不良。「不同錨體」這一條 MUST 保留:
+      // 兩端貼在**同一個**錨體上正是「板根鰭誤轉成切向」的指紋(沿樹幹一條線貼著、兩側翹起),
+      // 少了它就會把本工具最初要抓的那類病灶一併放過。
+      const bridged = (k1, k2) => {
+        const g1 = dirGap(k1), g2 = dirGap(k2);
+        if (g1 > tol || g2 > tol) return false;
+        const at = (k) => xfPoint(self.xf, end.probes[ds[k] <= ds[k + K] ? k : k + K]);
+        return sdWho(at(k1)) !== sdWho(at(k2));
+      };
+      cand.bridge = bridged(AX[0], AX[2]) || bridged(AX[1], AX[3]);
       // 中心被貫穿 = 零件是「套在錨體上」(樹冠罩、屋頂、竹葉冠):接縫在中心,外緣本該騰空
-      cand.score = cand.mid <= tol ? 1e3 - cand.mid : -Math.max(cand.viewA, cand.viewB);
+      cand.score = cand.mid <= tol || cand.bridge ? 1e3 - Math.min(cand.mid, 0) : -Math.max(cand.viewA, cand.viewB);
       if (!best || cand.score > best.score) best = cand;
     }
     const orthoWorst = Math.max(best.viewA, best.viewB);
     let flag = 'ok';
-    if (best.mid > tol && orthoWorst > tol) flag = best.min > tol ? 'FLOAT' : 'PARTIAL';
+    if (best.mid > tol && orthoWorst > tol && !best.bridge) flag = best.min > tol ? 'FLOAT' : 'PARTIAL';
     rows.push({ tag: self.tag, flag, axial: true, gap: +orthoWorst.toFixed(3),
                 viewA: +best.viewA.toFixed(3), viewB: +best.viewB.toFixed(3),
-                cover: `${best.inside}/${best.end.probes.length}` });
+                cover: best.bridge ? '兩端支承' : `${best.inside}/${best.end.probes.length}` });
   });
 
   // ---- 連通性:接觸圖 + 地面接觸;連不回主體/地面那組 = 整串脫落 ----
@@ -403,13 +458,17 @@ const geoStub = (dn) => ({
   ico: (r) => ({ t: 'ico', r }),
   box: (w, h, d) => ({ t: 'box', w, h, d }),
 });
-const colorStub = () => { const c = { multiplyScalar: () => c, offsetHSL: () => c, clone: () => c, setRGB: () => c, set: () => c }; return c; };
+const colorStub = () => { const c = { multiplyScalar: () => c, offsetHSL: () => c, clone: () => c, setRGB: () => c, set: () => c, getHex: () => 0 }; return c; };
 const THREE_STUB = {
   Color: class { constructor() { return colorStub(); } }, Vector3: class { constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
-    set() { return this; } copy() { return this; } fromBufferAttribute() { return this; } multiply() { return this; }
+    // set/copy MUST 真的存值:biomes.js 的 rockProbe 拿 Vector3 當射線起點/方向(空殼 = 永遠射原點)
+    set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+    copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
+    fromBufferAttribute() { return this; } multiply() { return this; }
     applyQuaternion() { return this; } add() { return this; } sub() { return this; } normalize() { return this; } },
   Quaternion: class { setFromEuler() { return this; } copy() { return this; } invert() { return this; } },
   BoxGeometry: class { constructor(w, h, d) { this.t = 'box'; this.w = w; this.h = h; this.d = d; } },
+  SphereGeometry: class { constructor(r, wSeg = 8, hSeg = 6) { this.t = 'sphere'; this.r = r; this.wSeg = wSeg; this.hSeg = hSeg; } },
   TorusGeometry: class { constructor(R, tube) { this.t = 'torus'; this.R = R; this.tube = tube; } },
   RingGeometry: class { constructor() { this.t = 'ring'; } },
   MeshBasicMaterial: class { constructor(o = {}) { Object.assign(this, o); } },
@@ -435,11 +494,67 @@ class Node3 {
     this.geo = geo; this.children = [];
     this.position = { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
     this.rotation = { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
-    this.scale = { x: 1, y: 1, z: 1, set(x, y, z) { this.x = x; this.y = y; this.z = z; } };
+    this.scale = { x: 1, y: 1, z: 1, set(x, y, z) { this.x = x; this.y = y; this.z = z; },
+                   setScalar(v) { this.x = this.y = this.z = v; return this; },
+                   multiplyScalar(v) { this.x *= v; this.y *= v; this.z *= v; return this; } };
     this.material = {}; this.userData = {};
     this.geometry = { attributes: { position: { count: 0 }, normal: { count: 0, setXYZ() {}, needsUpdate: false } } };
   }
   add(...cs) { this.children.push(...cs); return this; }
+  traverse(fn) { fn(this); for (const c of this.children) c.traverse(fn); return this; }
+  updateMatrixWorld() { return this; }   // 樁件的變換每次現算(xfOf),不需快取
+}
+/** 節點子樹 → [{ ls, xf }](xf 自該節點自身的局部變換起算,與真品 g 未套放置變換時的世界座標同義) */
+function flattenSolids(node, parentXf = IDENT, out = []) {
+  const xf = xfMul(parentXf, xfOf(node));
+  if (node.geo) { const ls = localSolid(node.geo); if (ls) out.push({ ls, xf }); }
+  for (const c of node.children) flattenSolids(c, xf, out);
+  return out;
+}
+/** 射線 vs 凸多面體({p : nᵢ·p ≤ dᵢ}):slab 法求進出區間,回傳進入參數(正面命中)或 null */
+function rayConvex(planes, o, d) {
+  let tIn = -Infinity, tOut = Infinity;
+  for (const [nx, ny, nz, dd] of planes) {
+    const den = nx * d[0] + ny * d[1] + nz * d[2];
+    const num = dd - (nx * o[0] + ny * o[1] + nz * o[2]);
+    if (Math.abs(den) < 1e-12) { if (num < 0) return null; continue; }
+    const t = num / den;
+    if (den > 0) tOut = Math.min(tOut, t); else tIn = Math.max(tIn, t);
+  }
+  const t0 = Math.max(tIn, 0);
+  return tOut >= t0 ? t0 : null;
+}
+/** three 的 Raycaster / Box3 樁件:巨岩表面實測(biomes.js rockProbe)靠它們吃到真幾何。
+ *  只實作 rockProbe 用到的介面;命中取「進入點」= three 只認正面(FrontSide)的等價語意。 */
+class RaycasterStub {
+  constructor() { this.far = Infinity; this.ray = { origin: [0, 0, 0], direction: [0, 0, 1] }; }
+  set(o, d) {
+    const l = Math.hypot(d.x, d.y, d.z) || 1;
+    this.ray = { origin: [o.x, o.y, o.z], direction: [d.x / l, d.y / l, d.z / l] };
+    return this;
+  }
+  intersectObjects(list) {
+    const hits = [];
+    for (const obj of list) for (const { ls, xf } of flattenSolids(obj)) {
+      if (!ls.planes) continue;                       // 環(torus)不參與實測
+      const w = worldSolid(ls, xf);
+      const t = rayConvex(w.planes, this.ray.origin, this.ray.direction);
+      if (t != null && t <= this.far) hits.push({ distance: t });
+    }
+    return hits.sort((a, b) => a.distance - b.distance);
+  }
+}
+class Box3Stub {
+  setFromObject(root) {
+    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+    for (const { ls, xf } of flattenSolids(root)) for (const v of ls.verts) {
+      const p = xfPoint(xf, v);
+      for (let k = 0; k < 3; k++) { lo[k] = Math.min(lo[k], p[k]); hi[k] = Math.max(hi[k], p[k]); }
+    }
+    this.min = { x: lo[0], y: lo[1], z: lo[2] };
+    this.max = { x: hi[0], y: hi[1], z: hi[2] };
+    return this;
+  }
 }
 const xfOf = (o) => ({
   m: eulerM3(o.rotation.x, o.rotation.y, o.rotation.z, o.scale.x, o.scale.y, o.scale.z),
@@ -527,6 +642,64 @@ function vegParts(def, it) {
   return parts;
 }
 
+// ============================ biomes.js:巨岩(岩體 + 表面特徵)============================
+// 巨岩 = 岩體(名岩 `build` / `synthMegalith`)+ 表面特徵(`decorateMegalith`:峭壁樹/岩菇/
+// 石砌屋/疊石堆/鳥巢台/高壓電塔)。特徵的錨點半徑是**推算**出來的(側壁橢圓 `er` × 高度
+// 收縮 `f`),推錯一步整棵樹就浮在半空 —— 與神木樹根脫節同一族的病灶,故一併納入本工具。
+// 岩體本身也受檢(疊石/柱束/刃嶺各自著地,故一律走 scatter:只放寬 ISOLATED,FLOAT/DETACHED 照判)。
+const megal = (() => {
+  const G = geoStub(5);
+  const code = [
+    pick(/const MEGALITHS = \{[\s\S]*?\n\};/, 'MEGALITHS'),
+    pick(/const _rcO = new THREE\.Vector3.*\n/, 'rockProbe 的射線暫存'),
+    pick(/function rockProbe\(g\) \{[\s\S]*?\n\}/, 'rockProbe'),
+    pick(/const ROCK_TONES = \[[\s\S]*?\];/, 'ROCK_TONES'),
+    pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
+    pick(/function decorateMegalith\(g, anchor, rnd, s\) \{[\s\S]*?\n\}/, 'decorateMegalith'),
+    'return { MEGALITHS, synthMegalith, decorateMegalith };',
+  ].join('\n');
+  const THREE = { ...THREE_STUB, Mesh: class extends Node3 { constructor(geo) { super(geo); } }, Group: class extends Node3 {},
+                  Raycaster: RaycasterStub, Box3: Box3Stub };
+  const mat = () => ({});
+  const box = (w, h, d, c, x = 0, y = 0, z = 0) => {
+    const m = new THREE.Mesh({ t: 'box', w, h, d }); m.position.set(x, y + h / 2, z); return m;
+  };
+  // 高壓電塔本體的接合歸 LANDMARKS 稽核(不在本節範圍);此處只驗它有沒有站在岩頂上,
+  // 故以「與真品同佔地」的樁件代表:LANDMARK_COL.power r=2.6 h=42(不消耗 rnd)
+  const LANDMARKS = { power: (g) => { const m = new THREE.Mesh({ t: 'prism', r1: 2.6, r2: 2.6, h: 42, n: 4 }); m.position.set(0, 21, 0); g.add(m); } };
+  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', code)(
+    G.cyl, G.cone, G.ico, box, mat, mat, LANDMARKS, THREE, Math);
+  return { ...mod, THREE };
+})();
+
+/** 巨岩一顆 → { parts(世界公尺:根變換 = 放置縮放 s;local y=0 在地表下 1.5m), main } */
+function megalithParts(name, seed, s) {
+  const rnd = mulberry32((seed * 2654435761) >>> 0);
+  const g = new megal.THREE.Group();
+  const meta = name === '合成' ? megal.synthMegalith(g, rnd)
+    : (megal.MEGALITHS[name].build(g, rnd), megal.MEGALITHS[name]);
+  const nBody = g.children.length;   // 之後加進來的都是 decorateMegalith 的表面特徵
+  megal.decorateMegalith(g, meta.anchor, rnd, s);
+  const parts = [];
+  const walk = (node, parentXf, trail) => {
+    const xf = xfMul(parentXf, xfOf(node));
+    if (node.geo) {
+      const ls = localSolid(node.geo);
+      // 岩體本身是多塊拼接的粗獷量體(小面內縮/塊間節理縫):容差比一般零件寬,與 hazards 的
+      // rock 件同一量級。**表面特徵一律吃嚴格容差** —— 落點是實測出來的,就該貼死。
+      // 標籤帶尺寸:巨岩一顆有 20~40 塊同型零件,光靠序號認不出是哪一塊出問題
+      const G2 = node.geo;
+      const dim = G2.t === 'box' ? `${G2.w}×${G2.h}×${G2.d}`
+        : G2.t === 'prism' ? `r${G2.r1}/${G2.r2}×${G2.h}` : `r${G2.r ?? ''}`;
+      if (ls) parts.push({ tag: `${trail}${G2.t}(${dim})`, ls, xf, tol: trail.startsWith('岩體') ? 0.35 : TOL });
+    }
+    node.children.forEach((c, i) => walk(c, xf,
+      trail ? `${trail}${i}.` : `${i < nBody ? '岩體' : '特徵'}${i}.`));
+  };
+  walk(g, { m: [s, 0, 0, 0, s, 0, 0, 0, s], t: [0, 0, 0] }, '');
+  return { parts, main: meta.main || name };
+}
+
 // ============================ 執行 ============================
 const GROUND = halfSolid([0, 1, 0], 0);          // 地面:y ≤ 0 為土裡(埋入)
 let bad = 0, checked = 0, info = 0;
@@ -594,6 +767,23 @@ for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   for (const inst of INSTANCES) {
     const it = { ...inst.it, tx: 0, tz: 0, dj: 0 };   // 特徵件不吃植株微傾斜,也不吃細節抖動(世界尺寸恆定)
     report(`巨木特徵 ${name}(${inst.name})`, auditJoints(vegParts(def, it), [BARK]), '錨體=樹皮面');
+  }
+}
+
+// ---- 巨岩:岩體 + 表面特徵(錨體 = 地面;巨岩擺放時 local y=0 沉在地表下 1.5m)----
+// 合成巨岩的主體型別是第 4 枚亂數決定的(11 型),用足量種子把每型都掃到。
+const MEGA_S = [0.9 * 1.35, 1.4 * 1.35];   // placeMegaliths:s = (0.9~1.4) × OVER.mega
+for (const name of ['合成', ...Object.keys(megal.MEGALITHS)]) {
+  if (ONLY && !name.includes(ONLY)) continue;
+  const ss = name === '合成' ? MEGA_S : megal.MEGALITHS[name].s.map((v) => v * 1.35);
+  const nSeed = name === '合成' ? SEEDS * 6 : SEEDS;
+  for (const s of ss) {
+    for (let seed = 1; seed <= nSeed; seed++) {
+      const { parts, main } = megalithParts(name, seed, s);
+      report(`巨岩 ${name}/${main}(seed ${seed}, s ${s.toFixed(2)})`,
+             auditJoints(parts, [halfSolid([0, 1, 0], 1.5 * s)], { scatter: true }),
+             '錨體=地面');
+    }
   }
 }
 

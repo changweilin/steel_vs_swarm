@@ -507,7 +507,7 @@ export class BattleClient {
           let t0, t1;
           if (b.hw2 != null) {
             // 有向盒:射線在盒 local frame 走 slab(與 _cameraDeClip clampBox / _sweepBlockers 同式)
-            const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+            const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
             const ox = ax - b.x, oz = az - b.z;
             const olx = ox * cs + oz * sn, olz = -ox * sn + oz * cs;
             if (A2 < 1e-8) {                        // 垂直線段:XZ 不動,只看是否在盒內
@@ -2382,7 +2382,7 @@ export class BattleClient {
         if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
         if (b.hw2 != null) {
           // 建物 = 有向盒推擠(圓柱內切於盒角 → 斜向進入會鑽進盒角破圖;改用真實盒面 + 機體半徑外擴)
-          const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+          const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
           const rx = this.pos.x - b.x, rz = this.pos.z - b.z;
           const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 -ry)
           const ex = b.hw2 + myR, ez = b.hd2 + myR;                // Minkowski 近似:盒面外擴機體半徑
@@ -2435,7 +2435,7 @@ export class BattleClient {
       // = 半穿透,故此處夾在進入面。終點在外(fwd 恆 >0 的真穿越)一律夾。
       const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
       if (b.hw2 != null) {
-        const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+        const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
         const ex = b.hw2 + myR, ez = b.hd2 + myR;
         const o0x = (px0 - b.x) * cs + (pz0 - b.z) * sn, o0z = -(px0 - b.x) * sn + (pz0 - b.z) * cs;
         if (Math.abs(o0x) < ex && Math.abs(o0z) < ez) continue;    // P0 已在盒內 → push-out 脫出
@@ -2503,7 +2503,7 @@ export class BattleClient {
     };
     // 有向盒版(建物):射線在盒 local frame 走 slab 求進入 t(盒外擴 SKIN);pos 已在盒內 → 縮回 pos
     const clampBox = (b) => {
-      const cs = Math.cos(b.ry), sn = Math.sin(b.ry);
+      const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
       const olx = (ox - b.x) * cs + (oz - b.z) * sn, olz = -(ox - b.x) * sn + (oz - b.z) * cs;
       const ulx = ux * cs + uz * sn, ulz = -ux * sn + uz * cs;
       const ex = b.hw2 + SKIN, ez = b.hd2 + SKIN;
