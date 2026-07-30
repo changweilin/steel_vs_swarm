@@ -194,15 +194,32 @@ function lanUrls() {
 // ws 預設 100MiB —— 惡意巨型訊息會讓單執行緒 JSON.parse 阻塞全部房間,先在框架層封頂。
 const wss = new WebSocketServer({ server: httpServer, maxPayload: 1 << 20 });
 
+// 心跳:偵測「髒斷線」(手機收後台/分頁被殺/網路中斷 —— TCP 不送 FIN,'close' 永遠不觸發)。
+// 沒有心跳,死連線的座位 connected 恆為 true ⇒ RoomHub 的「對局無真人逾時收房」(noHumanMs)
+// 永遠不會啟動,首頁戰區列表就一直看得到進行中的無人 bot 對局。
+// 瀏覽器對 ping 自動回 pong(不用改客戶端);兩個週期沒回應就 terminate → 觸發 'close' → 座位進入斷線流程。
+const HEARTBEAT_MS = 15 * 1000;
 wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   const sess = hub.attach((msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); });
   ws.on('message', (raw) => {
+    ws.isAlive = true;   // 有訊息進來 = 連線活著(對局中 pos 回報比 pong 更即時)
     let m;
     try { m = JSON.parse(raw); } catch { return; }
     sess.recv(m);
   });
   ws.on('close', () => sess.close());
 });
+const hbTimer = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) { ws.terminate(); continue; }   // terminate 觸發 'close' → sess.close()
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, HEARTBEAT_MS);
+hbTimer.unref?.();
+wss.on('close', () => clearInterval(hbTimer));
 
 // 雲端平台(fly.io / Render / Railway…)關機時送 SIGTERM,寬限期內要收乾淨:
 // 停掉全部房間 tick,否則容器被硬殺前還在跑模擬,玩家看到的是「畫面凍住」而非明確斷線。
