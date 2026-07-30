@@ -2601,6 +2601,27 @@ function roadWidth(tags) {
  * 的走廊、carveTunnels 的開挖剖面共用這一支。分家的後果是開挖寬度小於路面寬度 ⇒ 路面兩緣埋進土裡。
  */
 const strucHw = (tags) => Math.max(roadWidth(tags) / 2, PASS_W / 2);
+/**
+ * 塗裝車道半寬 —— **單一縫**(2026-07-30 使用者需求「橋/隧道/地下道內的馬路寬度與外部馬路
+ * 標線與寬度要對齊」):標線(車道線/分向線/路緣線)、避車道邊帶、銜接漸縮帶三個消費端共用。
+ * 一般道路的通行半寬本來就 = roadWidth/2 ⇒ 結構內外吃同一個值 = 車道數相同、路緣線接得上。
+ * MUST NOT 在結構那側改吃 `strucHw`(遊戲性夾寬 ≥ PASS_W/2):16m 隧道會被畫成 5 車道鋪滿,
+ * 與洞外 2 車道的路橫向錯開。也 MUST NOT 依「差額夠不夠寬」在車道寬與結構寬之間三元切換
+ * (舊版寫法):差額不足 AVOID_MIN 的路段會悄悄退回結構寬,標線寬度隨圖資 lanes 值在洞口跳動。
+ */
+const carriageHw = (tags) => roadWidth(tags) / 2;
+/**
+ * 結構端銜接漸縮帶(2026-07-30 使用者需求「接合處貼合」)。結構通行寬夾到 ≥ PASS_W/2、外部是
+ * 真實路寬 ⇒ 洞口/橋頭橫向差一階(路面憑空外擴,且橋/隧節點刻意不入 nodeArms ⇒ 沒有路口
+ * 縮減梯形可補)。往結構**外**延伸 ROAD_FLARE_M 補一片同色路面楔形,半寬由結構寬 smoothstep
+ * 收到車道寬 —— 兩端切線為 0(接結構端、接一般路端都不折角)。
+ * 純視覺:MUST NOT 進 decks / tunnelSegs / cols / 走廊 / 伺服器碰撞(通行寬唯一縫仍是 strucHw)。
+ */
+const ROAD_FLARE_M = 12;
+const flareHw = (hw, cw, t) => {
+  const u = Math.min(1, Math.max(0, t));
+  return hw + (cw - hw) * (u * u * (3 - 2 * u));
+};
 // 路面顏色(cel-shaded):城市柏油 / 綠地泥土 / 裸露地礫石;主/次略有深淺
 function roadColor(biome, main) {
   if (biome === 'urban') return main ? 0x3a3f45 : 0x4a4640;
@@ -3646,10 +3667,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         : (sunk(run[0]) && sunk(run[run.length - 1])))) continue;
       // 跨水自動橋段/結構隧道夾通行寬(PASS_W):兵線可能走的結構物;乾段維持原路寬
       const hw = (brg || strc) ? strucHw(way.tags) : hwWay;
-      // 真實車道半寬 laneHw(供標線與避車道邊帶用):結構通行寬 hw 為遊戲性夾到 ≥8,車道本身常窄得多。
-      // avoidHw = 每側「太寬、該畫避車道」的差額。通行寬 hw / decks / 牆 / 走廊 / 伺服器碰撞一律不動 ——
-      // 只是把中央車道漆成真實寬(接縫與外部一般路等寬、無縫)、兩側差額鋪避車道視覺(見下方 walk/hatch 段)。
-      const laneHw = roadWidth(way.tags) / 2;
+      // 真實車道半寬 laneHw(單一縫 carriageHw;供標線、避車道邊帶、銜接漸縮帶共用):結構通行寬 hw
+      // 為遊戲性夾到 ≥8,車道本身常窄得多。avoidHw = 每側「太寬、該畫避車道」的差額。通行寬 hw /
+      // decks / 牆 / 走廊 / 伺服器碰撞一律不動 —— 只是把中央車道漆成真實寬(與外部一般路等寬、標線
+      // 逐條對齊)、兩側差額鋪避車道視覺(見下方 walk/hatch 段)、結構外緣補漸縮帶接回一般路寬。
+      const laneHw = carriageHw(way.tags);
       const avoidHw = (brg || strc) ? Math.max(0, hw - laneHw) : 0;
       const mid = run[(run.length / 2) | 0];
       let biome = classify(terrain.sampleColor?.(mid[0], mid[1]), terrain.heightAt(mid[0], mid[1]), mix, rnd);
@@ -3661,7 +3683,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 結構隧道恆為柏油(2026-07-23):中點取樣落在**覆蓋段上方的山體**影像上(森林/裸岩),
       // 分類會判成綠地/裸露地 → 隧道鋪成泥土路(使用者實測金龍隧道)。隧道是工程結構物,
       // 現實中不存在土石路面 —— 與上面「橋段取到水色」同一道理,直接定調柏油。
-      if (strc) biome = 'urban';
+      // 橋面同款(2026-07-30 使用者需求「風格盡可能一致」):橋也是工程結構物,不存在泥土/礫石
+      // 橋面;跨河橋中點恆取到水色 ⇒ 舊版整座橋鋪成 roadColor('water') 的青灰、郊區橋鋪成泥土,
+      // 與洞內柏油、與標線(只畫柏油)三種風格。定調柏油後橋面才與隧道/一般市區路同一套外觀。
+      if (strc || brg) biome = 'urban';
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       const cum = [0];
@@ -3725,6 +3750,57 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         }
       }
       b.base += nP * 4;
+      // ---- 銜接漸縮帶(2026-07-30 使用者需求「接合處貼合」)----
+      // 結構的通行寬被夾到 ≥ PASS_W/2、外面接的是真實路寬 ⇒ 洞口/橋頭一道橫向硬階(結構節點
+      // 刻意不入 nodeArms ⇒ 路口「寬度縮減梯形」補不到這裡)。自結構端往**外**鋪一片同桶
+      // (同色同材質、同一 draw call)的路面楔形:半寬走 flareHw 由 hw smoothstep 收到車道寬,
+      // 末端就與外面那條路等寬、標線也接得上;起點高度取結構路面高(逐位元貼合)再融回一般路面
+      // 貼地規則。純視覺:不登記 decks / tunnelSegs / cols / 走廊(通行寬唯一縫仍是 strucHw)。
+      // 兩條跳過條件(寧缺勿錯):①端點離邊界不足一個漸縮長(往外會伸出地圖);②往外撞進山體
+      // (覆蓋段直接貼齊 run 端 = 洞還沒出山)或懸空(斷鏈端點落在河面/崖下)—— 楔形會沿山坡
+      // 爬上去/浮在空中,比那道階更難看。繞行朝向:d 與 p 同時反號 ⇒ 兩端楔形都朝 +Y(不被剔除)。
+      if ((brg || strc) && avoidHw >= AVOID_MIN) {
+        const FN = 4;   // 漸縮帶分段數(固定步長,零共享 rnd ⇒ 佈局序列不受影響)
+        for (const e of [0, 1]) {
+          const i0 = e ? nP - 1 : 0, i1 = e ? nP - 2 : 1;
+          const ex = run[i0][0], ez = run[i0][1];
+          if (ex < terrain.minX + inb + ROAD_FLARE_M || ex > terrain.maxX - inb - ROAD_FLARE_M
+            || ez < terrain.minZ + inb + ROAD_FLARE_M || ez > terrain.maxZ - inb - ROAD_FLARE_M) continue;
+          let dx = ex - run[i1][0], dz = ez - run[i1][1];
+          const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;     // 指向結構外
+          const px = dz, pz = -dx;
+          const yEnd = strc ? tFloorAt(cum[i0]) + ROAD_LIFT : deckAt(cum[i0], ex, ez);
+          const yFar = terrain.heightAt(ex + dx * ROAD_FLARE_M, ez + dz * ROAD_FLARE_M);
+          if (yFar > yEnd + 1.6 || yFar < yEnd - 3) continue;
+          const fbase = b.base;
+          for (let k = 0; k <= FN; k++) {
+            const t = k / FN;
+            const cx = ex + dx * (t * ROAD_FLARE_M), cz = ez + dz * (t * ROAD_FLARE_M);
+            const fhw = flareHw(hw, laneHw, t);
+            const offs = [[fhw, 1], [fhw * 0.64, 0], [-fhw * 0.64, 0], [-fhw, 1]];
+            const hs = offs.map(([off]) => terrain.heightAt(cx + px * off, cz + pz * off));
+            const hMax = Math.max(...hs);
+            const w = t * t * (3 - 2 * t);       // 高度融合權重(端點切線 0,與 flareHw 同曲線)
+            for (let q = 0; q < 4; q++) {
+              const [off, ink] = offs[q];
+              const vx = cx + px * off, vz = cz + pz * off;
+              const yG = Math.max(hs[q], hMax - CLAMP) + ROAD_LIFT;
+              b.pos.push(vx, yEnd + (yG - yEnd) * w, vz);
+              b.nrm.push(0, 1, 0);
+              b.uv.push(vx / 9, vz / 9);
+              if (ink) b.col.push(0.52, 0.52, 0.58);
+              else b.col.push(1, 1, 1);
+            }
+          }
+          for (let k = 0; k < FN; k++) {
+            const kb = fbase + k * 4;
+            for (const o of [0, 1, 2]) {
+              b.idx.push(kb + o, kb + o + 1, kb + o + 4, kb + o + 1, kb + o + 5, kb + o + 4);
+            }
+          }
+          b.base += (FN + 1) * 4;
+        }
+      }
       const at = (d) => {
         let i = 1; while (cum[i] < d && i < nP - 1) i++;
         const f = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
@@ -4101,12 +4177,23 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           }
         }
       }
-      // ---- 交通標線(只畫市區柏油;泥土/礫石路沒有標線;橋面另計,不重畫)----
+      // ---- 交通標線(只畫柏油;泥土/礫石路沒有標線)----
       // 結構隧道(2026-07-23 起)照畫:洞內是柏油車道,沒有標線的隧道很出戲。**MUST** 走
       // yBAt 基準高(= 隧道平直路面 tFloorAt,與路面緞帶同源),回退貼地取樣會把標線畫到
       // 覆蓋段上方的山頂(舊版索性整段跳過就是為了躲這個坑)。
-      const markYB = strc ? (i) => tFloorAt(cum[i]) : null;
-      if (!brg && biome === 'urban' && hw >= 2) {
+      // 橋面同納(2026-07-30 使用者需求「標線與寬度要對齊、風格盡可能一致」):舊版 `!brg` 把
+      // 橋整段排除 ⇒ 上橋瞬間車道線與路緣線全部消失(橋卻鋪著避車道邊帶,更顯突兀)。基準高
+      // 走 deckAt − ROAD_LIFT:deckAt 回的是橋面**表面**高,減掉 ROAD_LIFT 才與結構分支的
+      // tFloorAt(路面基準,+ROAD_LIFT 才是表面)同語意 ⇒ 兩者都吃同一組 lift 常數,標線離
+      // 路面的高度在橋/洞/一般路三處一致。回退貼地取樣會把橋上標線畫到河床。
+      const markBaseAt = strc ? (s) => tFloorAt(s)
+        : brg ? (s, gx, gz) => deckAt(s, gx, gz) - ROAD_LIFT : null;
+      const markYB = markBaseAt ? (i) => markBaseAt(cum[i], run[i][0], run[i][1]) : null;
+      // 標線半寬 = 塗裝車道半寬(單一縫 carriageHw,一般路的 hw 本來就等於它):結構通行寬被夾到
+      // ≥8,標線一律鋪在真實車道寬上 ⇒ 車道數與路緣線位置與結構外那條路對齊,邊帶交給避車道 +
+      // 銜接漸縮帶。MUST NOT 依「差額夠不夠寬」在 laneHw / hw 之間切換(見 carriageHw 註解)。
+      const mHw = laneHw;
+      if (biome === 'urban' && mHw >= 2) {
         // 白虛線通用鋪法:偏移 off(0 = 中線)。off=0 逐位元同舊版中線(±0.28 = 0.56 寬)
         const dashLine = (off) => {
           for (let s = 5; s + 3.2 < total; s += 9.5) {
@@ -4114,7 +4201,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             for (const d of [s, s + 3.2]) {
               const [ex, ez, ddx, ddz] = at(d);
               const qx = ddz, qz = -ddx;
-              const yB = strc ? tFloorAt(d) : null;
+              const yB = markBaseAt ? markBaseAt(d, ex, ez) : null;
               const hM = yB !== null ? -Infinity
                 : Math.max(terrain.heightAt(ex + qx * hw, ez + qz * hw),
                            terrain.heightAt(ex - qx * hw, ez - qz * hw));
@@ -4126,9 +4213,6 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           }
         };
         if (main) {
-          // 標線鋪在「真實車道寬」而非結構通行寬:結構(隧道)避車道生效時用 laneHw,否則(一般路)= hw。
-          // 修掉「16m 隧道被畫成 5 車道鋪滿」;路緣線落在真實車道外緣、與外部一般路對齊,邊帶交給避車道。
-          const mHw = avoidHw >= AVOID_MIN ? laneHw : hw;
           // 車道數由車道寬推導(單一縫,不硬編各路):main 恆 ≥ 雙線道
           const lanes = Math.max(2, Math.round(mHw * 2 / 3.2));
           if (arterial) {                        // 幹道:雙黃實線分向
@@ -4150,8 +4234,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           emitLine(run, mHw, 0.56, -mHw * 0.78, 0.18, MARK_W, markYB);
         }
         // ---- 路燈:沿路等間距、左右交錯(燈臂朝路心)----
-        // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體)
-        if (!strc && main && lamps.length < 380) {
+        // 隧道不立(洞內照明是天花燈;路燈桿會戳穿天花板與山體);橋不立(橋燈另有一套沿橋面
+        // 邊緣的實例,見上方 brg 段 —— 地面路燈桿以 heightAt 落地,在高架橋上會從橋面下長出來)
+        if (!strc && !brg && main && lamps.length < 380) {
           let side = rnd() < 0.5 ? 1 : -1;
           for (let s = 14 + rnd() * 10; s < total - 8 && lamps.length < 380; s += 40) {
             const [ex, ez, ddx, ddz] = at(s);
