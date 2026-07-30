@@ -527,6 +527,44 @@ export const CJUMP = {
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
   CD: 15,            // 蓄力跳躍冷卻(秒;客戶端閘門,與無敵幀 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
 };
+// ---- 飛行動力學(2026-07-30 使用者需求;飛行機體 = 無人機 + 飛行型態的變形機甲)----
+// 兩條規則共用這一個縫,MUST NOT 在 game.js / HUD 各自手寫係數:
+//  ①**受擊掉高**:飛行機體挨打會掉高度,掉的公尺數**正比於該次傷害**。校準錨(使用者定調)=
+//    「打完護盾 + 裝甲」掉 SINK_TOWERS 個砲塔高 ⇒ 每點傷害掉幾公尺是**推導值**(airSinkM):
+//    分母 = `SQUAD.DRONE_AVG_HP`(飛行機體平均總血量,既有推導縫)、一階高度 = `TARGET_H.tower`
+//    (砲塔高,與 altTier() 同一把尺)—— MUST NOT 手寫 52 或每點傷害的公尺數。
+//    使用者說的是「**平均**打完護+HP」⇒ 係數是**全飛行機體共用的一個定值**,不是逐機體按自身
+//    血量上限換算(那會讓護盾/裝甲升級順便買到抗擊落,是另一條設計);校準錨動了整組自動跟著動。
+//    掉高是**位移**不是速度:同一份傷害無論分幾發打完,掉的總高度相同(SINK_S 只管「掉多快才
+//    像被打趴」的展開節奏,MUST NOT 拿它縮放總量)。
+//  ②**爬升動力**:往上飛消耗專屬動力條(與電力分開的第二條資源;水平/下降/懸停不吃)。
+//    滿動力全速爬升可持續 DRAIN_S 秒(使用者定調 5s)⇒ 耗速 = 上限 ÷ DRAIN_S(liftDrainPS,
+//    推導不手寫);上限與回復**正比於電力**(liftMax ← 電力上限、liftRegen ← 電力回速 × 充能軌)。
+//    動力見底 = **爬不上去**(不是變慢)—— 與 slopeBlocked 同語意:玩家要分得出「上不去」。
+// 位置本就客戶端權威(見 sim.heroPos)⇒ 這兩條與蓄力跳/攀爬同層,住客戶端物理;驅動它們的量
+// (受擊傷害、電力上限/回速)仍是伺服器權威快照,MUST NOT 在客戶端自算。
+// 適用對象刻意只有**玩家操控的飛行機體**:NPC 直升機/餌機/自殺機走的是伺服器腳本航線(定高飛行),
+// 掉高會讓它們陷進地形、動力條也無電力可正比 —— MUST NOT 為了「一致」把規則套過去。
+export const FLIGHT = {
+  SINK_TOWERS: 2,    // 受擊掉高校準:掉光「平均護盾 + 裝甲」= 掉幾個砲塔高
+  SINK_S: 0.5,       // 一次掉高的展開秒數(純手感節奏;總掉幅由 airSinkM 決定)
+  DRAIN_S: 5,        // 滿動力全速爬升可持續秒數
+  MAX_F: 1.0,        // 動力上限 = 電力上限 × 此比(正比於電力;現值 = 電力上限本身)
+  // 動力回復 = 電力回速(mpRegen × chargeF(充能軌))× 此比 ⇒ **充能軌 = 飛行續航軌**:
+  // 滿充能約 2 × DRAIN_S(≈10s)回滿、充能 Lv0 約 5 × DRAIN_S(≈25s)—— 爬升是有代價的機動,
+  // 回充比耗盡慢是刻意的(不然動力條等於不存在)。
+  REGEN_F: 2.5,
+  LOW_F: 0.15,       // HUD 低動力警示門檻(佔上限比例)
+};
+/** 受擊掉高(公尺):該次傷害造成的下降量 —— 推導不手寫 */
+export const airSinkM = (dmg) =>
+  Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower;
+/** 爬升動力上限(正比於電力上限) */
+export const liftMax = (maxMp) => Math.max(0, maxMp || 0) * FLIGHT.MAX_F;
+/** 爬升動力回復(每秒;正比於電力回速 —— 同吃「充能」軌等級) */
+export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF(chLvl) * FLIGHT.REGEN_F;
+/** 全速爬升的動力耗速(每秒;= 動力上限 ÷ DRAIN_S,推導不手寫) */
+export const liftDrainPS = (maxMp) => liftMax(maxMp) / FLIGHT.DRAIN_S;
 // ---- 無敵幀(2026-07-16;起跳離地 1 秒無敵)----
 // 客戶端在「起跳離地當下」送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
 // 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。三機動能力共用此縫:
@@ -606,18 +644,34 @@ export const MORPH_BOMB = {
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 // ---- 重砲模式(巨炮;2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
-// 0.5 秒內傾洩重武器剩餘彈夾(DUR 窗解除射速閘與電力門檻),傷害 ×barrageDmgF()、射程 ×RANGE_F;
-// 獨立於彈夾裝填的 30s 冷卻。伺服器以 h.barrageUntil 窗結算加成(見 sim.heroBarrage / _heroDmg / heroHit)。
-// 每發傷害倍率 2026-07-27 起**不再是固定 ×2**:改由機種絕招傷害預算 ÷ 整夾爆發推導(見 barrageDmgF)——
-// 整夾傾洩完 = 追加一份與自爆攻擊/轟炸餌機同額的預算,單發爆發低的重武器倍率自然較高(三招因此等值);
-// 夾在 [DMG_MIN, DMG_MAX] 之間(32 把重武器整夾爆發差距約 2 倍,不夾會讓極端武器倍率失控)。
-// DMG_GRACE(2026-07-25 使用者回報「巨炮沒有傷害」修正):傾洩窗 DUR 是「多快能把彈夾打完」,
-//   但榴彈/火箭/飛彈是**拋射彈**,離膛後要飛一段才落點回報 heroBurst/heroLance —— 舊制傷害加成/射速閘/
-//   射程驗證全在**落點時刻**以 barrageUntil(DUR 窗)判定,彈體落地時窗早已過期 ⇒ ①2× 加成掉回原傷、
-//   ②射速閘重新生效讓同一輪傾洩的第 2 發起被擋(實測:一輪 3 發榴彈只有 1 發、且只造成原傷)。修正 =
-//   傷害/射速/電力/射程的加成窗延長 DMG_GRACE 秒涵蓋彈體飛行時間(_barragingDmg;彈夾此時已空且裝填中,
-//   不會有非傾洩的重武器射擊誤吃加成)。DUR 仍只管客戶端傾洩節奏,MUST NOT 用它判落點加成。
-export const BARRAGE = { DUR: 0.5, DMG_MIN: 1.5, DMG_MAX: 3.0, RANGE_F: 1.20, CD_S: 30, DMG_GRACE: 3.5 };
+// **2026-07-30 使用者需求改制**:巨砲不再「傾洩一般重武器的彈夾」,改成**獨立的一輪砲擊** ——
+//   ①**不消耗一般重武器的彈夾**(也不耗電力、不吃射速閘與裝填閘 ⇒ 空夾/裝填中照樣能轟);
+//   ②每發 **100% 傷害**(不再 ×1.5~3 的加成)。
+// 等值性(三招同預算)因此改由**發數**承擔,而不是每發倍率:
+//   發數 barrageShots() = 一份機種絕招預算 ÷ 該重武器每發傷害 ⇒ 整輪砲擊 ≈ 一份預算,
+//   與自爆攻擊/轟炸餌機同額(見 SPECIAL)。每發爆發低的重武器發數自然較多,反之較少。
+// 兩處 MUST NOT 復辟舊制:_heroDmg MUST NOT 再乘任何重砲倍率(那就不是 100% 傷害了)、
+//   _gateFire 的重砲分支 MUST NOT 扣 ammo/mp(那就又吃彈夾了)。
+// 發數是**權威資源**:伺服器 h.barrageLeft 逐發遞減,歸零即窗關閉(`_barragingDmg` 同判)——
+//   否則「窗內免彈免電」等於在 DUR 內無限開火,傷害隨幀率浮動且遠超預算。
+// 開窗長度 barrageDur() 由發數推導(MUST NOT 手寫 0.5):舊制彈夾只有 2~5 發,新制發數可達
+//   SHOTS_MAX ⇒ 固定 0.5s 在低幀率機器上打不完,沒打出的發數 = 靜默少掉的預算。
+// DMG_GRACE(2026-07-25 使用者回報「巨炮沒有傷害」修正):開窗長度是「多快能把這輪砲彈打完」,
+//   但榴彈/火箭/飛彈是**拋射彈**,離膛後要飛一段才落點回報 heroBurst/heroLance —— 舊制射速閘/
+//   射程驗證全在**落點時刻**以 barrageUntil 判定,彈體落地時窗早已過期 ⇒ 同一輪的第 2 發起被擋
+//   (實測:一輪 3 發榴彈只有 1 發)。修正 = 射速/彈藥/電力/射程的免除窗延長 DMG_GRACE 秒涵蓋
+//   彈體飛行時間(_barragingDmg)。發數閘門(barrageLeft)是免除窗不會外溢的保證。
+export const BARRAGE = {
+  DUR: 0.5,          // 開窗長度下限(秒;實際 = barrageDur(發數))
+  SHOT_GAP: 0.06,    // 每發預留的傾洩時間(秒;推導開窗長度用 —— 低幀率也打得完一輪)
+  SHOTS_MIN: 2,      // 一輪砲擊發數下限(每發傷害極高的重武器)
+  SHOTS_MAX: 12,     // 一輪砲擊發數上限(每發傷害極低的重武器)
+  RANGE_F: 1.20,     // 開窗期間射程 ×1.2
+  CD_S: 30,          // 獨立冷卻(與彈夾裝填無關)
+  DMG_GRACE: 3.5,    // 免除窗延長秒數(涵蓋拋射彈飛行時間)
+};
+/** 一輪砲擊的開窗長度(秒;發數推導,MUST NOT 手寫)—— 兩端共用:客戶端傾洩節奏 + 伺服器免除窗 */
+export const barrageDur = (shots) => Math.max(BARRAGE.DUR, (shots || 0) * BARRAGE.SHOT_GAP);
 
 // ---- 機種絕招傷害(2026-07-27 使用者需求;三招共用同一份傷害預算 = 唯一縫)----
 // 三招 = 無人機「自爆攻擊」(護衛自殺機 / 主機自毀撞擊)、變形機甲「轟炸餌機」、非變形機甲「重砲模式」;
@@ -630,7 +684,8 @@ export const BARRAGE = { DUR: 0.5, DMG_MIN: 1.5, DMG_MAX: 3.0, RANGE_F: 1.20, CD
 // 三招各自把同一份預算切給自己的投射數:
 //   自爆 = KAMI.N 架均分(主機自毀撞擊 = 一架機體吃整份);
 //   餌機 = 撞擊自爆 DECOY_IMPACT,其餘均分給 DECOY.BOMB_MAX 枚沿途投彈;
-//   重砲 = 整夾傾洩的**追加**傷害(每發倍率 = 1 + 預算 ÷ 整夾爆發,夾在 BARRAGE.DMG_MIN~MAX)。
+//   重砲 = 一輪砲擊的**發數**(= 預算 ÷ 每發傷害,夾在 BARRAGE.SHOTS_MIN~MAX;每發 100% 傷害,
+//         2026-07-30 起不消耗彈夾 ⇒ 整輪傷害全額是追加的,不必再扣掉「本來就打得出的整夾」)。
 // BASE 300 ≈ 舊制三者的中位(自爆 240 / 餌機 430 / 重砲加成 ~265),PER_LVL 0.45 ⇒ 綜合 Lv4 = ×2.35
 // (對齊重武器整夾爆發 Lv1→Lv4 的成長)。**MUST NOT** 在 sim/game/HUD 另寫任一招的傷害常數。
 export const SPECIAL = {
@@ -657,11 +712,15 @@ export const decoyBombBlast = (abil) => ({
   dmg: Math.round(specialBudget(abil) * (1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX),
   r: DECOY.BOMB_BLAST_R, pen: DECOY.BOMB_PEN, vs: DECOY.vs,
 });
-/** 重砲模式:每發傷害倍率 —— 整夾(mag 發)傾洩完 ≈ 追加一份預算;夾在 [DMG_MIN, DMG_MAX] */
-export const barrageDmgF = (def, abil) => {
-  const burst = (def?.dmg || 0) * (def?.mag || 1);
-  if (!(burst > 0)) return BARRAGE.DMG_MIN;
-  return Math.min(BARRAGE.DMG_MAX, Math.max(BARRAGE.DMG_MIN, 1 + specialBudget(abil) / burst));
+/**
+ * 重砲模式:**一輪砲擊的發數**(2026-07-30 改制;每發 100% 傷害、不消耗彈夾)。
+ * 發數 × 每發傷害 ≈ 一份絕招預算 ⇒ 與自爆攻擊/轟炸餌機等值;夾在 [SHOTS_MIN, SHOTS_MAX]。
+ * 離散化誤差最多半發(整數發數 × 100% 傷害是使用者定調,MUST NOT 為了對齊預算去縮放每發傷害)。
+ */
+export const barrageShots = (def, abil) => {
+  const per = def?.dmg || 0;
+  if (!(per > 0)) return BARRAGE.SHOTS_MIN;
+  return Math.min(BARRAGE.SHOTS_MAX, Math.max(BARRAGE.SHOTS_MIN, Math.round(specialBudget(abil) / per)));
 };
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
