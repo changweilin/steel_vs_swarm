@@ -252,9 +252,9 @@ const EMIT = src.slice(B0, B0e) + src.slice(C0, B1);
 // 這樣把程式碼寫回舊版時看到的是具名紅字,而不是一句抽取失敗。
 if (!EMIT.includes('const galBase =')) throw new Error('抽出的構件區塊缺少 galBase(結構已變?)');
 const tunnelWallProfile = evalBlock('const TUN_WALL_SAMP', 'tunnelWallProfile');
-const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'hw', 'tFloorAt', 'tBaseAt',
-  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope',
-  `${EMIT}\nreturn { galP, galMask, floorsV, covV };`);
+const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
+  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope', 'galBores',
+  `${EMIT}\nreturn { galP, galMask, floorsV, covV, galBores };`);
 const HW = 9;
 /**
  * 以規劃好的地下道剖面跑一次發射器。
@@ -277,8 +277,14 @@ function build(under = true, heightAt = null) {
   const wall = { pos: [], nrm: [], idx: [], base: 0 }, galCols = [];
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
-  const out = emit(TUN, UND, tunnelWallProfile, run, nP, cum, HW, fAt, bAt, covS,
-    { heightAt: heightAt || ((x) => carved(x)) }, (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope);
+  const galBores = [];
+  const at2 = (s) => {   // 規劃折線沿 +X:弧長 → 座標 + 切線(bore 發射用;地下道 galP 歸零恆不發)
+    let i = 1; while (i < nP - 1 && cum[i] < s) i++;
+    const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f, 1, 0];
+  };
+  const out = emit(TUN, UND, tunnelWallProfile, run, nP, cum, plan.total, at2, HW, fAt, bAt, covS,
+    { heightAt: heightAt || ((x) => carved(x)) }, (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, run, cum, fAt, bAt, covS, nP };
 }
 

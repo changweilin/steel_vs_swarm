@@ -132,11 +132,13 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
   ok(prof(mk(() => TOP - 0.01)).every((g) => g.open), '⑦ 地表低於頂板頂面 1cm MUST 判成明隧道');
 }
 
-// ⑧ 取樣 MUST 涵蓋 WALL_MIN 整數點(最外圈的凹陷抓得到)
+// ⑧ 取樣 MUST 涵蓋 WALL_MIN 整數點(最外圈的凹陷抓得到)。2026-07-31 近帶岩背改制後,
+//    「只有最外圈凹陷、近帶仍高」不再判 open(那是岩脊後的谷,牆背有實體支撐)——
+//    取樣涵蓋改以 gy 驗證(gy = 全取樣窗最小值,最外圈凹陷 MUST 反映在 gy)。
 {
   const dFar = HW + TUN.WALL_MIN;
   const h = mk((x, z) => (Math.abs(z + dFar) < 0.4 ? TOP - 5 : TOP + 20));
-  ok(prof(h).some((g) => g.open), `⑧ 側向 ${dFar}m(WALL_MIN 整數點)的凹陷 MUST 量得到`);
+  ok(prof(h).some((g) => g.gy <= TOP - 5 + 1e-6), `⑧ 側向 ${dFar}m(WALL_MIN 整數點)的凹陷 MUST 量得到(反映在 gy)`);
   // 反面:比 WALL_MIN 更外側的凹陷不該影響判定(否則門檻等於無限大)
   const hOut = mk((x, z) => (Math.abs(z + dFar + 6) < 0.4 ? TOP - 5 : TOP + 20));
   ok(prof(hOut).every((g) => !g.open), '⑧ WALL_MIN 之外的凹陷 MUST NOT 觸發明隧道');
@@ -147,6 +149,18 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
   const h = mk((x) => (Math.abs(x - 60) < 3 ? 5 : 40));
   const p = prof(h);
   ok(p[9].gy <= 5 + 1e-6 && p[11].gy <= 5 + 1e-6, '⑨ gy MUST 取前後一格窗口最小值(頂點間距 > 側向取樣距)');
+}
+
+// ⑪ 近帶岩背(2026-07-31 使用者回報「山壁側牆沒建完整、走得穿」;燕子口岩脊實案):
+//    牆背 NEAR_W 內只要有取樣點高過頂板 = 牆背貼著實體土/岩 ⇒ MUST 維持整面牆,
+//    即使更外側(岩脊後)落谷 —— 柱列開向一面岩壁 = 玩家看到的「山壁側只有矮牆」。
+{
+  const dRock = HW + 0.5;                                  // 岩脊:貼牆第一枚取樣點就是高岩
+  const hFin = mk((x, z) => (Math.abs(z) <= dRock + 0.4 ? TOP + 4 : FLOOR - 20));
+  ok(prof(hFin).every((g) => !g.open), '⑪ 近帶岩背(岩脊,脊後落谷)MUST NOT 判成明隧道');
+  // 對照:近帶(NEAR_W 內)全低、更外側才升高 ⇒ 照樣是明隧道(柱間看出去是上坡,合法)
+  const hRise = mk((x, z) => (Math.abs(z) <= HW + TUN.NEAR_W + 0.1 ? FLOOR - 3 : TOP + 20));
+  ok(prof(hRise).every((g) => g.open), '⑪ 近帶全低、遠處升高 MUST 照判明隧道(開口面向低地)');
 }
 
 // ⑩ 側向法線:單位長、與切線正交、兩側互為相反
@@ -176,18 +190,21 @@ for (const need of ['tunnelWallProfile(run, floorsV, covV', 'const galBase =', '
 }
 // under/tBaseAt/UND/cope 是地下道(平地下穿)那一路的參數 —— 本稽核一律以 under=false 跑,
 // 亦即「山體隧道 = 舊行為」;地下道自己的幾何由 tools/audit_underpass.mjs 驗。
-const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'hw', 'tFloorAt', 'tBaseAt',
-  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope',
-  `${EMIT}\nreturn { galP, galMask, floorsV, covV };`);
+const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
+  'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope', 'galBores',
+  `${EMIT}\nreturn { galP, galMask, floorsV, covV, galBores };`);
 
-/** 跑一次發射器;回傳三個桶 + profile */
+/** 跑一次發射器;回傳三個桶 + profile + 洞內打洞 bore */
 function build(heightAt, { cov = () => true, floor = FLOOR } = {}) {
   const cum2 = pts.map((p) => p[0]);                       // 沿 +X 直線 ⇒ 弧長 = x
+  const total2 = cum2[cum2.length - 1];
+  const at2 = (s) => [s, 0, 1, 0];                         // 直線:弧長 s → (x=s, z=0),切線 (1,0)
   const wall = { pos: [], nrm: [], idx: [], base: 0 }, galCols = [];
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
-  const out = emit(TUN, UND, tunnelWallProfile, pts, pts.length, cum2, HW, () => floor, () => floor, cov,
-    { heightAt }, (s) => floor + TUN.CLEAR, false, wall, galCols, galRoof, cope);
+  const galBores = [];
+  const out = emit(TUN, UND, tunnelWallProfile, pts, pts.length, cum2, total2, at2, HW, () => floor, () => floor, cov,
+    { heightAt }, (s) => floor + TUN.CLEAR, false, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, cum: cum2 };
 }
 const TOPY = FLOOR + TUN.CLEAR + TUN.ROOF_T;               // 頂板頂面(= ceilOf + ROOF_T)
@@ -205,6 +222,7 @@ const wallV = (b) => Array.from({ length: b.wall.pos.length / 3 }, (_, k) =>
   ok(b.galRoof.idx.length === 0 && b.galCols.length === 0, 'Ⅱ-a 深埋 MUST NOT 長出頂板/柱列(白付幾何成本)');
   ok(pts.slice(0, -1).every((_, i) => b.galMask(i) === 0),
     'Ⅱ-a 深埋 gal 遮罩 MUST 全 0(slab 上傳逐位元不變、伺服器行為不漂移)');
+  ok(b.galBores.length === 0, 'Ⅱ-a 深埋 MUST NOT 發洞內打洞 bore(地表恆高於天花,發了是白帳)');
 }
 
 // Ⅱ-b 山腰路(−z 山 / +z 懸崖,懸崖高 CLIFF):只有懸崖側改明隧道(矮牆 + 柱列)
@@ -256,6 +274,14 @@ const CLIFF = FLOOR - 6;
   const nOpen = [b.galP[1][0].nx, b.galP[1][0].nz];
   ok(b.galCols.every((t) => Math.abs(Math.cos(t.ry) - nOpen[0]) < 1e-9 && Math.abs(-Math.sin(t.ry) - nOpen[1]) < 1e-9),
     'Ⅱ-b 柱列的 local +X(由 ry 推)MUST = 擺位用的側向法線(見全域 A26:差 90°/差正負號)');
+  // 洞內打洞 bore(2026-07-31):明隧道段 MUST 發 bore(側坡地表斜穿洞內斷面,靠
+  // punchPortalHoles 同一把尺清掉);相鄰 bore MUST 交疊(走廊自錨點 0.5m 起算,不交疊
+  // 會留條狀殘牆);幾何欄位與 punch 契約一致(hw 同段、slope = 平直剖面 0)。
+  ok(b.galBores.length > 0, 'Ⅱ-b 明隧道段 MUST 發洞內打洞 bore');
+  ok(b.galBores.every((g) => g.hw === HW && Math.abs(g.slope) < 1e-9 && Math.abs(g.y - FLOOR) < 1e-9),
+    'Ⅱ-b bore 幾何 MUST 對齊段剖面(hw / 路面高 / 平直 slope)');
+  const covSpan = b.galBores.reduce((a, g) => a + g.depth, 0);
+  ok(covSpan >= b.cum[b.cum.length - 1], 'Ⅱ-b bore 走廊總長 MUST 蓋滿明隧道段(含交疊,不留縫)');
 }
 
 // Ⅱ-c 斜向隧道:矮牆 / 頂板 / 柱列 MUST 一律沿同一組法線擺(軸向路容易矇混過關)
@@ -268,8 +294,10 @@ const CLIFF = FLOOR - 6;
   // 側坡:沿 side +1 法線那半邊挖低 ⇒ 只有該側是明隧道
   const heightAt = (x, z) => ((x - diag[0][0]) * nx + (z - diag[0][1]) * nz > 1 ? CLIFF : TOPY + 25);
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
-  const r = emit(TUN, UND, tunnelWallProfile, diag, diag.length, cum2, HW, () => FLOOR, () => FLOOR, () => true,
-    { heightAt }, () => FLOOR + TUN.CLEAR, false, wall, galCols, galRoof, cope);
+  const at3 = (s) => [diag[0][0] + 0.8 * s, diag[0][1] + 0.6 * s, 0.8, 0.6];
+  const r = emit(TUN, UND, tunnelWallProfile, diag, diag.length, cum2, cum2[cum2.length - 1], at3, HW,
+    () => FLOOR, () => FLOOR, () => true,
+    { heightAt }, () => FLOOR + TUN.CLEAR, false, wall, galCols, galRoof, cope, []);
   ok(r.galP[0].every((g) => g.open) && r.galP[1].every((g) => !g.open), 'Ⅱ-c 斜向:只有低側判成明隧道');
   const off = (x, z, i) => (x - diag[i][0]) * nx + (z - diag[i][1]) * nz;   // 沿法線的側向位移
   const lat = (x, z, i) => (x - diag[i][0]) * 0.8 + (z - diag[i][1]) * 0.6; // 沿切線的位移(應為 0)
@@ -314,6 +342,26 @@ ok(!/cols\.push/.test(STRC) && !/cols\.push\([^)]*gal/i.test(src.slice(src.index
 }
 ok(!/hw = [^\n]*gal/.test(STRC), 'Ⅲ 通行寬 hw MUST NOT 隨明隧道改變(伺服器 slab / 規則 #5 不得漂移)');
 ok(TUN.EAVE > 0.6, `Ⅲ TUN.EAVE(${TUN.EAVE})MUST > 天花板小段的 hw+0.6(否則天花板邊緣露在簷外)`);
+// ---- Ⅲ-b 洞內淨空三消費端(2026-07-31 使用者回報「洞內石頭/地形卡住」)----
+// ① 散布淨空:markGradeCorridors 的覆蓋段跳過 MUST 帶明隧道例外,判定走 tunnelWallProfile 單一縫
+{
+  const M0 = src.indexOf('function markGradeCorridors(');
+  const M1 = src.indexOf('\nfunction buildRoads(', M0);
+  const MGC = src.slice(M0, M1);
+  ok(/tunnelWallProfile\(run, floorsV, covV/.test(MGC),
+    'Ⅲ-b markGradeCorridors 明隧道淨空 MUST 走 tunnelWallProfile 單一縫(另寫第二份判定即分家)');
+  ok(/!tw\.sink/.test(MGC), 'Ⅲ-b 地下道(tw.sink)MUST NOT 判明隧道淨空(恆非明隧道)');
+  ok(/&& !galOpenAt\?\.\(i\)/.test(MGC),
+    'Ⅲ-b 覆蓋段跳過淨空 MUST 帶明隧道例外(明隧道段地表斜穿洞內,照鋪地物就長在洞裡)');
+}
+// ② 洞內打洞:bore MUST 收進 punchPortalHoles 的**同一次**呼叫(index 壓實不可重入,
+//    二次呼叫會把壓實後殘留在尾端的舊三角形掃回 index = 已刪的土牆復活)
+ok((src.match(/terrain\.punchPortalHoles\(/g) || []).length === 1,
+  'Ⅲ-b punchPortalHoles MUST 只呼叫一次(bore 清單合併,不重入)');
+ok(/const boreRecs = \[\.\.\.portals, \.\.\.galBores\]/.test(src),
+  'Ⅲ-b 洞口 + 明隧道 bore MUST 合併成同一份清單(collar 迴圈同吃)');
+ok(/covV\[k\] && galAny\(k\)/.test(STRC),
+  'Ⅲ-b 洞內 bore MUST 只在「覆蓋且有明隧道側」的小段發(深埋段天然 no-op,不發省帳)');
 // main.js:slab 第 7 欄 MUST 上傳 gal(僅 ty=2;open 段照舊不上傳)
 const upTun = /\.\.\.tunnels\.filter\(\(d\) => !d\.open\)\.map\(\(d\) => (\[[^\n]*\])\),/.exec(mainSrc);
 ok(!!upTun, 'Ⅲ main.js 隧道 slab 上傳 MUST 保留 !d.open 過濾(露天路塹不是洞內)');

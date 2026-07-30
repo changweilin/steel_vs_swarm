@@ -2390,11 +2390,16 @@ const PASS_W = 16;
 //   WALL_MIN 側向土牆最小厚度:自隧道邊緣往外量這麼遠,地表 MUST 全程高過頂板頂面(藏得住結構);
 //            任一取樣點沒到 = 該側改明隧道:深埋側維持隧道牆,開放側 = 矮牆 + 連續柱列撐外露頂板,
 //            柱間**透明可見可穿透**(兩端同判:slab gal 遮罩讓伺服器 LOS/爆風同步放行,見 buildRoads)。
+//   NEAR_W   近帶岩背寬(2026-07-31):牆背這麼近之內只要有取樣點高過頂板 = 牆背貼著實體
+//            土/岩(山壁、峽谷岩脊)⇒ 該側維持整面牆,不因更外側落谷判開放(燕子口岩脊實案)。
 //   EAVE     外露頂板較通行寬多挑出的簷口(MUST > 天花板小段的 hw+0.6,否則天花板邊緣露在簷外)。
 //   PARAPET  女兒牆高;SILL 開放側矮牆頂(路面起算的護欄牆,封住 facade 底縫、柱腳立其後);
-//   COL_GAP  柱列間距;COL_MAX 全圖柱列實例上限(與 LAMP_MAX 同性質的資源閘)。
+//   COL_GAP  柱列間距;COL_MAX 全圖柱列實例上限(與 LAMP_MAX 同性質的資源閘);
+//   GAL_BORE_MAX 明隧道洞內打洞 bore 的全圖上限(側坡地表斜穿洞內斷面,沿明隧道段發 bore
+//            交給 punchPortalHoles 清掉 —— 與 PORTAL_MAX 同性質的資源閘)。
 const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
-              WALL_MIN: 7, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+              WALL_MIN: 7, NEAR_W: 3, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600,
+              GAL_BORE_MAX: 160 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -2550,6 +2555,10 @@ const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形�
  *
  * 判定純幾何(逐頂點、逐側、無 `rnd` ⇒ 跨客戶端同一份):自隧道邊緣往外量 `TUN.WALL_MIN`,
  * 任一取樣點的地表低於**頂板頂面**(路面 + CLEAR + ROOF_T)= 這一側藏不住 ⇒ 該側改明隧道。
+ * **近帶岩背例外**(2026-07-31 使用者回報「山壁側牆沒建完整、走得穿」):牆背 `NEAR_W` 內
+ * 只要有任一取樣點高過頂板 = 牆背貼著實體土/岩(山壁、峽谷岩脊 —— 燕子口正是薄岩脊,
+ * 脊後才落谷)⇒ 該側 MUST 維持整面隧道牆;只看「7m 內有低點」會把柱列開向一面岩壁,
+ * 玩家看到的就是「山壁側只有矮牆 + 柱間直接是裸地形」。
  * **只在覆蓋段判**(敞開段/洞口的牆本來就收成零高,見 buildRoads)。
  *
  * 回傳逐頂點 `{ open, gy, nx, nz }`:
@@ -2570,7 +2579,7 @@ function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
     const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     const nx = dz * side, nz = -dx * side;
     const top = floors[i] + TUN.CLEAR + TUN.ROOF_T;   // 頂板頂面 = 土牆該蓋過的高度
-    let gy = Infinity, thin = false;
+    let gy = Infinity, thin = false, backed = false;
     // 取樣點含**兩端**(牆面外 0.5m ~ WALL_MIN 整數點):`d += SAMP` 那種寫法會在最後一步
     // 越界而漏掉最外圈,實際只量到 5.5m —— 門檻寫 7 卻量 5.5 = 旋鈕失真。
     const nS = Math.max(2, Math.ceil((TUN.WALL_MIN - 0.5) / TUN_WALL_SAMP) + 1);
@@ -2579,8 +2588,9 @@ function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
       const h = heightAt(x + nx * d, z + nz * d);
       if (h < gy) gy = h;
       if (h < top) thin = true;
+      else if (d - hw <= TUN.NEAR_W) backed = true;   // 近帶有高於頂板的土/岩 = 牆背有實體支撐
     }
-    raw.push({ thin, gy, nx, nz });
+    raw.push({ thin: thin && !backed, gy, nx, nz });
   }
   return raw.map((r, i) => ({
     open: !!cov[i] && (r.thin || !!raw[i - 1]?.thin || !!raw[i + 1]?.thin),
@@ -3476,11 +3486,22 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
         // 淨空格:橋樑全段;隧道只有敞開/洞口段(覆蓋段山頂地物照舊)。此處 heightAt 是開挖後
         // 高度:自然覆蓋段未被開挖(= 原高)→ skip;縫合蓋廊段(地表低於天花)→ 淨空,
         // 蓋廊頂上才不會長出地物 —— 語意與覆蓋區間一致,不必查 intervals。
+        // 明隧道覆蓋段例外(2026-07-31 使用者回報「洞內有不明石頭卡住」):覆蓋段跳過淨空的
+        // 前提是「頂上是原樣山體、地物合法」,明隧道段的側坡低於頂板 = 地表斜穿洞內,
+        // 照鋪地物就長在洞裡。判定 MUST 走 tunnelWallProfile 單一縫(與 buildRoads 同輸入,
+        // 純幾何零 rnd);地下道(tw.sink)恆非明隧道,不判。
+        let galOpenAt = null;
+        if (kind === 'tun' && !tw.sink) {
+          const floorsV = cum.map((s) => tunFloorAt(tw, s, total));
+          const covV = run.map(([x, z], i) => terrain.heightAt(x, z) >= floorsV[i] + TUN.CLEAR + TUN.ROOF_T);
+          const gp = [1, -1].map((side) => tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side));
+          galOpenAt = (i) => gp[0][i].open || gp[1][i].open;
+        }
         for (let i = 0; i < run.length; i++) {
           const [x, z] = run[i];
           if (kind === 'tun') {
             const floor = tunFloorAt(tw, cum[i], total);   // 山體隧道 = 平直;地下道 = 下沉剖面
-            if (terrain.heightAt(x, z) >= floor + TUN.CLEAR + TUN.ROOF_T) continue;   // 覆蓋段
+            if (terrain.heightAt(x, z) >= floor + TUN.CLEAR + TUN.ROOF_T && !galOpenAt?.(i)) continue;   // 深埋覆蓋段
           }
           blockArea(blocked, x, z, hw + 4);
         }
@@ -3560,6 +3581,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // (底緣落地、頂緣收在路面 + SILL),不另開一份牆幾何。
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const galCols = [];
+  // 明隧道洞內地形楔 bore(2026-07-31 使用者回報):覆蓋只在中心線上判,明隧道段的側坡地表
+  // 會斜穿**洞內斷面**(高於路面、低於天花)—— 視覺上一坡岩土橫在柱列與路面之間,彈道端
+  // rayTerrain 也被這片地形擋住。與洞口打洞共用 punchPortalHoles 同一把尺(heights[] 不動、
+  // 洞緣 collar 封邊);punchPortalHoles 的 index 壓實**只准呼叫一次**,故收進同一份 bore 清單。
+  const galBores = [];
   // 地下道引道的**邊緣修飾**(2026-07-28):牆頂 → 外側地表的平頂緣石帶。carveTunnels 的路塹是
   // hw+1 全深、外擴到 hw+7 收回地表的斜壁,不修飾的話從外面看是路邊憑空一道土溝;鋪一條與
   // 一般路面同高的緣石帶把斜壁蓋掉,銜接處就與周邊街廓齊平。純視覺,不進 raycast/碰撞。
@@ -3870,6 +3896,20 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 命中 = 傷害靜默蒸發的 A18/A30 一族)。地下道 galP 已歸零 ⇒ 遮罩恆 0。
         const galMask = (i) => (galP[0][i].open || galP[0][i + 1]?.open ? 1 : 0)
                              | (galP[1][i].open || galP[1][i + 1]?.open ? 2 : 0);
+        // 明隧道段洞內打洞 bore:只在有明隧道側的小段發(深埋段地表恆高於天花,bore 天然
+        // no-op,不發省帳)。每兩頂點(~12m)一支、首尾各外溢 1m 與鄰支交疊(punchPortalHoles
+        // 走廊自錨點 0.5m 起算,不交疊會留 0.5m 條狀殘牆);彎道以 12m 直軸近似,誤差 << hw。
+        for (let i = 0; i + 1 < nP && galBores.length < TUN.GAL_BORE_MAX; i += 2) {
+          const j = Math.min(nP - 1, i + 2);
+          let any = false;
+          for (let k = i; k <= j; k++) if (covV[k] && galAny(k)) { any = true; break; }
+          if (!any) continue;
+          const s0 = Math.max(0, cum[i] - 1), s1 = Math.min(total, cum[j] + 1);
+          if (s1 - s0 < 2) continue;
+          const [bx, bz, ddx, ddz] = at(s0);
+          galBores.push({ x: bx, z: bz, y: tFloorAt(s0), ry: Math.atan2(-ddx, -ddz),
+                          hw, depth: s1 - s0, slope: (tFloorAt(s1) - tFloorAt(s0)) / (s1 - s0) });
+        }
         for (let i = 0; i < nP - 1; i++) {
           const sA = cum[i], sB = cum[i + 1];
           for (const [c0, c1] of ivx) {
@@ -4609,8 +4649,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   //   外環 = 洞緣頂點本身(與地形共用同一組座標 ⇒ 逐點水密,不可能有縫);
   //   內環 = 把洞緣點「夾制」到隧道斷面矩形上(夾制連續 ⇒ 內環是貼在管身表面的封閉曲線)。
   // ⇒ 任一條視線不是打到地形、就是打到 collar、再不然就是進到管內看見隧道,沒有第四種可能。
-  const punch = portals.length && terrain.punchPortalHoles
-    ? terrain.punchPortalHoles(portals.map((p) => ({
+  // bore 清單 = 洞口 + 明隧道洞內段(共用同一次 punch:index 壓實不可重入,二次呼叫會把
+  // 壓實後殘留在陣列尾端的舊三角形重新掃回 index = 已刪的土牆復活)。collar 迴圈同吃這份。
+  const boreRecs = [...portals, ...galBores];
+  const punch = boreRecs.length && terrain.punchPortalHoles
+    ? terrain.punchPortalHoles(boreRecs.map((p) => ({
       x: p.x, z: p.z, ry: p.ry, hw: p.hw, depth: p.depth,
       floorY: p.y, slope: p.slope, clear: TUN.CLEAR, lift: ROAD_LIFT,
     })), covers)
@@ -4625,7 +4668,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   if (rims.some((r) => r.length)) {
     const collar = { pos: [], nrm: [], idx: [], base: 0 };
     const INSET = 0.15;   // 內環往管內壓一點點 ⇒ 與牆/天花是「重疊」而非「對縫」,公差再差也無縫可漏
-    for (const [pi, p] of portals.entries()) {
+    for (const [pi, p] of boreRecs.entries()) {
       const rim = rims[pi];
       if (!rim?.length) continue;
       const ca = Math.cos(p.ry), sa = Math.sin(p.ry);

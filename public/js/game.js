@@ -3543,7 +3543,10 @@ export class BattleClient {
    * 沿水平方向 (dx,dz) 的**帶號地形坡度**(度;+ 上坡 / − 下坡)。移動減速與「爬不上去」共用
    * 這一支(唯一縫;倍率/阻擋角的規則住 data.js SLOPE)。三條豁免一律回 0(= 平地):
    *   ①飛行型態 / 騰空(_env.air):腳沒踩在坡上 —— 跳過懸崖邊緣、飛越山脊 MUST NOT 被坡度擋
-   *   ②人造鋪面:站立面與裸地形高差 > SLOPE.STRUCT_M(橋面 / 隧道路面 / 屋頂)—— 工程結構不是山坡
+   *   ②人造鋪面:站立面與裸地形高差 > SLOPE.STRUCT_M(橋面 / 隧道路面 / 屋頂)—— 工程結構不是山坡;
+   *     隧道天花之下(tunnelAt 捕捉,含明隧道/引道路塹)一律視同人造鋪面 —— 明隧道段的側坡
+   *     地表可與路面同高(高差閘抓不到),量到的是山坡橫斷坡度 = 洞內行進忽走忽卡
+   *     (2026-07-31 使用者回報「進明隧道卡卡的」;洞內站的本來就是結構路面)
    *   ③位移量趨近 0
    * 坡度一律量**裸地形 heightAt**,MUST NOT 改量站立面 _surf:_surf 在上橋捕捉(deckAt)與隧道
    * 天花之下會整段跳階,拿它量坡度 = 上引道那一步被當成垂直峭壁,橋直接上不去。
@@ -3552,7 +3555,11 @@ export class BattleClient {
     const run = Math.hypot(dx, dz);
     const t = this.terrain;
     if (run < 1e-4 || !t?.heightAt || this._flying() || this._env?.air) return 0;
-    const bare = (x, z) => Math.abs(this._surf(x, z, y0) - t.heightAt(x, z)) <= SLOPE.STRUCT_M;
+    const bare = (x, z) => {
+      const tn = t.tunnelAt?.(x, z);
+      if (tn && y0 < tn.ceil) return false;   // 洞內(隧道/明隧道/引道路塹):站的是結構路面
+      return Math.abs(this._surf(x, z, y0) - t.heightAt(x, z)) <= SLOPE.STRUCT_M;
+    };
     if (!bare(x0, z0) || !bare(x0 + dx, z0 + dz)) return 0;
     return slopeDeg(t.heightAt(x0 + dx, z0 + dz) - t.heightAt(x0, z0), run);
   }
