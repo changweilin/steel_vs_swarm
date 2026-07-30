@@ -503,6 +503,13 @@ export const CJUMP = {
   MIN: 0.35,         // 低於此蓄力比例 = 普通小跳
   V: 24,             // 滿蓄力垂直初速(m/s;實際 = V × 蓄力比例)
   FWD_F: 1.0,        // 前向彈射初速 = 機體移速 × 此比 × 蓄力比例(最大距離 ∝ 機體速度;2026-07-20 使用者需求)
+  // 蓄力跳「水平移動速度」倍率(2026-07-30 使用者需求「蓄力跳躍的水平移動速度提升 100%」= ×2)。
+  // 唯一縫,兩個消費端同吃 ⇒ 整段蓄力跳的水平速度一致加倍,MUST NOT 只改其中一處:
+  //   ①起跳的前向彈射初速(_chargeJump 的 fwd)—— 不然只有滑行變快、彈射距離沒變;
+  //   ②騰空期間(_lowG)的操縱移速 —— 不然只有起跳那一瞬變快、空中推杆仍是地面速度。
+  // 只作用於水平:垂直初速 V / 低重力 GRAV_F 不動 ⇒ 滯空時間不變、跳躍高度不變
+  // (滿蓄頂點仍 < GAME.AA_MIN_ALT,不會靠蓄力跳自己飛進 SAM 空域),變的只有跳得多遠/多快。
+  AIR_SPD_F: 2.0,
   GRAV_F: 0.45,      // 蓄力跳騰空重力係數(< 1 = 太空漫步)
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
   CD: 15,            // 蓄力跳躍冷卻(秒;客戶端閘門,與無敵幀 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
@@ -956,6 +963,33 @@ export function envTrigger(ground, waterY, footY, eyeH) {
   const eyeF = ground === 1 ? TERRAIN_FX.WATER_EYE_F : TERRAIN_FX.SWAMP_EYE_F;
   const planeY = ground === 1 ? waterY : waterY + WATER.SWAMP_BAND;
   return footY + eyeH * eyeF < planeY ? ground : 0;
+}
+
+// ---- 異常狀態致盲白幕(2026-07-30;純表現層唯一縫)----
+// 使用者需求:「閃光彈等異常狀態會使畫面一小段時間變白,之後漸漸淡去」。
+// 定位是**座艙光學被閃到的瞬時反應**(感光元件過曝),不是狀態計時器的可視化 ⇒
+//   白幕長度固定 = HOLD_S(全白)+ FADE_S(漸淡),MUST NOT 隨狀態剩餘秒數延長 ——
+//   狀態本身的效果(禁移動/武器離線/操縱反轉)一律伺服器結算(A1),白幕只吃「上身瞬間」那一下。
+// PEAK 逐狀態列出致盲強度(1 = 全白):只有**光學/電子系**異常狀態進表 ——
+//   emp 雷爆閃光(閃光彈本體,最亮)> conf 纏擾致盲 > stun 電擊麻痺;
+//   物理系(slow 緩速 / bleed 失血 / mark 被標定)MUST NOT 進表:那些不是光學事件,
+//   加進來 = 每次中招都白一次,分不出「被閃到」與「被咬到」。
+export const CC_FLASH = {
+  HOLD_S: 0.3, FADE_S: 1.2,
+  PEAK: { emp: 1, conf: 0.85, stun: 0.55 },
+};
+/** 白幕總長(秒)= 全白段 + 漸淡段;推導不手寫 */
+export const ccFlashDur = () => CC_FLASH.HOLD_S + CC_FLASH.FADE_S;
+/**
+ * 白幕不透明度(0~1):left = 白幕剩餘秒數(由 ccFlashDur() 倒數)、peak = 該狀態致盲強度。
+ * 剩餘 > FADE_S 的那段 = 全白(HOLD 段),其後在 FADE_S 內以 smoothstep 淡回清晰。
+ */
+export function ccFlashAlpha(left, peak) {
+  const p = Math.max(0, Math.min(1, peak || 0));
+  const t = Math.max(0, Math.min(ccFlashDur(), left || 0));
+  if (t >= CC_FLASH.FADE_S) return p;                 // 全白段(HOLD)
+  const u = t / CC_FLASH.FADE_S;                      // 1 → 0
+  return p * u * u * (3 - 2 * u);                     // smoothstep 漸淡(收尾平順)
 }
 
 // ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
