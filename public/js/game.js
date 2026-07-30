@@ -479,7 +479,8 @@ export class BattleClient {
   /**
    * 線段 vs 障礙體(建物/神木/巨岩/橋墩):回傳最近命中距離(沿線段),沒打到回 null。
    * 橫斷面 = _collide 同一份碰撞體:**建物走有向盒**(hw2/hd2/ry)、其餘走圓柱(r);
-   * 側面進入與自上而下打頂面都算。有物理障礙的物件不可讓砲火穿越;植被(無碰撞)照舊不擋彈。
+   * 側面進入 / 打頂面 / 打底面**皆算,且不分上下方向**。有物理障礙的物件不可讓砲火穿越;
+   * 植被(無碰撞)照舊不擋彈。
    *
    * **2026-07-28「所有方向皆可抵擋射擊」**:舊制建物一律以 r = 0.8×半對角 的圓柱近似,兩頭都不對 ——
    * ①牆角外露在圓外 ⇒ 對角線方向的砲火穿過**看得見的牆**;②細長樓的圓比盒寬 ⇒ 側面十幾公尺外的
@@ -540,21 +541,22 @@ export class BattleClient {
               if (t1 < 0 || t0 > 1) continue;
             }
           }
-          const yTop = b.y + b.h;
-          // 側面進入:入點高度落在柱身區間
-          const tIn = Math.max(0, t0);
-          const yIn = ay + dy * tIn;
-          if (yIn > b.y - 0.5 && yIn < yTop) {
-            if (bestT === null || tIn < bestT) bestT = tIn;
-            continue;
-          }
-          // 頂面:自上而下跨越 yTop 且交點仍在圓內
-          if (Math.abs(dy) > 1e-6) {
-            const tTop = (yTop - ay) / dy;
-            if (tTop >= Math.max(0, t0) && tTop <= Math.min(1, t1) && dy < 0) {
-              if (bestT === null || tTop < bestT) bestT = tTop;
-            }
-          }
+          // 垂直帶 [b.y − 0.5, b.y + b.h] ∩ 水平區間 [t0,t1] —— **方向無關**的一條式子:
+          // 側面進入 / 自上而下打頂面 / 自下而上打底面(路塹・地下道裡朝地面開火)同判。
+          // 舊制只驗「入點高度」+ 頂面加掛 `dy < 0`,由下往上穿過樓體的射線整條漏放;而伺服器
+          // `_losBlocked` 一向是「穿越區間 ∩ [0,h]」語意(min(y0,y1) < h)⇒ 客戶端算命中、
+          // 伺服器算被擋 = 傷害靜默蒸發(A30 兩端 MUST 同橫斷面)。
+          let tA = t0 < 0 ? 0 : t0, tB = t1 > 1 ? 1 : t1;
+          if (tB < tA) continue;
+          const yLo = b.y - 0.5, yHi = b.y + b.h;
+          if (dy > 1e-6 || dy < -1e-6) {
+            let s0 = (yLo - ay) / dy, s1 = (yHi - ay) / dy;
+            if (s0 > s1) { const s = s0; s0 = s1; s1 = s; }
+            if (s0 > tA) tA = s0;
+            if (s1 < tB) tB = s1;
+          } else if (ay <= yLo || ay >= yHi) continue;   // 水平線段整條在柱身之上/之下
+          if (tB < tA) continue;
+          if (bestT === null || tA < bestT) bestT = tA;
         }
       }
     }
@@ -562,7 +564,7 @@ export class BattleClient {
   }
 
   /**
-   * 線段 vs 水平薄板(橋面 / 隧道天花):回傳最近穿越距離(沿線段),沒穿回 null。
+   * 線段 vs 水平薄板(橋面 / 隧道天花 / 隧道路面):回傳最近穿越距離(沿線段),沒穿回 null。
    * 橋墩等垂直障礙走 _blockerHitT(圓柱);這裡補「橋面/天花」這種水平薄板 —— 只走 surfaceAt/
    * ceilingAt 管移動碰撞、原本不擋彈道/LOS 的缺口(#1)。沿射線 ~SLAB_STEP 取樣查 deckY/tunnelAt
    * (絕對世界 y):橋面板體 = [deckY − deckUnder, deckY],此步 y 區間與板體重疊 = 穿越;隧道 = 射線
@@ -588,8 +590,14 @@ export class BattleClient {
       }
       if (t.tunnelAt) {
         const tn = t.tunnelAt(x, z);
-        // open 段(地下道引道露天路塹)頭上是天空,MUST NOT 當隱形天花擋彈道
-        if (tn && !tn.open && yHi !== yLo && (py - tn.ceil) * (y - tn.ceil) <= 0) return (s - 0.5) / n * len;
+        // open 段(地下道引道露天路塹)頭上是天空、腳下就是地形本體 —— MUST NOT 當隱形天花
+        // 或隱形路面擋彈道(A29)。天花與**路面**都是雙面塗層,同一條「跨越」判定即涵蓋
+        // 洞內往上打天花 / 洞內往下打路面 / 洞外往下打進洞裡。路面漏判的代價:洞內朝地面
+        // 開火的彈頭穿過馬路鑽進岩盤(地形射線在山體內側找不到交點),一路飛到山腹另一側才炸。
+        if (tn && !tn.open && yHi !== yLo
+            && ((py - tn.ceil) * (y - tn.ceil) <= 0 || (py - tn.floor) * (y - tn.floor) <= 0)) {
+          return (s - 0.5) / n * len;
+        }
       }
       py = y;
     }
@@ -600,6 +608,34 @@ export class BattleClient {
   _obstHitT(ax, ay, az, bx, by, bz) {
     const a = this._blockerHitT(ax, ay, az, bx, by, bz);
     const b = this._slabHitT(ax, ay, az, bx, by, bz);
+    return a == null ? b : b == null ? a : Math.min(a, b);
+  }
+
+  /**
+   * 線段版地形射線:兩點 → 最近命中距離(公尺)或 null。內部走 `_terrainHitT`(rayTerrain
+   * 唯一縫),只多做「方向正規化 + far = 段長」。
+   * 高度場是**雙面**塗層:由上往下、由下往上穿過同一片三角形都要擋;被 `punchPortalHoles`
+   * 打掉的三角形(洞口 = 看得穿的地方)兩個方向一律放行(透明可穿透處例外)。
+   * **MUST NOT** 退回 `p.y <= heightAt(p.x, p.z)` 的單面判定 —— 那問的是「在地表以下」而不是
+   * 「穿過地表」:①由下往上的射線整條漏放;②heightAt 不吃打洞,覆蓋段的山體高度原封不動
+   * ⇒ 洞口/洞內成了看得見卻打不穿的隱形山體(在隧道裡開火 = 彈體在槍口原地就炸)。
+   */
+  _terrainSegT(ax, ay, az, bx, by, bz) {
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    const len = Math.hypot(dx, dy, dz);
+    if (len < 1e-4) return null;
+    // 熱路徑(_arcTrace 每幀最多 264 步 × 逐級降裝藥)MUST NOT 逐次配置暫存物件
+    const o = this._segRo || (this._segRo = { x: 0, y: 0, z: 0 });
+    const d = this._segRd || (this._segRd = { x: 0, y: 0, z: 0 });
+    o.x = ax; o.y = ay; o.z = az;
+    d.x = dx / len; d.y = dy / len; d.z = dz / len;
+    return this._terrainHitT(o, d, len);
+  }
+
+  /** 塗層總截斷:地形高度場(_terrainSegT)∪ 障礙圓柱/盒 ∪ 水平薄板(_obstHitT)。皆無回 null。 */
+  _layerHitT(ax, ay, az, bx, by, bz) {
+    const a = this._terrainSegT(ax, ay, az, bx, by, bz);
+    const b = this._obstHitT(ax, ay, az, bx, by, bz);
     return a == null ? b : b == null ? a : Math.min(a, b);
   }
 
@@ -4014,8 +4050,11 @@ export class BattleClient {
       const seg = b.pos.clone().sub(prev);
       const len = seg.length();
       b.dist += len;
-      let hit = b.pos.y <= this.terrain.heightAt(b.pos.x, b.pos.z);
-      const dB = len > 0.01 ? this._obstHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z) : null;
+      // 地形/障礙/薄板一律走 _layerHitT 的**雙面**解析截斷(與 _updateBullets 同一組規則):
+      // 舊制 `pos.y <= heightAt` 是單面「在地表以下」判定 —— 覆蓋段山體高度沒被開挖,隧道裡
+      // 每一發他人彈體都在槍口原地炸;由下往上穿地表也整條漏放。
+      const dB = len > 0.01 ? this._layerHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z) : null;
+      let hit = false;
       if (dB != null) { b.pos.copy(prev).addScaledVector(seg.clone().divideScalar(len), dB); hit = true; }
       if (hit || b.dist >= b.max) {
         starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
@@ -4317,8 +4356,10 @@ export class BattleClient {
       v.y -= BALLISTIC.G * step;
       p.addScaledVector(v, step);
       dist += prev.distanceTo(p);
-      let hit = p.y <= this.terrain.heightAt(p.x, p.z);
-      const dB = this._obstHitT(prev.x, prev.y, prev.z, p.x, p.y, p.z);
+      // 雙面塗層截斷(_layerHitT):打洞的洞口放行 —— 單面 `p.y <= heightAt` 會讓洞內架砲的
+      // 瞄準虛線在槍口就被截斷(cut='block' → 逐級降裝藥全滅 → 鎖定光暈永遠不亮)。
+      let hit = false;
+      const dB = this._layerHitT(prev.x, prev.y, prev.z, p.x, p.y, p.z);
       if (dB != null) { p.copy(prev).addScaledVector(v.clone().normalize(), dB); hit = true; }
       put(p, dist);
       minD = Math.min(minD, p.distanceTo(aim));
@@ -5649,17 +5690,22 @@ export class BattleClient {
       const def = this.wdef[b.slot];
       if (b.aoe) {
         // 發射器:著彈點回報伺服器結算範圍傷害(直擊/落地/射程終點皆引爆)
-        const gy = this.terrain.heightAt(p.x, p.z);
+        // 洞內著彈的「地面」是隧道路面,不是頭頂那座山:覆蓋段的地形高度**沒有**被開挖,拿
+        // heightAt 當基準會把爆點抬到山頂(爆炸畫在山上、離地高歸 1、lev 掉回 0 = 洞內單位
+        // 被 _slabSep 判成板體另一側 ⇒ 整發榴彈打在洞裡卻零傷害)。2026-07-30 起彈頭會真的
+        // 停在隧道路面上(_slabHitT 補了路面),這條基準才成為熱路徑。
+        // open 段(地下道引道露天路塹)腳下就是地形本體,照走 heightAt(A29)。
+        const btn = this.terrain.tunnelAt?.(p.x, p.z);
+        const inTun = !!(btn && !btn.open && p.y < btn.ceil);
+        const gy = inTun ? btn.floor : this.terrain.heightAt(p.x, p.z);
         const by = Math.max(p.y, gy + 1);
         this._explosion(p.x, by, p.z, (b.r || 12) * 0.8, 0xffaa33);
         this._applyBlast(p.x, by, p.z, b.r || 12);   // 太近開砲,自己也會被衝擊波掀飛
         // y = 離地引爆高度(對空:直擊飛行目標時在其高度炸;sim._blast 吃 3D 距離)
-        // lev = 爆點結構層(sim 隧道垂直隔離):彈道已被 _slabHitT 擋在天花外,
-        //       故「世界 y 低於天花」只會發生在真的從洞口打進去的彈頭。
-        //       open 段(地下道引道露天路塹)不算洞內 —— 露天溝裡的爆風不吃隧道隔絕。
-        const btn = this.terrain.tunnelAt?.(p.x, p.z);
-        this.net.send({ t: 'burst', x: p.x, z: -p.z, y: Math.max(0, Math.round((by - gy) * 10) / 10),
-          lev: btn && !btn.open && by < btn.ceil ? 2 : 0 });   // three z 南 → 模擬 z 北
+        // lev = 爆點結構層(sim 隧道垂直隔離)。**橋面刻意不報 1**:伺服器 _unitLev 讓塔/主堡
+        //       恆為 0,爆點報 1 會被 _slabSep 判成「與橋上砲塔分屬板體兩側」= 塔對 AoE 完全免傷。
+        this.net.send({ t: 'burst', x: p.x, z: -p.z,
+          y: Math.max(0, Math.round((by - gy) * 10) / 10), lev: inTun ? 2 : 0 });   // three z 南 → 模擬 z 北
       } else if (b.pierce) {   // (貫穿彈的 missileId 分支不會成立:_updateBullets 已讓飛彈不擋彈道)
         // 直線貫穿:落點定案(地形/障礙/射程終點)才回報整條射線,伺服器沿圓柱一次結算全部目標。
         // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
