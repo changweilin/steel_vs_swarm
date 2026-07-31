@@ -163,6 +163,11 @@ npm start
 開啟網頁即自動切換觸控版(無需安裝),配置照實體搖桿;直式與橫式**各有專屬排版**,橫式為建議持握。
 *Touch UI activates automatically on phones/tablets, laid out like a physical gamepad. Portrait and landscape each get their own layout; landscape is recommended.*
 
+**操作方式(加入戰區前選定)**:大廳的「操作方式」三選一 —— **不限定**(預設,依裝置自動判定,
+戰鬥中可在設定頁隨時切換鍵鼠 ⇄ 搖桿)/ **限定滑鼠鍵盤** / **限定搖桿**(桌機也會長出虛擬搖桿)。
+選了限定的一邊,**加入房間後就不能再改**;要能中途換,請在進房前選「不限定」。
+*Pick your control scheme before joining a room: unrestricted (default, device-detected and switchable mid-match), keyboard-and-mouse only, or gamepad/virtual-stick only. The restricted options lock once you join.*
+
 | 鍵位 · Button | 功能 · Action |
 |---|---|
 | **類比十字鍵 · D-pad** | 移動(外觀十字、判定類比:輕推慢走、**推到底 = 衝刺**) |
@@ -178,8 +183,8 @@ npm start
 
 **進場前先驗:大廳「📱 手機操控 / 陀螺儀設定」** — 逐項攤開判定結果(安全連線 / 觸控硬體 / 指標種類 /
 螢幕尺寸 / 結論),可直接開陀螺儀看即時讀值,還能按「🎮 試玩搖桿」在大廳用**真的**搖桿操作一遍
-(顯示軸值、視角角度、按下的鍵)。判定成桌機版時可在此把「觸控版」切成**強制開**,
-或在網址加 `?touch=1`(`?touch=0` 強制關、`?touch=auto` 回到自動)。
+(顯示軸值、視角角度、按下的鍵)。判定成桌機版時可把大廳的**操作方式**改成「限定搖桿」,
+或在網址加 `?ctrl=pad`(`?ctrl=kbm` 限定滑鼠鍵盤、`?ctrl=any` 回到不限定;舊的 `?touch=1/0/auto` 仍相容)。
 陀螺儀靈敏度、垂直反轉、拖曳靈敏度、左手模式(左右鏡像)、觸覺回饋在該面板與**戰場選單 → 設定**皆可調(自動記憶)。
 
 > **⚠ 陀螺儀需要安全連線(HTTPS)**
@@ -216,6 +221,7 @@ steel_vs_swarm/
 │       ├── help.js        # 操作提示與遊戲說明文字(鍵鼠版 / 觸控版)
 │       ├── net.js         # 傳輸層入口 makeNet():WebSocket(雲端/區網)或瀏覽器內主機(單機)
 │       ├── netmode.js     # 連線機制唯一真相(cloud / lan / solo 解析與節點網址)
+│       ├── ctrlmode.js    # 操作方式唯一真相(不限定 / 限定滑鼠鍵盤 / 限定搖桿 + 裝置判定)
 │       ├── localhost.js   # 單機模式:把 RoomHub 跑在瀏覽器分頁裡
 │       ├── mapSelect.js   # 真實地圖選點 + 主堡推薦演算法
 │       ├── venues.js      # 預設場地 + 我的最愛

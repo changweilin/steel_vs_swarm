@@ -11,62 +11,24 @@
 // 視野角度 MUST NOT 因直/橫式而改(全機種 fov 68,見 /CLAUDE.md A8):直式只是水平視野較窄,
 // 故直式首次進場提示「建議橫向持握」,而不是偷偷改 FOV。
 import * as THREE from 'three';
+import {
+  CTRL_MODES, CTRL_MODE_KEYS, CTRL_SCHEMES, CTRL_SCHEME_KEYS, ctrlMode, setCtrlMode,
+  ctrlScheme, setCtrlScheme, ctrlLocked, onCtrlChange, usePad, deviceScheme, touchCapable, ctrlModeText,
+} from './ctrlmode.js';
 
 /* ---------------- 裝置判定 ---------------- */
+// 判定本身住 `ctrlmode.js`(操作方式唯一真相縫):本檔只轉呼,MUST NOT 在這裡再寫一份
+// `maxTouchPoints` / `pointer: coarse` 的判斷(見 ctrlmode.js 檔頭)。
 
-const OVERRIDE_KEY = 'svs_touchui';   // '1' 強制觸控版 / '0' 強制桌機版 / 未設 = 自動
 const SETTINGS_KEY = 'svs_touch';
 
-/** 有觸控硬體(不代表要用觸控版:二合一筆電也有觸控螢幕)。大廳據此決定是否顯示「手機操控」入口 */
-export function touchCapable() {
-  return (navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window;
-}
+export { touchCapable };
 
 /**
- * 強制覆寫的來源:**網址參數 `?touch=1` / `?touch=0` 優先**,其次 localStorage。
- * 手機上沒有 devtools ⇒ 只能設 localStorage 的覆寫等於不存在;網址參數才是玩家真的能用的逃生門。
- * 讀到參數就順手寫進 localStorage,之後同一台裝置不必再帶參數。
+ * 是否採用虛擬搖桿版 UI(= 操作方式解析後的結果)。
+ * 玩家在大廳選「限定滑鼠鍵盤 / 限定搖桿 / 不限定」,不限定時吃裝置判定 —— 全部住 ctrlmode.js。
  */
-function overrideFlag() {
-  let v = null;
-  try {
-    const q = new URLSearchParams(location.search).get('touch');
-    if (q === '1' || q === 'on') v = '1';
-    else if (q === '0' || q === 'off') v = '0';
-    else if (q === 'auto') v = '';
-    if (v !== null) {
-      if (v === '') localStorage.removeItem(OVERRIDE_KEY);
-      else localStorage.setItem(OVERRIDE_KEY, v);
-      return v || null;
-    }
-  } catch { /* 私密模式忽略 */ }
-  try { return localStorage.getItem(OVERRIDE_KEY); } catch { return null; }
-}
-
-/** 觸控版強制開關(設定面板用;寫入後需重新載入才會重建輸入層) */
-export function setTouchUIOverride(v) {
-  try {
-    if (v == null) localStorage.removeItem(OVERRIDE_KEY);
-    else localStorage.setItem(OVERRIDE_KEY, v ? '1' : '0');
-  } catch { /* 私密模式忽略 */ }
-}
-export function touchUIOverride() { return overrideFlag(); }
-
-/**
- * 是否採用觸控版 UI:觸控硬體 + (無精準指標/無 hover,或短邊 ≤ 820px)。
- * 可用 `?touch=1` / `?touch=0`(或 localStorage `svs_touchui`)強制覆寫。
- */
-export function isTouchUI() {
-  const o = overrideFlag();
-  if (o === '1') return true;
-  if (o === '0') return false;
-  if (!touchCapable()) return false;
-  const mm = window.matchMedia;
-  const coarse = mm ? mm('(pointer: coarse)').matches : true;
-  const noHover = mm ? !mm('(any-hover: hover)').matches : true;
-  const small = Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 820;
-  return (coarse && noHover) || small;
-}
+export function isTouchUI() { return usePad(); }
 
 /**
  * 觸控/陀螺儀自我診斷:判定用到的每一項原始值 + 結論。
@@ -87,9 +49,11 @@ export function touchDiagnostics() {
     { k: '無 hover any-hover:none', v: mm('(any-hover: hover)') === false, ok: mm('(any-hover: hover)') === false },
     { k: '螢幕短邊 ≤ 820', v: `${window.screen?.width}×${window.screen?.height}`,
       ok: Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 820 },
-    { k: '強制覆寫', v: overrideFlag() === '1' ? '強制開' : overrideFlag() === '0' ? '強制關' : '自動', ok: true },
-    { k: '結論:觸控版', v: isTouchUI(), ok: isTouchUI(),
-      note: isTouchUI() ? '虛擬搖桿會在戰鬥中出現' : '可用網址加 ?touch=1 強制開啟' },
+    { k: '裝置判定(不限定時的預設)', v: CTRL_SCHEMES[deviceScheme()].label, ok: true },
+    { k: '操作方式', v: ctrlModeText(), ok: true,
+      note: ctrlLocked() ? '已加入房間 ⇒ 限定模式不可變更' : '加入房間前可在大廳變更' },
+    { k: '結論:虛擬搖桿', v: isTouchUI(), ok: isTouchUI(),
+      note: isTouchUI() ? '虛擬搖桿會在戰鬥中出現' : '可把操作方式改成「限定搖桿」,或網址加 ?ctrl=pad' },
     { k: 'body class', v: [...document.body.classList].filter((c) => c.startsWith('touch') || c.startsWith('ori')).join(' ') || '(無)',
       ok: document.body.classList.contains('touch-ui') },
   ];
@@ -206,8 +170,10 @@ function syncOrientation() {
 
 let _installed = false;
 /**
- * 安裝觸控版版型(main.js 啟動時呼叫一次)。回傳是否為觸控版。
+ * 安裝觸控版版型(main.js 啟動時呼叫一次)。回傳是否為虛擬搖桿版。
  * 只掛 body class 與監聽轉向 —— 戰場的觸控輸入由 TouchControls 負責(進戰場才建)。
+ * **操作方式改變(不限定時玩家在戰鬥中切換)時 MUST 重跑一次**:body class 是搖桿層的
+ * CSS 尺寸/定位來源,少掛就會塌成 0×0。故此處自行訂閱 ctrlmode,呼叫端不必記得。
  */
 export function installTouchUI() {
   const on = isTouchUI();
@@ -219,6 +185,7 @@ export function installTouchUI() {
     window.addEventListener('resize', syncOrientation);
     window.addEventListener('orientationchange', syncOrientation);
     window.screen?.orientation?.addEventListener?.('change', syncOrientation);
+    onCtrlChange(() => installTouchUI());
   }
   return on;
 }
@@ -590,9 +557,83 @@ export function gyroStatusText() {
 // MUST NOT 在 index.html 或 main.js 另寫一組觸控設定列(兩份一定會漂)。
 
 const _mounts = [];
+const _ctrlMounts = [];
 const _esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const MODE_LABEL = { auto: '自動', on: '強制開', off: '強制關' };
+/**
+ * 操作方式設定列(**限定模式** + **目前操控**兩列)。大廳(加入戰區前)、大廳選單、
+ * 戰場暫停選單三處共用這一份 DOM,MUST NOT 在 index.html / main.js 另寫一組
+ * —— 兩份一定會漂,而這一項還是「進房後就不能改」的規則落點。
+ *
+ * 兩列的啟用條件由 ctrlmode.js 決定,本函式只忠實反映:
+ *   ① 限定模式:`ctrlLocked()`(已加入房間)⇒ 停用。
+ *   ② 目前操控:限定模式非「不限定」⇒ 停用(這就是「遊戲中不可變更」)。
+ * MUST NOT 在這裡自己判 `app.phaseShown` 之類的畫面狀態(那是第二份規則)。
+ */
+export function renderCtrlSettings(mount, opts = {}) {
+  if (!mount || mount.dataset.ctrlBuilt) return;
+  mount.dataset.ctrlBuilt = '1';
+  const notice = opts.onNotice || (() => {});
+
+  const modeRow = document.createElement('div');
+  modeRow.className = 'set-row';
+  modeRow.innerHTML = '<span class="set-label">操作方式</span><span class="tset-seg tset-ctrl">'
+    + CTRL_MODE_KEYS.map((m) =>
+      `<button class="tset-segb" type="button" data-ctrl="${m}">${_esc(CTRL_MODES[m].icon)} ${_esc(CTRL_MODES[m].label)}</button>`).join('')
+    + '</span><span class="set-hint tset-ctrl-hint"></span>';
+  mount.appendChild(modeRow);
+  for (const b of modeRow.querySelectorAll('.tset-segb')) {
+    b.addEventListener('click', () => {
+      if (!setCtrlMode(b.dataset.ctrl)) { notice('操作方式在加入房間之前就要先選擇 —— 離開戰區後才能變更', 5000); return; }
+      syncCtrlSettings();
+      notice(`操作方式:${CTRL_MODES[ctrlMode()].label}`, 3000);
+    });
+  }
+
+  const pickRow = document.createElement('div');
+  pickRow.className = 'set-row';
+  pickRow.innerHTML = '<span class="set-label">目前操控</span><span class="tset-seg tset-pick">'
+    + CTRL_SCHEME_KEYS.map((s) =>
+      `<button class="tset-segb" type="button" data-scheme="${s}">${_esc(CTRL_SCHEMES[s].icon)} ${_esc(CTRL_SCHEMES[s].label)}</button>`).join('')
+    + '</span><span class="set-hint tset-pick-hint"></span>';
+  mount.appendChild(pickRow);
+  for (const b of pickRow.querySelectorAll('.tset-segb')) {
+    b.addEventListener('click', () => {
+      if (!setCtrlScheme(b.dataset.scheme)) { notice('已限定操作方式,遊戲中不可變更 —— 要能隨時切換請在加入房間前選「不限定」', 5000); return; }
+      syncCtrlSettings();
+      notice(`目前操控:${CTRL_SCHEMES[ctrlScheme()].label}`, 3000);
+    });
+  }
+  _ctrlMounts.push(mount);
+  syncCtrlSettings();
+}
+
+// 狀態一變(限定模式 / 目前操控 / 鎖定)就把所有已渲染的操作方式 UI 同步一次。
+// 訂閱 MUST 住這裡而不是 installTouchUI —— 少了它,「進房後選項變灰」要等下次開設定頁才生效。
+onCtrlChange(() => syncCtrlSettings());
+
+/** 把所有已渲染的操作方式 UI 同步到目前狀態(選取態 + 停用態 + 提示文字)*/
+export function syncCtrlSettings() {
+  const mode = ctrlMode(), scheme = ctrlScheme(), locked = ctrlLocked();
+  for (const mount of _ctrlMounts) {
+    for (const b of mount.querySelectorAll('.tset-ctrl .tset-segb')) {
+      b.classList.toggle('on', b.dataset.ctrl === mode);
+      b.disabled = locked;
+    }
+    for (const b of mount.querySelectorAll('.tset-pick .tset-segb')) {
+      b.classList.toggle('on', b.dataset.scheme === scheme);
+      b.disabled = mode !== 'any';
+    }
+    const mh = mount.querySelector('.tset-ctrl-hint');
+    if (mh) mh.textContent = locked ? `已加入戰區,離開後才能變更 ・ ${CTRL_MODES[mode].hint}` : CTRL_MODES[mode].hint;
+    const ph = mount.querySelector('.tset-pick-hint');
+    if (ph) {
+      ph.textContent = mode === 'any'
+        ? `即時切換,不必重新載入。裝置判定為${CTRL_SCHEMES[deviceScheme()].label}。`
+        : '已限定操作方式,遊戲中不可變更。';
+    }
+  }
+}
 
 /**
  * 把觸控設定列渲染進 mount(冪等:同一個 mount 只建一次)。
@@ -603,21 +644,6 @@ export function renderTouchSettings(mount, opts = {}) {
   mount.dataset.built = '1';
   const notice = opts.onNotice || (() => {});
   const uid = (k) => `${mount.id}__${k}`;
-
-  // 觸控版強制開關:手機沒有 devtools ⇒ 這是玩家唯一能自救的地方(另有網址 ?touch=1)
-  const modeRow = document.createElement('div');
-  modeRow.className = 'set-row';
-  modeRow.innerHTML = '<span class="set-label">觸控版</span><span class="tset-seg tset-mode">'
-    + ['auto', 'on', 'off'].map((m) => `<button class="tset-segb" type="button" data-mode="${m}">${MODE_LABEL[m]}</button>`).join('')
-    + '</span><span class="set-hint">切換後需重新載入頁面才會重建操控層(也可在網址加 ?touch=1)</span>';
-  mount.appendChild(modeRow);
-  for (const b of modeRow.querySelectorAll('.tset-segb')) {
-    b.addEventListener('click', () => {
-      setTouchUIOverride(b.dataset.mode === 'auto' ? null : b.dataset.mode === 'on');
-      syncTouchSettings();
-      notice('已變更觸控版設定 —— 請重新載入頁面套用', 5000);
-    });
-  }
 
   for (const d of TOUCH_SETTINGS) {
     const row = document.createElement('div');
@@ -669,11 +695,8 @@ export function renderTouchSettings(mount, opts = {}) {
 /** 把所有已渲染的觸控設定 UI 同步到目前(持久化的)狀態 + 陀螺儀即時狀態 */
 export function syncTouchSettings() {
   const status = gyroStatusText();
-  const mode = touchUIOverride() === '1' ? 'on' : touchUIOverride() === '0' ? 'off' : 'auto';
+  syncCtrlSettings();   // 操作方式列可能與觸控設定掛在同一個面板裡,一起同步(自身冪等)
   for (const mount of _mounts) {
-    // **MUST 限定在 .tset-mode 內** —— 設定表裡的「陀螺來源」也是 .tset-segb,
-    // 沒限定的話這一行會把它們的選取態清掉(下面那圈才補回來,中間會閃)。
-    for (const b of mount.querySelectorAll('.tset-mode .tset-segb')) b.classList.toggle('on', b.dataset.mode === mode);
     for (const d of TOUCH_SETTINGS) {
       const el = document.getElementById(`${mount.id}__${d.key}`);
       if (!el) continue;
@@ -1089,8 +1112,9 @@ export class TouchControls {
    *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
    *   ② ZL 下降只在飛行機種(無人機/變形者)與觀戰自由視角出現。
    *   ③ 換機(R 區系統鍵)只給無人機三機小隊。
-   *   ④ 觀戰沒有座機:A / R / ZR 鎖定 / 絕招 / ⊟ / HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
-   *      HOME 亦然 —— `_setPaused` 對 side=null 直接 return,桌機觀戰同樣沒有 ESC 選單)。
+   *   ④ 觀戰沒有座機:A / R / ZR 鎖定 / 絕招 / ⊟ 一律收掉(_cmd 對 side=null 不受理,留著只會誤按)。
+   *      **HOME 戰場選單不收**(2026-07-31 使用者需求「觀戰也可以按 ESC」)—— 觀戰者同樣要有
+   *      離開戰場的出口,`_setPaused` 已對 side=null 放行,桌機觀戰按 ESC 走的是同一條路。
    *      **十字鍵的陀螺與地圖不收** —— 觀戰自由視角同樣吃 _applyLook,也同樣看小地圖。
    */
   setKind(kind) {
@@ -1101,7 +1125,7 @@ export class TouchControls {
     const fly = spec || kind === 'drone' || kind === 'morph';
     document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
-    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"], [data-act="lock"]')
+    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="special"], [data-act="lock"]')
       .forEach((n) => { n.hidden = spec; });
     document.body.classList.toggle('tl-spec', spec);
   }

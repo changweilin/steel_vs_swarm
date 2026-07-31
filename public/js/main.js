@@ -34,8 +34,10 @@ import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel } from './help.js';
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
-  renderTouchSettings, syncTouchSettings, openTouchTest, closeTouchTest,
+  renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
+  isTouchUI, openTouchTest, closeTouchTest,
 } from './mobile.js';
+import { setCtrlLock, onCtrlChange } from './ctrlmode.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -98,7 +100,10 @@ const app = {
 
 // 觸控版版型(手機/平板):掛 body.touch-ui / .ori-portrait|.ori-landscape / .touch-lefty,
 // 並開始追蹤直式⇄橫式切換。CSS 全靠這幾個 class 分版型;戰場的觸控輸入層由 BattleClient 進場時才建。
-const TOUCH_UI = installTouchUI();
+installTouchUI();
+// **MUST 是函式呼叫而非常數**:操作方式選「不限定」時,玩家在戰鬥中也能切換鍵鼠 ⇄ 搖桿
+// (見 ctrlmode.js),快取成 const 會讓說明/提示文字停在進場當下那一版。
+const TOUCH_UI = () => isTouchUI();
 
 // 音效系統(app 層,單一實例):首次使用者手勢自動解鎖 + 啟動 BGM(見 audio.js)。
 app.audio = new GameAudio();
@@ -109,10 +114,16 @@ document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
 
+// 還沒進房間的畫面(操作方式只准在這些畫面變更 —— 使用者定案:加入房間之前就要先選)
+const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
+
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
   if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
+  // 操作方式鎖定:一進房間(含載入/戰鬥)就鎖,回大廳解鎖。**規則住 ctrlmode.js**,
+  // 這裡只回報「現在在哪個畫面」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
+  setCtrlLock(!LOBBY_SCREENS.has(screen));
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
@@ -1216,10 +1227,10 @@ function fillModalPanels(role) {
   $('stageModalKit').innerHTML = stageKitHTML(st);
   // 演示提示同樣隨輸入裝置切換(桌機講鍵位,觸控講「點哪一列」)
   $('stageModalKeys').innerHTML = st.subject.type === 'char'
-    ? (TOUCH_UI
+    ? (TOUCH_UI()
       ? '<b>操作演示</b>　點武器 / 招式列演出 ・ 拖曳旋轉 ・ 雙指縮放 ・ 點「跑速」鈕循環'
       : '<b>操作演示</b>　左鍵 輕武器 ・ 右鍵 重武器 ・ Q 小招 ・ E 大招 ・ Space 跳躍/變形 ・ W 循環跑速')
-    : (TOUCH_UI
+    : (TOUCH_UI()
       ? '<b>操作演示</b>　點下方武器列演出攻擊 ・ 拖曳旋轉 ・ 雙指縮放'
       : '<b>操作演示</b>　左鍵 主武器 ・ 右鍵 副武器 ・ 點下方武器列演出攻擊');
 }
@@ -1815,17 +1826,28 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
-  // 操作提示唯一來源 = help.js(桌機 CONTROLS_BY_KIND / 觸控版 TOUCH_CONTROLS;說明頁與此共用)
-  const ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
-  $('pauseHelp').textContent = TOUCH_UI
-    ? `${TOUCH_CONTROLS[ctrlKey]} ・ ☰ 開戰場選單`
-    : `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
-  // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
-  if (TOUCH_UI) $('shopHint').textContent = '';
-  toast(TOUCH_UI
+  app.ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
+  syncPauseHelp();
+  toast(TOUCH_UI()
     ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖 ・ HOME 選單'
     : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍', 4600);
 }
+
+/**
+ * 戰場選單「選單」頁的操作提示。唯一來源 = help.js(桌機 CONTROLS_BY_KIND / 搖桿版 TOUCH_CONTROLS)。
+ * 操作方式選「不限定」時戰鬥中可切換 ⇒ 這段 MUST 能重跑(進場一次 + 每次切換一次),
+ * MUST NOT 在 main.js 另寫 if(touch) 的字串分支(A21)。
+ */
+function syncPauseHelp() {
+  const ctrlKey = app.ctrlKey;
+  if (!ctrlKey) return;
+  $('pauseHelp').textContent = TOUCH_UI()
+    ? `${TOUCH_CONTROLS[ctrlKey]} ・ ☰ 開戰場選單`
+    : `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
+  $('shopHint').textContent = shopHintText();
+}
+/** 金錢列的升級提示:搖桿版沒有鍵盤快捷 ⇒ 收字(升級走工具列的 ⊟ 鈕)。逐幀 HUD 與此共用 */
+function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
 
 /**
  * 觸控版:把招式的冷卻/就緒/鎖定狀態鏡射到虛擬搖桿鈕面(X 小招 / Y 大招 / B 機動)。
@@ -1902,7 +1924,7 @@ function makeHud() {
         }
         // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
         // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
-        if (TOUCH_UI) {
+        if (TOUCH_UI()) {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
@@ -1913,7 +1935,7 @@ function makeHud() {
         document.body.classList.toggle('aiming', !!w.aiming);
         $('moneyText').textContent = Math.floor(w.money);
         $('knText').textContent = w.kn;
-        $('shopHint').textContent = 'B 升級';
+        $('shopHint').textContent = shopHintText();
       }
       const cdEl = $('burstCd');
       cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
@@ -2005,7 +2027,7 @@ function makeHud() {
       // 觸控版:鍵位提示直接換成兩顆 data-act 鈕(靠近才存在 ⇒ 離開範圍隨提示一起收,不留孤兒鈕)。
       // 動作照舊走 BattleClient._cmd,與桌機 G/H 同一個派發縫。
       const btn = (act, t) => `<button class="civ-btn" type="button" data-act="${act}">${t}</button>`;
-      const keys = TOUCH_UI
+      const keys = TOUCH_UI()
         ? (info.follow ? `跟隨中 ${btn('civAway', '驅趕')}` : `${btn('civFollow', '跟隨')}${btn('civAway', '驅趕')}`)
         : (info.follow ? '跟隨中 ・ <b>H</b> 驅趕' : '<b>G</b> 要求跟隨 ・ <b>H</b> 驅趕');
       el.innerHTML = `<span class="civ-fac" style="color:${s.color}">◈ ${esc(s.name)}平民 ${info.self ? '(我方)' : '(敵方)'}</span>`
@@ -2198,10 +2220,23 @@ bindSettingsControls('lset');
 // 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
 function syncSettingsUi() {
   syncAudioSwitches('set');
+  // 操作方式(限定模式 + 目前操控):與大廳共用同一份渲染(mobile.js),桌機也要看得到 ——
+  // 「限定搖桿」在桌機上同樣成立,MUST NOT 藏進 .touch-only
+  renderCtrlSettings($('pauseCtrlMount'), { onNotice: toast });
+  syncCtrlSettings();
   // 觸控/陀螺儀:渲染器與同步器住 mobile.js(大廳面板與此共用同一份)
   renderTouchSettings($('pauseTouchMount'), { onNotice: toast });
   syncTouchSettings();
 }
+
+// 操作方式切換(只在「不限定」時發生):說明頁與戰場提示的鍵位敘述 MUST 跟著換一份 ——
+// 搖桿層的建/毀由 BattleClient 自己訂閱(game.js `_applyCtrlScheme`),此處只管文字。
+onCtrlChange(() => {
+  syncPauseHelp();
+  mountHelp($('helpCats'), $('helpBody'));
+  mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));
+  syncTouchSetupBtn();
+});
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
 // **鍵位敘述隨輸入裝置自動切換**:TOUCH_UI(= mobile.js isTouchUI(),與 pauseHelp 同一個旗標)
@@ -2213,11 +2248,11 @@ function mountHelp(catsEl, bodyEl) {
   const renderCat = (cat) => {
     catsEl.querySelectorAll('.help-cat').forEach((b) => b.classList.toggle('on', b.dataset.cat === cat.id));
     bodyEl.innerHTML = cat.items.map((it) =>
-      `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(helpItemP(it, TOUCH_UI))}</div></div>`).join('');
+      `<div class="help-item"><div class="help-item-h">${esc(it.h)}</div><div class="help-item-p">${esc(helpItemP(it, TOUCH_UI()))}</div></div>`).join('');
     bodyEl.scrollTop = 0;
   };
   catsEl.innerHTML = HELP.map((c, i) =>
-    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI))}</button>`).join('');
+    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI()))}</button>`).join('');
   catsEl.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
     renderCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
   }));
@@ -2239,6 +2274,7 @@ function renderTouchDiag() {
   }).join('');
 }
 function openTouchPanel() {
+  renderCtrlSettings($('lobbyTouchCtrlMount'), { onNotice: toast });
   renderTouchSettings($('lobbyTouchMount'), { onNotice: toast });
   syncTouchSettings();
   renderTouchDiag();
@@ -2260,6 +2296,7 @@ function switchLobbyPage(page) {
 }
 function openLobbyMenu(page) {
   syncAudioSwitches('lset');
+  renderCtrlSettings($('lobbyMenuCtrlMount'), { onNotice: toast });     // 操作方式:桌機也要看得到
   renderTouchSettings($('lobbyMenuTouchMount'), { onNotice: toast });   // 桌機由 .touch-only 隱藏整區
   syncTouchSettings();
   switchLobbyPage(page);
@@ -2344,11 +2381,13 @@ function onSync(m) {
   }
 }
 
-// 觸控硬體(或已強制開啟觸控版)才顯示大廳入口 —— 桌機不需要這顆鈕
-if (touchCapable() || TOUCH_UI) {
+// 觸控硬體(或目前就在用虛擬搖桿)才顯示大廳入口 —— 桌機不需要這顆鈕。
+// 操作方式可在大廳改成「限定搖桿」⇒ MUST 跟著重算(寫死一次 = 切過去卻找不到陀螺/試玩面板)。
+function syncTouchSetupBtn() {
   const b = $('touchSetupBtn');
-  if (b) b.style.display = '';
+  if (b) b.style.display = touchCapable() || TOUCH_UI() ? '' : 'none';
 }
+syncTouchSetupBtn();
 
 window.addEventListener('DOMContentLoaded', () => {
   $('myName').value = localStorage.getItem('svs_name') || '';
@@ -2358,6 +2397,10 @@ window.addEventListener('DOMContentLoaded', () => {
   if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
+
+  // 操作方式:**加入戰區之前**就要選定 ⇒ 直接長在大廳面板上(不是藏在設定疊層裡)。
+  // 與設定頁共用同一份渲染(mobile.js renderCtrlSettings),MUST NOT 在 index.html 另寫一組選項。
+  renderCtrlSettings($('ctrlModeMount'), { onNotice: toast });
 
   renderLinkModes();
   connectNet();
