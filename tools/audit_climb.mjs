@@ -29,7 +29,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BattleSim } from '../server/sim.js';
-import { SOLDIER_H, HERO_SIZE, MAPGEO } from '../public/js/data.js';
+import { SOLDIER_H, HERO_SIZE, MAPGEO, SLOPE, slopeDeg, slopeBlocked } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 // LF 正規化:git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。全檔的跨行切片標記(DRAW、pickMethod
@@ -55,12 +55,14 @@ function loadCore(mutate = (s) => s) {
   const P1 = climbSrc.indexOf('// 3D 幾何(純表現層)');
   if (P0 < 0 || P1 <= P0) throw new Error('climb.js 找不到純幾何段');
   const body = mutate(climbSrc.slice(P0, P1)).replace(/^export /gm, '');
-  return new Function('MAX_BODY_R',
-    `${body}\nreturn { CLIMB, CLIMB_KIND, CLIMB_LABEL, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex };`,
-  )(MAX_BODY_R);
+  return new Function('MAX_BODY_R', 'SLOPE', 'slopeDeg',
+    `${body}\nreturn { CLIMB, CLIMB_KIND, CLIMB_LABEL, surfacePoint, attachFaces, climbCandidate,`
+    + ` siteSlopeDeg, climbShare, facilityEndY, planClimbRoutes, makeClimbIndex };`,
+  )(MAX_BODY_R, SLOPE, slopeDeg);
 }
 const C = loadCore();
 const { CLIMB, CLIMB_KIND, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex } = C;
+const { siteSlopeDeg, climbShare, facilityEndY } = C;
 
 // mulberry32(與 biomes.js 同款;稽核要的是確定性,不是同一個 seed)
 const mulberry32 = (seed) => {
@@ -133,8 +135,10 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   const DRAW = '    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    const linkRoll = rnd();\n';
   const lateRnd = loadCore((s) => {
     if (!s.includes(DRAW)) throw new Error('③ 對照組:抽樣區塊原文找不到(改過就要同步改稽核)');
-    return s.replace(`${DRAW}    if (!climbCandidate(b)) continue;\n    if (pick >= CLIMB.SHARE) continue;`,
-      `    if (!climbCandidate(b)) continue;\n${DRAW}    if (pick >= CLIMB.SHARE) continue;`);
+    const GATE = '    const deg = siteSlopeDeg(b, heightAt);\n    if (pick >= climbShare(deg)) continue;';
+    if (!s.includes(GATE)) throw new Error('③ 對照組:抽中門檻原文找不到(改過就要同步改稽核)');
+    return s.replace(`${DRAW}    if (!climbCandidate(b)) continue;`,
+      `    if (!climbCandidate(b)) continue;\n${DRAW}`);
   });
   const setL = (rs) => new Set(rs.map((r) => `${r.b.x},${r.b.z}`));
   const A2 = setL(lateRnd.planClimbRoutes({ blockers: base, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: mulberry32(99) }));
@@ -179,6 +183,8 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   ok(rs.length > 0 && rs.every((r) => near(r.y1, r.b.y + r.b.h)),
     '⑥ 頂端 y1 MUST = b.y + b.h(= makeBlockerTopIndex 的回傳值 ⇒ 爬到頂剛好站得住)');
   ok(rs.every((r) => near(r.y0, slope(r.x), 1e-9)), '⑥ 地面端 y0 MUST = 攀爬軸那一點的地表高');
+  ok(rs.every((r) => near(r.vy0, r.y0) && near(r.vy1, r.y1)),
+    '⑥ 沒帶實測頂面(b.ty)時,設施端點 MUST 貼齊攀爬柱兩端(行為與舊制逐位元相同)');
 }
 
 // ⑦ 攀爬軸 MUST 落在碰撞體外 OFF,且 OFF > 最大機體碰撞半徑(否則爬到一半被 _collide 推開)
@@ -831,6 +837,177 @@ console.log('\n=== Ⅶ 設施「正面」規則:面對結構、不要有其他�
         `Ⅶ 跨接臂(arm=${arm}):內端 MUST 咬進結構 0.2m、外端 MUST 蓋住設施(實測 ${inner.toFixed(2)}~${outer.toFixed(2)})`);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n=== Ⅷ 設施端點貼齊可見實體面(屋頂不平的結構,設施 MUST NOT 高出屋頂)===');
+{
+  // ---- ① facilityEndY 的曲線(執行 climb.js 原文)----
+  ok(near(facilityEndY(50, null), 50), 'Ⅷ 沒量到實體頂面(ty 缺)⇒ 設施端點 = 攀爬柱端點(退回舊制)');
+  ok(near(facilityEndY(50, 49.5), 49.5), 'Ⅷ 量到的屋頂低一截 ⇒ 設施收到屋頂上(長梯不再高出屋頂)');
+  ok(near(facilityEndY(50, 53), 50), 'Ⅷ 量到的值高過攀爬柱 ⇒ MUST 不理(設施 MUST NOT 長得比攀爬柱高)');
+  ok(near(facilityEndY(50, 50), 50), 'Ⅷ 兩者等高 ⇒ 不動');
+  ok(near(facilityEndY(50, 20), 50 - CLIMB.GRAB_UP),
+    `Ⅷ 落差 MUST 夾在 GRAB_UP(${CLIMB.GRAB_UP}m)內 —— 碰撞柱高過實體太多是結構自己的事,設施不准斷開`);
+  ok(!/GRAB_UP: [\d.]+,[\s\S]{0,200}facilityEndY/.test(climbSrc) || /yAuth - CLIMB\.GRAB_UP/.test(climbSrc),
+    'Ⅷ 夾制量 MUST 取自 CLIMB.GRAB_UP(推導不手寫第二個容差)');
+
+  // ---- ② 規劃結果:帶 ty 的結構,vy1 收到屋頂而 y1(站立面)MUST 一動不動 ----
+  const H = 40, TRIM = 0.5;
+  const B = { ...bld(0, 0, 40, 30, H), ty: 19 + H - TRIM };     // b.y = 19 ⇒ 碰撞柱頂 59、可見屋頂 58.5
+  const r = planClimbRoutes({ blockers: [B], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })[0];
+  ok(r && near(r.y1, B.y + B.h), 'Ⅷ 攀爬柱頂 y1 MUST 仍 = b.y + b.h(站立面/_collide 垂直閘都吃它,動了人會被推下屋頂)');
+  ok(r && near(r.vy1, B.ty), 'Ⅷ 設施頂端 vy1 MUST = 實測屋頂 b.ty');
+  ok(r && near(r.y1 - r.vy1, TRIM), `Ⅷ 一般建物的碰撞柱刻意高 ${TRIM}m ⇒ 設施 MUST 正好收掉這一截`);
+  ok(r && near(r.vy0, r.y0), 'Ⅷ 地面路線的設施底端 = 地面(只收頂端)');
+
+  // ---- ③ 相鄰相接:兩端各自貼齊該座結構的實體面(下端**往下延伸**到低者的屋頂)----
+  const Hi = { ...bld(0, 0, 40, 30, 60), ty: 19 + 60 - 0.5 };
+  const Lo = { ...bld(37, 0, 30, 30, 30), ty: 19 + 30 - 0.5 };
+  const lk = planClimbRoutes({ blockers: [Hi, Lo], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })
+    .find((q) => q.link);
+  ok(!!lk, 'Ⅷ 相鄰兩棟 MUST 架得起相接路線(本節的前提)');
+  ok(lk && near(lk.y1, Hi.y + Hi.h) && near(lk.y0, Lo.y + Lo.h), 'Ⅷ 相接路線的攀爬柱兩端 MUST 仍是兩座碰撞柱頂');
+  ok(lk && near(lk.vy1, Hi.ty), 'Ⅷ 相接路線上端 MUST 收到高者的實體屋頂');
+  ok(lk && near(lk.vy0, Lo.ty) && lk.vy0 < lk.y0,
+    'Ⅷ 相接路線下端 MUST **往下**延伸到低者的實體屋頂(不然梯腳浮在低頂上方半公尺)');
+
+  // ---- ④ 設施幾何真的吃 vy(執行 buildClimbMeshes 原文的垂直範圍)----
+  const meshSeg = climbSrc.slice(climbSrc.indexOf('export function buildClimbMeshes'));
+  ok(/const y0 = r\.vy0 \?\? r\.y0, y1 = r\.vy1 \?\? r\.y1;/.test(meshSeg),
+    'Ⅷ buildClimbMeshes 的垂直範圍 MUST 取自 vy0/vy1(設施端點)');
+  const facBody = meshSeg.slice(meshSeg.indexOf('for (const r of list)'), meshSeg.indexOf('// 材質每型別各一份'))
+    .replace(/const y0 = r\.vy0 \?\? r\.y0, y1 = r\.vy1 \?\? r\.y1;/, '');   // ← 唯一准許的取值處(上一條已釘住)
+  ok(!/\br\.y0\b|\br\.y1\b/.test(facBody),
+    'Ⅷ 設施幾何段 MUST NOT 再直接引用 r.y0/r.y1(攀爬柱與設施的分工不得混用)');
+  // 提示箭頭刻意仍吃 y0/y1(標的是「人站在哪裡」,不是實體面)
+  const arrSeg = climbSrc.slice(climbSrc.indexOf('function buildClimbArrows'));
+  ok(/r\.y0 \+ A\.FOOT/.test(arrSeg) && /r\.y1 \+ A\.HEAD/.test(arrSeg),
+    'Ⅷ 提示箭頭刻意仍吃 y0/y1(底端 = 落地點、頂端 = 站立面)');
+
+  // ---- ⑤ 生成端:三種結構都把實測值餵進來(biomes.js 原文)----
+  ok(/ty: gy \+ b\.h - 0\.5/.test(biomeSrc), 'Ⅷ biomes.js 一般建物 MUST 帶可見盒頂 ty(碰撞柱高 0.5m)');
+  ok(/ty: gy \+ ph - 0\.5/.test(biomeSrc), 'Ⅷ biomes.js 裙樓 MUST 帶可見盒頂 ty');
+  ok(/const lmTop = rockProbe\(g\)\.topAt\(bx, bz\);/.test(biomeSrc)
+    && /ty: lmTop,/.test(biomeSrc), 'Ⅷ biomes.js 地標 MUST **實測**屋頂(LANDMARK_COL.h 是擋彈高,不是屋頂高)');
+  ok(/ty: probe\.topAt\(x, z\)/.test(biomeSrc), 'Ⅷ biomes.js 巨岩 MUST **實測**岩頂(碰撞柱高 1.5m + 圓頂比 col.h 低)');
+  // 神木:垂直沒有落差(碰撞柱頂 = 樹尖),但幹身**向上收窄** ⇒ 走 arm 跨接臂而不是 ty
+  ok(/tr: trunkR\(def\.h \* s\)/.test(biomeSrc),
+    'Ⅷ biomes.js 神木 MUST 帶頂端幹半徑 tr(繩錨靠 r − tr 的跨接臂伸回幹身,否則吊在空中)');
+  const tr = { ...tree(0, 0, 9, 60), tr: 2.6 };
+  const trRoute = planClimbRoutes({ blockers: [tr], heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })[0];
+  ok(trRoute && near(trRoute.arm, 9 - 2.6), 'Ⅷ 圓柱結構的跨接臂 MUST = r − tr(收窄多少就伸多長)');
+  ok(near(attachFaces(tree(0, 0, 9, 60))[0].arm ?? 0, 0), 'Ⅷ 沒帶 tr 的等徑柱體 ⇒ 跨接臂 0(行為不變)');
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n=== Ⅸ 抽中機率 ← 地形陡度(越陡越高;不可陡上 = 100%)===');
+{
+  // ---- ① 曲線(執行 climb.js 原文;轉折點與 slopeMoveF 同一組,推導不手寫)----
+  ok(near(climbShare(0), CLIMB.SHARE), 'Ⅸ 平地 = 基準 CLIMB.SHARE');
+  ok(near(climbShare(SLOPE.EASE_DEG), CLIMB.SHARE), 'Ⅸ 平緩帶上限仍 = 基準(這種地形走路就上得去)');
+  ok(near(climbShare(SLOPE.BLOCK_DEG), 1), 'Ⅸ 阻擋角 = 100%');
+  ok(climbShare(SLOPE.BLOCK_DEG * 3) === 1, 'Ⅸ 更陡仍夾在 100%(MUST NOT 溢出)');
+  const mid = climbShare((SLOPE.EASE_DEG + SLOPE.BLOCK_DEG) / 2);
+  ok(mid > CLIMB.SHARE && mid < 1, `Ⅸ 中段落在基準與 1 之間(實測 ${(mid * 100).toFixed(1)}%)`);
+  let mono = true;
+  for (let d = 0; d < 60; d += 0.5) if (climbShare(d + 0.5) < climbShare(d) - 1e-12) mono = false;
+  ok(mono, 'Ⅸ 機率 MUST 隨陡度單調不減(「越陡的地形越高」)');
+  ok(near(climbShare(-25), climbShare(25)), 'Ⅸ 取絕對值:同一道坡從上/從下量 MUST 同機率');
+  // 「不可陡上 = 100%」由曲線推導,不是另寫一條 if ⇒ 拿 slopeBlocked 逐度反查
+  let blockedAll1 = true;
+  for (let d = 0; d <= 90; d += 0.25) if (slopeBlocked(d) && climbShare(d) !== 1) blockedAll1 = false;
+  ok(blockedAll1, 'Ⅸ 凡 slopeBlocked(爬不上去)的坡度 MUST 一律 100%(逐度反查,含 BLOCK_DEG 邊界)');
+  ok(!/slopeBlocked/.test(climbSrc.slice(climbSrc.indexOf('export function climbShare'),
+    climbSrc.indexOf('export function facilityEndY'))),
+    'Ⅸ climbShare MUST NOT 另寫一條 slopeBlocked 分支(兩份判定調 BLOCK_F 就分家)');
+
+  // ---- ② 陡度量測 siteSlopeDeg:取樣距離走 SLOPE.PROBE_M 單一縫、取最陡的一個方位 ----
+  ok(/SLOPE\.PROBE_M/.test(climbSrc) && !/const\s+\w*PROBE\w*\s*[:=]\s*[\d.]/.test(climbSrc),
+    'Ⅸ 取樣距離 MUST 取自 SLOPE.PROBE_M(MUST NOT 另手寫一個尺度)');
+  const B = bld(0, 0, 40, 30, 40);
+  ok(near(siteSlopeDeg(B, flat), 0), 'Ⅸ 平地 ⇒ 0°');
+  const ramp = (k) => (x) => 20 + x * k;                    // 沿 +X 的等坡面
+  for (const deg of [10, 20, 35]) {
+    const k = Math.tan(deg * Math.PI / 180);
+    ok(near(siteSlopeDeg(B, ramp(k)), deg, 1e-6), `Ⅸ 等坡面 ${deg}° ⇒ 量得 ${deg}°`);
+  }
+  // 取樣環半徑(與 siteSlopeDeg 同式):地形特徵擺在環外一點點,才量得到
+  const RING = Math.hypot(B.hw2, B.hd2) + CLIMB.OFF;
+  // 只有一個方位陡(其餘平)⇒ 仍 MUST 認出來(取最陡的一段,不是平均)
+  const oneSide = (x, z) => (x > RING && Math.abs(z) < 20 ? 20 + (x - RING) * 1.0 : 20);
+  ok(siteSlopeDeg(B, oneSide) > 40, 'Ⅸ 只有一側是陡壁 ⇒ MUST 取最陡的那一個方位(不得平均掉)');
+  // 崖頂(四周全是下坡):MUST 仍判為陡地形 —— 只認上坡的話這裡會被當成平地
+  const cliffTop = (x, z) => 20 - Math.max(0, Math.hypot(x, z) - RING) * 1.2;
+  ok(siteSlopeDeg(B, cliffTop) > SLOPE.BLOCK_DEG, 'Ⅸ 坐在崖頂(四周下坡)MUST 仍判為不可陡上的地形');
+
+  // ---- ③ 行為直測:同一批結構、同一 seed,只換地形陡度 ⇒ 抽中數量單調上升、陡到底 100% ----
+  const list = [];
+  for (let i = 0; i < 300; i++) list.push(bld((i % 20) * 200 - 2000, Math.floor(i / 20) * 200 - 2000, 24, 18, 30));
+  const share = (k) => planClimbRoutes({
+    blockers: list, heightAt: ramp(k), envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260731),
+  }).filter((q) => !q.link).length / list.length;
+  const flatShare = share(0);
+  const midShare = share(Math.tan(24 * Math.PI / 180));
+  const steepShare = share(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180));
+  ok(flatShare > 0.24 && flatShare < 0.36, `Ⅸ 平地 ≈ 30%(實測 ${(flatShare * 100).toFixed(1)}%)`);
+  ok(midShare > flatShare + 0.15, `Ⅸ 24° 斜面明顯更高(實測 ${(midShare * 100).toFixed(1)}%)`);
+  ok(near(steepShare, 1), `Ⅸ 不可陡上的地形 MUST 全部掛上(實測 ${(steepShare * 100).toFixed(1)}%)`);
+  ok(flatShare < midShare && midShare < steepShare, 'Ⅸ 三檔陡度 MUST 嚴格遞增');
+
+  // ---- ③b 相鄰相接也隨坡度(2026-07-31 使用者追加)----
+  // 隔離法同 Ⅵ⑥:鄰居壓到 MIN_H 以下(不是候選、拿不到自己的地面路線,仍是合法的相接目標)
+  // ⇒ 每對恰好一次擲骰,link/ground 就是那個機率本身。
+  {
+    ok(near(climbShare(0, CLIMB.LINK), CLIMB.LINK), 'Ⅸ 相接:平地 = 基準 CLIMB.LINK');
+    ok(near(climbShare(SLOPE.BLOCK_DEG, CLIMB.LINK), 1), 'Ⅸ 相接:阻擋角 = 100%');
+    ok(climbShare(20, CLIMB.LINK) > climbShare(20), 'Ⅸ 同一坡度下相接機率 MUST 高於地面路線(基準本來就高)');
+    const pairs = [];
+    for (let i = 0; i < 400; i++) {
+      const cx = (i % 20) * 190 - 1900, cz = Math.floor(i / 20) * 190 - 1900;
+      pairs.push(bld(cx, cz, 40, 40, 40));                     // 候選(高)
+      pairs.push(bld(cx + 37, cz, 30, 30, CLIMB.MIN_H - 1));   // 非候選(矮)但仍是合法相接目標
+    }
+    const rate = (k) => {
+      const rs = planClimbRoutes({
+        blockers: pairs, heightAt: ramp(k), envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260728),
+      });
+      const g = rs.filter((r) => !r.link).length;
+      return g ? rs.filter((r) => r.link).length / g : 0;
+    };
+    const flatLink = rate(0);
+    const steepLink = rate(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180));
+    ok(flatLink > CLIMB.LINK - 0.1 && flatLink < CLIMB.LINK + 0.1,
+      `Ⅸ 相接:平地 ≈ CLIMB.LINK(實測 ${(flatLink * 100).toFixed(1)}%)`);
+    ok(near(steepLink, 1), `Ⅸ 相接:不可陡上的地形 MUST 每條地面路線都相接(實測 ${(steepLink * 100).toFixed(1)}%)`);
+    // 反向對照:相接門檻寫死回 CLIMB.LINK ⇒ 陡地形不再 100%
+    const fixedLink = loadCore((s) => s.replace(
+      'if (linkRoll < climbShare(deg, CLIMB.LINK)) {', 'if (linkRoll < CLIMB.LINK) {'));
+    const rs2 = fixedLink.planClimbRoutes({
+      blockers: pairs, heightAt: ramp(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180)),
+      envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260728),
+    });
+    const bad2 = rs2.filter((r) => r.link).length / rs2.filter((r) => !r.link).length;
+    ok(bad2 < CLIMB.LINK + 0.1, 'Ⅸ 反向對照:相接門檻寫死回定值 MUST 讓陡地形掉回七成(證明本條真的驗到了)');
+    // 曲線只有一份:相接 MUST NOT 另寫一條 ramp
+    ok(!/BLOCK_DEG - SLOPE\.EASE_DEG[\s\S]*BLOCK_DEG - SLOPE\.EASE_DEG/.test(climbSrc),
+      'Ⅸ 坡度曲線 MUST 只有一份(相接不得另寫第二條 ramp)');
+  }
+
+  // ---- ④ 反向對照:門檻寫死回 CLIMB.SHARE ⇒ 陡地形不再 100%(證明本節真的驗到了)----
+  const fixed = loadCore((s) => s.replace(
+    'if (pick >= climbShare(deg)) continue;', 'if (pick >= CLIMB.SHARE) continue;'));
+  const bad = fixed.planClimbRoutes({
+    blockers: list, heightAt: ramp(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180)),
+    envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260731),
+  }).filter((q) => !q.link).length / list.length;
+  ok(bad < 0.4, 'Ⅸ 反向對照:門檻寫死回定值 MUST 讓陡地形掉回三成(證明本條真的驗到了)');
+
+  // ---- ⑤ 量測 MUST NOT 消耗亂數(排在三枚抽樣之後也不能擾動序列;§2.3)----
+  let draws = 0;
+  const counting = () => { draws++; return 0.99; };          // 恆不中 ⇒ 只數抽樣枚數
+  planClimbRoutes({ blockers: list, heightAt: ramp(1), envCodeAt: dry, bounds: BOX, rnd: counting });
+  ok(draws === list.length * 3, `Ⅸ 每候選仍固定消耗 3 枚亂數(實測 ${draws} / 期望 ${list.length * 3}）`);
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 攀爬路線稽核:${pass} 通過 / ${fail} 失敗`);

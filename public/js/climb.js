@@ -25,18 +25,28 @@
 //     接起來。那條路線的資料形狀與一般路線**完全相同**(`y0` 換成低者的頂面高、`bx/bz` 換成低頂落腳點)
 //     ⇒ 抓握索引 / 攀爬狀態機 / 提示箭頭一行都不必改。MUST NOT 為它另開第二種路線型別。
 //
+// **攀爬柱 vs 設施幾何是兩件事(2026-07-31 使用者回報「屋頂不平的建築,長梯會過高」)**:
+//   `y0/y1` = **攀爬柱**(權威):頂端恆 = 碰撞柱頂 `b.y + b.h`,也就是 `makeBlockerTopIndex`
+//   認得的站立面。這個值 **MUST NOT** 為了視覺往下修 —— `game.js _collide` 的建物垂直閘是
+//   `myBot >= b.y + b.h − 0.1` 才放行,站立面一低於碰撞柱頂,人站上屋頂就會被 push-out 推下去。
+//   `vy0/vy1` = **設施幾何兩端**(純表現層):碰撞柱是**刻意加高**的(一般建物 +0.5、巨岩 +1.5、
+//   地標取涵蓋尖頂/天線的 `LANDMARK_COL.h`),頂面不平的結構因此讓長梯/抓點/繩高出可見屋頂一截。
+//   生成期量到實體頂面就寫進 `b.ty`,設施改吃 `facilityEndY()` 貼齊實體面;沒量到就退回攀爬柱端點。
+//   落差恆夾在 `GRAB_UP` 內(頂端上緣容差)⇒ 設施頂端與站立面之間永遠仍在同一段抓握帶裡。
+//
 // 純表現層 + 客戶端移動:伺服器不參與(位置本就客戶端權威),故 `npm run bal` / e2e 天然不受影響。
 
 import * as THREE from 'three';
 import { markShared, envMat } from './toon.js';
-import { SOLDIER_H, HERO_SIZE } from './data.js';
+import { SOLDIER_H, HERO_SIZE, SLOPE, slopeDeg } from './data.js';
 
 /** 最大機體碰撞半徑(公尺):機種身高上界 × game.js SELF_F.groundR —— OFF 的下界由它推導,MUST NOT 手寫。
  *  也是「設施離結構表面的縫」上限(biomes.js 巨岩正面實測 ATT_GAP):縫 ≤ 機體半徑 ⇒ 機體仍貼著設施 */
 export const MAX_BODY_R = SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 0.317;
 
 export const CLIMB = {
-  SHARE: 0.3,        // 抽中比例(使用者需求「約 3 成」)
+  SHARE: 0.3,        // **平緩帶**的抽中比例(使用者需求「約 3 成」);越陡越高,見 climbShare()
+  SLOPE_N: 8,        // 地形陡度取樣方位數(繞腳印一圈;取樣距離走 SLOPE.PROBE_M 單一縫)
   MIN_H: 9,          // 低於此不掛路線:蓄力跳頂點就上得去,擺個梯子只是雜訊
   MAX_H: 120,        // 高於此不掛路線:單一出入口的垂直通道爬太久 = 站著給人打(神木可達 220m)
   OFF: MAX_BODY_R + 0.4,   // 攀爬軸離結構表面(MUST > MAX_BODY_R,否則爬到一半被 _collide 推開)
@@ -51,7 +61,7 @@ export const CLIMB = {
   // ---- 相鄰結構相接(2026-07-28 使用者需求)----
   // 已經掛了路線的結構,若「相鄰」還有另一座建築/巨石/神木,七成機率在相鄰處再架一條把兩者的
   // **頂面**接起來 —— 上得去之後不必回地面就能換棟推進(高處連成一片)。
-  LINK: 0.7,         // 相接機率
+  LINK: 0.7,         // **平緩帶**的相接機率;越陡越高,與地面路線共用 climbShare()
   LINK_GAP: 3.0,     // 「相鄰」= 兩者表面最短距離 ≤ 此值(> 這個距離,從低頂伸手就搆不到高牆上的梯子)
   LINK_DROP: 5,      // 兩頂高差門檻:低於此不是通道而是一階台階,不值得架
   LINK_STEP: 1.6,    // 低頂落腳點自鄰體表面往內踏進(比 TOP_STEP 短 ⇒ 抓握距離撐得住,見 GRAB_R 夾制)
@@ -147,13 +157,71 @@ export function attachFaces(b, phase = 0) {
   }
   // 逐方位自帶 gap/top(生成期實測):gap = 碰撞面到岩面的內縮量、top = 頂端處的剩餘縫
   if (b.attA) return b.attA.map((f) => ({ ...surfacePoint(b, f.a), gap: f.gap, arm: f.top }));
-  return Array.from({ length: CLIMB.AZ }, (_, k) => surfacePoint(b, phase + k / CLIMB.AZ * Math.PI * 2));
+  // 圓柱(神木):幹身**向上收窄**,碰撞半徑吃的是基部 ⇒ 頂端錨件離幹身還差 `r − tr`
+  // (`tr` = 生成期由 trunkR() 同一縫算出的頂端半徑;沒帶就是等徑柱體,arm = 0)。
+  // 不吃這一段的話,繩錨會吊在幹外好幾公尺的空中 —— 與「長梯高出屋頂」是同一族病灶。
+  const arm = b.tr != null ? Math.max(0, b.r - b.tr) : 0;
+  return Array.from({ length: CLIMB.AZ },
+    (_, k) => ({ ...surfacePoint(b, phase + k / CLIMB.AZ * Math.PI * 2), arm }));
 }
 
 /** 候選結構?= 頂面可站立的大型障礙(與 makeBlockerTopIndex 同一組旗標)且高度落在窗口內 */
 export function climbCandidate(b) {
   if (!b || (!b.bld && !b.std)) return false;
   return b.h >= CLIMB.MIN_H && b.h <= CLIMB.MAX_H;
+}
+
+/**
+ * 結構所在地的**地形陡度**(度,非負;純量測,不消耗亂數)。繞結構腳印外緣一圈取
+ * `CLIMB.SLOPE_N` 個方位,每個方位量「腳印外緣 → 再往外 `SLOPE.PROBE_M`」那一段的坡度,
+ * 回傳最陡的一段。
+ *
+ * 取**絕對值**是刻意的:同一道坡從下面上不去、從上面下不來,兩側都是「這裡沒有梯子過不去」;
+ * 只認上坡的話,坐在崖頂的結構會被判成平地(它四周全是下坡)。取樣距離吃 `SLOPE.PROBE_M`
+ * 單一縫(移動速度倍率的前瞻距離)—— MUST NOT 另手寫一個取樣尺度。
+ */
+export function siteSlopeDeg(b, heightAt) {
+  const rr = (b.hw2 != null ? Math.hypot(b.hw2, b.hd2) : b.r) + CLIMB.OFF;
+  let worst = 0;
+  for (let k = 0; k < CLIMB.SLOPE_N; k++) {
+    const a = k / CLIMB.SLOPE_N * Math.PI * 2;
+    const dx = Math.cos(a), dz = Math.sin(a);
+    const h0 = heightAt(b.x + dx * rr, b.z + dz * rr);
+    const h1 = heightAt(b.x + dx * (rr + SLOPE.PROBE_M), b.z + dz * (rr + SLOPE.PROBE_M));
+    const d = Math.abs(slopeDeg(h1 - h0, SLOPE.PROBE_M));
+    if (d > worst) worst = d;
+  }
+  return worst;
+}
+
+/**
+ * 抽中機率 ← 地形陡度(2026-07-31 使用者需求:「越陡的地形機率越高,在不可陡上的區域則是 100%」)。
+ * 曲線與 `slopeMoveF` **同一組轉折點**(MUST NOT 手寫第二套角度):
+ *   平緩帶(≤ `SLOPE.EASE_DEG`)= 基準 `base` —— 這種地形走路就上得去,梯子只是雜訊;
+ *   之後線性升到阻擋角 `SLOPE.BLOCK_DEG` = 1(100%)。
+ * 「不可陡上」= `slopeBlocked(deg)`(> BLOCK_DEG)⇒ 落在夾制段 ⇒ 恆 1,**由曲線推導**而非
+ * 另寫一條 if:兩條路各寫一次,調 BLOCK_F 就會分家(稽核 Ⅸ 直接以 slopeBlocked 逐度反查這條)。
+ *
+ * `base` 就是「平地時的那個機率」:地面路線吃 `CLIMB.SHARE`、**相鄰相接**吃 `CLIMB.LINK`
+ * (2026-07-31 使用者追加:相鄰結構之間的設施也隨坡度變化)。兩者共用這一支 ⇒ 曲線只有一份,
+ * MUST NOT 為相接另寫一條 ramp。
+ */
+export function climbShare(deg, base = CLIMB.SHARE) {
+  const d = Math.abs(deg || 0);
+  const k = Math.min(1, Math.max(0, d - SLOPE.EASE_DEG) / (SLOPE.BLOCK_DEG - SLOPE.EASE_DEG));
+  return base + (1 - base) * k;
+}
+
+/**
+ * 設施幾何的端點(貼齊**可見實體面**;見檔頭「攀爬柱 vs 設施幾何」)。
+ * `yAuth` = 攀爬柱那一端(權威站立面)、`measured` = 生成期實測的結構實體頂面(`b.ty`;缺 = null)。
+ * 只准把設施往結構那一側收(measured ≥ yAuth 一律不理:設施 MUST NOT 長得比攀爬柱高),
+ * 且落差夾在 `GRAB_UP` 內 —— 那是「自頂緣走出去仍抓得到」的容差,設施端點與站立面的落差
+ * 超出它就不再是同一段路線了(碰撞柱高過實體太多是結構自己的事,寧可留一小截也不要斷開)。
+ */
+export function facilityEndY(yAuth, measured) {
+  if (measured == null || !(measured < yAuth)) return yAuth;
+  return Math.max(measured, yAuth - CLIMB.GRAB_UP);
 }
 
 // ---------------------------------------------------------------------------
@@ -168,8 +236,9 @@ export function climbCandidate(b) {
  * @param envCodeAt (x,z) → 0 乾 / 1 水 / 2 沼(地面端 MUST 是乾地)
  * @param bounds    { minX, maxX, minZ, maxZ }
  * @param rnd       mulberry32(確定性;每個候選固定消耗 3 枚)
- * @returns 路線陣列 [{ b, kind, x, z, nx, nz, fx, fz, y0, y1, bx, bz, tx, tz }];
- *          相鄰相接的那一條另帶 `link`(接到的低者)與 `pair`(去重鍵)
+ * @returns 路線陣列 [{ b, kind, x, z, nx, nz, fx, fz, y0, y1, vy0, vy1, bx, bz, tx, tz }];
+ *          相鄰相接的那一條另帶 `link`(接到的低者)與 `pair`(去重鍵)。
+ *          `y0/y1` = 攀爬柱(權威站立面)、`vy0/vy1` = 設施幾何兩端(貼齊可見實體面),見檔頭。
  */
 export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) {
   const list = blockers || [];
@@ -231,7 +300,11 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
     const phase = rnd() * Math.PI * 2;
     const linkRoll = rnd();
     if (!climbCandidate(b)) continue;
-    if (pick >= CLIMB.SHARE) continue;
+    // 抽中門檻隨**該地的地形陡度**放寬:平緩帶 = 基準機率,阻擋角(爬不上去)= 100%。
+    // 量測純函式不消耗亂數 ⇒ 排在三枚抽樣之後仍不影響序列(§2.3);
+    // 地面路線與**相鄰相接**共用同一份量測(同一個地點只量一次,也保證兩道閘同調)。
+    const deg = siteSlopeDeg(b, heightAt);
+    if (pick >= climbShare(deg)) continue;
 
     const baseY = heightAt(b.x, b.z);
     const y1 = b.y + b.h;                     // = makeBlockerTopIndex 的頂面高(唯一縫)
@@ -261,13 +334,15 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
       arm: best.arm || 0,                     // 頂端處還差多少才碰到結構(頂端錨件的跨接臂長)
       y0: best.gy,                            // 地面端
       y1,                                     // 頂端(= surfaceAt 認得的站立面)
+      vy0: best.gy,                           // 設施底端 = 地面(地面路線兩者同值)
+      vy1: facilityEndY(y1, b.ty),            // 設施頂端:貼齊實測的實體屋頂(碰撞柱刻意高一截)
       bx: best.x, bz: best.z,                 // 下端落腳點(地面路線 = 攀爬軸本身)
       tx: best.fx - best.nx * step,           // 登頂落腳點(結構內側)
       tz: best.fz - best.nz * step,
     });
 
-    // ---- 相鄰結構相接(七成機率)----
-    if (linkRoll < CLIMB.LINK) {
+    // ---- 相鄰結構相接(平地七成,陡地形同樣往上調到 100%;與地面路線同一支曲線)----
+    if (linkRoll < climbShare(deg, CLIMB.LINK)) {
       const link = planLink(b, { nearby, clearance, surfDist, bounds, linked });
       if (link) { routes.push(link); linked.add(link.pair); }
     }
@@ -331,6 +406,10 @@ function planLink(b, { nearby, clearance, surfDist, bounds, linked }) {
     gap: best.sp.gap || 0, arm: best.sp.arm || 0,
     y0: best.y0,                              // 下端 = 低者的頂面(= blockerTopAt 的回傳值)
     y1: best.y1,                              // 上端 = 高者的頂面
+    // 設施兩端各自貼齊該座結構的**實體**面(兩端的碰撞柱都比實體高一截 ⇒ 兩端都要收):
+    // 上端收到高者的屋頂、下端**往下延伸**到低者的屋頂(不然梯腳浮在低頂上方半公尺)
+    vy0: facilityEndY(best.y0, best.L.ty),
+    vy1: facilityEndY(best.y1, best.H.ty),
     bx: best.bx, bz: best.bz,                 // 下端落腳點(低者屋頂內側)
     tx: best.sp.fx - best.sp.nx * step,       // 上端落腳點(高者屋頂內側)
     tz: best.sp.fz - best.sp.nz * step,
@@ -391,9 +470,13 @@ const MAT = {
 };
 
 /**
- * 建攀爬設施幾何。每條路線沿「攀爬軸」自 y0 立到 y1,朝向由該路線的向外法線 `nx/nz` 推 ——
+ * 建攀爬設施幾何。每條路線沿「攀爬軸」自 vy0 立到 vy1,朝向由該路線的向外法線 `nx/nz` 推 ——
  * A26:擺位方向與旋轉方向 MUST 同調,設施一律 `ry = atan2(nx, nz)`(local +z 指向法線外側),
  * **MUST NOT** 在此另算一次中央差分法線。回傳 THREE.Group(空路線回 null)。
+ *
+ * 垂直範圍吃的是 **`vy0/vy1`(設施端點,貼齊可見實體面)而非 `y0/y1`(攀爬柱)** —— 碰撞柱
+ * 刻意高過實體(見檔頭),照 y1 畫就是使用者回報的「屋頂不平的建築,長梯會過高」。
+ * 兩者的分工 MUST NOT 反過來:攀爬狀態機 / 抓握索引一律吃 y0/y1。
  */
 export function buildClimbMeshes(routes) {
   const list = routes || [];
@@ -411,8 +494,9 @@ export function buildClimbMeshes(routes) {
 
   for (const r of list) {
     const ry = Math.atan2(r.nx, r.nz);          // local +z = 向外法線(擺位與旋轉同調)
-    const H = Math.max(1, r.y1 - r.y0);
-    const midY = (r.y0 + r.y1) / 2;
+    const y0 = r.vy0 ?? r.y0, y1 = r.vy1 ?? r.y1;   // 設施端點(貼齊實體面;見本函式檔頭)
+    const H = Math.max(1, y1 - y0);
+    const midY = (y0 + y1) / 2;
     // 設施貼在結構表面外緣一點點(軸在表面外 OFF,設施本體貼牆 → 玩家爬在設施「外側」)。
     // `gap` = 碰撞面到**可見實體面**的內縮量(巨岩:碰撞圓比岩面大;建物 = 0):設施吃它才會
     // 真的靠在岩面上而不是浮在碰撞圈上;`gap ≤ 最大機體碰撞半徑`(生成期驗過)⇒ 機體仍貼著設施。
@@ -432,23 +516,23 @@ export function buildClimbMeshes(routes) {
         put(rails, sx + -r.nz * s * 0.42, midY, sz + r.nx * s * 0.42, ry, 0.12, H, 0.12);
       }
       const n = Math.min(320, Math.floor(H / CLIMB.RUNG));
-      for (let i = 1; i <= n; i++) put(rungs, sx, r.y0 + i * CLIMB.RUNG, sz, ry, 0.92, 0.09, 0.09);
+      for (let i = 1; i <= n; i++) put(rungs, sx, y0 + i * CLIMB.RUNG, sz, ry, 0.92, 0.09, 0.09);
       const A = anch(0.2, 0.32, 1.1, 1.1);      // 頂端護框(跨接臂把框接回結構)
-      put(anchors, A.cx, r.y1 + 0.55, A.cz, ry, A.w, A.h, A.L);
+      put(anchors, A.cx, y1 + 0.55, A.cz, ry, A.w, A.h, A.L);
     } else if (r.kind === 'holds') {
       const n = Math.min(200, Math.floor(H / CLIMB.HOLD));
       for (let i = 1; i <= n; i++) {            // 左右交錯的抓點(攀岩路線的手點/腳點)
         const s = i % 2 ? 1 : -1;
-        put(holds, sx + -r.nz * s * 0.34, r.y0 + i * CLIMB.HOLD, sz + r.nx * s * 0.34, ry, 0.5, 0.34, 0.5);
+        put(holds, sx + -r.nz * s * 0.34, y0 + i * CLIMB.HOLD, sz + r.nx * s * 0.34, ry, 0.5, 0.34, 0.5);
       }
       const A = anch(0.2, 0.15, 0.8, 0.5);      // 頂端確保站
-      put(anchors, A.cx, r.y1 + 0.45, A.cz, ry, A.w, A.h, A.L);
+      put(anchors, A.cx, y1 + 0.45, A.cz, ry, A.w, A.h, A.L);
     } else {
       put(ropes, sx, midY, sz, ry, 0.16, H, 0.16);                                          // 主繩
       const n = Math.min(120, Math.floor(H / CLIMB.KNOT));
-      for (let i = 1; i <= n; i++) put(anchors, sx, r.y0 + i * CLIMB.KNOT, sz, ry, 0.3, 0.16, 0.3);  // 繩結
+      for (let i = 1; i <= n; i++) put(anchors, sx, y0 + i * CLIMB.KNOT, sz, ry, 0.3, 0.16, 0.3);  // 繩結
       const A = anch(0.2, 0.8, 0.7, 0.28);      // 頂端繩錨(懸臂樑:自幹身伸出來吊住主繩)
-      put(anchors, A.cx, r.y1 + 0.4, A.cz, ry, A.w, A.h, A.L);
+      put(anchors, A.cx, y1 + 0.4, A.cz, ry, A.w, A.h, A.L);
     }
   }
 
@@ -487,6 +571,8 @@ function buildClimbArrows(g, list) {
   for (const r of list) {
     const tx = -r.nz, tz = r.nx;                // 切向(與向外法線正交的水平向量)
     const ax = r.x + r.nx * A.OUT, az = r.z + r.nz * A.OUT;
+    // 起算高刻意吃 `y0/y1`(攀爬柱)而非設施端點:箭頭標的是「人站在哪裡上/下」——
+    // 底端 = 落地點、頂端 = 站立面,兩者都是攀爬柱的端點(設施端點貼的是可見實體面)
     for (const [key, dir, y0] of [['up', 1, r.y0 + A.FOOT], ['down', -1, r.y1 + A.HEAD]]) {
       for (let i = 0; i < A.N; i++) {
         for (const s of [-1, 1]) {              // chevron 的左右兩根桿
