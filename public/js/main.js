@@ -35,9 +35,9 @@ import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel } from 
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
-  isTouchUI, openTouchTest, closeTouchTest,
+  renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest,
 } from './mobile.js';
-import { setCtrlLock, onCtrlChange } from './ctrlmode.js';
+import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange } from './ctrlmode.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -114,16 +114,16 @@ document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.btn, button') && !e.target.closest('#touchLayer, [data-act]')) app.audio?.ui('click');
 }, true);
 
-// 還沒進房間的畫面(操作方式只准在這些畫面變更 —— 使用者定案:加入房間之前就要先選)
+// 還沒進戰區的畫面(這些畫面上沒有房主定案 ⇒ 操作方式退回「我的預設」)
 const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
   if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
-  // 操作方式鎖定:一進房間(含載入/戰鬥)就鎖,回大廳解鎖。**規則住 ctrlmode.js**,
-  // 這裡只回報「現在在哪個畫面」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
-  setCtrlLock(!LOBBY_SCREENS.has(screen));
+  // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
+  // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
+  if (LOBBY_SCREENS.has(screen)) setRoomCtrlMode(null);
   // 主視覺:大廳/選圖/開房一律回到「藍黃左右對抗」;房間交給 renderRoom(依選角收束)、戰鬥交給 enterGame
   if (screen === 'connect' || screen === 'mapbuilder' || screen === 'openroom' || screen === 'story') document.body.dataset.side = 'SPEC';
 }
@@ -241,6 +241,7 @@ function renderRooms(list) {
         <div class="room-tags">${sideTags}
           <span class="tag dim">${n}v${n}</span>
           <span class="tag dim">${r.phase === 'room' ? '配對中' : r.phase === 'game' ? '交戰中' : '準備中'}</span>
+          ${r.ctrl && r.ctrl !== 'any' ? `<span class="tag dim">${esc(CTRL_MODES[r.ctrl].icon)} ${esc(CTRL_MODES[r.ctrl].label)}</span>` : ''}
           ${r.place ? `<span class="tag dim">📍 ${esc(r.place)}</span>` : ''}
           ${r.env ? `<span class="tag dim">${esc(envLabel(r.env))}</span>` : ''}
         </div>
@@ -644,7 +645,7 @@ function startStoryChapter(i) {
   $('storyDeploy').textContent = `⚙ 部署中:${sc.title}(${v.name})…`;
   app.net?.send({
     t: 'createRoom', name: myName(), roomName: sc.title, isPublic: false,
-    teamSize: ch.teamSize, botDiff: STORY_DIFF[i] || 'medium', battleConfig: cfg,
+    teamSize: ch.teamSize, botDiff: STORY_DIFF[i] || 'medium', ctrl: ctrlPref(), battleConfig: cfg,
   });
 }
 
@@ -732,6 +733,8 @@ $('createRoomBtn')?.addEventListener('click', () => {
     isPublic: $('createPublic').checked,
     teamSize: app.teamSize,
     botDiff: loadPrefs().botDiff || DEFAULT_BOT_DIFF,
+    // 操作方式:開房時先帶自己的預設,進戰區後房主仍可隨時改(整房一致,見 renderRoomCtrl)
+    ctrl: ctrlPref(),
     battleConfig: cfg,
   });
 });
@@ -758,6 +761,7 @@ function renderRoom() {
   renderPreloadStatus();   // 地圖預建進度(獨立元素,見 startPrebuild)
 
   renderBotDiff(lb);
+  renderRoomCtrl();
 
   const me = lb.clients.find((c) => c.id === app.youId);
   app.mySide = me?.side || null;
@@ -867,6 +871,17 @@ function renderBotDiff(lb) {
   hint.className = 'diff-hint dim';
   hint.textContent = ' ・ 新手:只用輕武器 ・ 低:不用招式 ・ 越低瞄準越差';
   row.appendChild(hint);
+}
+
+// 操作方式(整房一個;房主可改,其他人唯讀顯示 —— 2026-07-31 使用者定案「由房主選擇」)。
+// 選項 DOM 走 mobile.js 的共用渲染,MUST NOT 在這裡另畫一組按鈕;按下只做「上行 setRoomConfig」,
+// 生效值一律等伺服器廣播回來(onSync → setRoomCtrlMode),客戶端 MUST NOT 先斬後奏。
+function renderRoomCtrl() {
+  renderCtrlModeRow($('roomCtrlMount'), {
+    onPick: (m) => app.net?.send({ t: 'setRoomConfig', ctrl: m }),
+    onNotice: toast,
+  });
+  syncCtrlModeRow(app.isHost);
 }
 
 // ================= 選角(入座後出現;不選 = 開戰隨機)=================
@@ -2352,6 +2367,9 @@ function onSync(m) {
   sessionStorage.setItem('svs_token', m.token);
   app.lobby = m.lobby;
   const phase = m.lobby.phase;
+  // 操作方式 = 房主定案、整房一致(伺服器廣播的那一份就是唯一真相)。
+  // 這是 `_room` 的**唯一寫入路徑**;離開戰區的解除住 show()(見 LOBBY_SCREENS)。
+  setRoomCtrlMode(m.lobby.config?.ctrl || null);
 
   if (phase === 'room') {
     if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; }
@@ -2398,9 +2416,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 
-  // 操作方式:**加入戰區之前**就要選定 ⇒ 直接長在大廳面板上(不是藏在設定疊層裡)。
-  // 與設定頁共用同一份渲染(mobile.js renderCtrlSettings),MUST NOT 在 index.html 另寫一組選項。
-  renderCtrlSettings($('ctrlModeMount'), { onNotice: toast });
+  // 操作方式已改為**房主在戰區畫面決定**(整房一致)⇒ 大廳面板不再有這一區;
+  // 個人的「目前操控」選擇併入設定頁(見上面三個 renderCtrlSettings 掛載點)。
 
   renderLinkModes();
   connectNet();

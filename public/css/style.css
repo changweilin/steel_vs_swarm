@@ -2047,11 +2047,12 @@ body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
   background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
 }
 .tset-segb.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
-/* 停用 = 「這一項現在不能改」(操作方式進房後鎖定 / 限定模式下不可切換目前操控):
+/* 停用 = 「這一項現在不能改」(操作方式非房主唯讀 / 限定模式下不可切換目前操控):
    MUST 仍看得見目前選了哪一個(.on 的塗色照舊,只降透明度),否則玩家會以為設定被清掉了。 */
 .tset-segb:disabled { cursor: not-allowed; opacity: 0.45; }
-/* 大廳的操作方式區塊:與其他大廳列同寬,別把 .set-list 的 min-width 撐出面板 */
+/* 戰區畫面的操作方式區塊:與其他房間列同寬,別把 .set-list 的 min-width 撐出面板 */
 .ctrl-mode-box { min-width: 0; width: 100%; }
+.masthead .ctrl-mode-box { margin: 6px auto 0; max-width: 640px; text-align: left; }
 
 /* ---------- 疊層(選單/商店/陣亡/結束)在手機上的可讀性 ---------- */
 body.touch-ui .overlay-box {

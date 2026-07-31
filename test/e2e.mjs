@@ -1550,6 +1550,31 @@ await guest.wait((c) => c.msgs.find((m) => m.t === 'error' && /已滿/.test(m.ms
 assert(true, '陣營滿員(1 席)再搶被拒絕');
 guest.send({ t: 'pickSide', side: 'STEEL' });
 
+// 2026-07-31 使用者定案:操作方式是**房間設定**(整房一致),不再是每個人自己的偏好。
+// 客戶端那半(生效值只由廣播寫入、離開戰區退回自己的預設)由 tools/audit_ctrl_mode.mjs 直測。
+log('— 操作方式由房主選擇 —');
+assert(host.sync.lobby.config.ctrl === 'any', '開房未帶 ctrl ⇒ 預設「不限定」');
+host.send({ t: 'setRoomConfig', ctrl: 'pad' });
+await host.wait((c) => c.sync.lobby.config.ctrl === 'pad');
+await guest.wait((c) => c.sync.lobby.config.ctrl === 'pad');
+assert(true, '房主改操作方式 → 廣播全房(隊友的版型跟著換)');
+guest.send({ t: 'setRoomConfig', ctrl: 'kbm' });          // 非房主:靜默忽略
+host.send({ t: 'setRoomConfig', ctrl: '亂填的值' });        // 房主但非法值:靜默忽略
+host.send({ t: 'setRoomConfig', botDiff: 'high' });        // 之後這一筆的廣播 = 前兩筆的觀測點
+await guest.wait((c) => c.sync.lobby.config.botDiff === 'high');
+assert(guest.sync.lobby.config.ctrl === 'pad', '非房主改不動操作方式(由房主選擇)');
+assert(host.sync.lobby.config.ctrl === 'pad', '非法值靜默忽略,MUST NOT 把整房設成壞值');
+{
+  const l2 = await client('lurker2');
+  l2.send({ t: 'listRooms' });
+  const rooms2 = await l2.wait((c) => c.msgs.find((m) => m.t === 'rooms'));
+  assert(rooms2.rooms.find((r) => r.pin === pin)?.ctrl === 'pad',
+    '戰區列表帶出操作方式(手機玩家加入前就看得到限定與否)');
+  l2.ws.close();
+}
+host.send({ t: 'setRoomConfig', ctrl: 'any' });            // 還原,免影響後續段落的預設語意
+await host.wait((c) => c.sync.lobby.config.ctrl === 'any');
+
 log('— 選角(角色綁陣營;不選 = 開戰隨機)—');
 host.send({ t: 'pickChar', ch: 't01' });   // 蜂群玩家選鋼鐵角色 → 拒絕
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /陣營不符/.test(m.msg)));

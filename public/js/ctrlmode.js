@@ -8,29 +8,34 @@
 //   ⌨ kbm 限定滑鼠鍵盤    :鎖死鍵鼠,虛擬搖桿不出現。
 //   🕹 pad 限定搖桿        :鎖死虛擬搖桿(配置照實體手把),桌機也照樣長出搖桿。
 //
-// ── 兩層狀態,別搞混 ────────────────────────────────────────────
-//   `mode`(限定與否)= 玩家在**加入房間之前**選的那一個,`ctrlLocked()` 為真時 MUST NOT 再變更。
-//   `scheme`(目前操控 kbm/pad)= 真正生效的那一套。限定時恆等於 mode;不限定時
-//   預設 = 裝置判定 `deviceScheme()`,玩家改過就記住(這是「不限定 ⇒ 遊戲中可變更」的落點)。
-//   ⇒ 「遊戲中不可變更」不是另寫一道遊戲內閘門,而是 `setCtrlScheme` 對非 any 一律拒絕:
-//      鎖的是**限定模式本身**,不是某個畫面。MUST NOT 在 UI 端另判一次(兩份一定會漂)。
+// ── 三層狀態,別搞混(2026-07-31 使用者定案「操作方式應該由房主選擇」)──────
+//   `pref`(我的預設)  = 自己開房時整房沿用的那一個;記在 localStorage,房主在戰區畫面
+//                        改選時一併更新(下次開房沿用)。**它不是生效值**。
+//   `room`(戰區定案)  = **房主選定、伺服器廣播、整房一致**;在戰區內時蓋過 pref。
+//                        null = 現在不在任何戰區(大廳)⇒ 生效值退回 pref。
+//   `scheme`(目前操控)= 真正生效的那一套(kbm/pad),選擇**併入設定頁**。限定時恆等於
+//                        生效模式;不限定時預設 = 裝置判定 `deviceScheme()`,玩家改過就記住。
+//   ⇒ 生效模式 `ctrlMode()` = `room ?? pref`,消費端(mobile/game/main)一律只問這一支。
+//   ⇒ 「遊戲中不可變更」不是另寫一道遊戲內閘門,而是 `setCtrlScheme` 對非 any 一律拒絕;
+//      「其他人不能改整房的操作方式」也不是 UI 端判一次,而是根本沒有第二條寫入 `_room` 的路
+//      —— 唯一入口 `setRoomCtrlMode()` 吃的是伺服器廣播值(房主的選擇經 `setRoomConfig` 上行)。
 //
-// 解析順序(mode):網址參數 `?ctrl=` →(相容)`?touch=` → localStorage 記憶 →(相容)舊鍵 → any。
+// 解析順序(pref):網址參數 `?ctrl=` →(相容)`?touch=` → localStorage 記憶 →(相容)舊鍵 → any。
 // 本檔 MUST NOT import 任何 three.js / DOM 以外的東西:離線稽核 `tools/audit_ctrl_mode.mjs`
 // 直接 import 真品做行為直測(比照 netmode.js),多一個 import 就跑不起來。
 
 export const CTRL_MODES = {
   any: {
     key: 'any', icon: '◈', label: '不限定',
-    hint: '目前操控依裝置判定,戰鬥中也能隨時切換鍵鼠 ⇄ 搖桿。',
+    hint: '全房各自依裝置判定,戰鬥中也能隨時在設定頁切換鍵鼠 ⇄ 搖桿。',
   },
   kbm: {
     key: 'kbm', icon: '⌨', label: '限定滑鼠鍵盤',
-    hint: '鎖死鍵盤滑鼠,虛擬搖桿不會出現。加入房間後不可變更。',
+    hint: '全房鎖死鍵盤滑鼠,虛擬搖桿不會出現。',
   },
   pad: {
     key: 'pad', icon: '🕹', label: '限定搖桿',
-    hint: '鎖死搖桿或虛擬搖桿,桌機也會長出虛擬搖桿。加入房間後不可變更。',
+    hint: '全房鎖死搖桿或虛擬搖桿,桌機也會長出虛擬搖桿。',
   },
 };
 export const CTRL_MODE_KEYS = ['any', 'kbm', 'pad'];
@@ -94,34 +99,60 @@ function urlMode() {
   return null;
 }
 
-let _mode = null;      // 限定與否(any/kbm/pad);null = 尚未定案
+let _pref = null;      // 我的預設操作方式(any/kbm/pad);null = 尚未定案
 let _pick = null;      // 不限定時玩家挑過的那一套(kbm/pad);null = 還沒挑過 ⇒ 用裝置判定
-let _locked = false;   // 已加入房間 ⇒ mode MUST NOT 再變更
+let _room = null;      // 戰區定案(房主選定、伺服器廣播);null = 不在戰區
 const _subs = new Set();
 
-/** 目前的限定模式(首次呼叫時依解析順序定案並寫回記憶)*/
-export function ctrlMode() {
-  if (_mode) return _mode;
+/** 我的預設操作方式:自己開房時整房沿用(首次呼叫時依解析順序定案並寫回記憶)*/
+export function ctrlPref() {
+  if (_pref) return _pref;
   const u = urlMode();
-  if (u) { _mode = u; ls((s) => s.setItem(MODE_KEY, u)); return _mode; }
+  if (u) { _pref = u; ls((s) => s.setItem(MODE_KEY, u)); return _pref; }
   const saved = ls((s) => s.getItem(MODE_KEY));
-  if (CTRL_MODES[saved]) { _mode = saved; return _mode; }
+  if (CTRL_MODES[saved]) { _pref = saved; return _pref; }
   // 舊版「觸控版 強制開/強制關」遷移:一次性換算成限定模式(讀不到就是不限定)
   const legacy = ls((s) => s.getItem(LEGACY_KEY));
-  _mode = legacy === '1' ? 'pad' : legacy === '0' ? 'kbm' : DEFAULT_CTRL_MODE;
-  return _mode;
+  _pref = legacy === '1' ? 'pad' : legacy === '0' ? 'kbm' : DEFAULT_CTRL_MODE;
+  return _pref;
 }
 
 /**
- * 變更限定模式。**加入房間後一律拒絕**(使用者定案:操作方式在加入房間之前就要先選擇)。
- * 回傳是否真的變更 —— 呼叫端據此把 UI 扳回去,MUST NOT 自己再判一次鎖定狀態。
+ * 記住「我的預設操作方式」(房主在戰區畫面改選時一併呼叫 ⇒ 下次開房沿用)。
+ * 這 **不是** 整房生效值:在戰區內時生效的是房主定案 `_room`,所以本函式不需要鎖 ——
+ * 房主的選擇要真的生效,一律得經伺服器 `setRoomConfig` 廣播回來(單一寫入路徑)。
  */
-export function setCtrlMode(m) {
-  if (!CTRL_MODES[m] || _locked) return false;
-  if (ctrlMode() === m) return true;
-  _mode = m;
+export function setCtrlPref(m) {
+  if (!CTRL_MODES[m]) return false;
+  if (ctrlPref() === m) return true;
+  const before = ctrlMode();
+  _pref = m;
   ls((s) => s.setItem(MODE_KEY, m));
-  _emit();
+  if (ctrlMode() !== before) _emit();   // 在戰區內時房主定案蓋過預設 ⇒ 生效值沒變就不驚動消費端
+  return true;
+}
+
+/**
+ * **生效的操作方式**(消費端只准問這一支):在戰區內 = 房主定案,大廳 = 我的預設。
+ * 兩層合一只有這一處,MUST NOT 在別處自己寫 `room || pref`(第二份合流 = 兩邊會漂)。
+ */
+export function ctrlMode() { return _room || ctrlPref(); }
+
+/** 戰區定案(房主選的那一個);null = 現在不在任何戰區 */
+export function roomCtrlMode() { return _room; }
+
+/**
+ * 套用戰區定案。**唯一寫入路徑 = 伺服器廣播**(`sync` 的 `lobby.config.ctrl`),
+ * 離開戰區回大廳時以 `null` 解除。房主自己的選擇也 MUST 繞這一圈回來 ——
+ * 客戶端先斬後奏會讓房主看到的版型與其他人不同步(且違反「伺服器唯一真相」)。
+ */
+export function setRoomCtrlMode(m) {
+  const next = m == null ? null : (CTRL_MODES[m] ? m : null);
+  if (_room === next) return false;
+  const before = ctrlMode(), wasLocked = _room !== null;
+  _room = next;
+  // 生效模式或「還能不能自己改」任一項變了都要發 —— UI 的停用態與提示吃的是 ctrlLocked()
+  if (ctrlMode() !== before || wasLocked !== (_room !== null)) _emit();
   return true;
 }
 
@@ -137,8 +168,8 @@ export function ctrlScheme() {
 }
 
 /**
- * 切換目前操控(戰鬥中也可以)。**只有「不限定」才受理** —— 這就是
- * 「遊戲中不可變更(除非選不限定)」的唯一落點。回傳是否真的變更。
+ * 切換目前操控(戰鬥中也可以,選擇併入設定頁)。**只有「不限定」才受理** ——
+ * 這就是「遊戲中不可變更(除非戰區選不限定)」的唯一落點。回傳是否真的變更。
  */
 export function setCtrlScheme(s) {
   if (!CTRL_SCHEMES[s] || ctrlMode() !== 'any') return false;
@@ -152,18 +183,11 @@ export function setCtrlScheme(s) {
 /** 目前是不是虛擬搖桿版(mobile.js `isTouchUI()` 就是轉呼這一支)*/
 export function usePad() { return ctrlScheme() === 'pad'; }
 
-/** 現在還能不能改限定模式(= 尚未加入房間)*/
-export function ctrlLocked() { return _locked; }
-
 /**
- * 進/離房間時由 main.js `show()` 呼叫:進了房間(含載入/戰鬥/結算)就鎖上,回大廳解鎖。
- * 鎖定只影響**限定模式**;不限定時的「目前操控」仍可隨時切換(見 setCtrlScheme)。
+ * 操作方式現在是不是「別人定的」= 已在戰區內(房主定案生效中)。
+ * 鎖的是**整房的操作方式**;不限定時的「目前操控」仍可隨時切換(見 setCtrlScheme)。
  */
-export function setCtrlLock(on) {
-  if (_locked === !!on) return;
-  _locked = !!on;
-  _emit();
-}
+export function ctrlLocked() { return _room !== null; }
 
 /** 訂閱變更(UI 同步 / 戰場輸入層重建);回傳解除訂閱函式 */
 export function onCtrlChange(fn) {
@@ -172,7 +196,7 @@ export function onCtrlChange(fn) {
 }
 
 function _emit() {
-  const info = { mode: ctrlMode(), scheme: ctrlScheme(), locked: _locked };
+  const info = { mode: ctrlMode(), scheme: ctrlScheme(), locked: ctrlLocked(), room: _room };
   for (const fn of [..._subs]) {
     try { fn(info); } catch { /* 單一訂閱者出錯不該拖垮其他人(降級,不例外)*/ }
   }
@@ -181,5 +205,19 @@ function _emit() {
 /** 自我診斷用的一行說明(大廳「手機操控」面板逐項顯示)*/
 export function ctrlModeText() {
   const m = ctrlMode();
-  return `${CTRL_MODES[m].label} ・ 目前 ${CTRL_SCHEMES[ctrlScheme()].label}${_locked ? ' ・ 已鎖定' : ''}`;
+  return `${CTRL_MODES[m].label} ・ 目前 ${CTRL_SCHEMES[ctrlScheme()].label}`
+    + (_room ? '(戰區定案)' : '(我的預設)');
+}
+
+/**
+ * 「本裝置與生效的操作方式對不對盤」—— 房主限定鍵鼠、隊友卻是手機(反之亦然)時,
+ * UI MUST 講清楚(寧可醜話說在前面,也不要玩家進了戰場才發現沒有搖桿)。
+ * 回傳警告字串或 null。
+ */
+export function ctrlMismatchText() {
+  const m = ctrlMode();
+  if (m === 'any' || m === deviceScheme()) return null;
+  return m === 'kbm'
+    ? '⚠ 本戰區限定滑鼠鍵盤,但你的裝置判定為虛擬搖桿 —— 建議外接鍵鼠,或請房主改選「不限定」。'
+    : '⚠ 本戰區限定搖桿,你的畫面會長出虛擬搖桿(桌機也一樣)。';
 }
