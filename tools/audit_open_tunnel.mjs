@@ -367,6 +367,75 @@ ok(/const boreRecs = \[\.\.\.portals, \.\.\.galBores\]/.test(src),
   'Ⅲ-b 洞口 + 明隧道 bore MUST 合併成同一份清單(collar 迴圈同吃)');
 ok(/covV\[k\] && galAny\(k\)/.test(STRC),
   'Ⅲ-b 洞內 bore MUST 只在「覆蓋且有明隧道側」的小段發(深埋段天然 no-op,不發省帳)');
+// ---- Ⅲ-c 走廊地物淨空 MUST 蓋過**最寬的**開挖足跡(2026-08-01 金龍隧道真圖資檢視)----
+// 三道開挖各有自己的縫:山體斜壁 hw+7(terrain.js nearOf)、引道緣石帶 hw+UND.COPE、
+// 明隧道柱外淨空帶 hw+TUN.GAL_CLEAR_W。淨空只要窄於其中任一道,那一圈的地被拼圖/擺件
+// 就站在「已經被挖掉的地面」上 —— 懸在路塹上方或斜插進洞內斷面。
+{
+  const m = /const STRUCT_CLEAR_PAD = ([^;]+);/.exec(src);
+  ok(!!m, 'Ⅲ-c 結構走廊淨空外擴 MUST 具名為 STRUCT_CLEAR_PAD(單一縫)');
+  const expr = m?.[1] ?? '0';
+  ok(/TUN\.GAL_CLEAR_W/.test(expr) && /UND\.COPE/.test(expr),
+    'Ⅲ-c STRUCT_CLEAR_PAD MUST 由開挖足跡推導(TUN.GAL_CLEAR_W / UND.COPE),MUST NOT 手寫常數');
+  const pad = Number(new Function('TUN', 'UND', `return ${expr};`)(TUN, UND));
+  ok(pad >= 7, `Ⅲ-c 淨空 MUST ≥ 山體斜壁開挖 hw+7(實得 hw+${pad})`);
+  ok(pad >= UND.COPE, `Ⅲ-c 淨空 MUST ≥ 引道緣石帶 hw+${UND.COPE}(實得 hw+${pad})`);
+  ok(pad >= TUN.GAL_CLEAR_W, `Ⅲ-c 淨空 MUST ≥ 明隧道柱外淨空帶 hw+${TUN.GAL_CLEAR_W}(實得 hw+${pad})`);
+  const M0 = src.indexOf('function markGradeCorridors(');
+  const MGC = src.slice(M0, src.indexOf('\nfunction buildRoads(', M0));
+  ok(/blockArea\(blocked, x, z, hw \+ \(kind === 'tun' \? STRUCT_CLEAR_PAD : 4\)\)/.test(MGC),
+    'Ⅲ-c 結構走廊 MUST 吃 hw+STRUCT_CLEAR_PAD、橋維持 hw+4(橋下淨空語意不同)');
+}
+// ---- Ⅲ-d 神木腳印 MUST 整盤驗淨空(2026-08-01 金龍隧道真圖資:洞內卡著整根樹幹)----
+// 巨幹半徑可 >10m > 淨空網格 CELL(10m):中心格落在走廊淨空之外一格、樹身照樣橫插進洞內
+// 斷面。巨岩(placeMegaliths)一向走 areaFree 掃整盤,神木漏了這一關。
+{
+  const G0 = src.indexOf('function placeGiantGroves(');
+  const GG = src.slice(G0, src.indexOf('\n}\n', G0));
+  ok(/const foot = def\.r \* s \* 1\.6;/.test(GG),
+    'Ⅲ-d 神木腳印半徑 MUST 具名為 foot(落底與淨空吃同一個值,兩處各算一次就會漂)');
+  ok(/if \(!areaFree\(blocked, gx, gz, foot\)\) continue;/.test(GG),
+    'Ⅲ-d 神木淨空 MUST 掃整個腳印圓盤(areaFree);只問中心格 = 巨幹橫插進隧道斷面');
+  ok(/sinkBaseY\(terrain, gx, gz, foot\)/.test(GG),
+    'Ⅲ-d 神木落底 MUST 吃同一個 foot');
+  ok(!/blocked\.has\(cellKey\(gx, gz\)\)/.test(GG),
+    'Ⅲ-d 舊「只問中心格」判定 MUST 已退場');
+  ok(GG.indexOf('const s = base *') < GG.indexOf('areaFree(blocked, gx, gz, foot)'),
+    'Ⅲ-d 淘汰檢查 MUST 排在體格抽樣之後(§2.3;foot 要有 s 才算得出來)');
+}
+// ---- Ⅲ-e 別條地表道路的路面緞帶 MUST NOT 畫進洞內斷面(2026-08-01 金龍隧道真圖資檢視)----
+// `punchPortalHoles` 刪的是地形三角形與地被實例;**路面緞帶是另一個 mesh**,沒被刪。判成明隧道的
+// 淺覆蓋處,地表本來就落在洞底與頂板之間 ⇒ 山坡上那條路的緞帶整片橫在洞內(肉眼像倒下的樹幹)。
+{
+  const M0 = src.indexOf('function markGradeCorridors(');
+  const MGC = src.slice(M0, src.indexOf('\nfunction buildRoads(', M0));
+  ok(/cy = kind === 'tun'[\s\S]{0,220}tunFloorAt\(tw, cum\[i\], total\)[\s\S]{0,120}\+ TUN\.CLEAR/.test(MGC),
+    'Ⅲ-e 走廊小段 MUST 帶頂板底面 cy,且由 tunFloorAt + TUN.CLEAR 推導(MUST NOT 手寫剖面)');
+  ok(/corridors\.push\(\{[^}]*kind, cy \}\)/.test(MGC), 'Ⅲ-e cy MUST 進走廊記錄(buildRoads 的判定就吃這一份)');
+  const B0 = src.indexOf('function buildRoads(');
+  const BR = src.slice(B0, src.indexOf('\n// ---- 地標', B0) > 0 ? src.indexOf('\n// ---- 地標', B0) : B0 + 120000);
+  ok(/function buildRoads\([^)]*bores = \[\]\)/.test(src), 'Ⅲ-e buildRoads MUST 收走廊清單(bores)');
+  ok((src.match(/buildRoads\(group, [^\n]*gradeCorridors\)/g) || []).length === 2,
+    'Ⅲ-e buildRoads 兩處呼叫端 MUST 都傳 gradeCorridors(漏一處 = 該批道路照舊畫進洞裡)');
+  ok((BR.match(/const inTunBore = /g) || []).length === 1, 'Ⅲ-e 洞內判定 MUST 只有一份 inTunBore');
+  ok(/const dropXZ = \(px, pz\) => !strc && !brg/.test(BR),
+    'Ⅲ-e 判定 MUST 只作用在貼地路段 —— 結構自身路面(strc)與橋面(brg)MUST NOT 被丟掉');
+  ok(/if \(dropSeg\(i\)\) continue;/.test(BR), 'Ⅲ-e 路面緞帶 MUST 掛上判定');
+  ok(/if \(dropSeg\?\.\(i\)\) continue;/.test(BR), 'Ⅲ-e 縱向實線(emitLine)MUST 掛上判定');
+  ok(/if \(dropXZ\(px0, pz0\)\) continue;/.test(BR), 'Ⅲ-e 白虛線(dashLine)MUST 掛上判定');
+  // 行為直測:抽出 inTunBore 原文跑真值(頂板之上放行 / 斷面之內攔下 / 走廊外放行 / 端點夾制)
+  ok(/if \(y > bcy \|\| x < bx0 \|\| x > bx1 \|\| z < bz0 \|\| z > bz1\) return false;/.test(BR),
+    'Ⅲ-e 全圖包圍盒早退 MUST 在(純加速;走廊清單可達數千段 × 每條路每小段一次)');
+  const F0 = BR.indexOf('let bx0 = Infinity');
+  const F1 = BR.indexOf('\n  };', F0) + 5;
+  const fn = new Function('bores', `const tunBores = bores;\n${BR.slice(F0, F1)}\nreturn inTunBore;`);
+  const inBore = fn([{ kind: 'tun', cy: 40, hw: 8, x1: 0, z1: 0, x2: 100, z2: 0 }]);
+  ok(inBore(50, 36, 0) === true, 'Ⅲ-e 洞內斷面(頂板之下、±hw 之內)MUST 攔下');
+  ok(inBore(50, 41, 0) === false, 'Ⅲ-e 自頂板上方通過 MUST 放行(路鋪在洞頂的山坡上)');
+  ok(inBore(50, 36, 9) === false, 'Ⅲ-e 走廊外(> hw)MUST 放行');
+  ok(inBore(50, 36, 7.9) === true, 'Ⅲ-e 走廊內側邊界 MUST 攔下');
+  ok(inBore(-20, 36, 0) === false, 'Ⅲ-e 端點外延長線上 MUST 放行(t 夾制到線段內)');
+}
 // main.js:slab 第 7 欄 MUST 上傳 gal(僅 ty=2;open 段照舊不上傳)
 const upTun = /\.\.\.tunnels\.filter\(\(d\) => !d\.open\)\.map\(\(d\) => (\[[^\n]*\])\),/.exec(mainSrc);
 ok(!!upTun, 'Ⅲ main.js 隧道 slab 上傳 MUST 保留 !d.open 過濾(露天路塹不是洞內)');

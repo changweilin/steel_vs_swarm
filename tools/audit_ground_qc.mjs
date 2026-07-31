@@ -191,7 +191,8 @@ console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太�
   const gsrc = readFileSync(new URL('../public/js/ground.js', import.meta.url), 'utf8');
   const bsrc = readFileSync(new URL('../public/js/biomes.js', import.meta.url), 'utf8');
   // —— 執行 gridA 原文(全圖格網主方位:道路線段長度加權的 mod 90° 圓平均)——
-  const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = Math\.atan2\(gsz, gsx\) \/ 4;\n  \}/);
+  // `\r?\n`:CRLF 檢出(Windows core.autocrlf)下 `;\n` 抽不到原文 ⇒ 整段體檢靜默不驗
+  const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = Math\.atan2\(gsz, gsx\) \/ 4;\r?\n  \}/);
   if (!gm) bad('ground.js 找不到 gridA 主方位原文');
   else {
     const runGrid = (body, roadPolys) => new Function('roadPolys', `${body}\nreturn { GRID_FAR_R2, gridA };`)(roadPolys);

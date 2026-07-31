@@ -651,7 +651,8 @@ const megal = (() => {
   const G = geoStub(5);
   const code = [
     pick(/const MEGALITHS = \{[\s\S]*?\n\};/, 'MEGALITHS'),
-    pick(/const _rcO = new THREE\.Vector3.*\n/, 'rockProbe 的射線暫存'),
+    // `[^\n]*` 而非 `.*`:JS 的 `.` 不吃 `\r`,CRLF 檢出(Windows core.autocrlf)會整支抽不到原文
+    pick(/const _rcO = new THREE\.Vector3[^\n]*\n/, 'rockProbe 的射線暫存'),
     pick(/function rockProbe\(g\) \{[\s\S]*?\n\}/, 'rockProbe'),
     pick(/const ROCK_TONES = \[[\s\S]*?\];/, 'ROCK_TONES'),
     pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
