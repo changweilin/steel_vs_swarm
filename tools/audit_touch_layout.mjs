@@ -79,7 +79,7 @@ for (const v of VIEWS) {
       document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
       document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
       const spec = kind === 'spec';
-      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"]')
+      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"], [data-act="lock"]')
         .forEach((n) => { n.hidden = spec; });
       document.body.classList.toggle('tl-spec', spec);
     }, { kind, lefty });
@@ -111,7 +111,7 @@ for (const v of VIEWS) {
                              (gb[i].top + gb[i].bottom) / 2 - (gb[j].top + gb[j].bottom) / 2);
         if (d + 0.5 < (gb[i].width + gb[j].width) / 2) abxy = false;
       }
-      // 肩鍵/扳機逐列左右對應:L ⇄ R 同一列、ZL ⇄ ZR 絕招 同一列,且 ZL/ZR 在 L/R **下方**。
+      // 肩鍵/扳機逐列左右對應:L ⇄ R 同一列、ZL ⇄ ZR 鎖定 同一列,且 ZL/ZR 在 L/R **下方**。
       // ZL(僅飛行機種)與 ⇄換機(僅無人機)會 hidden ⇒ 用 grid-row 固定列,這裡驗它真的沒塌陷。
       const rowOf = (sel) => {
         const el = document.querySelector(sel);
@@ -121,14 +121,19 @@ for (const v of VIEWS) {
       };
       const pad = {
         L: rowOf('.tl-sys-l [data-act="reload"]'), ZL: rowOf('.tl-sys-l [data-act="dive"]'),
-        R: rowOf('.tl-sys-r [data-act="aim"]'), ZR: rowOf('.tl-sys-r [data-act="special"]'),
+        R: rowOf('.tl-sys-r [data-act="aim"]'), ZR: rowOf('.tl-sys-r [data-act="lock"]'),
       };
-      // 十字鍵:上 ⊟ 商店 / 下 陀螺 / 右 地圖(左向保留)。陀螺開關 MUST 只有這一顆 ——
+      // 十字鍵:上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖。陀螺開關 MUST 只有這一顆 ——
       // 2026-07-27 ZR 改給機種絕招後,兩顆同功能的鈕就是兩處要同步的狀態。
+      // 2026-08-01 ZR 再改給視野鎖定、絕招搬到十字鍵左:同理,**絕招也 MUST 只有一顆**
+      //(兩顆都要吃 padMirror 的冷卻鏡射,漏一顆就是「鈕面顯示就緒、按下去卻在冷卻」)。
       const dpadActs = [...document.querySelectorAll('#tlDpad .tl-dp-b')].map((n) => n.dataset.act || '');
       const gyroBtns = document.querySelectorAll('[data-act="gyro"]').length;
       const sysGyro = document.querySelectorAll('.tl-sys [data-act="gyro"]').length;
-      return { r, small, abxy, pad, dpadActs, gyroBtns, sysGyro };
+      const specBtns = document.querySelectorAll('[data-act="special"]').length;
+      const lockBtns = document.querySelectorAll('[data-act="lock"]').length;
+      const specCd = document.querySelectorAll('[data-act="special"] .gb-cd').length;
+      return { r, small, abxy, pad, dpadActs, gyroBtns, sysGyro, specBtns, lockBtns, specCd };
     }, { SEL, TAP });
 
     cases++;
@@ -156,6 +161,10 @@ for (const v of VIEWS) {
     // 十字鍵鍵位與「陀螺開關只有一顆」
     if (!out.dpadActs.includes('map')) msgs.push('十字鍵缺少小地圖範圍鍵(data-act="map")');
     if (!out.dpadActs.includes('gyro')) msgs.push('十字鍵缺少陀螺儀開關(data-act="gyro")');
+    if (!out.dpadActs.includes('special')) msgs.push('十字鍵缺少機種絕招(data-act="special";2026-08-01 從 ZR 搬來)');
+    if (out.specBtns !== 1) msgs.push(`機種絕招有 ${out.specBtns} 顆(MUST 恰好 1;冷卻鏡射要同步)`);
+    if (out.specCd !== out.specBtns) msgs.push('機種絕招鈕面缺 .gb-cd —— padMirror 的冷卻秒數會鏡射到空氣裡');
+    if (out.lockBtns !== 1) msgs.push(`視野鎖定有 ${out.lockBtns} 顆(MUST 恰好 1,且住扳機位 ZR)`);
     if (out.sysGyro > 0) msgs.push('系統鍵直條仍有陀螺儀開關 —— 開關只准住十字鍵下(見 index.html #touchLayer)');
     if (out.gyroBtns !== 1) msgs.push(`陀螺儀開關有 ${out.gyroBtns} 顆(MUST 恰好 1)`);
 
