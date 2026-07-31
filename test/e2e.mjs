@@ -1651,27 +1651,26 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機自殺攻擊機(F 鍵:前方左右各一;主機不自爆;CD 內再按無效)—');
+log('— 無人機飽和攻擊(長按右鍵:4 架衝出;主機不自爆;CD 內再按無效)—');
 const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
 const dies0 = droneDies();
-// 移到高空(250 > SAM 240)避免被塔擊落干擾,再按 F 釋放自殺攻擊機
+// 移到高空(250 > SAM 240)避免被塔擊落干擾,再觸發飽和攻擊
 const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
 host.send({ t: 'pos', x: foeTower.x, y: HI_ALT, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
-// 累計不同 id(自殺機撲擊敵塔 → 會邊飛邊死,任一瞬間的快照未必同時看到兩架 → 用累計 id 才穩)
-const kamiIds = () => { const s = new Set();
-  for (const snp of spec.snaps) for (const e of snp.ents) if (e.k === 'kami' && e.pid === host.sync.youId) s.add(e.id);
-  return s; };
-// WS 端只驗「F → 伺服器 → 快照」這條路走通(冒出自殺機);確切 2 架/HP/吸彈/引爆走上方 sim 直測。
-// (自殺機一冒出就撲向敵塔並被塔火集火 → 任一瞬間快照未必同時看到兩架,故只驗 ≥1)
+// WS 端只驗「長按右鍵 → 伺服器 → 廣播」這條路走通;確切架數/HP/吸彈/引爆走上方 sim 直測。
+// **判據是 `kami` 事件而不是快照裡的機體**(2026-08-01):飽和攻擊改制後每架只有 kamiHp()
+// (= 一座砲塔兩發的量,刻意的脆),丟在敵方一整波頭上時常在**同一個 tick 內**就被集火清空
+// ⇒ 8Hz 快照可能一幀都沒拍到。事件是伺服器「確實受理了這次施放」的權威回報,不受存活時間影響。
+const kamiEvs = () => host.snaps.flatMap((snp) => snp.ev || []).filter((e) => e.e === 'kami' && e.pid === host.sync.youId);
 host.send({ t: 'kami' });
-await host.wait(() => kamiIds().size >= 1, 3000);
-assert(kamiIds().size >= 1, `F 經網路生成自殺攻擊機(累計不同 id ${kamiIds().size};確切數量見 sim 直測)`);
-assert(droneDies() === dies0, '主機不再自爆(F 不會炸掉自己)');
-const idsAfterFirst = kamiIds().size;
-host.send({ t: 'kami' });   // CD 內再按:不應再生成一批
+await host.wait(() => kamiEvs().length >= 1, 3000);
+assert(kamiEvs().length === 1, `長按右鍵經網路觸發飽和攻擊(收到 ${kamiEvs().length} 次 kami 事件)`);
+assert(kamiEvs()[0].n === SQUAD.KAMI.N, `事件帶架數 n = ${SQUAD.KAMI.N}(實得 ${kamiEvs()[0].n})`);
+assert(droneDies() === dies0, '主機不自爆(飽和攻擊不會炸掉自己)');
+host.send({ t: 'kami' });   // CD 內再按:不應再放一次
 await new Promise((r) => setTimeout(r, 300));
-assert(kamiIds().size === idsAfterFirst, 'CD 內再按 F 不會再多一批自殺攻擊機');
+assert(kamiEvs().length === 1, 'CD 內再按不會再放一次飽和攻擊');
 
 log('— 俯衝進兵線 → 被擊殺 → 重生 —');
 host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });
