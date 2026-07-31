@@ -576,11 +576,14 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
         tx: (rnd() - 0.5) * 0.05, tz: (rnd() - 0.5) * 0.05,
         dj: rnd(),   // 細節種子(xform.js):冠層/枝節逐株走樣,同種不同貌
       });
-      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree' });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+      // 幹半徑隨高度收窄(表面特徵掛點與攀爬設施共用的單一縫;世界尺寸與樹齡脫鉤)
+      const trunkR = (yy) => def.r * s * (1 - 0.72 * yy / (def.h * s));
+      // tr = **頂端**幹半徑(climb.js:垂降技術繩的頂端繩錨靠 `r − tr` 的跨接臂伸回幹身)——
+      // 碰撞半徑吃的是基部,不帶這個值的話繩錨會吊在幹外好幾公尺的空中。推導自 trunkR,MUST NOT 手寫
+      blockers.push({ x: gx, z: gz, y: gy - 1, r: def.r * s + 0.6, h: def.h * s + 1, std: 1, cl: 'tree', tr: trunkR(def.h * s) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
       blocked.add(cellKey(gx, gz));               // 小植被/地被不長進樹幹
       trunks.push([gx, gz, def.r * s + 8]);       // 巨幹半徑可 >10m 網格;+8 淨距 = 樹冠不貼建物牆面
-      // 巨木表面特徵:掛在樹幹側面(幹半徑隨高度收窄),世界尺寸與樹齡脫鉤
-      const trunkR = (yy) => def.r * s * (1 - 0.72 * yy / (def.h * s));
+      // 巨木表面特徵:掛在樹幹側面,世界尺寸與樹齡脫鉤
       const hang = (dtype, frac, ds, faceOut = false) => {
         const ha = rnd() * Math.PI * 2;
         const hy = def.h * s * frac;
@@ -2175,36 +2178,44 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
     // 只留「整條路線高度帶內,岩面與碰撞面的縫都 ≤ ATT_GAP」的方位;一個都沒有 ⇒ attA 空陣列
     // ⇒ 不掛路線(圓頂/崖錐型巨岩本來就架不出一條筆直貼壁的路線,寧缺勿錯)。
     //
-    // **實測現況(2026-07-30,13 型 × 多種子)**:`col.r`(涵蓋整個外廓)× 0.85 與「高度帶內
-    // 壁面半徑」的差距是 4m(酋長岩)~60m(烏魯魯/桌山),故**目前所有巨岩都通不過**這一關
-    //  ⇒ 巨岩暫時不掛攀岩抓點。這是刻意的:掛上去就是一整排浮在 4~60m 空中的樹脂塊。
+    // **實測現況(2026-07-30,13 型 × 多種子;離線量測)**:`col.r`(涵蓋整個外廓)× 0.85 與
+    // 「高度帶內壁面半徑」的差距是 4m(酋長岩)~60m(烏魯魯/桌山),故**多數巨岩都通不過**這一關
+    //  ⇒ 巨岩幾乎不掛攀岩抓點。這是刻意的:掛上去就是一整排浮在 4~60m 空中的樹脂塊。
+    //  (遊戲內這條路徑另有座標系 bug,2026-07-31 才修 —— 見下段;修之前是「恆空」而非「多數不過」。)
     // 要讓巨岩重新掛得上,得先把碰撞體從「一顆涵蓋全外廓的圓柱」換成「主量體有向盒 +
     // 外伸量體(崖錐/崩落塊/伴生丘)各自登記」—— 那是動權威幾何的獨立工項(A30 對建物已改完,
     // 巨岩待補),本次不含。屆時只要碰撞面貼上壁面,這裡就會自動開始產出方位。
+    //
+    // **座標系(2026-07-31 修)**:`rockProbe(g)` 的射線一律走**世界**座標(g 此刻已定位/縮放/
+    // 旋轉,`bb`/`far` 也都是世界量)。舊版拿 local 的 `(0, 0, yL, aL)` 去問,等於從世界原點附近
+    // 朝原點射一條射線 —— 幾百公尺外的岩體根本吃不到,`wallR` 恆 null ⇒ **attA 恆空、巨岩一顆
+    // 都掛不上抓點**(症狀與上面那段「縫太大」的結論撞在一起,難以分辨)。改成整段用世界量:
+    // 方位直接就是世界方位(不必再 `− rot`)、半徑不再乘 s(probe 回的已是世界公尺)。
     const colR = r * 0.85;                     // 碰撞半徑(世界)
     const ATT_GAP = MAX_BODY_R;                // 縫上限(climb.js 單一縫):≤ 最大機體碰撞半徑 ⇒ 機體仍貼著設施
     const attA = [];
+    const probe = rockProbe(g);                // g 已含表面特徵,但射線只吃岩體(rockProbe 內部快照)
     {
-      const probe = rockProbe(g);              // g 已含表面特徵,但射線只吃岩體(rockProbe 內部快照)
-      const topL = meta.col.h;                 // 岩體 local 高度(路線頂端 = 碰撞柱頂)
-      const rot = g.rotation.y;
+      const yBase = gy - 1.5;                  // 岩體 local y=0 的世界高(= g.position.y)
+      const topW = meta.col.h * s;             // 岩體世界高度(路線頂端 = 碰撞柱頂)
       for (let k = 0; k < 16; k++) {
-        const aL = k / 16 * Math.PI * 2;        // 岩體 local 方位
+        const a = k / 16 * Math.PI * 2;         // 世界方位(attA.a 就是 surfacePoint 吃的那個角)
         let gap = 0, top = 0, okA = true;
         for (let i = 0; i <= 4; i++) {
-          const yL = topL * (0.12 + 0.2 * i);   // 高度帶:12%~92%(貼地段被崖錐/碎石坡吃掉,不驗)
-          const rr = probe.wallR(0, 0, yL, aL);
+          const yW = yBase + topW * (0.12 + 0.2 * i);   // 高度帶:12%~92%(貼地段被崖錐/碎石坡吃掉,不驗)
+          const rr = probe.wallR(x, z, yW, a);
           if (rr == null) { okA = false; break; }
-          const d = colR - rr * s;              // 該高度的縫(世界公尺)
+          const d = colR - rr;                  // 該高度的縫(世界公尺)
           if (d > ATT_GAP) { okA = false; break; }
           gap = Math.max(gap, Math.max(0, d));
           if (i === 4) top = Math.max(0, d);
         }
-        // local 方位 → 世界方位(three Euler(0,ry,0):local (cos a, sin a) → 方位 a − ry)
-        if (okA) attA.push({ a: aL - rot, gap, top });
+        if (okA) attA.push({ a, gap, top });
       }
     }
-    blockers.push({ x, z, y: gy - 2, r: colR, h: meta.col.h * s + 2, std: 1, cl: 'rock', attA });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+    // ty = 岩頂**實測**高(自岩心垂直下射):碰撞柱刻意比岩體高 1.5m(落底時整顆下沉),
+    // 圓頂/疊層巨岩的頂面又比 `col.h` 低一截 ⇒ 抓點照碰撞柱畫會整排高出岩頂(同建築那族病灶)
+    blockers.push({ x, z, y: gy - 2, r: colR, h: meta.col.h * s + 2, std: 1, cl: 'rock', attA, ty: probe.topAt(x, z) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
     placedM.push({ x, z, r });
   }
   return placedM.length;
@@ -6325,7 +6336,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
-          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld', hw2: b.w / 2, hd2: b.d / 2, ry: b.ry });
+          // ty = **可見**盒頂(= 上面 inst 那一項的頂面,推導不手寫):碰撞柱刻意比實體高 0.5m
+          // (站上屋頂才不會被 _collide 的垂直閘推下去),攀爬設施改吃 ty 貼齊屋頂(climb.js facilityEndY)
+          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld', hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 });
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
@@ -6347,7 +6360,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const ph = Math.max(6, b.h * 0.12);
             inst.push({ x: b.x, y: gy + ph / 2 - 0.5, z: b.z, ry: b.ry, w: b.w * 1.4, h: ph, d: b.d * 1.28, c: palC });
             // 裙樓比主體寬(1.4×1.28)且齊眼高 —— 另登記自己的碰撞盒(基座段),否則玩家/鏡頭鑽進裙樓看穿牆
-            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8 });
+            blockers.push({ x: b.x, z: b.z, y: gy - 1, h: ph + 1, bld: 1, cl: 'bld', hw2: b.w * 0.7, hd2: b.d * 0.64, ry: b.ry, r: Math.hypot(b.w * 1.4, b.d * 1.28) / 2 * 0.8, ty: gy + ph - 0.5 });
           }
           if (!commercial && b.h >= 14 && rnd() < 0.4) {        // 中層住宅:角落梯間塔(佔地內、突出屋頂)
             const tw = Math.min(b.w, b.d) * 0.3;
@@ -6717,11 +6730,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       const hw2 = Math.max(2, (lbb.max.x - lbb.min.x) / 2), hd2 = Math.max(2, (lbb.max.z - lbb.min.z) / 2);
       const cx = (lbb.min.x + lbb.max.x) / 2 - lm.x, cz = (lbb.min.z + lbb.max.z) / 2 - lm.z;
       const ca = Math.cos(g.rotation.y), sa = Math.sin(g.rotation.y);
+      const bx = lm.x + cx * ca + cz * sa, bz = lm.z - cx * sa + cz * ca;
+      // 屋頂**實測**高(2026-07-31):地標是多箱體模型(側翼/尖頂/天線/紅十字),`LANDMARK_COL.h`
+      // 是手寫的**擋彈**高度,常高過真正踩得到的主量體屋頂數公尺 ⇒ 長梯照碰撞柱畫就會高出屋頂一截
+      // (使用者回報「屋頂不平的建築,長梯會過高」)。碰撞柱 MUST NOT 動(站立面 + _collide 垂直閘
+      // 都吃它),改由 `ty` 餵給 climb.js 的設施幾何。量測 = 自盒心垂直下射(rockProbe 同一支射線工具,
+      // 此時 g 已定位/縮放/旋轉 ⇒ 世界座標);射空(盒心正上方是中庭)回 null ⇒ 設施退回碰撞柱頂。
+      const lmTop = rockProbe(g).topAt(bx, bz);
       blockers.push({
-        x: lm.x + cx * ca + cz * sa, z: lm.z - cx * sa + cz * ca,
+        x: bx, z: bz,
         y: gy - 1, h: col.h * sc + 1,   // 高度沿用 LANDMARK_COL(細長尖頂不該整段擋彈),只改橫斷面
         bld: 1, cl: 'bld', hw2, hd2, ry: g.rotation.y,
         r: Math.hypot(hw2, hd2),   // broad-phase:外接半對角(內切圓會讓盒角被提早剔掉)
+        ty: lmTop,
       });
     }
   }
