@@ -6,8 +6,9 @@
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
-  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, BARRAGE, heroArmor, BOT_KILL_SCORE, isBotId,
-  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, barrageShots, barrageDur, airSinkM,
+  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
+  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperApex, hyperRange, hyperDiveSpd,
+  kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange, flightCapS, shotV0,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -231,7 +232,7 @@ export class BattleSim {
     if (!e) return 0;
     if (e.kind === 'tower' || e.kind === 'base') return 0;
     if (e.hero && e.lev != null) return e.lev;
-    const fly = !!(UNITS[e.kind]?.fly || e.kind === 'heli' || e.kami || e.decoy);
+    const fly = !!(UNITS[e.kind]?.fly || e.kind === 'heli' || e.kami || e.decoy || e.hyper);
     if (fly && (e.y || 0) >= LOS.TUN_CLEAR_M) return 0;
     if (!fly && !e.hero && e.lane == null) return 0;
     return this._slabLevAt(e.x, e.z);
@@ -459,12 +460,12 @@ export class BattleSim {
   /** 目標取樣高(離地):塔/主堡是高聳工事,露頭就打得到 */
   _tgtY(e) {
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
-    return (e.hero || e.kind === 'heli' || e.decoy || e.kami ? (e.y || 0) : 0) + LOS.TGT_M;
+    return (e.hero || e.kind === 'heli' || e.decoy || e.kami || e.hyper ? (e.y || 0) : 0) + LOS.TGT_M;
   }
 
   /** 機體垂直帶(離地):[腳底, 腳底 + 實體高度]。飛行體的腳底 = 回報高度,地面單位 = 0。 */
   _bodySpan(e) {
-    const y0 = (e.hero || e.kind === 'heli' || e.decoy || e.kami ? (e.y || 0) : 0);
+    const y0 = (e.hero || e.kind === 'heli' || e.decoy || e.kami || e.hyper ? (e.y || 0) : 0);
     return [y0, y0 + hitH(e)];
   }
 
@@ -1274,21 +1275,13 @@ export class BattleSim {
    */
   _gateFire(h, id, def, lenient, back = 0) {
     const now = this.t;
-    // 巨砲(重砲模式)那一輪的砲彈(2026-07-30 改制,見 data.BARRAGE):**不消耗一般重武器的彈夾**
-    // ⇒ 連帶不吃電力/射速閘/裝填閘(空夾、裝填中照樣轟得出去);傷害 100%(_heroDmg 已無倍率)。
-    // 用免除窗(barrageDur + DMG_GRACE)而非開窗長度本身:拋射彈落點才回報 _gateFire,
-    // 窗早過會讓同輪第 2 發起被射速閘擋掉。窗不會外溢的保證 = 發數 barrageLeft(逐發遞減)。
-    const barrage = id === 'heavy' && this._barragingDmg(h);
-    // 填彈完成 → 補滿(巨砲不碰彈夾,但這一輪期間彈夾照樣自己裝填完)
+    // 2026-08-01:舊巨砲(重砲模式)的「這一發免彈夾/免電力/免射速閘」旁路隨機甲改招整組移除。
+    // **MUST NOT 復辟**:機甲的長按招式已是獨立實體(極音速飛彈),與重武器彈夾完全脫鉤 ——
+    // 重武器射擊路徑上不該再存在任何跳過彈夾/電力/射速閘的分支。
+    // 填彈完成 → 補滿
     if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
       h.ammo[id] = def.mag;
       h.reloadUntil[id] = 0;
-    }
-    if (barrage) {
-      h.barrageLeft = Math.max(0, (h.barrageLeft || 0) - 1);   // 發數是權威資源:歸零即窗關(_barragingDmg 同判)
-      h.fireAt[id] = now;
-      h.stealthUntil = 0;   // 開火即現形(匿蹤破除)
-      return true;
     }
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
@@ -1317,27 +1310,16 @@ export class BattleSim {
   }
 
   /** 英雄傷害倍率(招式增益 × 榴彈對建築加成;火力成長走武器面向 lw/hw 的階級數值)。
-   *  巨砲 2026-07-30 起**每發 100% 傷害** ⇒ 這裡 MUST NOT 再乘任何重砲倍率(等值性改由發數承擔)。 */
+   *  2026-08-01:巨砲移除後這裡**恆無任何情境倍率**;MUST NOT 為新招式在此加特例(招式傷害走 hyperBlast)。 */
   _heroDmg(h, def, targetKind) {
     return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
       * this._buffMul(h, 'dmg');
   }
 
-  /** 重砲開窗(barrageDur)是否生效:純客戶端傾洩節奏用途,目前無伺服器結算讀它 —— 保留為語意錨。 */
-  _barraging(h) { return (h?.barrageUntil || 0) > this.t; }
-
-  /** 這一發是不是「巨砲那一輪」的砲彈(免彈夾/電力/射速 + 射程 ×RANGE_F 的唯一判據):
-   *  免除窗(barrageDur + DMG_GRACE,涵蓋拋射彈飛行時間)**且**該輪發數未打完(barrageLeft > 0)。
-   *  兩個條件缺一不可 —— 只看窗 = 窗內無限開火(免彈免電),只看發數 = 窗過期後仍白吃。 */
-  _barragingDmg(h) {
-    const bu = h?.barrageUntil || 0;
-    return bu > 0 && bu + BARRAGE.DMG_GRACE > this.t && (h?.barrageLeft || 0) > 0;
-  }
-
-  /** 空中判定:無人機/直升機/餌機/自殺機恆算飛行;其餘(機甲/變形/NPC)以高度 ≥ AA_MIN_ALT 論 */
+  /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
   _airborne(e) {
-    return e.kind === 'drone' || e.kind === 'heli' || e.kind === 'decoy' || e.kind === 'kami'
-      || (e.y || 0) >= GAME.AA_MIN_ALT;
+    return e.kind === 'drone' || e.kind === 'heli' || e.kind === 'decoy' || e.kind === 'kami' || e.kind === 'hyper'
+      || e.kind === 'hyper' || (e.y || 0) >= GAME.AA_MIN_ALT;
   }
 
   /**
@@ -1349,7 +1331,7 @@ export class BattleSim {
     if (!e) return 0;
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
     if (e.hero) return e.ay != null ? e.ay : (e.y || 0) + LOS.EYE_M;
-    if (e.kind === 'heli' || e.decoy || e.kami) return (e.y || 0) + LOS.EYE_M;
+    if (e.kind === 'heli' || e.decoy || e.kami || e.hyper) return (e.y || 0) + LOS.EYE_M;
     return (e.y || 0) + LOS.TGT_M;
   }
 
@@ -1498,8 +1480,7 @@ export class BattleSim {
     // 射程驗證(3D:高空狙擊也要吃射程;留 25% 寬容給網路延遲/彈道飛行)
     // 量到目標**近側表面**(_surfD3):彈著本來就停在建築牆面上,量中心會讓砲塔/主堡吃掉整段寬容
     const d3 = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
-    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL
-        * (wp.id === 'heavy' && this._barraging(h) ? BARRAGE.RANGE_F : 1)) return;   // 高度制空:對地拉遠/對高空無人機縮短(重砲模式 +20% 射程)
+    if (this._surfD3(d3, t) > wp.def.range * this._altRange(h, t, wp.def) * RANGE_TOL) return;   // 高度制空:對地拉遠/對高空無人機縮短
     // 迷霧內的目標不可命中:射手陣營看不見(非瞄準模式看不到)就打不到 —
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 snapshotFor 同判定)。
     const pulse = this.visionUntil?.[h.side] > this.t;
@@ -1619,9 +1600,8 @@ export class BattleSim {
       const oy = (h.y || 0) + LOS.EYE_M;
       const hx = t.x - h.x, hz = t.z - h.z, hy = this._tgtY(t) - oy;
       const hl = Math.hypot(hx, hz, hy) || 1;
-      // 射線長維持 bot 自己的射程判定(上方 _botFire 未含 BARRAGE.RANGE_F),只有圓柱粗細吃傾洩窗
       const hits = this._lanceHits(h, wp.def, h.x, h.z, oy, hx / hl, hz / hl, hy / hl,
-        wp.def.range * this._altRange(h, t, wp.def), this._barragingDmg(h));
+        wp.def.range * this._altRange(h, t, wp.def));
       for (let i = 0; i < hits.length; i++) {
         const k = hits[i];
         if (k.t === t) continue;
@@ -1661,7 +1641,7 @@ export class BattleSim {
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
-    if (dImp > impCap * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) return;
+    if (dImp > impCap) return;
     // 這一發其實是「dImp ÷ 初速」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
     // dImp 已被 impCap 夾住 ⇒ back 天然 ≤ flightCapS,不必再另設上限(客戶端謊報距離只會先撞超程閘)。
     const back = Math.min(dImp / shotV0(wp.def), flightCapS(wp.def));
@@ -1685,7 +1665,7 @@ export class BattleSim {
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
-      if (dist2d(b.x, b.z, x, z) > impCap * (this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) continue;   // 僚機吃同一道閘門(同一縫,含重砲窗)
+      if (dist2d(b.x, b.z, x, z) > impCap) continue;   // 僚機吃同一道閘門(同一縫)
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
@@ -1717,7 +1697,7 @@ export class BattleSim {
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
         if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL
-            * (wp.id === 'heavy' && this._barragingDmg(h) ? BARRAGE.RANGE_F : 1)) continue;   // 高度制空(散彈輕武器;重砲模式 +20%);量到近側表面(_surfD3)
+            ) continue;   // 高度制空(散彈輕武器);量到近側表面(_surfD3)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
@@ -1750,8 +1730,8 @@ export class BattleSim {
    *      動能彈的落點都停在目標**近側表面**,而目標中心在那之後 ⇒ s > maxS 判成落空。
    *      改為量到「線段上最近點」(s 夾制到 [0, maxS])而非要求中心落在線段內。
    */
-  _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len, barrage = false) {
-    const R = lanceR(def, barrage);
+  _lanceHits(shooter, def, ox, oz, oy, dx, dz, dy, len) {
+    const R = lanceR(def);
     const band = R * LANCE.VBAND_F;
     const hd = Math.hypot(dx, dz);
     // 近乎垂直的射線(仰俯角 > 81°:對正上方的無人機開火)水平投影會退化 —— 改以高度差當軸向。
@@ -1819,17 +1799,16 @@ export class BattleSim {
     if (dist2d(h.x, h.z, ox, oz) > 12) return;
     const dl = Math.hypot(dx, dz, dy) || 1;
     dx /= dl; dz /= dl; dy /= dl;   // 3D 單位化(_lanceHits 自行拆水平/垂直分量)
-    const rMul = this._barragingDmg(h) ? BARRAGE.RANGE_F : 1;
-    const max = Math.min(Math.max(0, +len), wp.def.range * RANGE_TOL * rMul);
+    const max = Math.min(Math.max(0, +len), wp.def.range * RANGE_TOL);
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
       // 僚機以各自位置沿同射向貫穿(與 heroPlasma 同構;N=1 時只有本機)
       const bx = b === h ? ox : b.x, bz = b === h ? oz : b.z, by = b === h ? oy : (b.y || 0) + LOS.EYE_M;
-      const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max, rMul !== 1);
+      const hits = this._lanceHits(b, wp.def, bx, bz, by, dx, dz, dy, max);
       for (let i = 0; i < hits.length; i++) {
         const { t, d3, off } = hits[i];
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL * rMul) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
+        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL) continue;   // 高度制空;量到近側表面(_surfD3,與 _lanceHits 的 R+hitR 同一條尺)
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
@@ -1844,9 +1823,9 @@ export class BattleSim {
       const mx = m.x - ox, mz = m.z - oz, my = m.y - oy;
       const s0 = mx * dx + mz * dz + my * dy;
       const s = s0 < 0 ? 0 : (s0 > max ? max : s0);   // 量到線段最近點(與 _lanceHits 同一條規則)
-      if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def, rMul !== 1)) continue;
+      if (Math.hypot(mx - dx * s, mz - dz * s, my - dy * s) > lanceR(wp.def)) continue;
       const d3 = Math.hypot(mx, mz, my);
-      if (d3 > wp.def.range * RANGE_TOL * rMul) continue;
+      if (d3 > wp.def.range * RANGE_TOL) continue;
       m.hp -= this._heroDmg(h, wp.def, 'missile') * dmgFalloff(wp.def, d3);
       if (m.hp <= 0) {
         this.missiles.splice(i, 1);
@@ -1875,16 +1854,17 @@ export class BattleSim {
     const fx = -Math.sin(ry), fz = Math.cos(ry);   // 前方(sim z=北)
     const rx = Math.cos(ry), rz = Math.sin(ry);    // 右方
     for (let i = 0; i < K.N; i++) {
-      const s = i === 0 ? -1 : 1;                  // 左 / 右
+      const s = kamiSide(i);                       // 橫向站位 ∈ [−1, 1](單一縫,客戶端護衛機同吃)
       const k = this._add({
         kind: 'kami', side: h.side, pid, ch: h.ch, kami: true,
         x: h.x + fx * K.FWD + rx * K.SIDE * s,
         z: h.z + fz * K.FWD + rz * K.SIDE * s,
         y: h.y || 0, ry: ry + K.SPREAD * s,        // 朝前方左右散開
-        hp: Math.max(1, Math.round(h.maxHp * K.HP_F)),
-        armor: h.armor, tid: t0 ? t0.id : 0, dieAt: this.t + K.TTL_S,
+        // HP 走 kamiHp()(砲塔火力反解「一座砲塔剛好擊落 SHOT_DOWN 架」);armor/護盾恆 0 ——
+        // 校準要精確,EHP 就 MUST NOT 隨主機角色/升級漂移(MUST NOT 復辟 maxHp × HP_F)。
+        hp: kamiHp(), armor: 0, tid: t0 ? t0.id : 0, dieAt: this.t + K.TTL_S,
       });
-      k.maxSp = Math.max(0, Math.round((h.maxSp || 0) * K.HP_F)); k.sp = k.maxSp;
+      k.maxSp = 0; k.sp = 0;
       sq.kamis.push(k);
     }
     this.events.push({ e: 'kami', pid, side: h.side, n: K.N });
@@ -1894,7 +1874,7 @@ export class BattleSim {
   _kamiAcquire(k) {
     let best = null, bd = SQUAD.KAMI.ACQ_R;
     for (const e of this.ents.values()) {
-      if (e.side === k.side || e.neutral || e.hp <= 0 || e.kami || e.decoy || e.gar) continue;
+      if (e.side === k.side || e.neutral || e.hp <= 0 || e.kami || e.decoy || e.hyper || e.gar) continue;
       if (e.hero && (e.dead || (e.stealthUntil || 0) > this.t)) continue;
       const ty = e.hero || e.kind === 'heli' ? (e.y || 0) : 0;
       const d = Math.hypot(e.x - k.x, e.z - k.z, ty - (k.y || 0));
@@ -1997,14 +1977,15 @@ export class BattleSim {
     this._kill(b, null);
   }
 
-  // ---------- 餌機(機甲的 F 鍵:分離發射 = 誘導導彈 + 偵察機 + 誘餌)----------
+  // ---------- 集束炸彈(變形者長按右鍵:分離發射 = 集束轟炸機 + 偵察機 + 誘餌)----------
   /**
    * 發射:航向鎖定發射瞬間的機首朝向(玩家不能操舵);準星有鎖定才追蹤。
    * 空中已有一架 / 冷卻未到 → 忽略。CD 自發射瞬間起算(歸零 = 掛點重新組合完成)。
+   * HP 走 decoyHp()(砲塔火力反解「投得完 5+1 顆」),armor/護盾恆 0 —— 校準要精確就不能隨主機漂移。
    */
   heroDecoy(pid) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || h.kind !== 'morph' || this.over) return;   // 2026-07-18:餌機改變形機甲專屬(非變形機甲改重砲)
+    if (!h || h.dead || h.kind !== 'morph' || this.over) return;   // 集束炸彈 = 變形者專屬(機甲走極音速飛彈)
     const sq = h.sq;
     if (sq.decoy || this.t < sq.decoyCd) return;
     const t = this._lockedTarget(sq);
@@ -2012,34 +1993,105 @@ export class BattleSim {
     const d = this._add({
       kind: 'decoy', side: h.side, pid, decoy: true,
       x: h.x, z: h.z, y: (h.y || 0) + DECOY.ALT, ry,
-      hp: Math.max(1, Math.round(h.maxHp * DECOY.HP_F)),
+      hp: decoyHp(),
       armor: 0, tid: t ? t.id : 0, lost: false, dieAt: this.t + DECOY.TTL_S,
-      bombType: MORPH_BOMB[h.ch] || 'fire', bombsLeft: DECOY.BOMB_MAX, nextBomb: 0,   // 沿途投彈(依機體類型)
+      bombType: MORPH_BOMB[h.ch] || 'fire', bombsLeft: DECOY.BOMB_MAX, nextBomb: 0,   // 集束投彈(依機體類型)
     });
     sq.decoy = d;
     sq.decoyCd = this.t + DECOY.CD_S;
     this.events.push({ e: 'decoy', pid, side: h.side, id: d.id, homing: t ? 1 : 0, bomb: d.bombType });
   }
 
+  // ---------- 極音速飛彈(機甲長按右鍵;2026-08-01 取代舊「重砲模式/巨砲」)----------
   /**
-   * 重砲模式(巨砲;2026-07-18;非變形機甲:狙擊模式長按右鍵)。2026-07-30 改制為**獨立一輪砲擊**:
-   * 開窗期間的重武器射擊**不消耗一般彈夾**(連帶免電力/射速/裝填閘)、每發 100% 傷害、射程 ×RANGE_F;
-   * 一輪的發數 = barrageShots()(絕招預算 ÷ 每發傷害),開窗長度 = barrageDur(發數);獨立 CD_S 冷卻。
-   * 結算三處:_gateFire(免除 + 發數遞減)/ _barragingDmg(唯一判據)/ 各射程驗證處。
-   * 彈夾狀態**刻意不再是前置條件** —— 巨砲不吃彈夾,空夾/裝填中正是最需要它的時候。
+   * 發射一枚**射後不理**的極音速飛彈:垂直爬升到 hyperApex() 後,以 hyperDiveSpd() 螺旋俯衝撲向
+   * 發射瞬間鎖定的目標(鎖到實體 → 追它的即時位置;無鎖定 → 正前方 hyperRange() 的地面點)。
+   * 「射後不理」= 發射後玩家不必再瞄準,也不必維持鎖定(對齊 trajClass 'fnf');故此處**不驗**
+   * 狙擊模式、不驗彈夾 —— 它是獨立實體,與重武器完全脫鉤(MUST NOT 復辟巨砲的彈夾旁路)。
+   * 飛彈是**可被鎖定/擊落的實體**(kind 'hyper'),HP 走 hyperHp():一座砲塔剛好打不爆。
+   * 同時只能有一枚在空中(空中已有 → 忽略),CD 自發射瞬間起算。
    */
-  heroBarrage(pid) {
+  heroHyper(pid) {
     const h = this.heroes.get(pid);
-    if (!h || h.dead || h.kind !== 'robot' || this.over) return;   // 非變形機甲專屬
-    if (!h.aiming) return;                        // 必須在狙擊模式
-    if (this.t < (h.barrageCd || 0)) return;      // 冷卻中(靜默丟棄)
-    const wp = this._heroWeapon(h, 'heavy');
-    if (!wp) return;
-    const n = barrageShots(wp.def, h.abil);
-    h.barrageCd = this.t + BARRAGE.CD_S;
-    h.barrageLeft = n;
-    h.barrageUntil = this.t + barrageDur(n);
-    this.events.push({ e: 'barrage', pid, side: h.side, n });
+    if (!h || h.dead || h.kind !== 'robot' || this.over) return;   // 機甲專屬
+    if (h.hyper || this.t < (h.hyperCd || 0)) return;              // 空中已有一枚 / 冷卻中(靜默丟棄)
+    const sq = h.sq;
+    const t = this._lockedTarget(sq);
+    const ry = h.ry || 0;
+    // 無鎖定 → 打正前方 hyperRange() 的地面點(彈道終點固定,不會變成無限射程的遊蕩彈)
+    const tx = t ? t.x : h.x - Math.sin(ry) * hyperRange();
+    const tz = t ? t.z : h.z + Math.cos(ry) * hyperRange();
+    const m = this._add({
+      kind: 'hyper', side: h.side, pid, hyper: true,
+      x: h.x, z: h.z, y: h.y || 0, ry,
+      hp: hyperHp(), armor: 0,
+      tid: t ? t.id : 0, tx, tz,          // tid = 射後不理的追蹤對象;tx/tz = 失去對象後的最後落點
+      apex: hyperApex(), phase: 'climb', spin: 0,
+      dive: null,                          // 俯衝起點(轉入 dive 相位時定案)
+    });
+    h.hyper = m;
+    h.hyperCd = this.t + HYPER.CD_S;
+    this.events.push({ e: 'hyper', pid, side: h.side, id: m.id, homing: t ? 1 : 0 });
+  }
+
+  /**
+   * 每 tick:爬升 → 到頂轉俯衝 → 螺旋落向目標 → 觸地/近炸引爆。
+   * 兩相位都不吃玩家輸入(射後不理);追蹤對象死亡/消失 → 沿用最後已知落點 tx/tz 打下去。
+   * 螺旋只是**位置偏擺**(SPIN_RPS / SPIRAL_R),彈道軸仍是「俯衝起點 → 目標」的直線 ⇒
+   * 兩端同吃同一份參數就會畫出同一條航跡(客戶端只插值 y/x/z,不自己另算螺旋)。
+   */
+  _tickHypers(dt) {
+    for (const h of this.heroes.values()) {
+      const m = h.hyper;
+      if (!m) continue;
+      if (m.hp <= 0) { h.hyper = null; continue; }   // 已被擊落(_kill 走 _hyperShotDown)
+      // 追蹤對象仍在 → 更新落點(射後不理:飛彈自己追,玩家不必維持鎖定)
+      const t = m.tid ? this.ents.get(m.tid) : null;
+      if (t && t.hp > 0 && !(t.hero && t.dead)) { m.tx = t.x; m.tz = t.z; }
+      else m.tid = 0;
+
+      if (m.phase === 'climb') {
+        m.y += HYPER.CLIMB_SPD * dt;
+        if (m.y >= m.apex) { m.y = m.apex; m.phase = 'dive'; m.dive = { x: m.x, z: m.z, y: m.y }; }
+        continue;
+      }
+      // 俯衝:沿「俯衝起點 → 目標地面點」的軸線前進,位置再疊上繞軸螺旋偏擺
+      const ty = t ? this._tgtY(t) : 0;
+      const ax = m.tx - m.dive.x, az = m.tz - m.dive.z, ay = ty - m.dive.y;
+      const al = Math.hypot(ax, az, ay) || 1;
+      m.trav = (m.trav || 0) + hyperDiveSpd() * dt;
+      const f = Math.min(1, m.trav / al);
+      m.spin += HYPER.SPIN_RPS * Math.PI * 2 * dt;
+      // 螺旋半徑隨接近目標收斂到 0(否則落點會被偏擺推開一個 SPIRAL_R)
+      const sr = HYPER.SPIRAL_R * (1 - f);
+      const px = -az / Math.hypot(ax, az, 0.001), pz = ax / Math.hypot(ax, az, 0.001);   // 水平法向
+      m.x = m.dive.x + ax * f + px * Math.cos(m.spin) * sr;
+      m.z = m.dive.z + az * f + pz * Math.cos(m.spin) * sr;
+      m.y = Math.max(0, m.dive.y + ay * f + Math.sin(m.spin) * sr);
+      m.ry = Math.atan2(-ax, az);
+      if (f >= 1) this._hyperBoom(m);
+    }
+  }
+
+  /** 極音速飛彈命中引爆:整份絕招預算的單一戰鬥部(爆點算主機頭上 ⇒ 吃其增益、擊殺記給它) */
+  _hyperBoom(m) {
+    const h = this.heroes.get(m.pid);
+    const def = hyperBlast(h?.abil);
+    this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y || 0, r: def.r, side: m.side, hyper: 1 });
+    if (h) this._blast(h, def, m.x, m.z, m.y || 0, this._unitLev(m));
+    this._removeHyper(m);
+  }
+
+  /** 被擊落(_kill 呼叫):**不引爆**(攔截成功就該是完全否定)—— 只留一團碎裂演出 */
+  _hyperShotDown(m) {
+    this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y || 0, r: 6, side: m.side, sam: true });
+  }
+
+  _removeHyper(m) {
+    m.hp = 0;
+    this.ents.delete(m.id);
+    const h = this.heroes.get(m.pid);
+    if (h && h.hyper === m) h.hyper = null;
   }
 
   /**
@@ -2059,11 +2111,16 @@ export class BattleSim {
         this.events.push({ e: 'decoyLost', pid: sq.pid, id: d.id });
       }
 
-      // 沿途投彈:敵入 BOMB_R(餌機攻擊範圍)才開始丟,間隔 BOMB_GAP、單次任務最多 BOMB_MAX 枚
-      if ((d.bombsLeft || 0) > 0 && this.t >= (d.nextBomb || 0) && this._decoyEnemyNear(d, DECOY.BOMB_R)) {
-        this._decoyBomb(d, owner);
-        d.bombsLeft--;
-        d.nextBomb = this.t + DECOY.BOMB_GAP;
+      // 集束投彈:敵入 BOMB_R(攻擊範圍)才開始丟,間隔 BOMB_GAP、單次任務最多 BOMB_MAX 顆。
+      // **逐顆個別瞄準**(2026-08-01):每次取範圍內最近的、這一輪還沒被指派過的敵人 ——
+      // 多目標時炸彈分散到不同目標,單目標時才連續補刀(舊制是「炸在自己腳下」)。
+      if ((d.bombsLeft || 0) > 0 && this.t >= (d.nextBomb || 0)) {
+        const tgt = this._decoyBombTarget(d);
+        if (tgt) {
+          this._decoyBomb(d, owner, tgt);
+          d.bombsLeft--;
+          d.nextBomb = this.t + DECOY.BOMB_GAP;
+        }
       }
 
       const t = d.tid ? this.ents.get(d.tid) : null;
@@ -2239,7 +2296,7 @@ export class BattleSim {
     // 撞擊爆風 = 絕招預算 × DECOY_IMPACT(隨主機甲輕/重武器綜合等級成長);爆點層 = 餌機所在層(不穿橋面/隧道天花)
     if (owner) this._blast(owner, decoyBlast(owner.abil), d.x, d.z, d.y, this._unitLev(d));
     // 2026-07-19:自爆(燃料耗盡/近炸)時尚有未投完的炸彈 → 原地補投一枚(復用單一投彈縫,記主機甲)
-    if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner); }
+    if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner, this._decoyBombTarget(d)); }
     this._removeDecoy(d);
   }
 
@@ -2249,36 +2306,57 @@ export class BattleSim {
     if (sq && sq.decoy === d) sq.decoy = null;
   }
 
-  /** 餌機攻擊範圍內是否有敵方戰鬥單位(沿途投彈的觸發條件:敵入範圍才丟) */
-  _decoyEnemyNear(d, r) {
+
+  /**
+   * 集束投彈的**逐顆瞄準解**(2026-08-01 使用者需求「有多目標時個別瞄準」):
+   * BOMB_R 內的敵方單位取最近者,且優先挑這一趟任務還沒被指派過的(d.bombed 記名冊)——
+   * 目標數 ≥ 剩餘彈數時等於一顆一個,目標打完/只剩一個時名冊清空、回到連續補刀。
+   * 沒有合法目標 → 回 null,呼叫端**不投**(寧缺勿錯:炸彈不浪費在空地上)。
+   */
+  _decoyBombTarget(d) {
+    let best = null, bd = Infinity, fallback = null, fd = Infinity;
     for (const e of this.ents.values()) {
-      if (e.side === d.side || !e.side || e.neutral || e.decoy || e.kami || e.gar || e.hp <= 0) continue;
-      if (e.hero && e.dead) continue;
-      if (this._airborne(e)) continue;   // 投擲範圍偵測只針對地面單位(不對空中無人機/直升機/升空機甲丟彈)
-      if (dist2d(e.x, e.z, d.x, d.z) <= r) return true;
+      if (e.side === d.side || !e.side || e.neutral || e.decoy || e.kami || e.hyper || e.gar || e.hp <= 0) continue;
+      if (e.hero && (e.dead || (e.stealthUntil || 0) > this.t)) continue;
+      if (this._airborne(e)) continue;   // 投彈只對地(不對空中無人機/直升機/升空機甲丟炸彈)
+      const dist = dist2d(e.x, e.z, d.x, d.z);
+      if (dist > DECOY.BOMB_R) continue;
+      if (dist < fd) { fd = dist; fallback = e; }
+      if ((d.bombed ||= new Set()).has(e.id)) continue;
+      if (dist < bd) { bd = dist; best = e; }
     }
-    return false;
+    if (best) { d.bombed.add(best.id); return best; }
+    if (fallback) { d.bombed = new Set([fallback.id]); return fallback; }   // 名冊用盡 → 重新一輪
+    return null;
   }
 
   /**
-   * 餌機投下一枚炸彈(依機體類型:燃燒/凍結/毒霧/雷爆,見 DECOY_BOMB)。
-   * 直擊爆風走 _blast(記主機甲火力升級/助攻/擊殺);附加狀態復用既有 bleed/slow/EMP/stun 欄位
+   * 集束轟炸機投下一顆炸彈(依機體類型:燃燒/凍結/毒霧/雷爆,見 DECOY_BOMB)。
+   * 落點 = **指定目標的位置**(個別瞄準);沒帶目標(墜毀補投)才落在機體正下方。
+   * 直擊爆風走 _blast(記主機火力升級/助攻/擊殺);附加狀態復用既有 bleed/slow/EMP/stun 欄位
    * (與 _applyCC 同一批狀態縫),純狀態貢獻另補 asst 戳記(輔助角色收入)。
+   * 事件帶 fx/fz/fy(投擲點)⇒ 客戶端把炸彈畫成**榴彈拋物線**(使用者需求);傷害仍於事件當下
+   * 即結算(拋物線純表現層,MUST NOT 改成客戶端落地才回報 —— 那就是把結算下放到客戶端,A1)。
    */
-  _decoyBomb(d, owner) {
+  _decoyBomb(d, owner, tgt = null) {
     if (!owner) return;
     const b = DECOY_BOMB[d.bombType] || DECOY_BOMB.fire;
-    const def = decoyBombBlast(owner.abil);   // 單枚 = 預算的非撞擊部分 / BOMB_MAX(同吃綜合武器等級)
-    this.events.push({ e: 'decoyBomb', x: d.x, z: d.z, y: d.y || 0, r: def.r, side: d.side, bomb: d.bombType });
-    this._blast(owner, def, d.x, d.z, d.y || 0, this._unitLev(d));   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用);爆點層 = 餌機所在層
+    const def = decoyBombBlast(owner.abil);   // 單顆 = 預算的非撞擊部分 / BOMB_MAX(同吃綜合武器等級)
+    const bx = tgt ? tgt.x : d.x, bz = tgt ? tgt.z : d.z;
+    const by = tgt ? (tgt.hero || tgt.kind === 'heli' ? (tgt.y || 0) : 0) : (d.y || 0);
+    this.events.push({
+      e: 'decoyBomb', x: bx, z: bz, y: by, r: def.r, side: d.side, bomb: d.bombType,
+      fx: d.x, fz: d.z, fy: d.y || 0,
+    });
+    this._blast(owner, def, bx, bz, by, this._unitLev(tgt || d));   // 直擊爆風(走 _damage → 自動蓋 asst + 給擊殺信用)
     // 附加狀態:效果半徑內的敵方單位(建築/中立/無敵幀免疫,比照 _applyCC)
     const rr = def.r * 1.5;
     for (const t of [...this.ents.values()]) {
-      if (t.side === d.side || !t.side || t.neutral || t.decoy || t.kami || t.gar || t.hp <= 0) continue;
+      if (t.side === d.side || !t.side || t.neutral || t.decoy || t.kami || t.hyper || t.gar || t.hp <= 0) continue;
       if (t.hero && t.dead) continue;
       if (t.kind === 'tower' || t.kind === 'base' || t.kind === 'bunker') continue;   // 工事免控場/狀態
       if (t.hero && (t.invUntil || 0) > this.t) continue;
-      if (dist2d(t.x, t.z, d.x, d.z) > rr) continue;
+      if (dist2d(t.x, t.z, bx, bz) > rr) continue;
       (t.asst ||= {})[owner.pid] = this.t;   // 純狀態貢獻也記助攻
       if (b.dot) t.bleed = { dps: b.dot, until: this.t + (b.dur || 4), pen: 6, pid: owner.pid };   // 燃燒/毒霧 DoT
       if (b.slow) { t.slowUntil = Math.max(t.slowUntil || 0, this.t + (b.dur || 3)); t.slowF = Math.min(t.slowF ?? 1, b.slow); }   // 凍結/毒霧 減速(取較強 = 較小)
@@ -2751,11 +2829,16 @@ export class BattleSim {
     if (t.decoy) {   // 餌機被擊落:誘餌任務達成,不自爆;但尚有未投完的炸彈 → 原地補投一枚(2026-07-22)
       const sq = this.squads.get(t.pid);
       const owner = sq ? sq.bodies[sq.act] : null;
-      if (owner && (t.bombsLeft || 0) > 0) { t.bombsLeft--; this._decoyBomb(t, owner); }
+      if (owner && (t.bombsLeft || 0) > 0) { t.bombsLeft--; this._decoyBomb(t, owner, this._decoyBombTarget(t)); }
       this._removeDecoy(t);
       return;
     }
-    if (t.kami) {   // 自殺攻擊機被擊毀(2026-07-22):原地以 50% 傷害與半徑引爆(舊版只消失、不引爆)
+    if (t.hyper) {   // 極音速飛彈被攔截:不引爆(攔截成功 = 完全否定這一招),只留碎裂演出
+      this._hyperShotDown(t);
+      this._removeHyper(t);
+      return;
+    }
+    if (t.kami) {   // 護衛自殺機被擊毀(2026-07-22):原地以 50% 傷害與半徑引爆(舊版只消失、不引爆)
       this._kamiDeathBoom(t);
       this._removeKami(t);
       return;
@@ -2768,7 +2851,7 @@ export class BattleSim {
       // 第三方軍隊(GUER/MILI)沒有 stats 欄:擊殺英雄只記受害方 deaths,不記殺手 kills
       if (bySide && bySide !== t.side && this.stats[bySide]) this.stats[bySide].kills++;
       // 重生冷卻:三機小隊只有「整隊全滅」才追加重生時間(全隊統一延後),個別墜毀只吃基礎重生;
-      // 機甲/變形機甲(單機)沿用陣營死亡數累加。
+      // 機甲/變形者(單機)沿用陣營死亡數累加。
       const r = UNITS[t.kind].respawn;
       if (t.sq && t.sq.bodies.length > 1) {
         if (this._aliveN(t) === 0) {              // 這一架墜毀 = 三艘全滅 → 追加時間、三架一起延後重生
@@ -2917,6 +3000,7 @@ export class BattleSim {
     this._tickSquads(dt);
     this._tickDecoys(dt);
     this._tickKamis(dt);
+    this._tickHypers(dt);
     this._tickCivilians(dt);
     this._tickMines();
     this._tickAmbush(dt);
@@ -2928,8 +3012,8 @@ export class BattleSim {
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
     for (const e of [...this.ents.values()]) {
-      // 餌機/自殺攻擊機:位置由 _tickDecoys/_tickKamis 管、自己不推線,但仍是敵方小兵/塔的合法目標
-      if (e.hero || e.neutral || e.decoy || e.kami || e.hp <= 0) continue;
+      // 集束轟炸機/護衛機/極音速飛彈:位置由各自的 _tick* 管、自己不推線,但仍是敵方小兵/塔的合法目標
+      if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.hp <= 0) continue;
       const u = UNITS[e.kind];
       e.cd = Math.max(0, e.cd - dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
@@ -2988,7 +3072,7 @@ export class BattleSim {
     b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
-    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null; b.barrageUntil = 0; b.barrageLeft = 0;
+    b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
     if (soloWipe) {
       b.mp = b.maxMp;
       b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;
@@ -3108,7 +3192,7 @@ export class BattleSim {
     for (const h of this.heroes.values()) {
       // 機甲會踩雷,但**蓄力跳躍高過一般跳躍頂點的區間 = 空中狀態**(airUnit)不觸發
       // ——「小跳跳不過雷區、蓄力跳才過得去」是刻意的門檻,見 data.js AIR;
-      // 變形機甲照舊只有地面型態(回報高度 y ≤ MORPH.GROUND_Y)會踩,飛行型不觸發。
+      // 變形者照舊只有地面型態(回報高度 y ≤ MORPH.GROUND_Y)會踩,飛行型不觸發。
       const grounded = h.kind === 'robot'
         ? !airUnit(h.kind, h.y)
         : (h.kind === 'morph' && (h.y || 0) <= MORPH.GROUND_Y);
@@ -3141,7 +3225,7 @@ export class BattleSim {
     for (const h of this._allBodies()) {   // 每一架無人機各自可能被伏擊
       // 全場同時只准 1 發第三方伏擊飛彈在空中(THREAT_MISSILES_MAX)
       if (this.missiles.filter((m) => m.amb).length >= GAME.THREAT_MISSILES_MAX) return;
-      // 無人機恆為空中目標;變形機甲僅飛行型態(y ≥ AA_MIN_ALT)會被伏擊鎖定
+      // 無人機恆為空中目標;變形者僅飛行型態(y ≥ AA_MIN_ALT)會被伏擊鎖定
       if (h.dead) continue;
       if (h.kind !== 'drone' && !(h.kind === 'morph' && (h.y || 0) >= GAME.AA_MIN_ALT)) continue;
       if ((h.thirdCd || 0) > this.t) continue;   // 第三方打擊冷卻中(踩雷/被伏擊共用,3 分鐘)
@@ -3617,6 +3701,10 @@ export class BattleSim {
     if (e.kami) {   // 護衛自殺機衝出:客戶端要姿態 + 角色(縮小 SIZE_F 渲染成該角色的無人機)
       o.pid = e.pid; o.ch = e.ch; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
     }
+    if (e.hyper) {   // 極音速飛彈:客戶端要姿態 + 相位(爬升 = 尾焰柱,俯衝 = 音爆錐)
+      o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
+      o.ph = e.phase === 'dive' ? 1 : 0;
+    }
     if (e.hero) {
       o.pid = e.pid; o.y = Math.round((e.y || 0) * 10) / 10; o.ry = Math.round((e.ry || 0) * 100) / 100;
       o.dead = e.dead; if (e.dead) o.rs = Math.max(0, Math.round(e.respawnAt - this.t));
@@ -3637,13 +3725,17 @@ export class BattleSim {
         o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
                  Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
       }
-      // 變形機甲餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
+      // 變形者餌機:掛點狀態(0 = 已分離/重組中,1 = 已組合就緒)+ 冷卻倒數(HUD / 組合動畫)
       if (e.sq && e.kind === 'morph') {
         o.dcd = Math.max(0, Math.round((e.sq.decoyCd - this.t) * 10) / 10);
         o.dc = !e.sq.decoy && o.dcd === 0 ? 1 : 0;
       }
-      // 非變形機甲:重砲模式冷卻倒數(HUD)—— 只跟主視野機發一份
-      if (o.act && e.kind === 'robot') o.bcd = Math.max(0, Math.round(((e.barrageCd || 0) - this.t) * 10) / 10);
+      // 機甲:重砲模式冷卻倒數(HUD)—— 只跟主視野機發一份
+      // 機甲:極音速飛彈冷卻倒數(HUD)+ 空中是否已有一枚(有 → 鈕面顯示「飛行中」)
+      if (o.act && e.kind === 'robot') {
+        o.hcd = Math.max(0, Math.round(((e.hyperCd || 0) - this.t) * 10) / 10);
+        o.hfly = e.hyper ? 1 : 0;
+      }
       // 無人機護衛自殺機:CD 倒數(HUD;歸零 = 兩架護衛機重現)—— 只跟主視野機發一份
       if (o.act && e.sq && e.kind === 'drone') o.kcd = Math.max(0, Math.round((e.sq.kamiCd - this.t) * 10) / 10);
       if ((e.empUntil || 0) > this.t) o.emp = Math.round((e.empUntil - this.t) * 10) / 10;

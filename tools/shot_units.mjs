@@ -2,7 +2,7 @@
 // 前置:伺服器在 8620 執行中(node server/server.js);Playwright 借用 mapping_elf 的安裝
 // 用法:node tools/shot_units.mjs [--ids s01,t03|all] [--out DIR] [--size 640]
 //   每台機體輸出:front(前 3/4)/ side(正側)/ back(後 3/4)三視角;
-//   變形機甲(morph)另補 fly(飛行型 pose(1) 前 3/4)。
+//   變形者(morph)另補 fly(飛行型 pose(1) 前 3/4)。
 //   同時回報 build 例外 / mesh 數 / 包圍盒 —— 兼作「模型可建性」快速稽核。
 // 渲染管線與展示台(charPreview.js)同源:同光照、同 cel 光向、同 locomotion 收斂。
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';

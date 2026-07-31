@@ -52,7 +52,7 @@ export class CharPreview {
     this.targetY = 3;
     this.size = new THREE.Vector3(4, 6, 4);
 
-    // 變形機甲:0=地面型,1=飛行型(直接驅動 rig.pose,略過高度判定)
+    // 變形者:0=地面型,1=飛行型(直接驅動 rig.pose,略過高度判定)
     this.morphRig = null;
     this.morphM = 0;
     this.morphTarget = 0;
@@ -113,7 +113,7 @@ export class CharPreview {
     this.height = heroTargetH(kind, id);
     this.holder.add(group);
 
-    // 變形機甲:抓 rig(kind==='morph' 才有 pose);兩型態剪影差很大,取景要涵蓋較大者
+    // 變形者:抓 rig(kind==='morph' 才有 pose);兩型態剪影差很大,取景要涵蓋較大者
     const rig = group.userData.rig;
     this.morphRig = rig?.kind === 'morph' ? rig : null;
     this.morphM = 0;
@@ -252,7 +252,7 @@ export class CharPreview {
     return r / Math.sin(half) * 1.12;
   }
 
-  /** 變形機甲:切換地面↔飛行,回傳切換後是否為飛行型(給按鈕更新標籤) */
+  /** 變形者:切換地面↔飛行,回傳切換後是否為飛行型(給按鈕更新標籤) */
   toggleMorph() {
     if (!this.morphRig) return false;
     this.morphTarget = this.morphTarget > 0.5 ? 0 : 1;
@@ -585,7 +585,7 @@ export class CharPreview {
   toggleSlow() { this.timeScale = this.timeScale < 1 ? 1 : 0.3; return this.timeScale < 1; }
 
   /** 跳躍演示(仿遊戲 Space):robot/drone 拋物線起跳(驅動 heroY → locomotion stepJumpPose);
-   *  變形機甲 = 蓄力跳彈射變形(對應遊戲的 Space)。 */
+   *  變形者 = 蓄力跳彈射變形(對應遊戲的 Space)。 */
   jump() {
     if (this.isUnit) return false;   // NPC/建築不跳
     if (this.morphRig) return this.toggleMorph();
@@ -634,7 +634,7 @@ export class CharPreview {
     this.travel += this.speed * dt;
     if (this.ground) this.ground.position.z = -(this.travel % this.groundCell);   // 機體朝 +z → 地面往 -z 捲
 
-    // 變形機甲:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
+    // 變形者:locomotion.js 以「回報高度」推導型態(> 1.2 = 飛行型),與戰場同一條判定
     let hy = this.morphTarget > 0.5 ? 5 : 0;
     // 跳躍演示(robot/drone;morph 走變形不走此路):heroY 拋物線 → stepJumpPose 蹬伸/收腿/落地
     if (this._jump) {

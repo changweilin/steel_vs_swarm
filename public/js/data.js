@@ -386,6 +386,7 @@ export function tacticalScore(sinuosity, turnsPerKm, maxOverlap) {
 export const TARGET_CLASS = {
   soldier: 'flesh', apc: 'armor', tank: 'armor', rocketeer: 'flesh', howitzer: 'flesh', heli: 'air',
   robot: 'armor', drone: 'air', morph: 'armor', decoy: 'air', tower: 'building', base: 'building',
+  kami: 'air', hyper: 'air',   // 機種絕招的可擊落載具(飽和攻擊護衛機 / 極音速飛彈)—— 對空武器該吃得到加成
   bunker: 'building',   // 第三方碉堡(見 THIRD)
   civilian: 'flesh',    // 平民/間諜(非戰鬥人員;永不被 NPC 鎖定,見 CIVILIAN)
   // 中立可擊毀物(防空陣地 / 障礙物)吃反建築加成:攻城武器開路特別快
@@ -412,8 +413,8 @@ export const WEAPONS = {
   // rocket vs.air 1.2(2026-07-17 火箭筒對空化):肩射火箭筒是合格的防空武器,
   // 火箭兵優先鎖定空中目標(vs 進 _acquireTarget 的目標偏好;NPC 傷害本身不吃 vs)。
   rocket: { name: '肩射火箭',   dmg: 130, r: 20, rate: 1 / 6, range: 320, mag: 3, reload: 8, pen: 10, needAim: true, vs: { flesh: 1.0, armor: 1.5, air: 1.2, building: 1.3 } },
-  // bomb 只留「彈體規格」(半徑/破甲/vs);**傷害刻意不住這裡** —— 2026-07-27 起自爆攻擊與另兩招
-  // (餌機/重砲)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
+  // bomb 只留「彈體規格」(半徑/破甲/vs);**傷害刻意不住這裡** —— 飽和攻擊與另兩招
+  // (集束炸彈/極音速飛彈)共用機種絕招傷害預算,由 kamiBlast()/selfBoomBlast() 推導(見 SPECIAL)。
   bomb:   { name: '重型炸彈',   r: 22, pen: 8, vs: { flesh: 1.5, armor: 1.2, air: 0.5, building: 1.5 } },
   siege:  { name: '攻城榴彈砲', dmg: 90,  rate: 1.2, range: 260, mag: 6,  reload: 3.5, pen: 14, needAim: true, vs: { flesh: 0.8, armor: 1.2, air: 0.4, building: 2.2 } },
 };
@@ -471,7 +472,7 @@ export const RANGE_TOL = 1.25;
 // SQUAD:蜂群玩家 = 單架無人機(2026-07-17 起;舊制為 N 架小隊,現 N=1)。
 // 生存值(HP/護盾/護甲)= 機甲平均的 HP_F(80%);傷害 = 機甲全額(DMG=1,單機不折)。
 // 傷害折算仍住在 heroWeapon()(與 HEROIC 同一個縫),別在 sim/game 二次乘算。
-// MORPH:傭兵變形機甲(單機;HP/火力與機甲完全相同)。
+// MORPH:傭兵變形者(單機;HP/火力與機甲完全相同)。
 // 飛行型態「觸地」→ 變形為地面型;地面型態「蓄力跳躍」(按住 Space 蓄力後放開)→ 彈射升空變形為飛行型。
 // 變形是客戶端物理(位置本就客戶端回報),伺服器一律以回報高度 y 判定型態:
 // y≈0 = 地面型(會踩地雷)、y ≥ GAME.AA_MIN_ALT = 空中目標(吃塔 SAM / 防空伏擊)。
@@ -527,7 +528,7 @@ export const CJUMP = {
   CROUCH_M: 1.1,     // 蓄力下蹲幅度(公尺;FPV 鏡頭同步下沉)
   CD: 15,            // 蓄力跳躍冷卻(秒;客戶端閘門,與無敵幀 IFRAME.CD 對齊 —— CD 中放開只普通小跳)
 };
-// ---- 飛行動力學(2026-07-30 使用者需求;飛行機體 = 無人機 + 飛行型態的變形機甲)----
+// ---- 飛行動力學(2026-07-30 使用者需求;飛行機體 = 無人機 + 飛行型態的變形者)----
 // 兩條規則共用這一個縫,MUST NOT 在 game.js / HUD 各自手寫係數:
 //  ①**受擊掉高**:飛行機體挨打會掉高度,掉的公尺數**正比於該次傷害**。校準錨(使用者定調)=
 //    「打完護盾 + 裝甲」掉 SINK_TOWERS 個砲塔高 ⇒ 每點傷害掉幾公尺是**推導值**(airSinkM):
@@ -543,7 +544,7 @@ export const CJUMP = {
 //    動力見底 = **爬不上去**(不是變慢)—— 與 slopeBlocked 同語意:玩家要分得出「上不去」。
 // 位置本就客戶端權威(見 sim.heroPos)⇒ 這兩條與蓄力跳/攀爬同層,住客戶端物理;驅動它們的量
 // (受擊傷害、電力上限/回速)仍是伺服器權威快照,MUST NOT 在客戶端自算。
-// 適用對象刻意只有**玩家操控的飛行機體**:NPC 直升機/餌機/自殺機走的是伺服器腳本航線(定高飛行),
+// 適用對象刻意只有**玩家操控的飛行機體**:NPC 直升機/集束轟炸機/護衛機/極音速飛彈走的是伺服器腳本航線(定高飛行),
 // 掉高會讓它們陷進地形、動力條也無電力可正比 —— MUST NOT 為了「一致」把規則套過去。
 export const FLIGHT = {
   SINK_TOWERS: 2,    // 受擊掉高校準:掉光「平均護盾 + 裝甲」= 掉幾個砲塔高
@@ -578,18 +579,22 @@ export const SQUAD = {
   DMG: 1,             // 單機傷害 = 機甲全額(不再折算;heroWeapon() 唯一套用點,三機時代 = 1/3)
   ARMOR_F: 1,         // 無人機護甲等比縮放係數(UNITS 之後 derive:令無人機平均 armor = 機甲平均 ×HP_F)
   DRONE_AVG_HP: 0,    // 初始無人機平均總血量(護盾+裝甲;UNITS 之後 derive)→ 防空伏擊傷害 = 此值 /3
-  // ── 護衛自殺攻擊機(2026-07-18 重設計)──
-  //  兩架 1/2 體型、外觀同主機的護衛機常駐主機兩側;觸發前不可被鎖定/受傷(純客戶端貼身外觀,不在 sim)。
-  //  「狙擊模式長按右鍵」觸發:兩架同時衝出,以主機 3 倍速撲擊,各造成機種絕招預算 1/N 的重型炸彈爆風;
+  // ── 飽和攻擊(2026-08-01 使用者需求;原「自爆攻擊」)──
+  //  四架 1/2 體型、外觀同主機的護衛機常駐主機兩側;觸發前不可被鎖定/受傷(純客戶端貼身外觀,不在 sim)。
+  //  「長按右鍵」觸發:四架同時衝出,以主機 3 倍速撲擊,各造成機種絕招預算 1/N 的重型炸彈爆風;
   //  自爆後需等滿 CD_S 秒才重新出現(客戶端以 kamiCd 判定顯隱)。敵方導引飛彈會被衝出的護衛機吸走砲火
-  //  (見 sim._tickKamis / _tickMissiles)。觸發改狙擊長按右鍵(舊 F 鍵)。
+  //  (見 sim._tickKamis / _tickMissiles)。
+  //  **N 2 → 4「攻擊力減半、數量加倍」是同一件事**:每架 = 預算 / N ⇒ N 加倍即每架減半,
+  //  整份預算(= 三招等值)逐位元不變。MUST NOT 另外手寫折半係數(那會把總預算也砍半)。
   KAMI: {
-    N: 2, HP_F: 1 / 3, SIZE_F: 1 / 2, SPEED_MUL: 3, CD_S: 30,
+    N: 4, SHOT_DOWN: 2, SIZE_F: 1 / 2, SPEED_MUL: 3, CD_S: 30,
+    // HP 不再吃主機血量比例(HP_F 已移除):改由「一座砲塔擊落 SHOT_DOWN 架、其餘成功自爆」
+    // 反解(見 kamiHp)⇒ 使用者定調的「只有一座砲塔時可以成功自爆 2 架」是**推導值**,MUST NOT 手寫。
     // 傷害不再手寫折半係數:每架 = 機種絕招預算 / N(見 kamiBlast);N 架打完 = 一份完整預算。
     DEATH_F: 0.5,     // 被擊毀時原地引爆(2026-07-22 使用者需求):傷害與半徑各取正常撲擊爆風的 50%
     SPREAD: 0.55,     // 衝出時前方左右散開角(弧度,≈32°)
     FWD: 8, SIDE: 5,  // 衝出生成點:前置 / 側置偏移(公尺)
-    TURN: 3.2,        // 追蹤限轉率(弧度/秒;比餌機敏捷)
+    TURN: 3.2,        // 追蹤限轉率(弧度/秒;比集束轟炸機敏捷)
     BOOM_M: 5,        // 近炸引信半徑
     TTL_S: 8,         // 無目標時直飛自毀秒數
     ACQ_R: 260,       // 無鎖定時自動索敵半徑
@@ -606,13 +611,14 @@ export const SQUAD = {
 // 無人機另外沿用它當自爆衝刺目標。
 export const LOCK = { TTL: 2.5, WARN_S: 1.6 };
 
-// ---- 餌機(變形機甲專屬可分離子機;2026-07-18:非變形機甲已移除餌機,改重砲模式)----
-// 觸發改「狙擊模式長按右鍵」(舊 F 鍵)。分離發射,航向鎖定發射瞬間的機首朝向 —— 玩家無法操舵。
-// 準星有鎖定目標(LOCK.TTL 內)才會追蹤,否則直飛到燃料耗盡自爆。沿途投彈見下(BOMB_*)。
-// 飛行中經 PiP 小視窗回傳畫面與視野;超過 LINK_M 即失聯(斷訊、不再回傳視野),
-// 機體仍直飛到 TTL_S 自爆。可被擊落 —— 這就是「餌」:替主機甲吸走火力。
+// ---- 集束炸彈(變形者專屬可分離子機;2026-08-01 更名,原「轟炸餌機」)----
+// 「其他性質跟餌機相同」(使用者定調)⇒ 載具(可分離子機)整套沿用:分離發射,航向鎖定發射瞬間的
+// 機首朝向(玩家無法操舵)、準星有鎖定目標(LOCK.TTL 內)才追蹤、飛行中經 PiP 小視窗回傳畫面與視野、
+// 超過 LINK_M 失聯(斷訊、不再回傳視野,機體仍直飛到 TTL_S 自爆)、可被擊落替主機吸走火力。
+// 改的只有**投彈**那一段(見 BOMB_*):彈數 6、逐顆個別瞄準、投擲軌跡同榴彈。
+// 內部識別字 decoy/DECOY 刻意不改(entity kind / 事件名 / 稽核與 e2e 全綁在上面);
+// 面向玩家的名稱一律「集束炸彈 / 集束轟炸機」(UNITS.decoy.name 與 help.js 是唯一文案來源)。
 export const DECOY = {
-  HP_F: 0.25,       // 生命值 = 主機甲裝甲上限的 1/4
   SPEED: 62,
   TURN: 2.0,        // 追蹤時每秒最大轉向(弧度);無鎖定時完全不轉向
   ALT: 8,           // 發射後相對主機甲的爬升高度
@@ -625,11 +631,16 @@ export const DECOY = {
   // 由 decoyBlast()/decoyBombBlast() 推導(見 SPECIAL);此處只留彈體規格(半徑/破甲/vs)。
   R: 20, PEN: 10,
   vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
-  // 沿途投彈(2026-07-18):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
+  // 集束投彈(2026-08-01 改制):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
   // 單枚 = 直擊爆風(預算的非撞擊部分均分)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
-  BOMB_R: 90, BOMB_MAX: 5, BOMB_GAP: 0.9, BOMB_BLAST_R: 14, BOMB_PEN: 6,
+  // 三項使用者定調:①BOMB_MAX 6;②**逐顆個別瞄準**(範圍內多目標時輪流分配,見 sim._decoyBombTargets)
+  // —— 舊制是「炸在自己腳下」,多目標時後幾顆全落在同一團;③投擲軌跡同榴彈(客戶端拋物線,見
+  // game._spawnDecoyBomb 的 to 落點解;伺服器仍在事件當下結算,拋物線純表現層)。
+  BOMB_R: 90, BOMB_MAX: 6, BOMB_GAP: 0.7, BOMB_BLAST_R: 14, BOMB_PEN: 6,
+  // 一座砲塔火力下投得完 DROP_N 顆(墜毀補投的那一顆不算)—— HP 反解錨點,見 decoyHp()。
+  DROP_N: 5,
 };
-// ---- 餌機沿途投彈:依機體類型的效果(復用 sim 既有 bleed/slow/EMP/stun,無新狀態欄位)----
+// ---- 集束投彈:依機體類型的效果(復用 sim 既有 bleed/slow/EMP/stun,無新狀態欄位)----
 // fire/poison 走 bleed 逐體 DoT(owner 記功)、freeze 走 slow 減速、thunder 走 EMP(武器離線)+ stun 麻痺。
 export const DECOY_BOMB = {
   fire:    { name: '燃燒彈', color: 0xff6a2a, dot: 22, dur: 4 },              // 灼燒 DoT
@@ -637,61 +648,69 @@ export const DECOY_BOMB = {
   poison:  { name: '毒霧彈', color: 0x8fe36a, dot: 15, dur: 5, slow: 0.7 },  // 毒 DoT + 微減速
   thunder: { name: '雷爆彈', color: 0xffe14f, emp: 2.0, stun: 0.6 },         // 武器離線 + 短暫麻痺
 };
-/** 變形機甲角色 → 餌機炸彈類型(四類各兩台,依機體/性格配置) */
+/** 變形者角色 → 集束炸彈類型(四類各兩台,依機體/性格配置) */
 export const MORPH_BOMB = {
   m01: 'thunder', m02: 'freeze', m03: 'fire',   m04: 'poison',
   m05: 'thunder', m06: 'fire',   m07: 'freeze', m08: 'poison',
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
-// ---- 重砲模式(巨炮;2026-07-18;非變形機甲專屬:狙擊模式長按右鍵)----
-// **2026-07-30 使用者需求改制**:巨砲不再「傾洩一般重武器的彈夾」,改成**獨立的一輪砲擊** ——
-//   ①**不消耗一般重武器的彈夾**(也不耗電力、不吃射速閘與裝填閘 ⇒ 空夾/裝填中照樣能轟);
-//   ②每發 **100% 傷害**(不再 ×1.5~3 的加成)。
-// 等值性(三招同預算)因此改由**發數**承擔,而不是每發倍率:
-//   發數 barrageShots() = 一份機種絕招預算 ÷ 該重武器每發傷害 ⇒ 整輪砲擊 ≈ 一份預算,
-//   與自爆攻擊/轟炸餌機同額(見 SPECIAL)。每發爆發低的重武器發數自然較多,反之較少。
-// 兩處 MUST NOT 復辟舊制:_heroDmg MUST NOT 再乘任何重砲倍率(那就不是 100% 傷害了)、
-//   _gateFire 的重砲分支 MUST NOT 扣 ammo/mp(那就又吃彈夾了)。
-// 發數是**權威資源**:伺服器 h.barrageLeft 逐發遞減,歸零即窗關閉(`_barragingDmg` 同判)——
-//   否則「窗內免彈免電」等於在 DUR 內無限開火,傷害隨幀率浮動且遠超預算。
-// 開窗長度 barrageDur() 由發數推導(MUST NOT 手寫 0.5):舊制彈夾只有 2~5 發,新制發數可達
-//   SHOTS_MAX ⇒ 固定 0.5s 在低幀率機器上打不完,沒打出的發數 = 靜默少掉的預算。
-// DMG_GRACE(2026-07-25 使用者回報「巨炮沒有傷害」修正):開窗長度是「多快能把這輪砲彈打完」,
-//   但榴彈/火箭/飛彈是**拋射彈**,離膛後要飛一段才落點回報 heroBurst/heroLance —— 舊制射速閘/
-//   射程驗證全在**落點時刻**以 barrageUntil 判定,彈體落地時窗早已過期 ⇒ 同一輪的第 2 發起被擋
-//   (實測:一輪 3 發榴彈只有 1 發)。修正 = 射速/彈藥/電力/射程的免除窗延長 DMG_GRACE 秒涵蓋
-//   彈體飛行時間(_barragingDmg)。發數閘門(barrageLeft)是免除窗不會外溢的保證。
-export const BARRAGE = {
-  DUR: 0.5,          // 開窗長度下限(秒;實際 = barrageDur(發數))
-  SHOT_GAP: 0.06,    // 每發預留的傾洩時間(秒;推導開窗長度用 —— 低幀率也打得完一輪)
-  SHOTS_MIN: 2,      // 一輪砲擊發數下限(每發傷害極高的重武器)
-  SHOTS_MAX: 12,     // 一輪砲擊發數上限(每發傷害極低的重武器)
-  RANGE_F: 1.20,     // 開窗期間射程 ×1.2
-  CD_S: 30,          // 獨立冷卻(與彈夾裝填無關)
-  DMG_GRACE: 3.5,    // 免除窗延長秒數(涵蓋拋射彈飛行時間)
+// ---- 極音速飛彈(2026-08-01 使用者需求;機甲專屬,取代舊「重砲模式/巨砲」)----
+// 長按右鍵發射一枚**射後不理**的極音速飛彈:先垂直爬升到 APEX_M 高空,再以 DIVE_SPD 螺旋俯衝
+// 撲向發射瞬間鎖定的目標(鎖定實體 → 追它的即時位置;無鎖定 → 打正前方 RANGE_M 的地面點)。
+// 「射後不理」= 發射後玩家完全不需再瞄準/維持鎖定,飛彈自己飛完全程(對齊 trajClass 'fnf' 語意)。
+// **飛彈是實體、可被攻擊**(sim ent kind 'hyper',敵方小兵/塔的合法目標)⇒ 它的 HP 是平衡旋鈕:
+//   使用者定調「只有一座砲塔持續攻擊剛好不會被打爆」⇒ HP 由**最長飛行時間**反解(見 hyperHp),
+//   MUST NOT 手寫。最長 = 最遠射程那一發(爬升 + 斜距俯衝),故任何距離都撐得住一座塔。
+// 傷害 = **一整份機種絕招預算**(單一戰鬥部,見 hyperBlast)⇒ 與飽和攻擊(N 架均分)、
+//   集束炸彈(撞擊 + 6 顆)三招等值,這條不變式住 e2e「機種絕招三招同預算」。
+// 舊制 BARRAGE(傾洩重武器彈夾的巨砲)整組移除:BARRAGE / barrageShots / barrageDur /
+//   LANCE.BARRAGE_F / SHAKE.BARRAGE* / sim._barragingDmg 與各射程閘的 RANGE_F 分支全數不再存在。
+//   **MUST NOT 復辟**:重武器射擊路徑上不該再有任何「這一發免彈夾/免射速閘」的旁路 ——
+//   那是舊巨砲留下的洞,新招是獨立實體,與重武器彈夾完全脫鉤。
+export const HYPER = {
+  // 尺度紀律:飛彈的位置由伺服器每 tick 推進 ⇒ 速度/高度/射程全是**遊戲空間**(已吃 COMBAT_SCALE)。
+  //   射程與高度因此 MUST 由已縮好的量推導,MUST NOT 手寫真實世界公尺(那會大出一倍)。
+  APEX_F: 1.6,       // 爬升頂點 = 直射鎖定天花板 GAME.GUN_CEIL_M × 此值 ⇒ 爬到「槍打不到飛機」的高度之上
+  RANGE_F: 1.2,      // 最大接戰距離 = 砲塔射程 × 此值 ⇒ 機甲的攻塔手段:站在塔的射程外也打得到
+  CLIMB_SPD: 70,     // 爬升速度(m/s;略快於集束轟炸機 —— 這一段是刻意留給敵方的攔截窗)
+  DIVE_F: 3.5,       // 俯衝速度 = 爬升速度 × 此值(「極音速」的唯一定義處)
+  SPIN_RPS: 2.4,     // 螺旋落下的每秒圈數(伺服器位置與客戶端演出同吃一份 ⇒ 兩端同步)
+  SPIRAL_R: 9,       // 螺旋半徑(公尺;繞著彈道軸的偏擺,實體尺寸不吃 COMBAT_SCALE)
+  MODEL_F: 2.2,      // 彈體尺寸 = 集束轟炸機的幾倍(models.js 共用同一具彈體幾何放大;命中量體同吃 ⇒ 看到多大 = 打到多大)
+  BLAST_R: 26,       // 戰鬥部爆風半徑(公尺;> 重型炸彈 22 —— 這是單發吃整份預算的戰鬥部)
+  PEN: 12,           // 破甲值
+  CD_S: 30,          // 獨立冷卻(三招同一段 CD)
+  vs: { flesh: 1.2, armor: 1.5, air: 0.5, building: 1.6 },
 };
-/** 一輪砲擊的開窗長度(秒;發數推導,MUST NOT 手寫)—— 兩端共用:客戶端傾洩節奏 + 伺服器免除窗 */
-export const barrageDur = (shots) => Math.max(BARRAGE.DUR, (shots || 0) * BARRAGE.SHOT_GAP);
+/** 爬升頂點高度(公尺;推導不手寫) */
+export const hyperApex = () => GAME.GUN_CEIL_M * HYPER.APEX_F;
+/** 最大接戰距離(公尺;無鎖定時的正前方落點距離,也是 HP 反解的最長斜距) */
+export const hyperRange = () => UNITS.tower.range * HYPER.RANGE_F;
+/** 俯衝速度(m/s;推導不手寫) */
+export const hyperDiveSpd = () => HYPER.CLIMB_SPD * HYPER.DIVE_F;
+/** **最長**飛行時間(秒)= 爬升 + 最遠斜距俯衝;HP 反解與客戶端演出共用,MUST NOT 手寫 */
+export const hyperFlightS = () =>
+  hyperApex() / HYPER.CLIMB_SPD + Math.hypot(hyperRange(), hyperApex()) / hyperDiveSpd();
+
 
 // ---- 機種絕招傷害(2026-07-27 使用者需求;三招共用同一份傷害預算 = 唯一縫)----
-// 三招 = 無人機「自爆攻擊」(護衛自殺機 / 主機自毀撞擊)、變形機甲「轟炸餌機」、非變形機甲「重砲模式」;
+// 三招 = 無人機「飽和攻擊」(護衛自殺機 / 主機自毀撞擊)、變形者「集束炸彈」、機甲「極音速飛彈」;
 // 三者共用同一顆鍵(長按右鍵 / 觸控 ZR,見 game.js _fireHoldAbility)與同一段 30s CD,威力理應等值。
-// 舊制三招各自為政:自爆吃輕武器階(240→420)、餌機固定值(260 + 5×34,完全不隨升級成長)、
-// 重砲固定 ×2(實得加成 = 整夾爆發,隨重武器階 ~265→~730)⇒ 同一格絕招的期望傷害差到三倍。
-// 新制:一次絕招的**總傷害預算** = BASE ×(1 + PER_LVL ×(綜合等級 − 1)),
+// 一次絕招的**總傷害預算** = BASE ×(1 + PER_LVL ×(綜合等級 − 1)),
 //   綜合等級 = (輕武器階 + 重武器階) / 2 —— 絕招是機體整套武裝的爆發,兩條武器軌都算數,
 //   故等級可為 x.5 的**分數階** ⇒ MUST NOT 丟進 tierVal(三階數組只吃整數階,分數會回傳 undefined)。
-// 三招各自把同一份預算切給自己的投射數:
-//   自爆 = KAMI.N 架均分(主機自毀撞擊 = 一架機體吃整份);
-//   餌機 = 撞擊自爆 DECOY_IMPACT,其餘均分給 DECOY.BOMB_MAX 枚沿途投彈;
-//   重砲 = 一輪砲擊的**發數**(= 預算 ÷ 每發傷害,夾在 BARRAGE.SHOTS_MIN~MAX;每發 100% 傷害,
-//         2026-07-30 起不消耗彈夾 ⇒ 整輪傷害全額是追加的,不必再扣掉「本來就打得出的整夾」)。
-// BASE 300 ≈ 舊制三者的中位(自爆 240 / 餌機 430 / 重砲加成 ~265),PER_LVL 0.45 ⇒ 綜合 Lv4 = ×2.35
-// (對齊重武器整夾爆發 Lv1→Lv4 的成長)。**MUST NOT** 在 sim/game/HUD 另寫任一招的傷害常數。
+// 三招各自把同一份預算切給自己的投射數(2026-08-01 改制後):
+//   飽和攻擊 = KAMI.N(4)架均分(主機自毀撞擊 = 一架機體吃整份);
+//   集束炸彈 = 撞擊自爆 DECOY_IMPACT,其餘均分給 DECOY.BOMB_MAX(6)顆投彈;
+//   極音速飛彈 = 單一戰鬥部吃**整份**(見 hyperBlast)—— 一發打完,離散化誤差為零。
+// DECOY_IMPACT 0.6 → 0.25(2026-08-01):新制的集束轟炸機 HP 是「一座砲塔火力下投得完 5+1 顆」
+//   反解的 ⇒ 設計上它**預期會被打下來**(撞擊自爆多半兌現不了)。把預算重心從撞擊移到炸彈,
+//   實得傷害才對得上另兩招;撞擊那份改為「活著撞到目標」的額外報酬。
+// BASE 300、PER_LVL 0.45 ⇒ 綜合 Lv4 = ×2.35。**MUST NOT** 在 sim/game/HUD 另寫任一招的傷害常數。
 export const SPECIAL = {
   BASE: 300,          // 綜合 Lv1 一次絕招的總傷害預算(三招同額)
   PER_LVL: 0.45,      // 每 +1 綜合等級的線性成長(綜合 Lv4 = ×2.35)
-  DECOY_IMPACT: 0.6,  // 餌機:撞擊自爆佔預算的比例(其餘均分給沿途投彈)
+  DECOY_IMPACT: 0.25, // 集束炸彈:撞擊自爆佔預算的比例(其餘均分給投彈)
 };
 /** 輕/重武器綜合等級(= 兩軌平均,可為 x.5 分數階;缺值以 Lv1 計) */
 export const specialTier = (abil) => ((abil?.light || 1) + (abil?.heavy || 1)) / 2;
@@ -699,29 +718,75 @@ export const specialTier = (abil) => ((abil?.light || 1) + (abil?.heavy || 1)) /
 export const specialMul = (abil) => 1 + SPECIAL.PER_LVL * (specialTier(abil) - 1);
 /** 一次機種絕招的總傷害預算 */
 export const specialBudget = (abil) => SPECIAL.BASE * specialMul(abil);
-/** 自爆攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑/破甲/vs 沿用重型炸彈規格) */
+/** 飽和攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑/破甲/vs 沿用重型炸彈規格) */
 export const kamiBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil) / SQUAD.KAMI.N) });
-/** 自爆攻擊:主機自毀撞擊引爆(單一機體 = 整份預算) */
+/** 飽和攻擊:主機自毀撞擊引爆(單一機體 = 整份預算) */
 export const selfBoomBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil)) });
-/** 轟炸餌機:撞擊自爆的爆風 */
+/** 集束炸彈:載具撞擊自爆的爆風 */
 export const decoyBlast = (abil) => ({
   dmg: Math.round(specialBudget(abil) * SPECIAL.DECOY_IMPACT), r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs,
 });
-/** 轟炸餌機:沿途投彈單枚的爆風(預算的非撞擊部分均分 BOMB_MAX 枚) */
+/** 集束炸彈:單顆投彈的爆風(預算的非撞擊部分均分 BOMB_MAX 顆) */
 export const decoyBombBlast = (abil) => ({
   dmg: Math.round(specialBudget(abil) * (1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX),
   r: DECOY.BOMB_BLAST_R, pen: DECOY.BOMB_PEN, vs: DECOY.vs,
 });
+/** 極音速飛彈:單一戰鬥部 = 整份預算(半徑/破甲/vs 住 HYPER) */
+export const hyperBlast = (abil) => ({
+  dmg: Math.round(specialBudget(abil)), r: HYPER.BLAST_R, pen: HYPER.PEN, vs: HYPER.vs,
+});
+
+// ---- 機種絕招「載具 HP」校準(2026-08-01 使用者定調;三招共用同一把尺 = 唯一縫)----
+// 使用者把三招的生存性一律以「**一座砲塔**持續射擊」表述:
+//   飽和攻擊  → 只有一座砲塔時可以成功自爆 2 架(4 架中被擊落 KAMI.SHOT_DOWN 架);
+//   極音速飛彈 → 只有一座砲塔持續攻擊剛好**不會**被打爆;
+//   集束炸彈  → 剛好投得出 5+1 顆(投完第 DROP_N 顆即被擊落,墜毀再補投 1 顆)。
+// 三條全是「撐幾秒」⇒ 收成同一組推導:曝險秒數 × 一座砲塔的每秒傷害。MUST NOT 手寫任一個 HP。
+// 三種載具一律 **armor 0 / 護盾 0**(見 sim 生成處):校準要精確,EHP 就不能隨主機角色/升級漂移。
+// 砲塔無 wid ⇒ pen 0(見 sim 主迴圈的 `wd?.pen || 0`),故基準 DPS = dmg × rate,不吃 armorMul。
+export const towerDps = () => UNITS.tower.dmg * UNITS.tower.rate;
+/** 「一座砲塔連續射擊 sec 秒剛好打不爆」的 HP(打完至少剩 1 滴) */
+export const towerSurviveHp = (sec) => Math.floor(towerDps() * Math.max(0, sec)) + 1;
 /**
- * 重砲模式:**一輪砲擊的發數**(2026-07-30 改制;每發 100% 傷害、不消耗彈夾)。
- * 發數 × 每發傷害 ≈ 一份絕招預算 ⇒ 與自爆攻擊/轟炸餌機等值;夾在 [SHOTS_MIN, SHOTS_MAX]。
- * 離散化誤差最多半發(整數發數 × 100% 傷害是使用者定調,MUST NOT 為了對齊預算去縮放每發傷害)。
+ * 「一座砲塔連續射擊 sec 秒剛好被打爆」的 HP。
+ * **向下取整**(不是四捨五入):要保證「sec 秒內死得掉」,HP 就 MUST ≤ 這段時間的傷害量 ——
+ * 進位那半滴會讓載具多活一瞬,剛好把最後一次擊落/最後一顆投彈推到窗外(整條校準差一)。
  */
-export const barrageShots = (def, abil) => {
-  const per = def?.dmg || 0;
-  if (!(per > 0)) return BARRAGE.SHOTS_MIN;
-  return Math.min(BARRAGE.SHOTS_MAX, Math.max(BARRAGE.SHOTS_MIN, Math.round(specialBudget(abil) / per)));
+export const towerKillHp = (sec) => Math.max(1, Math.floor(towerDps() * Math.max(0, sec)));
+/**
+ * 飽和攻擊:單架護衛自殺機的 HP。
+ * 曝險窗 = 從進入砲塔射程到撲上砲塔(以撲擊速度飛完 tower.range);砲塔一次只打一架 ⇒
+ * 要「剛好擊落 SHOT_DOWN 架」,每架就得剛好撐滿 曝險窗 / SHOT_DOWN 秒。
+ * 其餘 N − SHOT_DOWN 架成功自爆(N=4、SHOT_DOWN=2 ⇒ 使用者要的「成功自爆 2 架」)。
+ */
+/**
+ * 第 i 架護衛自殺機的橫向站位 s ∈ [−1, 1](均勻散開)——「衝出散開角 / 生成側偏移 / 客戶端貼身站位」
+ * 三個消費端的**唯一縫**。改 KAMI.N 兩端一起跟著散,MUST NOT 在任一端寫 `i === 0 ? -1 : 1`
+ * (那是 N=2 時代的式子,N=4 會把三架全擠到右側)。
+ */
+export const kamiSide = (i) => {
+  const n = Math.max(1, SQUAD.KAMI.N);
+  return n === 1 ? 0 : (i - (n - 1) / 2) / ((n - 1) / 2);
 };
+export const kamiExposureS = () => UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL);
+export const kamiHp = () => towerKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN);
+/**
+ * 極音速飛彈:HP = 撐得住**最長**一次飛行(hyperFlightS:爬升 + 最遠斜距俯衝)的一座砲塔火力。
+ * 取最長 ⇒ 任何交戰距離都「剛好不會被打爆」;兩座塔或塔 + 任何一把槍就打得下來(這是它的弱點)。
+ */
+export const hyperHp = () => towerSurviveHp(hyperFlightS());
+/**
+ * 集束炸彈:載具 HP = 撐到投完第 DROP_N 顆就被擊落(墜毀補投第 DROP_N+1 顆 ⇒ 使用者要的「5+1」)。
+ * 曝險窗 = 進入砲塔射程 → 進入投彈範圍 BOMB_R 的接近時間
+ *        + 投出 DROP_N 顆所需的 (DROP_N−1) 個間隔
+ *        + **半個間隔**:第 DROP_N 顆恰在窗末投出,要它「投得出去」窗就得再多撐一點;
+ *          半個間隔既保證第 DROP_N 顆出得去,又保證撐不到第 DROP_N+1 顆(推導不手寫餘量)。
+ */
+export const decoyExposureS = () =>
+  Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED
+  + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP;
+export const decoyHp = () => towerKillHp(decoyExposureS());
+
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
@@ -739,7 +804,7 @@ export const VITALS = {
 // G:彈道重力(真實值;武器 mv = 初速 m/s)。LAUNCH_MV:榴彈/火箭(launcher)拋物線武器的初速上限 ——
 // 真實 mv(650~700)幾乎打平,降到此值讓拋物線軌跡明顯(2026-07-22 使用者需求;純客戶端視覺,伺服器不模擬彈道)。
 // 對空彈射模式(2026-07-23 使用者需求):launcher 準星錐(AA_CONE 弧度)內掃到飛行類目標
-// (TARGET_CLASS 'air':無人機/直升機/餌機)即改用高初速 AA_MV —— 拋物線吊射打不到會動的飛行單位,
+// (TARGET_CLASS 'air':無人機/直升機/集束轟炸機/護衛機/極音速飛彈)即改用高初速 AA_MV —— 拋物線吊射打不到會動的飛行單位,
 // 高速平直彈道才有火控意義(射程/傷害不變,只換初速 ⇒ 純客戶端彈道,伺服器仍只驗落點)。
 // AA_MV 720(原 340;使用者「再更快更直」):實際初速取 min(武器真實 mv, AA_MV) ——
 // 彈射模式 = **全裝藥直射**,砲彈跑該武器的真實初速(152mm 650 / 無後座砲 435 / 集束彈 400),
@@ -878,19 +943,16 @@ export const AOE_NAME = { blast: '爆炸傷害', fan: '扇形傷害', line: '直
 // DECAY:每貫穿一名目標,後續目標傷害 ×此值。**首個目標恆為全額** ⇒ 單體 DPS 與舊 heroHit 相同,
 //   npm run bal 的四不變式(全部只模型化 1v1)不受影響 —— MUST NOT 改成首發也衰減。
 // MAX:單發最多貫穿目標數(防一條線掃穿整條兵線)。
-// BARRAGE_F:重砲模式(傾洩窗)的圓柱加粗係數。**原本只存在於演出端**(game.js _lanceVisual
-//   畫 1.5 倍粗),伺服器仍用原半徑結算 ⇒ 巨炮開下去「看到的比打到的粗 50%」,正是使用者回報的
-//   「打不到單位」之一。收進本縫後兩端同步(A18「看到多粗就是打到多粗」)。
+// 2026-08-01:舊 BARRAGE_F(重砲傾洩窗加粗)隨巨砲一併移除 —— 貫穿粗細不再有任何情境倍率,
+//   `lanceR(def)` 是**唯一**半徑來源。演出端 MUST NOT 自己乘任何倍率(A18「看到多粗就是打到多粗」)。
 export const LANCE = {
   R: { beam: 5.4, rail: 4.2, gun: 3.3 },
   DECAY: 0.75,
   MAX: 6,
   VBAND_F: 2.2,     // 垂直帶寬容 = R × 此值(伺服器無地形高程,射線高度只能近似 —— 見 sim.heroLance)
-  BARRAGE_F: 1.5,   // 重砲模式加粗(與 BARRAGE.RANGE_F 同層:傾洩窗的火力展開)
 };
-/** 貫穿圓柱半徑(公尺);barrage = 重砲傾洩窗 ⇒ 判定與演出**同時**加粗 */
-export const lanceR = (def, barrage = false) =>
-  (LANCE.R[def?.type] ?? LANCE.R.gun) * (barrage ? LANCE.BARRAGE_F : 1);
+/** 貫穿圓柱半徑(公尺);判定與演出共用同一支 */
+export const lanceR = (def) => LANCE.R[def?.type] ?? LANCE.R.gun;
 
 // ---- 彈道五分類(2026-07-23 使用者定案)----
 //   lob   低初速拋物線:榴彈/火箭吊射(BALLISTIC.LAUNCH_MV;對空時換 AA_MV 見 _updateAaMode)
@@ -1042,14 +1104,13 @@ export function recoilName(w, slot, fan = !!w.fan || w.type === 'plasma') {
 // trauma 每秒衰減 1.4、以平方驅動噪聲(game.js _updatePlayer),故連發會自然疊成持續轟鳴。
 //   FIRE       每發開火的基礎震動(再乘 RECOIL.kick 分級倍率)
 //   HEAVY_F    重武器槽的額外倍率:重砲擊發要有頓挫感,輕武器維持原本的細碎抖動
-//   BARRAGE_F  巨炮傾洩窗內每發再乘的倍率
-//   KAMI / DECOY / BARRAGE  三種狙擊長按機種招(自殺機 / 餌機 / 重砲)的發射震動
+//   KAMI / DECOY / HYPER  三種長按機種招(飽和攻擊 / 集束炸彈 / 極音速飛彈)的發射震動
 //   BLAST_F    爆炸震波(鏡頭震動 + 掀飛推力)的作用半徑 = 該武器攻擊半徑 × 此值。
 //              MUST NOT 改回「固定下限 + 倍數放大」—— 使用者指示震波不可無限遠傳遞,
 //              震波範圍就是該武器的攻擊範圍(爆點核心的推力/震動強度不變,只是邊界收到 r)。
 export const SHAKE = {
-  FIRE: 0.03, HEAVY_F: 3.0, BARRAGE_F: 1.3,   // 重武器單發 0.22~0.41(依 kick 2.4~4.5);傾洩窗連發疊到上限 = 巨炮轟鳴
-  KAMI: 0.6, DECOY: 0.5, BARRAGE: 0.55,
+  FIRE: 0.03, HEAVY_F: 3.0,   // 重武器單發 0.22~0.41(依 kick 2.4~4.5)
+  KAMI: 0.6, DECOY: 0.5, HYPER: 0.7,   // 極音速飛彈最重:垂直發射的後燄推力
   BLAST_F: 1,
 };
 
@@ -1201,7 +1262,7 @@ export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC
 export const SOLDIER_H = 1.8;
 
 // 機體尺寸(2026-07-12 改制,相對真人身高):
-//   機甲 / 變形機甲(不分型態)= 150%~250%、無人機 = 75%~150%。
+//   機甲 / 變形者(不分型態)= 150%~250%、無人機 = 75%~150%。
 // 倍率仍隨 mods.armor 在該機種護甲區間內線性內插:
 // 高防禦 = 更巨大 = 剪影更大 = 更容易被命中(命中是客戶端對 mesh raycast,體型直接生效)。
 export const HERO_SIZE = {
@@ -1210,7 +1271,7 @@ export const HERO_SIZE = {
   drone: { armor: [3, 12], mul: [0.75, 1.5] },
 };
 const BEAST_H_F = 0.78;   // 獸型四足:同噸位的站姿較矮(體長換來的)—— 但不得跌破機種下限
-// 變形機甲的人形地面型(vis.ground):其餘值一律四足獸型
+// 變形者的人形地面型(vis.ground):其餘值一律四足獸型
 export const MORPH_HUMANOID = new Set(['biped', 'wolf', 'vampire', 'monkey', 'atlas']);
 
 /** 英雄機體顯示高度(公尺):依角色護甲值在機種區間內插 */
@@ -1221,8 +1282,8 @@ export function heroTargetH(kind, ch) {
   const armor = c?.mods?.armor;
   const t = armor == null ? 0.5 : Math.max(0, Math.min(1, (armor - S.armor[0]) / (S.armor[1] - S.armor[0])));
   const h = SOLDIER_H * (S.mul[0] + (S.mul[1] - S.mul[0]) * t);
-  // 獸型矮化:機甲看 visual.form;變形機甲看 visual.ground(非人形即四足獸,體長換高度)。
-  // 矮化後 MUST 夾回機種區間下限 —— 機甲/變形機甲不分型態都要 ≥ 150% 真人身高。
+  // 獸型矮化:機甲看 visual.form;變形者看 visual.ground(非人形即四足獸,體長換高度)。
+  // 矮化後 MUST 夾回機種區間下限 —— 機甲/變形者不分型態都要 ≥ 150% 真人身高。
   const quad = c?.visual?.form === 'beast'
     || (c?.visual?.ground && !MORPH_HUMANOID.has(c.visual.ground));
   return quad ? Math.max(SOLDIER_H * S.mul[0], h * BEAST_H_F) : h;
@@ -1231,8 +1292,9 @@ export function heroTargetH(kind, ch) {
 // 非英雄單位顯示高度(公尺;models.js fitToHeight 自動縮放)。人員/載具 = 真實世界尺寸;
 // 塔/主堡是虛構工事,維持既有的地標級量體。
 export const TARGET_H = {
-  // decoy:fitToHeight 量的是「高度」— 餌機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
+  // decoy:fitToHeight 量的是「高度」— 集束轟炸機高 ≈ 0.99 / 長 ≈ 2.2,取 1.4 得機身長約 3.1m
   decoy: 1.4,
+  hyper: 1.4 * HYPER.MODEL_F,   // 極音速飛彈 = 同一具彈體放大 MODEL_F(推導不手寫;models.js 吃同一個係數)
   'creep:soldier': SOLDIER_H, 'creep:rocketeer': SOLDIER_H, 'creep:howitzer': SOLDIER_H * 1.05,
   'creep:apc': 2.7, 'creep:tank': 2.8, 'creep:heli': 3.9,
   tower: 26, 'base:SWARM': 42, 'base:STEEL': 46,
@@ -1264,6 +1326,7 @@ export const HERO_HIT_R = { robot: 0.43, morph: 0.43, drone: 0.80 };
 // 非英雄單位/工事的水平半徑(公尺,真實世界公稱尺寸的一半;塔/主堡維持既有碰撞量體)
 export const TARGET_R = {
   decoy: 1.1,
+  hyper: 1.1 * HYPER.MODEL_F,
   'creep:soldier': 0.6, 'creep:rocketeer': 0.6, 'creep:howitzer': 0.6,
   'creep:apc': 1.6, 'creep:tank': 1.9, 'creep:heli': 3.0,
   tower: 7, 'base:SWARM': 20, 'base:STEEL': 20,
@@ -1285,7 +1348,7 @@ export function hitR(e) {
 // ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----
 // 擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。升級全改「金錢階梯單價」(隨等級遞增,見 ECON.UPGRADES / upgradePrice)。
 export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
-// 電腦玩家(bot;含駕駛傭兵變形機甲的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
+// 電腦玩家(bot;含駕駛傭兵變形者的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
 export const BOT_KILL_SCORE = 3;
 export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
 
@@ -1844,7 +1907,7 @@ export const CHARACTERS = {
   },
 
   // ================= 傭兵(side:'MERC',雙陣營皆可受雇)=================
-  // 傭兵一律駕駛「變形機甲」(kind:'morph'):HP/火力與機甲相同,
+  // 傭兵一律駕駛「變形者」(kind:'morph'):HP/火力與機甲相同,
   // 飛行型觸地變形為地面型、地面型蓄力跳躍彈射變形為飛行型(見 MORPH/UNITS.morph)。
   // 無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
   // 型態兩類等比例(4/4,原型迴避兩陣營既有生物:蜂/翼龍/飛龍/鷹/猩猩/鴕鳥/袋鼠/暴龍/獵犬/人馬/克蘇魯/劍龍):
@@ -1985,7 +2048,7 @@ export const CHARACTERS = {
 // 擊殺 = 全額賞金;助攻 = 賞金 × ASSIST.F —— 曾對死者造成傷害或負面狀態才算貢獻,
 // 貢獻後離開可視半徑(自身 sight)超過 ASSIST.TTL_S 秒即失效(sim._kill 結算)。
 // 賞金「對應難度」:表列戰鬥單位由 UNITS 戰力推導(見 UNITS 之後的推導區塊),
-// 此處只手訂非表列目標(missile 擊落防空飛彈 / aasite 匿蹤陣地 / decoy 餌機 / 英雄機體)。
+// 此處只手訂非表列目標(missile 擊落防空飛彈 / aasite 匿蹤陣地 / decoy 集束轟炸機 / 英雄機體)。
 // 校準錨(npm run bal ③):單一兵線 30% 擊殺 + 40% 助攻 × 10 分鐘 ≈ 八軌全滿總價。
 export const ECON = {
   START: 200,
@@ -1994,7 +2057,7 @@ export const ECON = {
   ASSIST: { F: 0.25, TTL_S: 10 },
   // 重武器「持續火力耗電率」(每秒);每發電力由 heavyMpCost 依彈夾週期均攤,全武器一致(見 heavyMpCost)
   HEAVY_MP_PER_CD: 2.0,
-  // 英雄賞金:機甲/變形機甲全額;無人機(單機,2026-07-17)≈ 機甲 ×SQUAD.HP_F(生存值 80% → 150)
+  // 英雄賞金:機甲/變形者全額;無人機(單機,2026-07-17)≈ 機甲 ×SQUAD.HP_F(生存值 80% → 150)
   BOUNTY: { missile: 15, aasite: 40, decoy: 25, drone: 150, robot: 190, morph: 190 },
   BOUNTY_DPS_S: 8,     // 戰力公式的 DPS 權重(秒):value = EHP + DPS × 此值
   BOUNTY_F: 0.12,      // 戰力 → 金錢的匯率(10 分鐘升滿預算的主旋鈕)
@@ -2079,17 +2142,20 @@ export const UNITS = {
   },
   robot: {
     // sight 240(原 220):輕武器射程被 rangeCap 夾到 sight×0.9,220 會把全機甲輕武器砍到
-    // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形機甲齊平。
-    // fov 68:自然人眼的舒適垂直視角 = 全機種 FPV 基準(2026-07-12 起無人機/變形機甲一律對齊,
+    // 198m(#INC-104 的 y=250 高空射擊測試要求 ×1.25 > 250)。240 = 與變形者齊平。
+    // fov 68:自然人眼的舒適垂直視角 = 全機種 FPV 基準(2026-07-12 起無人機/變形者一律對齊,
     // 雙陣營同距離目標的視覺大小才一致;差異化只靠座艙造型與視點高度)
     name: '執法者機甲', hp: 640, shield: 220, mp: 100, mpRegen: 4,
     speed: 21, jump: 9, fov: 68, zoomFov: 35, sight: 240,
     regen: 18,
     respawn: { base: 8, perDeath: 2 },   // 重生需冷卻,越死越久
   },
-  // 餌機:機甲的外掛子機(F 分離發射)。hp 於生成時覆寫為主機甲上限 × DECOY.HP_F;
+  // 集束轟炸機:變形者的外掛子機(長按右鍵分離發射)。hp 於生成時覆寫為 decoyHp()(砲塔火力反解);
   // speed:0 = 不進 sim 主迴圈的推線邏輯(位置由 _tickDecoys 管),但仍是敵方小兵/塔的合法目標。
-  decoy: { name: '餌機', hp: 160, armor: 0, speed: 0, sight: DECOY.SIGHT },
+  decoy: { name: '集束轟炸機', hp: 160, armor: 0, speed: 0, sight: DECOY.SIGHT },
+  // 極音速飛彈:機甲的長按招式彈體(2026-08-01)。**刻意是可被鎖定/擊落的實體**(使用者定調),
+  // hp 於生成時覆寫為 hyperHp();speed:0 同上(位置由 _tickHypers 管)。sight 0 = 不提供視野。
+  hyper: { name: '極音速飛彈', hp: 160, armor: 0, speed: 0, sight: 0 },
   // 第三方碉堡(2026-07-17,見 THIRD):本身無傷害(range/dmg 0 ⇒ 永不鎖定目標),
   // 功能 = 駐守 3 名步槍兵(免傷 + 緩慢回血 + 射程 ×GAR_RANGE_F)。
   // hp 於 UNITS 之後 derive = 塔的一半(MUST NOT 手寫,塔一動就漂移);armor 同塔。
@@ -2148,11 +2214,11 @@ export const CLASS_SYM = { K: 0.5, SWARM_ARMOR_F: 1, STEEL_AIR_F: 1 };
     }
   }
 }
-// 傭兵變形機甲:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
+// 傭兵變形者:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。
 UNITS.morph = {
   ...UNITS.robot,
-  name: '變形機甲',
+  name: '變形者',
   fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
   fov: 68, fovAir: 68, zoomFov: 35, sight: 240,   // 全型態 = 人眼視角(FPV 視覺大小雙陣營一致,飛行不再放寬)
 };
@@ -2299,7 +2365,7 @@ export const GAME = {
   WAVE_EXTRAS: ['rocketeer', 'howitzer', 'tank', 'heli'],
   HELI_ALT: 26,               // 攻擊直升機巡航高度(公尺;純視覺+高空降權判定用)
   AIM_SIGHT_MULT: 1.6,        // 瞄準模式視野加成(狙擊模式看得更遠)
-  // 「長按右鍵 / 觸控 R」達此秒數 → 觸發機種專屬招(無人機護衛自殺機 / 機甲重砲 / 變形機甲餌機)。
+  // 「長按右鍵 / 觸控 R」達此秒數 → 觸發機種專屬招(無人機飽和攻擊 / 機甲極音速飛彈 / 變形者集束炸彈)。
   // **一般模式與狙擊模式皆可觸發**(2026-07-27):舊版限定狙擊模式,等於要先短按切模式再長按,
   // 貼身遭遇時來不及;現在兩種模式的長按走同一條判定,不必先切換。
   // 短按右鍵仍 = 切換一般/狙擊模式;達門檻才出招(觸發後放開不再切換,兩者不衝突),能力各有獨立 CD。

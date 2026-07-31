@@ -15,7 +15,7 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
-  FLIGHT,
+  FLIGHT, SQUAD,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -920,7 +920,7 @@ function charAbilityRow(id, slot, key) {
 }
 
 /** 機體設計原型:「現實原型」(工程出處)/「機體原型」(人形機甲裝甲哲學)/
- * 「體態原型」(變形機甲地面體態)/「仿生原型」(獸型機體取自哪種生物)各自一行,
+ * 「體態原型」(變形者地面體態)/「仿生原型」(獸型機體取自哪種生物)各自一行,
  * 四種標籤格式一致(後三者皆為「名稱 —— 描述」),不併入單一「設計原型」桶。 */
 const PROTO_LABEL = { 現實: '設計原型', 機體: '機體原型', 體態: '體態原型', 仿生: '仿生原型' };
 function protoHTML(proto) {
@@ -973,8 +973,8 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-stats">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;兩架常駐護衛自殺機隨行,長按右鍵令其衝出(一般/狙擊模式皆可,兩架合計 = 一份絕招傷害,自爆後 30s 重現)。</div>` : ''}
-        ${kind === 'morph' ? '<div class="cd-note">※ 變形機甲:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;${SQUAD.KAMI.N} 架常駐護衛自殺機隨行,長按右鍵發動「飽和攻擊」(一般/狙擊模式皆可,${SQUAD.KAMI.N} 架合計 = 一份絕招傷害 ⇒ 每架威力為舊制的一半,自爆後 30s 重現)。</div>` : ''}
+        ${kind === 'morph' ? '<div class="cd-note">※ 變形者:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
         ${charWeaponRow(id, 'light', '左鍵')}
@@ -992,7 +992,7 @@ function showCharBioModal(id, side) {
   const c = CHARACTERS[id];
   if (!c) return;
   const kind = charKind(id);
-  const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
+  const kindLabel = kind === 'drone' ? '無人機' : kind === 'morph' ? '變形者' : '機甲';
   const s = side || c.side;
   $('charBioModalBody').innerHTML = `
     <div class="bio-portrait">
@@ -1039,7 +1039,7 @@ function unitStatCells(kind) {
   if (u.speed) rows.push(['機動', u.speed, 'speed']);
   return rows.map(([label, v, k]) => statCell(label, v, UNIT_BAR_MAX[k])).join('');
 }
-const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形機甲' : '機甲';
+const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形者' : '機甲';
 const sideName = (side) => sideInfo(side).name;   // SWARM/STEEL/第三方(GUER/MILI)統一查表
 const unitClassLabel = (kind) => CLASS_NAME[TARGET_CLASS[kind]] || '';
 
@@ -1870,18 +1870,18 @@ function makeHud() {
         $('wpnAmmo').textContent = l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
         $('wpnAmmo').classList.toggle('reloading', l.reload > 0);
         $('wpnAmmo').classList.toggle('low', l.reload <= 0 && l.ammo <= l.mag * 0.25);
-        // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示 / 變形機甲型態指示
+        // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示 / 變形者型態指示
         const hv = w.heavy;
         const morphTag = w.morph
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 護衛自殺機;變形機甲 = 餌機(沿途投彈);非變形機甲 = 重砲模式
-        const abCd = w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.barrage ? (w.barrage.cd || 0) : 0;
-        const abTag = w.kami ? (w.kami.cd > 0.05 ? `(護衛機 ${w.kami.cd.toFixed(0)}s)` : `(護衛機 ×${w.kami.n} 就緒)`)
-          : w.decoy ? (w.decoy.ready ? '(餌機就緒)' : `(餌機 ${w.decoy.cd.toFixed(0)}s)`)
-          : w.barrage ? (w.barrage.left > 0 ? `(巨砲齊射 ×${w.barrage.left})`
-            : w.barrage.cd > 0.05 ? `(巨砲 ${w.barrage.cd.toFixed(0)}s)` : '(巨砲就緒)')
+        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 飽和攻擊;變形者 = 集束炸彈;機甲 = 極音速飛彈
+        const abCd = w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.hyper ? (w.hyper.cd || 0) : 0;
+        const abTag = w.kami ? (w.kami.cd > 0.05 ? `(飽和攻擊 ${w.kami.cd.toFixed(0)}s)` : `(飽和攻擊 ×${w.kami.n} 就緒)`)
+          : w.decoy ? (w.decoy.ready ? '(集束炸彈就緒)' : `(集束炸彈 ${w.decoy.cd.toFixed(0)}s)`)
+          : w.hyper ? (w.hyper.fly ? '(極音速飛彈 飛行中)'
+            : w.hyper.cd > 0.05 ? `(極音速飛彈 ${w.hyper.cd.toFixed(0)}s)` : '(極音速飛彈就緒)')
           : '';
         $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${abTag}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
@@ -1906,7 +1906,7 @@ function makeHud() {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
-          // ZR 絕招:CD 與「(重砲 12s)」那一段同源(abCd),搖桿只是鏡子
+          // ZR 絕招:CD 與「(極音速飛彈 12s)」那一段同源(abCd),搖桿只是鏡子
           padMirror('special', abCd, abCd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)

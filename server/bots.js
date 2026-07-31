@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide } from '../public/js/data.js';
+import { UNITS, GAME, WEAPONS, ECON, LOS, DECOY, hyperRange, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -48,7 +48,7 @@ export class BotBrain {
     return f;
   }
 
-  /** 地速:變形機甲飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速 */
+  /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速 */
   _speed(h, u) {
     return (h.kind === 'morph' && (h.y || 0) > 2 ? UNITS.morph.fly : u.speed) * this._ccF(h);
   }
@@ -135,7 +135,7 @@ export class BotBrain {
       const want = this.state === 'ENGAGE' ? Math.max(GAME.AA_MIN_ALT * 0.6, this.alt * 0.6) : this.alt;
       h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
     } else if (h.kind === 'morph') {
-      // 變形機甲:推線時飛行型態趕路,交戰/撤退回堡時落地變形(y=0 才吃地雷、脫離防空)
+      // 變形者:推線時飛行型態趕路,交戰/撤退回堡時落地變形(y=0 才吃地雷、脫離防空)
       const want = this.state === 'PUSH' ? this.alt : 0;
       h.y = (h.y || 0) + (want - (h.y || 0)) * Math.min(1, dt * 1.5);
       if (want === 0 && h.y < 1.5) h.y = 0;
@@ -156,7 +156,7 @@ export class BotBrain {
     const cf = this._ccF(h);
     h.x += (x + this.jitter[0] - h.x) * Math.min(1, dt * 2.2 * cf);
     h.z += (z + this.jitter[1] - h.z) * Math.min(1, dt * 2.2 * cf);
-    // 繞開阻擋型障礙物,不卡在牆前(貼地移動才會撞到;無人機/飛行型變形機甲飛越)
+    // 繞開阻擋型障礙物,不卡在牆前(貼地移動才會撞到;無人機/飛行型變形者飛越)
     if (h.kind !== 'drone' && (h.y || 0) < 2) {
       for (const [hx, hz, hr] of this.sim.hazBlockers || []) {
         const dd = Math.hypot(h.x - hx, h.z - hz);
@@ -245,7 +245,9 @@ export class BotBrain {
       else if (A.fx === 'intercept' && this.sim.missiles.some((m) => m.tpid === this.pid)) cast(false);
     }
 
-    // 無人機自殺攻擊機:貼近建築或敵群密集時釋放(先鎖定目標,自殺機直接撲擊;CD 由 sim 把關)
+    // 機種絕招(長按右鍵)= 一項操作,三機種共用同一格 `special` 手速閘;CD 一律由 sim 把關,
+    // 但**冷卻中不付這格手速**(30s CD 內每 0.75s 空按一次會吃掉近兩成的操作額度)。
+    // 三招的釋放時機都取「打得痛的那一刻」:敵群密集 or 正在拆建築。
     if (h.kind === 'drone') {
       const b = WEAPONS[UNITS.drone.bomb];
       const near = [...this.sim.ents.values()].filter((e2) =>
@@ -259,6 +261,27 @@ export class BotBrain {
       if ((near >= 3 || onStruct) && kamiReady && this._op('special')) {
         this.sim.heroLock(this.pid, t.id);
         this.sim.heroKamikaze(this.pid);
+      }
+    }
+    // 變形者集束炸彈:轟炸機沿機首直飛,故要求目標大致在正前方(不能操舵 —— 對著側面放等於浪費一次 CD)
+    if (h.kind === 'morph') {
+      const ready = !h.sq?.decoy && this.sim.t >= (h.sq?.decoyCd || 0);
+      const d = Math.hypot(t.x - h.x, t.z - h.z);
+      let dr = Math.atan2(-(t.x - h.x), t.z - h.z) - (h.ry || 0);
+      while (dr > Math.PI) dr -= Math.PI * 2;
+      while (dr < -Math.PI) dr += Math.PI * 2;
+      if (ready && d <= DECOY.LINK_M && Math.abs(dr) < 0.5 && this._op('special')) {
+        this.sim.heroLock(this.pid, t.id);
+        this.sim.heroDecoy(this.pid);
+      }
+    }
+    // 機甲極音速飛彈:射後不理 ⇒ 只要目標在接戰距離內就能放(不必維持瞄準),優先砸建築
+    if (h.kind === 'robot') {
+      const ready = !h.hyper && this.sim.t >= (h.hyperCd || 0);
+      const d = Math.hypot(t.x - h.x, t.z - h.z);
+      if (ready && d <= hyperRange() && this._op('special')) {
+        this.sim.heroLock(this.pid, t.id);
+        this.sim.heroHyper(this.pid);
       }
     }
   }

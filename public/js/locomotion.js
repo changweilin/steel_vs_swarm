@@ -865,7 +865,7 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
 }
 
 /**
- * 變形機甲(transformer_plan):型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),
+ * 變形者(transformer_plan):型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),
  * 阻尼漸變出 0(地面)→1(飛行)的型態參數 m —
  * rig.pose(m)(models.js)以各部件自己的分段時窗 smoothstep 到位
  * (翼先展 → 腿後收 → 機首鎖上的 Macross 式序列);這裡在姿勢之上疊加動態:

@@ -1,12 +1,13 @@
-// ============ 飛行動力學(爬升動力 + 受擊掉高)+ 巨砲改制 稽核 ============
-// 用途:改 `data.js` 的 `FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`/`BARRAGE`/`barrageShots`/
-//      `barrageDur`,或 `game.js` 的 `_stepLift`/`_airSinkHit`/`_updatePlayer` 飛行段/`_launchBarrage`/
-//      `_barragingShot`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
+// ============ 飛行動力學(爬升動力 + 受擊掉高)+ 機種絕招載具 HP 校準 稽核 ============
+// 用途:改 `data.js` 的 `FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`/`HYPER`/`towerDps`/
+//      `kamiHp`/`hyperHp`/`decoyHp`/`kamiSide`,或 `game.js` 的 `_stepLift`/`_airSinkHit`/
+//      `_updatePlayer` 飛行段/`_launchHyper`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
 //
-// 三條規則(2026-07-30 使用者需求)共用一支稽核,因為破法都一樣**無聲**:
-//   ①**巨砲不消耗一般重武器的彈夾、每發 100% 傷害**:等值性(三招同預算)改由**發數**承擔。
-//      無聲寫壞法:_heroDmg 留著任一重砲倍率(那就不是 100%)、_gateFire 的重砲分支照扣 ammo/mp
-//      (那就又吃彈夾)、只看時間窗不看發數(窗內無限免費開火,傷害隨幀率浮動)。
+// 三條規則共用一支稽核,因為破法都一樣**無聲**:
+//   ①**機種絕招的載具 HP 一律由「一座砲塔打幾秒」反解**(2026-08-01 使用者定調):
+//      飽和攻擊 4 架、一座砲塔剛好擊落 2 架;極音速飛彈剛好打不爆;集束轟炸機剛好投得完 5+1 顆。
+//      無聲寫壞法:任一個 HP 手寫(改砲塔數值就整組漂掉)、載具帶 armor/護盾(EHP 隨主機角色浮動,
+//      「剛好」變成看人品)、巨砲時代的彈夾旁路殘留在 _gateFire/_tryFire(重武器又能免費開火)。
 //      伺服器那半由 `npm test`(sim 直測)把關;這裡驗**推導與客戶端消費端**。
 //   ②**受擊掉高**:掉的公尺數 ∝ 傷害,校準錨 = 打完「平均護盾+裝甲」掉 SINK_TOWERS 個砲塔高。
 //      無聲寫壞法:在 game.js 手寫公尺數/係數(校準錨一改就分家)、把掉幅做成「速度」
@@ -23,7 +24,9 @@ import { fileURLToPath } from 'node:url';
 import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
-  BARRAGE, barrageShots, barrageDur, specialBudget, heroWeapon,
+  HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
+  kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperApex, hyperRange, decoyHp, decoyExposureS,
+  GAME,
 } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -63,85 +66,110 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const count = (s, needle) => s.split(needle).length - 1;
 
 // ---------------------------------------------------------------------------
-console.log('■ Ⅰ 巨砲改制推導(發數 = 預算 ÷ 每發傷害;開窗長度 ← 發數;100% 傷害)');
+console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」反解(推導不手寫)');
 // ---------------------------------------------------------------------------
 {
-  const L1 = { light: 1, heavy: 1 }, L4 = { light: 4, heavy: 4 };
-  t('BARRAGE MUST NOT 再留每發傷害倍率(DMG_MIN/DMG_MAX 已退場)',
-    BARRAGE.DMG_MIN === undefined && BARRAGE.DMG_MAX === undefined);
-  t('data.js MUST NOT 再匯出 barrageDmgF(舊制每發倍率)', !/export const barrageDmgF/.test(dataSrc));
-  const chs = Object.keys(CHARACTERS);
-  const worst = chs.map((ch) => {
-    const w = heroWeapon(ch, 'heavy', 1, true);
-    return Math.abs(barrageShots(w, L1) * w.dmg - specialBudget(L1)) / w.dmg;
-  });
-  t('整輪傷害 ≈ 一份絕招預算(32 角誤差 ≤ 半發;離散化是 100% 傷害的必然代價)',
-    worst.every((e) => e <= 0.5 + 1e-9), `最大 ${Math.max(...worst).toFixed(3)} 發`);
-  t('發數為整數且夾在 SHOTS_MIN~MAX', chs.every((ch) => {
-    const n = barrageShots(heroWeapon(ch, 'heavy', 1, true), L1);
-    return Number.isInteger(n) && n >= BARRAGE.SHOTS_MIN && n <= BARRAGE.SHOTS_MAX;
-  }));
-  t('發數隨綜合等級單調不減(預算成長 ⇒ 轟更多發)', chs.every((ch) => {
-    const w1 = heroWeapon(ch, 'heavy', 1, true), w4 = heroWeapon(ch, 'heavy', 4, true);
-    return barrageShots(w4, L4) * w4.dmg >= barrageShots(w1, L1) * w1.dmg;
-  }));
-  t('每發傷害越高 → 發數越少(預算切分,非固定發數)',
-    barrageShots({ dmg: 50 }, L1) > barrageShots({ dmg: 200 }, L1));
-  t('開窗長度 = max(DUR, 發數 × SHOT_GAP)(推導不手寫)',
-    near(barrageDur(BARRAGE.SHOTS_MAX), Math.max(BARRAGE.DUR, BARRAGE.SHOTS_MAX * BARRAGE.SHOT_GAP))
-    && near(barrageDur(1), BARRAGE.DUR));
-  t('開窗長度隨發數單調不減(低幀率也打得完 ⇒ 不會靜默少掉預算)',
-    barrageDur(BARRAGE.SHOTS_MAX) >= barrageDur(BARRAGE.SHOTS_MIN));
-  t('barrageDur 原文取自 BARRAGE.DUR / SHOT_GAP,MUST NOT 手寫秒數',
-    /export const barrageDur[\s\S]{0,160}?BARRAGE\.DUR[\s\S]{0,80}?BARRAGE\.SHOT_GAP/.test(dataSrc));
+  t('towerDps() = 砲塔 dmg × rate(砲塔無 wid ⇒ pen 0,不吃 armorMul)',
+    near(towerDps(), UNITS.tower.dmg * UNITS.tower.rate));
+  t('towerDps 原文由 UNITS.tower 推導,MUST NOT 手寫',
+    /export const towerDps = \(\) => UNITS\.tower\.dmg \* UNITS\.tower\.rate;/.test(dataSrc));
+  t('towerSurviveHp(sec) 打完剩 ≥1 滴(「剛好打不爆」)',
+    towerSurviveHp(3) > towerDps() * 3 && towerSurviveHp(3) - towerDps() * 3 <= 1);
+  t('towerKillHp(sec) = 這段時間的傷害量(「剛好被打爆」)',
+    Math.abs(towerKillHp(3) - towerDps() * 3) <= 0.5);
+
+  // —— 飽和攻擊:4 架、一座砲塔剛好擊落 SHOT_DOWN 架 ——
+  t('KAMI.N = 4 且 SHOT_DOWN = 2 ⇒ 成功自爆 2 架(使用者定調)',
+    SQUAD.KAMI.N === 4 && SQUAD.KAMI.SHOT_DOWN === 2);
+  t('舊 KAMI.HP_F(主機血量比例)已退場(HP 改由砲塔火力反解)',
+    SQUAD.KAMI.HP_F === undefined);
+  t('kamiExposureS = 砲塔射程 ÷ 撲擊速度(推導不手寫)',
+    near(kamiExposureS(), UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL)));
+  t('kamiHp = towerKillHp(曝險窗 ÷ SHOT_DOWN)',
+    kamiHp() === towerKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN));
+  t('kamiHp 原文走 towerKillHp,MUST NOT 手寫',
+    /export const kamiHp = \(\) => towerKillHp\(/.test(dataSrc));
+  t('「攻擊力減半、數量加倍」= 同一件事:每架 = 預算 ÷ N(整份預算不變)',
+    /export const kamiBlast = \(abil\) => \(\{ \.\.\.WEAPONS\.bomb, dmg: Math\.round\(specialBudget\(abil\) \/ SQUAD\.KAMI\.N\) \}\);/.test(dataSrc));
+  {
+    const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
+    t('kamiSide 均勻散開、對稱、涵蓋 [−1, 1]',
+      ss[0] === -1 && ss[ss.length - 1] === 1 && near(ss.reduce((a2, b2) => a2 + b2, 0), 0), ss.join(', '));
+    t('兩端同吃 kamiSide(伺服器生成側偏移 + 客戶端貼身站位),MUST NOT 復辟 `const s = i === 0 ? -1 : 1`',
+      /const s = kamiSide\(i\);/.test(simCode) && /s: kamiSide\(i\)/.test(code)
+      && !/const s = i === 0 \? -1 : 1/.test(simCode) && !/const s = i === 0 \? -1 : 1/.test(code));
+  }
+
+  // —— 極音速飛彈:撐得住最長一次飛行 ——
+  t('hyperApex / hyperRange / hyperFlightS 全由已縮好的量推導(MUST NOT 手寫遊戲公尺)',
+    /export const hyperApex = \(\) => GAME\.GUN_CEIL_M \* HYPER\.APEX_F;/.test(dataSrc)
+    && /export const hyperRange = \(\) => UNITS\.tower\.range \* HYPER\.RANGE_F;/.test(dataSrc)
+    && /hyperApex\(\) \/ HYPER\.CLIMB_SPD \+ Math\.hypot\(hyperRange\(\), hyperApex\(\)\) \/ hyperDiveSpd\(\)/.test(dataSrc));
+  t('爬升頂點高過直射鎖定天花板(是「高空」不是抬個頭)', hyperApex() > GAME.GUN_CEIL_M);
+  t('接戰距離大於砲塔射程(機甲的攻塔手段)', hyperRange() > UNITS.tower.range);
+  t('俯衝遠快於爬升(「極音速」那一段幾乎攔不住)', HYPER.DIVE_F > 2);
+  t('hyperHp = towerSurviveHp(最長飛行時間)⇒ 一座砲塔剛好打不爆',
+    hyperHp() === towerSurviveHp(hyperFlightS()) && hyperHp() > towerDps() * hyperFlightS());
+  t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲', hyperHp() - towerDps() * hyperFlightS() < towerDps());
+  t('單一戰鬥部 = 整份絕招預算(一發打完,離散化誤差為零)',
+    /export const hyperBlast = \(abil\) => \(\{\s*\n\s*dmg: Math\.round\(specialBudget\(abil\)\),/.test(dataSrc));
+
+  // —— 集束炸彈:撐到投完 DROP_N 顆 ——
+  t('BOMB_MAX = 6 且 DROP_N + 墜毀補投 1 顆 = BOMB_MAX(使用者定調的 5+1)',
+    DECOY.BOMB_MAX === 6 && DECOY.DROP_N + 1 === DECOY.BOMB_MAX);
+  t('舊 DECOY.HP_F(主機血量比例)已退場', DECOY.HP_F === undefined);
+  t('decoyExposureS = 接近時間 + (DROP_N − 0.5) 個投彈間隔(半個間隔的餘量也是推導,不手寫秒數)',
+    near(decoyExposureS(),
+      Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP));
+  // 行為直測:曝險窗內剛好投得出第 DROP_N 顆、且撐不到第 DROP_N+1 顆
+  {
+    const live = decoyHp() / towerDps();
+    const approach = Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED;
+    const dropped = 1 + Math.floor((live - approach) / DECOY.BOMB_GAP + 1e-9);
+    t('一座砲塔火力下剛好投出 DROP_N 顆 + 墜毀補投 1 顆 = BOMB_MAX',
+      dropped === DECOY.DROP_N && dropped + 1 === DECOY.BOMB_MAX, `實得 ${dropped} + 1`);
+  }
+  // 行為直測:一座砲塔在曝險窗內剛好擊落 SHOT_DOWN 架
+  {
+    const downed = Math.floor(kamiExposureS() / (kamiHp() / towerDps()) + 1e-9);
+    t('一座砲塔在曝險窗內剛好擊落 SHOT_DOWN 架、其餘成功自爆',
+      downed === SQUAD.KAMI.SHOT_DOWN, `實得 ${downed} 架`);
+  }
+  t('decoyHp = towerKillHp(曝險窗)', decoyHp() === towerKillHp(decoyExposureS()));
 }
 
 // ---------------------------------------------------------------------------
-console.log('■ Ⅱ 巨砲免除窗的兩端(伺服器不扣彈夾/電力 + 客戶端同一條判據)');
+console.log('■ Ⅱ 巨砲整組退場:重武器射擊路徑上不得留任何免彈夾/免射速閘旁路');
 // ---------------------------------------------------------------------------
 {
+  t('data.js MUST NOT 再匯出 BARRAGE / barrageShots / barrageDur / barrageDmgF',
+    !/export const (BARRAGE|barrageShots|barrageDur|barrageDmgF)\b/.test(dataSrc));
+  t('LANCE MUST NOT 再有 BARRAGE_F(貫穿粗細無情境倍率)',
+    LANCE.BARRAGE_F === undefined && lanceR({ type: 'beam' }, true) === LANCE.R.beam);
+  t('sim.js 全檔已無 barrage 殘骸(_gateFire / _barragingDmg / heroBarrage)',
+    !/barrag/i.test(simCode));
+  t('game.js 全檔已無 barrage 殘骸(_launchBarrage / _barragingShot / _isBarraging)',
+    !/barrag/i.test(code));
   const gate = grab('_gateFire', simSrc);
-  t('sim._gateFire 的巨砲分支先於彈夾/電力扣減,直接 return true(不扣 ammo/mp)',
-    /if \(barrage\) \{[\s\S]{0,420}?return true;/.test(gate)
-    && !/if \(barrage\)[\s\S]{0,420}?h\.ammo\[id\]--/.test(gate));
-  t('sim._gateFire 的巨砲分支逐發遞減 barrageLeft(發數 = 權威資源)',
-    /if \(barrage\) \{[\s\S]{0,300}?h\.barrageLeft = Math\.max\(0, \(h\.barrageLeft \|\| 0\) - 1\)/.test(gate));
-  // 註解剝除 MUST 走 strip():_heroDmg 是一條乘法鏈,續行本身就以 `*` 開頭 ——
-  // 用「行首是 * 就當註解」剝會把**真正的程式碼**一起丟掉(復辟倍率也驗不出來)。
-  t('sim._heroDmg MUST NOT 再乘任何重砲倍率(每發 100% 傷害)',
-    !/barrag/i.test(strip(grab('_heroDmg', simSrc))));
-  const bd = grab('_barragingDmg', simSrc);
-  t('sim._barragingDmg 同時看「窗」與「發數」(缺一即無限免費開火 / 窗過期仍白吃)',
-    /barrageUntil/.test(bd) && /barrageLeft/.test(bd) && /DMG_GRACE/.test(bd));
-  t('sim.heroBarrage 不再以彈夾狀態為前置條件(空夾/裝填中照樣能轟)',
-    !/reloadUntil\?\.heavy[\s\S]{0,80}?return;/.test(grab('heroBarrage', simSrc)));
-  t('sim.heroBarrage 的發數走 barrageShots 單一縫',
-    /barrageShots\(/.test(grab('heroBarrage', simSrc)) && count(simCode, 'barrageShots(') === 1);
-  // 客戶端:免彈夾/免電力/解射速閘/射程加成 四個消費端 MUST 全吃 _barragingShot
-  t('game.js 有 _barragingShot 單一判據(窗 + 發數)',
-    /_barragingShot\(now = performance/.test(src)
-    && /_barrageUntil \|\| 0\) > now && \(this\._barrageLeft \|\| 0\) > 0/.test(code));
-  t('_barrageUntil 只在「開窗」與「判據」兩處被讀寫(其餘消費端一律走 _barragingShot)',
-    count(code, '_barrageUntil') === 2, `${count(code, '_barrageUntil')} 處`);
-  // 自機那一側的 RANGE_F 消費端一律走 _barragingShot;他人那側是事件轉播(_isBarraging(pid)),
-  // 兩者 MUST NOT 互串 —— 拿自機旗標畫別人的曳光 = 別人的巨砲永遠沒有加程演出。
-  {
-    const lines = code.split('\n').filter((l) => l.includes('BARRAGE.RANGE_F'));
-    const bad = lines.filter((l) => !/_barragingShot|barraging|\bbar \?/.test(l));
-    t('BARRAGE.RANGE_F 的每個消費端都掛在 _barragingShot(自機)或事件轉播旗標(他人)上',
-      lines.length >= 3 && bad.length === 0, bad.join(' | '));
-  }
+  t('sim._gateFire 沒有任何「先 return true」的旁路(彈夾/電力/射速閘一律照走)',
+    !/return true;[\s\S]{0,400}?reloadUntil\[id\] \|\| 0\) > now/.test(gate));
   const fire = grab('_tryFire');
-  t('_tryFire:巨砲那一發不扣彈夾、不扣電力,改扣該輪發數',
-    /if \(barraging\) this\._barrageLeft = Math\.max\(0, \(this\._barrageLeft \|\| 0\) - 1\);/.test(fire)
-    && /else \{\s*\n\s*st\.ammo--;/.test(fire));
-  t('_tryFire:裝填中 / 空夾不擋巨砲(巨砲不吃彈夾)',
-    /if \(!barraging && st\.reloadEnd > 0\) return;/.test(fire)
-    && /if \(!barraging && st\.ammo <= 0\) \{ this\._startReload/.test(fire));
-  t('_launchBarrage 不再以彈夾為閘、發數走 barrageShots',
-    /barrageShots\(hvDef, this\.abil\)/.test(grab('_launchBarrage'))
-    && !/reloadEnd > 0 \|\| hv\.ammo <= 0/.test(grab('_launchBarrage')));
-  t('他人巨砲的演出窗長也走 barrageDur(兩端同一支)', /barrageDur\(ev\.n\)/.test(code));
+  t('_tryFire:射速閘 / 裝填中 / 空夾三道閘門一律無條件生效',
+    /if \(now - \(this\.lastFireAt\[id\] \|\| 0\) < 1 \/ def\.rate\) return;/.test(fire)
+    && /if \(st\.reloadEnd > 0\) return;/.test(fire)
+    && /if \(st\.ammo <= 0\) \{ this\._startReload/.test(fire));
+  t('_tryFire:一律扣彈夾 + 扣電力(無免除分支)',
+    /st\.ammo--;\s*\n\s*if \(mpc > 0\) this\.mp = Math\.max\(0, this\.mp - mpc\);/.test(fire));
+  t('_tryFire:未按開火鍵就不擊發(舊巨砲的窗內自動擊發已移除)',
+    /if \(!this\.firing\) return;/.test(fire));
+  // 新招的客戶端入口:純「送請求 + 樂觀 CD」,MUST NOT 在客戶端算任何傷害/爆風(A1)
+  const lh = grab('_launchHyper');
+  t('game._launchHyper 只送 { t: \'hyper\' } + 樂觀本地 CD(彈道與傷害全在伺服器)',
+    /this\.net\.send\(\{ t: 'hyper' \}\);/.test(lh) && !/_blast|dmg/.test(lh));
+  t('game._launchHyper 有本地 CD 時戳(不被在途舊快照的 hcd=0 洗掉)',
+    /_hyperCdUntil/.test(lh) && /Math\.max\(this\.hyperCd \|\| 0, \(this\._hyperCdUntil \|\| 0\) - now\)/.test(lh));
+  t('機種派發縫仍只有一處(_fireHoldAbility),機甲那支改指 _launchHyper',
+    /else this\._launchHyper\(\);/.test(code) && count(code, '_launchHyper(') === 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -323,5 +351,5 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
   }
 }
 
-console.log(`\n${fail ? '❌' : '✅'} 飛行動力學 / 巨砲改制稽核:${pass}/${pass + fail} 通過`);
+console.log(`\n${fail ? '❌' : '✅'} 飛行動力學 / 絕招載具 HP 校準稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);
