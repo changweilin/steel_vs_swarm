@@ -109,7 +109,9 @@ console.log('Ⅲ 標線消費端單一縫 + 橋隧同款風格(原文)');
     'Ⅲ markYB(實線)與 dashLine(虛線)兩消費端 MUST 都吃 markBaseAt');
   ok(!/const yB = strc \? tFloorAt\(d\) : null;/.test(src), 'Ⅲ 虛線 MUST NOT 留舊版「只認結構」的基準高');
   const emit = src.match(/emitLine\(run, [^)]*\)/g) || [];
-  ok(emit.length >= 4 && emit.every((e) => /markYB\)$/.test(e)),
+  // `markYB` 之後還可以再帶參數(2026-08-01 起帶 dropSeg:落進別條路洞內斷面的那一格不成面),
+  // 這條斷言管的是「基準高有沒有傳」,MUST NOT 因為多一個尾參數就紅字
+  ok(emit.length >= 4 && emit.every((e) => /markYB[,)]/.test(e)),
     `Ⅲ emitLine 全部呼叫 MUST 傳 markYB(共 ${emit.length} 處;漏傳 = 該條線退回貼地取樣)`);
   ok(emit.every((e) => /\(run, mHw,/.test(e)), 'Ⅲ emitLine 的夾高取樣半寬 MUST 吃 mHw');
   ok(/if \(strc \|\| brg\) biome = 'urban';/.test(src), 'Ⅲ 橋與隧道 MUST 同款定調柏油(工程結構物無土石路面)');

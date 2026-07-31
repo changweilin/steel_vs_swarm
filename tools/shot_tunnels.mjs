@@ -340,8 +340,13 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
       bx0 = Math.min(bx0, d.x1, d.x2); bx1 = Math.max(bx1, d.x1, d.x2);
       bz0 = Math.min(bz0, d.z1, d.z2); bz1 = Math.max(bz1, d.z1, d.z2);
     }
-    for (let x = bx0 - 40; x <= bx1 + 40; x += 4) {
-      for (let z = bz0 - 40; z <= bz1 + 40; z += 4) {
+    // 取樣框 MUST 夾在地形範圍內(2026-08-01 燕子口實測):結構鏈貼著圖邊時,+40m 外擴會把
+    // 取樣點推到**地圖外**,那裡本來就沒有地形 ⇒ 整排記成「看穿世界」(實測 1453 筆假紅字,
+    // 幾乎全部落在同一條 x 上 = 圖邊那一欄)。內縮 1m 避開邊緣三角形的浮點掠射。
+    bx0 = Math.max(bx0 - 40, terrain.minX + 1); bx1 = Math.min(bx1 + 40, terrain.maxX - 1);
+    bz0 = Math.max(bz0 - 40, terrain.minZ + 1); bz1 = Math.min(bz1 + 40, terrain.maxZ - 1);
+    for (let x = bx0; x <= bx1; x += 4) {
+      for (let z = bz0; z <= bz1; z += 4) {
         voidN++;
         rayV.set(new THREE.Vector3(x, terrain.maxH + 400, z), new THREE.Vector3(0, -1, 0));
         if (!rayV.intersectObject(terrain.group, true).length) {
