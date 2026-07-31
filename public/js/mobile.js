@@ -702,7 +702,7 @@ const MOBIL_LABEL = { drone: '上升', morph: '躍/升', mech: '跳躍', robot: 
  *   - #tlLook  :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
  *   - #tlStick :移動類比搖桿(左上;圓心固定 = 搖桿中心,偏移量 = 推杆量)
  *   - #tlRStick:視角類比搖桿(右下;推杆量 → 每秒轉速,與拖曳並存)
- *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(上 ⊟ 商店 / 下 陀螺 / 右 小地圖範圍),左向保留未用
+ *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(上 ⊟ 商店 / 下 陀螺 / 右 小地圖範圍 / 左 機種絕招)
  *   - [data-act]:動作鈕(ABXY / 肩鍵與系統鍵直條)
  * 角色數據(.hud-self)與小地圖(#minimap)是純顯示,**MUST NOT** 被搖桿覆蓋(版型量測有斷言)。
  */
@@ -719,7 +719,7 @@ export class TouchControls {
     this._downAt = 0; this._downX = 0; this._downY = 0;
     this._fireArm = false;    // 本次按壓是「雙擊的第二點」⇒ 按久或拖動就開火
     this._lookFire = false;   // 本手勢目前正在開火(放開才收)
-    this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / B 跳躍 / ZL 下降)
+    this._held = new Map();   // pointerId → act(按住型搖桿鈕:A 射擊 / R 狙擊 / ZR 鎖定 / B 跳躍 / ZL 下降)
     // 兩支類比搖桿共用同一份判定(_bindStick):移動的推杆量餵 axis,視角的推杆量餵每幀轉速。
     this.moveStick = null;
     this.lookStick = null;
@@ -947,8 +947,8 @@ export class TouchControls {
 
   /* ---- 動作鈕 ---- */
   _bindButtons() {
-    // 按住型:A 射擊 / R 狙擊(長按 = 機種專屬絕招)/ B 跳躍(蓄力跳)/ ZL 下降
-    const HOLD = new Set(['fire', 'aim', 'jump', 'dive']);
+    // 按住型:A 射擊 / R 狙擊(長按 = 機種專屬絕招)/ ZR 鎖定目標 / B 跳躍(蓄力跳)/ ZL 下降
+    const HOLD = new Set(['fire', 'aim', 'jump', 'dive', 'lock']);
     this._onBtnDown = (e) => {
       const el = e.target.closest?.('[data-act]');
       if (!el) return;
@@ -1089,7 +1089,7 @@ export class TouchControls {
    *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
    *   ② ZL 下降只在飛行機種(無人機/變形者)與觀戰自由視角出現。
    *   ③ 換機(R 區系統鍵)只給無人機三機小隊。
-   *   ④ 觀戰沒有座機:A / R / ZR 絕招 / ⊟ / HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
+   *   ④ 觀戰沒有座機:A / R / ZR 鎖定 / 絕招 / ⊟ / HOME 一律收掉(_cmd 對 side=null 不受理,留著只會誤按;
    *      HOME 亦然 —— `_setPaused` 對 side=null 直接 return,桌機觀戰同樣沒有 ESC 選單)。
    *      **十字鍵的陀螺與地圖不收** —— 觀戰自由視角同樣吃 _applyLook,也同樣看小地圖。
    */
@@ -1101,7 +1101,7 @@ export class TouchControls {
     const fly = spec || kind === 'drone' || kind === 'morph';
     document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
-    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"]')
+    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="menu"], [data-act="special"], [data-act="lock"]')
       .forEach((n) => { n.hidden = spec; });
     document.body.classList.toggle('tl-spec', spec);
   }

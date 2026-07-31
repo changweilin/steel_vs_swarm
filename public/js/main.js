@@ -1823,7 +1823,7 @@ function enterGame() {
   // 觸控版沒有鍵盤快捷:金錢列的「B 升級」提示改指向工具列的升級鈕
   if (TOUCH_UI) $('shopHint').textContent = '';
   toast(TOUCH_UI
-    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 絕招 ・ 十字鍵 上 ⊟ 商店 / 下 陀螺 / 右 地圖 ・ HOME 選單'
+    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖 ・ HOME 選單'
     : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍', 4600);
 }
 
@@ -1906,7 +1906,7 @@ function makeHud() {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
-          // ZR 絕招:CD 與「(極音速飛彈 12s)」那一段同源(abCd),搖桿只是鏡子
+          // 機種絕招(2026-08-01 起住十字鍵左,原 ZR):CD 與「(極音速飛彈 12s)」那一段同源(abCd),搖桿只是鏡子
           padMirror('special', abCd, abCd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)

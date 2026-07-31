@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
@@ -332,6 +332,12 @@ export class BattleClient {
     this._recoilMove = null;        // 當前開火套用的位移懲罰 tier('slow'|'stop'|'back'|'free')
     this._recoilMoveUntil = 0;      // 位移懲罰有效到此時間
     this._recoilSlowF = 0.5;
+    // 視野鎖定(觸控 ZR 按住;見 data.js VIEW_LOCK 與 _tickViewLock)—— 純客戶端視角輔助
+    this._vlockHold = false;        // 鈕是否按著(按住型,與 firing 同層)
+    this._vlockId = null;           // 目前鎖住的 ent id(null = 沒鎖到)
+    this._vlockAt = 0;              // 上次索敵時刻(節流;0 = 下一幀立刻重找)
+    this._vlockAsk = false;         // 這次按下還沒回饋過(找不到目標要講一聲)
+    this._vlockUi = false;          // 鈕面亮燈(body class)目前狀態
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
     this._decoyBombs = [];           // 集束炸彈的「拋擲彈體」動畫(榴彈拋物線,落地才引爆演出,依類型上色)
@@ -2720,6 +2726,15 @@ export class BattleClient {
     if (act === 'jump') { this.keys.Space = !!down; return; }
     if (act === 'dive') { this.keys.KeyC = !!down; return; }
     if (act === 'sprint') { this.keys.ShiftLeft = !!down; return; }
+    // 視野鎖定(觸控 ZR 按住):純客戶端視角輔助,MUST 排在 `dead` 閘**之前**受理 ——
+    // 與 firing 同一族的按住型旗標,陣亡瞬間的放開事件若被吃掉,重生後視角會自己黏著目標。
+    // 實際收斂與索敵住 `_tickViewLock`(那裡另有 dead/paused/shopOpen 閘)。
+    if (act === 'lock') {
+      this._vlockHold = !!down;
+      if (down) { this._vlockAt = 0; this._vlockAsk = true; }   // 按下即刻索敵,並保證回饋一次
+      else { this._vlockId = null; }
+      return;
+    }
     if (!this.side) return;
     // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例),與 KeyB 同條件
     if (act === 'shop') { if (down) this._toggleShop(); return; }
@@ -4659,30 +4674,104 @@ export class BattleClient {
     return this._coneAcquire(rng) || null;
   }
 
-  /** 錐形瞄準輔助 + 黏著:準星錐(~8°)內、射程內、`_obstHitT` 無遮擋的存活敵方英雄;
-   *  既有鎖定仍合格則優先保留(遲滯,防忽明忽滅)。只鎖英雄(NPC/塔體型大,精確射線本就打得中)。 */
-  _coneAcquire(rng) {
+  /** 瞄準點 = 機體幾何中心(**單一縫**):錐形索敵與視野鎖定量的是同一個點,
+   *  各寫一份就會出現「鎖得到卻瞄到腳邊」。`dimTop/dimH` 是 spawn 時量好的機體尺寸。 */
+  _entAimPoint(ent) {
+    const c = ent.mesh.position.clone();
+    c.y += (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 2);
+    return c;
+  }
+
+  /**
+   * 錐形索敵 + 黏著(**唯一實作**):準星錐內、射程內、`_obstHitT` 無遮擋的存活敵方單位裡,
+   * 取最正對準星的那個;既有目標仍合格則優先保留(遲滯,防忽明忽滅)。
+   *
+   * 兩個消費端共用這一份,差異只在具名參數 —— MUST NOT 為了其中一邊另寫一份掃描
+   * (兩份「哪個敵人最正對準星」必定漂移,玩家會看到鎖定光暈與視野鎖定各指一個人):
+   *   ① `_aimTarget`(準星鎖定 / 射後不理追蹤):預設值 —— 錐 ~8°、**只鎖英雄**
+   *      (NPC/塔體型大,精確射線本就打得中)、遲滯錨在伺服器複驗過的 `_lockId`。
+   *   ② `_tickViewLock`(視野鎖定):錐角放寬到 `VIEW_LOCK.CONE`、放行所有敵方單位
+   *      (塔與小兵一樣要能鎖)、遲滯錨在自己的 `_vlockId` 且放寬到 `DROP` 才脫鎖。
+   */
+  _coneAcquire(rng, opt) {
+    const CONE = opt?.cone ?? 0.14;              // ~8°
+    const KEEP = opt?.keepCone ?? CONE;          // 既有目標放寬到這個夾角才脫鎖
+    const heroOnly = opt?.hero !== false;
+    const keepId = opt && 'keepId' in opt ? opt.keepId : this._lockId;
     const ro = this.camera.position;
     const fwd = this.camera.getWorldDirection(new THREE.Vector3());
-    const CONE = 0.14;   // ~8°
-    const score = (ent) => {   // 合格回傳夾角(rad;越小越正對),不合格回 -1
-      if (!ent || ent.side === this.side || ent.neutral || !ent.hero || !ent.mesh.visible || ent.dead) return -1;
-      const c = ent.mesh.position.clone();
-      c.y += (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 2);   // 瞄機體幾何中心
+    const score = (ent, lim) => {   // 合格回傳夾角(rad;越小越正對),不合格回 -1
+      if (!ent || ent.side === this.side || ent.neutral || (heroOnly && !ent.hero)
+        || !ent.mesh?.visible || ent.dead) return -1;
+      const c = this._entAimPoint(ent);
       if (this.pos.distanceTo(c) > rng) return -1;                     // 出射程
       const to = c.clone().sub(ro), ang = fwd.angleTo(to);
-      if (ang > CONE) return -1;                                       // 錐外
+      if (ang > lim) return -1;                                        // 錐外
       const dB = this._obstHitT(ro.x, ro.y, ro.z, c.x, c.y, c.z);
       return (dB != null && dB < to.length() - 1) ? -1 : ang;          // 障礙擋在目標前 = 失去火控
     };
-    const cur = this._lockId != null ? this.ents.get(this._lockId) : null;
-    if (cur && score(cur) >= 0) return cur;                            // 遲滯:既有鎖定仍在錐內不切換
+    const cur = keepId != null ? this.ents.get(keepId) : null;
+    if (cur && score(cur, KEEP) >= 0) return cur;                      // 遲滯:既有目標仍合格不切換
     let best = null, bestAng = CONE + 1;
     for (const ent of this.ents.values()) {
-      const a = score(ent);
+      const a = score(ent, CONE);
       if (a >= 0 && a < bestAng) { best = ent; bestAng = a; }
     }
     return best;
+  }
+
+  /**
+   * 視野鎖定(觸控 ZR 按住;常數見 `data.js VIEW_LOCK`)。按住期間把**基準視角**朝準星最近的
+   * 敵方單位收斂 —— 純客戶端視角輔助,伺服器不參與(送出去的仍只有本來就會回報的視角)。
+   *
+   * 三條 MUST:
+   *   ① 只動 `yaw/pitch`(經 `_applyLook` 單一縫),**MUST NOT** 直接設相機朝向 ——
+   *      相機角 = 基準角 + `recoil` + 震動,直接設等於把後座力與鏡頭震動一起吃掉,
+   *      而使用者要的是「鎖定了但還是會有後座力」:上踢照舊,只是回穩後準星自己回到目標身上。
+   *   ② 目標解析走 `_coneAcquire`(唯一實作,只放寬參數),MUST NOT 另寫一份掃描。
+   *   ③ 索敵節流 8Hz:逐幀對全場實體跑障礙射線是熱路徑,而鎖定目標本來就該黏著不跳
+   *      (放開/目標消失才重找)。收斂本身仍逐幀跑,不然轉頭會一格一格的。
+   */
+  _tickViewLock(dt, now) {
+    if (!this._vlockHold || this.dead || this.paused || this.shopOpen || !this.side) {
+      this._vlockId = null; this._vlockAsk = false; this._setVlockUi(false); return;
+    }
+    if (now - (this._vlockAt || 0) >= 0.12) {
+      this._vlockAt = now;
+      const def = this._curWeapon().def;
+      const rng = def ? def.range * this._altRangeMul(def) : 0;   // 與 `_tickLock` 同一把尺
+      const t = rng > 0 ? this._coneAcquire(rng, {
+        cone: VIEW_LOCK.CONE, keepCone: VIEW_LOCK.DROP, keepId: this._vlockId, hero: false,
+      }) : null;
+      this._vlockId = t ? t.id : null;
+      // 按下去卻沒鎖到 MUST 講一聲:沒有回饋的話玩家只會覺得「這顆鈕壞了」(寧缺勿錯的可見版)
+      if (this._vlockAsk) {
+        this._vlockAsk = false;
+        this.hud?.feed?.(t ? '🎯 視野鎖定目標' : '🎯 準星附近沒有可鎖定的目標');
+      }
+    }
+    const t = this._vlockId != null ? this.ents.get(this._vlockId) : null;
+    if (!t || t.dead || !t.mesh?.visible) { this._vlockId = null; this._setVlockUi(false); return; }
+    this._setVlockUi(true);
+    const c = this._entAimPoint(t);
+    const ro = this.camera.position;
+    const dx = c.x - ro.x, dy = c.y - ro.y, dz = c.z - ro.z;
+    const flat = Math.hypot(dx, dz);
+    if (flat < 0.01) return;
+    // 相機前向 = (−sin yaw·cos pitch, sin pitch, −cos yaw·cos pitch)(three:−z 為前)
+    let dYaw = Math.atan2(-dx, -dz) - this.yaw;
+    dYaw = Math.atan2(Math.sin(dYaw), Math.cos(dYaw));           // 收進 ±π,免得繞遠路轉一圈
+    const dPitch = Math.atan2(dy, flat) - this.pitch;
+    // 每幀轉多少 = `data.js viewLockStep`(唯一縫:逼近係數與角速度上限取小者),兩軸同吃;
+    // 套用走 `_applyLook`(視角套用唯一縫,俯仰夾制只住那裡)。
+    this._applyLook(viewLockStep(dYaw, dt), viewLockStep(dPitch, dt));
+  }
+
+  /** 鎖定中的鈕面亮燈:狀態唯一真相在此(比照 `body.mm-near`),觸控層不必自己記一份 */
+  _setVlockUi(on) {
+    if (on === this._vlockUi) return;
+    this._vlockUi = on;
+    document.body.classList.toggle('vlock', on);
   }
 
   // ---------------- 餌機(機甲 F:分離發射)----------------
@@ -4856,6 +4945,9 @@ export class BattleClient {
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._fireDwell = 0; this._swampDwell = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
+    // 死亡:清視野鎖定的目標與鈕面亮燈 —— `_updatePlayer` 對 dead 早退,`_tickViewLock` 不會再跑到
+    //(鈕還按著沒關係:重生後照樣重新索敵,與 `firing` 同語意)
+    this._vlockId = null; this._setVlockUi(false);
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
@@ -6824,6 +6916,10 @@ export class BattleClient {
     const shY = (Math.random() * 2 - 1) * n * 0.045;
     const shR = (Math.random() * 2 - 1) * n * 0.05;
 
+    // 視野鎖定(觸控 ZR 按住):MUST 排在下面的相機合成**之前** —— 它改的是基準角 yaw/pitch,
+    // 晚一步就要等下一幀才看得到,鎖定會慢半拍。後座力/震動仍疊在合成那一行(刻意不抵銷)。
+    this._tickViewLock(dt, now);
+
     // 座艙視點 = 機體實高 × heroView(依機體形狀的頭艙位置):人形在胸腔/頸根、獸型在獸首
     // (低且遠前)、飛行型在機鼻。與 models.js 的 heroTargetH 同一個縫,改角色護甲即連動。
     // 蓄力中重心下沉(鏡頭跟著蹲)。
@@ -7866,6 +7962,8 @@ export class BattleClient {
     this.touch?.dispose();
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
+    this._vlockHold = false; this._vlockId = null;
+    this._setVlockUi(false);                     // 視野鎖定的亮燈同理(留著 = 下一局開場就亮)
     document.exitPointerLock?.();
     // 離場清帳:一次性特效 / 飛行中彈體 / 彈體池全部釋放 GPU 資源。
     // 不釋放的話「回大廳再開一局」會把上一局的殭屍緩衝一路帶著走(共用幾何由註冊表跳過)。
