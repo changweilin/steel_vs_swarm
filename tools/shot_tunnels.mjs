@@ -77,12 +77,17 @@ if (threeLocal) {
 }
 // 圖磚一律由 Node 轉送:瀏覽器直連在沙箱/代理環境常被擋,Node 端已經配好憑證
 const relay = async (route, contentType) => {
-  try {
-    const r = await fetch(route.request().url());
-    if (!r.ok) return route.abort();
-    route.fulfill({ status: 200, contentType, body: Buffer.from(await r.arrayBuffer()),
-      headers: { 'access-control-allow-origin': '*' } });
-  } catch { route.abort(); }
+  // 重試三次:單一磚失敗會讓 fetchElevTerrarium 整批拋出 → 退到 open-meteo(沙箱連不出去)
+  // ⇒ 整場地形建不起來。網路顛簸不該讓檢視工具整支掛掉。
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch(route.request().url());
+      if (!r.ok) continue;
+      return route.fulfill({ status: 200, contentType, body: Buffer.from(await r.arrayBuffer()),
+        headers: { 'access-control-allow-origin': '*' } });
+    } catch { /* 再試 */ }
+  }
+  route.abort();
 };
 await page.route(/elevation-tiles-prod/, (r) => relay(r, 'image/png'));
 await page.route(/arcgisonline\.com/, (r) => relay(r, 'image/jpeg'));
@@ -195,7 +200,15 @@ const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
       else if (cur) { if (!bs || cur[1] - cur[0] > bs[1] - bs[0]) bs = cur; cur = null; }
     }
     if (cur && (!bs || cur[1] - cur[0] > bs[1] - bs[0])) bs = cur;
-    if (bs) { t0 = Math.max(0, bs[0] - 8 / L); t1 = Math.min(1, bs[1] + 8 / L); }
+    if (bs) {
+      // way 端 MUST 落在「路面與地表相交」處 = 現實中的洞口。停在還埋著 9.5m 的地方 = way
+      // 端點在山肚子裡:引擎只挖得出一條 ±hw 的走廊,兩側殘留的坡面就斜插進洞口(假破圖)。
+      const bury = (t) => { const q = P(t); return H(q[0], q[1]) - (hA + (hB - hA) * t); };
+      let a = bs[0], b2 = bs[1];
+      while (a > 0 && bury(a) > 0.3) a -= 1 / 120;
+      while (b2 < 1 && bury(b2) > 0.3) b2 += 1 / 120;
+      t0 = Math.max(0, a - 2 / L); t1 = Math.min(1, b2 + 2 / L);
+    }
   }
   const pts = [];
   for (let i = 0; i <= 6; i++) pts.push(P(t0 + (t1 - t0) * i / 6));
