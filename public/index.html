@@ -64,12 +64,9 @@
       <button id="cloudApplyBtn" class="btn">↯ 連線</button>
     </div>
 
-    <!-- 操作方式:限定滑鼠鍵盤 / 限定搖桿 / 不限定(預設)。**加入房間之前**就要選定 ——
-         進房後限定模式即鎖住(規則住 js/ctrlmode.js),選「不限定」才可在戰鬥中隨時切換。
-         選項 DOM 由 mobile.js renderCtrlSettings() 注入(與設定頁共用同一份),
-         MUST NOT 在這裡另寫一組按鈕。 -->
-    <div class="divider">─── 操作方式 ───</div>
-    <div class="set-list ctrl-mode-box" id="ctrlModeMount"></div>
+    <!-- 操作方式(限定滑鼠鍵盤 / 限定搖桿 / 不限定)已改由**房主在戰區畫面決定**、整房一致
+         (2026-07-31 使用者定案;規則住 js/ctrlmode.js、選項掛在 #roomCtrlMount)。
+         個人的「目前操控」切換併入設定頁(#lobbyMenuCtrlMount / #pauseCtrlMount)。 -->
 
     <!-- 加入現有戰區:單機模式沒有遠端戰區可加入,main.js 會整區收起 -->
     <div id="joinArea">
@@ -256,6 +253,9 @@
     <div class="room-map-info" id="roomMapInfo"></div>
     <div class="room-map-info" id="roomPreload"></div>
     <div class="room-map-info" id="botDiffRow"></div>
+    <!-- 操作方式(整房一致;房主可改、其他人唯讀)。選項 DOM 由 mobile.js renderCtrlModeRow()
+         注入 —— 與設定頁的「目前操控」共用同一套段落按鈕樣式,MUST NOT 在這裡另寫一組。 -->
+    <div class="set-list ctrl-mode-box" id="roomCtrlMount"></div>
   </header>
 
   <!-- 卡序 = 主視覺方位:STEEL 左(藍)/ SWARM 右(黃),與 logo、標題橫幔、底圖對抗場一致 -->

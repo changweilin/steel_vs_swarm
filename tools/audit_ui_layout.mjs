@@ -138,6 +138,13 @@ for (const v of VIEWS) {
       document.querySelector(`#side${s} .side-slots`).innerHTML =
         '<div class="slot empty"><button class="slot-btn">＋ 入座</button><button class="slot-btn">＋ 電腦</button></div>';
     }
+    // 操作方式(整房一致;房主可改)——真品 DOM 由 mobile.js renderCtrlModeRow() 注入,
+    // 這裡照它的形狀補一份骨架,好讓下面的 noHScroll('room') 真的量得到這一列的寬度。
+    document.getElementById('roomCtrlMount').innerHTML =
+      '<div class="set-row"><span class="set-label">操作方式</span><span class="tset-seg">'
+      + ['◈ 不限定', '⌨ 限定滑鼠鍵盤', '🕹 限定搖桿']
+        .map((t) => `<button class="tset-segb" type="button">${t}</button>`).join('')
+      + '</span><span class="set-hint">整房一致,由房主決定 ・ 全房各自依裝置判定,戰鬥中也能隨時在設定頁切換鍵鼠 ⇄ 搖桿。</span></div>';
     out.room = {
       steel: box('#sideSTEEL'), swarm: box('#sideSWARM'),
       ready: box('#readyBtn'), start: box('#startBattleBtn'), leave: box('#leaveRoomBtn'),

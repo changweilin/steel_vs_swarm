@@ -11,6 +11,10 @@ import {
   SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, lanesFor, resolveEnv,
   BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
 } from '../public/js/data.js';
+// 操作方式(整房一致、房主定案)的合法值只有 ctrlmode.js 一份 —— 在這裡照抄一組字串
+// 就是第二份選項表(新增第四種操控時必漏改)。該檔刻意零 import、頂層不碰 window ⇒
+// Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
+import { CTRL_MODES, DEFAULT_CTRL_MODE } from '../public/js/ctrlmode.js';
 
 // 兵線(lat/lng)→ 遊戲公尺(原點任取,towerLayoutAudit 只用相對距離)。與 mapSelect / 烘焙同一換算。
 const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
@@ -50,7 +54,8 @@ export function validateBattleConfig(cfg, teamSize) {
 /**
  * room = {
  *   pin, id, hostId, phase: 'room'|'loading'|'game'|'over',
- *   config: { roomName, isPublic, teamSize },   // 每陣營 teamSize 席(1~5)
+ *   config: { roomName, isPublic, teamSize, botDiff, ctrl },  // 每陣營 teamSize 席(1~5);
+ *                                              // ctrl = 操作方式(整房一致,房主可隨時改)
  *   clients: Map<clientId, {send, name, side:'SWARM'|'STEEL'|null, mode:'player'|'spectator',
  *                           ready, loaded, connected, token}>,
  *   bots: Map<botId('b1'...), {name, side}>,   // 電腦玩家(房主增減,佔正式席位)
@@ -142,6 +147,8 @@ export class RoomHub {
             .concat([...room.bots.values()].filter((b) => b.side === 'STEEL').map((b) => `🤖${b.name}`)),
         },
         host: this._hostNameOf(room),
+        // 操作方式:限定時要在**加入之前**看得到(手機玩家不該進了限定鍵鼠的房才發現沒搖桿)
+        ctrl: room.config.ctrl || DEFAULT_CTRL_MODE,
         place: room.battleConfig?.placeName || null,
         env: room.battleConfig?.env || null,
       };
@@ -320,7 +327,13 @@ export class RoomHub {
         client = { send, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
         room = {
           pin, id: hub._genRoomId(), hostId: myId, phase: 'room',
-          config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false, teamSize, botDiff: BOT_DIFF[m.botDiff] ? m.botDiff : DEFAULT_BOT_DIFF },
+          config: {
+            roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`,
+            isPublic: m.isPublic !== false, teamSize,
+            botDiff: BOT_DIFF[m.botDiff] ? m.botDiff : DEFAULT_BOT_DIFF,
+            // 操作方式:開房時取房主的預設,之後由房主經 setRoomConfig 變更(整房一致)
+            ctrl: CTRL_MODES[m.ctrl] ? m.ctrl : DEFAULT_CTRL_MODE,
+          },
           clients: new Map([[myId, client]]),
           bots: new Map(), nextBotId: 0, botBrains: [],
           battle: null, battleConfig: cfg, tickTimer: null,
@@ -430,6 +443,9 @@ export class RoomHub {
         if (m.roomName !== undefined) room.config.roomName = sanitizeName(m.roomName);
         if (m.isPublic !== undefined) room.config.isPublic = !!m.isPublic;
         if (m.botDiff !== undefined && BOT_DIFF[m.botDiff]) room.config.botDiff = m.botDiff;
+        // 操作方式整房一致 ⇒ 只有房主改得動(非房主的訊息在本 if 就被擋掉),
+        // 非法值一律靜默忽略(降級不例外);廣播出去才是客戶端的生效值。
+        if (m.ctrl !== undefined && CTRL_MODES[m.ctrl]) room.config.ctrl = m.ctrl;
         hub.broadcast(room);
         return;
       }

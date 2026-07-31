@@ -12,8 +12,9 @@
 // 故直式首次進場提示「建議橫向持握」,而不是偷偷改 FOV。
 import * as THREE from 'three';
 import {
-  CTRL_MODES, CTRL_MODE_KEYS, CTRL_SCHEMES, CTRL_SCHEME_KEYS, ctrlMode, setCtrlMode,
-  ctrlScheme, setCtrlScheme, ctrlLocked, onCtrlChange, usePad, deviceScheme, touchCapable, ctrlModeText,
+  CTRL_MODES, CTRL_MODE_KEYS, CTRL_SCHEMES, CTRL_SCHEME_KEYS, ctrlMode, ctrlPref, setCtrlPref,
+  ctrlScheme, setCtrlScheme, ctrlLocked, ctrlMismatchText, onCtrlChange, usePad, deviceScheme,
+  touchCapable, ctrlModeText,
 } from './ctrlmode.js';
 
 /* ---------------- 裝置判定 ---------------- */
@@ -26,7 +27,7 @@ export { touchCapable };
 
 /**
  * 是否採用虛擬搖桿版 UI(= 操作方式解析後的結果)。
- * 玩家在大廳選「限定滑鼠鍵盤 / 限定搖桿 / 不限定」,不限定時吃裝置判定 —— 全部住 ctrlmode.js。
+ * 房主替整房選「限定滑鼠鍵盤 / 限定搖桿 / 不限定」,不限定時吃裝置判定 —— 全部住 ctrlmode.js。
  */
 export function isTouchUI() { return usePad(); }
 
@@ -50,10 +51,11 @@ export function touchDiagnostics() {
     { k: '螢幕短邊 ≤ 820', v: `${window.screen?.width}×${window.screen?.height}`,
       ok: Math.min(window.screen?.width || 9999, window.screen?.height || 9999) <= 820 },
     { k: '裝置判定(不限定時的預設)', v: CTRL_SCHEMES[deviceScheme()].label, ok: true },
-    { k: '操作方式', v: ctrlModeText(), ok: true,
-      note: ctrlLocked() ? '已加入房間 ⇒ 限定模式不可變更' : '加入房間前可在大廳變更' },
+    { k: '操作方式', v: ctrlModeText(), ok: !ctrlMismatchText(),
+      note: ctrlLocked() ? '整房一致,由房主在戰區畫面決定' : `我的預設(開房時整房沿用):${CTRL_MODES[ctrlPref()].label}` },
     { k: '結論:虛擬搖桿', v: isTouchUI(), ok: isTouchUI(),
-      note: isTouchUI() ? '虛擬搖桿會在戰鬥中出現' : '可把操作方式改成「限定搖桿」,或網址加 ?ctrl=pad' },
+      note: isTouchUI() ? '虛擬搖桿會在戰鬥中出現'
+        : (ctrlLocked() ? '本戰區由房主限定,要換請洽房主' : '可把操作方式改成「限定搖桿」,或網址加 ?ctrl=pad') },
     { k: 'body class', v: [...document.body.classList].filter((c) => c.startsWith('touch') || c.startsWith('ori')).join(' ') || '(無)',
       ok: document.body.classList.contains('touch-ui') },
   ];
@@ -557,18 +559,60 @@ export function gyroStatusText() {
 // MUST NOT 在 index.html 或 main.js 另寫一組觸控設定列(兩份一定會漂)。
 
 const _mounts = [];
-const _ctrlMounts = [];
+const _ctrlMounts = [];    // 設定頁:目前操控(+ 操作方式唯讀狀態)
+const _modeMounts = [];    // 戰區畫面:操作方式三選一(房主可改)
+let _modeHost = false;     // 我是不是房主(由 main.js `syncCtrlModeRow()` 回報)
+let _modePick = null;      // 房主按下時的上行回呼(main.js 傳:送 setRoomConfig)
 const _esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /**
- * 操作方式設定列(**限定模式** + **目前操控**兩列)。大廳(加入戰區前)、大廳選單、
- * 戰場暫停選單三處共用這一份 DOM,MUST NOT 在 index.html / main.js 另寫一組
- * —— 兩份一定會漂,而這一項還是「進房後就不能改」的規則落點。
+ * **操作方式三選一(整房一致;2026-07-31 使用者定案「由房主選擇」)**。
+ * 只掛在戰區畫面 —— 它是房間設定,不是個人偏好,故與電腦難度並列而不是躺在設定頁裡。
  *
- * 兩列的啟用條件由 ctrlmode.js 決定,本函式只忠實反映:
- *   ① 限定模式:`ctrlLocked()`(已加入房間)⇒ 停用。
- *   ② 目前操控:限定模式非「不限定」⇒ 停用(這就是「遊戲中不可變更」)。
- * MUST NOT 在這裡自己判 `app.phaseShown` 之類的畫面狀態(那是第二份規則)。
+ * 這一列 MUST NOT 自己改生效值:房主按下 → `opts.onPick(mode)`(main.js 送 `setRoomConfig`)
+ * → 伺服器廣播 → `setRoomCtrlMode()` → 本列同步。客戶端先斬後奏 = 房主與隊友版型不同步。
+ * 非房主一律停用(規則的落點仍在伺服器 —— 只有 hostId 的 `setRoomConfig` 會被受理)。
+ */
+export function renderCtrlModeRow(mount, opts = {}) {
+  if (!mount) return;
+  if (opts.onPick) _modePick = opts.onPick;
+  if (mount.dataset.ctrlModeBuilt) { syncCtrlSettings(); return; }
+  mount.dataset.ctrlModeBuilt = '1';
+  const notice = opts.onNotice || (() => {});
+
+  const row = document.createElement('div');
+  row.className = 'set-row';
+  row.innerHTML = '<span class="set-label">操作方式</span><span class="tset-seg tset-ctrl">'
+    + CTRL_MODE_KEYS.map((m) =>
+      `<button class="tset-segb" type="button" data-ctrl="${m}">${_esc(CTRL_MODES[m].icon)} ${_esc(CTRL_MODES[m].label)}</button>`).join('')
+    + '</span><span class="set-hint tset-ctrl-hint"></span>';
+  mount.appendChild(row);
+  for (const b of row.querySelectorAll('.tset-segb')) {
+    b.addEventListener('click', () => {
+      if (!_modeHost) { notice('操作方式由房主決定 —— 整房一致', 4000); return; }
+      const m = b.dataset.ctrl;
+      setCtrlPref(m);        // 記成我的預設:下次自己開房沿用(生效值仍等伺服器廣播回來)
+      _modePick?.(m);
+      notice(`本戰區操作方式:${CTRL_MODES[m].label}`, 3000);
+    });
+  }
+  _modeMounts.push(mount);
+  syncCtrlSettings();
+}
+
+/** 戰區畫面每次重繪時回報「我是不是房主」(停用態的唯一驅動;值本身仍是伺服器廣播的那一份)*/
+export function syncCtrlModeRow(isHost) {
+  _modeHost = !!isHost;
+  syncCtrlSettings();
+}
+
+/**
+ * 設定頁的操作方式區塊:**唯讀狀態列 + 目前操控三選一**(2026-07-31 使用者定案
+ * 「目前操控的選擇併入設定」)。大廳選單、手機操控面板、戰場暫停選單三處共用這一份 DOM,
+ * MUST NOT 在 index.html / main.js 另寫一組 —— 兩份一定會漂。
+ *
+ * 啟用條件由 ctrlmode.js 決定,本函式只忠實反映:生效模式非「不限定」⇒ 目前操控停用
+ * (這就是「遊戲中不可變更」)。MUST NOT 在這裡自己判 `app.phaseShown` 之類的畫面狀態。
  */
 export function renderCtrlSettings(mount, opts = {}) {
   if (!mount || mount.dataset.ctrlBuilt) return;
@@ -577,18 +621,9 @@ export function renderCtrlSettings(mount, opts = {}) {
 
   const modeRow = document.createElement('div');
   modeRow.className = 'set-row';
-  modeRow.innerHTML = '<span class="set-label">操作方式</span><span class="tset-seg tset-ctrl">'
-    + CTRL_MODE_KEYS.map((m) =>
-      `<button class="tset-segb" type="button" data-ctrl="${m}">${_esc(CTRL_MODES[m].icon)} ${_esc(CTRL_MODES[m].label)}</button>`).join('')
-    + '</span><span class="set-hint tset-ctrl-hint"></span>';
+  modeRow.innerHTML = '<span class="set-label">操作方式</span>'
+    + '<span class="set-val tset-ctrl-val"></span><span class="set-hint tset-ctrl-hint"></span>';
   mount.appendChild(modeRow);
-  for (const b of modeRow.querySelectorAll('.tset-segb')) {
-    b.addEventListener('click', () => {
-      if (!setCtrlMode(b.dataset.ctrl)) { notice('操作方式在加入房間之前就要先選擇 —— 離開戰區後才能變更', 5000); return; }
-      syncCtrlSettings();
-      notice(`操作方式:${CTRL_MODES[ctrlMode()].label}`, 3000);
-    });
-  }
 
   const pickRow = document.createElement('div');
   pickRow.className = 'set-row';
@@ -599,7 +634,7 @@ export function renderCtrlSettings(mount, opts = {}) {
   mount.appendChild(pickRow);
   for (const b of pickRow.querySelectorAll('.tset-segb')) {
     b.addEventListener('click', () => {
-      if (!setCtrlScheme(b.dataset.scheme)) { notice('已限定操作方式,遊戲中不可變更 —— 要能隨時切換請在加入房間前選「不限定」', 5000); return; }
+      if (!setCtrlScheme(b.dataset.scheme)) { notice('本戰區已限定操作方式,遊戲中不可變更 —— 要能隨時切換請請房主改選「不限定」', 5000); return; }
       syncCtrlSettings();
       notice(`目前操控:${CTRL_SCHEMES[ctrlScheme()].label}`, 3000);
     });
@@ -608,24 +643,39 @@ export function renderCtrlSettings(mount, opts = {}) {
   syncCtrlSettings();
 }
 
-// 狀態一變(限定模式 / 目前操控 / 鎖定)就把所有已渲染的操作方式 UI 同步一次。
-// 訂閱 MUST 住這裡而不是 installTouchUI —— 少了它,「進房後選項變灰」要等下次開設定頁才生效。
+// 狀態一變(戰區定案 / 我的預設 / 目前操控)就把所有已渲染的操作方式 UI 同步一次。
+// 訂閱 MUST 住這裡而不是 installTouchUI —— 少了它,「房主改了選項變灰」要等下次開設定頁才生效。
 onCtrlChange(() => syncCtrlSettings());
 
 /** 把所有已渲染的操作方式 UI 同步到目前狀態(選取態 + 停用態 + 提示文字)*/
 export function syncCtrlSettings() {
   const mode = ctrlMode(), scheme = ctrlScheme(), locked = ctrlLocked();
-  for (const mount of _ctrlMounts) {
+  const warn = ctrlMismatchText();
+  // ① 戰區畫面:三選一(房主可改;值恆是伺服器廣播的那一份)
+  for (const mount of _modeMounts) {
     for (const b of mount.querySelectorAll('.tset-ctrl .tset-segb')) {
       b.classList.toggle('on', b.dataset.ctrl === mode);
-      b.disabled = locked;
+      b.disabled = !_modeHost;
+    }
+    const mh = mount.querySelector('.tset-ctrl-hint');
+    if (mh) {
+      mh.textContent = (_modeHost ? '整房一致,由你決定 ・ ' : '整房一致,由房主決定 ・ ')
+        + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
+    }
+  }
+  // ② 設定頁:操作方式唯讀 + 目前操控三選一
+  for (const mount of _ctrlMounts) {
+    const mv = mount.querySelector('.tset-ctrl-val');
+    if (mv) mv.textContent = `${CTRL_MODES[mode].icon} ${CTRL_MODES[mode].label}`;
+    const mh = mount.querySelector('.tset-ctrl-hint');
+    if (mh) {
+      mh.textContent = (locked ? '本戰區由房主指定,整房一致 ・ ' : '我的預設(自己開房時整房沿用;可在戰區畫面變更)・ ')
+        + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
     }
     for (const b of mount.querySelectorAll('.tset-pick .tset-segb')) {
       b.classList.toggle('on', b.dataset.scheme === scheme);
       b.disabled = mode !== 'any';
     }
-    const mh = mount.querySelector('.tset-ctrl-hint');
-    if (mh) mh.textContent = locked ? `已加入戰區,離開後才能變更 ・ ${CTRL_MODES[mode].hint}` : CTRL_MODES[mode].hint;
     const ph = mount.querySelector('.tset-pick-hint');
     if (ph) {
       ph.textContent = mode === 'any'
