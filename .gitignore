@@ -4,6 +4,9 @@ tools/.osm_cache/
 # 兵線場景稽核的 Overpass / terrarium 高程磚快取(同上,可重新抓取)
 tools/.scen_cache/
 
+# `node tools/shot_tunnels.mjs` 的多視角出圖(每座結構 24 張 ~7MB,隨時可重跑,勿入版控)
+tools/.shots_tunnels/
+
 # `npm start -- --https` 生成的自簽憑證(含私鑰,MUST NOT 入版控;刪掉會重新生成)
 .certs/
 

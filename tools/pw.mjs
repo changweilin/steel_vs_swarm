@@ -20,10 +20,11 @@ const CHROME = [
 /** 取得 playwright 的 chromium;找不到回傳 null(呼叫端印訊息後以 0 結束,不當成失敗) */
 export async function chromiumOrNull() {
   const cands = [
+    process.env.PW_MODULE,                       // 明確指定(裝在專案外的沙箱/CI 用)
     'playwright',
     '/opt/node22/lib/node_modules/playwright/index.mjs',
     `${process.env.HOME || ''}/.npm-global/lib/node_modules/playwright/index.mjs`,
-  ];
+  ].filter(Boolean);
   for (const c of cands) {
     try {
       const m = c.startsWith('/') ? await import(c) : require(c);
