@@ -828,13 +828,18 @@ export async function buildTerrain(cfg, onProgress) {
     const rims = (bores || []).map(() => []);
     const touched = (bores || []).map(() => false);
     if (!bores?.length) return { rims, touched };
-    const B = bores.map((b) => ({ ...b, ca: Math.cos(b.ry), sa: Math.sin(b.ry), far2: (b.depth + b.hw + 24) ** 2 }));
+    // out = 走廊往洞**外**延伸幾公尺(2026-07-31 多視角檢視):洞口外側 ±hw、路面以上、天花以下
+    // 那塊空間就是「車開出來的地方」,本來就該淨空 —— 開挖後殘留在切面上的地被底毯/地形攤片
+    // 會斜插進洞口(從洞內往外看是幾片浮在路面上方的土色薄片)。走廊只往外延一格,垂直三條界
+    // 不動 ⇒ 路面以下(路塹底、圍裙)與天花以上(山體)照樣不刪。
+    const B = bores.map((b) => ({ ...b, out: b.out || 0, ca: Math.cos(b.ry), sa: Math.sin(b.ry),
+      far2: (b.depth + b.hw + 24 + (b.out || 0)) ** 2 }));
     /** 點是否落在該 bore 的斷面走廊內(不含高度判定) */
     const inBore = (b, x, z) => {
       const dx = x - b.x, dz = z - b.z;
       if (dx * dx + dz * dz > b.far2) return false;
       const lx = dx * b.ca - dz * b.sa, lz = dx * b.sa + dz * b.ca;
-      return Math.abs(lx) <= b.hw && lz <= -0.5 && lz >= -b.depth;
+      return Math.abs(lx) <= b.hw && lz <= b.out - 0.5 && lz >= -b.depth;
     };
     /**
      * 三角形(XZ 投影)是否與該 bore 的斷面走廊矩形重疊(2D SAT;凸 × 凸)。
@@ -853,7 +858,7 @@ export async function buildTerrain(cfg, onProgress) {
         return [dx * b.ca - dz * b.sa, dx * b.sa + dz * b.ca];
       };
       const p = [L(x0, z0), L(x1, z1), L(x2, z2)];
-      const xLo = -b.hw, xHi = b.hw, zLo = -b.depth, zHi = -0.5;
+      const xLo = -b.hw, xHi = b.hw, zLo = -b.depth, zHi = b.out - 0.5;
       // 軸 1/2 = 走廊自身的兩軸
       if (p.every((q) => q[0] < xLo) || p.every((q) => q[0] > xHi)) return false;
       if (p.every((q) => q[1] < zLo) || p.every((q) => q[1] > zHi)) return false;

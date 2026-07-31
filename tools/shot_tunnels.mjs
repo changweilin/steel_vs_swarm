@@ -44,6 +44,7 @@ if (!['tunnel', 'underpass', 'gallery'].includes(KIND)) throw new Error(`--kind 
 const VENUE = arg('--venue', KIND === 'underpass' ? 'civicblvd' : 'taroko');
 const OUT = path.resolve(arg('--out', join(ROOT, 'tools', `.shots_tunnels/${KIND}`)));
 const LIVE = has('--live');
+const DEBUG = has('--debug');   // 洞口破片定位:同視角出「原樣 / 隱藏地被層 / 只留地被層」三份
 const PORT = +arg('--port', 8631);
 
 const chromium = await chromiumOrNull();
@@ -106,7 +107,7 @@ await page.route(PROBE_URL, (r) => r.fulfill({
 }));
 await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
 
-const report = await page.evaluate(async ({ venueId, kind, synth }) => {
+const report = await page.evaluate(async ({ venueId, kind, synth, dbg }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
@@ -376,9 +377,77 @@ const report = await page.evaluate(async ({ venueId, kind, synth }) => {
     shots.push({ name, data: canvas.toDataURL('image/png') });
   };
 
+  // --debug:同一視角出三份(原樣 / 隱藏地被實例層 / 只留地被實例層)—— 洞口的破片到底
+  // 是地形、結構還是地被拼圖,靠這三張一眼定位(肉眼分不出灰白拼圖與混凝土)
+  const dbgHits = [], dbgWidth = [];
+  const instLayer = [];
+  if (dbg) terrain.group.traverse((o) => { if (o.isInstancedMesh) instLayer.push(o); });
+  const snapDbg = (name, pos, look) => {
+    snap(name, pos, look);
+    if (!dbg) return;
+    instLayer.forEach((o) => { o.visible = false; });
+    snap(`${name}__noCover`, pos, look);
+    instLayer.forEach((o) => { o.visible = true; });
+    terrain.group.traverse((o) => { if (o.isMesh && !o.isInstancedMesh) o.visible = false; });
+    snap(`${name}__coverOnly`, pos, look);
+    terrain.group.traverse((o) => { if (o.isMesh && !o.isInstancedMesh) o.visible = true; });
+  };
+
   mouths.forEach((p, i) => {
     const ox = Math.sin(p.ry), oz = Math.cos(p.ry), rx = oz, rz = -ox, fy = p.y;
     const eye = (d) => Math.max(H(p.x + ox * d, p.z + oz * d), fy) + 3.2;
+    if (dbg) {
+      snapDbg(`p${i}_dbg_out14`, [p.x + ox * 14, fy + 3.0, p.z + oz * 14], [p.x - ox * 30, fy + 4, p.z - oz * 30]);
+      snapDbg(`p${i}_dbg_in12`, [p.x - ox * 12, fy + 3.0, p.z - oz * 12], [p.x + ox * 40, fy + 4, p.z + oz * 40]);
+      // 誰擋在洞口斷面裡:自洞內眼位掃一把扇形,把命中物件的識別特徵收集起來
+      const rayD = new THREE.Raycaster();
+      const org = new THREE.Vector3(p.x - ox * 12, fy + 3.0, p.z - oz * 12);
+      const seen = new Map();
+      for (let u = -1; u <= 1.001; u += 0.05) {
+        for (let w = -0.6; w <= 1.201; w += 0.1) {
+          const tx = p.x + rx * 12 * u + ox * 4, tz = p.z + rz * 12 * u + oz * 4, ty = fy + 1 + 6 * w;
+          rayD.set(org, new THREE.Vector3(tx - org.x, ty - org.y, tz - org.z).normalize());
+          rayD.far = 60;
+          const h = rayD.intersectObject(terrain.group, true)[0];
+          if (!h) continue;
+          const o = h.object, m = o.material;
+          const k = `${o.isInstancedMesh ? 'inst' : 'mesh'}|${m?.color?.getHexString?.() ?? '-'}|${m?.side ?? '-'}`
+            + `|vc=${!!m?.vertexColors}|map=${!!m?.map}|po=${!!m?.polygonOffset}|v=${o.geometry?.attributes?.position?.count ?? 0}`;
+          const rec = seen.get(k) || { n: 0, near: Infinity, y: 0 };
+          rec.n++;
+          if (h.distance < rec.near) { rec.near = +h.distance.toFixed(1); rec.y = +(h.point.y - fy).toFixed(1); }
+          seen.set(k, rec);
+        }
+      }
+      dbgHits.push({ portal: i, hits: [...seen].map(([k, v]) => ({ k, ...v })).sort((a, b) => b.n - a.n) });
+      // 洞口鋪面寬度剖面:自洞內 12m 到洞外 24m,逐公尺量「路面緞帶」橫向延伸多寬 ——
+      // 結構通行寬(≥PASS_W/2)與洞外車道寬之間若沒有漸縮帶,這條剖面就會在洞口斷成階梯
+      const rayW = new THREE.Raycaster();
+      const prof = [];
+      for (let s = -12; s <= 24; s += 2) {
+        const cx = p.x + ox * s, cz = p.z + oz * s;
+        // 基準高取**當地中心線**的路面(引道是斜的;拿洞口高當基準,10m 外就差一個門檻 = 假縮寬)
+        rayW.far = 30;
+        rayW.set(new THREE.Vector3(cx, p.y + 14, cz), new THREE.Vector3(0, -1, 0));
+        const cHits = rayW.intersectObject(terrain.group, true);
+        if (!cHits.length) { prof.push({ s, wL: -1, wR: -1 }); continue; }
+        const ref = cHits[cHits.length - 1].point.y;   // 最底下那個面 = 路面(上方可能有天花/門框)
+        let wL = 0, wR = 0;
+        for (let l = 0.5; l <= 18; l += 0.5) {
+          for (const sg of [1, -1]) {
+            rayW.set(new THREE.Vector3(cx + rx * l * sg, ref + 8, cz + rz * l * sg), new THREE.Vector3(0, -1, 0));
+            rayW.far = 20;
+            // 逐個交點找「與當地路面同高」的那一個(只看最近的會被門框/天花/簷口吃掉)
+            const paved = rayW.intersectObject(terrain.group, true).some((h) => Math.abs(h.point.y - ref) < 1.0);
+            if (!paved) continue;
+            if (sg > 0 && l > wR) wR = l;
+            if (sg < 0 && l > wL) wL = l;
+          }
+        }
+        prof.push({ s, wL: +wL.toFixed(1), wR: +wR.toFixed(1) });
+      }
+      dbgWidth.push({ portal: i, prof });
+    }
     snap(`p${i}_out60`, [p.x + ox * 60, eye(60) + 2, p.z + oz * 60], [p.x, fy + 4, p.z]);
     snap(`p${i}_out25`, [p.x + ox * 25, eye(25), p.z + oz * 25], [p.x, fy + 4, p.z]);
     snap(`p${i}_oblL`, [p.x + ox * 28 + rx * 22, eye(28) + 4, p.z + oz * 28 + rz * 22], [p.x, fy + 4, p.z]);
@@ -397,6 +466,7 @@ const report = await page.evaluate(async ({ venueId, kind, synth }) => {
     scan: { sectSamples, intruders: intruders.length, intruderList: intruders.slice(0, 200),
             apron, blockIn: blockIn.length, blockInList: blockIn.slice(0, 60),
             voidN, voidHits, voidPts, leaks },
+    dbgHits, dbgWidth,
   };
   if (covSegs.length) {
     const m = covSegs[Math.floor(covSegs.length / 2)];
@@ -420,7 +490,7 @@ const report = await page.evaluate(async ({ venueId, kind, synth }) => {
     snap('aerial_axis', camB, [cx, fy, cz]);
   }
   return { meta, shots };
-}, { venueId: VENUE, kind: KIND, synth: !LIVE });
+}, { venueId: VENUE, kind: KIND, synth: !LIVE, dbg: DEBUG });
 
 for (const s of report.shots) fs.writeFileSync(join(OUT, `${s.name}.png`), Buffer.from(s.data.split(',')[1], 'base64'));
 fs.writeFileSync(join(OUT, 'meta.json'), JSON.stringify(report.meta, null, 2));

@@ -2410,7 +2410,10 @@ const PASS_W = 16;
 //            交給 punchPortalHoles 清掉 —— 與 PORTAL_MAX 同性質的資源閘)。
 const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
               WALL_MIN: 7, NEAR_W: 3, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600,
-              GAL_BORE_MAX: 160, GAL_CLEAR_W: 9 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+              GAL_BORE_MAX: 160, GAL_CLEAR_W: 9, MOUTH_OUT: 8 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
+// MOUTH_OUT:門洞走廊往洞**外**延伸的長度(≈ 一格地形,2026-07-31 多視角檢視)。洞口外側 ±hw、
+// 路面以上/天花以下那塊空間就是車開出來的地方,開挖後仍攤在切面上的地被底毯與地形殘片會斜插
+// 進洞口(洞內往外看 = 幾片浮在路面上方的土色薄片)。垂直三條界不動 ⇒ 路塹底/圍裙/山體不受影響。
 // GAL_CLEAR_W:明隧道開放側柱外淨空帶寬(牆線外這段內、低於頂板的土脊開挖到路面;
 // 2026-07-31 太魯閣實測柱間視線被牆外 2~3m 殘丘擋在 13~17m ⇒ 帶寬取 9 蓋過實測殘丘)
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
@@ -2662,6 +2665,9 @@ function roadColor(biome, main) {
  * 市區主幹道加虛線中線;材質帶低頻水彩 wash 打破長路面單色。
  */
 const ROAD_SEG = 6;   // 路面貼地取樣間距(公尺)
+// 結構(隧道/地下道)走廊的地物淨空外擴:MUST ≥ 開挖足跡(carveTunnels 山體斜壁 hw+7、
+// 引道緣石帶 hw+UND.COPE=8)—— 淨空窄於開挖 = 開挖邊緣的地物懸在路塹上方。
+const STRUCT_CLEAR_PAD = 8;
 /** 折線細分:每段長度不超過 seg,回傳新折線(端點保留) */
 function densify(pts, seg) {
   const out = [pts[0]];
@@ -3520,7 +3526,11 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
             const floor = tunFloorAt(tw, cum[i], total);   // 山體隧道 = 平直;地下道 = 下沉剖面
             if (terrain.heightAt(x, z) >= floor + TUN.CLEAR + TUN.ROOF_T && !galOpenAt?.(i)) continue;   // 深埋覆蓋段
           }
-          blockArea(blocked, x, z, hw + 4);
+          // 淨空半徑 MUST 蓋過**開挖足跡**(2026-07-31 使用者回報「殘餘地形在道路之上、洞口沒有淨空」):
+          // 隧道/地下道的開挖是 hw+7(山體斜壁)/ 引道 hw+CUT_W 再加 hw+COPE 的緣石帶,舊 hw+4
+          // 只蓋到路面外 4m ⇒ 開挖邊緣那一圈仍會生地被特徵拼圖與擺件,它們以「單一取樣高」擺位,
+          // 挖空後就懸在路塹上方 = 洞口望出去幾片浮在路面上的土色薄片。橋維持 hw+4(橋下淨空語意不同)。
+          blockArea(blocked, x, z, hw + (kind === 'tun' ? STRUCT_CLEAR_PAD : 4));
         }
       }
     }
@@ -3815,7 +3825,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           const yEnd = strc ? tFloorAt(cum[i0]) + ROAD_LIFT : deckAt(cum[i0], ex, ez);
           const yFar = terrain.heightAt(ex + dx * ROAD_FLARE_M, ez + dz * ROAD_FLARE_M);
           if (yFar > yEnd + 1.6 || yFar < yEnd - 3) continue;
-          const fbase = b.base;
+          const fbase = b.base, wbase = walk.base;
           for (let k = 0; k <= FN; k++) {
             const t = k / FN;
             const cx = ex + dx * (t * ROAD_FLARE_M), cz = ez + dz * (t * ROAD_FLARE_M);
@@ -3824,6 +3834,10 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             const hs = offs.map(([off]) => terrain.heightAt(cx + px * off, cz + pz * off));
             const hMax = Math.max(...hs);
             const w = t * t * (3 - 2 * t);       // 高度融合權重(端點切線 0,與 flareHw 同曲線)
+            const yAt = (off) => {
+              const vx = cx + px * off, vz = cz + pz * off;
+              return yEnd + ((Math.max(terrain.heightAt(vx, vz), hMax - CLAMP) + ROAD_LIFT) - yEnd) * w;
+            };
             for (let q = 0; q < 4; q++) {
               const [off, ink] = offs[q];
               const vx = cx + px * off, vz = cz + pz * off;
@@ -3834,7 +3848,26 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               if (ink) b.col.push(0.52, 0.52, 0.58);
               else b.col.push(1, 1, 1);
             }
+            // 避車道邊帶跟著**同一個 fhw** 收(2026-07-31 使用者回報「洞體內外的道路沒接好、寬度不同」):
+            // 結構內的斷面是「中央車道 laneHw + 兩側邊帶到 hw」,漸縮帶只鋪柏油的話出洞那 12m
+            // 變成一片全寬柏油 —— 邊帶憑空消失、車道邊線對不上 = 洞口一道斷面階。
+            // 車道緣全程不動、邊帶寬 fhw − laneHw 收到零 ⇒ 洞內外同一個斷面。純視覺(同 walk 桶、
+            // 同 +0.12 路緣高),MUST NOT 進 decks / 走廊 / 碰撞;半寬 MUST NOT 自己再算一次。
+            const inO = Math.min(laneHw + 0.1, fhw), outO = Math.max(inO, fhw - 0.1);
+            for (const side of [1, -1]) {
+              for (const off of [inO * side, outO * side]) {
+                walk.pos.push(cx + px * off, yAt(off) + 0.12, cz + pz * off);
+                walk.nrm.push(0, 1, 0);
+              }
+            }
           }
+          for (let s2 = 0; s2 < 2; s2++) {          // 兩側各一條帶(每截面 4 頂點:內外緣 × 左右側)
+            for (let k = 0; k < FN; k++) {
+              const kb = wbase + k * 4 + s2 * 2;
+              walk.idx.push(kb, kb + 1, kb + 4, kb + 1, kb + 5, kb + 4);
+            }
+          }
+          walk.base += (FN + 1) * 4;
           for (let k = 0; k < FN; k++) {
             const kb = fbase + k * 4;
             for (const o of [0, 1, 2]) {
@@ -3968,6 +4001,19 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
               });
             }
           }
+          // 引道路塹的斷面淨空(2026-07-31 使用者回報「殘餘地形在道路之上」):垂直路塹是**開挖**
+          // 出來的,牆是結構、地被與地形卻仍沿著切面攤下來 —— 高度場把 10m 深的垂直壁攤成一格寬的
+          // 斜面,那片斜面(與貼在上面的地被拼圖)就橫在路塹斷面裡,從洞內往外看是幾片浮在路面上
+          // 方的土色薄片。沿引道逐段發 bore(與門洞/明隧道共用同一次 punch),把「路面以上、天花
+          // 以下、±hw 以內」的繪製三角形清掉;垂直三條界不動 ⇒ 路塹底與牆背照樣不刪。
+          for (const [c0, c1] of openIv) {
+            for (let s0 = c0; s0 < c1 - 0.5 && galBores.length < TUN.GAL_BORE_MAX; s0 += 12) {
+              const s1 = Math.min(c1, s0 + 12);
+              const [bx, bz, ddx, ddz] = at(s0);
+              galBores.push({ x: bx, z: bz, y: tFloorAt(s0), ry: Math.atan2(-ddx, -ddz),
+                              hw, depth: s1 - s0 + 1, slope: (tFloorAt(s1) - tFloorAt(s0)) / (s1 - s0 || 1) });
+            }
+          }
         }
         // facade 落地基準(單一縫:矮牆緞帶與柱列共用)—— 沉到側坡地表最低點之下 0.8m,
         // 坡面與牆之間不留看穿的縫;埋在土裡的部分不花額外頂點(同一條緞帶只是拉長)。
@@ -4093,7 +4139,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             const depth = Math.min(e1 - e0, 40);
             const sIn = Math.max(0, Math.min(total, s + sgn * depth));
             portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1,
-                           hw, depth,
+                           hw, depth, mouth: true,
                            slope: sIn === s ? 0 : (tFloorAt(sIn) - tFloorAt(s)) / Math.abs(sIn - s) });
           }
         }
@@ -4673,6 +4719,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
     ? terrain.punchPortalHoles(boreRecs.map((p) => ({
       x: p.x, z: p.z, ry: p.ry, hw: p.hw, depth: p.depth,
       floorY: p.y, slope: p.slope, clear: TUN.CLEAR, lift: ROAD_LIFT,
+      // 門洞的走廊往洞**外**再延 MOUTH_OUT(明隧道/引道段的 bore 不延:它的「外」是隔壁小段)
+      out: p.mouth ? TUN.MOUTH_OUT : 0,
     })), covers)
     : { rims: [], touched: [] };
   // 打洞能力是否具備(2026-07-27 金龍隧道「出入口只有一側」修復):punchPortalHoles 的 touched[pi]=true
