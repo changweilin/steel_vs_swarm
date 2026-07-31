@@ -135,7 +135,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   const DRAW = '    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    const linkRoll = rnd();\n';
   const lateRnd = loadCore((s) => {
     if (!s.includes(DRAW)) throw new Error('③ 對照組:抽樣區塊原文找不到(改過就要同步改稽核)');
-    const GATE = '    if (pick >= climbShare(siteSlopeDeg(b, heightAt))) continue;';
+    const GATE = '    const deg = siteSlopeDeg(b, heightAt);\n    if (pick >= climbShare(deg)) continue;';
     if (!s.includes(GATE)) throw new Error('③ 對照組:抽中門檻原文找不到(改過就要同步改稽核)');
     return s.replace(`${DRAW}    if (!climbCandidate(b)) continue;`,
       `    if (!climbCandidate(b)) continue;\n${DRAW}`);
@@ -955,9 +955,48 @@ console.log('\n=== Ⅸ 抽中機率 ← 地形陡度(越陡越高;不可陡上 =
   ok(near(steepShare, 1), `Ⅸ 不可陡上的地形 MUST 全部掛上(實測 ${(steepShare * 100).toFixed(1)}%)`);
   ok(flatShare < midShare && midShare < steepShare, 'Ⅸ 三檔陡度 MUST 嚴格遞增');
 
+  // ---- ③b 相鄰相接也隨坡度(2026-07-31 使用者追加)----
+  // 隔離法同 Ⅵ⑥:鄰居壓到 MIN_H 以下(不是候選、拿不到自己的地面路線,仍是合法的相接目標)
+  // ⇒ 每對恰好一次擲骰,link/ground 就是那個機率本身。
+  {
+    ok(near(climbShare(0, CLIMB.LINK), CLIMB.LINK), 'Ⅸ 相接:平地 = 基準 CLIMB.LINK');
+    ok(near(climbShare(SLOPE.BLOCK_DEG, CLIMB.LINK), 1), 'Ⅸ 相接:阻擋角 = 100%');
+    ok(climbShare(20, CLIMB.LINK) > climbShare(20), 'Ⅸ 同一坡度下相接機率 MUST 高於地面路線(基準本來就高)');
+    const pairs = [];
+    for (let i = 0; i < 400; i++) {
+      const cx = (i % 20) * 190 - 1900, cz = Math.floor(i / 20) * 190 - 1900;
+      pairs.push(bld(cx, cz, 40, 40, 40));                     // 候選(高)
+      pairs.push(bld(cx + 37, cz, 30, 30, CLIMB.MIN_H - 1));   // 非候選(矮)但仍是合法相接目標
+    }
+    const rate = (k) => {
+      const rs = planClimbRoutes({
+        blockers: pairs, heightAt: ramp(k), envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260728),
+      });
+      const g = rs.filter((r) => !r.link).length;
+      return g ? rs.filter((r) => r.link).length / g : 0;
+    };
+    const flatLink = rate(0);
+    const steepLink = rate(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180));
+    ok(flatLink > CLIMB.LINK - 0.1 && flatLink < CLIMB.LINK + 0.1,
+      `Ⅸ 相接:平地 ≈ CLIMB.LINK(實測 ${(flatLink * 100).toFixed(1)}%)`);
+    ok(near(steepLink, 1), `Ⅸ 相接:不可陡上的地形 MUST 每條地面路線都相接(實測 ${(steepLink * 100).toFixed(1)}%)`);
+    // 反向對照:相接門檻寫死回 CLIMB.LINK ⇒ 陡地形不再 100%
+    const fixedLink = loadCore((s) => s.replace(
+      'if (linkRoll < climbShare(deg, CLIMB.LINK)) {', 'if (linkRoll < CLIMB.LINK) {'));
+    const rs2 = fixedLink.planClimbRoutes({
+      blockers: pairs, heightAt: ramp(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180)),
+      envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260728),
+    });
+    const bad2 = rs2.filter((r) => r.link).length / rs2.filter((r) => !r.link).length;
+    ok(bad2 < CLIMB.LINK + 0.1, 'Ⅸ 反向對照:相接門檻寫死回定值 MUST 讓陡地形掉回七成(證明本條真的驗到了)');
+    // 曲線只有一份:相接 MUST NOT 另寫一條 ramp
+    ok(!/BLOCK_DEG - SLOPE\.EASE_DEG[\s\S]*BLOCK_DEG - SLOPE\.EASE_DEG/.test(climbSrc),
+      'Ⅸ 坡度曲線 MUST 只有一份(相接不得另寫第二條 ramp)');
+  }
+
   // ---- ④ 反向對照:門檻寫死回 CLIMB.SHARE ⇒ 陡地形不再 100%(證明本節真的驗到了)----
   const fixed = loadCore((s) => s.replace(
-    'if (pick >= climbShare(siteSlopeDeg(b, heightAt))) continue;', 'if (pick >= CLIMB.SHARE) continue;'));
+    'if (pick >= climbShare(deg)) continue;', 'if (pick >= CLIMB.SHARE) continue;'));
   const bad = fixed.planClimbRoutes({
     blockers: list, heightAt: ramp(Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180)),
     envCodeAt: dry, bounds: BOX, rnd: mulberry32(20260731),

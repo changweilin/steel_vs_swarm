@@ -61,7 +61,7 @@ export const CLIMB = {
   // ---- 相鄰結構相接(2026-07-28 使用者需求)----
   // 已經掛了路線的結構,若「相鄰」還有另一座建築/巨石/神木,七成機率在相鄰處再架一條把兩者的
   // **頂面**接起來 —— 上得去之後不必回地面就能換棟推進(高處連成一片)。
-  LINK: 0.7,         // 相接機率
+  LINK: 0.7,         // **平緩帶**的相接機率;越陡越高,與地面路線共用 climbShare()
   LINK_GAP: 3.0,     // 「相鄰」= 兩者表面最短距離 ≤ 此值(> 這個距離,從低頂伸手就搆不到高牆上的梯子)
   LINK_DROP: 5,      // 兩頂高差門檻:低於此不是通道而是一階台階,不值得架
   LINK_STEP: 1.6,    // 低頂落腳點自鄰體表面往內踏進(比 TOP_STEP 短 ⇒ 抓握距離撐得住,見 GRAB_R 夾制)
@@ -197,15 +197,19 @@ export function siteSlopeDeg(b, heightAt) {
 /**
  * 抽中機率 ← 地形陡度(2026-07-31 使用者需求:「越陡的地形機率越高,在不可陡上的區域則是 100%」)。
  * 曲線與 `slopeMoveF` **同一組轉折點**(MUST NOT 手寫第二套角度):
- *   平緩帶(≤ `SLOPE.EASE_DEG`)= 基準 `CLIMB.SHARE` —— 這種地形走路就上得去,梯子只是雜訊;
+ *   平緩帶(≤ `SLOPE.EASE_DEG`)= 基準 `base` —— 這種地形走路就上得去,梯子只是雜訊;
  *   之後線性升到阻擋角 `SLOPE.BLOCK_DEG` = 1(100%)。
  * 「不可陡上」= `slopeBlocked(deg)`(> BLOCK_DEG)⇒ 落在夾制段 ⇒ 恆 1,**由曲線推導**而非
  * 另寫一條 if:兩條路各寫一次,調 BLOCK_F 就會分家(稽核 Ⅸ 直接以 slopeBlocked 逐度反查這條)。
+ *
+ * `base` 就是「平地時的那個機率」:地面路線吃 `CLIMB.SHARE`、**相鄰相接**吃 `CLIMB.LINK`
+ * (2026-07-31 使用者追加:相鄰結構之間的設施也隨坡度變化)。兩者共用這一支 ⇒ 曲線只有一份,
+ * MUST NOT 為相接另寫一條 ramp。
  */
-export function climbShare(deg) {
+export function climbShare(deg, base = CLIMB.SHARE) {
   const d = Math.abs(deg || 0);
   const k = Math.min(1, Math.max(0, d - SLOPE.EASE_DEG) / (SLOPE.BLOCK_DEG - SLOPE.EASE_DEG));
-  return CLIMB.SHARE + (1 - CLIMB.SHARE) * k;
+  return base + (1 - base) * k;
 }
 
 /**
@@ -296,9 +300,11 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
     const phase = rnd() * Math.PI * 2;
     const linkRoll = rnd();
     if (!climbCandidate(b)) continue;
-    // 抽中門檻隨**該地的地形陡度**放寬:平緩帶 = CLIMB.SHARE,阻擋角(爬不上去)= 100%。
-    // 量測純函式不消耗亂數 ⇒ 排在三枚抽樣之後仍不影響序列(§2.3)。
-    if (pick >= climbShare(siteSlopeDeg(b, heightAt))) continue;
+    // 抽中門檻隨**該地的地形陡度**放寬:平緩帶 = 基準機率,阻擋角(爬不上去)= 100%。
+    // 量測純函式不消耗亂數 ⇒ 排在三枚抽樣之後仍不影響序列(§2.3);
+    // 地面路線與**相鄰相接**共用同一份量測(同一個地點只量一次,也保證兩道閘同調)。
+    const deg = siteSlopeDeg(b, heightAt);
+    if (pick >= climbShare(deg)) continue;
 
     const baseY = heightAt(b.x, b.z);
     const y1 = b.y + b.h;                     // = makeBlockerTopIndex 的頂面高(唯一縫)
@@ -335,8 +341,8 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
       tz: best.fz - best.nz * step,
     });
 
-    // ---- 相鄰結構相接(七成機率)----
-    if (linkRoll < CLIMB.LINK) {
+    // ---- 相鄰結構相接(平地七成,陡地形同樣往上調到 100%;與地面路線同一支曲線)----
+    if (linkRoll < climbShare(deg, CLIMB.LINK)) {
       const link = planLink(b, { nearby, clearance, surfDist, bounds, linked });
       if (link) { routes.push(link); linked.add(link.pair); }
     }
