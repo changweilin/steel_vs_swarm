@@ -144,22 +144,43 @@ log('— sim:玩家射程恆小於視野(rangeCap;重武器吃狙擊視角加成
     `夾住後仍滿足 #INC-104(y=${HI_ALT} 高空垂直射擊)`);
 }
 
-log('— sim:傭兵變形者(雙陣營可選;HP/火力同機甲;飛行/地面雙型態)+ 陣亡購買 —');
+log('— sim:機體混編陣營分佈(2026-08-02)+ 傭兵變形者雙型態 + 陣亡購買 —');
 {
   const mercs = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].side === 'MERC');
   assert(mercs.length === 8, `傭兵 ${mercs.length} 名(雙陣營共用)`);
   assert(mercs.every((id) => charsOf('SWARM').includes(id) && charsOf('STEEL').includes(id)),
     '雙陣營角色池皆含傭兵');
-  assert(mercs.every((id) => CHARACTERS[id].kind === 'morph'),
-    '傭兵一律駕駛變形者(kind:morph,不再駕駛無人機/機甲)');
+  // 機體混編(使用者定案):陣營 ≠ 機種,三陣營各自有三種機體。
+  assert(Object.keys(CHARACTERS).every((id) => CHARACTERS[id].kind),
+    '32 名角色一律顯式標註 kind(charKind MUST NOT 由 side 推機種)');
+  const MIX = { SWARM: { drone: 7, robot: 3, morph: 2 }, STEEL: { drone: 3, robot: 7, morph: 2 },
+    MERC: { drone: 2, robot: 2, morph: 4 } };
+  for (const [side, want] of Object.entries(MIX)) {
+    const got = { drone: 0, robot: 0, morph: 0 };
+    for (const id of Object.keys(CHARACTERS)) if (CHARACTERS[id].side === side) got[charKind(id)]++;
+    assert(['drone', 'robot', 'morph'].every((k) => got[k] === want[k]),
+      `${side} 機體編制 無人機 ${got.drone}/機甲 ${got.robot}/變形機甲 ${got.morph}`
+      + `(目標 ${want.drone}/${want.robot}/${want.morph})`);
+  }
+  // 機體設計 1:1 —— 12 無人機 / 12 機甲 / 8 變形機甲,每款恰好一名角色使用
+  const designOf = (id) => {
+    const v = CHARACTERS[id].visual, k = charKind(id);
+    if (k === 'drone') return v.form === 'avian' ? `avian:${v.creature}` : v.form === 'fixed' ? `fixed:${v.wing}` : `rotor:${v.frame}/${v.body}`;
+    if (k === 'robot') return v.proto ? `proto:${v.proto}` : `${v.form}:${v.creature}`;
+    return `${v.flight}/${v.ground}`;
+  };
+  for (const [k, n] of [['drone', 12], ['robot', 12], ['morph', 8]]) {
+    const ds = Object.keys(CHARACTERS).filter((id) => charKind(id) === k).map(designOf);
+    assert(ds.length === n && new Set(ds).size === n, `${k} 機體設計 ${new Set(ds).size}/${ds.length} 款不重複(應 ${n})`);
+  }
   assert(UNITS.morph.hp === UNITS.robot.hp && UNITS.morph.shield === UNITS.robot.shield,
     `變形者 HP/護盾與機甲相同(${UNITS.morph.hp}/${UNITS.morph.shield})`);
   assert(Math.abs(heroWeapon('m01', 'light', 1, false).dmg - tierVal(CHARACTERS.m01.light.dmg, 1)) < 1e-6,
     '變形者傷害不吃小隊折算(火力同機甲)');
   const sim = new BattleSim(fakeBattleConfig(1));
-  const a = sim.addHero('SWARM', 'p_ma', 'm02');
-  const b = sim.addHero('STEEL', 'p_mb', 'm02');
-  assert(a.kind === 'morph' && b.kind === 'morph', '傭兵受雇雙方皆為變形者(kind 不隨陣營)');
+  const a = sim.addHero('SWARM', 'p_ma', 'm01');
+  const b = sim.addHero('STEEL', 'p_mb', 'm01');
+  assert(a.kind === 'morph' && b.kind === 'morph', '傭兵受雇雙方機種一致(kind 綁角色不隨陣營)');
   assert(sim.squads.get('p_ma').bodies.length === 1, '變形者是單機(無三機小隊)');
   assert(a.maxHp === b.maxHp && a.armor === b.armor && a.maxSp === b.maxSp && a.maxMp === b.maxMp,
     `傭兵數值跨陣營一致(HP ${a.maxHp}/護甲 ${a.armor}/護盾 ${a.maxSp}/電力 ${a.maxMp})`);

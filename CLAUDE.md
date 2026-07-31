@@ -23,7 +23,7 @@
 
 ## 1. 系統架構與技術棧
 
-**產品**:瀏覽器 DOTA+FPS — 無人機陣營 (SWARM) vs 機甲陣營 (STEEL)。真實世界地圖選址 → OSRM/Overpass 取真實道路兵線 → 即時 3D 地形開戰。
+**產品**:瀏覽器 DOTA+FPS — 蜂群同盟 (SWARM) vs 鋼鐵協約 (STEEL);兩陣營主力機種不同但**皆為三機種混編**(2026-08-02)。真實世界地圖選址 → OSRM/Overpass 取真實道路兵線 → 即時 3D 地形開戰。
 
 **架構型態:Server-Authoritative Monolith**。三種遊戲機制(雲端伺服器 / 區網 Tailscale / 單機)共用 `server/rooms.js`(`RoomHub`)與 `server/sim.js`;單機 = 把伺服器整支搬進瀏覽器分頁跑,客戶端一樣只送輸入、收 8Hz 快照 —— MUST NOT 為單機另寫「客戶端自己算」的路徑。
 
@@ -63,6 +63,7 @@
 | 領域 | 唯一縫 | 要點 / 禁令 |
 |---|---|---|
 | 平衡數值 | `data.js` | 射程/傷害/經濟/波次/角色/招式全在此;sim/game MUST NOT 硬編碼;敘事文字去 `lore.js` |
+| 角色機種 | `data.js CHARACTERS[ch].kind` + `charKind()`/`heroKindOf()` | 2026-08-02 機體混編:**陣營 ≠ 機種**,32 名角色一律顯式標註 `kind`;MUST NOT 由 `side` 推機種。編制固定 蜂群 7/3/2・鋼鐵 3/7/2・傭兵 2/2/4(無人機/機甲/變形機甲),機體設計 12+12+8 款**每款恰好一名角色使用**。機體換陣營時,綁機體的 `models.js MOVE_SIG`/`CAST_SIG` 與 lore `proto`/`bond` MUST 整組跟著搬;武器/招式/塗裝綁角色不動 |
 | 推導值 | 各推導式 | 賞金表、`UNITS.drone.hp`/`SQUAD.DMG`(← `SQUAD.BUFF`)、`UNITS.bunker.hp`(= 塔一半)、塔位 `solveTowerSites()`、`MINES.PER_LANE`/`AA_SITE.range`(等面積)、`TOWER_SEP_F`(= 2 − TOWER_OVERLAP)、`FAN_MUZZLE`(← `FALLOFF.PLATEAU`)—— 一律 MUST NOT 手寫 |
 | 砲塔佈局規則 | `data.js towerLayoutAudit()`(#4 射程重疊)/`towerTunnelAudit()`(#5 洞口涵蓋) | 烘焙/mapSelect/伺服器/稽核共用;#5 MUST NOT 下放成執行期挪塔(兩端塔位會分家) |
 | 兵線導航規則 | `data.js laneUTurnAudit()`(U-turn)/`laneTurnAccumAudit()`(主軸偏航累積 ±`TURN_ACCUM_MAX_DEG`,順逆抵消)/`laneStructEntryAudit()`(橋隧只走出入口) | 生成期硬門檻淘汰;規則①只在離線 bake(唯一有逐邊結構旗標);②③互相獨立,MUST NOT 以一代二 |
@@ -201,6 +202,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 改動 | 驗證 |
 |---|---|
 | 任何平衡數值(小兵/角色武器/SQUAD.BUFF/HEROIC/塔/賞金/八軌價格) | `npm run bal` 全綠;動角色武器一併看 ⑤ 角色離群列 |
+| 角色機種編制(`CHARACTERS[].kind`/`visual` 機體欄/`mods.armor` 換機種) | e2e「機體混編陣營分佈」(三陣營 7/3/2・3/7/2・2/2/4 + 32 名皆有 kind + 12/12/8 款設計 1:1)+ `npm run bal` ①(換機種 = 換 EHP 池與 `UNITS.drone.hp`/`SQUAD.ARMOR_F` 推導)+ ⑤(換機種 = 換 `CLASS_SYM` 分組;⑤a 量真正的陣營成員)+ `audit_muzzle.mjs`/`audit_cockpit.mjs`/`audit_cast_jump.mjs`(㋓ 需真瀏覽器:掛點、座艙、施法/跳躍動作全依 `visual` 重生成)|
 | 出兵節奏 `GAME.WAVE_S` / 波次編制 `waveComp` / 開場預置 `_prefillLanes`・`_spawnLaneWave` | `npm run bal` ③(波數 × 波賞金 = 收入預算,±10%)+ e2e「出兵間隔固定 + 開場預置兵線」(6 項;間距 = 間隔 × 行軍速度、最前一波 ≤ 第一座砲塔、各波等距、波序為負)+ e2e「開局兵線」隻數(期望值 MUST 由同一份規則推出,不可手寫) |
 | 陣營小兵強化(`CREEP_UPG`/`creepUpgMul`/`_creepMul`/`_bounty`/`buy(…,'creep',lane)`) | e2e「陣營小兵強化」(11 項;曲線 1+log10(1+LV)、八軌未滿不解鎖、非法兵線被拒、共用/分兵線、hp・armor・賞金同吃 `e.cu`、快照帶等級)+ `npm run bal` 四不變式 MUST 不動(bal 模型是**未強化**的基準波次)+ 真機冒煙(八軌買滿商店才出現該區塊、隊友出資同陣營都看得到播報) |
 | 角色大小招 `fx`/`add`(招式家族配置) | bal ⑥:雙扇形 MUST 兩招貼身、單扇形 ≥1、密度 ≥ 非扇形 ×2;s07/m07 具名豁免 MUST NOT 為湊標換掉 |

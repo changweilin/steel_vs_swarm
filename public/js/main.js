@@ -1204,7 +1204,7 @@ function stageInfoHTML(subject) {
   if (subject.type === 'char') {
     const isDrone = charKind(subject.id) === 'drone';
     return `<div class="cd-stats">${heroStatCells(subject.id)}</div>
-      ${isDrone ? '<div class="cd-note">※ 蜂群為單架無人機(生存值 = 機甲平均 80%、傷害同機甲)。</div>' : ''}`;
+      ${isDrone ? '<div class="cd-note">※ 無人機為單架(生存值 = 機甲平均 80%、傷害同機甲)。</div>' : ''}`;
   }
   return `<div class="cd-stats">${unitStatCells(subject.kind)}</div>`;
 }

@@ -8,11 +8,13 @@ export const SIDES = {
     id: 'SWARM',
     name: '蜂群兵團',
     en: 'THE SWARM',
+    // hero = 該陣營的**主力機種**(也是 heroKindOf 查不到角色時的退路);
+    // 2026-08-02 混編改制後陣營不再只有單一機種,角色機種一律以 CHARACTERS[ch].kind 為準。
     hero: 'drone',
     heroName: '獵蜂無人機',
     color: '#ffb300',      // 琥珀警示黃
     colorDim: '#8a6a10',
-    desc: '操作武裝無人機。速度快、機動高、血量薄;垂直機動掌握制空權。',
+    desc: '以無人機為主力(7 無人機 / 3 機甲 / 2 變形機甲)。速度快、機動高、血量薄;垂直機動掌握制空權。',
   },
   STEEL: {
     id: 'STEEL',
@@ -22,7 +24,7 @@ export const SIDES = {
     heroName: '執法者機甲',
     color: '#4fc3f7',      // 鋼鐵冷藍
     colorDim: '#1a5c78',
-    desc: '駕駛雙足重型機甲。裝甲厚、火力猛、抗打擊;地面推進碾碎一切。',
+    desc: '以重型機甲為主力(7 機甲 / 3 無人機 / 2 變形機甲)。裝甲厚、火力猛、抗打擊;地面推進碾碎一切。',
   },
 };
 export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
@@ -1457,9 +1459,10 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
-/** 角色機體種類(不需要 side:傭兵自帶 kind,陣營角色由 side 決定)— heroWeapon 的折算依據 */
-export const charKind = (ch) =>
-  CHARACTERS[ch]?.kind || (CHARACTERS[ch]?.side === 'SWARM' ? 'drone' : 'robot');
+/** 角色機體種類(不需要 side:2026-08-02 混編改制後**每名角色一律自帶 kind**)— heroWeapon 的折算依據。
+ *  MUST NOT 再由 side 推機種:三陣營各自混編(蜂群 7/3/2、鋼鐵 3/7/2、傭兵 2/2/4),
+ *  退路 'robot' 只是防呆,漏寫 kind 即為資料錯誤。 */
+export const charKind = (ch) => CHARACTERS[ch]?.kind || 'robot';
 
 /** 角色實戰護甲值:無人機等比縮放到「機甲平均 armor ×SQUAD.HP_F」(SQUAD.ARMOR_F,UNITS 後 derive);
  *  其餘機種照 mods.armor。套用點:sim._add 生成 + buy('ar') 升級,兩處共用此縫(客戶端體型仍讀原 mods.armor)。 */
@@ -1472,16 +1475,29 @@ export const heroArmor = (ch) => {
 export const charsOf = (side) => Object.keys(CHARACTERS)
   .filter((id) => CHARACTERS[id].side === side || CHARACTERS[id].side === 'MERC');
 
-/** 角色機體種類:傭兵 kind 綁角色(無人機/機甲不隨陣營);陣營角色沿用 SIDES 預設 */
+/** 角色機體種類:kind 一律綁角色(機種不隨陣營);查無角色才退回 SIDES 主力機種 */
 export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero;
 
 // ---- 角色圖鑑(24 名陣營角色 + 8 名傭兵;劇情設定見 docs/characters.md)----
-// 每名角色 = 專屬機體(蜂群=無人機、鋼鐵=機甲;傭兵 kind 自帶)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
+// 每名角色 = 專屬機體(**kind 一律顯式標註**)+ 輕武器 + 重武器(CD)+ 小招 + 大招。
+// 2026-08-02 機體混編改制(使用者定案):陣營不再等於機種,每個陣營三種機體都有 ——
+//   蜂群 無人機 7 / 機甲 3 / 變形機甲 2、鋼鐵 無人機 3 / 機甲 7 / 變形機甲 2、傭兵 無人機 2 / 機甲 2 / 變形機甲 4。
+//   **角色的陣營不變**,移動的是「機體」:每具機體的原型(仿生/現實)配到與該陣營國家相稱的駕駛員身上,
+//   例:袋鼠機甲 → 蜂群(駕駛員國籍改澳洲)、孫悟空變形機甲 → 鋼鐵(駕駛員國籍為中國)、
+//       龍/翼龍無人機 → 鋼鐵(東亞)、Shahed 三角翼 → 鋼鐵(伊朗)、恐龍系機甲 → 傭兵(不結盟市場)。
+//   機體設計共 12 無人機 / 12 機甲 / 8 變形機甲,**每款恰好被一名角色使用一次**(改動 MUST 維持 1:1)。
+//   武器/招式跟著**角色**走(不跟機體)⇒ 兩陣營的武器型別與招式家族覆蓋率不受混編影響;
+//   但「換機種 = 換底盤」:EHP(UNITS[kind] + heroArmor 折算)、機動、射程上限(rangeCap ← sight)、
+//   閃避(飛行才有)與 `CLASS_SYM` 分組全部跟著變 ⇒ 14 名換機種的角色 MUST 重新校準。
+//   校準只走兩個旋鈕(逐武器手改 `vs` 仍是禁令):`mods` 與該角色的 `dmg` 階梯。
+//   換到無人機(t07/t08/t09/m03/m04)= 白拿飛行閃避 + 較長的射程上限 ⇒ 火力階梯下修;
+//   換到機甲/變形機甲(s06/s07/s09/s10/s12/t06/t11/m02/m06)= 失去上述 ⇒ 火力階梯上修。
+//   s01/s02/s05/s08/s11 未換機種但同池水位被墊高,收尾各修一階(見 `npm run bal` ①⑤)。
 // 武器參考現實原型(rw 註明原型與初速);傷害/射程為 NPC 基準值,
 // 玩家英雄實戰值 = 基準 × HEROIC(射程 1.2 / 威力 1.5),一律走 heroWeapon() 解析。
 // mods:hp/sp/mp/speed 為倍率,armor 為護甲值(裝甲層減免用)。
 // visual:程序生成機體外觀參數(hue 主色;無人機 frame/body(座艙沿用)、機甲 pod 掛件;
-//         2026-07-10 外觀改制(doc/image 賽璐璐重構,兩陣營各三型等比例):
+//         2026-07-10 外觀改制(doc/image 賽璐璐重構,無人機/機甲各三型等比例):
 //         無人機 = 旋翼(無 form;frame quad/hexa/coax)/ 定翼(form:'fixed',wing 指定
 //                   twinboom/vtail/canard/delta/zero 剪影;canard/delta 為噴射動力,
 //                   其餘掛螺旋槳 — 現實原型沒有槳的機種一律不畫槳)/ 擬態翼(form:'avian',creature:
@@ -1494,7 +1510,7 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 //                   (form:'biped',creature: gorilla 巨臂武裝・ostrich 翼藏飛彈・trex 巨顎藏砲・
 //                   roo 強腿重尾)/ 四足獸(form:'beast',creature: hound 揹負重武・centaur 人馬持槍・
 //                   stego 背鰭四聯飛彈・cthulhu 四爪步行四爪持武);
-//         傭兵 morph 用 flight(飛行型:jet 戰機/uav 固定翼/heli 直升機/tilt 傾轉旋翼/
+//         變形機甲 morph 用 flight(飛行型:jet 戰機/uav 固定翼/heli 直升機/tilt 傾轉旋翼/
 //         levi・archo・beetle・owl 擬態翼)+ ground(地面型:人形四體態 wolf 狼人趾行/
 //         vampire 吸血鬼挺立(披風即機翼)/monkey 猿猴蹲伏(多節長尾)/atlas 負重前傾(雙肩掛架);
 //         四足獸 elephant/raptor/beetle/panther)+ bulk 體格倍率 — 純外觀,不動數值)。
@@ -1534,14 +1550,14 @@ export const heroKindOf = (ch, side) => CHARACTERS[ch]?.kind || SIDES[side].hero
 export const CHARACTERS = {
   // ================= 蜂群陣營(無人機)=================
   s01: {
-    side: 'SWARM', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
+    side: 'SWARM', kind: 'drone', name: '卡特琳娜・薛甫琴科', code: '蜂后', machine: '「第聶伯總譜」指揮型六旋翼',
     visual: { hue: 0xffd257, frame: 'hexa', body: 'box', form: 'avian', creature: 'bee', paint: 'natflag', flag: [0xffd700, 0x0057b7] },
     mods: { hp: 1.0, sp: 1.15, mp: 1.15, speed: 0.95, armor: 6 },
     light: { name: '雙聯 5.56 機槍艙', rw: 'FN Minimi・初速 915m/s', type: 'gun', mv: 915,
-      dmg: [12, 15, 18], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
+      dmg: [11, 14, 17], rate: 10, mag: [40, 50, 60], reload: 2.0, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.6, air: 1.3, building: 0.5 } },
     heavy: { name: '70mm 導引火箭巢', rw: 'Hydra 70 + APKWS 雷射導引・初速 700m/s', type: 'launcher', mv: 700, guide: 1,
-      dmg: [52, 80, 116], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
+      dmg: [49, 75, 109], r: [12, 14, 16], mag: 3, reload: 12, range: 300, pen: 6,
       vs: { flesh: 1.1, armor: 1.4, air: 0.5, building: 1.2 } },
     skill: { name: '蜂群協奏', fx: 'buff', target: 'team', r: 180, mul: { dmg: [1.15, 1.23, 1.3] },
       add: { fx: 'vamp', f: [0.1, 0.13, 0.16] },
@@ -1550,19 +1566,19 @@ export const CHARACTERS = {
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '呼叫攻擊直升機編隊沿最近兵線壓上' },
   },
   s02: {
-    side: 'SWARM', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
+    side: 'SWARM', kind: 'drone', name: '塔拉斯・邦達爾', code: '鐵匠', machine: '「鐵匠鋪」重載運翼機',
     visual: { hue: 0xc98a3d, frame: 'hexa', body: 'slab', paint: 'minimal' },
     mods: { hp: 1.2, sp: 0.9, mp: 0.9, speed: 0.85, armor: 12 },
     light: { name: '12.7 重機艙', rw: 'DShK・初速 850m/s', type: 'gun', mv: 850,
       // crit 0 = 類型基準(重機槍低暴擊);2026-07-25 起 heroWeapon() 夾 CRIT_MIN 5% ⇒ 實戰 ≥5%。
       // e2e 的 s02/t01 確定性傷害斷言改用 Math.random 樁固定不觸發暴擊(不再依賴 crit:0)。
-      dmg: [17, 21, 26], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
+      dmg: [15, 19, 23], rate: 5, mag: [30, 36, 42], reload: 2.4, range: 200, crit: 0, pen: 6,
       vs: { flesh: 1.2, armor: 1.1, air: 0.9, building: 0.7 } },
     // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
     // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
     // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
     heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
-      dmg: [60, 88, 126], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
+      dmg: [50, 73, 105], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
@@ -1570,7 +1586,7 @@ export const CHARACTERS = {
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '半徑內友軍裝甲大修,護盾同步充滿' },
   },
   s03: {
-    side: 'SWARM', name: '林芷晴', code: 'Silicon', machine: '「跳頻蜂」電戰無人機',
+    side: 'SWARM', kind: 'drone', name: '林芷晴', code: 'Silicon', machine: '「跳頻蜂」電戰無人機',
     visual: { hue: 0x9ef2e6, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'canard', paint: 'tattoo' },
     mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
     light: { name: '相位脈衝步槍艙', rw: '低功率相控陣雷射・光速直擊', type: 'beam',
@@ -1585,7 +1601,7 @@ export const CHARACTERS = {
       cd: [70, 62, 54], mp: [90, 100, 110], desc: '以自身為中心的大範圍電子壓制' },
   },
   s04: {
-    side: 'SWARM', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
+    side: 'SWARM', kind: 'drone', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
     visual: { hue: 0xd6d63a, body: 'box', form: 'fixed', wing: 'zero', paint: 'hinomaru' },  // 純黃素色;雙翼正反面各一枚紅日
     mods: { hp: 1.1, sp: 1.0, mp: 0.95, speed: 1.05, armor: 8 },
     light: { name: '戰鬥霰彈莢艙', rw: 'Benelli M4・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [16, 14, 12],
@@ -1601,14 +1617,14 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [70, 60, 50], mp: [75, 85, 95], desc: '近接教官進入戰鬥反射狀態,衝鋒突臉' },
   },
   s05: {
-    side: 'SWARM', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
+    side: 'SWARM', kind: 'drone', name: '河瑟琪', code: 'Overclock', machine: '「超頻」競速 FPV',
     visual: { hue: 0xff6fb0, frame: 'quad', body: 'wedge', paint: 'minimal' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.1, speed: 1.2, armor: 3 },
     light: { name: '微型軌道轉輪砲', rw: '實驗性線性感應馬達・初速 1400m/s', type: 'rail', mv: 1400,
       dmg: [9, 11, 14], rate: [14, 16, 18], mag: [70, 90, 110], reload: 2.8, range: 180, crit: 0.05,
       vs: { flesh: 1.2, armor: 0.6, air: 1.4, building: 0.4 } },
     heavy: { name: '巡飛彈釋放器', rw: 'Lancet 縮裝・巡飛 90m/s', type: 'missile', mv: 90,
-      dmg: [48, 69, 96], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
+      dmg: [44, 63, 88], r: [13, 15, 17], mag: 4, reload: 11, range: 320, pen: 12,
       vs: { flesh: 1.0, armor: 1.6, air: 0.6, building: 1.1 } },
     skill: { name: '超頻', fx: 'buff', target: 'self', mul: { dmg: [1.05, 1.1, 1.15], reload: [0.65, 0.6, 0.55] },
       add: { fx: 'dodge' },
@@ -1619,14 +1635,19 @@ export const CHARACTERS = {
       desc: '呼叫 FPV 蜂群對指定區域飽和俯衝,纏擾致盲(混亂)' },
   },
   s06: {
-    side: 'SWARM', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」攔截者',
-    visual: { hue: 0xb9c7ff, frame: 'coax', body: 'sphere', form: 'avian', creature: 'ptero', paint: 'minimal' },
-    mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 6 },
+    // 2026-08-02 機體混編:接下原屬鋼鐵的「半人馬」四足機甲(希臘神話的凱隆 —— 教人療傷的射手,
+    // 不是獵人)。四足射擊平台把她的精準軌道步槍鎖死,上半身空出來的雙手才是她真正要的:擋。
+    side: 'SWARM', kind: 'robot', name: '瑪雅・柯爾曼', code: '悼歌', machine: '「輓歌」凱隆式護衛機甲',
+    visual: { hue: 0xb9c7ff, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'minimal' },
+    mods: { hp: 1.0, sp: 1.2, mp: 1.1, speed: 1.0, armor: 16 },
     light: { name: '精準軌道步槍艙', rw: '實驗性磁軌步槍・初速 1600m/s', type: 'rail', mv: 1600,
-      dmg: [24, 30, 37], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
+      dmg: [27, 34, 42], rate: 3, mag: [15, 18, 21], reload: 2.2, range: 230, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.2, armor: 0.8, air: 1.5, building: 0.5 } },
+    // r 6 → 8(2026-08-02 機體混編):她從飛行機體換到地面四足平台,sight 270 → 240 ⇒ 重武器解析
+    // 射程 194 → 173m,導引頭在「剛解除保險」的近帶只剩約 26m 修正距離(audit_weapon_gate Ⅵ 的
+    // s06@50% 由此翻紅)。核心帶 6 → 8m 把承諾(射程光暈)拉回實際彈道,仍是全機種最小的戰鬥部。
     heavy: { name: '微型攔截彈', rw: 'AIM-9X 縮裝・初速 1000m/s', type: 'missile', mv: 1000,
-      dmg: [38, 58, 87], r: [6, 7, 8], mag: 4, reload: 11, range: 340, pen: 6,
+      dmg: [45, 68, 102], r: [8, 9, 10], mag: 4, reload: 11, range: 340, pen: 6,
       vs: { flesh: 0.6, armor: 0.6, air: 2.5, building: 0.3 } },
     skill: { name: '攔截領域', fx: 'intercept', r: [150, 190, 230],
       cd: [16, 14, 12], mp: [30, 35, 40], desc: '擊落半徑內所有來襲飛彈(擋下的,不是打掉的)' },
@@ -1634,14 +1655,16 @@ export const CHARACTERS = {
       dur: [6, 7, 8], cd: [75, 65, 55], mp: [85, 95, 105], desc: '護航誓約:半徑內友軍承傷大減' },
   },
   s07: {
-    side: 'SWARM', name: '埃坦・沙哈', code: '鐵數學', machine: '「證明完畢」防空平台',
-    visual: { hue: 0x7fd8ff, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon', paint: 'totem' },
-    mods: { hp: 1.05, sp: 1.1, mp: 1.1, speed: 0.9, armor: 8 },
+    // 2026-08-02 機體混編:接下原屬鋼鐵的「頭足類」四足機甲 —— 四觸手步行、四觸手持械,
+    // 掛載恆為偶數,正好對上他「演算法一律雙發齊射」的執念(非歐幾何的機體,給非歐幾何的數學家)。
+    side: 'SWARM', kind: 'robot', name: '埃坦・沙哈', code: '鐵數學', machine: '「證明完畢」八臂防空機甲',
+    visual: { hue: 0x7fd8ff, pod: 'dish', form: 'beast', creature: 'cthulhu', paint: 'totem' },
+    mods: { hp: 1.05, sp: 1.1, mp: 1.1, speed: 0.9, armor: 18 },
     light: { name: '25mm 空爆機砲', rw: 'XM25 派生・初速 760m/s', type: 'gun', mv: 760,
-      dmg: [16, 20, 25], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
+      dmg: [20, 25, 31], rate: 6, mag: [24, 30, 36], reload: 2.3, range: 210, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.6, building: 0.5 } },
     heavy: { name: '防空散射矩陣', rw: '磁化電漿・扇形防空散布', type: 'plasma', arc: [20, 23, 26],
-      dmg: [33, 51, 75], mag: 3, reload: 7, range: 264, pen: 4,
+      dmg: [50, 77, 113], mag: 3, reload: 7, range: 264, pen: 4,
       vs: { flesh: 0.9, armor: 0.6, air: 2.0, building: 0.4 } },
     skill: { name: '分配演算法', fx: 'intercept', r: [170, 210, 250],
       cd: [15, 13, 11], mp: [30, 35, 40], desc: '一道證明完畢:清空半徑內來襲飛彈' },
@@ -1651,14 +1674,14 @@ export const CHARACTERS = {
       desc: '攔截網反向齊射:破片撕裂操縱面(緩速)' },
   },
   s08: {
-    side: 'SWARM', name: '佐菲亞・馬列克', code: '聖燭', machine: '「聖燭」醫療運補機',
+    side: 'SWARM', kind: 'drone', name: '佐菲亞・馬列克', code: '聖燭', machine: '「聖燭」醫療運補機',
     visual: { hue: 0xe8f0f4, frame: 'coax', body: 'sphere', paint: 'flag' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.25, speed: 1.0, armor: 5 },
     light: { name: '護航機槍艙', rw: 'PKM 7.62・初速 825m/s', type: 'gun', mv: 825,
-      dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
+      dmg: [14, 18, 22], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.1, building: 0.5 } },
     heavy: { name: '同步軌道狙擊砲', rw: '實驗性電磁狙擊系統・初速 2200m/s', type: 'rail', mv: 2200,
-      dmg: [77, 116, 175], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
+      dmg: [66, 99, 149], mag: 2, reload: 8, range: 360, crit: 0.25, critX: 2.0, pen: [16, 20, 24],
       vs: { flesh: 1.4, armor: 0.8, air: 1.4, building: 0.4 } },
     skill: { name: '血漿空投', fx: 'heal', target: 'team', r: 140, heal: [150, 210, 270],
       cd: [20, 18, 16], mp: [40, 45, 50], desc: '空中血庫開倉:半徑內友軍裝甲回復' },
@@ -1666,14 +1689,17 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '大範圍野戰醫療:裝甲大量回復、護盾充滿' },
   },
   s09: {
-    side: 'SWARM', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」雙管獵鷹',
-    visual: { hue: 0xd0602f, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'split', split: 'shade' },  // 鏽橙同色系:反蔭(含翅膀)—— 面朝上=背深、面朝下=腹淺
-    mods: { hp: 1.05, sp: 1.0, mp: 1.0, speed: 1.0, armor: 8 },
+    // 2026-08-02 機體混編:「袋鼠」機甲轉入蜂群(使用者定案 —— 袋鼠是澳洲的機體),
+    // 駕駛員國籍隨之改為澳洲(見 lore.js s09:內陸大牧場的獵場主,不再是英國子爵)。
+    // 跟腱儲能的躍步底盤 = 打完就換陣地的防空獵手,和他「一發撂一架、換膛的停頓分毫不差」是同一套節奏。
+    side: 'SWARM', kind: 'robot', name: '艾德蒙・惠特洛克', code: '獵場主', machine: '「獵場看守人」躍步防空機甲',
+    visual: { hue: 0xd0602f, pod: 'rack', form: 'biped', creature: 'roo', paint: 'split', split: 'shade' },  // 鏽橙同色系:反蔭 —— 面朝上=背深、面朝下=腹淺
+    mods: { hp: 1.05, sp: 1.15, mp: 1.0, speed: 1.05, armor: 18 },
     light: { name: '雙管防空霰彈', rw: 'Purdey 12 鉛徑改・初速 420m/s', type: 'gun', mv: 420, fan: true, arc: [18, 16, 14],
-      dmg: [30, 38, 47], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
+      dmg: [34, 43, 53], rate: 2.6, mag: [8, 10, 12], reload: 2.4, range: 170, crit: 0.10, critX: 1.5,
       vs: { flesh: 1.3, armor: 0.4, air: 2.0, building: 0.3 } },
     heavy: { name: '獵狐飛彈', rw: 'Starstreak 縮裝・雷射波束導引・初速 300m/s', type: 'launcher', mv: 300, guide: 1,
-      dmg: [68, 100, 147], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 10,
+      dmg: [76, 112, 165], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 10,
       vs: { flesh: 0.9, armor: 1.2, air: 1.8, building: 0.8 } },
     // mark 只在 heroHit(直擊彈道)有消耗路徑 —— s09 雙武器是 fan 散彈(heroPlasma)+ launcher
     // (heroBurst),掛 mark 等於死效果,2026-07-16 改 haste(獵手加速追獵)
@@ -1686,14 +1712,16 @@ export const CHARACTERS = {
       desc: '獵網彈幕封鎖指定空域,獵物向彈著中心收攏(拉近)' },
   },
   s10: {
-    side: 'SWARM', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」訊號機',
-    visual: { hue: 0xd7b8ff, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
-    mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 3 },
+    // 2026-08-02 機體混編:接下原屬傭兵的「飛鯨↔機械巨象」變形機甲 —— 鯨歌與象的次聲波是
+    // 自然界最遠的兩種通訊,象耳就是天線。她原本的機體註記寫著「別人的機體是拳頭,她的是一隻豎起來的耳朵」。
+    side: 'SWARM', kind: 'morph', name: '卡佳・塔姆', code: '白噪音', machine: '「靜電」長耳可變訊號機',
+    visual: { hue: 0xd7b8ff, pod: 'antenna', flight: 'levi', ground: 'elephant', bulk: 0.95, paint: 'minimal' },
+    mods: { hp: 0.9, sp: 1.2, mp: 1.3, speed: 1.05, armor: 8 },
     light: { name: '低功率脈衝雷射槍艙', rw: '抑制型雷射訊號步槍・光速直擊', type: 'beam',
-      dmg: [14, 17, 21], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
+      dmg: [16, 20, 24], rate: 9, mag: [30, 36, 42], reload: 1.8, range: 170, crit: 0.08,
       vs: { flesh: 1.4, armor: 0.5, air: 1.1, building: 0.4 } },
     heavy: { name: '訊號矛', rw: 'EMP 狙擊彈・初速 900m/s', type: 'gun', mv: 900,
-      dmg: [36, 55, 81], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
+      dmg: [42, 64, 94], mag: 3, reload: 9, range: 340, emp: [1.5, 2, 2.5],
       vs: { flesh: 0.8, armor: 1.0, air: 1.8, building: 0.5 } },
     skill: { name: '頻譜側錄', fx: 'vision', vision: [6, 8, 10],
       cd: [26, 23, 20], mp: [35, 40, 45], desc: '破解敵方遙測:全隊限時無霧視野' },
@@ -1701,14 +1729,14 @@ export const CHARACTERS = {
       cd: [75, 65, 55], mp: [90, 100, 110], desc: '大範圍鏈路壓制,聽起來就很假' },
   },
   s11: {
-    side: 'SWARM', name: '維爾納・哈特曼', code: '鐘匠', machine: '「錶芯」精密工作機',
+    side: 'SWARM', kind: 'drone', name: '維爾納・哈特曼', code: '鐘匠', machine: '「錶芯」精密工作機',
     visual: { hue: 0xd8c690, frame: 'wing', body: 'frame', form: 'fixed', wing: 'vtail', paint: 'minimal' },
     mods: { hp: 1.0, sp: 1.05, mp: 1.05, speed: 0.95, armor: 8 },
     light: { name: '精密聚焦雷射步槍', rw: '低散射固態雷射・光速直擊', type: 'beam',
-      dmg: [17, 21, 25], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
+      dmg: [16, 20, 24], rate: 3.5, mag: [20, 24, 28], reload: 2.1, range: 220, crit: 0.12, critX: 1.8, pen: 6,
       vs: { flesh: 1.1, armor: 1.3, air: 1.0, building: 0.6 } },
     heavy: { name: '關節破壞者', rw: '實驗性 EM 磁軌・初速 2000m/s', type: 'rail', mv: 2000,
-      dmg: [61, 88, 126], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
+      dmg: [48, 70, 99], mag: 2, reload: 8, range: 380, crit: 0.15, critX: 2.0, pen: [25, 30, 35],
       vs: { flesh: 0.8, armor: 2.2, air: 1.2, building: 0.7 } },
     skill: { name: '弱點解析', fx: 'buff', target: 'self', mul: { dmg: [1.3, 1.4, 1.5] },
       add: { fx: 'mark', dur: [4, 5, 6] },
@@ -1717,14 +1745,16 @@ export const CHARACTERS = {
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '鐘錶匠的手:自身裝甲大修、護盾充滿' },
   },
   s12: {
-    side: 'SWARM', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」偵察機',
-    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'delta', paint: 'totem' },
-    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 4 },
+    // 2026-08-02 機體混編:接下原屬傭兵的「始祖鳥↔迅猛龍」變形機甲 —— 他是那個「用雙腳補上
+    // 蜂群死角」的地面前導偵察組長,一台會飛也會落地用走的機體,本來就該是他的。
+    side: 'SWARM', kind: 'morph', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」可變前導偵察機',
+    visual: { hue: 0x9db8d8, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'totem' },
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
     light: { name: '偵察卡賓艙', rw: 'AKS-74U・初速 735m/s', type: 'gun', mv: 735,
-      dmg: [14, 17, 21], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
+      dmg: [16, 20, 25], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.6, air: 1.1, building: 0.4 } },
     heavy: { name: '衛星測距雷射砲', rw: '高能雷射測距一體・光速直擊', type: 'beam',
-      dmg: [34, 52, 78], mag: 5, reload: 8, range: 320, pen: [10, 13, 16],
+      dmg: [44, 68, 102], mag: 5, reload: 8, range: 320, pen: [10, 13, 16],
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
     skill: { name: '薰衣草斗篷', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從敵方感測網上消失(開火即現形)' },
@@ -1734,7 +1764,7 @@ export const CHARACTERS = {
 
   // ================= 鋼鐵陣營(機甲)=================
   t01: {
-    side: 'STEEL', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
+    side: 'STEEL', kind: 'robot', name: '瓦列里・格羅莫夫', code: '冬將軍', machine: '「莫洛茲」指揮型重機甲',
     visual: { hue: 0xd6e4ef, pod: 'none', proto: 'bastion', paint: 'natflag', flag: [0xffffff, 0x0039a6, 0xd52b1e] },
     mods: { hp: 1.15, sp: 1.0, mp: 1.1, speed: 0.9, armor: 22 },
     light: { name: '12.7 同軸重機槍', rw: 'Kord・初速 860m/s', type: 'gun', mv: 860,
@@ -1752,7 +1782,7 @@ export const CHARACTERS = {
       desc: '全營砲兵行進間齊射,砲擊震撼(麻痺)' },
   },
   t02: {
-    side: 'STEEL', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
+    side: 'STEEL', kind: 'robot', name: '薇拉・佐洛塔列娃', code: '編號七', machine: '「加拉泰亞-7」神經同步機',
     visual: { hue: 0xcfd8ff, pod: 'none', proto: 'seraph', paint: 'minimal' },
     mods: { hp: 0.9, sp: 1.3, mp: 1.2, speed: 1.15, armor: 14 },
     light: { name: '高斯衝鋒槍', rw: '實驗性 EM 線圈・初速 1100m/s', type: 'rail', mv: 1100,
@@ -1769,7 +1799,7 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '再沒有介面延遲:直射攻擊完美迴避' },
   },
   t03: {
-    side: 'STEEL', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
+    side: 'STEEL', kind: 'robot', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「大鍋」突擊機甲',
     visual: { hue: 0xe08a4a, pod: 'shield', form: 'biped', creature: 'gorilla', paint: 'minimal' },
     mods: { hp: 1.3, sp: 0.85, mp: 0.9, speed: 0.95, armor: 26 },
     light: { name: '全自動霰彈', rw: 'Saiga-12 彈鼓・初速 400m/s', type: 'gun', mv: 400, fan: true, arc: [17, 15, 13],
@@ -1793,7 +1823,7 @@ export const CHARACTERS = {
       desc: '掀鍋!滾燙熱浪炸開,周圍的全給我捲進來(拉近)' },
   },
   t04: {
-    side: 'STEEL', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
+    side: 'STEEL', kind: 'robot', name: '娜傑日達・奧爾洛娃', code: '灰雁', machine: '「灰雁」獵殺型',
     visual: { hue: 0x8a97a5, pod: 'rack', form: 'beast', creature: 'hound', paint: 'camo' },
     mods: { hp: 0.95, sp: 1.1, mp: 1.1, speed: 1.1, armor: 16 },
     light: { name: '消音 DMR', rw: 'VSS Vintorez 9×39・初速 295m/s', type: 'gun', mv: 295,
@@ -1809,7 +1839,7 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [85, 95, 105], desc: '名單下一行:全圖視野,下一擊必中必爆' },
   },
   t05: {
-    side: 'STEEL', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
+    side: 'STEEL', kind: 'robot', name: '沈鶴鳴', code: '鶴', machine: '「仿生鶴」原型機',
     visual: { hue: 0xf2f2f2, pod: 'dish', form: 'biped', creature: 'ostrich', paint: 'solid' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.15, speed: 1.05, armor: 18 },
     light: { name: '原型軌道步槍', rw: '實驗性線圈砲・初速 1500m/s', type: 'rail', mv: 1500,
@@ -1824,14 +1854,17 @@ export const CHARACTERS = {
       cd: [90, 80, 70], mp: [90, 100, 110], desc: '瀋陽重工加班:主戰坦克沿最近兵線出廠' },
   },
   t06: {
-    side: 'STEEL', name: '陸小川', code: '小川', machine: '「輕功」高機動機甲',
-    visual: { hue: 0xffb84d, pod: 'none', form: 'biped', creature: 'roo', paint: 'minimal' },
+    // 2026-08-02 機體混編(使用者定案:孫悟空轉鋼鐵、國籍中國 —— 他本來就是中國人):
+    // 「孫悟空」變形機甲從傭兵轉入鋼鐵。掌行跑酷的猴姿 ↔ 升空展開觔斗雲式光翼,
+    // 正是他那套「輕功」的原型;麻辣走位(dash)與主角時刻(leap)一個字都不用改。
+    side: 'STEEL', kind: 'morph', name: '陸小川', code: '小川', machine: '「輕功」齊天式可變機甲',
+    visual: { hue: 0xffb84d, pod: 'blade', flight: 'uav', ground: 'monkey', bulk: 0.95, paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.05, mp: 1.0, speed: 1.2, armor: 14 },
     light: { name: '5.8 突擊步槍', rw: 'QBZ-191・初速 930m/s', type: 'gun', mv: 930,
-      dmg: [13, 16, 20], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
+      dmg: [15, 18, 23], rate: 9, mag: [34, 42, 50], reload: 1.8, range: 190, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
-    heavy: { name: '熔核直拳砲', rw: '磁化電漿聚爆・貼身直擊', type: 'plasma', arc: [10, 12, 14],
-      dmg: [55, 85, 132], mag: 3, reload: 7, range: 264, pen: 10,
+    heavy: { name: '如意熔核砲', rw: '磁化電漿聚爆・多節長尾前捲貼身直擊', type: 'plasma', arc: [10, 12, 14],
+      dmg: [60, 93, 144], mag: 3, reload: 7, range: 264, pen: 10,
       vs: { flesh: 1.1, armor: 1.4, air: 0.3, building: 0.8 } },
     skill: { name: '麻辣走位', fx: 'dash', imp: [28, 34, 40],
       cd: [11, 9, 7], mp: [25, 30, 35], desc: '模擬器省冠軍的走位,機體像長在他身上' },
@@ -1840,14 +1873,16 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [70, 60, 50], mp: [80, 90, 100], desc: '儲物櫃漫畫的主角上場了:輕功大跳躍' },
   },
   t07: {
-    side: 'STEEL', name: '李正赫', code: '無聲', machine: '「無聲」狙擊型',
-    visual: { hue: 0x3fae4a, pod: 'rack', form: 'beast', creature: 'centaur', paint: 'split', split: 'y', splitAt: 0.63 },  // 翡翠綠同色系:人身(上)亮/馬身(下)暗
-    mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 14 },
+    // 2026-08-02 機體混編:接下原屬蜂群的「翼龍」擬態翼無人機 —— 膜翼滑翔幾乎不耗電、也幾乎沒有聲音,
+    // 雙爪各抓一具槍莢:要抓才有、鬆手就沒有,對一個「只需要一發」的狙擊手是量身訂做的機體。
+    side: 'STEEL', kind: 'drone', name: '李正赫', code: '無聲', machine: '「無聲」翼龍狙擊機',
+    visual: { hue: 0x3fae4a, frame: 'coax', body: 'sphere', form: 'avian', creature: 'ptero', paint: 'split', split: 'y', splitAt: 0.63 },  // 翡翠綠同色系:翼背(上)亮/腹面(下)暗
+    mods: { hp: 0.9, sp: 1.0, mp: 1.05, speed: 1.05, armor: 7 },
     light: { name: '消音卡賓', rw: '88 式縮裝・初速 720m/s', type: 'gun', mv: 720,
       dmg: [15, 19, 23], rate: 6, mag: [30, 36, 42], reload: 2.0, range: 190, crit: 0.10,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.4 } },
     heavy: { name: '白頭山反器材', rw: '14.5mm 栓動・初速 1000m/s', type: 'gun', mv: 1000,
-      dmg: [65, 93, 130], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
+      dmg: [40, 57, 80], mag: 3, reload: 9, range: 400, crit: 0.25, critX: 2.2, pen: [18, 24, 30],
       vs: { flesh: 2.0, armor: 1.6, air: 1.2, building: 0.5 } },
     skill: { name: '靜默潛行', fx: 'stealth', dur: [5, 6, 7],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '動作省到一毫米都不多(開火即現形)' },
@@ -1857,9 +1892,11 @@ export const CHARACTERS = {
       desc: '一發,只需要一發 —— 貫穿創口持續失血(出血)' },
   },
   t08: {
-    side: 'STEEL', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰機甲',
-    visual: { hue: 0xffc7dd, pod: 'dish', form: 'beast', creature: 'cthulhu', paint: 'sakura' },
-    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 12 },
+    // 2026-08-02 機體混編:接下原屬蜂群的「機械龍」擬態翼無人機 —— 東亞的龍,張口即齊射,
+    // 而她的武器本來就是從喉嚨裡出來的:諧振波炮的發射口就是那張嘴。
+    side: 'STEEL', kind: 'drone', name: '韓雪', code: '電波歌姬', machine: '「詠嘆調」電戰無人機',
+    visual: { hue: 0xffc7dd, frame: 'hexa', body: 'slab', form: 'avian', creature: 'dragon', paint: 'sakura' },
+    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 6 },
     light: { name: '共鳴脈衝步槍', rw: '聲電複合雷射・光速直擊', type: 'beam',
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
@@ -1872,14 +1909,16 @@ export const CHARACTERS = {
       cd: [72, 64, 56], mp: [90, 100, 110], desc: '絕對音感的全頻壓制' },
   },
   t09: {
-    side: 'STEEL', name: '達留什・法拉赫扎德', code: '詩人', machine: '「悲歌」巡飛彈平台',
-    visual: { hue: 0xc9b7e8, pod: 'rack', form: 'beast', creature: 'stego', paint: 'totem' },
-    mods: { hp: 1.05, sp: 1.0, mp: 1.15, speed: 0.9, armor: 16 },
+    // 2026-08-02 機體混編:接下原屬蜂群的三角翼定翼無人機 —— 他是「廉價自殺式無人機之父」,
+    // 而 Shahed-136 本來就是三角翼。他終於坐進了自己畫出來的那個外形裡。
+    side: 'STEEL', kind: 'drone', name: '達留什・法拉赫扎德', code: '詩人', machine: '「悲歌」巡飛彈母機',
+    visual: { hue: 0xc9b7e8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'delta', paint: 'totem' },
+    mods: { hp: 1.05, sp: 1.0, mp: 1.15, speed: 0.9, armor: 8 },
     light: { name: '防衛機槍', rw: 'MG3 7.62・初速 820m/s', type: 'gun', mv: 820,
       dmg: [14, 18, 22], rate: 8, mag: [40, 48, 56], reload: 2.2, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
     heavy: { name: '見證者巡飛彈', rw: 'Shahed 縮裝・巡飛 100m/s', type: 'missile', mv: 100,
-      dmg: [51, 74, 104], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
+      dmg: [38, 55, 77], r: [15, 17, 19], mag: 4, reload: 11, range: 360, pen: 10,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.6 } },
     skill: { name: '哀悼詩', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
       cd: [26, 23, 20], mp: [40, 45, 50], desc: '為敵我雙方各寫一行:火箭兵支援' },
@@ -1889,7 +1928,7 @@ export const CHARACTERS = {
       desc: '讓戰爭打不完的東西一次下完,漫天彈雨引發恐慌(混亂)' },
   },
   t10: {
-    side: 'STEEL', name: '蕾拉・侯賽尼', code: '軌跡', machine: '「軌跡」攔截機甲',
+    side: 'STEEL', kind: 'robot', name: '蕾拉・侯賽尼', code: '軌跡', machine: '「軌跡」攔截機甲',
     visual: { hue: 0x7fe8c9, pod: 'none', proto: 'aegis', paint: 'tattoo' },
     mods: { hp: 1.0, sp: 1.15, mp: 1.2, speed: 1.0, armor: 16 },
     light: { name: '30mm 速射砲', rw: '2A42 縮裝・初速 960m/s', type: 'gun', mv: 960,
@@ -1904,8 +1943,10 @@ export const CHARACTERS = {
       dur: [6, 7, 8], cd: [80, 70, 60], mp: [90, 100, 110], desc: '頭巾內襯的那頁詩:友軍承傷大減' },
   },
   t11: {
-    side: 'STEEL', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」戰術指導機',
-    visual: { hue: 0x8a9a5a, pod: 'antenna', form: 'biped', creature: 'trex', paint: 'camo' },
+    // 2026-08-02 機體混編:接下原屬傭兵的「傾轉旋翼 ↔ 負重工」變形機甲 —— 傾轉旋翼把步兵班
+    // 載到定位(大招「安哥拉支援」),落地變成扛著整個班的負重前傾體態。老兵的活,本來就是扛人。
+    side: 'STEEL', kind: 'morph', name: '拉斐爾・富恩特斯', code: '老雪茄', machine: '「老兵」可變式戰術指導機',
+    visual: { hue: 0x8a9a5a, pod: 'antenna', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'camo' },
     mods: { hp: 1.2, sp: 0.9, mp: 1.0, speed: 0.9, armor: 24 },
     light: { name: '車載重機槍', rw: 'DShKM・初速 850m/s', type: 'gun', mv: 850,
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
@@ -1919,7 +1960,7 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [85, 95, 105], desc: '老戰友聽得懂的黑話:步兵班沿最近兵線投入' },
   },
   t12: {
-    side: 'STEEL', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
+    side: 'STEEL', kind: 'robot', name: '阿列霞・卡爾波維奇', code: '螢火', machine: '「巨兵」訊號掃描機',
     visual: { hue: 0xb8ffb0, pod: 'none', proto: 'colossus', paint: 'tattoo' },
     mods: { hp: 0.9, sp: 1.15, mp: 1.3, speed: 1.05, armor: 12 },
     light: { name: '掃描脈衝槍', rw: '低功率相位雷射・光速直擊', type: 'beam',
@@ -1935,16 +1976,20 @@ export const CHARACTERS = {
   },
 
   // ================= 傭兵(side:'MERC',雙陣營皆可受雇)=================
-  // 傭兵一律駕駛「變形者」(kind:'morph'):HP/火力與機甲相同,
+  // 「變形者」(kind:'morph'):HP/火力與機甲相同,
   // 飛行型觸地變形為地面型、地面型蓄力跳躍彈射變形為飛行型(見 MORPH/UNITS.morph)。
   // 無論受雇於蜂群或鋼鐵,機體/武器/招式/特長完全相同。
-  // 型態兩類等比例(4/4,原型迴避兩陣營既有生物:蜂/翼龍/飛龍/鷹/猩猩/鴕鳥/袋鼠/暴龍/獵犬/人馬/克蘇魯/劍龍):
+  // 2026-08-02 機體混編:傭兵不再全員變形者 —— 變形機甲 4(m01/m05/m07/m08)、
+  //   無人機 2(m03/m04)、機甲 2(m02/m06);讓出的四款變形機甲各自轉入對應陣營
+  //   (悟空 → 鋼鐵、傾轉旋翼母艦 → 鋼鐵、飛鯨巨象 → 蜂群、始祖鳥迅猛龍 → 蜂群),
+  //   換回的四款機體一律取「不屬於任何國族象徵」的原型(恐龍系機甲 + 貨運/猛禽無人機),
+  //   契合不結盟市場的設定。
+  // 變形者型態兩類等比例(2/2):
   //  A 類 定翼/旋翼 ↔ 人形(地面型各有體態,不再共用一套站姿):
 //       m01 heli↔vampire(挺立高領・三旋翼:機首桅 + 雙腿末端,飛行雙腿與機身呈 Y 字)、
-//       m03 uav↔monkey(悟空:掌行猴姿;飛行「不」變形成飛機 —— 展開不揮動的光之翼、
-//           體軸壓平雙腿併攏、多節尾蠍式前捲讓尾端巨砲朝前備射)、
-//       m05 jet↔wolf(趾行深屈・鬃刺肩尖)、m06 tilt↔atlas(負重前傾・雙肩掛架;手持圓盾=傾轉旋翼盤)
-  //  B 類 擬態翼 ↔ 四足獸:m02 levi↔elephant、m04 archo↔raptor、m07 beetle、m08 owl↔panther
+//       m05 jet↔wolf(趾行深屈・鬃刺肩尖)
+  //  B 類 擬態翼 ↔ 四足獸:m07 beetle、m08 owl↔panther
+  //  (uav↔monkey 現屬 t06、tilt↔atlas 現屬 t11、levi↔elephant 現屬 s10、archo↔raptor 現屬 s12)
   m01: {
     side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
     visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xd52b1e, 0xffffff, 0x171796] },
@@ -1962,8 +2007,10 @@ export const CHARACTERS = {
       dur: [8, 10, 12], cd: [75, 65, 55], mp: [80, 90, 100], desc: '合約外時段全面超載,渡鴉汲血(吸血)' },
   },
   m02: {
-    side: 'MERC', kind: 'morph', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型可變機甲',
-    visual: { hue: 0x9aa3ad, pod: 'shield', flight: 'levi', ground: 'elephant', bulk: 1.3, paint: 'totem' },
+    // 2026-08-02 機體混編:改駕「暴龍」雙足機甲 —— 前傾軀幹以重尾配平,巨顎裡藏的正是
+    // 他那門重型線圈加農砲(HEAVY_MOUNT.trex = mouth);護衛重裝的體格一分未減。
+    side: 'MERC', kind: 'robot', name: '巴澤爾・奧坎', code: '磐石', machine: '「磐石」重型突擊機甲',
+    visual: { hue: 0x9aa3ad, pod: 'shield', form: 'biped', creature: 'trex', paint: 'totem' },
     mods: { hp: 1.25, sp: 0.9, mp: 0.95, speed: 0.9, armor: 24 },
     light: { name: '7.62 通用機槍', rw: 'FN MAG・初速 840m/s', type: 'gun', mv: 840,
       dmg: [16, 20, 25], rate: 7, mag: [40, 48, 56], reload: 2.2, range: 195, crit: 0.05,
@@ -1977,8 +2024,10 @@ export const CHARACTERS = {
       dur: [6, 8, 10], cd: [80, 70, 60], mp: [85, 95, 105], desc: '這一單保到底:半徑內友軍承傷降低' },
   },
   m03: {
-    side: 'MERC', kind: 'morph', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤可變機甲',
-    visual: { hue: 0x59c9a5, pod: 'dish', flight: 'uav', ground: 'monkey', bulk: 0.95, paint: 'minimal' },
+    // 2026-08-02 機體混編:改駕雙尾桁定翼無人機 —— 兩根尾桁之間的空腔本來是天線艙,
+    // 她改成了貨艙:先把血漿、零件、修理臂空投下去,帳單後到。
+    side: 'MERC', kind: 'drone', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤運補機',
+    visual: { hue: 0x59c9a5, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛脈衝雷射艙', rw: '低功率防禦雷射・光速直擊', type: 'beam',
       dmg: [15, 19, 23], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 175, crit: 0.07,
@@ -1992,14 +2041,16 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '大帳一次結清:裝甲大修、護盾充滿' },
   },
   m04: {
-    side: 'MERC', kind: 'morph', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵可變機甲',
-    visual: { hue: 0xd24fb4, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'totem' },  // 洋紅+圖騰徽:與夜豹(m08 紫)脫鉤,改素色+徽章
-    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 13 },
+    // 2026-08-02 機體混編:改駕「鷹」擬態翼無人機 —— 她的檔案上寫著「雷達截面壓到鳥類等級」,
+    // 現在那句話是字面意思:機體本身就是一隻鳥。翼掛反器材砲、俯衝一擊即走。
+    side: 'MERC', kind: 'drone', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵獵鷹',
+    visual: { hue: 0xd24fb4, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'totem' },  // 洋紅+圖騰徽:與夜豹(m08 紫)脫鉤,改素色+徽章
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 8 },
     light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
-      dmg: [21, 26, 32], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
+      dmg: [17, 21, 25], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
     heavy: { name: '游騎反器材砲', rw: 'NTW-20・初速 900m/s', type: 'gun', mv: 900,
-      dmg: [63, 92, 130], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
+      dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
     skill: { name: '匿名發包', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '合約不留名:從感測網上消失(開火即現形)' },
@@ -2024,9 +2075,11 @@ export const CHARACTERS = {
       desc: '逾期利滾利:飽和清算打擊,斷電扣押(麻痺)' },
   },
   m06: {
-    side: 'MERC', kind: 'morph', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式可變機甲',
-    visual: { hue: 0xf0c24a, pod: 'rack', flight: 'tilt', ground: 'atlas', bulk: 1.15, paint: 'totem' },
-    mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 6 },
+    // 2026-08-02 機體混編:改駕「劍龍」四足機甲 —— 背上那排骨板就是發射軌(HEAVY_MOUNT.stego = back),
+    // 一整排掛架吊著轉包出去的貨:一座會走路的碼頭,比傾轉旋翼還像他的生意。
+    side: 'MERC', kind: 'robot', name: '圖里奧・費雷拉', code: '外包', machine: '「外包」母艦式機甲',
+    visual: { hue: 0xf0c24a, pod: 'rack', form: 'beast', creature: 'stego', paint: 'totem' },
+    mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 14 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
