@@ -1512,7 +1512,7 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
    手機 / 平板:觸控操控層 + 直式(ori-portrait)/ 橫式(ori-landscape)版型特化
    ----------------------------------------------------------------------------
    啟用條件:body.touch-ui(由 js/mobile.js installTouchUI() 依裝置判定掛上;
-   localStorage svs_touchui='1' 可在桌機強制驗版型)。設計原則:
+   大廳的操作方式選「限定搖桿」或網址 ?ctrl=pad 可在桌機強制驗版型)。設計原則:
      ① 3D 視野是主角 —— 控件一律半透明、貼四角,中央 1/3 與準星四周不放任何實體件。
      ② 拇指可達 —— 觸控目標 ≥ 44px;左拇指移動、右拇指射擊/瞄準,招式列貼右下拇指弧。
      ③ 不做第二套 HUD —— 招式/填彈鈕就是既有 .ab-box / .wpn-box(名稱與 CD 已在其中),
@@ -2039,14 +2039,19 @@ body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
 .tset-drow.bad { color: var(--danger); }
 .tset-drow b { color: var(--text); font-weight: 400; }
 .tset-drow i { grid-column: 2 / -1; font-size: 10px; opacity: 0.7; font-style: normal; }
-/* 分段開關(自動 / 強制開 / 強制關) */
-.tset-seg { display: flex; gap: 4px; }
+/* 分段開關(操作方式的三選一 / 陀螺來源…);觸控目標 ≥44 高 */
+.tset-seg { display: flex; gap: 4px; flex-wrap: wrap; }
 .tset-segb {
   cursor: pointer; font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
   min-width: 46px; min-height: 44px; padding: 0 10px; color: var(--dim);
   background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
 }
 .tset-segb.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+/* 停用 = 「這一項現在不能改」(操作方式進房後鎖定 / 限定模式下不可切換目前操控):
+   MUST 仍看得見目前選了哪一個(.on 的塗色照舊,只降透明度),否則玩家會以為設定被清掉了。 */
+.tset-segb:disabled { cursor: not-allowed; opacity: 0.45; }
+/* 大廳的操作方式區塊:與其他大廳列同寬,別把 .set-list 的 min-width 撐出面板 */
+.ctrl-mode-box { min-width: 0; width: 100%; }
 
 /* ---------- 疊層(選單/商店/陣亡/結束)在手機上的可讀性 ---------- */
 body.touch-ui .overlay-box {

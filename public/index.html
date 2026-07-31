@@ -64,6 +64,13 @@
       <button id="cloudApplyBtn" class="btn">↯ 連線</button>
     </div>
 
+    <!-- 操作方式:限定滑鼠鍵盤 / 限定搖桿 / 不限定(預設)。**加入房間之前**就要選定 ——
+         進房後限定模式即鎖住(規則住 js/ctrlmode.js),選「不限定」才可在戰鬥中隨時切換。
+         選項 DOM 由 mobile.js renderCtrlSettings() 注入(與設定頁共用同一份),
+         MUST NOT 在這裡另寫一組按鈕。 -->
+    <div class="divider">─── 操作方式 ───</div>
+    <div class="set-list ctrl-mode-box" id="ctrlModeMount"></div>
+
     <!-- 加入現有戰區:單機模式沒有遠端戰區可加入,main.js 會整區收起 -->
     <div id="joinArea">
       <div class="divider">─── 加入現有戰區 ───</div>
@@ -473,6 +480,12 @@
             <span class="set-hint">降低算圖解析度與音效(用合成音、關移動環境音)以省電、提升幀率</span>
           </div>
 
+          <!-- 操作方式(限定模式 + 目前操控):內容由 mobile.js renderCtrlSettings() 注入。
+               **桌機不隱藏** —— 「限定搖桿」在桌機上同樣成立;能不能改由 ctrlmode.js 決定
+               (進房後限定模式鎖住;不限定才可在此切換鍵鼠 ⇄ 搖桿)。 -->
+          <div class="set-sub">▎操作方式</div>
+          <div id="pauseCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
+
           <!-- 觸控/陀螺儀:內容由 main.js renderTouchSettings() 注入(與大廳「手機操控」面板共用
                同一份設定表,MUST NOT 在兩處各寫一份 DOM)。桌機以 .touch-only 隱藏整區。 -->
           <div class="set-sub touch-only">▎觸控操控</div>
@@ -597,6 +610,7 @@
     <button class="ov-close" type="button" aria-label="關閉" data-ovclose="touchCloseBtn">✕</button>
     <div class="panel-head">▍手機操控 / 陀螺儀</div>
     <div class="tset-diag" id="touchDiag"></div>
+    <div class="set-list" id="lobbyTouchCtrlMount"></div>
     <div class="set-list" id="lobbyTouchMount"></div>
     <div class="row" style="justify-content:center">
       <button id="touchTestBtn" class="btn steel-btn">🎮 試玩</button>
@@ -638,6 +652,8 @@
           <button id="lsetLowPower" class="switch" type="button" role="switch" aria-checked="false" aria-label="低功耗模式開關"><span></span></button>
           <span class="set-hint">降低算圖解析度與音效以省電、提升幀率</span>
         </div>
+        <div class="set-sub">▎操作方式</div>
+        <div id="lobbyMenuCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
         <div class="set-sub touch-only">▎觸控操控</div>
         <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
       </div>

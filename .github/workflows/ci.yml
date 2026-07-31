@@ -45,6 +45,7 @@ jobs:
           node tools/audit_road_joint.mjs
           node tools/audit_road_bed.mjs
           node tools/audit_view_lock.mjs
+          node tools/audit_ctrl_mode.mjs
 
       - name: 平衡四不變式
         run: npm run bal

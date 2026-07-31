@@ -27,6 +27,7 @@ import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, 
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls } from './mobile.js';
+import { onCtrlChange } from './ctrlmode.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
@@ -2637,6 +2638,11 @@ export class BattleClient {
           if (n) this._swapDrone(Number(n[1]) - 1);
         }
       }
+      // 觀戰(side=null)也吃 ESC(2026-07-31 使用者需求):觀戰者一樣要有離開戰場的出口。
+      // 指標鎖定中的那顆 ESC 會被瀏覽器吃掉 → 走 `_onPlc`;**尚未鎖定**(剛進場、或剛從選單回來
+      // 還沒點畫面)時只有這條管用,故兩條都要有。
+      if (e.type === 'keydown' && e.code === 'Escape' && !this.side && !this._gameOver
+          && document.pointerLockElement !== this.canvas) this._setPaused(true);
       this.keys[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', this._onKey);
@@ -2650,8 +2656,11 @@ export class BattleClient {
 
     this._onMouseDown = (e) => {
       if (this.touch) return;                       // 觸控版:相容用滑鼠事件不參與(避免與觸控層雙送)
-      if (!this.side || this.shopOpen) return;
+      if (this.shopOpen) return;
+      // **觀戰也要鎖指標**:自由視角的轉向唯一來源是鎖定後的 mousemove;
+      // 順帶讓觀戰的 ESC 與交戰時同一條路(解鎖 → `_onPlc` → 戰場選單)。
       if (document.pointerLockElement !== this.canvas) { this.canvas.requestPointerLock(); return; }
+      if (!this.side) return;                       // 觀戰沒有座機:鎖了指標也不開火/不瞄準
       if (e.button === 0) this.firing = true;
       if (e.button === 2) this._rmbDown();
     };
@@ -2682,7 +2691,26 @@ export class BattleClient {
 
     // 觸控版(手機/平板):建虛擬蘑菇頭 + 動作鈕 + 陀螺儀。輸入一律經 _applyLook/_moveAxis/_cmd
     // 三個共用縫,MUST NOT 讓 mobile.js 直接改 yaw/keys/firing(見 mobile.js 檔頭)。
-    if (isTouchUI()) this.touch = new TouchControls(this);
+    // 操作方式選「不限定」時戰鬥中可切換 ⇒ 建/毀都走 `_applyCtrlScheme`,MUST NOT 在此另寫一次。
+    this._applyCtrlScheme();
+    this._offCtrl = onCtrlChange(() => this._applyCtrlScheme());
+  }
+
+  /**
+   * 操作方式落地:依 `ctrlmode.js` 的結論建立或銷毀虛擬搖桿層。
+   * 進場時呼叫一次;「不限定」時玩家在設定頁切換也回到這裡(限定模式根本不會發事件 ——
+   * `setCtrlScheme` 對非 any 一律拒絕,這就是「遊戲中不可變更」的落點,MUST NOT 在此再判一次)。
+   */
+  _applyCtrlScheme() {
+    const pad = isTouchUI();
+    if (pad === !!this.touch) return;
+    if (pad) {
+      document.exitPointerLock?.();     // 搖桿層與指標鎖定互斥(鎖著的話滑鼠事件會與觸控雙送)
+      this.touch = new TouchControls(this);   // 建構子自己會 setKind + syncBlocked(選單開著就整層收起,A19)
+    } else {
+      this.touch.dispose();
+      this.touch = null;
+    }
   }
 
   /**
@@ -2755,9 +2783,13 @@ export class BattleClient {
     }
   }
 
-  /** 戰場選單開關;伺服器持續模擬(多人不是真暫停),此處只凍結本機輸入 + 叫出選單 */
+  /**
+   * 戰場選單開關;伺服器持續模擬(多人不是真暫停),此處只凍結本機輸入 + 叫出選單。
+   * **觀戰(side=null)同樣受理**(2026-07-31 使用者需求「觀戰也可以按 ESC」)——
+   * 觀戰者需要「離開戰場」這個出口,MUST NOT 再加回 `!this.side` 早退。
+   */
   _setPaused(on) {
-    if (!this.side || this._gameOver) return;
+    if (this._gameOver) return;
     this.paused = on;
     if (on) {
       this.keys = {}; this.firing = false;
@@ -7959,6 +7991,8 @@ export class BattleClient {
     window.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('contextmenu', this._onCtx);
     document.removeEventListener('pointerlockchange', this._onPlc);
+    this._offCtrl?.();               // 操作方式訂閱 MUST 跟著戰局收掉(留著 = 下一局重建一個殭屍搖桿層)
+    this._offCtrl = null;
     this.touch?.dispose();
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉

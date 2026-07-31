@@ -98,6 +98,7 @@
 | 巨岩表面落點 | `biomes.js rockProbe(g)`(`wallR`/`slope`/`topAt` 射線實測) | 貼壁(峭壁樹/岩菇/侵蝕溝/棧道)與頂面(石屋/疊石/鳥巢台/電塔)落點一律**實測真幾何**;多面體小面內縮 4~5%、疊層收分、崩落塊撐大外廓 ⇒ 手寫剖面公式(側壁橢圓 × dome/taper)一律算不準,MUST NOT 復辟 |
 | 圓形腳印落底 | `biomes.js sinkBaseY()` | 神木/邊界巨岩/巨岩/地標一律「中心 + 腳印周圈取最低」,寧可陷入山坡不懸空;MUST NOT 只取中心高度(下坡側整片浮空) |
 | 連線機制 | `netmode.js`(模式/網址/`wsUrl()`)+ `net.js makeNet()` | `main.js` MUST NOT 自己 `new Net()`/看 `location.host`/寫單機文案分支;鈕面真相 = `LINK_MODES` |
+| 操作方式(輸入裝置) | `ctrlmode.js`(`CTRL_MODES`/`ctrlMode()`/`ctrlScheme()`/`deviceScheme()`/`setCtrlLock()`)+ 設定 UI `mobile.js renderCtrlSettings()` | 三選一(不限定/限定滑鼠鍵盤/限定搖桿)**MUST 在加入房間之前選定**:`setCtrlMode` 對已鎖定一律拒絕、`setCtrlScheme`(目前操控)只受理「不限定」—— 這就是「遊戲中不可變更,除非選不限定」的唯一落點,消費端 MUST NOT 另判一次。裝置判定(`maxTouchPoints`/`pointer:coarse`/短邊)只有 `deviceScheme()` 一份,`mobile.js isTouchUI()` MUST 只是轉呼;搖桿層建/毀只住 `game.js _applyCtrlScheme`;`main.js` 的 `TOUCH_UI` MUST 是函式(常數 = 切換後文字停在舊版)|
 | 共用視覺入口 | `spawnCastFx()`/`stepCombatFx()`/`terrain.surfaceAt()` | 戰場與展示台共用,MUST NOT 各寫一套 |
 
 ### 2.2 狀態鍵與迴圈粒度
@@ -250,6 +251,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 小地圖顯示範圍(`mmMode`/`_world2mm*` 系) | `audit_minimap_view.mjs`(16 項)+ 真機切換冒煙(已探索迷霧不得錯位) |
 | 視野鎖定(`VIEW_LOCK`/`viewLockStep`・`game._tickViewLock`/`_coneAcquire`/`_entAimPoint`・觸控 ZR `data-act="lock"`・絕招改掛十字鍵左) | `audit_view_lock.mjs`(44 項;Ⅰ 常數推導不手寫 + DROP > CONE 遲滯、Ⅱ **後座力不得被抵銷** + `_tickViewLock` 排在相機合成前、Ⅲ `viewLockStep` 直測不瞬移/不過衝/幀率無關、Ⅳ 鍵位與單一縫 + `_cmd` 的 lock 排在 dead 閘之前)+ `audit_touch_layout.mjs`(ZR 列位改認 lock、絕招與鎖定各恰好一顆、絕招鈕面仍帶 .gb-cd)+ `audit_ui_layout.mjs` + 真機冒煙(按住 ZR 視野貼上最近敵人且鈕面亮起、開火照樣上踢且回穩後自己貼回、放開立刻恢復自由視角、十字鍵左絕招顯 CD) |
 | 機種絕招觸發(`ABILITY_HOLD_S`/`_tickHoldAbility` 系) | 真機冒煙:一般/狙擊長按皆出招且不誤切模式、短按仍切換、十字鍵左同招顯 CD、三機種各一次 |
+| 操作方式(`ctrlmode.js` 系 / `renderCtrlSettings`・`syncCtrlSettings` / `game._applyCtrlScheme` / `main.TOUCH_UI`)或 觀戰戰場選單(`game._setPaused` 的 side 閘、觀戰指標鎖定、`mobile.setKind` 的 HOME) | `audit_ctrl_mode.mjs`(58 項;Ⅰ 裝置判定單一縫 + ctrlmode 無 import、Ⅱ 真品直測三選一規則「預設不限定 / 不限定吃裝置判定 / 進房後限定模式不可變更 / 限定時目前操控不可變更 / 舊鍵與 `?ctrl=` 遷移」、Ⅲ 選項 DOM 只有一份 + `TOUCH_UI` 是函式、Ⅳ 搖桿層建毀單一縫 + dispose 解訂閱、Ⅴ 觀戰 ESC/HOME 兩條路) + `audit_touch_layout.mjs`(觀戰版型:HOME 留著、其餘戰鬥鈕收起)+ `audit_ui_layout.mjs` + 真機冒煙(大廳選限定搖桿 → 桌機也長出搖桿且進房後選項變灰;不限定 → 戰鬥中設定頁即時切換鍵鼠 ⇄ 搖桿、說明文字跟著換;觀戰按 ESC 叫得出選單並離開)|
 | `mobile.js`/`_applyLook`/`_moveAxis`/`_cmd`/觸控 CSS | ①桌機 MUST 不回歸 ②`audit_touch_layout.mjs`(54 組;四分區零重疊、觸控目標 ≥44×40、`.tl-sys` 固定 grid)③疊層可點性 ④`audit_touch_gesture.mjs`(17 項)⑤真機冒煙 |
 | `#touchLayer` 節點位置 / `--tl-*` CSS 變數 | 搖桿 MUST 留 body 層 + 保留 `body.touch-ui` 保險預設值;真機大廳端對端量測(不設覆寫) |
 | 選單版型 / 任何鈕面文字 | `audit_ui_layout.mjs`(309 項;鈕面無括號補述、桌機並排直式維持並排、`.cd-art` 解除 sticky、疊層 ✕ 規則) |
