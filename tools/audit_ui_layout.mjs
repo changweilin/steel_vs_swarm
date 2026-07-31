@@ -58,6 +58,67 @@ const ok = (cond, msg) => {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 0.5)GUI 說明一律懸浮提示 + NPC 圖示(2026-07-31 使用者定案)
+//     這一段**不需要瀏覽器**,故排在 playwright 閘門之前 —— 沙箱/CI 沒有 chromium 時
+//     至少這些單一縫斷言仍然跑得到。
+// ---------------------------------------------------------------------------
+{
+  console.log('\n▍GUI 懸浮提示 / 按鍵風格 / NPC 圖示');
+  const html = readFileSync(join(ROOT, 'public', 'index.html'), 'utf8');
+  const css = readFileSync(join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+  const mainJs = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
+  const help = await import(new URL('../public/js/help.js', import.meta.url));
+  const icons = await import(new URL('../public/js/npcicon.js', import.meta.url));
+  const data = await import(new URL('../public/js/data.js', import.meta.url));
+
+  // ① 常駐說明 MUST 已下架(留一份在畫面上 = 兩份會漂的說明)
+  for (const cls of ['room-note', 'shop-note', 'dead-hint', 'pause-note', 'load-tip', 'link-hint']) {
+    ok(!html.includes(`"${cls}"`), `index.html MUST NOT 再有常駐說明 .${cls}`);
+    ok(!new RegExp(`\\.${cls}\\s*[,{]`).test(css), `style.css MUST NOT 再留 .${cls} 的死規則`);
+  }
+  ok(!html.includes('id="linkHint"') && !mainJs.includes('linkHint'),
+    '連線機制的說明 MUST 改掛各鈕自己的懸浮提示(`attachTip`),常駐列已移除');
+
+  // ② 靜態標記只准寫 key,文字一律從 UI_TIPS 取(唯一縫)
+  const keys = [...html.matchAll(/data-tipkey="([^"]+)"/g)].map((m) => m[1]);
+  ok(keys.length > 0, `index.html 有 ⓘ 提示標記(${keys.length} 顆)`);
+  for (const k of new Set(keys)) ok(!!help.UI_TIPS[k], `data-tipkey="${k}" 在 help.js UI_TIPS 有對應條目`);
+  ok(!/data-tip="[^"]{12,}"/.test(html),
+    'index.html MUST NOT 直接寫提示文字(只准寫 data-tipkey;寫死 = 說明分頁與 ⓘ 兩份會漂)');
+  ok(/function syncTips\(/.test(mainJs) && /installTips\(\);/.test(mainJs),
+    'main.js MUST 有 `syncTips()` 灌文字 + `installTips()` 安裝委派');
+  ok(/syncTips\(\);\s*\/\/ 提示文字/.test(mainJs),
+    '切換鍵鼠 ⇄ 搖桿 MUST 重跑 syncTips(UI_TIPS 有 pTouch 兩版)');
+
+  // ③ 說明分頁的「介面」類 MUST 由 UI_TIPS 推導,不得手抄第二份
+  const uiCat = help.HELP.find((c) => c.id === 'ui');
+  ok(!!uiCat, '說明分頁有「介面」類別');
+  ok(uiCat && uiCat.items.length === Object.keys(help.UI_TIPS).length
+    && uiCat.items.every((it, i) => it === Object.values(help.UI_TIPS)[i]),
+    '「介面」類的條目 MUST 就是 UI_TIPS 本身(同一個物件參考 = 推導而非抄寫)');
+
+  // ④ 按鍵風格統一:分段按鈕只有一套
+  ok(/^\.segb \{/m.test(css) && /^\.seg \{/m.test(css), 'style.css 有 `.seg`/`.segb` 分段按鈕單一縫');
+  ok(!/\.tset-segb?\b/.test(css), '舊的 `.tset-seg`/`.tset-segb` MUST 已改名(留著 = 兩套樣式並存)');
+  for (const dead of ['.pause-tab {', '.help-cat {', '.unit-side-btn {', '.diff-select']) {
+    ok(!css.includes(dead), `\`${dead.replace(' {', '')}\` MUST NOT 自己寫一份鈕面樣式`);
+  }
+  ok(!/<select[^>]*class="diff-select"/.test(mainJs) && !/diff-select/.test(mainJs),
+    '電腦難度 MUST NOT 退回 <select>(手機會叫出系統選單、風格與旁邊那列不一)');
+
+  // ⑤ NPC 圖示覆蓋現役名冊(缺鍵會回退問號圖,但那是保底不是及格)
+  const roster = new Set([
+    'soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'tower', 'base', 'bunker', 'civilian',
+    ...Object.values(data.THIRD.COMP).flat(),
+  ]);
+  for (const k of roster) ok(!!icons.NPC_ICONS[k], `npcicon.js 有 ${k} 的圖示`);
+  ok(!!icons.NPC_ICONS._, 'npcicon.js 有未列名兵種的保底圖示');
+  ok(icons.npcIconHTML('soldier').includes('currentColor'),
+    '圖示 MUST 吃 currentColor(選取態/陣營色才跟得動)');
+  ok(/npcIconHTML\(kind\)/.test(mainJs), '單位牆 MUST 走 npcicon.js 單一縫產生圖示');
+}
+
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('選單版型稽核');
 const srv = await serve();
@@ -138,13 +199,20 @@ for (const v of VIEWS) {
       document.querySelector(`#side${s} .side-slots`).innerHTML =
         '<div class="slot empty"><button class="slot-btn">＋ 入座</button><button class="slot-btn">＋ 電腦</button></div>';
     }
-    // 操作方式(整房一致;房主可改)——真品 DOM 由 mobile.js renderCtrlModeRow() 注入,
-    // 這裡照它的形狀補一份骨架,好讓下面的 noHScroll('room') 真的量得到這一列的寬度。
+    // 房間設定分頁(電腦難度 ⇄ 操作方式;一次只攤開一組)——真品 DOM 由 main.js renderBotDiff()
+    // 與 mobile.js renderCtrlModeRow() 注入,這裡照它們的形狀補一份骨架,
+    // 好讓下面的 noHScroll('room') 真的量得到這兩列的寬度。說明已改 ⓘ 懸浮提示,不再有常駐文字。
+    document.getElementById('botDiffRow').innerHTML =
+      '<span class="seg seg-sm">'
+      + ['新手', '低', '中', '高'].map((t) => `<button class="segb" type="button">${t}</button>`).join('')
+      + '</span><button class="tip-dot" type="button" data-tip="電腦難度說明">ⓘ</button>';
     document.getElementById('roomCtrlMount').innerHTML =
-      '<div class="set-row"><span class="set-label">操作方式</span><span class="tset-seg">'
+      '<div class="set-row"><span class="seg seg-sm">'
       + ['◈ 不限定', '⌨ 限定滑鼠鍵盤', '🕹 限定搖桿']
-        .map((t) => `<button class="tset-segb" type="button">${t}</button>`).join('')
-      + '</span><span class="set-hint">整房一致,由房主決定 ・ 全房各自依裝置判定,戰鬥中也能隨時在設定頁切換鍵鼠 ⇄ 搖桿。</span></div>';
+        .map((t) => `<button class="segb" type="button">${t}</button>`).join('')
+      + '</span><button class="tip-dot" type="button" data-tip="操作方式說明">ⓘ</button></div>';
+    // 分頁預設收著操作方式那一頁 —— 這裡兩頁都攤開,量的是「最寬的那一組會不會撐出橫向捲動」
+    document.getElementById('roomCtrlMount').hidden = false;
     out.room = {
       steel: box('#sideSTEEL'), swarm: box('#sideSWARM'),
       ready: box('#readyBtn'), start: box('#startBattleBtn'), leave: box('#leaveRoomBtn'),

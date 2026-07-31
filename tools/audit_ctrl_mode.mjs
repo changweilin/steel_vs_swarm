@@ -200,8 +200,18 @@ ok(!/\bTOUCH_UI\s*[?&|)]/.test(code(mainSrc).replace(/TOUCH_UI\(\)/g, '')),
 ok(/^onCtrlChange\(\(\) => syncCtrlSettings\(\)\);$/m.test(mobileSrc),
   '操作方式 UI 的同步訂閱 MUST 住模組層(掛在 installTouchUI 裡 ⇒ 進房後選項不會即時變灰)');
 const cssSrc = read('public', 'css', 'style.css');
-ok(/\.tset-segb:disabled/.test(cssSrc),
+ok(/\.segb:disabled/.test(cssSrc),
   '停用態 MUST 有視覺區別(不然玩家只會覺得「按了沒反應」)');
+// 2026-07-31「按鍵風格統一」:分段按鈕的鈕面樣式只准有 `.seg`/`.segb` 一份。
+ok(!/\.tset-segb\b/.test(cssSrc) && !/\.tset-seg\b/.test(cssSrc),
+  '舊的 `.tset-seg`/`.tset-segb` MUST 已改名為 `.seg`/`.segb`(留著 = 兩套分段按鈕樣式並存)');
+for (const dead of ['.pause-tab {', '.help-cat {', '.unit-side-btn {', '.diff-select']) {
+  ok(!cssSrc.includes(dead),
+    `\`${dead.replace(' {', '')}\` MUST NOT 自己寫一份鈕面樣式(一律掛 .segb)`);
+}
+ok(/class="segb pause-tab/.test(htmlSrc) && /class="segb help-cat/.test(mainSrc)
+  && /class="segb unit-side-btn/.test(mainSrc),
+  '分頁鈕 / 說明類別 / 圖鑑陣營切換 MUST 都掛上 `.segb`');
 ok(/onCtrlChange\(/.test(mainSrc) && /syncPauseHelp\(\)/.test(mainSrc),
   '切換操作方式時 MUST 重跑說明/提示(鍵位敘述兩份,取字仍走 help.js 單一縫)');
 ok(/renderRoomCtrl\(\);/.test(mainSrc) && /renderBotDiff\(lb\);\s*\n\s*renderRoomCtrl\(\);/.test(mainSrc),

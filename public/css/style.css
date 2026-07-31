@@ -284,11 +284,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
    窄屏只收窄欄寬 + 降一階字級,**MUST NOT** 改成直排(見 /CLAUDE.md A20)。 */
 .link-modes { gap: 8px; }
 .link-btn { flex: 1 1 0; min-width: 0; padding: 9px 6px; font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
-.link-hint { color: var(--dim); font-size: 11px; line-height: 1.6; text-align: center; }
 .link-cloud input { flex: 1 1 0; min-width: 0; font-size: 12px; }
 @media (max-width: 760px) {
   .link-btn { font-size: 11px; letter-spacing: 0; padding: 9px 4px; }
-  .link-hint { font-size: 10px; }
 }
 
 .join-mode { display: flex; gap: 18px; justify-content: center; color: var(--dim); font-size: 13px; }
@@ -387,7 +385,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .spec-list { color: var(--dim); font-size: 12px; z-index: 3; font-family: var(--mono); }
 .room-hint { color: var(--dim); font-size: 13px; z-index: 3; }
 .room-actions { z-index: 3; flex-wrap: wrap; justify-content: center; }
-.room-note { color: #4d5c66; font-size: 11px; z-index: 3; max-width: 900px; text-align: center; }
 
 /* ---------- 戰場選址 ---------- */
 #leafletMap { position: absolute; inset: 0; z-index: 1; background: var(--bg0); filter: saturate(0.65) contrast(1.1); }
@@ -435,7 +432,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .load-stats { color: var(--dim); font-size: 12px; font-family: var(--mono); }
 .load-label { font-size: 13px; min-height: 20px; font-family: var(--mono); color: var(--railS); letter-spacing: 1px; }
 .load-label::before { content: '> '; color: var(--railW); }
-.load-tip { color: #4d5c66; font-size: 11px; }
 
 /* ---------- 戰鬥 HUD ---------- */
 #game { background: #000; }
@@ -620,7 +616,6 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .shop-item.off { opacity: 0.45; }
 .shop-info { font-size: 13px; }
 .shop-item-note { color: var(--dim); font-size: 10px; font-family: var(--mono); }
-.shop-note { color: var(--dim); font-size: 10px; line-height: 1.7; border-left: 2px solid var(--line); padding-left: 8px; }
 /* HUD 收斂(2026-07-16):只留機體數據 + 小地圖;操作說明移駐 ESC 戰場選單 */
 .pause-help {
   color: var(--dim); font-size: 11px; line-height: 1.9; font-family: var(--mono); letter-spacing: 1px;
@@ -694,7 +689,6 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 /* 陣亡頁(2026-07-17):不全屏變暗 —— 砲塔視窗以 box-shadow 打洞式聚光,倒數卡浮在上方 */
 .dead-overlay { background: transparent; pointer-events: none; flex-direction: column; gap: 22px; }
 .dead-overlay .dead-panel { position: relative; z-index: 2; padding: 20px 34px; }
-.dead-hint { color: var(--dim); font-family: var(--mono); font-size: 11px; letter-spacing: 1px; }
 .dead-cam {
   position: relative; z-index: 1; width: min(40vw, 480px); aspect-ratio: 16 / 9;
   border: 2px solid var(--danger); background: transparent;
@@ -776,14 +770,12 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 }
 .env-sel:focus { outline: none; border-color: var(--railW); }
 
-/* 電腦玩家難度(房主) */
-.diff-select {
-  background: rgba(4, 7, 11, 0.9); color: var(--fg);
-  border: 1px solid var(--line); border-radius: 0; padding: 4px 8px; font-family: var(--mono); font-size: 12px;
-}
-.diff-select:focus { outline: none; border-color: var(--railW); }
-.diff-hint { font-size: 11px; font-family: var(--mono); }
-.diff-hint.dim { color: var(--dim); }
+/* 房間設定(電腦難度 / 操作方式):兩組都是「整房一個、房主可改」,故收在同一塊分頁裡輪流顯示 ——
+   兩列同時攤開會把陣營卡推出首屏(見 A20 的直式並排原則)。選項本體一律走 `.seg`/`.segb`。 */
+.room-cfg { margin: 6px auto 0; max-width: 640px; width: 100%; min-width: 0; text-align: left; }
+.room-cfg-tabs { justify-content: center; margin-bottom: 5px; }
+.room-cfg-page[hidden] { display: none; }
+.room-cfg-page { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- 劇情戰役 ---------- */
 /* 大廳三動作同列(建立地圖 / 開戰時刻 / 劇情戰役),窄螢幕自動換行 */
@@ -957,18 +949,9 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 
 /* 戰場選單(暫停)*/
 .pause-title { font-family: var(--serif); font-size: 30px; font-weight: 900; letter-spacing: 10px; color: var(--railS); }
-.pause-note { font-size: 12px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
 
-/* ── 戰場選單分頁(選單 / 設定 / 說明)── */
-.pause-tabs { display: flex; gap: 6px; justify-content: center; }
-.pause-tab {
-  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 12px; letter-spacing: 3px;
-  padding: 7px 20px; color: var(--dim); background: rgba(8, 12, 17, 0.9);
-  border: 1px solid var(--line); clip-path: var(--notch-sm);
-  transition: color 0.12s, background 0.12s, border-color 0.12s;
-}
-.pause-tab:hover:not(.on) { color: var(--text); border-color: var(--line-strong); }
-.pause-tab.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+/* ── 戰場選單分頁(選單 / 設定 / 說明)── 鈕面樣式全部來自 `.segb`,這裡只留排列 */
+.pause-tabs { justify-content: center; gap: 6px; }
 .pause-page { display: flex; flex-direction: column; gap: 14px; }
 .pause-page[hidden] { display: none; }
 .pause-back { align-self: center; }
@@ -992,16 +975,8 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .switch[aria-checked="true"] { background: rgba(var(--railS-rgb), 0.26); border-color: var(--railS); }
 .switch[aria-checked="true"] > span { left: 26px; background: var(--railS); }
 
-/* ── 說明:類別分頁 + 內文清單 ── */
-.help-cats { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
-.help-cat {
-  cursor: pointer; font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
-  padding: 5px 13px; color: var(--dim); background: rgba(8, 12, 17, 0.9);
-  border: 1px solid var(--line); clip-path: var(--notch-sm);
-  transition: color 0.12s, border-color 0.12s;
-}
-.help-cat:hover:not(.on) { color: var(--text); border-color: var(--line-strong); }
-.help-cat.on { color: var(--railS); border-color: var(--railS); box-shadow: inset 0 0 0 1px var(--railS); }
+/* ── 說明:類別分頁 + 內文清單 ── 鈕面樣式全部來自 `.segb`,這裡只留排列 */
+.help-cats { justify-content: center; gap: 5px; }
 .help-body {
   text-align: left; max-height: 46vh; overflow-y: auto; padding-right: 6px;
   display: flex; flex-direction: column; gap: 13px; min-width: min(468px, 84vw);
@@ -1263,26 +1238,26 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .unit-section { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
 .unit-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .unit-head-title { font-family: var(--mono); font-size: 12px; color: var(--railS); letter-spacing: 1px; }
-.unit-side-toggle { display: flex; gap: 4px; }
-.unit-side-btn {
-  font-family: var(--mono); font-size: 10px; color: var(--dim); background: rgba(12, 18, 25, 0.9);
-  border: 1px solid var(--line); border-radius: 0; padding: 3px 10px; cursor: pointer; letter-spacing: 1px;
-}
-.unit-side-btn:hover { border-color: var(--railW); color: var(--fg); }
-.unit-side-btn.on { color: var(--ok); border-color: var(--ok); }
+.unit-side-toggle { gap: 4px; }
+/* 單位牆:格子是「圖示 + 名稱 + 兵種」的卡片,不是分段列 ⇒ 沿用 `.segb` 的配色/邊框語彙,
+   但版面自己排(直排三行 + 自動填格)。選取態與全站一致 = railS 實心填。 */
 .unit-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 5px; margin-top: 8px;
 }
 .unit-btn {
   font: inherit; font-size: 11px; color: var(--fg); line-height: 1.3;
-  background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line); border-radius: 0;
-  padding: 6px 4px; cursor: pointer; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  transition: background 0.12s, border-color 0.12s;
+  background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
+  padding: 6px 4px; cursor: pointer; text-align: center; min-height: 62px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
-.unit-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
-.unit-btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
+.unit-btn:hover:not(.on) { border-color: var(--line-strong); background: rgba(var(--railS-rgb), 0.08); }
+.unit-btn.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+.unit-btn.on .unit-cls { color: rgba(4, 8, 11, 0.72); }
 .unit-cls { font-size: 9px; color: var(--dim); font-family: var(--mono); letter-spacing: 1px; }
+/* NPC 圖示(npcicon.js 的 24×24 平塗 SVG):吃 currentColor ⇒ 選取態自動翻成深色 */
+.npc-ico { width: 22px; height: 22px; display: block; flex: none; }
+.segb > .npc-ico { width: 15px; height: 15px; }
 
 /* 平民圖鑑:20 職業選擇格(點選切換展示台外觀) */
 .civ-prof-grid {
@@ -1290,13 +1265,13 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 }
 .civ-prof-btn {
   font: inherit; font-size: 11px; color: var(--fg);
-  background: rgba(12, 18, 25, 0.9); border: 1px solid var(--line); border-radius: 0;
+  background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
   padding: 5px 3px; cursor: pointer; text-align: center; white-space: nowrap;
-  transition: background 0.12s, border-color 0.12s;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
-.civ-prof-btn:hover { border-color: var(--railW); background: rgba(var(--railW-rgb), 0.1); }
-.civ-prof-btn.on { border-color: var(--ok); color: var(--ok); }
-.civ-fac-toggle { display: flex; gap: 6px; margin: 4px 0 8px; }
+.civ-prof-btn:hover:not(.on) { border-color: var(--line-strong); background: rgba(var(--railS-rgb), 0.08); }
+.civ-prof-btn.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+.civ-fac-toggle { gap: 6px; margin: 4px 0 8px; }
 .unit-empty { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 30px 10px; text-align: center; line-height: 1.9; }
 /* NPC 卡沿用角色卡版面(.char-pick + .char-detail + .cd-lower/.cd-art/.cd-body);展示台與角色小台同尺寸 */
 .unit-stage-mount { position: relative; }
@@ -1823,7 +1798,6 @@ body.touch-ui .ab-box .ab-key { font-size: 9px; padding: 0 4px; }
 body.touch-ui .ab-box .ab-name { font-size: 9px; }
 body.touch-ui .ab-box .ab-cd { font-size: 9px; }
 body.touch-ui .shop-hint { display: none; }
-body.touch-ui .dead-hint { font-size: 10px; }
 
 /* ================= 橫式:左右兩直欄(A 上 / L 下 ・ M 上 / R 下)=================
    左欄 = A 機體資訊(上)+ L 控件(下:**左上移動搖桿、左下十字鍵** + 內側 L/ZL/HOME/地圖 直條);
@@ -2039,20 +2013,65 @@ body.touch-ui.touch-lefty.ori-portrait #minimap { right: auto; left: 8px; }
 .tset-drow.bad { color: var(--danger); }
 .tset-drow b { color: var(--text); font-weight: 400; }
 .tset-drow i { grid-column: 2 / -1; font-size: 10px; opacity: 0.7; font-style: normal; }
-/* 分段開關(操作方式的三選一 / 陀螺來源…);觸控目標 ≥44 高 */
-.tset-seg { display: flex; gap: 4px; flex-wrap: wrap; }
-.tset-segb {
+/* ============================================================================
+   分段按鈕 —— **全站按鍵風格的單一縫**(2026-07-31 使用者定案「按鍵風格統一」)。
+   凡是「一組互斥選項,選中一個」的控件一律 `.seg` > `.segb`:
+   戰場選單分頁 / 說明類別 / 操作方式 / 目前操控 / 陀螺來源 / 電腦難度 / 圖鑑陣營切換。
+   消費端 MUST 只掛 class,MUST NOT 各自寫一份 padding / 選取態配色
+   —— 從前每一處各寫一版,結果選取態有實心填、有描邊、有發光三種,玩家分不出哪個是「已選」。
+   `.btn` 家族(準備 / 開戰 / 離開等大動作鈕)刻意不併入:那是動作不是選項。
+   ============================================================================ */
+.seg { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.segb {
   cursor: pointer; font: inherit; font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
   min-width: 46px; min-height: 44px; padding: 0 10px; color: var(--dim);
   background: rgba(8, 12, 17, 0.9); border: 1px solid var(--line); clip-path: var(--notch-sm);
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
-.tset-segb.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
-/* 停用 = 「這一項現在不能改」(操作方式非房主唯讀 / 限定模式下不可切換目前操控):
+.segb:hover:not(.on):not(:disabled) { color: var(--text); border-color: var(--line-strong); }
+.segb.on { color: #04080b; background: var(--railS); border-color: var(--railS-hot); font-weight: 700; }
+/* 停用 = 「這一項現在不能改」(操作方式/電腦難度非房主唯讀、限定模式下不可切換目前操控):
    MUST 仍看得見目前選了哪一個(.on 的塗色照舊,只降透明度),否則玩家會以為設定被清掉了。 */
-.tset-segb:disabled { cursor: not-allowed; opacity: 0.45; }
+.segb:disabled { cursor: not-allowed; opacity: 0.45; }
+/* 尺寸變體(只准改字級/內距/高度,配色與選取態一律沿用上面那一份) */
+.seg-lg > .segb { font-size: 12px; letter-spacing: 3px; padding: 0 20px; }
+.seg-sm > .segb { font-size: 10px; min-width: 0; min-height: 32px; padding: 0 9px; }
 /* 戰區畫面的操作方式區塊:與其他房間列同寬,別把 .set-list 的 min-width 撐出面板 */
 .ctrl-mode-box { min-width: 0; width: 100%; }
-.masthead .ctrl-mode-box { margin: 6px auto 0; max-width: 640px; text-align: left; }
+
+/* ============================================================================
+   懸浮提示(tip.js)—— 遊戲內 GUI 說明的唯一呈現。
+   ⓘ 標記本身是可聚焦按鈕(鍵盤 Enter 也叫得出來);氣泡 position:fixed 由 JS 定位。
+   ============================================================================ */
+.tip-dot {
+  cursor: help; font: inherit; font-family: var(--mono); font-size: 12px; line-height: 1;
+  width: 22px; height: 22px; flex: none; padding: 0; margin: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--dim); background: none; border: 0; border-radius: 50%;
+  transition: color 0.12s, background 0.12s;
+}
+.tip-dot:hover, .tip-dot:focus-visible, .tip-dot.tip-open {
+  color: var(--railS); background: rgba(var(--railS-rgb), 0.16); outline: none;
+}
+body.touch-ui .tip-dot { width: 30px; height: 30px; font-size: 14px; }
+.tip-bubble {
+  position: fixed; z-index: 300; max-width: min(340px, calc(100vw - 16px));
+  padding: 8px 11px; pointer-events: none;
+  font-family: var(--mono); font-size: 11px; line-height: 1.8; letter-spacing: 0.5px;
+  color: var(--text); background: rgba(6, 10, 14, 0.97);
+  border: 1px solid var(--railS); clip-path: var(--notch-sm);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.66);
+}
+.tip-bubble[hidden] { display: none; }
+/* ⓘ 掛在文字列裡時的對齊。**MUST NOT** 把容器改成 flex 來對齊 ——
+   `.panel-head` 裡的 `.shop-money` 是 float:right,容器一變 flex 就整顆掉到標題後面。 */
+.tip-dot { vertical-align: middle; }
+/* 標題色條是亮底(文字 #06090d),ⓘ 沿用預設的 --dim 會直接消失在底色裡 */
+.panel-head .tip-dot { color: rgba(6, 9, 13, 0.66); }
+.panel-head .tip-dot:hover, .panel-head .tip-dot:focus-visible, .panel-head .tip-dot.tip-open {
+  color: #06090d; background: rgba(6, 9, 13, 0.18);
+}
 
 /* ---------- 疊層(選單/商店/陣亡/結束)在手機上的可讀性 ---------- */
 body.touch-ui .overlay-box {
@@ -2069,8 +2088,7 @@ body.touch-ui .set-slider { min-width: 120px; height: 26px; }
 body.touch-ui .switch { width: 54px; height: 28px; }
 body.touch-ui .switch > span { width: 22px; height: 22px; }
 body.touch-ui .switch[aria-checked="true"] > span { left: 28px; }
-body.touch-ui .pause-tab { padding: 9px 16px; font-size: 12px; }
-body.touch-ui .help-cat { padding: 8px 12px; font-size: 11px; }
+body.touch-ui .seg-sm > .segb { min-height: 40px; padding: 0 12px; font-size: 11px; }
 body.touch-ui .btn { min-height: 44px; }
 body.touch-ui .shop-item { padding: 10px; gap: 8px; }
 body.touch-ui .shop-box { max-width: calc(100vw - 16px); }
@@ -2203,5 +2221,6 @@ body.touch-ui.ori-landscape .masthead .subtitle, body.touch-ui.ori-landscape .fo
 @media (hover: none) {
   .btn:hover:not(:disabled) { background: rgba(14, 21, 29, 0.95); color: var(--text); border-color: var(--line); }
   .shop-item:hover { background: rgba(4, 7, 11, 0.7); border-left-color: var(--railS-dark); }
-  .pause-tab:hover:not(.on), .help-cat:hover:not(.on) { color: var(--dim); border-color: var(--line); }
+  .segb:hover:not(.on):not(:disabled) { color: var(--dim); border-color: var(--line); }
+  .unit-btn:hover:not(.on), .civ-prof-btn:hover:not(.on) { background: rgba(8, 12, 17, 0.9); border-color: var(--line); }
 }
