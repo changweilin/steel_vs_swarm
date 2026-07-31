@@ -249,12 +249,15 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   console.log(`\n⑤ 對進戰勝率 — 自射程外接近 → 進場 → 拉鋸 → 互轟;高度差 ±${DUEL.DH_MAX_F} 個砲塔高`
     + `(${sweep.length} 點對稱掃描)取平均\n`);
 
-  // a 陣營對稱
-  const side = mean(of('drone').flatMap((a) => of('robot').map((b) => rate[a][b])));
+  // a 陣營對稱(2026-08-02 機體混編改制:陣營不再等於機種 ⇒ MUST 用**真正的陣營成員**交叉對局。
+  //   舊制以 drone×robot 代打,混編後那條等同 b 的機種對稱,量不到陣營本身。
+  //   傭兵 side:'MERC' 雙陣營皆可受雇,不計入任一邊。)
+  const sideOf = (s) => chs.filter((c) => CHARACTERS[c].side === s);
+  const side = mean(sideOf('SWARM').flatMap((a) => sideOf('STEEL').map((b) => rate[a][b])));
   const okS = Math.abs(side - 0.5) <= SIDE_TOL;
   if (!okS) fail++;
   console.log(`${okS ? '✅' : '❌'} 陣營對稱  SWARM vs STEEL ${(side * 100).toFixed(1)}%`
-    + `(目標 50±${SIDE_TOL * 100}pp;${of('drone').length * of('robot').length} 組對局)`);
+    + `(目標 50±${SIDE_TOL * 100}pp;${sideOf('SWARM').length * sideOf('STEEL').length} 組對局)`);
 
   // b 機種對稱
   for (const k of ['drone', 'robot', 'morph']) {

@@ -99,7 +99,7 @@ export class CharPreview {
   }
 
   // ---- 機體 ----
-  /** @param {string} id 角色 id;@param {string} side 檢視陣營(傭兵隨雇主換色) */
+  /** @param {string} id 角色 id;@param {string} side 檢視陣營(傭兵角色隨雇主換色) */
   setChar(id, side) {
     if (this.charId === id && this.unit?.userData.side === side) return;
     this._clearUnit();

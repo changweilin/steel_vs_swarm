@@ -358,10 +358,10 @@ export class BattleClient {
     this._slopeWarnAt = 0;           // 陡坡擋下的提示節流(8s;沿等高線滑得動就不算撞坡)
     this.cutin = new CutIn(document.getElementById('cutinLayer'));
 
-    // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
+    // 機體種類綁角色(2026-08-02 起每名角色都自帶 kind,不隨陣營);未選角/觀戰退回陣營主力機種
     this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
     this.isDrone = this.heroKind === 'drone';
-    this.isMorph = this.heroKind === 'morph';   // 傭兵變形者(飛行 ↔ 地面雙型態)
+    this.isMorph = this.heroKind === 'morph';   // 變形機甲(飛行 ↔ 地面雙型態)
     this.flight = false;                        // morph:目前是否飛行型態
     this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
     // 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT):爬升動力條 + 受擊掉高
@@ -5260,7 +5260,7 @@ export class BattleClient {
   }
 
   /** 請求無敵幀(蓄力跳 / 升空變形起跳離地 / 無人機完美迴避):時長與 CD 由伺服器 heroIframe 權威把關
-   *  (機甲/傭兵 15s、無人機 30s),這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
+   *  (機甲/變形機甲 15s、無人機 30s),這裡只做防連發節流 —— 被伺服器拒絕(CD 中)就什麼都不會發生。 */
   _reqIframe() {
     const now = performance.now() / 1000;
     if (now < (this._ifReqAt || 0) + 1.5) return;
