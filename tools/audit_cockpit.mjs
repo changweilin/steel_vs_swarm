@@ -2,7 +2,7 @@
 // 前置:伺服器在 8620 執行中(node server/server.js);Playwright 借用 mapping_elf 的安裝
 // 用法:node tools/audit_cockpit.mjs [--parts] [--only s01,t03]
 //
-// 使用者四條取景規則(全 32 角色 × 變形機甲雙型態):
+// 使用者四條取景規則(全 32 角色 × 變形者雙型態):
 //  ① 視野不可妨礙視線 —— 準星錐(COCKPIT.SIGHT_DEG 半角)內 MUST 零遮擋
 //  ② 手部/武器不可超出 HUD 太多 —— 武裝頂緣 MUST ≤ COCKPIT.WPN_TOP(NDC y)
 //  ③ 面積不可太大 —— 座艙總遮擋 ≤ COCKPIT.AREA_MAX、武裝 ≤ COCKPIT.WPN_AREA_MAX
@@ -74,7 +74,7 @@ const rep = await page.evaluate(async ({ PARTS, ONLY }) => {
     return { cov: cov / N, sight: sight / N, mid: mid / N, topY, minDeg: minDeg === 999 ? 90 : minDeg };
   };
 
-  /** 只隱藏(絕不打開)—— 變形機甲的型態可見性由 _syncCockpitWeapon 定案,稽核 MUST NOT 覆寫 */
+  /** 只隱藏(絕不打開)—— 變形者的型態可見性由 _syncCockpitWeapon 定案,稽核 MUST NOT 覆寫 */
   const isolate = (list, keep) => {
     const prev = list.map((o) => o.visible);
     list.forEach((o) => { if (!keep(o)) o.visible = false; });
@@ -179,7 +179,7 @@ const rep = await page.evaluate(async ({ PARTS, ONLY }) => {
           const isDesc = (n, root) => { let p = n; while (p) { if (p === root) return true; p = p.parent; } return false; };
           const list = [];
           for (const o of c.cockpit.children) {
-            // 容器(武裝組 / 變形雙型態組)下沉一層;變形機甲的 gunGroup 還要再下沉一層(_gunG/_gunA)
+            // 容器(武裝組 / 變形雙型態組)下沉一層;變形者的 gunGroup 還要再下沉一層(_gunG/_gunA)
             if (o === c.gunGroup && c.isMorph) for (const k of o.children) for (const q of k.children) list.push({ o: q, wpn: true });
             else if (o === c.gunGroup || o === c.cockGround || o === c.cockAir) for (const k of o.children) list.push({ o: k, wpn: o === c.gunGroup });
             else list.push({ o, wpn: false });

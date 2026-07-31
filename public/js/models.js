@@ -17,7 +17,7 @@ import { heroPalette, paintUnit } from './paint.js';
 export const MODEL_MANIFEST = Object.assign({
   'hero:robot':   null,                                          // 機甲:程序生成 人形/雙足獸/四足獸(doc/image/robot+beast 賽璐璐重構;GLB 可經 MODEL_MANIFEST_EXTRA 蓋回)
   'hero:drone':   null,                                          // 無人機:程序生成 旋翼/定翼/擬態翼(doc/image/drone+fly 賽璐璐重構)
-  'hero:morph':   null,                                          // 傭兵變形機甲:程式生成(雙型態)
+  'hero:morph':   null,                                          // 傭兵變形者:程式生成(雙型態)
   'creep:soldier': null,                                         // 機槍步兵:程式生成(pawn-casual GLB 徒手,無法滿足「步兵手持機槍」)
   'creep:apc':    null,                                          // 裝甲車:程式生成
   'creep:tank':   null,                                          // 坦克:程式生成
@@ -3381,7 +3381,7 @@ function buildBipedBeast(side, vis) {
   return g;
 }
 
-// ---------- 傭兵變形機甲(雙型態分段姿勢系統)----------
+// ---------- 傭兵變形者(雙型態分段姿勢系統)----------
 const clamp01 = (t) => Math.max(0, Math.min(1, t));
 /**
  * 分段姿勢插值器(doc/transformer_plan.html Task 2.1):
@@ -3408,7 +3408,7 @@ function makePoser(parts) {
 }
 
 /**
- * 傭兵變形機甲(hero:morph)— 飛行/地面剪影顯著不同的雙型態程序模型。
+ * 傭兵變形者(hero:morph)— 飛行/地面剪影顯著不同的雙型態程序模型。
  * 兩類等比例(4/4),原型迴避無人機/機器人陣營既有生物(蜂/翼龍/飛龍/鷹/猩猩/暴龍/獵犬…):
  *  A 類 定翼/旋翼 ↔ 人形雙足:vis.flight = 'jet' 鴨翼戰機(腿收攏成中置雙發機艙、
  *       骨盆後緣展開後掠雙垂尾)|'uav' 長直翼無人機(腿外張成雙尾桁、桁端大型 V 尾)
@@ -5804,7 +5804,7 @@ function buildRobotMech(side, vis) {
  * anchor 可覆寫肩點/燈條位置(程序生成人型機甲自帶胸燈,傳 trim:false)。
  */
 /**
- * 餌機:機甲外掛的可分離子機(誘導導彈 / 偵察機 / 誘餌)。
+ * 集束轟炸機(內部識別字仍是 decoy):變形者外掛的可分離子機(投彈機 / 偵察機 / 誘餌)。
  * 機首朝 +z(與機甲模型同慣例;game.js 一律以 ry + π 套用朝向)。
  * 尺寸以 len ≈ 2.2 為基準,掛在機甲肩上時整組縮放。
  */
@@ -5836,7 +5836,29 @@ function buildDecoy(side, vis = null) {
   return g;
 }
 
-/** 機甲肩上的餌機掛點(組合/分離動畫的錨點;game.js 以 userData.decoyPod 控制顯隱與縮放) */
+/**
+ * 極音速飛彈(2026-08-01;機甲長按招式的彈體)。
+ * 與集束轟炸機同一具彈體幾何(**刻意共用** buildDecoy —— 兩者都是「彈體 + 錐形彈頭 + 四片尾翼」,
+ * 各寫一份就是第二份實作),差異只有尾端多一段熾亮推進焰。
+ * **尺寸不在這裡放大**:makeUnit 一律 fitToHeight 到 `TARGET_H.hyper`(= decoy × HYPER.MODEL_F),
+ * 而命中量體 `TARGET_R.hyper` 吃同一個 MODEL_F ⇒ 看到多大就是打到多大(§「兩端同量體」)。
+ * 推進焰的 y 向半徑 MUST 小於彈體(含尾翼)的 y 向半高 —— fitToHeight 以**高度**定尺,
+ * 焰口一撐高就會把整枚飛彈等比縮小(同 tank 天線的前科)。
+ */
+function buildHyperMissile(side, vis = null) {
+  const g = new THREE.Group();
+  g.add(buildDecoy(side, vis));
+  const accent = new THREE.Color(vis?.hue ?? SIDES[side]?.color ?? 0xffffff);
+  // 推進焰:錐形(圓柱預設軸 +y ⇒ 轉 −90° 躺成 −z 尾向),自發光不描邊
+  const flame = cyl(g, 0.04, 0.22, 1.4, 8, 0, 0, -1.55, accent,
+    { emissive: accent, emissiveIntensity: 2.2 });
+  flame.rotation.x = -Math.PI / 2;
+  flame.userData.noOutline = true;
+  // 螺旋航跡由伺服器逐 tick 給位置/朝向 ⇒ 這裡**不掛** userData.spin(自轉會與回報的 ry 打架)
+  return g;
+}
+
+/** 變形者肩上的集束轟炸機掛點(組合/分離動畫的錨點;game.js 以 userData.decoyPod 控制顯隱與縮放) */
 function decoyPod(side, vis, target) {
   const pod = buildDecoy(side, vis);
   pod.scale.setScalar(target * 0.42 / pod.userData.decoyLen);
@@ -7476,6 +7498,7 @@ const FALLBACK = {
   'hero:robot': (side, vis, ch) => buildRobotMech(side, vis, ch),
   'hero:morph': (side, vis, ch) => buildMorphMech(side, vis, ch),
   decoy: (side, vis) => buildDecoy(side, vis),
+  hyper: (side, vis) => buildHyperMissile(side, vis),
   // NPC/塔陣營差異化:鋼鐵 = 履帶/輪式軍武;蜂群 = 懸浮/旋翼/機器人重塑版
   // 人類步兵外觀雙方對調:蜂群 = 人類部隊、鋼鐵 = 機器人部隊(2026-07-11)
   // 第三方(GUER/MILI,2026-07-17):非正規武裝專屬建模,剪影與雙陣營都不同
@@ -7543,7 +7566,7 @@ const MOVE_SIG = {
   t10: { poise: 0.58, idleF: 0.82, idleA: 1.05, launch: 0.20, spool: 0.58, brake: 0.52, settle: 1.05 },  // 持盾兵:方陣架步推進、落盾定樁
   t11: { poise: 0.70, idleF: 0.48, idleA: 1.62, launch: 0.14, spool: 0.85, brake: 0.20, settle: 1.90 },  // 暴龍:老獵手潛步、質量長滑抬尾配平
   t12: { poise: 0.20, idleF: 0.70, idleA: 0.85, launch: 0.15, spool: 0.40, brake: 0.30, settle: 1.40 },  // 巨兵哨兵:好奇緩擺頭巡視、謹慎試探
-  // 傭兵變形機甲(地面 + 飛行)
+  // 傭兵變形者(地面 + 飛行)
   m01: { poise: 0.85, idleF: 0.90, idleA: 0.40, launch: 0.90, spool: 0.10, brake: 0.70, settle: 0.40, hover: 0.55, hoverF: 1.8, hoverA: 0.12, surge: 0.85, flare: 0.45, bank: 0.70 },  // 吸血鬼決鬥站姿 ⟷ 敏捷三旋翼
   m02: { poise: 0.62, idleF: 0.48, idleA: 1.60, launch: 0.05, spool: 0.90, brake: 0.10, settle: 2.25, hover: 0.15, hoverF: 0.5, hoverA: 0.25, surge: 0.05, flare: 0.05, bank: 0.05 },  // 機械巨象護衛 ⟷ 浮空飛船
   m03: { poise: 0.38, idleF: 1.92, idleA: 1.05, launch: 0.94, spool: 0.08, brake: 0.60, settle: 0.42, hover: 0.30, hoverF: 0.7, hoverA: 0.15, surge: 0.70, flare: 0.85, bank: 0.62 },  // 悟空掌行跑酷 ⟷ 光翼雲行
@@ -7586,7 +7609,7 @@ const CAST_SIG = {
   t10: { omni: 'stomp', dir: 'jab' },     // 神盾:落盾定樁 + 盾擊
   t11: { omni: 'roar', dir: 'jab' },      // 暴龍:咆哮 + 俯衝咬殺
   t12: { omni: 'dance', dir: 'jab' },     // 巨兵:園丁機器人搖擺 + 圓臂直拳
-  // 傭兵變形機甲(地面型演出;飛行型自動收斂成軀幹級動作)
+  // 傭兵變形者(地面型演出;飛行型自動收斂成軀幹級動作)
   m01: { omni: 'spin', dir: 'swing' },    // 吸血鬼:披風迴旋 + 爪擊
   m02: { omni: 'roar', dir: 'swing' },    // 巨象:昂鼻長鳴 + 象鼻橫掃
   m03: { omni: 'dance', dir: 'swing' },   // 悟空:猴舞 + 如意棒掄劈
@@ -7690,8 +7713,8 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   // 施法動作性格(castSig):全向/定向施法動作原型(locomotion.js stepCastPose 消費)
   if (ch && g.userData.rig && CAST_SIG[ch]) g.userData.rig.castSig = CAST_SIG[ch];
 
-  // 變形機甲:肩上的餌機掛點(狙擊長按右鍵分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)。
-  // 2026-07-18:非變形機甲(hero:robot)移除餌機(改重砲模式),不再掛餌機模組。
+  // 變形者:肩上的餌機掛點(狙擊長按右鍵分離發射;顯隱/組合動畫見 game.js _updateDecoyPod)。
+  // 2026-07-18:機甲(hero:robot)移除餌機(改重砲模式),不再掛餌機模組。
   if (kind === 'hero:morph') {
     const pod = decoyPod(side, vis, target);
     outlinify(pod, outlineW(target));

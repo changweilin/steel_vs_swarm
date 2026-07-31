@@ -6,8 +6,9 @@
 //   ② **射線被目標自己截斷**:客戶端回報的 len 止於彈道終點,而彈道終點就是目標的**近側表面**
 //      (beam 的準星射線尤其明顯)⇒ 目標中心落在線段之外,s > maxS 判成落空。
 //      修正 = 軸距量到「線段上最近點」而非要求中心落在線段內(客戶端另讓貫穿光束不停在單位上)。
-// 另驗:重砲傾洩窗的加粗係數(LANCE.BARRAGE_F)兩端同步 —— 舊制只有演出端 ×1.5,
-//       伺服器仍用原半徑 ⇒ 看到的比打到的粗 50%(A18「看到多粗就是打到多粗」)。
+// 2026-08-01(機甲改招為極音速飛彈,舊巨砲整組移除):貫穿粗細**不再有任何情境倍率** ——
+//       `lanceR(def)` 是唯一半徑來源,兩端(伺服器 _lanceHits / 演出 _lanceVisual)吃同一支。
+//       舊 `lanceR(def, barrage)` 的第二參數 MUST NOT 復辟(那是「看到的比打到的粗」的來源)。
 //
 // 用法:node tools/audit_lance_hit.mjs
 
@@ -81,8 +82,8 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
   assert(ok, 'beam / rail / gun 三種 line 類重武器都有角色使用(測試素材齊備)');
   assert(LANCE.R.beam > LANCE.R.rail && LANCE.R.rail > LANCE.R.gun,
     `圓柱粗細階梯 beam > rail > gun(${LANCE.R.beam} / ${LANCE.R.rail} / ${LANCE.R.gun} m)`);
-  assert(lanceR({ type: 'beam' }, true) === LANCE.R.beam * LANCE.BARRAGE_F,
-    `重砲傾洩窗加粗收在 lanceR 單一縫(×${LANCE.BARRAGE_F},演出端 _lanceVisual 取同一支)`);
+  assert(LANCE.BARRAGE_F === undefined && lanceR({ type: 'beam' }, true) === LANCE.R.beam,
+    'lanceR 不再吃任何情境倍率(舊 LANCE.BARRAGE_F 已隨巨砲移除,第二參數 MUST NOT 復辟)');
   assert(lanceR({ type: 'nosuch' }) === LANCE.R.gun, '未知武器型別退回最細的 gun 半徑');
 }
 
@@ -222,21 +223,23 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
     '射線遠高於塔頂(垂直帶寬容之外)判定落空');
 }
 
-// ---------- ⑦ 重砲傾洩窗:加粗確實生效於伺服器結算 ----------
+// ---------- ⑦ 圓柱半徑恆為 lanceR(def):兩端同一條尺、無情境加粗 ----------
 {
   const sim = sandbox();
   const w = charWithHeavy('gun') || charWithHeavy('rail') || charWithHeavy('beam');
   const h = sim.addHero('SWARM', 'p_ba', w.id);
   h.x = 0; h.z = 0; h.y = 0;
   const oy = LOS.EYE_M;
-  const R = lanceR(w.def);
-  // 擺在「一般判定之外、傾洩窗加粗之內」的側向偏移
-  const off = (R + lanceR(w.def, true)) / 2 + hitR({ kind: 'soldier' });
-  const foe = sim._add({ kind: 'soldier', side: 'STEEL', x: off, z: 120, y: 0, hp: 99999, m: 99999 });
-  assert(!sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400, false).some((k) => k.t === foe),
-    `側向 ${off.toFixed(1)}m:一般模式判定落空`);
-  assert(sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400, true).some((k) => k.t === foe),
-    '同一位置:重砲傾洩窗(圓柱加粗)判定命中 —— 演出的 1.5 倍粗不再是空頭支票');
+  const R = lanceR(w.def) + hitR({ kind: 'soldier' });
+  // 判定邊界內外各擺一名:內側命中、外側落空,且**多傳一個舊 barrage 參數也不該改變結果**
+  const near = sim._add({ kind: 'soldier', side: 'STEEL', x: R * 0.8, z: 120, y: 0, hp: 99999, m: 99999 });
+  const far = sim._add({ kind: 'soldier', side: 'STEEL', x: R * 1.4, z: 100, y: 0, hp: 99999, m: 99999 });
+  assert(sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400).some((k) => k.t === near),
+    `側向 ${(R * 0.8).toFixed(1)}m(判定半徑內)命中`);
+  assert(!sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400).some((k) => k.t === far),
+    `側向 ${(R * 1.4).toFixed(1)}m(判定半徑外)落空`);
+  assert(!sim._lanceHits(h, w.def, 0, 0, oy, 0, 1, 0, 400, true).some((k) => k.t === far),
+    '傳入舊的 barrage 旗標也不會加粗(_lanceHits 已無該參數 ⇒ 沒有殘留旁路)');
 }
 
 // ---------- ⑧ 敵我識別:友軍與駐守單位不進命中列表 ----------
@@ -257,17 +260,17 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
 
 // ---------- ⑨ 演出範圍 = 判定範圍(靜態規則;three 走 CDN,沙箱無法真渲染)----------
 // 使用者需求「動畫範圍須一致」+ A18「看到多粗就是打到多粗」。三個會回歸的寫法:
-//   ① 演出端自己乘倍率(舊 `barrage ? 1.5 : 1`)⇒ 伺服器沒跟上 = 空頭支票
+//   ① 演出端自己乘倍率(舊巨砲的 `barrage ? 1.5 : 1`)⇒ 伺服器沒跟上 = 空頭支票
 //   ② 外層圓柱只畫判定半徑的一部分(舊 `w: r * 0.45`)⇒ 玩家看到細線、判定卻寬一倍
 //   ③ 演出端改吃 lanceR 以外的來源
 {
   const game = readFileSync(new URL('../public/js/game.js', import.meta.url), 'utf8');
   const vis = game.slice(game.indexOf('_lanceVisual(from, to, def, side'));
   const body = vis.slice(0, vis.indexOf('\n  }\n'));
-  assert(/const r = lanceR\(def, barrage\);/.test(body),
-    '_lanceVisual 的圓柱半徑取自 lanceR(def, barrage) 單一縫');
-  assert(!/barrage \? 1\.5 : 1/.test(body),
-    '演出端 MUST NOT 自己寫傾洩窗倍率(加成已收進 LANCE.BARRAGE_F)');
+  assert(/const r = lanceR\(def\);/.test(body),
+    '_lanceVisual 的圓柱半徑取自 lanceR(def) 單一縫');
+  assert(!/barrage/.test(body),
+    '演出端 MUST NOT 留任何傾洩窗倍率的殘骸(巨砲已整組移除)');
   assert(/beamLine\([^)]*\{ ttl: [\d.]+, w: r, op: [\d.]+ \}\)/.test(body),
     'rail/gun 外層通道滿寬 w: r(= 判定半徑),靠 op 壓低不透明度而非縮小尺寸');
   assert(/gundamBeam\([\s\S]{0,120}\{ r,/.test(body),

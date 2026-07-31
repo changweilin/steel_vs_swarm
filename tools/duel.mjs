@@ -77,7 +77,7 @@ function dodgeP(target, dh) {
 /** 建一名對局者(Lv1 基準,與 bal ① 同一組解析縫) */
 export function fighter(ch, lvl = 1) {
   const kind = charKind(ch), u = UNITS[kind], m = CHARACTERS[ch].mods || {};
-  const flying = kind === 'drone';                    // 無人機恆飛行;變形機甲以地面型入場(高度維度交給 dh 掃描)
+  const flying = kind === 'drone';                    // 無人機恆飛行;變形者以地面型入場(高度維度交給 dh 掃描)
   const slots = [];
   for (const id of ['light', 'heavy']) {
     const w = heroWeapon(ch, id, lvl, true);

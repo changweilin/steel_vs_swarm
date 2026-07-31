@@ -106,21 +106,21 @@ ok(/export const altRangeMax = \(\) => 1 \+ ALTITUDE\.RANGE;/.test(D),
 // =================================================================================
 sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下');
 // ---------------------------------------------------------------------------------
-// 客戶端彈道上限(game.js `_tryFire` 建立彈體時的 b.max)= range × _altRangeMul × 重砲窗,
+// 客戶端彈道上限(game.js `_tryFire` 建立彈體時的 b.max)= range × _altRangeMul,
 // 而 _altRangeMul 的上界就是 altRangeMax();伺服器 heroBurst 的上界 MUST ≥ 它。
 {
   const alt = methodSrc('_altRangeMul', G);
   ok(/1 \+ ALTITUDE\.RANGE \* altScale\(dh\)/.test(alt),
     '客戶端 _altRangeMul 的上界 = 1 + ALTITUDE.RANGE(= altRangeMax(),兩端同一條公式)');
-  ok(/max: def\.range \* this\._altRangeMul\(def\) \* rMul/.test(G),
-    '客戶端彈體射程上限 = range × _altRangeMul × 重砲窗');
+  ok(/max: def\.range \* this\._altRangeMul\(def\),/.test(G),
+    '客戶端彈體射程上限 = range × _altRangeMul(2026-08-01 起無重砲窗:巨砲已整組移除)');
   const burst = methodSrc('heroBurst', S);
   ok(/const impCap = wp\.def\.range \* altRangeMax\(\) \* RANGE_TOL;/.test(burst),
     'heroBurst 落點閘門 = range × altRangeMax() × RANGE_TOL(三個因子皆推導)');
   const burstCode = burst.replace(/^\s*\/\/.*$/gm, '');   // 只驗可執行原文(說明裡提得到舊值 1.15)
   ok(!/1\.15/.test(burstCode), 'heroBurst 不再手寫 1.15(舊制比其餘閘門緊 ⇒ 高地榴彈靜默丟包)');
   ok((burst.match(/impCap/g) || []).length >= 3,
-    '僚機齊射吃同一道 impCap(舊制僚機另寫一份、還漏掉重砲窗)');
+    '僚機齊射吃同一道 impCap(舊制僚機另寫一份 ⇒ 兩端分家)');
   ok(altRangeMax() * RANGE_TOL > 1.15,
     `舊制 1.15 確實收不下客戶端上限(現界 ${(altRangeMax() * RANGE_TOL).toFixed(3)} > 1.15)`);
 }
@@ -229,8 +229,8 @@ sec('Ⅳ 射程光暈的「打得到」判定:逐彈道分派、五類全覆蓋�
   ok(/rule\.hit === 'blast'/.test(re) && /rule\.path === 'arc'/.test(re) && /rule\.arm/.test(re),
     '_reachable 三個欄位全數消費(規則表沒有寫了不用的欄位)');
   ok(/blastCoreR\(def\)/.test(re), '爆炸戰鬥部的判據 = 落點落在爆風核心帶(blastCoreR,推導不手寫)');
-  ok(/def\.range \* this\._altRangeMul\(def\) \* rMul/.test(rg),
-    '光暈的有效射程與擊發同一組(高度制空 + 重砲窗;漏乘 = 光暈比實際射程短)');
+  ok(/def\.range \* this\._altRangeMul\(def\);/.test(rg),
+    '光暈的有效射程與擊發同一組(高度制空;漏乘 = 光暈比實際射程短)');
 }
 // 彈道積分單一縫:繪製與判定共用一份
 {

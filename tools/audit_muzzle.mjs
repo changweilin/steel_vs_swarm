@@ -4,7 +4,7 @@
 // ① 32 英雄地面型:rig.wpn 輕/重的「槍尾→槍口」方向(ref 框架 fwd 軸)MUST 朝機體正前
 //    (dot(+z) ≥ 0.8;例外:aegis 雙肩 VLS 朝上 = 本體特徵、monkey 尾砲須進重武器交戰檢查)
 // ② monkey 尾砲:地面重武器交戰(_aimH)後砲口 MUST 轉前(dot(+z) ≥ 0.6)
-// ③ 變形機甲飛行型(m→1):輕/重槍口 MUST 朝航向(dot(+z) ≥ 0.75)
+// ③ 變形者飛行型(m→1):輕/重槍口 MUST 朝航向(dot(+z) ≥ 0.75)
 // ④ 槍口位置 MUST 在武器前端(muz 沿射向投影 ≥ ref 原點)且掛焰(rig.flames)
 // ⑤ 開火後座:fireFx 注入後 _kickL/_kickR/_kickB 任一 MUST > 0.02(輕重各驗)
 // ⑥ 戰鬥姿勢:有 gunR/gunL 的機體,靜止(交戰)時槍身 rotation.x MUST 收斂到 aim 角 ±0.25
@@ -119,7 +119,7 @@ const report = await page.evaluate(async () => {
         if (dz < 0.6) r.issues.push(`monkey 尾砲重武器交戰未轉前(dot=${dz.toFixed(2)})`);
         ent.heavyFx = null;
       }
-      // ③ 變形機甲飛行型:開火中量測(悟空懸停直立是 by design,開火保持會壓平回巡航
+      // ③ 變形者飛行型:開火中量測(悟空懸停直立是 by design,開火保持會壓平回巡航
       //    → 槍口朝攻擊方向;其餘機種開不開火皆已對齊)
       if (kind === 'morph') {
         ent.cfx = null; ent.fireFx = null;

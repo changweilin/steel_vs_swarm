@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, BARRAGE, barrageShots, barrageDur, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
@@ -35,7 +35,8 @@ const KIND_KEY = {
   rocketeer: 'creep:rocketeer', howitzer: 'creep:howitzer', heli: 'creep:heli',
   tower: 'tower', drone: 'hero:drone', robot: 'hero:robot', morph: 'hero:morph', decoy: 'decoy',
   bunker: 'bunker',   // 第三方碉堡(GUER/MILI)
-  kami: 'hero:drone', // 自殺攻擊機:渲染成該角色的無人機(_spawnUnit 縮小 1/3)
+  kami: 'hero:drone', // 護衛自殺機:渲染成該角色的無人機(_spawnUnit 縮小 SIZE_F)
+  hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
 // 彈道積分的最大取樣點數(≈3m/點 ⇒ 涵蓋約 790m 弧長)。繪製緩衝(_ensureArcGuide)與
@@ -44,8 +45,13 @@ const ARC_MAXP = 264;
 // 射程光暈的評估節流(2026-07-30):光暈的判據從「距離夠近」升級成「這一發真的打得到」,
 // 而拋物線可行性要跑彈道積分 —— 全場敵人每幀重算會把 _lobAim 那條熱路徑再乘上敵人數。
 // 作法:每幀只評估固定枚數(拋物線積分貴 ⇒ 每幀 1 個;直線只是一條線段射線 ⇒ 每幀 6 個),
-// 結果快取 TTL 秒;換武器/重砲窗開關 ⇒ 整批作廢重評。尚未評估過的目標**不亮**(寧缺勿錯)。
+// 結果快取 TTL 秒;換武器 ⇒ 整批作廢重評。尚未評估過的目標**不亮**(寧缺勿錯)。
 const RANGE_GLOW = { TTL_S: 0.4, ARC_PER_FRAME: 1, RAY_PER_FRAME: 6, SURF_TOL_M: 0.5 };
+// 集束炸彈的投擲軌跡(純表現層;使用者需求「炸彈投擲軌跡同榴彈」)。
+// GRAV_F:比自由落體略重的墜落感(投擲解與逐幀積分 MUST 吃同一個值,否則畫出來的落點會偏)。
+// T:飛行時間 = 水平距離 / SPD,夾在 [MIN, MAX] ⇒ 近的快速甩出、遠的高拋,弧高隨距離自然變化。
+const DECOY_BOMB_GRAV_F = 1.6;
+const DECOY_BOMB_T = { MIN: 0.7, MAX: 2.2, SPD: 45 };
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
@@ -62,7 +68,7 @@ const SELF_F = {
 // FPV 視點 = 該機體「駕駛艙/頭艙」在自身幾何上的實際位置(2026-07-12):
 //   e = 佔機體實高的比例(舊制全機種一律 0.567 = 人形胸腔,套到水平體軸的獸型就成了「從肚子看出去」)
 //   f = 沿正面方向(-z)前移的比例 —— 水平體軸的獸首遠在身前,人形機甲的頭則幾乎在正上方。
-// 鍵 = visual.proto / visual.creature / visual.ground(變形機甲地面體態);查無 → DEF。
+// 鍵 = visual.proto / visual.creature / visual.ground(變形者地面體態);查無 → DEF。
 const VIEW_SHAPE = {
   // 人形機甲(艙在胸腔上緣~頸根)
   bastion: { e: 0.72, f: 0.10 }, seraph: { e: 0.76, f: 0.08 },
@@ -72,7 +78,7 @@ const VIEW_SHAPE = {
   // 頸部艙(水平體態):視點在頸根,頭顱在前下方 → 前移量小(頭本身佔前方視野)
   hound: { e: 0.74, f: 0.12 }, trex: { e: 0.80, f: 0.10 }, ostrich: { e: 0.84, f: 0.12 },
   stego: { e: 0.62, f: 0.14 }, centaur: { e: 0.88, f: 0.08 },
-  // 變形機甲地面體態(人形 = 頭部艙 / 獸型 = 頸部艙)
+  // 變形者地面體態(人形 = 頭部艙 / 獸型 = 頸部艙)
   vampire: { e: 0.80, f: 0.08 }, monkey: { e: 0.76, f: 0.16 },
   wolf: { e: 0.78, f: 0.12 }, atlas: { e: 0.74, f: 0.16 },
   elephant: { e: 0.74, f: 0.12 }, raptor: { e: 0.78, f: 0.10 },
@@ -98,7 +104,7 @@ const GUN_MOUNT = {
   gorilla: 'back', roo: 'hand', centaur: 'hand', cthulhu: 'tentacle',
   // 無手仿生體:嘴砲 or 背載 or 翼藏(ostrich 2026-07-17 輕武器藏左翼)
   trex: 'hand', hound: 'back', ostrich: 'wing', stego: 'back',
-  // 變形機甲地面體態(2026-07-17:raptor 雙手托槍、monkey 如意棒砲扛肩 = back 錨)
+  // 變形者地面體態(2026-07-17:raptor 雙手托槍、monkey 如意棒砲扛肩 = back 錨)
   wolf: 'hand', vampire: 'hand', monkey: 'back', atlas: 'hand',
   raptor: 'hand', elephant: 'mouth', beetle: 'mouth', panther: 'back',
   // 擬態無人機 / 擬態飛行體態
@@ -250,7 +256,7 @@ function factionMarkTex(side) {
   _markTex.set(side, t);
   return t;
 }
-// 副視窗(PiP):無人機僚機視角 / 機甲餌機視角
+// 副視窗(PiP):無人機僚機視角 / 變形者集束轟炸機視角
 // 靠左上:右下角是 minimap、右上角是 kill-feed(兩者都是 DOM,永遠疊在 WebGL 畫布上方)
 const PIP = { W_FRAC: 0.17, MAX_W: 250, ASPECT: 0.62, PAD: 12, TOP: 58, GAP: 8, FOV: 78 };
 
@@ -328,8 +334,7 @@ export class BattleClient {
     this._recoilSlowF = 0.5;
     this.samMeshes = new Map();      // 防空飛彈(伺服器權威,快照 sm 同步)
     this._visShells = [];            // 他人重武器視覺彈體(2026-07-22 彈藥同源;純表現層)
-    this._decoyBombs = [];           // 餌機投彈的「拋擲彈體」動畫(2026-07-22;落地才引爆演出,依類型上色)
-    this._barragePids = new Map();   // 他人重砲(巨炮)開窗時戳:pid → until(氣旋噴射曳光轉播)
+    this._decoyBombs = [];           // 集束炸彈的「拋擲彈體」動畫(榴彈拋物線,落地才引爆演出,依類型上色)
     this._wdefCache = new Map();     // 他人武器 def 快取(ch:slot → heroWeapon Lv1)
     this.lootMeshes = new Map();     // 戰場物資(快照 lt 同步)
     this.airdropMeshes = new Map();  // 空投物資補給箱(快照 ad 同步)
@@ -349,7 +354,7 @@ export class BattleClient {
     // 機體種類綁角色(傭兵 kind 自帶,不隨陣營);未選角/觀戰退回陣營預設
     this.heroKind = this.side ? (CHARACTERS[this.ch]?.kind || SIDES[this.side].hero) : null;
     this.isDrone = this.heroKind === 'drone';
-    this.isMorph = this.heroKind === 'morph';   // 傭兵變形機甲(飛行 ↔ 地面雙型態)
+    this.isMorph = this.heroKind === 'morph';   // 傭兵變形者(飛行 ↔ 地面雙型態)
     this.flight = false;                        // morph:目前是否飛行型態
     this.charge = 0;                            // morph:蓄力跳進度 0~1(按住 Space)
     // 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT):爬升動力條 + 受擊掉高
@@ -894,7 +899,7 @@ export class BattleClient {
   // ---------------- FPV 座艙(角色專屬:依 CHARACTERS[ch].visual 差異化,3D 賽璐璐)----------------
   // 與世界模型(models.js)同一套視覺語彙,座艙 = 從自己機體「頭/艙位」往正前方看出去的自身剪影:
   // 無人機 = 擬態獸(avian 撲翼)/ 定翼機(fixed 翼型)/ 旋翼機架;
-  // 機甲 = 人形艙框(proto 專屬)或獸首視野(creature);變形機甲 = 地面+飛行雙組件隨變形切換。
+  // 機甲 = 人形艙框(proto 專屬)或獸首視野(creature);變形者 = 地面+飛行雙組件隨變形切換。
   // 取景一律按 fov 68(全機種統一,z=-0.8 處畫面邊緣 y≈±0.54):周邊件貼邊、不擋準星。
   // 輕武器外觀依機構分類(gun/launcher/beam),主色 = 角色識別色。
   _buildCockpit() {
@@ -903,7 +908,7 @@ export class BattleClient {
     const c = this.ch && CHARACTERS[this.ch];
     const vis = c?.visual || {};
     // 座艙塗裝 = 機體塗裝(唯一的縫仍是 paint.js):色版 heroPalette + 花紋 paintUnit,
-    // tone 與 models.js 同一條規則(無人機/變形機甲/四足獸 = dark,人形機甲/雙足獸 = light)。
+    // tone 與 models.js 同一條規則(無人機/變形者/四足獸 = dark,人形機甲/雙足獸 = light)。
     const tone = (this.isDrone || this.isMorph || vis.form === 'beast') ? 'dark' : 'light';
     const PAL = heroPalette(vis, this.side, tone);
     // builder 內的結構灰階常數在此映射成角色色版階梯 —— 機體是什麼顏色,座艙就是什麼顏色。
@@ -928,8 +933,8 @@ export class BattleClient {
     this.cockpitSpin = [];    // 旋翼(繞 y 自轉)
     this.cockpitSpinZ = [];   // 螺旋槳(繞 z 自轉,軸線朝前)
     this.cockpitFlap = [];    // 撲翼/觸手:每幀 rot[ax] = base + amp·sin(2π·hz·t + ph)
-    this.cockGround = null;   // 變形機甲:地面型態組件
-    this.cockAir = null;      // 變形機甲:飛行型態組件
+    this.cockGround = null;   // 變形者:地面型態組件
+    this.cockAir = null;      // 變形者:飛行型態組件
     this._cockT = 0;
     this.gunGroup = new THREE.Group();
 
@@ -956,7 +961,7 @@ export class BattleClient {
     const sameRoot = wpn.light?.nodes?.[0] && wpn.light.nodes[0] === wpn.heavy?.nodes?.[0];
     const jobs = sameRoot ? [['light', 'heavy']] : [['light'], ['heavy']];
     if (this.isMorph) {
-      // 變形機甲:兩型態各一套武裝(地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙),隨變形整組切換
+      // 變形者:兩型態各一套武裝(地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙),隨變形整組切換
       this._gunG = new THREE.Group();
       this._gunA = new THREE.Group();
       this.gunGroup.add(this._gunG, this._gunA);
@@ -1079,7 +1084,7 @@ export class BattleClient {
 
   /**
    * 座艙武裝同步(2026-07-22 同源改制):
-   * 變形機甲隨型態切換整組結構+武裝;所有機種隨瞄準狀態切換「作用中槍口」(輕⇄重)——
+   * 變形者隨型態切換整組結構+武裝;所有機種隨瞄準狀態切換「作用中槍口」(輕⇄重)——
    * 輕/重武器與第三人稱一樣同時可見,只有彈道起點與槍口焰跟著當前武器走。
    */
   _syncCockpitWeapon() {
@@ -1727,7 +1732,7 @@ export class BattleClient {
   }
 
   /**
-   * 變形機甲座艙:地面 / 飛行兩組件同時建好,依 this.flight 切換可見(伺服器不管型態)。
+   * 變形者座艙:地面 / 飛行兩組件同時建好,依 this.flight 切換可見(伺服器不管型態)。
    * 型態一變,座艙結構與武裝掛點跟著整組換掉 —— 地面手持/嘴砲 ↔ 飛行機翼硬點/機身吊艙。
    * 回傳 { ground, air } 兩套掛點錨。
    */
@@ -2241,7 +2246,7 @@ export class BattleClient {
   /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導 */
   get selfH() { return this.heroKind ? heroTargetH(this.heroKind, this.ch) : SOLDIER_H * 4; }
 
-  /** 目前是否為飛行機體(無人機恆飛;變形機甲僅飛行型態) */
+  /** 目前是否為飛行機體(無人機恆飛;變形者僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
 
   /**
@@ -2344,7 +2349,7 @@ export class BattleClient {
    * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
    */
-  _fanBlast(muzzle, dir, def, barraging = false) {
+  _fanBlast(muzzle, dir, def) {
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(dir, up).normalize();
     const half = (def.arc || 15) * Math.PI / 180;
@@ -2352,17 +2357,16 @@ export class BattleClient {
     const col = plasma
       ? (this.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff)
       : (this.side === 'SWARM' ? 0xffe08a : 0xbfe6ff);
-    const blades = (plasma ? 7 : 9) + (barraging ? 4 : 0);   // 巨炮:離子扇加葉數(更密更亮)
-    const wF = barraging ? 1.9 : 1, rF = barraging ? BARRAGE.RANGE_F : 1;   // 巨炮:更寬 + 射程 +20%(對齊伺服器加程)
+    const blades = plasma ? 7 : 9;
+    const wF = 1, rF = 1;
     this._muzzleBurst(muzzle, plasma, this.side);   // 電漿重武器槍口爆(明顯度)
-    if (barraging) shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 3.8, col);
     // 離子吐息主噴流(哥吉拉式;使用者指定參考):錐狀噴口 + 螺旋纏繞能量帶。
     // 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 噴口最粗、末端收束就是它的可視化。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
       const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, def.range * this._altRangeMul(def) * rF * 0.82));
       ionBreath(this.scene, this.effects, muzzle, clip.to, col,
-        { r: 2.2 * wF, ttl: 0.45 * (barraging ? 1.4 : 1), coil: barraging ? 4 : 3, core });
+        { r: 2.2 * wF, ttl: 0.45, coil: 3, core });
       shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
     }
     for (let i = 0; i < blades; i++) {
@@ -2373,8 +2377,8 @@ export class BattleClient {
       const len = def.range * this._altRangeMul(def) * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
-      beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24 * (barraging ? 1.5 : 1), w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
-      starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, (plasma ? 3 : 1.5) * (barraging ? 1.7 : 1), col);
+      beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
+      starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, plasma ? 3 : 1.5, col);
     }
   }
 
@@ -2614,7 +2618,7 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // 機種專屬能力(無人機護衛自殺機 / 非變形機甲重砲 / 變形機甲餌機)以「長按右鍵」觸發,
+          // 機種專屬能力(無人機護衛自殺機 / 機甲重砲 / 變形者餌機)以「長按右鍵」觸發,
           // 一般模式與狙擊模式皆可(見 _tickHoldAbility,2026-07-27);F 鍵停用(2026-07-18)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
@@ -2846,7 +2850,8 @@ export class BattleClient {
           this.decoyCd = e.dcd ?? 0;
           this.decoyDocked = !!e.dc;
           this.kamiCd = e.kcd ?? 0;   // 無人機護衛自殺機冷卻(HUD;歸零 = 兩架重現)
-          this.barrageCd = e.bcd ?? 0;   // 非變形機甲重砲模式冷卻(HUD)
+          this.hyperCd = e.hcd ?? 0;     // 機甲極音速飛彈冷卻(HUD)
+          this.hyperFly = !!e.hfly;      // 空中已有一枚(鈕面顯示「飛行中」)
 
           this.hp = e.hp; this.maxHp = e.m;
           this.sp = e.sp ?? this.sp; this.maxSp = e.msp ?? this.maxSp;
@@ -3001,7 +3006,8 @@ export class BattleClient {
     const key = e.k === 'base' ? `base:${e.s}` : civ ? 'civ' : KIND_KEY[e.k];
     // 平民:陣營看 cs(伺服器 side=null,讓兩陣營都能開槍),ch = 職業 index(選 buildCivilian 變體)
     // 餌機:不畫陣營光環(它是一枚飛行中的彈體,不是站在地上的單位)
-    const { group, mixer } = makeUnit(key, civ ? e.cs : e.s, { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' });
+    const { group, mixer } = makeUnit(key, civ ? e.cs : e.s,
+      { ch: civ ? e.pf : e.ch, ring: e.k !== 'decoy' && e.k !== 'kami' && e.k !== 'hyper' });
     if (e.k === 'kami') group.scale.setScalar(SQUAD.KAMI.SIZE_F);   // 護衛自殺機衝出:SIZE_F(1/2)體型
     const hero = HERO_KINDS.has(e.k);
     // 三機小隊:只有主視野那架(e.act)才是「自己」,另外兩架當一般友軍渲染
@@ -3027,8 +3033,9 @@ export class BattleClient {
       dimR: Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) / 2,
       id: e.id, kind: e.k, side: e.s, mesh: group, mixer, ch: e.ch, pid: e.pid ?? null,
       tgt: new THREE.Vector3(e.x, 0, -e.z), hp: e.hp, max: e.m,
-      isSelf, hero, heroY: 0, ry: 0, flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami',
-      decoy: e.k === 'decoy', kami: e.k === 'kami', si: e.si || 0,
+      isSelf, hero, heroY: 0, ry: 0,
+      flies: e.k === 'heli' || e.k === 'decoy' || e.k === 'kami' || e.k === 'hyper',
+      decoy: e.k === 'decoy', kami: e.k === 'kami', hyper: e.k === 'hyper', si: e.si || 0,
       isStatic: e.k === 'tower' || e.k === 'base' || e.k === 'bunker',
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
@@ -3054,9 +3061,11 @@ export class BattleClient {
     return ent;
   }
 
-  /** 無人機兩架常駐護衛自殺機(純客戶端外觀:外觀同主機、SIZE_F 體型、貼身兩側)。
-   *  觸發前不是 sim 實體(不可鎖定/受傷);狙擊長按右鍵衝出時交給 sim 的 kami 實體渲染,
-   *  自爆後 kamiCd 歸零才重現(見 _updateEscorts 的顯隱判定)。 */
+  /** 無人機 KAMI.N 架常駐護衛自殺機(純客戶端外觀:外觀同主機、SIZE_F 體型、貼身兩側)。
+   *  觸發前不是 sim 實體(不可鎖定/受傷);長按右鍵「飽和攻擊」衝出時交給 sim 的 kami 實體渲染,
+   *  自爆後 kamiCd 歸零才重現(見 _updateEscorts 的顯隱判定)。
+   *  橫向站位 s ∈ [−1, 1] 由 N 推導(**與伺服器 heroKamikaze 同一式**)⇒ 改 N 兩端一起散開,
+   *  MUST NOT 退回 `i === 0 ? -1 : 1`(N>2 時會全部擠在右側)。 */
   _buildDroneEscorts(ent) {
     ent.escorts = [];
     for (let i = 0; i < SQUAD.KAMI.N; i++) {
@@ -3065,7 +3074,7 @@ export class BattleClient {
       group.visible = false;
       this.scene.add(group);
       if (group.userData.spin) this.spinners.add(group);
-      ent.escorts.push({ mesh: group, s: i === 0 ? -1 : 1 });   // 左 / 右
+      ent.escorts.push({ mesh: group, s: kamiSide(i) });
     }
   }
 
@@ -3477,9 +3486,9 @@ export class BattleClient {
   }
 
   /**
-   * 變形機甲的濕地浮台面(2026-07-25;唯一縫):水域回水面 waterY、沼澤回沼面 swampY
+   * 變形者的濕地浮台面(2026-07-25;唯一縫):水域回水面 waterY、沼澤回沼面 swampY
    * (= waterY + SWAMP_BAND,與 buildSwampSurface / 水下帷幕同一條線)、乾地回 null(照常規地面/涉水)。
-   * 變形機甲兩棲不潛水/不陷沼 —— 地面型停駐、觸地變形、蓄力彈射一律以此浮台為地板:
+   * 變形者兩棲不潛水/不陷沼 —— 地面型停駐、觸地變形、蓄力彈射一律以此浮台為地板:
    *   ①觸地變形停在**可見濕地表面**(WYSIWYG,非水底);②彈射初速的 +1m 抬升能真正脫離 LAND_M 觸地區
    *   (舊制淺水的地面 gy = 河床沉在水面下,+1m 被水深吃掉 ⇒ 彈射下一幀即觸地變形回地面)。
    * 只在 isMorph 時呼叫(其餘機種維持涉水沉至 FULL_D / 無人機水面下限)。
@@ -3509,7 +3518,7 @@ export class BattleClient {
     const s = this._surf(x, z, this.pos.y);
     const wy = this.terrain.waterY;
     // 站立面(深水的有效地板 = 水面 − FULL_D,與 _updatePlayer 的 gy 同式):離地即騰空。
-    // 變形機甲兩棲浮台(水面/沼面)⇒ 停駐於濕地表面時不誤判為「離地 FULL_D」的騰空,狀態/減速與地板一致。
+    // 變形者兩棲浮台(水面/沼面)⇒ 停駐於濕地表面時不誤判為「離地 FULL_D」的騰空,狀態/減速與地板一致。
     const wetY = this.isMorph ? this._wetSurfaceY(x, z) : null;
     const floor = wetY != null ? wetY : (wy != null ? Math.max(s, wy - WATER.FULL_D) : s);
     if (this.pos.y - floor > AIR.OFF_GROUND) return { ...DRY, air: true };
@@ -3682,7 +3691,7 @@ export class BattleClient {
         this.hud.feed?.('🎯 匿蹤防空陣地被摧毀,該片空域安全了!');
       } else if (ev.kind === 'decoy') {
         // 餌機被攔截擊落:誘餌任務結束(PiP 隨實體消失一起收掉)
-        if (ev.pid === this.youId) this.hud.feed?.('💥 餌機被擊落,回傳畫面終止');
+        if (ev.pid === this.youId) this.hud.feed?.('💥 集束轟炸機被擊落,回傳畫面終止');
       } else if (HAZARDS[ev.kind]) {
         this.hud.feed?.(`🧹 ${HAZARDS[ev.kind].name}被清除,通道打開了!`);
       } else if (ev.kind === 'bunker') {
@@ -3710,9 +3719,10 @@ export class BattleClient {
         if (bump) { this.scene.remove(bump); this.mineMeshes.delete(ev.mid); }
       }
     } else if (ev.e === 'decoyBomb') {
-      // 變形機甲餌機投彈(沿途 / 被擊毀補投,2026-07-22):拋擲一枚依機體類型上色/造型的炸彈,
-      // 翻滾墜落 + 拖尾 → 落地才引爆(依類型的地面演出)。伺服器傷害在事件當下即結算(純視覺延後)。
-      this._spawnDecoyBomb(ev.x, -ev.z, ev.y != null ? ev.y : 8, ev.bomb || 'fire', ev.r || 14);
+      // 變形者集束炸彈(逐顆個別瞄準 / 被擊毀補投):拋擲一顆依機體類型上色/造型的炸彈,
+      // **榴彈拋物線** + 翻滾拖尾 → 落地才引爆(依類型的地面演出)。伺服器傷害在事件當下即結算(純視覺延後)。
+      this._spawnDecoyBomb(ev.x, -ev.z, ev.y != null ? ev.y : 8, ev.bomb || 'fire', ev.r || 14,
+        ev.fx != null ? { x: ev.fx, z: -ev.fz, y: ev.fy || 0 } : null);
     } else if (ev.e === 'burn') {
       if (ev.pid === this.youId) {
         this.trauma = Math.min(1, this.trauma + 0.25);
@@ -3822,14 +3832,15 @@ export class BattleClient {
       if (ev.pid === this.youId) {
         // 餌機(轟炸機)彈射分離:掛點瞬間抽離的機體震動(伺服器確認才震,請求被拒不會誤震)
         this.trauma = Math.min(1, this.trauma + SHAKE.DECOY);
-        this.hud.feed?.(ev.homing ? '🚀 餌機分離:追蹤鎖定目標!' : '🛰️ 餌機分離:直飛偵察中(無法操舵)');
+        this.hud.feed?.(ev.homing ? '💣 集束炸彈投放:轟炸機追蹤鎖定目標!' : '💣 集束炸彈投放:轟炸機直飛(無法操舵)');
       }
     } else if (ev.e === 'decoyLost') {
-      if (ev.pid === this.youId) this.hud.feed?.(`📡 餌機超出 ${DECOY.LINK_M}m,鏈路中斷`);
-    } else if (ev.e === 'barrage') {
-      // 巨砲開窗:記射手時戳,讓其後短暫窗內的視覺彈體掛上氣旋噴射尾流(自己那份在 _tryFire 判)。
-      // 窗長由該輪發數推導(barrageDur,與伺服器同一支);缺 n 的舊訊息退回下限。
-      if (ev.pid !== this.youId) this._barragePids.set(ev.pid, performance.now() / 1000 + barrageDur(ev.n) + 0.3);
+      if (ev.pid === this.youId) this.hud.feed?.(`📡 集束轟炸機超出 ${DECOY.LINK_M}m,鏈路中斷`);
+    } else if (ev.e === 'hyper') {
+      // 極音速飛彈發射:彈體本身是伺服器實體(走 ents 渲染),這裡只播報 + 發射點後燄
+      if (ev.pid === this.youId) {
+        this.hud.feed?.(ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
+      }
     } else if (ev.e === 'cast') {
       // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
       const c = CHARACTERS[ev.ch];
@@ -3926,20 +3937,18 @@ export class BattleClient {
         const up = new THREE.Vector3(0, 1, 0);
         const pcol = ev.side === 'SWARM' ? 0xffcf7f : 0x7fe8ff;
         const heavy = ev.slot !== 'light';   // 電漿重武器 = 明顯焰舌;散彈輕武器 = 細一號
-        const bar = heavy && this._isBarraging(ev.pid);   // 巨炮離子扇:更寬更亮 + 射程 +20%(2026-07-22)
-        const wF = bar ? 1.9 : 1, kMax = bar ? 4 : 2;
+        const wF = 1, kMax = 2;
         this._muzzleBurst(from, heavy, ev.side);
-        if (bar) shockRing(this.scene, this.effects, from.x, from.y, from.z, 3.8, pcol);
         // 他人的離子吐息(與自機 _fanBlast 同一支 ionBreath —— 共用視覺入口,不另寫一套)
         if (heavy) {
           const core = this._shotCols(ev.side).hot;
-          const clip = this._clipBeam(from, from.clone().addScaledVector(dir3, (ev.r || 150) * 0.82 * (bar ? BARRAGE.RANGE_F : 1)));
+          const clip = this._clipBeam(from, from.clone().addScaledVector(dir3, (ev.r || 150) * 0.82));
           ionBreath(this.scene, this.effects, from, clip.to, pcol,
             { r: 2.2 * wF, ttl: 0.45 * (bar ? 1.4 : 1), coil: bar ? 4 : 3, core });
         }
         for (let k = -kMax; k <= kMax; k++) {
           const dk = dir3.clone().applyQuaternion(new THREE.Quaternion().setFromAxisAngle(up, arc * k / kMax));
-          const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8 * (bar ? BARRAGE.RANGE_F : 1));
+          const end = from.clone().addScaledVector(dk, (ev.r || 150) * 0.8);
           const clip = this._clipBeam(from, end);   // 扇形焰舌不畫穿牆(伺服器逐目標 LOS 已擋傷害)
           beamLine(this.scene, this.effects, from, clip.to, pcol, heavy ? { ttl: 0.26 * (bar ? 1.5 : 1), w: 0.22 * wF } : { ttl: 0.2, w: 0.09 });
           if (bar) starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 3.2, pcol);
@@ -3964,16 +3973,16 @@ export class BattleClient {
         if (def && (def.type === 'launcher' || def.type === 'missile') && d3.lengthSq() > 0.01) {
           // bot 重武器(heroBurst 補發的 shot):彈藥同源 —— 與真人 tracer 同一顆視覺彈體;
           // launcher 拋物線命中目標,砲管仰角與實際發射角一致(規則 1)
-          const ldir = this._spawnVisShell(from, to, def, ev.side, sh.ch, this._isBarraging(ev.pid));
+          const ldir = this._spawnVisShell(from, to, def, ev.side, sh.ch);
           this._muzzleBurst(from, true, ev.side);
           if (def.type === 'launcher') this._aimHeavyBarrel(ev.pid, ldir);
         } else if (def && aoeClass(def) === 'line') {
           // bot 的直線貫穿重武器:與真人 tracer 同一支 _lanceVisual(圓柱粗細 = 貫穿半徑)
-          this._lanceVisual(from, this._clipBeam(from, to).to, def, ev.side, this._isBarraging(ev.pid));
+          this._lanceVisual(from, this._clipBeam(from, to).to, def, ev.side);
           this._muzzleBurst(from, true, ev.side);
         } else {
           const clip = this._clipBeam(from, to);
-          this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true, barrage: ev.slot === 'heavy' && this._isBarraging(ev.pid) });
+          this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
         }
         this._markFire(ev.pid, ev.slot, t0, { x: tx, z: tz, y: to.y });
       } else {
@@ -4018,7 +4027,7 @@ export class BattleClient {
       const def = shooter ? this._heroDefOf(shooter.ch, 'heavy') : null;
       // 直線貫穿(beam/rail/gun 重武器):他人畫面同樣看得到圓柱貫穿的粗細 = 危險區(規則可讀性)
       if (def && aoeClass(def) === 'line') {
-        this._lanceVisual(from, this._clipBeam(from, to0).to, def, m.side, this._isBarraging(m.pid));
+        this._lanceVisual(from, this._clipBeam(from, to0).to, def, m.side);
         this._muzzleBurst(from, true, m.side);
         this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
         return;
@@ -4026,7 +4035,7 @@ export class BattleClient {
       if (def && (def.type === 'launcher' || def.type === 'missile')) {
         const dir = to0.clone().sub(from);
         if (dir.lengthSq() > 0.01) {
-          const ldir = this._spawnVisShell(from, to0, def, m.side, shooter.ch, this._isBarraging(m.pid), m.mv);
+          const ldir = this._spawnVisShell(from, to0, def, m.side, shooter.ch, m.mv);
           this._muzzleBurst(from, true, m.side);
           // 拋物線武器(launcher)砲管仰角與實際發射角一致(規則 1;missile 導引不回寫)
           if (def.type === 'launcher') this._aimHeavyBarrel(m.pid, ldir);
@@ -4040,7 +4049,7 @@ export class BattleClient {
     this._shotFx(
       from,
       clip.to,
-      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut, barrage: m.slot === 'heavy' && this._isBarraging(m.pid) },
+      { heavy: m.slot === 'heavy', side: m.side, impact: !!m.hit || clip.cut },
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
@@ -4075,14 +4084,6 @@ export class BattleClient {
     let d = this._wdefCache.get(key);
     if (!d) { d = heroWeapon(ch, slot, 1, true); this._wdefCache.set(key, d); }
     return d;
-  }
-
-  /** 他人是否處於重砲(巨炮)開窗內(barrage 事件記的時戳;過期即清) */
-  _isBarraging(pid) {
-    const until = this._barragePids.get(pid);
-    if (until == null) return false;
-    if (until < performance.now() / 1000) { this._barragePids.delete(pid); return false; }
-    return true;
   }
 
   /** 他人重武器的視覺彈體(純表現層:直線+重力近似,不結算;真實爆點由伺服器 boom 事件呈現) */
@@ -4120,7 +4121,7 @@ export class BattleClient {
   }
 
   /** 他人/bot 重武器視覺彈體。launcher 走拋物線命中 to(慢速明顯弧),其餘直指;回傳實際發射方向(供砲管仰角回寫)。 */
-  _spawnVisShell(from, to, def, side, ch, barrage = false, mv = null) {
+  _spawnVisShell(from, to, def, side, ch, mv = null) {
     // mv = 射手回報的實際初速(火控解定案的裝藥號數 / 彈射模式全速)⇒ 兩端看到同一條弧。
     // bot 的 shot 事件不帶初速,退回以落點離地高度推定對空(> AA_ALT = 打空中目標)→ 高速近直線。
     const aa = def.type === 'launcher' && to.y - this.terrain.heightAt(to.x, to.z) > BALLISTIC.AA_ALT;
@@ -4136,7 +4137,7 @@ export class BattleClient {
     this._visShells.push({
       pos: from.clone(), vel,
       dist: 0, max: (def.range || 300) * 1.35, mesh,
-      cyclone: barrage ? this._attachCyclone(mesh, side) : null, cycAcc: 0, cycCol: this._shotCols(side).col,
+      cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col,
     });
     return ldir;
   }
@@ -4209,20 +4210,39 @@ export class BattleClient {
     });
   }
 
-  // ---------------- 餌機投彈拋擲動畫(2026-07-22)----------------
-  /** 拋擲一枚依機體類型上色/造型的炸彈:自餌機高度翻滾墜落 + 拖尾 → 落地引爆(_updateDecoyBombs 驅動) */
-  _spawnDecoyBomb(x, z, alt, type, r) {
+  // ---------------- 集束炸彈投擲動畫(2026-08-01 使用者需求:軌跡同榴彈)----------------
+  /**
+   * 投出一顆依機體類型上色/造型的炸彈,**走榴彈拋物線**:自轟炸機的投擲點 (fx,fy,fz) 拋向
+   * 伺服器指定的落點 (x,z) —— 初速由「同一條重力 G×GRAV_F、指定飛行時間 T」的解析解求出,
+   * 逐幀積分(_updateDecoyBombs)用的就是同一個 G ⇒ **算出來的落點就是畫出來的落點**。
+   * T 由水平距離推導(距離越遠丟得越高越久),夾在 [MIN, MAX] 秒。
+   * 沒帶投擲點(舊訊息)→ 退回原本的正上方垂直投放。
+   * 傷害在伺服器事件當下即結算,這條拋物線純表現層(MUST NOT 改成落地才回報 —— 那是 A1)。
+   */
+  _spawnDecoyBomb(x, z, alt, type, r, from = null) {
     const gy = this.terrain.heightAt(x, z);
     const col = (DECOY_BOMB[type] || DECOY_BOMB.fire).color;
     const mesh = decoyBombMesh(type, col);
-    const startY = gy + Math.max(4, alt);
-    mesh.position.set(x, startY, z);
+    const G = BALLISTIC.G * DECOY_BOMB_GRAV_F;
+    const start = from
+      ? new THREE.Vector3(from.x, this.terrain.heightAt(from.x, from.z) + Math.max(1, from.y), from.z)
+      : new THREE.Vector3(x, gy + Math.max(4, alt), z);
+    const end = new THREE.Vector3(x, gy + 0.5, z);
+    let vel;
+    if (from) {
+      // 拋擲解:水平勻速 + 垂直 (Δy + ½G·T²)/T ⇒ T 秒後精準落在 end(與榴彈火控同一條物理)
+      const d = Math.hypot(end.x - start.x, end.z - start.z);
+      const T = Math.max(DECOY_BOMB_T.MIN, Math.min(DECOY_BOMB_T.MAX, d / DECOY_BOMB_T.SPD));
+      vel = new THREE.Vector3(
+        (end.x - start.x) / T, (end.y - start.y + 0.5 * G * T * T) / T, (end.z - start.z) / T);
+    } else {
+      vel = new THREE.Vector3((Math.random() - 0.5) * 4, -2, (Math.random() - 0.5) * 4);
+    }
+    mesh.position.copy(start);
     this.scene.add(mesh);
     this._decoyBombs.push({
-      mesh, type, col, r, gy,
-      pos: new THREE.Vector3(x, startY, z),
-      // 幾近垂直投放(微隨機水平擾動,落點貼近伺服器爆點);初速略下拋
-      vel: new THREE.Vector3((Math.random() - 0.5) * 4, -2, (Math.random() - 0.5) * 4),
+      mesh, type, col, r, gy: this.terrain.heightAt(start.x, start.z),
+      pos: start.clone(), vel,
       spin: new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3),
       trailAcc: 0,
     });
@@ -4232,7 +4252,7 @@ export class BattleClient {
   _updateDecoyBombs(dt) {
     for (let i = this._decoyBombs.length - 1; i >= 0; i--) {
       const b = this._decoyBombs[i];
-      b.vel.y -= BALLISTIC.G * 1.6 * dt;   // 略重的墜落感
+      b.vel.y -= BALLISTIC.G * DECOY_BOMB_GRAV_F * dt;   // 與 _spawnDecoyBomb 的拋擲解同一個 G(不同 ⇒ 落點分家)
       b.pos.addScaledVector(b.vel, dt);
       b.mesh.position.copy(b.pos);
       b.mesh.rotation.x += b.spin.x * dt;
@@ -4367,8 +4387,7 @@ export class BattleClient {
         || !def || trajClass(def) !== 'lob' || !this.gunGroup) return;
     this.camera.updateMatrixWorld();
     const from = this.gunGroup.localToWorld(this._muzzle.clone());
-    const max = def.range * this._altRangeMul(def)
-      * (this._barragingShot() ? BARRAGE.RANGE_F : 1);
+    const max = def.range * this._altRangeMul(def);
     // ① 瞄準點(對空彈射沿用 _updateAaMode 掃到的那架,不另掃)
     const aaEnt = this._aaAim ? this._aaEnt : null;
     if (aaEnt && !aaEnt.dead && aaEnt.mesh.visible) {
@@ -4671,7 +4690,7 @@ export class BattleClient {
   _launchDecoy() {
     if (this.isDrone || !this.side) return;
     if (!this.decoyDocked) {
-      this.hud.feed?.(`🔧 餌機重組中(${(this.decoyCd || 0).toFixed(0)}s)`);
+      this.hud.feed?.(`🔧 集束炸彈重組中(${(this.decoyCd || 0).toFixed(0)}s)`);
       return;
     }
     this.net.send({ t: 'decoy' });
@@ -4715,11 +4734,10 @@ export class BattleClient {
     const cur = this.side && !this.dead ? this._curWeapon() : null;
     const def = cur?.def;
     if (!def) { for (const ent of this.ents.values()) drop(ent); return; }
-    const rMul = cur.id === 'heavy' && this._barragingShot(now) ? BARRAGE.RANGE_F : 1;
-    const rng = def.range * this._altRangeMul(def) * rMul;   // 與擊發同一組有效射程(高度制空 + 重砲窗)
+    const rng = def.range * this._altRangeMul(def);   // 與擊發同一組有效射程(高度制空)
     const rule = reachRule(def);
-    // 換武器/重砲窗開關 ⇒ 快取的是「這把武器打不打得到」,整批作廢重評
-    const sig = `${cur.id}|${def.name}|${rMul}`;
+    // 換武器 ⇒ 快取的是「這把武器打不打得到」,整批作廢重評
+    const sig = `${cur.id}|${def.name}`;
     if (sig !== this._rgSig) { this._rgSig = sig; for (const e of this.ents.values()) e._rgAt = 0; }
     let budget = rule.path === 'arc' ? RANGE_GLOW.ARC_PER_FRAME : RANGE_GLOW.RAY_PER_FRAME;
     for (const ent of this.ents.values()) {
@@ -4981,7 +4999,7 @@ export class BattleClient {
     this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
     this.pitch = -0.05;
-    // 變形機甲:重生一律地面型態
+    // 變形者:重生一律地面型態
     // 蓄力/騰空狀態一律歸零(robot 蓄力中陣亡 → 重生殘留 charge 會立刻誤觸蓄力跳)
     this.charge = 0;
     this._lowG = false;
@@ -4991,7 +5009,7 @@ export class BattleClient {
     }
   }
 
-  // ---------------- 變形機甲:型態切換(蓄力彈射 ↔ 觸地變形)----------------
+  // ---------------- 變形者:型態切換(蓄力彈射 ↔ 觸地變形)----------------
   /** 地面型 → 飛行型:蓄力彈射(初速 ∝ 蓄力比例),FOV 拉廣;變形中段附無敵幀請求 */
   _morphLaunch(gy) {
     this.flight = true;
@@ -5184,7 +5202,7 @@ export class BattleClient {
   /** 第三人稱槍口世界座標:依 pid 找機體 rig.muzzles 錨(models.js 各 builder 登記),
    *  曳光/槍口爆從機體實際槍管射出,不再用射手 FPV 座標(機體越大偏差越大)。
    *  找不到錨(NPC/舊模型)、自己(FPV 已畫)一律退回訊息座標;三機小隊取離訊息座標
-   *  最近那架(訊息只描述開火的那一架)。變形機甲飛行型 2026-07-17 起不再退回訊息座標 ——
+   *  最近那架(訊息只描述開火的那一架)。變形者飛行型 2026-07-17 起不再退回訊息座標 ——
    *  手持機種雙臂前伸、肩扛機種轉到背部,槍口錨在飛行中一樣朝航向(models.js 變形時窗)。 */
   _entMuzzle(pid, slot, fallback) {
     if (pid == null) return fallback;
@@ -5417,7 +5435,7 @@ export class BattleClient {
    * 座標轉換:three z 南 → 模擬 z 北(取負);y 一律送「離站立表面高」(與 {t:'pos'} 的 _altAG 同源)。
    * oy 由呼叫端在**擊發當下**取樣後傳入 —— 動能彈飛行 0.1~0.4 秒才定案落點,拿當幀高度會漂。
    */
-  _sendLance(from, to, def, oy = null, barrage = false) {
+  _sendLance(from, to, def, oy = null) {
     const seg = to.clone().sub(from);
     const len = seg.length();
     if (len < 0.01) return [];
@@ -5430,7 +5448,7 @@ export class BattleClient {
       d: [q(d.x), q(-d.z), q(d.y)],
       len: Math.round(len * 10) / 10,
     });
-    return this._lancePierced(from, to, lanceR(def, barrage));
+    return this._lancePierced(from, to, lanceR(def));
   }
 
   /**
@@ -5489,17 +5507,17 @@ export class BattleClient {
    * 貫穿彈道演出(自機與他人共用):
    *   beam  → 鋼彈式光束(熾白內芯 + 外暈 + 行進能量環);
    *   rail/gun → 高速穿透通道(細亮曳光柱 + 兩端衝擊環 —— 空氣被撕開的彈道)。
-   * 圓柱半徑一律取 lanceR(def, barrage) ⇒ **看到多粗就是打到多粗**,不是裝飾性放大 ——
+   * 圓柱半徑一律取 lanceR(def) ⇒ **看到多粗就是打到多粗**,不是裝飾性放大 ——
    * 重砲傾洩窗的加粗也收在同一支(舊制只有這裡 ×1.5,伺服器沒跟上 = 看得到打不到)。
    */
-  _lanceVisual(from, to, def, side, barrage = false) {
+  _lanceVisual(from, to, def, side) {
     const { col, hot } = this._shotCols(side);
-    const r = lanceR(def, barrage);
+    const r = lanceR(def);
     if (def.type === 'beam') {
       const bcol = side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       gundamBeam(this.scene, this.effects, from, to, bcol,
-        { r, ttl: barrage ? 0.62 : 0.5, rings: barrage ? 6 : 4, core: hot });
-      shockRing(this.scene, this.effects, from.x, from.y, from.z, r * (barrage ? 1.7 : 1.15), bcol);
+        { r, ttl: 0.5, rings: 4, core: hot });
+      shockRing(this.scene, this.effects, from.x, from.y, from.z, r * 1.15, bcol);
       return;
     }
     // 動能貫穿(rail/gun):外層通道**滿寬 = 判定半徑**(低透明度的破壞管道),內層是熾芯曳光。
@@ -5561,23 +5579,21 @@ export class BattleClient {
     if (!this.side || this.dead || this.shopOpen || !this.ch) return;
     const { id, def, st } = this._curWeapon();
     if (!def || !st) return;
-    // 巨砲(重砲模式)那一輪的砲彈:**不消耗一般重武器的彈夾** ⇒ 連帶解除射速閘/電力/裝填閘,射程 +20%。
-    // 觸發手勢是「狙擊模式長按右鍵」→ 窗內逐幀自動擊發打完該輪發數,不需另按住開火鍵(否則根本轟不出去)。
-    const barraging = id === 'heavy' && this._barragingShot(now);
-    if (!this.firing && !barraging) return;
+    // 2026-08-01:舊巨砲的「窗內免彈夾/免射速閘 + 自動擊發」旁路隨機甲改招整組移除 ——
+    // 重武器射擊路徑上不該再有任何跳過彈夾/電力/射速閘的分支(MUST NOT 復辟)。
+    if (!this.firing) return;
     if (this.empLeft > 0) {
       if (now - (this._empWarnAt || 0) > 1.5) { this._empWarnAt = now; this.hud.feed?.('⚡ 武器離線(遭電磁癱瘓)!'); }
       return;
     }
-    const rMul = barraging ? BARRAGE.RANGE_F : 1;
     // 蓄力中切換武器(放開瞄準)= 取消磁軌蓄力
     if (this._railAt && def.type !== 'rail') { this._railAt = 0; this.flash?.scale.setScalar(1); this._setRailCharge(false); }
-    if (!barraging && now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
-    if (!barraging && st.reloadEnd > 0) return;                       // 填彈 / 冷卻中(巨砲不吃彈夾 ⇒ 裝填中照轟)
-    if (!barraging && st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
+    if (now - (this.lastFireAt[id] || 0) < 1 / def.rate) return;
+    if (st.reloadEnd > 0) return;                       // 填彈 / 冷卻中
+    if (st.ammo <= 0) { this._startReload(id); return; } // 打空自動填彈
     // 重武器擊發需電力(伺服器 _gateFire 權威;此為本地預測 + HUD 提示)
     const mpc = id === 'heavy' ? heavyMpCost(def) : 0;
-    if (!barraging && mpc > 0 && this.mp < mpc) {
+    if (mpc > 0 && this.mp < mpc) {
       if (now - (this._mpWarnAt || 0) > 1.5) { this._mpWarnAt = now; this.hud.feed?.(`🔋 電力不足(【${def.name}】每發需 ${mpc} MP)`); }
       return;
     }
@@ -5617,12 +5633,8 @@ export class BattleClient {
     }
     this.lastFireAt[id] = now;
     this.audio?.fire(def, id, this.side);   // 自機開火音(真實 def → 精確音色;閘門全過才播)
-    // 巨砲那一輪:不扣彈夾、不扣電力(伺服器 _gateFire 同判),改扣該輪剩餘發數 —— 打完即收窗
-    if (barraging) this._barrageLeft = Math.max(0, (this._barrageLeft || 0) - 1);
-    else {
-      st.ammo--;
-      if (mpc > 0) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電;快照回寫校正
-    }
+    st.ammo--;
+    if (mpc > 0) this.mp = Math.max(0, this.mp - mpc);   // 本地預測扣電;快照回寫校正
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
     // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
     if (prof.burst && !def.fan) {
@@ -5632,7 +5644,7 @@ export class BattleClient {
         this._settleUntil[id] = now + (prof.settle || 0.4);
       }
     }
-    if (!barraging && st.ammo <= 0) this._startReload(id);
+    if (st.ammo <= 0) this._startReload(id);
     // 重武器擊發:廣播離散事件,驅動第三人稱機體的掛點動畫(自己與他人皆可見)
     if (id === 'heavy') this.net?.send({ t: 'heavyFire' });
 
@@ -5649,9 +5661,9 @@ export class BattleClient {
     const airF = fly ? RECOIL.AIR_F : 1;                                 // 空中位移懲罰減半(使用者指示)
     this.recoil.p += (prof.climb ?? (id === 'heavy' ? 0.033 : 0.011));   // 準星上踢(開火停止後快速回穩)
     this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
-    // 鏡頭震動:重砲擊發要有頓挫感(輕武器維持細碎抖動),巨炮傾洩窗內每發再放大 → 連發疊成持續轟鳴
+    // 鏡頭震動:重砲擊發要有頓挫感(輕武器維持細碎抖動)
     this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1)
-      * (id === 'heavy' ? SHAKE.HEAVY_F : 1) * (barraging ? SHAKE.BARRAGE_F : 1));
+      * (id === 'heavy' ? SHAKE.HEAVY_F : 1));
     this.weaponKick = 1;
     this.flash.visible = true;
     this._flashTtl = 0.045;
@@ -5664,7 +5676,7 @@ export class BattleClient {
     if (def.fan) {
       // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
       // 本地畫扇形彈著(近距密、遠距散),slot 分輕(散彈)/ 重(電漿)。
-      this._fanBlast(muzzle, dir, def, barraging);   // 巨炮傾洩窗:離子扇加寬加亮 + 射程 +20%(2026-07-22)
+      this._fanBlast(muzzle, dir, def);
       this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id });   // three z 南 → 模擬 z 北
       return;
     }
@@ -5683,10 +5695,10 @@ export class BattleClient {
       if (missileId != null && aoeClass(def) !== 'line') this.net.send({ t: 'hitMissile', id: missileId, w: id });
       if (aoeClass(def) === 'line') {
         // 重武器光束 = 圓柱貫穿(伺服器 heroLance 沿射線結算全部目標);鋼彈式演出見 _lanceVisual
-        this._lanceVisual(muzzle, point, def, this.side, barraging);
+        this._lanceVisual(muzzle, point, def, this.side);
         this._muzzleBurst(muzzle, true, this.side);
         const oy = (this._altAG || 0) + (muzzle.y - this.pos.y);
-        this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy, barraging), point);
+        this._lanceFeedback(def, this._sendLance(muzzle, point, def, oy), point);
         return;
       }
       // 輕武器光束:不屬重武器三分類 —— 維持單體直擊(heroHit)
@@ -5733,11 +5745,10 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
       pos: muzzle.clone(), vel: fvel,
-      dist: 0, max: def.range * this._altRangeMul(def) * rMul, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠 + 重砲 +20%
+      dist: 0, max: def.range * this._altRangeMul(def), mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
-      // 巨炮傾洩窗內的重武器砲彈掛氣旋噴射尾流(2026-07-22)
-      cyclone: barraging ? this._attachCyclone(mesh, this.side) : null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, seek: !!arm, barrage: barraging,
+      cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
+      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, seek: !!arm,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -5965,8 +5976,8 @@ export class BattleClient {
       } else if (b.pierce) {   // (貫穿彈的 missileId 分支不會成立:_updateBullets 已讓飛彈不擋彈道)
         // 直線貫穿:落點定案(地形/障礙/射程終點)才回報整條射線,伺服器沿圓柱一次結算全部目標。
         // 高初速近似直線(trajClass 'flat')⇒ 以「槍口→終點」的直線圓柱近似實際彈道,誤差 < 0.4m。
-        this._lanceVisual(b.origin, p, def, this.side, b.barrage);
-        this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy, b.barrage), p);
+        this._lanceVisual(b.origin, p, def, this.side);
+        this._lanceFeedback(def, this._sendLance(b.origin, p, def, b.oy), p);
       } else if (hit?.missileId != null) {
         this.net.send({ t: 'hitMissile', id: hit.missileId, w: b.slot });
         this._hitFeedback(def, null, p);
@@ -6033,13 +6044,13 @@ export class BattleClient {
   _launchKamikaze() {
     if (!this.isDrone || this.dead) return;
     if ((this.kamiCd || 0) > 0.05) {
-      this.hud.feed?.(`🛠️ 護衛自殺機整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
+      this.hud.feed?.(`🛠️ 飽和攻擊整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
       return;
     }
     this.trauma = Math.min(1, this.trauma + SHAKE.KAMI);   // 護衛機彈射的推背感
     this.kamiCd = SQUAD.KAMI.CD_S;   // 樂觀本地冷卻(下一份快照的 kcd 會校正)
     this.net.send({ t: 'kami' });
-    this.hud.feed?.(`💥 ${SQUAD.KAMI.N} 架護衛自殺機衝出!`);
+    this.hud.feed?.(`💥 飽和攻擊:${SQUAD.KAMI.N} 架護衛機衝出!`);
   }
 
   /** 長按右鍵 / 觸控 R 達 GAME.ABILITY_HOLD_S → 觸發機種專屬招(自殺機 / 重砲 / 餌機)。
@@ -6062,40 +6073,28 @@ export class BattleClient {
     this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
     if (this.isDrone) this._launchKamikaze();
     else if (this.isMorph) this._launchDecoy();
-    else this._launchBarrage();
+    else this._launchHyper();
   }
 
-  /** 巨砲(重砲模式;非變形機甲:狙擊長按右鍵):送請求 + 開本地砲擊窗。
-   *  2026-07-30 改制:這一輪砲彈**不消耗一般重武器的彈夾**(免電力/射速/裝填閘)、每發 **100% 傷害**,
-   *  等值性由**發數** barrageShots()(絕招預算 ÷ 每發傷害)承擔;射程 +20%。
-   *  伺服器權威把關 CD、發數與免除窗(見 sim.heroBarrage / _gateFire / _barragingDmg)。 */
-  _launchBarrage() {
+  /** 極音速飛彈(機甲長按右鍵;2026-08-01 取代舊巨砲):送請求 + 樂觀本地 CD。
+   *  彈體是**伺服器實體**(kind 'hyper'),位置/傷害/被擊落全在伺服器 —— 客戶端不預測彈道,
+   *  只負責發射手感(震動 + 播報)與把它當一般 ent 渲染。MUST NOT 在此另寫任何本地爆風/傷害。
+   *  射後不理 ⇒ 一般/狙擊模式皆可發射,也不吃彈夾(它與重武器完全脫鉤)。 */
+  _launchHyper() {
     if (this.isDrone || this.isMorph || this.dead || !this.side) return;
     const now = performance.now() / 1000;
-    // CD 閘門取「伺服器 bcd」與「本地時戳」兩者較大者 —— 樂觀 barrageCd 可能被在途舊快照(server 尚未處理
-    // 本次請求)的 bcd=0 洗掉,單靠它會讓 30s CD 內誤判就緒;本地 _barrageCdUntil 時戳補住這個空窗。
-    const cdLeft = Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - now);
+    // CD 閘門取「伺服器 hcd」與「本地時戳」兩者較大者 —— 樂觀 hyperCd 可能被在途舊快照(server 尚未處理
+    // 本次請求)的 hcd=0 洗掉,單靠它會讓 30s CD 內誤判就緒;本地 _hyperCdUntil 時戳補住這個空窗。
+    const cdLeft = Math.max(this.hyperCd || 0, (this._hyperCdUntil || 0) - now);
     if (cdLeft > 0.05) {
-      this.hud.feed?.(`🎯 重砲整備中(${cdLeft.toFixed(0)}s)`);
+      this.hud.feed?.(`🎯 極音速飛彈整備中(${cdLeft.toFixed(0)}s)`);
       return;
     }
-    // 彈夾狀態**刻意不設閘**(與伺服器 heroBarrage 同條件):巨砲不吃彈夾,空夾/裝填中照樣轟。
-    const hvDef = this.wdef?.heavy;
-    if (!hvDef) return;
-    const n = barrageShots(hvDef, this.abil);
-    this.barrageCd = BARRAGE.CD_S;                          // 樂觀本地 CD(HUD;下一份快照的 bcd 校正)
-    this._barrageCdUntil = now + BARRAGE.CD_S;              // 本地 CD 時戳(不被在途舊快照 bcd 洗掉)
-    this._barrageLeft = n;                                  // 本輪剩餘發數(與伺服器 barrageLeft 同一份推導)
-    this._barrageUntil = now + barrageDur(n);
-    this.trauma = Math.min(1, this.trauma + SHAKE.BARRAGE);   // 重砲展開的機體震動
-    this.net.send({ t: 'barrage' });
-    this.hud.feed?.(`💥 巨砲齊射 ×${n} 發(不耗彈夾)!`);
-  }
-
-  /** 這一發是不是「巨砲那一輪」的砲彈 —— 客戶端唯一判據(對齊伺服器 _barragingDmg:窗內 **且** 發數未打完)。
-   *  免彈夾/免電力/解射速閘 + 射程 ×RANGE_F 的四個消費端 MUST 全吃這一支,MUST NOT 各自比對 `_barrageUntil`。 */
-  _barragingShot(now = performance.now() / 1000) {
-    return (this._barrageUntil || 0) > now && (this._barrageLeft || 0) > 0;
+    if (this.hyperFly) { this.hud.feed?.('🚀 已有一枚飛彈在空中'); return; }
+    this.hyperCd = HYPER.CD_S;                  // 樂觀本地 CD(HUD;下一份快照的 hcd 校正)
+    this._hyperCdUntil = now + HYPER.CD_S;      // 本地 CD 時戳(不被在途舊快照 hcd 洗掉)
+    this.trauma = Math.min(1, this.trauma + SHAKE.HYPER);   // 垂直發射的後燄推力
+    this.net.send({ t: 'hyper' });
   }
 
   /** HUD 資料:輕/重武器 / 招式 / 資源(彈藥為本地 HUD,與伺服器小幅漂移是 by design) */
@@ -6126,15 +6125,15 @@ export class BattleClient {
       // 爬升動力(飛行機體限定;非飛行狀態 = null ⇒ HUD 整條收起)。上限正比於電力,見 data.FLIGHT
       lift: this._flying() ? { v: Math.max(0, this.lift ?? this._liftMax()), max: this._liftMax() } : null,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      // 機種專屬能力(狙擊模式長按右鍵):無人機護衛自殺機 / 變形機甲餌機 / 非變形機甲重砲(冷卻倒數,0 = 就緒)
+      // 機種專屬能力(長按右鍵):無人機飽和攻擊 / 變形者集束炸彈 / 機甲極音速飛彈(冷卻倒數,0 = 就緒)
       kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
       decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
-      // 巨砲 CD 取「伺服器 bcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,HUD 不會瞬閃「就緒」;
-      // left = 這一輪剩餘發數(窗內才 > 0;發數是與伺服器同一份推導,見 barrageShots)
-      barrage: (!this.isDrone && !this.isMorph)
+      // 極音速飛彈 CD 取「伺服器 hcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,
+      // HUD 不會瞬閃「就緒」;fly = 空中已有一枚(同時只能有一枚)
+      hyper: (!this.isDrone && !this.isMorph)
         ? {
-          cd: Math.max(this.barrageCd || 0, (this._barrageCdUntil || 0) - performance.now() / 1000),
-          left: this._barragingShot(now) ? (this._barrageLeft || 0) : 0,
+          cd: Math.max(this.hyperCd || 0, (this._hyperCdUntil || 0) - performance.now() / 1000),
+          fly: !!this.hyperFly,
         } : null,
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
@@ -6179,17 +6178,12 @@ export class BattleClient {
    * heavy 重武器一律比 light 更粗、更亮、更持久、槍口爆更大 —— 第一/第三人稱皆適用。
    * @param opts.heavy 重武器  @param opts.side 陣營  @param opts.impact `to` 是真實命中點(才畫落點火花)
    */
-  _shotFx(from, to, { heavy = false, side, impact = false, barrage = false } = {}) {
+  _shotFx(from, to, { heavy = false, side, impact = false } = {}) {
     const { col, hot } = this._shotCols(side);
     this._muzzleBurst(from, heavy, side);
-    const wF = barrage ? 2.2 : 1, tF = barrage ? 1.5 : 1;   // 巨炮(光束/動能重砲):更粗更亮更持久 + 落點大爆
     beamLine(this.scene, this.effects, from, to, col,
-      heavy ? { ttl: 0.30 * tF, w: 0.30 * wF } : { ttl: 0.13, w: 0.075 });
-    if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18 * tF, w: 0.11 * wF });  // 高熱內芯
-    if (barrage) {
-      shockRing(this.scene, this.effects, from.x, from.y, from.z, 4.0, col);
-      starburst(this.scene, this.effects, to.x, to.y, to.z, 4.5, hot);
-    }
+      heavy ? { ttl: 0.30, w: 0.30 } : { ttl: 0.13, w: 0.075 });
+    if (heavy) beamLine(this.scene, this.effects, from, to, hot, { ttl: 0.18, w: 0.11 });  // 高熱內芯
     if (impact) starburst(this.scene, this.effects, to.x, to.y, to.z, heavy ? 4.2 : 1.6, col);
   }
 
@@ -6625,7 +6619,7 @@ export class BattleClient {
       // 攀爬中:位移已由 _stepClimb 定案(垂直沿路線、水平吸附到攀爬軸)
     } else if (this._flying()) {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
-      // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形機甲飛行型態用 fly 巡航速度。
+      // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形者飛行型態用 fly 巡航速度。
       const spd = this.isMorph ? u.fly : u.speed;
       const look = new THREE.Vector3(
         -Math.sin(this.yaw) * Math.cos(this.pitch),
@@ -6672,11 +6666,11 @@ export class BattleClient {
       }
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 水面是飛行下限(2026-07-15):海面下的海床不是可懸停的地板 —— 機體不潛水。
-      // 變形機甲兩棲浮台(水面/沼面)由 _wetSurfaceY 統一 ⇒ 觸地變形停在可見濕地表面(見該函式)。
+      // 變形者兩棲浮台(水面/沼面)由 _wetSurfaceY 統一 ⇒ 觸地變形停在可見濕地表面(見該函式)。
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const gy = wetY != null ? wetY
         : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS);
-      // 無人機不貼地(下限 +2.5);變形機甲允許降到地表 → 觸地即變形回地面型
+      // 無人機不貼地(下限 +2.5);變形者允許降到地表 → 觸地即變形回地面型
       this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
       // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
       const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.FULL_D;
@@ -6685,7 +6679,7 @@ export class BattleClient {
       const lat = this.vel.x * right.x + this.vel.z * right.z;
       this.roll += (-lat / spd * 0.16 - this.roll) * Math.min(1, dt * 5);
     } else {
-      this._airSink = 0;   // 地面型態不掉高(變形機甲觸地即清帳,免落地後被舊帳往下拉)
+      this._airSink = 0;   // 地面型態不掉高(變形者觸地即清帳,免落地後被舊帳往下拉)
       // 機甲:貼地 + 跳躍;this.vel 是爆炸/後座的擊退速度(地面摩擦快速衰減)
       // 蓄力中重心下沉、移動減速(起跳預備動作;morph 變形彈射與 robot 蓄力跳共用 this.charge)
       const slowK = 1 - 0.6 * this.charge;
@@ -6705,7 +6699,7 @@ export class BattleClient {
       const gyS = this._surf(this.pos.x, this.pos.z, this.pos.y);
       // 水中有效地板(2026-07-19 可涉水改制):可下沉至「水面 − FULL_D(全滅頂深)」→ 深水可涉、
       // 過深則半浮於 FULL_D(頭沒入水),不無限沉海床;淺水踩實際河床。深水不再是牆(passable 已放行)。
-      // 變形機甲例外:兩棲不潛水,地面型停在濕地表面浮台(_wetSurfaceY)⇒ 觸地變形不沉水底、
+      // 變形者例外:兩棲不潛水,地面型停在濕地表面浮台(_wetSurfaceY)⇒ 觸地變形不沉水底、
       // 蓄力彈射從水面/沼面起跳(修正淺水/沼澤「彈射即觸地」與「落地判水底」)。
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const gy = wetY != null ? wetY
@@ -6869,7 +6863,7 @@ export class BattleClient {
       const dY2 = !inTun && sy > th + 1 ? this.terrain.deckY?.(this.pos.x, this.pos.z, 3.0) : null;
       const onBridge = dY2 != null && Math.abs(sy - dY2) < 0.6;
       const yRef = (!inTun && !onBridge && sy > th + 1) ? th : sy;   // 障礙物頂 → 地形基準
-      // 變形機甲兩棲浮台:停在濕地表面(水面/沼面)⇒ 回報 y≈0 = 地面型(踩雷/型態判定一致),
+      // 變形者兩棲浮台:停在濕地表面(水面/沼面)⇒ 回報 y≈0 = 地面型(踩雷/型態判定一致),
       // 不因涉水沉至 FULL_D 而誤報離地高;乾地/橋面/障礙頂維持 yRef 抬升(高度制空)。
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const sEff = wetY != null ? wetY
@@ -7162,7 +7156,7 @@ export class BattleClient {
   }
 
   /** 單位的移動音類別(rotor 旋翼 / engine 引擎 / wingflap 振翅 / stomp 重機具震地);無 = 不發聲。
-   *  NPC 依兵種;英雄(含變形機甲)依 visual + 當前騰空狀態(落地=踏地、升空=依飛行型)。 */
+   *  NPC 依兵種;英雄(含變形者)依 visual + 當前騰空狀態(落地=踏地、升空=依飛行型)。 */
   _moveCat(ent) {
     const k = ent.kind;
     if (k === 'heli') return 'rotor';
@@ -7738,7 +7732,7 @@ export class BattleClient {
   // ---------------- 副視窗(PiP)----------------
   /**
    * 需要小螢幕的視角:蜂群 = 非主視野的僚機(最多 2 個);機甲 = 空中的餌機(1 個)。
-   * 餌機失聯後不再回傳畫面 → 不渲染(HUD 由 hud.feed 播報鏈路中斷)。
+   * 集束轟炸機失聯後不再回傳畫面 → 不渲染(HUD 由 hud.feed 播報鏈路中斷)。
    */
   _pipSources() {
     const out = [];
