@@ -287,6 +287,11 @@ export class RoomHub {
     const clientId = this._nextClientId++;
     let room = null;
     let client = null;
+    // 本 session 在房內的**座位鍵**:座位在 room.clients 的鍵、英雄在 sim.heroes 的 pid、hostId 的比對對象
+    // 全都是「建立座位那條 session」的 clientId。reattach 認回舊座位後 MUST 沿用原鍵 ——
+    // 用新連線的 clientId 會讓 pos/開火全被 sim 靜默丟棄(查無英雄)、房主權限失效、
+    // leaveRoom/清位刪錯鍵(座位永遠留著 → 殭屍房間,首頁一直看得到無人 bot 對局)。
+    let myId = clientId;
 
     const recv = (m) => {
       if (!m || typeof m.t !== 'string') return;
@@ -314,9 +319,9 @@ export class RoomHub {
         const pin = hub._genPin();
         client = { send, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
         room = {
-          pin, id: hub._genRoomId(), hostId: clientId, phase: 'room',
+          pin, id: hub._genRoomId(), hostId: myId, phase: 'room',
           config: { roomName: sanitizeName(m.roomName) || `${client.name} 的戰區`, isPublic: m.isPublic !== false, teamSize, botDiff: BOT_DIFF[m.botDiff] ? m.botDiff : DEFAULT_BOT_DIFF },
-          clients: new Map([[clientId, client]]),
+          clients: new Map([[myId, client]]),
           bots: new Map(), nextBotId: 0, botBrains: [],
           battle: null, battleConfig: cfg, tickTimer: null,
         };
@@ -335,7 +340,7 @@ export class RoomHub {
         if (mode === 'player' && players >= cap) { send({ t: 'error', msg: `參戰席位已滿(${cap} 人),可用觀戰模式加入` }); return; }
         client = { send, name: sanitizeName(m.name), side: null, mode, ready: false, loaded: false, connected: true, token: genToken() };
         room = r;
-        room.clients.set(clientId, client);
+        room.clients.set(myId, client);
         hub.broadcast(room);
         // 加入中途對局:立即補送階段與戰場設定(含危險區)
         if (room.phase === 'game' || room.phase === 'loading') {
@@ -350,7 +355,7 @@ export class RoomHub {
           for (const [id, c] of r.clients) {
             if (c.token === m.token) {
               c.send = send; c.connected = true;
-              room = r; client = c;
+              room = r; client = c; myId = id;   // 認回原座位鍵(英雄 pid / hostId / 清位全靠它)
               hub.broadcast(room);
               if (room.battleConfig && (room.phase === 'loading' || room.phase === 'game')) {
                 send({ t: 'battleConfig', config: room.battleConfig });
@@ -394,7 +399,7 @@ export class RoomHub {
       if (m.t === 'setReady') { client.ready = !!m.ready; hub.broadcast(room); return; }
       if (m.t === 'addBot') {
         // 電腦玩家:房主在房間階段補位(單人練習 / 湊隊)
-        if (clientId !== room.hostId) { send({ t: 'error', msg: '只有房主能增減電腦玩家' }); return; }
+        if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能增減電腦玩家' }); return; }
         if (room.phase !== 'room') return;
         const side = m.side === 'SWARM' || m.side === 'STEEL' ? m.side : null;
         if (!side) return;
@@ -404,7 +409,7 @@ export class RoomHub {
       }
       if (m.t === 'setBotChar') {
         // 房主替電腦玩家指定角色(null = 開戰時隨機,與真人 pickChar 同語意)
-        if (clientId !== room.hostId) { send({ t: 'error', msg: '只有房主能設定電腦玩家' }); return; }
+        if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能設定電腦玩家' }); return; }
         if (room.phase !== 'room') return;
         const bot = room.bots.get(String(m.id));
         if (!bot) return;
@@ -416,12 +421,12 @@ export class RoomHub {
         return;
       }
       if (m.t === 'removeBot') {
-        if (clientId !== room.hostId || room.phase !== 'room') return;
+        if (myId !== room.hostId || room.phase !== 'room') return;
         room.bots.delete(String(m.id));
         hub.broadcast(room);
         return;
       }
-      if (m.t === 'setRoomConfig' && clientId === room.hostId) {
+      if (m.t === 'setRoomConfig' && myId === room.hostId) {
         if (m.roomName !== undefined) room.config.roomName = sanitizeName(m.roomName);
         if (m.isPublic !== undefined) room.config.isPublic = !!m.isPublic;
         if (m.botDiff !== undefined && BOT_DIFF[m.botDiff]) room.config.botDiff = m.botDiff;
@@ -430,7 +435,7 @@ export class RoomHub {
       }
       if (m.t === 'startBattle') {
         // 房主開戰(地圖開房時已鎖定):至少 1 位已選陣營並準備
-        if (clientId !== room.hostId) { send({ t: 'error', msg: '只有房主能開戰' }); return; }
+        if (myId !== room.hostId) { send({ t: 'error', msg: '只有房主能開戰' }); return; }
         if (room.phase !== 'room') return;
         const players = [...room.clients.values()].filter((c) => c.mode === 'player' && c.side);
         if (players.length === 0) { send({ t: 'error', msg: '請先選擇陣營' }); return; }
@@ -449,7 +454,7 @@ export class RoomHub {
         // 房主上傳世界障礙(建物/神木/巨岩碰撞柱)+ 立體交通走廊(sim 座標)。
         // 通常先於開戰抵達(存房間,startBattle 套用);房主是觀戰者時可能晚到 → 直接套用進行中的 sim
         // (LOS 即時生效;走廊內障礙從快照消失,客戶端自動收掉)。非房主來源一律丟棄。
-        if (clientId === room.hostId && m.occ) {
+        if (myId === room.hostId && m.occ) {
           room.world = { occ: m.occ, cor: m.cor, wet: m.wet, slabs: m.slabs };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS)
           if (room.battle) room.battle.setWorld(room.world);
         }
@@ -459,47 +464,47 @@ export class RoomHub {
       // ---- 戰鬥中 ----
       const b = room.battle;
       if (!b) {
-        if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, clientId); room = null; client = null; }
+        if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, myId); room = null; client = null; }
         return;
       }
-      if (m.t === 'pos' && client.side) { b.heroPos(clientId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay); return; }
-      if (m.t === 'aim' && client.side) { b.heroAim(clientId, m.on); return; }
-      if (m.t === 'hit' && client.side) { b.heroHit(clientId, m.id, m.w); return; }
-      if (m.t === 'hitMissile' && client.side) { b.hitMissile(clientId, m.id, m.w); return; }
-      if (m.t === 'burst' && client.side) { b.heroBurst(clientId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)
-      if (m.t === 'plasma' && client.side) { b.heroPlasma(clientId, m.dx, m.dz, m.slot); return; }
-      if (m.t === 'lance' && client.side) { b.heroLance(clientId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
-      if (m.t === 'kami' && client.side) { b.heroKamikaze(clientId); return; }   // 無人機:狙擊長按左鍵 → 護衛自殺機衝出
-      if (m.t === 'decoy' && client.side) { b.heroDecoy(clientId); return; }     // 變形機甲:狙擊長按左鍵 → 餌機(沿途投彈)
-      if (m.t === 'barrage' && client.side) { b.heroBarrage(clientId); return; } // 非變形機甲:狙擊長按左鍵 → 重砲模式
-      if (m.t === 'swap' && client.side) { b.heroSwap(clientId, m.i); return; }
-      if (m.t === 'lock' && client.side) { b.heroLock(clientId, m.id); return; }
-      if (m.t === 'civ' && client.side) { b.civInteract(clientId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
-      if (m.t === 'cast' && client.side) { b.heroCast(clientId, m.slot, m.x, m.z); return; }
-      if (m.t === 'iframe' && client.side) { b.heroIframe(clientId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
-      if (m.t === 'reload' && client.side) { b.heroReload(clientId, m.w); return; }
+      if (m.t === 'pos' && client.side) { b.heroPos(myId, m.x, m.y, m.z, m.ry, m.wet, m.lev, m.ay); return; }
+      if (m.t === 'aim' && client.side) { b.heroAim(myId, m.on); return; }
+      if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
+      if (m.t === 'hitMissile' && client.side) { b.hitMissile(myId, m.id, m.w); return; }
+      if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)
+      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot); return; }
+      if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
+      if (m.t === 'kami' && client.side) { b.heroKamikaze(myId); return; }   // 無人機:狙擊長按左鍵 → 護衛自殺機衝出
+      if (m.t === 'decoy' && client.side) { b.heroDecoy(myId); return; }     // 變形機甲:狙擊長按左鍵 → 餌機(沿途投彈)
+      if (m.t === 'barrage' && client.side) { b.heroBarrage(myId); return; } // 非變形機甲:狙擊長按左鍵 → 重砲模式
+      if (m.t === 'swap' && client.side) { b.heroSwap(myId, m.i); return; }
+      if (m.t === 'lock' && client.side) { b.heroLock(myId, m.id); return; }
+      if (m.t === 'civ' && client.side) { b.civInteract(myId, m.id, m.act); return; }   // 平民互動:跟隨/驅趕
+      if (m.t === 'cast' && client.side) { b.heroCast(myId, m.slot, m.x, m.z); return; }
+      if (m.t === 'iframe' && client.side) { b.heroIframe(myId); return; }   // 蓄力跳/變形中段無敵幀(CD 由 sim 把關)
+      if (m.t === 'reload' && client.side) { b.heroReload(myId, m.w); return; }
       if (m.t === 'buy' && client.side) {
-        const err = b.buy(clientId, m.item, m.lane);   // lane 只有 item==='creep'(陣營小兵強化)會用到
+        const err = b.buy(myId, m.item, m.lane);   // lane 只有 item==='creep'(陣營小兵強化)會用到
         if (err) send({ t: 'error', msg: err });
         return;
       }
       if (m.t === 'tracer') {
         // 純視覺:轉播給其他客戶端畫彈道;pid 供接收端驅動射手機體的開火動畫(比照 heavyCharge,伺服器附上,不信任客戶端)
         // mv:拋物線武器的實際初速(火控解的裝藥號數;純視覺轉播,讓對方畫出與射手同一條弧)
-        for (const [id, c] of room.clients) if (id !== clientId) c.send({ t: 'tracer', pid: clientId, from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit, mv: m.mv });
+        for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'tracer', pid: myId, from: m.from, to: m.to, side: client.side, slot: m.slot, hit: m.hit, mv: m.mv });
         return;
       }
       if (m.t === 'heavyCharge' && client.side) {
         // 純視覺:即時轉播 rail 重武器蓄力狀態(third-person 掛點動畫),不進 sim 快照(不等 8Hz)
-        for (const [id, c] of room.clients) if (id !== clientId) c.send({ t: 'heavyCharge', pid: clientId, on: !!m.on });
+        for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'heavyCharge', pid: myId, on: !!m.on });
         return;
       }
       if (m.t === 'heavyFire' && client.side) {
         // 純視覺:即時轉播重武器擊發瞬間(third-person 掛點動畫)
-        for (const [id, c] of room.clients) if (id !== clientId) c.send({ t: 'heavyFire', pid: clientId });
+        for (const [id, c] of room.clients) if (id !== myId) c.send({ t: 'heavyFire', pid: myId });
         return;
       }
-      if (m.t === 'backToRoom' && clientId === room.hostId) {
+      if (m.t === 'backToRoom' && myId === room.hostId) {
         // 回到房間再戰:地圖屬於房間(開房前選定),保留 battleConfig
         hub.stopBattle(room);
         room.battle = null; room.phase = 'room';
@@ -507,22 +512,25 @@ export class RoomHub {
         hub.broadcast(room);
         return;
       }
-      if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, clientId); room = null; client = null; }
+      if (m.t === 'leaveRoom') { hub.leaveRoom(client, room, myId); room = null; client = null; }
     };
 
     const close = () => {
       if (!room || !client) return;
+      // 座位已被更新的連線用 reattach 認走(本 session 是殭屍舊 socket,close 晚到)→ MUST NOT 動座位:
+      // 標成斷線會讓「無真人逾時」把還有真人在玩的對局收掉。send 是否還指向本 session = 座位歸屬的唯一判準。
+      if (client.send !== send) return;
       client.connected = false;
       // 對局中保留座位等重連;房間階段直接離座
       if (room.phase === 'room' || hub.dropMs <= 0) {
-        hub.leaveRoom(client, room, clientId);
+        hub.leaveRoom(client, room, myId);
       } else {
         hub.broadcast(room);
         // 一段時間沒回來就清位
-        const c0 = client, r0 = room;
+        const c0 = client, r0 = room, id0 = myId;
         setTimeout(() => {
-          if (c0.connected === false && r0.clients.get(clientId) === c0) {
-            hub.leaveRoom(c0, r0, clientId);
+          if (c0.connected === false && r0.clients.get(id0) === c0) {
+            hub.leaveRoom(c0, r0, id0);
           }
         }, hub.dropMs);
       }

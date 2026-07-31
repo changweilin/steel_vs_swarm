@@ -1356,6 +1356,61 @@ log('\n— 對局中無真人玩家逾時 —');
   hub.shutdown();
 }
 
+// ================= 回連身分:reattach 後 MUST 沿用原座位鍵 =================
+// 座位在 room.clients 的鍵、英雄在 sim.heroes 的 pid、hostId 的比對對象,全是「建立座位那條 session」
+// 的 clientId。reattach 若沿用新連線自己的 clientId:pos/開火被 sim 靜默丟棄(查無英雄)、房主權限失效、
+// leaveRoom/清位刪錯鍵 → 座位永遠留著 = 殭屍房間(首頁一直看得到進行中的無人 bot 對局)。
+log('\n— 回連身分(reattach 沿用原座位鍵)—');
+{
+  const mkBattle = async () => {
+    const inbox = [];
+    const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 60 * 1000, noHumanMs: 400 });
+    const sess = hub.attach((m) => inbox.push(m));
+    sess.recv({ t: 'createRoom', name: '回連者', roomName: '回連測試', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+    sess.recv({ t: 'pickSide', side: 'SWARM' });
+    sess.recv({ t: 'setReady', ready: true });
+    sess.recv({ t: 'startBattle' });
+    sess.recv({ t: 'loaded' });
+    await new Promise((r) => setTimeout(r, 250));
+    const token = [...inbox].reverse().find((m) => m.t === 'sync').token;
+    return { hub, sess, token };
+  };
+  // ① 英雄操控 + ② 房主權限(斷線 → 新連線 reattach)
+  {
+    const { hub, sess, token } = await mkBattle();
+    const room = [...hub.rooms.values()][0];
+    const hero = room.battle.heroes.get(sess.id);
+    sess.close();
+    const sess2 = hub.attach(() => {});
+    sess2.recv({ t: 'reattach', token });
+    sess2.recv({ t: 'pos', x: 777, y: 0, z: 888, ry: 0 });
+    assert(hero.x === 777 && hero.z === 888, '回連後 pos 回報操控原英雄(座位鍵 = 原 clientId,非新連線的)');
+    sess2.recv({ t: 'backToRoom' });
+    assert(room.phase === 'room', '回連後房主權限仍在(backToRoom 生效)');
+    hub.shutdown();
+  }
+  // ③ 殭屍舊 socket 晚到的 close 不得奪走座位(伺服器心跳 terminate / OS TCP 逾時都會走到這條路)
+  {
+    const { hub, sess, token } = await mkBattle();
+    const sess2 = hub.attach(() => {});
+    sess2.recv({ t: 'reattach', token });   // 舊 socket 未 close 就先回連(手機收後台 → 回前台的常態)
+    sess.close();                           // 殭屍連線此刻才死
+    await new Promise((r) => setTimeout(r, 700));
+    assert(hub.stats().battles === 1, '殭屍舊 socket 晚到 close:座位不受影響、對局不被無真人逾時誤收');
+    hub.shutdown();
+  }
+  // ④ 回連後 leaveRoom 真的離座清房(刪對鍵,不留殭屍房)
+  {
+    const { hub, sess, token } = await mkBattle();
+    sess.close();
+    const sess2 = hub.attach(() => {});
+    sess2.recv({ t: 'reattach', token });
+    sess2.recv({ t: 'leaveRoom' });
+    assert(hub.stats().rooms === 0, '回連後離開戰局:房間清除(唯一真人離開不留殭屍房)');
+    hub.shutdown();
+  }
+}
+
 // ================= WebSocket 端對端 =================
 log('— 開房驗證(地圖必須先建立)—');
 const host = await client('host');
