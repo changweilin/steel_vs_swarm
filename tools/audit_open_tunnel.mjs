@@ -27,6 +27,11 @@
 //     **註記欄**;柱列 MUST NOT 進碰撞柱(cols);main.js slab 第 7 欄 MUST 上傳 gal。
 //   Ⅳ 兩端可穿透(import 真 `BattleSim` 數值直測):開放側穿出的射線/爆風 MUST 放行、
 //     實牆側/天花 MUST 照擋、gal=0 舊行為逐位元不變;side 位元在 z 鏡射上傳下 MUST 不換手。
+//   Ⅵ 洞口/明隧道端點打洞(執行 terrain.js `punchPortalHoles` 原文):斷面裡的地形三角形
+//     MUST 全刪 —— **含「跨越走廊但三個頂點都在走廊外」**的那一片(2026-07-31 多視角檢視:
+//     格距 8.3m / 對角 11.7m 對上只有 0.5m 與 depth 兩道縱向界 ⇒ 出入口附近常態出現,
+//     舊「任一頂點在走廊內」判定漏刪 = 洞口內側卡著一楔地形,且不進 rims ⇒ collar 也補不到)。
+//     同時釘住三條不得放寬的邊界:走廊外不刪、路面下不刪、天花上不刪。
 //
 // 為什麼 Ⅰ~Ⅲ 用「抽原文」而不是 import:`biomes.js` 的 three 走 CDN importmap,Node 端解析
 // 不了;抽出來評估的仍是**真正的程式碼文字**(另抄一份公式就永遠會通過)。Ⅳ 的 sim.js 是
@@ -504,6 +509,96 @@ function fakeBattleConfig() {
     t2.carveGalleryBands([{ pts: stripPts, floors: stripPts.map(() => FLOOR2), hw: 8, side: 1 }],
       { clear: TUN.CLEAR, roofT: TUN.ROOF_T, clearW: TUN.GAL_CLEAR_W });
     ok(Math.abs(t2.at(0, -10) - (FLOOR2 - 3)) < 1e-6, 'Ⅴ-c 帶內低於路面 MUST 不動(只降不升,不憑空長路堤)');
+  }
+}
+
+// ---- Ⅵ 洞口打洞:斷面裡的地形三角形一律刪掉(執行 terrain.js punchPortalHoles 原文)----
+// 合成 17² 網格(格距 5m)+ 一座朝 −Z 進洞的 bore,直接看「哪些三角形留在 drawRange 內」。
+{
+  const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+  const p0 = tsrc.indexOf('  function punchPortalHoles(');
+  const p1 = tsrc.indexOf("  onProgress?.(1, '地形完成');");
+  if (p0 < 0 || p1 <= p0) throw new Error('找不到 punchPortalHoles 區塊');
+  const PUNCH = tsrc.slice(p0, p1);
+  const N3 = 17, STEP = 5, ORG = -40;                       // 座標 = ORG + j*STEP
+  const key = (a, b, c) => [a, b, c].sort((u, v) => u - v).join(',');
+  /** hf(x,z) → 高度;回傳 { punch, alive(a,b,c), dead: Set } */
+  const mkGrid = (hf) => {
+    const pos = new Float32Array(N3 * N3 * 3);
+    for (let i = 0; i < N3; i++) {
+      for (let j = 0; j < N3; j++) {
+        const x = ORG + j * STEP, z = ORG + i * STEP, k = i * N3 + j;
+        pos[k * 3] = x; pos[k * 3 + 1] = hf(x, z); pos[k * 3 + 2] = z;
+      }
+    }
+    const idx = [];
+    for (let i = 0; i < N3 - 1; i++) {
+      for (let j = 0; j < N3 - 1; j++) {
+        const a = i * N3 + j, b = a + 1, c = a + N3, d = c + 1;
+        idx.push(a, c, b, b, c, d);                          // 與 buildTerrain 同一份三角形切法
+      }
+    }
+    const index = { array: Int32Array.from(idx), needsUpdate: false };
+    const geo = {
+      getIndex: () => index,
+      getAttribute: () => ({ array: pos }),
+      drawRange: { start: 0, count: idx.length },
+      setDrawRange(s, c) { this.drawRange = { start: s, count: c }; },
+    };
+    const fns = new Function('THREE', 'geo', 'N', 'markTriDead',
+      `${PUNCH}\nreturn { punchPortalHoles };`)(
+      { Matrix4: class { makeScale() { return this; } } }, geo, N3, () => {});
+    return {
+      punch: fns.punchPortalHoles,
+      alive: () => {
+        const s = new Set();
+        for (let t = 0; t < geo.drawRange.count / 3; t++) s.add(key(index.array[t * 3], index.array[t * 3 + 1], index.array[t * 3 + 2]));
+        return s;
+      },
+    };
+  };
+  const FLOOR3 = 20;
+  // bore:錨點 (0,0)、ry=0 ⇒ 局部 +Z = 洞外 = 世界 +Z,走廊 = |x| ≤ 8 且 z ∈ [−30, −0.5]
+  const bore = [{ x: 0, z: 0, ry: 0, hw: 8, depth: 30, floorY: FLOOR3, slope: 0, clear: TUN.CLEAR, lift: 0.45 }];
+  const V = (i, j) => i * N3 + j;                            // (z 列, x 行)
+  const iOf = (z) => (z - ORG) / STEP, jOf = (x) => (x - ORG) / STEP;
+  // 格 (i,j) 的兩片三角形(與 buildTerrain 的 a,c,b / b,c,d 同序):
+  //   upper = (x,z) (x,z+STEP) (x+STEP,z);lower = (x+STEP,z) (x,z+STEP) (x+STEP,z+STEP)
+  const cellAt = (x, z) => [iOf(z), jOf(x)];
+  const triUp = (x, z) => { const [i, j] = cellAt(x, z); return key(V(i, j), V(i + 1, j), V(i, j + 1)); };
+  const triLo = (x, z) => { const [i, j] = cellAt(x, z); return key(V(i, j + 1), V(i + 1, j), V(i + 1, j + 1)); };
+  {
+    // 全域高度落在斷面帶內(路面 +2m)⇒ 只剩「與走廊是否重疊」在決定刪不刪
+    const g = mkGrid(() => FLOOR3 + 2);
+    g.punch(bore, []);
+    const alive = g.alive();
+    // ① 跨越三角形:頂點 (10,−5)(5,0)(10,0) 全在走廊外(x > hw 或 z > −0.5),
+    //    但邊 (10,−5)→(5,0) 自 (8,−3) 起就切進走廊 ⇒ 這一片橫在洞口內側的斷面上
+    ok(!alive.has(triLo(5, -5)), 'Ⅵ 跨越走廊但無頂點在內的三角形 MUST 刪(舊「任一頂點」判定會在此紅字)');
+    // ② 走廊正中的三角形照刪(舊行為)
+    ok(!alive.has(triUp(0, -10)) && !alive.has(triLo(0, -10)), 'Ⅵ 走廊內的三角形 MUST 刪(舊行為不得回歸)');
+    // ③ 走廊外一整格(x ≥ 15)MUST NOT 誤刪 —— 重疊判定 MUST NOT 退化成「粗篩即刪」
+    ok(alive.has(triUp(15, -10)) && alive.has(triLo(15, -10)),
+      'Ⅵ 走廊外的三角形 MUST 留(過度打洞 = 山坡憑空破一片)');
+    // ④ 洞外(z ≥ 0)整片 MUST 留:走廊縱向自 −0.5 起算,洞口前的地面不是土牆
+    ok(alive.has(triUp(0, 5)) && alive.has(triLo(0, 5)),
+      'Ⅵ 洞口外側的地面 MUST 留(打穿了就是洞口前一個看穿的坑)');
+  }
+  {
+    const g = mkGrid(() => FLOOR3 - 3);                      // 整片低於路面
+    g.punch(bore, []);
+    ok(g.alive().has(triUp(0, -10)), 'Ⅵ 全在路面之下的三角形 MUST 留(被路面緞帶蓋著,刪了是從洞內看穿地板)');
+  }
+  {
+    const g = mkGrid(() => FLOOR3 + TUN.CLEAR + 6);          // 整片高於天花
+    g.punch(bore, []);
+    ok(g.alive().has(triUp(0, -10)), 'Ⅵ 全在天花之上的三角形 MUST 留(那是山體本身;刪了高空俯瞰破頂)');
+  }
+  {
+    const g = mkGrid(() => FLOOR3 + 2);
+    const r = g.punch(bore, []);
+    ok(r.touched[0] === true, 'Ⅵ 有刪到 MUST 記帳 touched(呼叫端據此決定不掛黑色暗面)');
+    ok(r.rims[0].length > 0, 'Ⅵ 刪出來的洞緣 MUST 進 rims(collar 靠它 loft 封邊;空的 = 洞口一圈漏縫)');
   }
 }
 

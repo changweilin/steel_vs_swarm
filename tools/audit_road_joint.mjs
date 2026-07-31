@@ -124,7 +124,7 @@ console.log('Ⅳ 銜接漸縮帶(行為直測:執行原文區塊)');
   const flareSrc = slice('      // ---- 銜接漸縮帶(2026-07-30 使用者需求「接合處貼合」)----',
     '\n      const at = (d) => {', '漸縮帶區塊');
   ok(/flareHw\(hw, laneHw, t\)/.test(flareSrc), 'Ⅳ 漸縮半寬 MUST 由 flareHw(hw → 車道寬)推導');
-  ok((src.match(/flareHw\(/g) || []).length === 1, 'Ⅳ flareHw MUST 只有一個消費端(漸縮帶)');
+  ok((src.match(/flareHw\(/g) || []).length === 1, 'Ⅳ flareHw MUST 只有一個消費端(漸縮帶;邊帶吃同一個 fhw,MUST NOT 自己再算一次)');
   for (const bad of ['decks.push', 'tunnelSegs.push', 'cols.push', 'corridors.push', 'blockArea(', 'rnd('])
     ok(!flareSrc.includes(bad), `Ⅳ 漸縮帶是純視覺 MUST NOT 出現 ${bad}`);
   ok(flareSrc.includes('b.pos.push') && flareSrc.includes('b.idx.push') && flareSrc.includes('b.uv.push'),
@@ -143,13 +143,14 @@ console.log('Ⅳ 銜接漸縮帶(行為直測:執行原文區塊)');
     ROAD_FLARE_M: W.ROAD_FLARE_M, flareHw: W.flareHw,
     hw: 8, laneHw: 5, avoidHw: 3, brg: false, strc: true,
     terrain: { minX: -500, maxX: 500, minZ: -500, maxZ: 500, heightAt: () => 5 },
-    tFloorAt: () => 5, deckAt: () => 5.45, b: bucket(), ...o,
+    tFloorAt: () => 5, deckAt: () => 5.45, b: bucket(), walk: bucket(), ...o,
   });
   const build = (o) => {
     const c = base(o);
     c.run = c.run || run(21, -50, 5);
     c.nP = c.run.length; c.cum = cumOf(c.run);
     flare(c);
+    c.b.walk = c.walk;                      // 邊帶與楔形同一次呼叫產出,一起帶回
     return c.b;
   };
   const sect = (b, k) => {   // 第 k 個截面(每截面 4 頂點):[半寬, y]
@@ -195,6 +196,38 @@ console.log('Ⅳ 銜接漸縮帶(行為直測:執行原文區塊)');
   {   // 橋:起點高 = deckAt(橋面表面高,不再加 ROAD_LIFT)
     const b = build({ brg: true, strc: false, deckAt: () => 5.6, tFloorAt: () => NaN });
     ok(b.base > 0 && Math.abs(sect(b, 0)[1] - 5.6) < 1e-12, 'Ⅳ 橋頭起點高 === deckAt(橋面表面)');
+  }
+  {   // 避車道邊帶同步漸縮(2026-07-31):洞內外 MUST 同斷面 —— 車道寬不變、邊帶寬收到零
+    const b = build({});
+    const w = b.walk;
+    const FN1 = b.base / 8;
+    ok(w.base === 8 * FN1, `Ⅳ 邊帶截面數 MUST 與楔形一致(${w.base / 4} 截面 × 內外緣)`);
+    const off = (k, q) => {   // 第 k 截面第 q 點的側向偏移(run 沿 +X ⇒ 側向 = z)
+      const i = (k * 4 + q) * 3;
+      return Math.abs(w.pos[i + 2]);
+    };
+    const yOf = (k, q) => w.pos[(k * 4 + q) * 3 + 1];
+    for (const e of [0, 1]) {
+      const k0 = e * FN1;
+      ok(Math.abs(off(k0, 0) - 5.1) < 1e-9 && Math.abs(off(k0, 1) - 7.9) < 1e-9,
+        `Ⅳ 端${e} 結構側邊帶 MUST 自車道緣(laneHw+0.1)鋪到結構緣(hw−0.1)`);
+      ok(Math.abs(off(k0 + FN1 - 1, 0) - off(k0 + FN1 - 1, 1)) < 1e-9,
+        `Ⅳ 端${e} 外側邊帶寬 MUST 收到零(接上一般路 = 只剩車道)`);
+      let mono = true;
+      for (let k = 1; k < FN1; k++) if (off(k0 + k, 1) > off(k0 + k - 1, 1) + 1e-9) mono = false;
+      ok(mono, `Ⅳ 端${e} 邊帶外緣逐截面單調收窄(與楔形同一條 fhw)`);
+      ok(Math.abs(off(k0, 0) - off(k0 + FN1 - 1, 0)) <= 0.25, `Ⅳ 端${e} 車道緣 MUST 全程不漂(斷面不跳階;容差 = 一個路緣寬)`);
+      ok(yOf(k0, 0) > sect(b, k0)[1] + 0.1, `Ⅳ 端${e} 邊帶 MUST 高於路面(路緣高 0.12)`);
+    }
+    let down = 0;
+    for (let t = 0; t < w.idx.length; t += 3) {
+      const v = [0, 1, 2].map((q) => { const i = w.idx[t + q] * 3; return [w.pos[i], w.pos[i + 1], w.pos[i + 2]]; });
+      const e1 = [v[1][0] - v[0][0], v[1][1] - v[0][1], v[1][2] - v[0][2]];
+      const e2 = [v[2][0] - v[0][0], v[2][1] - v[0][1], v[2][2] - v[0][2]];
+      if ((e1[2] * e2[0] - e1[0] * e2[2]) < 0) down++;
+    }
+    ok(w.idx.length > 0, 'Ⅳ 邊帶 MUST 真的產出三角形');
+    ok(build({ avoidHw: 1.2 }).walk.base === 0, 'Ⅳ 差額 < AVOID_MIN 時邊帶同步不鋪(與楔形同進退)');
   }
   {   // 跳過條件
     ok(build({ avoidHw: 1.2 }).base === 0, 'Ⅳ 差額 < AVOID_MIN(幾乎無階差)不鋪');

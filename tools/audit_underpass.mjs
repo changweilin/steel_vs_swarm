@@ -484,8 +484,11 @@ function build(under = true, heightAt = null) {
   const wallTop = (s) => bAt(s) + UND.KERB;   // 原文 wallTopAt 的 under 分支(Ⅲ 已鎖定其唯一縫)
   const mk = (under) => {
     const tunnelSegs = [];
-    new Function('under', 'ivx', 'cum', 'nP', 'total', 'at', 'tFloorAt', 'ceilOf', 'hw', 'ROAD_LIFT', 'wallTopAt', 'tunnelSegs', OPEN)(
-      under, ivx, cum, nP, total, at, fAt, cAt, HW, ROAD_LIFT, under ? wallTop : () => undefined, tunnelSegs);
+    const galBores = [];
+    new Function('under', 'ivx', 'cum', 'nP', 'total', 'at', 'tFloorAt', 'ceilOf', 'hw', 'ROAD_LIFT', 'wallTopAt',
+      'tunnelSegs', 'galBores', 'TUN', OPEN)(
+      under, ivx, cum, nP, total, at, fAt, cAt, HW, ROAD_LIFT, under ? wallTop : () => undefined, tunnelSegs, galBores, TUN);
+    tunnelSegs.bores = galBores;
     return tunnelSegs;
   };
   ok(mk(false).length === 0, 'Ⅴ 山體隧道(under=false)MUST NOT 登記 open 段(敞開段是原生山谷地形,照舊踩 heightAt)');
@@ -505,6 +508,33 @@ function build(under = true, heightAt = null) {
     'Ⅴ open 段 MUST 吃 tunFloorAt / ceilOf 同一條公式(路面 + ROAD_LIFT、天花 + CLEAR)');
   ok(segs.every((s) => !ivx.some(([c0, c1]) => sOf(s.x1) > c0 + 0.5 && sOf(s.x1) < c1 - 0.5)),
     'Ⅴ open 段 MUST NOT 疊進覆蓋段內部(覆蓋段的 slab/天花語意不得被 open 汙染)');
+  // 引道路塹斷面淨空(2026-07-31 使用者回報「殘餘地形在道路之上」):垂直路塹被高度場攤成一格寬的
+  // 斜面,那片斜面(與貼在上面的地被拼圖)橫在斷面裡 ⇒ 引道逐段 MUST 發 bore 交給 punchPortalHoles
+  const bores = segs.bores;
+  ok(bores.length > 0, 'Ⅴ 引道段 MUST 發斷面淨空 bore(沒有 = 洞口望出去浮著幾片土色薄片)');
+  ok(bores.every((b) => b.hw === HW && b.depth > 0), 'Ⅴ 引道 bore MUST 用通行寬 hw、深度為正');
+  {   // 覆蓋率:bore 走廊(自錨點 0.5m 起算)MUST 蓋滿引道全長
+    const covered = bores.map((b) => {
+      const s0 = (b.x - run[0][0]);   // 場地沿 +X ⇒ 弧長 = x 位移
+      return [s0 + 0.5, s0 + b.depth];
+    }).sort((a, c) => a[0] - c[0]);
+    const openIv = [];
+    let sPrev = 0;
+    for (const [c0, c1] of ivx) { if (c0 - sPrev > 0.4) openIv.push([sPrev, c0]); sPrev = Math.max(sPrev, c1); }
+    if (total - sPrev > 0.4) openIv.push([sPrev, total]);
+    let gap = 0;
+    for (const [c0, c1] of openIv) {
+      let cur = c0;
+      for (const [b0, b1] of covered) {
+        if (b1 <= cur || b0 >= c1) continue;
+        if (b0 > cur) gap += b0 - cur;
+        cur = Math.max(cur, b1);
+      }
+      if (cur < c1) gap += c1 - cur;
+    }
+    ok(gap < 2, `Ⅴ 引道 bore MUST 蓋滿敞開段(未覆蓋 ${gap.toFixed(1)}m —— 缺口就是殘留薄片的位置)`);
+  }
+  ok(mk(false).bores.length === 0, 'Ⅴ 山體隧道 MUST NOT 發引道 bore(它的敞開段是原生地形,不是開挖出來的路塹)');
   // 消費端閘門:makeTunnelIndex 單一縫傳遞;站立捕捉/側壁閘吃、slab 上傳/彈道/天花/lev 濾
   ok(/best = \{ floor, ceil: d\.cy1 \+ \(d\.cy2 - d\.cy1\) \* t, open: !!d\.open \}/.test(src),
     'Ⅴ makeTunnelIndex MUST 傳遞 open 旗標(消費端唯一資訊源)');

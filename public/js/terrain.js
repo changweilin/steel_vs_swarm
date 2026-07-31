@@ -811,7 +811,7 @@ export async function buildTerrain(cfg, onProgress) {
    * `heights[]` 與 position 屬性一律不動 —— heightAt / 碰撞 / 迷霧 LOS / bakeWetGrid 全讀 heights
    * 陣列,不讀三角形 ⇒ 這是**純視覺**開洞:單位照樣走不過山、砲火照樣打不穿(33b3c54 命脈不動)。
    * 刪除條件三合一(缺一不可,缺了就是破頂或黑洞):
-   *   ① 任一頂點落在斷面走廊內(|側向 offset| ≤ hw、進洞深度 0.5 ~ depth);
+   *   ① 三角形(XZ 投影)與斷面走廊矩形(|側向 offset| ≤ hw、進洞深度 0.5 ~ depth)**重疊**;
    *   ② 三角形有部分高過路面(整片在路面之下 = 被路面緞帶蓋著看不見,留著);
    *   ③ 三角形有部分低於天花(整片在天花之上 = 山體本體,留著 ⇒ 高空俯瞰不破頂)。
    * 亦即只刪「覆蓋轉換處那一圈把隧道斷面塞住的拉伸崖面(土牆)」。
@@ -828,13 +828,51 @@ export async function buildTerrain(cfg, onProgress) {
     const rims = (bores || []).map(() => []);
     const touched = (bores || []).map(() => false);
     if (!bores?.length) return { rims, touched };
-    const B = bores.map((b) => ({ ...b, ca: Math.cos(b.ry), sa: Math.sin(b.ry), far2: (b.depth + b.hw + 24) ** 2 }));
+    // out = 走廊往洞**外**延伸幾公尺(2026-07-31 多視角檢視):洞口外側 ±hw、路面以上、天花以下
+    // 那塊空間就是「車開出來的地方」,本來就該淨空 —— 開挖後殘留在切面上的地被底毯/地形攤片
+    // 會斜插進洞口(從洞內往外看是幾片浮在路面上方的土色薄片)。走廊只往外延一格,垂直三條界
+    // 不動 ⇒ 路面以下(路塹底、圍裙)與天花以上(山體)照樣不刪。
+    const B = bores.map((b) => ({ ...b, out: b.out || 0, ca: Math.cos(b.ry), sa: Math.sin(b.ry),
+      far2: (b.depth + b.hw + 24 + (b.out || 0)) ** 2 }));
     /** 點是否落在該 bore 的斷面走廊內(不含高度判定) */
     const inBore = (b, x, z) => {
       const dx = x - b.x, dz = z - b.z;
       if (dx * dx + dz * dz > b.far2) return false;
       const lx = dx * b.ca - dz * b.sa, lz = dx * b.sa + dz * b.ca;
-      return Math.abs(lx) <= b.hw && lz <= -0.5 && lz >= -b.depth;
+      return Math.abs(lx) <= b.hw && lz <= b.out - 0.5 && lz >= -b.depth;
+    };
+    /**
+     * 三角形(XZ 投影)是否與該 bore 的斷面走廊矩形重疊(2D SAT;凸 × 凸)。
+     * **MUST NOT 退回「任一頂點在走廊內」**(2026-07-31 多視角檢視):地形格 ~8.3m、對角 ~11.7m,
+     * 走廊在**縱向兩端**只有 0.5m / depth 兩道界 —— 洞口與明隧道段端點附近的三角形常常一個頂點
+     * 落在走廊外側(側向 > hw)、另一個落在端界外(lz > −0.5 或 < −depth),整片卻橫切過斷面。
+     * 頂點法漏掉它 ⇒ 出入口內側殘留一片戳進斷面的地形楔(使用者回報的「洞內卡著石頭」),
+     * 且該片不在 rims 內、collar 也補不到。重疊法只多刪真的擋在斷面裡的那幾片,鄰接的洞緣
+     * 照樣進 rims → collar 仍水密。
+     */
+    const triBore = (b, x0, z0, x1, z1, x2, z2) => {
+      const mx = (x0 + x1 + x2) / 3 - b.x, mz = (z0 + z1 + z2) / 3 - b.z;
+      if (mx * mx + mz * mz > b.far2) return false;                    // 粗篩(far2 已含一格餘裕)
+      const L = (x, z) => {
+        const dx = x - b.x, dz = z - b.z;
+        return [dx * b.ca - dz * b.sa, dx * b.sa + dz * b.ca];
+      };
+      const p = [L(x0, z0), L(x1, z1), L(x2, z2)];
+      const xLo = -b.hw, xHi = b.hw, zLo = -b.depth, zHi = b.out - 0.5;
+      // 軸 1/2 = 走廊自身的兩軸
+      if (p.every((q) => q[0] < xLo) || p.every((q) => q[0] > xHi)) return false;
+      if (p.every((q) => q[1] < zLo) || p.every((q) => q[1] > zHi)) return false;
+      // 軸 3~5 = 三角形三邊的法線
+      const corner = [[xLo, zLo], [xHi, zLo], [xHi, zHi], [xLo, zHi]];
+      for (let e = 0; e < 3; e++) {
+        const a = p[e], c = p[(e + 1) % 3];
+        const nx = c[1] - a[1], nz = a[0] - c[0];
+        let tLo = Infinity, tHi = -Infinity, rLo = Infinity, rHi = -Infinity;
+        for (const q of p) { const d = q[0] * nx + q[1] * nz; if (d < tLo) tLo = d; if (d > tHi) tHi = d; }
+        for (const q of corner) { const d = q[0] * nx + q[1] * nz; if (d < rLo) rLo = d; if (d > rHi) rHi = d; }
+        if (tHi < rLo || rHi < tLo) return false;
+      }
+      return true;
     };
     /** 該 bore 在此點深度的路面高(隧道路面是平直內插,slope 為定值) */
     const floorAt = (b, x, z) => b.floorY
@@ -857,8 +895,8 @@ export async function buildTerrain(cfg, onProgress) {
         const mx = (P[i0] + P[i1] + P[i2]) / 3, mz = (P[i0 + 2] + P[i1 + 2] + P[i2 + 2]) / 3;
         for (let k = 0; k < B.length; k++) {
           const b = B[k];
-          // ① 任一頂點在走廊內(三角形直徑 < 走廊寬,故「跨越但無頂點在內」不成立)
-          if (!inBore(b, P[i0], P[i0 + 2]) && !inBore(b, P[i1], P[i1 + 2]) && !inBore(b, P[i2], P[i2 + 2])) continue;
+          // ① 三角形與走廊斷面重疊(含「跨越但無頂點在內」——洞口/明隧道端點的常見情形)
+          if (!triBore(b, P[i0], P[i0 + 2], P[i1], P[i1 + 2], P[i2], P[i2 + 2])) continue;
           const fy = floorAt(b, mx, mz);
           if (yHi <= fy + b.lift + 0.15) continue;      // ② 全在路面之下
           if (yLo >= fy + b.clear + 0.25) continue;     // ③ 全在天花之上
