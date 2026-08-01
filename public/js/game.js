@@ -42,9 +42,13 @@ const KIND_KEY = {
   hyper: 'hyper',     // 極音速飛彈(機甲長按招式的彈體;位置/朝向全由伺服器回報)
 };
 const HERO_KINDS = new Set(['drone', 'robot', 'morph']);
-// 彈道積分的最大取樣點數(≈3m/點 ⇒ 涵蓋約 790m 弧長)。繪製緩衝(_ensureArcGuide)與
+// 彈道積分的最大取樣點數(步長 ≤0.03s 且 ≈3m/點)。繪製緩衝(_ensureArcGuide)與
 // 不繪製的可命中判定(_arcTrace draw=false)MUST 共用同一個上限,否則兩者會在長弧上分家。
-const ARC_MAXP = 264;
+// 384 = 涵蓋 11.5 秒飛行(2026-08-02 45° 對地拋投改制):45° 解的初速被反解到只剩 41~46m/s,
+// 步長被 0.03s 上限綁住 ⇒ 走完滿射程要 200~250 點,再算上往低處打的長弧(俯角 −100m 約 268 點)
+// 舊上限 264 會在彈頭落地**之前**用光緩衝 —— 積分沒走到瞄準點 ⇒ minD 永遠收不進 LOB_TOL,
+// 症狀是「打山谷底下的敵人光暈永遠不亮、虛線斷在半空」。
+const ARC_MAXP = 384;
 // 射程光暈的評估節流(2026-07-30):光暈的判據從「距離夠近」升級成「這一發真的打得到」,
 // 而拋物線可行性要跑彈道積分 —— 全場敵人每幀重算會把 _lobAim 那條熱路徑再乘上敵人數。
 // 作法:每幀只評估固定枚數(拋物線積分貴 ⇒ 每幀 1 個;直線只是一條線段射線 ⇒ 每幀 6 個),
@@ -4329,9 +4333,13 @@ export class BattleClient {
     // bot 的 shot 事件不帶初速,退回以落點離地高度推定對空(> AA_ALT = 打空中目標)→ 高速近直線。
     const aa = def.type === 'launcher' && to.y - this.terrain.heightAt(to.x, to.z) > BALLISTIC.AA_ALT;
     const v0 = mv || this._shotV0(def, aa);
-    const vel = def.type === 'launcher'
-      ? this._lobVel(from, to, v0)                              // 榴彈/火箭:拋物線命中目標(彈射模式初速高 ⇒ 解自然拉平)
-      : to.clone().sub(from).normalize().multiplyScalar(v0);   // 飛彈/動能:直指目標(近似,純視覺)
+    // 對地榴彈走射手同一支 45° 解(2026-08-02):兩端只要一端用低伸解,同一個落點就會畫出
+    // 兩條不同的弧(對方看到的砲彈從山腰擦過去、我這邊是吊過山頭)。初速由幾何反解(與射手同式),
+    // 上限吃全裝藥 —— 拿回報的 mv 當上限會在四捨五入邊界上忽解忽不解。
+    const v45 = def.type === 'launcher' && !aa ? this._lob45Vel(from, to, this._shotV0(def, false)) : null;
+    const vel = v45 || (def.type === 'launcher'
+      ? this._lobVel(from, to, v0)                              // 對空彈射:初速高 ⇒ 解自然拉平
+      : to.clone().sub(from).normalize().multiplyScalar(v0));   // 飛彈/動能:直指目標(近似,純視覺)
     const ldir = vel.clone().normalize();
     const mesh = this._takeProjectile(def, true, side, ch);   // 同池:他人彈體與自機彈體共用回收路徑
     mesh.position.copy(from);
@@ -4339,7 +4347,7 @@ export class BattleClient {
     this.scene.add(mesh);
     this._visShells.push({
       pos: from.clone(), vel,
-      dist: 0, max: (def.range || 300) * 1.35, mesh,
+      origin: from.clone(), max: (def.range || 300) * 1.35, mesh,   // 射程 = 以射擊點為中心的球面(與自機彈體同一把尺)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(side).col,
     });
     return ldir;
@@ -4354,14 +4362,13 @@ export class BattleClient {
       b.pos.addScaledVector(b.vel, dt);
       const seg = b.pos.clone().sub(prev);
       const len = seg.length();
-      b.dist += len;
       // 地形/障礙/薄板一律走 _layerHitT 的**雙面**解析截斷(與 _updateBullets 同一組規則):
       // 舊制 `pos.y <= heightAt` 是單面「在地表以下」判定 —— 覆蓋段山體高度沒被開挖,隧道裡
       // 每一發他人彈體都在槍口原地炸;由下往上穿地表也整條漏放。
       const dB = len > 0.01 ? this._layerHitT(prev.x, prev.y, prev.z, b.pos.x, b.pos.y, b.pos.z) : null;
       let hit = false;
       if (dB != null) { b.pos.copy(prev).addScaledVector(seg.clone().divideScalar(len), dB); hit = true; }
-      if (hit || b.dist >= b.max) {
+      if (hit || b.pos.distanceTo(b.origin) >= b.max) {
         starburst(this.scene, this.effects, b.pos.x, b.pos.y, b.pos.z, hit ? 1.6 : 0.8, 0xffc79a);
         this._dropBullet(b);
         this._visShells.splice(i, 1);
@@ -4521,13 +4528,20 @@ export class BattleClient {
    * 彈道變成高速近直線(拋物線吊射對會動的飛行目標毫無火控意義)。射程/傷害/彈藥全不變。
    * **唯一判定縫**:每幀在 `_tickWeapons`(擊發)之前更新 `this._aaAim`,擊發與瞄準虛線
    * 消費同一份結果 ⇒ 所見即所射;MUST NOT 在擊發處另做一次掃描(兩份會分家)。
+   *
+   * **準星優先**(2026-08-02 使用者定案「榴彈鎖定目標以準星優先」):目標一律由準星射線
+   * (`_lobCrosshair` 單一縫,與 `_lobAim` 的瞄準點同源)定案 —— 解到飛行單位才進彈射模式,
+   * 解到地面單位/建物一律走 45° 對地拋投。錐形輔助 `_aaTarget` 降級成**準星什麼都沒解到時**
+   * (壓在空無處打機群)才接手;舊制無條件吃錐內最正對者 ⇒ 8° 錐內任何一架飛行單位都能把
+   * 瞄準點從準星底下拉走(使用者回報「遠離準星瞄準目標卻還是被拉過去」),而 `_aimTarget`
+   * 對 lob 又是直接吃火控解 ⇒ 連鎖定也跟著被拉走。
    */
   _updateAaMode() {
     const def = (this.side && !this.dead && !this.shopOpen) ? this._curWeapon().def : null;
-    // 掃到的飛行目標留給 _lobAim 當瞄準點(彈射模式的火控解直接收束到機體幾何中心,
-    // 不再靠玩家對著會動的機群手動修正);MUST NOT 在 _lobAim 另掃一次(兩份會分家)。
-    this._aaEnt = def && def.type === 'launcher'
-      ? this._aaTarget(this._maxRange(def)) : null;
+    const cross = def && def.type === 'launcher' ? this._lobCrosshair(def) : null;
+    this._aaEnt = !cross ? null
+      : cross.ent ? (TARGET_CLASS[cross.ent.kind] === 'air' ? cross.ent : null)
+        : this._aaTarget(this._maxRange(def));
     const on = !!this._aaEnt;
     if (on === this._aaAim) return;
     this._aaAim = on;
@@ -4563,18 +4577,43 @@ export class BattleClient {
 
   // ---------------- 榴彈火控(trajClass 'lob';2026-07-22 瞄準指示 → 2026-07-23 改火控解)----------------
   /**
+   * 榴彈火控的**準星解**(單一縫):`_updateAaMode`(要不要進彈射模式)與 `_lobAim`(瞄準點)
+   * 同一幀吃同一份 —— 兩端各打一條射線就會出現「模式判成對地、瞄準點卻鎖在飛機上」。
+   * 準星射線每幀重打太貴(地形解析射線 + 全場機體 mesh)⇒ 鏡頭與槍口都幾乎沒動就沿用上一幀的解
+   * (靜止架砲是榴彈的主要用法);轉動/位移一超過門檻立刻重打 ⇒ 瞄準精度不打折。
+   * 回傳的快取物件另帶 `from`(本幀槍口世界座標),消費端只讀不改。
+   */
+  _lobCrosshair(def) {
+    this.camera.updateMatrixWorld();
+    const c = this._lobCache || (this._lobCache = {
+      d: new THREE.Vector3(), o: new THREE.Vector3(), t: -1, ent: null,
+      pt: new THREE.Vector3(), from: new THREE.Vector3(),
+    });
+    if (this.gunGroup) this.gunGroup.localToWorld(c.from.copy(this._muzzle));
+    else c.from.copy(this.camera.position);
+    const dir = this.camera.getWorldDirection(this._lobFwd || (this._lobFwd = new THREE.Vector3()));
+    const t = performance.now();
+    if (t - c.t > 60 || c.d.dot(dir) < 0.999998 || c.o.distanceToSquared(c.from) > 0.0225
+        || (c.ent && (c.ent.dead || !c.ent.mesh.visible))) {
+      const r = this._resolveAim(this._maxRange(def));
+      c.pt.copy(r.point); c.ent = r.ent || null; c.d.copy(dir); c.o.copy(c.from); c.t = t;
+    }
+    return c;
+  }
+
+  /**
    * 拋物線武器的火控解 —— **唯一判定縫**,每幀在 `_tickWeapons`(擊發)之前定案。
    * 擊發 `_tryFire`、瞄準虛線 `_updateArcGuide`、鎖定光暈 `_tickLock`、砲口仰角(`_loop` 的
    * gunGroup.rotation.x)全部消費同一份 `this._lobFc` ⇒ 所見即所射;
    * **MUST NOT** 在任何一端另解一次(兩份會分家)。
    *
-   * 火控流程(遵守真實彈道學,使用者 2026-07-23 定案):
-   *  ① 瞄準點:準星射線的交點 —— 打到機體就取**那個部位**的世界座標(規則:瞄哪個部位打哪個部位);
-   *     對空彈射模式改取飛行目標的機體幾何中心(會動的目標不該要求玩家對著它手動吊射)。
-   *  ② 解算:以初速 v0(吊射 LAUNCH_MV / 彈射 AA_MV)求命中該點的拋射角 —— 出膛仰角、弧高、
-   *     飛行時間全隨目標距離與高差改變,砲口因此不再是「沿準星直射的一條固定曲線」。
-   *  ③ 驗證:逐步積分;低伸解被地形/障礙截斷 → 逐級降裝藥(仰角自動抬高)重解,直到越過遮蔽物。
-   *     全部裝藥都不通 / 超出射程包絡 ⇒ ok:false,虛線轉警示色且**鎖定光暈不亮**
+   * 火控流程(遵守真實彈道學,使用者 2026-07-23 定案;2026-08-02 對地改 45° 固定投擲角):
+   *  ① 瞄準點:**準星優先** —— 準星射線的交點,打到機體就取**那個部位**的世界座標
+   *     (規則:瞄哪個部位打哪個部位)。只有準星本身解到飛行單位(或準星壓在空無處而錐內有
+   *     飛行目標)才切彈射模式取機體幾何中心;判定住 `_updateAaMode`,這裡不另掃一次。
+   *  ② 解算:對地 = 固定 45° 反解初速(落點恆為瞄準點);對空 = 以初速 AA_MV 求拋射角。
+   *  ③ 驗證:逐步積分;對空的低伸解被地形/障礙截斷 → 逐級降裝藥(仰角自動抬高)重解。
+   *     打不通 / 超出射程包絡 ⇒ ok:false,虛線轉警示色且**鎖定光暈不亮**
    *     (使用者規則「射程光暈要在拋物線對準時才亮」)。
    */
   _lobAim() {
@@ -4588,26 +4627,15 @@ export class BattleClient {
     // 走拋物線火控是錯的指示,兩者互斥。
     if (this.dead || this.shopOpen || !this.side || !this.ch || id !== 'heavy'
         || !def || trajClass(def) !== 'lob' || !this.gunGroup) return;
-    this.camera.updateMatrixWorld();
-    const from = this.gunGroup.localToWorld(this._muzzle.clone());
-    // ① 瞄準點(對空彈射沿用 _updateAaMode 掃到的那架,不另掃)
+    // ① 瞄準點(**準星優先**:準星解與彈射模式判定同吃 `_lobCrosshair`,不另掃一次)
+    const c = this._lobCrosshair(def);
+    const from = c.from;
     const aaEnt = this._aaAim ? this._aaEnt : null;
     if (aaEnt && !aaEnt.dead && aaEnt.mesh.visible) {
       const p = aaEnt.mesh.position;
       fc.aim.set(p.x, p.y + (aaEnt.dimTop != null ? aaEnt.dimTop - aaEnt.dimH * 0.5 : 1.5), p.z);
       fc.ent = aaEnt;
     } else {
-      // 準星射線每幀重打太貴(地形 7 萬面 + 全場機體 mesh)—— 鏡頭與槍口都幾乎沒動就沿用上一幀
-      // 的瞄準點(靜止架砲是榴彈的主要用法)。轉動/位移一超過門檻立刻重打 ⇒ 瞄準精度不打折,
-      // 最壞情況與既有 _updateGuideLaser 的每幀射線同級。
-      const dir = this.camera.getWorldDirection(this._lobFwd || (this._lobFwd = new THREE.Vector3()));
-      const c = this._lobCache || (this._lobCache = { d: new THREE.Vector3(), o: new THREE.Vector3(), t: -1, ent: null, pt: new THREE.Vector3() });
-      const t = performance.now();
-      if (t - c.t > 60 || c.d.dot(dir) < 0.999998 || c.o.distanceToSquared(from) > 0.0225
-          || (c.ent && (c.ent.dead || !c.ent.mesh.visible))) {
-        const r = this._resolveAim(this._maxRange(def));
-        c.pt.copy(r.point); c.ent = r.ent || null; c.d.copy(dir); c.o.copy(from); c.t = t;
-      }
       fc.aim.copy(c.pt);
       fc.ent = c.ent;
     }
@@ -4617,12 +4645,12 @@ export class BattleClient {
     // 射程包絡 = **對這個瞄準目標**的有效射程(唯一縫 `_effRange`;瞄地面 ⇒ ent=null ⇒ 基礎射程)。
     // 火控階梯決定的是真正的出膛向量 ⇒ 這裡放寬多少,砲彈就真的飛多遠 = 射程光暈與實際落點分家。
     const max = this._effRange(def, fc.ent);
-    // ② + ③ 逐級降裝藥:共用 `_lobLadder`(唯一縫)—— 射程光暈的可命中判定吃同一份階梯
-    const { ok, zi, arc } = this._lobLadder(from, fc.aim, max, base, BALLISTIC.LOB_TOL, true);
+    // ② + ③ 對地 45° / 對空逐級降裝藥:共用 `_lobLadder`(唯一縫)—— 射程光暈吃同一份解
+    const { ok, v0, vel, arc, high } = this._lobLadder(from, fc.aim, max, base, BALLISTIC.LOB_TOL, true, fc.aa);
     fc.ok = ok;
-    fc.v0 = base * BALLISTIC.LOB_CHARGE[zi];
-    fc.high = zi > 0;
-    fc.vel.copy(this._lobVel(from, fc.aim, fc.v0));
+    fc.v0 = v0;
+    fc.high = high;
+    fc.vel.copy(vel);
     fc.n = arc.n;
     fc.hasImpact = !!arc.impact;
     if (arc.impact) fc.impact.copy(arc.impact);
@@ -4641,32 +4669,65 @@ export class BattleClient {
   }
 
   /**
-   * 逐級降裝藥火控階梯(**唯一縫**):全裝藥低伸解 → 被地形/障礙擋住就降一號,初速降低 ⇒ 命中同一點
-   * 所需仰角自動抬高、弧線變高 —— 真實榴彈砲「選裝藥號數 + 高角度射擊」越過稜線/建物的作法
-   * (MUST NOT 改用同初速的高角度解:現尺度下那是 85° 迫砲彈,飛行 20 秒沒有戰術意義)。
-   * 降到打不到(射程包絡外)即停;出射程/無解的截斷降裝藥也沒用,不白跑積分。
+   * 固定 45° 投擲解(2026-08-02 使用者定案「準星瞄準地面敵人時,榴彈投擲角度 45 度,軌跡是以
+   * 目標物件瞄準點為落點進行拋物線投擲」)—— 角度定死、**初速反解**:
+   *   dy = L − g·L²/v0²  ⇒  v0² = g·L² / (L − dy)   (L = 水平距離、dy = 目標高差)
+   * 45° 同時是最大射程角、也是 dy=0 時的最小能量解 ⇒ 弧線恆高於同初速的低伸解,越障能力
+   * 本來就優於舊裝藥階梯的任一級(階梯因此對地面目標整組讓位,MUST NOT 兩套並存)。
+   * 回 null 的兩種情形交給呼叫端退回裝藥階梯:
+   *   ① L ≤ dy(目標仰角 ≥ 45°,懸崖正上方):45° 無解,而低伸解的仰角本來就比 45° 更陡
+   *      ⇒ 兩者在 45° 處連續,不是特例而是同一條曲線的延伸。
+   *   ② 反解初速超過全裝藥 vmax:超出物理射程包絡(45° 射程 = v0²/g,已是最遠)。
+   */
+  _lob45Vel(from, aim, vmax) {
+    const hx = aim.x - from.x, hz = aim.z - from.z;
+    const L = Math.hypot(hx, hz);
+    const dy = aim.y - from.y;
+    if (L <= Math.max(dy, 1e-3)) return null;
+    const v0 = Math.sqrt(BALLISTIC.G * L * L / (L - dy));
+    if (v0 > vmax) return null;
+    const c = v0 * Math.SQRT1_2;   // 45°:水平分量 = 垂直分量
+    return new THREE.Vector3((hx / L) * c, c, (hz / L) * c);
+  }
+
+  /**
+   * 榴彈火控解(**唯一縫**),兩段:
+   *  ① 對地(aa=false):固定 45° 拋投,初速由 `_lob45Vel` 反解 ⇒ 落點恆為瞄準點。
+   *  ② 對空彈射(aa=true)/ 45° 無解:逐級降裝藥階梯 —— 全裝藥低伸解 → 被地形/障礙擋住就降一號,
+   *     初速降低 ⇒ 命中同一點所需仰角自動抬高、弧線變高(真實榴彈砲「選裝藥號數」越過稜線的作法;
+   *     MUST NOT 改用同初速的高角度解:現尺度下那是 85° 迫砲彈,飛行 20 秒沒有戰術意義)。
+   *     降到打不到(射程包絡外)即停;出射程/無解的截斷降裝藥也沒用,不白跑積分。
    *
-   * 回傳 { ok:tol 內對準了嗎, zi:定案的裝藥號數索引, arc:該次積分結果 }。
+   * 回傳 { ok:tol 內對準了嗎, v0:定案初速, vel:出膛向量, arc:該次積分結果, high:非全裝藥標準解 }。
    * **兩個消費端 MUST 吃這一份**:
    *   ① `_lobAim` 的火控解(draw=true,寫繪製緩衝 → 虛線/落點環/砲管仰角/鎖定光暈)
    *   ② `_reachable` 的射程光暈可命中判定(draw=false,不動繪製緩衝)
    * 另寫一份簡化積分 = 光暈與實際彈道分家,又回到使用者回報的「光暈亮著卻沒命中」。
    */
-  _lobLadder(from, aim, max, base, tol, draw) {
+  _lobLadder(from, aim, max, base, tol, draw, aa = false) {
+    if (!aa) {
+      const v45 = this._lob45Vel(from, aim, base);
+      if (v45) {
+        const a = this._arcTrace(from, v45, max, aim, draw);
+        return { ok: a.minD <= tol, v0: v45.length(), vel: v45, arc: a, high: false };
+      }
+    }
     const Z = BALLISTIC.LOB_CHARGE;
-    let arc = null, zi = 0, ok = false;
+    let arc = null, vel = null, v0 = base, ok = false, high = false;
     for (let k = 0; k < Z.length; k++) {
       const v = base * Z[k];
       if (!this._lobSolve(from, aim, v).ok) break;   // 該裝藥打不到:更低號更打不到
-      const a = this._arcTrace(from, this._lobVel(from, aim, v), max, aim, draw);
-      arc = a; zi = k;
+      const lv = this._lobVel(from, aim, v);
+      const a = this._arcTrace(from, lv, max, aim, draw);
+      arc = a; vel = lv; v0 = v; high = k > 0;
       if (a.minD <= tol) { ok = true; break; }
       if (a.cut !== 'block') break;
     }
-    if (!arc && draw) {   // 全裝藥都沒有實數解(超出射程包絡):畫 45° 盡力弧當落短指示
-      arc = this._arcTrace(from, this._lobVel(from, aim, base), max, aim, true);
+    if (!arc && draw) {   // 全裝藥都沒有實數解(超出射程包絡):畫盡力弧當落短指示
+      vel = this._lobVel(from, aim, base);
+      arc = this._arcTrace(from, vel, max, aim, true);
     }
-    return { ok, zi, arc };
+    return { ok, v0, vel, arc, high };
   }
 
   /**
@@ -4677,6 +4738,12 @@ export class BattleClient {
    * 射程終點截斷,截斷了就永遠靠不近(單位不擋積分:命中由伺服器結算,虛線只是指示)。
    * cut:'block' 撞地形/障礙(降裝藥抬高彈道可能越過)/ 'range' 射程終點 / 'pass' 飛過瞄準點 / null 緩衝用盡。
    * step 隨初速自適應(恆 ~3m/點):彈射模式 720m/s 若照 0.03s 走,一步 21m 會跳過整條稜線。
+   *
+   * **射程 = 以射擊點為中心的球面,與軌跡無關**(2026-08-02 使用者定案;與 `_updateBullets`、
+   * 伺服器 `heroBurst` 落點閘門 `dist2d(射手, 落點)`、射程光暈 `_reachable` 的
+   * `from.distanceTo(aim)` 同一把尺)。舊制量航跡長是對低伸解說的;45° 拋投的弧長恆為水平距離的
+   * 1.148 倍 ⇒ 繼續扣航跡長 = 射程無聲砍掉 13%,而且砲彈會在抵達瞄準點**之前**於半空自爆
+   * (玩家看到的是「射程變短 + 光暈在 87% 射程外就熄」)。
    */
   _arcTrace(from, vel, max, aim, draw = true) {
     if (draw) this._ensureArcGuide();
@@ -4710,9 +4777,10 @@ export class BattleClient {
       minD = Math.min(minD, p.distanceTo(aim));
       // 飛過瞄準點即收線(落點環畫在目標上,虛線不再穿過機體往後方山腳延伸)
       const s = (p.x - from.x) * ux + (p.y - from.y) * uy + (p.z - from.z) * uz;
-      if (hit || dist >= max || s >= aimD) {
+      const spent = p.distanceTo(from);   // 射程包絡 = 離發射點的直線距離(見上方註解)
+      if (hit || spent >= max || s >= aimD) {
         impact = p.clone();
-        cut = hit ? 'block' : (dist >= max ? 'range' : 'pass');
+        cut = hit ? 'block' : (spent >= max ? 'range' : 'pass');
         break;
       }
     }
@@ -5113,7 +5181,7 @@ export class BattleClient {
    * 「這一發打得到嗎」——射程光暈的唯一判據,依 `data.js reachRule()` 逐彈道類型分派
    * (五類 lob/guide/fnf/flat/line 全部住在那張表;此處 MUST NOT 再比對一次 def.type)。
    *
-   *   path 'arc' 拋物線:跑**與 `_lobAim` 同一份**逐級降裝藥階梯(`_lobLadder`,draw=false)。
+   *   path 'arc' 拋物線:跑**與 `_lobAim` 同一份**火控解(`_lobLadder`,draw=false;對地 45° / 對空階梯)。
    *   path 'ray' 直線:槍口 → 目標命中量體中心的線段,被地形/障礙截斷處即落點(`_layerHitT`)。
    *   hit 'blast' 爆炸戰鬥部:落點落在**爆風核心帶**(blastCoreR + 目標水平量體)內才算打得到 ——
    *        刻意不要求視線通:爆風不吃 LOS(A11 繞射近似),貼著掩體外側炸開照樣傷得到後面的人。
@@ -5139,9 +5207,10 @@ export class BattleClient {
       const tol = blastCoreR(def) + hr;    // 落點落在核心帶內 ⇒ 目標吃滿額爆風(blastFalloff)
       let miss;                            // 落點與目標命中量體中心的距離
       if (rule.path === 'arc') {
-        // 對空彈射模式(高初速近直線)在瞄到飛行單位時自動生效 ⇒ 判定要用同一個初速
+        // 對空彈射模式(高初速近直線)在準星解到飛行單位時自動生效 ⇒ 判定要用同一個初速與同一段
+        // 解法(對地 = 45° 拋投、對空 = 裝藥階梯);少傳這個旗標,光暈就會拿另一條彈道回答
         const aa = TARGET_CLASS[ent.kind] === 'air';
-        const L = this._lobLadder(from, aim, rng, this._shotV0(def, aa), tol, false);
+        const L = this._lobLadder(from, aim, rng, this._shotV0(def, aa), tol, false, aa);
         if (!L.arc) return { ok: false, warn: false };   // 全裝藥都超出射程包絡
         miss = L.arc.minD;
       } else {
@@ -6051,7 +6120,12 @@ export class BattleClient {
       // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
       // 本地畫扇形彈著(近距密、遠距散),slot 分輕(散彈)/ 重(電漿)。
       this._fanBlast(muzzle, dir, def, rng);
-      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id });   // three z 南 → 模擬 z 北
+      // o = 槍口(與 lance 同一組座標約定:[x, −z, 離站立表面高])= **射程球心**。扇形吃誠實界
+      // (無 RANGE_TOL 吸收兩端差),球心 MUST 與射程光暈 `_reachable` 的 from 是同一個點 ——
+      // 少送這一欄,伺服器就退回機體中心量,槍口前伸的那一段變成「光暈亮著卻不掉血」的邊界帶。
+      this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id,   // three z 南 → 模擬 z 北
+        o: [Math.round(muzzle.x * 10) / 10, Math.round(-muzzle.z * 10) / 10,
+          Math.round(((this._altAG || 0) + (muzzle.y - this.pos.y)) * 10) / 10] });
       return;
     }
 
@@ -6119,10 +6193,10 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
       pos: muzzle.clone(), vel: fvel,
-      dist: 0, max: rng, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
+      max: rng, mesh, origin: muzzle.clone(),   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
-      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, seek: !!arm,
+      mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0,
       // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
       // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
       fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
@@ -6231,19 +6305,24 @@ export class BattleClient {
       if (b.fnf && tgt) b.chase = true;   // 曾經以鎖定目標追擊過 ⇒ 射程包絡換成追擊燃料(不可逆:目標中途陣亡也照飛)
       // 最短距離(軌跡修正期):離架 b.arm 公尺內導引/追蹤尚未接手 —— 只吃重力直飛,
       // 離架時的初期散布(_armSpread)因此無法被修正 ⇒ 近距離命中率較低(使用者定案規則)。
-      const armed = b.dist >= (b.arm || 0);
+      // 與射程同一把尺:量**離發射點的直線距離**(球面),而非航跡長 —— `_reachable` 的軌跡修正期
+      // 警示帶(`surf < arm`)本來就是直線量的,兩邊不同尺 = 琥珀色的範圍與實際偏差期對不上。
+      const armed = prev.distanceTo(b.origin) >= (b.arm || 0);
       if (tgt && armed) {
         // 飛彈自動追蹤:朝鎖定目標修正航向(動力飛行,升力抵銷重力)
         const want = _TMP_A.copy(tgt.mesh.position); want.y += 1.5;
         steer(b, want.sub(b.pos).normalize(), seekTurn(SEEK.HOME_W, b.mv));   // 轉彎半徑上限見 data.js SEEK
       } else if (armed && b.guide && this.aiming && b.slot === 'heavy') {
-        // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正
+        // 雷射導引(騎波):朝準星射線上、彈體前方 40m 的導引點修正。
+        // 使用者定案(2026-08-02)與榴彈**同一條**:中途碰撞就爆(下方 hit 分支)、目標移開而沒
+        // 碰撞就繼續飛、飛到射程球面就原地爆(下方 `spent >= b.max`)—— 導引失效 MUST NOT 讓彈體
+        // 提早消失或原地蒸發,它只是不再修正航向而已。
         const ro = this.camera.position;
         const rd = this.camera.getWorldDirection(_TMP_C);
         const along = Math.max(20, _TMP_A.copy(b.pos).sub(ro).dot(rd) + 40);
         const gp = _TMP_A.copy(ro).addScaledVector(rd, along);
         if (gp.distanceTo(b.origin) > b.max) {
-          b.guide = false;                     // 導引點出了射程 → 雷射導引失效
+          b.guide = false;                     // 導引點出了射程球面 → 雷射導引失效(彈體照飛)
           b.vel.y -= BALLISTIC.G * dt;
         } else {
           steer(b, gp.sub(b.pos).normalize(), seekTurn(SEEK.RIDE_W, b.mv));
@@ -6254,7 +6333,6 @@ export class BattleClient {
       b.pos.addScaledVector(b.vel, dt);
       const seg = _TMP_A.copy(b.pos).sub(prev);
       const len = seg.length();
-      b.dist += len;
       let hit = null;
       let hitDist = Infinity;
       if (len > 0.01) {
@@ -6314,18 +6392,17 @@ export class BattleClient {
           hit = { point: new THREE.Vector3(nx, ny, nz), ent: tgt };
         }
       }
-      // 射程包絡的量法跟著彈道走 —— 舊制在同一支函式裡混用兩種量法,正是「導引/射後不理光暈
-      // 亮著卻沒命中」的最後一塊:
-      //   ・無導引彈(lob / flat):量**航跡長** b.dist,與瞄準虛線的積分 `_arcTrace`(dist >= max)
-      //     同一把尺 —— 吊射的弧長本來就該算進射程消耗。
-      //   ・導引 / 射後不理(seek):量**離發射點的直線距離**。同一個 b.max 在失鎖判定
-      //     (目標離 b.origin 超過 b.max 即失鎖)、伺服器落點閘門(dist2d(射手, 落點))、射程光暈
-      //     (_reachable 的 from.distanceTo(aim))三處**全部**是直線量法;只有這裡拿航跡長。
-      //     而導引彈的航跡恆長於直線(離架散布 + 一路修正航向)⇒ 打射程邊緣的目標,彈頭必定在
-      //     飛到之前就自毀(實測微型攔截彈滿射程恆差 5.5m,任何轉向率都救不回來)。
-      //   ・射後不理**鎖定後**(b.chase):射程包絡整條讓位給追擊燃料 `chaseCapS`
-      //     (使用者定案「鎖定後持續追擊,不受射程影響」)—— 燃料只是不讓失控彈體永遠留在場上。
-      const spent = b.seek ? b.pos.distanceTo(b.origin) : b.dist;
+      // 射程 = **以射擊點為中心的球面,與軌跡無關**(2026-08-02 使用者定案)—— 逐彈道**唯一一把尺**:
+      // `|彈頭 − 發射點| ≥ b.max` 就到界,拋物線的弧、導引彈的修正航跡、離架散布繞的路一律不計。
+      // 這條同時把其餘三處量法對齊成同一個球:失鎖判定(目標離 b.origin 超過 b.max)、伺服器落點
+      // 閘門(dist2d(射手, 落點))、射程光暈(`_reachable` 的 from.distanceTo(aim))。
+      // 舊制對無導引彈量**航跡長**,兩個症狀都是靜默丟包(玩家只看到零傷害):
+      //   ・導引彈的航跡恆長於直線(離架散布 + 一路修正航向)⇒ 打射程邊緣的目標,彈頭必定在飛到
+      //     之前就自毀(實測微型攔截彈滿射程恆差 5.5m,任何轉向率都救不回來)。
+      //   ・45° 拋投的弧長恆為水平距離的 1.148 倍 ⇒ 射程無聲砍掉 13%,砲彈在抵達瞄準點之前半空自爆。
+      // 唯一的例外是射後不理**鎖定後**(b.chase):射程包絡整條讓位給追擊燃料 `chaseCapS`
+      // (使用者定案「鎖定後持續追擊,不受射程影響」)—— 燃料只是不讓失控彈體永遠留在場上。
+      const spent = b.pos.distanceTo(b.origin);
       const done = hit || (b.chase ? b.age >= b.fuel : spent >= b.max);
       if (!done) {
         b.mesh.position.copy(b.pos);

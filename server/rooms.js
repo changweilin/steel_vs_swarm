@@ -500,7 +500,7 @@ export class RoomHub {
       if (m.t === 'hit' && client.side) { b.heroHit(myId, m.id, m.w); return; }
       if (m.t === 'hitMissile' && client.side) { b.hitMissile(myId, m.id, m.w); return; }
       if (m.t === 'burst' && client.side) { b.heroBurst(myId, m.x, m.z, m.y, m.lev); return; }   // y = 對空引爆高度 / lev = 爆點結構層(sim 夾範圍)
-      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot); return; }
+      if (m.t === 'plasma' && client.side) { b.heroPlasma(myId, m.dx, m.dz, m.slot, m.o); return; }   // o=[x,z,y] 槍口 = 射程球心(與 lance 同一組約定)
       if (m.t === 'lance' && client.side) { b.heroLance(myId, m.o, m.d, m.len); return; }   // 直線貫穿(beam/rail/gun 重武器):o=[x,z,y] 槍口 / d=[dx,dz,dy] 射向 / len=射線長
       if (m.t === 'kami' && client.side) { b.heroKamikaze(myId); return; }   // 無人機:長按右鍵 → 飽和攻擊(4 架護衛機衝出)
       if (m.t === 'decoy' && client.side) { b.heroDecoy(myId); return; }     // 變形者:長按右鍵 → 集束炸彈(集束轟炸機投彈)

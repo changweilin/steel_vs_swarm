@@ -1799,8 +1799,15 @@ export class BattleSim {
    * 被誤丟。扇形武器沒有彈道也**沒有任何客戶端閘門**(只回報一個射向,選誰中彈全在這裡),
    * 寬容於是直接變成 25% 的隱形射程:光暈不亮的敵人照樣掉血。這裡是伺服器自己選目標的
    * 唯一一條英雄武器路徑,MUST 吃誠實界(與 `botFire` 同一條規則)。
+   *
+   * **射程球心 = 客戶端回報的槍口 `o`**(2026-08-02 使用者定案「射程是射擊點為中心的球面」;
+   * 與 `heroLance` 同一組座標約定與同一道 12m 防作弊閘)。誠實界沒有 `RANGE_TOL` 可以吸收
+   * 兩端的球心差 ⇒ 舊制從**機體中心**量、而客戶端的扇形彈舌與射程光暈 `_reachable` 都是從
+   * **槍口**量:槍口在機體前方,同一個敵人從機體量比從槍口量遠一個前伸量(閘門允許到 12m)
+   * ⇒ 那一整條邊界帶「光暈亮著卻不掉血」。取不到 `o`(bot 的 `botFire` 側呼叫 / 舊版客戶端)
+   * 退回機體中心 —— bot 沒有客戶端也沒有槍口回報,機體中心就是它的射擊點。
    */
-  heroPlasma(pid, dx, dz, slot = 'heavy') {
+  heroPlasma(pid, dx, dz, slot = 'heavy', o = null) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over || !Number.isFinite(dx) || !Number.isFinite(dz)) return;
     if (this._jammed(h)) return;
@@ -1813,23 +1820,32 @@ export class BattleSim {
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
     const cosA = Math.cos((wp.def.arc || 15) * Math.PI / 180);
+    // 槍口必須在自己身邊(防作弊:不能從任意座標噴一個錐;與 heroLance 同一道閘)
+    const mz = Array.isArray(o) && [+o[0], +o[1], +o[2]].every(Number.isFinite)
+      && dist2d(h.x, h.z, +o[0], +o[1]) <= 12 ? [+o[0], +o[1], +o[2]] : null;
     for (const b of this._bodies(h)) {
       if (b.dead) continue;
+      // 僚機以各自機體中心發射(它們沒有槍口回報);主視野機用回報的槍口 ⇒ 射程球心與客戶端同一點
+      const lead = mz && b === h;
+      const bx = lead ? mz[0] : b.x, bz = lead ? mz[1] : b.z;
+      const byD = lead ? mz[2] : (b.y || 0);                  // 量距離的球心高
+      const byE = lead ? mz[2] : (b.y || 0) + LOS.EYE_M;      // 射線起點高(LOS / 稜線)
       for (const t of [...this.ents.values()]) {
         if (t.side === h.side || t.gar || (t.hero && t.dead)) continue;
-        const tx = t.x - b.x, tz = t.z - b.z;
+        const tx = t.x - bx, tz = t.z - bz;
         const d2 = Math.hypot(tx, tz);
-        const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
+        const d3 = Math.hypot(d2, byD - (t.hero ? (t.y || 0) : 0));
         if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def)) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
-        if (this._losBlocked(b.x, b.z, (b.y || 0) + LOS.EYE_M, t.x, t.z, this._tgtY(t), b, t)) continue;
+        // (起點吃同一個 byE ⇒ 射線與射程球心同源,與客戶端 `_reachable` 的 `_layerHitT(from…)` 同一點)
+        if (this._losBlocked(bx, bz, byE, t.x, t.z, this._tgtY(t), b, t)) continue;
         // 也不穿**山**:扇形是伺服器自己在錐內選目標(客戶端只送一個射向)⇒ 沒有任何本端
         // 地形截斷可以依靠,不補這一道就是隔山打牛 —— 而射程光暈吃的是 `hit:'clear'`
         // (線段整段淨空,含地形),早就說打不到(2026-08-01 使用者需求)。
-        if (this._ridgeBlocked(b.x, b.z, this._absSightY(b, (b.y || 0) + LOS.EYE_M, b.x, b.z),
+        if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
         // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額;d2 極小的正上/正下視為正中)
         const offF = d2 > 8
