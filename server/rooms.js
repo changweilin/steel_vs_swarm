@@ -483,7 +483,7 @@ export class RoomHub {
         // 通常先於開戰抵達(存房間,startBattle 套用);房主是觀戰者時可能晚到 → 直接套用進行中的 sim
         // (LOS 即時生效;走廊內障礙從快照消失,客戶端自動收掉)。非房主來源一律丟棄。
         if (myId === room.hostId && m.occ) {
-          room.world = { occ: m.occ, cor: m.cor, wet: m.wet, slabs: m.slabs };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS)
+          room.world = { occ: m.occ, cor: m.cor, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS);hgt:粗高程網格(稜線遮蔽,避免隔山打牛)
           if (room.battle) room.battle.setWorld(room.world);
         }
         return;

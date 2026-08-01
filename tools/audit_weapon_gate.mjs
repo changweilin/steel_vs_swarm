@@ -31,6 +31,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
+  HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS,
   REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
   shotV0, flightCapS, SEEK, seekTurn,
@@ -87,7 +88,12 @@ ok(/export const altRangeMax = \(\) => 1 \+ ALTITUDE\.RANGE;/.test(D),
   const magic = gates.filter((g) => /\*\s*1\.\d/.test(g));
   ok(magic.length === 0, `sim.js 射程閘門無手寫倍率魔數(殘留 ${magic.length} 處:${magic.slice(0, 2).join(' | ')})`);
   const tolGates = gates.filter((g) => g.includes('RANGE_TOL'));
-  ok(tolGates.length >= 8, `sim.js 射程閘門吃 RANGE_TOL 單一縫(${tolGates.length} 處)`);
+  ok(tolGates.length >= 6, `客戶端已自行夾過射程的回報路徑吃 RANGE_TOL 單一縫(${tolGates.length} 處)`);
+  // 誠實界的那幾條(伺服器自己選目標)MUST NOT 混進 RANGE_TOL —— 沒有客戶端閘門可以寬容,
+  // 寬容就是白送射程。逐條釘住:botFire / heroPlasma / heroLance 逐目標 / NPC 主迴圈。
+  const honest = gates.filter((g) => /this\._altRange\(/.test(g) && !g.includes('RANGE_TOL'));
+  ok(honest.length >= 4,
+    `伺服器自己選目標的射程閘門吃誠實界(不乘 RANGE_TOL;${honest.length} 處)`);
   ok(/import \{[\s\S]*?altRangeMax[\s\S]*?\} from '\.\.\/public\/js\/data\.js'/.test(S),
     'sim.js 由 data.js 匯入 altRangeMax(不自算高度上限)');
 }
@@ -703,6 +709,120 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
   const cases = [{ kind: 'soldier' }, { kind: 'tower' }, { kind: 'base' }];
   ok(cases.every((t) => sim._altRange(h2, { ...t, side: 'STEEL', x: 0, z: 0, y: 0 }) === 1),
     '伺服器對小兵/塔/主堡一律 ×1 = 客戶端 _altRangeTo 的離地框結果(平地站立 _altAG=0)');
+}
+
+// =================================================================================
+sec('Ⅷ 隔山打牛:伺服器自己選目標的路徑 MUST 自己驗地形(2026-08-01 使用者需求)');
+// ---------------------------------------------------------------------------------
+// 伺服器是無地形高程的 2D 平面:`_losBlocked` 只認上傳的障礙柱與水平薄板,山稜不存在。
+// 客戶端回報型的攻擊(heroHit / heroBurst / heroLance 的射線)本來就被本端 193² 解析地形
+// 截斷過,看不出問題;而**伺服器自己選目標**的兩條路(heroPlasma 錐內選人、_lanceHits
+// 圓柱內選人 —— 後者含 botFire 自建的未截斷射線)沒有這道保護 ⇒ 隔山打牛。
+// 而客戶端射程光暈對這兩類武器吃的是 REACH_RULE 的 hit:'clear'(線段整段淨空,含地形)
+// ⇒ 光暈早就說打不到,伺服器照樣扣血 = 又一次「光暈 ⇔ 傷害」分家。
+{
+  // ---- 靜態:編碼單一縫 + 消費端只有該有的那兩處 ----
+  ok(HGT_CHARS.length === 64 && HGT_LEVELS === 64 * 64,
+    `高程編碼字母表 64 個字元、${HGT_LEVELS} 階(2 字元/格,推導不手寫)`);
+  ok(HGT_STEP < LOS.RIDGE_M,
+    `量化步長 ${HGT_STEP}m < 認定餘裕 ${LOS.RIDGE_M}m(量化誤差吃不進判定)`);
+  ok(/hgtEnc\(/.test(read(['public', 'js', 'main.js'])) && /HGT_CHARS/.test(S),
+    '烘烤端(main.js)與解析端(sim.js)同吃 data.js 的編碼縫,MUST NOT 各寫一份字母表');
+  ok(!/_ridgeBlocked/.test(methodSrc('_losBlocked', S)),
+    '_ridgeBlocked MUST NOT 併進 _losBlocked —— 客戶端回報型攻擊已被本端解析地形截斷,'
+    + '再驗一次只會因兩份解析度不同而多擋掉合法傷害(A30 靜默丟包)');
+  const users = (S.match(/this\._ridgeBlocked\(/g) || []).length;
+  ok(users === 2, `_ridgeBlocked 恰好兩個消費端(heroPlasma / _lanceHits;實得 ${users})`);
+  ok(/this\._ridgeBlocked\(/.test(methodSrc('heroPlasma', S))
+    && /this\._ridgeBlocked\(/.test(methodSrc('_lanceHits', S)),
+    '兩個消費端就是扇形(heroPlasma)與直線貫穿(_lanceHits)');
+  const rb = methodSrc('_ridgeBlocked', S);
+  ok(/if \(!g\) return false;/.test(rb), '沒有網格(e2e/headless/舊版房主)一律放行 —— 舊行為逐位元不變');
+  ok(/this\._unitLev\(ea\) === 2 \|\| this\._unitLev\(eb\) === 2/.test(rb),
+    '任一端在隧道內一律放行(高程網格是未開挖的山體,洞內頭頂永遠壓著一座山)');
+  ok(/LOS\.RIDGE_M/.test(rb) && /LOS\.RIDGE_SKIP_M/.test(rb),
+    '餘裕與端點豁免帶都吃 LOS 常數(MUST NOT 手寫公尺數)');
+}
+{
+  // ---- 行為直測:合成一道山脊,真 BattleSim 打過去 ----
+  const cell = LOS.HGT_M, cols = 64, rows = 64, minX = 400, minZ = 400, minH = 0;
+  const bake = (fn) => {
+    let data = '';
+    for (let i = 0; i < rows; i++) {
+      const z = minZ + (i + 0.5) * cell;
+      for (let j = 0; j < cols; j++) data += hgtEnc(fn(minX + (j + 0.5) * cell, z), minH);
+    }
+    return { minX, minZ, cell, cols, rows, minH, data };
+  };
+  const RIDGE = (x, z) => (Math.abs(z - 740) < 20 ? 60 : 0);          // z=740 一道 60m 山脊
+  const SLOPE = (x, z) => (z - minZ) * 0.35;                          // 均勻 19° 緩坡(雙方都站在坡上)
+  const fanCh = Object.keys(CHARACTERS).find((c) => heroWeapon(c, 'light', 1)?.fan);
+  const wf = heroWeapon(fanCh, 'light', 1, true);
+  /** 建一個裝好高程網格的 sim,回傳「往 +z 開一發扇形,距離 d 的目標有沒有掉血」 */
+  const mk = (hgt) => {
+    const sim = new BattleSim(fakeCfg());
+    purge(sim);
+    if (hgt) sim.setWorld({ occ: [], cor: [], slabs: [], hgt });
+    const fh = sim.addHero('SWARM', 'p_r', fanCh);
+    fh.x = 700; fh.z = 700; fh.y = 0;
+    return { sim, fh, shoot(tz, gy) {
+      const t = sim._add({ kind: 'soldier', side: 'STEEL', x: 700, z: tz, y: 0, hp: 999999, maxHp: 999999 });
+      sim.t += 5;
+      fh.ammo.light = wf.mag; fh.reloadUntil.light = 0; fh.fireAt.light = -99;
+      const hp0 = t.hp;
+      sim.heroPlasma('p_r', 0, 1, 'light');
+      const hurt = t.hp < hp0;
+      sim.ents.delete(t.id);
+      return hurt;
+    } };
+  };
+  const R = mk(bake(RIDGE));
+  ok(!!R.sim._hgtGrid, '粗高程網格收得進來(setWorld 的 hgt 欄位)');
+  ok(Math.abs(R.sim._hgtAt(700, 700)) < 1 && R.sim._hgtAt(700, 740) > 40,
+    `雙線性取樣讀得到山脊(平地 ${R.sim._hgtAt(700, 700).toFixed(1)}m / 脊頂 ${R.sim._hgtAt(700, 740).toFixed(1)}m)`);
+  ok(R.shoot(730), '山脊**前**的目標照常掉血(同側,射程內)');
+  ok(!R.shoot(780), '山脊**後**的目標 MUST NOT 掉血(隔山打牛已擋掉;射程內、錐內、無障礙柱)');
+  // 對照:同一組座標,沒有高程網格(e2e/headless)⇒ 舊行為,照樣打得到
+  const N = mk(null);
+  ok(N.shoot(780), '對照:未上傳高程網格時行為逐位元不變(判定 no-op,e2e 確定性不受影響)');
+  // 保守性:均勻緩坡上「雙方都站在坡上」MUST NOT 被自己腳下的地擋住(端點豁免 + 餘裕)
+  const P = mk(bake(SLOPE));
+  ok(P.shoot(780), '均勻緩坡上互射 MUST NOT 被誤擋(偏差方向一律朝「不擋」,原則 6)');
+  // 殘缺/壞掉的網格整份不收(半份網格 = 半張地圖隔山打牛)
+  const bad = mk(null);
+  bad.sim._worldSet = false;
+  bad.sim.setWorld({ occ: [], cor: [], slabs: [], hgt: { ...bake(RIDGE), data: 'AA' } });
+  ok(!bad.sim._hgtGrid, '長度不足的網格整份不收(寧缺勿錯,MUST NOT 收半份)');
+}
+{
+  // ---- 直線貫穿:超過射程就沒傷害(圓柱端帽不得再放 25% 寬容)----
+  const lance = methodSrc('heroLance', S);
+  ok(/wp\.def\.range \* this\._altRange\(b, t, wp\.def\)\) continue;/.test(lance),
+    'heroLance 逐目標射程閘門吃誠實界(d3 從回報槍口量起,與射程光暈同一個起點)');
+  ok(/wp\.def\.range \* altRangeMax\(\)\);/.test(lance),
+    '射線長上限 = range × altRangeMax()(誠實界;len 本來就是客戶端夾過的)');
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  const lineCh = heavyOf('line');
+  const wl = heroWeapon(lineCh.id, 'heavy', 1, true);
+  const lh = sim.addHero(CHARACTERS[lineCh.id].side === 'STEEL' ? 'STEEL' : 'SWARM', 'p_ln', lineCh.id);
+  lh.x = 700; lh.z = 700; lh.y = 0; lh.aiming = true;
+  const fire = (f) => {
+    const t = sim._add({ kind: 'soldier', side: lh.side === 'SWARM' ? 'STEEL' : 'SWARM',
+      x: 700, z: 700 + wl.range * f, y: 0, hp: 999999, maxHp: 999999 });
+    sim.t += 30;
+    lh.ammo.heavy = wl.mag; lh.reloadUntil.heavy = 0; lh.fireAt.heavy = -99; lh.mp = lh.maxMp;
+    const hp0 = t.hp;
+    // 射線長照客戶端上限(range × altRangeMax)回報 —— 伺服器仍 MUST 以逐目標誠實界夾回
+    sim.heroLance('p_ln', [700, 700, 2], [0, 1, 0], wl.range * 1.25);
+    const hurt = t.hp < hp0;
+    sim.ents.delete(t.id);
+    return hurt;
+  };
+  ok(fire(0.9), `直線貫穿射程內(0.9 × ${wl.range}m)照常掉血`);
+  for (const f of [1.05, 1.2]) {
+    ok(!fire(f), `${f.toFixed(2)} × 射程(光暈不亮)的直線貫穿目標 MUST NOT 掉血(舊制 ≤1.25 全中)`);
+  }
 }
 
 // ---------------------------------------------------------------------------------

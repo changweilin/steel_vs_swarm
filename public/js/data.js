@@ -1360,7 +1360,39 @@ export function ccFlashAlpha(left, peak) {
 // MAX_SLAB:上傳橋面/隧道天花薄板段數上限(#1;橋面 deck 段可達數千,取足量)。
 // TUN_CLEAR_M:隧道路面→天花淨空(遊戲公尺)。單一縫:biomes.js 建洞(TUN.CLEAR)與
 // sim.js 飛行體所在層推定(_unitLev:飛行高度 ≥ 淨空 ⇒ 必在山體上方,非洞內)共用。
-export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8 };
+// ---- 地形稜線遮蔽(2026-08-01 使用者需求「直線攻擊與扇形攻擊要避免隔山打牛」)----
+// 伺服器本來是**無地形高程**的 2D 平面:`_losBlocked` 只認上傳的障礙柱(occ)與水平薄板
+// (slabs),山稜完全不存在。客戶端回報型的攻擊(heroHit / heroBurst / heroLance 的射線)
+// 本來就被本端地形截斷過,所以看不出問題;而**伺服器自己選目標**的路徑沒有這道保護:
+//   ・`heroPlasma`(扇形):客戶端只送一個射向,錐內選誰中彈全在伺服器 ⇒ 隔山打牛。
+//   ・`_lanceHits`(直線貫穿)給 bot 用的那條(botFire 自建射線,未經客戶端地形截斷)。
+// 而客戶端的射程光暈對這兩類武器吃的是 `REACH_RULE` 的 `hit:'clear'`(線段整段淨空,含地形)
+//   ⇒ 光暈早就說「打不到」,伺服器照樣扣血 = 又一次「光暈 ⇔ 傷害」分家。
+// 解法沿用既有契約:房主載圖後把**粗高程網格**隨 `t:'world'` 一起上傳(與 occ/slabs/wet 同一條路),
+// 伺服器據此做稜線遮蔽。未上傳(e2e/headless)⇒ 網格不存在 ⇒ 判定 no-op,舊行為逐位元不變。
+//   HGT_M      網格格距(公尺)。地形本體是 193² 頂點 ≈ 27.7m/格(L3),取同級即可 —— 再細只是
+//              放大傳輸量,山稜的尺度遠大於此。
+//   HGT_MAX    每軸格數上限(32 × 256 = 8192m,涵蓋 L3 擴張後的 ~5311m)。
+//   RIDGE_M    認定遮蔽的餘裕:粗網格 + 雙線性內插必然與客戶端的 193² 解析射線有出入,
+//              **偏差方向 MUST 朝「不擋」**(原則 6 寧缺勿錯)—— 地形要高過射線這麼多才算擋,
+//              否則邊界上的合法傷害會被驗證後靜默丟棄(A30 家族),那比偶爾隔山打牛更糟。
+//   RIDGE_SKIP_M 兩端各跳過的長度:射手與目標本來就站在地面上,端點附近地表必然貼著射線,
+//              不跳過就是「每一發都被自己腳下的地擋住」。
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
+  HGT_M: 32, HGT_MAX: 256, RIDGE_M: 3, RIDGE_SKIP_M: 24 };
+
+// 粗高程網格的字串編碼(**唯一縫**:main.js 烘烤端與 sim.js 解析端同吃這一組)。
+// 每格 2 個可列印 ASCII 字元 = 12 bit = 4096 階 × HGT_STEP 公尺相對落差(遠超任何戰區的地形起伏),
+// JSON 逐字元 1 byte ⇒ L3 滿版 256² 格約 131KB,與既有的 occ/slabs 上傳同級。
+// MUST NOT 改成非 ASCII 單字元編碼:JSON.stringify 會轉成 \uXXXX,反而膨脹成三倍。
+export const HGT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+export const HGT_STEP = 1;        // 量化步長(公尺;< RIDGE_M 餘裕 ⇒ 量化誤差吃不進判定)
+export const HGT_LEVELS = 4096;   // = 64²(兩個字元)
+/** 高程 → 2 字元(相對 minH 量化);超出範圍夾住(遠高於頂 = 照樣擋,遠低於底 = 照樣不擋) */
+export const hgtEnc = (h, minH) => {
+  const v = Math.max(0, Math.min(HGT_LEVELS - 1, Math.round(((h - minH) / HGT_STEP) || 0)));
+  return HGT_CHARS[v >> 6] + HGT_CHARS[v & 63];
+};
 
 // ================= 機體實體高度 / 命中量體(2026-07-10 尺度基準;2026-07-23 移入本檔)=================
 // 步兵 = 真人身高 SOLDIER_H,是全遊戲唯一的「身高單位」。人員/載具/建物一律用真實世界
