@@ -270,6 +270,14 @@ const MM_NEAR = {
   SPEC_R: 420,   // 觀戰自由視角無座機 ⇒ 沒有 sight 可取,用固定半徑
 };
 
+// 觀戰視角(2026-08-02 使用者需求:滾輪縮放視野 + 上帝模式 ⇄ 玩家視角切換)。
+// **純客戶端視角工具**:不送任何訊息、不改權威狀態(與 VIEW_LOCK 同性質,A1 不涉)。
+// 玩家視角的偏航吃伺服器權威 `ry`;**快照沒有俯仰** ⇒ 俯仰保留觀戰者滑鼠自控(降級,不例外)。
+const SPEC = {
+  FOV_MIN: 12, FOV_MAX: 100, FOV_STEP: 1.12,   // 滾輪一格 = 乘/除一次(等比 ⇒ 遠近端手感一致)
+  FLY_Y: 2.5,                                  // 跟隨目標離地高於此 = 飛行型態(視點改取機鼻,同 heroView)
+};
+
 // ---- 表現層資源上限(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
 // 一次扇形擊發就吐 20~30 個特效物件;連發 + 多人同框時 `effects` 會長到數百,
 // 每幀逐個 fade 就是純 CPU 負擔。超量砍最舊(它們本來就快淡出,肉眼幾乎無感)。
@@ -408,6 +416,9 @@ export class BattleClient {
       const [cx, cz] = llToWorld(this.center.lat, this.center.lng, this.center);
       this.pos.set(cx, this.terrain.heightAt(cx, cz) + 400, cz); // 觀戰:高空俯瞰
       this.pitch = -0.9;
+      this._specFov = this.camera.fov;   // 滾輪縮放的當前視野角(上帝/玩家視角共用)
+      this._specPid = null;              // 玩家視角跟隨中的 pid(null = 上帝模式)
+      this._specHid = null;              // 為了不從自己鼻子裡往外看而暫時藏起的機體
     }
 
     this.clock = new THREE.Clock();
@@ -2643,6 +2654,13 @@ export class BattleClient {
       // 還沒點畫面)時只有這條管用,故兩條都要有。
       if (e.type === 'keydown' && e.code === 'Escape' && !this.side && !this._gameOver
           && document.pointerLockElement !== this.canvas) this._setPaused(true);
+      // 觀戰視角切換:F 上帝模式 ⇄ 玩家視角、Q/E 名冊前後換人。
+      // 這三顆在交戰中另有他用(招式/裝填),故一律關在 side=null 分支內。
+      if (e.type === 'keydown' && !this.side && !this.paused) {
+        if (e.code === 'KeyF') this._specFollow(this._specPid ? null : 0);
+        if (e.code === 'KeyQ') this._specFollow(-1);
+        if (e.code === 'KeyE') this._specFollow(1);
+      }
       this.keys[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', this._onKey);
@@ -2673,6 +2691,16 @@ export class BattleClient {
     window.addEventListener('mouseup', this._onMouseUp);
     this._onCtx = (e) => e.preventDefault();
     this.canvas.addEventListener('contextmenu', this._onCtx);
+
+    // 滾輪縮放視野:**觀戰限定**。交戰中的視野縮放唯一入口是右鍵瞄準(FOV ← UNITS[kind].zoomFov),
+    // 再加一套滾輪就是第二份實作,而且會與 A8「FOV 不做機種差異化」正面衝突。
+    this._onWheel = (e) => {
+      if (this.side || this.paused) return;
+      e.preventDefault();
+      const f = e.deltaY > 0 ? SPEC.FOV_STEP : 1 / SPEC.FOV_STEP;
+      this._specFov = Math.max(SPEC.FOV_MIN, Math.min(SPEC.FOV_MAX, this._specFov * f));
+    };
+    this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
 
     // 戰場選單:指標鎖定 = 交戰;解鎖(ESC / 切走視窗)= 跳出暫停選單(繼續 / 離開)。
     // 用 pointerlockchange 而非 ESC keydown —— 指標鎖定時瀏覽器會吃掉那顆 ESC 的 keydown。
@@ -2763,7 +2791,13 @@ export class BattleClient {
       else { this._vlockId = null; }
       return;
     }
-    if (!this.side) return;
+    // 觀戰視角(觸控):十字鍵左(絕招位)= 上帝 ⇄ 玩家視角、⇄(換機位)= 換下一位玩家。
+    // 與鍵鼠 F / Q・E 共用 `_specFollow` 這個縫;鈕面字由 mobile.js setKind 換。
+    if (!this.side) {
+      if (down && act === 'special') this._specFollow(this._specPid ? null : 0);
+      if (down && act === 'swap') this._specFollow(1);
+      return;
+    }
     // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例),與 KeyB 同條件
     if (act === 'shop') { if (down) this._toggleShop(); return; }
     if (this.shopOpen) return;
@@ -2883,6 +2917,7 @@ export class BattleClient {
         ent.heroY = e.y ?? 0;
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
+        ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
         ent.kcd = e.kcd;   // 無人機護衛自殺機冷卻(其他客戶端據此顯隱貼身護衛機;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
@@ -7020,21 +7055,79 @@ export class BattleClient {
     this._tickLock(now);
   }
 
+  /** 可跟隨名冊(含 bot)。排序 MUST 穩定,否則 Q/E 循環會隨快照跳位 */
+  _specRoster() {
+    return [...this.ents.values()]
+      .filter((e) => e.hero && e.pid && e.act !== false)
+      .sort((a, b) => (a.side === b.side ? String(a.pid).localeCompare(String(b.pid)) : (a.side < b.side ? -1 : 1)));
+  }
+
+  /** 觀戰視角切換。step:null = 退回上帝模式 / 0 = 進入玩家視角(取最近的一位)/ ±1 = 名冊循環 */
+  _specFollow(step) {
+    if (step == null) {
+      this._specPid = null;
+      this.hud.feed?.('👁 上帝模式:自由視角(F 切換玩家視角)');
+      return;
+    }
+    const list = this._specRoster();
+    if (!list.length) { this.hud.feed?.('👁 目前沒有可跟隨的玩家'); return; }
+    let ent;
+    if (step === 0 && !this._specPid) {
+      // 剛剛在看誰就跟誰:取離自由視角相機最近的一位
+      ent = list.reduce((a, b) => (this.pos.distanceToSquared(a.mesh.position)
+        <= this.pos.distanceToSquared(b.mesh.position) ? a : b));
+      this.pitch = 0;   // 從高空俯瞰(-0.9)切進座艙視角,俯仰先擺平
+    } else {
+      const i = list.findIndex((o) => o.pid === this._specPid);
+      ent = list[(((i < 0 ? 0 : i + step) % list.length) + list.length) % list.length];
+    }
+    this._specPid = ent.pid;
+    const c = CHARACTERS[ent.ch];
+    this.hud.feed?.(`🎥 玩家視角:${c ? `「${c.code}」${c.name}` : ent.pid}${ent.side ? ` ・ ${SIDES[ent.side].name}` : ''}(Q/E 換人 ・ F 回上帝模式)`);
+  }
+
   _updateSpectator(dt) {
-    // 觀戰:自由飛行
-    const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
-    const ax = this._moveAxis();
-    const sp = 120 * (ax.boost ? 3 : 1);
-    const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
-    this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
-    this.pos.addScaledVector(right, ax.r * k * sp * dt);
-    if (this.keys.Space) this.pos.y += sp * dt;
-    if (this.keys.KeyC) this.pos.y -= sp * dt;
-    this.camera.position.copy(this.pos);
+    const tgt = this._specPid ? this._specRoster().find((o) => o.pid === this._specPid) : null;
+    if (this._specPid && !tgt) this._specPid = null;   // 目標退場/離線:降級回上帝模式(寧缺勿錯)
+    // 上一幀藏起來的機體先還原(換人 / 回上帝模式都會走到);死亡中的機體本來就該是隱形的
+    if (this._specHid && this._specHid !== tgt) {
+      this._specHid.mesh.visible = !this._specHid.dead;
+      this._specHid = null;
+    }
+    if (tgt) {
+      // 玩家視角:視點與交戰 FPV 吃**同一個縫**(heroView + heroTargetH)⇒ 看到的畫面與該玩家一致。
+      // 偏航吃伺服器權威 ry(ry 是相機朝向慣例,模型才 +π);俯仰快照沒有 ⇒ 仍由觀戰者滑鼠自控。
+      const kind = CHARACTERS[tgt.ch]?.kind || (tgt.side && SIDES[tgt.side].hero) || 'robot';
+      const vw = heroView(kind, tgt.ch, (tgt.heroY || 0) > SPEC.FLY_Y);
+      const h = heroTargetH(kind, tgt.ch);
+      const p = tgt.mesh.position;
+      this.yaw = tgt.ry ?? this.yaw;
+      this.pos.set(p.x, p.y, p.z);              // 迷霧/小地圖/音場一併跟著跑(它們都讀 this.pos)
+      if (!tgt.dead) tgt.mesh.visible = false;  // 不要從自己的鼻子裡往外看(與 PiP 副視窗同一手法)
+      this._specHid = tgt;
+      const headF = h * vw.f;
+      this.camera.position.set(p.x - Math.sin(this.yaw) * headF, p.y + h * vw.e, p.z - Math.cos(this.yaw) * headF);
+    } else {
+      // 上帝模式:自由飛行
+      const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+      const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const ax = this._moveAxis();
+      const sp = 120 * (ax.boost ? 3 : 1);
+      const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
+      this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
+      this.pos.addScaledVector(right, ax.r * k * sp * dt);
+      if (this.keys.Space) this.pos.y += sp * dt;
+      if (this.keys.KeyC) this.pos.y -= sp * dt;
+      this.camera.position.copy(this.pos);
+    }
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw);
     this.camera.rotateX(this.pitch);
+    // 滾輪縮放視野(兩模式共用)。A8 禁的是「用 FOV 做**機種**差異化」,觀戰不是機種。
+    if (Math.abs(this.camera.fov - this._specFov) > 0.01) {
+      this.camera.fov = this._specFov;
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   // ---------------- 單位插值 ----------------
@@ -7990,6 +8083,7 @@ export class BattleClient {
     this.canvas.removeEventListener('mousedown', this._onMouseDown);
     window.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('contextmenu', this._onCtx);
+    this.canvas.removeEventListener('wheel', this._onWheel);
     document.removeEventListener('pointerlockchange', this._onPlc);
     this._offCtrl?.();               // 操作方式訂閱 MUST 跟著戰局收掉(留著 = 下一局重建一個殭屍搖桿層)
     this._offCtrl = null;

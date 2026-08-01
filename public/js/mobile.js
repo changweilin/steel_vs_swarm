@@ -1167,10 +1167,14 @@ export class TouchControls {
    *   ① B 鍵字樣跟著機動能力走(無人機=上升/完美迴避、機甲=躍/蓄力跳、變形=躍/變形彈射)。
    *   ② ZL 下降只在飛行機種(無人機/變形者)與觀戰自由視角出現。
    *   ③ 換機(R 區系統鍵)只給無人機三機小隊。
-   *   ④ 觀戰沒有座機:A / R / ZR 鎖定 / 絕招 / ⊟ 一律收掉(_cmd 對 side=null 不受理,留著只會誤按)。
+   *   ④ 觀戰沒有座機:A / R / ZR 鎖定 / ⊟ 一律收掉(_cmd 對 side=null 不受理,留著只會誤按)。
    *      **HOME 戰場選單不收**(2026-07-31 使用者需求「觀戰也可以按 ESC」)—— 觀戰者同樣要有
    *      離開戰場的出口,`_setPaused` 已對 side=null 放行,桌機觀戰按 ESC 走的是同一條路。
    *      **十字鍵的陀螺與地圖不收** —— 觀戰自由視角同樣吃 _applyLook,也同樣看小地圖。
+   *   ⑤ 觀戰視角切換(2026-08-02 使用者需求「觸控使用虛擬手把加入切換」)**沿用既有兩顆鈕、
+   *      只換鈕面字**:十字鍵左(絕招位)= 上帝 ⇄ 玩家視角、⇄(換機位)= 換下一位玩家。
+   *      A22「同功能只准一顆鈕」⇒ MUST NOT 為觀戰另長出新鈕(四分區版型已滿,新鈕必然疊到別區);
+   *      派發仍走 `game._cmd` → `_specFollow` 同一個縫,MUST NOT 在觸控層自己判模式。
    */
   setKind(kind) {
     const spec = !kind;                          // 觀戰自由視角(無機體)
@@ -1179,9 +1183,13 @@ export class TouchControls {
     if (bf) bf.textContent = spec ? '上升' : mob;
     const fly = spec || kind === 'drone' || kind === 'morph';
     document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
-    document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
-    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="special"], [data-act="lock"]')
+    document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = !spec && kind !== 'drone'; });
+    document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="lock"]')
       .forEach((n) => { n.hidden = spec; });
+    // 鈕面字:觀戰借用絕招/換機兩顆鈕(功能不同 ⇒ 字一定要跟著換,否則按下去與鈕面不符)
+    const sf = document.querySelector('[data-act="special"] .gb-f');
+    if (sf) sf.textContent = spec ? '視角' : '絕招';
+    document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.textContent = spec ? '⇄換人' : '⇄換機'; });
     document.body.classList.toggle('tl-spec', spec);
   }
 

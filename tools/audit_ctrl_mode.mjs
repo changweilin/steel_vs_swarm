@@ -253,12 +253,12 @@ ok(/requestPointerLock\(\); return; \}/.test(init) && !/if \(!this\.side \|\| th
 const setKind = body(mobileSrc, 'setKind');
 ok(setKind.length > 0 && !/data-act="menu"/.test(setKind),
   '觸控 HOME(戰場選單)MUST NOT 對觀戰收掉 —— 那是觀戰唯一的離場出口');
-ok(/\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="special"\], \[data-act="lock"\]/.test(setKind),
-  '其餘戰鬥鈕(A / R / ⊟ / 絕招 / 鎖定)仍對觀戰收起');
+ok(/\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="lock"\]/.test(setKind),
+  '其餘戰鬥鈕(A / R / ⊟ / 鎖定)仍對觀戰收起');
 // 版型稽核的 harness 是這一行的複製品,兩邊分家 = 量到不存在的版型
 const tlAudit = read('tools', 'audit_touch_layout.mjs');
 ok(!/\[data-act="menu"\][^\n]*n\.hidden = spec/.test(tlAudit)
-  && /\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="special"\], \[data-act="lock"\]/.test(tlAudit),
+  && /\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="lock"\]/.test(tlAudit),
   'audit_touch_layout 的 setKind 鏡射 MUST 與 mobile.js 逐字一致');
 // 說明文字:觀戰兩版都要提到選單出口(鍵鼠說 ESC、搖桿說 HOME)
 const helpSrc = read('public', 'js', 'help.js');
@@ -289,6 +289,63 @@ ok(/ctrl: room\.config\.ctrl \|\| DEFAULT_CTRL_MODE/.test(roomsSrc),
 const e2eSrc = read('test', 'e2e.mjs');
 ok(/操作方式由房主選擇/.test(e2eSrc),
   'e2e MUST 有「操作方式由房主選擇」段(行為直測住那裡,本稽核只驗原文)');
+
+// ── Ⅶ 觀戰視角(滾輪縮放 / 上帝模式 ⇄ 玩家視角)────────────────────
+sec('Ⅶ 觀戰視角:滾輪縮放 + 上帝/玩家視角');
+{
+  const spec = body(gameSrc, '_updateSpectator');
+  const specCode = code(spec);
+  ok(spec.length > 0, '`_updateSpectator` 還在(觀戰視角的唯一結算點)');
+  // 純客戶端視角工具:與 VIEW_LOCK 同性質,MUST NOT 上行、MUST NOT 碰權威狀態(A1)
+  ok(!/this\.net|_cmd\(|\.send\(/.test(specCode),
+    '觀戰視角 MUST NOT 送任何訊息(純客戶端視角工具,伺服器不參與)');
+  // 視點單一縫:玩家視角 MUST 與交戰 FPV 吃同一份 heroView + heroTargetH
+  ok(/heroView\(/.test(specCode) && /heroTargetH\(/.test(specCode),
+    '玩家視角的視點 MUST 走 heroView + heroTargetH 單一縫(手寫眼高 = 看到的與該玩家看到的分家)');
+  ok(!/\b(?:1\.[0-9]|2\.[0-9])\s*[;,)]/.test(specCode.replace(/SPEC\.[A-Z_]+/g, '')),
+    '玩家視角 MUST NOT 手寫眼高常數');
+  ok(/this\.yaw = tgt\.ry/.test(specCode),
+    '玩家視角的偏航 MUST 吃伺服器權威 `ry`(快照沒有俯仰 ⇒ 俯仰自控是刻意的降級)');
+  ok(/if \(this\._specPid && !tgt\) this\._specPid = null;/.test(specCode),
+    '跟隨目標退場 MUST 降級回上帝模式(寧缺勿錯,MUST NOT 卡在空目標)');
+  ok(/tgt\.mesh\.visible = false/.test(specCode) && /_specHid\.mesh\.visible = !this\._specHid\.dead/.test(specCode),
+    '跟隨中 MUST 藏起該機體、換人時 MUST 還原成「非死亡才可見」(死者本來就該隱形)');
+  ok(/SPEC\.FOV_MIN|_specFov/.test(specCode) && /updateProjectionMatrix/.test(specCode),
+    '滾輪視野角 MUST 真的套進相機(改了 fov 沒 updateProjectionMatrix = 完全沒作用)');
+
+  const roster = code(body(gameSrc, '_specRoster'));
+  ok(/e\.act !== false/.test(roster), '跟隨名冊 MUST 只收主視野機(三機小隊只有一架)');
+  ok(/\.sort\(/.test(roster), '跟隨名冊排序 MUST 穩定,否則 Q/E 循環會隨快照跳位');
+
+  const initSrc = code(init);
+  ok(/_onWheel[\s\S]*?if \(this\.side \|\| this\.paused\) return;/.test(initSrc),
+    '滾輪縮放 MUST 只在觀戰生效 —— 交戰的視野縮放唯一入口是右鍵瞄準(A8:FOV 不做機種差異化)');
+  ok(/removeEventListener\('wheel', this\._onWheel\)/.test(code(gameSrc)),
+    'wheel 監聽 MUST 在 dispose 解訂閱(離場後滾輪還在改上一局的相機)');
+  const upd = code(body(gameSrc, '_updatePlayer'));
+  ok(/zoomFov/.test(upd) && !/_specFov/.test(upd),
+    '交戰視角的 FOV 路徑 MUST 維持原樣(觀戰縮放 MUST NOT 滲進座機視角)');
+  ok(/滾輪/.test(kbmSpec) && /F /.test(kbmSpec),
+    '觀戰(鍵鼠版)操作提示 MUST 提到滾輪縮放與 F 切換視角');
+
+  // ── 觸控:虛擬手把的視角切換(2026-08-02)────────────────────────
+  // A22 同功能只准一顆鈕 ⇒ 觀戰**借用**既有的絕招/換機兩顆,MUST NOT 為觀戰另長新鈕。
+  const cmd = code(body(gameSrc, '_cmd'));
+  ok(/if \(!this\.side\) \{[\s\S]*?_specFollow\(/.test(cmd),
+    '觸控觀戰的視角切換 MUST 走 `_specFollow` 同一個縫(觸控層 MUST NOT 自己判模式)');
+  ok(/act === 'special'\) this\._specFollow/.test(cmd) && /act === 'swap'\) this\._specFollow\(1\)/.test(cmd),
+    '十字鍵左 = 上帝 ⇄ 玩家視角、⇄ = 換下一位(鈕位對應住 mobile.js setKind)');
+  ok(/if \(!this\.side\) \{[\s\S]*?\s+return;\s*\}/.test(cmd),
+    '觀戰分支 MUST 照舊 return —— 其餘戰鬥指令對 side=null 仍不受理');
+  ok(/\[data-act="swap"\]'\)\.forEach\(\(n\) => \{ n\.hidden = !spec && kind !== 'drone'; \}\)/.test(code(mobileSrc)),
+    '⇄ 鈕對觀戰 MUST NOT 收起(觀戰拿它換人)');
+  ok(/\[data-act="special"\] \.gb-f'\)/.test(mobileSrc) && /'視角' : '絕招'/.test(mobileSrc),
+    '借用的鈕面字 MUST 跟著換(按下去與鈕面不符 = 誤按來源)');
+  ok(/data-act="special"[^\n]*<span class="gb-f">絕招<\/span><span class="gb-cd">/.test(htmlSrc),
+    '絕招鈕的字 MUST 住 `.gb-f` span(setKind 換字時 MUST NOT 洗掉 padMirror 要用的 .gb-cd)');
+  ok(/十字鍵左 視角/.test(padSpec) && /⇄換人/.test(padSpec),
+    '觀戰(搖桿版)操作提示 MUST 提到兩顆借用鈕');
+}
 
 console.log(`\n${fail ? '✗' : '✓'} 操作方式 / 觀戰選單稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);
