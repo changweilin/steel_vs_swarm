@@ -12,7 +12,7 @@ import {
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, lanceR, LANCE, lobMinRange, flightCapS, shotV0,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
-  ALTITUDE, altScale, altRangeMax, RANGE_TOL, WATER, TERRAIN_FX, offGround, airUnit,
+  ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul,
 } from '../public/js/data.js';
 
@@ -1326,27 +1326,46 @@ export class BattleSim {
    * 機體「視線點」絕對高程(高度差空戰用,見 data.js ALTITUDE)。英雄取客戶端回報的絕對視線高程 ay
    * (地形+跳躍+飛行皆含;缺值 = bot/測試,退回離地眼高近似);塔/主堡取砲位視線高(高聳工事);小兵取離地小視線高。
    * 註:伺服器為 2D 平面無地形高程,NPC/塔以離地眼高近似(地形基準視為 0)—— 動態飛行/跳躍(英雄 ay)精確。
+   * `abs=false` = 強制**離地框**(英雄也吃 `y`):跨框比較的唯一出口見 `_altDh`。
    */
-  _sightY(e) {
+  _sightY(e, abs = true) {
     if (!e) return 0;
     if (e.kind === 'tower' || e.kind === 'base') return LOS.TOWER_EYE_M;
-    if (e.hero) return e.ay != null ? e.ay : (e.y || 0) + LOS.EYE_M;
+    if (e.hero) return abs && e.ay != null ? e.ay : (e.y || 0) + LOS.EYE_M;
     if (e.kind === 'heli' || e.decoy || e.kami || e.hyper) return (e.y || 0) + LOS.EYE_M;
     return (e.y || 0) + LOS.TGT_M;
   }
 
-  /** 高度差「射程」乘數:較高的一方 +射程(封頂 +RANGE);同高/較低 = 1(見 data.js ALTITUDE) */
+  /**
+   * 兩機體視線點的高度差 `a − b`(高度差空戰的**唯一量法**;射程/爆擊/閃避三個消費端同吃)。
+   *
+   * **同框才准相減**:`_sightY` 對英雄回的是客戶端量測的**絕對**高程 `ay`(含地形海拔),
+   * 對 NPC/塔/主堡回的是**離地**高(伺服器是無地形的 2D 平面,地基恆 0)—— 兩者相減
+   * 等於拿場地海拔當高度差。真實場地海拔動輒數百公尺,遠超 altScale 的封頂門檻
+   * (3 個砲塔高 = 78m)⇒ 英雄對**所有** NPC 恆判「高出一整個封頂」= 恆 +25% 射程、
+   * 爆擊代價也恆數套用。而客戶端射程光暈量的是本地地形高差(平地恆 1)⇒ 光暈與伺服器
+   * 實際結算差 25%:2026-08-01 使用者回報的「攻擊範圍異常,沒有射程光暈的敵人也打得到」。
+   *
+   * 規則只有一條:**兩邊都拿得到絕對高程**(= 雙方都是回報 `ay` 的英雄)才用絕對框,
+   * 否則一律退回離地框。伺服器算不出 NPC 的地形海拔 ⇒「寧缺勿錯」(原則 6):
+   * 寧可不給高地加成,也 MUST NOT 給一個客戶端看不到、光暈對不上的加成。
+   */
+  _altDh(a, b) {
+    if (!a || !b) return 0;
+    if (a.hero && a.ay != null && b.hero && b.ay != null) return a.ay - b.ay;
+    return this._sightY(a, false) - this._sightY(b, false);
+  }
+
+  /** 高度差「射程」乘數:較高的一方 +射程(封頂 +RANGE);同高/較低 = 1(曲線見 data.js altRangeF) */
   _altRange(shooter, target) {
     if (!shooter || !target) return 1;
-    const dh = this._sightY(shooter) - this._sightY(target);
-    if (dh <= 0) return 1;                    // 只有較高的一方拉遠射程
-    return 1 + ALTITUDE.RANGE * altScale(dh);
+    return altRangeF(this._altDh(shooter, target));
   }
 
   /** 高度差「爆擊」乘數 {rate, dmg}(施加在 shooter→target 這一擊):較高方攻擊時爆率/爆傷↓、受擊時↑ */
   _altCrit(shooter, target) {
     if (!shooter || !target) return { rate: 1, dmg: 1 };
-    const dh = this._sightY(shooter) - this._sightY(target);
+    const dh = this._altDh(shooter, target);
     const s = altScale(dh);
     if (s <= 0) return { rate: 1, dmg: 1 };
     if (dh > 0) return { rate: 1 - ALTITUDE.ATK_CRIT_RATE * s, dmg: 1 - ALTITUDE.ATK_CRIT_DMG * s };  // 較高方向下攻擊
@@ -1443,7 +1462,7 @@ export class BattleSim {
     let p = EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0);
     // 高度差:目標比射手高過門檻 → +閃避率(較高方 +DODGE 封頂;見 data.js ALTITUDE)
     if (shooter) {
-      const dh = this._sightY(t) - this._sightY(shooter);
+      const dh = this._altDh(t, shooter);   // 同框比較(見 _altDh:跨框相減 = 拿場地海拔當高度差)
       if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);
     }
     return Math.random() < p;
@@ -1461,7 +1480,7 @@ export class BattleSim {
   /**
    * 射程閘門用「到目標**近側表面**」的距離:d3(到中心)扣掉目標水平量體 hitR(= hitH 的水平版)。
    * 客戶端的準星射線/彈道停在目標**表面**(碰撞體),而舊閘門量的是**中心**——半徑 7m 的砲塔 /
-   * 20m 的主堡把 ×1.25 網路寬容吃掉大半,再疊上客戶端刻意寬鬆的 _altRangeMul 近似與彈道飛行時間,
+   * 20m 的主堡把 ×1.25 網路寬容吃掉大半,再疊上客戶端的 `_effRange` 有效射程與彈道飛行時間,
    * 射程邊界的合法彈著就被「驗證後靜默丟棄」= 使用者回報「光暈亮著卻打不到建築」(A30 靜默丟包家族;
    * 與 2026-07-28 _lanceHits 的 R + hitR(t) 同一條病灶,這裡補的是**射程閘門**那一半)。
    * 只放寬閘門;傷害衰減仍以 d3(中心)結算 —— 平衡數值不動。
@@ -1637,7 +1656,7 @@ export class BattleSim {
     // 著彈點超程閘門。上界 = 射程 × 高度制空上限 × 網路寬容 × 重砲窗 —— 三個因子都是**推導值**:
     //   ・RANGE_TOL:與 heroHit/heroLance/heroPlasma 同一個縫(舊制此處獨自寫 1.15,比其餘閘門緊)
     //   ・altRangeMax():落點是一個「點」,伺服器算不出射手與目標的高程差 ⇒ 只能取機制上限當誠實界。
-    //     客戶端的彈道上限本來就是 `range × _altRangeMul`(最高 1 + ALTITUDE.RANGE),閘門比它緊
+    //     客戶端的彈道上限本來就是 `range × _altRangeTo`(最高 1 + ALTITUDE.RANGE),閘門比它緊
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
@@ -1675,6 +1694,13 @@ export class BattleSim {
    * 與槽位 slot('heavy' 電漿 / 'light' 散彈;預設 heavy 向後相容)。命中判定全在伺服器 —
    * 射程內、水平夾角 ≤ arc、迷霧可見的敵方單位全數受創(× 扇形近距高遠距低衰減)。
    * 一發只扣一次彈藥/射速,錐內敵人全數命中 = 真散彈手感。僚機以各自位置沿同射向齊噴。
+   *
+   * **射程閘門 MUST NOT 乘 `RANGE_TOL`**(2026-08-01 使用者回報「攻擊範圍異常,沒有射程光暈
+   * 的敵人也打得到」):`RANGE_TOL` 是放給「客戶端已自行夾過射程的**回報**」的網路寬容 ——
+   * heroHit/heroLance/heroBurst 的彈道本來就飛不出 `range × 高度制空`,寬容只能防止合法彈著
+   * 被誤丟。扇形武器沒有彈道也**沒有任何客戶端閘門**(只回報一個射向,選誰中彈全在這裡),
+   * 寬容於是直接變成 25% 的隱形射程:光暈不亮的敵人照樣掉血。這裡是伺服器自己選目標的
+   * 唯一一條英雄武器路徑,MUST 吃誠實界(與 `botFire` 同一條規則)。
    */
   heroPlasma(pid, dx, dz, slot = 'heavy') {
     const h = this.heroes.get(pid);
@@ -1696,8 +1722,7 @@ export class BattleSim {
         const tx = t.x - b.x, tz = t.z - b.z;
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, (b.y || 0) - (t.hero ? (t.y || 0) : 0));
-        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def) * RANGE_TOL
-            ) continue;   // 高度制空(散彈輕武器);量到近側表面(_surfD3)
+        if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def)) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
         // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
         if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;

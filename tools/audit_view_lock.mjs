@@ -171,8 +171,8 @@ ok(/this\._entAimPoint\(/.test(body(gameSrc, '_coneAcquire')) && /this\._entAimP
   '索敵與視野鎖定同吃 `_entAimPoint`,兩處都 MUST NOT 自己內插機體中心');
 ok(!/dimTop/.test(tick) && !/dimTop/.test(body(gameSrc, '_coneAcquire')),
   '兩個消費端都沒有第二份 dimTop/dimH 算式');
-ok(/def\.range \* this\._altRangeMul\(def\)/.test(tick),
-  '可鎖距離與 `_tickLock` 同一把尺(射程 × 高度制空)');
+ok(/this\._maxRange\(def\)/.test(tick),
+  '可鎖距離與 `_tickLock` 同一把尺(索敵半徑 = `_maxRange` 機制上限)');
 // 亮燈狀態:唯一真相在 game.js,經 body class 落到鈕面(觸控層不自己記一份)
 ok(/document\.body\.classList\.toggle\('vlock'/.test(gameSrc)
   && /body\.vlock \.tl-sysb\[data-act="lock"\]/.test(cssSrc),
