@@ -10,6 +10,7 @@ import {
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
+  BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
@@ -398,6 +399,10 @@ export class BattleClient {
     // 異常狀態致盲白幕(純表現層;常數/曲線住 data.js CC_FLASH):狀態上身瞬間全白 → 漸淡
     this._ccFlashLeft = 0;            // 白幕剩餘秒數(由 ccFlashDur() 倒數)
     this._ccFlashPeak = 0;            // 本次白幕的峰值不透明度(= 該狀態的致盲強度)
+    // 受擊濺血提示(純表現層;常數/曲線住 data.js BLOOD):伺服器 hurt 事件 → 依方位噴在座艙玻璃上
+    this._blood = [];                 // [{ id, u, v, drops, left }](最舊的先退場,上限 BLOOD.MAX)
+    this._bloodSeq = 0;               // 血斑序號(HUD 端據此建立/回收 DOM,MUST 唯一遞增)
+    this._bloodOn = false;            // 上一幀是否還有血斑(歸零那幀仍推一次空陣列後才早退)
     this.shopOpen = false;
     this.paused = false;              // 戰場選單開啟中(凍結輸入)
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
@@ -2371,6 +2376,74 @@ export class BattleClient {
   }
 
   /**
+   * 受擊濺血(2026-08-02 使用者需求「半透明紅色濺血、位置視敵人射擊方向、傷害越高血滴越大」)。
+   * 唯一觸發點 = 伺服器 `hurt` 事件(帶攻擊者座標與這一擊的實際損耗)—— 客戶端 MUST NOT 自己
+   * 從血量落差猜方位(那份落差只知道「被打了」;猜出來的方向必定與伺服器分家)。
+   *
+   * 方位一律量**當下鏡頭**的相機空間(含後座力/震動/視野鎖定的即時姿態):
+   *   bearing = atan2(右, 前) ⇒ 0 正前、±π 背後,背後中彈自然夾到畫面左右緣;
+   *   elev    = 仰角,只有攻擊者也是英雄(事件帶 `ay` 絕對高程)時才算,否則畫在中線(見 sim._hurtLog)。
+   * 相機矩陣 MUST 自己 invert `matrixWorld` —— `matrixWorldInverse` 是 renderer.render 才寫的
+   * (與 `_coneAcquire` 同一個坑)。
+   */
+  _bloodSplat(ev) {
+    if (this.dead || !this.side) return;
+    const pool = (this.maxHp || 0) + (this.maxSp || 0);
+    const frac = bloodFrac(ev.v, pool);
+    if (!(frac > 0)) return;
+    // 攻擊者世界座標(sim 的 z 是鏡射的,與 boom/die 等事件同一條換算)
+    const ax = ev.x, az = -ev.z;
+    const cam = this.camera;
+    cam.updateMatrixWorld();
+    const p = new THREE.Vector3(ax, ev.ay != null ? ev.ay : 0, az)
+      .applyMatrix4(new THREE.Matrix4().copy(cam.matrixWorld).invert());
+    const fwd = -p.z;                                  // 相機空間:−z 為前
+    const bearing = Math.atan2(p.x, fwd);
+    // 仰角:只有兩端都拿得到絕對高程才算(我方 = pos.y + _eyeH(),與回報伺服器的 ay 同一式)
+    const elev = ev.ay != null ? Math.atan2(p.y, Math.hypot(p.x, fwd)) : 0;
+    const halfV = THREE.MathUtils.degToRad(cam.fov) * 0.5;
+    const halfH = Math.atan(Math.tan(halfV) * (cam.aspect || 1));
+    const { u, v } = bloodScreenUv(bearing, elev, halfH, halfV);
+    // 血滴:主滴在斑心,其餘依份量散開(純視覺抖動,不涉場景確定性 ⇒ Math.random 無妨)
+    const r0 = bloodDropR(frac);
+    const n = bloodDropN(frac);
+    const drops = [{ x: 0, y: 0, r: r0 }];
+    for (let i = 1; i < n; i++) {
+      const th = Math.random() * Math.PI * 2;
+      const rad = Math.sqrt(Math.random()) * BLOOD.SPREAD * (0.35 + 0.65 * frac);
+      drops.push({
+        x: Math.cos(th) * rad, y: Math.sin(th) * rad,
+        r: r0 * (0.18 + 0.42 * Math.random()),   // 衛星滴恆小於主滴
+      });
+    }
+    this._blood.push({ id: ++this._bloodSeq, u, v, drops, left: bloodDur() });
+    while (this._blood.length > BLOOD.MAX) this._blood.shift();   // 上限:最舊的先退場
+  }
+
+  /** 濺血逐幀衰減 → 推 HUD(空陣列 = 全部退場);清空那幀仍推一次,之後早退不再碰 DOM */
+  _updateBlood(dt) {
+    if (!this._blood.length) {
+      if (!this._bloodOn) return;
+      this._bloodOn = false;
+      this.hud.blood?.([]);
+      return;
+    }
+    for (const b of this._blood) b.left -= dt;
+    this._blood = this._blood.filter((b) => b.left > 0);
+    this._bloodOn = true;
+    this.hud.blood?.(this._blood.map((b) => ({
+      id: b.id, u: b.u, v: b.v, drops: b.drops, a: bloodAlpha(b.left),
+    })));
+  }
+
+  /** 清除濺血(陣亡/重生/換座機:血漬留在上一具機體的座艙玻璃上,MUST NOT 跟著視野搬過來) */
+  _clearBlood() {
+    this._blood.length = 0;
+    this._bloodOn = false;
+    this.hud.blood?.([]);
+  }
+
+  /**
    * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
    */
@@ -3932,6 +4005,9 @@ export class BattleClient {
       } else if (ev.tpid === this.youId) {
         this._lockedUntil = performance.now() / 1000 + LOCK.WARN_S;
       }
+    } else if (ev.e === 'hurt') {
+      // 受擊濺血:指名自己的事件才畫(伺服器已把同一 tick 同一攻擊者併成一筆)
+      if (ev.tpid === this.youId) this._bloodSplat(ev);
     } else if (ev.e === 'cc') {
       // 控場位移(拉近):位置客戶端權威 —— 指名自己的事件才生效,自套朝彈著中心的衝量
       // (dash 先例的反向;NPC/bot/僚機由伺服器直接位移,不會收到這條)
@@ -4741,6 +4817,7 @@ export class BattleClient {
     this._airSink = 0;        // 換座機:掉高待落帳是上一具機體的,不跟著搬(_prevVital 同理)
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
+    this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
   }
 
@@ -5112,6 +5189,7 @@ export class BattleClient {
     this._airSink = 0;    // 死亡:清掉高待落帳(墜機過場自有物理,兩套下降會打架)
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
+    this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
     // 死亡:清視野鎖定的目標與鈕面亮燈 —— `_updatePlayer` 對 dead 早退,`_tickViewLock` 不會再跑到
     //(鈕還按著沒關係:重生後照樣重新索敵,與 `firing` 同語意)
     this._vlockId = null; this._vlockPrev = null; this._setVlockUi(false);
@@ -6901,6 +6979,7 @@ export class BattleClient {
     this._env = this._envAt();   // 當幀環境(水/沼):移動減速、pos 回報、狀態結算(伺服器)皆讀它
     this._updateEnvFog(dt);      // 火場滯留 → 視野漸霧化(純客戶端表現)
     this._updateCcFlash(dt);     // 異常狀態致盲 → 全白後漸淡(純客戶端表現)
+    this._updateBlood(dt);       // 受擊濺血 → 依方位噴在座艙玻璃上後漸淡(純客戶端表現)
     // 結構物硬碰撞的參考狀態:位移前的座標與「是否在地下道內」(隧道側壁判定要以移動前為準)。
     // open 段(地下道引道露天路塹)**刻意不濾**:側壁閘(單步高差 + tunnelWallCross 幾何牆線)
     // 正是「溝底不能爬牆側出、出入口只在道路兩端」的物理 —— 這是 open 段唯二的消費端之一

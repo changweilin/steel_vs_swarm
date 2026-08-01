@@ -522,6 +522,20 @@ body.aiming .crosshair::after { height: 2px; }
 .hurt-vig.on { animation: hurtFlash 0.5s ease-out; }
 @keyframes hurtFlash { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
 
+/* 受擊濺血:座艙玻璃上的半透明血漬。z 8 同 hurt-vig/env-fog(HUD 之下不擋讀數),DOM 排在
+   env-fog 之後 ⇒ 同層時疊在暈影之上 = 血在玻璃上、霧在玻璃外。opacity 由 game.js 每幀依
+   data.js bloodAlpha() 推,MUST NOT 加 transition/animation(與逐幀曲線相爭,峰值被鈍化)。
+   血滴以多層 radial-gradient 疊在同一張 background(逐滴建 DOM 會讓節點數 = 血滴數);
+   位置與圖樣在建立時烤死,MUST NOT 每幀重算 —— 血漬噴上去就該黏在玻璃上不跟著鏡頭滑。 */
+.blood-vig { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+/* 畫布 26vmin = 2 ×(SPREAD 7.5 + DROP_MAX 4.6)+ 餘裕:小於這個值,最外圈的血滴會被切掉。 */
+.blood-splat {
+  position: absolute; opacity: 0;
+  width: 26vmin; height: 26vmin; transform: translate(-50%, -50%);
+  background-repeat: no-repeat;
+  filter: blur(0.22vmin) drop-shadow(0 0 0.5vmin rgba(60, 0, 0, 0.5));
+}
+
 /* 異常狀態致盲白幕:閃光彈(電磁)/纏擾致盲/電擊麻痺上身瞬間全屏過曝,之後漸淡回清晰。
    opacity 由 game.js 每幀依 data.js ccFlashAlpha() 推(全白段 → smoothstep 淡出)⇒
    MUST NOT 加 transition/animation(CSS 過渡會與逐幀曲線相爭,峰值被鈍化成「白得很慢」)。
