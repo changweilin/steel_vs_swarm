@@ -129,7 +129,9 @@ ok(/const HOLD = new Set\(\[[^\]]*'lock'/.test(mobileSrc),
 // 絕招:從 ZR 搬到十字鍵左,但派發縫不變(A22)
 ok(count(htmlSrc, /data-act="special"/g) === 1, '機種絕招鈕恰好一顆');
 ok(/tl-dp-b[^>]*data-act="special"/.test(htmlSrc), '機種絕招搬到十字鍵(.tl-dp-b)');
-ok(/data-act="special"[^>]*>[^<]*<span class="gb-cd">/.test(htmlSrc),
+// 鈕面字 2026-08-02 起住 `.gb-f` span(觀戰借用這顆鈕時要換字)⇒ 只驗同一顆鈕內有 .gb-cd,
+// MUST NOT 綁死「文字直接是 button 的子節點」那種標記形狀。
+ok(/data-act="special"[^\n]*<span class="gb-cd">/.test(htmlSrc),
   '絕招鈕面仍帶 .gb-cd(padMirror 鏡射冷卻秒數)');
 ok(/case 'special': if \(down\) this\._fireHoldAbility\(\);/.test(gameSrc),
   'A22:絕招仍只有 `_fireHoldAbility` 一個派發縫(換了鈕不等於換了實作)');
