@@ -2845,11 +2845,12 @@ export class BattleSim {
       const toShield = Math.min(t.sp || 0, dmg);
       t.sp = (t.sp || 0) - toShield;
       let rem = dmg - toShield;
-      if (rem <= 0) { this._botAirSink(t, toShield); this._vamp(by, toShield); return; }
+      if (rem <= 0) { this._botAirSink(t, toShield); this._hurtLog(t, by, toShield); this._vamp(by, toShield); return; }
       // 第二層裝甲:護甲值減免(破甲抵銷)
       dmg = rem * armorMul(t.armor, pen);
       dealt = toShield + Math.min(t.hp, dmg);
       this._botAirSink(t, dealt);   // 飛行機體受擊掉高(bot 專用;真人那份住客戶端物理)
+      this._hurtLog(t, by, dealt);  // 受擊濺血提示(方位 + 傷害量;純表現層,客戶端畫在座艙玻璃上)
     } else {
       // 陣營小兵強化:護甲值同吃 t.cu(與 hp/dmg/賞金同一條曲線;無此欄的塔/主堡/第三方 ×1)
       dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
@@ -2881,6 +2882,52 @@ export class BattleSim {
     const flying = t.kind === 'drone' || (t.kind === 'morph' && (t.y || 0) > MORPH.GROUND_Y);
     if (!flying) return;
     t.y = Math.max(0, (t.y || 0) - airSinkM(dealt));
+  }
+
+  /**
+   * 受擊濺血提示的**方位來源**(2026-08-02 使用者需求「濺血位置視敵人射擊方向而定、傷害越高血滴越大」)。
+   * 客戶端本來只從快照的血量落差知道「被打了」,不知道被誰從哪打 ⇒ 方位只能由伺服器給(A1)。
+   *
+   * 同一 tick 內**同一個攻擊者併成一筆**(散彈一次多發、貫穿一次多段 = 一坨大血漬而不是一排小點),
+   * 於 `_frame()` 統一 flush 成 `hurt` 事件 —— 事件在整個 tick 的傷害都結算完之後才被取走,
+   * 而傷害同時發生在 tick 內與訊息處理當下(heroHit/detonate)⇒ **flush 點 MUST 是 `_frame()`**,
+   * 放進 `tick()` 會漏掉 tick 之間回報進來的那些命中。
+   *
+   * 高程只在**攻擊者也是英雄**時附上(`ay` 絕對高程,與受擊者客戶端自己的 `pos.y + _eyeH()` 同框)——
+   * NPC/塔在伺服器是離地高、地基恆 0,跨框相減等於拿場地海拔當高度差(見 `_altDh` 的同一個坑)。
+   * 取不到就不給,客戶端退回「只吃水平方位、垂直畫在中線」(原則 6 寧缺勿錯)。
+   */
+  _hurtLog(t, by, dealt) {
+    if (!t.hero || t.dead || !(dealt > 0)) return;
+    if (!by || by.x == null || by.z == null) return;   // 環境傷害(沼澤/火場/地雷)無攻擊者方位 ⇒ 不濺血
+    // 只記**主視野機**:玩家看到的血量落差(受傷暈影)本來就只認這一架,僚機挨打不該噴在座艙玻璃上。
+    // 同時保證 `_flushHurt` 走 `heroes` 就能收乾淨(掛在僚機上的帳沒有 flush 點,會一路累積)。
+    if (this.heroes.get(t.pid) !== t) return;
+    const acc = (t._hurt ||= new Map());
+    const key = by.id ?? by.pid ?? 'x';
+    const prev = acc.get(key);
+    if (prev) { prev.v += dealt; return; }
+    acc.set(key, {
+      x: by.x, z: by.z, v: dealt,
+      ...(by.hero && by.ay != null ? { ay: by.ay } : {}),
+    });
+  }
+
+  /** 把本 tick 累積的濺血方位倒進事件流(`_frame()` 取走事件之前的唯一 flush 點) */
+  _flushHurt() {
+    for (const h of this.heroes.values()) {
+      const src = h._hurt;
+      if (!src) continue;
+      for (const s of src.values()) {
+        this.events.push({
+          e: 'hurt', tpid: h.pid,
+          x: Math.round(s.x * 10) / 10, z: Math.round(s.z * 10) / 10,
+          ...(s.ay != null ? { ay: Math.round(s.ay * 10) / 10 } : {}),
+          v: Math.round(s.v * 10) / 10,
+        });
+      }
+      h._hurt = null;
+    }
   }
 
   /** 火場灼傷(feature 6 調整):同時扣護盾/HP,依「最大值比例」拆分 → 兩池同步見底;HP 份不吃裝甲。
@@ -3956,6 +4003,7 @@ export class BattleSim {
   _frame() {
     if (this._frameTickN === this._tickN) return this._frameCache;
     this._frameTickN = this._tickN;
+    this._flushHurt();   // 濺血方位:MUST 排在取走 events 之前(見 _hurtLog)
     const ev = this.events;
     this.events = [];
     const sm = this.missiles.map((m) => ({

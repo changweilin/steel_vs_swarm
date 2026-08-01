@@ -2139,6 +2139,32 @@ function makeHud() {
       // 縮圈曲線住 data.js `scopeRvmin`(單一縫)—— 視野鎖定的取景判定吃同一支
       document.body.style.setProperty('--scope-r', `${scopeRvmin(f).toFixed(1)}vmin`);
     },
+    // 受擊濺血(2026-08-02;game.js 每幀推整份清單 [{id,u,v,drops,a}],空陣列 = 全部退場)。
+    // 依 id 對帳:新 id 建節點、舊 id 只更新 opacity、消失的 id 移除 —— 每幀重建 DOM 會讓
+    // 血漬每幀重畫(閃爍)且 GC 壓力大。一顆血斑 = 一個節點,血滴以多層 radial-gradient 疊在
+    // 同一張 background 上(逐滴建 DOM 的話,一場戰鬥下來節點數是血滴數而不是血斑數)。
+    blood: (list) => {
+      const box = $('bloodVig');
+      const live = new Set();
+      for (const b of list || []) {
+        live.add(String(b.id));
+        let el = box.querySelector(`[data-bid="${b.id}"]`);
+        if (!el) {
+          el = document.createElement('div');
+          el.className = 'blood-splat';
+          el.dataset.bid = String(b.id);
+          // 位置與圖樣在建立時烤死(血漬噴上去就不動了;每幀重算 = 血斑跟著鏡頭滑動)
+          el.style.left = `${(b.u * 100).toFixed(2)}%`;
+          el.style.top = `${(b.v * 100).toFixed(2)}%`;
+          el.style.backgroundImage = (b.drops || []).map((d) =>
+            `radial-gradient(circle ${d.r.toFixed(2)}vmin at calc(50% + ${d.x.toFixed(2)}vmin) calc(50% + ${d.y.toFixed(2)}vmin),`
+            + ' rgba(150, 8, 12, 0.95) 0%, rgba(122, 6, 10, 0.85) 55%, rgba(88, 4, 8, 0.45) 82%, rgba(70, 3, 6, 0) 100%)').join(',');
+          box.appendChild(el);
+        }
+        el.style.opacity = Math.max(0, Math.min(1, b.a || 0)).toFixed(3);
+      }
+      for (const el of [...box.children]) if (!live.has(el.dataset.bid)) el.remove();
+    },
     // 異常狀態致盲白幕(2026-07-30;game.js 每幀依 data.js ccFlashAlpha() 推 0~1)——
     // 純表現層:狀態效果(禁移動/武器離線/操縱反轉)一律伺服器結算,這裡只負責「被閃到」的過曝。
     ccFlash: (a) => {

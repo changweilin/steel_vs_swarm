@@ -1363,6 +1363,62 @@ export function ccFlashAlpha(left, peak) {
   return p * u * u * (3 - 2 * u);                     // smoothstep 漸淡(收尾平順)
 }
 
+// ---- 受擊濺血提示(2026-08-02;純表現層唯一縫)----
+// 使用者需求:「被攻擊時的畫面要有半透明紅色濺血提示,會視敵人射擊的方向決定濺血位置,
+//   傷害越高濺血的血滴越大」。定位是**座艙玻璃上的血漬**(半透明,視野 MUST 仍讀得到)——
+//   與 CC_FLASH 同族的純表現層:傷害/方位全部照抄伺服器的 `hurt` 事件(A1),客戶端只做投影與衰減。
+// 三件事各有一支曲線,MUST NOT 在消費端手寫:
+//   ・位置 bloodScreenUv:攻擊者相對**當下鏡頭**的水平/垂直夾角 → 螢幕 0~1;超過半視角(含背後)
+//     夾在畫面邊緣 ⇒ 「從哪邊打來、血就噴在哪一邊」對背後攻擊同樣成立。
+//   ・血滴大小 bloodDropR / 數量 bloodDropN:吃的是**這一擊佔自機總量(裝甲+護盾)的比例**而非絕對
+//     傷害值 —— 各機種 EHP 差一個量級,拿絕對值當尺會讓輕甲被擦一下就滿版、重甲被打爆卻沒感覺。
+//     REF_F = 「一擊打掉這個比例 = 最大血滴」的校準錨。
+//   ・淡出 bloodAlpha:HOLD 段維持 → FADE 段 smoothstep 淡掉(與 ccFlashAlpha 同形)。
+export const BLOOD = {
+  HOLD_S: 0.35, FADE_S: 2.4,      // 停留(全濃)+ 漸淡秒數
+  PEAK: 0.62,                     // 峰值不透明度(**半透明**上限;調到 1 = 擋住視野,違反需求)
+  REF_F: 0.22,                    // 校準錨:一擊打掉 22% 總量 = 最大血滴
+  DROP_MIN: 0.9, DROP_MAX: 4.6,   // 血滴半徑(vmin;主滴尺寸,衛星滴按比例縮)
+  N_MIN: 3, N_MAX: 12,            // 每次濺血的血滴數(含主滴)
+  SPREAD: 7.5,                    // 衛星滴散布半徑(vmin)
+  EDGE: 0.07,                     // 畫面邊緣內縮(避免血斑一半跑到畫面外)
+  MAX: 5,                         // 同時存在的血斑上限(超過 = 最舊的先退場)
+};
+/** 濺血總長(秒)= 停留段 + 漸淡段;推導不手寫 */
+export const bloodDur = () => BLOOD.HOLD_S + BLOOD.FADE_S;
+/** 濺血不透明度(0~1):left = 剩餘秒數(由 bloodDur() 倒數) */
+export function bloodAlpha(left) {
+  const t = Math.max(0, Math.min(bloodDur(), left || 0));
+  if (t >= BLOOD.FADE_S) return BLOOD.PEAK;             // 停留段
+  const u = t / BLOOD.FADE_S;                           // 1 → 0
+  return BLOOD.PEAK * u * u * (3 - 2 * u);              // smoothstep 漸淡
+}
+/** 這一擊的「份量」0~1:dmg = 實際損耗的護盾+裝甲、pool = 自機總量上限(maxHp + maxSp) */
+export function bloodFrac(dmg, pool) {
+  if (!(dmg > 0) || !(pool > 0)) return 0;
+  return Math.min(1, dmg / (pool * BLOOD.REF_F));
+}
+/** 主血滴半徑(vmin):份量 0 → DROP_MIN、份量 1 → DROP_MAX */
+export const bloodDropR = (frac) =>
+  BLOOD.DROP_MIN + (BLOOD.DROP_MAX - BLOOD.DROP_MIN) * Math.max(0, Math.min(1, frac || 0));
+/** 血滴數(含主滴):份量越高噴得越散 */
+export const bloodDropN = (frac) =>
+  Math.round(BLOOD.N_MIN + (BLOOD.N_MAX - BLOOD.N_MIN) * Math.max(0, Math.min(1, frac || 0)));
+/**
+ * 濺血位置(螢幕比例 {u, v},0~1;v 由上往下)。
+ * bearing = 攻擊者相對視線的**水平**夾角(0 = 正前、+ = 右、±π = 背後);
+ * elev    = **垂直**夾角(+ = 攻擊者在上方;取不到高程時傳 0 = 畫面中線);
+ * halfH / halfV = 當下鏡頭的半視角(弧度)—— 狙擊模式縮 FOV 時血斑跟著收攏,不必另寫一份。
+ * 超過半視角一律夾在邊緣:背後中彈 = 血噴在左右邊緣,而不是折回畫面中央。
+ */
+export function bloodScreenUv(bearing, elev, halfH, halfV) {
+  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+  const inset = (t) => BLOOD.EDGE + t * (1 - 2 * BLOOD.EDGE);
+  const u = inset(0.5 + 0.5 * clamp1(halfH > 0 ? (bearing || 0) / halfH : 0));
+  const v = inset(0.5 - 0.5 * clamp1(halfV > 0 ? (elev || 0) / halfV : 0));
+  return { u, v };
+}
+
 // ---- 障礙物視線遮蔽(2026-07-15;伺服器 sim._losBlocked / 客戶端彈道共用參數)----
 // 建物/神木/巨岩等實體障礙擋砲火與視線:塔/NPC/玩家都不能透視。
 // EYE_M/TGT_M:射手眼高 / 目標身高取樣(地面單位);TOWER_EYE_M:塔的砲位高(塔身 26m,砲位過半);
