@@ -599,6 +599,22 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 .money-box { font-size: 11px; color: var(--railW); font-family: var(--mono); letter-spacing: 1px; }
 .shop-hint { color: var(--dim); font-size: 10px; margin-left: 8px; }
 
+/* 觀戰的角色數據面板(2026-08-02):**與交戰共用同一塊 .hud-self** —— 沒跟人時只留標題(上帝視角
+   本來就沒有「誰的數據」可顯示),跟上某位玩家才整塊攤開,並在最下方補一列八軌商店升級。
+   收起靠 CSS 而不是逐節點 hidden:欄位增減時不必再回頭補一份顯隱清單。 */
+body.spectating:not(.spec-follow) .hud-self > :not(.hud-side) { display: none; }
+.spec-upg { display: none; flex-wrap: wrap; gap: 2px 6px; font-size: 10px; font-family: var(--mono); letter-spacing: 0; }
+body.spectating.spec-follow .spec-upg { display: flex; }
+.su-item {
+  color: var(--railW); background: rgba(4, 7, 11, 0.82); border: 1px solid var(--line);
+  padding: 0 4px; white-space: nowrap;
+}
+.su-item b { color: #eaf5ea; margin-left: 3px; font-weight: 700; }
+.su-item.su-zero { color: var(--dim); }
+.su-item.su-zero b { color: var(--dim); }
+.su-item.su-max { border-color: var(--ok); }
+.su-item.su-max b { color: var(--ok); }
+
 /* 主堡軍械庫 */
 .shop-overlay { pointer-events: auto; z-index: 30; }   /* 疊在死亡畫面上:陣亡等待重生也能購買 */
 .shop-box { text-align: left; max-width: min(560px, 94vw); max-height: 86vh; overflow-y: auto; }
