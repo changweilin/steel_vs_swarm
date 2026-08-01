@@ -581,8 +581,9 @@
          L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 全螢幕
          R 條:① R 狙擊(短按切換、長按絕招)② ZR 鎖定(按住)③ ⇄ 換機(無人機)④ 左手
 
-       **ZR = 視野鎖定(2026-08-01 使用者需求,原為機種絕招)**:按住 → 視野收斂到準星最近的敵人,
+       **ZR = 視野鎖定(2026-08-01 使用者需求,原為機種絕招)**:按住 → 視野收斂到鎖定的敵人,
        放開即恢復自由視角。虛擬搖桿的追瞄本來就比滑鼠吃力,這是扳機位最值得放的**按住型**動作;
+       2026-08-02 改制:**按一次輪替到前方視野內的下一個敵人**(狙擊模式以狙擊鏡圈為取景),
        後座力刻意**不**抵銷(見 data.js VIEW_LOCK 與 game.js `_tickViewLock`)。
        原本住這裡的機種絕招搬到十字鍵左(連冷卻鈕面一起),長按 R 那條路不變 ——
        兩者仍共用同一個派發縫(game.js `_fireHoldAbility`),絕招沒有少一條路。 -->
@@ -594,7 +595,7 @@
   </div>
   <div class="tl-sys tl-sys-r">
     <button class="tl-sysb gb-aim" type="button" data-act="aim">R 狙擊</button>
-    <button class="tl-sysb" type="button" data-act="lock" aria-label="按住鎖定目標">ZR 鎖定</button>
+    <button class="tl-sysb" type="button" data-act="lock" aria-label="按住鎖定目標,再按一次換下一個">ZR 鎖定</button>
     <button class="tl-sysb" type="button" data-act="swap" hidden>⇄換機</button>
     <button class="tl-sysb" type="button" data-act="lefty">左手</button>
   </div>

@@ -15,7 +15,7 @@ import {
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
-  FLIGHT, SQUAD,
+  FLIGHT, SQUAD, scopeRvmin,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -2072,7 +2072,8 @@ function makeHud() {
       el.style.opacity = String(f);
       const blur = f > 0 ? `blur(${(f * 6).toFixed(2)}px)` : '';   // 離場移除 → 不留 backdrop 合成層(效能)
       el.style.backdropFilter = blur; el.style.webkitBackdropFilter = blur;
-      document.body.style.setProperty('--scope-r', `${(40 - f * 22).toFixed(1)}vmin`);   // 40vmin → 18vmin
+      // 縮圈曲線住 data.js `scopeRvmin`(單一縫)—— 視野鎖定的取景判定吃同一支
+      document.body.style.setProperty('--scope-r', `${scopeRvmin(f).toFixed(1)}vmin`);
     },
     // 異常狀態致盲白幕(2026-07-30;game.js 每幀依 data.js ccFlashAlpha() 推 0~1)——
     // 純表現層:狀態效果(禁移動/武器離線/操縱反轉)一律伺服器結算,這裡只負責「被閃到」的過曝。
