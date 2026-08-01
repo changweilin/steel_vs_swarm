@@ -1104,7 +1104,7 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // **只放寬不收緊**是刻意的(MUST NOT 改成單純的 `初速 ÷ R_M`,那會讓慢速巡飛彈反而變鈍)。
 // R_M 由掃描定案:200m 是「能讓全部 8 把導引/射後不理武器在 35%~100% 射程全數命中」的**最寬**
 // 值(再放寬 s06 就回歸)⇒ 取最寬 = 對既有手感的擾動最小。伺服器不模擬彈道,bal/duel 不受影響。
-export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200 };
+export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200, CHASE_F: 3 };   // CHASE_F:射後不理鎖定後的追擊燃料 = 滿射程飛行時間 × 此值(見 chaseCapS)
 /** 導引頭每秒最大轉角(rad/s):基礎角速度與「轉彎半徑不超過 R_M」兩個上限取寬者 */
 export const seekTurn = (w, v0) => Math.max(w, (v0 || 0) / SEEK.R_M);
 
@@ -1127,6 +1127,16 @@ export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r ||
 // 不是砲口初速 640m/s;取錯差 6 倍)。
 export const flightCapS = (def) =>
   (def ? def.range * altRangeMax() * RANGE_TOL / shotV0(def) : 0);
+
+// ---- 射後不理的追擊燃料(2026-08-01 使用者定案)----
+// 規則:**鎖定之後持續追擊,不受射程影響 —— 但只能在射程內鎖定**。
+// 「能不能鎖定」吃射程(客戶端 `_tickLock` 的 `_effRange` 閘門 + 伺服器 `heroLock` 複驗射程/
+// 迷霧/LOS);一旦鎖上,彈頭就一路追到底,射程對彈道**不再有任何約束**(A7 的失鎖規則因此
+// 只留給雷射導引與已經失去目標的彈體,見該條)。
+// 燃料上限存在的唯一理由是「不讓失控彈體永遠留在場上」,MUST NOT 拿它當射程的替身:
+// **推導不手寫** = 滿射程飛行時間 × CHASE_F —— 追擊距離因此恆遠大於任何機體在同一段時間內
+// 跑得掉的位移(最快機體 ≈ 20m/s vs 彈頭 90~1000m/s),實務上等同「不受射程影響」。
+export const chaseCapS = (def) => flightCapS(def) * SEEK.CHASE_F;
 
 // ================= 「打得到嗎」逐彈道判定規則(2026-07-30 使用者回報)=================
 // 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。病灶是**射程光暈只量距離**:

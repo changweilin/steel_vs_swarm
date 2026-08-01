@@ -12,7 +12,7 @@ import {
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
-  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
+  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, camSmoothF, camAngleStep,
 } from './data.js';
@@ -6045,6 +6045,9 @@ export class BattleClient {
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
       mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, seek: !!arm,
+      // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
+      // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
+      fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -6139,10 +6142,15 @@ export class BattleClient {
       // 失鎖規則(與伺服器 _tickMissiles 同一條):目標/導引點跑出「攻擊範圍」(以發射點為圓心)
       // → 導引失效,之後只沿當下航向直線飛(吃重力),不再追擊。
       let tgt = b.homing ? this.ents.get(b.homing) : null;
-      if (tgt && tgt.mesh.position.distanceTo(b.origin) > b.max) {
+      // 射後不理(2026-08-01 使用者定案)**不吃這條**:鎖定之後一路追到底,射程只管「能不能鎖定」
+      // (客戶端 _tickLock 的 _effRange 閘門 + 伺服器 heroLock 複驗)。失鎖規則因此只剩雷射導引
+      // 那半(下方 b.guide 分支)—— 那是要玩家持續指示的武器,離開射程本來就該失效。
+      if (tgt && !b.fnf && tgt.mesh.position.distanceTo(b.origin) > b.max) {
         b.homing = null; tgt = null;
         this.hud.feed?.('📡 目標脫離射程:飛彈失鎖(直線飛行)');
       }
+      b.age += dt;
+      if (b.fnf && tgt) b.chase = true;   // 曾經以鎖定目標追擊過 ⇒ 射程包絡換成追擊燃料(不可逆:目標中途陣亡也照飛)
       // 最短距離(軌跡修正期):離架 b.arm 公尺內導引/追蹤尚未接手 —— 只吃重力直飛,
       // 離架時的初期散布(_armSpread)因此無法被修正 ⇒ 近距離命中率較低(使用者定案規則)。
       const armed = b.dist >= (b.arm || 0);
@@ -6237,8 +6245,10 @@ export class BattleClient {
       //     (_reachable 的 from.distanceTo(aim))三處**全部**是直線量法;只有這裡拿航跡長。
       //     而導引彈的航跡恆長於直線(離架散布 + 一路修正航向)⇒ 打射程邊緣的目標,彈頭必定在
       //     飛到之前就自毀(實測微型攔截彈滿射程恆差 5.5m,任何轉向率都救不回來)。
+      //   ・射後不理**鎖定後**(b.chase):射程包絡整條讓位給追擊燃料 `chaseCapS`
+      //     (使用者定案「鎖定後持續追擊,不受射程影響」)—— 燃料只是不讓失控彈體永遠留在場上。
       const spent = b.seek ? b.pos.distanceTo(b.origin) : b.dist;
-      const done = hit || spent >= b.max;
+      const done = hit || (b.chase ? b.age >= b.fuel : spent >= b.max);
       if (!done) {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
