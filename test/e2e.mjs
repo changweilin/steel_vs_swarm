@@ -4,7 +4,7 @@
 import WebSocket from 'ws';
 import { BattleSim, waveInterval, cumLen } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
-import { RoomHub } from '../server/rooms.js';
+import { RoomHub, validateBattleConfig } from '../server/rooms.js';
 import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
@@ -1396,6 +1396,49 @@ log('\n— 單機機制:瀏覽器內 RoomHub 迴路 —');
   await new Promise((r) => setTimeout(r, 400));
   assert(snapCount() === n, '單機:shutdown 後 tick 完全停止(不留背景迴圈)');
   assert(hub.stats().rooms === 0, '單機:shutdown 後房間清空');
+}
+
+// ================= 再戰重擲主堡陣營歸屬 =================
+// 「地圖雙邊位置陣營隨機」若只在開房擲一次,同一間房再戰十場都從同一端開場(2026-08-01 使用者回報
+// 「玩家主堡位置沒有隨機」)。擲點改成開房 + 再戰回房各一次(rooms.js rollSideSwap 單一縫)。
+// 斷言方式:只把 `Math.random` 包在 backToRoom 那一次**同步**呼叫上,兩種結果各驗一次 ——
+// 「多擲幾次總會換邊」那種統計式斷言會 flaky,MUST NOT 拿來當回歸驗證。
+log('\n— 再戰重擲主堡陣營歸屬 —');
+{
+  const hub = new RoomHub({ urls: () => [], log: () => {}, dropMs: 0 });
+  const sess = hub.attach(() => {});
+  sess.recv({ t: 'createRoom', name: '再戰指揮官', roomName: '換邊測試', teamSize: 1, battleConfig: fakeBattleConfig(1) });
+  const room = [...hub.rooms.values()][0];
+  sess.recv({ t: 'pickSide', side: 'SWARM' });
+
+  const cfg = () => room.battleConfig;
+  const shot = () => JSON.stringify([cfg().bases.SWARM, cfg().bases.STEEL, cfg().lanes[0]]);
+  /** 打一場然後按「回到房間再戰」;roll 只在 backToRoom 生效(其餘流程仍吃真亂數) */
+  const rematch = (roll) => {
+    sess.recv({ t: 'setReady', ready: true });
+    sess.recv({ t: 'startBattle' });
+    sess.recv({ t: 'loaded' });
+    const live = !!room.battle;
+    const rnd = Math.random;
+    Math.random = () => roll;
+    try { sess.recv({ t: 'backToRoom' }); } finally { Math.random = rnd; }
+    return live;
+  };
+
+  const swarm0 = JSON.stringify(cfg().bases.SWARM), steel0 = JSON.stringify(cfg().bases.STEEL);
+  const lane0 = cfg().lanes[0].slice();
+  assert(rematch(0.1), '再戰:對局開得起來(backToRoom 的前提)');
+  assert(room.phase === 'room' && !room.battle, '再戰:回到房間階段');
+  assert(JSON.stringify(cfg().bases.SWARM) === steel0 && JSON.stringify(cfg().bases.STEEL) === swarm0,
+    '再戰擲中 ⇒ 兩主堡的陣營歸屬對調(下一場換邊開打)');
+  assert(JSON.stringify(cfg().lanes[0]) === JSON.stringify(lane0.slice().reverse()),
+    '再戰擲中 ⇒ 兵線點序同步反轉(維持 sim 約定 lane[0] ≈ SWARM 主堡端)');
+  assert(!validateBattleConfig(cfg(), 1), '再戰:重擲後的 battleConfig 仍通過開房驗證(反轉換標不動幾何)');
+
+  const before = shot();
+  rematch(0.9);
+  assert(shot() === before, '再戰沒擲中 ⇒ battleConfig 逐位元不變(另外五成維持原歸屬)');
+  hub.shutdown();
 }
 
 // ================= 無真人玩家逾時:直接結束該場遊戲 =================
