@@ -14,6 +14,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
+  SPEC_CAM, specViewNext, camSmoothF, camAngleStep,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -274,13 +275,9 @@ const MM_NEAR = {
   SPEC_R: 420,   // 觀戰自由視角無座機 ⇒ 沒有 sight 可取,用固定半徑
 };
 
-// 觀戰視角(2026-08-02 使用者需求:滾輪縮放視野 + 上帝模式 ⇄ 玩家視角切換)。
-// **純客戶端視角工具**:不送任何訊息、不改權威狀態(與 VIEW_LOCK 同性質,A1 不涉)。
-// 玩家視角的偏航吃伺服器權威 `ry`;**快照沒有俯仰** ⇒ 俯仰保留觀戰者滑鼠自控(降級,不例外)。
-const SPEC = {
-  FOV_MIN: 12, FOV_MAX: 100, FOV_STEP: 1.12,   // 滾輪一格 = 乘/除一次(等比 ⇒ 遠近端手感一致)
-  FLY_Y: 2.5,                                  // 跟隨目標離地高於此 = 飛行型態(視點改取機鼻,同 heroView)
-};
+// 觀戰視角:常數與純數學一律住 `data.js SPEC_CAM`(稽核 `audit_spectator_cam.mjs` 直測真品),
+// game.js 只是消費端 —— MUST NOT 在此另開第二份係數表(見該檔頭註解)。
+// 玩家視角的偏航吃伺服器權威 `ry`;**快照沒有俯仰** ⇒ 俯仰保留觀戰者自控(降級,不例外)。
 
 // ---- 表現層資源上限(純效能保險,不是平衡數值 ⇒ 住這裡不進 data.js)----
 // 一次扇形擊發就吐 20~30 個特效物件;連發 + 多人同框時 `effects` 會長到數百,
@@ -422,9 +419,13 @@ export class BattleClient {
       const [cx, cz] = llToWorld(this.center.lat, this.center.lng, this.center);
       this.pos.set(cx, this.terrain.heightAt(cx, cz) + 400, cz); // 觀戰:高空俯瞰
       this.pitch = -0.9;
-      this._specFov = this.camera.fov;   // 滾輪縮放的當前視野角(上帝/玩家視角共用)
-      this._specPid = null;              // 玩家視角跟隨中的 pid(null = 上帝模式)
-      this._specHid = null;              // 為了不從自己鼻子裡往外看而暫時藏起的機體
+      this._specFov = this.camera.fov;   // 滾輪縮放的當前視野角(四種視角共用)
+      this._specPid = null;              // 玩家視角跟隨中的 pid(null = 上帝視角)
+      this._specHid = null;              // 為了不從自己鼻子裡往外看而暫時藏起的機體(只有第一人稱會藏)
+      this._specView = SPEC_CAM.VIEWS[0];        // 目前視角(唯一寫入點 = _specSetView)
+      this._specAnchor = new THREE.Vector3();    // 跟隨錨點(平滑後的目標位置;避免 8Hz 快照抖動直接進相機)
+      this._specAnchorOk = false;                // 錨點是否已有效(換人/首次跟隨 → 直接貼上,不拉長鏡頭)
+      this._specYaw = 0;                         // 平滑後的跟隨偏航(第一人稱視線 / 第三人稱機背方位共用)
     }
 
     this.clock = new THREE.Clock();
@@ -2658,10 +2659,10 @@ export class BattleClient {
           if (n) this._swapDrone(Number(n[1]) - 1);
         }
       }
-      // 觀戰視角切換:F 上帝模式 ⇄ 玩家視角、Q/E 名冊前後換人。
-      // 這三顆在交戰中另有他用(招式/裝填),故一律關在 side=null 分支內。
+      // 觀戰視角切換:F 循環四種視角(上帝 → 第一人稱 → 第三人稱跟隨 → 第三人稱自由)、
+      // Q/E 名冊前後換人。這三顆在交戰中另有他用(招式/裝填),故一律關在 side=null 分支內。
       if (e.type === 'keydown' && !this.side && !this.paused) {
-        if (e.code === 'KeyF') this._specFollow(this._specPid ? null : 0);
+        if (e.code === 'KeyF') this._specCycleView();
         if (e.code === 'KeyQ') this._specFollow(-1);
         if (e.code === 'KeyE') this._specFollow(1);
       }
@@ -2701,8 +2702,8 @@ export class BattleClient {
     this._onWheel = (e) => {
       if (this.side || this.paused) return;
       e.preventDefault();
-      const f = e.deltaY > 0 ? SPEC.FOV_STEP : 1 / SPEC.FOV_STEP;
-      this._specFov = Math.max(SPEC.FOV_MIN, Math.min(SPEC.FOV_MAX, this._specFov * f));
+      const f = e.deltaY > 0 ? SPEC_CAM.FOV_STEP : 1 / SPEC_CAM.FOV_STEP;
+      this._specFov = Math.max(SPEC_CAM.FOV_MIN, Math.min(SPEC_CAM.FOV_MAX, this._specFov * f));
     };
     this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
 
@@ -2798,10 +2799,10 @@ export class BattleClient {
       else this._vlockId = null;           // 放開只清「現在鎖著誰」;輪替錨點 `_vlockPrev` MUST 留著
       return;
     }
-    // 觀戰視角(觸控):十字鍵左(絕招位)= 上帝 ⇄ 玩家視角、⇄(換機位)= 換下一位玩家。
-    // 與鍵鼠 F / Q・E 共用 `_specFollow` 這個縫;鈕面字由 mobile.js setKind 換。
+    // 觀戰視角(觸控):十字鍵左(絕招位)= 循環四種視角、⇄(換機位)= 換下一位玩家。
+    // 與鍵鼠 F / Q・E 共用 `_specCycleView` / `_specFollow` 兩個縫;鈕面字由 mobile.js setKind 換。
     if (!this.side) {
-      if (down && act === 'special') this._specFollow(this._specPid ? null : 0);
+      if (down && act === 'special') this._specCycleView();
       if (down && act === 'swap') this._specFollow(1);
       return;
     }
@@ -2950,6 +2951,16 @@ export class BattleClient {
         ent.kcd = e.kcd;   // 無人機護衛自殺機冷卻(其他客戶端據此顯隱貼身護衛機;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
+        // 觀戰玩家資訊面板(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」):
+        // 這些欄位**伺服器本來就發**(見 sim._serializeEnt 的 o.act 區塊),客戶端只是留存下來 ——
+        // 一律照抄快照,MUST NOT 在觀戰端自算任何一項(A1)。只在觀戰時留存:交戰中沒有消費端。
+        if (!this.side && e.act) {
+          ent.mp = e.mp ?? 0; ent.mm = e.mm ?? 1;
+          ent.money = e.$ ?? 0; ent.kn = e.kn ?? 0;
+          ent.up = e.up || ent.up; ent.ab = e.ab || ent.ab; ent.cds = e.cds || ent.cds;
+          ent.emp = e.emp || 0; ent.rs = e.rs || 0;
+          ent.dcd = e.dcd ?? 0; ent.dock = e.dc != null ? !!e.dc : ent.dock; ent.hcd = e.hcd ?? 0; ent.hfly = !!e.hfly;
+        }
         const wasDead = ent.dead;
         ent.dead = !!e.dead;
         // 三機小隊:主視野由伺服器指定(e.act);換機時整個座機狀態接管過去
@@ -3045,7 +3056,10 @@ export class BattleClient {
     }
     this.hud.bases?.(bases, m.stats);
     this.hud.wave?.(m.wave, m.nextWave);
-    this.hud.self?.(this.hp, this.maxHp, this._burstCdLeft(), this._weaponHud());
+    // 角色數據面板:交戰 = 自機(_weaponHud);觀戰 = 跟隨中那位玩家(_specHud,同一個形狀)
+    const sh = this._specHud();
+    this.hud.self?.(sh ? sh.hp : this.hp, sh ? sh.max : this.maxHp,
+      sh ? 0 : this._burstCdLeft(), sh || this._weaponHud());
     if (m.over) { this._gameOver = true; this._deathSeq = null; this.hud.deathCine?.(false); this.hud.over?.(m.winner, m.stats); }
   }
 
@@ -7138,13 +7152,19 @@ export class BattleClient {
       .sort((a, b) => (a.side === b.side ? String(a.pid).localeCompare(String(b.pid)) : (a.side < b.side ? -1 : 1)));
   }
 
-  /** 觀戰視角切換。step:null = 退回上帝模式 / 0 = 進入玩家視角(取最近的一位)/ ±1 = 名冊循環 */
+  /** 跟隨中那位的名字(播報 / HUD 標題共用一份,MUST NOT 各拼一次) */
+  _specName(ent) {
+    const c = ent && CHARACTERS[ent.ch];
+    const who = c ? `「${c.code}」${c.name}` : (ent?.pid ?? '—');
+    return `${who}${ent?.side ? ` ・ ${SIDES[ent.side].name}` : ''}`;
+  }
+
+  /**
+   * 觀戰視角切換。step:null = 退回上帝視角 / 0 = 進入玩家視角(取最近的一位)/ ±1 = 名冊循環。
+   * **只管「跟誰」**;「怎麼看」(第一人稱 / 第三人稱跟隨 / 第三人稱自由)住 `_specSetView`。
+   */
   _specFollow(step) {
-    if (step == null) {
-      this._specPid = null;
-      this.hud.feed?.('👁 上帝模式:自由視角(F 切換玩家視角)');
-      return;
-    }
+    if (step == null) { this._specSetView('god'); return; }
     const list = this._specRoster();
     if (!list.length) { this.hud.feed?.('👁 目前沒有可跟隨的玩家'); return; }
     let ent;
@@ -7152,54 +7172,193 @@ export class BattleClient {
       // 剛剛在看誰就跟誰:取離自由視角相機最近的一位
       ent = list.reduce((a, b) => (this.pos.distanceToSquared(a.mesh.position)
         <= this.pos.distanceToSquared(b.mesh.position) ? a : b));
-      this.pitch = 0;   // 從高空俯瞰(-0.9)切進座艙視角,俯仰先擺平
     } else {
       const i = list.findIndex((o) => o.pid === this._specPid);
       ent = list[(((i < 0 ? 0 : i + step) % list.length) + list.length) % list.length];
     }
+    const swapped = this._specPid !== ent.pid;
     this._specPid = ent.pid;
-    const c = CHARACTERS[ent.ch];
-    this.hud.feed?.(`🎥 玩家視角:${c ? `「${c.code}」${c.name}` : ent.pid}${ent.side ? ` ・ ${SIDES[ent.side].name}` : ''}(Q/E 換人 ・ F 回上帝模式)`);
+    if (swapped) this._specAnchorOk = false;   // 換人 = 換錨點:直接貼上去,MUST NOT 平滑成一條長鏡頭
+    // 從上帝視角被 Q/E 拉進來 ⇒ 順勢進第一人稱(否則按了換人卻還在高空,看起來像沒反應);
+    // 播報一律由 `_specSetView` 那一份發,這裡只在「已經在跟隨中換人」時補一句
+    if (this._specView === 'god') this._specSetView('fpv');
+    else this.hud.feed?.(`🎥 ${SPEC_CAM.NAMES[this._specView]}:${this._specName(ent)}(Q/E 換人 ・ F 換視角)`);
   }
 
+  /**
+   * 觀戰視角的**唯一寫入點**(鍵盤 F / 觸控十字鍵左 / `_specFollow` 三個來源共用)。
+   * MUST NOT 在任何呼叫端另判「該不該切」或直接指派 `_specView` —— 條件一散出去,
+   * 兩種輸入就會走出不同的循環序(前科:觸控只做 god ⇄ 玩家視角的二態切換)。
+   * 進入跟隨類視角時若尚未選定目標,順手取最近的一位;完全沒有可跟隨的人就退回上帝視角(降級不例外)。
+   */
+  _specSetView(id) {
+    let view = SPEC_CAM.VIEWS.includes(id) ? id : SPEC_CAM.VIEWS[0];
+    let none = false;
+    if (view !== 'god' && !this._specPid) {
+      const list = this._specRoster();
+      if (!list.length) { view = 'god'; none = true; }   // 沒人可跟 ⇒ 維持上帝視角(降級,不例外)
+      else {
+        this._specPid = list.reduce((a, b) => (this.pos.distanceToSquared(a.mesh.position)
+          <= this.pos.distanceToSquared(b.mesh.position) ? a : b)).pid;
+        this._specAnchorOk = false;
+      }
+    }
+    const prev = this._specView;
+    this._specView = view;   // **唯一寫入點**(另一處只有建構子的初值)
+    if (view === 'god') {
+      this._specPid = null;
+      this._specAnchorOk = false;
+      // 自高空俯瞰的預設俯仰只在「從跟隨類切回來」時重設(在上帝視角裡自己調過的角度不該被吃掉)
+      if (prev !== 'god') this.pitch = Math.min(this.pitch, SPEC_CAM.ORBIT_PITCH);
+    } else if (prev === 'god' || prev === 'fpv') {
+      // 高空俯瞰(−0.9)切進跟隨類:俯仰先擺到該視角的預設值,否則第一幀是對著地面
+      this.pitch = view === 'fpv' ? 0 : view === 'tps' ? SPEC_CAM.TPS_PITCH : SPEC_CAM.ORBIT_PITCH;
+    }
+    if (none) { this.hud.feed?.(`👁 目前沒有可跟隨的玩家 ・ 維持${SPEC_CAM.NAMES.god}`); return; }
+    const tgt = this._specPid ? this._specRoster().find((o) => o.pid === this._specPid) : null;
+    this.hud.feed?.(view === 'god'
+      ? `👁 ${SPEC_CAM.NAMES.god}:WASD 飛行 ・ Space/C 升降 ・ F 換視角`
+      : `🎥 ${SPEC_CAM.NAMES[view]}:${this._specName(tgt)}(Q/E 換人 ・ F 換視角)`);
+  }
+
+  /** F / 十字鍵左:循環下一個視角(序取自 `SPEC_CAM.VIEWS` 這一份) */
+  _specCycleView() { this._specSetView(specViewNext(this._specView)); }
+
+  /**
+   * 觀戰玩家資訊(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」)。
+   * 回傳的形狀**刻意與 `_weaponHud()` 一致** —— 交戰 HUD(main.js `hud.self`)是唯一渲染來源,
+   * 觀戰只是換一組數字餵進去,MUST NOT 為觀戰另寫一塊面板 DOM(兩份必漂)。
+   * 三個「觀戰沒有」的欄位一律回 null 而不是假值:彈藥(伺服器不發別人的彈夾狀態)、
+   * 爬升動力與空白鍵機動 CD(純客戶端量,別人的算不出來)—— 寧缺勿錯,HUD 端顯示「—」。
+   */
+  _specHud() {
+    if (this.side) return null;
+    const vname = SPEC_CAM.NAMES[this._specView] || SPEC_CAM.NAMES.god;
+    const tgt = this._specPid ? this._specRoster().find((o) => o.pid === this._specPid) : null;
+    if (!tgt) return { spec: true, follow: false, who: `觀戰模式 ・ ${vname}`, hp: 0, max: 1 };
+    const c = CHARACTERS[tgt.ch];
+    const kind = c?.kind || (tgt.side && SIDES[tgt.side].hero) || 'robot';
+    const ab = tgt.ab || { light: 1, heavy: 1, skill: 1, ult: 1 };
+    const mp = tgt.mp ?? 0, mm = tgt.mm || 1;
+    const slotHud = (id) => {
+      const def = heroWeapon(tgt.ch, id, ab[id] || 1);
+      // 取不到就給一格空欄(HUD 端無條件讀 .name/.mag;回 null 會直接炸掉整個面板)
+      return def ? { name: def.name, lvl: ab[id] || 1, ammo: null, mag: def.mag, reload: 0 }
+        : { name: '—', lvl: 0, ammo: null, mag: 0, reload: 0 };
+    };
+    const abHud = (slot, idx) => {
+      const lvl = ab[slot] || 1;
+      const A = heroAbility(tgt.ch, slot, lvl);
+      if (!A) return { name: '—', lvl: 0, cd: 0, mp: 0, ready: false };
+      const mpc = Math.round(A.mp);
+      const cd = (tgt.cds || [])[idx] || 0;
+      return { name: A.name, lvl, cd, mp: mpc, ready: cd <= 0 && mp >= mpc };
+    };
+    return {
+      spec: true, follow: true,
+      who: `${this._specName(tgt)}${c ? ` ・ ${c.machine}` : ''} ・ ${vname}`,
+      hp: tgt.hp, max: tgt.max, dead: !!tgt.dead, rs: tgt.rs || 0,
+      upg: tgt.up || null,        // 八軌商店升級(名稱取自 ECON.UPGRADES 同一份,見 main.js)
+      money: tgt.money || 0, kn: tgt.kn || 0, atBase: false, aiming: false,
+      code: c?.code, machine: c?.machine,
+      light: slotHud('light'), heavy: slotHud('heavy'),
+      skill: abHud('skill', 0), ult: abHud('ult', 1),
+      sp: tgt.sp || 0, msp: tgt.maxSp || 1, mp, mm,
+      lift: null, mobil: null, morph: null,
+      emp: tgt.emp || 0, stealth: 0,
+      // 機種絕招冷卻:伺服器只跟主視野機發一份,欄位與交戰 HUD 同名 ⇒ 同一段渲染程式吃得到
+      kami: kind === 'drone' ? { cd: tgt.kcd || 0, n: SQUAD.KAMI.N } : null,
+      decoy: kind === 'morph' ? { ready: !!tgt.dock, cd: tgt.dcd || 0 } : null,
+      hyper: kind === 'robot' ? { cd: tgt.hcd || 0, fly: !!tgt.hfly } : null,
+    };
+  }
+
+  /**
+   * 觀戰相機。四種視角共用這一支:
+   *   god   上帝視角 —— 自由飛行(WASD + Space 升 / C・Ctrl 降;降到站立面上方 FLOOR_M 停住)
+   *   fpv   第一人稱 —— 視點與交戰 FPV 吃**同一個縫**(heroView + heroTargetH),看到的畫面與該玩家一致
+   *   tps   第三人稱跟隨 —— 相機掛在機背後上方,偏航自動跟著該玩家的 ry
+   *   orbit 第三人稱自由 —— 相機環繞該玩家,偏航/俯仰全由觀戰者自控
+   * **運鏡不晃的三道保險**(2026-08-02 使用者需求「運鏡時避免太晃」):
+   *   ①跟隨錨點 `_specAnchor` 平滑目標位置(快照 8Hz + 逐幀插值 ⇒ 直接貼上去就是逐幀抖);
+   *   ②偏航 `_specYaw` 平滑伺服器 ry(量化到 0.01 rad,直接賦值會一格一格跳);
+   *   ③兩者都經 `camSmoothF`(幀率無關),且換人/重生瞬移超過 SNAP_M 就直接貼上不拉長鏡頭。
+   */
   _updateSpectator(dt) {
     const tgt = this._specPid ? this._specRoster().find((o) => o.pid === this._specPid) : null;
-    if (this._specPid && !tgt) this._specPid = null;   // 目標退場/離線:降級回上帝模式(寧缺勿錯)
-    // 上一幀藏起來的機體先還原(換人 / 回上帝模式都會走到);死亡中的機體本來就該是隱形的
-    if (this._specHid && this._specHid !== tgt) {
+    // 目標退場/離線:降級回上帝視角(寧缺勿錯)。走 `_specSetView` 同一個縫 ——
+    // 「跟著誰」「怎麼看」「錨點」三件事一起收乾淨,MUST NOT 在這裡就地指派 `_specView`
+    if (this._specPid && !tgt) this._specSetView('god');
+    const view = tgt ? this._specView : 'god';
+    // 上一幀藏起來的機體先還原(換人 / 換視角 / 回上帝視角都會走到);死亡中的機體本來就該是隱形的。
+    // **只有第一人稱會藏機體** —— 第三人稱要看得到人,藏掉就只剩一個空鏡頭。
+    const hide = view === 'fpv' ? tgt : null;
+    if (this._specHid && this._specHid !== hide) {
       this._specHid.mesh.visible = !this._specHid.dead;
       this._specHid = null;
     }
     if (tgt) {
-      // 玩家視角:視點與交戰 FPV 吃**同一個縫**(heroView + heroTargetH)⇒ 看到的畫面與該玩家一致。
-      // 偏航吃伺服器權威 ry(ry 是相機朝向慣例,模型才 +π);俯仰快照沒有 ⇒ 仍由觀戰者滑鼠自控。
       const kind = CHARACTERS[tgt.ch]?.kind || (tgt.side && SIDES[tgt.side].hero) || 'robot';
-      const vw = heroView(kind, tgt.ch, (tgt.heroY || 0) > SPEC.FLY_Y);
       const h = heroTargetH(kind, tgt.ch);
       const p = tgt.mesh.position;
-      this.yaw = tgt.ry ?? this.yaw;
-      this.pos.set(p.x, p.y, p.z);              // 迷霧/小地圖/音場一併跟著跑(它們都讀 this.pos)
-      if (!tgt.dead) tgt.mesh.visible = false;  // 不要從自己的鼻子裡往外看(與 PiP 副視窗同一手法)
-      this._specHid = tgt;
-      const headF = h * vw.f;
-      this.camera.position.set(p.x - Math.sin(this.yaw) * headF, p.y + h * vw.e, p.z - Math.cos(this.yaw) * headF);
+      // ① 錨點平滑(三種跟隨視角共用;超過 SNAP_M = 換人/重生瞬移 ⇒ 直接貼上)
+      if (!this._specAnchorOk || this._specAnchor.distanceTo(p) > SPEC_CAM.SNAP_M) {
+        this._specAnchor.copy(p);
+        this._specAnchorOk = true;
+      } else {
+        this._specAnchor.lerp(p, camSmoothF(SPEC_CAM.POS_K, dt));
+      }
+      const a = this._specAnchor;
+      // ② 偏航平滑(ry 是相機朝向慣例,模型才 +π);第一人稱要跟手 ⇒ 係數明顯較大
+      this._specYaw = camAngleStep(this._specYaw, tgt.ry ?? this._specYaw,
+        view === 'fpv' ? SPEC_CAM.FPV_YAW_K : SPEC_CAM.YAW_K, dt);
+      this.pos.set(a.x, a.y, a.z);              // 迷霧/小地圖/音場一併跟著跑(它們都讀 this.pos)
+      if (view === 'fpv') {
+        // 第一人稱:偏航吃該玩家的視線;俯仰快照沒有 ⇒ 仍由觀戰者自控(降級,不例外)
+        const vw = heroView(kind, tgt.ch, (tgt.heroY || 0) > SPEC_CAM.FLY_M);
+        this.yaw = this._specYaw;
+        if (!tgt.dead) tgt.mesh.visible = false;   // 不要從自己的鼻子裡往外看(與 PiP 副視窗同一手法)
+        this._specHid = tgt;
+        const headF = h * vw.f;
+        this.camera.position.set(a.x - Math.sin(this.yaw) * headF, a.y + h * vw.e, a.z - Math.cos(this.yaw) * headF);
+      } else {
+        // 第三人稱:距離/抬高一律以**該機體實高**為尺(重機甲與小無人機共用固定距離必然一頭穿模)。
+        // 跟隨 = 相機站在機背後方(偏航自動);自由 = 觀戰者自己繞著看(偏航自控),兩者只差這一行。
+        if (view === 'tps') this.yaw = this._specYaw;
+        const dist = Math.max(SPEC_CAM.MIN_DIST, h * SPEC_CAM.DIST_F);
+        const cp = Math.cos(this.pitch);
+        // 注視點恆為機體頂高 × AIM_F;相機的抬高由俯仰推導 ⇒ 不論怎麼轉,人都在畫面中心
+        this.camera.position.set(
+          a.x + Math.sin(this.yaw) * dist * cp,
+          a.y + h * SPEC_CAM.AIM_F - Math.sin(this.pitch) * dist,
+          a.z + Math.cos(this.yaw) * dist * cp,
+        );
+        // 鑽進地形/橋面底下只會看到黑畫面 ⇒ 抬回站立面上方(與上帝視角同一條地板規則)
+        const floor = this._surf(this.camera.position.x, this.camera.position.z, this.camera.position.y)
+          + SPEC_CAM.FLOOR_M;
+        if (this.camera.position.y < floor) this.camera.position.y = floor;
+      }
     } else {
-      // 上帝模式:自由飛行
+      // 上帝視角:自由飛行。升降是**移動**不是姿態 ⇒ 與飛行機體同一組鍵(Space 升 / C・Ctrl 降),
+      // 觸控 B・ZL 經 `_cmd` 對映到同兩顆鍵,MUST NOT 在觸控層另寫一套垂直位移。
       const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
       const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const ax = this._moveAxis();
-      const sp = 120 * (ax.boost ? 3 : 1);
+      const sp = SPEC_CAM.MOVE_MPS * (ax.boost ? SPEC_CAM.BOOST_F : 1);
       const k = ax.mag > 1 ? 1 / ax.mag : 1;   // 鍵盤對角線夾回單位長(舊版逐軸相加會快 √2 倍,此處與交戰視角一致)
       this.pos.addScaledVector(fwd, ax.f * k * sp * dt);
       this.pos.addScaledVector(right, ax.r * k * sp * dt);
       if (this.keys.Space) this.pos.y += sp * dt;
-      if (this.keys.KeyC) this.pos.y -= sp * dt;
+      if (this.keys.KeyC || this.keys.ControlLeft) this.pos.y -= sp * dt;
+      // 下降的地板:降到站立面上方 FLOOR_M 就停住(地形/橋面同一個縫 `_surf`)
+      const floor = this._surf(this.pos.x, this.pos.z, this.pos.y) + SPEC_CAM.FLOOR_M;
+      if (this.pos.y < floor) this.pos.y = floor;
       this.camera.position.copy(this.pos);
     }
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.yaw);
     this.camera.rotateX(this.pitch);
-    // 滾輪縮放視野(兩模式共用)。A8 禁的是「用 FOV 做**機種**差異化」,觀戰不是機種。
+    // 滾輪縮放視野(四種視角共用)。A8 禁的是「用 FOV 做**機種**差異化」,觀戰不是機種。
     if (Math.abs(this.camera.fov - this._specFov) > 0.01) {
       this.camera.fov = this._specFov;
       this.camera.updateProjectionMatrix();
@@ -8166,6 +8325,7 @@ export class BattleClient {
     this.touch?.dispose();
     this.touch = null;
     document.body.classList.remove('mm-near');   // 小地圖模式的鈕面亮燈掛在 body,跟著戰局收掉
+    document.body.classList.remove('spectating', 'spec-follow');   // 觀戰版型同理(留著 = 下一局角色數據面板被收起)
     this._vlockHold = false; this._vlockId = null; this._vlockPrev = null;
     this._setVlockUi(false);                     // 視野鎖定的亮燈同理(留著 = 下一局開場就亮)
     document.exitPointerLock?.();

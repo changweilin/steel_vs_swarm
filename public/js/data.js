@@ -660,6 +660,55 @@ export const viewLockStep = (d, dt) => {
   return Math.max(-cap, Math.min(cap, d * Math.min(1, VIEW_LOCK.EASE * dt)));
 };
 
+// ---- 觀戰視角(2026-08-02 使用者需求:「上帝視角加入下降操作」+「玩家視角可切換
+//      第一人稱 / 第三人稱跟隨視角 / 第三人稱自由視角,運鏡時避免太晃」)----
+// **純客戶端視角工具**:不送任何訊息、不改任何權威狀態(與 VIEW_LOCK 同性質 ⇒ A1 不涉)。
+// 住 data.js 而不住 game.js 的理由與 VIEW_LOCK / SCOPE 一致:離線稽核 MUST 能 import **真品**
+// 做行為直測,而 game.js 依賴 three(沙箱無 CDN)⇒ 常數與純數學收在這裡,game.js 只當消費端。
+export const SPEC_CAM = {
+  // 視角循環的**唯一真相**:鍵盤 F 與觸控十字鍵左吃同一份序,說明文字與播報名稱亦由此推導。
+  // god = 自由飛行(無跟隨目標);其餘三種都跟著某位玩家。
+  VIEWS: ['god', 'fpv', 'tps', 'orbit'],
+  NAMES: { god: '上帝視角', fpv: '第一人稱', tps: '第三人稱跟隨', orbit: '第三人稱自由' },
+  FOV_MIN: 12, FOV_MAX: 100, FOV_STEP: 1.12,   // 滾輪一格 = 乘/除一次(等比 ⇒ 遠近端手感一致)
+  FLY_M: 2.5,          // 跟隨目標離地高於此 = 飛行型態(視點改取機鼻,同 heroView)
+  // 上帝視角自由飛行:水平吃 _moveAxis、垂直吃升/降鍵(Space / C・Ctrl)。
+  // FLOOR_M = 下降的地板餘裕:降到站立面上方這麼高就停住 —— 鑽進地形底下只會看到黑畫面,
+  // 「降不下去」比「掉進山肚子裡」好(原則 6 寧缺勿錯)。
+  MOVE_MPS: 120, BOOST_F: 3, FLOOR_M: 2,
+  // 第三人稱運鏡:距離與注視點一律以**該機體實高**(heroTargetH)為尺 —— 26m 的重機甲
+  // 與 5m 的小無人機共用固定距離必然一頭太遠一頭穿模。MIN_DIST 是小機體的下限。
+  // 相機的**抬高不另設常數**:注視點固定 = 機體頂高 × AIM_F,抬高完全由俯仰推導
+  // (`camY = aimY − sin(pitch)·dist`)⇒ 觀戰者往下看多少,相機就抬多高,不會兩份參數打架。
+  DIST_F: 6.5, AIM_F: 1.0, MIN_DIST: 12,
+  // 平滑係數(1/s;越大越跟手)。**運鏡不晃的全部本錢在這三個值 + camSmoothF 的幀率無關性**:
+  // 快照 8Hz、機體位置每幀插值、伺服器 ry 量化到 0.01 rad ⇒ 直接把相機貼上去就是逐幀抖。
+  // 第一人稱要跟手(玩家轉頭觀戰者就該跟著轉)⇒ FPV_YAW_K 明顯大於第三人稱的 YAW_K。
+  POS_K: 6, YAW_K: 4, FPV_YAW_K: 12,
+  SNAP_M: 40,          // 錨點與目標差距超過此值 = 換人/重生瞬移 ⇒ 直接貼上去(平滑會拉出一條長鏡頭)
+  TPS_PITCH: -0.18, ORBIT_PITCH: -0.25,  // 進入該模式時的預設俯仰(之後仍由觀戰者自己看)
+};
+/** 視角循環的下一個(唯一實作;鍵盤與觸控共用)。未知值一律回到序首,降級不例外 */
+export const specViewNext = (id) => {
+  const i = SPEC_CAM.VIEWS.indexOf(id);
+  return SPEC_CAM.VIEWS[(i < 0 ? 0 : i + 1) % SPEC_CAM.VIEWS.length];
+};
+/**
+ * 指數平滑的**幀率無關**權重:`1 − e^(−k·dt)`。相機平滑的唯一縫 ——
+ * MUST NOT 退回逐幀固定係數(`x += (t − x) * 0.1`):同一段運鏡在 30fps 與 120fps
+ * 會收斂出不同的跟隨延遲,高幀率反而更黏、低幀率反而更晃(正是「太晃」的來源)。
+ */
+export const camSmoothF = (k, dt) => 1 - Math.exp(-Math.max(0, k) * Math.max(0, dt));
+/** 角度差正規化到 [−π, π):跨 ±π 的偏航 MUST 走最短路徑,否則機體轉過背面時相機會繞一整圈。
+ *  正負 π 兩端等價(轉一樣多、方向相反)⇒ 端點落在哪一邊不影響運鏡,只影響剛好 180° 的旋向 */
+export const wrapPi = (a) => {
+  let d = (a + Math.PI) % (Math.PI * 2);
+  if (d < 0) d += Math.PI * 2;
+  return d - Math.PI;
+};
+/** 這一幀的偏航平滑結果(rad)。兩個消費端(第一人稱視線 / 第三人稱跟隨)MUST 同吃這一支 */
+export const camAngleStep = (cur, tgt, k, dt) => cur + wrapPi(tgt - cur) * camSmoothF(k, dt);
+
 // ---- 集束炸彈(變形者專屬可分離子機;2026-08-01 更名,原「轟炸餌機」)----
 // 「其他性質跟餌機相同」(使用者定調)⇒ 載具(可分離子機)整套沿用:分離發射,航向鎖定發射瞬間的
 // 機首朝向(玩家無法操舵)、準星有鎖定目標(LOCK.TTL 內)才追蹤、飛行中經 PiP 小視窗回傳畫面與視野、

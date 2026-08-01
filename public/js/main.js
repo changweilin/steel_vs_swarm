@@ -1843,6 +1843,10 @@ function enterGame() {
   $('hudSideName').textContent = app.mySide
     ? (chData ? `「${chData.code}」${chData.name} ・ ${chData.machine}` : `${SIDES[app.mySide].name} ・ ${SIDES[app.mySide].heroName}`)
     : '觀戰模式';
+  // 觀戰版角色數據面板:沒跟人時只留標題(其餘欄位由 CSS 收起,見 body.spectating);
+  // 跟上某位玩家時 hud.self 會補掛 .spec-follow 把整塊攤開(見 makeHud().self)
+  document.body.classList.toggle('spectating', !app.mySide);
+  document.body.classList.remove('spec-follow');
   app.ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
   syncPauseHelp();
   toast(TOUCH_UI()
@@ -1879,10 +1883,35 @@ function padMirror(act, cd, ready, locked) {
   }
 }
 
+/**
+ * 觀戰:跟隨中那位玩家的八軌商店升級(2026-08-02 使用者需求「包括商店升級」)。
+ * 軌名與上限的唯一真相 = `data.js ECON.UPGRADES` —— MUST NOT 在此另抄一份標題或 max,
+ * 商店 UI(renderShop)與這裡吃的是同一份表,加軌/改名兩邊自動同步。
+ */
+function renderSpecUpg(upg) {
+  const box = $('specUpg');
+  if (!box) return;
+  if (!upg) { box.innerHTML = ''; return; }
+  box.innerHTML = Object.entries(ECON.UPGRADES).map(([k, d]) => {
+    const lv = upg[k] || 0;
+    const cls = lv >= d.max ? ' su-max' : lv > 0 ? '' : ' su-zero';
+    return `<span class="su-item${cls}">${d.name}<b>${lv}</b></span>`;
+  }).join('');
+}
+
 function makeHud() {
   const feedBox = $('killFeed');
   return {
     self: (hp, max, cd, w) => {
+      // 觀戰(2026-08-02 使用者需求「顯示該玩家所有資訊,包括商店升級」):**同一塊角色數據面板**
+      // 換一組數字 —— 標題改成跟隨中那位、額外掛上八軌升級列;沒跟人時只留標題(其餘由 CSS 收起)。
+      // MUST NOT 為觀戰另做一塊面板 DOM:兩份渲染來源必漂(A21 同族)。
+      if (w?.spec) {
+        $('hudSideName').textContent = w.who;
+        document.body.classList.toggle('spec-follow', !!w.follow);
+        renderSpecUpg(w.follow ? w.upg : null);
+        if (!w.follow) return;
+      }
       $('hpBar').style.width = `${Math.max(0, hp / max * 100)}%`;
       $('hpText').textContent = `裝甲 ${Math.max(0, Math.round(hp))} / ${max}`;
       if (w) {
@@ -1906,9 +1935,11 @@ function makeHud() {
         // 輕武器:彈藥 / 填彈(瞄準中 HUD 高亮重武器)
         const l = w.light;
         $('wpnName').textContent = `${l.name} Lv.${l.lvl}${w.emp > 0 ? ' ⚡離線' : ''}`;
-        $('wpnAmmo').textContent = l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
+        // ammo == null = 觀戰(伺服器不發別人的彈夾狀態)⇒ 顯示「—」,MUST NOT 拿本地值假裝
+        $('wpnAmmo').textContent = l.ammo == null ? '—'
+          : l.reload > 0 ? `填彈 ${l.reload.toFixed(1)}s` : `${l.ammo} / ${l.mag}`;
         $('wpnAmmo').classList.toggle('reloading', l.reload > 0);
-        $('wpnAmmo').classList.toggle('low', l.reload <= 0 && l.ammo <= l.mag * 0.25);
+        $('wpnAmmo').classList.toggle('low', l.ammo != null && l.reload <= 0 && l.ammo <= l.mag * 0.25);
         // 重武器(CD 型;右鍵瞄準 + 左鍵發射)+ 無人機自爆提示 / 變形者型態指示
         const hv = w.heavy;
         const morphTag = w.morph
@@ -1941,7 +1972,9 @@ function makeHud() {
         }
         // 觸控版:同一份就緒/冷卻鏡射到虛擬搖桿的 X / Y / B 鈕面 —— 角色數據那一欄是唯一渲染來源,
         // 搖桿只是鏡子。MUST NOT 在 mobile.js 另算一份 CD(兩份會漂)。
-        if (TOUCH_UI()) {
+        // 觀戰不鏡射:那幾顆鈕在觀戰版型下是**視角/換人**(見 mobile.js setKind),
+        // 把別人的招式 CD 寫上去 = 鈕面與功能不符
+        if (TOUCH_UI() && !w.spec) {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
@@ -1952,11 +1985,12 @@ function makeHud() {
         document.body.classList.toggle('aiming', !!w.aiming);
         $('moneyText').textContent = Math.floor(w.money);
         $('knText').textContent = w.kn;
-        $('shopHint').textContent = shopHintText();
+        $('shopHint').textContent = w.spec ? '' : shopHintText();
       }
       const cdEl = $('burstCd');
-      cdEl.textContent = cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
-      cdEl.classList.toggle('ready', cd <= 0);
+      // 觀戰讀不到別人的重武器裝填計時器 ⇒ 留白(顯示「就緒」會誤導)
+      cdEl.textContent = w?.spec ? '' : cd > 0 ? `CD ${cd.toFixed(1)}s` : '就緒';
+      cdEl.classList.toggle('ready', !w?.spec && cd <= 0);
     },
     // 三機小隊:HP 條 + 陣亡重生倒數;高亮主視野那一架
     squad: (list) => {

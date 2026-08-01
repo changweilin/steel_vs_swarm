@@ -421,6 +421,9 @@
         <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
       <div class="money-box">$ <span id="moneyText">0</span> ・ KILL <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
+      <!-- 觀戰限定:跟隨中那位玩家的八軌商店升級(內容由 main.js renderSpecUpg 灌,
+           軌名/上限的唯一真相 = data.js ECON.UPGRADES;非觀戰時恆為空字串 + CSS 收起) -->
+      <div class="spec-upg" id="specUpg"></div>
     </div>
     <canvas id="minimap" width="220" height="220"></canvas>
   </div>

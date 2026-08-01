@@ -331,8 +331,11 @@ const e2eSrc = read('test', 'e2e.mjs');
 ok(/操作方式由房主選擇/.test(e2eSrc),
   'e2e MUST 有「操作方式由房主選擇」段(行為直測住那裡,本稽核只驗原文)');
 
-// ── Ⅶ 觀戰視角(滾輪縮放 / 上帝模式 ⇄ 玩家視角)────────────────────
-sec('Ⅶ 觀戰視角:滾輪縮放 + 上帝/玩家視角');
+// ── Ⅶ 觀戰視角(滾輪縮放 / 四種視角循環)──────────────────────────
+// 2026-08-02 改制(使用者:「上帝視角加入下降操作」+「玩家視角可切換第一人稱 / 第三人稱跟隨 /
+// 第三人稱自由,運鏡時避免太晃」):相機本身的行為與平滑數學歸 `audit_spectator_cam.mjs`,
+// 這裡只留「觸控/鍵鼠鈕位與版型」這一面(本檔的職責)。
+sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
 {
   const spec = body(gameSrc, '_updateSpectator');
   const specCode = code(spec);
@@ -343,12 +346,13 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 上帝/玩家視角');
   // 視點單一縫:玩家視角 MUST 與交戰 FPV 吃同一份 heroView + heroTargetH
   ok(/heroView\(/.test(specCode) && /heroTargetH\(/.test(specCode),
     '玩家視角的視點 MUST 走 heroView + heroTargetH 單一縫(手寫眼高 = 看到的與該玩家看到的分家)');
-  ok(!/\b(?:1\.[0-9]|2\.[0-9])\s*[;,)]/.test(specCode.replace(/SPEC\.[A-Z_]+/g, '')),
+  ok(!/\b(?:1\.[0-9]|2\.[0-9])\s*[;,)]/.test(specCode.replace(/SPEC_CAM\.[A-Z_]+/g, '')),
     '玩家視角 MUST NOT 手寫眼高常數');
-  ok(/this\.yaw = tgt\.ry/.test(specCode),
-    '玩家視角的偏航 MUST 吃伺服器權威 `ry`(快照沒有俯仰 ⇒ 俯仰自控是刻意的降級)');
-  ok(/if \(this\._specPid && !tgt\) this\._specPid = null;/.test(specCode),
-    '跟隨目標退場 MUST 降級回上帝模式(寧缺勿錯,MUST NOT 卡在空目標)');
+  ok(/camAngleStep\(this\._specYaw, tgt\.ry/.test(specCode) && /this\.yaw = this\._specYaw/.test(specCode),
+    '玩家視角的偏航 MUST 吃伺服器權威 `ry`,且**經平滑縫**才進相機'
+    + '(快照沒有俯仰 ⇒ 俯仰自控是刻意的降級;ry 量化到 0.01 rad ⇒ 直接賦值就是一格一格跳)');
+  ok(/if \(this\._specPid && !tgt\) this\._specSetView\('god'\);/.test(specCode),
+    '跟隨目標退場 MUST 降級回上帝視角,且走 `_specSetView` 同一個縫(寧缺勿錯,MUST NOT 卡在空目標)');
   ok(/tgt\.mesh\.visible = false/.test(specCode) && /_specHid\.mesh\.visible = !this\._specHid\.dead/.test(specCode),
     '跟隨中 MUST 藏起該機體、換人時 MUST 還原成「非死亡才可見」(死者本來就該隱形)');
   ok(/SPEC\.FOV_MIN|_specFov/.test(specCode) && /updateProjectionMatrix/.test(specCode),
@@ -372,10 +376,10 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 上帝/玩家視角');
   // ── 觸控:虛擬手把的視角切換(2026-08-02)────────────────────────
   // A22 同功能只准一顆鈕 ⇒ 觀戰**借用**既有的絕招/換機兩顆,MUST NOT 為觀戰另長新鈕。
   const cmd = code(body(gameSrc, '_cmd'));
-  ok(/if \(!this\.side\) \{[\s\S]*?_specFollow\(/.test(cmd),
-    '觸控觀戰的視角切換 MUST 走 `_specFollow` 同一個縫(觸控層 MUST NOT 自己判模式)');
-  ok(/act === 'special'\) this\._specFollow/.test(cmd) && /act === 'swap'\) this\._specFollow\(1\)/.test(cmd),
-    '十字鍵左 = 上帝 ⇄ 玩家視角、⇄ = 換下一位(鈕位對應住 mobile.js setKind)');
+  ok(/if \(!this\.side\) \{[\s\S]*?_specCycleView\(\)[\s\S]*?_specFollow\(/.test(cmd),
+    '觸控觀戰 MUST 走 `_specCycleView` / `_specFollow` 同兩個縫(觸控層 MUST NOT 自己判模式)');
+  ok(/act === 'special'\) this\._specCycleView\(\)/.test(cmd) && /act === 'swap'\) this\._specFollow\(1\)/.test(cmd),
+    '十字鍵左 = 循環四種視角、⇄ = 換下一位(鈕位對應住 mobile.js setKind)');
   ok(/if \(!this\.side\) \{[\s\S]*?\s+return;\s*\}/.test(cmd),
     '觀戰分支 MUST 照舊 return —— 其餘戰鬥指令對 side=null 仍不受理');
   ok(/\[data-act="swap"\]'\)\.forEach\(\(n\) => \{ n\.hidden = !spec && kind !== 'drone'; \}\)/.test(code(mobileSrc)),
