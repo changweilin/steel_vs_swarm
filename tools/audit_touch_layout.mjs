@@ -77,12 +77,16 @@ for (const v of VIEWS) {
       document.body.classList.toggle('touch-lefty', lefty);
       const fly = kind === 'drone' || kind === 'morph' || kind === 'spec';
       document.querySelectorAll('[data-act="dive"]').forEach((n) => { n.hidden = !fly; });
-      document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = kind !== 'drone'; });
       const spec = kind === 'spec';
+      // 觀戰借用絕招/換機兩顆鈕做視角切換(2026-08-02)⇒ 兩者對觀戰**不收**、鈕面換字。
+      document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = !spec && kind !== 'drone'; });
       // 觀戰收掉戰鬥鈕,**但 HOME 戰場選單留著**(2026-07-31「觀戰也可以按 ESC」)——
       // 這一行 MUST 與 mobile.js setKind() 的選擇器逐字一致,否則量到的是不存在的版型。
-      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="special"], [data-act="lock"]')
+      document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="lock"]')
         .forEach((n) => { n.hidden = spec; });
+      const sf = document.querySelector('[data-act="special"] .gb-f');
+      if (sf) sf.textContent = spec ? '視角' : '絕招';
+      document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.textContent = spec ? '⇄換人' : '⇄換機'; });
       document.body.classList.toggle('tl-spec', spec);
     }, { kind, lefty });
 
