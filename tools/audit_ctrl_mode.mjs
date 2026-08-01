@@ -16,17 +16,19 @@
 //     MUST NOT 另寫一組按鈕);main.js 的 TOUCH_UI MUST 是函式(快取成常數 ⇒ 說明停在舊版)。
 //   Ⅳ 戰鬥中切換:建/毀搖桿層只住 `game.js _applyCtrlScheme`,且訂閱在 dispose 解除
 //     (留著 = 下一局重建殭屍層);`_applyCtrlScheme` MUST NOT 自己判「能不能改」(那是 Ⅱ 的規則)。
-//   Ⅴ 觀戰也能開戰場選單:`_setPaused` MUST NOT 有 `!this.side` 早退、觀戰 ESC 兩條路
-//     (指標鎖定走 `_onPlc`、未鎖定走 keydown)、觸控 HOME 對觀戰 MUST NOT 收掉。
+//   Ⅴ 戰場選單隨時叫得出(2026-08-01 使用者需求「遊戲中隨時都可以 esc」):ESC 的受理只有
+//     `_escMenu()` 一個出口(鍵盤 keydown / 指標解鎖 `_onPlc` / 觸控 ☰ 三個來源同縫),
+//     MUST NOT 綁 `side`/`dead`/`paused`/指標鎖定狀態的條件 —— 那些條件散出去就是
+//     「某個時刻按了沒反應」(前科:未鎖定指標的交戰玩家、重生後還沒點畫面時 ESC 全無效);
+//     `_setPaused` MUST NOT 有 `!this.side` 早退、觸控 HOME 對觀戰 MUST NOT 收掉。
 //   Ⅵ 房主定案(真品 RoomHub 直測):操作方式住 `room.config.ctrl`、開房吃房主預設、
 //     **只有房主改得動**、非法值靜默忽略、廣播與戰區列表都帶得出去 ——
 //     客戶端的 `_room` 只准由這份廣播寫入(先斬後奏 = 房主與隊友版型不同步)。
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+// 原文一律經 `audit_src.mjs`(換行正規化 + 大括號配對抽方法):自己 readFileSync 的話,
+// CRLF 檢出的工作區會讓「逐行剝註解 / split('\n')」靜默失效(見該檔檔頭)。
+import { readSrc, grabMethod } from './audit_src.mjs';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (...p) => readFileSync(join(root, ...p), 'utf8');
+const read = (...p) => readSrc(...p);
 const ctrlSrc = read('public', 'js', 'ctrlmode.js');
 const mobileSrc = read('public', 'js', 'mobile.js');
 const gameSrc = read('public', 'js', 'game.js');
@@ -40,14 +42,8 @@ const ok = (cond, msg) => {
   else { fail++; console.log(`  ✗ ${msg}`); }
 };
 const sec = (t) => console.log(`\n▍${t}`);
-/** 取出某個方法的原文(從 `  <name>(` 起算到下一個同縮排的方法定義) */
-const body = (src, name) => {
-  const i = src.indexOf(`\n  ${name}(`);
-  if (i < 0) return '';
-  const rest = src.slice(i + 3);
-  const j = rest.search(/\n  [_A-Za-z$][\w$]*\(/);
-  return j < 0 ? rest : rest.slice(0, j);
-};
+/** 取出某個方法的原文(大括號配對;找不到回空字串 —— 由斷言自己報「沒這個方法」) */
+const body = (src, name) => { try { return grabMethod(src, name); } catch { return ''; } };
 /** 剝掉註解(斷言只認**執行原文**;註解裡寫什麼都不算數) */
 const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const count = (src, re) => (src.match(re) || []).length;
@@ -232,20 +228,65 @@ ok(/this\._offCtrl = onCtrlChange\(/.test(gameSrc), '戰場訂閱操作方式變
 ok(/this\._offCtrl\?\.\(\)/.test(body(gameSrc, 'dispose')),
   'dispose MUST 解除訂閱(留著 = 下一局重建一個殭屍搖桿層)');
 
-// ── Ⅴ 觀戰也能開戰場選單(ESC / HOME)────────────────────────────
-sec('Ⅴ 觀戰:ESC / HOME 戰場選單');
+// ── Ⅴ 戰場選單隨時叫得出(ESC / HOME)────────────────────────────
+sec('Ⅴ ESC 隨時可用 + 觀戰 HOME');
 const paused = body(gameSrc, '_setPaused');
 ok(paused.length > 0 && !/!this\.side/.test(paused),
   '`_setPaused` MUST NOT 有 `!this.side` 早退(觀戰者也要有離開戰場的出口)');
 ok(/if \(this\._gameOver\) return;/.test(paused), '`_setPaused` 仍在分出勝負後早退(結束頁獨佔)');
+
+// Ⅴ-a 單一出口:三個來源(鍵盤 / 指標解鎖 / 觸控 ☰)全走 `_escMenu`
+const escBody = body(gameSrc, '_escMenu');
+ok(escBody.length > 0, 'game.js 有 ESC 的唯一出口 `_escMenu`');
+ok(/if \(this\._gameOver\) return;/.test(escBody),
+  '`_escMenu` 只擋分出勝負(結束頁獨佔)—— 這是唯一准擋的狀態');
+ok(!/this\.side|this\.dead|pointerLockElement|this\.touch/.test(code(escBody)),
+  '`_escMenu` MUST NOT 判 side / dead / 指標鎖定 / 輸入裝置(那些條件 = 「某個時刻按了沒反應」)');
+ok(/if \(this\.shopOpen\) \{ this\._toggleShop\(false\); return; \}/.test(escBody),
+  '疊層逐層退出:商店開著時 ESC 先收商店(再按一次才是戰場選單)');
+ok(/this\._setPaused\(!this\.paused\)/.test(escBody),
+  '其餘一律**切換**戰場選單(叫得出也要收得回 —— 選單開著時 ESC 同樣受理)');
+ok(/ESC_GAP_S/.test(escBody) && count(code(gameSrc), /const ESC_GAP_S = /g) === 1,
+  '去彈跳窗 `ESC_GAP_S` 只有一份定義且 `_escMenu` 吃它(解鎖 + 補送 keydown = 開了又立刻關)');
+
 const init = body(gameSrc, '_initInput');
-ok(/e\.code === 'Escape' && !this\.side/.test(init),
-  '觀戰 ESC:未鎖定指標時走 keydown(剛進場/剛關掉選單時只有這條管用)');
-ok(/document\.pointerLockElement !== this\.canvas\) this\._setPaused\(true\)/.test(init),
-  '觀戰 ESC 的 keydown 路徑 MUST 只在**未鎖定**時觸發(鎖定中那顆 ESC 由 _onPlc 接手)');
+const initCode = code(init);
+ok(count(initCode, /'Escape'/g) === 1,
+  'ESC 的 keydown 判定全 `_initInput` 只有一處(散成 side/dead 各一條就是第二份實作)');
+ok(/if \(e\.type === 'keydown' && e\.code === 'Escape'\) \{ this\._escMenu\(\); return; \}/.test(initCode),
+  'ESC keydown 無條件轉呼 `_escMenu`(MUST NOT 夾帶 side / dead / pointerLockElement 條件)');
+ok(initCode.indexOf("'Escape'") >= 0
+  && initCode.indexOf("'Escape'") < initCode.indexOf('if (this.paused) return;'),
+  'ESC MUST 排在 `paused` 早退**之前** —— 選單開著時其餘輸入全凍結,這顆是收回選單的鑰匙');
 const plc = init.slice(init.indexOf('this._onPlc'));
-ok(!/this\.side/.test(plc.slice(0, plc.indexOf('document.addEventListener'))),
+const plcCode = code(plc.slice(0, plc.indexOf('document.addEventListener')));
+ok(!/this\.side/.test(plcCode),
   '`_onPlc`(指標解鎖 → 戰場選單)MUST NOT 加 side 門檻,觀戰與交戰同一條路');
+ok(/this\._escMenu\(\);/.test(plcCode),
+  '`_onPlc` 解鎖分支 MUST 走 `_escMenu`(順手蓋去彈跳戳記,擋掉瀏覽器補送的那顆 keydown)');
+const cmd = code(body(gameSrc, '_cmd'));
+ok(/act === 'menu'\) \{ if \(down\) this\._escMenu\(\); return; \}/.test(cmd),
+  '觸控 ☰ MUST 與鍵盤 ESC 同一個出口(MUST NOT 自己再判一次 `_gameOver`/`!this.paused`)');
+ok(count(code(gameSrc), /this\._setPaused\(/g) === 2,
+  '`_setPaused` 的呼叫端只剩兩處:`_escMenu` 切換 + `_onPlc` 重新鎖定時關選單');
+
+// Ⅴ-b 行為直測(真品原文;以 new Function 取回 `_escMenu` 本體)
+const escFn = new Function('ESC_GAP_S', `return ({${escBody}\n});`)(0.35)._escMenu;
+const mk = (o) => Object.assign({
+  paused: false, shopOpen: false, _gameOver: false, dead: false, side: 'SWARM', _escAt: -1e9, log: [],
+  _toggleShop(v) { this.shopOpen = v; this.log.push(`shop:${v}`); },
+  _setPaused(v) { this.paused = v; this.log.push(`pause:${v}`); },
+}, o);
+const run = (o) => { const s = mk(o); escFn.call(s); return s.log.join(','); };
+ok(run({}) === 'pause:true', '交戰中(指標未鎖定)ESC MUST 開得出戰場選單');
+ok(run({ dead: true }) === 'pause:true', '陣亡重生倒數中 ESC MUST 開得出戰場選單');
+ok(run({ side: null }) === 'pause:true', '觀戰(side=null)ESC MUST 開得出戰場選單');
+ok(run({ paused: true }) === 'pause:false', '選單已開著:ESC MUST 收得回去(隨時可按 = 雙向)');
+ok(run({ shopOpen: true }) === 'shop:false', '商店開著:ESC 先收商店,MUST NOT 同時動選單');
+ok(run({ _gameOver: true }) === '', '分出勝負:ESC MUST 無動作(結束頁獨佔)');
+const dbl = mk({}); escFn.call(dbl); escFn.call(dbl);
+ok(dbl.log.join(',') === 'pause:true',
+  '去彈跳:同一顆 ESC(解鎖事件 + 補送 keydown)只准生效一次');
 ok(/if \(!this\.side\) return;\s*\/\/ 觀戰/.test(gameSrc) || /if \(!this\.side\) return;/.test(init),
   '觀戰仍 MUST NOT 開火/瞄準(鎖了指標只為轉視角)');
 ok(/requestPointerLock\(\); return; \}/.test(init) && !/if \(!this\.side \|\| this\.shopOpen\) return;/.test(init),

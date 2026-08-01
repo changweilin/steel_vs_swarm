@@ -53,6 +53,10 @@ const RANGE_GLOW = { TTL_S: 0.4, ARC_PER_FRAME: 1, RAY_PER_FRAME: 6, SURF_TOL_M:
 // T:飛行時間 = 水平距離 / SPD,夾在 [MIN, MAX] ⇒ 近的快速甩出、遠的高拋,弧高隨距離自然變化。
 const DECOY_BOMB_GRAV_F = 1.6;
 const DECOY_BOMB_T = { MIN: 0.7, MAX: 2.2, SPD: 45 };
+// ESC(戰場選單)的去彈跳窗,秒。指標**鎖定中**按 ESC 時瀏覽器先解除鎖定(→ `_onPlc` 開選單),
+// 少數瀏覽器**還會**把同一顆 ESC 的 keydown 補送給頁面 ⇒ 不擋就是「開了又立刻自己關」。
+// 同一顆 ESC 只准生效一次;人手按不出這麼快的第二下(選單開/關本來就要看一眼才按)。
+const ESC_GAP_S = 0.35;
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
@@ -2621,17 +2625,20 @@ export class BattleClient {
   // ---------------- 輸入 ----------------
   _initInput() {
     this._onKey = (e) => {
-      if (this.paused) return;   // 戰場選單開啟:凍結所有輸入(keys 已清空 ⇒ 機體停住)
+      // ESC:**遊戲中隨時**都叫得出 / 收得回戰場選單(2026-08-01 使用者需求「遊戲中隨時都可以 esc」)。
+      // MUST 排在 `paused` 早退與 `this.side` 分支**之前** —— 交戰中、觀戰、陣亡倒數、選單已開著、
+      // 以及**指標還沒鎖定**的那些時刻(剛進場還沒點畫面、剛從選單回來、重生後尚未重新鎖定)
+      // 全部同一條路,唯一出口 = `_escMenu()`(與觸控 ☰ 同縫)。
+      // 指標**鎖定中**的那顆 ESC 會被瀏覽器吃掉(keydown 不派發)⇒ 由解鎖事件 `_onPlc` 接手,
+      // 故兩條路都要留;重複觸發由 `_escMenu` 的去彈跳窗擋掉。
+      if (e.type === 'keydown' && e.code === 'Escape') { this._escMenu(); return; }
+      if (this.paused) return;   // 戰場選單開啟:凍結其餘輸入(keys 已清空 ⇒ 機體停住)
       // 小地圖顯示範圍切換:純顯示層,**不設 this.side 門檻**(觀戰同樣看小地圖),
       // 也不受陣亡限制(倒數中看戰況正是要用的時候)。觸控版走十字鍵右(_cmd('map'))。
       if (e.type === 'keydown' && e.code === 'KeyM') this._toggleMmMode();
       if (e.type === 'keydown' && this.side) {
         // 商店不受死亡限制:陣亡等待重生也能買升級(DOTA 慣例)
         if (e.code === 'KeyB') this._toggleShop();
-        if (e.code === 'Escape' && this.shopOpen) this._toggleShop(false);
-        // 陣亡重生倒數中:ESC 叫出戰場選單(離開/繼續)。此時指標已解鎖 → pointerlockchange 不再觸發,
-        // 故直接綁 keydown(正常交戰時 ESC 被指標鎖定吞掉,走 _onPlc;陣亡例外走這條)。
-        else if (e.code === 'Escape' && this.dead && !this._gameOver) this._setPaused(true);
         if (!this.dead) {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
@@ -2649,11 +2656,6 @@ export class BattleClient {
           if (n) this._swapDrone(Number(n[1]) - 1);
         }
       }
-      // 觀戰(side=null)也吃 ESC(2026-07-31 使用者需求):觀戰者一樣要有離開戰場的出口。
-      // 指標鎖定中的那顆 ESC 會被瀏覽器吃掉 → 走 `_onPlc`;**尚未鎖定**(剛進場、或剛從選單回來
-      // 還沒點畫面)時只有這條管用,故兩條都要有。
-      if (e.type === 'keydown' && e.code === 'Escape' && !this.side && !this._gameOver
-          && document.pointerLockElement !== this.canvas) this._setPaused(true);
       // 觀戰視角切換:F 上帝模式 ⇄ 玩家視角、Q/E 名冊前後換人。
       // 這三顆在交戰中另有他用(招式/裝填),故一律關在 side=null 分支內。
       if (e.type === 'keydown' && !this.side && !this.paused) {
@@ -2712,7 +2714,9 @@ export class BattleClient {
         if (this.paused) this._setPaused(false);
       } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused && !this.dead) {
         // 陣亡不跳戰場選單(離開詢問):改顯示陣亡頁(重生倒數 + 砲塔視窗),見 _onSelfDeath
-        this._setPaused(true);
+        // 走 `_escMenu`(而非直接 `_setPaused`)= 順手蓋上去彈跳戳記:若瀏覽器**接著**又補送
+        // 同一顆 ESC 的 keydown,那顆會被擋掉,不會把剛開的選單立刻關回去。
+        this._escMenu();
       }
     };
     document.addEventListener('pointerlockchange', this._onPlc);
@@ -2774,7 +2778,8 @@ export class BattleClient {
    * 按住型:fire / aim / jump / dive / sprint;點擊型:其餘(down=true 才動作)。
    */
   _cmd(act, down) {
-    if (act === 'menu') { if (down && !this._gameOver) this._setPaused(!this.paused); return; }
+    // 戰場選單:與鍵盤 ESC 同一個出口(`_escMenu`)—— 兩套操作 MUST NOT 各判一次「該不該開」
+    if (act === 'menu') { if (down) this._escMenu(); return; }
     if (this.paused) return;
     // 小地圖顯示範圍:純顯示層,觀戰/陣亡皆可切(與 KeyM 同一條件,見 _initInput)
     if (act === 'map') { if (down) this._toggleMmMode(); return; }
@@ -2815,6 +2820,28 @@ export class BattleClient {
       case 'civAway': if (down) this._civAct('away'); break;
       default: break;
     }
+  }
+
+  /**
+   * ESC / ☰ 的**唯一出口**(2026-08-01 使用者需求「遊戲中隨時都可以 esc」)。
+   * 三個來源共用:鍵盤 keydown(`_onKey`)、指標鎖定解除(`_onPlc`)、觸控 ☰(`_cmd('menu')`)——
+   * MUST NOT 在任何一端另寫「這個狀態該不該開選單」的條件,散成第二份實作就會出現
+   * 「某個時刻按了沒反應」(前科:未鎖定指標的交戰玩家、剛重生還沒點畫面時 ESC 全無效)。
+   *
+   * 兩條規則:
+   *   ① 疊層**逐層退出** —— 商店開著先收商店,再按一次才是戰場選單(退出順序符合直覺)。
+   *   ② 其餘一律**切換**戰場選單 —— 交戰/觀戰(side=null)/陣亡倒數/選單已開著皆同。
+   * 唯一不受理的是分出勝負(`_gameOver`,結束頁獨佔;與 `_setPaused` 同判)。
+   */
+  _escMenu() {
+    if (this._gameOver) return;
+    // 去彈跳:指標鎖定中的那顆 ESC,瀏覽器先解鎖(`_onPlc` 已開選單),部分瀏覽器**還會**
+    // 補送 keydown ⇒ 沒這道窗就是「開了又立刻關」。同一顆 ESC 只准生效一次。
+    const now = performance.now() / 1000;
+    if (now - (this._escAt || -1e9) < ESC_GAP_S) return;
+    this._escAt = now;
+    if (this.shopOpen) { this._toggleShop(false); return; }
+    this._setPaused(!this.paused);
   }
 
   /**
