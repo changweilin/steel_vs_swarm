@@ -2409,13 +2409,21 @@ const PASS_W = 16;
 //            柱間**透明可見可穿透**(兩端同判:slab gal 遮罩讓伺服器 LOS/爆風同步放行,見 buildRoads)。
 //   NEAR_W   近帶岩背寬(2026-07-31):牆背這麼近之內只要有取樣點高過頂板 = 牆背貼著實體
 //            土/岩(山壁、峽谷岩脊)⇒ 該側維持整面牆,不因更外側落谷判開放(燕子口岩脊實案)。
+//   OUT_W    側向落差掃描帶(2026-08-01 使用者定案「貫穿地形的是隧道,不是明隧道」):明隧道的
+//            定義是**一側在地形內(牆)、另一側在地形外(柱)**;WALL_MIN 只量得到「上方覆蓋夠不夠厚」,
+//            量不到「這一側到底在不在地形裡」—— 7m 還不到一格地形(~8.3m),薄覆蓋與臨崖在它眼裡
+//            一模一樣。加掃到牆外 OUT_W(≈3 格),問「地表有沒有落到**路面**以下」:落下去 = 結構
+//            浮在地形之外 = 開放側;沒落下去 = 牆背整段是土,即使頂上只剩幾公尺也仍是隧道。
+//            實測(金龍隧道真圖資):被舊判定判成明隧道的點,側向地表在 40m 外仍高出路面 3.7~9.8m
+//            (= 貫穿山體的真隧道,只是覆蓋比頂板厚度少了 0.2~1.5m);燕子口錐麓隧道/落石棚的
+//            開放側則在 15~25m 內就落到路面之下 —— 兩者相隔一個數量級,門檻取「低於路面」即可分開。
 //   EAVE     外露頂板較通行寬多挑出的簷口(MUST > 天花板小段的 hw+0.6,否則天花板邊緣露在簷外)。
 //   PARAPET  女兒牆高;SILL 開放側矮牆頂(路面起算的護欄牆,封住 facade 底縫、柱腳立其後);
 //   COL_GAP  柱列間距;COL_MAX 全圖柱列實例上限(與 LAMP_MAX 同性質的資源閘);
 //   GAL_BORE_MAX 明隧道洞內打洞 bore 的全圖上限(側坡地表斜穿洞內斷面,沿明隧道段發 bore
 //            交給 punchPortalHoles 清掉 —— 與 PORTAL_MAX 同性質的資源閘)。
 const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_MAX: 240,
-              WALL_MIN: 7, NEAR_W: 3, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600,
+              WALL_MIN: 7, NEAR_W: 3, OUT_W: 25, EAVE: 0.8, PARAPET: 0.5, SILL: 1.1, COL_GAP: 4.5, COL_MAX: 600,
               GAL_BORE_MAX: 160, GAL_CLEAR_W: 9, MOUTH_OUT: 8 };   // CLEAR 單一縫住 data.js(sim 層推定共用)
 // MOUTH_OUT:門洞走廊往洞**外**延伸的長度(≈ 一格地形,2026-07-31 多視角檢視)。洞口外側 ±hw、
 // 路面以上/天花以下那塊空間就是車開出來的地方,開挖後仍攤在切面上的地被底毯與地形殘片會斜插
@@ -2575,12 +2583,20 @@ const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形�
  * 山坡上,坡面與結構之間一道直接看穿到洞內的縫。這種地方現實中蓋的是**明隧道**:
  * 結構自己站在地面上,有外露頂板、落地的擋土 facade、扶壁。
  *
- * 判定純幾何(逐頂點、逐側、無 `rnd` ⇒ 跨客戶端同一份):自隧道邊緣往外量 `TUN.WALL_MIN`,
- * 任一取樣點的地表低於**頂板頂面**(路面 + CLEAR + ROOF_T)= 這一側藏不住 ⇒ 該側改明隧道。
- * **近帶岩背例外**(2026-07-31 使用者回報「山壁側牆沒建完整、走得穿」):牆背 `NEAR_W` 內
- * 只要有任一取樣點高過頂板 = 牆背貼著實體土/岩(山壁、峽谷岩脊 —— 燕子口正是薄岩脊,
- * 脊後才落谷)⇒ 該側 MUST 維持整面隧道牆;只看「7m 內有低點」會把柱列開向一面岩壁,
- * 玩家看到的就是「山壁側只有矮牆 + 柱間直接是裸地形」。
+ * 判定純幾何(逐頂點、逐側、無 `rnd` ⇒ 跨客戶端同一份),**三個條件同時成立**才算開放側:
+ *   ① 藏不住:自隧道邊緣往外量 `TUN.WALL_MIN`,任一取樣點的地表低於**頂板頂面**(路面 + CLEAR + ROOF_T)。
+ *   ② 牆背沒有實體支撐(**近帶岩背例外**,2026-07-31 使用者回報「山壁側牆沒建完整、走得穿」):
+ *      牆背 `NEAR_W` 內只要有任一取樣點高過頂板 = 牆背貼著實體土/岩(山壁、峽谷岩脊 —— 燕子口
+ *      正是薄岩脊,脊後才落谷)⇒ 該側 MUST 維持整面隧道牆;只看「7m 內有低點」會把柱列開向
+ *      一面岩壁,玩家看到的就是「山壁側只有矮牆 + 柱間直接是裸地形」。
+ *   ③ **這一側真的在地形之外**(`TUN.OUT_W`,2026-08-01 使用者定案):牆外 OUT_W 內有取樣點
+ *      落到**路面**以下 = 結構那一側浮在地形之上(臨谷/臨崖)⇒ 柱列。反過來「地表低於頂板但
+ *      仍高於路面」= 覆蓋薄的**貫穿隧道**(牆背整段是土)⇒ 兩側都是牆,與深埋段同待遇。
+ *      沒有 ③ 的話,金龍隧道那種只差 0.2~1.5m 就蓋滿頂板的真山體隧道會被整段判成明隧道 ——
+ *      柱列開向山肚子,`carveGalleryBands` 還會把山壁真的挖掉一條溝(2026-08-01 使用者回報)。
+ * 本函式跑三次(carveGalleryBands 呼叫端在**開挖前**、buildRoads / markGradeCorridors 在**開挖後**),
+ * 三次 MUST 同解:①② 吃 heightAt 但開挖只降不升 ⇒ 只會更「開放」不會翻回牆;③ 吃天然地形
+ * ⇒ 對開挖**恆定**。分家的代價是「柱外淨空帶沒挖卻長出柱列」(金龍隧道實案,見 natAt)。
  * **只在覆蓋段判**(敞開段/洞口的牆本來就收成零高,見 buildRoads)。
  *
  * 回傳逐頂點 `{ open, gy, nx, nz }`:
@@ -2590,8 +2606,11 @@ const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形�
  *   nx/nz 該側的側向單位法線(= 牆面緞帶用的同一組)—— facade / 頂板 / 扶壁**共用這一份**,
  *         各自再算一次中央差分就是第二個縫(擺位與取樣方向一分家,牆就量錯坡)。
  * @param side +1 / −1
+ * @param natAt 天然地形取樣器(`terrain.natureAt`;預設 = heightAt)—— 條件③ 只認天然地形,
+ *   我們自己挖出來的路塹/斜壁/整平台不算「在地形之外」。本函式在**開挖前**(carveGalleryBands
+ *   呼叫端)與**開挖後**(buildRoads / markGradeCorridors)各跑一次,吃同一份天然地形才同解。
  */
-function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
+function tunnelWallProfile(pts, floors, cov, heightAt, hw, side, natAt = heightAt) {
   const n = pts.length;
   const raw = [];
   for (let i = 0; i < n; i++) {
@@ -2601,7 +2620,7 @@ function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
     const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     const nx = dz * side, nz = -dx * side;
     const top = floors[i] + TUN.CLEAR + TUN.ROOF_T;   // 頂板頂面 = 土牆該蓋過的高度
-    let gy = Infinity, thin = false, backed = false;
+    let gy = Infinity, thin = false, backed = false, outside = false;
     // 取樣點含**兩端**(牆面外 0.5m ~ WALL_MIN 整數點):`d += SAMP` 那種寫法會在最後一步
     // 越界而漏掉最外圈,實際只量到 5.5m —— 門檻寫 7 卻量 5.5 = 旋鈕失真。
     const nS = Math.max(2, Math.ceil((TUN.WALL_MIN - 0.5) / TUN_WALL_SAMP) + 1);
@@ -2612,10 +2631,17 @@ function tunnelWallProfile(pts, floors, cov, heightAt, hw, side) {
       if (h < top) thin = true;
       else if (d - hw <= TUN.NEAR_W) backed = true;   // 近帶有高於頂板的土/岩 = 牆背有實體支撐
     }
-    raw.push({ thin: thin && !backed, gy, nx, nz });
+    // 側向落差掃描:牆外 OUT_W 內有沒有低於**路面**的**天然**地表(= 這一側在地形之外)。
+    // gy 刻意不吃這段(矮牆落地基準只認 WALL_MIN 帶,擴到谷底就沉到看不見的地方去了)。
+    const nO = Math.max(2, Math.ceil((TUN.OUT_W - 0.5) / TUN_WALL_SAMP) + 1);
+    for (let k = 0; k < nO && !outside; k++) {
+      const d = hw + 0.5 + (TUN.OUT_W - 0.5) * k / (nO - 1);
+      if (natAt(x + nx * d, z + nz * d) < floors[i]) outside = true;
+    }
+    raw.push({ bare: thin && !backed && outside, gy, nx, nz });
   }
   return raw.map((r, i) => ({
-    open: !!cov[i] && (r.thin || !!raw[i - 1]?.thin || !!raw[i + 1]?.thin),
+    open: !!cov[i] && (r.bare || !!raw[i - 1]?.bare || !!raw[i + 1]?.bare),
     gy: Math.min(r.gy, raw[i - 1]?.gy ?? Infinity, raw[i + 1]?.gy ?? Infinity),
     nx: r.nx, nz: r.nz,
   }));
@@ -3533,7 +3559,8 @@ function markGradeCorridors(roads, terrain, center, blocked, inclSwamp = false) 
         if (kind === 'tun' && !tw.sink) {
           const floorsV = cum.map((s) => tunFloorAt(tw, s, total));
           const covV = run.map(([x, z], i) => terrain.heightAt(x, z) >= floorsV[i] + TUN.CLEAR + TUN.ROOF_T);
-          const gp = [1, -1].map((side) => tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side));
+          const gp = [1, -1].map((side) => tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side,
+            (x, z) => terrain.natureAt(x, z)));   // 落差掃描吃天然地形(開挖前/後同解)
           galOpenAt = (i) => gp[0][i].open || gp[1][i].open;
         }
         for (let i = 0; i < run.length; i++) {
@@ -3987,7 +4014,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 側向土牆厚度天生管夠。體檢照跑(法線 nx/nz 是牆/緣石共用的那一份),但 open 一律歸零 ——
         // 引道轉換帶被開挖的碗緣會讓體檢誤判成明隧道,平地上憑空長出外露頂板與柱列。
         const galP = [1, -1].map((side) => {
-          const prof = tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side);
+          const prof = tunnelWallProfile(run, floorsV, covV, (x, z) => terrain.heightAt(x, z), hw, side,
+            (x, z) => terrain.natureAt(x, z));   // 落差掃描吃天然地形(開挖前/後同解)
           return under ? prof.map((g) => ({ ...g, open: false })) : prof;
         });
         const galAny = (i) => galP[0][i].open || galP[1][i].open;
@@ -5961,12 +5989,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         }
         // 明隧道開放側柱外淨空帶(2026-07-31):覆蓋段逐側跑 tunnelWallProfile(單一縫,
         // **開挖前**高度 —— 本迴圈尚未呼叫 carveTunnels,輸入與覆蓋區間同一份),連續 open
-        // 段收成 strip 交給 carveGalleryBands。這刀只降不升、只動頂板以下 ⇒ buildRoads /
-        // markGradeCorridors 開挖後重算 profile 不翻面(backed 只認 ≥ 頂板的點)。地下道恆不判。
+        // 段收成 strip 交給 carveGalleryBands。這刀只降不升、只動頂板以下,且落差掃描一律吃
+        // 天然地形(natureAt)⇒ buildRoads / markGradeCorridors 開挖後重算 profile 不翻面。地下道恆不判。
         if (!rec.sink && terrain.carveGalleryBands) {
           const covV2 = pts.map((_, vi) => iv.some(([, , ia, ib]) => vi >= ia && vi <= ib));
           for (const side of [1, -1]) {
-            const prof = tunnelWallProfile(pts, floors, covV2, hAt, hwWay, side);
+            const prof = tunnelWallProfile(pts, floors, covV2, hAt, hwWay, side, (x, z) => terrain.natureAt(x, z));
             let s0 = -1;
             for (let vi = 0; vi <= pts.length; vi++) {
               const on = vi < pts.length && prof[vi].open;

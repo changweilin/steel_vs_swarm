@@ -460,19 +460,29 @@ export async function buildTerrain(cfg, onProgress) {
   // 世界座標高度取樣。
   // MUST 與網格三角化(idx: a,c,b / b,c,d;對角線 = b–c)一致:雙線性在鞍點會低於
   // 實際三角面最多 (a+d-b-c)/4 公尺,單位/道路/地被就會沉進地表被擋住。
-  function heightAt(x, z) {
+  function sampleField(field, x, z) {
     const gj = (x - minX) / (maxX - minX) * (N - 1);
     const gi = (z - minZ) / (maxZ - minZ) * (N - 1);
     const i0 = Math.max(0, Math.min(N - 2, Math.floor(gi)));
     const j0 = Math.max(0, Math.min(N - 2, Math.floor(gj)));
     const fi = Math.max(0, Math.min(1, gi - i0));
     const fj = Math.max(0, Math.min(1, gj - j0));
-    const at = (i, j) => heights[i * N + j];
+    const at = (i, j) => field[i * N + j];
     const a = at(i0, j0), b = at(i0, j0 + 1), c = at(i0 + 1, j0), d = at(i0 + 1, j0 + 1);
     return fi + fj <= 1
       ? a + (b - a) * fj + (c - a) * fi              // 三角形 (a, c, b)
       : d + (c - d) * (1 - fj) + (b - d) * (1 - fi); // 三角形 (b, c, d)
   }
+  const heightAt = (x, z) => sampleField(heights, x, z);
+  // 天然地形高(**開挖/整平之前**的那一份;2026-08-01 明隧道判定改制)。
+  // 「這一側在不在地形之外」問的是**天然**地形:我們自己挖出來的路塹/斜壁/整平台不算證據。
+  // 不分這一份的後果是判定隨呼叫時機漂移 —— 明隧道判定跑三次(carveGalleryBands 呼叫端在
+  // 開挖**前**、buildRoads 與 markGradeCorridors 在開挖**後**),金龍隧道實測:隔壁孔的洞口
+  // 路塹把 20~25m 外的地表挖到我方路面之下 3m ⇒ 開挖前判「牆」、開挖後判「柱」,結果是柱外
+  // 淨空帶沒挖、卻長出柱列(兩份剖面分家)。吃同一份天然地形 ⇒ 三次呼叫逐位元同解。
+  // 快照時機 = 地形建完(carve* / gradeRoadBeds 都在 buildBiomes 才呼叫)⇒ 恆是原始地形。
+  const heights0 = new Float32Array(heights);
+  const natureAt = (x, z) => sampleField(heights0, x, z);
 
   // ---- 地形射線(解析版;取代 three Mesh.raycast 的逐三角掃描)----
   // 地形是**高度場**:193² 網格 = 73,728 個三角形,three 的 Mesh.raycast 每次都整批線性掃完
@@ -970,5 +980,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, natureAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
 }

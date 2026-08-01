@@ -261,7 +261,7 @@ const HW = 9;
  * heightAt 預設模擬**開挖後**地形:引道段路廊被壓到路面高(carveTunnels 的行為),
  * 洞段地表原樣 —— 這正是「引道轉換帶會讓明隧道體檢誤判」的現場。
  */
-function build(under = true, heightAt = null) {
+function build(under = true, heightAt = null, natureAt = null) {
   const run = plan.pts, cum = plan.cum, nP = run.length;
   const fAt = (s) => tunFloorAt(plan, s, plan.total);
   const bAt = (s) => tunFloorAt(plan, s, plan.total, false);
@@ -284,7 +284,8 @@ function build(under = true, heightAt = null) {
     return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f, 1, 0];
   };
   const out = emit(TUN, UND, tunnelWallProfile, run, nP, cum, plan.total, at2, HW, fAt, bAt, covS,
-    { heightAt: heightAt || ((x) => carved(x)) }, (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope, galBores);
+    { heightAt: heightAt || ((x) => carved(x)), natureAt: natureAt || (() => G) },   // 天然地形 = 還沒開挖的那片平地
+    (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, run, cum, fAt, bAt, covS, nP };
 }
 
@@ -352,11 +353,21 @@ function build(under = true, heightAt = null) {
 }
 
 // Ⅱ-d 明隧道誤判防線:開挖後的引道碗緣讓側向地表低於頂板頂面,under=false 會判成明隧道,
-//     under=true MUST NOT —— 這是「平地上憑空長出外露頂板」的病灶
+//     under=true MUST NOT —— 這是「平地上憑空長出外露頂板」的病灶。
+//     2026-08-01 判定改制(明隧道 = 一側**在地形之外**)後多了一道**根因**防線:碗緣只挖到
+//     路面**之上**時,連 under=false 都不再判明隧道 —— 地下道的路面本來就沉在地表之下,
+//     側向地表恆高於路面 ⇒ 結構天生不可能露在地形外。對照組因此 MUST 挖到路面以下才成立。
 {
-  const dug = (x, z) => (Math.abs(z) > HW + 1 && Math.abs(z) < HW + 30 ? G - 6 : G);
-  ok(build(false, dug).galRoof.idx.length > 0, 'Ⅱ-d 對照組:same 地形 under=false MUST 判成明隧道');
-  ok(build(true, dug).galRoof.idx.length === 0, 'Ⅱ-d 地下道 MUST NOT 因引道碗緣長出明隧道構件');
+  const rim = (x, z) => (Math.abs(z) > HW + 1 && Math.abs(z) < HW + 30 ? G - 6 : G);
+  ok(build(false, rim).galRoof.idx.length === 0,
+    'Ⅱ-d 根因防線①(門檻):碗緣仍高於路面(地表 −6m,路面 −sink)⇒ 連 under=false 都 MUST NOT 判成明隧道');
+  const dug = (x, z) => (Math.abs(z) > HW + 1 && Math.abs(z) < HW + 30 ? G - plan.sink - 2 : G);
+  ok(build(false, dug).galRoof.idx.length === 0,
+    'Ⅱ-d 根因防線②(天然地形):挖到路面以下的**碗緣**天然地形仍是平地 ⇒ under=false 也 MUST NOT 判成明隧道');
+  // 對照組:天然地形本來就落到路面以下(真峽谷)⇒ under=false MUST 判明隧道、under=true MUST 照樣壓掉
+  const gorge = (x, z) => (z > HW + 1 ? G - plan.sink - 2 : G);
+  ok(build(false, gorge, gorge).galRoof.idx.length > 0, 'Ⅱ-d 對照組:天然峽谷側 + under=false MUST 判成明隧道');
+  ok(build(true, gorge, gorge).galRoof.idx.length === 0, 'Ⅱ-d 地下道 MUST NOT 長出明隧道構件(即使真的臨谷)');
 }
 
 // ---- Ⅳ 開挖補集:引道真的挖得到、洞段真的不動 ----

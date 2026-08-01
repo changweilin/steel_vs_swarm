@@ -12,13 +12,20 @@
 //        都會長出明隧道構件)
 //     ② 單邊土牆薄 → **只有那一側** open(使用者情境:山腰蜿蜒路)
 //     ③ 土牆被挖穿(側坡低於路面)→ open,且 gy < 路面 ⇒ 矮牆落地基準沉到地表之下
-//     ④ 縫合蓋廊段(兩側地表都低於頂板)→ 兩側都 open
+//     ④ 縫合蓋廊段(兩側地表都落到**路面**以下)→ 兩側都 open;
+//        ④-b 覆蓋薄但地表仍高於路面(= 貫穿地形的隧道)→ 兩側都 MUST NOT open(金龍隧道實案)
 //     ⑤ 覆蓋段之外(cov=false)MUST NOT open(那裡的牆本來就收成零高)
 //     ⑥ 單點抖動 MUST 膨脹到鄰格(不留 6m 長的孤立開口)
-//     ⑦ 門檻邊界:地表 = 頂板頂面 MUST NOT open;低 1cm MUST open
-//     ⑧ 取樣 MUST 量到 WALL_MIN 整數點(最外圈的凹陷也要抓到 —— `d += SAMP` 的寫法會漏掉)
+//     ⑦ 門檻邊界:地表 = 路面 MUST NOT open;低 1cm MUST open(頂板頂面已不是門檻)
+//     ⑧ 取樣 MUST 量到 WALL_MIN 整數點(最外圈的凹陷也要抓到 —— `d += SAMP` 的寫法會漏掉);
+//        落差掃描 MUST 量到 OUT_W 整數點、且 OUT_W 之外的落差 MUST NOT 觸發
 //     ⑨ gy 取前後一格窗口最小值(頂點間距 6m > 側向取樣距,單點值會讓矮牆底緣漏縫)
 //     ⑩ 法線 nx/nz:單位長、與切線正交、兩側互為相反 —— 矮牆 / 頂板 / 柱列共用這一份
+//     ⑫ 使用者定案(2026-08-01):明隧道 = 一側在地形內(牆)+ 一側在地形外(柱);
+//        **貫穿整個地形 = 兩側都在地形內 ⇒ 隧道,兩側都是牆**
+//     ⑬ 對開挖單調穩定:carve(只降不升)後重判 MUST 仍 open —— 判定在開挖前做一次、
+//        開挖後又做一次,翻面就是「挖了溝卻蓋回整面牆」
+//     ⑭ 落差掃描只認**天然**地形(`terrain.natureAt`):自家開挖的路塹不算「在地形之外」
 //   Ⅱ 構件(執行 biomes.js 真正的發射器原文;three 走 CDN 沙箱無法真渲染):
 //     深埋隧道三個桶 MUST 逐點同舊制;開放側 = 矮牆(galBase → 路面+SILL)+ 連續柱列
 //     (落地 → 頂板頂面,間距 COL_GAP、A26 朝向同調)+ 外露頂板(hw+EAVE 簷口)+
@@ -109,10 +116,23 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
   ok(base.every((b) => b <= FLOOR - 12 - 0.8 + 1e-6), '③ 挖穿側矮牆底緣 MUST 沉到側坡地表之下(不留看穿的縫)');
 }
 
-// ④ 縫合蓋廊段:兩側地表都低於頂板(但中心線覆蓋成立)⇒ 兩側都是明隧道
+// ④ 縫合蓋廊段:兩側地表都落到**路面**以下(結構兩側都露在地形之外)⇒ 兩側都是明隧道
 {
-  const h = mk(() => TOP - 3);
-  for (const side of [1, -1]) ok(prof(h, covAll, side).every((g) => g.open), `④ 蓋廊段 side=${side} MUST 判成明隧道`);
+  const h = mk(() => FLOOR - 3);
+  for (const side of [1, -1]) ok(prof(h, covAll, side).every((g) => g.open), `④ 蓋廊段(兩側都低於路面)side=${side} MUST 判成明隧道`);
+}
+
+// ④-b 覆蓋薄 ≠ 明隧道(2026-08-01 使用者定案;台北金龍隧道真圖資實案):地表低於頂板頂面、
+//     但**仍高於路面** = 兩側牆背整段是實體土 = 貫穿地形的隧道 ⇒ 兩側都 MUST NOT open。
+//     舊制(只問「藏不藏得住頂板」)在這裡整段長柱列,還會讓 carveGalleryBands 把山壁挖成一條溝。
+{
+  for (const dh of [0.2, 3, TUN.CLEAR + TUN.ROOF_T - 0.1]) {
+    const h = mk(() => TOP - dh);
+    for (const side of [1, -1]) {
+      ok(prof(h, covAll, side).every((g) => !g.open),
+        `④-b 覆蓋只差 ${dh.toFixed(1)}m 蓋滿頂板、地表仍高於路面 ⇒ side=${side} MUST 以隧道處理(兩側都是牆)`);
+    }
+  }
 }
 
 // ⑤ 覆蓋段之外一律不立(敞開段/洞口的牆本來就收成零高)
@@ -125,16 +145,17 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
 
 // ⑥ 單點抖動 MUST 膨脹一格(不留孤立開口)
 {
-  const h = mk((x) => (Math.abs(x - 60) < 3 ? TOP - 2 : TOP + 20));   // 只有頂點 10 那一格薄
+  const h = mk((x) => (Math.abs(x - 60) < 3 ? FLOOR - 2 : TOP + 20));   // 只有頂點 10 那一格露在地形外
   const p = prof(h);
-  ok(p[10].open && p[9].open && p[11].open, '⑥ 單點薄 MUST 膨脹到前後一格');
+  ok(p[10].open && p[9].open && p[11].open, '⑥ 單點露出 MUST 膨脹到前後一格');
   ok(!p[8].open && !p[12].open, '⑥ 膨脹 MUST 只有一格(不無限擴散)');
 }
 
-// ⑦ 門檻邊界:恰好等於頂板頂面 = 藏得住(不判明隧道);低 1cm 就判
+// ⑦ 門檻邊界(2026-08-01 起門檻是**路面**,不是頂板頂面):恰好齊平路面 = 還在地形內;低 1cm 就判
 {
   ok(prof(mk(() => TOP)).every((g) => !g.open), '⑦ 地表 = 頂板頂面 MUST NOT 判成明隧道');
-  ok(prof(mk(() => TOP - 0.01)).every((g) => g.open), '⑦ 地表低於頂板頂面 1cm MUST 判成明隧道');
+  ok(prof(mk(() => FLOOR)).every((g) => !g.open), '⑦ 地表 = 路面(齊平)MUST NOT 判成明隧道');
+  ok(prof(mk(() => FLOOR - 0.01)).every((g) => g.open), '⑦ 地表低於路面 1cm MUST 判成明隧道');
 }
 
 // ⑧ 取樣 MUST 涵蓋 WALL_MIN 整數點(最外圈的凹陷抓得到)。2026-07-31 近帶岩背改制後,
@@ -144,9 +165,20 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
   const dFar = HW + TUN.WALL_MIN;
   const h = mk((x, z) => (Math.abs(z + dFar) < 0.4 ? TOP - 5 : TOP + 20));
   ok(prof(h).some((g) => g.gy <= TOP - 5 + 1e-6), `⑧ 側向 ${dFar}m(WALL_MIN 整數點)的凹陷 MUST 量得到(反映在 gy)`);
-  // 反面:比 WALL_MIN 更外側的凹陷不該影響判定(否則門檻等於無限大)
+  // 反面:比 WALL_MIN 更外側、**仍高於路面**的凹陷不該影響判定(否則門檻等於無限大)
   const hOut = mk((x, z) => (Math.abs(z + dFar + 6) < 0.4 ? TOP - 5 : TOP + 20));
-  ok(prof(hOut).every((g) => !g.open), '⑧ WALL_MIN 之外的凹陷 MUST NOT 觸發明隧道');
+  ok(prof(hOut).every((g) => !g.open), '⑧ WALL_MIN 之外的凹陷(仍高於路面)MUST NOT 觸發明隧道');
+}
+
+// ⑧-b 落差掃描帶 OUT_W(2026-08-01):**低於路面**的地表要掃到牆外 OUT_W 整數點才算數 ——
+//     7m(不到一格地形)看不出「薄覆蓋」與「臨崖」的差別,這一段就是分辨兩者的那把尺。
+{
+  const dOut = HW + TUN.OUT_W;
+  const near = (z) => (z < 0 ? TOP - 2 : TOP + 20);            // 量測側(z<0)覆蓋薄但仍高於路面
+  const hIn = mk((x, z) => (Math.abs(z + dOut) < 0.4 ? FLOOR - 5 : near(z)));
+  ok(prof(hIn).every((g) => g.open), `⑧-b 牆外 ${TUN.OUT_W}m(OUT_W 整數點)落到路面以下 MUST 判成明隧道`);
+  const hFarOut = mk((x, z) => (Math.abs(z + dOut + 6) < 0.4 ? FLOOR - 5 : near(z)));
+  ok(prof(hFarOut).every((g) => !g.open), '⑧-b OUT_W 之外才落到路面以下 MUST NOT 觸發明隧道(掃描帶有界)');
 }
 
 // ⑨ gy 取前後一格的窗口最小值
@@ -166,6 +198,46 @@ const prof = (heightAt, cov = covAll, side = 1) => tunnelWallProfile(pts, floors
   // 對照:近帶(NEAR_W 內)全低、更外側才升高 ⇒ 照樣是明隧道(柱間看出去是上坡,合法)
   const hRise = mk((x, z) => (Math.abs(z) <= HW + TUN.NEAR_W + 0.1 ? FLOOR - 3 : TOP + 20));
   ok(prof(hRise).every((g) => g.open), '⑪ 近帶全低、遠處升高 MUST 照判明隧道(開口面向低地)');
+}
+
+// ⑫ 使用者定案的「明隧道 vs 隧道」(2026-08-01):明隧道 = 平行方向**一側在地形內部(牆)、
+//    另一側在地形外部(柱)**;貫穿整個地形 = 兩側都在地形內部 ⇒ 以隧道處理,兩側都是牆。
+{
+  const bench = mk((x, z) => (z > 0 ? TOP + 25 : FLOOR - 6));   // side +1 量 z<0(谷)、side −1 量 z>0(山)
+  const pOut = prof(bench, covAll, 1), pIn = prof(bench, covAll, -1);
+  ok(pOut.every((g) => g.open) && pIn.every((g) => !g.open),
+    '⑫ 一側在地形外 / 一側在地形內 ⇒ 恰好只有外側是明隧道(柱),內側維持整面牆');
+  // 貫穿:兩側地表都高於路面(覆蓋厚薄不拘)⇒ 兩側都 MUST NOT open
+  for (const gh of [FLOOR + 0.1, FLOOR + 6, TOP + 30]) {
+    ok([1, -1].every((s) => prof(mk(() => gh), covAll, s).every((g) => !g.open)),
+      `⑫ 貫穿地形(兩側地表 = 路面+${(gh - FLOOR).toFixed(1)}m,都在地形內部)⇒ 兩側都是牆`);
+  }
+}
+
+// ⑬ 對開挖單調穩定:判定在**開挖前**做一次(carveGalleryBands 的 strip)、**開挖後**又做一次
+//    (buildRoads / markGradeCorridors)。三個條件都只認「地表夠不夠低」,而 carve 只降不升 ⇒
+//    重判 MUST 仍 open;翻面 = 挖了一條溝卻蓋回整面牆(兩份剖面分家)。
+{
+  const cliff = mk((x, z) => (z >= 0 ? TOP + 25                       // 山側
+    : (-z - HW <= TUN.GAL_CLEAR_W ? FLOOR + 4 : FLOOR - 5)));         // 谷側:柱外土脊 + 更外側落谷
+  const carved = mk((x, z) => {                                       // 模擬 carveGalleryBands:帶內壓到路面
+    const h = cliff(x, z), d = -z - HW;
+    return (z < 0 && d >= -0.5 && d <= TUN.GAL_CLEAR_W) ? Math.min(h, FLOOR) : h;
+  });
+  ok(prof(cliff, covAll, 1).every((g) => g.open), '⑬ 開挖前:柱外土脊 + 更外側落谷 MUST 判成明隧道');
+  ok(prof(carved, covAll, 1).every((g) => g.open), '⑬ 開挖後重判 MUST 仍是明隧道(只降不升 ⇒ 判定單調)');
+}
+
+// ⑭ 落差掃描只認**天然**地形(2026-08-01 金龍隧道實案):隔壁孔的洞口路塹把 20~25m 外的地表
+//    挖到我方路面之下 3m —— 那是**我們自己挖的**,不是「這一側在地形之外」的證據。判定跑三次
+//    (開挖前一次、開挖後兩次),吃 heightAt 就會在同一段路上前後不一致。
+{
+  const nat = mk(() => TOP - 2);                                             // 天然:覆蓋薄但仍高於路面
+  const dug = mk((x, z) => (Math.abs(z) > HW + 10 ? FLOOR - 5 : TOP - 2));   // 開挖後:牆外被挖到路面以下
+  ok(tunnelWallProfile(pts, floors, covAll, dug, HW, 1, nat).every((g) => !g.open),
+    '⑭ 自家開挖出來的路塹 MUST NOT 讓該側判成明隧道(落差掃描吃天然地形)');
+  ok(tunnelWallProfile(pts, floors, covAll, dug, HW, 1, dug).every((g) => g.open),
+    '⑭ 對照組:同一份剖面若本來就是天然落差 ⇒ MUST 判成明隧道');
 }
 
 // ⑩ 側向法線:單位長、與切線正交、兩側互為相反
@@ -200,7 +272,7 @@ const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum',
   `${EMIT}\nreturn { galP, galMask, floorsV, covV, galBores };`);
 
 /** 跑一次發射器;回傳三個桶 + profile + 洞內打洞 bore */
-function build(heightAt, { cov = () => true, floor = FLOOR } = {}) {
+function build(heightAt, { cov = () => true, floor = FLOOR, natureAt = null } = {}) {
   const cum2 = pts.map((p) => p[0]);                       // 沿 +X 直線 ⇒ 弧長 = x
   const total2 = cum2[cum2.length - 1];
   const at2 = (s) => [s, 0, 1, 0];                         // 直線:弧長 s → (x=s, z=0),切線 (1,0)
@@ -209,7 +281,7 @@ function build(heightAt, { cov = () => true, floor = FLOOR } = {}) {
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
   const galBores = [];
   const out = emit(TUN, UND, tunnelWallProfile, pts, pts.length, cum2, total2, at2, HW, () => floor, () => floor, cov,
-    { heightAt }, (s) => floor + TUN.CLEAR, false, wall, galCols, galRoof, cope, galBores);
+    { heightAt, natureAt: natureAt || heightAt }, (s) => floor + TUN.CLEAR, false, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, cum: cum2 };
 }
 const TOPY = FLOOR + TUN.CLEAR + TUN.ROOF_T;               // 頂板頂面(= ceilOf + ROOF_T)
@@ -302,7 +374,7 @@ const CLIFF = FLOOR - 6;
   const at3 = (s) => [diag[0][0] + 0.8 * s, diag[0][1] + 0.6 * s, 0.8, 0.6];
   const r = emit(TUN, UND, tunnelWallProfile, diag, diag.length, cum2, cum2[cum2.length - 1], at3, HW,
     () => FLOOR, () => FLOOR, () => true,
-    { heightAt }, () => FLOOR + TUN.CLEAR, false, wall, galCols, galRoof, cope, []);
+    { heightAt, natureAt: heightAt }, () => FLOOR + TUN.CLEAR, false, wall, galCols, galRoof, cope, []);
   ok(r.galP[0].every((g) => g.open) && r.galP[1].every((g) => !g.open), 'Ⅱ-c 斜向:只有低側判成明隧道');
   const off = (x, z, i) => (x - diag[i][0]) * nx + (z - diag[i][1]) * nz;   // 沿法線的側向位移
   const lat = (x, z, i) => (x - diag[i][0]) * 0.8 + (z - diag[i][1]) * 0.6; // 沿切線的位移(應為 0)
@@ -512,8 +584,17 @@ function fakeBattleConfig() {
     'Ⅴ 隧道鏈 MUST 同 tunnel 值才併(混併 = 強制覆蓋旗標被種子 way 的 tags 吃掉)');
   ok((src.match(/terrain\.carveGalleryBands\(/g) || []).length === 1,
     'Ⅴ carveGalleryBands MUST 只有一個呼叫端(與 carveTunnels 同批、開挖前判定)');
-  ok(/tunnelWallProfile\(pts, floors, covV2, hAt, hwWay, side\)/.test(src),
-    'Ⅴ 淨空帶 strip MUST 走 tunnelWallProfile 單一縫(開挖前高度)');
+  ok(/tunnelWallProfile\(pts, floors, covV2, hAt, hwWay, side, \(x, z\) => terrain\.natureAt\(x, z\)\)/.test(src),
+    'Ⅴ 淨空帶 strip MUST 走 tunnelWallProfile 單一縫(開挖前高度 + 天然地形落差掃描)');
+  // 落差掃描的天然地形單一縫(2026-08-01):三個呼叫端都 MUST 餵 terrain.natureAt ——
+  // 開挖後的 heightAt 會把「隔壁孔的洞口路塹」當成「這一側在地形之外」(金龍隧道實案:
+  // 開挖前判牆、開挖後判柱 ⇒ 柱外淨空帶沒挖卻長出柱列,兩份剖面分家)。
+  ok((src.match(/terrain\.natureAt\(x, z\)/g) || []).length === 3,
+    'Ⅴ 三個 tunnelWallProfile 呼叫端 MUST 全數餵天然地形 natureAt(少一個就是開挖後重判翻面)');
+  ok(/const heights0 = new Float32Array\(heights\);/.test(tsrc)
+    && /const natureAt = \(x, z\) => sampleField\(heights0, x, z\);/.test(tsrc),
+    'Ⅴ terrain MUST 在開挖前快照天然高度場,natureAt 與 heightAt 共用同一支內插(sampleField)');
+  ok(/return \{ group, mesh, heightAt, natureAt,/.test(tsrc), 'Ⅴ natureAt MUST 掛在 terrain API 上(消費端拿得到)');
   ok(src.indexOf('galStrips.push') < src.indexOf('terrain.carveTunnels(tunnelRuns'),
     'Ⅴ strip 收集 MUST 在 carveTunnels 執行之前(整批用開挖前高度判定)');
   // ---- 執行原文:carveTunnels / carveGalleryBands ----

@@ -166,7 +166,7 @@ function decodePng(buf) {
 async function getBuf(url, tries = 4) {
   for (let a = 0; a < tries; a++) {
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      const r = await fetch(url, { headers: { 'User-Agent': OSM_UA }, signal: AbortSignal.timeout(30000) });
       if (r.ok) return Buffer.from(await r.arrayBuffer());
     } catch { /* 重試 */ }
     await sleep(800 * (a + 1));
@@ -305,6 +305,9 @@ function buildHeightField(cfg, bbox, sampleElev) {
 }
 
 // ---- Overpass(查詢字串與 biomes.js 同一份;失敗回 null,呼叫端略過該場地)----
+// Overpass / OSM API 對「沒有 User-Agent 的請求」一律拒絕(406 / 429)—— 這支是 Node 端 fetch,
+// 不補就等於整個工具在開發機上永遠「取不到路網」(2026-08-01 實測;瀏覽器自己會帶所以只有這裡要補)。
+const OSM_UA = 'steel-vs-swarm-lane-scenario-audit/1.0 (offline map audit)';
 const OVERPASS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
@@ -329,7 +332,9 @@ async function overpass(q) {
       try {
         const r = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          // User-Agent 是硬性要求(2026-08-01 實測):不帶會拿到 406(主站)/ 429(kumi)——
+          // 看起來像「網路被擋」,其實只是標頭。瀏覽器自己會帶,所以只有 Node 端這條路要補。
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': OSM_UA },
           body: 'data=' + encodeURIComponent(q),
           signal: AbortSignal.timeout(REQ_MS),
         });
@@ -400,7 +405,7 @@ async function osmApi(bbox) {
     + `${bbox.maxLng.toFixed(5)},${bbox.maxLat.toFixed(5)}`;
   for (let a = 0; a < 3; a++) {
     try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(REQ_MS) });
+      const r = await fetch(url, { headers: { 'User-Agent': OSM_UA }, signal: AbortSignal.timeout(REQ_MS) });
       if (r.ok) return parseOsmXml(await r.text());
       if (!RETRYABLE.has(r.status)) return null;      // 400 = bbox 太大 / 403 = 出口封鎖:不重試
     } catch { /* 逾時/連線層失敗:重試 */ }
