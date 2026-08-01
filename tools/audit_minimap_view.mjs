@@ -11,23 +11,11 @@
 // 但這三支方法只吃 `this.terrain` / `this.pos` / `this.mmMode` / `this.heroKind`,
 // 抽出來評估驗的仍是**真正的程式碼文字**(不是另抄一份公式,抄一份就永遠會通過)。
 // 跑法:`node tools/audit_minimap_view.mjs`
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
+import { readSrc, grabMethod } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
-const grab = (name) => {
-  const i = src.indexOf(`\n  ${name}(`);
-  if (i < 0) throw new Error(`找不到 ${name}`);
-  let d = 0, started = false, j = i;
-  for (; j < src.length; j++) {
-    const c = src[j];
-    if (c === '{') { d++; started = true; }
-    else if (c === '}') { d--; if (started && d === 0) { j++; break; } }
-  }
-  return src.slice(i, j);
-};
+const src = readSrc('public', 'js', 'game.js');
+const grab = (name) => grabMethod(src, name);
 
 const MM_NEAR = JSON.parse(
   '{' + /const MM_NEAR = \{([\s\S]*?)\n\};/.exec(src)[1]

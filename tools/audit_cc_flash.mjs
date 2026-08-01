@@ -15,29 +15,17 @@
 // 手法比照 `audit_minimap_view.mjs`:曲線直接 import(data.js 是純模組),
 // game.js 的方法**抽執行原文**評估(three 走 CDN、Node 端 import 不了整支;抄一份公式就永遠會通過)。
 // 跑法:`node tools/audit_cc_flash.mjs`
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
+import { readSrc, grabMethod } from './audit_src.mjs';
 import { CC_FLASH, ccFlashAlpha, ccFlashDur, CJUMP } from '../public/js/data.js';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
-const mainSrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
-const css = readFileSync(join(ROOT, 'public', 'css', 'style.css'), 'utf8');
-const html = readFileSync(join(ROOT, 'public', 'index.html'), 'utf8');
+const src = readSrc('public', 'js', 'game.js');
+const mainSrc = readSrc('public', 'js', 'main.js');
+const css = readSrc('public', 'css', 'style.css');
+const html = readSrc('public', 'index.html');
 
 /** 抽出 class 方法的原文(含大括號區塊);與 audit_minimap_view.mjs 同一手法 */
-const grab = (name) => {
-  const i = src.indexOf(`\n  ${name}(`);
-  if (i < 0) throw new Error(`找不到 ${name}`);
-  let d = 0, started = false, j = i;
-  for (; j < src.length; j++) {
-    const c = src[j];
-    if (c === '{') { d++; started = true; }
-    else if (c === '}') { d--; if (started && d === 0) { j++; break; } }
-  }
-  return src.slice(i, j);
-};
+const grab = (name) => grabMethod(src, name);
 
 // 「全檔只有 N 處」這類計數 MUST 只數**執行原文** —— 註解與 import 清單也提得到同一個名字,
 // 連著數會把「說明寫得詳細」誤判成「縫破了」。故先剝掉區塊/行註解與檔頭 import 段再數。
