@@ -19,8 +19,8 @@ import { VENUE_LANES } from './venueLanes.js';
 export const SCEN_LABEL = {
   // 隧道與地下道是兩種東西:隧道 = 道路平坦鑽進山體(深度來自山);
   // 地下道 = 平地上路面下沉再上來(深度來自挖,2026-07-28 起引擎以 underpassPlan 生成)。
-  // 明隧道(gallery)是隧道的側向變體:覆蓋段的單邊土牆藏不住結構(tunnelWallProfile 判 open),
-  // 該側改成外露頂板 + 落地擋土 facade + 扶壁 —— 純表現層,通行/碰撞/LOS 與隧道相同。
+  // 明隧道(gallery)是隧道的側向變體:覆蓋段的**一側在地形之外**(tunnelWallProfile 判 open),
+  // 該側改成外露頂板 + 落地矮牆 + 連續柱列 —— 貫穿地形(兩側都在地形內)的一律仍是隧道。
   tunnel: '山體隧道',
   underpass: '地下道',
   bridge: '高架橋',
@@ -72,7 +72,10 @@ export const VENUES = [
 
   // ---- 混合型 ----
   { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 }, scen: ['highGround'] },
-  { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'gallery', 'highGround'] },   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)
+  // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)。2026-08-01 明隧道判定改制後 ④ 不再成立:
+  // 金龍是**貫穿山體**的真隧道(側向地表在 40m 外仍高出路面 3.7~9.8m),舊判定只因覆蓋比頂板薄
+  // 0.2~1.5m 就判成明隧道 —— 使用者實測回報後改判,標記跟著實測退掉(見 tunnelWallProfile)。
+  { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'highGround'] },
   // ② 的候選場地(2026-07-28 探測選定):市民大道沿線車行地下道群 —— L1 bbox 內圖資有 8 條
   // tunnel way。2026-07-30 全量掃描實測:兵線走到的 60m 圖資地下道(service)underpassPlan
   // 規劃放棄、仍是平街 ⇒ ② 不成立,不標 scen;② 的指定場地由 taroko 擔任。

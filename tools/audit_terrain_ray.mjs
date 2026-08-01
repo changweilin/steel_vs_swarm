@@ -27,9 +27,9 @@ const BLOCK = src.slice(B0, B1);
 for (const need of ['function rayTerrain(', 'function markTriDead(', 'function triHit(']) {
   if (!BLOCK.includes(need)) throw new Error(`抽出的區塊缺少 ${need}`);
 }
-// heightAt 也一併抽(驗命中點高度同源)
-const H0 = src.indexOf('  function heightAt(x, z) {');
-const H1 = src.indexOf('\n  }', H0) + 4;
+// heightAt 也一併抽(驗命中點高度同源)——2026-08-01 起內插住 sampleField(heightAt / natureAt 共用)
+const H0 = src.indexOf('  function sampleField(field, x, z) {');
+const H1 = src.indexOf('\n', src.indexOf('  const heightAt = (x, z) => sampleField', H0)) + 1;
 const HBLOCK = src.slice(H0, H1);
 
 let pass = 0, fail = 0;
