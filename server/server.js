@@ -272,13 +272,16 @@ function lanUrls() {
 }
 
 // ---------------- WebSocket ----------------
-// maxPayload 1MiB:最大合法訊息 = world 障礙上傳(occ 4000 + cor 2400 ≈ 250KB,留 4 倍餘裕)。
+// maxPayload 2MiB:最大合法訊息 = world 上傳(occ 4000 + cor 2400 + slabs 6000 + wet + hgt)。
+// 2026-08-01 新增粗高程網格 hgt(稜線遮蔽,避免隔山打牛):實測 L3 約 55KB、理論上限 131KB
+// (LOS.HGT_MAX² × 2 字元)⇒ 整包合計上探 ~800KB,舊的 1MiB 只剩 1.3 倍餘裕。**超過就是 ws
+// 直接關連線** = 房主整份 world 靜默上傳失敗(LOS 遮蔽/走廊淨空/稜線全滅),提前留足餘裕。
 // ws 預設 100MiB —— 惡意巨型訊息會讓單執行緒 JSON.parse 阻塞全部房間,先在框架層封頂。
 //
 // `noServer` + 兩個 http 伺服器各自轉交 upgrade:ws / wss 共用**同一個** WebSocketServer 實例。
 // MUST NOT 改成一邊一個實例 —— 心跳掃的是 `wss.clients`,分兩份就有一半的死連線不會被回收
 // (座位 connected 恆 true ⇒ RoomHub 的無真人收房永遠不啟動,見下方心跳註解)。
-const wss = new WebSocketServer({ noServer: true, maxPayload: 1 << 20 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 2 << 20 });
 for (const s of [plainServer, httpsServer]) {
   if (!s) continue;
   s.on('upgrade', (req, socket, head) => {

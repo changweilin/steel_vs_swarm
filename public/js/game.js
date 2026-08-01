@@ -9,10 +9,10 @@ import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
-  ALTITUDE, altScale, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
+  altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
-  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH,
+  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, camSmoothF, camAngleStep,
 } from './data.js';
@@ -2374,7 +2374,7 @@ export class BattleClient {
    * 扇形武器彈著演出(散彈 / 電漿):沿射向水平張開 def.arc 半角,佐以少量垂直散布 =
    * 真散彈的圓形彈著。散彈 = 動能彈丸(細短曳光、密);電漿 = 焰舌(粗長、稀)。命中判定在伺服器。
    */
-  _fanBlast(muzzle, dir, def) {
+  _fanBlast(muzzle, dir, def, rng = def.range) {
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(dir, up).normalize();
     const half = (def.arc || 15) * Math.PI / 180;
@@ -2389,7 +2389,7 @@ export class BattleClient {
     // 扇形的「越近越強」由伺服器 fanFalloff 結算 —— 噴口最粗、末端收束就是它的可視化。
     if (plasma) {
       const core = this._shotCols(this.side).hot;
-      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, def.range * this._altRangeMul(def) * rF * 0.82));
+      const clip = this._clipBeam(muzzle, muzzle.clone().addScaledVector(dir, rng * rF * 0.82));
       ionBreath(this.scene, this.effects, muzzle, clip.to, col,
         { r: 2.2 * wF, ttl: 0.45, coil: 3, core });
       shockRing(this.scene, this.effects, muzzle.x, muzzle.y, muzzle.z, 2.6 * wF, core);
@@ -2399,7 +2399,7 @@ export class BattleClient {
       const dk = dir.clone()
         .applyAxisAngle(up, half * f)
         .applyAxisAngle(right, half * 0.5 * (Math.random() * 2 - 1));   // 垂直散布 = 圓形彈著
-      const len = def.range * this._altRangeMul(def) * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
+      const len = rng * rF * (plasma ? 0.7 + Math.random() * 0.3 : 0.85 + Math.random() * 0.15);
       const end = muzzle.clone().addScaledVector(dk, len);
       const clip = this._clipBeam(muzzle, end);   // 自機扇形彈舌同樣止於障礙面(彈著花打在牆上)
       beamLine(this.scene, this.effects, muzzle, clip.to, col, plasma ? { ttl: 0.24, w: 0.16 * wF } : { ttl: 0.12, w: 0.07 * wF });
@@ -4451,7 +4451,7 @@ export class BattleClient {
     // 掃到的飛行目標留給 _lobAim 當瞄準點(彈射模式的火控解直接收束到機體幾何中心,
     // 不再靠玩家對著會動的機群手動修正);MUST NOT 在 _lobAim 另掃一次(兩份會分家)。
     this._aaEnt = def && def.type === 'launcher'
-      ? this._aaTarget(def.range * this._altRangeMul(def)) : null;
+      ? this._aaTarget(this._maxRange(def)) : null;
     const on = !!this._aaEnt;
     if (on === this._aaAim) return;
     this._aaAim = on;
@@ -4514,7 +4514,6 @@ export class BattleClient {
         || !def || trajClass(def) !== 'lob' || !this.gunGroup) return;
     this.camera.updateMatrixWorld();
     const from = this.gunGroup.localToWorld(this._muzzle.clone());
-    const max = def.range * this._altRangeMul(def);
     // ① 瞄準點(對空彈射沿用 _updateAaMode 掃到的那架,不另掃)
     const aaEnt = this._aaAim ? this._aaEnt : null;
     if (aaEnt && !aaEnt.dead && aaEnt.mesh.visible) {
@@ -4530,7 +4529,7 @@ export class BattleClient {
       const t = performance.now();
       if (t - c.t > 60 || c.d.dot(dir) < 0.999998 || c.o.distanceToSquared(from) > 0.0225
           || (c.ent && (c.ent.dead || !c.ent.mesh.visible))) {
-        const r = this._resolveAim(max);
+        const r = this._resolveAim(this._maxRange(def));
         c.pt.copy(r.point); c.ent = r.ent || null; c.d.copy(dir); c.o.copy(from); c.t = t;
       }
       fc.aim.copy(c.pt);
@@ -4539,6 +4538,9 @@ export class BattleClient {
     fc.on = true;
     fc.aa = !!this._aaAim;
     const base = this._shotV0(def, fc.aa);
+    // 射程包絡 = **對這個瞄準目標**的有效射程(唯一縫 `_effRange`;瞄地面 ⇒ ent=null ⇒ 基礎射程)。
+    // 火控階梯決定的是真正的出膛向量 ⇒ 這裡放寬多少,砲彈就真的飛多遠 = 射程光暈與實際落點分家。
+    const max = this._effRange(def, fc.ent);
     // ② + ③ 逐級降裝藥:共用 `_lobLadder`(唯一縫)—— 射程光暈的可命中判定吃同一份階梯
     const { ok, zi, arc } = this._lobLadder(from, fc.aim, max, base, BALLISTIC.LOB_TOL, true);
     fc.ok = ok;
@@ -4759,7 +4761,10 @@ export class BattleClient {
     this._lockAt = now;
     const def = this._curWeapon().def;
     if (!def) return;
-    const t = this._aimTarget(def.range * this._altRangeMul(def));   // 高度制空:高空無人機對地拉遠鎖定/射程
+    // 索敵半徑取機制上限,再以**對這個目標**的有效射程誠實夾回(與射程光暈同一個數字 ——
+    // 鎖定目標刻意不亮射程光暈而改亮 lockGlow,兩者若不同界就會出現「鎖得到卻打不到」)。
+    const t0 = this._aimTarget(this._maxRange(def));
+    const t = t0 && this.pos.distanceTo(t0.mesh.position) - this._hitR(t0) <= this._effRange(def, t0) ? t0 : null;
     if (t) this.net.send({ t: 'lock', id: t.id });
     else this._clearLockGlow();
   }
@@ -4884,7 +4889,7 @@ export class BattleClient {
       this._vlockId = null; this._vlockNext = false; this._setVlockUi(false); return;
     }
     const def = this._curWeapon().def;
-    const rng = def ? def.range * this._altRangeMul(def) : 0;   // 與 `_tickLock` 同一把尺
+    const rng = def ? this._maxRange(def) : 0;   // 索敵半徑取機制上限(視角輔助不涉傷害;與 `_tickLock` 同一把尺)
     const opt = { ndc: true, lim: VIEW_LOCK.EDGE, keepLim: VIEW_LOCK.DROP, hero: false };
     if (this._vlockNext) {
       // 這一次按下 = 切到名冊的下一個(由左至右輪替,到底再回到最左邊)
@@ -4980,23 +4985,25 @@ export class BattleClient {
     const cur = this.side && !this.dead ? this._curWeapon() : null;
     const def = cur?.def;
     if (!def) { for (const ent of this.ents.values()) drop(ent); return; }
-    const rng = def.range * this._altRangeMul(def);   // 與擊發同一組有效射程(高度制空)
     const rule = reachRule(def);
+    const scan = this._maxRange(def);   // 候選預篩只用機制上限(便宜且寬);精確射程在 _reachable 定案
     // 換武器 ⇒ 快取的是「這把武器打不打得到」,整批作廢重評
     const sig = `${cur.id}|${def.name}`;
     if (sig !== this._rgSig) { this._rgSig = sig; for (const e of this.ents.values()) e._rgAt = 0; }
     let budget = rule.path === 'arc' ? RANGE_GLOW.ARC_PER_FRAME : RANGE_GLOW.RAY_PER_FRAME;
     for (const ent of this.ents.values()) {
-      // ① 便宜的候選閘(每幀全掃):敵方、活著、看得見、不是鎖定目標、近側表面在射程內
+      // ① 便宜的候選閘(每幀全掃):敵方、活著、看得見、不是鎖定目標、粗略在搜尋半徑內。
+      //    這一關 MUST 只寬不緊(用 scan 而非有效射程)—— 精確的射程判定住 _reachable 那一份,
+      //    在這裡先夾一次緊的 = 兩個閘門,邊界又會分家。
       const cand = !ent.isSelf && ent.side && ent.side !== this.side && !ent.neutral
         && !ent.dead && !ent.gar && ent.mesh.visible && ent.id !== this._lockId
-        && this.pos.distanceTo(ent.mesh.position) - this._hitR(ent) <= rng;
+        && this.pos.distanceTo(ent.mesh.position) - this._hitR(ent) <= scan;
       if (!cand) { drop(ent); ent._rgAt = 0; continue; }
       // ② 貴的可命中判定:攤提到多幀 + TTL 快取;本幀預算用完就沿用舊值,沒評估過的不亮
       if (!(ent._rgAt > 0) || now - ent._rgAt > RANGE_GLOW.TTL_S) {
         if (budget > 0) {
           budget--;
-          const r = this._reachable(ent, def, rule, rng);
+          const r = this._reachable(ent, def, rule, this._effRange(def, ent));
           ent._rgAt = now; ent._rgOk = r.ok; ent._rgWarn = r.warn;
         } else if (!(ent._rgAt > 0)) { drop(ent); continue; }
       }
@@ -5048,6 +5055,9 @@ export class BattleClient {
     const hr = this._hitR(ent);
     const full = from.distanceTo(aim);
     const surf = Math.max(0, full - hr);   // 到近側表面(與伺服器 _surfD3 同一把尺)
+    // 射程本身也住這裡(**唯一縫**):呼叫端的候選閘刻意只寬不緊,「打得到嗎」的距離判據
+    // MUST 與伺服器同一式 —— 量到近側表面、比對逐目標有效射程 `rng`(= _effRange)。
+    if (surf > rng) return { ok: false, warn: false };
     if (rule.hit === 'blast') {
       const tol = blastCoreR(def) + hr;    // 落點落在核心帶內 ⇒ 目標吃滿額爆風(blastFalloff)
       let miss;                            // 落點與目標命中量體中心的距離
@@ -5400,18 +5410,46 @@ export class BattleClient {
     return { id, def: this.wdef[id], st: this.wstate[id] };
   }
 
-  /** 高度差空戰(客戶端;取代舊無人機制空):射手視線點高過「前方目標區地表」達門檻 → +射程
-   *  (較高方封頂 +ALTITUDE.RANGE)。伺服器 sim._altRange 以雙方視線點精算並複驗 —— 客戶端取
-   *  「基礎射程處前方地表」為目標高程近似,寬鬆(飛行/俯瞰坡下都放行),不擋合法遠射;過遠落點伺服器複驗擋掉。 */
-  _altRangeMul(def) {
-    if (!def || !this.side || this.dead || !this.terrain) return 1;
-    const eyeY = this.camera.position.y;                       // 視線點絕對高程(相機眼位)
-    const dir = this.camera.getWorldDirection(this._altFwd || (this._altFwd = new THREE.Vector3()));
-    const ref = def.range || 0;                                // 基礎射程處前方地表 ≈ 目標高程
-    const gy = this.terrain.heightAt(this.pos.x + dir.x * ref, this.pos.z + dir.z * ref);
-    const dh = eyeY - (gy + LOS.TGT_M);
-    if (dh <= 0) return 1;
-    return 1 + ALTITUDE.RANGE * altScale(dh);
+  /**
+   * 高度差空戰(客戶端):**逐目標**的射程乘數,與伺服器 `sim._altRange`/`_altDh` 逐條同構
+   * (曲線走 `data.js altRangeF` 這個唯一縫)。
+   *
+   * 2026-08-01 使用者回報「攻擊範圍異常,沒有射程光暈的敵人也打得到」的客戶端那一半:
+   * 舊制拿「基礎射程處**前方地表**」當目標高程近似,刻意寬鬆 —— 而伺服器量的是雙方視線點。
+   * 兩端各寫一份近似 = 兩個數字,射程光暈(客戶端)與實際結算(伺服器)必然分家。現在改成
+   * 同一條規則、同一組輸入:
+   *   ・對方是英雄(兩端都拿得到絕對高程)⇒ 用**絕對**視線高程差(= 伺服器的 `ay` 差)。
+   *   ・對方是小兵/塔/主堡(伺服器是無地形的 2D 平面,地基恆 0)⇒ 退回**離地**框:
+   *     我方用回報給伺服器的同一個 `_altAG`,對方用 `sim._sightY` 的離地常數。
+   * 兩端同框才有意義,細節與病灶見 `sim._altDh`。ent = null(打地面/沒解到目標)⇒ 1。
+   */
+  _altRangeTo(ent) {
+    if (!this.side || this.dead) return 1;
+    if (!ent) return 1;
+    if (ent.hero) {
+      // 絕對框:我方 ay 與回報伺服器的同一式(pos.y + _eyeH);對方取機體世界高 + 標準眼高
+      return altRangeF((this.pos.y + this._eyeH()) - (ent.mesh.position.y + LOS.EYE_M));
+    }
+    // 離地框:對方的離地視線高照抄 sim._sightY(塔/主堡砲位高、飛行類眼高、其餘目標身高)
+    const tgt = (ent.kind === 'tower' || ent.kind === 'base') ? LOS.TOWER_EYE_M
+      : (ent.kind === 'heli' || ent.decoy || ent.kami || ent.hyper)
+        ? (ent.heroY || 0) + LOS.EYE_M
+        : (ent.heroY || 0) + LOS.TGT_M;
+    return altRangeF(((this._altAG || 0) + LOS.EYE_M) - tgt);
+  }
+
+  /** 對某個目標的**有效射程**(公尺):射程光暈與擊發閘門吃的同一個數字(唯一縫)。 */
+  _effRange(def, ent) {
+    return (def?.range || 0) * this._altRangeTo(ent);
+  }
+
+  /**
+   * 還沒解到目標時的**搜尋上限**:高度制空的機制上限(`altRangeMax`,與伺服器 `heroBurst`
+   * 的 `impCap` 同一個誠實界)。只准用在「先找目標」的射線/索敵半徑;找到目標之後
+   * MUST 以 `_effRange(def, ent)` 誠實夾回 —— 拿這個上限當射程 = 又一次兩端分家。
+   */
+  _maxRange(def) {
+    return (def?.range || 0) * altRangeMax();
   }
 
   /** 磁軌蓄力狀態切換:廣播離散事件(比照 heroCast 的 'cast' 事件),
@@ -5796,7 +5834,7 @@ export class BattleClient {
     this.camera.updateMatrixWorld();
     const dir = this.camera.getWorldDirection(new THREE.Vector3());
     const from = this.gunGroup.localToWorld(this._muzzle.clone());
-    const { point } = this._resolveAim(def.range * this._altRangeMul(def));
+    const { point } = this._resolveAim(this._maxRange(def));
     const seg = point.clone().sub(from);
     const len = Math.max(0.5, seg.length());
     g.beam.position.copy(from).addScaledVector(seg, 0.5);
@@ -5904,6 +5942,15 @@ export class BattleClient {
       ? this.gunGroup.localToWorld(this._muzzle.clone())
       : this.camera.position.clone().add(dir.clone().multiplyScalar(2));
 
+    // 這一發的有效射程(**唯一縫**:射程光暈 `_reachable` 吃的是同一個 `_effRange`)。
+    // 高度制空是**逐目標**的 ⇒ 先以機制上限解析準星目標,再以「對這個目標」的倍率定案 ——
+    // 打不到任何單位(對地/空放)時 ent=null ⇒ 倍率 1 = 基礎射程。
+    // 2026-08-01:舊制此處是 `def.range * _altRangeMul(def) * rMul`,而 `rMul` 早在巨砲移除
+    // (重砲窗 BARRAGE.RANGE_F)時就被刪掉 —— 留下的兩處引用是**未宣告變數**,beam 與 missile
+    // 一開火就 ReferenceError,整幀(含射程光暈/彈體更新/渲染)在 _tryFire 當場中斷。
+    const rMul = this._altRangeTo(this._aimTarget(this._maxRange(def)));
+    const rng = def.range * rMul;
+
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
     // 位移懲罰(減速/停止)在 _updatePlayer 依 _recoilMove 夾住;'back' 每發沿槍口反向擊退。
     const fly = this._flying();
@@ -5925,7 +5972,7 @@ export class BattleClient {
     if (def.fan) {
       // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
       // 本地畫扇形彈著(近距密、遠距散),slot 分輕(散彈)/ 重(電漿)。
-      this._fanBlast(muzzle, dir, def);
+      this._fanBlast(muzzle, dir, def, rng);
       this.net.send({ t: 'plasma', dx: dir.x, dz: -dir.z, slot: id });   // three z 南 → 模擬 z 北
       return;
     }
@@ -5936,7 +5983,7 @@ export class BattleClient {
       // 停下來的話回報給伺服器的 len 只到「目標近側表面」,而目標中心在那之後 ⇒ 整發落空,
       // 更別說貫穿後排。與動能貫穿彈(_updateBullets 的 b.pierce)同一條規則:只有地形/障礙才終止。
       const pierce = aoeClass(def) === 'line';
-      const { point, ent, missileId } = this._resolveAim(def.range * this._altRangeMul(def) * rMul, pierce);   // 高度制空(重砲 +20%)
+      const { point, ent, missileId } = this._resolveAim(rng, pierce);   // 高度制空:逐目標有效射程(與射程光暈同一個數字)
       const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
       this.net.send({ t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to: [point.x, point.y, point.z], slot: id, hit: 1 });
       // 直線貫穿一發只過一次 _gateFire ⇒ 來襲飛彈的擊落併進 heroLance 的圓柱掃描,
@@ -5982,7 +6029,7 @@ export class BattleClient {
     // 權威),傷害仍由伺服器驗落點 —— 不涉 A1。
     const locked = this._lockId != null && this.ents.has(this._lockId) ? this._lockId : null;
     const homing = def.type === 'missile'
-      ? (locked ?? this._aimTarget(def.range * this._altRangeMul(def) * rMul)?.id ?? null)
+      ? (locked ?? this._aimTarget(rng)?.id ?? null)
       : null;
     const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
     // 最短距離(軌跡修正期):導引/射後不理武器離架後 arm.m 內導引尚未接手,且帶一次性初期散布
@@ -5994,10 +6041,13 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
       pos: muzzle.clone(), vel: fvel,
-      dist: 0, max: def.range * this._altRangeMul(def), mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
+      dist: 0, max: rng, mesh, origin: muzzle.clone(),   // origin:失鎖判定的圓心(攻擊範圍);高度制空拉遠
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
       mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0, seek: !!arm,
+      // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
+      // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
+      fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -6092,10 +6142,15 @@ export class BattleClient {
       // 失鎖規則(與伺服器 _tickMissiles 同一條):目標/導引點跑出「攻擊範圍」(以發射點為圓心)
       // → 導引失效,之後只沿當下航向直線飛(吃重力),不再追擊。
       let tgt = b.homing ? this.ents.get(b.homing) : null;
-      if (tgt && tgt.mesh.position.distanceTo(b.origin) > b.max) {
+      // 射後不理(2026-08-01 使用者定案)**不吃這條**:鎖定之後一路追到底,射程只管「能不能鎖定」
+      // (客戶端 _tickLock 的 _effRange 閘門 + 伺服器 heroLock 複驗)。失鎖規則因此只剩雷射導引
+      // 那半(下方 b.guide 分支)—— 那是要玩家持續指示的武器,離開射程本來就該失效。
+      if (tgt && !b.fnf && tgt.mesh.position.distanceTo(b.origin) > b.max) {
         b.homing = null; tgt = null;
         this.hud.feed?.('📡 目標脫離射程:飛彈失鎖(直線飛行)');
       }
+      b.age += dt;
+      if (b.fnf && tgt) b.chase = true;   // 曾經以鎖定目標追擊過 ⇒ 射程包絡換成追擊燃料(不可逆:目標中途陣亡也照飛)
       // 最短距離(軌跡修正期):離架 b.arm 公尺內導引/追蹤尚未接手 —— 只吃重力直飛,
       // 離架時的初期散布(_armSpread)因此無法被修正 ⇒ 近距離命中率較低(使用者定案規則)。
       const armed = b.dist >= (b.arm || 0);
@@ -6190,8 +6245,10 @@ export class BattleClient {
       //     (_reachable 的 from.distanceTo(aim))三處**全部**是直線量法;只有這裡拿航跡長。
       //     而導引彈的航跡恆長於直線(離架散布 + 一路修正航向)⇒ 打射程邊緣的目標,彈頭必定在
       //     飛到之前就自毀(實測微型攔截彈滿射程恆差 5.5m,任何轉向率都救不回來)。
+      //   ・射後不理**鎖定後**(b.chase):射程包絡整條讓位給追擊燃料 `chaseCapS`
+      //     (使用者定案「鎖定後持續追擊,不受射程影響」)—— 燃料只是不讓失控彈體永遠留在場上。
       const spent = b.seek ? b.pos.distanceTo(b.origin) : b.dist;
-      const done = hit || spent >= b.max;
+      const done = hit || (b.chase ? b.age >= b.fuel : spent >= b.max);
       if (!done) {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
@@ -7121,7 +7178,7 @@ export class BattleClient {
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const sEff = wetY != null ? wetY
         : (this.terrain.waterY != null ? Math.max(yRef, this.terrain.waterY - WATER.FULL_D) : yRef);
-      this._altAG = this.pos.y - sEff;   // 離基準面高度(與回報 y 同源;高度制空 _altRangeMul 用)
+      this._altAG = this.pos.y - sEff;   // 離基準面高度(與回報伺服器的 y 同源;高度制空 _altRangeTo 的離地框用)
       const lev = inTun ? 2 : onBridge ? 1 : 0;
       this.net.send({
         t: 'pos',

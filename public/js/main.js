@@ -11,7 +11,7 @@ import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME,
-  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER,
+  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
@@ -63,6 +63,34 @@ function bakeWetGrid(t) {
     }
   }
   return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10, cell, cols, rows, data };
+}
+
+/**
+ * 粗高程網格烘烤(2026-08-01 使用者需求「直線攻擊與扇形攻擊要避免隔山打牛」;房主載圖後上傳)。
+ * 伺服器是無地形高程的 2D 平面 —— 沒有這份網格,`heroPlasma`(扇形)與 bot 的直線貫穿就會
+ * 穿山打到山背後的敵人,而客戶端的射程光暈(`hit:'clear'` 逐段淨空)早就說打不到。
+ *
+ * 座標系與 `bakeWetGrid` 完全相同(sim 座標:x = three x、z 北 = −three z),格心取樣;
+ * 高程取**裸地形** `heightAt`(橋面/隧道天花是另一套 slabs,MUST NOT 混進來)。
+ * 編碼走 `data.js hgtEnc` 這個唯一縫(相對 minH 量化成 2 個 ASCII 字元)。
+ */
+function bakeHeightGrid(t) {
+  const spanX = t.maxX - t.minX, spanZ = t.maxZ - t.minZ;
+  const cols = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanX / LOS.HGT_M)));
+  const rows = Math.max(1, Math.min(LOS.HGT_MAX, Math.ceil(spanZ / LOS.HGT_M)));
+  const cell = Math.max(LOS.HGT_M, Math.max(spanX / cols, spanZ / rows));   // 格數被上限夾住時放大格距,涵蓋範圍不縮
+  const minX = t.minX, minZ = -t.maxZ;
+  const minH = Math.floor(t.minH ?? 0);
+  let data = '';
+  for (let i = 0; i < rows; i++) {
+    const sz = minZ + (i + 0.5) * cell;              // sim z(格心)
+    for (let j = 0; j < cols; j++) {
+      const sx = minX + (j + 0.5) * cell;            // sim x = three x
+      data += hgtEnc(t.heightAt(sx, -sz), minH);     // 取樣 three 座標 (sx, −sz)
+    }
+  }
+  return { minX: Math.round(minX * 10) / 10, minZ: Math.round(minZ * 10) / 10,
+    cell: Math.round(cell * 100) / 100, cols, rows, minH, data };
 }
 const DECK_STEP = 2.2;   // 上橋台階(遊戲公尺):低於橋面這麼多以上 = 從橋下走過,不會被吸上橋
 const DECK_MARGIN = 3.0;  // 站立表面側向容差:走位/轉向/後座漂移貼近橋緣仍不掉下橋(上橋更穩);天花碰撞不吃此容差
@@ -1806,7 +1834,9 @@ async function enterLoading(cfg) {
       ].slice(0, LOS.MAX_SLAB);
       // 水沼粗網格(2026-07-19):逐格 terrainEnvCode 烘烤(0 乾 / 1 水 / 2 沼),sim 座標系(z 北 = −three z)。
       // 供伺服器中立單位(平民/第三方)佈點與移動迴避 —— 不涉任何權威傷害(領機水沼效果走客戶端 pos.wet 回報)。
-      app.net?.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs });
+      // hgt = 粗高程網格(2026-08-01):伺服器的稜線遮蔽 —— 沒有它,扇形/直線攻擊會隔山打牛
+      // (客戶端的射程光暈吃 `hit:'clear'` 逐段淨空,早就說打不到)。
+      app.net?.send({ t: 'world', occ, cor, wet: bakeWetGrid(app.terrain), slabs, hgt: bakeHeightGrid(app.terrain) });
     }
     app.net?.send({ t: 'loaded' });
   } catch (e) {

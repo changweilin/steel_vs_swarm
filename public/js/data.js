@@ -464,6 +464,17 @@ export const altScale = (dh) => {
  * 否則客戶端合法地以 `1 + ALTITUDE.RANGE` 拉遠射程打出去的那一發,會在伺服器被判超程靜默丟棄。
  */
 export const altRangeMax = () => 1 + ALTITUDE.RANGE;
+/**
+ * 高度差「射程」乘數的**唯一縫**(伺服器 `sim._altRange` 與客戶端 `game._altRangeTo` 同吃):
+ * 較高的一方 +射程(封頂 +`ALTITUDE.RANGE`),同高/較低 = 1。兩端 MUST NOT 各寫一份曲線。
+ *
+ * `dh` MUST 是**同一個高程參考框**下的兩個視線點高程差。跨框相減是 2026-08-01 使用者回報
+ * 「攻擊範圍異常:沒有射程光暈的敵人也打得到」的病根 —— 英雄回報的 `ay` 是**絕對**高程
+ * (含地形海拔;真實場地動輒數百公尺),而伺服器沒有地形、NPC/塔一律以「離地高 + 基準 0」
+ * 表示 ⇒ 兩者相減等於拿海拔當高度差,`altScale` 直接封頂 = 英雄對**所有** NPC 恆 +25% 射程,
+ * 而客戶端射程光暈量的是本地地形(恆 ≈1)⇒ 光暈與實際結算分家(見 sim._altDh)。
+ */
+export const altRangeF = (dh) => (dh > 0 ? 1 + ALTITUDE.RANGE * altScale(dh) : 1);
 // ---- 射程閘門的網路寬容(2026-07-30 收成單一縫)----
 // 伺服器複驗客戶端回報(命中/落點/射線)時放給網路延遲與彈道飛行時間的倍率。**唯一縫**:
 // sim.js 的每一道射程閘門 MUST 吃這一個值,MUST NOT 各處手寫倍率 —— 逐處手寫的下場是
@@ -1093,7 +1104,7 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // **只放寬不收緊**是刻意的(MUST NOT 改成單純的 `初速 ÷ R_M`,那會讓慢速巡飛彈反而變鈍)。
 // R_M 由掃描定案:200m 是「能讓全部 8 把導引/射後不理武器在 35%~100% 射程全數命中」的**最寬**
 // 值(再放寬 s06 就回歸)⇒ 取最寬 = 對既有手感的擾動最小。伺服器不模擬彈道,bal/duel 不受影響。
-export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200 };
+export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200, CHASE_F: 3 };   // CHASE_F:射後不理鎖定後的追擊燃料 = 滿射程飛行時間 × 此值(見 chaseCapS)
 /** 導引頭每秒最大轉角(rad/s):基礎角速度與「轉彎半徑不超過 R_M」兩個上限取寬者 */
 export const seekTurn = (w, v0) => Math.max(w, (v0 || 0) / SEEK.R_M);
 
@@ -1116,6 +1127,16 @@ export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r ||
 // 不是砲口初速 640m/s;取錯差 6 倍)。
 export const flightCapS = (def) =>
   (def ? def.range * altRangeMax() * RANGE_TOL / shotV0(def) : 0);
+
+// ---- 射後不理的追擊燃料(2026-08-01 使用者定案)----
+// 規則:**鎖定之後持續追擊,不受射程影響 —— 但只能在射程內鎖定**。
+// 「能不能鎖定」吃射程(客戶端 `_tickLock` 的 `_effRange` 閘門 + 伺服器 `heroLock` 複驗射程/
+// 迷霧/LOS);一旦鎖上,彈頭就一路追到底,射程對彈道**不再有任何約束**(A7 的失鎖規則因此
+// 只留給雷射導引與已經失去目標的彈體,見該條)。
+// 燃料上限存在的唯一理由是「不讓失控彈體永遠留在場上」,MUST NOT 拿它當射程的替身:
+// **推導不手寫** = 滿射程飛行時間 × CHASE_F —— 追擊距離因此恆遠大於任何機體在同一段時間內
+// 跑得掉的位移(最快機體 ≈ 20m/s vs 彈頭 90~1000m/s),實務上等同「不受射程影響」。
+export const chaseCapS = (def) => flightCapS(def) * SEEK.CHASE_F;
 
 // ================= 「打得到嗎」逐彈道判定規則(2026-07-30 使用者回報)=================
 // 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。病灶是**射程光暈只量距離**:
@@ -1349,7 +1370,39 @@ export function ccFlashAlpha(left, peak) {
 // MAX_SLAB:上傳橋面/隧道天花薄板段數上限(#1;橋面 deck 段可達數千,取足量)。
 // TUN_CLEAR_M:隧道路面→天花淨空(遊戲公尺)。單一縫:biomes.js 建洞(TUN.CLEAR)與
 // sim.js 飛行體所在層推定(_unitLev:飛行高度 ≥ 淨空 ⇒ 必在山體上方,非洞內)共用。
-export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8 };
+// ---- 地形稜線遮蔽(2026-08-01 使用者需求「直線攻擊與扇形攻擊要避免隔山打牛」)----
+// 伺服器本來是**無地形高程**的 2D 平面:`_losBlocked` 只認上傳的障礙柱(occ)與水平薄板
+// (slabs),山稜完全不存在。客戶端回報型的攻擊(heroHit / heroBurst / heroLance 的射線)
+// 本來就被本端地形截斷過,所以看不出問題;而**伺服器自己選目標**的路徑沒有這道保護:
+//   ・`heroPlasma`(扇形):客戶端只送一個射向,錐內選誰中彈全在伺服器 ⇒ 隔山打牛。
+//   ・`_lanceHits`(直線貫穿)給 bot 用的那條(botFire 自建射線,未經客戶端地形截斷)。
+// 而客戶端的射程光暈對這兩類武器吃的是 `REACH_RULE` 的 `hit:'clear'`(線段整段淨空,含地形)
+//   ⇒ 光暈早就說「打不到」,伺服器照樣扣血 = 又一次「光暈 ⇔ 傷害」分家。
+// 解法沿用既有契約:房主載圖後把**粗高程網格**隨 `t:'world'` 一起上傳(與 occ/slabs/wet 同一條路),
+// 伺服器據此做稜線遮蔽。未上傳(e2e/headless)⇒ 網格不存在 ⇒ 判定 no-op,舊行為逐位元不變。
+//   HGT_M      網格格距(公尺)。地形本體是 193² 頂點 ≈ 27.7m/格(L3),取同級即可 —— 再細只是
+//              放大傳輸量,山稜的尺度遠大於此。
+//   HGT_MAX    每軸格數上限(32 × 256 = 8192m,涵蓋 L3 擴張後的 ~5311m)。
+//   RIDGE_M    認定遮蔽的餘裕:粗網格 + 雙線性內插必然與客戶端的 193² 解析射線有出入,
+//              **偏差方向 MUST 朝「不擋」**(原則 6 寧缺勿錯)—— 地形要高過射線這麼多才算擋,
+//              否則邊界上的合法傷害會被驗證後靜默丟棄(A30 家族),那比偶爾隔山打牛更糟。
+//   RIDGE_SKIP_M 兩端各跳過的長度:射手與目標本來就站在地面上,端點附近地表必然貼著射線,
+//              不跳過就是「每一發都被自己腳下的地擋住」。
+export const LOS = { EYE_M: 2.0, TGT_M: 1.0, TOWER_EYE_M: 14, THRU_M: 3, MAX_OCC: 4000, CELL_M: 64, MAX_SLAB: 6000, TUN_CLEAR_M: 8,
+  HGT_M: 32, HGT_MAX: 256, RIDGE_M: 3, RIDGE_SKIP_M: 24 };
+
+// 粗高程網格的字串編碼(**唯一縫**:main.js 烘烤端與 sim.js 解析端同吃這一組)。
+// 每格 2 個可列印 ASCII 字元 = 12 bit = 4096 階 × HGT_STEP 公尺相對落差(遠超任何戰區的地形起伏),
+// JSON 逐字元 1 byte ⇒ L3 滿版 256² 格約 131KB,與既有的 occ/slabs 上傳同級。
+// MUST NOT 改成非 ASCII 單字元編碼:JSON.stringify 會轉成 \uXXXX,反而膨脹成三倍。
+export const HGT_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+export const HGT_STEP = 1;        // 量化步長(公尺;< RIDGE_M 餘裕 ⇒ 量化誤差吃不進判定)
+export const HGT_LEVELS = 4096;   // = 64²(兩個字元)
+/** 高程 → 2 字元(相對 minH 量化);超出範圍夾住(遠高於頂 = 照樣擋,遠低於底 = 照樣不擋) */
+export const hgtEnc = (h, minH) => {
+  const v = Math.max(0, Math.min(HGT_LEVELS - 1, Math.round(((h - minH) / HGT_STEP) || 0)));
+  return HGT_CHARS[v >> 6] + HGT_CHARS[v & 63];
+};
 
 // ================= 機體實體高度 / 命中量體(2026-07-10 尺度基準;2026-07-23 移入本檔)=================
 // 步兵 = 真人身高 SOLDIER_H,是全遊戲唯一的「身高單位」。人員/載具/建物一律用真實世界
