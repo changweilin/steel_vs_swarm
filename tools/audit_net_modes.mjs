@@ -16,6 +16,7 @@ import {
   LINK_MODES, LINK_MODE_KEYS, DEFAULT_LINK_MODE, netMode, setNetMode,
   wsUrl, modeReady, normalizeCloudUrl, soloOnly,
 } from '../public/js/netmode.js';
+import { readSrc, grabMethod } from './audit_src.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
@@ -57,6 +58,17 @@ ok(!/new\s+BotBrain\b/.test(serverJs), 'server.js MUST NOT 自己 new BotBrain')
 for (const seam of ['startBattle', 'snapshotFor', 'roomListPayload', 'validateBattleConfig']) {
   ok(roomsJs.includes(seam), `rooms.js 保有房間結算縫「${seam}」`);
 }
+// 主堡陣營歸屬 50% 對調(2026-08-01「再戰不換邊」):實作一份、擲點兩個,且都留在房間階段。
+// 原文一律經 audit_src.readSrc(CRLF 工作區的計數才準;見 CLAUDE.md §5 ㋑)。
+const roomsSrc = readSrc('server', 'rooms.js');
+const swapImpl = (roomsSrc.match(/cfg\.bases\.SWARM = cfg\.bases\.STEEL/g) || []).length;
+ok(swapImpl === 1, `主堡對調 MUST 只有一份實作 rollSideSwap(實際 ${swapImpl} 處)`);
+const swapCalls = (roomsSrc.match(/rollSideSwap\(/g) || []).length - 1;   // 扣掉函式定義本身
+ok(swapCalls === 2, `主堡對調 MUST 在「開房」與「再戰回房」各擲一次(實際 ${swapCalls} 處呼叫)`);
+ok(/backToRoom[\s\S]{0,400}?rollSideSwap\(/.test(roomsSrc),
+  '再戰回房 MUST 重擲主堡歸屬(只在開房擲 = 同一間房永遠從同一端開場)');
+ok(!grabMethod(roomsSrc, 'startBattle').includes('rollSideSwap'),
+  '擲點 MUST 留在房間階段,MUST NOT 移進 startBattle(客戶端房間階段的地形預建會整份作廢)');
 const mainJs = read('public', 'js', 'main.js');
 ok(!/\bnew\s+Net\s*\(/.test(mainJs), 'main.js MUST NOT 自己 new Net(傳輸層唯一入口 = makeNet)');
 ok(/makeNet\s*\(/.test(mainJs), 'main.js MUST 經 makeNet() 建傳輸層');

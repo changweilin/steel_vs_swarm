@@ -52,6 +52,24 @@ export function validateBattleConfig(cfg, teamSize) {
 }
 
 /**
+ * 地圖雙邊位置陣營隨機(2026-07-21):50% 機率對調兩主堡的陣營歸屬。同步反轉每條兵線的點序,
+ * 維持 sim 約定「lane[0]≈bases.SWARM 主堡端」;反轉+換標只變點序不動幾何 → 兵線分離/塔位稽核不受影響。
+ * 伺服器定案、隨 battleConfig 廣播全房 → 地形/出生/小地圖全客戶端一致。
+ *
+ * **每一場都要重擲**(2026-08-01 使用者回報「再戰不換邊」):擲點有兩個 —— 開房 + 再戰回房。
+ * 只在開房擲的舊制等於「一間房定終身」,同一間房連打十場都從同一端開場,機制形同不存在。
+ * 擲點 MUST 留在**房間階段**(createRoom / backToRoom),MUST NOT 移到 startBattle:客戶端的
+ * 地形預建是在房間階段依 cfg 的 bases/lanes 起跑的(main.js prebuildKey 兩者都進 key),
+ * 開戰當下才換 cfg = 整份預建作廢,載入畫面得從頭重建地形。
+ * 對調只有這一支實作 —— 兩個擲點各抄一次,改規則必漏改其中一邊(稽核 audit_net_modes.mjs)。
+ */
+function rollSideSwap(cfg) {
+  if (!cfg || Math.random() >= 0.5) return;      // 另外五成:維持原歸屬
+  const t = cfg.bases.SWARM; cfg.bases.SWARM = cfg.bases.STEEL; cfg.bases.STEEL = t;
+  cfg.lanes = cfg.lanes.map((l) => l.slice().reverse());
+}
+
+/**
  * room = {
  *   pin, id, hostId, phase: 'room'|'loading'|'game'|'over',
  *   config: { roomName, isPublic, teamSize, botDiff, ctrl },  // 每陣營 teamSize 席(1~5);
@@ -315,13 +333,7 @@ export class RoomHub {
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
-        // 地圖雙邊位置陣營隨機(2026-07-21):50% 機率對調兩主堡的陣營歸屬。同步反轉每條兵線的點序,
-        // 維持 sim 約定「lane[0]≈bases.SWARM 主堡端」;反轉+換標只變點序不動幾何 → 兵線分離/塔位稽核不受影響。
-        // 伺服器定案一次、隨 battleConfig 廣播全房 → 地形/出生/小地圖全客戶端一致。
-        if (Math.random() < 0.5) {
-          const t = cfg.bases.SWARM; cfg.bases.SWARM = cfg.bases.STEEL; cfg.bases.STEEL = t;
-          cfg.lanes = cfg.lanes.map((l) => l.slice().reverse());
-        }
+        rollSideSwap(cfg);                     // 主堡陣營歸屬 50% 對調(再戰時於 backToRoom 重擲)
         cfg.teamSize = teamSize;
         const pin = hub._genPin();
         client = { send, name: sanitizeName(m.name), side: null, mode: 'player', ready: false, loaded: false, connected: true, token: genToken() };
@@ -524,6 +536,9 @@ export class RoomHub {
         // 回到房間再戰:地圖屬於房間(開房前選定),保留 battleConfig
         hub.stopBattle(room);
         room.battle = null; room.phase = 'room';
+        // 但主堡的陣營歸屬**重擲**:下一場有五成機率換邊(見 rollSideSwap)。
+        // 廣播出去的 sync 帶著新 cfg → 客戶端在房間階段重跑預建(prebuildKey 吃 bases/lanes)。
+        rollSideSwap(room.battleConfig);
         for (const c of room.clients.values()) { c.ready = false; c.loaded = false; }
         hub.broadcast(room);
         return;

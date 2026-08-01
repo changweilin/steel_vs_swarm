@@ -57,12 +57,12 @@ function loadCore(mutate = (s) => s) {
   const body = mutate(climbSrc.slice(P0, P1)).replace(/^export /gm, '');
   return new Function('MAX_BODY_R', 'SLOPE', 'slopeDeg',
     `${body}\nreturn { CLIMB, CLIMB_KIND, CLIMB_LABEL, surfacePoint, attachFaces, climbCandidate,`
-    + ` siteSlopeDeg, climbShare, facilityEndY, planClimbRoutes, makeClimbIndex };`,
+    + ` siteSlopeDeg, slopeRamp, climbShare, highFaceShare, facilityEndY, planClimbRoutes, makeClimbIndex };`,
   )(MAX_BODY_R, SLOPE, slopeDeg);
 }
 const C = loadCore();
 const { CLIMB, CLIMB_KIND, surfacePoint, attachFaces, climbCandidate, planClimbRoutes, makeClimbIndex } = C;
-const { siteSlopeDeg, climbShare, facilityEndY } = C;
+const { siteSlopeDeg, slopeRamp, climbShare, highFaceShare, facilityEndY } = C;
 
 // mulberry32(與 biomes.js 同款;稽核要的是確定性,不是同一個 seed)
 const mulberry32 = (seed) => {
@@ -130,9 +130,10 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   const A = set(plan(base, { seed: 99 })), B = set(plan(short, { seed: 99 }));
   const drop = new Set([3, 17, 42, 88].map((i) => `${base[i].x},${base[i].z}`));
   const same = [...A].filter((k) => !drop.has(k)).every((k) => B.has(k)) && [...B].every((k) => A.has(k));
-  ok(same, '③ 淘汰候選 MUST NOT 擾動其餘抽樣結果(每候選固定 2 枚亂數)');
+  ok(same, '③ 淘汰候選 MUST NOT 擾動其餘抽樣結果(每候選固定 4 枚亂數)');
 
-  const DRAW = '    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n    const linkRoll = rnd();\n';
+  const DRAW = '    const pick = rnd();\n    const phase = rnd() * Math.PI * 2;\n'
+    + '    const linkRoll = rnd();\n    const faceRoll = rnd();\n';
   const lateRnd = loadCore((s) => {
     if (!s.includes(DRAW)) throw new Error('③ 對照組:抽樣區塊原文找不到(改過就要同步改稽核)');
     const GATE = '    const deg = siteSlopeDeg(b, heightAt);\n    if (pick >= climbShare(deg)) continue;';
@@ -225,7 +226,7 @@ console.log('\n=== Ⅰ 路線規劃(執行 climb.js 原文)===');
   // 對照組 = 完整的「舊制」:既不驗淨空、也不挑最空的一側,直接採用起相位的第一個方位
   const noClear = loadCore((s) => s
     .replace('      if (cl < CLIMB.CLEAR_R) continue;', '      // (對照組:淨空檢查已停用)')
-    .replace('      if (!best || cl > best.cl) best = { ...sp, x, z, gy, cl };', '      if (!best) best = { ...sp, x, z, gy, cl };'));
+    .replace('      if (!best || cl > best.cl) best = { ...f, cl };', '      if (!best) best = { ...f, cl };'));
   const bad = noClear.planClimbRoutes({ blockers: list, heightAt: flat, envCodeAt: dry, bounds: BOX, rnd: () => 0 })
     .filter((r) => r.b === B);
   ok(bad.length === 1 && bad[0].nx > -0.9, '⑧ 反向對照:拿掉淨空檢查 MUST 讓梯腳落到被堵的那一側(證明本條真的驗到了)');
@@ -1003,11 +1004,91 @@ console.log('\n=== Ⅸ 抽中機率 ← 地形陡度(越陡越高;不可陡上 =
   }).filter((q) => !q.link).length / list.length;
   ok(bad < 0.4, 'Ⅸ 反向對照:門檻寫死回定值 MUST 讓陡地形掉回三成(證明本條真的驗到了)');
 
-  // ---- ⑤ 量測 MUST NOT 消耗亂數(排在三枚抽樣之後也不能擾動序列;§2.3)----
+  // ---- ⑤ 量測 MUST NOT 消耗亂數(排在四枚抽樣之後也不能擾動序列;§2.3)----
   let draws = 0;
   const counting = () => { draws++; return 0.99; };          // 恆不中 ⇒ 只數抽樣枚數
   planClimbRoutes({ blockers: list, heightAt: ramp(1), envCodeAt: dry, bounds: BOX, rnd: counting });
-  ok(draws === list.length * 3, `Ⅸ 每候選仍固定消耗 3 枚亂數(實測 ${draws} / 期望 ${list.length * 3}）`);
+  ok(draws === list.length * 4, `Ⅸ 每候選仍固定消耗 4 枚亂數(實測 ${draws} / 期望 ${list.length * 4}）`);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n=== Ⅹ 高側取捨:掛在「等高線相對最高那一面」的機率 ← 陡度(最低 0%)===');
+{
+  // ---- ① 曲線:與 climbShare 反向,且共用同一份 slopeRamp(轉折點只准寫一次)----
+  ok(near(highFaceShare(0), 1), 'Ⅹ 平地 = 100%(四面等高,沒有高側可言)');
+  ok(near(highFaceShare(SLOPE.EASE_DEG), 1), 'Ⅹ 平緩帶上限仍 = 100%');
+  ok(near(highFaceShare(SLOPE.BLOCK_DEG), 0), 'Ⅹ 阻擋角 = 0%(使用者要的「最低 0%」)');
+  ok(highFaceShare(SLOPE.BLOCK_DEG * 3) === 0, 'Ⅹ 更陡仍夾在 0%(MUST NOT 變負)');
+  let mono = true;
+  for (let d = 0; d < 60; d += 0.5) if (highFaceShare(d + 0.5) > highFaceShare(d) + 1e-12) mono = false;
+  ok(mono, 'Ⅹ 機率 MUST 隨陡度單調不增(「隨坡度降低」)');
+  ok(near(highFaceShare(-25), highFaceShare(25)), 'Ⅹ 取絕對值:同一道坡從上/從下量 MUST 同機率');
+  let oneRamp = true;
+  for (let d = 0; d <= 90; d += 0.25) {
+    if (!near(highFaceShare(d) + slopeRamp(d), 1) || !near(climbShare(d, 0), slopeRamp(d))) oneRamp = false;
+  }
+  ok(oneRamp, 'Ⅹ 兩支曲線 MUST 同源:highFaceShare + slopeRamp ≡ 1、climbShare(base 0) ≡ slopeRamp');
+  const hfSrc = climbSrc.slice(climbSrc.indexOf('export function highFaceShare'),
+    climbSrc.indexOf('export function facilityEndY'));
+  ok(!/EASE_DEG|BLOCK_DEG/.test(hfSrc),
+    'Ⅹ highFaceShare MUST NOT 自寫轉折點(只准轉呼 slopeRamp;寫第二份調 BLOCK_F 就分家)');
+
+  // ---- ② 行為直測:陡度只來自量測環**之外**,四面落腳點只差 ±0.22m(都遠在 STEP 內)----
+  // ⇒ 四面全合格,唯一的差別就是「哪一面在等高線上最高」(+X)。
+  const box = () => bld(0, 0, 40, 30, 40);
+  const RING = Math.hypot(20, 15) + CLIMB.OFF;
+  const tilt = (k) => (x, z) => 20 + x * 0.01                         // 面與面之間的微高差(定出高側)
+    + (k && x > RING && Math.abs(z) < 20 ? (x - RING) * k : 0);       // 陡度:環外的斜壁(不動落腳點)
+  const hiRate = (k, n = 240) => {
+    let hi = 0, tot = 0;
+    for (let s = 1; s <= n; s++) {
+      const rs = planClimbRoutes({
+        blockers: [box()], heightAt: tilt(k), envCodeAt: dry, bounds: BOX, rnd: mulberry32(s * 7919),
+      });
+      for (const r of rs) { tot++; if (r.nx > 0.9) hi++; }            // nx>0.9 = 掛在 +X(高側)那一面
+    }
+    return tot ? hi / tot : 0;
+  };
+  const degOf = (k) => siteSlopeDeg(box(), tilt(k));
+  const kMid = Math.tan((SLOPE.EASE_DEG + SLOPE.BLOCK_DEG) / 2 * Math.PI / 180);
+  const kSteep = Math.tan((SLOPE.BLOCK_DEG + 8) * Math.PI / 180);
+  ok(degOf(0) < SLOPE.EASE_DEG && degOf(kSteep) > SLOPE.BLOCK_DEG,
+    `Ⅹ 對照地形的陡度落在預期檔位(平緩 ${degOf(0).toFixed(1)}° / 陡 ${degOf(kSteep).toFixed(1)}°)`);
+  const flatHi = hiRate(0), midHi = hiRate(kMid), steepHi = hiRate(kSteep);
+  ok(flatHi > 0.15, `Ⅹ 平緩地形:高側仍照常抽得到(實測 ${(flatHi * 100).toFixed(1)}%,四面均分約 25%)`);
+  ok(steepHi === 0, `Ⅹ 不可陡上的地形:高側 MUST 一次都不出現(實測 ${(steepHi * 100).toFixed(1)}%)`);
+  ok(midHi < flatHi && midHi > steepHi, `Ⅹ 中段落在兩者之間(實測 ${(midHi * 100).toFixed(1)}%)`);
+  // 只排除「最高的那一面」,不是把整個上坡側清掉:陡地形照樣掛得上路線(換一面而已)
+  const steepAny = hiRate(kSteep, 1) === 0 && planClimbRoutes({
+    blockers: [box()], heightAt: tilt(kSteep), envCodeAt: dry, bounds: BOX, rnd: mulberry32(7919),
+  }).length > 0;
+  ok(steepAny, 'Ⅹ 陡地形 MUST 只換一面、不是整棟放棄(高側以外三面照掛)');
+
+  // ---- ③ 四面等高 ⇒ 沒有「最高面」,一律不排除(否則平台上的結構會整棟掛不上)----
+  const plateau = (x, z) => 20 - Math.max(0, Math.hypot(x, z) - RING) * 1.2;   // 平台 + 環外斷崖
+  ok(siteSlopeDeg(box(), plateau) > SLOPE.BLOCK_DEG, 'Ⅹ 對照地形:平台四周斷崖 ⇒ 判為不可陡上');
+  const onPlateau = planClimbRoutes({
+    blockers: [box()], heightAt: plateau, envCodeAt: dry, bounds: BOX, rnd: () => 0.99,
+  });
+  ok(onPlateau.length === 1, 'Ⅹ 四面等高(平台)MUST NOT 排除任何一面 —— 沒有高側,不得整棟掛不上');
+  const noTie = loadCore((s) => s.replace(
+    'const dropHigh = hiY > loY && faceRoll >= highFaceShare(deg);',
+    'const dropHigh = faceRoll >= highFaceShare(deg);'));
+  const tieBad = noTie.planClimbRoutes({
+    blockers: [box()], heightAt: plateau, envCodeAt: dry, bounds: BOX, rnd: () => 0.99,
+  });
+  ok(tieBad.length === 0, 'Ⅹ 反向對照:拿掉「hi > lo」守衛 MUST 讓平台結構整棟掛不上(證明本條真的驗到了)');
+
+  // ---- ④ 反向對照:高側取捨關掉 ⇒ 陡地形照樣掛到最高那一面 ----
+  const noDrop = loadCore((s) => s.replace(
+    'const dropHigh = hiY > loY && faceRoll >= highFaceShare(deg);', 'const dropHigh = false;'));
+  let bad = 0;
+  for (let s = 1; s <= 240; s++) {
+    for (const r of noDrop.planClimbRoutes({
+      blockers: [box()], heightAt: tilt(kSteep), envCodeAt: dry, bounds: BOX, rnd: mulberry32(s * 7919),
+    })) if (r.nx > 0.9) bad++;
+  }
+  ok(bad > 0, 'Ⅹ 反向對照:關掉高側取捨 MUST 讓陡地形又掛回最高那一面(證明本節真的驗到了)');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 攀爬路線稽核:${pass} 通過 / ${fail} 失敗`);

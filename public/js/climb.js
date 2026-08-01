@@ -19,8 +19,8 @@
 //   - 攀爬軸 MUST 落在結構碰撞體**之外** `OFF` 公尺:`game.js _collide` 的推擠半徑上限 =
 //     最大機體高 × SELF_F.groundR = (SOLDIER_H × 2.5) × 0.317 ≈ 1.43m,`OFF` 大於它 ⇒ 攀爬途中
 //     機體本來就不與碰撞盒重疊,**不需要**在 _collide 開任何豁免洞(開了就等於在牆裡走路)。
-//   - 確定性(A4):抽樣 / 方位起相位 / 相鄰相接一律走傳入的 `rnd`(mulberry32),**每個候選固定消耗 3 枚**、
-//     淘汰檢查一律排在抽樣**之後** —— 否則佈局序列會跨客戶端分歧。
+//   - 確定性(A4):抽樣 / 方位起相位 / 相鄰相接 / 高側取捨一律走傳入的 `rnd`(mulberry32),
+//     **每個候選固定消耗 4 枚**、淘汰檢查一律排在抽樣**之後** —— 否則佈局序列會跨客戶端分歧。
 //   - **相鄰相接**(2026-07-28 追加):已掛路線的結構若有相鄰結構,七成機率再架一條把兩者的**頂面**
 //     接起來。那條路線的資料形狀與一般路線**完全相同**(`y0` 換成低者的頂面高、`bx/bz` 換成低頂落腳點)
 //     ⇒ 抓握索引 / 攀爬狀態機 / 提示箭頭一行都不必改。MUST NOT 為它另開第二種路線型別。
@@ -195,21 +195,40 @@ export function siteSlopeDeg(b, heightAt) {
 }
 
 /**
+ * 陡度 → [0,1] 正規化斜率(**全檔唯一一份 ramp**)。轉折點與 `slopeMoveF` 同一組
+ * (MUST NOT 手寫第二套角度):平緩帶(≤ `SLOPE.EASE_DEG`)= 0、阻擋角(`SLOPE.BLOCK_DEG`)= 1,
+ * 更陡夾在 1。取**絕對值**:同一道坡從上/從下量是同一件事。
+ * 三個消費端(抽中機率 / 相鄰相接 / 高側取捨)MUST 全部走這一支 —— 各寫一次,調 `BLOCK_F` 就分家。
+ */
+export function slopeRamp(deg) {
+  return Math.min(1, Math.max(0, Math.abs(deg || 0) - SLOPE.EASE_DEG) / (SLOPE.BLOCK_DEG - SLOPE.EASE_DEG));
+}
+
+/**
  * 抽中機率 ← 地形陡度(2026-07-31 使用者需求:「越陡的地形機率越高,在不可陡上的區域則是 100%」)。
- * 曲線與 `slopeMoveF` **同一組轉折點**(MUST NOT 手寫第二套角度):
- *   平緩帶(≤ `SLOPE.EASE_DEG`)= 基準 `base` —— 這種地形走路就上得去,梯子只是雜訊;
- *   之後線性升到阻擋角 `SLOPE.BLOCK_DEG` = 1(100%)。
- * 「不可陡上」= `slopeBlocked(deg)`(> BLOCK_DEG)⇒ 落在夾制段 ⇒ 恆 1,**由曲線推導**而非
- * 另寫一條 if:兩條路各寫一次,調 BLOCK_F 就會分家(稽核 Ⅸ 直接以 slopeBlocked 逐度反查這條)。
+ *   平緩帶 = 基準 `base` —— 這種地形走路就上得去,梯子只是雜訊;之後線性升到阻擋角 = 1(100%)。
+ * 「不可陡上」(> `SLOPE.BLOCK_DEG`)落在 `slopeRamp` 的夾制段 ⇒ 恆 1,**由曲線推導**而非另寫一條
+ * if:兩條路各寫一次,調 BLOCK_F 就會分家(稽核 Ⅸ 直接以 slopeBlocked 逐度反查這條)。
  *
  * `base` 就是「平地時的那個機率」:地面路線吃 `CLIMB.SHARE`、**相鄰相接**吃 `CLIMB.LINK`
  * (2026-07-31 使用者追加:相鄰結構之間的設施也隨坡度變化)。兩者共用這一支 ⇒ 曲線只有一份,
  * MUST NOT 為相接另寫一條 ramp。
  */
 export function climbShare(deg, base = CLIMB.SHARE) {
-  const d = Math.abs(deg || 0);
-  const k = Math.min(1, Math.max(0, d - SLOPE.EASE_DEG) / (SLOPE.BLOCK_DEG - SLOPE.EASE_DEG));
-  return base + (1 - base) * k;
+  return base + (1 - base) * slopeRamp(deg);
+}
+
+/**
+ * **掛在「等高線相對最高那一面」的機率** ← 地形陡度(2026-08-01 使用者需求:
+ * 「出現在等高線相對最高那一面的機率隨坡度降低,最低 0%」)。與 `climbShare` 是同一條
+ * `slopeRamp` 的反向:平緩帶 = 1(四面等價,不必挑),線性降到阻擋角 = 0(**那一面一律不掛**)。
+ *
+ * 設計語意:高側那一面的地表本來就已經抬到接近頂端,再插一支長梯既沒有攀爬價值、看起來也像
+ * 半截埋在山坡裡;真正需要垂直通道的是**低側**。上限 1 / 下限 0 由曲線兩端推導,MUST NOT 手寫。
+ * 平地(四面等高)沒有「最高面」可言 ⇒ 消費端以「hi > lo」擋在前面,這條曲線不必為它開特例。
+ */
+export function highFaceShare(deg) {
+  return 1 - slopeRamp(deg);
 }
 
 /**
@@ -294,31 +313,44 @@ export function planClimbRoutes({ blockers, heightAt, envCodeAt, bounds, rnd }) 
   const routes = [];
   const linked = new Set();   // 已相接的結構對(高者 → 低者),避免 A→B 與 B→A 生成兩條同樣的路線
   for (const b of list) {
-    // 抽樣紀律(A4/§2.3):**先抽固定 3 枚**(抽中與否、方位起相位、相鄰相接),
-    // 淘汰檢查一律排在抽樣之後。第三枚即使沒掛成路線也照抽 ⇒ 每個候選的消耗量恆定。
+    // 抽樣紀律(A4/§2.3):**先抽固定 4 枚**(抽中與否、方位起相位、相鄰相接、高側取捨),
+    // 淘汰檢查一律排在抽樣之後。後三枚即使沒掛成路線也照抽 ⇒ 每個候選的消耗量恆定。
     const pick = rnd();
     const phase = rnd() * Math.PI * 2;
     const linkRoll = rnd();
+    const faceRoll = rnd();
     if (!climbCandidate(b)) continue;
     // 抽中門檻隨**該地的地形陡度**放寬:平緩帶 = 基準機率,阻擋角(爬不上去)= 100%。
-    // 量測純函式不消耗亂數 ⇒ 排在三枚抽樣之後仍不影響序列(§2.3);
+    // 量測純函式不消耗亂數 ⇒ 排在四枚抽樣之後仍不影響序列(§2.3);
     // 地面路線與**相鄰相接**共用同一份量測(同一個地點只量一次,也保證兩道閘同調)。
     const deg = siteSlopeDeg(b, heightAt);
     if (pick >= climbShare(deg)) continue;
 
     const baseY = heightAt(b.x, b.z);
     const y1 = b.y + b.h;                     // = makeBlockerTopIndex 的頂面高(唯一縫)
-    let best = null;
+    // 先把每一面的落腳點與地表高量出來:「等高線相對最高的是哪一面」要看過全部候選才知道
+    // (逐面邊掃邊比會把「最高」誤判成「目前為止最高」)。出圖界的面不進來 —— 它本來就掛不上,
+    // 讓它參與比較會把真正掛得上的那一面誤標成高側。
+    const faces = [];
     for (const sp of attachFaces(b, phase)) {
       const x = sp.fx + sp.nx * CLIMB.OFF, z = sp.fz + sp.nz * CLIMB.OFF;
       if (x < bounds.minX + 45 || x > bounds.maxX - 45 || z < bounds.minZ + 45 || z > bounds.maxZ - 45) continue;
-      const gy = heightAt(x, z);
-      if (Math.abs(gy - baseY) > CLIMB.STEP) continue;              // 斜坡側:落腳點與基座差太多
-      if (envCodeAt(x, z) !== 0) continue;                          // 水域/沼澤不是「無障礙」
-      const cl = clearance(x, z, b, gy, y1);
+      faces.push({ ...sp, x, z, gy: heightAt(x, z) });
+    }
+    // 高側取捨(2026-08-01 使用者需求):掛在「等高線相對最高那一面」的機率隨陡度降到 0%。
+    // 四面等高(平地/平台)時沒有「最高面」⇒ `hi > lo` 先擋掉,一律不排除任何一面。
+    let hiY = -Infinity, loY = Infinity;
+    for (const f of faces) { if (f.gy > hiY) hiY = f.gy; if (f.gy < loY) loY = f.gy; }
+    const dropHigh = hiY > loY && faceRoll >= highFaceShare(deg);
+    let best = null;
+    for (const f of faces) {
+      if (dropHigh && f.gy >= hiY - 1e-9) continue;                 // 這一面是高側,本次擲骰不掛
+      if (Math.abs(f.gy - baseY) > CLIMB.STEP) continue;            // 斜坡側:落腳點與基座差太多
+      if (envCodeAt(f.x, f.z) !== 0) continue;                      // 水域/沼澤不是「無障礙」
+      const cl = clearance(f.x, f.z, b, f.gy, y1);
       if (cl < CLIMB.CLEAR_R) continue;                             // 被別的建物/巨岩/橋墩擋住
       // 取淨空最大的那一側(嚴格大於 ⇒ 同分時取先掃到的,序列確定)
-      if (!best || cl > best.cl) best = { ...sp, x, z, gy, cl };
+      if (!best || cl > best.cl) best = { ...f, cl };
     }
     if (!best) continue;                                            // 四面都有障礙 → 寧缺勿錯,不掛路線
 
