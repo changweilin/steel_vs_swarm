@@ -120,8 +120,8 @@ sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下
     '客戶端 _altRangeTo 走 data.js altRangeF 這個唯一縫(MUST NOT 自寫第二份曲線)');
   ok(/this\._maxRange\(def\)/.test(methodSrc('_tryFire', G)) && /altRangeMax\(\)/.test(methodSrc('_maxRange', G)),
     '搜尋上限 _maxRange = range × altRangeMax()(= 伺服器 impCap 的誠實界)');
-  ok(/dist: 0, max: rng,/.test(G),
-    '客戶端彈體射程上限 = 這一發的有效射程 rng(2026-08-01 起無重砲窗:巨砲已整組移除)');
+  ok(/max: rng, mesh, origin: muzzle\.clone\(\),/.test(G),
+    '客戶端彈體射程上限 = 這一發的有效射程 rng、球心 = 槍口(2026-08-01 起無重砲窗:巨砲已整組移除)');
   ok(!/\brMul\b/.test(G.replace(/^\s*(\/\/|\*).*$/gm, '')) || /const rMul = this\._altRangeTo\(/.test(G),
     'rMul 若仍出現在可執行原文 MUST 有宣告(巨砲移除後遺留的未宣告變數 = 一開火就 ReferenceError)');
   const burst = methodSrc('heroBurst', S);
@@ -251,13 +251,21 @@ sec('Ⅳ 射程光暈的「打得到」判定:逐彈道分派、五類全覆蓋�
   ok((G.match(/BALLISTIC\.G \* step/g) || []).length === 1,
     'game.js 只有一份彈道積分迴圈(_arcTrace;第二份 = 光暈與虛線分家)');
   const ladder = methodSrc('_lobLadder', G);
-  ok(/this\._arcTrace\(from, this\._lobVel\(from, aim, v\), max, aim, draw\)/.test(ladder),
+  ok(/const lv = this\._lobVel\(from, aim, v\);\n\s+const a = this\._arcTrace\(from, lv, max, aim, draw\);/.test(ladder),
     '_lobLadder 的每一級裝藥都走 _arcTrace(draw 由呼叫端決定寫不寫繪製緩衝)');
+  ok(/const v45 = this\._lob45Vel\(from, aim, base\);/.test(ladder)
+    && /this\._arcTrace\(from, v45, max, aim, draw\)/.test(ladder),
+    '_lobLadder 對地走固定 45° 解,且與裝藥階梯共用同一支 _arcTrace(第二份積分 = 光暈與虛線分家)');
   const aim = methodSrc('_lobAim', G);
   const re = methodSrc('_reachable', G);
   ok(/this\._lobLadder\(/.test(aim) && /this\._lobLadder\(/.test(re),
-    '火控解(_lobAim)與光暈判定(_reachable)吃同一份逐級降裝藥階梯');
+    '火控解(_lobAim)與光暈判定(_reachable)吃同一份火控解(對地 45° / 對空裝藥階梯)');
+  ok(/this\._lobLadder\(from, fc\.aim, max, base, BALLISTIC\.LOB_TOL, true, fc\.aa\)/.test(aim)
+    && /this\._lobLadder\(from, aim, rng, this\._shotV0\(def, aa\), tol, false, aa\)/.test(re),
+    '兩個消費端都把「對空與否」傳進 _lobLadder(漏傳 = 光暈拿另一條彈道回答)');
   ok(!/for \(let k = 0; k < Z\.length/.test(aim), '_lobAim 不再自己跑一次裝藥階梯(已收進 _lobLadder)');
+  ok(!/_lob45Vel/.test(aim) && !/_lob45Vel/.test(re),
+    '45° 解只在 _lobLadder 裡出現一次(消費端各解一次 = 兩份實作)');
   ok(/if \(draw\) this\._ensureArcGuide\(\);/.test(methodSrc('_arcTrace', G)),
     '_arcTrace 只在 draw 時碰繪製緩衝(判定路徑 MUST NOT 踩壞正在顯示的瞄準虛線)');
 }
@@ -290,6 +298,7 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     _shotV0: M('_shotV0'),
     _lobSolve: M('_lobSolve'),
     _lobVel: M('_lobVel'),
+    _lob45Vel: M('_lob45Vel'),
     _arcTrace: M('_arcTrace'),
     _lobLadder: M('_lobLadder'),
     _reachable: M('_reachable'),
@@ -375,7 +384,7 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     ok(overFlat != null,
       `榴彈:存在擋住直射卻打得到的稜線(${overFlat}m)→ 光暈仍亮(拋物線本來就越得過)`);
     ok(overFull != null,
-      `榴彈:存在連全裝藥低伸解都擋住、仍打得到的稜線(${overFull}m)→ 降裝藥階梯確實生效`);
+      `榴彈:存在連全裝藥低伸解都擋住、仍打得到的稜線(${overFull}m)→ 45° 拋投確實抬得比低伸解高`);
     // 最小安全射程內 → 亮但警示(打得到,只是會自損無差別)
     const mr = lobMinRange(def);
     ok(mr > 0, `測試前置:最小安全射程 ${mr.toFixed(1)}m`);
@@ -515,11 +524,8 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
     ok(/core: blastCoreR\(def\)/.test(methodSrc('_tryFire', G)), '核心帶於擊發當下由 blastCoreR 推導一次');
     ok(/const s = l2 > 1e-9/.test(ub) && /Math\.max\(0, Math\.min\(1,/.test(ub),
       '引信量的是**這一幀掃過的線段**上的最近點(夾制在 [0,1];點取樣會被高速彈跨過去)');
-    ok(/const spent = b\.seek \? b\.pos\.distanceTo\(b\.origin\) : b\.dist;/.test(ub),
-      '導引彈的射程包絡量直線(與失鎖判定/伺服器落點閘門/射程光暈三處同一把尺;航跡長恆長於直線)');
-    ok(/seek: !!arm/.test(methodSrc('_tryFire', G)), 'seek 旗標由 armingOf(def) 推導(導引/射後不理才有)');
-    ok(/dist >= max/.test(methodSrc('_arcTrace', G)),
-      '對照:無導引彈(拋物線瞄準虛線)仍量航跡長 —— 弧長本來就該算進射程消耗');
+    ok(/const spent = b\.pos\.distanceTo\(b\.origin\);/.test(ub),
+      '射程包絡量「離發射點的直線距離」(與失鎖判定/伺服器落點閘門/射程光暈三處同一把尺)');
   }
 
   // ---- ⑤ 導引頭轉得過來:轉彎半徑上限只放寬不收緊 ----
@@ -553,7 +559,8 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
     const ub = methodSrc('_updateBullets', G);
     ok(/Math\.max\(20, _TMP_A\.copy\(b\.pos\)\.sub\(ro\)\.dot\(rd\) \+ 40\)/.test(ub),
       '騎波導引點 = 準星射線上、彈體前方 40m(鏡射積分吃同一組數)');
-    ok(/const armed = b\.dist >= \(b\.arm \|\| 0\);/.test(ub), '解保險距離量的是航跡長 b.dist');
+    ok(/const armed = prev\.distanceTo\(b\.origin\) >= \(b\.arm \|\| 0\);/.test(ub),
+      '解保險距離與射程量同一顆球(離發射點的直線距離)');
 
     const sub3 = (a, b2) => [a[0] - b2[0], a[1] - b2[1], a[2] - b2[2]];
     const len3 = (v) => Math.hypot(v[0], v[1], v[2]);
@@ -569,7 +576,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       const v0 = shotV0(def), arm = armingOf(def).m, max = def.range, sp = armingOf(def).spread;
       const eye = [0, 2, 0], tgt = [dist, 2, 0];
       let pos = [...eye], vel = nrm3([Math.cos(sp), Math.sin(sp), 0]).map((x) => x * v0);
-      let travelled = 0, best = Infinity;
+      let best = Infinity;   // 解保險與射程一律量離發射點的直線距離(球面;航跡長已整組退場)
       const dt = 1 / 60;
       const turn = (want, w) => {          // game.js 的 steer():等速改向,每秒最大轉角 w
         const cur = nrm3(vel);
@@ -578,7 +585,7 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
         vel = nrm3(cur.map((c, i) => c + (want[i] - c) * k)).map((x) => x * v0);
       };
       for (let i = 0; i < 20000; i++) {
-        const armed = travelled >= arm;
+        const armed = len3(sub3(pos, eye)) >= arm;
         if (mode === 'home' && armed) {
           turn(nrm3(sub3([tgt[0], tgt[1] + 1.5, tgt[2]], pos)), seekTurn(SEEK.HOME_W, v0));
         } else if (mode === 'guide' && armed) {
@@ -588,10 +595,9 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
         } else vel[1] -= BALLISTIC.G * dt;
         const prev = [...pos];
         pos = pos.map((p, k2) => p + vel[k2] * dt);
-        travelled += len3(sub3(pos, prev));
         best = Math.min(best, segD(prev, pos, tgt));
         if (pos[1] <= 0) break;
-        if ((mode === 'dumb' ? travelled : len3(sub3(pos, eye))) >= max) break;
+        if (len3(sub3(pos, eye)) >= max) break;
       }
       return best;
     };
@@ -932,6 +938,313 @@ sec('Ⅹ 爆炸傷害:射程只限制擴散中心點,擴散範圍不受射程限
   const hp0 = out.hp;
   sim.heroBurst('p_bl', 700, impZ, 0, 0);
   ok(out.hp < hp0, '射程**外**的目標吃到射程內落點的爆風(擴散不受射程限制 —— 使用者定案)');
+}
+
+// =================================================================================
+sec('Ⅺ 榴彈:準星優先 + 對地 45° 拋投 + 射程量直線(2026-08-02 使用者定案)');
+// ---------------------------------------------------------------------------------
+// 使用者四條:①鎖定目標以準星優先(不可以有飛行單位就把瞄準點從準星底下拉走)
+//            ②準星瞄地面敵人 → 投擲角 45°、落點 = 目標瞄準點
+//            ③準星瞄空中敵人 → 維持彈射模式(高初速近直線)
+//            ④中途碰撞就爆、目標移開就繼續飛,超出射程原地爆
+{
+  // ---- ① 準星優先:目標解只有一份,錐形輔助只在準星解不到實體時接手 ----
+  {
+    const aa = methodSrc('_updateAaMode', G);
+    ok(/this\._lobCrosshair\(def\)/.test(aa),
+      '_updateAaMode 的目標來自準星解 _lobCrosshair(與 _lobAim 的瞄準點同一份)');
+    ok(/cross\.ent \? \(TARGET_CLASS\[cross\.ent\.kind\] === 'air' \? cross\.ent : null\)/.test(aa),
+      '準星解到實體 ⇒ 是不是飛行單位就決定進不進彈射模式(地面單位一律不進 = 不被拉走)');
+    ok(/: this\._aaTarget\(this\._maxRange\(def\)\)/.test(aa)
+      && aa.indexOf('_aaTarget') > aa.indexOf('cross.ent ?'),
+      '錐形輔助 _aaTarget 只在準星什麼都沒解到時才接手(舊制無條件吃錐內最正對者)');
+    ok((G.match(/this\._aaTarget\(/g) || []).length === 1, '_aaTarget 只有一個呼叫端');
+    const cross = methodSrc('_lobCrosshair', G);
+    ok(/this\._resolveAim\(this\._maxRange\(def\)\)/.test(cross)
+      && !/this\._resolveAim\(/.test(methodSrc('_lobAim', G)),
+      '榴彈的準星射線只打在 _lobCrosshair 一處(_lobAim 不再自己打一條 = 兩份會分家)');
+    ok(/_lobFc/.test(methodSrc('_aimTarget', G)),
+      '對照:_aimTarget(鎖定 / 追蹤)對 lob 直接吃火控解 ⇒ 瞄準點被拉走 = 鎖定也被拉走');
+  }
+
+  // ---- ②③ 45° 行為直測:落點 = 瞄準點、出膛角恆 45°、對空維持階梯 ----
+  {
+    class V3 {
+      constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+      set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+      clone() { return new V3(this.x, this.y, this.z); }
+      copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
+      addScaledVector(v, s) { this.x += v.x * s; this.y += v.y * s; this.z += v.z * s; return this; }
+      length() { return Math.hypot(this.x, this.y, this.z); }
+      normalize() { const l = this.length() || 1; this.x /= l; this.y /= l; this.z /= l; return this; }
+      distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
+    }
+    const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
+    const env = { THREE: { Vector3: V3 }, BALLISTIC, ARC_MAXP };
+    const M = (n) => pickMethod(n, G, env);
+    const c = {
+      _lobSolve: M('_lobSolve'), _lobVel: M('_lobVel'), _lob45Vel: M('_lob45Vel'),
+      _arcTrace: M('_arcTrace'), _lobLadder: M('_lobLadder'),
+      _layerHitT: () => null,   // 空地:彈道不被截斷
+    };
+    const { def } = heavyOf('lob');
+    const base = shotV0(def, false);
+    const from = new V3(0, 2, 0);
+    let worstAng = 0, worstMiss = 0;
+    for (const L of [20, 60, 120, def.range, def.range * altRangeMax()]) {
+      for (const dy of [-80, -20, 0, 10]) {
+        const aim = new V3(L, 2 + dy, 0);
+        const v = c._lob45Vel(from, aim, base);
+        ok(!!v, `45° 解存在(水平 ${L.toFixed(0)}m / 高差 ${dy}m)`);
+        if (!v) continue;
+        // 出膛角恆 45°
+        worstAng = Math.max(worstAng, Math.abs(Math.atan2(v.y, Math.hypot(v.x, v.z)) - Math.PI / 4));
+        // 落點 = 瞄準點(積分到位;射程給足以隔離射程截斷這個變因)
+        const a = c._arcTrace(from, v, 1e6, aim, false);
+        worstMiss = Math.max(worstMiss, a.minD);
+      }
+    }
+    ok(worstAng < 1e-9, `投擲角逐例恆為 45°(最大偏差 ${(worstAng * 180 / Math.PI).toExponential(1)}°)`);
+    ok(worstMiss <= BALLISTIC.LOB_TOL,
+      `積分落點逐例落在瞄準點的 LOB_TOL 內(最差 ${worstMiss.toFixed(2)}m ≤ ${BALLISTIC.LOB_TOL}m)—— 弧線真的以瞄準點為落點`);
+    // 45° 弧長 > 直線 ⇒ 舊制「扣航跡長」會在抵達之前截斷:這正是改量直線的理由
+    {
+      const aim = new V3(def.range, 2, 0);
+      const v = c._lob45Vel(from, aim, base);
+      const a = c._arcTrace(from, v, def.range, aim, false);
+      ok(a.minD <= BALLISTIC.LOB_TOL,
+        `滿射程 ${def.range}m 的 45° 拋投仍抵達瞄準點(minD ${a.minD.toFixed(2)}m;量航跡長會在 87% 處自爆)`);
+      const far = new V3(def.range * 1.3, 2, 0);
+      const vf = c._lob45Vel(from, far, base);
+      const af = c._arcTrace(from, vf, def.range, far, false);
+      ok(af.cut === 'range' && af.minD > BALLISTIC.LOB_TOL,
+        '超出射程的瞄準點:彈道在射程界原地截斷(cut=range)⇒ 光暈不亮、砲彈原地爆');
+    }
+    // 對地:_lobLadder 真的交出 45°(行為錨 —— 原文斷言擋不住「45° 那一段被繞過」的改法)
+    {
+      const aim = new V3(120, 2, 0);
+      const L = c._lobLadder(from, aim, 400, base, BALLISTIC.LOB_TOL, false, false);
+      ok(L.ok && Math.abs(Math.atan2(L.vel.y, Math.hypot(L.vel.x, L.vel.z)) - Math.PI / 4) < 1e-9,
+        '對地 _lobLadder 交出的出膛角 = 45°(不是低伸解)');
+      ok(L.v0 < base, `對地初速由幾何反解而非全裝藥(${L.v0.toFixed(1)} < ${base}m/s)`);
+      ok(L.high === false, '對地 45° 是標準解(high=false ⇒ 虛線維持陣營色,不是降裝藥的琥珀)');
+    }
+    // 仰角 ≥ 45° 無 45° 解 ⇒ 退回裝藥階梯(低伸解本來就更陡,兩者在 45° 處連續)
+    {
+      const up = new V3(30, 2 + 40, 0);
+      ok(c._lob45Vel(from, up, base) === null, '目標仰角 ≥ 45°(懸崖正上方)⇒ 45° 無解');
+      const L = c._lobLadder(from, up, 400, base, BALLISTIC.LOB_TOL, false, false);
+      ok(L.arc && L.ok, '無 45° 解時退回裝藥階梯,仍打得到(MUST NOT 變成打不到)');
+      ok(Math.atan2(L.vel.y, Math.hypot(L.vel.x, L.vel.z)) > Math.PI / 4,
+        '退回的低伸解仰角比 45° 更陡(曲線連續,不是特例)');
+    }
+    // 對空:維持既有裝藥階梯(高初速近直線),MUST NOT 被 45° 接管
+    {
+      const aim = new V3(120, 60, 0);
+      const aaBase = shotV0(def, true);
+      const L = c._lobLadder(from, aim, 400, aaBase, BALLISTIC.LOB_TOL, false, true);
+      ok(L.ok && Math.abs(L.v0 - aaBase) < 1e-9, '對空彈射:走全裝藥(初速 = AA_MV 夾制值,不被 45° 接管)');
+      ok(Math.atan2(L.vel.y, Math.hypot(L.vel.x, L.vel.z)) < Math.PI / 4,
+        '對空彈道明顯比 45° 平(高速近直線 —— 使用者「空中敵人維持現狀」)');
+    }
+  }
+
+  // ---- ④ 射程 = 以射擊點為中心的球面(與軌跡無關);中途碰撞就爆、沒碰撞就飛到球面原地爆 ----
+  // 使用者 2026-08-02 定案:「射程範圍與軌跡無關,是射擊點為中心的球面」。凡是「這一發還能不能
+  // 再飛」的判定 MUST 只量 |彈頭 − 發射點|;航跡長(弧、導引修正、離架散布繞的路)一律不計。
+  {
+    const ub = methodSrc('_updateBullets', G);
+    const at = methodSrc('_arcTrace', G);
+    const vs = methodSrc('_updateVisShells', G);
+    const fire = methodSrc('_tryFire', G);
+    ok(/const spent = p\.distanceTo\(from\);/.test(at) && /spent >= max/.test(at),
+      '_arcTrace(瞄準虛線/光暈判定)的射程界量離發射點的直線距離');
+    ok(/const spent = b\.pos\.distanceTo\(b\.origin\);/.test(ub),
+      '_updateBullets(自機彈體)的射程界量離發射點的直線距離');
+    ok(/b\.pos\.distanceTo\(b\.origin\) >= b\.max/.test(vs),
+      '_updateVisShells(他人/bot 視覺彈體)同一把尺 —— 兩端看到的射程界一致');
+    // 航跡長已整組退場:一條殘留的 b.dist 就是第二把尺
+    for (const [src, name] of [[ub, '_updateBullets'], [vs, '_updateVisShells'], [fire, '_tryFire']]) {
+      ok(!/\bb\.dist\b|\bdist: 0\b/.test(src.replace(/^\s*(\/\/|\*).*$/gm, '')),
+        `${name} 不再有航跡長 b.dist(射程與軌跡無關 ⇒ 第二把尺 MUST NOT 復辟)`);
+    }
+    ok(!/b\.seek|b\.lob/.test(ub.replace(/^\s*(\/\/|\*).*$/gm, '')),
+      '射程界不再依彈道分支(seek / lob 旗標整組退場 —— 一顆球面管全部)');
+    ok(/const armed = prev\.distanceTo\(b\.origin\) >= \(b\.arm \|\| 0\);/.test(ub),
+      '軌跡修正期(ARMING)也量同一顆球 —— 光暈的琥珀帶 `surf < arm` 本來就是直線量的');
+    ok(/const done = hit \|\| \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\);/.test(ub),
+      '彈體終止條件 = 命中 or 出球面(中途碰撞就爆、沒碰撞就繼續飛;唯一例外 = 射後不理鎖定後的追擊燃料)');
+    ok(/if \(b\.aoe\) \{/.test(ub) && /t: 'burst'/.test(ub),
+      '終止當下一律回報爆點(直擊/落地/射程終點皆引爆 —— 原地爆炸)');
+  }
+
+  // ---- ⑤ 雷射導引吃同一條規則(2026-08-02 使用者定案)----
+  // 「中途碰撞就爆炸,因為目標移動而沒碰撞的話會繼續飛,直到超出射程就原地爆炸」——
+  // 導引失效(導引點出球面)MUST 只是「不再修正航向」,MUST NOT 讓彈體提早消失。
+  {
+    const ub = methodSrc('_updateBullets', G);
+    const guideBlock = /} else if \(armed && b\.guide[\s\S]*?\n      } else \{/.exec(ub)?.[0] || '';
+    ok(guideBlock.length > 0, '_updateBullets 取得雷射導引分支原文');
+    ok(/gp\.distanceTo\(b\.origin\) > b\.max/.test(guideBlock),
+      '雷射導引的失效判據 = 導引點出了同一顆球(MUST NOT 另量航跡長)');
+    ok(/b\.guide = false;/.test(guideBlock) && !/splice|_dropBullet|done = true/.test(guideBlock),
+      '導引失效只關掉導引(彈體照飛到球面才爆 —— MUST NOT 在這裡把彈體收掉)');
+    ok(/b\.vel\.y -= BALLISTIC\.G \* dt;/.test(guideBlock),
+      '導引失效後改吃重力直飛(與 A7「失鎖後直線飛行」同一條)');
+    {
+      const { def } = heavyOf('guide');
+      ok(trajClass(def) === 'guide' && aoeClass(def) === 'blast',
+        `雷射導引是爆炸戰鬥部(${def.name})⇒ 走 b.aoe 的 burst 回報 = 碰撞/出球面都原地爆`);
+      ok(armingOf(def) != null, '雷射導引有軌跡修正期 ⇒ armed 之後才接手導引');
+    }
+  }
+}
+
+// =================================================================================
+sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形)');
+// ---------------------------------------------------------------------------------
+// 使用者 2026-08-02:「基於更改的射程範圍定義,確認包括扇形攻擊在內的所有攻擊符合射程範圍規則」。
+// 本段是那份對帳表的可執行版:每一條會造成傷害的路徑,射程判據 MUST 是
+//   ①**3D 直線距離**(球面,不是水平圓柱、不是航跡長)
+//   ②球心 = **射擊點**(客戶端量槍口 ⇒ 伺服器也要量槍口,否則誠實界沒有寬容可以吸收差額)
+// 具名例外(刻意的水平圓柱)集中在下方 ⑶,每一條都 MUST 附「為什麼 2D 是對的」。
+{
+  // ---- ⑴ 伺服器逐路徑:傷害射程閘量 3D ----
+  {
+    const paths = [
+      ['heroHit', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '單體直擊'],
+      ['heroPlasma', /const d3 = Math\.hypot\(d2, byD - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '扇形(散彈/電漿)'],
+      ['_lanceHits', /d3: Math\.hypot\(tx, tz, ty - oy\)/, '直線貫穿'],
+      ['hitMissile', /const d3 = Math\.hypot\(h\.x - m\.x, h\.z - m\.z, \(h\.y \|\| 0\) - m\.y\);/, '攔截來襲飛彈'],
+      ['botFire', /const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);|const d3 = Math\.hypot\(h\.x - t\.x, h\.z - t\.z, \(h\.y \|\| 0\) - \(t\.hero \? \(t\.y \|\| 0\) : 0\)\);/, '電腦玩家開火'],
+      ['heroLock', /Math\.hypot\(t\.x - h\.x, t\.z - h\.z, ty - \(h\.y \|\| 0\)\)/, '準星鎖定(決定射後不理能不能鎖)'],
+      ['_tickMissiles', /Math\.hypot\(t\.x - m\.ox, \(t\.y \|\| 0\) - \(m\.oy \|\| 0\), t\.z - m\.oz\) > m\.range/, '飛彈失鎖(以發射點為球心)'],
+    ];
+    for (const [m, re, why] of paths) {
+      ok(re.test(methodSrc(m, S)), `${m}(${why})的射程判據量 3D 直線距離(球面)`);
+    }
+    // 爆風擴散刻意無射程(A11)—— 對照組:它不在球面規則的管轄內
+    ok(!/\.range/.test(methodSrc('_blast', S).replace(/^\s*(\/\/|\*).*$/gm, '')),
+      '對照:_blast(爆風擴散)刻意沒有射程閘(射程只限制擴散中心點,A11)');
+  }
+
+  // ---- ⑵ 扇形的球心 = 客戶端回報的槍口(與 heroLance 同一條) ----
+  {
+    const hp = methodSrc('heroPlasma', S);
+    ok(/heroPlasma\(pid, dx, dz, slot = 'heavy', o = null\)/.test(hp),
+      'heroPlasma 收槍口 o(射程球心;與 heroLance 的 o 同一組座標約定)');
+    ok(/dist2d\(h\.x, h\.z, \+o\[0\], \+o\[1\]\) <= 12/.test(hp),
+      '槍口防作弊閘與 heroLance 同一道(不能從任意座標噴一個錐)');
+    ok(/const lead = mz && b === h;/.test(hp) && /const bx = lead \? mz\[0\] : b\.x, bz = lead \? mz\[1\] : b\.z;/.test(hp),
+      '僚機維持各自機體中心(它們沒有槍口回報),只有主視野機吃回報的槍口');
+    ok(/this\._losBlocked\(bx, bz, byE,/.test(hp) && /this\._ridgeBlocked\(bx, bz, this\._absSightY\(b, byE, bx, bz\)/.test(hp),
+      '錐內的 LOS / 稜線射線與射程球心同源(起點分家 = 打得到卻被自己的牆擋住)');
+    ok(/\{ t: 'plasma', dx: dir\.x, dz: -dir\.z, slot: id,/.test(G) && /o: \[Math\.round\(muzzle\.x \* 10\) \/ 10, Math\.round\(-muzzle\.z \* 10\) \/ 10,/.test(G),
+      '客戶端 plasma 回報帶槍口(少送這一欄 = 伺服器退回機體中心 = 邊界帶光暈亮著卻不掉血)');
+    ok(/if \(this\.gunGroup\) this\.gunGroup\.localToWorld\(from\.copy\(this\._muzzle\)\);/.test(methodSrc('_reachable', G)),
+      '對照:客戶端射程光暈 _reachable 量的就是槍口 ⇒ 兩端同一個球心');
+
+    // 行為直測:目標落在「機體量得到 = 超程 / 槍口量得到 = 射程內」那條邊界帶
+    const sim = new BattleSim(fakeCfg());
+    purge(sim);
+    let fanCh = null;
+    for (const id of Object.keys(CHARACTERS)) {
+      const d = heroWeapon(id, 'heavy', 1);
+      if (d && d.fan) { fanCh = { id, def: heroWeapon(id, 'heavy', 1, true) }; break; }
+    }
+    ok(fanCh != null, `測試前置:找得到扇形重武器角色(${fanCh?.id} / ${fanCh?.def?.name})`);
+    const R = fanCh.def.range, OFF = 10;                 // 槍口沿射向前伸 10m(閘門允許到 12m)
+    const side = CHARACTERS[fanCh.id].side === 'STEEL' ? 'STEEL' : 'SWARM';
+    const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
+    const mk = () => {
+      const h = sim.addHero(side, 'p_fan', fanCh.id);
+      h.x = 0; h.z = 0; h.y = 0; h.aiming = true;
+      sim.t += 60;
+      h.ammo.heavy = fanCh.def.mag; h.reloadUntil.heavy = 0; h.fireAt.heavy = -99; h.mp = h.maxMp;
+      return h;
+    };
+    const shoot = (withMuzzle) => {
+      for (const s of [...sim.ents.values()]) if (s.tp || s.hero) sim.ents.delete(s.id);
+      sim.heroes.clear();
+      const h = mk();
+      // 目標:離機體 R+5(超程)、離槍口 R−5(射程內)
+      const t = sim._add({ kind: 'soldier', side: foe, x: 0, z: R + 5 - hitR({ kind: 'soldier' }), y: 0, hp: 999999, maxHp: 999999 });
+      const hp0 = t.hp;
+      sim.heroPlasma('p_fan', 0, 1, 'heavy', withMuzzle ? [0, OFF, 0] : null);
+      return t.hp < hp0;
+    };
+    ok(shoot(true), '帶槍口:離槍口 R−5 的目標掉血(= 客戶端光暈亮的那一格)');
+    ok(!shoot(false), '對照:不帶槍口(bot / 舊版客戶端)退回機體中心 ⇒ 同一個目標超程不掉血');
+  }
+
+  // ---- ⑶ 具名例外:刻意的水平圓柱,每一條都只放寬不收緊 ----
+  // 這四條 MUST 留在名單上:偏差方向一律朝「不擋」(原則 6),2D ≤ 3D ⇒ 永遠不會把
+  // 客戶端已自行夾過球面的合法攻擊靜默丟棄(A30)。要收緊成球面,先解決「伺服器只有離地高、
+  // 沒有絕對高程」這件事(見 _altDh / _absSightY 同一個坑)。
+  {
+    const exceptions = [
+      ['heroBurst', /const dImp = dist2d\(h\.x, h\.z, x, z\);/,
+        '爆點落點閘:回報的 y 是離地高不是絕對高程,算不出 3D;2D ≤ 3D ⇒ 只放寬不誤丟'],
+      ['_acquireTarget', /let d = dist2d\(e\.x, e\.z, t\.x, t\.z\);/,
+        'NPC/塔索敵:高度另有獨立天花板閘(min(range×0.9, GUN_CEIL_M)),改 3D 會與它打架'],
+      ['heroCast', /const d = dist2d\(h\.x, h\.z, x, z\);/,
+        '招式:落點是地面座標(x,z),2D 就是球面在地面的截痕'],
+      ['_decoyBombTarget', /const dist = dist2d\(e\.x, e\.z, d\.x, d\.z\);/,
+        '集束投彈:轟炸機在正上方,BOMB_R 是投彈足跡半徑而非射擊射程'],
+    ];
+    for (const [m, re, why] of exceptions) {
+      ok(re.test(methodSrc(m, S)), `具名例外 ${m} 仍是水平圓柱 —— ${why}`);
+    }
+  }
+
+  // ---- ⑷ 球面是**遊戲空間**球面,不是真實世界球面(2026-08-02 使用者定案)----
+  // 座標系只有一個:x/z/y 全是**遊戲公尺**,三軸等權 ⇒ 直接對原始座標 hypot 就是遊戲空間球面。
+  // 兩個比例尺都在戰鬥層之外一次套完,MUST NOT 滲進任何射程/彈道判定:
+  //   ・`REAL_SCALE`(遊戲世界 = 真實 ×2)只住經緯度→遊戲公尺的邊界(llToMeters / rooms 的 SC_GAME);
+  //   ・`COMBAT_SCALE`(reach 減半)只住 data.js 的統一縮放塊 ⇒ `def.range` 送到判定時already 是遊戲公尺。
+  // 會壞掉的改法:看到「遊戲地形比真實平緩約兩倍」就想在 y 軸乘個補正把球面「拉回真實比例」——
+  // 那會讓射程變成橢球,而客戶端光暈/彈體是純遊戲空間的正球 ⇒ 兩端立刻分家(A30)。
+  {
+    ok(!/REAL_SCALE|COMBAT_SCALE/.test(G),
+      'game.js 全檔無比例尺常數(彈道/射程/光暈全在遊戲空間,MUST NOT 換算回真實世界)');
+    ok(!/COMBAT_SCALE/.test(S), 'sim.js 全檔無 COMBAT_SCALE(def.range 進來就已經是遊戲公尺)');
+    // sim.js 的 REAL_SCALE 只准出現在經緯度換算那一支
+    const realHits = S.split('\n').map((l, i) => [i + 1, l])
+      .filter(([, l]) => /MAPGEO\.REAL_SCALE/.test(l) && !/^\s*(\/\/|\*)/.test(l));
+    ok(realHits.length === 1 && /const s = 1 \/ MAPGEO\.REAL_SCALE;/.test(realHits[0][1]),
+      `sim.js 的 REAL_SCALE 只在 llToMeters(經緯度→遊戲公尺的邊界)出現一次(實得 ${realHits.length} 處)`);
+    for (const m of ['heroHit', 'heroPlasma', 'heroLance', 'heroBurst', '_lanceHits', 'botFire']) {
+      ok(!/REAL_SCALE|COMBAT_SCALE/.test(methodSrc(m, S)), `${m} 的判定內無任何比例尺換算`);
+    }
+
+    // 行為直測:三軸等權 —— 同一段遊戲公尺,擺水平與擺垂直 MUST 同判(正球,不是橢球/圓柱)
+    const sim = new BattleSim(fakeCfg());
+    purge(sim);
+    const { id: fid, def } = heavyOf('flat');           // 直擊武器 → heroHit 路徑
+    const side = CHARACTERS[fid].side === 'STEEL' ? 'STEEL' : 'SWARM';
+    const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
+    const wl = heroWeapon(fid, 'heavy', 1, true);
+    const shoot = (dx, dy) => {
+      sim.heroes.clear();
+      for (const s of [...sim.ents.values()]) if (s.hero) sim.ents.delete(s.id);
+      const h = sim.addHero(side, 'p_sp', fid);
+      h.x = 0; h.z = 0; h.y = 0; h.aiming = true;
+      const t = sim.addHero(foe, 'p_tg', fid);
+      t.x = dx; t.z = 0; t.y = dy;
+      t.hp = 999999; t.maxHp = 999999; t.sp = 0;
+      sim.t += 60;
+      h.ammo.heavy = wl.mag; h.reloadUntil.heavy = 0; h.fireAt.heavy = -99; h.mp = h.maxMp;
+      const hp0 = t.hp;
+      sim.heroHit('p_sp', t.id, 'heavy');
+      return t.hp < hp0;
+    };
+    const D = wl.range * 0.8, OUT = wl.range * 1.6;
+    ok(shoot(D, 0) === shoot(0, D),
+      `射程內 ${D.toFixed(0)} 遊戲公尺:擺水平與擺垂直同判(${shoot(D, 0)})—— 三軸等權`);
+    ok(shoot(OUT, 0) === shoot(0, OUT),
+      `射程外 ${OUT.toFixed(0)} 遊戲公尺:擺水平與擺垂直同判(${shoot(OUT, 0)})`);
+    ok(shoot(D, 0) && !shoot(OUT, 0), '對照:同一把武器射程內打得到、射程外打不到(閘門真的有作用)');
+  }
 }
 
 // ---------------------------------------------------------------------------------
