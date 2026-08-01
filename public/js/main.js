@@ -31,7 +31,9 @@ import { VENUES, venueTip, venueConfig, migrateFavCfg, loadFavorites, saveFavori
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip } from './help.js';
+import { installTips, attachTip, tipHTML } from './tip.js';
+import { npcIconHTML } from './npcicon.js';
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
@@ -197,18 +199,14 @@ function renderLinkModes() {
     b.textContent = `${m.icon} ${m.label}`;   // 鈕面文字的真相在 LINK_MODES(index.html 那份只是版型量測用的副本)
     b.classList.toggle('on', key === cur);
     b.disabled = locked && key !== cur;
+    // 說明改掛在該顆鈕自己的懸浮提示上(常駐文字已移除);單機特化版另補一句「沒有伺服器可連」
+    attachTip(b, locked && key === cur ? `${m.hint} 本站台是靜態單機版,沒有可連線的伺服器。` : m.hint);
     b.onclick = () => {
       if (!setNetMode(key)) return;
       sessionStorage.removeItem('svs_token');   // 舊機制的座位憑證帶到新機制只會換來一則「座位已失效」
       renderLinkModes();
       connectNet();
     };
-  }
-  const hint = $('linkHint');
-  if (hint) {
-    hint.textContent = locked
-      ? `${LINK_MODES[cur].hint} 本站台是靜態單機版,沒有可連線的伺服器。`
-      : LINK_MODES[cur].hint;
   }
   // 雲端才要填節點網址;單機沒有遠端戰區可加入 → 整區收起
   const cloudRow = $('cloudRow');
@@ -844,45 +842,48 @@ function renderRoom() {
     : '等待房主開戰…';
 }
 
-// 電腦玩家難度(整房一個;房主可改,其他人唯讀顯示)
+// 電腦玩家難度(整房一個;房主可改,其他人唯讀顯示)。
+// 2026-07-31 起鈕面與「操作方式」同款分段按鈕(`.seg`/`.segb`)—— 舊的 <select> 在手機上會叫出
+// 系統選單、也與旁邊那一列風格不一;非房主一律 disabled 而不是換成純文字(仍看得見目前選了哪一個)。
 function renderBotDiff(lb) {
   const row = $('botDiffRow');
   if (!row) return;
   const cur = lb.config.botDiff || DEFAULT_BOT_DIFF;
-  if (!app.isHost) {
-    row.textContent = `▣ 電腦難度:${BOT_DIFF[cur]?.name || cur}`;
-    return;
+  row.innerHTML = '<span class="seg seg-sm diff-seg">'
+    + BOT_DIFF_KEYS.map((k) =>
+      `<button class="segb${k === cur ? ' on' : ''}" type="button" data-diff="${k}">${esc(BOT_DIFF[k].name)}</button>`).join('')
+    + '</span>' + tipHTML(uiTip('botDiff', TOUCH_UI()));
+  for (const b of row.querySelectorAll('[data-diff]')) {
+    b.disabled = !app.isHost;
+    b.onclick = () => {
+      const v = b.dataset.diff;
+      savePrefs({ botDiff: v });
+      app.net?.send({ t: 'setRoomConfig', botDiff: v });   // 生效值等伺服器廣播回來,不先斬後奏
+    };
   }
-  row.innerHTML = '▣ 電腦難度:';
-  const sel = document.createElement('select');
-  sel.className = 'diff-select';
-  for (const k of BOT_DIFF_KEYS) {
-    const opt = document.createElement('option');
-    opt.value = k; opt.textContent = BOT_DIFF[k].name;
-    if (k === cur) opt.selected = true;
-    sel.appendChild(opt);
-  }
-  sel.onchange = () => {
-    savePrefs({ botDiff: sel.value });
-    app.net?.send({ t: 'setRoomConfig', botDiff: sel.value });
-  };
-  row.appendChild(sel);
-  const hint = document.createElement('span');
-  hint.className = 'diff-hint dim';
-  hint.textContent = ' ・ 新手:只用輕武器 ・ 低:不用招式 ・ 越低瞄準越差';
-  row.appendChild(hint);
 }
 
 // 操作方式(整房一個;房主可改,其他人唯讀顯示 —— 2026-07-31 使用者定案「由房主選擇」)。
 // 選項 DOM 走 mobile.js 的共用渲染,MUST NOT 在這裡另畫一組按鈕;按下只做「上行 setRoomConfig」,
 // 生效值一律等伺服器廣播回來(onSync → setRoomCtrlMode),客戶端 MUST NOT 先斬後奏。
+// `bare` = 分頁標題已經寫著「操作方式」⇒ 這一列不再重複一次列名。
 function renderRoomCtrl() {
   renderCtrlModeRow($('roomCtrlMount'), {
+    bare: true,
     onPick: (m) => app.net?.send({ t: 'setRoomConfig', ctrl: m }),
     onNotice: toast,
   });
   syncCtrlModeRow(app.isHost);
 }
+
+// 房間設定分頁(電腦難度 ⇄ 操作方式):兩組都是「整房一個、房主可改」,共用一塊版位輪流顯示。
+// 純表現層切換 —— MUST NOT 在這裡碰任何設定值。
+$('roomCfgTabs')?.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-cfg]'); if (!b) return;
+  for (const t of $('roomCfgTabs').querySelectorAll('[data-cfg]')) t.classList.toggle('on', t === b);
+  for (const p of $('roomCfg').querySelectorAll('.room-cfg-page')) p.hidden = p.dataset.cfg !== b.dataset.cfg;
+  app.audio?.ui('click');
+});
 
 // ================= 選角(入座後出現;不選 = 開戰隨機)=================
 const FX_LABEL = {
@@ -1008,7 +1009,7 @@ function charDetailHTML(id) {
         ${charAbilityRow(id, 'skill', 'Q')}
         ${charAbilityRow(id, 'ult', 'E')}
       </div>
-      <div class="cd-foot">數值為 Lv1 → Lv2 → Lv3 → Lv4(戰場金錢升級,開場 Lv1);已含英雄倍率(射程 ×1.2、威力 ×1.5)。</div>
+      <div class="cd-foot">${tipHTML(uiTip('charFoot', TOUCH_UI()))} 數值 Lv1 → Lv4</div>
     </div>
     </div>`;
 }
@@ -1115,8 +1116,8 @@ const CIV_REWARD_ICON = { medkit: '🩹', battery: '🔋', money: '💰' };
 const civProfGrid = () => `<div class="civ-prof-grid">${CIVILIANS.map((c, i) =>
   `<button class="civ-prof-btn ${i === (app.civProf || 0) ? 'on' : ''}" data-civprof="${i}">${c.g === 'F' ? '♀' : '♂'} ${esc(c.name)} ${CIV_REWARD_ICON[c.reward]}</button>`).join('')}</div>`;
 /** 平民陣營子切換(鋼鐵/蜂群;外觀只換貼地光環色) */
-const civFactionToggle = (side) => `<div class="civ-fac-toggle">${['STEEL', 'SWARM'].map((s) =>
-  `<button class="unit-side-btn ${s === side ? 'on' : ''}" data-civfac="${s}">${esc(sideInfo(s).name)}</button>`).join('')}</div>`;
+const civFactionToggle = (side) => `<div class="civ-fac-toggle seg seg-sm">${['STEEL', 'SWARM'].map((s) =>
+  `<button class="segb unit-side-btn ${s === side ? 'on' : ''}" type="button" data-civfac="${s}">${esc(sideInfo(s).name)}</button>`).join('')}</div>`;
 
 /** 建一台展示台(角色 'char' / NPC 'unit' 各一,持久重用):自帶 canvas + shell + CharPreview 實例。
  *  按鈕以 class 定位 + 閉包綁定(兩台 shell 並存,不可用共用 id)。 */
@@ -1362,7 +1363,8 @@ function renderModalPicks() {
   for (const kind of unitRosterOf(side)) {
     const b = document.createElement('button');
     b.className = 'unit-btn' + (app.stages.unit?.subject?.kind === kind && app.stages.unit?.subject?.side === side ? ' on' : '');
-    b.innerHTML = `<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
+    // 圖示走 npcicon.js 單一縫(平塗 SVG 吃 currentColor ⇒ 選取態自動翻深色)
+    b.innerHTML = `${npcIconHTML(kind)}<b>${esc(UNITS[kind].name)}</b><span class="unit-cls">${esc(unitClassLabel(kind))}</span>`;
     b.onclick = () => { app.unitKind = kind; app.unitShown = null; renderUnitGrid(side); showUnitDetail(kind, side); enlargeInModal('unit'); renderModalPicks(); };
     ug.appendChild(b);
   }
@@ -1398,7 +1400,7 @@ const toggleLabel = (sd) => sd === 'CIV' ? '平民' : sideInfo(sd).name;
 const unitRosterOf = (side) => side === 'CIV' ? ['civilian']
   : isThirdSide(side) ? [...new Set(THIRD.COMP[side]), 'bunker'] : UNIT_ROSTER;
 const sideToggleHTML = (side, attr) => UNIT_TOGGLE.map((sd) =>
-  `<button class="unit-side-btn ${sd === side ? 'on' : ''}" data-${attr}="${sd}">${esc(toggleLabel(sd))}</button>`).join('');
+  `<button class="segb unit-side-btn ${sd === side ? 'on' : ''}" type="button" data-${attr}="${sd}">${esc(toggleLabel(sd))}</button>`).join('');
 const UNIT_PROMPT = '<div class="unit-empty">點左側單位查看數值與武器 ・ 點武器列播放攻擊演出(對虛擬目標)。</div>';
 function unitDetailHTML(kind, side) {
   const u = UNITS[kind];
@@ -1412,7 +1414,7 @@ function unitDetailHTML(kind, side) {
       <div class="cd-kit">${kind === 'bunker' ? bunkerNoteRow()
         : kind === 'civilian' ? civFactionToggle(side) + civNoteRow() + civProfGrid()
           : list.map((w, i) => unitWeaponRow(w, i)).join('')}</div>
-      <div class="cd-foot">點武器列播放攻擊演出;拖曳旋轉、滾輪縮放,「放大」開獨立視窗。</div>
+      <div class="cd-foot">${tipHTML(uiTip('unitFoot', TOUCH_UI()))} 操作說明</div>
     </div>
   </div>`;
 }
@@ -2250,6 +2252,7 @@ onCtrlChange(() => {
   syncPauseHelp();
   mountHelp($('helpCats'), $('helpBody'));
   mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));
+  syncTips();          // 提示文字也有鍵鼠 / 搖桿兩版(UI_TIPS 的 pTouch)
   syncTouchSetupBtn();
 });
 
@@ -2267,7 +2270,7 @@ function mountHelp(catsEl, bodyEl) {
     bodyEl.scrollTop = 0;
   };
   catsEl.innerHTML = HELP.map((c, i) =>
-    `<button class="help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI()))}</button>`).join('');
+    `<button class="segb help-cat${i === 0 ? ' on' : ''}" type="button" data-cat="${c.id}">${esc(helpCatLabel(c, TOUCH_UI()))}</button>`).join('');
   catsEl.querySelectorAll('.help-cat').forEach((b) => b.addEventListener('click', () => {
     renderCat(HELP.find((c) => c.id === b.dataset.cat)); app.audio?.ui('click');
   }));
@@ -2275,6 +2278,16 @@ function mountHelp(catsEl, bodyEl) {
 }
 mountHelp($('helpCats'), $('helpBody'));            // 戰場暫停選單
 mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));  // 大廳:設定 / 說明疊層
+
+// ── GUI 懸浮提示(2026-07-31:遊戲內常駐說明一律改成 ⓘ 提示)──
+// index.html 的靜態標記只寫 `data-tipkey`,**文字一律在這裡從 help.js UI_TIPS 取** ——
+// 說明分頁的「介面」類吃的是同一份表,MUST NOT 把說明直接寫進 HTML(那就是兩份會漂的說明)。
+// 動態產生的提示(電腦難度 / 角色卡 / 圖鑑)走 `tipHTML(uiTip(...))`,同一個縫。
+function syncTips() {
+  for (const el of document.querySelectorAll('[data-tipkey]')) attachTip(el, uiTip(el.dataset.tipkey, TOUCH_UI()));
+}
+installTips();
+syncTips();
 
 // ── 大廳:手機操控面板(診斷 + 設定 + 搖桿試玩)──
 // 存在理由:虛擬搖桿與陀螺儀原本只在戰鬥中才摸得到,玩家無法在進場前確認到底有沒有生效。
