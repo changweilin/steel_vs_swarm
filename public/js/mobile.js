@@ -16,6 +16,7 @@ import {
   ctrlScheme, setCtrlScheme, ctrlLocked, ctrlMismatchText, onCtrlChange, usePad, deviceScheme,
   touchCapable, ctrlModeText,
 } from './ctrlmode.js';
+import { tipHTML } from './tip.js';
 
 /* ---------------- 裝置判定 ---------------- */
 // 判定本身住 `ctrlmode.js`(操作方式唯一真相縫):本檔只轉呼,MUST NOT 在這裡再寫一份
@@ -564,6 +565,7 @@ const _modeMounts = [];    // 戰區畫面:操作方式三選一(房主可改)
 let _modeHost = false;     // 我是不是房主(由 main.js `syncCtrlModeRow()` 回報)
 let _modePick = null;      // 房主按下時的上行回呼(main.js 傳:送 setRoomConfig)
 const _esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const _tipDot = (cls) => tipHTML('', cls);
 
 /**
  * **操作方式三選一(整房一致;2026-07-31 使用者定案「由房主選擇」)**。
@@ -582,12 +584,13 @@ export function renderCtrlModeRow(mount, opts = {}) {
 
   const row = document.createElement('div');
   row.className = 'set-row';
-  row.innerHTML = '<span class="set-label">操作方式</span><span class="tset-seg tset-ctrl">'
+  row.innerHTML = (opts.bare ? '' : '<span class="set-label">操作方式</span>')
+    + '<span class="seg seg-sm tset-ctrl">'
     + CTRL_MODE_KEYS.map((m) =>
-      `<button class="tset-segb" type="button" data-ctrl="${m}">${_esc(CTRL_MODES[m].icon)} ${_esc(CTRL_MODES[m].label)}</button>`).join('')
-    + '</span><span class="set-hint tset-ctrl-hint"></span>';
+      `<button class="segb" type="button" data-ctrl="${m}">${_esc(CTRL_MODES[m].icon)} ${_esc(CTRL_MODES[m].label)}</button>`).join('')
+    + '</span>' + _tipDot('tset-ctrl-hint');
   mount.appendChild(row);
-  for (const b of row.querySelectorAll('.tset-segb')) {
+  for (const b of row.querySelectorAll('.segb')) {
     b.addEventListener('click', () => {
       if (!_modeHost) { notice('操作方式由房主決定 —— 整房一致', 4000); return; }
       const m = b.dataset.ctrl;
@@ -622,17 +625,17 @@ export function renderCtrlSettings(mount, opts = {}) {
   const modeRow = document.createElement('div');
   modeRow.className = 'set-row';
   modeRow.innerHTML = '<span class="set-label">操作方式</span>'
-    + '<span class="set-val tset-ctrl-val"></span><span class="set-hint tset-ctrl-hint"></span>';
+    + '<span class="set-val tset-ctrl-val"></span>' + _tipDot('tset-ctrl-hint');
   mount.appendChild(modeRow);
 
   const pickRow = document.createElement('div');
   pickRow.className = 'set-row';
-  pickRow.innerHTML = '<span class="set-label">目前操控</span><span class="tset-seg tset-pick">'
+  pickRow.innerHTML = '<span class="set-label">目前操控</span><span class="seg seg-sm tset-pick">'
     + CTRL_SCHEME_KEYS.map((s) =>
-      `<button class="tset-segb" type="button" data-scheme="${s}">${_esc(CTRL_SCHEMES[s].icon)} ${_esc(CTRL_SCHEMES[s].label)}</button>`).join('')
-    + '</span><span class="set-hint tset-pick-hint"></span>';
+      `<button class="segb" type="button" data-scheme="${s}">${_esc(CTRL_SCHEMES[s].icon)} ${_esc(CTRL_SCHEMES[s].label)}</button>`).join('')
+    + '</span>' + _tipDot('tset-pick-hint');
   mount.appendChild(pickRow);
-  for (const b of pickRow.querySelectorAll('.tset-segb')) {
+  for (const b of pickRow.querySelectorAll('.segb')) {
     b.addEventListener('click', () => {
       if (!setCtrlScheme(b.dataset.scheme)) { notice('本戰區已限定操作方式,遊戲中不可變更 —— 要能隨時切換請請房主改選「不限定」', 5000); return; }
       syncCtrlSettings();
@@ -653,13 +656,13 @@ export function syncCtrlSettings() {
   const warn = ctrlMismatchText();
   // ① 戰區畫面:三選一(房主可改;值恆是伺服器廣播的那一份)
   for (const mount of _modeMounts) {
-    for (const b of mount.querySelectorAll('.tset-ctrl .tset-segb')) {
+    for (const b of mount.querySelectorAll('.tset-ctrl .segb')) {
       b.classList.toggle('on', b.dataset.ctrl === mode);
       b.disabled = !_modeHost;
     }
     const mh = mount.querySelector('.tset-ctrl-hint');
     if (mh) {
-      mh.textContent = (_modeHost ? '整房一致,由你決定 ・ ' : '整房一致,由房主決定 ・ ')
+      mh.dataset.tip = (_modeHost ? '整房一致,由你決定 ・ ' : '整房一致,由房主決定 ・ ')
         + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
     }
   }
@@ -669,16 +672,16 @@ export function syncCtrlSettings() {
     if (mv) mv.textContent = `${CTRL_MODES[mode].icon} ${CTRL_MODES[mode].label}`;
     const mh = mount.querySelector('.tset-ctrl-hint');
     if (mh) {
-      mh.textContent = (locked ? '本戰區由房主指定,整房一致 ・ ' : '我的預設(自己開房時整房沿用;可在戰區畫面變更)・ ')
+      mh.dataset.tip = (locked ? '本戰區由房主指定,整房一致 ・ ' : '我的預設(自己開房時整房沿用;可在戰區畫面變更)・ ')
         + CTRL_MODES[mode].hint + (warn ? ` ${warn}` : '');
     }
-    for (const b of mount.querySelectorAll('.tset-pick .tset-segb')) {
+    for (const b of mount.querySelectorAll('.tset-pick .segb')) {
       b.classList.toggle('on', b.dataset.scheme === scheme);
       b.disabled = mode !== 'any';
     }
     const ph = mount.querySelector('.tset-pick-hint');
     if (ph) {
-      ph.textContent = mode === 'any'
+      ph.dataset.tip = mode === 'any'
         ? `即時切換,不必重新載入。裝置判定為${CTRL_SCHEMES[deviceScheme()].label}。`
         : '已限定操作方式,遊戲中不可變更。';
     }
@@ -702,8 +705,8 @@ export function renderTouchSettings(mount, opts = {}) {
       row.innerHTML = `<span class="set-label">${_esc(d.label)}</span>`
         + `<button class="switch" type="button" role="switch" aria-checked="false" id="${uid(d.key)}"`
         + ` aria-label="${_esc(d.label)}"><span></span></button>`
-        + `<span class="set-hint">${_esc(d.hint || '')}`
-        + `${d.status ? ' ・ 狀態:<b class="tset-stat"></b>' : ''}</span>`;
+        + _tipDot(`tset-hint-${d.key}`)
+        + `${d.status ? '<span class="set-hint">狀態:<b class="tset-stat"></b></span>' : ''}`;
       row.querySelector('.switch').addEventListener('click', async () => {
         const el = document.getElementById(uid(d.key));
         const on = el.getAttribute('aria-checked') !== 'true';
@@ -715,10 +718,10 @@ export function renderTouchSettings(mount, opts = {}) {
         syncTouchSettings();
       });
     } else if (d.type === 'seg') {
-      row.innerHTML = `<span class="set-label">${_esc(d.label)}</span><span class="tset-seg" id="${uid(d.key)}">`
-        + d.opts.map((o) => `<button class="tset-segb" type="button" data-opt="${o}">${_esc(d.optLabel[o])}</button>`).join('')
-        + `</span><span class="set-hint">${_esc(d.hint || '')}</span>`;
-      for (const b of row.querySelectorAll('.tset-segb')) {
+      row.innerHTML = `<span class="set-label">${_esc(d.label)}</span><span class="seg seg-sm" id="${uid(d.key)}">`
+        + d.opts.map((o) => `<button class="segb" type="button" data-opt="${o}">${_esc(d.optLabel[o])}</button>`).join('')
+        + `</span>` + _tipDot(`tset-hint-${d.key}`);
+      for (const b of row.querySelectorAll('.segb')) {
         b.addEventListener('click', async () => {
           TOUCH[d.key] = b.dataset.opt;
           saveTouchPrefs();
@@ -750,9 +753,11 @@ export function syncTouchSettings() {
     for (const d of TOUCH_SETTINGS) {
       const el = document.getElementById(`${mount.id}__${d.key}`);
       if (!el) continue;
+      const dot = mount.querySelector(`.tset-hint-${d.key}`);
+      if (dot && d.hint) dot.dataset.tip = d.hint;
       if (d.type === 'switch') el.setAttribute('aria-checked', TOUCH[d.key] ? 'true' : 'false');
       else if (d.type === 'seg') {
-        for (const b of el.querySelectorAll('.tset-segb')) b.classList.toggle('on', b.dataset.opt === TOUCH[d.key]);
+        for (const b of el.querySelectorAll('.segb')) b.classList.toggle('on', b.dataset.opt === TOUCH[d.key]);
       } else {
         el.value = String(Math.round(TOUCH[d.key] * 100));
         const v = document.getElementById(`${mount.id}__${d.key}_v`);
