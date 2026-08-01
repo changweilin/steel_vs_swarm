@@ -21,6 +21,17 @@ export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 /** 讀原文;換行一律正規化為 `\n`(CRLF / 單獨 CR 檢出的工作區也驗得準) */
 export const readSrc = (...parts) => readFileSync(join(ROOT, ...parts), 'utf8').replace(/\r\n?/g, '\n');
 
+/** 從 `i` 起做大括號配對,回傳到區塊結束為止的原文(grabMethod / grabFn 共用,MUST NOT 各抄一份) */
+const grabAt = (src, i) => {
+  let d = 0, started = false, j = i;
+  for (; j < src.length; j++) {
+    const c = src[j];
+    if (c === '{') { d++; started = true; }
+    else if (c === '}') { d--; if (started && d === 0) { j++; break; } }
+  }
+  return src.slice(i, j);
+};
+
 /**
  * 抽出 class 方法的原文(含大括號區塊)。
  * @param {string} src  已正規化的原文
@@ -29,11 +40,16 @@ export const readSrc = (...parts) => readFileSync(join(ROOT, ...parts), 'utf8').
 export const grabMethod = (src, name) => {
   const i = src.indexOf(`\n  ${name}(`);
   if (i < 0) throw new Error(`找不到 ${name}`);
-  let d = 0, started = false, j = i;
-  for (; j < src.length; j++) {
-    const c = src[j];
-    if (c === '{') { d++; started = true; }
-    else if (c === '}') { d--; if (started && d === 0) { j++; break; } }
-  }
-  return src.slice(i, j);
+  return grabAt(src, i);
+};
+
+/**
+ * 抽出**頂層具名函式**的原文(含大括號區塊);供非 class 的模組(server.js 等)用。
+ * @param {string} src  已正規化的原文
+ * @param {string} name 函式名(以 `\nfunction name(` 定位 —— 零縮排 = 模組頂層)
+ */
+export const grabFn = (src, name) => {
+  const i = src.indexOf(`\nfunction ${name}(`);
+  if (i < 0) throw new Error(`找不到 function ${name}`);
+  return grabAt(src, i);
 };

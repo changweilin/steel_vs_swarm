@@ -9,14 +9,23 @@
 //     客戶端只准經 `makeNet()` 取傳輸層、只准經 `netmode.js` 判斷模式。
 //   ③【佈局鏡射】dev 伺服器與靜態單機版出的 URL 佈局必須一致(`/public/**` + `/server/*.js`),
 //     否則 `data.js` 會被載入兩次(兩份平衡數值),或單機版 import 直接 404。
+//   ④【同時多路徑】區網模式要讓有線 LAN / WiFi / Tailscale 同時都連得進來。壞掉的方式全都是靜默的:
+//     憑證 SAN 凍在第一次生成、介面熱插拔後沒重簽、`--https` 之下明文 http 是死的、
+//     兩個 WebSocketServer 讓心跳只掃到一半的連線 —— 每一條都只有「某一個隊友連不上」看得出來。
 import fs from 'fs';
 import path from 'path';
+import net from 'net';
+import os from 'os';
+import http from 'http';
+import https from 'https';
+import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import WebSocket from 'ws';
 import {
   LINK_MODES, LINK_MODE_KEYS, DEFAULT_LINK_MODE, netMode, setNetMode,
   wsUrl, modeReady, normalizeCloudUrl, soloOnly,
 } from '../public/js/netmode.js';
-import { readSrc, grabMethod } from './audit_src.mjs';
+import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
@@ -168,6 +177,95 @@ ok(/actions\/deploy-pages/.test(allWf), '有 workflow 部署到 GitHub Pages');
 ok(/audit_net_modes\.mjs/.test(allWf), 'CI MUST 跑本稽核(三機制的回歸防線)');
 const installs = [...allWf.matchAll(/npm\s+(?:i|install|add)\s+([^\s\n#]+)/g)].map((m) => m[1]).filter((p) => !p.startsWith('-'));
 ok(installs.length === 0, `workflow MUST NOT 安裝額外 npm 套件${installs.length ? `(發現 ${installs.join('/')})` : ''};唯一依賴 ws,見 /CLAUDE.md A2`);
+
+// ---------------- ⑥ 同時多路徑(有線 LAN / WiFi / Tailscale 一起通)----------------
+console.log('\n▍同時多路徑(server.js 傳輸層)');
+const srvSrc = readSrc('server', 'server.js');
+
+// (a) 單埠雙協定:第一個位元組分流,且**非 TLS 模式維持原路徑**(不為了分流讓 npm start 也繞一層)
+const demuxSrc = grabFn(srvSrc, 'demux');
+ok(/0x16/.test(demuxSrc), 'demux MUST 以第一個位元組 0x16(TLS handshake)分流 http / https');
+ok(/\bunshift\(/.test(demuxSrc), 'demux MUST 把探測位元組 unshift 回串流(交給真正的伺服器解析)');
+ok(!/\.resume\(/.test(demuxSrc),
+  'demux MUST NOT 用 resume() —— TLSSocket 在 nextTick 才補餵已緩衝位元組,先 resume 會把握手第一段流掉(https 連得上但永不回應)');
+ok(/SECURE\s*\?\s*net\.createServer\(demux\)\s*:\s*plainServer/.test(srvSrc),
+  '沒開 TLS MUST 維持 http 伺服器自己 listen(分流層只在 --https 之下才存在)');
+
+// (b) WebSocketServer 只有一份:心跳掃的是 wss.clients,分兩份就有一半死連線回收不掉
+const wssNew = (srvSrc.match(/new\s+WebSocketServer\s*\(/g) || []).length;
+ok(wssNew === 1, `server.js MUST 只有一個 WebSocketServer 實例(實際 ${wssNew} 處;心跳 wss.clients 才涵蓋 ws + wss)`);
+ok(/noServer:\s*true/.test(srvSrc) && /handleUpgrade\(/.test(srvSrc),
+  'WebSocketServer MUST 用 noServer + 兩個 http 伺服器各自轉交 upgrade');
+
+// (c) 憑證 SAN 取聯集:蓋不到才重簽、簽過的名字留著
+const certSrc = grabFn(srvSrc, 'ensureCert');
+ok(/missing\.length === 0/.test(certSrc) && /\.\.\.have/.test(certSrc),
+  'ensureCert MUST 只在「現用位址有沒簽過的」時重簽,且新 SAN = 舊 ∪ 新(位址會來回,簽過的名字 MUST 留著)');
+ok(!/if\s*\(fs\.existsSync\([^)]*\)\s*&&\s*fs\.existsSync\([^)]*\)\)\s*return/.test(certSrc),
+  'ensureCert MUST NOT 退回「有憑證檔就直接用」(之後才上線的路徑永遠蓋不到 = 同時多路徑的頭號病灶)');
+ok(/have\.size\s*\?\s*readCertPair\(\)\s*:\s*null/.test(certSrc),
+  '沒有 openssl 但有舊憑證 MUST 沿用舊的(降級不例外),完全沒有才回 null 讓呼叫端退回 http');
+
+// (d) 介面熱插拔:位址集合一變就重簽並熱換 secure context
+ok(/setSecureContext\(/.test(srvSrc),
+  '位址監看 MUST 熱換 secure context(不然 WiFi/Tailscale 晚一步上線就得重啟伺服器)');
+ok(/if\s*\(!CLOUD\)\s*\{[\s\S]{0,600}?addrSig\(\)/.test(srvSrc), '位址監看 MUST 只在非雲端跑(雲端位址固定且不廣播)');
+ok(/let TS_NAME/.test(srvSrc), 'MagicDNS 名 MUST 可後補(`tailscale up` 常晚於伺服器啟動)');
+
+// (e) 行為直測:起一支真的 server,同一個埠四種打法全通
+const freePort = () => new Promise((res) => {
+  const s = net.createServer();
+  s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); });
+});
+const probeHttp = (mod, port) => new Promise((res) => {
+  const r = mod.request({ host: '127.0.0.1', port, path: '/healthz', rejectUnauthorized: false }, (s) => {
+    let b = ''; s.on('data', (c) => { b += c; });
+    s.on('end', () => { try { res(s.statusCode === 200 && JSON.parse(b).ok === true); } catch { res(false); } });
+  });
+  r.on('error', () => res(false));
+  r.setTimeout(5000, () => { r.destroy(); res(false); });
+  r.end();
+});
+const probeWs = (url) => new Promise((res) => {
+  const w = new WebSocket(url, { rejectUnauthorized: false });
+  const t = setTimeout(() => { w.terminate(); res(false); }, 5000);
+  w.on('open', () => w.send(JSON.stringify({ t: 'listRooms' })));
+  w.on('message', (raw) => { clearTimeout(t); w.close(); try { res(JSON.parse(raw).t === 'rooms'); } catch { res(false); } });
+  w.on('error', () => { clearTimeout(t); res(false); });
+});
+
+const port = await freePort();
+const srv = spawn(process.execPath, [path.join(ROOT, 'server', 'server.js'), '--lan', '--https', '--port', String(port)],
+  { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+let boot = '';
+srv.stdout.on('data', (d) => { boot += d; });
+srv.stderr.on('data', (d) => { boot += d; });
+await new Promise((r) => {
+  const t0 = Date.now();
+  const iv = setInterval(() => {
+    if (/={10,}\s*$/.test(boot.trim()) || Date.now() - t0 > 15000) { clearInterval(iv); r(); }
+  }, 100);
+});
+try {
+  ok(await probeHttp(http, port), `明文 http://127.0.0.1:${port}/healthz 在 --https 之下照樣通(桌機打 IP 被瀏覽器補的就是 http)`);
+  ok(await probeWs(`ws://127.0.0.1:${port}`), 'ws:// 走得到同一個 RoomHub');
+  // 沒有 openssl ⇒ 伺服器已退回 http,TLS 那半沒得驗(降級不例外;此時上面兩項仍 MUST 通過)
+  const secure = /https:\/\/localhost/.test(boot);
+  if (!secure) {
+    console.log('  ⏭  跳過 TLS 半場:此機器沒有 openssl,伺服器已退回 http(見啟動訊息)');
+  } else {
+    ok(await probeHttp(https, port), `同一個埠的 https://127.0.0.1:${port}/healthz 也通(單埠雙協定)`);
+    ok(await probeWs(`wss://127.0.0.1:${port}`), 'wss:// 走得到同一個 RoomHub');
+    // 憑證 MUST 涵蓋當下每一條路徑,不只第一次生成時那幾個
+    const san = JSON.parse(fs.readFileSync(path.join(ROOT, '.certs', 'san.json'), 'utf8'));
+    const ifs = Object.values(os.networkInterfaces()).flat().filter((i) => i.family === 'IPv4' && !i.internal);
+    const uncovered = ifs.map((i) => `IP:${i.address}`).filter((n) => !san.includes(n));
+    ok(san.includes('DNS:localhost') && uncovered.length === 0,
+      `自簽憑證 SAN MUST 涵蓋當下每一個對外 IPv4${uncovered.length ? `(漏:${uncovered.join(', ')})` : `(${ifs.length} 條路徑)`}`);
+  }
+} finally {
+  srv.kill();
+}
 
 console.log(bad === 0 ? '\n🎉 三種連線機制稽核全數通過' : `\n💥 ${bad} 項未通過`);
 process.exit(bad === 0 ? 0 : 1);
