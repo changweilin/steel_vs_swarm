@@ -68,13 +68,14 @@ dist/
 npm run lan          # = node server/server.js --lan --https
 ```
 
-啟動後主機會印出三組網址:
+啟動後主機會印出每一條路徑的網址(附介面名,方便決定哪個網址給哪個隊友):
 
 ```
 本機:      https://localhost:8620
-Tailscale:  https://100.x.y.z:8620
+Tailscale:  https://100.x.y.z:8620      (Tailscale)
 MagicDNS:   https://my-box.tail1234.ts.net:8620
-區網:       https://192.168.1.20:8620
+區網:       https://192.168.1.20:8620   (乙太網路)
+區網:       https://192.168.1.31:8620   (Wi-Fi)
 ```
 
 - **同一個 Wi-Fi**:隊友直接開「區網」那組。
@@ -83,11 +84,24 @@ MagicDNS:   https://my-box.tail1234.ts.net:8620
   不必開防火牆通訊埠、不必固定 IP、不必 port forwarding。
 - 主機找不到 Tailscale 位址時會印提示。偵測方式是介面位址落在 CGNAT 段 `100.64.0.0/10`。
 
+### 同時多路徑:有線 LAN / Wi-Fi / Tailscale 一起通
+上面**每一條路徑都同時有效**,一台主機一個埠,不必為某一條路重跑或改參數:
+
+- **一個埠同時吃 https 與 http**。手機要 https(陀螺儀需要 secure context),桌機直接打
+  `192.168.1.20:8620` 卻會被瀏覽器補成 http —— 分兩個埠等於兩組網址要記,一定有人記錯,
+  所以伺服器看連線的第一個位元組分流(`0x16` = TLS handshake),兩種寫法都連得上同一場戰局。
+- **憑證涵蓋每一條路徑,且會自己補**。自簽憑證的 SAN 會蓋住當下全部區網/Tailscale IP;
+  之後才接上的 Wi-Fi、才 `tailscale up` 的位址,伺服器每 20 秒察覺一次並**重簽 + 熱換**
+  (不用重啟)。簽過的名字會留著取聯集 ⇒ 換回舊網路時隊友不會又被要求按一次憑證例外。
+- **連不上先看防火牆**。區網連不上但 Tailscale 連得上,十之八九是 Windows 防火牆沒放行
+  node 在「私人網路」接受連入(Tailscale 走自己的介面,所以不受影響)。
+
 ### 為什麼要 `--https`
 手機**陀螺儀瞄準只在 secure context 生效**。用 `http://<區網 IP>` 開的話瀏覽器**靜默不派送**
 感測器事件(沒有錯誤、沒有權限提示,就是不動)。`--https` 會用系統 `openssl` 生一張自簽憑證,
 SAN 帶上 localhost + 全部區網/Tailscale IP + MagicDNS 名。首次連線會有一次「不安全連線」警告,
-點「繼續前往」即可,secure context 照樣成立。沒有 `openssl` 就自動退回 http(伺服器照樣起得來)。
+點「繼續前往」即可,secure context 照樣成立。沒有 `openssl` 就自動退回 http(伺服器照樣起得來);
+若已有舊憑證但缺 openssl 無法重簽,會沿用舊憑證並在啟動訊息列出**還蓋不到**的位址。
 
 ### 進階:`tailscale serve`
 想讓隊友連到**有正式憑證**的網址(免掉自簽警告),可以讓 Tailscale 代管 TLS:
