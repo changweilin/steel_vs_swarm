@@ -7167,7 +7167,13 @@ export class BattleClient {
       const gy = wetY != null ? wetY
         : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY - WATER.FULL_D) : gyS);
       this.vy = this.vy ?? 0;
-      const onGround = this.pos.y <= gy + 0.05;
+      // 觸地判定 MUST 吃「本幀地表在腳下掉了多少」(下坡步進落差)——
+      // 走下坡時水平位移先發生、pos.y 仍留在上一幀高度,固定 0.05 容差會讓每一幀都判成騰空:
+      // 蓄力/變形彈射整組失效(charge 甚至在 else 分支被清零)。落差只來自地形(兩端同吃 _surf),
+      // 且只在 vy ≤ 0(沒有正在往上跳)時放行 ⇒ 真正的跳躍上升段不受影響。
+      const stepDrop = Math.max(0, this._surf(px0, pz0, py0) - gyS);
+      const onGround = this.pos.y <= gy + 0.05
+        || (this.vy <= 0 && this.pos.y <= gy + stepDrop + 0.05);
       // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
       if ((this.stunLeft || 0) > 0) {
         this.charge = 0;
