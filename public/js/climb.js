@@ -38,11 +38,13 @@
 
 import * as THREE from 'three';
 import { markShared, envMat } from './toon.js';
-import { SOLDIER_H, HERO_SIZE, SLOPE, slopeDeg } from './data.js';
+import { SOLDIER_H, HERO_SIZE, SLOPE, slopeDeg, selfCollider } from './data.js';
 
-/** 最大機體碰撞半徑(公尺):機種身高上界 × game.js SELF_F.groundR —— OFF 的下界由它推導,MUST NOT 手寫。
+/** 最大機體碰撞半徑(公尺):機種身高上界經 `selfCollider`(碰撞量體唯一縫)—— OFF 的下界由它推導,
+ *  MUST NOT 手寫係數(舊制在本檔抄了一份 0.317,與 game.js/伺服器的碰撞量體會各自漂移)。
  *  也是「設施離結構表面的縫」上限(biomes.js 巨岩正面實測 ATT_GAP):縫 ≤ 機體半徑 ⇒ 機體仍貼著設施 */
-export const MAX_BODY_R = SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])) * 0.317;
+export const MAX_BODY_R =
+  selfCollider(SOLDIER_H * Math.max(...Object.values(HERO_SIZE).map((s) => s.mul[1])), false).r;
 
 export const CLIMB = {
   SHARE: 0.3,        // **平緩帶**的抽中比例(使用者需求「約 3 成」);越陡越高,見 climbShare()
