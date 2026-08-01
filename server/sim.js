@@ -12,6 +12,7 @@ import {
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotV0, blastCoreR,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
+  selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul,
 } from '../public/js/data.js';
@@ -71,6 +72,75 @@ function tunnelSideExit(ix, iz, ox, oz, s) {
   const tD = dd > 0 ? (hw - dpI) / dd : dd < 0 ? (-hw - dpI) / dd : Infinity;   // 離側牆(|d|=hw)之 τ
   if (!(tD < tS)) return 0;                          // 洞口先離開(或未離框)→ 沿軸出洞口
   return ((s[6] | 0) & (dd > 0 ? 1 : 2)) ? 2 : 1;    // 該側開放(gal)→ 柱間穿出;否則穿岩體
+}
+
+// ---------- 實體碰撞幾何(2026-08-02;bot 移動用,與客戶端 `game.js _collide`/`_sweepBlockers` 同式)----------
+// 使用者定案:「電腦玩家的碰撞法則一律跟正常玩家一樣,移動與攻擊都不可穿牆穿越各種物理碰撞的物件」。
+// solid 沿用 occ 的形狀 `[x, z, r, top, hw2, hd2, cs, sn, base?]`:
+//   ・`hw2 > 0` = 有向盒(建物/地標;cs=cos(ry)、sn=−sin(ry),收料時算好,見 setWorld),否則圓柱(r);
+//   ・`top`/`base` = 垂直帶(base 缺省 0 —— 上傳碰撞柱一律由地面起算,與 `_losBlocked` 的 [0,h] 近似同語意)。
+// 兩支幾何函式是客戶端那兩段的**逐行鏡射**:同一顆盒/圓在兩端 MUST 判同一件事,
+// 否則就是「真人撞得到、電腦穿得過」(碰撞版的 A30 兩端分家)。
+const COL_SKIN = 0.3;   // 掃掠夾在進入面之後再退一截,免貼面(與客戶端 _sweepBlockers 同值)
+
+/** push-out:機體圓盤(半徑 myR)與 solid 重疊時,沿最小穿透軸推出的位移;不重疊回 null */
+function solidPush(o, x, z, myR) {
+  if (o[4] > 0) {
+    const cs = o[6], sn = o[7];
+    const rx = x - o[0], rz = z - o[1];
+    const lx = rx * cs + rz * sn, lz = -rx * sn + rz * cs;   // world→local(繞 −ry)
+    const ex = o[4] + myR, ez = o[5] + myR;                  // Minkowski 近似:盒面外擴機體半徑
+    if (Math.abs(lx) >= ex || Math.abs(lz) >= ez) return null;
+    const px = ex - Math.abs(lx), pz = ez - Math.abs(lz);
+    let dlx = 0, dlz = 0;
+    if (px < pz) dlx = lx < 0 ? -px : px; else dlz = lz < 0 ? -pz : pz;
+    return [dlx * cs - dlz * sn, dlx * sn + dlz * cs];       // local→world(繞 +ry)
+  }
+  const dx = x - o[0], dz = z - o[1];
+  const d = Math.hypot(dx, dz);
+  const min = myR + o[2];
+  if (d >= min || d === 0) return null;
+  return [dx / d * (min - d), dz / d * (min - d)];
+}
+
+/** 掃掠:位移 (ax,az)→(bx,bz) 是否**單幀橫越** solid;回傳進入參數 t ∈ (0,1],否則 null。
+ *  終點落在 solid 內的「近半」(fwd < 0)交給 push-out 沿牆滑(手感不變),遠半才夾在進入面。
+ *  `fwd === 0`(終點剛好落在通過中心的平面上)歸**遠半** —— 那一刀的最小穿透軸推出符號由
+ *  `lx < 0 ? …` 決定,正中央等機率推向另一側 = 直接穿過去。客戶端 `_sweepBlockers` 同判。 */
+function solidEnter(o, ax, az, bx, bz, myR) {
+  const dx = bx - ax, dz = bz - az;
+  const fwd = (bx - o[0]) * dx + (bz - o[1]) * dz;
+  if (o[4] > 0) {
+    const cs = o[6], sn = o[7];
+    const ex = o[4] + myR, ez = o[5] + myR;
+    const a0x = (ax - o[0]) * cs + (az - o[1]) * sn, a0z = -(ax - o[0]) * sn + (az - o[1]) * cs;
+    if (Math.abs(a0x) < ex && Math.abs(a0z) < ez) return null;   // 起點已在盒內 → push-out 脫出
+    const b1x = (bx - o[0]) * cs + (bz - o[1]) * sn, b1z = -(bx - o[0]) * sn + (bz - o[1]) * cs;
+    if (Math.abs(b1x) < ex && Math.abs(b1z) < ez && fwd < 0) return null;
+    const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;
+    let tmin = -Infinity, tmax = Infinity;
+    for (const [o0, u, e] of [[a0x, ux, ex], [a0z, uz, ez]]) {
+      if (Math.abs(u) < 1e-9) { if (o0 < -e || o0 > e) return null; continue; }
+      let t1 = (-e - o0) / u, t2 = (e - o0) / u;
+      if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+      if (t1 > tmin) tmin = t1;
+      if (t2 < tmax) tmax = t2;
+    }
+    return (tmax >= tmin && tmin > 0 && tmin <= 1) ? tmin : null;
+  }
+  const R = o[2] + myR;
+  const ox = ax - o[0], oz = az - o[1];
+  if (ox * ox + oz * oz <= R * R) return null;                   // 起點已在圓內 → push-out 脫出
+  const e1x = bx - o[0], e1z = bz - o[1];
+  if (e1x * e1x + e1z * e1z <= R * R && fwd < 0) return null;
+  const len2 = dx * dx + dz * dz;
+  if (len2 < 1e-9) return null;
+  const c = ox * ox + oz * oz - R * R;
+  const B2 = 2 * (ox * dx + oz * dz);
+  const disc = B2 * B2 - 4 * len2 * c;
+  if (disc < 0) return null;
+  const t0 = (-B2 - Math.sqrt(disc)) / (2 * len2);
+  return (t0 > 0 && t0 <= 1) ? t0 : null;
 }
 
 export class BattleSim {
@@ -537,6 +607,100 @@ export class BattleSim {
       else { j += stepJ; tMaxJ += tDJ; }
     }
     return false;
+  }
+
+  /**
+   * 這一段位移附近、與機體垂直帶重疊的 solid 清單(broad-phase)。
+   * 兩個來源,對應客戶端 `_collide` 的兩個迴圈:
+   *   ① `terrain.blockers` ⇒ 房主上傳的碰撞柱 `worldOcc`(建物有向盒 / 神木・巨岩・橋墩圓柱)。
+   *      查詢走 `_losGrid`(同一份格網,LOS 與碰撞本來就是同一組實體 —— MUST NOT 另建第二份索引);
+   *      未上傳世界(e2e / headless)⇒ 沒有格網,只剩下面的實體來源,舊行為不變。
+   *   ② `ents` 有碰撞量體者 ⇒ 塔/主堡/戰車/裝甲車/步兵(`COLLIDE_KINDS` 同一份鍵集)+ 英雄
+   *      + 阻擋型障礙(`HAZARDS[kind].block`)。
+   * 跨格重複登記的柱會被重複收進來(冪等:push-out 第二次就已在外、掃掠取同一個 t)——
+   * 與 `_losBlocked` 同一條紀律:MUST NOT 為了去重配置 Set(8Hz 熱路徑的 minor GC 更貴)。
+   */
+  _solidsNear(self, ax, az, bx, bz, myR, yBot, yTop) {
+    const out = [];
+    const span = (top, base) => yBot < top - 0.1 && yTop > base;   // 垂直帶重疊(閾值同客戶端)
+    const pad = myR + 4;
+    const minX = Math.min(ax, bx) - pad, maxX = Math.max(ax, bx) + pad;
+    const minZ = Math.min(az, bz) - pad, maxZ = Math.max(az, bz) + pad;
+    if (this._losDirty) { this._losDirty = false; this._rebuildLosGrid(); }   // 障礙被擊毀後的懶重建
+    const grid = this._losGrid;
+    if (grid) {
+      const C = LOS.CELL_M;
+      const i1 = Math.floor(maxX / C), j1 = Math.floor(maxZ / C);
+      for (let i = Math.floor(minX / C); i <= i1; i++) {
+        for (let j = Math.floor(minZ / C); j <= j1; j++) {
+          const arr = grid.get((i + 32768) * 65536 + (j + 32768));
+          if (!arr) continue;
+          for (const o of arr) if (span(o[3], 0)) out.push(o);
+        }
+      }
+    }
+    for (const e of this.ents.values()) {
+      if (e === self || e.gar || e.hp <= 0 || (e.hero && e.dead)) continue;
+      if (e.pid != null && e.pid === self.pid) continue;   // 自己的僚機不碰撞(客戶端同判)
+      let r, top, base = 0;
+      const haz = HAZARDS[e.kind];
+      if (e.neutral && haz?.block) {
+        if (grid) continue;                                // 已隨 _rebuildLosGrid 進了格網
+        r = haz.r * (e.sc || 1); top = haz.hgt || 6;
+      } else if (e.hero || COLLIDE_KINDS.includes(e.kind)) {
+        r = hitR(e); [base, top] = this._bodySpan(e);   // 命中量體 = 碰撞量體(同一把尺)
+      } else continue;
+      // bbox 篩選 MUST 帶上**該實體自己的半徑**(所以排在算出 r 之後)—— 只比中心點的話,
+      // 20m 半徑的主堡站在 22m 外就被篩掉 = 從主堡牆裡穿過去(半徑越大的越容易漏,
+      // 而那正好是最該擋的那些)
+      if (e.x < minX - r || e.x > maxX + r || e.z < minZ - r || e.z > maxZ + r) continue;
+      if (span(top, base)) out.push([e.x, e.z, r, top, 0, 0, 0, 0, base]);
+    }
+    return out;
+  }
+
+  /**
+   * 機體 vs 世界的實體推擠(**唯一縫**;2026-08-02 使用者定案「電腦玩家的碰撞法則一律跟正常
+   * 玩家一樣,移動與攻擊都不可穿牆穿越各種物理碰撞的物件」)。舊制 bot 直接寫 `h.x/h.z`,
+   * 只在 `_push` 繞開 `hazBlockers`(而且交戰/撤退兩段連那個都沒有)⇒ 電腦玩家從建物中間穿過去。
+   *
+   * 流程與幾何逐條鏡射客戶端 `game.js _collide` + `_sweepBlockers`(真人座機的權威版本):
+   *   ・量體走 `selfCollider`(data.js 唯一縫;兩端各寫一份係數 = 真人撞得到、電腦穿得過);
+   *   ・垂直閘:伺服器無地形高程 ⇒ 上傳碰撞柱一律視為 [0, top] 柱(同 `_losBlocked` 的近似),
+   *     機體底高過柱頂就飛得過去(無人機飛越屋頂,與客戶端同語意);
+   *   ・先掃掠(單幀橫越 → 夾在進入面,防高速擊退/大 dt 穿牆)、再 push-out 至多 3 趟
+   *     (密集街廓單趟可能把機體從 A 推進 B)。
+   * 位置寫回由呼叫端負責(bots.js `_move` 是唯一呼叫端);回傳夾制後的 `[x, z]`。
+   */
+  solidResolve(e, ax, az, nx, nz, fly) {
+    const col = selfCollider(hitH(e), fly);
+    const y = e.y || 0;
+    const sol = this._solidsNear(e, ax, az, nx, nz, col.r, y + col.bot, y + col.top);
+    if (!sol.length) return [nx, nz];
+    let x = nx, z = nz;
+    const dx = nx - ax, dz = nz - az;
+    const len = Math.hypot(dx, dz);
+    if (len > 1e-3) {
+      let bestT = Infinity;
+      for (const o of sol) {
+        const t = solidEnter(o, ax, az, nx, nz, col.r);
+        if (t != null && t < bestT) bestT = t;
+      }
+      if (bestT < Infinity) {
+        const t = Math.max(0, bestT - COL_SKIN / len);   // 夾在前緣(留 skin,不越回起點之前)
+        x = ax + dx * t; z = az + dz * t;
+      }
+    }
+    for (let pass = 0; pass < 3; pass++) {
+      let moved = false;
+      for (const o of sol) {
+        const p = solidPush(o, x, z, col.r);
+        if (!p) continue;
+        x += p[0]; z += p[1]; moved = true;
+      }
+      if (!moved) break;
+    }
+    return [x, z];
   }
 
   /** 射手眼高(離地):塔的砲位過半塔身,能越過矮牆射擊 */
@@ -2916,6 +3080,15 @@ export class BattleSim {
   _hurtLog(t, by, dealt) {
     if (!t.hero || t.dead || !(dealt > 0)) return;
     if (!by || by.x == null || by.z == null) return;   // 環境傷害(沼澤/火場/地雷)無攻擊者方位 ⇒ 不濺血
+    // 電腦玩家的**受擊警戒**(2026-08-02 使用者定案「其他方向敵人來襲視角要跟著轉向」):
+    // bot 的視野是前方錐(bots.js `_acquire`)⇒ 背後挨打時它看不到攻擊者、也就永遠不會轉身。
+    // 這裡是全伺服器唯一知道「被誰從哪裡打」的地方,順手把方位交給 AI —— MUST NOT 在 bots.js
+    // 另開一份記帳(第二份必定與濺血這份分家)。掛在**主視野機**上(BotBrain 只操控它),
+    // 但**僚機挨打也算**(整組小隊在同一個位置,打僚機就是打這一隊)⇒ 排在下面的主視野機閘之前。
+    if (isBotId(t.pid)) {
+      const lead = this.heroes.get(t.pid);
+      if (lead && !lead.dead) lead._alert = { x: by.x, z: by.z, t: this.t };
+    }
     // 只記**主視野機**:玩家看到的血量落差(受傷暈影)本來就只認這一架,僚機挨打不該噴在座艙玻璃上。
     // 同時保證 `_flushHurt` 走 `heroes` 就能收乾淨(掛在僚機上的帳沒有 flush 點,會一路累積)。
     if (this.heroes.get(t.pid) !== t) return;

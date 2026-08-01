@@ -1552,6 +1552,31 @@ export function hitR(e) {
   return TARGET_R[`creep:${e.kind}`] ?? TARGET_R[e.kind] ?? SOLDIER_H * 0.5;
 }
 
+// ---- 自機碰撞量體(2026-08-02 由 game.js 移入本檔)----
+// 住 data.js 的理由與 hitR/hitH 相同:**伺服器也要用**。使用者定案「電腦玩家的碰撞法則一律跟
+// 正常玩家一樣」⇒ bots.js 的移動走 `sim.solidResolve`,那支是客戶端 `_collide` 的鏡像,
+// 兩端各寫一份係數就是「真人撞得到、電腦穿得過」(A30 家族的移動版)。
+// climb.js 的 `MAX_BODY_R` 也 MUST 吃這一份(舊制在該檔手抄 0.317)。
+// 係數校準自舊制觀感:robot 6m → myR 1.9 / eye 3.4、drone 3m → myR 1.6。
+export const SELF_F = {
+  groundR: 0.317, groundTop: 0.70, eye: 0.567,
+  flyR: 0.533, flyBot: 0.267, flyTop: 0.40,
+};
+/**
+ * 自機碰撞圓柱(**唯一縫**;客戶端 `game.js _collide`/`_sweepBlockers` 與伺服器
+ * `sim.solidResolve` MUST 同吃這一支)。`H` = 機體實高(heroTargetH);`fly` = 飛行型態。
+ * `bot`/`top` 是相對機體 y 的**偏移**(飛行型態的機腹在 y 之下)⇒ 垂直帶 = [y+bot, y+top]。
+ */
+export const selfCollider = (H, fly) => ({
+  r: H * (fly ? SELF_F.flyR : SELF_F.groundR),
+  bot: fly ? -H * SELF_F.flyBot : 0,
+  top: H * (fly ? SELF_F.flyTop : SELF_F.groundTop),
+});
+// 「會擋住座機」的機種(客戶端 `COLLIDER` 與伺服器 `solidResolve` 同吃這一份鍵集)。
+// MUST NOT 隨 TARGET_R 增列而擴張 —— 那會讓直升機/碉堡突然開始擋路;量體本身則永遠由
+// hitR/hitH 推導,與命中判定同步。英雄不在此表(體型綁角色,逐機由 hitR/hitH 動態推導)。
+export const COLLIDE_KINDS = ['base', 'tower', 'tank', 'apc', 'soldier'];
+
 // ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----
 // 擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。升級全改「金錢階梯單價」(隨等級遞增,見 ECON.UPGRADES / upgradePrice)。
 export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
@@ -3127,6 +3152,28 @@ export const DEFAULT_BOT_DIFF = 'medium';
 export const botDiffOf = (key) => BOT_DIFF[key] || BOT_DIFF[DEFAULT_BOT_DIFF];
 /** 某難度下某類操作的最短切換間隔(秒);未列名的操作 = 一次基本操作(× 1) */
 export const botOpGap = (D, op) => (D?.gap ?? BOT_DIFF[DEFAULT_BOT_DIFF].gap) * (BOT_OPS[op] ?? 1);
+
+// ---- 電腦玩家視野(2026-08-02 使用者定案)----
+// 需求原文:「電腦應該要跟玩家一樣只有前方特定角度範圍的視野,其他方向敵人來襲視角要跟著轉向,
+// 不可以有全角度視野」。舊制 bot 的 `_acquire` 只吃「射程 + 迷霧 + LOS」⇒ 正背後的敵人照樣鎖得到
+// (**全角度視野**),而真人只看得到螢幕上那一塊 —— 這是 bot 相對真人最不公平的一項優勢。
+//
+// **只限水平**:bot 沒有俯仰狀態(`h.ry` 是它唯一的視角欄位),垂直錐無從量起;硬套一份垂直角
+// 只會讓巡航高度的無人機對正下方的目標整批失明(原則 6 寧缺勿錯)。
+//
+// **半視角推導不手寫**:相機吃的 `UNITS[kind].fov` 是**垂直**視角,畫面的水平半視角 =
+// `atan(tan(fov/2) × 寬高比)`(與 game.js 濺血方位的 `halfH` 同一條式子)。bot 沒有畫面 ⇒
+// 寬高比取寬螢幕基準 `ASPECT`;窄螢幕的真人只會看得更少,取寬 = 偏差一律朝「不苛刻 bot」。
+//
+// 轉頭速度**不另立常數**:一律走 `viewLockStep`(真人視野鎖定輔助的同一支角速度上限)——
+// 「跟玩家一樣」包含「不能瞬間回頭」,bots.js MUST NOT 手寫 rad/s。
+export const BOT_VIEW = {
+  ASPECT: 16 / 9,   // 基準畫面寬高比(bot 沒有畫面,取寬螢幕)
+  ALERT_S: 4,       // 受擊警戒:被視野外的敵人打中之後,朝彈著方向轉頭的持續秒數
+};
+/** 電腦玩家的水平半視角(弧度):看得見 = 目標方位與機體朝向的夾角 ≤ 這個值 */
+export const botFovHalf = (kind) =>
+  Math.atan(Math.tan((UNITS[kind]?.fov ?? 68) * Math.PI / 360) * BOT_VIEW.ASPECT);
 
 // ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
 export const ENV = {

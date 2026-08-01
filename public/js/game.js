@@ -16,6 +16,7 @@ import {
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, camSmoothF, camAngleStep,
+  SELF_F, selfCollider, COLLIDE_KINDS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -71,11 +72,7 @@ const heroCollider = (kind, ch) => ({
   r: hitR({ hero: true, kind, ch }),
   h: heroTargetH(kind, ch) * 1.08,
 });
-// 自機碰撞/視點的身高比例(同樣校準自舊制:robot 6m→myR 1.9 / eye 3.4、drone 3m→myR 1.6)
-const SELF_F = {
-  groundR: 0.317, groundTop: 0.70, eye: 0.567,
-  flyR: 0.533, flyBot: 0.267, flyTop: 0.40,
-};
+// 自機碰撞/視點的身高比例:2026-08-02 起住 data.js(伺服器的 bot 碰撞吃同一份 —— 見 selfCollider)
 // FPV 視點 = 該機體「駕駛艙/頭艙」在自身幾何上的實際位置(2026-07-12):
 //   e = 佔機體實高的比例(舊制全機種一律 0.567 = 人形胸腔,套到水平體軸的獸型就成了「從肚子看出去」)
 //   f = 沿正面方向(-z)前移的比例 —— 水平體軸的獸首遠在身前,人形機甲的頭則幾乎在正上方。
@@ -2273,8 +2270,7 @@ export class BattleClient {
   // 鍵集 = 「會擋住玩家座機」的機種,MUST NOT 隨 TARGET_R 增列而擴張(那會讓直升機/碉堡
   // 突然開始擋路);量體本身則永遠與命中判定同步。
   static COLLIDER = Object.fromEntries(
-    [['base', 'STEEL'], ['tower'], ['tank'], ['apc'], ['soldier']].map(([kind, side]) =>
-      [kind, { r: hitR({ kind, side }), h: hitH({ kind, side }) }]),
+    COLLIDE_KINDS.map((kind) => [kind, { r: hitR({ kind, side: 'STEEL' }), h: hitH({ kind, side: 'STEEL' }) }]),
   );
 
   /** 自機機體實高(公尺):碰撞圓柱與座艙視點高度一律由它推導 */
@@ -2487,10 +2483,12 @@ export class BattleClient {
   /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
   _collide(px0, pz0) {
     const fly = this._flying();
-    const H = this.selfH;
-    const myR = H * (fly ? SELF_F.flyR : SELF_F.groundR);
-    const myBot = this.pos.y - (fly ? H * SELF_F.flyBot : 0);
-    const myTop = this.pos.y + H * (fly ? SELF_F.flyTop : SELF_F.groundTop);
+    // 碰撞量體:與伺服器的 bot 碰撞(sim.solidResolve)MUST 同吃 selfCollider —— 兩端各寫一份
+    // 半徑/垂直帶就是「真人撞得到、電腦穿得過」(2026-08-02 使用者定案「碰撞法則一律一樣」)
+    const col = selfCollider(this.selfH, fly);
+    const myR = col.r;
+    const myBot = this.pos.y + col.bot;
+    const myTop = this.pos.y + col.top;
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
       // 自己的僚機不碰撞:歸隊時牠們以 50m/s 貼上來,會誤觸下面的高速撞擊自爆
@@ -2591,9 +2589,12 @@ export class BattleClient {
       if (onDeck && b.y < surfHere - 3) continue;
       if (myBot >= b.y + b.h - 0.1 || myTop < b.y) continue;
       let tEnter = null;
-      // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd≤0)push-out 沿中心→P1 反向推 =
-      // 退回進入側 → 交給 push-out 沿牆滑(手感不變);遠半(fwd>0)push-out 會把機體推出「另一側」
+      // 終點在障礙「內」時的取捨(fwd = (P1−中心)·位移):近半(fwd<0)push-out 沿中心→P1 反向推 =
+      // 退回進入側 → 交給 push-out 沿牆滑(手感不變);遠半(fwd≥0)push-out 會把機體推出「另一側」
       // = 半穿透,故此處夾在進入面。終點在外(fwd 恆 >0 的真穿越)一律夾。
+      // **fwd === 0(終點剛好落在通過中心的那個平面)歸「遠半」**:此時最小穿透軸的推出符號
+      // 由 `lx<0 ? … : …` 決定,正中央那一刀等機率推向另一側 = 直接穿過去(2026-08-02 稽核
+      // 以合成方牆逐位元復現;伺服器 `solidEnter` MUST 同步,兩端 MUST NOT 只改一邊)。
       const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
       if (b.hw2 != null) {
         const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
@@ -2602,7 +2603,7 @@ export class BattleClient {
         if (Math.abs(o0x) < ex && Math.abs(o0z) < ez) continue;    // P0 已在盒內 → push-out 脫出
         const p1x = (this.pos.x - b.x) * cs + (this.pos.z - b.z) * sn;
         const p1z = -(this.pos.x - b.x) * sn + (this.pos.z - b.z) * cs;
-        if (Math.abs(p1x) < ex && Math.abs(p1z) < ez && fwd <= 0) continue;   // 終點在盒內近半 → push-out 沿牆滑
+        if (Math.abs(p1x) < ex && Math.abs(p1z) < ez && fwd < 0) continue;   // 終點在盒內近半 → push-out 沿牆滑
         const ux = dx * cs + dz * sn, uz = -dx * sn + dz * cs;     // 位移轉盒 local
         let tmin = -Infinity, tmax = Infinity, ok = true;
         for (const [o, u, e] of [[o0x, ux, ex], [o0z, uz, ez]]) {
@@ -2616,7 +2617,7 @@ export class BattleClient {
         const ox = px0 - b.x, oz = pz0 - b.z;
         if (ox * ox + oz * oz <= R * R) continue;     // P0 已在圓內 → push-out 脫出
         const e1x = this.pos.x - b.x, e1z = this.pos.z - b.z;
-        if (e1x * e1x + e1z * e1z <= R * R && fwd <= 0) continue;  // 終點在圓內近半 → push-out 沿牆滑
+        if (e1x * e1x + e1z * e1z <= R * R && fwd < 0) continue;  // 終點在圓內近半 → push-out 沿牆滑
         const c = ox * ox + oz * oz - R * R;
         const B2 = 2 * (ox * dx + oz * dz);
         const disc = B2 * B2 - 4 * len2 * c;
