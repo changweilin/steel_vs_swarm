@@ -126,8 +126,8 @@ export const VENUES = [
   //           兩側數百公尺內沒有第二個跨越點 ⇒ 最短路徑非走橋面不可(bake 另掛 PREFER_BRIDGE)。
   //   madrid  ② 地下道 —— 卡斯提亞大道沿線的車行地下道群,地形全平 ⇒ 深度只可能來自「挖」,
   //           正是 underpassPlan 的適用面(對照組:金龍那種深度來自山的是 ① 山體隧道)。
-  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.503000, 13.448700], bearing: 10,  mix: { urban: 0.85, green: 0.15 } },
-  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.445600, -3.691200], bearing: 200, mix: { urban: 0.85, green: 0.15 } },
+  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.503300, 13.448750], bearing: 10, mix: { urban: 0.85, green: 0.15 } },
+  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.445540, -3.687600], bearing: 90, mix: { urban: 0.85, green: 0.15 } },
 
   // ---- 綠地單一(≥80%)----
   { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'] },   // 天母(南麓路網)
@@ -167,7 +167,7 @@ export const VENUES = [
   //   chicago ⑨ 水上高架橋 —— 芝加哥河兩岸街廓緊貼、河面僅數十公尺寬,南北向幹道一律以
   //           可通車的開合橋跨河 ⇒ L1 兩堡(481 真實公尺)分踞兩岸時,兵線必然踩上橋面。
   //           與 london(泰晤士河)的差別是「多座短橋 vs 單座長橋」,兩張都留著當對照。
-  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.888800, -87.624500], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 } },
+  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887700, -87.624360], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 } },
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----
