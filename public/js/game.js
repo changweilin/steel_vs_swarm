@@ -7,7 +7,8 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL,
+  ESCORT, escortSlot, escortLagK, escortDrift,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -3288,20 +3289,37 @@ export class BattleClient {
       group.visible = false;
       this.scene.add(group);
       if (group.userData.spin) this.spinners.add(group);
-      ent.escorts.push({ mesh: group, s: kamiSide(i) });
+      ent.escorts.push({ mesh: group, i, slot: escortSlot(i), k: escortLagK(i), warm: false });
     }
   }
 
-  /** 每幀擺放護衛機於主機兩側(隨主機朝向);kami 冷卻中(已衝出/未重現)或主機不可見則隱藏 */
-  _updateEscorts(ent) {
+  /** 每幀擺放護衛機於旗艦機的 ㄑ 字編隊槽位;kami 冷卻中(已衝出/未重現)或主機不可見則隱藏。
+   *  槽位/浮動誤差/跟隨逼近率三者全走 data.js 的 `escortSlot`/`escortDrift`/`escortLagK`
+   *  (見那一段的設計說明),MUST NOT 在這裡手寫排列式或 `1 − e^(−k·dt)`。
+   *  `warm`:隱藏期間不追槽位 ⇒ 重現/重進視野的第一幀直接貼上(否則會從上次自爆的位置飛回來)。 */
+  _updateEscorts(ent, dt = 0, now = 0) {
     const ready = ent.mesh.visible && (ent.kcd || 0) <= 0.05;
     const yaw = ent.mesh.rotation.y, cx = Math.cos(yaw), sx = Math.sin(yaw);
-    const p = ent.mesh.position, off = 3.5, back = -1.0;
+    const p = ent.mesh.position;
     for (const es of ent.escorts) {
       es.mesh.visible = ready;
-      if (!ready) continue;
-      es.mesh.position.set(p.x + cx * off * es.s + sx * back, p.y, p.z - sx * off * es.s + cx * back);
-      es.mesh.rotation.y = yaw;
+      if (!ready) { es.warm = false; continue; }
+      // 槽位 + 浮動誤差(兩者同在局部座標系)→ 世界:右 = (cos, −sin)、前 = (sin, cos)(機體朝 +z)
+      const d = escortDrift(es.i, now), rr = es.slot.x + d.x, ff = es.slot.z + d.z;
+      const tx = p.x + cx * rr + sx * ff;
+      const ty = p.y + d.y;
+      const tz = p.z - sx * rr + cx * ff;
+      const cur = es.mesh.position;
+      // 太遠(重生/瞬移/剛重現)一律貼上;其餘每幀指數逼近 = 使用者要的「微小操作延遲」
+      if (!es.warm || Math.hypot(tx - cur.x, tz - cur.z) > ESCORT.SNAP_M) {
+        cur.set(tx, ty, tz);
+        es.mesh.rotation.y = yaw;
+        es.warm = true;
+      } else {
+        const f = camSmoothF(es.k, dt);
+        cur.set(cur.x + (tx - cur.x) * f, cur.y + (ty - cur.y) * f, cur.z + (tz - cur.z) * f);
+        es.mesh.rotation.y = camAngleStep(es.mesh.rotation.y, yaw, ESCORT.YAW_K, dt);
+      }
     }
   }
 
@@ -7910,7 +7928,7 @@ export class BattleClient {
       ent._moveSpd = (!snapped && dt > 0) ? Math.hypot(nx - px, nz - pz) / dt : (ent._moveSpd || 0) * 0.6;
       // 無人機兩架貼身護衛自殺機(顯隱依 kami 冷卻);切離自機視角的機體補建護衛(spawn 時是自機故未建)
       if (ent.kind === 'drone' && !ent.escorts) this._buildDroneEscorts(ent);
-      if (ent.escorts) this._updateEscorts(ent);
+      if (ent.escorts) this._updateEscorts(ent, dt, now);
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);

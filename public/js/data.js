@@ -888,6 +888,65 @@ export const kamiSide = (i) => {
 };
 export const kamiExposureS = () => UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL);
 export const kamiHp = () => towerKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN);
+
+// ---- 待命護衛機編隊(2026-08-02 使用者需求)----
+// 「小無人機與無人機編隊呈現ㄑ字型,位置加點浮動誤差,跟隨旗艦機時有微小操作延遲,
+//   以免動作看起來太死硬」。
+//
+// **純表現層**(觸發前的護衛機不是 sim 實體 ⇒ 不涉 A1):三件事全在旗艦機的**局部座標系**裡定案,
+// 再由 game.js `_updateEscorts` 轉到世界座標。舊制是「兩側等距一排、每幀直接指派」——
+// 橫排看不出隊形、且四架與旗艦機逐位元同步 = 像焊在機身上的擺件。
+//   ① **ㄑ 字**:後掠量 ∝ |橫向站位|(`escortSlot`)⇒ 外側越靠後,旗艦機在頂點 = 雁行編隊。
+//      橫向站位仍走 `kamiSide` 那一份唯一縫(改 KAMI.N 隊形自己跟著散),MUST NOT 另寫排列式。
+//   ② **浮動誤差**:逐架相位錯開的 Lissajous 微幅漂移(`escortDrift`,**同在局部座標系** ——
+//      漂移是「在自己的槽位裡晃」,機體一轉向就該跟著轉;擺在世界座標系會變成「不管機頭朝哪
+//      都往同一個世界方向晃」,轉向時看得出來)。相位由**架次序號**推導(黃金角),
+//      MUST NOT 用 `Math.random()`(A4;而且每幀重抽 = 抖動不是漂移)。
+//      水平/垂直取不同頻率比 ⇒ 四架不會同步繞圈(那看起來像整組在公轉,比不動更假)。
+//   ③ **跟隨延遲**:每幀朝槽位**指數逼近**(`camSmoothF` 同一支幀率無關平滑,
+//      MUST NOT 另寫 `1 − e^(−k·dt)`),逼近率逐架不同(`escortLagK`:外側更拖)⇒
+//      旗艦機一轉向,ㄑ 字會先甩尾再收攏。逼近率 MUST NOT 收成同一個值(同步 = 又焊回去了)。
+// 超過 `SNAP_M` 直接貼上(重生/瞬移/重進視野 MUST NOT 拉出一條橫越戰場的長鏡頭;
+// 與 `SPEC_CAM.SNAP_M` 同一種理由)。
+export const ESCORT = {
+  SIDE_M: 3.6,        // 最外側(|s| = 1)的橫向偏移(公尺)
+  BACK_M: 1.0,        // 全員共通的基準後置(旗艦機正後方)
+  SWEEP_M: 4.4,       // ㄑ 字後掠:每單位 |s| 再往後幾公尺(0 = 退回舊制橫排)
+  DRIFT_R: 0.55,      // 水平浮動誤差振幅(公尺)
+  DRIFT_Y: 0.38,      // 垂直浮動誤差振幅(公尺)
+  DRIFT_HZ: 0.17,     // 水平浮動基礎頻率(Hz)
+  DRIFT_ZF: 0.73,     // 前後向頻率比(≠1 ⇒ 走 Lissajous 而非繞圓)
+  DRIFT_YF: 1.41,     // 垂直向頻率比(與水平無理數比 ⇒ 不循環)
+  PHASE: 2.399963229728653,   // 黃金角(rad):逐架相位錯開,零亂數(A4)
+  TRAIL_M: 1.6,       // **跟隨延遲的校準錨**:巡航直線前進時,最外側僚機落後槽位幾公尺
+  LAG_SPREAD: 0.3,    // 逐架逼近率落差(外側 ×(1 − SPREAD),內側幾乎不打折)
+  YAW_K: 6,           // 機首朝向的跟隨逼近率(1/s;機首晚一步轉過來)
+  SNAP_M: 25,         // 超過此距離直接貼上(重生/瞬移/重進視野)
+};
+/** 第 i 架待命護衛機在**旗艦機局部座標系**的槽位:`x` = 右正、`z` = 前正(機體朝 +z) */
+export const escortSlot = (i) => {
+  const s = kamiSide(i);
+  return { s, x: s * ESCORT.SIDE_M, z: -(ESCORT.BACK_M + Math.abs(s) * ESCORT.SWEEP_M) };
+};
+/**
+ * 基礎跟隨逼近率(1/s)。**由校準錨反解**:一階指數逼近在等速前進下的穩態落後 = 速度 ÷ 逼近率 ⇒
+ * 令最外側(逼近率 ×(1 − LAG_SPREAD))落後剛好 `TRAIL_M` 公尺。MUST NOT 手寫這個數 ——
+ * 手寫的後果是無聲的:調快無人機速度後,四架僚機在全速巡航時會**整組拖到編隊外**
+ * (看起來像脫隊,而不是「跟得有點慢」),而任何量測都仍然正常。
+ */
+export const escortLagBase = () => UNITS.drone.speed / (ESCORT.TRAIL_M * (1 - ESCORT.LAG_SPREAD));
+/** 第 i 架的跟隨逼近率(1/s);外側更拖 ⇒ 轉向時 ㄑ 字甩尾。恆 > 0(不然它永遠停在原地) */
+export const escortLagK = (i) =>
+  Math.max(0.5, escortLagBase() * (1 - ESCORT.LAG_SPREAD * Math.abs(kamiSide(i))));
+/** 第 i 架在時刻 t(秒)的浮動誤差(**旗艦機局部座標系**,公尺);逐架相位錯開、三軸不同頻 */
+export const escortDrift = (i, t) => {
+  const ph = i * ESCORT.PHASE, w = Math.PI * 2 * ESCORT.DRIFT_HZ, tt = t || 0;
+  return {
+    x: ESCORT.DRIFT_R * Math.sin(w * tt + ph),
+    y: ESCORT.DRIFT_Y * Math.sin(w * ESCORT.DRIFT_YF * tt + ph * 2),
+    z: ESCORT.DRIFT_R * Math.cos(w * ESCORT.DRIFT_ZF * tt + ph * 1.7),
+  };
+};
 /**
  * 極音速飛彈:HP = 撐得住**最長**一次飛行(hyperFlightS:爬升 + 最遠斜距俯衝)的一座砲塔火力。
  * 取最長 ⇒ 任何交戰距離都「剛好不會被打爆」;兩座塔或塔 + 任何一把槍就打得下來(這是它的弱點)。

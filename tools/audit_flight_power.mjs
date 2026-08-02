@@ -95,8 +95,11 @@ console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」�
     const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
     t('kamiSide 均勻散開、對稱、涵蓋 [−1, 1]',
       ss[0] === -1 && ss[ss.length - 1] === 1 && near(ss.reduce((a2, b2) => a2 + b2, 0), 0), ss.join(', '));
+    // 客戶端貼身站位自 2026-08-02 起改經 `escortSlot(i)`(ㄑ 字編隊;橫向那一項仍是 kamiSide),
+    // 仍是同一條縫 —— 故這裡驗「客戶端走 escortSlot」+「escortSlot 的橫向項走 kamiSide」。
     t('兩端同吃 kamiSide(伺服器生成側偏移 + 客戶端貼身站位),MUST NOT 復辟 `const s = i === 0 ? -1 : 1`',
-      /const s = kamiSide\(i\);/.test(simCode) && /s: kamiSide\(i\)/.test(code)
+      /const s = kamiSide\(i\);/.test(simCode) && /slot: escortSlot\(i\)/.test(code)
+      && /export const escortSlot = \(i\) => \{\n  const s = kamiSide\(i\);/.test(dataSrc)
       && !/const s = i === 0 \? -1 : 1/.test(simCode) && !/const s = i === 0 \? -1 : 1/.test(code));
   }
 
