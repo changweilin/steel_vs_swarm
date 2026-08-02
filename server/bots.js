@@ -1,15 +1,15 @@
 // ============ 電腦玩家(伺服器端英雄 AI)============
 // 每個 bot 操控一位英雄(無人機/機甲),與人類玩家共用 sim 的英雄規則:
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
-// 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RETREAT(低血撤退回堡補血)。
+// 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
 import { UNITS, GAME, WEAPONS, ECON, LOS, DECOY, hyperRange, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
-  BOT_VIEW, botFovHalf, viewLockStep, wrapPi } from '../public/js/data.js';
+  VITALS,
+  BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
+  BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
-const RETREAT_HP = 0.32;                    // 低於 32% 裝甲撤退
-const RESUME_HP = 0.85;                     // 回血到 85% 再出擊
 const FLY_Y = 2;                            // 離地高於此 = 飛行型態(地速 / 碰撞量體同判,唯一縫)
 const LANE_JITTER_M = 24;                   // 兵線側向散開幅度(峰對峰):同線多台 bot 不疊在一起
 // 推線時的前瞻距離:視角改吃視野錐之後,「看向線上的目標點」= 看向**側面**(機體站在
@@ -46,6 +46,8 @@ export class BotBrain {
     this._stuckT = 0;      // 撞牆累積秒數
     this._skirtUntil = 0;  // 繞行到期時刻
     this._skirtSide = 1;   // 繞行側(每次卡住輪替)
+    this._rallyAt = null;  // 集結點世界座標(RALLY 進場時定案,見 _pickRally)
+    this._rallyProg = 0;   // 集結點的沿兵線進度(復出時 prog 從這裡接回,不是從主堡重走)
   }
 
   /** 目前角色輕武器實戰數值(英雄倍率 + 現階級) */
@@ -158,13 +160,17 @@ export class BotBrain {
 
     const u = UNITS[h.kind];
     const frac = h.hp / h.maxHp;
+    const spF = h.maxSp > 0 ? (h.sp || 0) / h.maxSp : 1;
     // 撤退/回頭是「下決心」型的操作(不是看到血條就瞬間轉身)⇒ 吃 state 間隔,難度越低越晚察覺。
     // ENGAGE/PUSH 不另外收費:它只是「眼前有沒有目標」的結果,目標本身已由 scan + react 節流過。
-    if (this.state !== 'RETREAT' && frac < RETREAT_HP && this._op('state')) this.state = 'RETREAT';
-    if (this.state === 'RETREAT' && frac >= RESUME_HP && this._op('state')) { this.state = 'PUSH'; this.prog = 0; }
+    // **MUST 維持短路**:`_op` 一旦回 true 就吃掉一格全域手速,無條件問等於每拍都在付錢。
+    const want = this._pullWant(h, frac, spF);
+    if (want && this.state !== want && this._op('state')) this._enterPull(h, want);
+    else if (this.state === 'RETREAT' && frac >= BOT_TACTIC.RESUME_HP && this._op('state')) this._resume(0);
+    else if (this.state === 'RALLY' && spF >= BOT_TACTIC.RALLY_SP && this._op('state')) this._resume(this._progAt(h));
 
     const target = this._target(h);
-    if (this.state !== 'RETREAT') this.state = target ? 'ENGAGE' : 'PUSH';
+    if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
 
     // 經濟:依 BUY_ORDER 逐項升級(階梯單價,資金/滿級門檻由 sim.buy 把關)。
     // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
@@ -184,6 +190,7 @@ export class BotBrain {
     this._castSupport(h, frac);
 
     if (this.state === 'RETREAT') this._moveToward(h, u, sim.basePos[this.side], dt);
+    else if (this.state === 'RALLY') this._rally(h, u, target, dt);
     else if (this.state === 'ENGAGE') this._engage(h, u, target, dt);
     else this._push(h, u, dt);
 
@@ -227,6 +234,166 @@ export class BotBrain {
     if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - u.speed * dt * 4);
   }
 
+  /** 目前是否處於「脫離交戰」狀態(回堡 or 退到砲塔後方)—— 兩者共用的判斷,MUST NOT 逐處展開 */
+  _pulling() { return this.state === 'RETREAT' || this.state === 'RALLY'; }
+
+  /**
+   * 撤退線(2026-08-02 使用者定案)。回傳這一拍**應該**待在哪個脫離狀態(null = 不必脫離):
+   *   裝甲 < BASE_HP                     → 'RETREAT'(回主堡補血;唯一會離開兵線的情況)
+   *   裝甲 < PULL_HP 且護盾扛掉一半      → 'RALLY' (退到最近砲塔後方等護盾)
+   *   高難度:護盾扛掉一半(不看裝甲)   → 'RALLY' (「扛半條護盾就後撤」)
+   *
+   * 三道閘缺一不可,每一道都對應一個實測到的壞掉方式:
+   * ①**進場看 PULL_SP、出場看 RALLY_SP** 的遲滯帶 —— 裝甲離開主堡不會自己回,若進場只看
+   *   裝甲,「退到塔後 → 護盾滿 → 回去 → 血還是低 → 又退」會在門檻上無限抖動。
+   * ②**RETREAT 不被 RALLY 搶走** —— 回主堡是長途行程,裝甲只有主堡補得回來(sim 的
+   *   HERO_HEAL_R 內才回血);半路被護盾規則叫去集結點 = 整趟白跑,還帶著一管殘血回前線。
+   * ③**「扛掉半條護盾」量的是這一波真的吃下多少傷害,不是「護盾現在剛好低於一半」** ——
+   *   兩者聽起來一樣,實測差了一倍的攻堅產出。兵線上的小兵零星刮擦會讓護盾長時間掛在半條
+   *   以下(護盾要脫戰 `VITALS.OOC_S` 秒才開始回),照「當下水位」判 ⇒ bot 幾乎一直在撤退:
+   *   2026-08-02 實測 RALLY 吃掉 37% 的場次時間、工事損血腰斬、擊殺 −41%。改量近期傷害後,
+   *   一波英雄集火照樣觸發(6 秒內半條護盾),而小兵刮擦不會。近期傷害吃 `_threatOf` 那份帳
+   *   (`_hurtLog` 唯一縫,MUST NOT 另開第二份記帳);「還在挨打」吃 `VITALS.OOC_S`
+   *   (= 護盾還沒開始回復的那段),MUST NOT 另立第二個交戰判定。
+   *
+   * 中難度那條刻意**不吃** ③:它的危險訊號是「裝甲只剩三成」,慢慢被磨掉半條護盾一樣該撤。
+   * 沒有 tactic 旗標的難度(新手/低)只剩舊制那一條(門檻 PULL_HP、目的地主堡)⇒ 逐位元不變。
+   */
+  _pullWant(h, frac, spF) {
+    if (!this.diff.tactic) return frac < BOT_TACTIC.PULL_HP ? 'RETREAT' : null;
+    if (frac < BOT_TACTIC.BASE_HP) return 'RETREAT';
+    if (this.state === 'RETREAT') return 'RETREAT';
+    if (spF >= BOT_TACTIC.PULL_SP) return null;
+    if (!this._inFight(h)) return null;                                   // 已脫戰:護盾正在回,沒有危險
+    if (frac < BOT_TACTIC.PULL_HP) return 'RALLY';                        // 中/高:裝甲也見底
+    if (this.diff.elite && this._recentDmg(h) >= BOT_TACTIC.PULL_SP * (h.maxSp || 0)) return 'RALLY';
+    return null;
+  }
+
+  /** 還在挨打嗎(**唯一縫**:撤退判定與集結行為同吃)。定義直接借 sim 的脫戰秒數 ——
+   *  「護盾還沒開始回復」與「還在戰鬥中」本來就是同一件事,MUST NOT 另立第二個交戰判定。 */
+  _inFight(h) { return this.sim.t - (h.lastHitAt ?? -99) < VITALS.OOC_S; }
+
+  /**
+   * 最近 `THREAT_S` 秒內**被活的敵人**打掉多少(線性淡出)。與選敵的威脅值同一份帳、同一支
+   * 淡出曲線 —— MUST NOT 為撤退另記一份。
+   *
+   * **塔/主堡的刮傷不算**(與 `_prioritize` 排除工事總輸出同一條理由):拆塔本來就是站在塔的
+   * 射程裡挨打,把那份算進「扛了半條護盾」⇒ bot 每次攻堅到一半就自己退掉,攻堅產出直接腰斬
+   * (2026-08-02 實測)。工事打不死你的時候該退的訊號是**裝甲**(PULL_HP / BASE_HP 那兩條),
+   * 不是護盾。
+   */
+  _recentDmg(h) {
+    let s = 0;
+    for (const r of h._threat?.values() || []) {
+      if (r.k === 'tower' || r.k === 'base') continue;
+      s += r.v * botThreatDecay(this.sim.t - r.t);
+    }
+    return s;
+  }
+
+  /** 進入脫離狀態;集結點在**進場當下**定案(退到一半塔被拆了不重算 —— 那會讓機體在半路掉頭) */
+  _enterPull(h, want) {
+    this.state = want;
+    if (want === 'RALLY') this._pickRally(h);
+  }
+
+  /** 復出:回到推線,沿兵線進度從 `prog` 接回(回堡的那條從 0 重走,集結的接回**當下位置**) */
+  _resume(prog) { this.state = 'PUSH'; this.prog = prog; }
+
+  /**
+   * 機體目前位置投影回兵線的「己方端進度」(公尺)。
+   * 集結復出 MUST 吃這個而不是集結點的進度:脫離接觸往往在退到砲塔之前就成立(停火 5 秒就
+   * 脫戰),此時把 prog 設回砲塔後方 = `_push` 會先把機體**往回**拉到砲塔才開始推,白丟一整段
+   * 兵線。`prog` 本身在 ENGAGE/RALLY 期間是凍結的(只有 `_push` 會推進),不能直接沿用。
+   */
+  _progAt(h) {
+    const pts = this.sim.lanes[this.lane];
+    const cum = this._cum;
+    let bestD = Infinity, bestAt = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const ax = pts[i - 1][0], az = pts[i - 1][1];
+      const ex = pts[i][0] - ax, ez = pts[i][1] - az;
+      const L2 = ex * ex + ez * ez || 1;
+      let s = ((h.x - ax) * ex + (h.z - az) * ez) / L2;
+      s = s < 0 ? 0 : s > 1 ? 1 : s;
+      const dx = h.x - (ax + ex * s), dz = h.z - (az + ez * s);
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; bestAt = cum[i - 1] + (cum[i] - cum[i - 1]) * s; }
+    }
+    const total = cum[cum.length - 1];
+    return this.side === 'SWARM' ? bestAt : total - bestAt;   // 一律換算回「己方端起算」
+  }
+
+  /**
+   * 集結點 = **最近一座己方存活砲塔後方**的兵線點(使用者定案「撤退到最近砲塔後方兵線」)。
+   * 塔位一律吃 `sim.towerSites`(與開場預置兵線同一份解,MUST NOT 再解一次);但 towerSites 是
+   * 開局定案的**位置表**,不知道塔死了沒 ⇒ 逐塔位確認還有活著的己方塔,否則等於退進一個空位、
+   * 正好落在敵方推進的路線上。一座都不剩就退回主堡(原則 6 降級不例外)。
+   */
+  _pickRally(h) {
+    const sim = this.sim;
+    const total = this._cum[this._cum.length - 1];
+    let bestD = Infinity, bestFrac = null;
+    for (const st of sim.towerSites?.[this.lane] || []) {
+      const p = st[this.side];
+      if (!p) continue;
+      // 同一個塔位左右各一座(GAME.TOWER_SIDE_OFF),取涵蓋兩座的半徑判存活
+      let alive = false;
+      for (const e of sim.ents.values()) {
+        if (e.kind !== 'tower' || e.side !== this.side || e.hp <= 0) continue;
+        if (Math.hypot(e.x - p.x, e.z - p.z) <= GAME.TOWER_SIDE_OFF * 1.5) { alive = true; break; }
+      }
+      if (!alive) continue;
+      const d = Math.hypot(h.x - p.x, h.z - p.z);
+      if (d < bestD) { bestD = d; bestFrac = st.frac; }
+    }
+    if (bestFrac == null) { this._rallyProg = 0; this._rallyAt = sim.basePos[this.side]; return; }
+    // frac 自**己方端**起算(與 solveTowerSites / this.prog 同框)⇒ 減去 RALLY_BACK_M 就是塔後方
+    this._setRally(Math.max(0, total * bestFrac - BOT_TACTIC.RALLY_BACK_M));
+  }
+
+  /** 集結點寫入的唯一縫:己方端進度 → 世界座標(兩種集結點共用同一條換算) */
+  _setRally(prog) {
+    const total = this._cum[this._cum.length - 1];
+    this._rallyProg = prog;
+    this._rallyAt = pointAt(this.sim.lanes[this.lane], this._cum, this.side === 'SWARM' ? prog : total - prog);
+  }
+
+  /**
+   * 集結撤退:**還在挨打就邊退邊打、脫離接觸就停下來等護盾**。
+   *
+   * 兩半各自對應一個實測到的壞掉方式:
+   *   ①退的時候不還手 = 轉身送人頭 ⇒ 還在接觸時照樣開火(這就是「打帶跑」的宏觀版本)。
+   *   ②脫離接觸之後還繼續開火 = **護盾永遠回不來**:護盾要脫戰 `VITALS.OOC_S` 秒才開始回,
+   *     而開火會引來還擊、把脫戰計時一直重置 ⇒ bot 卡在 RALLY 直到裝甲見底才回主堡
+   *     (2026-08-02 實測:RALLY 吃掉 36% 的場次時間,而「等滿護盾」那個出場條件幾乎從沒
+   *     成立過)。停火停步 = 真人退到安全處按住不動等盾的那個動作。
+   *
+   * 位置一樣走 `_moveToward` 的碰撞唯一縫;`_face` 只寫意圖(不動 h.ry)⇒ 排在移動之後
+   * 就能把視角搶回目標身上。
+   */
+  _rally(h, u, t, dt) {
+    if (!this._inFight(h)) {                       // 已脫離接觸:原地停火等護盾回滿
+      if (t) this._face(h, t.x, t.z);              // 但眼睛還是盯著人(免得被繞後)
+      else this._faceLaneFwd(h);
+      return;
+    }
+    this._moveToward(h, u, this._rallyAt || this.sim.basePos[this.side], dt);
+    if (t) { this._face(h, t.x, t.z); this._fire(t.id, 'light'); return; }
+    this._faceLaneFwd(h);
+  }
+
+  /** 面向兵線的敵方端(集結等護盾時的預設朝向)——背對戰場等於白白讓人繞後,
+   *  而 `_acquire` 只認前方視野錐,轉錯邊 = 對來襲的敵人整批失明。 */
+  _faceLaneFwd(h) {
+    const total = this._cum[this._cum.length - 1];
+    const fwd = this.side === 'SWARM' ? 1 : -1;
+    const d = this.side === 'SWARM' ? this._rallyProg : total - this._rallyProg;
+    const [lx, lz] = pointAt(this.sim.lanes[this.lane], this._cum, Math.max(0, Math.min(total, d + fwd * PUSH_LOOK_M)));
+    this._face(h, lx, lz);
+  }
+
   /** 招式可用性(解鎖 + CD + MP)——實際結算仍由 sim.heroCast 把關 */
   _ready(h, slot) {
     const lvl = h.abil[slot];
@@ -244,7 +411,7 @@ export class BotBrain {
       const hurt = frac < 0.55;
       if ((A.fx === 'heal' && hurt)
         || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
-        || (A.fx === 'stealth' && this.state === 'RETREAT')) {
+        || (A.fx === 'stealth' && this._pulling())) {
         if (this._op('ability')) this.sim.heroCast(this.pid, slot);   // 按 Q/E 是一項操作
       }
     }
@@ -255,7 +422,12 @@ export class BotBrain {
     const gun = this._gun(h);
     const dx = t.x - h.x, dz = t.z - h.z;
     const d = Math.hypot(dx, dz) || 1;
-    const keep = gun.range * (t.kind === 'tower' || t.kind === 'base' ? 0.85 : 0.6);
+    // 打帶跑(高難度):裝填中拉到射程外緣、可擊發時再貼上去 —— 比例走 botKiteF 單一縫。
+    // 量的是**裝填**而不是逐發射速間隔:後者只有零點幾秒,照著它進退只會抖成原地震動。
+    // 建築(塔/主堡)不套 —— 它們不會追,拉開只是白白少打幾秒。
+    const struct = t.kind === 'tower' || t.kind === 'base';
+    const kite = this.diff.elite && !struct ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t)) : 0.6;
+    const keep = gun.range * (struct ? 0.85 : kite);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
     const spd = this._speed(h, u);                       // 控場(麻痺/緩速/混亂)折算後的地速
@@ -385,7 +557,20 @@ export class BotBrain {
     this._face(h, al.x, al.z);
   }
 
-  /** 目標選擇:**前方視野錐內**、射程內最近的敵人;優先英雄 > 小兵 > 建築(權重折算) */
+  /**
+   * 這個敵人最近對我造成的傷害(威脅值)。來源**只有** `sim._hurtLog` 那一份帳(與濺血提示、
+   * 受擊警戒同一份)—— bots.js MUST NOT 自己從血量落差反推攻擊者(A1 家族)。
+   * 英雄以 pid 為鍵:整組小隊打我 = 同一個人打我(記帳端同判)。
+   */
+  _threatOf(h, t) {
+    const r = h._threat?.get(t.hero ? t.pid : t.id);
+    return r ? r.v * botThreatDecay(this.sim.t - r.t) : 0;
+  }
+
+  /**
+   * 目標選擇:**前方視野錐內**、射程內最近的敵人;優先英雄 > 小兵 > 建築(權重折算)。
+   * 中難度以上再套一層**戰術優先度**(2026-08-02 使用者需求),見 `_prioritize`。
+   */
   _acquire(h) {
     const wd = this._gun(h);
     const range = wd.range;
@@ -394,7 +579,7 @@ export class BotBrain {
     // 塔/主堡/中立恆可見;偵察脈衝生效中該方視同無霧(與 sim.snapshotFor / heroHit 同判定)。
     const pulse = this.sim.visionUntil?.[this.side] > this.sim.t;
     const sources = pulse ? null : this.sim._visionSources(this.side);
-    let best = null, bestD = Infinity;
+    const cand = [];
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.gar || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙/駐守兵
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
@@ -410,8 +595,46 @@ export class BotBrain {
       else if (t.kind === 'tower' || t.kind === 'base') d *= 1.3;
       else if (isThirdSide(t.side)) d *= 1.8;            // 第三方野營:順路才打,不主動棄線刷錢
       d /= vsMult(wd, t.kind);                            // 優先打武器克制的目標類型
-      if (d < bestD) { bestD = d; best = t; }
+      cand.push({ t, d });
     }
+    if (this.diff.tactic) this._prioritize(h, wd, cand);   // 中難度以上:再套戰術優先度
+    let best = null, bestD = Infinity;
+    for (const c of cand) if (c.d < bestD) { bestD = c.d; best = c.t; }
     return best;
+  }
+
+  /**
+   * 戰術優先度(2026-08-02 使用者需求「被打時優先對『對自己傷害最高者、造成敵人最大總傷害、
+   * 快要陣亡的目標』進行攻擊」)。就地把候選的加權距離 `c.d` 除以 `botTargetPrio` —— 分數越小
+   * 越優先,所以優先度越高、距離「感覺」越近。
+   *
+   * 三項一律**正規化成候選集內的佔比**(絕對傷害量跨場地/跨時間沒有可比性;開局的 200 點與
+   * 後期的 2000 點是同一件事「他是這裡打最兇的那個」)。沒有任何人打過我 ⇒ 威脅項整組為 0,
+   * 自動退化成「總輸出 + 快陣亡」,不需要另寫一條「有沒有被打」的分支。
+   *
+   * 總輸出**排除塔/主堡**:它們的累計傷害必然是全場最高,但建築不是靠集火解決的目標 ——
+   * 收進來只會讓 bot 一頭撞進塔的射程裡(而且看起來像「AI 突然發瘋」,很難查)。
+   */
+  _prioritize(h, wd, cand) {
+    let mT = 0, mO = 0;
+    for (const c of cand) {
+      const t = c.t;
+      c.threat = this._threatOf(h, t);
+      c.out = (t.kind === 'tower' || t.kind === 'base') ? 0 : (t.dmgOut || 0);
+      const ehp = (t.hp || 0) + (t.sp || 0);
+      const maxEhp = (t.maxHp || ehp) + (t.maxSp || 0);
+      // 撿尾刀只給高難度:salvo 傳 0 = 關掉收割分支(中難度只剩一般的低血偏好),
+      // 分歧住 botExecW 那一支,MUST NOT 在這裡另寫一次 if。
+      c.exec = botExecW(ehp, maxEhp, this.diff.elite ? botSalvo(wd, t.kind) : 0);
+      if (c.threat > mT) mT = c.threat;
+      if (c.out > mO) mO = c.out;
+    }
+    for (const c of cand) {
+      c.d /= botTargetPrio({
+        threat: mT > 0 ? c.threat / mT : 0,
+        output: mO > 0 ? c.out / mO : 0,
+        exec: c.exec,
+      });
+    }
   }
 }
