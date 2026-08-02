@@ -464,6 +464,9 @@ export const altScale = (dh) => {
  * 否則客戶端合法地以 `1 + ALTITUDE.RANGE` 拉遠射程打出去的那一發,會在伺服器被判超程靜默丟棄。
  */
 export const altRangeMax = () => 1 + ALTITUDE.RANGE;
+/** 高度差的**機制上限**(公尺;推導不手寫 = `altScale` 封頂處的 TIERS 個砲塔高)。
+ *  同樣用在「拿不到目標實體、只能取封頂當誠實界」的場合(見 `flightCapS` 的俯射餘裕)。 */
+export const altDhMax = () => altTier() * ALTITUDE.TIERS;
 /**
  * 高度差「射程」乘數的**唯一縫**(伺服器 `sim._altRange` 與客戶端 `game._altRangeTo` 同吃):
  * 較高的一方 +射程(封頂 +`ALTITUDE.RANGE`),同高/較低 = 1。兩端 MUST NOT 各寫一份曲線。
@@ -1290,17 +1293,39 @@ export const seekTurn = (w, v0) => Math.max(w, (v0 || 0) / SEEK.R_M);
 // **推導不手寫**:= 爆風半徑 def.r × BALLISTIC.LOB_MIN_F(改係數自動跟著走);非 lob 回 0。
 export const lobMinRange = (def) => (def && trajClass(def) === 'lob' ? (def.r || 0) * BALLISTIC.LOB_MIN_F : 0);
 
-// ---- 彈頭最長飛行時間(2026-07-30 使用者回報「導引/射後不理常常光暈亮著卻沒命中」)----
+// ---- 彈頭飛行時間(2026-07-30 使用者回報「導引/射後不理常常光暈亮著卻沒命中」)----
 // AoE 彈頭是**著彈**才回報(`sim.heroBurst`),而「擊發資格」(需瞄準 / 裝填 / 射速)是**擊發
 // 當下**才成立的狀態 —— 兩者之間隔著整段飛行時間。巡飛彈初速只有 90~100m/s,滿射程要飛 2~3.3
 // 秒:那一發合法離架之後,玩家右鍵退出狙擊模式、或彈夾在飛行途中打空進入裝填,伺服器就把已經
 // 在天上的彈頭「驗證後靜默丟棄」(A30 靜默丟包家族)。凡是拿**著彈時刻**去驗擊發資格的閘門,
-// MUST 用本值把時間軸換算回擊發時刻,MUST NOT 手寫秒數。
-// **推導不手寫**:= 落點閘門上界(range × altRangeMax × RANGE_TOL)÷ 出膛初速 —— 改射程/
-// 初速/容差都自動跟著走。初速一律經 `shotV0()` 這個縫取(拋射武器吃的是吊射初速 100m/s,
-// 不是砲口初速 640m/s;取錯差 6 倍)。
+// MUST 用本支把時間軸換算回擊發時刻,MUST NOT 手寫秒數、MUST NOT 自己拿 `shotV0` 除一次。
+/**
+ * 一發彈頭從**擊發**到**著彈**的飛行時間(秒)。d = 水平距離、dy = 落點相對槍口的高差
+ * (往下打為負)。**唯一縫**:`heroBurst` 的擊發時刻回推(back)與 `flightCapS`(寬容窗
+ * 上限)同吃。
+ *
+ * 拋物線(`trajClass` 'lob')自 2026-08-02「對地 45° 拋投」起**初速是反解出來的**
+ * (`game._lob45Vel`):v0 = √(g·d²/(d−dy))、45° 的水平分量 = v0/√2
+ *   ⇒ T = √2·d / v0 = √(2(d−dy)/g)
+ * —— 與 `shotV0`(全裝藥砲口速度)無關,那個值現在只是 45° 解的**上限**(超過就無解退回
+ * 裝藥階梯)。舊制拿 `d / shotV0` 當拋射的飛行時間,在現行射程下低估 2.2 倍
+ * (172.8m:真實 5.94s vs 舊估 1.73s)⇒ ①收鏡後著彈的榴彈整發被丟、②伺服器的裝填窗比
+ * 客戶端晚 4 秒,下一輪只要打得比上一輪近就整輪靜默丟棄(2026-08-03 使用者回報
+ * 「榴彈投擲只有遊戲一開始有傷害」)。
+ * 其餘彈道(直射 / 導引 / 射後不理)維持等速直線近似,量 3D 斜距。
+ */
+export const shotFlightS = (def, d, dy = 0) => {
+  const h = Math.max(0, d || 0), v = dy || 0;
+  return def && trajClass(def) === 'lob'
+    ? Math.sqrt(2 * Math.max(0, h - v) / BALLISTIC.G)
+    : Math.hypot(h, v) / shotV0(def);
+};
+// **推導不手寫**:= 在「落點閘門上界」打出去的那一發要飛多久 —— 距離取 impCap 的三個因子
+// (range × altRangeMax × RANGE_TOL),高差取伺服器唯一認得的機制上限 `altDhMax()`
+// (拿不到目標實體就取封頂當誠實界,與 `altRangeMax` 同一個理由;俯射的拋物線飛得更久,
+// 偏差方向一律朝「不擋」= 原則 6)。改射程 / 初速 / 容差 / 彈道類型都自動跟著走。
 export const flightCapS = (def) =>
-  (def ? def.range * altRangeMax() * RANGE_TOL / shotV0(def) : 0);
+  (def ? shotFlightS(def, def.range * altRangeMax() * RANGE_TOL, -altDhMax()) : 0);
 
 // ---- 射後不理的追擊燃料(2026-08-01 使用者定案)----
 // 規則:**鎖定之後持續追擊,不受射程影響 —— 但只能在射程內鎖定**。
