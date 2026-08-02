@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, kamiSide, SQUAD, RECOIL,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -5858,7 +5858,11 @@ export class BattleClient {
       }
       const mult = vsMult(def, ent.kind);
       // 本地估算含距離物理衰減(伺服器結算同一條公式,HUD 數字才對得上;火力成長走武器品質階級)
-      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(point)));
+      // + 護盾分軌拆分(shieldSplit 單一縫):反護盾武器打滿盾目標的數字本來就該比打空盾時高,
+      //   估算不吃這一層的話,新原型的武器在 HUD 上會整場對不上帳。
+      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(point));
+      const sp = shieldSplit(def, raw, ent.sp || 0);
+      const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
         point.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: mult >= 1.5 });
     }
@@ -5932,7 +5936,9 @@ export class BattleClient {
         continue;
       }
       const mult = vsMult(def, ent.kind);
-      const est = Math.round(def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** i);
+      const raw = def.dmg * mult * dmgFalloff(def, this.pos.distanceTo(p)) * offAxisFalloff(off || 0) * LANCE.DECAY ** i;
+      const sp = shieldSplit(def, raw, ent.sp || 0);   // 護盾分軌(見 _hitFeedback 同註)
+      const est = Math.round(sp.toSp + sp.toHp);
       damageNumber(this.scene, this.effects,
         p.clone().add(new THREE.Vector3(0, 1.2, 0)), est, { big: i === 0 && mult >= 1.5 });
     }

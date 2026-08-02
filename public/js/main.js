@@ -10,7 +10,7 @@ import {
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
-  aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME,
+  aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
@@ -937,6 +937,15 @@ function charWeaponRow(id, slot, key) {
   if (raw.pen) bits.push(`破甲 ${tri((l) => w(l).pen)}`);
   if (raw.crit) bits.push(`爆擊 ${Math.round(w(1).crit * 100)}%×${w(1).critX}`);
   if (raw.emp) bits.push(`癱瘓 ${tri((l) => w(l).emp, 1)}s`);
+  // 護盾/裝甲分軌剋制(2026-08-02):標籤由旋鈕推導(shieldRoleName 單一縫),中性武器不顯示
+  const srole = shieldRoleName(w(1));
+  if (srole) {
+    const sb = [srole];
+    if ((w(1).spPierce || 0) > 0) sb.push(`穿盾 ${Math.round(w(1).spPierce * 100)}%`);
+    if ((w(1).vsSp ?? 1) !== 1) sb.push(`對護盾 ×${w(1).vsSp}`);
+    if ((w(1).vsHp ?? 1) !== 1) sb.push(`對裝甲 ×${w(1).vsHp}`);
+    bits.push(sb.join(' '));
+  }
   // 機制標籤(2026-07-11 武器多元化):一眼看出這把的操作手感
   // 範圍攻擊 / 彈道分類(2026-07-23):經 aoeClass/trajClass 唯一分類縫,MUST NOT 在此重判 type
   const cls = aoeClass(w(1));

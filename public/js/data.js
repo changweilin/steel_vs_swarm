@@ -1233,12 +1233,103 @@ export const SHAKE = {
   BLAST_F: 1,
 };
 
-// 榴彈 / 火箭(launcher)對建築的額外傷害加成(使用者指示「榴彈類武器對建築物傷害強化」)。
-// 疊在武器自身 vs.building 之上,只在 launcher 型命中建築(塔/主堡/障礙)時生效 ——
-// 攻城武器拆建築更快,但對兵員/裝甲/空中目標不變。套用點唯一:sim._heroDmg()。
-export const GRENADE = { BUILDING_MUL: 1.4 };
-export const grenadeBuildingMul = (def, kind) =>
-  def && def.type === 'launcher' && TARGET_CLASS[kind] === 'building' ? GRENADE.BUILDING_MUL : 1;
+// ---- 建築加乘移除(2026-08-02 使用者定案「移除對建築物加乘的武器」)----
+// 舊制有**兩層**對建築加成:①各武器自己的 `vs.building`(0.3~2.2);②`GRENADE.BUILDING_MUL`
+// (launcher 型再 ×1.4)。②已整組刪除(MUST NOT 復辟);①改為**只留懲罰不留加乘** ——
+// vs.building 一律夾到 ≤1(見 CHARACTERS 之後的 BUILDING_VS_CAP 推導段)。
+// 語意:沒有任何武器「特別會拆建築」,但防空/反甲特化機種打建築仍然吃虧(< 1 的值保留)。
+// 夾制是**推導**不是逐武器手改(MUST NOT 回頭去改那 60 幾行 vs 表:那正是 32 角一動就漂移的老病)。
+export const BUILDING_VS_CAP = 1;
+
+// ---- 護盾 / 裝甲分軌剋制(2026-08-02 使用者需求「武器單位剋制加入…各類型武器」)----
+// 舊制:傷害循序過雙層 HP(護盾先扣、溢出吃裝甲 + 護甲減免),而武器對兩層一視同仁 ——
+// 剋制軸只有「目標**類別**」(flesh/armor/air/building),沒有「目標**血條層**」這一軸。
+// 新制三個旋鈕全部住武器 def,**預設中性**(未標註的武器逐位元同舊制):
+//   vsSp     對「護盾層」的傷害倍率(> 1 = 擅長打護盾;0 = 完全打不動護盾,盾全擋)
+//   vsHp     對「裝甲 HP 層」的傷害倍率(< 1 = 主 HP 傷害較弱);**對無護盾的 NPC/建築同樣生效**
+//            —— 「主 HP 傷害弱」若只對英雄成立,那是隱形的第二套規則
+//   spPierce 0~1:這個比例的傷害**無視護盾**直接進 HP 層(仍吃 vsHp 與護甲減免)
+// 三個旋鈕組出使用者點名的兩型與其反面:
+//   反護盾型  vsSp > 1、vsHp < 1     定向能/微波:燒穿能量護盾,對裝甲板無力
+//   穿盾型    spPierce > 0、總傷害低  高速穿甲針:穿過護盾場但動能小,拿掉的是總量不是護盾
+//   反裝甲型  vsSp < 1、vsHp > 1     高爆/溫壓:護盾場消化得掉超壓,裝甲板消化不掉
+// 三條配置紀律(2026-08-02 使用者定案,全部做成**推導**;違反即由 audit_shield_counter 紅字):
+//   ①**穿盾 / 反裝甲只掛在原本吃建築加成的武器上** —— 那批攻城型重武器剛被拿掉 vs.building 的
+//     加乘(見上方 BUILDING_VS_CAP),正好用新軸把騰出來的預算還給它們;掛到別把武器上
+//     等於「舊的沒還、新的又多發一份」。名冊 = `EX_SIEGE_WEAPONS`。
+//   ②**反護盾武器不得再有其他單位加成** —— 護盾軸是「不挑目標」的廣泛加成(每個有護盾的
+//     對手都吃得到),再疊類別剋制就是一把武器領兩份預算。夾制見下方 `vsSp > 1 ⇒ vs 全欄 ≤ 1`。
+//   ③**加成越多、越廣泛 ⇒ 基礎傷害越低** —— 見 `COUNTER_BUDGET`/`counterDmgF`。
+// ①是名冊(資料),②③是夾制與折減(程式),三者都不准用「我記得當初是這樣調的」代替。
+export const SHIELD_ROLE_TOL = 0.05;   // 判定「有沒有偏離中性」的死區(HUD 標籤用,見 shieldRoleName)
+
+// ---- 剋制預算:加成越多越廣泛,基礎傷害越低(2026-08-02 使用者定案)----
+// 為什麼要分「廣泛 / 挑目標」兩種權重:類別剋制(flesh/armor/air)只在**遇到那一類**時兌現,
+// 一場對局裡有一半時間是白紙;護盾軸卻對**每一個有護盾的對手**恆常生效 —— 同樣寫 1.5,
+// 兩者不是同樣的價錢。BROAD ≫ NARROW 就是在標這個差價。
+// 負載 = BROAD ×(護盾軸超出中性的部分)+ NARROW ×(類別剋制超出 1 的部分);
+// 折減 = 1 /(1 + K × 負載)⇒ 負載 0 恰為 ×1、負載越高越低,且永不為負或歸零。
+// **只作用在掛了護盾軸旋鈕的武器**(`broad <= 0` 直接回 0):這是新軸的預算,不是把全表重新定價
+// —— 其餘 28 名角色的傷害逐位元不變,否則「微調」會變成 32 角全體重新校準。
+// 校準一律走 dmg 階梯與這三個係數,MUST NOT 回頭逐武器手改 `vs`(那是 CLASS_SYM 的欄位,
+// 手改會被下一次對稱化重新等比放大蓋掉)。
+// K 的校準錨 = `npm run bal` ⑤(機種對稱 50±5pp / 角色離群 20~80%):K=0.5 把兩把掛旗標的
+// 變形機甲重武器同時砍掉近 26%,morph 整組掉到 44.4% 出界 —— 折減是對的方向,但一次收太多。
+export const COUNTER_BUDGET = { BROAD: 1.0, NARROW: 0.35, K: 0.4 };
+
+/** 一把武器的「加成負載」(推導不手寫;沒掛護盾軸 = 0,不進預算) */
+export function counterLoad(w) {
+  if (!w) return 0;
+  const broad = Math.max(0, (w.vsSp ?? 1) - 1) + Math.max(0, (w.vsHp ?? 1) - 1) + (w.spPierce || 0);
+  if (broad <= 0) return 0;
+  const narrow = Object.values(w.vs || {}).reduce((s, v) => s + Math.max(0, v - 1), 0);
+  return COUNTER_BUDGET.BROAD * broad + COUNTER_BUDGET.NARROW * narrow;
+}
+/** 基礎傷害折減係數(唯一套用點:heroWeapon / heroAbility 的 dmg) */
+export const counterDmgF = (w) => 1 / (1 + COUNTER_BUDGET.K * counterLoad(w));
+
+// 2026-08-02 建築加乘移除前,`vs.building > 1` 的**英雄重武器**名冊(夾制後就查不出來了,
+// 故在此留檔)。使用者定案:**穿盾 / 反裝甲兩型只准掛在這批武器上** —— 它們剛被拿掉攻城加乘,
+// 新軸正好把騰出來的預算還回去;掛到別把武器上 = 舊的沒還、新的又多發一份。
+// (反護盾**不受此限**:它走的是「剝掉其他加成 + 壓低基礎傷害」那條路,見上方紀律②③。)
+// 名冊改動 MUST 同步 `audit_shield_counter.mjs` Ⅴ —— 那支拿它逐把反查掛法。
+export const EX_SIEGE_WEAPONS = [
+  's01.heavy', 's02.heavy', 's04.heavy', 's05.heavy', 's12.heavy',
+  't01.heavy', 't03.heavy', 't09.heavy', 't11.heavy',
+  'm01.heavy', 'm05.heavy', 'm06.heavy',
+];
+
+/**
+ * 傷害在「護盾層 / 裝甲 HP 層」之間的拆分(**唯一縫**)。
+ * 伺服器結算(sim._damage)、客戶端 HUD 估算(game._hitFeedback/_lanceFeedback)、
+ * 對進戰模型(tools/duel.mjs)MUST 全部吃這一支,MUST NOT 各自再寫一份分層邏輯。
+ *
+ * 護盾以「原始傷害預算」計價:`spent` = 這一發有多少預算被護盾吃掉,`toSp` = 折成護盾實際掉的量。
+ * MUST NOT 改成「先把溢出的護盾傷害直接倒進 HP」—— 那會讓 vsSp 高的武器打殘盾目標時,
+ * 溢出的那一段白賺一次反護盾加成(打空盾的瞬間傷害暴衝)。
+ * vsSp = 0 於是自然退化成「護盾完全擋下」(spent = 全部預算、toSp = 0),而不是「無視護盾穿過去」——
+ * 想要穿過去請用 spPierce(原則 6:寧缺勿錯,退化方向一律朝「盾有效」)。
+ * 中性參數(vsSp = vsHp = 1、spPierce = 0)逐位元還原舊制:toSp = min(sp, dmg)、toHp = dmg − toSp。
+ */
+export function shieldSplit(wd, dmg, sp) {
+  const sMul = wd?.vsSp ?? 1, hMul = wd?.vsHp ?? 1, pf = wd?.spPierce || 0;
+  const pierce = dmg * pf;              // 無視護盾的那一份(原始量)
+  const budget = dmg - pierce;          // 會撞上護盾層的預算(原始量)
+  const shield = Math.max(0, sp || 0);
+  const spent = sMul > 0 ? Math.min(budget, shield / sMul) : budget;   // 被護盾吃掉的預算
+  return { toSp: spent * sMul, toHp: (pierce + budget - spent) * hMul };
+}
+
+/** 武器在護盾軸上的角色標籤(HUD/圖鑑用;由旋鈕**推導**,MUST NOT 另建原型名冊) */
+export function shieldRoleName(wd) {
+  const s = wd?.vsSp ?? 1, h = wd?.vsHp ?? 1, p = wd?.spPierce || 0, T = SHIELD_ROLE_TOL;
+  if (p > T) return '穿盾';
+  if (s > 1 + T && h < 1 - T) return '反護盾';
+  if (s < 1 - T && h > 1 + T) return '反裝甲';
+  if (s > 1 + T) return '削盾';
+  if (h > 1 + T) return '破甲';
+  return '';
+}
 
 // ---- 水域規則(2026-07-15;客戶端物理 + 道路生成共用)----
 // LEVEL:海平面水面高(terrain.js 水面盤 y,minH < 0.5 才有水);WADE_M:淺水/涉水判定深度界
@@ -1622,7 +1713,8 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   const squad = kind === 'drone' ? SQUAD.DMG : 1;
   return {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
-    dmg: t(w.dmg) * (heroic ? HEROIC.dmg : 1) * squad,
+    // counterDmgF:加成越多越廣泛 → 基礎傷害越低(推導不手寫;沒掛護盾軸的武器恆 ×1)
+    dmg: t(w.dmg) * counterDmgF(w) * (heroic ? HEROIC.dmg : 1) * squad,
     // w.range 已於下方統一縮放塊 ×COMBAT_SCALE(source 縮 reach);rangeCap 隨 UNITS.sight 同步縮 ⇒ 相對關係不變
     range: heroic ? Math.min(w.range * HEROIC.range, rangeCap(kind, slot)) : w.range,
     rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
@@ -1638,6 +1730,9 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
     recoil: recoilTier(w, slot === 'heavy' ? 'heavy' : 'light', !!w.fan || w.type === 'plasma'),
     needAim: slot === 'heavy' || !!w.needAim,
     vs: w.vs || {},
+    // 護盾/裝甲分軌剋制(見 shieldSplit):刻意**不過 tierVal** —— 這是武器的性格不是火力,
+    // 隨階級漂移會讓「反護盾」在 Lv1 與 Lv4 是兩把不同的武器。火力成長仍走 dmg 階梯。
+    vsSp: w.vsSp ?? 1, vsHp: w.vsHp ?? 1, spPierce: w.spPierce || 0,
   };
 }
 
@@ -1649,11 +1744,12 @@ export function heroAbility(ch, slot, lvl = 1) {
   return {
     id: slot, name: a.name, fx: a.fx, desc: a.desc,
     cd: t(a.cd), mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
-    dmg: t(a.dmg ?? 0), heal: t(a.heal ?? 0), count: t(a.count ?? 1),
+    dmg: t(a.dmg ?? 0) * counterDmgF(a), heal: t(a.heal ?? 0), count: t(a.count ?? 1),   // 折減見 heroWeapon 同欄註
     range: t(a.range ?? 0) * COMBAT_SCALE, imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
     unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
+    vsSp: a.vsSp ?? 1, vsHp: a.vsHp ?? 1, spPierce: a.spPierce || 0,   // 見 heroWeapon 同欄註
     pen: t(a.pen ?? 0),
     // 追加效果(2026-07-16):{fx:'pull|stun|slow|confuse|haste|leap|dodge|vamp|bleed|mark', 數值欄逐一過 tierVal}
     add: a.add ? Object.fromEntries(Object.entries(a.add).map(([k, v]) =>
@@ -1794,8 +1890,13 @@ export const CHARACTERS = {
     light: { name: '相位脈衝步槍艙', rw: '低功率相控陣雷射・光速直擊', type: 'beam',
       dmg: [13, 16, 20], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
+    // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
+    // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
+    // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
+    // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
     heavy: { name: '高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
       dmg: [21, 31, 44], mag: 5, reload: 8, range: 280, emp: [0.8, 1.0, 1.2],
+      vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
     skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '指定區域敵軍武器離線(建築免疫)' },
@@ -1972,8 +2073,13 @@ export const CHARACTERS = {
     light: { name: '12.7 同軸重機槍', rw: 'Kord・初速 860m/s', type: 'gun', mv: 860,
       dmg: [22, 27, 33], rate: 4.5, mag: [40, 48, 56], reload: 2.4, range: 200, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
+    // 護盾軸示範 ④【反裝甲】(原 vs.building 1.8 —— 全表最高的攻城加乘之一,在 EX_SIEGE_WEAPONS
+    // 名冊內,紀律①)。反護盾的鏡像:榴彈的超壓是「大面積、慢」的能量,護盾場整個消化得掉;
+    // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
+    // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
     heavy: { name: '152mm 榴彈砲', rw: '2A65 縮裝・初速 650m/s', type: 'launcher', mv: 650,
       dmg: [75, 111, 156], r: [16, 18, 20], mag: 3, reload: 12, range: 340, pen: 14,
+      vsSp: 0.72, vsHp: 1.15,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
       add: { fx: 'haste', f: [1.2, 1.25, 1.3] },
@@ -2102,8 +2208,11 @@ export const CHARACTERS = {
     light: { name: '共鳴脈衝步槍', rw: '聲電複合雷射・光速直擊', type: 'beam',
       dmg: [15, 19, 23], rate: 7, mag: [36, 44, 52], reload: 2.1, range: 190, crit: 0.06,
       vs: { flesh: 1.3, armor: 0.7, air: 1.0, building: 0.5 } },
+    // 護盾軸示範 ②【反護盾】:諧振頻率對準護盾場的共振點,場一垮就沒戲唱了 —— 與 s03 同型,
+    // 但削盾幅度小一點、主 HP 掉得少一點(同一個原型的兩種調校,不是同一把武器)。
     heavy: { name: '諧振波炮', rw: '定向聲電複合・光速', type: 'beam',
       dmg: [23, 33, 45], mag: 5, reload: 8, range: 300, emp: [1.0, 1.5, 2.0],
+      vsSp: 1.55, vsHp: 0.78,
       vs: { flesh: 0.9, armor: 0.8, air: 1.8, building: 0.4 } },
     skill: { name: '搖籃曲', fx: 'emp', r: 140, dur: [2.5, 3, 3.5], range: 260,
       cd: [18, 16, 14], mp: [40, 45, 50], desc: '把你頻道撕碎的搖籃曲(區域武器離線)' },
@@ -2199,8 +2308,13 @@ export const CHARACTERS = {
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.3, building: 0.4 } },
+    // 護盾軸示範 ③【穿盾】(原 vs.building 1.1,在 EX_SIEGE_WEAPONS 名冊內 —— 紀律①):
+    // 破甲彈的金屬射流截面極小、速度極高,護盾場來不及耦合就被穿過去,一半動能直接打在裝甲上。
+    // 代價寫在兩處:總量偏低(vsHp < 1)、基礎傷害再吃 counterDmgF —— 它同時還留著 vs.armor 1.7
+    // 這個大加成,依紀律③「加成越多含金量越低」,折減會比只掛一項的武器更重。
     heavy: { name: '地獄火反裝甲彈', rw: 'AGM-114 縮裝・鎖定追蹤・初速 450m/s', type: 'missile', mv: 450,
       dmg: [50, 72, 103], r: [12, 14, 16], mag: 4, reload: 11, range: 320, pen: [14, 18, 22],
+      spPierce: 0.45, vsHp: 0.9,
       vs: { flesh: 0.9, armor: 1.7, air: 0.5, building: 1.1 } },
     skill: { name: '違約金條款', fx: 'dash', imp: [27, 33, 39],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '哪邊付錢都一樣快:沿視線爆發脫離' },
@@ -2496,6 +2610,22 @@ export const CLASS_SYM = { K: 0.5, SWARM_ARMOR_F: 1, STEEL_AIR_F: 1 };
       if (w) (w.vs ||= {})[cls] = Math.round((w.vs[cls] ?? 1) * f * 1000) / 1000;
     }
   }
+}
+// ---- 剋制表夾制(建築加乘 + 反護盾獨占;唯一套用處)----
+// 名冊 MUST 涵蓋所有帶 vs 的 def —— 漏一張表就是「這把武器還是拆得比較快」而且沒有任何
+// 錯誤訊息。heroWeapon()/heroAbility() 的 `vs: w.vs` 是**同一個物件參照** ⇒ 夾在源頭即全鏈生效。
+// **排在 CLASS_SYM 之後**是硬需求,不是排版偏好:那一段把 drone 的 armor 欄 / 非 drone 的 air 欄
+// 整組等比放大,夾在它前面會被重新放回 1 以上(而且只在某些角色身上,更難察覺)。
+const VS_DEFS = [
+  ...Object.values(WEAPONS), DECOY, HYPER,
+  ...Object.values(CHARACTERS).flatMap((c) => ['light', 'heavy', 'skill', 'ult'].map((s) => c[s])),
+].filter((w) => w?.vs);
+for (const w of VS_DEFS) {
+  // ① 建築加乘移除(見 BUILDING_VS_CAP):加乘歸零、懲罰(< 1)原樣保留
+  if (w.vs.building > BUILDING_VS_CAP) w.vs.building = BUILDING_VS_CAP;
+  // ② 反護盾獨占(使用者定案「反護盾效果的武器不要有其他單位加成」):護盾軸是廣泛加成,
+  //    再疊類別剋制 = 一把武器領兩份預算。懲罰同樣保留 —— 拿掉的是「加成」不是「剋制關係」。
+  if ((w.vsSp ?? 1) > 1) for (const k of Object.keys(w.vs)) if (w.vs[k] > 1) w.vs[k] = 1;
 }
 // 傭兵變形者:HP/護盾/電力/回復/重生一律與機甲相同(spread 保證不漂移),
 // 差異只有移動能力(地面 + 蓄力跳變形飛行)與視野;傷害不吃 SQUAD 折算(charKind ≠ drone)。

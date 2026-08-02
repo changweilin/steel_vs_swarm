@@ -167,8 +167,10 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
     && /by\.dmgOut = /.test(strip(grabMethod(simSrc, '_dmgOut'))));
   t('**兩條結算路徑都記帳**(護盾全擋早退 + 一般結算;漏一條 = 高護盾對手被系統性低估)', (() => {
     const d = strip(grabMethod(simSrc, '_damage'));
-    // 護盾全擋那條是「記帳 → return」的早退區塊,MUST 在 return 之前就把 toShield 入帳
-    const early = /rem <= 0[\s\S]*?_dmgOut\(by, t, toShield\)[\s\S]*?return;/.test(d);
+    // 護盾全擋那條是「記帳 → return」的早退區塊,MUST 在 return 之前就把 toShield 入帳。
+    // 守衛式在 2026-08-02 護盾分軌改制後由 `rem <= 0` 改名為 `toHp <= 0`(同語意:沒有任何
+    // 傷害進到裝甲層)—— 這裡認的是「早退前先記帳」這件事,不是變數叫什麼。
+    const early = /toHp <= 0[\s\S]*?_dmgOut\(by, t, toShield\)[\s\S]*?return;/.test(d);
     return count(d, 'this._dmgOut(') === 2 && early;
   })(), `${count(strip(grabMethod(simSrc, '_damage')), 'this._dmgOut(')} 處`);
   t('輸出帳與吸血記在同一個 dealt(量的是實際護盾+裝甲損耗)', (() => {
