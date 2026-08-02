@@ -129,7 +129,7 @@ export const VENUES = [
   //           **2026-08-02 首輪未達標**:兵線最近只到 Joaquín Costa 地下道旁 1m(沒踩進洞;
   //           那條在執行期只建出 29m 覆蓋段),錨點改試覆蓋 234m 的 María de Molina。
   { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 }, scen: ['bridge'], relief: 5 },
-  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.445395, -3.687511], bearing: 110, mix: { urban: 0.85, green: 0.15 }, relief: 11 },
+  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, relief: 11 },
 
   // ---- 綠地單一(≥80%)----
   { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'] },   // 天母(南麓路網)
