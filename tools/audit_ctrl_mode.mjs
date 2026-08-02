@@ -264,6 +264,15 @@ ok(!/this\.side/.test(plcCode),
   '`_onPlc`(指標解鎖 → 戰場選單)MUST NOT 加 side 門檻,觀戰與交戰同一條路');
 ok(/this\._escMenu\(\);/.test(plcCode),
   '`_onPlc` 解鎖分支 MUST 走 `_escMenu`(順手蓋去彈跳戳記,擋掉瀏覽器補送的那顆 keydown)');
+// 陣亡倒數中按 ESC(2026-08-02 使用者需求「重生倒數計時也要可以按 ESC」):陣亡頁是
+// `pointer-events: none` ⇒ 玩家隨手點畫面就重新鎖上指標,那顆 ESC 的 keydown 會被瀏覽器吃掉,
+// 只剩解鎖這條路。`!this.dead` 門檻會把它一起擋掉 ⇒ 一律改用「我方主動解鎖」戳記。
+ok(!/this\.dead/.test(plcCode),
+  '`_onPlc` MUST NOT 用 `dead` 當門檻(陣亡倒數中真的按下的那顆 ESC 會被一起擋掉)');
+ok(/this\._plcSelf/.test(plcCode)
+  && count(code(gameSrc), /this\._plcSelf = true/g) === 1
+  && /pointerLockElement === this\.canvas\) this\._plcSelf = true;/.test(code(body(gameSrc, '_onSelfDeath'))),
+  '陣亡的解鎖改以「我方主動」戳記略過(且 MUST 只在真的鎖著時打,否則會吃掉玩家下一顆 ESC)');
 const cmd = code(body(gameSrc, '_cmd'));
 ok(/act === 'menu'\) \{ if \(down\) this\._escMenu\(\); return; \}/.test(cmd),
   '觸控 ☰ MUST 與鍵盤 ESC 同一個出口(MUST NOT 自己再判一次 `_gameOver`/`!this.paused`)');
