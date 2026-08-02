@@ -124,10 +124,14 @@ export const VENUES = [
   // 三張新場地各鎖定一種場景,錨點由 `--probe` 實測選定(座標 = 探測回報的結構中點):
   //   berlin  ③ 陸上高架橋 —— 華沙大街跨東站調車場,橋下是鐵道不是水(⇒ 純陸域)。
   //           兩側數百公尺內沒有第二個跨越點 ⇒ 最短路徑非走橋面不可(bake 另掛 PREFER_BRIDGE)。
-  //   madrid  ② 地下道 —— 卡斯提亞大道沿線的車行地下道群,地形全平 ⇒ 深度只可能來自「挖」,
-  //           正是 underpassPlan 的適用面(對照組:金龍那種深度來自山的是 ① 山體隧道)。
-  //           **2026-08-02 首輪未達標**:兵線最近只到 Joaquín Costa 地下道旁 1m(沒踩進洞;
-  //           那條在執行期只建出 29m 覆蓋段),錨點改試覆蓋 234m 的 María de Molina。
+  //   madrid  原為 ② 地下道候選,**兩輪實測皆未達標**,標記留白(標記 MUST 由實測產生):
+  //           ① Joaquín Costa 錨點:兵線最近只到洞旁 1m 就繞回地面 —— 探測報的 165m 是圖資
+  //              way 全長,執行期 underpassPlan 只挖得出 29m 覆蓋段。
+  //           ② María de Molina 錨點(探測覆蓋 234m):選線整條偏離,連候選都掉到 1.9km 外。
+  //           病灶與曼哈頓 Park Avenue 高架同一族(見 docs/lane_scenarios.md「未解場景」):
+  //           市區地下道是**與地面街道分離的 way**,兩者等長 ⇒ 最短路徑沒有理由鑽下去,
+  //           `PREFER_TUNNEL` 只在「地下道本身就是唯一通路」時才咬得住(taroko 的峽谷公路)。
+  //           場地本身仍是一張可用的市區圖(真實道路兵線 + 實測 relief),故保留。
   { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 }, scen: ['bridge'], relief: 5 },
   { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, relief: 11 },
 
