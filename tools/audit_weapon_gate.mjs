@@ -339,7 +339,11 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     ok(trajClass(def) === 'guide', `測試前置:${id} 重武器彈道類別 = guide(${def.name})`);
     const rule = reachRule(def);
     const core = blastCoreR(def);
-    ok(core > 2, `測試前置:爆風核心半徑 ${core.toFixed(1)}m`);
+    // 前置只驗「核心帶是推導值且為正」——**MUST NOT 釘住一個絕對公尺數**:2026-08-02「一發不得
+    // 同時吃到兩座塔」的夾制把爆炸型半徑整批收到 soloBlastRmax() 以下(核心帶 6.0m → 1.5m),
+    // 舊的 `core > 2` 釘的是改制前的尺度,而下面兩條掩體測試本來就是按 core 的比例擺位。
+    ok(core > 0 && Math.abs(core - def.r * BLAST.CORE) < 1e-9,
+      `測試前置:爆風核心半徑 ${core.toFixed(2)}m = r ${def.r.toFixed(2)}m × BLAST.CORE`);
     const near = mkClient([{ x: 120 - core * 0.4, top: 40 }]);   // 掩體貼著目標
     ok(near._reachable(mkEnt(120), def, rule, def.range).ok,
       '爆炸戰鬥部:掩體貼著目標 → 仍亮(爆風繞過掩體照樣傷得到,A11)');

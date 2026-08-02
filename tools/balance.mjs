@@ -37,8 +37,10 @@
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
-  shieldSplit, dmgFalloff, waveComp } from '../public/js/data.js';
+  shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
+import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
 const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
 
@@ -341,6 +343,101 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   if (!okD) fail++;
   console.log(`${okD ? '✅' : '❌'} 優先配置密度  扇形 ${fans.length} 名人均 ${fanAvg.toFixed(2)} 招`
     + ` ≥ 非扇形 ${chs.length - fans.length} 名人均 ${restAvg.toFixed(2)} × ${DENSITY_F}`);
+}
+
+// ---------- ⑦ 前線交戰(射程 / 移速 / 火力 / 攻擊範圍 / 兵波 / 砲塔 / 經濟)----------
+// 2026-08-02 使用者定案的模擬方式(模型見 tools/lanesim.mjs,唯一縫):
+//   「須同時考量射程/速度/攻擊/範圍/兵波/砲塔等等,簡易模擬環境只有前線雙砲塔 + 兵波NPC
+//     (生成頻率同正式遊戲),模擬從雙方射程外開始接敵,有錢就升級,先擊毀敵方機體或一座砲塔者獲勝」。
+// ①~⑤ 全是單體、無兵線、無經濟的模型 ⇒ **攻擊範圍**這一軸在那裡從來沒有進過算式;
+// ⑦ 是它唯一被計價的地方。改 AoE 半徑 / AREA_WEAPONS / AOE_BUDGET / MOB_BUDGET / RANGE_BUDGET
+// MUST 以本段為準。
+{
+  const { rate, avg, stat } = laneMatrix();
+  const chs = Object.keys(CHARACTERS);
+  const mean = (v) => v.reduce((s, x) => s + x, 0) / v.length;
+  const of = (k) => chs.filter((c) => charKind(c) === k);
+  const clsOf = (c) => aoeClass(heroWeapon(c, 'heavy', 1, true)) || '?';
+  console.log('\n⑦ 前線交戰 — 前線雙砲塔 + 兵波,自射程外接敵,有錢就升級,先毀敵機體或一座塔者勝\n');
+
+  // ---- a 攻擊範圍規則:一發 AoE 不得同時吃到同塔位的兩座塔 ----
+  // 判定用**實算**而非比對常數:爆心沿兩塔連心線逐點掃,兩座塔都掉血就算違規
+  // (直接比 r × EDGE 也對,但實算連 blastFalloff 改形狀都驗得到)。
+  const twoTowers = (def) => {
+    const R = TARGET_R.tower, half = towerPairSepM() / 2;
+    for (let c = 0; c <= half + 1e-9; c += 0.25) {                 // 爆心偏移(對稱 ⇒ 只掃半邊)
+      const dA = Math.max(0, Math.abs(half - c) - R), dB = Math.max(0, half + c - R);
+      if (blastFalloff(def.r, dA) > 0 && blastFalloff(def.r, dB) > 0) return true;
+    }
+    return false;
+  };
+  const blasts = [];
+  for (const c of chs) for (const slot of ['light', 'heavy']) {
+    const w = heroWeapon(c, slot, MAX_TIER, true);                 // 滿級半徑才是真正的上界
+    if (w && aoeClass(w) === 'blast') blasts.push([`${c}.${slot}`, w]);
+  }
+  const bad = blasts.filter(([k, w]) => !AREA_WEAPONS[k] && twoTowers(w));
+  const areaOk = blasts.filter(([k, w]) => AREA_WEAPONS[k] && twoTowers(w)).length === Object.keys(AREA_WEAPONS).length;
+  if (bad.length || !areaOk) fail++;
+  console.log(`${bad.length || !areaOk ? '❌' : '✅'} a 攻擊範圍  ${blasts.length - Object.keys(AREA_WEAPONS).length} 把爆炸型武器`
+    + `(滿級 Lv${MAX_TIER})一發打不到兩座塔(同塔位塔距 ${towerPairSepM()}m、半徑上限 ${soloBlastRmax().toFixed(2)}m)`
+    + `${bad.length ? ` — 違規:${bad.map(([k]) => k).join('、')}` : ''}`
+    + `;範圍見長 ${Object.keys(AREA_WEAPONS).length} 把仍打得到 ${areaOk ? '✔' : '✘'}`);
+  for (const [k, why] of Object.entries(AREA_WEAPONS)) console.log(`   ⚪ 範圍見長 ${k}:${why}`);
+
+  // ---- b 模型準確度自驗:單軸擾動的方向性 ----
+  // 「確保模擬準確度」的可執行版本:同一台機體單獨加強一軸去打原版陣容,勝率 MUST 上升。
+  // 面板取三機種各 PANEL_N 名(全表跑一次要 4 倍矩陣時間,而結論在 9 名時就穩定)。
+  // **移動速度刻意不設門檻**:本模型只有兵線軸一個空間自由度(沒有橫向走位、沒有追擊),
+  // 機動只透過「撤退曝險時間」作用 ⇒ 靈敏度低到與雜訊同級(全表 +15% 移速 = +0.6pp)。
+  // 那是模型看不到的東西,不是機動不值錢 —— **移動速度 MUST NOT 只拿 ⑦ 校準**(見 MOB_BUDGET)。
+  const PANEL_N = 3, PANEL = ['drone', 'robot', 'morph'].flatMap((k) => of(k).slice(0, PANEL_N));
+  const axis = (tw) => {
+    let w = 0, n = 0;
+    for (const a of PANEL) for (const b of PANEL) { if (a === b) continue; w += laneWin(a, b, tw, null); n++; }
+    return w / n;
+  };
+  for (const [nm, tw] of [['火力 +20%', { dmg: 1.2 }], ['射程 +20%', { range: 1.2 }], ['攻擊範圍 ×2', { aoe: 2 }]]) {
+    const v = axis(tw), okA = v > 0.5;
+    if (!okA) fail++;
+    console.log(`${okA ? '✅' : '❌'} b 準確度自驗  ${nm} ⇒ 勝率 ${(v * 100).toFixed(1)}%(MUST > 50%,${PANEL.length} 名面板)`);
+  }
+
+  // ---- c 機種交叉對戰(使用者「三種機體使用不同武器類型交叉對戰」)----
+  // 目標仍是 50±5pp。**現況達不到**,守門線是防退化欄杆而非驗收線:
+  // 本模型刻意不含招式 / 機種絕招 / 變形(使用者指示「先不考慮長按技和大小招」),而那三者正是
+  // 短射程低機動機體的到位與求生手段;且 ⑦ 量到射程是最貴的一軸(見 RANGE_BUDGET),
+  // 而三機種的射程上限本來就不同(rangeCap ← UNITS[kind].sight)—— 要收斂 MUST 動那條線,另案。
+  const PAIR_MAX = 0.78;
+  for (const [a, b] of [['drone', 'robot'], ['drone', 'morph'], ['robot', 'morph']]) {
+    const v = mean(of(a).flatMap((x) => of(b).map((y) => rate[x][y])));
+    const okP = v <= PAIR_MAX && v >= 1 - PAIR_MAX;
+    if (!okP) fail++;
+    console.log(`${okP ? '✅' : '❌'} c 機種交叉  ${a.padEnd(5)} vs ${b.padEnd(5)} ${(v * 100).toFixed(1)}%`
+      + `(目標 50±5pp;現行守門線 ${(PAIR_MAX * 100).toFixed(0)}% = 防退化欄杆)`);
+  }
+
+  // ---- d 武器類型交叉(範圍收斂改制的驗收面)----
+  // 扇形具名豁免:純貼身機體,戰力主體是 ⑥ 強制配置的貼身招式套件,本模型不含招式(同 ⑤ 的豁免)。
+  const CLS_LO = 0.40, CLS_HI = 0.68, CLS_EXEMPT = { fan: '純貼身機體:到位手段是 ⑥ 強制配置的貼身招式套件,本模型不含招式' };
+  for (const g of ['blast', 'line', 'fan']) {
+    const cs = chs.filter((c) => clsOf(c) === g), rest = chs.filter((c) => clsOf(c) !== g);
+    const v = mean(cs.flatMap((x) => rest.map((y) => rate[x][y])));
+    const okC = !!CLS_EXEMPT[g] || (v >= CLS_LO && v <= CLS_HI);
+    if (!okC) fail++;
+    console.log(`${CLS_EXEMPT[g] ? '⚪' : okC ? '✅' : '❌'} d 武器類型  重武器 ${AOE_NAME[g]}(${cs.length} 名)vs 其他 ${(v * 100).toFixed(1)}%`
+      + (CLS_EXEMPT[g] ? ` — 豁免:${CLS_EXEMPT[g]}` : `(${CLS_LO * 100}~${CLS_HI * 100}%)`));
+  }
+
+  // ---- e 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」)----
+  const MED_MAX = 100, TIE_MAX = 0.25;
+  const okT = stat.med <= MED_MAX && stat.timeout <= TIE_MAX;
+  if (!okT) fail++;
+  console.log(`${okT ? '✅' : '❌'} e 模擬長度  ${stat.n} 場:中位 ${stat.med.toFixed(1)}s / p90 ${stat.p90.toFixed(1)}s`
+    + `、逾時 ${(stat.timeout * 100).toFixed(1)}%(上限 ${MED_MAX}s / ${TIE_MAX * 100}%;步進 ${LANE.DT}s = 伺服器 tick)`);
+  const worst = chs.slice().sort((a, b) => avg[a] - avg[b]);
+  console.log(`   ⓘ 前線交戰平均勝率 [最低 ${worst[0]} ${(avg[worst[0]] * 100).toFixed(0)}%`
+    + ` / 最高 ${worst[chs.length - 1]} ${(avg[worst[chs.length - 1]] * 100).toFixed(0)}%]`);
 }
 
 console.log(fail ? '\n❌ 平衡稽核未通過' : '\n🎉 平衡稽核通過');
