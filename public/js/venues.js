@@ -140,7 +140,7 @@ export const VENUES = [
   // 少數有 tag 的(Peterborough 13 條)則 `underpassPlan` 全數放棄。
   // 機場中了:**滑行道橋的橋面夠寬**,底下那段路才是真正的覆蓋段(探測 5 條成洞,
   // 最長 228m),而滑行道是無法橫越的硬屏障 ⇒ 下穿道就是唯一通路,`PREFER_TUNNEL` 咬得住。
-  { id: 'taoyuan',    name: '桃園・國際機場航廈區',   country: '🇹🇼', type: '混合', ll: [25.076140, 121.231210], bearing: 90, mix: { urban: 0.6, green: 0.35, bare: 0.05 } },
+  { id: 'taoyuan',    name: '桃園・國際機場航廈區',   country: '🇹🇼', type: '混合', ll: [25.075700, 121.231470], bearing: 60, mix: { urban: 0.6, green: 0.35, bare: 0.05 } },
 
   // ---- 綠地單一(≥80%)----
   { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'], relief: 28 },   // 天母(南麓路網)
