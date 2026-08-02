@@ -9,6 +9,9 @@
 //   ③ 爆風量到目標命中量體的**最近點**(水平 hitR + 垂直帶),不是量中心。
 //   ④ 射程光暈的判據依 `data.js reachRule()` 逐彈道分派,五類全覆蓋;消費端只有一份實作,
 //      且拋物線可行性與 `_lobAim` 的火控解吃**同一份**逐級降裝藥階梯(_lobLadder)。
+//   ⑤ 2026-08-03 使用者定案:光暈亮的是**這一發真的會傷到的單位**(準星目標打得到 ⇒ 名冊 =
+//      該次結算的傷害足跡)。足跡的分類只走 `aoeClass(def)` 一份、幾何逐類鏡射伺服器
+//      (`_blast` / `heroPlasma` / `_lanceHits`);爆風那一支**刻意不吃 LOS 也不吃射程**(A11)。
 //
 // 三種前科(本稽核逐條釘住):
 //   Ⅰ **光暈只量距離**:距離在射程內就亮 —— 榴彈的彈道被稜線擋住、直擊武器的視線被建物擋住
@@ -32,7 +35,7 @@ import { fileURLToPath } from 'node:url';
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
-  REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange,
+  REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
   shotV0, flightCapS, SEEK, seekTurn,
 } from '../public/js/data.js';
@@ -231,20 +234,28 @@ sec('Ⅳ 射程光暈的「打得到」判定:逐彈道分派、五類全覆蓋�
   // 消費端單一縫
   const rg = methodSrc('_updateRangeGlows', G);
   const re = methodSrc('_reachable', G);
-  ok(/this\._reachable\(ent, def, rule, this\._effRange\(def, ent\)\)/.test(rg),
-    '_updateRangeGlows 的亮暗由 _reachable 定案(MUST NOT 退回只量距離)');
+  const sv = methodSrc('_shotVictims', G);
+  const sw = methodSrc('_shotWarn', G);
+  ok(/this\._reachable\(ent, def, rule, this\._effRange\(def, ent\)\)/.test(sv),
+    '準星目標的亮暗由 _reachable 定案(MUST NOT 退回只量距離)');
   ok(/reachRule\(def\)/.test(rg), '_updateRangeGlows 經 reachRule() 取規則');
-  ok(!/trajClass\(|def\.type ===/.test(rg) && !/trajClass\(|def\.type ===/.test(re),
+  ok(!/trajClass\(|def\.type ===/.test(rg) && !/trajClass\(|def\.type ===/.test(re)
+    && !/trajClass\(|def\.type ===/.test(sv),
     '光暈路徑 MUST NOT 自己比對 trajClass / def.type(第二份分類表 = 分家)');
-  ok(/rule\.hit === 'blast'/.test(re) && /rule\.path === 'arc'/.test(re) && /rule\.arm/.test(re),
-    '_reachable 三個欄位全數消費(規則表沒有寫了不用的欄位)');
+  ok(/rule\.hit === 'blast'/.test(re) && /rule\.path === 'arc'/.test(re) && /rule\.arm/.test(sw),
+    '_reachable + _shotWarn 三個欄位全數消費(規則表沒有寫了不用的欄位)');
   ok(/blastCoreR\(def\)/.test(re), '爆炸戰鬥部的判據 = 落點落在爆風核心帶(blastCoreR,推導不手寫)');
-  ok(/this\._effRange\(def, ent\)/.test(rg),
+  ok(/this\._effRange\(def, ent\)/.test(sv) && /this\._effRange\(def, ent\)/.test(methodSrc('_inShotRange', G)),
     '光暈的有效射程 = 逐目標 _effRange(與擊發同一個數字;漏掉 = 光暈與實際射程分家)');
   ok(/if \(surf > rng\) return \{ ok: false/.test(re),
     '_reachable 自己夾射程(量近側表面 surf,與伺服器 _surfD3 同一把尺)');
-  ok(/this\._maxRange\(def\)/.test(rg),
-    '候選預篩用搜尋上限 _maxRange(只寬不緊;在這裡先夾緊 = 兩個閘門又分家)');
+  ok(/this\._maxRange\(def\)/.test(sv),
+    '貫穿圓柱端點用搜尋上限 _maxRange(只寬不緊;射程由逐目標誠實界夾回)');
+  // ---- 警示語意單一縫(2026-08-03:整發的性質,MUST NOT 讓準星與濺射名冊各判一次)----
+  ok((G.match(/lobMinRange\(def\)/g) || []).length === 2,
+    'game.js 只有兩處讀 lobMinRange(_lobAim 的太近提示 + _shotWarn;第三處 = 第二份警示規則)');
+  ok((G.match(/this\._shotWarn\(/g) || []).length === 2,
+    '_shotWarn 恰兩個消費端(_reachable 逐目標 + _shotVictims 整發)');
 }
 // 彈道積分單一縫:繪製與判定共用一份
 {
@@ -273,24 +284,41 @@ sec('Ⅳ 射程光暈的「打得到」判定:逐彈道分派、五類全覆蓋�
 // =================================================================================
 sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
 // ---------------------------------------------------------------------------------
-{
-  // ---- 最小 Vector3(只實作 _arcTrace/_lobVel/_reachable 用到的運算)----
-  class V3 {
+// ---- 最小 Vector3 + 真品方法抽取環境(Ⅴ 與 Ⅴ-b 共用一份:兩份樁 = 兩套幾何)----
+class V3 {
     constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
     set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
     clone() { return new V3(this.x, this.y, this.z); }
     copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
     addScaledVector(v, s) { this.x += v.x * s; this.y += v.y * s; this.z += v.z * s; return this; }
+    sub(v) { this.x -= v.x; this.y -= v.y; this.z -= v.z; return this; }
+    dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+    divideScalar(s) { this.x /= s; this.y /= s; this.z /= s; return this; }
     length() { return Math.hypot(this.x, this.y, this.z); }
     normalize() { const l = this.length() || 1; this.x /= l; this.y /= l; this.z /= l; return this; }
-    distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
+  distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
+}
+const THREE = { Vector3: V3 };
+const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
+const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
+const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
+  aoeClass, blastFalloff, lanceR, LANCE };
+const M = (n) => pickMethod(n, G, env);
+// 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
+const mkWalls = (walls) => (ax, ay, az, bx, by, bz) => {
+  let best = null;
+  for (const w of walls) {
+    if (ax >= w.x || bx <= w.x) continue;
+    const t = (w.x - ax) / (bx - ax);
+    if (ay + (by - ay) * t > w.top) continue;          // 從牆頂越過(拋物線高角度解)
+    const d = Math.hypot(bx - ax, by - ay, bz - az) * t;
+    if (best == null || d < best) best = d;
   }
-  const THREE = { Vector3: V3 };
-  const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
+  return best;
+};
+
+{
   ok(ARC_MAXP > 0, `game.js 的 ARC_MAXP 取得(${ARC_MAXP})`);
-  const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
-  const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0 };
-  const M = (n) => pickMethod(n, G, env);
   // 樁:平地無障礙 → _layerHitT 由外部注入的 walls 決定
   const mkClient = (walls = []) => ({
     gunGroup: null,
@@ -302,20 +330,9 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     _arcTrace: M('_arcTrace'),
     _lobLadder: M('_lobLadder'),
     _reachable: M('_reachable'),
+    _shotWarn: M('_shotWarn'),
     _hitR: (e) => e._hr ?? 1,
-    // 牆 = 沿 +X 的一道垂直面,擋住 x ≥ wx 的射線;回傳截斷距離
-    _layerHitT(ax, ay, az, bx, by, bz) {
-      let best = null;
-      for (const w of walls) {
-        if (ax >= w.x || bx <= w.x) continue;
-        const t = (w.x - ax) / (bx - ax);
-        const y = ay + (by - ay) * t;
-        if (y > w.top) continue;                       // 從牆頂越過(拋物線高角度解)
-        const d = Math.hypot(bx - ax, by - ay, bz - az) * t;
-        if (best == null || d < best) best = d;
-      }
-      return best;
-    },
+    _layerHitT: mkWalls(walls),
   });
   const mkEnt = (x, kind = 'robot', hr = 1) =>
     ({ kind, _hr: hr, dimTop: 6, dimH: 6, mesh: { position: new V3(x, 0, 0) } });
@@ -397,6 +414,159 @@ sec('Ⅴ _reachable 行為直測:逐彈道類型各自的判定');
     // 超出射程包絡(以極短的 max 模擬)→ 熄滅
     ok(!flat._reachable(mkEnt(rng * 0.9), def, rule, 30).ok,
       '榴彈:彈道被射程終點截斷 → 光暈熄滅');
+  }
+}
+
+// =================================================================================
+sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)');
+// ---------------------------------------------------------------------------------
+// 使用者定案:「範圍光暈不是單純在射程範圍內就亮,而是:**準星的目標在射程內被擊中時、
+// 同時會受到傷害的單位才亮**」。
+// 舊制(Ⅴ 那一代)亮的是「我打得到的每一個敵人」—— 190m 的重武器在前線會讓半個畫面同時
+// 發光,而其中絕大多數不是**這一發**會傷到的人。新制把名冊換成「這一發的結算足跡」,
+// Ⅴ 的判據沒有被丟掉,而是收斂成足跡的**入口閘**(準星那一發打不到 ⇒ 誰都不會受傷)。
+// 本段釘住三件事:①名冊只有一份且分類只走 `aoeClass` ②爆風那一支不吃 LOS / 射程(A11)
+// ③足跡幾何逐類鏡射伺服器(以真品 `_shotVictims` 原文跑合成場景直測)。
+{
+  const rg = methodSrc('_updateRangeGlows', G);
+  const sv = methodSrc('_shotVictims', G);
+  // ---- 原文:單一縫 ----
+  ok(/this\._shotVictims\(def, reachRule\(def\)\)/.test(rg), '光暈名冊只來自 _shotVictims(唯一縫)');
+  ok((G.match(/_shotVictims\(/g) || []).length === 2, '_shotVictims 一份實作、一個呼叫點');
+  ok(!/_reachable/.test(rg),
+    '_updateRangeGlows MUST NOT 自己逐敵人跑 _reachable(入口閘已收進 _shotVictims)');
+  ok(!/RANGE_GLOW\.(TTL_S|ARC_PER_FRAME|RAY_PER_FRAME)/.test(G),
+    '舊的分幀預算 / TTL 快取 MUST NOT 復辟(那是「每個敵人各跑一次彈道積分」時代的節流)');
+  ok(/aoeClass\(def\)/.test(sv), '足跡分類走 aoeClass(def)(唯一分類縫)');
+  ok(/blastFalloff\(def\.r,/.test(sv),
+    'blast 足跡以 blastFalloff 判入列(與伺服器 _blast 同一條曲線,MUST NOT 自己寫半徑比較)');
+  ok(/this\._lancePierced\(from, impact, lanceR\(def\)\)/.test(sv),
+    'line 足跡走既有的 _lancePierced(sim._lanceHits 的客戶端鏡射)');
+  ok(/this\._lobFc/.test(sv) && !/_lobLadder|_arcTrace|_lob45Vel/.test(sv),
+    '拋物線吃每幀已定案的火控解 _lobFc,MUST NOT 在名冊裡重解一次彈道');
+  ok(/ent\.id !== this\._lockId/.test(rg), '鎖定目標仍排除在範圍光暈之外(另有 lockGlow,不疊兩層)');
+  const blastArm = /if \(cls === 'blast'\) \{([\s\S]*?)\n {4}\} else if \(cls === 'fan'\)/.exec(sv)?.[1] || '';
+  ok(blastArm.length > 0, '取得 _shotVictims 的 blast 分支原文');
+  ok(!/_layerHitT|_losBlocked|_effRange|_inShotRange|RANGE_TOL/.test(blastArm),
+    'A11:blast 足跡 MUST NOT 出現 LOS / 射程閘(牆邊炸開照樣傷得到牆後的人)');
+  ok(/hitR|_hitR/.test(blastArm) && /_bodyDy/.test(blastArm),
+    'blast 足跡量到命中量體最近點(水平 _hitR + 垂直帶 _bodyDy,與伺服器 _blast 同構)');
+  ok(/_bodySpan|y < y0 \? y0 - y : \(y > y1 \? y - y1 : 0\)/.test(methodSrc('_bodyDy', G)),
+    '客戶端 _bodyDy 與伺服器 sim._bodyDy 同式(帶內 = 0)');
+
+  // ---- 行為直測:真品 _shotVictims 跑合成場景 ----
+  /** 挑一把 aoeClass = cls 的武器(不寫死角色代號) */
+  const weaponOfAoe = (cls) => {
+    for (const id of Object.keys(CHARACTERS)) {
+      for (const slot of ['light', 'heavy']) {
+        const def = heroWeapon(id, slot, 1);
+        if (def && aoeClass(def) === cls) return { id, slot, def };
+      }
+    }
+    throw new Error(`資料中找不到 aoeClass=${cls} 的武器`);
+  };
+  const mkFoe = (id, x, z = 0, h = 4) => ({
+    id, kind: 'robot', side: 'STEEL', mesh: { position: new V3(x, 0, z), visible: true },
+    dimTop: h, dimH: h,
+  });
+  /** 樁:自機在原點、面向 +X;準星解 / 貫穿端點 / 牆由呼叫端注入 */
+  const mkShot = (o = {}) => ({
+    side: 'SWARM', dead: false, shopOpen: false, gunGroup: null,
+    camera: {
+      position: new V3(0, 2, 0),
+      getWorldDirection: (v) => v.set(1, 0, 0),
+    },
+    ents: new Map((o.foes || []).map((e) => [e.id, e])),
+    _lobFc: o.fc || null,
+    _hitR: () => 1,
+    _altRangeTo: () => 1,
+    _maxRange: (d) => d.range * 2,
+    _effRange: M('_effRange'),
+    _entAimPoint: M('_entAimPoint'),
+    _bodyDy: M('_bodyDy'),
+    _shotWarn: M('_shotWarn'),
+    _inShotRange: M('_inShotRange'),
+    _lancePierced: M('_lancePierced'),
+    _reachable: M('_reachable'),
+    _shotVictims: M('_shotVictims'),
+    _shotV0: M('_shotV0'), _lobSolve: M('_lobSolve'), _lobVel: M('_lobVel'),
+    _lob45Vel: M('_lob45Vel'), _arcTrace: M('_arcTrace'), _lobLadder: M('_lobLadder'),
+    _layerHitT: mkWalls(o.walls || []),
+    _lobCrosshair: () => ({ from: new V3(0, 2, 0), pt: o.pt || new V3(100, 2, 0), ent: o.cross || null }),
+    _resolveAim: () => ({ point: o.pt || new V3(300, 2, 0), ent: null, missileId: null }),
+  });
+  const ids = (r) => (r ? r.hits.map((e) => e.id).sort() : null);
+
+  // ---- ① blast:準星目標 + **同時會受到傷害的那些人**(這一代的重點)----
+  {
+    const { id, def } = weaponOfAoe('blast');
+    const rule = reachRule(def);
+    ok(rule.path === 'ray', `測試前置:${id} 的 ${def.name} = 爆炸型且走直線落點(r ${def.r}m)`);
+    const A = mkFoe('A', 100), B = mkFoe('B', 100 + def.r * 1.5), C = mkFoe('C', 100 + def.r * 3);
+    const c = mkShot({ foes: [A, B, C], cross: A, pt: new V3(100, 2, 0) });
+    const r = c._shotVictims(def, rule);
+    ok(String(ids(r)) === 'A,B',
+      `爆炸型:準星目標 A 與爆風內的 B 一起亮、${(def.r * 3).toFixed(1)}m 外的 C 不亮(實得 ${ids(r)})`);
+    // A11:爆風不吃 LOS —— 掩體擋在 A 與 B 之間,B 照樣入列
+    const c2 = mkShot({ foes: [A, B, C], cross: A, pt: new V3(100, 2, 0),
+      walls: [{ x: 100 + def.r * 0.5, top: 400 }] });
+    ok(String(ids(c2._shotVictims(def, rule))) === 'A,B',
+      'A11:掩體擋在爆心與 B 之間,B 仍亮(爆風繞射近似,不吃 LOS)');
+    // 入口閘:準星目標打不到 ⇒ 誰都不受傷 ⇒ 全場熄燈(即使 B 就站在落點旁)
+    const c3 = mkShot({ foes: [A, B, C], cross: A, pt: new V3(100, 2, 0), walls: [{ x: 50, top: 400 }] });
+    ok(c3._shotVictims(def, rule) === null,
+      '入口閘:準星那一發被掩體擋住 ⇒ 回 null(全場熄燈,MUST NOT 只熄準星目標那一顆)');
+  }
+  // ---- ② 單體直擊輕武器:只有準星那一個亮(旁邊 1m 的隊友照樣不亮)----
+  {
+    let picked = null;
+    for (const id of Object.keys(CHARACTERS)) {
+      const def = heroWeapon(id, 'light', 1);
+      if (def && aoeClass(def) === null) { picked = { id, def }; break; }
+    }
+    ok(picked != null, '測試前置:找得到單體直擊輕武器(aoeClass = null)');
+    const { def } = picked;
+    const rule = reachRule(def);
+    const A = mkFoe('A', 60), B = mkFoe('B', 61);
+    const c = mkShot({ foes: [A, B], cross: A, pt: new V3(60, 2, 0) });
+    ok(String(ids(c._shotVictims(def, rule))) === 'A',
+      '單體直擊:只有準星那一個亮(這一發本來就只傷得到他)');
+    ok(mkShot({ foes: [A, B], cross: null, pt: new V3(60, 2, 0) })._shotVictims(def, rule) === null,
+      '單體直擊:準星壓在地上 ⇒ 誰都傷不到 ⇒ 全場熄燈');
+  }
+  // ---- ③ line:圓柱內的全部亮(與 sim._lanceHits 同構)----
+  {
+    const { id, def } = weaponOfAoe('line');
+    const rule = reachRule(def);
+    const R = lanceR(def);
+    ok(R > 0, `測試前置:${id} 的 ${def.name} = 直線貫穿(圓柱半徑 ${R}m)`);
+    const A = mkFoe('A', def.range * 0.3), B = mkFoe('B', def.range * 0.6, R * 0.4);
+    const C = mkFoe('C', def.range * 0.6, R + 1 + 6);
+    const D = mkFoe('D', def.range * 1.6);              // 射程外:圓柱裡但打不到
+    const c = mkShot({ foes: [A, B, C, D], pt: new V3(def.range * 2, 2, 0) });
+    ok(String(ids(c._shotVictims(def, rule))) === 'A,B',
+      `直線貫穿:圓柱內的 A/B 一起亮、柱外的 C 與射程外的 D 不亮(實得 ${ids(c._shotVictims(def, rule))})`);
+    ok(String(ids(mkShot({ foes: [A, D], pt: new V3(def.range * 2, 2, 0) })._shotVictims(def, rule))) === 'A',
+      '直線貫穿:射程外的 D 在同一條圓柱上也不亮(逐目標誠實界,與伺服器 heroLance 同一條)');
+  }
+  // ---- ④ fan:錐內的全部亮(與 sim.heroPlasma 同構)----
+  {
+    const { id, def } = weaponOfAoe('fan');
+    const rule = reachRule(def);
+    const arc = def.arc || 15;
+    const d = Math.min(50, def.range * 0.5);
+    const A = mkFoe('A', d, 0);
+    const B = mkFoe('B', d, d * Math.tan(arc * 0.5 * Math.PI / 180));   // 錐內
+    const C = mkFoe('C', d, d * Math.tan((arc + 20) * Math.PI / 180));  // 錐外
+    const c = mkShot({ foes: [A, B, C] });
+    ok(String(ids(c._shotVictims(def, rule))) === 'A,B',
+      `扇形(${id} ${def.name},±${arc}°):錐內的 A/B 亮、錐外的 C 不亮(實得 ${ids(c._shotVictims(def, rule))})`);
+    // 扇形不需要準星目標(錐從槍口張開,伺服器 heroPlasma 同樣不看準星解到誰)
+    ok(c._shotVictims(def, rule) !== null, '扇形:準星壓在空無處仍亮(足跡由射向定案)');
+    // 準星壓在射程外的遠方敵人身上:整發性的入口閘會把整組錯誤熄掉,而那一發真的會傷到近處的 A
+    const Z = mkFoe('Z', def.range * 3, 0);
+    ok(String(ids(mkShot({ foes: [A, Z], cross: Z })._shotVictims(def, rule))) === 'A',
+      '扇形:準星壓在射程外的敵人身上,錐內近處的 A 照樣亮(MUST NOT 讓準星目標整組熄燈)');
   }
 }
 

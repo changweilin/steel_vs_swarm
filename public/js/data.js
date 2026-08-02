@@ -1325,8 +1325,11 @@ export const chaseCapS = (def) => flightCapS(def) * SEEK.CHASE_F;
 //                   **刻意不要求視線通**:爆風不吃 LOS(A11 繞射近似),牆邊炸開照樣傷到牆後的人。
 //         'clear' = 直線必須整段淨空(伺服器 heroHit/_lanceHits/heroPlasma 都有 _losBlocked 複驗)
 //   arm   導引/射後不理的軌跡修正期(ARMING.m 內散布大、命中率低)⇒ 光暈轉警示色而非熄滅
-// **唯一分類縫**:消費端(game.js _updateRangeGlows)MUST 經 reachRule() 分派,
+// **唯一分類縫**:消費端(game.js `_reachable`)MUST 經 reachRule() 分派,
 // MUST NOT 自己比對 def.type / trajClass 再寫第二份規則表。五個彈道類別 MUST 全數列在此。
+// 2026-08-03 改制後這張表的角色是**準星那一發的入口閘**:光暈的名冊已改成「這一發的傷害
+// 足跡」(`game._shotVictims`,分類走 `aoeClass`),而足跡成不成立的前提就是準星目標打得到。
+// 判據本身逐位元不變,只是消費端從「逐敵人」收斂成「準星那一個」。
 export const REACH_RULE = {
   lob:   { path: 'arc', hit: 'blast', arm: false },
   guide: { path: 'ray', hit: 'blast', arm: true },
