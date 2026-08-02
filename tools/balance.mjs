@@ -38,7 +38,7 @@
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax } from '../public/js/data.js';
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
@@ -353,7 +353,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
 // ⑦ 是它唯一被計價的地方。改 AoE 半徑 / AREA_WEAPONS / AOE_BUDGET / MOB_BUDGET / RANGE_BUDGET
 // MUST 以本段為準。
 {
-  const { rate, avg, stat } = laneMatrix();
+  const { rate, avg, abil, stat } = laneMatrix();
   const chs = Object.keys(CHARACTERS);
   const mean = (v) => v.reduce((s, x) => s + x, 0) / v.length;
   const of = (k) => chs.filter((c) => charKind(c) === k);
@@ -428,6 +428,35 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     console.log(`${CLS_EXEMPT[g] ? '⚪' : okC ? '✅' : '❌'} d 武器類型  重武器 ${AOE_NAME[g]}(${cs.length} 名)vs 其他 ${(v * 100).toFixed(1)}%`
       + (CLS_EXEMPT[g] ? ` — 豁免:${CLS_EXEMPT[g]}` : `(${CLS_LO * 100}~${CLS_HI * 100}%)`));
   }
+
+  // ---- f 長按攻擊(2026-08-02 使用者定案「只使用輕/重武器 + 長按攻擊」)----
+  // 三招吃**同一份**傷害預算(SPECIAL)、同一顆鍵、同一段 30s CD ⇒ 使用者的設計語意就是「威力等值」。
+  // e2e 已釘死**名目**預算等值,但名目不等於實得:三招的載具都會被打下來,交付方式也各不相同
+  // (護衛機要撲到臉上、轟炸機從 90m 外投、飛彈得飛完全程且攔截即完全否定)。
+  // ⑦f 量的就是**實得**:打在「敵方機體 + 敵方砲塔」上的 EHP(= 兩個勝利條件),
+  // 清兵那一桶刻意不計 —— 兵波每 waveInterval 補一批,爆風掃到幾隻很好看但不決定勝負,
+  // 把它算進來會讓半徑大的一招看起來永遠贏(實測總傷害與有效傷害可以差到 4 倍)。
+  const KINDS = ['drone', 'robot', 'morph'];
+  const ABIL_NAME = { drone: '飽和攻擊', robot: '極音速飛彈', morph: '集束炸彈' };
+  const eff = Object.fromEntries(KINDS.map((k) => {
+    const v = of(k).map((c) => abil[c]);
+    const n = v.reduce((s, x) => s + x.n, 0);
+    return [k, { n, per: n ? v.reduce((s, x) => s + x.hero + x.tower, 0) / n : 0 }];
+  }));
+  // 守門線 1.8×(現行 1.71×)。**剩下的差距是結構性的,不是還沒調完**:三招總覆蓋面積已相同,
+  // 但極音速飛彈是**一顆**大圓、飽和攻擊是四顆小圓 —— 目標擠成一團(機體 + 同塔位雙塔)時,
+  // 一顆大圓一次吃三個、四顆小圓各吃各的。要再收就得動「切幾顆」本身(KAMI.N / BOMB_MAX),
+  // 而那是使用者定調的招式形狀 ⇒ 這裡當**防退化欄杆**用,不是驗收線。
+  const SPREAD_MAX = 1.8;
+  const lo = Math.min(...KINDS.map((k) => eff[k].per)), hi = Math.max(...KINDS.map((k) => eff[k].per));
+  const okF = lo > 0 && hi / lo <= SPREAD_MAX;
+  if (!okF) fail++;
+  for (const k of KINDS) {
+    console.log(`   ⓘ f 長按攻擊  ${ABIL_NAME[k].padEnd(6)}(${k})有效傷害 ${eff[k].per.toFixed(0)} EHP/次`
+      + `(打在敵方機體 + 砲塔上;${eff[k].n} 次施放)`);
+  }
+  console.log(`${okF ? '✅' : '❌'} f 長按攻擊  三招實得比 ${(hi / lo).toFixed(2)}×(同預算同 CD ⇒ MUST ≤ ${SPREAD_MAX}×,且 MUST 全數 > 0)`
+    + `;載具生存性 = ${TOWER_SITE_N} 座塔的前線基準(飛彈另計一波兵)`);
 
   // ---- e 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」)----
   const MED_MAX = 100, TIE_MAX = 0.25;

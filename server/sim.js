@@ -7,7 +7,8 @@ import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
-  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperApex, hyperRange, hyperDiveSpd,
+  kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
+  hyperClimbVx, hyperArcY,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotV0, blastCoreR,
@@ -2327,12 +2328,18 @@ export class BattleSim {
 
   // ---------- 極音速飛彈(機甲長按右鍵;2026-08-01 取代舊「重砲模式/巨砲」)----------
   /**
-   * 發射一枚**射後不理**的極音速飛彈:垂直爬升到 hyperApex() 後,以 hyperDiveSpd() 螺旋俯衝撲向
-   * 發射瞬間鎖定的目標(鎖到實體 → 追它的即時位置;無鎖定 → 正前方 hyperRange() 的地面點)。
+   * 發射一枚**射後不理**的極音速飛彈(2026-08-02 使用者定案的兩相位彈道):
+   *   ① 以 HYPER.LAUNCH_DEG(45°)出膛,沿**拋物線**飛向目標正上方(高度只走 hyperArcY 這一支);
+   *   ② 到頂點轉**極音速螺旋俯衝**(hyperDiveSpd),撲向發射瞬間鎖定的目標
+   *      (鎖到實體 → 追它的即時位置;無鎖定 → 正前方 hyperRange() 的地面點)。
    * 「射後不理」= 發射後玩家不必再瞄準,也不必維持鎖定(對齊 trajClass 'fnf');故此處**不驗**
    * 狙擊模式、不驗彈夾 —— 它是獨立實體,與重武器完全脫鉤(MUST NOT 復辟巨砲的彈夾旁路)。
    * 飛彈是**可被鎖定/擊落的實體**(kind 'hyper'),HP 走 hyperHp():一座砲塔剛好打不爆。
    * 同時只能有一枚在空中(空中已有 → 忽略),CD 自發射瞬間起算。
+   *
+   * 拋物線的**水平航線於發射當下定案**(方位 ux/uz + 全長 arcD):彈道就是彈道,發射後不再操舵 ——
+   * 追蹤對象的移動由**俯衝段**吸收(頂點 → 目標的軸線每 tick 重解)。MUST NOT 讓爬升段跟著轉,
+   * 那會把「拋物線」變成一條每幀重算的曲線,兩端(伺服器推進 / 客戶端插值)也就不再是同一條。
    */
   heroHyper(pid) {
     const h = this.heroes.get(pid);
@@ -2344,12 +2351,17 @@ export class BattleSim {
     // 無鎖定 → 打正前方 hyperRange() 的地面點(彈道終點固定,不會變成無限射程的遊蕩彈)
     const tx = t ? t.x : h.x - Math.sin(ry) * hyperRange();
     const tz = t ? t.z : h.z + Math.cos(ry) * hyperRange();
+    // 爬升段的水平航線(發射當下定案);d = 0 的退化情形(目標貼臉)給一個最小值免除以零
+    const dx = tx - h.x, dz = tz - h.z;
+    const arcD = Math.max(1, Math.hypot(dx, dz));
     const m = this._add({
       kind: 'hyper', side: h.side, pid, hyper: true,
-      x: h.x, z: h.z, y: h.y || 0, ry,
+      x: h.x, z: h.z, y: h.y || 0, ry: Math.atan2(-dx, dz),
       hp: hyperHp(), armor: 0,
       tid: t ? t.id : 0, tx, tz,          // tid = 射後不理的追蹤對象;tx/tz = 失去對象後的最後落點
-      apex: hyperApex(), phase: 'climb', spin: 0,
+      x0: h.x, z0: h.z, y0: h.y || 0,     // 發射點(拋物線的原點)
+      ux: dx / arcD, uz: dz / arcD, arcD, // 爬升段的水平方位與全長
+      trav: 0, phase: 'climb', spin: 0,
       dive: null,                          // 俯衝起點(轉入 dive 相位時定案)
     });
     h.hyper = m;
@@ -2358,10 +2370,13 @@ export class BattleSim {
   }
 
   /**
-   * 每 tick:爬升 → 到頂轉俯衝 → 螺旋落向目標 → 觸地/近炸引爆。
+   * 每 tick:拋物線爬升 → 到頂點(目標正上方)轉俯衝 → 螺旋落向目標 → 觸地/近炸引爆。
    * 兩相位都不吃玩家輸入(射後不理);追蹤對象死亡/消失 → 沿用最後已知落點 tx/tz 打下去。
-   * 螺旋只是**位置偏擺**(SPIN_RPS / SPIRAL_R),彈道軸仍是「俯衝起點 → 目標」的直線 ⇒
-   * 兩端同吃同一份參數就會畫出同一條航跡(客戶端只插值 y/x/z,不自己另算螺旋)。
+   * 爬升段:水平**等速** hyperClimbVx()、高度只由 hyperArcY(單一縫)給 ⇒ 出膛角恆為 LAUNCH_DEG。
+   * 俯衝段:彈道軸 = 「頂點 → 目標」的直線,位置再疊上**水平圓**螺旋偏擺(SPIN_RPS / SPIRAL_R)。
+   *   螺旋基底刻意取**固定的水平法向 ±(uz, −ux)**,而不是由彈道軸現算 —— 頂點就在目標正上方,
+   *   軸的水平分量趨近 0,拿它當基底會在最需要螺旋的「垂直落下」那一發整個退化成沒有螺旋。
+   * 兩端同吃同一份參數就會畫出同一條航跡(客戶端只插值 y/x/z,不自己另算彈道)。
    */
   _tickHypers(dt) {
     for (const h of this.heroes.values()) {
@@ -2374,23 +2389,27 @@ export class BattleSim {
       else m.tid = 0;
 
       if (m.phase === 'climb') {
-        m.y += HYPER.CLIMB_SPD * dt;
-        if (m.y >= m.apex) { m.y = m.apex; m.phase = 'dive'; m.dive = { x: m.x, z: m.z, y: m.y }; }
+        m.trav = Math.min(m.arcD, m.trav + hyperClimbVx() * dt);
+        const f = m.trav / m.arcD;
+        m.x = m.x0 + m.ux * m.trav;
+        m.z = m.z0 + m.uz * m.trav;
+        m.y = m.y0 + hyperArcY(m.arcD, f);
+        if (f >= 1) { m.phase = 'dive'; m.dive = { x: m.x, z: m.z, y: m.y }; m.trav = 0; }
         continue;
       }
-      // 俯衝:沿「俯衝起點 → 目標地面點」的軸線前進,位置再疊上繞軸螺旋偏擺
+      // 俯衝:沿「頂點 → 目標地面點」的軸線前進,位置再疊上繞軸的水平圓螺旋偏擺
       const ty = t ? this._tgtY(t) : 0;
       const ax = m.tx - m.dive.x, az = m.tz - m.dive.z, ay = ty - m.dive.y;
       const al = Math.hypot(ax, az, ay) || 1;
-      m.trav = (m.trav || 0) + hyperDiveSpd() * dt;
+      m.trav += hyperDiveSpd() * dt;
       const f = Math.min(1, m.trav / al);
       m.spin += HYPER.SPIN_RPS * Math.PI * 2 * dt;
       // 螺旋半徑隨接近目標收斂到 0(否則落點會被偏擺推開一個 SPIRAL_R)
       const sr = HYPER.SPIRAL_R * (1 - f);
-      const px = -az / Math.hypot(ax, az, 0.001), pz = ax / Math.hypot(ax, az, 0.001);   // 水平法向
-      m.x = m.dive.x + ax * f + px * Math.cos(m.spin) * sr;
-      m.z = m.dive.z + az * f + pz * Math.cos(m.spin) * sr;
-      m.y = Math.max(0, m.dive.y + ay * f + Math.sin(m.spin) * sr);
+      const c = Math.cos(m.spin) * sr, s = Math.sin(m.spin) * sr;
+      m.x = m.dive.x + ax * f + m.uz * c + m.ux * s;    // 水平圓:基底 = 發射方位與其法向
+      m.z = m.dive.z + az * f - m.ux * c + m.uz * s;
+      m.y = Math.max(0, m.dive.y + ay * f);
       m.ry = Math.atan2(-ax, az);
       if (f >= 1) this._hyperBoom(m);
     }
@@ -2615,9 +2634,11 @@ export class BattleSim {
   _decoyBoom(d) {
     const sq = this.squads.get(d.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
-    this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: DECOY.R, side: d.side });
     // 撞擊爆風 = 絕招預算 × DECOY_IMPACT(隨主機甲輕/重武器綜合等級成長);爆點層 = 餌機所在層(不穿橋面/隧道天花)
-    if (owner) this._blast(owner, decoyBlast(owner.abil), d.x, d.z, d.y, this._unitLev(d));
+    // 演出半徑 MUST 取結算用的同一份 def.r(面積計價後半徑是推導值)—— 看到多大 = 打到多大
+    const def = decoyBlast(owner?.abil);
+    this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: def.r, side: d.side });
+    if (owner) this._blast(owner, def, d.x, d.z, d.y, this._unitLev(d));
     // 2026-07-19:自爆(燃料耗盡/近炸)時尚有未投完的炸彈 → 原地補投一枚(復用單一投彈縫,記主機甲)
     if (owner && (d.bombsLeft || 0) > 0) { d.bombsLeft--; this._decoyBomb(d, owner, this._decoyBombTarget(d)); }
     this._removeDecoy(d);
