@@ -47,6 +47,7 @@ jobs:
           node tools/audit_view_lock.mjs
           node tools/audit_ctrl_mode.mjs
           node tools/audit_spectator_cam.mjs
+          node tools/audit_shop_auto.mjs
           node tools/audit_bot_vision.mjs
 
       - name: 平衡四不變式
