@@ -291,6 +291,24 @@ function buyUp(M) {
 }
 
 /**
+ * 下一次擊發的排程時刻(**唯一縫**:機體槽位 / NPC / 砲塔三個排程端 MUST 全吃這一支)。
+ *
+ * 舊制是 `next = t + 1/rate`,**每一發都把不滿一格的殘量丟掉** ⇒ 模型的有效射速被格點吃掉:
+ * 步進 0.125s 之下 rate 7 實際只打 4.0 發/秒(−43%)、rate 3.91 只打 2.67(−32%)。正式對局
+ * 的射速閘(`sim._gateFire` / `game._tryFire`)量的是**連續時鐘**,根本沒有這一層量化 ——
+ * 也就是說模型量到的不是武器強弱,是「這把武器的射速落在格點的哪一側」。
+ *
+ * 改成從**排定時刻**累加 ⇒ 長期平均射速 = 標稱射速,與步進無關(這才兌現檔頭「步進收斂」那條)。
+ * 落後超過一格(沒有目標而空等)一律只補一格,MUST NOT 讓空窗期把發數存起來事後連射。
+ *
+ * 2026-08-02:射速壓縮(data.js FIRE_RATE)把全部輕武器重新落到格點上,舊制的量化偏差因此
+ * 在 ⑦c 上表現成「無人機憑空變強 3.3pp」—— 那是模型的格點,不是機體的強弱。
+ */
+function reFire(next, t, iv) {
+  return Math.max(next, t - LANE.DT) + iv;
+}
+
+/**
  * 一台機體的開火:逐槽位檢查裝填/彈藥/電力,選敵後結算(含範圍命中名冊)。
  * 選敵序 = 敵方機體 > 最近的敵方 NPC > 敵方砲塔(都要在該槽位射程內)——
  * 對線期打人、沒人打就清兵、清完兵才拆塔,與正式對局的優先序同構。
@@ -312,7 +330,7 @@ function fire(M, foe, enemyTower, t, foes) {
     }
     if (!aim && enemyTower && inR(enemyTower)) aim = enemyTower;
     if (!aim) continue;
-    s.ammo--; s.next = t + 1 / (s.def.rate || 3);
+    s.ammo--; s.next = reFire(s.next, t, 1 / (s.def.rate || 3));
     if (s.id === 'heavy') M.mp -= s.mp;
     for (const h of hits(M, aim, s.def, foes)) {
       if (h.f <= 0 || h.ent.hp <= 0) continue;
@@ -549,7 +567,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       for (const e of foes) { const d = dist(c, e) - hitR(e); if (d < td) { td = d; tgt = e; } }
       if (!tgt || td > u.range) { c.x += c.dir * c.speed * LANE.DT; continue; }
       if (t < c.next) continue;
-      c.next = t + 1 / u.rate;
+      c.next = reFire(c.next, t, 1 / u.rate);
       const wd = { pen: 0, vs: {} };
       if (tgt.hero) { tgt.hurtT = t; }
       damage(tgt, u.dmg, wd, false);
@@ -561,7 +579,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       let tgt = null, td = Infinity;
       for (const e of foes) { const d = dist(T, e) - hitR(e); if (d <= UNITS.tower.range && d < td) { td = d; tgt = e; } }
       if (!tgt) continue;
-      T.next = t + 1 / UNITS.tower.rate;
+      T.next = reFire(T.next, t, 1 / UNITS.tower.rate);
       if (tgt.hero) tgt.hurtT = t;
       damage(tgt, UNITS.tower.dmg, { pen: 0, vs: {} }, false);
     }
