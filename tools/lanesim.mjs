@@ -38,10 +38,10 @@
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit
 // 雙層拆分 → 裝甲層吃 armorMul。差別只有「擲骰改期望值」(稽核要確定性,見全域 A4)。
 import {
-  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, BLAST, LANCE, AOE_EDGE,
+  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, blastFootprintR, aoeClass,
-  shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, hitH, lanceR,
+  shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
 } from '../public/js/data.js';
 import { waveInterval } from '../server/sim.js';
 

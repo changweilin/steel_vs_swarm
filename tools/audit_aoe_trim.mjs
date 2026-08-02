@@ -26,7 +26,7 @@
 import { readSrc } from './audit_src.mjs';
 import {
   CHARACTERS, GAME, ECON, BLAST, TARGET_R, UNITS, blastFalloff, aoeClass, heroWeapon, heroRange,
-  charKind, heroMobility, AREA_WEAPONS, AOE_BUDGET, MOB_BUDGET, RANGE_BUDGET, tierVal,
+  charKind, heroMobility, AREA_WEAPONS, AOE_BUDGET, MOB_BUDGET, tierVal,
   towerPairSepM, soloBlastRmax, blastFootprintR, areaValue, aoeTrimRaw, aoeTrimF,
   mobMid, mobDmgF, rangeMid, rngDmgF,
 } from '../public/js/data.js';
