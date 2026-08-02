@@ -126,8 +126,8 @@ export const VENUES = [
   //           兩側數百公尺內沒有第二個跨越點 ⇒ 最短路徑非走橋面不可(bake 另掛 PREFER_BRIDGE)。
   //   madrid  ② 地下道 —— 卡斯提亞大道沿線的車行地下道群,地形全平 ⇒ 深度只可能來自「挖」,
   //           正是 underpassPlan 的適用面(對照組:金龍那種深度來自山的是 ① 山體隧道)。
-  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.503300, 13.448750], bearing: 10, mix: { urban: 0.85, green: 0.15 } },
-  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.445540, -3.687600], bearing: 90, mix: { urban: 0.85, green: 0.15 } },
+  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 } },
+  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.445395, -3.687511], bearing: 110, mix: { urban: 0.85, green: 0.15 } },
 
   // ---- 綠地單一(≥80%)----
   { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'] },   // 天母(南麓路網)
@@ -162,12 +162,15 @@ export const VENUES = [
   // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。
   { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'] },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 } },   // Eixample 格柵
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500641, -0.124862],  bearing: 85,  mix: { urban: 0.6, water: 0.2, green: 0.2 } },   // 2026-07-30 複掃:07-29 兵線重烤後不再從 Westminster Bridge 下方過 ⇒ 摘除 underBridge
+  // 2026-08-02 錨點改貼西敏橋西橋頭 + PREFER_BRIDGE + 方位角夾東西向 ⇒ L1 兵線重新走上橋面
+  //(使用者回報「倫敦也沒有橋了」:07-29 主軸偏航規則重烤後兵線改走同一岸)。
+  // 代價:單橋兩岸擠不出第二、三條互不接觸的真實道路兵線 ⇒ L2/L3 退回 synthLane。
+  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500964, -0.124511],  bearing: 115, mix: { urban: 0.6, water: 0.2, green: 0.2 } },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 } },   // 右京區街廓
   //   chicago ⑨ 水上高架橋 —— 芝加哥河兩岸街廓緊貼、河面僅數十公尺寬,南北向幹道一律以
   //           可通車的開合橋跨河 ⇒ L1 兩堡(481 真實公尺)分踞兩岸時,兵線必然踩上橋面。
   //           與 london(泰晤士河)的差別是「多座短橋 vs 單座長橋」,兩張都留著當對照。
-  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887700, -87.624360], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 } },
+  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887643, -87.624481], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 } },
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----
