@@ -301,10 +301,13 @@ const tlAudit = read('tools', 'audit_touch_layout.mjs');
 ok(!/\[data-act="menu"\][^\n]*n\.hidden = spec/.test(tlAudit)
   && /\.gb-a, \.gb-aim, \[data-act="shop"\], \[data-act="lock"\]/.test(tlAudit),
   'audit_touch_layout 的 setKind 鏡射 MUST 與 mobile.js 逐字一致');
-// 說明文字:觀戰兩版都要提到選單出口(鍵鼠說 ESC、搖桿說 HOME)
-const helpSrc = read('public', 'js', 'help.js');
-const kbmSpec = /spectator: '([^']*)'/.exec(helpSrc)?.[1] || '';
-const padSpec = [...helpSrc.matchAll(/spectator: '([^']*)'/g)][1]?.[1] || '';
+// 說明文字:觀戰兩版都要提到選單出口(鍵鼠說 ESC、搖桿說 HOME)。
+// **取真品而不是正則刮原文**(2026-08-02):觀戰說明已改成由 `SPEC_CONTROLS` 逐列推導
+//(見 help.js;面板與選單共用同一份),原文裡不再有 `spectator: '…'` 那一行 ——
+// 繼續刮字串只會刮到空字串然後整批誤紅,而真正該驗的是「玩家最後讀到的那一份文字」。
+const { CONTROLS_BY_KIND: HELP_KBM, TOUCH_CONTROLS: HELP_PAD } = await import('../public/js/help.js');
+const kbmSpec = HELP_KBM.spectator || '';
+const padSpec = HELP_PAD.spectator || '';
 ok(/ESC/.test(kbmSpec), '觀戰(鍵鼠版)操作提示 MUST 提到 ESC 戰場選單');
 ok(/HOME/.test(padSpec), '觀戰(搖桿版)操作提示 MUST 提到 HOME 戰場選單');
 

@@ -27,7 +27,8 @@
 import { readSrc, grabMethod } from './audit_src.mjs';
 // heroTargetH 取 data.js 那一份(models.js 只是轉出;直接 import models.js 會拉進 three,
 // 而 three 走 CDN importmap,Node 端解析不了)
-import { SPEC_CAM, specViewNext, camSmoothF, camAngleStep, wrapPi, ECON, CHARACTERS, SIDES, heroTargetH } from '../public/js/data.js';
+import { SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep, wrapPi, ECON, CHARACTERS, SIDES, heroTargetH } from '../public/js/data.js';
+import { SPEC_CONTROLS, specControls, CONTROLS_BY_KIND, TOUCH_CONTROLS } from '../public/js/help.js';
 
 const dataSrc = readSrc('public', 'js', 'data.js');
 const gameSrc = readSrc('public', 'js', 'game.js');
@@ -71,6 +72,17 @@ ok(SPEC_CAM.FPV_YAW_K > SPEC_CAM.YAW_K,
   `第一人稱的偏航跟得比第三人稱緊(FPV_YAW_K ${SPEC_CAM.FPV_YAW_K} > YAW_K ${SPEC_CAM.YAW_K})`
   + ' —— 第一人稱是「用他的眼睛看」,鏡頭落後於他轉頭就是暈');
 ok(SPEC_CAM.POS_K > 0 && SPEC_CAM.YAW_K > 0 && SPEC_CAM.SNAP_M > 0, '平滑係數與瞬移門檻皆為正');
+// 剛體貼合的視角(2026-08-02 使用者定案「第一人稱視角和第三人稱跟隨視角應該要跟著機體」)
+ok(specViewLocked('fpv') && specViewLocked('tps'),
+  '第一人稱與第三人稱跟隨 = 掛在機體上的鏡頭(位置剛體貼合,不再套 POS_K)');
+ok(!specViewLocked('orbit') && !specViewLocked('god'),
+  '第三人稱自由 / 上帝視角不貼合(前者是觀戰者自己繞著看、後者根本沒有跟隨目標)');
+ok(SPEC_CAM.LOCK_VIEWS.every((v) => SPEC_CAM.VIEWS.includes(v)),
+  '貼合名冊只收合法視角(打錯字 = 那個視角靜默退回平滑,畫面上只看得出「鏡頭有點慢」)');
+ok(count(gameSrc, /specViewLocked\(/g) === 1,
+  '`specViewLocked` 在 game.js 只有一個消費端(判定散出去 = 兩處視角清單會漂)');
+ok(!/SPEC_CAM\.LOCK_VIEWS/.test(gameSrc.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '')),
+  'game.js 的程式碼 MUST NOT 自己比對 LOCK_VIEWS(名冊只准經 specViewLocked;註解提及不算)');
 ok(SPEC_CAM.FLOOR_M > 0, '下降地板餘裕 FLOOR_M > 0(降到地面就停住,不鑽進地形)');
 ok(SPEC_CAM.FOV_MIN < SPEC_CAM.FOV_MAX && SPEC_CAM.FOV_STEP > 1, '滾輪縮放:視野角上下界與等比步進合法');
 ok(!/\nconst SPEC = \{/.test(gameSrc),
@@ -146,9 +158,9 @@ class V3 {
 const THREE_STUB = { Vector3: V3 };
 const HERO_VIEW = () => ({ e: 0.85, f: 0.1 });   // 視點比例:真品住 game.js 模組層,行為與本測無關
 const proto = new Function(
-  'THREE', 'SPEC_CAM', 'camSmoothF', 'camAngleStep', 'CHARACTERS', 'SIDES', 'heroTargetH', 'heroView',
+  'THREE', 'SPEC_CAM', 'specViewLocked', 'camSmoothF', 'camAngleStep', 'CHARACTERS', 'SIDES', 'heroTargetH', 'heroView',
   `return ({ ${grabMethod(gameSrc, '_updateSpectator')} });`,
-)(THREE_STUB, SPEC_CAM, camSmoothF, camAngleStep, CHARACTERS, SIDES, heroTargetH, HERO_VIEW);
+)(THREE_STUB, SPEC_CAM, specViewLocked, camSmoothF, camAngleStep, CHARACTERS, SIDES, heroTargetH, HERO_VIEW);
 
 const CH = Object.keys(CHARACTERS)[0];
 const HH = heroTargetH(CHARACTERS[CH].kind, CH);
@@ -245,18 +257,50 @@ const DT = 1 / 60;
   ok(near(ob.yaw, -2.5), '第三人稱自由:偏航完全由觀戰者控(MUST NOT 被 ry 蓋掉)');
 }
 {
-  // ④ 平滑 vs 瞬移:小位移要平滑(不晃),換人/重生的大跳一律直接貼上(不拉長鏡頭)
+  // ④ 平滑 vs 瞬移(第三人稱**自由**:觀戰者自己繞著看的鏡頭,位置仍走平滑)
   const tgt = mkTarget(0, 0, 0, 0);
-  const c = mkSpec('tps', tgt);
+  const c = mkSpec('orbit', tgt);
   c._updateSpectator(DT);
   tgt.mesh.position.set(SPEC_CAM.SNAP_M * 0.2, 0, 0);
   c._updateSpectator(DT);
   ok(c._specAnchor.x > 0 && c._specAnchor.x < SPEC_CAM.SNAP_M * 0.2,
-    '目標小幅移動:錨點平滑逼近(直接貼上 = 8Hz 快照的逐幀抖動全進相機)');
+    '第三人稱自由:目標小幅移動時錨點平滑逼近');
   tgt.mesh.position.set(SPEC_CAM.SNAP_M * 5, 0, 0);
   c._updateSpectator(DT);
   ok(near(c._specAnchor.x, SPEC_CAM.SNAP_M * 5),
     `超過 SNAP_M(${SPEC_CAM.SNAP_M}m)的瞬移直接貼上 —— 換人/重生不該拉出一條橫越全圖的長鏡頭`);
+}
+{
+  // ④-b **跟著機體**(2026-08-02 使用者定案「第一人稱視角和第三人稱跟隨視角應該要跟著機體」):
+  //     這兩種是掛在機體上的鏡頭 ⇒ 錨點 MUST 逐位元等於機體位置,**一幀都不准落後**。
+  //     再套一次 POS_K 平滑是雙重平滑(機體位置本來就已逐幀插值過),穩態落後 = 速度 ÷ POS_K:
+  //     40m/s 的無人機差 6.7m —— 第一人稱看到自己的機體跑在前面、第三人稱跟隨的機體被推出畫面。
+  for (const view of SPEC_CAM.LOCK_VIEWS) {
+    const tgt = mkTarget(0, 0, 0, 0);
+    const c = mkSpec(view, tgt);
+    c._updateSpectator(DT);
+    // 逐幀等速前進:每一幀結束時錨點都 MUST 剛好落在機體上(累積落後 = 0)
+    let worst = 0;
+    for (let i = 1; i <= 120; i++) {
+      tgt.mesh.position.set(0, 0, -i * 0.7);          // ≈ 42m/s
+      c._updateSpectator(DT);
+      worst = Math.max(worst, Math.abs(c._specAnchor.z - tgt.mesh.position.z));
+    }
+    ok(worst === 0,
+      `${SPEC_CAM.NAMES[view]}:錨點剛體貼合機體(等速移動 2 秒後落後量恆為 0)`,
+      `最大落後 ${worst.toFixed(3)}m`);
+    ok(near(c.pos.z, tgt.mesh.position.z),
+      `${SPEC_CAM.NAMES[view]}:this.pos(迷霧 / 小地圖 / 音場都讀它)也跟著機體,不落後`);
+  }
+  // 反面對照:同一段移動下,第三人稱自由**確實**會落後(證明上面測到的是「貼合」而不是「平滑剛好很快」)
+  {
+    const tgt = mkTarget(0, 0, 0, 0);
+    const c = mkSpec('orbit', tgt);
+    c._updateSpectator(DT);
+    for (let i = 1; i <= 120; i++) { tgt.mesh.position.set(0, 0, -i * 0.7); c._updateSpectator(DT); }
+    ok(Math.abs(c._specAnchor.z - tgt.mesh.position.z) > 1,
+      '對照組:第三人稱自由在同一段等速移動下仍有可量測的落後(平滑沒被一起拔掉)');
+  }
 }
 {
   // ⑤ 目標退場:還原機體 + 降級回上帝視角(且走 `_specSetView` 同一個縫)
@@ -312,6 +356,49 @@ for (const v of SPEC_CAM.VIEWS) {
     `help.js 說明寫得出「${SPEC_CAM.NAMES[v]}」(A21:操作說明只住 help.js)`);
 }
 ok(/Ctrl/.test(helpSrc) && /下降/.test(helpSrc), 'help.js 寫明上帝視角的下降鍵');
+
+// ── Ⅳ-b 觀戰操作說明(2026-08-02 使用者需求「觀戰時加入觀戰操作說明」)────────
+sec('Ⅳ-b 觀戰操作說明');
+ok(Array.isArray(SPEC_CONTROLS.key) && Array.isArray(SPEC_CONTROLS.pad)
+  && SPEC_CONTROLS.key.length > 0 && SPEC_CONTROLS.pad.length > 0,
+  '鍵盤版 / 搖桿版各自完整一份逐列說明(慣例同 CONTROLS_BY_KIND ⇄ TOUCH_CONTROLS)');
+for (const [name, rows] of Object.entries(SPEC_CONTROLS)) {
+  ok(rows.every((r) => Array.isArray(r) && r.length === 2 && r[0] && r[1]),
+    `SPEC_CONTROLS.${name} 每一列都是 [鍵位, 說明] 且兩欄都有字`);
+  for (const v of SPEC_CAM.VIEWS) {
+    ok(rows.some(([k, d]) => k.includes(SPEC_CAM.NAMES[v]) || d.includes(SPEC_CAM.NAMES[v])),
+      `SPEC_CONTROLS.${name} 講得到「${SPEC_CAM.NAMES[v]}」(四種視角一個都不能漏)`);
+  }
+}
+ok(specControls(false) === SPEC_CONTROLS.key && specControls(true) === SPEC_CONTROLS.pad,
+  '`specControls(touch)` 是取字唯一縫(回傳同一份物件參考 = 推導而非複製)');
+ok(SPEC_CONTROLS.key.every(([k, d]) => CONTROLS_BY_KIND.spectator.includes(k)
+  && CONTROLS_BY_KIND.spectator.includes(d)),
+  '戰場選單那一長串由 SPEC_CONTROLS 推導(逐列都找得到 ⇒ 面板與選單不會各說各話)');
+ok(SPEC_CONTROLS.pad.every(([k, d]) => TOUCH_CONTROLS.spectator.includes(k)
+  && TOUCH_CONTROLS.spectator.includes(d)), '搖桿版同理');
+ok(/specJoin\(SPEC_CONTROLS\.key\)/.test(helpSrc) && /specJoin\(SPEC_CONTROLS\.pad\)/.test(helpSrc),
+  'help.js 的 spectator 兩欄 MUST 是 join 推導,MUST NOT 再手寫一份長字串');
+ok(count(mainSrc, /function renderSpecHelp/g) === 1,
+  '`renderSpecHelp` 只有一份實作(觀戰說明面板 MUST NOT 各畫面各畫一塊)');
+ok(/renderSpecHelp\(\);\s*\/\/ 觀戰說明/.test(mainSrc),
+  '面板重繪掛在 `syncPauseHelp` 上 —— 切鍵鼠 ⇄ 搖桿時說明要跟著換一份(A21)');
+{
+  const fn = mainSrc.slice(mainSrc.indexOf('function renderSpecHelp'), mainSrc.indexOf('/** 金錢列的升級提示'));
+  ok(/specControls\(TOUCH_UI\(\)\)/.test(fn),
+    '面板取字走 `specControls(TOUCH_UI())`,MUST NOT 在 main.js 另寫 if(touch) 字串分支(A21)');
+  ok(/if \(app\.mySide\) \{ box\.innerHTML = ''/.test(fn),
+    '非觀戰一律清空(留著會在下一局的交戰 HUD 佔掉一塊版位)');
+}
+ok(count(htmlSrc, /id="specHelp"/g) === 1 && /id="specHelp"[^>]*>\s*<\/div>/.test(htmlSrc),
+  'index.html 的觀戰說明只有一塊且靜態標記為空(寫死一份 = 與 help.js 漂開)');
+ok(htmlSrc.indexOf('id="specHelp"') > htmlSrc.indexOf('class="hud-self"')
+  && htmlSrc.indexOf('id="specHelp"') < htmlSrc.indexOf('id="minimap"'),
+  '#specHelp 掛在 .hud-self 之內(觀戰版位 MUST NOT 另開一塊蓋住戰場 / 小地圖)');
+ok(/body\.spectating:not\(\.spec-follow\) \.hud-self > :not\(\.hud-side\):not\(\.spec-help\)/.test(cssSrc),
+  '沒跟人時整塊收起的規則 MUST 放行 .spec-help(它正是要填那塊空版位)');
+ok(/body\.spectating \.spec-help \{[^}]*max-height/.test(cssSrc),
+  '.spec-help MUST 有高度上限 —— 跟上玩家時它與完整數據面板同框,沒有上限會把血條推出畫面');
 
 // ── Ⅴ 玩家資訊面板(含商店升級)──────────────────────────────
 sec('Ⅴ 玩家資訊面板');

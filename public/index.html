@@ -407,6 +407,9 @@
   <div class="hud-bottom">
     <div class="hud-self">
       <div class="hud-side" id="hudSideName"></div>
+      <!-- 觀戰限定:常駐的觀戰操作說明(內容由 main.js renderSpecHelp 灌,
+           文字唯一真相 = help.js SPEC_CONTROLS;非觀戰時清空 + CSS 收起) -->
+      <div class="spec-help" id="specHelp"></div>
       <div class="squad-row" id="squadRow"></div>
       <div class="spbar"><div id="spBar" class="spbar-fill"></div><span id="spText" class="sp-text"></span></div>
       <div class="hpbar"><div id="hpBar" class="hpbar-fill"></div><span id="hpText" class="hp-text"></span></div>
@@ -436,6 +439,12 @@
     <div class="overlay-box shop-box has-close">
       <button class="ov-close" type="button" aria-label="關閉" data-ovclose="shopCloseBtn">✕</button>
       <div class="panel-head">▍升級工坊 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="shop">ⓘ</button> <span id="shopMoney" class="shop-money"></span></div>
+      <!-- 掃貨 / 預約(2026-08-02 使用者需求):掃貨 = 現在買得起的一次買到底(判定住 game.js
+           `_sweepPick`,這裡只負責畫);預約 = 逐列的 ☆ 鈕,由 main.js renderShop 掛上。 -->
+      <div class="shop-tools">
+        <button id="shopSweepBtn" class="btn small" type="button">🛒 掃貨</button>
+        <button class="tip-dot" type="button" aria-label="說明" data-tipkey="shopAuto">ⓘ</button>
+      </div>
       <div id="shopItems" class="shop-items"></div>
       <button id="shopCloseBtn" class="btn">關閉</button>
     </div>

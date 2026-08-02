@@ -117,6 +117,36 @@ const ok = (cond, msg) => {
   ok(icons.npcIconHTML('soldier').includes('currentColor'),
     '圖示 MUST 吃 currentColor(選取態/陣營色才跟得動)');
   ok(/npcIconHTML\(kind\)/.test(mainJs), '單位牆 MUST 走 npcicon.js 單一縫產生圖示');
+
+  // (6) 機種圖示標在頭像旁邊(2026-08-02 使用者定案)
+  //     名冊 = 現役三機種(`HERO_SIZE` 是每個機種都得有體型區間的那一份)⇒ 新增機種漏畫會直接紅字。
+  for (const k of Object.keys(data.HERO_SIZE)) {
+    ok(!!icons.KIND_ICONS[k], `npcicon.js 有 ${k} 機種的圖示`);
+  }
+  ok(Object.keys(icons.KIND_ICONS).length === Object.keys(data.HERO_SIZE).length,
+    '機種圖示不多不少,與現役機種一一對應(多畫一個 = 名冊已經漂了)');
+  ok(icons.kindIconHTML('drone').includes('currentColor'),
+    '機種圖示 MUST 吃 currentColor(選取態 .char-btn.on 才翻得動色)');
+  ok(icons.kindIconHTML('不存在的機種').includes(icons.NPC_ICONS._),
+    '未知機種回退問號圖(與 NPC 圖示同一條保底規則,漏畫看得出來而不是破圖)');
+  ok((mainJs.match(/function charAvatarHTML/g) || []).length === 1,
+    '頭像 + 機種角標只有一份標記產生器(main.js `charAvatarHTML`)');
+  ok(!/<img class="char-av"/.test(mainJs) && !/<img src="\$\{avatarURL/.test(mainJs),
+    '所有頭像 MUST 走 `charAvatarHTML`,MUST NOT 自己拼 <img>(漏一處 = 那面牆沒有角標)');
+  ok(/charKind\(id\)/.test(mainJs.slice(mainJs.indexOf('function charAvatarHTML'),
+    mainJs.indexOf('function charAvatarHTML') + 500)),
+    '機種取自 `charKind()`(2026-08-02 混編後陣營 ≠ 機種,MUST NOT 由 side 推)');
+  ok(/\.av-kind \{/.test(css) && /\.kind-ico \{/.test(css), 'style.css 有角標版位規則');
+
+  // (7) 商店掃貨 / 預約(2026-08-02 使用者定案):鈕在 HTML、判定在 game.js,兩邊各一份
+  ok(html.includes('id="shopSweepBtn"'), 'index.html 有掃貨鈕');
+  ok(html.includes('data-tipkey="shopAuto"') && !!help.UI_TIPS.shopAuto,
+    '掃貨/預約有 ⓘ 懸浮提示,且文字住 UI_TIPS(說明分頁自動同步)');
+  ok(/st\.sweepable/.test(mainJs)
+    && !/_sweepPick/.test(mainJs.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '')),
+    '掃貨鈕的可用狀態吃 game.js 傳來的 `sweepable`,MUST NOT 在 UI 端自己再算一次買不買得起');
+  ok(/st\.toggleReserve\(item\)/.test(mainJs),
+    '預約鈕只呼叫 `toggleReserve`(名單與排程都住 game.js)');
 }
 
 const chromium = await chromiumOrNull();

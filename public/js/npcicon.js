@@ -52,3 +52,33 @@ export const NPC_ICONS = {
  */
 export const npcIconHTML = (kind) =>
   `<svg class="npc-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${NPC_ICONS[kind] || NPC_ICONS._}</svg>`;
+
+// ============ 機種圖示(無人機 / 機甲 / 變形者;標在頭像旁邊)============
+// 2026-08-02 使用者定案:「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」。
+//
+// 為什麼與 NPC 圖示同住一支:兩者是同一件事(平塗 24×24、吃 `currentColor`、缺鍵回退問號),
+// 分兩支就會長出兩套風格與兩份保底規則。**名冊真相仍是 `data.js CHARACTERS[ch].kind`** ——
+// 2026-08-02 機體混編後陣營 ≠ 機種,圖示 MUST 由 `charKind()` 取,MUST NOT 由 `side` 推。
+export const KIND_ICONS = {
+  // 無人機:X 形機臂 + 四片旋翼盤 + 中央機身
+  drone: '<path d="M3.6 5L5 3.6l5.6 5.6-1.4 1.4z"/><path d="M19 3.6L20.4 5l-5.6 5.6-1.4-1.4z"/>'
+    + '<path d="M5 20.4L3.6 19l5.6-5.6 1.4 1.4z"/><path d="M20.4 19L19 20.4l-5.6-5.6 1.4-1.4z"/>'
+    + '<circle cx="4.6" cy="4.6" r="3.2"/><circle cx="19.4" cy="4.6" r="3.2"/>'
+    + '<circle cx="4.6" cy="19.4" r="3.2"/><circle cx="19.4" cy="19.4" r="3.2"/>'
+    + '<path d="M9 9h6v6H9z"/>',
+  // 機甲:座艙頭 + 厚軀幹 + 雙肩掛架 + 雙腿(人形雙足,與 buildRobotMech 的剪影一致)
+  robot: '<path d="M8 1h8v4.2H8z"/><path d="M9.6 2.4h4.8V4H9.6z" fill="#05070a"/>'
+    + '<path d="M6 6h12v9H6z"/><path d="M2 7.4h3.4v6H2z"/><path d="M18.6 7.4H22v6h-3.4z"/>'
+    + '<path d="M7 16h3.4v7H7z"/><path d="M13.6 16H17v7h-3.4z"/>',
+  // 變形者:飛行型機首 + 後掠翼,底下接地面型雙腿 —— 兩種型態同時出現 = 「會變形」
+  morph: '<path d="M12 1.6l4.6 5.2H7.4z"/><path d="M8 7.4h8v7.6H8z"/>'
+    + '<path d="M7.6 8.6L1 12.4l6.6 1.2z"/><path d="M16.4 8.6L23 12.4l-6.6 1.2z"/>'
+    + '<path d="M8.2 16h3v6.8h-3z"/><path d="M13 16h3v6.8h-3z"/>',
+};
+
+/**
+ * 機種圖示(消費端唯一取字處;頭像角標 / 角色卡標籤共用)。
+ * 未知機種回退 `NPC_ICONS._` 的問號圖 —— 與 NPC 圖示同一條保底規則,漏畫看得出來而不是破圖。
+ */
+export const kindIconHTML = (kind) =>
+  `<svg class="kind-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${KIND_ICONS[kind] || NPC_ICONS._}</svg>`;
