@@ -2264,7 +2264,7 @@ function renderShop(open, st) {
   const box = $('shopItems');
   box.innerHTML = '';
   const reserved = new Set(st.reserve || []);
-  /** item != null ⇒ 這一列可預約(八軌);陣營小兵強化是共用資源,刻意不給預約(見 _toggleReserve)*/
+  /** item != null ⇒ 這一列可預約(八軌 + 陣營小兵強化);鍵一律由 game.js 給,MUST NOT 在此拼字串 */
   const row = (html, price, enabled, onBuy, note = '', item = null) => {
     const div = document.createElement('div');
     div.className = 'shop-item' + (enabled ? '' : ' off');
@@ -2309,8 +2309,8 @@ function renderShop(open, st) {
   // .shop-box 是 max-height:86vh 的捲動容器,八軌 + 兩段標題就已經溢出一般筆電的視窗高度 ——
   // 掛在最後面的新區塊整段落在摺線之外,而畫面上沒有任何捲動提示。解鎖的當下八軌**保證全滿**
   // (那正是解鎖條件),上面那 8 列全是「已滿階」的死列 ⇒ 唯一還能買的東西本來就該排第一。
-  const allMax = Object.entries(ECON.UPGRADES).every(([k, u]) => (st.upg[k] || 0) >= u.max);
-  if (allMax && st.creepUpg?.length) {
+  // 門檻吃 game.js 的 `allMax`(與預約排程 `_tickReserve` 同一份;這裡再算一次就是第二份門檻)
+  if (st.allMax && st.creepUpg?.length) {
     head(`🐜 陣營小兵強化(同陣營共用・兵線分開;LV1~${CREEP_UPG.MAX},每階 $${CREEP_UPG.PRICE})`);
     st.creepUpg.forEach((lvl, li) => {
       const full = lvl >= CREEP_UPG.MAX;
@@ -2318,7 +2318,7 @@ function renderShop(open, st) {
       row(`<b>第 ${li + 1} 兵線</b> LV${lvl}/${CREEP_UPG.MAX}`
         + ` <span class="dim">全能力與陣亡賞金 ×${mul.toFixed(2)}</span>`,
         full ? null : CREEP_UPG.PRICE, !full && st.money >= CREEP_UPG.PRICE, () => st.buyCreep(li),
-        full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`);
+        full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`, st.creepKey(li));
     });
   }
   if (c) {

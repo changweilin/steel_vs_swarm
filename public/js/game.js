@@ -18,6 +18,7 @@ import {
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
+  CREEP_UPG,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
@@ -69,6 +70,11 @@ const ESC_GAP_S = 0.35;
 // 短於這個窗就會在權威值回來之前對同一階重複下單;長到幾秒也沒關係(它只是被拒時的救濟閥,
 // 正常流程一律由「權威等級前進」解鎖下一階,不靠逾時)。
 const RESERVE_RESEND_S = 2;
+// 預約名單裡「陣營小兵強化」那幾列的鍵字首(後面接兵線索引;`creep:0`)。八軌的鍵就是 ECON.UPGRADES
+// 的鍵,兩者同住一個 Set ⇒ 需要一個不可能與八軌撞名的字首。**格式只有這一份**:
+// 產生走 `_creepResKey`、反解走 `_resCreepLane`,商店 UI 一律拿 `_shopState().creepKey(lane)`
+// 當不透明字串傳回來,MUST NOT 在 main.js 自己拼(拼錯不會報錯,只會「★ 亮著卻永遠不成交」)。
+const RES_CREEP = 'creep:';
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
@@ -414,6 +420,7 @@ export class BattleClient {
     this.shopOpen = false;
     this.paused = false;              // 戰場選單開啟中(凍結輸入)
     this._everLocked = false;         // 曾經取得過指標鎖定(未鎖定過不跳暫停選單)
+    this._plcSelf = false;            // 下一次指標解鎖是「我方主動」(陣亡過場),`_onPlc` 略過一次
     this._gameOver = false;           // 已分出勝負(over overlay 顯示中,不跳暫停選單)
     this._crashSent = false;          // 撞擊引爆去重
     this.aiming = false;              // 右鍵短按切換瞄準(拉近視角、切換重武器);長按 = 機種專屬招
@@ -2799,9 +2806,15 @@ export class BattleClient {
       const locked = document.pointerLockElement === this.canvas;
       if (locked) {
         this._everLocked = true;
+        this._plcSelf = false;
         if (this.paused) this._setPaused(false);
-      } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused && !this.dead) {
-        // 陣亡不跳戰場選單(離開詢問):改顯示陣亡頁(重生倒數 + 砲塔視窗),見 _onSelfDeath
+      } else if (this._plcSelf) {
+        // **我方主動解鎖**(陣亡過場的 exitPointerLock)不是玩家按的 ESC ⇒ 吃掉這一次事件。
+        // 用戳記而非 `!this.dead` 條件:後者會把**陣亡倒數中真的按下的那顆 ESC** 一起擋掉 ——
+        // 陣亡頁是 `pointer-events: none`,玩家隨手一點畫面就重新鎖上指標,那顆 ESC 的 keydown
+        // 會被瀏覽器吃掉、只剩這條解鎖路,於是「倒數中按 ESC 沒反應」(2026-08-02 使用者回報)。
+        this._plcSelf = false;
+      } else if (this._everLocked && !this.shopOpen && !this._gameOver && !this.paused) {
         // 走 `_escMenu`(而非直接 `_setPaused`)= 順手蓋上去彈跳戳記:若瀏覽器**接著**又補送
         // 同一顆 ESC 的 keydown,那顆會被擋掉,不會把剛開的選單立刻關回去。
         this._escMenu();
@@ -5300,6 +5313,10 @@ export class BattleClient {
     // 陣亡不再跳戰場選單:若當下正開著暫停選單(可能暫停中被擊殺),收掉它,只留陣亡頁
     if (this.paused) { this.paused = false; this.hud.pause?.(false); }
     // 商店保持開啟(陣亡購物):死亡畫面疊在商店下層,B/ESC 仍可開關
+    // 這一次解鎖是**我方主動**(要放開滑鼠看陣亡頁),不是玩家按 ESC ⇒ 打戳記讓 `_onPlc` 略過,
+    // 否則一死就自動彈出戰場選單。MUST 只在真的鎖著時打:沒鎖就不會有 pointerlockchange,
+    // 戳記會留下來把玩家**下一顆**真的 ESC 吃掉。
+    if (document.pointerLockElement === this.canvas) this._plcSelf = true;
     document.exitPointerLock?.();
 
     // ── 陣亡過場(純表現層;伺服器已權威判定死亡)──
@@ -5358,6 +5375,8 @@ export class BattleClient {
       // 陣營小兵強化:等級是同陣營共用的權威值(唯讀顯示),購買不做樂觀更新 —— 共用狀態
       // 樂觀扣款會在別人同時買的時候顯示錯位,交給下一份 8Hz 快照校正即可。
       creepUpg: [...(this.creepUpg?.[this.side] || [])],
+      // 小兵強化的解鎖門檻:與 `_tickReserve` 共用這一份(UI 自己再算一次 = 兩份門檻會漂)
+      allMax: this._upgAllMax(),
       buy: (item) => this._optimisticBuy(item),
       buyCreep: (lane) => this.net.send({ t: 'buy', item: 'creep', lane }),
       // 掃貨 / 預約(2026-08-02 使用者需求):UI 只負責畫,判定與排程一律住這裡
@@ -5365,7 +5384,25 @@ export class BattleClient {
       sweep: () => this._sweepBuy(),
       toggleReserve: (item) => this._toggleReserve(item),
       sweepable: this._sweepPick() != null,
+      creepKey: (lane) => this._creepResKey(lane),
     };
+  }
+
+  /**
+   * 八軌全滿 = 陣營小兵強化的解鎖門檻(與伺服器 `sim._upgAllMax` 同一條規則)。
+   * 商店 UI(要不要畫那個區塊)與預約排程(送出去會不會被拒)MUST 共用這一份。
+   */
+  _upgAllMax() {
+    return Object.entries(ECON.UPGRADES).every(([k, u]) => (this.upg[k] || 0) >= u.max);
+  }
+
+  /** 兵線 → 預約鍵(格式單一縫,見 `RES_CREEP`)*/
+  _creepResKey(lane) { return RES_CREEP + lane; }
+  /** 預約鍵 → 兵線索引;不是合法的小兵強化鍵(含八軌鍵、原型鏈鍵名)一律回 null */
+  _resCreepLane(item) {
+    if (typeof item !== 'string' || !item.startsWith(RES_CREEP)) return null;
+    const li = Number(item.slice(RES_CREEP.length));
+    return Number.isInteger(li) && li >= 0 && li < (this.creepUpg?.[this.side]?.length || 0) ? li : null;
   }
 
   /**
@@ -5389,7 +5426,8 @@ export class BattleClient {
    * **掃貨**(2026-08-02 使用者需求「商店加入掃貨與預約選項」):把現在買得起的升級一次買到底 ——
    * 每一輪挑 `_sweepPick()` 那一軌下單,直到一項都買不起為止。
    * **只掃八軌**:陣營小兵強化是同陣營共用的無底金錢去化(刻意不做樂觀更新,等級由快照校正),
-   * 掃進去等於把錢全倒進兵線 ⇒ MUST NOT 併入,要買仍走那一列自己的按鈕。
+   * 掃進去 = 迴圈條件永遠成立 = 一次掃光全部身家 ⇒ MUST NOT 併入。
+   *(預約則收 —— 那是一次一階的排程,見 `_toggleReserve`。)
    * 每一筆都走 `_optimisticBuy` ⇒ 伺服器逐筆複驗(客戶端只是替玩家連按了很多次,不涉 A1)。
    */
   _sweepBuy() {
@@ -5410,10 +5448,12 @@ export class BattleClient {
   /**
    * **預約**(同上需求):把某一軌掛進候補名單,**錢一夠就自動下單**(商店關著也生效 —— 那正是預約)。
    * 純客戶端排程 = 替玩家按下那顆按鈕,權威仍由伺服器逐筆複驗 ⇒ 不涉 A1。
-   * 名單只收八軌(理由同 `_sweepBuy`)。
+   * 名單收**八軌 + 陣營小兵強化**(2026-08-02 使用者定案「商店的預約包含兵線升級」)——
+   * 掃貨仍只作用於八軌:那是「一次買到底」的迴圈,而小兵強化沒有上限也沒有樂觀扣款,
+   * 掃進去等於把全部身家一次倒進兵線(見 `_sweepBuy`)。預約是**一次一階**,不吃這個坑。
    */
   _toggleReserve(item) {
-    if (!Object.hasOwn(ECON.UPGRADES, item)) return;
+    if (!Object.hasOwn(ECON.UPGRADES, item) && this._resCreepLane(item) == null) return;
     if (this._reserve.has(item)) this._reserve.delete(item);
     else this._reserve.add(item);
     if (this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
@@ -5423,11 +5463,18 @@ export class BattleClient {
   _tickReserve() {
     if (!this.side || !this._reserve.size) return;
     const now = performance.now() / 1000;
+    // 本輪已下單但**尚未**從 `this.money` 扣掉的金額(只有小兵強化會累加,理由見下)。
+    let pend = 0;
     for (const item of [...this._reserve]) {
-      const up = ECON.UPGRADES[item];
-      const lvl = this.upg[item] || 0;
-      if (lvl >= up.max) { this._reserve.delete(item); continue; }
-      if (this.money < upgradePrice(up, lvl)) continue;
+      const lane = this._resCreepLane(item);
+      const up = lane == null ? ECON.UPGRADES[item] : null;
+      const lvl = lane == null ? (this.upg[item] || 0) : (this.creepUpg?.[this.side]?.[lane] || 0);
+      const max = lane == null ? up.max : CREEP_UPG.MAX;
+      const price = lane == null ? upgradePrice(up, lvl) : CREEP_UPG.PRICE;
+      if (lvl >= max) { this._reserve.delete(item); continue; }
+      // 八軌未滿:伺服器根本不受理小兵強化 ⇒ 靜靜等著(門檻與 `_shopState().allMax` 同一份)
+      if (lane != null && !this._upgAllMax()) continue;
+      if (this.money - pend < price) continue;
       // **同一階只送一次**:樂觀更新會被下一份快照的權威值校正回去,而那份快照可能比伺服器處理
       // 這筆購買還早到(RTT > 125ms 就會發生)⇒ 沒有這道閘就會對同一階重複下單,第二筆被拒
       // 而玩家只看到一句莫名其妙的「資金不足」。逾時 `RESERVE_RESEND_S` 後放行重送 ——
@@ -5435,9 +5482,18 @@ export class BattleClient {
       const sent = this._resSent[item];
       if (sent && sent.lvl === lvl && now - sent.t < RESERVE_RESEND_S) continue;
       this._resSent[item] = { lvl, t: now };
-      this._optimisticBuy(item);
-      this.hud.feed?.(`📌 預約成交:${up.name}`);
-      if ((this.upg[item] || 0) >= up.max) this._reserve.delete(item);
+      if (lane == null) {
+        this._optimisticBuy(item);
+        this.hud.feed?.(`📌 預約成交:${up.name}`);
+        if ((this.upg[item] || 0) >= up.max) this._reserve.delete(item);
+        continue;
+      }
+      // 小兵強化是**同陣營共用**的等級,刻意不做樂觀更新(別人同時買會顯示錯位,交給快照校正)
+      // ⇒ 這一輪的餘額不會自己變少。沒有 `pend` 記帳的話,同一份快照裡三條兵線都看到同一筆錢
+      // 而全數下單,後兩筆被伺服器拒 = 玩家看到假的「資金不足」。
+      pend += price;
+      this.net.send({ t: 'buy', item: 'creep', lane });
+      this.hud.feed?.(`📌 預約成交:第 ${lane + 1} 兵線小兵強化`);
     }
   }
 
