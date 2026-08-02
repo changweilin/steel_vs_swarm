@@ -17,7 +17,18 @@ import {
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
   BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
+  aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
 } from '../public/js/data.js';
+
+/**
+ * 「未折算」的基準傷害 = 階梯值 × **剋制/範圍/機動/射程四個推導係數**。
+ * 下面那幾條斷言驗的是「**小隊折算** SQUAD.DMG 沒有生效」,不是「dmg 欄不准有任何係數」——
+ * 2026-08-02 起 heroWeapon 的 dmg 另外乘上 counterDmgF(建築/護盾軸剋制預算)、aoeTrimF
+ * (攻擊範圍收斂的火力回補)、mobDmgF(機動預算)、rngDmgF(射程預算)。直接比對階梯原值
+ * 會在那些係數 ≠ 1 的角色上假紅字,而真正要釘的是小隊折算。
+ */
+const rawDmg = (ch, slot) => tierVal(CHARACTERS[ch][slot].dmg, 1)
+  * counterDmgF(CHARACTERS[ch][slot]) * aoeTrimF(CHARACTERS[ch][slot]) * mobDmgF(ch) * rngDmgF(ch, slot);
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
 const HI_ALT = Math.round(250 * COMBAT_SCALE);
@@ -176,7 +187,7 @@ log('— sim:機體混編陣營分佈(2026-08-02)+ 傭兵變形者雙型態 + �
   }
   assert(UNITS.morph.hp === UNITS.robot.hp && UNITS.morph.shield === UNITS.robot.shield,
     `變形者 HP/護盾與機甲相同(${UNITS.morph.hp}/${UNITS.morph.shield})`);
-  assert(Math.abs(heroWeapon('m01', 'light', 1, false).dmg - tierVal(CHARACTERS.m01.light.dmg, 1)) < 1e-6,
+  assert(Math.abs(heroWeapon('m01', 'light', 1, false).dmg - rawDmg('m01', 'light')) < 1e-6,
     '變形者傷害不吃小隊折算(火力同機甲)');
   const sim = new BattleSim(fakeBattleConfig(1));
   const a = sim.addHero('SWARM', 'p_ma', 'm01');
@@ -351,6 +362,52 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
 
+  log('— data:攻擊範圍收斂(一發打不到兩座塔;2026-08-02 使用者定案)—');
+  {
+    // 使用者定案:「輕重武器縮減攻擊範圍,除了以範圍見長的武器之外,其他都避免一次打到兩座塔」。
+    // 幾何全部推導:同塔位塔距 = 2 × TOWER_SIDE_OFF、距離量到命中量體表面、爆風於 r×EDGE 歸零。
+    const half = towerPairSepM() / 2, R = TARGET_R.tower;
+    const twoTowers = (r) => {
+      for (let c = 0; c <= half; c += 0.1)
+        if (blastFalloff(r, Math.max(0, Math.abs(half - c) - R)) > 0
+          && blastFalloff(r, Math.max(0, half + c - R)) > 0) return true;
+      return false;
+    };
+    assert(Math.abs(towerPairSepM() - 2 * GAME.TOWER_SIDE_OFF) < 1e-9
+      && Math.abs(soloBlastRmax() - (half - R) / 1.8) < 1e-9,
+      `同塔位塔距 ${towerPairSepM()}m、爆風半徑上限 ${soloBlastRmax().toFixed(2)}m(推導不手寫)`);
+    const MAXT = 1 + ECON.UPGRADES.hw.max;
+    const bad = [], areaMiss = [];
+    for (const ch of Object.keys(CHARACTERS)) for (const slot of ['light', 'heavy']) {
+      const w = heroWeapon(ch, slot, MAXT, true);
+      if (!w || aoeClass(w) !== 'blast') continue;
+      if (AREA_WEAPONS[`${ch}.${slot}`]) { if (!twoTowers(w.r)) areaMiss.push(`${ch}.${slot}`); }
+      else if (twoTowers(w.r)) bad.push(`${ch}.${slot}`);
+    }
+    assert(bad.length === 0, `非「範圍見長」的爆炸型武器滿級(Lv${MAXT})一發打不到兩座塔(違規 ${bad.join('、') || '無'})`);
+    assert(areaMiss.length === 0 && Object.keys(AREA_WEAPONS).length > 0,
+      `範圍見長名冊 ${Object.keys(AREA_WEAPONS).length} 把仍打得到兩座塔(名冊不是裝飾)`);
+    // 補償是重分配不是通膨:整批補償係數的幾何平均 = 1
+    const trimmed = [];
+    for (const ch of Object.keys(CHARACTERS)) for (const slot of ['light', 'heavy'])
+      if (CHARACTERS[ch][slot]?._aoeRaw) trimmed.push(CHARACTERS[ch][slot]);
+    const geo = Math.exp(trimmed.reduce((a, w) => a + Math.log(aoeTrimF(w)), 0) / trimmed.length);
+    assert(trimmed.length > 0 && Math.abs(geo - 1) < 1e-12,
+      `被夾過的 ${trimmed.length} 把武器,火力補償幾何平均 = 1(重分配,不是整批加強)`);
+    // 三軸預算:機動/射程越高,基礎火力越低;且沒被夾過的武器範圍補償恆 ×1
+    const fast = Object.keys(CHARACTERS).reduce((a, c) => (mobDmgF(c) < mobDmgF(a) ? c : a));
+    const slow = Object.keys(CHARACTERS).reduce((a, c) => (mobDmgF(c) > mobDmgF(a) ? c : a));
+    assert(mobDmgF(fast) < 1 && mobDmgF(slow) > 1,
+      `機動預算:最快 ${fast} ×${mobDmgF(fast).toFixed(3)} < 1 < 最慢 ${slow} ×${mobDmgF(slow).toFixed(3)}`);
+    const far = Object.keys(CHARACTERS).reduce((a, c) => (rngDmgF(c, 'heavy') < rngDmgF(a, 'heavy') ? c : a));
+    assert(rngDmgF(far, 'heavy') < 1,
+      `射程預算:重武器射程最長的 ${far} 基礎火力 ×${rngDmgF(far, 'heavy').toFixed(3)} < 1`);
+    assert(Object.keys(CHARACTERS).every((c) => ['light', 'heavy'].every((s) => {
+      const w = CHARACTERS[c][s];
+      return !w || w._aoeRaw || aoeTrimF(w) === 1;
+    })), '沒被夾過的武器範圍補償恆 ×1(fan/line/名冊內的角色逐位元不受影響)');
+  }
+
   log('— sim/data:建築加乘移除 + 護盾分軌剋制(2026-08-02 使用者定案)—');
   {
     // ① 建築「加乘全刪、懲罰保留」:全武器/招式 vs.building ≤ 1,且仍有 < 1 的
@@ -506,9 +563,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(Math.abs(avgOf('drone', heroArmor) - SQUAD.HP_F * avgOf('robot', heroArmor)) < 0.5,
     `無人機平均護甲 = 機甲平均 ×${SQUAD.HP_F}(${avgOf('drone', heroArmor).toFixed(1)} vs ${(SQUAD.HP_F * avgOf('robot', heroArmor)).toFixed(1)})`);
   assert(Math.abs(SQUAD.DMG - 1) < 1e-9, `單機傷害不折算(SQUAD.DMG=${SQUAD.DMG})`);
-  assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - tierVal(CHARACTERS.s01.light.dmg, 1)) < 1e-6,
+  assert(Math.abs(heroWeapon('s01', 'light', 1, false).dmg - rawDmg('s01', 'light')) < 1e-6,
     '無人機單機傷害 = 原數值(DMG=1,不折算)');
-  assert(Math.abs(heroWeapon('t01', 'light', 1, false).dmg - tierVal(CHARACTERS.t01.light.dmg, 1)) < 1e-6,
+  assert(Math.abs(heroWeapon('t01', 'light', 1, false).dmg - rawDmg('t01', 'light')) < 1e-6,
     '機甲傷害不被折算');
   assert(Math.abs(UNITS.drone.sight / UNITS.robot.sight - 1.125) < 0.01,
     `無人機射程上限 ≈ 機甲 ×9/8(sight ${UNITS.drone.sight} vs ${UNITS.robot.sight},射程較機甲高約 1/8)`);

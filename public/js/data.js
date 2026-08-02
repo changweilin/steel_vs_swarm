@@ -1175,9 +1175,14 @@ export const armingOf = (def) => ARMING[trajClass(def)] || null;
 // 改成「角速度 **與** 轉彎半徑雙上限」:`max(基礎角速度, 初速 ÷ R_M)`。慢彈(初速 ≤ R_M × 基礎
 // 角速度)半徑本就遠小於 R_M ⇒ 逐位元維持舊值、手感零回歸;只有快到轉不過來的導引頭才被拉高。
 // **只放寬不收緊**是刻意的(MUST NOT 改成單純的 `初速 ÷ R_M`,那會讓慢速巡飛彈反而變鈍)。
-// R_M 由掃描定案:200m 是「能讓全部 8 把導引/射後不理武器在 35%~100% 射程全數命中」的**最寬**
-// 值(再放寬 s06 就回歸)⇒ 取最寬 = 對既有手感的擾動最小。伺服器不模擬彈道,bal/duel 不受影響。
-export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 200, CHASE_F: 3 };   // CHASE_F:射後不理鎖定後的追擊燃料 = 滿射程飛行時間 × 此值(見 chaseCapS)
+// R_M 由掃描定案:「能讓全部 8 把導引/射後不理武器在 35%~100% 射程全數落進**爆風核心帶**」的
+// **最寬**值(取最寬 = 對既有手感的擾動最小);判定縫 = `audit_weapon_gate.mjs` Ⅵ⑥。
+// **這個值綁著爆風核心帶的大小**:2026-08-02「一發不得同時吃到兩座塔」把爆炸型半徑整批收到
+// `soloBlastRmax()` 以下,核心帶 6.0m → 1.5m ⇒ 舊值 200m 的導引頭在 50% 射程整整差 4 把武器
+// 打不進核心帶(s06/t10/m01/m05)= 光暈亮著卻沒命中(A30 家族)。重掃後定案 60m
+// (70m 仍有 2 把回歸)。**改任何爆炸型武器的 r、AREA_WEAPONS 名冊或 soloBlastRmax MUST 重掃 R_M**。
+// 伺服器不模擬彈道,bal/duel 不受影響。
+export const SEEK = { HOME_W: 3.2, RIDE_W: 2.2, R_M: 60, CHASE_F: 3 };   // CHASE_F:射後不理鎖定後的追擊燃料 = 滿射程飛行時間 × 此值(見 chaseCapS)
 /** 導引頭每秒最大轉角(rad/s):基礎角速度與「轉彎半徑不超過 R_M」兩個上限取寬者 */
 export const seekTurn = (w, v0) => Math.max(w, (v0 || 0) / SEEK.R_M);
 
@@ -1772,6 +1777,13 @@ export function rangeCap(kind, slot) {
   return sight * (slot === 'heavy' ? GAME.AIM_SIGHT_MULT : 1) * GAME.RANGE_SIGHT_F;
 }
 
+/** 角色武器的**解析後射程**(唯一縫;heroWeapon 與射程預算 rangeMid/rngDmgF 同吃 ——
+ *  分兩份寫就會出現「計價用的射程」與「實戰射程」不同的無聲分歧)。 */
+export function heroRange(ch, slot, heroic = true) {
+  const w = CHARACTERS[ch]?.[slot];
+  if (!w) return 0;
+  return heroic ? Math.min(w.range * HEROIC.range, rangeCap(charKind(ch), slot)) : w.range;
+}
 /**
  * 解析角色武器(slot: 'light'|'heavy')在 lvl 階的實戰數值。
  * heroic=true 套用玩家英雄倍率(射程 ×1.2、傷害 ×1.5)並夾住 rangeCap;false = NPC 基準值。
@@ -1787,9 +1799,12 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
   return {
     id: slot, name: w.name, rw: w.rw, type: w.type, mv: w.mv,
     // counterDmgF:加成越多越廣泛 → 基礎傷害越低(推導不手寫;沒掛護盾軸的武器恆 ×1)
-    dmg: t(w.dmg) * counterDmgF(w) * (heroic ? HEROIC.dmg : 1) * squad,
+    // aoeTrimF:被「不得一次打到兩座塔」夾掉的範圍,照 areaValue 的價格還成火力(沒被夾過恆 ×1)
+    // mobDmgF / rngDmgF:機動與射程越高 → 基礎火力越低(各以同儕的幾何中點為軸;推導不手寫)
+    dmg: t(w.dmg) * counterDmgF(w) * aoeTrimF(w) * mobDmgF(ch) * rngDmgF(ch, slot)
+      * (heroic ? HEROIC.dmg : 1) * squad,
     // w.range 已於下方統一縮放塊 ×COMBAT_SCALE(source 縮 reach);rangeCap 隨 UNITS.sight 同步縮 ⇒ 相對關係不變
-    range: heroic ? Math.min(w.range * HEROIC.range, rangeCap(kind, slot)) : w.range,
+    range: heroRange(ch, slot, heroic),
     rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
     mag: t(w.mag ?? 1),
     reload: t(w.cd ?? w.reload ?? 2),
@@ -2941,6 +2956,169 @@ export const heroMobility = (kind, mods, flying = false) => {
 GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MINES.R ** 2));
 // 塔距 = 射程重疊率的唯一推導處(見 GAME.TOWER_OVERLAP)
 GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
+
+// ================= 攻擊範圍收斂:一發 AoE 不得同時吃到同塔位的兩座塔(2026-08-02 使用者定案)=================
+// 使用者定案:「輕重武器縮減攻擊範圍,除了**以範圍見長**的武器之外,其他都避免一次打到兩座塔」。
+// 舊制每一把爆炸型重武器的打擊足跡(r × BLAST.EDGE = 14~29m)都大於「同塔位左右兩座塔的淨間距」
+// (30 − 2×7 = 16m)⇒ 對著兩塔正中丟一發就同時削兩座,攻堅節奏從「選一座硬吃另一座的交叉火力」
+// 退化成「站中間刮」,② 的 80% 射程重疊設計等於白做。
+//
+// ---- 判定幾何(推導不手寫;MUST NOT 在任何消費端手抄 30 / 7 / 1.8)----
+//   同塔位左右塔距 towerPairSepM() = 2 × GAME.TOWER_SIDE_OFF;
+//   爆心取兩塔正中 ⇒ 到各塔**命中量體表面**的距離 = towerPairSepM()/2 − TARGET_R.tower
+//     (sim._blast 量的是「爆心 → 命中量體最近點」,不是中心;量到中心會少算一個塔半徑 = 夾不夠緊);
+//   blastFalloff 於 r × BLAST.EDGE 歸零 ⇒ 半徑上限 soloBlastRmax() = 該距離 ÷ BLAST.EDGE。
+//
+// ---- 誰進夾制(三分類同吃 aoeClass,MUST NOT 另寫一份 type 比對)----
+//   blast 爆炸 —— 進夾制。一個點炸出一片,正是「一次打到兩座塔」的那個機制。
+//   fan   扇形 —— 豁免。「大面積」就是它的本體(見 CHARACTERS 檔頭 plasma 說明)= 使用者說的
+//         「以範圍見長」;而且錐是從槍口張開的,射手貼到塔邊時錐寬本來就收斂。
+//   line  貫穿 —— 豁免。沿一條線穿透,要同時吃到兩座塔必須「射手與兩塔共線」(塔位左右對稱 ⇒
+//         那條線垂直於兵線、射手站在側翼),不是「一次打到一片」;夾它等於把貫穿機制本身拿掉。
+//   另有具名名冊 AREA_WEAPONS(以範圍見長的爆炸型武器)同樣豁免 —— MUST 附理由,
+//   MUST NOT 為了讓某個角色好過而加名(那就變成「範圍見長」四個字誰都可以自稱)。
+//
+// ---- 收掉的範圍 MUST 還回火力(範圍是有價的)----
+// 只夾不補 = 單方面砍掉半數重武器約三成的實戰價值,而且只砍到「剛好帶 r 的那 13 把」——
+// 那不是平衡調整,是把爆炸型武器降級。價格表 = areaValue():**足跡直徑**每多一個基準單位,
+// 價值 +AOE_BUDGET.W。刻意是**線性於半徑**而非面積:目標是沿兵線排開的一列,掃到幾個 ∝ 足跡
+// 直徑;用 πr² 會讓大半徑武器領到 3~13 倍的補償(t01 直接翻四倍傷害),那是模型錯,不是設計。
+// 夾制與補償由**同一次**迴圈定案(`_aoeRaw` 是唯一的中間狀態),套用點只有 heroWeapon 的 dmg 一處
+// (與 counterDmgF 同欄)—— MUST NOT 回頭逐武器手改 dmg 階梯,那正是「32 角一動就漂移」的老病。
+//
+// ---- 補償 MUST 是**重分配**而非通膨(NORM 幾何平均)----
+// 舊有四條不變式(bal ①④⑤ 與 duel)全是**單體**模型:爆風半徑從來沒有進過任何一條算式 ⇒
+// 這批武器的範圍在既有校準裡本來就是「免費的」。若把補償當純加法發下去,單體模型只看得到
+// 「傷害整批變高」= 直接把 drone 推出機種對稱區間、t11→s07 的射程壓制從 35% 衝到 57%
+// (2026-08-02 實測 W=0.35 的原始結果)。故補償一律先除以**這批武器補償係數的幾何平均**:
+//   收掉的範圍在「被收的那批武器之內」重新分配 —— 讓出越多範圍的拿越多火力,讓出得少的把火力
+//   讓出去,整批的火力水位不動(幾何平均 ⇒ 乘性係數的中點,與 CLASS_SYM 用幾何中點同理)。
+// 於是 W 的語意是**分配的陡度**(範圍的相對價格),不是總量;W → 0 即逐位元回到舊制傷害。
+export const AREA_WEAPONS = {
+  's02.heavy': '溫壓火箭(TBG-7V)—— 溫壓戰鬥部的殺傷機制本身就是超壓瀰漫,收半徑等於換一把武器',
+  't01.heavy': '152mm 榴彈砲(2A65)—— 全表最大口徑的面殺傷火砲,榴彈砲的定義就是「打一片」',
+  'm06.heavy': '集束子母彈(CBU)—— 子彈藥撒佈,撒佈範圍即彈種定義,收成點目標就不是集束彈了',
+};
+// W:範圍的**相對價格**(分配陡度,不是總量 —— 總量由 NORM 鎖住)。校準錨 = `npm run bal`
+// ⑤(機種對稱 / 角色離群 / 射程壓制):W 越大,讓出範圍越多的武器拿到越多火力、讓得少的賠越多,
+// 陡到某個程度就會把單一角色推出 20~80%。NORM 於下方夾制迴圈 derive,**MUST NOT 手寫**。
+export const AOE_BUDGET = { W: 0.35, NORM: 1 };
+/** 同塔位左右兩座砲塔的間距(公尺;推導不手寫) */
+export const towerPairSepM = () => 2 * GAME.TOWER_SIDE_OFF;
+/** 「一發不得同時傷到同塔位兩座塔」的爆風半徑上限(公尺;推導不手寫) */
+export const soloBlastRmax = () => (towerPairSepM() / 2 - TARGET_R.tower) / BLAST.EDGE;
+/** 爆風打擊足跡半徑(公尺)= 傷害歸零邊界(blastFalloff 的外界) */
+export const blastFootprintR = (r) => Math.max(0, r || 0) * BLAST.EDGE;
+/** 範圍價值(相對「剛好打不到第二座塔」的單體基準;線性於足跡直徑,見上方註) */
+export const areaValue = (r) => 1 + AOE_BUDGET.W * (blastFootprintR(r) / blastFootprintR(soloBlastRmax()));
+/** 未正規化的補償係數 = 「收掉的範圍值多少火力」(夾制迴圈用它算 NORM;消費端請用 aoeTrimF) */
+export const aoeTrimRaw = (w) => (w?._aoeRaw ? areaValue(w._aoeRaw) / areaValue(tierVal(w.r, 1)) : 1);
+/** 收掉範圍的火力補償(唯一套用點 = heroWeapon 的 dmg;沒被夾過的武器恆 ×1)。
+ *  除以 NORM ⇒ 這批武器的火力水位不動,只在彼此之間重分配(見上方註)。 */
+export const aoeTrimF = (w) => (w?._aoeRaw ? aoeTrimRaw(w) / AOE_BUDGET.NORM : 1);
+{
+  const cap = soloBlastRmax(), TOP = 1 + ECON.UPGRADES.hw.max, trimmed = [];   // 戰鬥面向滿級階(Lv4;含 tierVal 外推)
+  for (const [ch, c] of Object.entries(CHARACTERS)) for (const slot of ['light', 'heavy']) {
+    const w = c[slot];
+    if (!w || w.r == null || AREA_WEAPONS[`${ch}.${slot}`]) continue;
+    if (aoeClass({ ...w, id: slot }) !== 'blast') continue;   // id 是 aoeClass 分辨重武器的依據
+    const top = tierVal(w.r, TOP);                            // 滿級(外推後)的半徑才是真正的上界
+    if (!(top > cap)) continue;
+    const f = cap / top;                                      // 等比收斂:階梯形狀保留,頂階恰好貼齊上限
+    w._aoeRaw = tierVal(w.r, 1);
+    // 一律**無條件捨去**到 0.001m:四捨五入會讓頂階回到 cap 之上(4.4444 → 4.445),
+    // 而這條界是「打不打得到第二座塔」的充要條件 —— 差 0.001m 就整條規則失效(原則 6 寧缺勿錯)。
+    const trim = (v) => Math.floor(v * f * 1000) / 1000;
+    if (!Array.isArray(w.r)) { w.r = trim(w.r); trimmed.push(w); continue; }
+    const a = w.r.map(trim), n = a.length, k = Math.max(0, TOP - n);
+    // 頂階是 tierVal 的**外推**(末段增量續增:v[n−1]·(1+k) − v[n−2]·k)⇒ 逐項捨去之後
+    // 外推值會反彈到 cap 之上(t09 [15,17,19] 實測回到 4.445)。末階由外推式**反解**(推導不手寫)。
+    if (n >= 2) a[n - 1] = Math.min(a[n - 1], Math.floor((cap + k * a[n - 2]) / (1 + k) * 1000) / 1000);
+    w.r = a;
+    trimmed.push(w);
+  }
+  // 幾何平均:乘性係數的中點。整批補償除以它 ⇒ 火力總量不動,只在「讓出範圍的那批武器」之間重分配。
+  AOE_BUDGET.NORM = trimmed.length
+    ? Math.exp(trimmed.reduce((s2, w) => s2 + Math.log(aoeTrimRaw(w)), 0) / trimmed.length) : 1;
+}
+
+// ================= 機動預算:機動越高,基礎火力越低(2026-08-02 使用者定案)=================
+// 使用者定案:「涵蓋 DPS / 攻擊範圍(考量實質戰鬥角度)/ 射程 / 移動速度,重新調正武器平衡性,
+// 三種機體使用不同武器類型交叉對戰」。前三軸都已經有價格表(DPS = dmg 階梯本身、攻擊範圍 =
+// `AOE_BUDGET`、射程 = 各武器 range + rangeCap),**只有移動速度沒有**:機動一直是免費的。
+//
+// 免費的代價在新的前線交戰模型(`tools/lanesim.mjs` / bal ⑦)裡量得出來:那支有「扛不住就退回
+// 自家塔後等護盾、回滿再上」的撤退循環(= 正式對局的對線節奏),而**撤退的成本與機動成反比** ——
+// 跑得快的一方每次脫離接觸只挨兩秒打、跑得慢的挨四秒半,一場對線下來差距被乘上十幾次。
+// 2026-08-02 實測(改制前):drone 62.6% / robot 45.0% / morph 38.5%,而三機種的 EHP 只差 ±10%。
+// 既有的 bal ①④⑤ 全是「站著對射」的模型,機動在那裡只透過 EVASION 閃避作用一點點,量不到這件事。
+//
+// 價格表沿用 counterDmgF / aoeTrimF 的同一個形狀,但**以幾何中點為軸**:
+//   mobDmgF(ch) = (全角色有效機動的幾何中點 ÷ 該角色有效機動) ^ K
+// ⇒ 機動高於中點者基礎火力下修、低於中點者上修,整體火力水位由幾何中點鎖住(不通膨,與
+//   CLASS_SYM 取幾何中點同理)。K = 0 即逐位元回到舊制。
+// **只作用於武器**(招式不吃):使用者指示「先不考慮長按技和大小招」,那三類的預算住 SPECIAL /
+// 招式階梯,不在本次校準範圍。
+// 校準錨:bal ①(清波剩餘 EHP 三機種同時朝 40% 收斂)、④(drone 站外攻堅秒數上升,有預算上限)、
+//         ⑤(機種對稱 / 角色離群)、⑦(前線交戰機種對稱)。改 K MUST 四條一起看。
+// **K 有實測上界**(2026-08-02 逐值掃描):K=0.15 起 t02 的 ⑤ 平均勝率頂到 80%、K=0.20 起 t02/t04
+// 雙雙出界,K=0.28 另把 ④ 的 drone 站外攻堅推到 205s > 200s 預算。0.10 是「四條同時全綠」的最大值 ——
+// 再往上要先處理那兩名角色的 dmg 階梯,MUST NOT 只因為 ⑦ 好看就把 K 調過頭。
+export const MOB_BUDGET = { K: 0.10 };
+let _mobMid = 0;
+/** 全角色「有效機動」的幾何中點(m/s;推導不手寫,首次呼叫時定案並快取) */
+export function mobMid() {
+  if (!_mobMid) {
+    const v = Object.keys(CHARACTERS).map((c) => {
+      const k = charKind(c);
+      return heroMobility(k, CHARACTERS[c].mods, k === 'drone');
+    }).filter((x) => x > 0);
+    _mobMid = v.length ? Math.exp(v.reduce((a, x) => a + Math.log(x), 0) / v.length) : 1;
+  }
+  return _mobMid;
+}
+/** 機動折減/加成係數(唯一套用點 = heroWeapon 的 dmg,與 counterDmgF / aoeTrimF 同欄) */
+export function mobDmgF(ch) {
+  const k = charKind(ch);
+  const m = heroMobility(k, CHARACTERS[ch]?.mods, k === 'drone');
+  return m > 0 ? (mobMid() / m) ** MOB_BUDGET.K : 1;
+}
+
+// ================= 射程預算:射程越長,基礎火力越低(2026-08-02 使用者定案)=================
+// 與 MOB_BUDGET 同一條「軸要有價格」的道理,但**射程是新模型量到最貴的一軸**:
+// `tools/lanesim.mjs`(bal ⑦)的單軸擾動自驗實測 —— 同一台機體對全體對局,
+//   火力 +15% → 勝率 +4.1pp、範圍 +50% → +2.1pp、移速 +15% → +0.6pp、**射程 +15% → +21.3pp**。
+// 射程貴在它同時買到三件事:接近期單方面輸出、對線時把對手壓在自己的甜蜜點外、以及站在
+// 砲塔射程外拆塔(④ 的站外攻堅)。既有校準完全沒有替這一軸標價 ⇒ 誰的武器射程長誰就贏,
+// 而三機種的射程上限本來就不同(rangeCap ← UNITS[kind].sight),差距直接變成機種勝率差。
+//
+// 價格表與 MOB_BUDGET 同形,但**中點逐槽位取**(輕/重武器各算各的):
+//   rngDmgF(ch, slot) = (該槽位全角色解析後射程的幾何中點 ÷ 這把武器的射程) ^ K
+// 逐槽位而非全表混一鍋的理由:輕武器 102~122m、重武器 158~194m,混算會變成「所有輕武器
+// 集體加成、所有重武器集體折減」= 量到的是槽位不是射程優勢。比的必須是**同級距的同儕**。
+// K = 0 即逐位元回到舊制。校準錨同 MOB_BUDGET(bal ①④⑤⑦ 四條一起看)。
+// **K 有實測上界**(2026-08-02 逐值掃描):K ≥ 0.25 起 t02 的 ⑤ 平均勝率頂到 80% 出界
+// (它是低機動 + 中射程,兩份預算的加成同時落在它身上)。0.15 留一格餘裕(現況最高 t04 79%)。
+// **也要知道 K 買不到什麼**:⑦ 的射程敏感度(+15% 射程 = +21pp 勝率)遠高於火力敏感度
+// (+15% 火力 = +4.1pp),因為 `dmgFalloff` 的平台/衰減段都是**射程的比例** ⇒ 射程長不只是打得遠,
+// 是同一個距離上衰減更少。要靠火力折減把 12% 的射程優勢吃回來得砍掉近八成傷害 —— 不可能,也不該。
+// 真正的旋鈕在機種射程上限(`rangeCap` ← `UNITS[kind].sight`),那條線牽動 #INC-104 的高空射擊
+// 測試與全機種輕武器射程,MUST 另案處理,MUST NOT 拿 K 硬湊。
+export const RANGE_BUDGET = { K: 0.15 };
+const _rngMid = {};
+/** 某槽位「解析後射程」的幾何中點(公尺;推導不手寫,首次呼叫時定案並快取) */
+export function rangeMid(slot) {
+  if (!_rngMid[slot]) {
+    const v = Object.keys(CHARACTERS).map((c) => heroRange(c, slot)).filter((x) => x > 0);
+    _rngMid[slot] = v.length ? Math.exp(v.reduce((a, x) => a + Math.log(x), 0) / v.length) : 1;
+  }
+  return _rngMid[slot];
+}
+/** 射程折減/加成係數(唯一套用點 = heroWeapon 的 dmg,與 counterDmgF / aoeTrimF / mobDmgF 同欄) */
+export function rngDmgF(ch, slot) {
+  const r = heroRange(ch, slot);
+  return r > 0 ? (rangeMid(slot) / r) ** RANGE_BUDGET.K : 1;
+}
 
 // ---- 全際 reach 縮放(規則 #4,見 COMBAT_SCALE;唯一縫,MUST NOT 在別處二次縮)----
 // 統一縮「射程 / 視野 / 移速 / 制空高度門檻 / 速度門檻」× COMBAT_SCALE;**不動** 實體尺寸、AoE/障礙半徑、

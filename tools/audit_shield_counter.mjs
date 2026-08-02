@@ -30,7 +30,8 @@ import { readSrc } from './audit_src.mjs';
 import * as DATA from '../public/js/data.js';
 import { BUILDING_VS_CAP, shieldSplit, shieldRoleName, CHARACTERS, WEAPONS, DECOY, HYPER,
   heroWeapon, heroAbility, UNITS, MAPGEO,
-  EX_SIEGE_WEAPONS, COUNTER_BUDGET, counterLoad, counterDmgF } from '../public/js/data.js';
+  EX_SIEGE_WEAPONS, COUNTER_BUDGET, counterLoad, counterDmgF,
+  aoeTrimF, mobDmgF, rngDmgF } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
 // 合成戰場設定(同 test/e2e.mjs / audit_lance_hit.mjs 的 fakeBattleConfig;單線、台北 101 附近)
@@ -307,13 +308,18 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
   const broadW = { vsSp: 1.5, vs: {} }, narrowW = { vsSp: 1.0001, vs: { armor: 1.5 } };
   t('同樣 +0.5:掛護盾軸的折減重於掛類別剋制', counterDmgF(broadW) < counterDmgF(narrowW),
     `${counterDmgF(broadW).toFixed(3)} vs ${counterDmgF(narrowW).toFixed(3)}`);
-  // 掛旗標的武器實際傷害 MUST 低於未折減值(折減真的接上了 heroWeapon,不是只定義了函式)
+  // 掛旗標的武器實際傷害 MUST 低於未折減值(折減真的接上了 heroWeapon,不是只定義了函式)。
+  // **比對 MUST 走完整的預算鏈**:2026-08-02 起 heroWeapon 的 dmg 還乘上另外三個推導係數 ——
+  // aoeTrimF(攻擊範圍收斂的回補)、mobDmgF(機動預算)、rngDmgF(射程預算)。只比 counterDmgF
+  // 一項會在那三項非 1 的武器上假紅字(改制當下 s03/t01/t08/m01 四把),而真正要釘的是
+  // 「counterDmgF 有沒有接上」⇒ 拿全鏈乘積比對,並另外單獨驗 counterDmgF < 1。
   for (const [k, w] of flagged) {
     const [id, s] = k.split('.');
     if (s !== 'light' && s !== 'heavy') continue;
     const solved = heroWeapon(id, s, 1, false), f = counterDmgF(w);
-    t(`${k} 基礎傷害吃到折減 ×${f.toFixed(3)}(${(w.dmg?.[0] ?? w.dmg).toFixed?.(0) ?? w.dmg[0]} → ${solved.dmg.toFixed(1)})`,
-      f < 1 && near(solved.dmg, (Array.isArray(w.dmg) ? w.dmg[0] : w.dmg) * f, 1e-6));
+    const chain = f * aoeTrimF(w) * mobDmgF(id) * rngDmgF(id, s);
+    t(`${k} 基礎傷害吃到折減 ×${f.toFixed(3)}(全鏈 ×${chain.toFixed(3)};${(w.dmg?.[0] ?? w.dmg).toFixed?.(0) ?? w.dmg[0]} → ${solved.dmg.toFixed(1)})`,
+      f < 1 && near(solved.dmg, (Array.isArray(w.dmg) ? w.dmg[0] : w.dmg) * chain, 1e-6));
   }
   // 廣泛型(反護盾/穿盾)MUST 比只掛 vsHp 的反裝甲吃更重的折減 —— 使用者原話的「基礎傷害會偏低」
   const broadF = flagged.filter(([, w]) => (w.vsSp ?? 1) > 1 || (w.spPierce || 0) > 0).map(([, w]) => counterDmgF(w));
