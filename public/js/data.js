@@ -3138,11 +3138,16 @@ export const isBotId = (id) => typeof id === 'string' && id.startsWith('b');
 // 有效操作約 400 APM ⇒ 兩者都取 0.15s。伺服器 tick 為 GAME.TICK_MS(125ms)⇒ 高難度幾乎不設限
 // (就是人類手速的頂點),往下每一級明顯遲鈍:中 ≈ 熟練玩家、低 ≈ 一般玩家、新手 ≈ 生手。
 // 持續開火**不算切換操作**(扳機是按住的,不是每發重按一次)⇒ 不吃 gap,射速仍由 sim 的武器 rate 把關。
+//
+// ---- 戰術旗標(2026-08-02 使用者需求:中/高難度的操作邏輯優化)----
+// tactic(中/高):威脅選敵(對我傷害最高 / 對我方總輸出最高 / 快陣亡)+ 兩段撤退線。
+// elite(高):撿尾刀、打帶跑、扛半條護盾就後撤。
+// 難度分層一律走這兩顆旗標 —— bots.js MUST NOT 比對難度字串(`diff.key === 'high'` 一出現就是第二份分級表)。
 export const BOT_DIFF = {
-  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70 },
-  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45 },
-  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28 },
-  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15 },
+  novice: { key: 'novice', name: '新手', aimErr: 0.55, heavy: false, ability: false, gap: 0.90, react: 0.70, tactic: false, elite: false },
+  low:    { key: 'low',    name: '低',   aimErr: 0.35, heavy: true,  ability: false, gap: 0.55, react: 0.45, tactic: false, elite: false },
+  medium: { key: 'medium', name: '中',   aimErr: 0.15, heavy: true,  ability: true,  gap: 0.30, react: 0.28, tactic: true,  elite: false },
+  high:   { key: 'high',   name: '高',   aimErr: 0.0,  heavy: true,  ability: true,  gap: 0.15, react: 0.15, tactic: true,  elite: true  },
 };
 // 各類操作的切換間隔 = 該難度 gap × 此倍數(1 = 一次基本操作)。
 // buy 27 ⇒ 高難度 ≈ 4.1s,與 2026-07-27 之前的硬編碼 4s 巡店節奏一致(其餘難度按手速等比放慢)。
@@ -3174,6 +3179,60 @@ export const BOT_VIEW = {
 /** 電腦玩家的水平半視角(弧度):看得見 = 目標方位與機體朝向的夾角 ≤ 這個值 */
 export const botFovHalf = (kind) =>
   Math.atan(Math.tan((UNITS[kind]?.fov ?? 68) * Math.PI / 360) * BOT_VIEW.ASPECT);
+
+// ---- 電腦玩家戰術(2026-08-02 使用者定案)----
+// 需求原文:「被打時優先對『對自己傷害最高者、造成敵人最大總傷害、快要陣亡的目標』進行攻擊」/
+//          「HP 低於 25% 才會回主堡,否則撤退到最近砲塔後方兵線等滿護盾即可」/
+//          高級追加「撿尾刀、打帶跑操作、扛半條護盾就後撤」。
+//
+// 舊制 bot 的選敵只有「加權距離最近」一條(`_acquire`),撤退只有「回主堡補到 85%」一條 ——
+// 前者讓 bot 對著滿血步槍兵磨到死也不去收隔壁剩一口氣的英雄,後者讓每次擦傷都變成一趟
+// 橫越半張地圖的長征(兵線空窗 30 秒以上)。這兩件事都不是「準不準」,是**取捨**,所以分級
+// 走 BOT_DIFF 的 tactic/elite 旗標,新手/低難度**逐位元維持舊制**。
+//
+// **三項選敵指標一律正規化成「候選集內的佔比」**:傷害量的絕對值跨場地/跨時間沒有可比性
+// (開局 200 點就是最高威脅、後期 2000 點才是),拿絕對值當權重等於讓權重隨戰況漂移。
+export const BOT_TACTIC = {
+  // ① 選敵優先度(見 botTargetPrio;三項各自 0~1)
+  THREAT_S: 6,      // 威脅記憶秒數:只有「剛剛還在打我的人」算正在打我(線性淡出)
+  W_THREAT: 1.5,    // 對自己傷害最高者
+  W_OUTPUT: 0.7,    // 對我方造成總傷害最高者(專殺輸出核心)
+  W_EXEC: 1.0,      // 快要陣亡的目標
+  EXEC_S: 1.0,      // 收割窗:這麼多秒的持續輸出打得完 = 撿得到尾刀(見 botSalvo)
+  EXEC_MAX: 3,      // 撿尾刀的權重輸入(見 botExecW)—— 刻意遠高於「已損失比例」的上限 1
+  // ② 撤退線(使用者定案:回主堡是**唯一**會離開兵線的情況)
+  PULL_HP: 0.32,    // 脫離交戰的裝甲門檻(= 改制前 bots.js 的 RETREAT_HP,平衡不動)
+  BASE_HP: 0.25,    // 低於此才回主堡
+  RESUME_HP: 0.85,  // 回堡補血的復出線(= 改制前的 RESUME_HP)
+  RALLY_BACK_M: 70, // 集結點:沿兵線退到最近己方砲塔後方多遠
+  // ③ 護盾線。**進場 PULL_SP、出場 RALLY_SP** 是刻意留寬的遲滯帶:裝甲離開主堡不會自己回,
+  //    單看裝甲的話「退到塔後 → 護盾滿 → 回去 → 血還是低 → 又退」會在門檻上無限抖動。
+  PULL_SP: 0.5,     // 扛掉半條護盾(高難度單獨成立;中難度需同時裝甲 < PULL_HP)
+  RALLY_SP: 0.98,   // 集結點復出線:護盾回到接近滿(「等滿護盾即可」)
+  // ④ 打帶跑(高難度):距離環比例
+  KITE_NEAR: 0.55,  // 可擊發 ⇒ 貼上去
+  KITE_FAR: 0.95,   // 裝填中 ⇒ 拉到射程外緣
+};
+/** 選敵優先度(≥1,越大越優先;`_acquire` 以加權距離除以它)。三項佔比一律 0~1 ——
+ *  消費端 MUST NOT 另寫權重或改變組合方式。 */
+export const botTargetPrio = ({ threat = 0, output = 0, exec = 0 }) =>
+  1 + BOT_TACTIC.W_THREAT * threat + BOT_TACTIC.W_OUTPUT * output + BOT_TACTIC.W_EXEC * exec;
+/** 威脅記憶淡出(線性;THREAT_S 秒後歸零)—— 剛剛挨的那一槍權重最高 */
+export const botThreatDecay = (age) => Math.max(0, 1 - Math.max(0, age) / BOT_TACTIC.THREAT_S);
+/** 一個收割窗內打得出的傷害(撿尾刀的判準)。刻意是**近似**:不含護甲減免/爆擊/衰減 ——
+ *  這是「該不該插隊去收人頭」的取捨,不是傷害結算(結算永遠只在 sim._damage)。 */
+export const botSalvo = (wd, kind) => wd.dmg * vsMult(wd, kind) * wd.rate * BOT_TACTIC.EXEC_S;
+/**
+ * 「快要陣亡」那一項的權重輸入。一般 = **已損失比例**(0~1);收割窗內打得完 = `EXEC_MAX`。
+ * 兩者刻意差一個量級:「剩一口氣」只是排序偏好(反正誰打都會死),「我這一秒打得死」才是
+ * 該丟下手上目標去插隊的理由 —— 兩件事若共用 0~1 的尺,撿尾刀就只是個四捨五入的雜訊。
+ * `salvo = 0` ⇒ 關掉收割分支(中難度只有一般的低血偏好),消費端 MUST NOT 另寫 if。
+ */
+export const botExecW = (ehp, maxEhp, salvo) =>
+  (salvo > 0 && ehp <= salvo) ? BOT_TACTIC.EXEC_MAX
+    : (maxEhp > 0 ? Math.max(0, 1 - ehp / maxEhp) : 0);
+/** 打帶跑的距離環比例:可擊發 = 貼上去、裝填中 = 拉開 */
+export const botKiteF = (ready) => (ready ? BOT_TACTIC.KITE_NEAR : BOT_TACTIC.KITE_FAR);
 
 // ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
 export const ENV = {

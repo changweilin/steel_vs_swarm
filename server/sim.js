@@ -14,7 +14,7 @@ import {
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
-  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul,
+  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, BOT_TACTIC, botThreatDecay,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -22,9 +22,12 @@ let nextEntId = 1;
 // 小隊共用的「玩家狀態」:一名玩家不論操控幾架機體,經濟/電力/彈藥/招式只有一份。
 // 三架機體各自是獨立 ent(有自己的 hp/護盾/座標/死亡狀態),但這些欄位透過
 // getter/setter 指回同一個 sq.ps —— 讓既有的 h.money / h.abil / h.ammo 全部原樣可用。
+// dmgOut(累計輸出)同樣共用:一名玩家不論操控幾架機體,「這個人打出多少傷害」只有一份帳 ——
+// 逐機體各記一份的話,三架均分的小隊在電腦玩家眼裡永遠不是輸出核心(見 _dmgOut)。
 const SQUAD_SHARED = [
   'money', 'upg', 'ammo', 'reloadUntil', 'fireAt', 'buffs', 'mp', 'maxMp', 'mpRegen',
   'abil', 'acd', 'kn', 'mods', 'empUntil', 'stealthUntil', 'aiming', 'lastBurst', 'markUntil',
+  'dmgOut',
 ];
 
 /** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
@@ -3025,7 +3028,10 @@ export class BattleSim {
       const toShield = Math.min(t.sp || 0, dmg);
       t.sp = (t.sp || 0) - toShield;
       let rem = dmg - toShield;
-      if (rem <= 0) { this._botAirSink(t, toShield); this._hurtLog(t, by, toShield); this._vamp(by, toShield); return; }
+      if (rem <= 0) {
+        this._botAirSink(t, toShield); this._hurtLog(t, by, toShield);
+        this._dmgOut(by, t, toShield); this._vamp(by, toShield); return;
+      }
       // 第二層裝甲:護甲值減免(破甲抵銷)
       dmg = rem * armorMul(t.armor, pen);
       dealt = toShield + Math.min(t.hp, dmg);
@@ -3036,6 +3042,7 @@ export class BattleSim {
       dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
       dealt = Math.min(t.hp, dmg);
     }
+    this._dmgOut(by, t, dealt);
     this._vamp(by, dealt);
     if (floorHp) {
       // 環境傷害硬地板(沼澤:最多扣到剩 floorHp 滴,不致死)。只作下限、不回血 ——
@@ -3065,6 +3072,19 @@ export class BattleSim {
   }
 
   /**
+   * 累計輸出記帳(2026-08-02;電腦玩家選敵的「造成敵人最大總傷害者」**唯一真相**)。
+   * 量的是**實際造成的護盾 + 裝甲損耗**(與 `_vamp`/`_botAirSink` 同一份 dealt),因此
+   * **兩條結算路徑都 MUST 記** —— 只掛在一般結算那條的話,高護盾對手的輸出會被系統性低估
+   * (護盾全擋的那些發全部漏帳),而那正好是最該被集火的人。
+   * 英雄走 SQUAD_SHARED ⇒ 一名玩家不論幾架機體只有一份帳(見 SQUAD_SHARED 註)。
+   * MUST NOT 在 bots.js 另開第二份統計(客戶端/AI 自算 = A1 家族)。
+   */
+  _dmgOut(by, t, dealt) {
+    if (!by || !by.side || by.side === t.side || !(dealt > 0)) return;
+    by.dmgOut = (by.dmgOut || 0) + dealt;
+  }
+
+  /**
    * 受擊濺血提示的**方位來源**(2026-08-02 使用者需求「濺血位置視敵人射擊方向而定、傷害越高血滴越大」)。
    * 客戶端本來只從快照的血量落差知道「被打了」,不知道被誰從哪打 ⇒ 方位只能由伺服器給(A1)。
    *
@@ -3085,9 +3105,25 @@ export class BattleSim {
     // 這裡是全伺服器唯一知道「被誰從哪裡打」的地方,順手把方位交給 AI —— MUST NOT 在 bots.js
     // 另開一份記帳(第二份必定與濺血這份分家)。掛在**主視野機**上(BotBrain 只操控它),
     // 但**僚機挨打也算**(整組小隊在同一個位置,打僚機就是打這一隊)⇒ 排在下面的主視野機閘之前。
+    // 同一個地方順手記下**威脅帳**(2026-08-02 使用者需求「被打時優先打對自己傷害最高者」):
+    // 「誰對我造成多少傷害」與「被誰從哪裡打」是同一件事的兩個欄位,分兩份帳必定分家。
+    // 英雄以 pid 為鍵(整組小隊打我 = 同一個人打我);逾時的攻擊者就地清掉 —— 這張表只該
+    // 留「還在打我的人」,而不是整場的傷害排行(那是 dmgOut 的工作)。
     if (isBotId(t.pid)) {
       const lead = this.heroes.get(t.pid);
-      if (lead && !lead.dead) lead._alert = { x: by.x, z: by.z, t: this.t };
+      if (lead && !lead.dead) {
+        lead._alert = { x: by.x, z: by.z, t: this.t };
+        const tb = (lead._threat ||= new Map());
+        for (const [k, r] of tb) if (this.t - r.t > BOT_TACTIC.THREAT_S) tb.delete(k);
+        const tk = by.hero ? by.pid : by.id;
+        const pv = tb.get(tk);
+        // 累加前**先把舊帳淡出**(同一支 `botThreatDecay`):同一個攻擊者的紀錄只會在
+        // 「連續 THREAT_S 秒沒再打我」時才整筆過期,若只是 `v += dealt` 就等於永不遺忘 ——
+        // 每秒刮 2% 的持續騷擾一分鐘後會累積成「剛剛扛了半條護盾」,bot 於是無故後撤。
+        // `k` = 攻擊者機種:撤退判定要分得出「被人打」與「站在塔下面被刮」(見 bots._recentDmg)
+        if (pv) { pv.v = pv.v * botThreatDecay(this.t - pv.t) + dealt; pv.t = this.t; }
+        else tb.set(tk, { v: dealt, t: this.t, k: by.kind });
+      }
     }
     // 只記**主視野機**:玩家看到的血量落差(受傷暈影)本來就只認這一架,僚機挨打不該噴在座艙玻璃上。
     // 同時保證 `_flushHurt` 走 `heroes` 就能收乾淨(掛在僚機上的帳沒有 flush 點,會一路累積)。
