@@ -616,7 +616,25 @@ body[data-side="STEEL"] .hud-side { color: #04080b; background: var(--steel); cl
 /* 觀戰的角色數據面板(2026-08-02):**與交戰共用同一塊 .hud-self** —— 沒跟人時只留標題(上帝視角
    本來就沒有「誰的數據」可顯示),跟上某位玩家才整塊攤開,並在最下方補一列八軌商店升級。
    收起靠 CSS 而不是逐節點 hidden:欄位增減時不必再回頭補一份顯隱清單。 */
-body.spectating:not(.spec-follow) .hud-self > :not(.hud-side) { display: none; }
+/* 觀戰版型:沒跟人時角色數據整塊收起,只留標題 —— **觀戰操作說明是例外**(它正是要填這塊空版位)*/
+body.spectating:not(.spec-follow) .hud-self > :not(.hud-side):not(.spec-help) { display: none; }
+/* 觀戰操作說明(2026-08-02 使用者需求「觀戰時加入觀戰操作說明」):常駐左下,文字由
+   main.js renderSpecHelp 灌(唯一真相 = help.js SPEC_CONTROLS)。**MUST 有高度上限** ——
+   跟上玩家時這塊與完整數據面板同時在版位上,沒有 max-height 就會把血條推出畫面外。 */
+.spec-help { display: none; }
+body.spectating .spec-help {
+  display: block; max-height: 46vh; overflow-y: auto;
+  font-family: var(--mono); font-size: 10px; line-height: 1.5; letter-spacing: 0;
+  border-left: 2px solid var(--line); padding: 2px 0 2px 6px; margin: 3px 0;
+}
+/* 跟上某位玩家 ⇒ 完整數據面板回到同一塊版位上,說明跟著收窄(沒跟人時那些欄位是收起的,
+   整張表攤開也不會擠到誰)。上限一定要留 —— 觀戰時指標多半是鎖定的,捲不動 */
+body.spectating.spec-follow .spec-help { max-height: 24vh; }
+.spec-help-h { color: var(--railW); letter-spacing: 3px; margin-bottom: 2px; }
+.spec-help-h::before { content: '// '; opacity: 0.7; }
+.spec-help-r { display: flex; gap: 6px; }
+.spec-help-r > b { color: var(--fg); flex: none; min-width: 84px; font-weight: 400; }
+.spec-help-r > span { color: var(--dim); min-width: 0; }
 .spec-upg { display: none; flex-wrap: wrap; gap: 2px 6px; font-size: 10px; font-family: var(--mono); letter-spacing: 0; }
 body.spectating.spec-follow .spec-upg { display: flex; }
 .su-item {
@@ -646,6 +664,12 @@ body.spectating.spec-follow .spec-upg { display: flex; }
 .shop-item.off { opacity: 0.45; }
 .shop-info { font-size: 13px; }
 .shop-item-note { color: var(--dim); font-size: 10px; font-family: var(--mono); }
+/* 掃貨 / 預約(2026-08-02 使用者需求)。`.shop-item` 是 space-between ⇒ 預約鈕與價格鈕
+   一起被推到右側;`.shop-info` 吃 auto 讓兩顆鈕貼齊右緣不隨文字長短跳動。 */
+.shop-tools { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; }
+.shop-item > .shop-info { margin-right: auto; }
+.shop-res { min-width: 76px; font-family: var(--mono); letter-spacing: 1px; }
+.shop-res.on { color: #06090d; background: var(--railW); border-color: var(--railW); }
 /* HUD 收斂(2026-07-16):只留機體數據 + 小地圖;操作說明移駐 ESC 戰場選單 */
 .pause-help {
   color: var(--dim); font-size: 11px; line-height: 1.9; font-family: var(--mono); letter-spacing: 1px;
@@ -805,7 +829,12 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .room-cfg { margin: 6px auto 0; max-width: 640px; width: 100%; min-width: 0; text-align: left; }
 .room-cfg-tabs { justify-content: center; margin-bottom: 5px; }
 .room-cfg-page[hidden] { display: none; }
-.room-cfg-page { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+/* 選項本體 MUST **置中對齊頁籤**(2026-08-02 使用者定案「電腦難度/操作方式的選項要在頁籤正下方」):
+   頁籤那一列是置中的,選項若靠左(flex 預設 flex-start)就會歪在 640px 版位的左緣 ——
+   看起來像兩塊無關的東西,而不是「這組頁籤展開的內容」。內層的 `.set-row` 是操作方式那一頁
+   包住 seg 的容器 ⇒ 兩層都要置中,只改外層等於沒改(整列仍靠左貼齊)。 */
+.room-cfg-page { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.room-cfg-page > .set-row { justify-content: center; flex-wrap: wrap; }
 
 /* ---------- 劇情戰役 ---------- */
 /* 大廳三動作同列(建立地圖 / 開戰時刻 / 劇情戰役),窄螢幕自動換行 */
@@ -1077,6 +1106,18 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .char-btn.on { border-color: var(--ok); color: var(--ok); animation: selGlowOk 1.8s ease-in-out infinite; }
 .char-btn.merc { border-style: dashed; }
 .char-av { width: 56px; height: 56px; border-radius: 0; border: 1px solid var(--line); display: block; clip-path: var(--notch-sm); }
+/* 頭像 + 機種角標(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
+   標記由 main.js `charAvatarHTML()` 單一縫產生;圖示吃 `currentColor` ⇒ 選取態(.char-btn.on)
+   自動跟著翻色,MUST NOT 在這裡寫死 fill。角標壓在頭像右下角(不遮臉),自帶底色保證可讀。 */
+.av-wrap { position: relative; display: inline-block; flex: none; line-height: 0; }
+.av-kind {
+  position: absolute; right: -2px; bottom: -2px; display: block; padding: 2px;
+  background: rgba(4, 7, 11, 0.92); border: 1px solid var(--line); line-height: 0;
+}
+.kind-ico { width: 14px; height: 14px; display: block; }
+.cd-tag .kind-ico { width: 11px; height: 11px; display: inline-block; vertical-align: -1px; margin-right: 2px; }
+.sb-chip .av-kind { padding: 1px; }
+.sb-chip .kind-ico { width: 10px; height: 10px; }
 .char-btn.rnd { justify-content: center; min-height: 92px; }
 .char-dice { font-size: 30px; line-height: 1.4; }
 .char-name { font-size: 10px; color: var(--dim); font-family: var(--mono); }

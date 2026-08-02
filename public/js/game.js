@@ -15,7 +15,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
-  SPEC_CAM, specViewNext, camSmoothF, camAngleStep,
+  SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
@@ -64,6 +64,10 @@ const DECOY_BOMB_T = { MIN: 0.7, MAX: 2.2, SPD: 45 };
 // 少數瀏覽器**還會**把同一顆 ESC 的 keydown 補送給頁面 ⇒ 不擋就是「開了又立刻自己關」。
 // 同一顆 ESC 只准生效一次;人手按不出這麼快的第二下(選單開/關本來就要看一眼才按)。
 const ESC_GAP_S = 0.35;
+// 商店預約的重送等待窗,秒(見 `_tickReserve`)。MUST > 一次網路往返 + 一份 8Hz 快照(125ms)——
+// 短於這個窗就會在權威值回來之前對同一階重複下單;長到幾秒也沒關係(它只是被拒時的救濟閥,
+// 正常流程一律由「權威等級前進」解鎖下一階,不靠逾時)。
+const RESERVE_RESEND_S = 2;
 // 英雄碰撞圓柱:半徑正比機體實高。係數沿用舊制觀感(robot 6m→r 2.6、drone 3m→r 2.4),
 // 體型改綁角色護甲後,碰撞跟著等比走 —— 巨大機甲既難閃也難躲。
 // **半徑不手寫**:一律走 data.js hitR(貫穿判定的水平量體與碰撞量體 MUST 是同一把尺 ——
@@ -391,6 +395,8 @@ export class BattleClient {
     this._setChar(this.ch || null);
     this.money = 0;
     this.upg = { lw: 0, hw: 0, sk: 0, ult: 0, hp: 0, ar: 0, sp: 0, ch: 0 };   // 八軌升級(快照 o.up 回寫)
+    this._reserve = new Set();        // 商店預約名單(錢一夠自動下單;純客戶端排程,見 _tickReserve)
+    this._resSent = {};               // 預約已下單的階(item → {lvl, t}):擋住權威回覆前的重複下單
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this.kn = 0;                      // 擊殺數(招式解鎖門檻)
@@ -3093,12 +3099,17 @@ export class BattleClient {
           // 過場播放中壓住倒數頁(#deadOverlay/砲塔 PiP),過場結束(_deathSeq=null)下一快照才顯示;
           // 開著戰場選單(this.paused)時亦壓住倒數頁 → 讓離開/繼續選單獨佔畫面(ESC 開的離開頁)
           this.hud.dead?.(e.dead && !this._deathSeq && !this.paused ? e.rs : null);
+          // 商店預約:錢一夠就自動下單。MUST 排在商店重繪簽章**之前** —— 這一份快照剛把 money
+          // 寫進來,先成交才算得出正確的簽章;而且它 MUST NOT 關在 `if (this.shopOpen)` 裡
+          //(預約的用途正是「關著商店去打仗,錢到了自己買」)。
+          this._tickReserve();
           // 商店只在數值變動時重繪(2026-07-17):每 8Hz 全量重建 DOM 會在點擊瞬間銷毀按鈕 →
           // 掉點擊(「沒辦法馬上購買」)。以 money/擊殺/升級/角色/階級簽章 gate,idle 時完全不重繪。
           if (this.shopOpen) {
             const u = this.upg;
             const sig = `${Math.floor(this.money)}|${this.kn}|${this.ch}|${this.abil.light}.${this.abil.heavy}.${this.abil.skill}.${this.abil.ult}|`
               + ['lw', 'hw', 'sk', 'ult', 'hp', 'ar', 'sp', 'ch'].map((k) => u[k] || 0).join(',')
+              + `|${[...this._reserve].join('.')}`   // 預約名單(成交/退場都要讓 ★ 跟著更新)
               + `|${(this.creepUpg?.[this.side] || []).join('.')}`;   // 陣營小兵強化(共用值,別人買了也要重繪)
             if (sig !== this._shopSig) { this._shopSig = sig; this.hud.shop?.(true, this._shopState()); }
           }
@@ -5326,7 +5337,85 @@ export class BattleClient {
       creepUpg: [...(this.creepUpg?.[this.side] || [])],
       buy: (item) => this._optimisticBuy(item),
       buyCreep: (lane) => this.net.send({ t: 'buy', item: 'creep', lane }),
+      // 掃貨 / 預約(2026-08-02 使用者需求):UI 只負責畫,判定與排程一律住這裡
+      reserve: [...this._reserve],
+      sweep: () => this._sweepBuy(),
+      toggleReserve: (item) => this._toggleReserve(item),
+      sweepable: this._sweepPick() != null,
     };
+  }
+
+  /**
+   * 「現在買得起、最便宜」的那一軌(掃貨挑選 + 掃貨鈕的可用狀態**共用這一支**)。
+   * 兩處各寫一次判定 = 鈕面說買得起、按下去卻沒動作(或反過來),而畫面上看不出哪一邊錯。
+   * 便宜優先:階梯單價 `price(lvl)` 隨等級遞增 ⇒ 貪心地先買便宜的,同一筆錢換到最多階。
+   */
+  _sweepPick() {
+    let pick = null, best = Infinity;
+    for (const [id, up] of Object.entries(ECON.UPGRADES)) {
+      const lvl = this.upg[id] || 0;
+      if (lvl >= up.max) continue;
+      const price = upgradePrice(up, lvl);
+      if (price > this.money || price >= best) continue;
+      pick = id; best = price;
+    }
+    return pick;
+  }
+
+  /**
+   * **掃貨**(2026-08-02 使用者需求「商店加入掃貨與預約選項」):把現在買得起的升級一次買到底 ——
+   * 每一輪挑 `_sweepPick()` 那一軌下單,直到一項都買不起為止。
+   * **只掃八軌**:陣營小兵強化是同陣營共用的無底金錢去化(刻意不做樂觀更新,等級由快照校正),
+   * 掃進去等於把錢全倒進兵線 ⇒ MUST NOT 併入,要買仍走那一列自己的按鈕。
+   * 每一筆都走 `_optimisticBuy` ⇒ 伺服器逐筆複驗(客戶端只是替玩家連按了很多次,不涉 A1)。
+   */
+  _sweepBuy() {
+    if (!this.side) return 0;
+    // 迴圈邊界 = 八軌總階數(推導不手寫)。單價 > 0 ⇒ 每買一筆餘額必減,本來就會停;
+    // 這道上限只是「萬一有人把單價調成 0」的防呆,MUST NOT 拿它當節流。
+    const cap = Object.values(ECON.UPGRADES).reduce((s, u) => s + u.max, 0);
+    let n = 0;
+    for (; n < cap; n++) {
+      const pick = this._sweepPick();
+      if (!pick) break;
+      this._optimisticBuy(pick);
+    }
+    this.hud.feed?.(n ? `🛒 掃貨:一次購入 ${n} 階升級` : '🛒 掃貨:目前沒有買得起的升級');
+    return n;
+  }
+
+  /**
+   * **預約**(同上需求):把某一軌掛進候補名單,**錢一夠就自動下單**(商店關著也生效 —— 那正是預約)。
+   * 純客戶端排程 = 替玩家按下那顆按鈕,權威仍由伺服器逐筆複驗 ⇒ 不涉 A1。
+   * 名單只收八軌(理由同 `_sweepBuy`)。
+   */
+  _toggleReserve(item) {
+    if (!Object.hasOwn(ECON.UPGRADES, item)) return;
+    if (this._reserve.has(item)) this._reserve.delete(item);
+    else this._reserve.add(item);
+    if (this.shopOpen) { this._shopSig = null; this.hud.shop?.(true, this._shopState()); }
+  }
+
+  /** 每份快照跑一次:預約名單依**加入順序**逐項檢查,買得起就下單;滿級即退出名單(留著是死預約)*/
+  _tickReserve() {
+    if (!this.side || !this._reserve.size) return;
+    const now = performance.now() / 1000;
+    for (const item of [...this._reserve]) {
+      const up = ECON.UPGRADES[item];
+      const lvl = this.upg[item] || 0;
+      if (lvl >= up.max) { this._reserve.delete(item); continue; }
+      if (this.money < upgradePrice(up, lvl)) continue;
+      // **同一階只送一次**:樂觀更新會被下一份快照的權威值校正回去,而那份快照可能比伺服器處理
+      // 這筆購買還早到(RTT > 125ms 就會發生)⇒ 沒有這道閘就會對同一階重複下單,第二筆被拒
+      // 而玩家只看到一句莫名其妙的「資金不足」。逾時 `RESERVE_RESEND_S` 後放行重送 ——
+      // 萬一真的被拒(例如同隊共用資金被別人先花掉),這一軌才不會永久卡死(降級不例外)。
+      const sent = this._resSent[item];
+      if (sent && sent.lvl === lvl && now - sent.t < RESERVE_RESEND_S) continue;
+      this._resSent[item] = { lvl, t: now };
+      this._optimisticBuy(item);
+      this.hud.feed?.(`📌 預約成交:${up.name}`);
+      if ((this.upg[item] || 0) >= up.max) this._reserve.delete(item);
+    }
   }
 
   /**
@@ -7506,7 +7595,8 @@ export class BattleClient {
    *   tps   第三人稱跟隨 —— 相機掛在機背後上方,偏航自動跟著該玩家的 ry
    *   orbit 第三人稱自由 —— 相機環繞該玩家,偏航/俯仰全由觀戰者自控
    * **運鏡不晃的三道保險**(2026-08-02 使用者需求「運鏡時避免太晃」):
-   *   ①跟隨錨點 `_specAnchor` 平滑目標位置(快照 8Hz + 逐幀插值 ⇒ 直接貼上去就是逐幀抖);
+   *   ①跟隨錨點 `_specAnchor` 平滑目標位置 —— **只作用在第三人稱自由**(見 SPEC_CAM.LOCK_VIEWS:
+   *     第一人稱與第三人稱跟隨是掛在機體上的鏡頭,MUST 剛體貼合,否則鏡頭會落後機體一段);
    *   ②偏航 `_specYaw` 平滑伺服器 ry(量化到 0.01 rad,直接賦值會一格一格跳);
    *   ③兩者都經 `camSmoothF`(幀率無關),且換人/重生瞬移超過 SNAP_M 就直接貼上不拉長鏡頭。
    */
@@ -7527,8 +7617,12 @@ export class BattleClient {
       const kind = CHARACTERS[tgt.ch]?.kind || (tgt.side && SIDES[tgt.side].hero) || 'robot';
       const h = heroTargetH(kind, tgt.ch);
       const p = tgt.mesh.position;
-      // ① 錨點平滑(三種跟隨視角共用;超過 SNAP_M = 換人/重生瞬移 ⇒ 直接貼上)
-      if (!this._specAnchorOk || this._specAnchor.distanceTo(p) > SPEC_CAM.SNAP_M) {
+      // ① 錨點:第一人稱 / 第三人稱跟隨**剛體貼合機體**(specViewLocked 單一縫),
+      //    第三人稱自由才走平滑(超過 SNAP_M = 換人/重生瞬移 ⇒ 一律直接貼上)。
+      //    機體位置本身已由 `_updateEnts` 逐幀插值 ⇒ 貼合不抖;再套一次 POS_K 就是雙重平滑,
+      //    穩態落後 = 速度 ÷ POS_K,畫面上正是「鏡頭沒跟上機體」(見 SPEC_CAM.LOCK_VIEWS)。
+      if (specViewLocked(view) || !this._specAnchorOk
+        || this._specAnchor.distanceTo(p) > SPEC_CAM.SNAP_M) {
         this._specAnchor.copy(p);
         this._specAnchorOk = true;
       } else {

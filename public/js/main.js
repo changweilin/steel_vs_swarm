@@ -31,9 +31,9 @@ import { VENUES, venueTip, venueConfig, migrateFavCfg, loadFavorites, saveFavori
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
-import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip } from './help.js';
+import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip, specControls } from './help.js';
 import { installTips, attachTip, tipHTML } from './tip.js';
-import { npcIconHTML } from './npcicon.js';
+import { npcIconHTML, kindIconHTML } from './npcicon.js';
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
@@ -595,12 +595,24 @@ function renderStoryChapters() {
     + (clearedN >= STORY.length ? ' ・ 🏆 全戰線肅清!' : '');
 }
 
+/**
+ * **頭像 + 機種角標**(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
+ * 四處頭像(選角牆 / 放大視窗選角牆 / 劇情主駕小卡 / 角色卡立繪標籤)MUST 全走這一支 ——
+ * 各拼一次 `<img>` + `<svg>` 就是四份會漂的標記,而「某一面牆沒有角標」在畫面上只像是漏渲染。
+ * 機種一律取 `charKind(id)`(2026-08-02 混編後陣營 ≠ 機種,MUST NOT 由 side 推)。
+ */
+function charAvatarHTML(id, cls = 'char-av') {
+  const kind = charKind(id);
+  return `<span class="av-wrap"><img class="${cls}" src="${avatarURL(id)}" alt="" draggable="false">`
+    + `<span class="av-kind" aria-label="${esc(kindLabelOf(kind))}">${kindIconHTML(kind)}</span></span>`;
+}
+
 /** 角色小卡(選主駕 / 敵方預覽共用) */
 function heroChip(id, opts = {}) {
   const c = CHARACTERS[id] || {};
   const cls = 'sb-chip' + (opts.merc ? ' merc' : '') + (opts.on ? ' on' : '') + (opts.enemy ? ' enemy' : '');
   return `<button class="${cls}" data-ch="${id}"${opts.enemy ? ' disabled' : ''}>
-      <img src="${avatarURL(id)}" alt="">
+      ${charAvatarHTML(id, 'sb-chip-av')}
       <span class="sb-chip-txt"><b>「${esc(c.code || '')}」</b>${esc(c.name || '')}${opts.merc ? '<i>傭兵</i>' : ''}</span>
     </button>`;
 }
@@ -1029,7 +1041,7 @@ function charDetailHTML(id) {
       <div class="cd-portrait">
         <img src="${portraitURL(id)}" alt="${esc(c.name)}">
         <div class="cd-tag ${c.side === 'MERC' ? 'merc' : c.side.toLowerCase()}">
-          ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindLabel}</div>
+          ${c.side === 'MERC' ? '⚔ 傭兵' : SIDES[c.side].name}・${kindIconHTML(kind)}${kindLabel}</div>
       </div>
       <div class="cd-arthint">點立繪 ▸ 生平・興趣・專長・與機體的機緣</div>
       <div id="stageBottom"></div>
@@ -1386,7 +1398,7 @@ function renderModalPicks() {
       const c = CHARACTERS[id];
       const b = document.createElement('button');
       b.className = 'char-btn' + (app.stages.char?.subject?.id === id ? ' on' : '') + (c.side === 'MERC' ? ' merc' : '');
-      b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false"><b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
+      b.innerHTML = `${charAvatarHTML(id)}<b>${c.side === 'MERC' ? '⚔ ' : ''}${esc(c.code)}</b>`;
       b.onclick = () => { selectChar(id); enlargeInModal('char'); renderModalPicks(); };
       cg.appendChild(b);
     }
@@ -1551,7 +1563,7 @@ function renderCharPick(me) {
       const merc = c.side === 'MERC';   // 傭兵:雙陣營皆可受雇,機體/武器不隨陣營改變
       const b = document.createElement('button');
       b.className = 'char-btn' + (subject.ch === id ? ' on' : '') + (merc ? ' merc' : '');
-      b.innerHTML = `<img class="char-av" src="${avatarURL(id)}" alt="" draggable="false">
+      b.innerHTML = `${charAvatarHTML(id)}
         <b>${merc ? '⚔ ' : ''}${esc(c.code)}</b><span class="char-name">${esc(c.name)}</span>`;
       b.onclick = () => selectChar(id);   // 伺服器 sync 前先換,點擊即時有反應
       grid.appendChild(b);
@@ -1888,9 +1900,15 @@ function enterGame() {
   document.body.classList.remove('spec-follow');
   app.ctrlKey = app.mySide ? (heroKind in CONTROLS_BY_KIND ? heroKind : 'mech') : 'spectator';
   syncPauseHelp();
-  toast(TOUCH_UI()
-    ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖 ・ HOME 選單'
-    : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍', 4600);
+  // 進場提示:觀戰者拿到的 MUST 是**觀戰**操作(舊制無條件發交戰版 ⇒ 觀戰一進場就被告知
+  // 「A 射擊 / 十字鍵上商店」這些它根本沒有的鈕)。常駐版住 #specHelp,這裡只點出入口。
+  toast(!app.mySide
+    ? (TOUCH_UI()
+      ? '觀戰模式 ・ 十字鍵左 換視角 / ⇄換人 ・ 左下角常駐觀戰操作說明 ・ HOME 選單'
+      : '觀戰模式 ・ F 換視角 / Q・E 換人 ・ 左下角常駐觀戰操作說明 ・ ESC 開選單')
+    : (TOUCH_UI()
+      ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖 ・ HOME 選單'
+      : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍'), 4600);
 }
 
 /**
@@ -1905,6 +1923,23 @@ function syncPauseHelp() {
     ? `${TOUCH_CONTROLS[ctrlKey]} ・ ☰ 開戰場選單`
     : `${CONTROLS_BY_KIND[ctrlKey]} ・ ESC 戰場選單/離開`;
   $('shopHint').textContent = shopHintText();
+  renderSpecHelp();   // 觀戰說明與 pauseHelp 同源同時機(切鍵鼠 ⇄ 搖桿要一起換說法)
+}
+
+/**
+ * **觀戰操作說明面板**(2026-08-02 使用者需求「觀戰時加入觀戰操作說明」)。
+ * 觀戰者手上沒有任何戰鬥 HUD,`body.spectating` 又把角色數據整塊收起 ⇒ 那塊空版位正好放說明;
+ * 要看完整版仍可開戰場選單的「說明」頁(同一份文字,見 help.js SPEC_CONTROLS)。
+ * 文字唯一來源 = `specControls(TOUCH_UI())` —— MUST NOT 在這裡寫 `if (touch)` 的字串分支(A21)。
+ * 非觀戰一律清空:留著會在下一局的交戰 HUD 佔掉一塊版位(class 清除見 game.js dispose)。
+ */
+function renderSpecHelp() {
+  const box = $('specHelp');
+  if (!box) return;
+  if (app.mySide) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="spec-help-h">觀戰操作</div>'
+    + specControls(TOUCH_UI()).map(([k, d]) =>
+      `<div class="spec-help-r"><b>${esc(k)}</b><span>${esc(d)}</span></div>`).join('');
 }
 /** 金錢列的升級提示:搖桿版沒有鍵盤快捷 ⇒ 收字(升級走工具列的 ⊟ 鈕)。逐幀 HUD 與此共用 */
 function shopHintText() { return TOUCH_UI() ? '' : 'B 升級'; }
@@ -2201,12 +2236,31 @@ function renderShop(open, st) {
   ov.style.display = open ? '' : 'none';
   if (!open || !st) return;
   $('shopMoney').textContent = `💰 ${Math.floor(st.money)} ・ ☠ ${st.kn} 擊殺`;
+  // 掃貨(2026-08-02 使用者需求):把現在買得起的升級一次買到底。判定與下單全在 game.js
+  // `_sweepBuy`/`_sweepPick` —— 這裡 MUST NOT 自己再算一次「買不買得起」(兩份判定會漂:
+  // 鈕面說可以按、按下去卻沒反應)。
+  const sweepBtn = $('shopSweepBtn');
+  if (sweepBtn) {
+    sweepBtn.disabled = !st.sweepable;
+    sweepBtn.onclick = () => st.sweep();
+  }
   const box = $('shopItems');
   box.innerHTML = '';
-  const row = (html, price, enabled, onBuy, note = '') => {
+  const reserved = new Set(st.reserve || []);
+  /** item != null ⇒ 這一列可預約(八軌);陣營小兵強化是共用資源,刻意不給預約(見 _toggleReserve)*/
+  const row = (html, price, enabled, onBuy, note = '', item = null) => {
     const div = document.createElement('div');
     div.className = 'shop-item' + (enabled ? '' : ' off');
     div.innerHTML = `<div class="shop-info">${html}${note ? `<div class="shop-item-note">${note}</div>` : ''}</div>`;
+    if (item && price != null) {
+      const on = reserved.has(item);
+      const res = document.createElement('button');
+      res.className = 'btn small shop-res' + (on ? ' on' : '');
+      res.type = 'button';
+      res.textContent = on ? '★ 已預約' : '☆ 預約';
+      res.onclick = () => st.toggleReserve(item);
+      div.appendChild(res);
+    }
     const btn = document.createElement('button');
     btn.className = 'btn small';
     btn.textContent = price != null ? `$${price}` : '—';
@@ -2260,7 +2314,7 @@ function renderShop(open, st) {
       const nm = c[up.abil]?.name || up.desc;
       row(`<b>${up.name}</b> <span class="tag dim">${nm}・${KEYS[up.abil]}</span> Lv.${tier}/4`,
         price, !full && st.money >= price, () => st.buy(id),
-        full ? '已滿階(Lv4)' : facetNext(up.abil, tier + 1));
+        full ? '已滿階(Lv4)' : facetNext(up.abil, tier + 1), id);
     }
   }
   head('⬆️ 防禦/系統強化(隨處可買,立即生效;充能影響護盾/電力回速)');
@@ -2270,7 +2324,7 @@ function renderShop(open, st) {
     const full = lvl >= up.max;
     const price = full ? null : upgradePrice(up, lvl);
     row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
-      price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '');
+      price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '', id);
   }
 }
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));
