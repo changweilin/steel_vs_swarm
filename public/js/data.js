@@ -564,6 +564,10 @@ export const FLIGHT = {
   SINK_S: 0.5,       // 一次掉高的展開秒數(純手感節奏;總掉幅由 airSinkM 決定)
   DRAIN_S: 5,        // 滿動力全速爬升可持續秒數
   MAX_F: 1.0,        // 動力上限 = 電力上限 × 此比(正比於電力;現值 = 電力上限本身)
+  // 變形者(飛行型態)的飛行動力上限校準(2026-08-02 使用者定案「變形者的飛行動力減少 1/3」):
+  // 只降變形者的動力**上限**,耗速 `liftDrainPS` 由上限推導 ⇒ 滿動力仍撐 DRAIN_S 秒(節奏不變、
+  // 續航變短);無人機不吃此係數(MUST NOT 套用到 isDrone)。
+  MORPH_F: 2 / 3,
   // 動力回復 = 電力回速(mpRegen × chargeF(充能軌))× 此比 ⇒ **充能軌 = 飛行續航軌**:
   // 滿充能約 2 × DRAIN_S(≈10s)回滿、充能 Lv0 約 5 × DRAIN_S(≈25s)—— 爬升是有代價的機動,
   // 回充比耗盡慢是刻意的(不然動力條等於不存在)。
@@ -573,12 +577,13 @@ export const FLIGHT = {
 /** 受擊掉高(公尺):該次傷害造成的下降量 —— 推導不手寫 */
 export const airSinkM = (dmg) =>
   Math.max(0, dmg || 0) / SQUAD.DRONE_AVG_HP * FLIGHT.SINK_TOWERS * TARGET_H.tower;
-/** 爬升動力上限(正比於電力上限) */
-export const liftMax = (maxMp) => Math.max(0, maxMp || 0) * FLIGHT.MAX_F;
+/** 爬升動力上限(正比於電力上限;變形者額外乘 MORPH_F) */
+export const liftMax = (maxMp, isMorph) =>
+  Math.max(0, maxMp || 0) * FLIGHT.MAX_F * (isMorph ? FLIGHT.MORPH_F : 1);
 /** 爬升動力回復(每秒;正比於電力回速 —— 同吃「充能」軌等級) */
 export const liftRegen = (mpRegen, chLvl) => Math.max(0, mpRegen || 0) * chargeF(chLvl) * FLIGHT.REGEN_F;
 /** 全速爬升的動力耗速(每秒;= 動力上限 ÷ DRAIN_S,推導不手寫) */
-export const liftDrainPS = (maxMp) => liftMax(maxMp) / FLIGHT.DRAIN_S;
+export const liftDrainPS = (maxMp, isMorph) => liftMax(maxMp, isMorph) / FLIGHT.DRAIN_S;
 // ---- 無敵幀(2026-07-16;起跳離地 1 秒無敵)----
 // 客戶端在「起跳離地當下」送 {t:'iframe'},伺服器 sim.heroIframe 驗 CD 後結算(_damage 免傷、控場免疫)。
 // 時長與 CD 都夾在伺服器 —— 客戶端只能決定「何時用」,不能延長。三機動能力共用此縫:

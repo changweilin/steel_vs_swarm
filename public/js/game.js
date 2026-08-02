@@ -7124,8 +7124,8 @@ export class BattleClient {
   }
 
   // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
-  /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力) */
-  _liftMax() { return liftMax(this.maxMp || UNITS[this.heroKind]?.mp || 0); }
+  /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
+  _liftMax() { return liftMax(this.maxMp || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
 
   /**
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
@@ -7145,7 +7145,7 @@ export class BattleClient {
         }
       } else {
         this.lift = Math.max(0, this.lift
-          - liftDrainPS(this.maxMp || 0) * Math.min(1, target.y / vsp) * dt);
+          - liftDrainPS(this.maxMp || 0, this.isMorph) * Math.min(1, target.y / vsp) * dt);
       }
     } else {
       this.lift = Math.min(lMax, this.lift + liftRegen(u?.mpRegen, this.upg?.ch) * dt);
