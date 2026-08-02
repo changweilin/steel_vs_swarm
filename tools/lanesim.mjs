@@ -34,14 +34,29 @@
 //   line  圓柱貫穿:半徑 lanceR + hitR 的圓柱內,依序吃 LANCE.DECAY,最多 LANCE.MAX 個。
 // 偏心遞減走 offAxisFalloff(fan/line),與 sim.heroPlasma / _lanceHits 同一條曲線。
 //
+// ---- 長按攻擊(機種絕招)也在模型內(2026-08-02 使用者定案「只使用輕/重武器 + 長按攻擊」)----
+// 三招都是**可被擊落的載具**(飽和攻擊護衛機 / 集束轟炸機 / 極音速飛彈),而三者的傷害預算
+// (data.js SPECIAL)在設計上**逐位元等值** —— e2e「機種絕招三招同預算」已經釘死這一條。
+// 所以「把絕招加進模型」如果只是「CD 到就加一份預算的傷害」,三機種會拿到一模一樣的加成,
+// 量不到任何東西。真正的差別全在**投射過程**:
+//   ・飛過去要幾秒(kami 63m/s 撲擊 / decoy 62m/s 巡航 / hyper 45° 拋射 + 極音速俯衝);
+//   ・那幾秒裡敵方砲塔與小兵打不打得下來(HP 全由「一座砲塔打幾秒」反解,見 data.js);
+//   ・被打下來之後還剩多少(kami 原地半威力殉爆 / decoy 墜毀補投一顆 / hyper **完全否定**);
+//   ・預算怎麼切(kami 4 份均分、decoy 撞擊 + 6 顆逐顆個別瞄準、hyper 單一戰鬥部吃整份)。
+// 故本模型把載具當**真的實體**跑:進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到它,擊落也有賞金。
+// MUST NOT 簡化成「一次性加一筆傷害」——那等於把上面四項全部抹平,ⓕ 那一段就永遠是三個相同的數字。
+// 小招/大招仍不在模型內(使用者:先不考慮大小招),TRACKS 也仍不含 sk/ul。
+//
 // ---- 與 server/sim.js 的對齊 ----
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit
 // 雙層拆分 → 裝甲層吃 armorMul。差別只有「擲骰改期望值」(稽核要確定性,見全域 A4)。
 import {
-  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE,
+  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE, SQUAD, DECOY, HYPER,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
+  kamiBlast, kamiHp, kamiSide, decoyBlast, decoyBombBlast, decoyHp,
+  hyperBlast, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd,
 } from '../public/js/data.js';
 import { waveInterval } from '../server/sim.js';
 
@@ -82,6 +97,8 @@ export function mech(ch, side, tw = null) {
     hp0: Math.round(u.hp * (m.hp ?? 1)), sp0: Math.round(u.shield * (m.sp ?? 1)),
     armor0: heroArmor(ch), mp0: u.mp * (m.mp ?? 1), mpRegenBase: u.mpRegen,
     mob: heroMobility(kind, m, flying), slots: [], hurtT: -99,
+    // 長按攻擊:下次可施放時刻 / 施放次數 / 實得傷害(總計 + 分桶;bal ⑦f 的量測面)
+    abilAt: 0, abilN: 0, abilDmg: 0, abilBy: { hero: 0, tower: 0, creep: 0 },
   };
   M.tw = tw;
   if (tw?.speed) M.mob *= tw.speed;
@@ -168,6 +185,22 @@ function damage(tgt, dmg, def, byLight) {
 }
 
 /**
+ * 一次**爆風**的命中名冊(逐點對齊 sim._blast:量到命中量體最近點、只吃 blastFalloff)。
+ * 爆風本身**沒有距離衰減**(那是彈道飛行的事)⇒ 武器路徑由 hits() 另乘 dmgFalloff,
+ * 絕招引爆(kami/decoy/hyper)則直接吃這一支。兩條路 MUST 共用同一份幾何,MUST NOT 各寫一次。
+ */
+export function blastHits(cx, cy, def, foes) {
+  const R = blastFootprintR(def.r), out = [];
+  for (const e of foes) {
+    if (e.hp <= 0) continue;
+    const d = Math.max(0, Math.hypot(cx - e.x, cy - e.y) - hitR(e));
+    if (d >= R) continue;
+    out.push({ ent: e, f: blastFalloff(def.r, d) });
+  }
+  return out;
+}
+
+/**
  * 一發射擊的命中名冊(**攻擊範圍在此計價**;三類幾何見檔頭)。
  * 回傳 [{ ent, f }] —— f = 該目標吃到的傷害比例(距離衰減 × 偏心遞減 × 貫穿衰減)。
  */
@@ -175,14 +208,8 @@ export function hits(shooter, aim, def, foes) {
   const d0 = dist(shooter, aim);
   const cls = aoeClass(def);
   if (cls === 'blast') {
-    const R = blastFootprintR(def.r);
-    const out = [];
-    for (const e of foes) {
-      const d = Math.max(0, dist(aim, e) - hitR(e));      // 量到命中量體最近點(對齊 sim._blast)
-      if (d >= R) continue;
-      out.push({ ent: e, f: blastFalloff(def.r, d) * dmgFalloff(def, d0) });
-    }
-    return out;
+    const k = dmgFalloff(def, d0);                        // 彈道飛了 d0 的距離衰減(爆風本身不吃,見 blastHits)
+    return blastHits(aim.x, aim.y, def, foes).map((h) => ({ ent: h.ent, f: h.f * k }));
   }
   const ux = (aim.x - shooter.x) / (d0 || 1), uy = (aim.y - shooter.y) / (d0 || 1);
   if (cls === 'fan') {
@@ -291,12 +318,191 @@ function fire(M, foe, enemyTower, t, foes) {
       if (h.f <= 0 || h.ent.hp <= 0) continue;
       if (h.ent.hero) h.ent.hurtT = t;
       damage(h.ent, s.def.dmg * h.f, s.def, s.id === 'light');
-      if (h.ent.hp <= 0 && !h.ent.paid) {                  // 賞金:擊殺入帳(1v1 無友軍 ⇒ 助攻不模型化)
-        h.ent.paid = 1;
-        M.cash += ECON.BOUNTY[h.ent.kind] ?? 0;
-      }
+      reward(M, h.ent);
     }
   }
+}
+
+/** 擊殺賞金入帳(1v1 無友軍 ⇒ 助攻不模型化);每個實體只付一次 */
+function reward(M, e) {
+  if (e.hp > 0 || e.paid) return;
+  e.paid = 1;
+  M.cash += ECON.BOUNTY[e.kind] ?? 0;
+}
+
+// ---------- 長按攻擊(機種絕招:飽和攻擊 / 集束炸彈 / 極音速飛彈)----------
+
+/** 機種 → 這一招的載具類別(名冊唯一縫;`kind` 同時是 TARGET_CLASS / hitR 的鍵) */
+const ABIL_KIND = { drone: 'kami', morph: 'decoy', robot: 'hyper' };
+/** 絕招傷害預算吃「輕/重武器綜合等級」⇒ 由八軌現況推導(對齊 data.js specialTier) */
+const abilOf = (M) => ({ light: 1 + M.up.lw, heavy: 1 + M.up.hw });
+/** 三招各自的 CD(設計上同為 30s,但仍各讀各的常數 —— 拆開調時模型自己跟著走) */
+const abilCd = (k) => (k === 'kami' ? SQUAD.KAMI.CD_S : k === 'decoy' ? DECOY.CD_S : HYPER.CD_S);
+/**
+ * 施放距離上限(公尺)= 這一招真的送得到多遠。
+ * kami  自動索敵半徑與「TTL 內飛得到」取小者;decoy 鏈路距離與「TTL 內飛得到」取小者;
+ * hyper 直接就是它的接戰距離 hyperRange()。三個都是推導,MUST NOT 手寫公尺。
+ */
+const abilReach = (k) => (k === 'kami'
+  ? Math.min(SQUAD.KAMI.ACQ_R, SQUAD.KAMI.TTL_S * UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL)
+  : k === 'decoy' ? Math.min(DECOY.LINK_M, DECOY.TTL_S * DECOY.SPEED)
+    : hyperRange());
+
+/**
+ * 一次絕招引爆:對名冊內全員結算(**AoE 不爆擊、不可閃避**,對齊 sim._blast)+ 記帳 + 賞金。
+ * 記帳**分三桶**(hero / tower / creep):總實得傷害會被清兵灌爆 —— 集束炸彈一顆 14m 爆風
+ * 打在兵波上動輒吃到兩三隻,累積出來的數字是全表最大的,但兵波每 waveInterval 就補一批,
+ * 對「先擊毀敵方機體或一座砲塔」這兩個勝利條件幾乎沒有貢獻。要調平衡就 MUST 看分桶。
+ */
+function detonate(M, wdef, cx, cy, t, foes) {
+  // 單軸擾動(bal ⑦b 的模型準確度自驗)MUST 一起作用在長按攻擊上:火力與攻擊範圍這兩軸
+  // 現在有一大半是絕招在扛,只擾動武器那半 = 訊號被稀釋到量不出方向性(2026-08-02 實測:
+  // 只擾動武器時「攻擊範圍 ×2」的勝率從 54.2% 掉到 49.3%,方向性自驗當場失效)。
+  // `range`/`speed` 刻意不套:絕招的施放距離與飛行速度是各招自己的機制,不是機體的那兩軸。
+  const T = M.tw;
+  const def = T ? { ...wdef, dmg: wdef.dmg * (T.dmg ?? 1), r: wdef.r * (T.aoe ?? 1) } : wdef;
+  for (const h of blastHits(cx, cy, def, foes)) {
+    if (h.f <= 0) continue;
+    if (h.ent.hero) h.ent.hurtT = t;
+    const got = damage(h.ent, def.dmg * h.f, def, false);
+    M.abilDmg += got;
+    M.abilBy[h.ent.hero ? 'hero' : h.ent.tower ? 'tower' : 'creep'] += got;
+    reward(M, h.ent);
+  }
+}
+
+/**
+ * 長按攻擊的施放判定:CD 到、且施放距離內有目標就放。
+ * 選敵序與武器同構(敵方機體 > 最近的敵方 NPC > 敵方砲塔)—— 真人也是「有人打人、沒人拆塔」。
+ * 回傳新生成的載具(進 vehicles 名冊 ⇒ 下一格起就是敵方砲塔/小兵/機體都打得到的實體)。
+ */
+function castAbil(M, foe, enemyTower, t, foes) {
+  const kind = ABIL_KIND[M.kind];
+  if (!kind || t < M.abilAt) return [];
+  const reach = abilReach(kind);
+  const inR = (e) => dist(M, e) - hitR(e) <= reach;
+  let aim = foe.hp > 0 && inR(foe) ? foe : null;
+  if (!aim) {
+    let td = Infinity;
+    for (const e of foes) {
+      if (e.tower || e.hero || e.vehicle) continue;
+      const d = dist(M, e);
+      if (d - hitR(e) <= reach && d < td) { td = d; aim = e; }
+    }
+  }
+  if (!aim && enemyTower && inR(enemyTower)) aim = enemyTower;
+  if (!aim) return [];
+  M.abilAt = t + abilCd(kind);
+  M.abilN++;
+  const abil = abilOf(M);
+  const base = {
+    kind, side: M.side, owner: M, vehicle: true, armor: 0, abil,
+    tgt: aim, tx: aim.x, ty: aim.y,
+  };
+  if (kind === 'kami') {
+    // 4 架護衛自殺機:自機體前方左右散開生成,以 SPEED_MUL 倍速撲擊(每架 = 預算 / N)
+    const sp = UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL;
+    return Array.from({ length: SQUAD.KAMI.N }, (_, i) => ({
+      ...base, hp: kamiHp(), speed: sp, dieAt: t + SQUAD.KAMI.TTL_S,
+      x: M.x + M.dir * SQUAD.KAMI.FWD, y: M.y + kamiSide(i) * SQUAD.KAMI.SIDE,
+    }));
+  }
+  if (kind === 'decoy') {
+    // 集束轟炸機:進 BOMB_R 才開始逐顆投彈(個別瞄準),撞上目標再自爆
+    return [{
+      ...base, hp: decoyHp(), speed: DECOY.SPEED, dieAt: t + DECOY.TTL_S,
+      x: M.x, y: M.y, bombsLeft: DECOY.BOMB_MAX, nextBomb: t, bombed: new Set(),
+    }];
+  }
+  // 極音速飛彈:45° 拋射爬升(水平等速 hyperClimbVx,全長 = 到目標的水平距離)→ 極音速俯衝。
+  // 水平航線於**發射當下**定案(x0/y0 = 發射點)—— 拿主機的即時位置當起點,機體一走彈道就跟著平移。
+  const arcD = Math.max(1, dist(M, aim));
+  return [{
+    ...base, hp: hyperHp(), speed: hyperClimbVx(), x: M.x, y: M.y, x0: M.x, y0: M.y,
+    arcD, trav: 0, dive: hyperApex(arcD) / hyperDiveSpd(),
+  }];
+}
+
+/**
+ * 每格推進所有在空載具:飛行 → 投彈/撲擊/俯衝 → 引爆或被擊落。
+ * 被擊落的收尾**逐招不同**,這正是三招在本模型裡唯一分得出高下的地方(見檔頭):
+ *   kami  原地以 DEATH_F 的傷害與半徑殉爆;decoy 墜毀補投一顆;hyper **不引爆**(攔截 = 完全否定)。
+ * 回傳仍在空中的載具(死的/引爆的當格移除)。
+ */
+function stepAbils(vehicles, t, dt, foesOf) {
+  const alive = [];
+  for (const v of vehicles) {
+    const foes = foesOf(v.side);
+    const M = v.owner;
+    if (v.hp <= 0) {                                   // —— 被擊落 ——
+      if (v.kind === 'kami') {
+        const def = kamiBlast(v.abil);
+        detonate(M, { ...def, dmg: Math.round(def.dmg * SQUAD.KAMI.DEATH_F), r: def.r * SQUAD.KAMI.DEATH_F },
+          v.x, v.y, t, foes);
+      } else if (v.kind === 'decoy' && v.bombsLeft > 0) {
+        v.bombsLeft--; dropBomb(v, t, foes);
+      }
+      continue;                                        // hyper:攔截成功 = 什麼都不留
+    }
+    // 追蹤:對象還活著就更新落點(射後不理 —— 玩家不必維持鎖定)
+    if (v.tgt.hp > 0) { v.tx = v.tgt.x; v.ty = v.tgt.y; }
+    if (v.kind === 'hyper') {
+      if (v.trav < v.arcD) {                           // 相位一:拋物線爬升(水平等速)
+        v.trav = Math.min(v.arcD, v.trav + v.speed * dt);
+        const f = v.trav / v.arcD;
+        v.x = v.x0 + (v.tx - v.x0) * f; v.y = v.y0 + (v.ty - v.y0) * f;
+        alive.push(v); continue;
+      }
+      v.dive -= dt;                                    // 相位二:極音速俯衝(頂點在目標正上方)
+      v.x = v.tx; v.y = v.ty;
+      if (v.dive > 0) { alive.push(v); continue; }
+      detonate(M, hyperBlast(v.abil), v.x, v.y, t, foes);
+      continue;
+    }
+    // kami / decoy:朝落點直飛
+    const dx = v.tx - v.x, dy = v.ty - v.y, d = Math.hypot(dx, dy) || 1;
+    const step = Math.min(d, v.speed * dt);
+    v.x += dx / d * step; v.y += dy / d * step;
+    if (v.kind === 'kami') {
+      if (d - step <= SQUAD.KAMI.BOOM_M || t >= v.dieAt) {   // 撲擊命中 / 燃料耗盡自毀
+        detonate(M, kamiBlast(v.abil), v.x, v.y, t, foes);
+        continue;
+      }
+      alive.push(v); continue;
+    }
+    // decoy:進 BOMB_R 就逐顆個別瞄準投彈(名冊輪替,對齊 sim._decoyBombTarget)。
+    // 下一顆的時刻 MUST 由**這一顆投出的當下**起算(`= t + GAP`,不是 `+= GAP`):
+    // 巡航到接敵之間沒有目標可投,`nextBomb` 會停在生成時刻;累加式一進 BOMB_R 就會在同一格
+    // 把積欠的間隔一次補完 = 六顆同時落地(正式對局是每 GAP 秒一顆)。
+    if (v.bombsLeft > 0 && t >= v.nextBomb && dropBomb(v, t, foes)) {
+      v.bombsLeft--; v.nextBomb = t + DECOY.BOMB_GAP;
+    }
+    if (d - step <= DECOY.BOOM_M || t >= v.dieAt) {          // 撞擊自爆 + 補投一顆
+      detonate(M, decoyBlast(v.abil), v.x, v.y, t, foes);
+      if (v.bombsLeft > 0) { v.bombsLeft--; dropBomb(v, t, foes); }
+      continue;
+    }
+    alive.push(v);
+  }
+  return alive;
+}
+
+/** 投一顆集束炸彈:BOMB_R 內取最近、且這趟還沒被指派過的目標(名冊用盡即重來一輪)。回傳有沒有投出去 */
+function dropBomb(v, t, foes) {
+  let best = null, bd = Infinity, fb = null, fd = Infinity;
+  for (const e of foes) {
+    if (e.hp <= 0 || e.vehicle) continue;
+    const d = Math.hypot(v.x - e.x, v.y - e.y) - hitR(e);
+    if (d > DECOY.BOMB_R) continue;
+    if (d < fd) { fd = d; fb = e; }
+    if (v.bombed.has(e) || d >= bd) continue;
+    bd = d; best = e;
+  }
+  const tgt = best || fb;
+  if (!tgt) return false;
+  if (best) v.bombed.add(best); else v.bombed = new Set([fb]);
+  detonate(v.owner, decoyBombBlast(v.abil), tgt.x, tgt.y, t, foes);
+  return true;
 }
 
 // ---------- 主迴圈 ----------
@@ -321,8 +527,12 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
     nextWave = waveInterval() - PRE, why = 'timeout', win = 0.5;
   for (const c of creeps) c.x += c.dir * waveMarchSpeed() * PRE;
 
+  // 在空的長按攻擊載具(飽和攻擊護衛機 / 集束轟炸機 / 極音速飛彈)——**進 foesOf**:
+  // 敵方砲塔/小兵/機體都打得到它,擊落也照付賞金(它們在正式對局裡就是合法目標)。
+  let vehicles = [];
   const foesOf = (side) => [
     ...creeps.filter((c) => c.side !== side && c.hp > 0),
+    ...vehicles.filter((v) => v.side !== side && v.hp > 0),
     ...(side === 'SWARM' ? (B.hp > 0 ? [B] : []) : (A.hp > 0 ? [A] : [])),
     ...tw[side === 'SWARM' ? 'STEEL' : 'SWARM'].filter((x) => x.hp > 0),
   ];
@@ -399,11 +609,15 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       const step = Math.min(M.mob * LANE.DT, Math.abs(want - M.x));
       M.x += Math.sign(want - M.x) * step;
       fire(M, foe, enemyTower, t, foes);
+      // 長按攻擊:CD 到就放(施放本身不吃彈夾/電力 —— 三招都是獨立載具,見 sim.heroHyper 的註解)
+      vehicles.push(...castAbil(M, foe, enemyTower, t, foes));
       // 電力 / 護盾回復(脫戰 OOC_S 後回盾)+ 有錢就升級
       M.mp = Math.min(M.mp0, M.mp + M.mpRegenBase * M.chF * LANE.DT);
       if (t - M.hurtT >= VITALS.OOC_S) M.sp = Math.min(M.maxSp, M.sp + M.maxSp * VITALS.SP_REGEN_PS * M.chF * LANE.DT);
       buyUp(M);
     }
+    // ---- 在空載具:飛行 → 投彈/撲擊/俯衝 → 引爆或被擊落 ----
+    vehicles = stepAbils(vehicles, t, LANE.DT, foesOf);
     creeps = creeps.filter((c) => c.hp > 0 && Math.abs(c.x) < SEP());
     // ---- 勝負:先擊毀敵方機體或一座敵方砲塔者獲勝 ----
     const towDead = (side) => tw[side].some((x) => x.hp <= 0);
@@ -418,7 +632,12 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
     win = Math.abs(dA - dB) > 1e-6 ? (dA < dB ? 1 : 0)
       : Math.abs(leftA - leftB) > 1e-6 ? (leftA > leftB ? 1 : 0) : 0.5;
   }
-  return { win, t, why, leftA, leftB, towA: towLeft('SWARM'), towB: towLeft('STEEL') };
+  // abil = 長按攻擊的實得帳(bal ⑦f):施放次數 / 實得 EHP 傷害 / 每次施放的平均實得
+  const abilOf2 = (M) => ({ n: M.abilN, dmg: M.abilDmg, ...M.abilBy });
+  return {
+    win, t, why, leftA, leftB, towA: towLeft('SWARM'), towB: towLeft('STEEL'),
+    abilA: abilOf2(A), abilB: abilOf2(B),
+  };
 }
 
 /** A 對 B 的勝率(本模型確定性 ⇒ 單場即結論;取雙向平均消掉「誰站 SWARM 端」的位置偏差) */
@@ -427,25 +646,30 @@ export function laneWin(chA, chB, twA = null, twB = null) {
 }
 
 /**
- * 全角色矩陣;回傳 { rate[a][b], avg[a], stat }。
+ * 全角色矩陣;回傳 { rate[a][b], avg[a], stat, abil }。
  * stat = { n, med, p90, timeout } —— 對局長度與逾時率(使用者「測試時間越短越好」的量測面)。
- * 逐對只跑一次(rate[b][a] = 1 − rate[a][b]),但每一對仍打**雙向**兩場(laneWin)以消掉位置偏差。
+ * abil[ch] = { n, dmg, hero, tower, creep, games } —— 長按攻擊的實得帳(全矩陣累計;bal ⑦f 的量測面)。
+ * 逐對只跑一次(rate[b][a] = 1 − rate[a][b]),但每一對仍打**雙向**兩場以消掉位置偏差。
  */
 export function laneMatrix(chs = Object.keys(CHARACTERS)) {
-  const rate = {}, ts = [];
+  const rate = {}, ts = [], abil = {};
   let timeout = 0;
-  for (const a of chs) rate[a] = {};
+  const BUCKETS = ['n', 'dmg', 'hero', 'tower', 'creep'];
+  for (const a of chs) { rate[a] = {}; abil[a] = Object.fromEntries(BUCKETS.map((k) => [k, 0])); }
+  const tally = (ch, r) => { for (const k of BUCKETS) abil[ch][k] += r[k]; };
   for (let i = 0; i < chs.length; i++) for (let j = i + 1; j < chs.length; j++) {
     const a = chs[i], b = chs[j];
     const r1 = laneBattle(a, b), r2 = laneBattle(b, a);
     for (const r of [r1, r2]) { ts.push(r.t); if (r.why === 'timeout') timeout++; }
+    tally(a, r1.abilA); tally(b, r1.abilB); tally(b, r2.abilA); tally(a, r2.abilB);
     const w = (r1.win + (1 - r2.win)) / 2;
     rate[a][b] = w; rate[b][a] = 1 - w;
   }
+  for (const a of chs) abil[a].games = 2 * (chs.length - 1);   // 每角在矩陣裡打過幾場(每對雙向兩場)
   const avg = Object.fromEntries(chs.map((a) => {
     const v = Object.values(rate[a]);
     return [a, v.reduce((s, x) => s + x, 0) / v.length];
   }));
   ts.sort((x, y) => x - y);
-  return { rate, avg, stat: { n: ts.length, med: ts[ts.length >> 1], p90: ts[Math.floor(ts.length * 0.9)], timeout: timeout / ts.length } };
+  return { rate, avg, abil, stat: { n: ts.length, med: ts[ts.length >> 1], p90: ts[Math.floor(ts.length * 0.9)], timeout: timeout / ts.length } };
 }

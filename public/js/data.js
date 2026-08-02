@@ -752,14 +752,15 @@ export const DECOY = {
   SIGHT: 200,       // 偵察視野(僅連線中回傳)
   // 撞擊/投彈的**傷害不住這裡**(2026-07-27):與另兩招共用機種絕招傷害預算,
   // 由 decoyBlast()/decoyBombBlast() 推導(見 SPECIAL);此處只留彈體規格(半徑/破甲/vs)。
-  R: 20, PEN: 10,
+  PEN: 10,
   vs: { flesh: 1.4, armor: 1.3, air: 0.6, building: 1.2 },
   // 集束投彈(2026-08-01 改制):敵人進 BOMB_R 才開始丟,間隔 BOMB_GAP 秒、單次任務最多 BOMB_MAX 枚。
   // 單枚 = 直擊爆風(預算的非撞擊部分均分)+ 依機體類型附加狀態(見 DECOY_BOMB / MORPH_BOMB)。
   // 三項使用者定調:①BOMB_MAX 6;②**逐顆個別瞄準**(範圍內多目標時輪流分配,見 sim._decoyBombTargets)
   // —— 舊制是「炸在自己腳下」,多目標時後幾顆全落在同一團;③投擲軌跡同榴彈(客戶端拋物線,見
   // game._spawnDecoyBomb 的 to 落點解;伺服器仍在事件當下結算,拋物線純表現層)。
-  BOMB_R: 90, BOMB_MAX: 6, BOMB_GAP: 0.7, BOMB_BLAST_R: 14, BOMB_PEN: 6,
+  // 爆風半徑不住這裡:三招共用面積計價(見 specialBlastR)—— 舊 R / BOMB_BLAST_R 已退場
+  BOMB_R: 90, BOMB_MAX: 6, BOMB_GAP: 0.7, BOMB_PEN: 6,
   // 一座砲塔火力下投得完 DROP_N 顆(墜毀補投的那一顆不算)—— HP 反解錨點,見 decoyHp()。
   DROP_N: 5,
 };
@@ -778,12 +779,29 @@ export const MORPH_BOMB = {
 };
 export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 // ---- 極音速飛彈(2026-08-01 使用者需求;機甲專屬,取代舊「重砲模式/巨砲」)----
-// 長按右鍵發射一枚**射後不理**的極音速飛彈:先垂直爬升到 APEX_M 高空,再以 DIVE_SPD 螺旋俯衝
-// 撲向發射瞬間鎖定的目標(鎖定實體 → 追它的即時位置;無鎖定 → 打正前方 RANGE_M 的地面點)。
+// 長按右鍵發射一枚**射後不理**的極音速飛彈,兩相位(2026-08-02 使用者定案彈道):
+//   「前半段拋物線飛向高空,初始角度 45 度,後半段再以極快速度向下螺旋飛向目標」。
+//   相位一 **彈道爬升**:以 LAUNCH_DEG(45°)出膛,沿真實拋物線飛向目標上空(見 hyperArcY);
+//   相位二 **極音速螺旋俯衝**:在頂點改由 hyperDiveSpd() 繞軸螺旋撲下(追發射瞬間鎖定的目標;
+//           鎖定實體 → 追它的即時位置;無鎖定 → 打正前方 hyperRange() 的地面點)。
 // 「射後不理」= 發射後玩家完全不需再瞄準/維持鎖定,飛彈自己飛完全程(對齊 trajClass 'fnf' 語意)。
+//
+// **彈道幾何全是推導,MUST NOT 手寫**(45° 這一個角度定死了其餘每一個量):
+//   一條發射角 θ 的彈道,其**上升段**在水平走完 x 時的高度 = x·tanθ·(1 − x/(2·X)),
+//   頂點在水平 X 處、頂點高 = X·tanθ/2。本招把 X 取成「到目標的水平距離」⇒ 頂點恰在**目標正上方**,
+//   後半段因此是真正的「向下」俯衝(而不是滑翔),且爬升段的水平分速恆為 CLIMB_SPD·cosθ。
+//   頂點高隨交戰距離自然變化(遠 = 爬得高),最遠射程那一發 = hyperApex():
+//   MUST 仍高過直射鎖定天花板 GAME.GUN_CEIL_M(e2e / audit_flight_power 釘住)——
+//   「飛向高空」是這一招的本體,調 LAUNCH_DEG / RANGE_F 會同時動到它。
+//   舊制 APEX_F(頂點 = GUN_CEIL_M × 常數、爬升段**垂直**上升)已退場,MUST NOT 復辟:
+//   垂直爬升的頂點與發射點同一個水平位置 ⇒ 「初始角度 45 度」無處可放。
+//
 // **飛彈是實體、可被攻擊**(sim ent kind 'hyper',敵方小兵/塔的合法目標)⇒ 它的 HP 是平衡旋鈕:
-//   使用者定調「只有一座砲塔持續攻擊剛好不會被打爆」⇒ HP 由**最長飛行時間**反解(見 hyperHp),
-//   MUST NOT 手寫。最長 = 最遠射程那一發(爬升 + 斜距俯衝),故任何距離都撐得住一座塔。
+//   使用者定調「持續攻擊剛好不會被打爆」⇒ HP 由**最長飛行時間**反解(見 hyperHp),MUST NOT 手寫。
+//   最長 = 最遠射程那一發(爬升 + 頂點垂直落下),故任何距離都撐得過同一組火力。
+//   基準是**它飛越的整條前線**(一組塔位 + 一波兵,見 overflySurviveHp)—— 只有這一招的用途是
+//   「站在塔的射程外拆塔」⇒ 航路必然從敵方兵波頭上過去,拿只算塔的尺反解就少算了一半火力。
+//   改彈道 = 改曝險窗 ⇒ hyperFlightS 一動,HP 自己跟著漂(這正是推導的用意)。
 // 傷害 = **一整份機種絕招預算**(單一戰鬥部,見 hyperBlast)⇒ 與飽和攻擊(N 架均分)、
 //   集束炸彈(撞擊 + 6 顆)三招等值,這條不變式住 e2e「機種絕招三招同預算」。
 // 舊制 BARRAGE(傾洩重武器彈夾的巨砲)整組移除:BARRAGE / barrageShots / barrageDur /
@@ -793,27 +811,49 @@ export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 export const HYPER = {
   // 尺度紀律:飛彈的位置由伺服器每 tick 推進 ⇒ 速度/高度/射程全是**遊戲空間**(已吃 COMBAT_SCALE)。
   //   射程與高度因此 MUST 由已縮好的量推導,MUST NOT 手寫真實世界公尺(那會大出一倍)。
-  APEX_F: 1.6,       // 爬升頂點 = 直射鎖定天花板 GAME.GUN_CEIL_M × 此值 ⇒ 爬到「槍打不到飛機」的高度之上
+  LAUNCH_DEG: 45,    // **初始角度**(度;2026-08-02 使用者定案)—— 拋物線的形狀與頂點高全由它推導
   RANGE_F: 1.2,      // 最大接戰距離 = 砲塔射程 × 此值 ⇒ 機甲的攻塔手段:站在塔的射程外也打得到
-  CLIMB_SPD: 70,     // 爬升速度(m/s;略快於集束轟炸機 —— 這一段是刻意留給敵方的攔截窗)
-  DIVE_F: 3.5,       // 俯衝速度 = 爬升速度 × 此值(「極音速」的唯一定義處)
+  CLIMB_SPD: 70,     // **出膛速度**(m/s;沿 45° 發射向量,非垂直分速)—— 這一段是刻意留給敵方的攔截窗
+  DIVE_F: 3.5,       // 俯衝速度 = 出膛速度 × 此值(「極音速」的唯一定義處)
   SPIN_RPS: 2.4,     // 螺旋落下的每秒圈數(伺服器位置與客戶端演出同吃一份 ⇒ 兩端同步)
   SPIRAL_R: 9,       // 螺旋半徑(公尺;繞著彈道軸的偏擺,實體尺寸不吃 COMBAT_SCALE)
   MODEL_F: 2.2,      // 彈體尺寸 = 集束轟炸機的幾倍(models.js 共用同一具彈體幾何放大;命中量體同吃 ⇒ 看到多大 = 打到多大)
-  BLAST_R: 26,       // 戰鬥部爆風半徑(公尺;> 重型炸彈 22 —— 這是單發吃整份預算的戰鬥部)
+  BLAST_R: 26,       // 戰鬥部爆風半徑(公尺)。**同時是三招爆風的面積基準**(share = 1;見 specialBlastR)
   PEN: 12,           // 破甲值
   CD_S: 30,          // 獨立冷卻(三招同一段 CD)
   vs: { flesh: 1.2, armor: 1.5, air: 0.5, building: 1.6 },
 };
-/** 爬升頂點高度(公尺;推導不手寫) */
-export const hyperApex = () => GAME.GUN_CEIL_M * HYPER.APEX_F;
-/** 最大接戰距離(公尺;無鎖定時的正前方落點距離,也是 HP 反解的最長斜距) */
+/** 發射角(弧度;彈道唯一的自由參數) */
+export const hyperLaunchRad = () => HYPER.LAUNCH_DEG * Math.PI / 180;
+/** 最大接戰距離(公尺;無鎖定時的正前方落點距離,也是 HP 反解的最長一發) */
 export const hyperRange = () => UNITS.tower.range * HYPER.RANGE_F;
+/**
+ * 水平距離 d 的一發,其**頂點高度**(公尺)= d·tan(θ)/2。
+ * 預設取最遠射程 ⇒ `hyperApex()` = 這一招爬得最高的那一發(MUST > GAME.GUN_CEIL_M)。
+ */
+export const hyperApex = (d = hyperRange()) => d * Math.tan(hyperLaunchRad()) / 2;
+/** 爬升段的**水平**分速(m/s)= 出膛速度的水平分量;爬升全程等速(拋物線只有垂直項在變) */
+export const hyperClimbVx = () => HYPER.CLIMB_SPD * Math.cos(hyperLaunchRad());
+/** 水平距離 d 的一發,爬到頂點要幾秒(= 水平走完 d ÷ 水平分速) */
+export const hyperClimbS = (d) => Math.max(0, d) / hyperClimbVx();
+/**
+ * **拋物線的唯一縫**:水平進度 f ∈ [0,1](= 已走水平距離 ÷ d)時的離地高度(公尺)。
+ * y = apex·f·(2 − f) —— 由「發射角 θ、頂點在 f = 1」反解;f = 0 處的切線斜率
+ * dy/dx = 2·apex/d = tanθ ⇒ **出膛角恆為 LAUNCH_DEG**(這就是使用者要的「初始角度 45 度」)。
+ * 伺服器彈道與任何演出/稽核 MUST 全吃這一支,MUST NOT 各寫一份多項式。
+ */
+export const hyperArcY = (d, f) => {
+  const g = Math.max(0, Math.min(1, f));
+  return hyperApex(d) * g * (2 - g);
+};
 /** 俯衝速度(m/s;推導不手寫) */
 export const hyperDiveSpd = () => HYPER.CLIMB_SPD * HYPER.DIVE_F;
-/** **最長**飛行時間(秒)= 爬升 + 最遠斜距俯衝;HP 反解與客戶端演出共用,MUST NOT 手寫 */
+/**
+ * **最長**飛行時間(秒)= 最遠一發的彈道爬升 + 自頂點垂直落下;
+ * HP 反解(hyperHp)吃它,MUST NOT 手寫。頂點在目標正上方 ⇒ 俯衝段就是頂點高本身。
+ */
 export const hyperFlightS = () =>
-  hyperApex() / HYPER.CLIMB_SPD + Math.hypot(hyperRange(), hyperApex()) / hyperDiveSpd();
+  hyperClimbS(hyperRange()) + hyperApex() / hyperDiveSpd();
 
 
 // ---- 機種絕招傷害(2026-07-27 使用者需求;三招共用同一份傷害預算 = 唯一縫)----
@@ -841,22 +881,38 @@ export const specialTier = (abil) => ((abil?.light || 1) + (abil?.heavy || 1)) /
 export const specialMul = (abil) => 1 + SPECIAL.PER_LVL * (specialTier(abil) - 1);
 /** 一次機種絕招的總傷害預算 */
 export const specialBudget = (abil) => SPECIAL.BASE * specialMul(abil);
-/** 飽和攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑/破甲/vs 沿用重型炸彈規格) */
-export const kamiBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil) / SQUAD.KAMI.N) });
-/** 飽和攻擊:主機自毀撞擊引爆(單一機體 = 整份預算) */
-export const selfBoomBlast = (abil) => ({ ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil)) });
+// ---- 爆風半徑也是**預算**(2026-08-02 由 bal ⑦f 的長按攻擊量測定案)----
+// 三招的傷害預算逐位元等值,但爆風半徑過去是各招各寫的常數 ⇒ 總覆蓋面積差到 3 倍
+// (實測:飽和攻擊 4×r22 = 19.7k m²、集束炸彈 6×r14 + 1×r20 = 16.0k m²、極音速飛彈 1×r26 = 6.9k m²)。
+// 「把同一份預算切成越多顆、總面積就越大」等於**切分本身可以憑空生出攻擊範圍** ——
+// 這正是武器那邊已經立過的規矩(A35「攻擊範圍要計價」/ AOE_BUDGET)在絕招上的同一條:
+//   **半徑 ∝ √(該彈頭分到的預算比例)** ⇒ 總覆蓋面積與切幾顆無關,單位面積的傷害密度三招相同。
+// 基準 = 單一戰鬥部吃整份預算的 `HYPER.BLAST_R`(share = 1 ⇒ 逐位元不動)。
+// MUST NOT 逐招手寫半徑(舊 `DECOY.R` / `DECOY.BOMB_BLAST_R` 已退場,MUST NOT 復辟);
+// 改 `KAMI.N` / `BOMB_MAX` / `DECOY_IMPACT` 時半徑自己跟著收放,總面積恆定。
+export const specialBlastR = (share) => HYPER.BLAST_R * Math.sqrt(Math.max(0, share));
+/** 飽和攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑吃面積計價,破甲/vs 沿用重型炸彈規格) */
+export const kamiBlast = (abil) => ({
+  ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil) / SQUAD.KAMI.N),
+  r: specialBlastR(1 / SQUAD.KAMI.N),
+});
+/** 飽和攻擊:主機自毀撞擊引爆(單一機體 = 整份預算 ⇒ 半徑同基準) */
+export const selfBoomBlast = (abil) => ({
+  ...WEAPONS.bomb, dmg: Math.round(specialBudget(abil)), r: specialBlastR(1),
+});
 /** 集束炸彈:載具撞擊自爆的爆風 */
 export const decoyBlast = (abil) => ({
-  dmg: Math.round(specialBudget(abil) * SPECIAL.DECOY_IMPACT), r: DECOY.R, pen: DECOY.PEN, vs: DECOY.vs,
+  dmg: Math.round(specialBudget(abil) * SPECIAL.DECOY_IMPACT),
+  r: specialBlastR(SPECIAL.DECOY_IMPACT), pen: DECOY.PEN, vs: DECOY.vs,
 });
 /** 集束炸彈:單顆投彈的爆風(預算的非撞擊部分均分 BOMB_MAX 顆) */
 export const decoyBombBlast = (abil) => ({
   dmg: Math.round(specialBudget(abil) * (1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX),
-  r: DECOY.BOMB_BLAST_R, pen: DECOY.BOMB_PEN, vs: DECOY.vs,
+  r: specialBlastR((1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX), pen: DECOY.BOMB_PEN, vs: DECOY.vs,
 });
-/** 極音速飛彈:單一戰鬥部 = 整份預算(半徑/破甲/vs 住 HYPER) */
+/** 極音速飛彈:單一戰鬥部 = 整份預算(半徑基準住 HYPER.BLAST_R,破甲/vs 同) */
 export const hyperBlast = (abil) => ({
-  dmg: Math.round(specialBudget(abil)), r: HYPER.BLAST_R, pen: HYPER.PEN, vs: HYPER.vs,
+  dmg: Math.round(specialBudget(abil)), r: specialBlastR(1), pen: HYPER.PEN, vs: HYPER.vs,
 });
 
 // ---- 機種絕招「載具 HP」校準(2026-08-01 使用者定調;三招共用同一把尺 = 唯一縫)----
@@ -876,10 +932,48 @@ export const towerSurviveHp = (sec) => Math.floor(towerDps() * Math.max(0, sec))
  * 進位那半滴會讓載具多活一瞬,剛好把最後一次擊落/最後一顆投彈推到窗外(整條校準差一)。
  */
 export const towerKillHp = (sec) => Math.max(1, Math.floor(towerDps() * Math.max(0, sec)));
+// ---- 校準基準 = **前線一組塔位**,不是一座孤塔(2026-08-02 由 bal ⑦ 的長按攻擊量測定案)----
+// 使用者 2026-08-01 把三招的生存性都以「一座砲塔」表述,三個 HP 也照著反解;但前線塔位的
+// 幾何從來就是**同塔位雙塔**(② 的塔距不變式 / ④ 的「單推同塔位雙塔」/ lanesim 的場景),
+// 載具真正要穿越的火力是**兩座**。差這個 2 倍的後果在 bal ⑦f 量得清清楚楚(2026-08-02 實測,
+// 有效傷害 = 打在敵方機體與砲塔上的部分,佔 Lv1 預算 300 的比例):
+//   飽和攻擊 3.8%(需 2.46s approach,兩座塔下只撐 0.61s ⇒ 四架全在半路被打下來,
+//                  半威力殉爆炸在空地上)/ 極音速飛彈 **0.0%**(需 4.14s,只撐 2.07s,
+//                  而攔截 = 完全否定 ⇒ 這一招在有塔的前線**從未兌現過**)/ 集束炸彈 35.5%
+//                  (它從 BOMB_R 90m 外就開始投,不必活到目標頭上 ⇒ 只有它幾乎不受影響)。
+// 也就是說:舊基準不是「難度偏高」,而是讓兩招在正式對局的前線**結構性歸零**,
+// 且歸零的方式完全看不出來(玩家只覺得「絕招好像沒什麼用」)。
+// 修法**不動使用者定調的三句話**,只把尺換成前線真正的火力:
+//   飽和攻擊 → 前線一組塔位剛好擊落 SHOT_DOWN 架;極音速飛彈 → 前線一組塔位剛好打不爆;
+//   集束炸彈 → 前線一組塔位火力下剛好投得完 5+1 顆。
+// 三招 MUST 共用這一把尺(只調其中一招 = 又一次把三招的相對強弱寫死成手感),
+// 且 MUST 仍是推導:砲塔數值一動,三個 HP 自己跟著漂。
+export const TOWER_SITE_N = 2;   // 一個塔位的砲塔數(左右各一,見 GAME.TOWER_SIDE_OFF / towerPairSepM)
+/** 前線一組塔位的基準 DPS(校準三招載具生存性的唯一一把尺) */
+export const frontDps = () => towerDps() * TOWER_SITE_N;
+/** 「撐得住前線一組塔位 sec 秒」的 HP */
+export const frontSurviveHp = (sec) => towerSurviveHp(sec * TOWER_SITE_N);
+/** 「前線一組塔位 sec 秒內剛好打得爆」的 HP */
+export const frontKillHp = (sec) => towerKillHp(sec * TOWER_SITE_N);
+/**
+ * 一波 NPC 的總火力(推導:編制 waveComp() × 各兵種 dmg × rate;MUST NOT 手寫)。
+ * 只有「**飛越**整條前線」的載具要一起算它 —— 見 overflySurviveHp。
+ */
+export const waveDps = () => waveComp().reduce((s, k) => s + UNITS[k].dmg * UNITS[k].rate, 0);
+/**
+ * 「撐得住**飛越整條前線**(一組塔位 + 一波兵)sec 秒」的 HP。
+ * 極音速飛彈專用:另兩招都在自家這一側交付(護衛機自機體衝出撲近敵、轟炸機自 BOMB_R 外投彈),
+ * 只有飛彈的設計用途是「站在塔的射程外拆塔」(hyperRange > tower.range)⇒ 它的航路**必然**
+ * 從敵方兵波頭上飛過去。拿只算塔的尺去反解,少算的正是它一定會挨的那一半火力
+ * (2026-08-02 bal ⑦f 實測:只算塔位時有效傷害仍只有預算的 4.1% —— 因為攔截 = 完全否定,
+ *  它沒有另兩招那種「被打下來還剩一半」的緩衝,差一點點就是差全部)。
+ */
+export const overflyDps = () => frontDps() + waveDps();
+export const overflySurviveHp = (sec) => Math.floor(overflyDps() * Math.max(0, sec)) + 1;
 /**
  * 飽和攻擊:單架護衛自殺機的 HP。
- * 曝險窗 = 從進入砲塔射程到撲上砲塔(以撲擊速度飛完 tower.range);砲塔一次只打一架 ⇒
- * 要「剛好擊落 SHOT_DOWN 架」,每架就得剛好撐滿 曝險窗 / SHOT_DOWN 秒。
+ * 曝險窗 = 從進入砲塔射程到撲上砲塔(以撲擊速度飛完 tower.range);塔位一次只打一架 ⇒
+ * 要「剛好擊落 SHOT_DOWN 架」,每架就得剛好撐滿 曝險窗 / SHOT_DOWN 秒(基準 = 前線一組塔位)。
  * 其餘 N − SHOT_DOWN 架成功自爆(N=4、SHOT_DOWN=2 ⇒ 使用者要的「成功自爆 2 架」)。
  */
 /**
@@ -892,7 +986,7 @@ export const kamiSide = (i) => {
   return n === 1 ? 0 : (i - (n - 1) / 2) / ((n - 1) / 2);
 };
 export const kamiExposureS = () => UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL);
-export const kamiHp = () => towerKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN);
+export const kamiHp = () => frontKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN);
 
 // ---- 待命護衛機編隊(2026-08-02 使用者需求)----
 // 「小無人機與無人機編隊呈現ㄑ字型,位置加點浮動誤差,跟隨旗艦機時有微小操作延遲,
@@ -953,12 +1047,14 @@ export const escortDrift = (i, t) => {
   };
 };
 /**
- * 極音速飛彈:HP = 撐得住**最長**一次飛行(hyperFlightS:爬升 + 最遠斜距俯衝)的一座砲塔火力。
- * 取最長 ⇒ 任何交戰距離都「剛好不會被打爆」;兩座塔或塔 + 任何一把槍就打得下來(這是它的弱點)。
+ * 極音速飛彈:HP = 撐得住**最長**一次飛行(hyperFlightS:45° 拋射爬升 + 頂點垂直落下)的
+ * **前線一組塔位**火力。取最長 ⇒ 任何交戰距離都「剛好不會被打爆」;再多一把槍(小兵/敵方機體/
+ * 第二個塔位)就打得下來,而且攔截成功 = 完全否定(這是它的弱點)。
  */
-export const hyperHp = () => towerSurviveHp(hyperFlightS());
+export const hyperHp = () => overflySurviveHp(hyperFlightS());
 /**
- * 集束炸彈:載具 HP = 撐到投完第 DROP_N 顆就被擊落(墜毀補投第 DROP_N+1 顆 ⇒ 使用者要的「5+1」)。
+ * 集束炸彈:載具 HP = 在**前線一組塔位**火力下撐到投完第 DROP_N 顆就被擊落
+ * (墜毀補投第 DROP_N+1 顆 ⇒ 使用者要的「5+1」)。
  * 曝險窗 = 進入砲塔射程 → 進入投彈範圍 BOMB_R 的接近時間
  *        + 投出 DROP_N 顆所需的 (DROP_N−1) 個間隔
  *        + **半個間隔**:第 DROP_N 顆恰在窗末投出,要它「投得出去」窗就得再多撐一點;
@@ -967,7 +1063,7 @@ export const hyperHp = () => towerSurviveHp(hyperFlightS());
 export const decoyExposureS = () =>
   Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED
   + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP;
-export const decoyHp = () => towerKillHp(decoyExposureS());
+export const decoyHp = () => frontKillHp(decoyExposureS());
 
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)

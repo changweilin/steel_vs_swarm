@@ -12,6 +12,7 @@ import {
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast,
   hyperApex, hyperRange, hyperFlightS, hyperHp, kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
+  TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   FLIGHT, airSinkM,
@@ -752,7 +753,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     for (const e of [...sim.ents.values()]) if (e.pid === 'b_air' || e.pid === 'b_air2') sim.ents.delete(e.id);
   }
 
-  log('— sim:極音速飛彈(2026-08-01;機甲長按招式:高空爬升 → 螺旋俯衝 / 射後不理 / 可被擊落)—');
+  log('— sim:極音速飛彈(機甲長按招式:45° 拋物線爬升 → 極音速螺旋俯衝 / 射後不理 / 可被擊落)—');
   {
     const rb3 = sim.heroes.get('p_r');
     rb3.dead = false; rb3.hp = rb3.maxHp; rb3.mp = rb3.maxMp; rb3.x = 0; rb3.z = 0; rb3.y = 0; rb3.ry = 0;
@@ -782,12 +783,20 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const lock = sim._acquireTarget({ side: 'SWARM', x: m.x, z: m.z }, { range: 200 });
     assert(lock === m, '飛行中的極音速飛彈是敵方單位的合法鎖定目標(「可以被攻擊」)');
     m.x = 0; m.z = 0;
-    // 相位一:垂直爬升到 hyperApex(),期間不吃玩家輸入
-    m.y = 0; m.phase = 'climb';
+    // 相位一:45° 出膛的**拋物線**爬升到頂點(= 目標正上方),期間不吃玩家輸入
+    m.x = m.x0; m.z = m.z0; m.y = 0; m.trav = 0; m.phase = 'climb';
+    const p0 = { x: m.x, z: m.z, y: m.y };
+    sim._tickHypers(0.02);
+    const dh0 = Math.hypot(m.x - p0.x, m.z - p0.z), dv0 = m.y - p0.y, deg0 = Math.atan2(dv0, dh0) * 180 / Math.PI;
+    assert(Math.abs(deg0 - HYPER.LAUNCH_DEG) < 0.5,
+      `出膛角 ${deg0.toFixed(2)}° = HYPER.LAUNCH_DEG ${HYPER.LAUNCH_DEG}°(使用者定案「初始角度 45 度」)`);
+    assert(dh0 > 0, '爬升段**水平也在前進**(垂直爬升的舊制無處可放「初始角度」)');
     let guard = 0;
     while (m.phase === 'climb' && guard++ < 400) sim._tickHypers(0.05);
-    assert(m.phase === 'dive' && Math.abs(m.y - hyperApex()) < 1e-6,
-      `爬到 hyperApex() = ${hyperApex()}m 即轉入俯衝相位(實得 ${m.y.toFixed(1)}m)`);
+    assert(m.phase === 'dive' && Math.abs(m.y - hyperApex(m.arcD)) < 1e-6,
+      `拋物線爬到頂點 hyperApex(${m.arcD.toFixed(0)}m) = ${hyperApex(m.arcD).toFixed(1)}m 即轉俯衝(實得 ${m.y.toFixed(1)}m)`);
+    assert(Math.hypot(m.x - m.tx, m.z - m.tz) < 1e-6,
+      '頂點恰在目標正上方 ⇒ 後半段是真正的「向下」螺旋俯衝,不是滑翔');
     // 相位二:螺旋俯衝到落點 → 引爆(整份絕招預算的單一戰鬥部)
     const tgt = sim._add({ kind: 'soldier', side: 'SWARM', x: m.tx, z: m.tz, y: 0, hp: 9999 });
     const spin0 = m.spin;
@@ -819,8 +828,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(SQUAD.KAMI.N === 4 && SQUAD.KAMI.SHOT_DOWN === 2,
       `飽和攻擊 ${SQUAD.KAMI.N} 架、一座砲塔擊落 ${SQUAD.KAMI.SHOT_DOWN} 架 ⇒ 成功自爆 ${SQUAD.KAMI.N - SQUAD.KAMI.SHOT_DOWN} 架`);
     assert(SQUAD.KAMI.HP_F === undefined, '舊 KAMI.HP_F(主機血量比例)MUST 已移除');
-    assert(Math.abs(kamiHp() / towerDps() * SQUAD.KAMI.SHOT_DOWN - kamiExposureS()) < 0.5,
-      `單架護衛機撐 ${(kamiHp() / towerDps()).toFixed(2)}s × ${SQUAD.KAMI.SHOT_DOWN} 架 ≈ 曝險窗 ${kamiExposureS().toFixed(2)}s`);
+    assert(Math.abs(kamiHp() / frontDps() * SQUAD.KAMI.SHOT_DOWN - kamiExposureS()) < 0.5,
+      `單架護衛機撐 ${(kamiHp() / frontDps()).toFixed(2)}s × ${SQUAD.KAMI.SHOT_DOWN} 架 ≈ 曝險窗 ${kamiExposureS().toFixed(2)}s`);
     // 橫向站位單一縫:N 架均勻散開、對稱、涵蓋 [−1, 1]
     {
       const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
@@ -828,19 +837,37 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       assert(Math.abs(ss.reduce((a2, b2) => a2 + b2, 0)) < 1e-9, 'kamiSide 左右對稱(總和為 0)');
     }
     // 極音速飛彈:撐得住最長一次飛行 = 剛好不會被打爆(打完仍剩 ≥1 滴)
-    assert(hyperHp() > towerDps() * hyperFlightS(),
-      `飛彈 HP ${hyperHp()} > 一座砲塔全程輸出 ${(towerDps() * hyperFlightS()).toFixed(0)}(剛好打不爆)`);
-    assert(hyperHp() - towerDps() * hyperFlightS() < towerDps(),
-      '餘裕 < 一發塔砲 ⇒ 是「剛好」不是「綽綽有餘」(兩座塔就打得下來)');
+    assert(hyperHp() > overflyDps() * hyperFlightS(),
+      `飛彈 HP ${hyperHp()} > 飛越整條前線(塔位 + 一波兵)的全程輸出 ${(overflyDps() * hyperFlightS()).toFixed(0)}(剛好打不爆)`);
+    assert(hyperHp() - overflyDps() * hyperFlightS() < towerDps(),
+      '餘裕 < 一發塔砲 ⇒ 是「剛好」不是「綽綽有餘」(再多一把槍就打得下來)');
     assert(hyperRange() > UNITS.tower.range,
       `飛彈接戰距離 ${hyperRange()} > 砲塔射程 ${UNITS.tower.range}(機甲的攻塔手段)`);
     assert(hyperApex() > GAME.GUN_CEIL_M,
-      `爬升頂點 ${hyperApex()} > 直射鎖定天花板 ${GAME.GUN_CEIL_M}`);
+      `最遠一發的爬升頂點 ${hyperApex().toFixed(1)} > 直射鎖定天花板 ${GAME.GUN_CEIL_M}(「飛向高空」)`);
+    assert(HYPER.APEX_F === undefined,
+      '舊制固定頂點係數 APEX_F MUST 已移除(頂點改由 45° 發射角 × 交戰距離推導)');
     // 集束炸彈:撐到投完 DROP_N 顆(5)就被擊落,墜毀補投 1 顆 ⇒ 5 + 1
     assert(DECOY.DROP_N === 5 && DECOY.DROP_N + 1 === DECOY.BOMB_MAX,
       `集束轟炸機在一座砲塔火力下投得完 ${DECOY.DROP_N} 顆 + 墜毀補投 1 顆 = ${DECOY.BOMB_MAX} 顆`);
-    assert(Math.abs(decoyHp() / towerDps() - decoyExposureS()) < 0.5,
-      `轟炸機撐 ${(decoyHp() / towerDps()).toFixed(2)}s ≈ 曝險窗 ${decoyExposureS().toFixed(2)}s`);
+    assert(Math.abs(decoyHp() / frontDps() - decoyExposureS()) < 0.5,
+      `轟炸機撐 ${(decoyHp() / frontDps()).toFixed(2)}s ≈ 曝險窗 ${decoyExposureS().toFixed(2)}s`);
+    // 校準基準 = 前線一組塔位(2026-08-02 由 bal ⑦f 定案;飛彈另計它飛越的那一波兵)
+    assert(TOWER_SITE_N === 2 && frontDps() === towerDps() * TOWER_SITE_N,
+      `前線一組塔位 = ${TOWER_SITE_N} 座塔 ⇒ 基準 DPS ${frontDps()}(舊制單塔 ${towerDps()} 讓兩招在有塔的前線結構性歸零)`);
+    assert(overflyDps() === frontDps() + waveDps(),
+      `飛越前線的基準 = 塔位 ${frontDps()} + 一波兵 ${waveDps().toFixed(1)} = ${overflyDps().toFixed(1)}`);
+    // 爆風半徑的面積計價:同一份預算切成幾顆,總覆蓋面積不變
+    {
+      const ab = { light: 1, heavy: 1 }, A = (r, n) => n * Math.PI * blastFootprintR(r) ** 2;
+      const kam = A(kamiBlast(ab).r, SQUAD.KAMI.N);
+      const dec = A(decoyBombBlast(ab).r, DECOY.BOMB_MAX) + A(decoyBlast(ab).r, 1);
+      const hyp = A(hyperBlast(ab).r, 1);
+      assert(Math.abs(kam / hyp - 1) < 1e-9 && Math.abs(dec / hyp - 1) < 1e-9,
+        `三招總覆蓋面積相同(${(kam / 1000).toFixed(1)}k / ${(dec / 1000).toFixed(1)}k / ${(hyp / 1000).toFixed(1)}k m²)—— 半徑 ∝ √預算比例`);
+      assert(DECOY.R === undefined && DECOY.BOMB_BLAST_R === undefined,
+        '舊制逐招手寫半徑(DECOY.R / BOMB_BLAST_R)MUST 已退場');
+    }
   }
 
   log('— data:機種絕招三招同預算 + 隨輕/重武器綜合等級成長(2026-07-27)—');

@@ -3023,6 +3023,8 @@ export class BattleClient {
         ent.lost = !!e.lost;
       }
       if (e.k === 'kami') { ent.heroY = e.y ?? 0; ent.ry = e.ry ?? 0; }
+      // 極音速飛彈:方位/高度全由伺服器給(彈道在 sim._tickHypers 走完),客戶端只插值 + 補俯仰姿態
+      if (e.k === 'hyper') { ent.heroY = e.y ?? 0; ent.ry = e.ry ?? 0; }
       if (e.k === 'civilian') { ent.fo = !!e.fo; ent.fl = !!e.fl; }   // 跟隨/逃離旗標(頭頂提示)
       // 第三方碉堡進視野 = 情報永久留存:記位置(量化去重),小地圖離開視野後仍標示。
       // MUST 存 three 世界座標(z = −e.z);_world2mm 與其他標記(ent.mesh.position / this.pos)同框,
@@ -3255,6 +3257,9 @@ export class BattleClient {
       // 英雄機體:碰撞圓柱綁角色體型(高防禦=巨大=難閃避),不吃 COLLIDER 表
       heroCol: hero ? heroCollider(e.k, e.ch) : null,
     };
+    // 極音速飛彈:偏航 + 俯仰同時套(_updateEnts 的姿態段)⇒ 歐拉序 MUST 是 'YXZ',
+    // 否則俯仰會繞世界橫軸轉,大偏航時 45° 抬頭看起來變成側傾。
+    if (e.k === 'hyper') group.rotation.order = 'YXZ';
     // 平民/間諜:side 保持 null(兩陣營皆可開槍),陣營記在 cs 供頭頂箭頭;neutral = 不進準星敵人推測
     if (e.k === 'civilian') { ent.civ = true; ent.cs = e.cs; ent.prof = e.pf; ent.neutral = true; ent.fo = !!e.fo; ent.fl = !!e.fl; }
     // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
@@ -7890,7 +7895,7 @@ export class BattleClient {
       }
       // 朝向:平滑轉向(mobility_plan:8Hz 快照的方位跳變不直接進畫面)
       let wantYaw = null;
-      if (ent.decoy || ent.kami) {
+      if (ent.decoy || ent.kami || ent.hyper) {
         wantYaw = ent.ry + Math.PI;   // 機首朝 +z,與機甲同慣例
       } else if (ent.hero) {
         // ry 是「相機朝向」慣例(前方 = -z),機體模型一律朝 +z(見 buildRobotMech 腳尖/駕駛艙)
@@ -7923,6 +7928,18 @@ export class BattleClient {
         else {
           const dy = Math.atan2(Math.sin(wantYaw - pyaw), Math.cos(wantYaw - pyaw));
           ent.mesh.rotation.y = pyaw + dy * Math.min(1, dt * 8);
+        }
+      }
+      // 極音速飛彈:機首俯仰跟著彈道(45° 出膛 → 頂點放平 → 極音速垂直俯衝)。
+      // **純表現層**:角度由伺服器給的位置逐幀差分推導,客戶端不自己算彈道(A1);
+      // 機首朝 +z ⇒ 抬頭 = rotation.x 取負。需 'YXZ' 序(見 _spawnEnt):偏航先套、
+      // 俯仰才落在機體自己的橫軸上,否則大偏航時 45° 抬頭會歪成側傾。
+      if (ent.hyper) {
+        const dh = Math.hypot(nx - px, nz - pz), dv = ny - cur.y;
+        if (dh + Math.abs(dv) > 1e-3) {
+          const wantPit = -Math.atan2(dv, dh);
+          ent.mesh.rotation.x = snapped ? wantPit
+            : ent.mesh.rotation.x + (wantPit - ent.mesh.rotation.x) * Math.min(1, dt * 8);
         }
       }
       cur.set(nx, ny, nz);

@@ -4,8 +4,10 @@
 //      `_updatePlayer` 飛行段/`_launchHyper`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
 //
 // 三條規則共用一支稽核,因為破法都一樣**無聲**:
-//   ①**機種絕招的載具 HP 一律由「一座砲塔打幾秒」反解**(2026-08-01 使用者定調):
-//      飽和攻擊 4 架、一座砲塔剛好擊落 2 架;極音速飛彈剛好打不爆;集束轟炸機剛好投得完 5+1 顆。
+//   ①**機種絕招的載具 HP 一律由「前線一組塔位打幾秒」反解**(2026-08-01 使用者定調的三句話,
+//      2026-08-02 由 bal ⑦f 把尺從「一座孤塔」換成前線真正的火力 = 同塔位雙塔):
+//      飽和攻擊 4 架、剛好擊落 2 架;極音速飛彈剛好打不爆(它飛越整條前線 ⇒ 另計一波兵);
+//      集束轟炸機剛好投得完 5+1 顆。
 //      無聲寫壞法:任一個 HP 手寫(改砲塔數值就整組漂掉)、載具帶 armor/護盾(EHP 隨主機角色浮動,
 //      「剛好」變成看人品)、巨砲時代的彈夾旁路殘留在 _gateFire/_tryFire(重武器又能免費開火)。
 //      伺服器那半由 `npm test`(sim 直測)把關;這裡驗**推導與客戶端消費端**。
@@ -26,6 +28,9 @@ import {
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
   kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperApex, hyperRange, decoyHp, decoyExposureS,
+  hyperArcY, hyperClimbVx, hyperClimbS,
+  TOWER_SITE_N, frontKillHp, overflySurviveHp, waveDps, waveComp, blastFootprintR,
+  kamiBlast, decoyBlast, decoyBombBlast, hyperBlast,
   GAME,
 } from '../public/js/data.js';
 
@@ -66,7 +71,7 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 const count = (s, needle) => s.split(needle).length - 1;
 
 // ---------------------------------------------------------------------------
-console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」反解(推導不手寫)');
+console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一組塔位打幾秒」與「預算比例」反解(推導不手寫)');
 // ---------------------------------------------------------------------------
 {
   t('towerDps() = 砲塔 dmg × rate(砲塔無 wid ⇒ pen 0,不吃 armorMul)',
@@ -85,12 +90,12 @@ console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」�
     SQUAD.KAMI.HP_F === undefined);
   t('kamiExposureS = 砲塔射程 ÷ 撲擊速度(推導不手寫)',
     near(kamiExposureS(), UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL)));
-  t('kamiHp = towerKillHp(曝險窗 ÷ SHOT_DOWN)',
-    kamiHp() === towerKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN));
-  t('kamiHp 原文走 towerKillHp,MUST NOT 手寫',
-    /export const kamiHp = \(\) => towerKillHp\(/.test(dataSrc));
+  t('kamiHp = frontKillHp(曝險窗 ÷ SHOT_DOWN)',
+    kamiHp() === frontKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN));
+  t('kamiHp 原文走 frontKillHp,MUST NOT 手寫',
+    /export const kamiHp = \(\) => frontKillHp\(/.test(dataSrc));
   t('「攻擊力減半、數量加倍」= 同一件事:每架 = 預算 ÷ N(整份預算不變)',
-    /export const kamiBlast = \(abil\) => \(\{ \.\.\.WEAPONS\.bomb, dmg: Math\.round\(specialBudget\(abil\) \/ SQUAD\.KAMI\.N\) \}\);/.test(dataSrc));
+    /dmg: Math\.round\(specialBudget\(abil\) \/ SQUAD\.KAMI\.N\),/.test(dataSrc));
   {
     const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
     t('kamiSide 均勻散開、對稱、涵蓋 [−1, 1]',
@@ -103,17 +108,39 @@ console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」�
       && !/const s = i === 0 \? -1 : 1/.test(simCode) && !/const s = i === 0 \? -1 : 1/.test(code));
   }
 
-  // —— 極音速飛彈:撐得住最長一次飛行 ——
+  // —— 極音速飛彈:45° 拋物線爬升 + 撐得住最長一次飛行 ——
+  // 2026-08-02 使用者定案彈道:「前半段拋物線飛向高空,初始角度 45 度,後半段再以極快速度
+  // 向下螺旋飛向目標」⇒ 頂點高不再是常數,而是「發射角 × 交戰距離」的推導值。
   t('hyperApex / hyperRange / hyperFlightS 全由已縮好的量推導(MUST NOT 手寫遊戲公尺)',
-    /export const hyperApex = \(\) => GAME\.GUN_CEIL_M \* HYPER\.APEX_F;/.test(dataSrc)
+    /export const hyperApex = \(d = hyperRange\(\)\) => d \* Math\.tan\(hyperLaunchRad\(\)\) \/ 2;/.test(dataSrc)
     && /export const hyperRange = \(\) => UNITS\.tower\.range \* HYPER\.RANGE_F;/.test(dataSrc)
-    && /hyperApex\(\) \/ HYPER\.CLIMB_SPD \+ Math\.hypot\(hyperRange\(\), hyperApex\(\)\) \/ hyperDiveSpd\(\)/.test(dataSrc));
+    && /hyperClimbS\(hyperRange\(\)\) \+ hyperApex\(\) \/ hyperDiveSpd\(\)/.test(dataSrc));
+  t('舊制固定頂點係數 APEX_F 已退場(垂直爬升放不下「初始角度」)', HYPER.APEX_F === undefined);
+  t('出膛角 = HYPER.LAUNCH_DEG(拋物線在 f = 0 的切線斜率 = tanθ;數值微分驗真品)', (() => {
+    const d = hyperRange(), e = 1e-7;
+    const deg = Math.atan((hyperArcY(d, e) - hyperArcY(d, 0)) / (e * d)) * 180 / Math.PI;
+    return HYPER.LAUNCH_DEG === 45 && Math.abs(deg - HYPER.LAUNCH_DEG) < 1e-3;
+  })());
+  t('拋物線只有一份實作:hyperArcY 是唯一的高度式,伺服器不自己寫多項式',
+    /m\.y = m\.y0 \+ hyperArcY\(m\.arcD, f\);/.test(simCode)
+    && (simCode.match(/hyperArcY\(/g) || []).length === 1
+    && !/m\.y \+= HYPER\.CLIMB_SPD \* dt/.test(simCode));
+  t('爬升段水平等速 = 出膛速度的水平分量(hyperClimbVx 單一縫)',
+    /export const hyperClimbVx = \(\) => HYPER\.CLIMB_SPD \* Math\.cos\(hyperLaunchRad\(\)\);/.test(dataSrc)
+    && /m\.trav \+ hyperClimbVx\(\) \* dt/.test(simCode)
+    && near(hyperClimbS(hyperRange()) * hyperClimbVx(), hyperRange()));
+  t('頂點恰在目標正上方(後半段才是真正的「向下」俯衝)',
+    near(hyperArcY(hyperRange(), 1), hyperApex(hyperRange())));
+  t('螺旋基底取固定水平法向,MUST NOT 由彈道軸現算(垂直落下時軸的水平分量 → 0 = 沒有螺旋)',
+    /m\.uz \* c \+ m\.ux \* s/.test(simCode) && !/px = -az \/ Math\.hypot/.test(simSrc));
   t('爬升頂點高過直射鎖定天花板(是「高空」不是抬個頭)', hyperApex() > GAME.GUN_CEIL_M);
   t('接戰距離大於砲塔射程(機甲的攻塔手段)', hyperRange() > UNITS.tower.range);
   t('俯衝遠快於爬升(「極音速」那一段幾乎攔不住)', HYPER.DIVE_F > 2);
-  t('hyperHp = towerSurviveHp(最長飛行時間)⇒ 一座砲塔剛好打不爆',
-    hyperHp() === towerSurviveHp(hyperFlightS()) && hyperHp() > towerDps() * hyperFlightS());
-  t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲', hyperHp() - towerDps() * hyperFlightS() < towerDps());
+  t('hyperHp = overflySurviveHp(最長飛行時間)⇒ 飛越整條前線剛好打不爆',
+    hyperHp() === overflySurviveHp(hyperFlightS())
+    && hyperHp() > (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS());
+  t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲',
+    hyperHp() - (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS() < towerDps());
   t('單一戰鬥部 = 整份絕招預算(一發打完,離散化誤差為零)',
     /export const hyperBlast = \(abil\) => \(\{\s*\n\s*dmg: Math\.round\(specialBudget\(abil\)\),/.test(dataSrc));
 
@@ -126,19 +153,45 @@ console.log('■ Ⅰ 機種絕招載具 HP:一律由「一座砲塔打幾秒」�
       Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP));
   // 行為直測:曝險窗內剛好投得出第 DROP_N 顆、且撐不到第 DROP_N+1 顆
   {
-    const live = decoyHp() / towerDps();
+    const live = decoyHp() / (towerDps() * TOWER_SITE_N);
     const approach = Math.max(0, UNITS.tower.range - DECOY.BOMB_R) / DECOY.SPEED;
     const dropped = 1 + Math.floor((live - approach) / DECOY.BOMB_GAP + 1e-9);
-    t('一座砲塔火力下剛好投出 DROP_N 顆 + 墜毀補投 1 顆 = BOMB_MAX',
+    t('前線一組塔位火力下剛好投出 DROP_N 顆 + 墜毀補投 1 顆 = BOMB_MAX',
       dropped === DECOY.DROP_N && dropped + 1 === DECOY.BOMB_MAX, `實得 ${dropped} + 1`);
   }
-  // 行為直測:一座砲塔在曝險窗內剛好擊落 SHOT_DOWN 架
+  // 行為直測:前線一組塔位在曝險窗內剛好擊落 SHOT_DOWN 架
   {
-    const downed = Math.floor(kamiExposureS() / (kamiHp() / towerDps()) + 1e-9);
-    t('一座砲塔在曝險窗內剛好擊落 SHOT_DOWN 架、其餘成功自爆',
+    const downed = Math.floor(kamiExposureS() / (kamiHp() / (towerDps() * TOWER_SITE_N)) + 1e-9);
+    t('前線一組塔位在曝險窗內剛好擊落 SHOT_DOWN 架、其餘成功自爆',
       downed === SQUAD.KAMI.SHOT_DOWN, `實得 ${downed} 架`);
   }
-  t('decoyHp = towerKillHp(曝險窗)', decoyHp() === towerKillHp(decoyExposureS()));
+  t('decoyHp = frontKillHp(曝險窗)', decoyHp() === frontKillHp(decoyExposureS()));
+  // —— 校準基準:前線一組塔位(2026-08-02 由 bal ⑦f 定案)——
+  t('前線基準 = 同塔位雙塔,且 front* 由 tower* 推導(MUST NOT 各寫一份 dps)',
+    TOWER_SITE_N === 2
+    && /export const frontSurviveHp = \(sec\) => towerSurviveHp\(sec \* TOWER_SITE_N\);/.test(dataSrc)
+    && /export const frontKillHp = \(sec\) => towerKillHp\(sec \* TOWER_SITE_N\);/.test(dataSrc));
+  t('waveDps 由 waveComp 推導(飛越前線的載具才另計這一份)',
+    near(waveDps(), waveComp().reduce((s, k) => s + UNITS[k].dmg * UNITS[k].rate, 0))
+    && /export const waveDps = \(\) => waveComp\(\)\.reduce\(/.test(dataSrc));
+  t('三個 HP 全部走同一把前線的尺(MUST NOT 有人還留在單塔基準)',
+    !/= towerKillHp\(kamiExposureS|= towerSurviveHp\(hyperFlightS|= towerKillHp\(decoyExposureS/.test(dataSrc));
+  // —— 爆風半徑的面積計價:總覆蓋面積與「切成幾顆」無關 ——
+  {
+    const A = (d) => d.n * Math.PI * (blastFootprintR(d.r) ** 2);
+    const ab = { light: 1, heavy: 1 };
+    const areas = [
+      A({ n: SQUAD.KAMI.N, r: kamiBlast(ab).r }),
+      A({ n: DECOY.BOMB_MAX, r: decoyBombBlast(ab).r }) + A({ n: 1, r: decoyBlast(ab).r }),
+      A({ n: 1, r: hyperBlast(ab).r }),
+    ];
+    t('三招總覆蓋面積相同(半徑 ∝ √預算比例 ⇒ 切分不生範圍)',
+      areas.every((x) => Math.abs(x / areas[2] - 1) < 1e-9), areas.map((x) => (x / 1000).toFixed(1)).join(' / '));
+    t('specialBlastR 是唯一的半徑式,舊的逐招常數已退場',
+      /export const specialBlastR = \(share\) => HYPER\.BLAST_R \* Math\.sqrt\(/.test(dataSrc)
+      && DECOY.R === undefined && DECOY.BOMB_BLAST_R === undefined
+      && near(hyperBlast(ab).r, HYPER.BLAST_R));
+  }
 }
 
 // ---------------------------------------------------------------------------
