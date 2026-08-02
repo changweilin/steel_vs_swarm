@@ -4,15 +4,20 @@
 //   ① 隧道(山體):道路平坦,鑽進突起的地形 —— 深度來自山
 //   ② 地下道(平地下穿):地形平坦,路面一端往下、另一端上來 —— 深度來自挖
 //      (2026-07-28 起引擎會生成:`biomes.js underpassPlan` 把平坦 tunnel way 改吃下沉剖面)
-//   ③ 地面高架橋(兵線走在**純陸域**橋面上)  ④ 明隧道(側向土牆藏不住結構那一側)
+//   ③ 陸上高架橋(兵線走在**純陸域**橋面上)  ④ 明隧道(側向土牆藏不住結構那一側)
 //   ⑤ 平交道(兵線與地面鐵軌平面交會)        ⑥ 穿越高架橋底部(兵線從橋下鑽過)
 //   ⑦ 穿越地下道上方(兵線從洞頂走過)
 //   ⑧ 其中一側有超過一座砲塔高的地形(altTier() = TARGET_H.tower,高度差加成的觸發門檻;
 //      **只算一般道路段** —— 橋面/隧道/引道一律扣掉:洞裡量到的側向高差是「地下道/隧道的深度」,
 //      不是可以佔領的戰術高地)
+//   ⑨ 水上高架橋(兵線走在橋面上,但橋跨的是水域)
 //
-// 兩個附帶診斷(不是場景,但選場地時要看):
-//   跨水橋   兵線走在橋上但橋跨的是水域 —— ③ 刻意不收(使用者要純陸域高架橋)
+// ③ 與 ⑨ 是**兩種場景**(2026-08-02 使用者定案):橋下是陸地 ⇒ 橋墩之間可穿行、掉下去照樣打;
+// 橋下是水域 ⇒ 橋面是唯一通路、掉下去進水。判定縫只有 `spansWater()` 一支(圖資水道相交 ∪
+// 橋下地表沉在水/沼面下),兩者共用 —— MUST NOT 由場地名稱或 mix 的 water 比例臆測。
+// (2026-08-02 前 ⑨ 只是「跨水橋」附帶診斷、不列場景 ⇒ 沒有任何預設地圖被標記;改制後與 ③ 同級。)
+//
+// 一個附帶診斷(不是場景,但選場地時要看):
 //   落空地下道 圖資掛 tunnel、地形也平坦,但 underpassPlan 放棄(人行道 / 引道空間不足 /
 //            要挖到 SINK_MAX 以上 / 走廊碰水)⇒ 仍當一般道路,列出來供評估
 //
@@ -538,6 +543,29 @@ function overlapRuns(laneD, laneCum, wayPts, hw) {
   return runs.filter(([a, b]) => b - a >= ON_MIN);
 }
 
+/**
+ * 橋跨的是水域還是陸域 —— ③ 陸上高架橋 / ⑨ 水上高架橋 的**唯一分流縫**
+ * (2026-07-28 起 ③ 要純陸域;2026-08-02 起水域那半升格成 ⑨,兩者共用這一支)。
+ *   ① 與圖資水道相交,或 ② 橋下地表沉在水/沼面之下 —— 兩者任一即判水域。
+ * 第二條是為了抓沒被畫成 waterway 的湖/潟湖/海灣(遊戲端的 splitWaterPieces 也是看高程與水色)。
+ * scanVenue(兵線判定)與 probePoint(找錨點)MUST 同吃這一支,分兩份必然出現
+ * 「探測說是陸橋、掃描說是水橋」這種只在特定場地現形的分歧。
+ */
+const WET_Y = WATER.LEVEL + WATER.SWAMP_BAND;
+function makeSpansWater(waterWays, heightAt) {
+  return (wpts) => {
+    for (let i = 1; i < wpts.length; i++) {
+      for (const wp of waterWays) {
+        for (let j = 1; j < wp.length; j++) {
+          if (segCross(wpts[i - 1], wpts[i], wp[j - 1], wp[j])) return '水道';
+        }
+      }
+    }
+    for (const p of densify(wpts, ROAD_SEG)) if (heightAt(p[0], p[1]) <= WET_Y) return '水面';
+    return null;
+  };
+}
+
 async function scanVenue(v) {
   const cfg = venueConfig(v, 1);                  // teamSize 1 ⇒ L = 1(1v1)
   const res = { id: v.id, name: v.name, synthetic: cfg.synthetic, hits: {}, notes: [] };
@@ -565,22 +593,8 @@ async function scanVenue(v) {
   // 使用者要的是**一般道路**上的高地對峙,不是站在橋上或洞裡比高度。
   const structArcs = [];
 
-  // 橋跨的是水域還是陸域(2026-07-28 使用者需求:③ 要**純陸域**高架橋):
-  //   ①與圖資水道相交,或②橋下地表沉在水/沼面之下 —— 兩者任一即判水域。
-  // 第二條是為了抓沒被畫成 waterway 的湖/潟湖/海灣(遊戲端的 splitWaterPieces 也是看高程與水色)。
-  const WET_Y = WATER.LEVEL + WATER.SWAMP_BAND;
-  const waterWays = (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, center)));
-  const spansWater = (wpts) => {
-    for (let i = 1; i < wpts.length; i++) {
-      for (const wp of waterWays) {
-        for (let j = 1; j < wp.length; j++) {
-          if (segCross(wpts[i - 1], wpts[i], wp[j - 1], wp[j])) return '水道';
-        }
-      }
-    }
-    for (const p of densify(wpts, ROAD_SEG)) if (heightAt(p[0], p[1]) <= WET_Y) return '水面';
-    return null;
-  };
+  const spansWater = makeSpansWater(
+    (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, center))), heightAt);
 
   // ---- ①③⑤⑥ 結構 way(隧道/橋)----
   for (const way of osm.roads) {
@@ -597,14 +611,11 @@ async function scanVenue(v) {
     if (isBrg) {
       if (onLen >= ON_MIN && canCarry) {           // 兵線走在橋面上(車行橋 + 共用節點)
         structArcs.push(...runs);
+        // ③ 陸上高架橋 = 純陸域上方;⑨ 水上高架橋 = 跨水域。同一支 spansWater 分流,兩者同級。
         const wet = spansWater(wpts);
-        if (wet) {                                 // 跨水橋:記錄但不算 ③(使用者要純陸域高架橋)
-          const cur = res.hits2Water;
-          if (!cur || onLen > cur.len) res.hits2Water = { name, len: Math.round(onLen), wet };
-        } else {                                   // ③ 地面高架橋 = 純陸域上方
-          const cur = res.hits.bridge;
-          if (!cur || onLen > cur.len) res.hits.bridge = { name, len: Math.round(onLen) };
-        }
+        const key = wet ? 'waterBridge' : 'bridge';
+        const cur = res.hits[key];
+        if (!cur || onLen > cur.len) res.hits[key] = { name, len: Math.round(onLen), ...(wet ? { wet } : {}) };
       } else {                                     // ⑥ 兵線從橋下鑽過(純幾何交叉)
         for (let i = 1; i < laneD.length && !res.hits.underBridge; i++) {
           for (let j = 1; j < wpts.length; j++) {
@@ -705,18 +716,19 @@ async function scanVenue(v) {
         || (cand.depth === res.tunnelCand.depth && d < res.tunnelCand.d)) res.tunnelCand = cand;
   }
 
-  // ---- ③ 的候選診斷:bbox 內有沒有「純陸域的車行高架橋」(兵線沒走到也列出來)----
-  // 用途:③ 目前只有跨水橋時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上陸域高架橋」。
+  // ---- ③/⑨ 的候選診斷:bbox 內的車行高架橋(兵線沒走到也列出來),陸域/水域分開記 ----
+  // 用途:某個場景缺場地時,靠這份清單判斷「哪個場地換個錨點重烤兵線就能踩上橋面」。
   for (const w of osm.roads) {
     if (!w.tags.bridge || w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const wpts = w.geometry.map((p) => llToWorld(p.lat, p.lon, center));
-    if (spansWater(wpts)) continue;
+    const wet = spansWater(wpts);
     let len = 0;
     for (let i = 1; i < wpts.length; i++) len += Math.hypot(wpts[i][0] - wpts[i - 1][0], wpts[i][1] - wpts[i - 1][1]);
     if (len < ON_MIN) continue;
     const d = Math.round(Math.min(...wpts.map((p) => ptPoly(p, laneD))));
-    if (!res.landBridgeCand || d < res.landBridgeCand.d) {
-      res.landBridgeCand = { name: w.tags.name || w.tags.highway, len: Math.round(len), d };
+    const slot = wet ? 'waterBridgeCand' : 'landBridgeCand';
+    if (!res[slot] || d < res[slot].d) {
+      res[slot] = { name: w.tags.name || w.tags.highway, len: Math.round(len), d, ...(wet ? { wet } : {}) };
     }
   }
 
@@ -808,6 +820,9 @@ async function scanVenue(v) {
 /**
  * 探測模式(--probe=lat,lng[,名稱]):不需要 baked 兵線,只問「這個點周邊一張 L1 地圖裡,
  * 有沒有執行期真的成洞的車行隧道、覆蓋多長多厚」。用來替 ①(地下道感 = 短、覆蓋薄)找新場地。
+ * 2026-08-02 起同時回報**車行高架橋**(陸域 ③ / 水域 ⑨ 分流走 makeSpansWater 同一縫)——
+ * 三種使用者指定的場景(② 地下道 / ③ 陸上高架橋 / ⑨ 水上高架橋)因此一次探測就選得完錨點,
+ * 不必為了找橋另跑一輪「先烤兵線再掃描」(烤一次兵線是分鐘級的 Overpass 往返)。
  * ④ 明隧道候選也在此體檢:對每條成洞山體隧道跑 `tunnelWallProfile`(與執行期同一縫)兩側,
  * 報 open 點數 × ROAD_SEG = 明隧道段長 —— 判定與兵線無關(只吃地形與隧道軸),探測即可定案。
  * bbox 與 L1 同尺寸(`--probe-r=N` 可放大 N 倍廣域掃,找到後再精確定錨);
@@ -827,6 +842,8 @@ async function probePoint(lat, lng, label) {
   const { heightAt } = hf;
   const osm = await osmFor(`probe_${lat.toFixed(4)}_${lng.toFixed(4)}`, bbox);
   if (!osm) return console.log(`${label}:取不到路網`);
+  // 世界座標 → 經緯度(llToWorld 的逆換算;錨點擺位要用)
+  const w2ll = ([x, z]) => `${(lat - z / (R_EARTH * WORLD_S) * 180 / Math.PI).toFixed(5)},${(lng + x / (R_EARTH * Math.cos(d2r(lat)) * WORLD_S) * 180 / Math.PI).toFixed(5)}`;
   const found = [];
   for (const w of osm.roads) {
     if (!strucTunnel(w.tags) || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
@@ -835,8 +852,6 @@ async function probePoint(lat, lng, label) {
     const th = [];
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) th.push(heightAt(tr.pts[i][0], tr.pts[i][1]) - tr.floors[i]);
     th.sort((a, b) => a - b);
-    // 世界座標 → 經緯度(llToWorld 的逆換算;錨點擺位要用)
-    const w2ll = ([x, z]) => `${(lat - z / (R_EARTH * WORLD_S) * 180 / Math.PI).toFixed(5)},${(lng + x / (R_EARTH * Math.cos(d2r(lat)) * WORLD_S) * 180 / Math.PI).toFixed(5)}`;
     const covList = [];
     for (const [, , ia, ib] of tr.intervals) for (let i = ia; i <= ib; i++) covList.push(i);
     const covMid = tr.pts[covList[covList.length >> 1]];
@@ -855,13 +870,32 @@ async function probePoint(lat, lng, label) {
       depth: Math.round(th[th.length >> 1]), gal, galSide,
       at: covMid ? w2ll(covMid) : '', galAt: galMid ? w2ll(galMid) : '' });
   }
+  // ③/⑨ 車行高架橋:陸域/水域走 makeSpansWater(與 scanVenue 同一縫)。回報中點座標當錨點,
+  // 長度取全橋(> ON_MIN 才列 —— 短於這個長度的橋,兵線就算踩上去也判不成場景)。
+  const spansWater = makeSpansWater(
+    (osm.waters || []).map((w) => w.geometry.map((p) => llToWorld(p.lat, p.lon, cfg.center))), heightAt);
+  const bridges = [];
+  for (const w of osm.roads) {
+    if (!w.tags.bridge || w.tags.tunnel || !LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
+    const wpts = w.geometry.map((p) => llToWorld(p.lat, p.lon, cfg.center));
+    let len = 0;
+    for (let i = 1; i < wpts.length; i++) len += Math.hypot(wpts[i][0] - wpts[i - 1][0], wpts[i][1] - wpts[i - 1][1]);
+    if (len < ON_MIN) continue;
+    bridges.push({ name: w.tags.name || w.tags.highway, len: Math.round(len),
+      wet: spansWater(wpts), at: w2ll(wpts[wpts.length >> 1]) });
+  }
+  const land = bridges.filter((b) => !b.wet).sort((a, b) => b.len - a.len);
+  const wetB = bridges.filter((b) => b.wet).sort((a, b) => b.len - a.len);
+
   const real = found.filter((f) => !f.flat && !f.under).sort((a, b) => a.depth - b.depth);
   const und = found.filter((f) => f.under);
   const galHits = real.filter((f) => f.gal).sort((a, b) => b.gal - a.gal);
-  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、山體成洞 ${real.length} 條、地下道 ${und.length} 條、明隧道 ${galHits.length} 條`
+  console.log(`${label} (${lat},${lng}) 車行隧道 ${found.length} 條、山體成洞 ${real.length} 條、地下道 ${und.length} 條、明隧道 ${galHits.length} 條、陸橋 ${land.length} 座、水橋 ${wetB.length} 座`
     + (real.length ? `　最淺山體洞:${real.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m/深${f.depth}m @${f.at}`).join('、')}` : '')
     + (galHits.length ? `　明隧道:${galHits.slice(0, 3).map((f) => `${f.name} open ${f.gal}點≈${Math.round(f.gal * ROAD_SEG)}m(side ${f.galSide},覆蓋${f.len}m)@${f.galAt}`).join('、')}` : '')
     + (und.length ? `　地下道:${und.slice(0, 3).map((f) => `${f.name} 覆蓋${f.len}m @${f.at}`).join('、')}` : '')
+    + (land.length ? `　陸上高架橋:${land.slice(0, 3).map((b) => `${b.name} ${b.len}m @${b.at}`).join('、')}` : '')
+    + (wetB.length ? `　水上高架橋:${wetB.slice(0, 3).map((b) => `${b.name} ${b.len}m/${b.wet} @${b.at}`).join('、')}` : '')
     + (found.length - real.length - und.length ? `　平地不成洞 ${found.length - real.length - und.length} 條` : ''));
 }
 
@@ -884,12 +918,13 @@ if (ARG.probe) {
 const SCEN = [
   ['tunnel', '① 隧道(山體)'],
   ['underpass', '② 地下道(平地下穿)'],
-  ['bridge', '③ 地面高架橋'],
+  ['bridge', '③ 陸上高架橋'],
   ['gallery', '④ 明隧道'],
   ['crossing', '⑤ 平交道'],
   ['underBridge', '⑥ 穿越高架橋底部'],
   ['overTunnel', '⑦ 穿越地下道上方'],
   ['highGround', '⑧ 一側高於一座砲塔'],
+  ['waterBridge', '⑨ 水上高架橋'],
 ];
 // 引擎尚未生成的場景:報告但不計入「缺場地」(換地圖解不了,要改引擎)。
 // 2026-07-28:`underpass` 已隨 underpassPlan 落地 ⇒ 此表清空(留著結構,下一個缺口照樣掛得上)。
@@ -928,8 +963,8 @@ for (const v of list) {
   console.log(`${(r.id + ' ').padEnd(15, '·')} ${marks}  側向峰值 +${r.peakSide ?? '?'}m  ${r.secs}s  `
     + `${r.osm ? `[${r.osm.src} 路 ${r.osm.roads}/軌 ${r.osm.rails}/平交 ${r.osm.crossings}] ` : ''}`
     + `${r.error ? `⚠️ ${r.error}` : detail || '(無)'}`
-    + `${r.hits2Water ? `　跨水橋(不算③):${r.hits2Water.name} ${r.hits2Water.len}m/${r.hits2Water.wet}` : ''}`
     + `${r.landBridgeCand ? `　③候選陸橋:${r.landBridgeCand.name} ${r.landBridgeCand.len}m 離兵線 ${r.landBridgeCand.d}m` : ''}`
+    + `${r.waterBridgeCand ? `　⑨候選水橋:${r.waterBridgeCand.name} ${r.waterBridgeCand.len}m/${r.waterBridgeCand.wet} 離兵線 ${r.waterBridgeCand.d}m` : ''}`
     + `${r.flatTunnel ? `　落空地下道(規劃放棄,仍是平街):${r.flatTunnel.name} ${r.flatTunnel.len}m` : ''}`
     + `${r.underCand ? `　②候選地下道:${r.underCand.name} 覆蓋 ${r.underCand.len}m/沉 ${r.underCand.depth}m 離兵線 ${r.underCand.d}m` : ''}`
     + `${r.tunnelCand ? `　①候選洞:${r.tunnelCand.name} 覆蓋 ${r.tunnelCand.len}m/深 ${r.tunnelCand.depth}m 離兵線 ${r.tunnelCand.d}m` : ''}`
@@ -951,11 +986,17 @@ for (const [k, label] of SCEN) {
   if (!hit.length) {
     missing++;
     console.log(`  ${label}:❌ 沒有任何預設場地 —— 需新增測試場地`);
-    if (k === 'underpass') {   // 沒場地時把候選一起印出來:離兵線多遠、規劃有沒有落空,決定要不要重烤兵線
+    // 沒場地時把候選一起印出來:離兵線多遠、規劃有沒有落空,決定要不要重烤兵線 / 換錨點
+    if (k === 'underpass') {
       const cand = results.filter((r) => r.underCand).map((r) => `${r.id}(${r.underCand.name} ${r.underCand.len}m 離兵線 ${r.underCand.d}m)`);
       const lost = results.filter((r) => r.flatTunnel).map((r) => `${r.id}(${r.flatTunnel.name})`);
       console.log(`      bbox 內建得出來的地下道:${cand.join('、') || '(無)'}`);
       console.log(`      規劃落空(仍是平街):${lost.join('、') || '(無)'}`);
+    }
+    if (k === 'bridge' || k === 'waterBridge') {
+      const slot = k === 'bridge' ? 'landBridgeCand' : 'waterBridgeCand';
+      const cand = results.filter((r) => r[slot]).map((r) => `${r.id}(${r[slot].name} ${r[slot].len}m 離兵線 ${r[slot].d}m)`);
+      console.log(`      bbox 內的候選橋:${cand.join('、') || '(無)'}`);
     }
     continue;
   }
@@ -968,21 +1009,26 @@ for (const [k, label] of SCEN) {
   pick[k] = hit[0].id;
   console.log(`  ${label}:${hit[0].id}(${hit[0].name})　其他:${hit.slice(1).map((r) => r.id).join('、') || '—'}`);
 }
-// ---- venues.js 的 scen 標記 MUST 對得上實測(標記是給玩家看的提示,不能是臆測)----
+// ---- venues.js 的 scen / relief 標記 MUST 對得上實測(標記是給玩家看的提示,不能是臆測)----
+// relief(側翼峰值)與 scen 同一條規則:2026-08-02 起場地選單會用它推導「起伏」分級
+// (venues.js reliefTier),手寫或忘了更新都會讓玩家在選單看到與地圖不符的地形說明。
 // 只在「整批掃描且該場地確實取得圖資」時比對:--only= 或 Overpass 掛掉時無從判定漏標。
 let tagBad = 0;
 if (!ONLY.length && !skipped) {
-  console.log('\nvenues.js scen 標記複驗:');
+  console.log('\nvenues.js scen / relief 標記複驗:');
   for (const r of results) {
     if (r.error) { console.log(`  ⚠️ ${r.id}:${r.error} —— 無法複驗標記`); continue; }
     const want = SCEN.map(([k]) => k).filter((k) => !KNOWN_GAP.has(k) && r.hits[k]);
-    const have = VENUES.find((v) => v.id === r.id).scen || [];
+    const v = VENUES.find((x) => x.id === r.id);
+    const have = v.scen || [];
     const extra = have.filter((k) => !want.includes(k)), miss = want.filter((k) => !have.includes(k));
-    if (!extra.length && !miss.length) continue;
+    const reliefBad = r.peakSide != null && v.relief !== r.peakSide;
+    if (!extra.length && !miss.length && !reliefBad) continue;
     tagBad++;
     console.log(`  ❌ ${r.id}:${extra.length ? `多標 ${extra.join('、')}` : ''}`
       + `${extra.length && miss.length ? ' / ' : ''}${miss.length ? `漏標 ${miss.join('、')}` : ''}`
-      + `　實測 = [${want.join(', ')}]`);
+      + `${reliefBad ? `${extra.length || miss.length ? ' / ' : ''}relief ${v.relief ?? '(未標)'} ≠ 實測 ${r.peakSide}` : ''}`
+      + `　實測 = [${want.join(', ')}] relief ${r.peakSide}`);
   }
   if (!tagBad) console.log('  ✓ 全數相符');
 }

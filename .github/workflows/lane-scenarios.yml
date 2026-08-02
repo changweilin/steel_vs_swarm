@@ -80,7 +80,7 @@ jobs:
 
       - name: 掃描結果 JSON
         if: always()
-        run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'',r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.hits2Water?'跨水橋='+JSON.stringify(r.hits2Water):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
+        run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'','relief='+r.peakSide,r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.landBridgeCand?'③候選陸橋='+JSON.stringify(r.landBridgeCand):'',r.waterBridgeCand?'⑨候選水橋='+JSON.stringify(r.waterBridgeCand):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
 
       # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道;④ 明隧道候選同步體檢(附定錨座標)。
       - name: 隧道候選探測
