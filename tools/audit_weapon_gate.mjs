@@ -37,7 +37,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
-  shotV0, flightCapS, SEEK, seekTurn,
+  shotV0, shotFlightS, flightCapS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
@@ -590,8 +590,31 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
   }
 
   // ---- ② 著彈才回報 ⇒ 擊發資格的閘門要能把時間軸換算回擊發時刻 ----
-  ok(/export const flightCapS = \(def\) =>\s*\(def \? def\.range \* altRangeMax\(\) \* RANGE_TOL \/ shotV0\(def\) : 0\);/.test(D),
-    'flightCapS 原文 = 落點閘門上界 ÷ shotV0(三個因子全推導,MUST NOT 手寫秒數)');
+  ok(/export const flightCapS = \(def\) =>\s*\(def \? shotFlightS\(def, def\.range \* altRangeMax\(\) \* RANGE_TOL, -altDhMax\(\)\) : 0\);/.test(D),
+    'flightCapS 原文 = shotFlightS(落點閘門上界, 高差機制上限)(四個因子全推導,MUST NOT 手寫秒數)');
+  ok(/export const altDhMax = \(\) => altTier\(\) \* ALTITUDE\.TIERS;/.test(D),
+    'altDhMax 由 altScale 的封頂推導(俯射餘裕 MUST NOT 手寫公尺數)');
+  // 飛行時間是**唯一縫**:heroBurst 的 back 與 flightCapS 都 MUST 經 shotFlightS,
+  // MUST NOT 任一端自己拿 shotV0 除一次 —— 拋物線自 2026-08-02 改 45° 反解初速後,
+  // `d / shotV0` 低估 2.2 倍(舊制的病灶,見下方 ②-b 的行為直測)。
+  ok((D.match(/shotFlightS/g) || []).length === 2 && !/shotV0\(/.test(S),
+    'shotFlightS 是飛行時間唯一縫(data.js 只有定義 + flightCapS 消費;sim.js 全檔不再自己除 shotV0)');
+  {
+    // ②-b 45° 拋投的飛行時間 MUST 由 45° 解推導(T = √(2d/g)),而不是 d / 砲口初速。
+    // 反向驗證:把 shotFlightS 換回 `d / shotV0(def)`,這一條與下方「收鏡仍結算」都 MUST 紅字。
+    const lob = heavyOf('lob').def;
+    const d = lob.range;
+    const t45 = Math.sqrt(2 * d / BALLISTIC.G);
+    ok(Math.abs(shotFlightS(lob, d) - t45) < 1e-9,
+      `拋物線飛行時間 = √(2d/g)(${t45.toFixed(2)}s),與 _lob45Vel 的 45° 解同源`);
+    ok(shotFlightS(lob, d) > d / shotV0(lob) * 2,
+      `舊制 d/shotV0 低估 ${(t45 / (d / shotV0(lob))).toFixed(1)} 倍 —— 這就是「榴彈只有開局有傷害」的病灶`);
+    ok(flightCapS(lob) > shotFlightS(lob, d),
+      '寬容窗嚴格長於滿射程的真實飛行時間(偏差朝「不擋」,原則 6)');
+    const fnf = heavyOf('fnf').def;
+    ok(Math.abs(shotFlightS(fnf, fnf.range) - fnf.range / shotV0(fnf)) < 1e-9,
+      '非拋射彈道維持等速直線近似(逐位元同舊制)');
+  }
   {
     const slow = Object.keys(CHARACTERS)
       .map((id) => heroWeapon(id, 'heavy', 1))
@@ -608,8 +631,8 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       '飛行時間上限單一縫:射後不理吃 chaseCapS(追擊)、其餘吃 flightCapS(推導不手寫)');
     ok(/this\.t - \(h\.aimOffAt \?\? -Infinity\) > cap/.test(burst),
       'heroBurst 的需瞄準閘門給滿一整段飛行時間的寬容(吃同一個 cap)');
-    ok(/const back = Math\.min\(dImp \/ shotV0\(wp\.def\), cap\);/.test(burst),
-      'heroBurst 由落點距離反推擊發時刻(上限仍是 cap,不因客戶端謊報而失守)');
+    ok(/const back = Math\.min\(shotFlightS\(wp\.def, dImp\), cap\);/.test(burst),
+      'heroBurst 由落點距離經 shotFlightS 反推擊發時刻(上限仍是 cap,不因客戶端謊報而失守)');
     ok(/this\._gateFire\(h, wp\.id, wp\.def, true, back\)/.test(burst), '擊發閘門吃回推時刻');
     const gate = methodSrc('_gateFire', S);
     ok((gate.match(/now - back \+ this\._reloadT/g) || []).length === 2,
@@ -669,6 +692,41 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       sim.heroBurst('p_f1', t2.x, t2.z, 0, 0);
       ok(t2.hp < t2.maxHp,
         `裝填後打更近的目標不再被靜默丟棄(遠彈飛 ${fFar.toFixed(2)}s / 近彈 ${fNear.toFixed(2)}s)`); }
+    // ---- 拋物線版的同兩條(2026-08-03 使用者回報「榴彈投擲只有遊戲一開始有傷害」)----
+    // 45° 拋投的滿射程航程近 6 秒,而舊制的窗口是 `d / shotV0` 除出來的 1.7 秒 ⇒ 這兩條在
+    // 舊制下 100% 紅字。反向驗證:把 shotFlightS 的 lob 分支換回 `d / shotV0(def)` 即復現。
+    const lobId = heavyOf('lob', 'SWARM').id;
+    // 飛行時間**獨立於受測函式**推導:直接照 game._lob45Vel 的 45° 解算(v0 = √(g·d),
+    // 水平分量 v0/√2 ⇒ T = √(2d/g))。拿 shotFlightS 自己餵自己會讓這兩條變成恆真
+    // ——「把 lob 分支改回 d/shotV0」時測試也跟著縮短時間軸,壞版照樣全綠。
+    const lob45S = (d) => Math.sqrt(2 * d / BALLISTIC.G);
+    // ①-c 開完砲右鍵收鏡去移動(最自然的操作)⇒ 那一發 MUST 照樣結算
+    { const { sim, wp, t } = mk(lobId);
+      const fly = lob45S(wp.def.range * 0.8);
+      sim.heroAim('p_f1', false);
+      sim.t += fly;
+      sim.heroBurst('p_f1', t.x, t.z, 0, 0);
+      ok(t.hp < t.maxHp,
+        `45° 拋投飛 ${fly.toFixed(2)}s 才著彈,收鏡後仍結算`
+        + `(舊窗口只有 ${(wp.def.range * 0.8 / shotV0(wp.def)).toFixed(2)}s ⇒ 整輪靜默丟棄)`); }
+    // ②-b 這一輪打遠、下一輪打近:舊制伺服器的裝填窗比客戶端晚 4 秒 ⇒ 近的那一輪整輪被吃掉
+    { const { sim, h, wp } = mk(lobId);
+      const far = wp.def.range * 0.9, near = wp.def.range * 0.2;
+      const fFar = lob45S(far), fNear = lob45S(near);
+      let lastLaunch = 0;
+      for (let i = 0; i < wp.def.mag; i++) {
+        lastLaunch = sim.t;
+        sim.t += fFar;
+        sim.heroBurst('p_f1', h.x + far, h.z, 0, 0);
+        sim.t += Math.max(0, 1 / wp.def.rate - fFar);
+      }
+      ok(h.ammo.heavy === 0 && h.reloadUntil.heavy > 0, '測試前置:拋物線彈夾打空並進入裝填');
+      const t2 = sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+        x: h.x + near, z: h.z, y: 0, hp: 9000, maxHp: 9000, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+      sim.t = lastLaunch + sim._reloadT(h, wp.def) + fNear;   // 客戶端一裝填完就打近目標
+      sim.heroBurst('p_f1', t2.x, t2.z, 0, 0);
+      ok(t2.hp < t2.maxHp,
+        `拋物線裝填後打更近的目標不再整輪丟棄(遠彈飛 ${fFar.toFixed(2)}s / 近彈 ${fNear.toFixed(2)}s)`); }
   }
 
   // ---- ③ 射後不理真的會追蹤:MUST NOT 只認伺服器複驗過的 _lockId ----
@@ -1016,8 +1074,11 @@ sec('Ⅸ 射後不理:鎖定後持續追擊不受射程影響(但只能射程內
 //   ① **只能在射程內鎖定** —— 客戶端 `_tickLock` 以 `_effRange` 誠實夾回、伺服器 `heroLock`
 //      再驗一次射程 / 迷霧 / LOS。沒有這一半,規則就等於「無限射程」。
 //   ② **鎖定之後不受射程影響** —— 彈道的射程包絡整條讓位給追擊燃料(`chaseCapS`,推導不手寫),
-//      伺服器的落點閘門改綁**鎖定目標**而不是射手。
-// 防作弊沒有變鬆:沒有鎖定就沒有豁免;有鎖定也只能炸在那個目標的爆風核心帶內。
+//      伺服器的落點閘門**追加**一條綁鎖定目標的放行。
+// 防作弊沒有變鬆:沒有鎖定就沒有豁免;有鎖定也只有炸在那個目標的爆風核心帶內才豁免。
+// 2026-08-03 使用者定案「中途爆炸也要有傷害」:那條放行是**加分題不是替代題** —— 彈頭在半路
+// 撞到小兵/建物/地形就地引爆,爆點當然不在鎖定目標身上,舊制的 `if (lockT) … else` 把它連同
+// 一般落點閘門一起判掉 ⇒ 前線一有東西擋路,整發飛彈靜默丟包(開局空曠打得到、兵線鋪開後打不到)。
 const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代號:資料改了稽核仍成立)
 {
   ok(Math.abs(chaseCapS(FNF.def) - flightCapS(FNF.def) * SEEK.CHASE_F) < 1e-12,
@@ -1067,6 +1128,31 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
   ok(shoot(farOut, true), `${farOut}m 但**有伺服器複驗過的鎖定** ⇒ 照樣結算(鎖定後不受射程影響)`);
   ok(!shoot(farOut, true, blastCoreR(FNF.def) * 8),
     '有鎖定但炸在遠離鎖定目標的地方 ⇒ 仍丟棄(豁免只放給「炸在那個目標身上」,MUST NOT 變成隨便一個遠點)');
+  // 中途爆炸(2026-08-03 使用者定案):有鎖定、但彈頭在半路撞到別的東西就地引爆 ——
+  // 爆點離鎖定目標很遠卻仍在**一般落點閘門內** ⇒ MUST 退回一般閘門照常結算。
+  // 反向驗證:把 heroBurst 的 `chased` 改回 `if (lockT) … else`,這一條 MUST 立刻紅字。
+  {
+    const near = Math.round(FNF.def.range * 0.3);
+    const t = sim._add({ kind: 'soldier', side: foe, x: 700, z: 700 + FNF.def.range * 0.8, y: 0, hp: 999999, maxHp: 999999 });
+    const mid = sim._add({ kind: 'soldier', side: foe, x: 700, z: 700 + near, y: 0, hp: 999999, maxHp: 999999 });
+    sim.t += 60;
+    h.ammo.heavy = FNF.def.mag; h.reloadUntil.heavy = 0; h.fireAt.heavy = -99; h.mp = h.maxMp; h.aiming = true;
+    const sq3 = sim.squads.get('p_fnf');
+    sq3.lock = t.id; sq3.lockAt = sim.t;                 // 鎖定遠處目標
+    const hp3 = mid.hp;
+    sim.heroBurst('p_fnf', mid.x, mid.z, 0, 0);          // 卻在半路上的小兵身上引爆
+    ok(mid.hp < hp3,
+      `有鎖定但中途在 ${near}m 處引爆(離鎖定目標 ${(FNF.def.range * 0.8 - near).toFixed(0)}m)⇒ 退回一般閘門照常結算`);
+    sim.ents.delete(t.id); sim.ents.delete(mid.id);
+  }
+  {
+    const burst = methodSrc('heroBurst', S);
+    ok(/const chased = !!lockT\s*&&\s*this\._surfD3\(dist2d\(lockT\.x, lockT\.z, x, z\), lockT\) <= blastCoreR\(wp\.def\);/.test(burst),
+      '追擊放行是獨立旗標 chased(MUST NOT 退回 `if (lockT) … else` 的替代語意)');
+    ok(/if \(!chased && dImp > impCap\) return;/.test(burst)
+      && /if \(!chased && dist2d\(b\.x, b\.z, x, z\) > impCap\) continue;/.test(burst),
+      '射手與僚機吃同一個 chased ⇒ 一般落點閘門對「沒炸在鎖定目標上」的那一發仍原封不動生效');
+  }
   // 鎖定過期 ⇒ 退回一般落點閘門
   const t2 = sim._add({ kind: 'soldier', side: foe, x: 700, z: 700 + farOut, y: 0, hp: 999999, maxHp: 999999 });
   sim.t += 60;

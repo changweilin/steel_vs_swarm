@@ -11,7 +11,7 @@ import {
   hyperClimbVx, hyperArcY,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, shieldSplit,
-  aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotV0, blastCoreR,
+  aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, blastCoreR,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
@@ -1905,10 +1905,12 @@ export class BattleSim {
     // 巡飛彈初速 90m/s、滿射程飛 3 秒以上:合法離架後玩家右鍵收鏡(很自然:開完砲就要移動),
     // 這一發會在天上被靜默丟棄 = 使用者回報的「射後不理/雷射導引常常光暈亮著卻沒命中」。
     // 寬容窗 = 這把武器的最長飛行時間(data.js flightCapS,推導不手寫);超過才算「收鏡後才開砲」。
+    // 45° 拋投的榴彈滿射程要飛近 6 秒(不是 shotV0 除出來的 1.7 秒)—— 窗口一短,玩家開完砲
+    // 收鏡去移動,那一整輪就在天上被丟掉(2026-08-03 使用者回報「只有遊戲一開始有傷害」)。
     // 射後不理(2026-08-01 使用者定案)「鎖定之後持續追擊,不受射程影響 —— 但只能在射程內鎖定」:
-    // 落點閘門因此改綁**鎖定目標**而不是射手。「射程內才鎖得到」由 heroLock 把關(它自己驗
-    // 射程 / 迷霧 / LOS 三道),之後彈頭飛多遠都算數;鎖定過期/目標陣亡 ⇒ 退回一般落點閘門。
-    // 防作弊沒有變鬆:沒有鎖定就沒有豁免,有鎖定也只能炸在**那個目標身上**(核心帶內),
+    // 落點閘門因此**追加**一條綁鎖定目標的放行。「射程內才鎖得到」由 heroLock 把關(它自己驗
+    // 射程 / 迷霧 / LOS 三道),之後彈頭飛多遠都算數;鎖定過期/目標陣亡 ⇒ 只剩一般落點閘門。
+    // 防作弊沒有變鬆:沒有鎖定就沒有豁免,有鎖定也只有炸在**那個目標身上**(核心帶內)才豁免,
     // MUST NOT 放寬成「有鎖定就隨便一個遠點都收」。
     const fnf = trajClass(wp.def) === 'fnf';
     const lockT = fnf ? this._lockedTarget(this.squads.get(pid)) : null;
@@ -1924,13 +1926,20 @@ export class BattleSim {
     //     = 高地上合法的那一發被驗證後靜默丟棄:玩家看到砲彈在敵人身上炸開、傷害卻是 0
     //     (2026-07-30 使用者回報「榴彈類常常光暈亮著卻沒命中」的伺服器側那一半)。
     const impCap = wp.def.range * altRangeMax() * RANGE_TOL;
-    if (lockT) {
-      // 追擊中:落點 MUST 落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
-      if (this._surfD3(dist2d(lockT.x, lockT.z, x, z), lockT) > blastCoreR(wp.def)) return;
-    } else if (dImp > impCap) return;
-    // 這一發其實是「dImp ÷ 初速」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
-    // dImp 已被 impCap 夾住 ⇒ back 天然 ≤ flightCapS,不必再另設上限(客戶端謊報距離只會先撞超程閘)。
-    const back = Math.min(dImp / shotV0(wp.def), cap);
+    // 追擊命中:落點落在鎖定目標的爆風核心帶內(量到近側表面,與 _blast/_reachable 同一把尺)
+    // ⇒ 射程包絡整條讓位給追擊燃料。**這是一道加分題,不是替代題**(2026-08-03 使用者定案
+    // 「中途爆炸也要有傷害」):彈頭在半路撞到小兵/建物/地形就地引爆時,爆點當然不在鎖定
+    // 目標身上 —— 舊制的 `if (lockT) … else` 把它連同一般落點閘門一起判掉,前線一有東西擋路
+    // 整發飛彈就靜默丟包(開局空曠打得到、兵線一鋪開就再也打不到)。沒炸在鎖定目標上就退回
+    // 一般閘門照常結算;防作弊沒有變鬆 —— impCap 那條原封不動,遠距落點仍要有鎖定才收。
+    const chased = !!lockT
+      && this._surfD3(dist2d(lockT.x, lockT.z, x, z), lockT) <= blastCoreR(wp.def);
+    if (!chased && dImp > impCap) return;
+    // 這一發其實是「飛行時間」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
+    // 飛行時間只准經 `shotFlightS` 這個縫(拋物線是 45° 反解初速,MUST NOT 自己拿 shotV0 除一次:
+    // 那會低估 2.2 倍 ⇒ 伺服器的裝填窗比客戶端晚 4 秒)。dImp 已被 impCap 夾住 ⇒ back 天然 ≤ cap,
+    // 保留 Math.min 只為擋住追擊落點(chased 那條不吃 impCap)。
+    const back = Math.min(shotFlightS(wp.def, dImp), cap);
     if (!this._gateFire(h, wp.id, wp.def, true, back)) return;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
@@ -1951,7 +1960,7 @@ export class BattleSim {
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
-      if (!lockT && dist2d(b.x, b.z, x, z) > impCap) continue;   // 僚機吃同一道閘門(同一縫;追擊中由 lockT 那道取代)
+      if (!chased && dist2d(b.x, b.z, x, z) > impCap) continue;   // 僚機吃同一道閘門(同一縫;追擊命中才豁免)
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }

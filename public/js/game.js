@@ -4344,8 +4344,10 @@ export class BattleClient {
   /** 彈道初速:榴彈/火箭(launcher)拋物線武器降速(→ BALLISTIC.LAUNCH_MV),讓拋物線軌跡明顯;
    *  其餘武器用真實 mv。純客戶端視覺(伺服器不模擬彈道),與瞄準虛線 _updateArcGuide 同一組值。
    *  aa = 對空彈射模式(見 _updateAaMode):改用 BALLISTIC.AA_MV,彈道拉成高速近直線。
-   *  夾制規則本身住 `data.js shotV0()`(唯一縫)—— 伺服器 `flightCapS` 把著彈時刻換算回擊發
-   *  時刻時吃的是同一份初速,兩端各寫一份 = 拋射武器的飛行時間差 6 倍。 */
+   *  夾制規則本身住 `data.js shotV0()`(唯一縫)。**對地拋投的實際初速不是這個值** —— 45°
+   *  解由 `_lob45Vel` 反解(這裡只當它的上限 vmax);伺服器把著彈時刻換算回擊發時刻要的是
+   *  「飛多久」而不是「出膛多快」,那條縫是 `data.js shotFlightS()`(拋物線走 45° 解,
+   *  拿本值除一次會低估 2 倍以上 ⇒ 榴彈整輪靜默丟包)。 */
   _shotV0(def, aa = false) {
     return shotV0(def, aa);
   }
