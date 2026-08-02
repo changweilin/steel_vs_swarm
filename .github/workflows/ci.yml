@@ -36,6 +36,7 @@ jobs:
           node tools/audit_object_joints.mjs
           node tools/audit_lance_hit.mjs
           node tools/audit_weapon_gate.mjs
+          node tools/audit_aoe_trim.mjs
           node tools/audit_open_tunnel.mjs
           node tools/audit_underpass.mjs
           node tools/audit_climb.mjs
@@ -51,7 +52,7 @@ jobs:
           node tools/audit_bot_vision.mjs
           node tools/audit_escort_form.mjs
 
-      - name: 平衡四不變式
+      - name: 平衡七不變式
         run: npm run bal
 
       # `npm test` 只是 WS client,**不會自己啟動伺服器**(見 /CLAUDE.md §5 測試標準流程)
