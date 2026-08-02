@@ -403,6 +403,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--railW); }
 .map-rules { font-size: 11px; color: var(--dim); line-height: 1.6; border-left: 2px solid var(--railS-dark); padding-left: 8px; }
 .map-status { font-size: 13px; line-height: 1.6; min-height: 40px; font-family: var(--mono); }
 .map-status b { color: var(--railW); }
+/* 選定場地後的路線/地形說明(venueBrief 攤平成一行,窄屏自己折行;A20:MUST NOT 改成直排) */
+.venue-desc { margin-top: 4px; font-size: 11px; line-height: 1.6; color: var(--dim); word-break: break-word; }
 .pbar {
   height: 8px; background: rgba(4, 7, 11, 0.9); border: 1px solid var(--line); border-radius: 0; overflow: hidden;
 }

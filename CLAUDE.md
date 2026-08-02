@@ -256,7 +256,8 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 武裝掛點/槍口 | `audit_muzzle.mjs`(32 英雄 + NPC 四陣營) |
 | `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 建 `BattleSim` 數 `sim.camps.length`(L1 2/2、L2 4/4、L3 6/6) |
 | `VENUES[].ll` / `MAPGEO` 尺寸常數 | `node tools/bake_venue_lanes.mjs` 重烤 `venueLanes.js`(外網,㋓) |
-| 場地場景標記(`VENUES[].scen` 系) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含 |
+| 場地場景標記(`VENUES[].scen`/`relief` 系・`SCEN_LABEL`・`spansWater`) | `audit_lane_scenarios.mjs`:標記 MUST 由實測產生(多標/漏標/`relief` 對不上皆紅);㋓ 走 Actions「兵線場景掃描」,`ci.yml` 刻意不含。**③ 陸上高架橋 / ⑨ 水上高架橋分流只有 `spansWater()` 一支**(scanVenue 與 `--probe` 同吃)—— 兩份實作會出現「探測說陸橋、掃描說水橋」這種只在特定場地現形的分歧 |
+| 場地選單的路線/地形說明(`venues.js venueRoute`/`reliefTier`/`RELIEF_TIERS`/`venueTip`/`venueBrief`・`main.js renderVenues`/`renderVenuesOpen`/`syncVenueTips`/兩處狀態列・`.venue-desc`) | `audit_ui_layout.mjs`(㋒ 純表現層)+ 路線摘要 MUST 全由 `venueConfig()` + `data.js laneTacticsXZ()` 推導(手寫長度/彎曲度 = 重烤兵線後靜默分家)、起伏門檻 MUST 是 `altTier()` 的倍數(與 ⑧ 判定同一把尺)+ 說明 MUST 走 `tip.js attachTip`,**MUST NOT 退回 `title=`**(觸控無 hover ⇒ 手機上整份說明消失)+ 換人數 MUST 重掛(摘要吃人數)+ 真機冒煙(滑鼠移上/觸控長按看得到、選定後狀態列同步、切人數數字跟著變) |
 | `venueLanes.js` 重烤 / `TOWER_*` / `tower.range` | `audit_map_rules.mjs`(#4)+ `audit_lane_sep.mjs` + `audit_lane_grade_sep.mjs`(#5 洞內塔 ≥20% 射程涵蓋洞口外) |
 | 兵線導航規則(`UTURN_MAX_DEG`・`TURN_ACCUM_MAX_DEG`/三 audit/bake 閘門) | `audit_lane_navigation.mjs`(35 項);規則①③生效於既有場地需重烤(㋓) |
 | 地下道(`underpassPlan`/`tunFloorAt`/`UND.*`/引道 `cut`・`open` 系)/ 結構資格閘(`strucTunnel`) | `audit_underpass.mjs`(138 項;**山體隧道 MUST 逐位元不變**、引道回地表、縱坡 ≤ GRADE_MAX、四放棄條件、引道垂直路塹 + open 段消費端閘門、Ⅵ 資格閘:人行/室內 tunnel 不成洞且去重候選同閘、Ⅶ 幾何側壁:覆蓋段/圍裙/深路塹跨出必擋・道路兩端與淺端放行・山體無 by 不變、Ⅱ-d 明隧道誤判雙防線:碗緣高於路面/碗緣是自家開挖 ⇒ 連 under=false 都不判,天然峽谷才是對照組) |

@@ -75,8 +75,10 @@ jobs:
           node tools/audit_lane_sep.mjs
           node tools/audit_lane_grade_sep.mjs
 
+      # `always()`:規則稽核紅字時這一步照跑 —— 烤一次兵線是分鐘級的 Overpass 往返,
+      # 稽核擋下來就把結果整份丟掉的話,下一輪連「上一次烤到什麼」都看不到(2026-08-02 實測)。
       - name: 重烤差異
-        if: ${{ steps.req.outputs.go == '1' }}
+        if: ${{ always() && steps.req.outputs.go == '1' }}
         run: git --no-pager diff --stat
 
       - name: 提交回觸發分支
@@ -90,8 +92,9 @@ jobs:
             git push
           }
 
+      # 同上:稽核紅字時 artifact 也要留(下一輪可直接比對,不必重烤)
       - uses: actions/upload-artifact@v4
-        if: ${{ steps.req.outputs.go == '1' }}
+        if: ${{ always() && steps.req.outputs.go == '1' }}
         with:
           name: bake-lanes
           path: public/js/venueLanes.js

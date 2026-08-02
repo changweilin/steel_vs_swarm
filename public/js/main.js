@@ -27,7 +27,7 @@ import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
 import { CharPreview } from './charPreview.js';
-import { VENUES, venueTip, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
+import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
@@ -360,6 +360,7 @@ function setTeamSize(n) {
   $('saveFavBtn').disabled = true;
   for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfo();
+  syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
   if (app.venueSel) selectVenue(app.venueSel);
 }
@@ -370,6 +371,8 @@ function updateTsInfo() {
   $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`;
 }
 
+// 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);
+// MUST NOT 退回 `title=`(手機沒有 hover)。摘要吃當下人數 ⇒ 換人數要重掛(見 syncVenueTips)。
 function renderVenues() {
   const grid = $('venueGrid');
   grid.innerHTML = '';
@@ -377,9 +380,20 @@ function renderVenues() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    b.title = venueTip(v);
+    attachTip(b, venueTip(v, app.teamSize));
     b.onclick = () => selectVenue(v);
     grid.appendChild(b);
+  }
+}
+
+/** 換人數 ⇒ 兵線條數/長度/彎曲度整組變 ⇒ 兩處場地清單的說明 MUST 跟著重掛(唯一出口) */
+function syncVenueTips() {
+  for (const gid of ['venueGrid', 'venueGridOpen']) {
+    const grid = $(gid);
+    if (!grid) continue;
+    for (const [i, b] of [...grid.children].entries()) {
+      if (VENUES[i]) attachTip(b, venueTip(VENUES[i], app.teamSize));
+    }
   }
 }
 
@@ -393,7 +407,8 @@ function selectVenue(v) {
   savePrefs({ lastVenueId: v.id });
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
-    `(想用真實道路兵線,可改在地圖上手動點選錨點)`;
+    `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
+    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('mapProgressBar').style.width = '100%';
   $('saveFavBtn').disabled = false;
 }
@@ -473,6 +488,7 @@ function setTeamSizeOpen(n) {
   savePrefs({ teamSize: n });
   for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
   updateTsInfoOpen();
+  syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   if (app.venueSelOpen) {
     // 預設場地選好時,換人數直接即時重算(確定性幾何,瞬間完成)
     selectVenueOpen(app.venueSelOpen);
@@ -498,7 +514,7 @@ function renderVenuesOpen() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    b.title = venueTip(v);
+    attachTip(b, venueTip(v, app.teamSize));
     b.onclick = () => selectVenueOpen(v);
     grid.appendChild(b);
   }
@@ -516,7 +532,8 @@ function selectVenueOpen(v) {
   if (idx >= 0 && $('venueGridOpen').children[idx]) $('venueGridOpen').children[idx].classList.add('on');
   for (const el of $('favGrid').children) el.classList.remove('on');
   $('openRoomStatus').innerHTML =
-    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize} ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`;
+    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize} ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`
+    + `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
   $('createRoomBtn').disabled = false;
 }
 
