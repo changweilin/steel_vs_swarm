@@ -9,7 +9,7 @@ import {
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperApex, hyperRange, hyperDiveSpd,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
-  dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, grenadeBuildingMul,
+  dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotV0, blastCoreR,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
@@ -1561,11 +1561,12 @@ export class BattleSim {
     h.reloadUntil[wp.id] = this.t + this._reloadT(h, wp.def);
   }
 
-  /** 英雄傷害倍率(招式增益 × 榴彈對建築加成;火力成長走武器面向 lw/hw 的階級數值)。
-   *  2026-08-01:巨砲移除後這裡**恆無任何情境倍率**;MUST NOT 為新招式在此加特例(招式傷害走 hyperBlast)。 */
+  /** 英雄傷害倍率(目標類別剋制 × 招式增益;火力成長走武器面向 lw/hw 的階級數值)。
+   *  2026-08-01:巨砲移除後這裡**恆無任何情境倍率**;MUST NOT 為新招式在此加特例(招式傷害走 hyperBlast)。
+   *  2026-08-02:對建築的額外加成(舊 grenadeBuildingMul)已整組移除,MUST NOT 復辟。
+   *  護盾/裝甲分軌剋制**不在這裡** —— 那要看目標當下的護盾水位,只能在 _damage 分層時結算。 */
   _heroDmg(h, def, targetKind) {
-    return def.dmg * vsMult(def, targetKind) * grenadeBuildingMul(def, targetKind)
-      * this._buffMul(h, 'dmg');
+    return def.dmg * vsMult(def, targetKind) * this._buffMul(h, 'dmg');
   }
 
   /** 空中判定:無人機/直升機/集束轟炸機/護衛機/極音速飛彈恆算飛行;其餘以高度 ≥ AA_MIN_ALT 論 */
@@ -1779,7 +1780,7 @@ export class BattleSim {
       dmg = this._rollCrit(h, wp.def, dmg, t);
     }
     this._applyHitEmp(h, wp.def, t);
-    this._damage(t, dmg, h, wp.def.pen);
+    this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
     this._echo(h, t, wp.def);
   }
 
@@ -1804,7 +1805,7 @@ export class BattleSim {
       if (def.id === 'light' && this._dodges(t, b)) continue;   // 閃避:僚機這一發也被閃開
       const dmg = this._rollCrit(b, def, this._heroDmg(b, def, t.kind) * dmgFalloff(def, d3), t);
       this._applyHitEmp(b, def, t);
-      this._damage(t, dmg, b, def.pen);
+      this._damage(t, dmg, b, def.pen, 0, def);
     }
   }
 
@@ -1864,7 +1865,7 @@ export class BattleSim {
     }
     const dmg = this._rollCrit(h, wp.def, this._heroDmg(h, wp.def, t.kind) * dmgFalloff(wp.def, d3), t);
     this._applyHitEmp(h, wp.def, t);
-    this._damage(t, dmg, h, wp.def.pen);
+    this._damage(t, dmg, h, wp.def.pen, 0, wp.def);
     // 直線貫穿(line 類重武器):bot 也吃同一條範圍規則 —— 主目標之後的「順路」目標依序衰減。
     // 主目標本身已於上方全額結算,故這裡跳過它(貫穿序 i 仍沿用整條射線的名次)。
     if (aoeClass(wp.def) === 'line') {
@@ -1878,7 +1879,7 @@ export class BattleSim {
         if (k.t === t) continue;
         const kd = this._heroDmg(h, wp.def, k.t.kind) * dmgFalloff(wp.def, k.d3) * offAxisFalloff(k.off) * LANCE.DECAY ** i;
         this._applyHitEmp(h, wp.def, k.t);
-        this._damage(k.t, kd, h, wp.def.pen);
+        this._damage(k.t, kd, h, wp.def.pen, 0, wp.def);
       }
     }
     this._echo(h, t, wp.def);
@@ -2018,7 +2019,7 @@ export class BattleSim {
         const offF = d2 > 8
           ? offAxisFalloff(Math.acos(Math.min(1, Math.max(-1, (tx * dx + tz * dz) / d2))) / ((wp.def.arc || 15) * Math.PI / 180))
           : 1;
-        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen);
+        this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, wp.def);
       }
     }
     this.events.push({ e: 'plasma', pid, side: h.side, x: h.x, z: h.z, y: h.y || 0,
@@ -2134,7 +2135,7 @@ export class BattleSim {
         const dmg = this._rollCrit(b, wp.def,
           this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offAxisFalloff(off) * LANCE.DECAY ** i, t);
         this._applyHitEmp(b, wp.def, t);
-        this._damage(t, dmg, b, wp.def.pen);
+        this._damage(t, dmg, b, wp.def.pen, 0, wp.def);
       }
     }
     // 來襲防空飛彈也在圓柱內被打穿(取代 hitMissile 那條單體路徑 —— line 類一發只過一次
@@ -2765,7 +2766,10 @@ export class BattleSim {
         const ix = x + Math.cos(ang) * rr, iz = z + Math.sin(ang) * rr;
         this.events.push({ e: 'boom', x: ix, z: iz, r: A.r, side: h.side });
         // 空襲自天而降 → 爆點恆為地面層(lev 0):砸在隧道覆蓋段上方不會隔著山體炸到洞內
-        this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen }, ix, iz, 0, 0);
+        // 重建的 def MUST 帶齊剋制欄位:漏抄 vsSp/vsHp/spPierce 的話,招式版與武器版
+        // 會對同一個護盾軸有兩種行為(A34 的第二份拆分邏輯,只是換了個地方漏)。
+        this._blast(h, { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen,
+          vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce }, ix, iz, 0, 0);
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
@@ -2924,7 +2928,7 @@ export class BattleSim {
       const dh = Math.max(0, Math.hypot(x - t.x, z - t.z) - hitR(t));
       const d = Math.hypot(dh, this._bodyDy(t, y));
       const f = blastFalloff(def.r, d);
-      if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, same ? null : h, def.pen);
+      if (f > 0) this._damage(t, this._heroDmg(h, def, t.kind) * f, same ? null : h, def.pen, 0, def);
     }
   }
 
@@ -3002,7 +3006,9 @@ export class BattleSim {
   }
 
   // ---------- 傷害 / 擊殺(FPS × DOTA:護盾 → 裝甲,護甲值曲線減免,破甲抵銷)----------
-  _damage(t, dmg, by, pen = 0, floorHp = 0) {
+  /** wd = 造成這次傷害的武器/招式 def(護盾分軌剋制 vsSp/vsHp/spPierce 的來源,見 data.shieldSplit)。
+   *  環境傷害(沼澤/地雷/火場)與塔 SAM 一律不帶 ⇒ 中性參數 = 逐位元同舊制。 */
+  _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
@@ -3024,20 +3030,23 @@ export class BattleSim {
     if (t.hero) {
       dmg *= this._buffMul(t, 'dmgTaken');   // 複合裝甲詞綴 / 護盾類招式
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
-      // 第一層護盾先吃(能量護盾不吃護甲減免)
-      const toShield = Math.min(t.sp || 0, dmg);
+      // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
+      // 溢出進裝甲」)。護盾層恆不吃護甲減免 —— 能量護盾與裝甲板是兩套防護,這一點沒有改。
+      const { toSp: toShield, toHp } = shieldSplit(wd, dmg, t.sp || 0);
       t.sp = (t.sp || 0) - toShield;
-      let rem = dmg - toShield;
-      if (rem <= 0) {
+      if (toHp <= 0) {
         this._botAirSink(t, toShield); this._hurtLog(t, by, toShield);
         this._dmgOut(by, t, toShield); this._vamp(by, toShield); return;
       }
       // 第二層裝甲:護甲值減免(破甲抵銷)
-      dmg = rem * armorMul(t.armor, pen);
+      dmg = toHp * armorMul(t.armor, pen);
       dealt = toShield + Math.min(t.hp, dmg);
       this._botAirSink(t, dealt);   // 飛行機體受擊掉高(bot 專用;真人那份住客戶端物理)
       this._hurtLog(t, by, dealt);  // 受擊濺血提示(方位 + 傷害量;純表現層,客戶端畫在座艙玻璃上)
     } else {
+      // NPC/建築沒有護盾層 ⇒ 同一支 shieldSplit 以 sp=0 呼叫,結果就是「整發吃 vsHp」——
+      // 「主 HP 傷害較弱」對小兵/塔一樣成立(只對英雄生效的話那是隱形的第二套規則)。
+      dmg = shieldSplit(wd, dmg, 0).toHp;
       // 陣營小兵強化:護甲值同吃 t.cu(與 hp/dmg/賞金同一條曲線;無此欄的塔/主堡/第三方 ×1)
       dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
       dealt = Math.min(t.hp, dmg);
@@ -3443,7 +3452,7 @@ export class BattleSim {
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
             // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1)。高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
-            this._damage(target, u.dmg * (e.cu || 1), e, wd?.pen || 0);
+            this._damage(target, u.dmg * (e.cu || 1), e, wd?.pen || 0, 0, wd);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);

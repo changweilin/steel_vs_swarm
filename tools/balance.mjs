@@ -37,7 +37,7 @@
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
-  grenadeBuildingMul, dmgFalloff, waveComp } from '../public/js/data.js';
+  shieldSplit, dmgFalloff, waveComp } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 
 const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
@@ -54,7 +54,8 @@ const slotDps = (ch, slot, tk) => {
   const w = heroWeapon(ch, slot, 1, true);
   if (!w) return 0;
   const cycle = w.mag / (w.rate || 3) + w.reload;
-  return w.dmg * vsMult(w, tk) * armorMul(UNITS[tk].armor, w.pen) * w.mag / cycle;
+  // NPC/建築無護盾層 ⇒ shieldSplit(…, sp=0) 就是「整發吃 vsHp」(與 sim._damage 非英雄分支同一支)
+  return shieldSplit(w, w.dmg, 0).toHp * vsMult(w, tk) * armorMul(UNITS[tk].armor, w.pen) * w.mag / cycle;
 };
 const heroDps = (ch, tk) => {
   const d = slotDps(ch, 'light', tk) + slotDps(ch, 'heavy', tk);
@@ -161,7 +162,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
       const w = heroWeapon(ch, slot, MAX_TIER, true);
       if (!w) continue;
       const cycle = w.mag / (w.rate || 3) + w.reload;
-      dps += w.dmg * vsMult(w, 'tower') * grenadeBuildingMul(w, 'tower')
+      dps += shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
         * armorMul(UNITS.tower.armor, w.pen) * w.mag / cycle;
     }
     const armor = (m.armor ?? 0) + U.ar.step * U.ar.max;
@@ -187,7 +188,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     const d = UNITS.tower.range + 1;
     const w = heroWeapon(ch, 'heavy', MAX_TIER, true);
     const cycle = w.mag / (w.rate || 3) + w.reload;
-    const dps = w.dmg * vsMult(w, 'tower') * grenadeBuildingMul(w, 'tower')
+    const dps = shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
       * armorMul(UNITS.tower.armor, w.pen) * dmgFalloff(w, d) * w.mag / cycle * SQUAD.N;
     return { reach: w.range > d, t2: 2 * UNITS.tower.hp / dps };
   };

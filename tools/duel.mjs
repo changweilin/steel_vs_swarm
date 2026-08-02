@@ -29,7 +29,7 @@
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
 import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, altScale, altTier,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
-  dmgFalloff, heavyMpCost, grenadeBuildingMul } from '../public/js/data.js';
+  dmgFalloff, heavyMpCost, shieldSplit } from '../public/js/data.js';
 
 export const DUEL = {
   DT: 0.05,           // 步進(秒)
@@ -109,13 +109,24 @@ export function duel(A, B, dh = 0) {
   const eff = (S, side) => S.f.slots.map((s) => s.def.range * rF[side]);
   const effA = eff(a, 'a'), effB = eff(b, 'b');
 
+  /**
+   * 護盾軸(vsSp/vsHp/spPierce)在「整條 EHP 打完」尺度上的等效倍率 —— **只供偏好距離的啟發式**。
+   * 實際交火走 apply() 的逐層拆分(那才是與 sim._damage 對齊的那一份)。
+   * 沿用 dpsAt 既有的簡化(護甲減免一律套在全額上),此處只補上分層造成的總量差。
+   */
+  const shieldEqF = (def, F) => {
+    const tot = F.sh0 + F.ar0;
+    if (tot <= 0) return 1;
+    const { toSp, toHp } = shieldSplit(def, tot, F.sh0);
+    return (toSp + toHp) / tot;
+  };
   // 距離 dist 上「S 對 T」的每秒傷害(已含射程閘/衰減/克制/爆擊/閃避;電力未計,偏好距離只看火力形狀)
   const dpsAt = (S, T, effR, side, dist) => {
     let v = 0;
     S.f.slots.forEach((s, i) => {
       if (dist > effR[i]) return;
       const dodge = s.def.id === 'light' ? dodgeP(T.f, -cF[side]) : 0;
-      v += s.def.dmg * vsMult(s.def, T.f.kind) * grenadeBuildingMul(s.def, T.f.kind)
+      v += s.def.dmg * vsMult(s.def, T.f.kind) * shieldEqF(s.def, T.f)
         * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * (1 - dodge) * s.rps
         * armorMul(T.f.armor, s.def.pen);                        // 交換比要看「打進去的」傷害
     });
@@ -144,11 +155,11 @@ export function duel(A, B, dh = 0) {
   let d = Math.max(...effA, ...effB) * DUEL.D_START_F;
   const close = A.mob + B.mob;                                    // 接近期:雙方同時前進
 
-  // 護盾先扣(不吃護甲)→ 裝甲吃 armorMul(對齊 sim._damage)
-  const apply = (T, dmg, pen) => {
-    const toSh = Math.min(Math.max(0, T.sh), dmg);
-    T.sh -= toSh;
-    T.ar -= (dmg - toSh) * armorMul(T.f.armor, pen);
+  // 雙層拆分走 shieldSplit(與 sim._damage 同一支;含反護盾/穿盾/反裝甲三型)→ 裝甲層吃 armorMul
+  const apply = (T, dmg, pen, def) => {
+    const { toSp, toHp } = shieldSplit(def, dmg, Math.max(0, T.sh));
+    T.sh -= toSp;
+    T.ar -= toHp * armorMul(T.f.armor, pen);
   };
   // 逐槽位分開結算(pen 不同 ⇒ 不能先加總再套 armorMul)
   const strike = (S, T, effR, side, dist, dt) => {
@@ -158,9 +169,9 @@ export function duel(A, B, dh = 0) {
       if (dist > effR[i]) return;
       if (s.def.id === 'heavy' && S.mp < s.mp) return;
       const dodge = s.def.id === 'light' ? dodgeP(T.f, -cF[side]) : 0;
-      const dmg = s.def.dmg * vsMult(s.def, T.f.kind) * grenadeBuildingMul(s.def, T.f.kind)
+      const dmg = s.def.dmg * vsMult(s.def, T.f.kind)
         * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * (1 - dodge) * s.rps * dt;
-      apply(T, dmg, s.def.pen);
+      apply(T, dmg, s.def.pen, s.def);
       if (s.def.id === 'heavy') mpUse += s.mp * s.rps * dt;
     });
     S.mp = Math.min(S.f.mp0, S.mp - mpUse + S.f.mpRegen * dt);

@@ -16,6 +16,7 @@ import {
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
+  BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
 } from '../public/js/data.js';
 
 // #INC-104 高空垂直射擊測試點(隨 COMBAT_SCALE 縮放:全際射程/高度門檻減半 ⇒ 測試高度亦減半)
@@ -349,6 +350,99 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
   assert(Math.abs(magDmg - expMag) < 1,
     `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
+
+  log('— sim/data:建築加乘移除 + 護盾分軌剋制(2026-08-02 使用者定案)—');
+  {
+    // ① 建築「加乘全刪、懲罰保留」:全武器/招式 vs.building ≤ 1,且仍有 < 1 的
+    const over = [];
+    for (const [id, c] of Object.entries(CHARACTERS))
+      for (const s of ['light', 'heavy', 'skill', 'ult'])
+        if (c[s]?.vs?.building > BUILDING_VS_CAP) over.push(`${id}.${s}=${c[s].vs.building}`);
+    for (const [k, w] of Object.entries(WEAPONS))
+      if (w.vs?.building > BUILDING_VS_CAP) over.push(`WEAPONS.${k}=${w.vs.building}`);
+    assert(!over.length, `全武器/招式對建築一律無加乘(違規:${over.join(' ') || '無'})`);
+    assert(Object.values(CHARACTERS).some((c) => c.heavy?.vs?.building < 1),
+      '懲罰保留:仍有武器 vs.building < 1(防空/反甲特化拆建築照樣吃虧)');
+
+    // ② 中性參數逐位元還原舊制(未標註新旋鈕的武器 MUST 完全不受影響)
+    for (const [dmg, sp] of [[100, 250], [100, 40], [100, 0]]) {
+      const r = shieldSplit({}, dmg, sp);
+      assert(Math.abs(r.toSp - Math.min(sp, dmg)) < 1e-9
+        && Math.abs(r.toHp - (dmg - Math.min(sp, dmg))) < 1e-9,
+        `中性武器 dmg${dmg}/盾${sp}:護盾 ${r.toSp}、裝甲 ${r.toHp}(同舊制「先扣盾、溢出進甲」)`);
+    }
+
+    // ③ 反護盾:護盾多掉;打穿盾時溢出按**預算**折回(MUST NOT 把溢出的護盾傷害直接倒進裝甲)
+    const anti = { vsSp: 2, vsHp: 0.5 };
+    const a1 = shieldSplit(anti, 100, 1000);
+    assert(a1.toSp === 200 && a1.toHp === 0, `反護盾打滿盾:護盾 -${a1.toSp}(×2)、裝甲 -${a1.toHp}`);
+    const a2 = shieldSplit(anti, 100, 100);
+    assert(Math.abs(a2.toSp - 100) < 1e-9 && Math.abs(a2.toHp - 25) < 1e-9,
+      `反護盾打穿盾:護盾 -${a2.toSp}、剩餘 50 點預算 ×vsHp 0.5 = 裝甲 -${a2.toHp}(不是把溢出的 100 倒進去)`);
+
+    // ④ 穿盾:滿盾也一定見血,見血量 = 穿透比例 × vsHp
+    const p1 = shieldSplit({ spPierce: 0.5, vsHp: 0.8 }, 100, 1000);
+    assert(Math.abs(p1.toSp - 50) < 1e-9 && Math.abs(p1.toHp - 40) < 1e-9,
+      `穿盾打滿盾仍見血:護盾 -${p1.toSp}、裝甲 -${p1.toHp}(50 穿透 × 0.8)`);
+
+    // ⑤ vsSp=0 退化成「護盾全擋」而非「無視護盾穿過去」(原則 6:偏差朝盾有效)
+    const bk = shieldSplit({ vsSp: 0 }, 100, 1000);
+    assert(bk.toSp === 0 && bk.toHp === 0, 'vsSp=0 = 打不動護盾、也穿不過去(盾全擋)');
+
+    // ⑥ 角色標籤由旋鈕推導(圖鑑用;中性武器不掛標籤)
+    assert(shieldRoleName({}) === '' && shieldRoleName({ vsSp: 1.7, vsHp: 0.7 }) === '反護盾'
+      && shieldRoleName({ spPierce: 0.5 }) === '穿盾' && shieldRoleName({ vsSp: 0.7, vsHp: 1.2 }) === '反裝甲',
+      '護盾軸標籤 ← 旋鈕推導(反護盾 / 穿盾 / 反裝甲;中性武器空字串)');
+
+    // ⑦ 真 BattleSim `_damage` 直測:同一發 200 傷害,三型打在英雄雙層 HP 上的分佈各不相同。
+    //    借用既有的 rb(MUST NOT 另 addHero 再刪掉 —— 那會在 heroes/squad 之間留下懸空參照,
+    //    下一次 tick 的 _promote 直接炸)。量完把 hp/sp/受擊時刻原樣還原給後續斷言。
+    const keep = { sp: rb.sp, hp: rb.hp, at: rb.lastHitAt };
+    const hitBy = (wd) => {
+      rb.sp = rb.maxSp; rb.hp = rb.maxHp; rb.lastHitAt = -999;
+      sim._damage(rb, 200, null, 0, 0, wd);
+      return { sp: rb.maxSp - rb.sp, hp: rb.maxHp - rb.hp };
+    };
+    const dN = hitBy(null), dA = hitBy({ vsSp: 1.7, vsHp: 0.7 }), dP = hitBy({ spPierce: 0.5, vsHp: 0.9 });
+    assert(dA.sp > dN.sp, `反護盾削盾更快(護盾 ${dN.sp.toFixed(0)} → ${dA.sp.toFixed(0)})`);
+    assert(dN.hp === 0 && dP.hp > 0,
+      `穿盾:中性武器打滿盾目標裝甲 0 傷,穿盾武器仍打進 ${dP.hp.toFixed(1)}`);
+    rb.sp = keep.sp; rb.hp = keep.hp; rb.lastHitAt = keep.at;
+
+    // ⑧ 「主 HP 傷害較弱」對無護盾的 NPC 一樣成立(只對英雄生效 = 隱形的第二套規則)
+    const npc = sim._add({ kind: 'soldier', side: 'STEEL', x: rb.x + 40, z: rb.z, hp: UNITS.soldier.hp });
+    sim._damage(npc, 100, null, 0, 0, { vsHp: 0.5 });
+    const weak = UNITS.soldier.hp - npc.hp;
+    npc.hp = UNITS.soldier.hp;
+    sim._damage(npc, 100, null, 0, 0, null);
+    const full = UNITS.soldier.hp - npc.hp;
+    assert(Math.abs(weak - full * 0.5) < 1e-6,
+      `NPC 也吃 vsHp:弱化 ${weak.toFixed(1)} = 中性 ${full.toFixed(1)} × 0.5`);
+    sim.ents.delete(npc.id);
+
+    // ⑨ 配置三紀律(2026-08-02):①穿盾/反裝甲只掛在原本吃建築加成的武器上
+    //    ②反護盾不得再有其他單位加成 ③加成越多越廣泛 ⇒ 基礎傷害越低
+    const flagged = [];
+    for (const [id, c] of Object.entries(CHARACTERS))
+      for (const s of ['light', 'heavy'])
+        if (c[s] && ((c[s].vsSp ?? 1) !== 1 || (c[s].vsHp ?? 1) !== 1 || (c[s].spPierce || 0) !== 0))
+          flagged.push([`${id}.${s}`, c[s]]);
+    const roster = new Set(EX_SIEGE_WEAPONS);
+    const siege = flagged.filter(([, w]) => (w.spPierce || 0) > 0 || (w.vsHp ?? 1) > 1);
+    assert(siege.length > 0 && siege.every(([k]) => roster.has(k)),
+      `紀律①:穿盾/反裝甲 ${siege.length} 把全在 EX_SIEGE_WEAPONS 名冊內(${siege.map(([k]) => k).join(' ')})`);
+    const antiList = flagged.filter(([, w]) => (w.vsSp ?? 1) > 1);
+    assert(antiList.length > 0 && antiList.every(([, w]) => !Object.values(w.vs || {}).some((v) => v > 1)),
+      `紀律②:反護盾 ${antiList.length} 把的 vs 表無任何加成(${antiList.map(([k]) => k).join(' ')})`);
+    assert(flagged.every(([, w]) => counterDmgF(w) < 1),
+      '紀律③:掛旗標的武器基礎傷害一律吃折減');
+    assert(Math.max(...antiList.map(([, w]) => counterDmgF(w)))
+      < Math.min(...flagged.filter(([, w]) => (w.vsSp ?? 1) <= 1 && !(w.spPierce > 0)).map(([, w]) => counterDmgF(w))),
+      '紀律③:廣泛性加成(反護盾)的折減重於只挑一層的反裝甲');
+    // 未掛旗標的武器 MUST 逐位元不受影響(這是「微調」不是全表重新定價)
+    assert(counterDmgF(CHARACTERS.s02.heavy) === 1 && counterDmgF(CHARACTERS.t12.heavy) === 1,
+      '未掛護盾軸的武器折減恆 ×1(其餘 28 名角色傷害逐位元不變)');
+  }
 
   log('— sim:射程閘門量到目標「近側表面」(_surfD3 = d3 − hitR;射程邊界打建築不再被靜默丟棄)—');
   {
@@ -1622,7 +1716,7 @@ log('— 選角(角色綁陣營;不選 = 開戰隨機)—');
 host.send({ t: 'pickChar', ch: 't01' });   // 蜂群玩家選鋼鐵角色 → 拒絕
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /陣營不符/.test(m.msg)));
 assert(true, '選敵陣營角色被拒絕');
-host.send({ t: 'pickChar', ch: 's02' });   // 鐵匠(重武器溫壓火箭:反建築,後面拆堡用)
+host.send({ t: 'pickChar', ch: 's02' });   // 鐵匠(重武器溫壓火箭:高破甲,後面拆堡用)
 await host.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 's02');
 assert(true, `host 選角「${CHARACTERS.s02.code}」(lobby 同步)`);
 guest.send({ t: 'pickChar', ch: 't04' });
@@ -1796,7 +1890,9 @@ await host.wait((c) => (meOf(c)?.up?.hw || 0) >= 1, 5000);
 clearInterval(homeIv);
 assert(true, '重武器強化 Lv.1(快照 up 同步)');
 
-log('— 勝負(重武器溫壓火箭高空拆堡:反建築 ×2.0 + 破甲)—');
+// 2026-08-02 建築加乘移除:溫壓火箭的 vs.building 由 2.0 夾到 1.0、launcher 的 ×1.4 整組刪除
+// ⇒ 同一發打主堡的傷害剩約 1/2.8,拆堡時間等比拉長(逾時上限跟著放寬,不是變慢的 bug)。
+log('— 勝負(重武器溫壓火箭高空拆堡:建築無加乘 + 破甲)—');
 const steelBase = snap.ents.find((e) => e.k === 'base' && e.s === 'STEEL');
 const t0 = Date.now();
 const iv = setInterval(() => {
@@ -1804,7 +1900,7 @@ const iv = setInterval(() => {
   host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
   host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
 }, 300);
-const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 240000);
+const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 480000);
 clearInterval(iv);
 assert(overSnap.winner === 'SWARM', `蜂群獲勝(${((Date.now() - t0) / 1000).toFixed(0)}s 拆完主堡)`);
 
