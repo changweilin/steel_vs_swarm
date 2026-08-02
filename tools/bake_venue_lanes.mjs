@@ -177,10 +177,14 @@ async function osmApiRoads(lat, lng, radius) {
 }
 
 // ---- 數值索引路網圖 ----
-function buildGraph(ways, origin) {
+function buildGraph(ways, origin, tunPrefRe) {
   const idx = new Map();          // "lat,lng" -> i
   const X = [], Z = [], LA = [], LN = [], adj = [];
   const tunE = new Set();         // 隧道邊 "u:v"(雙向都記):規則 #5 選線判定用
+  // PREFER_TUNNEL 偏好**專用**的隧道邊(見 PREFER_TUNNEL_WAY)。刻意與 tunE 分家:
+  // tunE 是安全閘(規則 #5 洞內砲塔、laneStructEntryAudit 側面進出)的輸入,收窄它
+  // 等於讓兵線鑽進沒被檢查的洞;這一份只影響「選哪條線」的偏好分數。
+  const tunPrefE = new Set();
   const brgE = new Set();         // 橋樑邊(同上):PREFER_BRIDGE 場地的選線偏好用
   const portalN = new Set();      // 橋/隧 way 的端點節點 = 出入口(portal):規則「只能從出入口進出」
   const cosO = Math.cos(origin[0] * d2r);
@@ -207,7 +211,12 @@ function buildGraph(ways, origin) {
       const len = Math.hypot(X[u] - X[v], Z[u] - Z[v]);
       adj[u].push(v, len);        // 扁平化:[v0,len0, v1,len1, …]
       adj[v].push(u, len);
-      if (tun) { tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`); }
+      if (tun) {
+        tunE.add(`${u}:${v}`); tunE.add(`${v}:${u}`);
+        if (!tunPrefRe || tunPrefRe.test(w.tags?.name || '')) {
+          tunPrefE.add(`${u}:${v}`); tunPrefE.add(`${v}:${u}`);
+        }
+      }
       if (brg) { brgE.add(`${u}:${v}`); brgE.add(`${v}:${u}`); }
     }
     // 結構 way 的頭尾幾何節點 = 出入口(portal):真實匝道/洞口只接在結構兩端,
@@ -218,7 +227,7 @@ function buildGraph(ways, origin) {
       portalN.add(nid(gN.lat, gN.lon));
     }
   }
-  return { X, Z, LA, LN, adj, n: X.length, tunE, brgE, portalN };
+  return { X, Z, LA, LN, adj, n: X.length, tunE, tunPrefE, brgE, portalN };
 }
 
 class MinHeap {
@@ -384,6 +393,13 @@ const PREFER_BRIDGE = new Set(['parkave', 'london', 'berlin', 'chicago']);
 // 註:平地地下道現行引擎不生成(見 docs/lane_scenarios.md),這裡挑的是**圖資上**的地下道段,
 // 供引擎支援下沉剖面後直接成立;現在開這張圖看到的是一般街道。
 const PREFER_TUNNEL = new Set(['civicblvd', 'taroko', 'madrid', 'taoyuan']);
+// 指定場地的「目標隧道」名稱過濾(只作用在 PREFER_TUNNEL 的偏好分數,不動任何安全閘)。
+// 為什麼需要:`tunLen` 量的是「踩在**圖資** tunnel 邊上的長度」,不問執行期 underpassPlan
+// 建不建得出來 ⇒ 放任它挑,它會挑最長的那條。taoyuan 前兩輪都栽在這 —— 兵線確實鑽進
+// tunnel way(偏好生效)、卻是一條 238m 的**無名 service** 洞,規劃放棄後仍是平街,
+// 掃描只報得出「②地下道候選」而非 `underpass`(2026-08-02 兩輪實測)。
+// 值 = 比對 OSM way 的 `name`;未列場地一律全收(舊行為逐位元不變)。
+const PREFER_TUNNEL_WAY = { taoyuan: /航站北路/ };
 const BEARING_SECTORS = {
   // 三張新橋樑場地都要「兵線橫過那道障礙(河/調車場)」⇒ 方位角夾在橋軸上,
   // 否則暴搜會挑同一岸的街廓(分數更高、也不必過橋)。逐錨點一份扇區,兩錨對向。
@@ -517,7 +533,7 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
       const u = l.full[i - 1], v = l.full[i];
       const seg = Math.hypot(g.X[u] - g.X[v], g.Z[u] - g.Z[v]) * s;
       if (g.brgE?.has(`${u}:${v}`)) brgLen += seg;
-      if (g.tunE?.has(`${u}:${v}`)) tunLen += seg;
+      if (g.tunPrefE?.has(`${u}:${v}`)) tunLen += seg;
     }
   }
   return {
@@ -540,7 +556,7 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     const RAD = maxRealD * 2.4;
     const ways = await overpassRoads(`${id}_${anchor.map((v) => v.toFixed(4)).join('_')}_r${Math.round(RAD)}`, anchor[0], anchor[1], RAD);
     if (!ways || ways.length < 20) { log(`  ways=${ways ? ways.length : 'ERR'} → skip`); continue; }
-    const g = buildGraph(ways, anchor);
+    const g = buildGraph(ways, anchor, PREFER_TUNNEL_WAY[id]);
     log(`  ways=${ways.length} nodes=${g.n}`);
     // 錨點 → 最近道路節點(120m 內)
     let aIdx = -1, ad = 120;
