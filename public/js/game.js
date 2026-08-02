@@ -7835,7 +7835,9 @@ export class BattleClient {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
         ent.mesh.position.copy(this.pos);
-        if (ent.escorts) for (const es of ent.escorts) es.mesh.visible = false;   // 切為自機視角:貼身護衛機藏起(自機 FPV 不畫)
+        // 切為自機視角:貼身護衛機藏起(自機 FPV 不畫)。warm 一併歸零 —— 換回他人視角時
+        // 這四架的位置停在很久以前那一幀,不重置就會從那裡「補跟」過來(與冷卻重現同一個坑)
+        if (ent.escorts) for (const es of ent.escorts) { es.mesh.visible = false; es.warm = false; }
         continue;
       }
       if (ent.isStatic) {
