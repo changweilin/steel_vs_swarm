@@ -8,7 +8,8 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { envMat } from './hazards.js';
-import { makeField, makeToneLadder } from './field.js';
+import { setWeatherField } from './toon.js';
+import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
 import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
@@ -79,6 +80,20 @@ function paintTerrainTones(geo, pos, bounds, center) {
     colors[k * 3] = r; colors[k * 3 + 1] = g; colors[k * 3 + 2] = b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+// ---- 風化屬性場(P2-A;2026-08-03)----
+// 種子與地表色階梯**刻意錯開**(`^ WEATHER_SEED_MIX`):同一張場同時決定「地是什麼顏色」與
+// 「哪裡長苔」的話,深色的地方剛好也最斑駁 —— 兩個訊號完全相關 = 看起來像只有一個訊號,
+// 那正是要修的「整片一樣」本身。錯開後兩者各自起伏,交疊處才生得出「這一角特別老」。
+// 場的紀律(散布橢圓、加權平均、`mulberry32` 確定性)全在 field.js,本檔只負責接線;
+// 「這一區有多老」MUST NOT 改成由地形推(高度/離水距離在均勻區域內是常數,見計畫書 P2-A)。
+const WEATHER_SEED_MIX = 0x3F1B9D;
+const WEATHER_TEX_N = 64;    // 場的最小特徵 ≥ 1/10 跨距 ⇒ 64² 已細一個量級,線性內插看不出格點
+function installWeatherField(bounds, center) {
+  const span = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ);
+  const seed = (((Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ 0x7E44A1) ^ WEATHER_SEED_MIX) >>> 0;
+  setWeatherField(bakeFieldTexture(makeField(seed, span), bounds, WEATHER_TEX_N), WEATHER_TEX_N, bounds);
 }
 
 function loadImage(url) {
@@ -468,6 +483,9 @@ export async function buildTerrain(cfg, onProgress) {
   //     三種隊制最壞 30.3%),色階由**相對亮度**設計:暗端的階差大於亮端(暗部要分得開,
   //     亮部再拉開就過曝)。頂點色乘在底色上,故底色改成白。
   //  階數取 4(大型結構):3 階在整片山坡上只有一刀明暗界,轉折看不出來。
+  // 風化屬性場(P2-A):**兩條路徑都要裝**,而且要在建材質**之前** —— 場是共享 uniform,
+  // 材質只是拿到那個物件的參照,先後其實不影響,但擺在這裡才看得出「有沒有影像都有場」。
+  installWeatherField({ minX, maxX, minZ, maxZ }, center);
   let mat;
   if (imagery) {
     const tex = new THREE.CanvasTexture(imagery.canvas);

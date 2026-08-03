@@ -7,6 +7,19 @@ compatibility: Python 3.10+, CUDA GPU, ComfyUI; outputs GLB/PNG PBR sets for Uni
 
 # AI PBR Texturing & Delighting (Open-Source)
 
+> **Boundary in this repo (steel_vs_swarm) — read before running any of this.**
+> This project shades with **quantised toon ramps, not a PBR lighting model**
+> (`.claude/skills/cel-shading-pipeline`), and prefers to ship **zero binary image assets**
+> (`.claude/skills/procedural-canvas-textures`). Of the five maps below, only the
+> **delighted base colour** may cross into the repo, and only for a CC0 hero asset that a
+> parametric generator genuinely cannot express. **Normal / metallic / roughness MUST NOT
+> be shipped**: `CLAUDE.md` §1 requires normal maps to be deleted and the gltf rewritten to
+> drop the reference, and a metal/rough workflow contradicts the ramp — a map that adds
+> shading detail is fighting the band boundaries, not adding to them. Surface interest
+> belongs in the ramp's value ladder and in Canvas2D decals instead. Everything below
+> applies unchanged when authoring for a PBR engine; the delight stage in particular is
+> exactly what a toon base colour needs.
+
 You generate **clean, delighted PBR texture sets** (Base Color / Normal / Metallic / Roughness / Opacity) for a mesh. The #1 rule in game texturing: **no baked lighting** — engine dynamic lights must own the shading. Delight the source first, then synthesize maps, then bake to UVs.
 
 ## 1. Pipeline (model-agnostic, ANIA 5-stage pattern)
@@ -27,7 +40,7 @@ ANIA (SciTePress 2026) defines these as 5 swappable nodes: preprocess → mesh-g
 - **Why it matters:** any highlight/shadow left in the albedo double-shades under the engine's own lights → the asset looks dirty and inconsistent across maps.
 
 ### TRELLIS.2 built-in appearance (shortcut)
-- TRELLIS.2's O-Voxel VAE predicts per-vertex **Base Color / Metallic / Roughness / Opacity** directly and exports a Blender-compatible GLB — including transparency (mesh nets, leaf edges). If TRELLIS.2 geometry already carries acceptable PBR, **skip re-texturing**; only run this skill for a style change or higher-res maps. (See the `ai-mesh-generation` skill.)
+- TRELLIS.2's O-Voxel VAE predicts per-vertex **Base Color / Metallic / Roughness / Opacity** directly and exports a Blender-compatible GLB — including transparency (mesh nets, leaf edges). If TRELLIS.2 geometry already carries acceptable PBR, **skip re-texturing**; only run this skill for a style change or higher-res maps. (See the `ai-mesh-generation` skill.) Toon target: keep the base colour, drop the rest — carrying maps the renderer never samples still costs download and VRAM.
 
 ### 3DGenStudio — ComfyUI node pipeline
 - **Repo:** https://github.com/visualbruno/3DGenStudio
@@ -37,8 +50,9 @@ ANIA (SciTePress 2026) defines these as 5 swappable nodes: preprocess → mesh-g
 - **Source:** ANIA paper (SciTePress 2026), architecture reference (no single repo). Use it as the mental model for staging + hot-swapping delight/bake models.
 
 ## 3. Output contract
-- Emit a full PBR set: **Base Color (delighted albedo), Normal, Metallic, Roughness**, + Opacity/Alpha when the mesh has cutouts.
-- Match the game's texture budget: **≤2K for hero assets, ≤1K for background** (aligns with `web3d-game-orchestrator`). Do not ship 8K into a browser game.
+- PBR engine: emit a full set — **Base Color (delighted albedo), Normal, Metallic, Roughness**, + Opacity/Alpha when the mesh has cutouts.
+- Toon engine (this repo): emit the **delighted base colour only**, and rewrite the gltf so no dropped map is still referenced. A dangling texture reference is a load-time failure, not a silently-ignored field.
+- Match the game's texture budget: **≤2K for hero assets, ≤1K for background** in a browser game. Do not ship 8K.
 - Deliver as GLB with embedded maps, or PNG set + material JSON.
 
 ## 4. Constraints

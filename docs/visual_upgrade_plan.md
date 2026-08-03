@@ -38,11 +38,75 @@ open item, not a conclusion.
 | P1-A ramp family | **done** | `toon.js RAMPS`/`toonGradient(bands)` |
 | P1-C grade + FXAA | **done** | `postfx.js`; `antialias` now only on the `?post=0` fallback |
 | P1-D outline width | **done (conservative)** | `max(world width, screen floor)` — near field bit-identical, so the 15 call sites were **not** retuned |
-| P1-B shadow tint into ramp | **not done** | needs art-direction confirmation first (this document says so); it changes every mech's shadow hue |
-| P2-A weathering field | **not done** | the field exists (`field.js`) and is ready to drive it; the remaining work is getting a per-instance value into `envMat` without a per-pixel 26-ellipse loop (bake the field to a small texture) |
-| P2-B micro-jitter for buildings | **not done** | needs the collider-margin measurement this document calls "the item most in need of measurement" |
-| P2-C semantic placement | **not done** | placement decisions, no code |
-| V-C Node-side tunnel scans | **not done** | `venue_field.mjs` is the harness it needs; the five numeric scans still live inside `shot_tunnels.mjs` |
+| P1-B shadow tint into ramp | **done** | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before** |
+| P2-A weathering field | **done** | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder |
+| P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
+| P2-C semantic placement | **done** | `beacons.js` + `biomes.js placeBeacons` — the deferral reason was dissolved by a scope call, not by finding a way to verify the original scope (see below) |
+| V-E world signage | **done** | `worldtext.js` + `biomes.js buildWorldSigns` — was declined in the original plan; the reason it was declined turned out not to hold (see V-E) |
+| V-C Node-side tunnel scans | **partly done, partly not possible** | see below |
+
+**New in this batch: user-tunable art direction.** Four knobs (`visualPrefs.js`) with sliders and a
+**live sample that renders through the real materials and the real post pipeline** (`matsample.js`),
+mounted in both the pause settings page and the lobby settings page. Defaults are the shipped values,
+and the two knobs this document flagged as needing art-direction confirmation default to 0, i.e.
+byte-identical to before this batch. New audit: `tools/audit_visual_prefs.mjs` (79 assertions,
+reverse-verified).
+
+**P2-B excludes buildings on purpose.** Building footprints *are* their collider — the oriented box
+uploaded via `_losGrid` is derived from the same `hw2`/`hd2` that the mesh is extruded from. Inflating
+the visual radius there is exactly the "visible but unhittable" failure (A30) the item warns about,
+with no margin to spend. Obstacles and landmarks both carry an explicit collider radius (`HAZARDS[].r`,
+`MEGALITHS[].col.r`) that the geometry sits *inside*, which is why they can take the jitter and
+buildings cannot. The margin is not assumed: both consumers measure the jittered part's horizontal
+extent and revert that part if it crosses the collider.
+
+**V-C: the numeric half cannot fully leave Playwright, and that is a finding, not an omission.**
+Scans ②–⑤ (portal sky-leak, section obstruction, see-through holes, in-bore sky fraction) are
+`THREE.Raycaster` hits against real **meshes** — structure parts, vegetation, ground-cover patches.
+three is loaded from a CDN importmap and A2 forbids adding it to `package.json`, so Node has no three;
+approximating those four with hand-written geometry would be a second implementation of the very thing
+under test (§2.1) and would pass forever. Scan ① is likewise mesh-level: covered bores are *punched
+triangles*, not flattened height field — `carveTunnels` only ever sees the **open complement**
+(approach cuttings and underpass ramps).
+
+What did move to Node is the piece that turned out to matter more: `venue_field.mjs makeCarvedField`
+executes the **real `terrain.js carveTunnels` source** on a copy of the height field, and
+`audit_traverse.mjs` now floods over the **carved** surface. Before this, the traversability audit
+walked approach cuttings and underpass ramps on *natural* terrain — a road that is only passable
+because it was excavated would have been reported unreachable. Clearance (V-D) deliberately still
+reads the natural field, because "can this mountain hide the roof slab" is a question about the
+un-excavated mountain. A synthetic-terrain behaviour test covers the mirror with no network, and it
+has been reverse-verified.
+
+**P2-C shipped once the scope question was answered, and the answer is what unblocked it.**
+The deferral was never about difficulty. It was that the original wording put objects *into* the lane —
+base exit, first tower, portal mouth, bridgehead — which are precisely the places V-B exists to protect,
+and V-B needs Overpass plus terrarium tiles to run, so the change could not be verified where it was
+written. On 2026-08-03 the user settled it: **beside the lane / spawn / building units, visible from the
+surroundings is enough.** That turns "does this block the lane" from something an audit has to discover
+into something the construction guarantees — every site must pass `areaFree(blocked, …, foot + PAD)`,
+and `blocked` already carries the lane corridor (17 m half-width), tower sites (30 m), bases (70 m),
+bridge corridors and open tunnel sections. Beacons go through **the same gate** buildings, megaliths and
+giant trees already go through, with one extra ring of margin.
+
+What that bought: the whole item became verifiable **offline** — no network, no browser, no three.
+`beacons.js` keeps its first half (constants, catalogue, part tables, anchors, site planning) free of
+`THREE`, with parts declared as plain data (`['box', w, h, d]`), so `tools/audit_beacons.mjs` executes
+that source through `new Function` and computes real footprints in Node. 68 assertions, reverse-verified
+two ways (`--break-extent`, `--break-pad`).
+
+Three things worth recording because the audit found them in the first draft, not review:
+the tank's brace made its true footprint 6.6 m against a declared 5.6 m (a silent A30 — the collider is
+measured from the mesh, so the reservation would have been too small); the extent formula was
+over-conservative for offset boxes (`|p| + half-diagonal` reads 6.6 m where the real corner is 4.7 m),
+which would have pushed every beacon needlessly outward — the opposite of "beside"; and two catalogue
+entries had `foot` inflated by 40–80% for the same reason. `foot` is now pinned **from both sides**
+against the computed extent.
+
+Not covered: OSM building facades as a fourth anchor class. Buildings are placed after vegetation in
+`buildBiomes`, so a beacon pass anchored on them would have to run late and would lose the `blockArea`
+protection that keeps trees from growing through a pylon. The lane samples already run past buildings on
+urban venues, which is where that anchor class would have landed anyway.
 
 **Two things the shot set found that blind tuning had got wrong** (both now fixed, both would
 have shipped silently): the shadow lift was written in linear space but reads in sRGB
@@ -54,6 +118,10 @@ byte-identical screenshots.
 **Still unmeasured, and it is the gate this document names:** 30 s steady-state frame time on
 desktop and touch, before/after. Also unchecked: depth-writing transparent materials in
 `hazards.js` / `biomes.js` / `models.js` (`vfx.js` and `castfx.js` are already clean).
+The 2026-08-03 batch adds two more items to that list, both needing a real browser: the
+settings-page sample costs one extra WebGL context while the page is open, and the ramp patch adds
+one `texture2D` + one `mix` to every cel fragment (both defaults are no-ops numerically, but the
+instructions execute regardless).
 
 ---
 
@@ -279,11 +347,26 @@ geometry must not exceed the collision columns uploaded via `_losGrid`, or it be
 "visible but unhittable" (A30 family). `audit_climb.mjs` Ⅲ two-end agreement is the
 existing yardstick; this is the item most in need of measurement.
 
-### P2-C Semantic placement pass
+### P2-C Semantic placement pass — **done (2026-08-03)**
 
-Current scatter is density-driven. Pick 3–5 points every player passes each match
-(base exit, first tower, tunnel portal, bridgehead) and place one legible object at each.
-No new code required.
+Current scatter is density-driven. Pick the points every player passes each match and place one
+legible object at each — **beside** them, not on them (user call, 2026-08-03: 兵線 / 重生點 /
+建築單位旁邊,在周遭可以看見即可).
+
+Anchors, all derived from geometry already in memory — zero new fetches, zero shared `rnd()`:
+
+| Anchor | Source | Clearance ring | Beacon | Height |
+|---|---|---|---|---|
+| 重生點 | `cfg.bases` | 70 m | comms mast | 29 m |
+| 建築單位 | `solveTowerSites()` (frontline first) | 30 m | water tower | 23 m |
+| 兵線 | lane polyline at 0.3 / 0.5 / 0.7 | 17 m | pylon / container stack / cairn | 35 / 10 / 13 m |
+
+Height tracks the clearance ring on purpose: a bigger ring pushes the beacon further out, so it has
+to be taller to still read from the lane. `BEACON.FAR` must exceed the base ring (70 + foot + PAD)
+or spawns silently never get one.
+
+Search is radius-outer / angle-inner, starting from the lane normal — nearest ring wins ("beside"),
+and beacons land at the roadside rather than dead ahead. Nothing fits ⇒ nothing is placed (原則 6).
 
 ---
 
@@ -372,14 +455,42 @@ hole with a dark shape moving in it. A numeric check is the only thing that find
 
 **Accept** Worst-case headroom printed per structure; fails below the margin.
 
-### V-E Not proposed: world signage
+### V-E World signage — **done (2026-08-03), and it was not the feature request it looked like**
 
-The procedural-texture skill has the **least applicable surface here**. `paint.js` is already
-exemplary — procedural canvas, `${pattern}:${hue}:${tone}` cache, rig-rest triplanar so the
-pattern stays on the armour plate. The world itself carries almost no readable signage, and
-adding some is a **feature request, not a fix**. The skill's residual value is its trap list
-(aspect-ratio crush, the two-sided-plate mirror rule) — apply it *if* signage is ever added;
-do not schedule work for it now.
+The original entry declined this as "a feature request, not a fix", on the reading that signage
+means *inventing* text. That reading was wrong in one specific way: **the names are already in
+memory**. Overpass returns tags by default on `out geom` / `out center tags`, and `biomes.js` keeps
+the whole `tags` object all the way through. So this is not "draw signs" — it is "the world already
+has names, put them back". Tunnel portals and bridge heads needed **zero** new Overpass queries.
+
+**The corpus** — what carries text, and where it came from:
+
+| Layer | Query cost | Text | Surface |
+|---|---|---|---|
+| Road ways | free (already fetched) | `name` | **tunnel / gallery / underpass portal plaques**, **bridge name plates** |
+| Buildings | free (already fetched) | `name` on commercial | facade sign band |
+| Named point nodes | +4 cheap node queries | `name`, `ref`, `ele` | place / peak / motorway-junction / station posts |
+
+Point features cost four `node[...]` queries with tiny quotas — no geometry, so the payload barely
+moves. `geoKey('osmF', …)` was bumped 1 → 2 with the query change; without that bump the new signs
+would never appear on any machine that had opened the map before, silently.
+
+**Everything the trap list warned about is enforced by `audit_world_text.mjs`** rather than by
+memory: aspect-ratio crush (plate and atlas cell are both 4:1, width derived from height, long names
+shrink the type instead of stretching the plate), the two-sided-plate mirror rule (two back-to-back
+single-sided quads sharing one cell, never `DoubleSide`), plus four this project needed on top —
+missing-glyph detection (A2 forbids shipping a font, so a device without CJK would render a row of
+tofu; >20% missing ⇒ no sign at all), **no name means no sign** (原則 6 — a fabricated name is worse
+than none), one mesh and one atlas for the entire world's text (this renderer is draw-call bound, so
+per-sign materials were never an option; the cell count *is* the quota), and zero `rnd()` consumption
+so hanging a sign cannot shift the vegetation and building layout (§2.3).
+
+Which name to show is a taste question, not a derivation — 27 venues span many scripts, and `name` is
+the local one. It became a fourth settings control (`worldTextLang`: local / 中文 / English), which is
+why `visualPrefs.js` grew a second control type (mutually-exclusive choices → segmented buttons,
+per §2.1's button-style rule) alongside the sliders.
+
+`paint.js` remains the exemplar it always was; nothing there changed.
 
 ---
 

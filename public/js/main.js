@@ -40,6 +40,8 @@ import {
   renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest,
 } from './mobile.js';
 import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange } from './ctrlmode.js';
+import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
+import { MatSample } from './matsample.js';
 
 const $ = (id) => document.getElementById(id);
 const screens = ['connect', 'mapbuilder', 'openroom', 'story', 'room', 'loading', 'game'];
@@ -734,6 +736,7 @@ function exitStoryBattle() {
   $('overOverlay').style.display = 'none';
   $('pauseOverlay').style.display = 'none';
   $('shopOverlay').style.display = 'none';
+  disposeVisualSettings();   // 離場:設定頁若開著,樣品的 WebGL context 要跟著收(A25)
   delete $('overOverlay').dataset.done;
   sessionStorage.removeItem('svs_token');
   enterStory();
@@ -2173,7 +2176,10 @@ function makeHud() {
       document.exitPointerLock?.();
     },
     // 戰場選單(暫停):game.js 於指標解鎖時推狀態。每次開啟回到「選單」頁並同步設定 UI 到目前狀態
-    pause: (on) => { $('pauseOverlay').style.display = on ? '' : 'none'; if (on) { switchPausePage('menu'); syncSettingsUi(); } },
+    pause: (on) => {
+      $('pauseOverlay').style.display = on ? '' : 'none';
+      if (on) { switchPausePage('menu'); syncSettingsUi(); } else disposeVisualSettings();
+    },
     // 被敵方準星鎖定:每幀由 game.js 推狀態(伺服器 lock 事件驅動,LOCK.WARN_S 後自動退)
     locked: (on) => $('lockWarn').classList.toggle('on', !!on),
     // 平民互動提示:info={cs 陣營, self 是否我方, follow 是否跟隨中} 或 null(離開互動範圍)
@@ -2375,6 +2381,8 @@ $('pauseLeaveBtn')?.addEventListener('click', () => leaveBattle());
 function switchPausePage(page) {
   document.querySelectorAll('#pauseTabs .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#pauseOverlay .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
+  // 樣品是一顆真的 WebGL context:只在「設定」頁真的顯示時才建,離開這一頁立刻收
+  if (page === 'settings') renderVisualSettings($('pauseVisualMount')); else disposeVisualSettings();
 }
 document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').forEach((b) => {
   b.addEventListener('click', () => { switchPausePage(b.dataset.page); app.audio?.ui('click'); });
@@ -2420,6 +2428,100 @@ function bindSettingsControls(p) {
 }
 bindSettingsControls('set');
 bindSettingsControls('lset');
+
+// ── 畫面表現(art-direction 拉桿 + 即時樣品)──
+// 計畫書裡有幾項卡在「需要美術方向確認」(P1-B 陰影偏色最典型:它會改掉每一台機甲的暗面色相)。
+// 那種東西不該由 commit 定案 —— 換一台螢幕就不對了。故做成拉桿讓玩家自己定,程式只保證
+// 「只有一份數值(visualPrefs.js)」「預設 = 舊制」「改了立刻看得到(樣品走真品材質)」。
+//
+// **一份實作、兩個掛載點**(戰場暫停頁 + 大廳設定頁),與操作方式/觸控設定同一條規矩;
+// 樣品是一顆真的 WebGL context ⇒ 全程 MUST 只存在一個,換頁/關閉一律 dispose(A25)。
+let _matSample = null;
+function renderVisualSettings(mount) {
+  if (!mount) return;
+  _matSample?.dispose();
+  _matSample = null;
+  mount.innerHTML = '';
+
+  const preview = document.createElement('div');
+  preview.className = 'vset-preview';
+  mount.appendChild(preview);
+
+  // 拉桿逐項由 VISUAL_KNOBS 推導(標籤/範圍/說明都在那一份表)—— 這裡 MUST NOT 再寫一次
+  // 項目清單:兩份清單遲早分家,而症狀只是「某一根拉桿不見了」,不會報錯。
+  const vals = [];
+  for (const [k, d] of Object.entries(VISUAL_KNOBS)) {
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.dataset.vk = k;
+    row.innerHTML = `<span class="set-label">${d.label}</span>`;
+    attachTip(row.querySelector('.set-label'), d.hint);   // 逐項說明:滑鼠移上 / 觸控長按(tip.js 委派)
+    if (d.choices) {
+      // 一組互斥選項 ⇒ 分段按鈕(`.seg` > `.segb`,§2.1「按鍵風格統一」);
+      // 控件型別由 `choices` 這一欄推導,MUST NOT 在這裡寫「哪幾項是選單」的名單。
+      const seg = document.createElement('div');
+      seg.className = 'seg seg-sm';
+      for (const c of d.choices) {
+        const b = document.createElement('button');
+        b.className = 'segb' + (visualPref(k) === c ? ' on' : '');
+        b.type = 'button';
+        b.dataset.v = c;
+        b.textContent = d.choiceLabels?.[c] ?? c;
+        b.addEventListener('click', () => {
+          setVisualPref(k, c);
+          seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k)));
+          syncReset();
+          app.audio?.ui('click');
+        });
+        seg.appendChild(b);
+      }
+      row.appendChild(seg);
+      vals.push({ k, sync: () => seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k))) });
+    } else {
+      const pct = (v) => `${Math.round(v * 100)}%`;
+      row.insertAdjacentHTML('beforeend',
+        `<input class="set-slider" type="range" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label}">`
+        + `<span class="set-val">${pct(visualPref(k))}</span>`);
+      const slider = row.querySelector('.set-slider');
+      const val = row.querySelector('.set-val');
+      slider.value = String(visualPref(k));
+      slider.addEventListener('input', (e) => {
+        // 寫進單一真相 → visualPrefs 廣播 → toon.js / postfx.js 的共享 uniform 與樣品同一幀跟上。
+        // 回寫用**夾制後**的值(拉桿的 step 與 min/max 在某些瀏覽器上不保證),避免顯示與實際不符。
+        val.textContent = pct(setVisualPref(k, Number(e.target.value)));
+        syncReset();
+      });
+      vals.push({ k, sync: () => { slider.value = String(visualPref(k)); val.textContent = pct(visualPref(k)); } });
+    }
+    mount.appendChild(row);
+  }
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'row';
+  btnRow.style.justifyContent = 'center';
+  const reset = document.createElement('button');
+  reset.className = 'btn small';
+  reset.type = 'button';
+  reset.textContent = '↺ 還原預設';
+  btnRow.appendChild(reset);
+  mount.appendChild(btnRow);
+  const syncReset = () => { reset.disabled = visualPrefsDefault(); };
+  reset.addEventListener('click', () => {
+    resetVisualPrefs();
+    for (const v of vals) v.sync();
+    syncReset();
+    app.audio?.ui('click');
+  });
+  syncReset();
+
+  // 樣品最後建:上面若有任何一行拋出,至少不會留下一顆沒人收得掉的 WebGL context
+  try { _matSample = new MatSample(preview); } catch { preview.remove(); }   // WebGL 建不起來就不給樣品(原則 6)
+}
+/** 設定頁收起時把樣品收掉(一顆 context 常駐在背景是實打實的成本) */
+function disposeVisualSettings() {
+  _matSample?.dispose();
+  _matSample = null;
+}
 // 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
 function syncSettingsUi() {
   syncAudioSwitches('set');
@@ -2507,6 +2609,7 @@ $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.di
 function switchLobbyPage(page) {
   document.querySelectorAll('#lobbyMenu .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#lobbyMenu .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
+  if (page === 'settings') renderVisualSettings($('lobbyVisualMount')); else disposeVisualSettings();
 }
 function openLobbyMenu(page) {
   syncAudioSwitches('lset');
@@ -2518,8 +2621,11 @@ function openLobbyMenu(page) {
 }
 $('lobbySettingsBtn')?.addEventListener('click', () => { openLobbyMenu('settings'); app.audio?.ui('click'); });
 $('lobbyHelpBtn')?.addEventListener('click', () => { openLobbyMenu('help'); app.audio?.ui('click'); });
-$('lobbyMenuCloseBtn')?.addEventListener('click', () => { $('lobbyMenu').style.display = 'none'; });
-$('lobbyMenu')?.addEventListener('click', (e) => { if (e.target.id === 'lobbyMenu') $('lobbyMenu').style.display = 'none'; });
+// 關閉大廳疊層一律連樣品一起收(兩條關閉路徑都要,漏一條就是背景留著一顆 WebGL context)
+$('lobbyMenuCloseBtn')?.addEventListener('click', () => { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); });
+$('lobbyMenu')?.addEventListener('click', (e) => {
+  if (e.target.id === 'lobbyMenu') { $('lobbyMenu').style.display = 'none'; disposeVisualSettings(); }
+});
 document.querySelectorAll('#lobbyMenuTabs .pause-tab').forEach((b) => {
   b.addEventListener('click', () => { switchLobbyPage(b.dataset.page); app.audio?.ui('click'); });
 });
