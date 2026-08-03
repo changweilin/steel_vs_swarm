@@ -14,7 +14,7 @@ import {
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
-  aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
+  aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
@@ -5379,13 +5379,17 @@ export class BattleClient {
       const fwd = this.camera.getWorldDirection(this._rgDir || (this._rgDir = new THREE.Vector3()));
       const hl = Math.hypot(fwd.x, fwd.z) || 1;
       const ux = fwd.x / hl, uz = fwd.z / hl;
-      const cosA = Math.cos((def.arc || 15) * Math.PI / 180);
       for (const e of this.ents.values()) {
         if (!foe(e)) continue;
         const p = e.mesh.position;
         const tx = p.x - from.x, tz = p.z - from.z;
         const d2 = Math.hypot(tx, tz);
-        if (d2 > 8 && (tx * ux + tz * uz) / d2 < cosA) continue;
+        // 錐緣量到**命中量體近側表面**(`fanConeHalf` 單一縫,與 sim.heroPlasma 逐位元同式)——
+        // 量中心的話,貼著砲塔/主堡牆面時光暈全滅,而伺服器那半照樣結算 = 兩端分家。
+        if (d2 > 8) {
+          const ang = Math.acos(Math.min(1, Math.max(-1, (tx * ux + tz * uz) / d2)));
+          if (ang > fanConeHalf(def, d2, this._hitR(e))) continue;
+        }
         if (this._inShotRange(e, def, from)) hits.push(e);
       }
     } else if (cls === 'fan' || cls === 'line') {
