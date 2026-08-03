@@ -62,14 +62,54 @@ const NAME_KEYS = ['name', 'official_name', 'alt_name', 'short_name', 'brand', '
 /** 拉丁副名(次要層次,只做視覺節奏) */
 const ROMAN_KEYS = ['name:en', 'int_name', 'name:latin', 'brand:en'];
 
-/** 字串正規化:壓空白、丟過長/純數字/純標點的垃圾;取不到回 null(寧缺勿錯) */
+/**
+ * 字串正規化:控制字元收斂、壓空白、丟過長/純數字/純標點的垃圾;取不到回 null(寧缺勿錯)。
+ * OSM 是使用者產生內容 —— 換行、定位、零寬字元什麼都可能出現,直接上牌會畫成一排怪東西。
+ */
 function clean(v, maxLen = 40) {
   if (typeof v !== 'string') return null;
-  const s = v.replace(/\s+/g, ' ').trim();
+  // 控制字元/零寬字元/雙向控制/不斷行空白一律先變成空白,再壓成單一空白。
+  // 這個字元類 MUST 用 escape 寫 —— 把控制字元本身貼進正規表示式字面量,壞掉的是檔案。
+  const s = v.replace(/[\u0000-\u001f\u007f-\u009f\u00a0\u200b-\u200f\u202a-\u202e\u2060\ufeff]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
   if (!s || s.length > maxLen) return null;
   if (!/[\p{L}\p{N}]/u.test(s)) return null;
   if (/^[\d\p{P}\s]+$/u.test(s)) return null;
   return s;
+}
+
+/**
+ * 圖資 tags → 要顯示的名字(**全專案唯一的取名規則**)。
+ *
+ * 語言是**口味不是推導**:27 個場地跨國,`name` 是當地語言(真實感的來源),但看不懂
+ * 也是事實 ⇒ 由設定頁的「世界文字語言」決定;`worldtext.js resolveName` 只是替它補上
+ * 那個預設值的薄殼。取名規則住這裡而不是住 worldtext 的理由:本檔零 import ⇒
+ * 離線烘焙與稽核都 import 得到真品,而 worldtext 走 three + visualPrefs,Node 端載不進來。
+ *
+ * @param lang   'local'(當地原文,預設)/ 'zh' / 'en';沒有譯名一律**退回原文**,
+ *               MUST NOT 因為沒譯名就整塊消失(那會讓非中文場地整批不掛牌)
+ * @param maxLen 超過就回 null —— 那是公告欄不是招牌
+ */
+export function pickName(tags, lang = 'local', maxLen = 40) {
+  if (!tags) return null;
+  const order = lang === 'zh' ? ['name:zh-Hant', 'name:zh', ...NAME_KEYS]
+    : lang === 'en' ? ['name:en', ...NAME_KEYS] : NAME_KEYS;
+  for (const k of order) {
+    const s = clean(tags[k], maxLen);
+    if (s) return s;
+  }
+  return null;
+}
+
+/**
+ * 道路編號(`ref`)—— 交流道/公路盾牌用;與 name 分開,兩者常常都要。
+ * OSM 的 `ref` 可能是 `1;3` 多值,取第一個。
+ */
+export function pickRef(tags) {
+  const r = tags?.ref;
+  if (typeof r !== 'string') return null;
+  const s = r.split(';')[0].replace(/\s+/g, ' ').trim();
+  return s && s.length <= 8 ? s : null;
 }
 
 /**
@@ -263,8 +303,7 @@ export function emptyCorpus(locale = 'und') {
  *   en 拉丁副名(次要層次)
  */
 function entryOf(tags, kind) {
-  let t = null;
-  for (const k of NAME_KEYS) { t = clean(tags[k]); if (t) break; }
+  const t = pickName(tags);   // 取名規則只有一份(`pickName`),語料與世界文字同吃
   if (!t) return null;
   let en = null;
   for (const k of ROMAN_KEYS) { en = clean(tags[k], 28); if (en && en !== t) break; else en = null; }
