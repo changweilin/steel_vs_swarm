@@ -15,6 +15,7 @@ import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
+  fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
@@ -4237,6 +4238,8 @@ export class BattleClient {
         } else {
           const clip = this._clipBeam(from, to);
           this._shotFx(from, clip.to, { heavy: ev.slot === 'heavy', side: ev.side, impact: true });
+          // bot / 僚機的輕武器齊射同樣走連發演出(與真人 tracer 共用 _burstEchoOther)
+          this._burstEchoOther(ev.pid, ev.slot, ev.side, to);
         }
         this._markFire(ev.pid, ev.slot, t0, { x: tx, z: tz, y: to.y });
       } else {
@@ -4307,6 +4310,27 @@ export class BattleClient {
     );
     // 射手機體的開火動畫(後座 + 射姿保持):pid 由伺服器轉播時附上(server.js tracer relay)
     this._markFire(m.pid, m.slot, performance.now() / 1000, { x: to0.x, z: to0.z, y: to0.y });
+    // 連發演出:他人的機槍在我畫面上同樣要是連續的(N 由對方的武器 def 推導,兩端同一支
+    // fireBurstN ⇒ 不必為此加任何網路欄位)。槍口逐發重解 —— 射手在這 0.2 秒裡還在動。
+    this._burstEchoOther(m.pid, m.slot, m.side, to0);
+  }
+
+  /**
+   * 他人 / bot / 僚機開火的連發補畫(第 2~N 發)。純表現層:只重畫曳光 + 槍口焰 + 後座動畫,
+   * 傷害早已由伺服器結算完畢。射手 ch 解不出來(觀戰剛進場、實體已離場)就整段不做 —— 寧缺勿錯。
+   */
+  _burstEchoOther(pid, slot, side, to0) {
+    if (pid == null) return;
+    const shooter = this._heroEntByPid(pid);
+    const def = shooter ? this._heroDefOf(shooter.ch, slot) : null;
+    if (!def) return;
+    const aim = to0.clone();
+    this._queueBurst(def, () => {
+      const from = this._entMuzzle(pid, slot, aim);
+      const clip = this._clipBeam(from, aim);
+      this._shotFx(from, clip.to, { heavy: slot === 'heavy', side, impact: clip.cut });
+      this._markFire(pid, slot, performance.now() / 1000, { x: aim.x, z: aim.z, y: aim.y });
+    });
   }
 
   /** 手持重武器(launcher 彈道)砲管仰角回寫:發射方向的仰角調整 gunPitch 目標角。
@@ -4329,6 +4353,40 @@ export class BattleClient {
     if (pid == null) return null;
     for (const ent of this.ents.values()) if (ent.pid === pid && ent.ch) return ent;
     return null;
+  }
+
+  // ---------------- 連發演出(2026-08-02 使用者定案)----------------
+  /**
+   * 射速壓縮之後,一次擊發 = `fireBurstN(def)` 發**視覺**子彈(實質仍是一次結算 —— 伺服器
+   * 只收到一發、只結算一份傷害)。使用者定案:「高射速武器動畫做對應調整,例如機槍做成
+   * 3 連發實質一次傷害,整體看起來攻擊動畫是連續的」。
+   *
+   * **純表現層**(原則 4):排程只在客戶端,MUST NOT 送任何 hit/tracer/plasma —— 多送一發就是
+   * A1(客戶端自己加傷害)。三個消費端(自機 FPV / 他人 tracer / bot·僚機 shot 事件)共用這一支
+   * 排程器,MUST NOT 各寫一份計時器 —— 連發數與間隔的真相只有 `fireBurstN`/`fireBurstGap`。
+   *
+   * 間隔由 `fireBurstGap` 把 N 發**平均鋪滿整個擊發週期** ⇒ 週期內與跨週期的間隔完全相同,
+   * 這正是「看起來是連續的」的來源(打成「一串急促連發 + 一段空白」就不是使用者要的)。
+   */
+  _queueBurst(def, fn) {
+    const n = fireBurstN(def);
+    if (n <= 1) return;
+    const gap = fireBurstGap(def), t0 = performance.now() / 1000;
+    for (let i = 1; i < n; i++) (this._burstQ ||= []).push({ at: t0 + gap * i, fn, i, n });
+  }
+
+  /** 連發排程逐幀消化(排在 `_tickWeapons` 之後:本幀擊發的那一輪同幀就進佇列) */
+  _tickBurstFx(now) {
+    const q = this._burstQ;
+    if (!q || !q.length) return;
+    for (let i = q.length - 1; i >= 0; i--) {
+      if (now < q[i].at) continue;
+      const b = q[i];
+      q.splice(i, 1);
+      // 演出失敗(射手中途離場 / 場景已拆)一律靜默略過 —— 純視覺 MUST NOT 中斷戰鬥迴圈
+      // (前科:_tryFire 裡一個未宣告變數讓整幀含彈體更新與渲染當場斷掉)。
+      try { b.fn(b.i, b.n); } catch { /* 降級,不例外 */ }
+    }
   }
 
   /** 他人武器 def 解析(heroWeapon Lv1;純視覺用 type/mv/range,不涉結算)—— 依 ch:slot 快取 */
@@ -4377,7 +4435,9 @@ export class BattleClient {
   }
 
   /** 他人/bot 重武器視覺彈體。launcher 走拋物線命中 to(慢速明顯弧),其餘直指;回傳實際發射方向(供砲管仰角回寫)。 */
-  _spawnVisShell(from, to, def, side, ch, mv = null) {
+  // heavy:彈體外觀走輕/重哪一款(預設 true = 既有的重武器呼叫端逐位元不變;
+  //        連發演出補畫的輕武器視覺彈體傳 false,與自機 `_takeProjectile(def, false)` 同一顆)。
+  _spawnVisShell(from, to, def, side, ch, mv = null, heavy = true) {
     // mv = 射手回報的實際初速(火控解定案的裝藥號數 / 彈射模式全速)⇒ 兩端看到同一條弧。
     // bot 的 shot 事件不帶初速,退回以落點離地高度推定對空(> AA_ALT = 打空中目標)→ 高速近直線。
     const aa = def.type === 'launcher' && to.y - this.terrain.heightAt(to.x, to.z) > BALLISTIC.AA_ALT;
@@ -4390,7 +4450,7 @@ export class BattleClient {
       ? this._lobVel(from, to, v0)                              // 對空彈射:初速高 ⇒ 解自然拉平
       : to.clone().sub(from).normalize().multiplyScalar(v0));   // 飛彈/動能:直指目標(近似,純視覺)
     const ldir = vel.clone().normalize();
-    const mesh = this._takeProjectile(def, true, side, ch);   // 同池:他人彈體與自機彈體共用回收路徑
+    const mesh = this._takeProjectile(def, heavy, side, ch);   // 同池:他人彈體與自機彈體共用回收路徑
     mesh.position.copy(from);
     mesh.quaternion.setFromUnitVectors(_FWD_Z, ldir);
     this.scene.add(mesh);
@@ -4935,6 +4995,7 @@ export class BattleClient {
     this._prevVital = null;   // 換座機:重置受傷偵測基準,避免血量落差誤觸暈影
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
+    this._burstQ = null;      // 換座機:未補畫完的連發是上一具機體的槍口,不跟著搬
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
   }
 
@@ -5422,6 +5483,7 @@ export class BattleClient {
     this._fireDwell = 0; this._swampDwell = 0; this._scopeFog = 0; this.hud.envFog?.(0); this._env = { code: 0, depth: 0, ground: 0, air: false };   // 死亡:清火場霧化/沼澤滯留(_updatePlayer 已早退不再更新)
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
+    this._burstQ = null;    // 死亡:清連發演出佇列(自機那半的閉包會在重生後的新機體上補畫舊武器)
     // 死亡:清視野鎖定的目標與鈕面亮燈 —— `_updatePlayer` 對 dead 早退,`_tickViewLock` 不會再跑到
     //(鈕還按著沒關係:重生後照樣重新索敵,與 `firing` 同語意)
     this._vlockId = null; this._vlockPrev = null; this._setVlockUi(false);
@@ -6362,7 +6424,9 @@ export class BattleClient {
     // 連射回穩計數(中後座輕武器;扇形武器不吃 —— 慢射速本身就是節奏)。
     // 回穩短暫(settle 秒)且準星上踢自明,不下 HUD 提示以免連射時洗版。
     if (prof.burst && !def.fan) {
-      this._burstN[id] = (this._burstN[id] || 0) + 1;
+      // 計**發**不計**次扳機**:一次擊發現在等於 fireBurstN 發(見 _queueBurst),
+      // 逐次 +1 會讓 prof.burst=4 的回穩窗變成 8 發才觸發一次(射速壓縮前是 4 發)。
+      this._burstN[id] = (this._burstN[id] || 0) + fireBurstN(def);
       if (this._burstN[id] >= prof.burst) {
         this._burstN[id] = 0;
         this._settleUntil[id] = now + (prof.settle || 0.4);
@@ -6405,6 +6469,10 @@ export class BattleClient {
     this._recoilMove = prof.move || 'free';
     this._recoilSlowF = prof.slowF ?? 0.5;
     this._recoilMoveUntil = now + Math.max(0.22, 1 / def.rate) * 1.1;    // 位移懲罰持續到下一發窗口
+
+    // 連發演出:這一發若是 N 連發,補畫剩下 N−1 發(純視覺,不再回報命中 —— 見 _queueBurst)。
+    // N = 1 時整段是 no-op ⇒ 重武器與慢速輕武器逐位元維持舊路徑。
+    this._queueBurst(def, () => this._burstEchoSelf(def, id, prof));
 
     if (def.fan) {
       // 扇形武器(散彈 / 電漿):無彈道,命中由伺服器 heroPlasma 以「射向 + 夾角 + 射程」錐狀結算;
@@ -6505,6 +6573,50 @@ export class BattleClient {
       t: 'tracer', from: [muzzle.x, muzzle.y, muzzle.z], to, slot: id,
       mv: lobFc ? Math.round(lobFc.v0) : undefined,   // 拋物線武器帶實際初速(裝藥號數),對方重現同一條弧
     });
+  }
+
+  /**
+   * 自機 FPV 的連發補畫(第 2~N 發;第 1 發由 `_tryFire` 本體畫)。
+   *
+   * **不碰任何權威狀態**:不扣彈藥、不扣電力、不送 hit/tracer、不進 `this.bullets`
+   * (那條路徑會回報命中 = 傷害翻倍 = A1)。動能/磁軌走 `_spawnVisShell` 的**純視覺**彈體
+   * (同一個物件池,擊中/逾程照樣 `_dropBullet` 回收 —— A25),光束走 `_shotFx` 同一支曳光。
+   *
+   * **後座與震動刻意逐發補上**:兩者都是 `RECOIL`/`SHAKE` 註明的純客戶端手感,而且原本是
+   * **逐發**累加的 —— 射速從 10 壓到 3.91 之後,只在扳機那一下加一次會讓每秒後座量與鏡頭
+   * 震動一起掉到舊制的四成(手感無聲變輕,但沒有任何數字看得出來)。補回 N−1 份 ⇒ 每秒
+   * 後座/震動/擊退量與壓縮前一致。準星上踢 `recoil.p` 同理(伺服器不涉入視角)。
+   */
+  _burstEchoSelf(def, id, prof) {
+    if (!this.side || this.dead || !this.ch) return;
+    this.camera.updateMatrixWorld();
+    const dir = this.camera.getWorldDirection(new THREE.Vector3());
+    const muzzle = this.gunGroup
+      ? this.gunGroup.localToWorld(this._muzzle.clone())
+      : this.camera.position.clone().add(dir.clone().multiplyScalar(2));
+    const rng = def.range * this._altRangeTo(this._aimTarget(this._maxRange(def)));
+
+    // 逐發手感(見上方註):槍口焰 / 槍身後坐 / 鏡頭震動 / 準星上踢 / 擊退
+    this.flash.visible = true;
+    this._flashTtl = 0.045;
+    this._flashHeavy = false;               // 連發只發生在輕武器(重武器 N 恆為 1)
+    this.weaponKick = 1;
+    this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1));
+    this.recoil.p += (prof.climb ?? 0.011);
+    this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
+    if (prof.back) this.vel.addScaledVector(dir, -prof.back * (this._flying() ? RECOIL.AIR_F : 1));
+
+    if (def.type === 'beam') {
+      const col = this.side === 'SWARM' ? 0xa8fff2 : 0xd2b8ff;
+      const { point } = this._resolveAim(rng, aoeClass(def) === 'line');
+      this._tracer(muzzle, point, col, 0.35);
+      this._muzzleBurst(muzzle, false, this.side);
+      starburst(this.scene, this.effects, point.x, point.y, point.z, 2.2, col);
+      return;
+    }
+    // 動能 / 磁軌:與本體同初速同重力 ⇒ 三發走同一條彈道,看起來就是一串連續的曳光
+    const to = muzzle.clone().addScaledVector(dir, rng);
+    this._spawnVisShell(muzzle, to, def, this.side, this.ch, this._shotV0(def, false), false);
   }
 
   // ---------------- 彈體物件池(2026-07-27)----------------
@@ -8639,6 +8751,7 @@ export class BattleClient {
     this._updateAaMode();             // 榴彈對空彈射模式:MUST 在 _tickWeapons(擊發)之前定案
     this._lobAim();                   // 榴彈火控解(消費 _aaEnt):同樣 MUST 在擊發之前 —— 所見即所射
     this._tickWeapons(now);
+    this._tickBurstFx(now);           // 連發演出補畫:MUST 排在擊發之後(本幀那一輪同幀進佇列)
     this._updatePlayer(dt, now);
     if (this._deathSeq && !this._gameOver) this._updateDeathSeq(dt, now);   // 陣亡過場獨佔鏡頭(_updatePlayer 已對 dead 早退)
     this._updateEnts(dt, now);

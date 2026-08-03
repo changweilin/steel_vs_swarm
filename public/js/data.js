@@ -1400,7 +1400,9 @@ export const RECOIL = {
 export function recoilTier(w, slot, fan = !!w.fan || w.type === 'plasma') {
   const R = RECOIL[slot];
   if (w.recoil && R[w.recoil]) return R[w.recoil];
-  const nm = w.name || '', ty = w.type, rate = tierVal(w.rate ?? 3, 1);
+  // rate 一律取**壓縮前**的 rate0(見 FIRE_RATE):後座分級是武器性格,MUST NOT 隨射速壓縮漂移 ——
+  // 壓縮後全部輕武器都掉到 7 以下,`rate >= 7` 那一條會整條失效,機槍當場從 high 掉成 med。
+  const nm = w.name || '', ty = w.type, rate = tierVal(w.rate0 ?? w.rate ?? RATE_DEF, 1);
   let tier;
   if (slot === 'light') {
     if (ty === 'beam' || ty === 'rail') tier = 'low';
@@ -1929,7 +1931,10 @@ export function heroWeapon(ch, slot, lvl = 1, heroic = true) {
       * (heroic ? HEROIC.dmg : 1) * squad,
     // w.range 已於下方統一縮放塊 ×COMBAT_SCALE(source 縮 reach);rangeCap 隨 UNITS.sight 同步縮 ⇒ 相對關係不變
     range: heroRange(ch, slot, heroic),
-    rate: t(w.rate ?? 3),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
+    rate: t(w.rate ?? RATE_DEF),   // rate 也可三階(s05 旋轉機砲);漏過 tierVal 會把陣列外洩給 UI/射速限制
+    // rate0 = 射速壓縮**前**的射速(見 FIRE_RATE):連發演出 fireBurstN/fireBurstGap 的唯一依據。
+    // 未被壓縮的武器沒有這一欄 ⇒ 退回 rate 本身 ⇒ N = 1 = 不做連發演出。
+    rate0: t(w.rate0 ?? w.rate ?? RATE_DEF),
     mag: t(w.mag ?? 1),
     reload: t(w.cd ?? w.reload ?? 2),
     r: t(w.r), pen: t(w.pen ?? 0),
@@ -2652,6 +2657,85 @@ export const CHARACTERS = {
       cd: [70, 62, 54], mp: [80, 90, 100], desc: '尾款結清便人間蒸發(開火即現形)' },
   },
 };
+
+// ---- 射速壓縮 + 連發演出(2026-08-02 使用者定案)----------------------------------------
+// 使用者需求:「DPS 不變、降低輕重武器射速,射速越高降越多,拉近射速差異、但射速的排名不變,
+// 高射速武器動畫做對應調整,例如機槍做成 3 連發實質一次傷害,整體看起來攻擊動畫是連續的」。
+//
+// **這是一段推導迴圈,不是改數值**(同 CLASS_SYM / VS_DEFS 夾制 / aoe 夾制):32 角 × 兩槽位的
+// `rate`/`dmg`/`mag` 由 `rateComp()` 一次改寫完,MUST NOT 回頭逐武器手改階梯 —— 那正是
+// 「32 角一動就漂移」的老病。原始射速留在 `rate0`(連發演出與後座分級的唯一依據)。
+//
+// ① 曲線:`rateComp(r) = PIVOT × (r/PIVOT)^K`(r > PIVOT),PIVOT 以下逐位元不動。
+//    K < 1 ⇒ 折減率隨射速單調遞增 = 「射速越高降越多」;曲線嚴格遞增 ⇒ **排名保證不變**
+//    (這是「不變」的來源,不是巧合 —— MUST NOT 改成分段表或整數倍率:整數倍率會讓
+//    rate 8 → 4.0 而 rate 9 → 3.0,排名當場翻掉)。K = 1 ⇒ 逐位元回到舊制(反向驗證用)。
+// ② 錨點 `PIVOT = RATE_DEF`:32 把重武器一把都沒有標 `rate`,全部共用預設值 3 —— 那就是
+//    現役射速帶的底。錨在這裡 = 重武器與 2.2/2.4/2.6/3 那幾把慢速輕武器折減 0%,
+//    正是「降最少」的那一端。**MUST NOT 把錨點下修到全場最低 2.2**:重武器彈夾只有 2~5 發,
+//    ③ 的整數化在那個尺度上誤差 14%(實測 mag 3 → 2 = DPS −14%),遠超「DPS 不變」。
+// ③ **DPS 不變靠三件事一起動**:rate ×f、dmg ÷f、**mag ×f**。少了 mag 那一項,彈夾撐得更久
+//    ⇒ 裝填次數變少 ⇒ 持續 DPS 最多虛胖 33.5%(實測),而且完全看不出來。
+//    彈夾週期 `mag/rate + reload` 因此逐位元保持 ⇒ `heavyMpCost`(每發電力)與 bal ①④⑤⑦
+//    吃的持續火力同步不動。mag 必須是整數(`st.ammo` 逐發遞減),四捨五入是唯一的誤差來源:
+//    全 64 把武器 × Lv1~Lv4 實測最大偏差 0.99%。
+// ④ **演出**:一次擊發 = `fireBurstN` 發視覺子彈(實質傷害仍是一次結算,伺服器只收到一發)。
+//    N = round(rate0 / rate) ⇒ 視覺脈衝率 = N × rate ≈ 原射速,連發間隔 `fireBurstGap` 把 N 發
+//    **平均鋪滿整個擊發週期** ⇒ 跨週期的間隔與週期內完全相同 = 使用者要的「看起來是連續的」。
+//    現值:機槍(rate 10)→ 3 連發、旋轉機砲(14~18)→ 3~4 連發、重武器一律 N = 1(不變)。
+export const RATE_DEF = 3;   // 未標 rate 的武器共用的預設射速(32 把重武器全數落在這裡)
+export const FIRE_RATE = {
+  K: 0.22,         // 壓縮指數(< 1 = 越快降越多);校準錨 = 使用者指定的「機槍 3 連發」⇒ K ≤ 0.239
+  PIVOT: RATE_DEF, // 錨點:此值(含)以下折減 0%
+  BURST_MAX: 4,    // 單次擊發的視覺連發上限
+};
+/** 壓縮後射速(唯一縫;嚴格遞增 ⇒ 排名不變)。K ≥ 1 或 r ≤ PIVOT 一律原值回傳(逐位元舊制)。 */
+export const rateComp = (r) => (r <= FIRE_RATE.PIVOT || FIRE_RATE.K >= 1
+  ? r : FIRE_RATE.PIVOT * (r / FIRE_RATE.PIVOT) ** FIRE_RATE.K);
+/** 一次擊發的視覺連發數(解析後 def;`rate0` = 壓縮前射速)。MUST NOT 在消費端自己 round。 */
+export const fireBurstN = (def) => {
+  const r0 = def?.rate0, r = def?.rate;
+  if (!r0 || !r) return 1;
+  return Math.min(FIRE_RATE.BURST_MAX, Math.max(1, Math.round(r0 / r)));
+};
+/** 連發間隔:N 發平均鋪滿整個擊發週期 ⇒ 週期內與跨週期的間隔一致 =「連續」的來源 */
+export const fireBurstGap = (def) => 1 / (def.rate * fireBurstN(def));
+/**
+ * 一把武器的射速壓縮(**純函式,唯一實作**;下方的推導迴圈與 `tools/audit_fire_rate.mjs` 同吃)。
+ * 吃原始 `{rate, dmg, mag}`,回傳壓縮後的同三欄 + `rate0`;錨點以下(f 全階為 1)回傳 null
+ * = 這把武器逐位元不動(連 `rate0` 都不掛 ⇒ `fireBurstN` 恆 1 ⇒ 不做連發演出)。
+ *
+ * 三欄一起動才守得住「DPS 不變」(見上方 ③):rate ×f、dmg ÷f、mag ×f。
+ * rate 通常是純量(f 對全階相同 ⇒ dmg 階梯形狀原樣保留);s05 旋轉機砲的 rate 是三階陣列
+ * ⇒ 逐階各自解一次 f,同樣只改幅度不改形狀。
+ */
+export function compressWeapon(w) {
+  const arr = (v, n) => (Array.isArray(v) ? v : Array(n).fill(v));
+  const src = { rate: w.rate ?? RATE_DEF, dmg: w.dmg ?? 0, mag: w.mag ?? 1 };
+  const n = Math.max(...Object.values(src).map((v) => (Array.isArray(v) ? v.length : 1)));
+  const r0 = arr(src.rate, n), d0 = arr(src.dmg, n), m0 = arr(src.mag, n);
+  const f = r0.map((r) => rateComp(r) / r);
+  if (f.every((x) => x === 1)) return null;
+  const out = {
+    rate0: src.rate,   // 演出(fireBurstN)與後座分級(recoilTier)的原始射速,唯一保留處
+    rate: r0.map((r, i) => Math.round(r * f[i] * 1000) / 1000),
+    dmg: d0.map((d, i) => Math.round(d / f[i] * 1000) / 1000),
+    mag: m0.map((m, i) => Math.max(1, Math.round(m * f[i]))),
+  };
+  // 純量進來的欄位只要各階同值就仍以純量回去 —— tierVal 對「長度 1 的陣列」有專門語意
+  // (末段增量 0 = 不外推),把純量胖成三元素陣列會讓 Lv4 從「同值」變成「線性外推」。
+  for (const k of ['rate', 'dmg', 'mag']) {
+    if (!Array.isArray(src[k]) && out[k].every((v) => v === out[k][0])) out[k] = out[k][0];
+  }
+  return out;
+}
+for (const c of Object.values(CHARACTERS)) {
+  for (const slot of ['light', 'heavy']) {
+    const w = c[slot];
+    if (!w) continue;
+    Object.assign(w, compressWeapon(w) || {});
+  }
+}
 
 // ---- 經濟(2026-07-17 改制:金錢只來自擊殺/助攻/物資,無被動收入)----
 // 擊殺 = 全額賞金;助攻 = 賞金 × ASSIST.F —— 曾對死者造成傷害或負面狀態才算貢獻,

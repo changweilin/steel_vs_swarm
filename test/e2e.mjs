@@ -356,8 +356,12 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   rb.x = tw.x + 30; rb.z = tw.z;
   rb.ammo = {}; rb.fireAt = {}; rb.reloadUntil = {};   // 重置彈藥計數
   const hp0t = tw.hp;
-  const shots = wl.mag + 10;   // 填彈完成前打完(只吃得進一個彈夾)
-  for (let i = 0; i < shots; i++) { sim.t += 0.16; sim.heroHit('p_r', tw.id); }
+  // 步進與追加發數 MUST 由**解析後的武器**推導(2026-08-02 射速壓縮之後,手寫秒數會靜默失效:
+  // 舊制寫死的 0.16s 是「rate 4.5 的 lenient 射速閘」,射速一壓到 3.28 就變成每兩發被拒一發)。
+  const step = 1 / wl.rate;                                       // 恆寬於 lenient 閘(閘 = 1/(rate×1.5))
+  const extra = Math.max(1, Math.floor(wl.reload / step) - 1);    // 追加發數全落在填彈窗內 ⇒ 一律被拒
+  const shots = wl.mag + extra;   // 填彈完成前打完(只吃得進一個彈夾)
+  for (let i = 0; i < shots; i++) { sim.t += step; sim.heroHit('p_r', tw.id); }
   const magDmg = hp0t - tw.hp;
   const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
   assert(Math.abs(magDmg - expMag) < 1,
