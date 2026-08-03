@@ -1,21 +1,22 @@
 ---
 name: photo-to-prop-forge
-description: 從網路 CC0 照片快速取材,用開源 AI 3D 模型產出建築/神木/巨石/地標的「零件詞彙」,交給既有的程序組裝碼(VEG_DEFS / MEGALITHS / KIND_PARTS / BUILDERS)去挑選、擺放與抖動 —— 不是烤一棵成品樹。涵蓋 Openverse/Wikimedia 授權硬閘、12GB 選型、外廓實測與碰撞一致性,以及 audit_object_joints / audit_beacons / audit_traverse 的驗收條件。Use when static world objects look too uniform or too coarse, when adding rock/tree/building/landmark detail, when sourcing reference photos for 3D generation, or when asked to make scenery "more detailed".
+description: Turn CC0 web photos into a **part vocabulary** for buildings, giant trees, megaliths and landmarks using open-source AI 3D models, then let the existing procedural assembly code (VEG_DEFS / MEGALITHS / KIND_PARTS / BUILDERS) pick, place and jitter them — never bake a finished tree. Covers the Openverse/Wikimedia licence hard gate, the 12GB tool ladder, measured extents vs collider consistency, and the audit_object_joints / audit_beacons / audit_traverse acceptance gates. Use when static world objects look too uniform or too coarse, when adding rock/tree/building/landmark detail, when sourcing reference photos for 3D generation, or when asked to make scenery "more detailed".
 license: MIT
-compatibility: 離線管線(Python 3.11 venv + Blender headless,住 tools/ai3d/,不進 package.json);執行期只多一支 partlib.js
+compatibility: Offline pipeline (Python 3.11 venv + Blender headless under tools/ai3d/, never in package.json); runtime adds only partlib.js
 ---
 
-# 照片 → 靜態物件零件鍛造
+# Photo → Static Prop Part Forge
 
-> 先讀 `docs/ai3d_asset_plan.md`(執行計畫與階段閘門)。通用外部管線知識在 `ai-mesh-generation`;
-> 變異與種子紀律在 `procedural-object-detail`。本支只寫**本 repo 的契約與會靜默壞掉的地方**。
+> Read `docs/ai3d_asset_plan.md` first (plan and phase gates). Generic external-pipeline knowledge lives in
+> `ai-mesh-generation`; variation and seed discipline in `procedural-object-detail`. This skill covers
+> **only this repo's contract and what breaks silently**.
 
-## 0. 這支 skill 的唯一命題:產詞彙,不產成品
+## 0. Core premise: produce vocabulary, not finished props
 
-現有的靜態物件是**純資料零件表** + 程序組裝:
+Static props today are **pure-data part tables** + procedural assembly:
 
 ```js
-// beacons.js KIND_PARTS —— 純資料,零 THREE(這是它離線可驗的唯一原因)
+// beacons.js KIND_PARTS — pure data, zero THREE (the only reason it is offline-verifiable)
 pylon: [ { g: ['cyl', 0.42, 0.52, 13, 4], c: 0x8d949c, p: [-2.9, 6.5, -2.9] }, … ]
 
 // biomes.js VEG_DEFS
@@ -23,134 +24,141 @@ conifer2: { parts: [ { g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },
                      { g: ico(2.0), y: 3.4, key: 'conifer', sy: 0.8 }, … ] }
 ```
 
-組裝碼負責的是**每實例變異**:seed 決定挑哪一款、`stretch` 決定高瘦比、`partJitter` 決定零件抖動、
-`vegPartXform` 決定整株的朝向與微傾。**烤一棵完整的樹進來,就是把這一整層丟掉** ——
-一片林子會長得一模一樣,而且沒有任何錯誤訊息。
+The assembly code owns **per-instance variation**: the seed picks the variant, `stretch` sets the
+height/width ratio, `partJitter` perturbs parts, `vegPartXform` sets whole-instance yaw and tilt.
+**Baking a complete tree throws that entire layer away** — every tree in the forest becomes identical,
+with no error message.
 
-所以 AI 只產「零件」:
+So AI produces parts only:
 
-| 家族 | 現況零件 | AI 該產什麼 |
+| Family | Parts today | What AI should produce |
 |---|---|---|
-| 植被/神木 `VEG_DEFS` `GIANT_DEFS` | `cyl` 幹 + `ico`/`cone` 冠 | 3~5 款樹冠模組、2~3 款分枝、板根 |
-| 巨石 `MEGALITHS` | `Box`/`Sphere` + 手寫岩溝 | 岩面片、崩落塊、山腳碎石錐 |
-| 地標 `KIND_PARTS` | `['cyl'|'box'|'cone'|'ico']` | 格構節點、微波碟、水塔桶身、貨櫃 |
-| 建物 `hazards.js BUILDERS` | 拉伸盒 | 窗組模組、屋頂帽、陽台/雨遮、外掛管線 |
+| Vegetation / giant trees `VEG_DEFS` `GIANT_DEFS` | `cyl` trunk + `ico`/`cone` canopy | 3–5 canopy modules, 2–3 branch forks, buttress roots |
+| Megaliths `MEGALITHS` | `Box`/`Sphere` + hand-written grooves | rock facets, collapse blocks, talus cones |
+| Landmarks `KIND_PARTS` | `['cyl'\|'box'\|'cone'\|'ico']` | lattice nodes, microwave dishes, water-tank drums, containers |
+| Buildings `hazards.js BUILDERS` | extruded boxes | window modules, roof caps, balconies/canopies, external piping |
 
 ---
 
-## 1. 取材:授權是硬閘,不是建議
+## 1. Sourcing: the licence gate is hard, not advisory
 
-- **Openverse API**(`api.openverse.org`):**免金鑰**、8 億+ 件,來源涵蓋 Flickr / Wikimedia / 博物館,
-  支援 `license` 過濾。
-- **Wikimedia Commons API**:補地標類;每筆帶授權、作者、尺寸、分類。
+- **Openverse API** (`api.openverse.org`): **no key**, 800M+ items, `license` filter, covers Flickr /
+  Wikimedia / museums.
+- **Wikimedia Commons API**: fills the landmark category; each item carries licence, author, size, category.
 
-**規則**
+**Rules**
 
-1. 查詢**寫死 `license=cc0`**(含 public domain)。**CC-BY 也不收** —— 一顆烤進 repo 的岩石沒有地方
-   掛署名,而授權出事不會有任何錯誤訊息。
-2. 每筆下載連同 `{source_url, license, creator, retrieved_at}` 寫進 `tools/ai3d/photo_manifest.json` 留檔。
-3. **照片只是離線輸入,不進 repo**;進 repo 的只有零件庫 GLB。
+1. **Hard-code `license=cc0`** (includes public domain). **CC-BY is also rejected** — a rock baked into the
+   repo has nowhere to carry attribution, and a licence violation produces no error message.
+2. Every download records `{source_url, license, creator, retrieved_at}` in `tools/ai3d/photo_manifest.json`.
+3. **Photos are offline input and never enter the repo**; only the part-library GLB does.
 
-**選片準則**(與 `mech-part-forge` §4.1 同一套,但這裡是挑不是生成):
-單一主體、背景乾淨、平光無強投影、不透明、無人/車遮擋、短邊 ≥1024、避開廣角近攝的透視變形。
-一張好照片勝過三張補圖。
+**Selection criteria** (same spec as `mech-part-forge` §4.1, but here you are picking, not generating):
+single subject, clean background, flat light without hard shadows, opaque, no people/cars occluding,
+short side ≥1024, avoid wide-angle close-up distortion. One good photo beats three patched ones.
 
 ---
 
-## 2. 產製流程
+## 2. Production flow
 
 ```
-Openverse / Commons(license=cc0)
-    │  下載 + photo_manifest.json 留檔
+Openverse / Commons (license=cc0)
+    │  download + record in photo_manifest.json
     ▼
-挑片 →〔rembg 去背 → alpha〕
-    │  單圖→3D:Stable Fast 3D(6GB,主力)/ Hunyuan3D 2.1 shape-only(10GB)/ TRELLIS.2(細節件)
+select →[rembg matte → alpha]
+    │  image→3D: Stable Fast 3D (6GB, primary) / Hunyuan3D 2.1 shape-only (10GB) / TRELLIS.2 (hero parts)
     ▼
-raw mesh → Blender headless:減面 → **原點落在接合面** → 朝向正規化(+Y 上、+Z 前)→ 匯出
+raw mesh → Blender headless: decimate → **origin on the mating face** → normalise orientation (+Y up, +Z forward) → export
     ▼
-public/assets/models/parts/{family}.glb  →  partlib 查表  →  既有零件表挑用
+public/assets/models/parts/{family}.glb  →  partlib lookup  →  existing part tables select it
 ```
 
-**靜態這一半的主力是 SF3D 不是 TRELLIS**:一株樹要十幾個零件、一座地標要二十幾個,6GB/<1s 的
-吞吐才撐得住批量;真正需要細節的少數件(神木樹冠、指標性巨岩)才升級到 TRELLIS.2 / Hunyuan。
+**SF3D is the workhorse here, not TRELLIS**: a tree needs ~15 parts and a landmark ~25, so 6GB/<1s
+throughput is what makes the batch viable; only the few parts that genuinely need detail (giant-tree
+canopies, signature megaliths) escalate to TRELLIS.2 / Hunyuan.
 
-**原點落在接合面**是這條線最容易漏的一步:樹冠零件的原點要在**冠底**、屋頂帽在**簷口**、
-碎石錐在**地面**。原點在包圍盒中心的話,既有零件表裡那些 `y:` 值全部要重算 ——
-而症狀是樹冠浮在半空,`audit_object_joints` 會報 FLOAT。
+**Origin on the mating face** is the step most often missed: a canopy's origin belongs at the canopy base,
+a roof cap's at the eaves, a talus cone's at ground level. With the origin at the bbox centre, every `y:`
+value in the existing part tables would have to be recomputed — and the symptom is a canopy floating in
+mid-air, reported by `audit_object_joints` as FLOAT.
 
 ---
 
-## 3. 執行期單一縫:`public/js/partlib.js`
+## 3. Runtime seam: `public/js/partlib.js`
 
 ```js
-// beacons.js —— 只在 _geo() 多認一種描述,其餘一行不動
+// beacons.js — one extra descriptor form in _geo(), nothing else changes
 function _geo(g) {
-  if (g[0] === 'lib') return libGeo(g[1]) ?? _geo(g[2]);   // g[2] = 原本的基本體描述 = 保險絲
+  if (g[0] === 'lib') return libGeo(g[1]) ?? _geo(g[2]);   // g[2] = original primitive descriptor = the fuse
   …
 }
 
 // biomes.js VEG_DEFS
 { g: libGeo('tree/canopy_c') ?? ico(2.7), y: 5.0, key: 'foliage', sy: 0.75 }
-//                            ↑ 這個 ?? MUST 留著
+//                            ↑ this ?? MUST stay
 ```
 
-**`beacons.js` 前半段 MUST 維持零 THREE** —— 那是它離線可驗的唯一原因(`audit_beacons.mjs` Ⅰ 釘住這條)。
-零件描述仍是純資料 `['lib', name, 原本的基本體]`,查表發生在 `_geo` 那一層。
+**`beacons.js`'s front half MUST stay THREE-free** — that is the only reason it is offline-verifiable
+(`audit_beacons.mjs` I pins this). Part descriptors stay pure data, `['lib', name, <original primitive>]`;
+the lookup happens inside `_geo`.
 
 ---
 
-## 4. 四條不變式(這是驗收條件,不是建議)
+## 4. Four invariants (acceptance conditions, not advice)
 
-1. **外廓實測**:碰撞柱 / `foot` / `col.r` 一律 `Box3.setFromObject` 量**換上新零件之後**的結果。
-   標稱值沿用 = 演出頂出碰撞柱(A30)或地標被無謂推遠。`audit_beacons.mjs` Ⅰ 雙向釘住這一欄。
-2. **零額外亂數**:換幾何 MUST NOT 多抽一枚 `rnd()`。多抽一枚 = 整張圖的植被/建物/障礙佈局序列
-   整條推移(§2.3),而畫面上只表現成「這張圖跟上次不一樣」。
-3. **共用幾何 `markShared()`**:零件庫幾何被大量 InstancedMesh 共用,`disposeTree` 必須依註冊表跳過(A25)。
-4. **只有幾何 + 基色**:法線/金屬/粗糙貼圖一律不進 repo;顏色仍由零件表的 `c:` 決定 ⇒ 匯出的 GLB
-   **MUST 讓基色可被覆寫**。
+1. **Measured extents**: collider / `foot` / `col.r` always from `Box3.setFromObject` **after** the swap.
+   Reusing nominal values means visuals poking outside the collider (A30) or the landmark being pushed
+   needlessly far away. `audit_beacons.mjs` I pins this column in both directions.
+2. **Zero extra randomness**: swapping geometry MUST NOT consume an extra `rnd()`. One extra draw shifts
+   the whole map's vegetation/building/hazard layout sequence (CLAUDE.md §2.3), and on screen it just reads as
+   "this map is different from last time".
+3. **`markShared()` for shared geometry**: library geometry is shared by many InstancedMeshes;
+   `disposeTree` must skip it by registry (A25).
+4. **Geometry + base colour only**: no normal/metal/roughness maps in the repo; colour still comes from the
+   part table's `c:` ⇒ the exported GLB **MUST leave base colour overridable**.
 
 ---
 
-## 5. 驗收
+## 5. Acceptance
 
 ```bash
-node tools/audit_object_joints.mjs --seeds 8   # FLOAT/PARTIAL/DETACHED/ISOLATED 四硬失敗
-node tools/audit_beacons.mjs                   # 外廓/碰撞/落點
-node tools/audit_beacons.mjs --break-extent    # 反向驗證:撐爆一件零件 MUST 紅字
-node tools/audit_traverse.mjs                  # 新零件沒把路擋住
-node tools/audit_cel_pipeline.mjs              # ramp 家族/描邊不變
-node tools/audit_visual_prefs.mjs              # 零件抖動不變式
-node tools/audit_gpu_lifecycle.mjs             # 共用幾何
-npm test && npm run bal                        # 純表現層 ⇒ MUST 逐位元不動
+node tools/audit_object_joints.mjs --seeds 8   # FLOAT/PARTIAL/DETACHED/ISOLATED hard failures
+node tools/audit_beacons.mjs                   # extents / collider / placement
+node tools/audit_beacons.mjs --break-extent    # reverse check: an oversized part MUST turn it red
+node tools/audit_traverse.mjs                  # new parts do not block routes
+node tools/audit_cel_pipeline.mjs              # ramp family / outlines unchanged
+node tools/audit_visual_prefs.mjs              # part-jitter invariants
+node tools/audit_gpu_lifecycle.mjs             # shared geometry
+npm test && npm run bal                        # presentation layer ⇒ MUST be bit-identical
 ```
 
-**反向驗證(原則 9)**:`--break-extent` / `--break-pad` 兩支跑不出紅字,就是這一輪沒驗到外廓。
+**Reverse verification (principle 9)**: if `--break-extent` / `--break-pad` do not turn red, this round
+never tested extents.
 
-**視覺閉環**:`node tools/shot_scene.mjs --venue taroko` 前後對照;
-`--ink=0` / `--grade=0` / `--post=0` 逐層隔離 —— 「這張圖變醜是哪一層造成的」要能回答。
-
----
-
-## 6. 會靜默壞掉的六件事
-
-1. **烤成整棵樹/整棟樓** → 每實例變異消失 → 一片林子一模一樣,沒有錯誤訊息。
-2. **原點不在接合面** → 樹冠浮空/屋頂帽陷進牆 → `audit_object_joints` 報 FLOAT/PARTIAL。
-3. **碰撞柱沿用標稱值** → 看得見的外廓頂出碰撞柱(A30)→ 打得到的地方和看得到的地方分家。
-4. **多抽一枚 `rnd()`** → 整張圖佈局位移 → 跨客戶端場景不一致(§2.3 / A4)。
-5. **收了 CC-BY 卻沒署名** → 授權污染,無任何錯誤訊息 ⇒ 查詢寫死 `license=cc0`。
-6. **面數沒有預算** → 一座地標二十幾個高模零件 → 勾線 pass 變重、手機端幀時掉。
-   預算 MUST 由**量測現值**推導,不是手寫。
+**Visual loop**: `node tools/shot_scene.mjs --venue taroko` before/after; `--ink=0` / `--grade=0` /
+`--post=0` isolate each layer — "which layer made this frame worse" must be answerable.
 
 ---
 
-## 7. 12GB 選型速查
+## 6. Six things that break silently
 
-| 工具 | VRAM | 角色 |
+1. **Baking a whole tree / whole building** → per-instance variation disappears → the forest is uniform, with no error message.
+2. **Origin not on the mating face** → floating canopies / roof caps sunk into walls → `audit_object_joints` reports FLOAT/PARTIAL.
+3. **Collider reusing nominal values** → visible extent pokes outside the collider (A30) → what you can hit and what you can see diverge.
+4. **One extra `rnd()`** → the whole map's layout shifts → scenes differ across clients (CLAUDE.md §2.3 / A4).
+5. **CC-BY accepted without attribution** → licence contamination, no error message ⇒ hard-code `license=cc0`.
+6. **No triangle budget** → a landmark with 25 high-poly parts → heavier outline pass, mobile frame time drops. The budget MUST be derived from **measured current values**, not hand-written.
+
+---
+
+## 7. 12GB tool ladder
+
+| Tool | VRAM | Role |
 |---|---|---|
-| Stable Fast 3D | 6GB、<1s,自帶 delight + UV | **靜態主力**,批量掃貨 |
-| Hunyuan3D 2.1(shape only) | 10GB(paint 21GB **不跑**) | 中階細節件 |
-| TRELLIS.2-4B | 官方標 24GB;社群 8GB@256 / 12GB@512 | 指標性件,**MUST 先實測** |
-| P3-SAM | 待實測 | 需要把一顆掃描件切成多個零件時 |
+| Stable Fast 3D | 6GB, <1s, delight + UV included | **static workhorse**, batch throughput |
+| Hunyuan3D 2.1 (shape only) | 10GB (paint 21GB — **never run**) | mid-tier detail parts |
+| TRELLIS.2-4B | README 24GB; community 8GB@256 / 12GB@512 | signature parts, **MUST be measured first** |
+| P3-SAM | to be measured | when one scanned mesh must be split into parts |
 
-降級鏈:`TRELLIS.2 → Hunyuan3D shape-only → SF3D → 維持現有程序零件`。
-跑不動就往下退,**不准為了跑得動而改判定或改契約**。
+Fallback chain: `TRELLIS.2 → Hunyuan3D shape-only → SF3D → keep current procedural parts`.
+Drop a tier whenever one fails. **Never change a rule or a contract to make a tool fit.**
