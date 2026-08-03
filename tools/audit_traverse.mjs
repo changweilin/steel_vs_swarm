@@ -41,7 +41,10 @@
 // 退出碼:0 = 全部航點可達;1 = 有航點不可達
 import { writeFileSync } from 'node:fs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
-import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS } from '../public/js/data.js';
+// WATER 是橋下淨空那一段在用的(水面下不算「走得過去」)。漏了它不會報錯 ——
+// `scanVenue` 整段包在 try 裡,ReferenceError 會被吞成「⏭ 場地跳過」⇒ 每一個**有橋**的
+// 場地都靜默不驗,而收尾只會印「通過 N 項」看起來全綠(實測 27 場地跳掉 10 個)。
+import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS, WATER } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 import {
   llToWorld, elevSampler, buildHeightField, osmFor, tunnelRunOf, strucTunnel, strucHw,
@@ -401,8 +404,12 @@ let noOsm = 0;
 for (const v of list) {
   const t0 = Date.now();
   let r;
-  try { r = await scanVenue(v); } catch (e) { r = { id: v.id, skip: e.message }; }
+  // 例外 MUST NOT 被洗成「跳過」:跳過是留給**外部服務取不到**的降級(高程磚/圖資,原則 6),
+  // 程式自己的 ReferenceError/TypeError 洗成跳過就是假綠 —— 收尾照印「✅ 通過 N 項」,
+  // 而那 N 項裡根本沒有那個場地(前科:`WATER` 漏 import 讓 10 個有橋場地整批靜默不驗)。
+  try { r = await scanVenue(v); } catch (e) { r = { id: v.id, crash: e }; }
   results.push(r);
+  if (r.crash) { ok(false, `${v.id}:掃描拋出例外(不是降級,是 bug)—— ${r.crash.message}`); continue; }
   if (r.skip) { console.log(`  ${v.id}  ⏭  ${r.skip}`); continue; }
   if (!r.osm) noOsm++;
   console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`

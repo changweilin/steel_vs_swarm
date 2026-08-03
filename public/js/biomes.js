@@ -2571,6 +2571,43 @@ function bboxKm2(bbox) {
 }
 const quotaOf = (km2, perKm2, lo, hi) => Math.max(lo, Math.min(hi, Math.round(km2 * perKm2)));
 
+// ---- Overpass 取用:鏡像輪替 + **逐站**逾時(2026-08-03 太魯閣結構整批消失案)----
+// 舊制三個鏡像共用**一個** AbortController:任何一站掛住(不回應也不斷線)就把整份時間預算
+// 吃光,`ctrl.signal.aborted` 一成立就 `return null` —— **後面的鏡像永遠輪不到**。
+// 實測 2026-08-03:#2 kumi.systems 穩定不回應(25s 無回應),而 #1 常態 429/504、#3 mail.ru
+// 2.2s 就回得漂亮 ⇒ 路網查詢固定在第二站掐死。路網是隧道/明隧道/地下道/橋的**唯一** OSM 輸入,
+// 拿不到就退回合成兵線 = 一張圖上的立體結構整批消失(而且沒有任何錯誤訊息,看起來就是
+// 「太魯閣的明隧道不見了」)。
+// 改成每一站各自計時、總預算只管「什麼時候該收手」:一站掛住最多花掉它自己那一份。
+// 這正是 Node 端離線工具(tools/venue_field.mjs overpass()、bake_venue_lanes)一直在用的形狀 ——
+// 執行期是唯一的例外,現在對齊。
+const OVERPASS_TRY = { feat: 10000, road: 12000 };    // 單站上限(健康的鏡像實測 1.5~10s)
+const OVERPASS_TOTAL = { feat: 24000, road: 30000 };  // 總預算(夠三站各輪一次)
+/**
+ * 逐站送同一個查詢,第一個「解析得出東西」的回應即定案。
+ * @param parse (data) => 結果 | null —— 回 null 表示這一站的回應不合用(空結果/被截斷),換下一站
+ */
+async function overpassQuery(q, parse, tryMs, totalMs) {
+  const deadline = Date.now() + totalMs;
+  for (const url of OVERPASS_URLS) {
+    const left = deadline - Date.now();
+    if (left <= 0) break;                   // 總預算用盡,不再換站
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), Math.min(tryMs, left));
+    try {
+      const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
+      if (!resp.ok) continue;               // 限流/伺服器錯誤:即時回應,換鏡像
+      const out = parse(await resp.json());
+      if (out) return out;
+    } catch {
+      /* 這一站逾時或連不上 —— 只花掉它自己那一份預算,換下一站(MUST NOT 在此 return) */
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  return null;
+}
+
 /** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
 async function fetchOsmFeatures(bbox) {
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
@@ -2595,46 +2632,32 @@ async function fetchOsmFeatures(bbox) {
     + `node["natural"="peak"](${bb});out 12;`
     + `node["highway"="motorway_junction"](${bb});out 12;`
     + `node["railway"~"^(station|halt)$"](${bb});out 12;`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    for (const url of OVERPASS_URLS) {
-      try {
-        const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
-        if (!resp.ok) continue;   // 限流/伺服器錯誤:即時回應,換鏡像
-        const data = await resp.json();
-        const buildings = [], rails = [], falls = [], crossings = [], pois = [];
-        for (const el of data.elements || []) {
-          const tags = el.tags || {};
-          if (el.type === 'way' && el.geometry && tags.railway) {
-            rails.push({ tags, geometry: el.geometry });
-          } else if (el.type === 'node' && tags.railway === 'level_crossing') {
-            crossings.push({ lat: el.lat, lng: el.lon, tags });
-          } else if (el.type === 'node' && tags.waterway === 'waterfall') {
-            falls.push({ lat: el.lat, lng: el.lon, tags });
-          } else if (el.type === 'node' && (tags.place || tags.natural === 'peak'
-            || tags.highway === 'motorway_junction' || tags.railway)) {
-            // 具名點位:MUST 排在下面那個 else **之前** —— 那一條是「其餘全部當建物」,
-            // 漏了這個分支就會在地名節點的位置長出一棟樓(而且看起來完全正常)。
-            pois.push({ lat: el.lat, lng: el.lon, tags });
-          } else {
-            const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
-            if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
-          }
-        }
-        const res = { buildings, rails, falls, crossings, pois };
-        // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
-        // 不拷貝會把「該局變異後」的資料定案
-        if (!data.remark) geoPut(ckey, structuredClone(res));
-        return res;
-      } catch {
-        if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
+  return overpassQuery(q, (data) => {
+    const buildings = [], rails = [], falls = [], crossings = [], pois = [];
+    for (const el of data.elements || []) {
+      const tags = el.tags || {};
+      if (el.type === 'way' && el.geometry && tags.railway) {
+        rails.push({ tags, geometry: el.geometry });
+      } else if (el.type === 'node' && tags.railway === 'level_crossing') {
+        crossings.push({ lat: el.lat, lng: el.lon, tags });
+      } else if (el.type === 'node' && tags.waterway === 'waterfall') {
+        falls.push({ lat: el.lat, lng: el.lon, tags });
+      } else if (el.type === 'node' && (tags.place || tags.natural === 'peak'
+        || tags.highway === 'motorway_junction' || tags.railway)) {
+        // 具名點位:MUST 排在下面那個 else **之前** —— 那一條是「其餘全部當建物」,
+        // 漏了這個分支就會在地名節點的位置長出一棟樓(而且看起來完全正常)。
+        pois.push({ lat: el.lat, lng: el.lon, tags });
+      } else {
+        const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
+        if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
       }
     }
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+    const res = { buildings, rails, falls, crossings, pois };
+    // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
+    // 不拷貝會把「該局變異後」的資料定案
+    if (!data.remark) geoPut(ckey, structuredClone(res));
+    return res;
+  }, OVERPASS_TRY.feat, OVERPASS_TOTAL.feat);
 }
 
 /**
@@ -2658,31 +2681,16 @@ async function fetchOsmRoads(bbox) {
   const q = `[out:json][timeout:15];`
     + `way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bb});out geom ${nMain};`
     + `way["highway"~"^(unclassified|residential|living_street|service|track|path|footway|pedestrian)$"](${bb});out geom ${nMinor};`;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
-  try {
-    for (const url of OVERPASS_URLS) {
-      try {
-        const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
-        if (!resp.ok) continue;   // 限流/伺服器錯誤:即時回應,換鏡像
-        const data = await resp.json();
-        const roads = [];
-        for (const el of data.elements || []) {
-          if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
-        }
-        if (roads.length) {   // 空結果(部分逾時)也換鏡像
-          // 深拷貝理由同 fetchOsmFeatures:mergeGradeChains/way._tun 會就地變異 way 物件
-          if (!data.remark) geoPut(ckey, structuredClone(roads));
-          return roads;
-        }
-      } catch {
-        if (ctrl.signal.aborted) return null;   // 總時間預算用盡,不再換站
-      }
+  return overpassQuery(q, (data) => {
+    const roads = [];
+    for (const el of data.elements || []) {
+      if (el.type === 'way' && el.geometry && el.tags?.highway) roads.push({ tags: el.tags, geometry: el.geometry });
     }
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+    if (!roads.length) return null;   // 空結果(部分逾時)也換鏡像
+    // 深拷貝理由同 fetchOsmFeatures:mergeGradeChains/way._tun 會就地變異 way 物件
+    if (!data.remark) geoPut(ckey, structuredClone(roads));
+    return roads;
+  }, OVERPASS_TRY.road, OVERPASS_TOTAL.road);
 }
 
 /**
