@@ -506,6 +506,12 @@
           <div class="set-sub">▎操作方式</div>
           <div id="pauseCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
 
+          <!-- 畫面表現(art-direction 拉桿 + 即時樣品):內容由 main.js renderVisualSettings() 注入。
+               陰影偏色/勾線/風化這幾項在計畫書裡卡在「需要美術方向確認」—— 落地方式就是這裡,
+               由玩家自己在樣品上定案(預設值 = 逐位元同舊制)。 -->
+          <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
+          <div id="pauseVisualMount" class="vset"></div>
+
           <!-- 觸控/陀螺儀:內容由 main.js renderTouchSettings() 注入(與大廳「手機操控」面板共用
                同一份設定表,MUST NOT 在兩處各寫一份 DOM)。桌機以 .touch-only 隱藏整區。 -->
           <div class="set-sub touch-only">▎觸控操控</div>
@@ -675,6 +681,8 @@
         </div>
         <div class="set-sub">▎操作方式</div>
         <div id="lobbyMenuCtrlMount" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div class="set-sub">▎畫面表現 <button class="tip-dot" type="button" aria-label="說明" data-tipkey="visual">ⓘ</button></div>
+        <div id="lobbyVisualMount" class="vset"></div>
         <div class="set-sub touch-only">▎觸控操控</div>
         <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
       </div>

@@ -301,7 +301,55 @@ export function buildHeightField(cfg, bbox, sampleElev) {
     const a = at(i0, j0), b = at(i0, j0 + 1), c = at(i0 + 1, j0), d = at(i0 + 1, j0 + 1);
     return fi + fj <= 1 ? a + (b - a) * fj + (c - a) * fi : d + (c - d) * (1 - fj) + (b - d) * (1 - fi);
   };
-  return { heightAt, minX, maxX, minZ, maxZ };
+  // heights 一併回傳:開挖鏡射(makeCarvedField)要拿它複製一份出來動,
+  // 而 `heightAt` 這一份 MUST 永遠是**天然地形**(淨空檢查、明隧道判定的條件③都吃天然快照)
+  return { heightAt, minX, maxX, minZ, maxZ, heights, N };
+}
+
+// ---- 隧道開挖的鏡射(V-C;2026-08-03)----
+// 為什麼要有:`shot_tunnels.mjs` 的五項量化掃描全部住在 Playwright 頁面裡,整類在回歸矩陣上
+// 標著 ㋓(沙箱跑不動)⇒ **agent 沒辦法驗自己的隧道改動**。其中第①項「斷面地形殘留」是
+// 唯一不吃網格/貼圖、純粹由高度場決定的一項,可以整支搬到 Node。
+//
+// **只有第①項搬得動,其餘四項留在 Playwright**:②~⑤ 量的是 `THREE.Raycaster` 對真實
+// **網格**(結構件/植被/地被拼圖)的命中,而 three 走 CDN importmap、A2 又不准把它寫進
+// package.json ⇒ Node 端沒有 three 可用。硬把那四項「近似」成幾何式就是抄第二份公式
+// (§2.1 最忌的那件事),寧可留在 ㋓ 也不要一支永遠全綠的假稽核。
+//
+// 這裡執行的是 `terrain.js carveTunnels` 的**原文**(自由變數以參數注入),不是重寫的公式 ——
+// 開挖剖面一改,這支跟著改。
+const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8').replace(/\r\n?/g, '\n');
+const CUT_W = +/const CUT_W = ([\d.]+)/.exec(tsrc)[1];
+const PROT_M = +/const PROT_M = (\d+)/.exec(tsrc)[1];
+if (!Number.isFinite(CUT_W) || !Number.isFinite(PROT_M)) throw new Error('terrain.js 開挖常數解析失敗');
+
+/**
+ * 對高度場執行隧道開挖,回傳「開挖後」的取樣器(天然那一份不動)。
+ * @param hf   buildHeightField 的輸出
+ * @param runs [{ pts, floors, hw, cut?, covA?, covB? }](= tunnelRunOf 的形狀 + 通行寬)
+ * @returns (x, z) => 開挖後地表高;三角化取樣與 `hf.heightAt` 逐字同式
+ */
+export function makeCarvedField(hf, runs) {
+  const { N, minX, maxX, minZ, maxZ } = hf;
+  const heights = Float32Array.from(hf.heights);
+  const P0 = tsrc.indexOf('function carveTunnels(');
+  const P1 = tsrc.indexOf('\n  }', P0) + 4;
+  if (P0 < 0 || P1 <= P0) throw new Error('terrain.js 找不到 carveTunnels 區塊');
+  // `imagery` / `mat` 只出現在函式尾巴那段「開挖走廊影像重繪」(純視覺)裡,餵 null 即整段跳過;
+  // 但 MUST 餵 —— `if (imagery && …)` 讀一個未宣告的全域是 ReferenceError,不是 falsy。
+  const carve = new Function('N', 'minX', 'maxX', 'minZ', 'maxZ', 'heights', 'CUT_W', 'PROT_M',
+    'markCarved', 'syncHeights', 'imagery', 'mat', `${tsrc.slice(P0, P1)}\nreturn carveTunnels;`)(
+    N, minX, maxX, minZ, maxZ, heights, CUT_W, PROT_M, () => {}, () => {}, null, null);
+  carve(runs, { clear: TUN.CLEAR });
+  return (x, z) => {   // 三角化取樣:與 buildHeightField 的 heightAt 同一套內插(對角切法一致)
+    const gj = (x - minX) / (maxX - minX) * (N - 1);
+    const gi = (z - minZ) / (maxZ - minZ) * (N - 1);
+    const i0 = Math.max(0, Math.min(N - 2, Math.floor(gi))), j0 = Math.max(0, Math.min(N - 2, Math.floor(gj)));
+    const fi = Math.max(0, Math.min(1, gi - i0)), fj = Math.max(0, Math.min(1, gj - j0));
+    const at = (i, j) => heights[i * N + j];
+    const a = at(i0, j0), b = at(i0, j0 + 1), c = at(i0 + 1, j0), d = at(i0 + 1, j0 + 1);
+    return fi + fj <= 1 ? a + (b - a) * fj + (c - a) * fi : d + (c - d) * (1 - fj) + (b - d) * (1 - fi);
+  };
 }
 
 // ---- Overpass(查詢字串與 biomes.js 同一份;失敗回 null,呼叫端略過該場地)----

@@ -31,7 +31,7 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
-import { vegPartXform } from './xform.js';
+import { vegPartXform, partId, partJitter } from './xform.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -2108,6 +2108,35 @@ function sinkBaseY(terrain, x, z, r, n = 8) {
   return gy;
 }
 
+// ---- 零件級細節抖動(P2-B;2026-08-03)----
+// 規則(只增不減的水平半徑 / 只有軸心件准自轉 / 不動 y·px·pz·縱向尺寸)全在 `xform.js`,
+// 這裡只負責「量出來的夾制」:抖完直接量這一件的水平外廓,頂出碰撞柱半徑就退回原樣 ——
+// 岩體的碰撞柱本來就已經緊貼外廓(`col.r 一律涵蓋岩體實際外廓`,見 MEGALITHS 檔頭),
+// 演出半徑再往外長就是「看得見卻打不到」(原則 4 / A30 家族)。
+const MEGA_JIT = 0.05;
+const _mjbox = new THREE.Box3();
+/** 落點 → 細節種子(0~1;零亂數消耗,見呼叫端註解) */
+function djAt(x, z) {
+  const h = (Math.imul(Math.round(x * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 8) | 0, 0x85EBCA77)) | 0;
+  return ((Math.imul(h ^ (h >>> 15), 0xC2B2AE3D) >>> 0) % 100003) / 100003;
+}
+function jitterMegalith(g, dj, colR) {
+  for (const o of g.children) {
+    const { jr, spin } = partJitter(
+      partId(o.position.y, o.position.x, o.position.z), dj, MEGA_JIT,
+      o.position.x === 0 && o.position.z === 0,
+    );
+    if (jr === 1 && !spin) continue;
+    const sx = o.scale.x, sz = o.scale.z;
+    o.scale.x *= jr; o.scale.z *= jr;
+    if (spin) o.rotateY(spin);
+    _mjbox.setFromObject(o);
+    const ext = Math.max(Math.abs(_mjbox.min.x), Math.abs(_mjbox.max.x),
+      Math.abs(_mjbox.min.z), Math.abs(_mjbox.max.z));
+    if (ext > colR) { o.scale.x = sx; o.scale.z = sz; if (spin) o.rotateY(-spin); }
+  }
+}
+
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
 function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
   const types = Object.keys(MEGALITHS);
@@ -2159,6 +2188,13 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
         o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
       }
     });
+    // 零件級細節抖動(P2-B;2026-08-03):名岩的 build() 逐顆抽條數/尺寸,但**同一顆裡的
+    // 各個岩塊**比例是逐位元固定的 —— 兩座酋長岩的鼻樑稜線一模一樣。規則與振幅上界的
+    // 唯一縫 = `xform.js partJitter`(與植被/障礙同一份),夾制的尺是**碰撞柱半徑**
+    // `meta.col.r`(局部座標;g.scale 隨後才套上去 ⇒ 兩者同尺度)。
+    // dj 由**落點**推、MUST NOT 再抽一枚 `rnd()`:抽了就把後面每一顆巨岩/每一株植被的
+    // 亂數序列整條推移 ⇒ 全部場地的佈局跟著變(§2.3 的序列紀律),而這一項只是外觀微調。
+    jitterMegalith(g, djAt(x, z), meta.col.r);
     bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
     g.scale.setScalar(s);
     // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空

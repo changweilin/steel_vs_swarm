@@ -38,11 +38,50 @@ open item, not a conclusion.
 | P1-A ramp family | **done** | `toon.js RAMPS`/`toonGradient(bands)` |
 | P1-C grade + FXAA | **done** | `postfx.js`; `antialias` now only on the `?post=0` fallback |
 | P1-D outline width | **done (conservative)** | `max(world width, screen floor)` — near field bit-identical, so the 15 call sites were **not** retuned |
-| P1-B shadow tint into ramp | **not done** | needs art-direction confirmation first (this document says so); it changes every mech's shadow hue |
-| P2-A weathering field | **not done** | the field exists (`field.js`) and is ready to drive it; the remaining work is getting a per-instance value into `envMat` without a per-pixel 26-ellipse loop (bake the field to a small texture) |
-| P2-B micro-jitter for buildings | **not done** | needs the collider-margin measurement this document calls "the item most in need of measurement" |
-| P2-C semantic placement | **not done** | placement decisions, no code |
-| V-C Node-side tunnel scans | **not done** | `venue_field.mjs` is the harness it needs; the five numeric scans still live inside `shot_tunnels.mjs` |
+| P1-B shadow tint into ramp | **done** | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before** |
+| P2-A weathering field | **done** | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder |
+| P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
+| P2-C semantic placement | **not done** | deliberately deferred — see below |
+| V-C Node-side tunnel scans | **partly done, partly not possible** | see below |
+
+**New in this batch: user-tunable art direction.** Four knobs (`visualPrefs.js`) with sliders and a
+**live sample that renders through the real materials and the real post pipeline** (`matsample.js`),
+mounted in both the pause settings page and the lobby settings page. Defaults are the shipped values,
+and the two knobs this document flagged as needing art-direction confirmation default to 0, i.e.
+byte-identical to before this batch. New audit: `tools/audit_visual_prefs.mjs` (79 assertions,
+reverse-verified).
+
+**P2-B excludes buildings on purpose.** Building footprints *are* their collider — the oriented box
+uploaded via `_losGrid` is derived from the same `hw2`/`hd2` that the mesh is extruded from. Inflating
+the visual radius there is exactly the "visible but unhittable" failure (A30) the item warns about,
+with no margin to spend. Obstacles and landmarks both carry an explicit collider radius (`HAZARDS[].r`,
+`MEGALITHS[].col.r`) that the geometry sits *inside*, which is why they can take the jitter and
+buildings cannot. The margin is not assumed: both consumers measure the jittered part's horizontal
+extent and revert that part if it crosses the collider.
+
+**V-C: the numeric half cannot fully leave Playwright, and that is a finding, not an omission.**
+Scans ②–⑤ (portal sky-leak, section obstruction, see-through holes, in-bore sky fraction) are
+`THREE.Raycaster` hits against real **meshes** — structure parts, vegetation, ground-cover patches.
+three is loaded from a CDN importmap and A2 forbids adding it to `package.json`, so Node has no three;
+approximating those four with hand-written geometry would be a second implementation of the very thing
+under test (§2.1) and would pass forever. Scan ① is likewise mesh-level: covered bores are *punched
+triangles*, not flattened height field — `carveTunnels` only ever sees the **open complement**
+(approach cuttings and underpass ramps).
+
+What did move to Node is the piece that turned out to matter more: `venue_field.mjs makeCarvedField`
+executes the **real `terrain.js carveTunnels` source** on a copy of the height field, and
+`audit_traverse.mjs` now floods over the **carved** surface. Before this, the traversability audit
+walked approach cuttings and underpass ramps on *natural* terrain — a road that is only passable
+because it was excavated would have been reported unreachable. Clearance (V-D) deliberately still
+reads the natural field, because "can this mountain hide the roof slab" is a question about the
+un-excavated mountain. A synthetic-terrain behaviour test covers the mirror with no network, and it
+has been reverse-verified.
+
+**P2-C is deferred, with a reason.** It puts new objects into the lane — at the base exit, the first
+tower, a portal mouth, a bridgehead — which are precisely the places V-B exists to protect. The audit
+that would prove the lanes stay traversable needs Overpass and terrarium tiles, neither of which is
+reachable from the sandbox, so the change cannot be verified where it is written. It belongs with the
+next batch that runs on CI or a real machine.
 
 **Two things the shot set found that blind tuning had got wrong** (both now fixed, both would
 have shipped silently): the shadow lift was written in linear space but reads in sRGB
@@ -54,6 +93,10 @@ byte-identical screenshots.
 **Still unmeasured, and it is the gate this document names:** 30 s steady-state frame time on
 desktop and touch, before/after. Also unchecked: depth-writing transparent materials in
 `hazards.js` / `biomes.js` / `models.js` (`vfx.js` and `castfx.js` are already clean).
+The 2026-08-03 batch adds two more items to that list, both needing a real browser: the
+settings-page sample costs one extra WebGL context while the page is open, and the ramp patch adds
+one `texture2D` + one `mix` to every cel fragment (both defaults are no-ops numerically, but the
+instructions execute regardless).
 
 ---
 

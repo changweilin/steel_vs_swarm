@@ -12,6 +12,9 @@ export { mulberry32 } from './rng.js';
 import { toonGradient, toonMat, toonify, outlinify, envMat, bakeContactAO } from './toon.js';
 export { toonGradient, toonMat, toonify, envMat, bakeContactAO };
 
+// ---- 零件級細節抖動的規則(單一縫;植被的 vegPartXform 同吃這兩支)----
+import { partId, partJitter } from './xform.js';
+
 // ---- 幾何速記 ----
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const cyl = (r1, r2, h, n = 6) => new THREE.CylinderGeometry(r1, r2, h, n);
@@ -474,6 +477,38 @@ const BUILDERS = {
   },
 };
 
+// ---- 零件級細節抖動(P2-B;2026-08-03)----
+// 規則與振幅上界的**唯一縫 = xform.js `partJitter`**(植被那一套):
+//   ① `jr` 水平半徑**只增不減** —— 縮小會拉開「名義上剛好貼合」的接合(audit_object_joints 紅過);
+//   ② `spin` **只給軸心件**(px = pz = 0):偏移件的貼合靠特定朝向的頂點,自轉會把它轉開;
+//   ③ MUST NOT 動 y / px / pz / 縱向縮放。
+// 振幅刻意比植被小(8% → `PART_JIT`):障礙物的碰撞是**一根 def.r 的圓柱**,而 BUILDERS 的
+// 零件本來就散到 0.8~0.9 r —— 演出半徑一旦頂出那根圓柱就是「看得見卻穿得過」(原則 4 / A30 家族)。
+// 上界由 `audit_object_joints.mjs` 逐 kind 實測(抖動後的最大水平外廓 MUST 仍收在 r 內),
+// MUST NOT 憑感覺調大。
+const PART_JIT = 0.06;
+const _jbox = new THREE.Box3();
+function jitterParts(g, dj, r) {
+  for (const o of g.children) {
+    const { jr, spin } = partJitter(
+      partId(o.position.y, o.position.x, o.position.z), dj, PART_JIT,
+      o.position.x === 0 && o.position.z === 0,
+    );
+    if (jr === 1 && !spin) continue;
+    // **演出半徑 MUST 收在權威碰撞柱內**(原則 4;超出去 = 看得見卻打不到,A30 家族)。
+    // 這裡是**量出來**的不是估的:抖完直接量這一件的水平外廓(群組尚未進場景 ⇒ 子節點的
+    // 世界矩陣就是群組局部座標),頂出 r 就把這一件退回原樣。
+    // 逐件退回而不是整顆放棄 —— 近軸的零件本來就頂不到,沒有理由陪葬(原則 6)。
+    const sx = o.scale.x, sz = o.scale.z;
+    o.scale.x *= jr; o.scale.z *= jr;
+    if (spin) o.rotateY(spin);   // rotateY = 繞**自身**軸後乘,擠出軸的兩端不動
+    _jbox.setFromObject(o);
+    const ext = Math.max(Math.abs(_jbox.min.x), Math.abs(_jbox.max.x),
+      Math.abs(_jbox.min.z), Math.abs(_jbox.max.z));
+    if (ext > r) { o.scale.x = sx; o.scale.z = sz; if (spin) o.rotateY(-spin); }
+  }
+}
+
 /**
  * 建立一個障礙物 / 防空陣地。
  * @param kind HAZARDS 的 key 或 'aasite' / 'relay'
@@ -484,6 +519,10 @@ export function buildHazard(kind, seed, r = 8) {
   const g = new THREE.Group();
   const rnd = mulberry32((seed * 2654435761) >>> 0);
   (BUILDERS[kind] || BUILDERS.rockfall)(g, r, rnd);
+  // 零件級細節抖動(P2-B;2026-08-03):BUILDERS 本來就逐顆抽尺寸/數量/朝向,但**同一顆裡的
+  // 各個零件**是逐位元一樣的比例 —— 兩顆落石的每一塊石頭都同一副長寬比。dj 由 seed 推
+  // (確定性:全房同一顆障礙長得一樣,§2.3),規則整組沿用植被那一份縫(xform.js)。
+  jitterParts(g, ((seed * 2246822519) >>> 0) / 4294967296, r);
   // 接地 AO 頂點色(botw_plan Task 2.2):貼地處偏暗冷 → 物件「長」在地上
   // (神木不加大衰減:板根/樹幹本色深,AO 拉高會整片近黑)
   bakeContactAO(g, 2.4);

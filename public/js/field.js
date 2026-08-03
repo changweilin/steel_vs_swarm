@@ -90,6 +90,35 @@ export function makeToneLadder(field, b, n, jitM) {
 }
 
 /**
+ * 把場烤成一張小方格(P2-A 風化密度;唯一縫)。
+ *
+ * **為什麼是烤成貼圖而不是在著色器裡算**:場是 26 個橢圓的加權平均 —— 逐像素跑那個迴圈
+ * 在最大的一塊面(地形)上就是每幀幾百萬次橢圓測試。場本身又是**低頻**的(橢圓半徑
+ * ≥ 1/10 跨距),64² 的格子已經比場的最小特徵細一個量級,線性內插後看不出格點。
+ *
+ * 回傳 **Uint8Array 而不是貼圖**:本檔零 three 依賴(同 rng.js 的理由 —— 離線稽核要直接
+ * 執行它);而且 `audit_cel_pipeline` 釘死「ramp 的 DataTexture 只准在 toon.js 建構」,
+ * 場貼圖同理由同一個地方建,才不會長出第二套取樣規則。
+ *
+ * @param field  makeField 的輸出
+ * @param b      { minX, maxX, minZ, maxZ } 世界邊界(取樣框,與消費端的 uv 換算同一份)
+ * @param size   邊長格數
+ * @returns Uint8Array(size × size;列 = z,行 = x,0~255 對應場的 0~1)
+ */
+export function bakeFieldTexture(field, b, size = 64) {
+  const out = new Uint8Array(size * size);
+  for (let i = 0; i < size; i++) {
+    const z = b.minZ + (b.maxZ - b.minZ) * (i + 0.5) / size;
+    for (let j = 0; j < size; j++) {
+      const x = b.minX + (b.maxX - b.minX) * (j + 0.5) / size;
+      const v = field(x, z);
+      out[i * size + j] = Math.max(0, Math.min(255, Math.round(v * 255)));
+    }
+  }
+  return out;
+}
+
+/**
  * 閾值抖動用的粗粒雜湊(0~1)。
  * **為什麼要抖**:色階梯若逐點拿同一個閾值比,等值線會在畫面上長成一圈一圈的**等高線**
  * (地圖等高線那種),一眼就看得出是程式畫的。用比場本身**更粗**的格子抖動閾值 ⇒

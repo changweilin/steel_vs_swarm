@@ -25,6 +25,7 @@
 // **調節器整個變成 no-op**,而畫面上只表現成「手機還是一樣卡」,不會有任何錯誤。
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { visualPref, onVisualChange } from './visualPrefs.js';
 
 // ---- 勾線參數 ----
 const INK = {
@@ -95,6 +96,14 @@ export class Pipeline {
     this.inkQuad = new FullScreenQuad(this._inkMaterial());
     this.gradeQuad = new FullScreenQuad(this._gradeMaterial());
     this.fxaaQuad = new FullScreenQuad(this._fxaaMaterial());
+
+    // 勾線強度拉桿(visualPrefs.js):線的濃淡是**口味**,不同螢幕看起來差很多 ——
+    // 給一個 uniform 讓玩家自己定案,而不是把某一台螢幕上調出來的數字寫死給所有人。
+    // 拉到 0 = 沒有線(等同 `?ink=0`,但不必重開);預設 1 = 定場照調校出來的現值。
+    // MUST 是 uniform 不是重建材質:重建會在拉桿拖動時每一格丟一次 shader 編譯。
+    this._syncPrefs = () => { this.inkQuad.material.uniforms.uInk.value = visualPref('ink'); };
+    this._syncPrefs();
+    this._offPrefs = onVisualChange(this._syncPrefs);
   }
 
   _inkMaterial() {
@@ -102,12 +111,12 @@ export class Pipeline {
       uniforms: {
         tColor: { value: null }, tDepth: { value: null },
         uTexel: { value: new THREE.Vector2() },
-        uNear: { value: 0.5 }, uFar: { value: 1000 },
+        uNear: { value: 0.5 }, uFar: { value: 1000 }, uInk: { value: 1 },
       },
       vertexShader: QUAD_VS,
       fragmentShader: `
         uniform sampler2D tColor; uniform sampler2D tDepth;
-        uniform vec2 uTexel; uniform float uNear; uniform float uFar;
+        uniform vec2 uTexel; uniform float uNear; uniform float uFar; uniform float uInk;
         varying vec2 vUv;
         float lin( vec2 uv ) {                     // 非線性深度 → 視線距離(公尺)
           float z = texture2D( tDepth, uv ).x * 2.0 - 1.0;
@@ -141,6 +150,9 @@ export class Pipeline {
           if ( e > 0.0 ) ink *= ${INK.CONCAVE_F.toFixed(2)};   // 凹邊(牆角內側)比外輪廓輕
           // ② 遠處淡出:遠景線密到變雜訊,而且會蓋掉霧
           ink *= 1.0 - smoothstep( uFar * ${INK.FADE0.toFixed(2)}, uFar * ${INK.FADE1.toFixed(2)}, d );
+          // 強度拉桿:夾在 [0,1] —— 拉桿最大到 150% 是為了讓「線更濃」有得調,
+          // 但覆蓋率本身是機率意義的權重,超過 1 只會把半透明的線推成實線,不會更黑。
+          ink = clamp( ink * uInk, 0.0, 1.0 );
           // ① 墨色與底色相混,不是塗黑
           gl_FragColor = vec4( mix( base.rgb, base.rgb * ${INK.DARK.toFixed(2)}, ink ), base.a );
         }`,
@@ -255,8 +267,10 @@ export class Pipeline {
     r.setRenderTarget(null);
   }
 
-  /** A25:3 個 RT + depthTexture + 3 個全螢幕材質,一個都不能漏 */
+  /** A25:3 個 RT + depthTexture + 3 個全螢幕材質,一個都不能漏(拉桿訂閱也要退掉) */
   dispose() {
+    this._offPrefs?.();   // 不解訂閱 = 已 dispose 的材質被拉桿的 closure 抓著不放
+    this._offPrefs = null;
     for (const rt of [this.rtScene, this.rtA, this.rtB]) {
       rt.depthTexture?.dispose();
       rt.dispose();
