@@ -18,7 +18,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SLOPE, slopeDeg, slopeMoveF, slopeBlocked, MAPGEO, AIR } from '../public/js/data.js';
+import { SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM, MAPGEO, AIR } from '../public/js/data.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const src = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
@@ -280,6 +280,60 @@ console.log('■ Ⅴ 行為直測(執行 game.js 原文:合成高度場 + 橋面
   }
   t('騰空門檻沿用 AIR.OFF_GROUND 的 _env.air(不另立第二套騰空判定)',
     /_env\?\.air/.test(grab('_slopeDegAlong')) && AIR.OFF_GROUND > 0);
+}
+
+// ---------------------------------------------------------------------------
+console.log('■ Ⅵ 下坡貼地(離地量 MUST NOT 逐幀累積 —— 蓄力會被判成騰空而中斷)');
+// ---------------------------------------------------------------------------
+// 病灶:偏陡的下坡上,地表每幀掉的比自由落體同時間掉的多 ⇒ 機體被留在半空、離地量逐幀累加,
+// 兩三幀後 onGround 轉偽,`_updatePlayer` 的 else 分支把 `charge` 清零 = 蓄力中斷。
+// onGround 那道容差只擋得住一幀;判定既然說「在地面上」,位置就得跟著吸回去。
+{
+  t('落差上界只有 data.js slopeSnapM 一份(消費端 MUST NOT 手寫 tan(BLOCK_DEG))',
+    count(code, 'slopeSnapM(') === 1 && !/Math\.tan\(SLOPE\.BLOCK_DEG/.test(code));
+  t('上界推導自阻擋角(改 BLOCK_F / SNAP_F 自己跟著走,MUST NOT 手寫角度)',
+    near(SLOPE.SNAP_DEG, Math.min(89, SLOPE.BLOCK_DEG * SLOPE.SNAP_F), 1e-12)
+    && near(slopeSnapM(10), Math.tan(SLOPE.SNAP_DEG * D2R) * 10, 1e-12)
+    && slopeSnapM(0) === 0 && slopeSnapM(-5) === 0);
+  t('上界 MUST 寬於阻擋角(下坡不擋 ⇒ 走得下去但爬不上來的坡也要貼地)',
+    SLOPE.SNAP_DEG > SLOPE.BLOCK_DEG && SLOPE.SNAP_DEG < 90);
+  t('斷崖仍彈飛:一步 0.5m 的落差上界仍是坡度量級(不是幾十公尺的瞬移)',
+    slopeSnapM(0.5) < 3);
+  t('貼地掛在 onGround 那一處,且排除上升段與蓄力跳騰空',
+    /if \(onGround && !this\._lowG && this\.vy <= 0 && this\.pos\.y > gy[\s\S]{0,220}?this\.pos\.y = gy; this\.vy = 0;/.test(code));
+  t('貼地量的是「本幀實際水平位移」(px0/pz0 → pos)',
+    /slopeSnapM\(Math\.hypot\(this\.pos\.x - px0, this\.pos\.z - pz0\)\)/.test(code));
+
+  // 行為直測:逐幀模擬「等速下坡」,離地量 MUST 收斂到 0。
+  // 這一段是 `_updatePlayer` 的**鏡射**(那支綁死 three / 地形 / 碰撞,抽不出來執行)——
+  // 上面四項靜態斷言就是把鏡射釘回真品的那把鎖:公式或條件一改,靜態先紅。
+  const step = (gradeDeg, dt = 1 / 60, frames = 120, speed = 30) => {
+    const tan = Math.tan(gradeDeg * D2R);
+    const surf = (x) => -x * tan;                     // 沿 +x 走 = 下坡
+    let x = 0, y = 0, vy = 0, airborne = 0;
+    for (let i = 0; i < frames; i++) {
+      const px0 = x, py0 = y;
+      x += speed * dt;
+      const gy = surf(x);
+      const stepDrop = Math.max(0, surf(px0) - gy);
+      const onGround = y <= gy + 0.05 || (vy <= 0 && y <= gy + stepDrop + 0.05);
+      if (onGround && vy <= 0 && y > gy && y - gy <= slopeSnapM(Math.abs(x - px0))) { y = gy; vy = 0; }
+      if (!onGround) airborne++;
+      vy -= 9.8 * dt; y += vy * dt;
+      if (y < gy) { y = gy; vy = 0; }
+      void py0;
+    }
+    return airborne;
+  };
+  t('平緩下坡:全程貼地(基準行為不變)', step(SLOPE.EASE_DEG) === 0);
+  t('偏陡下坡(阻擋角):全程貼地 = 蓄力不中斷', step(SLOPE.BLOCK_DEG) === 0, `${step(SLOPE.BLOCK_DEG)} 幀騰空`);
+  t('走得下去但爬不上來的陡坡(貼地上界)仍全程貼地',
+    step(SLOPE.SNAP_DEG * 0.98) === 0, `${step(SLOPE.SNAP_DEG * 0.98)} 幀騰空`);
+  t('低幀率(30fps)同樣貼地(離地量 MUST NOT 隨步進放大)',
+    step(SLOPE.BLOCK_DEG, 1 / 30) === 0, `${step(SLOPE.BLOCK_DEG, 1 / 30)} 幀騰空`);
+  t('高速衝下陡坡仍貼地', step(SLOPE.BLOCK_DEG, 1 / 60, 120, 60) === 0);
+  t('超過上界的落差(近乎垂直的崖面)MUST 彈飛,不是被吸著滑下去',
+    step(86) > 0, `${step(86)} 幀騰空`);
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 地形坡度移動稽核:${pass}/${pass + fail} 通過`);

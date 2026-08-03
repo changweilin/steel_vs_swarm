@@ -292,6 +292,15 @@ console.log('■ Ⅴ 消費端單一縫(game.js:飛行段唯一入口 + 清帳�
   t('_botAirSink 只作用於 bot 的飛行機體(真人由客戶端物理結算,套兩次會打架)',
     /isBotId\(t\.pid\)/.test(grab('_botAirSink', simSrc))
     && /kind === 'drone'/.test(grab('_botAirSink', simSrc)));
+  // 電力上限的權威旗標:唯一寫入點 = 快照解析(收到 e.mm 那一行旁邊)。自己在別處補 true
+  // 就等於又拿佔位值當上限,而症狀只是「開場動力條是空的」,沒有任何錯誤訊息。
+  t('_mpAuth 只在收到快照的 e.mm 時寫 true(建構子那一次 false 不算)',
+    count(code, 'this._mpAuth = true') === 1
+    && /this\.maxMp = e\.mm \?\? this\.maxMp;[\s\S]{0,120}?this\._mpAuth = true/.test(code)
+    && count(code, 'this._mpAuth = false') === 1);
+  t('_stepLift 與 _liftMax 都以 _mpAuth 為閘(未定案 = 視同滿動力,不扣不夾)',
+    /if \(!this\._mpAuth\) return;/.test(grab('_stepLift'))
+    && /this\._mpAuth && this\.maxMp/.test(grab('_liftMax')));
   t('_stepLift 只在飛行段呼叫一次,且排在速度積分之前',
     count(code, 'this._stepLift(') === 1
     && /this\._stepLift\(dt, now, target, u\);[\s\S]{0,200}?this\.vel\.y \+= \(target\.y - this\.vel\.y\)/.test(code));
@@ -325,7 +334,7 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, UNITS);
   const u = { vspeed: UNITS.drone.vspeed, mpRegen: UNITS.drone.mpRegen };
   const mk = (over = {}) => Object.assign(Object.create(null), proto, {
-    maxMp: UNITS.drone.mp, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
+    maxMp: UNITS.drone.mp, _mpAuth: true, heroKind: 'drone', upg: { ch: 0 }, hud: { feed: () => {} },
     lift: null, _airSink: 0, _airSinkV: 0, _flying: () => true, ...over,
   });
 
@@ -379,6 +388,21 @@ console.log('■ Ⅵ 行為直測(執行 game.js 原文:5 秒耗盡 / 見底爬�
     const hi = mk({ lift: 0, upg: { ch: ECON.UPGRADES.ch.max } });
     for (let i = 0; i < 60; i++) { lo._stepLift(1 / 60, i / 60, { x: 0, y: 0, z: 0 }, u); hi._stepLift(1 / 60, i / 60, { x: 0, y: 0, z: 0 }, u); }
     t('充能軌越高回得越快(回復正比於電力回速)', hi.lift > lo.lift * 1.5, `${lo.lift.toFixed(1)} vs ${hi.lift.toFixed(1)}`);
+  }
+  // ④' 電力上限未定案(開場第一幀):MUST 視同滿動力,MUST NOT 拿建構子佔位的 maxMp 去夾
+  //     ——夾了就是「無人機一出場動力條是空的,只能靠回充慢慢爬回上限」(2026-08-03 使用者回報)
+  {
+    const boot = mk({ _mpAuth: false, maxMp: 1, lift: null });
+    const up = { x: 0, y: u.vspeed, z: 0 };
+    for (let i = 0; i < 60 * 3; i++) boot._stepLift(1 / 60, i / 60, { x: 0, y: u.vspeed, z: 0 }, u);
+    boot._stepLift(1 / 60, 3, up, u);
+    t('上限未定案:不解析動力(lift 維持 null = 滿)', boot.lift === null);
+    t('上限未定案:爬升不被擋(寧可放行,不可誤鎖)', up.y === u.vspeed);
+    t('上限未定案:_liftMax 退回機種基準電力,MUST NOT 吃佔位的 maxMp',
+      near(boot._liftMax(), liftMax(UNITS.drone.mp, false), 1e-9), `${boot._liftMax()}`);
+    boot._mpAuth = true; boot.maxMp = UNITS.drone.mp;
+    boot._stepLift(1 / 60, 4, { x: 0, y: 0, z: 0 }, u);
+    t('上限定案的第一幀補滿(開場動力條 = 滿格)', near(boot.lift, boot._liftMax(), 1e-9), `${boot.lift}`);
   }
   // ⑤ 掉高:總掉幅只由傷害決定(分幾次打完/幀率都不影響)
   {

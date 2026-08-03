@@ -13,7 +13,7 @@ import {
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
-  SLOPE, slopeDeg, slopeMoveF, slopeBlocked,
+  SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
   reachRule, blastCoreR, shotV0, SEEK, seekTurn,
@@ -405,6 +405,7 @@ export class BattleClient {
     this._resSent = {};               // 預約已下單的階(item → {lvl, t}):擋住權威回覆前的重複下單
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
+    this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
     this.kn = 0;                      // 擊殺數(招式解鎖門檻)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
@@ -3122,6 +3123,7 @@ export class BattleClient {
           }
           this._prevVital = vital;
           this.mp = e.mp ?? this.mp; this.maxMp = e.mm ?? this.maxMp;
+          if (e.mm != null) this._mpAuth = true;   // 電力上限定案 → 爬升動力才解析得出真正的上限
           this.money = e.$ ?? this.money;
           this.upg = e.up || this.upg;
           this.kn = e.kn ?? this.kn;
@@ -7458,7 +7460,7 @@ export class BattleClient {
 
   // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
   /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
-  _liftMax() { return liftMax(this.maxMp || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
+  _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
 
   /**
    * 爬升動力條:往上飛消耗、其餘時間回充。**唯一消費點** —— target.y > 0 才扣,扣速 ∝ 爬升率
@@ -7466,6 +7468,11 @@ export class BattleClient {
    * 不是變慢),水平/下降/懸停不受影響。回速正比於電力回速 × 充能軌(liftRegen)。
    */
   _stepLift(dt, now, target, u) {
+    // 電力上限是伺服器權威值(快照 e.mm)。它到達之前 MUST NOT 解析動力上限 —— 建構子的佔位值
+    // 是 1,拿它把 `lift == null`(= 補滿)夾成幾乎空的一格,之後只能靠回充慢慢爬回上限:
+    // 開場第一幀就會發生 ⇒ 無人機一出場動力條就是空的(2026-08-03 使用者回報)。
+    // 未定案前一律視同滿動力:不扣、不夾、不擋(HUD 的 `lift ?? _liftMax()` 同樣顯示滿格)。
+    if (!this._mpAuth) return;
     const lMax = this._liftMax();
     if (this.lift == null || this.lift > lMax) this.lift = lMax;   // 首幀 / 電力上限變動 → 夾回上限
     const vsp = Math.max(1e-6, u?.vspeed || 0);
@@ -7621,6 +7628,16 @@ export class BattleClient {
       const stepDrop = Math.max(0, this._surf(px0, pz0, py0) - gyS);
       const onGround = this.pos.y <= gy + 0.05
         || (this.vy <= 0 && this.pos.y <= gy + stepDrop + 0.05);
+      // 下坡貼地(2026-08-03 使用者回報「偏陡的斜坡移動時累積蓄力會中斷」):上面那道容差只擋得住
+      // 一幀 —— 坡一陡,地表每幀掉的比自由落體同時間掉的還多,離地量逐幀累加,兩三幀後 onGround
+      // 轉偽,蓄力被當成騰空在 else 分支清零。判定既然已經說「在地面上」,位置就 MUST 跟著吸回
+      // 地面並歸零 vy,離地量才不會累積(只判不吸 = 判定與物理分家)。上界走 slopeBlocked 同一把
+      // 尺(slopeSnapM ← 阻擋角):走得上去的坡才貼地 ⇒ 斷崖/跳台那種單步落差仍照舊彈飛。
+      // 跳躍上升段(vy > 0)與蓄力跳騰空(_lowG 太空漫步)一律不吸。
+      if (onGround && !this._lowG && this.vy <= 0 && this.pos.y > gy
+          && this.pos.y - gy <= slopeSnapM(Math.hypot(this.pos.x - px0, this.pos.z - pz0))) {
+        this.pos.y = gy; this.vy = 0;
+      }
       // 麻痺 = 禁移動:蓄力/起跳/變形彈射一併封鎖(已騰空的物理慣性不受影響)
       if ((this.stunLeft || 0) > 0) {
         this.charge = 0;
