@@ -33,6 +33,7 @@ import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef } from './worldtext.js';
+import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed } from './beacons.js';
 // 低功耗旗標的**唯一真相**仍是 mobile.js(localStorage svs_lowpower);世界文字的 atlas
 // 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
 import { lowPower } from './mobile.js';
@@ -2222,6 +2223,47 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     group.add(pm);
   }
   return mesh.userData.signCount;
+}
+
+/**
+ * 語意化地標(P2-C;2026-08-03 使用者定案「放在兵線 / 重生點 / 建築單位旁邊,在周遭可以
+ * 看見即可」)。規則與型錄全住 `beacons.js`,這裡只負責把三件事接起來:
+ *   ① 錨點:兵線 / 主堡 / 塔位 —— 全部由既有幾何推導,一次 fetch 都不加
+ *   ② 落點:`planBeaconSites` + 本函式的 `probe` —— 「淨空 / 乾地 / 界內 / 夠平」的判準
+ *      **與巨岩那一支逐條相同**(areaFree / heightAt / terrainEnvCode 腳印周圈 / flatRadiusAt),
+ *      只是多留一圈 `BEACON.PAD`。地標因此不可能落進兵線走廊、塔位、主堡、橋樑走廊或
+ *      隧道敞開段 —— 「不擋兵線」是構造保證,不是靠事後跑泛洪稽核發現
+ *   ③ 碰撞柱:**量出來**再登記(`beaconCollider`),與建物/巨岩走同一條 blockers 路徑
+ * 零共享 `rnd()` 消耗(§2.3):外觀差異由落點雜湊自帶種子,不動全圖佈局序列。
+ * MUST 排在一般植被散布**之前** —— blockArea 之後小植被才會自動避開整件地標。
+ */
+function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW }) {
+  if (!lanesW.length) return 0;
+  const anchors = beaconAnchors({ lanesW, basesW, towerSites: solveTowerSites(lanesW) });
+  const probe = (x, z, r) => {
+    if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
+      || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) return false;
+    if (terrain.heightAt(x, z) < 0.4) return false;
+    // 水域/沼澤:中心 + 腳印周圈四向一併驗(同 placeMegaliths —— 只問中心會讓腳半泡在水裡)
+    if (terrainEnvCode(terrain, x, z) !== 0
+      || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
+        .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) return false;
+    if (flatRadiusAt(terrain, x, z, r) < r) return false;   // 站不平的地方不立(寧缺勿錯)
+    return areaFree(blocked, x, z, r);
+  };
+  let n = 0;
+  for (const st of planBeaconSites(anchors, probe)) {
+    const g = buildBeacon(st.kind, beaconSeed(st.x, st.z));
+    const col = beaconCollider(g);
+    const gy = sinkBaseY(terrain, st.x, st.z, col.r);
+    g.position.set(st.x, gy, st.z);
+    g.rotation.y = st.ry;
+    group.add(g);
+    blockArea(blocked, st.x, st.z, col.r);
+    blockers.push({ x: st.x, z: st.z, y: gy - 1, r: col.r, h: col.h + 1 });
+    n++;
+  }
+  return n;
 }
 
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
@@ -6290,6 +6332,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
   const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites });
   const giantTrees = placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites: greenSites });
+  // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
+  // 故插在這裡**不會**推移後面每一株植被/每一棟建物的亂數序列(§2.3)。
+  const beaconsBuilt = placeBeacons({
+    group, terrain, blocked, blockers,
+    lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
+    basesW: ['SWARM', 'STEEL'].map((side) => {
+      const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
+      return { side, x, z };
+    }),
+  });
 
   const attempts = vegTarget * 3;
   for (let a = 0; a < attempts && placed < vegTarget; a++) {
@@ -7245,6 +7297,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     veg: placed,
     giantTrees,
     megaliths: megalithsBuilt,
+    beacons: beaconsBuilt,
     ground: ground.patches,
     groundDetails: ground.details,
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
