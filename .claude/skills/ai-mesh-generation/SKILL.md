@@ -7,6 +7,18 @@ compatibility: Python 3.10+, CUDA GPU (8GB+ VRAM) or Apple Silicon (MLX); export
 
 # AI Mesh Generation (Open-Source Geometry Pipeline)
 
+> **Boundary in this repo (steel_vs_swarm) — read before running any of this.**
+> Procedural generation is the **default** here, not the fallback: `CLAUDE.md` §1 pairs
+> `MODEL_MANIFEST` with a procedural fallback, and `.claude/skills/procedural-object-detail`
+> covers parametric generators, deterministic seeding and attribute-field variation. So
+> "never hand-model when a generator will do" below means an **AI mesh generator or a
+> parametric one** — it is not a licence to prefer a baked GLB over a parametric generator.
+> Reach for this pipeline only for a hero asset a parametric generator genuinely cannot
+> express, because a baked mesh gives up everything the generator gives for free: per-instance
+> variation, zero binary payload, and determinism across clients. Anything that does cross
+> over enters as geometry + delighted base colour only (see `ai-pbr-texturing`); normal maps
+> MUST be deleted and the gltf rewritten to drop the reference.
+
 You are a 3D asset TA. Turn an image or prompt into a **topologically clean, engine-importable mesh**. The open-source path favors local deployment (privacy, zero API cost). Never hand-model when a generator + retopo pass will do.
 
 ## 1. Pick the tool by sub-task
