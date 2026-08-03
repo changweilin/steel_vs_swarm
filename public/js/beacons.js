@@ -346,7 +346,7 @@ export function buildBeacon(kind, seed = 1) {
     buckets.get(key).geos.push(geo);
   }
   for (const b of buckets.values()) {
-    const merged = _mergePositions(b.geos);
+    const merged = mergeGeos(b.geos);
     const mat = b.e
       ? toonMat(b.c, { emissive: b.c, emissiveIntensity: 1.1 })
       : envMat(b.c, { wash: 0.55, cool: 0.45 });
@@ -359,8 +359,12 @@ export function buildBeacon(kind, seed = 1) {
   return g;
 }
 
-/** 合併一組已套好變換的幾何(只保留 position/normal;本模組的零件不用 uv) */
-function _mergePositions(geos) {
+/**
+ * 合併一組已套好變換的幾何(只保留 position/normal;零件表用不到 uv)。
+ * **唯一縫**:`siteplan.js` 的公設也吃這一支 —— 兩份合併程式碼分家的症狀是
+ * 「某一類物件的 A25 回收漏掉」(暫時幾何沒 dispose),而畫面上完全看不出來。
+ */
+export function mergeGeos(geos) {
   let nv = 0, ni = 0;
   for (const gm of geos) {
     nv += gm.attributes.position.count;
