@@ -45,15 +45,24 @@ const count = (s, re) => (bare(s).match(re) || []).length;
 console.log('\nⅠ 旋鈕表(visualPrefs.js)');
 {
   ok(Object.keys(VISUAL_KNOBS).length >= 4, `旋鈕 ${Object.keys(VISUAL_KNOBS).length} 項`);
+  // 兩種控件型別:拉桿(min/max/step)與互斥選項(choices)。型別由**欄位本身**推導,
+  // 消費端不得另寫一份「哪幾項是選單」的名單。
   for (const [k, d] of Object.entries(VISUAL_KNOBS)) {
-    ok(Number.isFinite(d.def) && d.def >= d.min && d.def <= d.max && d.step > 0 && !!d.label && !!d.hint,
-      `${k}:欄位齊全且預設值在範圍內`);
+    const good = d.choices
+      ? Array.isArray(d.choices) && d.choices.length >= 2 && d.choices.includes(d.def)
+      : Number.isFinite(d.def) && d.def >= d.min && d.def <= d.max && d.step > 0;
+    ok(good && !!d.label && !!d.hint, `${k}:欄位齊全且預設值合法`);
   }
   // **卡在「需要美術方向確認」的兩項預設 MUST 是 0** —— 沒動過拉桿的玩家 MUST 看到舊畫面。
   ok(VISUAL_KNOBS.shadowMech.def === 0, '機體陰影偏色預設 0(= 逐位元同舊制,計畫書要求先確認方向)');
   ok(VISUAL_KNOBS.shadowEnv.def === 0, '環境陰影偏色預設 0(同上)');
   ok(VISUAL_KNOBS.ink.def === 1 && VISUAL_KNOBS.weather.def === 1, '已定案的兩項預設 1(= 交付調校值)');
-  ok(Object.values(VISUAL_KNOBS).every((d) => d.min === 0), '每一項都拉得到 0(= 這一項完全不生效)');
+  ok(Object.values(VISUAL_KNOBS).every((d) => d.choices || d.min === 0),
+    '每一根拉桿都拉得到 0(= 這一項完全不生效)');
+  // 互斥選項:名單外的值一律退回預設(手改 localStorage 不得穿過去)
+  ok(setVisualPref('worldTextLang', 'zh') === 'zh', '選項:合法值收下');
+  ok(setVisualPref('worldTextLang', 'klingon') === VISUAL_KNOBS.worldTextLang.def, '選項:名單外的值退回預設');
+  ok(setVisualPref('worldTextLang', 3) === VISUAL_KNOBS.worldTextLang.def, '選項:數字不是合法選項');
 
   // 夾制:超界 / NaN / 非數字一律不得穿過去
   ok(setVisualPref('ink', 999) === VISUAL_KNOBS.ink.max, '超上界夾到 max');

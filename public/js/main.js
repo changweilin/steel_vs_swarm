@@ -2454,21 +2454,45 @@ function renderVisualSettings(mount) {
     const row = document.createElement('div');
     row.className = 'set-row';
     row.dataset.vk = k;
-    const pct = (v) => `${Math.round(v * 100)}%`;
-    row.innerHTML = `<span class="set-label">${d.label}</span>`
-      + `<input class="set-slider" type="range" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label}">`
-      + `<span class="set-val">${pct(visualPref(k))}</span>`;
+    row.innerHTML = `<span class="set-label">${d.label}</span>`;
     attachTip(row.querySelector('.set-label'), d.hint);   // 逐項說明:滑鼠移上 / 觸控長按(tip.js 委派)
-    const slider = row.querySelector('.set-slider');
-    const val = row.querySelector('.set-val');
-    slider.value = String(visualPref(k));
-    slider.addEventListener('input', (e) => {
-      // 寫進單一真相 → visualPrefs 廣播 → toon.js / postfx.js 的共享 uniform 與樣品同一幀跟上。
-      // 回寫用**夾制後**的值(拉桿的 step 與 min/max 在某些瀏覽器上不保證),避免顯示與實際不符。
-      val.textContent = pct(setVisualPref(k, Number(e.target.value)));
-      syncReset();
-    });
-    vals.push({ k, slider, val, pct });
+    if (d.choices) {
+      // 一組互斥選項 ⇒ 分段按鈕(`.seg` > `.segb`,§2.1「按鍵風格統一」);
+      // 控件型別由 `choices` 這一欄推導,MUST NOT 在這裡寫「哪幾項是選單」的名單。
+      const seg = document.createElement('div');
+      seg.className = 'seg seg-sm';
+      for (const c of d.choices) {
+        const b = document.createElement('button');
+        b.className = 'segb' + (visualPref(k) === c ? ' on' : '');
+        b.type = 'button';
+        b.dataset.v = c;
+        b.textContent = d.choiceLabels?.[c] ?? c;
+        b.addEventListener('click', () => {
+          setVisualPref(k, c);
+          seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k)));
+          syncReset();
+          app.audio?.ui('click');
+        });
+        seg.appendChild(b);
+      }
+      row.appendChild(seg);
+      vals.push({ k, sync: () => seg.querySelectorAll('.segb').forEach((x) => x.classList.toggle('on', x.dataset.v === visualPref(k))) });
+    } else {
+      const pct = (v) => `${Math.round(v * 100)}%`;
+      row.insertAdjacentHTML('beforeend',
+        `<input class="set-slider" type="range" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label}">`
+        + `<span class="set-val">${pct(visualPref(k))}</span>`);
+      const slider = row.querySelector('.set-slider');
+      const val = row.querySelector('.set-val');
+      slider.value = String(visualPref(k));
+      slider.addEventListener('input', (e) => {
+        // 寫進單一真相 → visualPrefs 廣播 → toon.js / postfx.js 的共享 uniform 與樣品同一幀跟上。
+        // 回寫用**夾制後**的值(拉桿的 step 與 min/max 在某些瀏覽器上不保證),避免顯示與實際不符。
+        val.textContent = pct(setVisualPref(k, Number(e.target.value)));
+        syncReset();
+      });
+      vals.push({ k, sync: () => { slider.value = String(visualPref(k)); val.textContent = pct(visualPref(k)); } });
+    }
     mount.appendChild(row);
   }
 
@@ -2484,7 +2508,7 @@ function renderVisualSettings(mount) {
   const syncReset = () => { reset.disabled = visualPrefsDefault(); };
   reset.addEventListener('click', () => {
     resetVisualPrefs();
-    for (const v of vals) { v.slider.value = String(visualPref(v.k)); v.val.textContent = v.pct(visualPref(v.k)); }
+    for (const v of vals) v.sync();
     syncReset();
     app.audio?.ui('click');
   });

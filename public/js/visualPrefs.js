@@ -46,6 +46,13 @@ export const VISUAL_KNOBS = {
     label: '風化密度', def: 1, min: 0, max: 1.5, step: 0.05, unit: '%',
     hint: '苔蘚 / 水漬跟著「這一區比較老」的屬性場起伏的幅度。0% = 全場均勻(舊制)。',
   },
+  // 互斥選項(非拉桿):`choices` 一出現就是分段按鈕,消費端 MUST 由這一欄推導控件型別,
+  // MUST NOT 在 UI 端寫「這一項是選單、那一項是拉桿」的名單(兩份名單遲早分家)。
+  worldTextLang: {
+    label: '世界文字語言', def: 'local', choices: ['local', 'zh', 'en'],
+    choiceLabels: { local: '當地', zh: '中文', en: '英文' },
+    hint: '洞口匾額 / 橋名牌 / 招牌上顯示哪一版名字。**當地** = 圖資的原文(真實感的來源,但可能看不懂);中文 / 英文取圖資的對應譯名,沒有譯名時退回原文。',
+  },
 };
 
 const _vals = {};
@@ -53,8 +60,12 @@ const _subs = new Set();
 
 function clamp(k, v) {
   const d = VISUAL_KNOBS[k];
-  if (!d || !Number.isFinite(v)) return d ? d.def : 0;
-  return Math.min(d.max, Math.max(d.min, v));
+  if (!d) return 0;
+  // 互斥選項:名單外的值一律退回預設(手改 localStorage / 舊版遺留的鍵不得穿過去)
+  if (d.choices) return d.choices.includes(v) ? v : d.def;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return d.def;
+  return Math.min(d.max, Math.max(d.min, n));
 }
 
 // 載入:整份讀進來後逐項夾制。壞掉的鍵/超界的值一律退回預設(原則 6 寧缺勿錯)——
@@ -63,8 +74,8 @@ function clamp(k, v) {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { /* 私密模式 / 壞字串 */ }
   for (const k in VISUAL_KNOBS) {
-    const v = raw && typeof raw === 'object' ? Number(raw[k]) : NaN;
-    _vals[k] = Number.isFinite(v) ? clamp(k, v) : VISUAL_KNOBS[k].def;
+    const v = raw && typeof raw === 'object' ? raw[k] : undefined;
+    _vals[k] = v === undefined ? VISUAL_KNOBS[k].def : clamp(k, v);
   }
 }
 
@@ -81,7 +92,7 @@ export function visualPrefs() {
 /** 寫入一個旋鈕(夾制 + 持久化 + 廣播)。回傳夾制後的值 */
 export function setVisualPref(k, v) {
   if (!(k in VISUAL_KNOBS)) return 0;
-  const nv = clamp(k, Number(v));
+  const nv = clamp(k, v);
   if (nv === _vals[k]) return nv;
   _vals[k] = nv;
   try { localStorage.setItem(KEY, JSON.stringify(_vals)); } catch { /* 私密模式忽略 */ }

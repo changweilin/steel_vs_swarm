@@ -42,6 +42,7 @@ open item, not a conclusion.
 | P2-A weathering field | **done** | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder |
 | P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
 | P2-C semantic placement | **not done** | deliberately deferred — see below |
+| V-E world signage | **done** | `worldtext.js` + `biomes.js buildWorldSigns` — was declined in the original plan; the reason it was declined turned out not to hold (see V-E) |
 | V-C Node-side tunnel scans | **partly done, partly not possible** | see below |
 
 **New in this batch: user-tunable art direction.** Four knobs (`visualPrefs.js`) with sliders and a
@@ -415,14 +416,42 @@ hole with a dark shape moving in it. A numeric check is the only thing that find
 
 **Accept** Worst-case headroom printed per structure; fails below the margin.
 
-### V-E Not proposed: world signage
+### V-E World signage — **done (2026-08-03), and it was not the feature request it looked like**
 
-The procedural-texture skill has the **least applicable surface here**. `paint.js` is already
-exemplary — procedural canvas, `${pattern}:${hue}:${tone}` cache, rig-rest triplanar so the
-pattern stays on the armour plate. The world itself carries almost no readable signage, and
-adding some is a **feature request, not a fix**. The skill's residual value is its trap list
-(aspect-ratio crush, the two-sided-plate mirror rule) — apply it *if* signage is ever added;
-do not schedule work for it now.
+The original entry declined this as "a feature request, not a fix", on the reading that signage
+means *inventing* text. That reading was wrong in one specific way: **the names are already in
+memory**. Overpass returns tags by default on `out geom` / `out center tags`, and `biomes.js` keeps
+the whole `tags` object all the way through. So this is not "draw signs" — it is "the world already
+has names, put them back". Tunnel portals and bridge heads needed **zero** new Overpass queries.
+
+**The corpus** — what carries text, and where it came from:
+
+| Layer | Query cost | Text | Surface |
+|---|---|---|---|
+| Road ways | free (already fetched) | `name` | **tunnel / gallery / underpass portal plaques**, **bridge name plates** |
+| Buildings | free (already fetched) | `name` on commercial | facade sign band |
+| Named point nodes | +4 cheap node queries | `name`, `ref`, `ele` | place / peak / motorway-junction / station posts |
+
+Point features cost four `node[...]` queries with tiny quotas — no geometry, so the payload barely
+moves. `geoKey('osmF', …)` was bumped 1 → 2 with the query change; without that bump the new signs
+would never appear on any machine that had opened the map before, silently.
+
+**Everything the trap list warned about is enforced by `audit_world_text.mjs`** rather than by
+memory: aspect-ratio crush (plate and atlas cell are both 4:1, width derived from height, long names
+shrink the type instead of stretching the plate), the two-sided-plate mirror rule (two back-to-back
+single-sided quads sharing one cell, never `DoubleSide`), plus four this project needed on top —
+missing-glyph detection (A2 forbids shipping a font, so a device without CJK would render a row of
+tofu; >20% missing ⇒ no sign at all), **no name means no sign** (原則 6 — a fabricated name is worse
+than none), one mesh and one atlas for the entire world's text (this renderer is draw-call bound, so
+per-sign materials were never an option; the cell count *is* the quota), and zero `rnd()` consumption
+so hanging a sign cannot shift the vegetation and building layout (§2.3).
+
+Which name to show is a taste question, not a derivation — 27 venues span many scripts, and `name` is
+the local one. It became a fourth settings control (`worldTextLang`: local / 中文 / English), which is
+why `visualPrefs.js` grew a second control type (mutually-exclusive choices → segmented buttons,
+per §2.1's button-style rule) alongside the sliders.
+
+`paint.js` remains the exemplar it always was; nothing there changed.
 
 ---
 
