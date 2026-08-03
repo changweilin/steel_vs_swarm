@@ -38,8 +38,8 @@ open item, not a conclusion.
 | P1-A ramp family | **done** | `toon.js RAMPS`/`toonGradient(bands)` |
 | P1-C grade + FXAA | **done** | `postfx.js`; `antialias` now only on the `?post=0` fallback |
 | P1-D outline width | **done (conservative)** | `max(world width, screen floor)` — near field bit-identical, so the 15 call sites were **not** retuned |
-| P1-B shadow tint into ramp | **done** | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before** |
-| P2-A weathering field | **done** | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder |
+| P1-B shadow tint into ramp | **done** (anchor fixed 2026-08-03) | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before**. The anchor originally named the wrong chunk, so the patch never applied — see the P1-B section below |
+| P2-A weathering field | **done** (preview fixed 2026-08-03) | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder. The settings sample reads its own preview field (`ensurePreviewField`) because the world field is flat-neutral in the lobby and whole-map-scale in battle |
 | P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
 | P2-C semantic placement | **done** | `beacons.js` + `biomes.js placeBeacons` — the deferral reason was dissolved by a scope call, not by finding a way to verify the original scope (see below) |
 | V-E world signage | **done** | `worldtext.js` + `biomes.js buildWorldSigns` — was declined in the original plan; the reason it was declined turned out not to hold (see V-E) |
@@ -282,8 +282,15 @@ New audit assertion: `DataTexture` for ramps constructed in `toon.js` only.
 **Now** `CEL_COOL` mixes `outgoingLight` before `opaque_fragment` and only `envMat`
 enables it. Mechs, heroes and weapons use `toonMat`, so **their shadows only darken**.
 
-**Do** Patch `lights_toon_pars_fragment` instead (one line, skill L1b). Weaker tint for
+**Do** Patch `getGradientIrradiance()` instead (one line, skill L1b). Weaker tint for
 mechs (they must hold faction livery hue), stronger for environment.
+
+**Correction (2026-08-03).** This item originally said "patch `lights_toon_pars_fragment`",
+and it was implemented literally. That chunk only *calls* `getGradientIrradiance`; the
+function — and the one line worth patching — lives in **`gradientmap_pars_fragment`**. The
+replacement therefore never matched, every material silently fell through to the fallback
+path, and both shadow sliders did nothing visible. Nothing errored. See CLAUDE.md §2.1
+「陰影偏色(ramp 層)」④–⑥ for the invariants that now pin this down.
 
 **Constraints** `customProgramCacheKey` must encode the tint value.
 **This changes the shadow hue of every mech** — get art-direction confirmation before

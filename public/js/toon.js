@@ -8,6 +8,7 @@
 // 全專案共用:hazards.js re-export 舊入口(toonMat/toonify/toonGradient)保持相容。
 import * as THREE from 'three';
 import { visualPref, onVisualChange } from './visualPrefs.js';
+import { makeField, bakeFieldTexture } from './field.js';
 
 // ---- cel ramp 家族(NearestFilter = 硬邊界)----
 // **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
@@ -69,27 +70,45 @@ const SHADOW_HUE_N = (() => {
   const l = SHADOW_HUE[0] * LUMA_709[0] + SHADOW_HUE[1] * LUMA_709[1] + SHADOW_HUE[2] * LUMA_709[2];
   return SHADOW_HUE.map((c) => c / l);
 })();
+// 拉桿上限(= `VISUAL_KNOBS.shadowMech/shadowEnv.max`;稽核 Ⅱ 逐值比對兩者,分家會紅字)。
+//
+// **為什麼上限不是 1**:`SHADOW_HUE` 是**方向**,1.0 只是它自己那個長度。偏色乘的是 ramp
+// 查表的回傳值 = 只有**直接光**那一項,而暗階的直接光本身就只有滿亮的 0.4 倍,旁邊還有一份
+// 完全不偏色的環境光在稀釋 ⇒ 1.0 在真瀏覽器上量到的峰值只有 **+5/255 藍、−2/255 紅**
+// (2026-08-03 逐像素量測),肉眼等同沒動 —— 這正是計畫書 P1-B 說的「cel 的陰影要有顏色,
+// 不是只是被壓暗」沒有兌現。上限拉到 3 之後同一顆球的峰值 ≈ ±16/255,拖拉桿看得出來。
+// **亮度中性與上限無關**:`luma(1 + (c−1)a) = 1 + (luma(c) − 1)·a`,而 `luma(SHADOW_HUE_N) ≡ 1`
+// ⇒ **任何** a 的亮度都恰好是 1(A14 的暗階亮度逐位元不動)。上限存在只為了不讓通道被拉到
+// 負數(最紅的通道要到 a ≈ 13.7 才碰到 0),MUST NOT 拿它當「安全亮度」的保險。
+const TINT_MAX_A = 3;
 /**
  * 陰影偏色乘數(單一縫:GLSL 的 uniform 與樣品畫面同吃這一支)。
- * @param amount 0~1(0 = 白 = 不偏色,逐位元同舊制)
+ * @param amount 0~TINT_MAX_A(0 = 白 = 不偏色,逐位元同舊制;1 = SHADOW_HUE 本身的長度)
  */
 export function shadowTintRGB(amount) {
-  const a = Math.min(1, Math.max(0, amount || 0));
+  const a = Math.min(TINT_MAX_A, Math.max(0, amount || 0));
   return SHADOW_HUE_N.map((c) => 1 + (c - 1) * a);
 }
 
-// three `lights_toon_pars_fragment` 裡 ramp 查表的**那一行原文**。
+// three 的 ramp 查表**那一行原文**(住在 `getGradientIrradiance()` 裡)。
 // 升級 three MUST 重新核對這一行(chunk 改寫 ⇒ 替換靜默失效)。
 // 替換不成功時走 `uCelRampFb` 的等效落地路徑(原則 6 降級不例外),不會變成「拉桿沒反應」。
 const RAMP_HOOK = 'return vec3( texture2D( gradientMap, coord ).r );';
-const RAMP_INC = '#include <lights_toon_pars_fragment>';
+// **`getGradientIrradiance()` 住在 `gradientmap_pars_fragment`,不是 `lights_toon_pars_fragment`**
+// —— 後者只是「呼叫它」的地方(`RE_Direct_Toon` 那一行)。錨錯 chunk 的症狀是
+// `RAMP_PATCHED` 恆為 null ⇒ 每一份材質都走落地保險,而畫面上只表現成「兩根陰影偏色拉桿
+// 拉了看不出差異」,沒有任何錯誤訊息(2026-08-03 使用者回報;真瀏覽器實測 uCelRampFb 恆 = 1)。
+// chunk 名因此只准有**這一份**,`#include` 指令 MUST 由它推導 —— 兩個名字各寫一次的話,
+// 「取哪個 chunk 的原文」與「換掉哪個 include」遲早指向不同的 chunk,而那正是上面那個 bug。
+const RAMP_CHUNK = 'gradientmap_pars_fragment';
+const RAMP_INC = `#include <${RAMP_CHUNK}>`;
 // **MUST 從 `THREE.ShaderChunk` 取 chunk 原文再換掉 include 指令**,MUST NOT 直接在
 // `shader.fragmentShader` 上找那一行 —— `onBeforeCompile` 收到的是**還沒展開 include** 的原始碼
 // (本檔其餘每一處補丁都錨在 `#include <…>` 上,正是這個理由)。在展開後的字串上找,
 // 永遠找不到、永遠走落地路徑,而畫面上只表現成「偏色比預期柔一點」,不會有任何錯誤。
 // chunk 從 three 自己身上讀 ⇒ 不必把它的原始碼抄一份進來。
 const RAMP_PATCHED = (() => {
-  const chunk = THREE.ShaderChunk?.lights_toon_pars_fragment;
+  const chunk = THREE.ShaderChunk?.[RAMP_CHUNK];
   if (typeof chunk !== 'string' || !chunk.includes(RAMP_HOOK)) return null;
   return chunk.replace(RAMP_HOOK, `
     {
@@ -149,6 +168,38 @@ export function setWeatherField(data, size, bounds) {
   old?.dispose();   // A25:上一場的場貼圖不放掉就是每開一場漏一張
 }
 
+// ---- 設定頁樣品的專屬場(2026-08-03)----
+// 「風化密度」那根拉桿在樣品上**證明性地**什麼都不會發生,原因有兩層,而且兩層都不報錯:
+//   ① 大廳還沒有戰場 ⇒ 場是 `neutralWField()` 的 1×1 中性貼圖(恆 0.5)⇒ `celWeatherF()`
+//      逐位元恆為 1,不管拉桿拉到哪(2026-08-03 逐像素量測:全畫面差 0)。
+//   ② 就算在戰鬥中開設定,世界那張場的取樣框是**整張圖**(數百公尺),而樣品在世界座標系裡
+//      只佔 24m ⇒ 整個樣品落在場的同一個值上,那個值是多少純看樣品的座標剛好落在哪。
+// 故樣品走**自己的一張場**:同一支 `field.js`、同一段 `celWeatherF()` 取樣碼、同一個
+// `uCelWSpread` —— 只有「取樣框」與「哪一張貼圖」兩個 uniform 換軌,與 `_rampTint` 的
+// mech / env 兩軌同一個道理(規則一份,軌兩條)。
+// **MUST NOT 改成讓樣品去呼叫 `setWeatherField`**:那是世界場的唯一寫入點,戰鬥中一開設定
+// 就會把整場的風化場換成樣品那一張(而且關掉設定也換不回來)。
+const PREVIEW_SEED = 0x5A17C3;
+const PREVIEW_SPAN = 24;      // = matsample 地面的邊長:場的起伏剛好鋪滿樣品畫面
+const PREVIEW_TEX_N = 64;
+const _wFieldPrev = { value: null };
+const _wRectPrev = {
+  value: new THREE.Vector4(-PREVIEW_SPAN / 2, -PREVIEW_SPAN / 2, 1 / PREVIEW_SPAN, 1 / PREVIEW_SPAN),
+};
+function ensurePreviewField() {
+  if (_wFieldPrev.value) return;
+  const h = PREVIEW_SPAN / 2;
+  const data = bakeFieldTexture(makeField(PREVIEW_SEED, PREVIEW_SPAN),
+    { minX: -h, maxX: h, minZ: -h, maxZ: h }, PREVIEW_TEX_N);
+  const t = new THREE.DataTexture(data, PREVIEW_TEX_N, PREVIEW_TEX_N, THREE.RedFormat);
+  t.minFilter = THREE.LinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.wrapS = THREE.ClampToEdgeWrapping;
+  t.wrapT = THREE.ClampToEdgeWrapping;
+  t.needsUpdate = true;
+  _wFieldPrev.value = t;
+}
+
 // 拉桿 → 共享 uniform(訂閱一次;本檔是全專案唯一持有這些 uniform 的地方)
 function syncVisualPrefs() {
   _rampTint.mech.value.setRGB(...shadowTintRGB(visualPref('shadowMech')));
@@ -184,7 +235,8 @@ export function updateCelLight(camera) {
  *   paint — { tex, matrix, scale } 以「靜止姿勢的機體局部座標」三平面投影花紋。
  *           matrix = mesh 局部 → 機體根(建模當下固定,不隨動畫更新)⇒ 花紋鎖在裝甲板上。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech' } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false } = {}) {
+  if (preview) ensurePreviewField();
   const defines = { ...(mat.defines || {}) };
   if (metal) defines.CEL_METAL = '';
   if (wash > 0) defines.CEL_WASH = '';
@@ -200,13 +252,14 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
     shader.uniforms.uCelRampTint = _rampTint[tint] || _rampTint.mech;
-    shader.uniforms.uCelWField = _wField;
-    shader.uniforms.uCelWRect = _wRect;
+    // 場只換「哪一張 + 取樣框」兩個 uniform;取樣規則(celWeatherF)與強度仍是同一份
+    shader.uniforms.uCelWField = preview ? _wFieldPrev : _wField;
+    shader.uniforms.uCelWRect = preview ? _wRectPrev : _wRect;
     shader.uniforms.uCelWSpread = _wSpread;
     shader.uniforms.uCelRim = { value: rim };
     shader.uniforms.uCelWash = { value: wash };
@@ -271,7 +324,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
             vec3 celWN = inverseTransformDirection( normal, viewMatrix );
             float mossW = smoothstep( 0.45, 0.8, celWN.y ) * uCelMossAmt * celWeatherF();
             mossW *= smoothstep( 0.28, 0.72, celNoise( vCelWP.xz * 0.3 + vCelWP.yy * 0.17 ) );
-            diffuseColor.rgb = mix( diffuseColor.rgb, uCelMossC, mossW );
+            // saturate MUST 留著:celWeatherF() 最高到 1 + WEATHER_SPREAD × 拉桿上限 = 2.2 ⇒
+            // mossW 會衝過 1,而 mix 在 t > 1 是**外插**(往苔色的反方向再推出去)——
+            // 場最高的那幾塊會過飽和,而拉桿再往上拉也只是外插得更遠 = 上半段看不出差異。
+            diffuseColor.rgb = mix( diffuseColor.rgb, uCelMossC, saturate( mossW ) );
           }
           #endif
         }
@@ -316,12 +372,20 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
             float celShade = smoothstep( 0.05, 0.45, dot( normal, uCelLightDir ) );
             outgoingLight = mix( outgoingLight * mix( vec3( 1.0 ), vec3( 0.86, 0.93, 1.1 ), uCelCool ), outgoingLight, celShade );
           #endif
-          // 落地保險(原則 6):three 若改寫 lights_toon_pars_fragment,上面那道 ramp 替換會
-          // **靜默**失效 —— 畫面只表現成「拉桿拉了沒反應」,不會有任何錯誤。uCelRampFb 在
-          // onBeforeCompile 當下就知道替換成不成功:成功恆 0(以下完全不執行),
-          // 失敗才走這條等效路徑(逐像素而非逐 ramp 階,交界略柔,但不會整項消失)。
+          // 落地保險(原則 6):three 若改寫那個 chunk,上面那道 ramp 替換會**靜默**失效 ——
+          // 畫面只表現成「拉桿拉了沒反應」,不會有任何錯誤。uCelRampFb 在 onBeforeCompile
+          // 當下就知道替換成不成功:成功恆 0(以下完全不執行),失敗才走這條路徑。
+          // **權重 MUST 取同一張 ramp 的階值**,MUST NOT 退回手寫的 dot·0.5+0.5 線性斜坡:
+          // 線性斜坡把偏色攤平在整顆球上 ⇒ 最暗的地方只吃到一部分,實測整體差異掉到
+          // 補丁版的一個零頭(2026-08-03 逐像素量測:最大差 11/765,肉眼等同沒有)。
+          // 保險的意義是「壞掉時看得出來還在動」,而不是「壞掉時剛好也看不出來」——
+          // 兩者一樣不會報錯,差別只在使用者會不會回報。
           if ( uCelRampFb > 0.5 ) {
-            float celFbG = saturate( dot( normal, uCelLightDir ) * 0.5 + 0.5 );
+            #ifdef USE_GRADIENTMAP
+              float celFbG = texture2D( gradientMap, vec2( dot( normal, uCelLightDir ) * 0.5 + 0.5, 0.0 ) ).r;
+            #else
+              float celFbG = saturate( dot( normal, uCelLightDir ) * 0.5 + 0.5 );
+            #endif
             outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbG );
           }
         }
@@ -407,11 +471,12 @@ export function toonMat(color, opts = {}) {
  */
 export function envMat(color, opts = {}) {
   // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, ...rest } = opts;
+  // preview:設定頁樣品專用(改吃樣品自己那張風化場,見 ensurePreviewField)
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env' });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview });
 }
 
 /**
