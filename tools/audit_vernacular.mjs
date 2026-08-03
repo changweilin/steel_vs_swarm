@@ -5,17 +5,16 @@
 // 是無聲的 —— 沒有例外、沒有紅字,只表現成「這張圖看起來怪怪的」:
 //   ・主幹抓到原名裡不存在的字串(2026-08-03 taipei101 首烤:spine=路巷、spineHits=0)
 //   ・OSM 的列舉值(religion=taoist)當人看的字上牌
-//   ・圖集 UV 的 v 沒翻 ⇒ 整批招牌上下顛倒
-//   ・牌面長寬比 ≠ 圖集儲存格長寬比 ⇒ 字被壓成一條糊帶
 //   ・去重帳漏掉合成名 ⇒ 同一個名字掛在兩塊牌上(一鎮兩家)
-//   ・逐實例 UV 屬性掛在跨場共用的 geometry 上 ⇒ 上一場的招牌蓋掉這一場
 //
 // 三種驗法:
 //   Ⅰ・Ⅱ  直接 import `vernacular.js` **真品**(該檔零 import,Node 跑得動)
-//   Ⅲ     以 `audit_src` 抽 `signage.js` 的純算術原文用 `new Function` 執行真品
-//          (signage.js 的 three 走 CDN importmap,Node 端 import 不進來)
+//   Ⅲ     讀原文驗「語料 → 世界文字」的接線(圖集/UV/裝箱住 worldtext ⇒ 由
+//          `audit_world_text.mjs` Ⅴ 驗,本支不重複)
 //   Ⅳ・Ⅴ  讀原文驗單一縫與紀律 / 驗烘焙語料
-import { readSrc, grabFn } from './audit_src.mjs';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { readSrc, ROOT } from './audit_src.mjs';
 import {
   TEXT_KINDS, SIGN_CLASSES, classifyOsm, harvestOsm, spineOf, signCopy, textW,
   flagToIso, localeOf, emptyCorpus, mergeCorpus, corpusStats, LOCALE_LEX, ELE_WORD,
@@ -203,111 +202,49 @@ const demo = () => harvestOsm({ pois: [
   ok(!cp || cp.t !== c.shop[0].t, 'Ⅱ② 超出容量的語料 MUST NOT 被選中');
 }
 
-/* ---------------------------- Ⅲ 圖集版面 / UV ---------------------------- */
-sec('Ⅲ 圖集版面與逐實例 UV(執行 signage.js 原文)');
+/* ------------------------- Ⅲ 語料 → 世界文字的接線 ------------------------- */
+sec('Ⅲ 接線(worldtext.js 是唯一的文字圖層)');
 
-const sgSrc = readSrc('public', 'js', 'signage.js');
-const specI = sgSrc.indexOf('const SPEC = {');
-const specSrc = sgSrc.slice(specI, sgSrc.indexOf('\n};', specI) + 3);
-const SG = new Function(`${specSrc}\n${grabFn(sgSrc, 'atlasLayout')}\n${grabFn(sgSrc, 'signAspect')}\n`
-  + 'return { atlasLayout, signAspect, SPEC };')();
+const wtSrc = readSrc('public', 'js', 'worldtext.js');
+const bioSrc = readSrc('public', 'js', 'biomes.js');
+const vnSrc = readSrc('public', 'js', 'vernacular.js');
+const gndSrc = readSrc('public', 'js', 'ground.js');
+const strip = (t) => t.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n')
+  .replace(/\/\*[\s\S]*?\*\//g, '');
 
-for (const cls of Object.keys(SIGN_CLASSES)) {
-  ok(SG.SPEC[cls], `Ⅲ① ${cls} MUST 有版面規格`);
-  const s = SG.SPEC[cls];
-  ok(Math.abs(SG.signAspect(cls) - s.cw / s.ch) < 1e-9, `Ⅲ① ${cls} signAspect === cw/ch`);
-  for (const n of [1, 3, 7, 16, 24]) {
-    const cells = Math.min(n, s.max);
-    const L = SG.atlasLayout(cls, cells);
-    ok(L.W <= 2048 && L.H <= 2048, `Ⅲ② ${cls}/${cells} 畫布 ≤2048`);
-    const r = L.rect;
-    let inRange = true, overlap = false;
-    for (let i = 0; i < cells; i++) {
-      const [u, v, w, h] = [r[i * 4], r[i * 4 + 1], r[i * 4 + 2], r[i * 4 + 3]];
-      if (u < -1e-6 || v < -1e-6 || u + w > 1 + 1e-6 || v + h > 1 + 1e-6) inRange = false;
-      for (let j = 0; j < i; j++) {
-        const [u2, v2, w2, h2] = [r[j * 4], r[j * 4 + 1], r[j * 4 + 2], r[j * 4 + 3]];
-        if (u < u2 + w2 - 1e-6 && u2 < u + w - 1e-6 && v < v2 + h2 - 1e-6 && v2 < v + h - 1e-6) overlap = true;
-      }
-    }
-    ok(inRange, `Ⅲ② ${cls}/${cells} 每格 UV 落在 [0,1]`);
-    ok(!overlap, `Ⅲ② ${cls}/${cells} 每格互不重疊(重疊 = 招牌上出現隔壁那塊牌的半個字)`);
-  }
-  // v 翻轉:canvas 原點在左上、UV 原點在左下 ⇒ 第 0 格(畫布最上一列)的 v 要在**上方**。
-  // 案例 MUST 逼出 ≥2 列 —— 單列時 H === ch,翻與不翻都得到 v=0,測不出來。
-  const cols1 = Math.max(1, Math.min(s.max, Math.floor(2048 / s.cw)));
-  const n2 = Math.min(s.max, cols1 + 1);
-  if (n2 > cols1) {
-    const L2 = SG.atlasLayout(cls, n2);
-    ok(L2.rows >= 2, `Ⅲ③ ${cls} 測資逼出多列`);
-    ok(Math.abs(L2.rect[1] - (1 - s.ch / L2.H)) < 1e-9,
-      `Ⅲ③ ${cls} 第 0 格的 v MUST 翻過(沒翻 = 整批招牌上下顛倒,不報錯)`);
-    ok(L2.rect[1] > L2.rect[(n2 - 1) * 4 + 1],
-      `Ⅲ③ ${cls} 畫布第一列 MUST 對到 UV 的上方(v 大)`);
-  }
+// 舊 signage.js(第二份圖集 + 第二套逐實例 UV 規則)MUST 已整支退場 —— 一個世界
+// 兩套文字圖層就是「第二份實作即是 bug」(原則 2)。
+ok(!existsSync(join(ROOT, 'public', 'js', 'signage.js')), 'Ⅲ① signage.js 已退場(文字圖層只有 worldtext 一份)');
+for (const [name, src] of [['biomes', bioSrc], ['ground', gndSrc]]) {
+  ok(!/signage\.js|signAtlas|applySignAtlas/.test(src), `Ⅲ① ${name}.js 無 signage.js 殘留`);
 }
-
+// 五種語料庫語域 MUST 都在 worldtext 的樣式表裡(表與消費端分家 = 掛了卻沒有版面)
+for (const cls of Object.keys(SIGN_CLASSES)) {
+  ok(new RegExp(`^  ${cls}: \\{ cw:`, 'm').test(wtSrc), `Ⅲ② worldtext 有 ${cls} 的版面規格`);
+  ok(new RegExp(`style: '${cls}'`).test(bioSrc), `Ⅲ② biomes 掛得出 ${cls}`);
+}
+// 挑字只有一條路:signCopy → sheet.add({ copy })
+ok((bioSrc.match(/signCopy\(/g) || []).length === 1, 'Ⅲ③ biomes 只有一處呼叫 signCopy(copyOf)');
+ok(/const copyOf = \(cls\) =>/.test(bioSrc), 'Ⅲ③ 語料庫挑字收斂成單一入口 copyOf');
+// 取名規則只有一份:worldtext 只是薄殼
+ok(/return pickName\(tags, lang, MAX_CHARS\);/.test(wtSrc),
+  'Ⅲ④ resolveName 只是 pickName 的薄殼(取名規則住 vernacular,零 import ⇒ 稽核吃得到真品)');
+ok(!/NAME_KEYS|name:zh-Hant/.test(strip(wtSrc)), 'Ⅲ④ worldtext 沒有第二份取名規則');
 /* ------------------------------- Ⅳ 單一縫 ------------------------------- */
 sec('Ⅳ 單一縫與紀律(讀原文)');
 
-const vnSrc = readSrc('public', 'js', 'vernacular.js');
-const bioSrc = readSrc('public', 'js', 'biomes.js');
-const gndSrc = readSrc('public', 'js', 'ground.js');
-const toonSrc = readSrc('public', 'js', 'toon.js');
-const strip = (s) => s.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n')
-  .replace(/\/\*[\s\S]*?\*\//g, '');
-
 ok(!/^\s*import\s/m.test(strip(vnSrc)),
   'Ⅳ① vernacular.js MUST 零 import(離線烘焙與稽核才吃得到同一份規則)');
-for (const [name, src] of [['vernacular', vnSrc], ['signage', sgSrc]]) {
-  ok(!/Math\.random\s*\(/.test(strip(src)), `Ⅳ② ${name}.js MUST NOT 用 Math.random(A4)`);
-}
-ok(/ClampToEdgeWrapping/.test(sgSrc) && !/RepeatWrapping/.test(strip(sgSrc)),
-  'Ⅳ③ 圖集 MUST ClampToEdge(Repeat 會在格緣抓到隔壁那塊牌的字)');
-ok(!/mirrored/.test(strip(sgSrc)) && !/\.repeat\.set/.test(strip(sgSrc)),
-  'Ⅳ③ 雙面牌 MUST NOT 做鏡像(BoxGeometry 負向面已自己反轉 udir)');
-
-// 長寬比是硬約束:牌面尺寸 MUST 由 signAspect 推導,MUST NOT 手寫第二個數字
-{
-  const bb = strip(bioSrc).match(/billboards\.push\([^\n]*\n?[^\n]*/)?.[0] || '';
-  ok(/signAspect\('billboard'\)/.test(bb), 'Ⅳ④ 屋頂看板高度 MUST 由 signAspect 推導');
-  const ws = strip(bioSrc).slice(strip(bioSrc).indexOf('const sh = Math.min(14'));
-  ok(/signAspect\('wallsign'\)/.test(ws.slice(0, 300)), 'Ⅳ④ 直式招牌寬度 MUST 由 signAspect 推導');
-  ok(/signAspect\('billboard'\)/.test(strip(gndSrc)), 'Ⅳ④ 街邊看板板高 MUST 由 signAspect 推導');
-}
-// 逐實例 UV 屬性掛在 geometry 上 ⇒ 跨場共用那一份就會互相蓋掉
-ok(/part\.geo\.clone\(\)/.test(gndSrc),
-  'Ⅳ⑤ ground.js 的圖集件 MUST 用 clone 的 geometry(DETAIL_DEFS 的 geo 是模組層共用的)');
-// 圖集自帶配色 ⇒ tint 白
-ok((bioSrc.match(/wsAt \? 0xffffff/g) || []).length === 1 && (bioSrc.match(/bbAt \? 0xffffff/g) || []).length === 1,
-  'Ⅳ⑥ 圖集招牌的 instance tint MUST 是白(否則在已上色的招牌上再乘一次色)');
-ok(/if \(at\) tint\.setHex\(0xffffff\)/.test(gndSrc), 'Ⅳ⑥ ground.js 同上');
-// 純表現層:招牌不得進碰撞/權威幾何
-{
-  const i = bioSrc.indexOf('const signRes = buildSignage(');
-  ok(i > 0, 'Ⅳ⑦ biomes.js MUST 有唯一一處 buildSignage 呼叫');
-  ok((bioSrc.match(/buildSignage\(/g) || []).length === 1, 'Ⅳ⑦ buildSignage 只有一處呼叫');
-  ok(!/blockers/.test(strip(sgSrc)), 'Ⅳ⑦ signage.js MUST NOT 碰 blockers(招牌是純表現層,不擋路)');
-  ok(/isBlocked/.test(sgSrc), 'Ⅳ⑦ 立牌落位 MUST 避開兵線淨空走廊');
-}
-// 著色器補丁:順序錯不會報錯,只讓整批招牌用第 0 格
-{
-  const iUv = toonSrc.indexOf("replace('#include <uv_vertex>'");
-  ok(iUv > 0, 'Ⅳ⑧ toon.js MUST 有 CEL_ATLAS 的 uv_vertex 補丁');
-  const seg = toonSrc.slice(iUv, iUv + 400);
-  ok(seg.indexOf('#include <uv_vertex>', 40) < seg.indexOf('vMapUv = aTexRect'),
-    'Ⅳ⑧ 圖集重映 MUST 排在 <uv_vertex> 之後(排前面 = 改一個還沒賦值的 varying)');
-  ok(/if \(atlas && mat\.map\)/.test(toonSrc),
-    'Ⅳ⑧ CEL_ATLAS MUST 只在真的有 map 時開(沒有 USE_MAP 就沒有 vMapUv,補丁編不過)');
-  ok((toonSrc.match(/aTexRect/g) || []).length >= 2 && !/aTexRect/.test(strip(bioSrc)),
-    'Ⅳ⑧ aTexRect 的著色器宣告只住 toon.js、屬性只由 signage.js 掛');
-}
+ok(!/Math\.random\s*\(/.test(strip(vnSrc)), 'Ⅳ② vernacular.js MUST NOT 用 Math.random(A4)');
+ok(!/Math\.random\s*\(/.test(strip(wtSrc)), 'Ⅳ② worldtext.js MUST NOT 用 Math.random(A4)');
 // 挑字用專屬亂數:MUST NOT 動到共享 rnd 的呼叫序(否則植被/建物佈局跟著漂)
-ok(/const signRnd = mulberry32\(/.test(bioSrc) && !/signAtlas\([^)]*rnd: rnd\b/.test(bioSrc),
-  'Ⅳ⑨ 招牌挑字走專屬 seed,MUST NOT 用共享 rnd');
+ok(/const signRnd = mulberry32\(/.test(bioSrc) && /rnd: signRnd/.test(bioSrc),
+  'Ⅳ③ 招牌挑字走專屬 seed,MUST NOT 用共享 rnd');
 ok((bioSrc.match(/const signUsed = new Set\(\)/g) || []).length === 1,
-  'Ⅳ⑨ 去重帳全世界只有一本');
-
+  'Ⅳ③ 一鎮一家的去重帳全世界只有一本');
+// 純表現層:招牌不得進碰撞/權威幾何
+ok(!/blockers/.test(strip(wtSrc)), 'Ⅳ④ worldtext MUST NOT 碰 blockers(招牌是純表現層,不擋路)');
+ok(/isBlocked/.test(bioSrc), 'Ⅳ④ 立牌落位 MUST 避開兵線淨空走廊');
 /* ----------------------------- Ⅴ 烘焙語料檔 ----------------------------- */
 sec('Ⅴ 烘焙語料(venueText.js)');
 
@@ -324,7 +261,7 @@ for (const id of ids) {
   const rows = TEXT_KINDS.flatMap((k) => c[k]);
   ok(rows.every((e) => typeof e.t === 'string' && e.t.length > 0 && e.t.length <= 40),
     `Ⅴ③ ${id} 主名非空且不過長`);
-  ok(!rows.some((e) => /[ -]/.test(e.t + (e.s || '') + (e.en || ''))),
+  ok(!rows.some((e) => /[\u0000-\u001f\u007f-\u009f]/.test(e.t + (e.s || '') + (e.en || ''))),
     `Ⅴ③ ${id} 語料無控制字元`);
   ok(rows.every((e) => !e.s || !/^(taoist|christian|muslim|river|stream|neighbourhood|suburb|quarter)$/i.test(e.s)),
     `Ⅴ③ ${id} 副行無 OSM 列舉值殘留`);

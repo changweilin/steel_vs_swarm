@@ -32,14 +32,13 @@ import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
-import { SignSheet, resolveName, resolveRef } from './worldtext.js';
+import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed } from './beacons.js';
 // 低功耗旗標的**唯一真相**仍是 mobile.js(localStorage svs_lowpower);世界文字的 atlas
 // 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
 import { lowPower } from './mobile.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
-import { signAtlas, signMaterial, applySignAtlas, signAspect, buildSignage } from './signage.js';
-import { harvestOsm, mergeCorpus, localeOf } from './vernacular.js';
+import { harvestOsm, mergeCorpus, localeOf, signCopy } from './vernacular.js';
 import { VENUE_TEXT } from './venueText.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -2150,13 +2149,99 @@ function jitterMegalith(g, dj, colR) {
 // 位置 MUST 取自各構件自己那份幾何(portals / signSpots / generic / poi 投影),
 // MUST NOT 在這裡重算一次橋在哪、洞口朝哪 —— 那就是第二份幾何,牌子會飄在結構外面。
 //
-// 優先序 = 額度分配:洞口 → 橋 → 具名點位 → 建物立面。愈前面的愈是「玩家一定會經過、
-// 而且有名字才成立」的東西;建物排最後是因為它數量最多,擠掉前面幾種就本末倒置。
-// 全程零 `rnd()` 消耗(§2.3):掛哪些、掛什麼字全由圖資決定,佈局序列不受影響。
+// 優先序 = 額度分配:洞口 → 橋 → 具名點位 → 建物立面 → 語料庫招牌(直式/看板/路標/
+// 佈告欄/解說牌)。愈前面的愈是「玩家一定會經過、而且有名字才成立」的東西;構件自己的
+// 名字排在語料庫挑字之前 —— 真名優先於「這座城市有的名字」。
+//
+// 亂數紀律(§2.3):構件名牌那四種**零 `rnd()` 消耗**(全由圖資決定);語料庫那五種走
+// **專屬 seed** `signRnd`(每次挑字固定 3 枚),MUST NOT 動到共享 `rnd` 的呼叫序 ——
+// 動了整張圖的植被/建物佈局會跟著位移,而畫面上只是「地圖變了」。
 const SIGN_POI_H = 5.2;     // 具名點位的標牌柱高(公尺;牌面掛在柱頂)
-function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, pois, lowPower }) {
+const SIGN_POST_H = 2.4;    // 路標/佈告欄/解說牌的立柱高(牌面掛在柱上)
+const MAIN_HW_SIGN = /^(motorway|trunk|primary|secondary|tertiary|residential|unclassified)$/;
+
+/**
+ * 語料庫招牌(路標 / 佈告欄 / 解說牌)的落點。
+ * 三條共同紀律:
+ *   ① 一律**避開兵線淨空走廊**(`isBlocked`)—— 招牌是純表現層,絕不擋路;
+ *   ② 位置取自既有幾何(路網折線 / 建物量體 / 地標圓),MUST NOT 另算一次;
+ *   ③ **零 `rnd()` 消耗** —— 要不要擺、擺哪一側全由幾何決定(§2.3)。
+ */
+function planCorpusSites({ terrain, center, roads, generic, features, isBlocked }) {
+  const inB = (x, z) => x > terrain.minX + 12 && x < terrain.maxX - 12
+    && z > terrain.minZ + 12 && z < terrain.maxZ - 12;
+  const free = (x, z) => inB(x, z) && !isBlocked(x, z);
+  const roadSites = [], noticeSites = [], scenicSites = [];
+
+  // 道路路標:主要道路每 ~130m 一支,退到路肩外 9m(兩側都試,取空的那一側)
+  for (const way of roads || []) {
+    const tg = way.tags || {};
+    // 橋上/洞內不立牌:柱腳會浮在橋面下或穿進山體(立牌是貼地道具,沒有結構落腳邏輯)
+    if (tg.bridge || tg.tunnel || !MAIN_HW_SIGN.test(tg.highway || '')) continue;
+    const pts = (way.geometry || []).map((p) => llToWorld(p.lat, p.lon, center));
+    let acc = 1e9;
+    for (let i = 1; i < pts.length && roadSites.length < 26; i++) {
+      const [x1, z1] = pts[i - 1], [x2, z2] = pts[i];
+      const seg = Math.hypot(x2 - x1, z2 - z1);
+      acc += seg;
+      if (acc < 130 || seg < 1) continue;
+      acc = 0;
+      const ux = (x2 - x1) / seg, uz = (z2 - z1) / seg;
+      for (const sgn of [1, -1]) {
+        const x = x2 - ux * seg * 0.5 - uz * sgn * 9, z = z2 - uz * seg * 0.5 + ux * sgn * 9;
+        if (!free(x, z)) continue;
+        // 牌面朝路(讀牌的人站在路上)⇒ 法線 = 路的側向
+        roadSites.push({ x, z, y: terrain.heightAt(x, z), ry: Math.atan2(ux, uz) + (sgn > 0 ? 0 : Math.PI) });
+        break;
+      }
+    }
+    if (roadSites.length >= 26) break;
+  }
+
+  // 佈告欄:住宅棟的臨路側。「外側」搞反是這一類道具最貴的錯誤(整組埋進牆裡)
+  // ⇒ 朝**最近的路標**擺,不猜;取樣每 7 棟一次(零亂數的「疏密」)。
+  generic.forEach((b, i) => {
+    if (b.commercial || noticeSites.length >= 18 || i % 7) return;
+    const half = Math.hypot(b.w, b.d) / 2 * 0.8;
+    const near = nearestDir(roadSites, b.x, b.z);
+    const x = b.x + near.dx * (half + 1.4), z = b.z + near.dz * (half + 1.4);
+    if (!free(x, z)) return;
+    noticeSites.push({ x, z, y: terrain.heightAt(x, z), ry: Math.atan2(near.dx, near.dz) });
+  });
+
+  // 風景解說牌:地標/瀑布旁。牌面**背對**特徵 —— 走上來讀牌,那座山就在牌子後面。
+  // 方位取「離戰場中心較近的那一側」(玩家多半從場中央過來),零亂數。
+  for (const f of features || []) {
+    if (scenicSites.length >= 14) break;
+    const d = Math.hypot(f.x, f.z) || 1;
+    const r = (f.r || 10) + 7;
+    const x = f.x - (f.x / d) * r, z = f.z - (f.z / d) * r;
+    if (!free(x, z)) continue;
+    scenicSites.push({ x, z, y: terrain.heightAt(x, z), ry: Math.atan2(x - f.x, z - f.z) });
+  }
+  return { roadSites, noticeSites, scenicSites };
+}
+
+/** 離某點最近的路標方向(沒有路標就朝 +x —— 有一個確定的答案好過猜) */
+function nearestDir(sites, x, z) {
+  let best = null, bd = Infinity;
+  for (const s of sites) {
+    const d = (s.x - x) ** 2 + (s.z - z) ** 2;
+    if (d < bd) { bd = d; best = s; }
+  }
+  if (!best || bd < 1) return { dx: 1, dz: 0 };
+  const d = Math.sqrt(bd);
+  return { dx: (best.x - x) / d, dz: (best.z - z) / d };
+}
+
+function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, pois, lowPower,
+  corpus, rnd, used, roads, features, isBlocked, wallSigns = [], billboards = [] }) {
   const sheet = new SignSheet(lowPower);
   const posts = [];
+  // 語料庫招牌的落點:全部在這裡先算好(位置一律取自既有幾何 + 路網,零 `rnd()`)
+  const { roadSites, noticeSites, scenicSites } = planCorpusSites({
+    terrain, center, roads, generic, features, isBlocked,
+  });
   // ① 洞口匾額:位置/朝向/門洞寬高全在 portals 那一筆記錄裡(現成版位)。
   //    牌寬 = 高 × 4,MUST 收在門洞寬內 —— 比門洞寬的匾額會穿出洞口兩側的岩壁。
   for (const p of portals) {
@@ -2211,16 +2296,74 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
       y: terrain.heightAt(b.x, b.z) + Math.min(b.h - h, b.h * 0.82), ry: b.ry, h, style: 'lightbox' });
   }
 
+  // ---- 以下五種走**語料庫挑字**(vernacular.js):字不是這個構件自己的名字,而是
+  //      「這座城市有的名字」。三層文字(主名 / 日常副行 / 拉丁副名),一鎮一家去重帳
+  //      與四種構件名牌**共用同一張 sheet** —— 一個世界只有一個文字圖層(原則 2)。
+  //      語料全空(離線 / 沙漠 / 未知語系)⇒ signCopy 回 null ⇒ 這幾類整批不出場(原則 6)。
+  const copyOf = (cls) => (corpus ? signCopy(cls, corpus, rnd, used) : null);
+
+  // ⑤ 建築直式招牌:亞洲街景的垂直長條。位置在 wallSigns 那一批(建物迴圈已定案的牆面點)
+  for (const s of wallSigns) {
+    if (sheet.full) break;
+    const copy = copyOf('wallsign');
+    if (!copy) break;
+    sheet.add({ copy, x: s.x, z: s.z, y: s.y, ry: s.ry, h: s.h, style: 'wallsign' });
+  }
+  // ⑥ 屋頂廣告看板:遠看的東西,三層文字都放得下
+  for (const b of billboards) {
+    if (sheet.full) break;
+    const copy = copyOf('billboard');
+    if (!copy) break;
+    sheet.add({ copy, x: b.x, z: b.z, y: b.y + b.h / 2 + 0.6, ry: b.ry, h: b.h, style: 'billboard' });
+  }
+  // ⑦ 道路路標:主要道路每 ~130m 一支,擺在**路肩外**(招牌絕不擋路),雙面
+  for (const st of roadSites) {
+    if (sheet.full) break;
+    const copy = copyOf('roadsign');
+    if (!copy) break;
+    if (sheet.add({ copy, x: st.x, z: st.z, y: st.y + SIGN_POST_H, ry: st.ry, h: 1.05, style: 'roadsign', both: true })) {
+      posts.push({ x: st.x, y: st.y, z: st.z });
+    }
+  }
+  // ⑧ 佈告欄:住宅棟的**臨路側**。「外側」搞反會把整組道具埋進牆裡 ⇒ 朝最近的路標擺,不猜
+  for (const st of noticeSites) {
+    if (sheet.full) break;
+    const copy = copyOf('notice');
+    if (!copy) break;
+    if (sheet.add({ copy, x: st.x, z: st.z, y: st.y + SIGN_POST_H * 0.62, ry: st.ry, h: 1.5, style: 'notice' })) {
+      posts.push({ x: st.x, y: st.y, z: st.z, h: SIGN_POST_H * 0.62 });
+    }
+  }
+  // ⑨ 風景解說牌:地標 / 瀑布旁。牌面**背對**特徵 —— 走上來讀牌,那座山就在牌子後面
+  for (const st of scenicSites) {
+    if (sheet.full) break;
+    const copy = copyOf('scenic');
+    if (!copy) break;
+    if (sheet.add({ copy, x: st.x, z: st.z, y: st.y + SIGN_POST_H * 0.5, ry: st.ry, h: 1.15, style: 'scenic' })) {
+      posts.push({ x: st.x, y: st.y, z: st.z, h: SIGN_POST_H * 0.5 });
+    }
+  }
+
   const mesh = sheet.build();
   if (!mesh) return 0;
   group.add(mesh);
   // 標牌柱:與牌面分兩個 draw call(柱子沒有貼圖)。純視覺 —— **不進 blockers**(原則 4:
   // 表現層不得新增碰撞),機體從柱子中間走過去是刻意的取捨,牌子本身就不該擋兵線。
   if (posts.length) {
-    const pm = new THREE.InstancedMesh(cyl(0.09, 0.11, SIGN_POI_H, 6),
+    // 單位高柱 + 逐實例縮放:三種立牌的柱高不同(具名點位 5.2m、路標 2.4m、佈告欄/解說牌
+    // 更矮),共用同一份幾何 ⇒ 仍是一個 draw call。柱高 MUST 由該塊牌自己的落點帶,
+    // MUST NOT 統一成一個常數(牌面會浮在柱頂之上或陷進柱身裡)。
+    const pm = new THREE.InstancedMesh(cyl(0.09, 0.11, 1, 6),
       envMat(0x8d9299, { wash: 0.3, cool: 0.45 }), posts.length);
-    const M = new THREE.Matrix4();
-    posts.forEach((p, i) => { M.makeTranslation(p.x, p.y + SIGN_POI_H / 2, p.z); pm.setMatrixAt(i, M); });
+    const M = new THREE.Matrix4(), P = new THREE.Vector3(), S = new THREE.Vector3();
+    const Q = new THREE.Quaternion();
+    posts.forEach((p, i) => {
+      const ph = p.h || SIGN_POI_H;
+      P.set(p.x, p.y + ph / 2, p.z);
+      S.set(1, ph, 1);
+      M.compose(P, Q, S);
+      pm.setMatrixAt(i, M);
+    });
     pm.instanceMatrix.needsUpdate = true;
     pm.frustumCulled = false;
     group.add(pm);
@@ -6143,7 +6286,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   ));
   const signRnd = mulberry32(((Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0) ^ 0x516E);
   const signUsed = new Set();   // 一鎮一家去重帳:全世界五類招牌共用**一本**(SKILL §一.4)
-  const signAtlases = [];       // 圖集貼圖(每場一組;A25 資源回收用)
+  // 圖集貼圖現在只有 worldtext 那一張(掛在 mesh.userData.signTex),不再有第二份
   // 地下道洞口開挖(真・下沉版;2026-07-22 覆蓋區間改制):**只開挖敞開補集**(引道/長峽谷),
   // 覆蓋段與縫合蓋廊段地表原樣保留。路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。
   // 覆蓋區間(tunnelCoverIntervals)在「開挖前」高度上計算一次,掛到 way._tun 供
@@ -6964,38 +7107,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       cm2.frustumCulled = false;
       group.add(cm2);
     }
-    if (wallSigns.length) {
-      // 直式招牌:厚度烤進幾何(0.55),實例縮放只吃高/寬;夜間背光。
-      // **在地文字**(2026-08-03):牌面走 signage.js 的圖集 —— 每一塊寫的是這個城市真實的
-      // 店名/廟名/機關名(語料 = venueText 烘焙底本 ∪ 當場的 OSM tag)。圖集自帶配色 ⇒
-      // instance tint MUST 是白(舊制那組 spal 等於在已經上好色的招牌上再乘一次色)。
-      // 語料全空(離線/沙漠)⇒ signAtlas 回 null,逐位元退回舊制的純色牌(原則 6)。
-      const wsGeo = new THREE.BoxGeometry(0.55, 1, 1);
-      const wsAt = signAtlas('wallsign', wallSigns.length, { corpus: vtext, rnd: signRnd, used: signUsed });
-      if (wsAt) { signAtlases.push(wsAt.tex); applySignAtlas(wsGeo, wallSigns.length, wsAt); }
-      // 牌面在 ±x(BoxGeometry 群組序 +x,-x,+y,-y,+z,-z);雙面**不做鏡像**,
-      // BoxGeometry 在負向面已自己反轉 udir,再翻一次才會出現鏡像字
-      const wsSide = bmat(0xf0ece4);
-      const wsFace = wsAt ? signMaterial(wsAt, night, 0.5)
-        : bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.5 : 0 });
-      const wsM = new THREE.InstancedMesh(
-        wsGeo, wsAt ? [wsFace, wsFace, wsSide, wsSide, wsSide, wsSide] : wsFace, wallSigns.length,
-      );
-      const spal = [0xe8734a, 0x4a9ae8, 0xe8c84a, 0x6cc45e, 0xd95e8a, 0x8a6ae8];
-      wallSigns.forEach((sgn, i) => {
-        E.set(0, sgn.ry, 0); Q.setFromEuler(E);
-        P.set(sgn.x, sgn.y, sgn.z);
-        S.set(1, sgn.h, sgn.w);
-        M.compose(P, Q, S);
-        wsM.setMatrixAt(i, M);
-        tint.setHex(wsAt ? 0xffffff : spal[((i * 40503) >>> 0) % spal.length]);
-        wsM.setColorAt(i, tint);
-      });
-      wsM.instanceMatrix.needsUpdate = true;
-      if (wsM.instanceColor) wsM.instanceColor.needsUpdate = true;
-      wsM.frustumCulled = false;
-      group.add(wsM);
-    }
+    // 直式招牌的**牌面**已改由 worldtext.js 的單一文字圖層畫(buildWorldSigns ⑤)——
+    // 這裡只把牆面落點算進 wallSigns。舊制在這裡另建一個 InstancedMesh + 自己的圖集,
+    // 那就是第二套文字圖層(原則 2)。
     if (roofBoxes.length) {
       const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), roofBoxes.length);
       roofBoxes.forEach((b, i) => {
@@ -7042,33 +7156,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       gm.frustumCulled = false;
       group.add(gm);
     }
-    if (billboards.length) {
-      // 屋頂廣告看板:字同樣走圖集(在地商家/車站/地名);夜間白光背光。
-      // 牌面在 ±z(群組序第 4/5 格),與直式招牌同一條「不做鏡像」規則。
-      const bbGeo = new THREE.BoxGeometry(1, 1, 0.25);
-      const bbAt = signAtlas('billboard', billboards.length, { corpus: vtext, rnd: signRnd, used: signUsed });
-      if (bbAt) { signAtlases.push(bbAt.tex); applySignAtlas(bbGeo, billboards.length, bbAt); }
-      const bbSide = bmat(0x9aa0a6);
-      const bbFace = bbAt ? signMaterial(bbAt, night, 0.45)
-        : bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.45 : 0 });
-      const bbM = new THREE.InstancedMesh(
-        bbGeo, bbAt ? [bbSide, bbSide, bbSide, bbSide, bbFace, bbFace] : bbFace, billboards.length,
-      );
-      const bpal = [0xe8734a, 0x4a9ae8, 0xe8c84a, 0x6cc45e, 0xd95e8a, 0x8a6ae8];
-      billboards.forEach((bb, i) => {
-        E.set(0, bb.ry, 0); Q.setFromEuler(E);
-        P.set(bb.x, bb.y + bb.h / 2 + 0.6, bb.z);
-        S.set(bb.w, bb.h, 1);
-        M.compose(P, Q, S);
-        bbM.setMatrixAt(i, M);
-        tint.setHex(bbAt ? 0xffffff : bpal[((i * 40503) >>> 0) % bpal.length]);
-        bbM.setColorAt(i, tint);
-      });
-      bbM.instanceMatrix.needsUpdate = true;
-      if (bbM.instanceColor) bbM.instanceColor.needsUpdate = true;
-      bbM.frustumCulled = false;
-      group.add(bbM);
-    }
+    // 屋頂廣告看板同上:牌面走 worldtext(buildWorldSigns ⑥),這裡只留落點。
     if (antennas.length) {
       const am = new THREE.InstancedMesh(
         new THREE.CylinderGeometry(0.12, 0.28, 1, 6),
@@ -7256,7 +7344,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
     // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
-    sign: { corpus: vtext, rnd: signRnd, used: signUsed, night, atlases: signAtlases },
+    // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
@@ -7304,11 +7392,6 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // MUST 排在 buildRoads 與建物之後(位置全部取自它們已經定案的幾何),排在攀爬路線之前
   // 沒有硬性理由,但擺這裡讓「純視覺圖層」聚在一起。取不到圖資 = 一塊牌都不掛(原則 6),
   // 而不是拿場地名去填 —— 假名比沒有名字更糟。
-  const signsBuilt = buildWorldSigns({
-    group, terrain, center,
-    portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
-    pois: osmData?.pois, lowPower: lowPower(),
-  });
 
   // ---- 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩;2026-07-28)----
   // 約三成的建築/巨石/神木掛一條「地面 ↔ 頂端」的垂直通道,讓地面機種爬上去立足射擊。
@@ -7332,25 +7415,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
   group.userData.climbs = climbs;   // main.js → terrain.climbs / climbAt → game.js 攀爬狀態機
 
-  // ---- 在地文字立牌:道路路標 / 佈告欄 / 風景解說牌(2026-08-03)----
-  // **純表現層**:不登記碰撞柱、不進 blockers、不動任何權威幾何 ⇒ bal/e2e 天然不受影響。
-  // MUST 排在攀爬之後(擺位要看得到最終的 blocked 走廊),且一律避開兵線淨空(招牌不擋路)。
-  onProgress?.(0.96, '豎立在地路標與解說牌…');
-  const scenicFeat = [
-    ...landmarkG.map((lm) => ({ x: lm.x, z: lm.z, r: lm.r })),
-    ...(osmData?.falls || []).map((f) => {
-      const [x, z] = llToWorld(f.lat, f.lng, center);
-      return { x, z, r: 8 };
-    }),
-  ];
-  const signRes = buildSignage(group, {
-    terrain, center, corpus: vtext, rnd: signRnd, used: signUsed, night,
-    roads: osmRoads || [], buildings: generic, features: scenicFeat,
+  // ---- 世界文字圖層(唯一的文字圖層:構件名牌 + 語料庫招牌全在同一張 sheet)----
+  // MUST 排在攀爬之後 —— 語料庫那五種的落點要看得到**最終**的 blocked 走廊(招牌不擋路)。
+  onProgress?.(0.96, '掛上世界文字…');
+  const signsBuilt = buildWorldSigns({
+    group, terrain, center,
+    portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
+    pois: osmData?.pois, lowPower: lowPower(),
+    // 語料庫招牌(直式招牌/屋頂看板/路標/佈告欄/解說牌)的字與落點
+    corpus: vtext, rnd: signRnd, used: signUsed, wallSigns, billboards,
+    roads: osmRoads || [],
+    features: [
+      ...landmarkG.map((lm) => ({ x: lm.x, z: lm.z, r: lm.r })),
+      ...(osmData?.falls || []).map((f) => { const [x, z] = llToWorld(f.lat, f.lng, center); return { x, z, r: 8 }; }),
+    ],
     isBlocked: (x, z) => blocked.has(cellKey(x, z)),
   });
-  signAtlases.push(...signRes.atlases);
-  // 圖集是每場新建的 CanvasTexture(材質 dispose 不會連帶放掉貼圖)⇒ 交出釋放入口(A25)
-  group.userData.disposeSigns = () => { for (const t of signAtlases) t.dispose(); signAtlases.length = 0; };
 
   if (dynamics.length) {
     group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
@@ -7374,8 +7454,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     roadBlocks: roadBlockN,
     boundary: boundaryN,
     climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
-    signs: signRes.count,    // 在地文字立牌數(路標 + 佈告欄 + 解說牌;招牌/看板另計於建物)
-    signText: vtext.spine,   // 這張圖的地名主幹(語料全空 = null ⇒ 招牌整批退回純色牌)
+
+    signText: vtext.spine,   // 這張圖的地名主幹(語料全空 = null ⇒ 語料庫招牌整批不出場)
     rails: railLines,
     falls: fallsBuilt,
     signs: signsBuilt,   // 世界文字塊數(0 = 圖資沒名字或整批缺字 ⇒ 一塊都不掛)

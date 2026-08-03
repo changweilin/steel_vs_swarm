@@ -48,7 +48,6 @@
 import * as THREE from 'three';
 import { ENV } from './data.js';
 import { envMat } from './toon.js';
-import { signAtlas, signMaterial, applySignAtlas, signAspect } from './signage.js';
 
 const MAX_DETAIL = 19000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變;
                            // 2026-07-12 15000→19000:綠地雜草/花帶密集散佈需要更多實例配額)
@@ -1186,11 +1185,11 @@ const DETAIL_DEFS = {
   weed:     [{ geo: cone(0.3, 0.75, 4), c: 0x9aa060 },                    // 雜草:歪斜雙叢
              { geo: cone(0.2, 0.55, 4).rotateZ(0.5).translate(0.25, 0, 0), c: 0x8a9050 }],
   cabbage:  [{ geo: new THREE.IcosahedronGeometry(0.34, 0).translate(0, 0.24, 0), c: 0x6f9a44, sy: 0.75 }],
-  // 街邊廣告看板:板面走在地文字圖集(signage.js)—— 板高 MUST 由 `signAspect` 反推,
-  // 牌面比例與貼圖比例不合不會報錯,只把字橫向壓成一條糊帶。語料全空時退回舊的 'ad' 抽象貼圖。
+  // 街邊廣告看板:板面是抽象色塊 + 標語筆畫。**這裡刻意不寫字** —— 它是散佈細節,沒有
+  // 「這塊看板屬於哪個店家」的語意可依附;有名字的招牌一律走 worldtext(唯一文字圖層)。
   billboard:[{ geo: cyl(0.09, 0.12, 3.4, 5).translate(-1.4, 0, 0), c: 0x8a8f96 },
              { geo: cyl(0.09, 0.12, 3.4, 5).translate(1.4, 0, 0), c: 0x8a8f96 },
-             { geo: box(3.8, 3.8 / signAspect('billboard'), 0.16).translate(0, 2.2, 0), c: 'palette', tex: 'ad', atlas: 'billboard' },
+             { geo: box(3.8, 2.0, 0.16).translate(0, 2.2, 0), c: 'palette', tex: 'ad' },
              { geo: new THREE.BoxGeometry(4.0, 0.16, 0.2).translate(0, 2.16, 0), c: 0x5a6066 }],
   planter:  [{ geo: box(1.0, 0.5, 1.0), c: 0xa8654a },                    // 盆栽:陶盆 + 修剪灌木
              { geo: new THREE.IcosahedronGeometry(0.58, 0).translate(0, 0.95, 0), c: 'foliage', sy: 0.85 }],
@@ -1563,7 +1562,7 @@ export function planEnclaves(zones, gnx, gnz, opts = {}) {
  * @param opts.roadClear  (x,z)=>是否落在道路走廊上(bool);特徵拼圖避開路面免 3D 件戳穿,
  *                        可缺席 = 不遮罩(行為同舊版)。查詢不吃 rnd(拒絕在首個 rnd() 前 = 序列不變)
  */
-export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys, sign = null }) {
+export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
   const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
@@ -2498,23 +2497,12 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const items = det[type];
     if (!items.length) continue;
     for (const part of DETAIL_DEFS[type]) {
-      // 在地文字圖集(看板板面):每一塊寫不同的字 ⇒ 需要**逐實例 UV**,而屬性掛在
-      // geometry 上 ⇒ MUST 用這一場自己的一份(DETAIL_DEFS 的 geo 是模組層共用的,
-      // 直接掛上去會讓上一場的招牌 UV 蓋掉這一場的)。
-      const at = part.atlas && sign?.corpus
-        ? signAtlas(part.atlas, items.length, sign) : null;
-      const geo = at ? applySignAtlas(part.geo.clone(), items.length, at) : part.geo;
       // 材質塗層與 2D 地表同語彙:低頻水彩 wash + 冷藍陰影(envMat),
       // 人造附件再疊程序貼圖(貨櫃浪板/太陽能電池格/看板畫面/木箱板紋)
       const mat = envMat(partColor(part.c), {
         map: part.tex ? detailTex(part.tex) : null, wash: 0.35, cool: 0.4,
       });
-      // 板面在 ±z(BoxGeometry 群組序 +x,-x,+y,-y,+z,-z);雙面不做鏡像(見 signage.js)
-      const face = at ? signMaterial(at, !!sign.night, 0.35) : null;
-      const m = new THREE.InstancedMesh(
-        geo, at ? [mat, mat, mat, mat, face, face] : mat, items.length,
-      );
-      if (at) sign.atlases?.push(at.tex);
+      const m = new THREE.InstancedMesh(part.geo, mat, items.length);
       items.forEach((it, i) => {
         E.set(it.tx || 0, it.ry, it.tz || 0);   // 隨機傾角(TILT 表)+ 隨機朝向
         Q.setFromEuler(E);
@@ -2522,9 +2510,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         S.set(it.s, it.s * (part.sy ?? 1) * it.sy, it.s);
         M.compose(P, Q, S);
         m.setMatrixAt(i, M);
-        // 圖集自帶配色 ⇒ tint MUST 是白(否則等於在已上好色的招牌上再乘一次色)
-        if (at) tint.setHex(0xffffff);
-        else if (part.c === 'palette' && it.tint != null) tint.setHex(it.tint);
+        if (part.c === 'palette' && it.tint != null) tint.setHex(it.tint);
         else {
           const j1 = ((i * 2654435761) >>> 0) % 100 / 100;
           const j2 = ((i * 1597334677) >>> 0) % 100 / 100;
