@@ -57,6 +57,7 @@ jobs:
           node tools/audit_visual_prefs.mjs
           node tools/audit_world_text.mjs
           node tools/audit_beacons.mjs
+          node tools/audit_vernacular.mjs
 
       - name: 平衡七不變式
         run: npm run bal

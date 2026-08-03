@@ -38,6 +38,9 @@ import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed
 // 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
 import { lowPower } from './mobile.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
+import { signAtlas, signMaterial, applySignAtlas, signAspect, buildSignage } from './signage.js';
+import { harvestOsm, mergeCorpus, localeOf } from './vernacular.js';
+import { VENUE_TEXT } from './venueText.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -6128,6 +6131,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 合併後平行雙幅橋去重(單層原則 ①)+ 平行雙孔隧道去重(footway/service 疊在車道孔上 → 洞口不對稱)。
   // 兩刀皆排在 carve 指派 way._tun(下方)之前 ⇒ carve/buildRoads/markGradeCorridors 三消費端吃同一份去重集。
   if (osmRoads?.length) osmRoads = dedupeParallelTunnels(dedupeParallelBridges(mergeGradeChains(osmRoads), center), center);
+
+  // ---- 在地文字語料(招牌/路標/佈告欄/看板/解說牌上寫什麼;唯一組裝點)----
+  // 底本 = `venueText.js` 的離線烘焙(宗教/交通/政府/水文/地名這幾類執行期根本沒查過);
+  // 上面再併當場抓到的建物/道路 tag(**零額外網路** —— 那兩份 payload 本來就帶著 name)。
+  // 亂數走**專屬 seed**:招牌挑字 MUST NOT 動到共享 rnd 的呼叫序,否則植被/建物佈局會跟著漂。
+  const bakedText = VENUE_TEXT[cfg.venue?.id] || null;
+  const vtext = mergeCorpus(bakedText, harvestOsm(
+    { buildings: osm || [], roads: osmRoads || [] },
+    bakedText?.locale || localeOf(cfg.venue?.country),
+  ));
+  const signRnd = mulberry32(((Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0) ^ 0x516E);
+  const signUsed = new Set();   // 一鎮一家去重帳:全世界五類招牌共用**一本**(SKILL §一.4)
+  const signAtlases = [];       // 圖集貼圖(每場一組;A25 資源回收用)
   // 地下道洞口開挖(真・下沉版;2026-07-22 覆蓋區間改制):**只開挖敞開補集**(引道/長峽谷),
   // 覆蓋段與縫合蓋廊段地表原樣保留。路面 = 兩端洞口地表高的平直內插;山體自然高過路面即成隧道。
   // 覆蓋區間(tunnelCoverIntervals)在「開挖前」高度上計算一次,掛到 way._tun 供
@@ -6774,23 +6790,37 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             }
           }
           if (commercial && b.h > 40 && crownTop === b.h && rnd() < 0.5) {   // 頂塔棟看板會插進塔身 → 跳過
-            billboards.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: Math.min(b.w * 0.7, 10), h: 3 + rnd() * 4 });
+            // 看板長寬比 MUST 由圖集儲存格推導(signAspect):牌面比例與貼圖比例不合不會報錯,
+            // 只會把上面的字橫向壓成一條糊帶(A37)。舊制 h 是獨立亂數 ⇒ 比例逐塊亂跑。
+            const bw = Math.min(b.w * 0.7, 10) * (0.8 + rnd() * 0.2);
+            billboards.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: bw, h: bw / signAspect('billboard') });
           }
           if ((commercial || fd.style === 'shop') && b.h > 14 && rnd() < 0.35) {
             // 直式招牌:亞洲街景的垂直長條招牌,掛在牆面微凸 0.4m
-            const sh = Math.min(14, b.h * 0.55);
-            const sw = 1.6 + rnd() * 0.8;
+            // 高度吃樓高、寬度由長寬比反推(同上:比例是硬約束,不是兩個各自的亂數)
+            const sh = Math.min(14, b.h * (0.45 + rnd() * 0.2));
+            const sw = sh * signAspect('wallsign');
             const face = Math.floor(rnd() * 4);              // 0:+x 1:−x 2:+z 3:−z
             const alongW = face < 2;
             const off = (rnd() - 0.5) * (alongW ? b.d : b.w) * 0.5;
             const [sx2, sz2] = alongW
               ? toW((face === 0 ? 1 : -1) * (b.w / 2 + 0.4), off)
               : toW(off, (face === 2 ? 1 : -1) * (b.d / 2 + 0.4));
-            wallSigns.push({
-              x: sx2, z: sz2, y: gy + b.h * 0.55 - 0.5,
-              ry: b.ry + (alongW ? 0 : Math.PI / 2),
-              w: sw, h: sh,
-            });
+            // **這棟已經有名字就讓給 worldtext**(2026-08-03 合併 main 的世界文字):
+            // `buildWorldSigns` ④ 給每一棟有 `name` 的商業建物掛一塊 lightbox 立面招牌,
+            // 而這裡挑的是同一批建物 ⇒ 不擋掉就是同一棟樓掛兩塊牌、而且寫**兩個不同的名字**
+            // (worldtext 寫圖資原名、本支寫語料庫挑的店名)。判定走 `resolveName` 同一支
+            // 縫,MUST NOT 自己再判一次「這棟有沒有名字」。
+            // 淘汰檢查排在四次抽樣**之後** ⇒ 亂數序列不因這條而漂(§2.3)。
+            // 這裡 MUST 是 `if` 不是 `return` —— 外層是 `list.forEach`,`return` 會**連同底下
+            // 的天線一起跳掉**(改到的是別的系統,而畫面上只表現成「高樓的天線變少了」)。
+            if (!resolveName(b.tags)) {
+              wallSigns.push({
+                x: sx2, z: sz2, y: gy + b.h * 0.55 - 0.5,
+                ry: b.ry + (alongW ? 0 : Math.PI / 2),
+                w: sw, h: sh,
+              });
+            }
           }
           if (commercial && b.h > 60 && rnd() < 0.6) {
             antennas.push({ x: crownX, z: crownZ, y: gy + crownTop - 0.5, h: 5 + rnd() * 7 });   // 偏心頂塔時跟著塔頂
@@ -6935,11 +6965,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(cm2);
     }
     if (wallSigns.length) {
-      // 直式招牌:厚度烤進幾何(0.55),實例縮放只吃高/寬;彩色 tint + 夜間背光
+      // 直式招牌:厚度烤進幾何(0.55),實例縮放只吃高/寬;夜間背光。
+      // **在地文字**(2026-08-03):牌面走 signage.js 的圖集 —— 每一塊寫的是這個城市真實的
+      // 店名/廟名/機關名(語料 = venueText 烘焙底本 ∪ 當場的 OSM tag)。圖集自帶配色 ⇒
+      // instance tint MUST 是白(舊制那組 spal 等於在已經上好色的招牌上再乘一次色)。
+      // 語料全空(離線/沙漠)⇒ signAtlas 回 null,逐位元退回舊制的純色牌(原則 6)。
+      const wsGeo = new THREE.BoxGeometry(0.55, 1, 1);
+      const wsAt = signAtlas('wallsign', wallSigns.length, { corpus: vtext, rnd: signRnd, used: signUsed });
+      if (wsAt) { signAtlases.push(wsAt.tex); applySignAtlas(wsGeo, wallSigns.length, wsAt); }
+      // 牌面在 ±x(BoxGeometry 群組序 +x,-x,+y,-y,+z,-z);雙面**不做鏡像**,
+      // BoxGeometry 在負向面已自己反轉 udir,再翻一次才會出現鏡像字
+      const wsSide = bmat(0xf0ece4);
+      const wsFace = wsAt ? signMaterial(wsAt, night, 0.5)
+        : bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.5 : 0 });
       const wsM = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(0.55, 1, 1),
-        bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.5 : 0 }),
-        wallSigns.length,
+        wsGeo, wsAt ? [wsFace, wsFace, wsSide, wsSide, wsSide, wsSide] : wsFace, wallSigns.length,
       );
       const spal = [0xe8734a, 0x4a9ae8, 0xe8c84a, 0x6cc45e, 0xd95e8a, 0x8a6ae8];
       wallSigns.forEach((sgn, i) => {
@@ -6948,7 +6988,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         S.set(1, sgn.h, sgn.w);
         M.compose(P, Q, S);
         wsM.setMatrixAt(i, M);
-        tint.setHex(spal[((i * 40503) >>> 0) % spal.length]);
+        tint.setHex(wsAt ? 0xffffff : spal[((i * 40503) >>> 0) % spal.length]);
         wsM.setColorAt(i, tint);
       });
       wsM.instanceMatrix.needsUpdate = true;
@@ -7003,11 +7043,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(gm);
     }
     if (billboards.length) {
-      // 看板底色靠 instance tint 上彩;夜間白光背光(emissive 不吃 tint,壓低強度保留色感)
+      // 屋頂廣告看板:字同樣走圖集(在地商家/車站/地名);夜間白光背光。
+      // 牌面在 ±z(群組序第 4/5 格),與直式招牌同一條「不做鏡像」規則。
+      const bbGeo = new THREE.BoxGeometry(1, 1, 0.25);
+      const bbAt = signAtlas('billboard', billboards.length, { corpus: vtext, rnd: signRnd, used: signUsed });
+      if (bbAt) { signAtlases.push(bbAt.tex); applySignAtlas(bbGeo, billboards.length, bbAt); }
+      const bbSide = bmat(0x9aa0a6);
+      const bbFace = bbAt ? signMaterial(bbAt, night, 0.45)
+        : bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.45 : 0 });
       const bbM = new THREE.InstancedMesh(
-        new THREE.BoxGeometry(1, 1, 0.25),
-        bmat(0xffffff, { emissive: new THREE.Color(night ? 0xfff2cc : 0x000000), emissiveIntensity: night ? 0.45 : 0 }),
-        billboards.length,
+        bbGeo, bbAt ? [bbSide, bbSide, bbSide, bbSide, bbFace, bbFace] : bbFace, billboards.length,
       );
       const bpal = [0xe8734a, 0x4a9ae8, 0xe8c84a, 0x6cc45e, 0xd95e8a, 0x8a6ae8];
       billboards.forEach((bb, i) => {
@@ -7016,7 +7061,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         S.set(bb.w, bb.h, 1);
         M.compose(P, Q, S);
         bbM.setMatrixAt(i, M);
-        tint.setHex(bpal[((i * 40503) >>> 0) % bpal.length]);
+        tint.setHex(bbAt ? 0xffffff : bpal[((i * 40503) >>> 0) % bpal.length]);
         bbM.setColorAt(i, tint);
       });
       bbM.instanceMatrix.needsUpdate = true;
@@ -7210,6 +7255,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
+    // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
+    sign: { corpus: vtext, rnd: signRnd, used: signUsed, night, atlases: signAtlases },
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
@@ -7285,6 +7332,26 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   }
   group.userData.climbs = climbs;   // main.js → terrain.climbs / climbAt → game.js 攀爬狀態機
 
+  // ---- 在地文字立牌:道路路標 / 佈告欄 / 風景解說牌(2026-08-03)----
+  // **純表現層**:不登記碰撞柱、不進 blockers、不動任何權威幾何 ⇒ bal/e2e 天然不受影響。
+  // MUST 排在攀爬之後(擺位要看得到最終的 blocked 走廊),且一律避開兵線淨空(招牌不擋路)。
+  onProgress?.(0.96, '豎立在地路標與解說牌…');
+  const scenicFeat = [
+    ...landmarkG.map((lm) => ({ x: lm.x, z: lm.z, r: lm.r })),
+    ...(osmData?.falls || []).map((f) => {
+      const [x, z] = llToWorld(f.lat, f.lng, center);
+      return { x, z, r: 8 };
+    }),
+  ];
+  const signRes = buildSignage(group, {
+    terrain, center, corpus: vtext, rnd: signRnd, used: signUsed, night,
+    roads: osmRoads || [], buildings: generic, features: scenicFeat,
+    isBlocked: (x, z) => blocked.has(cellKey(x, z)),
+  });
+  signAtlases.push(...signRes.atlases);
+  // 圖集是每場新建的 CanvasTexture(材質 dispose 不會連帶放掉貼圖)⇒ 交出釋放入口(A25)
+  group.userData.disposeSigns = () => { for (const t of signAtlases) t.dispose(); signAtlases.length = 0; };
+
   if (dynamics.length) {
     group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
   }
@@ -7307,6 +7374,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     roadBlocks: roadBlockN,
     boundary: boundaryN,
     climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
+    signs: signRes.count,    // 在地文字立牌數(路標 + 佈告欄 + 解說牌;招牌/看板另計於建物)
+    signText: vtext.spine,   // 這張圖的地名主幹(語料全空 = null ⇒ 招牌整批退回純色牌)
     rails: railLines,
     falls: fallsBuilt,
     signs: signsBuilt,   // 世界文字塊數(0 = 圖資沒名字或整批缺字 ⇒ 一塊都不掛)
