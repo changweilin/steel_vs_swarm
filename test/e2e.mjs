@@ -2059,11 +2059,22 @@ const sbSpec = hbSpec.snaps.at(-1);   // 無霧視角:才看得到對面(STEEL)�
 const isBot = (e) => typeof e.pid === 'string' && e.pid.startsWith('b') && e.act;
 const botHero = sbSpec.ents.find(isBot);   // bot 角色隨機,機體可能是無人機(傭兵)
 assert(!!botHero, `bot 英雄在場(pid=${botHero?.pid})`);
+// 「bot 會不會推線」= 它有沒有真的離開起點(原地卡死 / 完全不推線才是要抓的退化)。
+// **MUST 輪詢到達成為止,MUST NOT 只量「第 3.5 秒那一刻」的位移**:bot 角色隨機(機體移速差
+// 一個檔次)、開場那幾秒還要先轉向面對兵線(視野錐上線後 `h.ry` 只能經 viewLockStep 逐步轉),
+// 中途也可能被交戰打斷 —— 固定窗量到的是「這一次剛好走到哪」而不是「會不會推線」,
+// 門檻就壓在分佈的尾巴上(實測 3.5 秒窗散佈 10~59m,約 3% 落在門檻下;CI 上已紅過兩次:
+// main c5eb469 的 7m 與 PR #90 的 10m)。到達 10m 的耗時實測中位 0.8s / 最慢 2.95s(n=60),
+// 上限給 10 秒 = 三倍餘裕;真的卡死就是永遠到不了,一樣紅字。
 const bp0 = { x: botHero.x, z: botHero.z };
-await new Promise((r) => setTimeout(r, 3500));
-const botHero2 = hbSpec.snaps.at(-1).ents.find((e) => e.pid === botHero.pid && e.act);
-const movedM = botHero2 ? Math.hypot(botHero2.x - bp0.x, botHero2.z - bp0.z) : 999;
-assert(movedM > 10, `bot 沿兵線推進(3.5 秒移動 ${movedM.toFixed(0)}m)`);
+const botAt = () => hbSpec.snaps.at(-1).ents.find((e) => e.pid === botHero.pid && e.act);
+let movedM = 0, pushS = 0;
+for (; pushS < 10 && movedM <= 10; pushS += 0.25) {
+  await new Promise((r) => setTimeout(r, 250));
+  const b = botAt();
+  if (b) movedM = Math.hypot(b.x - bp0.x, b.z - bp0.z);
+}
+assert(movedM > 10, `bot 沿兵線推進(${pushS.toFixed(1)} 秒內移動 ${movedM.toFixed(0)}m;上限 10 秒)`);
 hb.ws.close(); hbSpec.ws.close();
 
 log(failed ? '\n❌ 有測試失敗' : '\n🎉 全部通過');
