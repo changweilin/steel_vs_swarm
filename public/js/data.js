@@ -1367,29 +1367,60 @@ export const reachRule = (def) => REACH_RULE[trajClass(def)] || REACH_RULE.flat;
 // ---- 後座力機制(2026-07-14:輕/重武器各三階,依武器原型分派)----
 // 純客戶端手感:game.js 依「當前手上武器」的 def.recoil 套用位移懲罰 + 準星上踢 + 開火節奏。
 // 伺服器不涉入(位移本就客戶端回報,防作弊仍走 heroHit 射程/迷霧驗證)⇒ bal/e2e 不受影響。
-//   move   移動中射擊的位移懲罰:'free' 不受影響 / 'slow' 減速 / 'stop' 開火即停 / 'back' 後退
 //   climb  每發準星上踢量(rad,累加到 recoil.p,開火停止後快速回穩)
+//          ——**同時是「後座量」的唯一尺度**,位移懲罰由它推導(見下方 recoilMoveF)
 //   kick   槍身後坐 + 鏡頭 trauma 震動倍率
-//   slowF  move:'slow' 時保留的速度比例
 //   back   每發沿槍口反向的擊退速度(m/s)
 //   burst  N 連射後強制回穩(0 = 無;扇形武器不吃 —— 見 game.js)
 //   settle burst 觸發後的回穩秒數(此間不能擊發,與換彈匣機制分離)
 //   steady 開火前須「停下 + 穩定」的秒數(高後座重武器:狙擊 / 超電磁炮 / 導引飛彈)
 // AIR_F:飛行機體(無人機 / 變形機飛行型)的位移懲罰折扣 —— 使用者指示「空中減半」,
 //   整個蜂群陣營靠飛行機動,套滿地面懲罰會過度削弱空戰體驗。
+// MOVE_K / DECAY / END_RAD:位移懲罰的三個旋鈕,見下方 recoilMoveF 的說明。
 export const RECOIL = {
   AIR_F: 0.5,
+  MOVE_K: 1,        // 位移懲罰曲線指數(1 = 降幅正比於後座量)
+  DECAY: 7,         // 後座回穩速率(recoil.p *= e^(−dt·DECAY);game.js `_updatePlayer` 唯一消費端)
+  END_RAD: 0.001,   // 「後座力結束」門檻(rad ≈ 0.057°:準星回到這以內,肉眼與像素都分不出來)
   light: {
-    low:  { move: 'free', climb: 0.006, kick: 0.8, slowF: 1,   back: 0, burst: 0, settle: 0,    steady: 0 },
-    med:  { move: 'slow', climb: 0.013, kick: 1.2, slowF: 0.5, back: 0, burst: 4, settle: 0.45, steady: 0 },
-    high: { move: 'stop', climb: 0.020, kick: 1.6, slowF: 0,   back: 3, burst: 0, settle: 0,    steady: 0 },
+    low:  { climb: 0.006, kick: 0.8, back: 0, burst: 0, settle: 0,    steady: 0 },
+    med:  { climb: 0.013, kick: 1.2, back: 0, burst: 4, settle: 0.45, steady: 0 },
+    high: { climb: 0.020, kick: 1.6, back: 3, burst: 0, settle: 0,    steady: 0 },
   },
   heavy: {
-    low:  { move: 'stop', climb: 0.022, kick: 2.4, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 0 },
-    med:  { move: 'back', climb: 0.032, kick: 3.2, slowF: 0.3, back: 9, burst: 0, settle: 0, steady: 0 },
-    high: { move: 'stop', climb: 0.044, kick: 4.5, slowF: 0,   back: 0, burst: 0, settle: 0, steady: 0 },   // steady 0(2026-07-18):重武器改彈夾連發,取消開火前停穩蓄力
+    low:  { climb: 0.022, kick: 2.4, back: 0, burst: 0, settle: 0, steady: 0 },
+    med:  { climb: 0.032, kick: 3.2, back: 9, burst: 0, settle: 0, steady: 0 },
+    high: { climb: 0.044, kick: 4.5, back: 0, burst: 0, settle: 0, steady: 0 },   // steady 0(2026-07-18):重武器改彈夾連發,取消開火前停穩蓄力
   },
 };
+// ---- 開火中位移懲罰(2026-08-03 使用者定案)----
+// 「後座力越大的武器,射擊中的移動速度下降越多,最大後座力的重武器會將移動速度歸零、
+//   直到後座力結束」⇒ 位移懲罰整條**由後座量推導**,舊制手寫的 `move`/`slowF` 兩欄退場。
+// 舊表為什麼非改不可:它**不單調** —— 輕高後座(機槍)`slowF: 0` = 開火即停,而後座量比它
+//   大一截的重中後座(榴彈/火箭)卻是 `move:'back'` = 位移完全不受影響、重低後座又是全停。
+//   「越大降越多」在那張表上根本不成立,而畫面上只表現成「這把槍動不了、那把重砲反而能跑」,
+//   沒有任何數字看得出來 —— 這正是逐階手寫的典型下場(同 CLASS_SYM / VS_DEFS 的夾制迴圈)。
+// 後座尺度 = 每發準星上踢 `climb`:六階跨槽位嚴格遞增(0.006 → 0.044),是全表唯一單調的
+//   後座量,也正是玩家看得見的那個後座(準星踢多高)。`kick`(震動)與 `back`(擊退)是它的
+//   表現層夥伴,MUST NOT 拿來當第二把尺 —— 兩把尺遲早排出不同的序。
+// 曲線 `1 − (climb / MAX)^MOVE_K`,兩個端點都是**定義**而非校準:
+//   climb = 0(無後座)⇒ 不減速;climb = MAX(全表最大 = 重武器高後座階)⇒ **歸零**。
+//   MOVE_K = 1 即「降幅正比於後座量」;MUST NOT 改成分段表或逐階手寫(那就是舊制的病回來)。
+// 「直到後座力結束」= 懲罰的時間窗就是 `recoil.p` 這個狀態本身(game.js `_recoiling()`):
+//   後座回穩是指數衰減(`DECAY`),踢回 `END_RAD` 以內即視為結束 ⇒ 連射自然累積、停火後才
+//   逐步解除。MUST NOT 退回舊制那個「到下一發窗口」(`max(0.22, 1/rate) × 1.1`)的計時器 ——
+//   那條與後座回穩無關,重武器打完一發早就恢復全速,使用者要的「直到後座力結束」量不到。
+// 係數只夾住**移動輸入**;擊退 `back` 走 `this.vel` 不吃這個係數(那是後座本身的位移,
+//   不是玩家在走路)。飛行機體另外套 `AIR_F` 折扣(見 game.js `_recoilMoveF`)。
+/** 全表最大後座量(= 位移歸零的那一階)——**推導不手寫**,任一階 climb 一改自己跟著走 */
+export const RECOIL_CLIMB_MAX = Math.max(
+  ...['light', 'heavy'].flatMap((s) => Object.values(RECOIL[s]).map((p) => p.climb)));
+/**
+ * 開火中位移懲罰係數(1 = 不受影響、0 = 完全不能移動)。
+ * @param {{climb?:number}} prof recoilTier() 回傳的 profile(或任何帶 climb 的物件);無 climb = 無後座
+ */
+export const recoilMoveF = (prof) =>
+  Math.max(0, 1 - Math.min(1, Math.max(0, prof?.climb || 0) / RECOIL_CLIMB_MAX) ** RECOIL.MOVE_K);
 /**
  * 解析武器後座力分級(回傳 RECOIL[slot] 的 profile 物件)。
  * 顯式 w.recoil('low'|'med'|'high')優先;否則依 type / 命名關鍵字 / 射速推導預設分級。

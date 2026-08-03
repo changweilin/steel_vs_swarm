@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL,
+  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
   ESCORT, escortSlot, escortLagK, escortDrift,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
@@ -352,9 +352,7 @@ export class BattleClient {
     this._burstN = {};              // slot -> 連射計數(達 profile.burst 後強制回穩)
     this._settleUntil = {};         // slot -> 回穩解除時間戳(此間不能擊發)
     this._steadyAt = 0;             // 高後座重武器:開始「停穩」的時間戳(0 = 尚未穩定)
-    this._recoilMove = null;        // 當前開火套用的位移懲罰 tier('slow'|'stop'|'back'|'free')
-    this._recoilMoveUntil = 0;      // 位移懲罰有效到此時間
-    this._recoilSlowF = 0.5;
+    this._recoilMoveF0 = 1;         // 當前這一輪後座的移速係數(← data.js recoilMoveF;1 = 不受影響)
     // 視野鎖定(觸控 ZR 按住;見 data.js VIEW_LOCK 與 _tickViewLock)—— 純客戶端視角輔助
     this._vlockHold = false;        // 鈕是否按著(按住型,與 firing 同層)
     this._vlockId = null;           // 目前鎖住的 ent id(null = 沒鎖到;放開即清)
@@ -2317,10 +2315,25 @@ export class BattleClient {
     return this._moveAxis().mag > 0.02;
   }
 
-  /** 開火中位移懲罰係數(stop=0 / slow=slowF / 其餘=1);飛行機體套 AIR_F 折扣(空中減半) */
-  _recoilMoveF(now, fly) {
-    if (!this._recoilMove || now >= (this._recoilMoveUntil || 0)) return 1;
-    let f = this._recoilMove === 'stop' ? 0 : this._recoilMove === 'slow' ? this._recoilSlowF : 1;
+  /**
+   * 後座力是否仍未結束 —— 位移懲罰的**唯一**時間窗(使用者:「直到後座力結束」)。
+   * 時間窗就是 `recoil.p` 這個狀態本身:準星上踢回穩到 `END_RAD` 以內即視為結束
+   * (回穩是 `_updatePlayer` 的指數衰減 ⇒ 連射自然累積、停火後才逐步解除)。
+   * MUST NOT 退回舊制的「到下一發窗口」計時器:那條與後座回穩無關,重武器打完一發
+   * 早就恢復全速,使用者要的那段「歸零直到後座結束」根本量不到。
+   */
+  _recoiling() {
+    return Math.abs(this.recoil.p) > RECOIL.END_RAD;
+  }
+
+  /**
+   * 開火中位移懲罰係數(1 = 不受影響、0 = 移動歸零)。
+   * 係數由**後座量**推導(data.js `recoilMoveF`,唯一縫),擊發當下定案存進 `_recoilMoveF0`;
+   * 這裡只負責兩件事:時間窗(`_recoiling`)與飛行機體的 `AIR_F` 折扣(空中減半)。
+   */
+  _recoilMoveF(fly) {
+    if (!this._recoiling()) return 1;
+    let f = this._recoilMoveF0 ?? 1;
     if (fly && f < 1) f = 1 - (1 - f) * RECOIL.AIR_F;
     return f;
   }
@@ -4996,6 +5009,7 @@ export class BattleClient {
     this._clearCcFlash();     // 換座機:白幕是上一具機體的感光反應,不跟著視野搬過來
     this._clearBlood();       // 換座機:血漬是上一具機體座艙玻璃上的,同理不跟著搬
     this._burstQ = null;      // 換座機:未補畫完的連發是上一具機體的槍口,不跟著搬
+    this.recoil.p = 0; this.recoil.y = 0; this._recoilMoveF0 = 1;   // 換座機:後座是上一具機體那發的,不跟著搬
     this.hud.feed?.(`🔀 主視野切換至 ${(e.si ?? 0) + 1} 號機`);
   }
 
@@ -5484,6 +5498,9 @@ export class BattleClient {
     this._clearCcFlash();   // 死亡:清致盲白幕(陣亡過場自有白閃,兩層白疊著會蓋掉過場演出)
     this._clearBlood();     // 死亡:清濺血(_updatePlayer 對 dead 早退不再衰減 ⇒ 不清會凍在畫面上)
     this._burstQ = null;    // 死亡:清連發演出佇列(自機那半的閉包會在重生後的新機體上補畫舊武器)
+    // 死亡:清後座(`_updatePlayer` 已早退不再衰減 ⇒ 不清就凍在那裡,重生後第一步先被上一具
+    // 機體那發重砲的位移懲罰黏住,而準星上踢也還掛在鏡頭上)
+    this.recoil.p = 0; this.recoil.y = 0; this._recoilMoveF0 = 1;
     // 死亡:清視野鎖定的目標與鈕面亮燈 —— `_updatePlayer` 對 dead 早退,`_tickViewLock` 不會再跑到
     //(鈕還按著沒關係:重生後照樣重新索敵,與 `firing` 同語意)
     this._vlockId = null; this._vlockPrev = null; this._setVlockUi(false);
@@ -6453,10 +6470,17 @@ export class BattleClient {
     const rng = def.range * rMul;
 
     // 後座力(依武器分級 def.recoil):視角上踢(準星上移)+ 偏擺 + 槍身後坐 + 鏡頭震動 + 位移擊退
-    // 位移懲罰(減速/停止)在 _updatePlayer 依 _recoilMove 夾住;'back' 每發沿槍口反向擊退。
+    // 位移懲罰在 _updatePlayer 依 `_recoilMoveF()` 夾住(係數 ← 後座量);'back' 每發沿槍口反向擊退。
     const fly = this._flying();
     const airF = fly ? RECOIL.AIR_F : 1;                                 // 空中位移懲罰減半(使用者指示)
-    this.recoil.p += (prof.climb ?? (id === 'heavy' ? 0.033 : 0.011));   // 準星上踢(開火停止後快速回穩)
+    const climb = prof.climb ?? (id === 'heavy' ? 0.033 : 0.011);        // 這一發的後座量(= 位移懲罰的尺)
+    // 位移懲罰係數:MUST 排在下面 `recoil.p +=` **之前** —— 加完之後 `_recoiling()` 恆為真,
+    // 「上一輪還沒結束就取較嚴者」會把這一發自己也算成上一輪,係數再也降不回來(單向棘輪)。
+    // 取較嚴者的用意:重砲那一發的歸零 MUST NOT 被隨手切一把輕武器補一槍就提早解除。
+    this._recoilMoveF0 = this._recoiling()
+      ? Math.min(this._recoilMoveF0 ?? 1, recoilMoveF({ climb }))
+      : recoilMoveF({ climb });
+    this.recoil.p += climb;                                              // 準星上踢(開火停止後快速回穩)
     this.recoil.y += (Math.random() - 0.5) * 0.006 * (prof.kick ?? 1);
     // 鏡頭震動:重砲擊發要有頓挫感(輕武器維持細碎抖動)
     this.trauma = Math.min(1, this.trauma + SHAKE.FIRE * (prof.kick ?? 1)
@@ -6465,10 +6489,7 @@ export class BattleClient {
     this.flash.visible = true;
     this._flashTtl = 0.045;
     this._flashHeavy = id === 'heavy';   // 重武器槍口焰放大(FPV 明顯度)
-    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airF);
-    this._recoilMove = prof.move || 'free';
-    this._recoilSlowF = prof.slowF ?? 0.5;
-    this._recoilMoveUntil = now + Math.max(0.22, 1 / def.rate) * 1.1;    // 位移懲罰持續到下一發窗口
+    if (prof.back) this.vel.addScaledVector(dir, -prof.back * airF);     // 擊退走 vel:是後座本身的位移,不吃移速係數
 
     // 連發演出:這一發若是 N 連發,補畫剩下 N−1 發(純視覺,不再回報命中 —— 見 _queueBurst)。
     // N = 1 時整段是 no-op ⇒ 重武器與慢速輕武器逐位元維持舊路徑。
@@ -7495,7 +7516,7 @@ export class BattleClient {
       // 控場:垂直升降同樣折速(麻痺 = 禁移動含爬升/下降,否則被暈仍可垂直脫離)
       const ccF = this._ccMoveF();
       const tmag = target.length();
-      if (tmag > 0) target.multiplyScalar(spd * boost * this._recoilMoveF(now, true)
+      if (tmag > 0) target.multiplyScalar(spd * boost * this._recoilMoveF(true)
         * ccF * this._modF('speed') / Math.max(1, tmag));
       // 混亂(招式追加效果):水平操縱反轉 + 慢速航向漂移(垂直升降不反轉,免得直接砸地)
       if ((this.confLeft || 0) > 0) { target.x *= -1; target.z *= -1; this.yaw += Math.sin(now * 2.7) * 0.5 * dt; }
@@ -7554,7 +7575,7 @@ export class BattleClient {
       // 地形坡度:上坡減速 / 下坡加速(平緩帶 = 兵線坡度限制內恆 1;騰空與人造鋪面回 1)
       const slopeF = this._slopeMoveF(move);
       this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._terrainSlowF()
-        * slopeF * this._recoilMoveF(now, false) * this._ccMoveF() * this._modF('speed') * airK * dt);
+        * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
       // 蓄力跳騰空(_lowG):水平近乎無阻力滑行(太空漫步的慣性);觸地恢復地面摩擦
@@ -7686,7 +7707,9 @@ export class BattleClient {
     this.pos.z = Math.max(this.terrain.minZ + 40, Math.min(this.terrain.maxZ - 40, this.pos.z));
 
     // 後座力回復 + 鏡頭震動(trauma² 噪聲)
-    const rk = Math.exp(-dt * 7);
+    // 回穩速率 = RECOIL.DECAY(唯一縫):位移懲罰的時間窗 `_recoiling()` 量的正是這條衰減曲線,
+    // 在這裡手寫一個數字 = 兩邊分家(改了回穩快慢,懲罰時長卻不動,而畫面上完全看不出來)。
+    const rk = Math.exp(-dt * RECOIL.DECAY);
     this.recoil.p *= rk; this.recoil.y *= rk;
     this.trauma = Math.max(0, this.trauma - dt * 1.4);
     const n = this.trauma * this.trauma;

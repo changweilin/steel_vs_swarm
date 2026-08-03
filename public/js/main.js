@@ -9,7 +9,7 @@ import {
 } from './netmode.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
@@ -985,6 +985,9 @@ function charWeaponRow(id, slot, key) {
   if (raw.arc) bits.push(`扇形 ±${tri((l) => w(l).arc)}°`);
   if (raw.type === 'missile') bits.push('鎖定追蹤');
   bits.push(`後座力 ${recoilName(raw, slot === 'heavy' ? 'heavy' : 'light')}`);
+  // 開火中移速:由後座量推導(data.js recoilMoveF 單一縫)—— 0% = 最大後座那一階的「移動歸零」。
+  // MUST NOT 在這裡手寫百分比表:那就變成第二份分級,調曲線時只有圖鑑不會跟著動。
+  bits.push(`射擊移速 ${Math.round(recoilMoveF(recoilTier(raw, slot === 'heavy' ? 'heavy' : 'light')) * 100)}%`);
   return `<div class="cd-row" data-slot="${slot}" title="點擊播放施展動畫">
     <span class="cd-key">${key}</span>
     <div><b>${esc(raw.name)}</b> <span class="dim">${esc(raw.rw)}</span> <span class="cd-play">▶</span>
