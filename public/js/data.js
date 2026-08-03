@@ -1201,6 +1201,18 @@ export function offAxisFalloff(frac) {
   return 1 - (1 - AOE_EDGE) * Math.max(0, Math.min(1, frac));
 }
 
+// ---- 扇形錐的半角(2026-08-03 使用者回報「部分武器打得到一般單位、但不到建築」)----
+// 錐內判定 MUST 量到目標**命中量體的近側表面**,不是量中心 —— 與 `_surfD3`(射程)、
+// `_lanceHits` 的 `R + hitR(t)`(貫穿)、`_blast` 的 `dh − hitR`(爆風)同一條規則,
+// 扇形是最後一個還在量中心的縫。半徑 7m 的砲塔 / 20m 的主堡貼著臉噴,整個錐子都打在牆上,
+// 而**中心**還在 30~70° 之外 ⇒ 舊制一發都不掉血,而同一處的小兵照樣被噴死。
+// 三個消費端 MUST 全吃這一支:伺服器 `sim.heroPlasma`(結算)、客戶端 `_shotVictims`
+// (範圍光暈名冊)、前線交戰模型 `tools/lanesim.mjs`(bal ⑦ 的攻擊範圍計價)。
+/** 錐的標稱半角(rad):偏心遞減 `offAxisFalloff` 的分母(量體不放大傷害,只放大「打不打得到」) */
+export const fanArcHalf = (def) => (def?.arc || 15) * Math.PI / 180;
+/** 對「距離 d、水平量體 hr」的這個目標,錐的有效半角(rad)= 標稱半角 + 量體張角 */
+export const fanConeHalf = (def, d, hr) => fanArcHalf(def) + Math.atan2(Math.max(0, hr || 0), Math.max(1, d));
+
 // ================= 重武器範圍攻擊三分類 + 彈道五分類(2026-07-23 使用者定案)=================
 // 使用者規則:「重武器必屬於其中一種範圍攻擊」—— 沒有單體直擊的重武器。
 //   blast 爆炸傷害:球形超壓(launcher 榴彈/火箭、missile 飛彈)→ sim._blast + blastFalloff

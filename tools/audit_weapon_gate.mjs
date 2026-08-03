@@ -35,7 +35,7 @@ import { fileURLToPath } from 'node:url';
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
-  REACH_RULE, reachRule, trajClass, aoeClass, armingOf, lobMinRange, lanceR, LANCE,
+  REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
   shotV0, shotFlightS, flightCapS, SEEK, seekTurn,
 } from '../public/js/data.js';
@@ -302,7 +302,7 @@ const THREE = { Vector3: V3 };
 const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
 const RANGE_GLOW = new Function(`return ${/const RANGE_GLOW = (\{[^}]*\});/.exec(G)[1]}`)();
 const env = { THREE, BALLISTIC, ARC_MAXP, RANGE_GLOW, TARGET_CLASS, blastCoreR, lobMinRange, armingOf, shotV0,
-  aoeClass, blastFalloff, lanceR, LANCE };
+  aoeClass, blastFalloff, fanConeHalf, lanceR, LANCE };
 const M = (n) => pickMethod(n, G, env);
 // 牆 = 沿 +X 的一道垂直面(擋住 x ≥ w.x 且高度低於 w.top 的射線);回傳截斷距離
 const mkWalls = (walls) => (ax, ay, az, bx, by, bz) => {
@@ -442,6 +442,21 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     'blast 足跡以 blastFalloff 判入列(與伺服器 _blast 同一條曲線,MUST NOT 自己寫半徑比較)');
   ok(/this\._lancePierced\(from, impact, lanceR\(def\)\)/.test(sv),
     'line 足跡走既有的 _lancePierced(sim._lanceHits 的客戶端鏡射)');
+  // 扇形錐緣 MUST 量到命中量體近側表面(fanConeHalf 單一縫)—— 量中心 = 貼著砲塔/主堡牆面噴
+  // 光暈全滅而伺服器那半照樣結算(2026-08-03 使用者回報「打得到一般單位、但不到建築」)
+  ok(/fanConeHalf\(def, d2, this\._hitR\(e\)\)/.test(sv),
+    'fan 足跡的錐緣走 fanConeHalf(def, d2, hitR) 單一縫');
+  ok(!/Math\.cos\(\(def\.arc/.test(sv) && !/cosA/.test(sv),
+    '_shotVictims MUST NOT 留下第二份手寫錐(舊 cosA 已退場)');
+  ok(!/Math\.cos\(\(wp\.def\.arc/.test(S) && !/cosA/.test(S),
+    'sim.js MUST NOT 留下第二份手寫錐(heroPlasma 改吃 fanConeHalf)');
+  ok((S.match(/fanConeHalf\(/g) || []).length === 1 && (G.match(/fanConeHalf\(/g) || []).length === 1,
+    'fanConeHalf 在 sim.js / game.js 各恰一個消費端');
+  {
+    const LS = read(['tools', 'lanesim.mjs']);
+    ok(/fanConeHalf\(def, d, hitR\(e\)\)/.test(LS),
+      '前線交戰模型(lanesim,bal ⑦ 的攻擊範圍計價)吃同一支 fanConeHalf');
+  }
   ok(/this\._lobFc/.test(sv) && !/_lobLadder|_arcTrace|_lob45Vel/.test(sv),
     '拋物線吃每幀已定案的火控解 _lobFc,MUST NOT 在名冊裡重解一次彈道');
   ok(/ent\.id !== this\._lockId/.test(rg), '鎖定目標仍排除在範圍光暈之外(另有 lockGlow,不疊兩層)');
@@ -465,9 +480,9 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     }
     throw new Error(`資料中找不到 aoeClass=${cls} 的武器`);
   };
-  const mkFoe = (id, x, z = 0, h = 4) => ({
+  const mkFoe = (id, x, z = 0, h = 4, hr = 1) => ({
     id, kind: 'robot', side: 'STEEL', mesh: { position: new V3(x, 0, z), visible: true },
-    dimTop: h, dimH: h,
+    dimTop: h, dimH: h, hr,
   });
   /** 樁:自機在原點、面向 +X;準星解 / 貫穿端點 / 牆由呼叫端注入 */
   const mkShot = (o = {}) => ({
@@ -478,7 +493,7 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     },
     ents: new Map((o.foes || []).map((e) => [e.id, e])),
     _lobFc: o.fc || null,
-    _hitR: () => 1,
+    _hitR: (e) => e?.hr ?? 1,
     _altRangeTo: () => 1,
     _maxRange: (d) => d.range * 2,
     _effRange: M('_effRange'),
@@ -561,6 +576,16 @@ sec('Ⅴ-b 範圍光暈 = 這一發的傷害足跡(2026-08-03 使用者定案)')
     const c = mkShot({ foes: [A, B, C] });
     ok(String(ids(c._shotVictims(def, rule))) === 'A,B',
       `扇形(${id} ${def.name},±${arc}°):錐內的 A/B 亮、錐外的 C 不亮(實得 ${ids(c._shotVictims(def, rule))})`);
+    // 建築量體撐開錐緣:中心遠在標稱錐外,但牆面就在錐裡 ⇒ MUST 亮(伺服器 heroPlasma 同判)
+    const towR = hitR({ kind: 'tower', side: 'STEEL' });
+    const angT = (arc + 12) * Math.PI / 180;                            // 中心偏出標稱錐 12°
+    const dT = towR / Math.sin(Math.min(1.2, angT - arc * Math.PI / 180 + 0.35));   // 近到量體撐得開
+    const T = mkFoe('T', dT * Math.cos(angT), dT * Math.sin(angT), 26, towR);
+    ok(String(ids(mkShot({ foes: [T] })._shotVictims(def, rule))) === 'T',
+      `扇形:砲塔量體(hitR ${towR}m)中心偏出標稱錐 12° 仍亮(錐緣量到近側表面)`);
+    const Tfar = mkFoe('Tfar', d * 3 * Math.cos(angT), d * 3 * Math.sin(angT), 26, towR);
+    ok(mkShot({ foes: [Tfar] })._shotVictims(def, rule) === null,
+      '扇形:同一個偏角但距離拉遠(量體張角撐不開)⇒ 不亮(只放寬、不無限放寬)');
     // 扇形不需要準星目標(錐從槍口張開,伺服器 heroPlasma 同樣不看準星解到誰)
     ok(c._shotVictims(def, rule) !== null, '扇形:準星壓在空無處仍亮(足跡由射向定案)');
     // 準星壓在射程外的遠方敵人身上:整發性的入口閘會把整組錯誤熄掉,而那一發真的會傷到近處的 A
