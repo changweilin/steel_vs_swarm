@@ -16,3 +16,6 @@ dist/
 
 # 開發期才裝的 three(離線工具 shot_tunnels / 未來的 Node 端 3D 檢視用;A2:MUST NOT 進 package.json)
 node_modules/three/
+
+# 定場鏡頭組出圖(V-A;隨時可重拍,勿入版控)
+tools/.shots_scene/

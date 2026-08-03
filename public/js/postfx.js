@@ -29,7 +29,12 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 // ---- 勾線參數 ----
 const INK = {
   THICK: 1.0,        // 取樣半徑(像素);> 1 會讓細線斷開
-  EDGE: 0.9,         // 二階差分門檻(以「該像素深度的比例」量,故遠近一致)
+  // 門檻的兩項係數與起畫/全強度全部是 **2026-08-03 用 `tools/shot_scene.mjs` 逐輪實測**出來的
+  // (定場照 + 除錯輸出把 e 直接畫成紅色通道),不是猜的;調校紀錄見下方 shader 內註解。
+  K_D: 0.020,        // 門檻的「距離項」係數(× 該像素深度)—— 遠近一致的那一半
+  K_S: 3.0,          // 門檻的「掠射項」係數(× 一階差分)—— 壓掉高度場的網格折邊
+  EDGE0: 0.14,       // 起畫(實測:地形網格折邊 e ≈ 0.1、建物輪廓 e ≈ 0.4~1.2)
+  EDGE1: 0.36,       // 全強度
   CONCAVE_F: 0.42,   // 凹邊強度倍率(手繪內角線比外輪廓輕)
   DARK: 0.14,        // 墨色(與底色相混的目標值,不是純黑)
   FADE0: 0.55,       // 開始淡出的深度(相機 far 的比例)
@@ -40,7 +45,7 @@ const INK = {
 // split-tone 讓暗部偏冷、亮部偏暖 —— 這與 toon.js 的 `CEL_COOL` 是同一個需求的兩個尺度
 // (那個逐材質、這個逐畫面),兩者相加才是完整的「陰影是天光反射」。
 const GRADE = {
-  LIFT: 0.045,
+  LIFT: 0.0055,
   SHADOW: [0.86, 0.94, 1.10],
   HIGH: [1.05, 1.01, 0.94],
   SAT: 1.06,
@@ -118,11 +123,22 @@ export class Pipeline {
           float u = lin( vUv + vec2( 0.0, t.y ) ), b = lin( vUv - vec2( 0.0, t.y ) );
           // 二階差分(拉普拉斯):平面恆 0 —— 掠射的地面不會刷滿線(見檔頭)
           float lap = ( l + r + u + b ) - 4.0 * d;
-          // 以「該像素深度的比例」量門檻 ⇒ 同一條折邊在遠近都畫得出來
-          float e = lap / max( d, 0.001 );
-          // 凸邊(lap < 0,物體在前)全強度;凹邊(lap > 0)壓低
-          float ink = max( 0.0, -e ) + max( 0.0, e ) * ${INK.CONCAVE_F.toFixed(2)};
-          ink = smoothstep( ${INK.EDGE.toFixed(3)} * 0.01, ${INK.EDGE.toFixed(3)} * 0.03, ink );
+          // 門檻 = **距離項 + 掠射項**,兩項缺一不可(2026-08-03 定場照四輪實測):
+          //   ・只有距離項(lap/d):地形是高度場、由 193² 個平三角面拼成,每一條網格折邊
+          //     都是**真的**折邊 ⇒ 整片山坡畫滿等高線一樣的細線;把門檻拉高到山坡乾淨時,
+          //     300m 外的建物輪廓(深度跳變只有 20m)也一起不見了 —— 兩者在 lap/d 上重疊。
+          //   ・只有掠射項(lap 除以一階差分,相對曲率):重疊在 0.3~0.7,同樣是「山坡乾淨了、
+          //     建物的線也沒了」(第二版實測,整個世界回到沒有描邊)。
+          //   ・兩項相加才分得開:掠射的地面**一階差分極大**(每像素跑好幾公尺)⇒ 門檻自動抬高;
+          //     建物輪廓的一階差分只有那一格跳變 ⇒ 門檻仍低,線畫得出來。
+          float slope = abs( l - r ) + abs( u - b );
+          float e = lap / max( 0.001, d * ${INK.K_D.toFixed(3)} + slope * ${INK.K_S.toFixed(1)} );
+          // 門檻 MUST 吃 **|e| 本身**,凸/凹的強度差要**乘在 smoothstep 之後**。
+          // 反過來寫(先乘 CONCAVE_F 再進 smoothstep)= 把凹邊的門檻整個往上推 1/0.42 倍 ——
+          // 而建物輪廓在這個 stencil 下大多算凹邊(近景像素旁邊是更遠的背景)⇒ 整批被吃掉:
+          // 2026-08-03 定場照的除錯輸出裡,建物邊的 e 明明有 2 以上,ink 卻是 0。
+          float ink = smoothstep( ${INK.EDGE0.toFixed(3)}, ${INK.EDGE1.toFixed(3)}, abs( e ) );
+          if ( e > 0.0 ) ink *= ${INK.CONCAVE_F.toFixed(2)};   // 凹邊(牆角內側)比外輪廓輕
           // ② 遠處淡出:遠景線密到變雜訊,而且會蓋掉霧
           ink *= 1.0 - smoothstep( uFar * ${INK.FADE0.toFixed(2)}, uFar * ${INK.FADE1.toFixed(2)}, d );
           // ① 墨色與底色相混,不是塗黑
@@ -147,7 +163,10 @@ export class Pipeline {
           vec3 hi = vec3( ${g.HIGH.map((v) => v.toFixed(3)).join(', ')} );
           c *= mix( sh, hi, smoothstep( 0.18, 0.72, l ) );
           c = mix( vec3( l ), c, ${g.SAT.toFixed(3)} );      // 微幅提彩度
-          c = c * ( 1.0 - ${g.LIFT.toFixed(3)} ) + ${g.LIFT.toFixed(3)};   // 陰影抬升:最暗不落到 0
+          // 陰影抬升:最暗不落到 0。**數值是線性空間的**,而畫面是 sRGB ——
+          // 線性 0.045 經 sRGB 轉換會變成 0.23(整片暗部一口氣被洗成灰),2026-08-03 定場照實測。
+          // 現值 0.0055 ≈ sRGB 0.06,才是「抬離全黑」而不是「把陰影拿掉」。
+          c = c * ( 1.0 - ${g.LIFT.toFixed(4)} ) + ${g.LIFT.toFixed(4)};
           gl_FragColor = vec4( c, 1.0 );
         }`,
     });
