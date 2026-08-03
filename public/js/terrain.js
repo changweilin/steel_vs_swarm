@@ -7,7 +7,8 @@
 // 世界座標:以戰場中心為原點,x = 東(公尺),z = 南(three.js 慣例;
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
-import { toonGradient } from './hazards.js';
+import { envMat } from './hazards.js';
+import { makeField, makeToneLadder } from './field.js';
 import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
@@ -49,6 +50,35 @@ function distToSegs(px, pz, segs) {
     if (d < min) min = d;
   }
   return min;
+}
+
+// ---- 無衛星影像時的地表色階梯(2026-08-03)----
+// 五階地被色,**由相對亮度(Rec.709)設計**:亮度 55 → 70 → 82 → 91 → 97,
+// 階差 15.1 / 12.3 / 8.5 / 6.0 —— **暗端的階差大於亮端**(嚴格遞減)。反過來排(亮端拉開)的話,暗部會糊成
+// 一坨、亮部又過曝,這是色階梯最常見的失敗。色相同時從「冷苔綠」漸走到「暖乾土」,
+// 讓層次不只是明暗還有溫度差。
+// 這些是**頂點色**(乘在白底上),不是 cel ramp 的階 —— A14/#INC-106 管的是 ramp 的暗階
+// (`toon.js RAMPS`,恆 ≥102),兩者是不同的東西,MUST NOT 混為一談。
+const GROUND_TONES = [0x2e3a34, 0x3c4a3e, 0x4b5646, 0x565e4c, 0x5d644f];
+const TONE_JIT_F = 0.018;   // 閾值抖動格寬 = 跨距 × 此值(比橢圓細、比取樣粗,見 field.js)
+
+/**
+ * 把色階梯烤成頂點色。
+ * 種子由**戰場中心**推(與 biomes.js 的散布同源,§2.3)⇒ 同一場地跨客戶端逐位元同一張場。
+ * 成本 = `pos.count * 3` 個 float(193² 網格 ≈ 447KB),換掉的是「整張地形一個顏色」。
+ */
+function paintTerrainTones(geo, pos, bounds, center) {
+  const span = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ);
+  const seed = ((Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) ^ 0x7E44A1) >>> 0;
+  const tone = makeToneLadder(makeField(seed, span), bounds, GROUND_TONES.length, span * TONE_JIT_F);
+  const rgb = GROUND_TONES.map((c) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]);
+  const n = pos.length / 3;
+  const colors = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) {
+    const [r, g, b] = rgb[tone(pos[k * 3], pos[k * 3 + 2])];
+    colors[k * 3] = r; colors[k * 3 + 1] = g; colors[k * 3 + 2] = b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 }
 
 function loadImage(url) {
@@ -426,15 +456,27 @@ export async function buildTerrain(cfg, onProgress) {
   geo.setIndex(idx);
   geo.computeVertexNormals();
 
-  // 地形也走日漫賽璐璐(衛星影像 + 4 階光影 = 2.5D 手繪感)
+  // 地形也走日漫賽璐璐(衛星影像 + 光影階梯 = 2.5D 手繪感)。
+  // 2026-08-03 兩件事一起修:
+  //  ① 地形是**畫面上最大的一塊面**,卻是全場唯一沒吃 cel 補丁的表面(裸 MeshToonMaterial)——
+  //     其他環境物件都有的 wash(低頻水彩暈染)與 cool(陰影偏冷)它一個都沒有,結果就是
+  //     「機體與建物是畫的、地面是照片」。改走 `envMat`;`rim: 0` 是必要的 —— 貼地平面在遠處
+  //     掠射角 rim 全開會整片洗白(envMat 檔頭已記),地被/道路早就這樣傳了。
+  //  ② **沒有衛星影像時整張地形是一個 `0x39424c`**。那正是「88% 的坡面同一個色」的教科書案例:
+  //     光影只有 3 階、又全部落在同一個底色上 ⇒ 山看起來是一塊平板。改吃屬性場驅動的色階梯
+  //     (field.js;門檻取該場地自己的分位數 ⇒ 單一色階佔比恆 ≤ 1/n 附近,實測 27 場地 ×
+  //     三種隊制最壞 30.3%),色階由**相對亮度**設計:暗端的階差大於亮端(暗部要分得開,
+  //     亮部再拉開就過曝)。頂點色乘在底色上,故底色改成白。
+  //  階數取 4(大型結構):3 階在整片山坡上只有一刀明暗界,轉折看不出來。
   let mat;
   if (imagery) {
     const tex = new THREE.CanvasTexture(imagery.canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
-    mat = new THREE.MeshToonMaterial({ map: tex, gradientMap: toonGradient() });
+    mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4 });
   } else {
-    mat = new THREE.MeshToonMaterial({ color: 0x39424c, gradientMap: toonGradient() });
+    paintTerrainTones(geo, pos, { minX, maxX, minZ, maxZ }, center);
+    mat = envMat(0xffffff, { vertexColors: true, rim: 0, bands: 4 });
   }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
@@ -449,8 +491,10 @@ export async function buildTerrain(cfg, onProgress) {
     waterY = WATER.LEVEL;
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(worldW, worldH),
-      // DoubleSide:視線沒入水下時抬頭仍看得到水面(單面會被背面剔除 = 水下憑空無水)
-      new THREE.MeshToonMaterial({ color: 0x1a4a6a, gradientMap: toonGradient(), transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
+      // DoubleSide:視線沒入水下時抬頭仍看得到水面(單面會被背面剔除 = 水下憑空無水)。
+      // 水面是淺色大面積 ⇒ ramp 取 `soft`(整條抬到亮端,兩階之間才看得出交界);
+      // 透明件不吃 moss(envMat 預設就沒有),wash/cool 照走 —— 水色要跟著天色偏。
+      envMat(0x1a4a6a, { bands: 'soft', rim: 0, transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);

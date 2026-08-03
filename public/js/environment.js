@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { ENV } from './data.js';
 import { setCelSun } from './toon.js';
+import { mulberry32 } from './rng.js';
 
 export function envLabel(env) {
   if (!env) return '';
@@ -38,6 +39,121 @@ const WEATHERS = {
   snow:   { light: 0.60, fogNear: 0.22, fogFar: 1.1, particle: 'snow', fogTint: 0xcfd8dd },
   fog:    { light: 0.50, fogNear: 0.04, fogFar: 0.35 },
 };
+
+// ---- 漸層天空穹頂(2026-08-03)----
+// 舊制 `scene.background = skyC` 是**一個顏色**:畫面上第二大的一塊面整片同色,
+// 4 種天氣 × 3 個時段全靠那一個顏色加霧表達。改成三停點漸層穹頂 + 柔量化。
+//
+// **顏色一律由 TIMES / SEASONS / WEATHERS 推導,MUST NOT 另開第四張色表**(§2.1):
+// 多一張表就會出現「某些季節 × 天氣的組合裡,天空與霧色對不上」這種只在特定組合現形的分歧。
+//   地平線 = 霧色本身  ⇒ 遠景融進天空是**恆等式**而不是調出來的
+//   天頂   = 天色壓暗  ⇒ 抬頭比較深,才有「天空是有厚度的」
+//   中段   = 兩者內插再微亮(逆光帶)
+// 兩道封頂(缺一不可):
+//   ① 任何一階 MUST NOT 亮過**今天的天色** —— 夜戰的天空不可以把場地照亮(A14 的精神延伸);
+//   ② 雨/霧天(由既有表的 `fogFar ≤ 1.0` 判,不是新旗標)MUST NOT 亮過**霧的遠端色**,
+//      否則霧茫茫的地面上頂著一片亮天,遠近關係整個讀反。
+const SKY_QUANT = 26;      // 柔量化階數(35% 混回原值:硬階梯太像色票,純漸層又不是賽璐璐)
+const SKY_QUANT_MIX = 0.35;
+const CLOUD_N = 26;        // 雲量基數;實際枚數與 WEATHERS[w].light 反比
+const lum = (c) => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+/** 亮度封頂(保色相):超過就整體等比壓下來 */
+function capLum(c, cap) {
+  const l = lum(c);
+  return l > cap && l > 1e-4 ? c.multiplyScalar(cap / l) : c;
+}
+
+/**
+ * 三個停點(地平線 / 中段 / 天頂)。**單一縫**:顏色全部由 skyC / fogC / W 推導,
+ * 這裡出現任何十六進位色值就是開了第四張色表(見上方註解)。稽核直測這一支。
+ */
+function skyStops(skyC, fogC, W) {
+  const horiz = fogC.clone();
+  const zen = skyC.clone().multiplyScalar(0.72);
+  const mid = horiz.clone().lerp(zen, 0.45).multiplyScalar(1.06);
+  // **地平線階刻意不吃封頂**:它就是霧色本身,而霧色今天已經畫在同一排像素上了 ——
+  // 夾它只會讓天空與霧在地平線上差一階(一條橫貫畫面的接縫),而那正是這一階存在的理由。
+  // 封頂只作用在天空那半(中段/天頂)。
+  const cap = W.fogFar <= 1.0 ? Math.min(lum(skyC), lum(fogC)) : lum(skyC);
+  for (const c of [mid, zen]) capLum(c, cap);
+  return { horiz, mid, zen };
+}
+
+function makeSkyDome(span, skyC, fogC, W) {
+  const { horiz, mid, zen } = skyStops(skyC, fogC, W);
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { uH: { value: horiz }, uM: { value: mid }, uZ: { value: zen } },
+    vertexShader: `
+      varying float vH;
+      void main() {
+        vH = normalize( position ).y * 0.5 + 0.5;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+      }`,
+    fragmentShader: `
+      uniform vec3 uH; uniform vec3 uM; uniform vec3 uZ;
+      varying float vH;
+      void main() {
+        // 柔量化:26 階再混回 35%,交界看得出來但不是色票
+        float t = clamp( vH * 1.15 + 0.02, 0.0, 1.0 );
+        float q = floor( t * ${SKY_QUANT}.0 ) / ${SKY_QUANT}.0;
+        t = mix( t, q, ${SKY_QUANT_MIX} );
+        vec3 c = t < 0.5 ? mix( uH, uM, t * 2.0 ) : mix( uM, uZ, ( t - 0.5 ) * 2.0 );
+        gl_FragColor = vec4( c, 1.0 );
+      }`,
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(span * 1.5, 24, 16), mat);
+  dome.frustumCulled = false;    // 中心恆在相機上,包圍球判定沒有意義
+  dome.renderOrder = -10;        // 最先畫:深度不寫,後面所有東西照常覆蓋
+  return dome;
+}
+
+/** 賽璐璐雲的貼圖:幾個硬邊圓疊出一朵,一張整場共用(手繪感靠硬邊,不靠柔化) */
+let _cloudTex = null;
+function cloudTexture() {
+  if (_cloudTex) return _cloudTex;
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S / 2;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#fff';
+  for (const [cx, cy, r] of [[0.28, 0.62, 0.20], [0.46, 0.44, 0.28], [0.68, 0.58, 0.22], [0.84, 0.66, 0.14]]) {
+    g.beginPath(); g.arc(cx * S, cy * S / 2, r * S / 2 * 2, 0, Math.PI * 2); g.fill();
+  }
+  _cloudTex = new THREE.CanvasTexture(cv);
+  _cloudTex.colorSpace = THREE.SRGBColorSpace;
+  return _cloudTex;
+}
+
+/**
+ * 天空的 billboard 雲。枚數與 `WEATHERS[w].light` **反比**(光量越低雲越多),
+ * 霧天一朵都不放 —— 霧的可視距離本來就到不了天空,放了只會在白牆上疊白斑。
+ * 散布走 mulberry32(§2.3 確定性,MUST NOT 用 Math.random)。
+ */
+function makeClouds(span, skyC, W, seed) {
+  const n = Math.max(0, Math.round(CLOUD_N * (1.05 - W.light)));
+  if (!n || W.fogNear <= 0.05) return null;
+  const rnd = mulberry32(seed >>> 0);
+  const grp = new THREE.Group();
+  const tex = cloudTexture();
+  const tint = skyC.clone().lerp(new THREE.Color(0xffffff), 0.55);
+  const mats = [0.9, 0.55].map((o) => new THREE.SpriteMaterial({
+    map: tex, color: tint, transparent: true, opacity: o, depthWrite: false, fog: false,
+  }));
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = span * (0.55 + rnd() * 0.75);
+    const y = span * (0.18 + rnd() * 0.42);
+    const s = span * (0.10 + rnd() * 0.16);
+    const sp = new THREE.Sprite(mats[i & 1]);
+    sp.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    sp.scale.set(s * 2, s, 1);
+    grp.add(sp);
+  }
+  grp.frustumCulled = false;
+  grp.renderOrder = -9;
+  return { obj: grp, mats };
+}
 
 /** 雨/雪粒子盒:跟著相機走,粒子落出底部就回頂部 */
 function makeParticles(kind) {
@@ -98,8 +214,15 @@ export function applyEnvironment(scene, terrain, env) {
 
   const skyC = new THREE.Color(T.sky).multiply(new THREE.Color(S.tint)).multiplyScalar(W.light * 0.7 + 0.3);
   const fogC = new THREE.Color(W.fogTint ?? T.fogC).multiplyScalar(W.light * 0.6 + 0.4);
-  scene.background = skyC;
+  scene.background = skyC;   // 穹頂沒畫到的像素(建構失敗/極端視角)仍是舊行為
   scene.fog = new THREE.Fog(fogC, span * W.fogNear, span * W.fogFar);
+
+  // 漸層穹頂 + 賽璐璐雲(顏色全由上面三張表推導,見 makeSkyDome 檔頭)
+  const dome = makeSkyDome(span, skyC, fogC, W);
+  scene.add(dome);
+  const clouds = makeClouds(span, skyC, W, Math.round((terrain.center?.lat ?? 0) * 1e4) * 31
+    + Math.round((terrain.center?.lng ?? 0) * 1e4));
+  if (clouds) scene.add(clouds.obj);
 
   const hemi = new THREE.HemisphereLight(T.hemiSky, T.hemiGnd, T.hemiI * (W.light * 0.6 + 0.4) * S.mul);
   scene.add(hemi);
@@ -120,10 +243,19 @@ export function applyEnvironment(scene, terrain, env) {
   }
 
   return {
-    update(dt, camera) { particles?.update(dt, camera); },
+    update(dt, camera) {
+      particles?.update(dt, camera);
+      // 穹頂/雲**恆以相機為中心**:天空沒有視差,不然走到地圖邊緣會看到「天空的邊」
+      dome.position.copy(camera.position);
+      if (clouds) clouds.obj.position.copy(camera.position);
+    },
     dispose() {
       scene.remove(hemi); scene.remove(sun);
       if (particles) scene.remove(particles.obj);
+      // A25:一次性 3D 物件移除 MUST 釋放 GPU 資源(貼圖是整場共用的快取,一律不動)
+      scene.remove(dome);
+      dome.geometry.dispose(); dome.material.dispose();
+      if (clouds) { scene.remove(clouds.obj); clouds.mats.forEach((m) => m.dispose()); }
     },
   };
 }

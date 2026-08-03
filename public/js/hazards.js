@@ -5,16 +5,8 @@
 // 地雷:顏色取自腳下衛星影像(融入環境),靠近才浮現的極輕微突起。
 import * as THREE from 'three';
 
-// ---- 決定性亂數(與 biomes.js 同款 mulberry32)----
-export function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// ---- 決定性亂數:唯一縫已抽到 rng.js(該檔零 import ⇒ 離線稽核在 Node 端跑得同一條序列)----
+export { mulberry32 } from './rng.js';
 
 // ---- 賽璐璐核心已抽到 toon.js(3 階 ramp / 描邊 / 硬邊高光),此處 re-export 保持相容 ----
 import { toonGradient, toonMat, toonify, outlinify, envMat, bakeContactAO } from './toon.js';
