@@ -261,7 +261,7 @@ for (const id of ids) {
   const rows = TEXT_KINDS.flatMap((k) => c[k]);
   ok(rows.every((e) => typeof e.t === 'string' && e.t.length > 0 && e.t.length <= 40),
     `Ⅴ③ ${id} 主名非空且不過長`);
-  ok(!rows.some((e) => /[ -]/.test(e.t + (e.s || '') + (e.en || ''))),
+  ok(!rows.some((e) => /[\u0000-\u001f\u007f-\u009f]/.test(e.t + (e.s || '') + (e.en || ''))),
     `Ⅴ③ ${id} 語料無控制字元`);
   ok(rows.every((e) => !e.s || !/^(taoist|christian|muslim|river|stream|neighbourhood|suburb|quarter)$/i.test(e.s)),
     `Ⅴ③ ${id} 副行無 OSM 列舉值殘留`);

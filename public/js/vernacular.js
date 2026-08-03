@@ -366,7 +366,7 @@ export function harvestOsm({ buildings = [], roads = [], pois = [] } = {}, local
     if (!kind) continue;
     const e = entryOf(tags, kind);
     if (!e) continue;
-    const key = kind + ' ' + e.t;
+    const key = kind + '|' + e.t;
     if (seen.has(key)) continue;
     seen.add(key);
     rows.push(e);

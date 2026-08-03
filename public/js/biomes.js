@@ -7343,7 +7343,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 水/沼分類唯一縫(WYSIWYG):底毯/特徵層的水域・沼澤專屬拼圖跟著伺服器遮罩同一規則走
     envCodeAt: (x, z) => terrainEnvCode(terrain, x, z),
     blockers, season, seed: gseed, rnd: grnd, roadDirAt, roadRank: roadRankAt, roadClear: roadClearAt, roadPolys,
-    // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數    // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
+    // 街邊廣告看板的在地文字:與建物招牌共用**同一本**去重帳與同一條專屬亂數
+    // 街邊廣告看板的字也走 worldtext(ground.js 不再自己開圖集)
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
@@ -7452,7 +7453,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     roads: roadsBuilt,
     roadBlocks: roadBlockN,
     boundary: boundaryN,
-    climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
+    climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
+
     signText: vtext.spine,   // 這張圖的地名主幹(語料全空 = null ⇒ 語料庫招牌整批不出場)
     rails: railLines,
     falls: fallsBuilt,
