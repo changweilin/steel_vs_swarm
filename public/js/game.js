@@ -5765,7 +5765,9 @@ export class BattleClient {
     sx += (dz / pl) * GAME.HERO_SPAWN_SIDE;
     sz += (-dx / pl) * GAME.HERO_SPAWN_SIDE;
     const gy = this._surf(sx, sz, Infinity);
-    this.pos.set(sx, gy + (this.isDrone ? 40 : 0), sz);
+    // 無人機重生落在離地下限(FLIGHT.HOVER_M)貼地起飛,不直接放到巡航高度 —— 重生動力補滿
+    // (見 _onSelfRespawn 的 this.lift = null)MUST 真的被拿來爬升,不然滿動力形同虛設。
+    this.pos.set(sx, gy + (this.isDrone ? FLIGHT.HOVER_M : 0), sz);
     this.yaw = Math.atan2(-dx, -dz);   // 面向兵線前進方向(three:-z 前方)→ 看得到兵線箭頭
     this.pitch = -0.05;
     // 變形者:重生一律地面型態
@@ -7555,8 +7557,8 @@ export class BattleClient {
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const gy = wetY != null ? wetY
         : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS);
-      // 無人機不貼地(下限 +2.5);變形者允許降到地表 → 觸地即變形回地面型
-      this.pos.y = Math.max(gy + (this.isMorph ? 0 : 2.5), Math.min(gy + 320, this.pos.y));
+      // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型
+      this.pos.y = Math.max(gy + (this.isMorph ? 0 : FLIGHT.HOVER_M), Math.min(gy + 320, this.pos.y));
       // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
       const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.FULL_D;
       if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
@@ -7647,7 +7649,7 @@ export class BattleClient {
     // 閘門條件由 ceilingAt 放寬成 heightAt(裸地形恆有):橋隧判定各自 optional,
     // 沒有橋隧的地圖照樣要吃坡度③。
     if (this.terrain.heightAt) {
-      const hover = this._flying() ? (this.isMorph ? 0 : 2.5) : 0;
+      const hover = this._flying() ? (this.isMorph ? 0 : FLIGHT.HOVER_M) : 0;
       let slopeStop = false;
       const passable = (cx, cz) => {
         const g = this._surf(cx, cz, py0);

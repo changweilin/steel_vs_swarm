@@ -15,7 +15,7 @@ import {
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
-  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, BOT_TACTIC, botThreatDecay,
+  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, BOT_TACTIC, botThreatDecay, FLIGHT,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -3519,7 +3519,10 @@ export class BattleSim {
     b.wet = 0; b.wetT = this.t;   // 重生清環境滯留(下個 pos 回報重新判定)
     const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0);
     b.x = sx; b.z = sz;
-    b.y = b.kind === 'drone' ? SQUAD.REGROUP_ALT : 0;
+    // 無人機重生落在離地下限(FLIGHT.HOVER_M),不直接放到 SQUAD.REGROUP_ALT 那個(三機小隊時代
+    // 遺留的)巡航高度 —— 重生動力補滿是為了讓玩家/bot 自己爬升,不是省了這段爬升(單一縫:
+    // 與客戶端 game._spawnAt/飛行下限鉗制同吃 FLIGHT.HOVER_M)。
+    b.y = b.kind === 'drone' ? FLIGHT.HOVER_M : 0;
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
