@@ -13,3 +13,6 @@ tools/.shots_tunnels/
 # `npm run build:solo` 產出的單機特化版(純複製,隨時可重生;GitHub Actions 也會自己打包)
 dist/
 
+
+# 開發期才裝的 three(離線工具 shot_tunnels / 未來的 Node 端 3D 檢視用;A2:MUST NOT 進 package.json)
+node_modules/three/
