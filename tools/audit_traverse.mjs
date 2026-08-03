@@ -39,7 +39,7 @@ import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS } fr
 import { BattleSim } from '../server/sim.js';
 import {
   llToWorld, elevSampler, buildHeightField, osmFor, tunnelRunOf, strucTunnel, strucHw,
-  LANE_HW, ptSeg, arcOf, densify, ROAD_SEG, makeDeckAt, TUN, UND,
+  LANE_HW, ptSeg, arcOf, densify, ROAD_SEG, makeDeckAt, TUN, UND, BRIDGE_RISE,
 } from './venue_field.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
@@ -71,6 +71,8 @@ const ok = (c, msg) => { c ? (pass++, console.log(`    ✓ ${msg}`)) : (fail++, 
 // 場上最大的機體(淨空/量體一律由 data.js 推導,MUST NOT 手寫公尺數)
 const BIGGEST = Object.keys(CHARACTERS).reduce((a, ch) =>
   heroTargetH(CHARACTERS[ch].kind, ch) > heroTargetH(CHARACTERS[a].kind, a) ? ch : a, Object.keys(CHARACTERS)[0]);
+const MECH_H = heroTargetH(CHARACTERS[BIGGEST].kind, BIGGEST);
+const HEAD_M = 0.2;   // 頭頂餘裕(CLAUDE.md §5「淨空 > 最大機體 + 0.2」)
 
 /**
  * 場地的「可站立面」模型。
@@ -233,6 +235,47 @@ function flood(seeds, surfacesAt, hf, sim, probe) {
   return reached;
 }
 
+/**
+ * 淨空(V-D)。`CLAUDE.md` §5 只寫「重驗『淨空 > 最大機體 4.5m + 0.2 頭頂餘裕』」卻**沒有指名腳本**
+ * —— 那是一次手動檢查。這裡把它變成數字。
+ *
+ * **為什麼非得是數值檢查**:剖面若寫錯基準(拿半徑當拱腳之類)是**完全無聲**的 ——
+ * 隧道就是一個黑洞、裡面有個黑影在動,肉眼永遠看不出來拱頂差了 2.75m。
+ * 兩件事各自量:
+ *   ① 洞體:天花板(路面 + CLEAR)之上還要有 ROOF_T 的板 —— 覆蓋段的**天然地表**
+ *      MUST 高過板頂,否則就是「山藏不住頂板」(那一段本來就該判成明隧道);
+ *   ② 橋下:跨中內側(扣掉兩端 24m 緩坡)的橋面到地表 MUST 塞得下最大機體。
+ * 機體高度一律由 `data.js heroTargetH` 推導,MUST NOT 手寫 4.5。
+ */
+function clearance(structs, hf) {
+  const need = MECH_H + HEAD_M;
+  const out = { need, bore: [], deck: [] };
+  for (const st of structs) {
+    const total = st.cum[st.cum.length - 1] || 1;
+    if (st.kind === '橋') {
+      let worst = Infinity, at = 0;
+      for (let s = 24; s <= total - 24; s += 4) {
+        const p = ptAt(st, s);
+        const g = hf.heightAt(p[0], p[1]);
+        if (g <= WATER.LEVEL) continue;            // 水面下沒有人會走
+        const h = st.floorAt(s, p[0], p[1]) - g;
+        if (h < worst) { worst = h; at = s; }
+      }
+      if (worst < Infinity) out.deck.push({ worst, at, total });
+    } else {
+      let worst = Infinity, at = 0;
+      for (let s = 0; s <= total; s += 4) {
+        const p = ptAt(st, s);
+        // 天然地表 − 板頂(路面 + 淨空 + 頂板厚):< 0 = 山藏不住頂板
+        const h = hf.heightAt(p[0], p[1]) - (st.floorAt(s, p[0], p[1]) + TUN.CLEAR + TUN.ROOF_T);
+        if (h < worst) { worst = h; at = s; }
+      }
+      if (worst < Infinity) out.bore.push({ worst, at, total, kind: st.kind });
+    }
+  }
+  return out;
+}
+
 async function scanVenue(v) {
   const cfg = venueConfig(v, TEAM);
   const bbox = battleBBox(cfg);
@@ -265,6 +308,7 @@ async function scanVenue(v) {
   }));
   for (const m of marks) wps.push(m);
 
+  const clear = clearance(structs, hf);
   const reached = flood(seeds, surfacesAt, hf, sim, probe);
   const miss = [];
   for (const w of wps) {
@@ -272,13 +316,23 @@ async function scanVenue(v) {
       Math.hypot(x - w.p[0], z - w.p[1]) <= HIT_R && (w.y == null || Math.abs(y - w.y) <= BUCKET_M));
     if (!hit) miss.push(w.name);
   }
-  return { id: v.id, cells: reached.length, wps: wps.length, miss, structs: structs.length, osm: !!osm };
+  return { id: v.id, cells: reached.length, wps: wps.length, miss, structs: structs.length, osm: !!osm, clear };
 }
 
 // ---- 主流程 ----
 console.log(`== 兵線與結構可通行稽核 ==  ${TEAM}v${TEAM}、格寬 ${CELL}m、高度桶 ${BUCKET_M}m、`
   + `量體取最大機體 ${BIGGEST}(${heroTargetH(CHARACTERS[BIGGEST].kind, BIGGEST).toFixed(1)}m)`
   + `${BREAK_SLOPE ? '  ⚠ 反向驗證模式(坡度閘寫死成全擋)' : ''}\n`);
+
+// ---- 淨空的資料層檢查(V-D;不需網路、不需場地,CI 一定跑得到)----
+// `CLAUDE.md` §5 那條「改 SOLDIER_H / HERO_SIZE.mul / BRIDGE_RISE / TUN.CLEAR 要重驗
+// 淨空 > 最大機體 + 0.2」原本**沒有指名腳本** = 一次手動檢查。這裡把它變成斷言。
+console.log('淨空(資料層)');
+ok(TUN.CLEAR >= MECH_H + HEAD_M,
+  `隧道淨空 ${TUN.CLEAR}m ≥ 最大機體 ${MECH_H.toFixed(2)}m + 頭頂餘裕 ${HEAD_M}m`);
+ok(BRIDGE_RISE >= MECH_H + HEAD_M,
+  `橋面抬升 ${BRIDGE_RISE}m ≥ 最大機體 ${MECH_H.toFixed(2)}m + 頭頂餘裕 ${HEAD_M}m(跨中橋下走得過)`);
+console.log('');
 
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
 const results = [];
@@ -293,6 +347,18 @@ for (const v of list) {
   console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
     + `・結構 ${r.structs}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`);
   ok(r.miss.length === 0, `${v.id}:${r.wps} 個航點全部可達${r.miss.length ? ` —— 不可達:${r.miss.join('、')}` : ''}`);
+  // 淨空(V-D):橋下塞不塞得下最大機體。洞體的「山藏不住頂板」只印出來當診斷 ——
+  // 那一段本來就該被 `tunnelWallProfile` 判成明隧道(柱列側是開的),不是破圖。
+  for (const d of r.clear.deck) {
+    ok(d.worst >= r.clear.need,
+      `${v.id}:橋下淨空 ${d.worst.toFixed(2)}m ≥ ${r.clear.need.toFixed(2)}m(最大機體 ${MECH_H.toFixed(1)}m + 頭頂餘裕 ${HEAD_M}m)`);
+  }
+  const shallow = r.clear.bore.filter((b) => b.worst < 0).length;
+  if (r.clear.bore.length) {
+    console.log(`      洞體覆蓋:${r.clear.bore.length} 座,最薄 `
+      + `${Math.min(...r.clear.bore.map((b) => b.worst)).toFixed(2)}m`
+      + `${shallow ? `(其中 ${shallow} 座有裸露段 ⇒ 應由 tunnelWallProfile 判成明隧道)` : ''}`);
+  }
 }
 
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify(results, null, 2));
