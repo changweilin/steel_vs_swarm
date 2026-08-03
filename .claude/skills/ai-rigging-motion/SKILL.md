@@ -7,6 +7,17 @@ compatibility: Python 3.10+, CUDA GPU; outputs rigged FBX/GLB compatible with Mi
 
 # AI Rigging, Skinning & Motion (Open-Source)
 
+> **Boundary in this repo (steel_vs_swarm) — read before running any of this.**
+> A rig that imports cleanly is not an accepted rig. Skeletons crossing into this repo are
+> consumed by the project's own conventions and are verified by
+> `tools/audit_muzzle.mjs` (weapon hardpoints), `audit_cockpit.mjs` (FPV framing) and
+> `audit_cast_jump.mjs` (cast/jump poses) against `data.js` — those audits are the
+> acceptance test, and a bone rename that moves a muzzle is a regression no importer will
+> report. Generated motion clips are **reference for the hand-authored gait/pose code**,
+> not a runtime animation system: adding an animation library would break A2 (no npm
+> dependency beyond `ws`). Mixamo-compatible naming below is a convenience for other
+> engines, not a requirement here.
+
 You take a **static mesh** and make it **animatable**: predict a skeleton, solve skin weights, then drive it with generated motion. Open-source now handles non-humanoid rigs and natural-language motion — no manual weight painting.
 
 ## 1. Pick the tool by sub-task
