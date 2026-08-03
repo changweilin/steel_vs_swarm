@@ -7544,7 +7544,7 @@ const MOVE_SIG = {
   // 蜂群:無人機 7(飛行欄)/ 機甲 3(地面欄)/ 變形機甲 2(兩欄)
   s01: { hover: 0.60, hoverF: 2.4, hoverA: 0.45, surge: 0.40, flare: 0.55, bank: 0.35 },  // 蜜蜂/蜂鳥活翼懸停·指揮節點
   s02: { hover: 0.35, hoverF: 0.6, hoverA: 0.12, surge: 0.25, flare: 0.40, bank: 0.30 },  // 重載六旋翼:笨重穩定
-  s03: { hover: 0.50, hoverF: 1.6, hoverA: 0.05, surge: 0.80, flare: 0,    bank: 0.92 },  // 鴨翼噴射遊蕩彈:高攻角急轉(定翼 flare=0)
+  s03: { poise: 0.80, idleF: 1.30, idleA: 0.50, launch: 0.84, spool: 0.16, brake: 0.40, settle: 0.90, hover: 0.22, hoverF: 0.75, hoverA: 0.65, surge: 0.38, flare: 0.75, bank: 0.52 },  // 迅猛龍蹲伏匿蹤 ⟷ 始祖鳥撲翼滑翔
   s04: { hover: 0.55, hoverF: 1.4, hoverA: 0.12, surge: 0.76, flare: 0,    bank: 0.90 },  // A6M 零式:纏鬥高滾轉(定翼 flare=0)
   s05: { hover: 0.90, hoverF: 3.0, hoverA: 0.12, surge: 1.00, flare: 0.50, bank: 1.00 },  // FPV 競速:極限俐落(機械 hoverA≈0)
   s06: { poise: 0.97, idleF: 0.58, idleA: 0.35, launch: 0.48, spool: 0.55, brake: 0.55, settle: 0.70 },  // 半人馬:載騎射擊台、扣扳機絕對靜止
@@ -7553,7 +7553,7 @@ const MOVE_SIG = {
   s09: { poise: 0.18, idleF: 1.62, idleA: 0.90, launch: 0.96, spool: 0.14, brake: 0.62, settle: 0.42 },  // 袋鼠:跟腱儲能彈射、跑酷釘樁落停
   s10: { poise: 0.62, idleF: 0.48, idleA: 1.60, launch: 0.05, spool: 0.90, brake: 0.10, settle: 2.25, hover: 0.15, hoverF: 0.5, hoverA: 0.25, surge: 0.05, flare: 0.05, bank: 0.05 },  // 機械巨象護衛 ⟷ 浮空飛鯨
   s11: { hover: 0.08, hoverF: 0.6, hoverA: 0.05, surge: 0.15, flare: 0,    bank: 0.25 },  // ScanEagle 長航時:極省滑翔(定翼 flare=0)
-  s12: { poise: 0.80, idleF: 1.30, idleA: 0.50, launch: 0.84, spool: 0.16, brake: 0.40, settle: 0.90, hover: 0.22, hoverF: 0.75, hoverA: 0.65, surge: 0.38, flare: 0.75, bank: 0.52 },  // 迅猛龍蹲伏匿蹤 ⟷ 始祖鳥撲翼滑翔
+  s12: { hover: 0.50, hoverF: 1.6, hoverA: 0.05, surge: 0.80, flare: 0,    bank: 0.92 },  // 鴨翼長航偵察機:高攻角急轉仍守得住星象視軸(定翼 flare=0)
   // 鋼鐵:機甲 7(地面欄)/ 無人機 3(飛行欄)/ 變形機甲 2(兩欄)
   t01: { poise: 0.86, idleF: 0.42, idleA: 1.90, launch: 0.10, spool: 0.95, brake: 0.10, settle: 2.20 },  // 過裝甲巨人:大力士錨定、柴油慢起轉
   t02: { poise: 0.08, idleF: 2.45, idleA: 0.95, launch: 0.93, spool: 0.05, brake: 0.95, settle: 0.38 },  // 神經同步機:擊劍球步、爆發弓步、瞬回位
@@ -7587,7 +7587,7 @@ const CAST_SIG = {
   // 蜂群(擬態獸展翼 / 旋翼定翼勝利桶滾 / 獸型機甲的踏擊與觸手)
   s01: { omni: 'flare', dir: 'lunge' },  // 蜂后:震翅威嚇
   s02: { omni: 'spin', dir: 'lunge' },  // 重載六旋翼:勝利桶滾
-  s03: { omni: 'spin', dir: 'lunge' },  // 鴨翼遊蕩彈:桶滾
+  s03: { omni: 'roar', dir: 'kick' },  // 迅猛龍:嘶鳴 + 鐮爪踢
   s04: { omni: 'spin', dir: 'lunge' },  // 零式:橫滾特技
   s05: { omni: 'spin', dir: 'lunge' },  // 競速 FPV:花式滾轉
   s06: { omni: 'stomp', dir: 'jab' },  // 人馬:人立刨蹄 + 前蹄踏擊
@@ -7596,7 +7596,7 @@ const CAST_SIG = {
   s09: { omni: 'stomp', dir: 'kick' },  // 袋鼠:跺腳警報 + 正蹬
   s10: { omni: 'roar', dir: 'swing' },  // 巨象:昂鼻長鳴 + 象鼻橫掃
   s11: { omni: 'spin', dir: 'lunge' },  // 長航時定翼:桶滾
-  s12: { omni: 'roar', dir: 'kick' },  // 迅猛龍:嘶鳴 + 鐮爪踢
+  s12: { omni: 'spin', dir: 'lunge' },  // 鴨翼長航偵察機:桶滾
   // 鋼鐵(人形原型的斧砲刺槍盾擊 / 獸型的吼撲 / 擬態翼無人機展翼)
   t01: { omni: 'stomp', dir: 'swing' },  // 巴斯通:重踏 + 揮斧
   t02: { omni: 'spin', dir: 'jab' },  // 熾天使:迴身 + 刺槍
