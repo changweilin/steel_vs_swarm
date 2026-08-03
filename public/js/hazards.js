@@ -6,7 +6,12 @@
 import * as THREE from 'three';
 
 // ---- 決定性亂數:唯一縫已抽到 rng.js(該檔零 import ⇒ 離線稽核在 Node 端跑得同一條序列)----
-export { mulberry32 } from './rng.js';
+// MUST 是「import + export」兩行:`export { x } from './y.js'` 是純轉出,**不建立本地繫結** ——
+// 本檔 `buildHazard` 自己要用 mulberry32,寫成轉出就是靜默的 ReferenceError(語法合法、
+// 載入模組不報錯,直到第一個障礙進快照才在 _spawnEnt 炸開;而 `_applySnap` 在 `_snapQueue`
+// 清空**之前**拋出 ⇒ 同一份快照每幀重試每幀再炸 = 整條 rAF 幀迴圈永久停擺、機體完全不受操控)。
+import { mulberry32 } from './rng.js';
+export { mulberry32 };
 
 // ---- 賽璐璐核心已抽到 toon.js(3 階 ramp / 描邊 / 硬邊高光),此處 re-export 保持相容 ----
 import { toonGradient, toonMat, toonify, outlinify, envMat, bakeContactAO } from './toon.js';
