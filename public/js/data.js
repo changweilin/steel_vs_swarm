@@ -1657,9 +1657,14 @@ export const SLOPE = {
   DOWN_MAX_F: 1.25,                      // 下坡到阻擋角後的最高速度倍率(更陡亦夾在此)
   PROBE_M: 2.5,                          // 速度倍率的前瞻取樣距離
   STRUCT_M: 1.2,                         // 站立面高出/低於裸地形超過此值 = 人造鋪面(不吃坡度)
-  BLOCK_DEG: 0,                          // 推導回填(見下一行),MUST NOT 手寫
+  SNAP_F: 2,                             // 下坡貼地上界 = 阻擋角 × 此倍率(見 slopeSnapM)
+  BLOCK_DEG: 0,                          // 推導回填(見下兩行),MUST NOT 手寫
+  SNAP_DEG: 0,                           // 同上
 };
 SLOPE.BLOCK_DEG = SLOPE.EASE_DEG * SLOPE.BLOCK_F;
+// 貼地上界 MUST 寬於阻擋角 —— **下坡從來不擋**,阻擋角只管上坡;拿它當貼地上界,
+// 那些走得下去但爬不上來的陡坡(> BLOCK_DEG)就又會回到「邊走邊彈起」的病灶。
+SLOPE.SNAP_DEG = Math.min(89, SLOPE.BLOCK_DEG * SLOPE.SNAP_F);
 
 /** 帶號坡度角(度;+ 上坡 / − 下坡)。run 為水平距離(> 0),rise 為高程差。 */
 export const slopeDeg = (rise, run) => Math.atan2(rise, run) * 180 / Math.PI;
@@ -1679,6 +1684,14 @@ export function slopeMoveF(deg) {
 
 /** 陡到爬不上去(**只擋上坡**:下坡一律放行,否則陡坡上的機體會把自己鎖死) */
 export const slopeBlocked = (deg) => (deg || 0) > SLOPE.BLOCK_DEG;
+
+/**
+ * 下坡貼地的落差上界(公尺):水平走了 run 公尺,「還算走在坡上」最多讓腳下掉這麼多。
+ * 落差在界內 = 機體 MUST 吸回地面(離地量逐幀累積會把下坡走成連續騰空,蓄力當場中斷);
+ * 超出 = 斷崖/跳台的單步落差,照舊彈飛。上界推導自 `SLOPE.SNAP_DEG`,
+ * MUST NOT 在消費端手寫 tan(...)(第二份實作 = 改了角度只有一半跟著走)。
+ */
+export const slopeSnapM = (run) => Math.tan(SLOPE.SNAP_DEG * Math.PI / 180) * Math.max(0, run || 0);
 
 // ---- 異常狀態致盲白幕(2026-07-30;純表現層唯一縫)----
 // 使用者需求:「閃光彈等異常狀態會使畫面一小段時間變白,之後漸漸淡去」。
