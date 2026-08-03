@@ -16,6 +16,12 @@
 //                  的同一條規則:站立面與裸地形差超過 STRUCT_M = 人造鋪面,不吃坡度)
 //   ・實體推擠     **真的 `BattleSim.solidResolve`**(bots.js `_move` 的唯一縫)—— 塔/主堡/碉堡
 //                  的碰撞量體由它給,MUST NOT 在這裡自己算一份圓
+//   ・開挖後地形   `terrain.js carveTunnels` 的**原文**(venue_field `makeCarvedField`)——
+//                  引道路塹與地下道斜坡是**挖出來的**,拿天然地形走那一段會把通的路報成不通
+//
+// **淨空(V-D)刻意仍吃天然地形**:那一項問的是「這座山藏不藏得住頂板」,本來就該用未開挖的
+// 山來問(與 `tunnelWallProfile` 條件③吃 `natureAt` 同一條理由)。兩個高度場並存不是重複,
+// 是兩個不同的問題。
 //
 // 泛洪的兩個地雷(都踩過,寫在這裡免得再踩):
 //   ① visited 的鍵 MUST 是 **(格, 高度桶)** —— 一格一個位元的話,每一段階梯、引道、洞口
@@ -39,7 +45,7 @@ import { SLOPE, slopeDeg, slopeBlocked, battleBBox, heroTargetH, CHARACTERS } fr
 import { BattleSim } from '../server/sim.js';
 import {
   llToWorld, elevSampler, buildHeightField, osmFor, tunnelRunOf, strucTunnel, strucHw,
-  LANE_HW, ptSeg, arcOf, densify, ROAD_SEG, makeDeckAt, TUN, UND, BRIDGE_RISE,
+  LANE_HW, ptSeg, arcOf, densify, ROAD_SEG, makeDeckAt, makeCarvedField, TUN, UND, BRIDGE_RISE,
 } from './venue_field.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
@@ -79,9 +85,9 @@ const HEAD_M = 0.2;   // 頭頂餘裕(CLAUDE.md §5「淨空 > 最大機體 + 0.
  * 每個點可能有多個站立面:地表一個,加上每一座覆蓋到該點的結構(隧道/地下道/橋)各一個。
  * 每個面帶 `sid`(結構代號;地表 = -1)與 `buried`(地表高 − 該面高:> 0 = 頭頂有東西)。
  */
-function makeSurfaces(hf, structs) {
+function makeSurfaces(ground, structs) {
   return (x, z) => {
-    const ty = hf.heightAt(x, z);
+    const ty = ground(x, z);
     const out = [{ y: ty, sid: -1, buried: 0 }];
     for (let k = 0; k < structs.length; k++) {
       const st = structs[k];
@@ -111,9 +117,9 @@ function projectArc(x, z, st) {
   return best <= st.hw ? bs : null;
 }
 
-/** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 */
+/** 結構清單(隧道 / 地下道 / 橋)+ 它們貢獻的航點 + 開挖走廊(carveTunnels 的輸入) */
 function buildStructs(osm, center, hf) {
-  const structs = [], marks = [];
+  const structs = [], marks = [], carveRuns = [];
   for (const w of (osm?.roads || [])) {
     if (!LANE_HW.test(w.tags.highway || '') || w.geometry.length < 2) continue;
     const hw = strucHw(w.tags);
@@ -129,6 +135,20 @@ function buildStructs(osm, center, hf) {
         marks.push({ name: `${st.kind}洞口A`, p: ptAt(run, a), y: floorAt(a) });
         marks.push({ name: `${st.kind}洞中`, p: ptAt(run, (a + b) / 2), y: floorAt((a + b) / 2) });
         marks.push({ name: `${st.kind}洞口B`, p: ptAt(run, b), y: floorAt(b) });
+      }
+      // 開挖走廊(V-C):`carveTunnels` 吃的是**敞開補集**(引道 / 路塹),不是覆蓋段本身 ——
+      // 洞體是把三角形整片刪掉,不是把山壓平。分段規則逐字鏡射 `biomes.js` 那一段
+      // (bounds = [頭, 各覆蓋段的頂點索引…, 尾],成對取);cut 旗標 = 地下道引道收窄成垂直路塹。
+      // 少了這一步,泛洪就是拿**天然**地形在走引道 —— 一條靠開挖才通的路會被報成不可達,
+      // 而那是假紅字,比沒驗還糟。
+      {
+        const bounds = [0, ...run.intervals.flatMap(([, , ia, ib]) => [ia, ib]), run.pts.length - 1];
+        for (let k = 0; k + 1 < bounds.length; k += 2) {
+          const a = bounds[k], b = bounds[k + 1];
+          if (!(b - a >= 1)) continue;
+          carveRuns.push({ pts: run.pts.slice(a, b + 1), floors: run.floors.slice(a, b + 1),
+            covA: k > 0, covB: k + 2 < bounds.length, hw, cut: !!run.under });
+        }
       }
       if (run.under) {   // 地下道引道:兩端各一個(引道走不通 = 掉進洞裡出不來)
         marks.push({ name: '地下道引道A', p: ptAt(run, Math.min(total, UND.EDGE + 2)), y: floorAt(Math.min(total, UND.EDGE + 2)) });
@@ -150,7 +170,7 @@ function buildStructs(osm, center, hf) {
       marks.push({ name: '橋面中段', p: mp, y: deckAt(mid, mp[0], mp[1]) });
     }
   }
-  return { structs, marks };
+  return { structs, marks, carveRuns };
 }
 
 /** 折線上弧長 s 的座標 */
@@ -184,7 +204,7 @@ function sampleAlong(cum, vals, s) {
  *   ③ 坡度 + 實體:裸地形段吃真 `slopeBlocked`,人造鋪面(差 > SLOPE.STRUCT_M)豁免;
  *      位移一律過真 `sim.solidResolve`,被夾回來就是撞牆。
  */
-function flood(seeds, surfacesAt, hf, sim, probe) {
+function flood(seeds, surfacesAt, hf, ground, sim, probe) {
   const seen = new Set();
   const key = (i, j, y) => `${i},${j},${Math.round(y / BUCKET_M)}`;
   const cellX = (i) => hf.minX + (i + 0.5) * CELL;
@@ -220,9 +240,9 @@ function flood(seeds, surfacesAt, hf, sim, probe) {
         const k = key(ni, nj, s.y);
         if (seen.has(k)) continue;
         // 閘③-a 坡度:兩端都是裸地形才吃(與客戶端 _slopeDegAlong 的 STRUCT_M 豁免同一條)
-        const bare = Math.abs(y - hf.heightAt(x, z)) <= SLOPE.STRUCT_M
-                  && Math.abs(s.y - hf.heightAt(nx, nz)) <= SLOPE.STRUCT_M;
-        const deg = bare ? slopeDeg(hf.heightAt(nx, nz) - hf.heightAt(x, z), run) : 0;
+        const bare = Math.abs(y - ground(x, z)) <= SLOPE.STRUCT_M
+                  && Math.abs(s.y - ground(nx, nz)) <= SLOPE.STRUCT_M;
+        const deg = bare ? slopeDeg(ground(nx, nz) - ground(x, z), run) : 0;
         if (BREAK_SLOPE ? true : slopeBlocked(deg)) continue;
         // 閘③-b 實體推擠:走真 sim.solidResolve(塔/主堡/碉堡的量體由它給)
         probe.x = x; probe.z = z; probe.y = Math.max(0, s.y);
@@ -284,8 +304,14 @@ async function scanVenue(v) {
   const hf = buildHeightField(cfg, bbox, sampleElev);
 
   const osm = await osmFor(v.id, bbox);
-  const { structs, marks } = osm ? buildStructs(osm, cfg.center, hf) : { structs: [], marks: [] };
-  const surfacesAt = makeSurfaces(hf, structs);
+  const { structs, marks, carveRuns } = osm
+    ? buildStructs(osm, cfg.center, hf)
+    : { structs: [], marks: [], carveRuns: [] };
+  // 站立面吃**開挖後**的地形(V-C):引道路塹/地下道斜坡是挖出來的,拿天然地形走那一段
+  // 就是把一條通的路報成不通。淨空檢查刻意仍吃 `hf.heightAt`(天然)—— 覆蓋門檻問的是
+  // 「這座山藏不藏得住頂板」,那本來就該用未開挖的山來問。
+  const ground = carveRuns.length ? makeCarvedField(hf, carveRuns) : hf.heightAt;
+  const surfacesAt = makeSurfaces(ground, structs);
 
   // 真 BattleSim:塔/主堡/碉堡的碰撞量體與塔位解都由它給(MUST NOT 另解一次)
   const sim = new BattleSim(cfg);
@@ -309,14 +335,15 @@ async function scanVenue(v) {
   for (const m of marks) wps.push(m);
 
   const clear = clearance(structs, hf);
-  const reached = flood(seeds, surfacesAt, hf, sim, probe);
+  const reached = flood(seeds, surfacesAt, hf, ground, sim, probe);
   const miss = [];
   for (const w of wps) {
     const hit = reached.some(([x, z, y]) =>
       Math.hypot(x - w.p[0], z - w.p[1]) <= HIT_R && (w.y == null || Math.abs(y - w.y) <= BUCKET_M));
     if (!hit) miss.push(w.name);
   }
-  return { id: v.id, cells: reached.length, wps: wps.length, miss, structs: structs.length, osm: !!osm, clear };
+  return { id: v.id, cells: reached.length, wps: wps.length, miss, structs: structs.length,
+    carve: carveRuns.length, osm: !!osm, clear };
 }
 
 // ---- 主流程 ----
@@ -334,6 +361,40 @@ ok(BRIDGE_RISE >= MECH_H + HEAD_M,
   `橋面抬升 ${BRIDGE_RISE}m ≥ 最大機體 ${MECH_H.toFixed(2)}m + 頭頂餘裕 ${HEAD_M}m(跨中橋下走得過)`);
 console.log('');
 
+// ---- 開挖鏡射的行為直測(V-C;合成高度場,不需網路 ⇒ CI 與沙箱都跑得到)----
+// 這一段驗的是「`makeCarvedField` 真的執行到了 terrain.js 的原文」而不是「有回傳一個函式」:
+// 一座 60m 的錐形山 + 一條穿過去的走廊,開挖後路廊 MUST 壓到路面高、遠場 MUST 逐位元不動、
+// 過渡帶 MUST 落在兩者之間(斜壁而非垂直斷崖)。任一條不成立就是原文抽取失敗(靜默的那種)。
+{
+  console.log('開挖鏡射(合成場)');
+  const N = 65, minX = -160, maxX = 160, minZ = -160, maxZ = 160;
+  const heights = new Float32Array(N * N);
+  const gxz = (i, j) => [minX + (maxX - minX) * j / (N - 1), minZ + (maxZ - minZ) * i / (N - 1)];
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) { const [x, z] = gxz(i, j); heights[i * N + j] = Math.max(0, 60 - Math.hypot(x, z) * 0.5); }
+  }
+  const sample = (hs) => (x, z) => {
+    const gj = (x - minX) / (maxX - minX) * (N - 1), gi = (z - minZ) / (maxZ - minZ) * (N - 1);
+    const i0 = Math.max(0, Math.min(N - 2, Math.floor(gi))), j0 = Math.max(0, Math.min(N - 2, Math.floor(gj)));
+    const fi = Math.max(0, Math.min(1, gi - i0)), fj = Math.max(0, Math.min(1, gj - j0));
+    const at = (i, j) => hs[i * N + j];
+    const a = at(i0, j0), b = at(i0, j0 + 1), c = at(i0 + 1, j0), d = at(i0 + 1, j0 + 1);
+    return fi + fj <= 1 ? a + (b - a) * fj + (c - a) * fi : d + (c - d) * (1 - fj) + (b - d) * (1 - fi);
+  };
+  const nat = sample(heights);
+  const hf = { heightAt: nat, minX, maxX, minZ, maxZ, heights, N };
+  const FLOOR = 5, HW = 9;
+  const pts = [], floors = [];
+  for (let i = 0; i <= 20; i++) { pts.push([-140 + i * 14, 0]); floors.push(FLOOR); }
+  const carved = makeCarvedField(hf, [{ pts, floors, hw: HW, covA: false, covB: false }]);
+  ok(Math.abs(carved(0, 0) - FLOOR) < 0.01, `路廊中心壓到路面高(${carved(0, 0).toFixed(2)}m,天然 ${nat(0, 0).toFixed(0)}m)`);
+  ok(carved(0, 40) === nat(0, 40), `過渡帶外逐位元不動(${carved(0, 40).toFixed(2)}m)`);
+  const mid = carved(0, HW + 4);
+  ok(mid > FLOOR + 0.5 && mid < nat(0, HW + 4) - 0.5, `過渡帶是斜壁不是斷崖(${mid.toFixed(2)}m 落在 ${FLOOR} 與 ${nat(0, HW + 4).toFixed(1)} 之間)`);
+  ok(nat(0, 0) === 60, '天然高度場未被就地改寫(淨空檢查吃的是這一份)');
+  console.log('');
+}
+
 const list = VENUES.filter((v) => !ONLY.length || ONLY.includes(v.id));
 const results = [];
 let noOsm = 0;
@@ -345,7 +406,7 @@ for (const v of list) {
   if (r.skip) { console.log(`  ${v.id}  ⏭  ${r.skip}`); continue; }
   if (!r.osm) noOsm++;
   console.log(`  ${v.id}  ${((Date.now() - t0) / 1000).toFixed(1)}s  可站立節點 ${r.cells}`
-    + `・結構 ${r.structs}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`);
+    + `・結構 ${r.structs}・開挖走廊 ${r.carve}${r.osm ? '' : '(⚠ 取不到路網 ⇒ 只驗地形層)'}`);
   ok(r.miss.length === 0, `${v.id}:${r.wps} 個航點全部可達${r.miss.length ? ` —— 不可達:${r.miss.join('、')}` : ''}`);
   // 淨空(V-D):橋下塞不塞得下最大機體。洞體的「山藏不住頂板」只印出來當診斷 ——
   // 那一段本來就該被 `tunnelWallProfile` 判成明隧道(柱列側是開的),不是破圖。

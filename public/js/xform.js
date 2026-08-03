@@ -71,6 +71,33 @@ function hash01(i, j) {
 }
 
 /**
+ * 零件識別(量化的擺位鍵):同株各零件不同、同零件跨實例相同 ⇒ 差異全部來自 dj。
+ * **單一縫**:植被的宣告式零件表(`vegPartXform`)與障礙/地標的程序生成子樹
+ * (`hazards.js` / `biomes.js` 的 Object3D 子節點)同吃這一支 —— 兩邊各算一次鍵的話,
+ * 「同一顆物件的同一個零件」在兩條路徑上會抖出不同的值,而畫面上完全看不出來。
+ */
+export function partId(y, px, pz) {
+  return Math.round((y || 0) * 8) * 131 + Math.round((px || 0) * 8) * 373 + Math.round((pz || 0) * 8) * 769;
+}
+
+/**
+ * 細節抖動的兩個自由度(見檔頭「細節抖動」段的完整理由)。
+ * @param pid   partId 的輸出
+ * @param dj    實例細節種子(0~1;0/undefined = 不抖,輸出逐位元同舊制)
+ * @param amp   半徑增幅上界(只增不減)
+ * @param axial 這個零件是否**軸心件**(px = pz = 0);只有軸心件准自轉
+ * @returns { jr 水平半徑倍率 ≥ 1, spin 繞自身擠出軸的自轉弧度 }
+ */
+export function partJitter(pid, dj, amp, axial) {
+  if (!dj) return { jr: 1, spin: 0 };
+  const di = (dj * 8191) | 0;
+  return {
+    jr: 1 + hash01(pid, di) * amp,                                    // 只增不減(見檔頭)
+    spin: axial ? (hash01(pid ^ 0x5bd1e99, di) - 0.5) * Math.PI * 2 : 0,   // 僅軸心零件(見檔頭)
+  };
+}
+
+/**
  * 零件 × 實例 → 世界變換。
  * @param part { g, y, px, pz, rx, rz, sy, key?, j? }
  * @param it   { x, y, z, s, ry, tx, tz, dj? }
@@ -81,16 +108,13 @@ export function vegPartXform(part, it) {
   // 實例剛體旋轉:朝向 ry 外層、站姿微傾斜內層(繞植株腳底)
   const qi = quatMul(quatFromEuler(0, it.ry || 0, 0), quatFromEuler(it.tx || 0, 0, it.tz || 0));
   const off = quatApply(qi, [(part.px || 0) * s, (part.y || 0) * s, (part.pz || 0) * s]);
-  let jr = 1, spin = 0;
-  if (it.dj) {
-    // 零件識別 = 量化的擺位鍵(同株各零件不同、同零件跨實例同鍵 → 差異全來自 dj)
-    const pid = Math.round((part.y || 0) * 8) * 131 + Math.round((part.px || 0) * 8) * 373
-              + Math.round((part.pz || 0) * 8) * 769;
-    const di = (it.dj * 8191) | 0;
-    const amp = (part.key ? 0.18 : 0.08) * (part.j || 1);
-    jr = 1 + hash01(pid, di) * amp;   // 只增不減(見檔頭:縮小會拉開貼合接合)
-    if (!(part.px || part.pz)) spin = (hash01(pid ^ 0x5bd1e99, di) - 0.5) * Math.PI * 2;   // 僅軸心零件(見檔頭)
-  }
+  // 零件識別 = 量化的擺位鍵(同株各零件不同、同零件跨實例同鍵 → 差異全來自 dj);
+  // 抖動的兩個自由度與規則住 partJitter(障礙/地標的程序生成子樹同吃那一支)
+  const { jr, spin } = partJitter(
+    partId(part.y, part.px, part.pz), it.dj,
+    (part.key ? 0.18 : 0.08) * (part.j || 1),
+    !(part.px || part.pz),
+  );
   let quat = quatMul(qi, quatFromEuler(part.rx || 0, part.ry || 0, part.rz || 0));
   if (spin) quat = quatMul(quat, quatFromEuler(0, spin, 0));   // 後乘 = 繞自身軸,端點不動
   return {

@@ -31,7 +31,11 @@ import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
-import { vegPartXform } from './xform.js';
+import { vegPartXform, partId, partJitter } from './xform.js';
+import { SignSheet, resolveName, resolveRef } from './worldtext.js';
+// 低功耗旗標的**唯一真相**仍是 mobile.js(localStorage svs_lowpower);世界文字的 atlas
+// 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
+import { lowPower } from './mobile.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
@@ -2108,6 +2112,118 @@ function sinkBaseY(terrain, x, z, r, n = 8) {
   return gy;
 }
 
+// ---- 零件級細節抖動(P2-B;2026-08-03)----
+// 規則(只增不減的水平半徑 / 只有軸心件准自轉 / 不動 y·px·pz·縱向尺寸)全在 `xform.js`,
+// 這裡只負責「量出來的夾制」:抖完直接量這一件的水平外廓,頂出碰撞柱半徑就退回原樣 ——
+// 岩體的碰撞柱本來就已經緊貼外廓(`col.r 一律涵蓋岩體實際外廓`,見 MEGALITHS 檔頭),
+// 演出半徑再往外長就是「看得見卻打不到」(原則 4 / A30 家族)。
+const MEGA_JIT = 0.05;
+const _mjbox = new THREE.Box3();
+/** 落點 → 細節種子(0~1;零亂數消耗,見呼叫端註解) */
+function djAt(x, z) {
+  const h = (Math.imul(Math.round(x * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 8) | 0, 0x85EBCA77)) | 0;
+  return ((Math.imul(h ^ (h >>> 15), 0xC2B2AE3D) >>> 0) % 100003) / 100003;
+}
+function jitterMegalith(g, dj, colR) {
+  for (const o of g.children) {
+    const { jr, spin } = partJitter(
+      partId(o.position.y, o.position.x, o.position.z), dj, MEGA_JIT,
+      o.position.x === 0 && o.position.z === 0,
+    );
+    if (jr === 1 && !spin) continue;
+    const sx = o.scale.x, sz = o.scale.z;
+    o.scale.x *= jr; o.scale.z *= jr;
+    if (spin) o.rotateY(spin);
+    _mjbox.setFromObject(o);
+    const ext = Math.max(Math.abs(_mjbox.min.x), Math.abs(_mjbox.max.x),
+      Math.abs(_mjbox.min.z), Math.abs(_mjbox.max.z));
+    if (ext > colR) { o.scale.x = sx; o.scale.z = sz; if (spin) o.rotateY(-spin); }
+  }
+}
+
+// ---- 世界文字圖層(2026-08-03;把圖資上的名字放回世界)----
+// 這裡只做一件事:**從真幾何取位置與朝向**,交給 `worldtext.js` 決定要不要掛、掛什麼字。
+// 位置 MUST 取自各構件自己那份幾何(portals / signSpots / generic / poi 投影),
+// MUST NOT 在這裡重算一次橋在哪、洞口朝哪 —— 那就是第二份幾何,牌子會飄在結構外面。
+//
+// 優先序 = 額度分配:洞口 → 橋 → 具名點位 → 建物立面。愈前面的愈是「玩家一定會經過、
+// 而且有名字才成立」的東西;建物排最後是因為它數量最多,擠掉前面幾種就本末倒置。
+// 全程零 `rnd()` 消耗(§2.3):掛哪些、掛什麼字全由圖資決定,佈局序列不受影響。
+const SIGN_POI_H = 5.2;     // 具名點位的標牌柱高(公尺;牌面掛在柱頂)
+function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, pois, lowPower }) {
+  const sheet = new SignSheet(lowPower);
+  const posts = [];
+  // ① 洞口匾額:位置/朝向/門洞寬高全在 portals 那一筆記錄裡(現成版位)。
+  //    牌寬 = 高 × 4,MUST 收在門洞寬內 —— 比門洞寬的匾額會穿出洞口兩側的岩壁。
+  for (const p of portals) {
+    if (sheet.full) break;
+    const text = resolveName(p.tags);
+    if (!text) continue;
+    const h = Math.min(1.5, p.w * 0.78 / 4);
+    // 匾額貼在門樑上:洞口高 h(= TUN.CLEAR + 1)之上再半個牌高,略往洞外推出 0.35m 避免與門框共面(z-fight)
+    sheet.add({ text, x: p.x + Math.sin(p.ry) * 0.35, z: p.z + Math.cos(p.ry) * 0.35,
+      y: p.y + p.h + h * 0.62, ry: p.ry, h, style: 'stone' });
+  }
+  // ② 橋名牌:橋頭欄杆外側朝外
+  for (const s of signSpots) {
+    if (sheet.full) break;
+    const text = resolveName(s.tags);
+    if (!text) continue;
+    sheet.add({ text, x: s.x + Math.sin(s.ry) * 0.4, z: s.z + Math.cos(s.ry) * 0.4,
+      y: s.y, ry: s.ry, h: Math.min(1.2, s.hw * 0.6 / 4), style: 'stone' });
+  }
+  // ③ 具名點位(地名 / 山峰 / 交流道 / 車站):立一根柱子 + 兩面看得到的牌。
+  //    交流道走公路指示牌配色(guide)、其餘走琺瑯牌(enamel)。山峰附標高 —— `ele` 是
+  //    這一類點位唯一一個「名字以外還值得寫上去」的欄位。
+  for (const poi of (pois || [])) {
+    if (sheet.full) break;
+    const [x, z] = llToWorld(poi.lat, poi.lng, center);
+    if (x < terrain.minX + 20 || x > terrain.maxX - 20 || z < terrain.minZ + 20 || z > terrain.maxZ - 20) continue;
+    const t = poi.tags || {};
+    const junction = t.highway === 'motorway_junction';
+    const base = resolveName(t) || (junction ? resolveRef(t) : null);
+    if (!base) continue;
+    const ele = t.natural === 'peak' && Number.isFinite(+t.ele) ? ` ${Math.round(+t.ele)}m` : '';
+    const ref = junction ? resolveRef(t) : null;
+    const text = junction && ref && base !== ref ? `${ref} ${base}` : base + ele;
+    const y = terrain.heightAt(x, z);
+    // 牌面朝向:一律面向戰場中心(玩家多半從場中央過來),零亂數
+    const ry = Math.atan2(-x, -z);
+    if (!sheet.add({ text, x, z, y: y + SIGN_POI_H, ry, h: 1.4, both: true,
+      style: junction ? 'guide' : 'enamel' })) continue;
+    posts.push({ x, y, z });
+  }
+  // ④ 建物立面招牌:只給**有名字的商業建物**(住宅掛名牌不合理,而且量會爆掉)。
+  //    貼在正面(ry 方向)牆上緣下方,寬度收在牆寬內。
+  for (const b of generic) {
+    if (sheet.full) break;
+    if (!b.commercial) continue;
+    const text = resolveName(b.tags);
+    if (!text) continue;
+    const h = Math.min(2.2, b.w * 0.7 / 4);
+    // 建物的 ry 是「牆面朝向」;招牌法線取 +ry 那一面,往外推半個牆厚 + 0.2 避免與牆共面
+    const nx = Math.sin(b.ry), nz = Math.cos(b.ry);
+    sheet.add({ text, x: b.x + nx * (b.d / 2 + 0.2), z: b.z + nz * (b.d / 2 + 0.2),
+      y: terrain.heightAt(b.x, b.z) + Math.min(b.h - h, b.h * 0.82), ry: b.ry, h, style: 'lightbox' });
+  }
+
+  const mesh = sheet.build();
+  if (!mesh) return 0;
+  group.add(mesh);
+  // 標牌柱:與牌面分兩個 draw call(柱子沒有貼圖)。純視覺 —— **不進 blockers**(原則 4:
+  // 表現層不得新增碰撞),機體從柱子中間走過去是刻意的取捨,牌子本身就不該擋兵線。
+  if (posts.length) {
+    const pm = new THREE.InstancedMesh(cyl(0.09, 0.11, SIGN_POI_H, 6),
+      envMat(0x8d9299, { wash: 0.3, cool: 0.45 }), posts.length);
+    const M = new THREE.Matrix4();
+    posts.forEach((p, i) => { M.makeTranslation(p.x, p.y + SIGN_POI_H / 2, p.z); pm.setMatrixAt(i, M); });
+    pm.instanceMatrix.needsUpdate = true;
+    pm.frustumCulled = false;
+    group.add(pm);
+  }
+  return mesh.userData.signCount;
+}
+
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
 function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
   const types = Object.keys(MEGALITHS);
@@ -2159,6 +2275,13 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
         o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
       }
     });
+    // 零件級細節抖動(P2-B;2026-08-03):名岩的 build() 逐顆抽條數/尺寸,但**同一顆裡的
+    // 各個岩塊**比例是逐位元固定的 —— 兩座酋長岩的鼻樑稜線一模一樣。規則與振幅上界的
+    // 唯一縫 = `xform.js partJitter`(與植被/障礙同一份),夾制的尺是**碰撞柱半徑**
+    // `meta.col.r`(局部座標;g.scale 隨後才套上去 ⇒ 兩者同尺度)。
+    // dj 由**落點**推、MUST NOT 再抽一枚 `rnd()`:抽了就把後面每一顆巨岩/每一株植被的
+    // 亂數序列整條推移 ⇒ 全部場地的佈局跟著變(§2.3 的序列紀律),而這一項只是外觀微調。
+    jitterMegalith(g, djAt(x, z), meta.col.r);
     bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
     g.scale.setScalar(s);
     // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空
@@ -2267,14 +2390,23 @@ async function fetchOsmFeatures(bbox) {
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
   // 之後每場建物/鐵路輸入位元級一致 —— 圖資不再隨鏡像輪替/限流逐局忽有忽無。
   // 鍵含查詢額度:額度常數改版自然失效重抓。
-  const ckey = geoKey('osmF', 1, bbox, `q${nBld}`);
+  // 版本 2(2026-08-03):查詢多了具名點位(worldtext 的地名/山峰/交流道/車站標牌)。
+  // **改查詢 MUST 同步 +1**:不改版的話舊快取會照樣命中,而它裡面沒有 pois ⇒ 新標牌
+  // 在所有「以前開過這張圖」的機器上永遠不出現,且沒有任何錯誤訊息。
+  const ckey = geoKey('osmF', 2, bbox, `q${nBld}`);
   const cached = await geoGet(ckey);
   if (cached) return cached;
+  // 具名點位額度刻意極小:一張圖最多掛 32 塊牌(worldtext SIGN_MAX),多抓也用不到,
+  // 而 node 查詢本身很便宜(不帶幾何)⇒ payload 幾乎不動。
   const q = `[out:json][timeout:9];`
     + `(way["building"](${bb});node["power"="tower"](${bb}););out center tags ${nBld};`
     + `way["railway"~"^(rail|subway|light_rail|monorail|narrow_gauge|tram)$"](${bb});out geom 60;`
     + `node["railway"="level_crossing"](${bb});out 40;`
-    + `node["waterway"="waterfall"](${bb});out 20;`;
+    + `node["waterway"="waterfall"](${bb});out 20;`
+    + `node["place"~"^(city|town|village|suburb|neighbourhood)$"](${bb});out 24;`
+    + `node["natural"="peak"](${bb});out 12;`
+    + `node["highway"="motorway_junction"](${bb});out 12;`
+    + `node["railway"~"^(station|halt)$"](${bb});out 12;`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 10000);
   try {
@@ -2283,7 +2415,7 @@ async function fetchOsmFeatures(bbox) {
         const resp = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), signal: ctrl.signal });
         if (!resp.ok) continue;   // 限流/伺服器錯誤:即時回應,換鏡像
         const data = await resp.json();
-        const buildings = [], rails = [], falls = [], crossings = [];
+        const buildings = [], rails = [], falls = [], crossings = [], pois = [];
         for (const el of data.elements || []) {
           const tags = el.tags || {};
           if (el.type === 'way' && el.geometry && tags.railway) {
@@ -2292,12 +2424,17 @@ async function fetchOsmFeatures(bbox) {
             crossings.push({ lat: el.lat, lng: el.lon, tags });
           } else if (el.type === 'node' && tags.waterway === 'waterfall') {
             falls.push({ lat: el.lat, lng: el.lon, tags });
+          } else if (el.type === 'node' && (tags.place || tags.natural === 'peak'
+            || tags.highway === 'motorway_junction' || tags.railway)) {
+            // 具名點位:MUST 排在下面那個 else **之前** —— 那一條是「其餘全部當建物」,
+            // 漏了這個分支就會在地名節點的位置長出一棟樓(而且看起來完全正常)。
+            pois.push({ lat: el.lat, lng: el.lon, tags });
           } else {
             const lat = el.center?.lat ?? el.lat, lng = el.center?.lon ?? el.lon;
             if (Number.isFinite(lat)) buildings.push({ lat, lng, tags });
           }
         }
-        const res = { buildings, rails, falls, crossings };
+        const res = { buildings, rails, falls, crossings, pois };
         // 入庫走深拷貝:IDB 寫入是非同步,下游(buildRails 等)會就地變異這些物件,
         // 不拷貝會把「該局變異後」的資料定案
         if (!data.remark) geoPut(ckey, structuredClone(res));
@@ -3674,6 +3811,9 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 灰色人行道實體帶(walk 桶)。依道路分級自動選(arterial → hatch,其餘 → walk)。純幾何、零 rnd。
   const walk = { pos: [], nrm: [], idx: [], base: 0 };
   const piers = [], portals = [];
+  // 世界文字的錨點(橋名牌;洞口匾額走 portals 自己那份記錄)—— 只收位置與朝向,
+  // 要不要掛、掛什麼字一律由 buildWorldSigns 定案(worldtext.js 是唯一縫)
+  const signSpots = [];
   // 地下道(開挖式)構件:兩側擋土牆(直立緞帶)+ 跨越橫樑(InstancedMesh)+ 天花照明(InstancedMesh)
   const wall = { pos: [], nrm: [], idx: [], base: 0 };
   const beams = [], ceilLamps = [];
@@ -4220,13 +4360,25 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             const depth = Math.min(e1 - e0, 40);
             const sIn = Math.max(0, Math.min(total, s + sgn * depth));
             portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1,
-                           hw, depth, mouth: true,
+                           hw, depth, mouth: true, tags: way.tags,   // tags:洞口匾額的字(worldtext)
                            slope: sIn === s ? 0 : (tFloorAt(sIn) - tFloorAt(s)) / Math.abs(sIn - s) });
           }
         }
       }
       // ---- 高架橋外觀:兩側欄杆(直立緞帶)+ 邊梁(box girder)+ 底板(soffit)+ 等間距橋墩落地(含墩帽)+ 橋燈 ----
       if (brg && total > 10) {
+        // 橋名牌的錨點(worldtext):兩端橋頭、掛在欄杆外側朝外。位置與朝向一律由**這一份**
+        // 橋幾何給,MUST NOT 在別處拿 way.geometry 再算一次(第二份幾何 = 牌子飄在橋外)。
+        if (way.tags?.name) {
+          for (const [i0, i1] of [[0, Math.min(nP - 1, 1)], [nP - 1, Math.max(0, nP - 2)]]) {
+            const a = run[i0], c = run[i1];
+            let dx = c[0] - a[0], dz = c[1] - a[1];
+            const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+            // 法線 = 沿橋軸向**外**(牌面正對走上橋的人),與 worldtext 的 (sin ry, cos ry) 同一套
+            signSpots.push({ kind: 'bridge', tags: way.tags, x: a[0], z: a[1],
+              y: deckAt(cum[i0], a[0], a[1]) + 1.35, ry: Math.atan2(-dx, -dz), hw });
+          }
+        }
         for (const side of [1, -1]) {
           const k0 = rail.base;
           for (let i = 0; i < nP; i++) {
@@ -4948,7 +5100,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
   // 柱頂 MUST 封在橋面「底緣」(y1 − 1.2,與 ceilingAt 的 deck 厚度一致)—— 封到橋面上表面的話,
   // 站在橋上的機體 myBot == 柱頂,_collide 的嚴格不等式不會跳過 → 過橋時每 24m 被隱形柱側推。
   for (const p of piers) cols.push({ x: p.x, z: p.z, y: p.y0, r: p.r + 0.25, h: Math.max(1, p.y1 - 1.2 - p.y0) });
-  return { built, decks, tunnels: tunnelSegs, cols, portals };
+  return { built, decks, tunnels: tunnelSegs, cols, portals, signSpots };
 }
 
 // ---- 兵線砲塔跨橋墩座(2026-07-24 使用者需求)----
@@ -6311,6 +6463,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         generic.push({
           x, z, w, d,
           h: buildingHeight(el.tags, type, rnd),
+          // tags 留著只為了立面招牌的字(worldtext);其餘欄位一律已在此處推導完畢,
+          // MUST NOT 讓下游再從 tags 推第二份幾何/高度(那就是兩份規則)
+          tags: el.tags,
           ry: nearestRoadAngle(x, z) ?? rndRy, commercial,
           v: Math.floor(rnd() * FACADES[commercial ? 'commercial' : 'residential'].length),   // 立面樣式變體
         });
@@ -7046,6 +7201,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
   const fallsBuilt = osmData?.falls?.length ? buildWaterfalls(group, osmData.falls, terrain, center, dynamics) : 0;
 
+  // ---- 世界文字(洞口匾額 / 橋名牌 / 地名標牌 / 建物招牌;2026-08-03)----
+  // MUST 排在 buildRoads 與建物之後(位置全部取自它們已經定案的幾何),排在攀爬路線之前
+  // 沒有硬性理由,但擺這裡讓「純視覺圖層」聚在一起。取不到圖資 = 一塊牌都不掛(原則 6),
+  // 而不是拿場地名去填 —— 假名比沒有名字更糟。
+  const signsBuilt = buildWorldSigns({
+    group, terrain, center,
+    portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
+    pois: osmData?.pois, lowPower: lowPower(),
+  });
+
   // ---- 攀爬路線(長梯 / 攀岩抓點 / 垂降技術繩;2026-07-28)----
   // 約三成的建築/巨石/神木掛一條「地面 ↔ 頂端」的垂直通道,讓地面機種爬上去立足射擊。
   // MUST 排在**所有** blockers.push 之後 —— 地面端的「無障礙那一側」要看得到橋墩/門洞柱/封路
@@ -7091,6 +7256,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)
     rails: railLines,
     falls: fallsBuilt,
+    signs: signsBuilt,   // 世界文字塊數(0 = 圖資沒名字或整批缺字 ⇒ 一塊都不掛)
     osm: !!(osm && osm.length),
     osmRoads: !!(osmRoads && osmRoads.length),   // 路網查詢是否成功(false = 兵線備援;main.js 房間補抓依據)
   };
