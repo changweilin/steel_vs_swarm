@@ -1700,7 +1700,7 @@ function startPrebuild(cfg) {
     // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);
-    const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil } | null
+    const tunnelAt = makeTunnelIndex(biomes.userData.tunnels);   // (x,z) → { floor, ceil, roof, open } | null
     terrain.deckY = deckY;
     terrain.tunnelAt = tunnelAt;
     // 地下道幾何側壁(2026-07-29):_updatePlayer 側壁閘的第二道判定 —— 步進跨出 ±hw 牆線
@@ -1728,7 +1728,8 @@ function startPrebuild(cfg) {
     terrain.rebuildClimbs = () => { climbIdx = makeClimbIndex(terrain.climbs); };
     const BLK_MARGIN = 0.6;   // 頂緣站立容差(遠小於 DECK_MARGIN:屋頂/岩頂邊緣走位餘裕,不誇張懸空)
     // 站立表面:①在地下道天花之下(curY < ceil)= 站隧道路面 ②橋面(curY 貼近橋面)= 站橋上
-    //           ③大型障礙物頂(curY 貼近頂面)= 站頂上 ④否則地表
+    //           ②' 隧道/明隧道/地下道頂板頂面(curY 在天花之上)= 站頂板上 ③大型障礙物頂
+    //           (curY 貼近頂面)= 站頂上 ④否則地表
     terrain.surfaceAt = (x, z, curY) => {
       const h = terrain.heightAt(x, z);
       if (curY == null) return h;
@@ -1740,6 +1741,17 @@ function startPrebuild(cfg) {
       // 上橋:①已貼近橋面(DECK_STEP 內)②或橋面底緣貼地(引道段,機體鑽不過去 → 只能上去,免卡在橋腹下)
       let s = h;
       if (d != null && d > h && (curY >= d - DECK_STEP || (d - DECK_UNDER) - h < MAX_MECH_H)) s = d;
+      // 隧道頂板頂面 = 可站立結構面(2026-08-03 使用者定案「明隧道天花板無法從上面踩,跟橋面
+      // 一樣需要遵守物理碰撞法則」)。**取 max 而非直接指派**是這條的全部安全性所在:
+      //   ・深埋山體隧道/地下道:覆蓋門檻本來就要求地表 ≥ 路面 + CLEAR + ROOF_T(= 頂板頂面)
+      //     ⇒ h 恆勝出,行為逐位元不變(不會在山坡上長出隱形平台);
+      //   ・明隧道(含落石棚強制覆蓋段):頂板**露在地形之外**,h 是被 carveGalleryBands 挖到
+      //     路面高的側坡 ⇒ 舊制從上面走過去直接踩空、穿過看得見的頂板掉進洞裡(使用者回報)。
+      // mount 台階測試不必另寫:走到這一行的前提已是 `curY >= tn.ceil`,而 roof − ceil =
+      // ROOF_T(1m)< DECK_STEP ⇒ 橋那條 `curY >= 頂 − DECK_STEP` 天然恆成立;反過來說,
+      // 洞內(curY < ceil)在上一行就 return 了,MUST NOT 讓洞內單位被吸到頂板上。
+      // open 段 MUST 濾掉:露天路塹頭上是天空,沒有頂板(A29)。
+      if (tn && !tn.open && tn.roof > s) s = tn.roof;
       // 障礙物頂:只吃 mount 台階測試(curY >= 頂 − DECK_STEP;從上方落下/跳上/飛降才成立)。
       // MUST NOT 抄橋的第二條款(底緣淨空 < MAX_MECH_H 強制上頂)—— 建物皆接地,該條恆真
       // 會把站在樓旁的機體整台吸上屋頂。貼牆行走 curY 距頂 >> DECK_STEP ⇒ 永不誤觸。

@@ -634,8 +634,9 @@ export class BattleClient {
    * 線段 vs 水平薄板(橋面 / 隧道天花 / 隧道路面):回傳最近穿越距離(沿線段),沒穿回 null。
    * 橋墩等垂直障礙走 _blockerHitT(圓柱);這裡補「橋面/天花」這種水平薄板 —— 只走 surfaceAt/
    * ceilingAt 管移動碰撞、原本不擋彈道/LOS 的缺口(#1)。沿射線 ~SLAB_STEP 取樣查 deckY/tunnelAt
-   * (絕對世界 y):橋面板體 = [deckY − deckUnder, deckY],此步 y 區間與板體重疊 = 穿越;隧道 = 射線
-   * 跨越天花 cy(上方實體山體)。沿橋面走(全程高於頂面)/ 橋下走(全程低於底緣)不擋,唯穿越才擋。
+   * (絕對世界 y):橋面板體 = [deckY − deckUnder, deckY]、隧道頂板板體 = [tn.ceil, tn.roof](兩者
+   * 同語意,此步 y 區間與板體重疊 = 穿越),隧道路面 = 零厚度塗層(跨越 fy 即穿越)。沿橋面/頂板
+   * 走(全程高於頂面)/ 橋下・洞內走(全程低於底緣)不擋,唯穿越才擋。
    * 伺服器以 lev bit + ribbon 權威複驗(_losBlocked);此處是客戶端彈道本體。
    */
   _slabHitT(ax, ay, az, bx, by, bz) {
@@ -658,11 +659,17 @@ export class BattleClient {
       if (t.tunnelAt) {
         const tn = t.tunnelAt(x, z);
         // open 段(地下道引道露天路塹)頭上是天空、腳下就是地形本體 —— MUST NOT 當隱形天花
-        // 或隱形路面擋彈道(A29)。天花與**路面**都是雙面塗層,同一條「跨越」判定即涵蓋
+        // 或隱形路面擋彈道(A29)。天花與**路面**都是雙面塗層,同一條判定即涵蓋
         // 洞內往上打天花 / 洞內往下打路面 / 洞外往下打進洞裡。路面漏判的代價:洞內朝地面
         // 開火的彈頭穿過馬路鑽進岩盤(地形射線在山體內側找不到交點),一路飛到山腹另一側才炸。
-        if (tn && !tn.open && yHi !== yLo
-            && ((py - tn.ceil) * (y - tn.ceil) <= 0 || (py - tn.floor) * (y - tn.floor) <= 0)) {
+        // 天花是**有厚度的頂板**(底面 tn.ceil、頂面 tn.roof = 站得上去的那一面;2026-08-03
+        // 使用者定案「跟橋面一樣…不可穿越或穿透攻擊」)⇒ 與橋面板體 [deckY − deckUnder, deckY]
+        // 同語意,此步的 y 區間與板體**重疊**即算穿越。只驗「跨過底面」會漏掉貼著頂板削過去
+        // 的擦邊彈 —— 站在明隧道頂板上朝洞口方向低伸射擊那一發正好是它,而那恰恰是本次要
+        // 擋掉的「從上面穿透攻擊」。路面那一項維持跨越語意(零厚度)。
+        if (tn && !tn.open
+            && ((yLo <= tn.roof && yHi >= tn.ceil)
+                || (yHi !== yLo && (py - tn.floor) * (y - tn.floor) <= 0))) {
           return (s - 0.5) / n * len;
         }
       }

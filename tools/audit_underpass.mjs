@@ -89,6 +89,8 @@ const ROAD_LIFT = +/const ROAD_LIFT = ([\d.]+)/.exec(src)[1];
 const CUT_W = +(/const CUT_W = ([\d.]+)/.exec(tsrc)?.[1] ?? NaN);   // 地下道路塹過渡帶寬(terrain.js)
 const TUN_GAP_CLOSE = +/const TUN_GAP_CLOSE = (\d+)/.exec(src)[1];
 const TUN_COV_MIN = +/TUN_COV_MIN = (\d+)/.exec(src)[1];
+// 頂板頂面單一縫(makeTunnelIndex 的 roof 欄吃它;本檔只是把原文注入執行環境,不另抄公式)
+const tunRoofTop = new Function('TUN', `${/const tunRoofTop = .*;/.exec(src)[0]}\nreturn tunRoofTop;`)(TUN);
 const evalBlock = (from, fnName, extra = {}) => {
   const P0 = src.indexOf(from);
   const P1 = src.indexOf('\n}', src.indexOf(`function ${fnName}(`)) + 2;
@@ -252,7 +254,7 @@ const EMIT = src.slice(B0, B0e) + src.slice(C0, B1);
 // 這樣把程式碼寫回舊版時看到的是具名紅字,而不是一句抽取失敗。
 if (!EMIT.includes('const galBase =')) throw new Error('抽出的構件區塊缺少 galBase(結構已變?)');
 const tunnelWallProfile = evalBlock('const TUN_WALL_SAMP', 'tunnelWallProfile');
-const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
+const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'tunRoofTop', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
   'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope', 'galBores',
   `${EMIT}\nreturn { galP, galMask, floorsV, covV, galBores };`);
 const HW = 9;
@@ -283,7 +285,7 @@ function build(under = true, heightAt = null, natureAt = null) {
     const f = (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
     return [run[i - 1][0] + (run[i][0] - run[i - 1][0]) * f, run[i - 1][1] + (run[i][1] - run[i - 1][1]) * f, 1, 0];
   };
-  const out = emit(TUN, UND, tunnelWallProfile, run, nP, cum, plan.total, at2, HW, fAt, bAt, covS,
+  const out = emit(TUN, UND, tunnelWallProfile, tunRoofTop, run, nP, cum, plan.total, at2, HW, fAt, bAt, covS,
     { heightAt: heightAt || ((x) => carved(x)), natureAt: natureAt || (() => G) },   // 天然地形 = 還沒開挖的那片平地
     (s) => fAt(s) + TUN.CLEAR, under, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, run, cum, fAt, bAt, covS, nP };
@@ -547,15 +549,17 @@ function build(under = true, heightAt = null, natureAt = null) {
   }
   ok(mk(false).bores.length === 0, 'Ⅴ 山體隧道 MUST NOT 發引道 bore(它的敞開段是原生地形,不是開挖出來的路塹)');
   // 消費端閘門:makeTunnelIndex 單一縫傳遞;站立捕捉/側壁閘吃、slab 上傳/彈道/天花/lev 濾
-  ok(/best = \{ floor, ceil: d\.cy1 \+ \(d\.cy2 - d\.cy1\) \* t, open: !!d\.open \}/.test(src),
-    'Ⅴ makeTunnelIndex MUST 傳遞 open 旗標(消費端唯一資訊源)');
+  ok(/best = \{ floor, ceil, roof: tunRoofTop\(ceil\), open: !!d\.open \};/.test(src),
+    'Ⅴ makeTunnelIndex MUST 傳遞 open 旗標(消費端唯一資訊源),頂板頂面 roof 走 tunRoofTop 單一縫');
   ok(/tunnels\.filter\(\(d\) => !d\.open\)\.map/.test(msrc),
     'Ⅴ main.js slab 上傳 MUST 過濾 open 段 —— 露天路塹上傳成 ty=2 = 伺服器把溝底當洞內(兩端分家靜默丟包)');
   ok(/if \(tn && !tn\.open && curY < tn\.ceil\) c = tn\.ceil;/.test(msrc),
     'Ⅴ ceilingAt MUST 濾 open(露天段頭上是天空,不是隱形蓋)');
   ok(/if \(tn && curY < tn\.ceil\) return tn\.floor;/.test(msrc),
     'Ⅴ surfaceAt MUST NOT 濾 open —— 站立捕捉正是 open 段的存在理由(站精確下沉剖面)');
-  ok(/if \(tn && !tn\.open && yHi !== yLo/.test(gsrc),
+  ok(/if \(tn && !tn\.open && tn\.roof > s\) s = tn\.roof;/.test(msrc),
+    'Ⅴ surfaceAt 的**頂板頂面**站立面 MUST 濾 open —— 露天路塹頭上是天空,沒有可站的頂板(A29)');
+  ok(/if \(tn && !tn\.open\s+&& \(\(yLo <= tn\.roof && yHi >= tn\.ceil\)/.test(gsrc),
     'Ⅴ _slabHitT MUST 濾 open(露天段不擋彈道 —— 看得到就打得到)');
   ok(/const inTun = !!\(btn && !btn\.open && p\.y < btn\.ceil\);/.test(gsrc)
     && /lev: inTun \? 2 : 0/.test(gsrc),
@@ -635,7 +639,8 @@ function build(under = true, heightAt = null, natureAt = null) {
   const M0 = src.indexOf('export function makeTunnelIndex');
   const M1 = src.indexOf('\n}', M0) + 2;
   if (M0 < 0 || M1 <= M0) throw new Error('找不到 makeTunnelIndex(結構已變?)');
-  const mkIndex = new Function(`${src.slice(M0, M1).replace('export function', 'function')}\nreturn makeTunnelIndex;`)();
+  const mkIndex = new Function('tunRoofTop',
+    `${src.slice(M0, M1).replace('export function', 'function')}\nreturn makeTunnelIndex;`)(tunRoofTop);
   const run = plan.pts, cum = plan.cum, nP = run.length, total = plan.total;
   const fAt = (s) => tunFloorAt(plan, s, plan.total);
   const bAt = (s) => tunFloorAt(plan, s, plan.total, false);
