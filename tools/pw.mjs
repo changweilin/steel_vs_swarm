@@ -5,7 +5,7 @@
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const require = createRequire(import.meta.url);
@@ -24,10 +24,17 @@ export async function chromiumOrNull() {
     'playwright',
     '/opt/node22/lib/node_modules/playwright/index.mjs',
     `${process.env.HOME || ''}/.npm-global/lib/node_modules/playwright/index.mjs`,
+    // Windows 全域安裝(`npm i -g playwright`)。少了這條,Windows 開發機每次都得手動
+    // 設 PW_MODULE,而症狀是所有截圖工具一律印「找不到 playwright」直接跳過 = 假綠。
+    `${process.env.APPDATA || ''}/npm/node_modules/playwright/index.mjs`,
   ].filter(Boolean);
   for (const c of cands) {
     try {
-      const m = c.startsWith('/') ? await import(c) : require(c);
+      // 絕對路徑一律走動態 import 並先轉成 file:// URL:playwright 的入口是 `.mjs`,
+      // `require()` 吃不下(丟 ERR_REQUIRE_ESM),而 Windows 的 `C:/…` 不以 `/` 開頭 ⇒
+      // 舊判斷會把它送進 require 然後靜默落到下一個候選。
+      const abs = c.startsWith('/') || c.startsWith('file:') || /^[A-Za-z]:[\\/]/.test(c);
+      const m = abs ? await import(c.startsWith('file:') ? c : pathToFileURL(c).href) : require(c);
       if (m?.chromium) return m.chromium;
     } catch { /* 下一個候選 */ }
   }

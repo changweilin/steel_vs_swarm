@@ -72,8 +72,13 @@ export function updateCelLight(camera) {
  * 機體塗裝(paint.js;英雄機體專用):
  *   paint — { tex, matrix, scale } 以「靜止姿勢的機體局部座標」三平面投影花紋。
  *           matrix = mesh 局部 → 機體根(建模當下固定,不隨動畫更新)⇒ 花紋鎖在裝甲板上。
+ * 招牌圖集(signage.js;文字招牌專用):
+ *   atlas — true 時吃逐實例屬性 `aTexRect`(vec4 ox,oy,sx,sy),把 `map` 的 UV 重映到
+ *           圖集的某一格。**招牌上的字每一塊都不同,但 InstancedMesh 只有一張貼圖** ——
+ *           沒有這條就只能一塊牌一個 mesh(幾百個 draw call),或者整座城的招牌寫同一行字。
+ *           著色器補丁一律住本檔(同 ramp 的單一縫紀律):散出去就是同一個場景兩套 UV 規則。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, atlas = false } = {}) {
   const defines = { ...(mat.defines || {}) };
   if (metal) defines.CEL_METAL = '';
   if (wash > 0) defines.CEL_WASH = '';
@@ -88,8 +93,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 抑制三平面投影在薄件側緣(垂直面)的溢色。與 GATE(單一半球)互斥。
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
+  // 圖集 UV 只在**真的有 map** 時開:`<uv_vertex>` 沒有 USE_MAP 就不會產生 vMapUv,
+  // 補丁會編不過(而畫面上只表現成那批物件整批消失)。
+  if (atlas && mat.map) defines.CEL_ATLAS = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, atlas };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     shader.uniforms.uCelRim = { value: rim };
@@ -112,7 +120,17 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         varying vec3 vPaintP;
         varying vec3 vPaintN;
         #endif
+        #ifdef CEL_ATLAS
+        attribute vec4 aTexRect;
+        #endif
         void main() {`)
+      // 圖集重映 MUST 排在 `<uv_vertex>` **之後**:那一段才剛把 vMapUv 算出來,
+      // 排前面等於改一個還沒賦值的 varying(不報錯,只是整批招牌用第 0 格)。
+      .replace('#include <uv_vertex>', `
+        #include <uv_vertex>
+        #ifdef CEL_ATLAS
+          vMapUv = aTexRect.xy + vMapUv * aTexRect.zw;
+        #endif`)
       .replace('#include <project_vertex>', `
         #include <project_vertex>
         #ifdef CEL_WP
@@ -259,9 +277,9 @@ export function toonMat(color, opts = {}) {
  */
 export function envMat(color, opts = {}) {
   // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, ...rest } = opts;
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, atlas = false, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, atlas });
 }
 
 /**
