@@ -25,6 +25,38 @@ open item, not a conclusion.
 
 ---
 
+## Execution status (2026-08-03)
+
+| Item | Status | Where |
+|---|---|---|
+| V-A fixed shot set | **done** | `tools/shot_scene.mjs` (derived camera list, `--ink=0/--grade=0/--fxaa=0/--post=0`) |
+| V-B traversability audit | **done** | `tools/audit_traverse.mjs` + `tools/venue_field.mjs` (extracted Node harness) |
+| V-D clearance | **done** | `audit_traverse.mjs` 「淨空」 section |
+| P0-A gradient sky | **done** | `environment.js skyStops`/`makeSkyDome`/`makeClouds` |
+| P0-B terrain cel + tone ladder | **done** | `terrain.js` (`envMat`, `GROUND_TONES`, `paintTerrainTones`) + `field.js` |
+| P0-C ink pass | **done** | `postfx.js` — thresholds measured with V-A, not guessed |
+| P1-A ramp family | **done** | `toon.js RAMPS`/`toonGradient(bands)` |
+| P1-C grade + FXAA | **done** | `postfx.js`; `antialias` now only on the `?post=0` fallback |
+| P1-D outline width | **done (conservative)** | `max(world width, screen floor)` — near field bit-identical, so the 15 call sites were **not** retuned |
+| P1-B shadow tint into ramp | **not done** | needs art-direction confirmation first (this document says so); it changes every mech's shadow hue |
+| P2-A weathering field | **not done** | the field exists (`field.js`) and is ready to drive it; the remaining work is getting a per-instance value into `envMat` without a per-pixel 26-ellipse loop (bake the field to a small texture) |
+| P2-B micro-jitter for buildings | **not done** | needs the collider-margin measurement this document calls "the item most in need of measurement" |
+| P2-C semantic placement | **not done** | placement decisions, no code |
+| V-C Node-side tunnel scans | **not done** | `venue_field.mjs` is the harness it needs; the five numeric scans still live inside `shot_tunnels.mjs` |
+
+**Two things the shot set found that blind tuning had got wrong** (both now fixed, both would
+have shipped silently): the shadow lift was written in linear space but reads in sRGB
+(0.045 linear → 0.23 displayed, i.e. the whole shadow range washed to grey), and the
+convex/concave strength factor was multiplied *before* the ink threshold instead of after,
+which pushed every building silhouette below the threshold — `--ink=0` and `--ink=1` produced
+byte-identical screenshots.
+
+**Still unmeasured, and it is the gate this document names:** 30 s steady-state frame time on
+desktop and touch, before/after. Also unchecked: depth-writing transparent materials in
+`hazards.js` / `biomes.js` / `models.js` (`vfx.js` and `castfx.js` are already clean).
+
+---
+
 ## Gap analysis
 
 | Layer | sakura-crossing | This project | Gap |

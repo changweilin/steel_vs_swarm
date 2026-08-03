@@ -8,16 +8,43 @@
 // 全專案共用:hazards.js re-export 舊入口(toonMat/toonify/toonGradient)保持相容。
 import * as THREE from 'three';
 
-// ---- 3 階 cel ramp(暗部 / 中間調 / 亮部;NearestFilter = 硬邊界)----
-let _grad = null;
-export function toonGradient() {
-  if (_grad) return _grad;
-  const data = new Uint8Array([102, 182, 255]);  // 3 階:高對比漫畫式明暗(暗部保底,深色機體不至於全黑)
-  _grad = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
-  _grad.minFilter = THREE.NearestFilter;
-  _grad.magFilter = THREE.NearestFilter;
-  _grad.needsUpdate = true;
-  return _grad;
+// ---- cel ramp 家族(NearestFilter = 硬邊界)----
+// **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
+// 散在各處 new DataTexture 就是「同一個場景裡有兩套明暗規則」,而畫面上只表現成
+// 「某些物件的陰影邊界跟別人對不上」,不會有任何錯誤訊息。
+//
+// 為什麼要分階數(2026-08-03):單一 3 階 ramp 對**淺色大面積**沒有階可以走 ——
+// 雪地/白色塗裝/水面的三階全擠在亮端,看起來就是一片平的;而小件深色零件(輪胎/線纜)
+// 三階又切得太碎。故依「這塊面積在畫面上要表現多少層次」選階數,不是依物件種類。
+//
+//   2     小塊深色件(輪胎/線纜/深色裝甲):只要一刀明暗界
+//   3     現役預設 —— **MUST 逐位元不變**,改了整個場景會重新上色
+//   4     大型結構(地形/建物量體):中間多一階,坡面才有轉折
+//   soft  淺色大面積(雪/煙/水/白色塗裝):把整條 ramp 抬到亮端,兩階之間才看得出交界
+//
+// A14 / #INC-106:每一組的**暗階 MUST ≥ 102** —— 低於此深色物件疊上 cool 會塌成全黑。
+const RAMPS = {
+  2: [102, 255],
+  3: [102, 182, 255],
+  4: [102, 158, 206, 255],
+  soft: [190, 255],
+};
+const _grads = new Map();
+/**
+ * cel 明暗階梯貼圖(依階數快取;同一組 bands 整場共用一張)。
+ * @param bands 2 / 3 / 4 / 'soft';省略 = 3(呼叫端不傳就**逐位元同舊制**)
+ */
+export function toonGradient(bands = 3) {
+  const key = RAMPS[bands] ? bands : 3;
+  let g = _grads.get(key);
+  if (g) return g;
+  const stops = RAMPS[key];
+  g = new THREE.DataTexture(new Uint8Array(stops), stops.length, 1, THREE.RedFormat);
+  g.minFilter = THREE.NearestFilter;
+  g.magFilter = THREE.NearestFilter;
+  g.needsUpdate = true;
+  _grads.set(key, g);
+  return g;
 }
 
 // ---- 共用光向 uniform(view space;每幀由 updateCelLight 更新)----
@@ -220,8 +247,8 @@ export function applyPaint(mat, paint) {
  * opts.celMetal = true → 硬邊金屬高光帶(槍管/砲塔/機甲裝甲)。
  */
 export function toonMat(color, opts = {}) {
-  const { celMetal, ...rest } = opts;
-  const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...rest });
+  const { celMetal, bands, ...rest } = opts;
+  const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   return applyCelPatch(m, { metal: !!celMetal });
 }
 
@@ -232,8 +259,8 @@ export function toonMat(color, opts = {}) {
  */
 export function envMat(color, opts = {}) {
   // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, ...rest } = opts;
-  const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...rest });
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, ...rest } = opts;
+  const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss });
 }
 
@@ -298,13 +325,28 @@ export function toonify(root) {
 // BackSide 黑殼沿頂點法線外推固定世界寬度;寬度在建立時除以該 mesh 的
 // 世界縮放,讓 fitToHeight 縮放過的模型描邊粗細一致(≈ 螢幕 2~3px)。
 const OUTLINE_COLOR = new THREE.Color(0x0a0b12);
+// 描邊的**螢幕最小半寬**(NDC;垂直方向 2 單位 = 整個畫面高)。
+// 舊制只沿法線外推固定的**世界**寬度 ⇒ 線粗與距離成反比:近的胖、遠的直接消失 ——
+// 一台機甲跑遠一點就從「漫畫角色」變回「沒有描邊的多邊形」。
+// 2026-08-03 改成「世界寬度」與「螢幕下限」取大者:
+//   ・近距離 uOW 勝出 ⇒ **逐位元同舊制**(所有 15 處呼叫端的寬度不必重調);
+//   ・遠距離下限勝出 ⇒ 線粗鎖在約 1.2px,不再消失。
+// 下限 MUST 由 `projectionMatrix[1][1]` 反推(= 1/tan(fov/2)):狙擊縮 FOV 時投影矩陣本來就變,
+// 手寫一個常數換算 = 一開鏡描邊全部變粗(而那正是最需要看清輪廓的時候)。
+const OUTLINE_MIN_NDC = 0.0022;
 
 function outlineMaterial(w) {
   const m = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR, side: THREE.BackSide });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uOW = { value: w };
-    shader.vertexShader = ('uniform float uOW;\n' + shader.vertexShader)
-      .replace('#include <begin_vertex>', 'vec3 transformed = position + normal * uOW;');
+    shader.uniforms.uOMin = { value: OUTLINE_MIN_NDC };
+    shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\n' + shader.vertexShader)
+      .replace('#include <begin_vertex>', `
+        // 視距:骨骼變形前的綁定姿勢即可(同一根骨頭上的頂點距離差異遠小於一個像素)
+        float oDist = max( 0.05, -( modelViewMatrix * vec4( position, 1.0 ) ).z );
+        // uOMin(NDC)換回這個距離上的世界寬度;projectionMatrix[1][1] = 1/tan(fov/2)
+        float oMinW = uOMin * oDist / max( 0.001, projectionMatrix[1][1] );
+        vec3 transformed = position + normal * max( uOW, oMinW );`);
   };
   m.customProgramCacheKey = () => 'celOutline';
   return m;

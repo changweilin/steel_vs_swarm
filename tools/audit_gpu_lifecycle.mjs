@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (f) => readFileSync(join(ROOT, 'public', 'js', f), 'utf8');
 const game = read('game.js'), vfx = read('vfx.js'), toon = read('toon.js'), castfx = read('castfx.js');
+const postfx = read('postfx.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -104,7 +105,10 @@ console.log('\n④ 高頻特效不重配幾何');
 
 console.log('\n⑤ 觸控裝置的填充率設定');
 {
-  ok(/antialias: !isTouchUI\(\)/.test(G), '觸控裝置關閉 MSAA(行動 GPU 頻寬瓶頸)');
+  // MSAA 對 pass 畫出來的勾線一點用都沒有 ⇒ 後製管線上線後改由 FXAA 負責;
+  // 只有 `?post=0`(退回舊的直接 render)才把 MSAA 開回來,且仍維持舊制「觸控一律關」。
+  ok(/antialias: off\('post'\) && !isTouchUI\(\)/.test(G),
+    'MSAA 只在 ?post=0 的退路上開,且觸控仍一律關(舊行為不得回歸)');
   ok(/TOUCH_DPR_MAX/.test(G) && /isTouchUI\(\) \? TOUCH_DPR_MAX : 2/.test(G),
     '像素比上限:觸控 TOUCH_DPR_MAX / 桌機 2(桌機行為不變)');
   ok(/lowPower\(\)\) return 1/.test(G), '低功耗模式仍夾到 1(舊行為不得回歸)');
@@ -124,6 +128,34 @@ console.log('\n⑥ 自適應解析度調節器(觸控限定,天花板以下浮�
     '升階指數退避(能力邊界不震盪)');
   // 落地出口唯一性:game.js 內 setPixelRatio 只准出現在 _initScene 初始化與 _applyRes 兩處
   ok([...G.matchAll(/setPixelRatio\(/g)].length === 2, 'setPixelRatio 全檔僅 2 處(初始化 + _applyRes)');
+}
+
+console.log('\n⑦ 後製管線(postfx.js)的資源生命週期與 RES_GOV 交互');
+{
+  const P = code(postfx);
+  ok(/export class Pipeline/.test(P), 'postfx.js 匯出 Pipeline');
+  // A25:3 個 RT + depthTexture + 3 個 FullScreenQuad 材質,一個都不能漏
+  ok(/dispose\(\) \{[\s\S]*?rt\.depthTexture\?\.dispose\(\)[\s\S]*?rt\.dispose\(\)/.test(P),
+    'dispose():三個 RenderTarget 與 depthTexture 都釋放');
+  ok(/q\.material\.dispose\(\)[\s\S]*?q\.dispose\(\)/.test(P),
+    'dispose():三個 FullScreenQuad 的材質與 quad 本身都釋放');
+  const rtN = [...P.matchAll(/new THREE\.WebGLRenderTarget\(/g)].length;
+  ok(rtN === 1, `RenderTarget 只有一個建構點(工廠 mk;實測 ${rtN} 處)`);
+  ok(/this\.pipeline\?\.dispose\(\)/.test(G), 'game.js dispose() 收掉管線(離場不留殭屍緩衝)');
+  // RES_GOV:RT 尺寸 MUST 由 drawing buffer 取得(那已經是 _dpr() × _resScale 的結果)。
+  // 管線自己算像素比 = 調節器降階時 RT 尺寸不動 = 調節器整個變成 no-op,而畫面上完全看不出來。
+  ok(/getDrawingBufferSize/.test(P), 'RT 尺寸吃 renderer.getDrawingBufferSize(跟著 _resScale 走)');
+  ok(!/devicePixelRatio|setPixelRatio/.test(P),
+    'postfx.js MUST NOT 自己算像素比(否則 RES_GOV 調節器變成 no-op)');
+  // 行動裝置降級路徑:半浮點 RT 在 tile GPU 上是頻寬成本
+  ok(/opts\.lowPower \? THREE\.UnsignedByteType : THREE\.HalfFloatType/.test(P),
+    '低功耗/觸控走 8bit RT(半浮點的頻寬成本是 tile GPU 的瓶頸)');
+  ok(/lowPower: lowPower\(\) \|\| isTouchUI\(\)/.test(G), 'game.js 把低功耗/觸控旗標餵給管線');
+  // 最後一 pass 同時負責線性 → sRGB ⇒ 不論開關怎麼設都 MUST 跑
+  ok(/chain\.push\('fxaa'\)/.test(P) && /uAA/.test(P),
+    'FXAA pass 恆執行(它兼任色彩空間轉換),?fxaa=0 只把邊緣混合關掉');
+  ok(/r\.setRenderTarget\(null\)/.test(P), 'render() 結束時 render target 歸零(PiP 照樣畫在畫布上)');
+  ok(/off\('post'\) \? null/.test(G), '?post=0 退回舊的直接 render(整支管線可關)');
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);

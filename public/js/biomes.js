@@ -29,6 +29,7 @@ import { ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME } from './data.js';
 import { llToWorld } from './terrain.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
+import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform } from './xform.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
@@ -64,16 +65,7 @@ const OVERPASS_URLS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
-// ---- 決定性亂數(mulberry32):全房間共享同一片地貌 ----
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// ---- 決定性亂數(mulberry32):全房間共享同一片地貌;唯一縫住 rng.js(見該檔檔頭)----
 
 // ---- 淨空網格 ----
 function cellKey(x, z) { return `${Math.round(x / CELL)},${Math.round(z / CELL)}`; }

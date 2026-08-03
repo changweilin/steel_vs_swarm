@@ -25,6 +25,7 @@ import { llToWorld } from './terrain.js';
 import { terrainEnvCode } from './biomes.js';
 import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './models.js';
 import { applyEnvironment } from './environment.js';
+import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
 import { toonMat, outlinify, updateCelLight, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
@@ -479,9 +480,16 @@ export class BattleClient {
     // antialias(MSAA)在行動 GPU 上是**頻寬**成本:tile 記憶體不夠時整個 render pass 會退化,
     // 而手機本來就有 ≥1.5 的像素比在做超取樣 ⇒ 觸控裝置一律關掉,肉眼差異極小、幀率差異很大。
     // stencil/depth:本專案沒有模板測試需求,關掉可省一份 tile 附件。
+    // 後製管線的三個開關(V-A 定場鏡頭組要能逐層隔離):?ink=0 / ?grade=0 / ?fxaa=0 各關一層、
+    // ?post=0 整支關掉。MUST 在建 renderer 之前解析 —— MSAA 的開關要跟著它走(見下一段)。
+    const q = new URLSearchParams(location.search);
+    const off = (k) => q.get(k) === '0';
+    // MSAA **對 pass 畫出來的線一點用都沒有**(勾線不是幾何邊)⇒ 管線上線後改由 FXAA 負責抗鋸齒:
+    // 桌機省下 MSAA 的解析頻寬、觸控裝置第一次有抗鋸齒。只有 `?post=0`(退回舊的直接 render)
+    // 才把 MSAA 開回來,且仍維持舊制「觸控一律關」。
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: !isTouchUI(),
+      antialias: off('post') && !isTouchUI(),
       stencil: false,
       powerPreference: 'high-performance',
     });
@@ -512,6 +520,13 @@ export class BattleClient {
       this.camera.updateProjectionMatrix();
     };
     window.addEventListener('resize', this._onResize);
+
+    // 賽璐璐後製管線(勾線 → 調色 → FXAA);開關見上方 `off()`。
+    // 低功耗/觸控走 8bit RT(半浮點在 tile GPU 上是頻寬成本,與關 MSAA 同一個瓶頸)。
+    this.pipeline = off('post') ? null : new Pipeline(this.renderer, this.scene, this.camera, {
+      ink: !off('ink'), grade: !off('grade'), fxaa: !off('fxaa'),
+      lowPower: lowPower() || isTouchUI(),
+    });
 
     this.raycaster = new THREE.Raycaster();
     // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
@@ -8848,7 +8863,8 @@ export class BattleClient {
     this._updateWaterVeil();   // 水下/沼澤視野變色(最終 camera 定案後、render 前)
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
-    this.renderer.render(this.scene, this.camera);
+    // 後製管線結束時 render target 一律歸零 ⇒ 後面的 PiP / 陣亡鏡頭照樣直接畫在畫布上(行為不變)
+    if (this.pipeline) this.pipeline.render(); else this.renderer.render(this.scene, this.camera);
     this._renderPips();
     this._renderDeathCam();
     this.hud.locked?.(now < (this._lockedUntil || 0));
@@ -8983,6 +8999,8 @@ export class BattleClient {
     this.audio?._stopMove();        // 移動環境音聲道靜音(離場後 _updateMoveAudio 不再餵值 → 需主動收)
     this.cutin?.dispose();
     this.envFx?.dispose();
+    this.pipeline?.dispose();        // A25:3 個 RT + depthTexture + 3 個全螢幕材質
+    this.pipeline = null;
     cancelAnimationFrame(this._raf);
     window.removeEventListener('resize', this._onResize);
     window.removeEventListener('keydown', this._onKey);

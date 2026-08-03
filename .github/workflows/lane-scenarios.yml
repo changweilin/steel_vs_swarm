@@ -82,6 +82,12 @@ jobs:
         if: always()
         run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'','relief='+r.peakSide,r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.landBridgeCand?'③候選陸橋='+JSON.stringify(r.landBridgeCand):'',r.waterBridgeCand?'⑨候選水橋='+JSON.stringify(r.waterBridgeCand):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
 
+      # 可通行泛洪 + 淨空(V-B / V-D):同樣要 terrarium 高程與圖資,故掛在這支有外網的 workflow。
+      # `ci.yml` 刻意不含 —— 外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+      - name: 兵線與結構可通行 + 淨空
+        continue-on-error: true
+        run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
+
       # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道;④ 明隧道候選同步體檢(附定錨座標)。
       - name: 隧道候選探測
         if: ${{ env.SCAN_PROBE != '' }}
@@ -101,5 +107,6 @@ jobs:
           name: lane-scenarios
           path: |
             scen.json
+            traverse.json
             public/js/venueLanes.js
           if-no-files-found: warn
