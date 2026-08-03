@@ -65,6 +65,8 @@ const TUN = Object.fromEntries(
   tunSrc[1].replace(/\/\/.*$/gm, '').split(',').map((s) => s.trim()).filter(Boolean)
     .map((s) => { const [k, v] = s.split(':').map((t) => t.trim()); return [k, v === 'LOS.TUN_CLEAR_M' ? 8 : +v]; }),
 );
+// 頂板頂面單一縫(galRoof 頂面 / galCols 柱頂 / makeTunnelIndex.roof 共用;本檔只注入原文,不另抄)
+const tunRoofTop = new Function('TUN', `${/const tunRoofTop = .*;/.exec(src)[0]}\nreturn tunRoofTop;`)(TUN);
 const undSrc = /const UND = \{([\s\S]*?)\};/.exec(src);
 if (!undSrc) throw new Error('找不到 UND 旋鈕(biomes.js 結構已變?)');
 const UND = Object.fromEntries(
@@ -267,7 +269,7 @@ for (const need of ['tunnelWallProfile(run, floorsV, covV', 'const galBase =', '
 }
 // under/tBaseAt/UND/cope 是地下道(平地下穿)那一路的參數 —— 本稽核一律以 under=false 跑,
 // 亦即「山體隧道 = 舊行為」;地下道自己的幾何由 tools/audit_underpass.mjs 驗。
-const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
+const emit = new Function('TUN', 'UND', 'tunnelWallProfile', 'tunRoofTop', 'run', 'nP', 'cum', 'total', 'at', 'hw', 'tFloorAt', 'tBaseAt',
   'covS', 'terrain', 'ceilOf', 'under', 'wall', 'galCols', 'galRoof', 'cope', 'galBores',
   `${EMIT}\nreturn { galP, galMask, floorsV, covV, galBores };`);
 
@@ -280,7 +282,7 @@ function build(heightAt, { cov = () => true, floor = FLOOR, natureAt = null } = 
   const galRoof = { pos: [], nrm: [], idx: [], base: 0 };
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
   const galBores = [];
-  const out = emit(TUN, UND, tunnelWallProfile, pts, pts.length, cum2, total2, at2, HW, () => floor, () => floor, cov,
+  const out = emit(TUN, UND, tunnelWallProfile, tunRoofTop, pts, pts.length, cum2, total2, at2, HW, () => floor, () => floor, cov,
     { heightAt, natureAt: natureAt || heightAt }, (s) => floor + TUN.CLEAR, false, wall, galCols, galRoof, cope, galBores);
   return { ...out, wall, galCols, galRoof, cope, cum: cum2 };
 }
@@ -372,7 +374,7 @@ const CLIFF = FLOOR - 6;
   const heightAt = (x, z) => ((x - diag[0][0]) * nx + (z - diag[0][1]) * nz > 1 ? CLIFF : TOPY + 25);
   const cope = { pos: [], nrm: [], idx: [], base: 0 };
   const at3 = (s) => [diag[0][0] + 0.8 * s, diag[0][1] + 0.6 * s, 0.8, 0.6];
-  const r = emit(TUN, UND, tunnelWallProfile, diag, diag.length, cum2, cum2[cum2.length - 1], at3, HW,
+  const r = emit(TUN, UND, tunnelWallProfile, tunRoofTop, diag, diag.length, cum2, cum2[cum2.length - 1], at3, HW,
     () => FLOOR, () => FLOOR, () => true,
     { heightAt, natureAt: heightAt }, () => FLOOR + TUN.CLEAR, false, wall, galCols, galRoof, cope, []);
   ok(r.galP[0].every((g) => g.open) && r.galP[1].every((g) => !g.open), 'Ⅱ-c 斜向:只有低側判成明隧道');

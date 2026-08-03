@@ -2430,6 +2430,18 @@ const TUN = { CLEAR: LOS.TUN_CLEAR_M, HW: 9, ROOF_T: 1.0, PORTAL_MAX: 48, LAMP_M
 // 進洞口(洞內往外看 = 幾片浮在路面上方的土色薄片)。垂直三條界不動 ⇒ 路塹底/圍裙/山體不受影響。
 // GAL_CLEAR_W:明隧道開放側柱外淨空帶寬(牆線外這段內、低於頂板的土脊開挖到路面;
 // 2026-07-31 太魯閣實測柱間視線被牆外 2~3m 殘丘擋在 13~17m ⇒ 帶寬取 9 蓋過實測殘丘)
+/**
+ * 隧道/明隧道/地下道**頂板頂面**的高度(單一縫,2026-08-03 使用者定案「明隧道天花板…跟橋面
+ * 一樣需要遵守物理碰撞法則」)—— 天花底面 `cy` 之上再 `ROOF_T` 就是頂板的**上表面**,也就是
+ * 「站得上去、擋得住砲火」的那一面(橋面的 `deckY` 對應物;板體 = [cy, roofTop],厚度語意
+ * 與橋的 [deckY − DECK_UNDER, deckY] 完全對稱)。
+ * 三個消費端 MUST 全吃這一支:外露頂板 `galRoof` 的頂面、柱列 `galCols` 的柱頂、站立/彈道
+ * 索引 `makeTunnelIndex` 的 `roof`。手寫第二份 `+ TUN.ROOF_T` 的代價是「看到的頂面」與
+ * 「踩得到/擋得住的頂面」分家 —— 玩家踩在頂板上方一截的空氣裡,或整個人陷進頂板裡(原則 4)。
+ * (覆蓋門檻那幾處寫的是 `floors[i] + TUN.CLEAR + TUN.ROOF_T` = 同一個高度的**需求**式,
+ *  問的是「地表藏不藏得住頂板」而不是「頂板在哪」,語意不同故不併入本縫。)
+ */
+const tunRoofTop = (cy) => cy + TUN.ROOF_T;
 // 覆蓋區間縫合參數(2026-07-22 洞口改制):
 //   GAP_CLOSE 覆蓋段之間 ≤ 此長度的短敞開縫 → 縫合視為覆蓋(蓋廊),否則山腰被挖出天窗壕溝;
 //   COV_MIN   短於此的孤立覆蓋殘段視為敞開(一小坨土蓋不成洞,挖掉比立兩座門乾淨)。
@@ -4128,7 +4140,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             nextS = cum[i] + TUN.COL_GAP;
             const D = 0.85, off = hw + D / 2 - 0.15;   // 柱深 / 柱心離中線(內緣略埋進牆線不留縫)
             galCols.push({ x: run[i][0] + g.nx * off, z: run[i][1] + g.nz * off,
-                        y0: galBase(i, g), y1: ceilOf(cum[i]) + TUN.ROOF_T,
+                        y0: galBase(i, g), y1: tunRoofTop(ceilOf(cum[i])),
                         ry: Math.atan2(-g.nz, g.nx), d: D, w: 0.85 });
           }
         }
@@ -4139,7 +4151,7 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
         // 只在有明隧道側的小段建 —— 深埋段的頂板永遠在山體裡,建了也只是多幾個三角形。
         {
           const RW = hw + TUN.EAVE;
-          const topAt = (i) => ceilOf(cum[i]) + TUN.ROOF_T;
+          const topAt = (i) => tunRoofTop(ceilOf(cum[i]));
           const quad = (c4, nrm) => {
             const k = galRoof.base;
             for (const c of c4) { galRoof.pos.push(c[0], c[1], c[2]); galRoof.nrm.push(nrm[0], nrm[1], nrm[2]); }
@@ -5135,9 +5147,16 @@ export function makeDeckIndex(decks) {
 }
 
 /**
- * 地下道查詢:回傳 (x, z) 處的 { floor, ceil, open }(路面高 / 天花高 / 露天引道旗標)——
- * 不在任何地下道上回 null。game.js/main.js 以「curY < ceil」判定人在洞內(站路面),否則走
- * 地表;天花另供頭部碰撞。open:true(地下道引道路塹)時天花/彈道/slab/lev 消費端 MUST 跳過。
+ * 地下道查詢:回傳 (x, z) 處的 { floor, ceil, roof, open }(路面高 / 天花**底面** / 頂板
+ * **頂面** / 露天引道旗標)—— 不在任何地下道上回 null。game.js/main.js 以「curY < ceil」
+ * 判定人在洞內(站路面),否則走地表;天花另供頭部碰撞。
+ * `roof`(2026-08-03 使用者定案「明隧道天花板…跟橋面一樣需要遵守物理碰撞法則,不可穿越或
+ * 穿透攻擊」)= `tunRoofTop(ceil)`,語意完全對應橋的 `deckY`:板體 = [ceil, roof]。
+ *   ・站立面(main.js surfaceAt):在天花之上時,頂板頂面是**可站立結構面** —— 深埋段的
+ *     地表本來就高過頂板(取 max 後恆是地形,逐位元不變),明隧道那一段的頂板卻是**露在
+ *     地形之外**的結構物 ⇒ 舊制走 heightAt = 踩空掉進洞裡(使用者回報)。
+ *   ・彈道(game.js _slabHitT):板體區間與橋面同語意,上下都擋。
+ * open:true(地下道引道路塹)時天花/頂板/彈道/slab/lev 消費端 MUST 跳過(露天段頭上是天空)。
  */
 export function makeTunnelIndex(tunnels) {
   if (!tunnels?.length) return () => null;
@@ -5172,8 +5191,11 @@ export function makeTunnelIndex(tunnels) {
       if (Math.hypot(x - (d.x1 + ex * t), z - (d.z1 + ez * t)) > d.hw) continue;
       const floor = d.fy1 + (d.fy2 - d.fy1) * t;
       // open = 地下道引道露天路塹(2026-07-29):只服務 surfaceAt 站立捕捉與移動側壁閘;
-      // 天花/彈道/slab/lev 消費端 MUST 以 !open 跳過(露天段頭上是天空,不是隧道)。
-      if (best === null || floor < best.floor) best = { floor, ceil: d.cy1 + (d.cy2 - d.cy1) * t, open: !!d.open };
+      // 天花/頂板/彈道/slab/lev 消費端 MUST 以 !open 跳過(露天段頭上是天空,不是隧道)。
+      if (best === null || floor < best.floor) {
+        const ceil = d.cy1 + (d.cy2 - d.cy1) * t;
+        best = { floor, ceil, roof: tunRoofTop(ceil), open: !!d.open };   // 頂板厚度走單一縫,MUST NOT 手寫
+      }
     }
     return best;
   };
