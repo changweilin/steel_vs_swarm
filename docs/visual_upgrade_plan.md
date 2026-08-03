@@ -41,7 +41,7 @@ open item, not a conclusion.
 | P1-B shadow tint into ramp | **done** | `toon.js` `shadowTintRGB` + `RAMP_HOOK` patch of `getGradientIrradiance`. The art-direction question is resolved by **handing it to the user**: two sliders (mech / environment) in the settings page, **default 0 = bit-identical to before** |
 | P2-A weathering field | **done** | `field.js bakeFieldTexture` → `toon.js setWeatherField` shared uniform → `celWeatherF()` scales moss + wash. Installed from `terrain.js` on both the imagery and no-imagery path, seed decorrelated from the tone ladder |
 | P2-B micro-jitter for obstacles / landmarks | **done (buildings deliberately excluded)** | `xform.js partId`/`partJitter` extracted as the seam; `hazards.js` and `biomes.js placeMegaliths` apply it and **measure** the resulting horizontal extent against the authoritative collider, reverting per part on overflow |
-| P2-C semantic placement | **not done** | deliberately deferred — see below |
+| P2-C semantic placement | **done** | `beacons.js` + `biomes.js placeBeacons` — the deferral reason was dissolved by a scope call, not by finding a way to verify the original scope (see below) |
 | V-E world signage | **done** | `worldtext.js` + `biomes.js buildWorldSigns` — was declined in the original plan; the reason it was declined turned out not to hold (see V-E) |
 | V-C Node-side tunnel scans | **partly done, partly not possible** | see below |
 
@@ -78,11 +78,35 @@ reads the natural field, because "can this mountain hide the roof slab" is a que
 un-excavated mountain. A synthetic-terrain behaviour test covers the mirror with no network, and it
 has been reverse-verified.
 
-**P2-C is deferred, with a reason.** It puts new objects into the lane — at the base exit, the first
-tower, a portal mouth, a bridgehead — which are precisely the places V-B exists to protect. The audit
-that would prove the lanes stay traversable needs Overpass and terrarium tiles, neither of which is
-reachable from the sandbox, so the change cannot be verified where it is written. It belongs with the
-next batch that runs on CI or a real machine.
+**P2-C shipped once the scope question was answered, and the answer is what unblocked it.**
+The deferral was never about difficulty. It was that the original wording put objects *into* the lane —
+base exit, first tower, portal mouth, bridgehead — which are precisely the places V-B exists to protect,
+and V-B needs Overpass plus terrarium tiles to run, so the change could not be verified where it was
+written. On 2026-08-03 the user settled it: **beside the lane / spawn / building units, visible from the
+surroundings is enough.** That turns "does this block the lane" from something an audit has to discover
+into something the construction guarantees — every site must pass `areaFree(blocked, …, foot + PAD)`,
+and `blocked` already carries the lane corridor (17 m half-width), tower sites (30 m), bases (70 m),
+bridge corridors and open tunnel sections. Beacons go through **the same gate** buildings, megaliths and
+giant trees already go through, with one extra ring of margin.
+
+What that bought: the whole item became verifiable **offline** — no network, no browser, no three.
+`beacons.js` keeps its first half (constants, catalogue, part tables, anchors, site planning) free of
+`THREE`, with parts declared as plain data (`['box', w, h, d]`), so `tools/audit_beacons.mjs` executes
+that source through `new Function` and computes real footprints in Node. 68 assertions, reverse-verified
+two ways (`--break-extent`, `--break-pad`).
+
+Three things worth recording because the audit found them in the first draft, not review:
+the tank's brace made its true footprint 6.6 m against a declared 5.6 m (a silent A30 — the collider is
+measured from the mesh, so the reservation would have been too small); the extent formula was
+over-conservative for offset boxes (`|p| + half-diagonal` reads 6.6 m where the real corner is 4.7 m),
+which would have pushed every beacon needlessly outward — the opposite of "beside"; and two catalogue
+entries had `foot` inflated by 40–80% for the same reason. `foot` is now pinned **from both sides**
+against the computed extent.
+
+Not covered: OSM building facades as a fourth anchor class. Buildings are placed after vegetation in
+`buildBiomes`, so a beacon pass anchored on them would have to run late and would lose the `blockArea`
+protection that keeps trees from growing through a pylon. The lane samples already run past buildings on
+urban venues, which is where that anchor class would have landed anyway.
 
 **Two things the shot set found that blind tuning had got wrong** (both now fixed, both would
 have shipped silently): the shadow lift was written in linear space but reads in sRGB
@@ -323,11 +347,26 @@ geometry must not exceed the collision columns uploaded via `_losGrid`, or it be
 "visible but unhittable" (A30 family). `audit_climb.mjs` Ⅲ two-end agreement is the
 existing yardstick; this is the item most in need of measurement.
 
-### P2-C Semantic placement pass
+### P2-C Semantic placement pass — **done (2026-08-03)**
 
-Current scatter is density-driven. Pick 3–5 points every player passes each match
-(base exit, first tower, tunnel portal, bridgehead) and place one legible object at each.
-No new code required.
+Current scatter is density-driven. Pick the points every player passes each match and place one
+legible object at each — **beside** them, not on them (user call, 2026-08-03: 兵線 / 重生點 /
+建築單位旁邊,在周遭可以看見即可).
+
+Anchors, all derived from geometry already in memory — zero new fetches, zero shared `rnd()`:
+
+| Anchor | Source | Clearance ring | Beacon | Height |
+|---|---|---|---|---|
+| 重生點 | `cfg.bases` | 70 m | comms mast | 29 m |
+| 建築單位 | `solveTowerSites()` (frontline first) | 30 m | water tower | 23 m |
+| 兵線 | lane polyline at 0.3 / 0.5 / 0.7 | 17 m | pylon / container stack / cairn | 35 / 10 / 13 m |
+
+Height tracks the clearance ring on purpose: a bigger ring pushes the beacon further out, so it has
+to be taller to still read from the lane. `BEACON.FAR` must exceed the base ring (70 + foot + PAD)
+or spawns silently never get one.
+
+Search is radius-outer / angle-inner, starting from the lane normal — nearest ring wins ("beside"),
+and beacons land at the roadside rather than dead ahead. Nothing fits ⇒ nothing is placed (原則 6).
 
 ---
 
