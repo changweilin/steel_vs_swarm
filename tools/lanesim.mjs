@@ -53,7 +53,7 @@
 import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE, SQUAD, DECOY, HYPER,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
-  dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, blastFootprintR, aoeClass,
+  dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiBlast, kamiHp, kamiSide, decoyBlast, decoyBombBlast, decoyHp,
   hyperBlast, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd,
@@ -218,7 +218,7 @@ export function hits(shooter, aim, def, foes) {
       const dx = e.x - shooter.x, dy = e.y - shooter.y, d = Math.hypot(dx, dy);
       if (d > def.range) continue;
       const ang = Math.abs(Math.atan2(dx * uy - dy * ux, dx * ux + dy * uy));
-      if (ang > half + Math.atan2(hitR(e), Math.max(1, d))) continue;   // 錐緣算到命中量體
+      if (ang > fanConeHalf(def, d, hitR(e))) continue;   // 錐緣算到命中量體(data.js 單一縫;sim/客戶端同吃)
       out.push({ ent: e, f: fanFalloff(def.range, d) * offAxisFalloff(half > 0 ? ang / half : 0) });
     }
     return out;

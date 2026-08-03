@@ -19,6 +19,7 @@ import {
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
   BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
+  trajClass, shotFlightS,
 } from '../public/js/data.js';
 
 /**
@@ -322,6 +323,104 @@ log('— sim:榴彈類最小射程 → 太近則無差別波及友軍 + 自損(2
   assert(owner2.hp + (owner2.sp || 0) === ohp2, '正常模式:射手自身不受傷(同陣營濾除)');
   assert(ally2.hp === UNITS.soldier.hp, '正常模式:友軍不被波及');
   assert(foe2.hp < UNITS.soldier.hp, '正常模式:敵方受創(一般榴彈行為不變)');
+}
+
+log('— sim:AoE 彈頭在天上時的填彈訊息(2026-08-03「只有第一擊有傷害」)—');
+{
+  // 榴彈投擲 / 射後不理 / 雷射導引三類的命中是**著彈**才回報,而客戶端彈匣一見底就送
+  // `{t:'reload'}`(送出時刻 = 擊發當下,那一匣的彈頭還在天上)。伺服器的補彈是惰性的
+  // ⇒ heroReload 若不先結清上一輪填彈,就會讀到「其實早就填完了」的 ammo=0,把 reloadUntil
+  // 重新推到一整個 reload 之後,下一匣整批落在填彈窗裡被靜默丟棄 —— 而且彈匣再也補不回來。
+  const byTraj = {};
+  for (const id of Object.keys(CHARACTERS)) {
+    const w = heroWeapon(id, 'heavy', 1);
+    if (w) (byTraj[trajClass(w)] ||= []).push(id);
+  }
+  assert(['lob', 'fnf', 'guide'].every((k) => byTraj[k]?.length), '三類 AoE 重武器都有現役角色');
+  for (const cls of ['lob', 'fnf', 'guide']) {
+    const ch = byTraj[cls][0];
+    const side = charsOf('SWARM').includes(ch) ? 'SWARM' : 'STEEL';
+    const sim = new BattleSim(fakeBattleConfig(1));
+    purgeCamps(sim);
+    const h = sim.addHero(side, 'p_ai', ch);
+    h.x = 4000; h.z = 4000; h.y = 0; h.ay = 1.8; h.aiming = true; h.mp = 1e6;
+    const w = sim._heroWeapon(h, 'heavy').def;
+    const dist = w.range * 0.8, tx = h.x + dist, flight = shotFlightS(w, dist);
+    // 排出客戶端的事件序:擊發(送 reload)/ 著彈(送 burst),依**到達時刻**餵給伺服器
+    const ev = [];
+    let ammo = w.mag, reloadEnd = 0, t = 5, fired = 0;
+    const SHOTS = w.mag * 3;   // 三個彈匣:病灶從第二個彈匣起才現形
+    while (fired < SHOTS) {
+      if (reloadEnd > 0 && t >= reloadEnd) { ammo = w.mag; reloadEnd = 0; }
+      if (reloadEnd === 0 && ammo > 0) {
+        ammo--; fired++;
+        ev.push({ at: t + flight, kind: 'burst', n: fired });
+        if (ammo <= 0) { reloadEnd = t + w.reload; ev.push({ at: t, kind: 'reload' }); }
+        t += 1 / w.rate;
+      } else t += 0.05;
+    }
+    ev.sort((a, b) => a.at - b.at || (a.kind === 'reload' ? -1 : 1));
+    let dry = 0;
+    for (const e of ev) {
+      sim.t = e.at;
+      if (e.kind === 'reload') { sim.heroReload('p_ai', 'heavy'); continue; }
+      const tgt = sim._add({ kind: 'soldier', side: side === 'SWARM' ? 'STEEL' : 'SWARM', x: tx, z: h.z, y: 0, hp: 1e9 });
+      sim.heroBurst('p_ai', tx, h.z, 0, 0);
+      if (tgt.hp >= 1e9) dry++;
+      sim.ents.delete(tgt.id);
+    }
+    assert(dry === 0, `${cls}(${ch} ${w.name}):${SHOTS} 發跨三個彈匣全數結算(靜默丟棄 ${dry} 發)`);
+  }
+  // 主動填彈仍照舊生效(這一支只補「先結清上一輪」,MUST NOT 讓 R 鍵失效)
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  const rb = sim.addHero('STEEL', 'p_ar', 't01');
+  const wl = heroWeapon('t01', 'light', 1);
+  sim.t = 10; rb.ammo.light = 1; rb.reloadUntil = {};
+  sim.heroReload('p_ar', 'light');
+  assert(rb.ammo.light === 0 && Math.abs(rb.reloadUntil.light - (10 + wl.reload)) < 1e-6, '主動填彈:半彈匣照樣重裝');
+  // 上一輪填彈已過期 ⇒ 先補滿再判「彈匣已滿就不重裝」(不得重新推遲填彈窗)
+  sim.t = 30; rb.ammo.light = 0; rb.reloadUntil.light = 20;
+  sim.heroReload('p_ar', 'light');
+  assert(rb.ammo.light === wl.mag && rb.reloadUntil.light === 0, '填彈已完成:結清後視為滿彈匣,不再重新起算填彈窗');
+}
+
+log('— sim:扇形錐緣量到命中量體(2026-08-03「打得到一般單位、但不到建築」)—');
+{
+  const sim = new BattleSim(fakeBattleConfig(1));
+  purgeCamps(sim);
+  const ch = Object.keys(CHARACTERS).find((id) => heroWeapon(id, 'heavy', 1)?.fan);
+  const side = charsOf('SWARM').includes(ch) ? 'SWARM' : 'STEEL';
+  const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
+  const h = sim.addHero(side, 'p_fan', ch);
+  h.x = 4000; h.z = 4000; h.y = 0; h.ay = 1.8; h.aiming = true; h.mp = 1e6;
+  const w = sim._heroWeapon(h, 'heavy').def;
+  /** 站在量體表面外 gap 公尺,準星壓在「偏離中心 f × 量體張角」的那個牆面點 → 這一噴打出多少 */
+  const spray = (kind, f, gap = 5) => {
+    const hr = hitR({ kind, side: foe });
+    const d2 = hr + gap;
+    const th = Math.asin(Math.min(1, hr / d2)) * f;
+    const e = sim._add({ kind, side: foe, x: h.x + d2, z: h.z, y: 0, hp: 1e9 });
+    sim.t += 10; h.fireAt = {}; h.ammo = {}; h.reloadUntil = {};
+    sim.heroPlasma('p_fan', Math.cos(th), Math.sin(th), 'heavy', null);
+    const dealt = 1e9 - e.hp;
+    sim.ents.delete(e.id);
+    return dealt;
+  };
+  for (const kind of ['tower', 'base']) {
+    assert(spray(kind, 0) > 0, `${kind}:準星壓在牆面正中 → 有傷害(迴歸)`);
+    assert(spray(kind, 0.9) > 0, `${kind}:準星壓在牆面邊緣(中心遠在錐外)→ 仍有傷害`);
+    // 量體只放寬「打不打得到」,MUST NOT 讓大目標的傷害跟著變高
+    assert(spray(kind, 0.9) <= spray(kind, 0) + 1e-9, `${kind}:靠量體才進錐 → 吃錐緣保底,不高於正中`);
+  }
+  // 量體外一律照舊:小兵在錐外仍打不到、錐內傷害逐位元不變
+  const sd = hitR({ kind: 'soldier', side: foe });
+  assert(spray('soldier', 0) > 0 && Math.abs(spray('soldier', 0.9) - spray('soldier', 0)) < 1e-9,
+    `小兵(hitR ${sd}):錐內傷害不受本次改動影響`);
+  const far = sim._add({ kind: 'soldier', side: foe, x: h.x + 40, z: h.z + 60, y: 0, hp: 1e9 });
+  sim.t += 10; h.fireAt = {}; h.ammo = {}; h.reloadUntil = {};
+  sim.heroPlasma('p_fan', 1, 0, 'heavy', null);
+  assert(far.hp === 1e9, `錐外(56°)的小兵一發都不掉血 —— 量體張角 ${(Math.atan2(sd, 72) * 180 / Math.PI).toFixed(1)}° 撐不開這個錐`);
 }
 
 log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');

@@ -10,7 +10,7 @@ import {
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
-  dmgFalloff, blastFalloff, offAxisFalloff, battleBBox, solveTowerSites, shieldSplit,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, blastCoreR,
   EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
@@ -1531,11 +1531,7 @@ export class BattleSim {
     // 2026-08-01:舊巨砲(重砲模式)的「這一發免彈夾/免電力/免射速閘」旁路隨機甲改招整組移除。
     // **MUST NOT 復辟**:機甲的長按招式已是獨立實體(極音速飛彈),與重武器彈夾完全脫鉤 ——
     // 重武器射擊路徑上不該再存在任何跳過彈夾/電力/射速閘的分支。
-    // 填彈完成 → 補滿
-    if ((h.reloadUntil[id] || 0) > 0 && now >= h.reloadUntil[id]) {
-      h.ammo[id] = def.mag;
-      h.reloadUntil[id] = 0;
-    }
+    this._refillIfDone(h, id, def);                                // 填彈完成 → 補滿(單一縫)
     if ((h.reloadUntil[id] || 0) > now) return false;              // 填彈中
     if (now - (h.fireAt[id] || 0) < 1 / (def.rate * (lenient ? 1.5 : 1))) return false;
     if (h.ammo[id] == null) h.ammo[id] = def.mag;
@@ -1550,13 +1546,34 @@ export class BattleSim {
     return true;
   }
 
-  /** 主動填彈(R 鍵):未滿且不在填彈中才會觸發 */
+  /**
+   * 填彈完成 → 補滿彈匣(**單一縫**:`_gateFire` 與 `heroReload` 同吃)。
+   *
+   * 伺服器的補彈是**惰性**的(沒有逐 tick 掃描):`reloadUntil` 過期之後彈匣仍寫著 0,
+   * 要等下一次開火判定才補回去。⇒ 任何要讀 `h.ammo` 下決定的路徑 MUST 先過這一支,
+   * 否則讀到的是「其實早就填完了」的 0。
+   *
+   * 2026-08-03 使用者回報「榴彈投擲/射後不理/雷射導引只有第一擊有傷害、後續都沒傷害」
+   * 就是漏了這一步:客戶端彈匣見底會送 `{t:'reload'}`(而且送的時刻是**擊發當下**,
+   * AoE 彈頭還在天上),`heroReload` 讀到過期的 `ammo = 0` ⇒「彈匣已滿就不重裝」那道
+   * 守衛失效 ⇒ 每個彈匣都把 `reloadUntil` 重新推到一整個 reload 之後,而下一批彈頭全部
+   * 落在那個填彈窗裡被靜默丟棄;彈匣因此永遠補不回來 = 從第二個彈匣起整場零傷害。
+   */
+  _refillIfDone(h, id, def) {
+    if ((h.reloadUntil[id] || 0) > 0 && this.t >= h.reloadUntil[id]) {
+      h.ammo[id] = def.mag;
+      h.reloadUntil[id] = 0;
+    }
+  }
+
+  /** 主動填彈(R 鍵 / 客戶端彈匣見底的回報):未滿且不在填彈中才會觸發 */
   heroReload(pid, w) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || this.over) return;
     const wp = this._heroWeapon(h, w);
     if (!wp || wp.def.mag == null) return;
     if (h.ammo[wp.id] == null) h.ammo[wp.id] = wp.def.mag;
+    this._refillIfDone(h, wp.id, wp.def);   // 先結清上一輪填彈,再判「要不要重裝」(見 _refillIfDone)
     if (h.ammo[wp.id] >= wp.def.mag || (h.reloadUntil[wp.id] || 0) > this.t) return;
     h.ammo[wp.id] = 0;
     h.reloadUntil[wp.id] = this.t + this._reloadT(h, wp.def);
@@ -1997,7 +2014,7 @@ export class BattleSim {
     if (!this._gateFire(h, wp.id, wp.def, true)) return;
     const pulse = this.visionUntil?.[h.side] > this.t;
     const src = this._visionSources(h.side);
-    const cosA = Math.cos((wp.def.arc || 15) * Math.PI / 180);
+    const arcHalf = fanArcHalf(wp.def);   // 偏心遞減的分母(量體只放寬「打不打得到」,不放大傷害)
     // 槍口必須在自己身邊(防作弊:不能從任意座標噴一個錐;與 heroLance 同一道閘)
     const mz = Array.isArray(o) && [+o[0], +o[1], +o[2]].every(Number.isFinite)
       && dist2d(h.x, h.z, +o[0], +o[1]) <= 12 ? [+o[0], +o[1], +o[2]] : null;
@@ -2014,8 +2031,12 @@ export class BattleSim {
         const d2 = Math.hypot(tx, tz);
         const d3 = Math.hypot(d2, byD - (t.hero ? (t.y || 0) : 0));
         if (this._surfD3(d3, t) > wp.def.range * this._altRange(b, t, wp.def)) continue;   // 誠實界(見上方註解);高度制空 + 量到近側表面(_surfD3)
-        // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內
-        if (d2 > 8 && (tx * dx + tz * dz) / d2 < cosA) continue;
+        // 圓錐判定取水平夾角;目標近乎正下/正上方(d2 極小)視為在錐內。
+        // 錐緣量到目標**命中量體的近側表面**(fanConeHalf 單一縫,lanesim / 客戶端光暈同吃):
+        // 量中心的話,貼著砲塔(hitR 7)/ 主堡(hitR 20)的牆面噴,整個錐子都打在牆上而中心
+        // 還在 30~70° 之外 = 一發都不掉血,同一處的小兵卻照樣被噴死(2026-08-03 使用者回報)。
+        const ang = d2 > 8 ? Math.acos(Math.min(1, Math.max(-1, (tx * dx + tz * dz) / d2))) : 0;
+        if (d2 > 8 && ang > fanConeHalf(wp.def, d2, hitR(t))) continue;
         if (!pulse && !this._visibleTo(t, h.side, src)) continue;
         // 扇形焰舌/彈丸也不穿牆:發射機到目標的射線被實體障礙擋住 = 錐內也打不到
         // (起點吃同一個 byE ⇒ 射線與射程球心同源,與客戶端 `_reachable` 的 `_layerHitT(from…)` 同一點)
@@ -2025,10 +2046,10 @@ export class BattleSim {
         // (線段整段淨空,含地形),早就說打不到(2026-08-01 使用者需求)。
         if (this._ridgeBlocked(bx, bz, this._absSightY(b, byE, bx, bz),
                                t.x, t.z, this._absSightY(t, this._tgtY(t), t.x, t.z), b, t)) continue;
-        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額;d2 極小的正上/正下視為正中)
-        const offF = d2 > 8
-          ? offAxisFalloff(Math.acos(Math.min(1, Math.max(-1, (tx * dx + tz * dz) / d2))) / ((wp.def.arc || 15) * Math.PI / 180))
-          : 1;
+        // 偏心傷害遞減:夾角偏離錐軸越多傷害越低(正對錐軸滿額;d2 極小的正上/正下視為正中)。
+        // 分母仍是**標稱**半角 —— 量體只放寬「打不打得到」,MUST NOT 讓大目標連傷害一起變高;
+        // 靠量體才進錐的目標一律吃錐緣保底 AOE_EDGE(offAxisFalloff 自帶 [0,1] 夾制)。
+        const offF = offAxisFalloff(ang / arcHalf);
         this._damage(t, this._heroDmg(b, wp.def, t.kind) * dmgFalloff(wp.def, d3) * offF, b, wp.def.pen, 0, wp.def);
       }
     }
