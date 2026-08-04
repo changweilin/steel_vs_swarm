@@ -11,7 +11,10 @@
 // 這支只保證**程式邏輯與軸向**不退化 —— 合成事件測不出感測器本身有沒有在動。
 // 跑法:`node tools/audit_gyro.mjs`
 import { chromiumOrNull, chromePath, serve, skipNoPlaywright, THREE_STUB } from './pw.mjs';
+import { readSrc } from './audit_src.mjs';
 
+/** 宣告的預設值只驗得到原文 —— 執行時的 `TOUCH` 早被前面每一段測試改過(見「預設關閉」段) */
+const mobileSrc = readSrc('public', 'js', 'mobile.js');
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('陀螺儀稽核');
@@ -153,8 +156,13 @@ await page.waitForTimeout(3600);
 st = await page.evaluate(() => ({ on: window.M.TOUCH.gyro, feeds: window.feeds }));
 t('auto 兩條都不通 → 關閉並講原因', st.on === false && st.feeds.length > 0, JSON.stringify(st.feeds));
 
-console.log('\n■ 預設開啟 + 十字鍵下「陀螺」一鍵收放');
-t('TOUCH.gyro 預設值為開', await page.evaluate(() => window.M.TOUCH.gyro === true || localStorage.getItem('svs_touch') !== null));
+console.log('\n■ 預設關閉 + 十字鍵下「陀螺」一鍵收放');
+// 2026-08-04 使用者需求「陀螺儀改成預設關閉」。這一條 MUST 驗**宣告的預設值**而不是執行時的
+// `window.M.TOUCH.gyro` —— 上面每一段都在改那個值、`saveTouchPrefs()` 也寫過 localStorage,
+// 讀執行時值等於在驗前一段留下的殘留(舊版那句 `|| localStorage.getItem(...) !== null`
+// 正是為此加的逃生門,代價是這條斷言幾乎恆真:預設值被改掉也不會紅)。
+t('TOUCH.gyro 宣告的預設值為關', /\bgyro:\s*false\s*,/.test(mobileSrc),
+  mobileSrc.match(/\bgyro:\s*[^,\n]+/)?.[0]);
 // 陀螺鈕按一下 → 關;再按一下 → 開(走的是 _local → setGyro 這一個縫)。
 // 2026-07-27 這顆從 ZR 搬到十字鍵下(ZR 改給機種絕招),但走的仍是同一個 data-act。
 const zr = await page.evaluate(async () => {
@@ -177,7 +185,7 @@ t('陀螺鈕按一下關閉陀螺儀', zr.off.active === false && zr.off.pref ==
 t('陀螺鈕再按一下重新開啟', zr.back.active === true && zr.back.pref === true, JSON.stringify(zr.back));
 t('陀螺鈕鈕面反映開關狀態(.on)', zr.off.on === false && zr.back.on === true, JSON.stringify([zr.off.on, zr.back.on]));
 
-// iOS:靜默(非使用者手勢)啟用時 MUST NOT 去要權限 —— 要了會被拒,連帶把預設開啟的偏好關掉
+// iOS:靜默(非使用者手勢)啟用時 MUST NOT 去要權限 —— 要了會被拒,連帶把玩家上一場開啟過的偏好關掉
 const ios = await page.evaluate(async () => {
   window.tc?.dispose();
   const D = window.DeviceOrientationEvent;
@@ -193,7 +201,7 @@ const ios = await page.evaluate(async () => {
   return out;
 });
 t('iOS 靜默啟用不在非手勢中要權限', ios.asked === false, JSON.stringify(ios));
-t('待授權時保留「預設開啟」的偏好', ios.pref === true && ios.ret === true, JSON.stringify(ios));
+t('待授權時保留玩家開啟過的偏好', ios.pref === true && ios.ret === true, JSON.stringify(ios));
 // 提示 MUST 指到真的存在的那顆鈕 —— 舊版寫「按一下 ZR」,ZR 改成絕招後就是把玩家指去按絕招
 t('待授權時提示玩家按十字鍵下的陀螺鈕', ios.feeds.some((f) => f.includes('十字鍵')), JSON.stringify(ios.feeds));
 

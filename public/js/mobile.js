@@ -106,7 +106,7 @@ export const GYRO_SRC = ['auto', 'orient', 'motion'];
 export const GYRO_SRC_LABEL = { auto: '自動', orient: '方向', motion: '角速度' };
 
 export const TOUCH = {
-  gyro: true,         // 陀螺儀輔助瞄準(**預設開啟**;戰場以十字鍵下的「陀螺」鈕一鍵收放)
+  gyro: false,        // 陀螺儀輔助瞄準(**預設關閉**;戰場以十字鍵下的「陀螺」鈕一鍵收放)
   gyroSrc: 'auto',    // 感測來源:auto 自動 / orient 方向感測 / motion 角速度(見 Gyro)
   gyroSens: 1.0,      // 陀螺儀靈敏度倍率(0.4~2.5)
   gyroInvert: false,  // 陀螺儀垂直反轉
@@ -202,16 +202,20 @@ export function applyLefty(on) {
 
 /**
  * 全螢幕切換(手機瀏覽器工具列會吃掉一大截畫面)。
- * 方向鎖 **MUST 跟著玩家當下的持握**,MUST NOT 一律鎖橫向 —— 直式玩家按全螢幕會被硬轉成橫式,
- * 等於「直式不能用全螢幕」。橫握 → 鎖 landscape、直握 → 鎖 portrait,兩種持握都進得了全螢幕。
+ * 全螢幕 **MUST NOT 鎖方向**(2026-08-04 使用者需求「全螢幕時也可以旋轉手機切換直式/橫式」)——
+ * 進全螢幕就 `unlock()`,轉手機照樣在直式/橫式版型之間切。
+ * 舊版是「鎖成當下的持握」(比一律鎖橫向好,但仍是鎖):玩家躺著開全螢幕就被釘死在直式,
+ * 想換橫式只能先退出全螢幕、轉好、再進一次 —— 中間還會掉一次 `resize`、畫布重算兩遍。
+ * `unlock()` 而非「什麼都不做」:PWA manifest 的 `orientation` 與前一次全螢幕留下的鎖都會延續,
+ * 不主動解就等於預設鎖著。版型切換本身不歸這裡管 —— `syncOrientation()` 已經在聽
+ * `orientationchange` / `screen.orientation` 的 change,全螢幕內外走的是同一條路徑。
  */
 export async function toggleFullscreen() {
   try {
     if (!document.fullscreenElement) {
       await (document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
         ?? document.documentElement.webkitRequestFullscreen?.());
-      const want = document.body.classList.contains('ori-portrait') ? 'portrait' : 'landscape';
-      try { await window.screen?.orientation?.lock?.(want); } catch { /* iOS 不支援 */ }
+      try { window.screen?.orientation?.unlock?.(); } catch { /* iOS 不支援 */ }
     } else {
       try { window.screen?.orientation?.unlock?.(); } catch { /* 同上 */ }
       await (document.exitFullscreen?.() ?? document.webkitExitFullscreen?.());
@@ -298,9 +302,9 @@ class Gyro {
   }
 
   /**
-   * 還需不需要跟使用者要權限(iOS 13+)。**預設開啟後這支很關鍵** ——
-   * iOS 的 `requestPermission()` 只在使用者手勢中可靠,進場自動啟用那條路徑不是手勢,
-   * 硬要就是被拒 ⇒ 開關被扳回關閉並寫進偏好,玩家等於「預設開啟」從來沒生效過。
+   * 還需不需要跟使用者要權限(iOS 13+)。**記憶開啟的偏好靠這支才活得下來** ——
+   * iOS 的 `requestPermission()` 只在使用者手勢中可靠,進場自動套用偏好那條路徑不是手勢,
+   * 硬要就是被拒 ⇒ 開關被扳回關閉並寫進偏好,玩家上一場親手打開的設定就這樣被抹掉。
    */
   needsPermission() {
     if (this.granted) return false;
@@ -1112,7 +1116,7 @@ export class TouchControls {
         return false;
       }
       // 靜默啟用(進場自動套用偏好)+ 尚未授權:**MUST NOT** 在這裡要權限 ——
-      // 那不是使用者手勢,iOS 會直接拒,結果是把「預設開啟」的偏好也一併關掉。
+      // 那不是使用者手勢,iOS 會直接拒,結果是把玩家上一場親手開啟的偏好也一併關掉。
       // 保留偏好、把「陀螺」鈕留在待授權狀態,並告訴玩家按一下就好。
       if (silent && this.gyro.needsPermission()) {
         this._syncGyroBtn();
