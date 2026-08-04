@@ -1,0 +1,11 @@
+# 管線中間產物:切圖 ~238 張 × ~300KB ≈ 70MB。這些是 image→3D 的**輸入**,
+# 不是遊戲資產 —— 進 repo 只會拖慢 npm run build:solo(計畫 §7「Binary payload growth」)。
+# 驗收通過的設定稿由人搬進 public/assets/cyberpunk_art/mechs/,那一層才進版控。
+drafts/
+masters/
+
+# 帳本刻意**不**忽略:prompt 與來源要查得回來(同計畫 §4.1 的 photo_manifest.json)。
+!gen_manifest.json
+
+# Python 模型環境(P0;A2 明令不得進 package.json)
+.venv/

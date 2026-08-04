@@ -1,0 +1,265 @@
+{
+  "generated": [
+    {
+      "id": "t10_static",
+      "ch": "t10",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\t10_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\cba6435a-091a-4136-a5a8-d68dd9f692e6\\aegis_mecha_t10_1785779055157.jpg",
+      "bytes": 741739,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:44:19.101Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t10, faction: STEEL pact — heavy industrial armour doctrine, thick cast plate and blocky mass.\nChassis specification: prototype line \"aegis\". Primary livery colour #7fe8c9, paint scheme \"tattoo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:Pantsir-S1 彈炮合一系統的機甲化。雙聯裝艙一邊裝攔截彈、一邊裝速射砲,交由同一組軌跡解算。機體原型:「神盾」持盾兵 —— 左臂是一面能立在地上的方形塔盾(方陣兵的正面推進),右前臂是速射砲,雙肩的垂直發射管口永遠朝天。她說攔截永遠該比打擊便宜。\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t12_static",
+      "ch": "t12",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\t12_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\c09cc0ea-15a0-490f-ba26-624c2fae2fc1\\colossus_mecha_t12_1785779107149.jpg",
+      "bytes": 689058,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:45:10.564Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t12, faction: STEEL pact — heavy industrial armour doctrine, thick cast plate and blocky mass.\nChassis specification: prototype line \"colossus\". Primary livery colour #b8ffb0, paint scheme \"tattoo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:反無人機 RF 測向車的機甲化。全身佈滿測向天線,火力貧弱是刻意的——它的工作是先聽見,再讓別人開火。機體原型:「巨兵」測向機(致敬天空之城的園丁機器人)—— 身軀與頭全是溫和的圓角矩形,四肢由圓角甲板一節節疊成、像蜈蚣的體節,每一節都能動;一雙圓圓的眼會安靜地看著你,眉心那道光是它唯一的火力。它像個守墓園的,直到不得不開火。\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m02_static",
+      "ch": "m02",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m02_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\4a82ce10-6a82-404a-9e6c-9ccd03f6f6b4\\m02_trex_mecha_1785779158616.jpg",
+      "bytes": 728854,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:46:01.595Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m02, faction: independent mercenary — mixed-provenance hardware, field-modified and individualistic.\nChassis specification: body plan \"biped\", biomimetic base \"trex\", dorsal pod \"shield\". Primary livery colour #9aa3ad, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:厚重鑄造裝甲 × 大口徑線圈加農砲。砲身整根藏在顎裡,張口才是射擊姿勢;它從來不是去追人的,是去擋在人前面的。仿生原型:暴龍 —— 前傾軀幹以重尾配平,短前肢改成貨物固定臂。\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m06_static",
+      "ch": "m06",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m06_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\449f14bc-63dd-4714-90d9-5e24cad58cb0\\mecha_stego_m06_1785779210967.jpg",
+      "bytes": 742787,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:46:55.278Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m06, faction: independent mercenary — mixed-provenance hardware, field-modified and individualistic.\nChassis specification: body plan \"beast\", biomimetic base \"stego\", dorsal pod \"rack\". Primary livery colour #f0c24a, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:集束子母彈發射軌 × 重載四足底盤。它自己的火力平平,但它會把外包的部分丟出去飛。仿生原型:劍龍 —— 背上那排骨板就是發射軌,一排掛滿轉包出去的貨;尾錘是最後的近戰手段,旺季時它整隻就是一座會走路的碼頭。\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s12_ground_static",
+      "ch": "s12",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\s12_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\5c83608b-a4b1-4cfa-a657-7c920589a11d\\swarm_s12_raptor_1785779433889.jpg",
+      "bytes": 641104,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:50:36.896Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s12, faction: SWARM alliance — insectile / organic-mechanical swarm doctrine, lightweight distributed hardware.\nChassis specification: ground-form biomimetic base \"raptor\", flight-form base \"archo\", dorsal pod \"antenna\". Primary livery colour #9db8d8, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:撲翼滑翔佈局 × 天文導航模組。GPS 一定會被打掉,所以它抬頭看星星。仿生原型:始祖鳥(空中描圖)↔ 迅猛龍(落地鑽巷弄) —— 天上看不見的死角,它落地用走的補上。\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s12_flight_static",
+      "ch": "s12",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\s12_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\5c83608b-a4b1-4cfa-a657-7c920589a11d\\swarm_s12_archo_1785779485371.jpg",
+      "bytes": 702387,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-03T17:51:29.432Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s12, faction: SWARM alliance — insectile / organic-mechanical swarm doctrine, lightweight distributed hardware.\nChassis specification: ground-form biomimetic base \"raptor\", flight-form base \"archo\", dorsal pod \"antenna\". Primary livery colour #9db8d8, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:撲翼滑翔佈局 × 天文導航模組。GPS 一定會被打掉,所以它抬頭看星星。仿生原型:始祖鳥(空中描圖)↔ 迅猛龍(落地鑽巷弄) —— 天上看不見的死角,它落地用走的補上。\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_ground_static",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\s10_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\3643cda0-a516-4163-8bb8-0cab85783b52\\s10_mecha_ground_1785806242995.jpg",
+      "bytes": 688001,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:17:27.257Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:浮空氣囊平台 × 訊號情報吊艙。慢、笨、續航極長 —— 因為它的工作是「一直聽著」。仿生原型:飛鯨(低頻鯨歌)↔ 機械巨象 —— 自然界通訊距離最遠的兩種動物;象的耳廓就是天線陣,次聲波是人耳聽不見的那一段。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_flight_static",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\s10_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\3643cda0-a516-4163-8bb8-0cab85783b52\\s10_mecha_flight_1785806296764.jpg",
+      "bytes": 633620,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:18:22.088Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:浮空氣囊平台 × 訊號情報吊艙。慢、笨、續航極長 —— 因為它的工作是「一直聽著」。仿生原型:飛鯨(低頻鯨歌)↔ 機械巨象 —— 自然界通訊距離最遠的兩種動物;象的耳廓就是天線陣,次聲波是人耳聽不見的那一段。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t11_ground_static",
+      "ch": "t11",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\t11_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\7cd0d3bc-db4f-4566-9db8-12ff12cba95d\\mecha_t11_ground_1785806351654.jpg",
+      "bytes": 680682,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:19:14.770Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t11, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: atlas/porter-motif heavy humanoid bipedal mech (人形雙足,扛負重的力士意象)\n  · FLIGHT form: tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #8a9a5a, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:傾轉旋翼運輸機 × 前傾負重底盤。車長指揮塔被原樣搬上去,他堅持那個高度才聽得見引擎的雜音。體態原型:負重工的前傾寬站 —— 雙肩兩根掛架撐著一整個班的家當,腰際配重塊讓它前傾也不會摔;老兵的活,本來就是扛人。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; rotor discs instead of wings — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t06_ground_static",
+      "ch": "t06",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\t06_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\60e16212-bc0f-424c-add1-f620cdd96926\\mecha_t06_ground_1785806434327.jpg",
+      "bytes": 701119,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:20:38.282Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:輕量化外骨骼 × 變形彈射機構。裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。體態原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。升空不變形成飛機:背後展開兩束不揮動的噴焰光翼(觔斗雲的現代解),身體壓平、雙腿併攏,多節長尾蠍式前捲過頂 —— 尾端那門熔核砲,砲口永遠朝著他要去的方向。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t06_flight_static",
+      "ch": "t06",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\t06_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\60e16212-bc0f-424c-add1-f620cdd96926\\mecha_t06_flight_1785806489638.jpg",
+      "bytes": 637011,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:21:33.068Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:輕量化外骨骼 × 變形彈射機構。裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。體態原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。升空不變形成飛機:背後展開兩束不揮動的噴焰光翼(觔斗雲的現代解),身體壓平、雙腿併攏,多節長尾蠍式前捲過頂 —— 尾端那門熔核砲,砲口永遠朝著他要去的方向。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m05_ground_static",
+      "ch": "m05",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m05_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\ef83b68e-b2cc-4126-8ae6-0ec2a9c982bc\\mecha_m05_ground_1785806542102.jpg",
+      "bytes": 705414,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:22:26.313Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m05, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: wolf-motif humanoid bipedal mech (人形雙足,狼系意象)\n  · FLIGHT form: canard jet fighter (鴨翼戰機) — the legs fold together into a centre-mounted twin-engine nacelle; swept twin vertical tails deploy from the rear edge of the pelvis\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #5551cc, paint scheme \"split\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:EA-18G 咆哮者的干擾吊艙 × 噴射變形機體。它的第一擊永遠不是火力,是斷電。體態原型:狼人式的趾行站姿 —— 膝深屈、腳跟永遠不著地、頸背立起一排鬃刺;債務人說她走近的時候聽不到腳步,只看到影子先低下去。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m07_ground_static",
+      "ch": "m07",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m07_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\1228b034-1a79-45a1-b049-affced78caf0\\mecha_m07_concept_1785806593638.jpg",
+      "bytes": 744032,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:23:17.384Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m07, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: rhinoceros beetle walking form (犀金龜) — low hard-limbed hexapod stance\n  · FLIGHT form: rhinoceros beetle (犀金龜) — shield-like elytra swing outward to release the membranous flight wings underneath\n  · Dorsal pod: a shield plate on the back\nPrimary livery colour #5fa8d3, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:可折疊鞘翅式裝甲 × 區域防空砲塔。展開即陣地:落地那一刻,這片天空就是收費區。仿生原型:犀金龜 —— 盾狀鞘翅外開讓出膜翅,落地即闔上成裝甲。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 middle legs (the third pair); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m07_flight_static",
+      "ch": "m07",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m07_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\1228b034-1a79-45a1-b049-affced78caf0\\mecha_m07_flight_1785806646917.jpg",
+      "bytes": 649991,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T01:24:12.593Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m07, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: rhinoceros beetle walking form (犀金龜) — low hard-limbed hexapod stance\n  · FLIGHT form: rhinoceros beetle (犀金龜) — shield-like elytra swing outward to release the membranous flight wings underneath\n  · Dorsal pod: a shield plate on the back\nPrimary livery colour #5fa8d3, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:可折疊鞘翅式裝甲 × 區域防空砲塔。展開即陣地:落地那一刻,這片天空就是收費區。仿生原型:犀金龜 —— 盾狀鞘翅外開讓出膜翅,落地即闔上成裝甲。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 middle legs (the third pair); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m08_ground_static",
+      "ch": "m08",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m08_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\632b8483-9a7b-4d82-a563-291ea2741cb4\\m08_mecha_ground_1785825372323.jpg",
+      "bytes": 649820,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T06:36:17.377Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m08, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: panther (夜豹) — sprung quadruped limbs, low prowling stance\n  · FLIGHT form: owl (夜梟) — broad feathered wings with serrated silencing combs along the leading edge\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #8f7fd0, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:前緣鋸齒的消音結構 × 匿蹤外形設計。飛行時的噪音低於環境背景值,所以沒有人記得看過她起飛。仿生原型:夜梟的鋸齒消音羽(飛行)↔ 夜豹的潛行步態(地面) —— 兩種型態都只求一件事:不被聽見,不被記得。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m08_flight_static",
+      "ch": "m08",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\weapon-damage-target-fix-911dc7\\tools\\ai3d\\masters\\m08_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\632b8483-9a7b-4d82-a563-291ea2741cb4\\m08_mecha_flight_1785825428395.jpg",
+      "bytes": 596519,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T06:37:12.877Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m08, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: panther (夜豹) — sprung quadruped limbs, low prowling stance\n  · FLIGHT form: owl (夜梟) — broad feathered wings with serrated silencing combs along the leading edge\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #8f7fd0, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:前緣鋸齒的消音結構 × 匿蹤外形設計。飛行時的噪音低於環境背景值,所以沒有人記得看過她起飛。仿生原型:夜梟的鋸齒消音羽(飛行)↔ 夜豹的潛行步態(地面) —— 兩種型態都只求一件事:不被聽見,不被記得。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    }
+  ],
+  "failed": [
+    {
+      "id": "t11_ground_static",
+      "at": "2026-08-03T17:54:08.075Z",
+      "note": "I attempted to generate the concept art for the **T11 STEEL Pact Ground Form Mecha**, but the image generation service returned a quota limit error (`429 RESOURCE_EXHAUSTED`).\n\n### Prompt & Design Specification\nHere is the prompt crafted from your authoritative design brief for generation once quota"
+    },
+    {
+      "id": "t11_flight_static",
+      "at": "2026-08-03T17:54:47.699Z",
+      "note": "I attempted to generate the concept art for the **T11 STEEL Pact Flight Form Mecha**, but the image generation tool is currently constrained by an API quota limit (`429 RESOURCE_EXHAUSTED`, quota resets in ~4.5 hours).\n\n### Prompt Specification for Flight Form\nHere is the prompt designed for the tra"
+    },
+    {
+      "id": "m05_ground_static",
+      "at": "2026-08-03T17:55:30.714Z",
+      "note": "I attempted to generate the concept art image for **Unit M05**, but the image generation quota is currently exhausted (`429 Resource Exhausted`). \n\nHere is the exact visual prompt specification prepared according to your authoritative design brief, which you can use directly or retry once your quota"
+    },
+    {
+      "id": "m08_ground_static",
+      "at": "2026-08-04T01:24:54.357Z",
+      "note": "I attempted to generate the concept art image for **Mecha Unit M08**, but hit an API quota limit (`429 Resource Exhausted`). \n\nHere is a summary of the concept art design specification prepared based on your authoritative prompt:\n\n### **Unit M08 — Concept Art Specification**\n* **Faction**: Independe"
+    },
+    {
+      "id": "m08_flight_static",
+      "at": "2026-08-04T01:25:35.359Z",
+      "note": "I attempted to generate the concept art image for **Mecha Unit M08 (FLIGHT Form — Owl / 夜梟)**, but the image generation engine is currently rate-limited (`429 Resource Exhausted`, quota resets in ~4.5 hours).\n\nHere is the authoritative design breakdown and detailed visual specification prepared for "
+    },
+    {
+      "id": "m08_ground_static",
+      "at": "2026-08-04T01:27:13.693Z",
+      "note": "The request to generate the concept art image encountered an API quota limitation (`429 Resource Exhausted: image generation quota reached for this model`).\n\nHere is the exact authoritative design prompt created according to all your specs (ground panther form, 4 quadruped limbs, 2 folded serrated s"
+    },
+    {
+      "id": "m08_flight_static",
+      "at": "2026-08-04T01:27:58.039Z",
+      "note": "The image generation tool is currently rate-limited by API quota restrictions (`429 Resource Exhausted`). \n\nHere is the authoritative design prompt tailored for the **FLIGHT form (夜梟)** of **Mecha Unit M08**, designed to maintain exact visual continuity with the GROUND form (same `#8f7fd0` camo sche"
+    }
+  ]
+}
