@@ -52,7 +52,7 @@
 // 雙層拆分 → 裝甲層吃 armorMul。差別只有「擲骰改期望值」(稽核要確定性,見全域 A4)。
 import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE, SQUAD, DECOY, HYPER,
-  BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
+  BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiBlast, kamiHp, kamiSide, decoyBlast, decoyBombBlast, decoyHp,
@@ -170,7 +170,7 @@ const critF = (def) => (def.crit ? 1 + def.crit * ((def.critX || VITALS.CRIT_X) 
  * duel.mjs 的同名函式亦同(那支連位置都沒有)。
  */
 const dodgeP = (tgt) => {
-  if (!tgt.hero || tgt.mob <= EVASION.MOBILITY_MIN) return 0;
+  if (!tgt.hero || tgt.mob <= evasionMinSpeed()) return 0;
   return EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0);
 };
 

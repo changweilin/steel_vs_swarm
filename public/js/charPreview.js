@@ -10,7 +10,7 @@
 // setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
 
 import * as THREE from 'three';
-import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility } from './data.js';
+import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight } from './toon.js';
@@ -135,9 +135,9 @@ export class CharPreview {
     this.holder.position.set(0, 0, 0);
     this.holder.rotation.set(0, 0, 0);
 
-    // 移動演示:巡航速 = 戰場實速(UNITS × 角色 mods),骨架演出才與實戰一致
+    // 移動演示:巡航速 = 戰場實速(heroMobility 單一縫 —— 含角色 mods 與移速壓縮),骨架演出才與實戰一致
     this._ent = { id, mesh: group, heroY: 0 };
-    this.topSpeed = (UNITS[kind]?.speed || 10) * (CHARACTERS[id].mods?.speed ?? 1);
+    this.topSpeed = heroMobility(kind, CHARACTERS[id].mods, kind === 'drone') || 10;
     this.moving = false;
     this.speed = 0;
     this.travel = 0;

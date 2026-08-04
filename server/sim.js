@@ -12,7 +12,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, blastCoreR,
-  EVASION, heroMobility, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
+  EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, BOT_TACTIC, botThreatDecay, FLIGHT,
@@ -1720,7 +1720,7 @@ export class BattleSim {
 
   /**
    * 閃避擲骰(輕武器直射專用,呼叫端負責只在 def.id==='light' / NPC gun 時呼叫)。
-   * 條件:目標是英雄機體 + 有效機動 > MOBILITY_MIN + 移動中;飛行單位額外加成。
+   * 條件:目標是英雄機體 + 有效機動 > 閃避門檻(evasionMinSpeed,與機體速度同一張映射)+ 移動中;飛行單位額外加成。
    * 只有英雄機體具閃避(NPC 移速 ≤ 20,永遠不符合) ⇒ 玩家打小兵不受影響。
    */
   _dodges(t, shooter) {
@@ -1729,7 +1729,7 @@ export class BattleSim {
     if (this._buffVal(t, 'dodge') > 0) return true;
     const flying = t.kind === 'drone' || (t.y || 0) >= GAME.AA_MIN_ALT;
     const mob = heroMobility(t.kind, CHARACTERS[t.ch]?.mods, flying);
-    if (mob <= EVASION.MOBILITY_MIN || !this._isMoving(t)) return false;
+    if (mob <= evasionMinSpeed() || !this._isMoving(t)) return false;
     let p = EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0);
     // 高度差:目標比射手高過門檻 → +閃避率(較高方 +DODGE 封頂;見 data.js ALTITUDE)
     if (shooter) {

@@ -1251,6 +1251,18 @@ body.touch-ui .bio-modal-close { width: 44px; height: 44px; font-size: 17px; }
 .cd-stat i b { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--steel) 0 4px, rgba(5, 7, 10, 0.6) 4px 6px); }
 .cd-stat em { font-style: normal; color: var(--fg); text-align: right; }
 .cd-note { grid-column: 1 / -1; font-family: var(--mono); font-size: 10px; color: var(--railW); margin-top: 3px; }
+/* 角色六角能力圖(2026-08-04):形狀由 data.js heroHexStats 給,這裡只管配色與版位。
+   陣營色走 --railW ⇒ 同一張圖在蜂群/鋼鐵兩側自動換色,MUST NOT 在 JS 端硬寫色碼。 */
+.cd-hexbox { margin: 8px 0; }
+.cd-hex { margin: 2px 0 6px; }
+.cd-hex svg { display: block; width: 100%; max-width: 320px; margin: 0 auto; height: auto; overflow: visible; }
+.hx-grid { fill: none; stroke: var(--line); stroke-width: 0.7; }
+.hx-spoke { stroke: var(--line); stroke-width: 0.7; }
+.hx-fill { fill: rgba(var(--railW-rgb), 0.22); stroke: var(--railW); stroke-width: 1.6; }
+.hx-dot { fill: var(--railW); }
+.hx-lab { font-family: var(--mono); font-size: 8.5px; fill: var(--dim); }
+.hx-num { fill: var(--fg); font-size: 9.5px; }
+.cd-hex-cap { font-family: var(--mono); font-size: 10px; color: var(--dim); text-align: center; margin-top: 2px; }
 .cd-kit { border-top: 1px solid var(--line); padding-top: 6px; }
 .cd-row {
   display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 5px 4px; font-size: 11.5px;

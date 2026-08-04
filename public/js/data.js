@@ -3248,12 +3248,69 @@ export const EVASION = {
   GROUND: 0.20,       // 地面移動:閃避率
   AIR_BONUS: 0.15,    // 飛行單位(無人機 / 變形機飛行型)額外加成
 };
-// 機體有效機動 = 機種基準移速(飛行取 fly)× 角色 speed 修正
+// ================= 移速壓縮:機體之間的移速拉近差距、排序不變(2026-08-04 使用者定案)=================
+// 使用者需求:「所有機體的移動速度拉近差距,但排序不變」。形狀與 FIRE_RATE(射速壓縮)同款 ——
+// 一條**嚴格遞增**的冪次曲線,而不是分段表或整數倍率(整數倍率會把排名當場翻掉)。
+//
+// ① 軸取**幾何中點**而非帶底(這是與 FIRE_RATE 唯一的形狀差別,理由在「有沒有補償機制」):
+//    射速壓縮有 dmg ÷ f、mag × f 兩欄同步把 DPS 補回來,所以錨在帶底(全體只降不升)不會改水位;
+//    移速沒有那種補償欄 —— 錨在帶底就是**全體變慢**(一場對局的節奏整個拖掉),那不是「拉近差距」。
+//    錨在幾何中點 ⇒ 快的降、慢的升,而壓縮後整組的幾何中點**逐位元不動**
+//    (geo(MID·(v/MID)^K) = MID·(geo(v)/MID)^K = MID),與 CLASS_SYM / AOE_BUDGET.NORM /
+//    BUILD_DPS ②「收斂 MUST 是重分配而非削弱」同一條紀律。
+// ② 中點 `speedMid()` **推導不手寫**:任一機種基準或任一角色 `mods.speed` 一改,軸自己跟著走。
+//    取樣面 = 每台機體的**每一種型態**(32 台的地面速 + 8 台變形者的飛行巡航速)—— 變形者飛起來
+//    也是一台在跑的機體,漏掉它就等於「飛行型態不受壓縮」,而畫面上只表現成變形者飛行時特別快。
+// ③ K 是**壓縮強度**:壓縮後的全距比值 = 舊比值 ^ K(現值 0.5 ⇒ 2.67× → 1.63×)。
+//    K = 1 逐位元回到舊制(反向驗證用);K = 0 = 全員同速(排序資訊整個消失,MUST NOT)。
+//    校準錨 = `npm run bal` ①④⑤⑦ 四條 —— 移速同時牽動 EVASION(閃避門檻 MOBILITY_MIN)與
+//    MOB_BUDGET(機動越高基礎火力越低),K 一動兩邊一起漂,MUST 四條一起看。
+//    **K 有實測下界**(2026-08-04 逐值掃描 1 / 0.6 / 0.5 / 0.4 / 0.3):K ≤ 0.4 起 ④ 的變形者
+//    「滿級單推同塔位雙塔」剩餘 EHP 掉到 −0.0%(= 第二座塔推不掉)。0.5 是「四條同時全綠」的
+//    最強壓縮 —— 再往下要先處理 ④ 那一條的邊際,MUST NOT 只因為「差距還能更小」就調過頭。
+//    (壓縮**改善**了另外三處:⑤ 射程壓制 35.0% → 28.1%、角色離群 11~80% → 17~76%、
+//     ⑦c robot vs morph 64.1% → 56.8% —— 移速差距本來就是那幾條的離群來源之一。)
+// ④ **唯一縫 = `heroMobility`**:客戶端物理(game._mobility)、電腦玩家(bots._speed)、伺服器閃避
+//    (sim._dodges)、兩支平衡模型(duel / lanesim)、圖鑑六角圖一律經此取速 ——
+//    MUST NOT 在任何消費端讀 `UNITS[kind].speed × mods.speed`(那是**壓縮前**的原始值,
+//    第二份實作的症狀是「圖鑑寫 12、實際跑起來是 9.45」這種只能靠碼表抓的無聲分歧)。
+// ⑤ `speedMid()` 惰性定案並快取 ⇒ 首次呼叫必然在 `COMBAT_SCALE` 統一縮放**之後**(同 buildDps ③);
+//    曲線對整體縮放是齊次的(MID 與 v 同步縮 ⇒ 結果同步縮),故 reach 縮放不改變任何相對關係。
+export const SPEED_COMP = { K: 0.5 };
+let _spdMid = 0;
+/** 全機體移速的幾何中點(m/s;**壓縮前**的原始值為取樣面,推導不手寫,首次呼叫時定案並快取) */
+export function speedMid() {
+  if (!_spdMid) {
+    const v = [];
+    for (const ch of Object.keys(CHARACTERS)) {
+      const u = UNITS[charKind(ch)];        // 機種取 charKind 單一縫(陣營 ≠ 機種)
+      if (!u) continue;
+      const f = CHARACTERS[ch].mods?.speed ?? 1;
+      if (u.speed > 0) v.push(u.speed * f);
+      if (u.fly > 0) v.push(u.fly * f);       // 變形者飛行巡航:同樣是一台在跑的機體
+    }
+    _spdMid = v.length ? Math.exp(v.reduce((a, x) => a + Math.log(x), 0) / v.length) : 1;
+  }
+  return _spdMid;
+}
+/** 壓縮後移速(**唯一縫**;嚴格遞增 ⇒ 排序保證不變)。K ≥ 1 一律原值回傳(逐位元舊制)。 */
+export const spdComp = (v) => (SPEED_COMP.K >= 1 || !(v > 0)
+  ? v : speedMid() * (v / speedMid()) ** SPEED_COMP.K);
+/** 機體有效機動 = 壓縮後的「機種基準移速(飛行取 fly)× 角色 speed 修正」(全消費端唯一取速處) */
 export const heroMobility = (kind, mods, flying = false) => {
   const u = UNITS[kind];
   if (!u) return 0;
-  return (flying ? (u.fly ?? u.speed) : u.speed) * (mods?.speed ?? 1);
+  return spdComp((flying ? (u.fly ?? u.speed) : u.speed) * (mods?.speed ?? 1));
 };
+/**
+ * 閃避門檻(m/s;**唯一縫**,三個消費端 sim._dodges / duel / lanesim 一律吃這一支)。
+ * 門檻是**同一條速度軸上的一個點** ⇒ MUST 與機體速度走同一張映射,否則壓縮會無聲地重畫
+ * 「誰閃得掉」:`MOBILITY_MIN` 原本卡在地面機甲那一帶中間(重甲慢速機體站著吃彈),
+ * 而壓縮把慢的往上抬 —— 門檻不跟著抬的話,32 台會整組落到門檻之上 = 那條設計當場失效,
+ * 而畫面上只表現成「重機甲好像變得比較難打中」。經 `spdComp` 之後,誰在門檻哪一側逐位元不變
+ * (曲線嚴格遞增 ⇒ 保序)。
+ */
+export const evasionMinSpeed = () => spdComp(EVASION.MOBILITY_MIN);
 
 // 等面積約束的唯一推導處(見 GAME.THREAT_AREA_PER_LANE)
 GAME.MINES.PER_LANE = Math.round(GAME.THREAT_AREA_PER_LANE / (Math.PI * GAME.MINES.R ** 2));
@@ -3492,6 +3549,15 @@ export function rngDmgF(ch, slot) {
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
 }
 
+// ---- 持續 DPS 的唯一量法(彈匣週期;**MUST NOT 在任何消費端手抄這兩行**)----
+// 三個消費端各自抄一份是這個公式的老病:對建築收斂 `buildDps`、平衡 `tools/balance.mjs slotDps`、
+// 圖鑑六角圖的「火力」軸 —— 抄第三份的症狀是「圖鑑寫的火力跟平衡量到的不是同一個數」,
+// 而兩邊都言之成理、沒有任何錯誤訊息。`dmg` 可覆寫成「對某個目標的實得傷害」(剋制 × 破甲後)。
+/** 一個彈匣週期(秒)= 打完 mag 發 + 裝填 */
+export const weaponCycleS = (w) => w.mag / (w.rate || RATE_DEF) + w.reload;
+/** 持續 DPS = 一個彈匣週期打出的傷害 ÷ 週期長度 */
+export const weaponDps = (w, dmg = w?.dmg ?? 0) => (w ? dmg * w.mag / weaponCycleS(w) : 0);
+
 // ================= 對建築 DPS 收斂(2026-08-04 使用者定案)=================
 // 使用者定案:「所有重武器之間與輕武器之間對建築的 DPS 不要落差太大」。
 // 改制前實測(對砲塔持續 DPS,Lv1):重武器 2.8 ~ 30.8(**10.8 倍**)、輕武器 19.9 ~ 62.8(3.2 倍)。
@@ -3528,9 +3594,8 @@ export const BUILD_DPS = { K: 0.55, LEVEL_ITERS: 64 };
 export function buildDps(ch, slot, lvl = 1) {
   const w = heroWeapon(ch, slot, lvl, true);
   if (!w) return 0;
-  const cycle = w.mag / (w.rate || RATE_DEF) + w.reload;
-  return shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
-    * armorMul(UNITS.tower.armor, w.pen) * w.mag / cycle;
+  return weaponDps(w, shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
+    * armorMul(UNITS.tower.armor, w.pen));
 }
 {
   const q = (v) => Math.round(v * 1000) / 1000;
@@ -3562,6 +3627,89 @@ export function buildDps(ch, slot, lvl = 1) {
     for (const r of all) set(r.w, (r.w.vs?.building ?? 1) * g);
   }
 }
+
+// ================= 圖鑑六角能力圖(2026-08-04 使用者定案)=================
+// 使用者定案:「角色能力使用六角圖顯示:HP 和護盾合併顯示為耐久,另外加上兩個項目:火力、
+// 射程 + 傷害面積」。舊制五條長條(裝甲 HP / 護盾 / 電力 / 機動 / 護甲值)全是**生存面**的
+// 拆解 —— 一台機體「打得多痛、控得住多大一塊地」在圖鑑上完全看不到,而那兩件事才是選角時
+// 真正要比的。合併 HP + 護盾(兩者都是「還能撐多久」,分兩條只是把同一件事講兩次)騰出位置,
+// 補上火力與制域 ⇒ 生存 3(耐久/護甲/電力)+ 輸出 3(火力/制域/機動)= 六軸。
+//
+// ---- 四條 MUST ----
+// ① **六軸全部推導**:值一律走既有的唯一縫(`heroArmor` / `heroMobility` / `heroWeapon` →
+//    `weaponDps`),MUST NOT 在 UI 端另寫一份公式或手抄一張數值表 —— 圖鑑與實戰分家的症狀是
+//    「圖上看起來很強、打起來不是」,而且沒有任何錯誤訊息。
+// ② **滿格基準 `hexMax` 由全體現役角色推導**(舊制 `BAR_MAX` 是手寫的:改一名角色的數值,
+//    別人的長條就悄悄失準,甚至爆出格子)。以全場最大值為滿格 ⇒ 每一軸至少有一名角色貼到
+//    外框,六角形的形狀因此讀得出「這台機體在這一軸上相對全場的位置」。
+// ③ **「射程 + 傷害面積」合成一軸 = 制域**(m²):`zoneAreaM2` = 射程 × 打擊足跡的**等效直徑**。
+//    兩者相加是量綱不同的東西(m 與 m²)不能真的相加,但它們回答的是同一個問題 ——
+//    「這一發能否定掉多大一塊空間」⇒ 以「射程長 × 足跡寬」的矩形面積表達,單體直擊武器的
+//    足跡取一名步兵的命中量體(`hitR`,不是 0)⇒ 它的制域就退化成純射程的線性量。
+// ④ 六軸一律取 **Lv1 未升級**(與卡面「數值 Lv1 → Lv4」的左端一致);八軌升級是玩家的選擇,
+//    不是機體的性格。
+/** 打擊足跡面積(m²;三類 AoE 各按自己的幾何 —— 分類走 `aoeClass` 單一縫,MUST NOT 比對 type) */
+export function strikeAreaM2(def) {
+  if (!def) return 0;
+  const cls = aoeClass(def);
+  if (cls === 'blast') return Math.PI * blastFootprintR(def.r) ** 2;       // 圓形超壓
+  if (cls === 'fan') return fanArcHalf(def) * def.range ** 2;              // 扇形 = 半角 × R²
+  if (cls === 'line') return 2 * lanceR(def) * def.range;                  // 貫穿圓柱的地面投影
+  return Math.PI * hitR({ kind: 'soldier' }) ** 2;                         // 單體直擊 = 一名步兵的量體
+}
+/** 制域(m²)= 射程 × 足跡等效直徑 ——「射程 + 傷害面積」的單一評估量(見上方 ③) */
+export const zoneAreaM2 = (def) => (def ? def.range * 2 * Math.sqrt(strikeAreaM2(def) / Math.PI) : 0);
+/**
+ * 六軸定義(**唯一真相**:名稱 / 單位 / 取值全在這裡;UI 只負責畫,MUST NOT 自備第二張表)。
+ * 每一軸「是什麼意思」只寫在 `help.js UI_TIPS.charHex`(⓵ 懸浮提示與說明分頁同一份文字);
+ * 本表只管**名稱 / 單位 / 怎麼算**,MUST NOT 在這裡再抄一份說明(兩份說明遲早各講各的)。
+ * 陣列順序 = 六角形**由頂點起順時針**的繪製順序,右半三軸(火力/制域/機動)是輸出面、
+ * 左半三軸(電力/護甲)與頂點(耐久)是生存面 ⇒ 圖形偏右 = 打擊型、偏左 = 耐戰型。
+ * 消費端 MUST 照這個順序走(自己重排 = 兩張圖不同形狀,而兩邊都「看起來合理」)。
+ */
+export const HEX_AXES = [
+  { key: 'dur', name: '耐久', unit: '',
+    val: (ch) => Math.round(UNITS[charKind(ch)].hp * (CHARACTERS[ch].mods?.hp ?? 1))
+      + Math.round(UNITS[charKind(ch)].shield * (CHARACTERS[ch].mods?.sp ?? 1)) },
+  { key: 'fire', name: '火力', unit: '/s',
+    val: (ch) => weaponDps(heroWeapon(ch, 'light')) + weaponDps(heroWeapon(ch, 'heavy')) },
+  { key: 'zone', name: '制域', unit: 'm²',
+    val: (ch) => zoneAreaM2(heroWeapon(ch, 'light')) + zoneAreaM2(heroWeapon(ch, 'heavy')) },
+  { key: 'mob', name: '機動', unit: 'm/s',
+    val: (ch) => heroMobility(charKind(ch), CHARACTERS[ch].mods, charKind(ch) === 'drone') },
+  { key: 'power', name: '電力', unit: '',
+    val: (ch) => Math.round(UNITS[charKind(ch)].mp * (CHARACTERS[ch].mods?.mp ?? 1)) },
+  { key: 'armor', name: '護甲', unit: '',
+    val: (ch) => heroArmor(ch) },
+];
+// ---- 正規化:內圈 = 全場最低、外框 = 全場最高,且在**對數**尺度上內插 ----
+// 兩種直覺的做法都試過,都會讓圖形讀不出東西:
+//   ・以 0 為內圈:現役 32 台的耐久只差 1.5 倍(659~1019)、電力 1.4 倍 ⇒ 六個頂點全部貼在
+//     外圈附近,每一台看起來都是同一個正六邊形。
+//   ・線性 min~max:對**長尾**的軸無效 —— 制域最大值(扇形武器的錐面)是中位數的近十倍,
+//     其餘 27 台全部擠在內圈 5% 以內,那一軸退化成「是不是扇形」的二元旗標。
+// 取對數 ⇒ 「差幾倍」而不是「差多少」決定半徑,與本檔其餘預算一律取幾何中點同一條尺;
+// 底 `FLOOR` 讓全場最低者仍看得見(半徑 0 的頂點會把六邊形塌成一條線)。
+export const HEX = { FLOOR: 0.14 };
+const _hexBand = {};
+/** 該軸的全場值域 { lo, hi }(推導不手寫 —— 改任一角色數值,基準自己跟著走;首呼定案並快取) */
+export function hexBand(key) {
+  if (!_hexBand[key]) {
+    const ax = HEX_AXES.find((a) => a.key === key);
+    const v = ax ? Object.keys(CHARACTERS).map((c) => Math.max(1e-6, ax.val(c))) : [1];
+    _hexBand[key] = { lo: Math.min(...v), hi: Math.max(...v) };
+  }
+  return _hexBand[key];
+}
+/** 一名角色的六軸能力(**唯一取值處**;`f` = FLOOR~1 已正規化,UI 直接拿來畫) */
+export const heroHexStats = (ch) => HEX_AXES.map((ax) => {
+  const v = CHARACTERS[ch] ? ax.val(ch) : 0;
+  const { lo, hi } = hexBand(ax.key);
+  const span = Math.log(hi / lo);
+  const t = span > 1e-9 ? Math.log(Math.max(1e-6, v) / lo) / span : 1;
+  return { key: ax.key, name: ax.name, unit: ax.unit, v,
+    f: HEX.FLOOR + (1 - HEX.FLOOR) * Math.max(0, Math.min(1, t)) };
+});
 
 // ---- 波次編制 / 節奏的唯一推導處(sim._spawnWave・_prefillLanes・balance.mjs・e2e 共用)----
 /** 一波每兵線每側的固定編制(WAVE_SOLDIERS 名步槍兵 + WAVE_EXTRAS);MUST NOT 在任何消費端手抄。 */

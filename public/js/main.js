@@ -16,6 +16,7 @@ import {
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
   FLIGHT, SQUAD, scopeRvmin,
+  heroHexStats,
 } from './data.js';
 import { LORE } from './lore.js';
 import { avatarURL, portraitURL } from './portraits.js';
@@ -950,8 +951,6 @@ const FX_LABEL = {
   buff: '增益', heal: '維修', strike: '打擊', summon: '召喚', emp: '癱瘓',
   vision: '視野', stealth: '匿蹤', dash: '突進', intercept: '攔截',
 };
-// 屬性條的滿格基準(取全角色池上緣,純顯示用)
-const BAR_MAX = { hp: 850, sp: 300, mp: 135, speed: 52, armor: 28 };
 
 /** 三階數值:全等 → 單值;否則 "a → b → c" */
 const tri = (fn, digits = 0) => {
@@ -1053,7 +1052,7 @@ function charDetailHTML(id) {
   const c = CHARACTERS[id];
   const kind = charKind(id);
   const isDrone = kind === 'drone';
-  const stats = heroStatCells(id);
+  const stats = heroHexHTML(id);
   const kindLabel = kindLabelOf(kind);
   // 展示台 #charStage 由 showCharDetail 直接插進 #charDetail 頂端(大)或 #stageBottom(小,頭像下方)。
   // 大圖必須是 #charDetail 的直接子代,sticky 才能在整個捲動容器內固定(套 wrapper 會被限制在 wrapper 內)。
@@ -1071,7 +1070,7 @@ function charDetailHTML(id) {
     </div>
     <div class="cd-body">
       ${charBioTextHTML(id)}
-      <div class="cd-stats">${stats}
+      <div class="cd-hexbox">${stats}
         ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;${SQUAD.KAMI.N} 架常駐護衛自殺機隨行,長按右鍵發動「飽和攻擊」(一般/狙擊模式皆可,${SQUAD.KAMI.N} 架合計 = 一份絕招傷害 ⇒ 每架威力為舊制的一半,自爆後 30s 重現)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形者:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
@@ -1116,15 +1115,47 @@ function statCell(label, v, max) {
       <i><b style="width:${Math.min(100, v / max * 100).toFixed(0)}%"></b></i>
       <em>${v}</em></div>`;
 }
-function heroStatCells(id) {
-  const kind = charKind(id); const u = UNITS[kind]; const m = CHARACTERS[id].mods;
-  return [
-    ['裝甲 HP', Math.round(u.hp * (m.hp ?? 1)), 'hp'],
-    ['護盾', Math.round(u.shield * (m.sp ?? 1)), 'sp'],
-    ['電力', Math.round(u.mp * (m.mp ?? 1)), 'mp'],
-    ['機動', Math.round(u.speed * (m.speed ?? 1)), 'speed'],
-    ['護甲值', m.armor ?? 0, 'armor'],
-  ].map(([label, v, k]) => statCell(label, v, BAR_MAX[k])).join('');
+// ---- 角色六角能力圖(2026-08-04 使用者定案:角色能力改以六角圖顯示)----
+// **這裡只負責畫**:六軸的名稱 / 單位 / 取值 / 正規化全住 `data.js heroHexStats`(單一縫),
+// UI MUST NOT 自備第二張軸表或自己再算一次比例 —— 那正是舊 `BAR_MAX` 手寫滿格基準的老病
+// (改一名角色的數值,別人的長條就悄悄失準)。
+// 幾何:頂點在正上方、順時針排(順序 = HEX_AXES 本身),半徑 = f × R。
+const HEXG = { r: 62, cx: 0, cy: 0, ring: [0.25, 0.5, 0.75, 1] };
+/** 第 i 軸(共 n 軸)在半徑 f 處的座標;-90° 起算 = 頂點朝上 */
+function hexPt(i, n, f) {
+  const a = -Math.PI / 2 + i * 2 * Math.PI / n;
+  return [(HEXG.cx + Math.cos(a) * HEXG.r * f).toFixed(2), (HEXG.cy + Math.sin(a) * HEXG.r * f).toFixed(2)];
+}
+const hexPoly = (n, fs) => Array.from({ length: n }, (_, i) => hexPt(i, n, fs[i]).join(',')).join(' ');
+function heroHexHTML(id) {
+  const st = heroHexStats(id);
+  const n = st.length;
+  const grid = HEXG.ring.map((g) =>
+    `<polygon class="hx-grid" points="${hexPoly(n, Array(n).fill(g))}"/>`).join('');
+  const spokes = st.map((_, i) => {
+    const [x, y] = hexPt(i, n, 1);
+    return `<line class="hx-spoke" x1="0" y1="0" x2="${x}" y2="${y}"/>`;
+  }).join('');
+  // 軸標籤:文字錨點依所在象限外推,避免壓在多邊形上(正上/正下置中、左右各自靠邊)
+  const labels = st.map((s, i) => {
+    const [x, y] = hexPt(i, n, 1.3).map(Number);
+    const anchor = Math.abs(x) < 1 ? 'middle' : (x > 0 ? 'start' : 'end');
+    const dy = y < -1 ? -2 : (y > 1 ? 12 : 4);
+    const num = s.v >= 1000 ? Math.round(s.v) : +s.v.toFixed(s.v < 100 ? 1 : 0);
+    return `<text class="hx-lab" x="${x}" y="${y + dy}" text-anchor="${anchor}">${esc(s.name)}`
+      + `<tspan class="hx-num" x="${x}" dy="11">${num}${esc(s.unit)}</tspan></text>`;
+  }).join('');
+  // 六軸各自的意思寫在 ⓘ 懸浮提示裡(2026-07-31 使用者定案:遊戲內常駐說明一律改 ⓘ,
+  // 並彙整到說明分頁)—— 常駐一行圖例會把六段定義釘在畫面上,手機直式尤其擠。
+  return `<div class="cd-hex">
+    <svg viewBox="-112 -96 224 214" role="img" aria-label="六角能力圖">
+      ${grid}${spokes}
+      <polygon class="hx-fill" points="${hexPoly(n, st.map((s) => s.f))}"/>
+      ${st.map((s, i) => { const [x, y] = hexPt(i, n, s.f); return `<circle class="hx-dot" cx="${x}" cy="${y}" r="2"/>`; }).join('')}
+      ${labels}
+    </svg>
+    <div class="cd-hex-cap">${tipHTML(uiTip('charHex', TOUCH_UI()))} 六角能力圖 ・ 外框 = 全場最高</div>
+  </div>`;
 }
 const UNIT_BAR_MAX = { hp: 3000, armor: 30, dmg: 130, range: 320, rate: 5, speed: 22, sight: 310 };
 function unitStatCells(kind) {
@@ -1291,7 +1322,7 @@ function stageTitleHTML(subject) {
 function stageInfoHTML(subject) {
   if (subject.type === 'char') {
     const isDrone = charKind(subject.id) === 'drone';
-    return `<div class="cd-stats">${heroStatCells(subject.id)}</div>
+    return `${heroHexHTML(subject.id)}
       ${isDrone ? '<div class="cd-note">※ 無人機為單架(生存值 = 機甲平均 80%、傷害同機甲)。</div>' : ''}`;
   }
   return `<div class="cd-stats">${unitStatCells(subject.kind)}</div>`;
