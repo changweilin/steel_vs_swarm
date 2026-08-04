@@ -257,8 +257,12 @@ node tools/audit_npc_collide.mjs # NPC 飛行高度基準 / NPC ⇄ 機體實體
 node tools/audit_hex_stats.mjs  # 圖鑑六角能力圖稽核(58 項;不需伺服器/瀏覽器)
 node tools/audit_codex.mjs     # 角色 / 機體檔案格式稽核(60 項;不需伺服器/瀏覽器;
                                 #   --break-layer / --break-align 反向驗證)
-npm run codex                   # 機體美術覆核台(臨時工具,dev-only:已生成機體圖 × 角色頭像 × 3D 展示台
-                                #   + 武器招式 + 遊戲未公開生成段;確認勾選 / 局部重繪框 / 重下 prompt)
+npm run codex                   # 機體美術覆核台 = 「2D 生圖對照台」(臨時工具,dev-only:已生成機體圖 ×
+                                #   角色頭像 × 3D 展示台 + 武器招式 + 遊戲未公開生成段;確認勾選 /
+                                #   局部重繪框 / 重下 prompt)。圖有**兩個來源**(`SOURCES` 單一縫):
+                                #   已入庫 `public/assets/…/mechs/*.png` + 尚未驗收的 AI 設定稿
+                                #   `tools/ai3d/masters/*.jpg`,兩者計數 MUST 分開(合併 = 把「還沒有
+                                #   正式圖」藏起來)。遊戲設定頁「開發工具」列有一條連結,只在本機顯示。
                                 #   `--report` = 不開瀏覽器直接印配對表(缺圖 / 孤兒 / 覆核進度)
 node tools/audit_vernacular.mjs # 在地文字語料稽核(287 項;不需伺服器/瀏覽器/網路)
 node tools/bake_venue_text.mjs  # 27 場地在地文字語料重烤 → public/js/venueText.js(外網 Overpass,㋓)
@@ -382,6 +386,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 | 全螢幕方向(`mobile.toggleFullscreen`) | 2026-08-04 使用者需求「全螢幕時也可以旋轉手機切換直式/橫式」。MUST NOT 鎖方向,進出各 `unlock()` 一次。`audit_ctrl_mode.mjs` Ⅶ(原文無 `orientation.lock`、`unlock()` 恰兩處、`syncOrientation` 兩個轉向監聽仍在)+ 真機冒煙(進全螢幕後轉手機,版型即時換且**沒有退出全螢幕**) |
 | `#touchLayer` 節點位置 / `--tl-*` CSS 變數 | 搖桿 MUST 留 body 層 + 保留 `body.touch-ui` 保險預設值;真機大廳端對端量測(不設覆寫) |
 | 選單版型 / 任何鈕面文字 | `audit_ui_layout.mjs`(309 項;鈕面無括號補述、桌機並排直式維持並排、`.cd-art` 解除 sticky、疊層 ✕ 規則) |
+| 機體美術覆核台 / 2D 生圖來源(`tools/codex_review.mjs` 的 `SOURCES`/`manifest`/`wantShots`・`tools/codex_review/review.js` 的 `rowStat`/`shotCard`/`renderOrphans`・`tools/ai3d/gen2d.mjs` 的 `relOut`/`gen_manifest.json`)或 設定頁開發工具列(`main.js DEV_TOOLS`/`devHost`/`renderDevTools`・`#pauseDevMount`/`#lobbyDevMount`) | `node tools/codex_review.mjs --report`(配對表:入庫 / AI 稿 **分開數**、缺圖與孤兒逐項列出 —— 兩個數字合併就是把「這一格還沒有正式圖」藏起來)+ `audit_ui_layout.mjs` (8) 段(開發工具列一份實作兩個掛載點、小標由 JS 產生、埠號與 `codex_review.mjs` 的預設埠同值、說明不進 `UI_TIPS`,並執行 `devHost()` 原文直測 localhost 顯示 / `file:` ・Pages ・區網位址不顯示)+ **反向驗證**(改掉 main.js 那條連結的埠 ⇒ 埠號斷言紅字;把 `devHost` 寫成恆真 ⇒ 三條出貨版斷言紅字)+ `audit_ctrl_mode.mjs`/`audit_touch_layout.mjs`(設定頁多一區)+ `npm test` / `npm run bal`(㋒ dev-only 工具 + 純表現層,伺服器完全不涉入 ⇒ MUST 全數不動)+ 真機冒煙(`npm run codex` 起台子:t10/t12/m02/m06 那幾格出現藍色虛線框的「AI 稿」、s12 那兩張列在孤兒區可指派到 s03;遊戲設定頁最下方有「▎開發工具(本機)」一列,點「↗ 開啟」開得起來;**單機版 / GitHub Pages / 隊友從區網位址連進來時,那一整區看不到**)|
 | 陀螺儀(`Gyro`/`gyroSrc`/`LOOK.GYRO_*`/`TOUCH.gyro` 預設值) | `audit_gyro.mjs`(25 項;兩感測路徑、俯仰同號、自動切換、**宣告的預設值為關**)+ `audit_ctrl_mode.mjs` Ⅶ(預設值的 CI 版斷言 —— audit_gyro 要 playwright,沒裝就整支跳過)+ **MUST 用 https/localhost 真機測**(非 secure context 靜默無感測事件) |
 
 **e2e 結構備忘**:前段 import `BattleSim` 直測(測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下偵察 MUST 另開 `mode:'spectator'` client。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。

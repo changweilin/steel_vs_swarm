@@ -21,6 +21,28 @@ P2/P3(image→3D)尚未開始。
 
 ---
 
+## 畫完之後在哪裡驗收
+
+`masters/` 那一層**刻意不進版控**(見 `.gitignore`)—— 它是「畫好了但還沒人看過」的暫存層。
+驗收在 **2D 生圖對照台**上做:
+
+```bash
+npm run codex          # = node tools/codex_review.mjs,起 dev server(:8621)
+npm run codex -- --report   # 不開瀏覽器,直接印配對表
+```
+
+那座台子把 `masters/*.jpg` 與已入庫的 `public/assets/cyberpunk_art/mechs/*.png` **收在同一個配對表裡**
+(配對規則同一條:檔名去副檔名 = slot),AI 稿標成藍色虛線框的「AI 稿」、計數也分開列 ——
+合併就等於把「這一格還沒有正式圖」藏起來。逐張確認勾選 / 框出要局部重繪的地方 / 重下 prompt,
+通過的再由人搬進 `public/assets/cyberpunk_art/mechs/`(那一層才進版控)。
+遊戲的設定頁最下方有一條連結(只在本機顯示)。
+
+**機體換過手的稿會變成孤兒**:2026-08-04 的 `s12_ground_static.jpg` / `s12_flight_static.jpg`
+畫的是 s12 還是變形者時的那台機體,而那台後來整組搬去 s03 ⇒ 檔名對不上任何一格。
+覆核台會把它們列在孤兒區,可以直接**指派**到 `s03_ground_static` / `s03_flight_static`,不必改檔名。
+
+---
+
 ## 兩支稽核
 
 | 稽核 | 問什麼 | 紅字代表 |
@@ -54,6 +76,13 @@ node -e "import('./tools/ai3d/slots.mjs').then(m=>console.log(m.auditCoverage())
 
 推導結果(2026-08-04):**32 隻機體 / 238 張切圖 / 18 張缺漏設定稿 = 256 張**
 (計畫 §5.0.2 的估計是 ~280;差額來自鏡射收斂逐隻實算而非取平均)。
+
+> 設定稿那 18 張在 2026-08-03~04 分三批畫完(中間被 429 額度打斷兩次),
+> 2026-08-04 全數收進 `masters/`。**帳本當時漏了兩筆**(`t11_flight_static` / `m05_flight_static`
+> —— 額度中斷那兩張畫出來了但沒記進去),另有一筆(`m05_ground_static`)記到**別段對話**的
+> 產出上(`newestNew()` 在多段對話交錯時會抓錯),已一併更正並在該筆的 `note` 欄註明。
+> 帳本的 `out` 欄從此記**相對於儲存庫根**的路徑:絕對路徑會綁死在產出當下那個 worktree 上,
+> worktree 一收掉,帳本裡每一筆就全部指向不存在的地方。
 
 ---
 

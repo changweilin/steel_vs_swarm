@@ -42,6 +42,9 @@ const MANIFEST = join(OUT, 'gen_manifest.json');
 const BRAIN = join(homedir(), '.gemini', 'antigravity-cli', 'brain');
 const AGY_TIMEOUT_MS = 6 * 60 * 1000;
 
+/** 產出路徑一律以儲存庫根為基準記帳(印在畫面上的也是同一份) */
+const relOut = p => p.replace(REPO + '\\', '').replace(REPO + '/', '').replace(/\\/g, '/');
+
 const argv = process.argv.slice(2);
 const flag = n => argv.includes(`--${n}`);
 const val = n => { const i = argv.indexOf(`--${n}`); return i < 0 ? null : argv[i + 1]; };
@@ -210,10 +213,12 @@ for (const j of jobs) {
   copyFileSync(file, j.out);
   ok++;
   const bytes = statSync(j.out).size;
-  console.log(`✓ ${(bytes / 1024).toFixed(0)}KB → ${j.out.replace(REPO + '\\', '').replace(REPO + '/', '')}`);
+  console.log(`✓ ${(bytes / 1024).toFixed(0)}KB → ${relOut(j.out)}`);
   man.generated = man.generated.filter(g => g.id !== j.id);
+  // `out` 記**相對於儲存庫根**:絕對路徑會把帳本綁死在產出當下那個 worktree 上,
+  // 而 worktree 一收掉,帳本裡每一筆的路徑就全部指向不存在的地方(2026-08-04 實例)。
   man.generated.push({ id: j.id, ch: j.ch, kind: j.kind, slot: j.slot ?? null,
-    ref: j.ref ?? null, mirror: !!j.mirror, out: j.out, src: file, bytes,
+    ref: j.ref ?? null, mirror: !!j.mirror, out: relOut(j.out), src: file, bytes,
     format: 'jpeg (agy generate_image 只出 JPEG)', at: new Date().toISOString(), prompt: j.prompt });
   saveManifest(man);
 }

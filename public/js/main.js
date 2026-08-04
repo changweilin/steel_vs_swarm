@@ -2555,6 +2555,51 @@ function disposeVisualSettings() {
   _matSample?.dispose();
   _matSample = null;
 }
+
+// ── 開發工具(dev-only:只在本機開發環境出現)──────────────────────────────
+// 這些工具**刻意住 tools/ 不住 public/**(`tools/build_solo.mjs` 是把 `public/**` 整包複製出貨的)⇒
+// 設定頁能給的只有一條連結,MUST NOT 把工具本身搬進遊戲。連結一律只在本機出現:
+// GitHub Pages / 單機版 file:// / 隊友連進來的區網位址上,那支 dev server 根本不在他們機器上,
+// 一顆點了必定連不上的鈕比沒有這顆鈕更糟。
+//
+// 埠號是「另一支程式的預設值」而不是本檔的自由變數 —— 兩邊各寫一個數字就會在某次改埠之後
+// 靜默分家(鈕還在、點下去連到空的),故由 `audit_ui_layout.mjs` 釘住兩邊同值。
+const DEV_TOOLS = [
+  { key: 'codex', label: '2D 生圖對照台', url: 'http://localhost:8621/',   // = tools/codex_review.mjs 的預設埠
+    hint: '把已生成的機體圖配對到角色頭像與 3D 展示台,逐張確認勾選 / 框出局部重繪 / 重下 prompt;'
+      + '同時列出缺圖與孤兒檔,並收 tools/ai3d/masters/ 那批尚未驗收的 AI 設定稿。'
+      + '要先在終端機跑 `npm run codex` 才開得起來。' },
+];
+/** 這個分頁是不是跑在本機開發環境?(出貨版一律 false) */
+function devHost() {
+  if (typeof location === 'undefined' || !/^https?:$/.test(location.protocol)) return false;
+  const h = location.hostname || '';
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1';
+}
+/** **一份實作、兩個掛載點**(戰場暫停頁 + 大廳設定頁),與畫面表現/操作方式同一條規矩 */
+function renderDevTools(mount) {
+  if (!mount) return;
+  mount.innerHTML = '';
+  mount.hidden = !devHost();
+  if (mount.hidden) return;
+  mount.insertAdjacentHTML('beforeend', '<div class="set-sub">▎開發工具(本機)</div>');
+  for (const d of DEV_TOOLS) {
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.style.flexWrap = 'wrap';   // 網址那一段比其他設定列長,窄螢幕塞不下就折行(A20:不准推出摺線)
+    row.innerHTML = `<span class="set-label">${d.label}</span>`
+      + `<span class="set-hint">${d.url}</span>`;
+    attachTip(row.querySelector('.set-label'), d.hint);   // 逐項說明走 ⓘ 懸浮提示(觸控長按)
+    const open = document.createElement('button');
+    open.className = 'btn small';
+    open.type = 'button';
+    open.textContent = '↗ 開啟';
+    // window.open 在點擊處理器裡不會被擋;`noopener` 免得那一頁拿得到本頁的 window
+    open.addEventListener('click', () => { window.open(d.url, '_blank', 'noopener'); app.audio?.ui('click'); });
+    row.appendChild(open);
+    mount.appendChild(row);
+  }
+}
 // 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
 function syncSettingsUi() {
   syncAudioSwitches('set');
@@ -2599,6 +2644,8 @@ function mountHelp(catsEl, bodyEl) {
 }
 mountHelp($('helpCats'), $('helpBody'));            // 戰場暫停選單
 mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));  // 大廳:設定 / 說明疊層
+renderDevTools($('pauseDevMount'));                 // 開發工具:靜態內容,開場畫一次就好
+renderDevTools($('lobbyDevMount'));
 
 // ── GUI 懸浮提示(2026-07-31:遊戲內常駐說明一律改成 ⓘ 提示)──
 // index.html 的靜態標記只寫 `data-tipkey`,**文字一律在這裡從 help.js UI_TIPS 取** ——

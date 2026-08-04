@@ -38,6 +38,8 @@ body.cr::before, body.cr::after { display: none; }
 .cr-pill.ok { background: rgba(90, 200, 130, 0.22); color: #9fe7bb; }
 .cr-pill.flag { background: rgba(255, 180, 70, 0.22); color: #ffcf8a; }
 .cr-pill.miss { background: rgba(255, 90, 90, 0.2); color: #ff9d9d; }
+/* AI 稿 = 尚未驗收的候選稿(tools/ai3d/masters/*.jpg):與已入庫的圖 MUST 一眼分得出來 */
+.cr-pill.ai { background: rgba(120, 170, 255, 0.22); color: #a9c8ff; }
 
 /* ── 上半:頭像 ▏3D 展示台 ── */
 .cr-head { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
@@ -55,6 +57,8 @@ body.cr::before, body.cr::after { display: none; }
 .cr-shots { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
 .cr-shot { width: 190px; cursor: pointer; position: relative; }
 .cr-shot img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; display: block; background: #11161b; }
+/* 未驗收的 AI 稿:虛線框 —— 覆核狀態的實線外框仍蓋得過它(已覆核 > 來源) */
+.cr-shot.is-ai img { outline: 2px dashed rgba(120, 170, 255, 0.7); }
 .cr-shot.on-ok img { outline: 2px solid #5ac882; }
 .cr-shot.on-flag img { outline: 2px solid #ffb446; }
 .cr-shot .cr-none {

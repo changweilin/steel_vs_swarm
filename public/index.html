@@ -516,6 +516,11 @@
                同一份設定表,MUST NOT 在兩處各寫一份 DOM)。桌機以 .touch-only 隱藏整區。 -->
           <div class="set-sub touch-only">▎觸控操控</div>
           <div class="touch-only" id="pauseTouchMount" style="flex-direction:column;gap:12px"></div>
+
+          <!-- 開發工具:內容由 main.js renderDevTools() 注入,**連小標都由它產生** ——
+               這一區在出貨版(GitHub Pages / 單機版 / 隊友連進來的區網位址)一律整塊不存在,
+               小標若寫成靜態標記就會在那些地方留下一個空的區塊標題。 -->
+          <div id="pauseDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
         </div>
         <div class="row" style="justify-content:center"><button class="btn small pause-back" type="button" data-page="menu">◀ 返回選單</button></div>
       </div>
@@ -685,6 +690,7 @@
         <div id="lobbyVisualMount" class="vset"></div>
         <div class="set-sub touch-only">▎觸控操控</div>
         <div class="touch-only" id="lobbyMenuTouchMount" style="flex-direction:column;gap:12px"></div>
+        <div id="lobbyDevMount" style="display:flex;flex-direction:column;gap:12px"></div>
       </div>
     </div>
 

@@ -9,10 +9,13 @@
 //   ② **唯讀遊戲資料** —— 頁面 import 的是真品 `data.js`/`codex.js`/`charPreview.js`,
 //      MUST NOT 由本工具寫回任何一支;覆核結果只寫 `tools/codex_review/state.json`(本工具自己的檔)。
 //      重新下的 prompt 也只存在那裡 —— 它是**覆核產物**,不是第二份 `imagePrompt`(A40 ⑥)。
-//   ③ **配對規則是推導的** —— 檔名 `<角色 id>[_<型態>]_<姿態>.png`,而「這台該有哪幾個型態」
+//   ③ **配對規則是推導的** —— 檔名 `<角色 id>[_<型態>]_<姿態>`,而「這台該有哪幾個型態」
 //      由 `visual.flight`/`visual.ground` 推導(與 `codex.js protoLayers()` 同一條規則)。
-//      缺圖與孤兒檔一律**列出來**,MUST NOT 靜默略過 —— 覆核台把漏掉的東西藏起來就沒有意義了
-//      (現況:32 台裡 11 台一張都沒有、s07 只有 3 張中的 1 張)。
+//      缺圖與孤兒檔一律**列出來**,MUST NOT 靜默略過 —— 覆核台把漏掉的東西藏起來就沒有意義了。
+//      圖有**兩個來源**(見 `SOURCES`):已入庫的 `public/assets/…/mechs/*.png`,以及 AI 管線
+//      剛畫、**尚未驗收**的 `tools/ai3d/masters/*.jpg`。後者收進來,這座台子才接得上
+//      「生成 → 驗收 → 入庫」那條線;但兩者的計數 MUST 分開,合併就等於把「還沒有正式圖」藏起來
+//      (2026-08-04 收了 18 張 AI 設定稿之後,「一張都沒有的角色」從 11 台掉到 2 台)。
 //
 // 跑法:
 //   node tools/codex_review.mjs            # 起 dev server(預設 :8621),瀏覽器開印出來的網址
@@ -28,9 +31,24 @@ import { ROOT } from './audit_src.mjs';
 import { CHARACTERS, SIDES, charKind } from '../public/js/data.js';
 import { KIND_WORD } from '../public/js/codex.js';
 
-const ART_DIR = join(ROOT, 'public', 'assets', 'cyberpunk_art', 'mechs');
-const ART_URL = 'public/assets/cyberpunk_art/mechs';
 const STATE_FILE = join(ROOT, 'tools', 'codex_review', 'state.json');
+
+/** 圖的**兩個來源**。配對規則兩邊同一條:檔名(去副檔名)= slot(`<角色 id>[_<型態>]_<姿態>`)。
+ *
+ *  ① `art` 已入庫 —— `public/assets/cyberpunk_art/mechs/*.png`,驗收通過才會出現在這裡(進版控)。
+ *  ② `ai`  AI 設定稿 —— `tools/ai3d/masters/*.jpg`,`tools/ai3d/gen2d.mjs --masters` 剛畫出來的,
+ *     **尚未驗收**(那一層刻意不進版控,見 tools/ai3d/.gitignore)。
+ *
+ *  收 ② 正是這座覆核台缺的那一段:生成 → masters/(未驗收)→ **在這裡驗收** → 搬進 public/assets(入庫)。
+ *  兩件事 MUST 分得開:AI 稿 MUST NOT 併進「已入庫」的計數裡(併了就是把「這一格還沒有正式圖」
+ *  藏起來,而檔頭 ③「缺圖與孤兒一律列出來」正是為了不藏)。 */
+export const SOURCES = [
+  { key: 'art', label: '入庫', ext: '.png', url: 'public/assets/cyberpunk_art/mechs',
+    dir: join(ROOT, 'public', 'assets', 'cyberpunk_art', 'mechs') },
+  { key: 'ai', label: 'AI 稿', ext: '.jpg', url: 'tools/ai3d/masters',
+    dir: join(ROOT, 'tools', 'ai3d', 'masters') },
+];
+const SRC_BY_KEY = Object.fromEntries(SOURCES.map((s) => [s.key, s]));
 
 /** 姿態(檔名末段):與現有出圖批次的命名一致 */
 export const POSES = [
@@ -43,35 +61,43 @@ export function formsOf(id) {
   const vis = CHARACTERS[id]?.visual || {};
   return vis.flight != null && vis.ground != null ? ['flight', 'ground'] : [null];
 }
-/** 這台機體**應該**有哪幾張圖(檔名 → slot 鍵) */
+/** 這台機體**應該**有哪幾張圖(slot 鍵 = 檔名去副檔名);`file` 是「入庫」那個來源的本名 */
 export function wantShots(id) {
   const out = [];
   for (const form of formsOf(id)) for (const p of POSES) {
-    const file = [id, form, p.key].filter(Boolean).join('_') + '.png';
-    out.push({ slot: file.replace(/\.png$/, ''), file, form, pose: p.key, poseLabel: p.label });
+    const slot = [id, form, p.key].filter(Boolean).join('_');
+    out.push({ slot, file: `${slot}${SOURCES[0].ext}`, form, pose: p.key, poseLabel: p.label });
   }
   return out;
 }
 
 /** 配對表:逐角色列出該有的圖、實際有沒有;另外收「檔案在但對不到任何角色」的孤兒。
  * 孤兒不是壞掉,是**機體換過手**:s03 的三張是她還是無人機時出的圖,2026-08-03 換成變形者之後
- * 檔名少了型態段就對不上了。所以孤兒可由覆核台**指派**到某一格(`state.assign`),
+ * 檔名少了型態段就對不上了(AI 稿那批同一回事:s12 的兩張畫的是她還是變形者時的機體,
+ * 2026-08-04 那台整組搬去 s03)。所以孤兒可由覆核台**指派**到某一格(`state.assign`),
  * 不必改檔名 —— 但 MUST 仍列在孤兒清單裡直到被指派,靜默吃掉才是真的壞掉。 */
 export async function manifest(assign = {}) {
-  const files = existsSync(ART_DIR)
-    ? (await readdir(ART_DIR)).filter((f) => f.toLowerCase().endsWith('.png'))
-    : [];
-  const pool = new Set(files);
+  // 檔名 → 來源。兩個來源共用一個池 ⇒ 指派、孤兒、佔位規則都只有一套
+  const pool = new Map();
+  for (const s of SOURCES) {
+    if (!existsSync(s.dir)) continue;   // AI 管線沒跑過就沒有那個目錄(原則 6:少一個來源不是錯)
+    for (const f of await readdir(s.dir)) if (f.toLowerCase().endsWith(s.ext)) pool.set(f, s.key);
+  }
   const bySlot = new Map();   // slot → 指派過來的檔名
   for (const [file, slot] of Object.entries(assign)) if (pool.has(file)) bySlot.set(slot, file);
   const rows = [];
   for (const id of Object.keys(CHARACTERS)) {
     const c = CHARACTERS[id];
     const shots = wantShots(id).map((s) => {
-      const file = pool.has(s.file) ? s.file : bySlot.get(s.slot);
-      const has = !!file;
-      if (has) pool.delete(file);
-      return { ...s, has, file: file || s.file, assigned: has && file !== s.file, url: has ? `${ART_URL}/${file}` : null };
+      // 本名(逐來源 `<slot><副檔名>`)優先於指派;來源之間的優先序 = SOURCES 的宣告序
+      // ⇒ 入庫圖永遠蓋過 AI 稿(同一格兩張時,畫面上要看到的是驗收過的那張)
+      const natural = SOURCES.map((x) => `${s.slot}${x.ext}`);
+      const file = natural.find((f) => pool.has(f)) ?? bySlot.get(s.slot);
+      if (!file) return { ...s, has: false, src: null, assigned: false, url: null };
+      const src = pool.get(file);
+      pool.delete(file);
+      return { ...s, has: true, file, src, assigned: !natural.includes(file),
+        url: `${SRC_BY_KEY[src].url}/${file}` };
     });
     rows.push({
       id, name: c.name, code: c.code, machine: c.machine,
@@ -83,7 +109,9 @@ export async function manifest(assign = {}) {
     });
   }
   // 剩下的就是孤兒:檔名的角色 id 不存在,或型態/姿態不在推導出來的清單裡
-  return { rows, orphans: [...pool].sort(), total: files.length };
+  const orphans = [...pool.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([file, src]) => ({ file, src, url: `${SRC_BY_KEY[src].url}/${file}` }));
+  return { rows, orphans, sources: SOURCES.map(({ key, label }) => ({ key, label })) };
 }
 
 async function loadState() {
@@ -98,21 +126,24 @@ async function saveState(s) {
 // ---- --report:不開瀏覽器的配對表 ----------------------------------------
 async function report() {
   const st = await loadState();
-  const { rows, orphans, total } = await manifest(st.assign);
-  let want = 0, have = 0, done = 0;
+  const { rows, orphans } = await manifest(st.assign);
+  // 逐來源分開數:AI 稿併進「有圖」就是把「這一格還沒有正式圖」藏起來(檔頭 ③)
+  let want = 0, done = 0;
+  const bySrc = Object.fromEntries(SOURCES.map((s) => [s.key, 0]));
   const missing = [];
   for (const r of rows) {
     for (const s of r.shots) {
       want++;
-      if (s.has) { have++; if (st.items?.[s.slot]?.status === 'ok') done++; }
+      if (s.has) { bySrc[s.src]++; if (st.items?.[s.slot]?.status === 'ok') done++; }
       else missing.push(`${r.id} ${s.form ? `${s.form}/` : ''}${s.pose}`);
     }
   }
+  const have = SOURCES.reduce((n, s) => n + bySrc[s.key], 0);
   console.log('機體美術覆核 — 配對表');
-  console.log(`  圖檔    ${total} 張(對得上 ${have} / 應有 ${want})`);
+  console.log(`  應有    ${want} 格 — ${SOURCES.map((s) => `${s.label} ${bySrc[s.key]}`).join(' / ')}`);
   console.log(`  已確認  ${done} / ${have}`);
   console.log(`  缺圖    ${missing.length} 張${missing.length ? `:${missing.join('、')}` : ''}`);
-  console.log(`  孤兒檔  ${orphans.length} 個${orphans.length ? `:${orphans.join('、')}` : ''}`);
+  console.log(`  孤兒檔  ${orphans.length} 個${orphans.length ? `:${orphans.map((o) => o.file).join('、')}` : ''}`);
   const noArt = rows.filter((r) => r.shots.every((s) => !s.has)).map((r) => r.id);
   if (noArt.length) console.log(`  一張都沒有的角色(${noArt.length}):${noArt.join(' ')}`);
 }

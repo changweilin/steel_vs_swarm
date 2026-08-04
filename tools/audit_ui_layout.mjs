@@ -147,6 +147,42 @@ const ok = (cond, msg) => {
     '掃貨鈕的可用狀態吃 game.js 傳來的 `sweepable`,MUST NOT 在 UI 端自己再算一次買不買得起');
   ok(/st\.toggleReserve\(item\)/.test(mainJs),
     '預約鈕只呼叫 `toggleReserve`(名單與排程都住 game.js)');
+
+  // (8) 設定頁的「開發工具」列(2026-08-04 使用者定案:2D 生圖對照台加進設定,只在本機顯示)
+  //     工具本體住 tools/,設定頁只給一條連結 —— 出貨版(Pages / 單機 / 隊友的區網位址)
+  //     MUST 整塊不存在,否則就是一顆點了必定連不上的鈕。
+  ok((mainJs.match(/function renderDevTools\(/g) || []).length === 1,
+    '開發工具列只有一份實作(`renderDevTools`)');
+  ok((mainJs.match(/renderDevTools\(\$\(/g) || []).length === 2,
+    '開發工具列恰兩個掛載點(戰場暫停頁 + 大廳設定頁)');
+  for (const id of ['pauseDevMount', 'lobbyDevMount']) {
+    ok(html.includes(`id="${id}"`), `index.html 有 #${id} 掛載點`);
+  }
+  ok(!html.replace(/<!--[\s\S]*?-->/g, '').includes('開發工具'),
+    '「開發工具」小標 MUST 由 renderDevTools 產生 —— 寫成靜態標記會在出貨版留下一個空的區塊標題');
+  ok(!Object.keys(help.UI_TIPS).some((k) => /dev/i.test(k)),
+    '開發工具的說明 MUST NOT 進 UI_TIPS(那一份會被推導進玩家看得到的說明分頁)');
+
+  // 埠號是「另一支程式的預設值」:兩邊各寫一個數字,改埠之後鈕還在、點下去連到空的
+  const devPort = mainJs.match(/url: 'http:\/\/localhost:(\d+)\//)?.[1];
+  const srvPort = readFileSync(join(ROOT, 'tools', 'codex_review.mjs'), 'utf8')
+    .match(/argv\[i \+ 1\]\) : (\d+)/)?.[1];
+  ok(!!devPort && devPort === srvPort,
+    `設定頁那條連結的埠 = tools/codex_review.mjs 的預設埠(main.js ${devPort} / 覆核台 ${srvPort})`);
+
+  // 行為直測:執行 main.js 的 `devHost()` 原文(它只吃 location,拆得出來單獨跑)
+  {
+    const src = mainJs.match(/function devHost\(\)\s*\{[\s\S]*?\n\}/)?.[0];
+    ok(!!src, 'main.js 有 `devHost()`(出貨版的閘門)');
+    const run = (loc) => new Function('location', `${src}\nreturn devHost();`)(loc);
+    ok(run({ protocol: 'http:', hostname: 'localhost' }) === true, 'devHost:localhost 顯示');
+    ok(run({ protocol: 'https:', hostname: '127.0.0.1' }) === true, 'devHost:127.0.0.1 顯示');
+    ok(run({ protocol: 'file:', hostname: '' }) === false, 'devHost:單機版 file:// 不顯示');
+    ok(run({ protocol: 'https:', hostname: 'changweilin.github.io' }) === false,
+      'devHost:GitHub Pages 不顯示');
+    ok(run({ protocol: 'http:', hostname: '192.168.1.20' }) === false,
+      'devHost:隊友連進來的區網位址不顯示(那支 dev server 不在他們機器上)');
+  }
 }
 
 const chromium = await chromiumOrNull();
