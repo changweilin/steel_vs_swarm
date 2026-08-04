@@ -2655,7 +2655,7 @@ export const CHARACTERS = {
   m03: {
     // 2026-08-02 機體混編:改駕雙尾桁定翼無人機 —— 兩根尾桁之間的空腔本來是天線艙,
     // 她改成了貨艙:先把血漿、零件、修理臂空投下去,帳單後到。
-    side: 'MERC', kind: 'drone', name: '烏蘇拉・林德特', code: '雪線', machine: '「帳房」雙尾桁運補機',
+    side: 'MERC', kind: 'drone', name: '烏蘇拉・林德特', code: '雪線', machine: '「續命」雙尾桁運補機',
     visual: { hue: 0x59c9a5, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛脈衝雷射艙', rw: '低功率防禦雷射・光速直擊', type: 'beam',
@@ -2689,7 +2689,7 @@ export const CHARACTERS = {
       cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊限時無霧視野' },
   },
   m05: {
-    side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '熄燈', machine: '「清算日」電戰可變機甲',
+    side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '熄燈', machine: '「鎖喉」電戰可變機甲',
     visual: { hue: 0x5551cc, pod: 'antenna', flight: 'jet', ground: 'wolf', bulk: 1.05, paint: 'split', split: 'x', splitFlip: true },  // 靛藍同色系:機體右半(-x)亮/左半暗
     mods: { hp: 1.1, sp: 1.0, mp: 1.15, speed: 0.95, armor: 16 },
     light: { name: '12.7 電磁機砲', rw: 'GAU-19 線圈化改裝・初速 1300m/s', type: 'rail', mv: 1300,
@@ -2708,7 +2708,7 @@ export const CHARACTERS = {
   m06: {
     // 2026-08-02 機體混編:改駕「劍龍」四足機甲 —— 背上那排骨板就是發射軌(HEAVY_MOUNT.stego = back),
     // 一整排掛架吊著轉包出去的貨:一座會走路的碼頭,比傾轉旋翼還像他的生意。
-    side: 'MERC', kind: 'robot', name: '圖里奧・費雷拉', code: '嘉年華', machine: '「外包」母艦式機甲',
+    side: 'MERC', kind: 'robot', name: '圖里奧・費雷拉', code: '嘉年華', machine: '「傾盆」母艦式機甲',
     visual: { hue: 0xf0c24a, pod: 'rack', form: 'beast', creature: 'stego', paint: 'totem' },
     mods: { hp: 1.0, sp: 1.1, mp: 1.25, speed: 1.0, armor: 14 },
     light: { name: '雙聯掛載機槍', rw: 'PKP 縮裝・初速 825m/s', type: 'gun', mv: 825,
@@ -2723,7 +2723,7 @@ export const CHARACTERS = {
       cd: [85, 75, 65], mp: [90, 100, 110], desc: '訂單爆量:攻擊直升機編隊壓上' },
   },
   m07: {
-    side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '界碑', machine: '「保全」區域拒止可變機甲',
+    side: 'MERC', kind: 'morph', name: '約蘭妲・里奧斯', code: '界碑', machine: '「落閘」區域拒止可變機甲',
     visual: { hue: 0x5fa8d3, pod: 'shield', flight: 'beetle', ground: 'beetle', bulk: 1.25, paint: 'totem' },
     mods: { hp: 1.15, sp: 1.05, mp: 1.1, speed: 0.9, armor: 20 },
     light: { name: '雙 35 快砲', rw: 'Oerlikon 縮裝・初速 1100m/s', type: 'gun', mv: 1100,
@@ -2740,7 +2740,7 @@ export const CHARACTERS = {
       desc: '把整片天空劃進責任區:彈幕壓制(緩速)' },
   },
   m08: {
-    side: 'MERC', kind: 'morph', name: '維迪雅・拉托爾', code: '尾聲', machine: '「尾款」隱形狙擊可變機甲',
+    side: 'MERC', kind: 'morph', name: '維迪雅・拉托爾', code: '尾聲', machine: '「空號」隱形狙擊可變機甲',
     visual: { hue: 0x8f7fd0, pod: 'blade', flight: 'owl', ground: 'panther', bulk: 0.85, paint: 'camo' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.15, speed: 1.15, armor: 5 },
     light: { name: '消音精準艙', rw: 'VSS 縮裝・初速 295m/s', type: 'gun', mv: 295,

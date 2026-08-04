@@ -4417,7 +4417,7 @@ function buildMorphMech(side, vis) {
       // (fitToHeight 以最低點歸零 = 整機浮空)⇒ 狼人 rest 拉到近水平;吸血鬼挺立照舊前下傾
       const restP = G === 'wolf' ? 1.62 : 1.35;
       if (sx > 0) {
-        // ── 右手輕武器:依角色原型建模(渡鴉 M134 六管速射 / 清算日 GAU-19 電磁旋管)──
+        // ── 右手輕武器:依角色原型建模(渡鴉 M134 六管速射 / 鎖喉 GAU-19 電磁旋管)──
         const gg = new THREE.Group();
         gg.position.set(0, -0.12, 0.12);
         gg.rotation.x = restP;                                                          // rest:行軍持槍
@@ -4458,7 +4458,7 @@ function buildMorphMech(side, vis) {
         // 槍口環 morphLMuz 在 gg 局部 y=+1.34(M134)/+1.4(GAU-19),機匣 +0.02 ⇒ fwd 'y'(已驗證局部 +y)
         morphWpnL = { nodes: [gg], ref: gg, muz: morphLMuz, fwd: 'y' };
       } else {
-        // ── 左手重武器(雙槍的另一手):渡鴉地獄火雙聯管 / 清算日追債者四聯彈匣箱 ──
+        // ── 左手重武器(雙槍的另一手):渡鴉地獄火雙聯管 / 鎖喉追債者四聯彈匣箱 ──
         const gg = new THREE.Group();
         gg.position.set(0, -0.12, 0.12);
         gg.rotation.x = restP;
@@ -4632,7 +4632,7 @@ function buildMorphMech(side, vis) {
     hem.rotation.x = -0.14;
   } else if (G === 'atlas') {
     // 負重型:雙肩貨運掛架(轉包的貨都吊在上面)+ 腰際配重塊 = 前傾負重站姿的來源。
-    // 武裝全數「掛載」在貨運架下(機體名就叫外包母艦 —— 手不持槍,手持圓盾=旋翼盤):
+    // 武裝全數「掛載」在貨運架下(機體名就叫「傾盆」母艦 —— 手不持槍,手持圓盾=旋翼盤):
     // 右架 = 雙聯掛載機槍(輕),左架 = 集束子母彈布撒器(重,蓄力上仰瞄準/擊發反向下沉)
     // 腰際配重塊:前傾寬站不會摔的配重(x ±0.42B 避開 ±0.95B 掛載臂與中線背包)
     for (const sx of [-1, 1]) {
@@ -4788,7 +4788,7 @@ function buildMorphMech(side, vis) {
     bx(torso, 0.2 * B, 0.34, 0.16, -0.52 * B, 0.85, -0.62, PAL.mid, { metalness: 0.5 });     // 工具匣
     bx(torso, 0.21 * B, 0.06, 0.02, -0.52 * B, 0.95, -0.53, dim(accent, 0.85));              // 匣面警示條
     cyl(torso, 0.05, 0.05, 0.24, 8, -0.42 * B, 0.95, -0.7, dim(accent, 0.7), { metalness: 0.6 });  // 焊炬瓶(外移避開光翼根機構盒)
-    // 帳房側掛袋:隨身帳冊/零件袋吊在腰際 —— 後勤/貨運身份的碼頭工人語彙
+    // 「續命」側掛袋:隨身帳冊/零件袋吊在腰際 —— 後勤/貨運身份的碼頭工人語彙
     bx(torso, 0.16 * B, 0.22, 0.1, -0.6 * B, 0.28, -0.08, PAL.deep, { metalness: 0.3 });     // 袋體
     bx(torso, 0.17 * B, 0.07, 0.02, -0.6 * B, 0.36, -0.02, dim(gold, 0.7));                  // 袋蓋
   }
