@@ -44,12 +44,16 @@ export const grabMethod = (src, name) => {
 };
 
 /**
- * 抽出**頂層具名函式**的原文(含大括號區塊);供非 class 的模組(server.js 等)用。
+ * 抽出**頂層具名函式**的原文(含大括號區塊);供非 class 的模組(server.js / mobile.js 等)用。
+ * `export` 與 `async` 前綴都吃得下 —— 客戶端模組的頂層函式幾乎都是 `export function`,
+ * 而只認裸 `function name(` 的舊版對它們一律丟「找不到」,稽核只好退回 regex 全檔原文:
+ * 那會跨函式誤命中(別處出現同一個字串就算過),而且看起來一樣綠。
+ * 回傳一律從 `function` / `async function` 起算(去掉 `export`),消費端仍可直接丟進 `new Function`。
  * @param {string} src  已正規化的原文
- * @param {string} name 函式名(以 `\nfunction name(` 定位 —— 零縮排 = 模組頂層)
+ * @param {string} name 函式名(以行首定位 —— 零縮排 = 模組頂層)
  */
 export const grabFn = (src, name) => {
-  const i = src.indexOf(`\nfunction ${name}(`);
-  if (i < 0) throw new Error(`找不到 function ${name}`);
-  return grabAt(src, i);
+  const m = new RegExp(`\\n(export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(src);
+  if (!m) throw new Error(`找不到 function ${name}`);
+  return grabAt(src, m.index + 1 + (m[1]?.length ?? 0));
 };

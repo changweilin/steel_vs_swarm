@@ -2211,6 +2211,33 @@ body.touch-ui.ori-landscape .overlay-box.has-close { padding-top: 56px; }
 body.touch-ui.ori-landscape .pause-title { font-size: 18px; }
 body.touch-ui.ori-landscape .set-list { gap: 8px; }
 
+/* 橫式商店:升級列**兩兩左右併列**(2026-08-04 使用者需求「商店在手機橫向時改成兩兩左右併列」)。
+   橫式的垂直預算只有 375~430 且 `.shop-box` 還被 `.overlay-box` 的 max-height 夾住 ⇒ 單欄清單
+   一屏只露得出三四列,八軌 + 兩段標題要捲好幾次才看得完(而且捲動中金錢統計在標題列上被捲走,
+   「買得起哪一項」得憑記憶)。橫式剩下的是**寬度**(844~932),故改吃兩欄:一屏掃完整份清單。
+   直式維持單欄 —— 360~430 寬切一半後,一列容不下「名稱 + Lv + ☆預約 + $價格」。
+   `.shop-head` 分區標題 **MUST 橫跨整列**:落進單欄的話它右邊會補上一列升級,
+   那一列看起來就像不屬於任何分區(小兵強化被讀成「戰鬥強化」的一員 = 買錯軌)。
+   欄寬用 `minmax(0, 1fr)`:預設的 `auto` 最小值是內容 min-content,長名稱會把欄撐出捲軸。 */
+body.touch-ui.ori-landscape .shop-box { width: 100%; max-width: calc(100vw - 16px - var(--tl-sl) - var(--tl-sr)); }
+body.touch-ui.ori-landscape .shop-items {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 8px; align-items: start;
+}
+body.touch-ui.ori-landscape .shop-head { grid-column: 1 / -1; }
+/* 半寬欄裡兩顆鈕塞不下就整組換行(**允許**折行,不是強制:寬螢幕仍是一行內右對齊)。
+   `.shop-info` 的 flex-basis 是「文字至少要有這麼寬才值得同行」的門檻,
+   低於它就讓鈕掉到下一行 —— 否則名稱會被擠成每行兩三個字的細長條。 */
+body.touch-ui.ori-landscape .shop-item {
+  flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 8px; padding: 8px 10px;
+}
+body.touch-ui.ori-landscape .shop-info { flex: 1 1 132px; font-size: 12px; }
+/* 兩顆鈕 MUST 一起收窄。667 寬的欄只有 283px 可用,而預設的 `.btn.small`(左右內距 14 + 字距 2)
+   加上 `.shop-res` 的 `min-width: 76px` 就吃掉 141px ⇒ 文字剩不到 126px、低於上面那條 basis,
+   flex 於是把價格鈕**再**擠到第三行:一列三層樓,兩欄反而比單欄還高(667×375 截圖實測)。
+   只收**橫向**尺寸 —— 高度仍由 `body.touch-ui .btn { min-height: 44px }` 守住觸控下限。 */
+body.touch-ui.ori-landscape .shop-item .btn.small { padding: 0 9px; font-size: 11px; letter-spacing: 0; }
+body.touch-ui.ori-landscape .shop-res { min-width: 0; }
+
 /* ---------- 大廳 / 開房 / 房間 / 選角:觸控版與窄屏 ---------- */
 body.touch-ui .screen { -webkit-overflow-scrolling: touch; }
 body.touch-ui .center-screen { align-items: flex-start; padding: calc(8px + var(--tl-st)) 8px calc(8px + var(--tl-sb)); overflow-y: auto; }

@@ -213,6 +213,67 @@ for (const v of VIEWS) {
   else if (!stuck) { bad++; console.log(`✗ ${v.n} 疊層在**未**收起搖桿時就點得到 —— 斷言失去意義,請確認 #touchLayer 的堆疊關係是否已改變`); }
   else if (verbose) console.log(`✓ ${v.n} 疊層:未收起被 ${ov.before[0]} 擋住、收起後三顆鈕都點得到`);
 
+  // ── 升級工坊:橫式兩兩左右併列 / 直式單欄(2026-08-04 使用者需求)──────────
+  // 版型是**純 CSS**(`renderShop()` 產的 DOM 不分持握),故這裡自己灌一份與它同構的清單:
+  // 分區標題 `.shop-head` 夾在 `.shop-item` 之間,每列是「資訊 + ☆預約 + $價格」。
+  // 驗**幾何**而不是 CSS 屬性 —— 讀 `grid-template-columns` 只能證明宣告還在,
+  // 證不了兩欄真的並排(欄被長名稱撐爆 → 橫向溢出,宣告照樣在;那正是 minmax(0,1fr) 要擋的)。
+  const shop = await page.evaluate(() => {
+    const box = document.getElementById('shopItems');
+    const add = (cls, html) => {
+      const d = document.createElement('div');
+      d.className = cls; d.innerHTML = html; box.appendChild(d);
+    };
+    const item = (nm, sub, note, price) => add('shop-item',
+      `<div class="shop-info"><b>${nm}</b> <span class="tag dim">${sub}</span> Lv.1/4`
+      + `<div class="shop-item-note">${note}</div></div>`
+      + `<button class="btn small shop-res">☆ 預約</button><button class="btn small">$${price}</button>`);
+    box.innerHTML = '';
+    add('shop-head', '🎖 戰鬥強化 —「SC-01」蜂群斥候(輕/重武器・小招/大招)');
+    item('輕武器強化', '脈衝步槍・左鍵', '下一階:傷害 42 ・ 彈夾 24 ・ 填彈 1.8s', 320);
+    item('重武器強化', '榴彈發射器・右鍵瞄準', '下一階:傷害 180 ・ 彈夾 4 ・ 填彈 2.6s', 480);
+    item('小招強化', '偵察脈衝・Q', '下一階:CD 12s ・ 25MP', 260);
+    item('大招強化', '蜂群突襲・E', '下一階:CD 60s ・ 80MP ・ 傷害 340', 620);
+    add('shop-head', '⬆️ 防禦/系統強化(隨處可買,立即生效)');
+    item('結構裝甲', '', '提升結構上限', 200);
+    item('能量護盾', '', '提升護盾上限與回復', 240);
+    item('充能模組', '', '提升電力回速', 180);
+    item('推進強化', '', '提升移動與衝刺速度', 220);
+    document.getElementById('shopOverlay').style.display = '';
+    document.body.classList.add('tl-off');            // = syncBlocked() 收起搖桿(疊層開著的真實狀態)
+    const shopBox = document.querySelector('.shop-box');
+    const rows = [...box.querySelectorAll('.shop-item')].map((n) => n.getBoundingClientRect());
+    const heads = [...box.querySelectorAll('.shop-head')].map((n) => n.getBoundingClientRect());
+    const bw = box.getBoundingClientRect().width;
+    const out = {
+      // 不同的左緣有幾種 = 欄數(同欄的列左緣一致;四捨五入吸收次像素)
+      cols: new Set(rows.map((b) => Math.round(b.left))).size,
+      // 第一組兩列是否真的「左右併列」:同一條上緣,且左列整個在右列之左
+      sideBySide: rows.length > 1
+        && Math.abs(rows[0].top - rows[1].top) <= 2 && rows[0].right <= rows[1].left + 1,
+      headFull: heads.length > 0 && heads.every((h) => Math.abs(h.width - bw) <= 2),
+      overflowX: shopBox.scrollWidth - shopBox.clientWidth,
+      outside: rows.some((b) => b.left < -1 || b.right > window.innerWidth + 1),
+      tap: Math.min(...[...box.querySelectorAll('.btn')].map((n) => n.getBoundingClientRect().height)),
+    };
+    document.getElementById('shopOverlay').style.display = 'none';
+    document.body.classList.remove('tl-off');
+    box.innerHTML = '';
+    return out;
+  });
+  cases++;
+  const portrait = v.h > v.w;
+  const want = portrait ? 1 : 2;
+  const msgs = [];
+  if (shop.cols !== want) msgs.push(`欄數 ${shop.cols}(${portrait ? '直式 MUST 單欄' : '橫式 MUST 兩欄'})`);
+  if (!portrait && !shop.sideBySide) msgs.push('前兩列沒有真的左右併列(同上緣且不重疊)');
+  if (!shop.headFull) msgs.push('.shop-head 分區標題沒有橫跨整列 —— 右邊會補上一列升級,那一列看起來就不屬於任何分區');
+  if (shop.overflowX > 1) msgs.push(`橫向溢出 ${shop.overflowX}px(欄寬 MUST minmax(0, 1fr))`);
+  if (shop.outside) msgs.push('升級列出界');
+  if (shop.tap < 40) msgs.push(`商店鈕高 ${Math.round(shop.tap)} < 40`);
+  if (msgs.length) { bad++; console.log(`✗ ${v.n} 升級工坊:${msgs.join(' / ')}`); }
+  else if (verbose) console.log(`✓ ${v.n} 升級工坊:${shop.cols} 欄、標題跨列、無溢出`);
+
   await page.close();
 }
 await browser.close();

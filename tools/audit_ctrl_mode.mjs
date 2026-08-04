@@ -26,7 +26,7 @@
 //     客戶端的 `_room` 只准由這份廣播寫入(先斬後奏 = 房主與隊友版型不同步)。
 // 原文一律經 `audit_src.mjs`(換行正規化 + 大括號配對抽方法):自己 readFileSync 的話,
 // CRLF 檢出的工作區會讓「逐行剝註解 / split('\n')」靜默失效(見該檔檔頭)。
-import { readSrc, grabMethod } from './audit_src.mjs';
+import { readSrc, grabMethod, grabFn } from './audit_src.mjs';
 
 const read = (...p) => readSrc(...p);
 const ctrlSrc = read('public', 'js', 'ctrlmode.js');
@@ -44,6 +44,8 @@ const ok = (cond, msg) => {
 const sec = (t) => console.log(`\n▍${t}`);
 /** 取出某個方法的原文(大括號配對;找不到回空字串 —— 由斷言自己報「沒這個方法」) */
 const body = (src, name) => { try { return grabMethod(src, name); } catch { return ''; } };
+/** 同上,但取**模組頂層**的具名函式(`export function …`);找不到同樣回空字串 */
+const fnBody = (src, name) => { try { return grabFn(src, name); } catch { return ''; } };
 /** 剝掉註解(斷言只認**執行原文**;註解裡寫什麼都不算數) */
 const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 const count = (src, re) => (src.match(re) || []).length;
@@ -403,6 +405,24 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
   ok(/十字鍵左 視角/.test(padSpec) && /⇄換人/.test(padSpec),
     '觀戰(搖桿版)操作提示 MUST 提到兩顆借用鈕');
 }
+
+// ── Ⅷ 持握相關的兩個預設(2026-08-04 使用者需求)──────────────────────
+// 這兩條住這裡而不是 `audit_gyro` / `audit_touch_layout`:那兩支要 playwright,CI 沒裝就整支跳過
+// ⇒ 預設值被改回去也沒人紅。純原文的斷言可以進 CI,才擋得住無聲回退。
+sec('Ⅷ 全螢幕方向鎖 / 陀螺儀預設值');
+const fullBody = code(fnBody(mobileSrc, 'toggleFullscreen'));
+ok(/gyro:\s*false\s*,/.test(code(mobileSrc)),
+  '`TOUCH.gyro` 預設 MUST 為 false(使用者:「陀螺儀改成預設關閉」)');
+ok(fullBody !== '' && !/orientation\??\.lock/.test(fullBody),
+  '`toggleFullscreen()` MUST NOT 鎖方向(使用者:「全螢幕時也可以旋轉手機切換直式/橫式」)');
+// 數**兩次**而不是「有出現」:退出全螢幕那條路本來就有一次 unlock ⇒ 只驗「有出現」的話,
+// 進場那條改回 lock() 也照樣綠(前科:反向驗證時三條斷言只紅了一條)。
+ok(count(fullBody, /orientation\?\.unlock\?\.\(\)/g) === 2,
+  '進與出全螢幕 MUST 各 `unlock()` 一次 —— PWA manifest 與前一次留下的鎖都會延續,不解就等於預設鎖著');
+// 版型切換不歸 toggleFullscreen 管:轉向監聽是全螢幕內外共用的那一條路徑,拆掉就沒人換 class
+ok(/window\.addEventListener\('orientationchange', syncOrientation\)/.test(mobileSrc)
+  && /screen\?\.orientation\?\.addEventListener\?\.\('change', syncOrientation\)/.test(mobileSrc),
+  '轉向 MUST 由 `syncOrientation` 兩個監聽接手(全螢幕內轉手機才換得了直式/橫式版型)');
 
 console.log(`\n${fail ? '✗' : '✓'} 操作方式 / 觀戰選單稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);
