@@ -30,7 +30,7 @@ import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.j
 import { toonMat, outlinify, updateCelLight, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
-import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeShield, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
+import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
 import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls } from './mobile.js';
@@ -340,7 +340,7 @@ export class BattleClient {
     this.lastPosSend = 0;
     this.mixers = new Set();
     this.spinners = new Set();
-    this.shields = new Set();        // 塔/主堡能量護盾(hex shader,受擊閃亮)
+    this.hitShells = new Set();      // 塔/主堡受擊回饋殼(hex shader,受擊閃亮;不是護盾層,工事無 sp)
     this.disposed = false;
     this._snapQueue = null;
     // 物理:後座力(視角踢)、鏡頭震動(trauma)、FPV 側傾
@@ -3059,8 +3059,8 @@ export class BattleClient {
       seen.add(e.id);
       let ent = this.ents.get(e.id);
       if (!ent) ent = this._spawnEnt(e);
-      // 護盾受擊回饋:hp 下降的那個快照閃亮 + 波紋
-      if (ent.shield && e.hp < ent.hp) ent.shield.userData.hit();
+      // 工事受擊回饋:hp 下降的那個快照閃亮 + 波紋(工事無護盾層,掉的一律是裝甲)
+      if (ent.hitShell && e.hp < ent.hp) ent.hitShell.userData.hit();
       ent.hp = e.hp; ent.max = e.m;
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
@@ -3283,8 +3283,8 @@ export class BattleClient {
     this.scene.add(group);
     if (mixer) this.mixers.add(mixer);
     if (group.userData.spin) this.spinners.add(group);
-    // 基準包圍盒:MUST 在掛護盾殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
-    // 撐大 —— 塔的護盾殼半徑 11m,曾把鎖定光暈吹成 49m 巨球、血條抬到半空)。
+    // 基準包圍盒:MUST 在掛受擊殼/血條/敵方標記之前量(它們都是 mesh 子節點,事後 Box3 會被
+    // 撐大 —— 塔的受擊殼半徑(舊制手寫 11m),曾把鎖定光暈吹成 49m 巨球、血條抬到半空)。
     // 貼地陣營光環(teamRing,塔的圈 r≈14)同樣排除:光暈/血條要包的是機體本體。
     const bb = new THREE.Box3();
     const bbT = new THREE.Box3();
@@ -3312,12 +3312,15 @@ export class BattleClient {
     if (e.k === 'hyper') group.rotation.order = 'YXZ';
     // 平民/間諜:side 保持 null(兩陣營皆可開槍),陣營記在 cs 供頭頂箭頭;neutral = 不進準星敵人推測
     if (e.k === 'civilian') { ent.civ = true; ent.cs = e.cs; ent.prof = e.pf; ent.neutral = true; ent.fo = !!e.fo; ent.fl = !!e.fl; }
-    // 防禦塔 / 主堡:動漫能量護盾(平時近透明,受擊亮起 hex 格紋)
+    // 防禦塔 / 主堡:受擊回饋殼(平時不存在,受擊才亮起 hex 格紋 → 淡出)。
+    // 尺寸吃**權威命中量體**(hitR/hitH 單一縫)⇒ 殼一亮就是在說「這一發打在量體上」;
+    // MUST NOT 手寫半徑(舊制 r=30 而主堡 hitR 只有 20 ⇒ 寬了 50%、頂端外溢到主堡上空)。
     if (e.k === 'tower' || e.k === 'base') {
-      const shield = makeShield(e.k === 'base' ? 30 : 11, SIDES[e.s].color, e.k === 'base' ? 1.5 : 2.3);
-      group.add(shield);
-      ent.shield = shield;
-      this.shields.add(shield);
+      const hv = { kind: e.k, side: e.s };   // hitR/hitH 只吃 kind/side(主堡兩陣營量體不同)
+      const shell = makeHitShell(hitR(hv), hitH(hv), SIDES[e.s].color);
+      group.add(shell);
+      ent.hitShell = shell;
+      this.hitShells.add(shell);
     }
     // 橋上砲塔:蓋在橋面墩座台上(biomes buildTowerBridgePads 定案;查無 = 一般貼地塔)
     if (e.k === 'tower') ent.padY = this.terrain.towerPadY?.(e.x, -e.z) ?? null;
@@ -3482,7 +3485,7 @@ export class BattleClient {
     if (ent.aura) { this.scene.remove(ent.aura); this._auras = (this._auras || []).filter((x) => x !== ent); }
     if (ent.guns) this.scene.remove(ent.guns);
     if (ent.mixer) this.mixers.delete(ent.mixer);
-    if (ent.shield) this.shields.delete(ent.shield);
+    if (ent.hitShell) this.hitShells.delete(ent.hitShell);
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
     this.damaged.delete(ent);
@@ -3537,7 +3540,7 @@ export class BattleClient {
         ticks(shY, 0x0a1723);
       }
       // 靜態建築(砲塔/主堡)的血條貼著頂端(剛好在上方,不再高高浮起);單位維持 2.2 抬高。
-      // 高度用 spawn 時的基準包圍盒(dimTop)—— 事後的 Box3 會把護盾殼/敵方標記一起量進去。
+      // 高度用 spawn 時的基準包圍盒(dimTop)—— 事後的 Box3 會把受擊殼/敵方標記一起量進去。
       const top = ent.dimTop ?? (() => {
         const box = new THREE.Box3().setFromObject(ent.mesh);
         return box.max.y - box.min.y;
@@ -3558,7 +3561,7 @@ export class BattleClient {
   /**
    * 受損視覺化(vfx makeDamageFx):依快照 HP 比例掛/卸兩階特效(1=冒煙+裂痕、2=失火+破損)。
    * 純表現層,只驅動視覺;跳過自機(FPV 機體隱藏)/中立物/平民/餌機/自殺機(體型縮放或短命)。
-   * 用 dimTop/dimH/dimR(spawn 時基準包圍盒,已排除護盾殼/血條)量體 —— 與血條/標記同一把尺。
+   * 用 dimTop/dimH/dimR(spawn 時基準包圍盒,已排除受擊殼/血條)量體 —— 與血條/標記同一把尺。
    */
   _updateDamageStage(ent) {
     if (ent.isSelf || ent.neutral || ent.civ || ent.decoy || ent.kami) return;
@@ -3598,7 +3601,7 @@ export class BattleClient {
    */
   _enemyMark(ent, dt, now) {
     if (!ent.mark) {
-      // 基準包圍盒(排除護盾殼/血條):否則塔的標記會疊在護盾殼頂上再 +3.4
+      // 基準包圍盒(排除受擊殼/血條):否則塔的標記會疊在受擊殼頂上再 +3.4
       const h = Math.max(2, ent.dimH ?? (() => {
         const box = new THREE.Box3().setFromObject(ent.mesh);
         return box.max.y - box.min.y;
@@ -5497,7 +5500,7 @@ export class BattleClient {
     if (this._lockId === ent.id) return;
     this._clearLockGlow();
     this._lockId = ent.id;
-    // 基準尺寸(排除護盾殼等子節點)→ 光暈剛好包住目標,塔不再是巨球
+    // 基準尺寸(排除受擊殼等子節點)→ 光暈剛好包住目標,塔不再是巨球
     this._lockGlow = lockGlow(ent.mesh, SIDES[this.side].color,
       ent.dimH != null ? { h: ent.dimH, r: ent.dimR, top: ent.dimTop } : null);
     this.hud.feed?.(`🎯 鎖定 ${UNITS[ent.kind]?.name || ent.kind}`);
@@ -8837,7 +8840,7 @@ export class BattleClient {
     this._updateAirdrop(dt, now);
     this._updateDamageFx(dt, now);
     this._updateEffects(dt);
-    for (const s of this.shields) s.userData.update(dt);
+    for (const s of this.hitShells) s.userData.update(dt);
     if (this._auras) for (const ent of this._auras) {   // 補血光環 / 第三方射程環:緩慢脈動
       const p = 0.22 + 0.12 * Math.sin(now * 1.6);
       ent.auraRing.material.opacity = p;
