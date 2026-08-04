@@ -402,8 +402,13 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   ok(/const nearUrban = settlement/.test(blockSrc), '街廓配置的市區閘 = 聚落場(不另判一次)');
   ok(/settlement\(b\.x, b\.z\)/.test(blockSrc), '補間種子也過聚落場(舊制 densifyUrban 一道地貌閘都沒有)');
   // 種子 MUST 在街廓配置之前定案:排在後面 = planBlocks 配出來的臨街樓回頭當補間種子
-  ok(blockSrc.indexOf('const infillSeeds') < blockSrc.indexOf('planBlocks({'),
-    '補間種子排在 planBlocks **之前**定案(否則新配的街屋會回頭當種子,圖資越稀疏放大越兇)');
+  {
+    // MUST 兩件事一起驗:①真的有這一行(找不到時 indexOf 回 −1,單比大小會**假綠**)
+    // ②它排在 planBlocks 之前。
+    const iSeed = blockSrc.indexOf('const infillSeeds = generic.slice(');
+    ok(iSeed >= 0 && iSeed < blockSrc.indexOf('planBlocks({'),
+      '補間種子排在 planBlocks **之前**定案(否則新配的街屋會回頭當種子,圖資越稀疏放大越兇)');
+  }
   ok((strip(bio).match(/[^n] densifyUrban\(\{/g) || []).length === 1
     && /densifyUrban\(\{ seeds: infillSeeds/.test(strip(bio)),
     'densifyUrban 恰一個呼叫點且吃呼叫端給的 seeds(MUST NOT 自己去 generic 撈)');
