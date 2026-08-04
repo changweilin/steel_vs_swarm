@@ -161,8 +161,17 @@ console.log('\nⅡ 陰影偏色(P1-B)');
   ok(/const RAMP_INC = `#include <\$\{RAMP_CHUNK\}>`/.test(toonSrc)
     && count(bare(toonSrc), /#include <lights_toon_pars_fragment>/g) === 0,
     '#include 指令由 RAMP_CHUNK 推導,沒有第二個手寫的 chunk 名');
-  ok(/uCelRampTint/.test(toonSrc) && /mix\( uCelRampTint, vec3\( 1\.0 \), celG \)/.test(toonSrc),
-    '偏色權重 = ramp 階值(暗階偏得多、亮階不偏)');
+  // ---- 權重 = 「這一階在 ramp 上有多深」,不是「這一階有多亮」(2026-08-04)----
+  // 舊制拿 `celG`(階的**亮度**)當權重,而暗階亮度是 A14/#INC-106 為了「深色件不塌黑」
+  // 訂的下限(102/255)⇒ 那條保命規則順便把偏色也夾掉:三階 ramp 的最暗階只吃得到 60%
+  // 的偏色,而拉桿的說明寫的是「100% = 天光藍本身的濃度」。兩件事被同一個數字綁著,不報錯。
+  ok(/uCelRampTint/.test(toonSrc) && /mix\( uCelRampTint, vec3\( 1\.0 \), celRampDepth\( celG \) \)/.test(toonSrc),
+    '偏色權重 = ramp **深度**(celRampDepth),不是階的亮度 celG');
+  ok(count(toonSrc, /float celRampDepth\( float g \)/g) === 1
+    && count(bare(toonSrc), /const RAMP_DEPTH_FN = /g) === 1,
+    '深度公式只有一份 GLSL 實作(補丁路徑與落地路徑同吃)');
+  ok(/mix\( uCelRampTint, vec3\( 1\.0 \), celG \)/.test(toonSrc) === false,
+    '沒有殘留「權重 = celG」的舊寫法');
   ok(/uCelRampFb/.test(toonSrc) && /canPatch \? 0 : 1/.test(bare(toonSrc))
     && /if \( uCelRampFb > 0\.5 \)/.test(toonSrc),
     '替換失敗有等效落地路徑(原則 6;否則 three 一升級就是「拉桿沒反應」)');
@@ -171,6 +180,57 @@ console.log('\nⅡ 陰影偏色(P1-B)');
   ok(/float celFbG = texture2D\( gradientMap, vec2\( dot\( normal, uCelLightDir \) \* 0\.5 \+ 0\.5, 0\.0 \) \)\.r;/.test(toonSrc)
     && /#ifdef USE_GRADIENTMAP/.test(toonSrc),
     '落地路徑的權重取同一張 ramp 的階值(壞掉時 MUST 仍看得出來還在動)');
+  ok(/float celFbW = celRampDepth\( celFbG \);/.test(toonSrc)
+    && /mix\( uCelRampTint, vec3\( 1\.0 \), celFbW \)/.test(toonSrc),
+    '落地路徑也走同一支 celRampDepth(兩條路徑的偏色濃度 MUST 一致)');
+
+  // ---- 正規化基準 `rampFloor`:推導不手寫、逐 ramp 各自一份 ----
+  {
+    const R0 = toonSrc.indexOf('const RAMPS = {');
+    const R1 = toonSrc.indexOf('\n}', toonSrc.indexOf('export function rampFloor(')) + 2;
+    ok(R0 > 0 && R1 > R0, '抽得到 RAMPS + rampFloor 區塊');
+    // 這一段夾著 `toonGradient`(它碰 THREE) —— 只把 export 剝掉即可,反正不呼叫它。
+    const { RAMPS, rampFloor } = new Function(`${toonSrc.slice(R0, R1).replace(/export function/g, 'function')}
+      return { RAMPS, rampFloor };`)();
+    ok(count(toonSrc, /export function rampFloor/g) === 1, 'rampFloor 只有一份實作');
+    // 推導:每一組的基準 MUST 等於**那一組自己**的暗階(改 RAMPS 自己跟著走)
+    let derived = true;
+    for (const k of Object.keys(RAMPS)) derived = derived && near(rampFloor(k), RAMPS[k][0] / 255);
+    ok(derived, `rampFloor 逐組由 RAMPS 推導(${Object.keys(RAMPS).map((k) => `${k}:${rampFloor(k).toFixed(3)}`).join(' ')})`);
+    ok(near(rampFloor(), rampFloor(3)) && near(rampFloor('無此組'), rampFloor(3)),
+      '未知 / 省略的階數退回 3 階(與 toonGradient 同一條回退規則)');
+    ok(rampFloor('soft') > rampFloor(3),
+      'soft(淺色大面積)的基準高於 3 階 —— 拿 3 階的 0.4 去量它,白色件的陰影偏色會少掉一半');
+
+    // 行為:深度權重把「最暗階」與「最亮階」兩個端點釘死。GLSL 只有一行,故在此**照它的
+    // 定義**驗語意(文字面已由上面的單一縫斷言釘住),重點是兩個端點與單調性。
+    const depth = (g, b) => Math.min(1, Math.max(0, (g - rampFloor(b)) / Math.max(1e-3, 1 - rampFloor(b))));
+    ok(near(depth(RAMPS[3][0] / 255, 3), 0), '最暗階的深度 = 0 ⇒ 吃**整份**偏色(拉桿說明的「100%」這才兌現)');
+    ok(near(depth(1, 3), 1), '最亮階的深度 = 1 ⇒ 逐位元不偏(受光面仍是光源本色)');
+    ok(depth(RAMPS[3][1] / 255, 3) > 0 && depth(RAMPS[3][1] / 255, 3) < 1, '中間階落在兩端之間');
+    // 舊制(權重 = celG)在最暗階只給 40% 的白 + 60% 的色 ⇒ 新制 MUST 嚴格更濃
+    const oldW = RAMPS[3][0] / 255;
+    ok(depth(RAMPS[3][0] / 255, 3) < oldW && (1 - depth(RAMPS[3][0] / 255, 3)) / (1 - oldW) > 1.6,
+      `最暗階的偏色濃度較舊制提升 ${((1 - depth(RAMPS[3][0] / 255, 3)) / (1 - oldW)).toFixed(2)} 倍`);
+    // 每一階的深度 MUST 單調遞增(否則「越暗偏越多」不成立)
+    let mono = true;
+    for (const k of Object.keys(RAMPS)) {
+      const st = RAMPS[k];
+      for (let i = 1; i < st.length; i++) mono = mono && depth(st[i] / 255, k) > depth(st[i - 1] / 255, k);
+    }
+    ok(mono, '每一組 ramp 逐階深度嚴格遞增(越暗偏越多)');
+  }
+  // uniform MUST 由 rampFloor 推導、且 `bands` MUST 一路傳到 applyCelPatch ——
+  // 漏傳的症狀是「soft / 2 階 / 4 階材質的陰影偏色跟 3 階的不一樣濃」,沒有錯誤訊息。
+  ok(/uCelRampLo = \{ value: rampFloor\(bands\) \}/.test(bare(toonSrc))
+    && count(bare(toonSrc), /uCelRampLo = \{ value:/g) === 1,
+    'uCelRampLo 由 rampFloor(bands) 推導且只有一個寫入點');
+  ok(/uniform float uCelRampLo;/.test(toonSrc), 'uCelRampLo 的宣告頂在片段程式最前(展開後的 chunk 比 main 早)');
+  ok(/applyCelPatch\(m, \{ metal: !!celMetal, rim, soft, bands \}\)/.test(bare(toonSrc))
+    && /tint: 'env', preview, soft, bands \}\)/.test(bare(toonSrc)),
+    'toonMat / envMat 都把 bands 傳給 applyCelPatch(同一份 ramp 餵貼圖也餵權重基準)');
+  ok(/celOpts = \{[^}]*bands \}/.test(bare(toonSrc)),
+    'celOpts 記著 bands(applyPaint 事後重注入時不得掉基準)');
   // 兩軌:機體與環境各一根拉桿,MUST NOT 併成一個值
   ok(/_rampTint = \{[\s\S]{0,200}mech:[\s\S]{0,200}env:/.test(toonSrc), '偏色分機體 / 環境兩軌');
   ok(/tint: 'env'/.test(bare(toonSrc)), 'envMat 走 env 軌');
@@ -314,6 +374,35 @@ console.log('\nⅤ 設定頁與樣品');
   ok(/from '\.\/postfx\.js'/.test(sampSrc) && /new Pipeline\(/.test(sampSrc),
     '樣品跑真品後製管線(否則勾線那根拉桿什麼都看不到)');
   ok(!/getContext\('2d'\)/.test(sampSrc), '樣品不是 2D 畫的(第二套明暗規則 = 調好了進戰場不是那樣)');
+  // ---- 鍵光:暗面 MUST 真的在畫面上(2026-08-04 使用者回報的另一半原因)----
+  // 偏色只作用在 ramp 的暗階;舊制 (0.4, 0.8, 0.4) 幾乎與視線同向 ⇒ 逐像素量測的暗階佔比
+  // 是 地面 0% / 岩塊 0% / 機甲臂 0% / 機甲球 1%,拉桿控制的那一階在畫面上等於不存在。
+  {
+    const m = /const SUN_DIR = new THREE\.Vector3\(([-\d., ]+)\)\.normalize\(\)/.exec(bare(sampSrc));
+    ok(!!m, '樣品的鍵光方向是具名常數 SUN_DIR');
+    const v = (m?.[1] || '').split(',').map(Number);
+    const L = v.length === 3 ? Math.hypot(...v) : 0;
+    // 相機在 +Z 看向原點 ⇒ 光的 z 分量為負 = 從物件後方側打過來,明暗交界才進得了畫面。
+    ok(L > 0 && v[2] < 0, `鍵光來自側後方(z = ${v[2]})—— 從相機肩膀上打過去就沒有暗面`);
+    // y MUST < 0.5:再高的話地面法線 (0,1,0) 會跳進四階 ramp 的頂階,而頂階的偏色權重恆為 0
+    // ⇒ 畫面裡最大的那一片(地面約佔 47%)當場退出這根拉桿的作用範圍。
+    ok(L > 0 && v[1] / L < 0.5,
+      `鍵光仰角夠低(正規化 y = ${(v[1] / L).toFixed(3)} < 0.5)—— 再高地面就整片壓進不偏色的頂階`);
+    ok(!/\.set\(0\.4, 0\.8, 0\.4\)/.test(bare(sampSrc)), '舊的過肩光向沒有殘留');
+    // 同一個常數 MUST 同時餵「場景那盞燈」與「uCelLightDir」:分家 = ramp 的明暗界在一邊、
+    // 硬邊高光與 CEL_COOL 的暗面在另一邊。
+    ok(/sun\.position\.copy\(SUN_DIR\)/.test(bare(sampSrc)) && /updateCelLight\(this\.camera, SUN_DIR\)/.test(bare(sampSrc)),
+      '燈與 uCelLightDir 同吃 SUN_DIR(MUST NOT 一邊自己的燈、一邊借戰場的光向)');
+    ok(count(bare(sampSrc), /SUN_DIR/g) === 3, 'SUN_DIR 恰一處定義兩處消費');
+  }
+  // 覆寫是樣品專屬:戰場與角色預覽 MUST 仍吃本場太陽(`setCelSun`),MUST NOT 跟著傳方向
+  ok(/export function updateCelLight\(camera, dirWorld = null\)/.test(toonSrc)
+    && /copy\(dirWorld \|\| _sunDirWorld\)/.test(bare(toonSrc)),
+    'updateCelLight 的光向覆寫是選用參數(省略 = 本場太陽)');
+  ok(/updateCelLight\(this\.camera\);/.test(bare(readSrc('public', 'js', 'game.js')))
+    && /updateCelLight\(this\.camera\);/.test(bare(readSrc('public', 'js', 'charPreview.js'))),
+    '戰場 / 角色預覽不傳覆寫(樣品 MUST NOT 把 _sunDirWorld 寫掉)');
+  ok(count(bare(sampSrc), /setCelSun/g) === 0, '樣品不呼叫 setCelSun(那是本場太陽的唯一寫入點)');
   ok(/renderer\?\.dispose\(\)/.test(sampSrc) && /pipeline\?\.dispose\(\)/.test(sampSrc)
     && /m\.dispose\(\)/.test(sampSrc) && /g\.dispose\(\)/.test(sampSrc),
     '樣品 dispose 收 renderer / 管線 / 材質 / 幾何(A25)');

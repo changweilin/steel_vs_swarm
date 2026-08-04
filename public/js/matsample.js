@@ -16,6 +16,26 @@ import { lowPower, isTouchUI } from './mobile.js';
 
 const W = 260, H = 140;
 
+// 樣品的鍵光方向(世界空間;**這一盞燈與 `uCelLightDir` 同吃這一個常數**,分家的話
+// ramp 的階落在一邊、硬邊高光與 CEL_COOL 的暗面落在另一邊)。
+//
+// **MUST NOT 是「從相機肩膀上打過去」的光**(2026-08-04 使用者回報「機體陰影、環境陰影
+// 調整時,展示樣品看不出差異」的另一半原因):偏色只作用在 ramp 的**暗階**上,而舊制的
+// (0.4, 0.8, 0.4) 幾乎與視線同向 ⇒ 逐像素量測(照抄本檔場景離線複刻整條像素鏈:
+// ramp → rim/metal/cool → postfx grade → sRGB)得到的暗階佔比是
+//   地面 0%(整片壓在**最亮**階 = 偏色的定義值就是 0)、岩塊 0%、機甲臂 0%、機甲球 1%
+// —— 也就是說,這根拉桿控制的那一階在畫面上**幾乎不存在**,不管拉到哪裡都一樣。
+// 改成側後方鍵光之後:地面 100% 落到中間階(吃得到偏色)、岩塊 80% / 機甲臂 55% /
+// 機甲球 19% 進暗階,同一次量測的峰值差從 100% 拉桿的 4/255 → 8/255、300% 的 11 → 21,
+// 全畫面「看得出來在動」的像素比從 6% → 23%。
+//
+// 側光同時是材質預覽的通則(一顆球要同時看得到受光面、明暗交界與暗面);而戰場的相機
+// 本來就繞著太陽轉一整圈 ⇒「相對相機的光向」在對局裡涵蓋全部角度,樣品挑會出現暗面的
+// 那一個角度才是有代表性的,不是挑會把暗面藏起來的那一個。
+// y 分量 MUST 低於 0.5:再高的話地面法線(0,1,0)會跳進四階 ramp 的**頂階**,而頂階的
+// 偏色權重恆為 0 ⇒ 畫面裡最大的那一片(地面佔 47%)當場退出這根拉桿的作用範圍。
+const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
+
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
   constructor(mount) {
@@ -33,10 +53,10 @@ export class MatSample {
     this.camera.position.set(0, 2.1, 9.2);
     this.camera.lookAt(0, 0.6, 0);
 
-    // 打光刻意與戰場同方向(toon.js 的 `_celLightDirView` 初值 = (0.4, 0.8, 0.4)):
-    // ramp 的階落在哪一面決定了「暗面是不是真的在畫面上」,方向一改樣品就不具代表性。
+    // 打光走 `SUN_DIR`(理由見檔頭那一段):ramp 的階落在哪一面,決定了「暗面是不是真的
+    // 在畫面上」—— 而陰影偏色只作用在暗階上,暗面不在畫面上這根拉桿就等於沒有。
     const sun = new THREE.DirectionalLight(0xffffff, 2.0);
-    sun.position.set(0.4, 0.8, 0.4).multiplyScalar(20);
+    sun.position.copy(SUN_DIR).multiplyScalar(20);
     this.scene.add(sun, new THREE.AmbientLight(0x556070, 0.55));
 
     // 左:機體(toonMat + 硬邊金屬高光)—— 「機體陰影偏色」看的就是這一顆。
@@ -82,7 +102,9 @@ export class MatSample {
     if (!this.renderer) return;
     // 共享的 cel 光向:戰場每幀自己會重設,樣品只在被看的時候借用一下 ——
     // 順序上戰場的 `updateCelLight` 恆在它自己 render 之前,借用不會留下殘影。
-    updateCelLight(this.camera);
+    // **MUST 餵樣品自己那盞燈的方向**:硬邊高光 / CEL_COOL 吃這個 uniform,而 ramp 吃的是
+    // 場景裡真的那盞 DirectionalLight ⇒ 不覆寫就會變成「高光打在這邊、明暗界在那邊」。
+    updateCelLight(this.camera, SUN_DIR);
     this.pipeline.render();
   }
 
