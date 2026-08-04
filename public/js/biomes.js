@@ -6342,19 +6342,24 @@ function makeOccupancy() {
  * 補回連續街區。REAL_SCALE=0.5(遊戲=2×真實)下 OSM 建物間距約為真實 ×2(遠比舊制 8× 密),
  * 補間量由 occ.free() 自然收斂(擠不下就不補);OSM 覆蓋稀疏的郊區/未測繪街廓仍靠它長出街景:
  *   - 同街廓共用朝向 ⇒ 樓面對齊、巷弄成直線;街廓之間的空隙自然留成街道
- *   - 只從既有建物長出去 ⇒ 郊野維持開闊,不會整張圖長滿樓
  *   - areaFree(blocked) 擋住兵線走廊(半寬 17m)/ 塔位 / 主堡 ⇒ 淨空帶成為街廓夾出的戰略通道
  *   - occ 以「外接圓」保證不穿模;skip 留出空地/中庭破除棋盤感
  * 補出的建物與 OSM 建物走同一條路徑登記 blockers,碰撞/隱蔽一致。
  * rnd 為 mulberry32 且每格消耗固定枚數(檢查一律放在抽樣之後)⇒ 全房間各客戶端結果相同。
+ *
+ * **種子由呼叫端給定(`seeds`),本函式 MUST NOT 自己去 `generic` 撈**(2026-08-04):
+ * 「郊野維持開闊,不會整張圖長滿樓」這條不變式的前提是「種子 = 圖資落下來的既有建物、
+ * 而且那裡真的是聚落」。舊制在此就地 `generic.slice(0, maxSeeds)`,而呼叫點排在街廓配置
+ * **之後** ⇒ 種子裡混進了 planBlocks 剛配出來的臨街樓,一棟圖資建物滾成一整片街區;
+ * 圖資越稀疏滾得越兇(市區的 slice 名額早被圖資建物佔滿,荒野才輪得到新配的)。
  */
-function densifyUrban({ generic, blocked, terrain, rnd, inb, occ, roadFacing }) {
-  if (!generic.length) return 0;
+function densifyUrban({ seeds, generic, blocked, terrain, rnd, inb, occ, roadFacing }) {
+  if (!seeds.length) return 0;
   // occ 為全建物共用占位網格(OSM/離線/地標已在收錄時登記),此處只續用
 
   const rint = ([lo, hi]) => lo + Math.floor(rnd() * (hi - lo + 1));
   let added = 0;
-  for (const s of generic.slice(0, INFILL.maxSeeds)) {
+  for (const s of seeds) {
     if (added >= MAX_INFILL) break;
     const ca = Math.cos(s.ry), sa = Math.sin(s.ry);
     const cols = rint(INFILL.cols), rows = rint(INFILL.rows);
@@ -6430,7 +6435,23 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 完整鏈,carveTunnels 與 buildRoads 共用同一份 → 剖面一致、洞口 = 鏈的真端點。
   // 合併後平行雙幅橋去重(單層原則 ①)+ 平行雙孔隧道去重(footway/service 疊在車道孔上 → 洞口不對稱)。
   // 兩刀皆排在 carve 指派 way._tun(下方)之前 ⇒ carve/buildRoads/markGradeCorridors 三消費端吃同一份去重集。
-  if (osmRoads?.length) osmRoads = dedupeParallelTunnels(dedupeParallelBridges(mergeGradeChains(osmRoads), center), center);
+  // ---- 結構剔除記帳(2026-08-04 使用者定案)----
+  // 「高架橋/地下道/隧道/明隧道**就算在兵線之外也建立**,除非會干擾兵線,或違反其他規則」。
+  // 建置端本來就沒有任何兵線距離判定(`buildRoads` 逐 way 跑完整份 `roadInput`,離兵線
+  // 一公里的橋照建、照上碰撞、照登記走廊)—— 會讓結構消失的只有下面這幾把具名的刀。
+  // 記帳的用途是**可見性**:少一座橋在畫面上完全看不出原因(它只是不在那裡),
+  // 沒有這個計數就只能逐條 way 手動比對圖資。每一把刀都 MUST 對得上一條具名理由:
+  //   parallel  平行雙幅橋 / 雙孔隧道疊在一起(單層原則:兩層貼在一起 = 破圖)
+  //   laneWet   兵線跨水段的補橋是唯一結算 ⇒ 走廊內側向重疊的真橋剔除(= 「干擾兵線」)
+  //   crossing  十字路口兩座橋交會只留一座(2026-07-28 使用者定案 = 「其他規則」)
+  // MUST NOT 新增第四把刀而不記帳,也 MUST NOT 加任何「離兵線多遠就不建」的判定。
+  const strucDrop = { parallel: 0, laneWet: 0, crossing: 0 };
+  const strucN = (rs) => (rs || []).filter((w) => w.tags?.bridge || w.tags?.tunnel).length;
+  if (osmRoads?.length) {
+    const before = strucN(osmRoads);
+    osmRoads = dedupeParallelTunnels(dedupeParallelBridges(mergeGradeChains(osmRoads), center), center);
+    strucDrop.parallel = Math.max(0, before - strucN(osmRoads));
+  }
 
   // ---- 在地文字語料(招牌/路標/佈告欄/看板/解說牌上寫什麼;唯一組裝點)----
   // 底本 = `venueText.js` 的離線烘焙(宗教/交通/政府/水文/地名這幾類執行期根本沒查過);
@@ -6551,7 +6572,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
     if (laneWetPieces.length) {
+      const beforeW = strucN(osmRoads);
       osmRoads = dropLaneBridges(osmRoads, laneWetPieces, center);
+      strucDrop.laneWet = Math.max(0, beforeW - strucN(osmRoads));
       for (const p of laneWetPieces) {
         laneWetWays.push({ tags: { highway: 'primary' }, geometry: p.map(([x, z]) => worldToLL(x, z, center)) });
       }
@@ -6561,9 +6584,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 2026-07-29 起含**鐵路高架**(osmData.rails 一併去重,鐵路×道路保留鐵路)。MUST 排在 roadInput 定案
   // **之前**(markGradeCorridors/buildRoads 吃 osmRoads)+ buildRails 之前(吃 osmData.rails)。
   if (osmRoads?.length || osmData?.rails?.length) {
+    const beforeC = strucN(osmRoads);
     const dd = dedupeCrossingBridges(osmRoads || [], center, laneWetPieces, osmData?.rails || []);
     if (osmRoads?.length) osmRoads = dd.roads;
     if (osmData?.rails?.length) osmData.rails = dd.rails;
+    strucDrop.crossing = Math.max(0, beforeC - strucN(osmRoads));
   }
   // 跨水路線 way 串接(一條路線上太靠近的兩座橋直接連成一座):MUST 排在 roadInput 定案**之前**
   // —— markGradeCorridors 與 buildRoads 吃同一份 way 陣列,分家的話走廊會與實際橋面對不上。
@@ -6881,11 +6906,65 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     });
   }
 
+  // ---- 聚落場(單一縫):街廓配置與市區補間**共用**這一支「這裡算不算聚落」----
+  // 2026-08-04 使用者回報「太魯閣、合歡山不在市區還這麼多建築」。兩個放大器(planBlocks
+  // 沿街配置、densifyUrban 街廓補間)本來各有各的門檻,而且都太鬆:
+  //   ① 舊 `nearUrban` 只問「±1 格內**有沒有**圖資建物」—— 峽谷裡一間廁所、一座工務段
+  //      就讓整條台8線兩旁具備配置資格(閘的註解寫的是「只在既有**聚落**周邊配置」,
+  //      但它實際判的是「附近有一棟房子」,兩者差了一個數量級)。
+  //   ② `densifyUrban` **一道地貌閘都沒有**:它的檔頭寫「只從既有建物長出去 ⇒ 郊野維持
+  //      開闊」,那條不變式只在「generic = 圖資建物」時成立。
+  //
+  // **門檻是局部標準化的比例,不是手寫的棵數**(2026-08-04 使用者定案「市區建築不是圖資
+  // 都有嗎?建立局部標準化判斷」)。理由與 `field.js` 的地表色階同一條(見 CLAUDE.md:
+  // 「色階門檻 MUST 取該場地自己的分位數,MUST NOT 手寫固定門檻」):
+  //   - 逐格數圖資建物 → `local(x, z)` = ±1 格內的棵數(= 這一點的都市化程度,原始值);
+  //   - **標準化基準取這張圖自己的密度尖峰** `peak` = 局部密度的 P90。取分位數不取最大值
+  //     (單一密集格會綁架基準)、也不取平均(大片空地會把基準壓平);取樣點是**每一棟
+  //     既有建物自己的位置**,不是全圖每一格 —— 空地的 0 會把分位數整個拉到 0。
+  //   - 閘門 = `local ≥ DENS_Q × peak`。DENS_Q 是**比例**不是棵數 ⇒ 圖資測繪得越完整
+  //     (市區,`MAX_BUILDINGS` 的名額全滿)基準越高、要求跟著高;測繪稀疏的郊區基準低,
+  //     兩者用同一把尺。手寫棵數做不到這件事:同一個數字在東京是「空地」、在峽谷是「市鎮」。
+  // 退化保險 `URBAN_MIN_PEAK` **推導不手寫** = `densifyUrban` 自己畫得出來的最小一塊街廓
+  //   (`INFILL.cols[0] × INFILL.rows[0]`):這張圖最密的地方連一塊最小街廓都湊不出來,
+  //   就沒有任何「街廓」可言 ⇒ 全圖不放大。少了它,只有三棟房子的峽谷 peak = 3、
+  //   閘門 = 1.05,那三棟自己就過關,比例式反而比舊制還鬆。
+  // **MUST NOT 改吃 `venue.mix`**:那是手寫的場地宣告(見 venues.js),不是圖資 ——
+  // 拿它當閘門就是「地貌由人宣告」,而使用者問的正是「有正確從圖資判斷地貌嗎」。
+  // 這一支只問圖資落下來的建物,場地宣告一格都不參與。
+  const UC = 128, URBAN_DENS_P = 0.9, URBAN_DENS_Q = 0.35;
+  const URBAN_MIN_PEAK = INFILL.cols[0] * INFILL.rows[0];   // 推導:最小一塊補間街廓的棟數
+  const urbanG = new Map();
+  const urbanSeeds = [...generic, ...landmarks];   // 此刻的 generic = 圖資建物 / 離線程序街區
+  {
+    const ukey = (x, z) => `${Math.floor(x / UC)},${Math.floor(z / UC)}`;
+    for (const b of urbanSeeds) { const k = ukey(b.x, b.z); urbanG.set(k, (urbanG.get(k) || 0) + 1); }
+  }
+  const localDens = (x, z) => {
+    const ci = Math.floor(x / UC), cj = Math.floor(z / UC);
+    let n = 0;
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) n += urbanG.get(`${ci + i},${cj + j}`) || 0;
+    return n;
+  };
+  // 這張圖自己的密度尖峰(P90);零建物 ⇒ peak = 0 ⇒ 下面那道保險直接關掉整個放大鏈
+  const densSamples = urbanSeeds.map((b) => localDens(b.x, b.z)).sort((a, b) => a - b);
+  const urbanPeak = densSamples.length
+    ? densSamples[Math.min(densSamples.length - 1, Math.floor(densSamples.length * URBAN_DENS_P))] : 0;
+  // 下限 1:`DENS_Q = 0` ⇒ 閘門退化成「附近有一棟就算」= 逐位元回到舊制(反向驗證的錨)
+  const urbanGate = Math.max(1, URBAN_DENS_Q * urbanPeak);
+  const settlement = (x, z) => urbanPeak >= URBAN_MIN_PEAK && localDens(x, z) >= urbanGate;
+  // 補間種子 MUST 在街廓配置**之前**定案:planBlocks 的產出與圖資建物走同一條路徑進
+  // `generic`,不先固定下來,下面那一段配出來的臨街樓就會回頭當補間種子 —— 一棟圖資建物
+  // → 一整排街屋 → 每一棟再各長一片 3~6×3~6 的網格,而且**圖資越稀疏放大得越兇**
+  //(市區的 generic 早就超過 `INFILL.maxSeeds`,新配的排在後面根本輪不到;荒野只有兩三棟
+  // 圖資建物,slice 的名額全讓給新配的街屋)。這正是「不在市區反而樓更多」的成因。
+  const infillSeeds = generic.slice(0, INFILL.maxSeeds).filter((b) => settlement(b.x, b.z));
+
   // ---- 都市計畫:沿街配置 + 公設(2026-08-03 使用者定案①)----
   // 「建築沿道路整齊排列,遵循都市規劃的原則來設計,包含公園、運動場、停車場等公設」。
   // 規則本體在 `siteplan.js planBlocks`(純幾何、離線可驗);本檔只做三件事:
   //   ① 餵街道線段(`frontSegs`,與占位/朝向同一次迴圈收的)
-  //   ② 把「放不放得下」收進兩個 probe 回呼(界內/乾地/淨空/占位/市區/平坦度)
+  //   ② 把「放不放得下」收進兩個 probe 回呼(界內/乾地/淨空/市區/占位/平坦度)
   //   ③ 收成果:建築進 `generic`(與圖資建物同一條路徑 ⇒ 碰撞/立面/招牌全部一致)、
   //      公設自建 mesh 並**實算**碰撞柱
   // **零共享 `rnd()` 消耗**:量體/樣式/公設款式全由 `plotSeed`/`frac` 雜湊決定 ⇒ 這一段
@@ -6893,17 +6972,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const civics = [];
   if (frontSegs.length && (generic.length || landmarks.length)) {
     onProgress?.(0.63, '劃設街廓與公設用地…');
-    // 「市區」閘:只在既有聚落周邊配置。少了它,穿過山區的一條省道兩旁會長出整排街屋
-    // (圖資把它標成 primary,而規劃器只看得到線段)。種子 = 圖資建物 + 地標。
-    const UC = 128, urbanG = new Set();
-    const ukey = (x, z) => `${Math.floor(x / UC)},${Math.floor(z / UC)}`;
-    for (const b of generic) urbanG.add(ukey(b.x, b.z));
-    for (const lm of landmarks) urbanG.add(ukey(lm.x, lm.z));
-    const nearUrban = (x, z) => {
-      const ci = Math.floor(x / UC), cj = Math.floor(z / UC);
-      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) if (urbanG.has(`${ci + i},${cj + j}`)) return true;
-      return false;
-    };
+    const nearUrban = settlement;   // 「市區」閘 = 聚落場(單一縫;MUST NOT 在此另判一次)
     const dryAt = (x, z) => terrain.heightAt(x, z) > 0.4 && terrainEnvCode(terrain, x, z) === 0;
     const res = planBlocks({
       segs: frontSegs,
@@ -6990,9 +7059,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   }
 
-  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)
-  if (generic.length) {
-    const n = densifyUrban({ generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
+  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)。
+  // 種子吃上面那份 `infillSeeds`(街廓配置**之前**就定案 + 過聚落場),MUST NOT 在此
+  // 回頭讀 `generic` —— 那一份此刻已混進 planBlocks 剛配出來的臨街樓(見 infillSeeds 註解)。
+  if (infillSeeds.length) {
+    const n = densifyUrban({ seeds: infillSeeds, generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
     if (n) onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
   }
 
@@ -7739,6 +7810,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,
+    // 立體結構(橋 / 隧道 / 地下道 / 明隧道)的建置與剔除 —— 建置端無兵線距離判定,
+    // 離兵線多遠一律照建;`strucDrop` 逐把刀記帳(見上方註解),少一座橋查得出原因。
+    strucWays: strucN(roadInput),
+    strucDrop,
     roadBlocks: roadBlockN,
     boundary: boundaryN,
     climbs: climbs.length,   // 攀爬路線數(長梯/抓點/技術繩合計)

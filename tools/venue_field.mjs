@@ -494,6 +494,47 @@ export async function osmFor(id, bbox) {
   return out;
 }
 
+/**
+ * 地被圖資(2026-08-04:`audit_venue_biome.mjs` 用)—— 回答「這張圖的地貌**實際上**是什麼」。
+ *
+ * 為什麼要另開一支而不是併進 `osmFor`:①`osmFor` 的快取檔(`*_L1v2.json`)是場景掃描與
+ * 泛洪稽核共用的貴重資產,改它的查詢就得換鍵、整批重抓(公共 Overpass 對雲端 IP 常態拒絕,
+ * 重抓一次是分鐘級);②地被只有這一支消費端,查詢額度與逾時可以自己設。
+ * 兩支共用同一個 `overpass()`(鏡像輪替 + 逐站計時,§2.4)與同一個快取目錄。
+ *
+ * 收兩件**互相獨立**的東西,刻意不合併成一個數字:
+ *   `covers` 土地覆蓋多邊形(landuse / natural / leisure)—— 這是「地貌」本身;
+ *   `buildings` 建物**輪廓**(不是中心點)—— 這是「建蔽率」,回答「為什麼這麼多樓」。
+ * 合併會失真:`landuse=residential` 的範圍涵蓋整個街廓(含道路與院子),而建蔽率量的是
+ * 真的被樓蓋住的地。兩者一起看才分得出「圖資說這裡是市區」與「這裡真的都是樓」。
+ *
+ * 沒有 `/map` 備援:Overpass 掛掉就回 null,呼叫端 MUST 標成「未驗」而不是報綠(原則 6)。
+ */
+export async function landcoverFor(id, bbox) {
+  const f = join(CACHE, `${id}_landcover_v1.json`);
+  if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
+  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  const km2 = bboxKm2(bbox);
+  // 額度隨面積縮放(同 osmFor 的紀律):地被多邊形遠少於道路,but 建物在密市區可達數千 ——
+  // 截斷會**低估**建蔽率,故把建物那一格給得寬,並在回傳裡記下有沒有頂到額度。
+  const nCover = quotaOf(km2, 400, 200, 900), nBld = quotaOf(km2, 6000, 1200, 4000);
+  const els = await overpass(`[out:json][timeout:60];`
+    + `way["landuse"](${bb});out geom ${nCover};`
+    + `way["natural"](${bb});out geom ${nCover};`
+    + `way["leisure"~"^(park|garden|golf_course|nature_reserve|recreation_ground)$"](${bb});out geom ${nCover};`
+    + `way["building"](${bb});out geom ${nBld};`);
+  if (!els) return null;
+  const poly = (e) => e.type === 'way' && Array.isArray(e.geometry) && e.geometry.length >= 3;
+  const covers = els.filter((e) => poly(e) && !e.tags?.building
+    && (e.tags?.landuse || e.tags?.natural || e.tags?.leisure))
+    .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+  const buildings = els.filter((e) => poly(e) && e.tags?.building)
+    .map((e) => ({ tags: e.tags, geometry: e.geometry }));
+  const out = { src: 'overpass', covers, buildings, capped: buildings.length >= nBld, quota: nBld };
+  writeFileSync(f, JSON.stringify(out));
+  return out;
+}
+
 // ---- 幾何小工具(遊戲公尺)----
 export function segCross(a, b, c, d) {            // 線段真交叉(共端點不算)
   const cr = (o, p, q) => (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0]);

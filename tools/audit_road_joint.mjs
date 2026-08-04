@@ -263,5 +263,44 @@ console.log('Ⅴ 權威幾何不變(通行寬唯一縫仍是 strucHw)');
     'Ⅴ 橋面碰撞段 MUST 仍以通行寬 hw 登記');
 }
 
+// ============ Ⅵ 結構的建置範圍:離兵線多遠一律照建 ============
+// 2026-08-04 使用者定案:「高架橋/地下道/隧道/明隧道**就算在兵線之外也建立**,
+// 除非會干擾兵線,或違反其他規則。」
+// 這一段釘的是「沒有那道閘」—— 而「沒有」正是最容易被人不知不覺加上去的東西:
+// 場地選單只看兵線(scen 標記),很容易讓人以為結構本來就只服務兵線,順手加一道
+// 「離兵線 N 公尺外就不建」來省 draw call。加了之後畫面上只表現成「這張圖的橋比較少」。
+{
+  console.log('\nⅥ 結構建置範圍(離兵線多遠一律照建)');
+  // 剝註解:註解裡當然可以提到兵線,會壞事的是真的去判它(㋑)
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+  const build = strip(slice('function buildRoads(', '  // ---- 路口:斑馬線', 'buildRoads'));
+  // 建置端 MUST **拿不到**兵線 —— 這比「原文裡沒有距離判定」更硬:簽章裡沒有那個參數,
+  // 就結構性地不可能長出「離兵線多遠就不建」的閘。
+  //(注意 `lanes` 在 buildRoads 裡是**車道數**、`laneHw` 是塗裝車道半寬,都與兵線無關。)
+  ok(/^function buildRoads\(group, roads, terrain, center, mix, rnd, season, covers = \[\], inclSwamp = false, bores = \[\]\) \{/
+    .test(build), 'buildRoads 的簽章沒有兵線參數(結構性地不可能依兵線距離篩選)');
+  ok(!/\bcfg\b/.test(build), 'buildRoads 全段拿不到 cfg(兵線/主堡/塔位一概不可見)');
+  ok(/for \(const way of roads\) \{/.test(build), '逐 way 跑完整份 roadInput(不是只挑兵線附近的)');
+  // 結構 way MUST 排在 maxRuns 截斷之前(2026-07-22 倫敦橋數浮動案的既有結論,不得倒退)
+  ok(/return out\.concat\(plain\);/.test(src),
+    '結構鏈排在一般道路之前(maxRuns 截斷依陣列序 ⇒ 結構不會整批被犧牲)');
+  // 會讓結構消失的刀:恰三把,每一把都對得上使用者那句話裡的一個例外,而且都有記帳
+  const cuts = [
+    ['dropLaneBridges', 'laneWet', '兵線跨水補橋是唯一結算 ⇒ 走廊內重疊的真橋剔除(= 干擾兵線)'],
+    ['dedupeCrossingBridges', 'crossing', '十字路口只留一座橋(2026-07-28 使用者定案 = 其他規則)'],
+    ['dedupeParallelBridges', 'parallel', '平行雙幅橋/雙孔隧道疊在一起(單層原則)'],
+  ];
+  for (const [fn, key, why] of cuts) {
+    ok((strip(src).match(new RegExp(`\\b${fn}\\(`, 'g')) || []).length === 2,
+      `${fn} 恰一份實作一個呼叫點`);
+    ok(new RegExp(`strucDrop\\.${key} =`).test(src), `${fn} 有記帳(strucDrop.${key}:${why})`);
+  }
+  ok(/const strucDrop = \{ parallel: 0, laneWet: 0, crossing: 0 \};/.test(src),
+    '記帳表恰三欄 —— 新增第四把刀 MUST 同步記帳(不然結構少了查不出原因)');
+  ok(/strucWays: strucN\(roadInput\)/.test(src) && /\bstrucDrop,/.test(src),
+    'stats 帶出結構總數與逐把刀的剔除數(冒煙時看得到「這張圖有幾座橋、被砍了幾座、為什麼」)');
+}
+
 console.log(`\n道路接合稽核:${pass} 綠 / ${fail} 紅`);
 process.exit(fail ? 1 : 0);

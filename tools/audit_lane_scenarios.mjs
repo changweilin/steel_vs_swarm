@@ -38,7 +38,12 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { VENUES, venueConfig, SCEN_LABEL } from '../public/js/venues.js';
-import { WATER, GAME, UNITS, TARGET_H, altTier, battleBBox, sideMFor, solveTowerSites } from '../public/js/data.js';
+// MAPGEO 只有 `probePoint` 用得到(探測 bbox 的邊長換算)。2026-08-03 抽出 venue_field.mjs
+// 時把 import 清單縮成「主掃描路徑用得到的」,連帶把它刪掉 ⇒ **探測模式自那天起整支炸掉**
+// (ReferenceError: MAPGEO is not defined),而 workflow 的探測步驟是 continue-on-error、
+// 主掃描又碰不到這條分支 ⇒ 沒有任何紅字。找新場地的工具就是這一支,它壞掉的症狀是
+// 「② 地下道一直找不到第二張圖」而不是「有個錯誤訊息」。
+import { MAPGEO, WATER, GAME, UNITS, TARGET_H, altTier, battleBBox, sideMFor, solveTowerSites } from '../public/js/data.js';
 // 高度場 / 圖資 / 結構剖面的 Node 端唯一縫(audit_traverse 與淨空檢查共用同一份)
 import {
   ROOT, CACHE, llToWorld, distToSegs, R_EARTH, d2r, WORLD_S,

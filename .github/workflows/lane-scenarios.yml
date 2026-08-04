@@ -37,6 +37,12 @@ concurrency:
   group: lane-scenarios
   cancel-in-progress: true
 
+# 重烤結果要**推回分支**(2026-08-04):沙箱沒有 artifact 下載權限,舊制只能從 job log
+# 把 `venueLanes.js` 的 diff 一行一行抄回來 —— 而那個檔一條兵線就是一行幾百個座標,
+# 抄回來的風險遠高於重跑一次。改成 runner 自己 commit,烘焙產物與請求檔同一條路徑。
+permissions:
+  contents: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -44,6 +50,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
+          # 要推回去 ⇒ 保留認證(預設就是 true,寫出來是為了「這件事是刻意的」)
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -82,25 +90,74 @@ jobs:
         if: always()
         run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'','relief='+r.peakSide,r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.landBridgeCand?'③候選陸橋='+JSON.stringify(r.landBridgeCand):'',r.waterBridgeCand?'⑨候選水橋='+JSON.stringify(r.waterBridgeCand):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
 
-      # 可通行泛洪 + 淨空(V-B / V-D):同樣要 terrarium 高程與圖資,故掛在這支有外網的 workflow。
-      # `ci.yml` 刻意不含 —— 外部服務會限流,不該讓 PR 卡在別人的伺服器上。
-      - name: 兵線與結構可通行 + 淨空
-        continue-on-error: true
-        run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
-
       # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道;④ 明隧道候選同步體檢(附定錨座標)。
+      # **排在泛洪之前**(2026-08-04):探測是「找新場地」的入口、幾秒就跑完,而泛洪是
+      # 28 個場地的分鐘級迴圈 —— 排在後面等於每次要新錨點座標都得先等半小時。
       - name: 隧道候選探測
         if: ${{ env.SCAN_PROBE != '' }}
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs --probe="$SCAN_PROBE" --probe-r="${SCAN_PROBE_R:-1}"
 
-      # 重烤結果整檔印進 log:沙箱沒有 artifact 下載權限時,從 log 取回 venueLanes.js 用
-      - name: 兵線重烤結果(diff + 完整新條目)
+      # 場地地貌宣告 vs 圖資實測(2026-08-04):要 Overpass 的地被/建物多邊形,故掛這一支。
+      - name: 場地地貌宣告 vs 圖資實測
+        continue-on-error: true
+        run: node tools/audit_venue_biome.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=biome.json
+
+      # 可通行泛洪 + 淨空(V-B / V-D):同樣要 terrarium 高程與圖資,故掛在這支有外網的 workflow。
+      # `ci.yml` 刻意不含 —— 外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+      # 這一步是分鐘級的迴圈,故**排在探測與地貌實測之後**(見上兩段)。
+      - name: 兵線與結構可通行 + 淨空
+        continue-on-error: true
+        run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
+
+      # 重烤結果**推回分支**:烘焙產物是原始碼(`venueLanes.js` 是 checked-in 的資料檔),
+      # 從 log 抄回來既慢又容易漏(一條兵線 = 一行幾百個座標)。只在真的有變更時 commit。
+      # 注意:GitHub 刻意**不讓 GITHUB_TOKEN 推的 commit 觸發 workflow**(遞迴防護)——
+      # 這一顆 commit 在 PR 上會顯示成 `action_required`(等待核准)而不是跑完的綠燈。
+      # 那不是失敗,是「沒跑」;它的內容由下一顆(人/agent 推的)commit 的 CI 一併覆蓋。
+      # MUST NOT 為了讓它變綠而改用 PAT —— 那會讓 CI 與 bake 互相觸發成無窮迴圈。
+      - name: 兵線重烤結果推回分支
         if: ${{ env.SCAN_BAKE != '' }}
         run: |
           git --no-pager diff --stat
-          echo '===== venueLanes.js 完整 diff ====='
-          git --no-pager diff public/js/venueLanes.js
+          if git diff --quiet -- public/js/venueLanes.js; then
+            echo '(venueLanes.js 無變更,不推)'
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/js/venueLanes.js
+          git commit -m "兵線重烤:$SCAN_BAKE(workflow run ${GITHUB_RUN_ID})"
+          # 這支 workflow 由 push 觸發,期間分支可能已被推新 commit ⇒ rebase 後再推
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      # ---- 重點摘要(**MUST 排在最後**)----
+      # 沙箱只讀得到 job log 的**尾端**(取 log 是分頁的,而泛洪那一步一次吐上百行)⇒
+      # 要看的數字一律在這裡再印一次精簡版,tail 幾十行就拿得到。
+      # 這不是重複輸出:上面那幾步印的是逐項明細(要看為什麼),這裡印的是決策要用的欄位。
+      - name: 重點摘要(場景標記 + 地貌實測)
+        if: always()
+        run: |
+          echo '===== 場景標記(scen.json)====='
+          test -f scen.json && node -e "
+            const d=require('./scen.json');
+            for(const r of d.results){
+              const h=Object.entries(r.hits||{}).map(([k,v])=>k+(v.len?':'+v.len+'m':'')).join(' ');
+              const c=[r.flatTunnel&&'落空地下道 '+r.flatTunnel.name+' '+r.flatTunnel.len+'m',
+                       r.underCand&&'②候選 '+r.underCand.name+' '+r.underCand.len+'m@'+r.underCand.d+'m',
+                       r.landBridgeCand&&'③候選 '+r.landBridgeCand.name+' '+r.landBridgeCand.len+'m@'+r.landBridgeCand.d+'m',
+                       r.waterBridgeCand&&'⑨候選 '+r.waterBridgeCand.name+' '+r.waterBridgeCand.len+'m@'+r.waterBridgeCand.d+'m',
+                      ].filter(Boolean).join(' | ');
+              console.log((r.id+' ').padEnd(14,'.'), 'relief='+r.peakSide, h||'(無場景)', c?'  '+c:'');
+            }" || echo '(無 scen.json)'
+          echo '===== 地貌宣告 vs 圖資實測(biome.json;只列不符的)====='
+          test -f biome.json && node -e "
+            const d=require('./biome.json');
+            const bad=d.rows.filter(r=>r.notes.length);
+            for(const r of bad) console.log((r.id+' ').padEnd(14,'.'), r.type,
+              '建蔽'+(r.builtF*100).toFixed(1)+'%', r.notes.join(';'));
+            console.log('小計:實測 '+d.rows.length+' 個場地,不符 '+bad.length+' 個');" || echo '(無 biome.json)'
 
       - uses: actions/upload-artifact@v4
         with:
@@ -108,5 +165,6 @@ jobs:
           path: |
             scen.json
             traverse.json
+            biome.json
             public/js/venueLanes.js
           if-no-files-found: warn
