@@ -34,6 +34,12 @@ import { buildGroundCover } from './ground.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed } from './beacons.js';
+// 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
+// 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
+import {
+  CIVIC_KINDS, CIVIC_TREES, roadFaceRy, planBlocks, buildCivic, civicColliders,
+  planShyGrove, ROCKFIELD, strikeRad, planRockField, plotSeed, frac,
+} from './siteplan.js';
 // 低功耗旗標的**唯一真相**仍是 mobile.js(localStorage svs_lowpower);世界文字的 atlas
 // 解析度跟著它降,MUST NOT 在此另讀一次 localStorage(第二份預設值遲早分家)。
 import { lowPower } from './mobile.js';
@@ -544,6 +550,27 @@ const GIANT_DECO = {
 const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwania', 'klinki', 'alerce']);
 
 /** 綠地神木群落:同一樹種成群、株高各異;樹幹登記碰撞柱(障礙 + 隱蔽) */
+/**
+ * 神木的**冠幅半徑**(體格 1.0 時;m)—— 由零件表推導,MUST NOT 逐樹種手寫。
+ *
+ * 樹冠羞避量的是「冠緣到冠緣」,而冠幅只有零件表知道:取樹高 35% 以上(各樹種冠層約自
+ * 40% 樹高起,留一點餘裕)所有零件的最遠水平點。手寫一欄 `cr` 的話,改了任何一個冠簇的
+ * `px/pz` 或半徑,間隙規則就與看得見的樹冠分家 —— 而畫面上只表現成「有些樹冠還是黏在一起」。
+ * three 的 `parameters` 是各 Geometry 建構時存下的原始參數(r160 恆有)。
+ */
+function giantCrownR(def) {
+  if (def._cr != null) return def._cr;
+  let m = 0;
+  for (const p of def.parts) {
+    if ((p.y ?? 0) < def.h * 0.35) continue;
+    const q = p.g.parameters || {};
+    const r = q.radius != null ? q.radius : Math.max(q.radiusTop ?? 0, q.radiusBottom ?? 0);
+    m = Math.max(m, Math.hypot(p.px ?? 0, p.pz ?? 0) + r * (p.sx ?? 1));
+  }
+  def._cr = m;
+  return m;
+}
+
 function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
   const species = Object.keys(GIANT_DEFS);
   const centers = [];
@@ -554,14 +581,29 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
     const type = species[Math.floor(rnd() * species.length)];
     const def = GIANT_DEFS[type];
     const n = 5 + Math.floor(rnd() * 7);          // 一群 5~11 株
-    const cr = 34 + rnd() * 48;                   // 群落半徑(株體放大 → 群落跟著攤開)
+    const cr = 52 + rnd() * 70;                   // 群落半徑(株體放大 → 群落跟著攤開;
+                                                  // 2026-08-03 樹冠羞避上線後同步放大:冠緣要留間隙,
+                                                  // 林子攤不開就只能少種樹 —— 使用者要的是「森林」)
     const base = (0.75 + rnd() * 0.35) * OVER.giant;   // 群落基準體格(隨建物佔地等比放大)
-    let added = 0;
-    const trunks = [];   // 本群樹幹腳印:迴圈後才整圓封鎖(不干擾同群後續植株的群聚)
+    // ---- 樹冠羞避(2026-08-03 使用者定案②「多個神木組成森林,遵循 Crown shyness 的規則」)----
+    // 抽樣與規則**分開**:落點/體格照舊逐株抽(每株固定枚數,§2.3),整群抽完才交給
+    // `siteplan.js planShyGrove` 一次定案 —— 它會把冠緣相碰的那幾株**縮冠**(而不是一律
+    // 淘汰,否則「森林」會被打成稀疏散株),縮不下去才丟。規則本身**零亂數消耗**。
+    // 傾斜 `lean` 遠離鄰冠:羞避的成因就是枝梢感受到鄰株而偏離,林相才不是一排直挺挺的柱子。
+    // 注意規則跑在地形淘汰(水域/淨空)**之前**:被地形刷掉的那株仍算進鄰株 ⇒ 間隙偏保守,
+    // 方向朝「留得更開」而不是「黏在一起」(原則 6)。
+    const gcr = giantCrownR(def);
+    const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
-      const gx = x + Math.cos(a) * d, gz = z + Math.sin(a) * d;
       const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
+      cands.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, s, cr: gcr, h: def.h });
+    }
+    const shy = planShyGrove(cands);
+    let added = 0;
+    const trunks = [];   // 本群樹幹腳印:迴圈後才整圓封鎖(不干擾同群後續植株的群聚)
+    for (const cand of shy) {
+      const gx = cand.x, gz = cand.z, s = cand.s;
       // 腳印半徑 = 幹半徑 × 1.6(基部喇叭口 + 板根鰭)—— 落底與淨空 MUST 吃同一個值
       const foot = def.r * s * 1.6;
       // 淨空 MUST 掃**整個腳印圓盤**(areaFree,同 placeMegaliths),MUST NOT 只問中心格:
@@ -578,7 +620,9 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
       (items[type] ??= []).push({
         x: gx, y: gy, z: gz, s,
         ry: rnd() * Math.PI * 2,
-        tx: (rnd() - 0.5) * 0.05, tz: (rnd() - 0.5) * 0.05,
+        // 站姿微傾斜 + 羞避傾斜(遠離鄰冠):兩者都是**剛體**傾斜,走 `xform.js vegPartXform`
+        // 同一份通道(A27),MUST NOT 併進逐零件歐拉角
+        tx: (rnd() - 0.5) * 0.05 + cand.lean[0], tz: (rnd() - 0.5) * 0.05 + cand.lean[1],
         dj: rnd(),   // 細節種子(xform.js):冠層/枝節逐株走樣,同種不同貌
       });
       // 幹半徑隨高度收窄(表面特徵掛點與攀爬設施共用的單一縫;世界尺寸與樹齡脫鉤)
@@ -2413,119 +2457,172 @@ function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW }) {
 }
 
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
+const MEGA_MAX = 15;       // 全圖巨岩上限(舊制 12;改成露頭群後多留三顆給第三片)
+// 合成巨岩的標稱碰撞半徑(`synthMegalith` 回的是 `max(RX,RZ)+4`,逐顆不同)——
+// 只用來估**格距**,實際緊密判定仍量每顆真正的 `meta.col.r`(原則 4)
+const SYNTH_COL_R = 30;
+
+/**
+ * 裸露地的巨岩露頭(2026-08-03 使用者定案③「巨石依地質特性緊密排列,形成壯麗景觀」)。
+ *
+ * 舊制是「全圖散 12 顆、彼此至少隔 70m」—— 那是**地標**的擺法(每顆都是孤立的奇岩),
+ * 不是露頭。改成 `ROCKFIELD.FIELDS` 片**露頭群**,每片內部緊密成列:
+ *   ① 走向由地形梯度推導(等高線方向 = 層面/節理的走向;`siteplan.js strikeRad` 單一縫)
+ *   ② 節理間距成排、相鄰排錯縫(`planRockField`),長軸一律對齊走向 ⇒ 一看就是同一組節理
+ *   ③ 同源同相:整片同一種岩、同一份色相偏移(同一岩層),體格自核心往外遞減
+ * 緊密的界線是「碰撞柱不互穿」(`dist ≥ r_i + r_j`):再密也不能長進彼此體內 —— 那是
+ * 破圖,不是景觀。逐顆仍走既有的水域/淨空/平坦度/邊界四道閘(一顆放不下就少一顆)。
+ */
 function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
+  const fields = [];
   let named = 0;
-  for (const [x, z] of sites) {
-    if (placedM.length >= 12) break;
-    // 約四成抽合成巨岩(先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致)
-    const synth = rnd() < 0.4;
-    const g = new THREE.Group();
-    let meta, s;
-    if (synth) {
-      meta = synthMegalith(g, rnd);
-      s = (0.9 + rnd() * 0.5) * OVER.mega;
-    } else {
-      const def = MEGALITHS[types[(start + named) % types.length]];
-      def.build(g, rnd);
-      meta = def;
-      s = (def.s[0] + rnd() * (def.s[1] - def.s[0])) * OVER.mega;
-    }
-    let r = meta.col.r * s;
-    // 山丘頂容不下整顆巨岩 → 等比縮到平坦半徑剛好;縮過頭(<45%)不像地標,換點
-    const fr = flatRadiusAt(terrain, x, z, r + 6);
-    if (fr < r) {
-      const shrink = fr / r;
-      if (shrink < 0.45) continue;
-      s *= shrink;
-      r = meta.col.r * s;
-    }
-    if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
-      || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) continue;
-    let gy = terrain.heightAt(x, z);
-    if (gy < 0.4) continue;
-    // 水域/沼澤不放巨岩:佔地大(r 可 ~20m+),中心 + 腳印周圈四向一併驗(rnd 已抽完,序列安全)
-    if (terrainEnvCode(terrain, x, z) !== 0
-      || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
-        .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
-    if (!areaFree(blocked, x, z, r + 6)) continue;
-    if (placedM.some((p) => Math.hypot(x - p.x, z - p.z) < r + p.r + 70)) continue;
-    if (!synth) named++;
-    decorateMegalith(g, meta.anchor, rnd, s);
-    // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
-    // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
-    // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
-    const dH = (rnd() - 0.5) * 0.05, dS = (rnd() - 0.5) * 0.12, dL = (rnd() - 0.5) * 0.1;
-    g.traverse((o) => {
-      if (o.isMesh && o.material?.userData?.rock) {
-        o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
-      }
+  for (const [fx, fz] of sites) {
+    if (fields.length >= ROCKFIELD.FIELDS || placedM.length >= MEGA_MAX) break;
+    if (fields.some((f) => Math.hypot(fx - f.x, fz - f.z) < ROCKFIELD.SEP)) continue;
+    // ---- 露頭群的三個「同源」決定:岩種 / 色相 / 走向 ----
+    const fSynth = rnd() < 0.4;                     // 約四成整片走合成岩
+    const fType = types[(start + named) % types.length];
+    // 同一岩層 ⇒ 整片共用色相偏移(逐顆再抖一點 = 塊面風化深淺)
+    const fH = (rnd() - 0.5) * 0.05, fS = (rnd() - 0.5) * 0.12, fL = (rnd() - 0.5) * 0.1;
+    // 走向 = 等高線方向(梯度的法向)。取樣距 MUST 跨得過地形格(~8.3m),否則量到的是
+    // 單格鋸齒而不是這面山坡的走向;平地(梯度趨零)回 null ⇒ 退回落點雜湊給的定值(原則 6)。
+    const G = 26;
+    const strike = strikeRad(
+      terrain.heightAt(fx + G, fz) - terrain.heightAt(fx - G, fz),
+      terrain.heightAt(fx, fz + G) - terrain.heightAt(fx, fz - G),
+    ) ?? (frac(beaconSeed(fx, fz), 0) * Math.PI);
+    const nomR = (fSynth ? 1.15 : (MEGALITHS[fType].s[0] + MEGALITHS[fType].s[1]) / 2)
+      * OVER.mega * (fSynth ? SYNTH_COL_R : MEGALITHS[fType].col.r);
+    const cells = planRockField({
+      cx: fx, cz: fz, strike, pitch: nomR * 2 * ROCKFIELD.PACK, seed: beaconSeed(fx, fz),
     });
-    // 零件級細節抖動(P2-B;2026-08-03):名岩的 build() 逐顆抽條數/尺寸,但**同一顆裡的
-    // 各個岩塊**比例是逐位元固定的 —— 兩座酋長岩的鼻樑稜線一模一樣。規則與振幅上界的
-    // 唯一縫 = `xform.js partJitter`(與植被/障礙同一份),夾制的尺是**碰撞柱半徑**
-    // `meta.col.r`(局部座標;g.scale 隨後才套上去 ⇒ 兩者同尺度)。
-    // dj 由**落點**推、MUST NOT 再抽一枚 `rnd()`:抽了就把後面每一顆巨岩/每一株植被的
-    // 亂數序列整條推移 ⇒ 全部場地的佈局跟著變(§2.3 的序列紀律),而這一項只是外觀微調。
-    jitterMegalith(g, djAt(x, z), meta.col.r);
-    bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
-    g.scale.setScalar(s);
-    // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空
-    for (let k = 0; k < 8; k++) {
-      const a = k / 8 * Math.PI * 2;
-      gy = Math.min(gy, terrain.heightAt(x + Math.cos(a) * r * 0.7, z + Math.sin(a) * r * 0.7));
-    }
-    g.position.set(x, gy - 1.5, z);
-    g.rotation.y = rnd() * Math.PI * 2;
-    group.add(g);
-    blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
-    // ---- 攀岩抓點的「正面」:逐方位**實測**岩面貼不貼碰撞圓(climb.js attachFaces ②)----
-    // 巨岩不是圓柱:碰撞圓涵蓋整個外廓(含崖錐/崩落塊/伴生丘),岩面常內縮十幾公尺 ⇒
-    // 抓點掛在碰撞圓上就是一整排浮在半空的樹脂塊(2026-07-30 使用者回報「正面必須面對巨石」)。
-    // 只留「整條路線高度帶內,岩面與碰撞面的縫都 ≤ ATT_GAP」的方位;一個都沒有 ⇒ attA 空陣列
-    // ⇒ 不掛路線(圓頂/崖錐型巨岩本來就架不出一條筆直貼壁的路線,寧缺勿錯)。
-    //
-    // **實測現況(2026-07-30,13 型 × 多種子;離線量測)**:`col.r`(涵蓋整個外廓)× 0.85 與
-    // 「高度帶內壁面半徑」的差距是 4m(酋長岩)~60m(烏魯魯/桌山),故**多數巨岩都通不過**這一關
-    //  ⇒ 巨岩幾乎不掛攀岩抓點。這是刻意的:掛上去就是一整排浮在 4~60m 空中的樹脂塊。
-    //  (遊戲內這條路徑另有座標系 bug,2026-07-31 才修 —— 見下段;修之前是「恆空」而非「多數不過」。)
-    // 要讓巨岩重新掛得上,得先把碰撞體從「一顆涵蓋全外廓的圓柱」換成「主量體有向盒 +
-    // 外伸量體(崖錐/崩落塊/伴生丘)各自登記」—— 那是動權威幾何的獨立工項(A30 對建物已改完,
-    // 巨岩待補),本次不含。屆時只要碰撞面貼上壁面,這裡就會自動開始產出方位。
-    //
-    // **座標系(2026-07-31 修)**:`rockProbe(g)` 的射線一律走**世界**座標(g 此刻已定位/縮放/
-    // 旋轉,`bb`/`far` 也都是世界量)。舊版拿 local 的 `(0, 0, yL, aL)` 去問,等於從世界原點附近
-    // 朝原點射一條射線 —— 幾百公尺外的岩體根本吃不到,`wallR` 恆 null ⇒ **attA 恆空、巨岩一顆
-    // 都掛不上抓點**(症狀與上面那段「縫太大」的結論撞在一起,難以分辨)。改成整段用世界量:
-    // 方位直接就是世界方位(不必再 `− rot`)、半徑不再乘 s(probe 回的已是世界公尺)。
-    const colR = r * 0.85;                     // 碰撞半徑(世界)
-    const ATT_GAP = MAX_BODY_R;                // 縫上限(climb.js 單一縫):≤ 最大機體碰撞半徑 ⇒ 機體仍貼著設施
-    const attA = [];
-    const probe = rockProbe(g);                // g 已含表面特徵,但射線只吃岩體(rockProbe 內部快照)
-    {
-      const yBase = gy - 1.5;                  // 岩體 local y=0 的世界高(= g.position.y)
-      const topW = meta.col.h * s;             // 岩體世界高度(路線頂端 = 碰撞柱頂)
-      for (let k = 0; k < 16; k++) {
-        const a = k / 16 * Math.PI * 2;         // 世界方位(attA.a 就是 surfacePoint 吃的那個角)
-        let gap = 0, top = 0, okA = true;
-        for (let i = 0; i <= 4; i++) {
-          const yW = yBase + topW * (0.12 + 0.2 * i);   // 高度帶:12%~92%(貼地段被崖錐/碎石坡吃掉,不驗)
-          const rr = probe.wallR(x, z, yW, a);
-          if (rr == null) { okA = false; break; }
-          const d = colR - rr;                  // 該高度的縫(世界公尺)
-          if (d > ATT_GAP) { okA = false; break; }
-          gap = Math.max(gap, Math.max(0, d));
-          if (i === 4) top = Math.max(0, d);
-        }
-        if (okA) attA.push({ a, gap, top });
+    let inField = 0;
+    for (const cell of cells) {
+      if (placedM.length >= MEGA_MAX) break;
+      const x = cell.x, z = cell.z;
+      // 先建再驗:淘汰只是丟棄未進場景的 Group,rnd 序全房一致
+      const synth = fSynth;
+      const g = new THREE.Group();
+      let meta, s;
+      if (synth) {
+        meta = synthMegalith(g, rnd);
+        s = (0.9 + rnd() * 0.5) * OVER.mega * cell.sf;
+      } else {
+        const def = MEGALITHS[fType];
+        def.build(g, rnd);
+        meta = def;
+        s = (def.s[0] + rnd() * (def.s[1] - def.s[0])) * OVER.mega * cell.sf;
       }
+      let r = meta.col.r * s;
+      // 山丘頂容不下整顆巨岩 → 等比縮到平坦半徑剛好;縮過頭(<45%)不像地標,換點
+      const fr = flatRadiusAt(terrain, x, z, r + 6);
+      if (fr < r) {
+        const shrink = fr / r;
+        if (shrink < 0.45) continue;
+        s *= shrink;
+        r = meta.col.r * s;
+      }
+      if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
+        || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) continue;
+      let gy = terrain.heightAt(x, z);
+      if (gy < 0.4) continue;
+      // 水域/沼澤不放巨岩:佔地大(r 可 ~20m+),中心 + 腳印周圈四向一併驗(rnd 已抽完,序列安全)
+      if (terrainEnvCode(terrain, x, z) !== 0
+        || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
+          .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
+      if (!areaFree(blocked, x, z, r + 6)) continue;
+      // 緊密排列的界線 = **碰撞柱不互穿**(同片露頭):再密也不能長進彼此體內 —— 那是破圖,
+      // 不是景觀。不同露頭群之間維持舊制的孤立感(`SEP` 已在外層擋掉,這裡是逐顆的保險)。
+      if (placedM.some((p) => Math.hypot(x - p.x, z - p.z)
+        < r + p.r + (p.f === fields.length ? ROCKFIELD.GAP_M : 70))) continue;
+      decorateMegalith(g, meta.anchor, rnd, s);
+      // 岩色隨生成/風化各異(2026-07-29):整顆色相/彩度/明度偏移 = 同名岩兩顆不同礦源;
+      // 逐塊再抖一點明度 = 塊面風化深淺。只動 rockMat 標記的材質(綠冠/木門/描邊不動);
+      // envMat 每次呼叫都建新材質,就地調色不會污染他顆。traverse 順序 = 加入序,rnd 序確定
+      // 同源同相(2026-08-03):偏移量的**主項是整片露頭共用**的 fH/fS/fL(同一岩層 = 同一礦源),
+      // 逐顆只再抖一小截。整片各抽各的話,一片露頭會是七彩的 —— 那看起來是七顆孤岩剛好擠在一起,
+      // 不是一片露頭。
+      const dH = fH + (rnd() - 0.5) * 0.015, dS = fS + (rnd() - 0.5) * 0.04, dL = fL + (rnd() - 0.5) * 0.04;
+      g.traverse((o) => {
+        if (o.isMesh && o.material?.userData?.rock) {
+          o.material.color.offsetHSL(dH, dS, dL + (rnd() - 0.5) * 0.05);
+        }
+      });
+      // 零件級細節抖動(P2-B;2026-08-03):名岩的 build() 逐顆抽條數/尺寸,但**同一顆裡的
+      // 各個岩塊**比例是逐位元固定的 —— 兩座酋長岩的鼻樑稜線一模一樣。規則與振幅上界的
+      // 唯一縫 = `xform.js partJitter`(與植被/障礙同一份),夾制的尺是**碰撞柱半徑**
+      // `meta.col.r`(局部座標;g.scale 隨後才套上去 ⇒ 兩者同尺度)。
+      // dj 由**落點**推、MUST NOT 再抽一枚 `rnd()`:抽了就把後面每一顆巨岩/每一株植被的
+      // 亂數序列整條推移 ⇒ 全部場地的佈局跟著變(§2.3 的序列紀律),而這一項只是外觀微調。
+      jitterMegalith(g, djAt(x, z), meta.col.r);
+      bakeContactAO(g, 6);   // 接地 AO:巨岩「長」在地上(botw_plan Task 2.2)
+      g.scale.setScalar(s);
+      // 佔地放大後坡地會露餡:取腳印周圈最低點落底(同建物),寧可陷入山坡不懸空
+      for (let k = 0; k < 8; k++) {
+        const a = k / 8 * Math.PI * 2;
+        gy = Math.min(gy, terrain.heightAt(x + Math.cos(a) * r * 0.7, z + Math.sin(a) * r * 0.7));
+      }
+      g.position.set(x, gy - 1.5, z);
+      // 長軸對齊走向(同一組節理面)—— 舊制的 `rnd() * 2π` 是「每顆各轉各的」,那正是
+      // 「巨石亂擺」的成因。抖動已含在 `cell.ry` 裡(`ROCKFIELD.RY_JIT`),不再另抽。
+      g.rotation.y = cell.ry;
+      group.add(g);
+      blockArea(blocked, x, z, r);   // 植被/地被/建物自動避開整個岩體
+      // ---- 攀岩抓點的「正面」:逐方位**實測**岩面貼不貼碰撞圓(climb.js attachFaces ②)----
+      // 巨岩不是圓柱:碰撞圓涵蓋整個外廓(含崖錐/崩落塊/伴生丘),岩面常內縮十幾公尺 ⇒
+      // 抓點掛在碰撞圓上就是一整排浮在半空的樹脂塊(2026-07-30 使用者回報「正面必須面對巨石」)。
+      // 只留「整條路線高度帶內,岩面與碰撞面的縫都 ≤ ATT_GAP」的方位;一個都沒有 ⇒ attA 空陣列
+      // ⇒ 不掛路線(圓頂/崖錐型巨岩本來就架不出一條筆直貼壁的路線,寧缺勿錯)。
+      //
+      // **實測現況(2026-07-30,13 型 × 多種子;離線量測)**:`col.r`(涵蓋整個外廓)× 0.85 與
+      // 「高度帶內壁面半徑」的差距是 4m(酋長岩)~60m(烏魯魯/桌山),故**多數巨岩都通不過**這一關
+      //  ⇒ 巨岩幾乎不掛攀岩抓點。這是刻意的:掛上去就是一整排浮在 4~60m 空中的樹脂塊。
+      //  (遊戲內這條路徑另有座標系 bug,2026-07-31 才修 —— 見下段;修之前是「恆空」而非「多數不過」。)
+      // 要讓巨岩重新掛得上,得先把碰撞體從「一顆涵蓋全外廓的圓柱」換成「主量體有向盒 +
+      // 外伸量體(崖錐/崩落塊/伴生丘)各自登記」—— 那是動權威幾何的獨立工項(A30 對建物已改完,
+      // 巨岩待補),本次不含。屆時只要碰撞面貼上壁面,這裡就會自動開始產出方位。
+      //
+      // **座標系(2026-07-31 修)**:`rockProbe(g)` 的射線一律走**世界**座標(g 此刻已定位/縮放/
+      // 旋轉,`bb`/`far` 也都是世界量)。舊版拿 local 的 `(0, 0, yL, aL)` 去問,等於從世界原點附近
+      // 朝原點射一條射線 —— 幾百公尺外的岩體根本吃不到,`wallR` 恆 null ⇒ **attA 恆空、巨岩一顆
+      // 都掛不上抓點**(症狀與上面那段「縫太大」的結論撞在一起,難以分辨)。改成整段用世界量:
+      // 方位直接就是世界方位(不必再 `− rot`)、半徑不再乘 s(probe 回的已是世界公尺)。
+      const colR = r * 0.85;                     // 碰撞半徑(世界)
+      const ATT_GAP = MAX_BODY_R;                // 縫上限(climb.js 單一縫):≤ 最大機體碰撞半徑 ⇒ 機體仍貼著設施
+      const attA = [];
+      const probe = rockProbe(g);                // g 已含表面特徵,但射線只吃岩體(rockProbe 內部快照)
+      {
+        const yBase = gy - 1.5;                  // 岩體 local y=0 的世界高(= g.position.y)
+        const topW = meta.col.h * s;             // 岩體世界高度(路線頂端 = 碰撞柱頂)
+        for (let k = 0; k < 16; k++) {
+          const a = k / 16 * Math.PI * 2;         // 世界方位(attA.a 就是 surfacePoint 吃的那個角)
+          let gap = 0, top = 0, okA = true;
+          for (let i = 0; i <= 4; i++) {
+            const yW = yBase + topW * (0.12 + 0.2 * i);   // 高度帶:12%~92%(貼地段被崖錐/碎石坡吃掉,不驗)
+            const rr = probe.wallR(x, z, yW, a);
+            if (rr == null) { okA = false; break; }
+            const d = colR - rr;                  // 該高度的縫(世界公尺)
+            if (d > ATT_GAP) { okA = false; break; }
+            gap = Math.max(gap, Math.max(0, d));
+            if (i === 4) top = Math.max(0, d);
+          }
+          if (okA) attA.push({ a, gap, top });
+        }
+      }
+      // ty = 岩頂**實測**高(自岩心垂直下射):碰撞柱刻意比岩體高 1.5m(落底時整顆下沉),
+      // 圓頂/疊層巨岩的頂面又比 `col.h` 低一截 ⇒ 抓點照碰撞柱畫會整排高出岩頂(同建築那族病灶)
+      blockers.push({ x, z, y: gy - 2, r: colR, h: meta.col.h * s + 2, std: 1, cl: 'rock', attA, ty: probe.topAt(x, z) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
+      placedM.push({ x, z, r, f: fields.length });   // f = 所屬露頭群序(緊密判定只對同片放寬)
+      inField++;
     }
-    // ty = 岩頂**實測**高(自岩心垂直下射):碰撞柱刻意比岩體高 1.5m(落底時整顆下沉),
-    // 圓頂/疊層巨岩的頂面又比 `col.h` 低一截 ⇒ 抓點照碰撞柱畫會整排高出岩頂(同建築那族病灶)
-    blockers.push({ x, z, y: gy - 2, r: colR, h: meta.col.h * s + 2, std: 1, cl: 'rock', attA, ty: probe.topAt(x, z) });   // std:頂部可站立(surfaceAt);cl:攀爬設施型別(climb.js)
-    placedM.push({ x, z, r });
+    // 岩種輪替以**露頭群**為單位遞增(同片同岩;逐顆遞增的話一片露頭會混七種名岩)
+    if (inField) {
+      if (!fSynth) named++;
+      fields.push({ x: fx, z: fz, strike, n: inField });
+    }
   }
   return placedM.length;
 }
@@ -2709,6 +2806,10 @@ const ROAD_W = {
   pedestrian: 4, track: 3.5, footway: 2.4, path: 2.2,
 };
 const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
+// 街廓配置(siteplan §A)認得的市街道路:MAIN_HW 之外再加住宅區道路與生活街道。
+// 刻意**不**收 service/track/步道 —— 那是停車場通道、產業道路與人行小徑,沿著它們配置街屋
+// 就會在山裡的林道兩旁長出整排樓房(而畫面上只表現成「這張圖的城市長到山上去了」)。
+const FRONT_HW = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street)$/;
 // 步道級 way(2026-07-29 使用者定案「步道一律不建橋」):行人道/步徑/徒步區/階梯/單車道 ——
 // 兵線本就只走 DRIVABLE(bake 的 DRIVABLE 排除步道 ⇒「步道不納入兵線」天然成立)。這類 way MUST NOT
 // 走橋樑管線:①跨水段不自動升高架橋(否則沿岸步道如泰晤士河維多利亞堤岸被整條升橋,而非貼岸繞行 ——
@@ -6590,13 +6691,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   };
   // 建物朝向/占位吃 roadInput(線上 = OSM 道路、離線 = 兵線當街道)⇒ 兩模式建物皆能門朝街
+  // 臨街配置吃的街道線段(§A):與上面的占位/朝向**同一次迴圈、同一份 roadInput** ——
+  // 另開一趟就是第二份街道清單,而它們遲早會因為某個 tag 過濾條件而分家。
+  // 這裡收的是 OSM 原始頂點之間的**整段**(直路 = 一長段),不是占位用的細分段:
+  // 細分段長度只有 6~12m,MIN_SEG 一律過不了 ⇒ 一棟都配不出來。
+  const frontSegs = [];
   for (const way of roadInput) {
     if (way.tags?.tunnel || way.tags?.bridge) continue;
     const hw = roadWidth(way.tags) / 2;
+    const hwName = way.tags?.highway || '';
+    const front = FRONT_HW.test(hwName);   // 街廓配置只認市街道路(步道/產業道路/連絡道不配)
+    const main = MAIN_HW.test(hwName);
     let px = null, pz = 0;
     for (const p of way.geometry || []) {
       const [x, z] = llToWorld(p.lat, p.lon, center);
       if (px !== null) {
+        if (front) frontSegs.push({ x1: px, z1: pz, x2: x, z2: z, hw, main });
         const seg = Math.hypot(x - px, z - pz);
         const n = Math.max(1, Math.ceil(seg / Math.max(hw * 1.2, 6)));
         for (let k = 1; k <= n; k++) {
@@ -6620,7 +6730,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
    */
   const nearestRoadAngle = (x, z) => {
     const ci = Math.floor(x / SEG_C), cj = Math.floor(z / SEG_C);
-    let bd = Infinity, nx = 0, nz = 0;
+    let bd = Infinity, bry = 0;
     for (let i = -1; i <= 1; i++) {
       for (let j = -1; j <= 1; j++) {
         const a = roadSegIdx.get(`${ci + i},${cj + j}`);
@@ -6635,13 +6745,15 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const d = Math.hypot(x - qx, z - qz);
           if (d < bd) {
             bd = d;
-            const s = ((-dz) * (qx - x) + dx * (qz - z)) >= 0 ? 1 : -1;   // 朝路法線的一側
-            nx = -dz * s; nz = dx * s;
+            // s = 讓 (-dz, dx)·s 指向道路的那一側 ⇒ 建物落在 −s 側
+            const s = ((-dz) * (qx - x) + dx * (qz - z)) >= 0 ? 1 : -1;
+            const l = Math.sqrt(l2);
+            bry = roadFaceRy(dx / l, dz / l, -s);   // 朝向公式單一縫(siteplan.js;臨街配置同吃)
           }
         }
       }
     }
-    return bd === Infinity ? null : Math.atan2(nx, nz);
+    return bd === Infinity ? null : bry;
   };
 
   const tryPlace = (x, z) =>
@@ -6721,6 +6833,115 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     });
   }
 
+  // ---- 都市計畫:沿街配置 + 公設(2026-08-03 使用者定案①)----
+  // 「建築沿道路整齊排列,遵循都市規劃的原則來設計,包含公園、運動場、停車場等公設」。
+  // 規則本體在 `siteplan.js planBlocks`(純幾何、離線可驗);本檔只做三件事:
+  //   ① 餵街道線段(`frontSegs`,與占位/朝向同一次迴圈收的)
+  //   ② 把「放不放得下」收進兩個 probe 回呼(界內/乾地/淨空/占位/市區/平坦度)
+  //   ③ 收成果:建築進 `generic`(與圖資建物同一條路徑 ⇒ 碰撞/立面/招牌全部一致)、
+  //      公設自建 mesh 並**實算**碰撞柱
+  // **零共享 `rnd()` 消耗**:量體/樣式/公設款式全由 `plotSeed`/`frac` 雜湊決定 ⇒ 這一段
+  // 的存在與否不會推移任何一株植被、任何一棟圖資建物的亂數序列(§2.3)。
+  const civics = [];
+  if (frontSegs.length && (generic.length || landmarks.length)) {
+    onProgress?.(0.63, '劃設街廓與公設用地…');
+    // 「市區」閘:只在既有聚落周邊配置。少了它,穿過山區的一條省道兩旁會長出整排街屋
+    // (圖資把它標成 primary,而規劃器只看得到線段)。種子 = 圖資建物 + 地標。
+    const UC = 128, urbanG = new Set();
+    const ukey = (x, z) => `${Math.floor(x / UC)},${Math.floor(z / UC)}`;
+    for (const b of generic) urbanG.add(ukey(b.x, b.z));
+    for (const lm of landmarks) urbanG.add(ukey(lm.x, lm.z));
+    const nearUrban = (x, z) => {
+      const ci = Math.floor(x / UC), cj = Math.floor(z / UC);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) if (urbanG.has(`${ci + i},${cj + j}`)) return true;
+      return false;
+    };
+    const dryAt = (x, z) => terrain.heightAt(x, z) > 0.4 && terrainEnvCode(terrain, x, z) === 0;
+    const res = planBlocks({
+      segs: frontSegs,
+      // 建築基地:與圖資建物**同一套判準**(半對角 ×0.75 掃走廊、外接圓查占位)
+      probeLot: (x, z, w, d) => {
+        if (x < terrain.minX + inb || x > terrain.maxX - inb
+          || z < terrain.minZ + inb || z > terrain.maxZ - inb) return false;
+        if (!nearUrban(x, z) || !dryAt(x, z)) return false;
+        if (!areaFree(blocked, x, z, Math.hypot(w, d) / 2 * 0.75)) return false;
+        if (!occ.free(x, z, Math.max(w, d) / 2, INFILL.gap)) return false;
+        occ.add(x, z, Math.max(w, d) / 2);   // 通過即收下(規劃器對每個候選只問一次)
+        return true;
+      },
+      // 公設用地:多兩道閘 —— 腳印周圈全在乾地(大平板半邊泡水最難看)、地表夠平
+      // (`flatRadiusAt` 單一縫;公園/球場/停車場在現實裡就是整過的平地,坡地上不擺)
+      probeCivic: (x, z, kind, r) => {
+        if (x < terrain.minX + r || x > terrain.maxX - r
+          || z < terrain.minZ + r || z > terrain.maxZ - r) return false;
+        if (!nearUrban(x, z) || !dryAt(x, z)) return false;
+        // 腳印周圈:全在乾地,且**起伏**收在門檻內。兩件事都要 ——
+        // `flatRadiusAt` 只認「掉下去」(它問的是懸崖),整片往上長的山坡它一路放行,
+        // 而落底走 `sinkBaseY` 取最低點 ⇒ 山坡會從鋪面中間長出來。故另量 max−min。
+        let lo = terrain.heightAt(x, z), hi = lo;
+        for (let k = 0; k < 8; k++) {
+          const a = k / 8 * Math.PI * 2;
+          const rx2 = x + Math.cos(a) * r * 0.8, rz2 = z + Math.sin(a) * r * 0.8;
+          if (!dryAt(rx2, rz2)) return false;
+          const hh = terrain.heightAt(rx2, rz2);
+          lo = Math.min(lo, hh); hi = Math.max(hi, hh);
+        }
+        if (hi - lo > CIVIC_KINDS[kind].flat) return false;
+        if (!areaFree(blocked, x, z, r)) return false;
+        if (!occ.free(x, z, r, 2)) return false;
+        if (flatRadiusAt(terrain, x, z, r, CIVIC_KINDS[kind].flat) < r) return false;
+        occ.add(x, z, r);
+        return true;
+      },
+    });
+    for (const p of res.plots) {
+      if (generic.length >= MAX_BUILDINGS + MAX_INFILL) break;
+      const f = frac(p.seed, 5);
+      generic.push({
+        x: p.x, z: p.z, w: p.w, d: p.d,
+        h: Math.min((p.commercial ? 24 + f * 40 : 7 + f * 9) * OVER.bldH, OVER.bldCap),
+        ry: p.ry, commercial: p.commercial,
+        v: Math.floor(frac(p.seed, 6) * FACADES[p.commercial ? 'commercial' : 'residential'].length),
+      });
+    }
+    for (const c of res.civics) {
+      const def = CIVIC_KINDS[c.kind];
+      const g = buildCivic(c.kind);
+      // 落底:取腳印周圈最低點(同建物/巨岩)—— 大平板寧可陷入緩坡,不懸空
+      const gy = sinkBaseY(terrain, c.x, c.z, def.foot * 0.8);
+      g.position.set(c.x, gy, c.z);
+      g.rotation.y = c.ry;
+      group.add(g);
+      blockArea(blocked, c.x, c.z, def.foot * 0.8);   // 植被/後續建物避開整片公設
+      // 碰撞柱:只有有量體的零件才登記(siteplan 紀律④),半徑由零件表**實算**(A30)
+      const ca = Math.cos(c.ry), sa = Math.sin(c.ry);
+      for (const col of civicColliders(c.kind)) {
+        const wx = c.x + col.px * ca + col.pz * sa, wz = c.z - col.px * sa + col.pz * ca;
+        // 方盒件登記**有向盒**(A30:圓只當 broad-phase 且恆為外接半對角)——
+        // 看台是 40m 長條,只登記外接圓就是球場中央一片 40m 直徑的隱形牆
+        blockers.push({
+          x: wx, z: wz, y: gy - 1, r: col.r, h: col.h + 1,
+          ...(col.hw2 != null ? { hw2: col.hw2, hd2: col.hd2, ry: c.ry + col.ry } : {}),
+        });
+      }
+      // 綠意:走既有植被 InstancedMesh(自建 mesh 就是多幾個 draw call 畫同一棵樹)
+      for (const [lx, lz, ls] of (CIVIC_TREES[c.kind] || [])) {
+        const wx = c.x + lx * ca + lz * sa, wz = c.z - lx * sa + lz * ca;
+        if (!dryAt(wx, wz)) continue;
+        const ts = plotSeed(Math.round(wx), Math.round(wz), 1, 5);
+        (items.broadleaf ??= []).push({
+          x: wx, y: terrain.heightAt(wx, wz), z: wz, s: ls * (VEG_SCALE.broadleaf || 1),
+          ry: frac(ts, 1) * Math.PI * 2,
+          tx: (frac(ts, 2) - 0.5) * 0.06, tz: (frac(ts, 3) - 0.5) * 0.06, dj: frac(ts, 4),
+        });
+      }
+      civics.push({ x: c.x, z: c.z, ry: c.ry, kind: c.kind, w: def.w, d: def.d });
+    }
+    if (res.plots.length || civics.length) {
+      onProgress?.(0.66, `沿街配置 ${res.plots.length} 棟、公設 ${civics.length} 處…`);
+    }
+  }
+
   // 市區補間:把被 8 倍世界撐開的街廓填回連續街區(隱蔽 + 走廊夾出戰略通道)
   if (generic.length) {
     const n = densifyUrban({ generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
@@ -6737,13 +6958,24 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 判定用「旋轉矩形 + 樹冠半徑外擴」:圓測試(半對角 ×0.8)在長方形建物的
   // 長邊側面留縫、角落外凸,貼牆的樹會漏掉。
   if (generic.length || landmarks.length) {
-    const C = 64;   // 桶格 > 最大半對角 ~23(裙樓外擴後 ~32)+ 最大樹冠外擴 ~8,±1 格掃描必然涵蓋
+    // 桶格 > 最大半對角 + 最大樹冠外擴 ~8,±1 格掃描必然涵蓋:建物 ~23(裙樓外擴後 ~32)、
+    // 鋪面型公設 ~45(運動場 76×48)⇒ 53 < 64。改大公設尺寸 MUST 重算這一條。
+    const C = 64;
     const rectG = new Map();
     for (const b of generic) {
       const k = `${Math.floor(b.x / C)},${Math.floor(b.z / C)}`;
       let a = rectG.get(k);
       if (!a) rectG.set(k, a = []);
       a.push(b);
+    }
+    // 鋪面型公設(停車場/運動場)同樣要拔植被 —— 柏油面與 PU 跑道上長出芒草不是自然,是漏濾。
+    // **公園刻意不列**:它的地被本來就該留著(園樹另由 CIVIC_TREES 補),整片拔掉會變成一塊禿地。
+    for (const c of civics) {
+      if (c.kind === 'park') continue;
+      const k = `${Math.floor(c.x / C)},${Math.floor(c.z / C)}`;
+      let a = rectG.get(k);
+      if (!a) rectG.set(k, a = []);
+      a.push({ x: c.x, z: c.z, w: c.w, d: c.d, ry: c.ry, commercial: false });
     }
     const lmC = landmarks.map((lm) => [lm.x, lm.z, (LANDMARK_COL[lm.type]?.r || 10) * OVER.lm]);
     const hitsBld = (x, z, pad) => {
