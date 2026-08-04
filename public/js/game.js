@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
-  ESCORT, escortSlot, escortLagK, escortDrift,
+  ESCORT, escortSlot, escortLagK, escortDrift, heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -2313,6 +2313,15 @@ export class BattleClient {
 
   /** 目前是否為飛行機體(無人機恆飛;變形者僅飛行型態) */
   _flying() { return this.isDrone || (this.isMorph && this.flight); }
+
+  /**
+   * 這台機體的水平巡航速度(m/s;**唯一取速處** = data.js heroMobility)。
+   * 三個消費端(地面移動 / 飛行推杆 / 蓄力跳彈射初速)MUST 全走這一支:
+   * `UNITS[kind].speed` 是**機種基準**,少乘角色 `mods.speed`、也吃不到移速壓縮(見 SPEED_COMP)
+   * ⇒ 伺服器閃避門檻(EVASION 吃 heroMobility)、平衡模型、圖鑑機動欄與腳下實際跑起來的速度
+   * 會分成兩份,而這種分歧只有拿碼表量才看得出來。
+   */
+  _mobility(flying) { return heroMobility(this.heroKind, CHARACTERS[this.ch]?.mods, flying); }
 
   /**
    * 移動輸入唯一縫:回傳 { f 前後, r 左右, mag 推杆量, boost 衝刺 }。
@@ -5841,7 +5850,7 @@ export class BattleClient {
 
   // ---------------- 機甲蓄力跳躍(2026-07-16;robot 限定,常數住 data.js CJUMP)----------------
   /** 垂直彈射 ∝ 蓄力 + 沿視線水平推進(距離 ∝ 機體速度);騰空低重力 = 太空漫步;起跳離地即請求無敵幀 */
-  _chargeJump(u) {
+  _chargeJump() {
     const k = this.charge;
     this.vy = CJUMP.V * k * this._modF('jump');
     this._lowG = true;
@@ -5849,7 +5858,7 @@ export class BattleClient {
     look.y = 0;
     if (look.lengthSq() > 0) look.normalize();
     // 前向彈射初速 ∝ 機體速度 ⇒ 最大距離同比;× AIR_SPD_F = 蓄力跳水平移速加倍(唯一縫,騰空操縱同吃)
-    const fwd = u.speed * this._modF('speed') * CJUMP.FWD_F * CJUMP.AIR_SPD_F * k;
+    const fwd = this._mobility(false) * this._modF('speed') * CJUMP.FWD_F * CJUMP.AIR_SPD_F * k;
     this.vel.x += look.x * fwd;
     this.vel.z += look.z * fwd;
     this.trauma = Math.min(1, this.trauma + 0.25);
@@ -7543,7 +7552,7 @@ export class BattleClient {
     } else if (this._flying()) {
       // FPV 3D 操作:2D 按鍵(W/S)沿「視線方向」飛 — 抬頭爬升、低頭俯衝;
       // A/D 水平橫移;Space/C 純垂直(懸停微調)。變形者飛行型態用 fly 巡航速度。
-      const spd = this.isMorph ? u.fly : u.speed;
+      const spd = this._mobility(true);   // 飛行巡航(變形者取 fly);唯一取速處,見 _mobility
       const look = new THREE.Vector3(
         -Math.sin(this.yaw) * Math.cos(this.pitch),
         Math.sin(this.pitch),
@@ -7612,7 +7621,7 @@ export class BattleClient {
       const airK = this._lowG ? CJUMP.AIR_SPD_F : 1;
       // 地形坡度:上坡減速 / 下坡加速(平緩帶 = 兵線坡度限制內恆 1;騰空與人造鋪面回 1)
       const slopeF = this._slopeMoveF(move);
-      this.pos.addScaledVector(move, u.speed * boost * this._zoneSlow() * slowK * this._terrainSlowF()
+      this.pos.addScaledVector(move, this._mobility(false) * boost * this._zoneSlow() * slowK * this._terrainSlowF()
         * slopeF * this._recoilMoveF(false) * this._ccMoveF() * this._modF('speed') * airK * dt);
       this.pos.x += this.vel.x * dt;
       this.pos.z += this.vel.z * dt;
@@ -7666,7 +7675,7 @@ export class BattleClient {
         this.charge = Math.min(1, this.charge + dt / CJUMP.CHARGE_S);
       } else if (!this.isMorph && this.charge > 0) {
         if (onGround && this.charge >= CJUMP.MIN && now >= (this._cjumpCd || 0)) {
-          this._chargeJump(u); this._cjumpCd = now + CJUMP.CD;   // 蓄力跳躍:15s CD
+          this._chargeJump(); this._cjumpCd = now + CJUMP.CD;   // 蓄力跳躍:15s CD
         } else if (onGround && this.charge >= CJUMP.MIN) {
           this.vy = u.jump * this._modF('jump');
           this.hud.feed?.(`🦿 蓄力跳冷卻中(${Math.ceil((this._cjumpCd || 0) - now)}s)`);

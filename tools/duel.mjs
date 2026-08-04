@@ -28,7 +28,7 @@
 // 差別只有「擲骰改期望值」(稽核要確定性,MUST NOT 用 Math.random —— 見全域 A4)與
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
 import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, altScale, altTier,
-  armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, chargeF,
+  armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, heavyMpCost, shieldSplit } from '../public/js/data.js';
 
 export const DUEL = {
@@ -68,7 +68,7 @@ function critF(def, dh) {
 
 /** 閃避期望存活率(對齊 sim._dodges:輕武器直射限定;移動中 + 有效機動 > 門檻;飛行加成;較高方 +DODGE) */
 function dodgeP(target, dh) {
-  if (target.mob <= EVASION.MOBILITY_MIN) return 0;   // 重甲慢速機體站著吃彈
+  if (target.mob <= evasionMinSpeed()) return 0;   // 重甲慢速機體站著吃彈
   let p = EVASION.GROUND + (target.flying ? EVASION.AIR_BONUS : 0);
   if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);     // 目標比射手高
   return Math.max(0, Math.min(1, p));

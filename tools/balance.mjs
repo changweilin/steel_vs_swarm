@@ -36,7 +36,7 @@
 //    (承傷減免 / 治療 / 召喚 / 攔截)等於貼不上就一項都兌現不了。雙扇形 MUST 兩招都是貼身套件、
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
-  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION,
+  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
   AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
@@ -51,13 +51,13 @@ import { BattleSim, waveInterval } from '../server/sim.js';
 const TARGET_LEFT = 0.40;          // 戰後應剩餘的 EHP 比例
 const WAVE = waveComp();   // 編制唯一真相住 data.js(waveComp;MUST NOT 手抄)
 
-/** 角色某槽位對某目標的持續 DPS(含換彈:輕/重武器一律 mag 發 / reload 秒;2026-07-18 重武器改彈夾 2~5 + 裝填 6~15s) */
+/** 角色某槽位對某目標的持續 DPS(彈匣週期走 data.js `weaponDps` 單一縫 —— 手抄第二份的症狀是
+ *  「圖鑑寫的火力跟平衡量到的不是同一個數」,兩邊都言之成理、沒有任何錯誤訊息) */
 const slotDps = (ch, slot, tk) => {
   const w = heroWeapon(ch, slot, 1, true);
   if (!w) return 0;
-  const cycle = w.mag / (w.rate || 3) + w.reload;
   // NPC/建築無護盾層 ⇒ shieldSplit(…, sp=0) 就是「整發吃 vsHp」(與 sim._damage 非英雄分支同一支)
-  return shieldSplit(w, w.dmg, 0).toHp * vsMult(w, tk) * armorMul(UNITS[tk].armor, w.pen) * w.mag / cycle;
+  return weaponDps(w, shieldSplit(w, w.dmg, 0).toHp * vsMult(w, tk) * armorMul(UNITS[tk].armor, w.pen));
 };
 const heroDps = (ch, tk) => {
   const d = slotDps(ch, 'light', tk) + slotDps(ch, 'heavy', tk);
@@ -163,9 +163,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     for (const slot of ['light', 'heavy']) {
       const w = heroWeapon(ch, slot, MAX_TIER, true);
       if (!w) continue;
-      const cycle = w.mag / (w.rate || 3) + w.reload;
-      dps += shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
-        * armorMul(UNITS.tower.armor, w.pen) * w.mag / cycle;
+      dps += weaponDps(w, shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
+        * armorMul(UNITS.tower.armor, w.pen));
     }
     const armor = (m.armor ?? 0) + U.ar.step * U.ar.max;
     let hull = Math.round(u.hp * (m.hp ?? 1)) * (1 + U.hp.step * U.hp.max);
@@ -189,9 +188,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   const standoff = (ch) => {
     const d = UNITS.tower.range + 1;
     const w = heroWeapon(ch, 'heavy', MAX_TIER, true);
-    const cycle = w.mag / (w.rate || 3) + w.reload;
-    const dps = shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
-      * armorMul(UNITS.tower.armor, w.pen) * dmgFalloff(w, d) * w.mag / cycle * SQUAD.N;
+    const dps = weaponDps(w, shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
+      * armorMul(UNITS.tower.armor, w.pen) * dmgFalloff(w, d)) * SQUAD.N;
     return { reach: w.range > d, t2: 2 * UNITS.tower.hp / dps };
   };
   console.log(`\n④ 滿級單推同塔位雙塔 — 機甲/變形:近戰互轟剩 0~20% EHP;無人機:站外攻堅 ≤ ${STANDOFF_BUDGET_S}s\n`);

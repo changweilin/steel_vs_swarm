@@ -4,6 +4,7 @@
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
 import { UNITS, GAME, WEAPONS, ECON, LOS, DECOY, hyperRange, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
+  CHARACTERS, heroMobility,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF } from '../public/js/data.js';
@@ -69,9 +70,11 @@ export class BotBrain {
    *  與客戶端 `game.js _flying()` 同語意 —— 碰撞量體的 fly 旗標兩端 MUST 是同一件事。 */
   _fly(h) { return h.kind === 'drone' || (h.kind === 'morph' && (h.y || 0) > FLY_Y); }
 
-  /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速 */
-  _speed(h, u) {
-    return (h.kind === 'morph' && this._fly(h) ? UNITS.morph.fly : u.speed) * this._ccF(h);
+  /** 地速:變形者飛行型態用飛行巡航速度(變形趕路才有意義)× 控場折速。
+   *  取速一律經 `heroMobility`(A32「電腦玩家 MUST NOT 比真人多看/多走」的同一條):
+   *  那支才含角色 `mods.speed` 與移速壓縮,直接讀 `UNITS[kind].speed` = bot 跑的是機種基準速。 */
+  _speed(h) {
+    return heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h);
   }
 
   /** 這架機體的水平半視角(弧度);推導不手寫,見 data.js botFovHalf */
@@ -216,7 +219,7 @@ export class BotBrain {
   _push(h, u, dt) {
     const pts = this.sim.lanes[this.lane];
     const total = this._cum[this._cum.length - 1];
-    this.prog = Math.min(total, this.prog + this._speed(h, u) * 0.85 * dt);
+    this.prog = Math.min(total, this.prog + this._speed(h) * 0.85 * dt);
     const fwd = this.side === 'SWARM' ? 1 : -1;
     const d = this.side === 'SWARM' ? this.prog : total - this.prog;
     const [x, z] = pointAt(pts, this._cum, d);
@@ -231,7 +234,7 @@ export class BotBrain {
     // 照穿不誤,而交戰/撤退兩段連那個都沒有。MUST NOT 在此另寫第二份推擠。
     this._stuck(this._move(h, h.x + (gx - h.x) * k, h.z + (gz - h.z) * k), dt);
     // 掉隊修正:被擊退/重生後 prog 對不上實際位置時,吸附回最近進度
-    if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - u.speed * dt * 4);
+    if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - this._speed(h) * dt * 4);
   }
 
   /** 目前是否處於「脫離交戰」狀態(回堡 or 退到砲塔後方)—— 兩者共用的判斷,MUST NOT 逐處展開 */
@@ -430,7 +433,7 @@ export class BotBrain {
     const keep = gun.range * (struct ? 0.85 : kite);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
-    const spd = this._speed(h, u);                       // 控場(麻痺/緩速/混亂)折算後的地速
+    const spd = this._speed(h);                       // 控場(麻痺/緩速/混亂)折算後的地速
     const vx = dx / d * radial * spd + (-dz / d) * strafe * spd;
     const vz = dz / d * radial * spd + (dx / d) * strafe * spd;
     this._move(h, h.x + vx * dt, h.z + vz * dt);   // 走位同吃碰撞唯一縫(交戰中一樣不能穿牆)
@@ -522,7 +525,7 @@ export class BotBrain {
     this._face(h, tx, tz);
     const [gx, gz] = this._skirt(h, tx, tz);             // 撤退路上一樣會撞牆 ⇒ 同一套繞行
     const gd = Math.hypot(gx - h.x, gz - h.z) || 1;
-    const step = this._speed(h, u) * dt;
+    const step = this._speed(h) * dt;
     this._stuck(this._move(h, h.x + (gx - h.x) / gd * step, h.z + (gz - h.z) / gd * step), dt);
   }
 

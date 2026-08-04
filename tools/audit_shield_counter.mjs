@@ -344,10 +344,13 @@ console.log('\n■ Ⅵ 對建築 DPS 收斂(2026-08-04 使用者定案「重武�
   t('BUILD_DPS.K ∈ (0, 1](0 = 逐位元同舊制、1 = 完全拉平)', BUILD_DPS.K > 0 && BUILD_DPS.K <= 1);
   t('水位回填有迭代上限(夾在 CAP 的那些補不滿 ⇒ 迴圈 MUST 有界)', BUILD_DPS.LEVEL_ITERS >= 1);
   t('buildDps 只有一份實作(收斂迴圈與本稽核同吃)', count(dataSrc, 'export function buildDps') === 1);
-  t('buildDps 與 balance.mjs 的 slotDps 同式(cycle = mag/rate + reload,且走 shieldSplit)',
-    /const cycle = w\.mag \/ \(w\.rate \|\| RATE_DEF\) \+ w\.reload;/.test(dataSrc)
-    && /const cycle = w\.mag \/ \(w\.rate \|\| 3\) \+ w\.reload;/.test(balSrc)
-    && /shieldSplit\(w, w\.dmg, 0\)\.toHp \* vsMult\(w, 'tower'\)/.test(dataSrc));
+  // 2026-08-04:彈匣週期改由 data.js `weaponDps`/`weaponCycleS` 單一縫供應(舊制是兩份手抄的
+  // `const cycle = …`,第三個消費端(圖鑑六角圖的火力軸)一來就會變成三份)。同式 = 同一支函式。
+  t('buildDps 與 balance.mjs 的 slotDps 同式(同吃 weaponDps,且走 shieldSplit)',
+    /export const weaponCycleS = \(w\) => w\.mag \/ \(w\.rate \|\| RATE_DEF\) \+ w\.reload;/.test(dataSrc)
+    && /weaponDps\(w, shieldSplit\(w, w\.dmg, 0\)\.toHp \* vsMult\(w, 'tower'\)/.test(dataSrc)
+    && /weaponDps\(w, shieldSplit\(w, w\.dmg, 0\)\.toHp \* vsMult\(w, tk\)/.test(balSrc)
+    && !/const cycle = w\.mag \//.test(dataSrc) && !/const cycle = w\.mag \//.test(balSrc));
   t('收斂只有一個 vs.building 寫入點(set() 單一縫;MUST NOT 逐武器手改)',
     count(dataSrc, /\(w\.vs \|\|= \{\}\)\.building = q\(Math\.min\(BUILDING_VS_CAP, v\)\)/g) === 1);
 

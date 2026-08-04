@@ -188,15 +188,16 @@ console.log('■ Ⅴ 蓄力跳水平移速(CJUMP.AIR_SPD_F 兩個消費端同吃
     },
   };
   const proto = new Function('THREE', 'CJUMP', 'shockRing', `return ({ ${grab('_chargeJump')} });`)(THREE, CJUMP, () => {});
+  // 移速取自 `_mobility`(2026-08-04 移速壓縮起的唯一取速處;見 audit_speed_comp.mjs)
   const u = { speed: 20 };
   const run = (charge) => {
     const c = Object.assign(Object.create(null), proto, {
       charge, vy: 0, _lowG: false, vel: { x: 0, y: 0, z: 0 }, pos: { x: 0, y: 0, z: 0 },
       trauma: 0, scene: null, effects: null, hud: {},
       camera: { getWorldDirection: (v) => { v.x = 0; v.y = -0.5; v.z = -1; return v; } },
-      _modF: () => 1, _reqIframe: () => {},
+      _modF: () => 1, _reqIframe: () => {}, _mobility: () => u.speed,
     });
-    c._chargeJump(u);
+    c._chargeJump();
     return c;
   };
   const full = run(1);
