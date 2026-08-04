@@ -49,6 +49,18 @@ export function toonGradient(bands = 3) {
   return g;
 }
 
+/**
+ * 這一組 ramp 的**暗階值**(0~1)。陰影偏色的權重基準(見下一段 P1-B)。
+ * **推導不手寫**:RAMPS 任一組的暗階一改,偏色的「最深處」自己跟著走 —— 手寫一份 0.4
+ * 的話,改了 ramp 就是「偏色的最深處」與「看得到的最暗階」分家,而畫面上只表現成
+ * 「某些材質的陰影偏色比別人淡」,沒有任何錯誤訊息。
+ * @param bands 2 / 3 / 4 / 'soft';省略 = 3(同 `toonGradient`)
+ */
+export function rampFloor(bands = 3) {
+  const key = RAMPS[bands] ? bands : 3;
+  return RAMPS[key][0] / 255;
+}
+
 // ---------------- 陰影偏色搬進 ramp(P1-B;2026-08-03)----------------
 // 舊制的 `CEL_COOL` 是**事後**把 `outgoingLight` 往冷色拌一下,而且**只有 `envMat` 開**;
 // 機甲/英雄/武器走 `toonMat` ⇒ 它們的陰影只是「比較暗」,不是「有顏色」。
@@ -107,16 +119,31 @@ const RAMP_INC = `#include <${RAMP_CHUNK}>`;
 // (本檔其餘每一處補丁都錨在 `#include <…>` 上,正是這個理由)。在展開後的字串上找,
 // 永遠找不到、永遠走落地路徑,而畫面上只表現成「偏色比預期柔一點」,不會有任何錯誤。
 // chunk 從 three 自己身上讀 ⇒ 不必把它的原始碼抄一份進來。
+// 偏色權重的單一縫(GLSL 端;JS 端的基準值是 `rampFloor`)。
+// **權重是「這一階在 ramp 上有多深」,不是「這一階有多亮」**(2026-08-04 使用者回報
+// 「機體陰影、環境陰影調整時,展示樣品看不出差異」的一半原因):舊制直接拿 `celG` 當權重,
+// 而 `celG` 是那一階的**亮度** —— A14/#INC-106 規定暗階 ≥ 102 是為了「深色件不塌黑」,
+// 拿它當偏色權重等於讓那條保命規則順便把偏色也一起夾掉:三階 ramp 的暗階 celG = 0.4
+// ⇒ 就算拉桿拉到底,最暗的那一階也只吃得到 **60%** 的偏色,而拉桿的說明寫的是
+// 「100% = 天光藍本身的濃度」。兩件不同的事被同一個數字綁在一起,而且不會報錯。
+// 正規化之後:最暗階 = 這張 ramp 的暗階值 ⇒ 權重 0 ⇒ **整份**偏色;最亮階恆為 1 ⇒
+// 逐位元不偏(「賽璐璐的受光面就該是光源本色」這條不變)。強度 0 仍是純白乘數 ⇒ 舊制。
+const RAMP_DEPTH_FN = `
+  // 0 = 這張 ramp 的最暗階(吃滿偏色)、1 = 最亮階(不偏)。分母的下限只為了防 ramp
+  // 退化成單一階時除以 0(RAMPS 每一組的頂階都是 255 ⇒ 正常情況恆 > 0)。
+  float celRampDepth( float g ) {
+    return clamp( ( g - uCelRampLo ) / max( 1e-3, 1.0 - uCelRampLo ), 0.0, 1.0 );
+  }`;
 const RAMP_PATCHED = (() => {
   const chunk = THREE.ShaderChunk?.[RAMP_CHUNK];
   if (typeof chunk !== 'string' || !chunk.includes(RAMP_HOOK)) return null;
   return chunk.replace(RAMP_HOOK, `
     {
-      // ramp 的階值 celG:0 = 最暗階、1 = 最亮階。偏色只給暗階(mix 的權重就是 celG),
+      // ramp 的階值 celG:暗階最小、亮階 = 1。偏色只給暗階(權重 = celRampDepth),
       // 亮階恆不偏 —— 賽璐璐的受光面本來就該是光源本色。
       // 乘數的 Rec.709 亮度恆 = 1(shadowTintRGB 已正規化)⇒ 暗階亮度逐位元不動,A14 不受影響。
       float celG = texture2D( gradientMap, coord ).r;
-      return vec3( celG ) * mix( uCelRampTint, vec3( 1.0 ), celG );
+      return vec3( celG ) * mix( uCelRampTint, vec3( 1.0 ), celRampDepth( celG ) );
     }`);
 })();
 
@@ -219,9 +246,14 @@ export function setCelSun(pos) {
   _sunDirWorld = pos.clone().normalize();
 }
 
-/** 每幀呼叫(render 前):把太陽光向轉到 view space 餵給硬邊高光 */
-export function updateCelLight(camera) {
-  _celLightDirView.copy(_sunDirWorld).transformDirection(camera.matrixWorldInverse);
+/**
+ * 每幀呼叫(render 前):把太陽光向轉到 view space 餵給硬邊高光 / CEL_COOL。
+ * @param dirWorld 覆寫用的世界光向(設定頁樣品:它有**自己**的一盞燈,見 matsample.js)。
+ *   省略 = 本場太陽(`setCelSun`)。覆寫是**每幀重寫**的共享 uniform ⇒ 誰要 render 誰先呼叫,
+ *   不留殘影;MUST NOT 改成「樣品去寫 `_sunDirWorld`」(那會把整場的光向換掉且換不回來)。
+ */
+export function updateCelLight(camera, dirWorld = null) {
+  _celLightDirView.copy(dirWorld || _sunDirWorld).transformDirection(camera.matrixWorldInverse);
 }
 
 // ---------------- 軟性物質:細勾線 + 隨風飄揚(2026-08-04)----------------
@@ -321,7 +353,7 @@ export function celWindTime() { return _windT.value; }
  *           base = 這個零件的原點在整株座標裡的位置(樹冠 = part.y、旗面 = 半寬);
  *           sy = 零件自身的縱向縮放(part.sy)。三者一起決定「這個頂點在整株上有多接近梢端」。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3 } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
@@ -345,7 +377,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     if (sk.axis === 'x') defines.CEL_SWAY_H = '';
   }
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
@@ -536,10 +568,12 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           if ( uCelRampFb > 0.5 ) {
             #ifdef USE_GRADIENTMAP
               float celFbG = texture2D( gradientMap, vec2( dot( normal, uCelLightDir ) * 0.5 + 0.5, 0.0 ) ).r;
+              float celFbW = celRampDepth( celFbG );
             #else
               float celFbG = saturate( dot( normal, uCelLightDir ) * 0.5 + 0.5 );
+              float celFbW = celFbG;   // 沒有 ramp 可正規化(退化到底的那一層)
             #endif
-            outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbG );
+            outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbW );
           }
         }
         #include <opaque_fragment>
@@ -598,7 +632,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     // 早得多,uniform 若跟著其他人塞在 main 前面就是「宣告在使用之後」。
     const canPatch = RAMP_PATCHED && shader.fragmentShader.includes(RAMP_INC);
     shader.uniforms.uCelRampFb = { value: canPatch ? 0 : 1 };
-    shader.fragmentShader = 'uniform vec3 uCelRampTint;\nuniform float uCelRampFb;\n'
+    // 偏色權重的基準 = **這份材質自己那張 ramp** 的暗階(2/3/4/soft 各不同)。
+    // 補丁路徑與落地路徑同吃 `celRampDepth`(一份公式),故宣告一律頂在最前面。
+    shader.uniforms.uCelRampLo = { value: rampFloor(bands) };
+    shader.fragmentShader = 'uniform vec3 uCelRampTint;\nuniform float uCelRampFb;\nuniform float uCelRampLo;\n'
+      + `${RAMP_DEPTH_FN}\n`
       + (canPatch ? shader.fragmentShader.replace(RAMP_INC, RAMP_PATCHED) : shader.fragmentShader);
   };
   // 軟性 MUST 進快取鍵:defines 不同卻共用同一支已編譯的程式 = 該材質整批沒有擺動也沒有
@@ -627,7 +665,9 @@ export function toonMat(color, opts = {}) {
   // 又不能因此比同一棵樹的樹幹多一圈邊緣光,那條路徑傳 rim: 0。
   const { celMetal, bands, rim = 0.22, soft = null, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
-  return applyCelPatch(m, { metal: !!celMetal, rim, soft });
+  // `bands` MUST 一起傳下去:偏色權重要以**這張 ramp 自己的暗階**正規化,拿不到就會用
+  // 預設 3 階的 0.4 去量 soft(0.745)那一組 = 白色大面積的陰影偏色少掉一半。
+  return applyCelPatch(m, { metal: !!celMetal, rim, soft, bands });
 }
 
 /**
@@ -642,7 +682,7 @@ export function envMat(color, opts = {}) {
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands });
 }
 
 /**
