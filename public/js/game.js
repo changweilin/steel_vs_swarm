@@ -27,7 +27,7 @@ import { makeUnit, heroTargetH, SOLDIER_H, MORPH_HUMANOID, podWeapon } from './m
 import { applyEnvironment } from './environment.js';
 import { Pipeline } from './postfx.js';
 import { buildHazard, buildMineBump, buildLoot, buildAirdrop } from './hazards.js';
-import { toonMat, outlinify, updateCelLight, disposeTree } from './toon.js';
+import { toonMat, outlinify, updateCelLight, stepCelWind, disposeTree } from './toon.js';
 import { heroPalette, paintUnit } from './paint.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { comicPop, starburst, shockRing, damageNumber, debrisBurst, makeHitShell, lockGlow, glowTexture, beamLine, projectileMesh, decoyBombMesh, cycloneJet, gundamBeam, ionBreath, makeDamageFx, DMG_FX } from './vfx.js';
@@ -8860,6 +8860,9 @@ export class BattleClient {
         ent.aura.position.set(mx, this.terrain.heightAt(mx, mz) + 0.6, mz);
       }
     }
+    // 全場風的時鐘(植被/旗幟的頂點擺動 + 雲的漂移同吃)。MUST 排在 `envFx.update` 之前:
+    // 雲那半讀的是 `celWindTime()`,晚一步就跟地面上的草差一幀。
+    stepCelWind(dt);
     this.envFx?.update(dt, this.camera);
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);

@@ -15,6 +15,14 @@
 //   ② 遠處淡出:遠景的線密到一定程度就變成雜訊(而且會蓋掉霧)。
 //   ③ 天空早退:天空的深度是 far,不early-out 的話整條天際線會被畫成一條粗黑邊。
 //
+// ---- 軟性物質的細線(2026-08-04;契約寫在 `toon.js` 的「軟性物質」段)----
+// 使用者定案「雲朵/芒草/草原/花園/樹葉/旗幟這些軟性的物質的線條會細得多,其他堅硬的
+// 物體則依據設定的數值」。本 pass 是**螢幕空間**的,天生不認識「這個像素是什麼東西」⇒
+// 逐像素的通道只有一條:**場景 RT 的 alpha ≡ 這一格的勾線門檻倍率**(1 = 硬性 = 舊制)。
+// 材質端怎麼寫進去、為什麼那個通道是空的,全部住 toon.js;本檔只負責讀它、乘進門檻。
+// 「細」= 抬高門檻而不是縮小取樣半徑:半徑已經是 1 像素(`INK.THICK`,再小就斷線),
+// 而 `|e|` 從邊緣往外遞減 ⇒ 門檻抬高,越過門檻的像素帶真的變窄(不是只變淡)。
+//
 // ---- A25 GPU 生命週期 ----
 // 這支持有 3 個 RenderTarget + 1 張 depthTexture + 3 個 FullScreenQuad 材質,
 // **全部** MUST 在 `dispose()` 釋放。`audit_gpu_lifecycle.mjs` ⑦ 逐項釘住。
@@ -146,7 +154,20 @@ export class Pipeline {
           // 反過來寫(先乘 CONCAVE_F 再進 smoothstep)= 把凹邊的門檻整個往上推 1/0.42 倍 ——
           // 而建物輪廓在這個 stencil 下大多算凹邊(近景像素旁邊是更遠的背景)⇒ 整批被吃掉:
           // 2026-08-03 定場照的除錯輸出裡,建物邊的 e 明明有 2 以上,ink 卻是 0。
-          float ink = smoothstep( ${INK.EDGE0.toFixed(3)}, ${INK.EDGE1.toFixed(3)}, abs( e ) );
+          float ae = abs( e );
+          // 早退:軟性倍率 ∈ (0,1] ⇒ ae × soft ≤ ae,硬性門檻都跨不過的一定也跨不過。
+          // 絕大多數像素在這裡離開(邊緣偵測本來就只有少數像素有值)⇒ 下面那四個 alpha
+          // 取樣只發生在「真的要畫線」的像素上,平均成本接近零。
+          if ( ae <= ${INK.EDGE0.toFixed(3)} ) { gl_FragColor = base; return; }
+          // 軟性倍率取**這一格與四鄰的最小值**:一條輪廓線同時落在物件側與背景側的像素上,
+          // 只看中心的話背景側那半條仍是硬性粗細 ⇒ 葉叢邊緣會一半粗一半細。
+          // 四鄰用的是與深度取樣**同一組偏移**(同一條線的兩側必定在其中)。
+          float soft = min( min( base.a, texture2D( tColor, vUv - vec2( t.x, 0.0 ) ).a ),
+                       min( min( texture2D( tColor, vUv + vec2( t.x, 0.0 ) ).a,
+                                 texture2D( tColor, vUv + vec2( 0.0, t.y ) ).a ),
+                                 texture2D( tColor, vUv - vec2( 0.0, t.y ) ).a ) );
+          soft = clamp( soft, 0.0, 1.0 );   // 硬性恆 1 ⇒ 這一行以下逐位元同舊制
+          float ink = smoothstep( ${INK.EDGE0.toFixed(3)}, ${INK.EDGE1.toFixed(3)}, ae * soft );
           if ( e > 0.0 ) ink *= ${INK.CONCAVE_F.toFixed(2)};   // 凹邊(牆角內側)比外輪廓輕
           // ② 遠處淡出:遠景線密到變雜訊,而且會蓋掉霧
           ink *= 1.0 - smoothstep( uFar * ${INK.FADE0.toFixed(2)}, uFar * ${INK.FADE1.toFixed(2)}, d );

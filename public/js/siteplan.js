@@ -209,13 +209,16 @@ export function planBlocks({ segs = [], probeLot, probeCivic, opts = {} }) {
 
 // ---- 公設零件表(純資料;規格同 `beacons.js KIND_PARTS`,外廓共用 `partExtent`)----
 // `col: 1` = 這件有量體、要登記碰撞柱(紀律④);沒有這面旗的一律是可走進去的鋪面/低矮件。
+// `sf` = 軟性物質(2026-08-04;使用者點名的「花園」與「草原」在這裡):細勾線 + 隨風飄揚,
+// 分類與參數住 `toon.js SOFT_KINDS`。草坪/內場草皮取 `turf`(**只細線、不擺動**)——
+// 它們是 0.5m 厚的鋪面,擺起來只會跟旁邊的步道錯開一條縫;花圃才取會擺的 `grass`。
 // 座標系:+x 沿街、+z 面向街道(與 `roadFaceRy` 定義的建物朝向同框)。
 const _row = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 
 export const CIVIC_PARTS = {
   // 公園:草坪 + 十字步道 + 水池 + 涼亭(有量體)+ 長椅/花圃(低矮,不擋路)
   park: [
-    { g: ['box', 62, 0.5, 42], c: 0x5f8a4a, p: [0, -0.25, 0] },              // 草坪
+    { g: ['box', 62, 0.5, 42], c: 0x5f8a4a, p: [0, -0.25, 0], sf: 'turf' },  // 草坪(軟性)
     { g: ['box', 62, 0.56, 4.6], c: 0xbfae90, p: [0, -0.2, -6] },            // 橫向步道
     { g: ['box', 4.6, 0.56, 42], c: 0xbfae90, p: [8, -0.2, 0] },             // 縱向步道
     { g: ['cyl', 7.2, 7.2, 0.62, 12], c: 0x4c7f96, p: [-17, -0.18, 8] },     // 水池
@@ -231,17 +234,17 @@ export const CIVIC_PARTS = {
     ..._row(4, (i) => ({ g: ['box', 3.2, 0.22, 0.9], c: 0x8a6a48, p: [-20 + i * 13, 0.86, -9.4] })),
     ..._row(4, (i) => ({ g: ['box', 3.2, 0.7, 0.16], c: 0x7a5a3c, p: [-20 + i * 13, 1.2, -9.85] })),
     // 花圃
-    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15] })),
+    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15], sf: 'grass' })),
     { g: ['cyl', 0.16, 0.2, 5.2, 6], c: 0x585e64, p: [-2, 2.6, -12] },       // 園燈
     { g: ['ico', 0.5], c: 0xffe9b0, p: [-2, 5.4, -12], e: 1 },
   ],
   // 運動場:PU 跑道 + 內場草皮 + 球門 + 看台(有量體)+ 照明燈柱(有量體)
   pitch: [
     { g: ['box', 74, 0.5, 46], c: 0xa8503c, p: [0, -0.25, 0] },              // 跑道鋪面
-    { g: ['box', 58, 0.56, 34], c: 0x4f8246, p: [0, -0.2, 0] },              // 內場草皮
+    { g: ['box', 58, 0.56, 34], c: 0x4f8246, p: [0, -0.2, 0], sf: 'turf' },  // 內場草皮(軟性)
     { g: ['box', 58, 0.6, 0.4], c: 0xe8ecef, p: [0, -0.17, 0] },             // 中線
     { g: ['cyl', 5.2, 5.2, 0.6, 16], c: 0xe8ecef, p: [0, -0.18, 0] },        // 中圈
-    { g: ['cyl', 4.9, 4.9, 0.62, 16], c: 0x4f8246, p: [0, -0.17, 0] },
+    { g: ['cyl', 4.9, 4.9, 0.62, 16], c: 0x4f8246, p: [0, -0.17, 0], sf: 'turf' },
     // 球門(細桿,不掛碰撞 —— 掛了就是球門後面那條看不見的牆)
     ..._row(2, (i) => ({ g: ['box', 0.32, 3.4, 0.32], c: 0xe8ecef, p: [(i ? 1 : -1) * 27, 1.7, -3.6] })),
     ..._row(2, (i) => ({ g: ['box', 0.32, 3.4, 0.32], c: 0xe8ecef, p: [(i ? 1 : -1) * 27, 1.7, 3.6] })),
@@ -497,7 +500,8 @@ export function buildCivic(kind) {
   const parts = CIVIC_PARTS[kind] || CIVIC_PARTS.park;
   const buckets = new Map();
   for (const p of parts) {
-    const key = `${p.c}|${p.e ? 1 : 0}`;
+    // 軟性旗標 MUST 進分桶鍵:同一桶只有一份材質,混桶的話同色的鋪面與草坪會共用一份旗標
+    const key = `${p.c}|${p.e ? 1 : 0}|${p.sf || ''}`;
     const geo = _geo(p.g);
     const m = new THREE.Matrix4();
     const [px = 0, py = 0, pz = 0] = p.p || [];
@@ -508,14 +512,21 @@ export function buildCivic(kind) {
       new THREE.Vector3(1, 1, 1),
     );
     geo.applyMatrix4(m);
-    if (!buckets.has(key)) buckets.set(key, { c: p.c, e: !!p.e, geos: [] });
-    buckets.get(key).geos.push(geo);
+    if (!buckets.has(key)) buckets.set(key, { c: p.c, e: !!p.e, sf: p.sf || null, top: 0, geos: [] });
+    const bk = buckets.get(key);
+    // 擺動權重的分母**實算**(零件位移已烘進幾何 ⇒ 這是「離公設地面多高」)。
+    // 手寫一個高度的話,改花圃尺寸就會變成「頂面擺不到滿幅」或「整塊一起平移」。
+    geo.computeBoundingBox();
+    bk.top = Math.max(bk.top, geo.boundingBox.max.y);
+    bk.geos.push(geo);
   }
   for (const b of buckets.values()) {
     const merged = mergeGeos(b.geos);
+    // 軟性(草坪/草皮/花圃):細勾線 + 隨風飄揚,分類與參數住 `toon.js SOFT_KINDS`
+    const soft = b.sf ? { k: b.sf, span: Math.max(0.2, b.top), base: 0, sy: 1 } : null;
     const mat = b.e
       ? toonMat(b.c, { emissive: b.c, emissiveIntensity: 1.0 })
-      : envMat(b.c, { wash: 0.5, cool: 0.4, rim: 0 });
+      : envMat(b.c, { wash: 0.5, cool: 0.4, rim: 0, soft });
     g.add(new THREE.Mesh(merged, mat));
   }
   bakeContactAO(g, 2.6);
