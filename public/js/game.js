@@ -739,6 +739,32 @@ export class BattleClient {
   }
 
   /**
+   * 飛行體(NPC 直升機 / 餌機 / 護衛自殺機 / 極音速飛彈)的高度基準面 —— **(x, z) 的純函式**。
+   *
+   * 為什麼不能沿用 `_surf` 的逐幀棘輪(2026-08-04 使用者回報「NPC 飛行單位在橋上會越飛越低」):
+   * `surfaceAt(x, z, curY)` 是為**地面**單位設計的「我現在在橋上還是橋下」消歧規則,curY 由
+   * 上一幀的高度回填 ⇒ 它是**單向棘輪**。飛行體的 curY 種子 = `cur.y − heroY`,一旦某一幀掉回
+   * 橋下的河床(兵線擁擠時 sim `_advance` 的側推會把直升機推出橋面足跡 ⇒ `deckY` 回 null),
+   * 上橋的兩個條件就再也不成立(距橋面 > `DECK_STEP`、橋腹淨空又 ≥ 最大機體)⇒ 基準面**永久**
+   * 停在河床:直升機從此貼著谷底飛、穿過橋面板 = 使用者看到的「越飛越低」+ 破圖。同一個棘輪在
+   * 隧道段更糟(`curY < ceil` ⇒ 回傳洞內路面,直升機一頭鑽進山肚子裡)。
+   *
+   * 飛行體根本不需要那條消歧規則:它本來就在所有結構之上飛。基準面 = **地表 ∪ 橋面 ∪ 隧道頂板**
+   * 取最高者,對每個座標只有一個答案 ⇒ 沒有路徑相依、沒有回不去的狀態。
+   * 大型障礙頂(`blockerTopAt` 的建物/神木/巨岩/地標)**刻意不收**:那是點狀物件不是連續結構面,
+   * 收了會讓直升機經過路邊電塔時整台彈到 35m 再落回來;兵線走廊本就淨空,漏收無代價。
+   */
+  _flySurf(x, z) {
+    const t = this.terrain;
+    let s = t.heightAt(x, z);
+    const d = t.deckY?.(x, z, t.deckMargin || 0);   // 橋面(側向容差與站立查詢同一份)
+    if (d != null && d > s) s = d;
+    const tn = t.tunnelAt?.(x, z);                  // 明隧道頂板露在地形之外(深埋段恆低於地表 ⇒ no-op)
+    if (tn && !tn.open && tn.roof > s) s = tn.roof;
+    return s;
+  }
+
+  /**
    * 兵線指引:不畫連續線,改成沿線的「ㄑ 字形」推進箭頭(馬力歐賽車加速板語彙)。
    * 造型 —— 每支箭 = 兩根扁平橫桿在頂點交會的 chevron,**貼在地面上**(HOVER 只留 0.3m
    *   離地淨空防 z-fighting;桿身厚度 0.12m)—— 浮在空中的箭頭地面玩家看不到(視線被機體
@@ -2539,15 +2565,14 @@ export class BattleClient {
     }
   }
 
-  /** 玩家 vs 單位/建築:水平圓柱推擠(考慮飛行高度,飛過塔頂不碰撞) */
-  _collide(px0, pz0) {
-    const fly = this._flying();
-    // 碰撞量體:與伺服器的 bot 碰撞(sim.solidResolve)MUST 同吃 selfCollider —— 兩端各寫一份
-    // 半徑/垂直帶就是「真人撞得到、電腦穿得過」(2026-08-02 使用者定案「碰撞法則一律一樣」)
-    const col = selfCollider(this.selfH, fly);
-    const myR = col.r;
-    const myBot = this.pos.y + col.bot;
-    const myTop = this.pos.y + col.top;
+  /**
+   * 這一幀「有碰撞量體的單位」清單(NPC 兵團 / 敵方英雄 / 阻擋型障礙),形狀 { x, z, r, base, top }。
+   * **掃掠與 push-out MUST 吃同一份名冊**(各自掃一次 `ents` 就是兩份實作,遲早挑到不同的單位 ——
+   * 症狀是「衝過去那一下穿過小兵,停下來才被推開」)。垂直帶判定 `myBot < top − 0.1 && myTop > base`
+   * 與伺服器 `sim._solidsNear` 的 `span()` 逐字同式:兩端各寫一份 = 真人撞得到、電腦穿得過(A30 家族)。
+   */
+  _unitSolids(myBot, myTop) {
+    const out = [];
     for (const ent of this.ents.values()) {
       if (ent.isSelf || !ent.mesh.visible) continue;
       // 自己的僚機不碰撞:歸隊時牠們以 50m/s 貼上來,會誤觸下面的高速撞擊自爆
@@ -2556,21 +2581,72 @@ export class BattleClient {
       if (!c && ent.colR) c = { r: ent.colR, h: ent.colH || 6 };   // 阻擋型障礙物
       if (!c) continue;
       const p = ent.mesh.position;
-      if (myBot > p.y + c.h || myTop < p.y) continue;     // 垂直不重疊
-      const dx = this.pos.x - p.x, dz = this.pos.z - p.z;
-      const d = Math.hypot(dx, dz);
-      const min = myR + c.r;
-      if (d >= min || d === 0) continue;
-      const nx = dx / d, nz = dz / d;
-      const push = min - d;
-      this.pos.x += nx * push;
-      this.pos.z += nz * push;
-      // 吃掉衝向障礙物的速度分量(不回彈)
-      const into = this.vel.x * nx + this.vel.z * nz;
-      if (into < 0) {
-        this.vel.x -= into * nx; this.vel.z -= into * nz;   // 吃掉衝向單位的速度分量(單機不再撞擊自爆)
-      }
+      const base = p.y, top = p.y + c.h;
+      if (myBot >= top - 0.1 || myTop <= base) continue;   // 垂直不重疊(ε 與伺服器 _solidsNear 同值)
+      out.push({ x: p.x, z: p.z, r: c.r, base, top });
     }
+    return out;
+  }
+
+  /**
+   * 圓柱 push-out(**唯一實作**;逐行鏡射伺服器 `solidPush` 的圓柱分支):機體圓盤與圓柱重疊時
+   * 沿圓心→機體推出,並吃掉衝向它的速度分量(不回彈)。回傳這一趟有沒有真的動到。
+   */
+  _pushOutCircle(cx, cz, cr, myR) {
+    const dx = this.pos.x - cx, dz = this.pos.z - cz;
+    const d = Math.hypot(dx, dz);
+    const min = myR + cr;
+    if (d >= min || d === 0) return false;
+    const nx = dx / d, nz = dz / d;
+    this.pos.x += nx * (min - d);
+    this.pos.z += nz * (min - d);
+    const into = this.vel.x * nx + this.vel.z * nz;
+    if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
+    return true;
+  }
+
+  /**
+   * 圓柱掃掠(**唯一實作**;逐行鏡射伺服器 `solidEnter` 的圓柱分支):位移 (ax,az)→(bx,bz) 是否
+   * **單幀橫越**這根圓柱;回進入參數 t ∈ (0,1],否則 null。起點已在圓內 → 交給 push-out 脫出;
+   * 終點落在圓內的「近半」(fwd < 0)→ 交給 push-out 沿邊滑(手感不變),遠半才夾在進入面。
+   */
+  _circleEnter(cx, cz, cr, ax, az, bx, bz, myR) {
+    const dx = bx - ax, dz = bz - az;
+    const len2 = dx * dx + dz * dz;
+    if (len2 < 1e-9) return null;
+    const R = cr + myR;
+    const ox = ax - cx, oz = az - cz;
+    if (ox * ox + oz * oz <= R * R) return null;                    // 起點已在圓內 → push-out 脫出
+    const e1x = bx - cx, e1z = bz - cz;
+    const fwd = e1x * dx + e1z * dz;
+    if (e1x * e1x + e1z * e1z <= R * R && fwd < 0) return null;     // 終點在圓內近半 → push-out 沿邊滑
+    const c = ox * ox + oz * oz - R * R;
+    const B2 = 2 * (ox * dx + oz * dz);
+    const disc = B2 * B2 - 4 * len2 * c;
+    if (disc < 0) return null;
+    const t0 = (-B2 - Math.sqrt(disc)) / (2 * len2);
+    return (t0 > 0 && t0 <= 1) ? t0 : null;
+  }
+
+  /**
+   * 玩家 vs 單位/建築:水平量體碰撞(考慮飛行高度,飛過塔頂不碰撞)。
+   * 流程 = 收名冊(`_unitSolids` + `terrain.blockers`)→ 掃掠(單幀橫越夾在進入面)→ push-out
+   * 交錯收斂;與伺服器 `sim.solidResolve` 逐段同構(兩端 MUST NOT 只改一邊)。
+   */
+  _collide(px0, pz0) {
+    const fly = this._flying();
+    // 碰撞量體:與伺服器的 bot 碰撞(sim.solidResolve)MUST 同吃 selfCollider —— 兩端各寫一份
+    // 半徑/垂直帶就是「真人撞得到、電腦穿得過」(2026-08-02 使用者定案「碰撞法則一律一樣」)
+    const col = selfCollider(this.selfH, fly);
+    const myR = col.r;
+    const myBot = this.pos.y + col.bot;
+    const myTop = this.pos.y + col.top;
+    // 單位(NPC/敵機/阻擋型障礙)與世界障礙走**同一套**流程:先掃掠、再交錯 push-out。
+    // 舊制單位只做 push-out(而且排在掃掠之前、自成一段迴圈)—— 「掃掠與 push-out 缺一不可」
+    // 對建物成立、對單位一樣成立:擊退/蓄力跳/掉幀那一幀的位移動輒數公尺 ≫ 一名步兵的直徑,
+    // 終點早就落在另一側 ⇒ 整台機體從小兵/戰車/敵方機甲身上穿過去(使用者回報的破圖),
+    // 而伺服器那半(`sim.solidResolve`)一向是掃掠 + push-out ⇒ 兩端分家(A30 家族)。
+    const units = this._unitSolids(myBot, myTop);
     // 圖資建物(biomes 客戶端幾何,全房間同一 OSM 來源 → 各端一致):
     // 純推擠不結算傷害,伺服器權威不受影響;無人機可飛越屋頂
     // 站在高架橋面上時,橋面「下方」街廓的建物(基座低於腳下一截)不推擠 —— 高架路飛越街廓,
@@ -2588,11 +2664,16 @@ export class BattleClient {
     // 只查終點重疊,穿到另一側就偵測不到 → 破圖穿透。先沿位移 P0(px0,pz0)→P1(pos)掃掠,夾在「首個
     // 真正被橫越(P0/P1 皆在外、線段進入)障礙」的前緣;正常慢速貼牆(終點落在障礙內)不觸發,交由
     // 下方 push-out 沿牆滑。與 push-out 共用同一垂直閘 + onDeck 豁免。px0/pz0 缺(舊呼叫)則跳過。
-    if (px0 != null) this._sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop);
+    if (px0 != null) this._sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop, units);
 
-    // push-out:密集街廓單趟推擠可能把機體從 A 推進 B(殘留重疊)→ 至多 3 趟收斂(穩定即止)
+    // push-out:密集街廓單趟推擠可能把機體從 A 推進 B(殘留重疊)→ 至多 3 趟收斂(穩定即止)。
+    // 單位 MUST 與世界障礙**同一趟交錯**收斂(舊制單位自成一段迴圈跑在最前面 = 只解一次)。
+    // **順序刻意是「先單位、後世界障礙」**:擠得下時兩者都滿足、順序無關;擠不下時(小兵把機體
+    // 頂在牆面上,而牆與小兵之間根本不夠一台機體寬)最後一趟說了算 ⇒ MUST 讓世界幾何贏。
+    // 陷進 NPC 只是兩個模型交疊,陷進建物是**鏡頭看穿牆面**的破圖(而且爬不出來)。
     for (let pass = 0; pass < 3; pass++) {
       let moved = false;
+      for (const u of units) if (this._pushOutCircle(u.x, u.z, u.r, myR)) moved = true;
       for (const b of this.terrain.blockers || []) {
         if (onDeck && b.y < surfHere - 3) continue;   // 橋下街廓建物:玩家在橋面上,不推擠
         // myBot 貼在頂面(surfaceAt mount 站上頂)不側推 —— 與橋墩「柱頂封底緣」同一課(biomes 2668);
@@ -2615,16 +2696,8 @@ export class BattleClient {
           if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }
           continue;
         }
-        const dx = this.pos.x - b.x, dz = this.pos.z - b.z;
-        const d = Math.hypot(dx, dz);
-        const min = myR + b.r;
-        if (d >= min || d === 0) continue;
-        const nx = dx / d, nz = dz / d;
-        this.pos.x += nx * (min - d);
-        this.pos.z += nz * (min - d);
-        moved = true;
-        const into = this.vel.x * nx + this.vel.z * nz;
-        if (into < 0) { this.vel.x -= into * nx; this.vel.z -= into * nz; }   // 撞神木/巨岩/橋墩:吃掉速度分量
+        // 撞神木/巨岩/橋墩:圓柱 push-out(與單位共用同一支 —— 兩份實作就是兩套推擠規則)
+        if (this._pushOutCircle(b.x, b.z, b.r, myR)) moved = true;
       }
       if (!moved) break;
     }
@@ -2636,8 +2709,10 @@ export class BattleClient {
    * 真正被橫越(P0 與 P1 皆在障礙外、進入參數 ∈(0,1])障礙」的進入點,夾住 pos 於其前緣(留 SKIN),
    * 吃掉沿位移方向的速度;隨後 push-out 解殘留 + 切向。終點落在障礙內(正常慢速貼牆)不觸發 → 手感不變。
    * 垂直閘 / onDeck 豁免與 push-out 同式;幾何式與 _blockerHitT / 盒推擠一致(圓柱 & 有向盒各一條)。
+   * `units`(`_unitSolids` 的同一份名冊)一併掃:小兵/戰車/敵方機甲的直徑遠小於一次擊退的位移,
+   * 少了這一段就是「衝過去那一下整台穿過去」——與伺服器 `solidResolve` 把 ents 和碰撞柱一起掃同判。
    */
-  _sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop) {
+  _sweepBlockers(px0, pz0, surfHere, onDeck, myR, myBot, myTop, units = []) {
     const dx = this.pos.x - px0, dz = this.pos.z - pz0;
     const len2 = dx * dx + dz * dz;
     if (len2 < 1e-4) return;                          // 幾乎沒位移 → 交給 push-out
@@ -2654,8 +2729,9 @@ export class BattleClient {
       // **fwd === 0(終點剛好落在通過中心的那個平面)歸「遠半」**:此時最小穿透軸的推出符號
       // 由 `lx<0 ? … : …` 決定,正中央那一刀等機率推向另一側 = 直接穿過去(2026-08-02 稽核
       // 以合成方牆逐位元復現;伺服器 `solidEnter` MUST 同步,兩端 MUST NOT 只改一邊)。
-      const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
+      // (圓柱那半的同一條規則住 `_circleEnter`,此處是有向盒版)
       if (b.hw2 != null) {
+        const fwd = (this.pos.x - b.x) * dx + (this.pos.z - b.z) * dz;
         const cs = Math.cos(b.ry), sn = -Math.sin(b.ry);   // 有向盒 local 軸:three Euler(0,ry,0) 的反解(sn 取 −sin)
         const ex = b.hw2 + myR, ez = b.hd2 + myR;
         const o0x = (px0 - b.x) * cs + (pz0 - b.z) * sn, o0z = -(px0 - b.x) * sn + (pz0 - b.z) * cs;
@@ -2672,19 +2748,14 @@ export class BattleClient {
         }
         if (ok && tmax >= tmin && tmin > 0 && tmin <= 1) tEnter = tmin;
       } else {
-        const R = b.r + myR;                          // 圓柱:2D 射線 × 圓(半徑外擴機體)
-        const ox = px0 - b.x, oz = pz0 - b.z;
-        if (ox * ox + oz * oz <= R * R) continue;     // P0 已在圓內 → push-out 脫出
-        const e1x = this.pos.x - b.x, e1z = this.pos.z - b.z;
-        if (e1x * e1x + e1z * e1z <= R * R && fwd < 0) continue;  // 終點在圓內近半 → push-out 沿牆滑
-        const c = ox * ox + oz * oz - R * R;
-        const B2 = 2 * (ox * dx + oz * dz);
-        const disc = B2 * B2 - 4 * len2 * c;
-        if (disc < 0) continue;
-        const t0 = (-B2 - Math.sqrt(disc)) / (2 * len2);
-        if (t0 > 0 && t0 <= 1) tEnter = t0;
+        // 圓柱(神木/巨岩/橋墩):與單位共用同一支掃掠(兩份實作 = 兩套穿透規則)
+        tEnter = this._circleEnter(b.x, b.z, b.r, px0, pz0, this.pos.x, this.pos.z, myR);
       }
       if (tEnter != null && tEnter < bestT) bestT = tEnter;
+    }
+    for (const u of units) {
+      const t = this._circleEnter(u.x, u.z, u.r, px0, pz0, this.pos.x, this.pos.z, myR);
+      if (t != null && t < bestT) bestT = t;
     }
     if (bestT === Infinity) return;                    // 無穿越
     const t = Math.max(0, bestT - SKIN / len);         // 夾在前緣(留 skin,不越回 P0 之前)
@@ -8235,14 +8306,21 @@ export class BattleClient {
       // 種子(_buildLaneSurf 從線頭穩定 march,不吃迷霧刪重建/重生瞬移/插值橫移汙染的 cur.y)⇒
       // 隧道段一定落在洞內、陸橋段一定落在橋面。離線遠(繞塔遠側等)查無取樣 → 退回逐幀棘輪(cur.y)。
       // 第三方(GUER/MILI)可駐守隧道正上方山頂 ⇒ 只主陣營(SWARM/STEEL)兵線單位吃剖面場,
-      // 免把山頂的第三方吸進洞內;英雄自由走位、飛行體本在空中 → 一律退回棘輪。
+      // 免把山頂的第三方吸進洞內;英雄自由走位 → 退回棘輪。
+      // 飛行體(NPC 直升機/餌機/自殺機/飛彈)MUST 走 `_flySurf`(座標的純函式)—— 逐幀棘輪
+      // 對它們是**單向**的:在橋上被側推出橋面足跡一次,基準面就永久掉回河床(見 _flySurf 檔頭)。
       const lift = (ent.hero || ent.flies) ? ent.heroY : 0;
-      let curSeed = cur.y - lift;
-      if (!ent.hero && !ent.flies && (ent.side === 'SWARM' || ent.side === 'STEEL')) {
-        const laneY = this._laneSurfAt?.(nx, nz);
-        if (laneY != null) curSeed = laneY + 1.2;   // +1.2:維持上橋 mount 台階 + 洞內 curY<ceil(同 march 配方)
+      let gy;
+      if (ent.flies) {
+        gy = this._flySurf(nx, nz);
+      } else {
+        let curSeed = cur.y - lift;
+        if (!ent.hero && (ent.side === 'SWARM' || ent.side === 'STEEL')) {
+          const laneY = this._laneSurfAt?.(nx, nz);
+          if (laneY != null) curSeed = laneY + 1.2;   // +1.2:維持上橋 mount 台階 + 洞內 curY<ceil(同 march 配方)
+        }
+        gy = this._surf(nx, nz, curSeed);
       }
-      const gy = this._surf(nx, nz, curSeed);
       let ny = gy + lift;
       // 兵線過水必走橋(#2 倫敦泡水保底 + 2026-07-22 棘輪修):地面小兵設計上過水一律走橋、
       // 不會游泳。surfaceAt 的 mount 台階(curY ≥ deck − DECK_STEP)是單向棘輪 —— 生成抖動/
