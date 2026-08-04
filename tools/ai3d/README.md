@@ -34,15 +34,21 @@ npm run codex -- --report   # 不開瀏覽器,直接印配對表
 (遊戲的設定頁最下方有一列「▎開發工具(本機)」可以直接按「▶ 啟動 / ⏹ 停止」,不必回終端機;
 後端是 `tools/dev_supervisor.mjs`,只回應本機來的請求,遊戲伺服器一關它開的那支也跟著收掉。)
 
-那座台子把 `masters/*.jpg` 與已入庫的 `public/assets/cyberpunk_art/mechs/*.png` **收在同一個配對表裡**
+那座台子把 `masters/` 與已入庫的 `public/assets/cyberpunk_art/mechs/` **收在同一個配對表裡**
 (配對規則同一條:檔名去副檔名 = slot),AI 稿標成藍色虛線框的「AI 稿」、計數也分開列 ——
 合併就等於把「這一格還沒有正式圖」藏起來。逐張確認勾選 / 框出要局部重繪的地方 / 重下 prompt,
-通過的再由人搬進 `public/assets/cyberpunk_art/mechs/`(那一層才進版控)。
-遊戲的設定頁最下方有一條連結(只在本機顯示)。
+通過的再**搬**進 `public/assets/cyberpunk_art/mechs/`(那一層才進版控;是搬不是複製 ——
+留一份在 `masters/` 就是同一張圖同時掛在兩個來源上)。
 
-**機體換過手的稿會變成孤兒**:2026-08-04 的 `s12_ground_static.jpg` / `s12_flight_static.jpg`
+**機體換過手的稿會變成孤兒**:2026-08-04 那批的 `s12_ground_static` / `s12_flight_static`
 畫的是 s12 還是變形者時的那台機體,而那台後來整組搬去 s03 ⇒ 檔名對不上任何一格。
-覆核台會把它們列在孤兒區,可以直接**指派**到 `s03_ground_static` / `s03_flight_static`,不必改檔名。
+覆核台會把這種檔列在孤兒區,可以直接**指派**到正確的一格而不必改檔名;那兩張入庫時
+則直接改名成 `s03_ground_static` / `s03_flight_static`(入庫層的檔名 MUST 對應**現在**的角色)。
+
+**入庫層兩種副檔名都收**(`.png` + `.jpg`):早期那 61 張是 `.png`,agy 產的一律 `.jpg`
+(見下方「已知限制 1」—— 轉成 `.png` 只是把 JPEG 壓縮雜訊包進無損容器)。
+`slots.mjs MASTER_EXT` 與覆核台的 `SOURCES[].ext` 同吃這條規則;只認 `.png` 的話,
+已經入庫的那批會被 `missingMasters()` 判成「還沒畫」而重畫一次,額度就這樣燒掉。
 
 ---
 
@@ -81,7 +87,10 @@ node -e "import('./tools/ai3d/slots.mjs').then(m=>console.log(m.auditCoverage())
 (計畫 §5.0.2 的估計是 ~280;差額來自鏡射收斂逐隻實算而非取平均)。
 
 > 設定稿那 18 張在 2026-08-03~04 分三批畫完(中間被 429 額度打斷兩次),
-> 2026-08-04 全數收進 `masters/`。**帳本當時漏了兩筆**(`t11_flight_static` / `m05_flight_static`
+> 2026-08-04 全數收進 `masters/`,同日入庫到 `public/assets/cyberpunk_art/mechs/`
+> (`s12_*` 那兩張改名為 `s03_*`,見上)⇒ 現在缺的設定稿只剩 **s12 一張**(那一格 2026-08-04
+> 從變形者換成鴨翼長航偵察機,是一台全新的機體,還沒畫過)。**帳本當時漏了兩筆**
+> (`t11_flight_static` / `m05_flight_static`
 > —— 額度中斷那兩張畫出來了但沒記進去),另有一筆(`m05_ground_static`)記到**別段對話**的
 > 產出上(`newestNew()` 在多段對話交錯時會抓錯),已一併更正並在該筆的 `note` 欄註明。
 > 帳本的 `out` 欄從此記**相對於儲存庫根**的路徑:絕對路徑會綁死在產出當下那個 worktree 上,

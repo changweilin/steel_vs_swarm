@@ -205,8 +205,15 @@ export function mastersOf(ch) {
     : [`${ch}_static`];
 }
 
+/** 已入庫設定稿的副檔名。**兩種都收**:早期那 61 張是 .png,agy 產的一律是 .jpg
+ *  (`generate_image` 只出 JPEG,轉成 .png 只是把壓縮雜訊包進無損容器 —— 見 README「已知限制 1」)。
+ *  只認 .png 的話,已經入庫的那 18 張會被判成「還沒畫」而重畫一次,額度就這樣燒掉。 */
+export const MASTER_EXT = ['.png', '.jpg'];
+
 export function missingMasters() {
-  const have = new Set(readdirSync(ART_DIR).filter(f => f.endsWith('.png')).map(f => f.slice(0, -4)));
+  const have = new Set(readdirSync(ART_DIR)
+    .filter(f => MASTER_EXT.includes(f.slice(f.lastIndexOf('.')).toLowerCase()))
+    .map(f => f.slice(0, f.lastIndexOf('.'))));
   const out = [];
   for (const ch of Object.keys(CHARACTERS)) {
     for (const m of mastersOf(ch)) if (!have.has(m)) out.push({ ch, master: m });
@@ -229,7 +236,14 @@ export function workList() {
   return out;
 }
 
-export function masterPath(name) { return join(ART_DIR, `${name}.png`); }
+/** 已入庫設定稿的路徑;找不到就回 .png 那個名字(呼叫端一律再 existsSync 一次) */
+export function masterPath(name) {
+  for (const ext of MASTER_EXT) {
+    const p = join(ART_DIR, `${name}${ext}`);
+    if (existsSync(p)) return p;
+  }
+  return join(ART_DIR, `${name}${MASTER_EXT[0]}`);
+}
 export function hasMaster(name) { return existsSync(masterPath(name)); }
 
 // 稽核入口住 gen2d.mjs(`--audit`)—— prompt.mjs 已經 import 這一支,在這裡反向
