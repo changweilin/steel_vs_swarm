@@ -66,6 +66,7 @@ jobs:
           #(外部服務會限流,不該讓 PR 卡在別人的伺服器上 —— 見該 workflow 檔頭)
           node tools/audit_venue_biome.mjs --offline
           node tools/audit_vernacular.mjs
+          node tools/audit_codex.mjs
 
       - name: 平衡七不變式
         run: npm run bal

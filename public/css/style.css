@@ -1203,6 +1203,9 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
   display: inline-block; margin-right: 5px; font-family: var(--mono); font-size: 9px;
   color: #04080b; background: var(--railS); border-radius: 0; padding: 0 5px; letter-spacing: 1px;
 }
+/* 原型名稱(codex.js 的 `src`)—— 分隔靠這一格的顏色與留白,不靠標點:
+   名稱本身就含「」與 ——(`「壁壘」過裝甲型`),拿標點當框會套成兩層引號。 */
+.cd-proto b { color: #e2ecf3; font-weight: 700; margin-right: 6px; }
 .cd-quote {
   margin: 7px 0; padding: 5px 9px; font-family: var(--serif); font-size: 12.5px; font-weight: 700; color: var(--railW);
   border-left: 3px solid var(--railW); background: rgba(var(--railW-rgb), 0.06);

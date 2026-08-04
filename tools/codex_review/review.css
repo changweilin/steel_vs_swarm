@@ -1,0 +1,113 @@
+/* 機體美術覆核台(dev-only)。沿用遊戲的 style.css 變數與 .seg/.segb 分段按鈕,
+   只補這一頁自己的版型 —— 覆核台不是遊戲畫面,但按鈕風格統一(CLAUDE.md §2.1 分段按鈕)。 */
+/* 遊戲的 style.css 給 body 掛了斜向導軌裝飾 —— 覆核台是看圖的工具,底圖上有一條粉紅斜線
+   會干擾「這張圖是不是偏色」這種判斷,故整片壓成純深色。 */
+body.cr {
+  margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  background: #0b0f14; background-image: none;
+}
+body.cr::before, body.cr::after { display: none; }
+
+.cr-top {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  border-bottom: 1px solid var(--railS); background: rgba(0, 0, 0, 0.35); flex: 0 0 auto;
+}
+.cr-top b { font-size: 14px; letter-spacing: 1px; }
+.cr-dim { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.cr-grow { flex: 1; }
+.cr-stat { font-family: var(--mono); font-size: 11px; color: var(--railW); }
+
+.cr-main { flex: 1; display: flex; min-height: 0; }
+.cr-list { width: 230px; flex: 0 0 auto; overflow-y: auto; border-right: 1px solid var(--railS); }
+.cr-body { flex: 1; overflow-y: auto; padding: 14px 18px 60px; }
+
+.cr-row {
+  display: flex; align-items: center; gap: 8px; padding: 6px 9px; cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.cr-row:hover { background: rgba(255, 255, 255, 0.05); }
+.cr-row.on { background: rgba(var(--railW-rgb), 0.14); }
+.cr-row img { width: 34px; height: 34px; object-fit: cover; border-radius: 2px; background: #11161b; }
+.cr-row .cr-rn { flex: 1; min-width: 0; }
+.cr-row .cr-rn b { display: block; font-size: 12px; }
+.cr-row .cr-rn span { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+.cr-pill {
+  font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1); color: var(--dim); white-space: nowrap;
+}
+.cr-pill.ok { background: rgba(90, 200, 130, 0.22); color: #9fe7bb; }
+.cr-pill.flag { background: rgba(255, 180, 70, 0.22); color: #ffcf8a; }
+.cr-pill.miss { background: rgba(255, 90, 90, 0.2); color: #ff9d9d; }
+
+/* ── 上半:頭像 ▏3D 展示台 ── */
+.cr-head { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.cr-face { width: 168px; flex: 0 0 auto; }
+.cr-face img { width: 100%; border-radius: 3px; background: #11161b; display: block; }
+.cr-face .cr-cap { font-family: var(--mono); font-size: 9.5px; color: var(--dim); margin-top: 3px; }
+.cr-stage { width: 320px; height: 300px; position: relative; flex: 0 0 auto; }
+.cr-stage canvas { width: 100%; height: 100%; display: block; background: rgba(0, 0, 0, 0.25); border-radius: 3px; }
+.cr-stage-btns { position: absolute; left: 6px; bottom: 6px; display: flex; gap: 5px; }
+.cr-meta { flex: 1; min-width: 240px; }
+.cr-meta h2 { margin: 0 0 2px; font-size: 17px; }
+.cr-meta .cr-mline { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-bottom: 6px; }
+
+/* ── 機體圖網格 ── */
+.cr-shots { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 4px; }
+.cr-shot { width: 190px; cursor: pointer; position: relative; }
+.cr-shot img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 3px; display: block; background: #11161b; }
+.cr-shot.on-ok img { outline: 2px solid #5ac882; }
+.cr-shot.on-flag img { outline: 2px solid #ffb446; }
+.cr-shot .cr-none {
+  width: 100%; aspect-ratio: 1; border: 1px dashed var(--railS); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center; color: var(--dim);
+  font-family: var(--mono); font-size: 11px; cursor: default;
+}
+.cr-shot .cr-sc { display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; }
+
+/* ── 資訊區塊 ── */
+.cr-sec { margin-top: 16px; }
+.cr-sec > h3 {
+  margin: 0 0 6px; font-size: 11px; font-family: var(--mono); letter-spacing: 1.5px;
+  color: var(--railW); border-bottom: 1px solid var(--railS); padding-bottom: 3px;
+}
+.cr-kv { display: grid; grid-template-columns: 92px 1fr; gap: 3px 10px; font-size: 11.5px; line-height: 1.65; }
+.cr-kv > b { font-family: var(--mono); font-size: 10px; color: var(--dim); font-weight: 400; }
+.cr-hide { border-left: 2px solid #ffb446; padding-left: 9px; }
+.cr-hide h3 { color: #ffcf8a; }
+.cr-gen { width: 100%; min-height: 120px; font-family: var(--mono); font-size: 11px; line-height: 1.6;
+  background: rgba(0, 0, 0, 0.35); color: #cfe0ea; border: 1px solid var(--railS); border-radius: 3px; padding: 8px; }
+.cr-wrow { padding: 5px 7px; border-left: 2px solid var(--railS); margin-bottom: 4px; cursor: pointer; font-size: 11.5px; }
+.cr-wrow:hover { background: rgba(255, 255, 255, 0.05); }
+.cr-wrow b { font-size: 12.5px; }
+.cr-wrow .cr-nums { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+
+/* ── 覆核 modal ── */
+/* `display:flex` 的特異性高過 `[hidden]` 的 display:none ⇒ MUST 自己補這條,
+   否則收起來的 modal 會變成一片透明的全螢幕遮罩,把底下每一顆按鈕都吃掉(點了沒反應)。 */
+.cr-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.82); z-index: 90; display: flex; }
+.cr-modal[hidden] { display: none; }
+.cr-mbox { margin: auto; display: flex; gap: 14px; max-width: 1180px; width: 94%; max-height: 92vh; }
+.cr-mimg { position: relative; flex: 1 1 auto; min-width: 0; user-select: none; }
+.cr-mimg img { width: 100%; max-height: 88vh; object-fit: contain; display: block; }
+.cr-box { position: absolute; border: 2px solid #ffb446; background: rgba(255, 180, 70, 0.16); pointer-events: none; }
+.cr-box i {
+  position: absolute; left: 0; top: -16px; font-style: normal; font-family: var(--mono);
+  font-size: 9.5px; background: #ffb446; color: #10131a; padding: 0 4px; white-space: nowrap;
+}
+.cr-mside {
+  width: 360px; flex: 0 0 auto; overflow-y: auto; background: #0d1116;
+  border: 1px solid var(--railS); border-radius: 3px; padding: 12px;
+}
+.cr-mside h3 { margin: 0 0 8px; font-size: 13px; }
+.cr-mside label { display: block; font-family: var(--mono); font-size: 10px; color: var(--dim); margin: 9px 0 3px; }
+.cr-mside textarea { width: 100%; box-sizing: border-box; }
+.cr-note { width: 100%; box-sizing: border-box; font-size: 11.5px; padding: 5px;
+  background: rgba(0, 0, 0, 0.4); color: #dce8f0; border: 1px solid var(--railS); border-radius: 3px; }
+.cr-acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.cr-rgl { font-family: var(--mono); font-size: 10px; color: var(--dim); line-height: 1.7; }
+.cr-rgl div { display: flex; gap: 5px; align-items: center; }
+.cr-rgl button { font-size: 9px; padding: 0 4px; }
+.cr-saved { font-family: var(--mono); font-size: 10px; color: #9fe7bb; margin-left: 6px; }
+
+.cr-orph { margin-top: 22px; }
+.cr-orph .cr-shot { width: 150px; }
