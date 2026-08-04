@@ -263,8 +263,107 @@ try {
     ok(san.includes('DNS:localhost') && uncovered.length === 0,
       `自簽憑證 SAN MUST 涵蓋當下每一個對外 IPv4${uncovered.length ? `(漏:${uncovered.join(', ')})` : `(${ifs.length} 條路徑)`}`);
   }
+  // ------------- ⑦ 開發工具啟停端點(dev-only;會開行程 ⇒ 閘門是安全邊界)-------------
+  // 2026-08-04 使用者定案:設定頁的「2D 生圖對照台」旁邊加一顆啟動/停止鈕。
+  // 這是本專案唯一一個「HTTP 進來 → spawn 一支行程」的路徑,所以閘門本身就是要稽核的東西。
+  console.log('\n▍開發工具啟停(/dev/tools)');
+  const supSrc = read('tools', 'dev_supervisor.mjs');
+
+  // (a) 靜態:三道閘 + 參數零信任 + 埠號不抄第二份
+  ok(/if\s*\(!CLOUD\s*&&\s*urlPath\.startsWith\('\/dev\/tools'\)\)/.test(srvSrc),
+    'server.js MUST 在 `!CLOUD` 之下才掛這條路由(雲端節點連載都不載)');
+  ok(/import\('\.\.\/tools\/dev_supervisor\.mjs'\)/.test(srvSrc) && /\.catch\(\(\) => null\)/.test(srvSrc),
+    'MUST 動態 import 且載不到就當沒有這條路由(出貨版沒有 tools/)');
+  ok(/import \{ DEFAULT_PORT as CODEX_PORT \} from '\.\/codex_review\.mjs'/.test(supSrc),
+    '埠號 MUST 從工具自己 import,MUST NOT 抄一份(抄了改埠就探不到,鈕面永遠停在「▶ 啟動」)');
+  ok(/spawn\(process\.execPath, \[t\.script, \.\.\.t\.args\]/.test(supSrc)
+    && !/spawn\([^)]*req\./.test(supSrc),
+    'spawn 的 argv MUST 全部來自 TOOLS 常數,請求只能挑一個 key(參數零信任)');
+  ok(/\/\^\\\/dev\\\/tools\\\/\(\[a-z0-9_-\]\{1,32\}\)\\\/\(start\|stop\)\$\//.test(supSrc)
+    || /\[a-z0-9_-\]\{1,32\}/.test(supSrc),
+    '動作路徑 MUST 以白名單字元集比對(key 進不了命令列,也進不了檔案路徑)');
+  ok(/x-dev-tools'\] !== '1'/.test(supSrc),
+    '改變狀態的請求 MUST 要一個非簡單標頭(擋跨來源網頁的 CSRF)');
+  ok(/if\s*\(!rec \|\| rec\.child\.exitCode !== null\)/.test(supSrc),
+    '停止 MUST 只停自己開的那支(憑一個埠號決定殺誰 = 寧缺勿錯的反面)');
+  ok(!read('tools', 'build_solo.mjs').includes('dev_supervisor'),
+    '單機打包 MUST NOT 把這支複製出去(它只複製 public/** 與白名單三支 server 模組)');
+
+  // (b) 行為直測:同一支跑著的伺服器,loopback 通、區網位址 404
+  const devReq = (host, p, opts = {}) => new Promise((res) => {
+    const r = http.request({ host, port, path: p, method: opts.method || 'GET', headers: opts.headers || {} }, (s) => {
+      let b = ''; s.on('data', (c) => { b += c; });
+      s.on('end', () => res({ code: s.statusCode, body: b }));
+    });
+    r.on('error', () => res({ code: 0, body: '' }));
+    r.setTimeout(8000, () => { r.destroy(); res({ code: 0, body: '' }); });
+    r.end();
+  });
+  const lo = await devReq('127.0.0.1', '/dev/tools');
+  let tools = [];
+  try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
+  ok(lo.code === 200 && tools.some((t) => t.key === 'codex'),
+    'loopback 拿得到工具清單(含 codex)');
+  ok(tools.every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
+    '清單自己帶網址(客戶端因此一個埠號都不用寫死)');
+  const lan = Object.values(os.networkInterfaces()).flat()
+    .find((i) => i.family === 'IPv4' && !i.internal)?.address;
+  if (!lan) console.log('  ⏭  跳過區網位址那一項:這台機器沒有對外 IPv4');
+  else {
+    const out = await devReq(lan, '/dev/tools');
+    ok(out.code === 404, `非 loopback(${lan})MUST 拿到 404 —— 隊友連進來看不到這個端點`);
+  }
+  ok((await devReq('127.0.0.1', '/dev/tools/codex/start', { method: 'POST' })).code === 403,
+    '沒帶 `x-dev-tools` 標頭的 POST MUST 被拒(擋 CSRF)');
+  ok((await devReq('127.0.0.1', '/dev/tools/codex/nope', {
+    method: 'POST', headers: { 'x-dev-tools': '1' },
+  })).code === 404, '沒有的動作 MUST 404(而不是被當成 start)');
+
+  // (c) 真的啟停一次。8621 已經有人在聽(使用者自己在終端機跑著)就跳過 —— MUST NOT 洗成通過
+  const sup = await import('./dev_supervisor.mjs');
+  const before = (await sup.list())[0];
+  if (before.listening) {
+    console.log('  ⏭  跳過啟停直測:8621 已經有人在聽(可能是終端機跑著的 npm run codex)');
+    ok((await sup.stop('codex')).error === '這一支不是從這裡啟動的',
+      '別人起的那一支停不掉,而且明講原因');
+  } else {
+    const started = await sup.start('codex');
+    ok(started.listening && started.owned, `start 之後埠 ${started.port} 真的聽得到,而且是我們開的`);
+    const stopped = await sup.stop('codex');
+    ok(!stopped.listening && !stopped.owned, 'stop 之後埠放掉了');
+    ok((await sup.stop('codex')).error === '這一支不是從這裡啟動的', '重複 stop 不炸,而且明講原因');
+  }
 } finally {
   srv.kill();
+}
+
+// 雲端節點根本不掛這條路由(上面那支是 --lan;這裡另起一支 --cloud 對照)
+{
+  const cport = await freePort();
+  const csrv = spawn(process.execPath,
+    [path.join(ROOT, 'server', 'server.js'), '--cloud', '--port', String(cport)],
+    { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  let cboot = '';
+  csrv.stdout.on('data', (d) => { cboot += d; });
+  await new Promise((r) => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if (/={10,}\s*$/.test(cboot.trim()) || Date.now() - t0 > 15000) { clearInterval(iv); r(); }
+    }, 100);
+  });
+  try {
+    const got = await new Promise((res) => {
+      const r = http.request({ host: '127.0.0.1', port: cport, path: '/dev/tools' }, (s) => {
+        s.resume(); s.on('end', () => res(s.statusCode));
+      });
+      r.on('error', () => res(0));
+      r.setTimeout(8000, () => { r.destroy(); res(0); });
+      r.end();
+    });
+    ok(got === 404, `雲端模式(--cloud)MUST NOT 有 /dev/tools(實際 ${got})`);
+  } finally {
+    csrv.kill();
+  }
 }
 
 console.log(bad === 0 ? '\n🎉 三種連線機制稽核全數通過' : `\n💥 ${bad} 項未通過`);

@@ -148,41 +148,44 @@ const ok = (cond, msg) => {
   ok(/st\.toggleReserve\(item\)/.test(mainJs),
     '預約鈕只呼叫 `toggleReserve`(名單與排程都住 game.js)');
 
-  // (8) 設定頁的「開發工具」列(2026-08-04 使用者定案:2D 生圖對照台加進設定,只在本機顯示)
-  //     工具本體住 tools/,設定頁只給一條連結 —— 出貨版(Pages / 單機 / 隊友的區網位址)
-  //     MUST 整塊不存在,否則就是一顆點了必定連不上的鈕。
+  // (8) 設定頁的「開發工具」列(2026-08-04 使用者定案:2D 生圖對照台加進設定 + 後端啟停鈕)
+  //     工具本體住 tools/,設定頁只有一列開關與一條連結。**清單/網址/顯不顯示一律問伺服器** ——
+  //     那條路由只回應 loopback、雲端不掛、出貨版連 tools/ 都沒有(閘門本身的稽核在 audit_net_modes ⑦)。
   ok((mainJs.match(/function renderDevTools\(/g) || []).length === 1,
     '開發工具列只有一份實作(`renderDevTools`)');
-  ok((mainJs.match(/renderDevTools\(\$\(/g) || []).length === 2,
-    '開發工具列恰兩個掛載點(戰場暫停頁 + 大廳設定頁)');
+  ok((mainJs.match(/function syncDevTools\(/g) || []).length === 1,
+    '狀態同步只有一份實作(`syncDevTools`)');
+  // 開設定頁時 MUST 重問一次:狀態會被終端機那邊改掉(Ctrl+C),鈕面停在上一次的答案就是騙人
+  for (const mnt of ['pauseVisualMount', 'lobbyVisualMount']) {
+    ok(new RegExp(`renderVisualSettings\\(\\$\\('${mnt}'\\)\\); syncDevTools\\(\\)`).test(mainJs),
+      `切到設定頁(${mnt})MUST 重問一次開發工具狀態`);
+  }
+  ok(/await syncDevTools\(\);/.test(mainJs), '按完啟停 MUST 重問一次(鈕面才跟得上實際狀態)');
   for (const id of ['pauseDevMount', 'lobbyDevMount']) {
     ok(html.includes(`id="${id}"`), `index.html 有 #${id} 掛載點`);
+    ok(mainJs.includes(`'${id}'`), `main.js 的掛載點名冊含 ${id}`);
   }
   ok(!html.replace(/<!--[\s\S]*?-->/g, '').includes('開發工具'),
     '「開發工具」小標 MUST 由 renderDevTools 產生 —— 寫成靜態標記會在出貨版留下一個空的區塊標題');
   ok(!Object.keys(help.UI_TIPS).some((k) => /dev/i.test(k)),
     '開發工具的說明 MUST NOT 進 UI_TIPS(那一份會被推導進玩家看得到的說明分頁)');
 
-  // 埠號是「另一支程式的預設值」:兩邊各寫一個數字,改埠之後鈕還在、點下去連到空的
-  const devPort = mainJs.match(/url: 'http:\/\/localhost:(\d+)\//)?.[1];
-  const srvPort = readFileSync(join(ROOT, 'tools', 'codex_review.mjs'), 'utf8')
-    .match(/argv\[i \+ 1\]\) : (\d+)/)?.[1];
-  ok(!!devPort && devPort === srvPort,
-    `設定頁那條連結的埠 = tools/codex_review.mjs 的預設埠(main.js ${devPort} / 覆核台 ${srvPort})`);
+  // 埠號的真相住工具自己(codex_review.mjs `DEFAULT_PORT`)⇒ 客戶端 MUST 一個數字都不寫死
+  const codexSrc = readFileSync(join(ROOT, 'tools', 'codex_review.mjs'), 'utf8');
+  ok(/export const DEFAULT_PORT = \d+;/.test(codexSrc),
+    'tools/codex_review.mjs 匯出 `DEFAULT_PORT`(埠號的唯一真相)');
+  ok(!/localhost:\d+/.test(mainJs),
+    'main.js MUST NOT 寫死開發工具的網址或埠(網址由 GET /dev/tools 給)');
+  ok(/fetch\('\/dev\/tools'/.test(mainJs) && /x-dev-tools/.test(mainJs),
+    '客戶端問 `/dev/tools`,而改變狀態的請求帶 `x-dev-tools` 非簡單標頭(擋跨來源 CSRF)');
+  ok(!/function devHost\(/.test(mainJs),
+    '客戶端 MUST NOT 自己判一次 hostname —— 說了算的是伺服器那條路由的 loopback 閘');
 
-  // 行為直測:執行 main.js 的 `devHost()` 原文(它只吃 location,拆得出來單獨跑)
-  {
-    const src = mainJs.match(/function devHost\(\)\s*\{[\s\S]*?\n\}/)?.[0];
-    ok(!!src, 'main.js 有 `devHost()`(出貨版的閘門)');
-    const run = (loc) => new Function('location', `${src}\nreturn devHost();`)(loc);
-    ok(run({ protocol: 'http:', hostname: 'localhost' }) === true, 'devHost:localhost 顯示');
-    ok(run({ protocol: 'https:', hostname: '127.0.0.1' }) === true, 'devHost:127.0.0.1 顯示');
-    ok(run({ protocol: 'file:', hostname: '' }) === false, 'devHost:單機版 file:// 不顯示');
-    ok(run({ protocol: 'https:', hostname: 'changweilin.github.io' }) === false,
-      'devHost:GitHub Pages 不顯示');
-    ok(run({ protocol: 'http:', hostname: '192.168.1.20' }) === false,
-      'devHost:隊友連進來的區網位址不顯示(那支 dev server 不在他們機器上)');
-  }
+  // 鈕面吃「埠上有沒有人在聽」;停不掉的(終端機起的)MUST 變灰而不是假裝停得掉
+  ok(/t\.listening \? '⏹ 停止' : '▶ 啟動'/.test(mainJs), '啟停鈕面吃 `listening`');
+  ok(/power\.disabled = t\.listening && !t\.owned/.test(mainJs),
+    '不是這裡啟動的那一支 MUST 停不掉(鈕變灰),MUST NOT 憑一個埠號決定殺誰');
+  ok(/open\.disabled = !t\.listening/.test(mainJs), '沒起來時「開啟」是灰的(免得開出一頁連線錯誤)');
 }
 
 const chromium = await chromiumOrNull();
