@@ -42,9 +42,12 @@ export class MatSample {
     // 左:機體(toonMat + 硬邊金屬高光)—— 「機體陰影偏色」看的就是這一顆。
     // 右:環境(envMat + 苔蘚 + 水彩暈染)—— 「環境陰影偏色」與「風化密度」看這一塊。
     // 兩者形狀刻意不同:球看得出 ramp 的階、方塊看得出勾線的輪廓與凹凸邊。
+    // `preview: true` = 改吃樣品自己那張風化場(toon.js ensurePreviewField):世界那一張在
+    // 大廳根本還沒有(1×1 中性 ⇒ 拉桿逐位元無作用),在戰鬥中又是整張圖的尺度 ⇒ 樣品那 24m
+    // 只取到單一個值。兩者都不報錯,症狀都是「風化密度拉了看不出差異」。
     this._mats = [];
     const mechM = toonMat(0x8d97a6, { celMetal: true });
-    const envM = envMat(0x6f7a63, { wash: 0.55, cool: 0.5, moss: { amount: 0.85 } });
+    const envM = envMat(0x6f7a63, { wash: 0.55, cool: 0.5, moss: { amount: 0.85 }, preview: true });
     this._mats.push(mechM, envM);
     const mech = new THREE.Mesh(new THREE.SphereGeometry(1.55, 32, 24), mechM);
     mech.position.set(-2.3, 1.0, 0);
@@ -54,8 +57,12 @@ export class MatSample {
     const rock = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 2.6), envM);
     rock.position.set(2.2, 1.1, 0);
     rock.rotation.y = 0.6;
+    // 地面 MUST 帶 moss:它是畫面裡唯一一片**正朝上**又佔滿下半幅的面(苔蘚是世界 Y 軸
+    // 投影 ⇒ 只有朝上的面吃得到),而岩塊的頂面在這個機位上幾乎看不到 —— 沒有它,
+    // 「風化密度」就只剩 wash 那 ±7% 的暈染在動,等同看不出差異。
+    // 邊長 MUST 與 `PREVIEW_SPAN` 一致:場的取樣框就是這一片地,起伏才鋪滿樣品畫面。
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(24, 24),
-      envMat(0x4b5646, { wash: 0.5, cool: 0.5, rim: 0, bands: 4 }));
+      envMat(0x4b5646, { wash: 0.5, cool: 0.5, rim: 0, bands: 4, moss: { amount: 0.8 }, preview: true }));
     ground.rotation.x = -Math.PI / 2;
     this._mats.push(ground.material);
     this.scene.add(mech, mechArm, rock, ground);

@@ -30,12 +30,15 @@ const KEY = 'svs_visual';
  *   sample 樣品畫面要示範哪一種材質(matsample.js 用;null = 全部)
  */
 export const VISUAL_KNOBS = {
+  // 兩根偏色拉桿的 `max` MUST 與 `toon.js TINT_MAX_A` 相同(稽核 Ⅱ 逐值比對)。
+  // 上限 > 1 的理由住在 toon.js 那個常數旁邊:偏色只乘得到暗階的**直接光**那一項,
+  // 100% 在真瀏覽器上量到的峰值只有 +5/255,拉了跟沒拉一樣。
   shadowMech: {
-    label: '機體陰影偏色', def: 0, min: 0, max: 1, step: 0.05, unit: '%',
-    hint: '機甲 / 英雄 / 武器的暗面往天光藍偏移。0% = 只變暗(舊制)。',
+    label: '機體陰影偏色', def: 0, min: 0, max: 3, step: 0.05, unit: '%',
+    hint: '機甲 / 英雄 / 武器的暗面往天光藍偏移。0% = 只變暗(舊制);100% = 天光藍本身的濃度,再往上是同一個色相拉更遠(亮度全程不變)。',
   },
   shadowEnv: {
-    label: '環境陰影偏色', def: 0, min: 0, max: 1, step: 0.05, unit: '%',
+    label: '環境陰影偏色', def: 0, min: 0, max: 3, step: 0.05, unit: '%',
     hint: '地形 / 建物 / 岩石的暗面偏移量,疊在既有的環境冷色之上。',
   },
   ink: {

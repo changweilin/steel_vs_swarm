@@ -112,20 +112,32 @@ console.log('\nⅡ 陰影偏色(P1-B)');
   const LUMA = [0.2126, 0.7152, 0.0722];
   const luma = (c) => c[0] * LUMA[0] + c[1] * LUMA[1] + c[2] * LUMA[2];
 
+  // 上限:`toon.js TINT_MAX_A` 與兩根拉桿的 max MUST 是同一個數 —— 分家的症狀是
+  // 「拉桿拉得到 300%,但超過 100% 之後畫面就不動了」,沒有任何錯誤訊息。
+  const maxA = Number(/const TINT_MAX_A = ([\d.]+)/.exec(toonSrc)?.[1]);
+  ok(Number.isFinite(maxA) && count(toonSrc, /const TINT_MAX_A = /g) === 1, `偏色上限是具名常數(${maxA})`);
+  ok(VISUAL_KNOBS.shadowMech.max === maxA && VISUAL_KNOBS.shadowEnv.max === maxA,
+    '兩根拉桿的 max 與 TINT_MAX_A 一致(拉得到的範圍 = 真的算得出來的範圍)');
+  // **上限 MUST > 1**:1.0 只是 SHADOW_HUE 自己那個長度,而偏色只乘得到暗階的直接光那一項
+  // ⇒ 真瀏覽器實測峰值只有 +5/255(2026-08-03 使用者回報「調整時看不出差異」的一半原因)。
+  ok(maxA > 1, `上限 ${maxA} > 1(100% 的實測峰值只有 +5/255,把它當天花板 = 這根拉桿等於沒有)`);
+
   const z = shadowTintRGB(0);
   ok(z[0] === 1 && z[1] === 1 && z[2] === 1, '強度 0 = 純白乘數 ⇒ **逐位元**同舊制(不是「差不多」)');
-  // 亮度中性是 A14 的保命條:暗階 ≥ 102 的規定不可以被「乘一個暗色」繞過去
+  // 亮度中性是 A14 的保命條:暗階 ≥ 102 的規定不可以被「乘一個暗色」繞過去。
+  // luma(1 + (c−1)a) = 1 + (luma(c) − 1)·a,而 luma 正規化過 ⇒ **與上限無關**恆為 1。
   let worst = 0, minC = 1;
-  for (let a = 0; a <= 1.0001; a += 0.02) {
+  for (let a = 0; a <= maxA + 1e-4; a += maxA / 100) {
     const t = shadowTintRGB(a);
     worst = Math.max(worst, Math.abs(luma(t) - 1));
     minC = Math.min(minC, Math.min(...t));
   }
   ok(worst < 1e-9, `全值域亮度恆為 1(最大偏差 ${worst.toExponential(1)})—— A14 的暗階亮度逐位元不動`);
-  ok(minC > 0.85, `最暗通道 ${minC.toFixed(3)} 仍遠離 0(色相在走,亮度沒掉)`);
-  const mid = shadowTintRGB(0.5), full = shadowTintRGB(1);
+  ok(minC > 0.5, `最暗通道 ${minC.toFixed(3)} 仍遠離 0(色相在走,亮度沒掉)`);
+  const mid = shadowTintRGB(0.5), full = shadowTintRGB(1), top = shadowTintRGB(maxA);
   ok(mid[2] > mid[0] && full[2] > mid[2] && full[0] < mid[0], '偏色方向恆為藍綠,且強度單調');
-  ok(shadowTintRGB(5)[0] === full[0] && shadowTintRGB(-3)[0] === 1, '強度自身夾在 [0,1]');
+  ok(top[2] > full[2] && top[0] < full[0], '超過 100% 仍沿同一個色相繼續走(不是停在 SHADOW_HUE 上)');
+  ok(shadowTintRGB(maxA + 9)[0] === top[0] && shadowTintRGB(-3)[0] === 1, `強度自身夾在 [0, ${maxA}]`);
 
   // 單一縫:GLSL 的乘數與樣品畫面同吃這一支,MUST NOT 有第二份色表
   ok(count(toonSrc, /SHADOW_HUE\s*=/g) === 1, '偏色色相表只有一份');
@@ -134,17 +146,31 @@ console.log('\nⅡ 陰影偏色(P1-B)');
   ok(count(toonSrc, /const RAMP_HOOK = /g) === 1 && toonSrc.includes('texture2D( gradientMap, coord ).r'),
     'ramp 查表的替換錨點是具名常數(升級 three MUST 重新核對這一行)');
   // 最容易靜默失效的一條:`onBeforeCompile` 收到的是**還沒展開 include** 的原始碼
-  ok(/THREE\.ShaderChunk\?\.lights_toon_pars_fragment/.test(toonSrc)
+  ok(/THREE\.ShaderChunk\?\.\[RAMP_CHUNK\]/.test(toonSrc)
     && /replace\(RAMP_INC, RAMP_PATCHED\)/.test(bare(toonSrc)),
     '從 ShaderChunk 取原文後換掉 **#include 指令**(在展開後的字串上找 = 永遠找不到、永遠走落地路徑)');
-  ok(count(toonSrc, /#include <lights_toon_pars_fragment>/g) === 1
-    && count(bare(toonSrc), /shader\.fragmentShader\.includes\(RAMP_HOOK\)/g) === 0,
+  ok(count(bare(toonSrc), /shader\.fragmentShader\.includes\(RAMP_HOOK\)/g) === 0,
     '沒有殘留「在 fragmentShader 上直接找 RAMP_HOOK」的舊寫法');
+  // **2026-08-03 的真凶**:`getGradientIrradiance()` 住在 `gradientmap_pars_fragment`,而舊制
+  // 錨在 `lights_toon_pars_fragment`(那裡只是**呼叫**它的地方)⇒ RAMP_PATCHED 恆為 null、
+  // 每一份材質都走落地保險,畫面上只表現成「兩根偏色拉桿看不出差異」。
+  // chunk 名 MUST 只有一份、`#include` 指令 MUST 由它推導(兩個名字各寫一次就會再分家一次)。
+  const chunkName = /const RAMP_CHUNK = '([a-z_]+)'/.exec(toonSrc)?.[1];
+  ok(count(toonSrc, /const RAMP_CHUNK = /g) === 1 && chunkName === 'gradientmap_pars_fragment',
+    `ramp 錨在 getGradientIrradiance 真正的家(${chunkName})—— 升級 three MUST 重新核對`);
+  ok(/const RAMP_INC = `#include <\$\{RAMP_CHUNK\}>`/.test(toonSrc)
+    && count(bare(toonSrc), /#include <lights_toon_pars_fragment>/g) === 0,
+    '#include 指令由 RAMP_CHUNK 推導,沒有第二個手寫的 chunk 名');
   ok(/uCelRampTint/.test(toonSrc) && /mix\( uCelRampTint, vec3\( 1\.0 \), celG \)/.test(toonSrc),
     '偏色權重 = ramp 階值(暗階偏得多、亮階不偏)');
   ok(/uCelRampFb/.test(toonSrc) && /canPatch \? 0 : 1/.test(bare(toonSrc))
     && /if \( uCelRampFb > 0\.5 \)/.test(toonSrc),
     '替換失敗有等效落地路徑(原則 6;否則 three 一升級就是「拉桿沒反應」)');
+  // 落地路徑 MUST 取**同一張 ramp 的階值**當權重:手寫的線性斜坡把偏色攤平在整顆球上,
+  // 實測差異只剩補丁版的一個零頭(最大 11/765)⇒ 保險壞掉時剛好也看不出來 = 等於沒有保險。
+  ok(/float celFbG = texture2D\( gradientMap, vec2\( dot\( normal, uCelLightDir \) \* 0\.5 \+ 0\.5, 0\.0 \) \)\.r;/.test(toonSrc)
+    && /#ifdef USE_GRADIENTMAP/.test(toonSrc),
+    '落地路徑的權重取同一張 ramp 的階值(壞掉時 MUST 仍看得出來還在動)');
   // 兩軌:機體與環境各一根拉桿,MUST NOT 併成一個值
   ok(/_rampTint = \{[\s\S]{0,200}mech:[\s\S]{0,200}env:/.test(toonSrc), '偏色分機體 / 環境兩軌');
   ok(/tint: 'env'/.test(bare(toonSrc)), 'envMat 走 env 軌');
@@ -184,6 +210,26 @@ console.log('\nⅢ 風化場(P2-A)');
     '乘數 = 1 + (場 − 0.5)×2×強度 ⇒ 強度 0 恆為 1(拉桿歸零 = 舊制)');
   ok(count(toonSrc, /celWeatherF\(\)/g) === 3, 'celWeatherF 一份定義、兩個消費端(苔蘚 + 水彩暈染)');
   ok(/#else\s*\n\s*return 1\.0;/.test(toonSrc), '取不到世界座標的材質回中性(機體不該因為停在哪而換一種鏽)');
+  // 苔蘚權重 MUST 夾在 [0,1]:celWeatherF 最高到 1 + WEATHER_SPREAD × 拉桿上限,mix 在 t > 1
+  // 是**外插** ⇒ 場最高的那幾塊過飽和,而且拉桿上半段只是外插得更遠 = 看不出差異。
+  ok(/mix\( diffuseColor\.rgb, uCelMossC, saturate\( mossW \) \)/.test(toonSrc),
+    '苔蘚權重夾在 [0,1](mix 在 t > 1 是外插,不是「更多苔」)');
+
+  // ---- 設定頁樣品的專屬場(2026-08-03 使用者回報「風化密度調整時看不出差異」)----
+  // 兩層原因都不報錯:大廳的場是 1×1 中性貼圖(恆 0.5 ⇒ 乘數逐位元恆 1),戰鬥中的場又是
+  // 整張圖的尺度(樣品那 24m 只取到單一個值)。
+  ok(count(toonSrc, /function ensurePreviewField\(/g) === 1
+    && /_wFieldPrev/.test(toonSrc) && /_wRectPrev/.test(toonSrc),
+    '樣品有自己的場(貼圖 + 取樣框各一條軌)');
+  ok(/preview \? _wFieldPrev : _wField/.test(toonSrc) && /preview \? _wRectPrev : _wRect/.test(toonSrc),
+    '只有「哪一張 + 取樣框」換軌,取樣規則與強度仍是同一份(同 _rampTint 的 mech / env)');
+  ok(count(bare(sampSrc), /preview: true/g) === 2 && !/setWeatherField/.test(sampSrc),
+    '樣品走 preview 軌,MUST NOT 去寫世界那一張(戰鬥中一開設定就會把整場的場換掉)');
+  // 苔蘚是世界 Y 軸投影 ⇒ 沒有一片正朝上的面,拉桿就只剩 wash 那 ±7% 在動 = 等同看不出差異
+  ok(/moss: \{ amount: 0\.8 \}/.test(sampSrc) && /PlaneGeometry\(24, 24\)/.test(sampSrc),
+    '樣品地面帶 moss(畫面裡唯一一片正朝上又佔滿下半幅的面)');
+  const span = Number(/const PREVIEW_SPAN = (\d+)/.exec(toonSrc)?.[1]);
+  ok(span === 24, `樣品場的取樣框 ${span}m 與樣品地面同邊長(場的起伏才鋪滿樣品畫面)`);
 }
 
 // ============ Ⅳ 零件級細節抖動(P2-B) ============
