@@ -43,12 +43,16 @@ const api = async (body) => (await fetch('/api/review', body
 const itemOf = (slot) => app.data?.state?.items?.[slot] || null;
 const rowOf = (id) => app.data.rows.find((r) => r.id === id);
 
-/** 一名角色的覆核進度(用於清單徽章與篩選) */
+/** 一名角色的覆核進度(用於清單徽章與篩選)。
+ * `art`(已入庫)與 `ai`(AI 稿,未驗收)**分開數** —— 併成一個「有圖」會讓「這一格還沒有正式圖」
+ * 消失在數字裡,而那正是伺服器端檔頭 ③ 不准藏的東西。缺 = 兩個來源都沒有。 */
 function rowStat(r) {
   const has = r.shots.filter((s) => s.has);
   const ok = has.filter((s) => itemOf(s.slot)?.status === 'ok').length;
   const flag = has.filter((s) => ['redraw', 'reprompt'].includes(itemOf(s.slot)?.status)).length;
-  return { want: r.shots.length, has: has.length, ok, flag, miss: r.shots.length - has.length };
+  const art = has.filter((s) => s.src === 'art').length;
+  return { want: r.shots.length, has: has.length, art, ai: has.length - art, ok, flag,
+    miss: r.shots.length - has.length };
 }
 
 // ---- 左側清單 ------------------------------------------------------------
@@ -58,6 +62,7 @@ function renderList() {
     if (app.filter === 'todo') return st.has > st.ok + st.flag;
     if (app.filter === 'flag') return st.flag > 0;
     if (app.filter === 'miss') return st.miss > 0;
+    if (app.filter === 'ai') return st.ai > 0;
     return true;
   };
   $('crList').innerHTML = app.data.rows.filter(keep).map((r) => {
@@ -66,10 +71,11 @@ function renderList() {
       : st.flag ? `<span class="cr-pill flag">${st.flag} 意見</span>`
         : st.ok === st.has ? `<span class="cr-pill ok">✔ ${st.ok}</span>`
           : `<span class="cr-pill">${st.ok}/${st.has}</span>`;
+    const ai = st.ai ? `<span class="cr-pill ai">AI ${st.ai}</span>` : '';
     return `<div class="cr-row ${app.cur === r.id ? 'on' : ''}" data-id="${r.id}">
       <img src="/${r.avatar}" alt="" onerror="this.style.visibility='hidden'">
       <div class="cr-rn"><b>${esc(r.name)}</b><span>${r.id.toUpperCase()} ・ ${esc(r.kindWord)}</span></div>
-      ${pill}</div>`;
+      ${ai}${pill}</div>`;
   }).join('') || '<div class="cr-dim" style="padding:12px">(這個篩選沒有結果)</div>';
   for (const el of $('crList').querySelectorAll('.cr-row')) {
     el.onclick = () => select(el.dataset.id);
@@ -77,12 +83,14 @@ function renderList() {
 }
 
 function renderStat() {
-  let has = 0, want = 0, ok = 0, flag = 0;
+  let has = 0, want = 0, art = 0, ai = 0, ok = 0, flag = 0;
   for (const r of app.data.rows) {
-    const s = rowStat(r); has += s.has; want += s.want; ok += s.ok; flag += s.flag;
+    const s = rowStat(r);
+    has += s.has; want += s.want; art += s.art; ai += s.ai; ok += s.ok; flag += s.flag;
   }
   $('crStat').textContent =
-    `圖 ${has}/${want} ・ 已確認 ${ok} ・ 有意見 ${flag} ・ 缺 ${want - has} ・ 孤兒 ${app.data.orphans.length}`;
+    `應有 ${want} 格 ・ 入庫 ${art} ・ AI 稿 ${ai} ・ 已確認 ${ok}/${has} ・ 有意見 ${flag}`
+    + ` ・ 缺 ${want - has} ・ 孤兒 ${app.data.orphans.length}`;
 }
 
 // ---- 右側:角色 / 機體 ---------------------------------------------------
@@ -190,7 +198,14 @@ function renderBody() {
     el.onclick = () => app.preview?.play(el.dataset.play);
   }
   mountStage(id);
+  // 孤兒區跟著每一次重繪掛回去 —— 只在 load() 掛一次的話,點掉第一名角色之後它就被 innerHTML 洗掉了,
+  // 而畫面上只表現成「孤兒檔不見了」(檔頭 ④:漏掉的東西不准藏)
+  renderOrphans();
 }
+
+/** 來源標籤:哪一格是「已入庫」、哪一格只是 AI 稿,MUST 在圖上就看得出來 ——
+ * 覆核台上這兩件事的下一步完全不同(入庫圖是複核,AI 稿是決定要不要讓它入庫)。 */
+const SRC_LABEL = { ai: 'AI 稿' };
 
 function shotCard(s) {
   const it = itemOf(s.slot);
@@ -200,10 +215,11 @@ function shotCard(s) {
     return `<div class="cr-shot"><div class="cr-none">缺圖</div>
       <div class="cr-sc"><span class="cr-pill miss">${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</span></div></div>`;
   }
-  return `<div class="cr-shot ${cls ? `on-${cls}` : ''}" data-slot="${s.slot}">
+  const srcPill = SRC_LABEL[s.src] ? `<span class="cr-pill ai">${esc(SRC_LABEL[s.src])}</span>` : '';
+  return `<div class="cr-shot ${cls ? `on-${cls}` : ''} ${s.src === 'ai' ? 'is-ai' : ''}" data-slot="${s.slot}">
     <img src="/${s.url}" alt="" loading="lazy">
     <div class="cr-sc"><span class="cr-pill">${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</span>
-      ${badge}<span class="cr-pill ${cls}">${esc(label)}</span></div></div>`;
+      ${srcPill}${badge}<span class="cr-pill ${cls}">${esc(label)}</span></div></div>`;
 }
 
 // ---- 3D 展示台(遊戲那一台)-----------------------------------------------
@@ -245,7 +261,8 @@ function openReview(slot) {
     <div class="cr-mimg" id="crImgWrap"><img src="/${s.url}" alt="" draggable="false"></div>
     <div class="cr-mside">
       <h3>${esc(r.name)} ・ ${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</h3>
-      <div class="cr-dim">${esc(s.file)}${s.assigned ? '(指派)' : ''}</div>
+      <div class="cr-dim">${esc(s.url)}${s.assigned ? '(指派)' : ''}
+        ${s.src === 'ai' ? '<br>⚑ AI 設定稿,<b>尚未驗收</b> —— 通過之後由人搬進 public/assets/cyberpunk_art/mechs/ 才算入庫' : ''}</div>
 
       <label>① 確認勾選</label>
       <div class="seg"><button class="segb ${it.status === 'ok' ? 'on' : ''}" data-st="ok">✔ 通過</button>
@@ -358,11 +375,14 @@ function renderOrphans() {
     .map((s) => ({ slot: s.slot, label: `${r.id} ${s.form ? `${s.form}/` : ''}${s.pose}` })));
   const box = document.createElement('div');
   box.className = 'cr-sec cr-orph';
+  // 圖的網址由伺服器端給(它才知道這個檔案是哪一個來源)—— 在這裡拼死路徑就是第二份來源表,
+  // 症狀是 AI 稿那批孤兒全部破圖,而且不會有任何錯誤訊息。
   box.innerHTML = `<h3>孤兒檔(${app.data.orphans.length})—— 檔名對不到任何一格,多半是機體換過手</h3>
-    <div class="cr-shots">${app.data.orphans.map((f) => `<div class="cr-shot">
-      <img src="/public/assets/cyberpunk_art/mechs/${f}" alt="" loading="lazy">
-      <div class="cr-sc"><span class="cr-pill flag">${esc(f)}</span></div>
-      <select class="cr-note" data-file="${esc(f)}">
+    <div class="cr-shots">${app.data.orphans.map((o) => `<div class="cr-shot ${o.src === 'ai' ? 'is-ai' : ''}">
+      <img src="/${o.url}" alt="" loading="lazy">
+      <div class="cr-sc">${SRC_LABEL[o.src] ? `<span class="cr-pill ai">${esc(SRC_LABEL[o.src])}</span>` : ''}
+        <span class="cr-pill flag">${esc(o.file)}</span></div>
+      <select class="cr-note" data-file="${esc(o.file)}">
         <option value="">(指派到…)</option>
         ${slots.map((s) => `<option value="${s.slot}">${esc(s.label)}</option>`).join('')}
       </select></div>`).join('')}</div>`;
@@ -380,8 +400,7 @@ async function load() {
   app.data = await api();
   renderStat();
   renderList();
-  renderBody();
-  renderOrphans();
+  renderBody();   // 孤兒區由 renderBody 一併掛(每次重繪都要有,不能只掛開場那一次)
 }
 for (const b of $('crFilter').querySelectorAll('.segb')) {
   b.onclick = () => {
