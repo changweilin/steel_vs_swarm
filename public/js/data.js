@@ -2163,24 +2163,37 @@ export const CHARACTERS = {
       cd: [80, 70, 60], mp: [85, 95, 105], desc: '半徑內友軍裝甲大修,護盾同步充滿' },
   },
   s03: {
-    side: 'SWARM', kind: 'drone', name: '林芷晴', code: 'Silicon', machine: '「跳頻蜂」電戰無人機',
-    visual: { hue: 0x9ef2e6, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'canard', paint: 'tattoo' },
-    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
-    light: { name: '相位脈衝步槍艙', rw: '低功率相控陣雷射・光速直擊', type: 'beam',
-      dmg: [13, 16, 20], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
+    // 2026-08-03 使用者定案「台灣換成變形者(迅猛龍 + 始祖鳥)」:接下原屬 s12 的
+    // 「始祖鳥 ↔ 迅猛龍」變形機甲。**機體欄整組互換、角色欄一格不動**(CLAUDE.md §2.1 角色機種:
+    // 機體換手時 kind/visual 的機體欄、mods、models.js MOVE_SIG/CAST_SIG、lore proto/bond 跟著搬;
+    // 武器/招式/塗裝(hue + paint)綁角色不動)。**mods 整組隨機體搬**是刻意的:這樣
+    // drone/morph 兩個機種池的 mods 多重集逐位元不變 ⇒ UNITS.drone.hp / SQUAD.ARMOR_F /
+    // SQUAD.DRONE_AVG_HP 三個推導值完全不動,只剩 CLASS_SYM 的分組會位移(bal ⑤ 已複驗)。
+    // 塗裝 paint:'tattoo' 留在她身上正好:那張徽是「對稱線描羽紋」——始祖鳥化石上的羽印。
+    side: 'SWARM', kind: 'morph', name: '林翎', code: '半羽', machine: '「羽陣」始祖式可變機甲',
+    visual: { hue: 0x9ef2e6, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'tattoo' },
+    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
+    // 2026-08-03 換機體後的 dmg 校準(唯一合法的旋鈕,見 §2.1 三軸預算:「校準只走 dmg 階梯」)。
+    // 她從無人機底盤換到變形機甲底盤 ⇒ rangeCap 由 sight 270 掉到 240,輕武器解析射程 114 → 108m
+    // (重武器 168m 兩邊都沒被夾,不受影響)。射程是 ⑦ 量到最貴的一軸,而她的重武器又是全表
+    // **總傷害最低**的那一把(反護盾的設計代價:vsSp 1.7 / vsHp 0.7 再吃 counterDmgF)⇒ 換完之後
+    // bal ⑤ 掉到 17% < 20% 下界。**補在輕武器而不是重武器**:重武器的低總傷害是護盾軸的定價本身,
+    // 動它等於把那筆交易改掉;輕武器沒掛任何護盾旗標,是乾淨的基礎火力。
+    light: { name: '翼面相位脈衝槍', rw: '翼緣相控陣・光速直擊', type: 'beam',
+      dmg: [15, 19, 24], rate: 9, mag: [36, 44, 52], reload: 1.9, range: 190, crit: 0.06,
       vs: { flesh: 1.2, armor: 0.7, air: 1.3, building: 0.5 } },
     // 護盾軸示範 ①【反護盾】:HPM 微波把能量灌進護盾場直接燒穿,對裝甲板卻幾乎只是加熱 ——
     // 開場兩發剝光對手護盾,之後就得換輕武器慢慢磨(見 data.js shieldSplit 上方註)。
     // **原本的 air 2.0 由夾制②自動歸 1**(反護盾不得有其他單位加成)—— 這裡刻意留著原值不手改:
     // 紀律是程式在管,寫死 1.0 反而看不出「這把武器本來被拿掉了什麼」。
-    heavy: { name: '高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
+    heavy: { name: '羽冠高功率微波炮', rw: 'HPM 定向能・光速', type: 'beam',
       dmg: [21, 31, 44], mag: 5, reload: 8, range: 280, emp: [0.8, 1.0, 1.2],
       vsSp: 1.7, vsHp: 0.7,
       vs: { flesh: 0.7, armor: 0.8, air: 2.0, building: 0.4 } },
     skill: { name: '定向干擾', fx: 'emp', r: 120, dur: [2.5, 3, 3.5], range: 260,
-      cd: [18, 16, 14], mp: [40, 45, 50], desc: '指定區域敵軍武器離線(建築免疫)' },
+      cd: [18, 16, 14], mp: [40, 45, 50], desc: '頸羽同相位對準:指定區域敵軍武器離線(建築免疫)' },
     ult: { name: '全頻壓制', fx: 'emp', r: 260, dur: [4, 5, 6],
-      cd: [70, 62, 54], mp: [90, 100, 110], desc: '以自身為中心的大範圍電子壓制' },
+      cd: [70, 62, 54], mp: [90, 100, 110], desc: '全身羽面一起起振:以自身為中心的大範圍電子壓制' },
   },
   s04: {
     side: 'SWARM', kind: 'drone', name: '樫村蒼真', code: 'Kashi', machine: '「鐵鍬」零式突擊翼',
@@ -2327,16 +2340,22 @@ export const CHARACTERS = {
       cd: [80, 70, 60], mp: [80, 90, 100], desc: '鐘錶匠的手:自身裝甲大修、護盾充滿' },
   },
   s12: {
-    // 2026-08-02 機體混編:接下原屬傭兵的「始祖鳥↔迅猛龍」變形機甲 —— 他是那個「用雙腳補上
-    // 蜂群死角」的地面前導偵察組長,一台會飛也會落地用走的機體,本來就該是他的。
-    side: 'SWARM', kind: 'morph', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」可變前導偵察機',
-    visual: { hue: 0x9db8d8, pod: 'antenna', flight: 'archo', ground: 'raptor', bulk: 0.85, paint: 'totem' },
-    mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.15, armor: 8 },
+    // 2026-08-03 台灣變形者定案的另一半:把「始祖鳥↔迅猛龍」讓給 s03,自己接下她那架鴨翼定翼機。
+    // 換得比看起來合理 —— 星象導航要的是**穩定的視軸**,撲翼機每一拍都在晃,而鴨翼給的正是
+    // 高攻角安定性:機身一邊急轉,星象儀一邊維持指向。他的偵察本來就分兩段(先用腳走過、
+    // 再從天上核對一遍),讓出撲翼收爪那一段,換來整夜不落地的長航時。
+    side: 'SWARM', kind: 'drone', name: '埃米爾・賽伊托夫', code: '歸鄉', machine: '「星圖」鴨翼長航偵察機',
+    visual: { hue: 0x9db8d8, frame: 'wing', body: 'wedge', form: 'fixed', wing: 'canard', paint: 'totem' },
+    mods: { hp: 0.9, sp: 1.25, mp: 1.3, speed: 1.0, armor: 4 },
     light: { name: '偵察卡賓艙', rw: 'AKS-74U・初速 735m/s', type: 'gun', mv: 735,
       dmg: [16, 20, 25], rate: 8, mag: [30, 36, 42], reload: 1.9, range: 180, crit: 0.08,
       vs: { flesh: 1.3, armor: 0.6, air: 1.1, building: 0.4 } },
-    heavy: { name: '衛星測距雷射砲', rw: '高能雷射測距一體・光速直擊', type: 'beam',
+    heavy: { name: '星象測距雷射砲', rw: '高能雷射測距一體・光速直擊', type: 'beam',
       dmg: [44, 68, 102], mag: 5, reload: 8, range: 320, pen: [10, 13, 16],
+      // range 320 MUST NOT 因為換機種而下修:bal ④ 要求**每一名無人機**的重武器解析射程 > 砲塔
+      // (站外攻堅是無人機的生存方式)。他從變形機甲底盤換到無人機底盤,rangeCap 由 sight 240 升到 270
+      // ⇒ 解析射程 172.8 → 192m。曾經試過把名目射程壓回去讓解析值不動(320 → 240),結果是
+      // ④ 當場紅字(172.8 < 砲塔的 186)、而且 rngDmgF 反手把傷害補上去,⑤ 直接衝到 88%。
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
     skill: { name: '薰衣草斗篷', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從敵方感測網上消失(開火即現形)' },
@@ -2579,10 +2598,16 @@ export const CHARACTERS = {
 //       m01 heli↔vampire(挺立高領・三旋翼:機首桅 + 雙腿末端,飛行雙腿與機身呈 Y 字)、
 //       m05 jet↔wolf(趾行深屈・鬃刺肩尖)
   //  B 類 擬態翼 ↔ 四足獸:m07 beetle、m08 owl↔panther
-  //  (uav↔monkey 現屬 t06、tilt↔atlas 現屬 t11、levi↔elephant 現屬 s10、archo↔raptor 現屬 s12)
+  //  (uav↔monkey 現屬 t06、tilt↔atlas 現屬 t11、levi↔elephant 現屬 s10、archo↔raptor 現屬 s03)
+  // 2026-08-03 地緣政治對帳:傭兵 = 「不結盟市場」,而舊名冊裡有四名是北約/歐盟成員國的人
+  //   (克羅埃西亞 / 葡萄牙 / 加拿大 / 德國)—— 那四國在世界觀裡明寫是蜂群同盟那一側的技術與志願
+  //   來源,擺在「兩邊都接」的傭兵席上是設定衝突。依「機體原型的形象 × 使用武器 × 地緣政治立場」
+  //   改為:m01 塞爾維亞(吸血鬼一詞的原產地,也是歐洲最典型的兩邊都賣的不結盟軍工國)、
+  //   m03 瑞士(中立國的中立生意:戰地再保 + 高山空中救援)、m04 蒙古(阿爾泰馴鷹世家 ×「第三鄰國」
+  //   等距外交)、m08 印度(高山狙擊傳統 × 兩大陣營都買也都賣的不結盟大國)。
   m01: {
-    side: 'MERC', kind: 'morph', name: '德揚・科瓦奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
-    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xd52b1e, 0xffffff, 0x171796] },
+    side: 'MERC', kind: 'morph', name: '德揚・科瓦切維奇', code: '渡鴉', machine: '「渡鴉」可變式突襲機甲',
+    visual: { hue: 0xd94f4f, pod: 'rack', flight: 'heli', ground: 'vampire', bulk: 1.0, paint: 'natflag', flag: [0xc6363c, 0x0c4076, 0xffffff] },
     mods: { hp: 1.0, sp: 1.05, mp: 1.0, speed: 1.1, armor: 7 },
     light: { name: '7.62 六管速射艙', rw: 'M134 Minigun・初速 850m/s', type: 'gun', mv: 850,
       dmg: [11, 14, 17], rate: 12, mag: [60, 75, 90], reload: 2.4, range: 185, crit: 0.05,
@@ -2621,7 +2646,7 @@ export const CHARACTERS = {
   m03: {
     // 2026-08-02 機體混編:改駕雙尾桁定翼無人機 —— 兩根尾桁之間的空腔本來是天線艙,
     // 她改成了貨艙:先把血漿、零件、修理臂空投下去,帳單後到。
-    side: 'MERC', kind: 'drone', name: '伊內絲・杜阿爾特', code: '帳房', machine: '「帳房」後勤運補機',
+    side: 'MERC', kind: 'drone', name: '烏蘇拉・林德特', code: '帳房', machine: '「帳房」雙尾桁運補機',
     visual: { hue: 0x59c9a5, frame: 'wing', body: 'frame', form: 'fixed', wing: 'twinboom', paint: 'minimal' },
     mods: { hp: 0.95, sp: 1.15, mp: 1.2, speed: 1.0, armor: 5 },
     light: { name: '護衛脈衝雷射艙', rw: '低功率防禦雷射・光速直擊', type: 'beam',
@@ -2638,13 +2663,15 @@ export const CHARACTERS = {
   m04: {
     // 2026-08-02 機體混編:改駕「鷹」擬態翼無人機 —— 她的檔案上寫著「雷達截面壓到鳥類等級」,
     // 現在那句話是字面意思:機體本身就是一隻鳥。翼掛反器材砲、俯衝一擊即走。
-    side: 'MERC', kind: 'drone', name: '奧莉薇亞・松', code: '霧行者', machine: '「霧行者」偵獵獵鷹',
+    // 2026-08-03 國籍對帳:加拿大 → 蒙古(阿爾泰馴鷹世家)。鷹式機體終於有了它的原產地,
+    // 而「第三鄰國」的等距外交,正是不結盟市場最乾淨的一張履歷。
+    side: 'MERC', kind: 'drone', name: '烏音嘎・策倫', code: '霧行者', machine: '「霧行者」鷹式偵獵機',
     visual: { hue: 0xd24fb4, frame: 'coax', body: 'box', form: 'avian', creature: 'eagle', paint: 'totem' },  // 洋紅+圖騰徽:與夜豹(m08 紫)脫鉤,改素色+徽章
     mods: { hp: 0.9, sp: 1.1, mp: 1.15, speed: 1.1, armor: 8 },
     light: { name: '消音戰鬥步槍', rw: 'HK G28・初速 780m/s', type: 'gun', mv: 780,
       dmg: [17, 21, 25], rate: 3.6, mag: [20, 24, 28], reload: 2.0, range: 215, crit: 0.14, critX: 1.8,
       vs: { flesh: 1.3, armor: 0.8, air: 1.1, building: 0.5 } },
-    heavy: { name: '游騎反器材砲', rw: 'NTW-20・初速 900m/s', type: 'gun', mv: 900,
+    heavy: { name: '鷹爪反器材砲', rw: '20mm 市購反器材砲・初速 900m/s', type: 'gun', mv: 900,
       dmg: [40, 58, 81], mag: 3, reload: 9, range: 380, crit: 0.18, critX: 2.0, pen: [18, 23, 28],
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
     skill: { name: '匿名發包', fx: 'stealth', dur: [4, 5, 6],
@@ -2704,7 +2731,7 @@ export const CHARACTERS = {
       desc: '把整片天空劃進責任區:彈幕壓制(緩速)' },
   },
   m08: {
-    side: 'MERC', kind: 'morph', name: '芮娜・沃斯', code: '尾款', machine: '「尾款」隱形狙擊可變機甲',
+    side: 'MERC', kind: 'morph', name: '維迪雅・拉托爾', code: '尾款', machine: '「尾款」隱形狙擊可變機甲',
     visual: { hue: 0x8f7fd0, pod: 'blade', flight: 'owl', ground: 'panther', bulk: 0.85, paint: 'camo' },
     mods: { hp: 0.85, sp: 1.1, mp: 1.15, speed: 1.15, armor: 5 },
     light: { name: '消音精準艙', rw: 'VSS 縮裝・初速 295m/s', type: 'gun', mv: 295,
