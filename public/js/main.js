@@ -19,6 +19,7 @@ import {
   heroHexStats,
 } from './data.js';
 import { LORE } from './lore.js';
+import { protoOf } from './codex.js';
 import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
@@ -1017,17 +1018,18 @@ function charAbilityRow(id, slot, key) {
     <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
 
-/** 機體設計原型:「現實原型」(工程出處)/「機體原型」(人形機甲裝甲哲學)/
- * 「體態原型」(變形者地面體態)/「仿生原型」(獸型機體取自哪種生物)各自一行,
- * 四種標籤格式一致(後三者皆為「名稱 —— 描述」),不併入單一「設計原型」桶。 */
-const PROTO_LABEL = { 現實: '設計原型', 機體: '機體原型', 體態: '體態原型', 仿生: '仿生原型' };
-function protoHTML(proto) {
-  if (!proto) return '';
-  return proto.split(/(?=現實原型:|機體原型:|體態原型:|仿生原型:)/).map((p) => {
-    const m = p.match(/^(現實|機體|體態|仿生)原型:/);
-    const label = m ? PROTO_LABEL[m[1]] : '設計原型';
-    return `<div class="cd-proto"><span>${label}</span>${esc(p.replace(/^(現實|機體|體態|仿生)原型:/, ''))}</div>`;
-  }).join('');
+/** 機體原型:逐層一行(設計原型 = 工程出處 / 機體原型 = 人形機甲裝甲哲學 /
+ * 仿生原型 = 獸型機體取自哪種生物 / 飛行型・地面型原型 = 變形者的兩個型態)。
+ * **層集與標籤都不在這裡定義**:`codex.js protoOf()` 由 `visual` 推導該有哪幾層、
+ * 到 `mecha.js` 取 `{ src, note }`。舊制是把一條自由字串用正規式切四個標籤 —— 那是第二份格式
+ * 定義,而且沒有任何東西保證誰該有幾層(實測 8 台只有一層、變形者的兩個型態被擠在同一句話裡)。
+ * 這裡 MUST 只負責畫,MUST NOT 再出現任何標籤字串或字串切割。 */
+function protoHTML(id) {
+  // 分隔一律交給 `<b>`(CSS 上色 + 留白),MUST NOT 用「」或 —— 當分隔符:
+  // 原型名稱本身就含這兩種符號(`「壁壘」過裝甲型`、`T-14 阿瑪塔的「乘員艙獨立裝甲」哲學`),
+  // 拿它們當框會套成「「壁壘」過裝甲型」,而 note 裡的 —— 會與分隔符撞在一起。
+  return protoOf(id).map((L) =>
+    `<div class="cd-proto"><span>${esc(L.label)}</span><b>${esc(L.src)}</b>${esc(L.note)}</div>`).join('');
 }
 
 /** 敘事文字區塊。簡歷(頭銜/機體關係/外貌/台詞)側欄與跳出視窗共用;
@@ -1037,7 +1039,7 @@ function charBioTextHTML(id, full = false) {
   const lo = LORE[id] || {};
   return `<div class="cd-name">「${esc(c.code)}」${esc(c.name)}</div>
     <div class="cd-machine">${esc(c.machine)}</div>
-    ${protoHTML(lo.proto)}
+    ${protoHTML(id)}
     <div class="cd-meta">${[lo.nat, lo.age && `${lo.age} 歲`, lo.sex, lo.role].filter(Boolean).map(esc).join(' ・ ')}</div>
     ${lo.quote ? `<div class="cd-quote">「${esc(lo.quote)}」</div>` : ''}
     ${lo.look ? `<p class="cd-bio">${esc(lo.look)}</p>` : ''}
