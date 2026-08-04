@@ -132,8 +132,8 @@ export const VENUES = [
   //           市區地下道是**與地面街道分離的 way**,兩者等長 ⇒ 最短路徑沒有理由鑽下去,
   //           `PREFER_TUNNEL` 只在「地下道本身就是唯一通路」時才咬得住(taroko 的峽谷公路)。
   //           場地本身仍是一張可用的市區圖(真實道路兵線 + 實測 relief),故保留。
-  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 }, scen: ['bridge'], relief: 5, relief: 5 },
-  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, relief: 11, relief: 11 },
+  { id: 'berlin',     name: '柏林・華沙大街陸橋',     country: '🇩🇪', type: '市區', ll: [52.508116, 13.449220], bearing: 195, mix: { urban: 0.85, green: 0.15 }, scen: ['bridge'], relief: 5 },
+  { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, scen: ['overTunnel'], relief: 11 },
 
   // ---- 綠地單一(≥80%)----
   { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'], relief: 28 },   // 天母(南麓路網)
@@ -171,13 +171,13 @@ export const VENUES = [
   // **偏好卻留著** —— 選線於是一路去追一條挖不出來的隧道,把兵線帶離市民大道本身。
   // 改制:錨點移到探測回報的「市民大道高架道路」覆蓋段中點(1526m @25.04974,121.51228),
   // 偏好改 `PREFER_BRIDGE` + 方位角夾在高架軸(東西向)上。scen/relief 待重烤後實測填入。
-  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.049740, 121.512280], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
+  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.049740, 121.512280], bearing: 80,  mix: { urban: 0.9, green: 0.1 }, relief: 27 },
   // ② 地下道的**第二張**測試場地(2026-08-04 探測選定;在此之前 ② 只有 taroko 一張,
   // 見 docs/lane_scenarios.md「② 為什麼市區地下道咬不住」)。探測回報六本木一帶有 7 條
   // 引擎真的挖得出來的車行地下道,是掃過最密的一區 —— 而 2026-07-28 那張「八個候選點
   // 全部 0 條成洞」的表是 `underpassPlan` **上線前**量的,早就過期了。
   // scen / relief 刻意留白:MUST 由 `tools/audit_lane_scenarios.mjs` 實測產生(同 crimea)。
-  { id: 'roppongi',   name: '東京・六本木',           country: '🇯🇵', type: '市區', ll: [35.661630, 139.728510], bearing: 200, mix: { urban: 0.9, green: 0.1 } },
+  { id: 'roppongi',   name: '東京・六本木',           country: '🇯🇵', type: '市區', ll: [35.661630, 139.728510], bearing: 200, mix: { urban: 0.9, green: 0.1 }, scen: ['underpass'], relief: 13 },
   // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,短隧道的側向
   // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線(2026-07-30 複掃):④ 明隧道 72m、
   // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。
@@ -186,12 +186,12 @@ export const VENUES = [
   // 2026-08-02 錨點改貼西敏橋西橋頭 + PREFER_BRIDGE + 方位角夾東西向 ⇒ L1 兵線重新走上橋面
   //(使用者回報「倫敦也沒有橋了」:07-29 主軸偏航規則重烤後兵線改走同一岸)。
   // 代價:單橋兩岸擠不出第二、三條互不接觸的真實道路兵線 ⇒ L2/L3 退回 synthLane。
-  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500964, -0.124511],  bearing: 115, mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['bridge', 'waterBridge'], relief: 10, relief: 10 },
+  { id: 'london',     name: '倫敦・泰晤士河畔',       country: '🇬🇧', type: '混合', ll: [51.500964, -0.124511],  bearing: 115, mix: { urban: 0.6, water: 0.2, green: 0.2 }, scen: ['bridge', 'waterBridge'], relief: 10 },
   { id: 'kyoto',      name: '京都・嵐山竹林寺町',     country: '🇯🇵', type: '混合', ll: [35.010032, 135.710095], bearing: 90,  mix: { green: 0.5, urban: 0.35, water: 0.15 }, relief: 8 },   // 右京區街廓
   //   chicago ⑨ 水上高架橋 —— 芝加哥河兩岸街廓緊貼、河面僅數十公尺寬,南北向幹道一律以
   //           可通車的開合橋跨河 ⇒ L1 兩堡(481 真實公尺)分踞兩岸時,兵線必然踩上橋面。
   //           與 london(泰晤士河)的差別是「多座短橋 vs 單座長橋」,兩張都留著當對照。
-  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887643, -87.624481], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 }, scen: ['overTunnel'], relief: 4, relief: 4 },
+  { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887643, -87.624481], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 }, scen: ['overTunnel'], relief: 4 },
   // 2026-08-04 使用者需求「劇情戰役最終關卡改為克里米亞,預設地圖加入克里米亞」。
   // 錨點 = 塞瓦斯托波爾灣南岸的納希莫夫廣場(市中心路網最密的節點),bearing 205 讓 L1~L3
   // 的另一端落在烏沙科夫廣場/大海洋街一帶 —— 全程走得到的市中心街廓,兩側各有一座海灣
@@ -201,7 +201,7 @@ export const VENUES = [
   // `reliefTier()` 回 null、venueTip 自動略過「起伏」那一段,不會顯示臆測的地形說明。
   // 同理 venueLanes.js / venueText.js 也沒有這張圖的烘焙資料:兵線退回 synthLane 合成弧、
   // 在地文字退回執行期即時抓的圖資 tag,兩條都是既有的降級路徑(MUST NOT 為它另開特例)。
-  { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 } },
+  { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 }, scen: ['highGround'], relief: 31 },
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----

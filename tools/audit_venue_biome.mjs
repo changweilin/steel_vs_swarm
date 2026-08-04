@@ -184,6 +184,20 @@ console.log('\nⅢ 不符合宣告類型的地圖');
   if (!bad.length) console.log('  (無)');
   for (const r of bad) console.log(`  ${r.id}(${r.type}):${r.notes.join(';')}`);
   ok(!bad.length, `${rows.length} 個實測到的場地全部符合宣告${bad.length ? ` —— ${bad.length} 個不符` : ''}`);
+  // **讀這份清單的注意事項(不是程式的毛病,是圖資的性質)**:
+  // OSM 的地被多邊形對「市區」是**系統性偏低**的 —— 密市區的街廓很少被畫成
+  // `landuse=residential`(那是郊區/新市鎮的畫法),而公園綠地一定會被畫出來
+  // ⇒ 巴黎那種「宣告 urban 80% 但地被 urban 0%」多半是標註習慣,不是地貌judgement 錯。
+  // 判「這裡到底是不是市區」一律以**建蔽率**為準(它量的是真的被樓蓋住的地),
+  // 地被組成只用來看「綠地/裸露/水體」那幾軸。兩個數字擺在一起就是為了這件事。
+  console.log('\n  ⓘ 讀法:地被的 urban 軸對密市區系統性偏低(街廓少被畫成 landuse=residential,'
+    + '而公園一定被畫出來)\n     ⇒ 「是不是市區」看**建蔽率**,地被組成只看綠地/裸露/水體那幾軸。');
+  const built = rows.filter((r) => (r.declared.urban || 0) <= TOL.URBAN_LOW && r.builtF >= TOL.BUILT_HIGH)
+    .sort((a, b) => b.builtF - a.builtF);
+  if (built.length) {
+    console.log(`  ⓘ 宣告非市區卻蓋滿樓的場地(建蔽率排序):`
+      + built.map((r) => `${r.id} ${(r.builtF * 100).toFixed(1)}%`).join('、'));
+  }
 }
 
 if (ARG.json) writeFileSync(ARG.json, JSON.stringify({ tol: TOL, rows }, null, 1));
