@@ -149,7 +149,11 @@ export const VENUES = [
 
   // ---- 水體 / 濕地為主 ----
   { id: 'venice',     name: '威尼斯・潟湖水都',       country: '🇮🇹', type: '水體', ll: [45.484986, 12.234699],  bearing: 300, mix: { water: 0.45, urban: 0.4, wet: 0.15 }, relief: 3 },   // Mestre(本島無車道)
-  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '水體', ll: [-25.598749, -54.573988], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 }, relief: 23 },    // Puerto Iguazú
+  // 2026-08-04 `audit_venue_biome.mjs` Ⅰ 檢出:`type` 與自己的 `mix` 對不上 —— 主成分是
+  // green 50%(錨點是 Puerto Iguazú 鎮,四周是亞熱帶雨林),water 只有 40%,而且沒有任何
+  // 一項 ≥80% ⇒ 依本檔開頭的規則(單一型 = 主要地貌 ≥80%;否則混合型)應標「混合」。
+  // 舊值「水體」寫的是**場地名字**(瀑布)而不是**這張圖**的地貌。
+  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '混合', ll: [-25.598749, -54.573988], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 }, relief: 23 },    // Puerto Iguazú
   { id: 'tamsui',     name: '淡水河口・紅樹林濕地',   country: '🇹🇼', type: '濕地', ll: [25.168155, 121.444729], bearing: 140, mix: { wet: 0.5, water: 0.3, green: 0.2 }, relief: 25 },     // 淡水市區(L3 無解 → synth)
   { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.983022, 23.416720], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 }, relief: 8 },   // Maun
 
@@ -159,10 +163,21 @@ export const VENUES = [
   // 金龍是**貫穿山體**的真隧道(側向地表在 40m 外仍高出路面 3.7~9.8m),舊判定只因覆蓋比頂板薄
   // 0.2~1.5m 就判成明隧道 —— 使用者實測回報後改判,標記跟著實測退掉(見 tunnelWallProfile)。
   { id: 'jinlong',    name: '台北・內湖金龍隧道',     country: '🇹🇼', type: '混合', ll: [25.083800, 121.584600], bearing: 56,  mix: { urban: 0.6, green: 0.35, water: 0.05 }, scen: ['tunnel', 'highGround'], relief: 42 },
-  // ② 的候選場地(2026-07-28 探測選定):市民大道沿線車行地下道群 —— L1 bbox 內圖資有 8 條
-  // tunnel way。2026-07-30 全量掃描實測:兵線走到的 60m 圖資地下道(service)underpassPlan
-  // 規劃放棄、仍是平街 ⇒ ② 不成立,不標 scen;② 的指定場地由 taroko 擔任。
-  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.047000, 121.518000], bearing: 80,  mix: { urban: 0.9, green: 0.1 }, relief: 12 },
+  // 2026-08-04 使用者回報「為何市民大道沒有高架橋?現實世界有」。實測(run 30883603424)
+  // 的三個數字說明了整件事:①L1 兵線 bases = 25.0495~25.0526,**整條在錨點以北 280~620m**
+  // ②場景 **0 種** ③③候選陸橋「新生高架道路 5184m」離兵線 226m。成因是這張圖原本是
+  // ② 地下道的候選(L1 bbox 內圖資有 8 條 tunnel way),配了 `PREFER_TUNNEL`;而 2026-07-30
+  // 早已實測「兵線走到的那條 60m service 地下道 underpassPlan 規劃放棄、仍是平街」⇒ ② 撤標,
+  // **偏好卻留著** —— 選線於是一路去追一條挖不出來的隧道,把兵線帶離市民大道本身。
+  // 改制:錨點移到探測回報的「市民大道高架道路」覆蓋段中點(1526m @25.04974,121.51228),
+  // 偏好改 `PREFER_BRIDGE` + 方位角夾在高架軸(東西向)上。scen/relief 待重烤後實測填入。
+  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.049740, 121.512280], bearing: 80,  mix: { urban: 0.9, green: 0.1 } },
+  // ② 地下道的**第二張**測試場地(2026-08-04 探測選定;在此之前 ② 只有 taroko 一張,
+  // 見 docs/lane_scenarios.md「② 為什麼市區地下道咬不住」)。探測回報六本木一帶有 7 條
+  // 引擎真的挖得出來的車行地下道,是掃過最密的一區 —— 而 2026-07-28 那張「八個候選點
+  // 全部 0 條成洞」的表是 `underpassPlan` **上線前**量的,早就過期了。
+  // scen / relief 刻意留白:MUST 由 `tools/audit_lane_scenarios.mjs` 實測產生(同 crimea)。
+  { id: 'roppongi',   name: '東京・六本木',           country: '🇯🇵', type: '市區', ll: [35.661630, 139.728510], bearing: 200, mix: { urban: 0.9, green: 0.1 } },
   // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,短隧道的側向
   // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線(2026-07-30 複掃):④ 明隧道 72m、
   // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。

@@ -82,17 +82,25 @@ jobs:
         if: always()
         run: test -f scen.json && node -e "const d=require('./scen.json');for(const r of d.results){const bits=[Object.keys(r.hits).length?JSON.stringify(r.hits):'','relief='+r.peakSide,r.flatTunnel?'②地下道候選='+JSON.stringify(r.flatTunnel):'',r.landBridgeCand?'③候選陸橋='+JSON.stringify(r.landBridgeCand):'',r.waterBridgeCand?'⑨候選水橋='+JSON.stringify(r.waterBridgeCand):''].filter(Boolean);if(bits.length)console.log(r.id,bits.join(' '))}" || echo '(無 scen.json)'
 
-      # 可通行泛洪 + 淨空(V-B / V-D):同樣要 terrarium 高程與圖資,故掛在這支有外網的 workflow。
-      # `ci.yml` 刻意不含 —— 外部服務會限流,不該讓 PR 卡在別人的伺服器上。
-      - name: 兵線與結構可通行 + 淨空
-        continue-on-error: true
-        run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
-
       # ① 的新場地探測:找「短、覆蓋薄」的成洞隧道;④ 明隧道候選同步體檢(附定錨座標)。
+      # **排在泛洪之前**(2026-08-04):探測是「找新場地」的入口、幾秒就跑完,而泛洪是
+      # 28 個場地的分鐘級迴圈 —— 排在後面等於每次要新錨點座標都得先等半小時。
       - name: 隧道候選探測
         if: ${{ env.SCAN_PROBE != '' }}
         continue-on-error: true
         run: node tools/audit_lane_scenarios.mjs --probe="$SCAN_PROBE" --probe-r="${SCAN_PROBE_R:-1}"
+
+      # 場地地貌宣告 vs 圖資實測(2026-08-04):要 Overpass 的地被/建物多邊形,故掛這一支。
+      - name: 場地地貌宣告 vs 圖資實測
+        continue-on-error: true
+        run: node tools/audit_venue_biome.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=biome.json
+
+      # 可通行泛洪 + 淨空(V-B / V-D):同樣要 terrarium 高程與圖資,故掛在這支有外網的 workflow。
+      # `ci.yml` 刻意不含 —— 外部服務會限流,不該讓 PR 卡在別人的伺服器上。
+      # 這一步是分鐘級的迴圈,故**排在探測與地貌實測之後**(見上兩段)。
+      - name: 兵線與結構可通行 + 淨空
+        continue-on-error: true
+        run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
 
       # 重烤結果整檔印進 log:沙箱沒有 artifact 下載權限時,從 log 取回 venueLanes.js 用
       - name: 兵線重烤結果(diff + 完整新條目)
@@ -108,5 +116,6 @@ jobs:
           path: |
             scen.json
             traverse.json
+            biome.json
             public/js/venueLanes.js
           if-no-files-found: warn

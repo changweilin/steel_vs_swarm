@@ -389,11 +389,32 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   ok(count(/const frontSegs = \[\]/g) === 1 && count(/frontSegs\.push\(/g) === 1,
     '街道線段只收一次(與占位/朝向同一次迴圈)');
   // 零共享 rnd:整段街廓配置不得出現 rnd(
-  const i2 = bio.indexOf('// ---- 都市計畫:沿街配置 + 公設');
+  // 區塊界標自 2026-08-04 起自「聚落場」起算 —— 市區閘與補間種子跟街廓配置是同一段接線
+  // (兩個放大器共用同一支 `settlement`),切在中間就會有一半的閘門沒被任何稽核執行到。
+  const i2 = bio.indexOf('  // ---- 聚落場(單一縫)');
   const i3 = bio.indexOf('  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區');
   ok(i2 > 0 && i3 > i2, '找得到街廓配置區塊界標');
   const blockSrc = strip(bio.slice(i2, i3));
   ok(!/\brnd\s*\(/.test(blockSrc), '**零共享 rnd 消耗**:街廓配置不推移植被/圖資建物的亂數序列(§2.3)');
+  // 聚落場是單一縫:兩個放大器(planBlocks 的 probe、densifyUrban 的種子)MUST 吃同一支,
+  // 且 MUST NOT 在別處再數一次格子(第二份門檻的症狀是「公設劃得出來、補間卻不補」)。
+  ok((blockSrc.match(/const settlement = /g) || []).length === 1, '聚落場 `settlement` 恰一份實作');
+  ok(/const nearUrban = settlement/.test(blockSrc), '街廓配置的市區閘 = 聚落場(不另判一次)');
+  ok(/settlement\(b\.x, b\.z\)/.test(blockSrc), '補間種子也過聚落場(舊制 densifyUrban 一道地貌閘都沒有)');
+  // 種子 MUST 在街廓配置之前定案:排在後面 = planBlocks 配出來的臨街樓回頭當補間種子
+  ok(blockSrc.indexOf('const infillSeeds') < blockSrc.indexOf('planBlocks({'),
+    '補間種子排在 planBlocks **之前**定案(否則新配的街屋會回頭當種子,圖資越稀疏放大越兇)');
+  ok((strip(bio).match(/[^n] densifyUrban\(\{/g) || []).length === 1
+    && /densifyUrban\(\{ seeds: infillSeeds/.test(strip(bio)),
+    'densifyUrban 恰一個呼叫點且吃呼叫端給的 seeds(MUST NOT 自己去 generic 撈)');
+  {
+    const d0 = bio.indexOf('function densifyUrban');
+    const dSrc = strip(bio.slice(d0, bio.indexOf('\n}', d0)));
+    ok(!/generic\.slice\(/.test(dSrc) && !/INFILL\.maxSeeds/.test(dSrc),
+      '舊制「densifyUrban 就地 generic.slice(0, maxSeeds)」已退場');
+  }
+  // 地貌閘 MUST 只問圖資,不得讀場地宣告的 mix(使用者問的正是「有沒有從圖資判斷地貌」)
+  ok(!/\bmix\b/.test(blockSrc), '聚落場/街廓配置不讀 venue.mix(地貌一律由圖資判,宣告不參與)');
   // 四道閘 + 平坦度
   for (const [re, m] of [[/areaFree\(/, '走廊淨空 areaFree'], [/occ\.free\(/, '建物占位 occ.free'],
     [/terrainEnvCode\(/, '水域/沼澤 terrainEnvCode'], [/flatRadiusAt\(/, '公設平坦度 flatRadiusAt'],
@@ -428,10 +449,15 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
 // 任何離線稽核裡都看不見。執行原文就把這一類抓在這裡。
 console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
 {
-  const i6 = bio.indexOf('  // ---- 都市計畫:沿街配置 + 公設');
+  const i6 = bio.indexOf('  // ---- 聚落場(單一縫)');
   const i7 = bio.indexOf('  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區');
   const blockSrc = bio.slice(i6, i7);
-  const generic = [{ x: 0, z: 0, w: 20, d: 20 }];
+  // 種子 = 一小撮**聚落**(四棟同在一個 128m 格內 ⇒ 放行範圍與舊制的單棟種子逐格相同,
+  // 這一段的其餘斷言因此可以逐項沿用)。單獨一棟是「孤立設施」,由下面的反面對照組驗它
+  // 一棟都不配 —— 兩組的差別只有「棵數」,正是聚落場量的那個量。
+  const cluster = (n) => Array.from({ length: n }, (_, i) => ({ x: 10 + i * 30, z: 10, w: 20, d: 20 }));
+  const generic = cluster(4);
+  const SEEDS = generic.length;
   const landmarks = [];
   const items = {};
   const blockers = [];
@@ -447,7 +473,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     blocked: new Set(),
     occ: { free: () => true, add: () => {}, room: () => 999 },
     group: { add: (g) => added.push(g) },
-    INFILL: { gap: 2 }, OVER: { bldH: 1, bldCap: 170 },
+    INFILL: { gap: 2, maxSeeds: 160 }, OVER: { bldH: 1, bldCap: 170 },
     FACADES: { commercial: [0, 1, 2], residential: [0, 1] },
     MAX_BUILDINGS: 240, MAX_INFILL: 1200, VEG_SCALE: { broadleaf: 1 },
     areaFree: () => true, blockArea: () => {}, terrainEnvCode: () => 0,
@@ -457,18 +483,22 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     buildCivic: (kind) => ({ kind, position: { set() {} }, rotation: { y: 0 }, userData: {} }),
   };
   const names = Object.keys(env);
-  let ranErr = null, out = null;
+  let ranErr = null, out = null, seeds = null;
   try {
-    out = new Function(...names, `${blockSrc}\n return civics;`)(...names.map((k) => env[k]));
+    // `infillSeeds` 是這一段的產出之一(補間的種子名冊),一併取回來驗
+    [out, seeds] = new Function(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => env[k]));
   } catch (e) { ranErr = e; }
   ok(!ranErr, `區塊原文執行不炸(自由變數全對得上)${ranErr ? ` —— ${ranErr.message}` : ''}`);
   if (!ranErr) {
-    ok(generic.length > 1, `建築進 generic(+${generic.length - 1} 棟,與圖資建物同一條路徑)`);
-    ok(generic.slice(1).every((b) => b.h > 0 && b.w > 0 && b.d > 0 && Number.isFinite(b.ry)
+    ok(generic.length > SEEDS, `建築進 generic(+${generic.length - SEEDS} 棟,與圖資建物同一條路徑)`);
+    ok(generic.slice(SEEDS).every((b) => b.h > 0 && b.w > 0 && b.d > 0 && Number.isFinite(b.ry)
       && Number.isInteger(b.v) && typeof b.commercial === 'boolean'),
       '每一棟都帶齊 w/d/h/ry/commercial/v(下游立面與碰撞吃這些欄位)');
-    ok(generic.slice(1).some((b) => b.commercial) && generic.slice(1).some((b) => !b.commercial),
+    ok(generic.slice(SEEDS).some((b) => b.commercial) && generic.slice(SEEDS).some((b) => !b.commercial),
       '商辦與住宅都配得出來(分區有生效)');
+    // 補間種子 = 四棟圖資建物本身,**不含**這一段剛配出來的臨街樓(不然就是滾雪球)
+    ok(seeds.length === SEEDS && seeds.every((s) => generic.slice(0, SEEDS).includes(s)),
+      `補間種子恰為圖資建物(${seeds.length} 棵),不含本段新配的 ${generic.length - SEEDS} 棟`);
     ok(out.length >= 1 && added.length === out.length, `公設建了 mesh 並加進場景(${out.length} 處)`);
     ok(out.every((c) => M.CIVIC_KINDS[c.kind] && c.w === M.CIVIC_KINDS[c.kind].w),
       '公設回傳帶著鋪面尺寸(植被拔除那一段吃它)');
@@ -482,10 +512,40 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
       && Number.isFinite(t.s) && Number.isFinite(t.dj)), '園樹實例欄位齊全(x/y/z/s/ry/tx/tz/dj)');
     // 市區閘:聚落在 5km 外(圖資建物存在,但這條街周邊沒有)⇒ 一棟都不配。
     // 這正是「穿過山區的一條 primary 兩旁長出整排街屋」那個病灶的直測。
-    const g2 = [{ x: 5000, z: 5000, w: 20, d: 20 }], b2 = [], it2 = {}, ad2 = [];
-    const env2 = { ...env, generic: g2, landmarks: [], items: it2, blockers: b2, group: { add: (g) => ad2.push(g) } };
-    new Function(...names, `${blockSrc}\n return civics;`)(...names.map((k) => env2[k]));
-    ok(g2.length === 1 && ad2.length === 0, '**市區閘**:聚落在 5km 外 ⇒ 這條街一棟都不配、一處公設都不劃');
+    const run = (g0, lm = []) => {
+      const b2 = [], it2 = {}, ad2 = [];
+      const e2 = { ...env, generic: g0, landmarks: lm, items: it2, blockers: b2, group: { add: (g) => ad2.push(g) } };
+      const [, sd] = new Function(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => e2[k]));
+      return { added: g0.length - (Array.isArray(g0) ? 0 : 0), civics: ad2.length, seeds: sd };
+    };
+    const g2 = [{ x: 5000, z: 5000, w: 20, d: 20 }];
+    const r2 = run(g2);
+    ok(g2.length === 1 && r2.civics === 0, '**市區閘**:聚落在 5km 外 ⇒ 這條街一棟都不配、一處公設都不劃');
+
+    // ---- 孤立設施(2026-08-04 使用者回報「太魯閣、合歡山不在市區還這麼多建築」)----
+    // 峽谷/草原上真實圖資往往只有一兩棟(遊客中心、工務段、山廟)。舊制的市區閘只問
+    // 「±1 格內有沒有建物」⇒ 那一棟就足以讓整條省道兩旁長出街屋,而那批街屋又回頭當
+    // 補間種子。閘門改數棵數之後,這一組 MUST 是**零產出**;而只要再多幾棟(真的是聚落)
+    // 就照配 —— 兩組的差別只有棵數,證明量到的是「聚落」而不是「附近有房子」。
+    for (const n of [1, 2, 3]) {
+      const gN = cluster(n);
+      const rN = run(gN);
+      ok(gN.length === n && rN.civics === 0 && rN.seeds.length === 0,
+        `**孤立設施**:路旁只有 ${n} 棟圖資建物 ⇒ 一棟都不配、補間種子也是 0`);
+    }
+    {
+      const gN = cluster(4);
+      const rN = run(gN);
+      ok(gN.length > 4 && rN.seeds.length === 4,
+        `門檻上緣:同一處有 4 棟(= 聚落)⇒ 照配(+${gN.length - 4} 棟),補間種子 4 棵`);
+    }
+    // 地標本身就是聚落的證據(車站/廟宇/體育場…)⇒ 與建物同權計數
+    {
+      const gN = cluster(1);
+      const rN = run(gN, [{ x: 40, z: 10 }, { x: 70, z: 10 }, { x: 100, z: 10 }]);
+      ok(gN.length > 1 && rN.seeds.length === 1,
+        `地標與建物同權計數:1 棟 + 3 座地標 = 聚落 ⇒ 配得出來(+${gN.length - 1} 棟)`);
+    }
   }
 }
 
