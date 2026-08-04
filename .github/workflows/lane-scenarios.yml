@@ -112,6 +112,10 @@ jobs:
 
       # 重烤結果**推回分支**:烘焙產物是原始碼(`venueLanes.js` 是 checked-in 的資料檔),
       # 從 log 抄回來既慢又容易漏(一條兵線 = 一行幾百個座標)。只在真的有變更時 commit。
+      # 注意:GitHub 刻意**不讓 GITHUB_TOKEN 推的 commit 觸發 workflow**(遞迴防護)——
+      # 這一顆 commit 在 PR 上會顯示成 `action_required`(等待核准)而不是跑完的綠燈。
+      # 那不是失敗,是「沒跑」;它的內容由下一顆(人/agent 推的)commit 的 CI 一併覆蓋。
+      # MUST NOT 為了讓它變綠而改用 PAT —— 那會讓 CI 與 bake 互相觸發成無窮迴圈。
       - name: 兵線重烤結果推回分支
         if: ${{ env.SCAN_BAKE != '' }}
         run: |
