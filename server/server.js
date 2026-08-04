@@ -190,8 +190,23 @@ function sendFile(res, filePath) {
   });
 }
 
+// 開發工具的啟停(dev-only;設定頁那顆「▶ 啟動 / ⏹ 停止」)。
+// 這是一個**會開行程**的端點,所以三道閘缺一不可:①雲端節點連載都不載(下面那個 CLOUD 判斷排在
+// import 之前)②只回應 loopback(閘門住 `tools/dev_supervisor.mjs`,與 spawn 的邏輯同一支)
+// ③出貨版根本沒有 `tools/`(build_solo 只複製 public/** 與白名單三支)⇒ import 失敗就當作沒有這條路由。
+// 延遲載入:一般對局永遠不會走到這裡,那支連同它 import 的 data.js/codex.js 都不進記憶體。
+let _devSup = null;
+const devSup = () => (_devSup ||= import('../tools/dev_supervisor.mjs').catch(() => null));
+
 const handler = (req, res) => {
   const urlPath = decodeURIComponent(req.url.split('?')[0]);
+
+  if (!CLOUD && urlPath.startsWith('/dev/tools')) {
+    devSup().then(async (m) => {
+      if (!m || !(await m.handle(req, res, urlPath))) { res.writeHead(404); res.end('404'); }
+    }).catch(() => { res.writeHead(500); res.end('500'); });
+    return;
+  }
 
   // 健康檢查(雲端平台的 liveness/readiness probe;區網跑也無害)
   if (urlPath === '/healthz') {

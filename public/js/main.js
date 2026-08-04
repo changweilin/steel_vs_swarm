@@ -2415,7 +2415,8 @@ function switchPausePage(page) {
   document.querySelectorAll('#pauseTabs .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#pauseOverlay .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
   // 樣品是一顆真的 WebGL context:只在「設定」頁真的顯示時才建,離開這一頁立刻收
-  if (page === 'settings') renderVisualSettings($('pauseVisualMount')); else disposeVisualSettings();
+  if (page === 'settings') { renderVisualSettings($('pauseVisualMount')); syncDevTools(); }
+  else disposeVisualSettings();
 }
 document.querySelectorAll('#pauseTabs .pause-tab, #pauseOverlay .pause-back').forEach((b) => {
   b.addEventListener('click', () => { switchPausePage(b.dataset.page); app.audio?.ui('click'); });
@@ -2558,47 +2559,80 @@ function disposeVisualSettings() {
 
 // ── 開發工具(dev-only:只在本機開發環境出現)──────────────────────────────
 // 這些工具**刻意住 tools/ 不住 public/**(`tools/build_solo.mjs` 是把 `public/**` 整包複製出貨的)⇒
-// 設定頁能給的只有一條連結,MUST NOT 把工具本身搬進遊戲。連結一律只在本機出現:
-// GitHub Pages / 單機版 file:// / 隊友連進來的區網位址上,那支 dev server 根本不在他們機器上,
-// 一顆點了必定連不上的鈕比沒有這顆鈕更糟。
+// 遊戲這邊只有一列開關與一條連結,MUST NOT 把工具本身搬進來。
 //
-// 埠號是「另一支程式的預設值」而不是本檔的自由變數 —— 兩邊各寫一個數字就會在某次改埠之後
-// 靜默分家(鈕還在、點下去連到空的),故由 `audit_ui_layout.mjs` 釘住兩邊同值。
-const DEV_TOOLS = [
-  { key: 'codex', label: '2D 生圖對照台', url: 'http://localhost:8621/',   // = tools/codex_review.mjs 的預設埠
-    hint: '把已生成的機體圖配對到角色頭像與 3D 展示台,逐張確認勾選 / 框出局部重繪 / 重下 prompt;'
-      + '同時列出缺圖與孤兒檔,並收 tools/ai3d/masters/ 那批尚未驗收的 AI 設定稿。'
-      + '要先在終端機跑 `npm run codex` 才開得起來。' },
-];
-/** 這個分頁是不是跑在本機開發環境?(出貨版一律 false) */
-function devHost() {
-  if (typeof location === 'undefined' || !/^https?:$/.test(location.protocol)) return false;
-  const h = location.hostname || '';
-  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1';
+// **清單、網址、跑沒跑起來一律問伺服器**(`GET /dev/tools`,後端 = `tools/dev_supervisor.mjs`):
+//   ① 埠號的真相住那支工具自己(`tools/codex_review.mjs DEFAULT_PORT`)—— 在這裡寫死就是第二份,
+//      改埠之後鈕還在、點下去連到空的,而且不會有任何錯誤訊息。
+//   ② 「該不該顯示」也由伺服器定案:那條路由只回應 loopback、雲端模式根本不掛、出貨版連 `tools/`
+//      都沒有 ⇒ GitHub Pages / 單機 file:// / 隊友的區網連線一律拿不到,整區自動收起來(原則 6)。
+//      在客戶端自己判一次 hostname = 同一條規則兩份,而真正說了算的是伺服器那一份。
+const DEV_MOUNTS = ['pauseDevMount', 'lobbyDevMount'];
+let _devTools = null;             // null / [] = 沒有這個端點(出貨版與隊友端),整區收起來
+
+/** 問一次後端,兩個掛載點一起重畫。開場、開設定頁、按完啟停各一次 */
+async function syncDevTools() {
+  try {
+    const res = await fetch('/dev/tools', { cache: 'no-store' });
+    _devTools = res.ok ? (await res.json()).tools : null;
+  } catch { _devTools = null; }   // 靜態站台 / file:// 一律走這裡
+  for (const id of DEV_MOUNTS) renderDevTools($(id));
 }
+
+async function devToolAction(key, act) {
+  // `x-dev-tools` 是非簡單標頭:惡意網頁可以叫瀏覽器 POST 到 localhost,但送不出自訂標頭
+  // (那需要 CORS 預檢,而後端不回應預檢)⇒ 這顆鈕不會變成別的網頁的遙控器
+  try {
+    const res = await fetch(`/dev/tools/${key}/${act}`, { method: 'POST', headers: { 'x-dev-tools': '1' } });
+    const out = await res.json().catch(() => ({}));
+    if (out.error) toast(out.error);
+  } catch { toast('開發工具後端沒有回應'); }
+  await syncDevTools();
+}
+
 /** **一份實作、兩個掛載點**(戰場暫停頁 + 大廳設定頁),與畫面表現/操作方式同一條規矩 */
 function renderDevTools(mount) {
   if (!mount) return;
   mount.innerHTML = '';
-  mount.hidden = !devHost();
+  mount.hidden = !_devTools?.length;
   if (mount.hidden) return;
   mount.insertAdjacentHTML('beforeend', '<div class="set-sub">▎開發工具(本機)</div>');
-  for (const d of DEV_TOOLS) {
-    const row = document.createElement('div');
-    row.className = 'set-row';
-    row.style.flexWrap = 'wrap';   // 網址那一段比其他設定列長,窄螢幕塞不下就折行(A20:不准推出摺線)
-    row.innerHTML = `<span class="set-label">${d.label}</span>`
-      + `<span class="set-hint">${d.url}</span>`;
-    attachTip(row.querySelector('.set-label'), d.hint);   // 逐項說明走 ⓘ 懸浮提示(觸控長按)
-    const open = document.createElement('button');
-    open.className = 'btn small';
-    open.type = 'button';
-    open.textContent = '↗ 開啟';
-    // window.open 在點擊處理器裡不會被擋;`noopener` 免得那一頁拿得到本頁的 window
-    open.addEventListener('click', () => { window.open(d.url, '_blank', 'noopener'); app.audio?.ui('click'); });
-    row.appendChild(open);
-    mount.appendChild(row);
-  }
+  for (const t of _devTools) mount.appendChild(devToolRow(t));
+}
+
+function devToolRow(t) {
+  const row = document.createElement('div');
+  row.className = 'set-row';
+  row.style.flexWrap = 'wrap';   // 網址那一段比其他設定列長,窄螢幕塞不下就折行(A20:不准推出摺線)
+  row.innerHTML = `<span class="set-label">${t.label}</span>`
+    + `<span class="set-hint">${t.listening ? t.url : '未啟動'}</span>`;
+  attachTip(row.querySelector('.set-label'), t.hint);   // 逐項說明走 ⓘ 懸浮提示(觸控長按)
+
+  // 啟停:鈕面吃**埠上有沒有人在聽**而不是「我的子行程活著嗎」—— 使用者關心的是開不開得起來。
+  // 聽得到但不是這裡啟動的(終端機 `npm run codex`)⇒ 停不掉也不假裝停得掉,鈕變灰並說明原因。
+  const power = document.createElement('button');
+  power.className = 'btn small';
+  power.type = 'button';
+  power.textContent = t.listening ? '⏹ 停止' : '▶ 啟動';
+  power.disabled = t.listening && !t.owned;
+  if (power.disabled) attachTip(power, '這一支是在終端機啟動的,請回終端機停(Ctrl+C)');
+  power.addEventListener('click', async () => {
+    power.disabled = true;
+    power.textContent = t.listening ? '停止中…' : '啟動中…';
+    app.audio?.ui('click');
+    await devToolAction(t.key, t.listening ? 'stop' : 'start');
+  });
+  row.appendChild(power);
+
+  const open = document.createElement('button');
+  open.className = 'btn small';
+  open.type = 'button';
+  open.textContent = '↗ 開啟';
+  open.disabled = !t.listening;   // 沒起來就別開一個連線錯誤的分頁
+  // window.open 在點擊處理器裡不會被擋;`noopener` 免得那一頁拿得到本頁的 window
+  open.addEventListener('click', () => { window.open(t.url, '_blank', 'noopener'); app.audio?.ui('click'); });
+  row.appendChild(open);
+  return row;
 }
 // 開啟戰場暫停「設定」頁時把 UI 同步到目前(持久化的)狀態
 function syncSettingsUi() {
@@ -2644,8 +2678,7 @@ function mountHelp(catsEl, bodyEl) {
 }
 mountHelp($('helpCats'), $('helpBody'));            // 戰場暫停選單
 mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));  // 大廳:設定 / 說明疊層
-renderDevTools($('pauseDevMount'));                 // 開發工具:靜態內容,開場畫一次就好
-renderDevTools($('lobbyDevMount'));
+syncDevTools();                                     // 開發工具:狀態問伺服器,開設定頁時再問一次
 
 // ── GUI 懸浮提示(2026-07-31:遊戲內常駐說明一律改成 ⓘ 提示)──
 // index.html 的靜態標記只寫 `data-tipkey`,**文字一律在這裡從 help.js UI_TIPS 取** ——
@@ -2689,7 +2722,8 @@ $('touchCloseBtn')?.addEventListener('click', () => { $('touchOverlay').style.di
 function switchLobbyPage(page) {
   document.querySelectorAll('#lobbyMenu .pause-tab').forEach((b) => b.classList.toggle('on', b.dataset.page === page));
   document.querySelectorAll('#lobbyMenu .pause-page').forEach((p) => { p.hidden = p.dataset.page !== page; });
-  if (page === 'settings') renderVisualSettings($('lobbyVisualMount')); else disposeVisualSettings();
+  if (page === 'settings') { renderVisualSettings($('lobbyVisualMount')); syncDevTools(); }
+  else disposeVisualSettings();
 }
 function openLobbyMenu(page) {
   syncAudioSwitches('lset');

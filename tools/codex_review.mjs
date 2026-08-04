@@ -26,7 +26,8 @@
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, readdir, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { extname, join, normalize, sep } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import { CHARACTERS, SIDES, charKind } from '../public/js/data.js';
 import { KIND_WORD } from '../public/js/codex.js';
@@ -162,9 +163,14 @@ function safePath(url) {
   return p.startsWith(ROOT + sep) || p === ROOT ? p : null;
 }
 
+/** 這支自己的預設埠 —— **它是這個數字的唯一真相**。
+ *  `tools/dev_supervisor.mjs`(設定頁那顆啟停鈕的後端)MUST import 這一個常數,
+ *  MUST NOT 自己抄一份:抄了之後某次改埠,啟停鈕會啟得起來卻探不到、鈕面永遠停在「▶ 啟動」。 */
+export const DEFAULT_PORT = 8621;
+
 async function serve() {
   const i = process.argv.indexOf('--port');
-  const port = i > 0 ? Number(process.argv[i + 1]) : 8621;
+  const port = i > 0 ? Number(process.argv[i + 1]) : DEFAULT_PORT;
   const srv = createServer(async (req, res) => {
     const send = (code, body, type = 'application/json; charset=utf-8') => {
       res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store' });
@@ -223,5 +229,10 @@ async function serve() {
   });
 }
 
-if (process.argv.includes('--report')) await report();
-else await serve();
+// 只有「直接被執行」時才起 server —— `tools/dev_supervisor.mjs` 要 import 這一支拿 `DEFAULT_PORT`
+// (埠號的單一真相縫),沒有這道閘,那支 import 會**在遊戲伺服器的行程裡**把覆核台也一起開起來,
+// 而且停不掉(它不是子行程)。
+if (import.meta.url === pathToFileURL(resolve(process.argv[1] || '')).href) {
+  if (process.argv.includes('--report')) await report();
+  else await serve();
+}

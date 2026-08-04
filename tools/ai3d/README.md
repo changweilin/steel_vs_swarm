@@ -31,6 +31,9 @@ npm run codex          # = node tools/codex_review.mjs,起 dev server(:8621)
 npm run codex -- --report   # 不開瀏覽器,直接印配對表
 ```
 
+(遊戲的設定頁最下方有一列「▎開發工具(本機)」可以直接按「▶ 啟動 / ⏹ 停止」,不必回終端機;
+後端是 `tools/dev_supervisor.mjs`,只回應本機來的請求,遊戲伺服器一關它開的那支也跟著收掉。)
+
 那座台子把 `masters/*.jpg` 與已入庫的 `public/assets/cyberpunk_art/mechs/*.png` **收在同一個配對表裡**
 (配對規則同一條:檔名去副檔名 = slot),AI 稿標成藍色虛線框的「AI 稿」、計數也分開列 ——
 合併就等於把「這一格還沒有正式圖」藏起來。逐張確認勾選 / 框出要局部重繪的地方 / 重下 prompt,
