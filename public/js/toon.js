@@ -224,6 +224,88 @@ export function updateCelLight(camera) {
   _celLightDirView.copy(_sunDirWorld).transformDirection(camera.matrixWorldInverse);
 }
 
+// ---------------- 軟性物質:細勾線 + 隨風飄揚(2026-08-04)----------------
+// 使用者定案:「不同類型物件有不同線條輪廓的粗細,例如雲朵、芒草、草原、花園、樹葉、旗幟
+// 這些軟性的物質的線條會細得多,其他堅硬的物體則依據設定的數值」+「這些軟性物質加入
+// 隨風飄揚之類的重複性變化」。
+//
+// **兩件事共用同一個旗標**,這是本段唯一的設計決定:一個零件是不是「軟的」,決定它
+// ①勾線要多細 ②會不會被風吹動。拆成兩份名單(「哪些東西線細」與「哪些東西會飄」)遲早分家,
+// 而分家的症狀是「這叢草會飄但線是硬的」——沒有任何錯誤訊息,只是看起來不對。
+//
+// ---- ① 細勾線怎麼傳到勾線 pass ----
+// 世界的線由 `postfx.js` 的**螢幕空間** pass 一次蓋全場(見那支的檔頭:外殼包住整個世界
+// 是幾百個 draw call,不可行)。螢幕空間 pass 天生不認識「這個像素是什麼東西」⇒ 必須有
+// 一條逐像素的通道。**通道 = 場景 RT 的 alpha**:
+//
+//     場景 RT 的 alpha ≡ 這一格的**勾線門檻倍率**(1 = 硬性,< 1 = 軟性 ⇒ 線更細)
+//
+// 這是 toon.js 與 postfx.js 之間的**契約**,兩邊的註解都指向這一行。可行的理由有三:
+//   ・three 對 `transparent === false && blending === NormalBlending` 的材質一律 `NoBlending`
+//     ⇒ 不透明件的 alpha 是**直寫**的,不會被混合攪掉;
+//   ・鏈上最後一 pass(FXAA)輸出 `vec4(rgb, 1.0)`、畫布 context 又是 `alpha: false`
+//     ⇒ alpha 從來沒有被當成不透明度用過,這個通道是空的;
+//   ・半透明件(水面/特效)混合後 alpha 只會被推向 1 = **硬性**,也就是**舊行為**
+//     (原則 6:偏差方向一律朝「不改變既有畫面」)。
+// 未標軟性的材質一律不碰 alpha ⇒ `INK_SOFT_A` 以外的每一個像素**逐位元同舊制**。
+//
+// ---- ② 為什麼「細」是門檻倍率而不是取樣半徑 ----
+// 勾線的取樣半徑 `INK.THICK` 已經是 1 個像素(那支的註解:「> 1 會讓細線斷開」),沒有
+// 更細的半徑可用。真正決定「畫出來幾格寬」的是**門檻**:二階差分 `|e|` 從邊緣往外遞減,
+// 門檻抬高 ⇒ 越過門檻的像素帶變窄。故軟性 = 把 `|e|` 乘上 `INK_SOFT_A` 再進 smoothstep
+// —— 線帶真的變窄(不是只變淡),而且 `INK_SOFT_A = 1` 逐位元回到舊制。
+const INK_SOFT_A = 0.3;
+
+/**
+ * 全場風(單一縫)。植被/旗幟(本檔的頂點位移)與雲朵(`environment.js` 的漂移)MUST
+ * 同吃這一份 —— 兩邊各寫一個風向,畫面上就是「雲往東飄、草往西倒」。
+ */
+export const WIND = {
+  DIR_DEG: 118,      // 風向(世界 XZ 方位角,度)
+  WAVE_M: 26,        // 空間波長(m):風以**波**的形式掃過林子,不是全林同步點頭
+  BEAT: 1.87,        // 第二諧波的頻率比;刻意取無理數附近 ⇒ 兩波的合成週期長到看不出重複
+  CLOUD_MPS: 1.7,    // 雲的漂移速度(m/s)
+};
+const WIND_DIR = [Math.cos(WIND.DIR_DEG * Math.PI / 180), Math.sin(WIND.DIR_DEG * Math.PI / 180)];
+
+/**
+ * 軟性物質分類(單一縫)。`amp` 是**擺幅佔整株尺寸的比例**(不是公尺)——
+ * 手寫公尺的話同一款植被放大兩倍就只擺一半,而「大樹擺得比小草多」正是風看起來對的原因。
+ *   amp   擺幅 ÷ span
+ *   freq  基頻(rad/s)
+ *   axis  擺動權重沿哪個**零件局部軸**遞增('y' = 由根到梢;'x' = 由旗桿到旗尾)
+ * `turf`(草坪/草皮/跑道內場)刻意 `amp: 0`:它是一塊 0.5m 厚的鋪面,擺動只會讓它與
+ * 旁邊的步道錯開;它要的只有「不要被畫上硬黑邊」那一半。
+ */
+export const SOFT_KINDS = {
+  // 頻率隨「這團東西有多重」遞減:樹冠是一大團葉子,慢;草穗輕,快;旗面最輕最快。
+  // 反過來排(草比樹慢)看起來會像水草,不像風。
+  leaf:  { amp: 0.035, freq: 0.62, axis: 'y' },   // 樹冠 / 葉簇 / 針葉
+  grass: { amp: 0.075, freq: 1.15, axis: 'y' },   // 芒草 / 蘆葦 / 箭竹 / 花圃
+  cloth: { amp: 0.110, freq: 1.70, axis: 'x' },   // 旗幟
+  turf:  { amp: 0,     freq: 0,    axis: 'y' },   // 草坪 / 內場草皮(只細線,不擺動)
+};
+
+// 共享 uniform(同 `_celLightDirView` / `_rampTint`:一份物件餵給所有材質)。
+// **時鐘刻意不取模**:各 kind 的頻率彼此不可通約,取模會在週期邊界跳一下;
+// float32 在一小時(t = 3600)上的相位解析度仍有 ~0.001 rad,一場對局綽綽有餘。
+const _windT = { value: 0 };
+const _windDir = { value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]) };
+const _windK = {
+  value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.WAVE_M),
+};
+
+/**
+ * 推進風的時鐘(每幀一次;呼叫端 = `game.js` 的主迴圈)。
+ * dt 夾在 [0, 0.25]:分頁切回來的那一幀 dt 可能是好幾秒,不夾的話整片林子會抽一下。
+ */
+export function stepCelWind(dt) {
+  _windT.value += Math.min(0.25, Math.max(0, dt || 0));
+}
+
+/** 目前的風時鐘(秒);雲朵那半(environment.js)與植被同吃一個時鐘 */
+export function celWindTime() { return _windT.value; }
+
 /**
  * 注入賽璐璐補丁:邊緣光(rim)+ 金屬硬邊高光帶(CEL_METAL 定義時)。
  * 沿用 MeshToonMaterial 既有光照結果,只疊加漫畫式高光。
@@ -234,9 +316,14 @@ export function updateCelLight(camera) {
  * 機體塗裝(paint.js;英雄機體專用):
  *   paint — { tex, matrix, scale } 以「靜止姿勢的機體局部座標」三平面投影花紋。
  *           matrix = mesh 局部 → 機體根(建模當下固定,不隨動畫更新)⇒ 花紋鎖在裝甲板上。
+ * 軟性物質(2026-08-04;見上方「軟性物質」段):
+ *   soft  — { k, span, base?, sy? } k = SOFT_KINDS 的鍵;span = 整株/整面的尺寸(局部單位);
+ *           base = 這個零件的原點在整株座標裡的位置(樹冠 = part.y、旗面 = 半寬);
+ *           sy = 零件自身的縱向縮放(part.sy)。三者一起決定「這個頂點在整株上有多接近梢端」。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null } = {}) {
   if (preview) ensurePreviewField();
+  const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
   if (metal) defines.CEL_METAL = '';
   if (wash > 0) defines.CEL_WASH = '';
@@ -251,10 +338,26 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 抑制三平面投影在薄件側緣(垂直面)的溢色。與 GATE(單一半球)互斥。
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
+  // 細勾線與擺動**分兩個 define**:草坪要前者不要後者(它是鋪面,擺起來只會跟步道錯開)。
+  if (sk) defines.CEL_SOFT = '';
+  if (sk && sk.amp > 0) {
+    defines.CEL_SWAY = '';
+    if (sk.axis === 'x') defines.CEL_SWAY_H = '';
+  }
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft };
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
+    // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
+    shader.uniforms.uSoftInk = { value: sk ? INK_SOFT_A : 1 };
+    shader.uniforms.uSoftSpan = { value: Math.max(1e-3, soft?.span ?? 1) };
+    shader.uniforms.uSoftBase = { value: soft?.base ?? 0 };
+    shader.uniforms.uSoftSy = { value: soft?.sy ?? 1 };
+    shader.uniforms.uSoftAmp = { value: (sk?.amp ?? 0) * Math.max(1e-3, soft?.span ?? 1) };
+    shader.uniforms.uSoftFreq = { value: sk?.freq ?? 0 };
+    shader.uniforms.uWindT = _windT;
+    shader.uniforms.uWindDir = _windDir;
+    shader.uniforms.uWindK = _windK;
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
     shader.uniforms.uCelRampTint = _rampTint[tint] || _rampTint.mech;
     // 場只換「哪一張 + 取樣框」兩個 uniform;取樣規則(celWeatherF)與強度仍是同一份
@@ -281,8 +384,58 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         varying vec3 vPaintP;
         varying vec3 vPaintN;
         #endif
+        #ifdef CEL_SWAY
+        uniform float uWindT;
+        uniform vec2 uWindDir;
+        uniform vec2 uWindK;
+        uniform float uSoftSpan;
+        uniform float uSoftBase;
+        uniform float uSoftSy;
+        uniform float uSoftAmp;
+        uniform float uSoftFreq;
+        #endif
         void main() {`)
+      // 擺動 MUST 排在 project_vertex **之前**:那一段吃 transformed 算 mvPosition 與
+      // gl_Position,擺完再算才會連 vViewPosition / 世界座標 varying 一起是同一個姿勢。
       .replace('#include <project_vertex>', `
+        #ifdef CEL_SWAY
+        {
+          // ---- 擺動權重 sw:0 = 錨在根部 / 旗桿側(不動),1 = 梢端 ----
+          // 單位是**整株局部座標**(uSoftBase = 這個零件的原點在整株上的位置、
+          // uSoftSy = 零件自身的縱向縮放)⇒ 樹幹頂與樹冠底在同一個高度上拿到**同一個** sw,
+          // 位移場是連續的 ⇒ 接合不會被風吹開(A26 / A27 的接合完成度與擺動無關)。
+          // 逐零件各自從 0 起算的話,每一顆樹冠都會繞自己的中心剪切,疊接縫當場開開合合。
+          #ifdef CEL_SWAY_H
+            float sw = clamp( ( uSoftBase + transformed.x ) / uSoftSpan, 0.0, 1.0 );
+          #else
+            float sw = clamp( ( uSoftBase + transformed.y * uSoftSy ) / uSoftSpan, 0.0, 1.0 );
+          #endif
+          sw *= sw;   // 二次:根部更硬、梢端更軟(一次的話整株看起來像被平移)
+          // ---- 相位:取**實例原點**,不是逐頂點 ----
+          // 逐頂點取相位 = 同一片葉子的兩端各走各的 = 幾何被拉扯變形;取原點則整個零件同相,
+          // 而相鄰植株的原點差幾公尺 ⇒ 風以波的形式掃過林子(uWindK 的波長 WIND.WAVE_M)。
+          mat3 swM = mat3( modelMatrix );
+          vec4 swO = vec4( 0.0, 0.0, 0.0, 1.0 );
+          #ifdef USE_INSTANCING
+            swM = swM * mat3( instanceMatrix );
+            swO = instanceMatrix * swO;
+          #endif
+          swO = modelMatrix * swO;
+          float swP = dot( swO.xz, uWindK );
+          // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點
+          float swOsc = sin( uWindT * uSoftFreq + swP ) * 0.72
+                      + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + swP * 1.6 + 1.7 ) * 0.28;
+          // 世界風向 → 零件局部方向。GLSL 的 \`v * m\` = transpose(m) * v;實例矩陣是
+          // 旋轉 × (XZ 等比、Y 另計) 的縮放 ⇒ 轉置與逆只差一個對角縮放,水平分量的比例不變,
+          // 正規化後方向一致。MUST NOT 省掉這一步:實例的 ry 是亂數,直接拿世界向量當局部
+          // 向量的話每一株會各吹各的方向,那就不是「風」了。
+          vec3 swD = normalize( vec3( uWindDir.x, 0.0, uWindDir.y ) * swM + vec3( 1e-6 ) );
+          float swA = sw * uSoftAmp * swOsc;
+          transformed += swD * swA;
+          // 擺出去時梢端略降(弧長守恆的一階近似)—— 少了這一項會看起來像整株在平移
+          transformed.y -= sw * uSoftAmp * abs( swOsc ) * 0.3;
+        }
+        #endif
         #include <project_vertex>
         #ifdef CEL_WP
         {
@@ -389,10 +542,19 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
             outgoingLight *= mix( uCelRampTint, vec3( 1.0 ), celFbG );
           }
         }
-        #include <opaque_fragment>`)
+        #include <opaque_fragment>
+        #ifdef CEL_SOFT
+        // 場景 RT 的 alpha ≡ 這一格的**勾線門檻倍率**(見檔頭「軟性物質」段的契約)。
+        // MUST 排在 opaque_fragment **之後**:那一段的 \`#ifdef OPAQUE diffuseColor.a = 1.0\`
+        // 會把先寫的值蓋掉。之後的 colorspace / fog / dithering 都只動 rgb,寫在這裡最穩。
+        gl_FragColor.a = uSoftInk;
+        #endif`)
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
+        #ifdef CEL_SOFT
+        uniform float uSoftInk;
+        #endif
         uniform float uCelWash;
         uniform float uCelCool;
         uniform vec3 uCelMossC;
@@ -439,8 +601,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.fragmentShader = 'uniform vec3 uCelRampTint;\nuniform float uCelRampFb;\n'
       + (canPatch ? shader.fragmentShader.replace(RAMP_INC, RAMP_PATCHED) : shader.fragmentShader);
   };
+  // 軟性 MUST 進快取鍵:defines 不同卻共用同一支已編譯的程式 = 該材質整批沒有擺動也沒有
+  // 細勾線(three 只認這把鑰匙),而畫面上只表現成「有些樹會動、有些不會」。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}` : ''}${rim}`;
   return mat;
 }
 
@@ -459,9 +623,11 @@ export function applyPaint(mat, paint) {
  * opts.celMetal = true → 硬邊金屬高光帶(槍管/砲塔/機甲裝甲)。
  */
 export function toonMat(color, opts = {}) {
-  const { celMetal, bands, ...rest } = opts;
+  // rim 可覆寫(同 envMat;預設 0.22 ⇒ 既有呼叫端逐位元不變):GLB 植被的葉片要掛軟性旗標
+  // 又不能因此比同一棵樹的樹幹多一圈邊緣光,那條路徑傳 rim: 0。
+  const { celMetal, bands, rim = 0.22, soft = null, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
-  return applyCelPatch(m, { metal: !!celMetal });
+  return applyCelPatch(m, { metal: !!celMetal, rim, soft });
 }
 
 /**
@@ -472,11 +638,11 @@ export function toonMat(color, opts = {}) {
 export function envMat(color, opts = {}) {
   // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
   // preview:設定頁樣品專用(改吃樣品自己那張風化場,見 ensurePreviewField)
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, ...rest } = opts;
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft });
 }
 
 /**

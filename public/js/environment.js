@@ -5,7 +5,7 @@
 // 粒子手法參考 mapping_elf/weatherFx3D.js(程序生成、無外部資產)。
 import * as THREE from 'three';
 import { ENV } from './data.js';
-import { setCelSun } from './toon.js';
+import { setCelSun, WIND, celWindTime } from './toon.js';
 import { mulberry32 } from './rng.js';
 
 export function envLabel(env) {
@@ -129,7 +129,18 @@ function cloudTexture() {
  * 天空的 billboard 雲。枚數與 `WEATHERS[w].light` **反比**(光量越低雲越多),
  * 霧天一朵都不放 —— 霧的可視距離本來就到不了天空,放了只會在白牆上疊白斑。
  * 散布走 mulberry32(§2.3 確定性,MUST NOT 用 Math.random)。
+ *
+ * ---- 雲的「軟性」(2026-08-04)----
+ * 使用者把雲朵列在「軟性物質」的第一個。**勾線那一半在雲身上是恆等式**:雲是
+ * `depthWrite: false` 的 sprite,那些像素的深度是天空的 far ⇒ `postfx.js` 的勾線 pass
+ * 第一行就早退(檔頭 ③「天空早退」),雲從來沒有被畫過線。所以這裡要做的只有另一半 ——
+ * **隨風飄揚**:沿全場風向平移(與植被/旗幟同一份 `WIND`,MUST NOT 另寫一個風向),
+ * 外加逐朵的微幅起伏與呼吸,免得一整片雲像一張硬紙板在滑。
+ * 平移在 `WRAP` 的長度上循環(≈ 20 分鐘一圈)⇒ 是使用者要的「重複性變化」,
+ * 而繞回的那一刻發生在雲場最外緣、多半在視野之外。
  */
+const CLOUD_BOB = 0.012;      // 逐朵上下起伏(× span)
+const CLOUD_BREATH = 0.05;    // 逐朵尺寸呼吸(比例)
 function makeClouds(span, skyC, W, seed) {
   const n = Math.max(0, Math.round(CLOUD_N * (1.05 - W.light)));
   if (!n || W.fogNear <= 0.05) return null;
@@ -140,19 +151,41 @@ function makeClouds(span, skyC, W, seed) {
   const mats = [0.9, 0.55].map((o) => new THREE.SpriteMaterial({
     map: tex, color: tint, transparent: true, opacity: o, depthWrite: false, fog: false,
   }));
+  const wd = [Math.cos(WIND.DIR_DEG * Math.PI / 180), Math.sin(WIND.DIR_DEG * Math.PI / 180)];
+  const WRAP = span * 2.8;    // 沿風向的循環長度(雲場直徑的量級)
+  const drift = [];
   for (let i = 0; i < n; i++) {
     const a = rnd() * Math.PI * 2;
     const r = span * (0.55 + rnd() * 0.75);
     const y = span * (0.18 + rnd() * 0.42);
     const s = span * (0.10 + rnd() * 0.16);
+    const ph = rnd() * Math.PI * 2;                       // 逐朵相位(§2.3:走同一條序列)
     const sp = new THREE.Sprite(mats[i & 1]);
     sp.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
     sp.scale.set(s * 2, s, 1);
     grp.add(sp);
+    // 沿風向 / 垂直風向拆成兩個分量:漂移只加在**沿風向**那一個,側向與高度不動
+    const px = Math.cos(a) * r, pz = Math.sin(a) * r;
+    drift.push({ sp, along: px * wd[0] + pz * wd[1], side: -px * wd[1] + pz * wd[0], y, s, ph });
   }
   grp.frustumCulled = false;
   grp.renderOrder = -9;
-  return { obj: grp, mats };
+  return {
+    obj: grp,
+    mats,
+    /** @param t 全場風的時鐘(秒;與植被同一支 `celWindTime`) */
+    step(t) {
+      for (const d of drift) {
+        // 取模 MUST 先加半個 WRAP 再減:JS 的 % 對負數回負值,直接取模會讓半邊的雲跳到另一側
+        const a = ((d.along + WIND.CLOUD_MPS * t + WRAP * 0.5) % WRAP + WRAP) % WRAP - WRAP * 0.5;
+        d.sp.position.set(a * wd[0] - d.side * wd[1],
+          d.y + Math.sin(t * 0.11 + d.ph) * span * CLOUD_BOB,
+          a * wd[1] + d.side * wd[0]);
+        const b = 1 + Math.sin(t * 0.17 + d.ph * 1.7) * CLOUD_BREATH;
+        d.sp.scale.set(d.s * 2 * b, d.s * b, 1);
+      }
+    },
+  };
 }
 
 /** 雨/雪粒子盒:跟著相機走,粒子落出底部就回頂部 */
@@ -247,7 +280,11 @@ export function applyEnvironment(scene, terrain, env) {
       particles?.update(dt, camera);
       // 穹頂/雲**恆以相機為中心**:天空沒有視差,不然走到地圖邊緣會看到「天空的邊」
       dome.position.copy(camera.position);
-      if (clouds) clouds.obj.position.copy(camera.position);
+      if (clouds) {
+        clouds.obj.position.copy(camera.position);
+        // 時鐘吃 `celWindTime()`(植被/旗幟同一支):自己數一份 dt 的話,暫停一次就與地面錯開
+        clouds.step(celWindTime());
+      }
     },
     dispose() {
       scene.remove(hemi); scene.remove(sun);

@@ -57,6 +57,7 @@ jobs:
           node tools/audit_escort_form.mjs
           node tools/audit_cel_pipeline.mjs
           node tools/audit_visual_prefs.mjs
+          node tools/audit_soft_stroke.mjs
           node tools/audit_world_text.mjs
           node tools/audit_beacons.mjs
           node tools/audit_siteplan.mjs

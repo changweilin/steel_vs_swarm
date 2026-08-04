@@ -210,10 +210,12 @@ const VEG_DEFS = {
                          { g: cyl(1.4, 1.9, 0.8, 8), y: 6.1, key: 'conifer' },
                          { g: cyl(0.7, 1.2, 0.75, 7), y: 7.4, key: 'conifer' },
                          { g: cone(0.5, 1.3, 6), y: 8.0, key: 'conifer' }] },
+  // sf(軟性覆寫;2026-08-04):芒花穗/箭竹葉/蘆葦有固定色 ⇒ 沒有 key,但它們正是使用者
+  // 點名的「芒草」。細勾線與擺動由 `vegSoftKind` 讀這一欄,MUST NOT 另開一張名單。
   silvergrass: { parts: [{ g: cone(0.85, 1.5), y: 0.75, key: 'grass' },
-                         { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8 }] },      // 抽穗的芒花
-  arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a },
-                         { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44 }] },
+                         { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8, sf: 'grass' }] },   // 抽穗的芒花
+  arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a, sf: 'grass' },
+                         { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44, sf: 'grass' }] },
   shrub:       { parts: [{ g: ico(0.9), y: 0.6, key: 'foliage', sy: 0.8 },
                          { g: ico(0.6), y: 1.3, key: 'foliage', sy: 0.75 }] },
   succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 },
@@ -221,7 +223,7 @@ const VEG_DEFS = {
   mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e },
                          { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // 支柱根
                          { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
-  reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a }] },
+  reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a, sf: 'grass' }] },
   // ---- 神木林床層(森林分層最底層):樹苗 + 各式香菇 ----
   // 分層邏輯:神木冠層 → 中小型同科喬木(sub-canopy,沿用 conifer*/broadleaf/birch)
   // → 樹苗/灌木叢(shrub)/各式香菇(林床)。香菇無 key(不吃季節葉色):固定菌色,
@@ -726,15 +728,21 @@ function extractNatureParts(gltf, season) {
     if (!o.isMesh) return;
     const geo = o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(norm, o.matrixWorld));
     const src = Array.isArray(o.material) ? o.material[0] : o.material;
-    const mat = new THREE.MeshToonMaterial({
-      color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
-      map: src.map || null,
-      gradientMap: toonGradient(),
-    });
+    // 葉片判定只有這一條(季節色偏與軟性旗標同吃):另寫第二條 regex 就會出現
+    // 「這叢葉子會變色卻不會飄」。幾何已正規化成「底部貼地、高度 1」⇒ 擺動權重的
+    // span 恆為 1、base 恆為 0(這正是正規化那一步順帶給的東西,不必再量一次)。
+    const leafy = /leaves|grass|flower|bush/i.test(`${src.name} ${o.name} ${src.map?.name || ''}`);
+    // rim: 0 = 逐位元維持這條路徑原本沒有邊緣光的樣子(同一棵樹的樹幹仍是未補丁材質)
+    const mat = leafy
+      ? toonMat(src.color ? src.color.clone() : new THREE.Color(0xffffff),
+        { map: src.map || null, rim: 0, soft: { k: 'leaf', span: 1 } })
+      : new THREE.MeshToonMaterial({
+        color: src.color ? src.color.clone() : new THREE.Color(0xffffff),
+        map: src.map || null,
+        gradientMap: toonGradient(),
+      });
     if (src.map) { mat.alphaTest = 0.5; mat.side = THREE.DoubleSide; }   // 葉片鏤空貼圖
-    if (/leaves|grass|flower|bush/i.test(`${src.name} ${o.name} ${src.map?.name || ''}`)) {
-      mat.color.multiply(new THREE.Color(SEASON_LEAF_TINT[season] ?? 0xffffff));
-    }
+    if (leafy) mat.color.multiply(new THREE.Color(SEASON_LEAF_TINT[season] ?? 0xffffff));
     parts.push({ geo, mat });
   });
   return parts;
@@ -809,16 +817,44 @@ function seasonColor(key, fixed, season) {
   return fixed ?? 0x777777;
 }
 
+// ---- 軟性零件的判定(2026-08-04;細勾線 + 隨風飄揚,規則與參數住 `toon.js SOFT_KINDS`)----
+// **由既有的 `part.key` 推導,不另開一張名單**:那一欄本來就是「這個零件是不是葉子/草」
+// 的唯一真相(`seasonColor` 同吃它)。另開一份「哪些零件會飄」遲早與季節換色那份分家,
+// 而分家的症狀是「這叢草會飄、但入秋不會變色」—— 沒有錯誤訊息,只是看起來不對。
+// `sf` 是**逐零件的顯式覆寫**,只給「不吃季節色但確實是軟的」那幾件(芒花穗/蘆葦/箭竹葉):
+// 它們有固定色 `c` 所以沒有 key,但它們正是使用者點名的「芒草」。
+const SOFT_BY_VEG_KEY = { foliage: 'leaf', gleaf: 'leaf', conifer: 'leaf', grass: 'grass' };
+const vegSoftKind = (part) => part.sf ?? SOFT_BY_VEG_KEY[part.key] ?? null;
+
+/**
+ * 一株植被的公稱高度(擺動權重的分母)。**推導不手寫**:改任一零件的 y/幾何,
+ * 擺幅自己跟著走 —— 手寫一欄 `h` 的話,加高樹冠之後梢端的權重會停在 1 以下(擺不動)。
+ * 取零件包圍盒的頂端(含 `sy` 縱向壓縮),與 `vegPartXform` 疊零件的算法同框。
+ */
+function vegSpan(def) {
+  let top = 0;
+  for (const p of def.parts) {
+    if (!p.g.boundingBox) p.g.computeBoundingBox();
+    top = Math.max(top, (p.y || 0) + p.g.boundingBox.max.y * (p.sy || 1));
+  }
+  return Math.max(0.5, top);
+}
+
 /** 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call) */
 function buildVegMeshes(type, items, season) {
   const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
+  const span = vegSpan(def);
   const meshes = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
   def.parts.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
-    const mat = toonMat(seasonColor(part.key, part.c, season));
+    // 軟性零件(葉/草)另帶擺動錨點:base = 這個零件的原點在整株上的高度、sy = 它自己的
+    // 縱向壓縮 ⇒ 樹幹頂與樹冠底在同一個高度上拿到同一份權重,接合不會被風吹開。
+    const sk = vegSoftKind(part);
+    const mat = toonMat(seasonColor(part.key, part.c, season),
+      sk ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } } : {});
     const m = new THREE.InstancedMesh(part.g, mat, items.length);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
@@ -861,6 +897,18 @@ function bmat(color, opts = {}) {
 }
 function box(w, h, d, color, x = 0, y = 0, z = 0) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bmat(color));
+  m.position.set(x, y + h / 2, z);
+  return m;
+}
+/**
+ * 旗面(軟性:細勾線 + 隨風飄揚;2026-08-04)。簽章與 `box()` 相同,差別只在材質旗標。
+ * 擺動權重沿**旗面自己的 −x → +x** 遞增(base = 半寬 ⇒ 左緣 0、右緣 1):場上兩處旗幟
+ * 都把旗桿放在旗面的 −x 側(校旗 pole x=−8 / 旗面中心 −7.2;堡旗 pole x=0 / 旗面中心 1.2),
+ * 所以桿邊不動、旗尾飄得最開。**新增旗幟 MUST 沿用這個朝向**,否則會看到旗面繞著旗尾擺。
+ */
+function flag(w, h, d, color, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+    bmat(color, { soft: { k: 'cloth', span: w, base: w / 2 } }));
   m.position.set(x, y + h / 2, z);
   return m;
 }
@@ -998,7 +1046,7 @@ const LANDMARKS = {
     clock.rotation.x = Math.PI / 2; clock.position.set(0, 7, 4.2); g.add(clock);
     const pole = new THREE.Mesh(cyl(0.12, 0.12, 12, 6), bmat(0x9aa2a8));
     pole.position.set(-8, 6, 8); g.add(pole);
-    g.add(box(1.4, 0.9, 0.06, 0xd93a2b, -7.2, 11, 8));          // 旗
+    g.add(flag(1.4, 0.9, 0.06, 0xd93a2b, -7.2, 11, 8));         // 旗(軟性:細線 + 飄揚)
     for (const s of [-1, 1]) g.add(box(1, 2.6, 1, 0xb0a898, s * 4, 0, 9));   // 校門柱
   },
   station: (g) => {
@@ -1128,8 +1176,8 @@ const LANDMARKS = {
     g.add(box(3.4, 4.5, 0.8, 0x4a3a2a, 0, 0, -7.4));            // 大門
     const pole = new THREE.Mesh(cyl(0.1, 0.1, 5, 5), bmat(0x9aa2a8));
     pole.position.set(0, kh + 3.5, 0); g.add(pole);
-    g.add(box(2.2, 1.2, 0.08, [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0],
-      1.2, kh + 4.4, 0));                                       // 主樓旗(徽色逐座抽)
+    g.add(flag(2.2, 1.2, 0.08, [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0],
+      1.2, kh + 4.4, 0));                                       // 主樓旗(徽色逐座抽;軟性)
   },
   lighthouse: (g, rnd) => {
     // 燈塔:白塔身 + 紅環帶 + 迴廊燈室 + 看守小屋;高度/環帶數逐座抽
