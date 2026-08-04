@@ -37,6 +37,12 @@ concurrency:
   group: lane-scenarios
   cancel-in-progress: true
 
+# 重烤結果要**推回分支**(2026-08-04):沙箱沒有 artifact 下載權限,舊制只能從 job log
+# 把 `venueLanes.js` 的 diff 一行一行抄回來 —— 而那個檔一條兵線就是一行幾百個座標,
+# 抄回來的風險遠高於重跑一次。改成 runner 自己 commit,烘焙產物與請求檔同一條路徑。
+permissions:
+  contents: write
+
 jobs:
   scan:
     runs-on: ubuntu-latest
@@ -44,6 +50,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
+          # 要推回去 ⇒ 保留認證(預設就是 true,寫出來是為了「這件事是刻意的」)
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -102,13 +110,50 @@ jobs:
         continue-on-error: true
         run: node tools/audit_traverse.mjs ${SCAN_ONLY:+--only=$SCAN_ONLY} --json=traverse.json
 
-      # 重烤結果整檔印進 log:沙箱沒有 artifact 下載權限時,從 log 取回 venueLanes.js 用
-      - name: 兵線重烤結果(diff + 完整新條目)
+      # 重烤結果**推回分支**:烘焙產物是原始碼(`venueLanes.js` 是 checked-in 的資料檔),
+      # 從 log 抄回來既慢又容易漏(一條兵線 = 一行幾百個座標)。只在真的有變更時 commit。
+      - name: 兵線重烤結果推回分支
         if: ${{ env.SCAN_BAKE != '' }}
         run: |
           git --no-pager diff --stat
-          echo '===== venueLanes.js 完整 diff ====='
-          git --no-pager diff public/js/venueLanes.js
+          if git diff --quiet -- public/js/venueLanes.js; then
+            echo '(venueLanes.js 無變更,不推)'
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add public/js/venueLanes.js
+          git commit -m "兵線重烤:$SCAN_BAKE(workflow run ${GITHUB_RUN_ID})"
+          # 這支 workflow 由 push 觸發,期間分支可能已被推新 commit ⇒ rebase 後再推
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      # ---- 重點摘要(**MUST 排在最後**)----
+      # 沙箱只讀得到 job log 的**尾端**(取 log 是分頁的,而泛洪那一步一次吐上百行)⇒
+      # 要看的數字一律在這裡再印一次精簡版,tail 幾十行就拿得到。
+      # 這不是重複輸出:上面那幾步印的是逐項明細(要看為什麼),這裡印的是決策要用的欄位。
+      - name: 重點摘要(場景標記 + 地貌實測)
+        if: always()
+        run: |
+          echo '===== 場景標記(scen.json)====='
+          test -f scen.json && node -e "
+            const d=require('./scen.json');
+            for(const r of d.results){
+              const h=Object.entries(r.hits||{}).map(([k,v])=>k+(v.len?':'+v.len+'m':'')).join(' ');
+              const c=[r.flatTunnel&&'落空地下道 '+r.flatTunnel.name+' '+r.flatTunnel.len+'m',
+                       r.underCand&&'②候選 '+r.underCand.name+' '+r.underCand.len+'m@'+r.underCand.d+'m',
+                       r.landBridgeCand&&'③候選 '+r.landBridgeCand.name+' '+r.landBridgeCand.len+'m@'+r.landBridgeCand.d+'m',
+                       r.waterBridgeCand&&'⑨候選 '+r.waterBridgeCand.name+' '+r.waterBridgeCand.len+'m@'+r.waterBridgeCand.d+'m',
+                      ].filter(Boolean).join(' | ');
+              console.log((r.id+' ').padEnd(14,'.'), 'relief='+r.peakSide, h||'(無場景)', c?'  '+c:'');
+            }" || echo '(無 scen.json)'
+          echo '===== 地貌宣告 vs 圖資實測(biome.json;只列不符的)====='
+          test -f biome.json && node -e "
+            const d=require('./biome.json');
+            const bad=d.rows.filter(r=>r.notes.length);
+            for(const r of bad) console.log((r.id+' ').padEnd(14,'.'), r.type,
+              '建蔽'+(r.builtF*100).toFixed(1)+'%', r.notes.join(';'));
+            console.log('小計:實測 '+d.rows.length+' 個場地,不符 '+bad.length+' 個');" || echo '(無 biome.json)'
 
       - uses: actions/upload-artifact@v4
         with:
