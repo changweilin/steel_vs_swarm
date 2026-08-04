@@ -6578,20 +6578,20 @@ export class BattleClient {
     const mesh = this._takeProjectile(def, id === 'heavy');
     this.scene.add(mesh);
     mesh.position.copy(muzzle);
-    // 射後不理(trajClass 'fnf')的追蹤對象:伺服器複驗過的 `_lockId` 優先,拿不到就用**擊發
-    // 當下**的準星解(`_aimTarget`,與 `_tickLock` 同一份實作)。只認 `_lockId` 有兩個坑,兩個
-    // 都直接造成使用者回報的「射後不理常常光暈亮著卻沒命中」:
-    //   ① 鎖定要一趟伺服器往返(`_tickLock` 4Hz 送出 → sim.heroLock 複驗 → lock 事件回來)才成立,
-    //      甩準星立刻開火的那一發永遠是無導引的。
-    //   ② `_updateRangeGlows` **刻意排除**鎖定目標(`ent.id !== this._lockId`,鎖定另有 lockGlow)
-    //      ⇒ 每一個亮著射程光暈的目標,依定義都不是 `_lockId` = 保證不會被追蹤。
+    // 射後不理(trajClass 'fnf')的追蹤對象 = **擊發當下的準星解**(`_aimTarget`,與 `_tickLock`
+    // 同一份實作)。三條紀律:
+    //   ① 目標只認準星,**MUST NOT 拿 `this._lockId` 當來源**(2026-08-04 使用者回報「準星沒有
+    //      照到目標時,彈體會往先前鎖定的敵人飛去」):`_lockId` 是伺服器複驗過的**上一個**鎖定,
+    //      準星移開之後要等 `_tickLock` 下一次 4Hz 心跳才清得掉 ⇒ 那段空窗裡開火,彈體會繞過
+    //      準星飛向一個玩家已經不再瞄的人。`_aimTarget` 本身在 `_coneAcquire` 裡已經拿 `_lockId`
+    //      當**遲滯錨**(準星仍在同一個錐內才續留)—— 鎖定該有的黏著在那裡,不在這裡。
+    //   ② 準星什麼都沒解到 ⇒ **不追蹤**(直飛),MUST NOT 退回任何舊目標。
+    //   ③ 仍 MUST 用擊發當下的準星解而非等鎖定成立:鎖定要一趟伺服器往返(`_tickLock` 4Hz 送出
+    //      → sim.heroLock 複驗 → lock 事件回來),甩準星立刻開火的那一發等不到。
     // 無導引的飛彈只吃重力直飛:離架散布(_armSpread)+ 滿射程 2 秒以上的墜距,實測全部落在
     // 爆風核心帶之外(tools/audit_weapon_gate.mjs Ⅵ)。導引對象是**表現層決策**(彈道本就客戶端
     // 權威),傷害仍由伺服器驗落點 —— 不涉 A1。
-    const locked = this._lockId != null && this.ents.has(this._lockId) ? this._lockId : null;
-    const homing = def.type === 'missile'
-      ? (locked ?? this._aimTarget(rng)?.id ?? null)
-      : null;
+    const homing = def.type === 'missile' ? (this._aimTarget(rng)?.id ?? null) : null;
     const v0 = this._shotV0(def, !!this._aaAim);   // 對空彈射(_updateAaMode 於本幀擊發前定案,與瞄準虛線同一份)
     // 最短距離(軌跡修正期):導引/射後不理武器離架後 arm.m 內導引尚未接手,且帶一次性初期散布
     // ⇒ 貼臉開導引彈會偏(命中率較低),拉開距離後導引/追蹤才把偏差修回來。

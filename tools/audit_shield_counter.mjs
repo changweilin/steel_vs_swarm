@@ -100,9 +100,10 @@ console.log('■ Ⅰ 建築加乘移除(加乘全刪、懲罰保留;夾制是推
   }
   t('heroWeapon/heroAbility 解析後仍無加乘(夾在源頭即全鏈生效)', solved.length === 0, solved.join(' '));
 
-  // 夾制 MUST 是推導的一段迴圈,不是逐武器手改(1 宣告 + 夾制段的比較與指派各 1)
+  // 夾制 MUST 是推導的一段迴圈,不是逐武器手改(1 宣告 + 夾制段的比較與指派各 1
+  // + 對建築 DPS 收斂那一段拿它當上夾 1 = 4 處;多出來的任何一處都要能說出它是哪一段推導)
   t('夾制在 data.js 只有唯一一段推導迴圈',
-    count(dataSrc, 'BUILDING_VS_CAP') === 3 && /w\.vs\.building > BUILDING_VS_CAP\) w\.vs\.building = BUILDING_VS_CAP;/.test(dataSrc),
+    count(dataSrc, 'BUILDING_VS_CAP') === 4 && /w\.vs\.building > BUILDING_VS_CAP\) w\.vs\.building = BUILDING_VS_CAP;/.test(dataSrc),
     `${count(dataSrc, 'BUILDING_VS_CAP')} 處`);
 
   // launcher 對建築 ×1.4 整組退場(留一處消費端 = 加乘沒真的移除)
@@ -327,6 +328,60 @@ console.log('\n■ Ⅴ 配置紀律(2026-08-02 使用者定案的三條;全部�
   t('反護盾/穿盾的折減重於反裝甲(廣泛性加成 ⇒ 基礎傷害更低)',
     broadF.length > 0 && narrowF.length > 0 && Math.max(...broadF) < Math.min(...narrowF),
     `廣泛 ${broadF.map((v) => v.toFixed(3)).join(',')} / 反裝甲 ${narrowF.map((v) => v.toFixed(3)).join(',')}`);
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n■ Ⅵ 對建築 DPS 收斂(2026-08-04 使用者定案「重武器之間與輕武器之間對建築的 DPS 不要落差太大」)');
+// ---------------------------------------------------------------------------
+// 這一段最容易「壞掉但不會報錯」的兩個形狀:
+//  ① 只做壓縮不回填水位 ⇒ 全體拆塔一起變慢(bal ④ 會紅,但要跑完整支才知道);
+//  ② `vs.building` 被改成逐武器手寫 ⇒ 32 角一動就漂移(A34 ① 的老病)。
+// 故此處驗:離散度真的收斂了(與「中性 vs.building」的離散度對照)、水位鎖在滿級拆塔 DPS 上、
+// 且寫入點只有推導迴圈那一處。
+{
+  const { BUILD_DPS, buildDps, ECON } = DATA;
+  const SPREAD_RAIL = { light: 2.0, heavy: 3.2 };   // 守門欄杆(防退化;現況 light 1.71× / heavy 2.92×)
+  t('BUILD_DPS.K ∈ (0, 1](0 = 逐位元同舊制、1 = 完全拉平)', BUILD_DPS.K > 0 && BUILD_DPS.K <= 1);
+  t('水位回填有迭代上限(夾在 CAP 的那些補不滿 ⇒ 迴圈 MUST 有界)', BUILD_DPS.LEVEL_ITERS >= 1);
+  t('buildDps 只有一份實作(收斂迴圈與本稽核同吃)', count(dataSrc, 'export function buildDps') === 1);
+  t('buildDps 與 balance.mjs 的 slotDps 同式(cycle = mag/rate + reload,且走 shieldSplit)',
+    /const cycle = w\.mag \/ \(w\.rate \|\| RATE_DEF\) \+ w\.reload;/.test(dataSrc)
+    && /const cycle = w\.mag \/ \(w\.rate \|\| 3\) \+ w\.reload;/.test(balSrc)
+    && /shieldSplit\(w, w\.dmg, 0\)\.toHp \* vsMult\(w, 'tower'\)/.test(dataSrc));
+  t('收斂只有一個 vs.building 寫入點(set() 單一縫;MUST NOT 逐武器手改)',
+    count(dataSrc, /\(w\.vs \|\|= \{\}\)\.building = q\(Math\.min\(BUILDING_VS_CAP, v\)\)/g) === 1);
+
+  for (const slot of ['light', 'heavy']) {
+    const chs = Object.keys(CHARACTERS).filter((ch) => CHARACTERS[ch][slot]);
+    const now = chs.map((ch) => buildDps(ch, slot));
+    // 對照組:vs.building 全部中性(=1)—— 也就是「完全不用這一軸調整」的離散度。
+    // 收斂的定義就是「用了這一軸之後,離散度 MUST 比不用時更小」;只釘一個絕對倍率的話,
+    // 有可能是武器階梯本來就整齊,量不到這一段有沒有真的在做事。
+    const flat = chs.map((ch) => buildDps(ch, slot) / (CHARACTERS[ch][slot].vs?.building ?? 1));
+    const sp = (v) => Math.max(...v) / Math.min(...v);
+    t(`${slot}:對建築 DPS 離散度 ${sp(now).toFixed(2)}× ≤ 守門線 ${SPREAD_RAIL[slot]}×`,
+      sp(now) <= SPREAD_RAIL[slot], `實得 ${sp(now).toFixed(3)}×`);
+    t(`${slot}:收斂後離散度 ${sp(now).toFixed(2)}× < 中性對照 ${sp(flat).toFixed(2)}×(這一軸真的在收斂)`,
+      sp(now) < sp(flat));
+    t(`${slot}:每一把的 vs.building 都在 (0, ${BUILDING_VS_CAP}](上夾不得為了收斂而放寬)`,
+      chs.every((ch) => {
+        const v = CHARACTERS[ch][slot].vs?.building ?? 1;
+        return v > 0 && v <= BUILDING_VS_CAP + 1e-9;
+      }));
+  }
+  // 水位:滿級逐角色(輕 + 重)拆塔 DPS —— bal ④ 量的就是這個。收斂 MUST 只改離散度不改水位,
+  // 故它 MUST 落在中性對照的水位附近(±2%);差太多就是回填那一段沒接上或被夾死。
+  const TOPL = 1 + ECON.UPGRADES.lw.max, TOPH = 1 + ECON.UPGRADES.hw.max;
+  const chs = Object.keys(CHARACTERS);
+  const push = (ch) => buildDps(ch, 'light', TOPL) + buildDps(ch, 'heavy', TOPH);
+  const pushFlat = (ch) => buildDps(ch, 'light', TOPL) / (CHARACTERS[ch].light?.vs?.building ?? 1)
+    + buildDps(ch, 'heavy', TOPH) / (CHARACTERS[ch].heavy?.vs?.building ?? 1);
+  const mean = (f) => chs.reduce((s, ch) => s + f(ch), 0) / chs.length;
+  const spread = (f) => Math.max(...chs.map(f)) / Math.min(...chs.map(f));
+  t(`滿級拆塔 DPS 離散度 ${spread(push).toFixed(2)}× < 中性對照 ${spread(pushFlat).toFixed(2)}×`,
+    spread(push) < spread(pushFlat));
+  t(`滿級拆塔 DPS 水位 ${mean(push).toFixed(1)} 落在中性對照 ${mean(pushFlat).toFixed(1)} 的合理帶內`,
+    mean(push) > 0 && mean(push) < mean(pushFlat));
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 建築加乘移除 / 護盾分軌剋制稽核:${pass}/${pass + fail} 通過`);

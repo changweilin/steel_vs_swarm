@@ -19,7 +19,7 @@ import {
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
   BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
-  trajClass, shotFlightS,
+  trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
 } from '../public/js/data.js';
 
 /**
@@ -462,9 +462,12 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const shots = wl.mag + extra;   // 填彈完成前打完(只吃得進一個彈夾)
   for (let i = 0; i < shots; i++) { sim.t += step; sim.heroHit('p_r', tw.id); }
   const magDmg = hp0t - tw.hp;
-  const expMag = wl.mag * wl.dmg * 0.6 * armorMul(UNITS.tower.armor, wl.pen);
+  // 建築倍率 MUST 由解析後的武器推導(2026-08-04「對建築 DPS 收斂」把 vs.building 改成推導值 ——
+  // 手寫 0.6 會在收斂係數一動就靜默失效,而這一段真正要驗的是「只吃得進一個彈夾」)。
+  const vsB = vsMult(wl, 'tower');
+  const expMag = wl.mag * wl.dmg * vsB * armorMul(UNITS.tower.armor, wl.pen);
   assert(Math.abs(magDmg - expMag) < 1,
-    `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 0.6 × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
+    `${shots} 連發只吃進一個彈夾 ${wl.mag} 發 × 建築 ${vsB.toFixed(3)} × 護甲減免(傷害 ${magDmg.toFixed(1)},其餘填彈中被拒)`);
 
   log('— data:攻擊範圍收斂(一發打不到兩座塔;2026-08-02 使用者定案)—');
   {
@@ -489,8 +492,11 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       else if (twoTowers(w.r)) bad.push(`${ch}.${slot}`);
     }
     assert(bad.length === 0, `非「範圍見長」的爆炸型武器滿級(Lv${MAXT})一發打不到兩座塔(違規 ${bad.join('、') || '無'})`);
-    assert(areaMiss.length === 0 && Object.keys(AREA_WEAPONS).length > 0,
-      `範圍見長名冊 ${Object.keys(AREA_WEAPONS).length} 把仍打得到兩座塔(名冊不是裝飾)`);
+    // 2026-08-04 使用者定案「榴彈類不可一次命中兩座砲塔」⇒ 名冊裡原本那三把榴彈類全數收回,
+    // 現況為空。名冊仍是唯一的具名豁免縫:一旦有人加名,那把武器 MUST 真的打得到兩座
+    // (否則名冊就只是註解),故兩個方向都驗。
+    assert(areaMiss.length === 0,
+      `範圍見長名冊 ${Object.keys(AREA_WEAPONS).length} 把,每一把都仍打得到兩座塔(名冊不是裝飾)`);
     // 補償是重分配不是通膨:整批補償係數的幾何平均 = 1
     const trimmed = [];
     for (const ch of Object.keys(CHARACTERS)) for (const slot of ['light', 'heavy'])
@@ -510,6 +516,41 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       const w = CHARACTERS[c][s];
       return !w || w._aoeRaw || aoeTrimF(w) === 1;
     })), '沒被夾過的武器範圍補償恆 ×1(fan/line/名冊內的角色逐位元不受影響)');
+    // 爆風家族帶(2026-08-04 使用者定案):榴彈類短射程 + 吃滿上限;導引類長射程 + 恆較小
+    const fam = { lob: [], guided: [] };
+    for (const ch of Object.keys(CHARACTERS)) {
+      const d1 = heroWeapon(ch, 'heavy', 1, true);
+      if (aoeClass(d1) !== 'blast') continue;
+      const f = blastFamily(trajClass(d1));
+      for (let lv = 1; lv <= MAXT; lv++) fam[f].push(heroWeapon(ch, 'heavy', lv, true).r);
+    }
+    assert(fam.lob.length > 0 && fam.guided.length > 0
+      && Math.max(...fam.guided) < Math.max(...fam.lob)
+      && Math.min(...fam.guided) < Math.min(...fam.lob),
+      `導引類爆風 ${Math.min(...fam.guided).toFixed(2)}~${Math.max(...fam.guided).toFixed(2)}m`
+      + ` 恆小於榴彈類 ${Math.min(...fam.lob).toFixed(2)}~${Math.max(...fam.lob).toFixed(2)}m(逐階,含 Lv${MAXT} 外推)`);
+    const heavyR = Object.keys(CHARACTERS).map((ch) => heroRange(ch, 'heavy'));
+    const minHeavyR = Math.min(...heavyR);
+    const lobChs = Object.keys(CHARACTERS).filter((ch) => trajClass(heroWeapon(ch, 'heavy', 1, true)) === 'lob');
+    assert(lobChs.length > 0 && lobChs.every((ch) => Math.abs(heroRange(ch, 'heavy') - minHeavyR) < 1e-9),
+      `榴彈類 ${lobChs.length} 把射程 = 全體重武器最短的那一帶 ${minHeavyR.toFixed(1)}m`);
+  }
+
+  log('— data:對建築 DPS 收斂(2026-08-04 使用者定案「重武器/輕武器之間落差不要太大」)—');
+  {
+    for (const [slot, rail] of [['light', 2.0], ['heavy', 3.2]]) {
+      const chs = Object.keys(CHARACTERS).filter((ch) => CHARACTERS[ch][slot]);
+      const now = chs.map((ch) => buildDps(ch, slot));
+      // 對照組 = 這一軸不作用(vs.building 全部中性)時的離散度 —— 收斂 MUST 比它更緊
+      const flat = chs.map((ch) => buildDps(ch, slot) / (CHARACTERS[ch][slot].vs?.building ?? 1));
+      const sp = (v) => Math.max(...v) / Math.min(...v);
+      assert(sp(now) <= rail && sp(now) < sp(flat),
+        `${slot} 對建築 DPS 離散度 ${sp(now).toFixed(2)}× ≤ ${rail}×,且緊於中性對照 ${sp(flat).toFixed(2)}×`);
+      assert(chs.every((ch) => {
+        const v = CHARACTERS[ch][slot].vs?.building ?? 1;
+        return v > 0 && v <= BUILDING_VS_CAP + 1e-9;
+      }), `${slot} 每一把的 vs.building ∈ (0, ${BUILDING_VS_CAP}](上夾不得為了收斂而放寬)`);
+    }
   }
 
   log('— sim/data:建築加乘移除 + 護盾分軌剋制(2026-08-02 使用者定案)—');
