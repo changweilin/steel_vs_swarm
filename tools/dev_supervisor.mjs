@@ -120,7 +120,9 @@ export async function stop(key) {
   return statusOf(t);
 }
 
-/** 父行程收掉時把開過的子行程一起帶走(否則 8621 會留下一支沒人管的 server) */
+/** 父行程收掉時把開過的子行程一起帶走(否則 8621 會留下一支沒人管的 server)。
+ *  只涵蓋得了「正常收掉」那幾條路:`taskkill /F` 是 SIGKILL,handler 根本不會跑,
+ *  那種情況下子行程會留著 —— 下次按「▶ 啟動」會看到它還在聽,鈕是灰的並說明「不是從這裡啟動的」。 */
 for (const sig of ['exit', 'SIGINT', 'SIGTERM']) {
   process.once(sig, () => {
     for (const { child } of running.values()) { try { child.kill(); } catch { /* 已經死了 */ } }

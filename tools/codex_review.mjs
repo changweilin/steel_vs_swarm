@@ -12,10 +12,10 @@
 //   ③ **配對規則是推導的** —— 檔名 `<角色 id>[_<型態>]_<姿態>`,而「這台該有哪幾個型態」
 //      由 `visual.flight`/`visual.ground` 推導(與 `codex.js protoLayers()` 同一條規則)。
 //      缺圖與孤兒檔一律**列出來**,MUST NOT 靜默略過 —— 覆核台把漏掉的東西藏起來就沒有意義了。
-//      圖有**兩個來源**(見 `SOURCES`):已入庫的 `public/assets/…/mechs/*.png`,以及 AI 管線
-//      剛畫、**尚未驗收**的 `tools/ai3d/masters/*.jpg`。後者收進來,這座台子才接得上
-//      「生成 → 驗收 → 入庫」那條線;但兩者的計數 MUST 分開,合併就等於把「還沒有正式圖」藏起來
-//      (2026-08-04 收了 18 張 AI 設定稿之後,「一張都沒有的角色」從 11 台掉到 2 台)。
+//      圖有**兩個來源**(見 `SOURCES`):已入庫的 `public/assets/…/mechs/`,以及 AI 管線剛畫、
+//      **尚未驗收**的 `tools/ai3d/masters/`。後者收進來,這座台子才接得上「生成 → 驗收 → 入庫」
+//      那條線;但兩者的計數 MUST 分開,合併就等於把「還沒有正式圖」藏起來
+//      (2026-08-04 那 18 張走完整條線之後,「一張都沒有的角色」從 11 台掉到 1 台)。
 //
 // 跑法:
 //   node tools/codex_review.mjs            # 起 dev server(預設 :8621),瀏覽器開印出來的網址
@@ -36,17 +36,22 @@ const STATE_FILE = join(ROOT, 'tools', 'codex_review', 'state.json');
 
 /** 圖的**兩個來源**。配對規則兩邊同一條:檔名(去副檔名)= slot(`<角色 id>[_<型態>]_<姿態>`)。
  *
- *  ① `art` 已入庫 —— `public/assets/cyberpunk_art/mechs/*.png`,驗收通過才會出現在這裡(進版控)。
- *  ② `ai`  AI 設定稿 —— `tools/ai3d/masters/*.jpg`,`tools/ai3d/gen2d.mjs --masters` 剛畫出來的,
+ *  ① `art` 已入庫 —— `public/assets/cyberpunk_art/mechs/`,驗收通過才會出現在這裡(進版控)。
+ *  ② `ai`  AI 設定稿 —— `tools/ai3d/masters/`,`tools/ai3d/gen2d.mjs --masters` 剛畫出來的,
  *     **尚未驗收**(那一層刻意不進版控,見 tools/ai3d/.gitignore)。
  *
  *  收 ② 正是這座覆核台缺的那一段:生成 → masters/(未驗收)→ **在這裡驗收** → 搬進 public/assets(入庫)。
  *  兩件事 MUST 分得開:AI 稿 MUST NOT 併進「已入庫」的計數裡(併了就是把「這一格還沒有正式圖」
- *  藏起來,而檔頭 ③「缺圖與孤兒一律列出來」正是為了不藏)。 */
+ *  藏起來,而檔頭 ③「缺圖與孤兒一律列出來」正是為了不藏)。
+ *  masters/ 現在是空的(那 18 張已經走完整條線)—— **不是死碼**:下一批 `--masters` 一畫出來
+ *  就又會出現在那裡等驗收,而它們一入庫,② 就會再度空掉。 */
+// `ext` 是**副檔名清單**:入庫層兩種都有 —— 早期那 61 張是 .png,agy 產的一律是 .jpg
+// (`generate_image` 只出 JPEG;轉成 .png 只是把壓縮雜訊包進無損容器,見 tools/ai3d/README「已知限制 1」)。
+// 只認一種的話,入庫的那批會整批變成孤兒。
 export const SOURCES = [
-  { key: 'art', label: '入庫', ext: '.png', url: 'public/assets/cyberpunk_art/mechs',
+  { key: 'art', label: '入庫', ext: ['.png', '.jpg'], url: 'public/assets/cyberpunk_art/mechs',
     dir: join(ROOT, 'public', 'assets', 'cyberpunk_art', 'mechs') },
-  { key: 'ai', label: 'AI 稿', ext: '.jpg', url: 'tools/ai3d/masters',
+  { key: 'ai', label: 'AI 稿', ext: ['.jpg'], url: 'tools/ai3d/masters',
     dir: join(ROOT, 'tools', 'ai3d', 'masters') },
 ];
 const SRC_BY_KEY = Object.fromEntries(SOURCES.map((s) => [s.key, s]));
@@ -67,7 +72,7 @@ export function wantShots(id) {
   const out = [];
   for (const form of formsOf(id)) for (const p of POSES) {
     const slot = [id, form, p.key].filter(Boolean).join('_');
-    out.push({ slot, file: `${slot}${SOURCES[0].ext}`, form, pose: p.key, poseLabel: p.label });
+    out.push({ slot, file: `${slot}${SOURCES[0].ext[0]}`, form, pose: p.key, poseLabel: p.label });
   }
   return out;
 }
@@ -82,7 +87,11 @@ export async function manifest(assign = {}) {
   const pool = new Map();
   for (const s of SOURCES) {
     if (!existsSync(s.dir)) continue;   // AI 管線沒跑過就沒有那個目錄(原則 6:少一個來源不是錯)
-    for (const f of await readdir(s.dir)) if (f.toLowerCase().endsWith(s.ext)) pool.set(f, s.key);
+    for (const f of await readdir(s.dir)) {
+      // 同一個檔名同時在兩個來源裡(剛入庫、masters/ 還留著一份)⇒ **先宣告的贏**,
+      // 覆寫會讓已經驗收入庫的那張被判成「AI 稿」,計數與虛線框一起說謊
+      if (s.ext.some((e) => f.toLowerCase().endsWith(e)) && !pool.has(f)) pool.set(f, s.key);
+    }
   }
   const bySlot = new Map();   // slot → 指派過來的檔名
   for (const [file, slot] of Object.entries(assign)) if (pool.has(file)) bySlot.set(slot, file);
@@ -92,7 +101,7 @@ export async function manifest(assign = {}) {
     const shots = wantShots(id).map((s) => {
       // 本名(逐來源 `<slot><副檔名>`)優先於指派;來源之間的優先序 = SOURCES 的宣告序
       // ⇒ 入庫圖永遠蓋過 AI 稿(同一格兩張時,畫面上要看到的是驗收過的那張)
-      const natural = SOURCES.map((x) => `${s.slot}${x.ext}`);
+      const natural = SOURCES.flatMap((x) => x.ext.map((e) => `${s.slot}${e}`));
       const file = natural.find((f) => pool.has(f)) ?? bySlot.get(s.slot);
       if (!file) return { ...s, has: false, src: null, assigned: false, url: null };
       const src = pool.get(file);
