@@ -401,6 +401,19 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   ok((blockSrc.match(/const settlement = /g) || []).length === 1, '聚落場 `settlement` 恰一份實作');
   ok(/const nearUrban = settlement/.test(blockSrc), '街廓配置的市區閘 = 聚落場(不另判一次)');
   ok(/settlement\(b\.x, b\.z\)/.test(blockSrc), '補間種子也過聚落場(舊制 densifyUrban 一道地貌閘都沒有)');
+  // 局部標準化(2026-08-04 使用者定案「建立局部標準化判斷」):門檻 MUST 是**比例**,
+  // MUST NOT 是手寫的棵數 —— 同一個數字在東京是空地、在峽谷是市鎮。
+  ok(/URBAN_DENS_Q \* urbanPeak/.test(blockSrc),
+    '閘門 = DENS_Q × 這張圖自己的密度尖峰(比例,不是手寫棵數)');
+  ok(/densSamples\[.*URBAN_DENS_P/s.test(blockSrc) && /\.sort\(/.test(blockSrc),
+    '尖峰取**分位數**(不是最大值:單一密集格會綁架基準;也不是平均:空地會壓平)');
+  ok(/urbanSeeds\.map\(\(b\) => localDens\(b\.x, b\.z\)\)/.test(blockSrc),
+    '取樣點 = 每一棟既有建物自己的位置(全圖每一格會被空地的 0 把分位數拉到 0)');
+  ok(/const URBAN_MIN_PEAK = INFILL\.cols\[0\] \* INFILL\.rows\[0\]/.test(blockSrc),
+    '退化保險 URBAN_MIN_PEAK **推導不手寫**(= densifyUrban 畫得出來的最小一塊街廓)');
+  ok(!/URBAN_SEED_MIN/.test(bcode), '舊制的手寫棵數門檻 URBAN_SEED_MIN 已退場');
+  ok(/Math\.max\(1, URBAN_DENS_Q \* urbanPeak\)/.test(blockSrc),
+    '下限 1 ⇒ DENS_Q = 0 退化成舊制「附近有一棟就算」(反向驗證的錨)');
   // 種子 MUST 在街廓配置之前定案:排在後面 = planBlocks 配出來的臨街樓回頭當補間種子
   {
     // MUST 兩件事一起驗:①真的有這一行(找不到時 indexOf 回 −1,單比大小會**假綠**)
@@ -457,11 +470,11 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
   const i6 = bio.indexOf('  // ---- 聚落場(單一縫)');
   const i7 = bio.indexOf('  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區');
   const blockSrc = bio.slice(i6, i7);
-  // 種子 = 一小撮**聚落**(四棟同在一個 128m 格內 ⇒ 放行範圍與舊制的單棟種子逐格相同,
-  // 這一段的其餘斷言因此可以逐項沿用)。單獨一棟是「孤立設施」,由下面的反面對照組驗它
-  // 一棟都不配 —— 兩組的差別只有「棵數」,正是聚落場量的那個量。
-  const cluster = (n) => Array.from({ length: n }, (_, i) => ({ x: 10 + i * 30, z: 10, w: 20, d: 20 }));
-  const generic = cluster(4);
+  // 種子 = 一小撮**聚落**。棵數要跨過 `URBAN_MIN_PEAK`(= INFILL.cols[0] × rows[0] = 9,
+  // 「densifyUrban 自己畫得出來的最小一塊街廓」)才算得上街廓;下面的反面對照組驗
+  // 1~8 棵一棟都不配 —— 兩組的差別只有密度,正是聚落場量的那個量。
+  const cluster = (n) => Array.from({ length: n }, (_, i) => ({ x: 10 + (i % 4) * 30, z: 10 + Math.floor(i / 4) * 30, w: 20, d: 20 }));
+  const generic = cluster(12);
   const SEEDS = generic.length;
   const landmarks = [];
   const items = {};
@@ -478,7 +491,8 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     blocked: new Set(),
     occ: { free: () => true, add: () => {}, room: () => 999 },
     group: { add: (g) => added.push(g) },
-    INFILL: { gap: 2, maxSeeds: 160 }, OVER: { bldH: 1, bldCap: 170 },
+    // cols/rows:聚落場的退化保險 `URBAN_MIN_PEAK` 由它們推導(最小一塊補間街廓)
+    INFILL: { gap: 2, maxSeeds: 160, cols: [3, 6], rows: [3, 6] }, OVER: { bldH: 1, bldCap: 170 },
     FACADES: { commercial: [0, 1, 2], residential: [0, 1] },
     MAX_BUILDINGS: 240, MAX_INFILL: 1200, VEG_SCALE: { broadleaf: 1 },
     areaFree: () => true, blockArea: () => {}, terrainEnvCode: () => 0,
@@ -517,9 +531,10 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
       && Number.isFinite(t.s) && Number.isFinite(t.dj)), '園樹實例欄位齊全(x/y/z/s/ry/tx/tz/dj)');
     // 市區閘:聚落在 5km 外(圖資建物存在,但這條街周邊沒有)⇒ 一棟都不配。
     // 這正是「穿過山區的一條 primary 兩旁長出整排街屋」那個病灶的直測。
-    const run = (g0, lm = []) => {
+    const run = (g0, lm = [], segs = null) => {
       const b2 = [], it2 = {}, ad2 = [];
-      const e2 = { ...env, generic: g0, landmarks: lm, items: it2, blockers: b2, group: { add: (g) => ad2.push(g) } };
+      const e2 = { ...env, generic: g0, landmarks: lm, items: it2, blockers: b2,
+        ...(segs ? { frontSegs: segs } : {}), group: { add: (g) => ad2.push(g) } };
       const [, sd] = new Function(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => e2[k]));
       return { added: g0.length - (Array.isArray(g0) ? 0 : 0), civics: ad2.length, seeds: sd };
     };
@@ -530,26 +545,47 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     // ---- 孤立設施(2026-08-04 使用者回報「太魯閣、合歡山不在市區還這麼多建築」)----
     // 峽谷/草原上真實圖資往往只有一兩棟(遊客中心、工務段、山廟)。舊制的市區閘只問
     // 「±1 格內有沒有建物」⇒ 那一棟就足以讓整條省道兩旁長出街屋,而那批街屋又回頭當
-    // 補間種子。閘門改數棵數之後,這一組 MUST 是**零產出**;而只要再多幾棟(真的是聚落)
-    // 就照配 —— 兩組的差別只有棵數,證明量到的是「聚落」而不是「附近有房子」。
-    for (const n of [1, 2, 3]) {
+    // 補間種子。閘門改成局部標準化的密度之後,這一組 MUST 是**零產出**;跨過最小街廓
+    // (9 棟)才照配 —— 兩組的差別只有密度,證明量到的是「街廓」而不是「附近有房子」。
+    for (const n of [1, 3, 8]) {
       const gN = cluster(n);
       const rN = run(gN);
       ok(gN.length === n && rN.civics === 0 && rN.seeds.length === 0,
-        `**孤立設施**:路旁只有 ${n} 棟圖資建物 ⇒ 一棟都不配、補間種子也是 0`);
+        `**孤立設施**:路旁只有 ${n} 棟圖資建物(< 最小街廓 9 棟)⇒ 一棟都不配、補間種子也是 0`);
     }
     {
-      const gN = cluster(4);
+      const gN = cluster(9);
       const rN = run(gN);
-      ok(gN.length > 4 && rN.seeds.length === 4,
-        `門檻上緣:同一處有 4 棟(= 聚落)⇒ 照配(+${gN.length - 4} 棟),補間種子 4 棵`);
+      ok(gN.length > 9 && rN.seeds.length === 9,
+        `門檻上緣:密到一塊最小街廓(9 棟)⇒ 照配(+${gN.length - 9} 棟),補間種子 9 棵`);
     }
     // 地標本身就是聚落的證據(車站/廟宇/體育場…)⇒ 與建物同權計數
     {
-      const gN = cluster(1);
-      const rN = run(gN, [{ x: 40, z: 10 }, { x: 70, z: 10 }, { x: 100, z: 10 }]);
-      ok(gN.length > 1 && rN.seeds.length === 1,
-        `地標與建物同權計數:1 棟 + 3 座地標 = 聚落 ⇒ 配得出來(+${gN.length - 1} 棟)`);
+      const gN = cluster(5);
+      const lm = Array.from({ length: 5 }, (_, i) => ({ x: 10 + (i % 4) * 30, z: 70 }));
+      const rN = run(gN, lm);
+      ok(gN.length > 5 && rN.seeds.length === 5,
+        `地標與建物同權計數:5 棟 + 5 座地標 = 一塊街廓 ⇒ 配得出來(+${gN.length - 5} 棟)`);
+    }
+    // ---- 局部標準化:同一張圖裡,密的地方配、疏的地方不配 ----
+    // 這一組是「局部」那兩個字的直測:密集核心 + 遠處兩棟散戶,**同一次**規劃裡
+    // 核心長街廓、散戶那一帶一棟都不長。手寫棵數門檻做得到這件事,但做不到跨圖可比
+    // (同一個數字在東京是空地、在峽谷是市鎮);比例式兩件事都做得到。
+    {
+      const core = cluster(16);
+      const outliers = [{ x: 700, z: 10, w: 20, d: 20 }, { x: 740, z: 10, w: 20, d: 20 }];
+      const gN = [...core, ...outliers];
+      // 幹道 MUST 一路延伸到散戶那裡 —— 不然「散戶周邊 0 棟」只是因為那邊沒有街道可配,
+      // 量不到閘門有沒有生效(這一組的整個意義就在於兩端**都有街**)。
+      const longSeg = [{ x1: -800, z1: 0, x2: 800, z2: 0, hw: 5, main: true }];
+      const rN = run(gN, [], longSeg);
+      const added = gN.slice(core.length + outliers.length);
+      const nearCore = added.filter((b) => Math.abs(b.x) < 300).length;
+      const nearOut = added.filter((b) => b.x > 500).length;
+      ok(added.length > 0 && nearCore > 0 && nearOut === 0,
+        `**局部標準化**:密集核心配 ${nearCore} 棟、600m 外的兩棟散戶周邊配 ${nearOut} 棟`);
+      ok(rN.seeds.length === core.length,
+        `補間種子只收核心那 ${core.length} 棵,散戶不入選(${rN.seeds.length} 棵)`);
     }
   }
 }
