@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>機體美術覆核台(dev)</title>
+<!-- three 走 CDN importmap,與 public/index.html 同一版(A2:不進 package.json) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/public/css/style.css">
+<link rel="stylesheet" href="/tools/codex_review/review.css">
+</head>
+<body class="cr">
+<header class="cr-top">
+  <b>機體美術覆核台</b>
+  <span class="cr-dim">dev-only ・ 不進遊戲建置</span>
+  <span class="cr-stat" id="crStat">載入中…</span>
+  <span class="cr-grow"></span>
+  <div class="seg cr-filter" id="crFilter">
+    <button class="segb on" data-f="all">全部</button>
+    <button class="segb" data-f="todo">待覆核</button>
+    <button class="segb" data-f="flag">有意見</button>
+    <button class="segb" data-f="miss">缺圖</button>
+  </div>
+</header>
+<div class="cr-main">
+  <nav class="cr-list" id="crList"></nav>
+  <section class="cr-body" id="crBody"></section>
+</div>
+<div class="cr-modal" id="crModal" hidden></div>
+<script type="module" src="/tools/codex_review/review.js"></script>
+</body>
+</html>

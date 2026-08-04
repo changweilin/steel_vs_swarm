@@ -139,3 +139,32 @@ node tools/audit_codex.mjs --break-align   # 反向:角色生成段多一欄 ⇒
 五段不變式:① 格式對齊是結構性的 ② 原型層由 `visual` 推導 ③ 32×2 份全數填滿
 ④ 單一縫(值到原處取、生成文字只由 codex.js 組裝、`main.js` 不再切標籤字串)
 ⑤ 生成輸出真的是推導的(改一個欄位,輸出跟著變)。
+
+---
+
+## 八、機體美術覆核台(臨時工具,dev-only)
+
+```bash
+npm run codex                            # 起覆核台 → http://localhost:8621/
+node tools/codex_review.mjs --report     # 不開瀏覽器,直接印配對表
+node tools/codex_review.mjs --port 9000
+```
+
+把 `public/assets/cyberpunk_art/mechs/` 已生成的機體圖,配到角色頭像與 3D 展示台旁邊,一格一格覆核:
+
+- **配對是推導的** —— 檔名 `<角色 id>[_<型態>]_<姿態>.png`;「這台該有哪幾張」由 `visual.flight`/`visual.ground`
+  推導(與原型層同一條規則)⇒ 變形者 6 張、其餘 3 張,合計應有 120 張。
+- **缺圖與孤兒不藏** —— 缺的畫成灰框、對不到任何一格的列在頁尾。首跑實測:**61/120 張到位、
+  12 名角色一張都沒有、3 張孤兒**(`s03_*.png` 是她還是無人機時出的圖,2026-08-03 換成變形者後檔名少了型態段)。
+  孤兒可在頁面上**指派**到某一格,不必改檔名。
+- **點圖 → 覆核**:① 確認勾選(通過 / 局部重繪 / 重下 prompt)② 在圖上**拖曳框出要重畫的地方**
+  (存成正規化 bbox + 逐框說明,可直接餵 inpaint)③ 重新下 prompt(預設 = `imagePrompt()` 推導值,
+  改過的才存;有「還原成推導值」)。
+- **旁邊就是遊戲那一台 3D 展示台**(`charPreview.js`,點武器/招式列會播演出)、武器招式數值走
+  `heroWeapon`/`heroAbility`、**遊戲未公開的生成段**(機體六欄 + 角色六欄 + `modelSheet` + `textSeed`)一併攤開。
+
+三條邊界:**住 `tools/` 不住 `public/`**(`build_solo` 是把 `public/**` 整包複製,放進去就會出貨)、
+**唯讀遊戲資料**(覆核結果只寫 `tools/codex_review/state.json`,那是覆核產物不是第二份 `imagePrompt`)、
+**three 拿不到就降級**(3D 那一格顯示原因,其餘照常 —— 原則 6)。
+
+> `state.json` **要 commit**:遠端容器會被回收,沒進版控的覆核紀錄就沒了。
