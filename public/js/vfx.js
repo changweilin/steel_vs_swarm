@@ -647,10 +647,22 @@ const SHIELD_FRAG = /* glsl */`
 `;
 
 /**
- * 能量護盾半球:回傳 mesh;mesh.userData.update(dt) 每幀呼叫,
- * mesh.userData.hit() 受擊時呼叫(閃亮 + 波紋,0.5s 衰減)。
+ * 工事(塔/主堡)受擊回饋殼:回傳 mesh;mesh.userData.update(dt) 每幀呼叫,
+ * mesh.userData.hit() 受擊時呼叫(閃亮 + 波紋,約 1.1s 衰減後自行收起)。
+ *
+ * **這不是「護盾」**:塔/主堡在 sim 裡沒有 `sp` 那一層(`sp`/`maxSp` 只掛在英雄機體上,
+ * `shieldSplit` 對非英雄一律以 sp=0 呼叫)⇒ 亮起來的時機其實是**裝甲掉血**。
+ * 它的功能只有一個:遠距離擊中 26m 的塔 / 40 幾 m 的主堡時,把「這一發打中了」畫出來
+ * (工事沒有受擊動作、血條在頭頂,單看曳光分不出打中還是擦過)。
+ *
+ * 尺寸 MUST 由呼叫端餵**權威命中量體**(`hitR`/`hitH`),MUST NOT 手寫(原則 4:
+ * 看到多大 = 打到多大)。舊制手寫 r=30 / yScale=1.5,而主堡的 hitR 只有 20 ——
+ * 殼比實際打得到的範圍寬了 50%,浮在主堡上空像個與任何機制都無關的球面輪廓。
+ * @param radius 命中量體水平半徑(赤道半徑)
+ * @param height 命中量體垂直帶高度(極半徑;殼頂 = 腳底 + height)
+ *   —— 半橢球內接於「hitR × hitH」那根圓柱 ⇒ 偏差恆朝「畫得比打得到的小」(原則 6)。
  */
-export function makeShield(radius, color, yScale = 1) {
+export function makeHitShell(radius, height, color) {
   const mat = new THREE.ShaderMaterial({
     vertexShader: SHIELD_VERT,
     fragmentShader: SHIELD_FRAG,
@@ -668,7 +680,7 @@ export function makeShield(radius, color, yScale = 1) {
     new THREE.SphereGeometry(radius, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2),
     mat,
   );
-  mesh.scale.y = yScale;
+  mesh.scale.y = height / radius;   // 推導不手寫:頂點恰好落在命中量體上緣
   mesh.renderOrder = 10;
   mesh.userData.noOutline = true;
   mesh.visible = false;   // 平時不存在;受擊才浮現(閃亮 → 淡出 → 收起)
