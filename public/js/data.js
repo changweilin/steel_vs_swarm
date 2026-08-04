@@ -2154,8 +2154,11 @@ export const CHARACTERS = {
     // range 275(2026-07-14):解析後 = min(275×1.2, cap) = 330m —— 全機種「最短的重武器」,
     // 剛好越過砲塔射程 310m 約 20m(使用者指示:重武器可在砲塔射程外拆塔,最短者僅稍遠一點點)。
     // 電漿扇形重武器(180~210m)是刻意的近戰例外,不在此列。
+    // 榴彈類(trajClass 'lob')射程一律 = 全表最短的那一帶(= 扇形 264;見 AREA_WEAPONS 檔頭
+    // 2026-08-04 定案)—— 吊射的大範圍換的就是「得走進去打」。r 由家族帶夾制(BLAST_BAND)。
     heavy: { name: '溫壓火箭', rw: 'TBG-7V・初速 120m/s', type: 'launcher', mv: 120,
-      dmg: [50, 73, 105], r: [15, 17, 19], mag: 3, reload: 12, range: 275, pen: 15,
+      // dmg −5%:讓出 15m 爆風換回的火力補償(aoeTrimF)把它推到 bal ⑤ 81% 出界(見 t02 heavy 同欄註)
+      dmg: [48, 69, 100], r: [15, 17, 19], mag: 3, reload: 12, range: 264, pen: 15,
       vs: { flesh: 1.4, armor: 1.3, air: 0.4, building: 2.0 } },
     skill: { name: '野戰搶修', fx: 'heal', target: 'self', heal: [180, 260, 340],
       cd: [24, 21, 18], mp: [35, 40, 45], desc: '焊槍出手:立即修復自身裝甲' },
@@ -2376,7 +2379,7 @@ export const CHARACTERS = {
     // 但盾一破,152mm 破片打在裝甲板上就不是護盾場能談的事了。
     // 它同時留著 vs.armor 1.3,依紀律③「加成越多含金量越低」⇒ vsHp 只給一小格,折減照吃。
     heavy: { name: '152mm 榴彈砲', rw: '2A65 縮裝・初速 650m/s', type: 'launcher', mv: 650,
-      dmg: [75, 111, 156], r: [16, 18, 20], mag: 3, reload: 12, range: 340, pen: 14,
+      dmg: [75, 111, 156], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 14,   // range:榴彈類短射程帶(見 s02 同欄註)
       vsSp: 0.72, vsHp: 1.15,
       vs: { flesh: 1.1, armor: 1.3, air: 0.3, building: 1.8 } },
     skill: { name: '冬將軍號令', fx: 'buff', target: 'team', r: 200, mul: { dmg: [1.15, 1.25, 1.35] },
@@ -2395,7 +2398,10 @@ export const CHARACTERS = {
       dmg: [14, 18, 21], rate: 8, mag: [32, 40, 48], reload: 1.9, range: 200, crit: 0.08,
       vs: { flesh: 1.2, armor: 0.9, air: 1.1, building: 0.5 } },
     heavy: { name: '同步狙擊砲', rw: 'EM 加速穿甲彈・初速 1500m/s', type: 'rail', mv: 1500,
-      dmg: [72, 107, 156], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
+      // dmg −5%(2026-08-04):榴彈類改吃短射程帶之後,長射程貫穿砲在 bal ⑤ 的相對優勢跟著上浮
+      // (t02 79% → 82%,出界)。射程差買不回來(⑦ 實測 +15% 射程 = +21pp,火力只有 +4pp)⇒
+      // 依 §2.1「個別角色改 dmg 階梯」這條唯一的具名出口修正,MUST NOT 回頭動 vs 表。
+      dmg: [68, 102, 148], mag: 2, reload: 8, range: 360, crit: 0.15, critX: 2.0, pen: [18, 22, 26],
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
     skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
@@ -2436,7 +2442,7 @@ export const CHARACTERS = {
       dmg: [21, 27, 33], rate: 3.2, mag: [20, 24, 28], reload: 2.0, range: 210, crit: 0.15, critX: 1.8,
       vs: { flesh: 1.4, armor: 0.8, air: 1.0, building: 0.5 } },
     heavy: { name: '14.5 反器材砲', rw: 'KPV・初速 1000m/s', type: 'gun', mv: 1000,
-      dmg: [57, 84, 118], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],
+      dmg: [54, 80, 112], mag: 3, reload: 9, range: 380, crit: 0.20, critX: 2.0, pen: [20, 25, 30],   // dmg −5%:同 t02 heavy 同欄註(bal ⑤ 離群修正)
       vs: { flesh: 1.2, armor: 2.0, air: 1.5, building: 0.6 } },
     skill: { name: '灰色迷彩', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從所有感測器上消失(開火即現形)' },
@@ -2561,7 +2567,7 @@ export const CHARACTERS = {
       dmg: [20, 25, 31], rate: 4.8, mag: [34, 40, 48], reload: 2.3, range: 200, pen: 4,
       vs: { flesh: 1.3, armor: 1.0, air: 0.8, building: 0.6 } },
     heavy: { name: '無後座砲', rw: 'SPG-9・初速 435m/s', type: 'launcher', mv: 435,
-      dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 320, pen: 12,
+      dmg: [78, 115, 168], r: [13, 15, 17], mag: 3, reload: 12, range: 264, pen: 12,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.0, armor: 1.5, air: 0.4, building: 1.3 } },
     skill: { name: '老兵的叮嚀', fx: 'buff', target: 'team', r: 160, mul: { dmgTaken: [0.7, 0.65, 0.6] },
       dur: [4, 5, 6], cd: [20, 18, 16], mp: [35, 40, 45], desc: '罐頭哪裡最薄,他都教過:友軍承傷降低' },
@@ -2706,7 +2712,7 @@ export const CHARACTERS = {
       dmg: [13, 16, 20], rate: 9, mag: [45, 54, 63], reload: 2.2, range: 180, crit: 0.05,
       vs: { flesh: 1.3, armor: 0.6, air: 1.2, building: 0.5 } },
     heavy: { name: '集束子母彈', rw: 'CBU 縮裝・初速 400m/s', type: 'launcher', mv: 400,
-      dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 300, pen: 6,
+      dmg: [55, 79, 112], r: [16, 18, 20], mag: 3, reload: 12, range: 264, pen: 6,   // range:榴彈類短射程帶(見 s02 同欄註)
       vs: { flesh: 1.4, armor: 0.9, air: 0.5, building: 1.2 } },
     skill: { name: '轉分包', fx: 'summon', unit: 'rocketeer', count: [2, 3, 4],
       cd: [26, 23, 20], mp: [40, 45, 50], desc: '臨時轉包:火箭兵沿最近兵線加入' },
@@ -3291,11 +3297,42 @@ GAME.TOWER_SEP_F = 2 - GAME.TOWER_OVERLAP;
 //   收掉的範圍在「被收的那批武器之內」重新分配 —— 讓出越多範圍的拿越多火力,讓出得少的把火力
 //   讓出去,整批的火力水位不動(幾何平均 ⇒ 乘性係數的中點,與 CLASS_SYM 用幾何中點同理)。
 // 於是 W 的語意是**分配的陡度**(範圍的相對價格),不是總量;W → 0 即逐位元回到舊制傷害。
+//
+// ---- 2026-08-04 使用者定案:名冊清空 + 爆炸型改吃「家族帶」----
+// 使用者定案兩條:①「榴彈類武器射程調整為較短射程的那一類,縮小爆炸範圍、**不可一次命中兩座
+// 砲塔**」;②「增加雷射導引、射後不理的攻擊範圍,同爆炸傷害、但**範圍較榴彈類小**」。
+// ① 直接廢掉這張豁免名冊 —— 名冊裡本來就只有那三把榴彈類(溫壓火箭 / 152mm / 集束子母彈),
+//    使用者把它們一併收進「不可一次命中兩座砲塔」⇒ 沒有任何爆炸型武器再享有豁免。
+//    名冊本身**保留為空**:它是「以範圍見長」的具名縫,後續要開特例仍 MUST 走這裡並附理由
+//    (fan/line 仍依機制豁免,不經此表)。
+// ② 於是三族(榴彈 / 導引 / 其餘)全部擠進同一條上限 `soloBlastRmax()` 之下,「導引 < 榴彈」
+//    只能靠**家族帶**表達:見下方 BLAST_BAND —— 榴彈吃滿上限、導引取其 GUIDED_F 倍。
 export const AREA_WEAPONS = {
-  's02.heavy': '溫壓火箭(TBG-7V)—— 溫壓戰鬥部的殺傷機制本身就是超壓瀰漫,收半徑等於換一把武器',
-  't01.heavy': '152mm 榴彈砲(2A65)—— 全表最大口徑的面殺傷火砲,榴彈砲的定義就是「打一片」',
-  'm06.heavy': '集束子母彈(CBU)—— 子彈藥撒佈,撒佈範圍即彈種定義,收成點目標就不是集束彈了',
+  // (目前為空)以範圍見長的爆炸型武器豁免名冊 —— 增刪 MUST 附理由並同步 tools/audit_aoe_trim.mjs。
 };
+
+// ---- 爆炸型武器的家族帶(2026-08-04 使用者定案;推導不手寫)----
+// 三個事實壓在一起,結論只有一種形狀:
+//   ・「一發不得同時吃到同塔位兩座塔」把**所有**爆炸型武器的足跡上限鎖死在 soloBlastRmax()。
+//   ・榴彈類是面殺傷的本體 ⇒ 它就是吃滿那個上限的那一族。
+//   ・導引類(雷射導引 / 射後不理)「範圍較榴彈類小」⇒ 只能取上限的一個固定比例。
+// 於是家族上限 = soloBlastRmax() × 家族係數,而**階梯底**(Lv1)= 家族上限 × LO ——
+// 這一項才是使用者說的「增加攻擊範圍」:舊制的夾制是「等比收斂到頂階貼齊上限」,授權階梯越陡
+// 的武器 Lv1 就被壓得越小(導引類實測只剩 2.88~3.17m = 幾乎是點命中,而它的授權值是 11~15m)。
+// 改成把授權階梯**仿射映射進家族帶** ⇒ 頂階恰好貼齊家族上限、Lv1 抬到 LO 倍,階梯的相對形狀
+// (誰成長得快)完整保留。LO → 1 = 半徑不隨武器階級成長;LO 與 GUIDED_F 都取 1 即回到
+// 「全族共用單一上限」的舊語意。
+// **範圍照樣要付錢**:授權值與定案值的價差由既有的 `aoeTrimF` 自動計價(半徑漲的武器
+// aoeTrimRaw < 1 = 基礎傷害折減),整批再除以 NORM ⇒ 火力水位不動(見下方註)。
+export const BLAST_BAND = {
+  LO: 0.86,        // 階梯底(Lv1)= 家族上限 × 此值 —— 爆炸型武器一開場就該炸出「一片」不是「一點」
+  GUIDED_F: 0.90,  // 導引類(guide 雷射導引 / fnf 射後不理)家族上限 = 榴彈類的此倍(恆 < 1)
+};
+/** 爆風家族(**唯一分組縫**):榴彈類 'lob' / 導引類 'guided'(雷射導引 guide + 射後不理 fnf 同一族 ——
+ *  使用者是把這兩者當同一組講的:「增加雷射導引、射後不理的攻擊範圍…範圍較榴彈類小」)。 */
+export const blastFamily = (traj) => (traj === 'lob' ? 'lob' : 'guided');
+/** 爆風半徑的**家族上限**(公尺;推導不手寫):榴彈類吃滿「不得一次吃兩塔」的上限,導引類取其 GUIDED_F 倍 */
+export const blastCapR = (traj) => soloBlastRmax() * (blastFamily(traj) === 'lob' ? 1 : BLAST_BAND.GUIDED_F);
 // W:範圍的**相對價格**(分配陡度,不是總量 —— 總量由 NORM 鎖住)。校準錨 = `npm run bal`
 // ⑤(機種對稱 / 角色離群 / 射程壓制):W 越大,讓出範圍越多的武器拿到越多火力、讓得少的賠越多,
 // 陡到某個程度就會把單一角色推出 20~80%。NORM 於下方夾制迴圈 derive,**MUST NOT 手寫**。
@@ -3314,27 +3351,46 @@ export const aoeTrimRaw = (w) => (w?._aoeRaw ? areaValue(w._aoeRaw) / areaValue(
  *  除以 NORM ⇒ 這批武器的火力水位不動,只在彼此之間重分配(見上方註)。 */
 export const aoeTrimF = (w) => (w?._aoeRaw ? aoeTrimRaw(w) / AOE_BUDGET.NORM : 1);
 {
-  const cap = soloBlastRmax(), TOP = 1 + ECON.UPGRADES.hw.max, trimmed = [];   // 戰鬥面向滿級階(Lv4;含 tierVal 外推)
+  const TOP = 1 + ECON.UPGRADES.hw.max, trimmed = [];   // 戰鬥面向滿級階(Lv4;含 tierVal 外推)
+  // ---- ① 收集受夾制的爆炸型武器,依**家族**(trajClass)分組 ----
+  // 仿射映射的定義域取**整個家族**的授權跨距(而非逐把武器各自伸展到帶的兩端):逐把伸展會把
+  // 「誰的範圍比較大」整組抹平 —— 集束子母彈與無後座砲會拿到逐位元相同的半徑,那是把一個設計
+  // 維度刪掉,不是收斂範圍。共用同一組 (A, B) ⇒ 家族內的相對大小與階梯形狀全部保留。
+  const fams = new Map();
   for (const [ch, c] of Object.entries(CHARACTERS)) for (const slot of ['light', 'heavy']) {
     const w = c[slot];
     if (!w || w.r == null || AREA_WEAPONS[`${ch}.${slot}`]) continue;
     if (aoeClass({ ...w, id: slot }) !== 'blast') continue;   // id 是 aoeClass 分辨重武器的依據
-    const top = tierVal(w.r, TOP);                            // 滿級(外推後)的半徑才是真正的上界
-    if (!(top > cap)) continue;
-    const f = cap / top;                                      // 等比收斂:階梯形狀保留,頂階恰好貼齊上限
-    w._aoeRaw = tierVal(w.r, 1);
-    // 一律**無條件捨去**到 0.001m:四捨五入會讓頂階回到 cap 之上(4.4444 → 4.445),
-    // 而這條界是「打不打得到第二座塔」的充要條件 —— 差 0.001m 就整條規則失效(原則 6 寧缺勿錯)。
-    const trim = (v) => Math.floor(v * f * 1000) / 1000;
-    if (!Array.isArray(w.r)) { w.r = trim(w.r); trimmed.push(w); continue; }
-    const a = w.r.map(trim), n = a.length, k = Math.max(0, TOP - n);
-    // 頂階是 tierVal 的**外推**(末段增量續增:v[n−1]·(1+k) − v[n−2]·k)⇒ 逐項捨去之後
-    // 外推值會反彈到 cap 之上(t09 [15,17,19] 實測回到 4.445)。末階由外推式**反解**(推導不手寫)。
-    if (n >= 2) a[n - 1] = Math.min(a[n - 1], Math.floor((cap + k * a[n - 2]) / (1 + k) * 1000) / 1000);
-    w.r = a;
-    trimmed.push(w);
+    const traj = trajClass(w), fam = blastFamily(traj);
+    let f = fams.get(fam);
+    if (!f) fams.set(fam, f = { cap: blastCapR(traj), lo: Infinity, hi: -Infinity, ws: [] });
+    f.lo = Math.min(f.lo, tierVal(w.r, 1));
+    f.hi = Math.max(f.hi, tierVal(w.r, TOP));                 // 頂 = 外推後的真正上界
+    f.ws.push(w);
   }
-  // 幾何平均:乘性係數的中點。整批補償除以它 ⇒ 火力總量不動,只在「讓出範圍的那批武器」之間重分配。
+  // ---- ② 逐家族仿射映射進家族帶 [cap × LO, cap] ----
+  // 一律**無條件捨去**到 0.001m:四捨五入會讓頂階回到 cap 之上(4.4444 → 4.445),而這條界是
+  // 「打不打得到第二座塔」的充要條件 —— 差 0.001m 就整條規則失效(原則 6 寧缺勿錯)。
+  const q = (v) => Math.floor(v * 1000) / 1000;
+  for (const f of fams.values()) {
+    const span = f.hi - f.lo;
+    // tierVal 對「條目」是仿射的(含末段外推 v[n−1]·(1+k) − v[n−2]·k)⇒ 對條目做 a = A + B·r
+    // 之後,家族授權跨距的兩端恰好落在帶的兩端,階梯形狀與家族內排序完整保留。
+    const B = span > 0 ? (f.cap - f.cap * BLAST_BAND.LO) / span : 0;
+    const A = f.cap * BLAST_BAND.LO - B * f.lo;
+    for (const w of f.ws) {
+      w._aoeRaw = tierVal(w.r, 1);                            // 計價基準 = 授權的 Lv1 半徑(見 aoeTrimRaw)
+      if (!Array.isArray(w.r)) { w.r = q(A + B * w.r); trimmed.push(w); continue; }
+      const a = w.r.map((v) => q(A + B * v)), n = a.length, k = Math.max(0, TOP - n);
+      // 頂階是 tierVal 的**外推**⇒ 逐項捨去之後外推值會反彈到 cap 之上(t09 [15,17,19] 實測
+      // 回到 4.445)。末階由外推式**反解**(推導不手寫)。
+      if (n >= 2) a[n - 1] = Math.min(a[n - 1], q((f.cap + k * a[n - 2]) / (1 + k)));
+      w.r = a;
+      trimmed.push(w);
+    }
+  }
+  // 幾何平均:乘性係數的中點。整批補償除以它 ⇒ 火力總量不動,只在這批武器之間重分配
+  //(讓出範圍的拿火力、拿到範圍的賠火力 —— 導引類這次是後者)。
   AOE_BUDGET.NORM = trimmed.length
     ? Math.exp(trimmed.reduce((s2, w) => s2 + Math.log(aoeTrimRaw(w)), 0) / trimmed.length) : 1;
 }
@@ -3434,6 +3490,77 @@ export function rngDmgF(ch, slot) {
   // 高度差空戰門檻 = 砲塔實體高(不吃 reach 縮放,與 AoE/實體尺寸同類);故此塊不縮 ALTITUDE。
   for (const k of ['GUN_CEIL_M', 'HELI_ALT', 'AA_MIN_ALT', 'HERO_HEAL_RADIUS', 'HERO_HEAL_R']) GAME[k] *= CS;
   EVASION.MOBILITY_MIN *= CS; EVASION.MOVING_SPD *= CS;   // 速度門檻隨移速縮
+}
+
+// ================= 對建築 DPS 收斂(2026-08-04 使用者定案)=================
+// 使用者定案:「所有重武器之間與輕武器之間對建築的 DPS 不要落差太大」。
+// 改制前實測(對砲塔持續 DPS,Lv1):重武器 2.8 ~ 30.8(**10.8 倍**)、輕武器 19.9 ~ 62.8(3.2 倍)。
+// 10.8 倍的意思是:同樣站在塔下打滿一整場,有的機種拆得掉兩座塔,有的連一座都刮不完 ——
+// 而玩家看到的只是「我這把武器打建築好像沒有傷害」(2026-08-04 另一條回報的成因之一)。
+//
+// ---- 為什麼旋鈕是 `vs.building` 而不是 dmg 階梯 ----
+// 對建築 DPS = dmg × vs.building × armorMul × mag/cycle。dmg 階梯同時決定對**所有**目標的火力
+// (bal ①④⑤⑦ 全部吃它),拿它調建築就是把四條不變式一起推走;`vs.building` 是「目標類別剋制」
+// 那一軸,**只**作用在建築上 —— 這一條規則要動的正好就是這一軸。
+//
+// ---- 形狀與既有三個預算同款(逐槽位幾何中點為軸;推導不手寫)----
+//   vs.building' = vs.building × (該槽位 DPS 幾何中點 ÷ 這把武器的 DPS) ^ K,再夾到 (0, BUILDING_VS_CAP]
+// ⇒ 新的離散度 = 舊離散度 ^ (1 − K):K = 0 逐位元回到舊制、K = 1 完全拉平。**逐槽位**取中點
+// (與 RANGE_BUDGET 同理):輕重武器的建築 DPS 本來就不同級距,混一鍋量到的是槽位不是武器。
+//
+// ---- 三條 MUST ----
+// ① 上夾 `BUILDING_VS_CAP`(A34 ①「建築加乘一律移除」)**不得為了收斂而放寬**。
+// ② 收斂 MUST 是**重分配而非削弱**(與 AOE_BUDGET.NORM / CLASS_SYM 取幾何中點同一條紀律),
+//    而**水位 MUST 量在 bal ④ 量的那個量上** = 滿級(Lv4)逐角色拆塔 DPS 的**算術**平均。
+//    只鎖幾何中點是不夠的:壓縮保住幾何中點(乘性中點)卻必然壓低**算術**平均(把長尾收進來),
+//    而拆一座塔的秒數 = 塔 HP ÷ (輕 + 重 DPS) 吃的是算術量 —— 實測只鎖幾何中點時,
+//    ④ 的機甲/變形者從剩餘 2.7%/4.9% 掉到 −0.1%/−0.1%(兩座塔都推不掉)。
+//    另一半原因是 ① 的上夾:高的可以無限降、低的最多補到 1.0,補不滿的缺口一樣要回填。
+//    故壓縮後 MUST 等比抬回水位再夾,重複到收斂:夾住的不再動,沒夾住的把缺口補起來。
+// ③ MUST 排在 `COMBAT_SCALE` 統一縮放**之後**:`buildDps` 走 `heroWeapon`,而射程縮放會定案
+//    `rangeMid`/`rngDmgF` 的快取 ⇒ 排在前面量到的是縮放前的火力,收斂係數整組偏掉。
+// 這一段**不改 `counterDmgF`**:夾制後 vs.building ≤ 1 ⇒ 它對 `narrow`(超出 1 的加成總和)的
+// 貢獻恆為 0,升降都不會回頭改動基礎傷害(沒有回饋迴圈)。
+export const BUILD_DPS = { K: 0.55, LEVEL_ITERS: 64 };
+/** 某角色某槽位對建築(砲塔)的持續 DPS(**唯一量法**;收斂迴圈與稽核同吃)。
+ *  公式與 tools/balance.mjs 的 slotDps 同構:cycle = mag/rate + reload;
+ *  無護盾層 ⇒ shieldSplit(…, sp=0) = 整發吃 vsHp(與 sim._damage 非英雄分支同一支)。 */
+export function buildDps(ch, slot, lvl = 1) {
+  const w = heroWeapon(ch, slot, lvl, true);
+  if (!w) return 0;
+  const cycle = w.mag / (w.rate || RATE_DEF) + w.reload;
+  return shieldSplit(w, w.dmg, 0).toHp * vsMult(w, 'tower')
+    * armorMul(UNITS.tower.armor, w.pen) * w.mag / cycle;
+}
+{
+  const q = (v) => Math.round(v * 1000) / 1000;
+  const set = (w, v) => { (w.vs ||= {}).building = q(Math.min(BUILDING_VS_CAP, v)); };
+  const SLOTS = ['light', 'heavy'];
+  const top = (slot) => 1 + ECON.UPGRADES[slot === 'light' ? 'lw' : 'hw'].max;   // 戰鬥面向滿級階(Lv4)
+  const all = [];
+  for (const slot of SLOTS) {
+    for (const ch of Object.keys(CHARACTERS)) {
+      const w = CHARACTERS[ch][slot];
+      if (w) all.push({ ch, slot, w, dps: buildDps(ch, slot), lv4: buildDps(ch, slot, top(slot)) });
+    }
+  }
+  // 水位錨(② 的守門值)= 滿級拆塔 DPS 的**算術**平均 —— bal ④ 量的就是這個。
+  const level = () => all.reduce((s, r) => s + buildDps(r.ch, r.slot, top(r.slot)), 0) / all.length;
+  const level0 = all.reduce((s, r) => s + r.lv4, 0) / all.length;
+  // ---- ① 離散度:逐槽位朝該槽位的幾何中點壓縮 ----
+  for (const slot of SLOTS) {
+    // 先整批量完再套用:`buildDps` 讀的是 live 的 `vs.building`,邊量邊改會讓中點跟著漂。
+    const rows = all.filter((r) => r.slot === slot && r.dps > 0);
+    if (!rows.length) continue;
+    const mid = Math.exp(rows.reduce((s, r) => s + Math.log(r.dps), 0) / rows.length);
+    for (const r of rows) set(r.w, (r.w.vs?.building ?? 1) * (mid / r.dps) ** BUILD_DPS.K);
+  }
+  // ---- ② 水位回填(見上方註):DPS 與 vs.building 成正比 ⇒ 直接等比抬,夾住的自然停在 CAP ----
+  for (let it = 0; it < BUILD_DPS.LEVEL_ITERS; it++) {
+    const g = level0 / level();
+    if (!(Math.abs(g - 1) > 1e-6)) break;
+    for (const r of all) set(r.w, (r.w.vs?.building ?? 1) * g);
+  }
 }
 
 // ---- 波次編制 / 節奏的唯一推導處(sim._spawnWave・_prefillLanes・balance.mjs・e2e 共用)----

@@ -277,5 +277,59 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
     'beam 外暈直接吃 r(gundamBeam 的 halo 半徑 = 判定半徑)');
 }
 
+// ---------- ⑪ 垂直帶 MUST 換算到目標自己的垂直框(2026-08-04 使用者回報)----------
+// 「反器材武器打建築會跳傷害數據,但血條沒變」的伺服器側成因:`oy` 是射手**離自己站立面**的高度、
+// `_bodySpan(t)` 是目標**離自己腳下地表**的量體帶 —— 兩個框各自以「自己腳下」為 0。射手站在
+// 稜線上往下打山谷裡的砲塔時,射線在塔位的「伺服器算高」會算成 −37m,`_bodyDy` 量出 37m
+// ≫ 垂直帶(gun 只有 7.26m)⇒ 整發靜默丟棄,而客戶端 `_lanceFeedback` 的圓柱鏡射沒有這一道、
+// 照樣跳傷害數字。只有 line 類重武器有垂直帶(輕武器回報目標 id、扇形沒有垂直帶)⇒ 症狀集中
+// 在反器材/貫穿砲,而建築是唯一「固定站在兵線上任你從高處狙」的目標。
+{
+  const src = readFileSync(new URL('../server/sim.js', import.meta.url), 'utf8');
+  const bare = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+  assert((bare.match(/_lanceBandY\(/g) || []).length === 2,
+    '_lanceBandY 一份定義 + 一個消費端(垂直帶換框只有這一個縫)');
+  assert(/this\._bodyDy\(t, this\._lanceBandY\(shooter, ox, oz, oy, t, oy \+ slope \* sc\)\) > band/.test(bare),
+    '_lanceHits 的垂直帶吃 _lanceBandY 的換算值(MUST NOT 直接拿 oy + slope × sc)');
+  assert(/_lanceBandY\([^)]*\) \{[\s\S]*?_absSightY\(shooter, oy, ox, oz\)/.test(bare)
+    && /_lanceBandY\([^)]*\) \{[\s\S]*?_hgtAt\(t\.x, t\.z\)/.test(bare),
+    '換框走 _absSightY / _hgtAt(與 _altDh「同框才准相減」同一條紀律)');
+
+  // 行為直測:合成粗高程網格(塔腳 0m、射手所在台地 dh m),射手瞄塔身中段
+  const { hgtEnc } = await import('../public/js/data.js');
+  const sim = sandbox();
+  const ch = charWithHeavy('gun');
+  const h = sim.addHero('STEEL', 'p_band', ch.id);
+  h.aiming = true;
+  const wp = sim._heroWeapon(h, 'heavy');
+  const tower = sim._add({ kind: 'tower', side: 'SWARM', x: 0, z: 0, hp: UNITS.tower.hp, maxHp: UNITS.tower.hp });
+  const D = 120;
+  const shot = (dh, aimY) => {
+    // 地形取**等坡**(射手處 dh、塔處 0,中間線性內插)—— 台階狀地形會讓崖緣本身變成稜線
+    // 而觸發 `_ridgeBlocked`(那是另一條規則,會蓋掉本節要量的垂直帶)。
+    const cell = 40, cols = 64, rows = 64;
+    const minX = -cols * cell / 2, minZ = -rows * cell / 2, minH = Math.min(0, dh);
+    let data = '';
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const f = Math.max(0, Math.min(1, -(minZ + (j + 0.5) * cell) / D));   // 0 = 塔、1 = 射手
+      data += hgtEnc(dh * f, minH);
+    }
+    sim._hgtGrid = null;
+    sim._ingestHgt({ hgt: { minX, minZ, cell, cols, rows, minH, data } });
+    h.x = 0; h.z = -D; h.y = 0; h.ay = dh + LOS.EYE_M;
+    const oy = LOS.EYE_M, dy = aimY - (dh + oy), L = Math.hypot(D, dy);
+    return sim._lanceHits(h, wp.def, h.x, h.z, oy, 0, D / L, dy / L, L).some((x) => x.t === tower);
+  };
+  for (const dh of [0, 30, 80, 200]) assert(shot(dh, 13), `射手高出砲塔 ${dh}m,瞄塔身中段仍命中(高低差不再吃掉整發)`);
+  for (const dh of [-30, -80]) assert(shot(dh, 13), `射手低於砲塔 ${-dh}m,瞄塔身中段仍命中`);
+  assert(!shot(0, 90), '對照:垂直帶還在 —— 平地朝塔頂上方 90m 開火 MUST 落空');
+  assert(!shot(80, 120), '對照:高台上朝塔頂上方掠過 MUST 落空(換框不等於取消垂直帶)');
+  // 未上傳高程網格(e2e / headless)⇒ 逐位元退回舊近似
+  sim._hgtGrid = null;
+  const relY = LOS.EYE_M + 3.7;
+  assert(sim._lanceBandY(h, h.x, h.z, LOS.EYE_M, tower, relY) === relY,
+    '未上傳高程網格 ⇒ 逐位元退回舊近似(原則 6;e2e 的確定性斷言不變)');
+}
+
 log(failed ? '\n❌ 直線貫穿命中判定稽核未通過' : '\n✅ 直線貫穿命中判定稽核全數通過');
 process.exit(failed ? 1 : 0);

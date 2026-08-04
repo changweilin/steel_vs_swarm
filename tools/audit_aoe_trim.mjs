@@ -29,6 +29,7 @@ import {
   charKind, heroMobility, AREA_WEAPONS, AOE_BUDGET, MOB_BUDGET, tierVal,
   towerPairSepM, soloBlastRmax, blastFootprintR, areaValue, aoeTrimRaw, aoeTrimF,
   mobMid, mobDmgF, rangeMid, rngDmgF,
+  BLAST_BAND, blastCapR, blastFamily, trajClass,
 } from '../public/js/data.js';
 import { LANE, laneBattle, hits, mech } from './lanesim.mjs';
 
@@ -77,9 +78,67 @@ console.log('\nⅠ 幾何上界:推導不手寫,且逐把實算「打不打得�
   t('原文:soloBlastRmax / towerPairSepM 各只有一處定義(單一縫)',
     count(DATA_B, /export const soloBlastRmax\s*=/g) === 1
     && count(DATA_B, /export const towerPairSepM\s*=/g) === 1);
-  // 消費端不得手抄幾何常數:夾制迴圈只准經 soloBlastRmax()
-  t('原文:夾制迴圈只有一處,且吃 soloBlastRmax()(MUST NOT 手抄 30 / 7 / 1.8)',
-    count(DATA_B, /const cap = soloBlastRmax\(\)/g) === 1);
+  // 消費端不得手抄幾何常數:家族上限只准經 blastCapR(),而它只准經 soloBlastRmax()
+  t('原文:blastCapR 只有一處定義,且吃 soloBlastRmax()(MUST NOT 手抄 30 / 7 / 1.8)',
+    count(DATA_B, /export const blastCapR\s*=/g) === 1
+    && /export const blastCapR\s*=[^;]*soloBlastRmax\(\)/.test(DATA_B));
+  t('原文:夾制迴圈只有一處,且家族上限一律取自 blastCapR()(全檔僅此一個呼叫點)',
+    count(DATA_B, /cap: blastCapR\(/g) === 1 && count(DATA_B, /blastCapR\(/g) === 1);
+  t('原文:家族分組只有 blastFamily 一份(MUST NOT 在夾制迴圈裡另寫一次 traj 比對)',
+    count(DATA_B, /export const blastFamily\s*=/g) === 1);
+}
+
+console.log('\nⅠ-b 爆風家族帶:榴彈吃滿上限、導引恆小於榴彈(2026-08-04 使用者定案)');
+{
+  t('blastFamily:lob → lob;guide / fnf → guided(兩者同族)',
+    blastFamily('lob') === 'lob' && blastFamily('guide') === 'guided' && blastFamily('fnf') === 'guided');
+  t('榴彈家族上限 = soloBlastRmax()(吃滿「不得一次吃兩塔」的上限)', near(blastCapR('lob'), soloBlastRmax()));
+  t('導引家族上限 = 榴彈 × GUIDED_F,且 GUIDED_F < 1(推導不手寫)',
+    near(blastCapR('guide'), soloBlastRmax() * BLAST_BAND.GUIDED_F)
+    && near(blastCapR('fnf'), blastCapR('guide')) && BLAST_BAND.GUIDED_F < 1);
+  t('階梯底係數 LO ∈ (0, 1](= 1 即半徑不隨階級成長;→ 0 即回到「頂階貼齊、底階自由落體」)',
+    BLAST_BAND.LO > 0 && BLAST_BAND.LO <= 1);
+  // 逐階全掃:兩族各自的值域,以及「導引 < 榴彈」的三個端點
+  const band = {};
+  for (const b of blasts) {
+    const fam = blastFamily(trajClass(b.def));
+    for (let lv = 1; lv <= MAX_TIER; lv++) (band[fam] ||= []).push(heroWeapon(b.ch, b.slot, lv, true).r);
+  }
+  const gm = (v) => Math.exp(v.reduce((s, x) => s + Math.log(x), 0) / v.length);
+  t('兩族都有成員(名冊清空後 lob 也走夾制)', band.lob?.length > 0 && band.guided?.length > 0);
+  t(`導引上限 ${Math.max(...band.guided).toFixed(3)}m < 榴彈上限 ${Math.max(...band.lob).toFixed(3)}m`,
+    Math.max(...band.guided) < Math.max(...band.lob));
+  t(`導引下限 ${Math.min(...band.guided).toFixed(3)}m < 榴彈下限 ${Math.min(...band.lob).toFixed(3)}m`,
+    Math.min(...band.guided) < Math.min(...band.lob));
+  t(`導引幾何中點 ${gm(band.guided).toFixed(3)}m < 榴彈幾何中點 ${gm(band.lob).toFixed(3)}m`,
+    gm(band.guided) < gm(band.lob));
+  t('每一族的頂階恰好貼齊自己的家族上限(帶的上緣是被吃滿的,不是碰巧落在下面)',
+    ['lob', 'guided'].every((f) => {
+      const cap = blastCapR(f === 'lob' ? 'lob' : 'guide');
+      return Math.abs(Math.max(...band[f]) - cap) <= 0.002;
+    }));
+  t('每一族的底階 = 家族上限 × LO(帶的下緣由 LO 定義,不是等比收斂的殘值)',
+    ['lob', 'guided'].every((f) => {
+      const cap = blastCapR(f === 'lob' ? 'lob' : 'guide');
+      return Math.abs(Math.min(...band[f]) - cap * BLAST_BAND.LO) <= 0.002;
+    }));
+  // 家族內排序保留:授權半徑大的,定案半徑也 MUST 不小於授權半徑小的(逐把伸展會把這條抹平)
+  const bad = [];
+  for (const fam of ['lob', 'guided']) {
+    const ws = blasts.filter((b) => blastFamily(trajClass(b.def)) === fam)
+      .map((b) => ({ k: b.key, raw: CHARACTERS[b.ch][b.slot]._aoeRaw, r: heroWeapon(b.ch, b.slot, 1, true).r }))
+      .sort((a, b2) => a.raw - b2.raw);
+    for (let i = 1; i < ws.length; i++) if (ws[i].r < ws[i - 1].r - 1e-9) bad.push(`${fam}:${ws[i].k}`);
+  }
+  t('家族內排序保留:授權半徑越大 ⇒ 定案半徑越大(逐把伸展會把這條抹平)', bad.length === 0, bad.join(' '));
+  // 榴彈類 = 「較短射程的那一類」(使用者定案):MUST 是全體重武器解析後射程的最小值
+  const heavies = Object.keys(CHARACTERS).map((ch) => ({ ch, r: heroRange(ch, 'heavy'), def: heroWeapon(ch, 'heavy', 1, true) }));
+  const minR = Math.min(...heavies.map((h) => h.r));
+  const lobs = heavies.filter((h) => trajClass(h.def) === 'lob');
+  t(`榴彈類(${lobs.length} 把)射程 = 全體重武器最短的那一帶 ${minR.toFixed(1)}m`,
+    lobs.length > 0 && lobs.every((h) => near(h.r, minR)));
+  t('導引類射程 MUST 長於榴彈類(短射程換大範圍 / 長射程換小範圍)',
+    heavies.filter((h) => aoeClass(h.def) === 'blast' && trajClass(h.def) !== 'lob').every((h) => h.r > minR));
 }
 
 console.log('\nⅡ 逐把武器:非「範圍見長」一發打不到兩座塔;名冊內的仍打得到');
@@ -88,10 +147,12 @@ console.log('\nⅡ 逐把武器:非「範圍見長」一發打不到兩座塔;�
   // 名冊是**凍結清單**(與 EX_SIEGE_WEAPONS 同一條紀律):放行的是「一發削兩座塔」這種
   // 結構性特權,單靠「有沒有附理由」擋不住膨脹 —— 誰都可以自稱以範圍見長。故此處逐一釘死,
   // **改名冊 MUST 同步改這一行**,讓每一次增刪都是一次刻意的決定而不是順手加名。
-  const EXPECT = ['s02.heavy', 't01.heavy', 'm06.heavy'];
-  t(`名冊 AREA_WEAPONS 恰為 ${EXPECT.join('、')}(凍結清單;增刪 MUST 同步本稽核)`,
+  // 2026-08-04 使用者定案「榴彈類不可一次命中兩座砲塔」⇒ 名冊裡原本那三把榴彈類全數收回,
+  // 現況**應為空**:沒有任何爆炸型武器享有豁免(fan/line 依機制豁免,不經此表)。
+  const EXPECT = [];
+  t(`名冊 AREA_WEAPONS 恰為 ${EXPECT.length ? EXPECT.join('、') : '空'}(凍結清單;增刪 MUST 同步本稽核)`,
     exempt.length === EXPECT.length && EXPECT.every((k) => k in AREA_WEAPONS),
-    `實得 ${exempt.join('、')}`);
+    `實得 ${exempt.join('、') || '空'}`);
   t('名冊每一把都附了理由', exempt.every((k) => typeof AREA_WEAPONS[k] === 'string' && AREA_WEAPONS[k].length > 8));
   t('名冊每一把都真的存在,且真的是爆炸型武器(名冊不得指向不存在/非 blast 的武器)',
     exempt.every((k) => blasts.some((b) => b.key === k)));
@@ -133,10 +194,19 @@ console.log('\nⅢ 範圍補償:重分配而非通膨(幾何平均 = 1),且讓�
       const w = CHARACTERS[ch][s];
       return !w || w._aoeRaw || (aoeTrimF(w) === 1 && aoeTrimRaw(w) === 1);
     })));
-  // 讓出越多範圍 ⇒ 補償越多(單調);同時驗 areaValue 的形狀
-  const sorted = trimmed.slice().sort((a, b2) => a._aoeRaw - b2._aoeRaw);
-  t('讓出越多範圍,補償越多(對原半徑單調不減)',
-    sorted.every((w, i) => i === 0 || aoeTrimRaw(w) >= aoeTrimRaw(sorted[i - 1]) - 1e-12));
+  // 讓出越多範圍 ⇒ 補償越多(單調);同時驗 areaValue 的形狀。
+  // **逐家族比**:兩族的上限不同(榴彈吃滿 / 導引 ×GUIDED_F)⇒ 同一個授權半徑在兩族會落在
+  // 不同的定案半徑上,跨族排序本來就沒有意義(這條驗的是「同一族內誰讓得多誰拿得多」)。
+  const badMono = [];
+  for (const fam of ['lob', 'guided']) {
+    const sorted = trimmed
+      .filter((w) => blastFamily(trajClass(w)) === fam)
+      .sort((a, b2) => a._aoeRaw - b2._aoeRaw);
+    for (let i = 1; i < sorted.length; i++) {
+      if (aoeTrimRaw(sorted[i]) < aoeTrimRaw(sorted[i - 1]) - 1e-12) badMono.push(`${fam}#${i}`);
+    }
+  }
+  t('讓出越多範圍,補償越多(同一家族內對原半徑單調不減)', badMono.length === 0, badMono.join(' '));
   t('areaValue:半徑 0 = 1(單體基準)、= 上界時 = 1 + W、且嚴格遞增',
     near(areaValue(0), 1) && near(areaValue(soloBlastRmax()), 1 + AOE_BUDGET.W)
     && areaValue(10) > areaValue(5));

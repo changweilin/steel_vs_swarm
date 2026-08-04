@@ -1758,6 +1758,32 @@ export class BattleSim {
    */
   _surfD3(d3, t) { return Math.max(0, d3 - hitR(t)); }
 
+  /**
+   * 貫穿圓柱垂直帶用的「射線高」——**換算到目標自己的垂直框**(離目標腳下地表)。
+   *
+   * 2026-08-04 使用者回報「反器材武器打建築會跳傷害數據,但血條沒變」的伺服器側成因:
+   * `_lanceHits` 拿 `oy + slope × s`(射手回報的**離站立表面**高 + 射線爬升)直接去比對
+   * `_bodySpan(t)`(目標**離自己腳下地表**的量體帶)—— 兩個框各自以「自己腳下」為 0,
+   * 高低差一大就完全對不上:射手站在稜線上往下打山谷裡的砲塔,射線在塔位的「伺服器算高」
+   * 會是 −37m,`_bodyDy` 量出 37m ≫ 垂直帶(gun 只有 7.26m)⇒ 整發靜默丟棄,而客戶端
+   * `_lanceFeedback` 的圓柱鏡射沒有這一道、照樣跳傷害數字(A18/A30 家族的兩端分家)。
+   * 實測門檻:120m 水平距下高低差超過約 ±25m 就開始整發落空 —— 山地圖(太魯閣一族)的
+   * 常態,而**只有 line 類重武器有這道垂直帶**(輕武器 heroHit 回報目標 id、扇形 heroPlasma
+   * 沒有垂直帶)⇒ 症狀集中在反器材/貫穿砲,建築又是唯一「固定站在兵線上任你從高處狙」的目標。
+   *
+   * 修法遵守 `_altDh` 的同一條紀律:**兩端都拿得到絕對高程才用絕對框**(射手 = 回報的 `ay`
+   * 或粗高程網格、目標 = 粗高程網格),否則逐位元退回舊近似(原則 6 寧缺勿錯 —— e2e/headless
+   * 沒有上傳 `hgt`,行為與舊制完全相同)。
+   */
+  _lanceBandY(shooter, ox, oz, oy, t, relY) {
+    const gT = this._hgtAt(t.x, t.z);
+    if (gT == null) return relY;                          // 未上傳高程網格 ⇒ 維持舊制近似
+    const abs = shooter?.hero && shooter.ay != null;
+    if (!abs && this._hgtAt(ox, oz) == null) return relY;  // 射手端也解不出絕對框 ⇒ 同上
+    // relY − oy = 射線相對槍口的爬升(客戶端回報的 d 是世界向量 ⇒ 這一段本來就是絕對量)
+    return this._absSightY(shooter, oy, ox, oz) + (relY - oy) - gT;
+  }
+
   /** 英雄射擊命中(客戶端彈道命中回報;傷害/克制/爆擊/破甲、射程/射速/彈藥伺服器把關) */
   heroHit(pid, targetId, w) {
     const h = this.heroes.get(pid);
@@ -2105,7 +2131,9 @@ export class BattleSim {
       if (!vert) {
         // 垂直帶(見上方幾何近似說明):比對的是**機體整條垂直帶**而非單一取樣點 ——
         // 26m 的塔 / 10m 的機甲被瞄準頭部時,單點取樣(_tgtY)會讓整條射線判成落空。
-        if (this._bodyDy(t, oy + slope * sc) > band) continue;
+        // 射線高 MUST 先換算到**目標自己的垂直框**(`_lanceBandY` 單一縫)—— 兩邊各自以
+        // 「自己腳下」為 0,高低差一大就整發靜默丟棄(2026-08-04 反器材打建築零傷害)。
+        if (this._bodyDy(t, this._lanceBandY(shooter, ox, oz, oy, t, oy + slope * sc)) > band) continue;
         if (s !== sc) perp = Math.hypot(tx - ux * sc, tz - uz * sc);
       }
       const dev = Math.hypot(perp, s - sc);                  // 偏離圓柱軸的量(含端點外溢)

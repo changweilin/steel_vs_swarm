@@ -761,6 +761,19 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       '_tryFire 的追蹤目標在拿不到 _lockId 時退回擊發當下的準星解(_aimTarget)');
     ok(!/def\.type === 'missile' && this\._lockId != null/.test(fire),
       '_tryFire 不再「只認 _lockId」(而射程光暈刻意排除 _lockId ⇒ 每個亮著的目標都保證不被追蹤)');
+    // 2026-08-04 使用者回報「準星沒有照到目標時,彈體會往先前鎖定的敵人飛去」:
+    // `_lockId` 是**上一個**伺服器複驗過的鎖定,準星移開後要等 `_tickLock` 下一次 4Hz 心跳才清得掉。
+    // 追蹤目標 MUST 只由**擊發當下的準星解**決定 ⇒ `_tryFire` 全段不得再出現 `_lockId`
+    // (鎖定該有的黏著住在 `_coneAcquire` 的遲滯錨 `keepId`,不在擊發端)。
+    // 單一縫計數 MUST 剝掉註解 —— 否則「解釋為什麼不能讀 _lockId」的那段註解自己會讓斷言紅字
+    const fireBare = fire.replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+    ok(!/_lockId/.test(fireBare),
+      '_tryFire 全段不讀 _lockId:追蹤目標只認擊發當下的準星解(準星沒照到 ⇒ 直飛,不追舊鎖定)');
+    ok(/const homing = def\.type === 'missile' \? \(this\._aimTarget\(rng\)\?\.id \?\? null\) : null;/.test(fire),
+      '追蹤目標定案只有一行(單一縫;準星解不到即 null = 不追蹤)');
+    ok(/keepId = opt && 'keepId' in opt \? opt\.keepId : this\._lockId/.test(methodSrc('_coneAcquire', G)),
+      '對照:鎖定的黏著仍在 _coneAcquire 的遲滯錨上(準星仍壓在同一個錐內才續留)');
     ok(/ent\.id !== this\._lockId/.test(methodSrc('_updateRangeGlows', G)),
       '對照:_updateRangeGlows 確實把鎖定目標排除在射程光暈之外(鎖定另有 lockGlow)');
     const at = methodSrc('_aimTarget', G);
