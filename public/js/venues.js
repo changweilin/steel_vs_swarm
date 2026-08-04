@@ -177,6 +177,16 @@ export const VENUES = [
   //           可通車的開合橋跨河 ⇒ L1 兩堡(481 真實公尺)分踞兩岸時,兵線必然踩上橋面。
   //           與 london(泰晤士河)的差別是「多座短橋 vs 單座長橋」,兩張都留著當對照。
   { id: 'chicago',    name: '芝加哥・河濱橋群',       country: '🇺🇸', type: '混合', ll: [41.887643, -87.624481], bearing: 0,   mix: { urban: 0.75, water: 0.2, green: 0.05 }, scen: ['overTunnel'], relief: 4, relief: 4 },
+  // 2026-08-04 使用者需求「劇情戰役最終關卡改為克里米亞,預設地圖加入克里米亞」。
+  // 錨點 = 塞瓦斯托波爾灣南岸的納希莫夫廣場(市中心路網最密的節點),bearing 205 讓 L1~L3
+  // 的另一端落在烏沙科夫廣場/大海洋街一帶 —— 全程走得到的市中心街廓,兩側各有一座海灣
+  //(西:炮台灣;東:南灣)在擴張後的圖框邊緣入鏡 ⇒ 地貌算混合型而非市區單一。
+  // **scen / relief 刻意留白**:兩者 MUST 由 `tools/audit_lane_scenarios.mjs` 實測產生
+  //(見上方欄位註解與 CLAUDE.md 原則 6),沙箱無外網跑不了該掃描,寧缺勿錯 —— 未標時
+  // `reliefTier()` 回 null、venueTip 自動略過「起伏」那一段,不會顯示臆測的地形說明。
+  // 同理 venueLanes.js / venueText.js 也沒有這張圖的烘焙資料:兵線退回 synthLane 合成弧、
+  // 在地文字退回執行期即時抓的圖資 tag,兩條都是既有的降級路徑(MUST NOT 為它另開特例)。
+  { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 } },
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----
