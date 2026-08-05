@@ -16,6 +16,7 @@
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
 | Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
 | Photo DB gap-fill (parts at 0, see §4 step A) | **DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; **all 14 parts at target** (55 photos), licence re-audit 55/55 CC0/PD; throttle-cooldown loop needed 3 extra rounds for `lattice`/`tank` |
+| Photo DB integrity pass (magic-bytes gate + manifest path portability) | **DONE 2026-08-05** (§5d) | 2 whole PDFs had passed the licence audit as `ok` photos (bytes, not licence, was the lie) — de-booked, deleted, refetched; 28 absolute-path manifest rows migrated to relative POSIX; final audit **61/61 ok = real image + file present + CC0/PD**, all 14 parts at target |
 | P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
 | P2c pilot — img→3D GLB parts (organic geometry) | **ALL PREP DONE 2026-08-05 — blocked only on SF3D weights gate** (owner: accept licence as `winniexchang`, §6-3) | venv 3.11 + torch 2.5.1+cu121 (GPU ✓) + SF3D deps + **both native extensions built** (`texture_baker`/`uv_unwrapper` `_C.pyd`, VS2022 + CUDA 12.6) + `sf3d` imports OK; Blender 5.2 LTS installed; rembg matting done; **2 usable inputs curated** (33MP glacial-erratic boulder + cropped fracture-face boulder); intake checker `tools/ai3d/intake_parts.mjs` written; tri budget **measured** (`tri_budget.json`: synthMegalith 200 seeds max 1071 tris) |
 | biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **blocked until P2c ships first tree/rock parts** | — |
@@ -172,6 +173,34 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
   mating face, +Y up, strip textures, named nodes `facet_a`/`collapse_a`) → intake checker →
   wire `PART_LIBS = ['rock']` + cairn `['lib', …]` descriptors → full static battery.
 
+## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
+
+- **SF3D gate re-probed: still closed.** Token itself is healthy — `whoami-v2` shows a classic
+  `read`-role access token ("WillyRnnoise") on `winniexchang`, public files (LICENSE/README)
+  download fine — but `model.safetensors` returns 403 *"you are not in the authorized list"*.
+  The repo is **`gated: auto`** ⇒ clicking "Agree" on the model page while logged in as
+  `winniexchang` grants instantly, no human review. Whatever was accepted earlier landed on a
+  different account or was never submitted. When it opens, resume at §5c's "next single action".
+- **Data home recorded** (hand-off state): the gitignored ai3d working set (`.venv`, `photos/`,
+  `photo_manifest.json`, `vendor/stable-fast-3d`, `weights/`, `out/matte`) lives in worktree
+  **`.claude/worktrees/zen-albattani-b33990/tools/ai3d/`** — the venv has absolute paths, do not
+  move it; run the fetcher from that copy (data is keyed off the script's own dir).
+- **Magic-bytes gate shipped** (the §5c "fetcher should gain a magic-bytes check" item):
+  `sniffImage()` accepts JPEG/PNG/WebP header bytes only; a non-image download now books
+  `ok:false` (it is a fact about the file, same rule as 404 — unlike 429 which never books)
+  and never lands on disk. Extension and Content-Type are both untrusted.
+- The pool scan found the predicted corruption **already inside the "green" DB**: two whole
+  Internet Archive book-scan **PDFs** booked as `ok` rock/facet photos (7 MB + 25 MB,
+  `wc_91723690` / `wc_93938159`) — the licence audit passes them because *Public domain is true*;
+  only the bytes reveal the lie. De-booked, deleted, refetched → **all 14 parts back at target,
+  61 ok entries, 61/61 real image + file present + CC0/PD**.
+- **Second fetcher bug caught by the same scan**: `entry.file` was made relative by
+  `replace(HERE + '/', '')`, which is separator-sensitive ⇒ on Windows it silently no-oped and
+  the manifest recorded **absolute paths of whatever worktree ran the fetch** (28 rows; the
+  Actions/Linux rows were fine — why round 1 never showed it). Fixed with `path.relative` +
+  POSIX separators; the 28 rows migrated. Portability moral: the artifact/manifest must never
+  encode the machine it was fetched on.
+
 ## 5. Trial log (2026-08-05, sandbox session)
 
 - Actions run 1 (`fetch-photos.yml` #30973968007): 118 manifest entries, 35 ok, **0 licence violations**,
@@ -189,8 +218,11 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
    be attempted; otherwise all inference stays on the 3060.
 2. `fetch-photos.yml`'s push trigger is pinned to branch `claude/photo-db-img-to-3d-8j9tbe`;
    after PR #127 merges, keep only `workflow_dispatch` (edit the `on:` block) or repoint the branch.
-3. **(2026-08-05, blocks P2c/P0)** Accept the `stabilityai/stable-fast-3d` licence on huggingface.co
-   with the `winniexchang` account (and make sure the stored token can read gated repos) — until then
-   the local `hf` CLI gets "Repository not found" and SF3D cannot be installed.
+3. **(2026-08-05, blocks P2c/P0 — re-verified §5d, still closed)** Accept the
+   `stabilityai/stable-fast-3d` licence at https://huggingface.co/stabilityai/stable-fast-3d
+   **while logged in as `winniexchang`** (x111281@gmail.com). The stored token is verified good
+   (classic `read` token, public files download fine); the only missing piece is the on-page
+   "Agree" — the repo is `gated: auto`, so acceptance grants instantly. The earlier acceptance
+   attempt landed elsewhere (wrong account, or never submitted).
 4. **(2026-08-05, blocks P2c)** Approve installing **Blender** on the 3060 machine (headless
    decimate/origin/export step of the GLB pipeline; system-level install, so not done unasked).
