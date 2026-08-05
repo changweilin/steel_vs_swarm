@@ -766,7 +766,9 @@ const BARK = halfSolid([-1, 0, 0], 0);
 for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   if (ONLY && !name.includes(ONLY)) continue;
   for (const inst of INSTANCES) {
-    const it = { ...inst.it, tx: 0, tz: 0, dj: 0 };   // 特徵件不吃植株微傾斜,也不吃細節抖動(世界尺寸恆定)
+    // 特徵件不吃植株微傾斜(世界尺寸恆定);dj 自 2026-08-05 起由 hang() 以落點雜湊給
+    // ⇒ 接合 MUST 在細節抖動之下仍成立(與神木/植被同一組抽樣種子)
+    const it = { ...inst.it, tx: 0, tz: 0 };
     report(`巨木特徵 ${name}(${inst.name})`, auditJoints(vegParts(def, it), [BARK]), '錨體=樹皮面');
   }
 }

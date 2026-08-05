@@ -223,7 +223,8 @@ console.log('\nⅣ 消費端覆蓋(使用者點名的六種軟性物質)');
   const allSf = Object.values(CIVIC_PARTS).flat().filter((p) => p.sf);
   ok(allSf.every((p) => SOFT_KINDS[p.sf]), `公設的 sf 全部認得(${[...new Set(allSf.map((p) => p.sf))].join('/')})`);
   ok(allSf.every((p) => !p.col), '軟性鋪面一律沒有碰撞柱(siteplan 紀律④:公設是開放空間)');
-  ok(/const key = `\$\{p\.c\}\|\$\{p\.e \? 1 : 0\}\|\$\{p\.sf \|\| ''\}`/.test(code(site)),
+  // 2026-08-05:色欄改吃 seed 變異後的 `pc`(vc 通道),sf 那一段不變
+  ok(/const key = `\$\{pc\}\|\$\{p\.e \? 1 : 0\}\|\$\{p\.sf \|\| ''\}`/.test(code(site)),
     '軟性旗標進分桶鍵(混桶 = 同色的鋪面與草坪共用一份材質)');
   ok(/geo\.computeBoundingBox\(\);/.test(code(site)) && /bk\.top = Math\.max/.test(code(site)),
     '公設的擺動 span 由幾何**實算**(手寫高度 = 改尺寸就擺不到滿幅)');
