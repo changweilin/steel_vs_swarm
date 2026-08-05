@@ -17,7 +17,7 @@
 | Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
 | Photo DB gap-fill (parts at 0, see §4 step A) | **DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; **all 14 parts at target** (55 photos), licence re-audit 55/55 CC0/PD; throttle-cooldown loop needed 3 extra rounds for `lattice`/`tank` |
 | P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
-| P2c pilot — img→3D GLB parts (organic geometry) | TODO — **blocked on SF3D licence gate + Blender install** (see §6) | rock photos ready (facet 6/6, collapse 4/4, talus 4/4) |
+| P2c pilot — img→3D GLB parts (organic geometry) | **ALL PREP DONE 2026-08-05 — blocked only on SF3D weights gate** (owner: accept licence as `winniexchang`, §6-3) | venv 3.11 + torch 2.5.1+cu121 (GPU ✓) + SF3D deps + **both native extensions built** (`texture_baker`/`uv_unwrapper` `_C.pyd`, VS2022 + CUDA 12.6) + `sf3d` imports OK; Blender 5.2 LTS installed; rembg matting done; **2 usable inputs curated** (33MP glacial-erratic boulder + cropped fracture-face boulder); intake checker `tools/ai3d/intake_parts.mjs` written; tri budget **measured** (`tri_budget.json`: synthMegalith 200 seeds max 1071 tris) |
 | biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **blocked until P2c ships first tree/rock parts** | — |
 | `giantCrownR` GLB-compat (vertex scan or metadata; plan §8 correction 1) | TODO — **hard blocker for canopy GLBs** | — |
 | P3 dynamic track (mech slots) | NOT STARTED | Plan §3; do not start before P2c passes |
@@ -132,6 +132,45 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
 - **SF3D licence gate probed**: `hf` CLI (logged in as `winniexchang`) cannot see gated
   `stabilityai/stable-fast-3d` ⇒ owner must accept the licence on HF (and the token must allow
   gated-repo read) before P0 venv work is worth starting. Blender also absent (owner install).
+
+## 5c. Trial log (2026-08-05, 3060-machine session — step C prep after owner unblocked installs)
+
+- **P0 environment fully built** (weights are the only missing piece):
+  `tools/ai3d/.venv` = uv-provisioned CPython 3.11.11; torch **2.5.1+cu121** (`cuda.is_available()` ✓
+  on the 3060); all SF3D requirements; **both native extensions compiled on Windows**
+  (`texture_baker`/`uv_unwrapper` real `_C.cp311-win_amd64.pyd`, ~34 s / ~14 s builds, VS2022
+  Community + CUDA toolkit 12.6, `uv pip install --no-build-isolation` after `uv pip install
+  setuptools wheel ninja` — uv venvs ship without pip/setuptools). `from sf3d.system import SF3D` OK.
+  Blender **5.2 LTS** installed via winget. Vendor clone + venv + weights dirs are gitignored.
+- **SF3D weights still 403** after the owner reported accepting the licence — the API answer is
+  "not in the authorized list" for the `winniexchang` token (x111281@gmail.com). Public files
+  (LICENSE/README) download fine ⇒ the token works; the *grant* is missing. Accept on
+  https://huggingface.co/stabilityai/stable-fast-3d while logged in as that exact account.
+- **HF Space fallback measured and rejected**: the official `stabilityai/stable-fast-3d` gradio
+  Space is a *stateful event chain* — `/run_button` via `gradio_client` raises a hidden upstream
+  exception, and `/requires_bg_remove` returns a UI-update dict, not a model (session state the API
+  client never populates). Do not budget time on driving it headlessly; plan §8's "Space fallback"
+  is browser-manual only.
+- **Photo pool quality finding (the big one for Track B)**: numeric targets ≠ usable inputs.
+  Human review of every rock candidate: **~1/15 usable** for image→3D — the CC0-only corpus is
+  dominated by museum scans, stereograph cards, watercolours, night shots and scene photos
+  (licence gate stays; this is an input-curation problem, not a licence problem). Two remedies that
+  worked, in order: ① **query for named single-object landforms** — `glacial erratic` returned a
+  33 MP, frame-filling, evenly-lit single boulder (now `rock/collapse ov_4a7de829`, the pilot's
+  primary input); ② **crop single subjects out of scene photos** (still CC0) — `facet_a_crop.png`
+  from `ov_92b0`'s left boulder. Also: one Commons "photo" was a 148-page **PDF** (fetcher should
+  gain a magic-bytes/MIME check some round).
+- **Intake checker + measured triangle budget shipped** (runbook C.3 done ahead of the GLB):
+  `tools/ai3d/intake_parts.mjs` executes the beacons pure block for `['lib', name, fallback]`
+  descriptors, parses GLB by hand (zero npm deps), verifies vertex extents fit the fallback
+  envelope **both ways** (over = A30, under-half = bloated upper bound) and triangle count ≤
+  `tri_budget.json` (measured: synthMegalith across 200 seeds min 85 / p50 380 / p90 548 /
+  **max 1071**, factor 1.0 with recorded justification).
+- **Next single action when the gate opens**: `hf download stabilityai/stable-fast-3d --local-dir
+  tools/ai3d/weights/sf3d` → run one image through `vendor/stable-fast-3d/run.py` (venv python,
+  `--texture-resolution 512`), record VRAM/seconds here → Blender headless normalise (origin on
+  mating face, +Y up, strip textures, named nodes `facet_a`/`collapse_a`) → intake checker →
+  wire `PART_LIBS = ['rock']` + cairn `['lib', …]` descriptors → full static battery.
 
 ## 5. Trial log (2026-08-05, sandbox session)
 

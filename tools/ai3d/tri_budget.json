@@ -1,0 +1,9 @@
+{
+  "measured_what": "synthMegalith 現行程序合成巨岩(11 型 × 200 seeds,mulberry32(s*2654435761),量法 = 逐 mesh index.count/3 加總;量測腳本 = playwright 頁內抽 biomes.js 原文執行,2026-08-05)",
+  "measured_min_tris": 85,
+  "measured_p50_tris": 380,
+  "measured_p90_tris": 548,
+  "measured_max_tris": 1071,
+  "factor": 1.0,
+  "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)"
+}

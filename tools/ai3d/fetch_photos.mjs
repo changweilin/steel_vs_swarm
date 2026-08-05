@@ -46,9 +46,12 @@ const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo
 // 一件零件最後只用一張 —— skill §1:一張好照片勝過三張拼湊的)。
 export const PHOTO_CATALOG = {
   rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
-    facet:    { want: 6, q: ['granite boulder isolated', 'weathered rock outcrop closeup', 'limestone boulder'] },
+    // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
+    // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
+    // 站在空地上」的地物詞:glacial erratic(冰川漂礫)正是「孤立巨石」的專名。
+    facet:    { want: 9, q: ['glacial erratic boulder', 'erratic boulder', 'granite boulder isolated'] },
     // 第 2 輪放寬名詞(runbook §4-A:第 1 輪 0/4、1/4 的成因是查詢措辭太窄,不是沒料)
-    collapse: { want: 4, q: ['fallen boulder', 'rockfall boulder', 'boulder field'] },
+    collapse: { want: 7, q: ['glacial erratic', 'balanced rock formation', 'fallen boulder'] },
     talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
   },
   tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
