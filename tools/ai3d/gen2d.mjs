@@ -32,7 +32,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, statS
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import {
-  workList, masterQueue, refShotOf, masterPath, mastersOf, REPO, auditCoverage, auditQueue,
+  workList, masterQueue, refShotOf, masterPath, mastersOf, starOf, REPO,
+  auditCoverage, auditQueue, auditStars,
 } from './slots.mjs';
 import { masterPrompt, slotPrompt, slotPromptNoRef, auditLexicon } from './prompt.mjs';
 import { SHOT_POSE_KEYS as SHOT_ORDER } from '../../public/js/codex.js';
@@ -167,11 +168,17 @@ function buildJobs() {
       return existsSync(fresh) ? fresh : null;
     };
     const refs = mastersOf(w.ch).filter(refOf);
-    const ref = refs.find(m => m.includes('_ground_')) || refs[0] || null;
-    const refFile = ref ? refOf(ref) : null;
+    // ★ 星號優先(2026-08-05 使用者定案:「img to 3D 時如果外觀有衝突,以星號圖片為主」)。
+    // 切圖就是 image→3D 的輸入,而它只吃**一張**參考圖 ⇒ 這裡就是「外觀衝突」唯一被解決的地方。
+    // 舊規則(地面型設定稿)是一條幾何規則,退居星號之後:同一台機體的三種動作 × 兩種型態
+    // 不會完全一樣,誰才是那台機器只有人看得出來。星號解析不到檔案 ⇒ 回 null ⇒ 逐位元走舊規則
+    // (`starOf` 檔頭;那種情況由 `auditStars()` 紅字,不靠這裡沉默吸收)。
+    const star = starOf(w.ch);
+    const ref = star ? star.slot : (refs.find(m => m.includes('_ground_')) || refs[0] || null);
+    const refFile = star ? star.path : (ref ? refOf(ref) : null);
     for (const s of w.slots) {
       jobs.push({ id: `${w.ch}/${s.slot}`, ch: w.ch, kind: 'slot', slot: s.slot,
-        mirror: !!s.mirror, ref: ref || null,
+        mirror: !!s.mirror, ref: ref || null, star: !!star,
         out: join(DRAFTS, w.ch, `${s.slot}.jpg`),
         prompt: (!OPT.noRef && refFile) ? slotPrompt(w.ch, s, refFile) : slotPromptNoRef(w.ch, s),
         needsRef: !refFile });
@@ -184,16 +191,16 @@ function buildJobs() {
 // 兩支稽核**每次執行都跑**:它們紅字代表提示詞是錯的(槽位漏畫 / 原始代碼漏進提示詞),
 // 那種錯要到組裝完或看圖才發現,而那時額度已經花掉了。
 {
-  const cov = auditCoverage(), lex = auditLexicon(), qq = auditQueue();
+  const cov = auditCoverage(), lex = auditLexicon(), qq = auditQueue(), st = auditStars();
   // 佇列的警告(0 通過但還沒被判退)只印出來不擋:那是「還沒覆核到」而不是壞掉
   const warn = qq.filter(p => p.startsWith('⚠')), qbad = qq.filter(p => !p.startsWith('⚠'));
-  if (cov.length || lex.length || qbad.length) {
+  if (cov.length || lex.length || qbad.length || st.length) {
     console.log('❌ 稽核未通過,先修好再畫(否則畫出來的東西掛不上去):');
-    for (const p of [...cov, ...lex, ...qbad]) console.log('  ' + p);
+    for (const p of [...cov, ...lex, ...qbad, ...st]) console.log('  ' + p);
     process.exit(1);
   }
   for (const p of warn) console.log(p);
-  if (flag('audit')) { console.log('✅ rig 節點涵蓋 + 描述子詞表 + 補圖優先序 三支稽核通過'); process.exit(0); }
+  if (flag('audit')) { console.log('✅ rig 節點涵蓋 + 描述子詞表 + 補圖優先序 + ★ 外觀權威 四支稽核通過'); process.exit(0); }
 }
 
 const jobs = buildJobs();
@@ -204,7 +211,9 @@ if (OPT.plan) {
   console.log(`工作項 ${jobs.length} 張,已完成 ${jobs.length - todo.length},待畫 ${todo.length}`);
   const noRef = todo.filter(j => j.needsRef);
   if (noRef.length) console.log(`⚠ 其中 ${noRef.length} 張沒有設定稿可當參考(先跑 --masters)`);
-  for (const j of todo.slice(0, 400)) console.log('  ' + j.id + (j.mirror ? '  (鏡射件,只畫左)' : '') + (j.needsRef ? '  ⚠無參考圖' : ''));
+  // ★ 標出來:哪幾張是照使用者指定的那一張畫的、哪幾張仍走舊規則,在下筆之前就要看得見
+  for (const j of todo.slice(0, 400)) console.log('  ' + j.id + (j.mirror ? '  (鏡射件,只畫左)' : '')
+    + (j.star ? `  ★${j.ref}` : '') + (j.needsRef ? '  ⚠無參考圖' : ''));
   process.exit(0);
 }
 
@@ -240,7 +249,9 @@ for (const j of jobs) {
   // 而 worktree 一收掉,帳本裡每一筆的路徑就全部指向不存在的地方(2026-08-04 實例)。
   man.generated.push({ id: j.id, ch: j.ch, kind: j.kind, slot: j.slot ?? null,
     form: j.form ?? null, pose: j.pose ?? null,
-    ref: j.ref ?? null, mirror: !!j.mirror, out: relOut(j.out), src: file, bytes,
+    // `star` = 這張的參考圖是使用者指定的外觀權威(而不是舊規則挑的地面型設定稿)。
+    // 查得回來才知道某一批切圖是照哪一版外觀畫的
+    ref: j.ref ?? null, star: !!j.star, mirror: !!j.mirror, out: relOut(j.out), src: file, bytes,
     format: 'jpeg (agy generate_image 只出 JPEG)', at: new Date().toISOString(), prompt: j.prompt });
   saveManifest(man);
 }

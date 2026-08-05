@@ -84,7 +84,25 @@ export function wantShots(id) {
 /** 被判退的狀態 —— 這一格的入庫圖已經被人否決,重畫出來的那張才是要看的 */
 const REDRAW_ST = new Set(['redraw', 'reprompt']);
 
-export async function manifest(assign = {}, items = {}) {
+/** 這個 slot 屬於哪一台機體 —— **由 `wantShots` 反查,MUST NOT 拆字串**。
+ *  `slot.split('_')[0]` 看起來一樣對,但那是第二份命名規則:哪天角色 id 帶了底線
+ *  (或型態段改名),星號就會記到一個不存在的機體上,而畫面上只表現成「星號按了沒反應」。 */
+export function charOfSlot(slot) {
+  for (const id of Object.keys(CHARACTERS)) if (wantShots(id).some((s) => s.slot === slot)) return id;
+  return null;
+}
+
+/** ★ 星號 = 這台機體的**外觀權威**(2026-08-05 使用者定案:「一個機體只能標註一張;
+ *  img to 3D 時如果外觀有衝突,以星號圖片為主」)。
+ *
+ *  「一台只能一張」MUST 是**資料結構**而不是一道驗證迴圈:`state.star` 是 `機體 id → slot`
+ *  的映射 ⇒ 同一個鍵覆寫,兩張星號在結構上不可能存在。改成 `slot → true` 的集合就會需要
+ *  「存之前先掃掉同機體的其他星號」那種規則,而規則會漏(漏掉的症狀是兩張圖同時亮著星,
+ *  img→3D 端只好隨便挑一張 —— 那正是這個功能要解決的問題本身)。
+ *
+ *  消費端(img→3D 的參考圖選擇)住 `tools/ai3d/slots.mjs starOf()`,那一支負責把 slot
+ *  解析成實際檔案;本檔只負責**寫**與**顯示**。 */
+export async function manifest(assign = {}, items = {}, stars = {}) {
   // 池的鍵 MUST **帶來源**。只用檔名當鍵的話,同名檔案(剛重畫出來、而入庫那張還在)會被
   // 「先宣告的贏」直接吃掉 —— 那張新稿連孤兒清單都進不去,整個消失(檔頭 ③ 不准藏的正是這個)。
   // 2026-08-05 實測:13 張重畫的設定稿裡,5 張掉進孤兒、**8 張憑空不見**。
@@ -113,7 +131,10 @@ export async function manifest(assign = {}, items = {}) {
       const order = REDRAW_ST.has(items[s.slot]?.status) ? [...SOURCES].reverse() : SOURCES;
       const natural = order.flatMap((x) => x.ext.map((e) => pkey(x.key, `${s.slot}${e}`)));
       const k = natural.find((n) => pool.has(n)) ?? bySlot.get(s.slot);
-      if (!k) return { ...s, has: false, src: null, assigned: false, stale: false, url: null };
+      const star = stars[id] === s.slot;
+      // 星號指到一格**沒有圖**的 slot 時照樣標出來(檔頭 ③ 不准藏):那代表圖被刪掉或換名了,
+      // 而 img→3D 端會靜靜退回舊規則 —— 看不見的話,使用者會以為星號還在生效
+      if (!k) return { ...s, has: false, src: null, assigned: false, stale: false, star, url: null };
       const { src, file } = pool.get(k);
       pool.delete(k);
       // 同一格的其餘檔案是**被取代**的版本,不是孤兒:孤兒的定義是「對不到任何一格」,
@@ -129,7 +150,7 @@ export async function manifest(assign = {}, items = {}) {
       // 否則使用者看到一張新圖掛著舊評語,會以為自己已經覆核過了
       const at = items[s.slot]?.at;
       const stale = !!at && statSync(join(SRC_BY_KEY[src].dir, file)).mtimeMs > Date.parse(at);
-      return { ...s, has: true, file, src, assigned: !natural.includes(k), stale,
+      return { ...s, has: true, file, src, assigned: !natural.includes(k), stale, star,
         url: `${SRC_BY_KEY[src].url}/${file}` };
     });
     rows.push({
@@ -138,6 +159,7 @@ export async function manifest(assign = {}, items = {}) {
       kind: charKind(id), kindWord: KIND_WORD[charKind(id)] || charKind(id),
       avatar: `public/assets/avatars/${id}.png`,
       portrait: `public/assets/characters/${id}_base.png`,
+      star: stars[id] || null,
       shots,
     });
   }
@@ -160,7 +182,7 @@ async function saveState(s) {
 // ---- --report:不開瀏覽器的配對表 ----------------------------------------
 async function report() {
   const st = await loadState();
-  const { rows, orphans, superseded } = await manifest(st.assign, st.items);
+  const { rows, orphans, superseded } = await manifest(st.assign, st.items, st.star);
   // 逐來源分開數:AI 稿併進「有圖」就是把「這一格還沒有正式圖」藏起來(檔頭 ③)
   let want = 0, done = 0;
   const bySrc = Object.fromEntries(SOURCES.map((s) => [s.key, 0]));
@@ -187,6 +209,13 @@ async function report() {
   console.log(`  孤兒檔  ${orphans.length} 個${orphans.length ? `:${orphans.map((o) => o.file).join('、')}` : ''}`);
   const noArt = rows.filter((r) => r.shots.every((s) => !s.has)).map((r) => r.id);
   if (noArt.length) console.log(`  一張都沒有的角色(${noArt.length}):${noArt.join(' ')}`);
+  // ★ 外觀權威:img→3D 的參考圖以它為主 ⇒ 沒標的機體走舊規則(地面型設定稿),要看得見。
+  // 指到空格的星號 MUST 明講(那顆星實際上沒有生效,而畫面上看不出來)
+  const starred = rows.filter((r) => r.star);
+  const dead = starred.filter((r) => !r.shots.some((s) => s.star && s.has));
+  console.log(`  ★ 外觀權威 ${starred.length} / ${rows.length} 台`
+    + `${starred.length ? `:${starred.map((r) => `${r.id}→${r.star}`).join('、')}` : ''}`);
+  if (dead.length) console.log(`  ⚠ 星號指到沒有圖的格子(${dead.length}):${dead.map((r) => r.star).join('、')} —— img→3D 會退回舊規則`);
 }
 
 // ---- dev server ----------------------------------------------------------
@@ -220,7 +249,7 @@ async function serve() {
       if (req.url.startsWith('/api/review')) {
         if (req.method === 'GET') {
           const st = await loadState();
-          return send(200, JSON.stringify({ ...(await manifest(st.assign, st.items)), state: st }));
+          return send(200, JSON.stringify({ ...(await manifest(st.assign, st.items, st.star)), state: st }));
         }
         if (req.method === 'POST') {
           const chunks = [];
@@ -238,8 +267,19 @@ async function serve() {
             if (body.assignSlot) st.assign[body.assignFile] = body.assignSlot;
             else delete st.assign[body.assignFile];
           }
+          // ★ 一機一張:鍵是**機體**不是 slot ⇒ 標第二張自動取代第一張(見 manifest 檔頭)。
+          // 機體由 `charOfSlot` 反查(MUST NOT 在這裡拆檔名);查不到就當沒這回事,
+          // MUST NOT 用前端送來的 `starChar` 當設定星號的依據 —— 那等於讓頁面指定要蓋掉誰的星
+          if ('starSlot' in body) {
+            st.star = st.star || {};
+            const ch = body.starSlot ? charOfSlot(body.starSlot) : body.starChar;
+            if (ch && CHARACTERS[ch]) {
+              if (body.starSlot) st.star[ch] = body.starSlot;
+              else delete st.star[ch];
+            }
+          }
           await saveState(st);
-          return send(200, JSON.stringify({ ok: true, items: st.items, assign: st.assign }));
+          return send(200, JSON.stringify({ ok: true, items: st.items, assign: st.assign, star: st.star || {} }));
         }
         return send(405, '{"error":"method"}');
       }

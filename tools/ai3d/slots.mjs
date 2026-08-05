@@ -238,6 +238,46 @@ function reviewItems() {
   catch { return {}; }        // 還沒覆核過 = 沒有判決可讀(原則 6:少一份輸入不是錯)
 }
 
+/** ★ 星號 = 這台機體的**外觀權威**(2026-08-05 使用者定案:「img to 3D 時如果外觀有衝突,
+ *  以星號圖片為主」)。寫入端住覆核台 `tools/codex_review.mjs`(鍵是機體 ⇒ 一機一張);
+ *  這裡是**唯一的讀取與解析縫**,消費端只有 `gen2d.mjs` 的切圖參考圖。
+ *
+ *  為什麼外觀會有衝突:同一台機體有三種動作 × 兩種型態,再加上「入庫」與「AI 稿」兩層,
+ *  一台機體同時存在好幾張長得不完全一樣的圖。切圖(= image→3D 的輸入)只吃**一張**參考圖,
+ *  舊制挑的是「地面型設定稿」—— 那是一條幾何規則,不是人的判斷 ⇒ 使用者覺得最像的那一張
+ *  沒有辦法表達。星號就是那個表達,故它 MUST 排在舊規則**之前**。
+ *
+ *  解析順序 = 入庫 → AI 稿(與覆核台顯示同一格時的來源優先序一致)。
+ *  **檔案不存在就回 null**(圖被刪或改名)⇒ 呼叫端退回舊規則,MUST NOT 拿一條死路徑去餵
+ *  提示詞(agy 讀不到檔會靜靜畫出一張沒有參考的圖,而帳本上仍寫著 ref)。星號指到空格
+ *  這件事本身由 `auditStars()` 紅字,不靠這裡沉默處理(原則 6:降級,但要看得見)。 */
+export function starSlots() {
+  try { return JSON.parse(readFileSync(REVIEW_STATE, 'utf8')).star || {}; }
+  catch { return {}; }
+}
+
+export function starOf(ch) {
+  const slot = starSlots()[ch];
+  if (!slot) return null;
+  const inRepo = masterPath(slot);
+  if (existsSync(inRepo)) return { slot, path: inRepo, src: 'art' };
+  const fresh = join(NEW_MASTERS, `${slot}.jpg`);
+  return existsSync(fresh) ? { slot, path: fresh, src: 'ai' } : null;
+}
+
+/** 星號壞掉 MUST 紅字:①機體不存在 ②slot 不屬於那台機體 ③指到的圖不存在。
+ *  三者的共同症狀都是**沉默** —— img→3D 照舊規則挑圖,而使用者以為星號在生效。
+ *  「一台兩張」不在檢查清單裡:那由資料結構保證(鍵 = 機體),不是靠掃描維持的。 */
+export function auditStars() {
+  const bad = [];
+  for (const [ch, slot] of Object.entries(starSlots())) {
+    if (!CHARACTERS[ch]) { bad.push(`★ 標在不存在的機體 '${ch}' 上`); continue; }
+    if (!shotsOf(ch).some((s) => s.slot === slot)) { bad.push(`★ ${ch} 標的 '${slot}' 不是這台機體的格子`); continue; }
+    if (!starOf(ch)) bad.push(`★ ${ch} 標的 '${slot}' 找不到圖檔 —— img→3D 會退回舊規則(等於沒標)`);
+  }
+  return bad;
+}
+
 /** 這台機體要哪幾張圖(型態 × 動作)。命名與覆核台的 slot 同一條規則 `<id>[_<型態>]_<姿態>`;
  *  姿態清單走 `codex.SHOT_POSES` 單一縫(MUST NOT 在這裡再列一份 —— 兩份就是覆核台數得出
  *  「缺 38 張」而出圖端生不出來的那個病灶)。 */
