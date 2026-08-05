@@ -1355,6 +1355,32 @@ export const flightCapS = (def) =>
 // 跑得掉的位移(最快機體 ≈ 20m/s vs 彈頭 90~1000m/s),實務上等同「不受射程影響」。
 export const chaseCapS = (def) => flightCapS(def) * SEEK.CHASE_F;
 
+// ---- 擊發位置軌跡的保留窗(2026-08-05 使用者定案)----
+// 使用者:「射程半球的計算應該要是由彈藥擊發的那個位置計算,後續機體的移動不影響」。
+// 客戶端一向如此(`b.origin = muzzle.clone()`,球心在擊發那一刻就烤死);少掉的那一半在
+// 伺服器:AoE 彈頭是**著彈**才回報(`heroBurst`),而落點閘門量的是機體的**當下**位置 ——
+// 拋物線榴彈滿射程要飛近 6 秒,那 6 秒裡球心跟著機體跑。⇒ 伺服器必須記得機體走過的路,
+// 才回推得出「這一發是從哪裡打出去的」。
+// 保留窗 **推導不手寫** = 全體武器裡最長的那個「著彈 → 擊發」回推窗(與 `sim.heroBurst` 的
+// `cap` 同一條式:射後不理取 `chaseCapS`、其餘取 `flightCapS`)。手寫秒數的下場是改了射程/
+// 初速/彈道類型之後,最遠那一發回推不到擊發位置 ⇒ 靜默退回機體中心 = 病灶原封不動回來,
+// 而且沒有任何錯誤訊息。
+let _trailS = 0;
+export function shotTrailS() {
+  if (!_trailS) {
+    let m = 0;
+    for (const ch of Object.keys(CHARACTERS)) {
+      for (const slot of ['light', 'heavy']) {
+        const def = heroWeapon(ch, slot, 1, true);
+        if (!def) continue;
+        m = Math.max(m, trajClass(def) === 'fnf' ? chaseCapS(def) : flightCapS(def));
+      }
+    }
+    _trailS = m;
+  }
+  return _trailS;
+}
+
 // ================= 「打得到嗎」逐彈道判定規則(2026-07-30 使用者回報)=================
 // 使用者回報:「榴彈類武器常常出現射程光暈卻沒命中對方」。病灶是**射程光暈只量距離**:
 // 距離在射程內就亮,而榴彈真正能不能命中還要看彈道解過不過得去(稜線/建物/射程包絡),
