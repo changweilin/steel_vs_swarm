@@ -7,12 +7,9 @@
 //   鐵路未 merge 鏈,端點貼近的同線段不得誤剔)。
 // 跑法:node tools/audit_bridge_crossing.mjs   退出碼:0 = 全綠;1 = 紅字
 // **改完 MUST 反向驗證**:把 polylinesMeet 的「真正交叉」return 寫回 false ⇒「交叉必剔除」段 MUST 紅字(內建對照組)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
 
 function loadCore(mutate = (s) => s) {
   const roadW = src.slice(src.indexOf('const ROAD_W = {'), src.indexOf('};', src.indexOf('const ROAD_W = {')) + 2);

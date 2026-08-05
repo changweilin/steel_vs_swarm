@@ -10,12 +10,9 @@
 //
 // 不需要 three.js —— 只載 DOM/CSS(3D 模組在沙箱/CI 常因 CDN 被擋而載不到),
 // 選角面板改以代表性骨架灌進去量。跑法:`node tools/audit_ui_layout.mjs [-v]`
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 // 直式是本次改版的主場;橫式一併量,確保「並排」原則沒把橫式撐爆(667×375 是最窄的一組)
 const VIEWS = [
   { n: '360x640 直', w: 360, h: 640 },
@@ -39,12 +36,12 @@ const ok = (cond, msg) => {
 // ---------------------------------------------------------------------------
 {
   console.log('▍按鈕文字(去括號補述)');
-  const html = readFileSync(join(ROOT, 'public', 'index.html'), 'utf8');
+  const html = readSrc('public', 'index.html');
   for (const m of html.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)) {
     const txt = m[1].replace(/<[^>]*>/g, '').trim();
     ok(!/[（(]/.test(txt), `index.html 鈕面「${txt}」MUST NOT 含括號補述`);
   }
-  const js = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
+  const js = readSrc('public', 'js', 'main.js');
   // ① `xxxBtn.textContent = '…'` / `btn.textContent = a ? '…' : '…'`(含樣板字串)
   for (const m of js.matchAll(/\b(?:\w*[Bb]tn|add|back)\.textContent\s*=\s*([^;]+);/g)) {
     for (const s of m[1].matchAll(/['`]([^'`]*)['`]/g)) {
@@ -65,9 +62,9 @@ const ok = (cond, msg) => {
 // ---------------------------------------------------------------------------
 {
   console.log('\n▍GUI 懸浮提示 / 按鍵風格 / NPC 圖示');
-  const html = readFileSync(join(ROOT, 'public', 'index.html'), 'utf8');
-  const css = readFileSync(join(ROOT, 'public', 'css', 'style.css'), 'utf8');
-  const mainJs = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
+  const html = readSrc('public', 'index.html');
+  const css = readSrc('public', 'css', 'style.css');
+  const mainJs = readSrc('public', 'js', 'main.js');
   const help = await import(new URL('../public/js/help.js', import.meta.url));
   const icons = await import(new URL('../public/js/npcicon.js', import.meta.url));
   const data = await import(new URL('../public/js/data.js', import.meta.url));
@@ -171,7 +168,7 @@ const ok = (cond, msg) => {
     '開發工具的說明 MUST NOT 進 UI_TIPS(那一份會被推導進玩家看得到的說明分頁)');
 
   // 埠號的真相住工具自己(codex_review.mjs `DEFAULT_PORT`)⇒ 客戶端 MUST 一個數字都不寫死
-  const codexSrc = readFileSync(join(ROOT, 'tools', 'codex_review.mjs'), 'utf8');
+  const codexSrc = readSrc('tools', 'codex_review.mjs');
   ok(/export const DEFAULT_PORT = \d+;/.test(codexSrc),
     'tools/codex_review.mjs 匯出 `DEFAULT_PORT`(埠號的唯一真相)');
   ok(!/localhost:\d+/.test(mainJs),

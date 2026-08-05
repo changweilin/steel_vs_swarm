@@ -10,14 +10,11 @@
 // 為什麼用「抽原文」而不是 import:`terrain.js` 的 three 走 CDN importmap,Node 端解析不了;
 // 本稽核抽出的是 rayTerrain 那一整段**真正的程式碼文字**(另抄一份公式就永遠會通過)。
 // 跑法:`node tools/audit_terrain_ray.mjs`
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-// LF 正規化:git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。下方跨行切片標記(B1 的 `\n   * …`、
-// H1 的 `\n  }`)一律以 `\n` 書寫,不正規化就只在 Linux 綠、Windows 紅。
-const src = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8').replace(/\r\n/g, '\n');
+// 讀原文一律走 `readSrc`(§5 通則 ㋑;換行正規化成 LF):git 存 LF,但 autocrlf 下 Windows 工作區是
+// CRLF。下方跨行切片標記(B1 的 `\n   * …`、H1 的 `\n  }`)一律以 `\n` 書寫,不正規化就只在 Linux 綠。
+const src = readSrc('public', 'js', 'terrain.js');
 
 // ---- 抽出 rayTerrain 區塊(含 triDead / markTriDead / triHit)----
 const B0 = src.indexOf('  // ---- 地形射線(解析版');

@@ -14,13 +14,13 @@
 //   Ⅴ 逐組合交界樣式(明確/柔和/斑塊/中間樣態帶 + 脊帶三水密不變式 + seamAlpha 直測
 //      + 對照組ⓒ單邊帶公式 ⓓ逐格閘門)
 'use strict';
-import { readFileSync } from 'node:fs';
+import { readSrc } from './audit_src.mjs';
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
 
-const src = readFileSync(new URL('../public/js/ground.js', import.meta.url), 'utf8');
+const src = readSrc('public', 'js', 'ground.js');
 
 // ===== 抽原文(零依賴 → eval 執行真品)=====
 const stylesM = src.match(/export const SEAM_STYLES = \{[\s\S]*?\n\};/);

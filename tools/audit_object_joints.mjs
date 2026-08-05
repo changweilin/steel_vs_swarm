@@ -51,13 +51,10 @@
 // 用法:node tools/audit_object_joints.mjs [--seeds 4] [--all] [--only <名稱>]
 //   --all 連 ok 的零件一起列(預設只列有問題的)
 // 退出碼:0 = 全部接好;1 = 有 FLOAT / PARTIAL / DETACHED / ISOLATED
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { HAZARDS } from '../public/js/data.js';
 import { vegPartXform } from '../public/js/xform.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const SEEDS = Math.max(1, +arg('--seeds', 4));
 const SHOW_ALL = process.argv.includes('--all');
@@ -477,7 +474,7 @@ const THREE_STUB = {
 };
 
 // ============================ hazards.js:BUILDERS ============================
-const hzSrc = fs.readFileSync(path.join(ROOT, 'public/js/hazards.js'), 'utf8');
+const hzSrc = readSrc('public', 'js', 'hazards.js');
 const hzBlock = hzSrc.match(/const BUILDERS = \{[\s\S]*?\n\};/);
 if (!hzBlock) { console.error('抽不到 hazards.js 的 BUILDERS'); process.exit(1); }
 
@@ -612,7 +609,7 @@ const HZ_EXEMPT = {
 };
 
 // ============================ biomes.js:植被 / 神木 ============================
-const bmSrc = fs.readFileSync(path.join(ROOT, 'public/js/biomes.js'), 'utf8');
+const bmSrc = readSrc('public', 'js', 'biomes.js');
 function pick(re, what) {
   const m = bmSrc.match(re);
   if (!m) { console.error(`抽不到 biomes.js 的 ${what}`); process.exit(1); }

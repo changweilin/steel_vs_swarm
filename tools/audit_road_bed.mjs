@@ -10,13 +10,10 @@
 //   Ⅴ 確定性:同輸入兩次執行逐位元同結果(零 rnd)
 //   Ⅵ 呼叫端(biomes):橋/步道/結構隧道 run 不整;排在 markGradeCorridors 之前
 // 跑法:node tools/audit_road_bed.mjs;退出碼 0 = 全綠
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
-const bsrc = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+const tsrc = readSrc('public', 'js', 'terrain.js');
+const bsrc = readSrc('public', 'js', 'biomes.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };

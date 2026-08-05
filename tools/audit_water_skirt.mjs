@@ -7,13 +7,10 @@
 // 跑法:node tools/audit_water_skirt.mjs   退出碼:0 = 全綠;1 = 紅字
 // **改完 MUST 反向驗證**(內建對照組):①skirtWaterClips 改 no-op ⇒「貼邊繞行」段紅字 ②去掉「另一側開放」條件
 //   (回到舊版單看近岸)⇒「斜交穿越」段紅字(斜交被誤判成貼邊繞掉整座橋 = 複審抓到的回歸)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { WATER } from '../public/js/data.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
 
 function loadCore(mutate = (s) => s) {
   const iw0 = src.indexOf('function isWaterPt(terrain, x, z) {');

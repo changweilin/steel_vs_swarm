@@ -18,13 +18,9 @@
 //   Ⅳ 鍵位與單一縫:ZR = 鎖定(按住型)、機種絕招搬到十字鍵左且仍只有一個派發縫、
 //     目標解析只有 `_coneAcquire` 一份、瞄準點只有 `_entAimPoint` 一份、
 //     **按一次輪替一個**(錨點 `_vlockPrev` 跨放開保留,名冊依畫面由左至右)。
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
 import { VIEW_LOCK, viewLockStep, SCOPE, scopeRvmin } from '../public/js/data.js';
+import { readSrc as read } from './audit_src.mjs';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (...p) => readFileSync(join(root, ...p), 'utf8');
 const dataSrc = read('public', 'js', 'data.js');
 const gameSrc = read('public', 'js', 'game.js');
 const mobileSrc = read('public', 'js', 'mobile.js');
