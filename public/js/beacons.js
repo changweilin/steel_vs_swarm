@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { toonMat, envMat, bakeContactAO } from './toon.js';
 import { mulberry32 } from './rng.js';
+import { libGeo } from './partlib.js';
 
 // ---- 規劃參數 ----
 // NEAR/FAR 是「centre 到 centre」的搜尋帶:近端沒有意義上的下限(真正的下限由 `blocked`
@@ -60,7 +61,7 @@ export const BEACON = {
 export const BEACON_KINDS = {
   pylon: { foot: 8.0, h: 35 },   // 高壓電塔
   mast: { foot: 3.8, h: 29 },    // 通訊天線塔
-  tank: { foot: 5.2, h: 23 },    // 水塔
+  tank: { foot: 5.6, h: 23 },    // 水塔(foot ← X 斜撐 3D 半對角實算 5.56,P2b 2026-08-05)
   depot: { foot: 6.0, h: 10 },   // 貨櫃堆
   cairn: { foot: 2.6, h: 13 },   // 敖包/疊石堆 + 旗桿
 };
@@ -108,17 +109,44 @@ const KIND_PARTS = {
     { g: ['cyl', 0.09, 0.14, 7, 5], c: 0xcfd6dc, p: [0, 27.5, 0] },
     { g: ['ico', 0.42], c: 0xff5a48, p: [0, 28.6, 0], e: 1 },
   ],
-  // 水塔:四根支腿 + 桶身 + 錐頂 + 側梯(梯子朝 +Z)。
+  // 水塔:四支兩節收分腿 + 中央立管 + 兩層 X 斜撐面板 + 桶身箍肋 + 錐頂 + 側梯(梯子朝 +Z)。
+  // P2b 試點(2026-08-05,runbook §4-B):以 CC0 照片庫 landmark/tank 為**量測參考**重寫
+  // (照片只當比例尺,不進 repo)。兩個工程取捨:
+  //   ① X 斜撐是傾斜件,外廓走 3D 半對角(偏差朝算大)⇒ 實算 5.56m,foot 5.2 → 5.6;
+  //   ② buildBeacon 的 stretch 對傾斜件**只縮位移不縮長度** ⇒ 斜撐 MUST 錨在「垂直的
+  //      腿軸」上並各留 0.18m 端部餘裕 —— 端點只會沿腿滑動,不會在 stretch 極值脫接
+  //      (錨在水平橫撐端點的話,極值下會浮開 0.2m)。
   tank: [
-    ...[[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]].map(([x, z]) => (
-      { g: ['cyl', 0.3, 0.4, 13, 5], c: 0x8a8f8a, p: [x, 6.5, z] })),
-    { g: ['box', 6.8, 0.3, 0.3], c: 0x7c817c, p: [0, 7.4, -3.2] },
-    { g: ['box', 6.8, 0.3, 0.3], c: 0x7c817c, p: [0, 7.4, 3.2] },
-    { g: ['cyl', 4.2, 4.2, 6.4, 10], c: 0xb6a892, p: [0, 16.2, 0] },
-    { g: ['cyl', 4.35, 4.35, 0.5, 10], c: 0x8d7f6c, p: [0, 13.4, 0] },
-    { g: ['cone', 4.45, 2.4, 10], c: 0x7a5f4b, p: [0, 20.6, 0] },
-    { g: ['cyl', 0.18, 0.18, 1.6, 5], c: 0xcfd6dc, p: [0, 22.4, 0] },
-    { g: ['box', 0.7, 15, 0.12], c: 0x6f746f, p: [0, 9.5, 4.5] },   // 側梯
+    ...[[-3.0, -3.0], [3.0, -3.0], [-3.0, 3.0], [3.0, 3.0]].flatMap(([x, z]) => [
+      { g: ['cyl', 0.34, 0.46, 7.2, 5], c: 0x8a8f8a, p: [x, 3.6, z] },   // 腿下節(粗)
+      { g: ['cyl', 0.26, 0.34, 6.4, 5], c: 0x8a8f8a, p: [x, 10.1, z] },  // 腿上節(細)
+    ]),
+    { g: ['cyl', 0.42, 0.5, 13.4, 6], c: 0x6f746f, p: [0, 6.7, 0] },     // 中央立管(riser)
+    // 面板橫撐(上下兩道 × 四面)
+    ...[4.2, 9.6].flatMap((y) => [
+      { g: ['box', 6.5, 0.26, 0.26], c: 0x7c817c, p: [0, y, -3.0] },
+      { g: ['box', 6.5, 0.26, 0.26], c: 0x7c817c, p: [0, y, 3.0] },
+      { g: ['box', 0.26, 0.26, 6.5], c: 0x7c817c, p: [-3.0, y, 0] },
+      { g: ['box', 0.26, 0.26, 6.5], c: 0x7c817c, p: [3.0, y, 0] },
+    ]),
+    // X 斜撐(兩層面板 × 四面;每面兩根對角、各在交點切成兩段 ⇒ 每面 4 段)
+    ...[[0.6, 4.2], [4.2, 9.6]].flatMap(([y0, y1]) => {
+      const ym = (y0 + y1) / 2, h2 = (y1 - y0) / 4;
+      const th = Math.atan2((y1 - y0) / 2, 3.0), L = Math.hypot(3.0, (y1 - y0) / 2) + 0.36;
+      return [-1, 1].flatMap((s1) => [-1, 1].flatMap((sd) => [
+        { g: ['box', L, 0.2, 0.2], c: 0x7c817c, r: [0, 0, sd * th], p: [s1 * 1.5, ym + s1 * sd * h2, -3.0] },
+        { g: ['box', L, 0.2, 0.2], c: 0x7c817c, r: [0, 0, sd * th], p: [s1 * 1.5, ym + s1 * sd * h2, 3.0] },
+        { g: ['box', 0.2, 0.2, L], c: 0x7c817c, r: [sd * th, 0, 0], p: [-3.0, ym - s1 * sd * h2, s1 * 1.5] },
+        { g: ['box', 0.2, 0.2, L], c: 0x7c817c, r: [sd * th, 0, 0], p: [3.0, ym - s1 * sd * h2, s1 * 1.5] },
+      ]));
+    }),
+    { g: ['cyl', 4.2, 4.2, 6.4, 10], c: 0xb6a892, p: [0, 16.2, 0] },     // 桶身
+    { g: ['cyl', 4.35, 4.35, 0.5, 10], c: 0x8d7f6c, p: [0, 13.4, 0] },   // 底環
+    ...[14.1, 16.2, 18.3].map((y) => (
+      { g: ['cyl', 4.3, 4.3, 0.22, 10], c: 0x8d7f6c, p: [0, y, 0] })),   // 箍肋 ×3
+    { g: ['cone', 4.45, 2.4, 10], c: 0x7a5f4b, p: [0, 20.6, 0] },        // 錐頂
+    { g: ['cyl', 0.18, 0.18, 1.6, 5], c: 0xcfd6dc, p: [0, 22.4, 0] },    // 通氣柱
+    { g: ['box', 0.7, 15, 0.12], c: 0x6f746f, p: [0, 9.5, 4.45] },       // 側梯
   ],
   // 貨櫃堆:交錯堆疊的貨櫃 + 油桶 + 棧板。矮但佔地大,只用在近距離的兵線錨點。
   depot: [
@@ -134,9 +162,11 @@ const KIND_PARTS = {
   ],
   // 敖包/疊石堆 + 旗桿:路旁的人跡標記。矮,但旗桿把可見高度撐起來。
   cairn: [
-    { g: ['ico', 1.5], c: 0x8f8a80, p: [0, 0.9, 0] },
-    { g: ['ico', 1.15], c: 0x9a958a, p: [0.25, 2.3, -0.15] },
-    { g: ['ico', 0.85], c: 0x857f75, p: [-0.2, 3.3, 0.2] },
+    // 疊石三大件走 AI 零件庫(P2c 首批;SF3D 實拍岩體):fallback = 舊 ico 描述子,
+    // 外廓契約由 intake_parts.mjs 擔保(GLB 頂點收在 fallback 包絡內)⇒ foot 不動。
+    { g: ['lib', 'rock/collapse_a', ['ico', 1.5]], c: 0x8f8a80, p: [0, 0.9, 0] },
+    { g: ['lib', 'rock/facet_a', ['ico', 1.15]], c: 0x9a958a, p: [0.25, 2.3, -0.15] },
+    { g: ['lib', 'rock/facet_b', ['ico', 0.85]], c: 0x857f75, p: [-0.2, 3.3, 0.2] },
     { g: ['ico', 0.6], c: 0x9a958a, p: [0.1, 4.1, 0] },
     { g: ['cyl', 0.13, 0.16, 9, 6], c: 0x6b5a42, p: [0, 8.2, 0] },
     ...[8.4, 9.6, 10.8].map((y, i) => (
@@ -157,6 +187,10 @@ const KIND_PARTS = {
  */
 export function partExtent(part) {
   const [t, a, b, c] = part.g;
+  // AI 零件庫描述子 `['lib', name, <fallback primitive>]`:離線外廓 = fallback 的外廓。
+  // 契約由匯出端擔保(GLB 零件外廓 ≤ fallback 外廓才准入庫)⇒ 這裡是保守上界,
+  // 執行期碰撞柱仍走 `beaconCollider` 實測(A30 兩邊都成立)。
+  if (t === 'lib') return partExtent({ ...part, g: part.g[2] });
   const [px = 0, , pz = 0] = part.p || [];
   const [rx = 0, ry = 0, rz = 0] = part.r || [];
   const tilted = rx !== 0 || rz !== 0;
@@ -309,6 +343,9 @@ export function planBeaconSites(anchors, probe, opts = {}) {
 // ---- 建構(以下才需要 THREE)----
 const _geo = (spec) => {
   const [t, a, b, c] = spec;
+  // AI 零件庫:查無此名 ⇒ 原 primitive 描述子(spec[2])就是保險絲,MUST 留著。
+  // `.clone()` 不可省 —— buildBeacon 會就地 `applyMatrix4`,共用庫幾何被改一次就全壞。
+  if (t === 'lib') { const g = libGeo(a); return g ? g.clone() : _geo(spec[2]); }
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);

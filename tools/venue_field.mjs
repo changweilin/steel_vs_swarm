@@ -85,7 +85,7 @@ export const densify = evalBlock('function densify(', 'densify');
 export const tunFloorAt = evalBlock('function tunFloorAt(', 'tunFloorAt');
 // 地下道規劃(平坦 tunnel way 的下沉剖面)—— 與遊戲同一份原文
 export const underpassPlan = evalBlock('const UND = {', 'underpassPlan',
-  { ROAD_SEG, WATER, densify, tunnelCoverIntervals });
+  { ROAD_SEG, WATER, densify, tunnelCoverIntervals, TUN_COV_MIN });
 // 結構隧道資格 —— 與遊戲同一份原文(人行/室內 tunnel way 不進結構管線 ⇒ 不成洞;
 // 2026-07-29 澀谷側壁破口案)。判定與候選診斷 MUST 同吃這個閘,否則稽核比執行期多洞。
 export const PED_HW = new Function(`return ${/const PED_HW = (\/[^\n]+\/);/.exec(bsrc)[1]};`)();
@@ -586,6 +586,7 @@ export function tunnelRunOf(way, center, heightAt, hf) {
   const up = underpassPlan(raw, way.tags, heightAt, {
     minX: hf.minX + UND.EDGE, maxX: hf.maxX - UND.EDGE,
     minZ: hf.minZ + UND.EDGE, maxZ: hf.maxZ - UND.EDGE,
+    hw: strucHw(way.tags),   // 全寬覆蓋取樣的牆線位置 —— 與 biomes.js carve 迴圈同一份 strucHw
   });
   if (!up) return { pts, cum, floors, intervals, under: false };
   return { pts: up.pts, cum: up.cum, floors: up.floors, intervals: up.intervals, under: true, sink: up.sink };

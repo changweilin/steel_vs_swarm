@@ -35,6 +35,7 @@ import {
   protoLayers, protoOf, charCodex, mechaCodex,
   textSeed, imagePrompt, modelSheet, codexIssues, visualWords, artWords, hueHex,
 } from '../public/js/codex.js';
+import { masterPrompt } from './ai3d/prompt.mjs';
 import { MECHA } from '../public/js/mecha.js';
 import { LORE } from '../public/js/lore.js';
 import { CHARACTERS, charKind, heroTargetH } from '../public/js/data.js';
@@ -199,6 +200,21 @@ t('main.js 的 protoHTML 只負責畫:不再切標籤字串、不再自帶標籤
   const layerLine = textSeed('mecha', 't01');
   t('文本種子的原型層也不用「」/—— 當分隔(t01 的名稱本身就含兩者)',
     layerLine.includes('機體原型 ▸ 「壁壘」過裝甲型'));
+}
+{
+  // 2D 生圖管線是 `protoOf` 的第二個消費端,而它的失效方式**完全無聲**:舊制讀 lore 的自由字串
+  // `proto`,那個欄位結構化之後取到 undefined → 空字串 → 被 `filter(Boolean)` 濾掉 ⇒ 提示詞裡
+  // 最權威的設計敘述整段消失,只表現成「生出來的圖跟設定對不上」(2026-08-05 實測 18 張設定稿)。
+  // 故除了原文比對,還 MUST **執行真品**確認那一行真的帶著這台的原型層。
+  const promptSrc = readSrc('tools', 'ai3d', 'prompt.mjs');
+  t('2D 生圖提示詞從 codex.js 取設計敘述(MUST NOT 回頭讀 lore 的 proto 自由字串)',
+    /import \{[^}]*protoOf[^}]*\} from '[^']*codex\.js'/.test(promptSrc)
+    && !/loreOf|\.proto\b/.test(strip(promptSrc)));
+  const brief = IDS.map((id) => masterPrompt(id, protoLayers(id).includes('air') ? 'ground' : null));
+  t('每一台的設定稿提示詞都帶著非空的設計敘述',
+    brief.every((p) => /Design brief \(authoritative, Traditional Chinese\):\n  · \S/.test(p)));
+  t('設計敘述逐層 = protoOf(該台)(內容真的是推導的,不是另寫一份)',
+    IDS.every((id, i) => protoOf(id).every((L) => brief[i].includes(`${L.label} ▸ ${L.src}:${L.note}`))));
 }
 t('main.js 從 codex.js 取原型(MUST NOT 自己 import MECHA 再拼)',
   /import \{[^}]*protoOf[^}]*\} from '\.\/codex\.js'/.test(mainSrc) && !/from '\.\/mecha\.js'/.test(mainSrc));

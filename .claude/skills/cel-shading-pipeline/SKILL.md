@@ -61,6 +61,13 @@ darkest   0.574   0.127 step — form is carried by the dark end
 Measured failure: lightest set to 0.806 bleached the whole hill — it is the lightest
 tone, on the largest area, already in the ramp's top band.
 
+**Treat the palette module as a design document.** Next to each colour family record its
+*measured* relative luminance (`0.2126R + 0.7152G + 0.0722B`), the reason for the value
+(which ramp band it lands in on what area share), and the values that **failed** and why.
+Keep every colour table **append-only** — `wall:`/`roof:` indices are baked into standing
+geometry, and reordering repaints half the world silently. Per area, a narrow gamut plus
+one or two saturated accents, each with its reason written down.
+
 ### 1b. Shadow hue shift — the one line that matters
 
 Patch `lights_toon_pars_fragment`:
@@ -83,7 +90,17 @@ mat.onBeforeCompile = (s) => { s.uniforms.uShadowTint = uni; /* replace chunk */
 mat.customProgramCacheKey = () => 'celTint_' + hex;   // omit ⇒ three shares one program across tints
 ```
 
-Cache materials by parameter signature or the scene compiles hundreds of programs.
+Cache materials by parameter signature or the scene compiles hundreds of programs — but
+**force no-cache for materials carrying a `map`/`alphaMap`** (textures are not shareable
+by signature).
+
+Two robustness rules for any ShaderChunk string replacement:
+
+- **Guard the anchor** (`chunk.includes(anchorLine)`): a three.js upgrade that rewrites
+  the chunk must *disable the patch*, not crash the app.
+- **A silently-disabled patch needs a visible fallback check** — the failure mode is
+  "shadows quietly stop being tinted", which nobody reports. Keep one automated frame
+  or uniform check that goes red when the patch stops landing.
 
 ### 1c. `flatShading: true` by default
 
@@ -208,6 +225,20 @@ rtScene.depthTexture.type = THREE.UnsignedIntType;
 rtScene.depthTexture.minFilter = rtScene.depthTexture.magFilter = THREE.NearestFilter;
 ```
 
+`NearestFilter` on the depth texture is load-bearing: linearly filtered depth invents
+values between surfaces, and a second difference amplifies them into false edges.
+
+**Model for the ink pass** — the pass changes what geometry reads as:
+
+- A hedge/bush row as instanced leaf blobs reads as **separate dark polyhedra**, because
+  the ink fires on every blob's own silhouette no matter how densely they pack. Give such
+  masses a solid dark core box and seat blobs only on the top and outer faces, where they
+  break the lit silhouette.
+- Ground pads want to be **shallow slabs, not planes** — the thin ink line around a
+  forecourt's edge is what makes paving read as paving.
+- Cheap tree shade: low-opacity dark discs (`depthWrite: false`, `noOutline`) beat real
+  leaf shadows and cost nothing in the ink pass.
+
 ---
 
 ## L4 — Inverted hull, hero props only
@@ -301,11 +332,32 @@ Match linear fog range to the ink fade range — distance is handed to fog, not 
 | Thin / transparent meshes `depthWrite: false` | Ink pass outlines petals and cables into speckle |
 | Pale canopies / masses never `receiveShadow` | Ramps shape direct light only ⇒ **dark circles floating in the sky** |
 | Thin overhanging copings `castShadow = false` | Self-shadow lands as a sawtooth row, not a line |
+| Closed sky/planet spheres `castShadow = false` | The far hemisphere renders into the shadow map and drops the **entire world** into shadow — everything uniformly dark for no visible reason |
 | Ground-hugging decals marked `noOutline` | Road patches / tyre marks / lane paint get inked |
-| Lift very dark base colours | Dark green in the bottom band lands within a few % of ink; glazing, seams and shut lines stop existing |
+| Lift very dark base colours | Dark green in the bottom band lands within a few % of ink; glazing, seams and shut lines stop existing. A prop that lives in *permanent* shade wants near-white |
+| Anything inside an unlit recess gets `emissive` (~0.4) | The recess and its contents are all on the ramp's bottom band within a few % of each other; **choosing a lighter colour buys nothing when the surface gets no direct light**. Emissive lifts value while keeping the shading — the lit-button trick |
+| Saturated lamp/accent surfaces stay small | A 0.26 m flat-red lamp is the loudest thing in any frame; real clusters are smaller, deeper, and split by housing bars |
 | Check texture aspect against the face | 512×128 on a 0.24×1.5 m face is 25× horizontal crush — renders as blur, not an error |
+| Single-sided planes must face the viewer they exist for | A painted interior / poster / curtain on a frontage looking −z is back-face culled — simply absent, no error. `rotation.y = atan2(nx, nz)` for outward normal `(nx, nz)` |
+| Merge a multi-box body into one mesh before hull-outlining it | Per-mesh contour ink draws every internal seam of a five-box prop |
 | Dispose one-shot geometry/materials; register shared geometry first | Frame time degrades over play session |
-| Multi-material meshes must keep `geometry.groups` | A material array without groups is **not drawn at all**, silently |
+| Multi-material meshes must keep `geometry.groups` through every rebuild pass | A material array without groups is **not drawn at all**, silently — one subdivision/`toNonIndexed()` pass took out all 54 signs at once and looked like an art choice |
+
+### Normals under a cel ramp
+
+- **`computeVertexNormals()` on a non-indexed geometry IS flat shading** — every vertex
+  gets the face normal, and `flat: false` on the material changes nothing. Any pass that
+  rebuilds geometry as a bare position list (CSG cuts, subdivision) de-indexes it. For
+  analytic surfaces take normals analytically (radial for a sphere: one loop, exact);
+  otherwise `mergeVertices` before computing.
+- **Re-read `geometry.attributes.position` after any pass that replaces it.** Writing the
+  normal buffer from the pre-pass attribute gives a shorter array; three.js does not
+  complain — it shades the tail of the mesh with whatever is in memory.
+- **A smooth analytic surface under a cel ramp has no shading on it.** Near-coplanar
+  ground quantises to one band with a hard straight edge. The fix is geometry (faceting,
+  scattered bumps), not tone — and never sine-based bumps: a plane wave gives every ridge
+  the same bearing and the ink pass draws them as parallel straight lines
+  (see `procedural-object-detail` L2).
 
 ---
 
@@ -337,5 +389,7 @@ Steps 1–3 give usable cel shading. **Step 4 is what moves it from "toon render
 | Petals / cables render as scattered dots | Thin meshes still writing depth |
 | Dark circles hanging in the sky | Pale masses with `receiveShadow` on |
 | Dark vehicle/mech is a flat silhouette | Base colour too dark; bottom band ≈ ink colour |
+| The shading terminator is a staircase of triangles | Face normals where smooth were intended — `computeVertexNormals` on non-indexed geometry (see "Normals under a cel ramp") |
+| A detail inside a recess is invisible however light its colour | It is on the ramp's bottom band with everything around it — needs `emissive`, not a lighter colour |
 | Material colour edit produces a **pixel-identical** frame | That face is not being drawn — two coplanar faces. Never a subtle material problem |
 | Bad aliasing on mobile | MSAA is a bandwidth cost on tilers and does nothing for pass-drawn lines |

@@ -229,12 +229,13 @@ export const CIVIC_PARTS = {
       p: [19 + Math.cos(i / 6 * Math.PI * 2) * 3.4, 1.8, 9 + Math.sin(i / 6 * Math.PI * 2) * 3.4],
     })),
     { g: ['cyl', 4.4, 4.4, 0.3, 6], c: 0x7a5a3c, p: [19, 3.75, 9], col: 1 },
-    { g: ['cone', 4.6, 2.4, 6], c: 0xa8503c, p: [19, 5.1, 9] },
+    { g: ['cone', 4.6, 2.4, 6], c: 0xa8503c, p: [19, 5.1, 9], vc: 30 },
     // 長椅(座面 + 兩腳;0.9m 高,與灌木同級 ⇒ 不掛碰撞)
-    ..._row(4, (i) => ({ g: ['box', 3.2, 0.22, 0.9], c: 0x8a6a48, p: [-20 + i * 13, 0.86, -9.4] })),
-    ..._row(4, (i) => ({ g: ['box', 3.2, 0.7, 0.16], c: 0x7a5a3c, p: [-20 + i * 13, 1.2, -9.85] })),
-    // 花圃
-    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15], sf: 'grass' })),
+    // `opt`:非碰撞小件的存缺通道(座面與椅背同通道 ⇒ 同進退)—— 同圖兩座公園不再逐位元相同
+    ..._row(4, (i) => ({ g: ['box', 3.2, 0.22, 0.9], c: 0x8a6a48, p: [-20 + i * 13, 0.86, -9.4], opt: 1 + i })),
+    ..._row(4, (i) => ({ g: ['box', 3.2, 0.7, 0.16], c: 0x7a5a3c, p: [-20 + i * 13, 1.2, -9.85], opt: 1 + i })),
+    // 花圃(`vc`:色相變異通道 —— 這座公園開紅花、那座開黃花)
+    ..._row(3, (i) => ({ g: ['box', 7, 0.7, 3.2], c: 0xc06a7a, p: [-6 + i * 12, 0.1, 15], sf: 'grass', vc: 21 + i })),
     { g: ['cyl', 0.16, 0.2, 5.2, 6], c: 0x585e64, p: [-2, 2.6, -12] },       // 園燈
     { g: ['ico', 0.5], c: 0xffe9b0, p: [-2, 5.4, -12], e: 1 },
   ],
@@ -270,10 +271,11 @@ export const CIVIC_PARTS = {
     ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, 10.4], c: 0xe0e4e8, p: [-22.5 + i * 5, -0.22, -7.4] })),
     ..._row(10, (i) => ({ g: ['box', 0.3, 0.54, 10.4], c: 0xe0e4e8, p: [-22.5 + i * 5, -0.22, 7.4] })),
     // 停放車輛(車體 + 車頂;各自登記碰撞柱 —— 停車場裡的車是實心的)
-    ..._row(5, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0xb4553c, 0x3f6f7a, 0xa8a08c, 0x7d8a4a, 0x51585f][i], p: [-20 + i * 5, 0.68, -7.4], col: 1 })),
-    ..._row(5, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x93412c, 0x335b64, 0x8b8474, 0x67723c, 0x41474d][i], p: [-20 + i * 5, 1.75, -7.8] })),
-    ..._row(4, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0x3f6f7a, 0xa8a08c, 0xb4553c, 0x7d8a4a][i], p: [2.5 + i * 5, 0.68, 7.4], col: 1 })),
-    ..._row(4, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x335b64, 0x8b8474, 0x93412c, 0x67723c][i], p: [2.5 + i * 5, 1.75, 7.0] })),
+    // `vc`:車體與車頂同通道 ⇒ 同一台車一起轉色;同圖兩座停車場停的車色不再逐位元相同
+    ..._row(5, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0xb4553c, 0x3f6f7a, 0xa8a08c, 0x7d8a4a, 0x51585f][i], p: [-20 + i * 5, 0.68, -7.4], col: 1, vc: 1 + i })),
+    ..._row(5, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x93412c, 0x335b64, 0x8b8474, 0x67723c, 0x41474d][i], p: [-20 + i * 5, 1.75, -7.8], vc: 1 + i })),
+    ..._row(4, (i) => ({ g: ['box', 2.2, 1.35, 4.8], c: [0x3f6f7a, 0xa8a08c, 0xb4553c, 0x7d8a4a][i], p: [2.5 + i * 5, 0.68, 7.4], col: 1, vc: 6 + i })),
+    ..._row(4, (i) => ({ g: ['box', 2.0, 0.9, 2.4], c: [0x335b64, 0x8b8474, 0x93412c, 0x67723c][i], p: [2.5 + i * 5, 1.75, 7.0], vc: 6 + i })),
     // 收費亭 + 柵欄 + 燈桿
     { g: ['box', 2.6, 3.0, 2.6], c: 0xd8d2c4, p: [-23, 1.5, 14.5], col: 1 },
     { g: ['box', 3.0, 0.3, 3.0], c: 0x51585f, p: [-23, 3.15, 14.5] },
@@ -495,13 +497,24 @@ const _geo = (spec) => {
  * 逐塊一個 mesh 的話光是停車場的車格白線就 20 個)。
  * 反轉外殼描邊刻意不掛 —— 世界的線由 `postfx.js` 的螢幕空間勾線 pass 蓋全場。
  */
-export function buildCivic(kind) {
+export function buildCivic(kind, seed = 0) {
   const g = new THREE.Group();
   const parts = CIVIC_PARTS[kind] || CIVIC_PARTS.park;
   const buckets = new Map();
   for (const p of parts) {
+    // 場景走樣(2026-08-05):同圖多座公設不再逐位元相同(舊制連停哪幾台車、什麼顏色
+    // 都一樣)。`opt` = 非碰撞小件的存缺通道 —— **col 件恆保留**(碰撞柱走 civicColliders
+    // 靜態表,視覺缺席就是隱形牆,A30 反面);`vc` = 色相變異通道(成對零件共用通道 ⇒
+    // 同一台車的車體與車頂一起轉色)。全由 seed 雜湊(`frac`)推導,零共享 rnd(A38 ②)。
+    if (p.opt && !p.col && frac(seed ^ 0x51ed, 100 + p.opt) > 0.72) continue;
+    const pc = p.vc
+      ? new THREE.Color(p.c).offsetHSL(
+          (frac(seed ^ 0x51ed, p.vc) - 0.5) * 0.14,
+          (frac(seed ^ 0x9d2c, p.vc) - 0.5) * 0.1,
+          (frac(seed ^ 0x2f81, p.vc) - 0.5) * 0.08).getHex()
+      : p.c;
     // 軟性旗標 MUST 進分桶鍵:同一桶只有一份材質,混桶的話同色的鋪面與草坪會共用一份旗標
-    const key = `${p.c}|${p.e ? 1 : 0}|${p.sf || ''}`;
+    const key = `${pc}|${p.e ? 1 : 0}|${p.sf || ''}`;
     const geo = _geo(p.g);
     const m = new THREE.Matrix4();
     const [px = 0, py = 0, pz = 0] = p.p || [];
@@ -512,7 +525,7 @@ export function buildCivic(kind) {
       new THREE.Vector3(1, 1, 1),
     );
     geo.applyMatrix4(m);
-    if (!buckets.has(key)) buckets.set(key, { c: p.c, e: !!p.e, sf: p.sf || null, top: 0, geos: [] });
+    if (!buckets.has(key)) buckets.set(key, { c: pc, e: !!p.e, sf: p.sf || null, top: 0, geos: [] });
     const bk = buckets.get(key);
     // 擺動權重的分母**實算**(零件位移已烘進幾何 ⇒ 這是「離公設地面多高」)。
     // 手寫一個高度的話,改花圃尺寸就會變成「頂面擺不到滿幅」或「整塊一起平移」。

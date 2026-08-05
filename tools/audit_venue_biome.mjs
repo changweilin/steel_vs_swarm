@@ -121,6 +121,14 @@ console.log('Ⅰ 宣告自洽(mix 鍵集 / 總和 / type 對得上主成分)');
   const i1 = bio.indexOf('  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區');
   ok(i0 > 0 && i1 > i0 && !/\bmix\b/.test(bio.slice(i0, i1).replace(/\/\/.*$/gm, '')),
     '建物管線(聚落場 + 街廓配置)不讀 venue.mix —— 地貌一律由圖資判,宣告不參與');
+  // 2026-08-05 補上同一條防線的另外兩個出口(使用者回報「綠地/裸露地建築太多」):
+  // 邊界樓也是建物(進 generic ⇒ 碰撞/立面同路)⇒ 市區判定 MUST 過聚落場;
+  // 備援程序街區 MUST 只在圖資查詢失敗時觸發(查到零建物 = 真實答案,不是降級的理由)。
+  const bare = bio.replace(/\/\/.*$/gm, '');
+  ok(/biome === 'urban' && !settlement\?\.\(x, z\)/.test(bare),
+    '邊界樓(placeBoundary)的市區判定過聚落場 —— mix / 衛星誤判不得憑空生出建物');
+  ok(/if \(!osm && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)/.test(bare),
+    '備援程序街區只在圖資查詢失敗(!osm)且宣告有市區成分時觸發 —— 查詢成功但零建物 ⇒ 荒野維持荒野');
 }
 
 if (ARG.offline) {

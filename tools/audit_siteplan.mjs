@@ -13,16 +13,21 @@
 //   Ⅲ 樹冠羞避 —— 冠緣不相碰(核心不變式)/ 縮冠而非淘汰 / 下限 / 傾斜方向與有界 / 確定性
 //   Ⅳ 地質排列 —— 走向 ⟂ 傾向 / 平地回 null / 長軸同向 / 排間錯縫 / 由核心往外 / 體格遞減
 //   Ⅴ 消費端單一縫 —— biomes.js 的接線(一份實作一個呼叫點、零共享 rnd、朝向公式共用)
+//   Ⅶ 建物來源信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」)——
+//      每一條會生出建物的路都要有圖資背書:邊界樓過聚落場、備援街區只在查詢失敗時觸發、
+//      市區種子影像在手就走純影像判(手寫 mix 不得憑空生出市區)
 //
 // 反向驗證(原則 9):
 //   --break-line    進深上限撐破排距 ⇒ Ⅰ 的排距不變式與後棟淨距 MUST 紅字
 //   --break-shy     冠緣間隙歸零 ⇒ Ⅲ 的「冠緣不相碰」MUST 紅字
 //   --break-strike  長軸抖動放大 ⇒ Ⅳ 的「長軸同向」MUST 紅字
+//   --break-gate    邊界樓的聚落場閘改成恆放行 ⇒ Ⅶ 的「荒野邊界零棟」MUST 紅字
 import { readSrc } from './audit_src.mjs';
 
 const BREAK_LINE = process.argv.includes('--break-line');
 const BREAK_SHY = process.argv.includes('--break-shy');
 const BREAK_STRIKE = process.argv.includes('--break-strike');
+const BREAK_GATE = process.argv.includes('--break-gate');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -586,6 +591,97 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
         `**局部標準化**:密集核心配 ${nearCore} 棟、600m 外的兩棟散戶周邊配 ${nearOut} 棟`);
       ok(rN.seeds.length === core.length,
         `補間種子只收核心那 ${core.length} 棵,散戶不入選(${rN.seeds.length} 棵)`);
+    }
+  }
+}
+
+// ============ Ⅶ 建物來源信任階梯(2026-08-05)============
+// 使用者回報「綠地和裸露地的建築太多了,不符合真實圖資,設計更符合現實世界的判斷機制」。
+// 病灶有三條,全部沒有錯誤訊息:
+//   ① `placeBoundary` 的邊界樓靠衛星像素低飽和度判 urban —— 裸岩/陰影/道路全是低飽和灰,
+//      綠地/裸露地場地被沿整圈邊界圈上數十棟高樓,而圖資裡一棟都沒有;
+//   ② 備援程序街區把「查詢成功但零建物」(真實答案:沒有建物)與「查詢失敗」(不知道)
+//      混為一談 —— 真的空曠荒野也會長出一座程序市區;
+//   ③ 市區種子 `urbanPts` 吃 classify 的手寫 mix 55% 改寫 —— 綠地場地宣告一成 urban
+//      就在全圖撒假種子。
+// 判斷機制 = **信任階梯**:圖資建物密度(聚落場)> 純影像分類 > 手寫 mix(只當全離線備援)。
+console.log('\nⅦ 建物來源信任階梯(biomes.js)');
+{
+  const bcode = strip(bio);
+  // ---- 原文單一縫 ----
+  ok((bcode.match(/function classifyImg/g) || []).length === 1, '純影像判 `classifyImg` 恰一份實作');
+  ok(/let c = classifyImg\(rgb\);/.test(bcode), 'classify 的第一層轉呼 classifyImg(色彩門檻只有一份)');
+  {
+    const c0 = bio.indexOf('function classifyImg');
+    const cSrc = strip(bio.slice(c0, bio.indexOf('\n}', c0)));
+    ok(!/\brnd\b/.test(cSrc), 'classifyImg 零亂數(收集閘多呼叫一次不推移共享序列,§2.3)');
+  }
+  ok(/\(!rgb \|\| classifyImg\(rgb\) === 'urban'\) && urbanPts\.length < 500/.test(bcode),
+    '市區種子:影像在手只收純影像判為 urban 的點;無影像才退回 classify(mix 是最後備援)');
+  ok(/if \(!osm && \(!mix \|\| \(mix\.urban \|\| 0\) > 0\.1\)\s*&& !landmarks\.length && !generic\.length && urbanPts\.length > 8\)/.test(bcode),
+    '備援程序街區只在圖資**查詢失敗**(!osm)且場地宣告有市區成分時觸發 —— '
+    + '查詢成功但零建物 = 荒野維持荒野;宣告 urban ≤ 10% = 沒有市區可重建(mix 是階梯第三層的否決票)');
+  ok(/placeBoundary\(\{ terrain, items, generic, rnd, mix, occ, settlement \}\)/.test(bcode),
+    '呼叫端把聚落場傳進 placeBoundary(邊界樓與兩個放大器同一把尺)');
+  ok(/biome === 'urban' && !settlement\?\.\(x, z\)/.test(bcode),
+    '邊界樓的市區判定過聚落場(衛星低飽和誤判 / mix 改寫不得憑空生出建物)');
+
+  // ---- 行為直測:執行 classifyImg / classify / placeBoundary 原文 ----
+  const h0 = bio.indexOf('function weightedPick');
+  const hEnd = bio.indexOf('function classify(');
+  const helpers = bio.slice(h0, bio.indexOf('\n}', hEnd) + 2);
+  const H = new Function(`${helpers}\n return { classifyImg, classify };`)();
+  ok(H.classifyImg([120, 120, 120]) === 'urban', '純影像:低飽和灰 → urban(誤判來源,故只當證據之一)');
+  ok(H.classifyImg([150, 120, 90]) === 'bare' && H.classifyImg([80, 140, 60]) === 'green'
+    && H.classifyImg([40, 80, 160]) === 'water' && H.classifyImg(null) === null,
+    '純影像:棕黃 → bare、綠 → green、藍 → water、無影像 → null');
+  {
+    let calls = 0;
+    const c = H.classify([120, 120, 120], 50, null, () => { calls++; return 0.9; });
+    ok(c === 'urban' && calls === 0, 'classify 無 mix 時零亂數且等於純影像判(重構逐位元相容)');
+    calls = 0;
+    const c2 = H.classify(null, 50, { urban: 1 }, () => { calls++; return 0.1; });
+    ok(c2 === 'urban' && calls === 2, '全離線(無影像)時 mix 仍是最後一層備援(降級鏈沒斷,原則 6)');
+  }
+  {
+    const p0 = bio.indexOf('function placeBoundary');
+    let pbSrc = bio.slice(p0, bio.indexOf('\n}', p0) + 2);
+    // 反向驗證:把聚落場閘改成恆放行 =「舊制」⇒ 荒野邊界照樣長樓,下面那條 MUST 紅字
+    if (BREAK_GATE) pbSrc = pbSrc.replace("biome === 'urban' && !settlement?.(x, z)", 'false');
+    const runBoundary = (settle, mix) => {
+      const env = {
+        GIANT_DEFS: { kapok: { r: 6 } },
+        FACADES: { commercial: [0], residential: [0] },
+        OVER: { bldCap: 170 },
+        terrainEnvCode: () => 0,
+        sinkBaseY: () => 50,
+      };
+      const names = Object.keys(env);
+      const fn = new Function(...names, `${helpers}\n${pbSrc}\n return placeBoundary;`)(
+        ...names.map((k) => env[k]));
+      const items = {}, generic = [];
+      const n = fn({
+        terrain: { minX: -500, maxX: 500, minZ: -500, maxZ: 500, worldW: 1000, worldH: 1000,
+          heightAt: () => 50, sampleColor: () => [120, 120, 120] },   // 整圈低飽和灰(裸岩/陰影)
+        items, generic, rnd: () => 0.9, mix, occ: { room: () => 999, add() {} },
+        settlement: settle,
+      });
+      return { n, items, generic };
+    };
+    let err = null, wild = null, town = null, bareV = null;
+    try {
+      wild = runBoundary(() => false, null);            // 荒野:圖資密度不足
+      town = runBoundary(() => true, null);             // 市區:圖資密度背書
+      bareV = runBoundary(() => false, { bare: 0.8, green: 0.2 });   // 裸露地場地的降格選型
+    } catch (e) { err = e; }
+    ok(!err, `placeBoundary 原文執行不炸${err ? ` —— ${err.message}` : ''}`);
+    if (!err) {
+      ok(wild.generic.length === 0 && wild.n > 0,
+        `**荒野邊界零棟**:整圈影像誤判 urban + 聚落場不背書 ⇒ 樓 0 棟、視覺牆仍有 ${wild.n} 件(不留缺口)`);
+      ok((wild.items.kapok || []).length > 0, '降格預設走神木牆(mix 缺席 → green)');
+      ok(town.generic.length > 0, `市區邊界照長樓(聚落場背書 ⇒ ${town.generic.length} 棟,城市場地不受影響)`);
+      ok((bareV.items.borderrock || []).length > 0 && bareV.generic.length === 0,
+        '裸露地場地降格成巨岩(mix.bare 佔多 → borderrock;視覺牆選型走宣告,建物才要圖資背書)');
     }
   }
 }

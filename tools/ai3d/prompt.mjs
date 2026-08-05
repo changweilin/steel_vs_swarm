@@ -9,23 +9,22 @@
  *   split(切圖)     = image→3D 的**輸入**,吃九條規則(灰底、全不透明、平光、無描邊)。
  *                      畫成漂亮插畫反而會在 3D 階段付代價(計畫 §5.2 開頭)。
  *
- * 設計敘述 MUST 取**機體檔案原文**(`codex.js` → `mecha.js` 的原型層與生成段)—— 那是機體設計的
- * 權威敘述。這裡**不轉譯**:轉譯就是第二份設計描述,而漂移只會表現成「新畫的這隻跟設定不太一樣」,
- * 沒有錯誤訊息。
+ * 設計敘述 MUST 取 `codex.js` 的機體檔案原文(`protoOf()` 原型層 + `mechaCodex().gen` 生成段)
+ * —— 那是機體設計的權威敘述(A40 ⑤:值一律到原處取)。這裡**不轉譯**:轉譯就是第二份設計描述,
+ * 而漂移只會表現成「新畫的這隻跟設定不太一樣」,沒有錯誤訊息。
  *
- * ⚠ 2026-08-05 修:舊制取的是 `loreOf(ch).proto`,而那個自由字串欄位在 2026-08-04 的
- *   A40 結構化改制裡**已經整組退場**(原型改住 `mecha.js proto` 的分層 `{src, note}`)。
- *   `proto && ...` 於是恆為 falsy ⇒ 整條「Design brief」**從那天起一次都沒有送出去過**,
- *   而且沒有任何錯誤訊息:提示詞看起來仍然很長(九條規則 + 底盤代碼詞表都還在),
- *   只是機體真正的設計敘述不見了。2026-08-04 那批覆核意見裡的
- *   「非人型,克蘇魯外型」「非人形,外觀以袋鼠為主」「非人形、犬型」「非人形、鴕鳥外觀」
- *   四條,逐字都寫在 mecha.js 的 `gen.sil`/`gen.note` 裡 —— 使用者是在手抄一份提示詞**本來
- *   就該自己帶上**的東西。故本檔改吃 codex,連 `gen.note`(這一台最容易被畫錯的那件事)一起送。
+ * ⚠ 舊制取的是 `loreOf(ch)` 的自由字串,而那個欄位在 2026-08-04 的 A40 結構化改制裡已整組
+ *   退場 ⇒ 條件恆為 falsy,整條「Design brief」一次都沒有送出去過,而且沒有任何錯誤訊息
+ *   (提示詞看起來仍然很長:九條規則 + 底盤代碼詞表都還在)。修法見 9ede197。
+ *   2026-08-05 覆核意見裡的「非人型,克蘇魯外型」「非人形,外觀以袋鼠為主」「非人形、犬型」
+ *   「非人形、鴕鳥外觀」四條,逐字都寫在 mecha.js 的 `gen.sil`/`gen.note` 裡 —— 使用者是在
+ *   手抄一份提示詞**本來就該自己帶上**的東西。故生成段(剪影/量體/材質/分件/生成注意)
+ *   一併送出,`gen.note`(這一台最容易被畫錯的那件事)排在最後、最靠近輸出。
  */
 
 import { CHARACTERS, MORPH_HUMANOID } from '../../public/js/data.js';
 import {
-  FORM_POSE, SHOT_POSES, formPose, shotFraming, mechaCodex, protoOf, visualUses,
+  FORM_POSE, SHOT_POSES, formPose, shotFraming, mechaCodex, protoOf, protoLayers, visualUses,
 } from '../../public/js/codex.js';
 import { slotsOf } from './slots.mjs';
 
@@ -233,12 +232,14 @@ function limbLine(ch) {
  * 這些字本身就把模型往人形機甲拉(訓練分布裡的 mecha 幾乎都是人形)。仿生原型只是一個
  * 「像什麼」的形容詞,壓不過那個先驗。
  *
- * 判定 MUST 推導、MUST NOT 手寫名單:人形 = 有人形機甲原型(`visual.proto`)或地面型態在
- * `MORPH_HUMANOID` 裡;其餘凡有生物原型的一律非人形。這樣新增角色會自己落到對的那一邊。
+ * 判定 MUST 推導、MUST NOT 手寫名單:人形 = 有**人形機甲原型層**(`protoLayers` 的 `frame`,
+ * 由 `visual.proto` 推導)或地面型態在 `MORPH_HUMANOID` 裡;其餘凡有生物原型的一律非人形。
+ * 這樣新增角色會自己落到對的那一邊。走 `protoLayers` 而非直接讀 `visual` 是 A40 ⑤ 的同一條
+ * (值到原處取),也讓本檔維持「不出現任何 `.proto` 欄位讀取」——那正是稽核釘住的那一點。
  */
 function bodyPlanLine(ch) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  if (v.proto != null) return '';                                   // 人形機甲原型 = 本來就是人形
+  if (protoLayers(ch).includes('frame')) return '';                   // 人形機甲原型 = 本來就是人形
   if (c.kind === 'morph' && MORPH_HUMANOID.has(v.ground)) return '';  // 人形變形者(狼/吸血鬼/悟空/力士)
   if (!LEX.creature[v.creature] && !LEX.ground[v.ground]) return '';  // 純載具(多旋翼/定翼)—— 不會被畫成人形
   return 'CRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, '
@@ -250,17 +251,24 @@ function bodyPlanLine(ch) {
 /**
  * 機體設計敘述 —— 取 `codex.js` 組裝好的機體檔案原文(原型層 + 生成段)。
  * 這是**權威敘述**,MUST NOT 在這裡改寫或摘要(見檔頭)。
- * `form` 給定時濾掉另一型的原型層:變形者恆有兩層,兩層一起送等於同一張圖被要求長成兩種東西。
+ *
+ * 分隔用 ` ▸ `(同 `codex.js fmtField` 與 9ede197):原型名稱本身就含「」與 ——,
+ * 64 層裡有 13 層的 `note` 自帶 —— ⇒ 拿那兩種符號當分隔會讀不出邊界。`label` 也 MUST 保住:
+ * 拆層後丟掉標籤,等於把 A40 ③ 好不容易分開的兩個型態又揉回同一句話裡。
+ *
+ * **變形者的兩層一律都送**(不依型態濾掉另一層):`label` 已經把「飛行型原型 / 地面型原型」
+ * 分得清清楚楚,而兩型本來就共用同一組零件(§5.0.1 MUST 1)—— 只送一層等於把
+ * 「這是一台會變形的機器」這件事藏起來,而 `chassisSpec` 那邊本來也是兩型都列。
+ * 真正指定「這一張畫哪一型」的是 `FORM_POSE`,不是這裡。
+ * (`imagePrompt` 那條**關鍵詞**串則相反,會濾掉另一型 —— 那邊沒有 label,詞會打架。)
  */
-function designBrief(ch, form) {
+function designBrief(ch) {
   const d = mechaCodex(ch);
   if (!d) return [];
-  const drop = formPose(ch, form)?.drop;      // 濾哪一層與姿態語同一個縫,MUST NOT 各判一次
-  const layers = protoOf(ch).filter((L) => L.key !== drop)
-    .map((L) => `  · ${L.label}:${L.src} —— ${L.note}`);
+  const proto = protoOf(ch).map((L) => `${L.label} ▸ ${L.src}:${L.note}`).join('\n  · ');
   const g = d.gen || {};
   return [
-    layers.length && `Design prototypes (authoritative, Traditional Chinese):\n${layers.join('\n')}`,
+    proto && `Design brief (authoritative, Traditional Chinese):\n  · ${proto}`,
     g.sil && `Silhouette (authoritative, Traditional Chinese): ${g.sil}`,
     g.mass && `Mass proportions: ${g.mass}`,
     g.mat && `Surface and materials: ${g.mat}`,
@@ -277,7 +285,8 @@ function designBrief(ch, form) {
  */
 export function masterPrompt(ch, form = null, pose = 'static', refPath = null) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  // 沒有型態(非變形者)一律沿用地面那組取景 ⇒ 與舊制逐字相同
+  // 沒有型態(非變形者)一律沿用地面那組取景 ⇒ 與舊制逐字相同。
+  // 舊的 `formLine` 三元式已收進 `codex.FORM_POSE` 單一縫(覆核台的重下 prompt 同吃)
   const fp = formPose(ch, form);
   const act = SHOT_POSES.find((p) => p.key === pose);
 
@@ -291,7 +300,7 @@ export function masterPrompt(ch, form = null, pose = 'static', refPath = null) {
     `Concept art sheet for a mecha unit in a near-future war game. Unit id ${ch}, faction: ${FACTION[c.side] || c.side}.`,
     `Chassis specification:\n  · ${chassisSpec(v)}`,
     `Primary livery colour ${hex(v.hue)}, paint scheme "${v.paint}".`,
-    ...designBrief(ch, form),
+    ...designBrief(ch),
     limbLine(ch),
     bodyPlanLine(ch),
     fp?.en,
@@ -328,8 +337,8 @@ export function slotPromptNoRef(ch, slot, brief) {
   return [
     `Generate ONE image: a single detached mecha part — the "${slot.desc}" of a near-future war machine.`,
     `Machine context: ${FACTION[c.side] || c.side}. Chassis: ${chassisSpec(v)}.`,
-    // 同 masterPrompt:設計敘述取機體檔案原文(舊制那個 `lore.proto` 已退場,恆為空)
-    ...designBrief(ch, null),
+    // 同 masterPrompt:設計敘述取機體檔案原文(舊制那個自由字串已退場,恆為空)
+    ...designBrief(ch),
     brief && `Part detail: ${brief}`,
     'Output requirements:',
     NINE_RULES + ';',

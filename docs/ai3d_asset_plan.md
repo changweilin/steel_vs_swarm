@@ -1,5 +1,9 @@
 # AI 3D Asset Pipeline — Execution Plan (settled 2026-08-04)
 
+> **Operational state and next steps live in [`ai3d_runbook.md`](ai3d_runbook.md)** (agent-readable
+> runbook: status ledger, environment matrix, execution queue, trial log). This file holds the
+> settled decisions; the runbook holds what to run next.
+
 > Goal: raise detail density of **dynamic units (mechs / building-unit NPCs)** and **static props
 > (buildings, giant trees, megaliths, landmarks)** one tier, without touching the rig contract,
 > determinism, or A2 (zero npm deps).
@@ -404,7 +408,55 @@ VRAM; how reliably the 2D tool obeys "keep only this part"; part-library load im
 
 ---
 
-## 8. Related skills
+## 8. Appendix A (2026-08-05) — Static-prop generation: method split per object family
+
+User proposal evaluated: "download a photo database first, fill gaps by search, then img→3D;
+(1) an Opus agent writing three.js from images, (2) local open-source img→3D models, (3) anything better."
+Verdict: **the proposal matches Track B §4 and is being executed** — but the three options are not
+alternatives; they split **by geometry class**:
+
+| Object family | Method | Why |
+|---|---|---|
+| Landmarks `KIND_PARTS`(pylon/watertower/container/cairn)| **LLM agent reads photos → writes pure-data part rows**(proposal 1, corrected form)| Part tables are already pure-data primitives; that is the only reason `audit_beacons` Ⅰ can verify extents offline in the sandbox. Zero binary weight, zero licence exposure(photos are measurement reference only, never baked in), native fit with `stretch`/`partJitter`/colour seam. The agent's output is **part-table data rows, not three.js code**(A38 purity)|
+| Building modules(windows/roof caps/balconies/piping)`BUILDERS` | Same as above | Boxy, regular; primitives suffice; oriented-box colliders stay derivable(A30)|
+| Civic parts `CIVIC_PARTS` | Same as above | Same |
+| Megaliths(rock facets/collapse blocks/talus cones)`MEGALITHS` | **img→3D model → partlib GLB**(proposal 2)| Organic, irregular — primitives cannot express them; this is the only family class worth the GLB payload + offline-extent contract. SF3D for bulk, TRELLIS.2/Hunyuan for signature pieces(§1 ladder unchanged)|
+| Giant-tree parts(canopy modules/buttress roots/forks)`GIANT_DEFS` | **img→3D model → partlib GLB** | Same; **blocked on the `giantCrownR` issue below — do not ship canopy GLBs before it is solved** |
+| Small vegetation / generic building masses | **Keep procedural** — no AI | Not every family should eat AI: wholesale GLB swap explodes draw calls/triangle budget, and `procedural-object-detail` already covers variation there |
+| Mechs / NPCs(Track A)| Unchanged(§3 per-slot 2D→3D)| Out of scope of this proposal |
+
+**Proposal 3(better routes)found**: when no local GPU is available, the official
+**`stabilityai/stable-fast-3d` HF Space**(gradio, 1206 likes)runs SF3D as a service; output still goes
+through the same Blender normalisation + intake contract. Photos must still be CC0 regardless of where
+inference runs.
+
+**Execution-environment split**(measured 2026-08-05): the CI sandbox has no GPU(`nvidia-smi` absent)
+and its proxy blocks `api.openverse.org` / `commons.wikimedia.org`(CONNECT 403 — ㋓)⇒ sandbox does
+seams/tools/audits; the 3060 machine(or Actions)does photo download + inference; HF Space is the
+no-GPU fallback.
+
+**Two plan corrections found by implementation(P1 landed 2026-08-05)**:
+
+1. **§2.1's biomes one-liner `g: libGeo(…) ?? ico(2.7)` cannot work as written**: `biomes.js` is a
+   static import, so `VEG_DEFS` is constructed at module-load time — before any async GLB fetch can
+   complete ⇒ `libGeo` would always miss and the library would silently never be used. The biomes seam
+   MUST resolve at the **consumption loop**(build time; e.g. an optional `p.lib` field next to `p.g`,
+   `p.g` remaining the fuse). Wire it in P2 together with the first real parts. Also `giantCrownR`
+   reads `p.g.parameters`, which GLB `BufferGeometry` does not have — crown-radius derivation must scan
+   vertices(or carry measured metadata)before any canopy GLB ships, or crown shyness silently
+   diverges from the visible canopy.
+2. **Offline-extent contract for lib descriptors**: `['lib', name, <fallback primitive>]`'s offline
+   extent = the fallback's extent; the export tool MUST verify the GLB part fits inside the fallback's
+   extent before intake(now encoded in `partExtent` and the `partlib.js` header). Runtime colliders
+   still come from `beaconCollider` measurement — A30 holds on both sides.
+
+**P1 status**: `public/js/partlib.js`(fuse + `markShared` + zero-randomness lookup)+ `beacons.js`
+`['lib', …]` descriptor + `main.js warmModels` preload hook are in. `PART_LIBS` is empty ⇒ today's
+frame bit-identical(`audit_beacons` 68 green; `--break-extent` reverse check red as required).
+`models.js` deliberately untouched until P3. Photo sourcing tool: `tools/ai3d/fetch_photos.mjs`
+(catalog + resumable gap-fill + CC0 double gate + manifest; runs on the 3060/Actions, not the sandbox).
+
+## 9. Related skills
 
 - `.claude/skills/mech-part-forge/` — Track A (dynamic mech/NPC parts)
 - `.claude/skills/photo-to-prop-forge/` — Track B (photo → static prop parts)

@@ -1,0 +1,118 @@
+# ============ GLB 零件正規化(Blender headless;runbook §4-C.2)============
+#
+# 輸入:SF3D 的原始 mesh.glb(有貼圖、任意比例、任意置中)
+# 輸出:public/assets/models/parts/{family}.glb —— 只有幾何 + 法線的具名節點
+#
+# 逐節點做四件事(intake_parts.mjs 的外廓契約在這裡兌現):
+#   ① 置中:包圍盒中心 → 原點(fallback 是 `['ico', r]` 這類**置中** primitive,
+#      消費端 KIND_PARTS 的 p: 位移就是以置中件為前提寫的;「原點對齊接合面」只適用
+#      牆模組那類有明確接合面的零件,石頭的接合語意 = 置中疊放)
+#   ② 等比縮放:水平徑向與縱向半跨都收進 fallback 包絡 × FIT(留 5% 餘裕吸浮點),
+#      且水平徑向 ≥ 包絡 × 0.5(intake 的「fallback 沒有虛胖」下界)
+#   ③ 減面:Decimate 到三角形預算內(tri_budget.json 的量測上界)
+#   ④ 剝材質/貼圖/UV:partlib 只吃幾何,顏色由零件表 `c:` 決定(CLAUDE.md §1)
+#
+# 用法(Blender 5.x;欄位分隔用 `|` —— `:` 會撞上 Windows 磁碟機代號):
+#   blender --background --python tools/ai3d/normalize_parts.py -- \
+#     --out public/assets/models/parts/rock.glb \
+#     --node "collapse_a=<src.glb>|1.5|1000[|ry_deg[|dy]]" --node "facet_a=<src.glb>|1.15|900" ...
+#   dy = 縮放後的縱向平移(m):實拍岩體常比 fallback ico 扁,置中會讓消費端算好的
+#        底面懸空 —— 基座件用 dy 沉到「底 = −消費端 p.y」貼地(仍 MUST 收在包絡內)。
+import bpy
+import sys
+import math
+
+FIT = 0.95          # 包絡餘裕:縮到 fallback × 0.95(浮點與後續 stretch 都吃不掉契約)
+
+argv = sys.argv[sys.argv.index('--') + 1:]
+
+
+def opt_all(name):
+    return [argv[i + 1] for i, a in enumerate(argv) if a == f'--{name}']
+
+
+OUT = opt_all('out')[0]
+NODES = []          # (node_name, src_glb, target_r, tri_cap, ry_deg)
+for spec in opt_all('node'):
+    name, rest = spec.split('=', 1)
+    bits = rest.split('|')
+    NODES.append((name, bits[0], float(bits[1]), int(bits[2]),
+                  float(bits[3]) if len(bits) > 3 else 0.0,
+                  float(bits[4]) if len(bits) > 4 else 0.0))
+
+# ---- 清場 ----
+bpy.ops.wm.read_factory_settings(use_empty=True)
+
+made = []
+for (name, src, target_r, tri_cap, ry_deg, dy) in NODES:
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=src)
+    news = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
+    if not news:
+        raise RuntimeError(f'{src} 匯入後沒有 mesh')
+    # SF3D 輸出是單一 mesh;若多個就 join
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in news:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = news[0]
+    if len(news) > 1:
+        bpy.ops.object.join()
+    ob = bpy.context.view_layer.objects.active
+    ob.name = name
+    ob.data.name = name
+    # 套掉匯入變換(SF3D 的 glTF 可能帶節點旋轉),之後全在網格頂點上操作
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # 變化朝向(facet_b 與 facet_a 同源,轉個角度別讓玩家一眼看出同一顆)
+    if ry_deg:
+        ob.rotation_euler = (0.0, 0.0, math.radians(ry_deg))   # Blender Z-up;匯出時轉 glTF Y-up
+        bpy.ops.object.transform_apply(rotation=True)
+
+    # ③ 減面(先減後量:減面本身會微動外廓)
+    tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+    if tris > tri_cap:
+        mod = ob.modifiers.new('dec', 'DECIMATE')
+        mod.ratio = tri_cap / tris * 0.98
+        bpy.ops.object.modifier_apply(modifier='dec')
+
+    # ① 置中(包圍盒中心 → 原點)
+    vs = ob.data.vertices
+    xs = [v.co.x for v in vs]; ys = [v.co.y for v in vs]; zs = [v.co.z for v in vs]
+    cx = (min(xs) + max(xs)) / 2; cy = (min(ys) + max(ys)) / 2; cz = (min(zs) + max(zs)) / 2
+    for v in vs:
+        v.co.x -= cx; v.co.y -= cy; v.co.z -= cz
+    # ② 等比縮放。Blender Z-up ⇒ 遊戲的「水平」= XY、「縱向」= Z(匯出 +Y up 時互換)
+    r_max = max(math.hypot(v.co.x, v.co.y) for v in vs)
+    z_max = max(abs(v.co.z) for v in vs)
+    s = min(FIT * target_r / r_max, FIT * target_r / z_max)
+    for v in vs:
+        v.co *= s
+    r_fin = r_max * s
+    assert r_fin >= 0.5 * target_r, f'{name}:縮放後水平徑向 {r_fin:.3f} < 下界 {0.5 * target_r:.3f}(高瘦輸入不適合這個 fallback)'
+    if dy:
+        for v in vs:
+            v.co.z += dy          # Blender Z-up;匯出 +Y up 時 = 遊戲的縱向平移
+        assert abs(-z_max * s + dy) <= FIT * target_r and abs(z_max * s + dy) <= FIT * target_r, f'{name}:dy 把縱向推出包絡'
+
+    # ④ 剝材質 / UV / 色彩屬性
+    ob.data.materials.clear()
+    for uv in list(ob.data.uv_layers):
+        ob.data.uv_layers.remove(uv)
+    for ca in list(ob.data.color_attributes):
+        ob.data.color_attributes.remove(ca)
+
+    tris_fin = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+    print(f'NODE {name}: tris={tris_fin} r={r_fin:.3f}/{target_r} zspan={z_max * s:.3f}')
+    made.append(ob)
+
+# 只留產出節點,其他(SF3D 場景空節點等)全刪
+for o in list(bpy.data.objects):
+    if o not in made:
+        bpy.data.objects.remove(o, do_unlink=True)
+
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.export_scene.gltf(
+    filepath=OUT, export_format='GLB', export_yup=True,
+    export_materials='NONE', export_normals=True, export_apply=True,
+)
+print('WROTE', OUT)
