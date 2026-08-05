@@ -109,6 +109,25 @@ export function megaLibDescs(src = biomesSrc()) {
   };
 }
 
+/**
+ * 建物配件零件庫名冊(第四個消費端;`biomes.js BLD_LIB` —— 屋頂配件 InstancedMesh 桶的
+ * 呼叫點守衛)。契約:**單位包絡** —— 桶的 instance scale 就是尺寸,fallback = 該桶現行的
+ * 單位 primitive(box(1,1,1) / cyl(1,1,1));一顆節點的幾何被全桶 instance 共用 ⇒ 預算走
+ * `families.building` 的**逐桶節點上限**(node_caps:由「配件桶總量 × whole_factor ÷
+ * 名冊桶數 ÷ 該桶實測最大 instance 數」推導 —— 逐件看毫無意義,GPU 成本 = 節點 tris × instance 數)。
+ */
+export function bldLibDescs(src = biomesSrc()) {
+  const BLD_LIB = new Function(`${blockOf(src, 'BLD_LIB')}; return BLD_LIB;`)();
+  return {
+    BLD_LIB,
+    rows: Object.entries(BLD_LIB).map(([key, [name, fb]]) => ({
+      name, family: name.split('/')[0], node: name.split('/').slice(1).join('/'),
+      fb, kind: key, index: 0, table: 'BLD_LIB',
+      consumer: 'biomes-bld', budgetFam: 'building', p: [0, 0, 0],
+    })),
+  };
+}
+
 /** `PART_LIBS = [...]`(partlib.js 是唯一真相;這裡只是把它從原文讀出來給 Node 端用) */
 export function partLibs(src = readSrc('public', 'js', 'partlib.js')) {
   const m = src.match(/export const PART_LIBS = \[([^\]]*)\]/);
@@ -219,5 +238,10 @@ export function triBudget() {
       const cur = f?.kind_tris?.[kind];
       return cur == null || f.kind_factor == null ? null : { cur, cap: Math.round(cur * f.kind_factor) };
     },
+    /**
+     * 逐桶節點上限(InstancedMesh 消費端專用;building 族):一顆節點被全桶 instance 共用,
+     * 逐件上限要由該桶的實測最大 instance 數反推。沒有這一桶的量測就回 null(intake 退回 capOf)。
+     */
+    nodeCap: (fam, kind) => b.families?.[fam]?.node_caps?.[kind] ?? null,
   };
 }

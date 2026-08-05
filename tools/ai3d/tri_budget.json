@@ -16,6 +16,16 @@
       "justification": "逐件上限 = whole_factor × 最重整顆(1071)÷ 同顆最多庫零件數(marble 8 塊 + 崩落塊 4 + 伴生丘 2 = 14,由 synthMegalith 原文的迴圈上限數出來)≈ 306 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。",
       "staleness": "synthMegalith 的 marble/崩落塊/伴生丘迴圈上限一改 MUST 重數 max_lib_parts_per_rock。"
     },
+    "building": {
+      "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於三個最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名;2026-08-06)。instance 上界(三場取最大):chimneys 212(shibuya)/ roofTanks 97(seoul)/ roofBoxes 117(seoul);配件桶總量上界 50,936 tris(seoul;shibuya 47,416、manhattan 35,940);全場三角形 1.47M~1.72M(配件佔比 2.5~3.1%)",
+      "measured_deco_total_max": 50936,
+      "measured_max_instances": { "chimney": 212, "tank": 97, "acbox": 117 },
+      "roster_size": 3,
+      "whole_factor": 4.0,
+      "node_caps": { "chimney": 240, "tank": 525, "acbox": 435 },
+      "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
+      "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
+    },
     "tree": {
       "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05)",
       "measured_max_tris": 402,
