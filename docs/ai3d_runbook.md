@@ -15,7 +15,7 @@
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
 | Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
-| Photo DB gap-fill (parts at 0, see §4 step A) | **MOSTLY DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; `rock/collapse` 4/4, `rock/talus` 4/4, `building/window` 4/4, `building/roofcap` 4/4; `landmark/lattice` 3/4, `landmark/tank` 0/3 pending Wikimedia IP-throttle cooldown loop (429, Retry-After 600) |
+| Photo DB gap-fill (parts at 0, see §4 step A) | **DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; **all 14 parts at target** (55 photos), licence re-audit 55/55 CC0/PD; throttle-cooldown loop needed 3 extra rounds for `lattice`/`tank` |
 | P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
 | P2c pilot — img→3D GLB parts (organic geometry) | TODO — **blocked on SF3D licence gate + Blender install** (see §6) | rock photos ready (facet 6/6, collapse 4/4, talus 4/4) |
 | biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **blocked until P2c ships first tree/rock parts** | — |
@@ -115,9 +115,14 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
   3. HTTP 429 ⇒ early-exit the whole round (`cooled` flag) and **do not write the failure to the
      manifest** (it is the round's network state, not a fact about the photo); 179 stale 429 rows
      pruned from the manifest.
-- Gap-fill result: `rock/collapse` 4/4, `rock/talus` 4/4, `building/window` 4/4, `building/roofcap` 4/4
-  (14 new photos, all CC0/PD); `landmark/lattice` 3/4 and `landmark/tank` 0/3 still pending the
-  throttle-cooldown retry loop.
+- Gap-fill result: **all 14 parts at target** (55 photos, licence re-audit 55/55 CC0/PD). The last
+  four photos (`lattice` 1, `tank` 3) needed a cooldown-retry loop (~11 min/round, 3 productive
+  rounds) — budget for that whenever bulk-fetching from this IP again.
+- Tank photo cross-check (after the rewrite landed — throttle delayed the photos): the Dallas-type
+  four-leg tower photo confirms the part vocabulary (X-brace panels between horizontal struts,
+  central riser, bottom ring, conical roof + finial). One deliberate deviation: legs stay vertical
+  (two-segment taper) instead of splaying — the tilted-part extent tax is documented in the
+  part-table comment.
 - **P2b executed** (§4-B): `tank` rewritten as 57 pure-data parts (was 12). Two engineering notes
   now recorded in the part table's comment: ① tilted parts pay the 3D-half-diagonal extent tax
   (foot 5.2→5.6 for a true visual extent of ~4.3); ② `buildBeacon`'s `stretch` scales tilted parts'
