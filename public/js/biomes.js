@@ -1761,7 +1761,13 @@ const MEGA_LIB = {
 // 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
 const megaGeo = (name) => { const g2 = name ? libGeo(name) : null; return g2 ? g2.clone() : null; };
 
-function decorateMegalith(g, anchor, rnd, s) {
+// 巨岩的三支建構器**具名匯出**(2026-08-06):第二個消費端 = `tools/parts_review`(3D 零件
+// 對照台,dev-only、唯讀)。MEGA_LIB 的節點只長在命令式建造端 ⇒ 台上要拿「同一顆座號的
+// 保險絲版 vs 零件庫版」並排,唯一正當的取得方式就是呼叫**遊戲自己的這三支** —— 台子那邊
+// 抄一份組裝順序就是「第二套組裝器」,而它壞掉的樣子是「對照台上的原版跟遊戲裡的原版不是
+// 同一個東西」,兩邊都不報錯(紀律 ①)。匯出只是可見性,呼叫端與行為逐位元不變;
+// placeMegaliths 仍是遊戲內唯一的呼叫點。
+export function decorateMegalith(g, anchor, rnd, s) {
   if (!anchor) return;
   const probe = rockProbe(g);
   const k = 1 / s;
@@ -2012,7 +2018,7 @@ function decorateMegalith(g, anchor, rnd, s) {
 const ROCK_TONES = [0xb3502e, 0xc9c4b8, 0x9a6248, 0x6f6a62, 0xa8875c, 0x8f8878,
                     0xd8b878, 0xc49a8a, 0x5a6470, 0xd4cdb8, 0x7a6a52, 0x996a3e,
                     0x4a4a52, 0xb87850, 0xd8c890, 0x7a8a92, 0x8a7a88, 0x6a5a44];
-function synthMegalith(g, rnd) {
+export function synthMegalith(g, rnd) {
   const base = new THREE.Color(ROCK_TONES[Math.floor(rnd() * ROCK_TONES.length)]);
   const shade = (dl) => base.clone().offsetHSL(0, 0, dl).getHex();
   const moss = rnd() < 0.55 ? 0.2 + rnd() * 0.35 : 0;
@@ -2352,7 +2358,7 @@ function djAt(x, z) {
   const h = (Math.imul(Math.round(x * 8) | 0, 0x9E3779B1) ^ Math.imul(Math.round(z * 8) | 0, 0x85EBCA77)) | 0;
   return ((Math.imul(h ^ (h >>> 15), 0xC2B2AE3D) >>> 0) % 100003) / 100003;
 }
-function jitterMegalith(g, dj, colR) {
+export function jitterMegalith(g, dj, colR) {
   for (const o of g.children) {
     const { jr, spin } = partJitter(
       partId(o.position.y, o.position.x, o.position.z), dj, MEGA_JIT,

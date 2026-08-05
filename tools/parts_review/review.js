@@ -63,8 +63,10 @@ async function initGfx(data) {
   gfx.beacons = await import('/public/js/beacons.js');
   // 植被/神木那一半由 biomes 自己的 buildVegMeshes 建(同紀律 ①:台上沒有第二套組裝器)
   gfx.biomes = await import('/public/js/biomes.js');
+  gfx.rng = await import('/public/js/rng.js');
   const partlib = await import('/public/js/partlib.js');
-  const { setCelSun } = await import('/public/js/toon.js');
+  const { setCelSun, bakeContactAO } = await import('/public/js/toon.js');
+  gfx.bakeContactAO = bakeContactAO;
   gfx.mods.set('now', gfx.beacons);
 
   // 舊版模組(純資料件的「原版」)——**一律在 loadPartLibs 之前**跑完 import 與建構
@@ -101,7 +103,14 @@ async function initGfx(data) {
  *   'beacon' → beacons.buildBeacon(kind, seed)
  *   'veg'    → biomes.buildVegMeshes(kind, [一株], season)——植被走 InstancedMesh,
  *              這裡就餵一個實例(items.length = 1),擺位/抖動仍是它自己那條 vegPartXform。
+ *   'mega'   → biomes 的巨岩三支(見 `buildMegalith`)——命令式建造端,沒有「一款一張零件表」
+ *              那種東西可以餵,只能照 placeMegaliths 的順序呼叫它自己那三支。
  * 種子只用來湊出一株的樣貌差異(dj/ry),與遊戲的散布無關 —— 台子不模擬佈局,只比幾何。
+ *
+ * **builder 少一種的下場**(2026-08-06 修:巨岩那三顆節點就是這樣掉進裂縫的):
+ * `buildBeacon(kind)` 對認不得的 kind 是 `KIND_PARTS[kind] || KIND_PARTS.cairn` —— 靜默回退。
+ * 於是 `rock/mega_*`(kind 'megalith')兩側畫的都是**地標疊石**,而疊石自己也吃 `rock/*` 節點
+ * ⇒ 左右真的長得不一樣、讀數也在動,看起來完全正常,只是那顆巨岩從來沒上過台。
  */
 function build(phase, src, kind, seed, builder = 'beacon') {
   const key = `${phase}|${src}|${kind}|${seed}|${builder}`;
@@ -113,11 +122,46 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       const it = { x: 0, y: 0, z: 0, s: 1, ry: seed * 0.7, dj: (seed % 5) / 5 };
       for (const m of gfx.biomes.buildVegMeshes(kind, [it], 'summer')) g.add(m);
       gfx.groups.set(key, g);
-    } else {
+    } else if (builder === 'mega') {
+      gfx.groups.set(key, buildMegalith(seed));
+    } else if (builder === 'beacon' && mod.BEACON_KINDS[kind]) {
       gfx.groups.set(key, mod.buildBeacon(kind, seed));
+    } else {
+      // **認不得就空著**,MUST NOT 交給 buildBeacon 收尾 —— 它對未知 kind 是
+      // `KIND_PARTS[kind] || KIND_PARTS.cairn` 的靜默回退,台上會理直氣壯地畫出另一個物件
+      // (兩側還會因為疊石自己也吃 rock/* 節點而長得不一樣 = 看起來完全正常)。
+      // 兩側都空 ⇒ 讀數寫「(建不起來)」,新增消費端時 MUST 在這裡補一支建構器。
+      console.warn(`[對照台] 沒有 builder 認得「${builder}/${kind}」—— 這一列不畫,補建構器`);
+      return null;
     }
   }
   return gfx.groups.get(key);
+}
+
+/**
+ * 一顆合成巨岩。順序照 `placeMegaliths` 的那一段:建量體 → 表面特徵 → 零件抖動 → 接地 AO,
+ * 每一步都是**遊戲自己的**那一支(紀律 ①:台上不生任何幾何)。
+ *
+ * 為什麼是**合成**岩:`MEGA_LIB` 的節點只長在 `synthMegalith`(marble 堆塊 / 崩落岩塊 /
+ * 伴生圓丘)與 `decorateMegalith`(疊石)裡 —— 名岩 `MEGALITHS[].build` 一顆庫零件都不吃,
+ * 拿它當對照,兩側會逐位元一模一樣(又一個「AI 跟原版差不多」的假結論)。崩落岩塊每一型
+ * 都有 ⇒ 任何座號都看得到那三顆節點,marble 那一型再多看到堆塊本體。
+ *
+ * 刻意略過的只有兩件與**露頭/地形**綁定、與零件無關的事:整片露頭共用的色相偏移(field 級,
+ * 兩側同樣不套 ⇒ 不影響對照)與落地縮放/落底(台上恆 s = 1,鏡頭按實測高度自己退開)。
+ */
+function buildMegalith(seed) {
+  const g = new gfx.THREE.Group();
+  const rnd = gfx.rng.mulberry32((seed * 2654435761) >>> 0);
+  const meta = gfx.biomes.synthMegalith(g, rnd);
+  gfx.biomes.decorateMegalith(g, meta.anchor, rnd, 1);
+  gfx.biomes.jitterMegalith(g, (seed % 5) / 5, meta.col.r);
+  gfx.bakeContactAO(g, 6);
+  // 巨岩的碰撞柱是**登記值**(佈局端 `meta.col`),不是從幾何量出來的 —— 拿 beaconCollider
+  // 硬套一個「看起來很像碰撞柱」的包圍盒上去,台上就會出現一根遊戲裡不存在的柱子(同神木)
+  g.userData.megaCol = { r: meta.col.r, h: meta.col.h };
+  g.userData.megaMain = meta.main;
+  return g;
 }
 
 function makeViewer() {
@@ -159,8 +203,11 @@ function setViewerGroup(v, group, builder = 'beacon') {
   if (!group) return null;
   v.scene.add(group);
   // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
-  // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去
-  const col = builder === 'veg' ? vegExtent(group) : gfx.beacons.beaconCollider(group);
+  // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
+  // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
+  const col = builder === 'veg' ? vegExtent(group)
+    : builder === 'mega' ? group.userData.megaCol
+      : gfx.beacons.beaconCollider(group);
   if (app.collider && builder !== 'veg') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
@@ -177,8 +224,15 @@ function setViewerGroup(v, group, builder = 'beacon') {
     // InstancedMesh 一件 = 幾何 × 實例數(台上只擺一株,但別讓讀數把這件事藏起來)
     tris += (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
   });
-  return { tris, meshes, r: col.r, h: col.h, veg: builder === 'veg' };
+  return { tris, meshes, r: col.r, h: col.h, colWhat: COL_WHAT[builder] || COL_WHAT.beacon };
 }
+
+/** 讀數那一行的「這根柱子是什麼」——三種來源不同,寫同一個字就是騙人 */
+const COL_WHAT = {
+  beacon: '碰撞柱(實測)',
+  veg: '外廓(包圍盒;碰撞柱住散布端)',
+  mega: '碰撞柱(登記值 meta.col)',
+};
 
 /** 一株植被的實測外廓(包圍盒:水平最遠點 + 頂高)—— 只給取景與讀數用 */
 function vegExtent(group) {
@@ -261,6 +315,12 @@ function renderStat() {
 
 // ---- 右側 ------------------------------------------------------------------
 function select(key) { app.cur = key; renderList(); renderBody(); }
+
+/** 「零件」取景成不成立(單一縫:取景計算與鈕面的禁用狀態同吃)*/
+const partFramable = (r) => !!(r.env && r.view?.at) && r.view.builder !== 'mega';
+/** 這一列**實際**用的取景:零件取景不成立時退回整件 —— 鈕面 MUST 跟著亮那一顆,
+ *  否則畫面已經是整件、三顆鈕卻一顆都沒亮(看起來像壞掉,而它其實正常) */
+const effDist = (r) => (partFramable(r) || app.dist !== 'part' ? app.dist : 'whole');
 
 const PANE_LABEL = {
   'fuse-vs-lib': ['原版(保險絲 primitive,零件庫未載入)', 'AI 生成(零件庫 GLB)'],
@@ -360,7 +420,12 @@ function renderBody() {
     <span class="pr-dim">座號</span>
     <div class="seg" id="prSeed">${SEEDS.map((s) => `<button class="segb ${s === app.seed ? 'on' : ''}" data-seed="${s}">#${s}</button>`).join('')}</div>
     <span class="pr-dim">取景</span>
-    <div class="seg" id="prDist">${Object.entries(DISTS).map(([k, v]) => `<button class="segb ${k === app.dist ? 'on' : ''}" data-dist="${k}">${v}</button>`).join('')}</div>
+    <div class="seg" id="prDist">${Object.entries(DISTS).map(([k, v]) => {
+    const off = k === 'part' && !partFramable(r);
+    return `<button class="segb ${k === effDist(r) ? 'on' : ''}" data-dist="${k}"${off
+      ? ' disabled title="單位包絡節點:實際大小與擺位由呼叫端 mesh.scale 決定 ⇒ 零件取景不成立,一律看整件"'
+      : ''}>${v}</button>`;
+  }).join('')}</div>
     <label><input type="checkbox" id="prCol" ${app.collider ? 'checked' : ''}>碰撞柱</label>
     <label><input type="checkbox" id="prSpin" ${app.spin ? 'checked' : ''}>自轉</label>
     <span class="pr-dim">(拖曳任一側 = 兩側一起轉;滾輪縮放)</span>
@@ -441,8 +506,11 @@ function mountStage(r) {
     sides.push({ g: v.kind ? build('post', 'now', v.kind, app.seed, bld) : null, read: 'prReadR' });
   }
   // 取景基準:整件取實測碰撞柱高;零件取這一列描述子自己的位置與 fallback 半徑
-  // (「換掉的就是它」—— 拿整件當基準的話,13m 旗桿會把 1.5m 的疊石壓成畫面底部一小坨)
-  gfx.frame = { h: 0, part: r.env && r.view.at ? { r: r.env.r, cy: r.view.at[1] || 0 } : null };
+  // (「換掉的就是它」—— 拿整件當基準的話,13m 旗桿會把 1.5m 的疊石壓成畫面底部一小坨)。
+  // 巨岩那三顆是**單位包絡**節點(fallback ico(1)、位置 [0,0,0]),實際大小與擺哪由呼叫端
+  // 的 mesh.scale 決定 ⇒ 零件取景在它身上不成立(照算會是「相機貼在 1m 球上,而岩體 100m」),
+  // 一律退回整件;`prDist` 那顆鈕同步禁用,MUST NOT 讓它按得下去卻沒有反應
+  gfx.frame = { h: 0, part: partFramable(r) ? { r: r.env.r, cy: r.view.at[1] || 0 } : null };
   sides.forEach((side, i) => {
     const viewer = gfx.viewers[i];
     const slot = slots[i];
@@ -455,7 +523,7 @@ function mountStage(r) {
     if (out) {
       out.textContent = st
         ? `${st.tris} 三角形 ・ ${st.meshes} 個 mesh(= draw call)・ `
-          + (st.veg ? `外廓 r ${st.r.toFixed(2)} 高 ${st.h.toFixed(2)}` : `碰撞柱 r ${st.r.toFixed(2)} h ${st.h.toFixed(2)}`)
+          + `${st.colWhat} r ${st.r.toFixed(2)} h ${st.h.toFixed(2)}`
         : '(建不起來)';
     }
   });
