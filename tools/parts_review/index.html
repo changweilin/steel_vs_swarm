@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D 零件對照台(dev)</title>
+<!-- 資產根 MUST 鏡射遊戲的 URL 佈局(A28):`partlib.js` / `models.js` 取的是**相對**網址
+     (`assets/models/parts/x.glb`),遊戲那邊 public/ 就是根。少了這一行,GLB 會 404 ⇒
+     零件庫整族退回保險絲 ⇒ 右邊那一格安安靜靜畫出跟左邊一樣的 primitive,只有 console
+     留下一行警告 —— 對照台上「AI 生成跟原版差不多」是這裡最不能出現的假結論。
+     本頁自己的資源一律寫絕對路徑(/public/…、/tools/…),不受這一行影響。 -->
+<base href="/public/">
+<!-- three 走 CDN importmap,與 public/index.html 同一版(A2:不進 package.json) -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/public/css/style.css">
+<link rel="stylesheet" href="/tools/parts_review/review.css">
+</head>
+<body class="pr">
+<header class="pr-top">
+  <b>3D 零件對照台</b>
+  <span class="pr-dim">dev-only ・ 不進遊戲建置</span>
+  <span class="pr-stat" id="prStat">載入中…</span>
+  <span class="pr-grow"></span>
+  <div class="seg pr-filter" id="prFilter">
+    <button class="segb on" data-f="all">全部</button>
+    <button class="segb" data-f="todo">待覆核</button>
+    <button class="segb" data-f="flag">有意見</button>
+    <button class="segb" data-f="miss">缺件</button>
+    <button class="segb" data-f="undoc">未記載</button>
+  </div>
+</header>
+<div class="pr-main">
+  <nav class="pr-list" id="prList"></nav>
+  <section class="pr-body" id="prBody"></section>
+</div>
+<script type="module" src="/tools/parts_review/review.js"></script>
+</body>
+</html>

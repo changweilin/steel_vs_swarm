@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "note": "AI 生成 3D 物件的來源帳(docs/ai3d_runbook.md 的產出 → 這裡)。每一筆回答兩個問題:①用哪一個生成方法 ②吃哪一張(些)圖。方法字彙住 tools/ai3d/provenance.mjs METHODS,本檔只引用鍵;fallback 幾何、外廓、三角形數一律由消費端零件表與 GLB 實測推導,MUST NOT 抄進本檔(抄了就是第二份真相)。照片本身不進儲存庫(runbook §3 規則 2),故只記 id / 授權 / 出處 / 相對路徑,對照台在本機解析得到就顯示、解析不到就明講。",
+  "parts": [
+    {
+      "key": "rock/collapse_a",
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石基座",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_f7e1cc51-e247-42b9-a51c-c775ad831804",
+          "family": "rock", "part": "facet",
+          "query": "glacial erratic boulder",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "United States National Museum Photographic Laboratory",
+          "source_url": "https://siarchives.si.edu/collections/siris_arc_388737",
+          "file": "photos/rock/facet/ov_f7e1cc51-e247-42b9-a51c-c775ad831804.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.17 GB;暖跑 13.6 s / 2 圖;15 張 matte 批跑只有 5 顆實心(可用率 ~1/15)",
+        "note": "MUST 走 SF3D 自己的 remesh —— Blender 50:1 硬減面會把 ~50k 殼撕出破洞(runbook §5e)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "dy": -0.12,
+        "note": "縮放目標 = 這一列 lib 描述子自己的 fallback 包絡(不在本檔複製數字);dy 讓扁岩基座沉到「底 = 消費端 p.y」貼地,任何 stretch 都不離地"
+      },
+      "note": "批跑第 6 顆(方正塊狀)。照片家族(facet)≠ 節點角色(collapse_a):挑的是形狀,不是分類。"
+    },
+    {
+      "key": "rock/facet_a",
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石中層",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+          "family": "rock", "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
+          "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批(峰值 VRAM 6.17 GB)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "note": "縮放目標 = 該列 fallback 包絡 × FIT"
+      },
+      "note": "批跑第 11 顆(渾圓多瘤)。"
+    },
+    {
+      "key": "rock/facet_b",
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石頂層",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
+          "family": "rock", "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
+          "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批(峰值 VRAM 6.17 GB)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "ry_deg": 137,
+        "note": "+137° yaw:與 facet_a 同一位攝影者的同組漂礫,轉開才不像同一顆石頭擺兩次"
+      },
+      "note": "批跑第 8 顆(平滑)。Blender 端另做了一次溫和 decimate(808→588),比例小、不撕面。"
+    },
+    {
+      "key": "beacon/tank",
+      "method": "llm_parts",
+      "consumer": "beacons watertower(BEACON_KINDS.tank)",
+      "rev": "f31c619",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "reference",
+          "id": "ov_10c06229-393b-4dc2-9f07-b403b63713ae",
+          "family": "landmark", "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Ammodramus",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=26485592",
+          "file": "photos/landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305",
+          "family": "landmark", "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Ammodramus",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=44367863",
+          "file": "photos/landmark/tank/ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9",
+          "family": "landmark", "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Estormiz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=42136597",
+          "file": "photos/landmark/tank/ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "LLM agent(讀照片 → 寫零件表資料列)",
+        "params": "無模型權重、無 GPU、無二進位資產;輸出是 KIND_PARTS 的純資料列(計畫書 §8 方法分流:規則/人造幾何走這一條)",
+        "measured": "foot 5.2 → 5.6(實算 5.56;件數與外廓由對照台從兩個版本的零件表推導,不在這裡手寫)"
+      },
+      "baseline": {
+        "rev": "32ec7b5",
+        "what": "改寫前的水塔零件表(件數由對照台推導,不在這裡手寫)。對照台以 `git show <rev>:public/js/beacons.js` 供應該版模組,由**那一版自己的 buildBeacon** 建原版 —— 這裡不會有第二套組裝器"
+      },
+      "note": "節流讓照片晚於改寫抵達 ⇒ 這三張的角色是**事後交叉確認**(Dallas 型四腳塔確認了零件字彙:橫撐間的 X 形斜撐板、中央豎管、底環、錐頂 + 頂針),不是改寫當下的輸入。一個 centre-y 加倍的算術 bug 通過了外廓稽核(外廓不看 y),只有截圖迴圈抓得到 —— 這正是這座對照台存在的理由。"
+    }
+  ]
+}

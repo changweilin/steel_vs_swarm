@@ -21,6 +21,7 @@
 | P2c pilot — img→3D GLB parts (organic geometry) | **DONE 2026-08-05** (§5e; gate opened same day) | `public/assets/models/parts/rock.glb` shipped: 3 nodes (`collapse_a`/`facet_a`/`facet_b`, 938/882/588 tris) consumed by beacons `cairn` via `['lib', …]`; SF3D measured on the 3060 (peak VRAM 6.17 GB, warm 13.6 s / 2 images); intake 14/14; `audit_beacons` 68 + reverse-red; `audit_object_joints --seeds 8` 21311/0; cel 52 / visual_prefs 124 / gpu 54 / siteplan 168; e2e green; bal green (structurally bit-identical — balance tooling imports neither beacons nor partlib); fallback-vs-lib renders with collider overlay (`tools/shot_beacons.mjs`) |
 | biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | **DONE 2026-08-05** (§5f) | `partGeo(p) = (p.lib && libGeo(p.lib)) \|\| p.g` in `buildVegMeshes` (draw only; no `lib:` rows yet ⇒ frame bit-identical); pinned by `audit_siteplan` Ⅴ (+3 assertions, manual reverse-verify both red modes); full battery green |
 | `giantCrownR` GLB-compat (plan §8 correction 1) | **DONE 2026-08-05 — by contract, zero code change** (§5f) | Vertex scan would be a determinism bug (layout ← load state, §2.3); layout math pinned to the fuse `p.g` (audit red if it touches `libGeo`/`partGeo`/`.lib`); intake envelope makes fuse crown radii conservative. Canopy GLBs unblocked |
+| 3D 零件對照台 (`tools/parts_review.mjs` + `tools/ai3d/parts_manifest.json` provenance ledger) | **DONE 2026-08-05** (§7) | Settings-page dev tool (`npm run parts`, port 8622); generated-vs-original side by side from the **real** `buildBeacon`; states method + source img per part. Found two silent bugs on first run — see §7 |
 | P3 dynamic track (mech slots) | NOT STARTED | Plan §3; do not start before P2c passes |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
@@ -46,6 +47,11 @@ the 3060 (or Actions for photo fetching only).
 6. **Geometry + base colour only** — no normal/metal/roughness maps (CLAUDE.md §1).
 7. **Triangle budget derived from measured current values**, never hand-written (plan §2.1-6).
 8. **Method split by geometry class** (plan §8 Appendix A): regular/man-made → LLM-written pure-data part rows; organic → img→3D GLB; small vegetation → stays procedural; mechs → Track A only.
+9. **Every generated object carries a provenance record** — one row in `tools/ai3d/parts_manifest.json`
+   naming **which method** (key from `tools/ai3d/provenance.mjs METHODS`) and **which img**
+   (id + licence + source URL). No record ⇒ the review board lists it under 未記載來源 and it is not
+   done. Never copy derivable numbers (extents, triangle counts, part counts) into that file —
+   they come from the consumer part table and the GLB itself.
 
 ## 4. Execution queue (in order; each step names its environment)
 
@@ -70,7 +76,8 @@ Target: `watertower` (or `pylon`) in `public/js/beacons.js KIND_PARTS` — the p
    audit checks it **both ways** (no under-report, no padding).
 3. Gates: `node tools/audit_beacons.mjs` (+ `--break-extent`), `node tools/audit_object_joints.mjs --seeds 8`,
    `npm test`, `npm run bal` (must be bit-identical — this is presentation-layer),
-   then in-game smoke: the landmark reads better at lane distance, collider matches visuals.
+   then the review board (§7): add the provenance row, look at old-vs-new side by side, tick 通過.
+   In-game smoke: the landmark reads better at lane distance, collider matches visuals.
 4. This pilot needs **no Python, no GPU, no GLB** — it is the cheapest end-to-end proof of the method split.
 
 ### C. P0 + P2c pilot — first GLB parts (rock family) — env: 3060 — 1–2 days
@@ -90,6 +97,8 @@ Target: `watertower` (or `pylon`) in `public/js/beacons.js KIND_PARTS` — the p
    `audit_traverse`, `audit_cel_pipeline`, `audit_visual_prefs`, `audit_gpu_lifecycle`,
    `npm test`, `npm run bal` (bit-identical), `shot_scene.mjs --venue taroko` before/after,
    30 s steady-state frame-time (desktop + touch emulation).
+6. Provenance + review: `node tools/ai3d/intake_parts.mjs` must be green **and** the part needs its
+   row in `parts_manifest.json` (method + img) before the review board (§7) counts it as done.
 
 ### D. Scale-out static (only after B and C are both green)
 Batches of ≤5 assets, full gate set per batch (plan §6). Order: megalith facets → landmark upgrades
@@ -296,6 +305,55 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
 - Artifact ingress to sandbox probed: MCP hands out a signed `*.blob.core.windows.net` URL; proxy 403.
   Raw `api.github.com` REST with the session token: "GitHub access is not enabled for this session".
   ⇒ recorded in §2; do not burn time re-testing.
+
+## 7. Review board — 3D 零件對照台 (generated vs original, side by side)
+
+User decision (2026-08-05): *「在設定頁面另外建立 docs/ai3d_runbook.md 生成的 3D 物件與原版 3D
+物件比較的工具,須說明使用哪個生成方法與 img,操作比照生圖對照台」*.
+
+**How to run** — same three ways as the 2D board:
+
+```bash
+npm run parts
+```
+
+`node tools/parts_review.mjs --report` prints the pairing table without a browser;
+`--port` / `--photos <某個 tools/ai3d 目錄>` override the port and where source photos are looked up.
+In-game it is the second row of 設定 → 開發工具(本機) (▶ 啟動 / ↗ 開啟 / ⏹ 停止, port **8622**) —
+that row exists because the tool is registered in `tools/dev_supervisor.mjs TOOLS`; the settings page
+derives the list from the server, so no client code was touched.
+
+**What one row shows**
+
+| | |
+|---|---|
+| Left pane | **原版** — for GLB parts, the fuse path (procedural primitive, part library deliberately not loaded); for pure-data parts, the pre-rewrite table built by **that revision's own `buildBeacon`**, served from `git show <rev>:public/js/beacons.js` |
+| Right pane | **AI 生成** — the real game path (library loaded / current table) |
+| Both | one shared camera and one seed (two different angles are not a comparison), measured `beaconCollider` cylinder overlaid, live readout: triangles / meshes(= draw calls) / collider r,h |
+| 來源圖 | every img with role, licence, creator, query and a link to the source page; the photo itself is served from whichever `tools/ai3d` data home has it (§5d) and says so plainly when it is not on this machine |
+| 生成方法 | method label + why that method (plan §8 split), tool, runner, params, machine, measured VRAM/seconds, post-processing, landing rev |
+| 數據對照 | GLB extent vs fallback envelope (+ verdict), triangles vs the measured budget; for pure-data parts, part count / measured extent / nominal `foot` then-vs-now |
+| Bottom | 缺件 (descriptor → missing node ⇒ whole prop silently falls back), 孤兒節點 (node nobody uses), 未記載來源, ledger problems — never hidden, same rule as the 2D board |
+
+**Where each fact lives** (no second copy anywhere):
+`tools/ai3d/parts_src.mjs` reads the consumer part table, `PART_LIBS`, the fallback envelope and the
+GLB (shared with `intake_parts.mjs` — it used to own all four); `tools/ai3d/provenance.mjs` holds the
+method vocabulary and reads `parts_manifest.json`; the page only draws. Both panes are built by the
+game's own `buildBeacon` — the board contains no second assembler and no second primitive builder.
+
+**The ordering that makes it true**: `libGeo` is module state, so every "原版" must be built *before*
+`loadPartLibs()` and cached. Getting that wrong produces two identical panes and no error message —
+i.e. a confident, wrong "the AI part looks much like the original".
+
+**Two silent bugs found on the first run** (this is what the board is for):
+
+1. `partlib.js` / `models.js` fetch **relative** asset URLs (`assets/models/parts/rock.glb`), and the
+   dev boards serve the repo root ⇒ 404 ⇒ the library fell back to primitives and the "generated"
+   pane quietly drew the original. Fixed with `<base href="/public/">` (URL layout mirrors the
+   repo layout, A28) — **and the same line was missing from the 2D board**, whose 3D stage had been
+   showing procedural fallbacks instead of the CC0 GLB units all along.
+2. §5b's "*57 pure-data parts (was 12)*" — the board derives **11** from rev `32ec7b5`. The counts are
+   derived from both revisions' part tables now, so the manifest records no part counts at all.
 
 ## 6. Open questions for the repo owner (do not guess)
 

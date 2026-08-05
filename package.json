@@ -16,7 +16,8 @@
     "sim": "node test/simrun.mjs",
     "bal": "node tools/balance.mjs",
     "audit:net": "node tools/audit_net_modes.mjs",
-    "codex": "node tools/codex_review.mjs"
+    "codex": "node tools/codex_review.mjs",
+    "parts": "node tools/parts_review.mjs"
   },
   "dependencies": {
     "ws": "^8.18.0"

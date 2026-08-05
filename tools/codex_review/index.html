@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>機體美術覆核台(dev)</title>
+<!-- 資產根 MUST 鏡射遊戲的 URL 佈局(A28):`models.js` 的 `MODEL_MANIFEST` 取的是**相對**
+     網址(`assets/models/quaternius/*.glb`),遊戲那邊 public/ 就是根。少了這一行,3D 展示台
+     的 GLB 全數 404 ⇒ 每一台都靜靜退回程序生成的 fallback(那正是 models.js 的設計),
+     畫面上看起來完全正常,只有 console 有警告。2026-08-05 由 3D 零件對照台的同一個坑找出來。 -->
+<base href="/public/">
 <!-- three 走 CDN importmap,與 public/index.html 同一版(A2:不進 package.json) -->
 <script type="importmap">
 {

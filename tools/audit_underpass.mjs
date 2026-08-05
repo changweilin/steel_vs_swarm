@@ -356,10 +356,12 @@ if (!plan) { console.error('  ✗ 平地基準案例規劃失敗,後續無法驗
     '⑩g boreRecs 映射 MUST 把 fp 傳給 punchPortalHoles(漏傳 = punch 退回線性外推)');
   ok(/const bFloor = \(d\) => \{/.test(src) && /const fy = bFloor\(-lz\);/.test(src),
     '⑩g collar 投影 MUST 同吃 fp(bFloor;兩端分家 = collar 內環貼錯高度)');
-  const tsrc2 = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
-  ok(/b\.fp\?\.length > 1/.test(tsrc2) && /b\.floorY \+ b\.slope \* Math\.min\(b\.depth, Math\.max\(0, d\)\)/.test(tsrc2),
+  // terrain.js 的原文檔頭已經讀過一份(`tsrc`,走 readSrc)—— 這裡 MUST 用它,MUST NOT 自己
+  // 再 `readFileSync` 一次:那支沒被 import(整支稽核當場 ReferenceError),而且繞過了 ㋑ 的
+  // CRLF 正規化 = 同一份程式碼在 LF 全綠、CRLF 紅字。
+  ok(/b\.fp\?\.length > 1/.test(tsrc) && /b\.floorY \+ b\.slope \* Math\.min\(b\.depth, Math\.max\(0, d\)\)/.test(tsrc),
     '⑩g terrain.floorAt MUST 支援 fp 剖面且無 fp 時逐位元走舊線性外推');
-  ok(/const f0 = floorAt\(b, P\[i0\], P\[i0 \+ 2\]\)/.test(tsrc2),
+  ok(/const f0 = floorAt\(b, P\[i0\], P\[i0 \+ 2\]\)/.test(tsrc),
     '⑩g punch 高差判定對 fp bore MUST 逐頂點(質心一枚樣本會在爬升段誤刪路塹底)');
   ok(/const nearRoad = /.test(src) && /nearRoad\(ax, ay, az\) && nearRoad\(bx, by, bz\)/.test(src),
     '⑩g collar MUST 跳過貼著路面的 rim 邊(織下去 = 浮在路面上的混凝土殘片)');
