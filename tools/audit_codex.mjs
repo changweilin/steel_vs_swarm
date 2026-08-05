@@ -18,14 +18,21 @@
 //      三份生成文字由 codex.js 組裝;`mecha.js` 零 import、`main.js` 不再切標籤字串。
 //   ⑤ 生成輸出真的是推導的        —— 直接執行真品:改一個欄位,三份輸出跟著變(手寫的第二份不會)。
 //
+//   ⑥ 型態姿態只有一份            —— 2026-08-05 使用者定案「變形者的飛行型態要另外下 prompt 說明是
+//      飛行姿態」。`FORM_POSE` 是那句話的**唯一**落點,覆核台(`imagePrompt` 的 zh)與離線出圖管線
+//      (`tools/ai3d/prompt.mjs` 的 en/framing)同吃 —— 各寫一份的症狀是「工具畫的是飛行姿態、
+//      人照著覆核台複製的那份不是」,兩邊都不報錯。
+//
 // 跑法:`node tools/audit_codex.mjs`(不需伺服器/瀏覽器/網路)
 // 反向驗證:`--break-layer`(抽掉一台機體的原型層)/ `--break-align`(角色生成段多一個欄位)
-//           —— 兩者 MUST 分別讓 ②③ 與 ① 紅字,否則等於沒驗到(CLAUDE.md 原則 9)。
+//           / `--break-pose`(飛行姿態語退回舊制「只說零件重排、不說在空中」)
+//           —— 三者 MUST 分別讓 ②③ / ① / ⑥ 紅字,否則等於沒驗到(CLAUDE.md 原則 9)。
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化)。
 import { readSrc } from './audit_src.mjs';
 import {
   SECTIONS, PROTO_LAYERS, PROTO_PARTS, GEN_FIELDS, GEN_KEYS, TAG_MAX, CODEX_FIELDS, CODEX_KINDS,
-  VIS_WORDS, HAIR_WORD, KIND_WORD, protoLayers, protoOf, charCodex, mechaCodex,
+  VIS_WORDS, HAIR_WORD, KIND_WORD, FORM_POSE, SHOT_POSES, SHOT_POSE_KEYS, shotFraming,
+  protoLayers, protoOf, charCodex, mechaCodex,
   textSeed, imagePrompt, modelSheet, codexIssues, visualWords, artWords, hueHex,
 } from '../public/js/codex.js';
 import { masterPrompt } from './ai3d/prompt.mjs';
@@ -35,8 +42,15 @@ import { CHARACTERS, charKind, heroTargetH } from '../public/js/data.js';
 
 const BREAK_LAYER = process.argv.includes('--break-layer');
 const BREAK_ALIGN = process.argv.includes('--break-align');
+const BREAK_POSE = process.argv.includes('--break-pose');
 if (BREAK_LAYER) delete MECHA.t06.proto.air;                       // 變形者少一層形態原型
 if (BREAK_ALIGN) CODEX_FIELDS.char.push({ sec: 'gen', key: 'pose', label: '姿勢', type: 'text', src: 'lore', req: true });
+// 舊制原文:只說「同一台機器把零件重排」,一個字都沒提機體在空中,取景還寫著站姿
+if (BREAK_POSE) {
+  FORM_POSE.flight.zh = '飛行型態:同一台機器的零件重新排列';
+  FORM_POSE.flight.en = 'Draw the FLIGHT form of the SAME machine: the same parts rearranged.';
+  FORM_POSE.flight.framing = 'standing three-quarter view';
+}
 
 const codexSrc = readSrc('public', 'js', 'codex.js');
 const mechaSrc = readSrc('public', 'js', 'mecha.js');
@@ -267,6 +281,125 @@ sec('Ⅴ 生成輸出:三份文字逐台可用,且真的是推導的');
   const ok = mechaCodex('s02').ident.name === '稽核機' && charCodex('s02').ident.mecha === '稽核機';
   CHARACTERS.s02.machine = keep;
   t('識別段的值到 data.js 取(mecha.js/lore.js 沒有第二份)', ok);
+}
+
+// ══ Ⅵ 型態姿態:飛行稿要真的是飛行姿態,而且只有一份定義 ══════════════════
+sec('Ⅵ 型態姿態(變形者飛行 / 地面):單一縫 + 真的說了「在空中」');
+{
+  const promptSrc = readSrc('tools', 'ai3d', 'prompt.mjs');
+  const promptCode = strip(promptSrc);
+  const reviewCode = strip(readSrc('tools', 'codex_review', 'review.js'));
+
+  t('恰兩個型態(地面 / 飛行),每個都有 zh / en / framing 三欄',
+    Object.keys(FORM_POSE).sort().join() === 'flight,ground'
+    && Object.values(FORM_POSE).every((p) => ['label', 'zh', 'en', 'framing']
+      .every((k) => typeof p[k] === 'string' && p[k].trim())));
+
+  // 這一條就是使用者那句話:飛行稿 MUST 講明機體「在空中」。舊制只講「零件重排」——
+  // 而「重排」在地面上也成立,所以收回來的六張全是站著的變形後姿態。
+  t('飛行姿態語明講機體離地在飛(中文)', /在空中|騰空|離地/.test(FORM_POSE.flight.zh));
+  t('飛行姿態語明講機體離地在飛(英文)',
+    /\bAIRBORNE\b/.test(FORM_POSE.flight.en) && /off the ground|in flight/i.test(FORM_POSE.flight.en));
+  t('飛行取景 MUST NOT 是站姿(standing 會把模型拉回地面)',
+    !/standing/i.test(FORM_POSE.flight.framing) && /airborne|flight/i.test(FORM_POSE.flight.framing));
+  t('地面取景逐字維持舊制(非變形者吃這一組 ⇒ 舊提示詞逐位元不變)',
+    FORM_POSE.ground.framing === 'standing three-quarter view');
+
+  // 單一縫:兩個消費端都 import,誰都不准自己寫一句飛行姿態
+  t('出圖管線吃 codex.FORM_POSE(MUST NOT 自帶第二份姿態語)',
+    /import \{[^}]*FORM_POSE[^}]*\} from '\.\.\/\.\.\/public\/js\/codex\.js'/.test(promptCode)
+    && !/Draw the (FLIGHT|GROUND) form/.test(promptCode));
+  t('覆核台的重下 prompt 帶型態**與動作**(不帶 = 好幾格共用同一份提示詞)',
+    /imagePrompt\('mecha', r\.id, s\.form, s\.pose\)/.test(reviewCode));
+  t('FORM_POSE 只有一份定義', (codexCode.match(/export const FORM_POSE/g) || []).length === 1);
+
+  // 行為直測:同一台變形者,兩型的提示詞 MUST 不同,且各自只帶自己那一層原型
+  const air = imagePrompt('mecha', 'm07', 'flight');
+  const gnd = imagePrompt('mecha', 'm07', 'ground');
+  const none = imagePrompt('mecha', 'm07');
+  t('同一台變形者兩型提示詞不同', air !== gnd);
+  t('飛行提示詞帶飛行姿態語、地面的不帶',
+    air.includes(FORM_POSE.flight.zh) && !gnd.includes(FORM_POSE.flight.zh)
+    && gnd.includes(FORM_POSE.ground.zh));
+  t('畫哪一型就只帶哪一層原型(兩層一起送 = 同一張圖被要求長成兩種東西)',
+    air.includes(MECHA.m07.proto.air.src) && !air.includes(MECHA.m07.proto.ground.src)
+    && gnd.includes(MECHA.m07.proto.ground.src) && !gnd.includes(MECHA.m07.proto.air.src));
+  t('不給型態 ⇒ 逐位元同舊行為(三行、兩層原型都在)',
+    none.split('\n').length === 3
+    && none.includes(MECHA.m07.proto.air.src) && none.includes(MECHA.m07.proto.ground.src));
+  t('非變形者不受影響(沒有型態層可濾,也不掛姿態語)',
+    imagePrompt('mecha', 't01', 'flight') === imagePrompt('mecha', 't01'));
+}
+{
+  // ── 動作姿態(第二個維度):覆核台數得出「缺 38 張 moving/heavy」,出圖端就要生得出來 ──
+  const reviewSrc = strip(readSrc('tools', 'codex_review.mjs'));
+  const promptCode = strip(readSrc('tools', 'ai3d', 'prompt.mjs'));
+  t('恰三種動作(靜止/移動/重武器),每一種都有 zh/en',
+    SHOT_POSE_KEYS.join() === 'static,moving,heavy'
+    && SHOT_POSES.every((p) => ['key', 'label', 'zh', 'en'].every((k) => typeof p[k] === 'string' && p[k].trim())));
+  t('覆核台的姿態清單由 SHOT_POSES 推導(MUST NOT 自己列第二份)',
+    /POSES = SHOT_POSES\.map/.test(reviewSrc) && !/key: 'moving'/.test(reviewSrc));
+  t('出圖端吃同一份動作語(MUST NOT 自帶第二份)',
+    /SHOT_POSES/.test(promptCode) && !/FIRING THE HEAVY WEAPON/.test(promptCode));
+  // 靜止**不覆寫取景** ⇒ 既有的靜止稿提示詞逐位元不變(這是這次擴充最容易破的一條)
+  t('靜止不覆寫取景(舊有靜止稿的提示詞逐位元不變)',
+    !SHOT_POSES.find((p) => p.key === 'static').framing
+    && shotFraming('t01', null, 'static') === FORM_POSE.ground.framing
+    && shotFraming('m07', 'flight', 'static') === FORM_POSE.flight.framing);
+  t('移動/重武器的取景逐 medium 分開(地面奔跑 ≠ 空中高速掠過)',
+    ['moving', 'heavy'].every((k) => {
+      const f = SHOT_POSES.find((p) => p.key === k).framing;
+      return f && f.ground && f.air && f.ground !== f.air;
+    }));
+  t('飛行的三種動作取景一律不含站姿、且都講明離地',
+    SHOT_POSE_KEYS.every((k) => {
+      const s = shotFraming('m07', 'flight', k);
+      return !/standing/i.test(s) && /airborne/i.test(s);
+    }));
+  t('地面機體的三種動作取景各不相同(三張圖不該是同一個取景)',
+    new Set(SHOT_POSE_KEYS.map((k) => shotFraming('t01', null, k))).size === 3);
+  {
+    const a = imagePrompt('mecha', 't01', null, 'heavy');
+    const b = imagePrompt('mecha', 't01', null, 'moving');
+    t('同一台機體三種動作的提示詞互不相同',
+      a !== b && a !== imagePrompt('mecha', 't01', null, 'static'));
+    t('不給動作 ⇒ 逐位元同舊行為(三行)', imagePrompt('mecha', 't01').split('\n').length === 3);
+  }
+}
+{
+  // 設計敘述真的送得出去 —— 舊制取的是 2026-08-04 已退場的 `lore.proto`,恆為空:
+  // 提示詞看起來仍然很長,但機體的權威敘述一次都沒送出過,而且沒有錯誤訊息。
+  const promptCode = strip(readSrc('tools', 'ai3d', 'prompt.mjs'));
+  t('出圖管線的設計敘述取機體檔案(MUST NOT 復辟已退場的 lore.proto)',
+    /mechaCodex|protoOf/.test(promptCode) && !/loreOf\(/.test(promptCode));
+
+  // 用不到的外觀欄位 MUST NOT 送進生圖(換機種留下的殘值 = 憑空多一條設計要求)。
+  // 適用性 MUST 對得上 models.js 的**實際消費點**:frame/body 只有 buildDrone 讀、
+  // wing 只有 buildFixedWing 讀 —— 這一條靠原文反查,models.js 一改就紅字。
+  const modelsCode = strip(readSrc('public', 'js', 'models.js'));
+  const consumedIn = (fn, key) => {
+    const at = modelsCode.indexOf(`function ${fn}(`);
+    const end = modelsCode.indexOf('\nfunction ', at + 1);
+    return new RegExp(`vis\\??\\.${key}\\b`).test(modelsCode.slice(at, end < 0 ? undefined : end));
+  };
+  t('擬態翼無人機不讀 frame/body(models.js 原文反查)',
+    !consumedIn('buildAvianDrone', 'frame') && !consumedIn('buildAvianDrone', 'body'));
+  t('定翼無人機不讀 frame/body、只讀 wing(models.js 原文反查)',
+    !consumedIn('buildFixedWing', 'frame') && !consumedIn('buildFixedWing', 'body')
+    && consumedIn('buildFixedWing', 'wing'));
+  const AVIAN = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].visual?.form === 'avian');
+  t(`擬態翼機體的生圖詞不含旋翼/機身殼(${AVIAN.length} 台)`, AVIAN.length > 0 && AVIAN.every((id) => {
+    const v = CHARACTERS[id].visual;
+    const w = visualWords(id);
+    return !w.includes(VIS_WORDS.frame?.[v.frame]) && !w.includes(VIS_WORDS.body?.[v.body]);
+  }));
+  t('多旋翼機體照舊帶旋翼骨架詞(這一刀 MUST 只切用不到的那幾台)', (() => {
+    const q = Object.keys(CHARACTERS).find((id) => {
+      const v = CHARACTERS[id].visual || {};
+      return v.frame && v.frame !== 'wing' && v.form !== 'avian' && v.form !== 'fixed';
+    });
+    return q && visualWords(q).includes(VIS_WORDS.frame[CHARACTERS[q].visual.frame]);
+  })());
 }
 
 console.log(`\n${fail === 0 ? '🎉' : '❌'} 角色 / 機體檔案格式稽核:${pass} 通過 / ${fail} 失敗`);

@@ -25,12 +25,12 @@
 // A2:零 npm 依賴(node:http/fs/path);three 仍走 CDN importmap,與遊戲同一版。
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, readdir, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import { CHARACTERS, SIDES, charKind } from '../public/js/data.js';
-import { KIND_WORD } from '../public/js/codex.js';
+import { KIND_WORD, SHOT_POSES } from '../public/js/codex.js';
 
 const STATE_FILE = join(ROOT, 'tools', 'codex_review', 'state.json');
 
@@ -56,12 +56,11 @@ export const SOURCES = [
 ];
 const SRC_BY_KEY = Object.fromEntries(SOURCES.map((s) => [s.key, s]));
 
-/** 姿態(檔名末段):與現有出圖批次的命名一致 */
-export const POSES = [
-  { key: 'static', label: '靜止' },
-  { key: 'moving', label: '移動' },
-  { key: 'heavy', label: '重武器' },
-];
+/** 姿態(檔名末段):與現有出圖批次的命名一致。
+ *  **推導自 `codex.SHOT_POSES`,MUST NOT 在這裡自己列一份** —— 這裡只需要 key/label,
+ *  但姿態的**語意**(要畫成什麼樣)住那一支。兩邊各列一份的下場已經量到了:
+ *  覆核台數得出「缺 38 張 moving/heavy」,而出圖端連那三個字的意思都不知道,一張都生不出來。 */
+export const POSES = SHOT_POSES.map(({ key, label }) => ({ key, label }));
 /** 型態:變形者兩型各一組,其餘機體只有一組(無型態前綴)。**由 visual 推導,MUST NOT 手寫名單** */
 export function formsOf(id) {
   const vis = CHARACTERS[id]?.visual || {};
@@ -82,31 +81,55 @@ export function wantShots(id) {
  * 檔名少了型態段就對不上了(AI 稿那批同一回事:s12 的兩張畫的是她還是變形者時的機體,
  * 2026-08-04 那台整組搬去 s03)。所以孤兒可由覆核台**指派**到某一格(`state.assign`),
  * 不必改檔名 —— 但 MUST 仍列在孤兒清單裡直到被指派,靜默吃掉才是真的壞掉。 */
-export async function manifest(assign = {}) {
-  // 檔名 → 來源。兩個來源共用一個池 ⇒ 指派、孤兒、佔位規則都只有一套
-  const pool = new Map();
+/** 被判退的狀態 —— 這一格的入庫圖已經被人否決,重畫出來的那張才是要看的 */
+const REDRAW_ST = new Set(['redraw', 'reprompt']);
+
+export async function manifest(assign = {}, items = {}) {
+  // 池的鍵 MUST **帶來源**。只用檔名當鍵的話,同名檔案(剛重畫出來、而入庫那張還在)會被
+  // 「先宣告的贏」直接吃掉 —— 那張新稿連孤兒清單都進不去,整個消失(檔頭 ③ 不准藏的正是這個)。
+  // 2026-08-05 實測:13 張重畫的設定稿裡,5 張掉進孤兒、**8 張憑空不見**。
+  const pool = new Map();          // `${來源}/${檔名}` → { src, file }
+  const pkey = (src, file) => `${src}/${file}`;
   for (const s of SOURCES) {
     if (!existsSync(s.dir)) continue;   // AI 管線沒跑過就沒有那個目錄(原則 6:少一個來源不是錯)
     for (const f of await readdir(s.dir)) {
-      // 同一個檔名同時在兩個來源裡(剛入庫、masters/ 還留著一份)⇒ **先宣告的贏**,
-      // 覆寫會讓已經驗收入庫的那張被判成「AI 稿」,計數與虛線框一起說謊
-      if (s.ext.some((e) => f.toLowerCase().endsWith(e)) && !pool.has(f)) pool.set(f, s.key);
+      if (s.ext.some((e) => f.toLowerCase().endsWith(e))) pool.set(pkey(s.key, f), { src: s.key, file: f });
     }
   }
-  const bySlot = new Map();   // slot → 指派過來的檔名
-  for (const [file, slot] of Object.entries(assign)) if (pool.has(file)) bySlot.set(slot, file);
+  const bySlot = new Map();   // slot → 指派過來的池鍵(`assign` 的鍵仍是檔名,對使用者友善)
+  for (const [file, slot] of Object.entries(assign)) {
+    const hit = [...pool.keys()].find((k) => pool.get(k).file === file);
+    if (hit) bySlot.set(slot, hit);
+  }
   const rows = [];
+  const superseded = [];      // 對得到格子、但輸了來源優先序的版本(≠ 孤兒)
   for (const id of Object.keys(CHARACTERS)) {
     const c = CHARACTERS[id];
     const shots = wantShots(id).map((s) => {
-      // 本名(逐來源 `<slot><副檔名>`)優先於指派;來源之間的優先序 = SOURCES 的宣告序
-      // ⇒ 入庫圖永遠蓋過 AI 稿(同一格兩張時,畫面上要看到的是驗收過的那張)
-      const natural = SOURCES.flatMap((x) => x.ext.map((e) => `${s.slot}${e}`));
-      const file = natural.find((f) => pool.has(f)) ?? bySlot.get(s.slot);
-      if (!file) return { ...s, has: false, src: null, assigned: false, url: null };
-      const src = pool.get(file);
-      pool.delete(file);
-      return { ...s, has: true, file, src, assigned: !natural.includes(file),
+      // 本名(逐來源 `<slot><副檔名>`)優先於指派。來源優先序預設 = SOURCES 的宣告序
+      // ⇒ 入庫圖蓋過 AI 稿(同一格兩張時,畫面上要看到的是驗收過的那張)。
+      // **但這一格被判退時整個翻過來**:那張 AI 稿就是為了取代被否決的入庫圖才畫的,
+      // 還讓入庫圖贏 = 人按了「⟳ 重下 prompt」、圖也重畫好了,畫面上卻永遠停在被否決的那張。
+      const order = REDRAW_ST.has(items[s.slot]?.status) ? [...SOURCES].reverse() : SOURCES;
+      const natural = order.flatMap((x) => x.ext.map((e) => pkey(x.key, `${s.slot}${e}`)));
+      const k = natural.find((n) => pool.has(n)) ?? bySlot.get(s.slot);
+      if (!k) return { ...s, has: false, src: null, assigned: false, stale: false, url: null };
+      const { src, file } = pool.get(k);
+      pool.delete(k);
+      // 同一格的其餘檔案是**被取代**的版本,不是孤兒:孤兒的定義是「對不到任何一格」,
+      // 而它們對得到 —— 只是輸了優先序。混在一起的話,覆核台會邀請使用者把一張被否決的
+      // 舊圖「指派」到別的格子去,那是把錯誤搬到另一個地方
+      for (const n of natural) {
+        if (!pool.has(n)) continue;
+        const lose = pool.get(n);
+        pool.delete(n);
+        superseded.push({ ...lose, slot: s.slot, url: `${SRC_BY_KEY[lose.src].url}/${lose.file}` });
+      }
+      // 判決比圖舊 = 這張是判決之後才畫的 ⇒ 那個判決講的是**上一張**,MUST 標出來,
+      // 否則使用者看到一張新圖掛著舊評語,會以為自己已經覆核過了
+      const at = items[s.slot]?.at;
+      const stale = !!at && statSync(join(SRC_BY_KEY[src].dir, file)).mtimeMs > Date.parse(at);
+      return { ...s, has: true, file, src, assigned: !natural.includes(k), stale,
         url: `${SRC_BY_KEY[src].url}/${file}` };
     });
     rows.push({
@@ -119,9 +142,10 @@ export async function manifest(assign = {}) {
     });
   }
   // 剩下的就是孤兒:檔名的角色 id 不存在,或型態/姿態不在推導出來的清單裡
-  const orphans = [...pool.entries()].sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([file, src]) => ({ file, src, url: `${SRC_BY_KEY[src].url}/${file}` }));
-  return { rows, orphans, sources: SOURCES.map(({ key, label }) => ({ key, label })) };
+  const orphans = [...pool.values()].sort((a, b) => (a.file < b.file ? -1 : 1))
+    .map(({ file, src }) => ({ file, src, url: `${SRC_BY_KEY[src].url}/${file}` }));
+  superseded.sort((a, b) => (a.slot < b.slot ? -1 : 1));
+  return { rows, orphans, superseded, sources: SOURCES.map(({ key, label }) => ({ key, label })) };
 }
 
 async function loadState() {
@@ -136,23 +160,30 @@ async function saveState(s) {
 // ---- --report:不開瀏覽器的配對表 ----------------------------------------
 async function report() {
   const st = await loadState();
-  const { rows, orphans } = await manifest(st.assign);
+  const { rows, orphans, superseded } = await manifest(st.assign, st.items);
   // 逐來源分開數:AI 稿併進「有圖」就是把「這一格還沒有正式圖」藏起來(檔頭 ③)
   let want = 0, done = 0;
   const bySrc = Object.fromEntries(SOURCES.map((s) => [s.key, 0]));
-  const missing = [];
+  const missing = [], stale = [];
   for (const r of rows) {
     for (const s of r.shots) {
       want++;
-      if (s.has) { bySrc[s.src]++; if (st.items?.[s.slot]?.status === 'ok') done++; }
-      else missing.push(`${r.id} ${s.form ? `${s.form}/` : ''}${s.pose}`);
+      if (s.has) {
+        bySrc[s.src]++;
+        // 判決比圖舊 ⇒ 那個 ok 講的是上一張,MUST NOT 算進「已確認」(算了就是把待覆核的藏起來)
+        if (s.stale) stale.push(`${r.id} ${s.form ? `${s.form}/` : ''}${s.pose}`);
+        else if (st.items?.[s.slot]?.status === 'ok') done++;
+      } else missing.push(`${r.id} ${s.form ? `${s.form}/` : ''}${s.pose}`);
     }
   }
   const have = SOURCES.reduce((n, s) => n + bySrc[s.key], 0);
   console.log('機體美術覆核 — 配對表');
   console.log(`  應有    ${want} 格 — ${SOURCES.map((s) => `${s.label} ${bySrc[s.key]}`).join(' / ')}`);
   console.log(`  已確認  ${done} / ${have}`);
+  console.log(`  待重覆核 ${stale.length} 張(判決之後才重畫的)${stale.length ? `:${stale.join('、')}` : ''}`);
   console.log(`  缺圖    ${missing.length} 張${missing.length ? `:${missing.join('、')}` : ''}`);
+  console.log(`  被取代  ${superseded.length} 張(同一格的舊版本,留著備查)`
+    + `${superseded.length ? `:${superseded.map((o) => `${o.file}(${SRC_BY_KEY[o.src].label})`).join('、')}` : ''}`);
   console.log(`  孤兒檔  ${orphans.length} 個${orphans.length ? `:${orphans.map((o) => o.file).join('、')}` : ''}`);
   const noArt = rows.filter((r) => r.shots.every((s) => !s.has)).map((r) => r.id);
   if (noArt.length) console.log(`  一張都沒有的角色(${noArt.length}):${noArt.join(' ')}`);
@@ -189,7 +220,7 @@ async function serve() {
       if (req.url.startsWith('/api/review')) {
         if (req.method === 'GET') {
           const st = await loadState();
-          return send(200, JSON.stringify({ ...(await manifest(st.assign)), state: st }));
+          return send(200, JSON.stringify({ ...(await manifest(st.assign, st.items)), state: st }));
         }
         if (req.method === 'POST') {
           const chunks = [];

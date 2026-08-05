@@ -85,92 +85,6 @@
       "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s12, faction: SWARM alliance — insectile / organic-mechanical swarm doctrine, lightweight distributed hardware.\nChassis specification: ground-form biomimetic base \"raptor\", flight-form base \"archo\", dorsal pod \"antenna\". Primary livery colour #9db8d8, paint scheme \"totem\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:撲翼滑翔佈局 × 天文導航模組。GPS 一定會被打掉,所以它抬頭看星星。仿生原型:始祖鳥(空中描圖)↔ 迅猛龍(落地鑽巷弄) —— 天上看不見的死角,它落地用走的補上。\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
     },
     {
-      "id": "s10_ground_static",
-      "ch": "s10",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/s10_ground_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\3643cda0-a516-4163-8bb8-0cab85783b52\\s10_mecha_ground_1785806242995.jpg",
-      "bytes": 688001,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:17:27.257Z",
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:浮空氣囊平台 × 訊號情報吊艙。慢、笨、續航極長 —— 因為它的工作是「一直聽著」。仿生原型:飛鯨(低頻鯨歌)↔ 機械巨象 —— 自然界通訊距離最遠的兩種動物;象的耳廓就是天線陣,次聲波是人耳聽不見的那一段。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
-      "id": "s10_flight_static",
-      "ch": "s10",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/s10_flight_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\3643cda0-a516-4163-8bb8-0cab85783b52\\s10_mecha_flight_1785806296764.jpg",
-      "bytes": 633620,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:18:22.088Z",
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:浮空氣囊平台 × 訊號情報吊艙。慢、笨、續航極長 —— 因為它的工作是「一直聽著」。仿生原型:飛鯨(低頻鯨歌)↔ 機械巨象 —— 自然界通訊距離最遠的兩種動物;象的耳廓就是天線陣,次聲波是人耳聽不見的那一段。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
-      "id": "t11_ground_static",
-      "ch": "t11",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/t11_ground_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\7cd0d3bc-db4f-4566-9db8-12ff12cba95d\\mecha_t11_ground_1785806351654.jpg",
-      "bytes": 680682,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:19:14.770Z",
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t11, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: atlas/porter-motif heavy humanoid bipedal mech (人形雙足,扛負重的力士意象)\n  · FLIGHT form: tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #8a9a5a, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:傾轉旋翼運輸機 × 前傾負重底盤。車長指揮塔被原樣搬上去,他堅持那個高度才聽得見引擎的雜音。體態原型:負重工的前傾寬站 —— 雙肩兩根掛架撐著一整個班的家當,腰際配重塊讓它前傾也不會摔;老兵的活,本來就是扛人。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; rotor discs instead of wings — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
-      "id": "t11_flight_static",
-      "ch": "t11",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/t11_flight_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\7cd0d3bc-db4f-4566-9db8-12ff12cba95d\\mecha_t11_flight_1785806404159.jpg",
-      "bytes": 693409,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:20:04.160Z",
-      "note": "帳本漏記(當時 429 額度中斷),2026-08-04 由 brain 目錄回收;prompt 由同一隻的地面稿換掉形態句推回",
-      "recovered": true,
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t11, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: atlas/porter-motif heavy humanoid bipedal mech (人形雙足,扛負重的力士意象)\n  · FLIGHT form: tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #8a9a5a, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:傾轉旋翼運輸機 × 前傾負重底盤。車長指揮塔被原樣搬上去,他堅持那個高度才聽得見引擎的雜音。體態原型:負重工的前傾寬站 —— 雙肩兩根掛架撐著一整個班的家當,腰際配重塊讓它前傾也不會摔;老兵的活,本來就是扛人。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; rotor discs instead of wings — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
-      "id": "t06_ground_static",
-      "ch": "t06",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/t06_ground_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\60e16212-bc0f-424c-add1-f620cdd96926\\mecha_t06_ground_1785806434327.jpg",
-      "bytes": 701119,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:20:38.282Z",
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:輕量化外骨骼 × 變形彈射機構。裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。體態原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。升空不變形成飛機:背後展開兩束不揮動的噴焰光翼(觔斗雲的現代解),身體壓平、雙腿併攏,多節長尾蠍式前捲過頂 —— 尾端那門熔核砲,砲口永遠朝著他要去的方向。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
-      "id": "t06_flight_static",
-      "ch": "t06",
-      "kind": "master",
-      "slot": null,
-      "ref": null,
-      "mirror": false,
-      "out": "tools/ai3d/masters/t06_flight_static.jpg",
-      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\60e16212-bc0f-424c-add1-f620cdd96926\\mecha_t06_flight_1785806489638.jpg",
-      "bytes": 637011,
-      "format": "jpeg (agy generate_image 只出 JPEG)",
-      "at": "2026-08-04T01:21:33.068Z",
-      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:輕量化外骨骼 × 變形彈射機構。裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。體態原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。升空不變形成飛機:背後展開兩束不揮動的噴焰光翼(觔斗雲的現代解),身體壓平、雙腿併攏,多節長尾蠍式前捲過頂 —— 尾端那門熔核砲,砲口永遠朝著他要去的方向。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
-    },
-    {
       "id": "m05_ground_static",
       "ch": "m05",
       "kind": "master",
@@ -256,6 +170,492 @@
       "format": "jpeg (agy generate_image 只出 JPEG)",
       "at": "2026-08-04T06:37:12.877Z",
       "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m08, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · GROUND form: panther (夜豹) — sprung quadruped limbs, low prowling stance\n  · FLIGHT form: owl (夜梟) — broad feathered wings with serrated silencing combs along the leading edge\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #8f7fd0, paint scheme \"camo\".\nDesign brief (authoritative, Traditional Chinese): 現實原型:前緣鋸齒的消音結構 × 匿蹤外形設計。飛行時的噪音低於環境背景值,所以沒有人記得看過她起飛。仿生原型:夜梟的鋸齒消音羽(飛行)↔ 夜豹的潛行步態(地面) —— 兩種型態都只求一件事:不被聽見,不被記得。\nLimb count is fixed and MUST be obeyed: exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s07_static",
+      "ch": "s07",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s07_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\9bfdddbf-0317-429d-9fed-ec7b23099248\\s07_cthulhu_mecha_1785865714326.jpg",
+      "bytes": 750694,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:48:36.704Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s07, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: quadruped beast body plan\n  · Biomimetic base: cthulhu (克蘇魯) — walks on four tentacles and wields weapons with four more; compound eye cluster and facial tendrils\n  · Dorsal pod: a parabolic dish on the back\nPrimary livery colour #7fd8ff, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:鐵穹的攔截分配演算法 × 空射近程攔截彈艙 —— 掛載數刻意做成偶數,因為演算法一律雙發齊射求命中率。\n  · 仿生原型:頭足類(克蘇魯式) —— 四觸手步行、四觸手持械,複眼群做全向頻譜監聽;八隻觸手永遠分得成四對。\nSilhouette (authoritative, Traditional Chinese): 一顆低伏的囊狀主體下伸出八條分節觸手 —— 下四條著地、上四條各托一具彈艙;主體正面是一整片複眼群,沒有一條直線。\nMass proportions: 主體扁圓、貼地;觸手長度約主體直徑的三倍,八條一律等長(偶數對稱是它的設計要求)。\nSurface and materials: 深青色濕潤感的裝甲殼,節與節之間露出蛇腹狀的柔性套;複眼是半球玻璃陣列,會反出一整排小光點。\nSeparable volumes (draw all of them, they become the 3D parts): 囊狀主體 / 步行觸手 ×4 / 持械觸手 ×4 / 攔截彈艙 ×4 / 複眼陣列 / 腹部發射軌\nMOST COMMON MISTAKE — do not make it: 觸手 MUST 是**四對**(可數):這台機的整個人設就是「永遠分得成四對」,畫成七條或九條就毀了。\nLimb count is fixed and MUST be obeyed: exactly 2 front legs; exactly 2 hind legs; 4 tentacle limbs — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t07_static",
+      "ch": "t07",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t07_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\7964620b-abdf-4186-b727-e501f9043f08\\steel_pact_pterosaur_t07_1785865803061.jpg",
+      "bytes": 665387,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:50:06.573Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t07, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: pterosaur (翼龍) — membrane wings, two clawed feet each gripping a weapon pod\nPrimary livery colour #3fae4a, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:長航時滑翔無人機 × 反器材狙擊槍的浮動槍架 —— 滑翔幾乎不耗電、也幾乎不出聲 —— 因為聲音會先於子彈抵達。\n  · 仿生原型:翼龍 —— 膜翼滑翔省電,雙爪各抓一具槍莢:要抓才有,鬆手就沒有。\nSilhouette (authoritative, Traditional Chinese): 一對指骨撐開的細長膜翼,頭部是尖長的感測喙;兩隻爪各抓著一具狙擊槍莢,爪一鬆槍就掉。\nMass proportions: 翼展約體長的三倍,身體極瘦;槍莢長度接近軀幹,是全機最重的掛載。\nSurface and materials: 深靛色的半透膜翼,逆光時看得到指骨與血管狀的張力筋;機體本身是消光深色,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 指骨膜翼 ×2 / 瘦長軀幹 / 尖喙感測頭 / 抓握爪 ×2 / 狙擊槍莢 ×2(可拋) / 尾舵\nMOST COMMON MISTAKE — do not make it: 槍莢是**抓著的**不是掛架焊死的:爪與槍身之間 MUST 看得出是可鬆開的握持關係。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t08_static",
+      "ch": "t08",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t08_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\8203ccbe-d67b-425d-befc-f616a8bd760b\\mecha_t08_sakura_dragon_1785865857513.jpg",
+      "bytes": 775428,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:51:01.685Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t08, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical dragon (機械龍) — membrane wings with a span far larger than the body, jaws open to reveal a missile nest\nPrimary livery colour #ffc7dd, paint scheme \"sakura\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:電子戰機的天線陣 × 口腔式定向波束艙 —— 發射口就是「嘴」,起音即是擊發。\n  · 仿生原型:機械龍 —— 膜翼加口腔飛彈巢,張口即齊射;東亞的龍不噴火,牠吐的是聲音。\nSilhouette (authoritative, Traditional Chinese): 長身無足的東亞龍形,一對膜翼從背側展開;頭部占比大,張口時看得見整排飛彈巢與波束口。\nMass proportions: 身長約翼展的 1.2 倍,身體分節、可彎;頭長約身長的六分之一,是全機的火力端。\nSurface and materials: 櫻粉與白的漸層鱗片板,每片鱗都是一格天線單元;口腔內壁是金屬本色,發射前會亮起一圈駐波光紋。\nSeparable volumes (draw all of them, they become the 3D parts): 分節長身 / 膜翼 ×2 / 龍首(口腔波束艙) / 飛彈巢(口內) / 背脊天線列 / 尾鰭舵\nMOST COMMON MISTAKE — do not make it: 牠不噴火:發射演出 MUST 是聲波/波束(駐波環、空氣扭曲),畫成噴火龍就走錯神話系統了。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m04_static",
+      "ch": "m04",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/m04_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\222eeca4-0e7b-4682-b0b8-1735e09db150\\mech_unit_m04_1785865909595.jpg",
+      "bytes": 684250,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:51:50.451Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m04, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical eagle (機械鷹) — bladed feather wings with missile pylons under the wings, twin barrels under the chin\nPrimary livery colour #d24fb4, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:擬態翼滑翔佈局 × 匿蹤外形 —— 雷達截面被壓到鳥類等級 —— 在這台機上那是字面意思,代價是掛載少得可笑。\n  · 仿生原型:鷹 —— 羽刃翼下掛「羽毛」飛彈,俯衝一擊即走;獵鷹從不在同一片天空繞第二圈。\nSilhouette (authoritative, Traditional Chinese): 一對由分片羽刃構成的寬翼,翼端指羽分開上翹;翼下只掛得下寥寥幾枚細長的「羽毛」飛彈,身體小得不成比例。\nMass proportions: 翼展約體長的 2.5 倍,身體極小;每片羽刃都是一片獨立可動的匿蹤面板。\nSurface and materials: 灰褐與紫的圖騰塗裝,羽刃邊緣是鋸齒狀的匿蹤處理;表面吸波塗層呈啞光絨質,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 分片羽刃翼 ×2 / 上翹指羽 / 小型軀幹 / 羽毛飛彈 ×4 / 頭部感測莢 / 抓握爪 ×2\nMOST COMMON MISTAKE — do not make it: 掛載 MUST 少得誇張(4 枚上下):那是它換來匿蹤的代價,掛滿飛彈就是另一台機。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s09_static",
+      "ch": "s09",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s09_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\165bc42b-09d4-4308-b9a2-b8b618b97aef\\s09_swarm_mecha_1785866007639.jpg",
+      "bytes": 616399,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:53:28.459Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s09, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: bipedal beast body plan\n  · Biomimetic base: kangaroo (袋鼠) — powerful hind legs plus a ground-touching balance tail, fist-cannons on the forearms\n  · Dorsal pod: a missile/launch rack on the back\nPrimary livery colour #d0602f, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:跟腱儲能的彈跳底盤 × 英式雙管獵槍 —— 反無人機散彈近炸的原理與獵鳥一模一樣,連「兩發打完要換膛」的節奏都是;打完一輪就彈開換射位。\n  · 仿生原型:袋鼠 —— 強腿重尾、連續彈跳比奔跑省力,落地卻穩得可以架槍;那是他家牧場圍籬外每天黃昏都會出現的東西。\nSilhouette (authoritative, Traditional Chinese): 兩條巨大的反曲後腿加一條粗重的配平尾,三點著地成穩定的架槍姿勢;上半身瘦小,雙手端著一具雙管砲。\nMass proportions: 後腿佔全高六成、上身只佔四成;尾巴長度約等於腿長,落地時與雙腿構成等邊三角。\nSurface and materials: 油布色的消光裝甲配黃銅色的機匣件,腿部跟腱儲能簧外露成一整條可見的弧;膝甲有反覆落地的刮痕。\nSeparable volumes (draw all of them, they become the 3D parts): 反曲後腿 ×2(跟腱簧外露) / 配平重尾 / 瘦小上身 / 雙管防空砲 / 肩掛備彈架 / 腰部彈跳配重\nMOST COMMON MISTAKE — do not make it: 三點站姿(雙腿 + 尾)是它能架槍的理由:MUST NOT 畫成只靠雙腿站著,那就變成一般雙足機。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_ground_static",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\6a2b3357-ca63-4757-8f13-12b4d22888dc\\s03_swarm_mecha_1785866062791.jpg",
+      "bytes": 623878,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:54:23.451Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 地面型原型:迅猛龍 —— 收翼成獵足,能鑽巷弄、能蹲在樹冠下不動聲色,靠腿而不是靠槳。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_flight_static",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\6a2b3357-ca63-4757-8f13-12b4d22888dc\\s03_swarm_flight_1785866109954.jpg",
+      "bytes": 648413,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:55:10.415Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 飛行型原型:始祖鳥 —— 不是最會飛的那一種,只負責替蜂群把整片頻譜描一遍;翼緣的爪還留著。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, the machine banked into flight, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_ground_static",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\b2adb206-1d56-4ba8-9ff5-cd826c798796\\mecha_s10_elephant_1785866160254.jpg",
+      "bytes": 667013,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:56:03.567Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 地面型原型:機械巨象 —— 兩片巨大的耳廓就是天線陣;象群靠人耳聽不見的次聲波隔著幾十公里說話。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_flight_static",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\b2adb206-1d56-4ba8-9ff5-cd826c798796\\mecha_s10_whale_1785866210804.jpg",
+      "bytes": 597303,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:56:54.475Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 飛行型原型:飛鯨 —— 用鯨歌那樣的低頻在整片天空裡投放與回收訊號,體積換續航。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, the machine banked into flight, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t06_ground_static",
+      "ch": "t06",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t06_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\18727353-e9ff-454a-93ea-ce5127bf998b\\mecha_t06_ground_form_1785866263104.jpg",
+      "bytes": 638596,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:57:46.818Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:輕量化外骨骼 × 變形彈射機構 —— 裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。\n  · 地面型原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。\nSilhouette (authoritative, Traditional Chinese): 地面型是掌行的猴姿:長臂垂直撐地、掌心平貼,背後斜插一根長棍,額頭一圈金箍;飛行型身體壓平、雙腿併攏,背後兩束光翼不揮動,多節長尾前捲過頂。\nMass proportions: 臂長明顯超過腿長,軀幹輕薄;尾長約全身的 1.5 倍,分節可數,尾端砲口是全機最重的一點。\nSurface and materials: 幾乎沒有裝甲板,露出金色的骨架與深色的柔性肌;金箍與棍身是拋光黃銅,光翼是半透明的噴焰而非實體翼面。\nSeparable volumes (draw all of them, they become the 3D parts): 輕量骨架軀幹 / 長臂 ×2(掌行) / 多節長尾 + 熔核砲 / 如意棒(背插) / 金箍(額) / 光翼發生器 ×2(背)\nMOST COMMON MISTAKE — do not make it: 光翼 MUST NOT 畫成會揮動的翅膀,它是兩束固定的噴焰;飛行型也 MUST NOT 變成飛機外形 —— 身體壓平就是它的飛行姿態。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t06_flight_static",
+      "ch": "t06",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t06_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\18727353-e9ff-454a-93ea-ce5127bf998b\\mecha_t06_flight_form_1785866317011.jpg",
+      "bytes": 730132,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:58:42.455Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:輕量化外骨骼 × 變形彈射機構 —— 裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。\n  · 飛行型原型:觔斗雲(光翼) —— 升空不變形成飛機:背後展開兩束不揮動的噴焰光翼,身體壓平、雙腿併攏,多節長尾蠍式前捲過頂,尾端那門熔核砲永遠朝著他要去的方向。\nSilhouette (authoritative, Traditional Chinese): 地面型是掌行的猴姿:長臂垂直撐地、掌心平貼,背後斜插一根長棍,額頭一圈金箍;飛行型身體壓平、雙腿併攏,背後兩束光翼不揮動,多節長尾前捲過頂。\nMass proportions: 臂長明顯超過腿長,軀幹輕薄;尾長約全身的 1.5 倍,分節可數,尾端砲口是全機最重的一點。\nSurface and materials: 幾乎沒有裝甲板,露出金色的骨架與深色的柔性肌;金箍與棍身是拋光黃銅,光翼是半透明的噴焰而非實體翼面。\nSeparable volumes (draw all of them, they become the 3D parts): 輕量骨架軀幹 / 長臂 ×2(掌行) / 多節長尾 + 熔核砲 / 如意棒(背插) / 金箍(額) / 光翼發生器 ×2(背)\nMOST COMMON MISTAKE — do not make it: 光翼 MUST NOT 畫成會揮動的翅膀,它是兩束固定的噴焰;飛行型也 MUST NOT 變成飛機外形 —— 身體壓平就是它的飛行姿態。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, the machine banked into flight, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t11_ground_static",
+      "ch": "t11",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t11_ground_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\48b82bfc-b5bf-4fd4-a19b-2b5d1df2b31e\\steel_pact_mecha_1785866369840.jpg",
+      "bytes": 636198,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T17:59:33.411Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t11, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: atlas/porter-motif heavy humanoid bipedal mech (人形雙足,扛負重的力士意象)\n  · FLIGHT form: tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #8a9a5a, paint scheme \"camo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:傾轉旋翼運輸機 × 前傾負重底盤 —— 車長指揮塔被原樣搬上去,他堅持那個高度才聽得見引擎的雜音。\n  · 地面型原型:負重工的前傾寬站 —— 雙肩兩根掛架撐著一整個班的家當,腰際配重塊讓它前傾也不會摔;老兵的活,本來就是扛人。\nSilhouette (authoritative, Traditional Chinese): 地面型雙肩兩根外伸掛架滿載補給、上身前傾、寬站;軀幹頂上突出一具老式車長指揮塔。飛行型兩具旋翼艙在翼端轉成垂直。\nMass proportions: 體格是全機種最大的一批;肩掛架外伸寬度約肩寬的 1.5 倍,腰際配重塊明顯外凸。\nSurface and materials: 綠褐迷彩上蓋著層層疊疊的補給網、帆布捆與備用履帶塊;指揮塔的觀察窗玻璃有裂痕,用膠帶壓著。\nSeparable volumes (draw all of them, they become the 3D parts): 前傾軀幹 / 肩掛補給架 ×2 / 車長指揮塔 / 腰際配重塊 / 傾轉旋翼艙 ×2(翼端) / 寬站腿 ×2\nMOST COMMON MISTAKE — do not make it: 掛架上 MUST 真的掛滿東西(帆布、水桶、備件):空著的掛架讓「扛人」這件事整個不見。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; rotor discs instead of wings — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t11_flight_static",
+      "ch": "t11",
+      "kind": "master",
+      "slot": null,
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t11_flight_static.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\48b82bfc-b5bf-4fd4-a19b-2b5d1df2b31e\\steel_pact_flight_1785866422842.jpg",
+      "bytes": 696088,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T18:00:26.170Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t11, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: atlas/porter-motif heavy humanoid bipedal mech (人形雙足,扛負重的力士意象)\n  · FLIGHT form: tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #8a9a5a, paint scheme \"camo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:傾轉旋翼運輸機 × 前傾負重底盤 —— 車長指揮塔被原樣搬上去,他堅持那個高度才聽得見引擎的雜音。\n  · 飛行型原型:傾轉旋翼母艦 —— 兩具旋翼艙在翼端轉九十度即成飛行型,機腹仍掛著整個班的家當。\nSilhouette (authoritative, Traditional Chinese): 地面型雙肩兩根外伸掛架滿載補給、上身前傾、寬站;軀幹頂上突出一具老式車長指揮塔。飛行型兩具旋翼艙在翼端轉成垂直。\nMass proportions: 體格是全機種最大的一批;肩掛架外伸寬度約肩寬的 1.5 倍,腰際配重塊明顯外凸。\nSurface and materials: 綠褐迷彩上蓋著層層疊疊的補給網、帆布捆與備用履帶塊;指揮塔的觀察窗玻璃有裂痕,用膠帶壓著。\nSeparable volumes (draw all of them, they become the 3D parts): 前傾軀幹 / 肩掛補給架 ×2 / 車長指揮塔 / 腰際配重塊 / 傾轉旋翼艙 ×2(翼端) / 寬站腿 ×2\nMOST COMMON MISTAKE — do not make it: 掛架上 MUST 真的掛滿東西(帆布、水桶、備件):空著的掛架讓「扛人」這件事整個不見。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; rotor discs instead of wings — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, the machine banked into flight, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s07_heavy",
+      "ch": "s07",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "heavy",
+      "ref": "s07_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/s07_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\70e667ae-369d-4aed-99e7-fca9621a10e9\\s07_firing_1785887795301.jpg",
+      "bytes": 752531,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T23:56:37.243Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\s07_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id s07, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: quadruped beast body plan\n  · Biomimetic base: cthulhu (克蘇魯) — walks on four tentacles and wields weapons with four more; compound eye cluster and facial tendrils\n  · Dorsal pod: a parabolic dish on the back\nPrimary livery colour #7fd8ff, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:鐵穹的攔截分配演算法 × 空射近程攔截彈艙 —— 掛載數刻意做成偶數,因為演算法一律雙發齊射求命中率。\n  · 仿生原型:頭足類(克蘇魯式) —— 四觸手步行、四觸手持械,複眼群做全向頻譜監聽;八隻觸手永遠分得成四對。\nSilhouette (authoritative, Traditional Chinese): 一顆低伏的囊狀主體下伸出八條分節觸手 —— 下四條著地、上四條各托一具彈艙;主體正面是一整片複眼群,沒有一條直線。\nMass proportions: 主體扁圓、貼地;觸手長度約主體直徑的三倍,八條一律等長(偶數對稱是它的設計要求)。\nSurface and materials: 深青色濕潤感的裝甲殼,節與節之間露出蛇腹狀的柔性套;複眼是半球玻璃陣列,會反出一整排小光點。\nSeparable volumes (draw all of them, they become the 3D parts): 囊狀主體 / 步行觸手 ×4 / 持械觸手 ×4 / 攔截彈艙 ×4 / 複眼陣列 / 腹部發射軌\nMOST COMMON MISTAKE — do not make it: 觸手 MUST 是**四對**(可數):這台機的整個人設就是「永遠分得成四對」,畫成七條或九條就毀了。\nLimb count is fixed and MUST be obeyed: exactly 2 front legs; exactly 2 hind legs; 4 tentacle limbs — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s09_moving",
+      "ch": "s09",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "moving",
+      "ref": "s09_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/s09_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\aec49acc-594f-4f19-a469-4dd87ad8b6c5\\s09_moving_1785887846375.jpg",
+      "bytes": 598525,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T23:57:29.974Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\s09_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id s09, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: bipedal beast body plan\n  · Biomimetic base: kangaroo (袋鼠) — powerful hind legs plus a ground-touching balance tail, fist-cannons on the forearms\n  · Dorsal pod: a missile/launch rack on the back\nPrimary livery colour #d0602f, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:跟腱儲能的彈跳底盤 × 英式雙管獵槍 —— 反無人機散彈近炸的原理與獵鳥一模一樣,連「兩發打完要換膛」的節奏都是;打完一輪就彈開換射位。\n  · 仿生原型:袋鼠 —— 強腿重尾、連續彈跳比奔跑省力,落地卻穩得可以架槍;那是他家牧場圍籬外每天黃昏都會出現的東西。\nSilhouette (authoritative, Traditional Chinese): 兩條巨大的反曲後腿加一條粗重的配平尾,三點著地成穩定的架槍姿勢;上半身瘦小,雙手端著一具雙管砲。\nMass proportions: 後腿佔全高六成、上身只佔四成;尾巴長度約等於腿長,落地時與雙腿構成等邊三角。\nSurface and materials: 油布色的消光裝甲配黃銅色的機匣件,腿部跟腱儲能簧外露成一整條可見的弧;膝甲有反覆落地的刮痕。\nSeparable volumes (draw all of them, they become the 3D parts): 反曲後腿 ×2(跟腱簧外露) / 配平重尾 / 瘦小上身 / 雙管防空砲 / 肩掛備彈架 / 腰部彈跳配重\nMOST COMMON MISTAKE — do not make it: 三點站姿(雙腿 + 尾)是它能架槍的理由:MUST NOT 畫成只靠雙腿站著,那就變成一般雙足機。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s09_heavy",
+      "ch": "s09",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "heavy",
+      "ref": "s09_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/s09_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\883d13bd-fc94-4cbc-bae5-17a95e9084af\\s09_firing_mecha_1785887901904.jpg",
+      "bytes": 660492,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T23:58:23.314Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\s09_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id s09, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: bipedal beast body plan\n  · Biomimetic base: kangaroo (袋鼠) — powerful hind legs plus a ground-touching balance tail, fist-cannons on the forearms\n  · Dorsal pod: a missile/launch rack on the back\nPrimary livery colour #d0602f, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:跟腱儲能的彈跳底盤 × 英式雙管獵槍 —— 反無人機散彈近炸的原理與獵鳥一模一樣,連「兩發打完要換膛」的節奏都是;打完一輪就彈開換射位。\n  · 仿生原型:袋鼠 —— 強腿重尾、連續彈跳比奔跑省力,落地卻穩得可以架槍;那是他家牧場圍籬外每天黃昏都會出現的東西。\nSilhouette (authoritative, Traditional Chinese): 兩條巨大的反曲後腿加一條粗重的配平尾,三點著地成穩定的架槍姿勢;上半身瘦小,雙手端著一具雙管砲。\nMass proportions: 後腿佔全高六成、上身只佔四成;尾巴長度約等於腿長,落地時與雙腿構成等邊三角。\nSurface and materials: 油布色的消光裝甲配黃銅色的機匣件,腿部跟腱儲能簧外露成一整條可見的弧;膝甲有反覆落地的刮痕。\nSeparable volumes (draw all of them, they become the 3D parts): 反曲後腿 ×2(跟腱簧外露) / 配平重尾 / 瘦小上身 / 雙管防空砲 / 肩掛備彈架 / 腰部彈跳配重\nMOST COMMON MISTAKE — do not make it: 三點站姿(雙腿 + 尾)是它能架槍的理由:MUST NOT 畫成只靠雙腿站著,那就變成一般雙足機。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t07_heavy",
+      "ch": "t07",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "heavy",
+      "ref": "t07_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/t07_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\4d0f5f4a-a5ae-47c4-9a6b-4e3790801c7b\\t07_firing_concept_1785887992546.jpg",
+      "bytes": 697305,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-04T23:59:54.027Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\t07_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id t07, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: pterosaur (翼龍) — membrane wings, two clawed feet each gripping a weapon pod\nPrimary livery colour #3fae4a, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:長航時滑翔無人機 × 反器材狙擊槍的浮動槍架 —— 滑翔幾乎不耗電、也幾乎不出聲 —— 因為聲音會先於子彈抵達。\n  · 仿生原型:翼龍 —— 膜翼滑翔省電,雙爪各抓一具槍莢:要抓才有,鬆手就沒有。\nSilhouette (authoritative, Traditional Chinese): 一對指骨撐開的細長膜翼,頭部是尖長的感測喙;兩隻爪各抓著一具狙擊槍莢,爪一鬆槍就掉。\nMass proportions: 翼展約體長的三倍,身體極瘦;槍莢長度接近軀幹,是全機最重的掛載。\nSurface and materials: 深靛色的半透膜翼,逆光時看得到指骨與血管狀的張力筋;機體本身是消光深色,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 指骨膜翼 ×2 / 瘦長軀幹 / 尖喙感測頭 / 抓握爪 ×2 / 狙擊槍莢 ×2(可拋) / 尾舵\nMOST COMMON MISTAKE — do not make it: 槍莢是**抓著的**不是掛架焊死的:爪與槍身之間 MUST 看得出是可鬆開的握持關係。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t08_moving",
+      "ch": "t08",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "moving",
+      "ref": "t08_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/t08_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\02754e9d-a47e-4832-b3ea-cb88c1b6c8f5\\t08_moving_1785888043766.jpg",
+      "bytes": 812146,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:00:45.534Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\t08_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id t08, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical dragon (機械龍) — membrane wings with a span far larger than the body, jaws open to reveal a missile nest\nPrimary livery colour #ffc7dd, paint scheme \"sakura\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:電子戰機的天線陣 × 口腔式定向波束艙 —— 發射口就是「嘴」,起音即是擊發。\n  · 仿生原型:機械龍 —— 膜翼加口腔飛彈巢,張口即齊射;東亞的龍不噴火,牠吐的是聲音。\nSilhouette (authoritative, Traditional Chinese): 長身無足的東亞龍形,一對膜翼從背側展開;頭部占比大,張口時看得見整排飛彈巢與波束口。\nMass proportions: 身長約翼展的 1.2 倍,身體分節、可彎;頭長約身長的六分之一,是全機的火力端。\nSurface and materials: 櫻粉與白的漸層鱗片板,每片鱗都是一格天線單元;口腔內壁是金屬本色,發射前會亮起一圈駐波光紋。\nSeparable volumes (draw all of them, they become the 3D parts): 分節長身 / 膜翼 ×2 / 龍首(口腔波束艙) / 飛彈巢(口內) / 背脊天線列 / 尾鰭舵\nMOST COMMON MISTAKE — do not make it: 牠不噴火:發射演出 MUST 是聲波/波束(駐波環、空氣扭曲),畫成噴火龍就走錯神話系統了。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t08_heavy",
+      "ch": "t08",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "heavy",
+      "ref": "t08_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/t08_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\ba6309f0-1ec0-4d25-acd5-933961d9af0e\\t08_action_1785888093550.jpg",
+      "bytes": 652565,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:01:36.635Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\t08_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id t08, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical dragon (機械龍) — membrane wings with a span far larger than the body, jaws open to reveal a missile nest\nPrimary livery colour #ffc7dd, paint scheme \"sakura\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:電子戰機的天線陣 × 口腔式定向波束艙 —— 發射口就是「嘴」,起音即是擊發。\n  · 仿生原型:機械龍 —— 膜翼加口腔飛彈巢,張口即齊射;東亞的龍不噴火,牠吐的是聲音。\nSilhouette (authoritative, Traditional Chinese): 長身無足的東亞龍形,一對膜翼從背側展開;頭部占比大,張口時看得見整排飛彈巢與波束口。\nMass proportions: 身長約翼展的 1.2 倍,身體分節、可彎;頭長約身長的六分之一,是全機的火力端。\nSurface and materials: 櫻粉與白的漸層鱗片板,每片鱗都是一格天線單元;口腔內壁是金屬本色,發射前會亮起一圈駐波光紋。\nSeparable volumes (draw all of them, they become the 3D parts): 分節長身 / 膜翼 ×2 / 龍首(口腔波束艙) / 飛彈巢(口內) / 背脊天線列 / 尾鰭舵\nMOST COMMON MISTAKE — do not make it: 牠不噴火:發射演出 MUST 是聲波/波束(駐波環、空氣扭曲),畫成噴火龍就走錯神話系統了。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m04_moving",
+      "ch": "m04",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "moving",
+      "ref": "m04_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/m04_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\c9cd6189-dc02-4b57-aab6-7393f52f23a7\\m04_action_concept_1785888146949.jpg",
+      "bytes": 692140,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:02:30.268Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\m04_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id m04, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical eagle (機械鷹) — bladed feather wings with missile pylons under the wings, twin barrels under the chin\nPrimary livery colour #d24fb4, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:擬態翼滑翔佈局 × 匿蹤外形 —— 雷達截面被壓到鳥類等級 —— 在這台機上那是字面意思,代價是掛載少得可笑。\n  · 仿生原型:鷹 —— 羽刃翼下掛「羽毛」飛彈,俯衝一擊即走;獵鷹從不在同一片天空繞第二圈。\nSilhouette (authoritative, Traditional Chinese): 一對由分片羽刃構成的寬翼,翼端指羽分開上翹;翼下只掛得下寥寥幾枚細長的「羽毛」飛彈,身體小得不成比例。\nMass proportions: 翼展約體長的 2.5 倍,身體極小;每片羽刃都是一片獨立可動的匿蹤面板。\nSurface and materials: 灰褐與紫的圖騰塗裝,羽刃邊緣是鋸齒狀的匿蹤處理;表面吸波塗層呈啞光絨質,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 分片羽刃翼 ×2 / 上翹指羽 / 小型軀幹 / 羽毛飛彈 ×4 / 頭部感測莢 / 抓握爪 ×2\nMOST COMMON MISTAKE — do not make it: 掛載 MUST 少得誇張(4 枚上下):那是它換來匿蹤的代價,掛滿飛彈就是另一台機。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_ground_moving",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "form": "ground",
+      "pose": "moving",
+      "ref": "s10_ground_static",
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_ground_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\72bb4198-55d7-4859-b281-41c8bd1f32a9\\s10_ground_running_1785888393149.jpg",
+      "bytes": 643424,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:06:34.508Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\public\\assets\\cyberpunk_art\\mechs\\s10_ground_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 地面型原型:機械巨象 —— 兩片巨大的耳廓就是天線陣;象群靠人耳聽不見的次聲波隔著幾十公里說話。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s07_moving",
+      "ch": "s07",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "moving",
+      "ref": "s07_static(未驗收)",
+      "mirror": false,
+      "out": "tools/ai3d/masters/s07_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\a93c8ba4-cd26-4f6d-abf6-164c895db052\\s07_full_speed_1785888930525.jpg",
+      "bytes": 659528,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:15:33.924Z",
+      "prompt": "Read the image file C:\\Users\\user\\Documents\\app\\steel_vs_swarm\\.claude\\worktrees\\angry-fermat-96b86d\\tools\\ai3d\\masters\\s07_static.jpg. That is THIS SAME machine, already approved. Keep its silhouette, proportions, panel layout, colours and every design detail identical — you are only changing what the machine is doing, never what it is.\nConcept art sheet for a mecha unit in a near-future war game. Unit id s07, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · Body plan: quadruped beast body plan\n  · Biomimetic base: cthulhu (克蘇魯) — walks on four tentacles and wields weapons with four more; compound eye cluster and facial tendrils\n  · Dorsal pod: a parabolic dish on the back\nPrimary livery colour #7fd8ff, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:鐵穹的攔截分配演算法 × 空射近程攔截彈艙 —— 掛載數刻意做成偶數,因為演算法一律雙發齊射求命中率。\n  · 仿生原型:頭足類(克蘇魯式) —— 四觸手步行、四觸手持械,複眼群做全向頻譜監聽;八隻觸手永遠分得成四對。\nSilhouette (authoritative, Traditional Chinese): 一顆低伏的囊狀主體下伸出八條分節觸手 —— 下四條著地、上四條各托一具彈艙;主體正面是一整片複眼群,沒有一條直線。\nMass proportions: 主體扁圓、貼地;觸手長度約主體直徑的三倍,八條一律等長(偶數對稱是它的設計要求)。\nSurface and materials: 深青色濕潤感的裝甲殼,節與節之間露出蛇腹狀的柔性套;複眼是半球玻璃陣列,會反出一整排小光點。\nSeparable volumes (draw all of them, they become the 3D parts): 囊狀主體 / 步行觸手 ×4 / 持械觸手 ×4 / 攔截彈艙 ×4 / 複眼陣列 / 腹部發射軌\nMOST COMMON MISTAKE — do not make it: 觸手 MUST 是**四對**(可數):這台機的整個人設就是「永遠分得成四對」,畫成七條或九條就毀了。\nLimb count is fixed and MUST be obeyed: exactly 2 front legs; exactly 2 hind legs; 4 tentacle limbs — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t07_moving",
+      "ch": "t07",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "moving",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t07_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\6a8a774e-3c45-4dff-af05-ddd085616045\\pterosaur_mecha_t07_1785889533614.jpg",
+      "bytes": 605787,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:25:35.151Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t07, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: pterosaur (翼龍) — membrane wings, two clawed feet each gripping a weapon pod\nPrimary livery colour #3fae4a, paint scheme \"split\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:長航時滑翔無人機 × 反器材狙擊槍的浮動槍架 —— 滑翔幾乎不耗電、也幾乎不出聲 —— 因為聲音會先於子彈抵達。\n  · 仿生原型:翼龍 —— 膜翼滑翔省電,雙爪各抓一具槍莢:要抓才有,鬆手就沒有。\nSilhouette (authoritative, Traditional Chinese): 一對指骨撐開的細長膜翼,頭部是尖長的感測喙;兩隻爪各抓著一具狙擊槍莢,爪一鬆槍就掉。\nMass proportions: 翼展約體長的三倍,身體極瘦;槍莢長度接近軀幹,是全機最重的掛載。\nSurface and materials: 深靛色的半透膜翼,逆光時看得到指骨與血管狀的張力筋;機體本身是消光深色,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 指骨膜翼 ×2 / 瘦長軀幹 / 尖喙感測頭 / 抓握爪 ×2 / 狙擊槍莢 ×2(可拋) / 尾舵\nMOST COMMON MISTAKE — do not make it: 槍莢是**抓著的**不是掛架焊死的:爪與槍身之間 MUST 看得出是可鬆開的握持關係。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "m04_heavy",
+      "ch": "m04",
+      "kind": "master",
+      "slot": null,
+      "form": null,
+      "pose": "heavy",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/m04_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\889eca6e-4519-476d-a000-4484d84df491\\mecha_m04_concept_1785889583300.jpg",
+      "bytes": 647116,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:26:27.250Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id m04, faction: independent mercenary (傭兵) — mixed-provenance hardware, field-modified, mismatched panels and improvised brackets.\nChassis specification:\n  · Body plan: biomimetic flapping-wing body plan\n  · Biomimetic base: mechanical eagle (機械鷹) — bladed feather wings with missile pylons under the wings, twin barrels under the chin\nPrimary livery colour #d24fb4, paint scheme \"totem\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:擬態翼滑翔佈局 × 匿蹤外形 —— 雷達截面被壓到鳥類等級 —— 在這台機上那是字面意思,代價是掛載少得可笑。\n  · 仿生原型:鷹 —— 羽刃翼下掛「羽毛」飛彈,俯衝一擊即走;獵鷹從不在同一片天空繞第二圈。\nSilhouette (authoritative, Traditional Chinese): 一對由分片羽刃構成的寬翼,翼端指羽分開上翹;翼下只掛得下寥寥幾枚細長的「羽毛」飛彈,身體小得不成比例。\nMass proportions: 翼展約體長的 2.5 倍,身體極小;每片羽刃都是一片獨立可動的匿蹤面板。\nSurface and materials: 灰褐與紫的圖騰塗裝,羽刃邊緣是鋸齒狀的匿蹤處理;表面吸波塗層呈啞光絨質,幾乎不反光。\nSeparable volumes (draw all of them, they become the 3D parts): 分片羽刃翼 ×2 / 上翹指羽 / 小型軀幹 / 羽毛飛彈 ×4 / 頭部感測莢 / 抓握爪 ×2\nMOST COMMON MISTAKE — do not make it: 掛載 MUST 少得誇張(4 枚上下):那是它換來匿蹤的代價,掛滿飛彈就是另一台機。\nLimb count is fixed and MUST be obeyed: exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_ground_moving",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "form": "ground",
+      "pose": "moving",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_ground_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\8b5b7ced-89e0-4194-a0f9-545f1e068eec\\swarm_s03_mecha_1785889636581.jpg",
+      "bytes": 721768,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:27:19.830Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 地面型原型:迅猛龍 —— 收翼成獵足,能鑽巷弄、能蹲在樹冠下不動聲色,靠腿而不是靠槳。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_ground_heavy",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "form": "ground",
+      "pose": "heavy",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_ground_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\8b5b7ced-89e0-4194-a0f9-545f1e068eec\\swarm_s03_firing_1785889686097.jpg",
+      "bytes": 745587,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T00:28:09.084Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 地面型原型:迅猛龍 —— 收翼成獵足,能鑽巷弄、能蹲在樹冠下不動聲色,靠腿而不是靠槳。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_flight_moving",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "form": "flight",
+      "pose": "moving",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_flight_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\d3c3acf7-471d-49eb-834a-f253bb643b11\\s03_flight_form_1785915074567.jpg",
+      "bytes": 602840,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:31:20.134Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 飛行型原型:始祖鳥 —— 不是最會飛的那一種,只負責替蜂群把整片頻譜描一遍;翼緣的爪還留著。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, in a hard fast pass, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s03_flight_heavy",
+      "ch": "s03",
+      "kind": "master",
+      "slot": null,
+      "form": "flight",
+      "pose": "heavy",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s03_flight_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\d3c3acf7-471d-49eb-834a-f253bb643b11\\s03_flight_firing_1785915128111.jpg",
+      "bytes": 731876,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:32:12.955Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s03, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: velociraptor (迅猛龍) — running posture, front claws tucked\n  · FLIGHT form: archaeopteryx (始祖鳥) — feathered bird wings with clawed wing-fingers and a long feathered tail\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #9ef2e6, paint scheme \"tattoo\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:撲翼滑翔佈局 × 相控陣羽面電戰吊艙 —— 翼面張開是相控陣,收翼落地摺成背脊長天線 —— 同一組振子,兩種指向。\n  · 飛行型原型:始祖鳥 —— 不是最會飛的那一種,只負責替蜂群把整片頻譜描一遍;翼緣的爪還留著。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一對前緣帶爪的寬羽翼,翼面平整得像一塊板;地面型收翼後翼板沿背脊摺成一根長天線,重心前傾、單邊鐮爪抬起。\nMass proportions: 體格偏小(全機種最輕的一批),翼展約地面全高的兩倍半;地面型頭尾等長,尾巴是配平桿不是裝飾。\nSurface and materials: 翼面是青綠色的複合板,每片羽都是一格相控陣單元,接縫清晰可數;足部關節外露、覆著薄薄的碳纖護片。\nSeparable volumes (draw all of them, they become the 3D parts): 可摺相控陣翼板 ×2 / 背脊長天線(翼板收攏態) / 獵足 ×2(鐮爪可動) / 配平尾 / 頭部感測莢 / 胸腹電戰艙\nMOST COMMON MISTAKE — do not make it: 兩種型態 MUST 是**同一組翼板**的兩個狀態(張開 = 陣列面、收攏 = 背脊天線),各畫一組就失去這台機的全部設計理由。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, pitched back on the gun, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_ground_heavy",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "form": "ground",
+      "pose": "heavy",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_ground_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\419d1993-ff3e-40b4-a341-44aa65d88742\\s10_mecha_concept_1785915182874.jpg",
+      "bytes": 744968,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:33:07.618Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 地面型原型:機械巨象 —— 兩片巨大的耳廓就是天線陣;象群靠人耳聽不見的次聲波隔著幾十公里說話。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view, braced in a firing stance, weight settled back against the recoil, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_flight_moving",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "form": "flight",
+      "pose": "moving",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_flight_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\419d1993-ff3e-40b4-a341-44aa65d88742\\s10_flight_concept_1785915234336.jpg",
+      "bytes": 475934,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:33:59.238Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 飛行型原型:飛鯨 —— 用鯨歌那樣的低頻在整片天空裡投放與回收訊號,體積換續航。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, in a hard fast pass, nose forward, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "s10_flight_heavy",
+      "ch": "s10",
+      "kind": "master",
+      "slot": null,
+      "form": "flight",
+      "pose": "heavy",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/s10_flight_heavy.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\419d1993-ff3e-40b4-a341-44aa65d88742\\s10_flight_firing_1785915285911.jpg",
+      "bytes": 548870,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:34:50.058Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id s10, faction: SWARM alliance (蜂群同盟) — distributed swarm tactics: lightweight, numerous, cheap-to-replace hardware, thin panels and exposed wiring looms.\nChassis specification:\n  · GROUND form: mechanical giant elephant (機械巨象) — a heavy quadruped with columnar legs, large ears and a trunk; the trunk folds flat to become the prow ram of the flight form\n  · FLIGHT form: LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs\n  · Dorsal pod: a mast of sensor antennae on the back\nPrimary livery colour #d7b8ff, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:浮空氣囊平台 × 訊號情報吊艙 —— 慢、笨、續航極長 —— 因為它的工作是「一直聽著」。\n  · 飛行型原型:飛鯨 —— 用鯨歌那樣的低頻在整片天空裡投放與回收訊號,體積換續航。\nSilhouette (authoritative, Traditional Chinese): 飛行型是一具鯨形浮空囊,腹下吊著細長的訊號艙;地面型四足站立,兩片巨大的耳廓向兩側張開成天線陣,長鼻垂到地面。\nMass proportions: 飛行型體積巨大而密度極低;地面型體高中等,耳廓單片寬度約軀幹的一半,是全機最大的可動面。\nSurface and materials: 灰白色的軟質囊皮上有縱向摺線,張力大時摺線攤平;耳廓內側是蜂巢狀的振子陣列,外側是布質蒙皮。\nSeparable volumes (draw all of them, they become the 3D parts): 浮空囊體(飛行型) / 訊號情報吊艙 / 四足軀幹(地面型) / 耳廓天線 ×2 / 長鼻感測臂 / 腹部發電組\nMOST COMMON MISTAKE — do not make it: 耳廓是**天線**不是耳朵:內側 MUST 看得到振子格陣,畫成毛茸茸的動物耳就失去它的機能。\nLimb count is fixed and MUST be obeyed: exactly 4 walking limbs in total, in 2 pairs (one front pair and one rear pair — a quadruped body plan; the front pair are legs, not hands); exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nCRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, not as a decorative motif bolted onto a humanoid mech.\nDraw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. It MUST read as the same machine transformed, not a different model.\nAction: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. Show the heavy weapon, not the light one.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, airborne three-quarter view seen slightly from below, pitched back on the gun, nothing touching the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
+    },
+    {
+      "id": "t06_ground_moving",
+      "ch": "t06",
+      "kind": "master",
+      "slot": null,
+      "form": "ground",
+      "pose": "moving",
+      "ref": null,
+      "mirror": false,
+      "out": "tools/ai3d/masters/t06_ground_moving.jpg",
+      "src": "C:\\Users\\user\\.gemini\\antigravity-cli\\brain\\d4e7d3eb-f346-4406-abe6-03bf35374910\\t06_monkey_mech_1785915337910.jpg",
+      "bytes": 637581,
+      "format": "jpeg (agy generate_image 只出 JPEG)",
+      "at": "2026-08-05T07:35:43.171Z",
+      "prompt": "Concept art sheet for a mecha unit in a near-future war game. Unit id t06, faction: STEEL pact (鋼鐵協約) — heavy industrial armour doctrine: thick cast plate, blocky mass, welded seams and rivet lines.\nChassis specification:\n  · GROUND form: Sun-Wukong monkey-motif humanoid bipedal mech (人形雙足,悟空意象) — palmigrade stance, walks on its palms\n  · FLIGHT form: long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends\n  · Dorsal pod: a stowed blade on the back\nPrimary livery colour #ffb84d, paint scheme \"minimal\".\nDesign prototypes (authoritative, Traditional Chinese):\n  · 設計原型:輕量化外骨骼 × 變形彈射機構 —— 裝甲被砍到極限,因為設計組相信「跳得掉的傷害不需要擋」。\n  · 地面型原型:齊天大聖孫悟空 —— 掌行四足(palmigrade)的猴姿,長臂垂直落地、手掌平貼地面在殘骸堆裡爬;額上一圈金箍、背後斜插一根如意金箍棒。\nSilhouette (authoritative, Traditional Chinese): 地面型是掌行的猴姿:長臂垂直撐地、掌心平貼,背後斜插一根長棍,額頭一圈金箍;飛行型身體壓平、雙腿併攏,背後兩束光翼不揮動,多節長尾前捲過頂。\nMass proportions: 臂長明顯超過腿長,軀幹輕薄;尾長約全身的 1.5 倍,分節可數,尾端砲口是全機最重的一點。\nSurface and materials: 幾乎沒有裝甲板,露出金色的骨架與深色的柔性肌;金箍與棍身是拋光黃銅,光翼是半透明的噴焰而非實體翼面。\nSeparable volumes (draw all of them, they become the 3D parts): 輕量骨架軀幹 / 長臂 ×2(掌行) / 多節長尾 + 熔核砲 / 如意棒(背插) / 金箍(額) / 光翼發生器 ×2(背)\nMOST COMMON MISTAKE — do not make it: 光翼 MUST NOT 畫成會揮動的翅膀,它是兩束固定的噴焰;飛行型也 MUST NOT 變成飛機外形 —— 身體壓平就是它的飛行姿態。\nLimb count is fixed and MUST be obeyed: exactly 2 legs; exactly 2 arms; exactly 2 wings (one mirrored pair, no extra wing pairs) — and no other limbs. Do not add extra legs, arms, wings or appendages.\nDraw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.\nAction: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.\nStyle: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.\nFraming: the complete machine, full body, three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground, filling about 85% of the frame, even margin on all sides, nothing cropped.\nBackground: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.\nExactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.\n1024x1024, square."
     }
   ],
   "failed": [
@@ -293,6 +693,386 @@
       "id": "m08_flight_static",
       "at": "2026-08-04T01:27:58.039Z",
       "note": "The image generation tool is currently rate-limited by API quota restrictions (`429 Resource Exhausted`). \n\nHere is the authoritative design prompt tailored for the **FLIGHT form (夜梟)** of **Mecha Unit M08**, designed to maintain exact visual continuity with the GROUND form (same `#8f7fd0` camo sche"
+    },
+    {
+      "id": "s09_static",
+      "at": "2026-08-04T17:49:14.142Z",
+      "note": "Error: Agent execution terminated due to error."
+    },
+    {
+      "id": "m01_ground_static",
+      "at": "2026-08-04T18:01:09.836Z",
+      "note": "Due to a temporary quota limit on the image generation service (`429 RESOURCE_EXHAUSTED`), the image rendering tool could not complete the final output at this moment.\n\nHere is the exact concept specifications and image generation prompt prepared for **Unit `m01` (Ground Form)**:\n\n---\n\n### Concept A"
+    },
+    {
+      "id": "m01_flight_static",
+      "at": "2026-08-04T18:01:51.258Z",
+      "note": "Due to the current API capacity limit on the image generation model (`429 RESOURCE_EXHAUSTED`), the image cannot be rendered right at this moment.\n\nHere is the concept breakdown and optimized generation prompt prepared for **Unit `m01` (Flight Form / Tricopter Gunship Mode)**:\n\n---\n\n### Concept Art "
+    },
+    {
+      "id": "m05_ground_static",
+      "at": "2026-08-04T18:02:35.599Z",
+      "note": "The image generation service is currently unavailable due to daily quota limits (Resource Exhausted - 429). \n\nHowever, here is the complete design specification and prompt architecture prepared for **Unit M05**, adhering strictly to all your authoritative design prototypes, posture requirements, and"
+    },
+    {
+      "id": "m05_flight_static",
+      "at": "2026-08-04T18:03:17.959Z",
+      "note": "The image generation service is currently hitting daily quota limits (Resource Exhausted - 429). \n\nHere is the complete concept design breakdown and prompt architecture for the **FLIGHT Form (飛行型態)** of **Unit M05**, adhering strictly to all your authoritative design specifications and transformatio"
+    },
+    {
+      "id": "m07_ground_static",
+      "at": "2026-08-04T18:04:01.738Z",
+      "note": "The image generation tool encountered a temporary quota limit (`429 Resource Exhausted`). \n\nTo ensure you still have a detailed reference for **Unit m07**, here is the concept art design specification breakdown formatted according to your exact requirements:\n\n---\n\n### 🎨 Concept Art Design Specifica"
+    },
+    {
+      "id": "m07_flight_static",
+      "at": "2026-08-04T18:04:43.450Z",
+      "note": "The image generation tool is still currently constrained by the model API quota (`429 Resource Exhausted`). \n\nTo ensure complete clarity for 3D modeling and visual development of **Unit m07 (FLIGHT Form / 飛行態)**, here is the detailed technical concept breakdown comparing both modes according to your"
+    },
+    {
+      "id": "m08_ground_static",
+      "at": "2026-08-04T18:05:25.623Z",
+      "note": "The image generation request failed because the image generation service quota has been temporarily exhausted.\n\n### Quota Details\n- **Error**: `429 RESOURCE_EXHAUSTED`\n- **Quota Reset Time**: Approximately **4 hours and 43 minutes** from now.\n\n---\n\n### Concept Art Specifications Prepared for Unit `m"
+    },
+    {
+      "id": "m08_flight_static",
+      "at": "2026-08-04T18:06:06.270Z",
+      "note": "The image generation request encountered a quota limit error from the image generation service.\n\n### Quota Status\n- **Error**: `429 RESOURCE_EXHAUSTED` (`gemini-3.1-flash-image`)\n- **Quota Reset Time**: Approximately **4 hours and 42 minutes** from now.\n\n---\n\n### Concept Art Specifications Prepared "
+    },
+    {
+      "id": "s07_moving",
+      "at": "2026-08-04T23:55:45.846Z",
+      "note": ""
+    },
+    {
+      "id": "t07_moving",
+      "at": "2026-08-04T23:59:02.169Z",
+      "note": ""
+    },
+    {
+      "id": "m04_heavy",
+      "at": "2026-08-05T00:03:10.184Z",
+      "note": ""
+    },
+    {
+      "id": "s03_ground_moving",
+      "at": "2026-08-05T00:03:49.065Z",
+      "note": ""
+    },
+    {
+      "id": "s03_ground_heavy",
+      "at": "2026-08-05T00:04:27.096Z",
+      "note": ""
+    },
+    {
+      "id": "s03_flight_moving",
+      "at": "2026-08-05T00:05:05.991Z",
+      "note": ""
+    },
+    {
+      "id": "s03_flight_heavy",
+      "at": "2026-08-05T00:05:44.930Z",
+      "note": ""
+    },
+    {
+      "id": "s10_ground_heavy",
+      "at": "2026-08-05T00:07:12.714Z",
+      "note": ""
+    },
+    {
+      "id": "s10_flight_moving",
+      "at": "2026-08-05T00:07:50.942Z",
+      "note": ""
+    },
+    {
+      "id": "s10_flight_heavy",
+      "at": "2026-08-05T00:08:29.263Z",
+      "note": ""
+    },
+    {
+      "id": "t06_ground_moving",
+      "at": "2026-08-05T00:09:07.398Z",
+      "note": ""
+    },
+    {
+      "id": "t06_ground_heavy",
+      "at": "2026-08-05T00:09:45.579Z",
+      "note": ""
+    },
+    {
+      "id": "t06_flight_moving",
+      "at": "2026-08-05T00:10:23.861Z",
+      "note": ""
+    },
+    {
+      "id": "t06_flight_heavy",
+      "at": "2026-08-05T00:11:02.939Z",
+      "note": ""
+    },
+    {
+      "id": "t11_ground_moving",
+      "at": "2026-08-05T00:11:41.783Z",
+      "note": ""
+    },
+    {
+      "id": "t11_ground_heavy",
+      "at": "2026-08-05T00:12:20.101Z",
+      "note": ""
+    },
+    {
+      "id": "t07_moving",
+      "at": "2026-08-05T00:16:12.012Z",
+      "note": ""
+    },
+    {
+      "id": "s03_flight_moving",
+      "at": "2026-08-05T00:28:53.946Z",
+      "note": "I have updated the design blueprint and documentation for the **SWARM Alliance s03** mecha unit to fully cover the **FLIGHT form (Archaeopteryx)** and its transformation mechanics.\n\n> [!NOTE]\n> *Image Generation Quota Notice*: The image generation API has temporarily reached its hourly request limit"
+    },
+    {
+      "id": "s03_flight_heavy",
+      "at": "2026-08-05T00:29:37.033Z",
+      "note": "I have updated the design blueprint and documentation for the **SWARM Alliance s03** mecha unit to specify the **Flight Form (Archaeopteryx) Airborne Heavy Weapon Firing Action**.\n\n> [!NOTE]\n> *Image Generation Quota Notice*: The image generation tool is currently on a 4-hour quota reset window. The"
+    },
+    {
+      "id": "s10_ground_heavy",
+      "at": "2026-08-05T00:30:19.877Z",
+      "note": "The image generation service has hit its quota limit (`429 Resource Exhausted`). \n\nHere is the complete concept design breakdown prepared for unit **`s10`** based on your exact specifications:\n\n### Unit `s10` — SWARM Alliance (蜂群同盟) Mechanical Elephant Ground Form\n* **Faction & Build**: SWARM allian"
+    },
+    {
+      "id": "s10_flight_moving",
+      "at": "2026-08-05T00:31:00.644Z",
+      "note": "The image generation service is currently hitting the quota rate limit (`429 Resource Exhausted`). \n\nHere is the complete concept design breakdown for the **FLIGHT form (Leviathan Flying Whale / 利維坦飛鯨)** of unit **`s10`**:\n\n### Unit `s10` — SWARM Alliance (蜂群同盟) Leviathan Flying Whale Form\n* **Facti"
+    },
+    {
+      "id": "s10_flight_heavy",
+      "at": "2026-08-05T00:31:39.854Z",
+      "note": "The image generation API remains paused due to the temporary rate limit (`429 Resource Exhausted`). \n\nHere is the exact concept specification breakdown for the **Flight Form — Airborne Firing Variant** of unit **`s10`**:\n\n### Unit `s10` — Leviathan Flying Whale (Airborne Heavy Weapon Firing Mode)\n* "
+    },
+    {
+      "id": "t06_ground_moving",
+      "at": "2026-08-05T00:32:25.975Z",
+      "note": "An image generation request was sent to render Unit **T06** (STEEL Pact ground form), but the image generation tool encountered a temporary API rate limit / quota reset window.\n\nIn the meantime, I have created a detailed concept art breakdown and 3D part volume specification document for the unit:\n\n"
+    },
+    {
+      "id": "t06_ground_heavy",
+      "at": "2026-08-05T00:33:08.225Z",
+      "note": "The image generation API model (`gemini-3.1-flash-image`) is currently experiencing a temporary quota reset delay (~4 hours).\n\nI have updated the concept art specification sheet artifact with the new **Heavy Weapon Firing Stance** directives:\n\n📄 **[t06_concept_art_sheet.md](file:///C:/Users/user/.g"
+    },
+    {
+      "id": "t06_flight_moving",
+      "at": "2026-08-05T00:33:51.004Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently under a temporary API quota reset window (~4 hours).\n\nI have updated the concept art specification sheet artifact with the complete **FLIGHT Form (觔斗雲 / 光翼姿態)** design details:\n\n📄 **[t06_concept_art_sheet.md](file:///C:/Users/user/."
+    },
+    {
+      "id": "t06_flight_heavy",
+      "at": "2026-08-05T00:34:33.324Z",
+      "note": "The image generation service (`gemini-3.1-flash-image`) is currently waiting on a temporary quota reset (~4 hours).\n\nI have updated the concept art specification document to incorporate the **Airborne Heavy Weapon Firing Mode (FLIGHT Form - Recoil Pitch Stance)**:\n\n📄 **[t06_concept_art_sheet.md](fi"
+    },
+    {
+      "id": "t11_ground_moving",
+      "at": "2026-08-05T00:35:16.809Z",
+      "note": "I attempted to generate the concept art image for the **STEEL Pact T11 Heavy Industrial Mech**, but the image generation service encountered a temporary rate/quota limit (Resource Exhausted).\n\nBelow is the structured specification and concept art blueprint sheet corresponding to your exact specifica"
+    },
+    {
+      "id": "t11_ground_heavy",
+      "at": "2026-08-05T00:35:58.187Z",
+      "note": "I have processed your updated specification for **Unit T11 (STEEL Pact)** in its **FIRING THE HEAVY WEAPON** stance. \n\nCurrently, the image generation API key/account capacity is under a temporary quota limit (resetting in approximately 4 hours). \n\nBelow is the complete design specification & prompt"
+    },
+    {
+      "id": "t11_flight_moving",
+      "at": "2026-08-05T00:36:39.827Z",
+      "note": "I have processed your specification for the **FLIGHT Form (傾轉旋翼母艦 - Airborne Flight Mode)** of **Unit T11 (STEEL Pact)**.\n\nThe image generation model remains under a temporary quota restriction (resetting in ~4 hours). \n\nBelow is the design breakdown and prompt architecture for the **T11 FLIGHT Form"
+    },
+    {
+      "id": "t11_flight_heavy",
+      "at": "2026-08-05T00:37:20.469Z",
+      "note": "I have updated the design blueprint for **Unit T11 (STEEL Pact)** in its **FLIGHT Form - Heavy Weapon Firing Mode (飛行型 重型武器開火姿態)**.\n\n*(Note: The image generation API is currently under a rate/quota limit with a reset scheduled in ~4 hours).*\n\nBelow is the design breakdown and prompt architecture tai"
+    },
+    {
+      "id": "m01_flight_static",
+      "at": "2026-08-05T00:38:08.326Z",
+      "note": "I attempted to generate the image for **Unit M01**, but the image generation engine encountered a temporary quota limit (`429 Quota Exhausted`). \n\nTo ensure all exact design criteria and transformation mechanics are preserved and ready, I have created a detailed concept art specification document:\n\n"
+    },
+    {
+      "id": "m01_flight_moving",
+      "at": "2026-08-05T00:38:54.292Z",
+      "note": "I have updated the design and rendering specification document with your updated action parameters (**full-speed hard fast pass**, **forward-pitched dynamic physics**, and **airflow-swept trailing components**):\n\n📄 [**m01_concept_art_spec.md**](file:///C:/Users/user/.gemini/antigravity-cli/brain/be"
+    },
+    {
+      "id": "m01_flight_heavy",
+      "at": "2026-08-05T00:39:36.339Z",
+      "note": "I have updated the concept art specification artifact to incorporate the **FIRING THE HEAVY WEAPON** action state and recoil bracing posture:\n\n📄 [**m01_concept_art_spec.md**](file:///C:/Users/user/.gemini/antigravity-cli/brain/be368aef-e706-483f-9025-af6817485d31/m01_concept_art_spec.md)\n\n### Updat"
+    },
+    {
+      "id": "m05_ground_moving",
+      "at": "2026-08-05T00:40:24.006Z",
+      "note": "已為您整理並建立 **M05 獨立傭兵可變型機體 (Wolf-Motif Mercenary Mecha M05)** 的完整美術與設計規範文件：[m05_concept_art_spec.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/f4d04f4a-2abe-42fb-a78b-22b854279324/m05_concept_art_spec.md)。\n\n---\n\n### 設計核心亮點摘要\n\n1. **趾行姿態 (Digitigrade Stance)**：\n   * 狼人式深屈膝構造，**蹠骨段特長，腳跟永遠不著地**。"
+    },
+    {
+      "id": "m05_ground_heavy",
+      "at": "2026-08-05T00:41:17.604Z",
+      "note": "已更新 **M05 獨立傭兵機體概念設計規範書**：[m05_concept_art_spec.md](file:///C:/Users/user/.gemini/antigravity-cli\\brain\\f4d04f4a-2abe-42fb-a78b-22b854279324\\m05_concept_art_spec.md)，加入**重型武裝開火姿態 (FIRING THE HEAVY WEAPON)** 的最新規範與兩套繪圖 Prompt。\n\n---\n\n### 最新姿態與武裝重點 (Heavy Weapon Action Updates)\n\n1. **重型武裝開火 (Heavy Weap"
+    },
+    {
+      "id": "m05_flight_static",
+      "at": "2026-08-05T00:42:04.782Z",
+      "note": "已更新 **M05 獨立傭兵機體概念設計規範書**：[m05_concept_art_spec.md](file:///C:/Users/user/.gemini/antigravity-cli\\brain\\f4d04f4a-2abe-42fb-a78b-22b854279324\\m05_concept_art_spec.md)，補充加入**鴨翼戰機 飛行型態 (FLIGHT Form - Airborne Canard Jet Fighter)** 的變形氣動結構與對應繪圖 Prompt。\n\n---\n\n### 飛行型態 (FLIGHT Form) 變形架構要線\n\n1. **機身與推進器構型 "
+    },
+    {
+      "id": "m05_flight_moving",
+      "at": "2026-08-05T00:42:55.862Z",
+      "note": "已將最新的**飛行型態全速俯衝掠過 (FLIGHT Form - Full Speed Hard Pass)** 動態規格與 Prompt 方案存入：[m05_concept_art_spec.md](file:///C:/Users/user/.gemini/antigravity-cli\\brain\\f4d04f4a-2abe-42fb-a78b-22b854279324\\m05_concept_art_spec.md)。\n\n---\n\n### 全速飛行動態與視覺焦點 (Full Speed Airborne Flight Key Points)\n\n1. **動態捕捉 (Full Speed"
+    },
+    {
+      "id": "m05_flight_heavy",
+      "at": "2026-08-05T00:43:38.398Z",
+      "note": "已更新 **M05 獨立傭兵機體概念設計規範書**：[m05_concept_art_spec.md](file:///C:/Users/user/.gemini/antigravity-cli\\brain\\f4d04f4a-2abe-42fb-a78b-22b854279324\\m05_concept_art_spec.md)，新增【方案 E：鴨翼戰機 飛行型態 空中重型武裝發射姿態 (FLIGHT Form - Airborne Heavy Weapon Firing)】。\n\n---\n\n### 飛行型態空中開火特徵 (Airborne Heavy Firing Key Points)\n\n1"
+    },
+    {
+      "id": "m07_ground_static",
+      "at": "2026-08-05T00:44:21.669Z",
+      "note": "The attempt to generate the image encountered a temporary API quota limit on the image generation service (resource capacity exhausted for `gemini-3.1-flash-image`).\n\nBelow is the refined prompt specification for **Unit M07**, ready to be used once capacity resets or in external image generators:\n\n-"
+    },
+    {
+      "id": "m07_ground_moving",
+      "at": "2026-08-05T00:45:02.085Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently at its API rate/capacity limit (quota reset in ~4 hours). \n\nHere is the exact refined prompt incorporating all updated dynamic action & framing specs for **Unit M07 (Ground / Full Speed)** so you can run it directly once capacity res"
+    },
+    {
+      "id": "m07_ground_heavy",
+      "at": "2026-08-05T00:45:42.461Z",
+      "note": "The image generation system is currently bound by API rate limits (quota resets in ~4 hours). \n\nHere is the exact refined prompt updated for the **FIRING THE HEAVY WEAPON** action stance, ready to use as soon as generation quota resets:\n\n---\n\n### Concept Art Prompt: Unit M07 (GROUND Form — Firing He"
+    },
+    {
+      "id": "m07_flight_static",
+      "at": "2026-08-05T00:46:23.419Z",
+      "note": "The image generation service is currently rate-limited (quota resets in ~4 hours). \n\nHere is the exact refined prompt for the **FLIGHT Form (Airborne)** of Unit M07, incorporating all biomimetic flight mechanics, opened elytra armor, membranous propulsion wings, folded hexapod landing legs, and fram"
+    },
+    {
+      "id": "m07_flight_moving",
+      "at": "2026-08-05T00:47:03.593Z",
+      "note": "The image generation API model is currently at capacity (quota reset in ~4 hours). \n\nHere is the exact refined prompt for **Unit M07 (FLIGHT Form — High-Speed Hard Pass)**, incorporating all high-speed flight aerodynamics, wide-open stationary elytra shields, rapidly vibrating translucent membranous"
+    },
+    {
+      "id": "t06_ground_heavy",
+      "at": "2026-08-05T07:36:28.993Z",
+      "note": "I attempted to render the new **Heavy Weapon Firing Stance (FIRING THE HEAVY WEAPON)** image for Unit T06; however, the image generation API quota has reached its current limit.\n\nI have updated the concept art artifact [t06_concept_art.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/d4e7d3eb"
+    },
+    {
+      "id": "t06_flight_moving",
+      "at": "2026-08-05T07:37:15.449Z",
+      "note": "The image generation API model quota is currently exhausted, preventing new image renders from generating at this moment.\n\nHowever, I have compiled the complete authoritative specifications for the **FLIGHT Form (觔斗雲 / 光翼姿態)** into the official concept art artifact [t06_concept_art.md](file:///C:/Us"
+    },
+    {
+      "id": "t06_flight_heavy",
+      "at": "2026-08-05T07:38:00.239Z",
+      "note": "The image generation API model quota remains exhausted at this time.\n\nThe concept art sheet artifact [t06_concept_art.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/d4e7d3eb-f346-4406-abe6-03bf35374910/t06_concept_art.md) has been updated with the full design matrix covering all 4 requested"
+    },
+    {
+      "id": "t11_ground_moving",
+      "at": "2026-08-05T07:38:47.827Z",
+      "note": "The image generation tool encountered a temporary quota limit (`429 RESOURCE_EXHAUSTED`). However, below is the finalized concept art design specification and prompt configuration crafted specifically for the **STEEL Pact T11 Mech Unit**, ready for rendering once image capacity resets or for use in "
+    },
+    {
+      "id": "t11_ground_heavy",
+      "at": "2026-08-05T07:39:32.549Z",
+      "note": "The image generation tool backend is currently under rate-limit capacity (`429 RESOURCE_EXHAUSTED`). Here is the complete design specification and prompt configuration tailored specifically for the **STEEL Pact T11 Mech Unit — Firing Stance Action**, fully compliant with all chassis, lore, and visua"
+    },
+    {
+      "id": "t11_flight_moving",
+      "at": "2026-08-05T07:40:18.180Z",
+      "note": "The image generation service is currently undergoing a temporary API capacity cooldown (`429 RESOURCE_EXHAUSTED`). Here is the comprehensive design specification breakdown and copy-ready prompt optimized specifically for the **FLIGHT Form (Airborne Tiltrotor Carrier)** of Unit T11.\n\n---\n\n### **Unit "
+    },
+    {
+      "id": "t11_flight_heavy",
+      "at": "2026-08-05T07:41:03.051Z",
+      "note": "The image generation tool capacity is currently undergoing a quota reset delay (`429 RESOURCE_EXHAUSTED`). Below is the complete concept design breakdown and ready-to-use generation prompt for the **FLIGHT Form — Airborne Heavy Cannon Firing Stance** of Unit T11.\n\n---\n\n### **Unit Concept Specificati"
+    },
+    {
+      "id": "m01_flight_static",
+      "at": "2026-08-05T07:41:56.238Z",
+      "note": "### Mecha Unit M01 — Concept Design & Visual Specification\n\nA concept art design specification sheet for **Unit M01** has been compiled and saved to [m01_tricopter_concept_sheet.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/e6268027-191d-4d74-a8d0-092e22837bfe/m01_tricopter_concept_sheet.m"
+    },
+    {
+      "id": "m01_flight_moving",
+      "at": "2026-08-05T07:42:41.136Z",
+      "note": "### Mecha Unit M01 — High-Speed Motion Concept Specification\n\nThe concept art specification sheet artifact has been updated with full-speed dynamic flight parameters at [m01_tricopter_concept_sheet.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/e6268027-191d-4d74-a8d0-092e22837bfe/m01_trico"
+    },
+    {
+      "id": "m01_flight_heavy",
+      "at": "2026-08-05T07:43:25.478Z",
+      "note": "### Mecha Unit M01 — Heavy Weapon Firing Concept Specification\n\nThe concept art specification sheet artifact has been updated with the **Heavy Weapon Firing Stance** parameters at [m01_tricopter_concept_sheet.md](file:///C:/Users/user/.gemini/antigravity-cli/brain/e6268027-191d-4d74-a8d0-092e22837bf"
+    },
+    {
+      "id": "m05_ground_moving",
+      "at": "2026-08-05T07:44:13.140Z",
+      "note": "An attempt was made to render the concept art image via the image generation tool; however, the image generation API encountered a quota limit error (`429 Resource Exhausted`).\n\nTo ensure all requested authoritative specifications, design prototypes, and 3D part breakdowns are preserved and organize"
+    },
+    {
+      "id": "m05_ground_heavy",
+      "at": "2026-08-05T07:44:57.992Z",
+      "note": "The image generation API is currently experiencing a backend quota exhaustion error (`429 Resource Exhausted`). \n\nI have updated the comprehensive design specification document with the **Heavy Weapon Firing Stance (重型武器開火姿態)** requirements, ensuring all parameters, digitigrade stance constraints, a"
+    },
+    {
+      "id": "m05_flight_static",
+      "at": "2026-08-05T07:45:43.308Z",
+      "note": "The image generation backend API is currently blocked by a quota exhaustion error (`429 Resource Exhausted`). \n\nI have updated the concept art specification document to incorporate full details for **Flight Form (飛行型 - 鴨翼噴射戰機)** alongside the existing Ground Form variants:\n\n📁 **[m05_mecha_concept_s"
+    },
+    {
+      "id": "m05_flight_moving",
+      "at": "2026-08-05T07:46:28.947Z",
+      "note": "The image generation backend API continues to return a quota exhaustion error (`429 Resource Exhausted`).\n\nI have updated the concept art specification document to log **Variant D: Flight Form — Moving at Full Speed (Fast Pass / 高速掠過)** along with all other action states:\n\n📁 **[m05_mecha_concept_sp"
+    },
+    {
+      "id": "m05_flight_heavy",
+      "at": "2026-08-05T07:47:14.082Z",
+      "note": "The image generation API remains blocked due to a quota exhaustion error (`429 Resource Exhausted`).\n\nI have updated the concept art specification document to log **Variant E: Flight Form — Firing the Heavy Weapon (飛行型 - 空中開火/姿態後仰)**:\n\n📁 **[m05_mecha_concept_spec.md](file:///C:/Users/user/.gemini/a"
+    },
+    {
+      "id": "m07_ground_static",
+      "at": "2026-08-05T07:48:00.528Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently out of quota capacity on the system side. \n\nHere is the exact concept breakdown and art directive created for **Unit ID: m07 (Rhinoceros Beetle / 犀金龜 - Ground Form)** based on all your authoritative specification constraints:\n\n---\n\n#"
+    },
+    {
+      "id": "m07_ground_moving",
+      "at": "2026-08-05T07:48:43.042Z",
+      "note": "The image generation service (`gemini-3.1-flash-image`) is currently unavailable due to API quota limits (`RESOURCE_EXHAUSTED`).\n\nHere is the updated concept specification and prompt architecture tailored to your revised **Full Speed / Dynamic Motion** requirement for **Unit ID: m07**:\n\n---\n\n### ⚡ U"
+    },
+    {
+      "id": "m07_ground_heavy",
+      "at": "2026-08-05T07:49:25.504Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently out of API quota capacity on the server side (`RESOURCE_EXHAUSTED`).\n\nHere is the concept breakdown and visual specification updated for your **FIRING THE HEAVY WEAPON (Heavy Siege / Anti-Air Turret Mode)** directive for **Unit ID: m"
+    },
+    {
+      "id": "m07_flight_static",
+      "at": "2026-08-05T07:50:08.940Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) remains at capacity limit on the backend (`RESOURCE_EXHAUSTED`).\n\nHere is the exact concept breakdown and technical art specification created for the **FLIGHT form (犀金龜 飛行態)** of **Unit ID: m07**:\n\n---\n\n### 🪲 Flight Form Concept Breakdown — Unit"
+    },
+    {
+      "id": "m07_flight_moving",
+      "at": "2026-08-05T07:50:50.870Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently out of API quota capacity on the system side (`RESOURCE_EXHAUSTED`).\n\nHere is the concept breakdown and visual specification updated for your **FLIGHT form (Airborne High-Speed Pass / 飛行態 高速掠過)** directive for **Unit ID: m07**:\n\n---\n"
+    },
+    {
+      "id": "m07_flight_heavy",
+      "at": "2026-08-05T07:51:33.204Z",
+      "note": "The image generation model (`gemini-3.1-flash-image`) is currently out of quota capacity on the system side (`RESOURCE_EXHAUSTED`).\n\nHere is the exact concept breakdown and technical art specification created for the **FLIGHT form + FIRING HEAVY WEAPON (飛行態 滯空防空開火)** directive for **Unit ID: m07**:\n"
+    },
+    {
+      "id": "m08_ground_moving",
+      "at": "2026-08-05T07:52:17.982Z",
+      "note": "I attempted to generate the concept art image for **Mecha Unit m08**, but the image generation quota on the service has been exhausted (Quota Reset: `2026-08-10T17:24:31Z`).\n\nHere is a summary of how all your specifications were structured and prepared for the concept art prompt:\n\n### **Unit Specifi"
+    },
+    {
+      "id": "m08_ground_heavy",
+      "at": "2026-08-05T07:52:59.517Z",
+      "note": "I have updated the design specification for **Mecha Unit m08** to incorporate your revised **Heavy Weapon Firing Stance** requirement.\n\n---\n\n### 📋 **Updated Concept Art Specification (Unit m08)**\n\n#### 1. **Chassis & Biomimetic Base (Strict Quadruped Panther — 夜豹)**\n- **Form**: GROUND mode panther "
+    },
+    {
+      "id": "m08_flight_static",
+      "at": "2026-08-05T07:53:42.062Z",
+      "note": "Here is the updated design specification breakdown for the **FLIGHT Form (夜梟 - Owl Mode)** of **Mecha Unit m08**:\n\n---\n\n### 🦉 **Flight Form Concept Art Specification (Unit m08 - 夜梟)**\n\n#### 1. **Airframe & Aerodynamic Transformation**\n- **Mode**: Fully airborne FLIGHT form — banked into forward fli"
     }
   ]
 }

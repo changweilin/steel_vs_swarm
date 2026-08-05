@@ -19,10 +19,14 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { CHARACTERS } from '../../public/js/data.js';
+import { visualUses, SHOT_POSE_KEYS } from '../../public/js/codex.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const REPO = join(HERE, '..', '..');
 export const ART_DIR = join(REPO, 'public', 'assets', 'cyberpunk_art', 'mechs');
+/** 本管線剛畫、**尚未驗收**的那一層(與 `tools/codex_review.mjs SOURCES` 的 `ai` 同一個目錄;
+ *  這裡只用來排除「本輪已經畫好、正在等人覆核」的那幾張,免得續跑時重畫一次) */
+export const NEW_MASTERS = join(REPO, 'tools', 'ai3d', 'masters');
 
 // ── rig 登記區塊在 models.js 的位置(以 'g.userData.rig = {' / 'const rig = {' 起算)──
 // 行號會漂,故只當搜尋起點提示;實際靠 findRigBlock() 以函式名往下找第一個 rig 登記。
@@ -62,7 +66,11 @@ const NON_GEOM = new Set([
 export const DRAW_SLOTS = {
   aerial: [
     { slot: 'hull',        nodes: ['tilt'],                 desc: 'main fuselage / hull body (the central chassis only, no rotors, no wings, no weapon pods)' },
-    { slot: 'rotor_arm',   nodes: ['spin'],                 desc: 'one rotor arm with its propeller and motor nacelle', when: v => v.frame && v.frame !== 'wing' },
+    // `visualUses` 這一道不可省:擬態翼無人機(buildAvianDrone)的 rig **沒有 `spin` 節點**,
+    // 但它的 `visual.frame` 仍留著換機種前的 'coax'/'hexa' 殘值 ⇒ 舊制會替 t07/t08/m04
+    // 各排一張「旋翼臂」切圖,而那個零件**沒有任何 rig 節點掛得上去**。
+    // (`auditCoverage` 驗的是「每個 rig 節點都有槽位涵蓋」,反方向不驗 ⇒ 它抓不到這個。)
+    { slot: 'rotor_arm',   nodes: ['spin'],                 desc: 'one rotor arm with its propeller and motor nacelle', when: v => visualUses(v, 'frame') && v.frame && v.frame !== 'wing' },
     { slot: 'wing',        nodes: ['wings'],                desc: 'one wing panel (left side), detached at the wing root', mirror: true, when: v => v.form === 'fixed' || v.form === 'avian' },
     { slot: 'tail',        nodes: ['tailSegs'],             desc: 'tail boom / tail segment assembly' , when: v => v.form === 'avian' },
     { slot: 'engine',      nodes: ['jets'],                 desc: 'one engine nacelle / thruster pod', when: v => v.form === 'fixed' },
@@ -209,6 +217,140 @@ export function mastersOf(ch) {
  *  (`generate_image` 只出 JPEG,轉成 .png 只是把壓縮雜訊包進無損容器 —— 見 README「已知限制 1」)。
  *  只認 .png 的話,已經入庫的那 18 張會被判成「還沒畫」而重畫一次,額度就這樣燒掉。 */
 export const MASTER_EXT = ['.png', '.jpg'];
+
+// ── 覆核回饋:哪些設定稿被人退回了 ──────────────────────────────────────
+// 2026-08-05 使用者定案:「根據生圖對照台的覆核,優先把 2D 生成圖無通過的機體補齊,
+// 再來通過數最少的開始補圖;都優先補滿一張、讓所有機體至少有一張通過。」
+//
+// 舊制 `--masters` **只看檔案在不在**:設定稿一旦畫出來就永遠算數,覆核台把它判成
+// 「重下 prompt」也沒有用 —— 生成端根本讀不到那份判決,`--redo` 也救不了(那條路要先
+// 進得了 `missingMasters()` 的清單才輪得到)。覆核台與生成端之間因此是斷的:
+// 人按了「⟳ 重下 prompt」,然後沒有任何工具會去重畫它。
+//
+// 優先序 MUST 是**推導**的,MUST NOT 手抄一份角色清單:名單會過期,而過期的名單不會報錯,
+// 只會讓某一台永遠排不進來。單位 = 角色 × 型態(變形者的飛行型態是獨立的交付物 ——
+// 它與地面型是兩張圖、兩個判決;併成一台來數,飛行型全軍覆沒也會被地面型的通過數蓋掉)。
+const REVIEW_STATE = join(REPO, 'tools', 'codex_review', 'state.json');
+const REDRAW = new Set(['redraw', 'reprompt']);
+
+function reviewItems() {
+  try { return JSON.parse(readFileSync(REVIEW_STATE, 'utf8')).items || {}; }
+  catch { return {}; }        // 還沒覆核過 = 沒有判決可讀(原則 6:少一份輸入不是錯)
+}
+
+/** 這台機體要哪幾張圖(型態 × 動作)。命名與覆核台的 slot 同一條規則 `<id>[_<型態>]_<姿態>`;
+ *  姿態清單走 `codex.SHOT_POSES` 單一縫(MUST NOT 在這裡再列一份 —— 兩份就是覆核台數得出
+ *  「缺 38 張」而出圖端生不出來的那個病灶)。 */
+export function shotsOf(ch) {
+  const forms = CHARACTERS[ch].kind === 'morph' ? ['ground', 'flight'] : [null];
+  const out = [];
+  for (const form of forms) {
+    for (const pose of SHOT_POSE_KEYS) {
+      out.push({ ch, form, pose, slot: [ch, form, pose].filter(Boolean).join('_') });
+    }
+  }
+  return out;
+}
+
+/** 逐單位的覆核帳:`{ ch, form, ok, shots }`。`shots[].need` = 這一張要不要(重)畫。 */
+export function reviewUnits() {
+  const items = reviewItems();
+  const have = new Set(readdirSync(ART_DIR)
+    .filter((f) => MASTER_EXT.includes(f.slice(f.lastIndexOf('.')).toLowerCase()))
+    .map((f) => f.slice(0, f.lastIndexOf('.'))));
+  const drawn = new Set(existsSync(NEW_MASTERS)
+    ? readdirSync(NEW_MASTERS).map((f) => f.slice(0, f.lastIndexOf('.'))) : []);
+  const out = [];
+  for (const ch of Object.keys(CHARACTERS)) {
+    const byForm = new Map();
+    for (const s of shotsOf(ch)) {
+      if (!byForm.has(s.form)) byForm.set(s.form, []);
+      byForm.get(s.form).push(s);
+    }
+    for (const [form, shots] of byForm) {
+      const ok = shots.filter((s) => items[s.slot]?.status === 'ok').length;
+      out.push({
+        ch, form, ok,
+        shots: shots.map((s) => ({
+          ...s,
+          ok: items[s.slot]?.status === 'ok',
+          // 要(重)畫的條件恰兩條:根本沒有這張圖,或人明確判了「局部重繪 / 重下 prompt」。
+          // **未覆核不算退回** —— 那只是還沒輪到人看,重畫它等於把額度花在沒人抱怨的圖上。
+          // 本輪已經畫出來(masters/ 有了)也不再排 —— 那張正在等人覆核,不是還沒畫。
+          need: !drawn.has(s.slot) && (!have.has(s.slot) || REDRAW.has(items[s.slot]?.status)),
+          // 參考圖只認**通過**的那張:覆核意見「機體仿照移動那張的外觀重繪此動作」要的正是它。
+          // 指向被否決的那張 = 把錯誤原樣複製一遍。
+          ref: items[s.slot]?.status === 'ok' && have.has(s.slot),
+        })),
+      });
+    }
+  }
+  return out;
+}
+
+/** 要(重)畫的角色,依使用者定案的優先序:通過數少的先(0 通過的最前面)。
+ *  變形者兩型共用一段對話 ⇒ 以角色為單位排,排序鍵取該角色**最慘的那一型**。 */
+export function masterQueue() {
+  const byCh = new Map();
+  for (const u of reviewUnits()) {
+    const need = u.shots.filter((s) => s.need);
+    if (!need.length) continue;
+    const cur = byCh.get(u.ch);
+    if (!cur) byCh.set(u.ch, { ch: u.ch, ok: u.ok, forms: [u.form], need });
+    else { cur.ok = Math.min(cur.ok, u.ok); cur.forms.push(u.form); cur.need.push(...need); }
+  }
+  // 同分時按機種順序(§5.0.1 機甲 → 無人機 → 變形者),再按宣告序 —— 逐次執行結果一致
+  const ids = Object.keys(CHARACTERS);
+  return [...byCh.values()].sort((a, b) => a.ok - b.ok
+    || KIND_ORDER.indexOf(CHARACTERS[a.ch].kind) - KIND_ORDER.indexOf(CHARACTERS[b.ch].kind)
+    || ids.indexOf(a.ch) - ids.indexOf(b.ch));
+}
+
+/**
+ * 這台機體可以拿來當設計參考的那一張,回 `{ slot, path, tier }`;找不到回 null
+ * (⇒ 呼叫端改用同一段對話串接,由第一張定案設計)。
+ *
+ * 優先序**分兩級,不可混為一談**:
+ *   ① 已通過且在入庫層  —— 覆核意見「機體仿照移動那張的外觀重繪此動作」指的就是它。
+ *   ② 本輪剛畫、尚未覆核 —— 比沒有錨好得多:同一台機體的三張姿態稿若各畫各的,收回來就是
+ *      三台不同的機器(那正是那幾則覆核意見的成因)。它與①的差別 MUST 記在帳本裡。
+ * **被判退的那張永遠不當錨**(指向它 = 把錯誤原樣複製一遍)—— 這是 ① 要求 `ok` 的理由,
+ * 而 ② 取的是 masters/ 那一層,判退的舊圖不在那裡。
+ * 同型態優先於別的型態(變形者的地面稿是飛行稿的剪影錨)。
+ */
+export function refShotOf(ch, form) {
+  const units = reviewUnits().filter((u) => u.ch === ch);
+  const drawn = existsSync(NEW_MASTERS)
+    ? new Set(readdirSync(NEW_MASTERS).map((f) => f.slice(0, f.lastIndexOf('.')))) : new Set();
+  const cand = (us, tier) => {
+    const all = us.flatMap((u) => u.shots).filter((s) => tier === 1 ? s.ref : drawn.has(s.slot));
+    const hit = all.find((s) => s.pose === 'static') ?? all[0];
+    if (!hit) return null;
+    const path = tier === 1 ? masterPath(hit.slot) : join(NEW_MASTERS, `${hit.slot}.jpg`);
+    return { slot: hit.slot, path, tier };
+  };
+  const same = units.filter((u) => u.form === form);
+  return cand(same, 1) ?? cand(units, 1) ?? cand(same, 2) ?? cand(units, 2) ?? null;
+}
+
+/** 優先序壞掉 MUST 紅字 —— 排序是使用者定案的規則,而排錯了不會報錯,只會讓某一台
+ *  一直排在後面(額度先花在別人身上),而畫面上完全看不出來。 */
+export function auditQueue() {
+  const bad = [];
+  const q = masterQueue();
+  for (let i = 1; i < q.length; i++) {
+    if (q[i].ok < q[i - 1].ok) bad.push(`優先序不是「通過數少的先」:${q[i - 1].ch}(${q[i - 1].ok})排在 ${q[i].ch}(${q[i].ok})之前`);
+  }
+  const inQ = new Set(q.map((x) => x.ch));
+  for (const u of reviewUnits()) {
+    if (u.need && !inQ.has(u.ch)) bad.push(`${u.ch}${u.form ? `/${u.form}` : ''} 的設定稿要重畫卻不在佇列裡`);
+    if (!u.need && u.ok === 0 && !inQ.has(u.ch)) {
+      // 0 通過但設定稿沒被判退 = 還沒覆核到那一格;這不是錯,但**要看得見**(原則 6 的「不藏」)
+      bad.push(`⚠ ${u.ch}${u.form ? `/${u.form}` : ''} 0 通過但設定稿未被判退(還沒覆核?)`);
+    }
+  }
+  return bad;
+}
 
 export function missingMasters() {
   const have = new Set(readdirSync(ART_DIR)
