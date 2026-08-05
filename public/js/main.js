@@ -28,6 +28,7 @@ import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terra
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
+import { loadPartLibs } from './partlib.js';
 import { CharPreview } from './charPreview.js';
 import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
@@ -1653,7 +1654,10 @@ function renderCharPick(me) {
 // enterLoading 消費後即清 app.pre,再戰回房(phase 'room' sync)自動重新預建。
 let _modelsReady = null;   // preloadModels 單航班(函式本身無重複守衛,重複呼叫會整批重抓 GLB)
 function warmModels(onProg) {
-  if (!_modelsReady) _modelsReady = preloadModels(onProg);
+  // AI 零件庫與模型 GLB 同批預載:兩者同一套降級語意(失敗只退回程序生成,不擋開戰)。
+  // loadPartLibs 自帶單航班守衛且絕不 reject;世界建構(buildBeacon)在預載之後才跑,
+  // 所以 `libGeo` 查表的時序在這裡就定案 —— MUST NOT 把它移到 buildBiomes 之後。
+  if (!_modelsReady) _modelsReady = Promise.all([preloadModels(onProg), loadPartLibs()]).then(([m]) => m);
   return _modelsReady;
 }
 

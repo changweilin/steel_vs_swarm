@@ -32,9 +32,10 @@ import { readSrc } from './audit_src.mjs';
 import {
   SECTIONS, PROTO_LAYERS, PROTO_PARTS, GEN_FIELDS, GEN_KEYS, TAG_MAX, CODEX_FIELDS, CODEX_KINDS,
   VIS_WORDS, HAIR_WORD, KIND_WORD, FORM_POSE, SHOT_POSES, SHOT_POSE_KEYS, shotFraming,
-  protoLayers, protoOf, charCodex, mechaCodex,
+  protoLayers, protoOf, formPose, charCodex, mechaCodex,
   textSeed, imagePrompt, modelSheet, codexIssues, visualWords, artWords, hueHex,
 } from '../public/js/codex.js';
+import { masterPrompt } from './ai3d/prompt.mjs';
 import { MECHA } from '../public/js/mecha.js';
 import { LORE } from '../public/js/lore.js';
 import { CHARACTERS, charKind, heroTargetH } from '../public/js/data.js';
@@ -199,6 +200,36 @@ t('main.js 的 protoHTML 只負責畫:不再切標籤字串、不再自帶標籤
   const layerLine = textSeed('mecha', 't01');
   t('文本種子的原型層也不用「」/—— 當分隔(t01 的名稱本身就含兩者)',
     layerLine.includes('機體原型 ▸ 「壁壘」過裝甲型'));
+}
+{
+  // 2D 生圖管線是 `protoOf` 的第二個消費端,而它的失效方式**完全無聲**:舊制讀 lore 的自由字串
+  // `proto`,那個欄位結構化之後取到 undefined → 空字串 → 被 `filter(Boolean)` 濾掉 ⇒ 提示詞裡
+  // 最權威的設計敘述整段消失,只表現成「生出來的圖跟設定對不上」(2026-08-05 實測 18 張設定稿)。
+  // 故除了原文比對,還 MUST **執行真品**確認那一行真的帶著這台的原型層。
+  const promptSrc = readSrc('tools', 'ai3d', 'prompt.mjs');
+  // `.proto` 不能當殘留旗標:`bodyPlanLine` 的 `v.proto`(人形機甲原型)是 `data.js` 的合法欄位,
+  // 拿它當關鍵字會把新加的非人形宣告誤判成復辟。要抓的是**讀 lore 那一支**,故只釘 `loreOf(`。
+  t('2D 生圖提示詞從 codex.js 取設計敘述(MUST NOT 回頭讀 lore 的 proto 自由字串)',
+    /import \{[^}]*protoOf[^}]*\} from '[^']*codex\.js'/.test(promptSrc)
+    && !/loreOf\(/.test(strip(promptSrc)));
+  // 型態給定時 designBrief 會**濾掉另一型的原型層**(變形者恆有兩層,兩層一起送 = 同一張圖
+  // 被要求長成兩種東西)⇒ 期望值 MUST 走同一支 `formPose(...).drop`,MUST NOT 在這裡自己判。
+  const FORM = (id) => (protoLayers(id).includes('air') ? 'ground' : null);
+  const brief = IDS.map((id) => masterPrompt(id, FORM(id)));
+  t('每一台的設定稿提示詞都帶著非空的設計敘述',
+    brief.every((p) => /Design prototypes \(authoritative, Traditional Chinese\):\n  · \S/.test(p)));
+  t('設計敘述逐層 = protoOf(該台)(內容真的是推導的,不是另寫一份)',
+    IDS.every((id, i) => {
+      const drop = formPose(id, FORM(id))?.drop;
+      return protoOf(id).filter((L) => L.key !== drop)
+        .every((L) => brief[i].includes(`${L.label}:${L.src} —— ${L.note}`));
+    }));
+  t('給定型態時另一型的原型層 MUST NOT 一起送(兩層同送 = 一張圖被要求長成兩種東西)',
+    IDS.filter((id) => formPose(id, FORM(id))?.drop).every((id) => {
+      const drop = formPose(id, FORM(id)).drop;
+      const other = protoOf(id).find((L) => L.key === drop);
+      return !other || !masterPrompt(id, FORM(id)).includes(`${other.label}:${other.src}`);
+    }));
 }
 t('main.js 從 codex.js 取原型(MUST NOT 自己 import MECHA 再拼)',
   /import \{[^}]*protoOf[^}]*\} from '\.\/codex\.js'/.test(mainSrc) && !/from '\.\/mecha\.js'/.test(mainSrc));

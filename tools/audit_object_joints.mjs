@@ -19,7 +19,7 @@
 //               零件樹連同 Group 嵌套變換一起解析。
 //   biomes.js   的 VEG_DEFS / GIANT_DEFS / GIANT_DECO(宣告式零件表)+
 //               xform.js 的 vegPartXform(實例變換單一縫)—— 驗的是渲染真的用的那份數學。
-//   biomes.js   的 MEGALITHS(名岩 12 座)/ synthMegalith(合成 11 型)/ decorateMegalith
+//   biomes.js   的 MEGALITHS(名岩 10 座;2026-08-05 移除方盒量體的 elcap/petra)/ synthMegalith(合成 11 型)/ decorateMegalith
 //               (峭壁樹·岩菇/石砌屋/疊石堆/鳥巢台/高壓電塔)—— 2026-07-30 納入:巨岩的
 //               貼壁與頂面落點是**推算**出來的,推錯一步整棵樹就浮在半空(使用者回報
 //               「巨石懸崖旁的樹沒接好」)。岩體的射線實測(`rockProbe`)以 RaycasterStub
@@ -766,7 +766,9 @@ const BARK = halfSolid([-1, 0, 0], 0);
 for (const [name, def] of Object.entries(defs.GIANT_DECO)) {
   if (ONLY && !name.includes(ONLY)) continue;
   for (const inst of INSTANCES) {
-    const it = { ...inst.it, tx: 0, tz: 0, dj: 0 };   // 特徵件不吃植株微傾斜,也不吃細節抖動(世界尺寸恆定)
+    // 特徵件不吃植株微傾斜(世界尺寸恆定);dj 自 2026-08-05 起由 hang() 以落點雜湊給
+    // ⇒ 接合 MUST 在細節抖動之下仍成立(與神木/植被同一組抽樣種子)
+    const it = { ...inst.it, tx: 0, tz: 0 };
     report(`巨木特徵 ${name}(${inst.name})`, auditJoints(vegParts(def, it), [BARK]), '錨體=樹皮面');
   }
 }

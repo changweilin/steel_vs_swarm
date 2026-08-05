@@ -24,9 +24,12 @@
 // 是兩個不同的問題。
 //
 // 泛洪的兩個地雷(都踩過,寫在這裡免得再踩):
-//   ① visited 的鍵 MUST 是 **(格, 高度桶)** —— 一格一個位元的話,每一段階梯、引道、洞口
-//      都會被判成「已經走過」而回報不可達,但它們明明走得通(洞在山**下**、山頂在洞**上**,
-//      同一格兩層)。
+//   ① visited 的鍵 MUST 是 **(格, 層別 sid, 高度桶)** —— 一格一個位元的話,每一段階梯、引道、
+//      洞口都會被判成「已經走過」而回報不可達,但它們明明走得通(洞在山**下**、山頂在洞**上**,
+//      同一格兩層)。**層別不可省**:引道/橋頭正是「結構面高 ≡ 開挖後地面高」的地方,兩層
+//      落在同一個桶 ⇒ 地面層先佔鍵、結構層永遠進不了佇列;等走進覆蓋段,換層閘(buried >
+//      OPEN_M)又擋掉跳層 ⇒ 洞中/橋中不可達,能不能進洞全看洞口有沒有剛好跨在桶邊界上
+//      (2026-08-05 實測:補上 sid 之後 jinlong/madrid/hehuanshan 整場轉綠)。
 //   ② 高度桶 MUST 是**固定量化**,MUST NOT 用「±tol 內視為同一點」的模糊比對 —— 在斜坡上
 //      會無限乒乓(別處實測:770k 格跑出 53.6M 次拜訪,不會結束)。
 //
@@ -209,7 +212,7 @@ function sampleAlong(cum, vals, s) {
  */
 function flood(seeds, surfacesAt, hf, ground, sim, probe) {
   const seen = new Set();
-  const key = (i, j, y) => `${i},${j},${Math.round(y / BUCKET_M)}`;
+  const key = (i, j, y, sid) => `${i},${j},${sid},${Math.round(y / BUCKET_M)}`;
   const cellX = (i) => hf.minX + (i + 0.5) * CELL;
   const cellZ = (j) => hf.minZ + (j + 0.5) * CELL;
   const iOf = (x) => Math.floor((x - hf.minX) / CELL);
@@ -222,7 +225,7 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
     if (i < 0 || j < 0 || i >= nI || j >= nJ) continue;
     for (const s of surfacesAt(cellX(i), cellZ(j))) {
       if (s.buried > OPEN_M) continue;                 // 種子只從通天的那一層下去
-      const k = key(i, j, s.y);
+      const k = key(i, j, s.y, s.sid);
       if (seen.has(k)) continue;
       seen.add(k); queue.push([i, j, s.y, s.sid, s.buried]); reached.push([cellX(i), cellZ(j), s.y]);
     }
@@ -240,7 +243,7 @@ function flood(seeds, surfacesAt, hf, ground, sim, probe) {
         const dy = s.y - y;
         if (dy > STEP_UP || dy < -STEP_DOWN) continue;                       // 閘①
         if (s.sid !== sid && (buried > OPEN_M || s.buried > OPEN_M)) continue;   // 閘②
-        const k = key(ni, nj, s.y);
+        const k = key(ni, nj, s.y, s.sid);
         if (seen.has(k)) continue;
         // 閘③-a 坡度:兩端都是裸地形才吃(與客戶端 _slopeDegAlong 的 STRUCT_M 豁免同一條)
         const bare = Math.abs(y - ground(x, z)) <= SLOPE.STRUCT_M

@@ -37,7 +37,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
-  shotV0, shotFlightS, flightCapS, SEEK, seekTurn,
+  shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 
@@ -656,7 +656,11 @@ sec('Ⅵ 導引 / 射後不理:承諾(光暈)與實際(彈道 + 伺服器閘門)
       '飛行時間上限單一縫:射後不理吃 chaseCapS(追擊)、其餘吃 flightCapS(推導不手寫)');
     ok(/this\.t - \(h\.aimOffAt \?\? -Infinity\) > cap/.test(burst),
       'heroBurst 的需瞄準閘門給滿一整段飛行時間的寬容(吃同一個 cap)');
-    ok(/const back = Math\.min\(shotFlightS\(wp\.def, dImp\), cap\);/.test(burst),
+    // 2026-08-05 起回推量與球心是**同一個解**(_shotOrigin 內部經 shotFlightS + cap 夾住);
+    // 在 heroBurst 裡另外算一次 shotFlightS(dImp) 就是第二份實作,機體一移動兩份立刻分家。
+    ok(/const back = org\.back;/.test(burst)
+      && /back: Math\.min\(ft, cap\)/.test(methodSrc('_shotOrigin', S))
+      && /back: Math\.min\(shotFlightS\(def, dist2d\(b\.x, b\.z, x, z\)\), cap\)/.test(methodSrc('_shotOrigin', S)),
       'heroBurst 由落點距離經 shotFlightS 反推擊發時刻(上限仍是 cap,不因客戶端謊報而失守)');
     ok(/this\._gateFire\(h, wp\.id, wp\.def, true, back\)/.test(burst), '擊發閘門吃回推時刻');
     const gate = methodSrc('_gateFire', S);
@@ -1188,7 +1192,7 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
     ok(/const chased = !!lockT\s*&&\s*this\._surfD3\(dist2d\(lockT\.x, lockT\.z, x, z\), lockT\) <= blastCoreR\(wp\.def\);/.test(burst),
       '追擊放行是獨立旗標 chased(MUST NOT 退回 `if (lockT) … else` 的替代語意)');
     ok(/if \(!chased && dImp > impCap\) return;/.test(burst)
-      && /if \(!chased && dist2d\(b\.x, b\.z, x, z\) > impCap\) continue;/.test(burst),
+      && /if \(!chased && dist2d\(bo\.x, bo\.z, x, z\) > impCap\) continue;/.test(burst),
       '射手與僚機吃同一個 chased ⇒ 一般落點閘門對「沒炸在鎖定目標上」的那一發仍原封不動生效');
   }
   // 鎖定過期 ⇒ 退回一般落點閘門
@@ -1481,7 +1485,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
   // 沒有絕對高程」這件事(見 _altDh / _absSightY 同一個坑)。
   {
     const exceptions = [
-      ['heroBurst', /const dImp = dist2d\(h\.x, h\.z, x, z\);/,
+      ['heroBurst', /const dImp = dist2d\(org\.x, org\.z, x, z\);/,
         '爆點落點閘:回報的 y 是離地高不是絕對高程,算不出 3D;2D ≤ 3D ⇒ 只放寬不誤丟'],
       ['_acquireTarget', /let d = dist2d\(e\.x, e\.z, t\.x, t\.z\);/,
         'NPC/塔索敵:高度另有獨立天花板閘(min(range×0.9, GUN_CEIL_M)),改 3D 會與它打架'],
@@ -1542,6 +1546,111 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
     ok(shoot(OUT, 0) === shoot(0, OUT),
       `射程外 ${OUT.toFixed(0)} 遊戲公尺:擺水平與擺垂直同判(${shoot(OUT, 0)})`);
     ok(shoot(D, 0) && !shoot(OUT, 0), '對照:同一把武器射程內打得到、射程外打不到(閘門真的有作用)');
+  }
+
+  // ---- ⑸ 球心 = **彈藥擊發當下的位置**,後續機體的移動不影響(2026-08-05 使用者定案)----
+  // 客戶端一向如此(`b.origin = muzzle.clone()`,見 ④);伺服器少的是那份記憶 —— AoE 彈頭是
+  // **著彈**才回報,而 45° 拋投的榴彈滿射程要飛近 6 秒,舊制的落點閘門拿的是機體**當下**的
+  // 位置 ⇒ 球心跟著機體跑。兩個方向都沒有錯誤訊息:退後 = 合法彈著被靜默丟棄(零傷害)、
+  // 前衝 = 射程外的彈著被收下(隱形射程)。
+  {
+    const hb = methodSrc('heroBurst', S);
+    const so = methodSrc('_shotOrigin', S);
+    const tp = methodSrc('_trailPush', S);
+
+    ok(/const org = this\._shotOrigin\(h, wp\.def, x, z, cap\);/.test(hb),
+      'heroBurst 的球心由 _shotOrigin 回推(擊發位置),不是機體當下位置');
+    ok(!/dist2d\(h\.x, h\.z, x, z\)/.test(hb),
+      '舊制「以機體當下位置為球心」已整組退場(MUST NOT 復辟)');
+    ok(/const back = org\.back;/.test(hb) && !/shotFlightS\(/.test(hb),
+      '擊發時刻回推量與球心是同一個解(heroBurst 內不得再算一次 shotFlightS —— 兩份會在移動時分家)');
+    ok(/const bo = this\._shotOrigin\(b, wp\.def, x, z, cap\);/.test(hb)
+      && /dist2d\(bo\.x, bo\.z, x, z\) > impCap/.test(hb),
+      '僚機吃同一條球心規則(整個小隊是一起移動的,只修主視野機 = 僚機那份傷害照樣被丟)');
+
+    // 單一縫:一份實作、消費端數得出來
+    const nDef = (re) => (S.match(re) || []).length;
+    ok(nDef(/^\s{2}_shotOrigin\(/gm) === 1, '_shotOrigin 只有一份實作');
+    ok(nDef(/^\s{2}_trailPush\(/gm) === 1, '_trailPush 只有一份實作');
+    ok(nDef(/this\._shotOrigin\(/g) === 2, `_shotOrigin 恰兩個消費端(領機 + 僚機;實得 ${nDef(/this\._shotOrigin\(/g)})`);
+    ok(nDef(/this\._trailPush\(/g) === 1, `軌跡取樣點只有一個(實得 ${nDef(/this\._trailPush\(/g)})`);
+    ok(/for \(const b of this\._allBodies\(\)\) this\._trailPush\(b\);/.test(methodSrc('tick', S)),
+      '取樣點在 tick 內、掃過每一架機體(領機/僚機/bot 三條位置寫入路徑同一個時間切片)');
+    ok(/b\._trail = null;/.test(methodSrc('_respawn', S)),
+      '重生清軌跡(瞬移;留著上一條命的軌跡會讓落點閘門回推到主堡外)');
+
+    // 保留窗推導不手寫
+    const trailDef = D.slice(D.indexOf('export function shotTrailS()'));
+    ok(/export function shotTrailS\(\)/.test(D), 'data.js 有 shotTrailS(軌跡保留窗的唯一縫)');
+    ok(!/\b\d+(\.\d+)?\s*\*?\s*\/\/.*秒/.test(trailDef.slice(0, 400))
+      && /chaseCapS\(def\)/.test(trailDef.slice(0, 400)) && /flightCapS\(def\)/.test(trailDef.slice(0, 400)),
+      '保留窗 = max(chaseCapS / flightCapS)推導不手寫(與 heroBurst 的 cap 同一條式)');
+    ok(/shotTrailS\(\)/.test(tp) && !/\b\d{1,3}\s*;\s*\/\/.*窗/.test(tp),
+      '_trailPush 的裁切窗吃 shotTrailS(sim.js 不手寫秒數)');
+    ok(shotTrailS() > 0 && shotTrailS() >= flightCapS(heavyOf('lob').def),
+      `保留窗 ${shotTrailS().toFixed(1)}s 蓋得住最長的拋物線飛行時間 ${flightCapS(heavyOf('lob').def).toFixed(1)}s`);
+
+    // 對照:客戶端那一半本來就是擊發點(兩端同一個球心的另一端)
+    ok(/origin: muzzle\.clone\(\),/.test(G), '對照:客戶端彈體的球心 = 擊發當下的槍口(烤死,不隨機體移動)');
+
+    // ---- 行為直測:真 BattleSim + 真 _trailPush / _shotOrigin / heroBurst ----
+    const { id: lid } = heavyOf('lob');
+    const wl = heroWeapon(lid, 'heavy', 1, true);
+    const side = CHARACTERS[lid].side === 'STEEL' ? 'STEEL' : 'SWARM';
+    const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
+    const impCap = wl.range * altRangeMax() * RANGE_TOL;
+    const IMP = impCap * 0.9;                       // 落點:擊發位置正北 0.9×上界(合法)
+    const FLY = shotFlightS(wl, IMP);               // 這一發要飛多久
+    const AWAY = impCap * 1.2;                      // 開完砲往後退到「從當下位置量就超程」
+
+    /**
+     * 打一發:射手在 (0,0) 擊發 → 花 fly 秒退到 (0, −away) → 回報落點 (0, IMP)。
+     * trail=false 時完全不記軌跡(= 舊制 / headless 降級路徑)。
+     */
+    const burstAfterMove = ({ away, fly, trail = true, atFire = 0 }) => {
+      const sim = new BattleSim(fakeCfg());
+      purge(sim);
+      for (const s of [...sim.ents.values()]) if (s.hero) sim.ents.delete(s.id);
+      const h = sim.addHero(side, 'p_mv', lid);
+      h.aiming = true;
+      sim.t = 100;
+      // 擊發那一刻的位置(atFire = 沿落點方向的偏移;0 = 正好在射程內)
+      h.x = 0; h.z = atFire;
+      if (trail) sim._trailPush(h);
+      // 飛行期間逐 tick 後撤(每 0.125s 一筆,與正式 tick 率同)
+      const steps = Math.max(1, Math.ceil(fly / 0.125));
+      for (let k = 1; k <= steps; k++) {
+        sim.t += 0.125;
+        h.z = atFire - away * (k / steps);
+        if (trail) sim._trailPush(h);
+      }
+      const t = sim._add({ kind: 'soldier', side: foe, x: 0, z: IMP, y: 0, hp: 999999, maxHp: 999999 });
+      h.ammo.heavy = wl.mag; h.reloadUntil.heavy = 0; h.fireAt.heavy = -99; h.mp = h.maxMp;
+      const hp0 = t.hp;
+      sim.heroBurst('p_mv', 0, IMP, 0, 0);
+      return t.hp < hp0;
+    };
+
+    ok(burstAfterMove({ away: AWAY, fly: FLY }),
+      `擊發時在射程內、飛行中往後退 ${AWAY.toFixed(0)}m(當下位置量已超程)⇒ 傷害照結算`);
+    ok(!burstAfterMove({ away: AWAY, fly: FLY, trail: false }),
+      '反面對照:沒有軌跡(舊制 = 以當下位置為球心)⇒ 同一發被靜默丟棄');
+    ok(!burstAfterMove({ away: -AWAY, fly: FLY, atFire: -impCap * 1.4 }),
+      '反向:擊發時就在射程外、飛行中衝進來 ⇒ 仍然丟棄(球心釘在擊發位置,不給隱形射程)');
+    ok(burstAfterMove({ away: 0, fly: FLY }),
+      '對照:原地不動照樣打得到(球心規則不改變靜止射手的任何行為)');
+
+    // tick 真的有在記軌跡(取樣點接上了)
+    {
+      const sim = new BattleSim(fakeCfg());
+      purge(sim);
+      const h = sim.addHero(side, 'p_tk', lid);
+      h.x = 12; h.z = 34;
+      sim.tick(0.125);
+      const tr = h._trail;
+      ok(Array.isArray(tr) && tr.length >= 3 && tr[1] === 12 && tr[2] === 34,
+        'sim.tick 一跑就記下這一格的位置(取樣點真的接上,不是只寫在原文裡)');
+    }
   }
 }
 
