@@ -11,7 +11,8 @@ import {
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, HYPER,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast,
-  hyperApex, hyperRange, hyperFlightS, hyperHp, kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
+  hyperApex, hyperRange, hyperFlightS, hyperHp, hyperTrackR, hyperTerminalF,
+  kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
   TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
@@ -1024,6 +1025,91 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(!rb3.hyper && !sim.ents.has(m2.id), '飛彈被擊落 → 從場上與英雄狀態一起清掉');
     assert(bystander.hp === UNITS.soldier.hp, '被擊落**不引爆**(旁邊的敵兵毫髮無傷)');
     sim.ents.delete(bystander.id);
+
+    // —— 終端追擊有射程(2026-08-05 使用者定案)——
+    // 「前 2/3 的軌跡是飛往發射時目標的初始地點,後 1/3 軌跡時如果目標還在特定範圍(砲塔射程的
+    //   1/2)才會以螺旋軌跡繼續追擊目標,如果目標已遠離特定範圍則保持原軌跡」。
+    // 「前 2/3 / 後 1/3」= 既有兩相位切換點的推導比例(hyperTerminalF),判定就掛在那一點上。
+    {
+      const R = hyperTrackR(), IZ = 120;
+      const sq3 = rb3.sq;
+      const mk = () => sim._add({ kind: 'soldier', side: 'SWARM', x: 0, z: IZ, y: 0, hp: 999999 });
+      const fire = (tgt) => {
+        rb3.hyperCd = 0; rb3.hyper = null;
+        rb3.x = 0; rb3.z = 0; rb3.y = 0; rb3.ry = 0;
+        sq3.lock = tgt.id; sq3.lockAt = sim.t;                  // 發射瞬間的鎖定 = 追擊候選
+        sim.heroHyper('p_r');
+        return rb3.hyper;
+      };
+      const climb = (m) => { let g = 0; while (m.phase === 'climb' && g++ < 2000) sim._tickHypers(0.05); };
+      // 飛到引爆,回傳這一發的 boom 事件(落點的唯一權威來源)
+      const impact = (m) => {
+        const n0 = sim.events.length;
+        let g = 0; while (rb3.hyper === m && g++ < 4000) sim._tickHypers(0.02);
+        return sim.events.slice(n0).find((e) => e.e === 'boom' && e.hyper);
+      };
+      const cleanup = (tgt) => { sim.ents.delete(tgt.id); sq3.lock = 0; };
+
+      // ① 前 2/3:爬升段完全不讀目標的即時位置 ⇒ 頂點恆在**發射瞬間**的目標地點正上方
+      let tgt = mk();
+      let m3 = fire(tgt);
+      assert(m3.tid === tgt.id && !m3.chase, '發射當下:追擊候選已記下,但追擊旗標尚未成立(那是後 1/3 的事)');
+      tgt.z = IZ + R * 4;                                        // 爬升途中跑掉(遠超判定半徑)
+      climb(m3);
+      assert(Math.hypot(m3.x - 0, m3.z - IZ) < 1e-6,
+        `前 2/3 飛的是發射瞬間的目標地點:頂點仍在 (0, ${IZ}) 正上方(實得 ${m3.x.toFixed(1)}, ${m3.z.toFixed(1)})`);
+      assert(m3.chase === false && m3.tid === 0,
+        `目標已遠離判定半徑 ${R}m ⇒ 頂點放棄追擊(保持原軌跡)`);
+      let bm = impact(m3);
+      assert(!!bm && Math.hypot(bm.x - 0, bm.z - IZ) < 1e-3,
+        `保持原軌跡:落點 = 發射瞬間的目標地點,不追過去(實得 ${bm.x.toFixed(1)}, ${bm.z.toFixed(1)})`);
+      assert(tgt.hp === 999999, '跑出判定半徑的目標毫髮無傷(這一招不再是必中)');
+      cleanup(tgt);
+
+      // ② 後 1/3:目標仍在 hyperTrackR() 內 ⇒ 轉螺旋追擊,落點跟著目標走
+      tgt = mk();
+      m3 = fire(tgt);
+      tgt.z = IZ + R * 0.9;                                      // 有跑,但還在判定半徑內
+      climb(m3);
+      assert(m3.chase === true, `目標仍在判定半徑 ${R}m 內 ⇒ 後 1/3 轉為追擊`);
+      assert(Math.hypot(m3.x - 0, m3.z - IZ) < 1e-6, '頂點位置與追不追無關(拋物線在發射當下就定案)');
+      bm = impact(m3);
+      assert(!!bm && Math.hypot(bm.x - tgt.x, bm.z - tgt.z) < 1.5,
+        `螺旋追擊:落點追到目標的即時位置 (0, ${tgt.z.toFixed(0)})(實得 ${bm.x.toFixed(1)}, ${bm.z.toFixed(1)})`);
+      assert(tgt.hp < 999999, '追擊命中 ⇒ 目標吃到整份絕招預算的爆風');
+      cleanup(tgt);
+
+      // ③ 判定只做一次(頂點那一刻):追上之後目標再跑出判定半徑,MUST NOT 中途折回原軌跡
+      tgt = mk();
+      m3 = fire(tgt);
+      tgt.z = IZ + R * 0.5;
+      climb(m3);
+      assert(m3.chase === true, '頂點判定通過(對照組:此時仍在半徑內)');
+      tgt.z = IZ + R * 3;                                        // 俯衝途中才跑遠
+      bm = impact(m3);
+      assert(!!bm && Math.hypot(bm.x - tgt.x, bm.z - tgt.z) < 1.5,
+        '追擊一旦成立就追到底(逐 tick 重判會讓彈道在最後零點幾秒整條折斷)');
+      cleanup(tgt);
+
+      // ④ 判定半徑的兩側:恰在界內追、恰在界外不追(邊界本身算界內)
+      for (const [off, want] of [[R * 0.999, true], [R * 1.001, false]]) {
+        tgt = mk();
+        m3 = fire(tgt);
+        tgt.z = IZ + off;
+        climb(m3);
+        assert(m3.chase === want,
+          `偏離 ${off.toFixed(1)}m(判定半徑 ${R}m)⇒ 追擊 ${want ? '成立' : '不成立'}`);
+        impact(m3);
+        cleanup(tgt);
+      }
+
+      // ⑤ 判定半徑推導不手寫 + 「後 1/3」是推導比例(不是手寫的相位邊界)
+      assert(hyperTrackR() === UNITS.tower.range * HYPER.TRACK_R_F,
+        `終端追擊半徑 ${hyperTrackR()}m = 砲塔射程 ${UNITS.tower.range} × ${HYPER.TRACK_R_F}(推導不手寫)`);
+      assert(Math.abs(hyperTerminalF(100) - hyperTerminalF(900)) < 1e-9
+        && Math.abs(hyperTerminalF() - 1 / 3) < 0.05,
+        `俯衝段佔全航跡 ${(hyperTerminalF() * 100).toFixed(1)}%(與交戰距離無關)≈ 使用者說的「後 1/3」`);
+    }
     rb3.hyperCd = 0; rb3.hyper = null; rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
   }
 

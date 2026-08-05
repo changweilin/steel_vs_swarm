@@ -8,7 +8,7 @@ import {
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
-  hyperClimbVx, hyperArcY,
+  hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
@@ -2453,8 +2453,8 @@ export class BattleSim {
   /**
    * 發射一枚**射後不理**的極音速飛彈(2026-08-02 使用者定案的兩相位彈道):
    *   ① 以 HYPER.LAUNCH_DEG(45°)出膛,沿**拋物線**飛向目標正上方(高度只走 hyperArcY 這一支);
-   *   ② 到頂點轉**極音速螺旋俯衝**(hyperDiveSpd),撲向發射瞬間鎖定的目標
-   *      (鎖到實體 → 追它的即時位置;無鎖定 → 正前方 hyperRange() 的地面點)。
+   *   ② 到頂點轉**極音速螺旋俯衝**(hyperDiveSpd):目標仍在 hyperTrackR() 內才追它的即時位置,
+   *      否則(含無鎖定)沿原軌跡打**發射瞬間**烤死的落點 tx/tz。
    * 「射後不理」= 發射後玩家不必再瞄準,也不必維持鎖定(對齊 trajClass 'fnf');故此處**不驗**
    * 狙擊模式、不驗彈夾 —— 它是獨立實體,與重武器完全脫鉤(MUST NOT 復辟巨砲的彈夾旁路)。
    * 飛彈是**可被鎖定/擊落的實體**(kind 'hyper'),HP 走 hyperHp():一座砲塔剛好打不爆。
@@ -2463,6 +2463,8 @@ export class BattleSim {
    * 拋物線的**水平航線於發射當下定案**(方位 ux/uz + 全長 arcD):彈道就是彈道,發射後不再操舵 ——
    * 追蹤對象的移動由**俯衝段**吸收(頂點 → 目標的軸線每 tick 重解)。MUST NOT 讓爬升段跟著轉,
    * 那會把「拋物線」變成一條每幀重算的曲線,兩端(伺服器推進 / 客戶端插值)也就不再是同一條。
+   * `tx/tz` 因此是**發射瞬間的目標地點**(= 原軌跡的終點,也是頂點的正下方),爬升段一路不動它;
+   * 只有「頂點通過追擊判定」那一種情形才會在俯衝段被改寫成目標的即時位置(見 _tickHypers)。
    */
   heroHyper(pid) {
     const h = this.heroes.get(pid);
@@ -2481,11 +2483,12 @@ export class BattleSim {
       kind: 'hyper', side: h.side, pid, hyper: true,
       x: h.x, z: h.z, y: h.y || 0, ry: Math.atan2(-dx, dz),
       hp: hyperHp(), armor: 0,
-      tid: t ? t.id : 0, tx, tz,          // tid = 射後不理的追蹤對象;tx/tz = 失去對象後的最後落點
+      tid: t ? t.id : 0, tx, tz,          // tid = 追擊候選;tx/tz = **發射瞬間的目標地點**(原軌跡終點)
       x0: h.x, z0: h.z, y0: h.y || 0,     // 發射點(拋物線的原點)
       ux: dx / arcD, uz: dz / arcD, arcD, // 爬升段的水平方位與全長
       trav: 0, phase: 'climb', spin: 0,
       dive: null,                          // 俯衝起點(轉入 dive 相位時定案)
+      chase: false,                        // 終端追擊(頂點那一刻判定一次;見 _tickHypers)
     });
     h.hyper = m;
     h.hyperCd = this.t + HYPER.CD_S;
@@ -2494,22 +2497,33 @@ export class BattleSim {
 
   /**
    * 每 tick:拋物線爬升 → 到頂點(目標正上方)轉俯衝 → 螺旋落向目標 → 觸地/近炸引爆。
-   * 兩相位都不吃玩家輸入(射後不理);追蹤對象死亡/消失 → 沿用最後已知落點 tx/tz 打下去。
+   * 兩相位都不吃玩家輸入(射後不理);追蹤對象死亡/消失 → 沿用發射瞬間的落點 tx/tz 打下去。
    * 爬升段:水平**等速** hyperClimbVx()、高度只由 hyperArcY(單一縫)給 ⇒ 出膛角恆為 LAUNCH_DEG。
-   * 俯衝段:彈道軸 = 「頂點 → 目標」的直線,位置再疊上**水平圓**螺旋偏擺(SPIN_RPS / SPIRAL_R)。
+   * 俯衝段:彈道軸 = 「頂點 → 落點」的直線,位置再疊上**水平圓**螺旋偏擺(SPIN_RPS / SPIRAL_R)。
    *   螺旋基底刻意取**固定的水平法向 ±(uz, −ux)**,而不是由彈道軸現算 —— 頂點就在目標正上方,
    *   軸的水平分量趨近 0,拿它當基底會在最需要螺旋的「垂直落下」那一發整個退化成沒有螺旋。
    * 兩端同吃同一份參數就會畫出同一條航跡(客戶端只插值 y/x/z,不自己另算彈道)。
+   *
+   * **終端追擊(2026-08-05 使用者定案;見 data.js HYPER 檔頭 ①②③)**:
+   *   ・前 2/3(爬升段)一律不讀目標的即時位置 —— 落點就是發射瞬間烤死的 tx/tz;
+   *   ・後 1/3(俯衝段)的入口**判定一次** `m.chase`:目標仍在 hyperTrackR() 內才轉為追擊,
+   *     否則放掉 tid、沿原軌跡打下去。判定 MUST 只做這一次 —— 逐 tick 重判會讓兩個相距
+   *     可達 hyperTrackR() 的落點在最後零點幾秒互相搶,彈道當場折斷(客戶端只做插值,
+   *     那一折在兩端會插出不同的航跡)。
+   *   ・距離量到**發射瞬間的落點**(= 頂點正下方,也就是這一刻飛彈自己的水平位置):
+   *     「目標有沒有跑出這一發的打擊範圍」問的是它離**原定落點**多遠,不是離飛彈多遠。
    */
   _tickHypers(dt) {
     for (const h of this.heroes.values()) {
       const m = h.hyper;
       if (!m) continue;
       if (m.hp <= 0) { h.hyper = null; continue; }   // 已被擊落(_kill 走 _hyperShotDown)
-      // 追蹤對象仍在 → 更新落點(射後不理:飛彈自己追,玩家不必維持鎖定)
-      const t = m.tid ? this.ents.get(m.tid) : null;
-      if (t && t.hp > 0 && !(t.hero && t.dead)) { m.tx = t.x; m.tz = t.z; }
-      else m.tid = 0;
+      // 追擊候選(射後不理:飛彈自己追,玩家不必維持鎖定);死亡/離場即放掉,落點維持原軌跡
+      const t0 = m.tid ? this.ents.get(m.tid) : null;
+      const t = t0 && t0.hp > 0 && !(t0.hero && t0.dead) ? t0 : null;
+      if (!t) m.tid = 0;
+      // 追擊中才改寫落點;未追擊(含爬升段)一律沿用發射瞬間的 tx/tz
+      if (m.chase && t) { m.tx = t.x; m.tz = t.z; }
 
       if (m.phase === 'climb') {
         m.trav = Math.min(m.arcD, m.trav + hyperClimbVx() * dt);
@@ -2517,7 +2531,12 @@ export class BattleSim {
         m.x = m.x0 + m.ux * m.trav;
         m.z = m.z0 + m.uz * m.trav;
         m.y = m.y0 + hyperArcY(m.arcD, f);
-        if (f >= 1) { m.phase = 'dive'; m.dive = { x: m.x, z: m.z, y: m.y }; m.trav = 0; }
+        if (f >= 1) {
+          m.phase = 'dive'; m.dive = { x: m.x, z: m.z, y: m.y }; m.trav = 0;
+          // 後 1/3 的入口:目標還在原定落點的 hyperTrackR() 內 ⇒ 螺旋追擊;否則保持原軌跡
+          m.chase = !!t && Math.hypot(t.x - m.tx, t.z - m.tz) <= hyperTrackR();
+          if (!m.chase) m.tid = 0;   // 放棄追擊 = 這一發從此與那個實體無關(高度也回地面)
+        }
         continue;
       }
       // 俯衝:沿「頂點 → 目標地面點」的軸線前進,位置再疊上繞軸的水平圓螺旋偏擺
