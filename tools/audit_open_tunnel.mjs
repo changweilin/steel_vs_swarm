@@ -752,6 +752,64 @@ function fakeBattleConfig() {
     ok(r.touched[0] === true, 'Ⅵ 有刪到 MUST 記帳 touched(呼叫端據此決定不掛黑色暗面)');
     ok(r.rims[0].length > 0, 'Ⅵ 刪出來的洞緣 MUST 進 rims(collar 靠它 loft 封邊;空的 = 洞口一圈漏縫)');
   }
+  // ---- Ⅵ-b 地下道 fp 剖面(2026-08-05 使用者回報「洞口殘留混凝土」)----
+  // 地下道的路面是下沉曲線、引道在洞外(MOUTH_OUT 外延帶)還一路爬升;舊制 floorAt 的線性
+  // 外推在外延帶把 fy 夾成洞口地板 ⇒「引道路面之下」的地形(本該被路面緞帶蓋住)被誤刪,
+  // 洞緣因此跑進斷面中央、collar 沿它織出橫跨洞口的混凝土殘片。修法 = bore 帶 fp 剖面取樣
+  // (biomes 由 tFloorAt 同一份剖面產出),punch/縮零/collar 三個消費端同吃。
+  {
+    // 引道向外爬升 0.12/m、洞內下沉 0.25/m;fp 覆蓋 d ∈ [−24, 30]、每 2m 一枚(d=0 恰在取樣
+    // 點上)—— 走廊 out 只有 8m,但重疊判定含「部分在走廊外」的三角形,遠端頂點可落在走廊外
+    // 一個地形格對角:fp 取樣 MUST 比走廊多墊一段(對齊 biomes 的 FP_PAD),否則被夾成端點值、
+    // 爬升段照樣誤刪。
+    const OUT_B = 8, FP_OUT = OUT_B + 16;
+    const profF = (d) => (d < 0 ? FLOOR3 + 0.12 * -d : FLOOR3 - 0.25 * d);
+    const fp = Array.from({ length: (30 + FP_OUT) / 2 + 1 }, (_, k) => profF(k * 2 - FP_OUT));
+    const boreFp = [{ x: 0, z: 0, ry: 0, hw: 8, depth: 30, out: OUT_B, floorY: FLOOR3, slope: -0.25,
+                      clear: TUN.CLEAR, lift: 0.45, fp, fpStep: 2, fpOut: FP_OUT }];
+    // 外延帶(z > 2)的地形 = 20.8:在爬升後的引道路面(d=−5 ⇒ 20.6)之下 0.4m 內 —— 是
+    // 「被路面緞帶蓋著」該保留的那種;洞內(z ≤ 2)壓低到路面下,對本測試惰性
+    const hfOut = (x, z) => (z > 2 ? FLOOR3 + 0.8 : FLOOR3 - 3);
+    {
+      const g = mkGrid(hfOut);
+      g.punch(boreFp, []);
+      ok(g.alive().has(triUp(0, 5)) && g.alive().has(triLo(0, 5)),
+        'Ⅵ-b 帶 fp 的地下道 bore:外延帶「引道路面之下」的地形 MUST 留(誤刪 = collar 殘片橫跨洞口)');
+    }
+    {
+      // 反例存證:同一個 bore 拿掉 fp(= 舊制線性外推)⇒ 同一片地形被誤刪 —— 這正是使用者
+      // 看到的殘留混凝土;此斷言釘住「fp 不是可有可無的裝飾」
+      const { fp: _, fpStep: __, fpOut: ___, ...legacy } = boreFp[0];
+      const g = mkGrid(hfOut);
+      g.punch([legacy], []);
+      ok(!g.alive().has(triUp(0, 5)),
+        'Ⅵ-b 舊制(無 fp)MUST 在同一片地形上誤刪(反例存證:fp 修的就是這一刀)');
+    }
+    {
+      // 地形貼著**爬升中的引道路面**(恆在路面 +0.5,被路面緞帶蓋著)MUST 整片保留 ——
+      // 這正是質心一枚樣本會誤刪的形狀:8.3m 三角形的遠端頂點路面更高,拿質心路面比對
+      // yHi 就把「路面之下」判成「戳進斷面」。fp 判定 MUST 逐頂點對各自深度的路面。
+      // (把逐頂點判定改回質心版:cell z∈[5,10] 的 yHi 21.7 > 質心門檻 21.4 ⇒ 本斷言紅字)
+      const hfTrack = (x, z) => (z > 2 ? profF(-z) + 0.5 : FLOOR3 - 3);
+      const g = mkGrid(hfTrack);
+      g.punch(boreFp, []);
+      ok(g.alive().has(triUp(0, 5)) && g.alive().has(triLo(0, 5)),
+        'Ⅵ-b 貼著爬升路面(+0.5)的地形 MUST 整片留(fp 高差判定 MUST 逐頂點,不得拿質心一枚樣本)');
+    }
+    {
+      // fp 取樣自**平直剖面**(與 slope=0 的舊制同一條地板)⇒ alive 集 MUST 與舊制完全相同
+      // —— fp 是「剖面來源」不是「新判定」:平直剖面下逐頂點與質心判定同義,行為逐位元不變
+      const fpFlat = Array.from({ length: (30 + FP_OUT) / 2 + 1 }, () => FLOOR3);
+      const boreFlat = [{ ...boreFp[0], slope: 0, fp: fpFlat }];
+      const { fp: _, fpStep: __, fpOut: ___, ...legacyFlat } = boreFlat[0];
+      const hfMix = (x, z) => FLOOR3 + 2 - 0.18 * z + 0.07 * x;
+      const gA = mkGrid(hfMix), gB = mkGrid(hfMix);
+      gA.punch(boreFlat, []); gB.punch([legacyFlat], []);
+      const a = gA.alive(), b2 = gB.alive();
+      ok(a.size === b2.size && [...a].every((t) => b2.has(t)),
+        'Ⅵ-b fp 取樣自平直剖面 ⇒ alive 集 MUST 與舊制完全相同(fp 只換剖面來源,不換判定)');
+    }
+  }
 }
 
 console.log(`\n明隧道稽核:${pass} 綠 / ${fail} 紅`);

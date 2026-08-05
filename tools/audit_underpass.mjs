@@ -346,6 +346,26 @@ if (!plan) { console.error('  ✗ 平地基準案例規劃失敗,後續無法驗
   const vfsrc = readFileSync(join(ROOT, 'tools', 'venue_field.mjs'), 'utf8');
   ok(/hw: strucHw\(way\.tags\)/.test(vfsrc), '⑩f venue_field.tunnelRunOf MUST 傳同一份 strucHw 半寬');
   ok(/underpassPlan',\n?\s*\{[^}]*TUN_COV_MIN/.test(vfsrc), '⑩f venue_field 的 underpassPlan 抽取 MUST 注入 TUN_COV_MIN');
+  // g. 洞口打洞的路面參考(2026-08-05 使用者回報「洞口殘留混凝土」):地下道的門洞 bore MUST
+  //    帶 fp 剖面取樣(tFloorAt 同一份;山體隧道刻意不帶 = 逐位元舊制),punch / 縮零 / collar
+  //    三個消費端同吃 —— 線性外推會把引道路面之下的地形誤刪 ⇒ collar 殘片橫跨洞口。
+  //    行為直測(fp 保留外延帶引道路面下的地形 + 舊制反例存證 + 線性剖面逐位元同舊制)
+  //    住 audit_open_tunnel.mjs Ⅵ-b;這裡釘接線原文。
+  const pushSrc = src.slice(src.indexOf('const FP_PAD = 16;'),
+                            src.indexOf('slope: sIn === s ? 0 :'));
+  ok(pushSrc.includes('under') && /tFloorAt\(/.test(pushSrc),
+    '⑩g 門洞 fp MUST 只在地下道(under)產出且取樣自 tFloorAt 同一份剖面');
+  ok(/fp: p\.fp, fpStep: p\.fpStep, fpOut: p\.fpOut/.test(src),
+    '⑩g boreRecs 映射 MUST 把 fp 傳給 punchPortalHoles(漏傳 = punch 退回線性外推)');
+  ok(/const bFloor = \(d\) => \{/.test(src) && /const fy = bFloor\(-lz\);/.test(src),
+    '⑩g collar 投影 MUST 同吃 fp(bFloor;兩端分家 = collar 內環貼錯高度)');
+  const tsrc2 = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+  ok(/b\.fp\?\.length > 1/.test(tsrc2) && /b\.floorY \+ b\.slope \* Math\.min\(b\.depth, Math\.max\(0, d\)\)/.test(tsrc2),
+    '⑩g terrain.floorAt MUST 支援 fp 剖面且無 fp 時逐位元走舊線性外推');
+  ok(/const f0 = floorAt\(b, P\[i0\], P\[i0 \+ 2\]\)/.test(tsrc2),
+    '⑩g punch 高差判定對 fp bore MUST 逐頂點(質心一枚樣本會在爬升段誤刪路塹底)');
+  ok(/const nearRoad = /.test(src) && /nearRoad\(ax, ay, az\) && nearRoad\(bx, by, bz\)/.test(src),
+    '⑩g collar MUST 跳過貼著路面的 rim 邊(織下去 = 浮在路面上的混凝土殘片)');
 }
 
 // ---- Ⅱ 構件幾何(執行 biomes.js 真正的發射器原文)----
