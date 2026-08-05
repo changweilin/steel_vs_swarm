@@ -3161,20 +3161,41 @@ function underpassPlan(raw, tags, heightAt, opt) {
   if (!raw || raw.length < 2) return null;
   if (!UND_HW.test(tags?.highway || '')) return null;
   const arc = (p) => { const c = [0]; for (let i = 1; i < p.length; i++) c.push(c[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); return c; };
-  // ① 下沉量:在**未延伸**的折線上量「直線剖面還差多少才藏得住天花板」的最大值。
+  // 結構半寬:呼叫端傳 strucHw(tags)(carve 迴圈的 hwWay;離線工具 venue_field 同一份)。
+  // 預設 8 = PASS_W/2 的字面值 —— 本函式以「抽原文執行」被離線稽核/工具吃,拿不到模組常數。
+  const hw = opt.hw || 8;
+  // 全寬地表取樣(2026-08-05 使用者回報「深度不夠導致兩側牆超出地表」「天花板應低於地表」):
+  // 要藏進地下的是**整個斷面**(兩側牆線 ±hw、天花外擴 +0.6 = ceilSegs 同款),不是只有中心線。
+  // 只量中心線,側向緩坡 / 8.3m 網格細碎起伏就讓牆頂與頂板從路側出土(合成場實測:側向 6% 坡
+  // 出土 0.2~0.4m、網格起伏最大 1.09m),而頂板一出土就是一座隱形站立面(surfaceAt 取
+  // max(地形, roof))+ 兩端與伺服器 slab 分家。逐點取中心線與兩側牆線三枚的最小值當「地表」。
+  const gMinOf = (p) => {
+    const gm2 = new Array(p.length);
+    for (let i = 0; i < p.length; i++) {
+      const a2 = p[Math.max(0, i - 1)], c2 = p[Math.min(p.length - 1, i + 1)];
+      let dx = c2[0] - a2[0], dz = c2[1] - a2[1];
+      const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+      const [x, z] = p[i], w = hw + 0.6;
+      gm2[i] = Math.min(heightAt(x, z), heightAt(x + dz * w, z - dx * w), heightAt(x - dz * w, z + dx * w));
+    }
+    return gm2;
+  };
+  // ① 下沉量(初估):在**未延伸**的折線上量「直線剖面還差多少才藏得住整個斷面」的最大值 ——
+  //    只拿來推導引道延伸長度;定案值在 ②-b 於延伸後的基準線上收斂。
   //    平坦地形 ⇒ 恆等於 CLEAR + ROOF_T + MARGIN;地表起伏處自動加深,洞段才不會中途斷開。
   const p0 = densify(raw, ROAD_SEG), c0 = arc(p0), t0 = c0[c0.length - 1] || 1;
   const gA = heightAt(p0[0][0], p0[0][1]), gB = heightAt(p0[p0.length - 1][0], p0[p0.length - 1][1]);
+  const gm0 = gMinOf(p0);
   let sink = TUN.CLEAR + TUN.ROOF_T + UND.MARGIN;
   for (let i = 0; i < p0.length; i++) {
     const lin = gA + (gB - gA) * (c0[i] / t0);
-    const need = lin + TUN.CLEAR + TUN.ROOF_T + UND.MARGIN - heightAt(p0[i][0], p0[i][1]);
+    const need = lin + TUN.CLEAR + TUN.ROOF_T + UND.MARGIN - gm0[i];
     if (need > sink) sink = need;
   }
   if (sink > UND.SINK_MAX) return null;
   // ② 引道長:由下沉量與縱坡推導(MUST NOT 手寫);兩端各沿端點切線外延,夾在圖界內。
   //    延伸不足的那一端不是失敗 —— 引道會改往 way 內部吃(下方 ramp 夾制),只是洞段變短。
-  const want = 1.5 * sink / UND.GRADE, least = 1.5 * sink / UND.GRADE_MAX;
+  const want = 1.5 * sink / UND.GRADE;
   const grow = (p, q) => {
     let dx = p[0] - q[0], dz = p[1] - q[1];
     const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
@@ -3189,15 +3210,54 @@ function underpassPlan(raw, tags, heightAt, opt) {
   const head = grow(raw[0], raw[1]), tail = grow(raw[n - 1], raw[n - 2]);
   const ext = [...(head ? [head] : []), ...raw, ...(tail ? [tail] : [])];
   const pts = densify(ext, ROAD_SEG), cum = arc(pts), total = cum[cum.length - 1] || 1;
-  const ramp = Math.min(want, (total - UND.BOX_MIN) / 2);
-  if (ramp < least) return null;
   const hA = heightAt(pts[0][0], pts[0][1]), hB = heightAt(pts[pts.length - 1][0], pts[pts.length - 1][1]);
   for (const p of pts) if (heightAt(p[0], p[1]) <= WATER.LEVEL + WATER.SWAMP_BAND) return null;
+  // ②-b 下沉量在**延伸後**的基準線上收斂(2026-08-05):最終路面吃的基準線是 hA→hB(延伸端點
+  //    的地表高),與 ① 量的 gA→gB 不是同一條 —— 延伸端點落在土丘上就把整條基準線抬高,①
+  //    量出的覆蓋餘裕(MARGIN 只有 1.2m)被無聲吃掉;覆蓋段也常自 smoothstep 過門檻處起算、
+  //    伸進 ① 沒量到的延伸帶。逐輪:以現值取 ramp → 對平底段(已達全深)逐點要求
+  //    全寬地表 ≥ 路面 + CLEAR + ROOF_T + MARGIN → 不足就加深(引道跟著變長)。
+  //    單調遞增、SINK_MAX 有界 ⇒ 必收斂;平地上第一輪即定(逐位元同 ①)。
+  const gm = gMinOf(pts);
+  let ramp = 0;
+  for (let it = 0; it < 8; it++) {
+    ramp = Math.min(1.5 * sink / UND.GRADE, (total - UND.BOX_MIN) / 2);
+    let need = sink;
+    for (let i = 0; i < pts.length; i++) {
+      if (Math.min(cum[i], total - cum[i]) < ramp) continue;   // 引道帶:蓋不住的本來就是露天路塹
+      const lin = hA + (hB - hA) * (cum[i] / total);
+      const d = lin + TUN.CLEAR + TUN.ROOF_T + UND.MARGIN - gm[i];
+      if (d > need) need = d;
+    }
+    if (need <= sink + 1e-6) break;
+    sink = need;
+    if (sink > UND.SINK_MAX) return null;
+  }
+  if (ramp < 1.5 * sink / UND.GRADE_MAX) return null;   // 引道擠不出 GRADE_MAX 以內的縱坡
   const tw = { hA, hB, sink, ramp };
   const floors = cum.map((s) => tunFloorAt(tw, s, total));
   const intervals = tunnelCoverIntervals(pts, cum, floors, heightAt);
-  if (intervals.reduce((a, [s0, s1]) => a + (s1 - s0), 0) < UND.BOX_MIN) return null;
-  return { ...tw, pts, cum, total, floors, intervals };
+  // ③ 全寬覆蓋檢核 + 拆縫(2026-08-05):tunnelCoverIntervals 只問**中心線**,TUN_GAP_CLOSE 又會
+  //    把 ≤36m 的缺口縫成蓋廊 —— 山體隧道的蓋廊頂上是山,縫得對;地下道的缺口是「藏不住結構
+  //    的露頭」,縫進覆蓋段 = 牆與頂板從平地冒出來、天花板高過地表(使用者點名的病灶)。
+  //    逐點以全寬 gm 重驗,蓋不住的點把區間拆開;拆剩的短段(< TUN_COV_MIN)退回露天路塹
+  //    (§4 寧缺勿錯 —— 蓋不住就不蓋,MUST NOT 靠改地形把它蓋起來:天花板上方的地表地貌不可動)。
+  //    平底段經 ②-b 保證 MARGIN 餘裕 ⇒ 正常拆不出縫,這刀只修引道過渡帶邊緣與縫合殘段。
+  const covOK = (i) => gm[i] >= floors[i] + TUN.CLEAR + TUN.ROOF_T;
+  const iv2 = [];
+  for (const [, , i0, i1] of intervals) {
+    let a2 = -1;
+    for (let i = i0; i <= i1 + 1; i++) {
+      const c2 = i <= i1 && covOK(i);
+      if (c2 && a2 < 0) a2 = i;
+      if (!c2 && a2 >= 0) {
+        if (cum[i - 1] - cum[a2] >= TUN_COV_MIN) iv2.push([cum[a2], cum[i - 1], a2, i - 1]);
+        a2 = -1;
+      }
+    }
+  }
+  if (iv2.reduce((a, [s0, s1]) => a + (s1 - s0), 0) < UND.BOX_MIN) return null;
+  return { ...tw, pts, cum, total, floors, intervals: iv2 };
 }
 const TUN_WALL_SAMP = 2.5;   // 土牆體檢的側向取樣間距(公尺;地形格 ~8.3m,三枚取樣已跨格)
 /**
@@ -6661,6 +6721,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const up = underpassPlan(raw2, way.tags, hAt, {
             minX: terrain.minX + UND.EDGE, maxX: terrain.maxX - UND.EDGE,
             minZ: terrain.minZ + UND.EDGE, maxZ: terrain.maxZ - UND.EDGE,
+            hw: hwWay,   // 全寬覆蓋取樣的牆線位置(單一縫 strucHw;venue_field 同一份)
           });
           if (up) { ({ pts, cum, total: tot, floors, intervals: iv } = up); rec = { hA: up.hA, hB: up.hB, sink: up.sink, ramp: up.ramp }; }
         }
