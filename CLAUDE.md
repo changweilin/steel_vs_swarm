@@ -255,8 +255,8 @@ node tools/audit_speed_comp.mjs # 移速壓縮(拉近差距 / 排序不變)稽�
 node tools/audit_npc_collide.mjs # NPC 飛行高度基準 / NPC ⇄ 機體實體碰撞稽核(44 項;不需伺服器/瀏覽器;
                                 #   --break-ratchet / --break-deck / --break-sweep 反向驗證)
 node tools/audit_hex_stats.mjs  # 圖鑑六角能力圖稽核(58 項;不需伺服器/瀏覽器)
-node tools/audit_codex.mjs     # 角色 / 機體檔案格式稽核(63 項;不需伺服器/瀏覽器;
-                                #   --break-layer / --break-align 反向驗證)
+node tools/audit_codex.mjs     # 角色 / 機體檔案格式稽核(90 項;不需伺服器/瀏覽器;
+                                #   --break-layer / --break-align / --break-pose 反向驗證)
 npm run codex                   # 機體美術覆核台 = 「2D 生圖對照台」(臨時工具,dev-only:已生成機體圖 ×
                                 #   角色頭像 × 3D 展示台 + 武器招式 + 遊戲未公開生成段;確認勾選 /
                                 #   局部重繪框 / 重下 prompt)。圖有**兩個來源**(`SOURCES` 單一縫):
