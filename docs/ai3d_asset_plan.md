@@ -1,5 +1,9 @@
 # AI 3D Asset Pipeline — Execution Plan (settled 2026-08-04)
 
+> **Operational state and next steps live in [`ai3d_runbook.md`](ai3d_runbook.md)** (agent-readable
+> runbook: status ledger, environment matrix, execution queue, trial log). This file holds the
+> settled decisions; the runbook holds what to run next.
+
 > Goal: raise detail density of **dynamic units (mechs / building-unit NPCs)** and **static props
 > (buildings, giant trees, megaliths, landmarks)** one tier, without touching the rig contract,
 > determinism, or A2 (zero npm deps).
