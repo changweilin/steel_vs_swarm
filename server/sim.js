@@ -11,7 +11,7 @@ import {
   hyperClimbVx, hyperArcY,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
-  aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, blastCoreR,
+  aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
@@ -1712,6 +1712,58 @@ export class BattleSim {
     h.lev = lev === 1 || lev === 2 ? lev : 0;   // 所在結構層(0 地面 / 1 橋面 / 2 隧道):slab LOS 用(#1)
   }
 
+  // ---------- 擊發位置軌跡(射程球心的唯一來源)----------
+  /**
+   * 每 tick 記一筆機體位置(扁平三元組 `t, x, z`)。
+   *
+   * 2026-08-05 使用者定案「射程半球的計算應該要是由彈藥擊發的那個位置計算,後續機體的移動
+   * 不影響」。客戶端一向如此(`b.origin = muzzle.clone()`);伺服器沒有這份記憶 —— AoE 彈頭
+   * 是**著彈**才回報,而回報進來的時候機體早就走掉了。**唯一寫入點**是這一支(每 tick 一次、
+   * 每架機體一筆:真人領機的位置來自 `heroPos`、僚機來自 `_tickSquads`、bot 來自 `bots._move`,
+   * 三條路都在 tick 尾端沉澱完畢 ⇒ 收在同一個取樣點才不會三份時間軸各走各的)。
+   *
+   * 取樣率 = tick 率(8Hz):粗到 125ms,但落點閘門本來就有 `RANGE_TOL` 這道網路寬容可以吸收
+   * (最快機體 125ms 走不到 3m),而球心從「跟著機體跑」變成「釘在擊發那一刻」是差**幾十公尺**
+   * 的事 —— 拿更高的取樣率換那 3m 不划算。
+   *
+   * 陣亡中不記(重生是瞬移:`_respawn` 一併清帳,否則會回推到上一條命的位置)。
+   */
+  _trailPush(b) {
+    if (b.dead) return;
+    const tr = b._trail || (b._trail = []);
+    tr.push(this.t, b.x, b.z);
+    // 保留窗推導不手寫(data.js shotTrailS)。**多留一筆早於窗口的樣本**:回推的解可能剛好落在
+    // 窗口邊界上,砍到剛好就沒有東西可以內插到那一刻。
+    const cut = this.t - shotTrailS();
+    let i = 0;
+    while (i + 3 < tr.length && tr[i + 3] <= cut) i += 3;
+    if (i > 0) tr.splice(0, i);
+  }
+
+  /**
+   * 這一發的**擊發位置**(射程球心)與擊發時刻回推量 `back`。
+   *
+   * 回推方式:由新到舊掃軌跡,取第一筆滿足「已經過去的時間 ≥ 從那個位置打到落點要飛的時間」
+   * 的樣本 —— 那就是物理上唯一自洽的擊發時刻(往回走 elapsed 遞增、飛行時間隨距離變化慢得多,
+   * 機體速度遠低於彈頭速度 ⇒ 交點存在且唯一)。**MUST NOT 改成迭代逼近**:拋物線的
+   * `dT/dd ≈ 0.017 s/m` 配上高速機體的收縮率只有 0.68,三五次迭代還差著幾十公尺。
+   *
+   * 軌跡不足以回推(剛進場 / headless 沒跑過 tick / 窗口太短)⇒ 退回機體當下位置 = **逐位元
+   * 同舊制**(原則 6 降級不例外)。`back` 一律回傳「從解出的球心飛到落點」的飛行時間而非
+   * elapsed:站著不動的射手因此與舊制逐位元相同(elapsed 有 tick 量化,飛行時間沒有)。
+   */
+  _shotOrigin(b, def, x, z, cap) {
+    const tr = b._trail;
+    if (tr) {
+      for (let i = tr.length - 3; i >= 0; i -= 3) {
+        if (this.t - tr[i] > cap) break;                       // 超出可容許的飛行窗:不再往回找
+        const ft = shotFlightS(def, dist2d(tr[i + 1], tr[i + 2], x, z));
+        if (this.t - tr[i] >= ft) return { x: tr[i + 1], z: tr[i + 2], back: Math.min(ft, cap) };
+      }
+    }
+    return { x: b.x, z: b.z, back: Math.min(shotFlightS(def, dist2d(b.x, b.z, x, z)), cap) };
+  }
+
   /** 目標(僚機跟隨領機,故以領機瞬時移速判定)是否移動中 */
   _isMoving(t) {
     const lead = t.sq ? this.heroes.get(t.pid) : t;
@@ -1961,7 +2013,17 @@ export class BattleSim {
     // MUST 跟著換上 chaseCapS,否則合法的長程追擊會在收鏡/裝填兩道閘門上被靜默丟棄(A30)。
     const cap = fnf ? chaseCapS(wp.def) : flightCapS(wp.def);
     if (wp.def.needAim && !h.aiming && this.t - (h.aimOffAt ?? -Infinity) > cap) return;
-    const dImp = dist2d(h.x, h.z, x, z);
+    // 射程球心 = **彈藥擊發當下的位置**,後續機體的移動不影響(2026-08-05 使用者定案)。
+    // 舊制拿機體的**當下**位置當球心 —— 而 AoE 彈頭是著彈才回報,45° 拋投的榴彈滿射程要飛
+    // 近 6 秒,那 6 秒裡球心一路跟著機體跑,兩個方向都是無聲的:
+    //   ・開完砲往後退(最自然的動作)⇒ dImp 憑空變大 ⇒ 合法彈著被驗證後靜默丟棄 = 零傷害;
+    //   ・開完砲往前衝 ⇒ dImp 憑空變小 ⇒ 射程外的彈著反而收下 = 25% 之外的隱形射程。
+    // 客戶端的彈體一向以 `b.origin`(擊發槍口)為心量球面、射程光暈也是,這裡補的正是
+    // 「兩端同量體」少掉的那一半(原則 3 / A30 靜默丟包家族)。球心由**伺服器自己的位置軌跡**
+    // 回推(`_shotOrigin`),MUST NOT 改成收客戶端回報的擊發座標 —— 那等於把落點閘門的球心
+    // 交給客戶端指定,`impCap` 當場失效(A1)。
+    const org = this._shotOrigin(h, wp.def, x, z, cap);
+    const dImp = dist2d(org.x, org.z, x, z);
     // 著彈點超程閘門。上界 = 射程 × 高度制空上限 × 網路寬容 × 重砲窗 —— 三個因子都是**推導值**:
     //   ・RANGE_TOL:與 heroHit/heroLance/heroPlasma 同一個縫(舊制此處獨自寫 1.15,比其餘閘門緊)
     //   ・altRangeMax():落點是一個「點」,伺服器算不出射手與目標的高程差 ⇒ 只能取機制上限當誠實界。
@@ -1980,9 +2042,9 @@ export class BattleSim {
     if (!chased && dImp > impCap) return;
     // 這一發其實是「飛行時間」秒之前擊發的 —— 把裝填計時器接回擊發時刻(見 _gateFire 的 back)。
     // 飛行時間只准經 `shotFlightS` 這個縫(拋物線是 45° 反解初速,MUST NOT 自己拿 shotV0 除一次:
-    // 那會低估 2.2 倍 ⇒ 伺服器的裝填窗比客戶端晚 4 秒)。dImp 已被 impCap 夾住 ⇒ back 天然 ≤ cap,
-    // 保留 Math.min 只為擋住追擊落點(chased 那條不吃 impCap)。
-    const back = Math.min(shotFlightS(wp.def, dImp), cap);
+    // 那會低估 2.2 倍 ⇒ 伺服器的裝填窗比客戶端晚 4 秒);球心與回推量是**同一個解**,故一律取
+    // `_shotOrigin` 已經夾好的那一份,MUST NOT 在這裡拿 dImp 再算一次(兩份會在機體移動時分家)。
+    const back = org.back;
     if (!this._gateFire(h, wp.id, wp.def, true, back)) return;
     h.lastBurst = this.t;
     // 榴彈類最小安全射程(2026-07-27):落點近於 lobMinRange ⇒ 射手落在自身爆風內 → 爆風改「無差別」
@@ -2003,7 +2065,10 @@ export class BattleSim {
     // 僚機同步齊射同一個落點(單發只畫一次爆炸,傷害疊三份 1/3)
     for (const b of this._bodies(h)) {
       if (b === h || b.dead) continue;
-      if (!chased && dist2d(b.x, b.z, x, z) > impCap) continue;   // 僚機吃同一道閘門(同一縫;追擊命中才豁免)
+      // 僚機吃同一道閘門、也吃同一條球心規則(各自的擊發位置 —— 整個小隊在那 6 秒裡是一起
+      // 移動的,只修主視野機那一份等於僚機那 1/3 傷害照樣被靜默丟棄)。追擊命中才豁免。
+      const bo = this._shotOrigin(b, wp.def, x, z, cap);
+      if (!chased && dist2d(bo.x, bo.z, x, z) > impCap) continue;
       this._blast(b, wp.def, x, z, y, lev, tooClose);
     }
   }
@@ -3555,6 +3620,10 @@ export class BattleSim {
     }
 
     this._tickMissiles(dt);
+
+    // 擊發位置軌跡:**唯一取樣點**,排在最後 —— 領機(heroPos)/僚機(_tickSquads)/bot
+    // (bots._move)三條位置寫入路徑到這裡全部沉澱完畢,一個取樣點才記得住同一個時間切片。
+    for (const b of this._allBodies()) this._trailPush(b);
   }
 
   /** 單機重生:回主堡、滿血滿盾;全隊都躺著時才重置共用資源(彈藥/增益) */
@@ -3566,6 +3635,7 @@ export class BattleSim {
     b.sp = b.maxSp;
     b.lastHitAt = -99;
     b.wet = 0; b.wetT = this.t;   // 重生清環境滯留(下個 pos 回報重新判定)
+    b._trail = null;              // 重生是瞬移:留著上一條命的軌跡會讓落點閘門回推到主堡外
     const [sx, sz] = this._spawnPoint(b.side, b.spawnIdx || 0, b.si || 0);
     b.x = sx; b.z = sz;
     // 無人機重生落在離地下限(FLIGHT.HOVER_M),不直接放到 SQUAD.REGROUP_ALT 那個(三機小隊時代

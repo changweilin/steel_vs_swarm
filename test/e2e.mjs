@@ -20,6 +20,7 @@ import {
   BUILDING_VS_CAP, shieldSplit, shieldRoleName, EX_SIEGE_WEAPONS, counterDmgF,
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
+  altRangeMax, RANGE_TOL,
 } from '../public/js/data.js';
 
 /**
@@ -383,6 +384,68 @@ log('— sim:AoE 彈頭在天上時的填彈訊息(2026-08-03「只有第一擊�
   sim.t = 30; rb.ammo.light = 0; rb.reloadUntil.light = 20;
   sim.heroReload('p_ar', 'light');
   assert(rb.ammo.light === wl.mag && rb.reloadUntil.light === 0, '填彈已完成:結清後視為滿彈匣,不再重新起算填彈窗');
+}
+
+log('— sim:射程球心 = 彈藥擊發的位置,後續機體的移動不影響(2026-08-05)—');
+{
+  // 使用者定案:「射程半球的計算應該要是由彈藥擊發的那個位置計算,後續機體的移動不影響」。
+  // 客戶端一向如此(彈體以 `b.origin` 為心);伺服器的落點閘門舊制拿的是機體**當下**的位置,
+  // 而 AoE 彈頭是**著彈**才回報 —— 45° 拋投滿射程要飛近 6 秒,那 6 秒裡球心一路跟著機體跑:
+  // 開完砲往後退 = 合法彈著被靜默丟棄(零傷害)、往前衝 = 射程外的彈著反而收下(隱形射程)。
+  const ch = Object.keys(CHARACTERS).find((id) => {
+    const w = heroWeapon(id, 'heavy', 1);
+    return w && trajClass(w) === 'lob';
+  });
+  const side = charsOf('SWARM').includes(ch) ? 'SWARM' : 'STEEL';
+  const foe = side === 'SWARM' ? 'STEEL' : 'SWARM';
+  /**
+   * 在 (4000, 4000+atFire) 擊發 → 花整段飛行時間退到 z 少 away → 回報落點 (4000, 4000+IMP)。
+   * trail=false = 完全不記軌跡(headless / 舊制降級路徑)。
+   */
+  const shootThenMove = ({ away, trail = true, atFire = 0 }) => {
+    const sim = new BattleSim(fakeBattleConfig(1));
+    purgeCamps(sim);
+    const h = sim.addHero(side, 'p_mv', ch);
+    const w = sim._heroWeapon(h, 'heavy').def;
+    const impCap = w.range * altRangeMax() * RANGE_TOL;
+    const IMP = impCap * 0.9;                       // 落點:擊發位置正北 0.9×上界(合法)
+    const flight = shotFlightS(w, IMP);
+    h.x = 4000; h.z = 4000 + atFire; h.y = 0; h.ay = 1.8; h.aiming = true; h.mp = 1e6;
+    sim.t = 50;
+    if (trail) sim._trailPush(h);
+    const steps = Math.max(1, Math.ceil(flight / 0.125));
+    for (let k = 1; k <= steps; k++) {
+      sim.t += 0.125;
+      h.z = 4000 + atFire - away * (k / steps);
+      if (trail) sim._trailPush(h);
+    }
+    const tgt = sim._add({ kind: 'soldier', side: foe, x: 4000, z: 4000 + IMP, y: 0, hp: 1e9 });
+    h.ammo = {}; h.reloadUntil = {}; h.fireAt = {};
+    sim.heroBurst('p_mv', 4000, 4000 + IMP, 0, 0);
+    return { hit: tgt.hp < 1e9, impCap, flight };
+  };
+  const base = shootThenMove({ away: 0 });
+  assert(base.hit, `原地不動:射程內的落點照常結算(飛行 ${base.flight.toFixed(1)}s)`);
+  const AWAY = base.impCap * 1.2;                   // 退到「以當下位置為球心就超程」
+  assert(shootThenMove({ away: AWAY }).hit,
+    `擊發後退 ${AWAY.toFixed(0)}m(當下位置量已超程)⇒ 傷害仍結算 —— 球心釘在擊發位置`);
+  assert(!shootThenMove({ away: AWAY, trail: false }).hit,
+    '反面對照:沒有軌跡 = 舊制以當下位置為球心 ⇒ 同一發被靜默丟棄');
+  assert(!shootThenMove({ away: -AWAY, atFire: -base.impCap * 1.4 }).hit,
+    '反向:擊發時就在射程外、飛行中衝進來 ⇒ 仍然丟棄(MUST NOT 給隱形射程)');
+  // 軌跡由 tick 記帳(取樣點真的接上),重生瞬移不得留下上一條命的位置
+  {
+    const sim = new BattleSim(fakeBattleConfig(1));
+    purgeCamps(sim);
+    const h = sim.addHero(side, 'p_tk', ch);
+    h.x = 1234; h.z = 5678;
+    sim.tick(0.125);
+    assert(Array.isArray(h._trail) && h._trail[1] === 1234 && h._trail[2] === 5678,
+      'sim.tick 一跑就記下這一格的位置(取樣點接上)');
+    h.dead = true; h.respawnAt = sim.t;
+    sim._respawn(h);
+    assert(h._trail == null, '重生清軌跡(瞬移;否則落點閘門會回推到上一條命的位置)');
+  }
 }
 
 log('— sim:扇形錐緣量到命中量體(2026-08-03「打得到一般單位、但不到建築」)—');
