@@ -3,8 +3,10 @@
 > 計畫與階段閘門:[`docs/ai3d_asset_plan.md`](../../docs/ai3d_asset_plan.md)。
 > 本目錄**不進 `package.json`、不進任何 build step**(CLAUDE.md A2)。全部只吃 Node 內建模組。
 
-目前只落地了 **§5「2D 圖片生成」** 那一段。P0(Python 模型環境)、P1(`partlib.js` 縫)、
-P2/P3(image→3D)尚未開始。
+已落地:**§5「2D 圖片生成」**、**P1(`public/js/partlib.js` 縫 + beacons 接線,2026-08-05)**、
+**§4.1 照片庫抓取器(`fetch_photos.mjs`)**。P0(Python 模型環境)、P2/P3(image→3D 本體)
+尚未開始;方法分工定案見計畫書 **§8 附錄 A**(規則幾何走 LLM 寫純資料零件、有機幾何走
+image→3D GLB、小植被維持程序生成)。
 
 ---
 
@@ -18,6 +20,9 @@ P2/P3(image→3D)尚未開始。
 | `gen_manifest.json` | 帳本(產出後自動生成):每一張的 prompt / 來源 / 位元組數 / 時間 |
 | `masters/` | 新畫的設定稿(驗收通過後才搬進 `public/assets/cyberpunk_art/mechs/`) |
 | `drafts/{ch}/{slot}.jpg` | 逐槽位切圖 = image→3D 的輸入 |
+| `fetch_photos.mjs` | **照片庫抓取器**(Track B §4.1):逐族查詢型錄、可續跑補缺、CC0 雙重硬閘、記帳。沙箱代理連不到 Openverse/Commons(㋓)⇒ 在 3060 真機或 Actions 上跑 |
+| `photo_manifest.json` | 照片帳本(產出後自動生成):`{source_url, license, creator, retrieved_at, …}` 一項不少 |
+| `photos/{family}/{part}/` | 照片本體(**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB) |
 
 ---
 

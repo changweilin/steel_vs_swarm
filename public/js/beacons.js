@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { toonMat, envMat, bakeContactAO } from './toon.js';
 import { mulberry32 } from './rng.js';
+import { libGeo } from './partlib.js';
 
 // ---- 規劃參數 ----
 // NEAR/FAR 是「centre 到 centre」的搜尋帶:近端沒有意義上的下限(真正的下限由 `blocked`
@@ -157,6 +158,10 @@ const KIND_PARTS = {
  */
 export function partExtent(part) {
   const [t, a, b, c] = part.g;
+  // AI 零件庫描述子 `['lib', name, <fallback primitive>]`:離線外廓 = fallback 的外廓。
+  // 契約由匯出端擔保(GLB 零件外廓 ≤ fallback 外廓才准入庫)⇒ 這裡是保守上界,
+  // 執行期碰撞柱仍走 `beaconCollider` 實測(A30 兩邊都成立)。
+  if (t === 'lib') return partExtent({ ...part, g: part.g[2] });
   const [px = 0, , pz = 0] = part.p || [];
   const [rx = 0, ry = 0, rz = 0] = part.r || [];
   const tilted = rx !== 0 || rz !== 0;
@@ -309,6 +314,9 @@ export function planBeaconSites(anchors, probe, opts = {}) {
 // ---- 建構(以下才需要 THREE)----
 const _geo = (spec) => {
   const [t, a, b, c] = spec;
+  // AI 零件庫:查無此名 ⇒ 原 primitive 描述子(spec[2])就是保險絲,MUST 留著。
+  // `.clone()` 不可省 —— buildBeacon 會就地 `applyMatrix4`,共用庫幾何被改一次就全壞。
+  if (t === 'lib') { const g = libGeo(a); return g ? g.clone() : _geo(spec[2]); }
   if (t === 'box') return new THREE.BoxGeometry(a, b, c);
   if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
   if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);
