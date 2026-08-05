@@ -36,6 +36,59 @@ export function beaconsPure(src) {
 }
 
 export const beaconsSrc = () => readSrc('public', 'js', 'beacons.js');
+export const biomesSrc = () => readSrc('public', 'js', 'biomes.js');
+
+/** 由 `const NAME = {` 起,以括號配對取回整個區塊(不靠行數,零件表加減行不會漂) */
+function blockOf(src, name) {
+  const i = src.indexOf(`const ${name} = {`);
+  if (i < 0) throw new Error(`biomes.js 找不到 ${name}`);
+  let depth = 0;
+  for (let k = src.indexOf('{', i); k < src.length; k++) {
+    if (src[k] === '{') depth++;
+    else if (src[k] === '}' && --depth === 0) return src.slice(i, k + 1);
+  }
+  throw new Error(`${name} 的括號沒有收尾`);
+}
+
+/**
+ * biomes 的植被/神木零件表裡的 `lib:` 列(第二個消費端;beacons 走 `['lib', …]` 描述子,
+ * 這邊是 `{ g: ico(5), lib: 'tree/canopy_a5' }` —— **保險絲仍是 `g`**,只是形式不同)。
+ *
+ * 做法:執行 `VEG_DEFS`/`GIANT_DEFS` 原文,但把 `cyl/cone/ico` 換成**回傳描述子陣列**的樁,
+ * 於是 `p.g` 就與 beacons 的 fallback primitive 同一套字彙 ⇒ `fbEnvelope` 一份實作兩邊同吃
+ * (抄第二份包絡公式 = 兩個消費端對同一顆樹冠給出兩種上界)。Node 端沒有 three(A2)。
+ *
+ * `srcLibCount` 是**原文裡 `lib:` 的總數**:可執行的只有上面兩張表,若有人把 lib 列加進
+ * `GIANT_DECO`(它直接用 THREE.TorusGeometry,樁餵不進去)或別處,兩個數字就對不上 ——
+ * 入庫閘據此紅字,MUST NOT 靜默跳過(那等於那一列從來沒被驗過)。
+ */
+export function bioLibDescs(src = biomesSrc()) {
+  const stub = `
+    const cyl = (r1, r2, h, n = 5) => ['cyl', r1, r2, h, n];
+    const cone = (r, h, n = 5) => ['cone', r, h, n];
+    const ico = (r) => ['ico', r];
+  `;
+  const { VEG_DEFS, GIANT_DEFS } = new Function(
+    `${stub}\n${blockOf(src, 'VEG_DEFS')};\n${blockOf(src, 'GIANT_DEFS')};\nreturn { VEG_DEFS, GIANT_DEFS };`,
+  )();
+  const out = [];
+  for (const [table, defs] of [['VEG_DEFS', VEG_DEFS], ['GIANT_DEFS', GIANT_DEFS]]) {
+    for (const [kind, def] of Object.entries(defs)) {
+      def.parts.forEach((p, index) => {
+        if (!p.lib) return;
+        out.push({
+          name: p.lib, family: p.lib.split('/')[0], node: p.lib.split('/').slice(1).join('/'),
+          fb: p.g, kind, index, table, consumer: 'biomes',
+          p: [p.px || 0, p.y || 0, p.pz || 0],
+        });
+      });
+    }
+  }
+  // 計數 MUST 先剝行註解(㋑):檔頭與零件表的說明裡就寫著 `lib: '家族/節點'` 這種範例,
+  // 算進去的話這道閘從第一天就紅字,而紅字的理由與「有 lib 列驗不到」完全無關
+  const bare = src.replace(/^\s*\/\/[^\n]*$/gm, '').replace(/\/\/[^\n]*$/gm, '');
+  return { rows: out, srcLibCount: (bare.match(/\blib:\s*'/g) || []).length, GIANT_DEFS, VEG_DEFS };
+}
 
 /** `PART_LIBS = [...]`(partlib.js 是唯一真相;這裡只是把它從原文讀出來給 Node 端用) */
 export function partLibs(src = readSrc('public', 'js', 'partlib.js')) {
@@ -125,10 +178,27 @@ export function nodeExtent(node) {
 
 export const glbPath = (family) => join(ROOT, 'public', 'assets', 'models', 'parts', `${family}.glb`);
 
-/** 三角形預算(量測檔;手寫數字不算數 —— 計畫書 §2.1-6) */
+/**
+ * 三角形預算(量測檔;手寫數字不算數 —— 計畫書 §2.1-6)。
+ * 頂層 = 預設(rock 族沿用);`families.<fam>` 有的話那一族改吃自己那份量測
+ * —— 一顆巨岩與一株神木不是同一個量級,共用一個數字必然是「對其中一邊太鬆」。
+ * `kindCap` 是**逐件之外的第二道**:單件合格不代表整株合格(見 tree 族 justification)。
+ */
 export function triBudget() {
   const p = join(ROOT, 'tools', 'ai3d', 'tri_budget.json');
   if (!existsSync(p)) return null;
   const b = JSON.parse(readFileSync(p, 'utf8'));
-  return { ...b, cap: Math.round(b.measured_max_tris * b.factor) };
+  const famOf = (fam) => (fam && b.families?.[fam]) || b;
+  return {
+    ...b,
+    cap: Math.round(b.measured_max_tris * b.factor),
+    capOf: (fam) => { const f = famOf(fam); return Math.round(f.measured_max_tris * f.factor); },
+    whatOf: (fam) => famOf(fam).measured_what,
+    /** 該族「逐株(逐款)」的庫零件三角形上限;沒有這一族的量測就回 null(= 沒有這道閘) */
+    kindCap: (fam, kind) => {
+      const f = b.families?.[fam];
+      const cur = f?.kind_tris?.[kind];
+      return cur == null || f.kind_factor == null ? null : { cur, cap: Math.round(cur * f.kind_factor) };
+    },
+  };
 }

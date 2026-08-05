@@ -272,6 +272,19 @@ const VEG_DEFS = {
 // 同一種神木成群聚落、株高各異(s = 0.75~1.10 → 公稱高的 75%~110%,即真實世界株高區間);
 // 每株多零件建模:板根/樹皮絲帶/斜出枝節/多層樹冠(px/pz = 距軸心偏移,
 // rx/rz = 枝幹傾角),樹幹登記碰撞柱 = 立體障礙與隱蔽。h/r = 公稱高/幹半徑。
+//
+// `lib:` = AI 零件庫的節點名(2026-08-05,計畫書 P2c 綠地首批):`g` 仍是**保險絲**
+// —— 載不到 GLB 就逐位元退回今天的畫面,而佈局數學(giantCrownR 冠幅 / vegSpan 擺幅 /
+// 淨空 / 碰撞)一律只讀 `g`(見 partGeo 檔頭:讀庫幾何 = 佈局隨載入成敗分家)。
+// 三條選列紀律:
+//   ① **只換 ico 冠簇,不換 cone 冠層**:cone 的包絡是 {r, h/2}(如 cone(7,26) = r7/hy13),
+//      把一團樹冠塞進去會被拉成柱子;ico 的包絡是球,實拍樹冠正好是球內的團塊。
+//   ② **節點半徑 MUST ≤ 該列 fallback 半徑**(且 ≥ 一半)—— 這就是離線外廓契約,
+//      `intake_parts.mjs` 逐列驗;所以節點做成尺寸階梯(10/8/7/6/5/4.5/3.5)而不是一顆通用件。
+//   ③ **三角形數是預算不是免費的**:實測現行一整株神木只有 259~402 tris、冠簇一顆 20,
+//      而 AI 零件一顆 215 ⇒ 逐株換幾件是有上限的(tri_budget.json families.tree:
+//      單件 ≤ 現行最重一整株、逐株 Σ 庫零件 ≤ 4× 該株現值)。klinki/alerce 的冠簇半徑
+//      只有 2.2~3.0m,比最小節點還小 ⇒ **刻意不換**(硬塞就破契約)。
 const GIANT_DEFS = {
   redwood:  { h: 110, r: 3.4, parts: [
     { g: cyl(3.4, 5.6, 7, 7), y: 3.5, c: 0x6e4630 },
@@ -289,10 +302,10 @@ const GIANT_DEFS = {
     { g: cone(7, 26, 7), y: 96, c: 0x3f7a46 },                   // 頂冠偏亮 = 受光層次
     { g: cone(9, 20, 7), y: 82, c: 0x33643c },
     { g: cone(10, 16, 7), y: 68, c: 0x2e5c38 },
-    { g: ico(5), y: 58, px: 6, sy: 0.8, c: 0x33643c },
-    { g: ico(5), y: 51, px: -6, sy: 0.8, c: 0x2e5c38 },
+    { g: ico(5), y: 58, px: 6, sy: 0.8, lib: 'tree/canopy_a5', c: 0x33643c },
+    { g: ico(5), y: 51, px: -6, sy: 0.8, lib: 'tree/canopy_b5', c: 0x2e5c38 },
     { g: ico(4), y: 74, px: -8, sy: 0.7, c: 0x4a8a4e },          // 受光亮綠簇
-    { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, c: 0x3b7042 },
+    { g: ico(4.5), y: 62, pz: 6.5, sy: 0.75, lib: 'tree/canopy_c45', c: 0x3b7042 },
     // 樹種特徵配件(2026-07-29):毬果簇(紅杉小毬果掛冠緣;R 主導色不吃 gleaf 季節疊色,
     // 錨在既有樹冠簇內 → 接合天然成立;各簇色抖動獨立,見 buildVegMeshes)
     { g: ico(1.4), y: 55.5, px: 6.8, c: 0x6e4a30 },
@@ -308,10 +321,10 @@ const GIANT_DEFS = {
     { g: cone(4.2, 8, 3), y: 4, px: -3.5, pz: 4.8, c: 0x75462a },
     { g: ico(1.9), y: 12, px: 5.4, sy: 0.8, c: 0x6e4226 },       // 樹瘤
     { g: ico(5), y: 88, px: 4, sy: 0.7, c: 0x55904a },           // 頂部受光亮簇
-    { g: ico(9), y: 72, sy: 0.8, c: 0x39683a },
-    { g: ico(7), y: 82, c: 0x336033 },
-    { g: ico(6), y: 66, px: 7.5, c: 0x4a7a3c },                  // 黃綠受光簇
-    { g: ico(6), y: 60, px: -7.5, c: 0x336033 },
+    { g: ico(9), y: 72, sy: 0.8, lib: 'tree/canopy_c8', c: 0x39683a },
+    { g: ico(7), y: 82, lib: 'tree/canopy_a7', c: 0x336033 },
+    { g: ico(6), y: 66, px: 7.5, lib: 'tree/canopy_c6', c: 0x4a7a3c },   // 黃綠受光簇
+    { g: ico(6), y: 60, px: -7.5, lib: 'tree/canopy_d6', c: 0x336033 },
     { g: ico(5), y: 55, pz: 7, c: 0x39683a },
     { g: cone(5, 10, 6), y: 89, c: 0x336033 },
     { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
@@ -328,9 +341,9 @@ const GIANT_DEFS = {
     { g: ico(3.5), y: 70, px: 3.2, sy: 0.6, c: 0x86985e },       // 低位側簇(銀綠;內緣貼幹,無枝可錨)
     { g: cyl(0.5, 0.9, 18, 5), y: 80, px: 3.5, rz: -0.55, c: 0xcfc4b0 },  // 側枝外端朝上
     { g: cyl(0.5, 0.8, 16, 5), y: 76, px: -3.2, rz: 0.6, c: 0xd6ccba },
-    { g: ico(7), y: 90, sy: 0.7, c: 0x5c7a4a },
-    { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, c: 0x738a52 },      // 橄欖偏黃簇(桉葉銀綠層次)
-    { g: ico(5), y: 80, px: -8, sy: 0.65, c: 0x5c7a4a },
+    { g: ico(7), y: 90, sy: 0.7, lib: 'tree/canopy_b7', c: 0x5c7a4a },
+    { g: ico(5.5), y: 84, px: 8.5, sy: 0.65, lib: 'tree/canopy_a5', c: 0x738a52 },   // 橄欖偏黃簇(桉葉銀綠層次)
+    { g: ico(5), y: 80, px: -8, sy: 0.65, lib: 'tree/canopy_b5', c: 0x5c7a4a },
     { g: ico(4.5), y: 83, pz: 4.5, sy: 0.6, c: 0x648250 },       // z 向無側枝 → 內緣貼幹
     { g: ico(4), y: 96, c: 0x7a9058 },
     { g: ico(1.5), y: 86, px: 9, c: 0xe9e2c8 },                  // 桉樹乳白花簇(冠緣,R≥G 不吃 gleaf)
@@ -346,8 +359,8 @@ const GIANT_DEFS = {
     { g: cone(7, 18, 7), y: 78, c: 0x2f5e40 },
     { g: cone(4.5, 16, 7), y: 90, c: 0x35684a },
     { g: cone(2, 11, 6), y: 99, c: 0x2f5e40 },
-    { g: ico(4), y: 46, px: 6, sy: 0.6, c: 0x35684a },
-    { g: ico(4), y: 42, px: -6, sy: 0.6, c: 0x2f5e40 },
+    { g: ico(4), y: 46, px: 6, sy: 0.6, lib: 'tree/canopy_d35', c: 0x35684a },
+    { g: ico(4), y: 42, px: -6, sy: 0.6, lib: 'tree/canopy_d35', c: 0x2f5e40 },
     { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
     { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
     { g: ico(1.1), y: 44.4, px: 6.4, c: 0x8a6244 },              // 花旗松垂毬果簇(側簇下緣)
@@ -360,8 +373,8 @@ const GIANT_DEFS = {
     { g: cone(7.5, 18, 7), y: 66, c: 0x467567 },
     { g: cone(6, 16, 7), y: 78, c: 0x3d6a5e },
     { g: cone(3.5, 15, 6), y: 89, c: 0x467567 },
-    { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, c: 0x3d6a5e },
-    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, c: 0x467567 },
+    { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, lib: 'tree/canopy_d35', c: 0x3d6a5e },
+    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, lib: 'tree/canopy_d35', c: 0x467567 },
     { g: ico(3.2), y: 44, pz: 5.5, sy: 0.55, c: 0x3d6a5e },
     { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
     { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
@@ -377,9 +390,9 @@ const GIANT_DEFS = {
     { g: cyl(0.9, 1.5, 20, 6), y: 66, c: 0xa89068 },
     { g: cyl(0.5, 0.8, 14, 5), y: 74, px: 4, rz: -0.7, c: 0x93805e },     // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
     { g: cyl(0.5, 0.8, 14, 5), y: 76, px: -4, rz: 0.7, c: 0x93805e },
-    { g: ico(12), y: 82, sy: 0.55, c: 0x4a8a3e },                // 傘狀突出樹冠(熱帶亮綠)
-    { g: ico(8), y: 78, px: 9.5, sy: 0.5, c: 0x57994a },
-    { g: ico(8), y: 76, px: -9.5, sy: 0.5, c: 0x4a8a3e },
+    { g: ico(12), y: 82, sy: 0.55, lib: 'tree/canopy_a10', c: 0x4a8a3e },   // 傘狀突出樹冠(熱帶亮綠)
+    { g: ico(8), y: 78, px: 9.5, sy: 0.5, lib: 'tree/canopy_c8', c: 0x57994a },
+    { g: ico(8), y: 76, px: -9.5, sy: 0.5, lib: 'tree/canopy_d8', c: 0x4a8a3e },
     { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x57994a },
     { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x4a8a3e },
     { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
@@ -396,8 +409,8 @@ const GIANT_DEFS = {
     { g: cone(5, 12, 7), y: 67, c: 0x2c6242 },
     { g: cone(3.2, 11, 6), y: 77, c: 0x347050 },
     { g: cone(1.6, 9, 5), y: 85, c: 0x2c6242 },
-    { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, c: 0x347050 },
-    { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, c: 0x2c6242 },
+    { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, lib: 'tree/canopy_d35', c: 0x347050 },
+    { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, lib: 'tree/canopy_d35', c: 0x2c6242 },
     { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
     { g: ico(0.9), y: 36.6, px: 4.9, c: 0x8a5a38 },              // 台灣杉紅褐毬果簇
@@ -412,9 +425,9 @@ const GIANT_DEFS = {
     { g: cyl(0.5, 0.9, 15, 5), y: 70, px: 4.5, rz: -0.75, c: 0x846248 },  // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
     { g: cyl(0.5, 0.9, 15, 5), y: 72, px: -4.5, rz: 0.75, c: 0x846248 },
     { g: cyl(0.4, 0.7, 12, 5), y: 72, pz: 5.0, rx: 1.0, c: 0x7a5a40 },
-    { g: ico(11), y: 80, sy: 0.5, c: 0x4f8a44 },                 // 傘狀平頂冠(突出主林冠)
-    { g: ico(7), y: 77, px: 9, sy: 0.45, c: 0x5c9a50 },
-    { g: ico(7), y: 78, px: -9, sy: 0.45, c: 0x468040 },
+    { g: ico(11), y: 80, sy: 0.5, lib: 'tree/canopy_b10', c: 0x4f8a44 },   // 傘狀平頂冠(突出主林冠)
+    { g: ico(7), y: 77, px: 9, sy: 0.45, lib: 'tree/canopy_a7', c: 0x5c9a50 },
+    { g: ico(7), y: 78, px: -9, sy: 0.45, lib: 'tree/canopy_b7', c: 0x468040 },
     { g: ico(6), y: 79, pz: 8.5, sy: 0.45, c: 0x549048 },
     { g: ico(5), y: 85, sy: 0.55, c: 0x86a45c },                 // 頂心黃綠新葉
     { g: ico(1.3), y: 75.2, px: 9.5, c: 0x7a5434 },              // 天使樹豆莢簇(豆科莢果)
@@ -444,9 +457,9 @@ const GIANT_DEFS = {
     { g: cyl(1.0, 1.8, 20, 6), y: 64, c: 0xbcb29c },
     { g: cyl(0.5, 0.9, 13, 5), y: 71, px: 4, rz: -0.8, c: 0xa39a86 },   // 側枝外端朝上
     { g: cyl(0.5, 0.9, 13, 5), y: 73, px: -4, rz: 0.8, c: 0xa39a86 },
-    { g: ico(10), y: 80, sy: 0.5, c: 0x4f8a44 },                 // 傘狀突出冠
-    { g: ico(6.5), y: 77, px: 8.5, sy: 0.45, c: 0x5c9a50 },
-    { g: ico(6.5), y: 76, px: -8.5, sy: 0.45, c: 0x468040 },
+    { g: ico(10), y: 80, sy: 0.5, lib: 'tree/canopy_a10', c: 0x4f8a44 },   // 傘狀突出冠
+    { g: ico(6.5), y: 77, px: 8.5, sy: 0.45, lib: 'tree/canopy_c6', c: 0x5c9a50 },
+    { g: ico(6.5), y: 76, px: -8.5, sy: 0.45, lib: 'tree/canopy_d6', c: 0x468040 },
     { g: ico(5.5), y: 79, pz: 7.5, sy: 0.45, c: 0x549048 },      // z 向無側枝 → 內緣貼主冠
     { g: ico(4.5), y: 84, sy: 0.55, c: 0x6fa050 },
     { g: ico(1.3), y: 74.8, px: 9, c: 0x8a5a30 },                // 豆莢簇(蜂樹為豆科)
@@ -880,8 +893,12 @@ function vegSpan(def) {
   return Math.max(0.5, top);
 }
 
-/** 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call) */
-function buildVegMeshes(type, items, season) {
+/**
+ * 把某類植被的所有實例組成 InstancedMesh(每 part 一個 draw call)。
+ * `export` 是給 **3D 零件對照台**(dev-only)用的:那座台子要兩側都由**遊戲自己的**建構器建,
+ * 不然「原版」跟遊戲裡的原版不是同一個東西而且不會報錯(對照台檔頭紀律 ①)。遊戲路徑不變。
+ */
+export function buildVegMeshes(type, items, season) {
   const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = vegSpan(def);
   const meshes = [];

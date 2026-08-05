@@ -18,6 +18,10 @@
 #     --node "collapse_a=<src.glb>|1.5|1000[|ry_deg[|dy]]" --node "facet_a=<src.glb>|1.15|900" ...
 #   dy = 縮放後的縱向平移(m):實拍岩體常比 fallback ico 扁,置中會讓消費端算好的
 #        底面懸空 —— 基座件用 dy 沉到「底 = −消費端 p.y」貼地(仍 MUST 收在包絡內)。
+#   目標欄寫 "r"(等比,岩族原行為逐位元不變)或 "r x hy"(如 "3.0x5.0" = 非等向:
+#   水平、縱向各自縮到包絡 × FIT)。非等向是給樹冠/板根用的:樹冠 fallback 是 ico 球,
+#   而實拍樹冠天生比球扁 —— 等比縮的話填不滿縱向,零件表的 sy 再壓一次就成薄餅;
+#   拉滿球包絡後,消費端 sy 壓出來的比例才與舊 ico 同款(板根同理:cone 的 r 與 h/2 差很遠)。
 import bpy
 import sys
 import math
@@ -32,11 +36,12 @@ def opt_all(name):
 
 
 OUT = opt_all('out')[0]
-NODES = []          # (node_name, src_glb, target_r, tri_cap, ry_deg)
+NODES = []          # (node_name, src_glb, target_r, target_hy|None, tri_cap, ry_deg, dy)
 for spec in opt_all('node'):
     name, rest = spec.split('=', 1)
     bits = rest.split('|')
-    NODES.append((name, bits[0], float(bits[1]), int(bits[2]),
+    tr, thy = (bits[1].split('x') + [None])[:2] if 'x' in bits[1] else (bits[1], None)
+    NODES.append((name, bits[0], float(tr), float(thy) if thy else None, int(bits[2]),
                   float(bits[3]) if len(bits) > 3 else 0.0,
                   float(bits[4]) if len(bits) > 4 else 0.0))
 
@@ -44,7 +49,7 @@ for spec in opt_all('node'):
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 made = []
-for (name, src, target_r, tri_cap, ry_deg, dy) in NODES:
+for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=src)
     news = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
@@ -81,18 +86,28 @@ for (name, src, target_r, tri_cap, ry_deg, dy) in NODES:
     cx = (min(xs) + max(xs)) / 2; cy = (min(ys) + max(ys)) / 2; cz = (min(zs) + max(zs)) / 2
     for v in vs:
         v.co.x -= cx; v.co.y -= cy; v.co.z -= cz
-    # ② 等比縮放。Blender Z-up ⇒ 遊戲的「水平」= XY、「縱向」= Z(匯出 +Y up 時互換)
+    # ② 縮放。Blender Z-up ⇒ 遊戲的「水平」= XY、「縱向」= Z(匯出 +Y up 時互換)。
+    #    等比(舊行為,岩族逐位元不變)/ 非等向(target_hy 給定:兩軸各自拉滿包絡 × FIT)
     r_max = max(math.hypot(v.co.x, v.co.y) for v in vs)
     z_max = max(abs(v.co.z) for v in vs)
-    s = min(FIT * target_r / r_max, FIT * target_r / z_max)
+    hy = target_hy if target_hy is not None else target_r
+    if target_hy is None:
+        s = min(FIT * target_r / r_max, FIT * target_r / z_max)
+        s_xy = s_z = s
+    else:
+        s_xy = FIT * target_r / r_max
+        s_z = FIT * hy / z_max
     for v in vs:
-        v.co *= s
-    r_fin = r_max * s
+        v.co.x *= s_xy
+        v.co.y *= s_xy
+        v.co.z *= s_z
+    r_fin = r_max * s_xy
     assert r_fin >= 0.5 * target_r, f'{name}:縮放後水平徑向 {r_fin:.3f} < 下界 {0.5 * target_r:.3f}(高瘦輸入不適合這個 fallback)'
     if dy:
         for v in vs:
             v.co.z += dy          # Blender Z-up;匯出 +Y up 時 = 遊戲的縱向平移
-        assert abs(-z_max * s + dy) <= FIT * target_r and abs(z_max * s + dy) <= FIT * target_r, f'{name}:dy 把縱向推出包絡'
+        # 界限取**完整包絡**(FIT 是縮放餘裕;dy 的用途是貼地,intake 驗的是完整包絡)
+        assert abs(-z_max * s_z + dy) <= hy and abs(z_max * s_z + dy) <= hy, f'{name}:dy 把縱向推出包絡'
 
     # ④ 剝材質 / UV / 色彩屬性
     ob.data.materials.clear()
@@ -102,7 +117,7 @@ for (name, src, target_r, tri_cap, ry_deg, dy) in NODES:
         ob.data.color_attributes.remove(ca)
 
     tris_fin = sum(len(p.vertices) - 2 for p in ob.data.polygons)
-    print(f'NODE {name}: tris={tris_fin} r={r_fin:.3f}/{target_r} zspan={z_max * s:.3f}')
+    print(f'NODE {name}: tris={tris_fin} r={r_fin:.3f}/{target_r} zspan={z_max * s_z:.3f}/{hy}')
     made.append(ob)
 
 # 只留產出節點,其他(SF3D 場景空節點等)全刪

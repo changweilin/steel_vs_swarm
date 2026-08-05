@@ -10,7 +10,9 @@
 //   ② **三角形預算**:預算 MUST 來自量測檔 `tri_budget.json`(記錄「量的是什麼、
 //      量到多少、係數為何」),MUST NOT 在本檔手寫一個好看的數字(計畫書 §2.1-6)。
 //
-// 描述子的真相在**消費端零件表**(beacons.js KIND_PARTS 的 `['lib', …]` 列)——
+// 描述子的真相在**消費端零件表**,而消費端現在有兩個(形式不同、保險絲語意相同):
+//   - `beacons.js KIND_PARTS` 的 `['lib', name, <fallback primitive>]` 列(地標)
+//   - `biomes.js VEG_DEFS/GIANT_DEFS` 的 `{ g: ico(5), lib: 'tree/canopy_a5' }` 列(植被/神木)
 // 讀原文、執行純區塊、解析 GLB、算 fallback 包絡這四件事全部住 `parts_src.mjs`(單一縫:
 // 3D 對照台問的是一模一樣的四個問題,各抄一份 = 入庫閘與對照台對同一顆石頭給出兩種外廓)。
 //
@@ -18,25 +20,32 @@
 //        (省略 --glb = 掃 PART_LIBS 列出的每一族)
 import { existsSync } from 'node:fs';
 import {
-  beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs,
+  beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs,
   fbEnvelope, parseGlb, nodeExtent, glbPath, triBudget,
 } from './parts_src.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
 
-// ---- 讀消費端真品:beacons.js 純區塊 → KIND_PARTS 的 lib 描述子;partlib.js → PART_LIBS ----
+// ---- 讀兩個消費端真品 + partlib.js 的 PART_LIBS ----
 const B = beaconsPure(beaconsSrc());
 const PART_LIBS = partLibs();
+const bio = bioLibDescs();
 
-// family → [{ name, fb, kind }]
+// family → [{ name, fb, kind, … }]
 const libDescs = new Map();
-for (const d of collectLibDescs(B.KIND_PARTS)) {
+const all = [...collectLibDescs(B.KIND_PARTS).map((d) => ({ ...d, consumer: 'beacons' })), ...bio.rows];
+for (const d of all) {
   if (!libDescs.has(d.family)) libDescs.set(d.family, []);
   libDescs.get(d.family).push(d);
 }
 
 const budget = triBudget();
+
+// biomes 原文裡的 `lib:` 筆數 MUST 與可執行零件表解析到的相同 —— 對不上代表有 lib 列住在
+// 樁餵不進去的表(如 GIANT_DECO 直接用 THREE.TorusGeometry)⇒ 那一列從來沒被驗過(不准靜默跳過)
+ok(bio.rows.length === bio.srcLibCount,
+  `biomes 的 lib 列全部驗得到(原文 ${bio.srcLibCount} 筆,可執行零件表解析 ${bio.rows.length} 筆)`);
 
 // ---- 主流程 ----
 const argv = process.argv.slice(2);
@@ -55,21 +64,34 @@ for (const gp of targets) {
   ok(nodes.size > 0, `具名 mesh 節點 ${nodes.size} 個(${[...nodes.keys()].join(', ')})`);
   const descs = libDescs.get(fam) || [];
   ok(descs.length > 0, `消費端有引用這一族的 lib 描述子(${descs.length} 筆)`);
-  for (const { name, fb, kind } of descs) {
+  const cap = budget?.capOf(fam);
+  const perKind = new Map();   // kind → Σ 庫零件三角形(逐株閘用)
+  const seen = new Set();
+  for (const { name, fb, kind, consumer } of descs) {
     const node = nodes.get(name.split('/').slice(1).join('/'));
     if (!node) { ok(false, `${kind}:${name} 在 GLB 裡有對應節點(缺 = 執行期整件走 fallback)`); continue; }
-    // ① 外廓契約:實測 ≤ fallback 包絡(水平徑向 + 縱向兩端)
+    perKind.set(kind, (perKind.get(kind) || 0) + node.tris);
+    // ① 外廓契約:實測 ≤ fallback 包絡(水平徑向 + 縱向兩端)。同一個節點被多列共用時,
+    //    每一列都要各自驗 —— 包絡是**那一列的** fallback,不是節點的屬性(小 ico 那列才是緊的那個)
     const env = fbEnvelope(fb);
     const { rMax, yMin, yMax } = nodeExtent(node);
-    ok(rMax <= env.r + 1e-6, `${name}:水平徑向 ${rMax.toFixed(3)} ≤ fallback ${env.r.toFixed(3)}(${JSON.stringify(fb)})`);
-    ok(yMax <= env.hy + 1e-6 && yMin >= -env.hy - 1e-6, `${name}:縱向 [${yMin.toFixed(2)}, ${yMax.toFixed(2)}] 收在 ±${env.hy.toFixed(2)} 內`);
+    const tag = `${name} ← ${consumer}:${kind}`;
+    ok(rMax <= env.r + 1e-6, `${tag}:水平徑向 ${rMax.toFixed(3)} ≤ fallback ${env.r.toFixed(3)}(${JSON.stringify(fb)})`);
+    ok(yMax <= env.hy + 1e-6 && yMin >= -env.hy - 1e-6, `${tag}:縱向 [${yMin.toFixed(2)}, ${yMax.toFixed(2)}] 收在 ±${env.hy.toFixed(2)} 內`);
     // 虛胖檢查(與 audit_beacons「foot 沒有虛胖」同方向):GLB 遠小於 fallback ⇒ 上界失真
-    ok(rMax >= env.r * 0.5, `${name}:fallback 沒有虛胖(實測佔 ${(rMax / env.r * 100).toFixed(0)}%)`);
-    // ② 三角形預算(推導自量測檔)
+    ok(rMax >= env.r * 0.5, `${tag}:fallback 沒有虛胖(實測佔 ${(rMax / env.r * 100).toFixed(0)}%)`);
+    // ② 三角形預算(推導自量測檔;逐件)—— 同一個節點只報一次
     if (!budget) ok(false, `${name}:tri_budget.json 存在(預算 MUST 量測,不准手寫)`);
-    else {
-      ok(node.tris <= budget.cap, `${name}:三角形 ${node.tris} ≤ 預算 ${budget.cap}(${budget.measured_what} 實測 ${budget.measured_max_tris} × ${budget.factor})`);
+    else if (!seen.has(name)) {
+      seen.add(name);
+      ok(node.tris <= cap, `${name}:三角形 ${node.tris} ≤ 單件預算 ${cap}(${budget.whatOf(fam)})`);
     }
+  }
+  // ③ 逐株(逐款)閘:單件合格 ≠ 整株合格 —— 一株神木十幾件,全換掉每一件都「合格」卻是 20 倍
+  for (const [kind, tris] of perKind) {
+    const k = budget?.kindCap(fam, kind);
+    if (!k) continue;
+    ok(tris <= k.cap, `${kind}:庫零件合計 ${tris} tris ≤ 逐株預算 ${k.cap}(現值 ${k.cur} × ${budget.families[fam].kind_factor})`);
   }
 }
 

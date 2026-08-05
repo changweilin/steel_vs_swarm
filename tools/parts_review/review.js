@@ -61,6 +61,8 @@ const gfx = {
 async function initGfx(data) {
   gfx.THREE = await import('three');
   gfx.beacons = await import('/public/js/beacons.js');
+  // 植被/神木那一半由 biomes 自己的 buildVegMeshes 建(同紀律 ①:台上沒有第二套組裝器)
+  gfx.biomes = await import('/public/js/biomes.js');
   const partlib = await import('/public/js/partlib.js');
   const { setCelSun } = await import('/public/js/toon.js');
   gfx.mods.set('now', gfx.beacons);
@@ -81,7 +83,7 @@ async function initGfx(data) {
     const src = v.mode === 'baseline-vs-now' ? `rev:${v.rev}` : 'now';
     if (v.mode === 'now-only') continue;
     if (!gfx.mods.has(src)) continue;
-    for (const s of SEEDS) build('pre', src, v.kind, s);
+    for (const s of SEEDS) build('pre', src, v.kind, s, v.builder);
   }
 
   await partlib.loadPartLibs();
@@ -94,12 +96,26 @@ async function initGfx(data) {
   requestAnimationFrame(tick);
 }
 
-function build(phase, src, kind, seed) {
-  const key = `${phase}|${src}|${kind}|${seed}`;
+/**
+ * 建一件(快取整場)。`builder` 決定用哪一支**遊戲自己的**建構器:
+ *   'beacon' → beacons.buildBeacon(kind, seed)
+ *   'veg'    → biomes.buildVegMeshes(kind, [一株], season)——植被走 InstancedMesh,
+ *              這裡就餵一個實例(items.length = 1),擺位/抖動仍是它自己那條 vegPartXform。
+ * 種子只用來湊出一株的樣貌差異(dj/ry),與遊戲的散布無關 —— 台子不模擬佈局,只比幾何。
+ */
+function build(phase, src, kind, seed, builder = 'beacon') {
+  const key = `${phase}|${src}|${kind}|${seed}|${builder}`;
   if (!gfx.groups.has(key)) {
     const mod = gfx.mods.get(src);
     if (!mod) return null;
-    gfx.groups.set(key, mod.buildBeacon(kind, seed));
+    if (builder === 'veg') {
+      const g = new gfx.THREE.Group();
+      const it = { x: 0, y: 0, z: 0, s: 1, ry: seed * 0.7, dj: (seed % 5) / 5 };
+      for (const m of gfx.biomes.buildVegMeshes(kind, [it], 'summer')) g.add(m);
+      gfx.groups.set(key, g);
+    } else {
+      gfx.groups.set(key, mod.buildBeacon(kind, seed));
+    }
   }
   return gfx.groups.get(key);
 }
@@ -134,7 +150,7 @@ function makeViewer() {
 }
 
 /** 掛一件到某一側。讀數(三角形/mesh 數/碰撞柱)一律**量真品群組**,不抄伺服器端的數字 */
-function setViewerGroup(v, group) {
+function setViewerGroup(v, group, builder = 'beacon') {
   const T = gfx.THREE;
   if (v.group && v.group !== group) v.scene.remove(v.group);
   if (v.wire) { v.scene.remove(v.wire); v.wire.geometry.dispose(); v.wire.material.dispose(); v.wire = null; }
@@ -142,8 +158,10 @@ function setViewerGroup(v, group) {
   v.live = !!group;
   if (!group) return null;
   v.scene.add(group);
-  const col = gfx.beacons.beaconCollider(group);
-  if (app.collider) {
+  // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
+  // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去
+  const col = builder === 'veg' ? vegExtent(group) : gfx.beacons.beaconCollider(group);
+  if (app.collider && builder !== 'veg') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
       new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
@@ -156,9 +174,19 @@ function setViewerGroup(v, group) {
     if (!o.isMesh) return;
     meshes++;
     const g = o.geometry;
-    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    // InstancedMesh 一件 = 幾何 × 實例數(台上只擺一株,但別讓讀數把這件事藏起來)
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
   });
-  return { tris, meshes, r: col.r, h: col.h };
+  return { tris, meshes, r: col.r, h: col.h, veg: builder === 'veg' };
+}
+
+/** 一株植被的實測外廓(包圍盒:水平最遠點 + 頂高)—— 只給取景與讀數用 */
+function vegExtent(group) {
+  const box = new gfx.THREE.Box3().setFromObject(group);
+  return {
+    r: Math.max(Math.abs(box.min.x), Math.abs(box.max.x), Math.abs(box.min.z), Math.abs(box.max.z)),
+    h: box.max.y,
+  };
 }
 
 function tick() {
@@ -292,6 +320,9 @@ function dataSection(r) {
         <tr><td>三角形</td><td class="num">—</td><td class="num">${r.measured.tris}</td>
             <td class="${okT ? 'pr-good' : 'pr-bad'}">${r.budget ? `${okT ? '✔' : '✘'} 預算 ${r.budget.cap}` : '(無量測預算)'}</td></tr>
         <tr><td>頂點</td><td class="num">—</td><td class="num">${r.measured.verts}</td><td>—</td></tr>
+        ${r.budget?.kind ? `<tr><td>逐株庫零件合計</td><td class="num">現值 ${r.budget.kind.cur}</td>
+          <td class="num">上限 ${r.budget.kind.cap}</td>
+          <td class="pr-dim">單件合格 ≠ 整株合格:一株十幾件全換掉,每件都「合格」卻是 20 倍</td></tr>` : ''}
       </table>
       <div class="pr-dim" style="margin-top:4px">外廓契約 = 離線外廓取 fallback 的外廓(partlib.js 檔頭);
         執行期碰撞柱仍走 <code>beaconCollider</code> 實測 —— 上方兩張圖裡的青色圓柱就是它。</div></div>`;
@@ -398,15 +429,16 @@ function mountStage(r) {
     return;
   }
   const v = r.view;
+  const bld = v.builder || 'beacon';
   const sides = [];
   if (v.mode === 'fuse-vs-lib') {
-    sides.push({ g: build('pre', 'now', v.kind, app.seed), read: 'prReadL' });
-    sides.push({ g: build('post', 'now', v.kind, app.seed), read: 'prReadR' });
+    sides.push({ g: build('pre', 'now', v.kind, app.seed, bld), read: 'prReadL' });
+    sides.push({ g: build('post', 'now', v.kind, app.seed, bld), read: 'prReadR' });
   } else if (v.mode === 'baseline-vs-now') {
-    sides.push({ g: build('pre', `rev:${v.rev}`, v.kind, app.seed), read: 'prReadL' });
-    sides.push({ g: build('post', 'now', v.kind, app.seed), read: 'prReadR' });
+    sides.push({ g: build('pre', `rev:${v.rev}`, v.kind, app.seed, bld), read: 'prReadL' });
+    sides.push({ g: build('post', 'now', v.kind, app.seed, bld), read: 'prReadR' });
   } else {
-    sides.push({ g: v.kind ? build('post', 'now', v.kind, app.seed) : null, read: 'prReadR' });
+    sides.push({ g: v.kind ? build('post', 'now', v.kind, app.seed, bld) : null, read: 'prReadR' });
   }
   // 取景基準:整件取實測碰撞柱高;零件取這一列描述子自己的位置與 fallback 半徑
   // (「換掉的就是它」—— 拿整件當基準的話,13m 旗桿會把 1.5m 的疊石壓成畫面底部一小坨)
@@ -417,12 +449,13 @@ function mountStage(r) {
     if (!slot || !viewer) return;
     slot.innerHTML = '';
     slot.appendChild(viewer.canvas);
-    const st = setViewerGroup(viewer, side.g);
+    const st = setViewerGroup(viewer, side.g, bld);
     if (st) gfx.frame.h = Math.max(gfx.frame.h, st.h);
     const out = $(side.read);
     if (out) {
       out.textContent = st
-        ? `${st.tris} 三角形 ・ ${st.meshes} 個 mesh(= draw call)・ 碰撞柱 r ${st.r.toFixed(2)} h ${st.h.toFixed(2)}`
+        ? `${st.tris} 三角形 ・ ${st.meshes} 個 mesh(= draw call)・ `
+          + (st.veg ? `外廓 r ${st.r.toFixed(2)} 高 ${st.h.toFixed(2)}` : `碰撞柱 r ${st.r.toFixed(2)} h ${st.h.toFixed(2)}`)
         : '(建不起來)';
     }
   });

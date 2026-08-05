@@ -55,9 +55,13 @@ export const PHOTO_CATALOG = {
     talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
   },
   tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
-    canopy:   { want: 6, q: ['tree crown isolated sky', 'oak tree canopy', 'conifer crown'] },
+    // 第 4 輪品質補抓(2026-08-05):首批 14 張過 SF3D 只有 1 顆實心 —— buttress 查詢命中
+    // 臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」——
+    // 唯一可用的那張正是空地孤立樹(oak tree canopy → rawpixel 孤樹);板根改點名
+    // 以板根聞名的樹種(吉貝木棉/澳洲大葉榕),避開 rainforest(整片都是暗景)。
+    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
     fork:     { want: 4, q: ['tree branch fork bare', 'large tree bough'] },
-    buttress: { want: 4, q: ['buttress root rainforest', 'tree buttress roots'] },
+    buttress: { want: 10, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk'] },
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },

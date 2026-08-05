@@ -24,6 +24,9 @@
 //   --break-strike  長軸抖動放大 ⇒ Ⅳ 的「長軸同向」MUST 紅字
 //   --break-gate    邊界樓的聚落場閘改成恆放行 ⇒ Ⅶ 的「荒野邊界零棟」MUST 紅字
 import { readSrc } from './audit_src.mjs';
+// AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
+// 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
+import { bioLibDescs, partLibs } from './ai3d/parts_src.mjs';
 
 const BREAK_LINE = process.argv.includes('--break-line');
 const BREAK_SHY = process.argv.includes('--break-shy');
@@ -474,6 +477,18 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     const spanSrc = strip(bio.slice(bio.indexOf('function vegSpan'), bio.indexOf('function buildVegMeshes')));
     ok(!/libGeo|partGeo|\.lib\b/.test(crownSrc) && !/libGeo|partGeo|\.lib\b/.test(spanSrc),
       '佈局數學(giantCrownR / vegSpan)只讀保險絲 p.g:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)');
+    // 2026-08-05 綠地首批接線之後才有意義的三條(在此之前一列 lib 都沒有,恆真)
+    const { rows, srcLibCount } = bioLibDescs(bio);
+    ok(rows.length === srcLibCount,
+      `biomes 的 lib 列全部在可執行的零件表裡(原文 ${srcLibCount} 筆 / 解析 ${rows.length} 筆)`
+      + ' —— 對不上代表有 lib 列住在離線驗不到的表,那一列等於沒被驗過');
+    ok(rows.every((r) => Array.isArray(r.fb) && r.fb.length >= 2),
+      '每一列 lib 都留著保險絲 g(只有 lib 沒有 g = 載入失敗當場沒有幾何可畫)');
+    const libs = new Set(partLibs());
+    const orphanFam = [...new Set(rows.map((r) => r.family))].filter((f) => !libs.has(f));
+    ok(orphanFam.length === 0,
+      `lib 列的家族都在 PART_LIBS 裡(缺 ${orphanFam.join('、') || '無'})`
+      + ' —— 不在的話那一族永遠查 null = 整批永久走保險絲,畫面與今天一樣而沒有任何錯誤訊息');
   }
   // 羞避傾斜吃既有 tx/tz 剛體通道(A27)
   ok(/cand\.lean\[0\]/.test(bio) && /cand\.lean\[1\]/.test(bio), '羞避傾斜併進既有 tx/tz(剛體通道,A27)');

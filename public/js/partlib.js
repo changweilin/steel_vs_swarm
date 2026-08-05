@@ -25,8 +25,10 @@ import { markShared } from './toon.js';
 
 // 家族清單 = 額度:每族一支 GLB(`assets/models/parts/{family}.glb`),按需再加。
 // P2c 首族 rock(2026-08-05:SF3D 冰川漂礫 + 裂面裁切 → collapse_a/facet_a/facet_b,
-// 消費端 = beacons cairn);載入失敗整族走 fallback = 舊畫面(保險絲,原則 6)。
-export const PART_LIBS = ['rock'];
+// 消費端 = beacons cairn);第二族 tree(2026-08-05:SF3D 孤立闊葉樹 → 12 顆冠簇節點,
+// 尺寸階梯 10/8/7/6/5/4.5/3.5 對齊 GIANT_DEFS 的 ico 冠簇半徑,消費端 = biomes 神木)。
+// 載入失敗整族走 fallback = 舊畫面(保險絲,原則 6)。
+export const PART_LIBS = ['rock', 'tree'];
 
 const _geos = new Map();   // 'family/nodeName' -> BufferGeometry(已 markShared)
 let _loaded = null;        // 單航班(與 main.js warmModels 同一套守衛語意)

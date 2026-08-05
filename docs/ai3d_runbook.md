@@ -22,6 +22,7 @@
 | biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | **DONE 2026-08-05** (§5f) | `partGeo(p) = (p.lib && libGeo(p.lib)) \|\| p.g` in `buildVegMeshes` (draw only; no `lib:` rows yet ⇒ frame bit-identical); pinned by `audit_siteplan` Ⅴ (+3 assertions, manual reverse-verify both red modes); full battery green |
 | `giantCrownR` GLB-compat (plan §8 correction 1) | **DONE 2026-08-05 — by contract, zero code change** (§5f) | Vertex scan would be a determinism bug (layout ← load state, §2.3); layout math pinned to the fuse `p.g` (audit red if it touches `libGeo`/`partGeo`/`.lib`); intake envelope makes fuse crown radii conservative. Canopy GLBs unblocked |
 | 3D 零件對照台 (`tools/parts_review.mjs` + `tools/ai3d/parts_manifest.json` provenance ledger) | **DONE 2026-08-05** (§7) | Settings-page dev tool (`npm run parts`, port 8622); generated-vs-original side by side from the **real** `buildBeacon`; states method + source img per part. Found two silent bugs on first run — see §7 |
+| **D-1 static scale-out — 綠地首批(神木樹冠)** | **DONE 2026-08-05** (§5g) | `tree.glb` 12 nodes (4 shapes × size ladder 10/8/7/6/5/4.5/3.5, 212–215 tris each) consumed by **biomes** `GIANT_DEFS` via the `lib:` field — 25 rows across 9 of 11 species; intake extended to the biomes consumer (113 green, reverse-red); `audit_siteplan` 171→174 (both new gates reverse-red); object_joints 21311/0; beacons 68 + reverse-red; soft_stroke 73 / cel 52 / visual_prefs 124 / gpu 54; e2e green (fresh server :8666); `npm run bal` green (⑦f 1.63× unchanged); review board extended to biomes (16 rows, 0 gaps) with side-by-side render |
 | P3 dynamic track (mech slots) | NOT STARTED | Plan §3; do not start before P2c passes |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
@@ -103,6 +104,17 @@ Target: `watertower` (or `pylon`) in `public/js/beacons.js KIND_PARTS` — the p
 ### D. Scale-out static (only after B and C are both green)
 Batches of ≤5 assets, full gate set per batch (plan §6). Order: megalith facets → landmark upgrades
 (mixed method) → building modules (LLM parts) → giant-tree parts (**after** `giantCrownR` fix).
+
+**D-1 giant-tree canopies: DONE 2026-08-05** (§5g). What the next batch inherits from it:
+1. **Measure the family before generating for it.** The per-part cap that fits rocks was meaningless
+   for trees; the gate that mattered (per-species total) did not exist until the measurement did.
+   Any new family gets its own `tri_budget.json families.<fam>` entry, measured, before wiring.
+2. **Match the AI part to the fallback's *shape*, not to the slot's name** — `ico` rows only, because
+   the envelope is what the offline contract checks. A `cone`/`box` row needs a part generated to that
+   proportion, not a blob squeezed into it.
+3. Remaining tree work: `buttress` + `fork` nodes (photo supply still short — Wikimedia PDFs/429s),
+   then `VEG_DEFS` ordinary trees (**check the draw-call and triangle maths again**: ordinary
+   vegetation has orders of magnitude more instances than the handful of giant trees).
 
 ### E. Track A dynamic (plan §3/P3–P4) — env: 3060 — unchanged
 Do not start before D's first batch ships; the rig contract makes failures 10× more expensive.
@@ -266,6 +278,51 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
   call site (zero extra `rnd()` either way; no in-place geometry mutation ⇒ no clone). The
   declarative seam above covers `VEG_DEFS`/`GIANT_DEFS`/`GIANT_DECO`. Road props / civic parts
   stay LLM-parts territory (method split) — do not extend `partGeo` there.
+
+## 5g. Trial log (2026-08-05, 3060-machine session — queue D first batch: giant-tree canopies)
+
+First consumer outside beacons. What was actually new (the rest was the rock recipe replayed):
+
+- **A triangle budget that a per-part cap cannot express.** Measured first (playwright, biomes source
+  + real three): a whole giant tree today is **259–402 tris** across 13–20 parts, and one canopy
+  cluster is **20** (an `ico`). An AI part cannot be 20. Cap-per-part alone is a trap here: swap every
+  canopy on a tree and each part passes while the tree becomes 20×. So `tri_budget.json` gained
+  `families.tree` with **two** gates — per part ≤ heaviest whole tree today (402, same rule shape as
+  rock), **plus per-species Σ(library parts) ≤ 4× that species' current total**. Measured outcome:
+  2.2–3.7×, worst species meranti 315 → ~890. Draw calls unchanged (one InstancedMesh per part row,
+  before and after).
+- **Only `ico` canopy rows are swappable, and that is geometry not taste.** A `cone` fallback's
+  envelope is `{r, h/2}` (e.g. `cone(7,26)` = r7 / hy13) — fitting a canopy blob into it stretches it
+  into a column. `ico` is a sphere, which is what a photographed crown actually fits. Two species
+  (klinki, alerce) are **deliberately left alone**: their crown clusters are 2.2–3.0 m, smaller than
+  the smallest node (3.325), and forcing them in would break the envelope contract.
+- **Non-uniform scaling added to `normalize_parts.py`** (`"r x hy"` target form; `"r"` keeps the old
+  equal-ratio path bit-identical for rock). Real crowns are flatter than a sphere: fit equal-ratio and
+  the node under-fills the vertical envelope, then the part row's `sy` squashes it again into a pancake.
+- **Input curation, again, is the whole game.** First 14 tree photos → **1 solid mesh** (the queries
+  `tree crown isolated sky` / `buttress root rainforest` return herbarium sheets and dark forest
+  scenes). Re-queried for *named single subjects* — `solitary oak tree meadow`, `lone tree field`,
+  `isolated tree grassland` — and 6 photos gave **5 solid meshes**. Same tool, same params. §5c's
+  finding generalises: the wording of the query beats every model knob.
+  `buttress` is still short (Wikimedia keeps serving book-scan PDFs and 429s) — buttress/fork parts
+  are **not done**, and the ledger says so rather than pretending the family is complete.
+- **Two seams extended rather than copied** (原則 2): `parts_src.mjs` gained `bioLibDescs()` — it
+  executes the `VEG_DEFS`/`GIANT_DEFS` source with `cyl/cone/ico` **stubs that return descriptor
+  arrays**, so biomes rows land in the exact same vocabulary `fbEnvelope` already speaks; and the
+  review board now derives rows from both consumers, building the veg side with the game's own
+  `buildVegMeshes` (exported for this; no second assembler on the board).
+- **A gate that counts what it cannot execute.** `bioLibDescs` also returns the raw count of `lib:` in
+  the source; intake reds when it differs from what the executable tables yielded — otherwise a `lib:`
+  row added to `GIANT_DECO` (which builds `THREE.TorusGeometry` directly, so the stubs cannot reach it)
+  would simply never be verified. First run of that gate went red on **its own doc comments** —
+  the ㋑ trap in miniature: source counting must strip comments.
+- **Provenance: one record can own several keys.** A size ladder is one generation job baked at
+  several scales; four entries with `keys: [...]` beat twelve near-identical ones (and twelve would
+  drift, with the stale ones still looking fine). `loadProvenance` now accepts `key` or `keys`.
+- **Not yet done**: in-game smoke (walk a grove + 30 s steady-state frame time) and `audit_traverse`
+  (㋓ network; canopies touch no collider — trunk colliders are registered by the scatter code and are
+  untouched — so no route can change, but it has not been run). `audit_ui_layout` reds on this machine
+  **identically at the pre-change tree** (A/B'd via `git stash`) — pre-existing, unrelated.
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
