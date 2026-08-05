@@ -1123,6 +1123,76 @@
       "id": "m01_flight_heavy",
       "at": "2026-08-05T13:21:36.870Z",
       "note": "I have updated the concept specification sheet [`m01_concept_art_sheet.md`](file:///C:/Users/user/.gemini/antigravity-cli/brain/2cfa450f-eb31-4b56-b104-adce5a73f10b/m01_concept_art_sheet.md) with your updated action state: **Firing the Heavy Weapon**.\n\n### Updated Action Mechanics & Blueprint Specs:"
+    },
+    {
+      "id": "t01/hips",
+      "at": "2026-08-05T15:01:19.363Z",
+      "note": ""
+    },
+    {
+      "id": "t01/chest",
+      "at": "2026-08-05T15:01:57.622Z",
+      "note": ""
+    },
+    {
+      "id": "t01/head",
+      "at": "2026-08-05T15:02:38.356Z",
+      "note": ""
+    },
+    {
+      "id": "t01/leg",
+      "at": "2026-08-05T15:03:16.862Z",
+      "note": ""
+    },
+    {
+      "id": "t01/arm",
+      "at": "2026-08-05T15:03:55.296Z",
+      "note": ""
+    },
+    {
+      "id": "t01/wpn_light",
+      "at": "2026-08-05T15:04:33.592Z",
+      "note": ""
+    },
+    {
+      "id": "t01/wpn_heavy",
+      "at": "2026-08-05T15:05:12.190Z",
+      "note": ""
+    },
+    {
+      "id": "t01/hips",
+      "at": "2026-08-05T15:07:26.530Z",
+      "note": "I attempted to generate the isolated mecha pelvis/hip block image following all of your design specifications (3/4 view, flat #808080 background, industrial cast plate aesthetics, 85% frame fill, and 100mm lens perspective).\n\nHowever, the image generation request failed due to a API rate/quota limit"
+    },
+    {
+      "id": "t01/chest",
+      "at": "2026-08-05T15:08:09.658Z",
+      "note": "I attempted to generate the single detached mecha torso/chest armor block according to your detailed design specifications:\n\n* **Part**: Detached egg-shaped central cockpit chest module (\"壁壘\" 過裝甲型蛋形駕駛艙胸部裝甲塊, isolated with no head, arms, legs, or weapons attached).\n* **Industrial Style & Construction"
+    },
+    {
+      "id": "t01/head",
+      "at": "2026-08-05T15:08:53.035Z",
+      "note": "I attempted to generate the isolated **\"head and neck assembly\"** mecha component image according to your exact design specifications and formatting requirements:\n\n* **Subject**: Isolated detached head & neck assembly module for the **STEEL Pact / BASTION** chassis.\n* **Details**: Heavy cast armor p"
+    },
+    {
+      "id": "t01/leg",
+      "at": "2026-08-05T15:09:34.737Z",
+      "note": "I attempted to generate the requested mecha part image (the isolated left leg assembly of the BASTION over-armoured brawler) with all specified design specifications and output constraints. \n\nHowever, the image generation service encountered a quota limit error (`429 RESOURCE_EXHAUSTED` on `gemini-3"
+    },
+    {
+      "id": "t01/arm",
+      "at": "2026-08-05T15:10:15.578Z",
+      "note": "The image generation tool returned a quota limit error (`429 RESOURCE_EXHAUSTED`), indicating that the capacity for the image generation model has been temporarily exhausted.\n\n### Request Summary\n- **Target Part**: Detached left arm assembly (upper arm, forearm, hand/fist detached at shoulder).\n- **"
+    },
+    {
+      "id": "t01/wpn_light",
+      "at": "2026-08-05T15:10:58.179Z",
+      "note": "I attempted to generate the requested image according to your exact specifications:\n\n### Design & Composition Summary:\n- **Object**: Single detached mecha light weapon module (axe-cannon with forward-facing 152mm barrel, open muzzle, revolver cylinder magazine, and heavy axe blade).\n- **Faction & St"
+    },
+    {
+      "id": "t01/wpn_heavy",
+      "at": "2026-08-05T15:11:40.318Z",
+      "note": "I attempted to generate the requested mecha weapon image (the 152mm axe-cannon module), but the image generation service returned a quota error:\n\n> **429 Resource Exhausted**: You have exhausted your capacity on this image generation model.\n\n### Weapon Design Specs (Reference Summary)\n- **Part**: De"
     }
   ]
 }

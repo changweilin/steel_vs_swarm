@@ -226,6 +226,122 @@
       "note": "花期樹(團塊分明)。canopy_d35 是最小的一級,同時服務 dougfir/sitka/taiwania 的小冠簇 —— 再小的冠簇(klinki/alerce 的 2.2~3.0m)沒有節點裝得下,刻意不換。"
     },
     {
+      "keys": ["tree/canopy_e4", "tree/canopy_e35", "tree/canopy_e32"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(dougfir ico(4)×2・taiwania ico(3.5)・sitka ico(3.2))",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_06b3b326-cdae-4e29-847f-4baba4266519",
+          "family": "tree", "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/06b3b326-cdae-4e29-847f-4baba4266519",
+          "file": "photos/tree/canopy/ov_06b3b326-cdae-4e29-847f-4baba4266519.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "31 張 tree matte 全批;mesh_stats fill 0.301"
+      },
+      "post": { "tool": "tools/ai3d/normalize_parts.py(--base 保留既有節點)", "fit": 0.95,
+                "note": "非等向 r×hy;e35 +65° / e32 +200° yaw 與同源錯開" },
+      "note": "剪影型闊葉冠(深色高對比孤樹)。**這一批的用途是拆開共用形狀**:dougfir/sitka/taiwania 三種原本共用 canopy_d35 一顆,使用者定案「不要只是原版重繪」的具體落點就是這裡 —— 每一種拿到自己的冠形。"
+    },
+    {
+      "keys": ["tree/canopy_f38", "tree/canopy_f5", "tree/canopy_f6"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(sitka ico(3.8)×2・sequoia ico(5)・meranti ico(6) 冠頂)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_3b61c08f-fc59-4b3b-be6f-dce89b643599",
+          "family": "tree", "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/3b61c08f-fc59-4b3b-be6f-dce89b643599",
+          "file": "photos/tree/canopy/ov_3b61c08f-fc59-4b3b-be6f-dce89b643599.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批;mesh_stats fill 0.242"
+      },
+      "post": { "tool": "tools/ai3d/normalize_parts.py(--base)", "fit": 0.95,
+                "note": "f5 +140° / f6 +250° yaw" },
+      "note": "橫展濃冠橡樹(春葉黃綠)。sequoia 與 meranti 各多接一列原本沒有 lib 的 ico 冠簇。"
+    },
+    {
+      "keys": ["rock/mega_a", "rock/mega_b", "rock/mega_c"],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary(mega_a;與 facet_b 同源,+210° yaw 錯開)",
+          "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
+          "family": "rock", "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
+          "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
+        },
+        {
+          "role": "primary(mega_b;§5c 的 33MP 冰川漂礫,首次入庫)",
+          "id": "ov_4a7de829-1184-4b05-bf5d-427b77fc76f5",
+          "family": "rock", "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697942",
+          "file": "photos/rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg"
+        },
+        {
+          "role": "primary(mega_c;與 facet_a 同源,+90° yaw 錯開)",
+          "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+          "family": "rock", "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
+          "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121;venv/weights 住 zen-albattani 資料家,照片庫已整合進本 worktree)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 150",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;19 張 matte 全批重跑;mesh_stats.mjs 體積比快篩 6/19 塊狀候選(fill ≥ 0.34),人眼複核淘汰 2(博物館老照片有人入鏡、立體鏡雙聯卡)",
+        "note": "低面數版(150 頂點 ≈ 280 tris)—— 巨岩一顆最多 14 件庫零件,families.megalith 的逐件上限 306 由 4× 整顆預算 ÷ 14 推導;挑選流程新增 tools/ai3d/mesh_stats.mjs(封閉網格體積 ÷ 包圍盒 = 實心度)統計前篩,contact sheet 只看前幾名"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;新增 --base 保留既有節點合併匯出)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1)):呼叫端 megaGeo 以 mesh.scale 拉到各自尺寸,同一顆節點服務任意大小的岩塊;mega_a +210° / mega_c +90° yaw 與同源的疊石節點錯開"
+      },
+      "note": "巨岩縫首批(runbook §5f 預告的『guarded libGeo ?? primitive』落地):biomes MEGA_LIB 名冊 + megaGeo(一律 clone —— 巨岩過 bakeContactAO 就地烤頂點色)5 個呼叫點;audit_siteplan Ⅴ 釘凍結清單並反向驗證。"
+    },
+    {
       "key": "beacon/tank",
       "method": "llm_parts",
       "consumer": "beacons watertower(BEACON_KINDS.tank)",

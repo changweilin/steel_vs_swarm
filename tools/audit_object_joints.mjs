@@ -652,6 +652,10 @@ const megal = (() => {
     pick(/const _rcO = new THREE\.Vector3[^\n]*\n/, 'rockProbe 的射線暫存'),
     pick(/function rockProbe\(g\) \{[\s\S]*?\n\}/, 'rockProbe'),
     pick(/const ROCK_TONES = \[[\s\S]*?\];/, 'ROCK_TONES'),
+    // 巨岩零件庫名冊與守衛(2026-08-05):稽核端注入 libGeo = () => null ⇒ 一律走保險絲
+    // 路徑(= 舊 primitive 幾何)—— 接合幾何的真相在保險絲上,GLB 只是同包絡的皮
+    pick(/const MEGA_LIB = \{[\s\S]*?\n\};/, 'MEGA_LIB'),
+    pick(/const megaGeo = [^\n]*\n/, 'megaGeo'),
     pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
     pick(/function decorateMegalith\(g, anchor, rnd, s\) \{[\s\S]*?\n\}/, 'decorateMegalith'),
     'return { MEGALITHS, synthMegalith, decorateMegalith };',
@@ -665,8 +669,8 @@ const megal = (() => {
   // 高壓電塔本體的接合歸 LANDMARKS 稽核(不在本節範圍);此處只驗它有沒有站在岩頂上,
   // 故以「與真品同佔地」的樁件代表:LANDMARK_COL.power r=2.6 h=42(不消耗 rnd)
   const LANDMARKS = { power: (g) => { const m = new THREE.Mesh({ t: 'prism', r1: 2.6, r2: 2.6, h: 42, n: 4 }); m.position.set(0, 21, 0); g.add(m); } };
-  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', code)(
-    G.cyl, G.cone, G.ico, box, mat, mat, LANDMARKS, THREE, Math);
+  const mod = new Function('cyl', 'cone', 'ico', 'box', 'rockMat', 'toonMat', 'LANDMARKS', 'THREE', 'Math', 'libGeo', code)(
+    G.cyl, G.cone, G.ico, box, mat, mat, LANDMARKS, THREE, Math, () => null);
   return { ...mod, THREE };
 })();
 

@@ -49,6 +49,16 @@ for spec in opt_all('node'):
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
 made = []
+
+# --base <glb>:先把既有零件庫整支匯入並全數保留 —— 追加節點時不必重跑舊節點的來源
+# (重跑 = 減面/縮放全部重算一次,舊節點有機會位元漂移;保留 = 舊節點逐位元原樣)。
+BASE = (opt_all('base') or [None])[0]
+if BASE:
+    bpy.ops.import_scene.gltf(filepath=BASE)
+    for o in list(bpy.data.objects):
+        if o.type == 'MESH':
+            o.data.materials.clear()
+            made.append(o)
 for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=src)

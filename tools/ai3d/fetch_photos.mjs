@@ -45,6 +45,35 @@ const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo
 // image→3D 要的是樹冠模組/枝叉/板根各自成像)。want = 每零件目標張數(多抓幾張供挑選,
 // 一件零件最後只用一張 —— skill §1:一張好照片勝過三張拼湊的)。
 export const PHOTO_CATALOG = {
+  // 第 5 輪大擴充(2026-08-05 使用者定案):「大量下載不同樹種的 2D 照片再 img→3D,
+  // 無視舊有物件、不要只是原版重繪」⇒ 樹族改成**逐樹種**列(GIANT_DEFS 的 11 個真實
+  // 樹種逐種對位 + VEG_DEFS 常見樹種),查詢一律走實測有效的「具名單一主體」句式;
+  // 岩族加四個新岩型;建築族加 img→3D 友善的單一主體模組(使用者定案:建築也走
+  // img→3D,計畫書 §8 方法分流已修訂)。族序 = 抓取優先序(fetcher 依序補缺)。
+  tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
+    // 第 4 輪品質補抓(2026-08-05):首批 14 張過 SF3D 只有 1 顆實心 —— buttress 查詢命中
+    // 臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」——
+    // 唯一可用的那張正是空地孤立樹(oak tree canopy → rawpixel 孤樹);板根改點名
+    // 以板根聞名的樹種(吉貝木棉/澳洲大葉榕),避開 rainforest(整片都是暗景)。
+    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
+    // —— 逐樹種列(GIANT_DEFS 對位)——(排在 fork/buttress 前:那兩列的候選重度
+    // Wikimedia-hosted,先跑會把每一輪都撞死在 429 上,樹種列永遠輪不到)
+    sp_sequoia: { want: 6, q: ['giant sequoia tree', 'sequoia tree isolated', 'coast redwood tree'] },
+    sp_conifer: { want: 8, q: ['lone spruce tree field', 'solitary fir tree meadow', 'single conifer tree'] },
+    sp_pine:    { want: 8, q: ['lone scots pine tree', 'stone pine tree isolated', 'solitary pine tree field'] },
+    sp_cypress: { want: 5, q: ['italian cypress tree', 'lone cypress tree', 'mediterranean cypress isolated'] },
+    sp_euc:     { want: 6, q: ['lone gum tree paddock', 'eucalyptus tree isolated', 'gum tree australia'] },
+    sp_tropical:{ want: 6, q: ['kapok tree isolated', 'rainforest emergent tree', 'lone tropical tree field'] },
+    // —— 逐樹種列(VEG_DEFS / 場地地貌對位)——
+    sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },
+    sp_baobab:  { want: 6, q: ['baobab tree', 'lone baobab tree', 'adansonia tree'] },
+    sp_willow:  { want: 5, q: ['weeping willow tree isolated', 'lone willow tree lake'] },
+    sp_maple:   { want: 6, q: ['lone maple tree field', 'solitary maple tree autumn', 'isolated maple tree'] },
+    sp_banyan:  { want: 5, q: ['banyan tree isolated', 'large fig tree isolated', 'lone ficus tree'] },
+    sp_cherry:  { want: 5, q: ['lone cherry blossom tree', 'sakura tree isolated', 'cherry tree in bloom field'] },
+    fork:     { want: 8, q: ['tree branch fork bare', 'large tree bough', 'lone bare oak tree winter', 'dead standing tree'] },
+    buttress: { want: 14, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk', 'strangler fig trunk', 'ficus macrophylla roots'] },
+  },
   rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
     // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
     // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
@@ -53,27 +82,28 @@ export const PHOTO_CATALOG = {
     // 第 2 輪放寬名詞(runbook §4-A:第 1 輪 0/4、1/4 的成因是查詢措辭太窄,不是沒料)
     collapse: { want: 7, q: ['glacial erratic', 'balanced rock formation', 'fallen boulder'] },
     talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
-  },
-  tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
-    // 第 4 輪品質補抓(2026-08-05):首批 14 張過 SF3D 只有 1 顆實心 —— buttress 查詢命中
-    // 臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」——
-    // 唯一可用的那張正是空地孤立樹(oak tree canopy → rawpixel 孤樹);板根改點名
-    // 以板根聞名的樹種(吉貝木棉/澳洲大葉榕),避開 rainforest(整片都是暗景)。
-    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
-    fork:     { want: 4, q: ['tree branch fork bare', 'large tree bough'] },
-    buttress: { want: 10, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk'] },
-  },
-  landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
-    lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
-    dish:     { want: 3, q: ['microwave dish antenna tower', 'parabolic antenna'] },
-    tank:     { want: 3, q: ['water tower', 'water tank', 'elevated water tank'] },
-    container:{ want: 3, q: ['shipping container single', 'cargo container isolated'] },
+    // —— 新岩型(第 5 輪;MEGALITHS/rockfield 的形狀字彙擴充)——
+    hoodoo:   { want: 5, q: ['hoodoo rock formation', 'sandstone hoodoo', 'earth pyramid rock'] },
+    tor:      { want: 5, q: ['granite tor', 'tor rock formation', 'weathered granite outcrop'] },
+    karst:    { want: 5, q: ['limestone karst pinnacle', 'karst rock formation', 'limestone pinnacle'] },
+    strata:   { want: 5, q: ['tilted rock strata', 'sedimentary rock outcrop', 'layered rock formation'] },
   },
   building: {                                                // hazards BUILDERS:窗格/簷口/陽台/外管
     window:   { want: 4, q: ['window facade', 'office building facade', 'factory windows'] },
     roofcap:  { want: 4, q: ['rooftop parapet', 'building rooftop', 'roof cornice'] },
     balcony:  { want: 3, q: ['concrete balcony facade', 'apartment balcony module'] },
     piping:   { want: 3, q: ['industrial external piping wall', 'building exterior pipes'] },
+    // —— img→3D 友善的單一主體屋頂/立面模組(第 5 輪;使用者定案建築走 img→3D)——
+    acunit:   { want: 6, q: ['air conditioner outdoor unit', 'hvac rooftop unit', 'air conditioning condenser'] },
+    rooftank: { want: 5, q: ['rooftop water tank', 'stainless steel water tank', 'plastic water tank'] },
+    chimney:  { want: 5, q: ['brick chimney', 'industrial chimney stack', 'old brick smokestack'] },
+    dormer:   { want: 5, q: ['dormer window roof', 'roof dormer'] },
+  },
+  landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
+    lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
+    dish:     { want: 3, q: ['microwave dish antenna tower', 'parabolic antenna'] },
+    tank:     { want: 3, q: ['water tower', 'water tank', 'elevated water tank'] },
+    container:{ want: 3, q: ['shipping container single', 'cargo container isolated'] },
   },
 };
 
@@ -111,9 +141,20 @@ async function jget(url) {
   return r.json();
 }
 
+// 供應者排除(2026-08-05 第 5 輪實測):CC0 的語料重心是**博物館/圖書館的數位化館藏** ——
+// 逐張人眼複核 19+26 顆 SF3D 產出,fill 排名前段一再是臘葉標本壓葉、19 世紀蛋白照片、
+// 石版畫、立體鏡雙聯卡、鉛筆素描明信片。那些東西 img→3D 生不出可用幾何,而**授權完全合法**
+// ⇒ 篩不掉的話,每一輪的 GPU 時間都花在注定要丟的候選上。這裡排掉純館藏型供應者;
+// rawpixel 刻意留著(它同時供應現代攝影與公版版畫,砍掉會連最好的那幾張一起砍)。
+const EXCLUDED_SOURCES = ['smithsonian_cooper_hewitt_museum', 'museumsvictoria', 'digitaltmuseum',
+  'sciencemuseum', 'statensmuseum', 'clevelandmuseum', 'smithsonian_national_museum_of_natural_history',
+  'smithsonian_institution_archives', 'smithsonian_libraries', 'brooklynmuseum', 'thorvaldsensmuseum',
+  'floraon', 'inaturalist', 'biodiversity_heritage_library'].join(',');
+
 /** Openverse:免金鑰;license=cc0 已含 public domain mark */
 async function searchOpenverse(q, n) {
-  const u = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&license=cc0&page_size=${n}`;
+  const u = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&license=cc0&page_size=${n}`
+    + `&excluded_source=${EXCLUDED_SOURCES}`;
   const j = await jget(u);
   return (j.results || []).filter((it) => CC0_RE.test(it.license || '')).map((it) => ({
     id: `ov_${it.id}`, url: it.url, w: it.width, h: it.height,
@@ -184,6 +225,11 @@ async function main() {
 
   let fetched = 0;
   let cooled = false;   // 撞上 IP 級限流(2026-08-05 實測 upload.wikimedia.org Retry-After: 600)
+  // 節流是**逐主機**的:upload.wikimedia.org 撞 429 不代表 rawpixel/flickr 也被封 ——
+  // 舊制「一顆 429 整輪收工」讓 Commons-hosted 候選多的零件把整輪額度全數陪葬,
+  // 排在後面的零件永遠輪不到。改成:被封主機記進 hostCool,本輪只跳過同主機的候選。
+  const hostCool = new Set();
+  const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
   for (const { fam, part, def, need } of work) {
     if (cooled || fetched >= LIMIT) break;
     // seen 只收成功條目:暫時性失敗(429 限流)重跑 MUST 能再試,否則②的「可續跑」對
@@ -195,6 +241,7 @@ async function main() {
         for (const it of items) {
           if (cooled || fetched >= LIMIT || have(fam, part) >= def.want) break;
           if (seen.has(it.id)) continue;
+          if (hostCool.has(hostOf(it.url))) continue;   // 該主機本輪已被 429 封鎖:跳過,別燒成失敗
           seen.add(it.id);
           // 選片過濾:短邊 <1024 直接跳過(skill §5.3:不足 1024 不准進 image→3D);尺寸未知照收並標記
           const short = Math.min(it.w || Infinity, it.h || Infinity);
@@ -215,10 +262,10 @@ async function main() {
           } catch (e) {
             entry.ok = false; entry.error = e.message;
             console.warn(`✗ ${fam}/${part} ← ${it.id}:${e.message}`);
-            // 429 = IP 級限流:繼續打只是把候選燒成失敗紀錄 ⇒ 提前收工,等冷卻窗過再跑。
-            // 它是「這一輪的網路狀態」不是「這張照片的屬性」⇒ 也不進帳本(帳本記的是
-            // 授權與檔案的事實;持續性失敗如 404 仍照記)。
-            if (/HTTP 429/.test(e.message)) { cooled = true; continue; }
+            // 429 = IP 級限流:它是「這一輪的網路狀態」不是「這張照片的屬性」⇒ 不進帳本
+            // (帳本記的是授權與檔案的事實;持續性失敗如 404 仍照記)。封鎖只及**該主機**,
+            // 其他主機的候選照抓;全輪早退(cooled)只留給搜尋 API 本身被限流的情況。
+            if (/HTTP 429/.test(e.message)) { hostCool.add(hostOf(it.url)); continue; }
           }
           manifest.push(entry);
           writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
@@ -239,7 +286,7 @@ async function main() {
       if (have(fam, part) >= def.want) break;
     }
   }
-  if (cooled) console.log('\n⚠ 撞上來源 IP 級限流(HTTP 429),本輪提前收工;約 10 分鐘後重跑同指令續補。');
+  if (cooled || hostCool.size) console.log(`\n⚠ 撞上來源 IP 級限流(HTTP 429${hostCool.size ? `;被封主機:${[...hostCool].join(', ')}` : ''}),約 10 分鐘後重跑同指令續補。`);
   console.log(`\n本輪下載 ${fetched} 張;重跑同指令可續補缺額。`);
 }
 

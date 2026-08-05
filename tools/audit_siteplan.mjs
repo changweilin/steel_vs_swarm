@@ -468,9 +468,19 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   // 佈局讀它 = 跨客戶端逐位元分家(§2.3),intake 契約(GLB 外廓 ≤ fallback)讓保險絲恆保守。
   {
     const bioC = strip(bio);
-    ok((bioC.match(/libGeo\(/g) || []).length === 1
-      && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC),
-      'AI 零件庫解析只有 partGeo 一份(build 時;p.g 是保險絲)');
+    ok((bioC.match(/libGeo\(/g) || []).length === 2
+      && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
+      && /const megaGeo = \(name\) => \{ const g2 = name \? libGeo\(name\) : null; return g2 \? g2\.clone\(\) : null; \};/.test(bioC),
+      'AI 零件庫解析恰兩份:partGeo(宣告式零件表)+ megaGeo(命令式巨岩呼叫點守衛;'
+      + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)');
+    {   // megaGeo 呼叫點 = 凍結清單 5 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石),名字一律出自 MEGA_LIB 名冊
+      const uses = (bioC.match(/megaGeo\(/g) || []).length;   // 定義式是 `= (name) =>`,不含 `megaGeo(`
+      ok(uses === 5 && (bioC.match(/megaGeo\(MEGA_LIB\./g) || []).length === 5,
+        `megaGeo 呼叫點 = 凍結的 5 處且全走 MEGA_LIB 名冊(實得 ${uses};增刪呼叫點 MUST 同步這裡與 tri_budget 的 max_lib_parts_per_rock)`);
+      const sm = strip(bio.slice(bio.indexOf('function synthMegalith'), bio.indexOf('function flatRadiusAt')));
+      ok(!/megaGeo|MEGA_LIB/.test(sm.slice(sm.lastIndexOf('return {'))),
+        'synthMegalith 的 col/anchor 回傳塊不讀庫(佈局與碰撞恆走 primitive 參數 —— 庫隨載入成敗而異,§2.3)');
+    }
     ok(/new THREE\.InstancedMesh\(partGeo\(part\)/.test(bioC),
       '植被消費迴圈畫的是 partGeo 解析結果(載入失敗退回保險絲 = 舊畫面)');
     const crownSrc = strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')));

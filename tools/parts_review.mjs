@@ -33,7 +33,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import {
-  beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, fbEnvelope,
+  beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, megaLibDescs, fbEnvelope,
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
 import { METHODS, loadProvenance, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
@@ -56,11 +56,14 @@ export function manifest(items = {}, photosOpt = null) {
   const roots = photoRoots(photosOpt);
   const budget = triBudget();
   const B = beaconsPure(beaconsSrc());
-  // 兩個消費端:beacons(地標,`['lib', …]` 描述子)+ biomes(植被/神木,`lib:` 欄)。
-  // 少收哪一邊,那一邊的生成物就整批從台上消失 —— 而「台上沒有」看起來跟「還沒做」一模一樣(邊界 ③)
+  // 三個消費端:beacons(地標,`['lib', …]` 描述子)+ biomes 宣告式零件表(植被/神木,`lib:` 欄)
+  // + biomes 命令式巨岩(`MEGA_LIB` 名冊 + `megaGeo` 呼叫點守衛)。少收哪一邊,那一邊的生成物
+  // 就整批從台上消失 —— 而「台上沒有」看起來跟「還沒做」一模一樣(邊界 ③),更糟的是它會被
+  // 算進**孤兒節點**:台子會說「這顆沒人用」,而它其實正在每一顆巨岩上。
   const descs = [
     ...libDescs(B.KIND_PARTS).map((d) => ({ ...d, builder: 'beacon' })),
     ...bioLibDescs().rows.map((d) => ({ ...d, builder: 'veg' })),
+    ...megaLibDescs().rows.map((d) => ({ ...d, builder: 'mega' })),
   ];
   const libs = partLibs();
 

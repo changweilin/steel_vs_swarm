@@ -325,7 +325,7 @@ const GIANT_DEFS = {
     { g: ico(7), y: 82, lib: 'tree/canopy_a7', c: 0x336033 },
     { g: ico(6), y: 66, px: 7.5, lib: 'tree/canopy_c6', c: 0x4a7a3c },   // 黃綠受光簇
     { g: ico(6), y: 60, px: -7.5, lib: 'tree/canopy_d6', c: 0x336033 },
-    { g: ico(5), y: 55, pz: 7, c: 0x39683a },
+    { g: ico(5), y: 55, pz: 7, lib: 'tree/canopy_f5', c: 0x39683a },
     { g: cone(5, 10, 6), y: 89, c: 0x336033 },
     { g: cyl(0.24, 0.45, 7, 5), y: 96, c: 0x8a6a4a },            // 突出頂梢枯枝(雷擊痕)
     { g: ico(1.3), y: 63.5, px: 8, c: 0x7a5230 },                // 世界爺毬果簇(冠緣)
@@ -359,8 +359,8 @@ const GIANT_DEFS = {
     { g: cone(7, 18, 7), y: 78, c: 0x2f5e40 },
     { g: cone(4.5, 16, 7), y: 90, c: 0x35684a },
     { g: cone(2, 11, 6), y: 99, c: 0x2f5e40 },
-    { g: ico(4), y: 46, px: 6, sy: 0.6, lib: 'tree/canopy_d35', c: 0x35684a },
-    { g: ico(4), y: 42, px: -6, sy: 0.6, lib: 'tree/canopy_d35', c: 0x2f5e40 },
+    { g: ico(4), y: 46, px: 6, sy: 0.6, lib: 'tree/canopy_e4', c: 0x35684a },
+    { g: ico(4), y: 42, px: -6, sy: 0.6, lib: 'tree/canopy_e4', c: 0x2f5e40 },
     { g: cone(1.2, 5, 4), y: 47, px: 5.5, rx: Math.PI, c: 0x7fa06a },   // 枝下垂掛松蘿(上端埋進樹冠錐)
     { g: cone(1.0, 4, 4), y: 60, px: -5.0, rx: Math.PI, c: 0x8aa876 },
     { g: ico(1.1), y: 44.4, px: 6.4, c: 0x8a6244 },              // 花旗松垂毬果簇(側簇下緣)
@@ -373,9 +373,9 @@ const GIANT_DEFS = {
     { g: cone(7.5, 18, 7), y: 66, c: 0x467567 },
     { g: cone(6, 16, 7), y: 78, c: 0x3d6a5e },
     { g: cone(3.5, 15, 6), y: 89, c: 0x467567 },
-    { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, lib: 'tree/canopy_d35', c: 0x3d6a5e },
-    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, lib: 'tree/canopy_d35', c: 0x467567 },
-    { g: ico(3.2), y: 44, pz: 5.5, sy: 0.55, c: 0x3d6a5e },
+    { g: ico(3.8), y: 46, px: 5.5, sy: 0.55, lib: 'tree/canopy_f38', c: 0x3d6a5e },
+    { g: ico(3.8), y: 44.5, px: -5.5, sy: 0.55, lib: 'tree/canopy_f38', c: 0x467567 },
+    { g: ico(3.2), y: 44, pz: 5.5, sy: 0.55, lib: 'tree/canopy_e32', c: 0x3d6a5e },
     { g: cone(1.1, 4.5, 4), y: 50, px: 6, rx: Math.PI, c: 0xa8c0a8 },   // 老人鬚地衣(灰綠垂簾)
     { g: cone(0.9, 3.6, 4), y: 62, px: -4.2, rx: Math.PI, c: 0x9db89d },
     { g: ico(3), y: 88, px: 3.2, sy: 0.6, c: 0x529272 },         // 頂部亮青簇
@@ -395,7 +395,7 @@ const GIANT_DEFS = {
     { g: ico(8), y: 76, px: -9.5, sy: 0.5, lib: 'tree/canopy_d8', c: 0x4a8a3e },
     { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x57994a },
     { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x4a8a3e },
-    { g: ico(6), y: 88, sy: 0.6, c: 0x8fa054 },                  // 開花期淡黃冠頂
+    { g: ico(6), y: 88, sy: 0.6, lib: 'tree/canopy_f6', c: 0x8fa054 },   // 開花期淡黃冠頂
     { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
     { g: ico(5), y: 92, px: 4, sy: 0.55, c: 0x63a850 },          // 突出主冠的受光新葉
     { g: ico(1.5), y: 75.5, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(橙紅雙翅果)
@@ -409,7 +409,7 @@ const GIANT_DEFS = {
     { g: cone(5, 12, 7), y: 67, c: 0x2c6242 },
     { g: cone(3.2, 11, 6), y: 77, c: 0x347050 },
     { g: cone(1.6, 9, 5), y: 85, c: 0x2c6242 },
-    { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, lib: 'tree/canopy_d35', c: 0x347050 },
+    { g: ico(3.5), y: 38, px: 4.5, sy: 0.65, lib: 'tree/canopy_e35', c: 0x347050 },
     { g: ico(3.5), y: 34, px: -3.9, sy: 0.65, lib: 'tree/canopy_d35', c: 0x2c6242 },
     { g: cyl(0.2, 0.35, 6, 4), y: 86, px: -0.4, rz: 0.5, c: 0x9a7a56 },   // 頂梢突出枯枝(基部埋回頂冠內)
     { g: ico(3), y: 50, pz: 5, sy: 0.6, c: 0x3f7a52 },
@@ -1740,6 +1740,23 @@ function rockProbe(g) {
 // 頂面特徵一律「塞不下就縮小到剛好」:sc = min(想要的, 頂面半徑/自身腳印),
 // 縮到下限仍塞不下才放棄;偏移量同步夾在「頂半徑 − 腳印」內,再由 `seat()` 實測腳印四角
 // 是否踩在同一片頂面上(圓頂/窄頂/疊石堆頂拿 topR 猜會半懸空)。
+// ---- 巨岩零件庫(runbook §5f:命令式建造端不開宣告式縫,只做呼叫點守衛)----
+// 名冊 = 這裡一份(audit_siteplan Ⅴ 與 tools/ai3d 的 megaLibDescs 都吃這一份;
+// 節點還沒入庫就不要把名字放進來 —— intake 會把「名冊有、GLB 無」判成缺件紅字)。
+// 節點契約:**單位包絡**(水平徑向 ≤1、縱向 ±1;= fallback ico(1)),呼叫端以
+// mesh.scale 拉到自己的尺寸 ⇒ 同一顆節點服務任意大小的岩塊。
+const MEGA_LIB = {
+  block: ['rock/mega_a', 'rock/mega_b', 'rock/mega_c'],   // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石)
+  // hoodoo: 'rock/hoodoo_a',                             // 蘑菇岩整柱 —— 節點入庫時再開這一列
+};
+// 與 partGeo 同一條紀律的命令式版本:查無此名/載入失敗 ⇒ null,呼叫端以原 primitive
+// 收尾(保險絲,原則 6)。兩點不同:①一律 `.clone()` —— 巨岩群組會過 bakeContactAO
+// (就地 setAttribute 頂點色),共用庫幾何被烤一次,全場每一處引用都帶著別顆岩的 AO
+// (partlib 紀律②);②佈局與碰撞(H/RX/RZ/col/anchor)的算式 MUST NOT 讀庫幾何 ——
+// 庫隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)。亂數紀律:呼叫端 MUST NOT 因
+// 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
+const megaGeo = (name) => { const g2 = name ? libGeo(name) : null; return g2 ? g2.clone() : null; };
+
 function decorateMegalith(g, anchor, rnd, s) {
   if (!anchor) return;
   const probe = rockProbe(g);
@@ -1810,8 +1827,9 @@ function decorateMegalith(g, anchor, rnd, s) {
     const n = 3 + Math.floor(lr() * 3);        // 3~5 顆
     let y = 0, r = 0.78 + lr() * 0.34;
     for (let i = 0; i < n; i++) {
-      const st = new THREE.Mesh(ico(r), rockMat(0x8f8a80));
-      st.scale.y = 0.7;
+      const g2 = megaGeo(MEGA_LIB.block[i % 3]);
+      const st = new THREE.Mesh(g2 || ico(r), rockMat(0x8f8a80));
+      if (g2) st.scale.set(r, r * 0.7, r); else st.scale.y = 0.7;
       // 疊層錯位:上層小石在 ±12% 半徑內偏移(深交疊不開縫);底石不偏(落座)
       const ex = i ? (lr() - 0.5) * 0.24 * r : 0, ez = i ? (lr() - 0.5) * 0.24 * r : 0;
       y += r * 0.7; st.position.set(ex, y, ez); y += r * 0.36;
@@ -2083,10 +2101,18 @@ function synthMegalith(g, rnd) {
       const a = rnd() * Math.PI * 2, d = i === 0 ? 0 : 14 + rnd() * 20;
       const px = Math.cos(a) * d, pz = Math.sin(a) * d;
       const h = 26 + rnd() * 30, r = 5 + rnd() * 4;
-      const neck = new THREE.Mesh(cyl(r * 0.55, r, h, 8), rockMat(shade(0.03)));
-      neck.position.set(px, h / 2, pz); g.add(neck);
-      const cap = new THREE.Mesh(cyl(r * 1.5, r * 0.9, h * 0.16, 8), rockMat(shade(-0.08), 0.15));
-      cap.position.set(px, h * 1.02, pz); g.add(cap);
+      // 整柱庫節點(實拍 hoodoo)?? 頸+帽兩件程序生成 —— 兩條路都零 rnd,枚數不變
+      const g2 = megaGeo(MEGA_LIB.hoodoo);
+      if (g2) {
+        const pil = new THREE.Mesh(g2, rockMat(shade(0.03)));
+        pil.scale.set(r * 1.5, h * 0.55, r * 1.5);
+        pil.position.set(px, h * 0.55, pz); g.add(pil);
+      } else {
+        const neck = new THREE.Mesh(cyl(r * 0.55, r, h, 8), rockMat(shade(0.03)));
+        neck.position.set(px, h / 2, pz); g.add(neck);
+        const cap = new THREE.Mesh(cyl(r * 1.5, r * 0.9, h * 0.16, 8), rockMat(shade(-0.08), 0.15));
+        cap.position.set(px, h * 1.02, pz); g.add(cap);
+      }
       // 頂錨綁「中央柱」帽岩頂面(特徵放置以原點為準;掛在群體最高點必懸空)
       if (i === 0) { topYA = h * 1.1; topRA = r * 1.1; }
       // 每根柱各自是一面可附著側壁(頸部上收 55%),樹菇/侵蝕溝貼各柱的壁
@@ -2190,8 +2216,10 @@ function synthMegalith(g, rnd) {
       const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
       const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
       // 色差收斂 ±0.02:同一岩體的大理岩塊色近,靠明暗交界讀塊面
-      const blk = new THREE.Mesh(ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
-      blk.scale.y = 0.72 + rnd() * 0.2;             // 溶蝕圓稜:壓扁的渾圓塊
+      const g2 = megaGeo(MEGA_LIB.block[i % 3]);   // 庫節點(單位包絡)?? 原 ico —— rnd 枚數不變
+      const blk = new THREE.Mesh(g2 || ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
+      const syF = 0.72 + rnd() * 0.2;               // 溶蝕圓稜:壓扁的渾圓塊
+      if (g2) blk.scale.set(r, r * syF, r); else blk.scale.y = syF;
       blk.rotation.set(rnd() * 0.5, rnd() * Math.PI, rnd() * 0.5);
       // 上塊坐進下塊間隙(半徑 55% 交疊 = 岩塊互倚,不是懸浮串珠);
       // 底塊心壓到 0.2r:超過半顆入土,坡地上也確實著地
@@ -2220,8 +2248,10 @@ function synthMegalith(g, rnd) {
     const nB = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < nB; i++) {
       const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
-      const bd = new THREE.Mesh(ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
-      bd.scale.y = 0.6 + rnd() * 0.3;
+      const g2 = megaGeo(MEGA_LIB.block[(i + 1) % 3]);   // 與 marble 錯開輪替,同岩不同型
+      const bd = new THREE.Mesh(g2 || ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
+      const syF = 0.6 + rnd() * 0.3;
+      if (g2) bd.scale.set(br, br * syF, br); else bd.scale.y = syF;
       bd.rotation.set(rnd() * 0.6, rnd() * Math.PI, rnd() * 0.6);
       // 塊心壓低到 0.1×半徑:過半入土,離群體最遠的崩落塊在坡地上也不懸空
       bd.position.set(Math.cos(a) * d, br * 0.1, Math.sin(a) * d);
@@ -2233,8 +2263,10 @@ function synthMegalith(g, rnd) {
   const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
   for (let i = 0; i < nSub; i++) {
     const r = 10 + rnd() * 14, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.9 + rnd() * 0.3);
-    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
-    m.scale.set(1.2, 0.6 + rnd() * 0.3, 1);
+    const g2 = megaGeo(MEGA_LIB.block[(i + 2) % 3]);
+    const m = new THREE.Mesh(g2 || new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
+    const syF = 0.6 + rnd() * 0.3;
+    if (g2) m.scale.set(1.2 * r, r * syF, r); else m.scale.set(1.2, syF, 1);
     m.position.set(Math.cos(a) * d, 4, Math.sin(a) * d);
     g.add(m);
     RX = Math.max(RX, Math.abs(Math.cos(a) * d) + r * 1.2);
