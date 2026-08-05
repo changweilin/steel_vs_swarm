@@ -1,8 +1,10 @@
 # AI 3D Asset Pipeline — Execution Runbook
 
 > **Audience: AI agents.** This is the operational sequel to `docs/ai3d_asset_plan.md`
-> (decisions + method split, esp. §8 Appendix A) and the two skills
-> `.claude/skills/photo-to-prop-forge/` (static) / `.claude/skills/mech-part-forge/` (dynamic).
+> (decisions + method split, esp. §8 Appendix A) and the skills
+> `.claude/skills/photo-to-prop-forge/` (static contract) / `.claude/skills/mech-part-forge/` (dynamic) /
+> **`.claude/skills/photo-to-3d-pipeline/` (the procedure: photo sourcing → route by geometry class →
+> img→three.js parts or local Blender GLB → gates)**.
 > Read those first; this file tells you **what to run next, where it can run, and how to prove it worked**.
 > Update the Status Ledger and Trial Log below as you complete steps — this file is the hand-off state.
 
