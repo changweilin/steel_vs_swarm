@@ -12,7 +12,8 @@
 //   Ⅱ 公設 —— foot 雙向貼齊零件實算 / 鋪面不掛碰撞 / 碰撞柱實算 / 三款輪替
 //   Ⅲ 樹冠羞避 —— 冠緣不相碰(核心不變式)/ 縮冠而非淘汰 / 下限 / 傾斜方向與有界 / 確定性
 //   Ⅳ 地質排列 —— 走向 ⟂ 傾向 / 平地回 null / 長軸同向 / 排間錯縫 / 由核心往外 / 體格遞減
-//   Ⅴ 消費端單一縫 —— biomes.js 的接線(一份實作一個呼叫點、零共享 rnd、朝向公式共用)
+//   Ⅴ 消費端單一縫 —— biomes.js 的接線(一份實作一個呼叫點、零共享 rnd、朝向公式共用、
+//      AI 零件庫解析只有 build 時的 partGeo 一份且佈局數學只讀保險絲 p.g —— §8 修正 1)
 //   Ⅶ 建物來源信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」)——
 //      每一條會生出建物的路都要有圖資背書:邊界樓過聚落場、備援街區只在查詢失敗時觸發、
 //      市區種子影像在手就走純影像判(手寫 mix 不得憑空生出市區)
@@ -458,6 +459,22 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     'GIANT_DEFS 沒有手寫的冠幅欄(推導值 MUST NOT 手寫)');
   ok(/parameters/.test(strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')))),
     'giantCrownR 由零件表的幾何參數推導(不是抄一組常數)');
+  // AI 零件庫消費端縫(2026-08-05;docs/ai3d_asset_plan.md §8 修正 1):
+  // 解析只有 build 時的 partGeo 一份(模組載入期 VEG_DEFS 建表早於 GLB 抓取,表內解析恆
+  // miss);佈局數學(冠幅/擺動分母)MUST 只讀保險絲 `p.g` —— 庫幾何隨載入成敗而異,
+  // 佈局讀它 = 跨客戶端逐位元分家(§2.3),intake 契約(GLB 外廓 ≤ fallback)讓保險絲恆保守。
+  {
+    const bioC = strip(bio);
+    ok((bioC.match(/libGeo\(/g) || []).length === 1
+      && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC),
+      'AI 零件庫解析只有 partGeo 一份(build 時;p.g 是保險絲)');
+    ok(/new THREE\.InstancedMesh\(partGeo\(part\)/.test(bioC),
+      '植被消費迴圈畫的是 partGeo 解析結果(載入失敗退回保險絲 = 舊畫面)');
+    const crownSrc = strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')));
+    const spanSrc = strip(bio.slice(bio.indexOf('function vegSpan'), bio.indexOf('function buildVegMeshes')));
+    ok(!/libGeo|partGeo|\.lib\b/.test(crownSrc) && !/libGeo|partGeo|\.lib\b/.test(spanSrc),
+      '佈局數學(giantCrownR / vegSpan)只讀保險絲 p.g:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)');
+  }
   // 羞避傾斜吃既有 tx/tz 剛體通道(A27)
   ok(/cand\.lean\[0\]/.test(bio) && /cand\.lean\[1\]/.test(bio), '羞避傾斜併進既有 tx/tz(剛體通道,A27)');
   // 公設不進權威幾何以外的地方:鋪面沒有登記碰撞(只有 civicColliders 那一條路)

@@ -24,12 +24,11 @@
 //   ⓓ `if (strc || brg) biome = 'urban';` 改回 `if (strc)` ⇒ Ⅲ 紅(橋面鋪泥土/水色)。
 //   ⓔ 漸縮帶起點高度改吃 `terrain.heightAt(...)` 而非結構路面高 ⇒ Ⅳ 紅(接合處高差不貼合)。
 //   ⓕ 漸縮帶的邊界/撞山跳過條件任一刪掉 ⇒ Ⅳ 紅(楔形伸出地圖 / 沿山坡爬上去)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// 讀原文 MUST 走 readSrc(㋑):CRLF 檢出的工作區裡,逐行剝註解 `//.*$` 靜默失效,
+// 註解裡提到的 dropLaneBridges 會被算進「恰一份實作一個呼叫點」的計數(2026-08-05 實測紅字)。
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
