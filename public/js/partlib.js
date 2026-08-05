@@ -24,9 +24,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { markShared } from './toon.js';
 
 // 家族清單 = 額度:每族一支 GLB(`assets/models/parts/{family}.glb`),按需再加。
-// 目前為空 ⇒ `loadPartLibs()` 是 no-op、`libGeo` 恆回 null = 今日畫面逐位元不變
-// (P1 的目的就是證明保險絲成立;P2 靜態試點起才放入第一族)。
-export const PART_LIBS = [];
+// P2c 首族 rock(2026-08-05:SF3D 冰川漂礫 + 裂面裁切 → collapse_a/facet_a/facet_b,
+// 消費端 = beacons cairn);載入失敗整族走 fallback = 舊畫面(保險絲,原則 6)。
+export const PART_LIBS = ['rock'];
 
 const _geos = new Map();   // 'family/nodeName' -> BufferGeometry(已 markShared)
 let _loaded = null;        // 單航班(與 main.js warmModels 同一套守衛語意)
