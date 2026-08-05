@@ -4923,8 +4923,22 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
             // 地下道的下沉剖面是曲線,拿洞口瞬時斜率往深處線性外推會偏掉好幾公尺。
             const depth = Math.min(e1 - e0, 40);
             const sIn = Math.max(0, Math.min(total, s + sgn * depth));
+            // 地下道:打洞/縮零/collar 的路面參考 fp(每 2m 取樣 tFloorAt 同一份剖面)——
+            // 下沉剖面是曲線、引道在洞外還一路爬升,線性 slope 外推會把「引道路面之下」的
+            // 地形誤刪 ⇒ 洞緣跑進斷面中央、collar 沿它織出橫跨洞口的混凝土殘片(2026-08-05
+            // 使用者回報)。取樣範圍兩端各加 FP_PAD:punch 的重疊判定含「部分在走廊外」的
+            // 三角形,遠端頂點可落在走廊外一個地形格對角(~12m)—— fp 蓋不到就被夾成端點值,
+            // 爬升段照樣誤刪。山體隧道刻意不帶 fp(平直剖面下線性外推本來就精確 ⇒ 打洞行為
+            // 逐位元不變)。
+            const FP_PAD = 16;
+            const fpN = Math.ceil((depth + TUN.MOUTH_OUT + FP_PAD * 2) / 2);
+            const fp = under
+              ? Array.from({ length: fpN + 1 }, (_, k) =>
+                  tFloorAt(Math.max(0, Math.min(total, s + sgn * (k * 2 - TUN.MOUTH_OUT - FP_PAD)))))
+              : undefined;
             portals.push({ x: ex, z: ez, y: tFloorAt(s), ry: Math.atan2(-ddx * sgn, -ddz * sgn), w: hw * 2 + 2, h: TUN.CLEAR + 1,
                            hw, depth, mouth: true, tags: way.tags,   // tags:洞口匾額的字(worldtext)
+                           ...(fp ? { fp, fpStep: 2, fpOut: TUN.MOUTH_OUT + FP_PAD } : {}),
                            slope: sIn === s ? 0 : (tFloorAt(sIn) - tFloorAt(s)) / Math.abs(sIn - s) });
           }
         }
@@ -5520,6 +5534,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       floorY: p.y, slope: p.slope, clear: TUN.CLEAR, lift: ROAD_LIFT,
       // 門洞的走廊往洞**外**再延 MOUTH_OUT(明隧道/引道段的 bore 不延:它的「外」是隔壁小段)
       out: p.mouth ? TUN.MOUTH_OUT : 0,
+      // 地下道下沉剖面取樣(見 portals.push;無 fp 的 bore 在 punch 端逐位元走舊線性外推)
+      fp: p.fp, fpStep: p.fpStep, fpOut: p.fpOut,
     })), covers)
     : { rims: [], touched: [] };
   // 打洞能力是否具備(2026-07-27 金龍隧道「出入口只有一側」修復):punchPortalHoles 的 touched[pi]=true
@@ -5538,19 +5554,39 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       const ca = Math.cos(p.ry), sa = Math.sin(p.ry);
       const xMax = p.hw - INSET;
       // 洞緣點 → 隧道斷面矩形(地板~天花 × ±hw)上的對應點;縱向也夾在管身範圍內
-      // (管身只存在於 −depth ≤ z ≤ 0,投到管外 = 貼到不存在的面 = 漏)
+      // (管身只存在於 −depth ≤ z ≤ 0,投到管外 = 貼到不存在的面 = 漏)。
+      // 路面參考與 terrain.punchPortalHoles 的 floorAt 同一份:地下道帶 fp(下沉曲線剖面),
+      // 其餘 bore 走線性內插(逐位元同舊制)—— 兩端分家 = collar 內環貼錯高度、洞緣漏縫。
+      const bFloor = (d) => {
+        if (p.fp?.length > 1) {
+          const t = Math.max(0, Math.min(p.fp.length - 1, (d + p.fpOut) / p.fpStep));
+          const i = Math.min(p.fp.length - 2, Math.floor(t));
+          return p.fp[i] + (p.fp[i + 1] - p.fp[i]) * (t - i);
+        }
+        return p.y + p.slope * d;
+      };
       const proj = (x, y, z) => {
         const dx = x - p.x, dz = z - p.z;
         const lx = dx * ca - dz * sa;
         const lz = Math.min(-0.2, Math.max(-p.depth, dx * sa + dz * ca));
-        const fy = p.y + p.slope * (-lz);
+        const fy = bFloor(-lz);
         const qx = Math.max(-xMax, Math.min(xMax, lx));
         const qy = Math.max(fy, Math.min(fy + TUN.CLEAR - INSET, y));
         return [p.x + qx * ca + lz * sa, qy, p.z - qx * sa + lz * ca];
       };
       // 視線側參考點:洞口上方 —— 洞是朝「門洞方向 + 上方」開的,法線一律朝這側(打光才對)
       const eye = [p.x, p.y + TUN.CLEAR + 12, p.z];
+      // fp bore(地下道):貼著路面的 rim 邊不織裙 —— 引道爬升段被刪三角形的「路面高」邊界
+      // 沿著整條走廊,把它投影回洞口斷面就是一片浮在路面上方的混凝土殘片;那條邊界下方是
+      // 保留的路塹底 + 路面緞帶,本來就無縫可封(2026-08-05 使用者回報「洞口殘留混凝土」)。
+      // 山體隧道無 fp ⇒ 恆 false,collar 逐位元舊制。
+      const nearRoad = (x, y, z) => {
+        if (!(p.fp?.length > 1)) return false;
+        const d = -((x - p.x) * sa + (z - p.z) * ca);
+        return y <= bFloor(d) + ROAD_LIFT + 0.6;
+      };
       for (const [ax, ay, az, bx, by, bz] of rim) {
+        if (nearRoad(ax, ay, az) && nearRoad(bx, by, bz)) continue;
         const [ux, uy, uz] = proj(ax, ay, az);
         const [vx, vy, vz] = proj(bx, by, bz);
         // 兩端都退化(洞緣本來就落在管身斷面內,如路面下方那圈)= 零面積裙,跳過

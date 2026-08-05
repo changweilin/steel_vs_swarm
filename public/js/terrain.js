@@ -946,9 +946,20 @@ export async function buildTerrain(cfg, onProgress) {
       }
       return true;
     };
-    /** 該 bore 在此點深度的路面高(隧道路面是平直內插,slope 為定值) */
-    const floorAt = (b, x, z) => b.floorY
-      + b.slope * Math.min(b.depth, Math.max(0, -((x - b.x) * b.sa + (z - b.z) * b.ca)));
+    /** 該 bore 在此點深度的路面高。山體隧道 = 平直內插(floorY + slope × 進洞深度);
+     *  地下道另帶 fp 剖面取樣(進洞深度自 −fpOut 起、每 fpStep 一枚)—— 下沉剖面是曲線、
+     *  引道在洞外還一路爬升,線性外推在 MOUTH_OUT 外延帶會把「引道路面之下」的地形誤刪:
+     *  洞緣(rim)因此跑進斷面中央,collar 沿著它織出橫跨洞口的混凝土殘片
+     *  (2026-08-05 使用者回報「洞口殘留混凝土」的成因)。無 fp 的 bore 逐位元同舊制。 */
+    const floorAt = (b, x, z) => {
+      const d = -((x - b.x) * b.sa + (z - b.z) * b.ca);
+      if (b.fp?.length > 1) {
+        const t = Math.max(0, Math.min(b.fp.length - 1, (d + b.fpOut) / b.fpStep));
+        const i = Math.min(b.fp.length - 2, Math.floor(t));
+        return b.fp[i] + (b.fp[i + 1] - b.fp[i]) * (t - i);
+      }
+      return b.floorY + b.slope * Math.min(b.depth, Math.max(0, d));
+    };
     /**
      * 通用打洞:index 就地壓實(寫入游標恆 ≤ 讀取游標,不會覆蓋未讀資料)+ drawRange 收尾 ——
      * 不重配緩衝、不動 position/normal。回傳 own 陣列(供地形取洞緣)或 null。
@@ -969,9 +980,21 @@ export async function buildTerrain(cfg, onProgress) {
           const b = B[k];
           // ① 三角形與走廊斷面重疊(含「跨越但無頂點在內」——洞口/明隧道端點的常見情形)
           if (!triBore(b, P[i0], P[i0 + 2], P[i1], P[i1 + 2], P[i2], P[i2 + 2])) continue;
-          const fy = floorAt(b, mx, mz);
-          if (yHi <= fy + b.lift + 0.15) continue;      // ② 全在路面之下
-          if (yLo >= fy + b.clear + 0.25) continue;     // ③ 全在天花之上
+          // ②③ 高差判定:fp bore(地下道)MUST 逐頂點對「該頂點自己所在深度」的路面 ——
+          // 引道是爬升坡,地形格三角形寬 ~8.3m,拿質心一枚樣本比對整片的 yHi/yLo,遠端頂點
+          // 的路面比質心高 ⇒「引道路面之下」的路塹底被系統性誤刪,rim 因此跑到洞外路面上、
+          // collar 沿它織出橫跨洞口的殘片(2026-08-05 使用者回報)。無 fp(山體隧道/明隧道)
+          // 維持質心判定 = 逐位元舊制(平直剖面下兩者差異只在 slope 那一點點,行為已凍結)。
+          if (b.fp?.length > 1) {
+            const f0 = floorAt(b, P[i0], P[i0 + 2]), f1 = floorAt(b, P[i1], P[i1 + 2]), f2 = floorAt(b, P[i2], P[i2 + 2]);
+            const lo = b.lift + 0.15, hi = b.clear + 0.25;
+            if (P[i0 + 1] <= f0 + lo && P[i1 + 1] <= f1 + lo && P[i2 + 1] <= f2 + lo) continue;   // ② 全在路面之下
+            if (P[i0 + 1] >= f0 + hi && P[i1 + 1] >= f1 + hi && P[i2 + 1] >= f2 + hi) continue;   // ③ 全在天花之上
+          } else {
+            const fy = floorAt(b, mx, mz);
+            if (yHi <= fy + b.lift + 0.15) continue;      // ② 全在路面之下
+            if (yLo >= fy + b.clear + 0.25) continue;     // ③ 全在天花之上
+          }
           touched[k] = true;                            // 重疊 bore 全部記帳(認領只給第一座)
           if (own[t] < 0) { own[t] = k; cut++; }
         }
