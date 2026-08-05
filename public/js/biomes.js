@@ -4,7 +4,7 @@
 //            + 神木群落:全球實存 >65m 巨樹樹種,同種群聚、株高各異(GIANT_DEFS),
 //              樹身掛鳥巢/樹屋/附生植物/垂藤(GIANT_DECO)
 //   裸露地 — 芒草 / 箭竹 / 灌木 / 多肉植物
-//            + 巨岩地標:世界名岩取材(酋長岩/烏魯魯/大霸尖山…,MEGALITHS)
+//            + 巨岩地標:世界名岩取材(烏魯魯/大霸尖山/獅子岩…,MEGALITHS)
 //              與特徵基因合成岩(synthMegalith);岩上有電塔/石屋/疊石/鳥巢/斷崖樹
 //   市區   — 依 OSM 圖資設置建物(住宅/商辦/醫院/學校/車站/寺廟/教堂/清真寺/
 //            博物館/電塔/工廠/城堡/燈塔/佛塔/體育場),離線時退回程序生成街區;
@@ -1313,10 +1313,10 @@ const LANDMARKS = {
 };
 
 // ---- 巨岩地標(裸露地;取材世界知名岩體/巨石遺跡)----
-// 酋長岩(優勝美地花崗岩壁)/ 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
+// 烏魯魯(艾爾斯岩)/ 奧古斯都山(單體岩山)/
 // 大霸尖山(酒桶狀霸尖)/ 摩艾石像群 / 馬丘比丘梯田遺跡 / 巨石陣 /
 // 百內三塔(花崗岩尖塔群)/ 張家界石柱(石英砂岩方柱)/ 邁泰奧拉(修道院岩峰)/
-// 獅子岩(斯里蘭卡 Sigiriya)/ 佩特拉(岩鑿神殿立面)。
+// 獅子岩(斯里蘭卡 Sigiriya)。共 10 座(酋長岩/佩特拉 2026-08-05 因方盒量體移除,見表內註)。
 // 公稱高即真實比例(×OVER.mega = 1;放置縮放後約 90~160m);col = 近似碰撞柱(× s),
 // s = 放置縮放區間。岩面走 envMat + 頂部苔蘚投影(botw_plan 岩石要點)。
 function rockMat(color, moss = 0) {
@@ -1326,25 +1326,10 @@ function rockMat(color, moss = 0) {
 }
 const MEGALITHS = {
   // col.r 一律涵蓋岩體實際外廓(含側肩/山腳錐):低估半徑 = 其他物件沉進崖錐
-  elcap: { col: { r: 38, h: 112 }, s: [0.8, 1.4],
-    anchor: { topY: 112, topR: 15, side: { y: [30, 95] } },
-    build: (g, rnd) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(52, 112, 30), rockMat(0xc9c4b8, 0.3));
-    wall.position.y = 56; wall.rotation.y = 0.06; g.add(wall);            // 主岩壁
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(24, 96, 22), rockMat(0xbdb6a8, 0.25));
-    nose.position.set(20, 48, 8); nose.rotation.y = 0.5; g.add(nose);     // 鼻樑稜線
-    const shoulder = new THREE.Mesh(new THREE.BoxGeometry(26, 64, 24), rockMat(0xd2ccbe, 0.35));
-    shoulder.position.set(-24, 32, 4); shoulder.rotation.y = -0.35; g.add(shoulder);
-    const nStreak = 3 + ((rnd() * 3) | 0);
-    for (let i = 0; i < nStreak; i++) {                                   // 垂直岩溝墨線(條數/粗細不定)
-      const streak = new THREE.Mesh(new THREE.BoxGeometry(1.1 + rnd() * 1.1, 70 + rnd() * 30, 1.2), rockMat(0x8f8a7e));
-      streak.position.set(-16 + i * 10 + rnd() * 4, 52, 14.9);
-      streak.rotation.z = (rnd() - 0.5) * 0.05;
-      g.add(streak);
-    }
-    const scree = new THREE.Mesh(cone(30, 14, 9), rockMat(0xb5ac9a));
-    scree.position.y = 5; scree.scale.z = 0.7; g.add(scree);              // 山腳碎石坡
-  } },
+  // 2026-08-05 使用者定案「方形巨石非常不自然,請移除」:主量體是**素面大方盒**的兩座名岩
+  // (elcap 酋長岩三大盒、petra 佩特拉紅砂岩崖盒)整組退場 —— 露頭群「同片同岩」會讓
+  // 一整片 3~4 顆同款方盒排在一起,遠看就是幾個貨櫃。MUST NOT 以 BoxGeometry 當名岩主量體
+  // 復辟(小構件:楣樑/梯板/屋舍/稜線墨線不在此限);合成 11 型全走 cyl/ico/cone,不受影響。
   uluru: { col: { r: 88, h: 62 }, s: [1.0, 1.7],   // 含東側低伏 hump(px 66 + r31)
     anchor: { topY: 60, topR: 24, side: { y: [12, 42] } },
     build: (g, rnd) => {
@@ -1664,54 +1649,6 @@ const MEGALITHS = {
       step.position.set(Math.cos(aa) * (rr - 0.9), sy2, Math.sin(aa) * (rr - 0.9));   // 沉半塊(1.8/2)
       step.rotation.y = -aa;
       g.add(step);
-    }
-  } },
-  petra: { col: { r: 46, h: 64 }, s: [0.9, 1.4],
-    anchor: { topY: 62, topR: 14, side: null },   // 沙漠砂岩,側壁不長樹
-    // 佩特拉卡茲尼神殿(約旦):玫瑰紅砂岩崖 + 岩鑿雙層柱廊立面(立面構件貼崖面微凸)
-    build: (g, rnd) => {
-    const cliff = new THREE.Mesh(new THREE.BoxGeometry(56, 62, 30), rockMat(0xb37360, 0.04));
-    cliff.position.y = 31; cliff.rotation.y = (rnd() - 0.5) * 0.06; g.add(cliff);
-    for (const s of [-1, 1]) {                                               // 兩翼岩體(峽谷壁)
-      const wh = 42 + rnd() * 12;
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(20 + rnd() * 3, wh, 26), rockMat(0xa8685a, 0.06));
-      wing.position.set(s * (29 + rnd() * 2), wh / 2, -5 - rnd() * 3);
-      wing.rotation.y = s * (0.28 + rnd() * 0.12); g.add(wing);
-    }
-    const F = 15;                                                            // 立面基準(崖正面)
-    for (const [w2, h2, z2] of [[30, 2, 3], [26, 2, 1.5]]) {                 // 入口台階
-      const stp = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, 6), rockMat(0xc08370));
-      stp.position.set(0, h2 / 2 + (z2 === 1.5 ? 2 : 0), F + z2 - 3); g.add(stp);
-    }
-    for (let i = 0; i < 6; i++) {                                            // 下層六柱柱廊
-      const col2 = new THREE.Mesh(cyl(1.0, 1.2, 13, 8), rockMat(0xc98d78));
-      col2.position.set(-12.5 + i * 5, 10.5, F - 0.2); g.add(col2);
-      const cap2 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1, 2.3), rockMat(0xc98d78));
-      cap2.position.set(-12.5 + i * 5, 17.5, F - 0.2); g.add(cap2);
-    }
-    const arch = new THREE.Mesh(new THREE.BoxGeometry(29, 2.4, 2.6), rockMat(0xc48776));
-    arch.position.set(0, 19.2, F - 0.3); g.add(arch);                        // 下層楣樑
-    const ped = new THREE.Mesh(cone(15, 4.6, 4), rockMat(0xbe8272));
-    ped.rotation.y = Math.PI / 4; ped.scale.z = 0.16;
-    ped.position.set(0, 22.6, F - 0.6); g.add(ped);                          // 三角楣
-    const door = new THREE.Mesh(new THREE.BoxGeometry(6, 9.5, 2), rockMat(0x2a1e1a));
-    door.position.set(0, 6.8, F - 1.2); g.add(door);                        // 幽深門洞
-    const tho = new THREE.Mesh(cyl(3.2, 3.4, 9, 8), rockMat(0xc98d78));
-    tho.position.set(0, 30, F - 0.8); g.add(tho);                            // 上層中央圓亭(半凸出崖面 = 岩鑿感)
-    const thr = new THREE.Mesh(cone(3.9, 3, 8), rockMat(0xb37360));
-    thr.position.set(0, 36, F - 0.8); g.add(thr);
-    for (const s of [-1, 1]) {                                               // 上層側龕樓 + 半楣
-      const nich = new THREE.Mesh(new THREE.BoxGeometry(6.5, 10, 3), rockMat(0xc08370));
-      nich.position.set(s * 10.5, 29.5, F - 1); g.add(nich);
-      const hp = new THREE.Mesh(cone(4.4, 2.6, 4), rockMat(0xbe8272));
-      hp.rotation.y = Math.PI / 4; hp.scale.z = 0.16;
-      hp.position.set(s * 10.5, 35.6, F + 0.1); g.add(hp);
-    }
-    const nRib = 3 + ((rnd() * 3) | 0);                                      // 崖面垂直風化墨線(立面以外;
-    for (let i = 0; i < nRib; i++) {                                         //  沉半深 —— 崖體微轉不會讓墨線外浮)
-      const rx2 = (rnd() < 0.5 ? -1 : 1) * (18 + rnd() * 8);
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(1.3, 20 + rnd() * 16, 1), rockMat(0x8f5a4c));
-      rib.position.set(rx2, 40 + rnd() * 12, F - 0.55); g.add(rib);
     }
   } },
 };
