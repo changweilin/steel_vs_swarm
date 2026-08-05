@@ -7,6 +7,15 @@
   "factor": 1.0,
   "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)",
   "families": {
+    "megalith": {
+      "measured_what": "synthMegalith 逐顆合成巨岩(沿用頂層 root 那一次 11 型 × 200 seeds 的量測;本族管的是「一顆巨岩裡的庫零件」的逐件上限,GLB 檔案本身仍在 rock 族)",
+      "measured_max_tris": 1071,
+      "max_lib_parts_per_rock": 14,
+      "whole_factor": 4.0,
+      "factor": 0.2857142857142857,
+      "justification": "逐件上限 = whole_factor × 最重整顆(1071)÷ 同顆最多庫零件數(marble 8 塊 + 崩落塊 4 + 伴生丘 2 = 14,由 synthMegalith 原文的迴圈上限數出來)≈ 306 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。",
+      "staleness": "synthMegalith 的 marble/崩落塊/伴生丘迴圈上限一改 MUST 重數 max_lib_parts_per_rock。"
+    },
     "tree": {
       "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05)",
       "measured_max_tris": 402,

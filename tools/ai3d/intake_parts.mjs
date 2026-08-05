@@ -20,7 +20,7 @@
 //        (省略 --glb = 掃 PART_LIBS 列出的每一族)
 import { existsSync } from 'node:fs';
 import {
-  beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs,
+  beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs, megaLibDescs,
   fbEnvelope, parseGlb, nodeExtent, glbPath, triBudget,
 } from './parts_src.mjs';
 
@@ -31,10 +31,11 @@ const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail
 const B = beaconsPure(beaconsSrc());
 const PART_LIBS = partLibs();
 const bio = bioLibDescs();
+const mega = megaLibDescs();
 
 // family → [{ name, fb, kind, … }]
 const libDescs = new Map();
-const all = [...collectLibDescs(B.KIND_PARTS).map((d) => ({ ...d, consumer: 'beacons' })), ...bio.rows];
+const all = [...collectLibDescs(B.KIND_PARTS).map((d) => ({ ...d, consumer: 'beacons' })), ...bio.rows, ...mega.rows];
 for (const d of all) {
   if (!libDescs.has(d.family)) libDescs.set(d.family, []);
   libDescs.get(d.family).push(d);
@@ -64,10 +65,12 @@ for (const gp of targets) {
   ok(nodes.size > 0, `具名 mesh 節點 ${nodes.size} 個(${[...nodes.keys()].join(', ')})`);
   const descs = libDescs.get(fam) || [];
   ok(descs.length > 0, `消費端有引用這一族的 lib 描述子(${descs.length} 筆)`);
-  const cap = budget?.capOf(fam);
   const perKind = new Map();   // kind → Σ 庫零件三角形(逐株閘用)
   const seen = new Set();
-  for (const { name, fb, kind, consumer } of descs) {
+  for (const { name, fb, kind, consumer, budgetFam } of descs) {
+    // 逐件預算依**消費角色**取(巨岩塊走 families.megalith:一顆巨岩最多 14 件庫零件,
+    // 上限比同一支 GLB 裡的 beacons 疊石緊得多 —— 族相同、角色不同、預算不同)
+    const cap = budget?.capOf(budgetFam || fam);
     const node = nodes.get(name.split('/').slice(1).join('/'));
     if (!node) { ok(false, `${kind}:${name} 在 GLB 裡有對應節點(缺 = 執行期整件走 fallback)`); continue; }
     perKind.set(kind, (perKind.get(kind) || 0) + node.tris);
@@ -84,7 +87,7 @@ for (const gp of targets) {
     if (!budget) ok(false, `${name}:tri_budget.json 存在(預算 MUST 量測,不准手寫)`);
     else if (!seen.has(name)) {
       seen.add(name);
-      ok(node.tris <= cap, `${name}:三角形 ${node.tris} ≤ 單件預算 ${cap}(${budget.whatOf(fam)})`);
+      ok(node.tris <= cap, `${name}:三角形 ${node.tris} ≤ 單件預算 ${cap}(${budget.whatOf(budgetFam || fam)})`);
     }
   }
   // ③ 逐株(逐款)閘:單件合格 ≠ 整株合格 —— 一株神木十幾件,全換掉每一件都「合格」卻是 20 倍

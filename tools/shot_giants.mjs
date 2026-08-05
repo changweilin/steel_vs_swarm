@@ -16,7 +16,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1000, height: 980 } });
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
-await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
+await page.goto('http://localhost:8666', { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async () => {
   const THREE = await import('three');

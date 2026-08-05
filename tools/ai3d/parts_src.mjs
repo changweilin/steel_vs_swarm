@@ -90,6 +90,25 @@ export function bioLibDescs(src = biomesSrc()) {
   return { rows: out, srcLibCount: (bare.match(/\blib:\s*'/g) || []).length, GIANT_DEFS, VEG_DEFS };
 }
 
+/**
+ * 巨岩零件庫名冊(第三個消費端;`biomes.js MEGA_LIB` —— 命令式建造端 synthMegalith/
+ * decorateMegalith 的呼叫點守衛)。契約:**單位包絡** = fallback `['ico', 1]`(水平徑向 ≤1、
+ * 縱向 ±1),呼叫端以 mesh.scale 拉尺寸 ⇒ 入庫閘照一般規則驗,只是包絡恆為單位球。
+ * 預算走 `families.megalith`(一顆巨岩最多 14 件庫零件 ⇒ 逐件上限比 rock 族緊得多)。
+ */
+export function megaLibDescs(src = biomesSrc()) {
+  const MEGA_LIB = new Function(`${blockOf(src, 'MEGA_LIB')}; return MEGA_LIB;`)();
+  const names = Object.values(MEGA_LIB).flat().filter(Boolean);
+  return {
+    MEGA_LIB,
+    rows: names.map((name) => ({
+      name, family: name.split('/')[0], node: name.split('/').slice(1).join('/'),
+      fb: ['ico', 1], kind: 'megalith', index: 0, table: 'MEGA_LIB',
+      consumer: 'biomes-mega', budgetFam: 'megalith', p: [0, 0, 0],
+    })),
+  };
+}
+
 /** `PART_LIBS = [...]`(partlib.js 是唯一真相;這裡只是把它從原文讀出來給 Node 端用) */
 export function partLibs(src = readSrc('public', 'js', 'partlib.js')) {
   const m = src.match(/export const PART_LIBS = \[([^\]]*)\]/);
