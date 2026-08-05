@@ -12,7 +12,7 @@
 //
 // 用法:node tools/audit_lance_hit.mjs
 
-import { readFileSync } from 'node:fs';
+import { readSrc } from './audit_src.mjs';
 import { BattleSim } from '../server/sim.js';
 import {
   UNITS, CHARACTERS, heroWeapon, aoeClass, lanceR, LANCE, MAPGEO, LOS, hitR, hitH, TARGET_R, dmgFalloff,
@@ -264,7 +264,7 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
 //   ② 外層圓柱只畫判定半徑的一部分(舊 `w: r * 0.45`)⇒ 玩家看到細線、判定卻寬一倍
 //   ③ 演出端改吃 lanceR 以外的來源
 {
-  const game = readFileSync(new URL('../public/js/game.js', import.meta.url), 'utf8');
+  const game = readSrc('public', 'js', 'game.js');
   const vis = game.slice(game.indexOf('_lanceVisual(from, to, def, side'));
   const body = vis.slice(0, vis.indexOf('\n  }\n'));
   assert(/const r = lanceR\(def\);/.test(body),
@@ -285,7 +285,7 @@ log('— 直線貫穿命中判定(sim._lanceHits)—');
 // 照樣跳傷害數字。只有 line 類重武器有垂直帶(輕武器回報目標 id、扇形沒有垂直帶)⇒ 症狀集中
 // 在反器材/貫穿砲,而建築是唯一「固定站在兵線上任你從高處狙」的目標。
 {
-  const src = readFileSync(new URL('../server/sim.js', import.meta.url), 'utf8');
+  const src = readSrc('server', 'sim.js');
   const bare = src.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
   assert((bare.match(/_lanceBandY\(/g) || []).length === 2,
     '_lanceBandY 一份定義 + 一個消費端(垂直帶換框只有這一個縫)');

@@ -35,7 +35,7 @@
 // 用法:node tools/audit_lane_scenarios.mjs [--only=jinlong,london] [--json=out.json]
 //      node tools/audit_lane_scenarios.mjs --probe='25.09,121.54,自強隧道;40.78,-73.97,中央公園'  ← 找新場地用
 // 退出碼:0 = 八種場景各至少有一個場地;1 = 有場景無場地(需要新增測試場地)
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VENUES, venueConfig, SCEN_LABEL } from '../public/js/venues.js';
 // MAPGEO 只有 `probePoint` 用得到(探測 bbox 的邊長換算)。2026-08-03 抽出 venue_field.mjs

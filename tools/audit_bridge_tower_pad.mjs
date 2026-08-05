@@ -8,13 +8,10 @@
 //
 // 跑法:node tools/audit_bridge_tower_pad.mjs   退出碼:0 = 全綠;1 = 有紅字
 // **改完 MUST 反向驗證**:把 TOWER_PAD_AXIS 寫回舊值(10.5)⇒ 「砲塔左右走位」段 MUST 紅字(內建對照組)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { GAME } from '../public/js/data.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
 const DECK_MARGIN = 3.0;   // main.js:62(站立查詢側向容差)—— surfaceAt 用同一值
 const MY_R = 1.43;         // 最大機體地面碰撞半徑(climb.js:MAX_BODY_R)
 

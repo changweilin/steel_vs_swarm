@@ -66,16 +66,13 @@
 // PED_HW / indoor 檢查拿掉、把 dedupeParallelTunnels 候選寫回裸 `tags.tunnel`、把 wallTopAt
 // 寫成恆 undefined(= 拿掉 by)、拿掉 game.js 的 tunnelWallCross 呼叫、把 wallCross 的
 //「內 → 外」判定反向,稽核 MUST 在對應條目紅字。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { LOS, WATER } from '../public/js/data.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
-const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
-const msrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
-const gsrc = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
+const tsrc = readSrc('public', 'js', 'terrain.js');
+const msrc = readSrc('public', 'js', 'main.js');
+const gsrc = readSrc('public', 'js', 'game.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -343,7 +340,7 @@ if (!plan) { console.error('  ✗ 平地基準案例規劃失敗,後續無法驗
   ok(/TUN_COV_MIN/.test(planSrc) && /covOK/.test(planSrc),
     '⑩f 覆蓋區間 MUST 逐點全寬重驗拆縫(covOK;短段以 TUN_COV_MIN 剔除)');
   ok(/hw: hwWay/.test(src), '⑩f carve 呼叫端 MUST 傳 strucHw 半寬(hw: hwWay)');
-  const vfsrc = readFileSync(join(ROOT, 'tools', 'venue_field.mjs'), 'utf8');
+  const vfsrc = readSrc('tools', 'venue_field.mjs');
   ok(/hw: strucHw\(way\.tags\)/.test(vfsrc), '⑩f venue_field.tunnelRunOf MUST 傳同一份 strucHw 半寬');
   ok(/underpassPlan',\n?\s*\{[^}]*TUN_COV_MIN/.test(vfsrc), '⑩f venue_field 的 underpassPlan 抽取 MUST 注入 TUN_COV_MIN');
   // g. 洞口打洞的路面參考(2026-08-05 使用者回報「洞口殘留混凝土」):地下道的門洞 bore MUST
@@ -741,7 +738,7 @@ function build(under = true, heightAt = null, natureAt = null) {
   const CARVE = src.slice(src.indexOf('const tunnelRuns = [];'), src.indexOf('terrain.carveTunnels(tunnelRuns'));
   ok(CARVE.length > 0 && /if \(!strucTunnel\(way\.tags\)\) continue;/.test(CARVE),
     'Ⅵ carve 入口(way._tun 唯一寫入迴圈)MUST 用 strucTunnel(way.tags) 閘住,不得退回裸 tags.tunnel');
-  const ssrc = readFileSync(join(ROOT, 'tools', 'audit_lane_scenarios.mjs'), 'utf8');
+  const ssrc = readSrc('tools', 'audit_lane_scenarios.mjs');
   ok((ssrc.match(/strucTunnel\(w(ay)?\.tags\)/g) || []).length >= 4,
     'Ⅵ 場景稽核 MUST 同步吃 strucTunnel(①/⑦ 判定與候選診斷同源,否則稽核比執行期多洞)');
 }

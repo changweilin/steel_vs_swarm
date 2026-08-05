@@ -35,13 +35,11 @@
 // 都自帶反向對照:把判定改回壞版,對應條目 MUST 立刻紅字。
 // 跑法:`node tools/audit_layer_block.mjs`
 // 退出碼:0 = 全綠;1 = 有紅字
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-// 換行一律正規化成 LF:工作副本在 Windows 上是 CRLF,方法尾端的 `\n  }` 比對會整組失手
-const read = (f) => readFileSync(join(ROOT, 'public', 'js', f), 'utf8').replace(/\r\n/g, '\n');
+// 讀原文一律走 `readSrc`(§5 通則 ㋑;換行正規化成 LF)——
+// 工作副本在 Windows 上是 CRLF,方法尾端的 `\n  }` 比對會整組失手
+const read = (f) => readSrc('public', 'js', f);
 const G = read('game.js');
 const M = read('main.js');
 const B = read('biomes.js');
@@ -189,7 +187,7 @@ console.log('\n=== Ⅳ 爆點的離地基準面與結構層(彈頭現在真的�
   // 橋面刻意不報 lev 1:伺服器 _unitLev 讓塔/主堡恆為 0,報 1 = 橋上砲塔對 AoE 完全免傷
   ok(/lev: inTun \? 2 : 0/.test(G),
     'Ⅳ 爆點 lev MUST 只報 0/2 —— 橋面報 1 會讓橋上砲塔被 _slabSep 判成板體另一側 = AoE 免傷(刻意設計)');
-  const sim = readFileSync(join(ROOT, 'server', 'sim.js'), 'utf8');
+  const sim = readSrc('server', 'sim.js');
   ok(/if \(e\.kind === 'tower' \|\| e\.kind === 'base'\) return 0;/.test(sim),
     'Ⅳ 上述「刻意不報 1」的前提 = sim._unitLev 讓塔/主堡恆為 lev 0(前提變了 MUST 重審這條)');
 }

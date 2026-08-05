@@ -25,16 +25,13 @@
 // 把抽樣改成「淘汰後才抽」、把 `_blockerHitT` 寫回純圓柱,稽核 MUST 在對應條目紅字。
 // (前兩者的對照組已內建於 Ⅰ-⑧ / Ⅰ-③,第三者內建於 Ⅲ。)
 
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { BattleSim } from '../server/sim.js';
 import { SOLDIER_H, HERO_SIZE, MAPGEO, SLOPE, slopeDeg, slopeBlocked } from '../public/js/data.js';
+import { readSrc as read } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-// LF 正規化:git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。全檔的跨行切片標記(DRAW、pickMethod
-// 的 `\n  }\n`、箭頭區塊的 `\n}\n`、_stepClimb 的正則)一律以 `\n` 書寫,不正規化就只在 Linux 綠。
-const read = (...p) => readFileSync(join(ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+// 讀原文一律走 `readSrc`(§5 通則 ㋑):git 存 LF,但 autocrlf 下 Windows 工作區是 CRLF。全檔的跨行
+// 切片標記(DRAW、pickMethod 的 `\n  }\n`、箭頭區塊的 `\n}\n`、_stepClimb 的正則)一律以 `\n` 書寫,
+// 不正規化就只在 Linux 綠。
 const climbSrc = read('public', 'js', 'climb.js');
 const gameSrc = read('public', 'js', 'game.js');
 const mainSrc = read('public', 'js', 'main.js');

@@ -15,13 +15,10 @@
 //
 // 手法比照 `audit_cc_flash.mjs`:曲線直接 import(data.js 是純模組),game.js 的方法**抽執行原文**
 // 評估(three 走 CDN、Node 端 import 不了整支;抄一份公式進稽核就永遠會通過)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM, MAPGEO, AIR } from '../public/js/data.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
+const src = readSrc('public', 'js', 'game.js');
 
 /** 抽出 class 方法的原文(含大括號區塊);與 audit_cc_flash.mjs 同一手法 */
 const grab = (name) => {
@@ -65,7 +62,7 @@ console.log('■ Ⅰ 坡度常數(平緩帶 = 兵線坡度限制;阻擋角推導
   t('前瞻距離 PROBE_M > 0', SLOPE.PROBE_M > 0);
   t('人造鋪面門檻 STRUCT_M > 0', SLOPE.STRUCT_M > 0);
   // data.js 原文:阻擋角 MUST 是推導回填而非字面量
-  const dsrc = readFileSync(join(ROOT, 'public', 'js', 'data.js'), 'utf8');
+  const dsrc = readSrc('public', 'js', 'data.js');
   t('data.js 以 EASE_DEG × BLOCK_F 回填 BLOCK_DEG(MUST NOT 手寫角度)',
     /SLOPE\.BLOCK_DEG\s*=\s*SLOPE\.EASE_DEG\s*\*\s*SLOPE\.BLOCK_F;/.test(dsrc));
   t('data.js 的 EASE_DEG 取自 MAPGEO.MAX_ROAD_GRADE_DEG',

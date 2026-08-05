@@ -6,7 +6,7 @@
 //     ⑦規律結構都市規劃朝向(2026-07-29:gridA 主方位執行原文 + ink 恆對齊三段退避靜態規則)
 // node tools/audit_ground_qc.mjs
 'use strict';
-import { readFileSync } from 'node:fs';
+import { readSrc } from './audit_src.mjs';
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
@@ -188,8 +188,8 @@ console.log('== ⑥ 細節疏密調變總量守恆(E[0.35+1.3q]=1, q=0.5+0.5·qc
 
 console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太陽能板 ↔ 道路格網一致)==');
 {
-  const gsrc = readFileSync(new URL('../public/js/ground.js', import.meta.url), 'utf8');
-  const bsrc = readFileSync(new URL('../public/js/biomes.js', import.meta.url), 'utf8');
+  const gsrc = readSrc('public', 'js', 'ground.js');
+  const bsrc = readSrc('public', 'js', 'biomes.js');
   // —— 執行 gridA 原文(全圖格網主方位:道路線段長度加權的 mod 90° 圓平均)——
   // `\r?\n`:CRLF 檢出(Windows core.autocrlf)下 `;\n` 抽不到原文 ⇒ 整段體檢靜默不驗
   const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = Math\.atan2\(gsz, gsx\) \/ 4;\r?\n  \}/);

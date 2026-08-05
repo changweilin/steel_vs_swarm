@@ -26,10 +26,11 @@
 //   `--offline` 只跑 Ⅰ(宣告自洽 + 建物管線不讀 mix)—— 那一段純離線,`ci.yml` 收這一半;
 //   完整版(含 Ⅱ/Ⅲ 的圖資實測)掛在 `lane-scenarios.yml`,與其餘要外網的稽核同一支。
 // 退出碼:0 = 全數相符且無未驗;1 = 有不符 or 有未驗(需要人看)
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { BIOMES, battleBBox } from '../public/js/data.js';
 import { R_EARTH, d2r, landcoverFor } from './venue_field.mjs';
+import { readSrc } from './audit_src.mjs';
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((s) => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(s);
@@ -116,7 +117,7 @@ console.log('Ⅰ 宣告自洽(mix 鍵集 / 總和 / type 對得上主成分)');
   ok(!bad.length, `${VENUES.length} 個場地的 mix 鍵集/總和/type 自洽${bad.length ? ` —— ${bad.join('、')}` : ''}`);
   // 這一條是本檔存在的理由,釘住它免得日後有人「順手」把 mix 接進建物管線:
   // mix 是宣告不是實測 ⇒ 它 MUST NOT 決定權威幾何(建物是碰撞柱 + LOS 遮蔽)。
-  const bio = readFileSync(new URL('../public/js/biomes.js', import.meta.url), 'utf8');
+  const bio = readSrc('public', 'js', 'biomes.js');
   const i0 = bio.indexOf('  // ---- 聚落場(單一縫)');
   const i1 = bio.indexOf('  // 市區補間:把被 8 倍世界撐開的街廓填回連續街區');
   ok(i0 > 0 && i1 > i0 && !/\bmix\b/.test(bio.slice(i0, i1).replace(/\/\/.*$/gm, '')),

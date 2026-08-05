@@ -13,12 +13,9 @@
 //   ④ 高頻特效 MUST NOT 每次新建幾何:beamLine / axisCylinder / shockRing / 能量珠一律
 //      吃單位幾何 + scale。
 // 跑法:`node tools/audit_gpu_lifecycle.mjs`
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const read = (f) => readFileSync(join(ROOT, 'public', 'js', f), 'utf8');
+const read = (f) => readSrc('public', 'js', f);
 const game = read('game.js'), vfx = read('vfx.js'), toon = read('toon.js'), castfx = read('castfx.js');
 const postfx = read('postfx.js');
 

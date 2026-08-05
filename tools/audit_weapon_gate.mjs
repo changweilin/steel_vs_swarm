@@ -29,9 +29,6 @@
 // 真的 `BattleSim`。每一段可執行斷言都自帶反向對照:把判定改回壞版,對應條目 MUST 立刻紅字。
 // 跑法:`node tools/audit_weapon_gate.mjs`
 // 退出碼:0 = 全綠;1 = 有紅字
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
@@ -40,10 +37,11 @@ import {
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-// 換行一律正規化成 LF:工作副本在 Windows 上是 CRLF,方法尾端的 `\n  }` 比對會整組失手
-const read = (p) => readFileSync(join(ROOT, ...p), 'utf8').replace(/\r\n/g, '\n');
+// 讀原文一律走 `readSrc`(§5 通則 ㋑;換行正規化成 LF)——
+// 工作副本在 Windows 上是 CRLF,方法尾端的 `\n  }` 比對會整組失手
+const read = (p) => readSrc(...p);
 const G = read(['public', 'js', 'game.js']);
 const S = read(['server', 'sim.js']);
 const D = read(['public', 'js', 'data.js']);

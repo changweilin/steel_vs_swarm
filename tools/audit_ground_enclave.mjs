@@ -11,13 +11,13 @@
 //   Ⅳ 靜態規則(單一縫:cellKeyAt 換 carpet / tryPatch 放行閘 / 沿街陣列 enclave 池 /
 //      watertile det 三款 / 兩個 scatterDetails 呼叫端都傳 enc / 純函式零 rnd)
 'use strict';
-import { readFileSync } from 'node:fs';
+import { readSrc } from './audit_src.mjs';
 
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
 
-const src = readFileSync(new URL('../public/js/ground.js', import.meta.url), 'utf8');
+const src = readSrc('public', 'js', 'ground.js');
 
 // ===== 抽原文(零依賴 → eval 執行真品)=====
 const encCfgM = src.match(/export const ENCLAVE = \{.*$/m);

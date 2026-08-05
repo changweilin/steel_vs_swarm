@@ -45,15 +45,12 @@
 // 瀏覽器可執行模組,直接 import 真品。
 // 跑法:`node tools/audit_open_tunnel.mjs`
 // 退出碼:0 = 全綠;1 = 有紅字
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { BattleSim } from '../server/sim.js';
 import { MAPGEO } from '../public/js/data.js';
+import { readSrc } from './audit_src.mjs';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'biomes.js'), 'utf8');
-const mainSrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
+const src = readSrc('public', 'js', 'biomes.js');
+const mainSrc = readSrc('public', 'js', 'main.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? pass++ : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -578,7 +575,7 @@ function fakeBattleConfig() {
 // 以 terrain.js **執行原文**建 33² 合成高度場直測 carveTunnels / carveGalleryBands;
 // biomes 端的接線(強制覆蓋 / 同 tag 併鏈 / strip 收集)以靜態規則釘住。
 {
-  const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+  const tsrc = readSrc('public', 'js', 'terrain.js');
   // ---- 靜態規則 ----
   ok(/way\.tags\.tunnel === 'avalanche_protector' && tot >= TUN_COV_MIN/.test(src),
     'Ⅴ tunnel=avalanche_protector MUST 整段強制覆蓋(落石棚的頂是建的不是山;短殘段仍剔)');
@@ -667,7 +664,7 @@ function fakeBattleConfig() {
 // ---- Ⅵ 洞口打洞:斷面裡的地形三角形一律刪掉(執行 terrain.js punchPortalHoles 原文)----
 // 合成 17² 網格(格距 5m)+ 一座朝 −Z 進洞的 bore,直接看「哪些三角形留在 drawRange 內」。
 {
-  const tsrc = readFileSync(join(ROOT, 'public', 'js', 'terrain.js'), 'utf8');
+  const tsrc = readSrc('public', 'js', 'terrain.js');
   const p0 = tsrc.indexOf('  function punchPortalHoles(');
   const p1 = tsrc.indexOf("  onProgress?.(1, '地形完成');");
   if (p0 < 0 || p1 <= p0) throw new Error('找不到 punchPortalHoles 區塊');
