@@ -34,6 +34,7 @@ import { buildGroundCover } from './ground.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
 import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed } from './beacons.js';
+import { libGeo } from './partlib.js';
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
 // 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
 import {
@@ -562,6 +563,11 @@ const CONIFER_GIANTS = new Set(['redwood', 'sequoia', 'dougfir', 'sitka', 'taiwa
  * 40% 樹高起,留一點餘裕)所有零件的最遠水平點。手寫一欄 `cr` 的話,改了任何一個冠簇的
  * `px/pz` 或半徑,間隙規則就與看得見的樹冠分家 —— 而畫面上只表現成「有些樹冠還是黏在一起」。
  * three 的 `parameters` 是各 Geometry 建構時存下的原始參數(r160 恆有)。
+ *
+ * AI 零件庫(`p.lib`)在這裡**刻意不解析**(MUST NOT 改吃 partGeo / 掃庫幾何頂點):
+ * 冠幅是佈局數學(縮冠量/傾斜方向/後續佔位全吃它),庫幾何隨載入成敗而異,讀它 =
+ * 佈局跨客戶端逐位元分家(§2.3)。保險絲 `p.g` 的包絡 ≥ GLB 實體(intake 契約)⇒
+ * 以它計冠幅恆保守 —— 冠層零件換 GLB 不需要動這一支,這正是 canopy GLB 的解鎖條件。
  */
 function giantCrownR(def) {
   if (def._cr != null) return def._cr;
@@ -847,10 +853,23 @@ function seasonColor(key, fixed, season) {
 const SOFT_BY_VEG_KEY = { foliage: 'leaf', gleaf: 'leaf', conifer: 'leaf', grass: 'grass' };
 const vegSoftKind = (part) => part.sf ?? SOFT_BY_VEG_KEY[part.key] ?? null;
 
+// ---- AI 零件庫的消費端縫(2026-08-05;docs/ai3d_asset_plan.md §8 修正 1)----
+// 零件列可帶選用欄 `lib: '家族/節點'`(例 `lib: 'rock/facet_a'`),**解析只在 build 時**
+// 走這一支:VEG_DEFS 這些表在模組載入期就建好,那時 GLB 還沒抓 ⇒ 表內解析恆 miss
+// (修正 1 的成因)。`p.g` 仍是保險絲 —— 載入失敗/查無此名 ⇒ 原 primitive(原則 6)。
+//   ① **佈局數學 MUST 只讀 `p.g`**(giantCrownR 冠幅 / vegSpan 擺動分母 / 淨空 / 碰撞):
+//      解析結果隨載入成敗而異,佈局讀它 = 跨客戶端逐位元分家(§2.3);intake 契約保證
+//      GLB 外廓收在 fallback 包絡內 ⇒ 以保險絲計佈局恆保守(方向朝「留得更開」)。
+//   ② 庫幾何已 markShared(A25)且本迴圈不就地改幾何 ⇒ 不 clone;會 applyMatrix4 的
+//      消費端(beacons buildBeacon)才要 clone。
+//   ③ 查表是純函式,零共享 rnd 消耗(§2.3)。
+const partGeo = (p) => (p.lib && libGeo(p.lib)) || p.g;
+
 /**
  * 一株植被的公稱高度(擺動權重的分母)。**推導不手寫**:改任一零件的 y/幾何,
  * 擺幅自己跟著走 —— 手寫一欄 `h` 的話,加高樹冠之後梢端的權重會停在 1 以下(擺不動)。
  * 取零件包圍盒的頂端(含 `sy` 縱向壓縮),與 `vegPartXform` 疊零件的算法同框。
+ * 讀的是保險絲 `p.g` 不是 AI 零件庫(與 giantCrownR 同一條紀律,見 partGeo 檔頭)。
  */
 function vegSpan(def) {
   let top = 0;
@@ -876,7 +895,8 @@ function buildVegMeshes(type, items, season) {
     const sk = vegSoftKind(part);
     const mat = toonMat(seasonColor(part.key, part.c, season),
       sk ? { soft: { k: sk, span, base: part.y || 0, sy: part.sy || 1 } } : {});
-    const m = new THREE.InstancedMesh(part.g, mat, items.length);
+    // 畫的是 partGeo 解析結果(AI 零件庫 ?? 保險絲);佈局(span/冠幅)仍吃 p.g,見 partGeo 檔頭
+    const m = new THREE.InstancedMesh(partGeo(part), mat, items.length);
     items.forEach((it, i) => {
       // 零件擺位 + 實例朝向/微傾斜(剛體)一律走 xform.js 的單一縫:
       // 併進逐零件歐拉角會讓 rx≠0 的枝叉被朝向攪亂、微傾斜變成分段剪切(接合開縫)

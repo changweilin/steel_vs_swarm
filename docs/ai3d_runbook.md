@@ -19,8 +19,8 @@
 | Photo DB integrity pass (magic-bytes gate + manifest path portability) | **DONE 2026-08-05** (§5d) | 2 whole PDFs had passed the licence audit as `ok` photos (bytes, not licence, was the lie) — de-booked, deleted, refetched; 28 absolute-path manifest rows migrated to relative POSIX; final audit **61/61 ok = real image + file present + CC0/PD**, all 14 parts at target |
 | P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
 | P2c pilot — img→3D GLB parts (organic geometry) | **DONE 2026-08-05** (§5e; gate opened same day) | `public/assets/models/parts/rock.glb` shipped: 3 nodes (`collapse_a`/`facet_a`/`facet_b`, 938/882/588 tris) consumed by beacons `cairn` via `['lib', …]`; SF3D measured on the 3060 (peak VRAM 6.17 GB, warm 13.6 s / 2 images); intake 14/14; `audit_beacons` 68 + reverse-red; `audit_object_joints --seeds 8` 21311/0; cel 52 / visual_prefs 124 / gpu 54 / siteplan 168; e2e green; bal green (structurally bit-identical — balance tooling imports neither beacons nor partlib); fallback-vs-lib renders with collider overlay (`tools/shot_beacons.mjs`) |
-| biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **unblocked** (P2c shipped rock parts 2026-08-05); next in queue before any `MEGALITHS`/`VEG_DEFS` consumer | — |
-| `giantCrownR` GLB-compat (vertex scan or metadata; plan §8 correction 1) | TODO — **hard blocker for canopy GLBs** | — |
+| biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | **DONE 2026-08-05** (§5f) | `partGeo(p) = (p.lib && libGeo(p.lib)) \|\| p.g` in `buildVegMeshes` (draw only; no `lib:` rows yet ⇒ frame bit-identical); pinned by `audit_siteplan` Ⅴ (+3 assertions, manual reverse-verify both red modes); full battery green |
+| `giantCrownR` GLB-compat (plan §8 correction 1) | **DONE 2026-08-05 — by contract, zero code change** (§5f) | Vertex scan would be a determinism bug (layout ← load state, §2.3); layout math pinned to the fuse `p.g` (audit red if it touches `libGeo`/`partGeo`/`.lib`); intake envelope makes fuse crown radii conservative. Canopy GLBs unblocked |
 | P3 dynamic track (mech slots) | NOT STARTED | Plan §3; do not start before P2c passes |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
@@ -217,6 +217,46 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
 - Remaining smoke (interactive, next real-game session): walk past a cairn in taroko + 30 s
   steady-state frame time. Expected delta is negligible: +~2.2k tris per cairn, merged into the
   same colour buckets (draw-call count unchanged), few cairns per map.
+
+## 5f. Trial log (2026-08-05, 3060-machine session — biomes seam + giantCrownR resolution)
+
+- **Seam shipped**: `biomes.js` now imports `libGeo`; a single build-time resolver
+  `const partGeo = (p) => (p.lib && libGeo(p.lib)) || p.g;` sits next to `vegSoftKind`, and
+  `buildVegMeshes` draws `partGeo(part)`. That is the **entire** code change (plus comments) —
+  no `lib:` rows exist in any table yet, so today's frame is bit-identical, same as P1's landing.
+- **The `giantCrownR` "hard blocker" dissolved by contract, not by code** — and the plan's own
+  proposed fix (vertex scan) turned out to be a latent bug: crown radius feeds `planShyGrove`
+  (shrink + lean) → items → blockers → `blocked` cells → every later placement. A GLB-derived
+  radius varies with **load success**, so scanning loaded geometry would diverge the whole layout
+  per client (§2.3) with zero error message. Resolution: **layout math (`giantCrownR`, `vegSpan`)
+  reads the fuse `p.g` only**; the intake envelope (GLB ≤ fallback, ≥ half) makes fuse-derived
+  radii conservative — gaps err wider (原則 6), canopy shyness never under-spaces. Canopy GLBs
+  are unblocked with `giantCrownR` untouched. Plan §8 correction 1 annotated so nobody
+  "re-fixes" it into the scan.
+- **Audit support** (原則 9): 3 new assertions in `audit_siteplan` Ⅴ — ① exactly one `libGeo(`
+  call in biomes and it is `partGeo`'s definition; ② the veg loop draws `partGeo(part)`;
+  ③ `giantCrownR`/`vegSpan` stripped source contains no `libGeo`/`partGeo`/`.lib`.
+  Reverse-verified both ways (crown reading `partGeo` ⇒ ③ red; a second inline `libGeo` call in
+  the loop ⇒ ①② red). 168 → 171 items.
+- **CRLF found a real audit bug**: `audit_road_joint` red'd "dropLaneBridges 恰一份實作一個呼叫點"
+  on this machine — **pre-existing, not this change** (A/B: HEAD content converted to CRLF reds
+  identically; `git show` LF content passes). Root cause is the exact ㋑ trap: it used raw
+  `readFileSync`, and this workspace is CRLF-checked-out (`core.autocrlf=true`) ⇒ per-line
+  `//.*$` comment-stripping silently fails ⇒ a comment mentioning `dropLaneBridges(` joins the
+  count. Fixed to `readSrc` (86/86 green). ~22 more audits still use raw `readFileSync` and may
+  be silently *weaker* on CRLF — spun off as its own task (chip), do not fold into this branch.
+- **Gates** (this machine, CRLF workspace): siteplan 171 (+ both reverse modes red);
+  soft_stroke 73; beacons 68 + `--break-extent` reverse-red; object_joints `--seeds 8`
+  21311/0; gpu 54; cel 52; visual_prefs 124; open_tunnel 159; underpass 155; road_joint 86;
+  climb 211; ground_qc/seam/enclave, terrain_ray 11, bridge_crossing 16, water_skirt 8,
+  bridge_tower_pad 23, road_bed 16, world_text 57, vernacular 287 — all green. `npm run bal`
+  green (balance tooling imports neither biomes nor partlib). e2e on a fresh worktree server
+  (port 8666, user's 8620 untouched): green.
+- **Next consumer note** (queue D): `MEGALITHS`/`synthMegalith` are imperative builders running at
+  biome-build time — they need **no seam**, just guarded `libGeo('rock/…') ?? primitive` at the
+  call site (zero extra `rnd()` either way; no in-place geometry mutation ⇒ no clone). The
+  declarative seam above covers `VEG_DEFS`/`GIANT_DEFS`/`GIANT_DECO`. Road props / civic parts
+  stay LLM-parts territory (method split) — do not extend `partGeo` there.
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

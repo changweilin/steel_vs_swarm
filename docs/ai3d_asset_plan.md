@@ -445,6 +445,15 @@ no-GPU fallback.
    reads `p.g.parameters`, which GLB `BufferGeometry` does not have — crown-radius derivation must scan
    vertices(or carry measured metadata)before any canopy GLB ships, or crown shyness silently
    diverges from the visible canopy.
+   **RESOLVED 2026-08-05**(runbook §5f): `p.lib` build-time resolver `partGeo(p)` landed in
+   `buildVegMeshes`(draw only). The `giantCrownR` half was resolved **by contract, not by vertex
+   scan** — and the vertex-scan idea proposed above is in fact a bug: layout math(crown radius →
+   `planShyGrove` shrink/lean → blockers/blocked cells)reading a geometry that varies with GLB load
+   success would diverge layouts **per client**(CLAUDE.md §2.3 determinism). Layout math MUST keep
+   reading the fuse `p.g`; the intake envelope(GLB extent ≤ fallback, ≥ half)makes fuse-derived
+   crown radii conservative(gaps err wider, 原則 6). Canopy GLBs are therefore unblocked with zero
+   change to `giantCrownR`. Pinned by `audit_siteplan` Ⅴ(single `libGeo` call = `partGeo`; layout
+   blocks free of lib references)with reverse verification. **Do not "fix" this into a vertex scan.**
 2. **Offline-extent contract for lib descriptors**: `['lib', name, <fallback primitive>]`'s offline
    extent = the fallback's extent; the export tool MUST verify the GLB part fits inside the fallback's
    extent before intake(now encoded in `partExtent` and the `partlib.js` header). Runtime colliders
