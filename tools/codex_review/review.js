@@ -55,6 +55,8 @@ function rowStat(r) {
   const flag = live.filter((s) => ['redraw', 'reprompt'].includes(itemOf(s.slot)?.status)).length;
   const art = has.filter((s) => s.src === 'art').length;
   return { want: r.shots.length, has: has.length, art, ai: has.length - art, ok, flag,
+    // ★ 只在真的有圖時算數:指到空格的星號在 img→3D 端等於沒標(見 shotCard 的「★ 失效」)
+    star: r.shots.some((s) => s.star && s.has),
     stale: has.length - live.length, miss: r.shots.length - has.length };
 }
 
@@ -75,10 +77,11 @@ function renderList() {
         : st.ok === st.has ? `<span class="cr-pill ok">✔ ${st.ok}</span>`
           : `<span class="cr-pill">${st.ok}/${st.has}</span>`;
     const ai = st.ai ? `<span class="cr-pill ai">AI ${st.ai}</span>` : '';
+    const star = st.star ? '<span class="cr-pill star">★</span>' : '';
     return `<div class="cr-row ${app.cur === r.id ? 'on' : ''}" data-id="${r.id}">
       <img src="/${r.avatar}" alt="" onerror="this.style.visibility='hidden'">
       <div class="cr-rn"><b>${esc(r.name)}</b><span>${r.id.toUpperCase()} ・ ${esc(r.kindWord)}</span></div>
-      ${ai}${pill}</div>`;
+      ${star}${ai}${pill}</div>`;
   }).join('') || '<div class="cr-dim" style="padding:12px">(這個篩選沒有結果)</div>';
   for (const el of $('crList').querySelectorAll('.cr-row')) {
     el.onclick = () => select(el.dataset.id);
@@ -86,14 +89,15 @@ function renderList() {
 }
 
 function renderStat() {
-  let has = 0, want = 0, art = 0, ai = 0, ok = 0, flag = 0, stale = 0;
+  let has = 0, want = 0, art = 0, ai = 0, ok = 0, flag = 0, stale = 0, star = 0;
   for (const r of app.data.rows) {
     const s = rowStat(r);
     has += s.has; want += s.want; art += s.art; ai += s.ai; ok += s.ok; flag += s.flag; stale += s.stale;
+    star += s.star ? 1 : 0;
   }
   $('crStat').textContent =
     `應有 ${want} 格 ・ 入庫 ${art} ・ AI 稿 ${ai} ・ 已確認 ${ok}/${has} ・ 有意見 ${flag}`
-    + ` ・ 已重畫待覆核 ${stale} ・ 缺 ${want - has}`
+    + ` ・ 已重畫待覆核 ${stale} ・ 缺 ${want - has} ・ ★ ${star}/${app.data.rows.length} 台`
     + ` ・ 被取代 ${app.data.superseded?.length || 0} ・ 孤兒 ${app.data.orphans.length}`;
 }
 
@@ -198,6 +202,10 @@ function renderBody() {
   for (const el of $('crBody').querySelectorAll('.cr-shot[data-slot]')) {
     el.onclick = () => openReview(el.dataset.slot);
   }
+  // ★ 鈕疊在圖上 ⇒ MUST 擋掉冒泡,否則按一次星號會順手把覆核 modal 也打開
+  for (const b of $('crBody').querySelectorAll('[data-star]')) {
+    b.onclick = (e) => { e.stopPropagation(); toggleStar(b.dataset.star, !b.classList.contains('on')); };
+  }
   for (const el of $('crBody').querySelectorAll('.cr-wrow[data-play]')) {
     el.onclick = () => app.preview?.play(el.dataset.play);
   }
@@ -212,6 +220,14 @@ function renderBody() {
  * 覆核台上這兩件事的下一步完全不同(入庫圖是複核,AI 稿是決定要不要讓它入庫)。 */
 const SRC_LABEL = { ai: 'AI 稿' };
 
+/** ★ 切換這台機體的外觀權威。鍵是**機體**(伺服器端 `state.star` 的映射)⇒ 標第二張自動
+ *  取代第一張,「一個機體只能標註一張」是資料結構保證的,這裡 MUST NOT 再寫一次那條規則
+ *  (寫了就是第二份實作,而兩份不同步的症狀是畫面上兩張同時亮著星)。 */
+async function toggleStar(slot, on) {
+  await api({ starSlot: on ? slot : null, starChar: app.cur });
+  await load();
+}
+
 function shotCard(s) {
   const it = itemOf(s.slot);
   // 判決比圖舊 ⇒ 一律當「未覆核」畫,並且明講這是重畫過的新圖(掛著上一張的評語最容易誤判成
@@ -219,14 +235,19 @@ function shotCard(s) {
   const [label, cls] = s.stale ? ['⟳ 已重畫,待覆核', 'flag'] : (STATUS[it?.status] || ['— 未覆核', '']);
   const badge = s.assigned ? '<span class="cr-pill flag">指派</span>' : '';
   if (!s.has) {
-    return `<div class="cr-shot"><div class="cr-none">缺圖</div>
-      <div class="cr-sc"><span class="cr-pill miss">${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</span></div></div>`;
+    // 星號指到一格沒有圖的 slot ⇒ 那顆星實際上沒有生效(img→3D 退回舊規則),MUST 講出來
+    return `<div class="cr-shot"><div class="cr-none">缺圖${s.star ? '<br>★ 星號指到這裡' : ''}</div>
+      <div class="cr-sc"><span class="cr-pill miss">${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</span>
+        ${s.star ? '<span class="cr-pill miss">★ 失效</span>' : ''}</div></div>`;
   }
   const srcPill = SRC_LABEL[s.src] ? `<span class="cr-pill ai">${esc(SRC_LABEL[s.src])}</span>` : '';
-  return `<div class="cr-shot ${cls ? `on-${cls}` : ''} ${s.src === 'ai' ? 'is-ai' : ''}" data-slot="${s.slot}">
+  return `<div class="cr-shot ${cls ? `on-${cls}` : ''} ${s.src === 'ai' ? 'is-ai' : ''} ${s.star ? 'is-star' : ''}" data-slot="${s.slot}">
     <img src="/${s.url}" alt="" loading="lazy">
+    <button class="cr-star ${s.star ? 'on' : ''}" data-star="${s.slot}"
+      title="★ 這台機體的外觀權威(img→3D 遇到外觀衝突以它為主;一台只能一張)">${s.star ? '★' : '☆'}</button>
     <div class="cr-sc"><span class="cr-pill">${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</span>
-      ${srcPill}${badge}<span class="cr-pill ${cls}">${esc(label)}</span></div></div>`;
+      ${srcPill}${badge}${s.star ? '<span class="cr-pill star">★ 外觀權威</span>' : ''}
+      <span class="cr-pill ${cls}">${esc(label)}</span></div></div>`;
 }
 
 // ---- 3D 展示台(遊戲那一台)-----------------------------------------------
@@ -273,6 +294,10 @@ function openReview(slot) {
       <h3>${esc(r.name)} ・ ${esc(s.poseLabel)}${s.form ? `・${s.form}` : ''}</h3>
       <div class="cr-dim">${esc(s.url)}${s.assigned ? '(指派)' : ''}
         ${s.src === 'ai' ? '<br>⚑ AI 設定稿,<b>尚未驗收</b> —— 通過之後由人搬進 public/assets/cyberpunk_art/mechs/ 才算入庫' : ''}</div>
+
+      <label>★ 外觀權威(img→3D 遇到外觀衝突以這張為主;一台機體只能一張)</label>
+      <div class="seg"><button class="segb ${s.star ? 'on' : ''}" id="crStar">${s.star ? '★ 就是這張' : '☆ 標為這台的外觀權威'}</button></div>
+      <div class="cr-dim">${r.star && r.star !== s.slot ? `目前標的是 <b>${esc(r.star)}</b> —— 標這張會取代它` : ''}</div>
 
       <label>① 確認勾選</label>
       <div class="seg"><button class="segb ${it.status === 'ok' ? 'on' : ''}" data-st="ok">✔ 通過</button>
@@ -357,6 +382,9 @@ function openReview(slot) {
       for (const x of m.querySelectorAll('[data-st]')) x.classList.toggle('on', x.dataset.st === status && status);
     };
   }
+  // 標星立刻存檔並重繪(它是獨立於覆核判決的一件事:一張被判「局部重繪」的圖仍可能是
+  // 最接近設計的那一張 ⇒ MUST NOT 綁進「儲存」那顆鈕的條件裡)
+  $('crStar').onclick = async () => { m.hidden = true; await toggleStar(slot, !s.star); };
   $('crReset').onclick = () => { $('crPrompt').value = derived; };
   $('crCopy').onclick = () => navigator.clipboard?.writeText($('crPrompt').value);
   $('crClose').onclick = () => { m.hidden = true; };
