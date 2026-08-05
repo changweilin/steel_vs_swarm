@@ -48,11 +48,14 @@ const rowOf = (id) => app.data.rows.find((r) => r.id === id);
  * 消失在數字裡,而那正是伺服器端檔頭 ③ 不准藏的東西。缺 = 兩個來源都沒有。 */
 function rowStat(r) {
   const has = r.shots.filter((s) => s.has);
-  const ok = has.filter((s) => itemOf(s.slot)?.status === 'ok').length;
-  const flag = has.filter((s) => ['redraw', 'reprompt'].includes(itemOf(s.slot)?.status)).length;
+  // `stale` = 這張圖是判決之後才重畫的 ⇒ 那個判決講的是**上一張**。既不算通過也不算意見,
+  // 否則覆核台會用一個過期的 ✔ 把「這一格重畫好了、還沒人看」蓋掉(檔頭 ④ 不准藏)
+  const live = has.filter((s) => !s.stale);
+  const ok = live.filter((s) => itemOf(s.slot)?.status === 'ok').length;
+  const flag = live.filter((s) => ['redraw', 'reprompt'].includes(itemOf(s.slot)?.status)).length;
   const art = has.filter((s) => s.src === 'art').length;
   return { want: r.shots.length, has: has.length, art, ai: has.length - art, ok, flag,
-    miss: r.shots.length - has.length };
+    stale: has.length - live.length, miss: r.shots.length - has.length };
 }
 
 // ---- 左側清單 ------------------------------------------------------------
@@ -83,14 +86,15 @@ function renderList() {
 }
 
 function renderStat() {
-  let has = 0, want = 0, art = 0, ai = 0, ok = 0, flag = 0;
+  let has = 0, want = 0, art = 0, ai = 0, ok = 0, flag = 0, stale = 0;
   for (const r of app.data.rows) {
     const s = rowStat(r);
-    has += s.has; want += s.want; art += s.art; ai += s.ai; ok += s.ok; flag += s.flag;
+    has += s.has; want += s.want; art += s.art; ai += s.ai; ok += s.ok; flag += s.flag; stale += s.stale;
   }
   $('crStat').textContent =
     `應有 ${want} 格 ・ 入庫 ${art} ・ AI 稿 ${ai} ・ 已確認 ${ok}/${has} ・ 有意見 ${flag}`
-    + ` ・ 缺 ${want - has} ・ 孤兒 ${app.data.orphans.length}`;
+    + ` ・ 已重畫待覆核 ${stale} ・ 缺 ${want - has}`
+    + ` ・ 被取代 ${app.data.superseded?.length || 0} ・ 孤兒 ${app.data.orphans.length}`;
 }
 
 // ---- 右側:角色 / 機體 ---------------------------------------------------
@@ -198,8 +202,9 @@ function renderBody() {
     el.onclick = () => app.preview?.play(el.dataset.play);
   }
   mountStage(id);
-  // 孤兒區跟著每一次重繪掛回去 —— 只在 load() 掛一次的話,點掉第一名角色之後它就被 innerHTML 洗掉了,
-  // 而畫面上只表現成「孤兒檔不見了」(檔頭 ④:漏掉的東西不准藏)
+  // 孤兒區/被取代區跟著每一次重繪掛回去 —— 只在 load() 掛一次的話,點掉第一名角色之後它就被
+  // innerHTML 洗掉了,而畫面上只表現成「孤兒檔不見了」(檔頭 ④:漏掉的東西不准藏)
+  renderSuperseded();
   renderOrphans();
 }
 
@@ -209,7 +214,9 @@ const SRC_LABEL = { ai: 'AI 稿' };
 
 function shotCard(s) {
   const it = itemOf(s.slot);
-  const [label, cls] = STATUS[it?.status] || ['— 未覆核', ''];
+  // 判決比圖舊 ⇒ 一律當「未覆核」畫,並且明講這是重畫過的新圖(掛著上一張的評語最容易誤判成
+  // 「我已經看過了」;那正是重畫完之後最不該發生的事)
+  const [label, cls] = s.stale ? ['⟳ 已重畫,待覆核', 'flag'] : (STATUS[it?.status] || ['— 未覆核', '']);
   const badge = s.assigned ? '<span class="cr-pill flag">指派</span>' : '';
   if (!s.has) {
     return `<div class="cr-shot"><div class="cr-none">缺圖</div>
@@ -253,8 +260,11 @@ function openReview(slot) {
   const s = r.shots.find((x) => x.slot === slot);
   const it = itemOf(slot) || {};
   const regions = [...(it.regions || [])];
-  // 重新下 prompt 的預設值一律取**推導值**(codex.imagePrompt);使用者改過的才存進 state
-  const derived = imagePrompt('mecha', r.id);
+  // 重新下 prompt 的預設值一律取**推導值**(codex.imagePrompt);使用者改過的才存進 state。
+  // **型態要一起傳**(2026-08-05):變形者恆有兩層原型,不傳型態拿到的是「地面型 + 飛行型」
+  // 混在一起的同一份提示詞 —— 那正是六台變形者的飛行稿被判「需要是飛行姿態」的原因
+  // (覆核台叫得出兩張不同的圖,卻只發得出一份提示詞)。姿態語的單一縫 = codex.FORM_POSE。
+  const derived = imagePrompt('mecha', r.id, s.form, s.pose);
   const m = $('crModal');
   m.hidden = false;
   m.innerHTML = `<div class="cr-mbox">
@@ -366,6 +376,24 @@ function openReview(slot) {
     renderList(); renderStat(); renderBody();
     setTimeout(() => { m.hidden = true; }, 350);
   };
+}
+
+// ---- 被取代的版本(對得到格子、只是輸了來源優先序)--------------------------
+// 與孤兒**分開列**:孤兒的定義是「對不到任何一格」,而這些對得到。混在一起的話,覆核台會邀請
+// 使用者把一張剛被否決的舊圖「指派」到別的格子去 —— 那是把錯誤搬到另一個地方,而不是修掉它。
+function renderSuperseded() {
+  const list = app.data.superseded || [];
+  const mine = list.filter((o) => o.slot.startsWith(`${app.cur}_`) || o.slot === app.cur);
+  if (!mine.length) return;
+  const box = document.createElement('div');
+  box.className = 'cr-sec cr-orph';
+  box.innerHTML = `<h3>被取代的版本(${mine.length})—— 同一格的舊版本,留著備查</h3>
+    <div class="cr-shots">${mine.map((o) => `<div class="cr-shot ${o.src === 'ai' ? 'is-ai' : ''}">
+      <img src="/${o.url}" alt="" loading="lazy">
+      <div class="cr-sc"><span class="cr-pill">${esc(o.slot)}</span>
+        <span class="cr-pill ${o.src === 'ai' ? 'ai' : ''}">${esc(SRC_LABEL[o.src] || '入庫')}</span></div>
+      </div>`).join('')}</div>`;
+  $('crBody').appendChild(box);
 }
 
 // ---- 孤兒檔(對不到任何一格的圖)------------------------------------------

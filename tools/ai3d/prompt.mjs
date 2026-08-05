@@ -9,12 +9,24 @@
  *   split(切圖)     = image→3D 的**輸入**,吃九條規則(灰底、全不透明、平光、無描邊)。
  *                      畫成漂亮插畫反而會在 3D 階段付代價(計畫 §5.2 開頭)。
  *
- * 設計敘述 MUST 取 lore.js 的 `proto` 原文 —— 那是機體原型的權威敘述。這裡**不轉譯**:
- * 轉譯就是第二份設計描述,而漂移只會表現成「新畫的這隻跟設定不太一樣」,沒有錯誤訊息。
+ * 設計敘述 MUST 取**機體檔案原文**(`codex.js` → `mecha.js` 的原型層與生成段)—— 那是機體設計的
+ * 權威敘述。這裡**不轉譯**:轉譯就是第二份設計描述,而漂移只會表現成「新畫的這隻跟設定不太一樣」,
+ * 沒有錯誤訊息。
+ *
+ * ⚠ 2026-08-05 修:舊制取的是 `loreOf(ch).proto`,而那個自由字串欄位在 2026-08-04 的
+ *   A40 結構化改制裡**已經整組退場**(原型改住 `mecha.js proto` 的分層 `{src, note}`)。
+ *   `proto && ...` 於是恆為 falsy ⇒ 整條「Design brief」**從那天起一次都沒有送出去過**,
+ *   而且沒有任何錯誤訊息:提示詞看起來仍然很長(九條規則 + 底盤代碼詞表都還在),
+ *   只是機體真正的設計敘述不見了。2026-08-04 那批覆核意見裡的
+ *   「非人型,克蘇魯外型」「非人形,外觀以袋鼠為主」「非人形、犬型」「非人形、鴕鳥外觀」
+ *   四條,逐字都寫在 mecha.js 的 `gen.sil`/`gen.note` 裡 —— 使用者是在手抄一份提示詞**本來
+ *   就該自己帶上**的東西。故本檔改吃 codex,連 `gen.note`(這一台最容易被畫錯的那件事)一起送。
  */
 
 import { CHARACTERS, MORPH_HUMANOID } from '../../public/js/data.js';
-import { loreOf } from '../../public/js/lore.js';
+import {
+  FORM_POSE, SHOT_POSES, formPose, shotFraming, mechaCodex, protoOf, visualUses,
+} from '../../public/js/codex.js';
 import { slotsOf } from './slots.mjs';
 
 /** 九條規則(§5.2)—— 逐字一份,兩個消費端同吃。 */
@@ -58,7 +70,15 @@ const LEX = {
   flight: {
     jet: 'canard jet fighter (鴨翼戰機) — the legs fold together into a centre-mounted twin-engine nacelle; swept twin vertical tails deploy from the rear edge of the pelvis',
     uav: 'long straight-wing UAV (長直翼無人機) — the legs splay outward into twin tail booms with large V-tails at the boom ends',
-    heli: 'single-rotor assault helicopter (單旋翼突擊直升機) — the tail boom deploys from the back',
+    // 2026-08-05 修正:舊詞條寫「單旋翼 + 尾桁自背後展開」,但 models.js 的 2026-07-11
+    // 「渡鴉三旋翼」重構**把披風翼/短翼掛架/尾桁全數移除**了(見 buildMorphMech 的 `F === 'heli'`
+    // 區塊與 mkLeg 的 heli 分支)。詞表是餵給生圖模型的唯一機體描述 ⇒ 它一停留在舊版,
+    // 收回來的就會是一架普通直升機,而遊戲裡跑的是 Y 字三旋翼 —— 兩者不會有任何錯誤訊息,
+    // 只會在拿切圖去掛 rig 時才發現對不上(m01 覆核意見逐字描述的正是現行模型)。
+    heli: 'TRICOPTER assault gunship (三旋翼突擊機) — it has NO tail boom and NO wings. '
+      + 'The legs swing back and outward and lock out dead straight, so the torso and the two legs together form a letter "Y"; '
+      + 'a rotor disc sits at the end of each leg (at the heel) and a third on a mast that unfolds from the back and stands above the nose — three rotors in all, arranged as an equilateral triangle. '
+      + 'Both arms stay extended forward along the flight direction, hands holding the gun',
     tilt: 'tiltrotor carrier (傾轉旋翼母艦) — on the ground the rotor discs stow beside the fists as round shields; in flight the arms spread into wings and the discs tilt horizontal at the wingtips',
     // 使用者定案 2026-08-04:巨象變巨鯨,MUST NOT 混昆蟲特徵
     levi: 'LEVIATHAN FLYING WHALE (利維坦飛鯨) — a colossal whale-bodied flier: smooth streamlined cetacean hull, a blunt rounded head, broad slow-beating whale/manta-like flippers, and a horizontal fluked tail fin. It is a WHALE and MUST NOT have any insect traits: no membranous veined insect wings, no compound eyes, no chitin shell, no antennae, no mandibles, no extra pairs of limbs',
@@ -147,7 +167,9 @@ function chassisSpec(v) {
   const bits = [];
   const put = (key, label) => {
     const code = v[key];
-    if (!code || code === 'none') return;
+    // `visualUses`:這台機體用不到的欄位是換機種留下的殘值,送出去等於憑空多一條設計要求
+    // (擬態翼無人機的 frame/body ⇒ 翼龍被寫成「共軸雙旋翼、球形艙」,見 codex.js 同一支)
+    if (!code || code === 'none' || !visualUses(v, key)) return;
     bits.push(`${label}: ${LEX[key][code] || `"${code}"`}`);
   };
   put('proto', 'Prototype line');
@@ -178,14 +200,22 @@ function limbLine(ch) {
   // 獸型變形者的 armL/armR 是**前腳**不是手臂(models.js:beast = !MORPH_HUMANOID.has(ground))
   const beastMorph = c.kind === 'morph' && !MORPH_HUMANOID.has(v.ground);
   if (beastMorph && has('leg') && has('arm')) {
-    parts.push('exactly 4 limbs in total — one front pair and one rear pair (a quadruped body plan; the front pair are legs, not hands)');
+    // **總數 MUST 把中足算進去**(2026-08-05 修):舊制固定寫死「exactly 4 limbs in total …
+    // a quadruped body plan」,後面再補一句「exactly 2 middle legs (the third pair)」,
+    // 最後還蓋一句「and no other limbs」—— 同一段話自相矛盾,模型只會照第一句畫。
+    // 症狀就是 m07 犀金龜兩個型態收回來永遠是四隻腳(2026-08-04 覆核:「昆蟲有 6 隻腳」),
+    // 而 mecha.js 早就寫著「六足定樁 ×6」—— 資料是對的,是這一行把它蓋掉了。
+    const pairs = 2 + (has('mid_leg') ? 1 : 0);
+    parts.push(`exactly ${pairs * 2} walking limbs in total, in ${pairs} pairs `
+      + `(${pairs === 3 ? 'front, middle and rear — a HEXAPOD (six-legged) insect body plan'
+        : 'one front pair and one rear pair — a quadruped body plan'}; the front pair are legs, not hands)`);
   } else {
     if (has('leg')) parts.push('exactly 2 legs');
     if (has('arm')) parts.push('exactly 2 arms');
+    if (has('mid_leg')) parts.push('exactly 2 middle legs (the third pair)');
   }
   if (has('leg_front')) parts.push('exactly 2 front legs');
   if (has('leg_hind')) parts.push('exactly 2 hind legs');
-  if (has('mid_leg')) parts.push('exactly 2 middle legs (the third pair)');
   if (has('rider_arm')) parts.push('exactly 2 rider arms');
   if (has('tentacle')) parts.push('4 tentacle limbs');
   if (has('wing')) parts.push('exactly 2 wings (one mirrored pair, no extra wing pairs)');
@@ -195,27 +225,79 @@ function limbLine(ch) {
 }
 
 /**
+ * 非人形宣告 —— 有仿生原型或獸型地面型態的機體 MUST **明講**「這不是人形機甲」。
+ *
+ * 2026-08-04 覆核:s07(克蘇魯)/ s09(袋鼠)/ t04(犬型)/ t05(鴕鳥)四台收回來全是人形機甲,
+ * 使用者逐台留下「非人型/非人形」四則意見。底盤規格那一行其實已經寫了 cthulhu/kangaroo/hound/
+ * ostrich —— 但整份提示詞從頭到尾**沒有任何一句說「不要畫人形」**,而 "mecha unit"、"machine"
+ * 這些字本身就把模型往人形機甲拉(訓練分布裡的 mecha 幾乎都是人形)。仿生原型只是一個
+ * 「像什麼」的形容詞,壓不過那個先驗。
+ *
+ * 判定 MUST 推導、MUST NOT 手寫名單:人形 = 有人形機甲原型(`visual.proto`)或地面型態在
+ * `MORPH_HUMANOID` 裡;其餘凡有生物原型的一律非人形。這樣新增角色會自己落到對的那一邊。
+ */
+function bodyPlanLine(ch) {
+  const c = CHARACTERS[ch], v = c.visual || {};
+  if (v.proto != null) return '';                                   // 人形機甲原型 = 本來就是人形
+  if (c.kind === 'morph' && MORPH_HUMANOID.has(v.ground)) return '';  // 人形變形者(狼/吸血鬼/悟空/力士)
+  if (!LEX.creature[v.creature] && !LEX.ground[v.ground]) return '';  // 純載具(多旋翼/定翼)—— 不會被畫成人形
+  return 'CRITICAL — this machine is NOT humanoid: no human head, no human face, no human torso, '
+    + 'no upright two-legged human stance, no human shoulder-and-hip proportions, it does not stand like a person. '
+    + 'Its skeleton IS the animal named above, rebuilt as a machine — take the biomimetic base literally, '
+    + 'not as a decorative motif bolted onto a humanoid mech.';
+}
+
+/**
+ * 機體設計敘述 —— 取 `codex.js` 組裝好的機體檔案原文(原型層 + 生成段)。
+ * 這是**權威敘述**,MUST NOT 在這裡改寫或摘要(見檔頭)。
+ * `form` 給定時濾掉另一型的原型層:變形者恆有兩層,兩層一起送等於同一張圖被要求長成兩種東西。
+ */
+function designBrief(ch, form) {
+  const d = mechaCodex(ch);
+  if (!d) return [];
+  const drop = formPose(ch, form)?.drop;      // 濾哪一層與姿態語同一個縫,MUST NOT 各判一次
+  const layers = protoOf(ch).filter((L) => L.key !== drop)
+    .map((L) => `  · ${L.label}:${L.src} —— ${L.note}`);
+  const g = d.gen || {};
+  return [
+    layers.length && `Design prototypes (authoritative, Traditional Chinese):\n${layers.join('\n')}`,
+    g.sil && `Silhouette (authoritative, Traditional Chinese): ${g.sil}`,
+    g.mass && `Mass proportions: ${g.mass}`,
+    g.mat && `Surface and materials: ${g.mat}`,
+    g.parts?.length && `Separable volumes (draw all of them, they become the 3D parts): ${g.parts.join(' / ')}`,
+    // `gen.note` = 「這一台最容易被畫錯的那一件事」。它就是覆核意見的預防針 ⇒ 放最後(最靠近輸出)
+    g.note && `MOST COMMON MISTAKE — do not make it: ${g.note}`,
+  ].filter(Boolean);
+}
+
+/**
  * 設定稿 prompt。form = null | 'ground' | 'flight'(變形者雙型態)。
  * 畫風 MUST 對齊現有 master:綠幕 + 粗黑描邊 + 賽璐璐上色。
+ * 型態姿態語(含取景)取 `codex.FORM_POSE` 單一縫 —— 覆核台的「重下 prompt」吃同一份。
  */
-export function masterPrompt(ch, form = null) {
+export function masterPrompt(ch, form = null, pose = 'static', refPath = null) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  const proto = (loreOf(ch) || {}).proto || '';
-  const formLine = form === 'ground'
-    ? 'Draw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.'
-    : form === 'flight'
-      ? 'Draw the FLIGHT form of the SAME machine: the same parts rearranged — limbs folded into the airframe, wings and thrusters deployed. It MUST read as the same machine transformed, not a different model.'
-      : '';
+  // 沒有型態(非變形者)一律沿用地面那組取景 ⇒ 與舊制逐字相同
+  const fp = formPose(ch, form);
+  const act = SHOT_POSES.find((p) => p.key === pose);
 
   return [
+    // 參考圖 = 這台機體**已通過**的那一張。覆核意見反覆出現的「機體仿照移動那張的外觀重繪
+    // 此動作」講的就是這件事:三張姿態稿必須是同一台機器,而唯一能當錨的是通過的那張。
+    // 沒有通過的圖時呼叫端改用同一段對話串接(agy -c),同樣不讓三張各想像各的。
+    refPath && `Read the image file ${refPath}. That is THIS SAME machine, already approved. `
+      + 'Keep its silhouette, proportions, panel layout, colours and every design detail identical — '
+      + 'you are only changing what the machine is doing, never what it is.',
     `Concept art sheet for a mecha unit in a near-future war game. Unit id ${ch}, faction: ${FACTION[c.side] || c.side}.`,
     `Chassis specification:\n  · ${chassisSpec(v)}`,
     `Primary livery colour ${hex(v.hue)}, paint scheme "${v.paint}".`,
-    proto && `Design brief (authoritative, Traditional Chinese): ${proto}`,
+    ...designBrief(ch, form),
     limbLine(ch),
-    formLine,
+    bodyPlanLine(ch),
+    fp?.en,
+    act?.en,
     'Style: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.',
-    'Framing: the complete machine, full body, standing three-quarter view, filling about 85% of the frame, even margin on all sides, nothing cropped.',
+    `Framing: the complete machine, full body, ${shotFraming(ch, form, pose)}, filling about 85% of the frame, even margin on all sides, nothing cropped.`,
     'Background: flat pure chroma-key green #22B14C, completely uniform, no gradient, no ground plane, no shadow on the background.',
     'Exactly one machine in frame. No pilot figure, no text, no logos, no labels, no watermark, no multi-view sheet.',
     '1024x1024, square.',
@@ -243,11 +325,11 @@ export function slotPrompt(ch, slot, refPath) {
 /** 沒有參考圖時的退路(agy 無 read_file 權限)—— 品質較差,MUST 在交付說明中標註。 */
 export function slotPromptNoRef(ch, slot, brief) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  const proto = (loreOf(ch) || {}).proto || '';
   return [
     `Generate ONE image: a single detached mecha part — the "${slot.desc}" of a near-future war machine.`,
     `Machine context: ${FACTION[c.side] || c.side}. Chassis: ${chassisSpec(v)}.`,
-    proto && `Machine design brief (Traditional Chinese): ${proto}`,
+    // 同 masterPrompt:設計敘述取機體檔案原文(舊制那個 `lore.proto` 已退場,恆為空)
+    ...designBrief(ch, null),
     brief && `Part detail: ${brief}`,
     'Output requirements:',
     NINE_RULES + ';',

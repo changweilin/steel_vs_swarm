@@ -228,6 +228,68 @@ report 2–5 images per call at peak. The two volume rules in §5.0.2 are a **fe
 
 ⇒ Transformer masters are drawn as **ground + flight pairs, in the same conversation**, for silhouette consistency.
 
+#### 5.0.3 The flight master must say *airborne* (settled 2026-08-05, after the first review pass)
+
+The first transformer batch came back with **every flight master judged「需要是飛行姿態」** (s03 / s10 /
+t06 / t11 / m05 / m08 — six of eight). The images were not wrong about the machine; they were wrong about
+the **pose**: a correctly transformed airframe, standing on the ground.
+
+Cause: the flight instruction only said *"the same parts rearranged"* — which is equally true on the
+ground — while the framing line still said **`standing` three-quarter view**. Two signals pulled the
+model down; nothing pulled it up.
+
+The pose wording is therefore a **single seam**, `codex.js FORM_POSE`, with three fields per form
+(`zh` for the review station's re-prompt box, `en` + `framing` for the offline generator). Both consumers
+read it; neither may write its own. Requirements:
+
+- flight `zh`/`en` MUST state the machine is **off the ground and in flight**;
+- flight `framing` MUST NOT contain `standing`;
+- ground `framing` stays byte-identical (`standing three-quarter view`) so **non-transformer prompts do
+  not change at all**;
+- drawing one form drops the **other** form's prototype layer — a transformer always has two, and sending
+  both asks one image to be two machines at once.
+
+Audited by `audit_codex.mjs` Ⅵ, reverse-verified with `--break-pose`.
+
+#### 5.0.3b The second dimension: pose (settled 2026-08-05)
+
+Each unit needs **three** shots — 靜止 / 移動 / 重武器. Those names lived only in the review station's
+`POSES` list (key + label, **no semantics anywhere**), so the generator could only ever draw `_static`:
+**38 of the 120 cells had no tool capable of producing them.** The review station could count the gap
+and nothing could close it — the classic cost of splitting a name from its meaning.
+
+`codex.js SHOT_POSES` now carries the meaning, and `POSES` derives from it. Pose is **orthogonal** to
+form: `FORM_POSE` says where the machine is (ground / airborne), `SHOT_POSES` says what it is doing.
+`shotFraming(ch, form, pose)` composes them, with two rules that keep the change safe:
+
+- `static` declares **no** framing override ⇒ existing static prompts are byte-identical;
+- `moving`/`heavy` declare framing **per medium**, because "running" and "screaming past" are different
+  things on the ground and in the air — one shared sentence draws a flying unit sprinting on the floor.
+
+**Design anchor.** Six review notes said some variant of「機體仿照移動那張的外觀重繪此動作」 — three
+poses of one unit kept coming back as three different machines. `slots.mjs refShotOf()` now resolves an
+anchor per unit and feeds it to the prompt as a `Read the image file …` reference, in two tiers:
+① an **approved** in-repo shot (preferred — the note's literal request), ② this round's freshly drawn,
+not-yet-reviewed shot. A **rejected** shot is never an anchor; pointing at it copies the defect forward.
+With no anchor at all, the unit's shots are chained in one `agy -c` conversation instead — which is the
+generalisation of the §5.0.1 MUST 3 transformer pair rule (that rule is just this rule with two shots).
+
+#### 5.0.4 Three defects the first review pass exposed (all silent)
+
+The review notes were mostly not art direction — they were the artist hand-patching pipeline bugs:
+
+| Review note | Real cause | Fix |
+|---|---|---|
+|「非人型,克蘇魯外型」「非人形,外觀以袋鼠為主」「非人形、犬型」「非人形、鴕鳥外觀」(s07 s09 t04 t05) | **The design brief was never sent.** `masterPrompt` read `loreOf(ch).proto`, a free-string field **deleted** by the 2026-08-04 A40 restructure ⇒ `proto && …` was permanently falsy. The prompt still *looked* long (nine rules + chassis lexicon), so nothing looked broken. And no line ever said "not humanoid", while the word *mecha* pulls hard toward humanoid. | brief now comes from `codex.js mechaCodex`/`protoOf` (prototype layers + `gen.sil`/`mass`/`mat`/`parts`/**`note`**); plus a derived `bodyPlanLine()` non-humanoid clause |
+|「昆蟲有 6 隻腳」(m07, both forms) | `limbLine()` emitted *"exactly 4 limbs in total … a quadruped body plan"*, then *"exactly 2 middle legs"*, then *"and no other limbs"* — **self-contradictory in one paragraph**. The model obeyed the first clause. `mecha.js` had said 「六足定樁 ×6」 all along. | limb total is derived from the pair count (2 pairs → quadruped, 3 → HEXAPOD) |
+| t07 / t08 / m04 re-prompts, each deleting exactly「共軸雙旋翼/六旋翼」+「球形艙/厚板機身」 | `visual.frame`/`body` are read **only** by `buildDrone` (multirotor). Avian drones carry them as leftovers from earlier chassis, and `visualWords()` fed them to the model — so the pterosaur sniper was briefed as a *coaxial twin-rotor with a spherical hull*. The same stale field also gave t07/t08/m04 a bogus `rotor_arm` split slot with **no rig node to hang on** (`auditCoverage` only checks the other direction). | `codex.js visualUses()` — applicability derived from the actual consumer in `models.js`; `visualWords`, `chassisSpec` and `DRAW_SLOTS.rotor_arm` all gate on it |
+
+A fourth was a stale lexicon rather than a prompt bug: `LEX.flight.heli` still described 「單旋翼 …
+尾桁自背後展開」, but the **2026-07-11 tricopter refactor removed the tail boom** — `models.js` builds a
+Y-shaped three-rotor gunship (nose mast + one rotor at each heel, arms extended forward on the gun).
+m01's review note describes the built model almost verbatim. The `buildMorphMech` header comment — which
+`LEX`'s own docstring names as its authoritative source — was stale too; both were corrected.
+
 #### 5.0.2 Two volume rules (quota precondition)
 
 1. **Mirror-symmetric parts are generated once; mirroring happens in Blender.** Applies to `legL/R`,
@@ -312,6 +374,7 @@ no text, no labels, no arrows, no watermark, no multi-view sheet;
 | **P1 seam** (½ day) | `public/js/partlib.js` + one-line parse change in each of the three consumers; **no AI parts yet** | every audit bit-identical (the point of this step is proving the fuse works) |
 | **P2 static pilot** (1–2 d) | one landmark (`pylon` or `watertower`) end-to-end: Openverse → SF3D → Blender → part library | `audit_beacons.mjs` + `audit_object_joints.mjs` + `--break-extent` reverse check |
 | **P3 dynamic pilot** (2–3 d) | one mech (`biped`, most typical slots) end-to-end: `agy` split → TRELLIS/Hunyuan → slot alignment | three rig audits green + bbox drift ≤±5% + `shot_units.mjs` before/after |
+| **P4-0 review feedback loop** | the review station's verdict drives the generator: `slots.mjs masterQueue()` orders redraws by **fewest passes first** (a unit = character × form). Before this, `--masters` only looked at whether a file existed, so「⟳ 重下 prompt」 reached nothing — the loop was cut | every unit has ≥1 passing image; `gen2d.mjs --audit` queue check green |
 | **P4a mechs ×12** | draw the 4 missing masters (t10 t12 m02 m06), then split per unit; symmetric parts once | each unit passes the three rig audits; 12 done = first deliverable milestone |
 | **P4b drones ×12** | masters complete ⇒ split directly; fewest slots, lowest unit cost | same |
 | **P4c transformers ×8** | draw 7 × ground/flight master pairs; **one part set only**, split from ground form, accept against flight form | same **+ `shot_units.mjs` in both forms** (`makePoser` time-window sequence must not drift) |

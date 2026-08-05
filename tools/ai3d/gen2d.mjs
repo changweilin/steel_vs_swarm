@@ -22,18 +22,20 @@
  *   node tools/ai3d/gen2d.mjs --only t01             單一角色
  *   node tools/ai3d/gen2d.mjs --limit 5              本輪最多幾張(批次 ≤5,§6)
  *   node tools/ai3d/gen2d.mjs --redo t01/leg         強制重畫某一張
- *   node tools/ai3d/gen2d.mjs --no-ref               無參考圖模式(agy 沒有 read_file 權限時)
+ *   node tools/ai3d/gen2d.mjs --no-ref               切圖:無參考圖模式(agy 沒有 read_file 權限時)
+ *   node tools/ai3d/gen2d.mjs --masters --ref        設定稿:改用參考圖當設計錨(需 agy 真的讀得到檔;
+ *                                                    1.1.10 實測讀不到 —— 見 buildJobs 的 anchor 那一段)
  */
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
-import { workList, missingMasters, masterPath, mastersOf, REPO, KIND_ORDER, auditCoverage } from './slots.mjs';
+import {
+  workList, masterQueue, refShotOf, masterPath, mastersOf, REPO, auditCoverage, auditQueue,
+} from './slots.mjs';
 import { masterPrompt, slotPrompt, slotPromptNoRef, auditLexicon } from './prompt.mjs';
-import { CHARACTERS } from '../../public/js/data.js';
-
-const CH_KIND = Object.fromEntries(Object.entries(CHARACTERS).map(([id, c]) => [id, c.kind]));
+import { SHOT_POSE_KEYS as SHOT_ORDER } from '../../public/js/codex.js';
 
 const OUT = join(REPO, 'tools', 'ai3d');
 const DRAFTS = join(OUT, 'drafts');
@@ -50,7 +52,7 @@ const flag = n => argv.includes(`--${n}`);
 const val = n => { const i = argv.indexOf(`--${n}`); return i < 0 ? null : argv[i + 1]; };
 
 const OPT = {
-  plan: flag('plan'), masters: flag('masters'), noRef: flag('no-ref'),
+  plan: flag('plan'), masters: flag('masters'), noRef: flag('no-ref'), ref: flag('ref'),
   kind: val('kind'), only: val('only'), redo: val('redo'),
   limit: val('limit') ? Number(val('limit')) : Infinity,
 };
@@ -115,22 +117,38 @@ function runAgy(prompt, cont = false) {
 function buildJobs() {
   const jobs = [];
   if (OPT.masters) {
-    // 順序 MUST 吃 §5.0.1(機甲 → 無人機 → 變形者):額度有限 ⇒ 先畫的那批才是先交付的
-    // 里程碑,照 CHARACTERS 宣告序畫等於把額度花在最難的變形者上。
-    const rank = ch => KIND_ORDER.indexOf(CH_KIND[ch]);
-    const need = missingMasters().sort((a, b) => rank(a.ch) - rank(b.ch));
-    const chs = [...new Set(need.map(m => m.ch))];
-    for (const ch of chs) {
-      if (OPT.only && ch !== OPT.only) continue;
-      // 變形者:地面/飛行**成對**送 —— 只缺一張也兩張一起重畫(§5.0.1 MUST 3)。
-      // 跳過已存在的那張 = 飛行稿接不到地面稿那段對話,剪影必分家;多畫一張是這條
-      // MUST 的價錢,不是浪費。
-      const all = mastersOf(ch);
-      const pair = all.length > 1;
-      all.forEach((master, i) => {
-        const form = master.includes('_ground_') ? 'ground' : master.includes('_flight_') ? 'flight' : null;
-        jobs.push({ id: master, ch, kind: 'master', out: join(NEW_MASTERS, `${master}.jpg`),
-          prompt: masterPrompt(ch, form), cont: pair && i > 0, pair, force: pair });
+    // 順序 = **覆核優先序**(slots.mjs `masterQueue()` 單一縫;2026-08-05 使用者定案):
+    // 通過數少的先畫、0 通過的最前面。舊制只排「機甲 → 無人機 → 變形者」而且只看檔案在不在
+    // ⇒ 被覆核退回的設定稿一張都排不進來(那條線是斷的,見 slots.mjs 同一段)。
+    // 機種序退居同分時的次要鍵,仍在 masterQueue 裡吃 §5.0.1。
+    for (const q of masterQueue()) {
+      if (OPT.only && q.ch !== OPT.only) continue;
+      // 設計錨(`refShotOf` 單一縫:已通過的優先,其次是前一輪剛畫、還在等覆核的那張)。
+      // 有錨 ⇒ 每一張都對著它畫;**沒有錨 ⇒ 整台機體的待畫張數串在同一段對話裡**(agy -c),
+      // 由第一張定案設計。兩條路的目的是同一個:同一台機器的每一張圖都不該各想像各的
+      // (覆核意見「機體仿照移動那張的外觀重繪此動作」出現了六次)。
+      // §5.0.1 MUST 3(變形者地面/飛行必須同一段對話)是這一條的特例,自動被涵蓋。
+      // ⚠ 參考圖預設**關閉**(`--ref` 才開)。agy 1.1.10 的 headless 模式下,
+      // README 記載的 `permissions.allow: ["read_file(…)"]` 規則**已不生效**(逐一實測過
+      // 反斜線 glob / 正斜線 glob / 絕對檔名 / `*…*` 四種寫法,一律仍回
+      // 「auto-denied」);唯一有效的是 `--dangerously-skip-permissions`,而那會連
+      // edit_file 與 command 一起放行 —— 讓一個 headless agent 拿到儲存庫的寫入與執行權,
+      // 為了一張參考圖不值得。**沒有參考圖不是災難**:設計敘述(mecha.js 的
+      // sil/mass/mat/parts/note)本來就是設計的權威,實測 s07_heavy 是在讀檔被拒的情況下
+      // 生出來的,仍與 s07_static 是同一台機器。取不到就走同一段對話串接(原則 6:降級不例外)。
+      const anchor = OPT.ref ? refShotOf(q.ch, null) : null;
+      const shots = q.need.slice().sort((a, b) =>
+        // 地面型先(關節樞軸最清楚,是飛行型的錨)、靜止先(它是另外兩張的錨)
+        (a.form === 'flight') - (b.form === 'flight')
+        || SHOT_ORDER.indexOf(a.pose) - SHOT_ORDER.indexOf(b.pose));
+      shots.forEach((s, i) => {
+        jobs.push({
+          id: s.slot, ch: q.ch, kind: 'master', form: s.form, pose: s.pose,
+          out: join(NEW_MASTERS, `${s.slot}.jpg`),
+          ref: anchor ? `${anchor.slot}${anchor.tier === 2 ? '(未驗收)' : ''}` : null,
+          prompt: masterPrompt(q.ch, s.form, s.pose, anchor?.path ?? null),
+          cont: !anchor && i > 0,
+        });
       });
     }
     return jobs;
@@ -166,13 +184,16 @@ function buildJobs() {
 // 兩支稽核**每次執行都跑**:它們紅字代表提示詞是錯的(槽位漏畫 / 原始代碼漏進提示詞),
 // 那種錯要到組裝完或看圖才發現,而那時額度已經花掉了。
 {
-  const cov = auditCoverage(), lex = auditLexicon();
-  if (cov.length || lex.length) {
+  const cov = auditCoverage(), lex = auditLexicon(), qq = auditQueue();
+  // 佇列的警告(0 通過但還沒被判退)只印出來不擋:那是「還沒覆核到」而不是壞掉
+  const warn = qq.filter(p => p.startsWith('⚠')), qbad = qq.filter(p => !p.startsWith('⚠'));
+  if (cov.length || lex.length || qbad.length) {
     console.log('❌ 稽核未通過,先修好再畫(否則畫出來的東西掛不上去):');
-    for (const p of [...cov, ...lex]) console.log('  ' + p);
+    for (const p of [...cov, ...lex, ...qbad]) console.log('  ' + p);
     process.exit(1);
   }
-  if (flag('audit')) { console.log('✅ rig 節點涵蓋 + 描述子詞表 兩支稽核通過'); process.exit(0); }
+  for (const p of warn) console.log(p);
+  if (flag('audit')) { console.log('✅ rig 節點涵蓋 + 描述子詞表 + 補圖優先序 三支稽核通過'); process.exit(0); }
 }
 
 const jobs = buildJobs();
@@ -190,12 +211,12 @@ if (OPT.plan) {
 let done = 0, ok = 0, fail = 0;
 for (const j of jobs) {
   if (done >= OPT.limit) break;
-  // 成對工作項(變形者雙型態)只在**兩張都已存在**時才跳過
-  const pairDone = j.pair && mastersOf(j.ch).every(m => existsSync(join(NEW_MASTERS, `${m}.jpg`)));
-  // `--redo s10` = 整隻(變形者則兩型態一起,才會在同一段對話裡重畫);
+  // `--redo s10` = 整隻(所有姿態一起,才會在同一段對話裡重畫);
   // `--redo s10_ground_static` / `--redo t01/leg` = 只那一張。
   const forced = OPT.redo && (OPT.redo === j.id || OPT.redo === j.ch);
-  if ((j.pair ? pairDone : existsSync(j.out)) && !forced) continue;
+  // 已經畫出來的不重畫(續跑紀律 ①)。設定稿那條線 `reviewUnits` 已經先濾過一次,
+  // 這裡是切圖與 `--redo` 共用的最後一道
+  if (existsSync(j.out) && !forced) continue;
   if (j.needsRef && !OPT.noRef) { console.log(`skip ${j.id}(缺設定稿;先跑 --masters,或加 --no-ref)`); continue; }
 
   done++;
@@ -218,6 +239,7 @@ for (const j of jobs) {
   // `out` 記**相對於儲存庫根**:絕對路徑會把帳本綁死在產出當下那個 worktree 上,
   // 而 worktree 一收掉,帳本裡每一筆的路徑就全部指向不存在的地方(2026-08-04 實例)。
   man.generated.push({ id: j.id, ch: j.ch, kind: j.kind, slot: j.slot ?? null,
+    form: j.form ?? null, pose: j.pose ?? null,
     ref: j.ref ?? null, mirror: !!j.mirror, out: relOut(j.out), src: file, bytes,
     format: 'jpeg (agy generate_image 只出 JPEG)', at: new Date().toISOString(), prompt: j.prompt });
   saveManifest(man);

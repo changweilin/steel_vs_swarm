@@ -49,6 +49,87 @@ export const PROTO_LAYERS = [
 ];
 export const PROTO_PARTS = ['src', 'note'];
 
+// ---- 型態姿態(變形者的地面 / 飛行)----------------------------------------
+// 2026-08-05 使用者定案:「如果是變形者的飛行型態,需另外下 prompt 說明是飛行姿態」。
+//
+// **這一條 MUST 只有一份**,兩個消費端同吃:覆核台那顆「重下 prompt」(`imagePrompt` 取 `zh`)
+// 與離線出圖管線(`tools/ai3d/prompt.mjs masterPrompt` 取 `en`/`framing`)。中英同放一格是
+// 刻意的 —— 它們是**同一件事的兩種寫法**,不是兩件事;拆成兩個檔各寫一份的症狀是「工具自己
+// 畫出來的是飛行姿態,人照著覆核台複製的那份不是」,而兩邊都不會報錯。
+//
+// `pose`/`framing` 兩欄才是這次真正的修法:舊制只說「同一台機器把零件重排」,從頭到尾**沒有
+// 一個字說機體在空中**,而取景那一行還寫著 standing(站姿)—— 兩者一起把模型拉回地面。
+// 2026-08-04 覆核收回來的六張飛行稿(s03 / s10 / t06 / t11 / m05 / m08)因此一律被判
+// 「需要是飛行姿態」:畫的是變形完成、但站在地上的機體。
+export const FORM_POSE = {
+  ground: {
+    label: '地面型態',
+    zh: '地面(步行)型態:四肢展開承重站在地面,翼面、旋翼與推進器收折貼身',
+    en: 'Draw the GROUND (walking) form: limbs deployed and bearing weight, wings, rotors and thrusters folded against the body.',
+    framing: 'standing three-quarter view',
+  },
+  flight: {
+    label: '飛行型態',
+    zh: '飛行型態:機體**正在空中飛行** —— 完全離地騰空、機首朝航向前方、翼面與推進器全部展開、'
+      + '四肢與起落收進機身;是同一台機器變形而來,不是另一台機器',
+    en: 'Draw the FLIGHT form of the SAME machine, AIRBORNE AND IN FLIGHT — not a transformed machine standing on the ground. '
+      + 'The machine is completely off the ground with nothing touching any surface, flying nose-first along its direction of travel; '
+      + 'wings, rotors and thrusters fully deployed and locked out, limbs and landing gear folded into the airframe. '
+      + 'It MUST read as the same machine transformed, not a different model.',
+    framing: 'airborne three-quarter view seen slightly from below, the machine banked into flight, nose forward, nothing touching the ground',
+  },
+};
+
+// ---- 動作姿態(每一台機體要畫的三張)----------------------------------------
+// 2026-08-05:圖的第二個維度。`FORM_POSE` 講的是「機體在哪」(地面 / 空中),
+// 這一張講的是「它在做什麼」(待機 / 移動 / 開重砲)—— 兩者**正交**,合起來才是一張圖的取景。
+//
+// 為什麼要收成表:三種姿態的名字本來只住覆核台的 `POSES`(一張只有 key/label 的清單),
+// 而**姿態的語意一個字都沒有** —— 出圖端因此只畫得出 `_static`,120 格裡的 moving/heavy
+// 有 38 格根本沒有工具生得出來(2026-08-05 實測)。名字與語意分兩處就是這個結果:
+// 覆核台數得出「缺 38 張」,卻沒有任何東西知道那 38 張長什麼樣。
+//
+// `framing` 是**覆寫**不是取代:只有需要改站姿的姿態才寫,static 不寫 ⇒ 逐字沿用 `FORM_POSE`
+// 那一份 ⇒ 既有的靜止稿提示詞**逐位元不變**。逐 medium 分開寫是因為「奔跑」與「高速掠過」
+// 在地面與空中是兩件事,共用一句話會讓飛行體被畫成在地上跑。
+export const SHOT_POSES = [
+  {
+    key: 'static', label: '靜止',
+    zh: '待機:機體靜止不動,武器收在待命位置,重心居中',
+    en: 'Action: at rest and motionless, weapons stowed at the ready, weight centred and settled.',
+  },
+  {
+    key: 'moving', label: '移動',
+    zh: '移動:機體正在全速前進,重心前傾、四肢/推進器擺到動作中段,看得出速度',
+    en: 'Action: MOVING AT FULL SPEED — caught mid-motion, not posed. Weight thrown forward, limbs and thrusters '
+      + 'frozen mid-cycle (one side driving, the other recovering), trailing parts swept back by the airflow.',
+    framing: {
+      ground: 'three-quarter view from slightly ahead, caught mid-stride at a full run, one foot off the ground',
+      air: 'airborne three-quarter view seen slightly from below, in a hard fast pass, nose forward, nothing touching the ground',
+    },
+  },
+  {
+    key: 'heavy', label: '重武器',
+    zh: '重武器:機體正在使用**重武器**射擊 —— 據槍/展開砲位、後座撐住,槍口朝畫面前方偏側',
+    en: 'Action: FIRING THE HEAVY WEAPON — the heavy weapon is deployed and being fired right now, braced against '
+      + 'recoil (legs planted or airframe pitched back), muzzle end clearly visible and pointed forward off-camera. '
+      + 'Show the heavy weapon, not the light one.',
+    framing: {
+      ground: 'three-quarter view, braced in a firing stance, weight settled back against the recoil',
+      air: 'airborne three-quarter view seen slightly from below, pitched back on the gun, nothing touching the ground',
+    },
+  },
+];
+export const SHOT_POSE_KEYS = SHOT_POSES.map((p) => p.key);
+
+/** 這一張圖的取景 = 型態(在哪)× 動作(在做什麼)。姿態沒有覆寫就沿用型態那一份。 */
+export function shotFraming(ch, form, pose) {
+  const fp = formPose(ch, form);
+  const medium = fp && form === 'flight' ? 'air' : 'ground';
+  const p = SHOT_POSES.find((x) => x.key === pose);
+  return p?.framing?.[medium] || (fp || FORM_POSE.ground).framing;
+}
+
 /** 這台機體**該有**哪幾層原型(由 visual 推導;mecha.js 少一層或多一層都是稽核紅字)*/
 export function protoLayers(ch) {
   const vis = CHARACTERS[ch]?.visual || {};
@@ -177,12 +258,34 @@ export function hueHex(ch) {
   return h == null ? '' : `#${h.toString(16).padStart(6, '0')}`;
 }
 
+/**
+ * 這一欄外觀描述子對這台機體**適不適用**。
+ *
+ * `visual` 是一張共用的欄位表,一台機體只用得到其中一部分 —— 用不到的那幾欄是換機種/改設計
+ * 時留下來的**殘值**,而 `visualWords` 會照樣把它們翻成名詞送進生圖模型,變成憑空多出來的
+ * 設計要求。實測(`models.js` 逐處消費點):`frame`(旋翼骨架)與 `body`(機身殼)**只有
+ * `buildDrone`(多旋翼)讀**,`wing` **只有 `buildFixedWing` 讀**;擬態翼無人機
+ * (`form:'avian'`,走 `buildAvianDrone`)三欄一個都不讀,它的 rig 連 `spin` 節點都沒有。
+ *
+ * 2026-08-04 覆核於是收到三則同樣的意見 —— t07 翼龍被寫成「共軸雙旋翼、球形艙」、
+ * t08 東亞龍被寫成「六旋翼、厚板機身」、m04 獵鷹被寫成「共軸雙旋翼、方艙機身」,
+ * 使用者把這幾個詞逐一手動刪掉才重下 prompt(三台的重下 prompt 差異**只有**這一項)。
+ * 手刪治不了本:規則 MUST 推導,MUST NOT 靠人每次記得刪。
+ */
+const VIS_USED_BY_FORM = {
+  avian: { frame: false, body: false, wing: false },   // 生物骨架:三欄都不讀
+  fixed: { frame: false, body: false },                // 定翼:只讀 wing
+};
+export function visualUses(vis, key) {
+  return (VIS_USED_BY_FORM[vis?.form] || {})[key] !== false;
+}
+
 /** 把 `visual` 翻成名詞短語清單(生圖用;查無詞彙的列舉值原樣帶出,稽核會抓)*/
 export function visualWords(ch) {
   const vis = CHARACTERS[ch]?.visual || {};
   const out = [];
   for (const [k, v] of Object.entries(vis)) {
-    if (VIS_NUMERIC.has(k)) continue;
+    if (VIS_NUMERIC.has(k) || !visualUses(vis, k)) continue;
     out.push(VIS_WORDS[k]?.[v] || `${k}:${v}`);
   }
   return out;
@@ -273,13 +376,36 @@ function fmtField(f, v) {
   return String(v);
 }
 
-/** ㈡ 2D 生圖:名詞短語串(關鍵詞優先,句子只留剪影與材質兩句)*/
-export function imagePrompt(kind, ch) {
+/** 型態 → 它自己的原型層 / 要**濾掉**的另一層。畫飛行型就別把地面型的原型當關鍵詞送進去
+ *  (變形者恆有兩層,兩層一起送 = 同一張圖同時被要求長成兩種東西)。 */
+const FORM_LAYER = { flight: { own: 'air', drop: 'ground' }, ground: { own: 'ground', drop: 'air' } };
+
+/**
+ * 這一台機體的這一個型態該用哪組姿態語 —— **兩個消費端的唯一入口**
+ * (`imagePrompt` 與 `tools/ai3d/prompt.mjs masterPrompt`),回傳 `null` = 不分型態。
+ *
+ * 「有沒有這個型態」MUST **推導**(該型態的原型層存不存在),MUST NOT 比對機種字串:
+ * 非變形者就算被傳進 'flight' 也拿不到飛行姿態語 —— 它根本沒有飛行型態,掛上去就是憑空
+ * 多一個型態,而畫面上只表現成「這台機甲怎麼在飛」。`drop` = 畫這一型時要濾掉的另一層原型。
+ */
+export function formPose(ch, form) {
+  const L = FORM_LAYER[form];
+  if (!L || !protoLayers(ch).includes(L.own)) return null;
+  return { ...FORM_POSE[form], drop: L.drop };
+}
+
+/** ㈡ 2D 生圖:名詞短語串(關鍵詞優先,句子只留剪影與材質兩句)
+ *  `form` = 'ground' | 'flight'(變形者專用)、`shot` = 'static' | 'moving' | 'heavy'。
+ *  兩者省略 = 不分型態/不分動作,逐位元同舊行為。 */
+export function imagePrompt(kind, ch, form = null, shot = null) {
   const d = codexOf(kind, ch);
   if (!d) return '';
+  const pose = kind === 'mecha' ? formPose(ch, form) : null;
+  const act = kind === 'mecha' ? SHOT_POSES.find((p) => p.key === shot) : null;
   const bits = [];
   if (kind === 'mecha') {
-    bits.push(d.ident.name, d.ident.kind, ...d.brief.proto.map((L) => L.src), ...visualWords(ch), hueHex(ch));
+    bits.push(d.ident.name, d.ident.kind,
+      ...d.brief.proto.filter((L) => L.key !== pose?.drop).map((L) => L.src), ...visualWords(ch), hueHex(ch));
   } else {
     bits.push(`${d.ident.name}「${d.ident.code}」`, d.brief.nat, d.brief.sex, `${d.brief.age} 歲`, ...artWords(ch));
   }
@@ -288,8 +414,9 @@ export function imagePrompt(kind, ch) {
   // (同一件事在三個縫各講一次是對的 —— 但送進生圖模型時重複的詞會變成權重灌水)。
   const seen = new Set();
   const uniq = bits.filter((b) => b && !seen.has(b) && seen.add(b));
-  // 剪影/材質是「畫成什麼樣」的兩句,放在關鍵詞之後(前面的名詞才是主導)
-  return [uniq.join('、'), d.gen.sil, d.gen.mat].filter(Boolean).join('\n');
+  // 剪影/材質是「畫成什麼樣」的兩句,放在關鍵詞之後(前面的名詞才是主導);
+  // 型態與動作排最後 —— 它們講的是「這一張要畫哪一型、在做什麼」,是對前面那台機器的取景指令
+  return [uniq.join('、'), d.gen.sil, d.gen.mat, pose?.zh, act?.zh].filter(Boolean).join('\n');
 }
 
 /** ㈢ 3D 建模:分件單 + 尺度 + 比例 + 注意事項 */
