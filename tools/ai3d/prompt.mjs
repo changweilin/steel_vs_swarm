@@ -9,12 +9,13 @@
  *   split(切圖)     = image→3D 的**輸入**,吃九條規則(灰底、全不透明、平光、無描邊)。
  *                      畫成漂亮插畫反而會在 3D 階段付代價(計畫 §5.2 開頭)。
  *
- * 設計敘述 MUST 取 lore.js 的 `proto` 原文 —— 那是機體原型的權威敘述。這裡**不轉譯**:
- * 轉譯就是第二份設計描述,而漂移只會表現成「新畫的這隻跟設定不太一樣」,沒有錯誤訊息。
+ * 設計敘述 MUST 取 `codex.js protoOf()` 的原型層原文 —— 那是機體原型的權威敘述(A40 ⑤:
+ * 值一律到原處取)。這裡**不轉譯**:轉譯就是第二份設計描述,而漂移只會表現成「新畫的這隻
+ * 跟設定不太一樣」,沒有錯誤訊息。
  */
 
 import { CHARACTERS, MORPH_HUMANOID } from '../../public/js/data.js';
-import { loreOf } from '../../public/js/lore.js';
+import { protoOf } from '../../public/js/codex.js';
 import { slotsOf } from './slots.mjs';
 
 /** 九條規則(§5.2)—— 逐字一份,兩個消費端同吃。 */
@@ -163,6 +164,20 @@ function chassisSpec(v) {
 }
 
 /**
+ * 設計敘述(權威原文)—— 走 `codex.js protoOf()` 這一個縫,兩個消費端同吃。
+ *
+ * 舊制讀 `lore.js` 的自由字串 `proto`,那個欄位已於 2026-08-04 拆成結構化的原型層;
+ * 讀不到就變成空字串被 `filter(Boolean)` 濾掉 ⇒ 提示詞裡最權威的那一段整段消失,
+ * 而且沒有任何錯誤訊息(只表現成「生出來的圖跟設定對不上」)。
+ *
+ * 分隔用 ` ▸ `(同 codex.js `fmtField`):原型名稱本身就含「」與 ——,
+ * 拿那兩種符號當分隔會讀不出邊界。層與層之間用換行條列,與 chassisSpec 同款。
+ */
+function protoBrief(ch) {
+  return protoOf(ch).map((L) => `${L.label} ▸ ${L.src}:${L.note}`).join('\n  · ');
+}
+
+/**
  * 肢體數目 —— **由槽位表推導**,MUST NOT 讓模型自己猜。
  *
  * 首批實測:s10(象)畫成六條腿、t06(猿)畫成六肢 —— 而 rig 只有 legL/legR + armL/armR
@@ -200,7 +215,7 @@ function limbLine(ch) {
  */
 export function masterPrompt(ch, form = null) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  const proto = (loreOf(ch) || {}).proto || '';
+  const proto = protoBrief(ch);
   const formLine = form === 'ground'
     ? 'Draw the GROUND (walking) form: legs deployed and bearing weight, wings and thrusters folded against the body.'
     : form === 'flight'
@@ -211,7 +226,7 @@ export function masterPrompt(ch, form = null) {
     `Concept art sheet for a mecha unit in a near-future war game. Unit id ${ch}, faction: ${FACTION[c.side] || c.side}.`,
     `Chassis specification:\n  · ${chassisSpec(v)}`,
     `Primary livery colour ${hex(v.hue)}, paint scheme "${v.paint}".`,
-    proto && `Design brief (authoritative, Traditional Chinese): ${proto}`,
+    proto && `Design brief (authoritative, Traditional Chinese):\n  · ${proto}`,
     limbLine(ch),
     formLine,
     'Style: bold cel-shaded comic illustration, thick black ink outlines, hard-edged cel shading with two or three tone bands, saturated colours, cyan accent rim on the silhouette edge.',
@@ -243,11 +258,11 @@ export function slotPrompt(ch, slot, refPath) {
 /** 沒有參考圖時的退路(agy 無 read_file 權限)—— 品質較差,MUST 在交付說明中標註。 */
 export function slotPromptNoRef(ch, slot, brief) {
   const c = CHARACTERS[ch], v = c.visual || {};
-  const proto = (loreOf(ch) || {}).proto || '';
+  const proto = protoBrief(ch);
   return [
     `Generate ONE image: a single detached mecha part — the "${slot.desc}" of a near-future war machine.`,
     `Machine context: ${FACTION[c.side] || c.side}. Chassis: ${chassisSpec(v)}.`,
-    proto && `Machine design brief (Traditional Chinese): ${proto}`,
+    proto && `Machine design brief (Traditional Chinese):\n  · ${proto}`,
     brief && `Part detail: ${brief}`,
     'Output requirements:',
     NINE_RULES + ';',
