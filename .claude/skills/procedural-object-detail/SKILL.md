@@ -59,6 +59,8 @@ export function rngKit(seed) {
 |---|---|
 | No `Math.random()` in any scene-generation path | Clients / reloads diverge |
 | Fixed RNG draws per candidate; **reject-tests run after sampling** | "Skip sampling when rejected" desyncs the whole stream |
+| Seeds are **stable IDs in data tables** (per house/tree/pole), not a global counter | Inserting one object reshuffles every later one |
+| Removing a random call from a generator leaves a **burnt draw** (`rng.next()` with a comment) | Everything after it in the stream moves — the whole object repaints for an unrelated edit |
 | Palette/roster arrays are **appended, never reordered** | Every index in the world shifts; half the scene repaints |
 
 **Extending a scatter window: append a second RNG, never widen the first.**
@@ -114,6 +116,40 @@ strut(g, mat, J.BB, J.HB);    // length and rake derived from the two endpoints
 
 Applies to anything with **two or more connected members**. Hand-placed centres+angles
 fail silently and only show after a rotation.
+
+### Depth is built outward — you cannot carve a recess into a box
+
+The single most repeated silent failure family. A panel written *behind* a solid face is
+simply inside the render: lattice screens at `front − 0.04` (five frontages, none drawn),
+windscreens laid along a body wedge's centreline (every car with a body-coloured screen),
+brake levers written at the cowl's own half-width (inside it), a map tilted about its own
+centre "for depth" (bottom edge swings behind the posts it bolts to).
+
+- Fake depth by stacking **outward**: backing board `+0.04`, battens `+0.12`, sill/posts
+  `+0.08` (deeper than the board, shallower than the battens, so they frame it).
+- Where a real cavity is required (an opening that must admit or emit an object), the
+  volume itself must be cut back — returns either side, a header over — or notched out of
+  multiple boxes merged into one mesh.
+- A pane over a raked panel is offset along the panel's **outward normal**, and which
+  normal is outward is *derived* (points away from the interior centre), not assumed.
+- A tilt is for a hood — a hood overhangs nothing.
+
+### Orientation is derived, never guessed
+
+Author every generator facing **one convention axis** and rotate the group by `face` —
+branching on axis inside each measurement is how stairs climb away from their treads.
+Then:
+
+| Case | Derivation |
+|---|---|
+| Wall-mounted prop (fan unit, plate, poster) | `ry = atan2(nx, nz)` of the wall's **outward normal**; the back face must touch the wall (draw bracket arms across any stand-off) |
+| Pavement clutter outside a frontage | Faces the way the shop does — placed in world space but authored facing the convention axis, so a unit looking −x needs `ry = −π/2` on everything stood outside it |
+| A bench / seat pair | `ry` is a function of **which side of the space it stands on** — one constant for a pair is guaranteed wrong for one of them ("two benches facing the view" both faced away) |
+| Bay markings / wheel stops | Nose in from a convention end; a bay entered from the other end needs `ry = π` on **both** |
+| Rotated part's tip position | Apply the rotation to the offset (`applyEuler`), never hand-derive the trig — a part rotates about its **centre**, and hand-derived sin/cos put every limb 0.4 m off at 90° to the lean |
+| Cylinders along the ground | `CylinderGeometry`'s axis is +y; a rail along z needs `rx = π/2` or it is a column standing through the roof |
+| In-unit offsets (`doorAt` etc.) | Are in the **unit's frame**; on a rotated frontage a positive offset moves the other way in world space |
+| Ride-on / close-use props | A prop authored to be read from outside **has no inside** — render from the new viewpoint before making anything enterable; the fault will be an absence, not a bug |
 
 ### Micro-jitter: only degrees of freedom that cannot break joints
 
@@ -227,8 +263,48 @@ a hundred scattered ones.
   Tyre marks: opacity 0.09, `depthWrite: false`.
 - **Scale anchor.** Place one vertical object of known size. A row of cones is a saw;
   a row of blobs is a scallop; vertical is the only thing the eye can compare slope against.
+- **A plantation is not a scatter.** A second species built as a *stand* — a rotated
+  rectangle with a hard edge, a regular grid inside, nothing else inside it, its own
+  ground tone under it — is what gives a slope its scale and a ridge its saw edge. And a
+  block of tall anything defeats keep-out **discs** sized for scatter: what holds a sight
+  line open through a block is a **corridor**, not a bigger radius (a sector from a point
+  is arbitrarily narrow at its apex — one tree at the apex is the whole view).
 - **One moving thing.** A few cloth/flag pieces on different `rate`/`phase`;
   waveform `sin(t·r+φ)·0.75 + sin(t·r·3.3+φ)·0.25` (slow lift + small flutter).
+- **Pre-warm ambient particle systems** (petals, leaves, rain) by stepping the update
+  ~40 × 0.1 s at build — the first frame should already have them mid-air. Bias fallen
+  ones toward edges and walls (that is where wind actually leaves them); wrap drifting
+  ones relative to the *feature's centreline*, not world axes.
+
+### Distribution is a single auditable table
+
+When placing many of one expensive thing (vehicles, hero props), put **every placement in
+one file, one row each, with a `note` saying why it is there** — a distribution cannot be
+reviewed 30 lines at a time across 22 modules, and half the placements are one metre from
+something that would make them wrong; the note is what stops the next round moving them.
+Measured composition rules that generalise:
+
+- Cap the on-road count hard (18 total / 8 on carriageways read as a town; 36/20 read as
+  a car park with houses).
+- **Fill the marked parking the districts already drew first** — an empty bay beside one
+  parked vehicle does more work than a second vehicle in it. Kerbside is seasoning.
+- Never let two face each other across a road (the eye reads the gap as impassable), and
+  keep drive-side orientation consistent — it costs nothing and is most of why a parked
+  row reads as a street.
+- Some places have none *because nothing can drive there* — record that reason too.
+- Run a **pairwise overlap audit over the table itself** in dev (rotated AABBs), and keep
+  a **flood-fill checkpoint list in the file header** for every passage the table could
+  seal (see `walkable-level-verification`).
+
+### Frontage dressing wants a frame and a slot allocator
+
+Dress plots in the plot's own frame: `at(u, v)` with `u` along the frontage and `v`
+outward, plus derived `outRy` (against-wall) and `flankRy(side)`. Then allocate frontage
+positions through one `take(halfWidth, preferred)` that walks outward in 0.3 m steps over
+a `used[]` interval list — **with the doorway reserved before any prop is placed** —
+and skip props that do not fit rather than pushing them into the road. Every placed thing
+seats on the *dressed* ground query, never the raw profile. The one prop that bypassed
+the allocator in the reference project is the one that ended up buried in a front step.
 
 ---
 
@@ -237,6 +313,7 @@ a hundred scattered ones.
 | Construction | Actually reads as |
 |---|---|
 | One blob generator rescaled as a second species | Field of identical bubbles |
+| A hedge/mass as instanced blobs only | A row of separate dark polyhedra — an edge/ink pass fires on every blob's own silhouette. Needs a solid core with blobs on top and outer faces only |
 | Blob unit too large (4 m canopy from 40 × 0.5 m units) | A few floating lozenges. Unit must be small enough that the eye reads the mass: ~0.3 m ⇒ 120 units |
 | Cone radius < 0.04 m | Dark skewer (one facet wide, near-black when turned from sun) |
 | Cone radius > 0.05 m | Tent peg |

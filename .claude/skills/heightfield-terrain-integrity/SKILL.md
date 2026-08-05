@@ -51,6 +51,11 @@ seated on. With it:
 An object on a hillside and an object on a pavement are then seated **by the same call,
 with the same clearance**. Nothing in the existing ground modules changes.
 
+**Add the field at the height-query seam, not inside a base profile that anything coarser
+also samples.** If a distant LOD / sphere / skirt samples the same base function, its
+larger facets chord across the fine lattice and poke through the hill mesh. The relief
+belongs in `heightAt` / `groundAt`; the coarse surface never sees it.
+
 ---
 
 ## Rule 2 — one node function, read by both the mesh and the query
@@ -69,6 +74,23 @@ Consequences worth knowing:
   it — the midpoint of an edge of a planar triangle is on the plane.
 - **Roughness cannot be continuous noise sampled anywhere.** Anything evaluated *between*
   nodes breaks the agreement. Make a hash of the **lattice index** part of the node value.
+- **Split cells on alternating diagonals — in the mesh AND the query.** One diagonal for
+  every cell gives the whole hillside a diagonal grain that a depth-edge ink pass draws
+  as parallel straight creases. It costs one bit; but the query must use the same rule
+  as the mesh or they stop being the same surface.
+- **A per-facet tone keys off the facet's own plane gradient** (`hypot(dh/dx, dh/dz)` from
+  the triangle's plane), not off the biggest drop across its edges — on a uniform ramp
+  the diagonal edge falls 2× either side and misclassifies the whole toe.
+- **Tones that are a boundary the eye reads as a line** (a waterline, a plantation floor)
+  are decided **once per cell at the cell centre**. Per-triangle jitter on such a
+  boundary produces a zip of alternating triangles.
+- **Refining the lattice: halve only, and add a roughness octave at the new size.**
+  Halving the cell on its own buys smaller flat cards — the normal turn per facet is set
+  by roughness wavelength against cell size, so it *halves*. Add an octave whose radius
+  matches the new facet size, and halve any node-jitter amplitude with the cell (jitter
+  has no length scale of its own; unhalved it becomes per-node fizz). Halve-only matters
+  because everything that samples the lattice at fixed stations (cap edges, corridors)
+  stays on nodes only if the old spacing is a multiple of the new.
 
 ---
 
@@ -119,7 +141,16 @@ what carries the player is the height field itself. Sweep a ribbon of geometry t
 the field.
 
 **Bench every path**: cut and fill it into the slope it crosses. A path that inherits the
-cross-slope of the face it is painted on is not a path on a 1-in-2 bank.
+cross-slope of the face it is painted on is not a path on a 1-in-2 bank — the walker
+(which has no slope limit) climbs it happily, the connectivity fill refuses every step,
+and nobody notices for rounds. **Cut alone is not enough**: it takes the uphill shoulder
+off and leaves every hollow, and what stops a walker-rules fill is climbing *out* of a
+hollow. The **fill half must be refused inside any keep-out** — raising ground there takes
+the safety check off 0.00.
+
+**A diagonal flight cannot be faked with axis-aligned platforms** — five overlapping AABBs
+maxed together are the same ramp shifted up-slope. Run flights along an axis or grade the
+ground under them (see `walkable-level-verification`).
 
 Have the path sweeper **return the measured gradient of every leg**, and place steps where
 that says — not where a hand-written list says. A leg over ~0.28 must look like a stair or
@@ -155,24 +186,87 @@ which is exactly what a reservoir is. If it must be a lowland lake, you need the
 no way to ask "where was the valley mouth" any more. Every dam and channel coordinate
 should be read off that survey, not drawn by hand.
 
+**Derive the rim from the shoreline, never build it from summits.** A continuous rim made
+of scattered bumps needs dozens of them and any later change to any one drains the lake —
+a bump is at ~56% of its height half a radius out. Making the rim a function of the
+shoreline (within crest distance of the water, ground = `LEVEL + bank·s`) makes
+containment **structural** rather than hoped for.
+
+**A body of water fails globally, and nothing renders the failure.** The surface finds the
+lowest point on the whole rim; a 0.3 m notch anywhere drains the basin without changing a
+pixel. The only meaningful test is a **leak flood fill** — fill `field < LEVEL` from a
+seed in the basin and assert it stops at the shore. Per-point freeboard sampling passes
+while a gully twenty metres out drains the lot. (Measured on a first rim attempt: 20 of 32
+shore stretches had ground below water level within 2 m — not a leak, no lake at all.)
+
+**A fill term whose baseline is not zero cannot be multiplied by a keep-out mask.**
+Ordinary summits fade to zero under the mask and that is correct; a rim or embankment is a
+height *above the water level*, so masking it toward zero digs it under the water — a
+spillway at exactly the masked spot. Fade toward the field's floor instead:
+`FLOOR + (v − FLOOR) · keep`.
+
+**Depth-derived dressing works in field units, not ground distance.** A drawdown margin
+defined as "0.85 m of field below LEVEL" is `fall ÷ slope` wide on the ground — eight
+metres on the reed flat, none on the steep revetment — which is physically right and free.
+
 ---
 
 ## Rule 7 — tunnels and cuttings
 
 - A height field **cannot have a hole in it**. A bore is a separate structure plus a
   removal of the surface over its mouth; the field above it stays the un-excavated mountain.
+  You cannot make a height field vertical either, so there is no way to express a portal
+  face in it: cut a **lattice-aligned notch** out of the field and fill it with an
+  authored cap + portals + lining.
+- **The cap must *continue* the terrain, not stand on it.** Blending a cap from its crest
+  out to the terrain at only two edges leaves a full-height lens open at the portal planes
+  — a dam, not a portal. A bilinear **Coons patch from all four boundary curves**
+  interpolates every edge exactly, so at the portal planes the cap *is* the hillside's own
+  edge.
+- **The cap's sample stations must be lattice nodes.** The cap samples the field along its
+  notch edges and chords in between, so the two surfaces meet only where its stations land
+  on nodes. Derive station counts from `CELL`, never from `round(length / k)` — measured
+  1.69 m of open sky along one edge when they disagreed. Then **measure the worst gap
+  along every cap edge and assert 0.0000**.
+- **A portal wall splits at the coping line** — concrete below, the hillside's own surface
+  above, with the coping between; running the concrete up to the cap's edge produces a
+  tent no portal has ever had. And size the coping to where the wall actually *reaches*
+  that line, sampled finely — quantised to the wall's own station spacing it overhangs
+  like a diving board.
+- **Hold an extruded shape's holes clear of its outer contour by a real margin** (~0.5 m).
+  A hole touching the contour makes the triangulator fill it — a wedge of concrete across
+  the mouth, nearly invisible from outside, half the frame from inside.
 - Anything that asks "am I under the terrain" must therefore be **suspended inside a bore**
   (line-of-sight, slope gates, projectile blocking). Ceiling and floor are the bore's, not
-  the field's.
+  the field's. Same for builders seating props **on a cap**: the field query answers with
+  the flat grade inside a notch (correctly — it was cut out), so rock/tuft placers need an
+  optional `yAt` override or they seat everything fifteen metres under the cap.
 - **Engineered faces are the one ground with nothing on them.** A vegetation sampler that
   refuses ground steeper than ~0.9 leaves every cutting bank bare — measured at 45% and 60%
   of two viewpoints' frames. Scattering more scrub is not the answer; the face has no scale
   and no evidence of anyone on it. A grid of shallow beams with growth in the cells supplies
-  both, and is what a real cutting has.
+  both, and is what a real cutting has. Four rules make the grid read as engineering:
+  - **March rows by arc length along the slope from the toe**, so the grid does not
+    stretch as the bank deepens and simply stops where the bank dies.
+  - **Divide a member's plan half-width by `hypot(1, grade·normal)`** so it is constant
+    width *on the ground* whichever way it runs.
+  - **Seek forward for ground that is actually steep** before laying anything — a face
+    treatment started at the caller's nominal toe breaks out the moment the local gradient
+    dips below threshold, and 26 triangles of crib is indistinguishable from the feature
+    not existing.
+  - **Anything that covers a measured area must be told what is already standing in it**
+    — a viewpoint platform sits on the crest of the very face being treated; the module
+    that placed it is the only thing that knows, so it hands back its footprint and the
+    treatment runs after it. And derive quad winding from a reference point via cross
+    product (a helper), never by hand — a hand-written winding for a surface with four
+    orientations faced every cell into the hillside, single-sided, rendering as bare
+    earth showing between the beams.
 - **Check the section numerically against whatever must pass through it.** An arch written
   from its radius instead of its springing put the crown 2.75 m out and ran a vehicle
   through solid rock — invisible for the structure's whole life. Write a
-  `clearance()` function; it is the only thing that would ever have found it.
+  `clearance()` function; it is the only thing that would ever have found it. Same for a
+  face treatment: report the worst height the terrain reaches above the laid cells,
+  against the lift.
 
 ---
 
@@ -186,6 +280,14 @@ Run all of these after any terrain change; none is optional and none is visible 
 | Slope limiter | no node above `maxSlope · CELL` over a neighbour, per corridor |
 | Both ground surfaces | any displacement applied to one applied to the other |
 | Section clearance | measured against the largest thing that must pass |
+| Face-treatment clearance | worst terrain height above laid cells < lift |
+| Cap-edge agreement | worst gap between cap and field along every notch edge = 0.0000 |
+| Water containment | leak flood fill from a basin seed stops at the shore |
 | Connectivity flood fill | all waypoints reachable (see `walkable-level-verification`) |
+| Bench effectiveness | worst axial rise on every route within the fill's step limit |
 | Tone distribution | no ground tone above ~⅓ of drawn area (see `procedural-object-detail`) |
 | Determinism | same seed ⇒ bit-identical lattice; scatter windows appended, never widened |
+
+Re-derive published figures (areas, summit heights, cell counts) after any lattice or
+octave change rather than comparing — a finer lattice samples a different set of points
+and every derived number legitimately moves.
