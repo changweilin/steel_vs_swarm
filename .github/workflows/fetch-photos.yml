@@ -1,0 +1,63 @@
+# 照片庫抓取(docs/ai3d_asset_plan.md §4.1 / Track B)
+#
+# 為什麼在 Actions 跑:沙箱代理連不到 api.openverse.org / commons.wikimedia.org(㋓),
+# 而 Actions runner 的對外網路是通的。照片**永不入版控**(.gitignore 已擋)——
+# 產出走 artifact:下載到 3060 真機解壓進 tools/ai3d/photos/ 就能接 image→3D。
+# 帳本 photo_manifest.json 與照片同一份 artifact(授權欄位要跟著照片走)。
+#
+# 觸發:手動 workflow_dispatch;開發分支上改到抓取器/本檔也自動跑一輪(= 立即開抓)。
+name: 照片庫抓取
+
+on:
+  workflow_dispatch:
+    inputs:
+      family:
+        description: '只抓某一族(rock|tree|landmark|building;留空 = 全部)'
+        required: false
+        default: ''
+      limit:
+        description: '本輪最多下載幾張'
+        required: false
+        default: '60'
+  push:
+    branches: [claude/photo-db-img-to-3d-8j9tbe]
+    paths:
+      - tools/ai3d/fetch_photos.mjs
+      - .github/workflows/fetch-photos.yml
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 抓照片(CC0 雙重硬閘 + 記帳)
+        run: |
+          FAM="${{ github.event.inputs.family }}"
+          LIM="${{ github.event.inputs.limit || '60' }}"
+          if [ -n "$FAM" ]; then
+            node tools/ai3d/fetch_photos.mjs --family "$FAM" --limit "$LIM"
+          else
+            node tools/ai3d/fetch_photos.mjs --limit "$LIM"
+          fi
+      - name: 缺額清單(收尾印一次,補抓時看這裡)
+        run: node tools/ai3d/fetch_photos.mjs --plan
+      - name: 授權複核(帳本內不得出現任何非 CC0/PD 條目)
+        run: |
+          node -e '
+            const m = JSON.parse(require("fs").readFileSync("tools/ai3d/photo_manifest.json", "utf8"));
+            const bad = m.filter((e) => e.ok && !/^(cc0|pdm)$/i.test(e.license) && !/cc0|public domain/i.test(e.license));
+            if (bad.length) { console.error("非 CC0 條目:", bad); process.exit(1); }
+            console.log(`帳本 ${m.length} 筆,成功 ${m.filter((e) => e.ok).length} 筆,授權全數 CC0/PD ✅`);
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photo-db
+          path: |
+            tools/ai3d/photos/
+            tools/ai3d/photo_manifest.json
+          retention-days: 30
+          if-no-files-found: error
