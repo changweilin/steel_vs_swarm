@@ -1073,6 +1073,56 @@
       "id": "m08_flight_static",
       "at": "2026-08-05T07:53:42.062Z",
       "note": "Here is the updated design specification breakdown for the **FLIGHT Form (夜梟 - Owl Mode)** of **Mecha Unit m08**:\n\n---\n\n### 🦉 **Flight Form Concept Art Specification (Unit m08 - 夜梟)**\n\n#### 1. **Airframe & Aerodynamic Transformation**\n- **Mode**: Fully airborne FLIGHT form — banked into forward fli"
+    },
+    {
+      "id": "t06_ground_heavy",
+      "at": "2026-08-05T13:15:14.086Z",
+      "note": "I attempted to generate the concept art image for the **t06 STEEL Pact Wukong Mecha Unit**, but the image generation tool returned a quota limit error (`429 Resource Exhausted`). \n\nBelow is the complete design specification and artistic breakdown distilled from your brief:\n\n---\n\n### Concept Art Brea"
+    },
+    {
+      "id": "t06_flight_moving",
+      "at": "2026-08-05T13:15:55.870Z",
+      "note": "Due to the image generation API quota limit (`429 Resource Exhausted`), here is the authoritative design breakdown and artistic specification for the **FLIGHT Form (飛行型 / 觔斗雲模式)** of Unit `t06` (STEEL Pact / 鋼鐵協約).\n\n---\n\n### Concept Art Breakdown — Unit `t06` FLIGHT Form (飛行姿態 / 觔斗雲)\n\n#### 1. Flight"
+    },
+    {
+      "id": "t06_flight_heavy",
+      "at": "2026-08-05T13:16:37.862Z",
+      "note": "Due to the image generation API quota limit (`429 Resource Exhausted`), here is the authoritative design breakdown and artistic specification for the **FLIGHT Form in Firing Stance (飛行型 / 觔斗雲重砲開火態)** of Unit `t06` (STEEL Pact / 鋼鐵協約).\n\n---\n\n### Concept Art Breakdown — Unit `t06` FLIGHT Form (Airborn"
+    },
+    {
+      "id": "t11_ground_moving",
+      "at": "2026-08-05T13:17:21.142Z",
+      "note": "I attempted to generate the concept art image for the **STEEL Pact T11 Heavy Industrial Mech**, but the image generation service is currently unavailable due to API quota limits (`429 Resource Exhausted`).\n\nHere is a summary of how the prompt and design details were structured according to your auth"
+    },
+    {
+      "id": "t11_ground_heavy",
+      "at": "2026-08-05T13:18:01.500Z",
+      "note": "I attempted to generate the updated concept art image for the **STEEL Pact T11 Heavy Industrial Mech** (Firing Action), but the image generation quota for `gemini-3.1-flash-image` remains exhausted (`429 Resource Exhausted`).\n\nHere is a summary of how the updated prompt and specifications are define"
+    },
+    {
+      "id": "t11_flight_moving",
+      "at": "2026-08-05T13:18:42.564Z",
+      "note": "The image generation tool is currently unavailable due to system quota limits (`429 Resource Exhausted`). \n\nHere is the design and prompt breakdown formatted for the **FLIGHT Form (飛行型 / Airborne Carrier)** of the **STEEL Pact T11 Heavy Industrial Mech**:\n\n---\n\n### Concept Art Breakdown: FLIGHT Form"
+    },
+    {
+      "id": "t11_flight_heavy",
+      "at": "2026-08-05T13:19:23.076Z",
+      "note": "The image generation tool is currently unavailable due to API rate limits (`429 Resource Exhausted`). \n\nHere is the complete specification breakdown for the **FLIGHT Form (Airborne) — Heavy Weapon Firing Stance** of the **STEEL Pact T11 Mech**:\n\n---\n\n### Concept Specifications: FLIGHT Form — FIRING "
+    },
+    {
+      "id": "m01_flight_static",
+      "at": "2026-08-05T13:20:05.921Z",
+      "note": "The image generation service has hit a temporary quota limit (`429 Resource Exhausted`). However, here is the full, structured design breakdown for **Unit ID: m01 (Mercenary Tricopter Assault Mech)** formatted according to your specifications:\n\n---\n\n# 🤖 Unit Concept Sheet: m01 (傭兵獨立型 · 三旋翼突擊機)\n\n###"
+    },
+    {
+      "id": "m01_flight_moving",
+      "at": "2026-08-05T13:20:52.316Z",
+      "note": "I have created the design specification sheet for **Unit ID: m01 (傭兵獨立型 · 三旋翼突擊機)**. You can view the full blueprint and breakdown in [`m01_concept_art_sheet.md`](file:///C:/Users/user/.gemini/antigravity-cli/brain/2cfa450f-eb31-4b56-b104-adce5a73f10b/m01_concept_art_sheet.md).\n\n### Key Design Highl"
+    },
+    {
+      "id": "m01_flight_heavy",
+      "at": "2026-08-05T13:21:36.870Z",
+      "note": "I have updated the concept specification sheet [`m01_concept_art_sheet.md`](file:///C:/Users/user/.gemini/antigravity-cli/brain/2cfa450f-eb31-4b56-b104-adce5a73f10b/m01_concept_art_sheet.md) with your updated action state: **Firing the Heavy Weapon**.\n\n### Updated Action Mechanics & Blueprint Specs:"
     }
   ]
 }
