@@ -56,7 +56,7 @@ import {
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiBlast, kamiHp, kamiSide, decoyBlast, decoyBombBlast, decoyHp,
-  hyperBlast, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd,
+  hyperBlast, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
 } from '../public/js/data.js';
 import { waveInterval } from '../server/sim.js';
 
@@ -434,10 +434,12 @@ function castAbil(M, foe, enemyTower, t, foes) {
   }
   // 極音速飛彈:45° 拋射爬升(水平等速 hyperClimbVx,全長 = 到目標的水平距離)→ 極音速俯衝。
   // 水平航線於**發射當下**定案(x0/y0 = 發射點)—— 拿主機的即時位置當起點,機體一走彈道就跟著平移。
+  // `chase` = 終端追擊(頂點那一刻判定一次;對齊 sim._tickHypers)—— 生成當下必為 false:
+  // 前 2/3 飛的是**發射瞬間**的目標地點,追不追得上是後 1/3 才問的事。
   const arcD = Math.max(1, dist(M, aim));
   return [{
     ...base, hp: hyperHp(), speed: hyperClimbVx(), x: M.x, y: M.y, x0: M.x, y0: M.y,
-    arcD, trav: 0, dive: hyperApex(arcD) / hyperDiveSpd(),
+    arcD, trav: 0, dive: hyperApex(arcD) / hyperDiveSpd(), chase: false,
   }];
 }
 
@@ -462,13 +464,20 @@ function stepAbils(vehicles, t, dt, foesOf) {
       }
       continue;                                        // hyper:攔截成功 = 什麼都不留
     }
-    // 追蹤:對象還活著就更新落點(射後不理 —— 玩家不必維持鎖定)
-    if (v.tgt.hp > 0) { v.tx = v.tgt.x; v.ty = v.tgt.y; }
+    // 追蹤:對象還活著就更新落點(射後不理 —— 玩家不必維持鎖定)。
+    // **極音速飛彈是例外**(2026-08-05 使用者定案的終端追擊射程,與 sim._tickHypers 同一條規則):
+    // 前 2/3(爬升)一律不追,後 1/3 也只有通過 hyperTrackR() 判定的那一發才追 ⇒ 這一招的
+    // 實得傷害要算得準,就 MUST 把「目標跑掉、飛彈打在原地」也模型化(否則它在模型裡永遠命中)。
+    if (v.tgt.hp > 0 && (v.kind !== 'hyper' || v.chase)) { v.tx = v.tgt.x; v.ty = v.tgt.y; }
     if (v.kind === 'hyper') {
       if (v.trav < v.arcD) {                           // 相位一:拋物線爬升(水平等速)
         v.trav = Math.min(v.arcD, v.trav + v.speed * dt);
         const f = v.trav / v.arcD;
         v.x = v.x0 + (v.tx - v.x0) * f; v.y = v.y0 + (v.ty - v.y0) * f;
+        // 頂點 = 後 1/3 的入口:目標仍在原定落點的 hyperTrackR() 內才轉螺旋追擊(只判這一次)
+        if (v.trav >= v.arcD) {
+          v.chase = v.tgt.hp > 0 && Math.hypot(v.tgt.x - v.tx, v.tgt.y - v.ty) <= hyperTrackR();
+        }
         alive.push(v); continue;
       }
       v.dive -= dt;                                    // 相位二:極音速俯衝(頂點在目標正上方)

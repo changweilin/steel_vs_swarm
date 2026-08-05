@@ -20,27 +20,27 @@
 //
 // 手法比照 `audit_cc_flash.mjs`:公式直接 import(data.js 是純模組),game.js 的方法**抽執行原文**
 // 評估(three 走 CDN,Node 端 import 不了整支;抄一份公式到稽核裡就永遠會通過)。
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// 原文一律經 `audit_src.mjs readSrc()`(換行正規化):本檔逐行剝註解 + 「全檔只有 N 處」計數,
+// 而 `//.*$` 在 CRLF 檢出的工作區靜默失效 ⇒ 註解裡的名字會被算進單一縫計數(同一份程式碼
+// LF 全綠、Windows 紅字)。MUST NOT 退回自己 `readFileSync`(§5 通則 ㋑)。
+import { readSrc } from './audit_src.mjs';
 import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
   kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperApex, hyperRange, decoyHp, decoyExposureS,
-  hyperArcY, hyperClimbVx, hyperClimbS,
+  hyperArcY, hyperClimbVx, hyperClimbS, hyperTrackR, hyperClimbLen, hyperTerminalF,
   TOWER_SITE_N, frontKillHp, overflySurviveHp, waveDps, waveComp, blastFootprintR,
   kamiBlast, decoyBlast, decoyBombBlast, hyperBlast,
   GAME,
 } from '../public/js/data.js';
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
-const src = readFileSync(join(ROOT, 'public', 'js', 'game.js'), 'utf8');
-const dataSrc = readFileSync(join(ROOT, 'public', 'js', 'data.js'), 'utf8');
-const simSrc = readFileSync(join(ROOT, 'server', 'sim.js'), 'utf8');
-const mainSrc = readFileSync(join(ROOT, 'public', 'js', 'main.js'), 'utf8');
-const css = readFileSync(join(ROOT, 'public', 'css', 'style.css'), 'utf8');
-const html = readFileSync(join(ROOT, 'public', 'index.html'), 'utf8');
+const src = readSrc('public', 'js', 'game.js');
+const dataSrc = readSrc('public', 'js', 'data.js');
+const simSrc = readSrc('server', 'sim.js');
+const mainSrc = readSrc('public', 'js', 'main.js');
+const css = readSrc('public', 'css', 'style.css');
+const html = readSrc('public', 'index.html');
 
 /** 抽出 class 方法的原文(含大括號區塊);與 audit_cc_flash.mjs 同一手法 */
 const grab = (name, s = src) => {
@@ -62,8 +62,10 @@ const strip = (s, cut) => {
     .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n');
   return cut ? noCom.split(cut).slice(1).join(cut) : noCom;
 };
+const laneSrc = readSrc('tools', 'lanesim.mjs');
 const code = strip(src, "} from './data.js';");
 const simCode = strip(simSrc, "} from '../public/js/data.js';");
+const laneCode = strip(laneSrc, "} from '../public/js/data.js';");
 
 let pass = 0, fail = 0;
 const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (fail++, console.log(`  ✗ ${n} ${extra}`)); };
@@ -115,6 +117,10 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     /export const hyperApex = \(d = hyperRange\(\)\) => d \* Math\.tan\(hyperLaunchRad\(\)\) \/ 2;/.test(dataSrc)
     && /export const hyperRange = \(\) => UNITS\.tower\.range \* HYPER\.RANGE_F;/.test(dataSrc)
     && /hyperClimbS\(hyperRange\(\)\) \+ hyperApex\(\) \/ hyperDiveSpd\(\)/.test(dataSrc));
+  t('曝險窗基準 = **原軌跡**(爬升 + 垂直落下),MUST NOT 改吃追擊斜距 —— 追擊是「打得到人」的加分,'
+    + '連生存性也加成會把 bal ⑦f 的三招實得比推到 1.93×(實測)',
+    near(hyperFlightS(), hyperClimbS(hyperRange()) + hyperApex() / (HYPER.CLIMB_SPD * HYPER.DIVE_F))
+    && !/Math\.hypot\(hyperApex\(\), hyperTrackR\(\)\)/.test(dataSrc));
   t('舊制固定頂點係數 APEX_F 已退場(垂直爬升放不下「初始角度」)', HYPER.APEX_F === undefined);
   t('出膛角 = HYPER.LAUNCH_DEG(拋物線在 f = 0 的切線斜率 = tanθ;數值微分驗真品)', (() => {
     const d = hyperRange(), e = 1e-7;
@@ -133,6 +139,41 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     near(hyperArcY(hyperRange(), 1), hyperApex(hyperRange())));
   t('螺旋基底取固定水平法向,MUST NOT 由彈道軸現算(垂直落下時軸的水平分量 → 0 = 沒有螺旋)',
     /m\.uz \* c \+ m\.ux \* s/.test(simCode) && !/px = -az \/ Math\.hypot/.test(simSrc));
+
+  // —— 終端追擊有射程(2026-08-05 使用者定案)——
+  // 「前 2/3 飛往發射時目標的初始地點;後 1/3 只有目標仍在砲塔射程 1/2 內才螺旋追擊,
+  //   否則保持原軌跡」。破法全無聲:判定半徑手寫(改砲塔射程就分家)、爬升段偷讀即時位置
+  //   (頂點被拉走 = 拋物線不成立)、逐 tick 重判(最後零點幾秒彈道整條折斷)。
+  t('終端追擊半徑推導不手寫 = 砲塔射程 × TRACK_R_F',
+    /export const hyperTrackR = \(\) => UNITS\.tower\.range \* HYPER\.TRACK_R_F;/.test(dataSrc)
+    && near(hyperTrackR(), UNITS.tower.range * HYPER.TRACK_R_F)
+    && HYPER.TRACK_R_F === 0.5);
+  t('「前 2/3 / 後 1/3」是推導比例不是手寫邊界:俯衝段佔全航跡的比例與交戰距離無關,且落在 1/3 帶',
+    near(hyperTerminalF(80), hyperTerminalF(900), 1e-12)
+    && Math.abs(hyperTerminalF() - 1 / 3) < 0.05,
+    `實得 ${(hyperTerminalF() * 100).toFixed(1)}%`);
+  t('爬升弧長走閉式解(比水平距離長、比兩倍短;MUST NOT 手寫係數或改數值積分)',
+    hyperClimbLen(200) > 200 && hyperClimbLen(200) < 400
+    && near(hyperClimbLen(400), hyperClimbLen(200) * 2)
+    && /Math\.asinh\(k\) \/ \(2 \* k\)/.test(dataSrc));
+  t('追擊判定**只做一次**,而且就掛在既有的頂點切換點上(MUST NOT 另立第三相位)',
+    count(simCode, 'm.chase =') === 1
+    && /m\.phase = 'dive';[\s\S]{0,200}m\.chase = !!t && Math\.hypot\(t\.x - m\.tx, t\.z - m\.tz\) <= hyperTrackR\(\);/.test(simCode));
+  t('前 2/3 不讀目標的即時位置:落點只有「追擊中」才改寫(舊制無條件跟蹤已退場)',
+    count(simCode, 'm.tx = t.x') === 1
+    && /if \(m\.chase && t\) \{ m\.tx = t\.x; m\.tz = t\.z; \}/.test(simCode)
+    && !/if \(t && t\.hp > 0 && !\(t\.hero && t\.dead\)\) \{ m\.tx = t\.x/.test(simCode));
+  t('放棄追擊 = 這一發從此與那個實體無關(tid 清掉 ⇒ 落點與高度都回原軌跡)',
+    /if \(!m\.chase\) m\.tid = 0;/.test(simCode));
+  t('判定半徑在伺服器只有這一個消費端(MUST NOT 在別處再判一次)',
+    count(simCode, 'hyperTrackR()') === 1);
+  t('前線交戰模型吃同一條規則(lanesim 的 hyper 也會追丟 —— 否則 bal ⑦f 把它算成必中)',
+    /v\.kind !== 'hyper' \|\| v\.chase/.test(laneCode)
+    && /v\.chase = v\.tgt\.hp > 0 && Math\.hypot\(v\.tgt\.x - v\.tx, v\.tgt\.y - v\.ty\) <= hyperTrackR\(\);/.test(laneCode)
+    && count(laneCode, 'hyperTrackR()') === 1);
+  // 客戶端只插值伺服器回報的位置(`b.chase` 是射後不理**彈體**的追擊燃料旗標,與這一招無關)
+  t('客戶端不參與追擊判定(彈道與命中全在伺服器)',
+    !/hyperTrackR/.test(code) && !/m\.chase|hyperChase/.test(code));
   t('爬升頂點高過直射鎖定天花板(是「高空」不是抬個頭)', hyperApex() > GAME.GUN_CEIL_M);
   t('接戰距離大於砲塔射程(機甲的攻塔手段)', hyperRange() > UNITS.tower.range);
   t('俯衝遠快於爬升(「極音速」那一段幾乎攔不住)', HYPER.DIVE_F > 2);
