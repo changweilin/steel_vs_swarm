@@ -149,19 +149,22 @@ function weightedPick(mix, rnd) {
   return null;
 }
 
+// 純影像判(零亂數;2026-08-05 抽成單一縫):classify 的第一層 + urbanPts 收集的信任閘同吃。
+// 抄第二份色彩門檻 = 兩份規則遲早分家(症狀是「植被說這裡是市區、種子閘說不是」)。
+// 注意「低飽和灰 → urban」對裸岩/陰影/道路是**系統性誤判** —— 這正是建物種子 MUST NOT
+// 只信這一支、還要過「圖資查詢失敗才當備援」那道閘的原因(見 urbanPts 收集處)。
+function classifyImg(rgb) {
+  if (!rgb) return null;
+  const [r, g, b] = rgb;
+  if (b > r + 14 && b > g + 6) return 'water';
+  if (g > r + 10 && g > b + 12) return 'green';
+  const sat = Math.max(r, g, b) - Math.min(r, g, b);
+  if (sat < 24) return 'urban';              // 低飽和灰 → 人工地貌
+  return r > b + 12 ? 'bare' : 'green';      // 棕黃 → 裸露地
+}
+
 function classify(rgb, h, mix, rnd) {
-  let c = null;
-  if (rgb) {
-    const [r, g, b] = rgb;
-    if (b > r + 14 && b > g + 6) c = 'water';
-    else if (g > r + 10 && g > b + 12) c = 'green';
-    else {
-      const sat = Math.max(r, g, b) - Math.min(r, g, b);
-      if (sat < 24) c = 'urban';             // 低飽和灰 → 人工地貌
-      else if (r > b + 12) c = 'bare';       // 棕黃 → 裸露地
-      else c = 'green';
-    }
-  }
+  let c = classifyImg(rgb);
   if (mix && rnd() < 0.55) c = weightedPick(mix, rnd) || c;   // 場地類型加權
   if (!c) c = h > 400 ? 'bare' : 'green';                     // 無影像時粗略猜
   if (c === 'wet' && h > 8) c = 'green';                      // 濕地只在低海拔
@@ -6229,7 +6232,7 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
 // 讓「打不開的邊」看起來是被城市/森林/岩壁圍住,而不是隱形牆。
 // 全部走既有管線(generic 建物 / items 植被 InstancedMesh);邊界樓沿管線
 // 也會登記碰撞柱 —— 反正在空氣牆外不可達,無礙。
-function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
+function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
   const IN0 = 8, IN1 = 34;
   const species = Object.keys(GIANT_DEFS);
   const edges = [
@@ -6251,7 +6254,17 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ }) {
       // 水面/濕地缺口:水面本身就是邊界;沼澤帶也不種邊界樓/神木牆/巨岩(水沼上禁大型障礙物)
       if (h < 0.4 || terrainEnvCode(terrain, x, z) !== 0) continue;
       const avail = occ.room(x, z) - 1;   // 與既有物(含邊界鄰居/邊緣 OSM 樓)的可用半徑
-      const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
+      let biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
+      // 邊界樓是**建物**(進 generic ⇒ 立面/占位與圖資建物同一條路)⇒ 市區判定 MUST 過
+      // 聚落場(圖資建物密度的單一縫,與兩個建物放大器同一把尺)。衛星低飽和像素
+      // (裸岩/陰影/道路)與手寫 mix 的 55% 改寫都會把荒野判成 urban —— 舊制沿整圈邊界
+      // 每 ~30m 抽一次,綠地/裸露地場地被圈上數十棟 22~70m 高樓,而圖資裡一棟都沒有
+      // (2026-08-05 使用者回報「建築太多、不符真實圖資」)。降格**不留缺口**:視覺牆
+      // 照樣要圍,改按場地宣告的主要野地地貌擺巨岩/神木(邊界帶本來就是 mix 的具名
+      // 消費端 —— 視覺牆選型不是權威地貌;建物那一型才要圖資背書)。
+      if (biome === 'urban' && !settlement?.(x, z)) {
+        biome = mix && (mix.bare || 0) > (mix.green || 0) + (mix.wet || 0) ? 'bare' : 'green';
+      }
       if (biome === 'urban') {
         let w = 14 + rnd() * 14, dd = 12 + rnd() * 10;
         const f = Math.min(1, avail / (Math.max(w, dd) / 2));   // 塞不下就縮到剛好
@@ -6839,7 +6852,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const biome = classify(terrain.sampleColor?.(x, z), h, mix, rnd);
     if (biome === 'water') continue;
     if (biome === 'urban') {
-      if (urbanPts.length < 500) urbanPts.push([x, z]);
+      // 建物種子的信任階梯(2026-08-05 使用者回報「綠地/裸露地建築太多、不符真實圖資」):
+      // urbanPts 是「程序生成市區」備援的唯一種子 ⇒ 影像在手就只收**純影像**判為市區的點
+      // (`classifyImg` 單一縫、零亂數)—— 手寫 mix 的 55% 改寫是植被/地被的加權,
+      // MUST NOT 讓它憑空生出市區種子(綠地場地宣告一成 urban ⇒ 全圖撒滿假種子)。
+      // 影像也取不到(全離線)才退回 classify 的結果 = mix 當最後一層備援(原則 6 降級鏈)。
+      // 不動 classify 的呼叫 ⇒ 亂數消耗逐位元不變,植被佈局不漂移(§2.3)。
+      const rgb = terrain.sampleColor?.(x, z);
+      if ((!rgb || classifyImg(rgb) === 'urban') && urbanPts.length < 500) urbanPts.push([x, z]);
       continue;
     }
     if (biome === 'green') {
@@ -7012,8 +7032,16 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       }
     }
   }
-  // 備援:離線 / 圖資空白但影像判定有市區 → 程序生成街區
-  if (!landmarks.length && !generic.length && urbanPts.length > 8) {
+  // 備援:**只在圖資查詢失敗**(osm = null = 「不知道」)且影像判定有市區時才程序生成街區。
+  // 查詢成功但零建物(osm = [])= 真實答案就是「這裡沒有建物」—— 荒野 MUST 維持荒野,
+  // 舊制在這個案例照樣生出一座程序市區 = 綠地/裸露地憑空長樓(2026-08-05 使用者回報)。
+  // 「不符真實圖資」與「圖資取不到」是兩件事:前者寧缺勿錯、後者才降級(原則 6)。
+  // mix 是同一條信任階梯的第三層**否決票**:備援街區的語意是「重建一座宣告中的市區」——
+  // 場地宣告根本沒有市區成分(urban ≤ 10%,荒野場地全是 0)就沒有東西可重建;放行的話,
+  // Overpass 掛掉那幾局,裸岩/陰影的低飽和灰像素(classifyImg 的系統性誤判)照樣在
+  // 太魯閣/合歡山長出一座城。市區/混合場地(urban ≥ 15%)不受影響。
+  if (!osm && (!mix || (mix.urban || 0) > 0.1)
+    && !landmarks.length && !generic.length && urbanPts.length > 8) {
     onProgress?.(0.6, '離線模式:程序生成市區…');
     const lmTypes = Object.keys(LANDMARKS);
     urbanPts.forEach(([x, z], i) => {
@@ -7207,7 +7235,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // 邊界帶視覺牆:放在補間之後(邊界樓不當補間種子)、植被過濾之前
   onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
-  const boundaryN = placeBoundary({ terrain, items, generic, rnd, mix, occ });
+  const boundaryN = placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement });
 
   // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
   // 不濾掉就會樹冠穿屋頂、樹卡進牆面。只濾「錨點貼地」的實例 —— 神木上的
