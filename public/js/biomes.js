@@ -82,6 +82,10 @@ const OVERPASS_URLS = [
 // ---- 決定性亂數(mulberry32):全房間共享同一片地貌;唯一縫住 rng.js(見該檔檔頭)----
 
 // ---- 淨空網格 ----
+// 主堡淨空半徑:`buildClearance` 登記的那一圈,與 `placeMegaliths` 的名岩退避距同吃這一份
+// (兩處各寫一個 70 = 改了其中一個,名岩的退避距悄悄以另一個基準計算,而畫面上只表現成
+//  「這張圖的巨岩離主堡近了一點」)。
+const BASE_CLEAR_R = 70;
 function cellKey(x, z) { return `${Math.round(x / CELL)},${Math.round(z / CELL)}`; }
 
 // 大型地物 footprint 淨空:巨岩/神木群半徑可達數十公尺,逐格掃整個圓盤
@@ -136,7 +140,7 @@ function buildClearance(cfg, center) {
   }
   for (const side of ['SWARM', 'STEEL']) {
     const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
-    blockPoint(x, z, 70);
+    blockPoint(x, z, BASE_CLEAR_R);
   }
   return blocked;
 }
@@ -2618,7 +2622,7 @@ const SYNTH_COL_R = 30;
  * 緊密的界線是「碰撞柱不互穿」(`dist ≥ r_i + r_j`):再密也不能長進彼此體內 —— 那是
  * 破圖,不是景觀。逐顆仍走既有的水域/淨空/平坦度/邊界四道閘(一顆放不下就少一顆)。
  */
-function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
+function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW }) {
   const types = Object.keys(MEGALITHS);
   const start = Math.floor(rnd() * types.length);   // 每張圖不同起點,依序輪替求多樣
   const placedM = [];
@@ -2681,6 +2685,13 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites }) {
         || [[r * 0.7, 0], [-r * 0.7, 0], [0, r * 0.7], [0, -r * 0.7]]
           .some(([ox, oz]) => terrainEnvCode(terrain, x + ox, z + oz) !== 0)) continue;
       if (!areaFree(blocked, x, z, r + 6)) continue;
+      // 主堡退避:名岩公稱高即真實比例(放置後 90~160m),`blocked` 那圈 70m 是照**建物**
+      // 尺度訂的 ⇒ 舊制只保證岩壁邊緣離主堡中心 `BASE_CLEAR_R + 6`,一座 160m 高的岩體
+      // 站在 76m 外仰角就是 65° = 從主堡出生看出去整片天空被吃掉(2026-08-05 使用者回報)。
+      // 尺 MUST 是**岩體自己的外廓**而不是定值:名岩體格差到四倍,寫死一個退避距不是對
+      // 小顆的太鬆就是對大顆的沒用。判準 = 中心距 ≥ 淨空圈 + 一整個岩體直徑
+      // (⇒ 岩壁邊緣離淨空圈還隔著一個岩體半徑)。
+      if (basesW?.some((b) => Math.hypot(x - b.x, z - b.z) < BASE_CLEAR_R + r * 2)) continue;
       // 緊密排列的界線 = **碰撞柱不互穿**(同片露頭):再密也不能長進彼此體內 —— 那是破圖,
       // 不是景觀。不同露頭群之間維持舊制的孤立感(`SEP` 已在外層擋掉,這裡是逐顆的保險)。
       if (placedM.some((p) => Math.hypot(x - p.x, z - p.z)
@@ -6954,17 +6965,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     if (b === 'green' && greenSites.length < 20) greenSites.push([x, z]);
     else if (b === 'bare' && bareSites.length < 28) bareSites.push([x, z]);
   }
-  const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites });
+  // 主堡世界座標:名岩退避與語意化地標的錨點同吃這一份(各算一次 = 第二份實作)
+  const basesW = ['SWARM', 'STEEL'].map((side) => {
+    const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
+    return { side, x, z };
+  });
+  const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites, basesW });
   const giantTrees = placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites: greenSites });
   // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
   // 故插在這裡**不會**推移後面每一株植被/每一棟建物的亂數序列(§2.3)。
   const beaconsBuilt = placeBeacons({
     group, terrain, blocked, blockers,
     lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
-    basesW: ['SWARM', 'STEEL'].map((side) => {
-      const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
-      return { side, x, z };
-    }),
+    basesW,
   });
 
   const attempts = vegTarget * 3;
