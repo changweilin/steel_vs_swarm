@@ -441,7 +441,7 @@ derives the list from the server, so no client code was touched.
 |---|---|
 | Left pane | **原版** — for GLB parts, the fuse path (procedural primitive, part library deliberately not loaded); for pure-data parts, the pre-rewrite table built by **that revision's own `buildBeacon`**, served from `git show <rev>:public/js/beacons.js` |
 | Right pane | **AI 生成** — the real game path (library loaded / current table) |
-| Both | one shared camera and one seed (two different angles are not a comparison), measured `beaconCollider` cylinder overlaid, live readout: triangles / meshes(= draw calls) / collider r,h |
+| Both | one shared camera and one seed (two different angles are not a comparison), collider cylinder overlaid, live readout: triangles / meshes(= draw calls) / collider r,h. The readout **names where that cylinder came from**, because the three consumers differ: beacons = measured `beaconCollider`, giant trees = bounding box (the real collider lives in the scatter code), megaliths = the registered `meta.col` |
 | 來源圖 | every img with role, licence, creator, query and a link to the source page; the photo itself is served from whichever `tools/ai3d` data home has it (§5d) and says so plainly when it is not on this machine |
 | 生成方法 | method label + why that method (plan §8 split), tool, runner, params, machine, measured VRAM/seconds, post-processing, landing rev |
 | 數據對照 | GLB extent vs fallback envelope (+ verdict), triangles vs the measured budget; for pure-data parts, part count / measured extent / nominal `foot` then-vs-now |
@@ -457,7 +457,15 @@ game's own `buildBeacon` — the board contains no second assembler and no secon
 `loadPartLibs()` and cached. Getting that wrong produces two identical panes and no error message —
 i.e. a confident, wrong "the AI part looks much like the original".
 
-**Two silent bugs found on the first run** (this is what the board is for):
+**One builder per consumer** (`build(…, builder)`): `beacon` → `beacons.buildBeacon`, `veg` →
+`biomes.buildVegMeshes`, `mega` → biomes' own `synthMegalith` → `decorateMegalith` →
+`jitterMegalith` → `bakeContactAO`, in `placeMegaliths`' order. The megalith one has to be a
+**synthesised** rock: `MEGA_LIB` nodes only appear in `synthMegalith` (marble stack / talus blocks /
+satellite domes) and `decorateMegalith` (cairn) — the named `MEGALITHS[].build` eat no library part
+at all, so they would render bit-identically on both sides. An unknown builder now renders
+**nothing** and logs; see silent bug 3.
+
+**Three silent bugs found so far** (this is what the board is for):
 
 1. `partlib.js` / `models.js` fetch **relative** asset URLs (`assets/models/parts/rock.glb`), and the
    dev boards serve the repo root ⇒ 404 ⇒ the library fell back to primitives and the "generated"
@@ -466,6 +474,14 @@ i.e. a confident, wrong "the AI part looks much like the original".
    showing procedural fallbacks instead of the CC0 GLB units all along.
 2. §5b's "*57 pure-data parts (was 12)*" — the board derives **11** from rev `32ec7b5`. The counts are
    derived from both revisions' part tables now, so the manifest records no part counts at all.
+3. (2026-08-06) The megalith nodes `rock/mega_a|b|c` — the newest generation round, and the first
+   **imperative** consumer — had a row on the board but no builder: `build()` fell through to
+   `buildBeacon('megalith')`, whose `KIND_PARTS[kind] || KIND_PARTS.cairn` silently substituted the
+   **cairn beacon**. And because the cairn eats `rock/*` nodes itself, the two panes genuinely
+   differed and the readouts genuinely moved — it looked completely normal while the rock had never
+   once been on stage. Fixed by adding the `mega` builder (three exports in `biomes.js`; behaviour
+   bit-identical, `placeMegaliths` is still the only in-game caller) and by making an unrecognised
+   builder/kind render nothing and log, instead of letting `buildBeacon` cover for it.
 
 ## 6. Open questions for the repo owner (do not guess)
 
