@@ -28,3 +28,7 @@ tools/.shots/
 
 # 照片庫(Track B 的離線輸入;照片永不入庫,入庫的只有零件 GLB —— skill photo-to-prop-forge §1)
 tools/ai3d/photos/
+tools/ai3d/.venv/
+tools/ai3d/weights/
+tools/ai3d/vendor/
+tools/ai3d/out/

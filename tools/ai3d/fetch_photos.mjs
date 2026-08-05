@@ -46,9 +46,13 @@ const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo
 // 一件零件最後只用一張 —— skill §1:一張好照片勝過三張拼湊的)。
 export const PHOTO_CATALOG = {
   rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
-    facet:    { want: 6, q: ['granite boulder isolated', 'weathered rock outcrop closeup', 'limestone boulder'] },
-    collapse: { want: 4, q: ['collapsed rock block', 'scree boulder', 'rockfall debris block'] },
-    talus:    { want: 4, q: ['talus cone slope', 'scree slope rocks'] },
+    // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
+    // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
+    // 站在空地上」的地物詞:glacial erratic(冰川漂礫)正是「孤立巨石」的專名。
+    facet:    { want: 9, q: ['glacial erratic boulder', 'erratic boulder', 'granite boulder isolated'] },
+    // 第 2 輪放寬名詞(runbook §4-A:第 1 輪 0/4、1/4 的成因是查詢措辭太窄,不是沒料)
+    collapse: { want: 7, q: ['glacial erratic', 'balanced rock formation', 'fallen boulder'] },
+    talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
   },
   tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
     canopy:   { want: 6, q: ['tree crown isolated sky', 'oak tree canopy', 'conifer crown'] },
@@ -56,14 +60,14 @@ export const PHOTO_CATALOG = {
     buttress: { want: 4, q: ['buttress root rainforest', 'tree buttress roots'] },
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
-    lattice:  { want: 4, q: ['transmission tower lattice', 'pylon steel lattice closeup'] },
+    lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
     dish:     { want: 3, q: ['microwave dish antenna tower', 'parabolic antenna'] },
-    tank:     { want: 3, q: ['water tower tank', 'elevated water tank'] },
+    tank:     { want: 3, q: ['water tower', 'water tank', 'elevated water tank'] },
     container:{ want: 3, q: ['shipping container single', 'cargo container isolated'] },
   },
   building: {                                                // hazards BUILDERS:窗格/簷口/陽台/外管
-    window:   { want: 4, q: ['building window module facade', 'industrial window grid'] },
-    roofcap:  { want: 4, q: ['building roof parapet', 'rooftop mechanical penthouse'] },
+    window:   { want: 4, q: ['window facade', 'office building facade', 'factory windows'] },
+    roofcap:  { want: 4, q: ['rooftop parapet', 'building rooftop', 'roof cornice'] },
     balcony:  { want: 3, q: ['concrete balcony facade', 'apartment balcony module'] },
     piping:   { want: 3, q: ['industrial external piping wall', 'building exterior pipes'] },
   },
@@ -163,45 +167,61 @@ async function main() {
   }
 
   let fetched = 0;
+  let cooled = false;   // 撞上 IP 級限流(2026-08-05 實測 upload.wikimedia.org Retry-After: 600)
   for (const { fam, part, def, need } of work) {
-    if (fetched >= LIMIT) break;
-    const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part).map((e) => e.id));
+    if (cooled || fetched >= LIMIT) break;
+    // seen 只收成功條目:暫時性失敗(429 限流)重跑 MUST 能再試,否則②的「可續跑」對
+    // 整批被限流的零件永久失效;失敗紀錄仍留在帳本當歷史(④),成功時另推一筆新條目。
+    const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part && e.ok).map((e) => e.id));
     for (const q of def.q) {
-      if (fetched >= LIMIT) break;
+      if (cooled || fetched >= LIMIT) break;
+      const tryItems = async (items) => {
+        for (const it of items) {
+          if (cooled || fetched >= LIMIT || have(fam, part) >= def.want) break;
+          if (seen.has(it.id)) continue;
+          seen.add(it.id);
+          // 選片過濾:短邊 <1024 直接跳過(skill §5.3:不足 1024 不准進 image→3D);尺寸未知照收並標記
+          const short = Math.min(it.w || Infinity, it.h || Infinity);
+          if (short < 1024) continue;
+          const entry = {
+            family: fam, part, id: it.id, query: q, api: it.api,
+            source_url: it.source_url, license: it.license, creator: it.creator,
+            retrieved_at: new Date().toISOString(), w: it.w || null, h: it.h || null,
+            size_unknown: !(it.w && it.h) || undefined,
+          };
+          try {
+            entry.file = (await download(it, fam, part)).replace(HERE + '/', '');
+            entry.ok = true;
+            fetched++;
+            console.log(`✓ ${fam}/${part} ← ${it.id}(${it.license})`);
+          } catch (e) {
+            entry.ok = false; entry.error = e.message;
+            console.warn(`✗ ${fam}/${part} ← ${it.id}:${e.message}`);
+            // 429 = IP 級限流:繼續打只是把候選燒成失敗紀錄 ⇒ 提前收工,等冷卻窗過再跑。
+            // 它是「這一輪的網路狀態」不是「這張照片的屬性」⇒ 也不進帳本(帳本記的是
+            // 授權與檔案的事實;持續性失敗如 404 仍照記)。
+            if (/HTTP 429/.test(e.message)) { cooled = true; continue; }
+          }
+          manifest.push(entry);
+          writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
+          await new Promise((r) => setTimeout(r, 1100));     // 禮貌限速(Openverse 匿名額度)
+        }
+      };
       let items = [];
       try { items = await searchOpenverse(q, need * 3); } catch (e) { console.warn(`Openverse 失敗(${q}):${e.message}`); }
-      if (!items.length) {
-        try { items = await searchCommons(q, need * 3); } catch (e) { console.warn(`Commons 失敗(${q}):${e.message}`); }
-      }
-      for (const it of items) {
-        if (fetched >= LIMIT || have(fam, part) >= def.want) break;
-        if (seen.has(it.id)) continue;
-        seen.add(it.id);
-        // 選片過濾:短邊 <1024 直接跳過(skill §5.3:不足 1024 不准進 image→3D);尺寸未知照收並標記
-        const short = Math.min(it.w || Infinity, it.h || Infinity);
-        if (short < 1024) continue;
-        const entry = {
-          family: fam, part, id: it.id, query: q, api: it.api,
-          source_url: it.source_url, license: it.license, creator: it.creator,
-          retrieved_at: new Date().toISOString(), w: it.w || null, h: it.h || null,
-          size_unknown: !(it.w && it.h) || undefined,
-        };
-        try {
-          entry.file = (await download(it, fam, part)).replace(HERE + '/', '');
-          entry.ok = true;
-          fetched++;
-          console.log(`✓ ${fam}/${part} ← ${it.id}(${it.license})`);
-        } catch (e) {
-          entry.ok = false; entry.error = e.message;
-          console.warn(`✗ ${fam}/${part} ← ${it.id}:${e.message}`);
-        }
-        manifest.push(entry);
-        writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
-        await new Promise((r) => setTimeout(r, 1100));       // 禮貌限速(Openverse 匿名額度)
+      await tryItems(items);
+      // 降級不例外(④):Openverse「搜尋零結果」**或「有結果但下載被限流(429)整批失敗」**
+      // 同一條查詢都降級到 Commons 再試 —— 舊制只蓋前者,實測 Openverse 匿名額度一燒完,
+      // 缺額零件就永遠補不滿,而畫面上只看得到「✗ HTTP 429」一排。
+      if (have(fam, part) < def.want && fetched < LIMIT) {
+        let more = [];
+        try { more = await searchCommons(q, need * 3); } catch (e) { console.warn(`Commons 失敗(${q}):${e.message}`); }
+        await tryItems(more);
       }
       if (have(fam, part) >= def.want) break;
     }
   }
+  if (cooled) console.log('\n⚠ 撞上來源 IP 級限流(HTTP 429),本輪提前收工;約 10 分鐘後重跑同指令續補。');
   console.log(`\n本輪下載 ${fetched} 張;重跑同指令可續補缺額。`);
 }
 
