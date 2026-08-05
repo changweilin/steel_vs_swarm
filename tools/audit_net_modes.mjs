@@ -274,8 +274,24 @@ try {
     'server.js MUST 在 `!CLOUD` 之下才掛這條路由(雲端節點連載都不載)');
   ok(/import\('\.\.\/tools\/dev_supervisor\.mjs'\)/.test(srvSrc) && /\.catch\(\(\) => null\)/.test(srvSrc),
     'MUST 動態 import 且載不到就當沒有這條路由(出貨版沒有 tools/)');
-  ok(/import \{ DEFAULT_PORT as CODEX_PORT \} from '\.\/codex_review\.mjs'/.test(supSrc),
-    '埠號 MUST 從工具自己 import,MUST NOT 抄一份(抄了改埠就探不到,鈕面永遠停在「▶ 啟動」)');
+  // 埠號**逐支**都要從那支工具自己 import(抄一份 = 改埠之後啟得起來卻探不到,鈕面永遠停在
+  // 「▶ 啟動」)。這一條 MUST 隨 TOOLS 一起長:新增一支工具就會多一列 import 要驗。
+  {
+    const sup = await import('./dev_supervisor.mjs');
+    const srcOf = { codex: 'codex_review', parts: 'parts_review' };
+    for (const key of Object.keys(sup.TOOLS)) {
+      const mod = srcOf[key];
+      ok(!!mod && new RegExp(`import \\{ DEFAULT_PORT as \\w+ \\} from '\\./${mod}\\.mjs'`).test(supSrc),
+        `${key}:埠號 MUST 從 tools/${mod || '?'}.mjs import,MUST NOT 抄一份`);
+      const m = await import(`./${mod}.mjs`);
+      ok(sup.TOOLS[key].port === m.DEFAULT_PORT,
+        `${key}:TOOLS 的埠(${sup.TOOLS[key].port})= 工具自己的 DEFAULT_PORT(${m.DEFAULT_PORT})`);
+      ok(!/^\d+$/.test(String(sup.TOOLS[key].script)) && sup.TOOLS[key].script.startsWith('tools' + path.sep),
+        `${key}:script 是 tools/ 底下的常數路徑`);
+    }
+    const ports = Object.values(sup.TOOLS).map((t) => t.port);
+    ok(new Set(ports).size === ports.length, `每一支工具的埠互不相同(${ports.join(', ')})`);
+  }
   ok(/spawn\(process\.execPath, \[t\.script, \.\.\.t\.args\]/.test(supSrc)
     && !/spawn\([^)]*req\./.test(supSrc),
     'spawn 的 argv MUST 全部來自 TOOLS 常數,請求只能挑一個 key(參數零信任)');
@@ -302,8 +318,8 @@ try {
   const lo = await devReq('127.0.0.1', '/dev/tools');
   let tools = [];
   try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
-  ok(lo.code === 200 && tools.some((t) => t.key === 'codex'),
-    'loopback 拿得到工具清單(含 codex)');
+  ok(lo.code === 200 && tools.some((t) => t.key === 'codex') && tools.some((t) => t.key === 'parts'),
+    'loopback 拿得到工具清單(含 codex 2D 生圖對照台與 parts 3D 零件對照台)');
   ok(tools.every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
     '清單自己帶網址(客戶端因此一個埠號都不用寫死)');
   const lan = Object.values(os.networkInterfaces()).flat()
@@ -319,19 +335,21 @@ try {
     method: 'POST', headers: { 'x-dev-tools': '1' },
   })).code === 404, '沒有的動作 MUST 404(而不是被當成 start)');
 
-  // (c) 真的啟停一次。8621 已經有人在聽(使用者自己在終端機跑著)就跳過 —— MUST NOT 洗成通過
+  // (c) **逐支**真的啟停一次(啟不起來的工具在鈕面上只表現成「按了沒反應」)。
+  //     那個埠已經有人在聽(使用者自己在終端機跑著)就跳過 —— MUST NOT 洗成通過。
   const sup = await import('./dev_supervisor.mjs');
-  const before = (await sup.list())[0];
-  if (before.listening) {
-    console.log('  ⏭  跳過啟停直測:8621 已經有人在聽(可能是終端機跑著的 npm run codex)');
-    ok((await sup.stop('codex')).error === '這一支不是從這裡啟動的',
-      '別人起的那一支停不掉,而且明講原因');
-  } else {
-    const started = await sup.start('codex');
-    ok(started.listening && started.owned, `start 之後埠 ${started.port} 真的聽得到,而且是我們開的`);
-    const stopped = await sup.stop('codex');
-    ok(!stopped.listening && !stopped.owned, 'stop 之後埠放掉了');
-    ok((await sup.stop('codex')).error === '這一支不是從這裡啟動的', '重複 stop 不炸,而且明講原因');
+  for (const t of await sup.list()) {
+    if (t.listening) {
+      console.log(`  ⏭  跳過 ${t.key} 啟停直測:${t.port} 已經有人在聽(可能是終端機跑著的那一支)`);
+      ok((await sup.stop(t.key)).error === '這一支不是從這裡啟動的',
+        `${t.key}:別人起的那一支停不掉,而且明講原因`);
+      continue;
+    }
+    const started = await sup.start(t.key);
+    ok(started.listening && started.owned, `${t.key}:start 之後埠 ${started.port} 真的聽得到,而且是我們開的`);
+    const stopped = await sup.stop(t.key);
+    ok(!stopped.listening && !stopped.owned, `${t.key}:stop 之後埠放掉了`);
+    ok((await sup.stop(t.key)).error === '這一支不是從這裡啟動的', `${t.key}:重複 stop 不炸,而且明講原因`);
   }
 } finally {
   srv.kill();

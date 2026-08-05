@@ -20,6 +20,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
+import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -33,6 +34,16 @@ export const TOOLS = {
     args: [],
     hint: '把已生成的機體圖配對到角色頭像與 3D 展示台,逐張確認勾選 / 框出局部重繪 / 重下 prompt;'
       + '同時列出缺圖與孤兒檔,並收 tools/ai3d/masters/ 那批尚未驗收的 AI 設定稿。',
+  },
+  parts: {
+    key: 'parts',
+    label: '3D 零件對照台',
+    port: PARTS_PORT,
+    script: path.join('tools', 'parts_review.mjs'),
+    args: [],
+    hint: '把 docs/ai3d_runbook.md 生成的 3D 物件與原版並排比較(同一顆座號、同一顆相機):'
+      + '零件庫 GLB vs 保險絲 primitive、純資料件 vs 改寫前的零件表;逐件說明用哪個生成方法、'
+      + '吃哪一張來源圖(授權與出處),並列出缺件 / 孤兒節點 / 未記載來源。',
   },
 };
 
