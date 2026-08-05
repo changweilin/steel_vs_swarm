@@ -456,6 +456,28 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   ok(!/g\.rotation\.y = rnd\(\)/.test(megaSrc), '舊制「每顆各轉各的」已退場');
   ok(/ROCKFIELD\.GAP_M/.test(megaSrc), '同片露頭的緊密判定吃 ROCKFIELD.GAP_M(不再是手寫的 +70)');
   ok(/ROCKFIELD\.FIELDS/.test(megaSrc) && /ROCKFIELD\.SEP/.test(megaSrc), '露頭群數與間距吃常數表');
+  // 主堡退避(2026-08-05 使用者定案「直接把名岩排除在主堡周圍一整個岩體直徑之外」)
+  ok(/basesW\?\.some\(/.test(megaSrc) && /BASE_CLEAR_R \+ r \* 2/.test(megaSrc),
+    '名岩退避主堡:中心距 ≥ 淨空圈 + 一整個岩體直徑');
+  ok(!/\bBASE_CLEAR_R \+ \d+(\.\d+)?\s*\)/.test(megaSrc),
+    '退避距的尺是岩體自己的外廓,MUST NOT 退回定值(名岩體格差到四倍)');
+  ok((strip(bio).match(/const BASE_CLEAR_R\s*=/g) || []).length === 1
+    && (strip(bio).match(/\bBASE_CLEAR_R\b/g) || []).length >= 3,
+    '主堡淨空半徑只有一份定義,buildClearance 與 placeMegaliths 同吃(手寫兩個 70 會悄悄分家)');
+  ok(!/blockPoint\(x, z, 70\)/.test(strip(bio)), 'buildClearance 的主堡那圈已改吃 BASE_CLEAR_R');
+  ok((strip(bio).match(/llToWorld\(cfg\.bases\[side\]\[0\]/g) || []).length === 2,
+    '主堡世界座標恰兩處(buildClearance 一份 + buildBiomes 的 basesW 一份,地標與名岩共用後者)');
+  // 退避距真的把名岩推出去:以現役 MEGALITHS 的體格反算最小中心距
+  {
+    const megaBlk = strip(bio.slice(bio.indexOf('const MEGALITHS = {'), bio.indexOf('function synthMegalith')));
+    const cols = [...megaBlk.matchAll(/col:\s*\{\s*r:\s*(\d+(?:\.\d+)?)/g)].map((m) => +m[1]);
+    const ss = [...megaBlk.matchAll(/s:\s*\[(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\]/g)].map((m) => +m[2]);
+    ok(cols.length >= 4 && cols.length === ss.length, `名岩體格表解析到 ${cols.length} 型`);
+    const rMax = Math.max(...cols.map((c, i) => c * ss[i]));
+    // 舊制:岩壁邊緣可逼近到離主堡中心 BASE_CLEAR_R + 6;新制邊緣至少再退一個岩體半徑
+    ok(70 + rMax * 2 - rMax > (70 + 6) * 2,
+      `最大名岩(r=${rMax.toFixed(0)}m)的岩壁邊緣退到 ≥${(70 + rMax).toFixed(0)}m(舊制 76m)`);
+  }
   // 冠幅推導不手寫
   ok(/function giantCrownR\(/.test(bio), '冠幅由 giantCrownR 推導');
   ok(!/\bcr:\s*\d+(\.\d+)?\s*[,}]/.test(strip(bio.slice(bio.indexOf('const GIANT_DEFS'), bio.indexOf('const GIANT_DECO')))),
