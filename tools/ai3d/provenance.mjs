@@ -66,18 +66,23 @@ export function loadProvenance(path = MANIFEST_PATH) {
   const parts = Array.isArray(raw.parts) ? raw.parts : [];
   const byKey = new Map();
   for (const p of parts) {
-    if (!p.key) { issues.push({ level: 'err', msg: '有一筆沒有 key' }); continue; }
-    if (byKey.has(p.key)) issues.push({ level: 'err', msg: `${p.key}:重複記載(兩筆帳 = 沒有帳)` });
-    if (!METHODS[p.method]) issues.push({ level: 'err', msg: `${p.key}:方法「${p.method}」不在 METHODS 字彙裡` });
-    if (!p.imgs?.length) issues.push({ level: 'warn', msg: `${p.key}:沒有記載任何來源圖` });
+    // 一次生成作業可能產出**一組同源節點**(尺寸階梯:同一張圖、同一組參數,只是烤成
+    // 幾個級距)⇒ 允許 `keys: []` 一筆帳掛多個鍵。拆成 N 筆會讓同一件事有 N 份說明,
+    // 改一個參數就得改 N 個地方(而漏改的那幾筆看起來仍然正常)。
+    const keys = Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []);
+    if (!keys.length) { issues.push({ level: 'err', msg: '有一筆沒有 key / keys' }); continue; }
+    if (keys.some((k) => byKey.has(k))) issues.push({ level: 'err', msg: `${keys.join('、')}:重複記載(兩筆帳 = 沒有帳)` });
+    const tag = keys.join('、');
+    if (!METHODS[p.method]) issues.push({ level: 'err', msg: `${tag}:方法「${p.method}」不在 METHODS 字彙裡` });
+    if (!p.imgs?.length) issues.push({ level: 'warn', msg: `${tag}:沒有記載任何來源圖` });
     for (const im of p.imgs || []) {
-      if (!im.license) issues.push({ level: 'err', msg: `${p.key}:來源圖 ${im.id || '?'} 沒有授權欄(CC0/PD 是硬閘)` });
-      if (!im.source_url) issues.push({ level: 'warn', msg: `${p.key}:來源圖 ${im.id || '?'} 沒有出處連結` });
+      if (!im.license) issues.push({ level: 'err', msg: `${tag}:來源圖 ${im.id || '?'} 沒有授權欄(CC0/PD 是硬閘)` });
+      if (!im.source_url) issues.push({ level: 'warn', msg: `${tag}:來源圖 ${im.id || '?'} 沒有出處連結` });
     }
     if (METHODS[p.method]?.kind === 'parts' && !p.baseline?.rev) {
-      issues.push({ level: 'warn', msg: `${p.key}:純資料件沒有 baseline.rev ⇒ 對照台畫不出「原版」那一半` });
+      issues.push({ level: 'warn', msg: `${tag}:純資料件沒有 baseline.rev ⇒ 對照台畫不出「原版」那一半` });
     }
-    byKey.set(p.key, p);
+    for (const k of keys) byKey.set(k, p);
   }
   return { version: raw.version || 0, parts, byKey, issues };
 }

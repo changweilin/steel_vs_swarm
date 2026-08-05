@@ -5,5 +5,20 @@
   "measured_p90_tris": 548,
   "measured_max_tris": 1071,
   "factor": 1.0,
-  "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)"
+  "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)",
+  "families": {
+    "tree": {
+      "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05)",
+      "measured_max_tris": 402,
+      "factor": 1.0,
+      "kind_tris": {
+        "redwood": 402, "sequoia": 368, "euc": 328, "dougfir": 316, "meranti": 315,
+        "klinki": 286, "sitka": 281, "alerce": 280, "dinizia": 279, "taiwania": 268,
+        "tualang": 259
+      },
+      "kind_factor": 4.0,
+      "justification": "兩道閘,缺一不可。①單件上限同 rock 族那條規則:一個 AI 零件 ≤ 現行最重的**一整株**神木(402)。②但樹與石頭有一個關鍵差別 —— 一株神木有 13~20 件、冠簇一件今天只有 20 tris(ico),AI 零件是 215 ⇒ 只驗單件的話,把整株冠簇全換掉會變成 20 倍而每一件都「合格」。故加逐株閘:該株所有庫零件的三角形和 ≤ kind_factor × 該株現值 ⇒ 換完的整株保證 ≤ 5× 現值(非庫零件本來就 ≤ 現值)。現行接線實測 2.2~3.7×。",
+      "staleness": "kind_tris 是量測快照:**改 GIANT_DEFS 任一零件表 MUST 重量**(否則閘門拿舊基準放行)。重量方式見 measured_what。"
+    }
+  }
 }

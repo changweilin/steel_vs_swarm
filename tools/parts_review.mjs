@@ -33,7 +33,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import {
-  beaconsPure, beaconsSrc, partLibs, libDescs, fbEnvelope,
+  beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, fbEnvelope,
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
 import { METHODS, loadProvenance, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
@@ -56,7 +56,12 @@ export function manifest(items = {}, photosOpt = null) {
   const roots = photoRoots(photosOpt);
   const budget = triBudget();
   const B = beaconsPure(beaconsSrc());
-  const descs = libDescs(B.KIND_PARTS);
+  // 兩個消費端:beacons(地標,`['lib', …]` 描述子)+ biomes(植被/神木,`lib:` 欄)。
+  // 少收哪一邊,那一邊的生成物就整批從台上消失 —— 而「台上沒有」看起來跟「還沒做」一模一樣(邊界 ③)
+  const descs = [
+    ...libDescs(B.KIND_PARTS).map((d) => ({ ...d, builder: 'beacon' })),
+    ...bioLibDescs().rows.map((d) => ({ ...d, builder: 'veg' })),
+  ];
   const libs = partLibs();
 
   // 逐族解析 GLB(不存在/壞掉不是例外:那正是要顯示的事實)
@@ -99,15 +104,23 @@ export function manifest(items = {}, photosOpt = null) {
       prov: p,
       imgs: imgOut(name),
       consumer: ds.map((x) => `${x.kind}[${x.index}]`).join('、'),
-      // 對照的兩側:左 = 原版(保險絲 primitive),右 = AI 生成(GLB)
-      view: { mode: 'fuse-vs-lib', kind: d0.kind, node: d0.node, fb: d0.fb, at: d0.p },
+      // 對照的兩側:左 = 原版(保險絲 primitive),右 = AI 生成(GLB)。
+      // `builder` 決定由**誰的**建構器建 —— beacons 的 buildBeacon / biomes 的 buildVegMeshes,
+      // 兩者都是遊戲自己那一支(台上沒有第二套組裝器,紀律 ①)
+      view: { mode: 'fuse-vs-lib', builder: d0.builder, kind: d0.kind, node: d0.node, fb: d0.fb, at: d0.p },
       missing: !node,
       glbPath: fam ? fam.path.replace(ROOT + sep, '') : null,
       glbError: fam?.error || null,
       measured: mea,
       env,
       pct: mea ? mea.rMax / env.r : null,
-      budget: budget ? { cap: budget.cap, what: budget.measured_what } : null,
+      budget: budget
+        ? {
+          cap: budget.capOf(d0.family), what: budget.whatOf(d0.family),
+          // 逐株(逐款)閘:單件合格 ≠ 整株合格(tree 族 justification)
+          kind: budget.kindCap(d0.family, d0.kind),
+        }
+        : null,
       item: items[name] || null,
     });
   }

@@ -105,6 +105,127 @@
       "note": "批跑第 8 顆(平滑)。Blender 端另做了一次溫和 decimate(808→588),比例小、不撕面。"
     },
     {
+      "keys": ["tree/canopy_a10", "tree/canopy_a7", "tree/canopy_a5"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_a10 / a7 / a5;消費株 meranti・tualang・sequoia・dinizia・redwood・euc)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
+          "family": "tree", "part": "canopy",
+          "query": "oak tree canopy",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
+          "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;第一批 14 張 matte 只有 1 顆實心(可用率與 rock 族的 ~1/15 同級)",
+        "note": "首批 tree 查詢(tree crown isolated sky / buttress root rainforest)命中臘葉標本掃描與夜拍林景 ⇒ 幾乎全軍覆沒;改點名「孤立單株」(solitary oak tree meadow / lone tree field)後同一支工具 6 張中 5 張實心。輸入的措辭比模型參數重要得多"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "note": "非等向縮放(新增能力):樹冠 fallback 是 ico 球,而實拍樹冠天生比球扁 —— 等比縮會填不滿縱向、零件表的 sy 再壓一次就成薄餅。尺寸階梯逐級各烤一顆(半徑 MUST ≤ 該列 fallback);同一顆形狀用在不同級距時另給 ry 轉開"
+      },
+      "note": "闊葉團(渾圓)。節點名的 a/b/c/d = 形狀來源,數字 = 尺寸階梯,兩者正交 —— 同一形狀跨級距共用,不同株才換形狀。"
+    },
+    {
+      "keys": ["tree/canopy_b10", "tree/canopy_b7", "tree/canopy_b5"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_b10 / b7 / b5;消費株 dinizia・euc・redwood)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_4e78d273-4403-467b-8ec3-439619a55e01",
+          "family": "tree", "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/4e78d273-4403-467b-8ec3-439619a55e01",
+          "file": "photos/tree/canopy/ov_4e78d273-4403-467b-8ec3-439619a55e01.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": { "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)", "fit": 0.95 },
+      "note": "橫展孤樹(梢端外突)。減面到 ~215 tris 後梢端保留成短枝狀突起 —— 那是刻意留的:冠緣全平滑會退回 ico 的剪影。"
+    },
+    {
+      "keys": ["tree/canopy_c8", "tree/canopy_c6", "tree/canopy_c45"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_c8 / c6 / c45;消費株 sequoia・meranti・tualang・redwood)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_52cfa19d-01af-4783-a884-9bd7ce684c3b",
+          "family": "tree", "part": "canopy",
+          "query": "isolated tree grassland",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/52cfa19d-01af-4783-a884-9bd7ce684c3b",
+          "file": "photos/tree/canopy/ov_52cfa19d-01af-4783-a884-9bd7ce684c3b.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": { "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)", "fit": 0.95 },
+      "note": "大冠橡樹(飽滿渾圓)。"
+    },
+    {
+      "keys": ["tree/canopy_d8", "tree/canopy_d6", "tree/canopy_d35"],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_d8 / d6 / d35;消費株 meranti・sequoia・tualang・dougfir・sitka・taiwania)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
+          "family": "tree", "part": "canopy",
+          "query": "lone tree field",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
+          "file": "photos/tree/canopy/ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": { "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)", "fit": 0.95 },
+      "note": "花期樹(團塊分明)。canopy_d35 是最小的一級,同時服務 dougfir/sitka/taiwania 的小冠簇 —— 再小的冠簇(klinki/alerce 的 2.2~3.0m)沒有節點裝得下,刻意不換。"
+    },
+    {
       "key": "beacon/tank",
       "method": "llm_parts",
       "consumer": "beacons watertower(BEACON_KINDS.tank)",
