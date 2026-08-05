@@ -16,9 +16,10 @@
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
 | Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
 | Photo DB gap-fill (parts at 0, see §4 step A) | **DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; **all 14 parts at target** (55 photos), licence re-audit 55/55 CC0/PD; throttle-cooldown loop needed 3 extra rounds for `lattice`/`tank` |
+| Photo DB integrity pass (magic-bytes gate + manifest path portability) | **DONE 2026-08-05** (§5d) | 2 whole PDFs had passed the licence audit as `ok` photos (bytes, not licence, was the lie) — de-booked, deleted, refetched; 28 absolute-path manifest rows migrated to relative POSIX; final audit **61/61 ok = real image + file present + CC0/PD**, all 14 parts at target |
 | P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
-| P2c pilot — img→3D GLB parts (organic geometry) | **ALL PREP DONE 2026-08-05 — blocked only on SF3D weights gate** (owner: accept licence as `winniexchang`, §6-3) | venv 3.11 + torch 2.5.1+cu121 (GPU ✓) + SF3D deps + **both native extensions built** (`texture_baker`/`uv_unwrapper` `_C.pyd`, VS2022 + CUDA 12.6) + `sf3d` imports OK; Blender 5.2 LTS installed; rembg matting done; **2 usable inputs curated** (33MP glacial-erratic boulder + cropped fracture-face boulder); intake checker `tools/ai3d/intake_parts.mjs` written; tri budget **measured** (`tri_budget.json`: synthMegalith 200 seeds max 1071 tris) |
-| biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **blocked until P2c ships first tree/rock parts** | — |
+| P2c pilot — img→3D GLB parts (organic geometry) | **DONE 2026-08-05** (§5e; gate opened same day) | `public/assets/models/parts/rock.glb` shipped: 3 nodes (`collapse_a`/`facet_a`/`facet_b`, 938/882/588 tris) consumed by beacons `cairn` via `['lib', …]`; SF3D measured on the 3060 (peak VRAM 6.17 GB, warm 13.6 s / 2 images); intake 14/14; `audit_beacons` 68 + reverse-red; `audit_object_joints --seeds 8` 21311/0; cel 52 / visual_prefs 124 / gpu 54 / siteplan 168; e2e green; bal green (structurally bit-identical — balance tooling imports neither beacons nor partlib); fallback-vs-lib renders with collider overlay (`tools/shot_beacons.mjs`) |
+| biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | TODO — **unblocked** (P2c shipped rock parts 2026-08-05); next in queue before any `MEGALITHS`/`VEG_DEFS` consumer | — |
 | `giantCrownR` GLB-compat (vertex scan or metadata; plan §8 correction 1) | TODO — **hard blocker for canopy GLBs** | — |
 | P3 dynamic track (mech slots) | NOT STARTED | Plan §3; do not start before P2c passes |
 
@@ -28,7 +29,7 @@
 |---|---|---|
 | **CC sandbox** (this repo's remote sessions) | All offline audits; e2e (`node server/server.js` then `npm test`); `npm run bal`; editing + push; GitHub MCP (PR/Actions API); HF MCP (search + the curated `dynamic_space` roster) | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` / `*.blob.core.windows.net` — all CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio calls**. No GPU (`nvidia-smi` absent). Raw `api.github.com` REST is gated (MCP tools work; `curl` with `$GITHUB_TOKEN` returns "GitHub access is not enabled") |
 | **GitHub Actions** (ubuntu runner) | Open egress ⇒ photo fetching (proven, run 1); licence re-audit; artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference here would need an `HF_TOKEN` secret **which only the repo owner can add** — do not attempt without it |
-| **User's RTX 3060 12 GB machine** | The whole model ladder (plan §1): SF3D 6 GB / Hunyuan3D 2.1 shape-only 10 GB / TRELLIS.2 (measure first); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present (can provision the 3.10–3.11 venv without touching system Python) | Python 3.13 is system default — the model stack needs a **separate 3.10–3.11 venv** in `tools/ai3d/.venv` (never in `package.json`, A2). **Blender not installed** (P2c normalisation step needs it — system-level install, ask owner). **SF3D weights unreachable**: `hf` CLI is logged in as `winniexchang` but gated `stabilityai/stable-fast-3d` returns not-found ⇒ licence not accepted on that account (or token lacks gated-repo read) — owner action, §6. **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
+| **User's RTX 3060 12 GB machine** | The whole model ladder (plan §1): **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images) / Hunyuan3D 2.1 shape-only 10 GB / TRELLIS.2 (measure first); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
 | **HF Spaces** | `stabilityai/stable-fast-3d` (official gradio Space) as no-GPU fallback — drive it from a machine that can reach `huggingface.co`, i.e. the 3060 box or a browser; **not** from the sandbox | The HF MCP `dynamic_space` roster has **no mesh-generating space** (checked: only image/video/audio tools; `stabilityai/stable-fast-3d` is not MCP-enabled → HTTP 404 via MCP) |
 
 **Consequence an agent must internalise**: photos and GLBs cannot pass through the sandbox.
@@ -172,6 +173,79 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
   mating face, +Y up, strip textures, named nodes `facet_a`/`collapse_a`) → intake checker →
   wire `PART_LIBS = ['rock']` + cairn `['lib', …]` descriptors → full static battery.
 
+## 5e. Trial log (2026-08-05, 3060-machine session — P2c executed: first GLB parts shipped)
+
+- **Gate opened** (owner accepted the licence) → weights downloaded (4.02 GB, ~6 min).
+  **Measured**: cold run 3 m 02 s (includes one-time dinov2/CLIP aux downloads), **warm run 13.6 s
+  for 2 images end-to-end, peak VRAM 6.17 GB** at `--texture-resolution 512` — comfortable on the
+  12 GB 3060; plan §1's "SF3D 6 GB" confirmed.
+- **Do not decimate raw SF3D output in Blender** — the ~50k-tri shell tears into dark speckle
+  holes at 50:1 ratios (first attempt, visible in the screenshot loop). Use SF3D's own
+  `--remesh_option triangle --target_vertex_count 520` → clean solid ~944/808-tri meshes straight
+  out; Blender then only centres/scales/strips (its decimate stays as a mild safety trim, e.g.
+  808→588 for the 0.85 m node — harmless at that ratio).
+- **Input curation is a mesh-level fact, not just a photo-level one**: batched all 15 matted rock
+  candidates through SF3D (13.6 s… batching is ~free) and contact-sheeted the meshes — only
+  **5/15 solid** (indices 2/6/8/9/11); crops-from-scene-photos (`facet_a_crop`) and museum-scan
+  survivors all came out as thin shells or flakes. §5c's "~1/15 usable" holds at the mesh stage
+  too; the reliable route stays "named single-object landform" queries. Batch + contact sheet is
+  now the standard pick flow (render script kept in scratchpad; promote if reused).
+- **Final picks** (node = consumer role, photo family ≠ node name): `collapse_a` ← batch 6
+  (facet `ov_f7e1cc51`, blocky), `facet_a` ← batch 11 (collapse `ov_62d21e5a`, lumpy),
+  `facet_b` ← batch 8 (collapse `ov_0012000f`, smooth, +137° yaw for same-source disguise).
+- **`normalize_parts.py` shipped** (tools/ai3d): centre-to-origin + envelope-fit (FIT 0.95) +
+  strip materials/UV/colour + optional per-node `ry`/`dy`. `dy` exists because real boulders are
+  flatter than the fallback ico — centring left the base stone hovering 12 cm; `dy −0.12` puts its
+  underside at −0.9 = the consumer's `p.y`, so it grounds at **every** stretch value (`py·s − hy·s`).
+  Field separator is `|` (`:` collides with Windows drive letters).
+- **Wiring**: `PART_LIBS = ['rock']`; cairn's three stack stones → `['lib', 'rock/…', ['ico', r]]`
+  with the old ico as fuse. `foot` untouched — `partExtent(lib) ≡ fallback extent` by contract.
+- **Gates all green**: intake 14/14; `audit_beacons` 68 + `--break-extent` reverse-red;
+  `audit_object_joints --seeds 8` 21311 joints / 0 anomalies; cel 52 / visual_prefs 124 / gpu 54 /
+  siteplan 168; e2e green (fresh server on 8666, user's 8620 servers untouched); bal green and
+  structurally bit-identical (balance tooling imports neither beacons.js nor partlib.js nor the GLB).
+  **Visual closure** via new `tools/shot_beacons.mjs`: same seed shot twice — fuse path (no
+  `loadPartLibs`) renders the old all-ico cairn, lib path renders the three AI rocks solid and
+  grounded, collider cylinder overlaid (r 2.28 unchanged — set by the untouched scatter stone).
+- **`audit_traverse` ran on the 3060** (first time on this machine; warm `.scen_cache` copied from
+  the main checkout): **89 pass / 20 fail — and the failure set is line-for-line identical at the
+  pre-change commit 2c1d123** (A/B in the zen-albattani worktree, same cache). So it is a
+  **pre-existing baseline red** (bridge mid-deck / underpass-interior waypoints unreachable in 14
+  venues + several collapsed bridge-clearance readings, e.g. 0.45 m), not something this change
+  introduced — structurally it cannot be: traverse's pipeline (venue_field/terrain/biomes flood)
+  never touches beacons/partlib/the GLB. Tracked as its own issue outside this runbook.
+- Remaining smoke (interactive, next real-game session): walk past a cairn in taroko + 30 s
+  steady-state frame time. Expected delta is negligible: +~2.2k tris per cairn, merged into the
+  same colour buckets (draw-call count unchanged), few cairns per map.
+
+## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
+
+- **SF3D gate re-probed: still closed.** Token itself is healthy — `whoami-v2` shows a classic
+  `read`-role access token ("WillyRnnoise") on `winniexchang`, public files (LICENSE/README)
+  download fine — but `model.safetensors` returns 403 *"you are not in the authorized list"*.
+  The repo is **`gated: auto`** ⇒ clicking "Agree" on the model page while logged in as
+  `winniexchang` grants instantly, no human review. Whatever was accepted earlier landed on a
+  different account or was never submitted. When it opens, resume at §5c's "next single action".
+- **Data home recorded** (hand-off state): the gitignored ai3d working set (`.venv`, `photos/`,
+  `photo_manifest.json`, `vendor/stable-fast-3d`, `weights/`, `out/matte`) lives in worktree
+  **`.claude/worktrees/zen-albattani-b33990/tools/ai3d/`** — the venv has absolute paths, do not
+  move it; run the fetcher from that copy (data is keyed off the script's own dir).
+- **Magic-bytes gate shipped** (the §5c "fetcher should gain a magic-bytes check" item):
+  `sniffImage()` accepts JPEG/PNG/WebP header bytes only; a non-image download now books
+  `ok:false` (it is a fact about the file, same rule as 404 — unlike 429 which never books)
+  and never lands on disk. Extension and Content-Type are both untrusted.
+- The pool scan found the predicted corruption **already inside the "green" DB**: two whole
+  Internet Archive book-scan **PDFs** booked as `ok` rock/facet photos (7 MB + 25 MB,
+  `wc_91723690` / `wc_93938159`) — the licence audit passes them because *Public domain is true*;
+  only the bytes reveal the lie. De-booked, deleted, refetched → **all 14 parts back at target,
+  61 ok entries, 61/61 real image + file present + CC0/PD**.
+- **Second fetcher bug caught by the same scan**: `entry.file` was made relative by
+  `replace(HERE + '/', '')`, which is separator-sensitive ⇒ on Windows it silently no-oped and
+  the manifest recorded **absolute paths of whatever worktree ran the fetch** (28 rows; the
+  Actions/Linux rows were fine — why round 1 never showed it). Fixed with `path.relative` +
+  POSIX separators; the 28 rows migrated. Portability moral: the artifact/manifest must never
+  encode the machine it was fetched on.
+
 ## 5. Trial log (2026-08-05, sandbox session)
 
 - Actions run 1 (`fetch-photos.yml` #30973968007): 118 manifest entries, 35 ok, **0 licence violations**,
@@ -189,8 +263,6 @@ Do not start before D's first batch ships; the rig contract makes failures 10× 
    be attempted; otherwise all inference stays on the 3060.
 2. `fetch-photos.yml`'s push trigger is pinned to branch `claude/photo-db-img-to-3d-8j9tbe`;
    after PR #127 merges, keep only `workflow_dispatch` (edit the `on:` block) or repoint the branch.
-3. **(2026-08-05, blocks P2c/P0)** Accept the `stabilityai/stable-fast-3d` licence on huggingface.co
-   with the `winniexchang` account (and make sure the stored token can read gated repos) — until then
-   the local `hf` CLI gets "Repository not found" and SF3D cannot be installed.
-4. **(2026-08-05, blocks P2c)** Approve installing **Blender** on the 3060 machine (headless
-   decimate/origin/export step of the GLB pipeline; system-level install, so not done unasked).
+3. ~~Accept the SF3D licence~~ — **RESOLVED 2026-08-05** (owner accepted on `winniexchang`;
+   weights downloaded, P2c executed same day, §5e).
+4. ~~Approve installing Blender~~ — **RESOLVED 2026-08-05** (Blender 5.2 LTS via winget, §5c).

@@ -32,7 +32,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -137,6 +137,15 @@ async function searchCommons(q, n) {
   }).filter(Boolean);
 }
 
+// magic bytes 嗅探:副檔名與 Content-Type 都不可信(2026-08-05 實測 Commons 一張「照片」
+// 是 148 頁 PDF)⇒ 只認檔案開頭位元組;認得的三種 = 影像管線吃得下的三種格式。
+function sniffImage(buf) {
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
+  if (buf.length >= 4 && buf.readUInt32BE(0) === 0x89504e47) return 'png';
+  if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'webp';
+  return null;
+}
+
 async function download(it, fam, part) {
   const dir = join(PHOTOS, fam, part);
   mkdirSync(dir, { recursive: true });
@@ -145,7 +154,10 @@ async function download(it, fam, part) {
   if (existsSync(file)) return file;
   const r = await fetch(it.url, { headers: { 'User-Agent': UA } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+  const buf = Buffer.from(await r.arrayBuffer());
+  // 非影像是「這張檔案的事實」不是網路狀態 ⇒ 照 404 的規矩記進帳本(ok:false),不落地。
+  if (!sniffImage(buf)) throw new Error(`非影像位元組(${buf.subarray(0, 4).toString('hex')})`);
+  writeFileSync(file, buf);
   return file;
 }
 
@@ -190,7 +202,9 @@ async function main() {
             size_unknown: !(it.w && it.h) || undefined,
           };
           try {
-            entry.file = (await download(it, fam, part)).replace(HERE + '/', '');
+            // 帳本一律記「相對 HERE 的 POSIX 路徑」:舊制 replace(HERE + '/') 在 Windows 上
+            // 因分隔符不符靜默失效 ⇒ 別台 worktree 的絕對路徑漏進帳本(2026-08-05 實測 28 筆)。
+            entry.file = relative(HERE, await download(it, fam, part)).split('\\').join('/');
             entry.ok = true;
             fetched++;
             console.log(`✓ ${fam}/${part} ← ${it.id}(${it.license})`);
