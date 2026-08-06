@@ -131,6 +131,40 @@ Batches of ≤5 assets, full gate set per batch (plan §6). Order: megalith face
    then `VEG_DEFS` ordinary trees (**check the draw-call and triangle maths again**: ordinary
    vegetation has orders of magnitude more instances than the handful of giant trees).
 
+### F. 建築整棟節點的消費端縫 + T2 入庫路徑 — env: 3060 — **下一支分支的工作(2026-08-07 交接)**
+
+前置全部備齊:生成器有了(§5n,T2-spz 建築雙 ◎、幾何 + PBR 一次出)、減面路徑量過了
+(§5o,**MUST 先實體化**)。缺的只有**消費端** —— 建築目前沒有「整棟」這個節點,
+所以 §5i 以來每一顆建築產出都只能停在硬碟上(§5i/§5m/§5n/§5o 待續同一條)。
+順序 MUST 是**先開縫、再入庫**(§5m ④ 的原話:「先開縫再入庫」)。
+
+1. **先量再開**:建築整棟的三角形預算沒有量過,而 §5o 已證明 **500 面這一級留不住識別特徵**
+   (Art Deco 的退縮量體被抹平,`dev_p95` 0.0088 → 0.0144)。先跑
+   `tools/ai3d/measure_building_tris.mjs` 取得現值,再定 `tri_budget.json families.building`
+   的整棟級距 —— 預算與縫 **MUST 同一輪定案**,分兩次做的話縫會照舊 400~900 開下去,
+   而那個級距生出來的每一棟都是同一團方塊(D-1 教訓的同一條:先量家族再為它生成)。
+2. **縫開在哪**:建物是 `biomes.js` 的 `BUILDERS`(拉伸量體 + 有向盒碰撞 `hw2/hd2/ry`),
+   與 `beacons.js KIND_PARTS` 的零件式**不是同一種消費端**。整棟節點 MUST 維持
+   ①碰撞/LOS 仍走既有有向盒(A30:看得見多粗 = 撞得到多粗 = 打得到多粗,權威幾何一格不動)
+   ②`['lib', name, fallback]` 的保險絲契約(`partlib.js`;庫載不到就走程序生成)
+   ③**佈局數學只讀保險絲**(§2.3:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家)。
+3. **T2 入庫路徑要先定案**:`normalize_parts.py` 目前沒有實體化那一刀,而 Blender 沒有
+   volumetric resample。兩個選項 ——(a)入庫**前**的離線步驟(pymeshlab,住 study clone
+   或 `tools/ai3d/` 的 venv,**MUST NOT 進 `package.json`**,A2);(b)`normalize_parts.py`
+   多吃一個 `--solidify` 旗標。傾向 (a):新相依不進出貨路徑,且 §5o 的 C 路徑參數
+   (cell = 對角線/256、offset = 對角線 ×0.6%)還沒掃描過,先留在量測側。
+4. **入庫閘照舊**:`intake_parts.mjs` 外廓契約 + 三角形兩道閘(單件 ≤ 族上限、逐款
+   Σ 庫零件 ≤ `kind_factor` × 該款現值);`provenance.mjs METHODS` 這一輪才第一次加
+   `trellis2_spz` 鍵(§5n/§5o 都是零節點出貨所以沒加),帳列 MUST 含 `imgs[].file`。
+5. **驗收**:`intake` / `siteplan` / `audit_object_joints` / `beacons` ±reverse / `gpu` /
+   `soft_stroke` / `cel` / `visual_prefs` 全綠 + `npm test` + `npm run bal` 不動(地物散布,
+   伺服器不涉入)+ 3D 零件對照台 0 缺件 / 0 孤兒 / 0 未記載 + 真機冒煙。
+   **`audit_traverse`(㋓)這次不能省** —— 整棟建物會動到街廓夾出來的通道寬。
+6. **不要順手做的事**:①神木族**不要**再餵 T2(§5n③/§5o 逐族對照都證明碎裂 + 把照片裡的
+   遊客一起生出來,那是輸入語料問題不是模型問題);②hoodoo 那張的失敗是 matte 軟 alpha
+   被 T2 前處理裁掉(§5n),餵 T2 的 matte **MUST 先二值化 alpha**(>16 → 255);
+   ③岩石類有逐 seed 方差(浮雕化/貼圖掉色),要出貨得 per-seed 重抽,別只跑一顆就下結論。
+
 ### E. Track A dynamic (plan §3/P3–P4) — env: 3060 — unchanged
 Do not start before D's first batch ships; the rig contract makes failures 10× more expensive.
 
@@ -858,14 +892,24 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   這一輪是同一件事的拓樸版證據)。⇒ 「取原生網格再自己減面」不是解法,實體化是必需品。
   附帶:50k 與 473k 的黏土渲染**肉眼幾乎分不出來** ⇒ fork 的預設減面在外觀上沒有損失,
   沒有理由為了品質去付 RAM 與匯出時間(473k 那次載入後 `ram_avail` 只剩 **1.3GB**,起跳是 20.3GB)。
-- **人眼複核 MUST 剝貼圖(clay pass)**:`render_decim.py` 一律清掉材質。**這一條同時修正
-  §5n 的判讀口徑** —— §5n 的「建築雙 ◎」是看**帶 PBR 貼圖**的渲染,而黏土渲染下 Art Deco
-  的立面佈滿縱向裂隙,與 34,751 開放邊 / 3,123 元件對得上;貼圖會把幾何破洞演成「貼圖有點花」。
-  反過來也要小心別過度解讀:魔鬼塔柱身的縱溝**剛好也是它真實的柱狀節理**,外觀分不出來 ——
-  **能分辨的只有開放邊/元件那兩個數字**,渲染只用來看識別特徵在不在。
+- **人眼複核 MUST 剝貼圖(clay pass;`render_decim.py` 一律清掉材質),但 clay 也看不出不封閉。**
+  逐族對照表(`family_sheet.py` → `out_sheets/t2_{building,rock,tree}.png`:輸入 matte → 貼圖
+  兩視角 → 黏土)跑完之後,§5n 的「建築雙 ◎」**維持成立** —— 黏土渲染下 Art Deco 的退縮量體
+  一階一階都在、直櫺辦公樓箱體完整,立面上那些縱向紋路是**窗帶/櫺線本身**,不是破洞
+  (魔鬼塔柱身的縱溝同理,那是它真實的柱狀節理)。⇒ **「不封閉」在物件尺度上是看不見的**,
+  能分辨的只有開放邊/元件那兩個數字;clay pass 的用途是「識別特徵在不在」與「減面後有沒有塌」,
+  MUST NOT 拿它當封閉性的判準(反過來,貼圖 pass 連減面塌陷都會蓋掉,更不能用)。
+  clay 真正抓到的一件事是**背面**:魔鬼塔兩顆的側視都是一片開口的殼(§5n 記的「正面浮雕、
+  背面開口」),而那正是「薄殼」在畫面上唯一自己現形的地方。
 - **500 面這一級留不住建築的識別特徵**:C→500 的魔鬼塔 ◎(柱身 + 裙狀崖錐都在),但 Art Deco
   的退縮量體被抹平成一團(`dev_p95` 2000 面 0.0088 → 500 面 0.0144)。⇒ 建築整棟節點若真要用 T2,
   **預算不是 500 這一級**;這件事要與 §5i/§5m 待續的「消費端縫」一起定,別分兩次做。
+- **逐族對照表(交接用)**:`family_sheet.py` → `out_sheets/t2_{building,rock,tree}.png`,
+  逐列 = 輸入 matte → T2 貼圖兩視角 → 黏土。**建築 2/2 ◎**(退縮量體/箱體+櫺線,幾何 + PBR
+  一次出);**巨石 2/3 ◎**(魔鬼塔兩張;側視看得到背面開口 = 薄殼在畫面上唯一現形處)、
+  hoodoo ✗ 是 matte 軟 alpha 被裁的輸入問題;**神木 0/2**(碎裂,而且把照片裡的遊客一起
+  生成出來 —— §5n③「樹的問題是輸入語料不是模型」再確認一次)。⇒ 出貨順序只有一個答案:
+  **建築先行**。
 - **未跑 / 待續**:①實體化那一刀**還沒進 `normalize_parts.py`** —— 這一輪只在 study clone 量,
   出貨輪要決定它是入庫前的離線步驟還是 normalise 的一段(前者較符合 A2/原則 6:
   Blender 沒有 volumetric resample,pymeshlab 是**新的離線相依**,MUST NOT 進 `package.json`);
