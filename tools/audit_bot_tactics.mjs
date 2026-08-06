@@ -209,8 +209,12 @@ sec('Ⅱ 單一縫(原文:威脅/輸出各只有一份帳,分層只認旗標)');
     /towerSites/.test(strip(grabMethod(botsSrc, '_pickRally'))) && !/solveTowerSites/.test(botsCode));
   t('RALLY 的位置一樣走 `_moveToward` → `_move` 碰撞唯一縫',
     /this\._moveToward\(/.test(strip(grabMethod(botsSrc, '_rally'))));
-  t('bots.js 不再手寫撤退門檻(整組搬進 BOT_TACTIC)',
-    !/RETREAT_HP|RESUME_HP\s*=/.test(botsCode) && /BOT_TACTIC\./.test(botsCode));
+  // 2026-08-06 學習策略上線:旋鈕讀取縫升級為 `this.tac`(預設 = BOT_TACTIC,學習迴圈逐 brain
+  // 注入候選策略)⇒ 門檻仍整組住 BOT_TACTIC,但 bots.js MUST 經 this.tac 讀、MUST NOT 再
+  // 直接讀 `BOT_TACTIC.`(第二條讀取路 = 學習候選蓋不到的死角)。見 audit_bot_policy.mjs。
+  t('bots.js 不再手寫撤退門檻(整組搬進 BOT_TACTIC,經 this.tac 單一讀取縫)',
+    !/RETREAT_HP|RESUME_HP\s*=/.test(botsCode) && /this\.tac = BOT_TACTIC;/.test(botsCode)
+    && !/BOT_TACTIC\./.test(botsCode));
   t('「還在戰鬥中」只有 `_inFight` 一支、且吃 `VITALS.OOC_S`(= 護盾還沒開始回復)',
     /VITALS\.OOC_S/.test(strip(grabMethod(botsSrc, '_inFight')))
     && count(botsCode, 'VITALS.') === 1
