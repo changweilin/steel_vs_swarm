@@ -37,6 +37,7 @@
 
 | **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
 | **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
+| **薄殼大比例減面閘門(T2 產出 50k→~500;§5n 待續②)** | **MEASURED 2026-08-07 凌晨**(§5o)| **直接減面關、先實體化再減面開**。A trimesh quadric **打不到預算又不報錯**(2000/900/500 三個目標回同一個 2,865~6,076 面 = 預算 5.7~12.2 倍);B pymeshlab 打得到但產出是**三角形湯**(499 面 / 468~479 元件 / v:f 2.8 = 每元件 1~1.5 面);C 先 uniform volumetric resample 再 quadric = 唯一兩者成立(500 面 / 元件 1~9 / v:f 0.48~0.58 / 開放邊 0~97,dev_mean 恆 ≈ offset 本身)。**方法論**:表面偏差量不出撕裂(B→500 的 dev_p95 只有 0.0034~0.0057 卻是彩紙)⇒ 判準是 **v:f 與 面/元件**。原生網格更乾淨那條假設**被否掉**:`--decimate 500` 重跑得 473,280 面仍有 205,236 開放邊 / 9,898 元件(0.434/面,50k 版 0.653/面)⇒ 兇手不是 fork 的 86:1 減面,O-Voxel 輸出本身就不封閉;且 50k 與 473k 黏土渲染肉眼分不出來。500 面留不住建築識別特徵(Art Deco 退縮量體被抹平)⇒ 建築節點的預算與消費端縫要一起定。零節點出貨 |
 | **TRELLIS.2-spz fork gate(§5l 頭兩階的翻案)** | **MEASURED — OPEN 2026-08-06 深夜**(§5n)| 使用者指示「先在 3060 上跑閘門量測」。IgorAherne StableProjectorz fork = Windows 原生 + 全預編 cp311 wheel + 逐階段 CPU offload;§5l/§5m 同組 7 張 **7/7 全過 @1024_cascade,59~226s/張、torch 峰值 2.7~3.4GB、裝置 free 恆 ≥5.4GB** —— §5l 殺掉 TRELLIS 1 的網格抽取在 O-Voxel 路徑上不是事。**真門檻是 RAM**(low_vram 模型駐留 CPU ~19GB,avail <20GB 載入無聲死);fill 前篩對 O-Voxel 雙層薄殼**結構性不適用**(七張全 ✗ 而人眼兩張 ◎);建築雙 ◎ 是甜蜜點(幾何+PBR 一次出);「同一張 matte ≠ 同一個輸入」(T2 裁 alpha>204 bbox + 預乘,軟 alpha matte 整段被裁)。**零節點出貨**(METHODS 不動);階梯更新 = `T2-spz(建築/要貼圖)→ 2GP(實心岩體)→ SF3D(快篩)→ procedural`;venv 住 study clone `Documents\study\TRELLIS.2-stableprojectorz\.venv` |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
@@ -786,7 +787,8 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   封閉但不包體積,by construction)。fill 的語意是「實心度」,是為 SF3D 設計的(薄殼 =
   垃圾);對 T2 薄殼 = 常態,判讀只能靠人眼渲染(Blender headless 兩視角 contact sheet,
   `render_gate.py`/`sheet_gate.py`)。連帶警告:**薄殼大比例減面正是 §5e 撕裂警告的那一族**
-  (2GP 是實心 mc 網格才敢 213k→560),入庫前 MUST 實測 50k→~500 的減面路徑。
+  (2GP 是實心 mc 網格才敢 213k→560),入庫前 MUST 實測 50k→~500 的減面路徑(**§5o 已實測:
+  直接減面確實壞掉,要先實體化**)。
 - **人眼判讀(對照 §5l SF3D / §5m 2GP 同組)**:
   ①**建築雙 ◎ —— 這是 T2 的甜蜜點**:Art Deco 摩天樓四面退縮量體 + 窗格貼圖全在
   (SF3D 0.048 立面殼、2GP 0.447 shape-only);直櫺辦公樓箱體 + 垂直櫺線完整。且 T2 是
@@ -807,11 +809,69 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   T2 不取代 2GP:薄殼 vs 實心、9~30 倍慢於 SF3D、RAM 門檻高;它拿下的是「SF3D 推不出
   深度、2GP 沒有貼圖」的那一格。
 - **未跑 / 待續**:①**零節點出貨** ⇒ `METHODS` 不加鍵、`parts_manifest` 不動(原則 6,
-  §5l 同款);②薄殼 50k→~500 大比例減面未測 —— 這是入庫前的下一道閘;③512 / 1536 兩檔
+  §5l 同款);②薄殼 50k→~500 大比例減面未測 —— 這是入庫前的下一道閘(**已於 §5o 跑完:
+  直接減面關、先實體化再減面開**);③512 / 1536 兩檔
   解析度未量(512 應更快,1536 疑似撞 RAM);④plan §1 表待補一行 fork 建置(與官方
   TRELLIS.2 分列,勿再混寫 —— §5l 的教訓);⑤建築整棟節點的消費端縫仍未開(§5i/§5m
   待續同款),開了才輪得到 T2 的甜蜜點兌現;⑥texture 掉色(魔鬼塔深藍)未歸因,懷疑
   tex_slat 對 seed 敏感,出貨輪要 A/B。
+
+## 5o. Trial log (2026-08-07 凌晨, 3060-machine session — §5n 待續② 的薄殼減面閘門:直接減面**關**,「先實體化再減面」把它**打開**)
+
+> §5n 收尾寫著「薄殼大比例減面正是 §5e 撕裂警告的那一族,入庫前 MUST 實測 50k→~500」。
+> 這一輪就是那道閘。量測環境同 §5n(study clone、同一個 `.venv`,另裝 `pymeshlab 2025.7` +
+> `fast-simplification` + `rtree`),腳本 `decim_gate.py`(三條路徑 + 拓樸/偏差量測)與
+> `render_decim.py`(黏土渲染),產出 `out_decim*/`。**零節點出貨**(`METHODS`/`parts_manifest` 不動)。
+
+- **結論**:T2(O-Voxel)的產出**不能**直接走 §5m 那條兩段式減面入庫;要進零件庫必須多一道
+  **實體化(volumetric resample)**。三條路徑逐一實測(四顆主體 × 目標 2000/900/500):
+
+  | 主體 | src 面/開放邊/元件 | A trimesh quadric 實得面 | B pymeshlab→500 面/元件/v:f | C 實體化→500 面/元件/v:f/開放邊 |
+  |---|---|---|---|---|
+  | Art Deco 摩天樓 `ov_5846` | 49,845 / 34,751 / 3,123 | **4,688(三個目標同值)** | 491 / 335 / 2.24 | 499 / 8 / 0.58 / 97 |
+  | 直櫺辦公樓 `ov_fde7` | 49,385 / 22,517 / 990 | **6,076** | 497 / 398 / 2.50 | 500 / 9 / 0.48 / 0 |
+  | 魔鬼塔 `ov_163a` | 49,791 / 32,509 / 2,534 | **4,646** | 499 / 479 / 2.86 | 500 / 3 / 0.51 / 8 |
+  | hoodoo `wc_112762573` | 47,567 / 23,029 / 1,364 | **2,865** | 499 / 468 / 2.83 | 500 / 2 / 0.50 / 0 |
+
+- **路徑 A(trimesh / fast-simplification quadric,保拓樸)結構性打不到預算,而且不報錯。**
+  2000 / 900 / 500 三個目標回傳**逐位元同一個面數**(2,865~6,076 = 預算的 5.7~12.2 倍)——
+  它塌不過元件邊界,撞到地板就停,然後**照樣回傳一顆網格**。呼叫端要 500 拿到 6,076,
+  唯一會攔下來的地方是 `intake_parts` 的三角形閘;少了那道閘就是「零件庫悄悄多了 12 倍面數」。
+- **路徑 B(pymeshlab quadric,`preservetopology=False`)打得到精確目標,代價是產出變成三角形湯。**
+  499 面 / 468~479 元件 / v:f ≈ 2.8 ⇒ **平均每個元件 1.0~1.5 面** = 幾乎每一面都是一片孤立三角形。
+  對塊狀岩體(魔鬼塔)遠看還像個東西(孤立三角形照樣覆蓋在原輪廓上),對建築當場炸開
+  (Art Deco 剩幾片大三角 + 一叢針狀刺)。
+- **方法論:表面偏差(dev)量不出撕裂 —— 誰拿它當通過條件,誰就會把彩紙入庫。**
+  以包圍盒對角線正規化的最近距離,B→500 的 `dev_p95` 只有 0.0034~0.0057(魔鬼塔 0.0045),
+  完全「合格」,因為**孤立三角形本來就貼在原表面上**。真正的偵測器是拓樸兩欄:
+  健康的封閉件 **v:f ≈ 0.5、面/元件 = 全部**;三角形湯 **v:f → 3、面/元件 → 1**。
+  唯一 dev 也一起爆掉的是 Art Deco(0.0686)—— 那是因為它連輪廓都沒剩。
+- **路徑 C(先 uniform volumetric resample 實體化,再 quadric)是唯一兩者同時成立的路。**
+  `generate_resampled_uniform_mesh`(cell = 對角線/256、offset = 對角線 ×0.6%)把雙層殼併成
+  一層等值面 ⇒ 之後的 quadric 就與 §5m 那顆 2GP 實心 mc 網格同處境。精確打到 500 面、
+  **v:f 0.48~0.58、元件 1~9、開放邊 0~97**;`dev_mean` 恆 **0.0051~0.0057 ≈ offset 本身**
+  —— 偏差的主項是設計上的等距外移而不是撕裂,這條自洽性檢查值得留著當回歸判準。
+- **「原生網格比較乾淨」這條假設被否掉了 —— 兇手不是 fork 的 86:1 減面。**
+  魔鬼塔重跑一次 `--decimate 500`(4,318,700 → **473,280** 面,132.4s,torch 峰值 2,911MiB 不變,
+  glb 匯出 6.9→17.4s):**開放邊 205,236(0.434/面)、元件 9,898**。50k 版是 0.653/面 ——
+  同一個量級,**O-Voxel 的輸出本身就不是封閉面**(§5n 已用 trimesh 驗過「焊掉 UV 縫後 fill 仍趨近 0」,
+  這一輪是同一件事的拓樸版證據)。⇒ 「取原生網格再自己減面」不是解法,實體化是必需品。
+  附帶:50k 與 473k 的黏土渲染**肉眼幾乎分不出來** ⇒ fork 的預設減面在外觀上沒有損失,
+  沒有理由為了品質去付 RAM 與匯出時間(473k 那次載入後 `ram_avail` 只剩 **1.3GB**,起跳是 20.3GB)。
+- **人眼複核 MUST 剝貼圖(clay pass)**:`render_decim.py` 一律清掉材質。**這一條同時修正
+  §5n 的判讀口徑** —— §5n 的「建築雙 ◎」是看**帶 PBR 貼圖**的渲染,而黏土渲染下 Art Deco
+  的立面佈滿縱向裂隙,與 34,751 開放邊 / 3,123 元件對得上;貼圖會把幾何破洞演成「貼圖有點花」。
+  反過來也要小心別過度解讀:魔鬼塔柱身的縱溝**剛好也是它真實的柱狀節理**,外觀分不出來 ——
+  **能分辨的只有開放邊/元件那兩個數字**,渲染只用來看識別特徵在不在。
+- **500 面這一級留不住建築的識別特徵**:C→500 的魔鬼塔 ◎(柱身 + 裙狀崖錐都在),但 Art Deco
+  的退縮量體被抹平成一團(`dev_p95` 2000 面 0.0088 → 500 面 0.0144)。⇒ 建築整棟節點若真要用 T2,
+  **預算不是 500 這一級**;這件事要與 §5i/§5m 待續的「消費端縫」一起定,別分兩次做。
+- **未跑 / 待續**:①實體化那一刀**還沒進 `normalize_parts.py`** —— 這一輪只在 study clone 量,
+  出貨輪要決定它是入庫前的離線步驟還是 normalise 的一段(前者較符合 A2/原則 6:
+  Blender 沒有 volumetric resample,pymeshlab 是**新的離線相依**,MUST NOT 進 `package.json`);
+  ②C 的兩個旋鈕(cell 256 / offset 0.6%)沒有掃描,offset 直接決定「胖多少」而包絡契約會抓它;
+  ③建築預算該落在哪一級沒量(2000 面看起來夠,但零件庫現行是 400~900);
+  ④§5n 待續 ③④⑤⑥ 原封不動(512/1536 解析度、plan §1 補行、消費端縫、texture 掉色)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
