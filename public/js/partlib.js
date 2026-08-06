@@ -28,7 +28,10 @@ import { markShared } from './toon.js';
 // 消費端 = beacons cairn);第二族 tree(2026-08-05:SF3D 孤立闊葉樹 → 12 顆冠簇節點,
 // 尺寸階梯 10/8/7/6/5/4.5/3.5 對齊 GIANT_DEFS 的 ico 冠簇半徑,消費端 = biomes 神木)。
 // 載入失敗整族走 fallback = 舊畫面(保險絲,原則 6)。
-export const PART_LIBS = ['rock', 'tree'];
+// 第三族 building(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片
+// 再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」:SF3D 磚砌煙囪/商辦量體 →
+// chimney_a/ac_a,消費端 = biomes 屋頂配件 InstancedMesh 桶,BLD_LIB 呼叫點守衛)。
+export const PART_LIBS = ['rock', 'tree', 'building'];
 
 const _geos = new Map();   // 'family/nodeName' -> BufferGeometry(已 markShared)
 let _loaded = null;        // 單航班(與 main.js warmModels 同一套守衛語意)

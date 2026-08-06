@@ -49,8 +49,53 @@ export const PHOTO_CATALOG = {
   // 無視舊有物件、不要只是原版重繪」⇒ 樹族改成**逐樹種**列(GIANT_DEFS 的 11 個真實
   // 樹種逐種對位 + VEG_DEFS 常見樹種),查詢一律走實測有效的「具名單一主體」句式;
   // 岩族加四個新岩型;建築族加 img→3D 友善的單一主體模組(使用者定案:建築也走
-  // img→3D,計畫書 §8 方法分流已修訂)。族序 = 抓取優先序(fetcher 依序補缺)。
-  tree: {                                                    // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
+  // img→3D,計畫書 §8 方法分流已修訂)。族序 = 抓取優先序(fetcher 依序補缺)
+  // ⇒ **第 7 輪把 rock 提到最前面**(2026-08-06 使用者定案「大量下載不同國家地區的
+  // 地質岩層或奇石/巨岩的照片」):tree 族還有 5 列零張,排在後面的族在無 `--family`
+  // 的整輪跑法裡永遠輪不到(§5h 已用「樹種列優先」踩過同一個坑)。
+  rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
+    // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
+    // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
+    // 站在空地上」的地物詞:glacial erratic(冰川漂礫)正是「孤立巨石」的專名。
+    facet:    { want: 9, q: ['glacial erratic boulder', 'erratic boulder', 'granite boulder isolated'] },
+    // 第 2 輪放寬名詞(runbook §4-A:第 1 輪 0/4、1/4 的成因是查詢措辭太窄,不是沒料)
+    collapse: { want: 7, q: ['glacial erratic', 'balanced rock formation', 'fallen boulder'] },
+    talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
+    // —— 新岩型(第 5 輪;MEGALITHS/rockfield 的形狀字彙擴充)——
+    hoodoo:   { want: 6, q: ['fairy chimney cappadocia', 'hoodoo rock formation', 'sandstone hoodoo', 'mushroom rock desert'] },
+    tor:      { want: 6, q: ['granite tor dartmoor', 'granite tor', 'weathered granite outcrop'] },
+    karst:    { want: 5, q: ['limestone karst pinnacle', 'karst rock formation', 'limestone pinnacle'] },
+    strata:   { want: 5, q: ['tilted rock strata', 'sedimentary rock outcrop', 'layered rock formation'] },
+    // —— 第 7 輪大擴充(2026-08-06 使用者定案):「大量下載不同國家地區的地質岩層或
+    // 奇石/巨岩的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」——
+    // 結構同第 5 輪的逐樹種列:**逐岩型對位消費端**(`biomes.js synthMegalith` 的 11 型
+    // dome/slab/tower/spire/arch/mesa/hoodoo/fin/basalt/granite/marble)—— 對位的是
+    // 「這一型的形狀」,不是照片家的名字(節點角色 ≠ 照片家,§5e/§5i 已兩度證實)。
+    // granite tor 沿用既有 `tor` 列、hoodoo 沿用既有 `hoodoo` 列(改點名卡帕多奇亞),
+    // 其餘九型各開一列;查詢一律走實測有效的「具名單一主體」句式(§5c:句式勝過所有
+    // 模型旋鈕),且**逐列點名不同國家/地區的那個地物專名** —— 專名才是 CC0 語料裡
+    // 真正存在的檢索詞(`glacial erratic` 一詞換來整個岩族的第一顆可用件)。
+    mg_dome:    { want: 5, q: ['granite dome rock', 'bornhardt inselberg', 'sugarloaf granite monolith'] },        // 巴西/澳洲/西非
+    mg_slab:    { want: 5, q: ['tilted rock slab outcrop', 'leaning monolith rock', 'standing rock slab'] },       // 北歐/澳洲
+    mg_tower:   { want: 5, q: ['devils tower rock', 'quartzite pillar zhangjiajie', 'sandstone tower butte'] },    // 美國/中國
+    mg_spire:   { want: 5, q: ['granite spire peak', 'rock needle pinnacle', 'aiguille granite tower'] },          // 巴塔哥尼亞/白朗峰
+    mg_arch:    { want: 5, q: ['natural rock arch', 'sandstone arch desert', 'natural stone bridge rock'] },       // 猶他/馬爾他
+    mg_mesa:    { want: 5, q: ['sandstone butte desert', 'mesa rock formation desert', 'tepui table mountain'] },  // 紀念碑谷/委內瑞拉
+    mg_fin:     { want: 5, q: ['sandstone fin ridge', 'rock fin formation', 'knife edge rock ridge'] },            // 猶他/挪威
+    mg_basalt:  { want: 6, q: ['columnar basalt rock', 'giants causeway basalt column', 'basalt column cliff'] },  // 北愛/冰島
+    mg_marble:  { want: 5, q: ['marble rock formation', 'rounded marble boulder', 'white marble outcrop'] },       // 智利/希臘
+    // —— 地質岩層與奇石(使用者句中的「地質岩層」「奇石」;供 fin/slab/mesa 的層理外觀
+    // 與 rockfield 露頭字彙,不逐一對位單一岩型)——
+    st_folded:  { want: 5, q: ['folded rock strata', 'geological fold anticline', 'contorted rock layers'] },      // 阿爾卑斯/蘇格蘭
+    st_banded:  { want: 5, q: ['banded sandstone dome', 'bungle bungle beehive rock', 'striped rock formation'] }, // 澳洲 Purnululu
+    st_seastack:{ want: 5, q: ['sea stack rock coast', 'coastal rock stack isolated', 'rock stack ocean'] },       // 澳洲/冰島/蘇格蘭
+    st_tafoni:  { want: 4, q: ['tafoni honeycomb weathering rock', 'honeycomb rock formation'] },                  // 地中海/加州
+    st_dolmen:  { want: 5, q: ['dolmen megalith stone', 'standing stone menhir', 'megalithic standing stone'] },   // 韓國/愛爾蘭/法國
+    st_travertine:{ want: 4, q: ['travertine terrace rock', 'travertine rock formation'] },                        // 土耳其/黃石
+    st_lava:    { want: 4, q: ['volcanic rock outcrop', 'lava rock formation isolated'] },                         // 冰島/夏威夷
+    st_pinnacle:{ want: 4, q: ['limestone stone forest pinnacle', 'pinnacles desert limestone'] },                 // 中國石林/澳洲
+  },
+  tree: {                                                  // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
     // 第 4 輪品質補抓(2026-08-05):首批 14 張過 SF3D 只有 1 顆實心 —— buttress 查詢命中
     // 臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」——
     // 唯一可用的那張正是空地孤立樹(oak tree canopy → rawpixel 孤樹);板根改點名
@@ -74,20 +119,6 @@ export const PHOTO_CATALOG = {
     fork:     { want: 8, q: ['tree branch fork bare', 'large tree bough', 'lone bare oak tree winter', 'dead standing tree'] },
     buttress: { want: 14, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk', 'strangler fig trunk', 'ficus macrophylla roots'] },
   },
-  rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
-    // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
-    // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
-    // 站在空地上」的地物詞:glacial erratic(冰川漂礫)正是「孤立巨石」的專名。
-    facet:    { want: 9, q: ['glacial erratic boulder', 'erratic boulder', 'granite boulder isolated'] },
-    // 第 2 輪放寬名詞(runbook §4-A:第 1 輪 0/4、1/4 的成因是查詢措辭太窄,不是沒料)
-    collapse: { want: 7, q: ['glacial erratic', 'balanced rock formation', 'fallen boulder'] },
-    talus:    { want: 4, q: ['scree slope', 'talus slope mountain', 'rock debris slope'] },
-    // —— 新岩型(第 5 輪;MEGALITHS/rockfield 的形狀字彙擴充)——
-    hoodoo:   { want: 5, q: ['hoodoo rock formation', 'sandstone hoodoo', 'earth pyramid rock'] },
-    tor:      { want: 5, q: ['granite tor', 'tor rock formation', 'weathered granite outcrop'] },
-    karst:    { want: 5, q: ['limestone karst pinnacle', 'karst rock formation', 'limestone pinnacle'] },
-    strata:   { want: 5, q: ['tilted rock strata', 'sedimentary rock outcrop', 'layered rock formation'] },
-  },
   building: {                                                // hazards BUILDERS:窗格/簷口/陽台/外管
     window:   { want: 4, q: ['window facade', 'office building facade', 'factory windows'] },
     roofcap:  { want: 4, q: ['rooftop parapet', 'building rooftop', 'roof cornice'] },
@@ -98,6 +129,30 @@ export const PHOTO_CATALOG = {
     rooftank: { want: 5, q: ['rooftop water tank', 'stainless steel water tank', 'plastic water tank'] },
     chimney:  { want: 5, q: ['brick chimney', 'industrial chimney stack', 'old brick smokestack'] },
     dormer:   { want: 5, q: ['dormer window roof', 'roof dormer'] },
+    // —— 第 6 輪大擴充(2026-08-06 使用者定案):「大量下載不同國家、城市、小鎮、風格的
+    // 建築物照片,再進行 img to 3D;無視舊有物件直接畫,禁止使用原版重繪」——
+    // 查詢一律走實測有效的「具名單一主體」句式(§5c/§5g:句式勝過所有模型旋鈕);
+    // 建物多為獨棟開闊地主體(穀倉/風車/教堂/農舍…),貼街相連的立面列(rowhouse/shophouse)
+    // 明知 SF3D 會出薄殼,仍收 —— fill 預篩會擋,留作立面模組語料。列序 = 抓取優先序:
+    // 本批接線的模組列在前(tank_wood 供水塔第二款式),整棟風格列供本批與後續批次。
+    tank_wood:      { want: 5, q: ['wooden water tower rooftop', 'wooden water tank tower', 'rooftop wooden water tower new york'] },
+    bld_barn:       { want: 5, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },          // 美國鄉間
+    bld_windmill:   { want: 5, q: ['dutch windmill', 'stone windmill isolated', 'old windmill field'] }, // 荷蘭
+    bld_chalet:     { want: 5, q: ['alpine chalet', 'swiss chalet mountain', 'wooden mountain hut alps'] }, // 瑞士山城
+    bld_minka:      { want: 5, q: ['japanese thatched farmhouse', 'gassho zukuri house', 'thatched roof cottage'] }, // 日本合掌造
+    bld_hanok:      { want: 4, q: ['korean hanok house', 'hanok traditional building'] },               // 韓國
+    bld_pagoda:     { want: 4, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },         // 東亞塔樓
+    bld_medit:      { want: 5, q: ['santorini white house', 'whitewashed greek house', 'mediterranean house isolated'] }, // 地中海
+    bld_adobe:      { want: 4, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },        // 美洲西南/北非
+    bld_halftimber: { want: 5, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },             // 德/英老鎮
+    bld_stonecottage:{ want: 5, q: ['stone cottage', 'scottish blackhouse', 'stone farmhouse countryside'] }, // 蘇格蘭/愛爾蘭
+    bld_church:     { want: 4, q: ['village church', 'white wooden church', 'country church steeple'] }, // 歐美小鎮
+    bld_lighthouse: { want: 4, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                // 海岸
+    bld_rowhouse:   { want: 4, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] }, // 歐洲城市
+    bld_shophouse:  { want: 4, q: ['shophouse facade', 'colonial shophouse'] },                         // 東南亞城鎮
+    bld_tower:      { want: 4, q: ['art deco skyscraper', 'apartment tower block', 'brutalist tower'] }, // 城市高樓
+    bld_warehouse:  { want: 4, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] }, // 工業
+    bld_yurt:       { want: 3, q: ['mongolian yurt', 'ger tent grassland'] },                           // 蒙古草原
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },

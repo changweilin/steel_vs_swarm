@@ -8,21 +8,48 @@
   "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)",
   "families": {
     "megalith": {
-      "measured_what": "synthMegalith 逐顆合成巨岩(沿用頂層 root 那一次 11 型 × 200 seeds 的量測;本族管的是「一顆巨岩裡的庫零件」的逐件上限,GLB 檔案本身仍在 rock 族)",
-      "measured_max_tris": 1071,
-      "max_lib_parts_per_rock": 14,
+      "measured_what": "遊戲裡真的擺出去的**一整顆**巨岩(placeMegaliths 的建造順序 synthMegalith → decorateMegalith → jitterMegalith → bakeContactAO),200 顆種子 × 5 個世界尺寸 = 1000 顆,逐 mesh index.count/3 加總;量測腳本 tools/ai3d/measure_megalith_tris.mjs(playwright 頁內執行 biomes.js 匯出的真品三支 + 真 three),2026-08-06。分布 min 664 / p50 1718 / p90 2366 / max 3114;逐岩型最重 basalt 3114 / tower 2943 / hoodoo 2855 / mesa 2645 / granite 2586 / slab 2555 / dome 2452 / fin 2305 / arch 2070 / marble 1935 / spire 1728",
+      "measured_max_tris": 3114,
+      "max_lib_parts_per_rock": 29,
+      "observed_max_lib_parts": 19,
       "whole_factor": 4.0,
-      "factor": 0.2857142857142857,
-      "justification": "逐件上限 = whole_factor × 最重整顆(1071)÷ 同顆最多庫零件數(marble 8 塊 + 崩落塊 4 + 伴生丘 2 = 14,由 synthMegalith 原文的迴圈上限數出來)≈ 306 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。",
-      "staleness": "synthMegalith 的 marble/崩落塊/伴生丘迴圈上限一改 MUST 重數 max_lib_parts_per_rock。"
+      "factor": 0.13793103448275862,
+      "justification": "逐件上限 = whole_factor × 最重整顆(3114)÷ 同顆最多庫零件數(29)≈ 430 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。**2026-08-06 修正了一筆錯帳**:舊值(1071 ÷ 14 = 306)的分子只量 synthMegalith(岩體本身)、分母也只數 synthMegalith 的三個迴圈,**兩者都漏掉 decorateMegalith 的疊石堆** —— 而 MEGA_LIB 這份名冊從第一天就同時服務那兩支(parts_src.megaLibDescs 的檔頭寫著)。漏量分子與漏數分母的偏差方向相反、都沒有錯誤訊息,只表現成閘門鬆緊不對。分母 29 = 迴圈上限的**解析值**(marble 堆塊 8 + 崩落岩塊 4 + 伴生圓丘 2 + 疊石堆 3 堆 × 每堆 5 顆 = 15),MUST NOT 改取抽樣最大值(抽樣只是「這 1000 顆裡最多的那顆」,拿它當分母會把上限算鬆);抽樣量到的 19 件是這份逐項清單的**反向核對**(量到的超過解析值 = 清單漏了某個呼叫點,腳本會紅字)。",
+      "staleness": "①synthMegalith 的 marble/崩落塊/伴生丘、decorateMegalith 的疊石堆**任一迴圈上限一改** MUST 重數 max_lib_parts_per_rock(新增第五個吃 MEGA_LIB 的呼叫點同理);②岩體零件表一改 MUST 重跑 measure_megalith_tris.mjs 重量 measured_max_tris;③factor 是推導值(= whole_factor ÷ max_lib_parts_per_rock),MUST NOT 手改。"
+    },
+    "building": {
+      "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於三個最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名;2026-08-06)。instance 上界(三場取最大):chimneys 212(shibuya)/ roofTanks 97(seoul)/ roofBoxes 117(seoul);配件桶總量上界 50,936 tris(seoul;shibuya 47,416、manhattan 35,940);全場三角形 1.47M~1.72M(配件佔比 2.5~3.1%)",
+      "measured_deco_total_max": 50936,
+      "measured_max_instances": {
+        "chimney": 212,
+        "tank": 97,
+        "acbox": 117
+      },
+      "roster_size": 3,
+      "whole_factor": 4.0,
+      "node_caps": {
+        "chimney": 240,
+        "tank": 525,
+        "acbox": 435
+      },
+      "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
+      "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
     },
     "tree": {
       "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05)",
       "measured_max_tris": 402,
       "factor": 1.0,
       "kind_tris": {
-        "redwood": 402, "sequoia": 368, "euc": 328, "dougfir": 316, "meranti": 315,
-        "klinki": 286, "sitka": 281, "alerce": 280, "dinizia": 279, "taiwania": 268,
+        "redwood": 402,
+        "sequoia": 368,
+        "euc": 328,
+        "dougfir": 316,
+        "meranti": 315,
+        "klinki": 286,
+        "sitka": 281,
+        "alerce": 280,
+        "dinizia": 279,
+        "taiwania": 268,
         "tualang": 259
       },
       "kind_factor": 4.0,

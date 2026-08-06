@@ -31,6 +31,14 @@ const SQUAD_SHARED = [
   'dmgOut',
 ];
 
+// ---- tick 內加速結構(2026-08-05 手機單機效能:索敵/推擠原是 O(N²) 全掃,實測佔 tick 近九成)----
+// 網格與分桶只在 tick() 內存在(tick 尾清空):tick 之外的直接呼叫(訊息處理/e2e 直測)
+// 一律退回原全掃路徑,行為逐位元同舊制 —— 位置在 tick 之間仍會變(heroPos 訊息/測試瞬移),
+// 過期網格 MUST NOT 留用。格寬/週期只影響效能;索敵合法性仍逐候選走 _tgBlockedD 單一縫。
+const TG_CELL = 96;      // 索敵網格格寬(m):最長射程(塔 310 × altRangeMax)的查詢圈也只掃 ~9×9 格
+const TG_OFF = 2048, TG_SPAN = 4096;   // 格座標 → 單一整數鍵(±2048 格 ≈ ±196km,遠大於任何戰場)
+const TG_RESCAN = 2;     // 索敵快取強制重掃週期(tick):黏著窗 ≤ 2×125ms,克制/英雄偏好的重排語意保留
+
 /** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
  *  ×(1/REAL_SCALE):真實範圍縮小,但遊戲世界公尺不變 — 與 terrain.js/llToWorld 必須同倍率。 */
 export function llToMeters(lat, lng, center) {
@@ -3594,6 +3602,7 @@ export class BattleSim {
 
     // 小兵 / 塔 / 主堡行為
     this._structs = [...this.ents.values()].filter((s) => s.kind === 'tower' || s.kind === 'base');
+    this._buildTickIndex();   // 索敵網格 + (side|lane) 推擠分桶:一趟建好,tick 尾清空
     for (const e of [...this.ents.values()]) {
       // 集束轟炸機/護衛機/極音速飛彈:位置由各自的 _tick* 管、自己不推線,但仍是敵方小兵/塔的合法目標
       if (e.hero || e.neutral || e.decoy || e.kami || e.hyper || e.hp <= 0) continue;
@@ -3601,8 +3610,8 @@ export class BattleSim {
       e.cd = Math.max(0, e.cd - dt);
       if (u.guns) this._tickBaseGuns(e, u.guns, dt);   // 主堡兩門大砲(獨立於本體火砲,砲塔級射程/傷害)
       if (e.tp) this._tpBehave(e, dt);   // 第三方:駐守回血/進出碉堡/繫繩旗標(開火與移動之外的狀態機)
-      // 駐守碉堡:射孔限制,射程 ×GAR_RANGE_F(其餘規格照舊)
-      const target = this._acquireTarget(e, e.gar ? { ...u, range: u.range * THIRD.GAR_RANGE_F } : u);
+      // 駐守碉堡:射孔限制,射程 ×GAR_RANGE_F(其餘規格照舊);主迴圈索敵走快取層(_acquireCached)
+      const target = this._acquireCached(e, e.gar ? { ...u, range: u.range * THIRD.GAR_RANGE_F } : u);
       e._eng = !!target;   // 交戰中的不當凝聚錨點(否則整波卡在原地等它)
       if (target && !e.ret) {   // 第三方撤回中(ret)不停下交戰 —— 「馬上撤回碉堡周圍」
         // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)
@@ -3643,6 +3652,11 @@ export class BattleSim {
     // 擊發位置軌跡:**唯一取樣點**,排在最後 —— 領機(heroPos)/僚機(_tickSquads)/bot
     // (bots._move)三條位置寫入路徑到這裡全部沉澱完畢,一個取樣點才記得住同一個時間切片。
     for (const b of this._allBodies()) this._trailPush(b);
+
+    // tick 內加速結構只活在 tick 裡(見 TG_CELL 檔頭註解):清掉之後,
+    // tick 之外的直接呼叫一律走原全掃路徑 —— 過期網格 MUST NOT 留用。
+    this._tgGrid = null;
+    this._pushBuckets = null;
   }
 
   /** 單機重生:回主堡、滿血滿盾;全隊都躺著時才重置共用資源(彈藥/增益) */
@@ -4179,20 +4193,69 @@ export class BattleSim {
     }
   }
 
+  /** 索敵網格 + (side|lane) 推擠分桶:主迴圈前一趟建好(2026-08-05 手機單機效能)。
+   *  兩者都只是「候選集縮小」,判定本身一個都沒動:
+   *  ・索敵格只收「恆非目標」以外的實體(同 _tgBlockedD 首行早退),合法性仍逐候選驗;
+   *  ・推擠桶依 ents.values() 順序收集 ⇒ 掃描順序 = 原全掃的同序子集(浮點累加順序不變),
+   *    主迴圈中途的死亡移除由消費端以 ents.has 鏡射 live 迭代語意 ⇒ 推擠行為逐位元不變。 */
+  _buildTickIndex() {
+    const grid = new Map(), buckets = new Map();
+    for (const t of this.ents.values()) {
+      if (t.lane != null && !t.hero && !t.neutral) {
+        const k = `${t.side}|${t.lane}`;
+        let arr = buckets.get(k);
+        if (!arr) buckets.set(k, arr = []);
+        arr.push(t);
+      }
+      if (t.neutral || t.hp <= 0) continue;   // 恆非索敵目標:中立障礙是 ents 的大宗,先剪掉
+      const ck = (Math.floor(t.x / TG_CELL) + TG_OFF) * TG_SPAN + (Math.floor(t.z / TG_CELL) + TG_OFF);
+      let cell = grid.get(ck);
+      if (!cell) grid.set(ck, cell = []);
+      cell.push(t);
+    }
+    this._tgGrid = grid;
+    this._pushBuckets = buckets;
+  }
+
+  /** 索敵候選集:tick 內走網格(只掃射程圈涵蓋的格),tick 外退回全掃。
+   *  只縮小候選、不做任何判定 —— 合法性只有 _tgBlockedD 一份。
+   *  查詢圈上界取 range × altRangeMax():高度制空至多把射程放大到這裡 ⇒ 圈外恆出局;
+   *  掃描順序改變只影響「折算距離恰好同分」的極端同分裁決,合法候選集與全掃相同。 */
+  _tgCandidates(e, u) {
+    if (!this._tgGrid) return this.ents.values();
+    const out = this._tgScratch ??= [];   // 重用暫存(同步消費完才會再進來,不跨 tick 持有)
+    out.length = 0;
+    const r = u.range * altRangeMax();
+    const cx0 = Math.floor((e.x - r) / TG_CELL), cx1 = Math.floor((e.x + r) / TG_CELL);
+    const cz0 = Math.floor((e.z - r) / TG_CELL), cz1 = Math.floor((e.z + r) / TG_CELL);
+    for (let cx = cx0; cx <= cx1; cx++) for (let cz = cz0; cz <= cz1; cz++) {
+      const cell = this._tgGrid.get((cx + TG_OFF) * TG_SPAN + (cz + TG_OFF));
+      if (cell) for (const t of cell) out.push(t);
+    }
+    return out;
+  }
+
+  /** 索敵合法性(單一縫:全掃 / 網格 / _acquireCached 快取沿用三路同吃;d = 已算好的 2D 距離)。
+   *  回 true = 不可鎖定;條款自舊制 _acquireTarget 逐字搬入,語意一字未動。 */
+  _tgBlockedD(e, u, wd, t, d) {
+    if (t.side === e.side || t.neutral || t.hp <= 0) return true;   // 中立障礙不當目標
+    if (e.tp && t.tp) return true;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
+    if (t.gar) return true;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
+    if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) return true;   // 匿蹤英雄不被鎖定
+    // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
+    // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
+    if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
+      && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) return true;
+    if (d > u.range * this._altRange(e, t, wd)) return true;   // 高度制空:地面槍械對高空無人機縮短射程
+    return false;
+  }
+
   _acquireTarget(e, u) {
     let best = null, bestD = Infinity;
     const wd = u.wid ? WEAPONS[u.wid] : null;
-    for (const t of this.ents.values()) {
-      if (t.side === e.side || t.neutral || t.hp <= 0) continue;   // 中立障礙不當目標
-      if (e.tp && t.tp) continue;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
-      if (t.gar) continue;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
-      if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) continue;   // 匿蹤英雄不被鎖定
-      // 高空飛行單位難以直射鎖定:天花板 = min(射程×0.9, GUN_CEIL_M) —— 與射程脫鉤,
-      // 塔射程拉到 310 也不會把高空無人機從 SAM 手上搶走(#INC-104 的 y=250 仍在天花板之上)
-      if ((t.kind === 'drone' || t.kind === 'heli' || t.kind === 'morph')
-        && (t.y || 0) > Math.min(u.range * 0.9, GAME.GUN_CEIL_M)) continue;
+    for (const t of this._tgCandidates(e, u)) {
       let d = dist2d(e.x, e.z, t.x, t.z);
-      if (d > u.range * this._altRange(e, t, wd)) continue;   // 高度制空:地面槍械對高空無人機縮短射程
+      if (this._tgBlockedD(e, u, wd, t, d)) continue;
       if (t.hero) d /= GAME.CREEP_AGGRO_HERO_BIAS; // 小兵偏好打兵線目標
       if (wd) d /= vsMult(wd, t.kind);             // 優先打武器克制的目標類型
       if (d >= bestD) continue;
@@ -4203,6 +4266,27 @@ export class BattleSim {
       bestD = d; best = t;
     }
     return best;
+  }
+
+  /** 主迴圈索敵的快取層(恰主迴圈一個呼叫端;主堡砲/第三方各帶自己的 u,不吃這份快取):
+   *  上個 tick 的目標仍合法(活著/射程內/LOS 通)就沿用 —— 免掃描,每 tick 只付 1 次距離
+   *  + 至多 1 次 LOS;沒有目標的單位仍逐 tick 全新索敵(交戰觸發延遲不變)。
+   *  每 TG_RESCAN tick 強制重掃一次(相位逐實體錯開,攤平尖峰),保住「優先打克制目標 /
+   *  偏好英雄」的逐 tick 重排語意 —— 黏著窗 ≤ TG_RESCAN × TICK_MS = 0.25s。 */
+  _acquireCached(e, u) {
+    e._tgPh ??= (this._tgSeq = ((this._tgSeq || 0) + 1) % TG_RESCAN);
+    if ((this._tickN + e._tgPh) % TG_RESCAN !== 0 && e._tgId != null) {
+      const t = this.ents.get(e._tgId);
+      if (t) {
+        const wd = u.wid ? WEAPONS[u.wid] : null;
+        const d = dist2d(e.x, e.z, t.x, t.z);
+        if (!this._tgBlockedD(e, u, wd, t, d)
+          && !(this._losGrid && this._losBlocked(e.x, e.z, this._eyeY(e), t.x, t.z, this._tgtY(t), e, t))) return t;
+      }
+    }
+    const t = this._acquireTarget(e, u);
+    e._tgId = t ? t.id : null;
+    return t;
   }
 
   /** 同波、同線、同陣營的「最慢進度」;交戰中的成員不列入(否則整波停下來等它打完) */
@@ -4253,10 +4337,14 @@ export class BattleSim {
       e.x = hx + (e.x - hx) / dd * hr;
       e.z = hz + (e.z - hz) / dd * hr;
     }
-    // 前方卡住的同陣營單位(如被障礙擋住減速者):側移繞過,不疊在一起
+    // 前方卡住的同陣營單位(如被障礙擋住減速者):側移繞過,不疊在一起。
+    // 候選走 (side|lane) 分桶(_buildTickIndex,tick 內才有):同序子集 + ents.has 鏡射
+    // live 迭代的中途刪除語意 ⇒ 逐位元同全掃;tick 外(直測)退回全掃。
     const UNIT_PUSH_R = 4.5;
-    for (const o of this.ents.values()) {
+    const near = this._pushBuckets ? this._pushBuckets.get(`${e.side}|${e.lane}`) || [] : this.ents.values();
+    for (const o of near) {
       if (o === e || o.side !== e.side || o.lane !== e.lane || o.hero || o.neutral) continue;
+      if (!this.ents.has(o.id)) continue;   // 分桶是主迴圈前的快照:已死移除者不推
       const dd = dist2d(e.x, e.z, o.x, o.z);
       if (dd >= UNIT_PUSH_R || dd === 0) continue;
       const push = (UNIT_PUSH_R - dd) / 2;

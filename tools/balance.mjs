@@ -38,7 +38,7 @@
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N } from '../public/js/data.js';
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, hyperShare } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
@@ -459,10 +459,12 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     const n = v.reduce((s, x) => s + x.n, 0);
     return [k, { n, per: n ? v.reduce((s, x) => s + x.hero + x.tower, 0) / n : 0 }];
   }));
-  // 守門線 1.8×(現行 1.71×)。**剩下的差距是結構性的,不是還沒調完**:三招總覆蓋面積已相同,
+  // 守門線 1.8×。**剩下的差距是結構性的,不是還沒調完**:三招總覆蓋面積已相同,
   // 但極音速飛彈是**一顆**大圓、飽和攻擊是四顆小圓 —— 目標擠成一團(機體 + 同塔位雙塔)時,
   // 一顆大圓一次吃三個、四顆小圓各吃各的。要再收就得動「切幾顆」本身(KAMI.N / BOMB_MAX),
   // 而那是使用者定調的招式形狀 ⇒ 這裡當**防退化欄杆**用,不是驗收線。
+  // **2026-08-06 火力改制之後這條欄杆仍成立**:飛彈的戰鬥部改領 hyperShare()(2.5 架自爆無人機份)
+  // 而爆風半徑不動 ⇒ 它交付的 EHP 隨火力等比下降(實測 155 → 102 EHP/次,比值 1.63× → 1.09×),比值反而更緊。
   const SPREAD_MAX = 1.8;
   const lo = Math.min(...KINDS.map((k) => eff[k].per)), hi = Math.max(...KINDS.map((k) => eff[k].per));
   const okF = lo > 0 && hi / lo <= SPREAD_MAX;
@@ -471,7 +473,8 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     console.log(`   ⓘ f 長按攻擊  ${ABIL_NAME[k].padEnd(6)}(${k})有效傷害 ${eff[k].per.toFixed(0)} EHP/次`
       + `(打在敵方機體 + 砲塔上;${eff[k].n} 次施放)`);
   }
-  console.log(`${okF ? '✅' : '❌'} f 長按攻擊  三招實得比 ${(hi / lo).toFixed(2)}×(同預算同 CD ⇒ MUST ≤ ${SPREAD_MAX}×,且 MUST 全數 > 0)`
+  console.log(`${okF ? '✅' : '❌'} f 長按攻擊  三招實得比 ${(hi / lo).toFixed(2)}×(同 CD ⇒ 實得同量級 MUST ≤ ${SPREAD_MAX}×,且 MUST 全數 > 0)`
+    + `;極音速飛彈的火力預算為 ${(hyperShare() * 100).toFixed(1)}%(2026-08-06 使用者定案)`
     + `;載具生存性 = ${TOWER_SITE_N} 座塔的前線基準(飛彈另計一波兵)`);
 
   // ---- e 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」)----

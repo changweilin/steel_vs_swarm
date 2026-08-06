@@ -342,6 +342,145 @@
       "note": "巨岩縫首批(runbook §5f 預告的『guarded libGeo ?? primitive』落地):biomes MEGA_LIB 名冊 + megaGeo(一律 clone —— 巨岩過 bakeContactAO 就地烤頂點色)5 個呼叫點;audit_siteplan Ⅴ 釘凍結清單並反向驗證。"
     },
     {
+      "keys": ["building/chimney_a", "building/ac_a"],
+      "method": "sf3d",
+      "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket 桶建構表:chimney_a → chimneys 磚煙囪桶、ac_a → roofBoxes 空調機組/機房桶;單位包絡節點,instance scale = 尺寸,一顆節點服務全桶所有 instance,draw call 不變)",
+      "rev": "(本輪)",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary(chimney_a;磚砌工業煙囪仰拍,方形斷面 + 階狀收分)",
+          "id": "ov_551789bb-eab2-42b8-8861-b76ef732d2e4",
+          "family": "building", "part": "chimney",
+          "query": "brick chimney",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6040211/brick-chimney-free-public-domain-cc0-image",
+          "file": "photos/building/chimney/ov_551789bb-eab2-42b8-8861-b76ef732d2e4.jpg"
+        },
+        {
+          "role": "primary(ac_a;白色三層商辦量體 —— 節點角色是屋頂機房箱,照片族 ≠ 節點名,取的是方箱形)",
+          "id": "ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff",
+          "family": "building", "part": "roofcap",
+          "query": "building rooftop",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/3337243/free-photo-image-architecture-advertisement-apartment-building",
+          "file": "photos/building/roofcap/ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(venv/weights 住 zen-albattani 資料家;照片庫/matte/產出住 reverent-pascal 資料家)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520(兩顆同挑選版;減面交給 normalize 的 Blender decimate)",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.17 GB;79 張建築族 matte 全批跑挑選版(tvc 520),mesh_stats.mjs 快篩 + mesh_sheet.mjs contact sheet 人眼複核(擋下:蒙古包有人入鏡、整片屋頂場景照、統計合格但語意荒謬的蛋形/球形 window 產出)",
+        "note": "逐桶節點上限由 families.building 推導(chimney 240 / acbox 435):InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數,量測見 tri_budget.json。**人造直線輪廓 MUST NOT 用超低 tvc 的 SF3D 等向 remesh 出貨**:實測 tvc 120 把直立煙囪磨成彎香蕉、tvc 220 把方箱磨成鵝卵石(岩族 tvc 150 沒事 —— 岩石本來就是塊團);正確路線 = 挑選版 tvc 520 + Blender collapse decimate 溫和減面(938→234 / 986→426,3.9:1 / 2.3:1,§5e「溫和減面無害」的上緣)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;內建 decimate 到逐桶預算)",
+        "fit": 0.95,
+        "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理"
+      },
+      "note": "建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。"
+    },
+    {
+      "keys": ["rock/mega_d", "rock/mega_e", "rock/mega_f"],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊 3 → 6:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸。輪替除數由名冊長度推導 NBLK ⇒ 新節點真的輪得到)",
+      "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_95d9c227-032e-415a-8ae3-2faea55fead7",
+          "family": "rock", "part": "mg_arch",
+          "query": "natural rock arch",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Hardeep Asrani",
+          "source_url": "https://wordpress.org/photos/photo/3767d3599a/",
+          "note": "海蝕拱殘丘 → mega_d(節點角色 = 渾圓塊狀岩塊;照片族 ≠ 節點名)"
+        },
+        {
+          "role": "primary",
+          "id": "ov_43802293-e834-4d23-8f72-935935cf9c85",
+          "family": "rock", "part": "tor",
+          "query": "granite tor",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Alan Mattingly",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=185494083",
+          "note": "花崗岩平衡巨礫 → mega_e"
+        },
+        {
+          "role": "primary",
+          "id": "ov_deb2f87f-fb18-40ae-b47c-2447e06afa96",
+          "family": "rock", "part": "strata",
+          "query": "sedimentary rock outcrop",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Sakin Shrestha",
+          "source_url": "https://wordpress.org/photos/photo/1006a14027/",
+          "note": "砂岩刃脊塊 → mega_f"
+        }
+      ],
+      "gen": {
+        "tool": "stable-fast-3d(SF3D)",
+        "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "note": "權重 MUST 指本機目錄 —— 省略 --pretrained-model 會去連 HF 重抓 4GB 受管制權重,表徵是「跑了十幾分鐘一顆都沒出來」(本輪踩過)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base 保留既有節點)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1));mega_e +55° / mega_f +190° yaw 與同源錯開"
+      }
+    },
+    {
+      "keys": ["rock/tower_a", "rock/mesa_a"],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith 的 tower / mesa 兩個岩型分支(**整座**庫節點:崖錐 + 柱身/疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
+      "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006",
+          "family": "rock", "part": "mg_tower",
+          "query": "devils tower rock",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Carol M Highsmith",
+          "source_url": "https://www.rawpixel.com/image/3093678/free-photo-image-america-beautiful-carol-highsmith",
+          "note": "魔鬼塔(美國懷俄明,火山頸)→ tower_a"
+        },
+        {
+          "role": "primary",
+          "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+          "family": "rock", "part": "mg_tower",
+          "query": "devils tower rock",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Carol M Highsmith",
+          "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
+          "note": "同一座地標的另一張 → mesa_a(+120° yaw 與 tower_a 錯開)"
+        }
+      ],
+      "gen": {
+        "tool": "stable-fast-3d(SF3D)",
+        "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1;減面刻意留餘裕(逐件上限 430,節點收在 372/371)—— 上限是量測推導值,會隨岩體零件表重量而移動,貼著上限出貨等於把下一次重量變成紅字"
+      }
+    },
+    {
       "key": "beacon/tank",
       "method": "llm_parts",
       "consumer": "beacons watertower(BEACON_KINDS.tank)",

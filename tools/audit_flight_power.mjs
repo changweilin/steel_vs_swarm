@@ -32,6 +32,7 @@ import {
   hyperArcY, hyperClimbVx, hyperClimbS, hyperTrackR, hyperClimbLen, hyperTerminalF,
   TOWER_SITE_N, frontKillHp, overflySurviveHp, waveDps, waveComp, blastFootprintR,
   kamiBlast, decoyBlast, decoyBombBlast, hyperBlast,
+  SPECIAL, specialBudget, specialBlastR, hyperShare,
   GAME,
 } from '../public/js/data.js';
 
@@ -102,12 +103,13 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     const ss = Array.from({ length: SQUAD.KAMI.N }, (_, i) => kamiSide(i));
     t('kamiSide 均勻散開、對稱、涵蓋 [−1, 1]',
       ss[0] === -1 && ss[ss.length - 1] === 1 && near(ss.reduce((a2, b2) => a2 + b2, 0), 0), ss.join(', '));
-    // 客戶端貼身站位自 2026-08-02 起改經 `escortSlot(i)`(ㄑ 字編隊;橫向那一項仍是 kamiSide),
-    // 仍是同一條縫 —— 故這裡驗「客戶端走 escortSlot」+「escortSlot 的橫向項走 kamiSide」。
-    t('兩端同吃 kamiSide(伺服器生成側偏移 + 客戶端貼身站位),MUST NOT 復辟 `const s = i === 0 ? -1 : 1`',
-      /const s = kamiSide\(i\);/.test(simCode) && /slot: escortSlot\(i\)/.test(code)
-      && /export const escortSlot = \(i\) => \{\n  const s = kamiSide\(i\);/.test(dataSrc)
+    // 2026-08-06 使用者定案「拿掉常駐模組,攻擊時再出現」⇒ 客戶端貼身站位那一個消費端整組退場
+    // (`ESCORT`/`escortSlot`/`_buildDroneEscorts`/`_updateEscorts`),kamiSide 只剩伺服器一個消費端。
+    t('kamiSide 只剩伺服器生成側偏移一個消費端,MUST NOT 復辟 `const s = i === 0 ? -1 : 1`',
+      /const s = kamiSide\(i\);/.test(simCode)
       && !/const s = i === 0 \? -1 : 1/.test(simCode) && !/const s = i === 0 \? -1 : 1/.test(code));
+    t('常駐護衛機外觀已退場(客戶端零殘留:模型/每幀擺位/ESCORT 常數)',
+      !/escort|ESCORT/i.test(code) && !/ESCORT|escortSlot|escortDrift|escortLag/.test(dataSrc.replace(/\/\/.*$/gm, '')));
   }
 
   // —— 極音速飛彈:45° 拋物線爬升 + 撐得住最長一次飛行 ——
@@ -182,8 +184,21 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     && hyperHp() > (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS());
   t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲',
     hyperHp() - (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS() < towerDps());
-  t('單一戰鬥部 = 整份絕招預算(一發打完,離散化誤差為零)',
-    /export const hyperBlast = \(abil\) => \(\{\s*\n\s*dmg: Math\.round\(specialBudget\(abil\)\),/.test(dataSrc));
+  // —— 火力 / 範圍改制(2026-08-06 使用者定案:2.5 架自爆無人機的傷害 / 砲塔射程 2/5 的爆風)——
+  t('戰鬥部 = 2.5 架自爆無人機的傷害(逐等級都成立)',
+    [{ light: 1, heavy: 1 }, { light: 4, heavy: 1 }, { light: 4, heavy: 4 }].every((ab2) =>
+      Math.abs(hyperBlast(ab2).dmg - kamiBlast(ab2).dmg * HYPER.KAMI_EQ) <= 2),
+    `Lv1 ${hyperBlast({ light: 1, heavy: 1 }).dmg} vs ${kamiBlast({ light: 1, heavy: 1 }).dmg} × ${HYPER.KAMI_EQ}`);
+  t('比例推導不手寫:hyperShare = KAMI_EQ / KAMI.N(改 N 這句話仍成立)',
+    /export const hyperShare = \(\) => HYPER\.KAMI_EQ \/ Math\.max\(1, SQUAD\.KAMI\.N\);/.test(dataSrc)
+    && near(hyperShare(), HYPER.KAMI_EQ / SQUAD.KAMI.N));
+  t('傷害走 hyperShare,MUST NOT 悄悄調回整份預算(那正是「一轟就爆」的成因)',
+    /dmg: Math\.round\(specialBudget\(abil\) \* hyperShare\(\)\)/.test(dataSrc)
+    && hyperBlast({ light: 1, heavy: 1 }).dmg < Math.round(specialBudget({ light: 1, heavy: 1 })));
+  t('爆風半徑仍是 share = 1 的基準(2026-08-06 使用者定案「範圍改回舊制」)—— 少領預算 MUST NOT 順手連範圍也削',
+    /r: specialBlastR\(1\), pen: HYPER\.PEN/.test(dataSrc)
+    && near(hyperBlast({ light: 1, heavy: 1 }).r, HYPER.BLAST_R) && HYPER.BLAST_R_F === undefined,
+    `${hyperBlast({ light: 1, heavy: 1 }).r.toFixed(1)}m`);
 
   // —— 集束炸彈:撐到投完 DROP_N 顆 ——
   t('BOMB_MAX = 6 且 DROP_N + 墜毀補投 1 顆 = BOMB_MAX(使用者定調的 5+1)',
@@ -217,7 +232,7 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
     && /export const waveDps = \(\) => waveComp\(\)\.reduce\(/.test(dataSrc));
   t('三個 HP 全部走同一把前線的尺(MUST NOT 有人還留在單塔基準)',
     !/= towerKillHp\(kamiExposureS|= towerSurviveHp\(hyperFlightS|= towerKillHp\(decoyExposureS/.test(dataSrc));
-  // —— 爆風半徑的面積計價:總覆蓋面積與「切成幾顆」無關 ——
+  // —— 爆風半徑的面積計價:總覆蓋面積與「切成幾顆」無關(2026-08-06 火力改制**不動**這一條)——
   {
     const A = (d) => d.n * Math.PI * (blastFootprintR(d.r) ** 2);
     const ab = { light: 1, heavy: 1 };

@@ -257,13 +257,15 @@ export class RoomHub {
       }
       for (const brain of room.botBrains) brain.update(dt);
       room.battle.tick(dt);
-      // 霧戰爭:各陣營依己方視野收到不同過濾後的快照;觀戰者收無霧全局快照
-      const snaps = {
-        SWARM: room.battle.snapshotFor('SWARM'),
-        STEEL: room.battle.snapshotFor('STEEL'),
-        all: room.battle.snapshotFor(null),
-      };
-      for (const c of room.clients.values()) c.send(snaps[c.side] || snaps.all);
+      // 霧戰爭:各陣營依己方視野收到不同過濾後的快照;觀戰者收無霧全局快照。
+      // 快照惰性產生(2026-08-05 手機單機效能):只算「在場收件者」需要的那幾份 ——
+      // 單機恆只有一個真人,固定算三份 = 每 tick 把 2/3 的序列化與敵方視野過濾直接丟掉。
+      // 內容逐位元不變;同 tick 首份快照沖洗 events 的共用語意(sim._frame)不受影響。
+      const snaps = {};
+      for (const c of room.clients.values()) {
+        const k = c.side === 'SWARM' || c.side === 'STEEL' ? c.side : 'all';   // 未定/非法 side 照舊收無霧份
+        c.send(snaps[k] ??= room.battle.snapshotFor(k === 'all' ? null : k));
+      }
       if (room.battle.over) {
         room.phase = 'over';
         this.stopBattle(room, /*keepPhase*/ true);

@@ -33,7 +33,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import {
-  beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, megaLibDescs, fbEnvelope,
+  beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, megaLibDescs, bldLibDescs, fbEnvelope,
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
 import { METHODS, loadProvenance, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
@@ -64,6 +64,7 @@ export function manifest(items = {}, photosOpt = null) {
     ...libDescs(B.KIND_PARTS).map((d) => ({ ...d, builder: 'beacon' })),
     ...bioLibDescs().rows.map((d) => ({ ...d, builder: 'veg' })),
     ...megaLibDescs().rows.map((d) => ({ ...d, builder: 'mega' })),
+    ...bldLibDescs().rows.map((d) => ({ ...d, builder: 'bld' })),
   ];
   const libs = partLibs();
 
@@ -119,7 +120,10 @@ export function manifest(items = {}, photosOpt = null) {
       pct: mea ? mea.rMax / env.r : null,
       budget: budget
         ? {
-          cap: budget.capOf(d0.family), what: budget.whatOf(d0.family),
+          // 預算依**消費角色**取(與 intake 同一條:巨岩塊走 families.megalith、建物配件桶
+          // 走 families.building 的逐桶 node_caps)—— 拿檔案族當鍵會把巨岩顯示成 rock 的 1071
+          cap: budget.nodeCap(d0.budgetFam || d0.family, d0.kind) ?? budget.capOf(d0.budgetFam || d0.family),
+          what: budget.whatOf(d0.budgetFam || d0.family),
           // 逐株(逐款)閘:單件合格 ≠ 整株合格(tree 族 justification)
           kind: budget.kindCap(d0.family, d0.kind),
         }

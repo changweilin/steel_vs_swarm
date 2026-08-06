@@ -1750,8 +1750,14 @@ function rockProbe(g) {
 // 節點契約:**單位包絡**(水平徑向 ≤1、縱向 ±1;= fallback ico(1)),呼叫端以
 // mesh.scale 拉到自己的尺寸 ⇒ 同一顆節點服務任意大小的岩塊。
 const MEGA_LIB = {
-  block: ['rock/mega_a', 'rock/mega_b', 'rock/mega_c'],   // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石)
+  // 渾圓/塊狀岩塊(marble 堆/崩落塊/伴生丘/疊石);2026-08-06 第 7 輪 +3 顆跨國地質實拍:
+  // d 海蝕拱殘丘、e 平衡巨礫(花崗岩 tor)、f 砂岩刃脊塊
+  block: ['rock/mega_a', 'rock/mega_b', 'rock/mega_c', 'rock/mega_d', 'rock/mega_e', 'rock/mega_f'],
+  tower: 'rock/tower_a',                                  // 火山頸整座(實拍魔鬼塔;崖錐 + 柱身同一顆)
+  mesa: 'rock/mesa_a',                                    // 平頂岩體整座(實拍;裙狀崖錐 + 疊層同一顆)
   // hoodoo: 'rock/hoodoo_a',                             // 蘑菇岩整柱 —— 節點入庫時再開這一列
+  //   (2026-08-06:hoodoo 六張候選裡,單一主體的那兩張過 SF3D 都在細腰處斷成兩截 ——
+  //    細頸正是這一型的識別特徵,也正是 SF3D 最容易掉的地方;等更正面、更貼近的候選)
 };
 // 與 partGeo 同一條紀律的命令式版本:查無此名/載入失敗 ⇒ null,呼叫端以原 primitive
 // 收尾(保險絲,原則 6)。兩點不同:①一律 `.clone()` —— 巨岩群組會過 bakeContactAO
@@ -1760,6 +1766,37 @@ const MEGA_LIB = {
 // 庫隨載入成敗而異,佈局讀它 = 跨客戶端分家(§2.3)。亂數紀律:呼叫端 MUST NOT 因
 // 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
 const megaGeo = (name) => { const g2 = name ? libGeo(name) : null; return g2 ? g2.clone() : null; };
+// 輪替除數 MUST 由名冊長度推導(推導值 MUST NOT 手寫,§2.1):四個呼叫點原本各寫死 `% 3`,
+// 名冊一擴充,第 4 顆以後的節點就**永遠不會被取到** —— 檔案在、intake 綠、對照台有列,
+// 而遊戲裡一顆都沒出現過,沒有任何錯誤訊息。長度為 3 時逐位元同舊制。
+const NBLK = MEGA_LIB.block.length;
+
+// ---- 建物配件零件庫(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物
+// 照片,再進行 img to 3D;無視舊有物件直接畫,禁止使用原版重繪」)----
+// 名冊 = 這裡一份(audit_siteplan Ⅴ 與 tools/ai3d 的 bldLibDescs 都吃這一份;節點還沒入庫
+// 就不要把名字放進來 —— intake 會把「名冊有、GLB 無」判成缺件紅字)。
+// 節點契約:**單位包絡** —— 屋頂配件桶的 instance scale 本來就是尺寸(煙囪 S=(w,h,w)、
+// 水塔 S=(r,h,r)、機組 S=(w,h,d)),故 fallback = 該桶現行的**單位 primitive** 同義描述:
+// box(1,1,1) / cyl(r1,r2 1、h 1)。幾何縫換的是 InstancedMesh 的**共用幾何**:一顆節點服務
+// 全桶所有 instance,draw call 逐位元不變;屋頂配件本無碰撞柱(佈局/碰撞無庫可讀的問題
+// 天然不存在);換幾何消耗 0 枚 rnd(§2.3)。不 clone —— 這些桶不過 bakeContactAO,
+// 幾何唯讀共用(與 megaGeo 的差異點,理由在各自的消費方式)。
+const BLD_LIB = {
+  chimney: ['building/chimney_a', ['box', 1, 1, 1]],   // 磚砌煙囪(chimneys 桶)
+  // tank: ['building/tank_a', ['cyl', 1, 1, 1]],      // 圓筒水塔 —— 節點入庫時再開這一列
+  //   (2026-08-06:rooftank 候選照全是場景照/有人入鏡,tank_wood 木製水塔列等節流窗)
+  acbox:   ['building/ac_a', ['box', 1, 1, 1]],        // 空調機組/機房(roofBoxes 桶)
+};
+const bldGeo = (key) => (BLD_LIB[key] ? libGeo(BLD_LIB[key][0]) : null);
+// 桶建構表(凍結三桶):單位 primitive 保險絲 + 桶色 + InstancedMesh 一次定案在這裡。
+// 兩個消費端:①下方一般建物繪製段的三個桶(遊戲內唯一呼叫點);②`tools/parts_review`
+// 3D 零件對照台(dev-only、唯讀,count=1 取樣)—— 台上另抄 primitive/桶色就是第二套
+// 組裝器(runbook §7 紀律 ①),它壞掉的樣子是「對照台上的原版與遊戲裡的不是同一個東西」。
+export const buildBldBucket = {
+  chimney: (n) => new THREE.InstancedMesh(bldGeo('chimney') || new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
+  tank: (n) => new THREE.InstancedMesh(bldGeo('tank') || new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
+  acbox: (n) => new THREE.InstancedMesh(bldGeo('acbox') || new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
+};
 
 // 巨岩的三支建構器**具名匯出**(2026-08-06):第二個消費端 = `tools/parts_review`(3D 零件
 // 對照台,dev-only、唯讀)。MEGA_LIB 的節點只長在命令式建造端 ⇒ 台上要拿「同一顆座號的
@@ -1802,11 +1839,11 @@ export function decorateMegalith(g, anchor, rnd, s) {
       // 蛋徑走樣後心高 MUST 跟著縮放比例走(0.17 × esc),縮小的蛋才不會浮在巢盤上
       const esc = 0.85 + lr() * 0.35;
       const egg = new THREE.Mesh(ico(0.2), toonMat(0xf2ead6));
-      egg.position.set((rnd() - 0.5) * 0.6, 0.17 * esc, (rnd() - 0.5) * 0.6);
+      egg.position.set((lr() - 0.5) * 0.6, 0.17 * esc, (lr() - 0.5) * 0.6);
       egg.scale.setScalar(esc);
       n.add(egg);
     }
-    if (rnd() < 0.5) {
+    if (lr() < 0.5) {   // 與 cliffPlant 的傘色同一條:`lr` 是這一巢自己的種子,共用 rnd 會分家
       const bird = new THREE.Mesh(cone(0.3, 0.8, 4), toonMat(0x4a586a));
       bird.position.set(0.7, 0.5, 0); bird.rotation.z = -0.4; n.add(bird);
     }
@@ -1837,7 +1874,7 @@ export function decorateMegalith(g, anchor, rnd, s) {
     const n = 3 + Math.floor(lr() * 3);        // 3~5 顆
     let y = 0, r = 0.78 + lr() * 0.34;
     for (let i = 0; i < n; i++) {
-      const g2 = megaGeo(MEGA_LIB.block[i % 3]);
+      const g2 = megaGeo(MEGA_LIB.block[i % NBLK]);
       const st = new THREE.Mesh(g2 || ico(r), rockMat(0x8f8a80));
       if (g2) st.scale.set(r, r * 0.7, r); else st.scale.y = 0.7;
       // 疊層錯位:上層小石在 ±12% 半徑內偏移(深交疊不開縫);底石不偏(落座)
@@ -1876,7 +1913,12 @@ export function decorateMegalith(g, anchor, rnd, s) {
       kneeAt(jx, jy);
     }
     if (mush) {   // 岩菇:蕈柄彎附岩壁,蕈傘水平朝上 + 傘底淺色菌褶(傘徑/傘色逐朵走樣)
-      const capC = [0xc25c4a, 0xd8a04a, 0x8a6ab8, 0xb8556e, 0x6a9a4e][Math.floor(rnd() * 5)];
+      // 傘色 MUST 走**局部** `lr()`(這一朵自己的種子),MUST NOT 用共用 `rnd()`:
+      // cliffPlant 只在 `rockProbe` 實測到壁面時才跑(`er == null` 就 continue)⇒ 幾何一換
+      // 跑到的朵數就變,共用序列被多抽/少抽幾枚 ⇒ 有沒有載到零件庫會走出兩條佈局
+      // (§2.3 / A4)。2026-08-06 由 measure_megalith_tris 的枚數對帳抓到:整座型節點
+      // 上線後 50/200 顆分家,而只有 block 名冊時也已經有 1/200 —— 沒有任何錯誤訊息。
+      const capC = [0xc25c4a, 0xd8a04a, 0x8a6ab8, 0xb8556e, 0x6a9a4e][Math.floor(lr() * 5)];
       const capR = 1.45 + lr() * 0.45, capH = 1.0 + lr() * 0.25;
       const cap = new THREE.Mesh(cone(capR, capH, 8), toonMat(capC));
       cap.position.set(jx, jy + 0.72, 0); t.add(cap);
@@ -2062,8 +2104,13 @@ export function synthMegalith(g, rnd) {
     chisel(2 + Math.floor(rnd() * 3), RX, RZ, H * 0.8);
   } else if (main === 'tower') {
     const r0 = 17 + rnd() * 8, bh = 24 + rnd() * 14;
+    // 整座庫節點(實拍魔鬼塔:崖錐 + 柱身同一顆)?? 原「錐 + 疊層圓柱」——
+    // **兩條路的 rnd() 枚數逐位元相同**:下面那個迴圈照跑(它負責消耗亂數並把 y/r 推到
+    // 終值,而 H/topR/sideDef 全由 y/r 決定),只有「要不要 add 進場景」分岔。少了這一點,
+    // 有沒有載到零件庫就會讓後面每一顆巨岩、每一株植被的落點整條位移(§2.3 / A4)。
+    const gT = megaGeo(MEGA_LIB.tower);
     const baseC = new THREE.Mesh(cone(r0 * 2.2, bh, 9), rockMat(shade(0.03), 0.35));
-    baseC.position.y = bh / 2; g.add(baseC);
+    baseC.position.y = bh / 2; if (!gT) g.add(baseC);
     // 柱基自錐體半高起(該處錐半徑 1.1×r0 ≥ 柱半徑)—— 柱是「從山裡長出來」,
     // 不是擱在山尖上;柱基寬過錐面 = 懸挑,物理不成立(魔鬼塔的崖錐與柱身相接)
     let y = bh * 0.5, r = r0;
@@ -2072,10 +2119,14 @@ export function synthMegalith(g, rnd) {
       const band = i % 2 === 1, hh = band ? 3.5 : 9 + rnd() * 5;
       const st = new THREE.Mesh(cyl(r * (band ? 1.06 : 1), r * (band ? 1.06 : 1) + 1, hh, 10),
         rockMat(shade(band ? 0.06 : -0.03), band ? 0.12 : 0));
-      st.position.y = y + hh / 2; y += hh; g.add(st);
+      st.position.y = y + hh / 2; y += hh; if (!gT) g.add(st);
       if (!band) r *= 0.92;
     }
     H = y; RX = RZ = r0 * 2.0; topR = r * 0.85;   // footprint 含 2.2×r0 山腳崖錐
+    if (gT) {   // 單位包絡 → 撐滿這一顆的 footprint 與高度(佈局值 H/RX/RZ 仍由上面推導)
+      const pil = new THREE.Mesh(gT, rockMat(shade(0), moss * 0.5));
+      pil.scale.set(RX, H / 2, RZ); pil.position.y = H / 2; g.add(pil);
+    }
     sideDef = { y: [bh, H * 0.85] };   // 柱身段(崖錐以上)
   } else if (main === 'arch') {   // 天然岩拱:雙墩 + 頂樑 + 拱背圓丘
     const span = 26 + rnd() * 14, ph = 34 + rnd() * 22, pw = 10 + rnd() * 5;
@@ -2094,15 +2145,22 @@ export function synthMegalith(g, rnd) {
     H = ph + pw * 1.3; RX = span / 2 + pw; RZ = pw * 1.4; topR = 3;
   } else if (main === 'mesa') {   // 平頂桌山:裙狀崖錐 + 疊層 + 開闊平頂
     const r0 = 30 + rnd() * 22, h = 40 + rnd() * 26;
-    // 崖錐加寬拉高:疊層起點(0.3h)處錐半徑 ≈ 疊層半徑,崖壁與崖錐相接不懸挑
+    // 整座庫節點(實拍平頂岩體:裙狀崖錐 + 疊層同一顆)?? 原「錐 + 三段疊層」——
+    // 這一支的疊層迴圈**本來就零 rnd()**(逐層係數是靜態表),故兩條路的亂數枚數天然相同;
+    // 仍照跑迴圈是為了讓 y 推到終值(H/sideDef 讀它)。
+    const gM = megaGeo(MEGA_LIB.mesa);
     const skirt = new THREE.Mesh(cone(r0 * 2.2, h * 0.62, 10), rockMat(shade(0.05), 0.3));
-    skirt.position.y = h * 0.31; g.add(skirt);
+    skirt.position.y = h * 0.31; if (!gM) g.add(skirt);
     let y = h * 0.3;
     for (const [f, hh, dl] of [[1.12, h * 0.22, -0.04], [1.04, h * 0.16, 0.05], [1.0, h * 0.32, -0.02]]) {
       const st = new THREE.Mesh(cyl(r0 * f * 0.94, r0 * f, hh, 10), rockMat(shade(dl)));
-      st.position.y = y + hh / 2; y += hh; g.add(st);
+      st.position.y = y + hh / 2; y += hh; if (!gM) g.add(st);
     }
     H = y; RX = RZ = r0 * 2.0; topR = r0 * 0.8;   // footprint 含 2.2×r0 裙狀崖錐
+    if (gM) {
+      const tbl = new THREE.Mesh(gM, rockMat(shade(0), moss * 0.4));
+      tbl.scale.set(RX, H / 2, RZ); tbl.position.y = H / 2; g.add(tbl);
+    }
     sideDef = { y: [H * 0.4, H * 0.9] };   // 疊層段(裙狀崖錐以上)
   } else if (main === 'hoodoo') {   // 風化蘑菇岩群:細腰石柱頂著過寬帽岩
     const n = 2 + Math.floor(rnd() * 3);
@@ -2226,7 +2284,7 @@ export function synthMegalith(g, rnd) {
       const drift = Math.max(1.5, (R0 - r) * (1 - i / nB));
       const px = (rnd() - 0.5) * drift, pz = (rnd() - 0.5) * drift;
       // 色差收斂 ±0.02:同一岩體的大理岩塊色近,靠明暗交界讀塊面
-      const g2 = megaGeo(MEGA_LIB.block[i % 3]);   // 庫節點(單位包絡)?? 原 ico —— rnd 枚數不變
+      const g2 = megaGeo(MEGA_LIB.block[i % NBLK]);   // 庫節點(單位包絡)?? 原 ico —— rnd 枚數不變
       const blk = new THREE.Mesh(g2 || ico(r), rockMat(shade((rnd() - 0.5) * 0.04), i < 2 ? moss * 0.6 : 0));
       const syF = 0.72 + rnd() * 0.2;               // 溶蝕圓稜:壓扁的渾圓塊
       if (g2) blk.scale.set(r, r * syF, r); else blk.scale.y = syF;
@@ -2258,7 +2316,7 @@ export function synthMegalith(g, rnd) {
     const nB = 2 + Math.floor(rnd() * 3);
     for (let i = 0; i < nB; i++) {
       const br = 4 + rnd() * 7, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.85 + rnd() * 0.35);
-      const g2 = megaGeo(MEGA_LIB.block[(i + 1) % 3]);   // 與 marble 錯開輪替,同岩不同型
+      const g2 = megaGeo(MEGA_LIB.block[(i + 1) % NBLK]);   // 與 marble 錯開輪替,同岩不同型
       const bd = new THREE.Mesh(g2 || ico(br), rockMat(shade((rnd() - 0.5) * 0.06), moss * 0.6));
       const syF = 0.6 + rnd() * 0.3;
       if (g2) bd.scale.set(br, br * syF, br); else bd.scale.y = syF;
@@ -2273,7 +2331,7 @@ export function synthMegalith(g, rnd) {
   const nSub = Math.floor(rnd() * 3);   // 伴生小圓丘
   for (let i = 0; i < nSub; i++) {
     const r = 10 + rnd() * 14, a = rnd() * Math.PI * 2, d = Math.max(RX, RZ) * (0.9 + rnd() * 0.3);
-    const g2 = megaGeo(MEGA_LIB.block[(i + 2) % 3]);
+    const g2 = megaGeo(MEGA_LIB.block[(i + 2) % NBLK]);
     const m = new THREE.Mesh(g2 || new THREE.SphereGeometry(r, 9, 7), rockMat(shade((rnd() - 0.5) * 0.08), moss * 0.8));
     const syF = 0.6 + rnd() * 0.3;
     if (g2) m.scale.set(1.2 * r, r * syF, r); else m.scale.set(1.2, syF, 1);
@@ -7740,7 +7798,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(cm);
     }
     if (chimneys.length) {
-      const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), chimneys.length);
+      const hm = buildBldBucket.chimney(chimneys.length);
       chimneys.forEach((c, i) => {
         E.set(0, c.ry, 0); Q.setFromEuler(E);
         P.set(c.x, c.y + c.h / 2, c.z);
@@ -7844,7 +7902,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 這裡只把牆面落點算進 wallSigns。舊制在這裡另建一個 InstancedMesh + 自己的圖集,
     // 那就是第二套文字圖層(原則 2)。
     if (roofBoxes.length) {
-      const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), roofBoxes.length);
+      const rm = buildBldBucket.acbox(roofBoxes.length);
       roofBoxes.forEach((b, i) => {
         E.set(0, b.ry, 0); Q.setFromEuler(E);
         P.set(b.x, b.y + b.h / 2, b.z);
@@ -7857,7 +7915,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(rm);
     }
     if (roofTanks.length) {
-      const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), roofTanks.length);
+      const tm = buildBldBucket.tank(roofTanks.length);
       roofTanks.forEach((t, i) => {
         P.set(t.x, t.y + t.h / 2, t.z);
         S.set(t.r, t.h, t.r);

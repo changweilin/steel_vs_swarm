@@ -27,8 +27,14 @@ const STATUS = {
   regen: ['⟳ 重生(同圖換參數)', 'flag'],
   reimg: ['⇄ 換來源圖', 'flag'],
 };
-/** 對照用的座號:同一顆 seed 兩側才比得起來(buildBeacon 的 stretch 由 seed 決定) */
-const SEEDS = [1, 3, 7];
+/**
+ * 對照用的座號:同一顆 seed 兩側才比得起來(buildBeacon 的 stretch 由 seed 決定)。
+ * **座號組 MUST 蓋得到每一顆庫節點**:命令式巨岩逐座號挑型 ⇒ 一顆節點只長在某些座號上,
+ * 沒被任何一個座號蓋到的那幾顆在台上**三個座號都看不到**(2026-08-06 實測:舊組 #1/#3/#7
+ * 蓋不到 `rock/mega_e` 與 `rock/mega_f`)。#10 一顆補上 a~f,#3 蓋到的是 #1/#10 的子集
+ * ⇒ 換掉不損失。新增庫節點時 MUST 重掃一次,缺口由「零件」那一行的說明講出來(紀律 ④)。
+ */
+const SEEDS = [1, 7, 10];
 /** 三種取景,全部**推導自台上真的建出來的那一團幾何**(手寫距離的話,r 1.5m 的疊石與 24m 的
  *  水塔只能二選一照顧得到:9m 對水塔是貼著一根腿看,對疊石又剛好把 13m 的旗桿塞滿整格):
  *    `part`  這一件零件本身(換掉的就是它)—— 框 = 兩側**差集**那幾顆 mesh 的實測包圍球。
@@ -135,6 +141,19 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       gfx.groups.set(key, g);
     } else if (builder === 'mega') {
       gfx.groups.set(key, buildMegalith(seed));
+    } else if (builder === 'bld' && gfx.biomes.buildBldBucket?.[kind]) {
+      // 建物屋頂配件桶:遊戲自己的桶建構表(count = 1 取樣)。instance scale 就是尺寸,
+      // 這裡只給一組代表性尺寸讓幾何看得出比例 —— 台子不模擬佈局,數字是取樣不是第二份佈局。
+      const DIM = { chimney: [1.15, 4.2, 1.15], tank: [1.75, 3.5, 1.75], acbox: [2.2, 2.6, 2.2] };
+      const [sx, sy, sz] = DIM[kind] || [1, 1, 1];
+      const im = gfx.biomes.buildBldBucket[kind](1);
+      im.setMatrixAt(0, new gfx.THREE.Matrix4().compose(
+        new gfx.THREE.Vector3(0, sy / 2, 0), new gfx.THREE.Quaternion(),
+        new gfx.THREE.Vector3(sx, sy, sz)));
+      im.instanceMatrix.needsUpdate = true;
+      const g = new gfx.THREE.Group();
+      g.add(im);
+      gfx.groups.set(key, g);
     } else if (builder === 'beacon' && mod.BEACON_KINDS[kind]) {
       gfx.groups.set(key, mod.buildBeacon(kind, seed));
     } else {
@@ -216,12 +235,12 @@ function setViewerGroup(v, group, builder = 'beacon') {
   // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
   // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
   // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
-  const col = builder === 'veg' ? vegExtent(group)
+  const col = (builder === 'veg' || builder === 'bld') ? vegExtent(group)
     : builder === 'mega' ? group.userData.megaCol
       : gfx.beacons.beaconCollider(group);
   // 碰撞柱是**整件**的柱子(163m 的巨岩那一根尤其)⇒ 零件取景不畫它,否則畫面上只剩幾條
   // 從天到地的青線,而要看的那一顆零件在中間被切成兩半
-  if (app.collider && builder !== 'veg' && app.dist !== 'part') {
+  if (app.collider && builder !== 'veg' && builder !== 'bld' && app.dist !== 'part') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
       new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
@@ -245,6 +264,7 @@ const COL_WHAT = {
   beacon: '碰撞柱(實測)',
   veg: '外廓(包圍盒;碰撞柱住散布端)',
   mega: '碰撞柱(登記值 meta.col)',
+  bld: '外廓(包圍盒;屋頂配件不掛碰撞柱,建物本體的碰撞盒在 blockers)',
 };
 
 /** 一個群組的 mesh,依 traversal 順序(兩側同一支建構器同一顆 seed ⇒ 逐索引對得起來)*/
@@ -254,62 +274,88 @@ function meshesOf(group) {
   return out;
 }
 
+/** 一顆 mesh 的世界包圍球(取景與配對都吃這一份) */
+function sphereOf(m) {
+  const box = new gfx.THREE.Box3();
+  box.expandByObject(m);
+  return box.isEmpty() ? null : box.getBoundingSphere(new gfx.THREE.Sphere());
+}
+/** 配對半徑倍率:原版那顆 primitive 的中心落在庫節點包圍球的這個倍數以內就算「同一處」 */
+const PAIR_F = 1.5;
+
 /**
- * 「換掉的就是它」是哪幾顆 mesh —— **由兩側差集量出來**,不由描述子推。
+ * 「換掉的就是它」是哪幾顆 mesh —— **量台上這兩團**,不由描述子推(描述子只說得出
+ * 「fallback 包絡多大、零件表上寫在哪」,說不出呼叫端把它擺到哪、拉多大:巨岩那幾顆是
+ * 單位包絡節點,`mesh.scale` 在建造端才定案)。回傳 `{ per: [原版索引[], 生成索引[]], focus }`。
  *
- * 為什麼是差集:描述子只說得出「fallback 包絡多大、零件表上寫在哪」,說不出**呼叫端**
- * 把它擺到哪、拉多大(巨岩那三顆是單位包絡節點,`mesh.scale` 在建造端才定案)。而兩側是
- * 同一支建構器、同一顆 seed 建的 ⇒ mesh 的 traversal 順序一致,幾何簽章不同的那幾顆
- * 正好就是「保險絲 primitive → GLB 節點」換掉的那些。
+ * 兩條路,先後不可對調:
+ *   ① **先在「AI 生成」那一側依實測頂點數認人**(`megaGeo`/`buildBeacon` 都是 clone,
+ *      頂點數不變 ⇒ 認得到);原版那一側**以位置配對**,MUST NOT 假設索引對得起來 ——
+ *      命令式巨岩會把好幾件 primitive 換成一顆庫節點(2026-08-06 實測 92 → 49 顆 mesh),
+ *      逐索引配對在它身上整組落空,而症狀只是「這一列退回整件取景」。
+ *   ② 認不出來(beacons 依材質**合併成桶**,cairn 11 件 → 8 顆 mesh ⇒ 桶裡混著別的零件、
+ *      頂點數對不上)⇒ 退回**逐索引差集** = 「這一款換掉的全部」;那條路要求兩側粒度一致,
+ *      不一致就回 null 交給整件取景(寧缺勿錯,原則 6)。
  *
- * 兩段收斂,缺一不可:
- *   ① 粒度對不上(mesh 數不同)⇒ 回 null 交給整件取景(寧缺勿錯,原則 6);
- *   ② 差集再以**這一列節點的頂點數**過濾:植被逐零件一顆 InstancedMesh、巨岩逐塊一顆 mesh
- *      ⇒ 過濾得掉同一款上的其他庫節點;beacons 依材質**合併成桶**(cairn 11 件 → 8 顆 mesh)
- *      ⇒ 桶裡混著別的零件、頂點數對不上 ⇒ 退回整個差集 = 「這一款換掉的全部」。
- *      同一個來源形狀的不同尺寸階(canopy_c6 / c8)頂點數相同 —— 同款同時消費兩階時會一起
- *      入選,那是實話(台上就是看到兩顆),MUST NOT 為了「只留一顆」去猜。
+ * 同一個來源形狀的不同尺寸階(`canopy_c6` / `c8`)頂點數相同 —— 同款同時消費兩階時會一起
+ * 入選,那是實話(台上就是看到兩顆),MUST NOT 為了「只留一顆」去猜。
  */
 function sliceOf(sides, r) {
   if (sides.length < 2 || !sides[0]?.g || !sides[1]?.g || !r.measured) return null;
   const A = meshesOf(sides[0].g), B = meshesOf(sides[1].g);
-  if (!A.length || A.length !== B.length) return null;
-  const sig = (m) => `${m.geometry.attributes.position.count}/${m.geometry.index ? m.geometry.index.count : 0}`;
-  const diff = [];
-  for (let i = 0; i < A.length; i++) if (sig(A[i]) !== sig(B[i])) diff.push(i);
-  if (!diff.length) return null;
-  const exact = diff.filter((i) => B[i].geometry.attributes.position.count === r.measured.verts);
-  return exact.length ? exact : diff;
+  if (!A.length || !B.length) return null;
+  sides[0].g.updateMatrixWorld(true);
+  sides[1].g.updateMatrixWorld(true);
+
+  const hits = B.map((m, i) => (m.geometry.attributes.position.count === r.measured.verts ? i : -1))
+    .filter((i) => i >= 0);
+  if (!hits.length) {
+    // 認不出來又配不了索引 = 這顆座號的建造端**根本沒用到這個節點**(命令式巨岩逐座號挑型),
+    // MUST NOT 跟「粒度對不上」寫同一句 —— 那會把「換個座號就看得到」講成台子壞了
+    if (A.length !== B.length) return { miss: 'absent' };
+    const sig = (m) => `${m.geometry.attributes.position.count}/${m.geometry.index ? m.geometry.index.count : 0}`;
+    const diff = [];
+    for (let i = 0; i < A.length; i++) if (sig(A[i]) !== sig(B[i])) diff.push(i);
+    if (!diff.length) return { miss: 'same' };
+    let focus = null;
+    for (const i of diff) {
+      const s = sphereOf(B[i]);
+      if (s && (!focus || s.radius > focus.radius)) focus = s;
+    }
+    return focus ? { per: [diff, diff], focus } : { miss: 'same' };
+  }
+
+  const spheres = hits.map((i) => sphereOf(B[i])).filter(Boolean);
+  if (!spheres.length) return null;
+  const focus = spheres.reduce((best, s) => (s.radius > best.radius ? s : best));
+  // 原版那一側:中心落在任一顆庫節點包圍球內(× PAIR_F)的就是被換掉的那幾件
+  const paired = [];
+  for (let i = 0; i < A.length; i++) {
+    const s = sphereOf(A[i]);
+    if (s && spheres.some((h) => s.center.distanceTo(h.center) <= h.radius * PAIR_F)) paired.push(i);
+  }
+  return { per: [paired.length ? paired : A.map((_, i) => i), hits], focus };
 }
 
-/**
- * 取景框(世界座標的包圍球)。兩種取法**刻意不同**:
- *   整件(`slice` 為 null)⇒ 全部 mesh 的**聯集**:要看的就是整件。
- *   零件(有 `slice`)     ⇒ 入選裡**最大的那一顆**:同一顆庫節點會被擺很多次(`rock/mega_a`
- *     在一顆合成岩上就有 7 處,散在 290m 的露頭上),框住聯集等於把每一處都縮成畫面上的
- *     一個點 —— 那跟看不到沒有差別。其餘入選仍然顯示,只是不決定鏡頭。
- */
-function frameOf(groups, slice) {
+/** 這顆節點出現在哪幾個座號上(`miss: 'absent'` 時直接告訴使用者去哪找,而不是只說看不到)*/
+function seedsWith(r, v, bld) {
+  const src = v.mode === 'baseline-vs-now' ? `rev:${v.rev}` : 'now';
+  return SEEDS.filter((s) => {
+    const g = build('post', src, v.kind, s, bld);
+    return g && meshesOf(g).some((m) => m.geometry.attributes.position.count === r.measured.verts);
+  });
+}
+
+/** 整件取景框 = 全部 mesh 的聯集包圍球(世界座標) */
+function frameOf(groups) {
   const T = gfx.THREE;
-  const one = new T.Box3();
-  const acc = slice ? null : new T.Box3();
-  let best = null;
+  const acc = new T.Box3();
   for (const g of groups) {
     g.updateMatrixWorld(true);
-    const ms = meshesOf(g);
-    for (const m of (slice ? slice.map((i) => ms[i]).filter(Boolean) : ms)) {
-      one.makeEmpty();
-      one.expandByObject(m);
-      if (one.isEmpty()) continue;
-      if (acc) acc.union(one);
-      else {
-        const s = one.getBoundingSphere(new T.Sphere());
-        if (!best || s.radius > best.radius) best = s;
-      }
-    }
+    acc.expandByObject(g);
   }
-  const s = acc ? (acc.isEmpty() ? null : acc.getBoundingSphere(new T.Sphere())) : best;
-  if (!s) return { c: { x: 0, y: 3, z: 0 }, r: 6 };
+  if (acc.isEmpty()) return { c: { x: 0, y: 3, z: 0 }, r: 6 };
+  const s = acc.getBoundingSphere(new T.Sphere());
   return { c: { x: s.center.x, y: s.center.y, z: s.center.z }, r: Math.max(0.4, s.radius) };
 }
 
@@ -619,20 +665,36 @@ function mountStage(r) {
   const groups = sides.map((s) => s.g).filter(Boolean);
   for (const g of groups) for (const m of meshesOf(g)) m.visible = true;
   const want = effDist(r) === 'part';
-  const slice = want ? sliceOf(sides, r) : null;
+  const got = want ? sliceOf(sides, r) : null;
+  const slice = got?.per ? got : null;
   if (slice) {
     // 「零件」取景 = **只顯示換掉的那幾顆 mesh**。隱藏不是第二套組裝器(群組仍是遊戲自己
     // 建的、一顆頂點都沒動),而是把「換掉的就是它」真的畫出來 —— 不隔離的話,4m 的冠簇
     // 節點會被旁邊 25m 寬的原生冠錐整個蓋掉(PR147 的樹冠節點就是這樣在台上看不到的),
     // 而讀數(三角形/mesh 數)量的仍是整件 ⇒ 不會因為隱藏而說謊。
-    for (const g of groups) meshesOf(g).forEach((m, i) => { m.visible = slice.includes(i); });
+    // 兩側各有各的名冊(見 sliceOf ①:巨岩的兩側粒度本來就不同),MUST NOT 共用一份索引。
+    sides.forEach((side, i) => {
+      if (!side.g || !slice.per[i]) return;
+      meshesOf(side.g).forEach((m, k) => { m.visible = slice.per[i].includes(k); });
+    });
   }
-  gfx.frame = frameOf(groups, slice);
+  gfx.frame = slice
+    ? { c: slice.focus.center, r: Math.max(0.4, slice.focus.radius) }
+    : frameOf(groups);
   const note = $('prFrameNote');
   if (note) {
-    note.textContent = !want ? ''
-      : slice ? `(只顯示換掉的 ${slice.length} 顆 mesh)`
-        : '(兩側粒度對不上,退回整件取景)';
+    // 退回整件時 MUST 講清楚是**哪一種**退回:「這顆座號沒用到這個節點」換個座號就看得到,
+    // 跟「台子配不起來」是兩件完全不同的事(寫同一句 = 把可以按的那顆鈕講成壞掉)
+    let why = '';
+    if (want && !slice) {
+      const other = got?.miss === 'absent' ? seedsWith(r, v, bld).filter((s) => s !== app.seed) : [];
+      why = got?.miss === 'absent'
+        ? (other.length
+          ? `(這顆座號沒用到這個節點 —— 座號 ${other.map((s) => `#${s}`).join('/')} 有;先看整件)`
+          : '(三顆座號都沒用到這個節點 —— 先看整件)')
+        : '(兩側逐位元相同,沒有換到東西 —— 先看整件)';
+    }
+    note.textContent = !want ? '' : slice ? `(只顯示換掉的 ${slice.per[1].length} 顆 mesh)` : why;
   }
 }
 
