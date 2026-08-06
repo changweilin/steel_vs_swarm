@@ -607,10 +607,15 @@ export const SQUAD = {
   ARMOR_F: 1,         // 無人機護甲等比縮放係數(UNITS 之後 derive:令無人機平均 armor = 機甲平均 ×HP_F)
   DRONE_AVG_HP: 0,    // 初始無人機平均總血量(護盾+裝甲;UNITS 之後 derive)→ 防空伏擊傷害 = 此值 /3
   // ── 飽和攻擊(2026-08-01 使用者需求;原「自爆攻擊」)──
-  //  四架 1/2 體型、外觀同主機的護衛機常駐主機兩側;觸發前不可被鎖定/受傷(純客戶端貼身外觀,不在 sim)。
-  //  「長按右鍵」觸發:四架同時衝出,以主機 3 倍速撲擊,各造成機種絕招預算 1/N 的重型炸彈爆風;
-  //  自爆後需等滿 CD_S 秒才重新出現(客戶端以 kamiCd 判定顯隱)。敵方導引飛彈會被衝出的護衛機吸走砲火
+  //  「長按右鍵」觸發:四架 1/2 體型、外觀同主機的自殺攻擊機**在觸發當下才生成**,以主機 3 倍速
+  //  撲擊,各造成機種絕招預算 1/N 的重型炸彈爆風;敵方導引飛彈會被衝出的護衛機吸走砲火
   //  (見 sim._tickKamis / _tickMissiles)。
+  //  **2026-08-06 使用者定案「自殺攻擊機拿掉常駐模組,攻擊時再出現」**:舊制在觸發前另有四架
+  //  純客戶端的貼身護衛機外觀(不在 sim ⇒ 不可鎖定/受傷),整組退場 —— 連同它的 ㄑ 字編隊
+  //  (`ESCORT`/`escortSlot`/`escortLagBase`/`escortLagK`/`escortDrift`、`game._buildDroneEscorts`/
+  //  `_updateEscorts`、`tools/audit_escort_form.mjs`)。**MUST NOT 復辟**:那批模型是「看得見卻
+  //  打不到」的擺件(原則 4 的反面),而衝出後的 kami 本來就是 sim 實體、客戶端照樣渲染得出來
+  //  ⇒ 使用者要的「攻擊時再出現」不需要任何新機制。CD 期間也就沒有東西需要顯隱判定了。
   //  **N 2 → 4「攻擊力減半、數量加倍」是同一件事**:每架 = 預算 / N ⇒ N 加倍即每架減半,
   //  整份預算(= 三招等值)逐位元不變。MUST NOT 另外手寫折半係數(那會把總預算也砍半)。
   KAMI: {
@@ -825,8 +830,18 @@ export const morphBomb = (ch) => DECOY_BOMB[MORPH_BOMB[ch] || 'fire'];
 //   基準是**它飛越的整條前線**(一組塔位 + 一波兵,見 overflySurviveHp)—— 只有這一招的用途是
 //   「站在塔的射程外拆塔」⇒ 航路必然從敵方兵波頭上過去,拿只算塔的尺反解就少算了一半火力。
 //   改彈道 = 改曝險窗 ⇒ hyperFlightS 一動,HP 自己跟著漂(這正是推導的用意)。
-// 傷害 = **一整份機種絕招預算**(單一戰鬥部,見 hyperBlast)⇒ 與飽和攻擊(N 架均分)、
-//   集束炸彈(撞擊 + 6 顆)三招等值,這條不變式住 e2e「機種絕招三招同預算」。
+// **火力改制(2026-08-06 使用者定案)**:「極音速飛彈攻擊力太高了,常常被一轟就爆,
+//   同等於 2.5 架自爆無人機的傷害」。舊制是「單一戰鬥部吃**整份**預算」(= 4 架自爆無人機)
+//   ⇒ 一發把人轟掉是設計的直接後果(Lv4 705 vs 最脆的無人機 EHP 728)。
+//   傷害改為 預算 × `hyperShare()`(= KAMI_EQ / KAMI.N;Lv1 300 → 188、Lv4 705 → 441)——
+//   **推導不手寫**:改 `KAMI.N` 它自己跟著走、「2.5 架份」這句話恆成立;手寫 0.625 會在 N 一改
+//   就與使用者的話分家。
+// **只動火力,範圍不動**(同日使用者定案「範圍改回舊制」):爆風半徑仍取 `specialBlastR(1)`
+//   ⇒ 上面「三招總覆蓋面積相同」那條不變式逐位元不受影響。MUST NOT 「順手」把半徑也乘上
+//   `√hyperShare()`(那是使用者沒有要求的第二次削弱,而且會讓這一招同時失去點殺與面壓制兩頭)。
+//   中途試過的 `hyperBlastR()` / `HYPER.BLAST_R_F`(半徑 = 砲塔射程 2/5 = 62m)**已退場、
+//   MUST NOT 復辟**:半徑一放大就蓋得住同塔位雙塔(塔距 30m),bal ⑦f 的實得傷害反而由
+//   155 升到 197 EHP/次(範圍不動版 102)—— 火力砍了、交付總量卻更高,與使用者的訴求相反。
 // 舊制 BARRAGE(傾洩重武器彈夾的巨砲)整組移除:BARRAGE / barrageShots / barrageDur /
 //   LANCE.BARRAGE_F / SHAKE.BARRAGE* / sim._barragingDmg 與各射程閘的 RANGE_F 分支全數不再存在。
 //   **MUST NOT 復辟**:重武器射擊路徑上不該再有任何「這一發免彈夾/免射速閘」的旁路 ——
@@ -842,6 +857,7 @@ export const HYPER = {
   SPIN_RPS: 2.4,     // 螺旋落下的每秒圈數(伺服器位置與客戶端演出同吃一份 ⇒ 兩端同步)
   SPIRAL_R: 9,       // 螺旋半徑(公尺;繞著彈道軸的偏擺,實體尺寸不吃 COMBAT_SCALE)
   MODEL_F: 2.2,      // 彈體尺寸 = 集束轟炸機的幾倍(models.js 共用同一具彈體幾何放大;命中量體同吃 ⇒ 看到多大 = 打到多大)
+  KAMI_EQ: 2.5,      // **戰鬥部傷害 = 幾架自爆無人機**(2026-08-06 使用者定案;見 hyperShare)
   BLAST_R: 26,       // 戰鬥部爆風半徑(公尺)。**同時是三招爆風的面積基準**(share = 1;見 specialBlastR)
   PEN: 12,           // 破甲值
   CD_S: 30,          // 獨立冷卻(三招同一段 CD)
@@ -851,6 +867,12 @@ export const HYPER = {
 export const hyperLaunchRad = () => HYPER.LAUNCH_DEG * Math.PI / 180;
 /** 最大接戰距離(公尺;無鎖定時的正前方落點距離,也是 HP 反解的最長一發) */
 export const hyperRange = () => UNITS.tower.range * HYPER.RANGE_F;
+/**
+ * **戰鬥部佔一份機種絕招預算的比例**(2026-08-06 使用者定案「同等於 2.5 架自爆無人機的傷害」)。
+ * 推導不手寫:一架自爆無人機 = 預算 / `KAMI.N` ⇒ 2.5 架份 = `KAMI_EQ / KAMI.N`。
+ * 改 `KAMI.N` 時這個比例自己跟著走,使用者那句話恆成立(手寫 0.625 則會當場分家)。
+ */
+export const hyperShare = () => HYPER.KAMI_EQ / Math.max(1, SQUAD.KAMI.N);
 /**
  * 水平距離 d 的一發,其**頂點高度**(公尺)= d·tan(θ)/2。
  * 預設取最遠射程 ⇒ `hyperApex()` = 這一招爬得最高的那一發(MUST > GAME.GUN_CEIL_M)。
@@ -919,7 +941,9 @@ export const hyperFlightS = () =>
 // 三招各自把同一份預算切給自己的投射數(2026-08-01 改制後):
 //   飽和攻擊 = KAMI.N(4)架均分(主機自毀撞擊 = 一架機體吃整份);
 //   集束炸彈 = 撞擊自爆 DECOY_IMPACT,其餘均分給 DECOY.BOMB_MAX(6)顆投彈;
-//   極音速飛彈 = 單一戰鬥部吃**整份**(見 hyperBlast)—— 一發打完,離散化誤差為零。
+//   極音速飛彈 = 單一戰鬥部,**只領 `hyperShare()`**(2026-08-06 使用者定案「同等於 2.5 架
+//     自爆無人機的傷害」;見 HYPER 檔頭)—— 三招等值那條不變式因此只剩前兩招,而它換到的是
+//     一個直徑等於砲塔射程 4/5 的爆風。**MUST NOT 把它悄悄調回整份**(那正是「一轟就爆」的成因)。
 // DECOY_IMPACT 0.6 → 0.25(2026-08-01):新制的集束轟炸機 HP 是「一座砲塔火力下投得完 5+1 顆」
 //   反解的 ⇒ 設計上它**預期會被打下來**(撞擊自爆多半兌現不了)。把預算重心從撞擊移到炸彈,
 //   實得傷害才對得上另兩招;撞擊那份改為「活著撞到目標」的額外報酬。
@@ -940,10 +964,14 @@ export const specialBudget = (abil) => SPECIAL.BASE * specialMul(abil);
 // (實測:飽和攻擊 4×r22 = 19.7k m²、集束炸彈 6×r14 + 1×r20 = 16.0k m²、極音速飛彈 1×r26 = 6.9k m²)。
 // 「把同一份預算切成越多顆、總面積就越大」等於**切分本身可以憑空生出攻擊範圍** ——
 // 這正是武器那邊已經立過的規矩(A35「攻擊範圍要計價」/ AOE_BUDGET)在絕招上的同一條:
-//   **半徑 ∝ √(該彈頭分到的預算比例)** ⇒ 總覆蓋面積與切幾顆無關,單位面積的傷害密度三招相同。
-// 基準 = 單一戰鬥部吃整份預算的 `HYPER.BLAST_R`(share = 1 ⇒ 逐位元不動)。
+//   **半徑 ∝ √(該彈頭分到的預算比例)** ⇒ 總覆蓋面積與切幾顆無關,單位面積的傷害密度相同。
+// 基準 = 單一戰鬥部的 `HYPER.BLAST_R`(share = 1 ⇒ 逐位元不動)。
 // MUST NOT 逐招手寫半徑(舊 `DECOY.R` / `DECOY.BOMB_BLAST_R` 已退場,MUST NOT 復辟);
 // 改 `KAMI.N` / `BOMB_MAX` / `DECOY_IMPACT` 時半徑自己跟著收放,總面積恆定。
+// **半徑與傷害在 2026-08-06 起是兩件事**:極音速飛彈的戰鬥部只領 `hyperShare()`(2.5 架自爆
+//   無人機份),但爆風**仍取 share = 1 的基準** ⇒ 三招總覆蓋面積仍逐位元相同,差的只有火力。
+//   MUST NOT 「順手」把它的半徑也乘上 `√hyperShare()`(那是使用者沒有要求的第二次削弱,
+//   而且會讓這一招同時失去點殺與面壓制兩頭)。
 export const specialBlastR = (share) => HYPER.BLAST_R * Math.sqrt(Math.max(0, share));
 /** 飽和攻擊:單架護衛自殺機的爆風(N 架均分預算;半徑吃面積計價,破甲/vs 沿用重型炸彈規格) */
 export const kamiBlast = (abil) => ({
@@ -964,9 +992,13 @@ export const decoyBombBlast = (abil) => ({
   dmg: Math.round(specialBudget(abil) * (1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX),
   r: specialBlastR((1 - SPECIAL.DECOY_IMPACT) / DECOY.BOMB_MAX), pen: DECOY.BOMB_PEN, vs: DECOY.vs,
 });
-/** 極音速飛彈:單一戰鬥部 = 整份預算(半徑基準住 HYPER.BLAST_R,破甲/vs 同) */
+/**
+ * 極音速飛彈:單一戰鬥部。傷害 = 預算 × `hyperShare()`(2026-08-06 使用者定案 = 2.5 架自爆無人機份,
+ * 推導不手寫);**爆風半徑仍是 share = 1 的基準**(2026-08-06 使用者定案「範圍改回舊制」)
+ * ⇒ 三招總覆蓋面積逐位元相同,只有火力不同。
+ */
 export const hyperBlast = (abil) => ({
-  dmg: Math.round(specialBudget(abil)), r: specialBlastR(1), pen: HYPER.PEN, vs: HYPER.vs,
+  dmg: Math.round(specialBudget(abil) * hyperShare()), r: specialBlastR(1), pen: HYPER.PEN, vs: HYPER.vs,
 });
 
 // ---- 機種絕招「載具 HP」校準(2026-08-01 使用者定調;三招共用同一把尺 = 唯一縫)----
@@ -1031,8 +1063,9 @@ export const overflySurviveHp = (sec) => Math.floor(overflyDps() * Math.max(0, s
  * 其餘 N − SHOT_DOWN 架成功自爆(N=4、SHOT_DOWN=2 ⇒ 使用者要的「成功自爆 2 架」)。
  */
 /**
- * 第 i 架護衛自殺機的橫向站位 s ∈ [−1, 1](均勻散開)——「衝出散開角 / 生成側偏移 / 客戶端貼身站位」
- * 三個消費端的**唯一縫**。改 KAMI.N 兩端一起跟著散,MUST NOT 在任一端寫 `i === 0 ? -1 : 1`
+ * 第 i 架護衛自殺機的橫向站位 s ∈ [−1, 1](均勻散開)——「衝出散開角 / 生成側偏移」兩個消費端的
+ * **唯一縫**(2026-08-06 常駐外觀移除後,客戶端貼身站位那一個消費端一併退場)。
+ * 改 KAMI.N 散開自己跟著走,MUST NOT 在任一端寫 `i === 0 ? -1 : 1`
  * (那是 N=2 時代的式子,N=4 會把三架全擠到右側)。
  */
 export const kamiSide = (i) => {
@@ -1042,64 +1075,6 @@ export const kamiSide = (i) => {
 export const kamiExposureS = () => UNITS.tower.range / (UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL);
 export const kamiHp = () => frontKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN);
 
-// ---- 待命護衛機編隊(2026-08-02 使用者需求)----
-// 「小無人機與無人機編隊呈現ㄑ字型,位置加點浮動誤差,跟隨旗艦機時有微小操作延遲,
-//   以免動作看起來太死硬」。
-//
-// **純表現層**(觸發前的護衛機不是 sim 實體 ⇒ 不涉 A1):三件事全在旗艦機的**局部座標系**裡定案,
-// 再由 game.js `_updateEscorts` 轉到世界座標。舊制是「兩側等距一排、每幀直接指派」——
-// 橫排看不出隊形、且四架與旗艦機逐位元同步 = 像焊在機身上的擺件。
-//   ① **ㄑ 字**:後掠量 ∝ |橫向站位|(`escortSlot`)⇒ 外側越靠後,旗艦機在頂點 = 雁行編隊。
-//      橫向站位仍走 `kamiSide` 那一份唯一縫(改 KAMI.N 隊形自己跟著散),MUST NOT 另寫排列式。
-//   ② **浮動誤差**:逐架相位錯開的 Lissajous 微幅漂移(`escortDrift`,**同在局部座標系** ——
-//      漂移是「在自己的槽位裡晃」,機體一轉向就該跟著轉;擺在世界座標系會變成「不管機頭朝哪
-//      都往同一個世界方向晃」,轉向時看得出來)。相位由**架次序號**推導(黃金角),
-//      MUST NOT 用 `Math.random()`(A4;而且每幀重抽 = 抖動不是漂移)。
-//      水平/垂直取不同頻率比 ⇒ 四架不會同步繞圈(那看起來像整組在公轉,比不動更假)。
-//   ③ **跟隨延遲**:每幀朝槽位**指數逼近**(`camSmoothF` 同一支幀率無關平滑,
-//      MUST NOT 另寫 `1 − e^(−k·dt)`),逼近率逐架不同(`escortLagK`:外側更拖)⇒
-//      旗艦機一轉向,ㄑ 字會先甩尾再收攏。逼近率 MUST NOT 收成同一個值(同步 = 又焊回去了)。
-// 超過 `SNAP_M` 直接貼上(重生/瞬移/重進視野 MUST NOT 拉出一條橫越戰場的長鏡頭;
-// 與 `SPEC_CAM.SNAP_M` 同一種理由)。
-export const ESCORT = {
-  SIDE_M: 3.6,        // 最外側(|s| = 1)的橫向偏移(公尺)
-  BACK_M: 1.0,        // 全員共通的基準後置(旗艦機正後方)
-  SWEEP_M: 4.4,       // ㄑ 字後掠:每單位 |s| 再往後幾公尺(0 = 退回舊制橫排)
-  DRIFT_R: 0.55,      // 水平浮動誤差振幅(公尺)
-  DRIFT_Y: 0.38,      // 垂直浮動誤差振幅(公尺)
-  DRIFT_HZ: 0.17,     // 水平浮動基礎頻率(Hz)
-  DRIFT_ZF: 0.73,     // 前後向頻率比(≠1 ⇒ 走 Lissajous 而非繞圓)
-  DRIFT_YF: 1.41,     // 垂直向頻率比(與水平無理數比 ⇒ 不循環)
-  PHASE: 2.399963229728653,   // 黃金角(rad):逐架相位錯開,零亂數(A4)
-  TRAIL_M: 1.6,       // **跟隨延遲的校準錨**:巡航直線前進時,最外側僚機落後槽位幾公尺
-  LAG_SPREAD: 0.3,    // 逐架逼近率落差(外側 ×(1 − SPREAD),內側幾乎不打折)
-  YAW_K: 6,           // 機首朝向的跟隨逼近率(1/s;機首晚一步轉過來)
-  SNAP_M: 25,         // 超過此距離直接貼上(重生/瞬移/重進視野)
-};
-/** 第 i 架待命護衛機在**旗艦機局部座標系**的槽位:`x` = 右正、`z` = 前正(機體朝 +z) */
-export const escortSlot = (i) => {
-  const s = kamiSide(i);
-  return { s, x: s * ESCORT.SIDE_M, z: -(ESCORT.BACK_M + Math.abs(s) * ESCORT.SWEEP_M) };
-};
-/**
- * 基礎跟隨逼近率(1/s)。**由校準錨反解**:一階指數逼近在等速前進下的穩態落後 = 速度 ÷ 逼近率 ⇒
- * 令最外側(逼近率 ×(1 − LAG_SPREAD))落後剛好 `TRAIL_M` 公尺。MUST NOT 手寫這個數 ——
- * 手寫的後果是無聲的:調快無人機速度後,四架僚機在全速巡航時會**整組拖到編隊外**
- * (看起來像脫隊,而不是「跟得有點慢」),而任何量測都仍然正常。
- */
-export const escortLagBase = () => UNITS.drone.speed / (ESCORT.TRAIL_M * (1 - ESCORT.LAG_SPREAD));
-/** 第 i 架的跟隨逼近率(1/s);外側更拖 ⇒ 轉向時 ㄑ 字甩尾。恆 > 0(不然它永遠停在原地) */
-export const escortLagK = (i) =>
-  Math.max(0.5, escortLagBase() * (1 - ESCORT.LAG_SPREAD * Math.abs(kamiSide(i))));
-/** 第 i 架在時刻 t(秒)的浮動誤差(**旗艦機局部座標系**,公尺);逐架相位錯開、三軸不同頻 */
-export const escortDrift = (i, t) => {
-  const ph = i * ESCORT.PHASE, w = Math.PI * 2 * ESCORT.DRIFT_HZ, tt = t || 0;
-  return {
-    x: ESCORT.DRIFT_R * Math.sin(w * tt + ph),
-    y: ESCORT.DRIFT_Y * Math.sin(w * ESCORT.DRIFT_YF * tt + ph * 2),
-    z: ESCORT.DRIFT_R * Math.cos(w * ESCORT.DRIFT_ZF * tt + ph * 1.7),
-  };
-};
 /**
  * 極音速飛彈:HP = 撐得住**最長**一次飛行(hyperFlightS:45° 拋射爬升 + 頂點垂直落下)的
  * **前線一組塔位**火力。取最長 ⇒ 任何交戰距離都「剛好不會被打爆」;再多一把槍(小兵/敵方機體/

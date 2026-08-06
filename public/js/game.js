@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
-  ESCORT, escortSlot, escortLagK, escortDrift, heroMobility,
+  heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -3164,7 +3164,7 @@ export class BattleClient {
         ent.ry = e.ry ?? 0;
         ent.si = e.si || 0;
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
-        ent.kcd = e.kcd;   // 無人機護衛自殺機冷卻(其他客戶端據此顯隱貼身護衛機;非無人機為 undefined)
+        ent.kcd = e.kcd;   // 無人機自殺攻擊機冷卻(HUD 顯示用;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
         // 觀戰玩家資訊面板(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」):
@@ -3187,7 +3187,7 @@ export class BattleClient {
         if (ent.isSelf) {
           this.decoyCd = e.dcd ?? 0;
           this.decoyDocked = !!e.dc;
-          this.kamiCd = e.kcd ?? 0;   // 無人機護衛自殺機冷卻(HUD;歸零 = 兩架重現)
+          this.kamiCd = e.kcd ?? 0;   // 無人機自殺攻擊機冷卻(HUD;歸零 = 可再次觸發)
           this.hyperCd = e.hcd ?? 0;     // 機甲極音速飛彈冷卻(HUD)
           this.hyperFly = !!e.hfly;      // 空中已有一枚(鈕面顯示「飛行中」)
 
@@ -3408,57 +3408,10 @@ export class BattleClient {
     if (e.k === 'base') { this._addHealAura(ent, e); this._addBaseGuns(ent, e); }
     else if (isThirdSide(e.s)) this._addRangeRing(ent, e);   // 第三方(GUER/MILI)戰鬥單位與碉堡:貼地射程光暈
     if (e.k === 'bunker') this._clearAroundBunker(e);        // 碉堡淨空:移除重疊建物 + 清同區碰撞柱
-    // 無人機:兩架常駐護衛自殺機(純外觀,貼身跟隨;觸發前不可鎖定/受傷 = 不進 sim)。自機 FPV 看不到自身,略過。
-    if (e.k === 'drone' && !isSelf) this._buildDroneEscorts(ent);
+    // 自殺攻擊機**不常駐**(2026-08-06 使用者定案「拿掉常駐模組,攻擊時再出現」):
+    // 觸發時由 sim 生成 kind 'kami' 實體,走 _spawnEnt 的一般渲染路徑(SIZE_F 縮小)⇒ 這裡什麼都不做。
     this.ents.set(e.id, ent);
     return ent;
-  }
-
-  /** 無人機 KAMI.N 架常駐護衛自殺機(純客戶端外觀:外觀同主機、SIZE_F 體型、貼身兩側)。
-   *  觸發前不是 sim 實體(不可鎖定/受傷);長按右鍵「飽和攻擊」衝出時交給 sim 的 kami 實體渲染,
-   *  自爆後 kamiCd 歸零才重現(見 _updateEscorts 的顯隱判定)。
-   *  橫向站位 s ∈ [−1, 1] 由 N 推導(**與伺服器 heroKamikaze 同一式**)⇒ 改 N 兩端一起散開,
-   *  MUST NOT 退回 `i === 0 ? -1 : 1`(N>2 時會全部擠在右側)。 */
-  _buildDroneEscorts(ent) {
-    ent.escorts = [];
-    for (let i = 0; i < SQUAD.KAMI.N; i++) {
-      const { group } = makeUnit('hero:drone', ent.side, { ch: ent.ch, ring: false });
-      group.scale.setScalar(SQUAD.KAMI.SIZE_F);
-      group.visible = false;
-      this.scene.add(group);
-      if (group.userData.spin) this.spinners.add(group);
-      ent.escorts.push({ mesh: group, i, slot: escortSlot(i), k: escortLagK(i), warm: false });
-    }
-  }
-
-  /** 每幀擺放護衛機於旗艦機的 ㄑ 字編隊槽位;kami 冷卻中(已衝出/未重現)或主機不可見則隱藏。
-   *  槽位/浮動誤差/跟隨逼近率三者全走 data.js 的 `escortSlot`/`escortDrift`/`escortLagK`
-   *  (見那一段的設計說明),MUST NOT 在這裡手寫排列式或 `1 − e^(−k·dt)`。
-   *  `warm`:隱藏期間不追槽位 ⇒ 重現/重進視野的第一幀直接貼上(否則會從上次自爆的位置飛回來)。 */
-  _updateEscorts(ent, dt = 0, now = 0) {
-    const ready = ent.mesh.visible && (ent.kcd || 0) <= 0.05;
-    const yaw = ent.mesh.rotation.y, cx = Math.cos(yaw), sx = Math.sin(yaw);
-    const p = ent.mesh.position;
-    for (const es of ent.escorts) {
-      es.mesh.visible = ready;
-      if (!ready) { es.warm = false; continue; }
-      // 槽位 + 浮動誤差(兩者同在局部座標系)→ 世界:右 = (cos, −sin)、前 = (sin, cos)(機體朝 +z)
-      const d = escortDrift(es.i, now), rr = es.slot.x + d.x, ff = es.slot.z + d.z;
-      const tx = p.x + cx * rr + sx * ff;
-      const ty = p.y + d.y;
-      const tz = p.z - sx * rr + cx * ff;
-      const cur = es.mesh.position;
-      // 太遠(重生/瞬移/剛重現)一律貼上;其餘每幀指數逼近 = 使用者要的「微小操作延遲」
-      if (!es.warm || Math.hypot(tx - cur.x, tz - cur.z) > ESCORT.SNAP_M) {
-        cur.set(tx, ty, tz);
-        es.mesh.rotation.y = yaw;
-        es.warm = true;
-      } else {
-        const f = camSmoothF(es.k, dt);
-        cur.set(cur.x + (tx - cur.x) * f, cur.y + (ty - cur.y) * f, cur.z + (tz - cur.z) * f);
-        es.mesh.rotation.y = camAngleStep(es.mesh.rotation.y, yaw, ESCORT.YAW_K, dt);
-      }
-    }
   }
 
   // 碉堡淨空:碉堡進場時移除與其重疊的客戶端建物/地標(視覺 + 碰撞柱一併,由 clearAround 內部同判定處理,
@@ -3569,7 +3522,6 @@ export class BattleClient {
     this.spinners.delete(ent.mesh);
     this.flamers.delete(ent.mesh);
     this.damaged.delete(ent);
-    if (ent.escorts) for (const es of ent.escorts) { this.scene.remove(es.mesh); this.spinners.delete(es.mesh); }
     this.ents.delete(id);
   }
 
@@ -7034,9 +6986,10 @@ export class BattleClient {
    * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
    */
   /**
-   * 無人機護衛自殺機(2026-07-18;狙擊模式長按右鍵):兩架常駐護衛機衝出撲擊(3 倍速,
-   * 各造成機種絕招預算的 1/N —— 兩架打完 = 一份完整預算,與重砲/餌機等值,見 data.js SPECIAL)。
-   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵;自爆後 CD 結束才重現。
+   * 無人機自殺攻擊機(2026-07-18;狙擊模式長按右鍵):KAMI.N 架**於觸發當下生成**並衝出撲擊
+   * (3 倍速,各造成機種絕招預算的 1/N —— N 架打完 = 一份完整預算,見 data.js SPECIAL)。
+   * 2026-08-06 起觸發前身邊沒有任何常駐外觀(使用者定案「拿掉常駐模組,攻擊時再出現」)。
+   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵。
    */
   _launchKamikaze() {
     if (!this.isDrone || this.dead) return;
@@ -8274,9 +8227,6 @@ export class BattleClient {
     for (const ent of this.ents.values()) {
       if (ent.isSelf) {
         ent.mesh.position.copy(this.pos);
-        // 切為自機視角:貼身護衛機藏起(自機 FPV 不畫)。warm 一併歸零 —— 換回他人視角時
-        // 這四架的位置停在很久以前那一幀,不重置就會從那裡「補跟」過來(與冷卻重現同一個坑)
-        if (ent.escorts) for (const es of ent.escorts) { es.mesh.visible = false; es.warm = false; }
         continue;
       }
       if (ent.isStatic) {
@@ -8386,9 +8336,6 @@ export class BattleClient {
       cur.set(nx, ny, nz);
       // 水平移動速率(m/s):餵移動環境音的音量/音高(_updateMoveAudio);瞬移幀不計
       ent._moveSpd = (!snapped && dt > 0) ? Math.hypot(nx - px, nz - pz) / dt : (ent._moveSpd || 0) * 0.6;
-      // 無人機兩架貼身護衛自殺機(顯隱依 kami 冷卻);切離自機視角的機體補建護衛(spawn 時是自機故未建)
-      if (ent.kind === 'drone' && !ent.escorts) this._buildDroneEscorts(ent);
-      if (ent.escorts) this._updateEscorts(ent, dt, now);
       // 車載砲塔(坦克):獨立於車體轉向,咬住交戰目標
       const tur = ent.mesh.userData.turret;
       if (tur) this._aimVehicleTurret(ent, tur, dt, now);
