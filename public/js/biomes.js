@@ -1805,9 +1805,9 @@ const MEGA_LIB = {
   block: ['rock/mega_a', 'rock/mega_b', 'rock/mega_c', 'rock/mega_d', 'rock/mega_e', 'rock/mega_f'],
   tower: 'rock/tower_a',                                  // 火山頸整座(實拍魔鬼塔;崖錐 + 柱身同一顆)
   mesa: 'rock/mesa_a',                                    // 平頂岩體整座(實拍;裙狀崖錐 + 疊層同一顆)
-  // hoodoo: 'rock/hoodoo_a',                             // 蘑菇岩整柱 —— 節點入庫時再開這一列
-  //   (2026-08-06:hoodoo 六張候選裡,單一主體的那兩張過 SF3D 都在細腰處斷成兩截 ——
-  //    細頸正是這一型的識別特徵,也正是 SF3D 最容易掉的地方;等更正面、更貼近的候選)
+  hoodoo: 'rock/hoodoo_a',                                // 蘑菇岩整柱(實拍帽岩+細頸,Hoodoo Basin)
+  //   (2026-08-06 晚:同一張乾淨候選 wc_112762573,SF3D 在細腰處斷成兩截(§5j 待續①)⇒
+  //    改走 fallback chain 下一階 Hunyuan3D-2GP(runbook §5m)—— 帽岩/細頸/基座全保住)
 };
 // 與 partGeo 同一條紀律的命令式版本:查無此名/載入失敗 ⇒ null,呼叫端以原 primitive
 // 收尾(保險絲,原則 6)。兩點不同:①一律 `.clone()` —— 巨岩群組會過 bakeContactAO

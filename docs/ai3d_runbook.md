@@ -35,7 +35,8 @@
 
 | **D-6 樹族第二批 — 逐樹種冠形補齊 + 一般植被開族(灌木/闊葉/針葉)+ Quaternius 退場** | **PARTIAL 2026-08-06** (§5k) | 使用者定案「大量下載不同國家地區的不同樹種,如灌木/闊葉林/針葉林/各種大小神木的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」+ 追問後定案「**連 Quaternius 一起換掉**」。①照片目錄 tree 族 +26 列(灌木 6 / 闊葉 8 / 針葉 6 / 神木 6,逐列點名國家地區)、族序提前;3 輪抓到 **25 張**後撞上小時級 IP 節流(§5i 同款,3 輪 ×0 張)。②**新工具 `photo_sheet.mjs`**(§5j「人眼先看照片」升格為正式工具):82 張逐張看,語意可用 13 張(~1/6),其中 CGI/館藏/明信片/有人入鏡/浮水印一次擋掉。③`tree.glb` **+18 節點**:神木 9 顆(g/h/i/j/k 五形)⇒ 11 種神木**各有專屬節點名,但不是 11 個專屬形狀**(**2026-08-06 使用者質疑後更正**:`i` 與舊制 `a` 同一張照片、`g` 與舊制 `b` 同一張 ⇒ 11 種實際只對到 **9 張**照片;且 `lib:` 這條縫換不掉骨架,見 §5k),且 klinki/alerce 這兩種**第一次接得上**(冠簇 2.2~3.0m 小於舊制最小節點 3.325 —— 這正是使用者說的「各種**大小**神木」);一般植被 9 顆(bush/vleaf/vcone)。④**`families.veg` 預算先量測後生成**(新工具 `measure_veg_tris.mjs`,四個綠地場地 team 3 實測),且 `whole_factor = 4.0` 這一次是**量出來的**(Quaternius 退場釋出 585,966~1,669,392 tris)。⑤**broadleaf/birch/shrub 退出 `NATURE_MANIFEST`** 改走零件表 + 照片冠簇(掛在名冊裡的型別連 `buildVegMeshes` 都不會被呼叫 ⇒ `lib:` 列會接在沒人看得到的路徑上);silvergrass/deadtree 留著(不在使用者這一輪點名的四類裡,草葉鏤空貼圖 SF3D 生不出來)。intake 234 / siteplan 187 / joints 21516-0 / beacons 68 / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73;e2e 全綠(fresh server :8666)、`npm run bal` 全綠(⑦f 1.09× 不動);對照台 0 缺件 / 0 孤兒 / 0 未記載 |
 
-| **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06** (§5l) | 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
+| **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
+| **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
 
@@ -43,7 +44,7 @@
 |---|---|---|
 | **CC sandbox** (this repo's remote sessions) | All offline audits; e2e (`node server/server.js` then `npm test`); `npm run bal`; editing + push; GitHub MCP (PR/Actions API); HF MCP (search + the curated `dynamic_space` roster) | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` / `*.blob.core.windows.net` — all CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio calls**. No GPU (`nvidia-smi` absent). Raw `api.github.com` REST is gated (MCP tools work; `curl` with `$GITHUB_TOKEN` returns "GitHub access is not enabled") |
 | **GitHub Actions** (ubuntu runner) | Open egress ⇒ photo fetching (proven, run 1); licence re-audit; artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference here would need an `HF_TOKEN` secret **which only the repo owner can add** — do not attempt without it |
-| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **TRELLIS is out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; TRELLIS.2-4B needs 24 GB and its floor resolution is 512³ ⇒ **both rungs of plan §1's fallback chain above Hunyuan are empty here**. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
+| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`** — the img→3D ladder on this card is now `2GP → SF3D → procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **TRELLIS is out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; TRELLIS.2-4B needs 24 GB and its floor resolution is 512³ ⇒ **both rungs of plan §1's fallback chain above Hunyuan are empty here**. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
 | **HF Spaces** | `stabilityai/stable-fast-3d` (official gradio Space) as no-GPU fallback — drive it from a machine that can reach `huggingface.co`, i.e. the 3060 box or a browser; **not** from the sandbox | The HF MCP `dynamic_space` roster has **no mesh-generating space** (checked: only image/video/audio tools; `stabilityai/stable-fast-3d` is not MCP-enabled → HTTP 404 via MCP) |
 
 **Consequence an agent must internalise**: photos and GLBs cannot pass through the sandbox.
@@ -680,6 +681,60 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   plan §1 表裡本來就列著);②因此**這一輪一顆節點都沒有出貨**,`parts_manifest.json` 不動、
   `METHODS` 不新增 `trellis` 鍵(沒有產物就不該有方法字彙,原則 6);③plan §1/§8 的更正尚未寫入
   (使用者指示先寫 runbook)。
+
+## 5m. Trial log (2026-08-06 晚, 3060-machine session — Hunyuan3D-2GP 閘門:**開**;首個 2GP 節點 hoodoo_a 出貨)
+
+> §5l 三件待續的收尾輪:①fallback chain 下一階撞了(這一節);②plan §1/§7/§8 更正寫入
+> (§1 表拆開 TRELLIS 1 / TRELLIS.2 兩代、fallback chain 頭兩階標空、§8 補 SF3D 三族 fill 實測);
+> ③照片節流同晚探測**未退**(tree --limit 25 一輪 0 張,Openverse 401 + Commons 429 都還在封 —— 隔天再抓)。
+
+- **2GP 在這張卡全開,而且餘裕大得反直覺**:§5l 同組知名主體 7 張全過,**逐張 torch 峰值
+  恆 2524MiB、GPU 全程 free ≥10.2GB、61~67s/張**(SF3D 6.17GB/7s —— 2GP 慢 9 倍但 VRAM
+  只吃 40%)。安裝:獨立 venv `~/ai3d/.venv311hy`(不動 §5l 的 TRELLIS venv,量測可重現;
+  torch 2.5.1+cu121 + mmgp 3.2.7 + transformers 4.49.0;uv venv 缺 setuptools 的 §5c 老坑又咬一次
+  —— mmgp→optimum.quanto 要它)。`diso` 不裝(dmc 是編譯件),`mc_algo='mc'` 走 skimage;
+  texgen/custom_rasterizer 整組跳過(plan §0 paint 不跑)。權重 `tencent/Hunyuan3D-2`
+  dit-v2-0 fp16 4.9GB(下載 16 分、熱載 3.6s)。runner `~/ai3d/run_hy.py`(mmgp offload
+  profile 3 + `_execution_device` 釘 cuda,gradio_app 的做法照抄)。
+- **品質恰好收復 §5l 點名的兩個 SF3D 失敗型態**(fill 前篩 + 人眼渲染複核):
+  ①hoodoo **同一張** `wc_112762573`:SF3D 兩參數皆塌片(0.065/0.227)→ 2GP **0.274 ◎,
+  帽岩/細頸/基座全保住**(細頸正是 §5j 待續① 說 SF3D 最容易掉的識別特徵);
+  ②Art Deco 摩天樓:SF3D 0.048 立面殼 → 2GP **0.447 ◎,退縮量體一階一階清楚**——
+  原生 3D 擴散推得出深度,單前饋推不出,§8 分流原則的第二組實測數字(方向仍支持分流:
+  規則幾何的純資料件仍然零成本零授權,2GP 只是把「必須用照片的人造物」從不可能變成可行);
+  ③魔鬼塔 0.404 ◎(裙狀崖錐 + 平頂)。7 張人眼取 3(~1/2;SF3D 語料可用率 ~1/6)。
+  落選四張仍是輸入問題(場景照地面片、背景元素黏進網格、空心殼)—— 挑片紀律不變。
+- **`rock/hoodoo_a` 出貨**(D-5 待續① 補完;首個非 SF3D 的庫節點):
+  兩段式減面 —— 2GP 原生是 **mc 實心網格 watertight**(213,682 面),pymeshlab quadric
+  大比例(213k→560)安全(§5e 的撕裂警告是「SF3D 薄殼 + Blender 硬減面」那條路),
+  末段 Blender 1.5:1 溫和(560→382 ≤ 430 留餘裕,§5j 教訓)。單位包絡 1×1、佔比 95%。
+  MEGA_LIB.hoodoo 列啟用(呼叫點 D-5 就寫好了,逐柱一顆、柱數 2~4、兩條路零 rnd);
+  **預算分母 29 不動**(hoodoo 型整顆 = 4+4+2+15 = 25 < marble 的 29,tri_budget 註記)。
+- **座號組重掃踩到一個「差點量錯」**:直呼 `synthMegalith(mulberry32(seed))` 掃出來的
+  seed→岩型映射與台子**不同** —— 台子雜湊過(`(seed×2654435761)>>>0`)。用錯映射會挑到
+  一顆台上根本不是 hoodoo 型的座號,而台上只顯示「這顆座號沒用到這個節點」= 看起來像
+  掃過了。正確映射下 hoodoo 型只在 #22/#33;#1 mesa、#7 tower、#10 marble 各自必要
+  (mega_f 只有 marble 的 8 疊塊輪得到)⇒ **加 #22 成四顆,不換掉誰**。
+- **wsl.exe 會把多行腳本的換行接成空白**(本輪三次踩同一個坑才定位):`wsl -- bash -lc '<多行>'`
+  的變數賦值行被接進上一行變成 `cd` 的多餘參數,`$M` 靜默變空;heredoc 同理被絞。
+  對策 = 一律 Write 落地 .sh 到 /mnt/c、`tr -d '\r'` 拷進 WSL 再執行;另外 `bash -lc 'A && B & echo'`
+  的 `&` 把**整串**丟背景,wsl.exe 一退出 distro 幾秒內 teardown 連 nohup 都帶走 ——
+  長跑一律讓 wsl.exe 前景活著(外層背景任務)。
+- **閘門全綠**:intake 240(hoodoo_a 包絡/預算 4 項新增)/ siteplan 187 / joints 21611-0
+  (hoodoo 柱的接合全乾淨)/ beacons 68 + `--break-extent` 反向紅 / cel 52 / visual_prefs 124 /
+  gpu 54 / soft_stroke 73 / `measure_megalith_tris` rnd 對帳 1000/1000(hoodoo 節點載入下);
+  e2e 全綠(**8666 上先撞到一支 8.4 小時的舊伺服器** —— #INC-101 流程救了這一輪:kill 後
+  fresh server 再測)/ bal 全綠(⑦f 1.09× 不動)。對照台 0 缺件/0 孤兒/0 未記載;
+  provenance `METHODS` +`hunyuan_2gp` 鍵(§5l 當時不加是因為零產物;現在有了),
+  帳列含 `imgs[].file`(漏了這一欄的症狀 = 台上「原圖不在本機」而照片明明在)。
+  視覺閉環:座號 #22 保險絲 vs 零件庫並排(左 = 平滑柱+綠苔平帽的程序 hoodoo、
+  右 = 實拍岩柱群),兩側都落地、崩落塊/疊石正常。
+- **未跑 / 待續**:①`audit_traverse`(㋓;巨岩零件不動碰撞柱 ⇒ 結構上路徑不可能變,但沒跑
+  就是沒跑);②真機互動冒煙(走過 hoodoo 巨岩 + 30 秒穩態幀時);③2GP 對**神木**沒有幫上
+  (兩張 sequoia 都碎 —— 樹的問題仍是輸入語料不是模型);④摩天樓 0.447 那顆**沒有出貨**
+  (整棟建物節點還沒有消費端,§5i 待續同款 —— 先開縫再入庫);⑤照片 20+ 列缺額等節流退
+  (隔天 `--family tree/rock/building --limit 25` 逐族);⑥hoodoo 只有 _a 一形,#33 那顆
+  座號留給下一形驗異質性。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

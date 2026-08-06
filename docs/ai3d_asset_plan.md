@@ -37,15 +37,21 @@ Measured: `NVIDIA GeForce RTX 3060, 12288 MiB` / `Python 3.13.1` / `gemini` on P
 
 | Tool | Use | VRAM (official / reported) | Viable at 12GB |
 |---|---|---|---|
-| TRELLIS.2-4B | image→high-fidelity geometry (MIT) | README says **24GB** (A100/H100); community/ComfyUI builds report **8GB@256 / 12GB@512** | ⚠ **must measure first**: run 256, then push to 512. If it fails, drop to Hunyuan |
-| Hunyuan3D 2.1 (shape only) | image→geometry | shape **10GB** / paint 21GB / full 29GB | ✅ shape-only fits; **paint never runs** |
-| Hunyuan3D-2GP | low-spec build (CPU offload) | below the above | ✅ fuse |
+| TRELLIS.2-4B | image→high-fidelity geometry (MIT) | official **24GB** (A100/H100); floor resolution **512³** — no 256 mode exists in this generation | ❌ **measured out 2026-08-06** (runbook §5l): not even worth loading on 12GB. The original "8GB@256 / 12GB@512" line conflated two generations — 256/512 are **TRELLIS 1** sparse-structure resolutions |
+| TRELLIS 1 (image-large, 1.2B) | image→geometry (MIT) | official 16GB | ❌ **measured 2026-08-06**: cond/sparse-structure/slat all pass, **flexicubes mesh extraction OOMs with 9.58GB free** after every offload trick (unused decoders popped, per-stage CPU offload, `expandable_segments`). The inference isn't out — the mesh extraction is; gaussian/RF outputs are why "12GB works" reports exist |
+| Hunyuan3D 2.1 (shape only) | image→geometry | shape **10GB** / paint 21GB / full 29GB | ⚠ marginal vs the measured ~9.5GB free; go straight to 2GP |
+| Hunyuan3D-2GP | low-spec build (CPU offload) | below the above | ✅ fuse — the next unmeasured rung |
 | Stable Fast 3D | fast small parts, delight + UV included | **6GB** | ✅ loosest; primary for static parts |
 | P3-SAM / X-Part | 3D part segmentation / part generation | unpublished, **to be measured** | ⚠ use P3-SAM (segmentation) only for now |
 | Blender headless | decimate / merge / export GLB | CPU | ✅ |
 
-**Fallback chain (principle 6)**: `TRELLIS.2@512 → TRELLIS.2@256 → Hunyuan3D 2.1 shape-only → SF3D → keep current procedural parts`.
+**Fallback chain (principle 6)**: ~~`TRELLIS.2@512 → TRELLIS.2@256 →`~~ `Hunyuan3D-2GP shape-only → SF3D → keep current procedural parts`.
 Drop a tier whenever one fails. **Never change a rule or a contract to make a tool fit.**
+(2026-08-06 correction, runbook §5l: both TRELLIS rungs are **empty on this card** — measured, not assumed.
+Environment note for whoever climbs the next rung: native Windows cannot build this stack (no MSVC) ⇒
+**WSL2 only**; the working recipe (zero sudo, 7.5GB venv + 2.9GB weights, `kaolin` from NVIDIA's prebuilt
+wheel index, `ATTN_BACKEND=xformers` instead of flash-attn, skip `nvdiffrast`/`nvdiffrec` for
+geometry-only) is in runbook §5l.)
 
 ---
 
@@ -395,7 +401,7 @@ gait, hardpoints and hit volumes simultaneously.
 
 | Risk | Symptom | Mitigation |
 |---|---|---|
-| TRELLIS.2 won't fit in 12GB | OOM, or only 256 runs and detail is worse than current procedural parts | verify in P0; fall back to Hunyuan3D 2.1 shape-only (10GB, safe) |
+| ~~TRELLIS.2 won't fit in 12GB~~ **confirmed 2026-08-06** (runbook §5l) | TRELLIS 1 OOMs at flexicubes extraction with 9.58GB free; TRELLIS.2 floor is 512³/24GB | fall back to **Hunyuan3D-2GP** (the 10GB 2.1 build is itself marginal vs ~9.5GB measured free) |
 | P3-SAM splits don't map to slots | left shin split in two, foot merged into shin | main line is per-slot generation (§3.2 B); P3-SAM is cross-validation only |
 | Triangle count blowout | mobile frame time drops, outline pass gets heavier | budget derived from **measured current values**; frame-time comparison per batch |
 | Binary payload growth | repo size, slower solo packaging | split library per family, load on demand; confirm `npm run build:solo` copies it |
@@ -403,7 +409,8 @@ gait, hardpoints and hit volumes simultaneously.
 | Outline stroke read as geometry | mysterious groove around the part surface | inspect alpha edge after matting; add `no outline stroke` to the prompt if needed |
 | Translucent wings | foggy blob geometry | prompt rule 6; never submit existing concept art unmodified |
 
-**Unverified (must be flagged on delivery)**: TRELLIS.2's real ceiling on this 12GB card; P3-SAM/X-Part
+**Unverified (must be flagged on delivery)**: ~~TRELLIS.2's real ceiling on this 12GB card~~ (measured
+2026-08-06, runbook §5l — out); **Hunyuan3D-2GP's real VRAM/quality on this card**; P3-SAM/X-Part
 VRAM; how reliably the 2D tool obeys "keep only this part"; part-library load impact on first-frame time.
 
 ---
@@ -420,7 +427,7 @@ alternatives; they split **by geometry class**:
 | Landmarks `KIND_PARTS`(pylon/watertower/container/cairn)| **LLM agent reads photos → writes pure-data part rows**(proposal 1, corrected form)| Part tables are already pure-data primitives; that is the only reason `audit_beacons` Ⅰ can verify extents offline in the sandbox. Zero binary weight, zero licence exposure(photos are measurement reference only, never baked in), native fit with `stretch`/`partJitter`/colour seam. The agent's output is **part-table data rows, not three.js code**(A38 purity)|
 | Building modules(windows/roof caps/balconies/piping)`BUILDERS` | Same as above | Boxy, regular; primitives suffice; oriented-box colliders stay derivable(A30)|
 | Civic parts `CIVIC_PARTS` | Same as above | Same |
-| Megaliths(rock facets/collapse blocks/talus cones)`MEGALITHS` | **img→3D model → partlib GLB**(proposal 2)| Organic, irregular — primitives cannot express them; this is the only family class worth the GLB payload + offline-extent contract. SF3D for bulk, TRELLIS.2/Hunyuan for signature pieces(§1 ladder unchanged)|
+| Megaliths(rock facets/collapse blocks/talus cones)`MEGALITHS` | **img→3D model → partlib GLB**(proposal 2)| Organic, irregular — primitives cannot express them; this is the only family class worth the GLB payload + offline-extent contract. SF3D for bulk; signature pieces wait on the Hunyuan3D-2GP rung(§1 ladder corrected 2026-08-06 — TRELLIS is out on this card, runbook §5l). First measured support for this split (§5l): SF3D on clean photos of a skyscraper / a named giant tree / Devils Tower scored fill 0.048 / 0.274 / 0.313 — regular man-made geometry collapses to a facade shell(the cleanest photo scored lowest), while the organic rock was the only one past the prefilter |
 | Giant-tree parts(canopy modules/buttress roots/forks)`GIANT_DEFS` | **img→3D model → partlib GLB** | Same; **blocked on the `giantCrownR` issue below — do not ship canopy GLBs before it is solved** |
 | Small vegetation / generic building masses | **Keep procedural** — no AI | Not every family should eat AI: wholesale GLB swap explodes draw calls/triangle budget, and `procedural-object-detail` already covers variation there |
 | Mechs / NPCs(Track A)| Unchanged(§3 per-slot 2D→3D)| Out of scope of this proposal |
