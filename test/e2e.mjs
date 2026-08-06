@@ -11,6 +11,7 @@ import {
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, HYPER,
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast,
+  specialBlastR, hyperShare,
   hyperApex, hyperRange, hyperFlightS, hyperHp, hyperTrackR, hyperTerminalF,
   kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
   TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
@@ -1005,7 +1006,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       `拋物線爬到頂點 hyperApex(${m.arcD.toFixed(0)}m) = ${hyperApex(m.arcD).toFixed(1)}m 即轉俯衝(實得 ${m.y.toFixed(1)}m)`);
     assert(Math.hypot(m.x - m.tx, m.z - m.tz) < 1e-6,
       '頂點恰在目標正上方 ⇒ 後半段是真正的「向下」螺旋俯衝,不是滑翔');
-    // 相位二:螺旋俯衝到落點 → 引爆(整份絕招預算的單一戰鬥部)
+    // 相位二:螺旋俯衝到落點 → 引爆(單一戰鬥部 = 2.5 架自爆無人機的傷害)
     const tgt = sim._add({ kind: 'soldier', side: 'SWARM', x: m.tx, z: m.tz, y: 0, hp: 9999 });
     const spin0 = m.spin;
     sim._tickHypers(0.05);
@@ -1013,7 +1014,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     guard = 0;
     while (rb3.hyper && guard++ < 400) sim._tickHypers(0.05);
     assert(!rb3.hyper && !sim.ents.has(m.id), '俯衝抵達落點 → 引爆並清場');
-    assert(tgt.hp < 9999, `落點爆風命中目標(戰鬥部 ${hyperBlast(rb3.abil).dmg} = 整份絕招預算)`);
+    assert(tgt.hp < 9999, `落點爆風命中目標(戰鬥部 ${hyperBlast(rb3.abil).dmg} = ${HYPER.KAMI_EQ} 架自爆無人機)`);
     sim.ents.delete(tgt.id);
     // 被攔截:不引爆(攔截成功 = 完全否定這一招)
     rb3.hyperCd = 0;
@@ -1076,7 +1077,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       bm = impact(m3);
       assert(!!bm && Math.hypot(bm.x - tgt.x, bm.z - tgt.z) < 1.5,
         `螺旋追擊:落點追到目標的即時位置 (0, ${tgt.z.toFixed(0)})(實得 ${bm.x.toFixed(1)}, ${bm.z.toFixed(1)})`);
-      assert(tgt.hp < 999999, '追擊命中 ⇒ 目標吃到整份絕招預算的爆風');
+      assert(tgt.hp < 999999, '追擊命中 ⇒ 目標吃到戰鬥部爆風');
       cleanup(tgt);
 
       // ③ 判定只做一次(頂點那一刻):追上之後目標再跑出判定半徑,MUST NOT 中途折回原軌跡
@@ -1151,6 +1152,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(overflyDps() === frontDps() + waveDps(),
       `飛越前線的基準 = 塔位 ${frontDps()} + 一波兵 ${waveDps().toFixed(1)} = ${overflyDps().toFixed(1)}`);
     // 爆風半徑的面積計價:同一份預算切成幾顆,總覆蓋面積不變
+    // (2026-08-06 只動火力、**不動範圍** ⇒ 這一條逐位元維持舊制)
     {
       const ab = { light: 1, heavy: 1 }, A = (r, n) => n * Math.PI * blastFootprintR(r) ** 2;
       const kam = A(kamiBlast(ab).r, SQUAD.KAMI.N);
@@ -1158,6 +1160,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       const hyp = A(hyperBlast(ab).r, 1);
       assert(Math.abs(kam / hyp - 1) < 1e-9 && Math.abs(dec / hyp - 1) < 1e-9,
         `三招總覆蓋面積相同(${(kam / 1000).toFixed(1)}k / ${(dec / 1000).toFixed(1)}k / ${(hyp / 1000).toFixed(1)}k m²)—— 半徑 ∝ √預算比例`);
+      assert(Math.abs(hyperBlast(ab).r - specialBlastR(1)) < 1e-9 && HYPER.BLAST_R_F === undefined,
+        `極音速飛彈爆風 ${hyperBlast(ab).r.toFixed(1)}m = share 1 的基準(火力減半 MUST NOT 順手連範圍也削)`);
       assert(DECOY.R === undefined && DECOY.BOMB_BLAST_R === undefined,
         '舊制逐招手寫半徑(DECOY.R / BOMB_BLAST_R)MUST 已退場');
     }
@@ -1176,18 +1180,26 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       + ` → $${Math.round(specialBudget(L4))})`);
     assert(Math.abs(specialBudget(L4) / specialBudget(L1) - (1 + SPECIAL.PER_LVL * 3)) < 1e-9,
       `綜合 Lv4 = Lv1 ×${(1 + SPECIAL.PER_LVL * 3).toFixed(2)}`);
-    // 三招在同一綜合等級下的「一次絕招總傷害」等值(±2%,只差四捨五入)
+    // 飽和攻擊 / 集束炸彈仍吃整份預算(±2%,只差四捨五入);
+    // 極音速飛彈自 2026-08-06 起只領 2.5 架自爆無人機的份(使用者定案「攻擊力太高、一轟就爆」),
+    // 而**爆風半徑不動**(仍是 share 1 的基準)—— 這條 MUST 逐等級驗,悄悄調回整份就是把病灶原樣放回去。
     for (const abil of [L1, MIX, L4]) {
       const budget = specialBudget(abil);
       const kami = kamiBlast(abil).dmg * SQUAD.KAMI.N;
       const decoy = decoyBlast(abil).dmg + decoyBombBlast(abil).dmg * DECOY.BOMB_MAX;
       const solo = selfBoomBlast(abil).dmg;
-      const hyper = hyperBlast(abil).dmg;
-      for (const [name, tot] of [['飽和攻擊', kami], ['集束炸彈', decoy], ['主機自毀', solo], ['極音速飛彈', hyper]]) {
+      for (const [name, tot] of [['飽和攻擊', kami], ['集束炸彈', decoy], ['主機自毀', solo]]) {
         assert(Math.abs(tot - budget) <= budget * 0.02,
           `綜合 Lv${specialTier(abil)} ${name}總傷害 ${Math.round(tot)} ≈ 預算 ${Math.round(budget)}`);
       }
+      const hyper = hyperBlast(abil).dmg;
+      assert(Math.abs(hyper - kamiBlast(abil).dmg * HYPER.KAMI_EQ) <= 2,
+        `綜合 Lv${specialTier(abil)} 極音速飛彈 ${hyper} = ${HYPER.KAMI_EQ} 架自爆無人機`
+        + `(${kamiBlast(abil).dmg} 每架;整份預算為 ${Math.round(budget)})`);
+      assert(hyper < budget * 0.9, `極音速飛彈 MUST NOT 悄悄調回整份預算(實得佔比 ${(hyper / budget * 100).toFixed(1)}%)`);
     }
+    assert(Math.abs(hyperShare() - HYPER.KAMI_EQ / SQUAD.KAMI.N) < 1e-9,
+      `戰鬥部佔預算 ${(hyperShare() * 100).toFixed(1)}% = KAMI_EQ ÷ KAMI.N(推導不手寫)`);
     // 舊巨砲的發數/開窗常數整組移除(改招後不該再有任何殘留 export)
     assert(HYPER && HYPER.CD_S > 0, 'HYPER 取代 BARRAGE 成為機甲長按招式的常數組');
   }
