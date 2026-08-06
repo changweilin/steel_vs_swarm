@@ -578,15 +578,27 @@ at all, so they would render bit-identically on both sides. An unknown builder n
 **nothing** and logs; see silent bug 3.
 
 **Framing is measured, never derived from the descriptor** (2026-08-06, silent bug 4). `whole` frames
-the group's own bounding sphere; `part` frames the **per-index diff between the two panes** (same
-builder, same seed ⇒ traversal order lines up), hides everything else, and points the camera at the
-**largest** hit — one node is placed many times (`rock/mega_a` sits in 7 places across a 290 m
-outcrop), so framing their union turns every one of them into a dot. The diff is then narrowed by the
-node's measured vertex count (veg = one InstancedMesh per part, megaliths = one mesh per block;
-beacons merge by material, so it falls back to the whole diff = "everything this kind swapped"), and
-if the two panes have different mesh counts the board says so and falls back to `whole`. Hiding is
-not a second assembler — the group is still the game's own, vertex for vertex — and the readout still
-measures the whole prop, so it cannot lie. `near`/`far` track the distance.
+the group's own bounding sphere; `part` shows only the meshes that were **swapped**, hides the rest,
+and points the camera at the **largest** hit — one node is placed many times (`rock/mega_a` sits in 7
+places across a 290 m outcrop), so framing their union turns every one of them into a dot.
+
+Finding those meshes takes two passes, in this order. First, identify them **on the generated side by
+measured vertex count** (`megaGeo` / `buildBeacon` both clone, so the count survives) and pair the
+original side **by position** (centre inside the node's bounding sphere × `PAIR_F`). Never assume the
+two panes' traversal indices line up: the imperative megalith builder replaces several primitives
+with one library node (measured 92 → 49 meshes), so index pairing misses all of them and the only
+symptom is "this row fell back to whole". Second, if the count identifies nothing — beacons merge by
+material (cairn: 11 parts → 8 meshes), so the node's vertices are mixed into a bucket — fall back to
+the **per-index diff** = "everything this kind swapped"; that path does require equal mesh counts.
+
+When it does fall back to `whole`, say **which** reason: "this seed doesn't use this node" (the
+imperative megalith picks types per seed — and the board names a seed that does) is not the same as
+"the board couldn't pair them", and writing one message for both turns a working button into a
+broken-looking one. The seed set must cover every library node: `[1, 3, 7]` reached neither
+`rock/mega_e` nor `rock/mega_f`, hence `[1, 7, 10]` — re-scan when nodes are added.
+
+Hiding is not a second assembler — the group is still the game's own, vertex for vertex — and the
+readout still measures the whole prop, so it cannot lie. `near`/`far` track the distance.
 
 **Four silent bugs found so far** (this is what the board is for):
 
