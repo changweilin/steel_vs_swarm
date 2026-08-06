@@ -273,6 +273,7 @@ npm run parts                   # 「3D 零件對照台」(臨時工具,dev-only
                                 #   與**吃哪一張 img**(授權/出處/查詢字),並列出缺件 / 孤兒節點 / 未記載來源。
                                 #   `--report` = 直接印對照表;`--photos <某個 tools/ai3d 目錄>` 指定照片家
 node tools/ai3d/intake_parts.mjs # AI 零件庫入庫閘(外廓契約 + 三角形預算;讀取縫 = tools/ai3d/parts_src.mjs)
+node tools/ai3d/measure_megalith_tris.mjs # families.megalith 預算量測 + 「有無零件庫 rnd() 枚數相同」對帳(需 playwright)
 node tools/audit_vernacular.mjs # 在地文字語料稽核(287 項;不需伺服器/瀏覽器/網路)
 node tools/bake_venue_text.mjs  # 27 場地在地文字語料重烤 → public/js/venueText.js(外網 Overpass,㋓)
 node tools/shot_signs.mjs --venue shibuya   # 世界文字視覺閉環(㋓ 需 playwright;九種語域排面 + 圖集 PNG)
@@ -282,7 +283,7 @@ node tools/audit_visual_prefs.mjs # 畫面表現旋鈕 / 陰影偏色 / 風化�
 node tools/audit_soft_stroke.mjs # 軟性物質(細勾線 + 隨風飄揚)稽核(73 項;不需伺服器/瀏覽器;--break-ink / --break-anchor 反向驗證)
 node tools/audit_world_text.mjs  # 世界文字(圖集/版面/裝箱/接線)稽核(57 項;不需伺服器/瀏覽器)
 node tools/audit_beacons.mjs     # 語意化地標(P2-C)稽核(68 項;不需伺服器/瀏覽器;--break-extent / --break-pad 反向驗證)
-node tools/audit_siteplan.mjs    # 場址配置規則稽核(171 項;都市計畫/樹冠羞避/地質排列/**聚落場**;--break-line / --break-shy / --break-strike 反向驗證)
+node tools/audit_siteplan.mjs    # 場址配置規則稽核(187 項;都市計畫/樹冠羞避/地質排列/**聚落場**;--break-line / --break-shy / --break-strike 反向驗證)
 node tools/audit_venue_biome.mjs --offline  # 場地地貌宣告自洽 + 建物管線不讀 mix(不需網路;CI 收這一半)
 node tools/audit_venue_biome.mjs # 完整版:宣告 mix/type vs 圖資實測的地被組成與建蔽率(㋓ 需 Overpass)
 node tools/shot_scene.mjs --venue taroko  # 定場鏡頭組(㋓ 需 playwright;--ink=0/--grade=0/--post=0 逐層隔離)

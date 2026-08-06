@@ -69,7 +69,7 @@ for (const gp of targets) {
   const perKind = new Map();   // kind → Σ 庫零件三角形(逐株閘用)
   const seen = new Set();
   for (const { name, fb, kind, consumer, budgetFam } of descs) {
-    // 逐件預算依**消費角色**取(巨岩塊走 families.megalith:一顆巨岩最多 14 件庫零件,
+    // 逐件預算依**消費角色**取(巨岩塊走 families.megalith:一顆巨岩最多 29 件庫零件,
     // 上限比同一支 GLB 裡的 beacons 疊石緊得多 —— 族相同、角色不同、預算不同)。
     // InstancedMesh 消費端(building 桶)另有**逐桶**節點上限:一顆節點被全桶共用,
     // 上限由該桶實測最大 instance 數反推(nodeCap),有這一份就以它為準。

@@ -506,10 +506,22 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       ok(uses === 3 && (bioC.match(/bldGeo\(/g) || []).length === 3 && calls === 3,
         `bldGeo 只在 buildBldBucket 三桶且逐桶帶原 primitive 保險絲、遊戲內消費點恰 3 處(實得 ${uses}/${calls})`);
     }
-    {   // megaGeo 呼叫點 = 凍結清單 5 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石),名字一律出自 MEGA_LIB 名冊
+    {   // megaGeo 呼叫點 = 凍結清單 7 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石/tower 整座/mesa 整座),名字一律出自 MEGA_LIB 名冊
       const uses = (bioC.match(/megaGeo\(/g) || []).length;   // 定義式是 `= (name) =>`,不含 `megaGeo(`
-      ok(uses === 5 && (bioC.match(/megaGeo\(MEGA_LIB\./g) || []).length === 5,
-        `megaGeo 呼叫點 = 凍結的 5 處且全走 MEGA_LIB 名冊(實得 ${uses};增刪呼叫點 MUST 同步這裡與 tri_budget 的 max_lib_parts_per_rock)`);
+      ok(uses === 7 && (bioC.match(/megaGeo\(MEGA_LIB\./g) || []).length === 7,
+        `megaGeo 呼叫點 = 凍結的 7 處且全走 MEGA_LIB 名冊(實得 ${uses};增刪呼叫點 MUST 同步這裡與 tri_budget 的 max_lib_parts_per_rock)`);
+      // 輪替除數推導不手寫:名冊擴充後第 4 顆以後的節點若取不到,檔案在、intake 綠、
+      // 遊戲裡卻一顆都沒出現 —— 沒有任何錯誤訊息(2026-08-06 名冊 3 → 6 時補上)
+      ok(!/MEGA_LIB\.block\[[^\]]*%\s*\d/.test(bioC) && /const NBLK = MEGA_LIB\.block\.length;/.test(bioC),
+        'MEGA_LIB.block 的輪替除數取自名冊長度(NBLK),MUST NOT 寫死數字');
+      // 「整座」型的兩支:載到庫就不 add 原 primitive,但**迴圈照跑** —— rnd() 枚數
+      // 有無零件庫都要逐位元相同(§2.3 / A4:多消耗一枚,後面每一顆巨岩與每一株植被都位移)
+      for (const [key, flag] of [['tower', 'gT'], ['mesa', 'gM']]) {
+        const seg = bioC.slice(bioC.indexOf(`megaGeo(MEGA_LIB.${key})`));
+        const body = seg.slice(0, seg.indexOf('} else if'));
+        ok(!/if \(!?g[TM]\)[^\n]*rnd\(\)/.test(body) && new RegExp(`if \\(!${flag}\\) g\\.add`).test(body),
+          `synthMegalith ${key} 分支:庫節點只換「add 進場景」,rnd() 不進條件分支(枚數不變)`);
+      }
       const sm = strip(bio.slice(bio.indexOf('function synthMegalith'), bio.indexOf('function flatRadiusAt')));
       ok(!/megaGeo|MEGA_LIB/.test(sm.slice(sm.lastIndexOf('return {'))),
         'synthMegalith 的 col/anchor 回傳塊不讀庫(佈局與碰撞恆走 primitive 參數 —— 庫隨載入成敗而異,§2.3)');

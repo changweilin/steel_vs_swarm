@@ -52,13 +52,25 @@ made = []
 
 # --base <glb>:先把既有零件庫整支匯入並全數保留 —— 追加節點時不必重跑舊節點的來源
 # (重跑 = 減面/縮放全部重算一次,舊節點有機會位元漂移;保留 = 舊節點逐位元原樣)。
+# 同名節點 MUST 是「取代」不是「並存」:Blender 對撞名物件會自動改名成 `name.001`,
+# 於是重跑一顆既有節點會**靜默**留下舊的那顆繼續當真品(消費端與 intake 都按名字查),
+# 新的那顆變成沒人引用的孤兒 —— 讀數完全正常,只是這次重跑等於沒發生
+# (2026-08-06:tower_a/mesa_a 想留三角形餘裕而重跑,實際輸出仍是舊版,由對照台的孤兒
+#  清單與 GLB 節點表才看出來)。
 BASE = (opt_all('base') or [None])[0]
 if BASE:
     bpy.ops.import_scene.gltf(filepath=BASE)
+    regen = {n[0] for n in NODES}
     for o in list(bpy.data.objects):
-        if o.type == 'MESH':
-            o.data.materials.clear()
-            made.append(o)
+        if o.type != 'MESH':
+            continue
+        # `.001` 尾碼一併清:base 若已被舊版本汙染過(撞名自動改名留下的孤兒),
+        # 只比對精確名字會把孤兒留在輸出裡 —— 它沒有消費端,但會一直出現在對照台
+        if o.name.split('.')[0] in regen:
+            bpy.data.objects.remove(o, do_unlink=True)
+            continue
+        o.data.materials.clear()
+        made.append(o)
 for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=src)
