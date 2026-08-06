@@ -577,7 +577,30 @@ satellite domes) and `decorateMegalith` (cairn) — the named `MEGALITHS[].build
 at all, so they would render bit-identically on both sides. An unknown builder now renders
 **nothing** and logs; see silent bug 3.
 
-**Three silent bugs found so far** (this is what the board is for):
+**Framing is measured, never derived from the descriptor** (2026-08-06, silent bug 4). `whole` frames
+the group's own bounding sphere; `part` shows only the meshes that were **swapped**, hides the rest,
+and points the camera at the **largest** hit — one node is placed many times (`rock/mega_a` sits in 7
+places across a 290 m outcrop), so framing their union turns every one of them into a dot.
+
+Finding those meshes takes two passes, in this order. First, identify them **on the generated side by
+measured vertex count** (`megaGeo` / `buildBeacon` both clone, so the count survives) and pair the
+original side **by position** (centre inside the node's bounding sphere × `PAIR_F`). Never assume the
+two panes' traversal indices line up: the imperative megalith builder replaces several primitives
+with one library node (measured 92 → 49 meshes), so index pairing misses all of them and the only
+symptom is "this row fell back to whole". Second, if the count identifies nothing — beacons merge by
+material (cairn: 11 parts → 8 meshes), so the node's vertices are mixed into a bucket — fall back to
+the **per-index diff** = "everything this kind swapped"; that path does require equal mesh counts.
+
+When it does fall back to `whole`, say **which** reason: "this seed doesn't use this node" (the
+imperative megalith picks types per seed — and the board names a seed that does) is not the same as
+"the board couldn't pair them", and writing one message for both turns a working button into a
+broken-looking one. The seed set must cover every library node: `[1, 3, 7]` reached neither
+`rock/mega_e` nor `rock/mega_f`, hence `[1, 7, 10]` — re-scan when nodes are added.
+
+Hiding is not a second assembler — the group is still the game's own, vertex for vertex — and the
+readout still measures the whole prop, so it cannot lie. `near`/`far` track the distance.
+
+**Four silent bugs found so far** (this is what the board is for):
 
 1. `partlib.js` / `models.js` fetch **relative** asset URLs (`assets/models/parts/rock.glb`), and the
    dev boards serve the repo root ⇒ 404 ⇒ the library fell back to primitives and the "generated"
@@ -594,6 +617,16 @@ at all, so they would render bit-identically on both sides. An unknown builder n
    once been on stage. Fixed by adding the `mega` builder (three exports in `biomes.js`; behaviour
    bit-identical, `placeMegaliths` is still the only in-game caller) and by making an unrecognised
    builder/kind render nothing and log, instead of letting `buildBeacon` cover for it.
+4. (2026-08-06) Owner: *「PR147 畫的 3D 物件在零件展示台沒有看到,只看到跟舊有物件重繪」*. Bug 3
+   put the megaliths on stage; the **camera** then kept them off screen. Framing came from the
+   offline descriptor and the registered collider, neither of which is the thing on stage, so one
+   cause produced three symptoms: the camera always looked at `(0, y, 0)` (giant-tree canopy nodes
+   sit 5.8 m off axis and never made it to the middle of the frame); the distance was `collider
+   height × 1.35` with no horizontal term (a 58 m tall, 207 m wide megalith put the camera *inside*
+   the rock — a flat grey wall in both panes); and unit-envelope nodes (`ico(1)` at `[0,0,0]`) could
+   not be framed at all, so the 零件 button was simply disabled for `rock/mega_*`. Net effect:
+   PR #147's output was on the board and unviewable. Fixed as above; `far` was also pinned at 500,
+   which turned the 290 m outcrop into an all-black pane once the camera did back off far enough.
 
 ## 6. Open questions for the repo owner (do not guess)
 
