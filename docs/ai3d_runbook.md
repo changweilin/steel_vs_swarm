@@ -37,6 +37,7 @@
 
 | **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
 | **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
+| **TRELLIS.2-spz fork gate(§5l 頭兩階的翻案)** | **MEASURED — OPEN 2026-08-06 深夜**(§5n)| 使用者指示「先在 3060 上跑閘門量測」。IgorAherne StableProjectorz fork = Windows 原生 + 全預編 cp311 wheel + 逐階段 CPU offload;§5l/§5m 同組 7 張 **7/7 全過 @1024_cascade,59~226s/張、torch 峰值 2.7~3.4GB、裝置 free 恆 ≥5.4GB** —— §5l 殺掉 TRELLIS 1 的網格抽取在 O-Voxel 路徑上不是事。**真門檻是 RAM**(low_vram 模型駐留 CPU ~19GB,avail <20GB 載入無聲死);fill 前篩對 O-Voxel 雙層薄殼**結構性不適用**(七張全 ✗ 而人眼兩張 ◎);建築雙 ◎ 是甜蜜點(幾何+PBR 一次出);「同一張 matte ≠ 同一個輸入」(T2 裁 alpha>204 bbox + 預乘,軟 alpha matte 整段被裁)。**零節點出貨**(METHODS 不動);階梯更新 = `T2-spz(建築/要貼圖)→ 2GP(實心岩體)→ SF3D(快篩)→ procedural`;venv 住 study clone `Documents\study\TRELLIS.2-stableprojectorz\.venv` |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
 
@@ -44,7 +45,7 @@
 |---|---|---|
 | **CC sandbox** (this repo's remote sessions) | All offline audits; e2e (`node server/server.js` then `npm test`); `npm run bal`; editing + push; GitHub MCP (PR/Actions API); HF MCP (search + the curated `dynamic_space` roster) | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` / `*.blob.core.windows.net` — all CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio calls**. No GPU (`nvidia-smi` absent). Raw `api.github.com` REST is gated (MCP tools work; `curl` with `$GITHUB_TOKEN` returns "GitHub access is not enabled") |
 | **GitHub Actions** (ubuntu runner) | Open egress ⇒ photo fetching (proven, run 1); licence re-audit; artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference here would need an `HF_TOKEN` secret **which only the repo owner can add** — do not attempt without it |
-| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`** — the img→3D ladder on this card is now `2GP → SF3D → procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **TRELLIS is out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; TRELLIS.2-4B needs 24 GB and its floor resolution is 512³ ⇒ **both rungs of plan §1's fallback chain above Hunyuan are empty here**. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
+| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`**; **TRELLIS.2 via the stableprojectorz fork proven on native Windows 2026-08-06 深夜 (§5n): 7/7 @1024³, torch peak ≤3.4GB, 59–226s/image, needs ≥20GB free RAM to load, venv `Documents\study\TRELLIS.2-stableprojectorz\.venv`** — the img→3D ladder on this card is now `T2-spz(buildings/textured)→ 2GP(solid rock)→ SF3D(fast prescreen)→ procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **Official TRELLIS builds are out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; official TRELLIS.2-4B needs 24 GB and its floor resolution is 512³. **The stableprojectorz fork reverses this for TRELLIS.2 (§5n, measured)** — those rungs are no longer empty, but only via that fork's build. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
 | **HF Spaces** | `stabilityai/stable-fast-3d` (official gradio Space) as no-GPU fallback — drive it from a machine that can reach `huggingface.co`, i.e. the 3060 box or a browser; **not** from the sandbox | The HF MCP `dynamic_space` roster has **no mesh-generating space** (checked: only image/video/audio tools; `stabilityai/stable-fast-3d` is not MCP-enabled → HTTP 404 via MCP) |
 
 **Consequence an agent must internalise**: photos and GLBs cannot pass through the sandbox.
@@ -735,6 +736,82 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   (整棟建物節點還沒有消費端,§5i 待續同款 —— 先開縫再入庫);⑤照片 20+ 列缺額等節流退
   (隔天 `--family tree/rock/building --limit 25` 逐族);⑥hoodoo 只有 _a 一形,#33 那顆
   座號留給下一形驗異質性。
+
+## 5n. Trial log (2026-08-06 深夜→07 凌晨, 3060-machine session — TRELLIS.2(stableprojectorz fork)閘門:**開**;§5l「頭兩階是空的」被 fork 翻案)
+
+> 使用者問「TRELLIS.2-stableprojectorz 專案的 img to 3D 可應用於 steel_vs_swarm 嗎」——
+> §5l 判 TRELLIS.2 出局的前提是**官方建置**(24GB、Linux-only);IgorAherne 的
+> StableProjectorz fork 宣稱 8GB@1024³ + Windows 原生 + 全預編 cp311 wheel,正好逐條
+> 對著 §5l 的死因打 ⇒ 使用者指示「先在 3060 上跑閘門量測」。本輪**原生 Windows**
+> (非 WSL2),獨立 venv,§5l/§5m 同組 7 張 matte,同一支 `mesh_stats` 前篩。
+
+- **閘門開:7/7 全過 @1024_cascade,59~226s/張,VRAM 餘裕大到反直覺。** 量測環境:
+  study clone `C:\Users\user\Documents\study\TRELLIS.2-stableprojectorz`(venv `.venv`、
+  runner `run_t2_gate.py`、產出 `out_gate*/`)、torch 2.8.0+cu128 / xformers 0.0.32.post2 /
+  triton-windows 3.4;參數 = 模型自身預設(steps 12 / ss 7.5·0.7·5.0 / shape 7.5·0.5·3.0 /
+  tex 1.0·0.0·3.0;fork API 的 12 步「快檔」**就是** TRELLIS.2-4B pipeline.json 的原廠值)、
+  seed 1234、decimation 50k、texture 1024:
+
+  | 主體 | 總秒 | sample+decode+glb | raw faces | torch 峰值 |
+  |---|---|---|---|---|
+  | hoodoo `wc_112762573` | 111.3 | 91.0+6.2+14.1 | 3.84M | 2853MiB |
+  | 神木 `wc_82407863` | 59.4 | 51.7+2.8+4.9 | 1.45M | 2746MiB |
+  | 神木 `wc_82468948` | 61.2 | 53.1+2.9+5.2 | 1.54M | 2746MiB |
+  | Art Deco 摩天樓 `ov_5846` | 226.4 | 198.4+19.1+9.0 | 12.19M | 3409MiB |
+  | 直櫺辦公樓 `ov_fde7` | 133.2 | 114.5+10.3+8.4 | 6.18M | 2974MiB |
+  | 魔鬼塔 `ov_163a` | 111.3 | 96.8+7.6+6.9 | 4.32M | 2909MiB |
+  | 魔鬼塔 `ov_f94b` | 106.0 | 93.0+6.5+6.5 | 3.96M | 2890MiB |
+
+  nvidia-smi 每秒輪詢全程裝置峰值 6648MiB(含桌面基準 ~2.3GB)= **free 恆 ≥5.4GB**;
+  §5l 殺掉 TRELLIS 1 的網格抽取,在 O-Voxel 路徑上是 decode 峰值 0.7~3.4GB 的小事。
+  載入 68s(權重駐留 CPU)。速度定位:SF3D 7s ≪ 2GP 61~67s ≈ **T2 59~226s**(voxel 數
+  隨主體變,建築最貴;steps 25 時魔鬼塔 292.6s)。
+- **真正的門檻是 RAM 不是 VRAM**:low_vram 模式整套模型駐留 CPU **~19GB**,32GB 機器
+  avail <20GB 時 `from_pretrained` **無聲死亡**(exit 5、零 traceback —— 第一次背景跑就這樣
+  死的,GPU 從頭到尾沒被碰)。對策已寫進 runner:依 pipeline type 踢掉用不到的模型
+  (cascade 不用 `tex_slat_flow_model_512`)、matte 有 alpha 就踢 rembg ⇒ 載完 avail 2~3.5GB
+  可跑完整批。跑批前先確認 avail ≥20GB,或先關瀏覽器。
+- **安裝的三個坑(下一個人照抄)**:①installer 的 urllib 抓 GitHub release zip 只有
+  17~62KB/s(pip 同時在抓 torch 會把頻寬搶光)——先 pip 完再 curl zip,dinov3 1.07GB +
+  RMBG-2.0 785MB 就恢復 ~11MB/s;②**wheel 沒打包 `flex_gemm/kernels/triton/`**(`try: import
+  except: pass` 靜默吞掉,直到 to_glb 的 grid_sample 才炸 `has no attribute 'triton'`;取樣
+  不炸是因為 spconv 分派吃 `ALGORITHM` 設定恆走 EXPLICIT_GEMM)⇒ 從上游 FlexGEMM 拷
+  `kernels/triton/` 進 site-packages,而上游 HEAD 的 `spconv/__init__.py` 又引用八個不存在的
+  submanifold 模組 ⇒ init 补 try/except(有留檔註解);③sm_86 自動偵測會選 `flash_attn`
+  而 whl/ 沒有那顆 ⇒ **`ATTN_BACKEND=xformers` 必須顯式設**(§5l 同款)。附帶:Blender
+  headless 的相對 render 路徑會落到**磁碟根目錄**(`C:\out_gate\`),一律給絕對路徑。
+- **`mesh_stats` 的 fill 這把尺對 TRELLIS.2 結構性不適用 —— 別拿它判死最強的模型。**
+  七張全被判「殼/碎片 ✗」(fill 0.004~0.025),而人眼有兩張 ◎:O-Voxel 產出是**雙層
+  薄殼**(trimesh 驗證:焊掉 UV 縫後開放邊 ~0、`fix_normals` 後 fill 仍趨近 0 = 幾何上
+  封閉但不包體積,by construction)。fill 的語意是「實心度」,是為 SF3D 設計的(薄殼 =
+  垃圾);對 T2 薄殼 = 常態,判讀只能靠人眼渲染(Blender headless 兩視角 contact sheet,
+  `render_gate.py`/`sheet_gate.py`)。連帶警告:**薄殼大比例減面正是 §5e 撕裂警告的那一族**
+  (2GP 是實心 mc 網格才敢 213k→560),入庫前 MUST 實測 50k→~500 的減面路徑。
+- **人眼判讀(對照 §5l SF3D / §5m 2GP 同組)**:
+  ①**建築雙 ◎ —— 這是 T2 的甜蜜點**:Art Deco 摩天樓四面退縮量體 + 窗格貼圖全在
+  (SF3D 0.048 立面殼、2GP 0.447 shape-only);直櫺辦公樓箱體 + 垂直櫺線完整。且 T2 是
+  **幾何 + PBR 貼圖一次出**(2GP 的 paint 從來沒跑)⇒ 建築整棟節點的縫(§5i/§5m 待續)
+  開了之後,T2 是首選生成器;②魔鬼塔 seed 1234 = 正面浮雕背面開口 △,seed 42/steps 25 =
+  **全閉合筒身+裙錐 ◎ 但貼圖整體掉成深藍 ✗** ⇒ 浮雕化是**逐 seed 抽籤不是結構性失敗**,
+  shape 與 texture 各自有方差 ⇒ 岩石類要 per-seed 重抽紀律(挑片紀律的延伸);③神木仍碎
+  且**把照片裡的遊客生成出來**(2GP 同病)—— 樹的問題仍是輸入語料不是模型(§5m ③ 不變)。
+- **同一張 matte ≠ 同一個輸入(本輪最重要的一課)**:hoodoo 錨點圖三種輸入三種結果 ——
+  SVS matte(下半身**軟 alpha 漸層**,≤8/255)→ T2 preprocess「bbox 取 alpha>204 裁切 +
+  RGB×alpha 預乘到黑」把基座**整段裁掉** ⇒ 生成石板,忠於它看到的殘片;同檔案 2GP 全身
+  保住是因為 hy3dgen 前處理自己閾值化;原圖 + fork 內建 RMBG-2.0 → 背景同質岩壁剝不掉 ⇒
+  **場景地形塊**(hoodoo 本體帽岩/細頸/基座俱全,但埋在場景裡 = §5m 落選同族)。
+  ⇒ 接進 SVS 管線的紀律:**餵 T2 的 matte MUST 先驗 alpha 直方圖、軟 alpha 先二值化**
+  (>16 → 255);同時這解釋了 §5l SF3D 在同一張的 0.065/0.227 —— 那半條帳也是輸入的。
+- **定位定案**:fallback chain 頭兩階從「空」變「**開(fork 版)**」,階梯 =
+  `T2-spz(建築/規則幾何、要貼圖時)→ 2GP(實心岩體)→ SF3D(量產快篩)→ procedural`。
+  T2 不取代 2GP:薄殼 vs 實心、9~30 倍慢於 SF3D、RAM 門檻高;它拿下的是「SF3D 推不出
+  深度、2GP 沒有貼圖」的那一格。
+- **未跑 / 待續**:①**零節點出貨** ⇒ `METHODS` 不加鍵、`parts_manifest` 不動(原則 6,
+  §5l 同款);②薄殼 50k→~500 大比例減面未測 —— 這是入庫前的下一道閘;③512 / 1536 兩檔
+  解析度未量(512 應更快,1536 疑似撞 RAM);④plan §1 表待補一行 fork 建置(與官方
+  TRELLIS.2 分列,勿再混寫 —— §5l 的教訓);⑤建築整棟節點的消費端縫仍未開(§5i/§5m
+  待續同款),開了才輪得到 T2 的甜蜜點兌現;⑥texture 掉色(魔鬼塔深藍)未歸因,懷疑
+  tex_slat 對 seed 敏感,出貨輪要 A/B。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
