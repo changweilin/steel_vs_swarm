@@ -8,13 +8,18 @@
 //   ・轉換名冊手寫 ⇒ 加角色/改 fx 之後名冊靜默漂移(推導判定 ultDelivered 是唯一縫);
 //   ・CD 映射改成分段表 ⇒ 排名翻掉(仿射保序是**保證**不是巧合);
 //   ・效果分支在載具端另抄一份 ⇒ heroCast 改了、載具照舊(_castEffect 單一縫);
-//   ・守衛漏一個機種 ⇒ 該機種 converted 角色同時領兩份載具(大招 + 機種絕招);
+//   ・機種絕招復辟 ⇒ 那個機種同時領兩份載具(大招 + 機種絕招),而預算只發了一份;
 //   ・「效果取代傷害」漏一條引爆路徑 ⇒ 補血機炸人(預算雙重領,畫面上只是「傷害偏高」)。
+//
+// 2026-08-06 第二階段(長按 = 招式手勢)之後,②「合併為一招」的驗法**換了一把更硬的尺**:
+// 機種絕招三個入口(heroKamikaze / heroDecoy / heroHyper)**整組退場**,守衛也就沒有東西可守
+// ⇒ 改驗「三種載具的**唯一生成點** = _launchUltCarrier」。這比逐入口驗守衛強:守衛是「舊路徑
+// 還在,只是對 converted 關著」,而唯一生成點是「舊路徑根本不存在」——後者連新增第二條路都擋得住。
 //
 // 跑法:`node tools/audit_ult_carrier.mjs`
 //   反向驗證(原則 9;對應條目 MUST 立刻紅字,否則等於沒驗到):
 //     `--break-cd`    ultCarrierCd 改回恆等映射(CD 不壓帶)⇒ Ⅰ 紅
-//     `--break-guard` 拿掉 heroKamikaze 的 ultDelivered 守衛(原文層)⇒ Ⅱ 紅
+//     `--break-guard` 把 heroKamikaze 連同第二個 kami 生成點塞回原文(復辟)⇒ Ⅱ 紅
 //     `--break-boom`  _kamiBoom 的 uA 分支失效(引爆走一般爆風)⇒ Ⅲ 紅
 // 退出碼:0 = 全綠;1 = 有紅字
 import { mkdtempSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
@@ -47,7 +52,10 @@ const bust = (src, re, to, tag) => {
   if (next === src) throw new Error(`反向驗證 ${tag}:原文沒有匹配到目標,改壞規則已失效`);
   return next;
 };
-if (BREAK_GUARD) S = bust(S, /\n    if \(ultDelivered\(h\.ch\)\) return;\n    const sq = h\.sq;\n    if \(this\.t < \(sq\.kamiCd/, '\n    const sq = h.sq;\n    if (this.t < (sq.kamiCd', '--break-guard');
+// --break-guard:把機種絕招「復辟」回原文 —— 一個獨立的 heroKamikaze 入口 + 第二個 kami 生成點。
+// 這正是 Ⅱ 要擋的那件事(該機種的 converted 角色同時領大招載具與機種絕招 = 預算領兩份)。
+if (BREAK_GUARD) S = bust(S, /\n  \/\/ 機種絕招「飽和攻擊」\(heroKamikaze\)/,
+  "\n  heroKamikaze(pid) {\n    const h = this.heroes.get(pid);\n    this._add({ kind: 'kami', side: h.side, pid, kami: true, hp: kamiHp(), armor: 0 });\n  }\n\n  // 機種絕招「飽和攻擊」(heroKamikaze)", '--break-guard');
 
 // ---- 資料層:--break-cd 走「改壞副本再 import」——與真品同一份原文,只動映射那一行 ----
 let d;   // data.js 模組(真品或改壞副本)
@@ -153,31 +161,48 @@ sec('Ⅱ 單一縫(原文)');
   ok(count(S, /_ultArrive\(/g) === 4, `_ultArrive:1 定義 + 3 引爆端(kami / hyper / 轟炸機;實得 ${count(S, /_ultArrive\(/g)})`);
   ok(count(S, /_launchUltCarrier\(/g) === 2, '_launchUltCarrier:1 定義 + heroCast 恰一個呼叫點');
 
-  // 三個機種絕招入口都有 ultDelivered 守衛(合併為一招:舊路徑對 converted 關閉)
+  // 機種絕招三個入口**整組退場**(2026-08-06 第二階段):不是「留著但擋住」,是根本不存在。
+  // 註解裡照樣提得到這三個名字(具名退場記錄),所以 MUST 只數執行原文(strip)。
   for (const m of ['heroKamikaze', 'heroDecoy', 'heroHyper']) {
-    ok(/ultDelivered\(h\.ch\)/.test(grabMethod(S, m)), `${m} 有 ultDelivered 守衛`);
+    ok(!new RegExp(`\\n  ${m}\\(`).test(strip(S)), `${m} 已整組退場(MUST NOT 復辟)`);
   }
+  // 唯一生成點:三種載具的 kind 各只出現一次,而且都在 _launchUltCarrier 裡
+  const luc = strip(grabMethod(S, '_launchUltCarrier'));
+  for (const k of ['kami', 'decoy', 'hyper']) {
+    ok(count(S, new RegExp(`kind: '${k}',`, 'g')) === 1 && new RegExp(`kind: '${k}',`).test(luc),
+      `${k} 的唯一生成點 = _launchUltCarrier(載具只剩「大招遞送」這一個身分)`);
+  }
+  // 傳輸層:三條機種絕招訊息一併退場(留著就是一條繞過 heroCast 的側門)
+  ok(!/'kami'|'decoy'|'hyper'/.test(strip(readSrc('server', 'rooms.js'))),
+    'rooms.js 的 kami / decoy / hyper 三條訊息已退場(一律走 t:\'cast\' 單一縫)');
 
-  // 客戶端:長按與 E 同縫(_fireHoldAbility 的 converted 分支走 _castAbility('ult'))
+  // 客戶端:長按 = 招式手勢,分流只有 abilHoldSlot 一份(MUST NOT 在輸入端另寫 `aiming ? …`)
   const fha = grabMethod(G, '_fireHoldAbility');
-  ok(/ultDelivered\(this\.ch\)/.test(fha) && /_castAbility\('ult'\)/.test(fha),
-    'game._fireHoldAbility:converted 分支走 _castAbility(\'ult\')(單一派發縫)');
-  ok(fha.indexOf('ultDelivered') < fha.indexOf('isDrone'), '轉換分支排在機種分派**之前**');
-  // HUD:機種絕招格對 converted 收起、觸控絕招鈕鏡射 ult CD
+  ok(/_castAbility\(abilHoldSlot\(this\.aiming\)\)/.test(fha),
+    'game._fireHoldAbility:長按走 _castAbility(abilHoldSlot(aiming))(與 Q/E 同一個派發縫)');
+  ok(!/isDrone|isMorph|ultDelivered/.test(strip(fha)),
+    '_fireHoldAbility 不再有機種分派表(機種絕招退場 ⇒ A22 的分派縫一併退場)');
+  ok(count(G, /abilHoldSlot\(/g) === 1,
+    `分流只有一個消費端(實得 ${count(G, /abilHoldSlot\(/g)});MUST NOT 在觸控鈕/鍵盤各判一次`);
+  // HUD:機種絕招三格整組收起、觸控招式鈕鏡射 ult CD
   const hud = grabMethod(G, '_weaponHud');
-  ok(count(hud, /ultDelivered\(this\.ch\)/g) >= 4, '_weaponHud:kami/decoy/hyper 三格 + ultCarrier 欄都吃 ultDelivered');
-  ok(/w\.ultCarrier \? \(w\.ult\.cd \|\| 0\)/.test(readSrc('public', 'js', 'main.js')),
-    'main.js 觸控絕招鈕面:carrier 角色鏡射 ult 的 CD(單一來源)');
+  ok(!/kami:|decoy:|hyper:/.test(strip(hud)), '_weaponHud 不再有 kami / decoy / hyper 三格');
+  // 招式鈕面:長按對 32 台一視同仁 ⇒ CD 鏡射**當下模式那一格**招式(單一來源 = w.skill / w.ult),
+  // 載具化與否不影響鈕面(它只改大招自己的結算方式)⇒ HUD 不再需要 ultCarrier 旗標
+  const M = readSrc('public', 'js', 'main.js');
+  ok(/const abCd = \(w\.aiming \? w\.ult\.cd : w\.skill\.cd\) \|\| 0;/.test(M),
+    'main.js 招式鈕面:依 aiming 鏡射小招/大招 CD(單一來源)');
+  ok(!/w\.ultCarrier/.test(strip(M)) && !/ultCarrier:/.test(strip(hud)),
+    'HUD 不再帶 ultCarrier 旗標(長按語意與載具化無關)');
 
-  // bots:三個機種絕招區塊有守衛(不浪費 special 手速去按必拒的鈕)
-  ok(count(B, /h\.kind === 'drone' && !ultDelivered\(h\.ch\)/g) === 1
-    && count(B, /h\.kind === 'morph' && !ultDelivered\(h\.ch\)/g) === 1
-    && count(B, /h\.kind === 'robot' && !ultDelivered\(h\.ch\)/g) === 1,
-    'bots._engage:三個機種絕招區塊都有 !ultDelivered 守衛');
+  // bots:三個機種絕招區塊一併退場(否則每 0.75s 付一格 special 手速去按一顆不存在的鈕)
+  ok(!/heroKamikaze|heroDecoy|heroHyper/.test(strip(B)),
+    'bots._engage:三個機種絕招區塊已退場(只剩 heroCast 兩條路)');
 
   // lanesim:converted 分流 + 擊落否定 + 平衡模型 ⑦f 只量仍持有機種絕招的角色
   ok(/ultDelivered\(M\.ch\)\) return castUltCarrier/.test(strip(L)), 'lanesim.castAbil 分流到 castUltCarrier');
-  ok(/if \(v\.uA\) continue;/.test(strip(L)), 'lanesim.stepAbils:大招載具擊落 = 完全否定(無殉爆/無補投)');
+  ok(/if \(v\.hp <= 0\) continue;/.test(strip(L)) && !/DEATH_F/.test(strip(L)),
+    'lanesim.stepAbils:載具擊落 = 該份完全否定(機種絕招時代的殉爆/補投已隨那三招退場)');
   ok(/filter\(\(c\) => !ultDelivered\(c\)\)/.test(strip(BAL)), 'balance ⑦f 只平均仍持有機種絕招的角色');
 
   // 效果取代傷害:四條 uA 引爆/擊落路徑一律不走 _blast
@@ -263,24 +288,20 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     ok(dum.hp === 4000, '效果取代傷害:emp 載具全程零傷害');
   }
 
-  // ④ 守衛:converted 三機種舊路徑全擋;unconverted 照常
+  // ④ 機種絕招整組退場:舊路徑在伺服器上**不存在**(而不是「被守衛擋下」);
+  //    未轉換的 9 台大招仍是瞬發 —— 一台載具都不生(它們的補償走 SELF_ULT,見 audit_self_ult)
   {
     const sim = new BattleSim(mkCfg());
-    const g1 = sim.addHero('SWARM', 'a4', 's02'); g1.x = 0; g1.z = 0;
-    sim.heroKamikaze('a4');
-    ok(![...sim.ents.values()].some((e) => e.kami), 'converted 無人機 heroKamikaze 被擋(合併為一招)');
-    const g2 = sim.addHero('SWARM', 'a5', 's03'); g2.x = 0; g2.z = 0;
-    sim.heroDecoy('a5');
-    ok(!sim.squads.get('a5').decoy, 'converted 變形者 heroDecoy 被擋');
-    const g3 = sim.addHero('STEEL', 'a6', 't01'); g3.x = 0; g3.z = 0; g3.hyperCd = 0;
-    sim.heroHyper('a6');
-    ok(!g3.hyper, 'converted 機甲 heroHyper 被擋');
-    const g4 = sim.addHero('STEEL', 'a7', 't02'); g4.x = 10; g4.z = 0; g4.hyperCd = 0;
-    sim.heroHyper('a7');
-    ok(!!g4.hyper && !g4.hyper.uA, 'unconverted 機甲(t02)機種絕招照常(純傷害戰鬥部)');
-    const g5 = sim.addHero('SWARM', 'a8', 's12'); g5.x = 20; g5.z = 0;
-    sim.heroKamikaze('a8');
-    ok([...sim.ents.values()].some((e) => e.kami && !e.uA), 'unconverted 無人機(s12)機種絕招照常');
+    ok(['heroKamikaze', 'heroDecoy', 'heroHyper'].every((m) => sim[m] === undefined),
+      '三個機種絕招入口在 BattleSim 上不存在(載具只剩「大招遞送」這一個身分)');
+    // 側別只用戰區真的有主堡的那兩個(傭兵角色照樣掛得上去 —— 這裡驗的是機種不是陣營)
+    for (const [pid, ch, side] of [['a4', 's12', 'SWARM'], ['a5', 't02', 'STEEL'], ['a6', 'm08', 'STEEL']]) {
+      const g = sim.addHero(side, pid, ch);
+      g.x = 0; g.z = 0; g.mp = 999; g.abil.ult = 1;
+      sim.heroCast(pid, 'ult');
+    }
+    ok(![...sim.ents.values()].some((e) => e.kami || e.decoy || e.hyper),
+      '未轉換的三機種代表(s12 / t02 / m08)大招一律瞬發,不生任何載具');
   }
 
   // ⑤ 最短飛行腿:對自身施放(支援型無點)⇒ 遞送點仍推到 MIN_LEG 之外(需要飛行時間)
@@ -294,14 +315,19 @@ sec('Ⅲ 行為直測(真 BattleSim)');
       `瞄在腳邊 ⇒ 遞送點推到 MIN_LEG ${d.ULT_CARRIER.MIN_LEG}m 之外(每一發都有攔截窗)`);
   }
 
-  // ⑥ 未轉換角色瞬發路徑逐位元不變(s11 自補;抽縫是重構不是改行為)
+  // ⑥ 未轉換角色走瞬發路徑(s11 自補);**治療量 = 基礎 + SELF_ULT 補償增額**——
+  //    2026-08-06 機種絕招退場後這一格不再是「逐位元同舊制」,增額本身由 audit_self_ult 把關,
+  //    這裡只釘住「載具路徑沒有把它接管走」與「補償真的經 selfUltBoost 這一個縫」。
   {
     const sim = new BattleSim(mkCfg());
     const h = sim.addHero('SWARM', 'a10', 's11');
     h.mp = 999; h.abil.ult = 1; h.hp = 50;
     sim.heroCast('a10', 'ult');
     const A = d.heroAbility('s11', 'ult', 1);
-    ok(Math.abs(h.hp - Math.min(h.maxHp, 50 + A.heal)) < 0.01, 's11 瞬發自補逐位元同舊制');
+    const bst = d.selfUltBoost('s11', 1, h.abil);
+    ok(![...sim.ents.values()].some((e) => e.uA), 's11 大招不生載具(瞬發路徑)');
+    ok(Math.abs(h.hp - Math.min(h.maxHp, 50 + A.heal + bst.heal)) < 0.01,
+      `s11 瞬發自補 = 基礎 ${A.heal} + 補償增額 ${bst.heal.toFixed(1)}(selfUltBoost 單一縫)`);
     ok(A.cd === d.tierVal(d.CHARACTERS.s11.ult.cd, 1), `s11 大招 cd 不動(${A.cd}s)`);
   }
 }

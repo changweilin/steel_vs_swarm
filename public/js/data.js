@@ -1160,6 +1160,94 @@ export const ultParts = (kind, fx) => {
 export const ultPartN = (total, n, i) =>
   Math.round(total * (i + 1) / n) - Math.round(total * i / n);
 
+// ---- 招式啟動手勢(2026-08-06 使用者定案「大招可透過狙擊模式長按右鍵、小招可透過一般模式長按右鍵」)----
+// 長按右鍵/長按 R 自此**只做一件事** = 施放招式,由**當下模式**分流:一般 → 小招、狙擊 → 大招。
+// `abilHoldSlot(aiming)` 是這條分流的**唯一縫**:客戶端手勢(game._fireHoldAbility)、觸控招式鈕、
+// 說明文字與稽核同吃 —— MUST NOT 在任一輸入端另寫 `aiming ? 'ult' : 'skill'`(第二份就是
+// 「某顆鈕在狙擊模式下放的是小招」這種只在特定狀態現形的分歧,而且沒有任何錯誤訊息)。
+// 短按右鍵仍是切換模式(見 game._rmbUp),兩者以按住時長區分,互不衝突。
+export const abilHoldSlot = (aiming) => (aiming ? 'ult' : 'skill');
+
+// ---- 機種絕招退場 + 純自身型大招補償(2026-08-06 使用者定案「機種絕招移除,提高大招效果」)----
+// 長按被招式佔走之後,純傷害的機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)**整組退場**:
+// 三種載具只剩「大招遞送」這一個身分(ULT_CARRIER),`SPECIAL` 只剩下面這把**補償的尺**。
+// 載具化的 23 台本來就把長按換成了大招(2026-08-06 前一輪),不受這一段影響;
+// 剩下 9 台純自身型大招沒有載具可換 ⇒ 把被移除的那份預算折進大招本身。
+//
+// **當量 MUST 推導不手寫**(`selfUltEq`):機種絕招每 `SPECIAL_CD_S` 秒發一份,而在同一段時間裡
+// 大招只放得出 `cd / SPECIAL_CD_S` 次 ⇒ 一次大招要帶回這麼多份,否則「移除」就是淨削弱。
+// 手寫一個 2 倍係數的下場是:之後改任一角色的 `ult.cd` 或 `SPECIAL.BASE`,補償當場失準,
+// 而畫面上只表現成「這幾台好像變弱了」,沒有任何錯誤訊息。
+//
+// 兌現形式**逐 fx 分派**(`selfUltBoost`),但一律走既有的 mods / heal 通道:
+//   ①有傷害窗的 buff 型(s04/t04/t06/m01)⇒ 把當量攤進 `dur` 秒的 `mul.dmg` 增額
+//     (Δ = 當量 ÷ (該角色重武器持續 DPS × dur);DPS 走 `weaponDps` 單一縫,MUST NOT 手抄彈匣週期);
+//   ②自補型(s11)⇒ 治療量增額 = 當量本身(治療 X 點抵銷 X 點傷害,等價可推導);
+//   ③匿蹤(m08)⇒ 收斂成**破隱後 `ALPHA_S` 秒**的傷害倍率(使用者定案「破隱一秒內傷害增加」)——
+//     同一份預算換一個更短更硬的窗,倍率因此也是推導值,MUST NOT 手寫 3。
+//   ④重新設計的三台(s12 復甦 / t02 超載 / m04 偵搜)⇒ 效果本身就是補償,不再另加乘數
+//     (它們的數值是**設計值**,校準錨是 bal ⑤⑦,見各自 ult 欄位的註解)。
+// 夾制(MUL_MAX / ALPHA_MAX)只是防呆上限:窗短或 DPS 低的角色不該因為除法而拿到荒謬倍率。
+export const SPECIAL_CD_S = SQUAD.KAMI.CD_S;   // 三招同一段 CD(DECOY.CD_S / HYPER.CD_S 同值,稽核釘住)
+export const SELF_ULT = {
+  ALPHA_S: 1,       // 匿蹤破除後的爆發窗長度(秒;使用者定案「破隱一秒內」)
+  MUL_MAX: 1.0,     // 傷害加成**增額**上限(疊在既有 mul.dmg 之上)
+  ALPHA_MAX: 3,     // 破隱爆發窗的傷害倍率上限(= 使用者舉的「3 倍」;推導值多半頂到這裡)
+  // **實得率**:`SPECIAL.BASE` 是**名目**預算(爆風總傷害),而機種絕招的**實得**(打在英雄與
+  // 砲塔上、扣掉被攔截那幾份)只有其中一部分。補償要換的是「玩家真的少拿到多少」,拿名目去換
+  // 就是**淨加強**:Lv1 一次大招會塞進 700 點額外傷害、8 秒窗算出來的增額直接頂到夾制上限,
+  // 而那台角色本來的 mul.dmg 才 1.35。
+  //
+  // **自 2026-08-06 起這是凍結的歷史量測,MUST NOT 再宣稱它是當輪量出來的**:
+  // 現值 0.35 取自機種絕招**退場前**最後一輪 bal ⑦f 的實測帶下緣(逐招 102~183 EHP/次 ÷ 名目
+  // 300 = 0.34~0.61;偏差朝「補得保守」,原則 6)。退場之後那三招在模型裡**不存在**,而最接近
+  // 的類比(帶 strike payload 的大招載具)差在**唯一支配這個數字的性質**上 —— 機種絕招自動追蹤
+  // 目標,大招載具是「點遞送、不索敵不追擊」(同日使用者定案)⇒ 同一輪 ⑦f 實測它對機體+砲塔
+  // 只有 **4.3 EHP/次**(名目 391 ⇒ 實得率 1.1%);清兵那一桶另有 142 EHP/次(全部/名目 37.4%,
+  // 與本係數同量級 —— 但那一桶不決定勝負,見 lanesim 檔頭)。拿 1.1% 去重算會把這 9 台的大招
+  // 折到近乎歸零,而那量到的是「載具打不中移動中的機體」,不是「機種絕招本來值多少」。
+  // ⇒ 要調這個係數,**MUST 改看 bal ⑦f 的「自身型補償」那一行**(逐台 EHP/次)決定。
+  REALIZED_F: 0.35,
+  REVIVE_INV_S: 1.5,   // 原地復活後的無敵幀(站起來那一瞬不該被同一發爆風再收一次)
+};
+/** 一次純自身型大招要帶回的機種絕招預算(**實得**傷害當量)。
+ *  載具化角色恆 0(長按已經換成大招,不重複補)。 */
+export const selfUltEq = (ch, lvl, abil) => {
+  const a = CHARACTERS[ch]?.ult;
+  if (!a || ultDelivered(ch)) return 0;
+  return specialBudget(abil) * SELF_ULT.REALIZED_F * tierVal(a.cd, lvl) / SPECIAL_CD_S;
+};
+/**
+ * 純自身型大招的補償欄位(**單一縫**:伺服器 `_castEffect`、客戶端 HUD 與圖鑑同吃)。
+ * 回傳 `{ dmgMul, heal, alphaX }` —— 全為「增額」語意,無補償時三欄皆為中性值
+ * (dmgMul 0 / heal 0 / alphaX 1)⇒ 其餘 23 台逐位元不受影響。
+ */
+export const selfUltBoost = (ch, lvl, abil) => {
+  const none = { dmgMul: 0, heal: 0, alphaX: 1 };
+  const a = CHARACTERS[ch]?.ult;
+  const eq = selfUltEq(ch, lvl, abil);
+  if (!a || eq <= 0) return none;
+  if (a.fx === 'stealth') {
+    // 破隱窗:整份當量壓進 ALPHA_S 秒 ⇒ 倍率 = 1 + 當量 ÷ (窗內基礎輸出)
+    const dps = selfUltDps(ch, abil);
+    if (dps <= 0) return none;
+    return { ...none, alphaX: Math.min(SELF_ULT.ALPHA_MAX, 1 + eq / (dps * SELF_ULT.ALPHA_S)) };
+  }
+  if (a.fx === 'heal') return { ...none, heal: eq };   // 治療 X 點 = 抵銷 X 點傷害
+  if (a.fx === 'buff' && a.mul?.dmg) {
+    const dur = tierVal(a.dur, lvl), dps = selfUltDps(ch, abil);
+    if (!(dur > 0) || dps <= 0) return none;
+    return { ...none, dmgMul: Math.min(SELF_ULT.MUL_MAX, eq / (dps * dur)) };
+  }
+  return none;   // 重新設計的三台(rally / overdrive / recon):效果本身即補償
+};
+/** 補償折算用的基準輸出:該角色**重武器**的持續 DPS(彈匣週期走 `weaponDps` 單一縫)。
+ *  取重武器是因為大招開窗那幾秒玩家打的就是它;輕武器 DPS 低會把倍率推到夾制上限。 */
+export const selfUltDps = (ch, abil) => {
+  const w = heroWeapon(ch, 'heavy', abil?.heavy || 1);
+  return w ? weaponDps(w) : 0;
+};
+
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
@@ -2143,6 +2231,10 @@ export function heroAbility(ch, slot, lvl = 1) {
     range: carrier && !a.range ? hyperRange() : t(a.range ?? 0) * COMBAT_SCALE,
     imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
     unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
+    // 純自身型大招補償帶進來的三個新欄位(2026-08-06;見 SELF_ULT):
+    //   regen 恢復速度倍率 / cleanse 解除並免疫異常 / revive 復活回場血量比例 / brk 被擊中即結束。
+    // 未標註的角色一律得到 0/false ⇒ 其餘 28 台的 heroAbility 輸出逐位元不動。
+    regen: t(a.regen ?? 0), cleanse: !!a.cleanse, revive: t(a.revive ?? 0), brk: !!a.brk,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
     vsSp: a.vsSp ?? 1, vsHp: a.vsHp ?? 1, spPierce: a.spPierce || 0,   // 見 heroWeapon 同欄註
@@ -2479,8 +2571,13 @@ export const CHARACTERS = {
       vs: { flesh: 0.8, armor: 1.1, air: 0.5, building: 1.2 } },
     skill: { name: '薰衣草斗篷', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '從敵方感測網上消失(開火即現形)' },
-    ult: { name: '滿天星座', fx: 'vision', vision: [10, 13, 16],
-      cd: [70, 62, 54], mp: [80, 90, 100], desc: '衛星會被打下來,星星不會:全隊長時間無霧' },
+    // 2026-08-06 使用者定案(機種絕招退場的補償;見 SELF_ULT):由「全隊無霧」改成**全隊復甦**——
+    // 恢復速度倍率 + 解除既有異常 + 期間免疫異常 + **仍在重生倒數中**的隊友原地半血復活。
+    // 復活刻意只救「倒數中」的(已重生的不算)且回場半血 + 一瞬無敵,CD 維持 70→54s:
+    // 這是全場唯一能把一條命拿回來的效果,價錢付在「必須在那 30 秒窗口內按下去」。
+    ult: { name: '滿天星座', fx: 'rally', target: 'team', regen: [2.5, 3, 3.5],
+      cleanse: true, revive: [0.5, 0.5, 0.5], dur: [8, 10, 12],
+      cd: [70, 62, 54], mp: [80, 90, 100], desc: '衛星會被打下來,星星不會:全隊回復加速、解除並免疫異常,倒下的人原地站起來' },
   },
 
   // ================= 鋼鐵陣營(機甲)=================
@@ -2522,10 +2619,14 @@ export const CHARACTERS = {
       vs: { flesh: 1.0, armor: 1.8, air: 1.2, building: 0.6 } },
     skill: { name: '相位突進', fx: 'dash', imp: [26, 32, 38],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '同步率暴走:機體瞬間位移' },
+    // 2026-08-06 使用者定案(見 SELF_ULT):改成**超載** —— 彈藥全滿 + 期間無限彈藥(免裝填)
+    // + 閃避率提升,**被擊中即結束**。補償當量由「免裝填的 DPS 增益 × 撐得住的秒數」兌現,
+    // 故刻意不再疊 mul.dmg(疊上去就是同一份預算領兩次);`brk` 那條風險正是它的價錢 ——
+    // 全滿彈匣 + 零裝填的爆發只有在沒被打到的前提下成立,吃到一發就回到常態。
     ult: { name: '同步率 100%', fx: 'buff', target: 'self',
-      mul: { dmg: [1.3, 1.4, 1.5], dmgTaken: [0.75, 0.7, 0.65], reload: [0.75, 0.7, 0.65] },
-      add: { fx: 'dodge' },
-      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '再沒有介面延遲:直射攻擊完美迴避' },
+      mul: { dmgTaken: [0.75, 0.7, 0.65] },
+      add: { fx: 'overdrive', evade: [0.25, 0.32, 0.4] }, brk: true,
+      dur: [8, 10, 12], cd: [80, 70, 60], mp: [85, 95, 105], desc: '再沒有介面延遲:彈藥全滿、期間免裝填、閃避率大增 —— 但挨一發就結束' },
   },
   t03: {
     side: 'STEEL', kind: 'robot', name: '阿爾喬姆・薩維利耶夫', code: '大鍋', machine: '「爐膛」突擊機甲',
@@ -2802,8 +2903,13 @@ export const CHARACTERS = {
       vs: { flesh: 1.2, armor: 1.9, air: 1.3, building: 0.5 } },
     skill: { name: '匿名發包', fx: 'stealth', dur: [4, 5, 6],
       cd: [20, 18, 16], mp: [35, 40, 45], desc: '合約不留名:從感測網上消失(開火即現形)' },
-    ult: { name: '全境盡職調查', fx: 'vision', vision: [9, 12, 15],
-      cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊限時無霧視野' },
+    // 2026-08-06 使用者定案(見 SELF_ULT):無霧秒數加倍,並在同一段窗內給**全隊**射程 / 跑速 /
+    // 閃避率加成。fx 仍是 `recon`(不是 buff+team)⇒ `ultDelivered` 不收它,維持瞬發全隊型;
+    // 射程加成走 mods 的 `range` 鍵(伺服器射程閘與客戶端有效射程同吃 heroRange 那條縫)。
+    ult: { name: '全境盡職調查', fx: 'recon', target: 'team', vision: [18, 24, 30],
+      mul: { range: [1.2, 1.25, 1.3], speed: [1.2, 1.25, 1.3] },
+      add: { fx: 'evade', evade: [0.12, 0.16, 0.2] }, dur: [8, 10, 12],
+      cd: [72, 64, 56], mp: [85, 95, 105], desc: '受雇前先查清楚:全隊無霧視野加倍,射程/跑速/閃避同步拉高' },
   },
   m05: {
     side: 'MERC', kind: 'morph', name: '瑪爾塔・韋恩', code: '熄燈', machine: '「鎖喉」電戰可變機甲',
@@ -2868,8 +2974,10 @@ export const CHARACTERS = {
       vs: { flesh: 1.3, armor: 1.7, air: 1.2, building: 0.5 } },
     skill: { name: '預付訂金', fx: 'dash', imp: [28, 34, 40],
       cd: [12, 10, 8], mp: [25, 30, 35], desc: '訂金到帳就位:沿視線瞬間位移' },
-    ult: { name: '查無此人', fx: 'stealth', dur: [4, 5, 6],
-      cd: [70, 62, 54], mp: [80, 90, 100], desc: '尾款結清便人間蒸發(開火即現形)' },
+    // 2026-08-06 使用者定案(見 SELF_ULT):破隱後 SELF_ULT.ALPHA_S 秒內傷害倍增 ——
+    // 倍率由 `selfUltBoost` 從被移除的機種絕招預算**推導**(MUST NOT 手寫);`alpha` 只是旗標。
+    ult: { name: '查無此人', fx: 'stealth', dur: [4, 5, 6], add: { fx: 'alpha' },
+      cd: [70, 62, 54], mp: [80, 90, 100], desc: '尾款結清便人間蒸發:開火即現形,但現形那一秒傷害暴增' },
   },
 };
 

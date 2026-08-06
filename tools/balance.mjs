@@ -38,7 +38,7 @@
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, hyperShare, ultDelivered } from '../public/js/data.js';
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, ultDelivered, SELF_ULT } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
@@ -445,40 +445,59 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
       + (CLS_EXEMPT[g] ? ` — 豁免:${CLS_EXEMPT[g]}` : `(${CLS_LO * 100}~${CLS_HI * 100}%)`));
   }
 
-  // ---- f 長按攻擊(2026-08-02 使用者定案「只使用輕/重武器 + 長按攻擊」)----
-  // 三招吃**同一份**傷害預算(SPECIAL)、同一顆鍵、同一段 30s CD ⇒ 使用者的設計語意就是「威力等值」。
-  // e2e 已釘死**名目**預算等值,但名目不等於實得:三招的載具都會被打下來,交付方式也各不相同
-  // (護衛機要撲到臉上、轟炸機從 90m 外投、飛彈得飛完全程且攔截即完全否定)。
-  // ⑦f 量的就是**實得**:打在「敵方機體 + 敵方砲塔」上的 EHP(= 兩個勝利條件),
-  // 清兵那一桶刻意不計 —— 兵波每 waveInterval 補一批,爆風掃到幾隻很好看但不決定勝負,
-  // 把它算進來會讓半徑大的一招看起來永遠贏(實測總傷害與有效傷害可以差到 4 倍)。
+  // ---- f 長按 = 大招(2026-08-06 使用者定案:一般模式 → 小招 / 狙擊模式 → 大招)----
+  // 機種絕招整組退場之後,「三招同預算 ⇒ 實得也該等值」這條**沒有東西可量了**(那三招不存在)。
+  // 長按自此分成兩組,而兩組的**量測面刻意不同**(硬塞進同一個平均就是舊制失效的原因:
+  // 效果型 payload 的 EHP 恆為 0,混進去會被讀成「這一招不會交付」,而它其實每一發都到了):
+  //   f1 **載具組**(23 台)—— 量「送出去的份額有幾份真的飛到」。這個量對每一種 payload
+  //      都成立,而且正是三種載具形式唯一分得出高下的地方(kami 魚貫 / 轟炸機逐批 / 飛彈全有或全無)。
+  //   f2 **自身型組**(9 台)—— 量補償兌現的 EHP 當量(多打出的 + 少挨的 + 補回來的)。
   const KINDS = ['drone', 'robot', 'morph'];
-  const ABIL_NAME = { drone: '飽和攻擊', robot: '極音速飛彈', morph: '集束炸彈' };
-  // 2026-08-06 大招載具遞送改制後,「三招等值」只對**還持有機種絕招**的角色成立
-  // (converted 角色的長按 = 大招 payload:strike 有傷害、heal/buff/emp 交付的是效果不是 EHP
-  //  ⇒ 混進平均會把「效果型大招沒有傷害」誤讀成「這一招不會交付」)。
-  const eff = Object.fromEntries(KINDS.map((k) => {
-    const v = of(k).filter((c) => !ultDelivered(c)).map((c) => abil[c]);
-    const n = v.reduce((s, x) => s + x.n, 0);
-    return [k, { n, per: n ? v.reduce((s, x) => s + x.hero + x.tower, 0) / n : 0 }];
-  }));
-  // 守門線 1.8×。**剩下的差距是結構性的,不是還沒調完**:三招總覆蓋面積已相同,
-  // 但極音速飛彈是**一顆**大圓、飽和攻擊是四顆小圓 —— 目標擠成一團(機體 + 同塔位雙塔)時,
-  // 一顆大圓一次吃三個、四顆小圓各吃各的。要再收就得動「切幾顆」本身(KAMI.N / BOMB_MAX),
-  // 而那是使用者定調的招式形狀 ⇒ 這裡當**防退化欄杆**用,不是驗收線。
-  // **2026-08-06 火力改制之後這條欄杆仍成立**:飛彈的戰鬥部改領 hyperShare()(2.5 架自爆無人機份)
-  // 而爆風半徑不動 ⇒ 它交付的 EHP 隨火力等比下降(實測 155 → 102 EHP/次,比值 1.63× → 1.09×),比值反而更緊。
+  const FORM_NAME = { drone: '自殺機群', robot: '極音速飛彈', morph: '集束轟炸機' };
   const SPREAD_MAX = 1.8;
-  const lo = Math.min(...KINDS.map((k) => eff[k].per)), hi = Math.max(...KINDS.map((k) => eff[k].per));
-  const okF = lo > 0 && hi / lo <= SPREAD_MAX;
-  if (!okF) fail++;
+
+  // —— f1 載具交付率 ——
+  const conv = Object.fromEntries(KINDS.map((k) => {
+    const v = of(k).filter((c) => ultDelivered(c)).map((c) => abil[c]);
+    const n = v.reduce((s, x) => s + x.carN, 0), hit = v.reduce((s, x) => s + x.carHit, 0);
+    return [k, { n, hit, rate: n ? hit / n : 0 }];
+  }));
+  const cLo = Math.min(...KINDS.map((k) => conv[k].rate)), cHi = Math.max(...KINDS.map((k) => conv[k].rate));
+  const okF1 = cLo > 0 && cHi / cLo <= SPREAD_MAX;
+  if (!okF1) fail++;
   for (const k of KINDS) {
-    console.log(`   ⓘ f 長按攻擊  ${ABIL_NAME[k].padEnd(6)}(${k})有效傷害 ${eff[k].per.toFixed(0)} EHP/次`
-      + `(打在敵方機體 + 砲塔上;${eff[k].n} 次施放)`);
+    console.log(`   ⓘ f 載具交付  ${FORM_NAME[k].padEnd(6)}(${k})${(conv[k].rate * 100).toFixed(1)}%`
+      + `(${conv[k].n} 份送出 / ${conv[k].hit} 份抵達)`);
   }
-  console.log(`${okF ? '✅' : '❌'} f 長按攻擊  三招實得比 ${(hi / lo).toFixed(2)}×(同 CD ⇒ 實得同量級 MUST ≤ ${SPREAD_MAX}×,且 MUST 全數 > 0)`
-    + `;極音速飛彈的火力預算為 ${(hyperShare() * 100).toFixed(1)}%(2026-08-06 使用者定案)`
-    + `;載具生存性 = ${TOWER_SITE_N} 座塔的前線基準(飛彈另計一波兵)`);
+  console.log(`${okF1 ? '✅' : '❌'} f 載具交付  三種形式交付率 ${(cHi / cLo).toFixed(2)}×`
+    + `(同 CD ⇒ 交付同量級 MUST ≤ ${SPREAD_MAX}×,且 MUST 全數 > 0)`
+    + `;生存性 = ${TOWER_SITE_N} 座塔的前線基準(飛彈另計一波兵)`);
+  // 帶**傷害** payload 的載具實得(舊 ⑦f 的直接類比):點遞送不追擊 ⇒ 移動中的機體幾乎吃不到。
+  // 這一行**刻意只印不擋**:它量的是「使用者定案的點遞送對移動目標有多難命中」,那是設計取捨,
+  // 不是退化;要不要收緊是 KAMI.N / 追不追蹤那一層的決定(見交付說明)。
+  {
+    const v = chs.filter((c) => ultDelivered(c) && CHARACTERS[c].ult.fx === 'strike').map((c) => abil[c]);
+    const n = v.reduce((s, x) => s + x.n, 0);
+    const eff2 = v.reduce((s, x) => s + x.hero + x.tower, 0), cr = v.reduce((s, x) => s + x.creep, 0);
+    const nom = v.reduce((s, x) => s + x.carNom, 0);
+    console.log(`   ⓘ f 載具實得  strike payload 對機體+砲塔 ${n ? (eff2 / n).toFixed(1) : 0} EHP/次`
+      + `(名目 ${n ? (nom / n).toFixed(0) : 0};清兵另 ${n ? (cr / n).toFixed(0) : 0} EHP/次不計)`);
+  }
+
+  // —— f2 自身型補償兌現 ——
+  // **本模型看不到的價值逐項列在 lanesim 的長按章節檔頭**(匿蹤不可鎖定 / 無霧視野 / 定位 /
+  // 大跳躍 / 原地復活 / 解除異常)⇒ 那幾台的數字是**下界**,不是它們真正的強度。
+  // 故這一條只擋「完全沒有作用」(> 0),**不設離群比** —— 對量不到的東西設離群比就是假精確。
+  const selfChs = chs.filter((c) => !ultDelivered(c));
+  const perCast = (c) => {
+    const a = abil[c];
+    return a.ultN ? (a.dealtEff + a.prevented + a.healed) / a.ultN : 0;
+  };
+  const okF2 = selfChs.every((c) => perCast(c) > 0);
+  if (!okF2) fail++;
+  console.log(`   ⓘ f 自身型補償  ${selfChs.map((c) => `${c} ${perCast(c).toFixed(0)}`).join(' / ')} EHP/次`);
+  console.log(`${okF2 ? '✅' : '❌'} f 自身型補償  ${selfChs.length} 台的長按 MUST 全數 > 0`
+    + `(視野/匿蹤/復活等本模型不計價 ⇒ 這些是下界;係數見 data.js SELF_ULT.REALIZED_F = ${SELF_ULT.REALIZED_F})`);
 
   // ---- e 模擬長度(使用者「在確保模擬準確度前提下測試時間越短越好」)----
   const MED_MAX = 100, TIE_MAX = 0.25;

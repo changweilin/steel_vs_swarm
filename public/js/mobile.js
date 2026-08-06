@@ -784,7 +784,7 @@ const MOBIL_LABEL = { drone: '上升', morph: '躍/升', mech: '跳躍', robot: 
  *   - #tlLook  :全畫面拖曳視角(壓在所有控件之下;控件自行吃掉事件)
  *   - #tlStick :移動類比搖桿(左上;圓心固定 = 搖桿中心,偏移量 = 推杆量)
  *   - #tlRStick:視角類比搖桿(右下;推杆量 → 每秒轉速,與拖曳並存)
- *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(上 ⊟ 商店 / 下 陀螺 / 右 小地圖範圍 / 左 機種絕招)
+ *   - #tlDpad  :十字鍵 —— 四向是**按鍵**(上 ⊟ 商店 / 下 陀螺 / 右 小地圖範圍 / 左 招式)
  *   - [data-act]:動作鈕(ABXY / 肩鍵與系統鍵直條)
  * 角色數據(.hud-self)與小地圖(#minimap)是純顯示,**MUST NOT** 被搖桿覆蓋(版型量測有斷言)。
  */
@@ -1029,7 +1029,7 @@ export class TouchControls {
 
   /* ---- 動作鈕 ---- */
   _bindButtons() {
-    // 按住型:A 射擊 / R 狙擊(長按 = 機種專屬絕招)/ ZR 鎖定目標 / B 跳躍(蓄力跳)/ ZL 下降
+    // 按住型:A 射擊 / R 狙擊(長按 = 施放招式,一般模式小招 / 狙擊模式大招)/ ZR 鎖定目標 / B 跳躍(蓄力跳)/ ZL 下降
     const HOLD = new Set(['fire', 'aim', 'jump', 'dive', 'lock']);
     this._onBtnDown = (e) => {
       const el = e.target.closest?.('[data-act]');
@@ -1176,7 +1176,7 @@ export class TouchControls {
    *      離開戰場的出口,`_setPaused` 已對 side=null 放行,桌機觀戰按 ESC 走的是同一條路。
    *      **十字鍵的陀螺與地圖不收** —— 觀戰自由視角同樣吃 _applyLook,也同樣看小地圖。
    *   ⑤ 觀戰視角切換(2026-08-02 使用者需求「觸控使用虛擬手把加入切換」)**沿用既有兩顆鈕、
-   *      只換鈕面字**:十字鍵左(絕招位)= 循環四種視角(上帝 → 第一人稱 → 第三人稱跟隨 →
+   *      只換鈕面字**:十字鍵左(招式位)= 循環四種視角(上帝 → 第一人稱 → 第三人稱跟隨 →
    *      第三人稱自由,序取自 `data.js SPEC_CAM.VIEWS`)、⇄(換機位)= 換下一位玩家。
    *      A22「同功能只准一顆鈕」⇒ MUST NOT 為觀戰另長出新鈕(四分區版型已滿,新鈕必然疊到別區);
    *      派發仍走 `game._cmd` → `_specFollow` 同一個縫,MUST NOT 在觸控層自己判模式。
@@ -1191,9 +1191,9 @@ export class TouchControls {
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.hidden = !spec && kind !== 'drone'; });
     document.querySelectorAll('.gb-a, .gb-aim, [data-act="shop"], [data-act="lock"]')
       .forEach((n) => { n.hidden = spec; });
-    // 鈕面字:觀戰借用絕招/換機兩顆鈕(功能不同 ⇒ 字一定要跟著換,否則按下去與鈕面不符)
+    // 鈕面字:觀戰借用招式/換機兩顆鈕(功能不同 ⇒ 字一定要跟著換,否則按下去與鈕面不符)
     const sf = document.querySelector('[data-act="special"] .gb-f');
-    if (sf) sf.textContent = spec ? '視角' : '絕招';
+    if (sf) sf.textContent = spec ? '視角' : '招式';
     document.querySelectorAll('[data-act="swap"]').forEach((n) => { n.textContent = spec ? '⇄換人' : '⇄換機'; });
     document.body.classList.toggle('tl-spec', spec);
   }
