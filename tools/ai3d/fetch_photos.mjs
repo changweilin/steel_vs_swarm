@@ -53,7 +53,74 @@ export const PHOTO_CATALOG = {
   // ⇒ **第 7 輪把 rock 提到最前面**(2026-08-06 使用者定案「大量下載不同國家地區的
   // 地質岩層或奇石/巨岩的照片」):tree 族還有 5 列零張,排在後面的族在無 `--family`
   // 的整輪跑法裡永遠輪不到(§5h 已用「樹種列優先」踩過同一個坑)。
-  rock: {                                                    // MEGALITHS:岩面/崩落塊/落石堆
+  // ⇒ **第 8 輪把 tree 提到最前面**(2026-08-06 使用者定案「大量下載不同國家地區的不同
+  // 樹種,如灌木/闊葉林/針葉林/各種大小神木的照片」):同一條族序規則,這一輪換樹族排頭。
+  tree: {                                                  // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
+    // —— 第 8 輪大擴充(2026-08-06 使用者定案)——
+    // 使用者點名四組:**灌木 / 闊葉林 / 針葉林 / 各種大小神木**,跨國跨地區逐樹種。
+    // 對位方式同第 5 輪(逐樹種)與第 7 輪(逐岩型):**對位的是消費端那一列的形狀**,
+    // 不是照片家的名字(節點角色 ≠ 照片家,§5e/§5i/§5j 已三度證實):
+    //   sh_* → VEG_DEFS.shrub 的 ico(0.9)/ico(0.6) 兩顆矮團
+    //   bl_* → VEG_DEFS.broadleaf ico(2.7)/ico(1.7)、birch ico(2.0)/ico(1.2)
+    //   cf_* → VEG_DEFS.conifer2 的 ico 簇疊冠(conifer/3/4 是 cone/cyl 包絡,**不換**)
+    //   gt_* → GIANT_DEFS 尚無專屬冠形的樹種(§5h 只推進到 6 形/11 種)+ 小徑冠簇
+    //          (klinki/alerce 的冠簇只有 2.2~3.0m,比現有最小節點 3.325 還小 ⇒ 這一輪
+    //           才有機會補上使用者說的「各種**大小**神木」)
+    // 查詢一律「具名單一主體 + 地區」句式(§5c 實測:句式勝過所有模型旋鈕),
+    // 且刻意避開 forest / woodland / grove 這類**整片**詞 —— 那是暗景與雜訊的來源。
+    // 新列排在既有缺額列之前:buttress/sp_willow/sp_banyan 的候選重度 Wikimedia-hosted,
+    // 排前面會把每一輪都撞死在 429 上(§5h 同款坑)。
+    // 灌木(使用者「灌木」;矮團冠,VEG_DEFS.shrub)
+    sh_rhodo:   { want: 4, q: ['rhododendron bush in bloom', 'azalea shrub isolated'] },                  // 喜馬拉雅/日本
+    sh_juniper: { want: 4, q: ['juniper shrub isolated', 'creeping juniper bush rock'] },                 // 地中海/北美高山
+    sh_sage:    { want: 4, q: ['sagebrush desert shrub', 'creosote bush desert plant'] },                 // 北美大盆地
+    sh_heather: { want: 4, q: ['gorse bush yellow flower', 'heather shrub moorland'] },                   // 蘇格蘭/北歐
+    sh_boxwood: { want: 4, q: ['boxwood shrub garden', 'rounded topiary shrub'] },                        // 歐洲庭園
+    sh_protea:  { want: 4, q: ['protea shrub fynbos', 'banksia shrub australia'] },                       // 南非/澳洲
+    // 闊葉林(使用者「闊葉林」;VEG_DEFS.broadleaf / birch)
+    bl_beech:   { want: 4, q: ['solitary beech tree field', 'lone beech tree meadow'] },                  // 中歐
+    bl_birch:   { want: 4, q: ['lone silver birch tree', 'solitary birch tree field'] },                  // 北歐/西伯利亞
+    bl_plane:   { want: 4, q: ['lone plane tree', 'solitary sycamore tree field'] },                      // 地中海/英國
+    bl_chestnut:{ want: 4, q: ['lone horse chestnut tree', 'solitary chestnut tree meadow'] },            // 巴爾幹/西歐
+    bl_jacaranda:{ want: 4, q: ['jacaranda tree in bloom', 'flamboyant tree isolated'] },                 // 南美/南非
+    bl_olive:   { want: 4, q: ['ancient olive tree', 'old olive tree isolated'] },                        // 地中海
+    bl_mango:   { want: 4, q: ['lone mango tree field', 'large mango tree isolated'] },                   // 南亞/熱帶
+    bl_camphor: { want: 4, q: ['large camphor tree', 'lone zelkova tree'] },                              // 東亞
+    // 針葉林(使用者「針葉林」;VEG_DEFS.conifer2 的簇疊冠)
+    cf_spruce:  { want: 4, q: ['lone norway spruce tree', 'solitary spruce tree meadow'] },               // 北歐/阿爾卑斯
+    cf_larch:   { want: 4, q: ['lone larch tree autumn', 'solitary larch tree'] },                        // 西伯利亞/阿爾卑斯
+    cf_cedar:   { want: 4, q: ['lebanon cedar tree', 'old cedar tree isolated'] },                        // 黎巴嫩/喜馬拉雅
+    cf_araucaria:{ want: 4, q: ['monkey puzzle tree', 'araucaria tree isolated'] },                       // 智利/南美
+    cf_yew:     { want: 4, q: ['ancient yew tree churchyard', 'lone yew tree'] },                         // 英國
+    cf_juniper_tree:{ want: 4, q: ['old juniper tree twisted', 'bristlecone pine tree'] },                // 北美高山
+    // 各種大小神木(使用者「各種大小神木」;GIANT_DEFS 尚無專屬冠形的樹種 + 小徑冠簇)
+    gt_dougfir: { want: 5, q: ['douglas fir tree isolated', 'lone douglas fir tree'] },                   // 北美西岸
+    gt_sitka:   { want: 5, q: ['sitka spruce tree', 'lone spruce tree coast'] },                          // 阿拉斯加/英國
+    gt_kauri:   { want: 5, q: ['kauri tree new zealand', 'giant kauri tree'] },                           // 紐西蘭
+    gt_cryptomeria:{ want: 5, q: ['giant cryptomeria tree', 'japanese cedar giant tree'] },               // 日本屋久島/台灣
+    gt_dipterocarp:{ want: 5, q: ['emergent rainforest tree crown', 'tall tropical tree isolated'] },     // 婆羅洲
+    gt_alerce:  { want: 4, q: ['alerce tree patagonia', 'fitzroya tree chile'] },                         // 巴塔哥尼亞
+    // —— 第 4 輪品質補抓(2026-08-05)——首批 14 張過 SF3D 只有 1 顆實心:buttress 查詢
+    // 命中臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」。
+    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
+    // —— 第 5 輪逐樹種列(GIANT_DEFS 對位;缺額續補)——
+    sp_sequoia: { want: 6, q: ['giant sequoia tree', 'sequoia tree isolated', 'coast redwood tree'] },
+    sp_conifer: { want: 8, q: ['lone spruce tree field', 'solitary fir tree meadow', 'single conifer tree'] },
+    sp_pine:    { want: 8, q: ['lone scots pine tree', 'stone pine tree isolated', 'solitary pine tree field'] },
+    sp_cypress: { want: 5, q: ['italian cypress tree', 'lone cypress tree', 'mediterranean cypress isolated'] },
+    sp_euc:     { want: 6, q: ['lone gum tree paddock', 'eucalyptus tree isolated', 'gum tree australia'] },
+    sp_tropical:{ want: 6, q: ['kapok tree isolated', 'rainforest emergent tree', 'lone tropical tree field'] },
+    // —— 逐樹種列(VEG_DEFS / 場地地貌對位)——
+    sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },
+    sp_baobab:  { want: 6, q: ['baobab tree', 'lone baobab tree', 'adansonia tree'] },
+    sp_willow:  { want: 5, q: ['weeping willow tree isolated', 'lone willow tree lake'] },
+    sp_maple:   { want: 6, q: ['lone maple tree field', 'solitary maple tree autumn', 'isolated maple tree'] },
+    sp_banyan:  { want: 5, q: ['banyan tree isolated', 'large fig tree isolated', 'lone ficus tree'] },
+    sp_cherry:  { want: 5, q: ['lone cherry blossom tree', 'sakura tree isolated', 'cherry tree in bloom field'] },
+    fork:     { want: 8, q: ['tree branch fork bare', 'large tree bough', 'lone bare oak tree winter', 'dead standing tree'] },
+    buttress: { want: 14, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk', 'strangler fig trunk', 'ficus macrophylla roots'] },
+  },
+  rock: {                                                  // MEGALITHS:岩面/崩落塊/落石堆
     // 第 3 輪品質補抓(2026-08-05):數量達標 ≠ img→3D 可用 —— CC0 語料重度偏向博物館
     // 掃描/畫作/立體鏡老照片,rock 族逐張人眼覆核後可用率近乎零。改用「現代、單體、
     // 站在空地上」的地物詞:glacial erratic(冰川漂礫)正是「孤立巨石」的專名。
@@ -94,30 +161,6 @@ export const PHOTO_CATALOG = {
     st_travertine:{ want: 4, q: ['travertine terrace rock', 'travertine rock formation'] },                        // 土耳其/黃石
     st_lava:    { want: 4, q: ['volcanic rock outcrop', 'lava rock formation isolated'] },                         // 冰島/夏威夷
     st_pinnacle:{ want: 4, q: ['limestone stone forest pinnacle', 'pinnacles desert limestone'] },                 // 中國石林/澳洲
-  },
-  tree: {                                                  // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
-    // 第 4 輪品質補抓(2026-08-05):首批 14 張過 SF3D 只有 1 顆實心 —— buttress 查詢命中
-    // 臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」——
-    // 唯一可用的那張正是空地孤立樹(oak tree canopy → rawpixel 孤樹);板根改點名
-    // 以板根聞名的樹種(吉貝木棉/澳洲大葉榕),避開 rainforest(整片都是暗景)。
-    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
-    // —— 逐樹種列(GIANT_DEFS 對位)——(排在 fork/buttress 前:那兩列的候選重度
-    // Wikimedia-hosted,先跑會把每一輪都撞死在 429 上,樹種列永遠輪不到)
-    sp_sequoia: { want: 6, q: ['giant sequoia tree', 'sequoia tree isolated', 'coast redwood tree'] },
-    sp_conifer: { want: 8, q: ['lone spruce tree field', 'solitary fir tree meadow', 'single conifer tree'] },
-    sp_pine:    { want: 8, q: ['lone scots pine tree', 'stone pine tree isolated', 'solitary pine tree field'] },
-    sp_cypress: { want: 5, q: ['italian cypress tree', 'lone cypress tree', 'mediterranean cypress isolated'] },
-    sp_euc:     { want: 6, q: ['lone gum tree paddock', 'eucalyptus tree isolated', 'gum tree australia'] },
-    sp_tropical:{ want: 6, q: ['kapok tree isolated', 'rainforest emergent tree', 'lone tropical tree field'] },
-    // —— 逐樹種列(VEG_DEFS / 場地地貌對位)——
-    sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },
-    sp_baobab:  { want: 6, q: ['baobab tree', 'lone baobab tree', 'adansonia tree'] },
-    sp_willow:  { want: 5, q: ['weeping willow tree isolated', 'lone willow tree lake'] },
-    sp_maple:   { want: 6, q: ['lone maple tree field', 'solitary maple tree autumn', 'isolated maple tree'] },
-    sp_banyan:  { want: 5, q: ['banyan tree isolated', 'large fig tree isolated', 'lone ficus tree'] },
-    sp_cherry:  { want: 5, q: ['lone cherry blossom tree', 'sakura tree isolated', 'cherry tree in bloom field'] },
-    fork:     { want: 8, q: ['tree branch fork bare', 'large tree bough', 'lone bare oak tree winter', 'dead standing tree'] },
-    buttress: { want: 14, q: ['ceiba buttress roots', 'kapok tree trunk buttress', 'moreton bay fig trunk', 'strangler fig trunk', 'ficus macrophylla roots'] },
   },
   building: {                                                // hazards BUILDERS:窗格/簷口/陽台/外管
     window:   { want: 4, q: ['window facade', 'office building facade', 'factory windows'] },

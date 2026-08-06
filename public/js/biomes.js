@@ -187,13 +187,27 @@ const VEG_DEFS = {
   bamboo:      { parts: [{ g: cyl(0.10, 0.14, 6.5), y: 3.25, c: 0x8fae4e },
                          { g: cone(1.1, 2.4), y: 7.4, key: 'foliage' },
                          { g: cone(0.8, 1.6), y: 5.6, key: 'foliage', sy: 0.9 }] },
+  // 闊葉喬木:**不對稱寬展冠**(2026-08-06 使用者質疑「新舊物件結構這麼像」後重寫骨架)——
+  // 舊制是「兩顆同軸疊球」,而 birch/shrub/conifer2 也都是同一個骨架 ⇒ `lib:` 換的只有每一團的
+  // 表面起伏,換再多不同樹種的照片,這幾型看起來還是同一棵樹。闊葉的識別特徵是冠幅大於半個
+  // 樹高、主冠偏心、側簇各自朝不同方位散開。
   broadleaf:   { parts: [{ g: cyl(0.22, 0.40, 3.2), y: 1.6, c: 0x6b4a2f },
-                         { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // 分枝
-                         { g: ico(2.7), y: 5.0, key: 'foliage', sy: 0.75 },
-                         { g: ico(1.7), y: 6.6, key: 'foliage', sy: 0.7 }] },   // 疊層樹冠
-  birch:       { parts: [{ g: cyl(0.16, 0.22, 3.8), y: 1.9, c: 0xe8e4dc },
-                         { g: ico(2.0), y: 4.9, key: 'foliage', sy: 0.85 },
-                         { g: ico(1.2), y: 6.3, key: 'foliage', sy: 0.8 }] },
+                         { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // 主分枝
+                         { g: cyl(0.09, 0.13, 2.0, 5), y: 4.1, px: 0.85, rz: -0.62, c: 0x5f452c },   // 斜出側枝(外端朝上)
+                         { g: cyl(0.09, 0.13, 1.8, 5), y: 3.9, pz: -0.8, rx: 0.58, c: 0x5f452c },
+                         { g: ico(2.7), y: 5.1, px: 0.35, key: 'foliage', sy: 0.62, lib: 'tree/vleaf_a27' },   // 主冠偏心壓扁
+                         { g: ico(1.7), y: 5.9, px: -1.5, pz: 0.5, key: 'foliage', sy: 0.66, lib: 'tree/vleaf_a17' },
+                         { g: ico(1.7), y: 5.4, px: 1.7, pz: -0.9, key: 'foliage', sy: 0.6 },
+                         { g: ico(1.2), y: 6.5, px: -0.3, pz: -0.6, key: 'foliage', sy: 0.7 }] },
+  // 白樺:**細高窄冠、葉簇沿幹上段縱向錯落**(與 broadleaf 的寬展冠成對比)——
+  // 先鋒樹種的樹型:幹細直、冠幅窄、葉簇一路散到頂,不是頂著兩顆球。
+  birch:       { parts: [{ g: cyl(0.16, 0.22, 4.6), y: 2.3, c: 0xe8e4dc },
+                         { g: cyl(0.07, 0.10, 1.6, 4), y: 5.0, px: 0.5, rz: -0.85, c: 0xd8d2c6 },   // 細枝(外端朝上)
+                         { g: cyl(0.07, 0.10, 1.5, 4), y: 5.8, px: -0.45, rz: 0.85, c: 0xd8d2c6 },
+                         { g: ico(1.2), y: 5.2, px: 0.75, key: 'foliage', sy: 1.15, lib: 'tree/vleaf_a12' },   // 縱向拉長的窄簇
+                         { g: ico(1.2), y: 6.2, px: -0.7, key: 'foliage', sy: 1.1, lib: 'tree/vleaf_a12' },
+                         { g: ico(1.2), y: 7.1, pz: 0.55, key: 'foliage', sy: 1.05 },
+                         { g: ico(1.2), y: 7.9, key: 'foliage', sy: 0.95 }] },
   deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 },
                          { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 },
                          { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }] },
@@ -203,11 +217,13 @@ const VEG_DEFS = {
                          { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }] },
   // 針葉林幾何多樣化(2026-07-12):三角錐塔之外再添三款輪廓,同林異形
   conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // 老雲杉:不規則簇疊冠
-                         { g: ico(2.0), y: 3.4, key: 'conifer', sy: 0.8 },
-                         { g: ico(1.6), y: 4.9, px: 0.7, key: 'conifer', sy: 0.75 },
-                         { g: ico(1.4), y: 6.1, px: -0.6, key: 'conifer', sy: 0.7 },
-                         { g: ico(0.9), y: 7.3, key: 'conifer', sy: 0.8 },
-                         { g: cone(0.5, 1.6, 5), y: 7.9, key: 'conifer' }] },   // 突出頂梢
+                         { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5, lib: 'tree/vcone_a20' },   // 老雲杉:下層枝盤外伸、上層急收
+                         { g: ico(1.6), y: 4.15, px: 0.62, pz: 0.3, key: 'conifer', sy: 0.46, lib: 'tree/vcone_a16' },
+                         { g: ico(1.6), y: 4.9, px: -0.58, pz: -0.35, key: 'conifer', sy: 0.44 },
+                         { g: ico(1.4), y: 5.7, px: 0.4, key: 'conifer', sy: 0.42, lib: 'tree/vcone_a14' },
+                         { g: ico(1.4), y: 6.45, px: -0.34, pz: 0.28, key: 'conifer', sy: 0.4 },
+                         { g: ico(0.9), y: 7.15, key: 'conifer', sy: 0.6, lib: 'tree/vcone_b09' },
+                         { g: cone(0.5, 1.9, 5), y: 8.0, key: 'conifer' }] },   // 突出頂梢
   conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // 柱狀絲柏:細長紡錘
                          { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
                          { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
@@ -224,13 +240,21 @@ const VEG_DEFS = {
                          { g: cone(0.4, 1.4, 5), y: 1.5, c: 0xd8cfa8, sf: 'grass' }] },   // 抽穗的芒花
   arrowbamboo: { parts: [{ g: cone(0.9, 2.3), y: 1.15, c: 0x5c7a3a, sf: 'grass' },
                          { g: cone(0.5, 1.5), y: 2.2, c: 0x6b8a44, sf: 'grass' }] },
-  shrub:       { parts: [{ g: ico(0.9), y: 0.6, key: 'foliage', sy: 0.8 },
-                         { g: ico(0.6), y: 1.3, key: 'foliage', sy: 0.75 }] },
+  // 灌木:**叢生多幹、寬大於高**(舊制是縮小版的樹:兩顆同軸疊球)——灌木的識別特徵正好是
+  // 「沒有主幹、幾叢從地面各自長開」,故三團並排、高度互不相同。只有最大那一團接零件庫:
+  // 灌木 1909 個 instance 是全族最貴的一列(見 tri_budget families.veg),其餘兩團留保險絲
+  // —— 它們本來就被主團擋住大半。
+  shrub:       { parts: [{ g: ico(0.9), y: 0.55, px: 0.3, key: 'foliage', sy: 0.85, lib: 'tree/bush_a09' },
+                         { g: ico(0.62), y: 0.42, px: -0.72, pz: 0.3, key: 'foliage', sy: 0.8 },
+                         { g: ico(0.5), y: 0.36, px: -0.15, pz: -0.7, key: 'foliage', sy: 0.75 }] },
   succulent:   { parts: [{ g: cyl(0.5, 0.7, 0.9, 6), y: 0.45, c: 0x7a9c74 },
                          { g: cyl(0.28, 0.4, 0.7, 6), y: 1.1, c: 0x8cae82 }] },
   mangrove:    { parts: [{ g: cyl(0.25, 0.5, 1.8), y: 0.9, c: 0x54412e },
                          { g: cyl(0.08, 0.12, 1.4, 4), y: 0.6, c: 0x4a3826 },   // 支柱根
-                         { g: ico(2.0), y: 2.7, key: 'foliage', sy: 0.6 }] },
+                         { g: cyl(0.08, 0.12, 1.3, 4), y: 0.55, px: 0.3, pz: -0.2, rz: 0.42, c: 0x4a3826 },   // 支柱根(多方位;上端 MUST 咬進幹面)
+                         { g: cyl(0.08, 0.12, 1.2, 4), y: 0.5, px: -0.28, pz: 0.22, rz: -0.4, c: 0x4a3826 },
+                         { g: ico(2.0), y: 2.5, px: 0.4, key: 'foliage', sy: 0.42, lib: 'tree/vleaf_a20' },   // 低平寬冠(潮間帶樹型)
+                         { g: ico(1.4), y: 3.0, px: -0.9, pz: 0.5, key: 'foliage', sy: 0.4 }] },
   reed:        { parts: [{ g: cone(0.35, 1.9, 4), y: 0.95, c: 0xa9b06a, sf: 'grass' }] },
   // ---- 神木林床層(森林分層最底層):樹苗 + 各式香菇 ----
   // 分層邏輯:神木冠層 → 中小型同科喬木(sub-canopy,沿用 conifer*/broadleaf/birch)
@@ -394,15 +418,18 @@ const GIANT_DEFS = {
     { g: cyl(0.9, 1.5, 20, 6), y: 66, c: 0xa89068 },
     { g: cyl(0.5, 0.8, 14, 5), y: 74, px: 4, rz: -0.7, c: 0x93805e },     // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
     { g: cyl(0.5, 0.8, 14, 5), y: 76, px: -4, rz: 0.7, c: 0x93805e },
-    { g: ico(12), y: 82, sy: 0.55, lib: 'tree/canopy_a10', c: 0x4a8a3e },   // 傘狀突出樹冠(熱帶亮綠)
-    { g: ico(8), y: 78, px: 9.5, sy: 0.5, lib: 'tree/canopy_c8', c: 0x57994a },
-    { g: ico(8), y: 76, px: -9.5, sy: 0.5, lib: 'tree/canopy_d8', c: 0x4a8a3e },
-    { g: ico(7), y: 79, pz: 9, sy: 0.5, c: 0x57994a },
-    { g: ico(7), y: 77, pz: -9, sy: 0.5, c: 0x4a8a3e },
-    { g: ico(6), y: 88, sy: 0.6, lib: 'tree/canopy_f6', c: 0x8fa054 },   // 開花期淡黃冠頂
+    // 龍腦香突出傘冠 = **一片攤平的圓盤**(2026-08-06 重寫骨架):四方等高環繞、整層壓到 sy 0.4,
+    // 中心只比外圈高一點。舊制的「中心 + 兩側 + 頂上再堆兩層」與 dinizia/tualang 是同一份配方,
+    // `lib:` 換的只是每一團的表面起伏,三種樹的剪影還是一樣的。
+    { g: ico(12), y: 81, sy: 0.4, lib: 'tree/canopy_i10', c: 0x4a8a3e },
+    { g: ico(8), y: 79.5, px: 9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x57994a },
+    { g: ico(8), y: 79.5, px: -9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x4a8a3e },
+    { g: ico(8), y: 79, pz: 9.8, sy: 0.36, lib: 'tree/canopy_i8', c: 0x57994a },
+    { g: ico(7), y: 79, pz: -9.8, sy: 0.36, c: 0x4a8a3e },
+    { g: ico(6), y: 83, px: 4.6, pz: 4.2, sy: 0.42, c: 0x8fa054 },   // 盤上兩處隆起(開花期淡黃;留保險絲控逐株預算)
+    { g: ico(5), y: 82.6, px: -4.4, pz: -4.6, sy: 0.42, c: 0x8fa054 },
     { g: cyl(0.1, 0.16, 26, 4), y: 40, px: 1.7, rz: 0.018, c: 0x6a7a44 },   // 纏繞藤蔓(貼幹面、傾角跟隨幹身收分)
-    { g: ico(5), y: 92, px: 4, sy: 0.55, c: 0x63a850 },          // 突出主冠的受光新葉
-    { g: ico(1.5), y: 75.5, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(橙紅雙翅果)
+    { g: ico(1.5), y: 77.2, px: 10, c: 0xc27a4a },               // 龍腦香翅果簇(掛在冠盤下緣;冠盤高度一改這一顆要跟著走)
     { g: ico(1.3), y: 76.8, pz: 9.5, c: 0xb8703f },
   ] },
   taiwania: { h: 86, r: 2.1, parts: [
@@ -429,11 +456,13 @@ const GIANT_DEFS = {
     { g: cyl(0.5, 0.9, 15, 5), y: 70, px: 4.5, rz: -0.75, c: 0x846248 },  // 側枝外端朝上(傾角勿過斜:枝根會穿出幹身反側)
     { g: cyl(0.5, 0.9, 15, 5), y: 72, px: -4.5, rz: 0.75, c: 0x846248 },
     { g: cyl(0.4, 0.7, 12, 5), y: 72, pz: 5.0, rx: 1.0, c: 0x7a5a40 },
-    { g: ico(11), y: 80, sy: 0.5, lib: 'tree/canopy_b10', c: 0x4f8a44 },   // 傘狀平頂冠(突出主林冠)
-    { g: ico(7), y: 77, px: 9, sy: 0.45, lib: 'tree/canopy_a7', c: 0x5c9a50 },
-    { g: ico(7), y: 78, px: -9, sy: 0.45, lib: 'tree/canopy_b7', c: 0x468040 },
-    { g: ico(6), y: 79, pz: 8.5, sy: 0.45, c: 0x549048 },
-    { g: ico(5), y: 85, sy: 0.55, c: 0x86a45c },                 // 頂心黃綠新葉
+    // 天使樹的平頂冠 = **外緣高於中心的凹頂**(2026-08-06 重寫骨架):它突出主林冠、常年受風,
+    // 中心反而被削低。與 meranti 的「攤平圓盤」和 tualang 的「高處聚冠」是三種不同剪影。
+    { g: ico(11), y: 78.5, sy: 0.34, lib: 'tree/canopy_g10', c: 0x4f8a44 },   // 低平中心
+    { g: ico(7), y: 80.5, px: 8.6, sy: 0.5, lib: 'tree/canopy_g7', c: 0x5c9a50 },   // 外緣抬高一圈
+    { g: ico(7), y: 80.5, px: -8.6, sy: 0.5, lib: 'tree/canopy_g7', c: 0x468040 },
+    { g: ico(7), y: 80, pz: 8.4, sy: 0.5, lib: 'tree/canopy_g7', c: 0x549048 },
+    { g: ico(6), y: 79.8, pz: -8.2, sy: 0.5, c: 0x86a45c },
     { g: ico(1.3), y: 75.2, px: 9.5, c: 0x7a5434 },              // 天使樹豆莢簇(豆科莢果)
     { g: ico(1.1), y: 77.5, pz: 9, c: 0x714d30 },
   ] },
@@ -443,14 +472,21 @@ const GIANT_DEFS = {
     { g: cyl(1.5, 2.2, 46, 7), y: 28, c: 0x75593c },             // 通直淨幹
     { g: cyl(0.8, 1.5, 26, 6), y: 64, c: 0x7d6142 },
     { g: cyl(2.25, 2.32, 4, 7), y: 20, c: 0x8f9a6e },            // 地衣環帶
-    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: 5.5, rz: -1.42, c: 0x6a5138 },   // 輪生近水平枝(梢端略朝上)
-    { g: cyl(0.35, 0.55, 11, 5), y: 62, px: -5.5, rz: 1.42, c: 0x6a5138 },
-    { g: cyl(0.3, 0.5, 9, 5), y: 68, pz: 4.5, rx: 1.4, c: 0x75593c },
-    { g: ico(2.6), y: 59, px: 10.2, sy: 0.5, c: 0x3a6b3a },      // 枝端扁平葉盤(南洋杉特徵)
-    { g: ico(2.6), y: 63, px: -10.2, sy: 0.5, c: 0x2f5e34 },
-    { g: ico(2.2), y: 69, pz: 8.5, sy: 0.5, c: 0x3a6b3a },
+    // 南洋杉的識別特徵是**輪生**:枝盤成層,層與層之間留明顯空隙(不是把葉簇黏在幹上)。
+    // 2026-08-06 重寫骨架:三層 × 每層一對枝 + 枝端葉盤,層距 8m、盤壓到 sy 0.34 = 一層層的盤子。
+    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: 5.5, rz: -1.42, c: 0x6a5138 },   // 第一輪(近水平,梢端略朝上)
+    { g: cyl(0.35, 0.55, 11, 5), y: 58, px: -5.5, rz: 1.42, c: 0x6a5138 },
+    { g: cyl(0.32, 0.5, 9.5, 5), y: 66, pz: 4.75, rx: 1.44, c: 0x75593c },   // 第二輪(轉 90°)
+    { g: cyl(0.32, 0.5, 9.5, 5), y: 66, pz: -4.75, rx: -1.44, c: 0x75593c },
+    { g: cyl(0.28, 0.44, 7.5, 5), y: 74, px: 3.75, rz: -1.46, c: 0x6a5138 },   // 第三輪(收小)
+    { g: cyl(0.28, 0.44, 7.5, 5), y: 74, px: -3.75, rz: 1.46, c: 0x6a5138 },
+    { g: ico(2.6), y: 58.5, px: 10.4, sy: 0.34, lib: 'tree/canopy_j22', c: 0x3a6b3a },   // 枝端扁平葉盤
+    { g: ico(2.6), y: 58.5, px: -10.4, sy: 0.34, lib: 'tree/canopy_j22', c: 0x2f5e34 },
+    { g: ico(2.4), y: 66.5, pz: 9.0, sy: 0.34, lib: 'tree/canopy_j22', c: 0x3a6b3a },
+    { g: ico(2.4), y: 66.5, pz: -9.0, sy: 0.34, c: 0x2f5e34 },
+    { g: ico(2.2), y: 74.5, px: 7.1, sy: 0.34, lib: 'tree/canopy_j22', c: 0x35643a },
+    { g: ico(2.2), y: 74.5, px: -7.1, sy: 0.34, c: 0x3a6b3a },
     { g: cone(4.5, 14, 6), y: 84, c: 0x2f5e34 },                 // 頂梢窄錐冠
-    { g: ico(3), y: 76, px: 3.5, sy: 0.5, c: 0x35643a },
     { g: ico(1.2), y: 59.5, px: 9.5, c: 0x7a5a34 },              // 克林奇大毬果簇(掛枝端葉盤)
   ] },
   tualang:  { h: 85, r: 2.8, parts: [                            // 蜂樹(東南亞 Koompassia 88m):灰白滑幹 + 突出傘冠 + 野蜂巢
@@ -461,11 +497,13 @@ const GIANT_DEFS = {
     { g: cyl(1.0, 1.8, 20, 6), y: 64, c: 0xbcb29c },
     { g: cyl(0.5, 0.9, 13, 5), y: 71, px: 4, rz: -0.8, c: 0xa39a86 },   // 側枝外端朝上
     { g: cyl(0.5, 0.9, 13, 5), y: 73, px: -4, rz: 0.8, c: 0xa39a86 },
-    { g: ico(10), y: 80, sy: 0.5, lib: 'tree/canopy_a10', c: 0x4f8a44 },   // 傘狀突出冠
-    { g: ico(6.5), y: 77, px: 8.5, sy: 0.45, lib: 'tree/canopy_c6', c: 0x5c9a50 },
-    { g: ico(6.5), y: 76, px: -8.5, sy: 0.45, lib: 'tree/canopy_d6', c: 0x468040 },
-    { g: ico(5.5), y: 79, pz: 7.5, sy: 0.45, c: 0x549048 },      // z 向無側枝 → 內緣貼主冠
-    { g: ico(4.5), y: 84, sy: 0.55, c: 0x6fa050 },
+    // 蜂樹 = **枝下高極高、冠小而聚**(2026-08-06 重寫骨架):灰白滑幹一路光禿到近頂,冠幅收在
+    // 軸心附近並往上堆成半球 —— 與 meranti 的攤平圓盤、dinizia 的凹頂各走各的剪影。
+    { g: ico(10), y: 82, sy: 0.62, lib: 'tree/canopy_h10', c: 0x4f8a44 },
+    { g: ico(6.5), y: 79.5, px: 5.4, sy: 0.6, lib: 'tree/canopy_h65', c: 0x5c9a50 },   // 收在軸心附近
+    { g: ico(6.5), y: 79.5, px: -5.2, pz: 1.2, sy: 0.6, lib: 'tree/canopy_h65', c: 0x468040 },
+    { g: ico(5.5), y: 86.5, px: 1.4, sy: 0.62, c: 0x549048 },     // 往上堆的冠頂
+    { g: ico(4.5), y: 89.5, px: -1.2, sy: 0.6, c: 0x6fa050 },
     { g: ico(1.3), y: 74.8, px: 9, c: 0x8a5a30 },                // 豆莢簇(蜂樹為豆科)
     { g: ico(0.9), y: 55, px: 1.9, c: 0xd8b04a },                // 樹幹垂掛野巨蜂巢(蜂樹地標特徵)
   ] },
@@ -479,8 +517,8 @@ const GIANT_DEFS = {
     { g: cone(4.4, 14, 7), y: 53, c: 0x2c5c40 },
     { g: cone(3.2, 13, 6), y: 62, c: 0x336850 },
     { g: cone(1.8, 10, 5), y: 70, c: 0x2c5c40 },
-    { g: ico(2.6), y: 36, px: 3.8, sy: 0.6, c: 0x33684a },
-    { g: ico(2.4), y: 33, px: -3.6, sy: 0.6, c: 0x2c5c40 },
+    { g: ico(2.6), y: 36, px: 3.8, sy: 0.6, lib: 'tree/canopy_k22', c: 0x33684a },
+    { g: ico(2.4), y: 33, px: -3.6, sy: 0.6, lib: 'tree/canopy_k22', c: 0x2c5c40 },
     { g: cyl(0.2, 0.3, 5, 4), y: 72.5, c: 0x9a7a56 },            // 頂梢枯枝(千年老樹雷痕)
     { g: ico(0.8), y: 30.5, pz: 4.2, c: 0x7a5434 },              // 小毬果簇
   ] },
@@ -742,12 +780,24 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
 // ---- Quaternius Ultimate Stylized Nature(CC0)植被插槽 ----
 // 下載自 quaternius.com(gltf + bin + 貼圖,法線圖已剝除);
 // 載入失敗自動退回上面 VEG_DEFS 的程序生成版本,不開天窗。
+//
+// **2026-08-06 使用者定案「連 Quaternius 一起換掉」**(第 8 輪:灌木/闊葉林/針葉林/各種
+// 大小神木一律照片 → img→3D)—— broadleaf / birch / shrub 三型**退出這份名冊**,改走
+// 下面 VEG_DEFS 的零件表 + `lib:` 照片零件庫冠簇。三件事要一起記住:
+//   ① 這份名冊在這裡的語意是「這一型**不走**零件表」:掛在名冊裡的型別,`buildVegMeshes`
+//      連呼叫都不會被呼叫到 ⇒ 在名冊裡的型別上加 `lib:` 列是接在**沒人看得到的路徑**上
+//      (整支 GLB 分支沒有零件表可掛),而且不會有任何錯誤訊息。移除是唯一的接法。
+//   ② **只換冠簇,樹幹/枝條維持 primitive**(§3 rule 1「parts, never finished props」):
+//      SF3D 吃一張整棵樹的照片會吐出一整棵樹 —— 那是成品,烤進去就沒有逐實例變化了。
+//      故照片零件只接 `ico` 冠簇列,樹幹那幾根 cyl 一根都不動。
+//   ③ **尺寸接得上**:GLB 路徑的高度是 `it.s × entry.h`(8 / 8.5 / 1.8),零件表路徑是
+//      `vegSpan(def) × it.s`(實測 7.8 / 7.3 / 1.75)⇒ 同量級,不必改散布尺度。
+//      兩條路徑都零 `rnd()` 消耗(散布早就跑完)⇒ **佈局逐位元不變**,只換畫出來的幾何。
+// silvergrass / deadtree 留在名冊裡:使用者這一輪點名的是灌木/闊葉林/針葉林/神木,
+// 芒草與枯木不在其中,而草葉的鏤空貼圖是 SF3D 生不出來的東西(寧缺勿錯)。
 const NATURE_DIR = 'assets/models/quaternius/nature/';
 // h = 基準高(m):GLB 植被同步吃超尺度(比現實高大;put() 的 VEG_SCALE 已含在 s)
 const NATURE_MANIFEST = {
-  broadleaf:   { files: ['MapleTree_1.gltf', 'MapleTree_2.gltf', 'MapleTree_3.gltf'], h: 8 },
-  birch:       { files: ['BirchTree_1.gltf', 'BirchTree_2.gltf'], h: 8.5 },
-  shrub:       { files: ['Bush.gltf', 'Bush_Large.gltf', 'Bush_Small_Flowers.gltf'], h: 1.8 },
   silvergrass: { files: ['Grass_Large.gltf', 'Grass_Small.gltf'], h: 1.2 },
   deadtree:    { files: ['DeadTree_1.gltf', 'DeadTree_2.gltf'], h: 6.5 },
 };

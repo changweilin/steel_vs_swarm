@@ -79,6 +79,11 @@ export function bioLibDescs(src = biomesSrc()) {
         out.push({
           name: p.lib, family: p.lib.split('/')[0], node: p.lib.split('/').slice(1).join('/'),
           fb: p.g, kind, index, table, consumer: 'biomes',
+          // 預算依**消費角色**不依 GLB 家族(同 megalith 那一列的理由):神木一張圖幾十株、
+          // 一般植被上萬株,同一支 tree.glb 裡的節點按誰在用它決定上限。
+          //   GIANT_DEFS → families.tree(單件 ≤ 最重整株 + 逐株 kind_factor)
+          //   VEG_DEFS   → families.veg(InstancedMesh 逐列反推的 node_cap)
+          budgetFam: table === 'VEG_DEFS' ? 'veg' : 'tree',
           p: [p.px || 0, p.y || 0, p.pz || 0],
         });
       });
@@ -239,9 +244,14 @@ export function triBudget() {
       return cur == null || f.kind_factor == null ? null : { cur, cap: Math.round(cur * f.kind_factor) };
     },
     /**
-     * 逐桶節點上限(InstancedMesh 消費端專用;building 族):一顆節點被全桶 instance 共用,
-     * 逐件上限要由該桶的實測最大 instance 數反推。沒有這一桶的量測就回 null(intake 退回 capOf)。
+     * 逐桶節點上限(InstancedMesh 消費端專用;building / veg 族):一顆節點被全桶 instance
+     * 共用,逐件上限要由實測 instance 數反推。兩種寫法,取哪一種由該族的幾何學決定:
+     *   `node_caps[kind]` = 逐桶各有一個上限(building:三個桶的 instance 數同量級,
+     *                       故均分「總額度」再各自除以自己的 instance 數)
+     *   `node_cap`        = 全族一個上限(veg:名冊列均分「成長額度」⇒ 推導出來就是單一值;
+     *                       逐型再寫一次只是同一個數字抄 N 遍,而抄本會漂)
+     * 兩者都沒有就回 null(intake 退回 capOf)。
      */
-    nodeCap: (fam, kind) => b.families?.[fam]?.node_caps?.[kind] ?? null,
+    nodeCap: (fam, kind) => b.families?.[fam]?.node_caps?.[kind] ?? b.families?.[fam]?.node_cap ?? null,
   };
 }

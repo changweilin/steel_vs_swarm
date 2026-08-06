@@ -35,8 +35,48 @@
       "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
       "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
     },
+    "veg": {
+      "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73",
+      "measured_veg_total_max": 212963,
+      "measured_max_instances": {
+        "shrub": 1909,
+        "broadleaf": 211,
+        "birch": 98,
+        "mangrove": 98,
+        "conifer2": 73
+      },
+      "measured_quaternius_freed_min": 592199,
+      "measured_cur_part_tris": 20,
+      "lib_roster": {
+        "shrub": {
+          "rows": 1,
+          "instances": 1909
+        },
+        "broadleaf": {
+          "rows": 2,
+          "instances": 211
+        },
+        "birch": {
+          "rows": 2,
+          "instances": 98
+        },
+        "mangrove": {
+          "rows": 1,
+          "instances": 98
+        },
+        "conifer2": {
+          "rows": 4,
+          "instances": 73
+        }
+      },
+      "lib_instance_rows": 2917,
+      "whole_factor": 3.78,
+      "node_cap": 223,
+      "justification": "InstancedMesh 消費端(同 building 族的幾何學:GPU 成本 = 節點 tris × instance 數,逐件看毫無意義),但**數量級與 building 差一個檔次** —— 一張圖的屋頂煙囪 212 座,而灌木 1909 叢。**上限由「這一層還能長多少」反推**:node_cap = 成長額度 ÷ Σ(名冊列 × 該型 instance 上界) + 現行零件三角形數 = 592,199 ÷ 2,917 + 20 = 223。成長額度 = **Quaternius 退場實測釋出的最小值**(blackforest 2,184,169 → 1,591,970)⇒ 名冊每一列都貼滿上限的最壞情況,**每一個量過的場地都不比這一輪之前重**(whole_factor 3.78 是這條式子的結果,不是先挑一個好看的倍率)。逐列均分「成長額度」而不是均分「總額度」:均分總額度會給 20 株的 sapling 與 1909 叢的灌木同一份錢,實測算出來的上限是 27 tris —— 比現行的 ico(20)還小,等於這一族永遠不准接。**名冊本身是旋鈕,而且是雙向的**:①灌木 1909 個 instance ⇒ 它一列的價錢等於其餘九列的總和,兩列都接時 cap 只有 140,而 140 逼出來的減面比(實拍冠簇 336~414 → 140 = 2.4~3:1)正是 §5e 那個「Blender 硬減面把殼撕出洞」的區間 —— 外廓與預算全綠,截圖上是樹冠裂成一片片;②2026-08-06 重寫冠層骨架後零件變多,若每一團都接庫,Σ 會漲到 3,779、cap 掉到 176(又進撕裂區)⇒ 把「被主冠擋住大半」的小簇退回保險絲,額度留給看得見的那幾團。逐株(逐款)閘刻意不設:node_cap 的推導式本身已經把整層總量鎖住,再加一道 kind_factor 只是同一個約束寫兩次。",
+      "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量;④node_cap 與 whole_factor 都是推導值,MUST NOT 手改。"
+    },
     "tree": {
-      "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05)",
+      "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05;**2026-08-06 因 meranti/dinizia/tualang/klinki 重寫冠層骨架而重量** —— 只有 klinki 變動 286 → 386(輪生枝盤從 3 枝 3 盤改成 3 層 × 2 枝 2 盤),其餘三種零件數淨值不變。量測腳本已從臨時腳本升格為 `tools/ai3d/measure_veg_tris.mjs --giants`)",
       "measured_max_tris": 402,
       "factor": 1.0,
       "kind_tris": {
@@ -45,7 +85,7 @@
         "euc": 328,
         "dougfir": 316,
         "meranti": 315,
-        "klinki": 286,
+        "klinki": 386,
         "sitka": 281,
         "alerce": 280,
         "dinizia": 279,

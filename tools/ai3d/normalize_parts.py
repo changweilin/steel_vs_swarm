@@ -57,10 +57,16 @@ made = []
 # 新的那顆變成沒人引用的孤兒 —— 讀數完全正常,只是這次重跑等於沒發生
 # (2026-08-06:tower_a/mesa_a 想留三角形餘裕而重跑,實際輸出仍是舊版,由對照台的孤兒
 #  清單與 GLB 節點表才看出來)。
+# --drop <node>:把 base 裡的某個節點**刪掉**(可重複)。用途是「消費端不再引用它了」——
+# 節點表換形之後留下的舊節點沒有任何消費端,只會一直出現在對照台的孤兒清單裡,而且照樣
+# 佔著 GLB 的下載體積。與同名取代共用同一段刪除邏輯(含 `.NNN` 尾碼),語意差別只有
+# 「刪完要不要重生」。MUST NOT 拿它來「清掉看不順眼的節點」:孤兒清單是對照台的產出,
+# 刪之前先確認消費端真的不引用了(node tools/parts_review.mjs --report)。
 BASE = (opt_all('base') or [None])[0]
+DROP = set(opt_all('drop'))
 if BASE:
     bpy.ops.import_scene.gltf(filepath=BASE)
-    regen = {n[0] for n in NODES}
+    regen = {n[0] for n in NODES} | DROP
     for o in list(bpy.data.objects):
         if o.type != 'MESH':
             continue
