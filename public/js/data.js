@@ -1,6 +1,7 @@
 // ============ 無人戰略:鋼鐵與蜂群 — 共用遊戲常數 ============
 // 伺服器(server/sim.js)與前端(game.js)共用同一份數值,
 // 模式沿用 ai_tycoon:server 直接 import '../public/js/data.js'。
+import { BOT_POLICY } from './botPolicy.js';   // 電腦玩家學習策略(工具產出;見檔尾 BOT_LEARN 區塊)
 
 // ---- 陣營 ----
 export const SIDES = {
@@ -4216,14 +4217,17 @@ export const BOT_TACTIC = {
   KITE_FAR: 0.95,   // 裝填中 ⇒ 拉到射程外緣
 };
 /** 選敵優先度(≥1,越大越優先;`_acquire` 以加權距離除以它)。三項佔比一律 0~1 ——
- *  消費端 MUST NOT 另寫權重或改變組合方式。 */
-export const botTargetPrio = ({ threat = 0, output = 0, exec = 0 }) =>
-  1 + BOT_TACTIC.W_THREAT * threat + BOT_TACTIC.W_OUTPUT * output + BOT_TACTIC.W_EXEC * exec;
-/** 威脅記憶淡出(線性;THREAT_S 秒後歸零)—— 剛剛挨的那一槍權重最高 */
-export const botThreatDecay = (age) => Math.max(0, 1 - Math.max(0, age) / BOT_TACTIC.THREAT_S);
+ *  消費端 MUST NOT 另寫權重或改變組合方式。
+ *  第二參數 T = 戰術旋鈕表(預設全域 BOT_TACTIC;學習迴圈逐 brain 注入候選策略用,見 BOT_LEARN)。 */
+export const botTargetPrio = ({ threat = 0, output = 0, exec = 0 }, T = BOT_TACTIC) =>
+  1 + T.W_THREAT * threat + T.W_OUTPUT * output + T.W_EXEC * exec;
+/** 威脅記憶淡出(線性;THREAT_S 秒後歸零)—— 剛剛挨的那一槍權重最高。
+ *  THREAT_S 刻意**不在** BOT_LEARN 白名單:sim._hurtLog 累加前的淡出吃同一支(全域)——
+ *  帳的時鐘只有一個,逐 brain 各走各的秒數 = 記帳與讀帳兩個時鐘(第二份帳的變體)。 */
+export const botThreatDecay = (age, T = BOT_TACTIC) => Math.max(0, 1 - Math.max(0, age) / T.THREAT_S);
 /** 一個收割窗內打得出的傷害(撿尾刀的判準)。刻意是**近似**:不含護甲減免/爆擊/衰減 ——
  *  這是「該不該插隊去收人頭」的取捨,不是傷害結算(結算永遠只在 sim._damage)。 */
-export const botSalvo = (wd, kind) => wd.dmg * vsMult(wd, kind) * wd.rate * BOT_TACTIC.EXEC_S;
+export const botSalvo = (wd, kind, T = BOT_TACTIC) => wd.dmg * vsMult(wd, kind) * wd.rate * T.EXEC_S;
 /**
  * 「快要陣亡」那一項的權重輸入。一般 = **已損失比例**(0~1);收割窗內打得完 = `EXEC_MAX`。
  * 兩者刻意差一個量級:「剩一口氣」只是排序偏好(反正誰打都會死),「我這一秒打得死」才是
@@ -4234,7 +4238,72 @@ export const botExecW = (ehp, maxEhp, salvo) =>
   (salvo > 0 && ehp <= salvo) ? BOT_TACTIC.EXEC_MAX
     : (maxEhp > 0 ? Math.max(0, 1 - ehp / maxEhp) : 0);
 /** 打帶跑的距離環比例:可擊發 = 貼上去、裝填中 = 拉開 */
-export const botKiteF = (ready) => (ready ? BOT_TACTIC.KITE_NEAR : BOT_TACTIC.KITE_FAR);
+export const botKiteF = (ready, T = BOT_TACTIC) => (ready ? T.KITE_NEAR : T.KITE_FAR);
+
+// ---- 電腦玩家學習策略(2026-08-06 使用者需求「最佳操作策略的電腦玩家,平衡性調整時可不斷學習」)----
+// 手寫的 BOT_TACTIC 是**基準**;`tools/bot_learn.mjs` 以離線自對戰(CRN 配對鏡射 + 鏡射高斯
+// 擾動)持續優化其中的**取捨型旋鈕**,成果寫進 `botPolicy.js`,由下面的覆寫迴圈套回 BOT_TACTIC。
+// 平衡數值一改(指紋 `balanceFingerprint()` 變了)⇒ 重跑 bot_learn 即以現行策略暖啟動再學 —— 這
+// 就是「平衡性調整時可不斷學習」的落點:策略不追 commit,追**平衡指紋**。
+//
+// 四條紀律(缺一即是 A32/A33 倒退,詳見 docs/bot_learning.md 與 audit_bot_policy.mjs):
+// ①**只學「取捨」,不學「能力」**:白名單全是決策權重/距離環/集結參數 —— 視野(BOT_VIEW)、
+//   手速(BOT_DIFF.gap/react)、準度(aimErr)一律不可學,學了就是把「比真人多看/多走」偷渡回來。
+// ②**使用者定案值不可學**:PULL_SP(=0.5)/BASE_HP(=0.25)/PULL_HP/RESUME_HP/EXEC_MAX 是
+//   2026-08-02 使用者定案或舊制平衡錨,MUST NOT 進白名單;THREAT_S 見 botThreatDecay 檔頭。
+// ③**白名單鍵 MUST 只被 tactic/elite 分支消費**(讀取端 = bots.js `this.tac`):新手/低難度
+//   因此**結構性地**逐位元維持舊制,不靠「記得別改到」。
+// ④**夾制只有 `botPolicySanitize` 一份**(執行期覆寫與學習工具同吃):邊界鏡射
+//   audit_bot_tactics 的守門斷言(W_THREAT 恆最重、RALLY_SP ∈ (0.9,1)、KITE 近 < 遠…)——
+//   壞掉的學習輪寫出再離譜的值,套用時也會被夾回合法域(原則 6)。
+export const BOT_TACTIC_BASE = Object.freeze({ ...BOT_TACTIC });   // 手寫基準快照(同 rate0 的留檔模式)
+export const BOT_LEARN = {
+  // 可學習鍵與邊界 [lo, hi](夾制唯一真相;audit_bot_policy 反查每一條都收在 audit_bot_tactics 的守門線內)
+  KEYS: {
+    W_THREAT: [0.8, 4],        // 對自己傷害最高者的權重(恆最重,由 GAP 交叉夾制保證)
+    W_OUTPUT: [0, 2],          // 對我方總輸出最高者
+    W_EXEC: [0, 2.5],          // 快要陣亡目標
+    EXEC_S: [0.4, 2.5],        // 收割窗秒數
+    RALLY_SP: [0.91, 0.995],   // 集結復出的護盾線(audit 守門 (0.9, 1) 之內)
+    RALLY_BACK_M: [20, UNITS.tower.range * 0.9],   // 集結點退到塔後多遠(推導:恆 < tower.range 守門線)
+    KITE_NEAR: [0.35, 0.8],    // 打帶跑:可擊發的距離環
+    KITE_FAR: [0.75, 1],       // 打帶跑:裝填中的距離環
+  },
+  GAP: 0.05,   // 交叉約束的最小間距(W_THREAT 對其餘權重 / KITE 近對遠)
+};
+/**
+ * 策略夾制的**唯一縫**:部分策略(botPolicy.js 的 tactic 或學習中的候選)→ 完整合法旋鈕表。
+ * 非白名單鍵/非有限數一律忽略(= 取基準);逐鍵夾邊界後再套交叉約束。
+ * `botPolicySanitize({})` MUST 逐位元等於 BOT_TACTIC_BASE(中性不變式,稽核釘住)。
+ */
+export const botPolicySanitize = (p) => {
+  const out = { ...BOT_TACTIC_BASE };
+  for (const [k, [lo, hi]] of Object.entries(BOT_LEARN.KEYS)) {
+    const v = p?.[k];
+    if (Number.isFinite(v)) out[k] = Math.min(hi, Math.max(lo, v));
+  }
+  // 交叉約束(鏡射 audit_bot_tactics 的守門斷言;只收緊不放寬)
+  out.W_THREAT = Math.max(out.W_THREAT, Math.max(out.W_OUTPUT, out.W_EXEC) + BOT_LEARN.GAP);
+  out.KITE_FAR = Math.min(1, Math.max(out.KITE_FAR, out.KITE_NEAR + BOT_LEARN.GAP));
+  out.KITE_NEAR = Math.min(out.KITE_NEAR, out.KITE_FAR - BOT_LEARN.GAP);
+  return out;
+};
+{ // 覆寫迴圈(唯一套用點):學習成果 → BOT_TACTIC。空 policy ⇒ 逐位元同基準。
+  const s = botPolicySanitize(BOT_POLICY?.tactic);
+  for (const k of Object.keys(BOT_LEARN.KEYS)) BOT_TACTIC[k] = s[k];
+}
+/**
+ * 平衡數值指紋(FNV-1a 32-bit):蓋住學習結果所依附的那批數值 —— 機種/角色(含推導迴圈
+ * 定案後的武器階梯)/經濟/波次。指紋一變 = 平衡調整過,botPolicy.js 的 meta.balHash 過期
+ * ⇒ bot_learn 提示重新學習(策略檔照常生效 —— 過期的好策略仍比中性好,原則 6)。
+ */
+export const balanceFingerprint = () => {
+  let s;
+  try { s = JSON.stringify([UNITS, CHARACTERS, WEAPONS, ECON, SQUAD, GAME]); } catch { return 'json-err'; }
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+};
 
 // ---- 環境:季節 / 日夜 / 天氣(建房時選,預設隨機)----
 export const ENV = {

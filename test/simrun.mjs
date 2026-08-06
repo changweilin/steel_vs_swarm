@@ -10,13 +10,14 @@
 //
 // 離開碼:0 = 全部正常結束(有勝負或達上限);1 = 有場次拋例外。
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { BattleSim } from '../server/sim.js';
 import { BotBrain } from '../server/bots.js';
 import { MAPGEO, lanesFor, BOT_DIFF } from '../public/js/data.js';
 
 // ---- 合成戰場(台北 101 附近;兩堡 1600×L,與 e2e 同錨點,留防空安全邊界)----
-function buildConfig(L) {
+// 匯出給 tools/bot_learn.mjs / audit_bot_policy.mjs 共用(合成戰場只有這一份,MUST NOT 各抄一份)
+export function buildConfig(L) {
   const A = [25.0330, 121.5654];
   const D = 1600 * L, R = 6371000;
   const realD = D * MAPGEO.REAL_SCALE;
@@ -105,11 +106,15 @@ function parseArgs(argv) {
   return a;
 }
 
-if (!isMainThread) {
+// 入口守衛:本檔被其他工具 import(取 buildConfig)時 MUST NOT 執行主流程/誤認別人的 worker。
+// worker 分支認 `workerData.simrun` 標記(別的工具也會開 worker,workerData 形狀不同)。
+const isEntry = isMainThread && process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (!isMainThread && workerData?.simrun) {
   // worker:跑指派的區間,回傳結果陣列
   const { opts, from, to } = workerData;
   parentPort.postMessage(runBatch(opts, from, to));
-} else {
+} else if (isEntry) {
   const opts = parseArgs(process.argv.slice(2));
   const { matches, workers } = opts;
   const t0 = Date.now();
@@ -129,7 +134,7 @@ if (!isMainThread) {
       const from = w * per, to = Math.min(matches, from + per);
       if (from >= to) break;
       jobs.push(new Promise((res, rej) => {
-        const wk = new Worker(here, { workerData: { opts, from, to } });
+        const wk = new Worker(here, { workerData: { simrun: true, opts, from, to } });
         wk.on('message', res);
         wk.on('error', rej);
         wk.on('exit', (code) => { if (code !== 0) rej(new Error(`worker exit ${code}`)); });

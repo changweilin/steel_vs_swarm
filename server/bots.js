@@ -32,6 +32,10 @@ export class BotBrain {
     this.pid = pid;
     this.side = side;
     this.diff = botDiffOf(diffKey);   // { aimErr, heavy, ability, gap, react }
+    // 戰術旋鈕表的**唯一讀取縫**:預設 = 全域 BOT_TACTIC(含 botPolicy.js 學習成果)。
+    // 離線學習迴圈(tools/bot_learn.mjs)逐 brain 注入候選策略時只換這一個參照 ——
+    // bots.js 其餘各處 MUST 經 this.tac 取旋鈕,MUST NOT 再直接讀 BOT_TACTIC.*。
+    this.tac = BOT_TACTIC;
     this.lane = laneIdx % sim.lanes.length;
     this.state = 'PUSH';
     // ---- 操作節奏(見 _op)----
@@ -169,8 +173,8 @@ export class BotBrain {
     // **MUST 維持短路**:`_op` 一旦回 true 就吃掉一格全域手速,無條件問等於每拍都在付錢。
     const want = this._pullWant(h, frac, spF);
     if (want && this.state !== want && this._op('state')) this._enterPull(h, want);
-    else if (this.state === 'RETREAT' && frac >= BOT_TACTIC.RESUME_HP && this._op('state')) this._resume(0);
-    else if (this.state === 'RALLY' && spF >= BOT_TACTIC.RALLY_SP && this._op('state')) this._resume(this._progAt(h));
+    else if (this.state === 'RETREAT' && frac >= this.tac.RESUME_HP && this._op('state')) this._resume(0);
+    else if (this.state === 'RALLY' && spF >= this.tac.RALLY_SP && this._op('state')) this._resume(this._progAt(h));
 
     const target = this._target(h);
     if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
@@ -263,13 +267,13 @@ export class BotBrain {
    * 沒有 tactic 旗標的難度(新手/低)只剩舊制那一條(門檻 PULL_HP、目的地主堡)⇒ 逐位元不變。
    */
   _pullWant(h, frac, spF) {
-    if (!this.diff.tactic) return frac < BOT_TACTIC.PULL_HP ? 'RETREAT' : null;
-    if (frac < BOT_TACTIC.BASE_HP) return 'RETREAT';
+    if (!this.diff.tactic) return frac < this.tac.PULL_HP ? 'RETREAT' : null;
+    if (frac < this.tac.BASE_HP) return 'RETREAT';
     if (this.state === 'RETREAT') return 'RETREAT';
-    if (spF >= BOT_TACTIC.PULL_SP) return null;
+    if (spF >= this.tac.PULL_SP) return null;
     if (!this._inFight(h)) return null;                                   // 已脫戰:護盾正在回,沒有危險
-    if (frac < BOT_TACTIC.PULL_HP) return 'RALLY';                        // 中/高:裝甲也見底
-    if (this.diff.elite && this._recentDmg(h) >= BOT_TACTIC.PULL_SP * (h.maxSp || 0)) return 'RALLY';
+    if (frac < this.tac.PULL_HP) return 'RALLY';                        // 中/高:裝甲也見底
+    if (this.diff.elite && this._recentDmg(h) >= this.tac.PULL_SP * (h.maxSp || 0)) return 'RALLY';
     return null;
   }
 
@@ -290,7 +294,7 @@ export class BotBrain {
     let s = 0;
     for (const r of h._threat?.values() || []) {
       if (r.k === 'tower' || r.k === 'base') continue;
-      s += r.v * botThreatDecay(this.sim.t - r.t);
+      s += r.v * botThreatDecay(this.sim.t - r.t, this.tac);
     }
     return s;
   }
@@ -353,7 +357,7 @@ export class BotBrain {
     }
     if (bestFrac == null) { this._rallyProg = 0; this._rallyAt = sim.basePos[this.side]; return; }
     // frac 自**己方端**起算(與 solveTowerSites / this.prog 同框)⇒ 減去 RALLY_BACK_M 就是塔後方
-    this._setRally(Math.max(0, total * bestFrac - BOT_TACTIC.RALLY_BACK_M));
+    this._setRally(Math.max(0, total * bestFrac - this.tac.RALLY_BACK_M));
   }
 
   /** 集結點寫入的唯一縫:己方端進度 → 世界座標(兩種集結點共用同一條換算) */
@@ -429,7 +433,7 @@ export class BotBrain {
     // 量的是**裝填**而不是逐發射速間隔:後者只有零點幾秒,照著它進退只會抖成原地震動。
     // 建築(塔/主堡)不套 —— 它們不會追,拉開只是白白少打幾秒。
     const struct = t.kind === 'tower' || t.kind === 'base';
-    const kite = this.diff.elite && !struct ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t)) : 0.6;
+    const kite = this.diff.elite && !struct ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t), this.tac) : 0.6;
     const keep = gun.range * (struct ? 0.85 : kite);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
@@ -567,7 +571,7 @@ export class BotBrain {
    */
   _threatOf(h, t) {
     const r = h._threat?.get(t.hero ? t.pid : t.id);
-    return r ? r.v * botThreatDecay(this.sim.t - r.t) : 0;
+    return r ? r.v * botThreatDecay(this.sim.t - r.t, this.tac) : 0;
   }
 
   /**
@@ -628,7 +632,7 @@ export class BotBrain {
       const maxEhp = (t.maxHp || ehp) + (t.maxSp || 0);
       // 撿尾刀只給高難度:salvo 傳 0 = 關掉收割分支(中難度只剩一般的低血偏好),
       // 分歧住 botExecW 那一支,MUST NOT 在這裡另寫一次 if。
-      c.exec = botExecW(ehp, maxEhp, this.diff.elite ? botSalvo(wd, t.kind) : 0);
+      c.exec = botExecW(ehp, maxEhp, this.diff.elite ? botSalvo(wd, t.kind, this.tac) : 0);
       if (c.threat > mT) mT = c.threat;
       if (c.out > mO) mO = c.out;
     }
@@ -637,7 +641,7 @@ export class BotBrain {
         threat: mT > 0 ? c.threat / mT : 0,
         output: mO > 0 ? c.out / mO : 0,
         exec: c.exec,
-      });
+      }, this.tac);
     }
   }
 }
