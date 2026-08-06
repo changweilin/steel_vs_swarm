@@ -23,6 +23,7 @@ import {
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
+  ULT_CARRIER, ultDelivered, ultCarrierCd, ultCdBand, ultParts, ultPartN,
 } from '../public/js/data.js';
 
 /**
@@ -781,53 +782,58 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     `無人機射程上限 ≈ 機甲 ×9/8(sight ${UNITS.drone.sight} vs ${UNITS.robot.sight},射程較機甲高約 1/8)`);
 
   log('— sim:無人機飽和攻擊(長按右鍵:4 架衝出 / 每架半傷 / 3 倍速撲擊 / 吸走導引飛彈 / 主機不自爆)—');
-  const $kill0 = dr.money;
-  sim.heroKamikaze('p_d');
-  assert(sq.kamis.length === SQUAD.KAMI.N, `護衛機衝出 ${SQUAD.KAMI.N} 架(實際 ${sq.kamis.length})`);
-  assert(!dr.dead, '主機不自爆(護衛機才是自殺攻擊來源)');
-  assert(sq.kamis.every((k) => k.kami && k.side === 'SWARM' && k.hp === kamiHp() && k.armor === 0 && k.maxSp === 0),
+  // 2026-08-06 大招載具化:s01 的大招已轉載具遞送(heroKamikaze 有 ultDelivered 守衛)⇒
+  // 機種絕招直測改用**未轉換**的無人機角色 s12(vision 大招維持瞬發、機種絕招保留)。
+  const dk = sim.addHero('SWARM', 'p_k', 's12');
+  dk.dead = false; dk.x = dr.x; dk.z = dr.z; dk.y = dr.y || 0; dk.ry = 0;
+  const ksq = sim.squads.get('p_k');
+  const $kill0 = dk.money;
+  sim.heroKamikaze('p_k');
+  assert(ksq.kamis.length === SQUAD.KAMI.N, `護衛機衝出 ${SQUAD.KAMI.N} 架(實際 ${ksq.kamis.length})`);
+  assert(!dk.dead, '主機不自爆(護衛機才是自殺攻擊來源)');
+  assert(ksq.kamis.every((k) => k.kami && k.side === 'SWARM' && k.hp === kamiHp() && k.armor === 0 && k.maxSp === 0),
     `護衛機 HP = kamiHp() 推導 ${kamiHp()}、armor/護盾 0(校準不隨主機漂移)`);
   // 橫向站位由 kamiSide 單一縫散開(N=4 ⇒ 左右各兩架,MUST NOT 全擠一側)
-  assert(sq.kamis.filter((k) => k.ry < dr.ry).length === SQUAD.KAMI.N / 2,
+  assert(ksq.kamis.filter((k) => k.ry < dk.ry).length === SQUAD.KAMI.N / 2,
     `${SQUAD.KAMI.N} 架左右對半散開(kamiSide 單一縫)`);
-  assert(sq.kamiCd > sim.t, `冷卻啟動(CD ${SQUAD.KAMI.CD_S}s)`);
-  sim.heroKamikaze('p_d');
-  assert(sq.kamis.length === SQUAD.KAMI.N, '冷卻中再按不會再生成一批');
+  assert(ksq.kamiCd > sim.t, `冷卻啟動(CD ${SQUAD.KAMI.CD_S}s)`);
+  sim.heroKamikaze('p_k');
+  assert(ksq.kamis.length === SQUAD.KAMI.N, '冷卻中再按不會再生成一批');
   // 導引飛彈吸附:朝主機發射的追蹤飛彈 → 改追最近的自殺機(吸走砲火)
-  sim.missiles.push({ id: 990001, byId: 0, side: 'STEEL', tid: dr.id, tpid: 'p_d',
-    x: dr.x, z: dr.z + 40, y: dr.y || 0, speed: 1, dmg: 10, pen: 0, hp: 40, ttl: 14 });
+  sim.missiles.push({ id: 990001, byId: 0, side: 'STEEL', tid: dk.id, tpid: 'p_k',
+    x: dk.x, z: dk.z + 40, y: dk.y || 0, speed: 1, dmg: 10, pen: 0, hp: 40, ttl: 14 });
   sim._tickMissiles(0.001);
-  assert(sq.kamis.some((k) => k.id === sim.missiles[0].tid), '敵方導引飛彈被自殺機吸走砲火(改追自殺機)');
+  assert(ksq.kamis.some((k) => k.id === sim.missiles[0].tid), '敵方導引飛彈被自殺機吸走砲火(改追自殺機)');
   sim.missiles.length = 0;
   // 撲擊近炸:把護衛機挪到孤立敵人旁,tick 引爆 → 重型炸彈爆風命中、擊殺記主機。
   // 2026-08-01 飽和攻擊改制:每架威力減半(預算 / 4)⇒ **一架殺不死一名步槍兵**,兩架才行 ——
   // 這正是「攻擊力減半、數量加倍」的設計面貌(單點爆發下降、覆蓋面上升)。
-  const k0 = sq.kamis[0], k0b = sq.kamis[1];
-  const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x + 400, z: dr.z + 400, hp: UNITS.soldier.hp });
+  const k0 = ksq.kamis[0], k0b = ksq.kamis[1];
+  const victim = sim._add({ kind: 'soldier', side: 'STEEL', x: dk.x + 400, z: dk.z + 400, hp: UNITS.soldier.hp });
   k0.x = victim.x - 1; k0.z = victim.z; k0.y = 0; k0.tid = victim.id;
   sim._tickKamis(0.05);
   assert(sim.ents.has(victim.id) && victim.hp < UNITS.soldier.hp,
     `單架護衛機打掉步槍兵 ${Math.round(UNITS.soldier.hp - victim.hp)} 點但殺不死(每架威力減半)`);
-  assert(!sim.ents.has(k0.id) && !sq.kamis.includes(k0), '護衛機引爆後移除');
+  assert(!sim.ents.has(k0.id) && !ksq.kamis.includes(k0), '護衛機引爆後移除');
   k0b.x = victim.x - 1; k0b.z = victim.z; k0b.y = 0; k0b.tid = victim.id;
   sim._tickKamis(0.05);
   assert(!sim.ents.has(victim.id), '第二架補上 → 炸死孤立敵兵(數量取代單發爆發)');
-  assert(dr.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺賞金記主機 +$${Math.round(dr.money - $kill0)}`);
+  assert(dk.money - $kill0 >= ECON.BOUNTY.soldier, `擊殺賞金記主機 +$${Math.round(dk.money - $kill0)}`);
   // 傷害驗證(2026-07-27 改制):每架護衛機爆風 = 機種絕招預算 / KAMI.N(N 架打完 = 一份完整預算)
-  if (sq.kamis.length) {
-    const k1 = sq.kamis[0];
-    const beef = sim._add({ kind: 'soldier', side: 'STEEL', x: dr.x - 400, z: dr.z - 400, y: 0, hp: 9999 });
+  if (ksq.kamis.length) {
+    const k1 = ksq.kamis[0];
+    const beef = sim._add({ kind: 'soldier', side: 'STEEL', x: dk.x - 400, z: dk.z - 400, y: 0, hp: 9999 });
     k1.x = beef.x; k1.z = beef.z; k1.y = 0; k1.tid = beef.id;
     const bhp0 = beef.hp;
     sim._tickKamis(0.05);
-    const kd = kamiBlast(dr.abil);
+    const kd = kamiBlast(dk.abil);
     const expOne = kd.dmg * WEAPONS.bomb.vs.flesh * armorMul(UNITS.soldier.armor, WEAPONS.bomb.pen);
     assert(Math.abs((bhp0 - beef.hp) - expOne) < 2,
-      `護衛機近炸 ${(bhp0 - beef.hp).toFixed(0)} ≈ 絕招預算 ${Math.round(specialBudget(dr.abil))}/${SQUAD.KAMI.N}`
+      `護衛機近炸 ${(bhp0 - beef.hp).toFixed(0)} ≈ 絕招預算 ${Math.round(specialBudget(dk.abil))}/${SQUAD.KAMI.N}`
       + ` × 肉體 ${WEAPONS.bomb.vs.flesh} × 護甲減免(${expOne.toFixed(0)})`);
     if (sim.ents.has(beef.id)) sim.ents.delete(beef.id);
   }
-  for (const k of [...sq.kamis]) sim._removeKami(k);   // 收掉剩餘護衛機
+  for (const k of [...ksq.kamis]) sim._removeKami(k);   // 收掉剩餘護衛機
 
   log('— sim:無人機重生冷卻 —');
   dr.hp = 0; sim._kill(dr, null);
@@ -964,7 +970,9 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
 
   log('— sim:極音速飛彈(機甲長按招式:45° 拋物線爬升 → 極音速螺旋俯衝 / 射後不理 / 可被擊落)—');
   {
-    const rb3 = sim.heroes.get('p_r');
+    // 2026-08-06 大招載具化:t01 的大招已轉載具遞送(heroHyper 有 ultDelivered 守衛)⇒
+    // 機種絕招直測改用**未轉換**的機甲角色 t02(自身 buff 大招維持瞬發、機種絕招保留)。
+    const rb3 = sim.addHero('STEEL', 'p_h', 't02');
     rb3.dead = false; rb3.hp = rb3.maxHp; rb3.mp = rb3.maxMp; rb3.x = 0; rb3.z = 0; rb3.y = 0; rb3.ry = 0;
     rb3.hyperCd = 0; rb3.hyper = null;
     rb3.ammo = {}; rb3.fireAt = {}; rb3.reloadUntil = {};
@@ -977,7 +985,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     // 射後不理 ⇒ 不需狙擊模式、不吃彈夾(空夾/裝填中照樣發射)
     rb3.aiming = false;
     rb3.reloadUntil = { heavy: sim.t + 5 }; rb3.ammo = { heavy: 0 };
-    sim.heroHyper('p_r');
+    sim.heroHyper('p_h');
     const m = rb3.hyper;
     assert(!!m && m.kind === 'hyper', '一般模式(非狙擊)+ 空夾/裝填中照樣發射得出極音速飛彈');
     assert((rb3.hyperCd || 0) > sim.t, '發射即進入冷卻');
@@ -985,7 +993,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       `飛彈 HP = hyperHp() 推導 ${hyperHp()}、armor 0(一座砲塔剛好打不爆)`);
     assert(rb3.ammo.heavy === 0, '發射不消耗一般重武器彈夾(它與彈夾完全脫鉤)');
     const before = rb3.hyper;
-    sim.heroHyper('p_r');
+    sim.heroHyper('p_h');
     assert(rb3.hyper === before, '冷卻中 / 空中已有一枚時再按無效');
     // 它是敵方的合法鎖定目標(「可以被攻擊」)—— 挪到空曠處量,否則同格的機甲本體(英雄偏好)會先被選走
     m.x = 900; m.z = 900; m.y = 20;
@@ -1018,7 +1026,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     sim.ents.delete(tgt.id);
     // 被攔截:不引爆(攔截成功 = 完全否定這一招)
     rb3.hyperCd = 0;
-    sim.heroHyper('p_r');
+    sim.heroHyper('p_h');
     const m2 = rb3.hyper;
     const bystander = sim._add({ kind: 'soldier', side: 'SWARM', x: m2.x + 2, z: m2.z, y: 0, hp: UNITS.soldier.hp });
     m2.hp = 0;
@@ -1039,7 +1047,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
         rb3.hyperCd = 0; rb3.hyper = null;
         rb3.x = 0; rb3.z = 0; rb3.y = 0; rb3.ry = 0;
         sq3.lock = tgt.id; sq3.lockAt = sim.t;                  // 發射瞬間的鎖定 = 追擊候選
-        sim.heroHyper('p_r');
+        sim.heroHyper('p_h');
         return rb3.hyper;
       };
       const climb = (m) => { let g = 0; while (m.phase === 'climb' && g++ < 2000) sim._tickHypers(0.05); };
@@ -1202,6 +1210,104 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       `戰鬥部佔預算 ${(hyperShare() * 100).toFixed(1)}% = KAMI_EQ ÷ KAMI.N(推導不手寫)`);
     // 舊巨砲的發數/開窗常數整組移除(改招後不該再有任何殘留 export)
     assert(HYPER && HYPER.CD_S > 0, 'HYPER 取代 BARRAGE 成為機甲長按招式的常數組');
+  }
+
+  log('— sim/data:大招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的大招」)—');
+  {
+    // ① 轉換判定是推導(區域/指向型全轉:strike/emp/summon + 團隊 heal/buff = 23 台);
+    //    純自身型 9 台維持瞬發且 heroAbility 輸出(cd/range)逐位元不動
+    const conv = Object.keys(CHARACTERS).filter((c) => ultDelivered(c));
+    assert(conv.length === 23, `區域/指向型大招共 23 台轉載具(實得 ${conv.length})`);
+    for (const c of Object.keys(CHARACTERS)) {
+      const u = CHARACTERS[c].ult;
+      const inst = !(u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
+        || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team'));
+      assert(ultDelivered(c) === !inst, `${c} 轉換判定與「區域/指向型」定義一致`);
+      const A = heroAbility(c, 'ult', 1);
+      if (inst) {
+        assert(!A.carrier && A.cd === tierVal(u.cd, 1), `${c} 純自身型大招維持瞬發、cd 不動(${A.cd}s)`);
+      } else {
+        assert(A.carrier && A.cd >= ULT_CARRIER.CD_LO - 1e-9 && A.cd <= ULT_CARRIER.CD_HI + 1e-9,
+          `${c} 載具大招 CD ${A.cd.toFixed(1)}s 落在 [${ULT_CARRIER.CD_LO}, ${ULT_CARRIER.CD_HI}]`);
+        assert(A.range > 0, `${c} 載具大招有遞送距離(${A.range.toFixed(0)}m)`);
+      }
+    }
+    // CD 映射保序(仿射):原 cd 越短者新 cd 仍越短
+    const pairs = conv.map((c) => [tierVal(CHARACTERS[c].ult.cd, 1), heroAbility(c, 'ult', 1).cd]);
+    pairs.sort((a, b) => a[0] - b[0]);
+    assert(pairs.every((p, i) => i === 0 || p[1] >= pairs[i - 1][1] - 1e-9), 'CD 帶映射嚴格保序');
+
+    // ② 機甲 strike 大招 = 極音速飛彈形式:有飛行時間、著彈打出 strike、效果取代傷害
+    const s2 = new BattleSim(fakeBattleConfig(1));
+    const rc = s2.addHero('STEEL', 'uc_r', 't01');
+    rc.x = 400; rc.z = 0; rc.mp = 999; rc.abil.ult = 1;
+    const dum = s2._add({ kind: 'bunker', side: 'SWARM', x: 500, z: 0, y: 0, hp: 4000 }); delete dum.lane;
+    s2.heroCast('uc_r', 'ult', 500, 0);
+    assert(!!rc.hyper && !!rc.hyper.uA, 't01 大招發射極音速飛彈載具(uA payload、點遞送)');
+    assert((rc.acd.ult - s2.t) >= ULT_CARRIER.CD_LO && (rc.acd.ult - s2.t) <= ULT_CARRIER.CD_HI, 'CD 已收進 [30,60] 帶');
+    const hp0 = dum.hp;
+    let flew = 0, fxN = 0;
+    for (let i = 0; i < 400 && rc.hyper; i++) {
+      s2.tick(0.125); flew++;
+      fxN += s2.events.filter((e) => e.e === 'ultfx' && e.fx === 'strike').length;
+      s2.events.length = 0;
+    }
+    assert(!rc.hyper && flew * 0.125 >= 1, `飛彈有飛行時間(${(flew * 0.125).toFixed(1)}s ≥ 1s)後引爆`);
+    assert(fxN === 1 && dum.hp < hp0, `著彈推送 ultfx 並以 strike 結算(${Math.round(hp0)} → ${Math.round(dum.hp)})`);
+
+    // ③ 無人機團隊 heal 大招 = 4 架自殺攻擊機分批;擊落一半 = 只補一半(該份否定、無殉爆傷害)
+    const s3 = new BattleSim(fakeBattleConfig(1));
+    const dc = s3.addHero('SWARM', 'uc_d', 's02');
+    dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.ult = 1; dc.hp = 100;
+    // 旁觀者取 bunker(speed 0):測試假人無 lane,speed > 0 的兵種會被 _advance 撞上 undefined 兵線
+    const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
+    s3.heroCast('uc_d', 'ult', 450, 0);
+    const uk = [...s3.ents.values()].filter((e) => e.kami);
+    assert(uk.length === SQUAD.KAMI.N && uk.every((k) => k.uA && k.pt), `s02 大招生成 ${SQUAD.KAMI.N} 架點遞送 kami(分批)`);
+    uk[0].hp = 0; s3._kill(uk[0], null);
+    uk[1].hp = 0; s3._kill(uk[1], null);
+    for (let i = 0; i < 200 && [...s3.ents.values()].some((e) => e.kami); i++) s3.tick(0.125);
+    const healFull = heroAbility('s02', 'ult', 1).heal;
+    assert(Math.abs((dc.hp - 100) - healFull / 2) < 12,
+      `擊落 2/${SQUAD.KAMI.N} ⇒ 只補一半(${(dc.hp - 100).toFixed(0)} / 全額 ${healFull})`);
+    assert(bys.hp === 4000, '效果取代傷害:heal 載具抵達不產生任何爆風傷害(落點敵方單位毫髮無傷)');
+
+    // ④ 變形者 emp 大招 = 單一轟炸機(不可分狀態單載);抵達落點區內敵人武器離線
+    const s4 = new BattleSim(fakeBattleConfig(1));
+    const mc = s4.addHero('SWARM', 'uc_m', 's03');
+    mc.x = 400; mc.z = 0; mc.mp = 999; mc.abil.ult = 1;
+    const dum4 = s4._add({ kind: 'bunker', side: 'STEEL', x: 520, z: 0, y: 0, hp: 4000 }); delete dum4.lane;
+    s4.heroCast('uc_m', 'ult', 520, 0);
+    const ub = [...s4.ents.values()].filter((e) => e.decoy);
+    assert(ub.length === 1 && ub[0].uA && ub[0].uDrops.length === 1, 's03(emp)= 單一轟炸機、單份投遞(emp/buff 不可分)');
+    assert(ultParts('morph', 'emp') === 1 && ultParts('drone', 'buff') === 1
+      && ultParts('drone', 'heal') === SQUAD.KAMI.N && ultParts('morph', 'strike') === DECOY.BOMB_MAX,
+      'ultParts:可分預算分批、不可分狀態單載(推導規則)');
+    for (let i = 0; i < 300 && [...s4.ents.values()].some((e) => e.decoy); i++) s4.tick(0.125);
+    assert((dum4.empUntil || 0) > s4.t, '轟炸機抵達 ⇒ 落點敵人 EMP 武器離線(效果取代傷害)');
+
+    // ⑤ 合併為一招:converted 角色的機種絕招舊路徑被守衛擋下;unconverted 照常
+    const s5 = new BattleSim(fakeBattleConfig(1));
+    const g1 = s5.addHero('SWARM', 'uc_g1', 's02'); g1.x = 0; g1.z = 0;
+    s5.heroKamikaze('uc_g1');
+    assert(![...s5.ents.values()].some((e) => e.kami), 'converted 無人機(s02)heroKamikaze 被守衛擋下');
+    const g2 = s5.addHero('SWARM', 'uc_g2', 's03'); g2.x = 0; g2.z = 0;
+    s5.heroDecoy('uc_g2');
+    assert(!s5.squads.get('uc_g2').decoy, 'converted 變形者(s03)heroDecoy 被守衛擋下');
+    const g3 = s5.addHero('STEEL', 'uc_g3', 't01'); g3.x = 0; g3.z = 0;
+    s5.heroHyper('uc_g3');
+    assert(!g3.hyper, 'converted 機甲(t01)heroHyper 被守衛擋下');
+    const g4 = s5.addHero('STEEL', 'uc_g4', 't02'); g4.x = 10; g4.z = 0; g4.hyperCd = 0;
+    s5.heroHyper('uc_g4');
+    assert(!!g4.hyper && !g4.hyper.uA, 'unconverted 機甲(t02)機種絕招照常(純傷害戰鬥部)');
+
+    // ⑥ 未轉換角色瞬發大招逐位元不變(s11 自補)
+    const s6 = new BattleSim(fakeBattleConfig(1));
+    const h6 = s6.addHero('SWARM', 'uc_i', 's11');
+    h6.mp = 999; h6.abil.ult = 1; h6.hp = 50;
+    s6.heroCast('uc_i', 'ult');
+    const A6 = heroAbility('s11', 'ult', 1);
+    assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal)) < 0.01, `s11 瞬發自補照舊(+${A6.heal},cd ${A6.cd}s 不變)`);
   }
 
   log('— data:八軌升級第三階單價 = $200(2026-07-27)—');
@@ -2223,26 +2329,32 @@ host.send({ t: 'aim', on: false });
 const boomsAfter = host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'boom').length;
 assert(boomsAfter - boomsBefore === 1, `連按兩次只炸一次(重武器 CD 生效;實際 ${boomsAfter - boomsBefore})`);
 
-log('— 無人機飽和攻擊(長按右鍵:4 架衝出;主機不自爆;CD 內再按無效)—');
+log('— 無人機長按 = 大招載具(2026-08-06:s02 大招已轉載具遞送;kami 事件帶 ult 旗標)—');
 const droneDies = () => host.snaps.flatMap((s) => s.ev || []).filter((e) => e.e === 'die' && e.kind === 'drone').length;
 const dies0 = droneDies();
-// 移到高空(250 > SAM 240)避免被塔擊落干擾,再觸發飽和攻擊
+// 移到高空(250 > SAM 240)避免被塔擊落干擾,再觸發
 const foeTower = spec.snaps.at(-1).ents.find((e) => e.k === 'tower' && e.s === 'STEEL');
 host.send({ t: 'pos', x: foeTower.x, y: HI_ALT, z: foeTower.z, ry: 0 });
 await new Promise((r) => setTimeout(r, 250));
-// WS 端只驗「長按右鍵 → 伺服器 → 廣播」這條路走通;確切架數/HP/吸彈/引爆走上方 sim 直測。
-// **判據是 `kami` 事件而不是快照裡的機體**(2026-08-01):飽和攻擊改制後每架只有 kamiHp()
-// (= 一座砲塔兩發的量,刻意的脆),丟在敵方一整波頭上時常在**同一個 tick 內**就被集火清空
-// ⇒ 8Hz 快照可能一幀都沒拍到。事件是伺服器「確實受理了這次施放」的權威回報,不受存活時間影響。
+// WS 端只驗「長按 → 伺服器 → 廣播」這條路走通;確切架數/HP/payload/擊落否定走上方 sim 直測與稽核。
+// host = s02(團隊 heal 大招,已轉載具)⇒ ①舊 {t:'kami'} 路徑被 ultDelivered 守衛擋下;
+// ②長按改送 {t:'cast', slot:'ult'}(client._fireHoldAbility 同一縫)⇒ kami 事件帶 ult:1。
+// **判據是 `kami` 事件而不是快照裡的機體**(2026-08-01):每架只有 kamiHp()(刻意的脆),
+// 8Hz 快照可能一幀都沒拍到;事件是伺服器「確實受理」的權威回報,不受存活時間影響。
 const kamiEvs = () => host.snaps.flatMap((snp) => snp.ev || []).filter((e) => e.e === 'kami' && e.pid === host.sync.youId);
-host.send({ t: 'kami' });
-await host.wait(() => kamiEvs().length >= 1, 3000);
-assert(kamiEvs().length === 1, `長按右鍵經網路觸發飽和攻擊(收到 ${kamiEvs().length} 次 kami 事件)`);
-assert(kamiEvs()[0].n === SQUAD.KAMI.N, `事件帶架數 n = ${SQUAD.KAMI.N}(實得 ${kamiEvs()[0].n})`);
-assert(droneDies() === dies0, '主機不自爆(飽和攻擊不會炸掉自己)');
-host.send({ t: 'kami' });   // CD 內再按:不應再放一次
+host.send({ t: 'kami' });   // 舊機種絕招路徑:converted 角色 MUST 被守衛擋下
+await new Promise((r) => setTimeout(r, 400));
+assert(kamiEvs().length === 0, 'converted 角色(s02)按舊 kami 路徑被守衛擋下(不生成護衛機)');
+// 長按 = 施放大招(與 E 鍵同縫):電力由前面測試消耗過 ⇒ 等回充到夠再送(wait 內重送無妨,CD 擋重複)
+host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });
+await host.wait(() => { host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z }); return kamiEvs().length >= 1; }, 15000);
+assert(kamiEvs().length === 1, `大招經網路發射載具(收到 ${kamiEvs().length} 次 kami 事件)`);
+assert(kamiEvs()[0].ult === 1 && kamiEvs()[0].n === SQUAD.KAMI.N,
+  `kami 事件帶 ult 旗標與架數 n = ${SQUAD.KAMI.N}(實得 ult:${kamiEvs()[0].ult} n:${kamiEvs()[0].n})`);
+assert(droneDies() === dies0, '主機不自爆(大招載具不會炸掉自己)');
+host.send({ t: 'cast', slot: 'ult', x: foeTower.x, z: foeTower.z });   // CD 內再按:不應再放一次
 await new Promise((r) => setTimeout(r, 300));
-assert(kamiEvs().length === 1, 'CD 內再按不會再放一次飽和攻擊');
+assert(kamiEvs().length === 1, 'CD 內再按不會再放一次大招載具');
 
 log('— 俯衝進兵線 → 被擊殺 → 重生 —');
 host.send({ t: 'pos', x: target.x, y: 5, z: target.z, ry: 0 });

@@ -10,6 +10,7 @@ import {
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
+  ULT_CARRIER, ultDelivered, ultParts, ultPartN,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -2299,6 +2300,9 @@ export class BattleSim {
   heroKamikaze(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'drone' || this.over) return;
+    // 2026-08-06 使用者定案「合併為一招」:大招已轉載具遞送的角色,純傷害機種絕招退場 ——
+    // 這些角色的長按/E 一律走 heroCast('ult') → _launchUltCarrier(單一縫);此守衛擋掉舊路徑。
+    if (ultDelivered(h.ch)) return;
     const sq = h.sq;
     if (this.t < (sq.kamiCd || 0)) return;   // 冷卻中
     const K = SQUAD.KAMI;
@@ -2351,6 +2355,20 @@ export class BattleSim {
         const k = sq.kamis[i];
         if (k.hp <= 0) { sq.kamis.splice(i, 1); continue; }   // 已被 _kill 移除
         if (this.t >= k.dieAt) { this._kamiBoom(k); continue; }
+        if (k.pt) {
+          // 點遞送(大招載具):直飛落點近炸 —— 不索敵、不追擊(效果落在瞄準點,不被路過的敵人拉走)
+          if (Math.hypot(k.pt.x - k.x, k.pt.z - k.z, k.y || 0) <= K.BOOM_M) { this._kamiBoom(k); continue; }
+          const want = Math.atan2(-(k.pt.x - k.x), k.pt.z - k.z);
+          let dr = want - k.ry;
+          while (dr > Math.PI) dr -= Math.PI * 2;
+          while (dr < -Math.PI) dr += Math.PI * 2;
+          k.ry += Math.max(-K.TURN * dt, Math.min(K.TURN * dt, dr));
+          k.y += Math.max(-spd * dt, Math.min(spd * dt, 0 - k.y));
+          k.x += -Math.sin(k.ry) * spd * dt;
+          k.z += Math.cos(k.ry) * spd * dt;
+          k.y = Math.max(0, k.y);
+          continue;
+        }
         let t = k.tid ? this.ents.get(k.tid) : null;
         if (t && (t.hp <= 0 || t.side === k.side || t.neutral || t.gar || (t.hero && t.dead))) { t = null; k.tid = 0; }
         if (!t) { t = this._kamiAcquire(k); k.tid = t ? t.id : 0; }
@@ -2384,6 +2402,13 @@ export class BattleSim {
 
   /** 自殺攻擊機引爆:重型炸彈爆風(同餌機:算主機頭上,吃其火力升級/增益,擊殺記給它) */
   _kamiBoom(k) {
+    if (k.uA) {
+      // 大招載具:效果取代傷害(2026-08-06 使用者定案)—— 引爆 = 施放該架攜帶的份,不附爆風
+      this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: 6, side: k.side, kami: 1 });
+      this._ultArrive(k, k.x, k.z);
+      this._removeKami(k);
+      return;
+    }
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     const def = this._bombDef(owner);   // 每架 = 絕招預算 / KAMI.N(N 架打完 = 一份完整預算)
@@ -2398,6 +2423,11 @@ export class BattleSim {
    * 客戶端 boom 事件帶 kami 旗標 → 播殉爆演出。呼叫端(_kill)另行 _removeKami。
    */
   _kamiDeathBoom(k) {
+    if (k.uA) {
+      // 大招載具被擊落 = 該份完全否定(效果已取代傷害 ⇒ 沒有殉爆可留);只留碎裂演出
+      this.events.push({ e: 'boom', x: k.x, z: k.z, y: k.y || 0, r: 6, side: k.side, sam: true });
+      return;
+    }
     const sq = this.squads.get(k.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     const def = this._bombDef(owner);
@@ -2441,6 +2471,7 @@ export class BattleSim {
   heroDecoy(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'morph' || this.over) return;   // 集束炸彈 = 變形者專屬(機甲走極音速飛彈)
+    if (ultDelivered(h.ch)) return;   // 大招載具化角色:機種絕招退場(見 heroKamikaze 同註)
     const sq = h.sq;
     if (sq.decoy || this.t < sq.decoyCd) return;
     const t = this._lockedTarget(sq);
@@ -2477,6 +2508,7 @@ export class BattleSim {
   heroHyper(pid) {
     const h = this.heroes.get(pid);
     if (!h || h.dead || h.kind !== 'robot' || this.over) return;   // 機甲專屬
+    if (ultDelivered(h.ch)) return;   // 大招載具化角色:機種絕招退場(見 heroKamikaze 同註)
     if (h.hyper || this.t < (h.hyperCd || 0)) return;              // 空中已有一枚 / 冷卻中(靜默丟棄)
     const sq = h.sq;
     const t = this._lockedTarget(sq);
@@ -2567,6 +2599,13 @@ export class BattleSim {
 
   /** 極音速飛彈命中引爆:整份絕招預算的單一戰鬥部(爆點算主機頭上 ⇒ 吃其增益、擊殺記給它) */
   _hyperBoom(m) {
+    if (m.uA) {
+      // 大招載具:效果取代傷害(2026-08-06 使用者定案)—— 著彈只施放大招效果,不再有戰鬥部爆風
+      this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y || 0, r: 8, side: m.side, hyper: 1 });
+      this._ultArrive(m, m.x, m.z);
+      this._removeHyper(m);
+      return;
+    }
     const h = this.heroes.get(m.pid);
     const def = hyperBlast(h?.abil);
     this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y || 0, r: def.r, side: m.side, hyper: 1 });
@@ -2595,6 +2634,26 @@ export class BattleSim {
       const d = sq.decoy;
       if (!d) continue;
       if (this.t >= d.dieAt) { this._decoyBoom(d); continue; }
+
+      if (d.uA) {
+        // 大招載具(點遞送):限轉率飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);
+        // 投完短暫飛離後解體。不吃鏈路距離(射後不理)、不索敵 —— 效果落在瞄準點。
+        if (d.uDrops.length && this.t >= (d.nextBomb || 0)
+          && dist2d(d.x, d.z, d.pt.x, d.pt.z) <= DECOY.BOMB_R) {
+          const part = d.uDrops.shift();
+          this._ultArrive(d, d.pt.x, d.pt.z, part.frac, part.n);
+          d.nextBomb = this.t + DECOY.BOMB_GAP;
+          if (!d.uDrops.length) d.dieAt = Math.min(d.dieAt, this.t + 1.5);   // 任務完成
+        }
+        const want = Math.atan2(-(d.pt.x - d.x), d.pt.z - d.z);
+        let dr = want - d.ry;
+        while (dr > Math.PI) dr -= Math.PI * 2;
+        while (dr < -Math.PI) dr += Math.PI * 2;
+        d.ry += Math.max(-DECOY.TURN * dt, Math.min(DECOY.TURN * dt, dr));
+        d.x += -Math.sin(d.ry) * DECOY.SPEED * dt;
+        d.z += Math.cos(d.ry) * DECOY.SPEED * dt;
+        continue;
+      }
 
       const owner = sq.bodies[sq.act];
       if (!d.lost && dist2d(d.x, d.z, owner.x, owner.z) > DECOY.LINK_M) {
@@ -2782,6 +2841,12 @@ export class BattleSim {
 
   /** 餌機自爆:爆風算在主機甲頭上(吃它的火力升級 / 招式增益,擊殺也記給它) */
   _decoyBoom(d) {
+    if (d.uA) {
+      // 大招載具:效果取代傷害 —— 任務結束/燃料耗盡只解體;未投完的份**不補投**(擊落/逾時 = 否定)
+      this.events.push({ e: 'boom', x: d.x, z: d.z, y: d.y, r: 8, side: d.side, sam: true });
+      this._removeDecoy(d);
+      return;
+    }
     const sq = this.squads.get(d.pid);
     const owner = sq ? sq.bodies[sq.act] : null;
     // 撞擊爆風 = 絕招預算 × DECOY_IMPACT(隨主機甲輕/重武器綜合等級成長);爆點層 = 餌機所在層(不穿橋面/隧道天花)
@@ -2901,9 +2966,32 @@ export class BattleSim {
     h.mp -= mpc;
     h.acd[slot] = this.t + A.cd;
     if (A.fx !== 'stealth' && A.fx !== 'vision') h.stealthUntil = 0;   // 出手即現形
-    // 一隊只回傳主視野那架當代表:招式增益(mods)是小隊共用的,推三次會疊三倍
+    // 大招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的大招」):carrier 大招不在此結算 ——
+    // 發射該機種絕招形式的載具(kami×N / 集束轟炸機 / 極音速飛彈),效果由載具**抵達時**經同一支
+    // _castEffect 施放(單一縫;擊落 = 該份否定)。CD/MP 已於上方收訖;cast 事件帶 carrier 旗標
+    // ⇒ 客戶端只演施法動作/立繪,落地演出等 ultfx 事件。
+    if (A.carrier) {
+      this._launchUltCarrier(h, A, x, z);
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1 });
+      return;
+    }
+    this._castEffect(h, A, x, z);
+    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl });
+  }
+
+  /**
+   * 招式效果的**唯一結算點**(2026-08-06 抽縫):瞬發施放(heroCast)與大招載具抵達
+   * (_kamiBoom/_hyperBoom/_tickDecoys 投遞)共用 —— 效果分支 MUST NOT 在載具端另抄一份。
+   * (cx, cz) = 效果中心(瞬發 = heroCast 夾回射程後的落點;自身/團隊型 = 施放者位置,逐位元同舊制)。
+   * frac = 可分預算的份額(heal 量 × frac;單載具 = 1);nImp = 這一份攜帶的整數預算
+   * (strike 彈著數 / summon 隻數;null = A.count 全額)。emp/buff 恆整份單載(見 ultParts)。
+   */
+  _castEffect(h, A, cx, cz, frac = 1, nImp = null) {
+    // 一隊只回傳主視野那架當代表:招式增益(mods)是小隊共用的,推三次會疊三倍。
+    // 中心取 (cx, cz):瞬發路徑 cx/cz = 施放者位置 ⇒ 距離 0 恆入列,行為逐位元同舊制。
     const allies = (r) => [...this.heroes.values()].filter((a) =>
-      a.side === h.side && !a.dead && (a === h || dist2d(a.x, a.z, h.x, h.z) <= r));
+      a.side === h.side && !a.dead && dist2d(a.x, a.z, cx, cz) <= r);
+    const x = cx, z = cz;
 
     if (A.fx === 'buff') {
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
@@ -2921,17 +3009,19 @@ export class BattleSim {
         }
       }
     } else if (A.fx === 'heal') {
-      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)
+      // 「特殊招式」是裝甲(第二層 HP)在主堡以外唯一的回復手段(小隊三架一起回)。
+      // frac = 載具分批份額(heal 量與護盾補量等比;瞬發 frac = 1 逐位元同舊制)
       const targets = A.target === 'team' ? allies(A.r || 0) : [h];
       for (const a of targets) {
         for (const b of this._bodies(a)) {
           if (b.dead) continue;
-          b.hp = Math.min(b.maxHp, b.hp + A.heal);
-          if (A.sp) b.sp = b.maxSp;
+          b.hp = Math.min(b.maxHp, b.hp + A.heal * frac);
+          if (A.sp) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
         }
       }
     } else if (A.fx === 'strike') {
-      for (let i = 0; i < A.count; i++) {
+      const nStrike = nImp ?? A.count;
+      for (let i = 0; i < nStrike; i++) {
         const ang = Math.random() * Math.PI * 2;
         const rr = i === 0 ? 0 : Math.random() * (A.scatter || A.r * 2);
         const ix = x + Math.cos(ang) * rr, iz = z + Math.sin(ang) * rr;
@@ -2944,15 +3034,17 @@ export class BattleSim {
         if (A.add) this._applyCC(h, A.add, ix, iz, A.r);   // 控場類追加效果:彈著區內敵人
       }
     } else if (A.fx === 'summon') {
-      const { li, d } = this._nearestLane(h.x, h.z);
+      // 召喚中心 = 效果落點(瞬發 = 施放者位置;載具遞送 = 抵達點,單位就地投入最近兵線)
+      const nSum = nImp ?? A.count;
+      const { li, d } = this._nearestLane(x, z);
       const total = this._laneCum(li)[this._laneCum(li).length - 1];
       const comp = A.unit === 'squad'
-        ? Array.from({ length: A.count }, (_, i) => (i % 3 === 2 ? 'rocketeer' : 'soldier'))
-        : Array(A.count).fill(A.unit);
+        ? Array.from({ length: nSum }, (_, i) => (i % 3 === 2 ? 'rocketeer' : 'soldier'))
+        : Array(nSum).fill(A.unit);
       comp.forEach((kind, i) => {
         this._add({
           kind, side: h.side, lane: li,
-          x: h.x + (Math.random() - 0.5) * 20, z: h.z + (Math.random() - 0.5) * 20,
+          x: x + (Math.random() - 0.5) * 20, z: z + (Math.random() - 0.5) * 20,
           y: kind === 'heli' ? GAME.HELI_ALT : 0,
           hp: UNITS[kind].hp,
           prog: (h.side === 'SWARM' ? d : total - d) - i * 12,
@@ -2986,7 +3078,97 @@ export class BattleSim {
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
     if (A.fx === 'buff' && A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
-    this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl });
+  }
+
+  /**
+   * 大招載具遞送(2026-08-06 使用者定案;唯一發射縫):以**該機種絕招的載具形式**把大招效果
+   * 送到落點 (x, z) —— 無人機 = KAMI.N 架自殺攻擊機、變形者 = 集束轟炸機逐批投遞、
+   * 機甲 = 極音速飛彈拋物線。載具全是 sim 實體(可被鎖定/擊落),HP 沿用三招同一把尺
+   * (kamiHp/decoyHp/hyperHp),armor/護盾恆 0;**效果取代傷害**(引爆只施放 _castEffect,
+   * 不再附機種絕招爆風)。可分預算(strike/heal/summon)依 ultParts 分批 —— 擊落幾份就少幾份;
+   * emp/buff 單載具,攔截 = 完全否定(同極音速飛彈語意)。
+   * 最短飛行腿 ULT_CARRIER.MIN_LEG:自身/團隊型瞄在腳邊也保證有攔截窗(使用者定案「需要飛行時間」)。
+   */
+  _launchUltCarrier(h, A, x, z) {
+    const dx0 = x - h.x, dz0 = z - h.z;
+    const d0 = Math.hypot(dx0, dz0);
+    if (d0 < ULT_CARRIER.MIN_LEG) {
+      const ry = h.ry || 0;
+      const ux = d0 > 1 ? dx0 / d0 : -Math.sin(ry), uz = d0 > 1 ? dz0 / d0 : Math.cos(ry);
+      x = h.x + ux * ULT_CARRIER.MIN_LEG;
+      z = h.z + uz * ULT_CARRIER.MIN_LEG;
+    }
+    const n = ultParts(h.kind, A.fx);
+    const total = A.fx === 'strike' || A.fx === 'summon' ? A.count : 0;   // 整數預算(heal 走 frac)
+    const partImp = (i) => (total ? ultPartN(total, n, i) : null);
+    if (h.kind === 'robot') {
+      // 極音速飛彈形式:單彈頭、拋物線 + 螺旋俯衝(彈道機制沿用 _tickHypers;點遞送 ⇒ 不追擊)
+      const dx = x - h.x, dz = z - h.z;
+      const arcD = Math.max(1, Math.hypot(dx, dz));
+      const m = this._add({
+        kind: 'hyper', side: h.side, pid: h.pid, hyper: true,
+        uA: A, uFrac: 1, uImp: partImp(0),
+        x: h.x, z: h.z, y: h.y || 0, ry: Math.atan2(-dx, dz),
+        hp: hyperHp(), armor: 0,
+        tid: 0, tx: x, tz: z,
+        x0: h.x, z0: h.z, y0: h.y || 0,
+        ux: dx / arcD, uz: dz / arcD, arcD,
+        trav: 0, phase: 'climb', spin: 0, dive: null, chase: false,
+      });
+      m.maxSp = 0; m.sp = 0;
+      h.hyper = m;
+      this.events.push({ e: 'hyper', pid: h.pid, side: h.side, id: m.id, homing: 0, ult: 1 });
+    } else if (h.kind === 'morph') {
+      // 集束轟炸機形式:飛向落點,進 BOMB_R 起每 BOMB_GAP 投遞一份(間斷型);投完飛離解體。
+      // 擊落 = 剩餘份全數否定(_kill 的 decoy 分支對 uA 載具沒有 bombsLeft ⇒ 天然不補投)。
+      const sq = h.sq;
+      const d = this._add({
+        kind: 'decoy', side: h.side, pid: h.pid, decoy: true,
+        uA: A, uDrops: Array.from({ length: n }, (_, i) => ({ frac: 1 / n, n: partImp(i) })),
+        pt: { x, z }, nextBomb: 0,
+        x: h.x, z: h.z, y: (h.y || 0) + DECOY.ALT, ry: h.ry || 0,
+        hp: decoyHp(), armor: 0, tid: 0, lost: false, dieAt: this.t + DECOY.TTL_S,
+      });
+      d.maxSp = 0; d.sp = 0;
+      if (sq) { sq.decoy = d; }
+      this.events.push({ e: 'decoy', pid: h.pid, side: h.side, id: d.id, homing: 0, ult: 1 });
+    } else {
+      // 自殺攻擊機形式:n 架自機體前方散開衝出、直飛落點近炸,各攜 1/n 份(擊落 = 該份否定)
+      const K = SQUAD.KAMI;
+      const sq = h.sq;
+      if (sq) sq.kamis ??= [];
+      const ry = h.ry || 0;
+      const fx = -Math.sin(ry), fz = Math.cos(ry);
+      const rx = Math.cos(ry), rz = Math.sin(ry);
+      for (let i = 0; i < n; i++) {
+        const s = kamiSide(i);
+        const k = this._add({
+          kind: 'kami', side: h.side, pid: h.pid, ch: h.ch, kami: true,
+          uA: A, uFrac: 1 / n, uImp: partImp(i),
+          pt: { x, z },
+          x: h.x + fx * K.FWD + rx * K.SIDE * s,
+          z: h.z + fz * K.FWD + rz * K.SIDE * s,
+          y: h.y || 0, ry: ry + K.SPREAD * s,
+          hp: kamiHp(), armor: 0, tid: 0, dieAt: this.t + K.TTL_S,
+        });
+        k.maxSp = 0; k.sp = 0;
+        if (sq) sq.kamis.push(k);
+      }
+      this.events.push({ e: 'kami', pid: h.pid, side: h.side, n, ult: 1 });
+    }
+  }
+
+  /** 載具抵達的效果施放(單一縫的載具端出口):owner 缺席(離場)= 寧缺勿錯不施放。
+   *  frac/nImp 預設取載具自身攜帶份(kami/hyper);轟炸機逐批投遞由呼叫端逐份傳入。 */
+  _ultArrive(v, bx, bz, frac = v.uFrac ?? 1, nImp = v.uImp ?? null) {
+    const owner = this.heroes.get(v.pid);
+    if (!owner) return;
+    this._castEffect(owner, v.uA, bx, bz, frac, nImp);
+    this.events.push({
+      e: 'ultfx', pid: v.pid, side: v.side, ch: owner.ch, slot: 'ult',
+      fx: v.uA.fx, x: bx, z: bz, r: v.uA.r, dur: v.uA.dur, lvl: owner.abil?.ult || 1,
+      frac,
+    });
   }
 
   /** 控場類追加效果(strike 彈著區 r×1.5 內敵人;建築/中立/無敵幀免疫)。

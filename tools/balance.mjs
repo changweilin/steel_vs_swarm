@@ -38,7 +38,7 @@
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
   armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, hyperShare } from '../public/js/data.js';
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, hyperShare, ultDelivered } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
@@ -454,8 +454,11 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   // 把它算進來會讓半徑大的一招看起來永遠贏(實測總傷害與有效傷害可以差到 4 倍)。
   const KINDS = ['drone', 'robot', 'morph'];
   const ABIL_NAME = { drone: '飽和攻擊', robot: '極音速飛彈', morph: '集束炸彈' };
+  // 2026-08-06 大招載具遞送改制後,「三招等值」只對**還持有機種絕招**的角色成立
+  // (converted 角色的長按 = 大招 payload:strike 有傷害、heal/buff/emp 交付的是效果不是 EHP
+  //  ⇒ 混進平均會把「效果型大招沒有傷害」誤讀成「這一招不會交付」)。
   const eff = Object.fromEntries(KINDS.map((k) => {
-    const v = of(k).map((c) => abil[c]);
+    const v = of(k).filter((c) => !ultDelivered(c)).map((c) => abil[c]);
     const n = v.reduce((s, x) => s + x.n, 0);
     return [k, { n, per: n ? v.reduce((s, x) => s + x.hero + x.tower, 0) / n : 0 }];
   }));

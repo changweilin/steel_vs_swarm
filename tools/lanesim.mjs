@@ -57,6 +57,7 @@ import {
   shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiBlast, kamiHp, kamiSide, decoyBlast, decoyBombBlast, decoyHp,
   hyperBlast, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
+  heroAbility, ultDelivered, ultParts, ultPartN, ULT_CARRIER,
 } from '../public/js/data.js';
 import { waveInterval } from '../server/sim.js';
 
@@ -174,9 +175,11 @@ const dodgeP = (tgt) => {
   return EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0);
 };
 
-/** 對目標結算一次傷害(雙層拆分 → 裝甲層吃 armorMul);回傳實際扣掉的 EHP */
-function damage(tgt, dmg, def, byLight) {
-  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * (1 - (byLight ? dodgeP(tgt) : 0));
+/** 對目標結算一次傷害(雙層拆分 → 裝甲層吃 armorMul);回傳實際扣掉的 EHP。
+ *  now = 模擬時鐘:大招載具遞送的減傷 buff(dmgTaken)在此消費(未傳 = 不吃 buff,舊行為)。 */
+function damage(tgt, dmg, def, byLight, now = -Infinity) {
+  const takenF = tgt.hero && (tgt.buffUntil || 0) > now ? (tgt.buffTakenF ?? 1) : 1;
+  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * takenF * (1 - (byLight ? dodgeP(tgt) : 0));
   const before = (tgt.sp || 0) + tgt.hp;
   const { toSp, toHp } = shieldSplit(def, raw, Math.max(0, tgt.sp || 0));
   if (tgt.sp != null) tgt.sp -= toSp;
@@ -314,6 +317,7 @@ function reFire(next, t, iv) {
  * 對線期打人、沒人打就清兵、清完兵才拆塔,與正式對局的優先序同構。
  */
 function fire(M, foe, enemyTower, t, foes) {
+  if ((M.empUntil || 0) > t) return;   // 大招 EMP:武器離線(移動不受影響,對齊 sim._jammed)
   for (const s of M.slots) {
     if (t < s.next) continue;
     if (s.ammo <= 0) { s.ammo = s.def.mag; s.next = t + s.def.reload; continue; }
@@ -335,7 +339,7 @@ function fire(M, foe, enemyTower, t, foes) {
     for (const h of hits(M, aim, s.def, foes)) {
       if (h.f <= 0 || h.ent.hp <= 0) continue;
       if (h.ent.hero) h.ent.hurtT = t;
-      damage(h.ent, s.def.dmg * h.f, s.def, s.id === 'light');
+      damage(h.ent, s.def.dmg * h.f, s.def, s.id === 'light', t);
       reward(M, h.ent);
     }
   }
@@ -382,7 +386,7 @@ function detonate(M, wdef, cx, cy, t, foes) {
   for (const h of blastHits(cx, cy, def, foes)) {
     if (h.f <= 0) continue;
     if (h.ent.hero) h.ent.hurtT = t;
-    const got = damage(h.ent, def.dmg * h.f, def, false);
+    const got = damage(h.ent, def.dmg * h.f, def, false, t);
     M.abilDmg += got;
     M.abilBy[h.ent.hero ? 'hero' : h.ent.tower ? 'tower' : 'creep'] += got;
     reward(M, h.ent);
@@ -397,6 +401,9 @@ function detonate(M, wdef, cx, cy, t, foes) {
 function castAbil(M, foe, enemyTower, t, foes) {
   const kind = ABIL_KIND[M.kind];
   if (!kind || t < M.abilAt) return [];
+  // 大招載具遞送(2026-08-06 使用者定案「合併為一招」):converted 角色的長按 = 大招 ——
+  // 同形式載具攜帶大招 payload(效果取代傷害),CD/MP 走 heroAbility 解析值。
+  if (ultDelivered(M.ch)) return castUltCarrier(M, foe, enemyTower, t, foes);
   const reach = abilReach(kind);
   const inR = (e) => dist(M, e) - hitR(e) <= reach;
   let aim = foe.hp > 0 && inR(foe) ? foe : null;
@@ -444,17 +451,104 @@ function castAbil(M, foe, enemyTower, t, foes) {
 }
 
 /**
+ * converted 角色的長按 = 大招載具(2026-08-06):同形式載具(kami×N / 轟炸機 / 飛彈)點遞送,
+ * payload = 大招效果(strike 傷害 / heal 自補 / dmgTaken 減傷 / emp 武器離線 / summon 加兵),
+ * **效果取代傷害** ⇒ 引爆不再吃 kamiBlast/decoyBlast/hyperBlast。落點發射當下烤死(pt 模式,
+ * 不追蹤 —— 對齊 sim._launchUltCarrier);擊落 = 該份否定(無殉爆、無補投)。
+ * CD = ultCarrierCd 解析值([30,60]s)、MP = 大招電力(與重武器搶同一池 —— 正式對局同構)。
+ */
+function castUltCarrier(M, foe, enemyTower, t, foes) {
+  const kind = ABIL_KIND[M.kind];
+  const A = heroAbility(M.ch, 'ult', 1);
+  if (M.mp < A.mp) return [];
+  const offensive = A.fx === 'strike' || A.fx === 'emp' || A.fx === 'summon';
+  let tx, ty;
+  if (offensive) {
+    // 選敵序同 castAbil(機體 > 最近 NPC > 塔);遞送距離 = 大招射程(支援型預設已在 heroAbility 補上)
+    const reach = A.range || hyperRange();
+    const inR = (e) => dist(M, e) - hitR(e) <= reach;
+    let aim = foe.hp > 0 && inR(foe) ? foe : null;
+    if (!aim) {
+      let td = Infinity;
+      for (const e of foes) {
+        if (e.tower || e.hero || e.vehicle) continue;
+        const d = dist(M, e);
+        if (d - hitR(e) <= reach && d < td) { td = d; aim = e; }
+      }
+    }
+    if (!aim && enemyTower && inR(enemyTower)) aim = enemyTower;
+    if (!aim) return [];
+    tx = aim.x; ty = aim.y;
+  } else {
+    // 支援型(heal/buff):對自身施放 —— 遞送點 = 面前 MIN_LEG(對齊 sim 的最短飛行腿)
+    tx = M.x + M.dir * ULT_CARRIER.MIN_LEG; ty = M.y;
+  }
+  M.mp -= A.mp;
+  M.abilAt = t + A.cd;
+  M.abilN++;
+  const n = ultParts(M.kind, A.fx);
+  const divis = A.fx === 'strike' || A.fx === 'summon';
+  const part = (i) => ({ uA: A, uFrac: 1 / n, uImp: divis ? ultPartN(A.count, n, i) : null });
+  const base = { side: M.side, owner: M, vehicle: true, armor: 0, tgt: { hp: 0 }, tx, ty };
+  if (kind === 'kami') {
+    const sp = UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL;
+    return Array.from({ length: n }, (_, i) => ({
+      ...base, ...part(i), kind: 'kami', hp: kamiHp(), speed: sp, dieAt: t + SQUAD.KAMI.TTL_S,
+      x: M.x + M.dir * SQUAD.KAMI.FWD, y: M.y + kamiSide(i) * SQUAD.KAMI.SIDE,
+    }));
+  }
+  if (kind === 'decoy') {
+    return [{
+      ...base, ...part(0), kind: 'decoy', hp: decoyHp(), speed: DECOY.SPEED, dieAt: t + DECOY.TTL_S,
+      x: M.x, y: M.y, uDrops: Array.from({ length: n }, (_, i) => part(i)), nextBomb: t,
+    }];
+  }
+  const arcD = Math.max(1, Math.hypot(tx - M.x, ty - M.y));
+  return [{
+    ...base, ...part(0), kind: 'hyper', hp: hyperHp(), speed: hyperClimbVx(), x: M.x, y: M.y, x0: M.x, y0: M.y,
+    arcD, trav: 0, dive: hyperApex(arcD) / hyperDiveSpd(), chase: false,
+  }];
+}
+
+/** 大招 payload 的落點施放(lanesim 端的 _castEffect 鏡射;只模型化模型量得到的量) */
+function ultDetonate(M, A, cx, cy, frac, nImp, t, foes, ctx) {
+  if (A.fx === 'strike') {
+    const def = { dmg: A.dmg, r: A.r, vs: A.vs, pen: A.pen, vsSp: A.vsSp, vsHp: A.vsHp, spPierce: A.spPierce };
+    for (let i = 0; i < (nImp ?? A.count); i++) detonate(M, def, cx, cy, t, foes);   // detonate 吃 tw 擾動 + 分桶記帳
+  } else if (A.fx === 'heal') {
+    if (Math.hypot(M.x - cx, M.y - cy) <= A.r) {
+      M.hp = Math.min(M.maxHp, M.hp + A.heal * frac);
+      if (A.sp) M.sp = Math.min(M.maxSp, M.sp + M.maxSp * frac);
+    }
+  } else if (A.fx === 'buff') {
+    if (Math.hypot(M.x - cx, M.y - cy) <= A.r && A.mul?.dmgTaken) {
+      M.buffTakenF = A.mul.dmgTaken;
+      M.buffUntil = t + A.dur;
+    }
+  } else if (A.fx === 'emp') {
+    for (const e of foes) {
+      if (e.tower || e.vehicle) continue;   // 工事免疫(對齊 sim heroCast emp 分支)
+      if (Math.hypot(e.x - cx, e.y - cy) > A.r) continue;
+      e.empUntil = Math.max(e.empUntil || 0, t + A.dur);
+    }
+  } else if (A.fx === 'summon') {
+    ctx?.spawnSummon?.(M.side, A, nImp ?? A.count, cx);
+  }
+}
+
+/**
  * 每格推進所有在空載具:飛行 → 投彈/撲擊/俯衝 → 引爆或被擊落。
  * 被擊落的收尾**逐招不同**,這正是三招在本模型裡唯一分得出高下的地方(見檔頭):
  *   kami  原地以 DEATH_F 的傷害與半徑殉爆;decoy 墜毀補投一顆;hyper **不引爆**(攔截 = 完全否定)。
  * 回傳仍在空中的載具(死的/引爆的當格移除)。
  */
-function stepAbils(vehicles, t, dt, foesOf) {
+function stepAbils(vehicles, t, dt, foesOf, ctx = null) {
   const alive = [];
   for (const v of vehicles) {
     const foes = foesOf(v.side);
     const M = v.owner;
     if (v.hp <= 0) {                                   // —— 被擊落 ——
+      if (v.uA) continue;                              // 大招載具:擊落 = 該份完全否定(無殉爆/無補投)
       if (v.kind === 'kami') {
         const def = kamiBlast(v.abil);
         detonate(M, { ...def, dmg: Math.round(def.dmg * SQUAD.KAMI.DEATH_F), r: def.r * SQUAD.KAMI.DEATH_F },
@@ -483,7 +577,8 @@ function stepAbils(vehicles, t, dt, foesOf) {
       v.dive -= dt;                                    // 相位二:極音速俯衝(頂點在目標正上方)
       v.x = v.tx; v.y = v.ty;
       if (v.dive > 0) { alive.push(v); continue; }
-      detonate(M, hyperBlast(v.abil), v.x, v.y, t, foes);
+      if (v.uA) ultDetonate(M, v.uA, v.tx, v.ty, v.uFrac, v.uImp, t, foes, ctx);
+      else detonate(M, hyperBlast(v.abil), v.x, v.y, t, foes);
       continue;
     }
     // kami / decoy:朝落點直飛
@@ -492,9 +587,21 @@ function stepAbils(vehicles, t, dt, foesOf) {
     v.x += dx / d * step; v.y += dy / d * step;
     if (v.kind === 'kami') {
       if (d - step <= SQUAD.KAMI.BOOM_M || t >= v.dieAt) {   // 撲擊命中 / 燃料耗盡自毀
-        detonate(M, kamiBlast(v.abil), v.x, v.y, t, foes);
+        if (v.uA) ultDetonate(M, v.uA, v.x, v.y, v.uFrac, v.uImp, t, foes, ctx);
+        else detonate(M, kamiBlast(v.abil), v.x, v.y, t, foes);
         continue;
       }
+      alive.push(v); continue;
+    }
+    if (v.uA) {
+      // 大招轟炸機:進 BOMB_R 起逐份投遞(間斷型);投完短暫飛離解體(不撞擊自爆、不補投)
+      if (v.uDrops.length && t >= v.nextBomb && d <= DECOY.BOMB_R) {
+        const p = v.uDrops.shift();
+        ultDetonate(M, v.uA, v.tx, v.ty, p.uFrac, p.uImp, t, foes, ctx);
+        v.nextBomb = t + DECOY.BOMB_GAP;
+        if (!v.uDrops.length) v.dieAt = Math.min(v.dieAt, t + 1.5);
+      }
+      if (d - step <= DECOY.BOOM_M || t >= v.dieAt) continue;
       alive.push(v); continue;
     }
     // decoy:進 BOMB_R 就逐顆個別瞄準投彈(名冊輪替,對齊 sim._decoyBombTarget)。
@@ -557,6 +664,22 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
   // 在空的長按攻擊載具(飽和攻擊護衛機 / 集束轟炸機 / 極音速飛彈)——**進 foesOf**:
   // 敵方砲塔/小兵/機體都打得到它,擊落也照付賞金(它們在正式對局裡就是合法目標)。
   let vehicles = [];
+  // 大招載具的 summon payload:單位就地投入(落點起沿兵線推進;血量/火力/速度取自 UNITS)
+  const ctx = {
+    spawnSummon: (side, A, count, cx) => {
+      const dir = side === 'SWARM' ? 1 : -1;
+      const comp = A.unit === 'squad'
+        ? Array.from({ length: count }, (_, i) => (i % 3 === 2 ? 'rocketeer' : 'soldier'))
+        : Array(count).fill(A.unit);
+      comp.forEach((kind, i) => {
+        const u = UNITS[kind];
+        creeps.push({
+          kind, side, dir, t0: t, x: cx - dir * i * 6, y: LANE.LAT_M * ((i % 3) - 1),
+          hp: u.hp, armor: u.armor, speed: u.speed, next: 0,
+        });
+      });
+    },
+  };
   const foesOf = (side) => [
     ...creeps.filter((c) => c.side !== side && c.hp > 0),
     ...vehicles.filter((v) => v.side !== side && v.hp > 0),
@@ -575,11 +698,12 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       let tgt = null, td = Infinity;
       for (const e of foes) { const d = dist(c, e) - hitR(e); if (d < td) { td = d; tgt = e; } }
       if (!tgt || td > u.range) { c.x += c.dir * c.speed * LANE.DT; continue; }
+      if ((c.empUntil || 0) > t) continue;   // 大招 EMP:武器離線(仍會推進,對齊 sim)
       if (t < c.next) continue;
       c.next = reFire(c.next, t, 1 / u.rate);
       const wd = { pen: 0, vs: {} };
       if (tgt.hero) { tgt.hurtT = t; }
-      damage(tgt, u.dmg, wd, false);
+      damage(tgt, u.dmg, wd, false, t);
     }
     // ---- 砲塔 ----
     for (const side of ['SWARM', 'STEEL']) for (const T of tw[side]) {
@@ -590,7 +714,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       if (!tgt) continue;
       T.next = reFire(T.next, t, 1 / UNITS.tower.rate);
       if (tgt.hero) tgt.hurtT = t;
-      damage(tgt, UNITS.tower.dmg, { pen: 0, vs: {} }, false);
+      damage(tgt, UNITS.tower.dmg, { pen: 0, vs: {} }, false, t);
     }
     // ---- 兵線接觸線:雙方最前線小兵的中點(沒兵就是地圖中線)----
     let fS = null, fT = null;
@@ -644,7 +768,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       buyUp(M);
     }
     // ---- 在空載具:飛行 → 投彈/撲擊/俯衝 → 引爆或被擊落 ----
-    vehicles = stepAbils(vehicles, t, LANE.DT, foesOf);
+    vehicles = stepAbils(vehicles, t, LANE.DT, foesOf, ctx);
     creeps = creeps.filter((c) => c.hp > 0 && Math.abs(c.x) < SEP());
     // ---- 勝負:先擊毀敵方機體或一座敵方砲塔者獲勝 ----
     const towDead = (side) => tw[side].some((x) => x.hp <= 0);
