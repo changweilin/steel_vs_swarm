@@ -14,7 +14,7 @@
       "observed_max_lib_parts": 19,
       "whole_factor": 4.0,
       "factor": 0.13793103448275862,
-      "justification": "逐件上限 = whole_factor × 最重整顆(3114)÷ 同顆最多庫零件數(29)≈ 430 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。**2026-08-06 修正了一筆錯帳**:舊值(1071 ÷ 14 = 306)的分子只量 synthMegalith(岩體本身)、分母也只數 synthMegalith 的三個迴圈,**兩者都漏掉 decorateMegalith 的疊石堆** —— 而 MEGA_LIB 這份名冊從第一天就同時服務那兩支(parts_src.megaLibDescs 的檔頭寫著)。漏量分子與漏數分母的偏差方向相反、都沒有錯誤訊息,只表現成閘門鬆緊不對。分母 29 = 迴圈上限的**解析值**(marble 堆塊 8 + 崩落岩塊 4 + 伴生圓丘 2 + 疊石堆 3 堆 × 每堆 5 顆 = 15),MUST NOT 改取抽樣最大值(抽樣只是「這 1000 顆裡最多的那顆」,拿它當分母會把上限算鬆);抽樣量到的 19 件是這份逐項清單的**反向核對**(量到的超過解析值 = 清單漏了某個呼叫點,腳本會紅字)。",
+      "justification": "逐件上限 = whole_factor × 最重整顆(3114)÷ 同顆最多庫零件數(29)≈ 430 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。**2026-08-06 修正了一筆錯帳**:舊值(1071 ÷ 14 = 306)的分子只量 synthMegalith(岩體本身)、分母也只數 synthMegalith 的三個迴圈,**兩者都漏掉 decorateMegalith 的疊石堆** —— 而 MEGA_LIB 這份名冊從第一天就同時服務那兩支(parts_src.megaLibDescs 的檔頭寫著)。漏量分子與漏數分母的偏差方向相反、都沒有錯誤訊息,只表現成閘門鬆緊不對。分母 29 = 迴圈上限的**解析值**(marble 堆塊 8 + 崩落岩塊 4 + 伴生圓丘 2 + 疊石堆 3 堆 × 每堆 5 顆 = 15),MUST NOT 改取抽樣最大值(抽樣只是「這 1000 顆裡最多的那顆」,拿它當分母會把上限算鬆);抽樣量到的 19 件是這份逐項清單的**反向核對**(量到的超過解析值 = 清單漏了某個呼叫點,腳本會紅字)。**2026-08-06 晚(§5m)hoodoo 呼叫點啟用**:hoodoo 分支逐柱吃一顆節點、柱數上限 2+⌊rnd·3⌋=4 ⇒ hoodoo 型整顆 = 4+崩落 4+伴生 2+疊石 15 = 25 < 29(marble 型仍是最大配置)⇒ 分母不動、逐件上限不動。",
       "staleness": "①synthMegalith 的 marble/崩落塊/伴生丘、decorateMegalith 的疊石堆**任一迴圈上限一改** MUST 重數 max_lib_parts_per_rock(新增第五個吃 MEGA_LIB 的呼叫點同理);②岩體零件表一改 MUST 重跑 measure_megalith_tris.mjs 重量 measured_max_tris;③factor 是推導值(= whole_factor ÷ max_lib_parts_per_rock),MUST NOT 手改。"
     },
     "building": {
@@ -92,7 +92,7 @@
         "taiwania": 268,
         "tualang": 259
       },
-      "kind_factor": 4.0,
+      "kind_factor": 4,
       "justification": "兩道閘,缺一不可。①單件上限同 rock 族那條規則:一個 AI 零件 ≤ 現行最重的**一整株**神木(402)。②但樹與石頭有一個關鍵差別 —— 一株神木有 13~20 件、冠簇一件今天只有 20 tris(ico),AI 零件是 215 ⇒ 只驗單件的話,把整株冠簇全換掉會變成 20 倍而每一件都「合格」。故加逐株閘:該株所有庫零件的三角形和 ≤ kind_factor × 該株現值 ⇒ 換完的整株保證 ≤ 5× 現值(非庫零件本來就 ≤ 現值)。現行接線實測 2.2~3.7×。",
       "staleness": "kind_tris 是量測快照:**改 GIANT_DEFS 任一零件表 MUST 重量**(否則閘門拿舊基準放行)。重量方式見 measured_what。"
     }

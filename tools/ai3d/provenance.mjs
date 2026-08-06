@@ -32,6 +32,13 @@ export const METHODS = {
     short: 'SF3D',
     doc: '有機/不規則幾何(岩體、樹冠)—— primitive 表達不出來,值得付 GLB 的重量與離線外廓契約(計畫書 §8)',
   },
+  hunyuan_2gp: {
+    key: 'hunyuan_2gp',
+    label: 'img→3D(Hunyuan3D-2GP)',
+    kind: 'glb',
+    short: '2GP',
+    doc: 'SF3D 的兩個已量測失敗型態(細頸斷裂、規則人造量體塌成立面殼)的上一階:原生 3D 擴散 + mmgp CPU offload,WSL2/3060 實測峰值 2.5GB / ~62s(runbook §5m;TRELLIS 兩階在這張卡量測出局 §5l)',
+  },
   llm_parts: {
     key: 'llm_parts',
     label: 'LLM 讀照片 → 寫純資料零件列',

@@ -960,6 +960,39 @@
     "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
    },
    "note": "同一株上兩種輪廓(雲杉錐冠 + 猴謎樹頂梢)—— 這正是使用者說的「不同樹種」在同一片林子裡混著出現。"
+  },
+  {
+   "key": "rock/hoodoo_a",
+   "method": "hunyuan_2gp",
+   "consumer": "biomes synthMegalith(MEGA_LIB.hoodoo 呼叫點啟用:蘑菇岩整柱,逐柱一顆、柱數 2~4;單位包絡節點,呼叫端 scale (r×1.5, h×0.55, r×1.5)。§5j 待續① 的缺口 —— 同一張照片 SF3D 在細腰處斷成兩截,2GP 保住帽岩/細頸/基座)",
+   "rev": "§5m Hunyuan3D-2GP 閘門量測輪(2026-08-06 晚)",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "wc_112762573",
+     "family": "rock",
+     "part": "hoodoo",
+     "query": "hoodoo rock formation",
+     "api": "commons",
+     "license": "Public domain",
+     "creator": "John Good",
+     "source_url": "https://commons.wikimedia.org/wiki/File:A_hoodoo_in_Hoodoo_Basin.jpg",
+     "note": "乾淨單體:平衡帽岩 + 細頸 + 藍天(§5l 曾以同張量 SF3D 基準,兩種參數皆塌成薄片 fill 0.065/0.227)",
+     "file": "photos/rock/hoodoo/wc_112762573.jpg"
+    }
+   ],
+   "gen": {
+    "tool": "Hunyuan3D-2GP(shape-only;tencent/Hunyuan3D-2 dit-v2-0 fp16)",
+    "runner": "WSL2 Ubuntu 24.04 ~/ai3d/.venv311hy(CPython 3.11 + torch 2.5.1+cu121 + mmgp 3.2.7)",
+    "params": "profile 3 / steps 30 / octree 256 / mc_algo=mc(diso 不裝)/ seed 2025",
+    "machine": "RTX 3060 12GB(WSL2 GPU 直通)",
+    "note": "量測:torch 峰值 2524MiB(GPU 全程 free ≥10.2GB)、67.4s/張(七張批次逐張 61~67s、模型熱載 3.6s);原生 213,682 面 watertight"
+   },
+   "post": {
+    "tool": "hy3dgen FaceReducer(pymeshlab,WSL)213,682→560 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)560→382",
+    "fit": 0.95,
+    "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
+   }
   }
  ]
 }
