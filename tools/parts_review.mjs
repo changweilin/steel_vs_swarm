@@ -135,7 +135,13 @@ export function manifest(items = {}, photosOpt = null) {
   // ── (B) 純資料件(生成物 = 零件表本身;原版來自 baseline rev)────────────
   for (const p of prov.parts) {
     if (METHODS[p.method]?.kind !== 'parts') continue;
-    const kind = p.key.startsWith('beacon/') ? p.key.slice('beacon/'.length) : null;
+    // 鍵一律走 `keys ?? [key]` 這個正規化(與 provenance.mjs loadProvenance 同一條規則):
+    // 這裡原本直接讀 `p.key`,而來源帳**兩種寫法都合法**(一筆帳掛多個鍵是刻意允許的,
+    // 見 provenance.mjs 檔頭)⇒ 一筆用 `keys:` 寫的純資料件會讓整支對照台 TypeError 掛掉,
+    // 而 `--report` 是「這一輪到底交付了什麼」的唯一離線出口(2026-08-06 實際踩到)。
+    const pk = (Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []))
+      .find((k) => k.startsWith('beacon/'));
+    const kind = pk ? pk.slice('beacon/'.length) : null;
     const now = kind && B.KIND_PARTS[kind]
       ? { parts: B.KIND_PARTS[kind].length, foot: B.BEACON_KINDS[kind]?.foot ?? null, extent: +B.kindExtent(kind).toFixed(3) }
       : null;
