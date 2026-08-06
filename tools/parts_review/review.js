@@ -29,12 +29,23 @@ const STATUS = {
 };
 /** 對照用的座號:同一顆 seed 兩側才比得起來(buildBeacon 的 stretch 由 seed 決定) */
 const SEEDS = [1, 3, 7];
-/** 三種取景,全部**推導自當件的實測幾何**(手寫距離的話,r 1.5m 的疊石與 24m 的水塔只能二選一
- *  照顧得到:9m 對水塔是貼著一根腿看,對疊石又剛好把 13m 的旗桿塞滿整格):
- *    `part`  這一件零件本身(換掉的就是它)—— 中心取描述子的位置、距離由 fallback 半徑反解。
- *    `whole` 整件地標 —— 距離由碰撞柱高度反解。
- *    `lane`  兵線走廊半寬外 22m 的固定機位 = 玩家實際看到的樣子,不同件之間可比。 */
+/** 三種取景,全部**推導自台上真的建出來的那一團幾何**(手寫距離的話,r 1.5m 的疊石與 24m 的
+ *  水塔只能二選一照顧得到:9m 對水塔是貼著一根腿看,對疊石又剛好把 13m 的旗桿塞滿整格):
+ *    `part`  這一件零件本身(換掉的就是它)—— 框 = 兩側**差集**那幾顆 mesh 的實測包圍球。
+ *    `whole` 整件 —— 框 = 整個群組的實測包圍球。
+ *    `lane`  兵線走廊半寬外 22m 的固定機位 = 玩家實際看到的樣子,不同件之間可比(刻意不隨物件變)。
+ *
+ *  **框 MUST 量台上那一團,MUST NOT 取離線描述子或登記碰撞柱**(2026-08-06 修):舊制 `part`
+ *  取「fallback 包絡半徑 + 零件表座標」、`whole` 取「登記碰撞柱高度 × 1.35」,兩個都不是台上
+ *  那一團的尺寸與位置,同一個成因長出三個症狀 ——
+ *    ① 恆 `lookAt(0, y, 0)` ⇒ 偏離中軸的零件永遠不在畫面中央(神木冠簇離軸 5.8m);
+ *    ② 距離只看高度不看水平尺寸 ⇒ 58m 高但 207m 寬的巨岩把相機關在石頭裡面(整格灰牆);
+ *    ③ 單位包絡節點(mega,fallback `ico(1)` 且座標 `[0,0,0]`)推不出東西 ⇒ 那顆鈕只好禁用
+ *       = PR147 的主角在台上**沒有任何一種取景看得到它**。
+ *  三個症狀都沒有錯誤訊息,畫面上只表現成「AI 生成跟原版差不多」—— 這座台子最不能出現的假結論。 */
 const DISTS = { part: '零件', whole: '整件', lane: '兵線 22m' };
+/** 包圍球塞進畫面時留的邊界餘裕(1 = 剛好貼滿較窄的那一軸) */
+const FIT_PAD = 1.3;
 
 const app = {
   data: null, cur: null, filter: 'all',
@@ -208,7 +219,9 @@ function setViewerGroup(v, group, builder = 'beacon') {
   const col = builder === 'veg' ? vegExtent(group)
     : builder === 'mega' ? group.userData.megaCol
       : gfx.beacons.beaconCollider(group);
-  if (app.collider && builder !== 'veg') {
+  // 碰撞柱是**整件**的柱子(163m 的巨岩那一根尤其)⇒ 零件取景不畫它,否則畫面上只剩幾條
+  // 從天到地的青線,而要看的那一顆零件在中間被切成兩半
+  if (app.collider && builder !== 'veg' && app.dist !== 'part') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
       new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
@@ -234,6 +247,72 @@ const COL_WHAT = {
   mega: '碰撞柱(登記值 meta.col)',
 };
 
+/** 一個群組的 mesh,依 traversal 順序(兩側同一支建構器同一顆 seed ⇒ 逐索引對得起來)*/
+function meshesOf(group) {
+  const out = [];
+  group.traverse((o) => { if (o.isMesh) out.push(o); });
+  return out;
+}
+
+/**
+ * 「換掉的就是它」是哪幾顆 mesh —— **由兩側差集量出來**,不由描述子推。
+ *
+ * 為什麼是差集:描述子只說得出「fallback 包絡多大、零件表上寫在哪」,說不出**呼叫端**
+ * 把它擺到哪、拉多大(巨岩那三顆是單位包絡節點,`mesh.scale` 在建造端才定案)。而兩側是
+ * 同一支建構器、同一顆 seed 建的 ⇒ mesh 的 traversal 順序一致,幾何簽章不同的那幾顆
+ * 正好就是「保險絲 primitive → GLB 節點」換掉的那些。
+ *
+ * 兩段收斂,缺一不可:
+ *   ① 粒度對不上(mesh 數不同)⇒ 回 null 交給整件取景(寧缺勿錯,原則 6);
+ *   ② 差集再以**這一列節點的頂點數**過濾:植被逐零件一顆 InstancedMesh、巨岩逐塊一顆 mesh
+ *      ⇒ 過濾得掉同一款上的其他庫節點;beacons 依材質**合併成桶**(cairn 11 件 → 8 顆 mesh)
+ *      ⇒ 桶裡混著別的零件、頂點數對不上 ⇒ 退回整個差集 = 「這一款換掉的全部」。
+ *      同一個來源形狀的不同尺寸階(canopy_c6 / c8)頂點數相同 —— 同款同時消費兩階時會一起
+ *      入選,那是實話(台上就是看到兩顆),MUST NOT 為了「只留一顆」去猜。
+ */
+function sliceOf(sides, r) {
+  if (sides.length < 2 || !sides[0]?.g || !sides[1]?.g || !r.measured) return null;
+  const A = meshesOf(sides[0].g), B = meshesOf(sides[1].g);
+  if (!A.length || A.length !== B.length) return null;
+  const sig = (m) => `${m.geometry.attributes.position.count}/${m.geometry.index ? m.geometry.index.count : 0}`;
+  const diff = [];
+  for (let i = 0; i < A.length; i++) if (sig(A[i]) !== sig(B[i])) diff.push(i);
+  if (!diff.length) return null;
+  const exact = diff.filter((i) => B[i].geometry.attributes.position.count === r.measured.verts);
+  return exact.length ? exact : diff;
+}
+
+/**
+ * 取景框(世界座標的包圍球)。兩種取法**刻意不同**:
+ *   整件(`slice` 為 null)⇒ 全部 mesh 的**聯集**:要看的就是整件。
+ *   零件(有 `slice`)     ⇒ 入選裡**最大的那一顆**:同一顆庫節點會被擺很多次(`rock/mega_a`
+ *     在一顆合成岩上就有 7 處,散在 290m 的露頭上),框住聯集等於把每一處都縮成畫面上的
+ *     一個點 —— 那跟看不到沒有差別。其餘入選仍然顯示,只是不決定鏡頭。
+ */
+function frameOf(groups, slice) {
+  const T = gfx.THREE;
+  const one = new T.Box3();
+  const acc = slice ? null : new T.Box3();
+  let best = null;
+  for (const g of groups) {
+    g.updateMatrixWorld(true);
+    const ms = meshesOf(g);
+    for (const m of (slice ? slice.map((i) => ms[i]).filter(Boolean) : ms)) {
+      one.makeEmpty();
+      one.expandByObject(m);
+      if (one.isEmpty()) continue;
+      if (acc) acc.union(one);
+      else {
+        const s = one.getBoundingSphere(new T.Sphere());
+        if (!best || s.radius > best.radius) best = s;
+      }
+    }
+  }
+  const s = acc ? (acc.isEmpty() ? null : acc.getBoundingSphere(new T.Sphere())) : best;
+  if (!s) return { c: { x: 0, y: 3, z: 0 }, r: 6 };
+  return { c: { x: s.center.x, y: s.center.y, z: s.center.z }, r: Math.max(0.4, s.radius) };
+}
+
 /** 一株植被的實測外廓(包圍盒:水平最遠點 + 頂高)—— 只給取景與讀數用 */
 function vegExtent(group) {
   const box = new gfx.THREE.Box3().setFromObject(group);
@@ -247,29 +326,36 @@ function tick() {
   requestAnimationFrame(tick);
   if (!gfx.ready) return;
   if (app.spin) gfx.orbit.yaw += 0.0035;
-  // 取景全部推導(見 DISTS);兩側同一顆相機 —— 不同角度的兩張圖沒有可比性
-  const f = gfx.frame || {};
-  let d, h, lookY;
-  if (app.dist === 'lane') [d, h, lookY] = [22, 4.5, 4.0];
-  else if (app.dist === 'part' && f.part) {
-    const { r, cy } = f.part;
-    [d, h, lookY] = [Math.max(4.5, r * 5.5), cy + r * 1.1, cy];
-  } else {
-    const th = Math.max(1.5, f.h || 6);
-    [d, h, lookY] = [th * 1.35, th * 0.55, th * 0.45];
-  }
-  const z = d * (app.zoom || 1);
+  // 取景全部推導(見 DISTS);兩側同一顆相機 —— 不同角度的兩張圖沒有可比性。
+  // 相機定位 MUST 排在 `aspect` 之後:塞得進畫面的那一軸是**較窄的那一軸**,直式視窗
+  // 是水平那一軸 ⇒ 距離吃 aspect,先擺相機再改投影矩陣等於用上一格的比例算這一格。
+  const cam = gfx.camera;
   const { yaw, pitch } = gfx.orbit;
-  gfx.camera.position.set(Math.sin(yaw) * z * Math.cos(pitch), h + Math.sin(pitch) * z * 0.7, Math.cos(yaw) * z * Math.cos(pitch));
-  gfx.camera.lookAt(0, lookY, 0);
+  const lane = app.dist === 'lane';
+  const f = gfx.frame || { c: { x: 0, y: 3, z: 0 }, r: 6 };
   for (const v of gfx.viewers) {
     if (!v.live || !v.canvas.isConnected) continue;
     const w = v.canvas.clientWidth, ht = v.canvas.clientHeight;
     if (!w || !ht) continue;
     if (v.canvas.width !== w || v.canvas.height !== ht) v.renderer.setSize(w, ht, false);
-    gfx.camera.aspect = w / ht;
-    gfx.camera.updateProjectionMatrix();
-    v.renderer.render(v.scene, gfx.camera);
+    cam.aspect = w / ht;
+    const vHalf = cam.fov * Math.PI / 360;
+    const fit = Math.min(vHalf, Math.atan(Math.tan(vHalf) * cam.aspect));
+    const z = (lane ? 22 : (f.r * FIT_PAD) / Math.sin(fit)) * (app.zoom || 1);
+    // 近遠平面 MUST 跟著距離走:290m 的露頭要退到 700m 外才框得住,而固定 far = 500 的
+    // 下場是**整格全黑**(什麼都沒畫錯,只是全被遠平面裁掉了 —— 看起來像「這一列建不起來」)
+    cam.near = Math.max(0.05, z / 5000);
+    cam.far = Math.max(500, z * 3);
+    cam.updateProjectionMatrix();
+    const ring = z * Math.cos(pitch);
+    if (lane) {
+      cam.position.set(Math.sin(yaw) * ring, 4.5 + Math.sin(pitch) * z * 0.7, Math.cos(yaw) * ring);
+      cam.lookAt(0, 4, 0);
+    } else {
+      cam.position.set(f.c.x + Math.sin(yaw) * ring, f.c.y + Math.sin(pitch) * z, f.c.z + Math.cos(yaw) * ring);
+      cam.lookAt(f.c.x, f.c.y, f.c.z);
+    }
+    v.renderer.render(v.scene, cam);
   }
 }
 
@@ -316,8 +402,11 @@ function renderStat() {
 // ---- 右側 ------------------------------------------------------------------
 function select(key) { app.cur = key; renderList(); renderBody(); }
 
-/** 「零件」取景成不成立(單一縫:取景計算與鈕面的禁用狀態同吃)*/
-const partFramable = (r) => !!(r.env && r.view?.at) && r.view.builder !== 'mega';
+/** 「零件」取景成不成立(單一縫:取景計算與鈕面的禁用狀態同吃)——
+ *  條件只有「兩側各建得起一組、而且這一列真的有一顆 GLB 節點」;**MUST NOT 再看描述子有沒有
+ *  座標**(單位包絡節點的座標恆 `[0,0,0]`,那個條件把 mega 整批擋在門外)。粒度對不上時由
+ *  `sliceOf` 回 null,取景退回整件並在工具列講明(缺的不准藏,紀律 ④)。 */
+const partFramable = (r) => r.view?.mode === 'fuse-vs-lib' && !!r.measured;
 /** 這一列**實際**用的取景:零件取景不成立時退回整件 —— 鈕面 MUST 跟著亮那一顆,
  *  否則畫面已經是整件、三顆鈕卻一顆都沒亮(看起來像壞掉,而它其實正常) */
 const effDist = (r) => (partFramable(r) || app.dist !== 'part' ? app.dist : 'whole');
@@ -423,9 +512,10 @@ function renderBody() {
     <div class="seg" id="prDist">${Object.entries(DISTS).map(([k, v]) => {
     const off = k === 'part' && !partFramable(r);
     return `<button class="segb ${k === effDist(r) ? 'on' : ''}" data-dist="${k}"${off
-      ? ' disabled title="單位包絡節點:實際大小與擺位由呼叫端 mesh.scale 決定 ⇒ 零件取景不成立,一律看整件"'
+      ? ' disabled title="這一列沒有 GLB 節點可以隔離(純資料件的生成物就是整份零件表)⇒ 一律看整件"'
       : ''}>${v}</button>`;
   }).join('')}</div>
+    <span class="pr-dim" id="prFrameNote"></span>
     <label><input type="checkbox" id="prCol" ${app.collider ? 'checked' : ''}>碰撞柱</label>
     <label><input type="checkbox" id="prSpin" ${app.spin ? 'checked' : ''}>自轉</label>
     <span class="pr-dim">(拖曳任一側 = 兩側一起轉;滾輪縮放)</span>
@@ -505,12 +595,6 @@ function mountStage(r) {
   } else {
     sides.push({ g: v.kind ? build('post', 'now', v.kind, app.seed, bld) : null, read: 'prReadR' });
   }
-  // 取景基準:整件取實測碰撞柱高;零件取這一列描述子自己的位置與 fallback 半徑
-  // (「換掉的就是它」—— 拿整件當基準的話,13m 旗桿會把 1.5m 的疊石壓成畫面底部一小坨)。
-  // 巨岩那三顆是**單位包絡**節點(fallback ico(1)、位置 [0,0,0]),實際大小與擺哪由呼叫端
-  // 的 mesh.scale 決定 ⇒ 零件取景在它身上不成立(照算會是「相機貼在 1m 球上,而岩體 100m」),
-  // 一律退回整件;`prDist` 那顆鈕同步禁用,MUST NOT 讓它按得下去卻沒有反應
-  gfx.frame = { h: 0, part: partFramable(r) ? { r: r.env.r, cy: r.view.at[1] || 0 } : null };
   sides.forEach((side, i) => {
     const viewer = gfx.viewers[i];
     const slot = slots[i];
@@ -518,7 +602,6 @@ function mountStage(r) {
     slot.innerHTML = '';
     slot.appendChild(viewer.canvas);
     const st = setViewerGroup(viewer, side.g, bld);
-    if (st) gfx.frame.h = Math.max(gfx.frame.h, st.h);
     const out = $(side.read);
     if (out) {
       out.textContent = st
@@ -529,6 +612,28 @@ function mountStage(r) {
   });
   // 這一列只用到一側時,另一個 viewer 停止渲染(canvas 沒掛在 DOM 上也不該白跑)
   for (let i = sides.length; i < gfx.viewers.length; i++) setViewerGroup(gfx.viewers[i], null);
+
+  // ── 取景框 + 「零件」隔離(見 DISTS)────────────────────────────────────────
+  // 群組是**整場快取**的 ⇒ 每次掛台一律先把 visible 全開,否則上一列關掉的 mesh 會留在
+  // 別列身上(而那看起來就是「這一款的零件怎麼少了幾顆」,沒有任何錯誤訊息)。
+  const groups = sides.map((s) => s.g).filter(Boolean);
+  for (const g of groups) for (const m of meshesOf(g)) m.visible = true;
+  const want = effDist(r) === 'part';
+  const slice = want ? sliceOf(sides, r) : null;
+  if (slice) {
+    // 「零件」取景 = **只顯示換掉的那幾顆 mesh**。隱藏不是第二套組裝器(群組仍是遊戲自己
+    // 建的、一顆頂點都沒動),而是把「換掉的就是它」真的畫出來 —— 不隔離的話,4m 的冠簇
+    // 節點會被旁邊 25m 寬的原生冠錐整個蓋掉(PR147 的樹冠節點就是這樣在台上看不到的),
+    // 而讀數(三角形/mesh 數)量的仍是整件 ⇒ 不會因為隱藏而說謊。
+    for (const g of groups) meshesOf(g).forEach((m, i) => { m.visible = slice.includes(i); });
+  }
+  gfx.frame = frameOf(groups, slice);
+  const note = $('prFrameNote');
+  if (note) {
+    note.textContent = !want ? ''
+      : slice ? `(只顯示換掉的 ${slice.length} 顆 mesh)`
+        : '(兩側粒度對不上,退回整件取景)';
+  }
 }
 
 /** 缺口三種 + 帳目問題:一律列在最後,不准藏(紀律 ④) */
