@@ -98,6 +98,30 @@ export const PHOTO_CATALOG = {
     rooftank: { want: 5, q: ['rooftop water tank', 'stainless steel water tank', 'plastic water tank'] },
     chimney:  { want: 5, q: ['brick chimney', 'industrial chimney stack', 'old brick smokestack'] },
     dormer:   { want: 5, q: ['dormer window roof', 'roof dormer'] },
+    // —— 第 6 輪大擴充(2026-08-06 使用者定案):「大量下載不同國家、城市、小鎮、風格的
+    // 建築物照片,再進行 img to 3D;無視舊有物件直接畫,禁止使用原版重繪」——
+    // 查詢一律走實測有效的「具名單一主體」句式(§5c/§5g:句式勝過所有模型旋鈕);
+    // 建物多為獨棟開闊地主體(穀倉/風車/教堂/農舍…),貼街相連的立面列(rowhouse/shophouse)
+    // 明知 SF3D 會出薄殼,仍收 —— fill 預篩會擋,留作立面模組語料。列序 = 抓取優先序:
+    // 本批接線的模組列在前(tank_wood 供水塔第二款式),整棟風格列供本批與後續批次。
+    tank_wood:      { want: 5, q: ['wooden water tower rooftop', 'wooden water tank tower', 'rooftop wooden water tower new york'] },
+    bld_barn:       { want: 5, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },          // 美國鄉間
+    bld_windmill:   { want: 5, q: ['dutch windmill', 'stone windmill isolated', 'old windmill field'] }, // 荷蘭
+    bld_chalet:     { want: 5, q: ['alpine chalet', 'swiss chalet mountain', 'wooden mountain hut alps'] }, // 瑞士山城
+    bld_minka:      { want: 5, q: ['japanese thatched farmhouse', 'gassho zukuri house', 'thatched roof cottage'] }, // 日本合掌造
+    bld_hanok:      { want: 4, q: ['korean hanok house', 'hanok traditional building'] },               // 韓國
+    bld_pagoda:     { want: 4, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },         // 東亞塔樓
+    bld_medit:      { want: 5, q: ['santorini white house', 'whitewashed greek house', 'mediterranean house isolated'] }, // 地中海
+    bld_adobe:      { want: 4, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },        // 美洲西南/北非
+    bld_halftimber: { want: 5, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },             // 德/英老鎮
+    bld_stonecottage:{ want: 5, q: ['stone cottage', 'scottish blackhouse', 'stone farmhouse countryside'] }, // 蘇格蘭/愛爾蘭
+    bld_church:     { want: 4, q: ['village church', 'white wooden church', 'country church steeple'] }, // 歐美小鎮
+    bld_lighthouse: { want: 4, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                // 海岸
+    bld_rowhouse:   { want: 4, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] }, // 歐洲城市
+    bld_shophouse:  { want: 4, q: ['shophouse facade', 'colonial shophouse'] },                         // 東南亞城鎮
+    bld_tower:      { want: 4, q: ['art deco skyscraper', 'apartment tower block', 'brutalist tower'] }, // 城市高樓
+    bld_warehouse:  { want: 4, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] }, // 工業
+    bld_yurt:       { want: 3, q: ['mongolian yurt', 'ger tent grassland'] },                           // 蒙古草原
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },

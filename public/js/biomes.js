@@ -1761,6 +1761,33 @@ const MEGA_LIB = {
 // 庫的有無增減 rnd() 枚數(有無庫,共享序列逐位元同一條)。
 const megaGeo = (name) => { const g2 = name ? libGeo(name) : null; return g2 ? g2.clone() : null; };
 
+// ---- 建物配件零件庫(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物
+// 照片,再進行 img to 3D;無視舊有物件直接畫,禁止使用原版重繪」)----
+// 名冊 = 這裡一份(audit_siteplan Ⅴ 與 tools/ai3d 的 bldLibDescs 都吃這一份;節點還沒入庫
+// 就不要把名字放進來 —— intake 會把「名冊有、GLB 無」判成缺件紅字)。
+// 節點契約:**單位包絡** —— 屋頂配件桶的 instance scale 本來就是尺寸(煙囪 S=(w,h,w)、
+// 水塔 S=(r,h,r)、機組 S=(w,h,d)),故 fallback = 該桶現行的**單位 primitive** 同義描述:
+// box(1,1,1) / cyl(r1,r2 1、h 1)。幾何縫換的是 InstancedMesh 的**共用幾何**:一顆節點服務
+// 全桶所有 instance,draw call 逐位元不變;屋頂配件本無碰撞柱(佈局/碰撞無庫可讀的問題
+// 天然不存在);換幾何消耗 0 枚 rnd(§2.3)。不 clone —— 這些桶不過 bakeContactAO,
+// 幾何唯讀共用(與 megaGeo 的差異點,理由在各自的消費方式)。
+const BLD_LIB = {
+  chimney: ['building/chimney_a', ['box', 1, 1, 1]],   // 磚砌煙囪(chimneys 桶)
+  // tank: ['building/tank_a', ['cyl', 1, 1, 1]],      // 圓筒水塔 —— 節點入庫時再開這一列
+  //   (2026-08-06:rooftank 候選照全是場景照/有人入鏡,tank_wood 木製水塔列等節流窗)
+  acbox:   ['building/ac_a', ['box', 1, 1, 1]],        // 空調機組/機房(roofBoxes 桶)
+};
+const bldGeo = (key) => (BLD_LIB[key] ? libGeo(BLD_LIB[key][0]) : null);
+// 桶建構表(凍結三桶):單位 primitive 保險絲 + 桶色 + InstancedMesh 一次定案在這裡。
+// 兩個消費端:①下方一般建物繪製段的三個桶(遊戲內唯一呼叫點);②`tools/parts_review`
+// 3D 零件對照台(dev-only、唯讀,count=1 取樣)—— 台上另抄 primitive/桶色就是第二套
+// 組裝器(runbook §7 紀律 ①),它壞掉的樣子是「對照台上的原版與遊戲裡的不是同一個東西」。
+export const buildBldBucket = {
+  chimney: (n) => new THREE.InstancedMesh(bldGeo('chimney') || new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
+  tank: (n) => new THREE.InstancedMesh(bldGeo('tank') || new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
+  acbox: (n) => new THREE.InstancedMesh(bldGeo('acbox') || new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
+};
+
 // 巨岩的三支建構器**具名匯出**(2026-08-06):第二個消費端 = `tools/parts_review`(3D 零件
 // 對照台,dev-only、唯讀)。MEGA_LIB 的節點只長在命令式建造端 ⇒ 台上要拿「同一顆座號的
 // 保險絲版 vs 零件庫版」並排,唯一正當的取得方式就是呼叫**遊戲自己的這三支** —— 台子那邊
@@ -7740,7 +7767,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(cm);
     }
     if (chimneys.length) {
-      const hm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), chimneys.length);
+      const hm = buildBldBucket.chimney(chimneys.length);
       chimneys.forEach((c, i) => {
         E.set(0, c.ry, 0); Q.setFromEuler(E);
         P.set(c.x, c.y + c.h / 2, c.z);
@@ -7844,7 +7871,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     // 這裡只把牆面落點算進 wallSigns。舊制在這裡另建一個 InstancedMesh + 自己的圖集,
     // 那就是第二套文字圖層(原則 2)。
     if (roofBoxes.length) {
-      const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), roofBoxes.length);
+      const rm = buildBldBucket.acbox(roofBoxes.length);
       roofBoxes.forEach((b, i) => {
         E.set(0, b.ry, 0); Q.setFromEuler(E);
         P.set(b.x, b.y + b.h / 2, b.z);
@@ -7857,7 +7884,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       group.add(rm);
     }
     if (roofTanks.length) {
-      const tm = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), roofTanks.length);
+      const tm = buildBldBucket.tank(roofTanks.length);
       roofTanks.forEach((t, i) => {
         P.set(t.x, t.y + t.h / 2, t.z);
         S.set(t.r, t.h, t.r);

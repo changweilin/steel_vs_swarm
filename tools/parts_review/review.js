@@ -124,6 +124,19 @@ function build(phase, src, kind, seed, builder = 'beacon') {
       gfx.groups.set(key, g);
     } else if (builder === 'mega') {
       gfx.groups.set(key, buildMegalith(seed));
+    } else if (builder === 'bld' && gfx.biomes.buildBldBucket?.[kind]) {
+      // 建物屋頂配件桶:遊戲自己的桶建構表(count = 1 取樣)。instance scale 就是尺寸,
+      // 這裡只給一組代表性尺寸讓幾何看得出比例 —— 台子不模擬佈局,數字是取樣不是第二份佈局。
+      const DIM = { chimney: [1.15, 4.2, 1.15], tank: [1.75, 3.5, 1.75], acbox: [2.2, 2.6, 2.2] };
+      const [sx, sy, sz] = DIM[kind] || [1, 1, 1];
+      const im = gfx.biomes.buildBldBucket[kind](1);
+      im.setMatrixAt(0, new gfx.THREE.Matrix4().compose(
+        new gfx.THREE.Vector3(0, sy / 2, 0), new gfx.THREE.Quaternion(),
+        new gfx.THREE.Vector3(sx, sy, sz)));
+      im.instanceMatrix.needsUpdate = true;
+      const g = new gfx.THREE.Group();
+      g.add(im);
+      gfx.groups.set(key, g);
     } else if (builder === 'beacon' && mod.BEACON_KINDS[kind]) {
       gfx.groups.set(key, mod.buildBeacon(kind, seed));
     } else {
@@ -205,10 +218,10 @@ function setViewerGroup(v, group, builder = 'beacon') {
   // 神木的碰撞柱不是由幾何量出來的(那是樹幹的登記柱,住 biomes 的散布端)⇒ 這裡照實
   // 改量包圍盒,MUST NOT 拿 beaconCollider 硬套一個看起來很像碰撞柱的東西上去。
   // 巨岩同理但反過來:它**有**登記柱(synthMegalith 回傳的 `col`),量包圍盒才是假的。
-  const col = builder === 'veg' ? vegExtent(group)
+  const col = (builder === 'veg' || builder === 'bld') ? vegExtent(group)
     : builder === 'mega' ? group.userData.megaCol
       : gfx.beacons.beaconCollider(group);
-  if (app.collider && builder !== 'veg') {
+  if (app.collider && builder !== 'veg' && builder !== 'bld') {
     v.wire = new T.Mesh(
       new T.CylinderGeometry(col.r, col.r, col.h, 14, 1, true),
       new T.MeshBasicMaterial({ color: 0x2ee6d6, wireframe: true, transparent: true, opacity: 0.3 }),
@@ -232,6 +245,7 @@ const COL_WHAT = {
   beacon: '碰撞柱(實測)',
   veg: '外廓(包圍盒;碰撞柱住散布端)',
   mega: '碰撞柱(登記值 meta.col)',
+  bld: '外廓(包圍盒;屋頂配件不掛碰撞柱,建物本體的碰撞盒在 blockers)',
 };
 
 /** 一株植被的實測外廓(包圍盒:水平最遠點 + 頂高)—— 只給取景與讀數用 */

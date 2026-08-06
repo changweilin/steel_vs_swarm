@@ -29,6 +29,7 @@
 | Photo catalog round 5 — 逐樹種大擴充(使用者定案「大量下載不同樹種」) | **IN PROGRESS 2026-08-05** | +12 tree-species rows / +4 rock kinds / +4 img→3D-friendly building modules;fetcher 改**逐主機**節流 + `excluded_source` 排館藏(§5h)+ 樹種列優先;4 輪抓到 sequoia/baobab/maple/cypress/strata/chimney/rooftank **7 個零件達標**,conifer/pine/willow/banyan/tropical/karst/acunit/dormer 待續 |
 | **D-3 逐樹種冠簇拆分(第一步)** | **PARTIAL 2026-08-05** (§5h) | `tree.glb` +6 節點(e/f 兩形 × 3 尺寸階):dougfir/sitka/taiwania 三種原本共用 `canopy_d35` **一顆**,現各有自己的冠形;sequoia/meranti 各多接一列原本無 lib 的 ico。**4 形 → 6 形,不是 11 形** —— 卡在語料而非管線,見 §5h |
 | P3 dynamic track (mech slots) | **BLOCKED on agy quota**(2026-08-05 §5h) | t01 七槽兩輪全 429 RESOURCE_EXHAUSTED(gemini-3.1-flash-image);`--no-ref` 也一樣 = 模型級額度。models.js 刻意續留不動(無真零件可校準的縫 = 10× 貴的失敗)。額度重置後:`node tools/ai3d/gen2d.mjs --only t01 --no-ref --limit 7` |
+| **D-4 建築族首批 — 屋頂配件桶幾何縫 + families.building 預算量測** | **PARTIAL 2026-08-06** (§5i) | 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片,再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」。`families.building` 預算**先量測後生成**(新工具 `measure_building_tris.mjs`,shibuya/manhattan/seoul 三場 --live 實測;InstancedMesh 桶的逐桶節點上限由 instance 上界反推);`building.glb` 首批 2 節點(`chimney_a` 220 tris / `ac_a` 402 tris)接進 `BLD_LIB` + `buildBldBucket` 桶建構表(零 rnd、draw call 不變);照片目錄 +19 列(module + 17 國家/風格整棟列),第 1 輪收 55 張;**tank_a 未出貨**(候選全是場景照/有人入鏡,等 tank_wood 冷卻輪);對照台 + intake + audit_siteplan(184,含反向)+ bal 全綠 |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
 
@@ -380,6 +381,60 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
 - **建築族擋在預算量測**(不是擋在照片):chimney 5/5、rooftank 5/5 已到位,但
   `families.building` 的三角形上限 MUST 量測(§2.1-6),量法與 tree 族同樣是 playwright 頁內
   執行 `LANDMARKS` 原文 + 真 three。**MUST NOT 手寫一個好看的數字** ⇒ 停在這裡,下一輪第一件事。
+
+## 5i. Trial log (2026-08-06, 3060-machine session — 建築族首批:使用者定案「大量下載不同國家/城市/小鎮/風格的建築物照片再 img→3D,無視舊有物件直接畫,禁止使用原版重繪」)
+
+- **兩個資料家並存**(§5d 的單一資料家已不成立,記清楚免得下一輪撲空):venv/vendor/weights
+  住 `zen-albattani-b33990/tools/ai3d`(絕對路徑,不可搬);**照片庫/photo_manifest/matte/SF3D
+  產出住 `reverent-pascal-fcd63e/tools/ai3d`**(§5h 那一輪在那裡跑的 fetch)。本輪流程:目錄改在
+  本 worktree → `cp fetch_photos.mjs` 到 reverent-pascal 跑 fetch;matte/run.py 用 zen 的 venv、
+  吃 reverent-pascal 的檔案。GLB/manifest/預算檔一律落在**本 worktree**。
+- **InstancedMesh 桶的預算與 rock/tree 是不同的幾何學**(本輪最重要的方法結論):一顆節點
+  幾何被全桶 instance 共用 ⇒ GPU 成本 = 節點 tris × instance 數,「單件 ≤ 最重整件」在這裡毫無
+  意義。故 `families.building` 的逐桶節點上限 = (whole_factor−1) × 配件桶總量上界 ÷ 名冊桶數 ÷
+  該桶 instance 上界(全部量測/可數:`measure_building_tris.mjs` 三個最密市區 --live 實測
+  chimneys 212 / roofTanks 97 / roofBoxes 117,配件桶合計上界 50,936 tris,全場 1.47M~1.72M)
+  ⇒ chimney 240 / tank 525 / acbox 435;名冊全換滿的最壞情況 = 4× 現值(≈204k,佔最重場景
+  11.8%)。`parts_src.triBudget()` 新增 `nodeCap(fam, kind)`,intake 與對照台同吃。
+- **接線 = 桶建構表,不是逐呼叫點散裝**:`BLD_LIB` 名冊(單位包絡:box(1,1,1)/cyl(1,1,1),
+  instance scale 本來就是尺寸)+ `bldGeo` 守衛 + **`buildBldBucket` 桶建構表**(單位 primitive
+  保險絲 + 桶色 + InstancedMesh 一次定案;遊戲三個呼叫點與對照台 `bld` 建構器同吃 ⇒ 台上
+  沒有第二套組裝器)。零 rnd、draw call 逐位元不變、屋頂配件本無碰撞柱(A30 的「佈局讀庫」
+  問題天然不存在)。`audit_siteplan` Ⅴ 改釘「恰三份解析 + bldGeo 只在三桶 + 消費點恰 3 處」,
+  反向驗證(拔煙囪桶保險絲 ⇒ 紅 2/3)。
+- **建築照片是 SF3D 的甜蜜點**:79 張 matte 全批(tvc 520)→ mesh_stats 塊狀候選 ~30/79
+  (樹/岩輪次是 ~1/15)—— 建築天生塊狀。但**人眼那一步照樣不可省**:統計前段照樣混進
+  蒙古包**有人入鏡**(§5h 同款)、整片屋頂**場景照**(rooftank 查詢命中率 0/5 可用)、
+  以及兩顆統計合格語意荒謬的**蛋形/球形**(window 立面照的 SF3D 產出)。contact sheet
+  渲染器升格為正式工具 `mesh_sheet.mjs`(§5e 備註「reused 就 promote」兌現)。
+- **首批兩顆**:`chimney_a` ← 磚砌工業煙囪仰拍(brick chimney,rawpixel CC0;938 → 234 tris
+  ≤ 240)、`ac_a` ← 白色商辦量體(building rooftop 查詢;節點角色 = 屋頂機房箱,照片族 ≠
+  節點名;986 → 426 ≤ 435)。normalize 非等向 0.6×0.5 / 0.65×0.5 —— box 包絡 r 0.707 容得下,
+  但桶的 S=(w,h,w) 以**軸寬**為準,貼滿 0.707 會比原單位盒視覺胖一圈(對角 vs 軸向的差,
+  mega 的 ico 包絡沒有這一題)。
+- **人造直線輪廓的減面路線與岩族相反**(實測,兩張截圖都留在 §5i 這一輪的 out 目錄):
+  SF3D 超低 tvc 的等向 remesh 會把直線磨圓 —— tvc 120 的煙囪是**彎香蕉**、tvc 220 的方箱是
+  鵝卵石(岩族 tvc 150 沒事:岩石本來就是塊團)。正確路線 = 挑選版 tvc 520 出貨 + normalize
+  內建的 Blender collapse decimate 溫和減面(3.9:1 / 2.3:1;§5e「溫和減面無害」的上緣)。
+  另:單位包絡節點的**遊戲內模樣**要把 instance scale 烤進去才看得出來(俯拍預覽小心
+  glTF y-up ↔ Blender z-up:object scale 的 y 是 glTF 的 −z,軸搞錯會把「拉高」變「拉深」)。
+- **tank_a 未出貨(誠實記錄)**:rooftank 現有 5 照全是場景照;`tank_wood`(木製水塔,具名
+  單一主體)列已進目錄,但 dormer/tank_wood 的候選重度 Wikimedia-hosted —— 本輪撞上
+  **深度 IP 節流**:與 §5b「每 10 分鐘窗放 2~3 張」不同,第 1 輪 55 張爆量後
+  **連續 7 輪(≈80 分鐘)整輪 0 張**,是小時級的長時窗。結論:單輪 ≤55 張的爆量會把
+  同一天的後續輪次全部賠掉 —— 下次大量抓取把 `--limit` 壓在 ~25,或隔天再補缺額。
+  BLD_LIB 的 tank 列在節點入庫前保持註解(intake「名冊有、GLB 無」紅字驗證過會咬人 ——
+  這是特性)。補抓指令:`node fetch_photos.mjs --family building --limit 25`(reverent-pascal
+  資料家),tank_wood/dormer/acunit 達標後從 §5i 的 mesh_sheet 挑選流程續跑。
+- **cp950 主控台會咬 Python 工具**:matte_photos.py 印 `✓` 直接 UnicodeEncodeError 死在
+  第一張(exit 0,看起來像跑完)—— 跑任何會印非 ASCII 的 venv 工具一律帶
+  `PYTHONIOENCODING=utf-8`。另:matte 的 rglob 在 fetch 還在下載時列舉會漏檔,重跑一次
+  就補上(可續跑語意)。
+- **量測選點**:場景照/仰拍導致 SF3D 背面外推失敗的比例遠低於樹族;`bld_*` 整棟風格列
+  17 列有 13 列首輪就至少 2 張達標(barn/chalet/halftimber/stonecottage/lighthouse 全滿),
+  歐洲城市立面列(rowhouse/shophouse)與亞洲列(hanok/minka 部分)卡在 Commons 429。
+  **整棟節點還沒有消費端**(邊界樓/程序街區/巨岩石屋是候選)—— 下一輪先開縫再入庫,
+  不要先塞節點(孤兒節點會被對照台點名)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

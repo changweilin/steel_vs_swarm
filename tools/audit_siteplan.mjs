@@ -490,11 +490,22 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
   // 佈局讀它 = 跨客戶端逐位元分家(§2.3),intake 契約(GLB 外廓 ≤ fallback)讓保險絲恆保守。
   {
     const bioC = strip(bio);
-    ok((bioC.match(/libGeo\(/g) || []).length === 2
+    ok((bioC.match(/libGeo\(/g) || []).length === 3
       && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
-      && /const megaGeo = \(name\) => \{ const g2 = name \? libGeo\(name\) : null; return g2 \? g2\.clone\(\) : null; \};/.test(bioC),
-      'AI 零件庫解析恰兩份:partGeo(宣告式零件表)+ megaGeo(命令式巨岩呼叫點守衛;'
-      + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)');
+      && /const megaGeo = \(name\) => \{ const g2 = name \? libGeo\(name\) : null; return g2 \? g2\.clone\(\) : null; \};/.test(bioC)
+      && /const bldGeo = \(key\) => \(BLD_LIB\[key\] \? libGeo\(BLD_LIB\[key\]\[0\]\) : null\);/.test(bioC),
+      'AI 零件庫解析恰三份:partGeo(宣告式零件表)+ megaGeo(命令式巨岩呼叫點守衛;'
+      + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)'
+      + '+ bldGeo(建物屋頂配件桶守衛;不 clone —— 配件桶不過 bakeContactAO,幾何唯讀共用)');
+    {   // bldGeo 只住 buildBldBucket 桶建構表(凍結三桶:煙囪/水塔/空調機組),逐桶
+        // 恆以 `|| 原 primitive` 收尾(保險絲,原則 6;載入失敗 = 舊畫面);遊戲內消費點
+        // 恰 3 處(一般建物繪製段的三個 InstancedMesh 桶)。增刪桶 MUST 同步這裡與
+        // tri_budget families.building 的 roster_size/node_caps(名冊桶數是預算的除數)。
+      const uses = (bioC.match(/bldGeo\('(?:chimney|tank|acbox)'\) \|\| new THREE\.(?:Box|Cylinder)Geometry\(/g) || []).length;
+      const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox)\(/g) || []).length;
+      ok(uses === 3 && (bioC.match(/bldGeo\(/g) || []).length === 3 && calls === 3,
+        `bldGeo 只在 buildBldBucket 三桶且逐桶帶原 primitive 保險絲、遊戲內消費點恰 3 處(實得 ${uses}/${calls})`);
+    }
     {   // megaGeo 呼叫點 = 凍結清單 5 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石),名字一律出自 MEGA_LIB 名冊
       const uses = (bioC.match(/megaGeo\(/g) || []).length;   // 定義式是 `= (name) =>`,不含 `megaGeo(`
       ok(uses === 5 && (bioC.match(/megaGeo\(MEGA_LIB\./g) || []).length === 5,
