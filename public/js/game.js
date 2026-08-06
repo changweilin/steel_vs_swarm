@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
+  CHARACTERS, heroWeapon, heroAbility, ultDelivered, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
   heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
@@ -4159,14 +4159,16 @@ export class BattleClient {
       if (ev.pid === this.youId) {
         // 餌機(轟炸機)彈射分離:掛點瞬間抽離的機體震動(伺服器確認才震,請求被拒不會誤震)
         this.trauma = Math.min(1, this.trauma + SHAKE.DECOY);
-        this.hud.feed?.(ev.homing ? '💣 集束炸彈投放:轟炸機追蹤鎖定目標!' : '💣 集束炸彈投放:轟炸機直飛(無法操舵)');
+        this.hud.feed?.(ev.ult ? '💣 大招載具升空:轟炸機飛往指定落點投遞!'
+          : ev.homing ? '💣 集束炸彈投放:轟炸機追蹤鎖定目標!' : '💣 集束炸彈投放:轟炸機直飛(無法操舵)');
       }
     } else if (ev.e === 'decoyLost') {
       if (ev.pid === this.youId) this.hud.feed?.(`📡 集束轟炸機超出 ${DECOY.LINK_M}m,鏈路中斷`);
     } else if (ev.e === 'hyper') {
       // 極音速飛彈發射:彈體本身是伺服器實體(走 ents 渲染),這裡只播報 + 發射點後燄
       if (ev.pid === this.youId) {
-        this.hud.feed?.(ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
+        this.hud.feed?.(ev.ult ? '🚀 大招載具發射:飛彈飛往指定落點!'
+          : ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
       }
     } else if (ev.e === 'cast') {
       // 招式施放:角色專屬演出(castfx.js:魔法陣/元素環繞/拳影劍氣/靈魂束縛……)+ 播報
@@ -4191,12 +4193,16 @@ export class BattleClient {
       // 地面高走 surfaceAt 唯一縫(§2):以施放者當下高度當 curY —— 隧道內施放
       // 特效貼隧道路面、橋上施放貼橋面;裸 heightAt 會把演出釘上覆蓋段山頂。
       const surfY = (x, z) => this._surf(x, z, casterPos ? casterPos().y : this.terrain.heightAt(x, z));
-      spawnCastFx(this.scene, this.effects, {
-        ch: ev.ch, slot: ev.slot, lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
-        at: new THREE.Vector3(wx, surfY(wx, wz), wz),
-        casterPos, groundY: surfY,
-        r: ev.r || 0, dur: ev.dur || 0, scale,
-      });
+      // 大招載具遞送(ev.carrier):效果還在天上飛 —— 施法當下只演施法動作/立繪/播報,
+      // 落點效果等載具抵達的 ultfx 事件再演(在這裡就開演 = 演出跑在結算前面,擊落也收不回來)
+      if (!ev.carrier) {
+        spawnCastFx(this.scene, this.effects, {
+          ch: ev.ch, slot: ev.slot, lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
+          at: new THREE.Vector3(wx, surfY(wx, wz), wz),
+          casterPos, groundY: surfY,
+          r: ev.r || 0, dur: ev.dur || 0, scale,
+        });
+      }
       // 施法動作(locomotion stepCastPose;與展示台共用,MUST NOT 另寫分叉):
       // 指向型招式(strike/dash/遠端 emp)= 定向動作(揮武/刺拳/踢腿),其餘 = 全向(吼叫/跺腳/旋轉…)
       const cpNow = casterPos ? casterPos() : null;
@@ -4221,6 +4227,17 @@ export class BattleClient {
         this.cutin.show(ev, self, ev.side ? SIDES[ev.side].color : '#ffffff');
         if (ev.slot === 'ult') this.trauma = Math.min(1, this.trauma + (self ? 0.45 : 0.25));
       }
+    } else if (ev.e === 'ultfx') {
+      // 大招載具抵達:效果在落點結算(伺服器 _ultArrive)—— 這裡補上落點演出。
+      // 錨定落點(casterPos null),分批遞送(frac < 1)縮小尺寸 —— 看到多大 ≈ 拿到多少份
+      const wx = ev.x, wz = -ev.z;
+      const surfY = (x, z) => this._surf(x, z, this.terrain.heightAt(x, z));
+      spawnCastFx(this.scene, this.effects, {
+        ch: ev.ch, slot: ev.slot || 'ult', lvl: ev.lvl || 1, fx: ev.fx, side: ev.side,
+        at: new THREE.Vector3(wx, surfY(wx, wz), wz),
+        casterPos: null, groundY: surfY,
+        r: ev.r || 0, dur: ev.dur || 0, scale: 4 * Math.sqrt(Math.max(0.25, ev.frac ?? 1)),
+      });
     } else if (ev.e === 'crit') {
       // 爆擊(伺服器擲骰):自己打出 → 橘色大字回饋
       if (ev.pid === this.youId) {
@@ -7021,6 +7038,10 @@ export class BattleClient {
   _fireHoldAbility() {
     if (!this.side || this.dead || this.shopOpen) return;
     this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
+    // 2026-08-06 使用者定案「合併為一招」:大招已轉載具遞送的角色,長按 = 施放大招
+    // (與 E 鍵同走 _castAbility('ult') → 伺服器 heroCast → _launchUltCarrier 單一縫);
+    // 純傷害機種絕招對這些角色退場(伺服器端另有 ultDelivered 守衛)。
+    if (ultDelivered(this.ch)) { this._castAbility('ult'); return; }
     if (this.isDrone) this._launchKamikaze();
     else if (this.isMorph) this._launchDecoy();
     else this._launchHyper();
@@ -7069,18 +7090,22 @@ export class BattleClient {
     return {
       money: this.money, atBase: this._atBase(),
       code: c.code, machine: c.machine, aiming: this.aiming,
+      // 大招載具遞送(2026-08-06):長按 = 大招 ⇒ 觸控絕招鈕面鏡射 ult 的 CD(main.js 同吃這一欄)
+      ultCarrier: ultDelivered(this.ch),
       light: slotHud('light'), heavy: slotHud('heavy'),
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       // 爬升動力(飛行機體限定;非飛行狀態 = null ⇒ HUD 整條收起)。上限正比於電力,見 data.FLIGHT
       lift: this._flying() ? { v: Math.max(0, this.lift ?? this._liftMax()), max: this._liftMax() } : null,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      // 機種專屬能力(長按右鍵):無人機飽和攻擊 / 變形者集束炸彈 / 機甲極音速飛彈(冷卻倒數,0 = 就緒)
-      kami: this.isDrone ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
-      decoy: this.isMorph ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
+      // 機種專屬能力(長按右鍵):無人機飽和攻擊 / 變形者集束炸彈 / 機甲極音速飛彈(冷卻倒數,0 = 就緒)。
+      // 大招載具化角色(ultDelivered)整組收起 —— 長按已是大招(CD 顯示走 ult 那一格),
+      // 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
+      kami: this.isDrone && !ultDelivered(this.ch) ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
+      decoy: this.isMorph && !ultDelivered(this.ch) ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
       // 極音速飛彈 CD 取「伺服器 hcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,
       // HUD 不會瞬閃「就緒」;fly = 空中已有一枚(同時只能有一枚)
-      hyper: (!this.isDrone && !this.isMorph)
+      hyper: (!this.isDrone && !this.isMorph && !ultDelivered(this.ch))
         ? {
           cd: Math.max(this.hyperCd || 0, (this._hyperCdUntil || 0) - performance.now() / 1000),
           fly: !!this.hyperFly,

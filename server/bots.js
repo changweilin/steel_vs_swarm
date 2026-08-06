@@ -3,7 +3,7 @@
 // 角色武器/招式解析、傷害查表、射速/射程/CD/MP 全由 sim 把關(botFire / heroBurst / heroCast)。
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
-import { UNITS, GAME, WEAPONS, ECON, LOS, DECOY, hyperRange, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
+import { UNITS, GAME, WEAPONS, ECON, LOS, DECOY, hyperRange, heroWeapon, heroAbility, ultDelivered, vsMult, botDiffOf, botOpGap, isThirdSide,
   CHARACTERS, heroMobility,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
@@ -484,7 +484,10 @@ export class BotBrain {
     // 機種絕招(長按右鍵)= 一項操作,三機種共用同一格 `special` 手速閘;CD 一律由 sim 把關,
     // 但**冷卻中不付這格手速**(30s CD 內每 0.75s 空按一次會吃掉近兩成的操作額度)。
     // 三招的釋放時機都取「打得痛的那一刻」:敵群密集 or 正在拆建築。
-    if (h.kind === 'drone') {
+    // 大招載具化角色(2026-08-06「合併為一招」):機種絕招退場 —— 三個機種區塊一律跳過,
+    // 這些角色的載具大招走上面的 heroCast('ult') 路徑(strike/emp/summon 對點、heal/buff 自身)。
+    // 不加守衛的話 bot 會每 0.75s 付一格 special 手速去按一顆伺服器必拒的鈕。
+    if (h.kind === 'drone' && !ultDelivered(h.ch)) {
       const b = WEAPONS[UNITS.drone.bomb];
       const near = [...this.sim.ents.values()].filter((e2) =>
         e2.side !== h.side && !e2.hero && !e2.neutral
@@ -500,7 +503,7 @@ export class BotBrain {
       }
     }
     // 變形者集束炸彈:轟炸機沿機首直飛,故要求目標大致在正前方(不能操舵 —— 對著側面放等於浪費一次 CD)
-    if (h.kind === 'morph') {
+    if (h.kind === 'morph' && !ultDelivered(h.ch)) {
       const ready = !h.sq?.decoy && this.sim.t >= (h.sq?.decoyCd || 0);
       const d = Math.hypot(t.x - h.x, t.z - h.z);
       let dr = Math.atan2(-(t.x - h.x), t.z - h.z) - (h.ry || 0);
@@ -512,7 +515,7 @@ export class BotBrain {
       }
     }
     // 機甲極音速飛彈:射後不理 ⇒ 只要目標在接戰距離內就能放(不必維持瞄準),優先砸建築
-    if (h.kind === 'robot') {
+    if (h.kind === 'robot' && !ultDelivered(h.ch)) {
       const ready = !h.hyper && this.sim.t >= (h.hyperCd || 0);
       const d = Math.hypot(t.x - h.x, t.z - h.z);
       if (ready && d <= hyperRange() && this._op('special')) {

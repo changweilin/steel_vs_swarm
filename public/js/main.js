@@ -2092,9 +2092,13 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 飽和攻擊;變形者 = 集束炸彈;機甲 = 極音速飛彈
-        const abCd = w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.hyper ? (w.hyper.cd || 0) : 0;
-        const abTag = w.kami ? (w.kami.cd > 0.05 ? `(飽和攻擊 ${w.kami.cd.toFixed(0)}s)` : `(飽和攻擊 ×${w.kami.n} 就緒)`)
+        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 飽和攻擊;變形者 = 集束炸彈;機甲 = 極音速飛彈。
+        // 大招載具化角色(w.ultCarrier):長按 = 大招 ⇒ 絕招格鏡射 E 大招那一份 CD(單一來源),
+        // 重武器列不再掛絕招標籤(大招格自己會顯示)
+        const abCd = w.ultCarrier ? (w.ult.cd || 0)
+          : w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.hyper ? (w.hyper.cd || 0) : 0;
+        const abTag = w.ultCarrier ? ''
+          : w.kami ? (w.kami.cd > 0.05 ? `(飽和攻擊 ${w.kami.cd.toFixed(0)}s)` : `(飽和攻擊 ×${w.kami.n} 就緒)`)
           : w.decoy ? (w.decoy.ready ? '(集束炸彈就緒)' : `(集束炸彈 ${w.decoy.cd.toFixed(0)}s)`)
           : w.hyper ? (w.hyper.fly ? '(極音速飛彈 飛行中)'
             : w.hyper.cd > 0.05 ? `(極音速飛彈 ${w.hyper.cd.toFixed(0)}s)` : '(極音速飛彈就緒)')

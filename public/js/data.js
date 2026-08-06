@@ -1095,6 +1095,71 @@ export const decoyExposureS = () =>
   + (DECOY.DROP_N - 0.5) * DECOY.BOMB_GAP;
 export const decoyHp = () => frontKillHp(decoyExposureS());
 
+// ---- 大招載具遞送(2026-08-06 使用者定案「長按招式取代部分機體的大招」)----
+// 定案三條:①**區域/指向型大招全轉**載具形式(strike/emp/summon/團隊 heal/團隊 buff);
+//   純自身型(自我強化/隱形/視野/自補)維持瞬發不變 —— 自身效果沒有「飛過去」的語意。
+//   ②**合併為一招**:轉換角色的長按(與 E 鍵同縫 game._fireHoldAbility → _castAbility('ult'))
+//   = 發射「該機種絕招形式」的載具送出大招效果;原純傷害機種絕招對這些角色**退場**
+//   (sim.heroKamikaze/heroDecoy/heroHyper 各有 ultDelivered 守衛)。CD 收到 [30,60]s、
+//   沿用大招 MP 與升級階梯。③**效果取代傷害**:攻擊型(strike)的傷害就是它的 payload;
+//   補血/控場/強化型載具抵達只施放效果、不再附機種絕招爆風 —— 預算不雙重領,
+//   「效果強大」的代價是**可被攔截**(載具是 sim 實體,擊落 = 該份否定,同極音速飛彈語意)。
+// 形式沿用三機種既有載具(以原先長按招式的形式):無人機 = KAMI.N 架自殺攻擊機、
+//   變形者 = 集束轟炸機逐顆投遞、機甲 = 極音速飛彈拋物線 —— 節奏因此天然分成
+//   爆發型(單彈頭)/ 間斷型(轟炸機分批)/ 連擊型(四機魚貫),持續型 = 效果本身的 dur。
+// **可分預算分批、不可分狀態單載**(ultParts):strike 彈著數 / heal 量 / summon 隻數可均分
+//   ⇒ 依機種分批(擊落幾架就少幾份);emp/buff 是一段狀態時窗,分批會疊乘(mods 逐筆相乘)
+//   ⇒ 恆單一載具、攔截 = 完全否定。
+export const ULT_CARRIER = {
+  CD_LO: 30, CD_HI: 60,   // 使用者定案 CD 帶;舊 cd 階梯以仿射映射壓入(保序,見 ultCarrierCd)
+  // 最短飛行腿(公尺):使用者定案「需要飛行時間」——自身/團隊型大招瞄在腳邊時,遞送點仍
+  // 推到面前這麼遠,保證每一發都有 ≥0.6s 的攔截窗(最慢載具 DECOY.SPEED 62m/s)。
+  // 支援型效果半徑(r 200~300)遠大於此 ⇒ 施放者自己仍在效果圈內,涵蓋不受影響。
+  MIN_LEG: 40,
+};
+/** 這名角色的大招是否已轉為載具遞送(**推導判定,MUST NOT 手寫名冊**):
+ *  區域/指向型 = strike/emp/summon + 團隊 heal/buff;其餘(純自身型)維持瞬發。 */
+export const ultDelivered = (ch) => {
+  const u = CHARACTERS[ch]?.ult;
+  if (!u) return false;
+  return u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
+    || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team');
+};
+/** 轉換角色群的原 cd 全距(逐階掃描;memo —— CHARACTERS 之後才叫得動) */
+let _ultCdBand = null;
+export const ultCdBand = () => {
+  if (_ultCdBand) return _ultCdBand;
+  let lo = Infinity, hi = -Infinity;
+  for (const [id, c] of Object.entries(CHARACTERS)) {
+    if (!ultDelivered(id)) continue;
+    for (let lvl = 1; lvl <= 3; lvl++) {
+      const cd = tierVal(c.ult.cd, lvl);
+      if (cd < lo) lo = cd;
+      if (cd > hi) hi = cd;
+    }
+  }
+  _ultCdBand = { lo, hi };
+  return _ultCdBand;
+};
+/** 舊 cd → 載具制 cd:把轉換群的 cd 全距仿射映射進 [CD_LO, CD_HI]。
+ *  **嚴格保序**(仿射斜率 > 0)⇒ 誰的大招轉得快、改制後仍轉得快;MUST NOT 改成分段表。 */
+export const ultCarrierCd = (cd) => {
+  const { lo, hi } = ultCdBand();
+  const f = hi > lo ? (cd - lo) / (hi - lo) : 0.5;
+  return ULT_CARRIER.CD_LO + f * (ULT_CARRIER.CD_HI - ULT_CARRIER.CD_LO);
+};
+/** 載具遞送的分批數:可分預算(strike/heal/summon)依機種分批,不可分狀態(emp/buff)恆單載。
+ *  分批數沿用該機種絕招的投射數(KAMI.N / DECOY.BOMB_MAX / 單彈頭)—— 形式即機種絕招。 */
+export const ultParts = (kind, fx) => {
+  const divisible = fx === 'strike' || fx === 'heal' || fx === 'summon';
+  if (!divisible) return 1;
+  return kind === 'drone' ? SQUAD.KAMI.N : kind === 'morph' ? DECOY.BOMB_MAX : 1;
+};
+/** 整數預算(彈著數/召喚隻數)均分到 n 批的第 i 批份額(平衡分配,總和恆 = total)。
+ *  sim 生成端與 lanesim/稽核共用 —— MUST NOT 各自 round(各寫一份會湊不回 total)。 */
+export const ultPartN = (total, n, i) =>
+  Math.round(total * (i + 1) / n) - Math.round(total * i / n);
+
 export const VITALS = {
   OOC_S: 5,            // 脫戰秒數(這段時間沒受擊,護盾開始回復)
   SP_REGEN_PS: 0.20,   // 護盾每秒回復上限比例 = 「充能」滿級規格(實際回速 × chargeF(充能等級),Lv0 = 40%)
@@ -2067,11 +2132,16 @@ export function heroAbility(ch, slot, lvl = 1) {
   const a = CHARACTERS[ch]?.[slot];
   if (!a) return null;
   const t = (v) => tierVal(v, lvl);
+  // 大招載具遞送(2026-08-06 使用者定案;見 ULT_CARRIER):carrier 大招的 cd 壓入 [30,60] 帶、
+  // 未標 range 的支援型補上遞送距離 = hyperRange()(與機甲接戰距離同一把尺;不再 ×COMBAT_SCALE ——
+  // hyperRange 已是縮好的遊戲公尺)。其餘欄位(dmg/heal/dur/mp/…)逐位元不動。
+  const carrier = slot === 'ult' && ultDelivered(ch);
   return {
-    id: slot, name: a.name, fx: a.fx, desc: a.desc,
-    cd: t(a.cd), mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
+    id: slot, name: a.name, fx: a.fx, desc: a.desc, carrier,
+    cd: carrier ? ultCarrierCd(t(a.cd)) : t(a.cd), mp: t(a.mp), dur: t(a.dur ?? 0), r: t(a.r ?? 0),
     dmg: t(a.dmg ?? 0) * counterDmgF(a), heal: t(a.heal ?? 0), count: t(a.count ?? 1),   // 折減見 heroWeapon 同欄註
-    range: t(a.range ?? 0) * COMBAT_SCALE, imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
+    range: carrier && !a.range ? hyperRange() : t(a.range ?? 0) * COMBAT_SCALE,
+    imp: t(a.imp ?? 0), scatter: t(a.scatter ?? 0),   // range 縮 reach;imp/scatter/r 為效果尺寸不縮
     unit: a.unit, target: a.target || 'self', sp: !!a.sp, vision: t(a.vision ?? 0) * COMBAT_SCALE,
     mul: a.mul ? Object.fromEntries(Object.entries(a.mul).map(([k, v]) => [k, t(v)])) : null,
     vs: a.vs || {},
