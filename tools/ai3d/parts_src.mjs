@@ -94,7 +94,7 @@ export function bioLibDescs(src = biomesSrc()) {
  * 巨岩零件庫名冊(第三個消費端;`biomes.js MEGA_LIB` —— 命令式建造端 synthMegalith/
  * decorateMegalith 的呼叫點守衛)。契約:**單位包絡** = fallback `['ico', 1]`(水平徑向 ≤1、
  * 縱向 ±1),呼叫端以 mesh.scale 拉尺寸 ⇒ 入庫閘照一般規則驗,只是包絡恆為單位球。
- * 預算走 `families.megalith`(一顆巨岩最多 14 件庫零件 ⇒ 逐件上限比 rock 族緊得多)。
+ * 預算走 `families.megalith`(一顆巨岩最多 29 件庫零件 ⇒ 逐件上限比 rock 族緊得多)。
  */
 export function megaLibDescs(src = biomesSrc()) {
   const MEGA_LIB = new Function(`${blockOf(src, 'MEGA_LIB')}; return MEGA_LIB;`)();

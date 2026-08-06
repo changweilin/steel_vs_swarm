@@ -656,6 +656,9 @@ const megal = (() => {
     // 路徑(= 舊 primitive 幾何)—— 接合幾何的真相在保險絲上,GLB 只是同包絡的皮
     pick(/const MEGA_LIB = \{[\s\S]*?\n\};/, 'MEGA_LIB'),
     pick(/const megaGeo = [^\n]*\n/, 'megaGeo'),
+    // 輪替除數(名冊長度推導,2026-08-06):抽原文執行 ⇒ 這一行少了就是 ReferenceError,
+    // 而它與 MEGA_LIB 是同一個縫的兩半,MUST 一起抽(MUST NOT 在這裡寫死 3)
+    pick(/const NBLK = MEGA_LIB\.block\.length;/, 'NBLK'),
     pick(/function synthMegalith\(g, rnd\) \{[\s\S]*?\n\}/, 'synthMegalith'),
     pick(/function decorateMegalith\(g, anchor, rnd, s\) \{[\s\S]*?\n\}/, 'decorateMegalith'),
     'return { MEGALITHS, synthMegalith, decorateMegalith };',
