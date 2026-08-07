@@ -42,3 +42,4 @@ node_modules/playwright-core/
 node_modules/.bin/
 # 三角形預算量測的中間產物(量測結論住 tools/ai3d/tri_budget.json,原始快照不入版控)
 tools/ai3d/.tri_measure/
+tools/ai3d/__pycache__/
