@@ -35,6 +35,7 @@
 
 | **D-6 樹族第二批 — 逐樹種冠形補齊 + 一般植被開族(灌木/闊葉/針葉)+ Quaternius 退場** | **PARTIAL 2026-08-06** (§5k) | 使用者定案「大量下載不同國家地區的不同樹種,如灌木/闊葉林/針葉林/各種大小神木的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」+ 追問後定案「**連 Quaternius 一起換掉**」。①照片目錄 tree 族 +26 列(灌木 6 / 闊葉 8 / 針葉 6 / 神木 6,逐列點名國家地區)、族序提前;3 輪抓到 **25 張**後撞上小時級 IP 節流(§5i 同款,3 輪 ×0 張)。②**新工具 `photo_sheet.mjs`**(§5j「人眼先看照片」升格為正式工具):82 張逐張看,語意可用 13 張(~1/6),其中 CGI/館藏/明信片/有人入鏡/浮水印一次擋掉。③`tree.glb` **+18 節點**:神木 9 顆(g/h/i/j/k 五形)⇒ 11 種神木**各有專屬節點名,但不是 11 個專屬形狀**(**2026-08-06 使用者質疑後更正**:`i` 與舊制 `a` 同一張照片、`g` 與舊制 `b` 同一張 ⇒ 11 種實際只對到 **9 張**照片;且 `lib:` 這條縫換不掉骨架,見 §5k),且 klinki/alerce 這兩種**第一次接得上**(冠簇 2.2~3.0m 小於舊制最小節點 3.325 —— 這正是使用者說的「各種**大小**神木」);一般植被 9 顆(bush/vleaf/vcone)。④**`families.veg` 預算先量測後生成**(新工具 `measure_veg_tris.mjs`,四個綠地場地 team 3 實測),且 `whole_factor = 4.0` 這一次是**量出來的**(Quaternius 退場釋出 585,966~1,669,392 tris)。⑤**broadleaf/birch/shrub 退出 `NATURE_MANIFEST`** 改走零件表 + 照片冠簇(掛在名冊裡的型別連 `buildVegMeshes` 都不會被呼叫 ⇒ `lib:` 列會接在沒人看得到的路徑上);silvergrass/deadtree 留著(不在使用者這一輪點名的四類裡,草葉鏤空貼圖 SF3D 生不出來)。intake 234 / siteplan 187 / joints 21516-0 / beacons 68 / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73;e2e 全綠(fresh server :8666)、`npm run bal` 全綠(⑦f 1.09× 不動);對照台 0 缺件 / 0 孤兒 / 0 未記載 |
 
+| **D-8 樹族首件 — deadtree 遷零件表 + 整樹節點縫(`whole:`)+ `tree/snag_a` T2 入庫** | **DONE 2026-08-07 夜** (§5u) | 使用者定案「缺口補平當作被砍伐或雷擊損毀,自然的樹木本來就不完美,繼續」⇒ §5t 神木那半的縫 + 預算同輪定案。①**縫 = `VEG_DEFS` 新增 def 層 `whole:`**(整樹節點:lib 載到 ⇒ 這一型只畫那一顆、保險絲零件全藏 —— synthMegalith tower 的資料路徑版;載不到 ⇒ **逐位元**退回 parts;解析仍只經 `partGeo` 三份縫之一);deadtree 退出 `NATURE_MANIFEST`(§5k ⑤ broadleaf 同路,Quaternius DeadTree_1/2 退場)。②**預算先量再開**:uluru(bare 0.95)加入取樣面 —— deadtree instance 上界 **121**(blackforest 僅 15);blackforest 重量 1,591,970 → 1,561,264 = Quaternius 枯木退場釋出 30,706 ⇒ 成長額度 592,199 → **622,905**、`node_cap` 223 → **225**(分母 2,917 → 3,038;既有節點 max 214 仍綠)。③`tree/snag_a` = §5p 漂白刺果松 ◎(seed 1234)走 `--mode wrap` 刀 48,673→200 水密單元件,非等向拉滿 ico(3.2)、200 ≤ 225 留餘裕。intake 244 / siteplan 187 / soft 73 / beacons 68 / joints 21611-0 / gpu 54 / cel 52 / visual 124 / bal 全綠 / e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載 |
 | **D-7 T2 首件入庫 — 實體化刀進 `tools/ai3d` + `rock/tower_a` 改 T2 重生成** | **DONE 2026-08-07 晚** (§5t) | 使用者指示「跑」(巨石首件入庫 + 實體化刀定案)。**零縫改動**:同名取代 `rock/tower_a`(§5l 記錄 SF3D 版「柱狀節理全失、頂面變圓」;§5o 實測 T2 C→500 柱身+裙錐都在)⇒ biomes.js 一行未動、rnd 枚數/座號組逐位元不變。鏈 = T2-spz seed 42 天然閉合注(47,725 面撕裂薄殼)→ **`tools/ai3d/solidify_parts.py`**(§5o C 路徑出貨版;佇列 F.3 選項 (a) 定案 + 3×3 參數掃描全平台)→ 500 面水密單元件(kf_p95 0.94%)→ normalize 同名取代 → **392 tris**(上限 430 留餘裕)。`METHODS` +`trellis2_spz`(§5p 待續③ 兌現)、manifest 拆列(mesa_a 留 sf3d)。intake 240 / siteplan 187 / beacons 68 ± 兩反向紅 / joints 21611-0 / gpu 54 / soft 73 / cel 52 / visual 124 / megalith rnd 對帳 1000 顆 + cap 430 重推不動 / bal 全綠(⑦f 1.78×)/ e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載;黏土人眼:柱身直紋 + 裙錐 + 平頂都在 |
 | **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
 | **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
@@ -1223,6 +1224,42 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   Quaternius 檔退場又會把成長額度加回來(staleness ①③ 兩條同時動,不重量就開列 = 賭)。
 - **其餘待續**:①真機冒煙(使用者下次開圖:tower 型巨岩換臉,柱狀節理看得出來);
   ②texture 掉色(§5n 待續⑥)不影響 —— partlib 只吃幾何,顏色由零件表 `c:` 給。
+
+## 5u. Trial log (2026-08-07 夜, 3060-machine session — 樹族首件入庫:deadtree 遷零件表 + 整樹節點縫 + `tree/snag_a`)
+
+> 使用者定案:「沒關係,能接起來就好,缺口補平當作被砍伐或雷擊損毀,自然的樹木本來就
+> 不完美,繼續」⇒ §5t 神木那半的縫 + 預算,同輪定案(佇列 F.1「預算與縫 MUST 同一輪」)。
+
+- **縫 = `VEG_DEFS` 的 def 層 `whole:`(整樹節點)**:`{ g, y, c, lib }` —— lib 載到 ⇒
+  這一型**只畫那一顆節點**(保險絲零件全藏;synthMegalith tower「載到就不 add 原
+  primitive」的資料路徑版);載不到 ⇒ rows = parts **逐位元**退回舊制(比任何 fuse-blob
+  近似都乾淨 —— 這正是選 def 層而不是 per-part lib 的理由:枯幹沒有球形部件,per-part
+  的 fuse 載不到時會畫出一顆掛著大球的樹)。三條紀律:①佈局(`vegSpan`/散布)仍只讀
+  `parts`;②庫解析仍只經 `partGeo`(判「載到沒」= `partGeo(whole) !== whole.g`,
+  audit_siteplan「解析恰三份」不動);③`whole.g` 只當入庫包絡與世界尺度,不是渲染備援。
+  `bioLibDescs` 多吐一列 desc(fb = whole.g),`lib:` 字面計數自動平衡(原文 46 = 解析 46)。
+- **deadtree 退出 `NATURE_MANIFEST`**(§5k ⑤ broadleaf 同路;§5q 定案樹族 img→3D 只收
+  雕塑性主體 —— 枯幹正是首件):Quaternius DeadTree_1/2 退場(gltf 檔留在 assets 目錄,
+  已無引用;要不要清檔由出貨版打包輪定),散布/佈局零 rnd 變化。
+- **預算先量再開**(staleness ①③ 兩條同時動,§5t 預告的那筆帳):①uluru(bare 0.95,
+  deadtree 的上界地貌)加入取樣面 —— **deadtree instance 上界 121**(blackforest 僅 15;
+  綠地場地量不到它,§5t 的判斷成立);②blackforest 全場重量 1,591,970 → **1,561,264** =
+  Quaternius 枯木退場釋出 **30,706** ⇒ 成長額度 592,199 → **622,905**;③`node_cap` =
+  622,905 ÷ 3,038 + 20 = **225**(舊 223;分母 +121)—— 既有 veg 節點 max 214 仍綠。
+  若只加分母不重量額度,cap 掉到 214.9 = 貼著既有節點零餘裕(§5t 預警的賭局,量測解掉)。
+- **`tree/snag_a`**:§5p 漂白刺果松枯幹 ◎(`ov_6f0ad84c`,CC0 USFS;seed 1234 出來就 ◎
+  不需重抽)→ `--mode wrap` 刀(§5t)48,673 面 1,428 元件 → **200 面水密單元件**
+  (kf_p95 2.4%)→ normalize 非等向拉滿 ico(3.2)(≈ 全高 6.1m × it.s 0.7~1.4)。
+  200 ≤ 225 留 11% 餘裕(§5j 教訓)。黏土:多刺蒼勁枯幹,缺枝/補痕照使用者定案讀作
+  砍伐/雷擊損毀。
+- **驗收全綠**:intake 244(snag_a 四條契約全過)/ siteplan 187 / soft_stroke 73(deadtree
+  維持非軟性)/ beacons 68 / joints 21611-0 / gpu 54 / cel 52 / visual 124 / `npm run bal`
+  全綠 / e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載(snag_a 列:T2-spz、
+  來源圖、消費端 deadtree[3]、200 tris / 95% 包絡)。
+- **未跑 / 待續**:①真機冒煙(裸露地場地看枯木換臉 + 保險絲路徑不迴歸);②板根/扭曲幹
+  是下一批(GIANT_DEFS 板根鰭的 per-part 縫 —— cone fuse 的非等向 normalize 已就緒,
+  語料要回 F0 續抓);③`--mode wrap` 的 alpha 只在這一顆殼上驗過 2%,語料多了要掃
+  (§5t 凍結值紀律同款);④卡在 §5p 的 conifer/pine 語料缺額照舊(冷卻後續抓)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

@@ -87,6 +87,17 @@ export function bioLibDescs(src = biomesSrc()) {
           p: [p.px || 0, p.y || 0, p.pz || 0],
         });
       });
+      // 整樹節點(def.whole;§5u):lib 載到 ⇒ 整型只畫這一顆,佈局仍讀 parts。
+      // fb = whole.g = 入庫包絡與世界尺度(不是 fallback 渲染 —— 載不到時渲染的是 parts)。
+      if (def.whole?.lib) {
+        const w = def.whole;
+        out.push({
+          name: w.lib, family: w.lib.split('/')[0], node: w.lib.split('/').slice(1).join('/'),
+          fb: w.g, kind, index: def.parts.length, table, consumer: 'biomes',
+          budgetFam: table === 'VEG_DEFS' ? 'veg' : 'tree',
+          p: [w.px || 0, w.y || 0, w.pz || 0],
+        });
+      }
     }
   }
   // 計數 MUST 先剝行註解(㋑):檔頭與零件表的說明裡就寫著 `lib: '家族/節點'` 這種範例,

@@ -1013,6 +1013,39 @@
     "fit": 0.95,
     "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
    }
+  },
+  {
+   "key": "tree/snag_a",
+   "method": "trellis2_spz",
+   "consumer": "biomes VEG_DEFS.deadtree 的整樹節點(def.whole;§5u 新縫:lib 載到 ⇒ 這一型只畫這一顆、保險絲三件式全藏,載不到 ⇒ 逐位元退回舊制三件式。deadtree 同輪退出 NATURE_MANIFEST —— Quaternius DeadTree_1/2 退場,blackforest 實測釋出 30,706 tris;散布/佈局零 rnd 變化)",
+   "rev": "§5u 樹族首件(2026-08-07;§5q 定案樹族 img→3D 只收雕塑性主體 —— 枯幹/板根/扭曲幹,漂白枯幹是範本)",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_6f0ad84c-3565-4acb-8578-b633c9016b54",
+     "family": "tree",
+     "part": "cf_juniper_tree",
+     "query": "bristlecone pine tree",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "U.S. Forest Service (source)",
+     "source_url": "https://www.rawpixel.com/image/3388298/free-photo-image-blue-bristlecone-pines-california",
+     "file": "photos/tree/cf_juniper_tree/ov_6f0ad84c-3565-4acb-8578-b633c9016b54.jpg",
+     "note": "漂白刺果松枯幹(§5p F0 黏土複驗 ◎ 的那張 —— 無葉冠的雕塑性主體是 T2 樹族甜蜜點);matte 先二值化 alpha >16→255(§5n)"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+    "params": "1024_cascade 快檔 / seed 1234(§5p F0 複驗那一注,出來就 ◎ 不需重抽)",
+    "machine": "RTX 3060 12GB",
+    "note": "原生 48,673 面 / 27,447 開放邊 / 1,428 元件 —— 細枝主體的 T2 原殼是空間上斷開的孤島群(§5t 三連敗的成因),與岩族的緊密團塊是兩種病"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py --mode wrap(alpha wrap 2% 橋接 + 取最大元件(棄 0.7% 面積的離體浮枝)+ 拓樸保護 quadric)48,673→200 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)非等向拉滿 ico(3.2) 包絡",
+    "fit": 0.95,
+    "note": "kf_p95 2.4% / dev_p95 1.7%;逐件上限 225(§5u 以 uluru deadtree 121 instance + Quaternius 退場釋出重推)收在 200 留餘裕(§5j 教訓);缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木本來就不完美」"
+   }
   }
  ]
 }

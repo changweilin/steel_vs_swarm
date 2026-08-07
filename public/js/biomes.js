@@ -208,9 +208,14 @@ const VEG_DEFS = {
                          { g: ico(1.2), y: 6.2, px: -0.7, key: 'foliage', sy: 1.1, lib: 'tree/vleaf_a12' },
                          { g: ico(1.2), y: 7.1, pz: 0.55, key: 'foliage', sy: 1.05 },
                          { g: ico(1.2), y: 7.9, key: 'foliage', sy: 0.95 }] },
+  // 枯立木(2026-08-07 §5u):**整樹節點** —— `whole:` 載到 ⇒ 這一型只畫那一顆節點
+  // (T2 實拍漂白刺果松枯幹;缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木
+  // 本來就不完美」),載不到 ⇒ **逐位元**退回 parts 三件式(比任何 fuse 近似都乾淨)。
+  // 佈局數學(vegSpan/散布)仍只讀 parts(partGeo 紀律);whole.g 只當入庫包絡與世界尺度。
   deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 },
                          { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 },
-                         { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }] },
+                         { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }],
+                 whole: { g: ico(3.2), y: 3.05, c: 0x9a8b74, lib: 'tree/snag_a' } },
   conifer:     { parts: [{ g: cyl(0.20, 0.32, 2.0), y: 1.0, c: 0x5d4027 },
                          { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
                          { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
@@ -793,13 +798,13 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
 //   ③ **尺寸接得上**:GLB 路徑的高度是 `it.s × entry.h`(8 / 8.5 / 1.8),零件表路徑是
 //      `vegSpan(def) × it.s`(實測 7.8 / 7.3 / 1.75)⇒ 同量級,不必改散布尺度。
 //      兩條路徑都零 `rnd()` 消耗(散布早就跑完)⇒ **佈局逐位元不變**,只換畫出來的幾何。
-// silvergrass / deadtree 留在名冊裡:使用者這一輪點名的是灌木/闊葉林/針葉林/神木,
-// 芒草與枯木不在其中,而草葉的鏤空貼圖是 SF3D 生不出來的東西(寧缺勿錯)。
+// silvergrass 留在名冊裡:草葉的鏤空貼圖是 img→3D 生不出來的東西(寧缺勿錯)。
+// deadtree 已退出名冊改走零件表(2026-08-07 §5u;§5q 定案樹族 img→3D 只收雕塑性主體,
+// 枯幹正是首件 —— §5k ⑤ broadleaf 的同一條遷移路,Quaternius DeadTree_1/2 隨之退場)。
 const NATURE_DIR = 'assets/models/quaternius/nature/';
 // h = 基準高(m):GLB 植被同步吃超尺度(比現實高大;put() 的 VEG_SCALE 已含在 s)
 const NATURE_MANIFEST = {
   silvergrass: { files: ['Grass_Large.gltf', 'Grass_Small.gltf'], h: 1.2 },
-  deadtree:    { files: ['DeadTree_1.gltf', 'DeadTree_2.gltf'], h: 6.5 },
 };
 // 葉片的季節色偏(乘在貼圖上;樹幹不動)
 const SEASON_LEAF_TINT = { spring: 0xd9ffd0, summer: 0xffffff, autumn: 0xffab5e, winter: 0xc9d6da };
@@ -955,11 +960,16 @@ function vegSpan(def) {
 export function buildVegMeshes(type, items, season) {
   const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = vegSpan(def);
+  // 整樹節點(def.whole;2026-08-07 §5u):lib 載到 ⇒ 這一型只畫節點那一列(保險絲零件
+  // 全藏 —— 與 synthMegalith tower 的「載到就不 add 原 primitive」同語意);載不到 ⇒
+  // rows = def.parts 逐位元同舊制。span/佈局仍讀 parts,零 rnd 消耗;庫的解析仍只經
+  // partGeo 這一份(partGeo ≠ 保險絲 g ⇔ 節點真的載到了)。
+  const rows = (def.whole && partGeo(def.whole) !== def.whole.g) ? [def.whole] : def.parts;
   const meshes = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
-  def.parts.forEach((part, pi) => {
+  rows.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     // 軟性零件(葉/草)另帶擺動錨點:base = 這個零件的原點在整株上的高度、sy = 它自己的
     // 縱向壓縮 ⇒ 樹幹頂與樹冠底在同一個高度上拿到同一份權重,接合不會被風吹開。
