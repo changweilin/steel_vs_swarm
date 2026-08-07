@@ -1329,6 +1329,11 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   磁碟根)K3 = 三瓣風車、K5 = 五瓣風車,花形與手稿一致;側視量感、葉叢起伏都在。
   待使用者校準:瓣的胖瘦(現值 fill 0.62 偏尖楔,手稿的瓣更圓潤 —— 旋鈕是 fill 與
   逐瓣 r 剖面)、質感檔位、適用樹種。
+- **v4(同日;使用者手稿二 —— 尖楔瓣 X 掉,瓣要圓潤)**:瓣的角向半寬從常數改成沿
+  徑向脊的**圓弧包絡** `W(u) = 0.14 + 0.86·sin(πu)^0.85`(近軸收細柄、中段鼓滿、梢端
+  收圓;兩端不歸零 —— 柄與梢都留肉),`half_deg` 語意改為中段半寬、近軸爆脹以 1.9×
+  夾住;fill 0.62 → 0.72。俯視 K5 = 五瓣圓瓣花(柄細中鼓梢收、緣帶鋸齒),與手稿二的
+  團塊瓣一致;側視圓頂量感不退、葉隙讀作透光孔。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
