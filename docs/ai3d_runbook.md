@@ -35,6 +35,7 @@
 
 | **D-6 樹族第二批 — 逐樹種冠形補齊 + 一般植被開族(灌木/闊葉/針葉)+ Quaternius 退場** | **PARTIAL 2026-08-06** (§5k) | 使用者定案「大量下載不同國家地區的不同樹種,如灌木/闊葉林/針葉林/各種大小神木的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」+ 追問後定案「**連 Quaternius 一起換掉**」。①照片目錄 tree 族 +26 列(灌木 6 / 闊葉 8 / 針葉 6 / 神木 6,逐列點名國家地區)、族序提前;3 輪抓到 **25 張**後撞上小時級 IP 節流(§5i 同款,3 輪 ×0 張)。②**新工具 `photo_sheet.mjs`**(§5j「人眼先看照片」升格為正式工具):82 張逐張看,語意可用 13 張(~1/6),其中 CGI/館藏/明信片/有人入鏡/浮水印一次擋掉。③`tree.glb` **+18 節點**:神木 9 顆(g/h/i/j/k 五形)⇒ 11 種神木**各有專屬節點名,但不是 11 個專屬形狀**(**2026-08-06 使用者質疑後更正**:`i` 與舊制 `a` 同一張照片、`g` 與舊制 `b` 同一張 ⇒ 11 種實際只對到 **9 張**照片;且 `lib:` 這條縫換不掉骨架,見 §5k),且 klinki/alerce 這兩種**第一次接得上**(冠簇 2.2~3.0m 小於舊制最小節點 3.325 —— 這正是使用者說的「各種**大小**神木」);一般植被 9 顆(bush/vleaf/vcone)。④**`families.veg` 預算先量測後生成**(新工具 `measure_veg_tris.mjs`,四個綠地場地 team 3 實測),且 `whole_factor = 4.0` 這一次是**量出來的**(Quaternius 退場釋出 585,966~1,669,392 tris)。⑤**broadleaf/birch/shrub 退出 `NATURE_MANIFEST`** 改走零件表 + 照片冠簇(掛在名冊裡的型別連 `buildVegMeshes` 都不會被呼叫 ⇒ `lib:` 列會接在沒人看得到的路徑上);silvergrass/deadtree 留著(不在使用者這一輪點名的四類裡,草葉鏤空貼圖 SF3D 生不出來)。intake 234 / siteplan 187 / joints 21516-0 / beacons 68 / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73;e2e 全綠(fresh server :8666)、`npm run bal` 全綠(⑦f 1.09× 不動);對照台 0 缺件 / 0 孤兒 / 0 未記載 |
 
+| **D-7 T2 首件入庫 — 實體化刀進 `tools/ai3d` + `rock/tower_a` 改 T2 重生成** | **DONE 2026-08-07 晚** (§5t) | 使用者指示「跑」(巨石首件入庫 + 實體化刀定案)。**零縫改動**:同名取代 `rock/tower_a`(§5l 記錄 SF3D 版「柱狀節理全失、頂面變圓」;§5o 實測 T2 C→500 柱身+裙錐都在)⇒ biomes.js 一行未動、rnd 枚數/座號組逐位元不變。鏈 = T2-spz seed 42 天然閉合注(47,725 面撕裂薄殼)→ **`tools/ai3d/solidify_parts.py`**(§5o C 路徑出貨版;佇列 F.3 選項 (a) 定案 + 3×3 參數掃描全平台)→ 500 面水密單元件(kf_p95 0.94%)→ normalize 同名取代 → **392 tris**(上限 430 留餘裕)。`METHODS` +`trellis2_spz`(§5p 待續③ 兌現)、manifest 拆列(mesa_a 留 sf3d)。intake 240 / siteplan 187 / beacons 68 ± 兩反向紅 / joints 21611-0 / gpu 54 / soft 73 / cel 52 / visual 124 / megalith rnd 對帳 1000 顆 + cap 430 重推不動 / bal 全綠(⑦f 1.78×)/ e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載;黏土人眼:柱身直紋 + 裙錐 + 平頂都在 |
 | **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
 | **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
 | **薄殼大比例減面閘門(T2 產出 50k→~500;§5n 待續②)** | **MEASURED 2026-08-07 凌晨**(§5o)| **直接減面關、先實體化再減面開**。A trimesh quadric **打不到預算又不報錯**(2000/900/500 三個目標回同一個 2,865~6,076 面 = 預算 5.7~12.2 倍);B pymeshlab 打得到但產出是**三角形湯**(499 面 / 468~479 元件 / v:f 2.8 = 每元件 1~1.5 面);C 先 uniform volumetric resample 再 quadric = 唯一兩者成立(500 面 / 元件 1~9 / v:f 0.48~0.58 / 開放邊 0~97,dev_mean 恆 ≈ offset 本身)。**方法論**:表面偏差量不出撕裂(B→500 的 dev_p95 只有 0.0034~0.0057 卻是彩紙)⇒ 判準是 **v:f 與 面/元件**。原生網格更乾淨那條假設**被否掉**:`--decimate 500` 重跑得 473,280 面仍有 205,236 開放邊 / 9,898 元件(0.434/面,50k 版 0.653/面)⇒ 兇手不是 fork 的 86:1 減面,O-Voxel 輸出本身就不封閉;且 50k 與 473k 黏土渲染肉眼分不出來。500 面留不住建築識別特徵(Art Deco 退縮量體被抹平)⇒ 建築節點的預算與消費端縫要一起定。零節點出貨 |
@@ -220,7 +221,8 @@ matte 上就看得到人)、**真正可用的全身單株只有 ~16~18 張**。
    ①碰撞/LOS 仍走既有有向盒(A30:看得見多粗 = 撞得到多粗 = 打得到多粗,權威幾何一格不動)
    ②`['lib', name, fallback]` 的保險絲契約(`partlib.js`;庫載不到就走程序生成)
    ③**佈局數學只讀保險絲**(§2.3:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家)。
-3. **T2 入庫路徑要先定案**:`normalize_parts.py` 目前沒有實體化那一刀,而 Blender 沒有
+3. **T2 入庫路徑要先定案**(→ §5t 已定案:選項 (a) 落地為 `tools/ai3d/solidify_parts.py`,
+   參數已掃描;建築批直接沿用):`normalize_parts.py` 目前沒有實體化那一刀,而 Blender 沒有
    volumetric resample。兩個選項 ——(a)入庫**前**的離線步驟(pymeshlab,住 study clone
    或 `tools/ai3d/` 的 venv,**MUST NOT 進 `package.json`**,A2);(b)`normalize_parts.py`
    多吃一個 `--solidify` 旗標。傾向 (a):新相依不進出貨路徑,且 §5o 的 C 路徑參數
@@ -987,8 +989,10 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   上全數碎裂,換模型已經換過兩次了)。
 - **未跑 / 待續**:①實體化那一刀**還沒進 `normalize_parts.py`** —— 這一輪只在 study clone 量,
   出貨輪要決定它是入庫前的離線步驟還是 normalise 的一段(前者較符合 A2/原則 6:
-  Blender 沒有 volumetric resample,pymeshlab 是**新的離線相依**,MUST NOT 進 `package.json`);
-  ②C 的兩個旋鈕(cell 256 / offset 0.6%)沒有掃描,offset 直接決定「胖多少」而包絡契約會抓它;
+  Blender 沒有 volumetric resample,pymeshlab 是**新的離線相依**,MUST NOT 進 `package.json`)
+  **(→ §5t 已定案落地:入庫前離線步驟 `tools/ai3d/solidify_parts.py`)**;
+  ②C 的兩個旋鈕(cell 256 / offset 0.6%)沒有掃描,offset 直接決定「胖多少」而包絡契約會抓它
+  **(→ §5t 已掃描:3×3 全平台,凍結值在平台中央)**;
   ③建築預算該落在哪一級沒量(2000 面看起來夠,但零件庫現行是 400~900);
   ④§5n 待續 ③④⑤⑥ 原封不動(512/1536 解析度、plan §1 補行、消費端縫、texture 掉色)。
 
@@ -1041,7 +1045,8 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
 - **未跑 / 待續**:①孤立松柏(conifer/pine)這一輪整批被 401/429 吃掉,冷卻後續抓;
   ②冠簇的浮雕問題:要嘛換斜側面/多視角照片語料,要嘛冠簇維持程序 ico + 照片貼圖,由樹族
   入庫輪定;③枯幹那顆 ◎ 要入庫得走佇列 F 定案的實體化 + 減面路徑(§5o C 路徑),`METHODS`
-  的 `trellis2_spz` 鍵仍等**首個入庫節點**才加(原則 6,§5n 同款);④`screen_mattes.py` 的
+  的 `trellis2_spz` 鍵仍等**首個入庫節點**才加(原則 6,§5n 同款)**(→ §5t 已加:
+  首件 = `rock/tower_a`)**;④`screen_mattes.py` 的
   三桶門檻是 82 張校準的凍結值 —— 語料結構大改(例如大量白背景商品照湧入)要重校,別默默沿用。
 
 ## 5q. Trial log (2026-08-07 午後, 3060-machine session — 冠簇路線定案:葉冠不走 img→3D)
@@ -1163,7 +1168,50 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   2.9 萬開放邊,wrap 那一步貢獻了面積 +27% 的圓潤化,必要性未測);④margin 未掃描
   (現值 4°;g0−e 側鏡射源落在缺口內部近乎無料 = 虛設,真正的重疊只在中線與 g1 側);
   ⑤V5a 背側凹窩可否以底面切平/實心化收掉(岩石本就 `sinkBaseY` 埋底)—— 由入庫輪定;
-  ⑥腳本仍住 study clone(§5o 同款:等首個入庫節點才搬 `tools/ai3d/`)。
+  ⑥腳本仍住 study clone(§5o 同款:等首個入庫節點才搬 `tools/ai3d/`)**(→ §5t:C 路徑
+  出貨版已搬 `tools/ai3d/solidify_parts.py`;`symfill_wedge.py` 楔形救援仍住 study clone,
+  等第一顆「非救不可的浮雕注」再搬)**。
+
+## 5t. Trial log (2026-08-07 晚, 3060-machine session — T2 首件入庫:`rock/tower_a` 改 T2 重生成 + 實體化刀落地 `tools/ai3d/solidify_parts.py`)
+
+> 使用者指示「跑」(巨石首件入庫 + 實體化刀定案)。落點刻意選**零縫改動**的那一格:
+> `rock/tower_a` 同名取代(`normalize_parts.py --base` 的既有語意)—— 消費端 tower 呼叫點、
+> rnd 枚數、座號組、`MEGA_LIB` 名冊全部逐位元不動,整輪只動 GLB + 來源帳 + 工具。
+> 動機不是「多一顆」是「換臉」:§5l 早記錄 SF3D 版 tower fill 0.313「量體對了,但**柱狀
+> 節理全失**、頂面變圓」,而 §5o 實測 T2 C→500「柱身 + 裙狀崖錐都在」。
+
+- **來源與 seed**:來源圖 `ov_163a0902`(CC0,Highsmith 魔鬼塔 —— 與 mesa_a 同一張;
+  原 tower_a 的 `ov_f94b5c10` 退役)。**seed 42 天然閉合注**(per-seed 重抽紀律 §5m③/§5r:
+  seed 1234 抽到浮雕注 —— 就是 §5r/§5s 的那顆標本;天然閉合注在手就不必動用楔形救援)。
+  matte 先二值化 alpha >16→255(§5n)。
+- **實體化刀定案(佇列 F.3 選項 (a) 的 repo 版)**:`tools/ai3d/solidify_parts.py` ——
+  §5o C 路徑(uniform volumetric resample 實體化 + quadric)的出貨實作,pymeshlab venv
+  **外部**(A2;3060 現成的家 = study clone `.venv`),pymeshlab 不出 GLB ⇒ 內部經 trimesh
+  轉檔。study clone 的 `decim_gate.py`/`symfill_gate.py` 退回量測史料,出貨縫只有這一份
+  (原則 2)。**參數掃描**(§5o 待續② 欠的):3×3(cells 192/256/320 × offset 0.4/0.6/0.8%)
+  對 seed-42 殼**九組全數收斂水密單元件 500 面** —— 平台很寬,凍結值 256/0.006 落在平台
+  中央不是揀好看的;offset 單調控制貼合度(0.4% → kf 0.73%、0.8% → 1.17%),出貨仍用
+  跨族驗證值 0.006(0.004 略貼但只在這一顆殼上驗過;「太低 = 薄壁斷開」的風險面沒掃)。
+- **鏈與數字**:T2 raw 47,725 面 / 29,239 開放邊 / 2,443 元件(O-Voxel 輸出本身就是撕裂
+  薄殼,§5o)→ solidify 500 面水密單元件(kf_p95 0.94% / dev_p95 1.15%)→ normalize
+  (Blender 同名取代,非等向 1.0×1.0 拉滿單位包絡 × FIT 0.95)→ **392 tris**。首跑 420
+  太貼上限(430),重跑目標 400 收 392 —— §5j 教訓「貼著上限出貨 = 把下一次重量變成紅字」
+  (前例 372/371/382 全在 90% 以下)。
+- **來源帳**:`METHODS` +`trellis2_spz` 鍵(§5p 待續③ 的「等首個入庫節點」= 本輪);
+  manifest 原 mesa_a/tower_a 合列**拆成兩列**(一次生成作業的語意已不成立):mesa_a 留
+  sf3d、tower_a 新列記 T2 全參數(seed、掃描結論、兩段後處理)。
+- **驗收全綠**:intake 240 / siteplan 187 / beacons 68 ±兩反向紅 / joints 21611-0 / gpu 54 /
+  soft_stroke 73 / cel 52 / visual_prefs 124 / **megalith rnd 對帳 1000 顆逐顆相同 + 逐件
+  上限 430 重推不動**(tower_a 372→392 不動 max = basalt 3114)/ `npm run bal` 全綠
+  (⑦f 1.78× 不動 —— 純表現層)/ e2e 全綠(fresh server :8666)/ 對照台 0 缺件 0 孤兒
+  0 未記載(tower_a 列:方法 T2-spz、來源圖、消費端 megalith、392 tris / 95% 包絡)。
+  黏土人眼:柱身直紋 + 裙狀崖錐 + 平頂都在。
+- **未跑 / 待續**:①真機冒煙(使用者下次開圖:tower 型巨岩換臉,柱狀節理看得出來);
+  ②**神木開縫是下一輪**:`tree` 族 45 條 `lib:` 全是冠簇/灌木(§5q 判定不走 img→3D 的
+  那一類),雕塑性主體的落點(`VEG_DEFS.deadtree` / `GIANT_DEFS` 板根鰭)一條掛點都沒有
+  ⇒ 先加 lib 列 + `measure_veg_tris` 補 deadtree instance 上界(tri_budget staleness ②),
+  再讓 §5p 的漂白枯幹 ◎ 走本輪同一刀(solidify → normalize → intake);③texture 掉色
+  (§5n 待續⑥)不影響本輪 —— partlib 只吃幾何,顏色由零件表 `c:` 給。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

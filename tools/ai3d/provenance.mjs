@@ -39,6 +39,13 @@ export const METHODS = {
     short: '2GP',
     doc: 'SF3D 的兩個已量測失敗型態(細頸斷裂、規則人造量體塌成立面殼)的上一階:原生 3D 擴散 + mmgp CPU offload,WSL2/3060 實測峰值 2.5GB / ~62s(runbook §5m;TRELLIS 兩階在這張卡量測出局 §5l)',
   },
+  trellis2_spz: {
+    key: 'trellis2_spz',
+    label: 'img→3D(TRELLIS.2 stableprojectorz fork)',
+    kind: 'glb',
+    short: 'T2-spz',
+    doc: '幾何 + PBR 一次出的 O-Voxel 原生 3D:官方 TRELLIS.2 在 12GB 卡出局(§5l),IgorAherne fork 以預編 wheel + 逐階段 CPU offload 翻案(§5n:7/7@1024³、峰值 ≤3.4GB、59~226s/張、載入需 ≥20GB 空閒 RAM)。輸出是撕裂薄殼 ⇒ MUST 先過 tools/ai3d/solidify_parts.py(§5o C 路徑:實體化再減面)才進 normalize;岩石類逐 seed 重抽(§5r)+ V5a 楔形補丁備援(§5s)',
+  },
   llm_parts: {
     key: 'llm_parts',
     label: 'LLM 讀照片 → 寫純資料零件列',

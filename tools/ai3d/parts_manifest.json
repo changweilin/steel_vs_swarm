@@ -510,25 +510,12 @@
   },
   {
    "keys": [
-    "rock/mesa_a",
-    "rock/tower_a"
+    "rock/mesa_a"
    ],
    "method": "sf3d",
-   "consumer": "biomes synthMegalith 的 tower / mesa 兩個岩型分支(**整座**庫節點:崖錐 + 柱身/疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
+   "consumer": "biomes synthMegalith 的 mesa 岩型分支(**整座**庫節點:裙狀崖錐 + 疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
    "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
    "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006",
-     "family": "rock",
-     "part": "mg_tower",
-     "query": "devils tower rock",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Carol M Highsmith",
-     "source_url": "https://www.rawpixel.com/image/3093678/free-photo-image-america-beautiful-carol-highsmith",
-     "note": "魔鬼塔(美國懷俄明,火山頸)→ tower_a"
-    },
     {
      "role": "primary",
      "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
@@ -539,7 +526,7 @@
      "license": "cc0",
      "creator": "Carol M Highsmith",
      "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
-     "note": "同一座地標的另一張 → mesa_a(+120° yaw 與 tower_a 錯開)"
+     "note": "魔鬼塔(美國懷俄明)同地標第二張;SF3D + 120° yaw 化用為平頂桌山 → mesa_a。2026-08-07 拆列:tower_a 已改 T2-spz 重生成(見同鍵新列),本列只剩 mesa_a"
     }
    ],
    "gen": {
@@ -552,6 +539,39 @@
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base)",
     "fit": 0.95,
     "note": "單位包絡 1×1;減面刻意留餘裕(逐件上限 430,節點收在 372/371)—— 上限是量測推導值,會隨岩體零件表重量而移動,貼著上限出貨等於把下一次重量變成紅字"
+   }
+  },
+  {
+   "key": "rock/tower_a",
+   "method": "trellis2_spz",
+   "consumer": "biomes synthMegalith 的 tower 岩型分支(**整座**庫節點:崖錐 + 柱身同一顆;消費端一行未動 —— 同名取代,rnd() 枚數/座號組/呼叫點逐位元不變)",
+   "rev": "§5t 首個 T2-spz 入庫節點(2026-08-07;取代 §5j 的 SF3D 版 —— §5l 記錄該版「柱狀節理全失、頂面變圓」,§5o 實測 T2 C→500 柱身+裙錐都在)",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+     "family": "rock",
+     "part": "mg_tower",
+     "query": "devils tower rock",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "Carol M Highsmith",
+     "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
+     "file": "photos/rock/mg_tower/ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1.jpg",
+     "note": "魔鬼塔;matte 先二值化 alpha >16→255 再餵 T2(§5n「同一張 matte ≠ 同一個輸入」)"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+    "params": "1024_cascade 快檔(= TRELLIS.2-4B pipeline.json 原廠值)/ seed 42 —— per-seed 重抽紀律(§5r):seed 1234 抽到浮雕注(背面開口 115°,§5s 楔形補丁可救但天然閉合注在手就不必),42 天然閉合",
+    "machine": "RTX 3060 12GB(torch 峰值 ≤3.4GB;載入需 ≥20GB 空閒 RAM)",
+    "note": "原生 47,725 面、29,239 開放邊、2,443 元件 —— O-Voxel 輸出本身就是撕裂薄殼(§5o),不是減面弄壞的"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py(§5o C 路徑:uniform volumetric resample 實體化 + quadric;cells 256 / offset 0.6%,3×3 掃描全平台後採跨族驗證凍結值)47,725→500 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base 同名取代)500→392",
+    "fit": 0.95,
+    "note": "單位包絡 1×1(= fallback ico(1)),非等向拉滿;kf_p95 0.94% / dev_p95 1.15%(對 T2 原殼);逐件上限 430 收在 392 留餘裕(§5j 教訓)"
    }
   },
   {
