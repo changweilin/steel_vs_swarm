@@ -68,6 +68,11 @@ export const PHOTO_CATALOG = {
     // (lone / isolated / full height silhouette),刻意避開 trunk/bark 這類必然回傳局部特寫
     // 的字。列序 = 抓取優先序:F0 列排樹族最前(族序規則同第 7/8 輪)。
     gt_dragontree: { want: 5, q: ['dragon blood tree socotra', 'dracaena draco tree canary', 'lone dragon tree'] }, // 龍血樹(F0 點名;天生傘冠單株)
+    // 斜側視角探針列(§5p 待續② → §5q 已收斂,want 歸零):實測 5 張 —— 空拍單株的主體
+    // 天生太小(matte 畫布 253~711px,4/5 被剝空桶擋),唯一倖存是一座**小島**(空拍查詢
+    // 撈到的是島/林不是樹)⇒ 斜側語料在**採集端**就死了,救不了冠簇;冠簇定案走
+    // 程序 ico + 貼圖(§5q),img→3D 只收雕塑性主體(枯幹/樹幹/板根)。
+    gt_oblique: { want: 0, q: [] },
     canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland', 'isolated tree against sky', 'tree full height silhouette'] }, // 曠野孤立橡樹(F0 點名;+全身輪廓句式)
     sp_baobab:  { want: 6, q: ['solitary baobab', 'lone baobab tree', 'baobab tree', 'adansonia tree'] },          // 猴麵包樹(F0 點名;既有 2 張可用正是這一型)
     sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },              // 傘刺金合歡(F0 策略的同型印證家)
