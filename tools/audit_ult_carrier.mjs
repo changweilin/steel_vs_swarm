@@ -16,6 +16,13 @@
 // ⇒ 改驗「三種載具的**唯一生成點** = _launchUltCarrier」。這比逐入口驗守衛強:守衛是「舊路徑
 // 還在,只是對 converted 關著」,而唯一生成點是「舊路徑根本不存在」——後者連新增第二條路都擋得住。
 //
+// 2026-08-07 第二輪(使用者定案兩句:「小招也改為輔助機型模式,CD 時間 15~30s,從玩家身邊召喚」
+// +「大招改為從最近的砲塔或主堡召喚」)⇒ 新增 Ⅳ。要擋的病灶同樣**全部無錯誤訊息**:
+//   ・小招留一條瞬發路(某一招沒有被載具接管)⇒ 打起來「這一招特別快」,而稽核照樣全綠;
+//   ・兩個槽位各寫一份發射點判斷 ⇒ 之後只改其中一份,另一個槽位悄悄留在舊制;
+//   ・小招 CD 帶用手寫階梯 ⇒ 改任一角色的 skill.cd 之後,帶的兩端就不再是 15/30;
+//   ・小招一律做成跟隨編隊 ⇒ 三把 emp 小招的效果圈當場從 250m 外搬回腳下(招式身分被刪掉)。
+//
 // 2026-08-07(自身強化型改跟隨玩家的輔助機隊,見 data.js ULT_SUPPORT / audit_self_ult.mjs Ⅴ):
 // 32 台大招自此**全部**載具化,只差形式 —— 點遞送(本檔,23 台)vs 跟隨編隊(9 台)。
 // 於是 kami 這個 kind 有了**第二個具名生成點** `_launchUltSupport`:本檔的「唯一生成點」因此改成
@@ -27,6 +34,7 @@
 //     `--break-cd`    ultCarrierCd 改回恆等映射(CD 不壓帶)⇒ Ⅰ 紅
 //     `--break-guard` 把 heroKamikaze 連同第二個 kami 生成點塞回原文(復辟)⇒ Ⅱ 紅
 //     `--break-boom`  _kamiBoom 的 uA 分支失效(引爆走一般爆風)⇒ Ⅲ 紅
+//     `--break-origin` 發射點退回「一律主機自己」(大招不從工事召喚)⇒ Ⅳ 紅
 // 退出碼:0 = 全綠;1 = 有紅字
 import { mkdtempSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,6 +43,7 @@ import { pathToFileURL } from 'node:url';
 import { readSrc, grabMethod } from './audit_src.mjs';
 
 const ARGV = new Set(process.argv.slice(2));
+const BREAK_ORIGIN = ARGV.has('--break-origin');
 const BREAK_CD = ARGV.has('--break-cd');
 const BREAK_GUARD = ARGV.has('--break-guard');
 const BREAK_BOOM = ARGV.has('--break-boom');
@@ -69,7 +78,7 @@ let d;   // data.js 模組(真品或改壞副本)
   if (BREAK_CD) {
     const dir = mkdtempSync(join(tmpdir(), 'svs-ultcd-'));
     const src = bust(readSrc('public', 'js', 'data.js'),
-      /return ULT_CARRIER\.CD_LO \+ f \* \(ULT_CARRIER\.CD_HI - ULT_CARRIER\.CD_LO\);/,
+      /return band\.lo \+ f \* \(band\.hi - band\.lo\);/,
       'return cd;', '--break-cd');
     writeFileSync(join(dir, 'data.js'), src);
     copyFileSync(join(process.cwd(), 'public', 'js', 'botPolicy.js'), join(dir, 'botPolicy.js'));
@@ -80,6 +89,10 @@ let d;   // data.js 模組(真品或改壞副本)
   }
 }
 const { BattleSim } = await import('../server/sim.js');
+if (BREAK_ORIGIN) {
+  // 改壞:發射點一律主機自己(= 2026-08-07 之前的舊制)⇒ Ⅳ 的「大招自工事召喚」MUST 立刻紅字
+  BattleSim.prototype._launchOrigin = function (h) { return { x: h.x, z: h.z, y: h.y || 0 }; };
+}
 if (BREAK_BOOM) {
   const orig = BattleSim.prototype._kamiBoom;
   BattleSim.prototype._kamiBoom = function (k) {
@@ -163,8 +176,11 @@ sec('Ⅱ 單一縫(原文)');
   // 效果分支只有 _castEffect 一份:heroCast 不再自帶效果迴圈,三個載具端走 _ultArrive
   ok(count(S, /A\.fx === 'strike'/g) >= 1 && count(grabMethod(S, 'heroCast'), /A\.fx === 'strike'/g) === 0,
     'heroCast 不再自帶效果分支(全部住 _castEffect)');
-  ok(count(S, /_castEffect\(/g) === 4,
-    `_castEffect:1 定義 + 3 消費(heroCast 瞬發 / _ultArrive 點遞送 / _supSync 輔助機隊;實得 ${count(S, /_castEffect\(/g)})`);
+  // 2026-08-07 第二輪:兩個槽位一律載具化 ⇒ heroCast **不再有瞬發結算** —— 效果只從載具端進來。
+  // 這一條同時是「小招也改為輔助機型模式」最硬的那道閘:heroCast 裡再冒出一個 _castEffect
+  // 就是「某一招又變回瞬發」,而畫面上只表現成「這一招好像特別快」。
+  ok(count(S, /_castEffect\(/g) === 3 && count(grabMethod(S, 'heroCast'), /_castEffect\(/g) === 0,
+    `_castEffect:1 定義 + 2 消費(_ultArrive 點遞送 / _supSync 輔助機隊;實得 ${count(S, /_castEffect\(/g)})`);
   ok(count(S, /_ultArrive\(/g) === 5,
     `_ultArrive:1 定義 + 4 交付端(kami / hyper / 轟炸機 / 輔助機瞬發型;實得 ${count(S, /_ultArrive\(/g)})`);
   ok(count(S, /_launchUltCarrier\(/g) === 2, '_launchUltCarrier:1 定義 + heroCast 恰一個呼叫點');
@@ -233,8 +249,9 @@ sec('Ⅱ 單一縫(原文)');
 
 // ============================================================
 sec('Ⅲ 行為直測(真 BattleSim)');
+let mkCfg, run;
 {
-  const mkCfg = () => {
+  mkCfg = () => {
     const A = [25.0330, 121.5654];
     const D = 1600, R = 6371000;
     const realD = D * d.MAPGEO.REAL_SCALE;
@@ -250,7 +267,7 @@ sec('Ⅲ 行為直測(真 BattleSim)');
       env: { season: 'summer', time: 'day', weather: 'clear' },
     };
   };
-  const run = (sim, cond, n = 400) => { for (let i = 0; i < n && cond(); i++) sim.tick(0.125); };
+  run = (sim, cond, n = 400) => { for (let i = 0; i < n && cond(); i++) sim.tick(0.125); };
 
   // ① 機甲 strike:飛彈載具、飛行時間、著彈 strike 結算 + ultfx 事件
   {
@@ -259,17 +276,18 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     h.x = 400; h.z = 0; h.mp = 999; h.abil.ult = 1;
     const dum = sim._add({ kind: 'bunker', side: 'SWARM', x: 500, z: 0, y: 0, hp: 4000 }); delete dum.lane;
     sim.heroCast('a1', 'ult', 500, 0);
-    ok(!!h.hyper && !!h.hyper.uA && h.hyper.tid === 0, 't01 大招 = 極音速飛彈形式(點遞送、不追擊)');
+    ok(h.hypers?.length === 1 && !!h.hypers[0].uA && h.hypers[0].tid === 0,
+      't01 大招 = 極音速飛彈形式(點遞送、不追擊)');
     const cd = h.acd.ult - sim.t;
     ok(cd >= d.ULT_CARRIER.CD_LO && cd <= d.ULT_CARRIER.CD_HI, `施放 CD ${cd.toFixed(1)}s 落在帶內`);
     let ticks = 0, fx = 0;
     const hp0 = dum.hp;
-    for (let i = 0; i < 400 && h.hyper; i++) {
+    for (let i = 0; i < 400 && h.hypers.length; i++) {
       sim.tick(0.125); ticks++;
       fx += sim.events.filter((e) => e.e === 'ultfx' && e.fx === 'strike').length;
       sim.events.length = 0;
     }
-    ok(!h.hyper && ticks * 0.125 >= 1, `有飛行時間(${(ticks * 0.125).toFixed(1)}s)後抵達`);
+    ok(!h.hypers.length && ticks * 0.125 >= 1, `有飛行時間(${(ticks * 0.125).toFixed(1)}s)後抵達`);
     ok(fx === 1 && dum.hp < hp0, `著彈 ultfx + strike 傷害(${hp0} → ${Math.round(dum.hp)})`);
   }
 
@@ -278,6 +296,10 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     const sim = new BattleSim(mkCfg());
     const h = sim.addHero('SWARM', 'a2', 's02');
     h.x = 400; h.z = 0; h.mp = 999; h.abil.ult = 1; h.hp = 100;
+    // 2026-08-07:大招自最近的我方工事召喚 ⇒ 載具要飛好幾秒才到,期間這具 100 HP 的假人會被
+    // 場上的敵方單位打死(舊制窗只有 0.7s 碰不到)。量的是「補多少」不是「活不活得下來」
+    // ⇒ 用無敵幀把傷害那一軸移開(治療照常寫 hp,不吃 invUntil)。
+    h.invUntil = 1e9;
     const bys = sim._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
     sim.heroCast('a2', 'ult', 450, 0);
     const ks = [...sim.ents.values()].filter((e) => e.kami);
@@ -333,10 +355,12 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     const sim = new BattleSim(mkCfg());
     const h = sim.addHero('SWARM', 'a9', 's02');
     h.x = 400; h.z = 0; h.ry = 0; h.mp = 999; h.abil.ult = 1;
+    const org9 = sim._launchOrigin(sim.heroes.get('a9'), 'ult');
     sim.heroCast('a9', 'ult');   // 不帶點(bots 的 _castSupport 同構)
     const ks = [...sim.ents.values()].filter((e) => e.kami);
-    ok(ks.length > 0 && ks.every((k) => Math.hypot(k.pt.x - 400, k.pt.z - 0) >= d.ULT_CARRIER.MIN_LEG - 1e-6),
-      `瞄在腳邊 ⇒ 遞送點推到 MIN_LEG ${d.ULT_CARRIER.MIN_LEG}m 之外(每一發都有攔截窗)`);
+    // 2026-08-07:最短飛行腿改**自發射點**量 —— 站在自家塔下對腳邊施放也要有攔截窗
+    ok(ks.length > 0 && ks.every((k) => Math.hypot(k.pt.x - org9.x, k.pt.z - org9.z) >= d.ULT_CARRIER.MIN_LEG - 1e-6),
+      `瞄在腳邊 ⇒ 遞送點自發射點推到 MIN_LEG ${d.ULT_CARRIER.MIN_LEG}m 之外(每一發都有攔截窗)`);
   }
 
   // ⑥ 未轉換角色走瞬發路徑(s11 自補);**治療量 = 基礎 + SELF_ULT 補償增額**——
@@ -352,7 +376,8 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     ok([...sim.ents.values()].filter((e) => e.supG).length === d.supportN('s11'),
       `s11 大招改派 ${d.supportN('s11')} 架輔助機(2026-08-07;不是點遞送載具)`);
     ok(Math.abs(h.hp - 50) < 0.01, '施放當下不回血 —— 要等輔助機飛完投放腿(每一發都有攔截窗)');
-    for (let i = 0; i < Math.ceil(d.supportLegS() / 0.125) + 2; i++) sim.tick(0.125);
+    // 大招自最近的工事召喚 ⇒ 投放腿是實距(不是固定格數);四架各交付 1/4,等整隊到齊
+    run(sim, () => [...sim.ents.values()].some((e) => e.supG));
     ok(Math.abs(h.hp - Math.min(h.maxHp, 50 + A.heal + bst.heal)) < 1,
       `s11 自補 = 基礎 ${A.heal} + 補償增額 ${bst.heal.toFixed(1)}(selfUltBoost 單一縫)`);
     ok(A.cd === d.tierVal(d.CHARACTERS.s11.ult.cd, 1), `s11 大招 cd 不動(${A.cd}s)`);
@@ -360,6 +385,132 @@ sec('Ⅲ 行為直測(真 BattleSim)');
 }
 
 // ============================================================
+sec('Ⅳ 兩個槽位一律載具化 + 發射點(2026-08-07 使用者定案)');
+{
+  // ---- Ⅳ-a 分類與旗標:64 招全部載具化,分類只有 abilDelivered 一支 ----
+  const expect = (c, slot) => {
+    const u = d.CHARACTERS[c][slot];
+    return u.fx === 'strike' || u.fx === 'emp' || u.fx === 'summon'
+      || ((u.fx === 'heal' || u.fx === 'buff') && u.target === 'team');
+  };
+  let clsOk = true, formOk = true;
+  for (const c of CHS) for (const slot of ['skill', 'ult']) {
+    if (d.abilDelivered(c, slot) !== expect(c, slot)) clsOk = false;
+    const A = d.heroAbility(c, slot, 1);
+    if (A.carrier === A.support) formOk = false;                     // 恰一種形式
+    if (A.carrier !== d.abilDelivered(c, slot)) formOk = false;
+  }
+  ok(clsOk, '分類 = 區域/指向型(32 台 × 兩個槽位逐一重算比對;MUST NOT 手寫名冊)');
+  ok(formOk, '每一招恰一種形式(carrier 點遞送 / support 跟隨編隊),旗標與分類同源');
+  ok(d.ultDelivered('s03') === d.abilDelivered('s03', 'ult'),
+    'ultDelivered 只是 abilDelivered 的薄殼(不是第二份規則)');
+  // 「不可以一律做成跟隨編隊」:有遞送距離的小招標的是幾百公尺外的一片區域
+  const rangedSk = CHS.filter((c) => (d.CHARACTERS[c].skill.range ?? 0) > 0);
+  ok(rangedSk.length > 0 && rangedSk.every((c) => d.heroAbility(c, 'skill', 1).carrier
+    && d.heroAbility(c, 'skill', 1).range > 0),
+    `有遞送距離的小招(${rangedSk.join(' ')})走**點遞送**並保留 range(MUST NOT 收回腳下)`);
+  ok(CHS.every((c) => {
+    const u = d.CHARACTERS[c].skill;
+    return d.heroAbility(c, 'skill', 1).range === d.tierVal(u.range ?? 0, 1) * d.COMBAT_SCALE;
+  }), '小招的遞送距離逐位元 = 原資料(未標 range 的不補 hyperRange —— 那是大招的戰略遞送)');
+
+  // ---- Ⅳ-b 小招 CD 帶 [15, 30]:推導不手寫、嚴格保序 ----
+  const SB = d.abilCdRange('skill');
+  ok(SB.lo === 15 && SB.hi === 30, `小招 CD 帶 = [${SB.lo}, ${SB.hi}](使用者定案「CD時間15~30s」)`);
+  let skIn = true;
+  const skGrid = [];
+  for (const c of CHS) for (let lvl = 1; lvl <= 3; lvl++) {
+    const cd = d.heroAbility(c, 'skill', lvl).cd;
+    if (cd < SB.lo - 1e-9 || cd > SB.hi + 1e-9) skIn = false;
+    skGrid.push([d.tierVal(d.CHARACTERS[c].skill.cd, lvl), cd]);
+  }
+  ok(skIn, `32 台 × 3 階小招 CD 全落 [${SB.lo}, ${SB.hi}]`);
+  const sband = d.abilCdBand('skill');
+  ok(Math.abs(d.abilCarrierCd('skill', sband.lo) - SB.lo) < 1e-9
+    && Math.abs(d.abilCarrierCd('skill', sband.hi) - SB.hi) < 1e-9,
+    `仿射端點貼齊:原小招 cd 帶 [${sband.lo}, ${sband.hi}] → [${SB.lo}, ${SB.hi}]`);
+  skGrid.sort((a, b) => a[0] - b[0]);
+  ok(skGrid.every((g2, i) => i === 0 || g2[1] >= skGrid[i - 1][1] - 1e-9),
+    '小招 CD 映射嚴格保序(排名不變的保證)');
+  ok(d.abilCdRange('skill').hi <= d.abilCdRange('ult').lo,
+    '兩個槽位各自一條映射且不重疊(小招 [15,30] / 大招 [30,60])');
+  ok(CHS.filter((c) => !d.ultDelivered(c))
+    .every((c) => d.heroAbility(c, 'ult', 2).cd === d.tierVal(d.CHARACTERS[c].ult.cd, 2)),
+    '自身型大招的 cd 仍逐位元不壓帶(補償 selfUltEq 正比於 cd)');
+
+  // ---- Ⅳ-c 發射點:單一縫 + 原文沒有第二份 slot 判斷 ----
+  ok(d.abilOrigin('skill') === 'self' && d.abilOrigin('ult') === 'fort',
+    'abilOrigin:小招 = 主機身邊 / 大招 = 最近的砲塔或主堡');
+  ok(count(S, /_launchOrigin\(/g) === 2, '_launchOrigin:1 定義 + heroCast 恰一個呼叫點(發射點只判一次)');
+  ok(count(S, /abilOrigin\(/g) === 2,
+    `abilOrigin 在 sim 恰兩個消費端(_launchOrigin / _launchUltSupport;實得 ${count(S, /abilOrigin\(/g)})`);
+  ok(!/slot === 'ult'/.test(strip(grabMethod(S, '_launchUltCarrier')) + strip(grabMethod(S, '_launchUltSupport'))),
+    '兩支發射縫都不自己判 slot(分流只有 abilOrigin 一份)');
+  ok(/UNITS\.tower\.range \* GAME\.TOWER_SEP_F \/ 2/.test(readSrc('public', 'js', 'data.js')),
+    'ultLaunchLegM 推導不手寫(= 半個塔距 = 兵線接觸線到自家前線塔的距離)');
+  ok(Math.abs(d.supportLegS('ult') - d.ultLaunchLegM() / d.supportSpeed()) < 1e-9
+    && Math.abs(d.supportLegS('skill') - d.ULT_CARRIER.MIN_LEG / d.supportSpeed()) < 1e-9,
+    `投放腿逐槽位推導(小招 ${d.supportLegS('skill').toFixed(2)}s / 大招 ${d.supportLegS('ult').toFixed(2)}s)`);
+  ok(/overflySurviveHp\(hyperFlightS\(hyperMaxArcM\(\)\)\)/.test(readSrc('public', 'js', 'data.js')),
+    '飛彈 HP 吃「代表發射腿 + 遞送距離」的最長航程(工事召喚讓它多飛一段,曝險窗跟著漂)');
+
+  // ---- Ⅳ-d 行為直測:大招自工事出發、小招自主機身邊出發 ----
+  for (const [ch, side, kindWord] of [['t01', 'STEEL', '飛彈'], ['s03', 'SWARM', '轟炸機'], ['s08', 'SWARM', '自殺機']]) {
+    const sim = new BattleSim(mkCfg());
+    const h = sim.addHero(side, `o_${ch}`, ch);
+    h.x = 300; h.z = 120; h.mp = 999; h.abil.ult = 1; h.abil.skill = 1;
+    const fort = sim._launchOrigin(h, 'ult');
+    const dFar = Math.hypot(fort.x - h.x, fort.z - h.z);
+    sim.heroCast(`o_${ch}`, 'ult', h.x + 60, h.z);
+    const v = [...sim.ents.values()].filter((e) => e.kami || e.decoy || e.hyper)[0];
+    ok(!!v && dFar > d.ULT_CARRIER.MIN_LEG
+      && Math.hypot(v.x - fort.x, v.z - fort.z) < Math.hypot(v.x - h.x, v.z - h.z),
+      `${ch} 大招載具(${kindWord})自最近的我方工事出發(工事距機體 ${dFar.toFixed(0)}m)`);
+  }
+  {
+    const sim = new BattleSim(mkCfg());
+    const h = sim.addHero('SWARM', 'o_sk', 's03');
+    h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
+    const fort = sim._launchOrigin(h, 'ult');
+    sim.heroCast('o_sk', 'skill', h.x + 60, h.z);
+    const v = [...sim.ents.values()].filter((e) => e.decoy)[0];
+    ok(!!v && Math.hypot(v.x - h.x, v.z - h.z) < Math.hypot(v.x - fort.x, v.z - fort.z)
+      && Math.hypot(v.x - h.x, v.z - h.z) < d.ULT_CARRIER.MIN_LEG,
+      's03 小招載具生在主機身邊(不是工事)—— 使用者定案「從玩家身邊召喚」');
+  }
+  {
+    // 小招也走載具:效果 MUST 等抵達才施放,而且打光輔助機就整份下線
+    const sim = new BattleSim(mkCfg());
+    const h = sim.addHero('SWARM', 'o_bf', 's05');   // 自身 buff 小招 ⇒ 跟隨編隊
+    h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1;
+    sim.heroCast('o_bf', 'skill');
+    const sup = [...sim.ents.values()].filter((e) => e.supG);
+    ok(sup.length === d.supportN('s05', 'skill')
+      && sup.every((k) => k.hp === d.supportHp('s05', 1, 'skill') && k.armor === 0),
+      `s05 小招派 ${sup.length} 架輔助機、每架 HP ${d.supportHp('s05', 1, 'skill')}(armor 0;耐久同一把尺)`);
+    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '小招施放當下加成未上線 —— 輔助機還在投放腿上');
+    run(sim, () => Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, 200);
+    ok(Math.abs(sim._buffMul(h, 'dmg') - d.heroAbility('s05', 'skill', 1).mul.dmg) < 1e-6,
+      '小招輔助機就位 ⇒ 效果值逐位元 = 招式原值(全員在線)');
+    for (const k of [...sim.ents.values()].filter((e) => e.supG)) { k.hp = 0; sim._kill(k, null); }
+    ok(Math.abs(sim._buffMul(h, 'dmg') - 1) < 1e-9, '小招輔助機被打光 ⇒ 加成整份下線');
+  }
+  {
+    // 兩個槽位的載具同時在空:名冊 MUST 是陣列(單槽位會把第一發變成殭屍實體)
+    const sim = new BattleSim(mkCfg());
+    const h = sim.addHero('SWARM', 'o_two', 's03');   // 小招 emp + 大招 emp,同為轟炸機形式
+    h.x = 300; h.z = 120; h.mp = 999; h.abil.skill = 1; h.abil.ult = 1;
+    sim.heroCast('o_two', 'skill', h.x + 60, h.z);
+    sim.heroCast('o_two', 'ult', h.x + 60, h.z);
+    ok(h.sq?.decoys?.length === 2 && [...sim.ents.values()].filter((e) => e.decoy).length === 2,
+      '同一名玩家的小招與大招轟炸機可同時在空(名冊是陣列,不是單槽位)');
+    run(sim, () => [...sim.ents.values()].some((e) => e.decoy), 600);
+    ok(![...sim.ents.values()].some((e) => e.decoy) && h.sq.decoys.length === 0,
+      '兩架都飛完任務被回收(單槽位名冊會留下一架永不落地的殭屍)');
+  }
+}
+
+// ============================================================
 console.log(`\n${fail ? '❌' : '✅'} 大招載具遞送稽核:${pass} 綠 / ${fail} 紅`
-  + (BREAK_CD || BREAK_GUARD || BREAK_BOOM ? '(反向驗證模式:紅字 = 稽核有牙)' : ''));
+  + (BREAK_CD || BREAK_GUARD || BREAK_BOOM || BREAK_ORIGIN ? '(反向驗證模式:紅字 = 稽核有牙)' : ''));
 process.exit(fail ? 1 : 0);
