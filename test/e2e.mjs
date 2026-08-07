@@ -25,6 +25,8 @@ import {
   altRangeMax, RANGE_TOL,
   ULT_CARRIER, ultDelivered, ultCarrierCd, ultCdBand, ultParts, ultPartN,
   SELF_ULT, selfUltEq, selfUltBoost, abilHoldSlot,
+  ULT_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfUltTempo,
+  kindParts, frontKillHp,
 } from '../public/js/data.js';
 
 /**
@@ -1007,10 +1009,85 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     s6.heroCast('uc_i', 'ult');
     const A6 = heroAbility('s11', 'ult', 1);
     const B6 = selfUltBoost('s11', 1, h6.abil);
-    assert(!A6.carrier && ![...s6.ents.values()].some((e) => e.uA), 's11 仍是瞬發大招(不發載具)');
+    // 2026-08-07:自身強化型改由**跟隨玩家的輔助機隊**供輸(見下一段)⇒ 這裡只釘住
+    // 「不是點遞送載具」與「補償真的經 selfUltBoost 進到結算」;交付要等輔助機飛完投放腿。
+    assert(!A6.carrier && A6.support, 's11 是輔助機隊型大招(不是點遞送載具)');
     assert(B6.heal > 0, `s11 領到機種絕招退場的補償(+${Math.round(B6.heal)} 治療)`);
-    assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal + B6.heal)) < 0.01,
+    assert(Math.abs(h6.hp - 50) < 0.01, 's11 施放當下不回血 —— 輔助機還在飛投放腿(有攔截窗)');
+    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) s6.tick(0.125);
+    assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal + B6.heal)) < 1,
       `s11 自補 = 原值 ${A6.heal} + 補償 ${Math.round(B6.heal)}(cd ${A6.cd}s 不變)`);
+  }
+
+  log('— sim/data:自身強化型大招 = 跟隨玩家的輔助機隊(2026-08-07 使用者定案)—');
+  {
+    // ① 分類與機數推導:某些招式換成多架(可疊加者依機種分批)、二元狀態恆單機
+    const SELF9 = Object.keys(CHARACTERS).filter((c) => !ultDelivered(c));
+    assert(SELF9.length === 9 && SELF9.every((c) => heroAbility(c, 'ult', 1).support),
+      `自身強化型 9 台全走輔助機隊(${SELF9.join(' ')})`);
+    assert(SELF9.every((c) => supportN(c) === (supportStackable(c) ? kindParts(charKind(c)) : 1)),
+      '機數 = 可疊加 ? 該機種分批數 : 1(與 ultParts 同一張機種表)');
+    assert(supportN('s04') === SQUAD.KAMI.N && supportN('t06') === DECOY.BOMB_MAX
+      && supportN('t02') === 1 && supportN('m08') === 1,
+      `多機 ${supportN('s04')}(drone)/ ${supportN('t06')}(morph),單機 robot 與純二元狀態(m08 匿蹤)`);
+    assert(new Set(SELF9.map((c) => selfUltTempo(c))).size === 3,
+      '三種節奏(瞬發/間斷/持續)在現役角色上都有人');
+
+    // ② 耐久:持續 > 間斷 > 瞬發,且 dur 越久越硬(逐台獨立重算 —— 推導不手寫)
+    for (const c of SELF9) {
+      const n = supportN(c), dur = tierVal(CHARACTERS[c].ult.dur ?? 0, 1);
+      const tf = supportTempoF(selfUltTempo(c));
+      assert(supportHp(c, 1) === frontKillHp(supportLegS() + tf * dur / n),
+        `${c} 每架 ${supportHp(c, 1)} = 前線一組塔位 ×(投放腿 + ${selfUltTempo(c)} 窗 ÷ ${n})`);
+    }
+    {
+      const hpAt = (tempo, dur) => frontKillHp(supportLegS() + supportTempoF(tempo) * dur / 4) * 4;
+      assert(hpAt('sustain', 8) > hpAt('pulse', 8) && hpAt('pulse', 8) > hpAt('burst', 8),
+        `同 dur:持續 ${hpAt('sustain', 8)} > 間斷 ${hpAt('pulse', 8)} > 瞬發 ${hpAt('burst', 8)}`);
+      assert(hpAt('sustain', 12) > hpAt('sustain', 8) && hpAt('pulse', 12) > hpAt('pulse', 8),
+        '持續時間越久,輔助機隊越硬');
+    }
+
+    // ③ 行為:就位才供輸、疊加是加法、擊落就少一份、全滅整份下線
+    const sS = new BattleSim(fakeBattleConfig(1));
+    const hS = sS.addHero('SWARM', 'sup_d', 's04');
+    hS.x = 400; hS.z = 0; hS.mp = 999; hS.abil.ult = 1;
+    sS.heroCast('sup_d', 'ult');
+    const cS = [...sS.ents.values()].filter((e) => e.supG);
+    assert(cS.length === supportN('s04') && cS.every((k) => k.hp === supportHp('s04', 1) && k.armor === 0),
+      `s04 派出 ${cS.length} 架輔助機、每架 HP ${supportHp('s04', 1)}(armor 0)`);
+    assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '投放腿飛行中 ⇒ 加成尚未上線(每一發都有攔截窗)');
+    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) sS.tick(0.125);
+    const fullS = heroAbility('s04', 'ult', 1).mul.dmg + selfUltBoost('s04', 1, hS.abil).dmgMul;
+    assert(Math.abs(sS._buffMul(hS, 'dmg') - fullS) < 1e-6,
+      `全員就位 ⇒ 效果值逐位元同舊制(×${fullS.toFixed(3)})`);
+    const aliveS = [...sS.ents.values()].filter((e) => e.supG);
+    aliveS[0].hp = 0; sS._kill(aliveS[0], null);
+    aliveS[1].hp = 0; sS._kill(aliveS[1], null);
+    assert(Math.abs(sS._buffMul(hS, 'dmg') - (1 + (fullS - 1) * 0.5)) < 1e-6,
+      `擊落 2/4 ⇒ ×${(1 + (fullS - 1) * 0.5).toFixed(3)}(加法疊加;相乘會是 ${((1 + (fullS - 1) / 4) ** 2).toFixed(3)})`);
+    for (const k of [...sS.ents.values()].filter((e) => e.supG)) { k.hp = 0; sS._kill(k, null); }
+    assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '機隊全滅 ⇒ 加成整份下線');
+
+    // ④ 二元狀態(匿蹤)單機:輔助機被擊落即現形
+    const sT = new BattleSim(fakeBattleConfig(1));
+    const hT = sT.addHero('STEEL', 'sup_m', 'm08');
+    hT.x = 400; hT.z = 0; hT.mp = 999; hT.abil.ult = 1;
+    sT.heroCast('sup_m', 'ult');
+    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) sT.tick(0.125);
+    assert(hT.stealthUntil > sT.t, 'm08 輔助機就位 ⇒ 匿蹤上線');
+    const kT = [...sT.ents.values()].filter((e) => e.supG)[0];
+    kT.hp = 0; sT._kill(kT, null);
+    assert(hT.stealthUntil === 0, '輔助機被擊落 ⇒ 當場現形(二元狀態顯式撤掉)');
+
+    // ⑤ 點遞送的 23 台完全不受影響
+    const sC = new BattleSim(fakeBattleConfig(1));
+    const hC = sC.addHero('SWARM', 'sup_c', 's02');
+    hC.x = 400; hC.z = 0; hC.mp = 999; hC.abil.ult = 1;
+    sC.heroCast('sup_c', 'ult', 450, 0);
+    assert(![...sC.ents.values()].some((e) => e.supG)
+      && [...sC.ents.values()].filter((e) => e.kami).length === SQUAD.KAMI.N,
+      's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
   }
 
   log('— data:八軌升級第三階單價 = $200(2026-07-27)—');

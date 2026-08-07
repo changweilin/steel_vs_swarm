@@ -496,6 +496,16 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   const okF2 = selfChs.every((c) => perCast(c) > 0);
   if (!okF2) fail++;
   console.log(`   ⓘ f 自身型補償  ${selfChs.map((c) => `${c} ${perCast(c).toFixed(0)}`).join(' / ')} EHP/次`);
+  // 輔助機損失率(2026-08-07 起自身型也是載具制):**印出來不擋** —— 這一欄量的是「改制的代價
+  // 在模型裡有沒有現形」。恆為 0 = 輔助機根本沒被打過(那 ⑦f 的自身型欄就仍是舊制的瞬發值);
+  // 太高則是耐久校準過脆。本模型的選敵是**最近優先**,而輔助機貼著主機 ⇒ 多數時候火力仍落在
+  // 主機身上,故這個比例是實戰的**下界**(真人會刻意點掉補給機)。
+  {
+    const sN = selfChs.reduce((s, c) => s + abil[c].carN, 0);
+    const sL = selfChs.reduce((s, c) => s + abil[c].supLost, 0);
+    console.log(`   ⓘ f 輔助機損失  ${sN} 架派出 / ${sL} 架被擊落(${sN ? (100 * sL / sN).toFixed(1) : 0}%`
+      + `;選敵最近優先 ⇒ 這是下界)—— 耐久見 data.js ULT_SUPPORT`);
+  }
   console.log(`${okF2 ? '✅' : '❌'} f 自身型補償  ${selfChs.length} 台的長按 MUST 全數 > 0`
     + `(視野/匿蹤/復活等本模型不計價 ⇒ 這些是下界;係數見 data.js SELF_ULT.REALIZED_F = ${SELF_ULT.REALIZED_F})`);
 
