@@ -28,7 +28,8 @@ import {
   FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
   SQUAD, TARGET_H, UNITS, CHARACTERS, ECON, chargeF,
   HYPER, DECOY, LANCE, lanceR, towerDps, towerSurviveHp, towerKillHp,
-  kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperApex, hyperRange, decoyHp, decoyExposureS,
+  kamiHp, kamiExposureS, kamiSide, hyperHp, hyperFlightS, hyperMaxArcM, ultLaunchLegM,
+  hyperApex, hyperRange, decoyHp, decoyExposureS,
   hyperArcY, hyperClimbVx, hyperClimbS, hyperTrackR, hyperClimbLen, hyperTerminalF,
   TOWER_SITE_N, frontKillHp, overflySurviveHp, waveDps, waveComp, blastFootprintR,
   kamiBlast, decoyBlast, decoyBombBlast, hyperBlast,
@@ -118,11 +119,24 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
   t('hyperApex / hyperRange / hyperFlightS 全由已縮好的量推導(MUST NOT 手寫遊戲公尺)',
     /export const hyperApex = \(d = hyperRange\(\)\) => d \* Math\.tan\(hyperLaunchRad\(\)\) \/ 2;/.test(dataSrc)
     && /export const hyperRange = \(\) => UNITS\.tower\.range \* HYPER\.RANGE_F;/.test(dataSrc)
-    && /hyperClimbS\(hyperRange\(\)\) \+ hyperApex\(\) \/ hyperDiveSpd\(\)/.test(dataSrc));
+    && /hyperClimbS\(d\) \+ hyperApex\(d\) \/ hyperDiveSpd\(\)/.test(dataSrc)
+    && /export const hyperMaxArcM = \(\) => ultLaunchLegM\(\) \+ hyperRange\(\);/.test(dataSrc));
   t('曝險窗基準 = **原軌跡**(爬升 + 垂直落下),MUST NOT 改吃追擊斜距 —— 追擊是「打得到人」的加分,'
     + '連生存性也加成會把 bal ⑦f 的三招實得比推到 1.93×(實測)',
-    near(hyperFlightS(), hyperClimbS(hyperRange()) + hyperApex() / (HYPER.CLIMB_SPD * HYPER.DIVE_F))
+    near(hyperFlightS(hyperMaxArcM()),
+      hyperClimbS(hyperMaxArcM()) + hyperApex(hyperMaxArcM()) / (HYPER.CLIMB_SPD * HYPER.DIVE_F))
     && !/Math\.hypot\(hyperApex\(\), hyperTrackR\(\)\)/.test(dataSrc));
+  // 2026-08-07 使用者定案「大招改為從最近的砲塔或主堡召喚」:最長那一發多了一段**代表發射腿**,
+  // 而飛彈全程在高空飛越整條前線(它吃的是 overflyDps)⇒ 那一段是真的多挨打,曝險窗 MUST 跟著長。
+  // 另兩種形式刻意不動:它們的曝險窗量的是「進入敵方前線塔位射程 → 抵達」,發射點往後退不改變它。
+  t('最長航程 = 代表發射腿 + 遞送距離(工事召喚多飛的那一段真的進了曝險窗)',
+    hyperMaxArcM() === ultLaunchLegM() + hyperRange()
+    && hyperFlightS(hyperMaxArcM()) > hyperFlightS(hyperRange())
+    && kamiHp() === frontKillHp(kamiExposureS() / SQUAD.KAMI.SHOT_DOWN)
+    && decoyHp() === frontKillHp(decoyExposureS()));
+  t('代表發射腿推導不手寫(= 半個塔距 = 兵線接觸線到自家前線塔的距離)',
+    /export const ultLaunchLegM = \(\) => UNITS\.tower\.range \* GAME\.TOWER_SEP_F \/ 2;/.test(dataSrc)
+    && near(ultLaunchLegM(), UNITS.tower.range * GAME.TOWER_SEP_F / 2));
   t('舊制固定頂點係數 APEX_F 已退場(垂直爬升放不下「初始角度」)', HYPER.APEX_F === undefined);
   t('出膛角 = HYPER.LAUNCH_DEG(拋物線在 f = 0 的切線斜率 = tanθ;數值微分驗真品)', (() => {
     const d = hyperRange(), e = 1e-7;
@@ -180,10 +194,10 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
   t('接戰距離大於砲塔射程(機甲的攻塔手段)', hyperRange() > UNITS.tower.range);
   t('俯衝遠快於爬升(「極音速」那一段幾乎攔不住)', HYPER.DIVE_F > 2);
   t('hyperHp = overflySurviveHp(最長飛行時間)⇒ 飛越整條前線剛好打不爆',
-    hyperHp() === overflySurviveHp(hyperFlightS())
-    && hyperHp() > (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS());
+    hyperHp() === overflySurviveHp(hyperFlightS(hyperMaxArcM()))
+    && hyperHp() > (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS(hyperMaxArcM()));
   t('「剛好」不是「綽綽有餘」:餘裕 < 一發塔砲',
-    hyperHp() - (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS() < towerDps());
+    hyperHp() - (towerDps() * TOWER_SITE_N + waveDps()) * hyperFlightS(hyperMaxArcM()) < towerDps());
   // —— 火力 / 範圍改制(2026-08-06 使用者定案:2.5 架自爆無人機的傷害 / 砲塔射程 2/5 的爆風)——
   t('戰鬥部 = 2.5 架自爆無人機的傷害(逐等級都成立)',
     [{ light: 1, heavy: 1 }, { light: 4, heavy: 1 }, { light: 4, heavy: 4 }].every((ab2) =>

@@ -12,7 +12,7 @@ import {
   charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast,
   specialBlastR, hyperShare,
-  hyperApex, hyperRange, hyperFlightS, hyperHp, hyperTrackR, hyperTerminalF,
+  hyperApex, hyperRange, hyperFlightS, hyperMaxArcM, hyperHp, hyperTrackR, hyperTerminalF,
   kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
   TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
   upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
@@ -23,7 +23,7 @@ import {
   aoeTrimF, mobDmgF, rngDmgF, AREA_WEAPONS, soloBlastRmax, towerPairSepM, aoeClass, blastFalloff, TARGET_R,
   trajClass, shotFlightS, vsMult, blastFamily, buildDps, heroRange,
   altRangeMax, RANGE_TOL,
-  ULT_CARRIER, ultDelivered, ultCarrierCd, ultCdBand, ultParts, ultPartN,
+  ULT_CARRIER, ultDelivered, abilDelivered, abilOrigin, ultCarrierCd, ultCdBand, ultParts, ultPartN,
   SELF_ULT, selfUltEq, selfUltBoost, abilHoldSlot,
   ULT_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfUltTempo,
   kindParts, frontKillHp,
@@ -849,9 +849,12 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
       assert(Math.abs(ss.reduce((a2, b2) => a2 + b2, 0)) < 1e-9, 'kamiSide 左右對稱(總和為 0)');
     }
     // 極音速飛彈:撐得住最長一次飛行 = 剛好不會被打爆(打完仍剩 ≥1 滴)
-    assert(hyperHp() > overflyDps() * hyperFlightS(),
-      `飛彈 HP ${hyperHp()} > 飛越整條前線(塔位 + 一波兵)的全程輸出 ${(overflyDps() * hyperFlightS()).toFixed(0)}(剛好打不爆)`);
-    assert(hyperHp() - overflyDps() * hyperFlightS() < towerDps(),
+    // 2026-08-07:大招載具改從最近的砲塔/主堡發射 ⇒ 最長一發的航程多了一段代表發射腿
+    // (hyperMaxArcM);曝險窗跟著長,HP 也跟著漂 —— 這裡量的仍是同一句「剛好打不爆」。
+    const hyFly = hyperFlightS(hyperMaxArcM());
+    assert(hyperHp() > overflyDps() * hyFly,
+      `飛彈 HP ${hyperHp()} > 飛越整條前線(塔位 + 一波兵)的全程輸出 ${(overflyDps() * hyFly).toFixed(0)}(剛好打不爆)`);
+    assert(hyperHp() - overflyDps() * hyFly < towerDps(),
       '餘裕 < 一發塔砲 ⇒ 是「剛好」不是「綽綽有餘」(再多一把槍就打得下來)');
     assert(hyperRange() > UNITS.tower.range,
       `飛彈接戰距離 ${hyperRange()} > 砲塔射程 ${UNITS.tower.range}(機甲的攻塔手段)`);
@@ -953,22 +956,35 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     rc.x = 400; rc.z = 0; rc.mp = 999; rc.abil.ult = 1;
     const dum = s2._add({ kind: 'bunker', side: 'SWARM', x: 500, z: 0, y: 0, hp: 4000 }); delete dum.lane;
     s2.heroCast('uc_r', 'ult', 500, 0);
-    assert(!!rc.hyper && !!rc.hyper.uA, 't01 大招發射極音速飛彈載具(uA payload、點遞送)');
+    // 2026-08-07:名冊是陣列(同一名機甲的小招與大招都可能是飛彈形式)
+    assert(rc.hypers?.length === 1 && !!rc.hypers[0].uA, 't01 大招發射極音速飛彈載具(uA payload、點遞送)');
+    // 大招改從最近的**我方砲塔/主堡**發射(2026-08-07 使用者定案)——彈道起點不再是機體自己
+    {
+      const m0 = rc.hypers[0];
+      const fort = [...s2.ents.values()].filter((e) => e.side === rc.side && (e.kind === 'tower' || e.kind === 'base'))
+        .sort((a, b) => Math.hypot(a.x - rc.x, a.z - rc.z) - Math.hypot(b.x - rc.x, b.z - rc.z))[0];
+      assert(!!fort && Math.hypot(m0.x0 - fort.x, m0.z0 - fort.z) < 1e-6 && Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z) > 1,
+        `大招載具自最近的我方工事(${fort?.kind})發射,不是自機體 —— 距機體 ${Math.hypot(m0.x0 - rc.x, m0.z0 - rc.z).toFixed(0)}m`);
+    }
     assert((rc.acd.ult - s2.t) >= ULT_CARRIER.CD_LO && (rc.acd.ult - s2.t) <= ULT_CARRIER.CD_HI, 'CD 已收進 [30,60] 帶');
     const hp0 = dum.hp;
     let flew = 0, fxN = 0;
-    for (let i = 0; i < 400 && rc.hyper; i++) {
+    for (let i = 0; i < 400 && rc.hypers.length; i++) {
       s2.tick(0.125); flew++;
       fxN += s2.events.filter((e) => e.e === 'ultfx' && e.fx === 'strike').length;
       s2.events.length = 0;
     }
-    assert(!rc.hyper && flew * 0.125 >= 1, `飛彈有飛行時間(${(flew * 0.125).toFixed(1)}s ≥ 1s)後引爆`);
+    assert(!rc.hypers.length && flew * 0.125 >= 1, `飛彈有飛行時間(${(flew * 0.125).toFixed(1)}s ≥ 1s)後引爆`);
     assert(fxN === 1 && dum.hp < hp0, `著彈推送 ultfx 並以 strike 結算(${Math.round(hp0)} → ${Math.round(dum.hp)})`);
 
     // ③ 無人機團隊 heal 大招 = 4 架自殺攻擊機分批;擊落一半 = 只補一半(該份否定、無殉爆傷害)
     const s3 = new BattleSim(fakeBattleConfig(1));
     const dc = s3.addHero('SWARM', 'uc_d', 's02');
     dc.x = 400; dc.z = 0; dc.mp = 999; dc.abil.ult = 1; dc.hp = 100;
+    // 2026-08-07:大招自最近的我方工事召喚 ⇒ 載具要飛好幾秒才到,期間這具 100 HP 的假人會被
+    // 旁邊的敵方工事打死(舊制窗只有 0.7s 所以碰不到)。量的是「補多少」不是「活不活得下來」
+    // ⇒ 給無敵幀把傷害那一軸移開(治療照常寫 hp,不吃 invUntil)。
+    dc.invUntil = 1e9;
     // 旁觀者取 bunker(speed 0):測試假人無 lane,speed > 0 的兵種會被 _advance 撞上 undefined 兵線
     const bys = s3._add({ kind: 'bunker', side: 'STEEL', x: 450, z: 0, y: 0, hp: 4000 }); delete bys.lane;
     s3.heroCast('uc_d', 'ult', 450, 0);
@@ -1014,7 +1030,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(!A6.carrier && A6.support, 's11 是輔助機隊型大招(不是點遞送載具)');
     assert(B6.heal > 0, `s11 領到機種絕招退場的補償(+${Math.round(B6.heal)} 治療)`);
     assert(Math.abs(h6.hp - 50) < 0.01, 's11 施放當下不回血 —— 輔助機還在飛投放腿(有攔截窗)');
-    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) s6.tick(0.125);
+    // 四架各交付 1/4:等**整隊**都到齊(第一架到就停 = 只量到四分之一份)
+    for (let i = 0; i < 400 && [...s6.ents.values()].some((e) => e.supG); i++) s6.tick(0.125);
     assert(Math.abs(h6.hp - Math.min(h6.maxHp, 50 + A6.heal + B6.heal)) < 1,
       `s11 自補 = 原值 ${A6.heal} + 補償 ${Math.round(B6.heal)}(cd ${A6.cd}s 不變)`);
   }
@@ -1048,6 +1065,12 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
         '持續時間越久,輔助機隊越硬');
     }
 
+    // 輔助機就位的等待:大招自最近的我方工事召喚(2026-08-07)⇒ 投放腿是**實距**不是固定值,
+    // MUST NOT 再用 `supportLegS()/dt` 那種固定格數(工事離施放者多遠就飛多久)。
+    const armWait = (sim, pred, maxS = 30) => {
+      for (let i = 0; i < Math.ceil(maxS / 0.125) && !pred(); i++) sim.tick(0.125);
+    };
+
     // ③ 行為:就位才供輸、疊加是加法、擊落就少一份、全滅整份下線
     const sS = new BattleSim(fakeBattleConfig(1));
     const hS = sS.addHero('SWARM', 'sup_d', 's04');
@@ -1057,7 +1080,10 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(cS.length === supportN('s04') && cS.every((k) => k.hp === supportHp('s04', 1) && k.armor === 0),
       `s04 派出 ${cS.length} 架輔助機、每架 HP ${supportHp('s04', 1)}(armor 0)`);
     assert(Math.abs(sS._buffMul(hS, 'dmg') - 1) < 1e-9, '投放腿飛行中 ⇒ 加成尚未上線(每一發都有攔截窗)');
-    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) sS.tick(0.125);
+    // 大招自最近的我方工事召喚 ⇒ 生成點離施放者一段實距(這一條同時釘住「不是就地生成」)
+    assert(cS.every((k) => Math.hypot(k.x - hS.x, k.z - hS.z) > ULT_SUPPORT.SLOT_R * 2),
+      '大招輔助機自後方工事出發(生成點不在主機身邊)');
+    armWait(sS, () => [...sS.ents.values()].some((e) => e.supG && e.phase === 'escort'));
     const fullS = heroAbility('s04', 'ult', 1).mul.dmg + selfUltBoost('s04', 1, hS.abil).dmgMul;
     assert(Math.abs(sS._buffMul(hS, 'dmg') - fullS) < 1e-6,
       `全員就位 ⇒ 效果值逐位元同舊制(×${fullS.toFixed(3)})`);
@@ -1074,7 +1100,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const hT = sT.addHero('STEEL', 'sup_m', 'm08');
     hT.x = 400; hT.z = 0; hT.mp = 999; hT.abil.ult = 1;
     sT.heroCast('sup_m', 'ult');
-    for (let i = 0; i < Math.ceil(supportLegS() / 0.125) + 2; i++) sT.tick(0.125);
+    armWait(sT, () => hT.stealthUntil > sT.t);
     assert(hT.stealthUntil > sT.t, 'm08 輔助機就位 ⇒ 匿蹤上線');
     const kT = [...sT.ents.values()].filter((e) => e.supG)[0];
     kT.hp = 0; sT._kill(kT, null);
@@ -1088,6 +1114,62 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(![...sC.ents.values()].some((e) => e.supG)
       && [...sC.ents.values()].filter((e) => e.kami).length === SQUAD.KAMI.N,
       's02(點遞送)仍生 kami 載具、一架輔助機都沒有');
+  }
+
+  log('— sim/data:小招也是輔助機型模式 + 大招自最近的砲塔/主堡召喚(2026-08-07 使用者定案)—');
+  {
+    // ① 兩個槽位一律載具化:64 招沒有任何一招在施放當下結算
+    const CHS2 = Object.keys(CHARACTERS);
+    assert(CHS2.every((c) => ['skill', 'ult'].every((sl) => {
+      const A = heroAbility(c, sl, 1);
+      return A.carrier !== A.support && A.carrier === abilDelivered(c, sl);
+    })), '32 台 × 兩個槽位:每一招恰一種載具形式(點遞送 / 跟隨編隊)');
+    // ② 小招 CD 帶 [15,30] 且嚴格保序(排名不變的保證)
+    const skCd = [];
+    let skIn = true;
+    for (const c of CHS2) for (let lvl = 1; lvl <= 3; lvl++) {
+      const cd = heroAbility(c, 'skill', lvl).cd;
+      if (cd < 15 - 1e-9 || cd > 30 + 1e-9) skIn = false;
+      skCd.push([tierVal(CHARACTERS[c].skill.cd, lvl), cd]);
+    }
+    assert(skIn, '小招 CD 全落 [15, 30]s(使用者定案)');
+    skCd.sort((a, b) => a[0] - b[0]);
+    assert(skCd.every((g, i) => i === 0 || g[1] >= skCd[i - 1][1] - 1e-9), '小招 CD 映射嚴格保序');
+    assert(abilOrigin('skill') === 'self' && abilOrigin('ult') === 'fort',
+      '發射點單一縫:小招 = 主機身邊 / 大招 = 最近的我方砲塔或主堡');
+
+    // ③ 行為:同一台機體、同一個站位 —— 小招載具生在身邊、大招載具生在工事上
+    const sk = new BattleSim(fakeBattleConfig(1));
+    const hk = sk.addHero('SWARM', 'ab_o', 's03');   // 小招 emp + 大招 emp,同為轟炸機形式
+    hk.x = 320; hk.z = 140; hk.mp = 999; hk.abil.skill = 1; hk.abil.ult = 1;
+    const fortP = sk._launchOrigin(hk, 'ult');
+    assert(Math.hypot(fortP.x - hk.x, fortP.z - hk.z) > ULT_CARRIER.MIN_LEG,
+      `最近的我方工事離施放者 ${Math.hypot(fortP.x - hk.x, fortP.z - hk.z).toFixed(0)}m(不是就地生成)`);
+    sk.heroCast('ab_o', 'skill', hk.x + 60, hk.z);
+    const vSk = [...sk.ents.values()].filter((e) => e.decoy)[0];
+    assert(!!vSk && Math.hypot(vSk.x - hk.x, vSk.z - hk.z) < ULT_CARRIER.MIN_LEG,
+      '小招載具自主機身邊升空(「從玩家身邊召喚」)');
+    sk.heroCast('ab_o', 'ult', hk.x + 60, hk.z);
+    const vUl = [...sk.ents.values()].filter((e) => e.decoy && e !== vSk)[0];
+    assert(!!vUl && Math.hypot(vUl.x - fortP.x, vUl.z - fortP.z) < 1e-6,
+      '大招載具自最近的我方工事升空(「從最近的砲塔或主堡召喚」)');
+    assert(hk.sq.decoys.length === 2, '兩個槽位的載具可同時在空(名冊是陣列)');
+
+    // ④ 自身型小招 = 跟隨編隊:施放當下沒有加成,輔助機就位才上線、被打光就整份下線
+    const sb = new BattleSim(fakeBattleConfig(1));
+    const hb = sb.addHero('SWARM', 'ab_b', 's05');
+    hb.x = 320; hb.z = 140; hb.mp = 999; hb.abil.skill = 1;
+    sb.heroCast('ab_b', 'skill');
+    const fl = [...sb.ents.values()].filter((e) => e.supG);
+    assert(fl.length === supportN('s05', 'skill')
+      && fl.every((k) => k.hp === supportHp('s05', 1, 'skill') && k.armor === 0),
+      `s05 小招派 ${fl.length} 架輔助機(每架 ${supportHp('s05', 1, 'skill')} HP、armor 0)`);
+    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招施放當下加成未上線(輔助機還在投放腿上)');
+    for (let i = 0; i < 200 && Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9; i++) sb.tick(0.125);
+    assert(Math.abs(sb._buffMul(hb, 'dmg') - heroAbility('s05', 'skill', 1).mul.dmg) < 1e-6,
+      '小招輔助機就位 ⇒ 加成 = 招式原值(全員在線逐位元同舊制)');
+    for (const k of [...sb.ents.values()].filter((e) => e.supG)) { k.hp = 0; sb._kill(k, null); }
+    assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招輔助機被打光 ⇒ 加成整份下線(效果可以被打斷)');
   }
 
   log('— data:八軌升級第三階單價 = $200(2026-07-27)—');
@@ -1264,7 +1346,10 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   const mp1 = dr.mp;
   sim.heroCast('p_d', 'skill', dr.x, dr.z);
   assert(dr.mp === mp1, 'CD 中重複施放被拒(電力未扣)');
-  assert(dr.mods.length > 0, '增益類小招掛上 mods(蜂群協奏)');
+  // 2026-08-07:小招也載具化(從玩家身邊召喚)⇒ 效果由載具**抵達**才施放,施放當下還在飛
+  assert(dr.mods.length === 0, '小招施放當下尚未掛 mods —— 載具還在投放腿上(有攔截窗)');
+  for (let i = 0; i < 400 && dr.mods.length === 0; i++) sim.tick(0.125);
+  assert(dr.mods.length > 0, '增益類小招載具抵達 ⇒ 掛上 mods(蜂群協奏)');
   const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
   rb2.money = 999;
   assert(sim.buy('p_r2', 'hp') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
@@ -1331,6 +1416,8 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     const mark = sim._add({ kind: 'tank', side: 'STEEL', x: empc.x + 10, z: empc.z, hp: 9999 });
     empc.abil.skill = 1; empc.mp = empc.maxMp;
     sim.heroCast('p_e', 'skill', empc.x, empc.z);
+    // 小招載具化(2026-08-07):EMP 由轟炸機送到落點才施放 ⇒ 等它飛完投放腿
+    for (let i = 0; i < 400 && !((mark.empUntil || 0) > sim.t); i++) sim.tick(0.125);
     assert((mark.empUntil || 0) > sim.t && mark.asst && mark.asst.p_e != null,
       '範圍 EMP(負面狀態)寫入助攻貢獻戳記');
     sim.ents.delete(mark.id);

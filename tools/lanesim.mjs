@@ -464,16 +464,16 @@ function detonate(M, wdef, cx, cy, t, foes) {
  * 選敵序與武器同構(敵方機體 > 最近的敵方 NPC > 敵方砲塔)—— 真人也是「有人打人、沒人拆塔」。
  * 回傳新生成的載具(進 vehicles 名冊 ⇒ 下一格起就是敵方砲塔/小兵/機體都打得到的實體)。
  */
-function castAbil(M, foe, enemyTower, t, foes) {
+function castAbil(M, foe, enemyTower, t, foes, ownFort) {
   if (t < M.abilAt) return [];
   // `noUlt` = ⑦f 的**反事實對照組**(同一台機體、同一份升級,只是不放大招)。自身型組的價值
   // 有一半本模型無法逐項歸因(射程/移速/視野/匿蹤,見本節檔頭)⇒ 拿「有 vs 沒有」的鏡像勝率量,
   // 就不必替每一種效果各寫一條計價規則,也就不會漏算(漏算的症狀是「這一招看起來沒有用」)。
   if (M.tw?.noUlt) return [];
   // 載具組:同形式載具攜帶大招 payload 點遞送(效果取代傷害),CD/MP 走 heroAbility 解析值
-  if (ultDelivered(M.ch)) return castUltCarrier(M, foe, enemyTower, t, foes);
+  if (ultDelivered(M.ch)) return castUltCarrier(M, foe, enemyTower, t, foes, ownFort);
   // 自身型組:派出跟隨玩家的輔助機隊(2026-08-07),飛完投放腿才供輸、被打下來就少一份
-  return castSelfUlt(M, foe, enemyTower, t, foes);
+  return castSelfUlt(M, foe, enemyTower, t, foes, ownFort);
 }
 
 /**
@@ -538,7 +538,7 @@ function supDeliver(M, frac) {
  * 輔助機 MUST 當**真的實體**跑(進 foesOf ⇒ 敵方砲塔/小兵/機體都打得到它)—— 這一輪改制的
  * 全部代價就在這裡:少幾架就少幾份加成,而模型看不到它就等於改制沒有發生。
  */
-function castSelfUlt(M, foe, enemyTower, t, foes) {
+function castSelfUlt(M, foe, enemyTower, t, foes, ownFort) {
   const A = heroAbility(M.ch, 'ult', 1);
   if (M.mp < A.mp) return [];
   // ---- 施放時機:兩道閘,少一道這一招在模型裡就是**淨損** ----
@@ -561,14 +561,19 @@ function castSelfUlt(M, foe, enemyTower, t, foes) {
   M.uf = null;                                        // 舊時窗先下線(輔助機還沒就位 = 還沒供輸)
   M.sup = {
     A, B, n, tempo: selfUltTempo(M.ch), armAt: null,
-    until: t + supportLegS() + (A.dur || 0), cleanse: !!A.cleanse,
+    // 效果窗由**第一架就位**那一刻起算(對齊 sim._supArm 的 `g.until ??=`)——
+    // 施放當下就定死的話,工事離施放者遠一點就在半路到期 = 這一招永遠交付不到。
+    until: null, cleanse: !!A.cleanse,
   };
   M.carN += n;   // 輔助機同樣是「送出去幾份」——⑦f 自身型組另量 EHP,這一欄留給交叉比對
+  // 2026-08-07:大招自**最近的我方工事**出發,飛向主機才就位 ⇒ 投放腿是實距(離前線越深越久,
+  // 而且整段都在敵方火力下)。生成點 MUST 真的在工事上:寫成 M.x 的話這一輪改制在模型裡不存在。
+  const ox = ownFort ? ownFort.x : M.x;
   return Array.from({ length: n }, (_, i) => ({
     side: M.side, owner: M, vehicle: true, sup: true, kind: 'kami', armor: 0,
     hp: supportHp(M.ch, 1), speed: supportSpeed(), tgt: { hp: 0 },
-    x: M.x, y: M.y + (n === 1 ? 0 : (i - (n - 1) / 2) * SQUAD.KAMI.SIDE),
-    tx: M.x, ty: M.y, trav: 0, armed: false, uFrac: 1 / n, dieAt: M.sup.until,
+    x: ox, y: M.y + (n === 1 ? 0 : (i - (n - 1) / 2) * SQUAD.KAMI.SIDE),
+    tx: M.x, ty: M.y, trav: 0, armed: false, uFrac: 1 / n,
   }));
 }
 
@@ -579,7 +584,7 @@ function castSelfUlt(M, foe, enemyTower, t, foes) {
  * 不追蹤 —— 對齊 sim._launchUltCarrier);擊落 = 該份否定(無殉爆、無補投)。
  * CD = ultCarrierCd 解析值([30,60]s)、MP = 大招電力(與重武器搶同一池 —— 正式對局同構)。
  */
-function castUltCarrier(M, foe, enemyTower, t, foes) {
+function castUltCarrier(M, foe, enemyTower, t, foes, ownFort) {
   const kind = ABIL_KIND[M.kind];
   const A = heroAbility(M.ch, 'ult', 1);
   if (M.mp < A.mp) return [];
@@ -605,6 +610,10 @@ function castUltCarrier(M, foe, enemyTower, t, foes) {
     // 支援型(heal/buff):對自身施放 —— 遞送點 = 面前 MIN_LEG(對齊 sim 的最短飛行腿)
     tx = M.x + M.dir * ULT_CARRIER.MIN_LEG; ty = M.y;
   }
+  // 2026-08-07:發射點 = 最近的我方工事(不是機體自己)。載具因此要先飛完「工事 → 落點」
+  // 這一整段,而它從第一格起就是敵方砲塔/小兵/機體打得到的實體 ⇒ ⑦f 的交付率會跟著掉,
+  // 那正是這一輪改制要量的東西。MUST NOT 保留舊的 `x: M.x`(改制在模型裡就不存在了)。
+  const ox = ownFort ? ownFort.x : M.x;
   M.mp -= A.mp;
   M.abilAt = t + A.cd;
   M.abilN++;
@@ -617,22 +626,23 @@ function castUltCarrier(M, foe, enemyTower, t, foes) {
   const divis = A.fx === 'strike' || A.fx === 'summon';
   const part = (i) => ({ uA: A, uFrac: 1 / n, uImp: divis ? ultPartN(A.count, n, i) : null });
   const base = { side: M.side, owner: M, vehicle: true, armor: 0, tgt: { hp: 0 }, tx, ty };
+  const fwd = Math.sign(tx - ox) || M.dir;   // 發射點 → 落點(散開/前伸沿這個方向)
   if (kind === 'kami') {
     const sp = UNITS.drone.speed * SQUAD.KAMI.SPEED_MUL;
     return Array.from({ length: n }, (_, i) => ({
       ...base, ...part(i), kind: 'kami', hp: kamiHp(), speed: sp, dieAt: t + SQUAD.KAMI.TTL_S,
-      x: M.x + M.dir * SQUAD.KAMI.FWD, y: M.y + kamiSide(i) * SQUAD.KAMI.SIDE,
+      x: ox + fwd * SQUAD.KAMI.FWD, y: M.y + kamiSide(i) * SQUAD.KAMI.SIDE,
     }));
   }
   if (kind === 'decoy') {
     return [{
       ...base, ...part(0), kind: 'decoy', hp: decoyHp(), speed: DECOY.SPEED, dieAt: t + DECOY.TTL_S,
-      x: M.x, y: M.y, uDrops: Array.from({ length: n }, (_, i) => part(i)), nextBomb: t,
+      x: ox, y: M.y, uDrops: Array.from({ length: n }, (_, i) => part(i)), nextBomb: t,
     }];
   }
-  const arcD = Math.max(1, Math.hypot(tx - M.x, ty - M.y));
+  const arcD = Math.max(1, Math.hypot(tx - ox, ty - M.y));
   return [{
-    ...base, ...part(0), kind: 'hyper', hp: hyperHp(), speed: hyperClimbVx(), x: M.x, y: M.y, x0: M.x, y0: M.y,
+    ...base, ...part(0), kind: 'hyper', hp: hyperHp(), speed: hyperClimbVx(), x: ox, y: M.y, x0: ox, y0: M.y,
     arcD, trav: 0, dive: hyperApex(arcD) / hyperDiveSpd(), chase: false,
   }];
 }
@@ -686,18 +696,22 @@ function stepAbils(vehicles, t, dt, foesOf, ctx = null) {
     // 位置 MUST 真的跟著主機:停在原地的話它會被留在後方,前線的火力永遠打不到它 = 改制沒有發生。
     if (v.sup) {
       if (!v.armed) {
-        v.trav += v.speed * dt;
-        v.x = M.x + M.dir * Math.min(ULT_CARRIER.MIN_LEG, v.trav);
-        if (v.trav >= ULT_CARRIER.MIN_LEG) {
+        // 投放腿:自工事**飛向主機**(2026-08-07)—— 到得了才就位。腿長是實距不是固定值,
+        // 而整段航程都在場上(進 foesOf)⇒ 「從後方召喚」的代價就在這一段的曝險。
+        const dxS = M.x - v.x, stepS = v.speed * dt;
+        v.trav += stepS;
+        if (Math.abs(dxS) <= stepS) {
+          v.x = M.x; v.y = M.y;
           v.armed = true;
           M.sup.armAt ??= t;
+          M.sup.until ??= t + (M.sup.A.dur || 0);     // 效果窗自就位起算(對齊 sim._supArm)
           if (M.sup.cleanse) M.empUntil = 0;          // 解除異常:本模型只有 EMP 一種(一次性)
           if (M.sup.tempo === 'burst') { supDeliver(M, v.uFrac); continue; }   // 交付完退場
-        }
+        } else v.x += Math.sign(dxS) * stepS;
         alive.push(v); continue;
       }
       v.x = M.x; v.y = M.y;
-      if (t >= v.dieAt) continue;
+      if (t >= (M.sup?.until ?? Infinity)) continue;
       alive.push(v); continue;
     }
     // 追蹤:對象還活著就更新落點(射後不理 —— 玩家不必維持鎖定)。
@@ -849,6 +863,10 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
     for (const [M, foe, pref, hold] of [[A, B, prefA, holdA], [B, A, prefB, holdB]]) {
       if (M.hp <= 0) continue;
       const enemyTower = tw[M.side === 'SWARM' ? 'STEEL' : 'SWARM'].filter((x) => x.hp > 0)[0];
+      // 大招載具的**發射點**(2026-08-07 使用者定案「從最近的砲塔或主堡召喚」):本模型場上
+      // 只有自家前線塔位;全滅就退回自家開場站位(= 主堡方向那一端)。少了這一段,模型裡的
+      // 大招仍是「就地生成」⇒ 這一輪改制在 ⑦f 上完全看不見(交付率不會動)。
+      const ownFort = tw[M.side].filter((x) => x.hp > 0)[0] || { x: M.x0 };
       const foes = foesOf(M.side);
       // ---- 撤退 / 復出(門檻與遲滯帶沿用 bots.js 的同一組 BOT_TACTIC,MUST NOT 另立第二套數字)----
       // 少了這一段,模型裡的機體就是「站著對射到其中一方倒下」⇒ 機動整條軸沒有價值,
@@ -883,7 +901,7 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       M.x += Math.sign(want - M.x) * step;
       fire(M, foe, enemyTower, t, foes);
       // 長按 = 大招:CD 到就放(載具組送載具 / 自身型組就地開窗,見 castAbil)
-      vehicles.push(...castAbil(M, foe, enemyTower, t, foes));
+      vehicles.push(...castAbil(M, foe, enemyTower, t, foes, ownFort));
       // 電力 / 護盾回復(脫戰 OOC_S 後回盾)+ 有錢就升級
       M.mp = Math.min(M.mp0, M.mp + M.mpRegenBase * M.chF * LANE.DT);
       const rg = U ? U.regenF : 1;

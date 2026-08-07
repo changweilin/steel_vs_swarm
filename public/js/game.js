@@ -4160,7 +4160,8 @@ export class BattleClient {
       if (ev.pid === this.youId) {
         // 餌機(轟炸機)彈射分離:掛點瞬間抽離的機體震動(伺服器確認才震,請求被拒不會誤震)
         this.trauma = Math.min(1, this.trauma + SHAKE.DECOY);
-        this.hud.feed?.(ev.ult ? '💣 大招載具升空:轟炸機飛往指定落點投遞!'
+        this.hud.feed?.(ev.slot === 'ult' ? '💣 大招載具升空:轟炸機自後方工事飛往落點投遞!'
+          : ev.slot === 'skill' ? '💣 小招載具升空:轟炸機自機側飛往落點投遞!'
           : ev.homing ? '💣 集束炸彈投放:轟炸機追蹤鎖定目標!' : '💣 集束炸彈投放:轟炸機直飛(無法操舵)');
       }
     } else if (ev.e === 'decoyLost') {
@@ -4168,7 +4169,8 @@ export class BattleClient {
     } else if (ev.e === 'hyper') {
       // 極音速飛彈發射:彈體本身是伺服器實體(走 ents 渲染),這裡只播報 + 發射點後燄
       if (ev.pid === this.youId) {
-        this.hud.feed?.(ev.ult ? '🚀 大招載具發射:飛彈飛往指定落點!'
+        this.hud.feed?.(ev.slot === 'ult' ? '🚀 大招載具發射:飛彈自後方工事飛往落點!'
+          : ev.slot === 'skill' ? '🚀 小招載具發射:飛彈自機側飛往落點!'
           : ev.homing ? '🚀 極音速飛彈發射:鎖定目標,射後不理!' : '🚀 極音速飛彈發射:無鎖定,打向正前方');
       }
     } else if (ev.e === 'cast') {
