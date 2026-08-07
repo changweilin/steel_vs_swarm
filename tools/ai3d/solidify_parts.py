@@ -144,6 +144,15 @@ def main():
     ref = load_concat(a.src)
     ref.merge_vertices()
     print(f'src: {len(ref.faces)} faces  {stats(ref)}', flush=True)
+    # 浮雕/平板前篩(§5v:六張冠層標本量出來的判準):水平兩軸的深度比 < 0.15 ⇒
+    # 這一注根本沒有背面,任何閉合(resample/wrap)出來都是薄板 —— 別浪費黏土,
+    # 直接重抽(§5r)或楔形補丁(§5s;缺口楔形限 span<180°)。wrap 對「身分住在
+    # 細絲裡」的主體(茂密冠層)同樣無效:橋接尺度會把濾網熔成蠟燭(§5q 不翻案)。
+    e = ref.bounds[1] - ref.bounds[0]
+    hx = sorted([float(e[0]), float(e[2])])
+    if hx[1] > 0 and hx[0] / hx[1] < 0.15:
+        print(f'⚠ 浮雕/平板注:水平深度比 {hx[0] / hx[1]:.2f} < 0.15 —— 閉合救不回不存在的'
+              f'深度,建議重抽(§5r)或楔形補丁(§5s)', flush=True)
 
     if a.sweep:
         print(f'{"cells":>6} {"offset":>7} | faces open comp wt   v:f  kf_p95 dev_p95')

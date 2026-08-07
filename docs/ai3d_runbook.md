@@ -1261,6 +1261,33 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   語料要回 F0 續抓);③`--mode wrap` 的 alpha 只在這一顆殼上驗過 2%,語料多了要掃
   (§5t 凍結值紀律同款);④卡在 §5p 的 conifer/pine 語料缺額照舊(冷卻後續抓)。
 
+## 5v. Trial log (2026-08-07 深夜, 3060-machine session — 冠層複測:wrap 刀對六張冠層標本,§5q 定案維持、機制升級成可量的數)
+
+> 使用者指示「再檢查有樹冠層的樹」—— wrap 刀救回枯幹之後,§5q「葉冠不走 img→3D」的
+> 定案值得拿新刀重審一次(定案當時沒有這把刀)。六張冠層 T2 標本全部過刀
+> (密冠橡樹 seed 1234/42/7、大橡樹 #16、南洋杉 #27、猴麵包白描 #58)。
+
+- **閉合全勝、身分全敗 —— §5q 維持,而且第三次驗證了它那句話**(「這些方法能閉合葉冠,
+  但閉合從來不是葉冠的缺口」):wrap 刀把六張全部閉成水密單元件(連 §5q 的「最壞平板」
+  seed 42 都是),但 ①**平板注閉合後還是板**:密冠 1234/42、南洋杉、猴麵包的**水平深度比**
+  (min(x,z)/max(x,z))= 0.01~0.08,黏土側視就是一片薄板 —— 深度不存在,閉合造不出來;
+  ②**真體積樹被熔掉**:大橡樹 #16 是六張裡唯一的真 3D(深度比 **0.80**,原殼是
+  幹 + 枝椏濾網 + 葉簇的漂亮橡樹,§5p 當時人眼判 △ 其實冤枉它了)—— 但 wrap 的橋接
+  尺度恰好抹掉細枝濾網,380 面出來是「蠟燭熔岩插在盤子上」。**枯幹 ◎ 與冠層 ✗ 的分界
+  就此講清楚:身分住在粗肢(wrap 保得住的尺度)= 可救;身分住在細絲 = 橋接即熔毀**;
+  ③碎塊雲 seed 7 在 alpha 2% 撞 MemoryError、4% 閉成深度比 0.98 的圓丘(kf 5.5%)——
+  是「一團東西」不是「一棵樹」,冠簇節點另有 SF3D 現役貨,不缺這一注。
+- **`depth_ratio` 前篩進 `solidify_parts.py`**:< 0.15 = 浮雕/平板注,免跑閉合免看黏土
+  直接判(六張標本 + 魔鬼塔兩注校準:平板 0.01~0.08 / 楔形缺口浮雕 0.70(§5s 那顆,
+  楔形可救)/ 真體積 0.80~0.98)。與 §5o「fill 尺對 T2 不適用」互補:fill 量殼的封閉度、
+  depth_ratio 量**形狀本身有沒有背面**。
+- **順帶迴歸確認**:§5u 的 `whole:` 縫只掛在 deadtree 上,冠層樹種(broadleaf/birch/
+  shrub/conifer*/mangrove + 神木)rows = parts 逐位元不變 —— uluru/blackforest 兩輪量測
+  的逐型 instance 指紋全部對得上(那兩張表就是遷移後量的),soft_stroke/joints/e2e 全綠。
+- 結論:樹族 img→3D 的邊界穩定在 §5q 原判 —— **只收雕塑性主體**(枯幹 ◎ 已入庫;
+  板根/扭曲幹排隊),冠層維持程序冠簇 + 照片貼圖;oak16 這種真體積樹若要用,出路是
+  高預算 GIANT 節點(數千面)—— 現行預算(veg 225 / tree 402)下無解,不立佇列。
+
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
 - **SF3D gate re-probed: still closed.** Token itself is healthy — `whoami-v2` shows a classic
