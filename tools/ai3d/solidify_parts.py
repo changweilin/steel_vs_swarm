@@ -20,11 +20,27 @@
 # 判準(§5o 方法論:表面偏差量不出撕裂):watertight / open_edges / components / v:f
 # 先行,kf_p95(來源取樣→到結果)與 dev_p95(結果取樣→到來源)殿後,黏土人眼收尾。
 #
+# **兩種模式,依主體的幾何類型選**(2026-08-07 §5t 實測定案):
+#   --mode resample(預設;實心團塊 = 岩體/建築量體)
+#     uniform volumetric resample + quadric。§5o 原 C 路徑;對薄殼「就地取拓樸」——
+#     它是忠實的:原殼斷開的地方重採樣後照樣斷開。
+#   --mode wrap(細枝主體 = 枯幹/板根/扭曲樹幹,§5q 定案樹族只收這一類)
+#     CGAL alpha wrap(--alpha 2%)橋接 + **取最大元件** + **拓樸保護** quadric。
+#     三段缺一不可(魔鬼塔刀對枯幹的三連敗,§5t 實測):①T2 對細枝主體的原殼是
+#     **空間上斷開的孤島群**(bristlecone 實測 1,428 元件;resample 忠實所以照斷,
+#     offset 加大只是搭橋失敗 11~33 元件)⇒ 要 wrap 的「形對殼碎」救援(§5r ③ 預留
+#     的正是這一型;wrap2% 後 4 元件、最大佔 99.3% 面積);②浮渣孤枝離主體超過
+#     alpha 橋不到 ⇒ 取最大元件(丟掉的 0.7% 是離體浮枝,不是形狀);③細管拓樸在
+#     低預算 quadric 下會被塌成串珠(preservetopology=False 實測 12 元件)⇒ 開拓樸
+#     保護(岩族不需要:團塊沒有細管)。實測 500/300/220 面全數水密單元件、
+#     kf_p95 1.3~2.0%,黏土 C500 蒼勁多枝 ◎、C220 輪廓仍在(veg 級距撐得住)。
+#
 # 環境:pymeshlab + trimesh + numpy 的 venv(MUST NOT 進 package.json,A2;3060 機上
 # 現成的家 = Documents\study\TRELLIS.2-stableprojectorz\.venv)。
 #
 # 用法:
 #   python tools/ai3d/solidify_parts.py <t2_raw.glb> --out <solid.glb> --target 500
+#   python tools/ai3d/solidify_parts.py <t2_snag.glb> --mode wrap --out <solid.glb> --target 220
 #   python tools/ai3d/solidify_parts.py <t2_raw.glb> --sweep          # 3×3 參數掃描,只印表
 import argparse
 import os
@@ -45,21 +61,39 @@ def load_concat(path):
     return m
 
 
-def solidify(src_path, target, out_path, cells=256, offset_frac=0.006):
+def solidify(src_path, target, out_path, cells=256, offset_frac=0.006,
+             mode='resample', alpha_pct=2.0):
     import pymeshlab
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(src_path)
-    ms.meshing_merge_close_vertices()
-    ms.meshing_remove_duplicate_faces()
-    ms.meshing_remove_unreferenced_vertices()
-    diag = ms.current_mesh().bounding_box().diagonal()
-    ms.generate_resampled_uniform_mesh(
-        cellsize=pymeshlab.PureValue(diag / cells),
-        offset=pymeshlab.PureValue(diag * offset_frac),
-        mergeclosevert=True, discretize=False, multisample=True, absdist=False)
-    ms.meshing_decimation_quadric_edge_collapse(
-        targetfacenum=int(target), preserveboundary=True, preservenormal=True,
-        preservetopology=False, planarquadric=True, qualitythr=0.3, autoclean=True)
+    if mode == 'wrap':
+        # 細枝主體:wrap 橋接 → 取最大元件 → 拓樸保護減面(三段缺一不可,見檔頭)
+        ms.generate_alpha_wrap(alpha=pymeshlab.PercentageValue(alpha_pct),
+                               offset=pymeshlab.PercentageValue(0.2))
+        with tempfile.TemporaryDirectory() as td:
+            p = os.path.join(td, 'w.ply')
+            ms.save_current_mesh(p, save_textures=False)
+            w = load_concat(p)
+            big = max(w.split(only_watertight=False), key=lambda c: c.area)
+            p2 = os.path.join(td, 'b.ply')
+            big.export(p2)
+            ms = pymeshlab.MeshSet()
+            ms.load_new_mesh(p2)
+        ms.meshing_decimation_quadric_edge_collapse(
+            targetfacenum=int(target), preserveboundary=True, preservenormal=True,
+            preservetopology=True, planarquadric=True, qualitythr=0.3, autoclean=True)
+    else:
+        ms.meshing_merge_close_vertices()
+        ms.meshing_remove_duplicate_faces()
+        ms.meshing_remove_unreferenced_vertices()
+        diag = ms.current_mesh().bounding_box().diagonal()
+        ms.generate_resampled_uniform_mesh(
+            cellsize=pymeshlab.PureValue(diag / cells),
+            offset=pymeshlab.PureValue(diag * offset_frac),
+            mergeclosevert=True, discretize=False, multisample=True, absdist=False)
+        ms.meshing_decimation_quadric_edge_collapse(
+            targetfacenum=int(target), preserveboundary=True, preservenormal=True,
+            preservetopology=False, planarquadric=True, qualitythr=0.3, autoclean=True)
     # pymeshlab 只出 ply/obj 系;下游 normalize_parts.py(Blender gltf importer)要 GLB
     # ⇒ 經 trimesh 轉檔(純幾何,無材質可失真)
     if out_path.lower().endswith(('.glb', '.gltf')):
@@ -102,6 +136,8 @@ def main():
     ap.add_argument('--target', type=int, default=500)
     ap.add_argument('--cells', type=float, default=256)
     ap.add_argument('--offset', type=float, default=0.006)
+    ap.add_argument('--mode', choices=['resample', 'wrap'], default='resample')
+    ap.add_argument('--alpha', type=float, default=2.0)
     ap.add_argument('--sweep', action='store_true')
     a = ap.parse_args()
 
@@ -126,7 +162,7 @@ def main():
         return
 
     out = a.out or os.path.splitext(a.src)[0] + f'_solid{a.target}.glb'
-    solidify(a.src, a.target, out, a.cells, a.offset)
+    solidify(a.src, a.target, out, a.cells, a.offset, mode=a.mode, alpha_pct=a.alpha)
     s = stats(load_concat(out), ref)
     print(f'out: {out}\n     {s}', flush=True)
     if not s['watertight'] or s['components'] != 1:

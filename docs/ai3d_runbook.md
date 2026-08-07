@@ -1206,12 +1206,23 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   (⑦f 1.78× 不動 —— 純表現層)/ e2e 全綠(fresh server :8666)/ 對照台 0 缺件 0 孤兒
   0 未記載(tower_a 列:方法 T2-spz、來源圖、消費端 megalith、392 tris / 95% 包絡)。
   黏土人眼:柱身直紋 + 裙狀崖錐 + 平頂都在。
-- **未跑 / 待續**:①真機冒煙(使用者下次開圖:tower 型巨岩換臉,柱狀節理看得出來);
-  ②**神木開縫是下一輪**:`tree` 族 45 條 `lib:` 全是冠簇/灌木(§5q 判定不走 img→3D 的
-  那一類),雕塑性主體的落點(`VEG_DEFS.deadtree` / `GIANT_DEFS` 板根鰭)一條掛點都沒有
-  ⇒ 先加 lib 列 + `measure_veg_tris` 補 deadtree instance 上界(tri_budget staleness ②),
-  再讓 §5p 的漂白枯幹 ◎ 走本輪同一刀(solidify → normalize → intake);③texture 掉色
-  (§5n 待續⑥)不影響本輪 —— partlib 只吃幾何,顏色由零件表 `c:` 給。
+- **神木那半:刀已驗通,縫與預算是下一輪**(同日晚,使用者問「可以嘗試神木部分了嗎」):
+  ①**枯幹走不了岩族的刀** —— 三連敗實測:凍結參數 24 元件、offset 加大 11~33 元件、
+  wrap 後直接 quadric 12 元件。成因鏈:T2 對細枝主體的原殼是**空間上斷開的孤島群**
+  (漂白刺果松 `ov_6f0ad84c` 實測 1,428 元件;resample 忠實所以照斷)+ 細管拓樸在低預算
+  quadric 下被塌成**串珠**。②解 = `--mode wrap` 三段(已進 `solidify_parts.py`):
+  alpha wrap 2% 橋接(§5r ③「形對殼碎」預留的正是這一型;wrap 後 4 元件、最大佔 99.3%)
+  → 取最大元件(丟掉的 0.7% 是離體浮枝)→ **拓樸保護** quadric。**500/300/220 三級距
+  全數水密單元件**(kf_p95 1.3~2.0%),黏土 C500 蒼勁多枝 ◎、C220 輪廓仍在 ⇒
+  **veg 級距(node_cap 223)撐得住枯幹**;resample 模式對 tower 迴歸逐位元一致。
+  ③下一輪 = 縫 + 預算同輪定案(佇列 F.1 同款):deadtree 退出 `NATURE_MANIFEST` 改走
+  零件表(§5k ⑤ 的 broadleaf 前例)+ lib 列;**開列前先量** —— deadtree 住 `bare` 地貌
+  (裸露地場地,量測挑 uluru 這類;現行四個綠地場地量不到它),而 veg 的 `node_cap` 是
+  「成長額度 ÷ Σ(lib 列 × instance 上界)」:deadtree 列進分母 cap 就降,**既有節點
+  ~215 tris 離 223 只有 8 tris 餘裕** —— cap 降過頭會把已出貨節點變紅,同時 deadtree 的
+  Quaternius 檔退場又會把成長額度加回來(staleness ①③ 兩條同時動,不重量就開列 = 賭)。
+- **其餘待續**:①真機冒煙(使用者下次開圖:tower 型巨岩換臉,柱狀節理看得出來);
+  ②texture 掉色(§5n 待續⑥)不影響 —— partlib 只吃幾何,顏色由零件表 `c:` 給。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
