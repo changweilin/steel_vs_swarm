@@ -16,6 +16,12 @@
 // ⇒ 改驗「三種載具的**唯一生成點** = _launchUltCarrier」。這比逐入口驗守衛強:守衛是「舊路徑
 // 還在,只是對 converted 關著」,而唯一生成點是「舊路徑根本不存在」——後者連新增第二條路都擋得住。
 //
+// 2026-08-07(自身強化型改跟隨玩家的輔助機隊,見 data.js ULT_SUPPORT / audit_self_ult.mjs Ⅴ):
+// 32 台大招自此**全部**載具化,只差形式 —— 點遞送(本檔,23 台)vs 跟隨編隊(9 台)。
+// 於是 kami 這個 kind 有了**第二個具名生成點** `_launchUltSupport`:本檔的「唯一生成點」因此改成
+// 「**恰兩個具名生成點**,而且都在這兩支裡」——仍然擋得住「隨手再開一條生成路」,
+// 而 decoy / hyper 維持恰一個(輔助機一律走 kami 那具小型載具的渲染路徑)。
+//
 // 跑法:`node tools/audit_ult_carrier.mjs`
 //   反向驗證(原則 9;對應條目 MUST 立刻紅字,否則等於沒驗到):
 //     `--break-cd`    ultCarrierCd 改回恆等映射(CD 不壓帶)⇒ Ⅰ 紅
@@ -157,21 +163,28 @@ sec('Ⅱ 單一縫(原文)');
   // 效果分支只有 _castEffect 一份:heroCast 不再自帶效果迴圈,三個載具端走 _ultArrive
   ok(count(S, /A\.fx === 'strike'/g) >= 1 && count(grabMethod(S, 'heroCast'), /A\.fx === 'strike'/g) === 0,
     'heroCast 不再自帶效果分支(全部住 _castEffect)');
-  ok(count(S, /_castEffect\(/g) === 3, `_castEffect:1 定義 + 2 消費(heroCast 瞬發 / _ultArrive 載具端;實得 ${count(S, /_castEffect\(/g)})`);
-  ok(count(S, /_ultArrive\(/g) === 4, `_ultArrive:1 定義 + 3 引爆端(kami / hyper / 轟炸機;實得 ${count(S, /_ultArrive\(/g)})`);
+  ok(count(S, /_castEffect\(/g) === 4,
+    `_castEffect:1 定義 + 3 消費(heroCast 瞬發 / _ultArrive 點遞送 / _supSync 輔助機隊;實得 ${count(S, /_castEffect\(/g)})`);
+  ok(count(S, /_ultArrive\(/g) === 5,
+    `_ultArrive:1 定義 + 4 交付端(kami / hyper / 轟炸機 / 輔助機瞬發型;實得 ${count(S, /_ultArrive\(/g)})`);
   ok(count(S, /_launchUltCarrier\(/g) === 2, '_launchUltCarrier:1 定義 + heroCast 恰一個呼叫點');
+  ok(count(S, /_launchUltSupport\(/g) === 2, '_launchUltSupport:1 定義 + heroCast 恰一個呼叫點');
 
   // 機種絕招三個入口**整組退場**(2026-08-06 第二階段):不是「留著但擋住」,是根本不存在。
   // 註解裡照樣提得到這三個名字(具名退場記錄),所以 MUST 只數執行原文(strip)。
   for (const m of ['heroKamikaze', 'heroDecoy', 'heroHyper']) {
     ok(!new RegExp(`\\n  ${m}\\(`).test(strip(S)), `${m} 已整組退場(MUST NOT 復辟)`);
   }
-  // 唯一生成點:三種載具的 kind 各只出現一次,而且都在 _launchUltCarrier 裡
+  // 生成點:decoy / hyper 各恰一處(都在 _launchUltCarrier);kami 恰兩處 —— 點遞送與輔助機隊
+  // 各一個具名生成點,MUST NOT 有第三處(第三處 = 有人又開了一條繞過大招結算的側門)
   const luc = strip(grabMethod(S, '_launchUltCarrier'));
-  for (const k of ['kami', 'decoy', 'hyper']) {
+  const lus = strip(grabMethod(S, '_launchUltSupport'));
+  for (const k of ['decoy', 'hyper']) {
     ok(count(S, new RegExp(`kind: '${k}',`, 'g')) === 1 && new RegExp(`kind: '${k}',`).test(luc),
       `${k} 的唯一生成點 = _launchUltCarrier(載具只剩「大招遞送」這一個身分)`);
   }
+  ok(count(S, /kind: 'kami',/g) === 2 && /kind: 'kami',/.test(luc) && /kind: 'kami',/.test(lus),
+    'kami 恰兩個具名生成點(_launchUltCarrier 點遞送 / _launchUltSupport 輔助機隊)');
   // 傳輸層:三條機種絕招訊息一併退場(留著就是一條繞過 heroCast 的側門)
   ok(!/'kami'|'decoy'|'hyper'/.test(strip(readSrc('server', 'rooms.js'))),
     'rooms.js 的 kami / decoy / hyper 三條訊息已退場(一律走 t:\'cast\' 單一縫)');
@@ -201,8 +214,13 @@ sec('Ⅱ 單一縫(原文)');
 
   // lanesim:converted 分流 + 擊落否定 + 平衡模型 ⑦f 只量仍持有機種絕招的角色
   ok(/ultDelivered\(M\.ch\)\) return castUltCarrier/.test(strip(L)), 'lanesim.castAbil 分流到 castUltCarrier');
-  ok(/if \(v\.hp <= 0\) continue;/.test(strip(L)) && !/DEATH_F/.test(strip(L)),
-    'lanesim.stepAbils:載具擊落 = 該份完全否定(機種絕招時代的殉爆/補投已隨那三招退場)');
+  // 擊落當格就丟掉,而且那一行**不得**走到任何交付(2026-08-07 起同一行另記輔助機損失,
+  // 所以 MUST 驗語意而不是逐字比對:有 continue、沒有 ultDetonate、全檔沒有殉爆係數)
+  {
+    const drop = (strip(L).match(/if \(v\.hp <= 0\).*/) || [''])[0];
+    ok(/continue;/.test(drop) && !/ultDetonate/.test(drop) && !/DEATH_F/.test(strip(L)),
+      'lanesim.stepAbils:載具擊落 = 該份完全否定(當格丟掉、不引爆、不補投;殉爆隨機種絕招退場)');
+  }
   ok(/filter\(\(c\) => !ultDelivered\(c\)\)/.test(strip(BAL)), 'balance ⑦f 只平均仍持有機種絕招的角色');
 
   // 效果取代傷害:四條 uA 引爆/擊落路徑一律不走 _blast
@@ -300,8 +318,14 @@ sec('Ⅲ 行為直測(真 BattleSim)');
       g.x = 0; g.z = 0; g.mp = 999; g.abil.ult = 1;
       sim.heroCast(pid, 'ult');
     }
-    ok(![...sim.ents.values()].some((e) => e.kami || e.decoy || e.hyper),
-      '未轉換的三機種代表(s12 / t02 / m08)大招一律瞬發,不生任何載具');
+    // 2026-08-07:那 9 台改派**跟隨型輔助機**(仍是 kami 那具小型載具),但 MUST NOT 走點遞送
+    // ——沒有落點 `pt`、沒有 decoy/hyper 形式,而且效果要等就位才上線。
+    const sup = [...sim.ents.values()].filter((e) => e.supG);
+    ok(sup.length === ['s12', 't02', 'm08'].reduce((a, c) => a + d.supportN(c), 0)
+      && sup.every((k) => k.kami && !k.pt && k.phase === 'deploy'),
+      '未轉換的三機種代表(s12 / t02 / m08)大招改派跟隨型輔助機(不是點遞送)');
+    ok(![...sim.ents.values()].some((e) => e.decoy || e.hyper),
+      '輔助機一律走 kami 那具小型載具(不生轟炸機 / 飛彈)');
   }
 
   // ⑤ 最短飛行腿:對自身施放(支援型無點)⇒ 遞送點仍推到 MIN_LEG 之外(需要飛行時間)
@@ -325,9 +349,12 @@ sec('Ⅲ 行為直測(真 BattleSim)');
     sim.heroCast('a10', 'ult');
     const A = d.heroAbility('s11', 'ult', 1);
     const bst = d.selfUltBoost('s11', 1, h.abil);
-    ok(![...sim.ents.values()].some((e) => e.uA), 's11 大招不生載具(瞬發路徑)');
-    ok(Math.abs(h.hp - Math.min(h.maxHp, 50 + A.heal + bst.heal)) < 0.01,
-      `s11 瞬發自補 = 基礎 ${A.heal} + 補償增額 ${bst.heal.toFixed(1)}(selfUltBoost 單一縫)`);
+    ok([...sim.ents.values()].filter((e) => e.supG).length === d.supportN('s11'),
+      `s11 大招改派 ${d.supportN('s11')} 架輔助機(2026-08-07;不是點遞送載具)`);
+    ok(Math.abs(h.hp - 50) < 0.01, '施放當下不回血 —— 要等輔助機飛完投放腿(每一發都有攔截窗)');
+    for (let i = 0; i < Math.ceil(d.supportLegS() / 0.125) + 2; i++) sim.tick(0.125);
+    ok(Math.abs(h.hp - Math.min(h.maxHp, 50 + A.heal + bst.heal)) < 1,
+      `s11 自補 = 基礎 ${A.heal} + 補償增額 ${bst.heal.toFixed(1)}(selfUltBoost 單一縫)`);
     ok(A.cd === d.tierVal(d.CHARACTERS.s11.ult.cd, 1), `s11 大招 cd 不動(${A.cd}s)`);
   }
 }

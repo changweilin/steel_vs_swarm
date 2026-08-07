@@ -11,6 +11,7 @@ import {
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
+  ULT_SUPPORT, supportN, supportHp, supportLegS, selfUltTempo,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -2337,6 +2338,8 @@ export class BattleSim {
       for (let i = sq.kamis.length - 1; i >= 0; i--) {
         const k = sq.kamis[i];
         if (k.hp <= 0) { sq.kamis.splice(i, 1); continue; }   // 已被 _kill 移除
+        // 輔助機隊(2026-08-07):同一具小型載具的第二種身分 —— 不撲擊、不引爆,跟著主機供輸加成
+        if (k.supG) { this._tickSupport(k, dt, spd); continue; }
         if (this.t >= k.dieAt) { this._kamiBoom(k); continue; }
         if (k.pt) {
           // 點遞送(大招載具):直飛落點近炸 —— 不索敵、不追擊(效果落在瞄準點,不被路過的敵人拉走)
@@ -2923,6 +2926,13 @@ export class BattleSim {
       this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl, carrier: 1 });
       return;
     }
+    // 自身強化型大招(2026-08-07 使用者定案;見 data.js ULT_SUPPORT):同樣不在此結算 ——
+    // 派出 supportN 架**跟隨玩家的輔助機**,效果由它們就位後供輸、被打下來就少一份(疊加是加法)。
+    if (A.support) {
+      this._launchUltSupport(h, A);
+      this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x: h.x, z: h.z, r: A.r, dur: A.dur, lvl, carrier: 1, sup: supportN(h.ch) });
+      return;
+    }
     this._castEffect(h, A, x, z);
     this.events.push({ e: 'cast', pid, side: h.side, ch: h.ch, slot, fx: A.fx, x, z, r: A.r, dur: A.dur, lvl });
   }
@@ -2933,8 +2943,19 @@ export class BattleSim {
    * (cx, cz) = 效果中心(瞬發 = heroCast 夾回射程後的落點;自身/團隊型 = 施放者位置,逐位元同舊制)。
    * frac = 可分預算的份額(heal 量 × frac;單載具 = 1);nImp = 這一份攜帶的整數預算
    * (strike 彈著數 / summon 隻數;null = A.count 全額)。emp/buff 恆整份單載(見 ultParts)。
+   *
+   * 2026-08-07(輔助機隊,見 data.js ULT_SUPPORT):`frac` 自此**同時**縮放狀態值 ——
+   *   乘數型 `mf`:1 + (m − 1) × frac(疊加是**加法**;逐架各推一筆會被 `_buffMul` 相乘 ⇒ 全員在線時
+   *     的效果高於舊制,而且只在「剛好幾架活著」時對得上帳,沒有任何錯誤訊息);
+   *   數值型 `vf`:v × frac(evade / vamp 走 `_buffVal` 取最大值,不相乘)。
+   *   frac = 1 ⇒ mf/vf 皆為恆等 ⇒ 瞬發與點遞送三條路徑**逐位元同舊制**。
+   * `once` = 這一次是不是這一段效果的第一次施放。輔助機每次增減都要**重算** mods(撤下再放),
+   *   而一次性的部分(復活 / 解除異常 / 彈匣全滿 / 定位 / 匿蹤 / 無霧視野)MUST 只在第一次做 ——
+   *   重放會把時窗一路往後展期(症狀是「這一招怎麼一直沒結束」)。
    */
-  _castEffect(h, A, cx, cz, frac = 1, nImp = null) {
+  _castEffect(h, A, cx, cz, frac = 1, nImp = null, once = true) {
+    const mf = (m) => 1 + (m - 1) * frac;   // 乘數型狀態的份額(疊加 = 加法)
+    const vf = (v) => v * frac;             // 數值型狀態的份額
     // 純自身型大招補償(2026-08-06;見 data.js SELF_ULT):機種絕招退場之後,那 9 台把被移除的
     // 預算折進大招本身。**單一縫**:倍率/治療增額只在這裡取一次,MUST NOT 在客戶端或平衡模型
     // 另算一份(算出兩個數字的症狀是「HUD 說 ×2.3、實際掉血是 ×1.35」,兩邊都不報錯)。
@@ -2954,24 +2975,24 @@ export class BattleSim {
           // 補償是**增額**不是再乘一層:1.35 + 1.00 = 2.35(相乘會變 2.70 = 多發一份預算)。
           // `brk` 的招式(t02 超載)把 mods 標記起來,挨一發就整批撤銷(見 _breakOnHit)。
           const mm = k === 'dmg' ? m + B.dmgMul : m;
-          a.mods.push({ k, m: mm, until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
+          a.mods.push({ k, m: mf(mm), until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
         }
         // 走位/其他類追加效果(haste 衝鋒 / leap 大跳躍 / dodge 完美迴避 / vamp 吸血 → mods 通道;
         // mark 定位 → markUntil 一擊即耗)—— 效果種類與數值全住 data.js 的 add 欄位
         const ad = A.add;
         if (ad) {
-          if (ad.fx === 'haste') a.mods.push({ k: 'speed', m: ad.f || 1.25, until: this.t + A.dur });
-          else if (ad.fx === 'leap') a.mods.push({ k: 'jump', m: ad.f || 2, until: this.t + A.dur });
+          if (ad.fx === 'haste') a.mods.push({ k: 'speed', m: mf(ad.f || 1.25), until: this.t + A.dur });
+          else if (ad.fx === 'leap') a.mods.push({ k: 'jump', m: mf(ad.f || 2), until: this.t + A.dur });
           else if (ad.fx === 'dodge') a.mods.push({ k: 'dodge', m: 1, until: this.t + A.dur });
-          else if (ad.fx === 'vamp') a.mods.push({ k: 'vamp', m: ad.f || 0.12, until: this.t + A.dur });
-          else if (ad.fx === 'mark') a.markUntil = this.t + (ad.dur || A.dur);
-          else if (ad.fx === 'evade') a.mods.push({ k: 'evade', m: ad.evade || 0, until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
+          else if (ad.fx === 'vamp') a.mods.push({ k: 'vamp', m: vf(ad.f || 0.12), until: this.t + A.dur });
+          else if (ad.fx === 'mark') { if (once) a.markUntil = this.t + (ad.dur || A.dur); }
+          else if (ad.fx === 'evade') a.mods.push({ k: 'evade', m: vf(ad.evade || 0), until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
           else if (ad.fx === 'overdrive') {
             // 超載(t02「同步率 100%」;2026-08-06 使用者定案):彈匣全滿 + 期間免裝填 + 閃避率加成。
             // 「全滿」= 清掉彈藥/填彈帳,下一次 _gateFire 的 `??= def.mag` 就是滿匣(與重生同一條路);
             // 免裝填只是一個時窗旗標,MUST NOT 改成「彈匣無限大」(那會把彈匣整數化與射速壓縮一起繞過)。
-            a.ammo = {}; a.reloadUntil = {}; a.noReloadUntil = this.t + A.dur;
-            a.mods.push({ k: 'evade', m: ad.evade || 0, until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
+            if (once) { a.ammo = {}; a.reloadUntil = {}; a.noReloadUntil = this.t + A.dur; }
+            a.mods.push({ k: 'evade', m: vf(ad.evade || 0), until: this.t + A.dur, ...(A.brk ? { brk: 1 } : {}) });
           }
         }
       }
@@ -3033,11 +3054,11 @@ export class BattleSim {
     } else if (A.fx === 'vision') {
       this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
     } else if (A.fx === 'stealth') {
-      h.stealthUntil = this.t + A.dur;
+      if (once) h.stealthUntil = this.t + A.dur;
       // 破隱爆發窗(m08「查無此人」;2026-08-06 使用者定案「破隱一秒內傷害增加」):這裡只**上膛**,
       // 真正開窗在 `_gateFire` 那一行 `stealthUntil = 0`(= 開火現形的唯一時刻)——
       // 在這裡就開窗的話,玩家躲著不開火也在燒那一秒,而畫面上只表現成「爆發好像沒生效」。
-      if (A.add?.fx === 'alpha') { h.alphaX = B.alphaX; h.alphaArm = this.t + A.dur; }
+      if (A.add?.fx === 'alpha' && once) { h.alphaX = B.alphaX; h.alphaArm = this.t + A.dur; }
     } else if (A.fx === 'rally' || A.fx === 'recon') {
       // 2026-08-06 純自身型大招補償的兩個新效果(見 data.js SELF_ULT):
       //   rally 復甦(s12)—— 全隊回復加速 + 解除並免疫異常 + **重生倒數中**的隊友原地復活;
@@ -3047,22 +3068,23 @@ export class BattleSim {
       const team = [...this.heroes.values()].filter((a) => a.side === h.side);
       for (const a of team) {
         // 復活排在增益之前:剛站起來的那一架也要吃得到同一段窗。
-        if (A.revive > 0) {
+        if (A.revive > 0 && once) {
           for (const b of this._bodies(a)) {
             if (b.dead && b.respawnAt > this.t) this._reviveBody(b, A.revive);
           }
         }
         if (a.dead) continue;
-        for (const [k, m] of Object.entries(A.mul || {})) a.mods.push({ k, m, until: this.t + A.dur });
-        if (A.regen > 0) a.mods.push({ k: 'regen', m: A.regen, until: this.t + A.dur });
-        if (A.add?.fx === 'evade') a.mods.push({ k: 'evade', m: A.add.evade || 0, until: this.t + A.dur });
+        for (const [k, m] of Object.entries(A.mul || {})) a.mods.push({ k, m: mf(m), until: this.t + A.dur });
+        if (A.regen > 0) a.mods.push({ k: 'regen', m: mf(A.regen), until: this.t + A.dur });
+        if (A.add?.fx === 'evade') a.mods.push({ k: 'evade', m: vf(A.add.evade || 0), until: this.t + A.dur });
         if (A.cleanse) {
-          // 解除既有異常 + 期間免疫(`ccImm` 由 _applyCC / _applyHitEmp / emp 分支同判)
-          a.stunUntil = 0; a.slowUntil = 0; a.confUntil = 0; a.empUntil = 0; a.bleed = null;
+          // 解除既有異常 + 期間免疫(`ccImm` 由 _applyCC / _applyHitEmp / emp 分支同判)。
+          // 二元狀態沒有「一半」⇒ 只要還有一架輔助機在線就是整份(同 vision;見 ULT_SUPPORT)。
+          if (once) { a.stunUntil = 0; a.slowUntil = 0; a.confUntil = 0; a.empUntil = 0; a.bleed = null; }
           a.mods.push({ k: 'ccImm', m: 1, until: this.t + A.dur });
         }
       }
-      if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+      if (A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
     } else if (A.fx === 'intercept') {
       // 擊落半徑內所有敵方來襲飛彈(悼歌條款:擋子彈的,不是打人的)
       for (let i = this.missiles.length - 1; i >= 0; i--) {
@@ -3075,7 +3097,7 @@ export class BattleSim {
       if (A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
     }
     // dash:位移在客戶端(位置本就客戶端回報),伺服器只管 CD/MP 與廣播特效
-    if (A.fx === 'buff' && A.vision) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
+    if (A.fx === 'buff' && A.vision && once) this.visionUntil[h.side] = Math.max(this.visionUntil[h.side], this.t + A.vision);
   }
 
   /**
@@ -3167,6 +3189,131 @@ export class BattleSim {
       fx: v.uA.fx, x: bx, z: bz, r: v.uA.r, dur: v.uA.dur, lvl: owner.abil?.ult || 1,
       frac,
     });
+  }
+
+  /**
+   * 自身強化型大招的輔助機隊(2026-08-07 使用者定案;**唯一發射縫**,見 data.js ULT_SUPPORT)。
+   * 派出 `supportN(ch)` 架跟隨主機的輔助機:先沿機首飛完一段 `ULT_CARRIER.MIN_LEG` 的**投放腿**
+   * (= 點遞送載具的最短飛行腿,每一次施放都有同樣長的攔截窗),就位後才開始供輸加成。
+   * 加成**按在線架數疊加**(`_supSync` 撤下再放,倍率 = 1 + (m−1)×k/N);被擊落 = 那一份下線。
+   * HP 走 `supportHp` 這把尺(armor / 護盾恆 0),MUST NOT 手寫。
+   */
+  _launchUltSupport(h, A) {
+    const n = supportN(h.ch);
+    if (n <= 0) return;
+    const sq = h.sq;
+    if (sq) sq.kamis ??= [];
+    const g = {
+      id: (this._supSeq = (this._supSeq || 0) + 1),
+      pid: h.pid, side: h.side, ch: h.ch, A, n,
+      tempo: selfUltTempo(h.ch), live: 0, applied: false,
+      // 效果窗自「就位那一刻」起算 ⇒ 群組結束時刻 = 投放腿 + dur(輔助機的 dieAt 同此值)。
+      until: this.t + supportLegS() + (A.dur || 0),
+    };
+    if (sq) sq.sup = g;
+    const ry = h.ry || 0;
+    const fx = -Math.sin(ry), fz = Math.cos(ry);
+    const hp = supportHp(h.ch, h.abil?.ult || 1);
+    for (let i = 0; i < n; i++) {
+      // 環形編隊:同一個相位角同時決定「投放時的散開位置」與「就位後的站位」——
+      // 兩份相位就會出現「從左邊彈出去、卻繞到右邊站位」的無意義迴轉。
+      const a0 = (i / n) * Math.PI * 2;
+      const k = this._add({
+        kind: 'kami', side: h.side, pid: h.pid, ch: h.ch, kami: true, sup: g.id, supG: g, slotA: a0,
+        uA: A, uFrac: 1 / n, uImp: null,
+        x: h.x + fx * SQUAD.KAMI.FWD + Math.cos(ry + a0) * SQUAD.KAMI.SIDE,
+        z: h.z + fz * SQUAD.KAMI.FWD + Math.sin(ry + a0) * SQUAD.KAMI.SIDE,
+        y: (h.y || 0) + ULT_SUPPORT.SLOT_ALT, ry,
+        hp, armor: 0, tid: 0, phase: 'deploy', trav: 0, dieAt: g.until,
+      });
+      k.maxSp = 0; k.sp = 0;
+      if (sq) sq.kamis.push(k);
+    }
+    this.events.push({ e: 'kami', pid: h.pid, side: h.side, n, ult: 1, sup: 1 });
+  }
+
+  /** 一架輔助機的推進(由 _tickKamis 分流):投放腿 → 就位供輸 → 跟隨編隊 */
+  _tickSupport(k, dt, spd) {
+    const h = this.heroes.get(k.pid);
+    if (!h || h.dead) { this._supLost(k); return; }
+    // 投放腿**不吃時窗到期**:它自己就是有限的(飛完 MIN_LEG 就結束),而 dieAt 恰好也是
+    // 「投放腿 + dur」⇒ 瞬發型(dur = 0)的兩者同值,先驗到期就會在 tick 量化那一格把它收掉
+    // = 這一招**永遠交付不到**(2026-08-07 實測:s11 補血恆為 0,而且沒有任何錯誤訊息)。
+    if (k.phase === 'deploy') {
+      k.trav += spd * dt;
+      k.x += -Math.sin(k.ry) * spd * dt;
+      k.z += Math.cos(k.ry) * spd * dt;
+      if (k.trav >= ULT_CARRIER.MIN_LEG) this._supArm(k);
+      return;
+    }
+    if (this.t >= k.dieAt) { this._supLost(k); return; }
+    // 編隊:朝站位點**收斂**(不硬貼)—— 硬貼在主機身上就是一群打不中的無敵護衛。
+    const ang = (h.ry || 0) + k.slotA;
+    const tx = h.x + Math.cos(ang) * ULT_SUPPORT.SLOT_R;
+    const tz = h.z + Math.sin(ang) * ULT_SUPPORT.SLOT_R;
+    const ty = (h.y || 0) + ULT_SUPPORT.SLOT_ALT;
+    const w = Math.min(1, ULT_SUPPORT.TURN_K * dt);
+    const dx = (tx - k.x) * w, dz = (tz - k.z) * w, dy = (ty - k.y) * w;
+    const d = Math.hypot(dx, dz, dy), cap = spd * dt;
+    const f = d > cap ? cap / d : 1;
+    k.x += dx * f; k.z += dz * f; k.y = Math.max(0, k.y + dy * f);
+    k.ry = h.ry || 0;
+  }
+
+  /** 輔助機就位:瞬發型交付自己那一份就功成身退,其餘轉入編隊並讓那一份加成上線 */
+  _supArm(k) {
+    const g = k.supG;
+    k.phase = 'escort';
+    if (!g) return;
+    if (g.tempo === 'burst') {
+      // 瞬發型(s11 大修):沒有時窗可供輸 ⇒ 抵達即交付(走 _ultArrive 這一個既有出口)
+      this._ultArrive(k, k.x, k.z);
+      this._removeKami(k);
+      return;
+    }
+    g.live++;
+    this._supSync(g);
+  }
+
+  /**
+   * 依**目前在線架數**重算這一段加成(單一縫:撤下這一組舊 mods → 以新份額重放一次 `_castEffect`)。
+   * 逐架各推一筆 mods 會被 `_buffMul` 相乘 ⇒ MUST 走「撤下再放」;
+   * 新推出來的那幾筆一律改寫成群組的 `until`(不改 = 每死一架就把時窗往後展期一次)。
+   */
+  _supSync(g) {
+    const h = this.heroes.get(g.pid);
+    if (!h) return;
+    const team = [...this.heroes.values()].filter((a) => a.side === g.side);
+    for (const a of team) {
+      if (!a.mods) continue;
+      for (let i = a.mods.length - 1; i >= 0; i--) if (a.mods[i].sup === g.id) a.mods.splice(i, 1);
+    }
+    if (g.live <= 0) { this._supRevoke(g, h); return; }   // 一架都不剩 ⇒ 只撤不放
+    const marks = team.map((a) => (a.mods ? a.mods.length : 0));
+    const first = !g.applied;
+    g.applied = true;
+    this._castEffect(h, g.A, h.x, h.z, g.live / g.n, null, first);
+    team.forEach((a, i) => {
+      if (!a.mods) return;
+      for (let j = marks[i]; j < a.mods.length; j++) { a.mods[j].sup = g.id; a.mods[j].until = g.until; }
+    });
+  }
+
+  /** 機隊清空:撤下**不住在 mods** 的二元狀態(匿蹤 / 免裝填)——
+   *  留著就是「輔助機全被打下來了,對方還是看不到我」。視野(visionUntil)是具名例外:
+   *  已經給出去的情報收不回來,而且它是陣營層級的取大值。 */
+  _supRevoke(g, h) {
+    if (g.A.fx === 'stealth') { h.stealthUntil = 0; h.alphaArm = 0; h.alphaX = 1; }
+    if (g.A.add?.fx === 'overdrive') h.noReloadUntil = 0;
+  }
+
+  /** 一架輔助機下線(被擊落 / 時窗到期 / 主機離場):扣掉那一份再重算 */
+  _supLost(k) {
+    const g = k.supG;
+    this._removeKami(k);
+    if (!g) return;
+    if (k.phase === 'escort') g.live = Math.max(0, g.live - 1);
+    this._supSync(g);
   }
 
   /** 控場類追加效果(strike 彈著區 r×1.5 內敵人;建築/中立/無敵幀免疫)。
@@ -3609,6 +3756,11 @@ export class BattleSim {
     if (t.hyper) {   // 極音速飛彈被攔截:不引爆(攔截成功 = 完全否定這一招),只留碎裂演出
       this._hyperShotDown(t);
       this._removeHyper(t);
+      return;
+    }
+    if (t.supG) {   // 輔助機被擊落(2026-08-07):沒有彈頭可爆 —— 只把它那一份加成下線
+      this.events.push({ e: 'boom', x: t.x, z: t.z, y: t.y || 0, r: 5, side: t.side, sam: true });
+      this._supLost(t);
       return;
     }
     if (t.kami) {   // 護衛自殺機被擊毀(2026-07-22):原地以 50% 傷害與半徑引爆(舊版只消失、不引爆)
