@@ -24,7 +24,9 @@
  *    ⇒ 本工具在真機(3060 那台)或 GitHub Actions 上跑。
  *
  * 用法:
- *   node tools/ai3d/fetch_photos.mjs --plan               只印工作清單與缺額(不打 API)
+ *   node tools/ai3d/fetch_photos.mjs --plan               只印工作清單與缺額(不打 API;
+ *                                                        計的是「可用」張數 —— 選片閘
+ *                                                        screen_mattes.py 淘汰的不算)
  *   node tools/ai3d/fetch_photos.mjs --family rock        只抓某一族(rock|tree|landmark|building)
  *   node tools/ai3d/fetch_photos.mjs --part rock/facet    只抓某一個零件
  *   node tools/ai3d/fetch_photos.mjs --limit 10           本輪最多下載幾張
@@ -33,7 +35,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PHOTOS = join(HERE, 'photos');
@@ -56,6 +58,26 @@ export const PHOTO_CATALOG = {
   // ⇒ **第 8 輪把 tree 提到最前面**(2026-08-06 使用者定案「大量下載不同國家地區的不同
   // 樹種,如灌木/闊葉林/針葉林/各種大小神木的照片」):同一條族序規則,這一輪換樹族排頭。
   tree: {                                                  // VEG_DEFS / GIANT_DEFS:樹冠模組/枝叉/板根
+    // —— F0 輪(2026-08-07 使用者定案「神木要重新找,有神木全身照片的圖,無其他干擾的照片」)——
+    // 語料庫攤開後的診斷是「污染不是不足」(82 張 matte 人眼只剩 ~16 張可用;統計分桶與門檻住
+    // screen_mattes.py 檔頭、規格住 runbook 佇列 F0):下載張數不再是帳 ⇒ have() 只計選片閘
+    // 未淘汰的條目。**紅杉別再抓**(結構性失敗:它出名的原因就是「大到拍不下」,絕大多數照片
+    // 不是遊客當比例尺就是仰角局部,換查詢字救不回來)⇒ sp_sequoia want 歸零。樹種放寬到
+    // 「天生單株立在空地、背景是天空」的巨木 —— 遊戲要的是「神木 = 巨木」,VEG_DEFS/GIANT_DEFS
+    // 消費的是冠簇/樹幹/板根的**形狀**,不是樹種名。查詢往「孤立單株 + 全身輪廓」句式走
+    // (lone / isolated / full height silhouette),刻意避開 trunk/bark 這類必然回傳局部特寫
+    // 的字。列序 = 抓取優先序:F0 列排樹族最前(族序規則同第 7/8 輪)。
+    gt_dragontree: { want: 5, q: ['dragon blood tree socotra', 'dracaena draco tree canary', 'lone dragon tree'] }, // 龍血樹(F0 點名;天生傘冠單株)
+    // 斜側視角探針列(§5p 待續② → §5q 已收斂,want 歸零):實測 5 張 —— 空拍單株的主體
+    // 天生太小(matte 畫布 253~711px,4/5 被剝空桶擋),唯一倖存是一座**小島**(空拍查詢
+    // 撈到的是島/林不是樹)⇒ 斜側語料在**採集端**就死了,救不了冠簇;冠簇定案走
+    // 程序 ico + 貼圖(§5q),img→3D 只收雕塑性主體(枯幹/樹幹/板根)。
+    gt_oblique: { want: 0, q: [] },
+    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland', 'isolated tree against sky', 'tree full height silhouette'] }, // 曠野孤立橡樹(F0 點名;+全身輪廓句式)
+    sp_baobab:  { want: 6, q: ['solitary baobab', 'lone baobab tree', 'baobab tree', 'adansonia tree'] },          // 猴麵包樹(F0 點名;既有 2 張可用正是這一型)
+    sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },              // 傘刺金合歡(F0 策略的同型印證家)
+    sp_conifer: { want: 8, q: ['lone spruce tree field', 'solitary fir tree meadow', 'single conifer tree'] },     // 孤立松柏(F0 點名)
+    sp_pine:    { want: 8, q: ['lone scots pine tree', 'stone pine tree isolated', 'solitary pine tree field'] },  // 孤立松柏(F0 點名)
     // —— 第 8 輪大擴充(2026-08-06 使用者定案)——
     // 使用者點名四組:**灌木 / 闊葉林 / 針葉林 / 各種大小神木**,跨國跨地區逐樹種。
     // 對位方式同第 5 輪(逐樹種)與第 7 輪(逐岩型):**對位的是消費端那一列的形狀**,
@@ -102,17 +124,15 @@ export const PHOTO_CATALOG = {
     gt_alerce:  { want: 4, q: ['alerce tree patagonia', 'fitzroya tree chile'] },                         // 巴塔哥尼亞
     // —— 第 4 輪品質補抓(2026-08-05)——首批 14 張過 SF3D 只有 1 顆實心:buttress 查詢
     // 命中臘葉標本掃描、canopy 命中夜拍。與 rock 族同一帖藥:「具名單一主體」。
-    canopy:   { want: 12, q: ['solitary oak tree meadow', 'lone tree field', 'isolated tree grassland'] },
+    // (canopy 列已上移到 F0 輪 —— 它就是「曠野孤立橡樹」那一列)
     // —— 第 5 輪逐樹種列(GIANT_DEFS 對位;缺額續補)——
-    sp_sequoia: { want: 6, q: ['giant sequoia tree', 'sequoia tree isolated', 'coast redwood tree'] },
-    sp_conifer: { want: 8, q: ['lone spruce tree field', 'solitary fir tree meadow', 'single conifer tree'] },
-    sp_pine:    { want: 8, q: ['lone scots pine tree', 'stone pine tree isolated', 'solitary pine tree field'] },
+    // sp_sequoia:F0 定案**別再抓**(結構性失敗;既有 6 張全數不可用:2 張含遊客、4 張剝空/
+    // 仰角局部)。列留著讓 --plan 把歷史下載與淘汰數印出來;want 0 = 永無缺額,不再花額度。
+    sp_sequoia: { want: 0, q: [] },
     sp_cypress: { want: 5, q: ['italian cypress tree', 'lone cypress tree', 'mediterranean cypress isolated'] },
     sp_euc:     { want: 6, q: ['lone gum tree paddock', 'eucalyptus tree isolated', 'gum tree australia'] },
     sp_tropical:{ want: 6, q: ['kapok tree isolated', 'rainforest emergent tree', 'lone tropical tree field'] },
-    // —— 逐樹種列(VEG_DEFS / 場地地貌對位)——
-    sp_acacia:  { want: 6, q: ['umbrella thorn acacia', 'acacia tree savanna', 'lone acacia tree'] },
-    sp_baobab:  { want: 6, q: ['baobab tree', 'lone baobab tree', 'adansonia tree'] },
+    // —— 逐樹種列(VEG_DEFS / 場地地貌對位;sp_acacia / sp_baobab 已上移到 F0 輪)——
     sp_willow:  { want: 5, q: ['weeping willow tree isolated', 'lone willow tree lake'] },
     sp_maple:   { want: 6, q: ['lone maple tree field', 'solitary maple tree autumn', 'isolated maple tree'] },
     sp_banyan:  { want: 5, q: ['banyan tree isolated', 'large fig tree isolated', 'lone ficus tree'] },
@@ -214,7 +234,12 @@ const ONLY_PART = opt('part');                               // 'rock/facet' 形
 const LIMIT = Number(opt('limit') || 20);
 
 const manifest = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : [];
-const have = (fam, part) => manifest.filter((e) => e.family === fam && e.part === part && e.ok).length;
+// 「已有」計的是**可用**張數,不是下載張數(F0 的診斷:82 張 tree matte 只有 ~16 張可用)——
+// 選片閘 screen_mattes.py 淘汰的條目(entry.screen.v === 'reject')不算,否則帳面永遠「抓夠了」
+// 而語料裡躺著 4/5 的垃圾。淘汰條目仍留在 seen(見下)⇒ 同一張垃圾不會被重新下載。
+const usable = (e) => e.ok && !(e.screen && e.screen.v === 'reject');
+const have = (fam, part) => manifest.filter((e) => e.family === fam && e.part === part && usable(e)).length;
+const screened = (fam, part) => manifest.filter((e) => e.family === fam && e.part === part && e.ok && e.screen && e.screen.v === 'reject').length;
 
 function workList() {
   const out = [];
@@ -313,9 +338,12 @@ async function main() {
     return;
   }
   if (flag('plan') || !work.length) {
-    console.log('工作清單(零件:已有/目標):');
+    console.log('工作清單(零件:可用/目標;「可用」= 下載成功且未被選片閘淘汰):');
     for (const [fam, parts] of Object.entries(PHOTO_CATALOG)) {
-      for (const [part, def] of Object.entries(parts)) console.log(`  ${fam}/${part}: ${have(fam, part)}/${def.want}`);
+      for (const [part, def] of Object.entries(parts)) {
+        const rej = screened(fam, part);
+        console.log(`  ${fam}/${part}: ${have(fam, part)}/${def.want}${rej ? `(選片閘另淘汰 ${rej} 張)` : ''}`);
+      }
     }
     if (!work.length) console.log('\n缺額為零,不用抓。');
     return;
@@ -323,6 +351,8 @@ async function main() {
 
   let fetched = 0;
   let cooled = false;   // 撞上 IP 級限流(2026-08-05 實測 upload.wikimedia.org Retry-After: 600)
+  let searchThrottled = 0;                  // 連續「兩個搜尋 API 都零結果且至少一邊限流」的查詢數
+  const SEARCH_COOL_N = 6;                  // 到這個數才判定搜尋層被封(間歇 401/429 不足以早退)
   // 節流是**逐主機**的:upload.wikimedia.org 撞 429 不代表 rawpixel/flickr 也被封 ——
   // 舊制「一顆 429 整輪收工」讓 Commons-hosted 候選多的零件把整輪額度全數陪葬,
   // 排在後面的零件永遠輪不到。改成:被封主機記進 hostCool,本輪只跳過同主機的候選。
@@ -330,9 +360,15 @@ async function main() {
   const hostOf = (u) => { try { return new URL(u).host; } catch { return u; } };
   for (const { fam, part, def, need } of work) {
     if (cooled || fetched >= LIMIT) break;
-    // seen 只收成功條目:暫時性失敗(429 限流)重跑 MUST 能再試,否則②的「可續跑」對
-    // 整批被限流的零件永久失效;失敗紀錄仍留在帳本當歷史(④),成功時另推一筆新條目。
-    const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part && e.ok).map((e) => e.id));
+    // seen 收成功條目 + **持續性失敗**(非影像位元組/403/404 —— 那是「這張檔案的事實」):
+    // 少了後者,選片閘把可用數清零之後,每一輪都會把同一份 PDF / 同一批 403 重新下載一次、
+    // 再 append 一筆重複 fail 列(2026-08-07 帳上實測 acunit 一張 PDF 已疊 8 筆),而且無效
+    // 請求還燒掉 upload.wikimedia.org 的 429 額度 = 真候選整輪被 hostCool 跳過。
+    // 暫時性失敗(429 限流)本來就不進帳本 ⇒ 重跑天然能再試(②的「可續跑」不受影響);
+    // 其他未知錯誤(5xx/網路斷)不匹配樣式 ⇒ 照舊可重試。
+    const PERSIST_FAIL_RE = /非影像位元組|HTTP 40[34]/;
+    const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part
+      && (e.ok || PERSIST_FAIL_RE.test(e.error || ''))).map((e) => e.id));
     for (const q of def.q) {
       if (cooled || fetched >= LIMIT) break;
       const tryItems = async (items) => {
@@ -371,16 +407,23 @@ async function main() {
         }
       };
       let items = [];
-      try { items = await searchOpenverse(q, need * 3); } catch (e) { console.warn(`Openverse 失敗(${q}):${e.message}`); }
+      let more = [];
+      let q429 = false;   // 這一條查詢的「搜尋層」有沒有撞限流(Openverse 額度耗盡實測回 401 或 429)
+      try { items = await searchOpenverse(q, need * 3); } catch (e) { q429 ||= /HTTP (401|429)/.test(e.message); console.warn(`Openverse 失敗(${q}):${e.message}`); }
       await tryItems(items);
       // 降級不例外(④):Openverse「搜尋零結果」**或「有結果但下載被限流(429)整批失敗」**
       // 同一條查詢都降級到 Commons 再試 —— 舊制只蓋前者,實測 Openverse 匿名額度一燒完,
       // 缺額零件就永遠補不滿,而畫面上只看得到「✗ HTTP 429」一排。
       if (have(fam, part) < def.want && fetched < LIMIT) {
-        let more = [];
-        try { more = await searchCommons(q, need * 3); } catch (e) { console.warn(`Commons 失敗(${q}):${e.message}`); }
+        try { more = await searchCommons(q, need * 3); } catch (e) { q429 ||= /HTTP (401|429)/.test(e.message); console.warn(`Commons 失敗(${q}):${e.message}`); }
         await tryItems(more);
       }
+      // 搜尋層的全輪早退(檔頭註解一直承諾、2026-08-07 之前從未實作):兩個搜尋 API 都
+      // 拿不出半個結果、而且至少一邊回限流,連續 SEARCH_COOL_N 條查詢都如此 = 搜尋層真的
+      // 被封 ⇒ 再掃剩下的幾十列只是對已限流的主機多打幾百發、延長封鎖。單發 429 MUST NOT
+      // 早退(實測 401/429 是間歇的,後面的查詢還撈得到);計數在任何一批結果進來時歸零。
+      if (items.length || more.length) searchThrottled = 0;
+      else if (q429 && ++searchThrottled >= SEARCH_COOL_N) cooled = true;
       if (have(fam, part) >= def.want) break;
     }
   }
@@ -388,4 +431,8 @@ async function main() {
   console.log(`\n本輪下載 ${fetched} 張;重跑同指令可續補缺額。`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// 進入點守衛:只有被當指令跑才啟動。import 本檔(例如只想拿 PHOTO_CATALOG 驗型錄)
+// MUST NOT 觸發抓取 —— 2026-08-07 實測一次 import 當場開跑一整輪(runbook §5p ④)。
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}

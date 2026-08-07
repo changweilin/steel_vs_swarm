@@ -38,6 +38,7 @@
 | **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
 | **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
 | **薄殼大比例減面閘門(T2 產出 50k→~500;§5n 待續②)** | **MEASURED 2026-08-07 凌晨**(§5o)| **直接減面關、先實體化再減面開**。A trimesh quadric **打不到預算又不報錯**(2000/900/500 三個目標回同一個 2,865~6,076 面 = 預算 5.7~12.2 倍);B pymeshlab 打得到但產出是**三角形湯**(499 面 / 468~479 元件 / v:f 2.8 = 每元件 1~1.5 面);C 先 uniform volumetric resample 再 quadric = 唯一兩者成立(500 面 / 元件 1~9 / v:f 0.48~0.58 / 開放邊 0~97,dev_mean 恆 ≈ offset 本身)。**方法論**:表面偏差量不出撕裂(B→500 的 dev_p95 只有 0.0034~0.0057 卻是彩紙)⇒ 判準是 **v:f 與 面/元件**。原生網格更乾淨那條假設**被否掉**:`--decimate 500` 重跑得 473,280 面仍有 205,236 開放邊 / 9,898 元件(0.434/面,50k 版 0.653/面)⇒ 兇手不是 fork 的 86:1 減面,O-Voxel 輸出本身就不封閉;且 50k 與 473k 黏土渲染肉眼分不出來。500 面留不住建築識別特徵(Art Deco 退縮量體被抹平)⇒ 建築節點的預算與消費端縫要一起定。零節點出貨 |
+| **佇列 F0 — 神木語料重採(選片閘 + 可用帳 + 孤立單株重採 + T2 複驗)** | **PARTIAL 2026-08-07**(§5p;閘與帳 DONE,**冠簇路線已定案(§5q:葉冠不走 img→3D,只收雕塑性主體)**,剩語料續補)| `screen_mattes.py` 三統計桶 + 人眼回寫,known-good 16 張零誤殺、反向驗證紅;`fetch_photos --plan` 改計**可用**張數、sequoia want 歸零;兩輪重採 +6 可用(樹族 16→22,canopy 6→9);T2 黏土 5/5 不碎不生遊客(枯幹 ◎ 體積型、茂密冠層 △ 浮雕);授權 264/264;photo DB 搬家至 F0 分支 worktree |
 | **TRELLIS.2-spz fork gate(§5l 頭兩階的翻案)** | **MEASURED — OPEN 2026-08-06 深夜**(§5n)| 使用者指示「先在 3060 上跑閘門量測」。IgorAherne StableProjectorz fork = Windows 原生 + 全預編 cp311 wheel + 逐階段 CPU offload;§5l/§5m 同組 7 張 **7/7 全過 @1024_cascade,59~226s/張、torch 峰值 2.7~3.4GB、裝置 free 恆 ≥5.4GB** —— §5l 殺掉 TRELLIS 1 的網格抽取在 O-Voxel 路徑上不是事。**真門檻是 RAM**(low_vram 模型駐留 CPU ~19GB,avail <20GB 載入無聲死);fill 前篩對 O-Voxel 雙層薄殼**結構性不適用**(七張全 ✗ 而人眼兩張 ◎);建築雙 ◎ 是甜蜜點(幾何+PBR 一次出);「同一張 matte ≠ 同一個輸入」(T2 裁 alpha>204 bbox + 預乘,軟 alpha matte 整段被裁)。**零節點出貨**(METHODS 不動);階梯更新 = `T2-spz(建築/要貼圖)→ 2GP(實心岩體)→ SF3D(快篩)→ procedural`;venv 住 study clone `Documents\study\TRELLIS.2-stableprojectorz\.venv` |
 
 ## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
@@ -46,7 +47,7 @@
 |---|---|---|
 | **CC sandbox** (this repo's remote sessions) | All offline audits; e2e (`node server/server.js` then `npm test`); `npm run bal`; editing + push; GitHub MCP (PR/Actions API); HF MCP (search + the curated `dynamic_space` roster) | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` / `*.blob.core.windows.net` — all CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio calls**. No GPU (`nvidia-smi` absent). Raw `api.github.com` REST is gated (MCP tools work; `curl` with `$GITHUB_TOKEN` returns "GitHub access is not enabled") |
 | **GitHub Actions** (ubuntu runner) | Open egress ⇒ photo fetching (proven, run 1); licence re-audit; artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference here would need an `HF_TOKEN` secret **which only the repo owner can add** — do not attempt without it |
-| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`**; **TRELLIS.2 via the stableprojectorz fork proven on native Windows 2026-08-06 深夜 (§5n): 7/7 @1024³, torch peak ≤3.4GB, 59–226s/image, needs ≥20GB free RAM to load, venv `Documents\study\TRELLIS.2-stableprojectorz\.venv`** — the img→3D ladder on this card is now `T2-spz(buildings/textured)→ 2GP(solid rock)→ SF3D(fast prescreen)→ procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<data home>/tools/ai3d/.venv` (never in `package.json`, A2; data home = worktree `zen-albattani-b33990`, §5d). **Official TRELLIS builds are out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; official TRELLIS.2-4B needs 24 GB and its floor resolution is 512³. **The stableprojectorz fork reverses this for TRELLIS.2 (§5n, measured)** — those rungs are no longer empty, but only via that fork's build. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
+| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`**; **TRELLIS.2 via the stableprojectorz fork proven on native Windows 2026-08-06 深夜 (§5n): 7/7 @1024³, torch peak ≤3.4GB, 59–226s/image, needs ≥20GB free RAM to load, venv `Documents\study\TRELLIS.2-stableprojectorz\.venv`** — the img→3D ladder on this card is now `T2-spz(buildings/textured)→ 2GP(solid rock)→ SF3D(fast prescreen)→ procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<venv home>/tools/ai3d/.venv` (never in `package.json`, A2; venv home = worktree `zen-albattani-b33990`, §5d; **photo-DB home moved 2026-08-07 (§5p)** to the F0 branch worktree `self-buff-support-scaling-866a87` — the 305-entry superset; the copy that had grown in `reverent-pascal-fcd63e` is now stale). **Official TRELLIS builds are out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; official TRELLIS.2-4B needs 24 GB and its floor resolution is 512³. **The stableprojectorz fork reverses this for TRELLIS.2 (§5n, measured)** — those rungs are no longer empty, but only via that fork's build. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
 | **HF Spaces** | `stabilityai/stable-fast-3d` (official gradio Space) as no-GPU fallback — drive it from a machine that can reach `huggingface.co`, i.e. the 3060 box or a browser; **not** from the sandbox | The HF MCP `dynamic_space` roster has **no mesh-generating space** (checked: only image/video/audio tools; `stabilityai/stable-fast-3d` is not MCP-enabled → HTTP 404 via MCP) |
 
 **Consequence an agent must internalise**: photos and GLBs cannot pass through the sandbox.
@@ -135,6 +136,11 @@ Batches of ≤5 assets, full gate set per batch (plan §6). Order: megalith face
 
 > 使用者定案:「**神木要重新找,有神木全身照片的圖,無其他干擾的照片**」。
 > 下一支分支**先做這一項**,F(建築縫)排其後。
+> **進度 2026-08-07(§5p + §5q)**:①選片閘 `screen_mattes.py` 上線(known-good 16 零誤殺 +
+> 反向驗證)②`--plan` 改計可用張數 ③重採 +6 可用(16→22)④T2 黏土複驗 5/5 **不再碎裂、
+> 不再生出遊客**(枯幹 ◎ 體積型)⑤**冠簇路線已定案(§5q)**:葉冠逐 seed 三注全不可用 +
+> 斜側語料採集端死 ⇒ 冠簇維持程序 ico + 貼圖,img→3D 只收雕塑性主體(枯幹/板根/扭曲樹幹)。
+> 剩:缺額續補(小時級節流,冷卻重跑同指令)。
 
 **這是語料問題不是模型問題,而且已經有三組獨立證據**:SF3D(§5c/§5k)、Hunyuan3D-2GP
 (§5m③)、TRELLIS.2-spz(§5n③/§5o 逐族對照)在**同一批 sequoia** 上全數碎裂,而同樣這三個
@@ -985,6 +991,122 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   ②C 的兩個旋鈕(cell 256 / offset 0.6%)沒有掃描,offset 直接決定「胖多少」而包絡契約會抓它;
   ③建築預算該落在哪一級沒量(2000 面看起來夠,但零件庫現行是 400~900);
   ④§5n 待續 ③④⑤⑥ 原封不動(512/1536 解析度、plan §1 補行、消費端縫、texture 掉色)。
+
+## 5p. Trial log (2026-08-07, 3060-machine session — 佇列 F0 執行:選片閘上線、語料帳改「可用張數」、孤立單株重採、T2 黏土複驗 5/5 不再碎裂)
+
+> 使用者指示「接著 PR #160 的進度,在 main 重開一個分支繼續」⇒ 本輪 = **佇列 F0 逐條照做**
+> (F0 是使用者 2026-08-07 定案的最優先;佇列 F 建築縫排下一輪)。
+
+- **選片閘 `tools/ai3d/screen_mattes.py` 上線(F0 第一步「補閘,不是再抓一輪」)**:三統計桶
+  (門檻與 82 張校準記錄全住檔頭)—— 剝空/主體太小 27、印刷品 10、葉片標本 3,對上人眼分桶
+  ~25/~13/~11;**已知可用 16 張零誤殺**(硬約束;可用者最低 cov 0.100 vs 門檻 0.05 = 2× 邊際);
+  反向驗證 `BLANK_COV 0.05→0.30` ⇒ 倖存 42→7 紅(原則 9)。統計倖存 42 逐格人眼再淘汰 26
+  (烏龜/魚/壓葉標本/浮世繪明信片/含遊客紅杉…)⇒ 82 張既有 matte 可用 = **16**,與 F0 的
+  「~16~18」逐張對上。人眼判決(`--human pass|reject`)恆勝統計、統計重跑不覆寫;淘汰者另出
+  `out/sheets/tree_screen_reject.png`(誤殺看得見才救得回,原則 6)。
+- **帳的語意換掉(F0:「可用張數不是下載張數」)**:`fetch_photos.mjs` 的 `have()`/`--plan`
+  只計 screen 未淘汰的條目;淘汰條目仍佔 `seen` ⇒ 同一張垃圾不會被重新下載。`sp_sequoia`
+  **want 歸零**(結構性失敗,F0 定案別再抓);F0 列排樹族最前(`gt_dragontree` 新開 +
+  canopy/sp_baobab/sp_acacia/sp_conifer/sp_pine 上移),查詢往 lone / isolated /
+  full height silhouette 句式。
+- **重採兩輪**(Openverse 間歇 401/429、Commons 429 —— §5h 的小時級節流原樣):21 筆新入帳
+  (dragontree 3 / canopy 4(其中 4 張是磁碟有檔、帳上從缺的舊檔補登)/ baobab 7 /
+  boxwood 3 / cedar 1 / juniper 1 / cypress 2)→ matte → 過閘:統計淘汰 10、人眼淘汰 5
+  (向量剪貼圖/柑橘圖鑑版畫(dragontree 查詢誤中)/鄰樹殘塊/老照片含地形塊/樹+大岩塊)
+  ⇒ 新增可用 6,樹族可用 **16 → 22**(canopy 6→9 = 句式改善的主證;dragontree 三張只活
+  一張石版畫 —— 照片兩張都不是活樹)。另有一小輪**誤啟動**(見下環境筆記 ④)+4 張:
+  長頸鹿/犀牛(acacia 查詢)/葫蘆工藝品/岩塊(baobab 查詢)—— 全數「不是樹」人眼淘汰;
+  這正是 F0 診斷的再現:**節流主機的淺頁好貨抓完之後,越深的頁面垃圾率越高**,
+  續補要等冷卻拿淺頁,不是加深翻頁。
+- **T2 黏土複驗(驗收 ③;5 張:大橡樹#16、密冠橡樹(新)、漂白刺果松枯幹(新)、南洋杉#27、
+  猴麵包樹白描#58;matte 先二值化 >16→255(study clone `binarize_feed.py`),1024_cascade
+  seed 1234)**:**5/5 出網格、58~94s、torch 峰值 ≤2.8GB、raw faces 1.3M~5.5M —— §5n③/§5o
+  的「碎裂 + 把遊客生出來」兩個病灶隨語料修正一起消失**(clay `out_clay_f0/`、對照表
+  `out_sheets/t2_tree_f0.png`)。人眼判讀:**枯幹 ◎**(真正體積型,側視有厚度 —— 形狀線索強、
+  無葉冠的主體是 T2 樹族的甜蜜點,對位 deadtree/snag 節點);其餘四張 △ = **可辨識的樹,但
+  單張正面照的茂密冠層出的是「浮雕」**(側視薄板;§5n 薄殼傾向在葉冠主體上的表現形)。
+  ⇒ F0 的診斷成立:碎裂的成因是輸入語料;「冠簇節點要不要走 T2」是**下一個問題**
+  (浮雕轉不了視角),不是這一輪的失敗。
+- **執行環境三筆**:①photo DB(photos 533MB + out 437MB + `photo_manifest.json` 305 筆)自
+  reverent-pascal-fcd63e 搬到本分支 worktree(那份已是最新超集;zen-albattani-b33990 從此
+  只是 rembg venv 的家);②Windows 主控台 cp950:`screen_mattes.py` 內建 stdout 重設 UTF-8,
+  `matte_photos.py` 要帶 `PYTHONIOENCODING=utf-8` 跑(第一次沒帶:第一張存檔成功、print 就炸);
+  ③T2 首跑 exit 139 段錯誤 —— **與 rembg 去背同時跑,模型載入撞 RAM**(§5n 的 <20GB 警告以
+  另一種死法現形);單獨重跑(avail 19.2GB)全過。**T2 載入與 rembg MUST NOT 同時跑**;
+  ④`fetch_photos.mjs` 的 `main()` 是**頂層呼叫** —— 任何 `import` 它的動作(哪怕只想拿
+  `PHOTO_CATALOG` 驗個鍵)都會**當場開跑抓取**。要檢查型錄用 `grep`/文字工具,別 import。
+- **驗收對帳**:①授權稽核 **264/264 ok 條目 0 違規**;②閘冪等(重跑零改寫、人眼判決保留);
+  ③`--plan` F0 列現值:dragontree 1/5、canopy 9/12、baobab 3/6、acacia 1/6、conifer 1/8、
+  pine 0/8 —— **缺額是真缺額**,續補用同指令(小時級節流,冷卻後重跑)。
+- **未跑 / 待續**:①孤立松柏(conifer/pine)這一輪整批被 401/429 吃掉,冷卻後續抓;
+  ②冠簇的浮雕問題:要嘛換斜側面/多視角照片語料,要嘛冠簇維持程序 ico + 照片貼圖,由樹族
+  入庫輪定;③枯幹那顆 ◎ 要入庫得走佇列 F 定案的實體化 + 減面路徑(§5o C 路徑),`METHODS`
+  的 `trellis2_spz` 鍵仍等**首個入庫節點**才加(原則 6,§5n 同款);④`screen_mattes.py` 的
+  三桶門檻是 82 張校準的凍結值 —— 語料結構大改(例如大量白背景商品照湧入)要重校,別默默沿用。
+
+## 5q. Trial log (2026-08-07 午後, 3060-machine session — 冠簇路線定案:葉冠不走 img→3D)
+
+> §5p 待續② 的收斂輪:兩個假說各補一組量測,同日關閉。
+
+- **逐 seed 對照(同一張密冠橡樹 matte,seed 1234/42/7;`out_sheets/t2_tree_seed_probe.png`)**:
+  1234 = 浮雕(側視薄板帶少量起伏)、42 = **一片平板**(最壞)、7 = 有體積但整團碎塊雲
+  (無主幹、葉簇彼此不相連)⇒ **葉冠在 T2 上是逐 seed 抽籤,而且沒有一注是可用冠簇** ——
+  單張正面照對「毛茸茸的體積」給不出深度約束,落點在平板與碎雲之間漂。與岩石的 per-seed
+  方差(§5n③)不同族:岩石是「浮雕 vs 閉合」兩注都有救、重抽有意義;葉冠是三種都不能用,
+  重抽沒有出口。
+- **斜側語料探針(`gt_oblique` 列,5 張)**:空拍/俯視查詢撈回的主體天生太小(matte 畫布
+  253~711px,4/5 進剝空桶),唯一統計倖存是一座**空拍小島**(人眼淘汰)⇒ 斜側路線在
+  **採集端**就死了 —— CC0 語料裡「離機夠近的單株俯拍」實際上不存在,與紅杉「大到拍不下」
+  同族的結構性缺片。探針列已 want 歸零收斂(列上有結論註解)。
+- **定案(樹族入庫輪的前提)**:①**冠簇維持程序 ico + 照片貼圖**,MUST NOT 再把葉冠照片
+  餵 img→3D(三個模型 × 換語料 × 換 seed 都量過了);②**img→3D 對樹族只收雕塑性主體** ——
+  枯幹/板根/扭曲樹幹(§5p 的漂白枯幹 ◎ 是範本),對位 deadtree/snag/buttress 節點;
+  ③F0 語料庫的價值不因此縮水:可用 22 張裡的冠層照是**貼圖與輪廓參考**(程序冠簇的
+  albedo 來源),不是幾何來源。
+- 帳面:gt_oblique 5 張全淘汰(4 統計 + 1 人眼),樹族可用維持 22;兩個已收斂的
+  want 0 列(sp_sequoia / gt_oblique)不再產生缺額。
+
+## 5r. Trial log (2026-08-07 午後, 3060-machine session — 浮雕救援閘門:幾何閉合**關**,岩石浮雕注的唯一路徑 = per-seed 重抽)
+
+> 使用者問「葉冠或岩石變浮雕時,能不能把水平角度當對稱去跑?多補幾個視角、缺口接合處
+> 做近似?」⇒ 方法盤點(工具逐一驗在 venv:pymeshlab 有 **CGAL `generate_alpha_wrap`**、
+> screened Poisson、凸包;fork API 收多圖但只用第一張(`generation.py:411/428`)——
+> 多圖條件混合要小改 `run()`,列為未跑)+ 閘門實測 `symfill_gate.py`(study clone;
+> 測試品 = §5n 魔鬼塔 **seed 1234 浮雕殼**,對照組 = **seed 42 天然閉合**那注,全變體
+> 閉合後走 §5o 的 C 路徑到 500 面;產出 `out_symfill{,2}/` + `out_sheets/t2_symfill.png`)。
+> 本段跑了**兩輪**:首輪結論被對抗覆核推翻一半,第二輪(誠實版)才定案 —— 兩輪都留著,
+> 因為錯的那半正是機制所在。
+
+- **首輪(鏡射平面 = 開放邊界中位數)**:指標把 V1a 鏡射+wrap2% 判為全綠(水密單元件、
+  kf_p95 2.3%,勝凸包基線 6.9% 三倍),黏土卻在頂部長出**隧道與簷帽** —— 幻影材料撕裂尺
+  與 kf 尺都量不到。**對抗覆核揪出成因:前提整個是錯的** —— T2 殼撕裂遍佈(實測 75% 頂點
+  是邊界、2534 元件),「開放邊界 = 後緣」不成立,邊界深度分佈 ≈ 全殼分佈 ⇒ 中位數 =
+  體中位平面 ⇒ **鏡射把殼從中剖半**(49% 頂點被鏡穿體、副本突出前緣達原深度 47%)。
+  首輪測的是稻草人。
+- **第二輪(誠實版:鏡射平面 = 深度背側極值 P99;rot4 軸改包圍盒足跡中心)**:
+  V1a 閉合 kf 降到 0.9% 且水密,但深度膨脹到 1.379(CTRL 真塔深 0.944,**+46%**)——
+  **殼本身就包過塔身超過半圈**,貼背極值鏡射必然長出**雙瓣體**(黏土側視 = 兩座塔以
+  細橋相連),C500 還微破(10 開放邊/2 元件,平面接觸帶太薄)。V2 修軸後 14 → 3 元件
+  (覆核者以擬合真軸反事實實測 = 2)⇒ 首輪的 14 元件主要是**質心軸被前板拉偏**的污染,
+  但修好也仍碎。⇒ **兩種平面選法用互補的方式證明同一件事:T2 浮雕殼不是「有乾淨後緣的
+  半個物體」,鏡射補全沒有合法平面可選** —— 中位面剖體、極值面雙瓣,中間任何位置是
+  兩者的線性混合。
+- **其餘變體與對照**:V1b wrap5% 減面後破(64~70 開放邊);V3 Poisson 的**本體 kf 0.42%
+  全場最佳**,崩的是 C 路徑那一段(42 萬面 Poisson 包膜減面到 932/514 面全開放邊 ——
+  目標都沒打到;歸因寫「Poisson 崩」是錯置,覆核已修正);CTRL 再印證 §5o ——「天然閉合」
+  也是 2.9 萬開放邊/2443 元件的殼,C 路徑一支就收拾成水密(**不需要 wrap**)。
+- **定案(岩石救援紀律)**:①浮雕注的**唯一路徑 = per-seed 重抽**(60~110s GPU;跨 seed
+  形狀差 ~9% 但形狀「對」,黏土全場最像);②**幾何閉合救援閘門關**(鏡射/旋轉/Poisson
+  對 T2 浮雕注全數不合格,兩輪實測);③工具箱正面收穫:wrap2%+C 能把任意破殼變水密
+  單元件 —— 對「形對殼碎」的失敗型態留用,但 CTRL 顯示那種型態 C 路徑自己就夠;
+  ④**kf 尺必要不充分**:撕裂尺 + kf + 黏土人眼三者缺一不可(「人眼是主判準」第三次實證:
+  fill 尺 §5n、選片統計 §5p、kf 尺本輪);⑤報表紀律:CTRL 的 kf 是**跨 seed 形狀距離**
+  不是品質(裸讀 JSON 會把凸包排在重抽前面 —— 報表列已加 `cross_seed_kf` 標記);
+  ⑥alpha 的百分比基底是**各 soup 自己的對角線**(跨變體差 13~16%),MUST NOT 把
+  「wrap2%」當可移植常數。
+- **未跑 / 待續**:①多圖條件混合(同圖/鏡像當多視角)—— `get_cond` 本就收 list、差
+  `run()` 一段聚合;在重抽紀律面前優先度低;②葉冠不因此翻案(§5q):這些方法能閉合
+  葉冠,但閉合從來不是葉冠的缺口。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
