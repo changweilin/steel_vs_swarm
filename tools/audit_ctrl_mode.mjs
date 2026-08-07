@@ -388,7 +388,7 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
     '觀戰(鍵鼠版)操作提示 MUST 提到滾輪縮放與 F 切換視角');
 
   // ── 觸控:虛擬手把的視角切換(2026-08-02)────────────────────────
-  // A22 同功能只准一顆鈕 ⇒ 觀戰**借用**既有的絕招/換機兩顆,MUST NOT 為觀戰另長新鈕。
+  // A22 同功能只准一顆鈕 ⇒ 觀戰**借用**既有的招式/換機兩顆,MUST NOT 為觀戰另長新鈕。
   const cmd = code(body(gameSrc, '_cmd'));
   ok(/if \(!this\.side\) \{[\s\S]*?_specCycleView\(\)[\s\S]*?_specFollow\(/.test(cmd),
     '觸控觀戰 MUST 走 `_specCycleView` / `_specFollow` 同兩個縫(觸控層 MUST NOT 自己判模式)');
@@ -398,10 +398,10 @@ sec('Ⅶ 觀戰視角:滾輪縮放 + 四種視角循環');
     '觀戰分支 MUST 照舊 return —— 其餘戰鬥指令對 side=null 仍不受理');
   ok(/\[data-act="swap"\]'\)\.forEach\(\(n\) => \{ n\.hidden = !spec && kind !== 'drone'; \}\)/.test(code(mobileSrc)),
     '⇄ 鈕對觀戰 MUST NOT 收起(觀戰拿它換人)');
-  ok(/\[data-act="special"\] \.gb-f'\)/.test(mobileSrc) && /'視角' : '絕招'/.test(mobileSrc),
+  ok(/\[data-act="special"\] \.gb-f'\)/.test(mobileSrc) && /'視角' : '招式'/.test(mobileSrc),
     '借用的鈕面字 MUST 跟著換(按下去與鈕面不符 = 誤按來源)');
-  ok(/data-act="special"[^\n]*<span class="gb-f">絕招<\/span><span class="gb-cd">/.test(htmlSrc),
-    '絕招鈕的字 MUST 住 `.gb-f` span(setKind 換字時 MUST NOT 洗掉 padMirror 要用的 .gb-cd)');
+  ok(/data-act="special"[^\n]*<span class="gb-f">招式<\/span><span class="gb-cd">/.test(htmlSrc),
+    '招式鈕的字 MUST 住 `.gb-f` span(setKind 換字時 MUST NOT 洗掉 padMirror 要用的 .gb-cd)');
   ok(/十字鍵左 視角/.test(padSpec) && /⇄換人/.test(padSpec),
     '觀戰(搖桿版)操作提示 MUST 提到兩顆借用鈕');
 }

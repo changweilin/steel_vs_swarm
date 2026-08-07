@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, ultDelivered, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, HYPER, SQUAD, RECOIL, recoilMoveF,
+  CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
@@ -2854,8 +2854,8 @@ export class BattleClient {
           if (e.code === 'KeyQ') this._castAbility('skill');   // 小招
           if (e.code === 'KeyE') this._castAbility('ult');     // 大招
           if (e.code === 'KeyR') this._startReload();
-          // 機種專屬能力(無人機護衛自殺機 / 機甲重砲 / 變形者餌機)以「長按右鍵」觸發,
-          // 一般模式與狙擊模式皆可(見 _tickHoldAbility,2026-07-27);F 鍵停用(2026-07-18)
+          // 長按右鍵 = 招式手勢(一般模式 → 小招 / 狙擊模式 → 大招,見 _fireHoldAbility);
+          // 與這裡的 Q / E 同一個 _castAbility 縫。F 鍵停用(2026-07-18)
           // 平民互動(靠近平民時 HUD 顯示提示):G 要求跟隨 / H 驅趕
           if (e.code === 'KeyG') this._civAct('follow');
           if (e.code === 'KeyH') this._civAct('away');
@@ -2971,8 +2971,8 @@ export class BattleClient {
     this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dPitch));
   }
 
-  /** 右鍵/瞄準鈕「按下」:達門檻 → 機種專屬招(見 _tickHoldAbility,一般/狙擊模式皆可);短按放開 → 切換模式(見 _rmbUp)。
-   *  切換與出招以「按住時長」區分,互不衝突。 */
+  /** 右鍵/瞄準鈕「按下」:達門檻 → 施放招式(一般模式 = 小招 / 狙擊模式 = 大招,見 _fireHoldAbility);
+   *  短按放開 → 切換模式(見 _rmbUp)。切換與出招以「按住時長」區分,互不衝突。 */
   _rmbDown() {
     this._rmbDownAt = performance.now() / 1000;
     this._rmbAbilityFired = false;
@@ -3031,7 +3031,8 @@ export class BattleClient {
       case 'skill': if (down) this._castAbility('skill'); break;
       case 'ult': if (down) this._castAbility('ult'); break;
       case 'reload': if (down) this._startReload(); break;
-      // ZR 絕招鈕:與「長按右鍵 / 長按 R」同一個派發縫(_fireHoldAbility),MUST NOT 在此另寫機種分派
+      // 招式鈕(十字鍵左):與「長按右鍵 / 長按 R」同一個派發縫(_fireHoldAbility)——
+      // 一般模式放小招、狙擊模式放大招,MUST NOT 在此另寫一次模式判斷
       case 'special': if (down) this._fireHoldAbility(); break;
       case 'civFollow': if (down) this._civAct('follow'); break;
       case 'civAway': if (down) this._civAct('away'); break;
@@ -5281,17 +5282,7 @@ export class BattleClient {
     document.body.classList.toggle('vlock', on);
   }
 
-  // ---------------- 餌機(機甲 F:分離發射)----------------
-  /** 發射請求;航向由伺服器取當下機首朝向,玩家無法操舵 */
-  _launchDecoy() {
-    if (this.isDrone || !this.side) return;
-    if (!this.decoyDocked) {
-      this.hud.feed?.(`🔧 集束炸彈重組中(${(this.decoyCd || 0).toFixed(0)}s)`);
-      return;
-    }
-    this.net.send({ t: 'decoy' });
-  }
-
+  // ---------------- 餌機掛點(純外觀;2026-08-06 起只服務大招載具遞送)----------------
   /** 掛點餌機:組合(慢慢裝上)/ 分離(瞬間彈出)的縮放動畫 */
   _updateDecoyPod(ent, dt) {
     const pod = ent.mesh.userData.decoyPod;
@@ -6998,31 +6989,7 @@ export class BattleClient {
     this.net.send({ t: 'aim', on });
   }
 
-  /**
-   * 無人機自爆:F 鍵必須有準星鎖定目標(伺服器複驗)才會引爆 + 僚機追擊;
-   * 無鎖定 = 不動作,只提示。高速撞擊(crash)是物理引爆,不需鎖定。
-   */
-  /**
-   * 無人機自殺攻擊機(2026-07-18;狙擊模式長按右鍵):KAMI.N 架**於觸發當下生成**並衝出撲擊
-   * (3 倍速,各造成機種絕招預算的 1/N —— N 架打完 = 一份完整預算,見 data.js SPECIAL)。
-   * 2026-08-06 起觸發前身邊沒有任何常駐外觀(使用者定案「拿掉常駐模組,攻擊時再出現」)。
-   * CD 固定 SQUAD.KAMI.CD_S(伺服器把關);有準星鎖定就直接指定目標,否則自動索敵。
-   */
-  _launchKamikaze() {
-    if (!this.isDrone || this.dead) return;
-    if ((this.kamiCd || 0) > 0.05) {
-      this.hud.feed?.(`🛠️ 飽和攻擊整備中(${(this.kamiCd || 0).toFixed(0)}s)`);
-      return;
-    }
-    this.trauma = Math.min(1, this.trauma + SHAKE.KAMI);   // 護衛機彈射的推背感
-    this.kamiCd = SQUAD.KAMI.CD_S;   // 樂觀本地冷卻(下一份快照的 kcd 會校正)
-    this.net.send({ t: 'kami' });
-    this.hud.feed?.(`💥 飽和攻擊:${SQUAD.KAMI.N} 架護衛機衝出!`);
-  }
-
-  /** 長按右鍵 / 觸控 R 達 GAME.ABILITY_HOLD_S → 觸發機種專屬招(自殺機 / 重砲 / 餌機)。
-   *  **一般模式與狙擊模式皆可觸發**(2026-07-27):舊版加了 `this.aiming` 這道門,等於得先短按切到
-   *  狙擊模式才長得出招 —— 貼身遭遇時那一次切換就是來不及的原因。現在兩種模式共用這一條判定。
+  /** 長按右鍵 / 觸控 R 達 GAME.ABILITY_HOLD_S → 施放招式(見 _fireHoldAbility 的模式分流)。
    *  短按右鍵仍 = 切換模式(見 _rmbUp);達門檻才出招,一次按住只觸發一次,
    *  觸發後放開不再切換 → 切換與出招互不衝突。左鍵射擊獨立(狙擊模式重武器照常連射)。 */
   _tickHoldAbility(now) {
@@ -7032,40 +6999,19 @@ export class BattleClient {
   }
 
   /**
-   * 機種專屬招的**唯一派發縫**:長按右鍵 / 觸控 R(_tickHoldAbility)與 ZR 絕招鈕(_cmd('special'))
-   * 都走這裡。MUST NOT 在任一輸入端各自比對 isDrone/isMorph —— 那就是第二份機種分派表。
+   * 招式手勢的**唯一派發縫**(2026-08-06 使用者定案「大招可透過狙擊模式長按右鍵、小招可透過
+   * 一般模式長按右鍵、或鍵盤按鍵施展」):長按右鍵 / 觸控長按 R(_tickHoldAbility)與觸控招式鈕
+   * (_cmd('special'))都走這裡,由**當下模式**分流 —— 一般 = 小招、狙擊 = 大招。
+   *
+   * 分流本身只有 `data.js abilHoldSlot` 一份,MUST NOT 在任一輸入端另寫 `aiming ? …`。
+   * 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)自本日起**整組退場**:三種載具只剩「大招遞送」
+   * 這一個身分(ULT_CARRIER),而失去它的 9 台純自身型大招改由 `SELF_ULT` 折算補償。
+   * ⇒ 這裡不再有任何 isDrone/isMorph 分派表(A22 的機種分派縫隨機種絕招一併退場)。
    */
   _fireHoldAbility() {
     if (!this.side || this.dead || this.shopOpen) return;
     this._rmbAbilityFired = true;   // 同一次按住只觸發一次;放開時也據此不再切換模式
-    // 2026-08-06 使用者定案「合併為一招」:大招已轉載具遞送的角色,長按 = 施放大招
-    // (與 E 鍵同走 _castAbility('ult') → 伺服器 heroCast → _launchUltCarrier 單一縫);
-    // 純傷害機種絕招對這些角色退場(伺服器端另有 ultDelivered 守衛)。
-    if (ultDelivered(this.ch)) { this._castAbility('ult'); return; }
-    if (this.isDrone) this._launchKamikaze();
-    else if (this.isMorph) this._launchDecoy();
-    else this._launchHyper();
-  }
-
-  /** 極音速飛彈(機甲長按右鍵;2026-08-01 取代舊巨砲):送請求 + 樂觀本地 CD。
-   *  彈體是**伺服器實體**(kind 'hyper'),位置/傷害/被擊落全在伺服器 —— 客戶端不預測彈道,
-   *  只負責發射手感(震動 + 播報)與把它當一般 ent 渲染。MUST NOT 在此另寫任何本地爆風/傷害。
-   *  射後不理 ⇒ 一般/狙擊模式皆可發射,也不吃彈夾(它與重武器完全脫鉤)。 */
-  _launchHyper() {
-    if (this.isDrone || this.isMorph || this.dead || !this.side) return;
-    const now = performance.now() / 1000;
-    // CD 閘門取「伺服器 hcd」與「本地時戳」兩者較大者 —— 樂觀 hyperCd 可能被在途舊快照(server 尚未處理
-    // 本次請求)的 hcd=0 洗掉,單靠它會讓 30s CD 內誤判就緒;本地 _hyperCdUntil 時戳補住這個空窗。
-    const cdLeft = Math.max(this.hyperCd || 0, (this._hyperCdUntil || 0) - now);
-    if (cdLeft > 0.05) {
-      this.hud.feed?.(`🎯 極音速飛彈整備中(${cdLeft.toFixed(0)}s)`);
-      return;
-    }
-    if (this.hyperFly) { this.hud.feed?.('🚀 已有一枚飛彈在空中'); return; }
-    this.hyperCd = HYPER.CD_S;                  // 樂觀本地 CD(HUD;下一份快照的 hcd 校正)
-    this._hyperCdUntil = now + HYPER.CD_S;      // 本地 CD 時戳(不被在途舊快照 hcd 洗掉)
-    this.trauma = Math.min(1, this.trauma + SHAKE.HYPER);   // 垂直發射的後燄推力
-    this.net.send({ t: 'hyper' });
+    this._castAbility(abilHoldSlot(this.aiming));
   }
 
   /** HUD 資料:輕/重武器 / 招式 / 資源(彈藥為本地 HUD,與伺服器小幅漂移是 by design) */
@@ -7089,27 +7035,19 @@ export class BattleClient {
     };
     return {
       money: this.money, atBase: this._atBase(),
+      // `aiming` 同時是招式鈕的鏡射依據(2026-08-06:長按 = 一般 → 小招 / 狙擊 → 大招),
+      // main.js 依它挑要顯示哪一格招式的 CD。**這一欄對 32 台一視同仁** —— 大招有沒有載具化
+      // 只改大招自己的結算方式,不改長按的語意 ⇒ 這裡不再需要 ultCarrier 旗標。
       code: c.code, machine: c.machine, aiming: this.aiming,
-      // 大招載具遞送(2026-08-06):長按 = 大招 ⇒ 觸控絕招鈕面鏡射 ult 的 CD(main.js 同吃這一欄)
-      ultCarrier: ultDelivered(this.ch),
       light: slotHud('light'), heavy: slotHud('heavy'),
       skill: abHud('skill', 0), ult: abHud('ult', 1),
       sp: this.sp, msp: this.maxSp, mp: this.mp, mm: this.maxMp,
       // 爬升動力(飛行機體限定;非飛行狀態 = null ⇒ HUD 整條收起)。上限正比於電力,見 data.FLIGHT
       lift: this._flying() ? { v: Math.max(0, this.lift ?? this._liftMax()), max: this._liftMax() } : null,
       kn: this.kn, emp: this.empLeft, stealth: this.stealthLeft,
-      // 機種專屬能力(長按右鍵):無人機飽和攻擊 / 變形者集束炸彈 / 機甲極音速飛彈(冷卻倒數,0 = 就緒)。
-      // 大招載具化角色(ultDelivered)整組收起 —— 長按已是大招(CD 顯示走 ult 那一格),
-      // 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
-      kami: this.isDrone && !ultDelivered(this.ch) ? { cd: this.kamiCd || 0, n: SQUAD.KAMI.N } : null,
-      decoy: this.isMorph && !ultDelivered(this.ch) ? { ready: !!this.decoyDocked, cd: this.decoyCd || 0 } : null,
-      // 極音速飛彈 CD 取「伺服器 hcd」與「本地時戳剩餘」較大者 —— 樂觀值被在途舊快照洗回 0 時,
-      // HUD 不會瞬閃「就緒」;fly = 空中已有一枚(同時只能有一枚)
-      hyper: (!this.isDrone && !this.isMorph && !ultDelivered(this.ch))
-        ? {
-          cd: Math.max(this.hyperCd || 0, (this._hyperCdUntil || 0) - performance.now() / 1000),
-          fly: !!this.hyperFly,
-        } : null,
+      // 機種絕招(飽和攻擊 / 集束炸彈 / 極音速飛彈)自 2026-08-06 起整組退場 ⇒ 這裡不再有
+      // kami / decoy / hyper 三格。長按右鍵改成招式手勢(一般 = 小招、狙擊 = 大招),
+      // CD 一律由上面的 skill / ult 兩格顯示 —— 再畫一顆機種絕招格就是「鈕面說有、按下去沒有」的假招。
       morph: this.isMorph ? { flight: this.flight, charge: this.charge } : null,
       // 空白鍵機動能力 CD(HUD 顯示;完美迴避 30s / 蓄力跳躍 15s / 升空變形 15s,皆客戶端時戳)
       mobil: this.isDrone ? { name: '完美迴避', cd: Math.max(0, (this._dodgeCd || 0) - now) }
@@ -8016,10 +7954,7 @@ export class BattleClient {
       sp: tgt.sp || 0, msp: tgt.maxSp || 1, mp, mm,
       lift: null, mobil: null, morph: null,
       emp: tgt.emp || 0, stealth: 0,
-      // 機種絕招冷卻:伺服器只跟主視野機發一份,欄位與交戰 HUD 同名 ⇒ 同一段渲染程式吃得到
-      kami: kind === 'drone' ? { cd: tgt.kcd || 0, n: SQUAD.KAMI.N } : null,
-      decoy: kind === 'morph' ? { ready: !!tgt.dock, cd: tgt.dcd || 0 } : null,
-      hyper: kind === 'robot' ? { cd: tgt.hcd || 0, fly: !!tgt.hfly } : null,
+      // 機種絕招 2026-08-06 整組退場 ⇒ 觀戰面板與交戰 HUD 同樣只剩 skill / ult 兩格招式冷卻。
     };
   }
 

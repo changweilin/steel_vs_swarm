@@ -9,7 +9,7 @@ import {
 } from './netmode.js';
 import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
-  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, recoilName, recoilTier, recoilMoveF,
+  CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
@@ -998,20 +998,39 @@ function charWeaponRow(id, slot, key) {
     <div class="cd-nums">${bits.join(' ・ ')}</div></div></div>`;
 }
 
+/** 招式倍率欄的中文欄名(新增鍵 MUST 一併補上 —— 沒補到的會落到 `k` 本身,
+ *  而舊制的三元運算子是把**任何**沒列到的鍵都寫成「填彈」= 悄悄標錯) */
+const MUL_LABEL = { dmg: '傷害', dmgTaken: '承傷', reload: '填彈', range: '射程', speed: '跑速' };
+
 function charAbilityRow(id, slot, key) {
   const a = (l) => heroAbility(id, slot, l);
   const A = a(1);
+  // 純自身型大招的補償增額(2026-08-06 機種絕招退場;data.js SELF_ULT 單一縫)——
+  // 圖鑑 MUST 顯示**加成後**的值,而不是 CHARACTERS 表上那個未補償的階梯:
+  // 玩家在選角畫面比的就是這幾個數字,顯示未補償值等於把這一輪的改動整個藏起來。
+  // 載具化的 23 台 boost 恆中性 ⇒ 這一段對它們逐位元不動。
+  const bst = (l) => (slot === 'ult' ? selfUltBoost(id, l, { light: l, heavy: l })
+    : { dmgMul: 0, heal: 0, alphaX: 1 });
+  const B = bst(1);
   const bits = [`電力 ${tri((l) => a(l).mp)}`, `冷卻 ${tri((l) => a(l).cd, 1)}s`];
   if (A.dmg) bits.push(`傷害 ${tri((l) => a(l).dmg)}`);
-  if (A.heal) bits.push(`修復 ${tri((l) => a(l).heal)}`);
+  if (A.heal) bits.push(`修復 ${tri((l) => a(l).heal + bst(l).heal)}`
+    + (B.heal > 0 ? `<span class="cd-boost">(含補償 +${Math.round(B.heal)})</span>` : ''));
   if (A.count > 1 || A.unit) bits.push(`數量 ${tri((l) => a(l).count)}`);
   if (A.dur) bits.push(`持續 ${tri((l) => a(l).dur, 1)}s`);
   if (A.r) bits.push(`半徑 ${tri((l) => a(l).r)}m`);
   if (A.range) bits.push(`施放距離 ${tri((l) => a(l).range)}m`);
   if (A.vision) bits.push(`無霧 ${tri((l) => a(l).vision)}s`);
   if (A.imp) bits.push(`推力 ${tri((l) => a(l).imp)}`);
+  if (A.regen) bits.push(`回復速度 ${tri((l) => a(l).regen, 1)}×`);
+  if (A.revive) bits.push(`原地復活 ${tri((l) => a(l).revive * 100)}% 血`);
+  if (A.cleanse) bits.push('解除並免疫異常');
+  if (B.alphaX > 1) bits.push(`破隱爆發 ${tri((l) => bst(l).alphaX, 2)}×`
+    + `<span class="cd-boost">(${SELF_ULT.ALPHA_S}s)</span>`);
+  if (A.brk) bits.push('挨一發即結束');
   if (A.mul) bits.push(...Object.entries(A.mul).map(([k, _]) =>
-    `${k === 'dmg' ? '傷害' : k === 'dmgTaken' ? '承傷' : '填彈'} ${tri((l) => a(l).mul[k], 2)}×`));
+    `${MUL_LABEL[k] || k} ${tri((l) => a(l).mul[k] + (k === 'dmg' ? bst(l).dmgMul : 0), 2)}×`
+    + (k === 'dmg' && B.dmgMul > 0 ? `<span class="cd-boost">(含補償 +${B.dmgMul.toFixed(2)})</span>` : '')));
   return `<div class="cd-row" data-slot="${slot}" title="點擊播放施展動畫">
     <span class="cd-key">${key}</span>
     <div><b>${esc(A.name)}</b> <span class="cd-fx">${FX_LABEL[A.fx] || A.fx}</span> <span class="cd-play">▶</span>
@@ -1074,7 +1093,7 @@ function charDetailHTML(id) {
     <div class="cd-body">
       ${charBioTextHTML(id)}
       <div class="cd-hexbox">${stats}
-        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;${SQUAD.KAMI.N} 架常駐護衛自殺機隨行,長按右鍵發動「飽和攻擊」(一般/狙擊模式皆可,${SQUAD.KAMI.N} 架合計 = 一份絕招傷害 ⇒ 每架威力為舊制的一半,自爆後 30s 重現)。</div>` : ''}
+        ${isDrone ? `<div class="cd-note">※ 蜂群為單架無人機:生存值為機甲平均的 80%、傷害同機甲、射程略高;區域/指向型大招由 ${SQUAD.KAMI.N} 架自殺攻擊機分批遞送到落點(平時不隨行,施放那一刻才衝出去;被打下幾架就少交付幾份效果)。</div>` : ''}
         ${kind === 'morph' ? '<div class="cd-note">※ 變形者:HP 與火力與機甲相同。飛行型態觸地 → 變形為地面型;地面型按住 Space 蓄力跳 → 彈射變形為飛行型。</div>' : ''}
       </div>
       <div class="cd-kit">
@@ -1979,7 +1998,7 @@ function enterGame() {
       ? '觀戰模式 ・ 十字鍵左 換視角 / ⇄換人 ・ 左下角常駐觀戰操作說明 ・ HOME 選單'
       : '觀戰模式 ・ F 換視角 / Q・E 換人 ・ 左下角常駐觀戰操作說明 ・ ESC 開選單')
     : (TOUCH_UI()
-      ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 絕招 / 下 陀螺 / 右 地圖 ・ HOME 選單'
+      ? '左上搖桿移動 ・ 右下搖桿轉視角(或空處輕點一下再按住 = 邊瞄邊射)・ A 射擊 / R 狙擊 / ZR 按住鎖定目標 ・ 十字鍵 上 ⊟ 商店 / 左 招式 / 下 陀螺 / 右 地圖 ・ HOME 選單'
       : '點擊畫面鎖定滑鼠開始戰鬥 ・ ESC 開選單 ・ M 切換小地圖範圍'), 4600);
 }
 
@@ -2092,18 +2111,11 @@ function makeHud() {
           ? (w.morph.flight ? '(✈ 飛行型態)'
             : w.morph.charge > 0 ? `(⚡ 蓄力 ${Math.round(w.morph.charge * 100)}%)` : '(🦿 地面型態)')
           : '';
-        // 機種絕招(長按右鍵 / 觸控 ZR):無人機 = 飽和攻擊;變形者 = 集束炸彈;機甲 = 極音速飛彈。
-        // 大招載具化角色(w.ultCarrier):長按 = 大招 ⇒ 絕招格鏡射 E 大招那一份 CD(單一來源),
-        // 重武器列不再掛絕招標籤(大招格自己會顯示)
-        const abCd = w.ultCarrier ? (w.ult.cd || 0)
-          : w.kami ? (w.kami.cd || 0) : w.decoy ? (w.decoy.ready ? 0 : (w.decoy.cd || 0)) : w.hyper ? (w.hyper.cd || 0) : 0;
-        const abTag = w.ultCarrier ? ''
-          : w.kami ? (w.kami.cd > 0.05 ? `(飽和攻擊 ${w.kami.cd.toFixed(0)}s)` : `(飽和攻擊 ×${w.kami.n} 就緒)`)
-          : w.decoy ? (w.decoy.ready ? '(集束炸彈就緒)' : `(集束炸彈 ${w.decoy.cd.toFixed(0)}s)`)
-          : w.hyper ? (w.hyper.fly ? '(極音速飛彈 飛行中)'
-            : w.hyper.cd > 0.05 ? `(極音速飛彈 ${w.hyper.cd.toFixed(0)}s)` : '(極音速飛彈就緒)')
-          : '';
-        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${abTag}${morphTag}`;
+        // 長按 = 招式手勢(2026-08-06:一般模式 → 小招 / 狙擊模式 → 大招)。機種絕招整組退場 ⇒
+        // 重武器列不再掛任何絕招標籤,十字鍵左那顆的 CD 直接鏡射**當下模式那一格**招式的 CD
+        // (單一來源 = 上面的 w.skill / w.ult;MUST NOT 在這裡另算一份)。
+        const abCd = (w.aiming ? w.ult.cd : w.skill.cd) || 0;
+        $('burstName').textContent = `${hv.name} Lv.${hv.lvl}${morphTag}`;
         // 招式:Q 小招 / E 大招(鎖定 / 冷卻 / 就緒)
         const abEl = (box, nameEl, cdEl2, a) => {
           $(nameEl).textContent = a.lvl > 0 ? `${a.name} Lv.${a.lvl}` : `${a.name} 🔒`;
@@ -2128,7 +2140,8 @@ function makeHud() {
           padMirror('skill', w.skill.cd, w.skill.ready, w.skill.lvl === 0);
           padMirror('ult', w.ult.cd, w.ult.ready, w.ult.lvl === 0);
           if (mob) padMirror('jump', mob.cd, mob.cd <= 0.05, false);
-          // 機種絕招(2026-08-01 起住十字鍵左,原 ZR):CD 與「(極音速飛彈 12s)」那一段同源(abCd),搖桿只是鏡子
+          // 招式鈕(十字鍵左):長按 R 的同一個派發縫 ⇒ 鈕面 CD 鏡射**當下模式那一格**招式
+          // (一般 = 小招 / 狙擊 = 大招),與上面 X / Y 兩顆同源,搖桿只是鏡子
           padMirror('special', abCd, abCd <= 0.05, false);
         }
         // 狙擊模式:正圓可視遮罩(body.aiming → CSS 顯示 scope-vig;陣亡 aiming 已歸零 → 自動收起)

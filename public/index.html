@@ -566,8 +566,9 @@
   <!-- ===== L 區(左手)===== 依實體手把(Switch / PS5 / Xbox)排位:**左上類比搖桿、左下十字鍵**。
        類比搖桿 = 移動(輕推慢走、推到底衝刺);十字鍵四向是「按鍵」不是移動 ——
        上 ⊟ 商店 / 下 陀螺儀開關 / 右 小地圖範圍(周遭 ⇄ 全部,等同鍵盤 M),
-       左 = **機種絕招**(2026-08-01 從 ZR 搬來,原本是保留未用的版位;扳機位改給視野鎖定)。
-       絕招仍有「長按 R」那條路(game.js `_fireHoldAbility` 同一個派發縫),這顆是不必長按的捷徑;
+       左 = **施放招式**(2026-08-01 從 ZR 搬來,原本是保留未用的版位;扳機位改給視野鎖定)。
+       2026-08-06 起長按 = 招式手勢(一般模式小招 / 狙擊模式大招),機種絕招整組退場。
+       這顆與「長按 R」是同一個派發縫(game.js `_fireHoldAbility`),只是不必長按;
        冷卻秒數由 main.js `padMirror('special')` 鏡射進鈕面的 .gb-cd,與舊 ZR 同源。
        陀螺儀開關**只住這裡**(2026-07-27 起)—— 兩顆同功能的鈕就是兩處要同步的狀態。 -->
   <div id="tlStick" class="tl-stick tl-stick-move" aria-label="移動搖桿">
@@ -578,7 +579,7 @@
     <button class="tl-dp-b dir-up" type="button" data-act="shop" aria-label="商店">⊟</button>
     <button class="tl-dp-b dir-rt" type="button" data-act="map" aria-label="小地圖範圍:周遭 / 全部">地圖</button>
     <button class="tl-dp-b dir-dn" type="button" data-act="gyro" aria-label="陀螺儀開關">陀螺</button>
-    <button class="tl-dp-b dir-lf dp-cd" type="button" data-act="special" aria-label="機種絕招"><span class="gb-f">絕招</span><span class="gb-cd"></span></button>
+    <button class="tl-dp-b dir-lf dp-cd" type="button" data-act="special" aria-label="施放招式"><span class="gb-f">招式</span><span class="gb-cd"></span></button>
   </div>
 
   <!-- ===== R 區(右手)===== **右上 ABXY 菱形、右下視角類比搖桿**。
@@ -605,14 +606,14 @@
        所以 ZL(僅飛行機種)/ ⇄ 換機(僅無人機)隱藏時**列不會塌陷**,對應關係恆成立。
        欄位順序 MUST NOT 隨機種改動 —— 換機種就找不到鍵了。
          L 條:① L 填彈 ② ZL 下降(飛行機種)③ HOME 戰場選單 ④ 全螢幕
-         R 條:① R 狙擊(短按切換、長按絕招)② ZR 鎖定(按住)③ ⇄ 換機(無人機)④ 左手
+         R 條:① R 狙擊(短按切換、長按施放招式)② ZR 鎖定(按住)③ ⇄ 換機(無人機)④ 左手
 
-       **ZR = 視野鎖定(2026-08-01 使用者需求,原為機種絕招)**:按住 → 視野收斂到鎖定的敵人,
+       **ZR = 視野鎖定(2026-08-01 使用者需求,原為招式鈕)**:按住 → 視野收斂到鎖定的敵人,
        放開即恢復自由視角。虛擬搖桿的追瞄本來就比滑鼠吃力,這是扳機位最值得放的**按住型**動作;
        2026-08-02 改制:**按一次輪替到前方視野內的下一個敵人**(狙擊模式以狙擊鏡圈為取景),
        後座力刻意**不**抵銷(見 data.js VIEW_LOCK 與 game.js `_tickViewLock`)。
-       原本住這裡的機種絕招搬到十字鍵左(連冷卻鈕面一起),長按 R 那條路不變 ——
-       兩者仍共用同一個派發縫(game.js `_fireHoldAbility`),絕招沒有少一條路。 -->
+       原本住這裡的招式鈕搬到十字鍵左(連冷卻鈕面一起),長按 R 那條路不變 ——
+       兩者仍共用同一個派發縫(game.js `_fireHoldAbility`),招式沒有少一條路。 -->
   <div class="tl-sys tl-sys-l">
     <button class="tl-sysb" type="button" data-act="reload">L 填彈</button>
     <button class="tl-sysb" type="button" data-act="dive" hidden>ZL 降</button>

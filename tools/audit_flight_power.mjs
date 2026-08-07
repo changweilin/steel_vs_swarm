@@ -1,7 +1,7 @@
 // ============ 飛行動力學(爬升動力 + 受擊掉高)+ 機種絕招載具 HP 校準 稽核 ============
 // 用途:改 `data.js` 的 `FLIGHT`/`airSinkM`/`liftMax`/`liftRegen`/`liftDrainPS`/`HYPER`/`towerDps`/
 //      `kamiHp`/`hyperHp`/`decoyHp`/`kamiSide`,或 `game.js` 的 `_stepLift`/`_airSinkHit`/
-//      `_updatePlayer` 飛行段/`_launchHyper`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
+//      `_updatePlayer` 飛行段/`_fireHoldAbility`/`_tryFire` 之後跑。跑法:`node tools/audit_flight_power.mjs`
 //
 // 三條規則共用一支稽核,因為破法都一樣**無聲**:
 //   ①**機種絕招的載具 HP 一律由「前線一組塔位打幾秒」反解**(2026-08-01 使用者定調的三句話,
@@ -251,7 +251,7 @@ console.log('■ Ⅰ 機種絕招載具 HP + 爆風面積:一律由「前線一�
 }
 
 // ---------------------------------------------------------------------------
-console.log('■ Ⅱ 巨砲整組退場:重武器射擊路徑上不得留任何免彈夾/免射速閘旁路');
+console.log('■ Ⅱ 巨砲 + 機種絕招整組退場:射擊路徑無旁路、客戶端無機種分派表');
 // ---------------------------------------------------------------------------
 {
   t('data.js MUST NOT 再匯出 BARRAGE / barrageShots / barrageDur / barrageDmgF',
@@ -274,14 +274,21 @@ console.log('■ Ⅱ 巨砲整組退場:重武器射擊路徑上不得留任何�
     /st\.ammo--;\s*\n\s*if \(mpc > 0\) this\.mp = Math\.max\(0, this\.mp - mpc\);/.test(fire));
   t('_tryFire:未按開火鍵就不擊發(舊巨砲的窗內自動擊發已移除)',
     /if \(!this\.firing\) return;/.test(fire));
-  // 新招的客戶端入口:純「送請求 + 樂觀 CD」,MUST NOT 在客戶端算任何傷害/爆風(A1)
-  const lh = grab('_launchHyper');
-  t('game._launchHyper 只送 { t: \'hyper\' } + 樂觀本地 CD(彈道與傷害全在伺服器)',
-    /this\.net\.send\(\{ t: 'hyper' \}\);/.test(lh) && !/_blast|dmg/.test(lh));
-  t('game._launchHyper 有本地 CD 時戳(不被在途舊快照的 hcd=0 洗掉)',
-    /_hyperCdUntil/.test(lh) && /Math\.max\(this\.hyperCd \|\| 0, \(this\._hyperCdUntil \|\| 0\) - now\)/.test(lh));
-  t('機種派發縫仍只有一處(_fireHoldAbility),機甲那支改指 _launchHyper',
-    /else this\._launchHyper\(\);/.test(code) && count(code, '_launchHyper(') === 2);
+  // ---- 機種絕招的客戶端入口(2026-08-06 第二階段:長按右鍵改成招式手勢)整組退場 ----
+  // 舊制三支 _launchKamikaze / _launchDecoy / _launchHyper 是「機種分派表」的三個葉子;
+  // 機種絕招退場之後分派表本身也沒有東西可派 ⇒ A22 那條縫改由 data.js `abilHoldSlot` 表達
+  // **模式**分流(一般 = 小招 / 狙擊 = 大招)。留一支在原文裡就是一顆按了沒反應的鈕
+  //(伺服器連對應的訊息都不再受理),而畫面上只表現成「這台機體的長按壞了」。
+  for (const m of ['_launchKamikaze', '_launchDecoy', '_launchHyper']) {
+    t(`game.${m} 已整組退場(MUST NOT 復辟)`, !new RegExp(`\\n  ${m}\\(`).test(code));
+  }
+  t('客戶端不再送 kami / decoy / hyper 三條機種絕招訊息(一律走 t:\'cast\' 單一縫)',
+    !/t: 'kami'|t: 'decoy'|t: 'hyper'/.test(code));
+  t('長按派發縫仍只有一處(_fireHoldAbility),且不再有機種分派表',
+    /_castAbility\(abilHoldSlot\(this\.aiming\)\)/.test(grab('_fireHoldAbility', code))
+    && !/isDrone|isMorph/.test(grab('_fireHoldAbility', code)));
+  t('模式分流只有 abilHoldSlot 一個消費端(MUST NOT 在觸控鈕/鍵盤各判一次 `aiming ? …`)',
+    count(code, 'abilHoldSlot(') === 1, `實得 ${count(code, 'abilHoldSlot(')} 處`);
 }
 
 // ---------------------------------------------------------------------------
