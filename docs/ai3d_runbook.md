@@ -1387,11 +1387,45 @@ First consumer outside beacons. What was actually new (the rest was the rock rec
   `622,905 / 3671 ≈ 170`。⇒ **可用區間 = [100 拓樸底, 170 預算天花板]**,`--faces 160`
   是唯一同時落在裡面又不讀成碎片的檔位(這一輪的建議值;正式數字仍走 §5u 模式,
   由 `measure_veg_tris.mjs` 對**選定樹種**重量一次)。
-- **未跑 / 待決**:①適用樹種(broadleaf 家族?)—— 使用者未定,量測面跟著它走;
-  ②入庫縫 ㋐/㋑/㋒ 三選一;③選定後 `measure_veg_tris` 重量 + `node_cap` 重算 + intake
-  外廓契約;④全砲火 + 對照台(`mega`/`veg` builder 那一列)。
-  原型與黏土:study clone `canopy_petals.py`、`out_petals/`(`v6/` 高模、`game/`=100、
-  `f160/`、`f225/`,各含 `top/` 正俯視與 `side/` 兩視角)。
+### 5x-b. 入庫縫定案 ㋑(逐 instance)+ 適用樹種的兩道閘(同日,使用者「那就逐 instance」)
+
+- **㋑ 成立的理由是可證的**:`bend_wedge` 的 `φ = (t/tmax)·alpha(u; span)`,而 `alpha` 對
+  `span` **幾乎**是齊次的 ⇒ 一顆基準瓣 + 逐 instance 一個純量 `aSpanF`、著色器裡
+  `φ = atan2(z, x); φ *= aSpanF; (x, z) = r·(cos φ, sin φ)` 就能重現任意格寬。
+  「幾乎」的兩個例外都是**刻意的**:樹枝段的 `branch_w / r`(物理細柄)與梢端保底 `0.03`
+  都不隨 span 走 ⇒ **單一基準瓣打不到全域精確**。實測(相對包圍盒對角):
+  | 方案 | 節點數 | draw call | 最壞偏差 |
+  |---|---|---|---|
+  | 單顆基準瓣(S₀ = 90°)吃全部 K | 1 | 2 | **1.63%**(集中在 K=2:span/S₀ = 2.25 ⇒ 細枝柄被撐成 2.25 倍寬,賠掉使用者鎖死的「樹枝段」) |
+  | **逐 K 一顆基準瓣(K=2~6)+ `aSpanF` 只吃 ±1/8** | 6 | 6 | **0.16%**(逐 K 最壞 1.98e-3 / 1.98e-3 / 1.39e-3 / 1.25e-3 / 3.88e-4) |
+  | ㋐ 全烤(逐 K 逐位次) | 21 | 21 | 0 |
+  ⇒ **定案 = 逐 K 基準瓣 + 逐 instance `aSpanF` ∈ [0.875, 1.125]**。三角形預算與列數
+  **與方案無關**(Σ instance 數一樣),差的只有 GLB 節點數與 draw call。
+- **A39 ⑦ 連帶**:新的彎折 define 與 `aSpanF` MUST 進 `customProgramCacheKey`(不進 = three
+  共用舊程式 = 那批材質整批不彎,而且不報錯);排序上先彎再交給 `CEL_SWAY` 的擺動位移
+  (擺動錨在整株局部座標,彎折不動 y ⇒ 兩者正交)。
+- **適用樹種:兩道閘,都是量出來的**(F0 五張語料實跑,`--faces 160` K5 俯視 + 側視):
+  | 語料 | depth_ratio | 冠寬/冠高 | 結果 |
+  |---|---|---|---|
+  | 密冠橡樹 | 0.029 | **1.60** | ✓ 黑桃花形、側視有機團塊 |
+  | 猴麵包樹(白描) | 0.012 | **1.52** | ✓ 最乾淨的一朵 |
+  | 南洋杉 | 0.064 | **0.89** | ✗ **過了 dr 閘仍不成立** —— 攤成放射尖星 |
+  | 大橡樹#16 | **0.804** | 1.25 | ✗ 薄刃 + 側視雙層板 |
+  | 漂白枯幹 | **0.531** | 0.97 | ✗ 碎片 |
+  ①**輸入閘 = `depth_ratio < 0.15`**(§5v 已進 `solidify_parts.py` 的同一支前篩):貼背鏡射
+  只對「半個物體」合法,本來就有厚度的產出翻一倍就是雙層板(oak16 / juniper 兩張把這條
+  演出來)。②**形狀閘 = 冠寬/冠高 ≥ ~1.2**(新):南洋杉 dr 只有 0.064、閘一穩穩過,瓣化
+  出來卻是尖星 —— **錐形/尖塔樹的身分在垂直方向**,而瓣是放射鋪開的機制,兩者互斥。
+  現有語料的分界很寬(1.52/1.60 ✓ vs 0.89 ✗),不是壓線判讀。
+  ⇒ 對回遊戲樹型:**broadleaf 家族(橫展圓冠)+ 粗幹稀冠型可收;conifer2 / birch 這類
+  直立錐形或細高型排除**(適用名冊仍待使用者定案 —— 這兩道閘只負責把不可能的先刪掉)。
+- **未跑 / 待決**:①適用名冊拍板(閘已備好,使用者過目本輪對照表後定);②選定後
+  `measure_veg_tris` 重量 + `node_cap` 重算 + intake 外廓契約;③`buildVegMeshes` 的
+  逐株 K(位置雜湊 2~6,零共享 rnd §2.3)+ `aSpanF` instanced attribute + toon.js 彎折
+  define;④全砲火 + 對照台(`veg` builder 那一列)。
+  原型與黏土:study clone `canopy_petals.py`、`sheet_species.py`、`out_petals/`
+  (`v6/` 高模、`game/`=100、`f160/`、`f225/`、`sp_*/` 逐樹種,各含 `top/`+`side/`;
+  總表 `out_petals/species_sheet.png`)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
