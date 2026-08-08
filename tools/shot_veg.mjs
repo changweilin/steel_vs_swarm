@@ -9,7 +9,13 @@
 // `--group` 就是為它加的),那必須在載了庫的真實路徑上看。
 //
 // 前置:伺服器執行中;Playwright 借用 mapping_elf 的安裝(同 shot_beacons.mjs)。
-// 用法:node tools/shot_veg.mjs [--url http://localhost:8666] [--kinds conifer2,broadleaf,shrub] [--season summer]
+// **2026-08-08 §5z-t 補上賽璐璐 + 勾線**:在此之前這一支是**黏土**的(自己開一顆
+//   `WebGLRenderer` 直接 render,沒有 `postfx.Pipeline`)⇒ 它答得了「兩顆節點有沒有組成一棵樹」,
+//   答不了「這個冠形在**賽璐璐勾線**下讀起來如何」。而後者正是 §5y-h / §5z-j / §5z-o / §5z-r
+//   連著四輪掛在「未跑」上的那一項 —— 因為另一支有管線的(`shot_scene`)**不載零件庫**,
+//   兩邊各缺一半,誰都跑不完那一項。`--post=0` 保留舊的黏土輸出當對照。
+// 用法:node tools/shot_veg.mjs [--url http://localhost:8666] [--kinds conifer2,broadleaf,shrub]
+//       [--season summer] [--post=0 黏土] [--ink=0 只關勾線]
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,6 +25,13 @@ const OUT = path.resolve(arg('--out', 'tools/.shots/veg'));
 const URL = arg('--url', 'http://localhost:8666');
 const KINDS = arg('--kinds', 'conifer2,broadleaf,shrub,deadtree').split(',');
 const SEASON = arg('--season', 'summer');
+const flag = (k) => !process.argv.includes(`--${k}=0`);   // ⚠ MUST 回**布林**:`Pipeline` 的判定是
+// `opts.ink !== false`,而 `0 !== false` 為真 ⇒ 回 0/1 的話 `--ink=0`/`--grade=0`/`--fxaa=0`
+// **全部是 no-op**(2026-08-08 §5z-t 實測:`--ink=0` 與預設的 PNG 逐位元相同,而那不是
+// 「勾線沒作用」,是**旗標沒作用**)。`post` 之所以看起來正常,只因為它在本檔內另被當
+// truthy 用(`layers.post ? new Pipeline(...) : null`)—— 一個旗標兩套解讀,壞掉的那半沒人發現。
+const LAYERS = { ink: flag('ink'), grade: flag('grade'), fxaa: flag('fxaa'), post: flag('post') };
+const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('');
 const SIZE = 720;
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -28,19 +41,24 @@ for (const useLib of [false, true]) {
   const page = await browser.newPage({ viewport: { width: SIZE, height: SIZE } });
   page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
   await page.goto(URL, { waitUntil: 'networkidle' });
-  const shots = await page.evaluate(async ({ useLib, KINDS, SEASON, SIZE }) => {
+  const shots = await page.evaluate(async ({ useLib, KINDS, SEASON, SIZE, layers }) => {
     const THREE = await import('three');
     const { loadPartLibs } = await import('/public/js/partlib.js');
     const { buildVegMeshes } = await import('/public/js/biomes.js');
+    const { Pipeline } = await import('/public/js/postfx.js');
+    const { updateCelLight } = await import('/public/js/toon.js');
     if (useLib) await loadPartLibs();          // false = 保險絲路徑,證明降級 = 舊畫面
 
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = SIZE;
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    // `antialias` MUST 與管線互斥:開了管線就由 FXAA 那一 pass 負責(同 shot_scene),
+    // 兩邊都開 = 多付一次 MSAA 而畫面不變。
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: !layers.post });
     renderer.setSize(SIZE, SIZE, false);
     renderer.setClearColor(0x2a2e36, 1);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
+    const pipe = layers.post ? new Pipeline(renderer, scene, camera, layers) : null;
     const dir = new THREE.DirectionalLight(0xffffff, 2.1);
     dir.position.set(6, 9, 4);
     scene.add(dir, new THREE.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
@@ -59,7 +77,10 @@ for (const useLib of [false, true]) {
       for (const [tag, dist, hy] of [['near', top * 2.1, top * 0.55], ['lane', top * 4.2, top * 0.8]]) {
         camera.position.set(dist * 0.80, hy, dist * 0.60);
         camera.lookAt(0, top * 0.45, 0);
-        renderer.render(scene, camera);
+        // 勾線門檻吃「離相機多遠 + 掠射角」⇒ MUST 每次移動相機後重算光向與矩陣,
+        // 否則暗面與線寬會停在上一個機位(而畫面照樣出得來)。
+        camera.updateMatrixWorld(true);
+        if (pipe) { updateCelLight(camera); pipe.render(); } else renderer.render(scene, camera);
         out.push({
           name: `${kind}_${tag}_${useLib ? 'lib' : 'fallback'}`,
           png: canvas.toDataURL('image/png'),
@@ -71,10 +92,10 @@ for (const useLib of [false, true]) {
       ms.forEach((m) => scene.remove(m));
     }
     return out;
-  }, { useLib, KINDS, SEASON, SIZE });
+  }, { useLib, KINDS, SEASON, SIZE, layers: LAYERS });
   for (const s of shots) {
-    fs.writeFileSync(path.join(OUT, `${s.name}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
-    console.log(`${s.name}.png  列數 ${s.rows}  全高 ${s.top}m  單株 ${s.tris} tris`);
+    fs.writeFileSync(path.join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
+    console.log(`${s.name}${SUFFIX}.png  列數 ${s.rows}  全高 ${s.top}m  單株 ${s.tris} tris`);
   }
   await page.close();
 }
