@@ -425,12 +425,64 @@ alternatives; they split **by geometry class**:
 | Object family | Method | Why |
 |---|---|---|
 | Landmarks `KIND_PARTS`(pylon/watertower/container/cairn)| **LLM agent reads photos → writes pure-data part rows**(proposal 1, corrected form)| Part tables are already pure-data primitives; that is the only reason `audit_beacons` Ⅰ can verify extents offline in the sandbox. Zero binary weight, zero licence exposure(photos are measurement reference only, never baked in), native fit with `stretch`/`partJitter`/colour seam. The agent's output is **part-table data rows, not three.js code**(A38 purity)|
-| Building modules(windows/roof caps/balconies/piping)`BUILDERS` | Same as above | Boxy, regular; primitives suffice; oriented-box colliders stay derivable(A30)|
-| Civic parts `CIVIC_PARTS` | Same as above | Same |
+| Building modules(windows/roof caps/balconies/piping)`BUILDERS` | Same as above | Boxy, regular; primitives suffice; oriented-box colliders stay derivable(A30). **Declined 2026-08-08, see §8.1** — note the already-shipped `BLD_LIB` roof deco is a different consumer and stays |
+| Civic parts `CIVIC_PARTS` | Same as above | Same — **declined 2026-08-08, see §8.1** |
 | Megaliths(rock facets/collapse blocks/talus cones)`MEGALITHS` | **img→3D model → partlib GLB**(proposal 2)| Organic, irregular — primitives cannot express them; this is the only family class worth the GLB payload + offline-extent contract. SF3D for bulk; signature pieces wait on the Hunyuan3D-2GP rung(§1 ladder corrected 2026-08-06 — TRELLIS is out on this card, runbook §5l). First measured support for this split (§5l): SF3D on clean photos of a skyscraper / a named giant tree / Devils Tower scored fill 0.048 / 0.274 / 0.313 — regular man-made geometry collapses to a facade shell(the cleanest photo scored lowest), while the organic rock was the only one past the prefilter |
 | Giant-tree parts(canopy modules/buttress roots/forks)`GIANT_DEFS` | **img→3D model → partlib GLB** | Same; **blocked on the `giantCrownR` issue below — do not ship canopy GLBs before it is solved** |
 | Small vegetation / generic building masses | **Keep procedural** — no AI | Not every family should eat AI: wholesale GLB swap explodes draw calls/triangle budget, and `procedural-object-detail` already covers variation there |
 | Mechs / NPCs(Track A)| Unchanged(§3 per-slot 2D→3D)| Out of scope of this proposal |
+
+### 8.1 Scope narrowed to organic geometry only (user decision, 2026-08-08)
+
+User decision, verbatim: **「一般景觀樹木/石頭等複雜幾何形狀的可以建立就好」** — build the AI part
+library **only** for complex organic shapes (landscape trees, rocks). This settles the open
+recommendation from the previous pass (extend `CIVIC_PARTS` next): **it is declined.**
+
+What the decision changes:
+
+| Family | Before | After 2026-08-08 |
+|---|---|---|
+| `VEG_DEFS` landscape trees(tree/*)| live, 10 lib rows of 87 | **in scope** — but see the roster ceiling below |
+| `GIANT_DEFS` giant trees(tree/*)| live, 35 lib rows of 173 | **in scope** — same ceiling |
+| `MEGALITHS` / `MEGA_LIB` rocks(rock/*)| live, 19 of 29 slots used | **in scope, the only family with real headroom** |
+| `CIVIC_PARTS` civic props | recommended next | **not doing** — declined |
+| `KIND_PARTS` landmarks | 6 `['lib',…]` descriptors declared | **freeze at what is declared** — no new nodes |
+| `BUILDERS` building masses | table says "LLM writes part rows" | **not doing** |
+| `BLD_LIB` roof deco(building/*)| live, `node_caps` measured 2026-08-06 | **stays as-is** — do not rip out; it is already measured and wired |
+
+The decision is a scope gate on *new* families, not a rollback. Nothing that already ships gets
+removed — pulling `BLD_LIB` back out would burn the measurement work in `tri_budget.json` for a
+change nobody asked for.
+
+**Consequence that is easy to get wrong — "just add more rows" is not free.** For the tree family the
+roster **is the knob, and it is already at its economic limit**. `node_cap` is derived, not chosen:
+
+```
+node_cap = growth allowance ÷ Σ(roster rows × that type's instance ceiling) + current part tris
+         = 592,199 ÷ 2,917 + 20 = 223        (tri_budget.json families.veg)
+```
+
+Every new `lib:` row is another instance-row in the divisor. `tri_budget.json` already records the
+measurement: wiring **every** canopy clump would push Σ to 3,779 and drop the cap to **176** — back
+inside the 2.4–3:1 decimation band where Blender tears holes in the canopy shell (runbook §5e). The
+extents and the budget both stay green in that state; the failure only shows up as split canopies in
+a screenshot. So within trees, "build more" means **swapping which clumps are wired**, not adding
+rows — and the current selection (clumps mostly hidden behind the main crown pushed back to the fuse)
+is the answer to that trade, not an accident.
+
+Rocks are the opposite: `max_lib_parts_per_rock` is 29 by code-derived count, `observed_max` is 19,
+and the hoodoo call site only came online 2026-08-06 (§5m). **Remaining generation effort should go
+to `rock/*`, not `tree/*`.**
+
+Two doc facts this decision exposes, recorded so they are not rediscovered:
+
+1. The table above routes "Building modules `BUILDERS`" to the LLM-writes-part-rows lane, but roof
+   deco actually shipped as GLB (`BLD_LIB` + `PART_LIBS` includes `'building'`). The table describes
+   the *building masses*; the roof-deco bucket took the GLB lane because it is an InstancedMesh
+   consumer with its own reverse-derived `node_caps`. Both are true — they are different consumers.
+2. This session verified the §8 execution-environment split still holds: `nvidia-smi` absent, no
+   `torch`, and both `api.openverse.org` and `commons.wikimedia.org` fail to connect through the
+   proxy. Photo sourcing and inference remain ㋓ — the 3060 machine, Actions, or the HF Space.
 
 **Proposal 3(better routes)found**: when no local GPU is available, the official
 **`stabilityai/stable-fast-3d` HF Space**(gradio, 1206 likes)runs SF3D as a service; output still goes
