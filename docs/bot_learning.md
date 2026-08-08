@@ -95,6 +95,20 @@ node tools/bot_learn.mjs --reset                            # 隨時可回中性
 - 學到的策略對**中/高難度**生效(白名單鍵只被 tactic/elite 分支消費);難度階梯
   (新手 < 低 < 中 < 高)由能力欄維持,不受學習影響。
 
+## 5.5 與機體定位分類的分工(2026-08-08)
+
+`docs/bot_roles.md` 那一輪讓每台機體依自己的數值分到一個定位(突襲/壓制/攻堅/支援),
+定位再把 `BOT_TACTIC` 的 11 個旋鈕往自己那邊調。兩者的分工是**基準 vs 相對偏移**:
+
+- 學習迴圈學的是**全體共用的基準**(`BOT_LEARN.KEYS` 那 8 鍵),定位覆寫疊在它之上
+  (`bots.js _resolveRole` 把注入的 `this.tac` 記成 `_tacBase` 再乘)。
+- **刻意不為四個定位各學一份**:搜尋空間 ×4、每一份的樣本數 ÷4 —— 而本文 §3 已經量過,
+  單場工事損血在 433~10298 之間跳,訊號會整個淹在雜訊裡。
+- 定位那一輪新增的五個旋鈕(`KEEP_F`/`KEEP_STRUCT`/`PRIO_HERO`/`PRIO_STRUCT`/`CAST_HURT`)
+  **不進**學習白名單 ⇒ `botPolicy.js` 與平衡指紋逐位元不受影響,既有策略檔照常生效。
+- 夾制與交叉約束共用 `botTacticCross` 單一縫(學習夾制 `botPolicySanitize` 與定位覆寫
+  `botRoleTactic` 同吃)——兩邊各抄一份就會出現「學習寫不出來、定位寫得出來」的值。
+
 ## 6. 驗證矩陣(改了什麼 → 跑什麼)
 
 見 `CLAUDE.md §5` 對應列。核心:`audit_bot_policy.mjs`(40 項;`--break-clamp` /

@@ -7,7 +7,8 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, bot
   CHARACTERS, heroMobility,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
-  BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF } from '../public/js/data.js';
+  BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
+  botRoleOf, botRoleTactic, botBuyOrder } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -22,8 +23,8 @@ const PUSH_LOOK_M = LANE_JITTER_M * 3;
 // 換個方向再試(左右輪替)。純 AI 決策,不動任何碰撞規則。
 const STUCK = { F: 0.35, S: 0.6, SKIRT_S: 1.6, SKIRT_M: 28 };
 
-// 消費優先序(八軌,2026-07-20 面向):先重/輕武器,再大/小招,攻防交錯(sim.buy 會擋資金不足/已滿級)
-const BUY_ORDER = ['hw', 'lw', 'ult', 'sk', 'hp', 'sp', 'ar', 'ch'];
+// 消費優先序(八軌,2026-07-20 面向)住 `data.js BOT_BUY_ORDER`,逐定位的順序走 `botBuyOrder`
+// (2026-08-08 定位分類改制)—— 兩邊各留一份的話,改定位採購順序時基準那份不會跟著動。
 
 export class BotBrain {
   /** sim: BattleSim;pid: 'b1' 之類字串;laneIdx: 指派兵線;diffKey: 難度(新手/低/中/高) */
@@ -36,6 +37,13 @@ export class BotBrain {
     // 離線學習迴圈(tools/bot_learn.mjs)逐 brain 注入候選策略時只換這一個參照 ——
     // bots.js 其餘各處 MUST 經 this.tac 取旋鈕,MUST NOT 再直接讀 BOT_TACTIC.*。
     this.tac = BOT_TACTIC;
+    // 機體定位(2026-08-08「依機體技能等數值為電腦玩家分類,並設計不同策略」)——
+    // 解析點只有 `_resolveRole` 一處,且只在有 `tactic` 旗標的難度下發生(A33:新手/低難度
+    // 逐位元維持舊制)。這裡不能先解析:角色由 sim.addHero 指派、而學習迴圈是在 **構造之後**
+    // 才注入基準策略(`b.tac = candTac`),在構造函式裡定案會被那一行整份蓋掉。
+    this._role = null;      // 定位鍵('raider'|'zoner'|'siege'|'support');null = 無定位(同基準)
+    this._roleCh = null;    // 已解析過的角色(換角色才重解)
+    this._tacBase = null;   // 定位覆寫的基準表(= 解析當下的 this.tac,含學習成果)
     this.lane = laneIdx % sim.lanes.length;
     this.state = 'PUSH';
     // ---- 操作節奏(見 _op)----
@@ -164,6 +172,7 @@ export class BotBrain {
     const h = sim.heroes.get(this.pid);
     if (!h || sim.over) return;
     if (h.dead) { this.state = 'PUSH'; this.prog = 0; return; }
+    this._resolveRole(h);
 
     const u = UNITS[h.kind];
     const frac = h.hp / h.maxHp;
@@ -183,7 +192,8 @@ export class BotBrain {
     // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
     if (h.money >= ECON.UPG_BASE && this._op('buy')) {
       let bought = false;
-      for (const item of BUY_ORDER) {
+      // 採購順序隨定位換(攻堅先買重武器與護甲、支援先買招式與充能…);無定位 = 舊制順序
+      for (const item of botBuyOrder(this._role)) {
         // 不使用招式的難度(新手/低):不買招式面向,把錢留給武器/防禦強化
         if (!this.diff.ability && (item === 'sk' || item === 'ult')) continue;
         if (sim.buy(this.pid, item) === null) { bought = true; break; }
@@ -217,6 +227,24 @@ export class BotBrain {
     } else {
       h.y = 0;
     }
+  }
+
+  /**
+   * 機體定位解析(**唯一縫**;每個角色只做一次)。定位怎麼算住 `data.js botRoleOf`,
+   * 策略怎麼疊住 `botRoleTactic` —— bots.js MUST NOT 比對定位鍵寫任何 `if (role === …)`
+   * 行為分支(那就是第二套決策系統,而且會與難度分層打架)。
+   *
+   * 三條:①**只在 `diff.tactic` 之下解析** ⇒ 新手/低難度的 `this.tac` 恆是注入/全域那一份,
+   * 結構性地逐位元同舊制(A33);②**基準只記一次**(`_tacBase`):不記的話每次重解都會把
+   * 上一輪覆寫過的表再乘一次乘數 —— 換角色幾次之後距離環就飄到夾制邊界上,而且完全無聲;
+   * ③換角色(換座機/重生抽到別台)才重解,同一台不重複算。
+   */
+  _resolveRole(h) {
+    if (!this.diff.tactic || h.ch === this._roleCh) return;
+    this._roleCh = h.ch;
+    if (this._tacBase == null) this._tacBase = this.tac;   // 學習迴圈注入的那一份 = 基準
+    this._role = botRoleOf(h.ch);
+    this.tac = botRoleTactic(this._tacBase, this._role);
   }
 
   /** 沿指派兵線往敵方端推進(SWARM 端是折線起點) */
@@ -415,7 +443,7 @@ export class BotBrain {
     for (const slot of ['skill', 'ult']) {
       const A = this._ready(h, slot);
       if (!A) continue;
-      const hurt = frac < 0.55;
+      const hurt = frac < this.tac.CAST_HURT;   // 血線走旋鈕(支援型放得早、攻堅型撐得久)
       if ((A.fx === 'heal' && hurt)
         || (A.fx === 'buff' && A.mul?.dmgTaken && hurt)
         || (A.fx === 'stealth' && this._pulling())) {
@@ -433,8 +461,9 @@ export class BotBrain {
     // 量的是**裝填**而不是逐發射速間隔:後者只有零點幾秒,照著它進退只會抖成原地震動。
     // 建築(塔/主堡)不套 —— 它們不會追,拉開只是白白少打幾秒。
     const struct = t.kind === 'tower' || t.kind === 'base';
-    const kite = this.diff.elite && !struct ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t), this.tac) : 0.6;
-    const keep = gun.range * (struct ? 0.85 : kite);
+    const kite = this.diff.elite && !struct
+      ? botKiteF(!((h.reloadUntil?.light || 0) > this.sim.t), this.tac) : this.tac.KEEP_F;
+    const keep = gun.range * (struct ? this.tac.KEEP_STRUCT : kite);
     const radial = (d - keep) / Math.max(1, d);          // >0 靠近、<0 拉開
     const strafe = Math.sin(this.sim.t * 0.9 + this.lane * 2) * 0.6;
     const spd = this._speed(h);                       // 控場(麻痺/緩速/混亂)折算後的地速
@@ -562,8 +591,9 @@ export class BotBrain {
       if (Math.abs(this._bearing(h, t.x, t.z)) > fovHalf) continue;
       // 便宜的射程/視野錐淘汰在前、_visibleTo(LOS 上線後含遮蔽 trace)在後 —— 打不到的目標不付視野成本
       if (sources && !this.sim._visibleTo(t, this.side, sources)) continue;   // 迷霧外 → 看不見,不鎖定
-      if (t.hero) d *= 0.55;                             // 優先咬英雄
-      else if (t.kind === 'tower' || t.kind === 'base') d *= 1.3;
+      // 類別折算走旋鈕(定位覆寫的落點:攻堅型把工事的加價收掉去咬塔、突襲型加得更兇去獵人)
+      if (t.hero) d *= this.tac.PRIO_HERO;               // 優先咬英雄
+      else if (t.kind === 'tower' || t.kind === 'base') d *= this.tac.PRIO_STRUCT;
       else if (isThirdSide(t.side)) d *= 1.8;            // 第三方野營:順路才打,不主動棄線刷錢
       d /= vsMult(wd, t.kind);                            // 優先打武器克制的目標類型
       cand.push({ t, d });
