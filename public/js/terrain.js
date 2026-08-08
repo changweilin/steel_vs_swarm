@@ -249,7 +249,7 @@ function stylizeImagery(canvas) {
 /**
  * 建立戰場地形。回傳:
  * { group, heightAt(x,z), sampleColor(x,z)|null, center, bbox,
- *   worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH }
+ *   worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH }
  * sampleColor:取衛星影像該點的 [r,g,b],供 biomes.js 做地被分類。
  */
 export async function buildTerrain(cfg, onProgress) {
@@ -434,6 +434,15 @@ export async function buildTerrain(cfg, onProgress) {
       }
     }
   }
+
+  // ---- 全圖平均海拔(遊戲最高高度的兩個輸入之一;唯一取樣點)----
+  // 與 `minH`/`maxH` 同一組取樣面(整片 N×N 高度場,含上面每一段抬升/放大的結果)。
+  // 之後的 `gradeRoadBeds`/`carveTunnels` 是**局部**開挖(路廊/洞口),對全圖平均的位移
+  // 遠小於一個砲塔高 ⇒ 刻意不重算:天花板是全場一個值,讓它隨開挖逐格漂移只會讓
+  // 同一張圖在不同載入階段算出不同的天花板。
+  let avgH = 0;
+  for (let k = 0; k < N * N; k++) avgH += heights[k];
+  avgH /= N * N;
 
   // ---- BufferGeometry ----
   const geo = new THREE.BufferGeometry();
@@ -1065,5 +1074,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, natureAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, natureAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
 }

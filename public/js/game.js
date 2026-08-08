@@ -12,7 +12,7 @@ import {
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
@@ -437,7 +437,9 @@ export class BattleClient {
     this._spawnAt();
     if (!this.side) {
       const [cx, cz] = llToWorld(this.center.lat, this.center.lng, this.center);
-      this.pos.set(cx, this.terrain.heightAt(cx, cz) + 400, cz); // 觀戰:高空俯瞰
+      // 觀戰:高空俯瞰。起始高度同樣收在**遊戲最高高度**之下 —— `_updateSpectator` 每幀都會
+      // 夾,不夾這一行只是讓第一幀先跳一下(而不是「觀戰起點比天花板還高」這種真的漏洞)。
+      this.pos.set(cx, Math.min(this.terrain.heightAt(cx, cz) + 400, this._ceilY()), cz);
       this.pitch = -0.9;
       this._specFov = this.camera.fov;   // 滾輪縮放的當前視野角(四種視角共用)
       this._specPid = null;              // 玩家視角跟隨中的 pid(null = 上帝視角)
@@ -7463,6 +7465,23 @@ export class BattleClient {
     });
   }
 
+  /**
+   * 遊戲最高高度(**絕對**高程;2026-08-08 使用者定案)—— 客戶端的唯一取值處。
+   * 公式住 `data.js worldCeilY`(= max(平均海拔 + 4 倍砲塔高, 最高海拔 + 2.5 倍砲塔高)),
+   * 本支只負責把這張圖的高程統計餵進去並快取:兩個輸入都是**整張地形一次算完**的常數
+   * (terrain.avgH / maxH),逐幀重取只是浪費,但更重要的是「一場只有一個天花板」——
+   * 逐處各自去讀地形統計就是第二份實作,而它壞掉的樣子只是「有些地方飛得比較高」。
+   * 取不到地形統計(程序生成備援)一律回 Infinity = 不設限(原則 6 降級不例外)。
+   */
+  _ceilY() {
+    if (this._worldCeil == null) {
+      const t = this.terrain;
+      this._worldCeil = (t && Number.isFinite(t.maxH))
+        ? worldCeilY(Number.isFinite(t.avgH) ? t.avgH : t.maxH, t.maxH) : Infinity;
+    }
+    return this._worldCeil;
+  }
+
   // ---------------- 飛行動力學(2026-07-30;唯一縫 data.js FLIGHT)----------------
   /** 爬升動力上限(正比於伺服器權威的電力上限;缺值退回機種基準電力;變形者吃 FLIGHT.MORPH_F) */
   _liftMax() { return liftMax((this._mpAuth && this.maxMp) || UNITS[this.heroKind]?.mp || 0, this.isMorph); }
@@ -7591,8 +7610,14 @@ export class BattleClient {
       const wetY = this.isMorph ? this._wetSurfaceY(this.pos.x, this.pos.z) : null;
       const gy = wetY != null ? wetY
         : (this.terrain.waterY != null ? Math.max(gyS, this.terrain.waterY) : gyS);
-      // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型
-      this.pos.y = Math.max(gy + (this.isMorph ? 0 : FLIGHT.HOVER_M), Math.min(gy + 320, this.pos.y));
+      // 無人機不貼地(下限 +HOVER_M);變形者允許降到地表 → 觸地即變形回地面型。
+      // 上限兩道取嚴者:①離站立面 320m(既有的相對上限,防止在深谷上空一路飛出大氣層)
+      // ②**遊戲最高高度**(2026-08-08 使用者定案的絕對天花板,見 `_ceilY`)。
+      // 兩者問的是不同的問題(「離腳下多高」vs「離海平面多高」)⇒ 刻意都留著;
+      // 位置本就客戶端權威(同 FLIGHT 全族)⇒ 伺服器不再驗一次(A1 的另一半:
+      // 真人那半住客戶端物理,bot 那半見 `_ceilY` 檔頭與稽核 Ⅴ)。
+      this.pos.y = Math.max(gy + (this.isMorph ? 0 : FLIGHT.HOVER_M),
+        Math.min(gy + 320, this._ceilY(), this.pos.y));
       // 全滅頂深水上空不自動落地變形(水深 > FULL_D:降不到底,維持飛行);較淺水可落地涉水
       const deepW = this.terrain.waterY != null && gyS < this.terrain.waterY - WATER.FULL_D;
       if (this.isMorph && !deepW && this.pos.y <= gy + MORPH.LAND_M) this._morphLand(gy);
@@ -8045,6 +8070,12 @@ export class BattleClient {
       // 下降的地板:降到站立面上方 FLOOR_M 就停住(地形/橋面同一個縫 `_surf`)
       const floor = this._surf(this.pos.x, this.pos.z, this.pos.y) + SPEC_CAM.FLOOR_M;
       if (this.pos.y < floor) this.pos.y = floor;
+      // 上升的天花板 = **遊戲最高高度**(同飛行機體那一份 `_ceilY`):上帝視角照樣是在這個
+      // 世界裡飛,升到全場沒有任何東西的高度只會看到一片天空。地板與天花板兩條夾制的順序
+      // MUST 是「先地板後天花板」—— 極平坦場地上兩者相距仍有數個砲塔高,順序其實不影響,
+      // 但反過來寫會在天花板低於地板的退化輸入下把相機塞進地形裡(原則 6)。
+      const ceil = this._ceilY();
+      if (this.pos.y > ceil) this.pos.y = Math.max(floor, ceil);
       this.camera.position.copy(this.pos);
     }
     this.camera.rotation.set(0, 0, 0);

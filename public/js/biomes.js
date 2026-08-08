@@ -25,7 +25,7 @@
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME } from './data.js';
+import { ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit } from './data.js';
 import { llToWorld } from './terrain.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
@@ -60,7 +60,10 @@ const INFILL = { maxSeeds: 160, pitch: 36, cols: [3, 6], rows: [3, 6], skip: 0.1
 // 2026-07-12 佔地改制:建物公稱佔地加大到真實市街量體(住宅 10~22m、商辦 16~32m)——
 // 建物佔地:士兵比例對齊現實;神木/巨岩以 giant/mega = 1.35 跟隨佔地等比放大,
 // 與建物維持視覺等比(高度公稱值不動,仍是真實公尺)。lm 同步放大:地標量體對齊真實公共建築。
-const OVER = { bldH: 1.0, bldXZ: 1.0, bldCap: 170, lm: 1.5, giant: 1.35, mega: 1.35 };
+// `bldCap` = 建物高度上限:2026-08-08 使用者定案「所有物件的最高高度限定 2 倍砲塔高度」之後
+// 它不再是本檔自己的一個數字,而是 `data.js objHeightMax()` 那個全世界共用的上限
+//(舊制手寫 170 = 六倍多的砲塔高,遠高過飛行天花板到地表的餘裕)。MUST NOT 改回字面值。
+const OVER = { bldH: 1.0, bldXZ: 1.0, bldCap: objHeightMax(), lm: 1.5, giant: 1.35, mega: 1.35 };
 // 植被放大倍率(喬木最誇張,地被小幅)。
 // 注意:此表作用在很小的公稱幾何上(針葉樹公稱僅 ~8.7m),放大後的「絕對高度」本就接近真實,
 // 故改制不動它 —— 步兵縮到 1.8m 後,樹木相對步兵的比例自動回歸現實。
@@ -687,7 +690,15 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
     const cands = [];
     for (let k = 0; k < n; k++) {
       const a = rnd() * Math.PI * 2, d = k === 0 ? 0 : 10 + rnd() * cr;
-      const s = base * (0.72 + rnd() * 0.63);     // 株高變異:約 63~223m
+      // 物件高度上限(2026-08-08 使用者定案:2 倍砲塔高)。神木走**分布版** `objScaleFit`
+      // 而不是硬夾:>65m 巨樹的公稱高 72~110m,連最矮的抽樣(× 0.72)都超過上限
+      // ⇒ 硬夾會把整片森林壓成**每一株一樣高**,而「同種群聚、株高各異」正是這套群落的設計
+      //(樹冠羞避的縮冠量也是從株高變異來的)。等比壓縮 ⇒ 最高那株恰好貼齊上限、矮的仍矮。
+      // `sMax` = 本群抽得到的最大縮放(= base × 0.72+0.63 的上端),同群逐株共用同一個壓縮率。
+      // MUST 夾在 `cands.push` 之前:羞避規劃吃的 `s` 與後面的落底/腳印/碰撞柱/攀爬設施
+      // 全是同一個值,晚一步夾就是「冠幅按大株算、樹身按小株長」(原則 4)。
+      // 夾制**不消耗亂數** ⇒ 佈局序列逐位元不變(§2.3)。
+      const s = objScaleFit(base * (0.72 + rnd() * 0.63), def.h, base * 1.35);
       cands.push({ x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, s, cr: gcr, h: def.h });
     }
     const shy = planShyGrove(cands);
@@ -2831,8 +2842,14 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
       terrain.heightAt(fx + G, fz) - terrain.heightAt(fx - G, fz),
       terrain.heightAt(fx, fz + G) - terrain.heightAt(fx, fz - G),
     ) ?? (frac(beaconSeed(fx, fz), 0) * Math.PI);
-    const nomR = (fSynth ? 1.15 : (MEGALITHS[fType].s[0] + MEGALITHS[fType].s[1]) / 2)
-      * OVER.mega * (fSynth ? SYNTH_COL_R : MEGALITHS[fType].col.r);
+    // 標稱半徑(只用來估格距):**縮放先過物件高度上限**再乘半徑 —— 名岩公稱高 50~120m,
+    // 上限(2 倍砲塔高)把 s 壓下來的同時半徑也等比縮小 ⇒ 沒過這一支就會用「未夾制的體格」
+    // 去排格點,整片露頭之間憑空多出一倍的空隙(而每一顆本身仍然合法,看不出成因)。
+    // 合成岩的 H 逐顆生成時才知道 ⇒ 這裡沿用既有估計值,逐顆的真正夾制在下面。
+    const nomS = fSynth ? 1.15 * OVER.mega
+      : objScaleFit((MEGALITHS[fType].s[0] + MEGALITHS[fType].s[1]) / 2 * OVER.mega,
+        MEGALITHS[fType].col.h, MEGALITHS[fType].s[1] * OVER.mega);
+    const nomR = nomS * (fSynth ? SYNTH_COL_R : MEGALITHS[fType].col.r);
     const cells = planRockField({
       cx: fx, cz: fz, strike, pitch: nomR * 2 * ROCKFIELD.PACK, seed: beaconSeed(fx, fz),
     });
@@ -2844,15 +2861,25 @@ function placeMegaliths({ group, terrain, blocked, blockers, rnd, sites, basesW 
       const synth = fSynth;
       const g = new THREE.Group();
       let meta, s;
+      let sMax;   // 這一片露頭抽得到的最大縮放(cell.sf ≤ 1:體格自核心往外遞減)
       if (synth) {
         meta = synthMegalith(g, rnd);
         s = (0.9 + rnd() * 0.5) * OVER.mega * cell.sf;
+        sMax = 1.4 * OVER.mega;
       } else {
         const def = MEGALITHS[fType];
         def.build(g, rnd);
         meta = def;
         s = (def.s[0] + rnd() * (def.s[1] - def.s[0])) * OVER.mega * cell.sf;
+        sMax = def.s[1] * OVER.mega;
       }
+      // 物件高度上限(2026-08-08 使用者定案:2 倍砲塔高)。**夾縮放不截幾何**:`meta.col.h × s`
+      // 正是後面 `topW` 量的那個「岩體世界高度」,而半徑 `r`、落底腳印、緊密判定、攀岩高度帶
+      // 全部乘同一個 s ⇒ 夾在這裡(平坦度縮放**之前**)整顆等比縮小,一條也不會分家。
+      // 走**分布版**(同神木):名岩公稱高 27~120m,硬夾會把高的那幾型全部壓成同一個高度
+      //(而「核心最大、往外遞減」正是露頭的樣子)⇒ 等比壓縮讓最大的那顆恰好貼齊上限。
+      // 合成岩與名岩同吃(兩者的 meta 都帶 col.h);夾制不消耗亂數 ⇒ 佈局序列不變(§2.3)。
+      s = objScaleFit(s, meta.col.h, sMax);
       let r = meta.col.r * s;
       // 山丘頂容不下整顆巨岩 → 等比縮到平坦半徑剛好;縮過頭(<45%)不像地標,換點
       const fr = flatRadiusAt(terrain, x, z, r + 6);
@@ -6621,7 +6648,9 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
         occ.add(x, z, 3.6 * s);
       } else {   // green / wet → 神木牆
         const sp = species[Math.floor(rnd() * species.length)];
-        let s = 0.65 + rnd() * 0.5;
+        // 邊界神木牆吃同一個物件高度上限(分布版,同 placeGiantGroves)—— 邊界帶在空氣牆外
+        // 不可達,但它照樣**看得見**,漏掉這一支就是「圖中央的神木被削平、圍牆那圈還是 200m」
+        let s = objScaleFit(0.65 + rnd() * 0.5, GIANT_DEFS[sp].h, 1.15);
         const rT = GIANT_DEFS[sp].r;
         // 幹腳印 +6:與邊界樓保持淨距,樹冠不貼上建物牆面(樹冠彼此交疊成林無妨)
         s *= Math.min(1, avail / (rT * s + 6));
@@ -8093,6 +8122,12 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     LANDMARKS[lm.type](g, rnd);   // rnd → 同型地標逐座變化(塔高/層數/徽色;巨岩準則)
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
     let sc = OVER.lm * (0.9 + rnd() * 0.25);
+    // 物件高度上限(2026-08-08 使用者定案:2 倍砲塔高)。標稱高 MUST **實測**而不是讀
+    // `LANDMARK_COL[].h` —— 那一欄是手寫的**擋彈**高度,對細長尖頂/天線/煙囪常低報數公尺
+    //(同一族病灶已在 `ty` 屋頂實測那段記過一次)⇒ 拿它當分母會讓那幾座地標的真正頂端
+    // 越過上限,而碰撞柱卻乖乖收在上限之下 = 看得到的尖頂打不到。此時 g 尚未 scale/rotate
+    // ⇒ 世界軸 = 局部軸,量到的就是 s = 1 的標稱高。
+    sc = objScaleFit(sc, new THREE.Box3().setFromObject(g).max.y, OVER.lm * 1.15);
     // 山丘頂容不下就縮(同巨岩);地標縮太小不像公共建築 → 下限 0.55×
     const lr0 = (LANDMARK_COL[lm.type]?.r || 10) * sc;
     const lfr = flatRadiusAt(terrain, lm.x, lm.z, lr0 + 6, 5);

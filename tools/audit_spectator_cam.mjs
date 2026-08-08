@@ -169,7 +169,7 @@ const mkTarget = (x = 0, y = 0, z = 0, ry = 0) => ({
   hero: true, act: true, mesh: { position: new V3(x, y, z), visible: true },
 });
 /** 造一個最小可跑的觀戰客戶端(surf = 站立面高度) */
-const mkSpec = (view, tgt, surf = 0) => {
+const mkSpec = (view, tgt, surf = 0, ceil = Infinity) => {
   const c = Object.assign(Object.create(null), proto, {
     side: null, keys: {}, yaw: 0, pitch: 0,
     pos: new V3(0, 300, 0),
@@ -183,6 +183,10 @@ const mkSpec = (view, tgt, surf = 0) => {
     _specRoster: () => (tgt ? [tgt] : []),
     _specSetView(id) { this._specView = id; this._specPid = null; this._specAnchorOk = false; },
     _surf: () => surf,
+    // 遊戲最高高度(2026-08-08 使用者定案):上帝視角照樣收在天花板之下。真品的公式住
+    // `game._ceilY`(見 audit_world_height),本測只需要一個可控的高度來驗夾制真的接上了 ——
+    // 預設 Infinity = 不設限 ⇒ 既有的每一條測項逐位元不受影響。
+    _ceilY: () => ceil,
     hud: { feed() {} },
   });
   return c;
@@ -212,6 +216,15 @@ const DT = 1 / 60;
   ok(near(fl.pos.y, 120 + SPEC_CAM.FLOOR_M),
     '下降到站立面上方 FLOOR_M 停住(鑽進地形只會看到黑畫面 —— 降不下去比掉進山肚子好)');
   ok(near(fl.camera.position.y, fl.pos.y), '上帝視角:相機 = 自由飛行座標(夾制後才同步)');
+  // 天花板夾制:升到**遊戲最高高度**就停住(2026-08-08 使用者定案「限制遊戲最高高度」)
+  const ce = mkSpec('god', null, 0, 400); ce.keys.Space = true; ce.pos.set(0, 399.9, 0);
+  ce._updateSpectator(DT);
+  ok(near(ce.pos.y, 400), '上升到遊戲最高高度停住(上帝視角也在這個世界裡)');
+  ok(near(ce.camera.position.y, ce.pos.y), '天花板夾制同樣排在相機同步之前');
+  // 退化輸入(天花板低於地板)MUST 讓地板贏 —— 反過來寫會把相機塞進地形裡(原則 6)
+  const dg = mkSpec('god', null, 500, 100); dg.pos.set(0, 300, 0);
+  dg._updateSpectator(DT);
+  ok(dg.pos.y >= 500 + SPEC_CAM.FLOOR_M, '天花板低於地板的退化輸入:地板贏,相機不被塞進地形');
 }
 {
   // ② 第一人稱:藏機體、偏航跟著伺服器 ry(且**平滑**不是直接賦值)

@@ -62,6 +62,7 @@ jobs:
           node tools/audit_world_text.mjs
           node tools/audit_beacons.mjs
           node tools/audit_siteplan.mjs
+          node tools/audit_world_height.mjs
           # 地貌宣告只收離線那一半:完整版要 Overpass,掛在 lane-scenarios.yml
           #(外部服務會限流,不該讓 PR 卡在別人的伺服器上 —— 見該 workflow 檔頭)
           node tools/audit_venue_biome.mjs --offline
