@@ -4579,6 +4579,15 @@ export const BOT_TACTIC = {
   // ④ 打帶跑(高難度):距離環比例
   KITE_NEAR: 0.55,  // 可擊發 ⇒ 貼上去
   KITE_FAR: 0.95,   // 裝填中 ⇒ 拉到射程外緣
+  // ⑤ 其餘距離環 / 選敵折算 / 招式血線(2026-08-08 定位分類改制收成旋鈕)。
+  //    基準值**逐一等於**改制前 bots.js 那幾個硬編碼常數 ⇒ 沒有定位覆寫時逐位元同舊制。
+  //    收成旋鈕的理由不是「比較整齊」:定位策略要調的就是這幾個數,留在 bots.js 裡等於
+  //    「策略表在 data.js、真正在動的數字在別的檔」——第二份實作的標準形狀。
+  KEEP_F: 0.6,       // 沒有打帶跑時的一般距離環(中難度與非 elite 同吃)
+  KEEP_STRUCT: 0.85, // 打建築的距離環(塔/主堡不會追,拉開只是白白少打幾秒)
+  PRIO_HERO: 0.55,   // 選敵加權距離:英雄的折扣(< 1 = 優先咬人)
+  PRIO_STRUCT: 1.3,  // 選敵加權距離:塔/主堡的加價(> 1 = 順路才拆)
+  CAST_HURT: 0.55,   // 自保/輔助招式的觸發血線(裝甲低於此才放治療/減傷)
 };
 /** 選敵優先度(≥1,越大越優先;`_acquire` 以加權距離除以它)。三項佔比一律 0~1 ——
  *  消費端 MUST NOT 另寫權重或改變組合方式。
@@ -4646,16 +4655,222 @@ export const botPolicySanitize = (p) => {
     const v = p?.[k];
     if (Number.isFinite(v)) out[k] = Math.min(hi, Math.max(lo, v));
   }
-  // 交叉約束(鏡射 audit_bot_tactics 的守門斷言;只收緊不放寬)
+  return botTacticCross(out);
+};
+/**
+ * 旋鈕表的**交叉約束**(唯一實作:學習夾制 `botPolicySanitize` 與定位覆寫 `botRoleTactic` 同吃)。
+ * 鏡射 audit_bot_tactics 的守門斷言,只收緊不放寬;就地改寫並回傳同一個物件。
+ * 兩個消費端各抄一份的下場:學習寫得出的合法值,定位覆寫寫不出來(或反過來)——
+ * 而兩邊都不會報錯,只表現成「某個定位的 bot 行為怪怪的」。
+ *   ・W_THREAT 恆最重(「被打時優先」是需求原文的第一順位)
+ *   ・KITE 近 < 遠(打帶跑的兩個環不得交叉,交叉 = 裝填中反而貼上去)
+ *   ・PULL_HP > BASE_HP(RALLY 的窗口:低於 BASE_HP 就直接回堡了,兩條線一旦反轉
+ *     「退到砲塔後方」那一段就是死碼,而畫面上只表現成「這台 bot 一受傷就跑回家」)
+ */
+export const botTacticCross = (out) => {
   out.W_THREAT = Math.max(out.W_THREAT, Math.max(out.W_OUTPUT, out.W_EXEC) + BOT_LEARN.GAP);
   out.KITE_FAR = Math.min(1, Math.max(out.KITE_FAR, out.KITE_NEAR + BOT_LEARN.GAP));
   out.KITE_NEAR = Math.min(out.KITE_NEAR, out.KITE_FAR - BOT_LEARN.GAP);
+  out.PULL_HP = Math.max(out.PULL_HP, out.BASE_HP + BOT_LEARN.GAP);
   return out;
 };
 { // 覆寫迴圈(唯一套用點):學習成果 → BOT_TACTIC。空 policy ⇒ 逐位元同基準。
   const s = botPolicySanitize(BOT_POLICY?.tactic);
   for (const k of Object.keys(BOT_LEARN.KEYS)) BOT_TACTIC[k] = s[k];
 }
+
+// ---- 電腦玩家定位分類與策略(2026-08-08 使用者需求「依機體技能等數值為電腦玩家分類,並設計不同策略」)----
+// 改制前,32 台機體的 bot 全部共用**同一張** BOT_TACTIC:同樣的距離環、同樣的選敵權重、同樣的
+// 撤退線、同樣的採購順序。一台 6.4m/s 的偵察無人機與一台扛 26 護甲的攻城機甲用一模一樣的
+// 打法 —— 而那張表只可能對其中一種是對的。畫面上不會有任何錯誤訊息,只表現成「這台 bot 好像
+// 不太會用自己的機體」。
+//
+// ---- 六條 MUST ----
+// ① **分類推導不手寫**:定位由機體自己的數值算出來,MUST NOT 出現任何逐角色名冊(`s01: 'raider'`
+//    這種東西一旦寫下去,改平衡數值時沒有任何東西會提醒你它已經過期)。取值一律走**既有的
+//    唯一縫** —— 五條特徵直接吃 `HEX_AXES[].val`(圖鑑六角圖那六軸的同一份取值函式)、攻堅吃
+//    `buildDps`、支援吃 `heroAbility`。改任一角色的武器/機體數值,圖鑑與 bot 分類**同步**改。
+// ② **特徵是「相對全場的位置」不是絕對值**:同 `hexBand` 的對數分位(差幾倍決定位置,而不是
+//    差多少)。絕對值沒有可比性 —— 「射程 190」在輕武器裡是最遠、在重武器裡是最近。
+//    `aid` 是例外且刻意如此:它本來就是 0~1 的佔比(「兩個招式槽裡有幾個在供輸隊友」),
+//    取分位反而會把「一招都沒有」跟「有一招」拉成 0 與 1 的二元旗標。
+// ③ **策略是既有旋鈕的覆寫,不是第二套決策系統**:定位只改 `BOT_TACTIC` 的值 + 採購順序,
+//    bots.js 的狀態機/選敵/撤退流程一行都不動。新增一條「定位專用的行為分支」就是第二份實作,
+//    而且會與難度分層(A33)打架。讀取縫仍然只有 `this.tac` 一個。
+// ④ **覆寫是重分配不是通膨**:每個旋鈕的四個乘數以**角色數加權的幾何平均 = 1** 正規化
+//    (同 `AOE_BUDGET.NORM` / `SPEED_COMP` / `BUILD_DPS` 的同一條)⇒ 全場的幾何中點逐位元
+//    錨在使用者定案值上。少了這一步,「給每個定位一點加強」會變成整體 bot 悄悄變強/變弱,
+//    而 `npm run sim` 的勝負旗標對這種整體漂移是飽和的(量不出來)。
+// ⑤ **難度分層不得被繞過**(A33):定位覆寫只在 `BOT_DIFF.tactic` 之下解析 ⇒ 新手/低難度
+//    **結構性地**逐位元維持舊制,不靠「記得別改到」。
+// ⑥ **與學習迴圈疊加而不是取代**:`bot_learn` 學的是全體共用的**基準**(BOT_LEARN.KEYS),
+//    定位覆寫是疊在那份基準上的相對偏移 ⇒ 學習輪不必為 4 個定位各學一份(搜尋空間 ×4、
+//    每一份的樣本數 ÷4 = 訊號淹在雜訊裡)。夾制與交叉約束共用 `botTacticCross` 單一縫。
+const _hexVal = Object.fromEntries(HEX_AXES.map((a) => [a.key, a.val]));
+/** 「這一招是在供輸隊友嗎」的判準:團隊指向恆是;自身指向裡只有這幾種 fx 帶著資訊/續戰價值 */
+const AID_FX = new Set(['heal', 'rally', 'recon', 'vision']);
+/**
+ * 分類特徵(**唯一真相**:名稱 / 從哪裡取值 / 要不要取分位)。`raw` 一律轉呼既有唯一縫,
+ * MUST NOT 在這裡自己算 DPS / EHP / 射程(那就是圖鑑與 bot 分類分家的起點)。
+ * 六角圖的 `power`(電力)刻意不收:它決定的是「多久能放一次招」,不是「該站多近、該先打誰」——
+ * 收進來只會讓分類跟著一個與戰術取捨無關的軸漂移。
+ */
+export const BOT_ROLE_FEATS = {
+  dur:   { name: '耐久', raw: _hexVal.dur },
+  armor: { name: '護甲', raw: _hexVal.armor },
+  fire:  { name: '火力', raw: _hexVal.fire },
+  zone:  { name: '制域', raw: _hexVal.zone },
+  mob:   { name: '機動', raw: _hexVal.mob },
+  siege: { name: '攻堅', raw: (ch) => buildDps(ch, 'light') + buildDps(ch, 'heavy') },
+  aid:   { name: '支援', ratio: true,   // 已是 0~1 的佔比(見上方 ②),不取分位
+    raw: (ch) => ['skill', 'ult'].reduce((s, slot) => {
+      const A = heroAbility(ch, slot);
+      return s + (!A ? 0 : A.target === 'team' ? 1 : AID_FX.has(A.fx) ? 0.5 : 0);
+    }, 0) / 2 },
+};
+/**
+ * 四個定位(**唯一真相**:名稱 / 判別剖面 / 策略乘數 / 採購順序)。
+ *
+ * `w` = 判別剖面:分數 = Σ w_i × (特徵_i − 0.5),取分數最高者。**特徵置中**(減 0.5)是公平性
+ * 的來源 —— 各項都恰好中庸的機體對四個定位一律得 0 分,不會因為某個剖面的正權重比較多就
+ * 先天佔便宜;`Σ|w| = 1` 讓四個分數落在同一把尺上(稽核釘住這兩條)。
+ *
+ * `mul` = 策略乘數(相對值;實際套用前先經 `botRoleMul` 正規化,見上方 ④)。
+ * `buy` = 八軌採購順序,MUST 是 BOT_BUY_ORDER 的排列(缺一軌 = 那一軌永遠不會被買)。
+ *
+ * 四個定位的設計主軸(每一條都是「這台機體的數值本來就該這樣打」):
+ *   突襲 = 機動高、扛不住 ⇒ 貼身點殺、撿尾刀、獵殺輸出核心,見血就退、退得近(跑得回來)。
+ *   壓制 = 制域大、火力高 ⇒ 站中距離讓範圍發揮,不追人也不主動貼臉。
+ *   攻堅 = 耐久護甲高、對建築 DPS 高 ⇒ 咬工事、貼著塔打,撐到裝甲見底才脫離。
+ *   支援 = 招式在供輸隊友 ⇒ 站得最後面、最早放招、最早脫離(死掉的支援供輸為零)。
+ */
+export const BOT_ROLES = {
+  raider: { name: '突襲',
+    w: { mob: 0.45, zone: -0.15, aid: -0.15, dur: -0.13, armor: -0.12 },
+    buy: ['lw', 'hw', 'sk', 'ult', 'sp', 'hp', 'ch', 'ar'],
+    mul: { KITE_NEAR: 0.80, KEEP_F: 0.80, KEEP_STRUCT: 1.00, W_OUTPUT: 1.25, W_EXEC: 1.30,
+      PRIO_HERO: 0.85, PRIO_STRUCT: 1.20, PULL_HP: 1.15, PULL_SP: 1.10, RALLY_BACK_M: 0.80, CAST_HURT: 1.00 } },
+  zoner: { name: '壓制',
+    w: { zone: 0.45, fire: 0.25, mob: -0.20, siege: -0.10 },
+    buy: ['hw', 'lw', 'ult', 'sk', 'hp', 'ar', 'sp', 'ch'],
+    mul: { KITE_NEAR: 1.20, KEEP_F: 1.20, KEEP_STRUCT: 1.10, W_OUTPUT: 1.00, W_EXEC: 1.00,
+      PRIO_HERO: 1.00, PRIO_STRUCT: 1.00, PULL_HP: 1.00, PULL_SP: 1.00, RALLY_BACK_M: 1.10, CAST_HURT: 1.00 } },
+  siege: { name: '攻堅',
+    w: { siege: 0.35, dur: 0.20, armor: 0.20, mob: -0.15, zone: -0.10 },
+    buy: ['hw', 'ar', 'hp', 'lw', 'ult', 'sk', 'sp', 'ch'],
+    mul: { KITE_NEAR: 0.85, KEEP_F: 0.85, KEEP_STRUCT: 0.85, W_OUTPUT: 0.75, W_EXEC: 0.75,
+      PRIO_HERO: 1.20, PRIO_STRUCT: 0.70, PULL_HP: 0.90, PULL_SP: 0.85, RALLY_BACK_M: 0.75, CAST_HURT: 0.90 } },
+  support: { name: '支援',
+    w: { aid: 0.65, fire: -0.15, siege: -0.20 },
+    buy: ['sk', 'ult', 'ch', 'lw', 'sp', 'hp', 'hw', 'ar'],
+    mul: { KITE_NEAR: 1.15, KEEP_F: 1.20, KEEP_STRUCT: 1.10, W_OUTPUT: 1.20, W_EXEC: 0.85,
+      PRIO_HERO: 0.95, PRIO_STRUCT: 1.15, PULL_HP: 1.25, PULL_SP: 1.20, RALLY_BACK_M: 1.25, CAST_HURT: 1.30 } },
+};
+export const BOT_ROLE_KEYS = Object.keys(BOT_ROLES);
+/** 八軌採購順序的基準(沒有定位時 = 舊制;bots.js BUY_ORDER 已收到這裡,MUST NOT 兩邊各一份) */
+export const BOT_BUY_ORDER = ['hw', 'lw', 'ult', 'sk', 'hp', 'sp', 'ar', 'ch'];
+export const BOT_ROLE = {
+  MUL_MAX: 1.5,   // 乘數的合法幅度 [1/MUL_MAX, MUL_MAX](防呆上限;現役最大 1.30)
+  // 覆寫後的合法域。與 BOT_LEARN.KEYS 重疊的那幾個 MUST 收在學習邊界之內(稽核反查)——
+  // 兩張表對同一個旋鈕給出不同的合法域,就會出現「學習寫不出來、但定位寫得出來」的值。
+  KNOBS: {
+    KITE_NEAR: [0.35, 0.8],
+    KEEP_F: [0.35, 0.95],
+    KEEP_STRUCT: [0.6, 1.0],
+    W_OUTPUT: [0, 2],
+    W_EXEC: [0, 2.5],
+    PRIO_HERO: [0.3, 1],
+    PRIO_STRUCT: [1, 2.5],
+    PULL_HP: [0.2, 0.5],
+    PULL_SP: [0.3, 0.7],
+    RALLY_BACK_M: [20, UNITS.tower.range * 0.9],
+    CAST_HURT: [0.3, 0.85],
+  },
+};
+// ---- 特徵分位 / 定位判定 / 乘數正規化(全部惰性快取:首呼定案,同 hexBand)----
+const _roleBand = {};
+/** 某特徵在全體現役角色中的值域 { lo, hi }(推導不手寫 —— 改任一角色數值,基準自己跟著走) */
+function botRoleBand(key) {
+  if (!_roleBand[key]) {
+    const f = BOT_ROLE_FEATS[key];
+    const v = f ? Object.keys(CHARACTERS).map((c) => Math.max(1e-6, f.raw(c))) : [1];
+    _roleBand[key] = { lo: Math.min(...v), hi: Math.max(...v) };
+  }
+  return _roleBand[key];
+}
+/** 一名角色的分類特徵向量(每一項 0~1;`ratio` 型直接取原值,其餘取對數分位) */
+export const botRoleFeats = (ch) => Object.fromEntries(Object.entries(BOT_ROLE_FEATS).map(([k, f]) => {
+  // 佔比型直接取原值(0 是合法的「一招都沒有」);分位型才需要 log 的正值下限
+  if (f.ratio) return [k, Math.max(0, Math.min(1, f.raw(ch)))];
+  const v = Math.max(1e-6, f.raw(ch));
+  const { lo, hi } = botRoleBand(k);
+  const span = Math.log(hi / lo);
+  return [k, span > 1e-9 ? Math.max(0, Math.min(1, Math.log(v / lo) / span)) : 0.5];
+}));
+/** 一名角色對四個定位的親和分數(**唯一評分處**;越大越像)。稽核與 UI 若要顯示一律取這一支。 */
+export const botRoleScores = (ch) => {
+  const f = botRoleFeats(ch);
+  return Object.fromEntries(BOT_ROLE_KEYS.map((r) =>
+    [r, Object.entries(BOT_ROLES[r].w).reduce((s, [k, w]) => s + w * ((f[k] ?? 0.5) - 0.5), 0)]));
+};
+const _roleOf = {};
+/**
+ * 角色的定位(**唯一分類處**)= 親和分數最高者;同分時取 `BOT_ROLE_KEYS` 的宣告序(決定性)。
+ * 查無角色回 null ⇒ 呼叫端逐位元退回無定位的基準表(原則 6 降級不例外)。
+ */
+export function botRoleOf(ch) {
+  if (!CHARACTERS[ch]) return null;
+  if (!_roleOf[ch]) {
+    const sc = botRoleScores(ch);
+    let best = BOT_ROLE_KEYS[0];
+    for (const r of BOT_ROLE_KEYS) if (sc[r] > sc[best]) best = r;
+    _roleOf[ch] = best;
+  }
+  return _roleOf[ch];
+}
+/** 全體現役角色的定位名冊 { 角色: 定位 }(乘數正規化的權重來源;稽核與工具同吃) */
+let _roster = null;
+export const botRoleRoster = () => (_roster ||= Object.fromEntries(
+  Object.keys(CHARACTERS).map((c) => [c, botRoleOf(c)])));
+const _roleNorm = {};
+/**
+ * 某旋鈕四個乘數的**角色數加權幾何平均**(正規化基準;見上方 ④)。
+ * 除掉它之後,全體現役角色的該旋鈕幾何中點逐位元 = 使用者定案的基準值 ——
+ * 「讓某個定位更敢貼上去」的代價是別的定位更保守,而不是整批 bot 一起往前站。
+ */
+function botRoleNorm(key) {
+  if (_roleNorm[key] === undefined) {
+    const roster = botRoleRoster();
+    const n = {};
+    for (const r of BOT_ROLE_KEYS) n[r] = 0;
+    let tot = 0;
+    for (const c of Object.keys(roster)) { if (n[roster[c]] !== undefined) { n[roster[c]]++; tot++; } }
+    let s = 0;
+    for (const r of BOT_ROLE_KEYS) s += n[r] * Math.log(BOT_ROLES[r].mul[key] ?? 1);
+    _roleNorm[key] = tot > 0 ? Math.exp(s / tot) : 1;
+  }
+  return _roleNorm[key];
+}
+/** 某定位在某旋鈕上的**正規化後乘數**(唯一取用處;全體加權幾何平均恆 = 1) */
+export const botRoleMul = (key, role) =>
+  (BOT_ROLES[role]?.mul?.[key] ?? 1) / botRoleNorm(key);
+/**
+ * 定位策略表(**唯一套用處**):基準旋鈕表 → 該定位的旋鈕表。
+ * `base` = 這顆 brain 當下的基準(全域 BOT_TACTIC,或學習迴圈逐 brain 注入的候選策略)——
+ * 定位是疊在它之上的相對偏移,不是取代它(見上方 ⑥)。
+ * `role` 為 null / 未知 ⇒ **回傳 base 本身**(逐位元同基準,新手/低難度走這條)。
+ */
+export function botRoleTactic(base = BOT_TACTIC, role = null) {
+  if (!role || !BOT_ROLES[role]) return base;
+  const out = { ...base };
+  for (const [k, [lo, hi]] of Object.entries(BOT_ROLE.KNOBS)) {
+    const b = Number.isFinite(base?.[k]) ? base[k] : BOT_TACTIC_BASE[k];
+    out[k] = Math.min(hi, Math.max(lo, b * botRoleMul(k, role)));
+  }
+  return botTacticCross(out);
+}
+/** 各定位的採購順序(未知定位 ⇒ 舊制順序) */
+export const botBuyOrder = (role) => BOT_ROLES[role]?.buy || BOT_BUY_ORDER;
 /**
  * 平衡數值指紋(FNV-1a 32-bit):蓋住學習結果所依附的那批數值 —— 機種/角色(含推導迴圈
  * 定案後的武器階梯)/經濟/波次。指紋一變 = 平衡調整過,botPolicy.js 的 meta.balHash 過期

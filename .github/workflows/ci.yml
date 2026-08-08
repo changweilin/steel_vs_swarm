@@ -54,6 +54,7 @@ jobs:
           node tools/audit_spectator_cam.mjs
           node tools/audit_shop_auto.mjs
           node tools/audit_bot_vision.mjs
+          node tools/audit_bot_role.mjs
           node tools/audit_npc_collide.mjs
           node tools/audit_cel_pipeline.mjs
           node tools/audit_visual_prefs.mjs
