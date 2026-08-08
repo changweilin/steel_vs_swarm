@@ -68,7 +68,8 @@ for (const gp of targets) {
   ok(descs.length > 0, `消費端有引用這一族的 lib 描述子(${descs.length} 筆)`);
   const perKind = new Map();   // kind → Σ 庫零件三角形(逐株閘用)
   const seen = new Set();
-  for (const { name, fb, kind, consumer, budgetFam } of descs) {
+  const vegUse = new Map();    // kind → { tris: Σ 庫節點, whole: bool, rows: n }(整層總量閘用)
+  for (const { name, fb, kind, consumer, budgetFam, whole } of descs) {
     // 逐件預算依**消費角色**取(巨岩塊走 families.megalith:一顆巨岩最多 29 件庫零件,
     // 上限比同一支 GLB 裡的 beacons 疊石緊得多 —— 族相同、角色不同、預算不同)。
     // InstancedMesh 消費端(building 桶)另有**逐桶**節點上限:一顆節點被全桶共用,
@@ -87,11 +88,52 @@ for (const gp of targets) {
     // 虛胖檢查(與 audit_beacons「foot 沒有虛胖」同方向):GLB 遠小於 fallback ⇒ 上界失真
     ok(rMax >= env.r * 0.5, `${tag}:fallback 沒有虛胖(實測佔 ${(rMax / env.r * 100).toFixed(0)}%)`);
     // ② 三角形預算(推導自量測檔;逐件)—— 同一個節點只報一次
+    if ((budgetFam || fam) === 'veg') {
+      const u = vegUse.get(kind) || { tris: 0, whole: false, rows: 0 };
+      u.tris += node.tris; u.rows += 1; u.whole = u.whole || !!whole;
+      vegUse.set(kind, u);
+    }
     if (!budget) ok(false, `${name}:tri_budget.json 存在(預算 MUST 量測,不准手寫)`);
     else if (!seen.has(name)) {
       seen.add(name);
-      ok(node.tris <= cap, `${name}:三角形 ${node.tris} ≤ 單件預算 ${cap}(${budget.whatOf(budgetFam || fam)})`);
+      // **整樹節點(whole)不吃逐件上限**:逐件上限的語意是「一顆節點換掉一個零件」,
+      // 而 whole 換掉的是整株 —— 拿一株樹去比一顆葉團,那道閘只會恆紅而且沒有意義。
+      // 它由下面的**整層總量閘**管(那才是 node_cap 本來想代理的東西)。
+      if (whole) {
+        ok(true, `${name}:整樹節點 ${node.tris} tris —— 逐件上限不適用,改由整層總量閘管`);
+      } else {
+        ok(node.tris <= cap, `${name}:三角形 ${node.tris} ≤ 單件預算 ${cap}(${budget.whatOf(budgetFam || fam)})`);
+      }
     }
+  }
+  // ②-b **整層總量閘**(families.veg;2026-08-08 §5z-o):flat `node_cap` 本來就只是
+  // 「整層總量 ≤ 成長額度」的**保守代理**(逐列均分,假設每一列都吃滿)。整樹節點一上場,
+  // 那個代理結構性失效:一株樹本來就是一顆葉團的四五倍,而它換掉的也是整株而不是一個零件。
+  // ⇒ 直接鎖真正的那個量:Σ 逐型消耗 ≤ 成長額度,其中
+  //     消耗(型) = (該型庫節點三角形和 − 被取代的現值) × 該型 instance 上界
+  //     被取代的現值 = whole ⇒ 該型整株現值 kind_tris;逐件 ⇒ 20 × 列數
+  // 這比舊代理**更緊也更準**(不再假設別的型也吃滿),而且它就是使用者 2026-08-08
+  // 決定「闊葉保圓潤冠、從 shrub 挖額度」時看的那一份帳。
+  const vf = budget?.families?.veg;
+  if (vf && vegUse.size) {
+    const quota = vf.measured_quaternius_freed_min;
+    const fuse = vf.measured_cur_part_tris;
+    let total = 0;
+    const lines = [];
+    for (const [kind, u] of [...vegUse].sort((a, b) => b[1].tris - a[1].tris)) {
+      const inst = vf.measured_max_instances?.[kind];
+      const base = u.whole ? vf.measured_kind_tris?.[kind] : fuse * u.rows;
+      if (inst == null || base == null) {
+        ok(false, `families.veg:${kind} 缺 instance 上界或現值量測(預算算不出來 = 這一型沒被驗到)`);
+        continue;
+      }
+      const c = (u.tris - base) * inst;
+      total += c;
+      lines.push(`${kind} ${u.tris}tris${u.whole ? '(整株)' : `/${u.rows}列`} −${base} ×${inst} = ${c}`);
+    }
+    ok(total <= quota,
+      `families.veg 整層消耗 ${total} ≤ 成長額度 ${quota}(用量 ${(total / quota * 100).toFixed(1)}%)`);
+    for (const l of lines) console.log(`     · ${l}`);
   }
   // ③ 逐株(逐款)閘:單件合格 ≠ 整株合格 —— 一株神木十幾件,全換掉每一件都「合格」卻是 20 倍
   for (const [kind, tris] of perKind) {

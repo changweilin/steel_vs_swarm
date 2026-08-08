@@ -195,10 +195,14 @@ const VEG_DEFS = {
                          { g: cyl(0.10, 0.14, 2.2, 5), y: 3.6, c: 0x5f452c },   // 主分枝
                          { g: cyl(0.09, 0.13, 2.0, 5), y: 4.1, px: 0.85, rz: -0.62, c: 0x5f452c },   // 斜出側枝(外端朝上)
                          { g: cyl(0.09, 0.13, 1.8, 5), y: 3.9, pz: -0.8, rx: 0.58, c: 0x5f452c },
-                         { g: ico(2.7), y: 5.1, px: 0.35, key: 'foliage', sy: 0.62, lib: 'tree/vleaf_a27' },   // 主冠偏心壓扁
-                         { g: ico(1.7), y: 5.9, px: -1.5, pz: 0.5, key: 'foliage', sy: 0.66, lib: 'tree/vleaf_a17' },
+                         { g: ico(2.7), y: 5.1, px: 0.35, key: 'foliage', sy: 0.62 },   // 主冠偏心壓扁
+                         { g: ico(1.7), y: 5.9, px: -1.5, pz: 0.5, key: 'foliage', sy: 0.66 },
                          { g: ico(1.7), y: 5.4, px: 1.7, pz: -0.9, key: 'foliage', sy: 0.6 },
-                         { g: ico(1.2), y: 6.5, px: -0.3, pz: -0.6, key: 'foliage', sy: 0.7 }] },
+                         { g: ico(1.2), y: 6.5, px: -0.3, pz: -0.6, key: 'foliage', sy: 0.7 }],
+                 // 整樹節點(2026-08-08 §5z-o);規則同 conifer2 那一段。冠形維持 ico 圓潤葉團
+                 // (使用者 2026-08-08 定案:寧可從 shrub 挖額度也不換成八面體的稜角冠)。
+                 whole: [{ g: cyl(2.22, 2.22, 6.99), y: 3.425, c: 0x6b4a2f, lib: 'tree/bl_wood_a' },
+                         { g: cyl(3.06, 3.06, 6.99), y: 3.425, key: 'foliage', lib: 'tree/bl_crown_a' }] },
   // 白樺:**細高窄冠、葉簇沿幹上段縱向錯落**(與 broadleaf 的寬展冠成對比)——
   // 先鋒樹種的樹型:幹細直、冠幅窄、葉簇一路散到頂,不是頂著兩顆球。
   birch:       { parts: [{ g: cyl(0.16, 0.22, 4.6), y: 2.3, c: 0xe8e4dc },
@@ -208,22 +212,39 @@ const VEG_DEFS = {
                          { g: ico(1.2), y: 6.2, px: -0.7, key: 'foliage', sy: 1.1, lib: 'tree/vleaf_a12' },
                          { g: ico(1.2), y: 7.1, pz: 0.55, key: 'foliage', sy: 1.05 },
                          { g: ico(1.2), y: 7.9, key: 'foliage', sy: 0.95 }] },
+  // 枯立木(2026-08-07 §5u):**整樹節點** —— `whole:` 是**一列以上**的陣列(2026-08-08 改;
+  // 枯幹單色不換季不是軟性 ⇒ 它恰好只需要一列,見 buildVegMeshes 的說明),載到 ⇒ 只畫那幾顆節點
+  // (T2 實拍漂白刺果松枯幹;缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木
+  // 本來就不完美」),載不到 ⇒ **逐位元**退回 parts 三件式(比任何 fuse 近似都乾淨)。
+  // 佈局數學(vegSpan/散布)仍只讀 parts(partGeo 紀律);whole.g 只當入庫包絡與世界尺度。
   deadtree:    { parts: [{ g: cyl(0.14, 0.30, 4.4), y: 2.2, c: 0x6a5a48 },
                          { g: cyl(0.06, 0.1, 2.2, 5), y: 4.6, c: 0x5c4e40 },
-                         { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }] },
+                         { g: cyl(0.05, 0.08, 1.6, 4), y: 3.6, c: 0x5c4e40 }],
+                 whole: [{ g: ico(3.2), y: 3.05, c: 0x9a8b74, lib: 'tree/snag_a' }] },
   conifer:     { parts: [{ g: cyl(0.20, 0.32, 2.0), y: 1.0, c: 0x5d4027 },
                          { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
                          { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
                          { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }] },
   // 針葉林幾何多樣化(2026-07-12):三角錐塔之外再添三款輪廓,同林異形
   conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // 老雲杉:不規則簇疊冠
-                         { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5, lib: 'tree/vcone_a20' },   // 老雲杉:下層枝盤外伸、上層急收
-                         { g: ico(1.6), y: 4.15, px: 0.62, pz: 0.3, key: 'conifer', sy: 0.46, lib: 'tree/vcone_a16' },
+                         { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5 },   // 老雲杉:下層枝盤外伸、上層急收
+                         { g: ico(1.6), y: 4.15, px: 0.62, pz: 0.3, key: 'conifer', sy: 0.46 },
                          { g: ico(1.6), y: 4.9, px: -0.58, pz: -0.35, key: 'conifer', sy: 0.44 },
-                         { g: ico(1.4), y: 5.7, px: 0.4, key: 'conifer', sy: 0.42, lib: 'tree/vcone_a14' },
+                         { g: ico(1.4), y: 5.7, px: 0.4, key: 'conifer', sy: 0.42 },
                          { g: ico(1.4), y: 6.45, px: -0.34, pz: 0.28, key: 'conifer', sy: 0.4 },
-                         { g: ico(0.9), y: 7.15, key: 'conifer', sy: 0.6, lib: 'tree/vcone_b09' },
-                         { g: cone(0.5, 1.9, 5), y: 8.0, key: 'conifer' }] },   // 突出頂梢
+                         { g: ico(0.9), y: 7.15, key: 'conifer', sy: 0.6 },
+                         { g: cone(0.5, 1.9, 5), y: 8.0, key: 'conifer' }],   // 突出頂梢
+                 // 整樹節點(2026-08-08 §5z-o):簡單幾何版一株樹 = **木質 + 葉冠兩顆節點**
+                 // (為什麼不能併成一顆:見 buildVegMeshes)。兩顆是 normalize_parts `--group`
+                 // **共用同一個變換**烤出來的 ⇒ 相對位置烤進頂點,兩列因此共用同一組 `y`
+                 // (= 聯集半跨,讓樹底落在 0),少一個可以寫錯的地方。
+                 // 逐部件 `lib:` 同輪退場 —— whole 載到時 parts 整組不畫,那幾列永遠不會再被
+                 // 解析,留著只會讓預算帳多算一份(而且對照台會把它們列成孤兒)。
+                 // 冠形 = **疊層多角錐,凸角朝上、平整面朝下**(使用者 2026-08-08 定案)——
+                 // 逐瓣散葉那一版在遊戲真實路徑上讀成「光禿樹幹上的碎葉片」(付 7.9 倍面數換到
+                 // 更稀疏的樹);疊層單錐才是針葉林一眼可辨的那個輪廓,而且只要 172 面。
+                 whole: [{ g: cyl(0.24, 0.24, 8.68), y: 4.251, c: 0x54402a, lib: 'tree/cf2_wood_a' },
+                         { g: cyl(1.92, 1.92, 7.41), y: 4.251, key: 'conifer', lib: 'tree/cf2_crown_a' }] },
   conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // 柱狀絲柏:細長紡錘
                          { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
                          { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
@@ -793,13 +814,13 @@ function placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites }) {
 //   ③ **尺寸接得上**:GLB 路徑的高度是 `it.s × entry.h`(8 / 8.5 / 1.8),零件表路徑是
 //      `vegSpan(def) × it.s`(實測 7.8 / 7.3 / 1.75)⇒ 同量級,不必改散布尺度。
 //      兩條路徑都零 `rnd()` 消耗(散布早就跑完)⇒ **佈局逐位元不變**,只換畫出來的幾何。
-// silvergrass / deadtree 留在名冊裡:使用者這一輪點名的是灌木/闊葉林/針葉林/神木,
-// 芒草與枯木不在其中,而草葉的鏤空貼圖是 SF3D 生不出來的東西(寧缺勿錯)。
+// silvergrass 留在名冊裡:草葉的鏤空貼圖是 img→3D 生不出來的東西(寧缺勿錯)。
+// deadtree 已退出名冊改走零件表(2026-08-07 §5u;§5q 定案樹族 img→3D 只收雕塑性主體,
+// 枯幹正是首件 —— §5k ⑤ broadleaf 的同一條遷移路,Quaternius DeadTree_1/2 隨之退場)。
 const NATURE_DIR = 'assets/models/quaternius/nature/';
 // h = 基準高(m):GLB 植被同步吃超尺度(比現實高大;put() 的 VEG_SCALE 已含在 s)
 const NATURE_MANIFEST = {
   silvergrass: { files: ['Grass_Large.gltf', 'Grass_Small.gltf'], h: 1.2 },
-  deadtree:    { files: ['DeadTree_1.gltf', 'DeadTree_2.gltf'], h: 6.5 },
 };
 // 葉片的季節色偏(乘在貼圖上;樹幹不動)
 const SEASON_LEAF_TINT = { spring: 0xd9ffd0, summer: 0xffffff, autumn: 0xffab5e, winter: 0xc9d6da };
@@ -955,11 +976,26 @@ function vegSpan(def) {
 export function buildVegMeshes(type, items, season) {
   const def = VEG_DEFS[type] || GIANT_DEFS[type] || GIANT_DECO[type];
   const span = vegSpan(def);
+  // 整樹節點(def.whole;2026-08-07 §5u,**2026-08-08 起是「一列以上」**):lib 全數載到 ⇒
+  // 這一型只畫 whole 那幾列(保險絲零件全藏 —— 與 synthMegalith tower 的「載到就不 add 原
+  // primitive」同語意);載不到 ⇒ rows = def.parts 逐位元同舊制。span/佈局仍讀 parts,
+  // 零 rnd 消耗;庫的解析仍只經 partGeo 這一份(partGeo ≠ 保險絲 g ⇔ 節點真的載到了)。
+  //
+  // **為什麼一株樹要拆成木質 / 葉冠兩列**(2026-08-08 入庫輪;使用者定案「走零件庫」):
+  // 一列 = 一個 InstancedMesh = **一份材質**。整株併成一列會同時失去三樣東西,而且三樣
+  // 都沒有錯誤訊息 —— ①樹幹與葉冠同色;②`seasonColor` 的季節換色(那一列沒有 `key`);
+  // ③**A39 軟性物質**:`vegSoftKind` 逐列判 ⇒ 一列只能二選一,不是樹幹跟著風擺就是葉子
+  // 不擺(= 把「軟性物質隨風飄揚」整個關掉)。§5u 的 `snag_a` 能單列,是因為枯幹**本來
+  // 就單色、不換季、不是軟性**,不是因為「整株一列」這件事本身成立。
+  // **MUST 是全有全無**(`every`):只載到木質那一列 ⇒ 畫出一棵沒有葉子的樹,比整型退回
+  // 保險絲更糟(原則 6 寧缺勿錯)。
+  const whole = def.whole;
+  const rows = (whole && whole.every((w) => partGeo(w) !== w.g)) ? whole : def.parts;
   const meshes = [];
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion();
   const P = new THREE.Vector3(), S = new THREE.Vector3();
   const tint = new THREE.Color();
-  def.parts.forEach((part, pi) => {
+  rows.forEach((part, pi) => {
     // 日漫賽璐璐渲染(4 階 toon 漸層,取代寫實 PBR)
     // 軟性零件(葉/草)另帶擺動錨點:base = 這個零件的原點在整株上的高度、sy = 它自己的
     // 縱向壓縮 ⇒ 樹幹頂與樹冠底在同一個高度上拿到同一份權重,接合不會被風吹開。

@@ -510,25 +510,12 @@
   },
   {
    "keys": [
-    "rock/mesa_a",
-    "rock/tower_a"
+    "rock/mesa_a"
    ],
    "method": "sf3d",
-   "consumer": "biomes synthMegalith 的 tower / mesa 兩個岩型分支(**整座**庫節點:崖錐 + 柱身/疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
+   "consumer": "biomes synthMegalith 的 mesa 岩型分支(**整座**庫節點:裙狀崖錐 + 疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
    "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
    "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_f94b5c10-497a-4d02-aaa9-e4e197ddc006",
-     "family": "rock",
-     "part": "mg_tower",
-     "query": "devils tower rock",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Carol M Highsmith",
-     "source_url": "https://www.rawpixel.com/image/3093678/free-photo-image-america-beautiful-carol-highsmith",
-     "note": "魔鬼塔(美國懷俄明,火山頸)→ tower_a"
-    },
     {
      "role": "primary",
      "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
@@ -539,7 +526,7 @@
      "license": "cc0",
      "creator": "Carol M Highsmith",
      "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
-     "note": "同一座地標的另一張 → mesa_a(+120° yaw 與 tower_a 錯開)"
+     "note": "魔鬼塔(美國懷俄明)同地標第二張;SF3D + 120° yaw 化用為平頂桌山 → mesa_a。2026-08-07 拆列:tower_a 已改 T2-spz 重生成(見同鍵新列),本列只剩 mesa_a"
     }
    ],
    "gen": {
@@ -552,6 +539,39 @@
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base)",
     "fit": 0.95,
     "note": "單位包絡 1×1;減面刻意留餘裕(逐件上限 430,節點收在 372/371)—— 上限是量測推導值,會隨岩體零件表重量而移動,貼著上限出貨等於把下一次重量變成紅字"
+   }
+  },
+  {
+   "key": "rock/tower_a",
+   "method": "trellis2_spz",
+   "consumer": "biomes synthMegalith 的 tower 岩型分支(**整座**庫節點:崖錐 + 柱身同一顆;消費端一行未動 —— 同名取代,rnd() 枚數/座號組/呼叫點逐位元不變)",
+   "rev": "§5t 首個 T2-spz 入庫節點(2026-08-07;取代 §5j 的 SF3D 版 —— §5l 記錄該版「柱狀節理全失、頂面變圓」,§5o 實測 T2 C→500 柱身+裙錐都在)",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+     "family": "rock",
+     "part": "mg_tower",
+     "query": "devils tower rock",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "Carol M Highsmith",
+     "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
+     "file": "photos/rock/mg_tower/ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1.jpg",
+     "note": "魔鬼塔;matte 先二值化 alpha >16→255 再餵 T2(§5n「同一張 matte ≠ 同一個輸入」)"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+    "params": "1024_cascade 快檔(= TRELLIS.2-4B pipeline.json 原廠值)/ seed 42 —— per-seed 重抽紀律(§5r):seed 1234 抽到浮雕注(背面開口 115°,§5s 楔形補丁可救但天然閉合注在手就不必),42 天然閉合",
+    "machine": "RTX 3060 12GB(torch 峰值 ≤3.4GB;載入需 ≥20GB 空閒 RAM)",
+    "note": "原生 47,725 面、29,239 開放邊、2,443 元件 —— O-Voxel 輸出本身就是撕裂薄殼(§5o),不是減面弄壞的"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py(§5o C 路徑:uniform volumetric resample 實體化 + quadric;cells 256 / offset 0.6%,3×3 掃描全平台後採跨族驗證凍結值)47,725→500 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base 同名取代)500→392",
+    "fit": 0.95,
+    "note": "單位包絡 1×1(= fallback ico(1)),非等向拉滿;kf_p95 0.94% / dev_p95 1.15%(對 T2 原殼);逐件上限 430 收在 392 留餘裕(§5j 教訓)"
    }
   },
   {
@@ -881,7 +901,7 @@
     "tri_cap": 218,
     "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
    },
-   "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。"
+   "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。 **2026-08-08(§5z-o)減面 213 → 140**:整層總量閘上線後量到這一列吃掉成長額度的 59.1%(213 tris × 1909 instance);使用者定案「闊葉保圓潤冠、寧可從 shrub 挖額度」⇒ 以同一支 normalize_parts 重跑減面(來源網格不變,只是 tri_cap 143)。灌木是 1909 叢的填充植物,單株 213 面本來就與它在畫面上的份量不成比例。"
   },
   {
    "keys": [
@@ -993,6 +1013,105 @@
     "fit": 0.95,
     "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
    }
+  },
+  {
+   "key": "tree/snag_a",
+   "method": "trellis2_spz",
+   "consumer": "biomes VEG_DEFS.deadtree 的整樹節點(def.whole;§5u 新縫:lib 載到 ⇒ 這一型只畫這一顆、保險絲三件式全藏,載不到 ⇒ 逐位元退回舊制三件式。deadtree 同輪退出 NATURE_MANIFEST —— Quaternius DeadTree_1/2 退場,blackforest 實測釋出 30,706 tris;散布/佈局零 rnd 變化)",
+   "rev": "§5u 樹族首件(2026-08-07;§5q 定案樹族 img→3D 只收雕塑性主體 —— 枯幹/板根/扭曲幹,漂白枯幹是範本)",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_6f0ad84c-3565-4acb-8578-b633c9016b54",
+     "family": "tree",
+     "part": "cf_juniper_tree",
+     "query": "bristlecone pine tree",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "U.S. Forest Service (source)",
+     "source_url": "https://www.rawpixel.com/image/3388298/free-photo-image-blue-bristlecone-pines-california",
+     "file": "photos/tree/cf_juniper_tree/ov_6f0ad84c-3565-4acb-8578-b633c9016b54.jpg",
+     "note": "漂白刺果松枯幹(§5p F0 黏土複驗 ◎ 的那張 —— 無葉冠的雕塑性主體是 T2 樹族甜蜜點);matte 先二值化 alpha >16→255(§5n)"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+    "params": "1024_cascade 快檔 / seed 1234(§5p F0 複驗那一注,出來就 ◎ 不需重抽)",
+    "machine": "RTX 3060 12GB",
+    "note": "原生 48,673 面 / 27,447 開放邊 / 1,428 元件 —— 細枝主體的 T2 原殼是空間上斷開的孤島群(§5t 三連敗的成因),與岩族的緊密團塊是兩種病"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py --mode wrap(alpha wrap 2% 橋接 + 取最大元件(棄 0.7% 面積的離體浮枝)+ 拓樸保護 quadric)48,673→200 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)非等向拉滿 ico(3.2) 包絡",
+    "fit": 0.95,
+    "note": "kf_p95 2.4% / dev_p95 1.7%;逐件上限 225(§5u 以 uluru deadtree 121 instance + Quaternius 退場釋出重推)收在 200 留餘裕(§5j 教訓);缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木本來就不完美」"
+   }
+  },
+  {
+   "keys": [
+    "tree/cf2_wood_a",
+    "tree/cf2_crown_a"
+   ],
+   "method": "simple_geom_tree",
+   "consumer": "biomes VEG_DEFS.conifer2 的整樹節點(def.whole 兩列:木質 c 0x54402a / 葉冠 key conifer)",
+   "rev": "§5z-o 樹族入庫輪(2026-08-08;使用者定案「走零件庫」)",
+   "at": "2026-08-08",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+     "family": "tree",
+     "part": "cf_araucaria",
+     "query": "araucaria tree",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": null,
+     "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
+     "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+     "note": "南洋杉(§5p F0 選片閘通過的針葉語料;T2 浮雕殼只當佈局來源,出貨幾何是基本體重建)"
+    }
+   ],
+   "gen": {
+    "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
+    "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
+    "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
+    "params": "--density mid --touch 1.15 --crown tiers(針葉;凸角朝上、平整面朝下)/ --major 0.3 --density sparse --touch 1.15(闊葉,逐瓣 ico);--group 共用變換",
+    "measured": "木質 92 / 葉冠 80(針葉疊層,合計 172)"
+   },
+   "note": "**兩顆節點共用一個變換**(normalize_parts --group cf2=1.98x4.475,遊戲端實測全高 8.95m / 半徑 1.98m)⇒ 相對位置烤進頂點,消費端兩列共用同一個 y=4.251。同輪退掉 vcone_a20/a16/a14/b09 四列 per-part lib(whole 載到時 parts 整組不畫,那幾列永遠不會再被解析)。 **2026-08-08 同輪改疊層**:逐瓣散葉版(1,220 面)在遊戲真實路徑上讀成「光禿樹幹上的碎葉片」—— 付 7.9 倍面數換到比現況更稀疏的樹。成因是量測面:§5z 五輪的剪影全部對 v7 瓣化原型量,從來沒有對過遊戲裡真的那棵樹(針葉對 v7 只有 62% ⇒ 對現況更瘦)。使用者定案改 --crown tiers 且「多角錐凸角朝上、平整面朝下」(單錐,不是 bipyr —— 疊層要的是那條平整下緣)。172 面 vs 現值 155 ⇒ 整層消耗 98.2% → 85.9%。"
+  },
+  {
+   "keys": [
+    "tree/bl_wood_a",
+    "tree/bl_crown_a"
+   ],
+   "method": "simple_geom_tree",
+   "consumer": "biomes VEG_DEFS.broadleaf 的整樹節點(def.whole 兩列:木質 c 0x6b4a2f / 葉冠 key foliage)",
+   "rev": "§5z-o 樹族入庫輪(2026-08-08)",
+   "at": "2026-08-08",
+   "imgs": [
+    {
+     "role": "primary",
+     "id": "ov_26750ed5-e0a1-4a46-a301-68040c9d4075",
+     "family": "tree",
+     "part": "bl_oak",
+     "query": "dense oak canopy",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": null,
+     "source_url": "https://openverse.org/image/26750ed5-e0a1-4a46-a301-68040c9d4075",
+     "file": "photos/tree/bl_oak/ov_26750ed5-e0a1-4a46-a301-68040c9d4075.jpg",
+     "note": "密冠橡樹;冠形維持 ico 圓潤葉團 —— 使用者 2026-08-08 定案「寧可從 shrub 挖額度也不換成八面體的稜角冠」(八面體 704 面雖然省一半,列圖上冠變結晶感)"
+    }
+   ],
+   "gen": {
+    "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
+    "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
+    "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
+    "params": "--density mid --touch 1.15(針葉)/ --major 0.3 --density sparse --touch 1.15(闊葉);--group 共用變換",
+    "measured": "木質 428 / 葉冠 792(針葉,合計 1,220);木質 336 / 葉冠 920(闊葉,合計 1,256)"
+   },
+   "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。"
   }
  ]
 }

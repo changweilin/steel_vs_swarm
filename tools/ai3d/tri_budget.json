@@ -1,100 +1,129 @@
 {
-  "measured_what": "synthMegalith 現行程序合成巨岩(11 型 × 200 seeds,mulberry32(s*2654435761),量法 = 逐 mesh index.count/3 加總;量測腳本 = playwright 頁內抽 biomes.js 原文執行,2026-08-05)",
-  "measured_min_tris": 85,
-  "measured_p50_tris": 380,
-  "measured_p90_tris": 548,
-  "measured_max_tris": 1071,
-  "factor": 1.0,
-  "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)",
-  "families": {
-    "megalith": {
-      "measured_what": "遊戲裡真的擺出去的**一整顆**巨岩(placeMegaliths 的建造順序 synthMegalith → decorateMegalith → jitterMegalith → bakeContactAO),200 顆種子 × 5 個世界尺寸 = 1000 顆,逐 mesh index.count/3 加總;量測腳本 tools/ai3d/measure_megalith_tris.mjs(playwright 頁內執行 biomes.js 匯出的真品三支 + 真 three),2026-08-06。分布 min 664 / p50 1718 / p90 2366 / max 3114;逐岩型最重 basalt 3114 / tower 2943 / hoodoo 2855 / mesa 2645 / granite 2586 / slab 2555 / dome 2452 / fin 2305 / arch 2070 / marble 1935 / spire 1728",
-      "measured_max_tris": 3114,
-      "max_lib_parts_per_rock": 29,
-      "observed_max_lib_parts": 19,
-      "whole_factor": 4.0,
-      "factor": 0.13793103448275862,
-      "justification": "逐件上限 = whole_factor × 最重整顆(3114)÷ 同顆最多庫零件數(29)≈ 430 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。**2026-08-06 修正了一筆錯帳**:舊值(1071 ÷ 14 = 306)的分子只量 synthMegalith(岩體本身)、分母也只數 synthMegalith 的三個迴圈,**兩者都漏掉 decorateMegalith 的疊石堆** —— 而 MEGA_LIB 這份名冊從第一天就同時服務那兩支(parts_src.megaLibDescs 的檔頭寫著)。漏量分子與漏數分母的偏差方向相反、都沒有錯誤訊息,只表現成閘門鬆緊不對。分母 29 = 迴圈上限的**解析值**(marble 堆塊 8 + 崩落岩塊 4 + 伴生圓丘 2 + 疊石堆 3 堆 × 每堆 5 顆 = 15),MUST NOT 改取抽樣最大值(抽樣只是「這 1000 顆裡最多的那顆」,拿它當分母會把上限算鬆);抽樣量到的 19 件是這份逐項清單的**反向核對**(量到的超過解析值 = 清單漏了某個呼叫點,腳本會紅字)。**2026-08-06 晚(§5m)hoodoo 呼叫點啟用**:hoodoo 分支逐柱吃一顆節點、柱數上限 2+⌊rnd·3⌋=4 ⇒ hoodoo 型整顆 = 4+崩落 4+伴生 2+疊石 15 = 25 < 29(marble 型仍是最大配置)⇒ 分母不動、逐件上限不動。",
-      "staleness": "①synthMegalith 的 marble/崩落塊/伴生丘、decorateMegalith 的疊石堆**任一迴圈上限一改** MUST 重數 max_lib_parts_per_rock(新增第五個吃 MEGA_LIB 的呼叫點同理);②岩體零件表一改 MUST 重跑 measure_megalith_tris.mjs 重量 measured_max_tris;③factor 是推導值(= whole_factor ÷ max_lib_parts_per_rock),MUST NOT 手改。"
+ "measured_what": "synthMegalith 現行程序合成巨岩(11 型 × 200 seeds,mulberry32(s*2654435761),量法 = 逐 mesh index.count/3 加總;量測腳本 = playwright 頁內抽 biomes.js 原文執行,2026-08-05)",
+ "measured_min_tris": 85,
+ "measured_p50_tris": 380,
+ "measured_p90_tris": 548,
+ "measured_max_tris": 1071,
+ "factor": 1,
+ "justification": "單一 AI 零件的三角形數不得超過現行最重的一整顆合成巨岩(計畫書 §2.1-6:預算由量測推導;係數 1.0 = 保守端 —— 零件只是巨岩的一個面/一塊,整件替換品沒有理由比整顆原品更貴)",
+ "families": {
+  "megalith": {
+   "measured_what": "遊戲裡真的擺出去的**一整顆**巨岩(placeMegaliths 的建造順序 synthMegalith → decorateMegalith → jitterMegalith → bakeContactAO),200 顆種子 × 5 個世界尺寸 = 1000 顆,逐 mesh index.count/3 加總;量測腳本 tools/ai3d/measure_megalith_tris.mjs(playwright 頁內執行 biomes.js 匯出的真品三支 + 真 three),2026-08-06。分布 min 664 / p50 1718 / p90 2366 / max 3114;逐岩型最重 basalt 3114 / tower 2943 / hoodoo 2855 / mesa 2645 / granite 2586 / slab 2555 / dome 2452 / fin 2305 / arch 2070 / marble 1935 / spire 1728",
+   "measured_max_tris": 3114,
+   "max_lib_parts_per_rock": 29,
+   "observed_max_lib_parts": 19,
+   "whole_factor": 4,
+   "factor": 0.13793103448275862,
+   "justification": "逐件上限 = whole_factor × 最重整顆(3114)÷ 同顆最多庫零件數(29)≈ 430 ⇒ 全部換滿的一顆 ≤ 4× 現行最重 —— 與 tree 族 kind_factor 同一條「整件閘」規則,只是巨岩的同顆件數上限由程式碼直接可數,故內建進逐件上限。factor = whole_factor ÷ max_lib_parts_per_rock。**2026-08-06 修正了一筆錯帳**:舊值(1071 ÷ 14 = 306)的分子只量 synthMegalith(岩體本身)、分母也只數 synthMegalith 的三個迴圈,**兩者都漏掉 decorateMegalith 的疊石堆** —— 而 MEGA_LIB 這份名冊從第一天就同時服務那兩支(parts_src.megaLibDescs 的檔頭寫著)。漏量分子與漏數分母的偏差方向相反、都沒有錯誤訊息,只表現成閘門鬆緊不對。分母 29 = 迴圈上限的**解析值**(marble 堆塊 8 + 崩落岩塊 4 + 伴生圓丘 2 + 疊石堆 3 堆 × 每堆 5 顆 = 15),MUST NOT 改取抽樣最大值(抽樣只是「這 1000 顆裡最多的那顆」,拿它當分母會把上限算鬆);抽樣量到的 19 件是這份逐項清單的**反向核對**(量到的超過解析值 = 清單漏了某個呼叫點,腳本會紅字)。**2026-08-06 晚(§5m)hoodoo 呼叫點啟用**:hoodoo 分支逐柱吃一顆節點、柱數上限 2+⌊rnd·3⌋=4 ⇒ hoodoo 型整顆 = 4+崩落 4+伴生 2+疊石 15 = 25 < 29(marble 型仍是最大配置)⇒ 分母不動、逐件上限不動。",
+   "staleness": "①synthMegalith 的 marble/崩落塊/伴生丘、decorateMegalith 的疊石堆**任一迴圈上限一改** MUST 重數 max_lib_parts_per_rock(新增第五個吃 MEGA_LIB 的呼叫點同理);②岩體零件表一改 MUST 重跑 measure_megalith_tris.mjs 重量 measured_max_tris;③factor 是推導值(= whole_factor ÷ max_lib_parts_per_rock),MUST NOT 手改。"
+  },
+  "building": {
+   "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於三個最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名;2026-08-06)。instance 上界(三場取最大):chimneys 212(shibuya)/ roofTanks 97(seoul)/ roofBoxes 117(seoul);配件桶總量上界 50,936 tris(seoul;shibuya 47,416、manhattan 35,940);全場三角形 1.47M~1.72M(配件佔比 2.5~3.1%)",
+   "measured_deco_total_max": 50936,
+   "measured_max_instances": {
+    "chimney": 212,
+    "tank": 97,
+    "acbox": 117
+   },
+   "roster_size": 3,
+   "whole_factor": 4,
+   "node_caps": {
+    "chimney": 240,
+    "tank": 525,
+    "acbox": 435
+   },
+   "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
+   "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
+  },
+  "veg": {
+   "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73。**2026-08-07 第三次量測(§5u deadtree 遷移輪)**:uluru(裸露地,bare 0.95)加入取樣面 —— deadtree instance 上界 121(blackforest 僅 15;裸露地才是它的上界場地);blackforest 全場 1,591,970 → 1,561,264 = deadtree 的 Quaternius 檔(DeadTree_1/2)退場再釋出 30,706",
+   "measured_veg_total_max": 212963,
+   "measured_max_instances": {
+    "shrub": 1909,
+    "broadleaf": 211,
+    "birch": 98,
+    "mangrove": 98,
+    "conifer2": 73,
+    "deadtree": 121
+   },
+   "measured_quaternius_freed_min": 622905,
+   "measured_cur_part_tris": 20,
+   "lib_roster": {
+    "shrub": {
+     "rows": 1,
+     "instances": 1909
     },
-    "building": {
-      "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於三個最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名;2026-08-06)。instance 上界(三場取最大):chimneys 212(shibuya)/ roofTanks 97(seoul)/ roofBoxes 117(seoul);配件桶總量上界 50,936 tris(seoul;shibuya 47,416、manhattan 35,940);全場三角形 1.47M~1.72M(配件佔比 2.5~3.1%)",
-      "measured_deco_total_max": 50936,
-      "measured_max_instances": {
-        "chimney": 212,
-        "tank": 97,
-        "acbox": 117
-      },
-      "roster_size": 3,
-      "whole_factor": 4.0,
-      "node_caps": {
-        "chimney": 240,
-        "tank": 525,
-        "acbox": 435
-      },
-      "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
-      "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
+    "broadleaf": {
+     "rows": 2,
+     "instances": 211
     },
-    "veg": {
-      "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73",
-      "measured_veg_total_max": 212963,
-      "measured_max_instances": {
-        "shrub": 1909,
-        "broadleaf": 211,
-        "birch": 98,
-        "mangrove": 98,
-        "conifer2": 73
-      },
-      "measured_quaternius_freed_min": 592199,
-      "measured_cur_part_tris": 20,
-      "lib_roster": {
-        "shrub": {
-          "rows": 1,
-          "instances": 1909
-        },
-        "broadleaf": {
-          "rows": 2,
-          "instances": 211
-        },
-        "birch": {
-          "rows": 2,
-          "instances": 98
-        },
-        "mangrove": {
-          "rows": 1,
-          "instances": 98
-        },
-        "conifer2": {
-          "rows": 4,
-          "instances": 73
-        }
-      },
-      "lib_instance_rows": 2917,
-      "whole_factor": 3.78,
-      "node_cap": 223,
-      "justification": "InstancedMesh 消費端(同 building 族的幾何學:GPU 成本 = 節點 tris × instance 數,逐件看毫無意義),但**數量級與 building 差一個檔次** —— 一張圖的屋頂煙囪 212 座,而灌木 1909 叢。**上限由「這一層還能長多少」反推**:node_cap = 成長額度 ÷ Σ(名冊列 × 該型 instance 上界) + 現行零件三角形數 = 592,199 ÷ 2,917 + 20 = 223。成長額度 = **Quaternius 退場實測釋出的最小值**(blackforest 2,184,169 → 1,591,970)⇒ 名冊每一列都貼滿上限的最壞情況,**每一個量過的場地都不比這一輪之前重**(whole_factor 3.78 是這條式子的結果,不是先挑一個好看的倍率)。逐列均分「成長額度」而不是均分「總額度」:均分總額度會給 20 株的 sapling 與 1909 叢的灌木同一份錢,實測算出來的上限是 27 tris —— 比現行的 ico(20)還小,等於這一族永遠不准接。**名冊本身是旋鈕,而且是雙向的**:①灌木 1909 個 instance ⇒ 它一列的價錢等於其餘九列的總和,兩列都接時 cap 只有 140,而 140 逼出來的減面比(實拍冠簇 336~414 → 140 = 2.4~3:1)正是 §5e 那個「Blender 硬減面把殼撕出洞」的區間 —— 外廓與預算全綠,截圖上是樹冠裂成一片片;②2026-08-06 重寫冠層骨架後零件變多,若每一團都接庫,Σ 會漲到 3,779、cap 掉到 176(又進撕裂區)⇒ 把「被主冠擋住大半」的小簇退回保險絲,額度留給看得見的那幾團。逐株(逐款)閘刻意不設:node_cap 的推導式本身已經把整層總量鎖住,再加一道 kind_factor 只是同一個約束寫兩次。",
-      "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量;④node_cap 與 whole_factor 都是推導值,MUST NOT 手改。"
+    "birch": {
+     "rows": 2,
+     "instances": 98
     },
-    "tree": {
-      "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05;**2026-08-06 因 meranti/dinizia/tualang/klinki 重寫冠層骨架而重量** —— 只有 klinki 變動 286 → 386(輪生枝盤從 3 枝 3 盤改成 3 層 × 2 枝 2 盤),其餘三種零件數淨值不變。量測腳本已從臨時腳本升格為 `tools/ai3d/measure_veg_tris.mjs --giants`)",
-      "measured_max_tris": 402,
-      "factor": 1.0,
-      "kind_tris": {
-        "redwood": 402,
-        "sequoia": 368,
-        "euc": 328,
-        "dougfir": 316,
-        "meranti": 315,
-        "klinki": 386,
-        "sitka": 281,
-        "alerce": 280,
-        "dinizia": 279,
-        "taiwania": 268,
-        "tualang": 259
-      },
-      "kind_factor": 4,
-      "justification": "兩道閘,缺一不可。①單件上限同 rock 族那條規則:一個 AI 零件 ≤ 現行最重的**一整株**神木(402)。②但樹與石頭有一個關鍵差別 —— 一株神木有 13~20 件、冠簇一件今天只有 20 tris(ico),AI 零件是 215 ⇒ 只驗單件的話,把整株冠簇全換掉會變成 20 倍而每一件都「合格」。故加逐株閘:該株所有庫零件的三角形和 ≤ kind_factor × 該株現值 ⇒ 換完的整株保證 ≤ 5× 現值(非庫零件本來就 ≤ 現值)。現行接線實測 2.2~3.7×。",
-      "staleness": "kind_tris 是量測快照:**改 GIANT_DEFS 任一零件表 MUST 重量**(否則閘門拿舊基準放行)。重量方式見 measured_what。"
+    "mangrove": {
+     "rows": 1,
+     "instances": 98
+    },
+    "conifer2": {
+     "rows": 4,
+     "instances": 73
+    },
+    "deadtree": {
+     "rows": 1,
+     "instances": 121,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫一顆 ⇒ 恆 1 列"
     }
+   },
+   "measured_kind_tris": {
+    "conifer4": 162,
+    "broadleaf": 160,
+    "toadstool": 160,
+    "conifer2": 155,
+    "redcap": 148,
+    "birch": 132,
+    "mangrove": 108,
+    "browncap": 88,
+    "conifer": 83,
+    "borderrock": 81,
+    "conifer3": 77,
+    "sapling": 76,
+    "parasol": 71,
+    "shrub": 60,
+    "deadtree": 56,
+    "bamboo": 50,
+    "succulent": 48,
+    "silvergrass": 30,
+    "arrowbamboo": 30,
+    "reed": 12
+   },
+   "lib_instance_rows": 3038,
+   "whole_factor": 3.92,
+   "node_cap": 225,
+   "justification": "InstancedMesh 消費端(同 building 族的幾何學:GPU 成本 = 節點 tris × instance 數,逐件看毫無意義),但**數量級與 building 差一個檔次** —— 一張圖的屋頂煙囪 212 座,而灌木 1909 叢。**上限由「這一層還能長多少」反推**:node_cap = 成長額度 ÷ Σ(名冊列 × 該型 instance 上界) + 現行零件三角形數 = 622,905 ÷ 3,038 + 20 = 225。成長額度 = **Quaternius 退場實測釋出的最小值**(blackforest 2,184,169 → 1,591,970)⇒ 名冊每一列都貼滿上限的最壞情況,**每一個量過的場地都不比這一輪之前重**(whole_factor 3.78 是這條式子的結果,不是先挑一個好看的倍率)。逐列均分「成長額度」而不是均分「總額度」:均分總額度會給 20 株的 sapling 與 1909 叢的灌木同一份錢,實測算出來的上限是 27 tris —— 比現行的 ico(20)還小,等於這一族永遠不准接。**名冊本身是旋鈕,而且是雙向的**:①灌木 1909 個 instance ⇒ 它一列的價錢等於其餘九列的總和,兩列都接時 cap 只有 140,而 140 逼出來的減面比(實拍冠簇 336~414 → 140 = 2.4~3:1)正是 §5e 那個「Blender 硬減面把殼撕出洞」的區間 —— 外廓與預算全綠,截圖上是樹冠裂成一片片;②2026-08-06 重寫冠層骨架後零件變多,若每一團都接庫,Σ 會漲到 3,779、cap 掉到 176(又進撕裂區)⇒ 把「被主冠擋住大半」的小簇退回保險絲,額度留給看得見的那幾團。逐株(逐款)閘刻意不設:node_cap 的推導式本身已經把整層總量鎖住,再加一道 kind_factor 只是同一個約束寫兩次。",
+   "whole_node_gate": "2026-08-08(§5z-o,使用者定案「走零件庫」):簡單幾何版把**一整株樹**做成庫節點(`VEG_DEFS.whole`,木質 + 葉冠兩列)之後,flat `node_cap` 這道閘**結構性失效** —— 它的語意是「一顆節點換掉一個零件」,而一株樹本來就是一顆葉團的四五倍,拿它去比只會恆紅。⇒ 逐件上限對 `whole` 列不適用,改由 **整層總量閘** 管(intake ②-b):Σ 逐型消耗 ≤ `measured_quaternius_freed_min`,其中「消耗(型) = (該型庫節點三角形和 − 被取代的現值) × 該型 instance 上界」,被取代的現值 = whole 走 `measured_kind_tris[型]`(整株)、逐件走 `measured_cur_part_tris × 列數`。**這不是放寬,是把代理換成本尊**:flat cap 一向只是「每一列都吃滿」的保守代理,總量閘直接量真正被約束的那個數,比代理更緊也更準。2026-08-08 實測:改制前既有名冊已用掉成長額度的 **92.4%**(其中 shrub 一列 213 tris × 1909 instance = 59.1%),故同輪把 `bush_a09` 減面 213 → 140 讓出額度給 conifer2 / broadleaf 的整樹節點 —— 使用者定案「闊葉保圓潤冠(ico 1,256),寧可從 shrub 挖」。`node_cap` 仍是**逐件列**(shrub/birch/mangrove)的閘,不退場。",
+   "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量(2026-08-08 盤點:NATURE_MANIFEST 只剩 silvergrass,而 §5k 定案它留著(草葉鏤空貼圖 img→3D 生不出來)⇒ **這一桶已經倒不出更多額度,只能重分配**);④node_cap 與 whole_factor 都是推導值,MUST NOT 手改;⑤`measured_kind_tris` 是**逐型整株現值**的量測快照(整層總量閘的分母),**改 VEG_DEFS 任一型的零件表 MUST 重跑 `measure_veg_tris.mjs --kinds`** —— 不重量的話閘門拿舊基準算消耗,而偏差沒有錯誤訊息,只表現成「額度怎麼還有這麼多」。"
+  },
+  "tree": {
+   "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05;**2026-08-06 因 meranti/dinizia/tualang/klinki 重寫冠層骨架而重量** —— 只有 klinki 變動 286 → 386(輪生枝盤從 3 枝 3 盤改成 3 層 × 2 枝 2 盤),其餘三種零件數淨值不變。量測腳本已從臨時腳本升格為 `tools/ai3d/measure_veg_tris.mjs --giants`)",
+   "measured_max_tris": 402,
+   "factor": 1,
+   "kind_tris": {
+    "redwood": 402,
+    "sequoia": 368,
+    "euc": 328,
+    "dougfir": 316,
+    "meranti": 315,
+    "klinki": 386,
+    "sitka": 281,
+    "alerce": 280,
+    "dinizia": 279,
+    "taiwania": 268,
+    "tualang": 259
+   },
+   "kind_factor": 4,
+   "justification": "兩道閘,缺一不可。①單件上限同 rock 族那條規則:一個 AI 零件 ≤ 現行最重的**一整株**神木(402)。②但樹與石頭有一個關鍵差別 —— 一株神木有 13~20 件、冠簇一件今天只有 20 tris(ico),AI 零件是 215 ⇒ 只驗單件的話,把整株冠簇全換掉會變成 20 倍而每一件都「合格」。故加逐株閘:該株所有庫零件的三角形和 ≤ kind_factor × 該株現值 ⇒ 換完的整株保證 ≤ 5× 現值(非庫零件本來就 ≤ 現值)。現行接線實測 2.2~3.7×。",
+   "staleness": "kind_tris 是量測快照:**改 GIANT_DEFS 任一零件表 MUST 重量**(否則閘門拿舊基準放行)。重量方式見 measured_what。"
   }
+ }
 }
