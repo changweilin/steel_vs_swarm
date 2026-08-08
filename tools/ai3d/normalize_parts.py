@@ -18,6 +18,9 @@
 #     --node "collapse_a=<src.glb>|1.5|1000[|ry_deg[|dy]]" --node "facet_a=<src.glb>|1.15|900" ...
 #   dy = 縮放後的縱向平移(m):實拍岩體常比 fallback ico 扁,置中會讓消費端算好的
 #        底面懸空 —— 基座件用 dy 沉到「底 = −消費端 p.y」貼地(仍 MUST 收在包絡內)。
+#   目標欄寫 "@<群組名>" = **這一顆與同群的其他顆共用一個變換**(2026-08-08;搭配
+#     `--group "<群組名>=r[xhy]"`)。用途:一株樹拆成木質 / 葉冠兩顆節點 —— 各自縮到
+#     自己的包絡就是兩個不同的縮放,樹會散開,而外廓契約與三角形預算全綠、只有截圖看得出來。
 #   目標欄寫 "r"(等比,岩族原行為逐位元不變)或 "r x hy"(如 "3.0x5.0" = 非等向:
 #   水平、縱向各自縮到包絡 × FIT)。非等向是給樹冠/板根用的:樹冠 fallback 是 ico 球,
 #   而實拍樹冠天生比球扁 —— 等比縮的話填不滿縱向,零件表的 sy 再壓一次就成薄餅;
@@ -36,14 +39,39 @@ def opt_all(name):
 
 
 OUT = opt_all('out')[0]
-NODES = []          # (node_name, src_glb, target_r, target_hy|None, tri_cap, ry_deg, dy)
+
+
+def _target(s):
+    """`"3.0"` = 等比 / `"3.0x5.0"` = 非等向。回傳 (r, hy|None)。"""
+    tr, thy = (s.split('x') + [None])[:2] if 'x' in s else (s, None)
+    return float(tr), (float(thy) if thy else None)
+
+
+# `--group "gname=r[xhy]"`:**同一群的節點共用一個變換**(置中與縮放由聯集算)。
+# 2026-08-08 加入。為什麼需要:一株樹拆成「木質」「葉冠」兩顆節點時,兩顆是同一株的兩半 ——
+# 各自置中、各自縮到自己的包絡 = 兩個不同的縮放係數 ⇒ **樹會散開**(葉冠浮在樹幹旁邊),
+# 而且外廓契約與三角形預算都會全綠,只有截圖看得出來。共用變換之後,相對位置是烤進頂點的,
+# 結構上不可能散;消費端那幾列因此共用同一組 `px/y/pz`(= 聯集中心),少一個可以寫錯的地方。
+GROUPS = {}
+for spec in opt_all('group'):
+    gname, tgt = spec.split('=', 1)
+    GROUPS[gname] = _target(tgt)
+
+NODES = []          # (node_name, src_glb, target_r, target_hy|None, tri_cap, ry_deg, dy, group|None)
 for spec in opt_all('node'):
     name, rest = spec.split('=', 1)
     bits = rest.split('|')
-    tr, thy = (bits[1].split('x') + [None])[:2] if 'x' in bits[1] else (bits[1], None)
-    NODES.append((name, bits[0], float(tr), float(thy) if thy else None, int(bits[2]),
+    if bits[1].startswith('@'):
+        grp = bits[1][1:]
+        if grp not in GROUPS:
+            raise SystemExit(f'{name}:未宣告的群組 @{grp}(要先給 --group "{grp}=r[xhy]")')
+        tr, thy = GROUPS[grp]
+    else:
+        grp = None
+        tr, thy = _target(bits[1])
+    NODES.append((name, bits[0], tr, thy, int(bits[2]),
                   float(bits[3]) if len(bits) > 3 else 0.0,
-                  float(bits[4]) if len(bits) > 4 else 0.0))
+                  float(bits[4]) if len(bits) > 4 else 0.0, grp))
 
 # ---- 清場 ----
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -77,7 +105,8 @@ if BASE:
             continue
         o.data.materials.clear()
         made.append(o)
-for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
+pending = {}        # group → [ob, ...](置中與縮放延到全群備齊之後)
+for (name, src, target_r, target_hy, tri_cap, ry_deg, dy, grp) in NODES:
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=src)
     news = [o for o in bpy.data.objects if o not in before and o.type == 'MESH']
@@ -108,6 +137,21 @@ for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
         mod.ratio = tri_cap / tris * 0.98
         bpy.ops.object.modifier_apply(modifier='dec')
 
+    # ④ 剝材質 / UV / 色彩屬性(群組成員一樣要剝 ⇒ 排在分流之前)
+    ob.data.materials.clear()
+    for uv in list(ob.data.uv_layers):
+        ob.data.uv_layers.remove(uv)
+    for ca in list(ob.data.color_attributes):
+        ob.data.color_attributes.remove(ca)
+
+    if grp:
+        # 群組成員:置中與縮放延後(要等全群備齊才算得出聯集)。dy 對群組沒有語意
+        # ——「貼地」是整群的事,由群組包絡與消費端的 y 決定。
+        assert not dy, f'{name}:群組節點不支援 dy(貼地是整群的事)'
+        pending.setdefault(grp, []).append(ob)
+        made.append(ob)
+        continue
+
     # ① 置中(包圍盒中心 → 原點)
     vs = ob.data.vertices
     xs = [v.co.x for v in vs]; ys = [v.co.y for v in vs]; zs = [v.co.z for v in vs]
@@ -137,16 +181,39 @@ for (name, src, target_r, target_hy, tri_cap, ry_deg, dy) in NODES:
         # 界限取**完整包絡**(FIT 是縮放餘裕;dy 的用途是貼地,intake 驗的是完整包絡)
         assert abs(-z_max * s_z + dy) <= hy and abs(z_max * s_z + dy) <= hy, f'{name}:dy 把縱向推出包絡'
 
-    # ④ 剝材質 / UV / 色彩屬性
-    ob.data.materials.clear()
-    for uv in list(ob.data.uv_layers):
-        ob.data.uv_layers.remove(uv)
-    for ca in list(ob.data.color_attributes):
-        ob.data.color_attributes.remove(ca)
-
     tris_fin = sum(len(p.vertices) - 2 for p in ob.data.polygons)
     print(f'NODE {name}: tris={tris_fin} r={r_fin:.3f}/{target_r} zspan={z_max * s_z:.3f}/{hy}')
     made.append(ob)
+
+# ---- 群組:一個變換套給全群(聯集置中 + 聯集縮放)----
+for gname, obs in pending.items():
+    target_r, target_hy = GROUPS[gname]
+    allv = [(v, o) for o in obs for v in o.data.vertices]
+    xs = [v.co.x for v, _ in allv]; ys = [v.co.y for v, _ in allv]; zs = [v.co.z for v, _ in allv]
+    cx = (min(xs) + max(xs)) / 2; cy = (min(ys) + max(ys)) / 2; cz = (min(zs) + max(zs)) / 2
+    for v, _ in allv:
+        v.co.x -= cx; v.co.y -= cy; v.co.z -= cz
+    r_max = max(math.hypot(v.co.x, v.co.y) for v, _ in allv)
+    z_max = max(abs(v.co.z) for v, _ in allv)
+    hy = target_hy if target_hy is not None else target_r
+    if target_hy is None:
+        s_xy = s_z = min(FIT * target_r / r_max, FIT * target_r / z_max)
+    else:
+        s_xy = FIT * target_r / r_max
+        s_z = FIT * hy / z_max
+    for v, _ in allv:
+        v.co.x *= s_xy; v.co.y *= s_xy; v.co.z *= s_z
+    r_fin = r_max * s_xy
+    assert r_fin >= 0.5 * target_r, \
+        f'群組 {gname}:縮放後水平徑向 {r_fin:.3f} < 下界 {0.5 * target_r:.3f}'
+    print(f'GROUP {gname}: r={r_fin:.3f}/{target_r} zspan={z_max * s_z:.3f}/{hy} '
+          f'({len(obs)} 顆共用同一個變換)')
+    for o in obs:
+        t = sum(len(p.vertices) - 2 for p in o.data.polygons)
+        vv = o.data.vertices
+        rr = max(math.hypot(v.co.x, v.co.y) for v in vv)
+        z0 = min(v.co.z for v in vv); z1 = max(v.co.z for v in vv)
+        print(f'NODE {o.name}: tris={t} r={rr:.3f} z=[{z0:.3f},{z1:.3f}] (群組 {gname})')
 
 # 只留產出節點,其他(SF3D 場景空節點等)全刪
 for o in list(bpy.data.objects):

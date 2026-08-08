@@ -75,11 +75,34 @@
      "note": "整樹節點(def.whole;§5u):lib 載到整型只畫一顆 ⇒ 恆 1 列"
     }
    },
+   "measured_kind_tris": {
+    "conifer4": 162,
+    "broadleaf": 160,
+    "toadstool": 160,
+    "conifer2": 155,
+    "redcap": 148,
+    "birch": 132,
+    "mangrove": 108,
+    "browncap": 88,
+    "conifer": 83,
+    "borderrock": 81,
+    "conifer3": 77,
+    "sapling": 76,
+    "parasol": 71,
+    "shrub": 60,
+    "deadtree": 56,
+    "bamboo": 50,
+    "succulent": 48,
+    "silvergrass": 30,
+    "arrowbamboo": 30,
+    "reed": 12
+   },
    "lib_instance_rows": 3038,
    "whole_factor": 3.92,
    "node_cap": 225,
    "justification": "InstancedMesh 消費端(同 building 族的幾何學:GPU 成本 = 節點 tris × instance 數,逐件看毫無意義),但**數量級與 building 差一個檔次** —— 一張圖的屋頂煙囪 212 座,而灌木 1909 叢。**上限由「這一層還能長多少」反推**:node_cap = 成長額度 ÷ Σ(名冊列 × 該型 instance 上界) + 現行零件三角形數 = 622,905 ÷ 3,038 + 20 = 225。成長額度 = **Quaternius 退場實測釋出的最小值**(blackforest 2,184,169 → 1,591,970)⇒ 名冊每一列都貼滿上限的最壞情況,**每一個量過的場地都不比這一輪之前重**(whole_factor 3.78 是這條式子的結果,不是先挑一個好看的倍率)。逐列均分「成長額度」而不是均分「總額度」:均分總額度會給 20 株的 sapling 與 1909 叢的灌木同一份錢,實測算出來的上限是 27 tris —— 比現行的 ico(20)還小,等於這一族永遠不准接。**名冊本身是旋鈕,而且是雙向的**:①灌木 1909 個 instance ⇒ 它一列的價錢等於其餘九列的總和,兩列都接時 cap 只有 140,而 140 逼出來的減面比(實拍冠簇 336~414 → 140 = 2.4~3:1)正是 §5e 那個「Blender 硬減面把殼撕出洞」的區間 —— 外廓與預算全綠,截圖上是樹冠裂成一片片;②2026-08-06 重寫冠層骨架後零件變多,若每一團都接庫,Σ 會漲到 3,779、cap 掉到 176(又進撕裂區)⇒ 把「被主冠擋住大半」的小簇退回保險絲,額度留給看得見的那幾團。逐株(逐款)閘刻意不設:node_cap 的推導式本身已經把整層總量鎖住,再加一道 kind_factor 只是同一個約束寫兩次。",
-   "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量;④node_cap 與 whole_factor 都是推導值,MUST NOT 手改。"
+   "whole_node_gate": "2026-08-08(§5z-o,使用者定案「走零件庫」):簡單幾何版把**一整株樹**做成庫節點(`VEG_DEFS.whole`,木質 + 葉冠兩列)之後,flat `node_cap` 這道閘**結構性失效** —— 它的語意是「一顆節點換掉一個零件」,而一株樹本來就是一顆葉團的四五倍,拿它去比只會恆紅。⇒ 逐件上限對 `whole` 列不適用,改由 **整層總量閘** 管(intake ②-b):Σ 逐型消耗 ≤ `measured_quaternius_freed_min`,其中「消耗(型) = (該型庫節點三角形和 − 被取代的現值) × 該型 instance 上界」,被取代的現值 = whole 走 `measured_kind_tris[型]`(整株)、逐件走 `measured_cur_part_tris × 列數`。**這不是放寬,是把代理換成本尊**:flat cap 一向只是「每一列都吃滿」的保守代理,總量閘直接量真正被約束的那個數,比代理更緊也更準。2026-08-08 實測:改制前既有名冊已用掉成長額度的 **92.4%**(其中 shrub 一列 213 tris × 1909 instance = 59.1%),故同輪把 `bush_a09` 減面 213 → 140 讓出額度給 conifer2 / broadleaf 的整樹節點 —— 使用者定案「闊葉保圓潤冠(ico 1,256),寧可從 shrub 挖」。`node_cap` 仍是**逐件列**(shrub/birch/mangrove)的閘,不退場。",
+   "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量(2026-08-08 盤點:NATURE_MANIFEST 只剩 silvergrass,而 §5k 定案它留著(草葉鏤空貼圖 img→3D 生不出來)⇒ **這一桶已經倒不出更多額度,只能重分配**);④node_cap 與 whole_factor 都是推導值,MUST NOT 手改;⑤`measured_kind_tris` 是**逐型整株現值**的量測快照(整層總量閘的分母),**改 VEG_DEFS 任一型的零件表 MUST 重跑 `measure_veg_tris.mjs --kinds`** —— 不重量的話閘門拿舊基準算消耗,而偏差沒有錯誤訊息,只表現成「額度怎麼還有這麼多」。"
   },
   "tree": {
    "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05;**2026-08-06 因 meranti/dinizia/tualang/klinki 重寫冠層骨架而重量** —— 只有 klinki 變動 286 → 386(輪生枝盤從 3 枝 3 盤改成 3 層 × 2 枝 2 盤),其餘三種零件數淨值不變。量測腳本已從臨時腳本升格為 `tools/ai3d/measure_veg_tris.mjs --giants`)",

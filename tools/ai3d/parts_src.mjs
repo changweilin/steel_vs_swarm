@@ -87,17 +87,21 @@ export function bioLibDescs(src = biomesSrc()) {
           p: [p.px || 0, p.y || 0, p.pz || 0],
         });
       });
-      // 整樹節點(def.whole;§5u):lib 載到 ⇒ 整型只畫這一顆,佈局仍讀 parts。
-      // fb = whole.g = 入庫包絡與世界尺度(不是 fallback 渲染 —— 載不到時渲染的是 parts)。
-      if (def.whole?.lib) {
-        const w = def.whole;
+      // 整樹節點(def.whole;§5u,2026-08-08 起是**一列以上**的陣列 —— 木質 / 葉冠分列,
+      // 理由見 biomes.js buildVegMeshes)。lib 全載到 ⇒ 整型只畫這幾顆,佈局仍讀 parts。
+      // fb = whole[i].g = 入庫包絡與世界尺度(不是 fallback 渲染 —— 載不到時渲染的是 parts)。
+      (def.whole || []).forEach((w, wi) => {
+        if (!w.lib) return;
         out.push({
           name: w.lib, family: w.lib.split('/')[0], node: w.lib.split('/').slice(1).join('/'),
-          fb: w.g, kind, index: def.parts.length, table, consumer: 'biomes',
+          fb: w.g, kind, index: def.parts.length + wi, table, consumer: 'biomes',
           budgetFam: table === 'VEG_DEFS' ? 'veg' : 'tree',
+          // `whole: true` = 這一列取代的是**整株**(不是一個零件)⇒ 預算的基準是該型現值
+          // `kind_tris`,不是單件的 20;逐件上限對它沒有語意(一株樹當然比一顆葉團大)。
+          whole: true,
           p: [w.px || 0, w.y || 0, w.pz || 0],
         });
-      }
+      });
     }
   }
   // 計數 MUST 先剝行註解(㋑):檔頭與零件表的說明裡就寫著 `lib: '家族/節點'` 這種範例,

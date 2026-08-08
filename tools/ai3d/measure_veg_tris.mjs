@@ -36,8 +36,13 @@
  * §5g 那一輪這一步是臨時腳本,而 tri_budget 的 staleness 明寫「改 GIANT_DEFS 任一零件表 MUST 重量」
  * ⇒ 第二次要用就升格成工具(同 mesh_sheet/photo_sheet 的來歷)。
  *
+ * `--kinds`:量 **families.veg 的逐型現值**(VEG_DEFS 20 型,整株零件三角形加總)。2026-08-08
+ * 加入 —— 整樹節點(`whole:`)一上場,「一顆節點換掉的是整株」⇒ per-type node_cap 的
+ * `+ 現值` 項不再是單件的 20,而是該型整株的現值;沿用 `--giants` 那一份實作(見下方 KIND_MODE)。
+ *
  * 用法:node tools/ai3d/measure_veg_tris.mjs --venue aokigahara --team 3 [--live]
  *      node tools/ai3d/measure_veg_tris.mjs --giants
+ *      node tools/ai3d/measure_veg_tris.mjs --kinds
  */
 import fs from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -114,22 +119,49 @@ await page.route(PROBE_URL, (r) => r.fulfill({
 }));
 await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
 
-if (process.argv.includes('--giants')) {
-  const kinds = Object.keys(bioLibDescs().GIANT_DEFS);
+// `--giants`(families.tree 的 kind_tris)與 `--kinds`(families.veg 的逐型現值)是**同一個量法**
+// —— 頁內以真品 `buildVegMeshes` 建一株、逐 mesh 加總,差別只有「量哪一張表」。故只有一份實作:
+// 各寫一份的下場是兩張表的「現值」語意悄悄分岔(一邊算了 whole、一邊沒有),而閘門拿現值當
+// 分母 ⇒ 分岔只表現成「這一族的上限怎麼變寬了」,沒有錯誤訊息。
+const KIND_MODE = process.argv.includes('--giants') ? 'GIANT_DEFS'
+  : process.argv.includes('--kinds') ? 'VEG_DEFS' : null;
+if (KIND_MODE) {
+  const kinds = Object.keys(bioLibDescs()[KIND_MODE]);
   const out = await page.evaluate(async (ks) => {
+    const THREE = await import('three');
     const { buildVegMeshes } = await import('/public/js/biomes.js');   // 刻意不 loadPartLibs:量的是保險絲現值
     const one = [{ x: 0, y: 0, z: 0, s: 1, ry: 0 }];
     const r = {};
     for (const k of ks) {
-      r[k] = buildVegMeshes(k, one, 'summer').reduce((t, m) => t
-        + Math.round(((m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) || 0) / 3), 0);
+      let tris = 0;
+      const bb = new THREE.Box3();
+      for (const m of buildVegMeshes(k, one, 'summer')) {
+        tris += Math.round(((m.geometry.index ? m.geometry.index.count
+          : m.geometry.attributes.position.count) || 0) / 3);
+        m.geometry.computeBoundingBox();
+        // InstancedMesh 的 matrixAt(0) 就是那一株的擺位(items 只有一株)⇒ 外廓量的是
+        // **這一型在遊戲裡真的多大**,而不是零件的局部盒(整樹節點的世界尺度要對到它)。
+        const mm = new THREE.Matrix4();
+        m.getMatrixAt(0, mm);
+        bb.union(m.geometry.boundingBox.clone().applyMatrix4(mm));
+      }
+      r[k] = { tris, top: bb.max.y, bottom: bb.min.y, rad: Math.max(bb.max.x, -bb.min.x, bb.max.z, -bb.min.z) };
     }
     return r;
   }, kinds);
-  const sorted = Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]));
-  console.log('families.tree kind_tris(逐株零件三角形加總;保險絲路徑):');
-  for (const [k, v] of Object.entries(sorted)) console.log(`  ${k.padEnd(10)} ${v}`);
-  console.log(`measured_max_tris = ${Math.max(...Object.values(out))}`);
+  const sorted = Object.fromEntries(Object.entries(out).sort((a, b) => b[1].tris - a[1].tris)
+    .map(([k, v]) => [k, v.tris]));
+  const ext = out;
+  const label = KIND_MODE === 'GIANT_DEFS'
+    ? 'families.tree kind_tris(逐株零件三角形加總;保險絲現值)'
+    : 'families.veg kind_tris(逐型整株零件三角形加總;保險絲現值 —— per-type node_cap 的 `+ 現值` 項)';
+  console.log(`${label}:`);
+  for (const [k, v] of Object.entries(sorted)) {
+    const e = ext[k];
+    console.log(`  ${k.padEnd(12)} ${String(v).padStart(4)} 面   全高 ${e.top.toFixed(2)}m`
+      + `(底 ${e.bottom.toFixed(2)})  水平半徑 ${e.rad.toFixed(2)}m`);
+  }
+  console.log(`measured_max_tris = ${Math.max(...Object.values(sorted))}`);
   console.log(JSON.stringify(sorted));
   await browser.close(); srv.close();
   process.exit(0);

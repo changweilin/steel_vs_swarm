@@ -46,6 +46,13 @@ export const METHODS = {
     short: 'T2-spz',
     doc: '幾何 + PBR 一次出的 O-Voxel 原生 3D:官方 TRELLIS.2 在 12GB 卡出局(§5l),IgorAherne fork 以預編 wheel + 逐階段 CPU offload 翻案(§5n:7/7@1024³、峰值 ≤3.4GB、59~226s/張、載入需 ≥20GB 空閒 RAM)。輸出是撕裂薄殼 ⇒ MUST 先過 tools/ai3d/solidify_parts.py(§5o C 路徑:實體化再減面)才進 normalize;岩石類逐 seed 重抽(§5r)+ V5a 楔形補丁備援(§5s)',
   },
+  simple_geom_tree: {
+    key: 'simple_geom_tree',
+    label: '語料導出佈局 + 基本體重建(簡單幾何版整樹)',
+    kind: 'glb',
+    short: '簡單幾何樹',
+    doc: '§5z~§5z-o 那一路線:照片 → T2 浮雕殼**只當語料**(從它導出叢/層/瓣的佈局),葉冠與幹枝**整組換成基本體**重建 —— 所以 GLB 裡沒有一個頂點來自 AI 網格,但佈局是從那張照片量出來的。與 `procedural` 的分界就在這裡(那一支完全不看語料);與 `sf3d`/`trellis2_spz` 的分界是「AI 網格有沒有出貨」。葉冠**刻意不走 img→3D**(§5q:逐 seed 三注全不可用),雕塑性主體才走(§5u snag_a)。一株 = 木質 + 葉冠**兩顆節點**,由 normalize_parts `--group` 共用同一個變換烤出(各自縮放會把樹拆散)',
+  },
   llm_parts: {
     key: 'llm_parts',
     label: 'LLM 讀照片 → 寫純資料零件列',
