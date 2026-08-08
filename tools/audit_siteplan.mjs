@@ -24,6 +24,7 @@
 //   --break-strike  長軸抖動放大 ⇒ Ⅳ 的「長軸同向」MUST 紅字
 //   --break-gate    邊界樓的聚落場閘改成恆放行 ⇒ Ⅶ 的「荒野邊界零棟」MUST 紅字
 import { readSrc } from './audit_src.mjs';
+import { objHeightMax, objScaleFit } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
 import { bioLibDescs, partLibs } from './ai3d/parts_src.mjs';
@@ -737,9 +738,12 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
     if (BREAK_GATE) pbSrc = pbSrc.replace("biome === 'urban' && !settlement?.(x, z)", 'false');
     const runBoundary = (settle, mix) => {
       const env = {
-        GIANT_DEFS: { kapok: { r: 6 } },
+        // 標稱高 `h` 是物件高度上限(2026-08-08)的輸入:邊界神木牆與圖中央的群落吃同一支
+        // `objScaleFit`,少了它這段原文一執行就 undefined(而不是安靜地少驗一條)
+        GIANT_DEFS: { kapok: { r: 6, h: 90 } },
         FACADES: { commercial: [0], residential: [0] },
-        OVER: { bldCap: 170 },
+        OVER: { bldCap: objHeightMax() },   // 真品上限(舊制手寫 170 已退場)
+        objScaleFit,
         terrainEnvCode: () => 0,
         sinkBaseY: () => 50,
       };

@@ -57,3 +57,20 @@ export const grabFn = (src, name) => {
   if (!m) throw new Error(`找不到 function ${name}`);
   return grabAt(src, m.index + 1 + (m[1]?.length ?? 0));
 };
+
+/**
+ * 抽出**頂層 const 物件字面值**的原文(含大括號區塊),回傳可直接丟進 `new Function` 的
+ * `const NAME = {...}`(去掉 `export`)。
+ * 用途:一批表(`biomes.js` 的 `GIANT_DEFS`/`MEGALITHS`/`LANDMARK_COL`、`beacons.js` 的
+ * `BEACON_KINDS`)住在 import three 的檔案裡 —— Node 端 import 不了整支,而把那些數字抄一份
+ * 進稽核就永遠會通過。這一支讓稽核吃**真品原文**(表裡的 `build:` 閉包只是定義、不求值,
+ * 所以引用到 three 的那幾行不會被執行)。大括號配對走 `grabAt` 同一份實作。
+ * @param {string} src  已正規化的原文
+ * @param {string} name const 名(以行首定位 —— 零縮排 = 模組頂層)
+ */
+export const grabConst = (src, name) => {
+  const m = new RegExp(`\\n(export\\s+)?const\\s+${name}\\s*=\\s*[{[]`).exec(src);
+  if (!m) throw new Error(`找不到 const ${name}`);
+  const i = m.index + 1 + (m[1]?.length ?? 0);
+  return `const ${name} = ${grabAt(src, src.indexOf('=', i) + 1)};`;
+};
