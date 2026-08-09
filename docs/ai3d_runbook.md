@@ -14,7 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
-| **⭐ 下一輪從這裡開始 — §5aj-B 的**節點**(低矮量體兩顆)+ §5aj-C(只補有洞的)** | **待執行 2026-08-09** | B 的**縫已開並驗完** = **§5am**(8/8 切分,使用者選 (a);名冊空著 ⇒ 目前逐位元同舊制),下一輪只差**生成兩顆節點** —— 語料與人眼挑好的兩張已寫在 §5am-e,配方沿用 §5ae-c 一字不改。量測與推導 = §5al。C 的規格見 §5aj-C;§5aj-A 已落地 = §5ak |
+| **⭐ 下一輪從這裡開始 — §5aj-C(只補有洞的;推翻 §5ad 的觸發條件)** | **待執行 2026-08-09** | 規格全文 **§5aj-C**(含回退清單與「樹族 MUST 排除在貼平之外」)。**§5aj-A 已落地 = §5ak;§5aj-B 已落地 = §5am**(第二個整棟量體桶 8/8 切分 + `masslow_a`/`masslow_b` 兩顆節點同輪出貨)。§5am-f 另留三項材料到位就能做的收尾 |
 | §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
@@ -3926,16 +3926,45 @@ commercial    → mass(高層商辦)   → 方盒
   `open_tunnel` 163 / `underpass` 161 / `road_joint` 86 / `climb` 211 —— 全綠。
 - `npm run bal` 全綠(⑦f 1.78×、自身型 9 台全 > 0);`npm test` 全綠(fresh server :8676)。
 
-### 5am-e. 未做(下一輪)
+### 5am-e. 同輪出貨:`masslow_a` / `masslow_b` 兩顆節點
 
-- **名冊還是空的** ⇒ 這一桶目前**不會換掉任何一棟**(保險絲)。要兌現得補**兩顆**節點
-  (§5ae-e 的規矩:一顆打天下 = 同一張圖上挑中的那幾棟同一個剪影,而所有離線閘門全綠)。
-- 語料已就位、人眼已挑好兩張(整棟入鏡 + 3/4 視角,§5ae-d 的選片準則):
-  **`bld_barn/ov_910e1b0…`**(紅色雙坡穀倉)與 **`bld_church/ov_16f1257…`**(白色木教堂 + 鐘樓)。
-  配方沿用 §5ae-c 一個字不改(T2-spz 1024_cascade / steps 12 / seed 1234 →
-  `--cells 72 --offset 0.006 --target 2900` → 非等向 0.5×0.5 + `--boxuv`)。
-- 節點入庫後 MUST 一併:`shot_scene.mjs` 那兩份手寫清單(§5ae-e)、3D 對照台的來源帳、
-  `mass_near` 機位認人、真機冒煙(低矮那幾棟的剪影要看得出是坡屋頂量體而不是方盒)。
+縫開好之後直接把名冊補滿(**MUST ≥2 顆**:一顆打天下 = 同一張圖上挑中的那幾棟同一個剪影)。
+語料人眼挑的兩張都符合 §5ae-d 的準則(**整棟入鏡 + 3/4 視角**):
+`bld_barn/ov_910e1b06`(Carol M Highsmith,紅色雙坡穀倉)與 `bld_church/ov_16f1257f`
+(白色木造鄉村教堂 + 鐘樓)。配方沿用 §5ae-c **一個字沒改**。
+
+| | raw 面 | 匯出(薄殼)| 實體化後 | 開放邊 | 元件 | kf_p95 |
+|---|---|---|---|---|---|---|
+| `masslow_a` 穀倉 | 5,814,558 | 47,658(21,482 開放邊 / 1,763 元件)| **2,900** | 0 | 1 | 0.83% |
+| `masslow_b` 教堂 | 4,810,964 | 47,990(24,262 / 1,782)| **2,900** | 0 | 1 | 1.99% |
+
+**唯一要調的一個旋鈕**:教堂的 `--offset` 從 0.006 調到 **0.014**。鐘樓尖頂那一段太細,
+等值面重建橋不起來 —— 0.006 出 3 元件、0.010 仍 2 元件(而且「watertight: True 但 2 元件」
+這種讀數最容易被當成過了);0.014 才收斂成水密單元件,代價是 kf_p95 0.83% → 1.99%,
+黏土複核尖頂仍在。⇒ **實體化參數不是全族一份,是隨主體的細部尺度走**(§5t 的同一條)。
+
+**兩顆都不需要鏡像貼補**:`mesh_sym` 量到半空間不對稱 masslow_a **0.023 / 0.015**、
+masslow_b **0.037 / 0.006** —— 遠在 `EMPTY_ASYM` 0.12 之下。這是 §5ae-d 那條結論的第二次
+印證(**上游修語料勝過下游動刀**):兩張都是整棟入鏡的照片,而 mass_a 那張夜景緊裁特寫
+鏡射前是 0.123。
+
+驗收(節點那一半):`intake_parts` **253 綠**、`parts_review --report` **0 缺件 / 0 孤兒 /
+0 未記載**、`node_sheet` 四面黏土人眼(穀倉的山牆脊線、教堂的鐘樓尖頂四面都在)、
+`shot_scene --venue taipei101 --live` 讀數 **零件庫節點 48・整棟量體挑中 16 棟**(= 8 + 8,
+與預算逐位元對上)。
+
+**順手修掉第三次的同一個坑**:`shot_scene` 的 `mass_near` 認人條件是
+`n.startsWith('building/mass_')` —— 那個**底線**剛好把 `masslow_*` 整組排除。它是推導的
+(§5ae-e 之後改成 `libNames()`),只是推導式太緊 ⇒ 前綴改成 `building/mass`(無底線)。
+
+### 5am-f. 未做(下一輪)
+
+- **真機冒煙**:低矮那 8 棟的剪影要看得出是坡屋頂量體而不是方盒(離線可先加一個
+  低矮專用機位 —— 現行 `mass_near` 是對著高層那一叢拍的)。
+- `audit_traverse`(㋓):整棟建物換幾何會動到街廓夾出來的通道寬。這一輪的節點外廓收在
+  同一份包絡內(水平徑向 0.475 = 與 mass_a/b 同值)⇒ 理由上不影響,但**節點入庫那一輪
+  不可省**(CLAUDE.md 那一列的原話)。
+- `mass_c`(GE Building / 布魯托主義板樓已 matte 未生成)、`chimney_a` 的來源帳缺口。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

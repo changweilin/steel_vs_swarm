@@ -69,6 +69,12 @@
     "measured_low_pool_min": 471,
     "justification_low": "**第二個桶(低矮建物;2026-08-09 使用者定案「開」+ 選 (a))**:它與高層那一桶吃的是**同一個** facade_wall 桶 ⇒ 額度是同一份 —— `pick_n` 仍是**總**挑選棟數(draw call 約束:額外 mesh ≤ 立面段現行的 16),`node_cap` 仍 = 3 × 15,900 ÷ 16 = 2,981(已出貨的 mass_a 2,921 / mass_b 2,900 因此逐位元不受影響)。⇒ **開第二個桶只能從那 16 棟裡切**,取 8 / 8:兩邊都沒有量得出來的偏袒理由(低矮候選池 471~1,321 棟、高層 13~108 棟,雙方都遠超過 8)。使用者 2026-08-09 於 §5al-c 兩個選項中選 (a)(另一個是把這一桶的 whole_factor 抬到 8,代價是整件閘比 tree/megalith 鬆一倍)。**資格是同一個門檻的另一邊**:高層 = `commercial && h > min_h`、低矮 = `h <= min_h` ⇒ 中間那一段(高於 55m 的非商辦)兩邊都不換,維持方盒 —— 為它再訂一個門檻就是第三個手寫數字。低矮桶的排序取**足跡面積**(高層排「最高」;低矮最顯眼的是屋頂面積)。`measured_low_pool_min` = 四場最小的候選池(shibuya 471;manhattan 576 / taipei101 599 / seoul 1,321)⇒ 密市區恆由 pick_n_low 夾住。",
     "staleness_low": "①`pick_n_high + pick_n_low` MUST === `pick_n`(稽核釘住)—— 分開加總對不上就是「額度憑空多出來一份」;②低矮桶的名冊擴充**不改** node_cap(除數是總挑選棟數,不是名冊長度);③改 8/8 的切分比例 MUST 同步 biomes.js 的 `MASS`(兩份同值,稽核釘住)。"
+   },
+   "masslow": {
+    "measured_what": "低矮建物的整棟量體桶(2026-08-09 §5am)。**它與 `mass` 共用同一份推導** —— 兩桶吃的是同一個 facade_wall 桶,額度、總挑選棟數(pick_n)、逐節點上限全部是那一份;這一格存在的唯一理由是 `parts_src.mjs nodeCap(fam, kind)` 以**名冊鍵**查表(kind = 'masslow')。稽核釘住 `masslow.node_cap === mass.node_cap` ⇒ 兩邊分家寫不出來。",
+    "node_cap": 2981,
+    "same_as": "mass",
+    "staleness": "MUST NOT 手改 —— 改 `mass.node_cap` 時這一格要跟著,而 audit_siteplan 會在分家時紅字。"
    }
   },
   "veg": {

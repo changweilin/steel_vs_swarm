@@ -1221,6 +1221,55 @@
         "note": "沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕),**未重新掃描** —— 同一族同一種主體。這一顆的實體化結果比 mass_a 乾淨(0 開放邊 / 1 元件 vs 16 / 6),因此**不需要鏡像貼補**:mesh_sym 量到的半空間面積不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
       },
       "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
+    },
+    {
+      "keys": [
+        "building/masslow_a",
+        "building/masslow_b"
+      ],
+      "method": "trellis2_spz",
+      "consumer": "biomes 一般建物繪製段的**第二個整棟量體桶**(BLD_LIB.masslow;2026-08-09 使用者定案「開」+ 8/8 切分)—— 服務 `!commercial && h <= MASS.MIN_H` 的低矮非商辦,也就是 rural / civic 兩條語料在此之前唯一缺的那個消費端。名冊 MUST ≥2 顆(一顆打天下 = 同一張圖上挑中的那幾棟同一個剪影)",
+      "rev": "5e54dce",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary(masslow_a;美國鄉間紅色雙坡穀倉 —— 整棟入鏡的 3/4 視角,§5ae-d 的選片準則)",
+          "id": "ov_910e1b06-a62f-474d-b156-f3845aa1fd57",
+          "family": "building",
+          "part": "bld_barn",
+          "query": "red barn field",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Carol M Highsmith",
+          "source_url": "https://www.rawpixel.com/image/3093750/free-photo-image-agriculture-america-barn",
+          "file": "photos/building/bld_barn/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.jpg"
+        },
+        {
+          "role": "primary(masslow_b;白色木造鄉村教堂 + 鐘樓尖頂 —— 與穀倉的長條山牆是兩種低矮剪影)",
+          "id": "ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6",
+          "family": "building",
+          "part": "bld_church",
+          "query": "country church steeple",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "libraryofcongress",
+          "source_url": "https://www.rawpixel.com/image/12175733/image-person-grass-art",
+          "file": "photos/building/bld_church/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+        "runner": "run_t2_gate.py — venv `DocumentsstudyTRELLIS.2-stableprojectorz.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(配方沿用 §5ae-c,一個字沒改)",
+        "machine": "RTX 3060 12GB",
+        "out": "out_masslow/ov_910e1b06-a62f-474d-b156-f3845aa1fd57.glb(masslow_a)+ out_masslow/ov_16f1257f-8cf9-4bf6-ac9a-57e8ce24e5c6.glb(masslow_b);stats 同名 json",
+        "measured": "raw 5,814,558 面(barn)/ 4,810,964 面(church)→ 匯出 47,658 / 47,990 面(雙層薄殼:開放邊 21,482 / 24,262、元件 1,763 / 1,782);torch 峰值 3,001 MiB;跑批當下 avail RAM 22.0 → 1.6GB(兩顆連跑,貼著 §5n 的 20GB 門檻但沒有無聲死亡)"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --base + --boxuv(Blender 5.2 headless)",
+        "params": "masslow_a `--cells 72 --offset 0.006 --target 2900` ⇒ 2,900 面 / 0 開放邊 / 1 元件 / kf_p95 0.83% / dev_p95 0.69%;**masslow_b 的 offset 要調到 0.014**(0.006 出 3 元件、0.010 仍 2 元件 —— 鐘樓尖頂那一段太細,等值面重建橋不起來;0.014 收斂成水密單元件,代價是 kf_p95 0.83% → 1.99%,黏土複核尖頂仍在)。兩顆 normalize 非等向 0.5×0.5 + --boxuv ⇒ 各 2,900 面、水平徑向 0.475、縱向 ±0.475",
+        "checks": "intake 253 綠;mesh_sym 半空間不對稱 masslow_a 0.023/0.015、masslow_b 0.037/0.006 —— **兩顆都遠在 EMPTY_ASYM 0.12 之下,不需要鏡像貼補**(再一次印證 §5ae-d:整棟入鏡的語料勝過下游動刀);node_sheet 四面黏土人眼複核:穀倉的山牆脊線與教堂的鐘樓尖頂四面都在,沒有空的那一半"
+      }
     }
   ]
 }

@@ -162,7 +162,10 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     libN = names.length;
     // 整棟量體庫節點:下面的 mass_near 機位靠它認人 —— **整個 mass 家族都要認**,
     // 否則挑中 mass_b 的那幾棟拍不到,而畫面上只表現成「這張圖好像沒換到庫節點」。
-    massGeo = names.filter((n) => n.startsWith('building/mass_')).map((n) => libGeo(n)).filter(Boolean);
+    // ⚠ 前綴 MUST 是 `building/mass`(**沒有底線**):2026-08-09 開了第二個桶
+    // `masslow_*`(低矮建物),而 `building/mass_` 的底線剛好把它整組排除掉 —— 同一個
+    // 「手寫清單靜默過期」的坑換一種寫法再犯一次(這一份是推導的,只是推導式太緊)。
+    massGeo = names.filter((n) => n.startsWith('building/mass')).map((n) => libGeo(n)).filter(Boolean);
     // 巨岩那一族**不能**比對幾何參照:`megaGeo` 一律 `.clone()`(群組要過 bakeContactAO,
     // 共用幾何被就地烤一次全場都帶著別顆岩的頂點色)⇒ 下面的 mega_orbit 改認**頂點數**
     // (clone 不動頂點數,§7 對照台的同一條)。名冊照樣由 `libNames()` 推導。

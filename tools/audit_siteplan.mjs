@@ -547,6 +547,11 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       ok(budget.pick_n_high + budget.pick_n_low === budget.pick_n && !!M
         && +M[2] + +M[3] === budget.pick_n,
         `兩桶的挑選數加起來 = 總額度(${budget.pick_n_high} + ${budget.pick_n_low} = ${budget.pick_n})`);
+      // 低矮桶的 node_cap 是**同一份推導**,tri_budget 只是為了 `nodeCap(fam, kind)` 的
+      // 名冊鍵查表多存一格 ⇒ 分家寫不出來。
+      const budLow = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.masslow;
+      ok(!!budLow && budLow.node_cap === budget.node_cap && budLow.same_as === 'mass',
+        `低矮桶的逐節點上限與高層同一份(${budLow?.node_cap}/${budget.node_cap})`);
       ok(budget.node_cap === Math.floor((budget.whole_factor - 1) * budget.measured_mass_total_max / budget.pick_n),
         `整棟節點上限是推導值(3 × ${budget.measured_mass_total_max} ÷ ${budget.pick_n} = ${budget.node_cap})`);
       ok(budget.full_swap_cap < 50 && budget.full_swap_cap
