@@ -24,6 +24,37 @@
 #      實測抓 3 張葉片特寫(#71/74/75);herbarium 壓葉標本(#6/8/9/10)邊緣有比例尺與標籤、
 #      統計上抓不乾淨,刻意留給人眼。
 #
+# ⚠ **①的 cov 與 ② 的 fill 是 tree 專用,MUST NOT 原樣套到別族**(2026-08-09 實測,
+#    硬約束改用「已經出貨的 25 張來源」當真品名單):兩條門檻都是拿 82 張 tree matte 校準的,
+#    而它們各自內建了一個「樹長什麼樣」的假設。
+#      ① cov:樹是密實團塊,桁架水塔與細長石柱不是 ⇒ 全族套下去誤殺 **3 張已出貨來源**
+#         (landmark/tank `ov_6d02b9e0` 0.024、`ov_15922084` 0.092、rock/mg_tower
+#         `ov_163a0902` 0.034 = 魔鬼塔那顆)。畫布下限 MIN_CANVAS 量的是「主體在原圖裡多大」,
+#         與主體形狀無關 ⇒ 那一半全族通用。
+#      ② fill:「主體是一張紙」的前提是主體本身留得下輪廓縫 —— 而**建物就是個方盒**,
+#         bbox 填滿率天生接近 1(建物族已出貨最高 0.909,tree 只有 0.765)⇒ 0.85 誤殺
+#         building/roofcap `ov_f18913fc`。別族改用 PRINT_FILL_OTHER(0.93,零誤殺)。
+#    兩條在非校準族**降級成觀察線**(watched()),MUST NOT 直接放棄:它們抓的東西在那些族
+#    照樣存在(1932 年畢業紀念冊封面 fill 0.854、舊 hoodoo 那張 cov 0.016),只是統計上
+#    分不開真品與紙 ⇒ 交給人眼,而不是靜默放過。
+#    順帶一提:「主體太小」在跨族上**沒有乾淨的統計特徵** —— 本輪 hoodoo 的贏家 `ov_929bc3d9`
+#    畫布只有 588px(主體在 2816×2112 原圖裡佔一小塊)卻是四族裡最好的一顆,而輸家
+#    `wc_112762573` 畫布 1590px、cov 0.016。兩張各贏一項,單一門檻分不開它們。
+#
+# —— 2026-08-09 使用者定案:「挑選的照片盡可能乾淨,只有目標物件無其他物件,且光源充足」——
+#   ④ **多主體**:matte 最大連通元件佔全體 α>128 面積 < MULTI_MAIN(0.70)⇒ 淘汰。
+#      「只有目標物件」量在 **matte** 上而不是照片上:本輪 hoodoo 的贏家原圖有三顆蘑菇岩
+#      加電線桿,而去背只留下一顆(main 0.984)—— 照片髒不等於輸入髒。
+#      門檻校準(244 張 matte × 25 張已出貨來源):已出貨最低 0.778(landmark/tank 的桁架腿
+#      會被切成幾塊)⇒ 0.70 留 10% 邊際,**零誤殺**,淘汰 28 張。
+#   ⑤ **光源不足**:主體像素平均亮度 < LUM_MIN(35)**且** 暗部佔比 ≥ DARK_FRAC(0.70)⇒ 淘汰。
+#      兩條 AND 是必要的:深色玄武岩在好光下也是低亮度,只看平均會把它連坐;真正的欠曝是
+#      「又暗又整片壓在暗部」。已出貨最低 lum 43.5 / 最高 dark 0.632 ⇒ 兩邊各留 ~11~24% 邊際,
+#      **零誤殺**,淘汰 13 張。
+#   ④⑤ 之間還有一段統計分不開的帶(本輪實例:熱氣球那張 main 0.760,而已出貨的水塔 0.778)
+#      ⇒ **不淘汰,進觀察名單 sheet**(`*_watch.png`,格子標上 main/lum),交給人眼。
+#      把門檻收到 0.77 去「剛好」抓到熱氣球就是拿兩個樣本過擬合,而代價是誤殺真品。
+#
 # 紀律:
 #   - 結論回寫 photo_manifest.json 的 entry.screen = { v: 'pass'|'reject', why, at } ——
 #     fetch_photos.mjs 的 have()/--plan 只計 screen 未淘汰的條目(F0:「可用張數不是下載張數」,
@@ -34,8 +65,11 @@
 #   - 零亂數、零網路;跑在 tools/ai3d/.venv(PIL + numpy,rembg 環境本來就有)。
 #
 # 用法:
-#   .venv/Scripts/python screen_mattes.py                     # 統計三桶 + 回寫帳本 + 印摘要
+#   .venv/Scripts/python screen_mattes.py                     # 統計五桶 + 回寫帳本 + 印摘要
 #   .venv/Scripts/python screen_mattes.py --family tree       # 只跑某一族(預設 tree)
+#   .venv/Scripts/python screen_mattes.py --home <資料家>     # 語料不在本 checkout 底下時
+#       ⚠ 語料家會搬(runbook §5af-g:一個 worktree 被刪掉,整份 superset 跟著沒了)⇒ 資料家
+#         是**參數**不是「腳本住哪」。不給就沿用舊行為(= 腳本自己的目錄),逐位元不變。
 #   .venv/Scripts/python screen_mattes.py --dry               # 只印不寫
 #   .venv/Scripts/python screen_mattes.py --sheet             # 另產倖存者/淘汰者 contact sheet
 #   .venv/Scripts/python screen_mattes.py --human reject ov_x1,ov_x2   # 人眼淘汰(含人/不是樹)
@@ -53,19 +87,33 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from scipy import ndimage
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MATTE = os.path.join(HERE, 'out', 'matte')
-PHOTOS = os.path.join(HERE, 'photos')
-MANIFEST = os.path.join(HERE, 'photo_manifest.json')
-SHEETS = os.path.join(HERE, 'out', 'sheets')
+# 資料家(matte / photos / 帳本 / sheet)= --home,不給就是腳本自己的目錄(舊行為)。
+# argparse 在 main() 才跑,而這幾個常數是模組層 ⇒ 先在這裡撈一次 argv(零副作用)。
+_HOME = HERE
+if '--home' in sys.argv:
+    _HOME = os.path.abspath(sys.argv[sys.argv.index('--home') + 1])
+MATTE = os.path.join(_HOME, 'out', 'matte')
+PHOTOS = os.path.join(_HOME, 'photos')
+MANIFEST = os.path.join(_HOME, 'photo_manifest.json')
+SHEETS = os.path.join(_HOME, 'out', 'sheets')
 
-BLANK_COV = 0.05      # ① 整畫布 α>128 覆蓋率下限(可用 16 張最低 0.100)
-MIN_CANVAS = 300      # ① 畫布最長邊下限 px(可用 16 張最小 481)
-PRINT_FILL = 0.85     # ② bbox 內填滿率上限(可用 16 張最高 0.643)
+TREE_CAL_FAMS = ('tree',)  # ①② 是拿 82 張 tree matte 校準的 ⇒ 那兩條門檻只在這幾族當淘汰線
+BLANK_COV = 0.05      # ① 整畫布 α>128 覆蓋率下限(可用 16 張最低 0.100);tree 專用
+MIN_CANVAS = 300      # ① 畫布最長邊下限 px(可用 16 張最小 481);全族通用
+PRINT_FILL = 0.85     # ② bbox 內填滿率上限(可用 16 張最高 0.643);tree 專用
+PRINT_FILL_OTHER = 0.93  # ② 別族的淘汰線:建物 bbox 本來就接近填滿(已出貨最高 0.909)
 SPEC_COV = 0.28       # ③ 葉片標本:覆蓋率下限
 SPEC_ASP = (0.8, 1.3) # ③ 長寬比帶(白描猴麵包樹 #58 asp 1.40 在帶外)
 SPEC_BSTD = 20.0      # ③ 原圖邊框 std 上限(大橡樹 #16 bstd 62.5 在帶外)
+MULTI_MAIN = 0.70     # ④ 多主體:最大連通元件面積佔比下限(已出貨 25 張最低 0.778)
+LUM_MIN = 35.0        # ⑤ 光源不足:主體平均亮度下限(已出貨最低 43.5)
+DARK_FRAC = 0.70      # ⑤ 光源不足:主體暗部(luma<40)佔比上限(已出貨最高 0.632)
+WATCH_MAIN = 0.90     # 觀察名單(不淘汰,只上 sheet 給人眼):主體佔比
+WATCH_LUM = 55.0      # 觀察名單:平均亮度
+DARK_L = 40.0         # 「暗部」的亮度界(0~255 luma)
 
 
 def now_iso():
@@ -73,14 +121,20 @@ def now_iso():
 
 
 def matte_stats(path):
-    """單張 matte 的統計特徵;bbox 一律取 α>128(α>16 會被雜散像素撐大,四角/填滿率全失真)。"""
+    """單張 matte 的統計特徵;bbox 一律取 α>128(α>16 會被雜散像素撐大,四角/填滿率全失真)。
+
+    ④⑤ 的三個新欄位(main / lum / dark)在**縮到 512 的副本**上算 —— 連通元件標記與亮度
+    平均對解析度不敏感(實測 512 與原尺寸的 main 差 <0.01),而原尺寸逐張標記會讓整輪多花
+    幾分鐘;①②③ 仍吃原尺寸(畫布下限與填滿率就是尺寸的函數,縮了就量錯)。
+    """
     im = Image.open(path)
     a = np.asarray(im.convert('RGBA'))[:, :, 3]
     h, w = a.shape
     cov = float((a > 128).mean())
+    sm = _subject_stats(im)
     ys, xs = np.where(a > 128)
     if len(xs) == 0:
-        return {'canvas': max(w, h), 'cov': cov, 'fill': 0.0, 'asp': 0.0, 'corners': 0}
+        return {'canvas': max(w, h), 'cov': cov, 'fill': 0.0, 'asp': 0.0, 'corners': 0, **sm}
     x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
     bw, bh = int(x1 - x0 + 1), int(y1 - y0 + 1)
     sub = a[y0:y1 + 1, x0:x1 + 1]
@@ -88,7 +142,30 @@ def matte_stats(path):
     corners = sum(1 for cy, cx in ((0, 0), (0, bw - p), (bh - p, 0), (bh - p, bw - p))
                   if sub[cy:cy + p, cx:cx + p].mean() > 128)
     return {'canvas': max(w, h), 'cov': cov, 'fill': float((sub > 128).mean()),
-            'asp': (bw / bh) if bh else 0.0, 'corners': corners}
+            'asp': (bw / bh) if bh else 0.0, 'corners': corners, **sm}
+
+
+def _subject_stats(im):
+    """④⑤ 用的主體統計:最大連通元件佔比 main、主體平均亮度 lum、主體暗部佔比 dark。
+
+    連通元件取 α>128 的**面積**佔比而不是「幾塊」:桁架水塔的腿本來就會被切成好幾塊
+    (已出貨的 `ov_6d02b9e0` 有 4 塊)⇒ 數塊數會把真品跟「三顆蘑菇岩」判成同一類;
+    面積佔比則分得開(前者 0.778 = 一個主體 + 碎腿,後者 0.35 = 好幾個主體)。
+    """
+    sm = im.convert('RGBA').copy()
+    sm.thumbnail((512, 512))
+    arr = np.asarray(sm)
+    mask = arr[:, :, 3] > 128
+    tot = int(mask.sum())
+    if tot == 0:
+        return {'main': 0.0, 'lum': 0.0, 'dark': 1.0}
+    lab, _ = ndimage.label(mask)
+    sizes = np.bincount(lab.ravel())[1:]
+    rgb = arr[:, :, :3].astype(np.float32)
+    luma = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
+    sl = luma[mask]
+    return {'main': float(sizes.max() / tot), 'lum': float(sl.mean()),
+            'dark': float((sl < DARK_L).mean())}
 
 
 def border_std(fam, part, stem):
@@ -110,16 +187,36 @@ def border_std(fam, part, stem):
     return None
 
 
-def verdict_of(st, bstd):
-    """三統計桶;回 (v, why)。統計通過 = ('pass', 'stat') —— 待人眼,不是最終可用。"""
-    if st['cov'] < BLANK_COV or st['canvas'] < MIN_CANVAS:
+def verdict_of(st, bstd, fam='tree'):
+    """五統計桶;回 (v, why)。統計通過 = ('pass', 'stat') —— 待人眼,不是最終可用。"""
+    cal = fam in TREE_CAL_FAMS
+    if (cal and st['cov'] < BLANK_COV) or st['canvas'] < MIN_CANVAS:
         return 'reject', 'blank'
-    if st['fill'] >= PRINT_FILL:
+    if st['fill'] >= (PRINT_FILL if cal else PRINT_FILL_OTHER):
         return 'reject', 'print'
     if (st['cov'] >= SPEC_COV and SPEC_ASP[0] <= st['asp'] <= SPEC_ASP[1]
             and bstd is not None and bstd <= SPEC_BSTD):
         return 'reject', 'specimen'
+    if st['main'] < MULTI_MAIN:
+        return 'reject', 'multi'
+    if st['lum'] < LUM_MIN and st['dark'] >= DARK_FRAC:
+        return 'reject', 'dark'
     return 'pass', 'stat'
+
+
+def watched(st, fam='tree'):
+    """統計放行但值得人眼多看一眼(不淘汰)。
+
+    ①② 在非校準族**降級成觀察線而不是放棄**:tree 的門檻在那些族會誤殺真品(檔頭 ⚠),
+    但它抓的那兩種東西(空/小主體、整張紙)在那些族一樣存在 —— 1932 年畢業紀念冊封面
+    (fill 0.854)與舊 hoodoo 那張(cov 0.016)就落在這一帶。降級 = 人眼看得到,而不是
+    被統計悄悄吃掉,也不是被統計悄悄放過。
+    """
+    if st['main'] < WATCH_MAIN or st['lum'] < WATCH_LUM:
+        return True
+    if fam not in TREE_CAL_FAMS and (st['fill'] >= PRINT_FILL or st['cov'] < BLANK_COV):
+        return True
+    return False
 
 
 def load_manifest():
@@ -189,6 +286,7 @@ def apply_human(manifest, fam, mode, ids):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--family', default='tree')
+    ap.add_argument('--home', default=None)                  # 已在模組層讀過(MATTE/PHOTOS/…);此處只為 --help 與拒收未知旗標
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--sheet', action='store_true')
     ap.add_argument('--human', nargs=2, metavar=('pass|reject', 'id[,id..]'))
@@ -220,15 +318,15 @@ def main():
     if not files:
         raise SystemExit(f'找不到 {fam} 族的 matte({os.path.relpath(os.path.join(MATTE, fam), HERE)});先跑 matte_photos.py')
 
-    counts = {'blank': 0, 'print': 0, 'specimen': 0, 'human': 0, 'pass': 0}
+    counts = {'blank': 0, 'print': 0, 'specimen': 0, 'multi': 0, 'dark': 0, 'human': 0, 'pass': 0}
     changed = 0
     orphans = []
-    pass_cells, rej_cells = [], []
+    pass_cells, rej_cells, watch_cells = [], [], []
     for f in files:
         part = os.path.basename(os.path.dirname(f))
         stem = os.path.splitext(os.path.basename(f))[0]
         st = matte_stats(f)
-        v, why = verdict_of(st, border_std(fam, part, stem))
+        v, why = verdict_of(st, border_std(fam, part, stem), fam)
         entries = by_id.get((part, stem), [])
         if not entries:
             orphans.append(f'{part}/{stem}')
@@ -242,15 +340,24 @@ def main():
                 e['screen'] = {'v': v, 'why': why, 'at': now_iso()}
                 changed += 1
         counts['human' if eff_why == 'human' and eff_v == 'reject' else (eff_why if eff_v == 'reject' else 'pass')] += 1
-        label = f'{part} {stem[:14]} cov{st["cov"]:.2f} fill{st["fill"]:.2f}'
+        # 標籤要塞得進 210px 的格子(超出就疊在一起 = 整張 sheet 讀不了)⇒ 縮寫欄名 + 截短 stem
+        label = f'{part[:12]} {stem[:10]} m{st["main"]:.2f} l{st["lum"]:.0f}'
         if eff_v == 'pass':
             pass_cells.append((f, label))
+            if watched(st, fam):
+                watch_cells.append((st['main'], f, f'{label} f{st["fill"]:.2f} c{st["cov"]:.2f}'))
         else:
             rej_cells.append((f, f'[{eff_why}] {label}'))
+    watch_cells.sort(key=lambda t: t[0])                     # 最可疑的排前面
+    watch_cells = [(f, lb) for _, f, lb in watch_cells]
 
     print(f'{fam} 族 matte {len(files)} 張:'
           f'剝空/主體太小 {counts["blank"]}、印刷品 {counts["print"]}、葉片標本 {counts["specimen"]}、'
+          f'多主體 {counts["multi"]}、光源不足 {counts["dark"]}、'
           f'人眼淘汰 {counts["human"]} ⇒ 倖存 {counts["pass"]}(待人眼/已可用)')
+    if watch_cells:
+        print(f'  觀察名單 {len(watch_cells)} 張(統計放行但主體佔比 <{WATCH_MAIN} 或亮度 <{WATCH_LUM:.0f};'
+              f'--sheet 會另出一張,人眼決定留不留)')
     if orphans:
         print(f'⚠ {len(orphans)} 張 matte 在帳本裡找不到對應條目(結論寫不回去):{", ".join(orphans[:6])}…'
               if len(orphans) > 6 else f'⚠ 帳本缺條目:{", ".join(orphans)}')
@@ -263,6 +370,7 @@ def main():
     if args.sheet:
         contact_sheet(pass_cells, os.path.join(SHEETS, f'{fam}_screen_pass.png'))
         contact_sheet(rej_cells, os.path.join(SHEETS, f'{fam}_screen_reject.png'))
+        contact_sheet(watch_cells, os.path.join(SHEETS, f'{fam}_screen_watch.png'))
 
 
 if __name__ == '__main__':

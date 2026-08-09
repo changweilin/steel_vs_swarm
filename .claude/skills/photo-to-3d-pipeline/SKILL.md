@@ -60,9 +60,20 @@ node tools/ai3d/fetch_photos.mjs --part rock/facet
 node tools/ai3d/fetch_photos.mjs --review               # list what is on disk, for human picking
 ```
 
-The catalog (`PHOTO_CATALOG`) is the single seam: family → part → `{want, q[]}`. **Catalog order is
+The catalog (`PHOTO_CATALOG`) is the single seam: family → part → `{want, q[], grp?}`. **Catalog order is
 priority order** — put the rows you actually need next above the rows whose candidates are throttle-heavy,
 or they never get their turn.
+
+**Whole-building rows carry a corpus mix (user decision 2026-08-09): 50% ordinary urban / 25% rural or
+tourist-lodging / 25% functional (temple, church, hospital, station, school, museum, government).** It is
+declared as `BUILDING_MIX`, tagged per row with `grp`, and **checked from the `want` totals** — `--plan`
+prints target vs. holdings and the fetcher refuses to run on drift. Two rules that are easy to get wrong:
+the mix covers *buildings*, not the module rows (window/parapet/AC unit — counting those makes 50% drift
+with every part you add), and rebalancing means **lowering `want`, not deleting rows** (a deleted row
+orphans photos already on disk).
+
+The data home is a **parameter** (`--home`), not wherever the script happens to live: a worktree was once
+deleted and took a 305-entry corpus with it.
 
 **Four things the fetcher already knows; do not re-derive them**
 
@@ -80,6 +91,31 @@ or they never get their turn.
 `solitary oak tree meadow` / `lone tree field` returns single subjects (6 photos → 5 usable meshes). Same
 tool, same parameters. Ask for a **named single subject** (`glacial erratic`, `italian cypress tree`,
 `umbrella thorn acacia`), never a scene or a category.
+
+**Selection standard (user decision 2026-08-09): as clean as possible — the target object and nothing
+else — and well lit.** It lands in two places, and knowing which half is which saves a round:
+
+- *Before download*, the only lever is query wording (above). Licence and short-edge are the only other
+  things checkable from metadata.
+- *After matting*, `screen_mattes.py` measures what wording cannot: `④ 多主體` (largest connected alpha
+  component < 0.70 of subject area) and `⑤ 光源不足` (mean subject luma < 35 **and** shadow fraction ≥ 0.70).
+  Thresholds are calibrated against **sources that already shipped a node**, zero false kills.
+
+Three things that round cost:
+1. **Measure the matte, not the photo.** The winning hoodoo source was a cluttered hillside with three
+   mushroom rocks and a power line; matting left exactly one (`main` 0.984). A dirty photo is not a dirty
+   input — and the converse holds too (a clean 3-chimney photo shattered into 6 components at 222 tris).
+2. **Area share, not blob count.** A lattice water tower's legs are 4 blobs of *one* subject.
+3. **Where statistics cannot separate, watch — do not tighten.** Balloons sat at 0.760 and a shipped water
+   tower at 0.778. Narrowing the threshold to catch the balloons is overfitting to two samples; those cases
+   go to a `*_screen_watch.png` sheet with their numbers, for the human pass.
+
+**Thresholds carry a shape assumption — check it before applying a gate to a new family.** The original
+`BLANK_COV` (canvas coverage) and `PRINT_FILL` (bbox fill = "the subject is a sheet of paper") were
+calibrated on trees. Trees are dense blobs; a lattice tower is not, and *a building is a box*. Applied
+family-wide as-is they would have killed four already-shipped sources (including the Devils Tower one).
+Scope them to the calibrated families and demote them to the watch list elsewhere — do not simply drop
+them, because what they catch (yearbook covers, near-empty mattes) exists in every family.
 
 **The structural limit you will hit** (do not mistake it for bad wording): CC0 corpora are dominated by
 *digitised museum and library holdings*. Per-species queries can hit their photo target in full and still
