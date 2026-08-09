@@ -36,6 +36,16 @@ const W = 260, H = 140;
 // 偏色權重恆為 0 ⇒ 畫面裡最大的那一片(地面佔 47%)當場退出這根拉桿的作用範圍。
 const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 
+// 樣品自己的景深帶(公尺)。戰場那一組是 `data.js dofNearM/dofFarM` 由狙擊模式可視範圍推導的
+// **576~864m**,而樣品整個場景只有 24m 深 ⇒ 直接沿用的話樣品每一個像素都落在焦內帶,
+// 「景深模糊」這根拉桿拉到底都不會有任何變化。這是陰影偏色(過肩光 ⇒ 暗面不在畫面上)與
+// 風化密度(大廳沒有世界的場 ⇒ 乘數恆 1)各踩過一次的同一個坑,第三次不必再踩:
+// **規則同一份(postfx 的 CoC 曲線),尺度兩軌**(同 `toon.js _rampTint` 的 mech/env)。
+// 帶的兩端刻意夾住場景 —— 前景三件(離相機 8.0~10.5m)全部落在 NEAR 之內恆為全清晰,
+// 背景那排(≈14.8~15.5m)與地面遠端(21m)落在 FAR 之外吃滿模糊,一眼看得出差別。
+const DOF_NEAR = 11.0, DOF_FAR = 15.5;
+const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
+
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
   constructor(mount) {
@@ -86,12 +96,26 @@ export class MatSample {
     ground.rotation.x = -Math.PI / 2;
     this._mats.push(ground.material);
     this.scene.add(mech, mechArm, rock, ground);
-    this._geos = [mech.geometry, mechArm.geometry, rock.geometry, ground.geometry];
+    // 背景排:**「景深模糊」那根拉桿的示範對象**。沒有它,焦外帶裡就只剩一片平坦的地面 ——
+    // 而平面在勾線 pass 的二階差分恆為 0(檔頭)⇒ 那裡一條線都沒有,糊與不糊只差在苔蘚
+    // 的低頻起伏,等同看不出差異。有輪廓線的方塊糊起來才是一眼就認得出來的那種糊。
+    // 共用 `envM` 與同一份幾何(逐件各配一份 = 白白多幾個要 dispose 的東西,A25)。
+    const bgGeo = new THREE.BoxGeometry(1, 1, 1);
+    const bg = [[-4.6, 1.9, 1.5], [-0.2, 2.6, 1.8], [4.3, 1.6, 1.3]].map(([x, h, w]) => {
+      const m = new THREE.Mesh(bgGeo, envM);
+      m.position.set(x, h / 2, BG_Z);
+      m.scale.set(w, h, w);
+      m.rotation.y = x * 0.11;
+      return m;
+    });
+    this.scene.add(...bg);
+    this._geos = [mech.geometry, mechArm.geometry, rock.geometry, ground.geometry, bgGeo];
 
     // 勾線/調色走真的後製管線 —— 「勾線強度」那根拉桿否則什麼都看不到。
     this.pipeline = new Pipeline(this.renderer, this.scene, this.camera, {
       lowPower: lowPower() || isTouchUI(),
     });
+    this.pipeline.setDof(DOF_NEAR, DOF_FAR);   // 樣品尺度(見檔頭那一段;戰場走 game._syncDof)
 
     this._draw = () => this.render();
     this._off = onVisualChange(this._draw);

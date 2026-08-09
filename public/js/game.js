@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
+  CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
@@ -527,9 +527,14 @@ export class BattleClient {
     // 賽璐璐後製管線(勾線 → 調色 → FXAA);開關見上方 `off()`。
     // 低功耗/觸控走 8bit RT(半浮點在 tile GPU 上是頻寬成本,與關 MSAA 同一個瓶頸)。
     this.pipeline = off('post') ? null : new Pipeline(this.renderer, this.scene, this.camera, {
-      ink: !off('ink'), grade: !off('grade'), fxaa: !off('fxaa'),
+      ink: !off('ink'), dof: !off('dof'), grade: !off('grade'), fxaa: !off('fxaa'),
       lowPower: lowPower() || isTouchUI(),
     });
+    // 景深的兩個轉折點:**一律到 data.js 取**(由全場最遠交戰距離推導),game.js MUST NOT
+    // 自己乘 sight / 射程 —— 第二份實作的症狀是「射程調了之後遠景糊的距離沒跟著走」,
+    // 而那要等到有人抱怨「打得到卻看不清楚」才會發現。與機種無關(交戰上界是全場的性質:
+    // 對面那台帶什麼武器不由你決定)⇒ 換座機不必重設。
+    this.pipeline?.setDof(dofNearM(), dofFarM());
 
     this.raycaster = new THREE.Raycaster();
     // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
@@ -8917,6 +8922,14 @@ export class BattleClient {
     this._updateWaterVeil();   // 水下/沼澤視野變色(最終 camera 定案後、render 前)
     this._drawMinimap(now);
     updateCelLight(this.camera);   // 硬邊金屬高光帶的 view-space 光向
+    // 景深**只在狙擊模式**(2026-08-09 使用者補充)。強度由**已定案的 camera.fov** 反解 ⇒
+    // 與右鍵拉近是結構上同一條曲線,MUST NOT 改判 `this.aiming` 布林(進鏡瞬間硬切)、
+    // 更 MUST NOT 自己跑一條淡入(第二條時間曲線 = 模糊比鏡頭慢半拍)。與 `updateCelLight`
+    // 同一層:相機定案之後、render 之前,而且**這是唯一的呼叫點** —— 散在狀態機裡的話,
+    // 陣亡/觀戰那幾條路留著上一幀的值就是「死了畫面還糊著」。
+    // 觀戰的滾輪縮放也吃 camera.fov ⇒ 明確排除(否則拉遠會被誤讀成進鏡)。
+    this.pipeline?.setDofBlend(this.side && !this.dead
+      ? dofAimBlend(this.camera.fov, this.baseFov, UNITS[this.heroKind]?.zoomFov ?? this.baseFov) : 0);
     // 後製管線結束時 render target 一律歸零 ⇒ 後面的 PiP / 陣亡鏡頭照樣直接畫在畫布上(行為不變)
     if (this.pipeline) this.pipeline.render(); else this.renderer.render(this.scene, this.camera);
     this._renderPips();

@@ -654,6 +654,87 @@ export const SCOPE = { R_VMIN: 40, FOG_R_VMIN: 18 };
 export const scopeRvmin = (fog = 0) =>
   SCOPE.R_VMIN - Math.max(0, Math.min(1, fog || 0)) * (SCOPE.R_VMIN - SCOPE.FOG_R_VMIN);
 
+// ---- 景深模糊(2026-08-09 使用者需求「加入遠的物件隨距離景深模糊的效果」)----
+// **純表現層**(與 SCOPE / VIEW_LOCK / RECOIL 同層:伺服器完全不知道它的存在 ⇒ 不涉 A1),
+// 而且**是加成本不是省成本**的 —— 它是後製管線多出來的一個全螢幕 pass,採用的理由是畫面
+// 不是效能(2026-08-09 已向使用者說明後定案)。住 data.js 而不住 postfx.js 的理由同 SCOPE:
+// 離線稽核 MUST 能 import **真品**驗下面那條不變式,而 postfx.js 依賴 three(沙箱無 CDN)。
+//
+// **兩個轉折點推導不手寫**,係數就是使用者 2026-08-09 提的那兩圈:起糊 = 1.5×、全糊 = 2×。
+//
+// **錨改了,而那是量出來的**:使用者原話是「狙擊模式可視範圍」的倍數,但 `COMBAT_SCALE`
+// 把 sight 與武器射程一起砍半、**地圖邊長沒有跟著砍**(REAL_SCALE 是另一條路)⇒ 現役的
+// 狙擊可視只有 192~216m,而**最遠交戰距離 304m 比它還遠**(重武器射程上限吃的是
+// `sight × AIM_SIGHT_MULT × RANGE_SIGHT_F`,再乘高度制空與防作弊容差)。照原話取
+// 1.5 × 216 = 324m 的話,起糊點就落在交戰距離**裡面** —— 糊掉打得到的目標不再是表現層
+// 改動而是玩法改動(原則 4),而畫面上只表現成「這場好像比較難瞄」。
+//
+// 故錨在 `combatReachM()`:**「打得到的東西恆為全清晰」因此是結構保證而不是校準**——
+// 起糊點 = 交戰上界 × 1.5,射程/視野/塔怎麼調都自己跟著走。錨也 MUST NOT 取相機 far
+// 平面(= 地圖邊長 × 2):那隨隊制變(L1/L2/L3 邊長 800/1000/1200),同一把武器在大地圖上
+// 就要更遠才開始糊,而「多遠算遠」是戰鬥尺度的性質不是地圖尺寸的性質。
+//
+// 全糊那一圈刻意就是使用者原本要「不顯示」的那一圈:日後真做距離剔除時,物件消失的邊界
+// **已經在全糊帶裡** ⇒ 憑空消失的那一下被模糊蓋住。兩件事對得起來不是巧合,是同一組數字。
+export const DOF = {
+  NEAR_F: 1.5,     // 起糊 = 交戰距離上界 × 此值。**1.0 以下即侵入交戰距離**(稽核 Ⅵ-b 守門)
+  FAR_F: 2.0,      // 全糊
+  // 最大模糊半徑 = **螢幕高度的比例**,不是像素。寫成像素的話高解析度螢幕上相對變窄、
+  // 而 RES_GOV 一降階又相對變寬(同一根拉桿在不同裝置上是不同的效果)。
+  MAX_R: 0.005,
+  TAPS: 8,         // 圓盤取樣數(低功耗折半;分布與展開全在 postfx.js)
+};
+let _reachM = 0;
+/**
+ * 全場最遠交戰距離(m)= 「這個距離上還可能發生傷害或需要瞄準」的上界。**推導不手寫** ——
+ * 取樣面 MUST 涵蓋每一條會讓玩家想看清楚遠處的路徑,漏一條就是那一種目標被糊掉:
+ *   ① 砲塔射程(它會先開火,而你得看得到是誰在打你);
+ *   ② 32 角 × 兩槽位 × 四階的解析後射程,再乘**高度制空放寬**與**防作弊容差**
+ *      —— 伺服器真的會收下那個距離的回報(`RANGE_TOL`),那就是誠實的上界;
+ *   ③ 32 角 × 兩槽位 × 四階的招式施放距離;
+ *   ④ 大招載具的最長航程(`hyperMaxArcM`)—— 它是可鎖定可擊落的實體,全程都該看得見。
+ * 快取:靜態資料的純函式,而呼叫點在開場與換座機(每局個位數次)。
+ */
+export const combatReachM = () => {
+  if (_reachM) return _reachM;
+  let m = UNITS.tower?.range || 0;
+  const wF = altRangeMax() * RANGE_TOL;
+  for (const ch of Object.keys(CHARACTERS)) {
+    for (const slot of ['light', 'heavy']) {
+      for (let lv = 1; lv <= 4; lv++) {
+        m = Math.max(m, (heroWeapon(ch, slot, lv, true)?.range || 0) * wF);
+      }
+    }
+    for (const slot of ['skill', 'ult']) {
+      for (let lv = 1; lv <= 4; lv++) m = Math.max(m, heroAbility(ch, slot, lv, true)?.range || 0);
+    }
+  }
+  _reachM = Math.max(m, hyperMaxArcM());
+  return _reachM;
+};
+/** 開始模糊的距離(m)。MUST NOT 手寫 —— 改射程 / 視野 / 塔,兩個轉折點自己跟著走 */
+export const dofNearM = () => combatReachM() * DOF.NEAR_F;
+/** 完全模糊的距離(m) */
+export const dofFarM = () => combatReachM() * DOF.FAR_F;
+/**
+ * 景深強度隨進鏡程度(2026-08-09 使用者補充「遠景景深模糊**只有在狙擊模式**」)。
+ * 0 = 一般視角(這一 pass 整個退出鏈)、1 = 完全進鏡。
+ *
+ * **輸入是當下的 `camera.fov` 而不是 `aiming` 布林**,理由是單一曲線:右鍵拉近本來就已經
+ * 有一條緩動(`game._updatePlayer` 的 `fov += (want − fov) × min(1, dt × 10)`),照布林做
+ * 硬切就是進鏡瞬間「啪」地糊掉;而自己再跑一條淡入淡出 = **第二條時間曲線**,兩者遲早不
+ * 同步,症狀只是「模糊比鏡頭慢半拍」,沒有任何錯誤訊息。由 fov 反解 ⇒ 兩者**結構上**是
+ * 同一條曲線,連緩動係數都不必共用。
+ *
+ * `span ≤ 0`(zoomFov 未設 / 與 baseFov 相同 / 觀戰滾輪把 fov 拉到帶外)一律回 0 =
+ * 不糊(原則 6 寧缺勿錯:偏差朝「看得清楚」)。
+ */
+export const dofAimBlend = (fov, baseFov, zoomFov) => {
+  const span = baseFov - zoomFov;
+  if (!(span > 0)) return 0;
+  return Math.max(0, Math.min(1, (baseFov - fov) / span));
+};
+
 // ---- 視野鎖定(2026-08-01 使用者需求:虛擬搖桿加入「按住鎖定目標」= 觸控 ZR)----
 // **純客戶端視角輔助**(與 RECOIL / BALLISTIC 同層,伺服器完全不參與 ⇒ 不涉 A1):按住期間每幀把
 // **基準視角**(yaw/pitch)朝鎖定的敵方單位收斂,放開即恢復自由視角。權威側看到的仍只有
