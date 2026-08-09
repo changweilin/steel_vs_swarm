@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { envMat } from './hazards.js';
 import { setWeatherField } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
-import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites } from './data.js';
+import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites, curveMaxEdgeM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -516,8 +516,13 @@ export async function buildTerrain(cfg, onProgress) {
   let waterY = null;
   if (minH < WATER.LEVEL + 0.2) {
     waterY = WATER.LEVEL;
+    // 分段數由 `curveMaxEdgeM()` 推導(MUST NOT 手寫):世界曲面是**逐頂點**沉降,一整片
+    // 鋪成兩個三角形的話中間就是一條弦 —— 邊長 L 的弦高 L²/(4R),整張圖一格的舊制在 L3
+    // (1200m)上是 25m,水面會從遠處的地形裡整片浮出來。地形自己的格是 6.25m ⇒ 弦高
+    // 0.9mm,本來就遠在容差之內,只有水面需要補這一刀。
+    const wSeg = (n) => Math.max(1, Math.ceil(n / curveMaxEdgeM()));
     const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(worldW, worldH),
+      new THREE.PlaneGeometry(worldW, worldH, wSeg(worldW), wSeg(worldH)),
       // DoubleSide:視線沒入水下時抬頭仍看得到水面(單面會被背面剔除 = 水下憑空無水)。
       // 水面是淺色大面積 ⇒ ramp 取 `soft`(整條抬到亮端,兩階之間才看得出交界);
       // 透明件不吃 moss(envMat 預設就沒有),wash/cool 照走 —— 水色要跟著天色偏。

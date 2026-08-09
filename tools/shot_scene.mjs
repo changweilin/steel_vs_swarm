@@ -10,12 +10,12 @@
 //   bridge     第一座橋的橋頭(有才拍)   hilltop      全圖最高點俯瞰兵線
 //   waterline  水岸(有水域才拍)         aerial       圖心高空俯瞰
 //
-// 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` 各關一層,同一組機位再拍一次
+// 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` / `--curve=0` 各關一層,同一組機位再拍一次
 // ⇒ 「這張圖變醜是哪一層造成的」變成可回答的問題,而不是憑印象猜。
 //
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
-// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--lib=0] [--live]
+// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live]
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -69,6 +69,10 @@ const ENV_DEF = { season: 'summer', time: 'day', weather: 'clear' };
 const LAYERS = {
   ink: flag('ink'), dof: flag('dof'), grade: flag('grade'), fxaa: flag('fxaa'),
   post: flag('post'), lib: flag('lib'),
+  // 世界曲面(2026-08-09):它是**唯一**改 three 共用 chunk 的一層,而且只在遠景才看得出來 ⇒
+  // 前後對照時最需要能單獨關掉。開關住頁面的 query(`toon.js installWorldCurve` 在模組載入時讀),
+  // 所以這一層與其他幾層不同:走探針頁的網址,不是走 `Pipeline` 的 opts。
+  curve: flag('curve'),
 };
 const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('')
   + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('');
@@ -122,14 +126,17 @@ if (!LIVE) {
 }
 
 const PROBE_URL = `${srv.url}public/__scene_probe.html`;
-await page.route(PROBE_URL, (r) => r.fulfill({
+// `--curve=0` 靠網址傳(見 LAYERS.curve);route 樣式因此 MUST 收得下 query string ——
+// 用精確網址攔截的話,帶了 `?curve=0` 的那一次會直接漏到真實檔案系統上變成 404。
+const PROBE_NAV = LAYERS.curve ? PROBE_URL : `${PROBE_URL}?curve=0`;
+await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
   status: 200, contentType: 'text/html; charset=utf-8',
   body: `<!DOCTYPE html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"${THREE_CDN}","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 <style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c" width="1280" height="720"></canvas></body></html>`,
 }));
-await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
+await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
 const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, env }) => {
   const THREE = await import('three');
@@ -138,8 +145,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   const { buildBiomes } = await import('/public/js/biomes.js');
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
-  const { updateCelLight } = await import('/public/js/toon.js');
-  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax, dofNearM, dofFarM }
+  const { updateCelLight, worldCurveOn } = await import('/public/js/toon.js');
+  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax, dofNearM, dofFarM, curveKneeM, curveHorizonM }
     = await import('/public/js/data.js');
 
   const venue = VENUES.find((v) => v.id === venueId);
@@ -449,7 +456,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
       p: st.p.map((v) => Math.round(v)), look: st.look.map((v) => Math.round(v)) });
   }
-  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor };
+  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor,
+    curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
 }, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV });
 
 for (const s of shots.shots) {
@@ -459,6 +467,11 @@ for (const s of shots.shots) {
 if (shots.biomeErr) console.log(`  ⚠ buildBiomes 例外:${shots.biomeErr}`);
 console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS.lib ? '' : '(--lib=0 保險絲)'}・隧道 ${shots.tunnels}・橋 ${shots.decks}`
   + `・水域 ${shots.water ? '有' : '無'}・衛星影像 ${shots.imagery ? '有' : '無'}`);
+// 曲面裝上了沒有 MUST 印出來,理由與景深那一段同源:錨點對不上 / 網址旗標打錯,
+// 兩者都會安靜地拍出一疊**平面**定場照,而每一行讀數與每一張圖看起來都正常 ——
+// 而這支工具的賣點正是「改動前後各拍一次」,拍到的若是同一件事就什麼都比不出來。
+console.log(`  世界曲面 ${shots.curveOn ? `已裝(拐點 ${Math.round(shots.curveKnee)}m / 地平線 ${Math.round(shots.curveHorizon)}m)`
+  : (LAYERS.curve ? '⚠ 未裝(three 錨點對不上?)' : '關閉(--curve=0)')}`);
 // 繞行了哪一顆 MUST 印出來:四張圖本身分不出「這顆真的長著庫節點」還是「認錯人拍了一顆
 // 程序岩」—— 節點名 + 候選顆數就是那個證據(0 顆 = 這張圖沒有庫岩體,不是拍失敗)。
 if (LAYERS.lib) {
