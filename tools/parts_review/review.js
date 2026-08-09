@@ -418,9 +418,19 @@ function statOf(r) {
   return { status: it?.status || '', flag: ['regen', 'reimg'].includes(it?.status || '') };
 }
 
+/**
+ * 半成品(使用者 2026-08-09「零件台清掉半成品」)。判定不在這裡 —— 伺服器端走
+ * `mesh_sym.nodeFlaws` 那一支量出來的(規則見它的檔頭),頁面只讀 `r.flaws`。
+ * **清理 = 不顯示,不是刪除**:節點仍在 GLB 裡、遊戲照舊吃它,「半成品」分頁看得到
+ * (缺的不准藏,紀律 ④)。
+ */
+const isWip = (r) => !!r.flaws?.length;
+
 function renderList() {
   const keep = (r) => {
     const s = statOf(r);
+    if (app.filter === 'wip') return isWip(r);
+    if (isWip(r)) return false;   // 其餘每一個分頁都收起半成品
     if (app.filter === 'todo') return !s.status;
     if (app.filter === 'flag') return s.flag;
     if (app.filter === 'miss') return r.missing;
@@ -429,7 +439,8 @@ function renderList() {
   };
   $('prList').innerHTML = app.data.rows.filter(keep).map((r) => {
     const s = statOf(r);
-    const pill = r.missing ? '<span class="pr-pill miss">缺件</span>'
+    const pill = isWip(r) ? '<span class="pr-pill miss">半成品</span>'
+      : r.missing ? '<span class="pr-pill miss">缺件</span>'
       : s.status ? `<span class="pr-pill ${STATUS[s.status]?.[1] || ''}">${esc(STATUS[s.status]?.[0] || s.status)}</span>`
         : '<span class="pr-pill">未覆核</span>';
     const meth = r.method
@@ -444,10 +455,14 @@ function renderList() {
 
 function renderStat() {
   const rows = app.data.rows;
-  const ok = rows.filter((r) => itemOf(r.key)?.status === 'ok').length;
-  const flag = rows.filter((r) => statOf(r).flag).length;
-  $('prStat').textContent = `生成物 ${rows.length} 件 ・ 已通過 ${ok} ・ 有意見 ${flag}`
-    + ` ・ 缺件 ${app.data.missing.length} ・ 孤兒節點 ${app.data.orphans.length}`
+  const wip = app.data.wip?.length || 0;
+  const shown = rows.filter((r) => !isWip(r));
+  const ok = shown.filter((r) => itemOf(r.key)?.status === 'ok').length;
+  const flag = shown.filter((r) => statOf(r).flag).length;
+  // 分子分母都只算**台上顯示的那些** —— 把收起來的半成品算進「生成物」的話,
+  // 「已通過 N / 生成物 M」這個進度永遠差那幾件而看不出原因
+  $('prStat').textContent = `生成物 ${shown.length} 件 ・ 已通過 ${ok} ・ 有意見 ${flag}`
+    + ` ・ 半成品 ${wip}(已收起) ・ 缺件 ${app.data.missing.length} ・ 孤兒節點 ${app.data.orphans.length}`
     + ` ・ 未記載來源 ${app.data.undocumented.length}`
     + (app.data.issues.length ? ` ・ 帳目問題 ${app.data.issues.length}` : '');
 }
@@ -557,6 +572,10 @@ function renderBody() {
   <div class="pr-mline">${esc(r.method ? r.method.label : '未記載來源')}
     ・ 消費端 ${esc(r.consumer || '—')}${r.glbPath ? ` ・ ${esc(r.glbPath)}` : ''}
     ${r.missing ? ' ・ <span class="pr-bad">缺件:執行期整件走 fallback</span>' : ''}</div>
+  ${isWip(r) ? `<div class="pr-sec pr-warn"><h3>⚑ 半成品(台上預設收起)</h3>
+    <div>${r.flaws.map((f) => `<b>${esc(f.label)}</b>:${esc(f.detail)}`).join('<br>')}</div>
+    <div class="pr-dim">節點沒有被刪 —— 遊戲照舊吃它。判定住 <code>tools/ai3d/mesh_sym.mjs</code>
+      (<code>--flaws</code> 印同一份名單);要它回到台上,把網格封起來重新入庫即可。</div></div>` : ''}
 
   <div class="pr-tools">
     <span class="pr-dim">座號</span>

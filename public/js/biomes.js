@@ -227,7 +227,12 @@ const VEG_DEFS = {
   conifer:     { parts: [{ g: cyl(0.20, 0.32, 2.0), y: 1.0, c: 0x5d4027 },
                          { g: cone(2.3, 3.4, 7), y: 3.2, key: 'conifer' },      // 三層塔狀樹冠
                          { g: cone(1.8, 3.0, 7), y: 5.4, key: 'conifer' },
-                         { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }] },
+                         { g: cone(1.2, 2.6, 7), y: 7.4, key: 'conifer' }],
+                 // 整樹節點(2026-08-09):與 conifer2 同一支星盤生成器,只換樹種參數
+                 // (`STAR_SPECIES.fir`:5 角 / 谷底 0.55 / 凹面 1.7)。三種針葉在此之前
+                 // **一顆庫節點都沒有** —— 那三組樹種參數自 §5z-r 寫出來就沒上過畫面。
+                 whole: [{ g: cyl(0.33, 0.33, 8.30), y: 4.133, c: 0x5d4027, lib: 'tree/cf1_wood_a' },
+                         { g: cyl(2.23, 2.23, 8.30), y: 4.133, key: 'conifer', lib: 'tree/cf1_crown_a' }] },
   // 針葉林幾何多樣化(2026-07-12):三角錐塔之外再添三款輪廓,同林異形
   conifer2:    { parts: [{ g: cyl(0.18, 0.3, 2.4), y: 1.2, c: 0x54402a },       // 老雲杉:不規則簇疊冠
                          { g: ico(2.0), y: 3.2, key: 'conifer', sy: 0.5 },   // 老雲杉:下層枝盤外伸、上層急收
@@ -255,13 +260,21 @@ const VEG_DEFS = {
   conifer3:    { parts: [{ g: cyl(0.14, 0.22, 1.2), y: 0.6, c: 0x5d4027 },      // 柱狀絲柏:細長紡錘
                          { g: cone(1.1, 7.6, 6), y: 4.9, key: 'conifer' },
                          { g: cyl(0.9, 1.3, 2.2, 6), y: 2.2, key: 'conifer' },
-                         { g: cone(0.5, 2.0, 5), y: 8.6, key: 'conifer' }] },
+                         { g: cone(0.5, 2.0, 5), y: 8.6, key: 'conifer' }],
+                 // `STAR_SPECIES.cypress`:8 角 / 谷底 0.70 / 凹面 2.4 —— 角多而淺、輪廓最直,
+                 // 配上這一型自己的細高包絡(r 1.30 × 全高 9.60)才是「柱狀」那個身分
+                 whole: [{ g: cyl(0.15, 0.15, 9.16), y: 4.560, c: 0x5d4027, lib: 'tree/cf3_wood_a' },
+                         { g: cyl(1.26, 1.26, 9.16), y: 4.560, key: 'conifer', lib: 'tree/cf3_crown_a' }] },
   conifer4:    { parts: [{ g: cyl(0.12, 0.36, 8.2), y: 4.1, c: 0x66492e },      // 雪松:平展層枝盤
                          { g: cyl(2.6, 3.1, 0.9, 8), y: 3.0, key: 'conifer' },
                          { g: cyl(2.0, 2.5, 0.85, 8), y: 4.6, key: 'conifer' },
                          { g: cyl(1.4, 1.9, 0.8, 8), y: 6.1, key: 'conifer' },
                          { g: cyl(0.7, 1.2, 0.75, 7), y: 7.4, key: 'conifer' },
-                         { g: cone(0.5, 1.3, 6), y: 8.0, key: 'conifer' }] },
+                         { g: cone(0.5, 1.3, 6), y: 8.0, key: 'conifer' }],
+                 // `STAR_SPECIES.cedar`:4 角 / 谷底 0.45 / 凹面 1.4 —— 角少而深、層盤最平展,
+                 // 包絡最寬(r 3.10)⇒ 與絲柏在同一片林子裡一眼分得出來
+                 whole: [{ g: cyl(0.33, 0.33, 8.25), y: 4.109, c: 0x66492e, lib: 'tree/cf4_wood_a' },
+                         { g: cyl(3.00, 3.00, 8.25), y: 4.109, key: 'conifer', lib: 'tree/cf4_crown_a' }] },
   // sf(軟性覆寫;2026-08-04):芒花穗/箭竹葉/蘆葦有固定色 ⇒ 沒有 key,但它們正是使用者
   // 點名的「芒草」。細勾線與擺動由 `vegSoftKind` 讀這一欄,MUST NOT 另開一張名單。
   silvergrass: { parts: [{ g: cone(0.85, 1.5), y: 0.75, key: 'grass' },
@@ -1054,6 +1067,15 @@ export function buildVegMeshes(type, items, season) {
     if (m.instanceColor) m.instanceColor.needsUpdate = true;
     m.castShadow = false;
     m.frustumCulled = false;   // 實例散佈全圖,包圍球不可靠
+    // 這一列是「哪一型的第幾件」——**建造端本來就知道,離線量測 MUST 問它而不是事後反推**。
+    // 舊制 `measure_veg_tris` 以「幾何參數 + 材質色」當指紋去對回 VEG_DEFS,而同參同色是常態
+    // (birch 與 mangrove 的 ico(2.0)、broadleaf 與 borderrock 的 ico(1.7)…)⇒ 碰撞群的
+    // instance 數被**記給群裡每一列**,三個綠地場地量到 broadleaf 與 birch 同為 438
+    // = 兩型互相灌帳。那個偏差方向雖然朝「算多」(閘門偏緊,不會放行過重的節點),
+    // 但它同時讓 `node_cap` 的除數虛胖 ⇒ **合格的節點被擋在門外**,而紅字的理由與真正的
+    // 三角形成本無關。純資訊、執行期沒有任何消費端,不影響渲染與權威幾何(原則 4)。
+    m.userData.vegKind = type;
+    m.userData.vegRow = pi;
     meshes.push(m);
   });
   return meshes;
@@ -2107,8 +2129,11 @@ const BLD_LIB = {
   acbox:   ['building/ac_a', ['box', 1, 1, 1]],        // 空調機組/機房(roofBoxes 桶)
   // 整棟量體(高層商辦子集;§5aa/§5ab)。**輪替名冊 MUST ≥2 顆** —— 只有一顆的話
   // 同一張圖上挑中的十幾棟塔樓是同一個剪影(尺寸各異、形狀相同),而所有離線閘門全綠。
-  // a = 退縮階梯式方塔、b = 寬裙樓 + 細塔身 + 尖頂(§5ae)。
-  mass: [['building/mass_a', 'building/mass_b'], ['box', 1, 1, 1]],
+  // a = 退縮階梯式方塔、b = 寬裙樓 + 細塔身 + 尖頂(§5ae)、c = 帝國大廈式高聳退縮塔 + 尖塔(§5aq)。
+  // c 是**第一顆背面不是空的整棟量體節點**(半空間面積不對稱 asymZ 0.001,而 a 是 0.123)——
+  // 選片那一條(§5ae「整棟入鏡,不是最好看的局部」)兌現在這裡:同一族的另一張候選照
+  // 生出來的是一塊中空的立面碎片,而它在任何離線閘門上都是綠的(見 §5aq-b)。
+  mass: [['building/mass_a', 'building/mass_b', 'building/mass_c'], ['box', 1, 1, 1]],
   // 低矮建物的整棟量體(2026-08-09 使用者定案「開」第二個桶 + §5al-c 選 (a) 8/8 切分)。
   // **它與上面那一桶吃同一個 facade_wall 桶** ⇒ 額度是同一份:`MASS.PICK_N` 與
   // `MASS.PICK_N_LOW` 加起來才是 tri_budget 的 `pick_n`,`node_cap` 因此一格不動

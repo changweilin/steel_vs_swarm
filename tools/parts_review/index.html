@@ -29,11 +29,14 @@
   <span class="pr-stat" id="prStat">載入中…</span>
   <span class="pr-grow"></span>
   <div class="seg pr-filter" id="prFilter">
+    <!-- 「全部」= 全部**成品**:半成品由伺服器端量出來(mesh_sym.nodeFlaws),
+         每一個分頁都收起,只有最後那一顆看得到 —— 清理是不顯示,不是刪除 -->
     <button class="segb on" data-f="all">全部</button>
     <button class="segb" data-f="todo">待覆核</button>
     <button class="segb" data-f="flag">有意見</button>
     <button class="segb" data-f="miss">缺件</button>
     <button class="segb" data-f="undoc">未記載</button>
+    <button class="segb" data-f="wip">半成品</button>
   </div>
 </header>
 <div class="pr-main">

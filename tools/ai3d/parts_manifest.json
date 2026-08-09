@@ -1294,6 +1294,152 @@
           "checks": "intake 269 綠(新增 16 條 UV 契約:有無 UV / 方向 corr > 0.9 / 朝上面收在帶內 / 牆不踩進帶 / 帶寬 = 量出來的 parity ±0.03);反向驗證兩支各 2 紅與 8 紅;audit_siteplan 206 綠(--break-roof 2 紅);視覺 tools/shot_facades.mjs 排面"
         }
       }
+    },
+    {
+      "method": "simple_geom_tree",
+      "consumer": "biomes VEG_DEFS.conifer(整株:木質 + 葉冠兩顆節點)",
+      "keys": [
+        "tree/cf1_wood_a",
+        "tree/cf1_crown_a"
+      ],
+      "rev": "HEAD",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "sp_araucaria",
+          "query": "araucaria tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "",
+          "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
+          "file": "photos/tree/sp_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "simple_tree.py --crown star(疊層星盤;§5z-r 使用者手稿)",
+        "runner": "study clone C:/Users/user/Documents/study/TRELLIS.2-stableprojectorz(.venv;無 .git,只活在本機)",
+        "params": "--crown star --density mid --species fir",
+        "machine": "CPU(不需 GPU —— 這一族是語料導出佈局 + 基本體重建,不是 img→3D)",
+        "measured": "240 faces(木質 80 / 葉冠 160);check_star.py fir 78 條全綠",
+        "note": "冷杉:星盤造型參數 5 角 / 谷底 0.55 / 凹面 1.7。**這三種樹在此之前一顆庫節點都沒有** —— `STAR_SPECIES` 的 fir / cypress / cedar 三組參數自 §5z-r 寫出來就沒上過畫面,只有 spruce(conifer2)出過貨。三者共用同一支生成器與同一張語料,**差異來自樹種參數 + 各自的世界包絡**(絲柏細高 r 1.30 × 全高 9.60、雪松最寬 r 3.10)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "group": "CF1=2.30x4.35(木質與葉冠共用同一個變換 ⇒ 相對位置烤進頂點,兩列共用同一組 y)",
+        "note": "目標包絡取該型 `measure_veg_tris --kinds` 量到的水平半徑 × 全高一半"
+      }
+    },
+    {
+      "method": "simple_geom_tree",
+      "consumer": "biomes VEG_DEFS.conifer3(整株:木質 + 葉冠兩顆節點)",
+      "keys": [
+        "tree/cf3_wood_a",
+        "tree/cf3_crown_a"
+      ],
+      "rev": "HEAD",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "sp_araucaria",
+          "query": "araucaria tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "",
+          "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
+          "file": "photos/tree/sp_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "simple_tree.py --crown star(疊層星盤;§5z-r 使用者手稿)",
+        "runner": "study clone C:/Users/user/Documents/study/TRELLIS.2-stableprojectorz(.venv;無 .git,只活在本機)",
+        "params": "--crown star --density mid --species cypress",
+        "machine": "CPU(不需 GPU —— 這一族是語料導出佈局 + 基本體重建,不是 img→3D)",
+        "measured": "336 faces(木質 80 / 葉冠 256);check_star.py cypress 78 條全綠",
+        "note": "柱狀絲柏:星盤造型參數 8 角 / 谷底 0.70 / 凹面 2.4(角多而淺、輪廓最直)。**這三種樹在此之前一顆庫節點都沒有** —— `STAR_SPECIES` 的 fir / cypress / cedar 三組參數自 §5z-r 寫出來就沒上過畫面,只有 spruce(conifer2)出過貨。三者共用同一支生成器與同一張語料,**差異來自樹種參數 + 各自的世界包絡**(絲柏細高 r 1.30 × 全高 9.60、雪松最寬 r 3.10)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "group": "CF3=1.30x4.80(木質與葉冠共用同一個變換 ⇒ 相對位置烤進頂點,兩列共用同一組 y)",
+        "note": "目標包絡取該型 `measure_veg_tris --kinds` 量到的水平半徑 × 全高一半"
+      }
+    },
+    {
+      "method": "simple_geom_tree",
+      "consumer": "biomes VEG_DEFS.conifer4(整株:木質 + 葉冠兩顆節點)",
+      "keys": [
+        "tree/cf4_wood_a",
+        "tree/cf4_crown_a"
+      ],
+      "rev": "HEAD",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "sp_araucaria",
+          "query": "araucaria tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "",
+          "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
+          "file": "photos/tree/sp_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "simple_tree.py --crown star(疊層星盤;§5z-r 使用者手稿)",
+        "runner": "study clone C:/Users/user/Documents/study/TRELLIS.2-stableprojectorz(.venv;無 .git,只活在本機)",
+        "params": "--crown star --density mid --species cedar",
+        "machine": "CPU(不需 GPU —— 這一族是語料導出佈局 + 基本體重建,不是 img→3D)",
+        "measured": "208 faces(木質 80 / 葉冠 128);check_star.py cedar 78 條全綠",
+        "note": "雪松:星盤造型參數 4 角 / 谷底 0.45 / 凹面 1.4(角少而深、層盤最平展)。**這三種樹在此之前一顆庫節點都沒有** —— `STAR_SPECIES` 的 fir / cypress / cedar 三組參數自 §5z-r 寫出來就沒上過畫面,只有 spruce(conifer2)出過貨。三者共用同一支生成器與同一張語料,**差異來自樹種參數 + 各自的世界包絡**(絲柏細高 r 1.30 × 全高 9.60、雪松最寬 r 3.10)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "group": "CF4=3.10x4.325(木質與葉冠共用同一個變換 ⇒ 相對位置烤進頂點,兩列共用同一組 y)",
+        "note": "目標包絡取該型 `measure_veg_tris --kinds` 量到的水平半徑 × 全高一半"
+      }
+    },
+    {
+      "method": "trellis2_spz",
+      "consumer": "biomes BLD_LIB.mass[2](整棟量體;高層商辦子集)",
+      "key": "building/mass_c",
+      "rev": "HEAD",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_38b02277-9baa-4af2-81ae-80fc56bd2272",
+          "family": "building",
+          "part": "bld_tower",
+          "query": "art deco skyscraper",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "",
+          "source_url": "https://openverse.org/image/38b02277-9baa-4af2-81ae-80fc56bd2272",
+          "file": "photos/building/bld_tower/ov_38b02277-9baa-4af2-81ae-80fc56bd2272.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`",
+        "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
+        "machine": "RTX 3060 12GB",
+        "out": "out_5aq/ov_38b02277-9baa-4af2-81ae-80fc56bd2272.glb(＋同批 ov_f7730e98 未採用)",
+        "measured": "匯出 48,748 面(13,518 開放邊 / 369 元件 / v:f 0.64);跑批當下 avail RAM 25.6GB",
+        "note": "**這是第一顆背面不是空的整棟量體節點** —— 半空間面積不對稱 asymX 0.002 / asymZ 0.001,而 mass_a 是 0.123(使用者當初對著定場圖說「另一面是空的」那一顆)、mass_b 0.004/0.014。差別**只有選片**:這一張是整棟塔連尖塔完整入鏡(§5ae 那條「整棟入鏡,不是最好看的局部」)。同一族的 `ov_fde797a7` 反例存證:照片本身是一整棟現代主義板樓,但生出來的是**一塊中空的、帶垂直鰭條的立面碎片**,而它在三角形/外廓/watertight 上都可以是綠的 ⇒ **「整棟入鏡」這一條沒有離線閘門能代勞,只有黏土圖看得出來**。同批 `ov_f7730e98`(現代玻璃辦公樓)實測 17 元件 / 50 開放邊 / asymZ 0.089,不採用。"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
+        "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 0.92% / dev_p95 0.88%;normalize 非等向 0.5×0.5 ⇒ 水平徑向 0.475、縱向 ±0.475",
+        "note": "沿用 mass_a / mass_b 那一組參數,一格未調(同一族同一種主體)。UV 走 `--boxuv`(平頂桶不開屋頂帶,朝上面 v 上界 0.948);立面方向 corr(高度, v) = 1.000。這一顆**不需要鏡像貼補** —— 不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
+      }
     }
   ]
 }

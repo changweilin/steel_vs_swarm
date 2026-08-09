@@ -37,6 +37,9 @@ import {
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
 import { METHODS, loadProvenance, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
+// 半成品判定的唯一縫(使用者 2026-08-09「零件台清掉半成品」+「不要在零件台顯示,不是刪除」)。
+// 規則與兩個常數的語意見 mesh_sym.mjs 檔頭那一段;`mesh_sym --flaws` 印的就是這裡隱藏的那幾顆。
+import { topoStats, nodeFlaws } from './ai3d/mesh_sym.mjs';
 
 const STATE_FILE = join(ROOT, 'tools', 'parts_review', 'state.json');
 
@@ -99,6 +102,10 @@ export function manifest(items = {}, photosOpt = null) {
     const env = fbEnvelope(d0.fb);
     const mea = node ? nodeExtent(node) : null;
     const p = prov.byKey.get(name) || null;
+    // 半成品:走 `mesh_sym` 那一支判定(只跑拓樸那一半 —— 鏡射殘差是 O(n²))。
+    // 台上**預設不顯示**但不刪節點,遊戲照舊吃它;「半成品」分頁看得到(缺的不准藏,邊界 ③)
+    const topo = node ? topoStats(node) : null;
+    const flaws = topo ? nodeFlaws(topo, d0.family) : [];
     rows.push({
       key: name,
       title: name,
@@ -116,6 +123,8 @@ export function manifest(items = {}, photosOpt = null) {
       glbPath: fam ? fam.path.replace(ROOT + sep, '') : null,
       glbError: fam?.error || null,
       measured: mea,
+      topo: topo && { open: topo.open, loops: topo.loops, perimF: +topo.perimF.toFixed(2), comps: topo.comps, compTris: topo.compTris.slice(0, 6) },
+      flaws,
       env,
       pct: mea ? mea.rMax / env.r : null,
       budget: budget
@@ -139,9 +148,14 @@ export function manifest(items = {}, photosOpt = null) {
     // 這裡原本直接讀 `p.key`,而來源帳**兩種寫法都合法**(一筆帳掛多個鍵是刻意允許的,
     // 見 provenance.mjs 檔頭)⇒ 一筆用 `keys:` 寫的純資料件會讓整支對照台 TypeError 掛掉,
     // 而 `--report` 是「這一輪到底交付了什麼」的唯一離線出口(2026-08-06 實際踩到)。
-    const pk = (Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []))
-      .find((k) => k.startsWith('beacon/'));
+    const allKeys = (Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []));
+    const pk = allKeys.find((k) => k.startsWith('beacon/'));
     const kind = pk ? pk.slice('beacon/'.length) : null;
+    // 列的鍵 MUST 走同一份正規化 —— 舊制直接讀 `p.key`,而以 `keys:` 寫的帳沒有那一欄
+    // ⇒ 整列的鍵是 `undefined`:清單畫得出來、覆核存不進去(狀態以鍵為索引)、`--report`
+    // 印出一行字面的「undefined」。同一個坑上面那個 `pk` 已經修過一次,這裡是它的另一半。
+    // 兩者皆空的帳進不到這裡(`loadProvenance` 已在「有一筆沒有 key / keys」那條擋掉)。
+    const rowKey = pk || allKeys[0];
     const now = kind && B.KIND_PARTS[kind]
       ? { parts: B.KIND_PARTS[kind].length, foot: B.BEACON_KINDS[kind]?.foot ?? null, extent: +B.kindExtent(kind).toFixed(3) }
       : null;
@@ -156,13 +170,14 @@ export function manifest(items = {}, photosOpt = null) {
       } catch (e) { baseErr = `取不到 ${p.baseline.rev} 的 beacons.js:${e.message}`; }
     }
     rows.push({
-      key: p.key,
-      title: kind ? `${kind}(${p.consumer || ''})` : p.key,
+      key: rowKey,
+      title: kind ? `${kind}(${p.consumer || ''})` : rowKey,
       family: null,
       node: null,
       method: METHODS[p.method],
       prov: p,
-      imgs: imgOut(p.key),
+      imgs: imgOut(rowKey),
+      flaws: [],   // 純資料件沒有 GLB 網格可量 ⇒ 半成品判定對它不適用(不是「量過而合格」)
       consumer: p.consumer || '',
       view: p.baseline?.rev && kind && !baseErr
         ? { mode: 'baseline-vs-now', kind, rev: p.baseline.rev }
@@ -171,7 +186,7 @@ export function manifest(items = {}, photosOpt = null) {
       now,
       base,
       baseErr,
-      item: items[p.key] || null,
+      item: items[rowKey] || null,
     });
   }
 
@@ -187,6 +202,8 @@ export function manifest(items = {}, photosOpt = null) {
   }
   const undocumented = rows.filter((r) => !r.prov).map((r) => r.key);
   const missing = rows.filter((r) => r.missing).map((r) => r.key);
+  // 半成品(台上預設不顯示;判定住 mesh_sym,這裡只是把名冊帶出去給頁面與 --report)
+  const wip = rows.filter((r) => r.flaws?.length).map((r) => r.key);
 
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
   return {
@@ -194,6 +211,7 @@ export function manifest(items = {}, photosOpt = null) {
     orphans,
     undocumented,
     missing,
+    wip,
     issues: prov.issues,
     libs,
     photoRoots: roots.map((r) => r.replace(ROOT + sep, '') || r),
@@ -244,9 +262,11 @@ async function report() {
         + ` / fallback ${r.env.r.toFixed(3)}(${(r.pct * 100).toFixed(0)}%)`);
     }
     if (r.now) console.log(`    件數  原版 ${r.base ? r.base.parts : '?'} → 現行 ${r.now.parts}${r.baseErr ? `(${r.baseErr})` : ''}`);
+    if (r.flaws?.length) console.log(`    ⚑ 半成品(台上預設不顯示)${r.flaws.map((f) => `${f.label}:${f.detail}`).join(' ・ ')}`);
     if (r.missing) console.log('    ❌ 缺件:執行期整件走 fallback');
   }
-  console.log(`\n  缺件    ${m.missing.length}${m.missing.length ? `:${m.missing.join('、')}` : ''}`);
+  console.log(`\n  半成品  ${m.wip.length}${m.wip.length ? `:${m.wip.join('、')}` : ''}（台上預設不顯示;節點仍在遊戲裡）`);
+  console.log(`  缺件    ${m.missing.length}${m.missing.length ? `:${m.missing.join('、')}` : ''}`);
   console.log(`  孤兒節點 ${m.orphans.length}${m.orphans.length ? `:${m.orphans.map((o) => o.name).join('、')}` : ''}`);
   console.log(`  未記載來源 ${m.undocumented.length}${m.undocumented.length ? `:${m.undocumented.join('、')}` : ''}`);
   for (const i of m.issues) console.log(`  ${i.level === 'err' ? '❌' : '⚠'} ${i.msg}`);

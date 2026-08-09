@@ -85,43 +85,63 @@
    }
   },
   "veg": {
-   "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73。**2026-08-07 第三次量測(§5u deadtree 遷移輪)**:uluru(裸露地,bare 0.95)加入取樣面 —— deadtree instance 上界 121(blackforest 僅 15;裸露地才是它的上界場地);blackforest 全場 1,591,970 → 1,561,264 = deadtree 的 Quaternius 檔(DeadTree_1/2)退場再釋出 30,706",
-   "measured_veg_total_max": 212963,
+   "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73。**2026-08-07 第三次量測(§5u deadtree 遷移輪)**:uluru(裸露地,bare 0.95)加入取樣面 —— deadtree instance 上界 121(blackforest 僅 15;裸露地才是它的上界場地);blackforest 全場 1,591,970 → 1,561,264 = deadtree 的 Quaternius 檔(DeadTree_1/2)退場再釋出 30,706。**2026-08-09 第四次量測(逐型歸屬修正輪)**:改由**建造端蓋章**(buildVegMeshes 的 userData.vegKind / vegRow)對回型別,指紋只留作備援 —— 舊制以「幾何參數 + 材質色」事後反推,而同參同色是常態:碰撞群的 instance 數被記給群裡**每一列**(blackforest 實測 broadleaf 與 birch 同報 438 = 兩型互相灌帳)。偏差方向雖朝「算多」= 閘門偏緊,但它同時讓 node_cap 的除數虛胖 ⇒ **合格的節點被擋在門外**,而紅字的理由與真正的三角形成本無關;更糟的是指紋對不上的 InstancedMesh 會被**靜默丟掉**(舊制只對上 80 個,而場上有 341 個)。修正後逐型歸屬(blackforest):conifer2 198→**99**、broadleaf 131→**43**、birch 131→**22**,而**層總量逐位元不變**(198,741)⇒ 錯的只是歸屬不是總量。取樣面擴到**六場**(blackforest / aokigahara / yangmingshan / uluru / okavango / tamsui;後兩場是 mangrove 與 deadtree 的上界場地),逐型上界(六場取最大)shrub 1892 / conifer 154 / broadleaf 160 / deadtree 114 / conifer2 99 / conifer3 97 / conifer4 90 / birch 85 / mangrove 28;植被層總量上界 tamsui 227,108。連帶:lib_roster.conifer2.rows 由 4 修正為 **2**(星盤那一輪之後它只剩 whole 兩列,而那個 4 沒有任何東西會提醒它過期)⇒ Σ(列×instance) 3,038 → **2,722**、node_cap 225 → **249**、整層用量 87.8% → **75.7%**",
+   "measured_veg_total_max": 227108,
    "measured_max_instances": {
-    "shrub": 1909,
-    "broadleaf": 211,
-    "birch": 98,
-    "mangrove": 98,
-    "conifer2": 73,
-    "deadtree": 121
+    "shrub": 1892,
+    "broadleaf": 160,
+    "birch": 85,
+    "mangrove": 28,
+    "conifer2": 99,
+    "conifer": 154,
+    "conifer3": 97,
+    "conifer4": 90,
+    "deadtree": 114
    },
    "measured_quaternius_freed_min": 622905,
    "measured_cur_part_tris": 20,
    "lib_roster": {
-    "shrub": {
-     "rows": 1,
-     "instances": 1909
-    },
     "broadleaf": {
      "rows": 2,
-     "instances": 211
+     "instances": 160,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
     },
     "birch": {
      "rows": 2,
-     "instances": 98
-    },
-    "mangrove": {
-     "rows": 1,
-     "instances": 98
-    },
-    "conifer2": {
-     "rows": 4,
-     "instances": 73
+     "instances": 85
     },
     "deadtree": {
      "rows": 1,
-     "instances": 121,
-     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫一顆 ⇒ 恆 1 列"
+     "instances": 114,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
+    },
+    "conifer": {
+     "rows": 2,
+     "instances": 154,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
+    },
+    "conifer2": {
+     "rows": 2,
+     "instances": 99,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
+    },
+    "conifer3": {
+     "rows": 2,
+     "instances": 97,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
+    },
+    "conifer4": {
+     "rows": 2,
+     "instances": 90,
+     "note": "整樹節點(def.whole;§5u):lib 載到整型只畫這幾列,列數 = whole 裡有 lib 的那幾筆"
+    },
+    "shrub": {
+     "rows": 1,
+     "instances": 1892
+    },
+    "mangrove": {
+     "rows": 1,
+     "instances": 28
     }
    },
    "measured_kind_tris": {
@@ -146,12 +166,12 @@
     "arrowbamboo": 30,
     "reed": 12
    },
-   "lib_instance_rows": 3038,
-   "whole_factor": 3.92,
-   "node_cap": 225,
+   "lib_instance_rows": 3404,
+   "whole_factor": 3.74,
+   "node_cap": 203,
    "justification": "InstancedMesh 消費端(同 building 族的幾何學:GPU 成本 = 節點 tris × instance 數,逐件看毫無意義),但**數量級與 building 差一個檔次** —— 一張圖的屋頂煙囪 212 座,而灌木 1909 叢。**上限由「這一層還能長多少」反推**:node_cap = 成長額度 ÷ Σ(名冊列 × 該型 instance 上界) + 現行零件三角形數 = 622,905 ÷ 3,038 + 20 = 225。成長額度 = **Quaternius 退場實測釋出的最小值**(blackforest 2,184,169 → 1,591,970)⇒ 名冊每一列都貼滿上限的最壞情況,**每一個量過的場地都不比這一輪之前重**(whole_factor 3.78 是這條式子的結果,不是先挑一個好看的倍率)。逐列均分「成長額度」而不是均分「總額度」:均分總額度會給 20 株的 sapling 與 1909 叢的灌木同一份錢,實測算出來的上限是 27 tris —— 比現行的 ico(20)還小,等於這一族永遠不准接。**名冊本身是旋鈕,而且是雙向的**:①灌木 1909 個 instance ⇒ 它一列的價錢等於其餘九列的總和,兩列都接時 cap 只有 140,而 140 逼出來的減面比(實拍冠簇 336~414 → 140 = 2.4~3:1)正是 §5e 那個「Blender 硬減面把殼撕出洞」的區間 —— 外廓與預算全綠,截圖上是樹冠裂成一片片;②2026-08-06 重寫冠層骨架後零件變多,若每一團都接庫,Σ 會漲到 3,779、cap 掉到 176(又進撕裂區)⇒ 把「被主冠擋住大半」的小簇退回保險絲,額度留給看得見的那幾團。逐株(逐款)閘刻意不設:node_cap 的推導式本身已經把整層總量鎖住,再加一道 kind_factor 只是同一個約束寫兩次。",
    "whole_node_gate": "2026-08-08(§5z-o,使用者定案「走零件庫」):簡單幾何版把**一整株樹**做成庫節點(`VEG_DEFS.whole`,木質 + 葉冠兩列)之後,flat `node_cap` 這道閘**結構性失效** —— 它的語意是「一顆節點換掉一個零件」,而一株樹本來就是一顆葉團的四五倍,拿它去比只會恆紅。⇒ 逐件上限對 `whole` 列不適用,改由 **整層總量閘** 管(intake ②-b):Σ 逐型消耗 ≤ `measured_quaternius_freed_min`,其中「消耗(型) = (該型庫節點三角形和 − 被取代的現值) × 該型 instance 上界」,被取代的現值 = whole 走 `measured_kind_tris[型]`(整株)、逐件走 `measured_cur_part_tris × 列數`。**這不是放寬,是把代理換成本尊**:flat cap 一向只是「每一列都吃滿」的保守代理,總量閘直接量真正被約束的那個數,比代理更緊也更準。2026-08-08 實測:改制前既有名冊已用掉成長額度的 **92.4%**(其中 shrub 一列 213 tris × 1909 instance = 59.1%),故同輪把 `bush_a09` 減面 213 → 140 讓出額度給 conifer2 / broadleaf 的整樹節點 —— 使用者定案「闊葉保圓潤冠(ico 1,256),寧可從 shrub 挖」。`node_cap` 仍是**逐件列**(shrub/birch/mangrove)的閘,不退場。",
-   "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量(2026-08-08 盤點:NATURE_MANIFEST 只剩 silvergrass,而 §5k 定案它留著(草葉鏤空貼圖 img→3D 生不出來)⇒ **這一桶已經倒不出更多額度,只能重分配**);④node_cap 與 whole_factor 都是推導值,MUST NOT 手改;⑤`measured_kind_tris` 是**逐型整株現值**的量測快照(整層總量閘的分母),**改 VEG_DEFS 任一型的零件表 MUST 重跑 `measure_veg_tris.mjs --kinds`** —— 不重量的話閘門拿舊基準算消耗,而偏差沒有錯誤訊息,只表現成「額度怎麼還有這麼多」。"
+   "staleness": "①**名冊一改就要重算**(`lib_instance_rows` 是除數:多一列 `lib:` 就多一份 instance-row,cap 要跟著降);②**VEG_DEFS 的零件表一改就要重跑 measure_veg_tris.mjs**(骨架變豐富 ⇒ 植被層總量與名冊列數同時變,2026-08-06 實測 193,355 → 212,963);③`measured_quaternius_freed_min` 是成長額度本身,再從 NATURE_MANIFEST 移除(或加回)任何型別 MUST 重量(2026-08-08 盤點:NATURE_MANIFEST 只剩 silvergrass,而 §5k 定案它留著(草葉鏤空貼圖 img→3D 生不出來)⇒ **這一桶已經倒不出更多額度,只能重分配**);④node_cap 與 whole_factor 都是推導值,MUST NOT 手改;⑤`measured_kind_tris` 是**逐型整株現值**的量測快照(整層總量閘的分母),**改 VEG_DEFS 任一型的零件表 MUST 重跑 `measure_veg_tris.mjs --kinds`** —— 不重量的話閘門拿舊基準算消耗,而偏差沒有錯誤訊息,只表現成「額度怎麼還有這麼多」。;⑥**逐型歸屬 MUST 讀建造端的章**(userData.vegKind)—— 指紋反推只留作備援,工具會印「N 個沒有章 ⇒ 退回指紋反推」,那一行不是零就代表這一輪的數字有一部分是猜的;⑦lib_roster 的 rows MUST 由 VEG_DEFS 原文推導(手寫的那一份在名冊改動時會靜默過期,conifer2 的 4 就是前科);⑧node_cap 的除數是**名冊本身** ⇒ 每加一列,既有逐件節點的上限就跟著降(2026-08-09 針葉三種入名冊:249 → 203,而 vleaf_a12/a20 是 211 ⇒ 就地減到 198)。**MUST NOT 為了讓新增品過關而把 whole 列從除數裡拿掉**(那會讓 cap 跳到 318 = 放寬一道安全閘);正確的動作是把撞到上限的既有節點減到上限之內,外廓由 normalize_parts 的 _restore_ext 逐位元還原 ⇒ 佈局數學(vegSpan / 冠幅 / 淨空)一格不動"
   },
   "tree": {
    "measured_what": "現行 11 種神木(biomes.js GIANT_DEFS)逐株零件三角形加總,量法 = playwright 頁內抽 biomes.js 原文 + 真 three 建幾何、逐件 index.count/3(2026-08-05;**2026-08-06 因 meranti/dinizia/tualang/klinki 重寫冠層骨架而重量** —— 只有 klinki 變動 286 → 386(輪生枝盤從 3 枝 3 盤改成 3 層 × 2 枝 2 盤),其餘三種零件數淨值不變。量測腳本已從臨時腳本升格為 `tools/ai3d/measure_veg_tris.mjs --giants`)",
