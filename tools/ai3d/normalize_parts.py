@@ -172,6 +172,13 @@ for spec in opt_all('mirror'):
 # 水準,而「空的那一面被填滿」不受影響 —— 兩件事各有各的量測(tools/ai3d/mesh_sym.mjs)。
 # 位移是**逐頂點**的連續場 ⇒ 不新增任何一條自由邊、三角形數逐位元不變。
 # 建築 MUST 給 0:對稱正是那一型的取捨(§5ac-c),歪掉的摩天樓不是「更自然」。
+#
+# 第四欄 `tri_cap`(選用;2026-08-09):**就地減面到某個上限**,軸給 `none` 就是「只減面」。
+# 用途:`families.veg` 的 `node_cap` 是「成長額度 ÷ Σ(名冊列 × instance)」⇒ **名冊本身是
+# 除數** —— 每加一列,既有節點的逐件上限就跟著降。針葉三種進名冊那一輪把 cap 由 249 壓到
+# 203,而 `vleaf_a12/a20` 是 211 ⇒ 差 8 個三角形。**MUST NOT 改推導式讓自己過關**(把 whole
+# 列從除數裡拿掉會讓 cap 跳到 318,那是為了讓新增品過關而放寬一道安全閘);正確的動作是
+# 把那兩顆減到上限之內,而外廓仍由 `_restore_ext` 逐位元還原 ⇒ 佈局數學一格不動。
 REWORK = {}
 for spec in opt_all('rework'):
     rname, rest = spec.split('=', 1)
@@ -181,7 +188,10 @@ for spec in opt_all('rework'):
     mode = bits[2] if len(bits) > 2 else 'half'
     if mode not in ('half', 'union'):
         raise SystemExit(f'--rework {rname}:第三欄只能是 half / union')
-    REWORK[rname] = (bits[0], float(bits[1]) if len(bits) > 1 else 0.0, mode)
+    cap = int(bits[3]) if len(bits) > 3 and bits[3] else 0
+    if bits[0] == 'none' and not float(bits[1] or 0) and not cap:
+        raise SystemExit(f'--rework {rname}:axis=none 又不減面又不 warp = 這一刀什麼都沒做')
+    REWORK[rname] = (bits[0], float(bits[1]) if len(bits) > 1 and bits[1] else 0.0, mode, cap)
 
 
 def _ext(ob):
@@ -408,7 +418,7 @@ if REWORK:
     assert not dup, f'同一顆節點不可同時 --node 與 --rework:{sorted(dup)}'
     miss = set(REWORK) - set(byname)
     assert not miss, f'--rework 指到 base 裡不存在的節點:{sorted(miss)}'
-    for rname, (axis, warp, mode) in REWORK.items():
+    for rname, (axis, warp, mode, tcap) in REWORK.items():
         ob = byname[rname]
         bpy.ops.object.select_all(action='DESELECT')
         ob.select_set(True)
@@ -439,6 +449,14 @@ if REWORK:
             mod = ob.modifiers.new('dec', 'DECIMATE')
             mod.ratio = t0 / t1 * 0.98
             bpy.ops.object.modifier_apply(modifier='dec')
+        # 就地減面(第四欄):排在 warp **之前** —— 減面之後頂點少了,同一個振幅的位移
+        # 場會在更粗的網格上放大成可見的凹凸;而 warp 之後再減面則會把剛推出來的起伏磨掉。
+        if tcap:
+            t1b = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+            if t1b > tcap:
+                mod = ob.modifiers.new('dec', 'DECIMATE')
+                mod.ratio = tcap / t1b * 0.98
+                bpy.ops.object.modifier_apply(modifier='dec')
         if warp:
             _warp(ob, warp, rname)
         _restore_ext(ob, e0)

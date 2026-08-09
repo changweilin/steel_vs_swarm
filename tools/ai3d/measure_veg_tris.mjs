@@ -60,6 +60,7 @@ const PORT = +arg('--port', 8643);
 // 型別名冊由真品原文推導(名字而已;指紋本身在頁內問真品 buildVegMeshes)
 const { VEG_DEFS } = bioLibDescs();
 const VEG_TYPES = Object.keys(VEG_DEFS);
+const VEG_SET = new Set(VEG_TYPES);
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('一般植被三角形預算量測');
@@ -204,7 +205,13 @@ const res = await page.evaluate(async ({ venueId, teamSize, vegTypes }) => {
     const t = tri(o.geometry);
     const n = o.isInstancedMesh ? o.count : 1;
     sceneTris += t * n;
-    if (o.isInstancedMesh) rows.push({ sig: sigOf(o), count: n, tris: t });
+    // `tag` = 建造端自己蓋的章(`buildVegMeshes` 的 userData);指紋只當它不在時的備援
+    if (o.isInstancedMesh) {
+      rows.push({
+        sig: sigOf(o), count: n, tris: t,
+        tag: o.userData?.vegKind ? { type: o.userData.vegKind, index: o.userData.vegRow } : null,
+      });
+    }
   });
   walk(bio); walk(terrain.group);
   return { rows, ref, sceneTris, meshN, stats: bio.userData?.stats || null };
@@ -213,11 +220,17 @@ const res = await page.evaluate(async ({ venueId, teamSize, vegTypes }) => {
 // —— 對回 VEG_DEFS(逐(型,零件序);真正無解的同色同參碰撞才整群加總)——
 const byRow = new Map();         // `型#序` → { type, index, count, tris }
 const ambiguous = new Set();
-let vegTris = 0, matched = 0;
+let vegTris = 0, matched = 0, tagged = 0;
 for (const r of res.rows) {
-  const m = res.ref[r.sig];
-  if (!m) continue;
+  // ① 建造端的章(唯一真相);② 沒有章才退回指紋(舊制,保留為備援 —— 章不在時
+  //    整支工具靜默量到 0 列比量偏還糟,原則 6)。
+  // **章蓋在 `buildVegMeshes` 上,而那一支同時服務 VEG_DEFS / GIANT_DEFS / GIANT_DECO**
+  // ⇒ MUST 濾回本族(`families.veg` 的分母只認一般植被;神木走 `families.tree`)。
+  // 舊制靠 `ref` 只收得到 VEG_DEFS,濾網是**副作用**不是規則 —— 換成章之後那層副作用沒了。
+  const m = (r.tag ? [r.tag] : res.ref[r.sig])?.filter((x) => VEG_SET.has(x.type));
+  if (!m || !m.length) continue;
   matched++;
+  if (r.tag) tagged++;
   vegTris += r.count * r.tris;
   if (m.length > 1) ambiguous.add(r.sig);
   for (const { type, index } of m) {               // 碰撞群:同一筆 instance 數記給群裡每一列(偏緊)
@@ -240,7 +253,9 @@ console.log('植被型                instance   零件列  最重零件tris');
 for (const [t, c] of [...byType.entries()].sort((a, b) => b[1].count - a[1].count)) {
   console.log(`  ${t.padEnd(20)} ${String(c.count).padStart(8)} ${String(c.rows).padStart(7)} ${String(c.tris).padStart(13)}`);
 }
-console.log(`一般植被合計 ${vegTris.toLocaleString()} tris(佔全場 ${(vegTris / res.sceneTris * 100).toFixed(1)}%;對上 ${matched} 個 InstancedMesh)`);
+console.log(`一般植被合計 ${vegTris.toLocaleString()} tris(佔全場 ${(vegTris / res.sceneTris * 100).toFixed(1)}%;`
+  + `對上 ${matched} 個 InstancedMesh,其中 ${tagged} 個讀建造端的章)`);
+if (matched > tagged) console.log(`⚠ ${matched - tagged} 個沒有 userData.vegKind ⇒ 退回指紋反推`);
 if (ambiguous.size) console.log(`無解碰撞指紋 ${ambiguous.size} 組(同參數同色;instance 數記給群裡每一列 = 上限偏緊)`);
 
 fs.mkdirSync(join(ROOT, 'tools', 'ai3d', '.tri_measure'), { recursive: true });
