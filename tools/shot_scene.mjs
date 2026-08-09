@@ -16,6 +16,7 @@
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
 // 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--lib=0] [--live]
+//                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
 import path from 'node:path';
 import { dirname, join } from 'node:path';
@@ -43,8 +44,31 @@ const LIVE = has('--live');
 const STATIONS = arg('--stations', '');
 const REPLAY = STATIONS ? JSON.parse(fs.readFileSync(STATIONS, 'utf8')).stations : null;
 const PORT = +arg('--port', 8632);
+// `--time night`(+ `--season` / `--weather`):環境本來寫死 `summer/day/clear`,而**夜間是
+// 一整條沒有任何離線工具走過的路** —— `biomes.js` 的 `night` 旗標(`cfg.env?.time === 'night'`)
+// 只在夜裡把立面的 `emissiveMap` 點亮,而整棟量體節點正是**唯一吃立面貼圖**的庫節點:
+// 盒投影 UV 一錯,白天看到的是「一塊有 tint 的板」、夜裡才會看到「一塊沒有窗的板」,
+// 而外廓契約、三角形預算、`--report` 全部照樣綠(§5ab-c 的材質契約就是為這件事立的)。
+// 這與 §5z-t 記的是同一種病:**兩支工具各缺一半** ⇒ 那一項就永遠卡著沒人跑得動。
+// 非預設值 MUST 進檔名後綴,否則日夜兩輪互相覆寫、事後分不出手上這張是哪一輪。
+const ENV = { season: arg('--season', 'summer'), time: arg('--time', 'day'), weather: arg('--weather', 'clear') };
+const ENV_DEF = { season: 'summer', time: 'day', weather: 'clear' };
+// 合法值 MUST 對 `data.js ENV` 驗過再送進去,而且**打錯要當場停**:`environment.js` 是
+// `TIMES[env?.time] || TIMES.day`、`biomes.js` 是 `=== 'night'` ⇒ 打成 `--time nigth`
+// 拍出來的是一組**白天**的圖,而每一行讀數(地物數、庫節點數、機位)都正常。
+// 這就是 §5z-t 那個 `--ink=0` no-op 的同一種失效:旗標沒作用,而畫面看起來完全合理。
+{
+  const { ENV: CAT } = await import(new URL('../public/js/data.js', import.meta.url));
+  for (const [k, pool] of [['season', 'seasons'], ['time', 'times'], ['weather', 'weathers']]) {
+    if (!CAT[pool][ENV[k]]) {
+      console.error(`--${k} 只收 ${Object.keys(CAT[pool]).join(' / ')},收到「${ENV[k]}」`);
+      process.exit(1);
+    }
+  }
+}
 const LAYERS = { ink: flag('ink'), grade: flag('grade'), fxaa: flag('fxaa'), post: flag('post'), lib: flag('lib') };
-const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('');
+const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('')
+  + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('');
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('定場鏡頭組');
@@ -104,7 +128,7 @@ await page.route(PROBE_URL, (r) => r.fulfill({
 }));
 await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, env }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
@@ -112,12 +136,12 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
   const { updateCelLight } = await import('/public/js/toon.js');
-  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO } = await import('/public/js/data.js');
+  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax } = await import('/public/js/data.js');
 
   const venue = VENUES.find((v) => v.id === venueId);
   if (!venue) throw new Error(`找不到場地 ${venueId}`);
   const cfg = venueConfig(venue, teamSize);
-  cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
+  cfg.env = { ...env };
 
   // ⚠ **零件庫 MUST 在 buildBiomes 之前載入**(2026-08-08 §5z-t):這一支跑的是真的賽璐璐 +
   // 勾線管線,但在此之前它從來沒有載過零件庫 ⇒ 每一張定場圖畫的都是**保險絲**那棵樹,
@@ -126,7 +150,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
   // 這正是「勾線對新冠形是加分還是扣分」那一項卡了三輪沒答案的原因:
   // `shot_veg` 載庫但**沒有管線**(黏土)、`shot_scene` 有管線但**不載庫** —— 兩邊各缺一半。
   // `--lib=0` 保留舊行為當**前後對照的「前」**(保險絲路徑),而不是預設。
-  let libN = 0, massGeo = null;
+  let libN = 0, massGeo = null, rockCount = null, megaOrbit = null, massInst = null, megaDrop = 0;
   if (layers.lib) {
     const { loadPartLibs, libGeo, libNames } = await import('/public/js/partlib.js');
     await loadPartLibs();
@@ -139,6 +163,14 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
     // 整棟量體庫節點:下面的 mass_near 機位靠它認人 —— **整個 mass 家族都要認**,
     // 否則挑中 mass_b 的那幾棟拍不到,而畫面上只表現成「這張圖好像沒換到庫節點」。
     massGeo = names.filter((n) => n.startsWith('building/mass_')).map((n) => libGeo(n)).filter(Boolean);
+    // 巨岩那一族**不能**比對幾何參照:`megaGeo` 一律 `.clone()`(群組要過 bakeContactAO,
+    // 共用幾何被就地烤一次全場都帶著別顆岩的頂點色)⇒ 下面的 mega_orbit 改認**頂點數**
+    // (clone 不動頂點數,§7 對照台的同一條)。名冊照樣由 `libNames()` 推導。
+    rockCount = new Map();
+    for (const n of names.filter((n) => n.startsWith('rock/'))) {
+      const g = libGeo(n);
+      if (g?.attributes?.position) rockCount.set(g.attributes.position.count, n);
+    }
   }
 
   const terrain = await buildTerrain(cfg, () => {});
@@ -165,6 +197,11 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
   const pipe = layers.post ? new Pipeline(renderer, scene, camera, layers) : null;
 
   // ---- 機位推導(零手打座標)----
+  // 機位是在**第一次 render 之前**算的,而 three 的 `matrixWorld` 要等到 render 才更新
+  // ⇒ 任何 `Box3.setFromObject` / `applyMatrix4(matrixWorld)` 讀到的都是上一輪(或單位)矩陣。
+  // 2026-08-09 實測:`mega_orbit` 因此量到「外接半徑 733.5m」的岩塊(真值 3m 級),
+  // 四台相機被擺到 1.4km 外拍空氣 —— 而輸出的每一行讀數都正常。
+  scene.updateMatrixWorld(true);
   const R_EARTH = 6371000, d2r = (d) => d * Math.PI / 180, S = MAPGEO.REAL_SCALE;
   const toW = (lat, lng) => [
     (lng - cfg.center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(cfg.center.lat)) / S,
@@ -253,6 +290,12 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
   // 參照),MUST NOT 靠 mesh 名字或面數猜。庫沒載到(`--lib=0`)就沒有這一張。
   if (massGeo && massGeo.length && bio) {
     let hit = null;
+    // 挑中幾棟 MUST 印出來:這一桶只換「全圖最高的十幾棟商辦」,圖資沒給樓高的那一局
+    // 一棟都挑不到 ⇒ **這張機位整個消失**,而輸出上看起來只是「少了一張圖」
+    // (2026-08-09 實測:shibuya / manhattan 連兩局 0 棟,而前一天同一支同一場地有 13 棟)。
+    // 沒有這個讀數,分不出「挑不到」與「認錯人」——兩者都不報錯。
+    massInst = 0;
+    bio.traverse((o) => { if (o.isInstancedMesh && massGeo.includes(o.geometry)) massInst += o.count; });
     bio.traverse((o) => {
       if (hit || !o.isInstancedMesh || !massGeo.includes(o.geometry) || !o.count) return;
       const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
@@ -266,6 +309,63 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
         p: [hit.p.x + dist * 0.8, hit.p.y + th * 0.35, hit.p.z + dist * 0.6],
         look: [hit.p.x, hit.p.y, hit.p.z],
       });
+    }
+  }
+  // **岩體繞行四面**(2026-08-09;§5ad-g 未跑第 1 條「走到岩體旁邊繞一圈看四面」)。
+  // 為什麼是四張而不是一張:§5ad 的鏡像貼補補的正是「**沒被拍到的那半**沒有東西」,
+  // 而 §5ac-e 記過一次更難堪的事 —— 那一輪所謂的「多視角」複核其實全是同一個視角
+  // (`ry` 是 no-op)⇒ **繞相機**是結構上唯一不會重蹈的作法。四個方位一張,
+  // 接縫在哪一面、有沒有變成一道對稱銳脊,都只有這四張看得到(離線指標一概無感:
+  // 鏡射之後不對稱值本來就趨近 0,那正是它被判「補完」的理由)。
+  // 認人走**頂點數**(上面 rockCount 那段的理由);`--lib=0` 沒有庫就沒有這一組。
+  if (rockCount && rockCount.size && bio) {
+    const cands = [];
+    bio.traverse((o) => {
+      if (!o.isMesh || o.isInstancedMesh) return;
+      const n = rockCount.get(o.geometry?.attributes?.position?.count);
+      if (!n) return;
+      // 取景框**那一顆節點自己**,不是它所屬的整組物件(§7 對照台「零件」取景的同一條):
+      // 同一顆節點在世界上常常只是崩落塊/伴生丘/敖包底座,框整組的話它只佔畫面下緣幾十像素
+      // (shibuya 實測:敖包連旗桿 13.1m 高,而 `collapse_a` 只有 2.8m)—— 而這四張圖存在的
+      // 唯一理由就是看清楚**那顆節點**的四個面。
+      const bb = new THREE.Box3().setFromObject(o);
+      if (bb.isEmpty()) return;
+      const c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+      // 頂點數相同**不保證**是單獨一顆:合併過的桶(整批零件焊成一個 mesh)偶爾會撞上同一個
+      // 數字,而它的包圍盒橫跨整張圖。2026-08-09 實測 shibuya 某一局撞到「外接半徑 733.5m、
+      // 高 39.5m」⇒ 四台相機被擺到 1.4km 外拍空氣,而每一行讀數都正常。門檻吃**權威常數**
+      // `objHeightMax()`(單一世界物件的高度上限)的兩倍:比任何一顆真岩體都寬鬆,而合併桶
+      // 差一個量級 ⇒ 擋得住。被擋掉幾顆 MUST 印出來(真的有那麼大的一顆被誤擋要看得見)。
+      if (Math.max(s.x, s.z) > objHeightMax() * 2) { megaDrop++; return; }
+      cands.push({ node: n, c: [c.x, c.y, c.z], r: Math.max(s.x, s.z) / 2, h: s.y });
+    });
+    // 挑**最大的那一顆**(同一顆節點在圖上會被擺很多次,尺寸差一個量級):四張圖是拿來
+    // 判讀接縫與補完面的,最大的那一處才看得清楚;等大時以離兵線中段近者定序(零亂數)。
+    const l0 = lanes[0] || [];
+    const ref = l0.length ? l0[Math.floor(l0.length / 2)] : [0, 0];
+    let best = null;
+    for (const g of cands) {
+      const size = Math.hypot(g.r, g.h / 2);
+      const d = (g.c[0] - ref[0]) ** 2 + (g.c[2] - ref[1]) ** 2;
+      if (!best || size > best[0] + 1e-6 || (Math.abs(size - best[0]) <= 1e-6 && d < best[2])) best = [size, g, d];
+    }
+    if (best) {
+      const g = best[1];
+      // 取景距離由**外接球**推導,MUST NOT 只吃高:岩體的長寬比從細高的柱狀節理到扁平的
+      // 崖錐都有,只吃高的話寬扁那一種在畫面上只剩一條;`0.8` = 邊緣留白,四張同尺度。
+      const R = Math.hypot(g.r, g.h / 2);
+      const dist = R / (Math.tan(68 / 2 * Math.PI / 180) * 0.8);
+      for (const a of [0, 90, 180, 270]) {
+        const t = a * Math.PI / 180;
+        stations.push({
+          name: `mega_orbit_${a}`,
+          p: [g.c[0] + Math.sin(t) * dist, g.c[1] + g.h * 0.35, g.c[2] + Math.cos(t) * dist],
+          look: [g.c[0], g.c[1], g.c[2]],
+        });
+      }
+      megaOrbit = { node: g.node, c: g.c, r: g.r, h: g.h, n: cands.length,
+        top: cands.slice().sort((a, b) => Math.hypot(b.r, b.h / 2) - Math.hypot(a.r, a.h / 2)).slice(0, 5)
+          .map((v) => `${v.node} r${v.r.toFixed(1)} h${v.h.toFixed(1)} @${v.c.map((n) => n.toFixed(0)).join(',')}`) };
     }
   }
   // 全圖最高點俯瞰兵線(掃格,零亂數)
@@ -310,8 +410,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
       p: st.p.map((v) => Math.round(v)), look: st.look.map((v) => Math.round(v)) });
   }
-  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, imagery: !!terrain.sampleColor };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY });
+  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, megaDrop, imagery: !!terrain.sampleColor };
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
@@ -320,8 +420,19 @@ for (const s of shots.shots) {
 if (shots.biomeErr) console.log(`  ⚠ buildBiomes 例外:${shots.biomeErr}`);
 console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS.lib ? '' : '(--lib=0 保險絲)'}・隧道 ${shots.tunnels}・橋 ${shots.decks}`
   + `・水域 ${shots.water ? '有' : '無'}・衛星影像 ${shots.imagery ? '有' : '無'}`);
+// 繞行了哪一顆 MUST 印出來:四張圖本身分不出「這顆真的長著庫節點」還是「認錯人拍了一顆
+// 程序岩」—— 節點名 + 候選顆數就是那個證據(0 顆 = 這張圖沒有庫岩體,不是拍失敗)。
+if (LAYERS.lib) {
+  console.log(`  mass_near → 整棟量體挑中 ${shots.massInst} 棟`
+    + (shots.massInst ? '' : '(這一局的圖資沒有高於門檻的商辦 ⇒ 沒拍)'));
+  const m = shots.megaOrbit;
+  console.log(m ? `  mega_orbit → ${m.node}(候選 ${m.n} 顆・外接半徑 ${m.r.toFixed(1)}m・高 ${m.h.toFixed(1)}m`
+    + `${shots.megaDrop ? `・擋掉 ${shots.megaDrop} 顆過大的誤配` : ''})`
+    : '  mega_orbit → 這張圖沒有帶庫節點的岩體(沒拍)');
+  if (m?.top) for (const l of m.top) console.log(`      · ${l}`);
+}
 fs.writeFileSync(join(OUT, `meta${SUFFIX}.json`), JSON.stringify({
-  venue: VENUE, team: TEAM, layers: LAYERS,
+  venue: VENUE, team: TEAM, layers: LAYERS, env: ENV,
   tunnels: shots.tunnels, decks: shots.decks, water: shots.water,
   objN: shots.objN, libN: shots.libN, biomeErr: shots.biomeErr, imagery: shots.imagery,
   stations: shots.shots.map((s) => ({ name: s.name, p: s.p, look: s.look })),

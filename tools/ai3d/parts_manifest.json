@@ -1,1197 +1,1223 @@
 {
- "version": 1,
- "note": "AI 生成 3D 物件的來源帳(docs/ai3d_runbook.md 的產出 → 這裡)。每一筆回答兩個問題:①用哪一個生成方法 ②吃哪一張(些)圖。方法字彙住 tools/ai3d/provenance.mjs METHODS,本檔只引用鍵;fallback 幾何、外廓、三角形數一律由消費端零件表與 GLB 實測推導,MUST NOT 抄進本檔(抄了就是第二份真相)。照片本身不進儲存庫(runbook §3 規則 2),故只記 id / 授權 / 出處 / 相對路徑,對照台在本機解析得到就顯示、解析不到就明講。",
- "parts": [
-  {
-   "method": "sf3d",
-   "consumer": "beacons cairn 疊石基座",
-   "rev": "947ce55",
-   "at": "2026-08-05",
-   "imgs": [
+  "version": 1,
+  "note": "AI 生成 3D 物件的來源帳(docs/ai3d_runbook.md 的產出 → 這裡)。每一筆回答兩個問題:①用哪一個生成方法 ②吃哪一張(些)圖。方法字彙住 tools/ai3d/provenance.mjs METHODS,本檔只引用鍵;fallback 幾何、外廓、三角形數一律由消費端零件表與 GLB 實測推導,MUST NOT 抄進本檔(抄了就是第二份真相)。照片本身不進儲存庫(runbook §3 規則 2),故只記 id / 授權 / 出處 / 相對路徑,對照台在本機解析得到就顯示、解析不到就明講。",
+  "parts": [
     {
-     "role": "primary",
-     "id": "ov_f7e1cc51-e247-42b9-a51c-c775ad831804",
-     "family": "rock",
-     "part": "facet",
-     "query": "glacial erratic boulder",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "United States National Museum Photographic Laboratory",
-     "source_url": "https://siarchives.si.edu/collections/siris_arc_388737",
-     "file": "photos/rock/facet/ov_f7e1cc51-e247-42b9-a51c-c775ad831804.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.17 GB;暖跑 13.6 s / 2 圖;15 張 matte 批跑只有 5 顆實心(可用率 ~1/15)",
-    "note": "MUST 走 SF3D 自己的 remesh —— Blender 50:1 硬減面會把 ~50k 殼撕出破洞(runbook §5e)"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "dy": -0.12,
-    "note": "縮放目標 = 這一列 lib 描述子自己的 fallback 包絡(不在本檔複製數字);dy 讓扁岩基座沉到「底 = 消費端 p.y」貼地,任何 stretch 都不離地",
-    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):collapse_a 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(938 → 918)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
-   },
-   "note": "批跑第 6 顆(方正塊狀)。照片家族(facet)≠ 節點角色(collapse_a):挑的是形狀,不是分類。",
-   "keys": [
-    "rock/collapse_a"
-   ]
-  },
-  {
-   "method": "sf3d",
-   "consumer": "beacons cairn 疊石中層",
-   "rev": "947ce55",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
-     "family": "rock",
-     "part": "collapse",
-     "query": "glacial erratic",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Leonhard Lenz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
-     "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批(峰值 VRAM 6.17 GB)"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "note": "縮放目標 = 該列 fallback 包絡 × FIT",
-    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):facet_a(有 4 條邊界邊 ⇒ warp 0,位移會把裂縫拉開) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(882 → 864)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
-   },
-   "note": "批跑第 11 顆(渾圓多瘤)。",
-   "keys": [
-    "rock/facet_a"
-   ]
-  },
-  {
-   "method": "sf3d",
-   "consumer": "beacons cairn 疊石頂層",
-   "rev": "947ce55",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
-     "family": "rock",
-     "part": "collapse",
-     "query": "glacial erratic",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Leonhard Lenz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
-     "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批(峰值 VRAM 6.17 GB)"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "ry_deg": 137,
-    "note": "+137° yaw:與 facet_a 同一位攝影者的同組漂礫,轉開才不像同一顆石頭擺兩次"
-   },
-   "note": "批跑第 8 顆(平滑)。Blender 端另做了一次溫和 decimate(808→588),比例小、不撕面。",
-   "keys": [
-    "rock/facet_b"
-   ]
-  },
-  {
-   "keys": [
-    "tree/canopy_a5",
-    "tree/canopy_a7"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_a10 / a7 / a5;消費株 meranti・tualang・sequoia・dinizia・redwood・euc)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
-     "family": "tree",
-     "part": "canopy",
-     "query": "oak tree canopy",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
-     "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;第一批 14 張 matte 只有 1 顆實心(可用率與 rock 族的 ~1/15 同級)",
-    "note": "首批 tree 查詢(tree crown isolated sky / buttress root rainforest)命中臘葉標本掃描與夜拍林景 ⇒ 幾乎全軍覆沒;改點名「孤立單株」(solitary oak tree meadow / lone tree field)後同一支工具 6 張中 5 張實心。輸入的措辭比模型參數重要得多"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "note": "非等向縮放(新增能力):樹冠 fallback 是 ico 球,而實拍樹冠天生比球扁 —— 等比縮會填不滿縱向、零件表的 sy 再壓一次就成薄餅。尺寸階梯逐級各烤一顆(半徑 MUST ≤ 該列 fallback);同一顆形狀用在不同級距時另給 ry 轉開"
-   },
-   "note": "闊葉團(渾圓)。節點名的 a/b/c/d = 形狀來源,數字 = 尺寸階梯,兩者正交 —— 同一形狀跨級距共用,不同株才換形狀。"
-  },
-  {
-   "keys": [
-    "tree/canopy_b5",
-    "tree/canopy_b7"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_b10 / b7 / b5;消費株 dinizia・euc・redwood)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_4e78d273-4403-467b-8ec3-439619a55e01",
-     "family": "tree",
-     "part": "canopy",
-     "query": "solitary oak tree meadow",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/4e78d273-4403-467b-8ec3-439619a55e01",
-     "file": "photos/tree/canopy/ov_4e78d273-4403-467b-8ec3-439619a55e01.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "同上(第 2 批)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95
-   },
-   "note": "橫展孤樹(梢端外突)。減面到 ~215 tris 後梢端保留成短枝狀突起 —— 那是刻意留的:冠緣全平滑會退回 ico 的剪影。"
-  },
-  {
-   "keys": [
-    "tree/canopy_c45",
-    "tree/canopy_c6",
-    "tree/canopy_c8"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_c8 / c6 / c45;消費株 sequoia・meranti・tualang・redwood)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_52cfa19d-01af-4783-a884-9bd7ce684c3b",
-     "family": "tree",
-     "part": "canopy",
-     "query": "isolated tree grassland",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/52cfa19d-01af-4783-a884-9bd7ce684c3b",
-     "file": "photos/tree/canopy/ov_52cfa19d-01af-4783-a884-9bd7ce684c3b.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "同上(第 2 批)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95
-   },
-   "note": "大冠橡樹(飽滿渾圓)。"
-  },
-  {
-   "keys": [
-    "tree/canopy_d35",
-    "tree/canopy_d6"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_d8 / d6 / d35;消費株 meranti・sequoia・tualang・dougfir・sitka・taiwania)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
-     "family": "tree",
-     "part": "canopy",
-     "query": "lone tree field",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
-     "file": "photos/tree/canopy/ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "同上(第 2 批)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95
-   },
-   "note": "花期樹(團塊分明)。canopy_d35 是最小的一級,同時服務 dougfir/sitka/taiwania 的小冠簇 —— 再小的冠簇(klinki/alerce 的 2.2~3.0m)沒有節點裝得下,刻意不換。"
-  },
-  {
-   "keys": [
-    "tree/canopy_e32",
-    "tree/canopy_e35",
-    "tree/canopy_e4"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(dougfir ico(4)×2・taiwania ico(3.5)・sitka ico(3.2))",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_06b3b326-cdae-4e29-847f-4baba4266519",
-     "family": "tree",
-     "part": "canopy",
-     "query": "solitary oak tree meadow",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/06b3b326-cdae-4e29-847f-4baba4266519",
-     "file": "photos/tree/canopy/ov_06b3b326-cdae-4e29-847f-4baba4266519.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "31 張 tree matte 全批;mesh_stats fill 0.301"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(--base 保留既有節點)",
-    "fit": 0.95,
-    "note": "非等向 r×hy;e35 +65° / e32 +200° yaw 與同源錯開"
-   },
-   "note": "剪影型闊葉冠(深色高對比孤樹)。**這一批的用途是拆開共用形狀**:dougfir/sitka/taiwania 三種原本共用 canopy_d35 一顆,使用者定案「不要只是原版重繪」的具體落點就是這裡 —— 每一種拿到自己的冠形。"
-  },
-  {
-   "keys": [
-    "tree/canopy_f38",
-    "tree/canopy_f5"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS 冠簇(sitka ico(3.8)×2・sequoia ico(5)・meranti ico(6) 冠頂)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_3b61c08f-fc59-4b3b-be6f-dce89b643599",
-     "family": "tree",
-     "part": "canopy",
-     "query": "solitary oak tree meadow",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/3b61c08f-fc59-4b3b-be6f-dce89b643599",
-     "file": "photos/tree/canopy/ov_3b61c08f-fc59-4b3b-be6f-dce89b643599.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "同批;mesh_stats fill 0.242"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(--base)",
-    "fit": 0.95,
-    "note": "f5 +140° / f6 +250° yaw"
-   },
-   "note": "橫展濃冠橡樹(春葉黃綠)。sequoia 與 meranti 各多接一列原本沒有 lib 的 ico 冠簇。"
-  },
-  {
-   "keys": [
-    "rock/mega_a",
-    "rock/mega_b",
-    "rock/mega_c"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸)",
-   "rev": "(本輪)",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "primary(mega_a;與 facet_b 同源,+210° yaw 錯開)",
-     "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
-     "family": "rock",
-     "part": "collapse",
-     "query": "glacial erratic",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Leonhard Lenz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
-     "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石基座",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_f7e1cc51-e247-42b9-a51c-c775ad831804",
+          "family": "rock",
+          "part": "facet",
+          "query": "glacial erratic boulder",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "United States National Museum Photographic Laboratory",
+          "source_url": "https://siarchives.si.edu/collections/siris_arc_388737",
+          "file": "photos/rock/facet/ov_f7e1cc51-e247-42b9-a51c-c775ad831804.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.17 GB;暖跑 13.6 s / 2 圖;15 張 matte 批跑只有 5 顆實心(可用率 ~1/15)",
+        "note": "MUST 走 SF3D 自己的 remesh —— Blender 50:1 硬減面會把 ~50k 殼撕出破洞(runbook §5e)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "dy": -0.12,
+        "note": "縮放目標 = 這一列 lib 描述子自己的 fallback 包絡(不在本檔複製數字);dy 讓扁岩基座沉到「底 = 消費端 p.y」貼地,任何 stretch 都不離地",
+        "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):collapse_a 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(938 → 918)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
+      },
+      "note": "批跑第 6 顆(方正塊狀)。照片家族(facet)≠ 節點角色(collapse_a):挑的是形狀,不是分類。",
+      "keys": [
+        "rock/collapse_a"
+      ]
     },
     {
-     "role": "primary(mega_b;§5c 的 33MP 冰川漂礫,首次入庫)",
-     "id": "ov_4a7de829-1184-4b05-bf5d-427b77fc76f5",
-     "family": "rock",
-     "part": "collapse",
-     "query": "glacial erratic",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Leonhard Lenz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697942",
-     "file": "photos/rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg"
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石中層",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+          "family": "rock",
+          "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
+          "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批(峰值 VRAM 6.17 GB)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "note": "縮放目標 = 該列 fallback 包絡 × FIT",
+        "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):facet_a(有 4 條邊界邊 ⇒ warp 0,位移會把裂縫拉開) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(882 → 864)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
+      },
+      "note": "批跑第 11 顆(渾圓多瘤)。",
+      "keys": [
+        "rock/facet_a"
+      ]
     },
     {
-     "role": "primary(mega_c;與 facet_a 同源,+90° yaw 錯開)",
-     "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
-     "family": "rock",
-     "part": "collapse",
-     "query": "glacial erratic",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Leonhard Lenz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
-     "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121;venv/weights 住 zen-albattani 資料家,照片庫已整合進本 worktree)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 150",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;19 張 matte 全批重跑;mesh_stats.mjs 體積比快篩 6/19 塊狀候選(fill ≥ 0.34),人眼複核淘汰 2(博物館老照片有人入鏡、立體鏡雙聯卡)",
-    "note": "低面數版(150 頂點 ≈ 280 tris)—— 巨岩一顆最多 14 件庫零件,families.megalith 的逐件上限 306 由 4× 整顆預算 ÷ 14 推導;挑選流程新增 tools/ai3d/mesh_stats.mjs(封閉網格體積 ÷ 包圍盒 = 實心度)統計前篩,contact sheet 只看前幾名"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;新增 --base 保留既有節點合併匯出)",
-    "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1)):呼叫端 megaGeo 以 mesh.scale 拉到各自尺寸,同一顆節點服務任意大小的岩塊;mega_a +210° / mega_c +90° yaw 與同源的疊石節點錯開",
-    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_c**(mega_a 0.070 / mega_b 0.049 在門檻之下,逐位元未動) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(274 → 268)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
-   },
-   "note": "巨岩縫首批(runbook §5f 預告的『guarded libGeo ?? primitive』落地):biomes MEGA_LIB 名冊 + megaGeo(一律 clone —— 巨岩過 bakeContactAO 就地烤頂點色)5 個呼叫點;audit_siteplan Ⅴ 釘凍結清單並反向驗證。"
-  },
-  {
-   "keys": [
-    "building/ac_a",
-    "building/chimney_a"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket 桶建構表:chimney_a → chimneys 磚煙囪桶、ac_a → roofBoxes 空調機組/機房桶;單位包絡節點,instance scale = 尺寸,一顆節點服務全桶所有 instance,draw call 不變)",
-   "rev": "(本輪)",
-   "at": "2026-08-06",
-   "imgs": [
-    {
-     "role": "primary(chimney_a;磚砌工業煙囪仰拍,方形斷面 + 階狀收分)",
-     "id": "ov_551789bb-eab2-42b8-8861-b76ef732d2e4",
-     "family": "building",
-     "part": "chimney",
-     "query": "brick chimney",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6040211/brick-chimney-free-public-domain-cc0-image",
-     "file": "photos/building/chimney/ov_551789bb-eab2-42b8-8861-b76ef732d2e4.jpg"
+      "method": "sf3d",
+      "consumer": "beacons cairn 疊石頂層",
+      "rev": "947ce55",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
+          "family": "rock",
+          "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
+          "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批(峰值 VRAM 6.17 GB)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "ry_deg": 137,
+        "note": "+137° yaw:與 facet_a 同一位攝影者的同組漂礫,轉開才不像同一顆石頭擺兩次"
+      },
+      "note": "批跑第 8 顆(平滑)。Blender 端另做了一次溫和 decimate(808→588),比例小、不撕面。",
+      "keys": [
+        "rock/facet_b"
+      ]
     },
     {
-     "role": "primary(ac_a;白色三層商辦量體 —— 節點角色是屋頂機房箱,照片族 ≠ 節點名,取的是方箱形)",
-     "id": "ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff",
-     "family": "building",
-     "part": "roofcap",
-     "query": "building rooftop",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/3337243/free-photo-image-architecture-advertisement-apartment-building",
-     "file": "photos/building/roofcap/ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(venv/weights 住 zen-albattani 資料家;照片庫/matte/產出住 reverent-pascal 資料家)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520(兩顆同挑選版;減面交給 normalize 的 Blender decimate)",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.17 GB;79 張建築族 matte 全批跑挑選版(tvc 520),mesh_stats.mjs 快篩 + mesh_sheet.mjs contact sheet 人眼複核(擋下:蒙古包有人入鏡、整片屋頂場景照、統計合格但語意荒謬的蛋形/球形 window 產出)",
-    "note": "逐桶節點上限由 families.building 推導(chimney 240 / acbox 435):InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數,量測見 tri_budget.json。**人造直線輪廓 MUST NOT 用超低 tvc 的 SF3D 等向 remesh 出貨**:實測 tvc 120 把直立煙囪磨成彎香蕉、tvc 220 把方箱磨成鵝卵石(岩族 tvc 150 沒事 —— 岩石本來就是塊團);正確路線 = 挑選版 tvc 520 + Blender collapse decimate 溫和減面(938→234 / 986→426,3.9:1 / 2.3:1,§5e「溫和減面無害」的上緣)"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;內建 decimate 到逐桶預算)",
-    "fit": 0.95,
-    "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理。**2026-08-08 重減面(佇列 F 同輪)**:四場重取樣把逐桶上限收到 chimney 222 / acbox 285(舊 240/435 是三場樣本、沒取到 taipei101 ⇒ instance 上界低估)⇒ 兩顆各補一刀溫和減面 chimney_a 234 → **217**、ac_a 426 → **279**(1.08:1 / 1.53:1,遠離 §5e 的 2.4~3:1 撕裂區),黏土四格對照人眼複核:垛口頂/凹槽/收分/方箱頂脊全部還在。**刀落在已出貨的節點本身**而不是從 SF3D 原檔重跑 —— 後者復現不出出貨的那兩顆(見下方 source_gap)。",
-    "source_gap": "⚠ 這一列的來源記到照片與 fit 就停了,**沒記是哪一批 SF3D 輸出的第幾顆**。2026-08-08 想從原檔重跑時發現 `sf3d_bld_final/{chimney,ac}/0/mesh.glb` 配同一組 fit 只得到 220 / 402(不是 234 / 426),而且黏土剪影明顯是另一顆 ⇒ 出貨那兩顆的真正來源已經找不回來。下一批建築節點的帳 MUST 記到輸出目錄與序號。"
-   },
-   "note": "建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。"
-  },
-  {
-   "keys": [
-    "rock/mega_d",
-    "rock/mega_e",
-    "rock/mega_f"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊 3 → 6:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸。輪替除數由名冊長度推導 NBLK ⇒ 新節點真的輪得到)",
-   "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_95d9c227-032e-415a-8ae3-2faea55fead7",
-     "family": "rock",
-     "part": "mg_arch",
-     "query": "natural rock arch",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Hardeep Asrani",
-     "source_url": "https://wordpress.org/photos/photo/3767d3599a/",
-     "note": "海蝕拱殘丘 → mega_d(節點角色 = 渾圓塊狀岩塊;照片族 ≠ 節點名)"
+      "keys": [
+        "tree/canopy_a5",
+        "tree/canopy_a7"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_a10 / a7 / a5;消費株 meranti・tualang・sequoia・dinizia・redwood・euc)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
+          "family": "tree",
+          "part": "canopy",
+          "query": "oak tree canopy",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
+          "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;第一批 14 張 matte 只有 1 顆實心(可用率與 rock 族的 ~1/15 同級)",
+        "note": "首批 tree 查詢(tree crown isolated sky / buttress root rainforest)命中臘葉標本掃描與夜拍林景 ⇒ 幾乎全軍覆沒;改點名「孤立單株」(solitary oak tree meadow / lone tree field)後同一支工具 6 張中 5 張實心。輸入的措辭比模型參數重要得多"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "note": "非等向縮放(新增能力):樹冠 fallback 是 ico 球,而實拍樹冠天生比球扁 —— 等比縮會填不滿縱向、零件表的 sy 再壓一次就成薄餅。尺寸階梯逐級各烤一顆(半徑 MUST ≤ 該列 fallback);同一顆形狀用在不同級距時另給 ry 轉開"
+      },
+      "note": "闊葉團(渾圓)。節點名的 a/b/c/d = 形狀來源,數字 = 尺寸階梯,兩者正交 —— 同一形狀跨級距共用,不同株才換形狀。"
     },
     {
-     "role": "primary",
-     "id": "ov_43802293-e834-4d23-8f72-935935cf9c85",
-     "family": "rock",
-     "part": "tor",
-     "query": "granite tor",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Alan Mattingly",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=185494083",
-     "note": "花崗岩平衡巨礫 → mega_e"
+      "keys": [
+        "tree/canopy_b5",
+        "tree/canopy_b7"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_b10 / b7 / b5;消費株 dinizia・euc・redwood)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_4e78d273-4403-467b-8ec3-439619a55e01",
+          "family": "tree",
+          "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/4e78d273-4403-467b-8ec3-439619a55e01",
+          "file": "photos/tree/canopy/ov_4e78d273-4403-467b-8ec3-439619a55e01.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95
+      },
+      "note": "橫展孤樹(梢端外突)。減面到 ~215 tris 後梢端保留成短枝狀突起 —— 那是刻意留的:冠緣全平滑會退回 ico 的剪影。"
     },
     {
-     "role": "primary",
-     "id": "ov_deb2f87f-fb18-40ae-b47c-2447e06afa96",
-     "family": "rock",
-     "part": "strata",
-     "query": "sedimentary rock outcrop",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Sakin Shrestha",
-     "source_url": "https://wordpress.org/photos/photo/1006a14027/",
-     "note": "砂岩刃脊塊 → mega_f"
-    }
-   ],
-   "gen": {
-    "tool": "stable-fast-3d(SF3D)",
-    "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "note": "權重 MUST 指本機目錄 —— 省略 --pretrained-model 會去連 HF 重抓 4GB 受管制權重,表徵是「跑了十幾分鐘一顆都沒出來」(本輪踩過)"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base 保留既有節點)",
-    "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1));mega_e +55° / mega_f +190° yaw 與同源錯開",
-    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_d**(mega_e 0.035 在門檻之下;mega_f 0.104 亦未達門檻,且兩把刀都過不了元件閘) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|half\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(291 → 285)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
-   }
-  },
-  {
-   "keys": [
-    "rock/mesa_a"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes synthMegalith 的 mesa 岩型分支(**整座**庫節點:裙狀崖錐 + 疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
-   "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
-     "family": "rock",
-     "part": "mg_tower",
-     "query": "devils tower rock",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Carol M Highsmith",
-     "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
-     "note": "魔鬼塔(美國懷俄明)同地標第二張;SF3D + 120° yaw 化用為平頂桌山 → mesa_a。2026-08-07 拆列:tower_a 已改 T2-spz 重生成(見同鍵新列),本列只剩 mesa_a"
-    }
-   ],
-   "gen": {
-    "tool": "stable-fast-3d(SF3D)",
-    "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base)",
-    "fit": 0.95,
-    "note": "單位包絡 1×1;減面刻意留餘裕(逐件上限 430,節點收在 372/371)—— 上限是量測推導值,會隨岩體零件表重量而移動,貼著上限出貨等於把下一次重量變成紅字"
-   }
-  },
-  {
-   "key": "rock/tower_a",
-   "method": "trellis2_spz",
-   "consumer": "biomes synthMegalith 的 tower 岩型分支(**整座**庫節點:崖錐 + 柱身同一顆;消費端一行未動 —— 同名取代,rnd() 枚數/座號組/呼叫點逐位元不變)",
-   "rev": "§5t 首個 T2-spz 入庫節點(2026-08-07;取代 §5j 的 SF3D 版 —— §5l 記錄該版「柱狀節理全失、頂面變圓」,§5o 實測 T2 C→500 柱身+裙錐都在)",
-   "imgs": [
-    {
-     "role": "primary",
-     "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
-     "family": "rock",
-     "part": "mg_tower",
-     "query": "devils tower rock",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Carol M Highsmith",
-     "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
-     "file": "photos/rock/mg_tower/ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1.jpg",
-     "note": "魔鬼塔;matte 先二值化 alpha >16→255 再餵 T2(§5n「同一張 matte ≠ 同一個輸入」)"
-    }
-   ],
-   "gen": {
-    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
-    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
-    "params": "1024_cascade 快檔(= TRELLIS.2-4B pipeline.json 原廠值)/ seed 42 —— per-seed 重抽紀律(§5r):seed 1234 抽到浮雕注(背面開口 115°,§5s 楔形補丁可救但天然閉合注在手就不必),42 天然閉合",
-    "machine": "RTX 3060 12GB(torch 峰值 ≤3.4GB;載入需 ≥20GB 空閒 RAM)",
-    "note": "原生 47,725 面、29,239 開放邊、2,443 元件 —— O-Voxel 輸出本身就是撕裂薄殼(§5o),不是減面弄壞的"
-   },
-   "post": {
-    "tool": "tools/ai3d/solidify_parts.py(§5o C 路徑:uniform volumetric resample 實體化 + quadric;cells 256 / offset 0.6%,3×3 掃描全平台後採跨族驗證凍結值)47,725→500 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base 同名取代)500→392",
-    "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1)),非等向拉滿;kf_p95 0.94% / dev_p95 1.15%(對 T2 原殼);逐件上限 430 收在 392 留餘裕(§5j 教訓)"
-   }
-  },
-  {
-   "method": "llm_parts",
-   "consumer": "beacons watertower(BEACON_KINDS.tank)",
-   "rev": "f31c619",
-   "at": "2026-08-05",
-   "imgs": [
-    {
-     "role": "reference",
-     "id": "ov_10c06229-393b-4dc2-9f07-b403b63713ae",
-     "family": "landmark",
-     "part": "tank",
-     "query": "water tower",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Ammodramus",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=26485592",
-     "file": "photos/landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae.jpg"
+      "keys": [
+        "tree/canopy_c45",
+        "tree/canopy_c6",
+        "tree/canopy_c8"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_c8 / c6 / c45;消費株 sequoia・meranti・tualang・redwood)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_52cfa19d-01af-4783-a884-9bd7ce684c3b",
+          "family": "tree",
+          "part": "canopy",
+          "query": "isolated tree grassland",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/52cfa19d-01af-4783-a884-9bd7ce684c3b",
+          "file": "photos/tree/canopy/ov_52cfa19d-01af-4783-a884-9bd7ce684c3b.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95
+      },
+      "note": "大冠橡樹(飽滿渾圓)。"
     },
     {
-     "role": "reference",
-     "id": "ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305",
-     "family": "landmark",
-     "part": "tank",
-     "query": "water tower",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Ammodramus",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=44367863",
-     "file": "photos/landmark/tank/ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305.jpg"
+      "keys": [
+        "tree/canopy_d35",
+        "tree/canopy_d6"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(節點 canopy_d8 / d6 / d35;消費株 meranti・sequoia・tualang・dougfir・sitka・taiwania)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
+          "family": "tree",
+          "part": "canopy",
+          "query": "lone tree field",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4",
+          "file": "photos/tree/canopy/ov_719e3afc-b6de-4bab-bbdb-c3eaeb5c8db4.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "同上(第 2 批)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95
+      },
+      "note": "花期樹(團塊分明)。canopy_d35 是最小的一級,同時服務 dougfir/sitka/taiwania 的小冠簇 —— 再小的冠簇(klinki/alerce 的 2.2~3.0m)沒有節點裝得下,刻意不換。"
     },
     {
-     "role": "reference",
-     "id": "ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9",
-     "family": "landmark",
-     "part": "tank",
-     "query": "water tower",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "Estormiz",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=42136597",
-     "file": "photos/landmark/tank/ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "LLM agent(讀照片 → 寫零件表資料列)",
-    "params": "無模型權重、無 GPU、無二進位資產;輸出是 KIND_PARTS 的純資料列(計畫書 §8 方法分流:規則/人造幾何走這一條)",
-    "measured": "foot 5.2 → 5.6(實算 5.56;件數與外廓由對照台從兩個版本的零件表推導,不在這裡手寫)"
-   },
-   "baseline": {
-    "rev": "32ec7b5",
-    "what": "改寫前的水塔零件表(件數由對照台推導,不在這裡手寫)。對照台以 `git show <rev>:public/js/beacons.js` 供應該版模組,由**那一版自己的 buildBeacon** 建原版 —— 這裡不會有第二套組裝器"
-   },
-   "note": "節流讓照片晚於改寫抵達 ⇒ 這三張的角色是**事後交叉確認**(Dallas 型四腳塔確認了零件字彙:橫撐間的 X 形斜撐板、中央豎管、底環、錐頂 + 頂針),不是改寫當下的輸入。一個 centre-y 加倍的算術 bug 通過了外廓稽核(外廓不看 y),只有截圖迴圈抓得到 —— 這正是這座對照台存在的理由。",
-   "keys": [
-    "beacon/tank"
-   ]
-  },
-  {
-   "keys": [
-    "tree/canopy_g10",
-    "tree/canopy_g7"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS dinizia(亞馬遜天使樹)三列冠簇",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "tree/canopy_e32",
+        "tree/canopy_e35",
+        "tree/canopy_e4"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(dougfir ico(4)×2・taiwania ico(3.5)・sitka ico(3.2))",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_06b3b326-cdae-4e29-847f-4baba4266519",
+          "family": "tree",
+          "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/06b3b326-cdae-4e29-847f-4baba4266519",
+          "file": "photos/tree/canopy/ov_06b3b326-cdae-4e29-847f-4baba4266519.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "31 張 tree matte 全批;mesh_stats fill 0.301"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(--base 保留既有節點)",
+        "fit": 0.95,
+        "note": "非等向 r×hy;e35 +65° / e32 +200° yaw 與同源錯開"
+      },
+      "note": "剪影型闊葉冠(深色高對比孤樹)。**這一批的用途是拆開共用形狀**:dougfir/sitka/taiwania 三種原本共用 canopy_d35 一顆,使用者定案「不要只是原版重繪」的具體落點就是這裡 —— 每一種拿到自己的冠形。"
+    },
     {
-     "role": "primary",
-     "id": "ov_4e78d273-4403-467b-8ec3-439619a55e01",
-     "family": "tree",
-     "part": "canopy",
-     "query": "lone tree field",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/3304794/free-photo-image-trunk-cc0-countryside",
-     "file": "photos/tree/canopy/ov_4e78d273-4403-467b-8ec3-439619a55e01.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
-    "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 250,
-    "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
-   },
-   "note": "形 g = 不規則團冠。第 8 輪把 11 種神木改成**逐種一個專屬冠形**(舊制 9 種共用 6 形):dinizia 原本吃 b10/a7/b7 三顆與別種共用的節點。"
-  },
-  {
-   "keys": [
-    "tree/canopy_h10",
-    "tree/canopy_h65"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS tualang(蜂樹)三列冠簇",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "tree/canopy_f38",
+        "tree/canopy_f5"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS 冠簇(sitka ico(3.8)×2・sequoia ico(5)・meranti ico(6) 冠頂)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_3b61c08f-fc59-4b3b-be6f-dce89b643599",
+          "family": "tree",
+          "part": "canopy",
+          "query": "solitary oak tree meadow",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/3b61c08f-fc59-4b3b-be6f-dce89b643599",
+          "file": "photos/tree/canopy/ov_3b61c08f-fc59-4b3b-be6f-dce89b643599.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "同批;mesh_stats fill 0.242"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(--base)",
+        "fit": 0.95,
+        "note": "f5 +140° / f6 +250° yaw"
+      },
+      "note": "橫展濃冠橡樹(春葉黃綠)。sequoia 與 meranti 各多接一列原本沒有 lib 的 ico 冠簇。"
+    },
     {
-     "role": "primary",
-     "id": "ov_71b76588-800c-4b51-892d-fb42f7067fb5",
-     "family": "tree",
-     "part": "canopy",
-     "query": "lone tree field",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6016677/photo-image-background-wallpaper-design",
-     "file": "photos/tree/canopy/ov_71b76588-800c-4b51-892d-fb42f7067fb5.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
-    "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 250,
-    "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
-   },
-   "note": "形 h = 寬扁傘冠,對上零件表註解寫的「傘狀突出冠」。"
-  },
-  {
-   "keys": [
-    "tree/canopy_i10",
-    "tree/canopy_i8"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS meranti(黃柳桉)四列冠簇",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "rock/mega_a",
+        "rock/mega_b",
+        "rock/mega_c"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸)",
+      "rev": "(本輪)",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "primary(mega_a;與 facet_b 同源,+210° yaw 錯開)",
+          "id": "ov_0012000f-fdcf-4695-b48c-52910d3ea6f5",
+          "family": "rock",
+          "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697904",
+          "file": "photos/rock/collapse/ov_0012000f-fdcf-4695-b48c-52910d3ea6f5.jpg"
+        },
+        {
+          "role": "primary(mega_b;§5c 的 33MP 冰川漂礫,首次入庫)",
+          "id": "ov_4a7de829-1184-4b05-bf5d-427b77fc76f5",
+          "family": "rock",
+          "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=155697942",
+          "file": "photos/rock/collapse/ov_4a7de829-1184-4b05-bf5d-427b77fc76f5.jpg"
+        },
+        {
+          "role": "primary(mega_c;與 facet_a 同源,+90° yaw 錯開)",
+          "id": "ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5",
+          "family": "rock",
+          "part": "collapse",
+          "query": "glacial erratic",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Leonhard Lenz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=148738268",
+          "file": "photos/rock/collapse/ov_62d21e5a-cdcd-40f7-add4-18f72a8368a5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121;venv/weights 住 zen-albattani 資料家,照片庫已整合進本 worktree)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 150",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;19 張 matte 全批重跑;mesh_stats.mjs 體積比快篩 6/19 塊狀候選(fill ≥ 0.34),人眼複核淘汰 2(博物館老照片有人入鏡、立體鏡雙聯卡)",
+        "note": "低面數版(150 頂點 ≈ 280 tris)—— 巨岩一顆最多 14 件庫零件,families.megalith 的逐件上限 306 由 4× 整顆預算 ÷ 14 推導;挑選流程新增 tools/ai3d/mesh_stats.mjs(封閉網格體積 ÷ 包圍盒 = 實心度)統計前篩,contact sheet 只看前幾名"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;新增 --base 保留既有節點合併匯出)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1)):呼叫端 megaGeo 以 mesh.scale 拉到各自尺寸,同一顆節點服務任意大小的岩塊;mega_a +210° / mega_c +90° yaw 與同源的疊石節點錯開",
+        "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_c**(mega_a 0.070 / mega_b 0.049 在門檻之下,逐位元未動) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(274 → 268)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
+      },
+      "note": "巨岩縫首批(runbook §5f 預告的『guarded libGeo ?? primitive』落地):biomes MEGA_LIB 名冊 + megaGeo(一律 clone —— 巨岩過 bakeContactAO 就地烤頂點色)5 個呼叫點;audit_siteplan Ⅴ 釘凍結清單並反向驗證。"
+    },
     {
-     "role": "primary",
-     "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
-     "family": "tree",
-     "part": "canopy",
-     "query": "oak tree canopy",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
-     "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
-    "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 250,
-    "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
-   },
-   "note": "形 i = 圓潤卵冠。三段尺寸階是包絡契約逼出來的(節點半徑 MUST ≤ 該列 fallback 且 ≥ 一半)。"
-  },
-  {
-   "keys": [
-    "tree/canopy_j22"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS klinki(克林奇南洋杉)四列冠簇",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "building/ac_a"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket 桶建構表:ac_a → roofBoxes 空調機組/機房桶;單位包絡節點,instance scale = 尺寸,一顆節點服務全桶所有 instance,draw call 不變)",
+      "rev": "(本輪)",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary(ac_a;白色三層商辦量體 —— 節點角色是屋頂機房箱,照片族 ≠ 節點名,取的是方箱形)",
+          "id": "ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff",
+          "family": "building",
+          "part": "roofcap",
+          "query": "building rooftop",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/3337243/free-photo-image-architecture-advertisement-apartment-building",
+          "file": "photos/building/roofcap/ov_f18913fc-b6ba-4984-8f19-edbaf5b9a2ff.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv(venv/weights 住 zen-albattani 資料家;照片庫/matte/產出住 reverent-pascal 資料家)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520(兩顆同挑選版;減面交給 normalize 的 Blender decimate)",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.17 GB;79 張建築族 matte 全批跑挑選版(tvc 520),mesh_stats.mjs 快篩 + mesh_sheet.mjs contact sheet 人眼複核(擋下:蒙古包有人入鏡、整片屋頂場景照、統計合格但語意荒謬的蛋形/球形 window 產出)",
+        "note": "逐桶節點上限由 families.building 推導(chimney 240 / acbox 435):InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數,量測見 tri_budget.json。**人造直線輪廓 MUST NOT 用超低 tvc 的 SF3D 等向 remesh 出貨**:實測 tvc 120 把直立煙囪磨成彎香蕉、tvc 220 把方箱磨成鵝卵石(岩族 tvc 150 沒事 —— 岩石本來就是塊團);正確路線 = 挑選版 tvc 520 + Blender collapse decimate 溫和減面(938→234 / 986→426,3.9:1 / 2.3:1,§5e「溫和減面無害」的上緣)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;內建 decimate 到逐桶預算)",
+        "fit": 0.95,
+        "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理。**2026-08-08 重減面(佇列 F 同輪)**:四場重取樣把逐桶上限收到 chimney 222 / acbox 285(舊 240/435 是三場樣本、沒取到 taipei101 ⇒ instance 上界低估)⇒ 兩顆各補一刀溫和減面 chimney_a 234 → **217**、ac_a 426 → **279**(1.08:1 / 1.53:1,遠離 §5e 的 2.4~3:1 撕裂區),黏土四格對照人眼複核:垛口頂/凹槽/收分/方箱頂脊全部還在。**刀落在已出貨的節點本身**而不是從 SF3D 原檔重跑 —— 後者復現不出出貨的那兩顆(見下方 source_gap)。",
+        "source_gap": "⚠ 這一列的來源記到照片與 fit 就停了,**沒記是哪一批 SF3D 輸出的第幾顆**。2026-08-08 想從原檔重跑時發現 `sf3d_bld_final/{chimney,ac}/0/mesh.glb` 配同一組 fit 只得到 220 / 402(不是 234 / 426),而且黏土剪影明顯是另一顆 ⇒ 出貨那兩顆的真正來源已經找不回來。下一批建築節點的帳 MUST 記到輸出目錄與序號。"
+      },
+      "note": "建築族首批(2026-08-06)。**chimney_a 已於 2026-08-09 拆出獨立一列**(§5af:改走 T2-spz 重生成)—— 本列自此只服務 ac_a。建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。"
+    },
     {
-     "role": "primary",
-     "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
-     "family": "tree",
-     "part": "cf_araucaria",
-     "query": "monkey puzzle tree",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6078341/monkey-puzzle-tree",
-     "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
-    "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 250,
-    "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
-   },
-   "note": "形 j = 南洋杉。**照片就是南洋杉屬**(monkey puzzle / Araucaria araucana),而 klinki 是 Araucaria hunsteinii —— 同屬。klinki 在第 7 輪之前**一列都沒有**:它的冠簇只有 2.2~3.0m,比當時最小的節點(3.325)還小,硬塞會破包絡契約 ⇒ 這一輪才補得上使用者說的「各種**大小**神木」。"
-  },
-  {
-   "keys": [
-    "tree/canopy_k22"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes GIANT_DEFS alerce(智利柏)兩列冠簇",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "building/chimney_a"
+      ],
+      "method": "trellis2_spz",
+      "consumer": "biomes 一般建物屋頂配件 InstancedMesh 桶(BLD_LIB 名冊 + buildBldBucket:chimney_a → chimneys 磚煙囪桶;單位包絡節點,instance scale S=(w,h,w),一顆節點服務全桶所有 instance,draw call 不變)",
+      "rev": "(本輪)",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary(chimney_a;磚砌工業煙囪,方形斷面 + 階狀收分。**與 SF3D 版同一張照片** —— 這一輪換的是模型不是語料)",
+          "id": "ov_551789bb-eab2-42b8-8861-b76ef732d2e4",
+          "family": "building",
+          "part": "chimney",
+          "query": "brick chimney",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6040211/brick-chimney-free-public-domain-cc0-image",
+          "file": "photos/building/chimney/ov_551789bb-eab2-42b8-8861-b76ef732d2e4.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
+        "machine": "RTX 3060 12GB",
+        "out": "out_5ag/ov_551789bb-eab2-42b8-8861-b76ef732d2e4.glb + out_5ag/stats/ 同名 json(餵入 = feed_5ag/ 的二值化 matte,alpha>16 → 255)",
+        "measured": "torch 峰值 sample 2,749MiB;raw 1,997,846 面 → 匯出 48,316 面(雙層薄殼:6,258 開放邊 / 201 元件 / v:f 0.57)",
+        "note": "**同一張照片、換模型**:SF3D 版(2026-08-06)在這張仰拍上出的是一顆歪塊(§5ad-f;黏土四面看得到裂縫,mesh_sym 邊界邊 189)。§5n 已量到 T2-spz 對建築/規則幾何是雙 ◎ ⇒ 這一輪只換鞋不換路。"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)",
+        "params": "--cells 72 --offset 0.006 --target 270 ⇒ 270 面 / 0 開放邊 / 2 元件 / watertight / kf_p95 0.72% / dev_p95 0.75%;normalize 非等向 0.6x0.5 ⇒ **216 面**、水平徑向 0.570、縱向 ±0.475",
+        "fit": 0.95,
+        "note": "外廓**與 SF3D 版逐位元相同**(0.570 / ±0.475)⇒ 消費端的 instance scale 與碰撞語意一格不動。沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕)。**不需要鏡像貼補**:mesh_sym 半空間面積不對稱 0.214 → **0.053**,遠在 EMPTY_ASYM 0.12 之下 ——§5ad-f 原本把這一顆列為「兩把刀都不適用 ⇒ 該重生成」,而重生成之後那個問題自己消失了(§5ae-d「上游修語料勝過下游動刀」的第二次兌現,只是這次修的是模型不是語料)。邊界邊 189 → **0**。"
+      },
+      "note": "§5af:§5ad-f / §5ae-g 掛了兩輪的「chimney_a 待重生成」。同輪也試了 hoodoo_a(rock)與另一張三連煙囪語料,**兩者都判退**,理由見 runbook §5ag。"
+    },
     {
-     "role": "primary",
-     "id": "wc_133471453",
-     "family": "tree",
-     "part": "sp_conifer",
-     "query": "lone spruce tree field",
-     "api": "commons",
-     "license": "Public domain",
-     "creator": "NPS",
-     "source_url": "https://commons.wikimedia.org/wiki/File:A_lone_spruce_tree_in_a_grassy_meadow_(8ac97ae4-0422-4f25-a250-d828e19a9d8d).JPG",
-     "file": "photos/tree/sp_conifer/wc_133471453.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
-    "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 250,
-    "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
-   },
-   "note": "形 k = 窄錐冠。與 klinki 同一個理由(冠簇 2.4~2.6m)第一次接得上。"
-  },
-  {
-   "keys": [
-    "tree/vleaf_a27",
-    "tree/vleaf_a20",
-    "tree/vleaf_a17",
-    "tree/vleaf_a12"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes VEG_DEFS broadleaf(闊葉)兩列 / birch(白樺)兩列 / mangrove(紅樹林)一列",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "rock/mega_d",
+        "rock/mega_e",
+        "rock/mega_f"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith / decorateMegalith(MEGA_LIB.block 名冊 3 → 6:marble 堆塊・崩落岩塊・伴生圓丘・疊石;單位包絡節點,呼叫端以 mesh.scale 拉尺寸。輪替除數由名冊長度推導 NBLK ⇒ 新節點真的輪得到)",
+      "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_95d9c227-032e-415a-8ae3-2faea55fead7",
+          "family": "rock",
+          "part": "mg_arch",
+          "query": "natural rock arch",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Hardeep Asrani",
+          "source_url": "https://wordpress.org/photos/photo/3767d3599a/",
+          "note": "海蝕拱殘丘 → mega_d(節點角色 = 渾圓塊狀岩塊;照片族 ≠ 節點名)"
+        },
+        {
+          "role": "primary",
+          "id": "ov_43802293-e834-4d23-8f72-935935cf9c85",
+          "family": "rock",
+          "part": "tor",
+          "query": "granite tor",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Alan Mattingly",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=185494083",
+          "note": "花崗岩平衡巨礫 → mega_e"
+        },
+        {
+          "role": "primary",
+          "id": "ov_deb2f87f-fb18-40ae-b47c-2447e06afa96",
+          "family": "rock",
+          "part": "strata",
+          "query": "sedimentary rock outcrop",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Sakin Shrestha",
+          "source_url": "https://wordpress.org/photos/photo/1006a14027/",
+          "note": "砂岩刃脊塊 → mega_f"
+        }
+      ],
+      "gen": {
+        "tool": "stable-fast-3d(SF3D)",
+        "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "note": "權重 MUST 指本機目錄 —— 省略 --pretrained-model 會去連 HF 重抓 4GB 受管制權重,表徵是「跑了十幾分鐘一顆都沒出來」(本輪踩過)"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base 保留既有節點)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1));mega_e +55° / mega_f +190° yaw 與同源錯開",
+        "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_d**(mega_e 0.035 在門檻之下;mega_f 0.104 亦未達門檻,且兩把刀都過不了元件閘) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|half\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(291 → 285)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
+      }
+    },
     {
-     "role": "primary",
-     "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
-     "family": "tree",
-     "part": "canopy",
-     "query": "oak tree canopy",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
-     "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB",
-    "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 218,
-    "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
-   },
-   "note": "使用者定案「闊葉林」。**這三型原本吃 Quaternius 的 MapleTree/BirchTree**(NATURE_MANIFEST):掛在那份名冊裡的型別連 buildVegMeshes 都不會被呼叫,`lib:` 列等於接在沒人看得到的路徑上 ⇒ 第 8 輪把 broadleaf/birch/shrub 三型退出名冊,改走零件表 + 照片冠簇(使用者定案「連 Quaternius 一起換掉」)。**只換冠簇,樹幹維持 primitive**(§3 rule 1:parts, never finished props)。"
-  },
-  {
-   "keys": [
-    "tree/bush_a09"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes VEG_DEFS shrub(灌木)主團那一列",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "keys": [
+        "rock/mesa_a"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes synthMegalith 的 mesa 岩型分支(**整座**庫節點:裙狀崖錐 + 疊層同一顆;載到庫就不 add 原 primitive,但迴圈照跑 ⇒ rnd() 枚數逐位元不變)",
+      "rev": "第 7 輪跨國地質岩層/奇石(2026-08-06)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+          "family": "rock",
+          "part": "mg_tower",
+          "query": "devils tower rock",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Carol M Highsmith",
+          "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
+          "note": "魔鬼塔(美國懷俄明)同地標第二張;SF3D + 120° yaw 化用為平頂桌山 → mesa_a。2026-08-07 拆列:tower_a 已改 T2-spz 重生成(見同鍵新列),本列只剩 mesa_a"
+        }
+      ],
+      "gen": {
+        "tool": "stable-fast-3d(SF3D)",
+        "runner": "tools/ai3d/.venv(CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--pretrained-model <本機 weights/sf3d> --texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base)",
+        "fit": 0.95,
+        "note": "單位包絡 1×1;減面刻意留餘裕(逐件上限 430,節點收在 372/371)—— 上限是量測推導值,會隨岩體零件表重量而移動,貼著上限出貨等於把下一次重量變成紅字"
+      }
+    },
     {
-     "role": "primary",
-     "id": "ov_331ba448-3fc1-472d-8f43-b0626b0096a7",
-     "family": "tree",
-     "part": "sh_boxwood",
-     "query": "boxwood shrub garden",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://n2t.net/ark:/65665/ax7f7b06212-92f9-4b77-8bd6-5ff2f00f1645",
-     "file": "photos/tree/sh_boxwood/ov_331ba448-3fc1-472d-8f43-b0626b0096a7.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB",
-    "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 218,
-    "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
-   },
-   "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。 **2026-08-08(§5z-o)減面 213 → 140**:整層總量閘上線後量到這一列吃掉成長額度的 59.1%(213 tris × 1909 instance);使用者定案「闊葉保圓潤冠、寧可從 shrub 挖額度」⇒ 以同一支 normalize_parts 重跑減面(來源網格不變,只是 tri_cap 143)。灌木是 1909 叢的填充植物,單株 213 面本來就與它在畫面上的份量不成比例。"
-  },
-  {
-   "keys": [
-    "tree/vcone_a20",
-    "tree/vcone_a16",
-    "tree/vcone_a14"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes VEG_DEFS conifer2(針葉;老雲杉簇疊冠)下三列",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "key": "rock/tower_a",
+      "method": "trellis2_spz",
+      "consumer": "biomes synthMegalith 的 tower 岩型分支(**整座**庫節點:崖錐 + 柱身同一顆;消費端一行未動 —— 同名取代,rnd() 枚數/座號組/呼叫點逐位元不變)",
+      "rev": "§5t 首個 T2-spz 入庫節點(2026-08-07;取代 §5j 的 SF3D 版 —— §5l 記錄該版「柱狀節理全失、頂面變圓」,§5o 實測 T2 C→500 柱身+裙錐都在)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1",
+          "family": "rock",
+          "part": "mg_tower",
+          "query": "devils tower rock",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Carol M Highsmith",
+          "source_url": "https://www.rawpixel.com/image/582788/carol-highsmiths-wyoming-photograph",
+          "file": "photos/rock/mg_tower/ov_163a0902-b6b4-48ab-8fe6-dbc38f1ce1e1.jpg",
+          "note": "魔鬼塔;matte 先二值化 alpha >16→255 再餵 T2(§5n「同一張 matte ≠ 同一個輸入」)"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+        "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+        "params": "1024_cascade 快檔(= TRELLIS.2-4B pipeline.json 原廠值)/ seed 42 —— per-seed 重抽紀律(§5r):seed 1234 抽到浮雕注(背面開口 115°,§5s 楔形補丁可救但天然閉合注在手就不必),42 天然閉合",
+        "machine": "RTX 3060 12GB(torch 峰值 ≤3.4GB;載入需 ≥20GB 空閒 RAM)",
+        "note": "原生 47,725 面、29,239 開放邊、2,443 元件 —— O-Voxel 輸出本身就是撕裂薄殼(§5o),不是減面弄壞的"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py(§5o C 路徑:uniform volumetric resample 實體化 + quadric;cells 256 / offset 0.6%,3×3 掃描全平台後採跨族驗證凍結值)47,725→500 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base 同名取代)500→392",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1)),非等向拉滿;kf_p95 0.94% / dev_p95 1.15%(對 T2 原殼);逐件上限 430 收在 392 留餘裕(§5j 教訓)"
+      }
+    },
     {
-     "role": "primary",
-     "id": "wc_133471453",
-     "family": "tree",
-     "part": "sp_conifer",
-     "query": "lone spruce tree field",
-     "api": "commons",
-     "license": "Public domain",
-     "creator": "NPS",
-     "source_url": "https://commons.wikimedia.org/wiki/File:A_lone_spruce_tree_in_a_grassy_meadow_(8ac97ae4-0422-4f25-a250-d828e19a9d8d).JPG",
-     "file": "photos/tree/sp_conifer/wc_133471453.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB",
-    "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 218,
-    "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
-   },
-   "note": "使用者定案「針葉林」。conifer/conifer3/conifer4 的冠層是 cone/cyl 包絡,把一團樹冠塞進去會被拉成柱子 ⇒ **只換 conifer2 的 ico 簇疊冠**。"
-  },
-  {
-   "keys": [
-    "tree/vcone_b09"
-   ],
-   "method": "sf3d",
-   "consumer": "biomes VEG_DEFS conifer2 頂梢那一列(ico 0.9)",
-   "rev": "d4b8c63",
-   "at": "2026-08-06",
-   "imgs": [
+      "method": "llm_parts",
+      "consumer": "beacons watertower(BEACON_KINDS.tank)",
+      "rev": "f31c619",
+      "at": "2026-08-05",
+      "imgs": [
+        {
+          "role": "reference",
+          "id": "ov_10c06229-393b-4dc2-9f07-b403b63713ae",
+          "family": "landmark",
+          "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Ammodramus",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=26485592",
+          "file": "photos/landmark/tank/ov_10c06229-393b-4dc2-9f07-b403b63713ae.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305",
+          "family": "landmark",
+          "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Ammodramus",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=44367863",
+          "file": "photos/landmark/tank/ov_15922084-4e2d-4e6d-afd9-e99ee6eb9305.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9",
+          "family": "landmark",
+          "part": "tank",
+          "query": "water tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Estormiz",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=42136597",
+          "file": "photos/landmark/tank/ov_6d02b9e0-7a5a-4d8d-88a0-6cbdc52113d9.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "LLM agent(讀照片 → 寫零件表資料列)",
+        "params": "無模型權重、無 GPU、無二進位資產;輸出是 KIND_PARTS 的純資料列(計畫書 §8 方法分流:規則/人造幾何走這一條)",
+        "measured": "foot 5.2 → 5.6(實算 5.56;件數與外廓由對照台從兩個版本的零件表推導,不在這裡手寫)"
+      },
+      "baseline": {
+        "rev": "32ec7b5",
+        "what": "改寫前的水塔零件表(件數由對照台推導,不在這裡手寫)。對照台以 `git show <rev>:public/js/beacons.js` 供應該版模組,由**那一版自己的 buildBeacon** 建原版 —— 這裡不會有第二套組裝器"
+      },
+      "note": "節流讓照片晚於改寫抵達 ⇒ 這三張的角色是**事後交叉確認**(Dallas 型四腳塔確認了零件字彙:橫撐間的 X 形斜撐板、中央豎管、底環、錐頂 + 頂針),不是改寫當下的輸入。一個 centre-y 加倍的算術 bug 通過了外廓稽核(外廓不看 y),只有截圖迴圈抓得到 —— 這正是這座對照台存在的理由。",
+      "keys": [
+        "beacon/tank"
+      ]
+    },
     {
-     "role": "primary",
-     "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
-     "family": "tree",
-     "part": "cf_araucaria",
-     "query": "monkey puzzle tree",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://www.rawpixel.com/image/6078341/monkey-puzzle-tree",
-     "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "stabilityai/stable-fast-3d (SF3D)",
-    "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
-    "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
-    "machine": "RTX 3060 12GB",
-    "measured": "峰值 VRAM 6.13 GB",
-    "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
-   },
-   "post": {
-    "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
-    "fit": 0.95,
-    "tri_cap": 218,
-    "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
-   },
-   "note": "同一株上兩種輪廓(雲杉錐冠 + 猴謎樹頂梢)—— 這正是使用者說的「不同樹種」在同一片林子裡混著出現。"
-  },
-  {
-   "key": "rock/hoodoo_a",
-   "method": "hunyuan_2gp",
-   "consumer": "biomes synthMegalith(MEGA_LIB.hoodoo 呼叫點啟用:蘑菇岩整柱,逐柱一顆、柱數 2~4;單位包絡節點,呼叫端 scale (r×1.5, h×0.55, r×1.5)。§5j 待續① 的缺口 —— 同一張照片 SF3D 在細腰處斷成兩截,2GP 保住帽岩/細頸/基座)",
-   "rev": "§5m Hunyuan3D-2GP 閘門量測輪(2026-08-06 晚)",
-   "imgs": [
+      "keys": [
+        "tree/canopy_g10",
+        "tree/canopy_g7"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS dinizia(亞馬遜天使樹)三列冠簇",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_4e78d273-4403-467b-8ec3-439619a55e01",
+          "family": "tree",
+          "part": "canopy",
+          "query": "lone tree field",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/3304794/free-photo-image-trunk-cc0-countryside",
+          "file": "photos/tree/canopy/ov_4e78d273-4403-467b-8ec3-439619a55e01.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
+        "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 250,
+        "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
+      },
+      "note": "形 g = 不規則團冠。第 8 輪把 11 種神木改成**逐種一個專屬冠形**(舊制 9 種共用 6 形):dinizia 原本吃 b10/a7/b7 三顆與別種共用的節點。"
+    },
     {
-     "role": "primary",
-     "id": "wc_112762573",
-     "family": "rock",
-     "part": "hoodoo",
-     "query": "hoodoo rock formation",
-     "api": "commons",
-     "license": "Public domain",
-     "creator": "John Good",
-     "source_url": "https://commons.wikimedia.org/wiki/File:A_hoodoo_in_Hoodoo_Basin.jpg",
-     "note": "乾淨單體:平衡帽岩 + 細頸 + 藍天(§5l 曾以同張量 SF3D 基準,兩種參數皆塌成薄片 fill 0.065/0.227)",
-     "file": "photos/rock/hoodoo/wc_112762573.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "Hunyuan3D-2GP(shape-only;tencent/Hunyuan3D-2 dit-v2-0 fp16)",
-    "runner": "WSL2 Ubuntu 24.04 ~/ai3d/.venv311hy(CPython 3.11 + torch 2.5.1+cu121 + mmgp 3.2.7)",
-    "params": "profile 3 / steps 30 / octree 256 / mc_algo=mc(diso 不裝)/ seed 2025",
-    "machine": "RTX 3060 12GB(WSL2 GPU 直通)",
-    "note": "量測:torch 峰值 2524MiB(GPU 全程 free ≥10.2GB)、67.4s/張(七張批次逐張 61~67s、模型熱載 3.6s);原生 213,682 面 watertight"
-   },
-   "post": {
-    "tool": "hy3dgen FaceReducer(pymeshlab,WSL)213,682→560 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)560→382",
-    "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
-   }
-  },
-  {
-   "key": "tree/snag_a",
-   "method": "trellis2_spz",
-   "consumer": "biomes VEG_DEFS.deadtree 的整樹節點(def.whole;§5u 新縫:lib 載到 ⇒ 這一型只畫這一顆、保險絲三件式全藏,載不到 ⇒ 逐位元退回舊制三件式。deadtree 同輪退出 NATURE_MANIFEST —— Quaternius DeadTree_1/2 退場,blackforest 實測釋出 30,706 tris;散布/佈局零 rnd 變化)",
-   "rev": "§5u 樹族首件(2026-08-07;§5q 定案樹族 img→3D 只收雕塑性主體 —— 枯幹/板根/扭曲幹,漂白枯幹是範本)",
-   "imgs": [
+      "keys": [
+        "tree/canopy_h10",
+        "tree/canopy_h65"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS tualang(蜂樹)三列冠簇",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_71b76588-800c-4b51-892d-fb42f7067fb5",
+          "family": "tree",
+          "part": "canopy",
+          "query": "lone tree field",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6016677/photo-image-background-wallpaper-design",
+          "file": "photos/tree/canopy/ov_71b76588-800c-4b51-892d-fb42f7067fb5.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
+        "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 250,
+        "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
+      },
+      "note": "形 h = 寬扁傘冠,對上零件表註解寫的「傘狀突出冠」。"
+    },
     {
-     "role": "primary",
-     "id": "ov_6f0ad84c-3565-4acb-8578-b633c9016b54",
-     "family": "tree",
-     "part": "cf_juniper_tree",
-     "query": "bristlecone pine tree",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "U.S. Forest Service (source)",
-     "source_url": "https://www.rawpixel.com/image/3388298/free-photo-image-blue-bristlecone-pines-california",
-     "file": "photos/tree/cf_juniper_tree/ov_6f0ad84c-3565-4acb-8578-b633c9016b54.jpg",
-     "note": "漂白刺果松枯幹(§5p F0 黏土複驗 ◎ 的那張 —— 無葉冠的雕塑性主體是 T2 樹族甜蜜點);matte 先二值化 alpha >16→255(§5n)"
-    }
-   ],
-   "gen": {
-    "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
-    "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
-    "params": "1024_cascade 快檔 / seed 1234(§5p F0 複驗那一注,出來就 ◎ 不需重抽)",
-    "machine": "RTX 3060 12GB",
-    "note": "原生 48,673 面 / 27,447 開放邊 / 1,428 元件 —— 細枝主體的 T2 原殼是空間上斷開的孤島群(§5t 三連敗的成因),與岩族的緊密團塊是兩種病"
-   },
-   "post": {
-    "tool": "tools/ai3d/solidify_parts.py --mode wrap(alpha wrap 2% 橋接 + 取最大元件(棄 0.7% 面積的離體浮枝)+ 拓樸保護 quadric)48,673→200 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)非等向拉滿 ico(3.2) 包絡",
-    "fit": 0.95,
-    "note": "kf_p95 2.4% / dev_p95 1.7%;逐件上限 225(§5u 以 uluru deadtree 121 instance + Quaternius 退場釋出重推)收在 200 留餘裕(§5j 教訓);缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木本來就不完美」"
-   }
-  },
-  {
-   "keys": [
-    "tree/cf2_wood_a",
-    "tree/cf2_crown_a"
-   ],
-   "method": "simple_geom_tree",
-   "consumer": "biomes VEG_DEFS.conifer2 的整樹節點(def.whole 兩列:木質 c 0x54402a / 葉冠 key conifer)",
-   "rev": "§5z-s 星盤第二輪(2026-08-08;尖銳度改由輪廓凹面給 + 所有參數加誤差)",
-   "at": "2026-08-08",
-   "imgs": [
+      "keys": [
+        "tree/canopy_i10",
+        "tree/canopy_i8"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS meranti(黃柳桉)四列冠簇",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
+          "family": "tree",
+          "part": "canopy",
+          "query": "oak tree canopy",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
+          "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
+        "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 250,
+        "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
+      },
+      "note": "形 i = 圓潤卵冠。三段尺寸階是包絡契約逼出來的(節點半徑 MUST ≤ 該列 fallback 且 ≥ 一半)。"
+    },
     {
-     "role": "primary",
-     "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
-     "family": "tree",
-     "part": "cf_araucaria",
-     "query": "araucaria tree",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
-     "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
-     "note": "南洋杉(§5p F0 選片閘通過的針葉語料)。**語料只提供佈局** —— 層數 8 / 層間距 / 冠的最寬與最窄兩端 / 幹的寬度剖面 / 樹高;出貨幾何是使用者手稿指定的星盤基本體,角數 / 內凹深度 / 下緣凹度 / 裙深 / 尖銳度 / 錯開角度是造型參數(浮雕板量不出「角」這種東西)"
-    }
-   ],
-   "gen": {
-    "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
-    "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
-    "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
-    "params": "--crown star --species spruce --density mid --touch 1.15(6 角 × arc 2 / 谷底 .50 / 下緣凹度 .55 / 裙 .62 / **輪廓凹度 1.9** / 尖銳 +0.15 / **誤差 .10**(角長・層高・錯開角三組零均值)/ 錯開 30° 推導 / 逐層收分 .90);--group CF2=1.98x4.475 共用變換",
-    "measured": "木質 80 / 葉冠 192(8 層 × 2·6·2)= 272;整層消耗 87.1%"
-   },
-   "note": "**兩顆節點共用一個變換**(normalize_parts --group CF2=1.98x4.475)⇒ 相對位置烤進頂點,消費端兩列共用同一個 y=4.251。**2026-08-08 §5z-r 改星盤**(使用者手稿七句:上視各角邊長內凹 / 側視每層下緣內凹 / 層間平面錯開疊加 / 越上層角越短但頂角越尖 / 頂部不露幹 / 不需要樹枝 / 參數視樹種而定):一層 = 2·角數·arc 面;層間距與幹頂高都是**解**出來的(前者要求最上層頂點落在冠頂、後者量最上層**谷底**母線 —— 角尖那條最寬,拿它算幹會從兩角之間的凹口穿出來)。樹枝與木質頂梢(--spire)同輪整組退場 ⇒ 木質 92 → 80,而**葉冠的頂就是整株的頂** ⇒ 消費端葉冠包絡 cyl 高 7.41 → 8.52(沿用舊值會讓 intake 的縱向契約紅在「葉冠比包絡高」上,而那正是這一輪要的形狀)。arc 全族取 2:價目表實測 arc 2/3/4 的側視疊起來看不出差別,而 ×3 是 +37% 面數(使用者定案)。逐句稽核 check_star.py 四樹種 40 條 + --break-notch/-cave/-cover 反向驗證。272 面 vs 現值 155 ⇒ 整層消耗 85.9% → 87.1%。 **2026-08-08 §5z-s 第二輪**(使用者「上層的頂角不要那麼高,每層高度相近,用凹面的方法增加尖銳度,旋轉角度/角長/層高等所有參數都適度加入誤差」):`sharp` 1.3 → **0.15**(層高全距 2.30 → 1.15 = 「相近」),尖銳度改由 **`--star-curve` 側輪廓凹度**給(R_k = R_top + (R₀−R_top)(1−u^curve);curve>1 ⇒ 下半近乎等寬、上半急收 = 手稿那條長弧);三組零均值誤差 .10。**凹面與適度誤差在同一個序列上互斥** —— 底部相鄰層只差 2.3% 而誤差是 10% ⇒ 「越上層越短/越尖」的定律搬到**名目階梯**(未加誤差),realized 改驗「誤差零均值有界 +趨勢跨 lag 遞減」(lag 由誤差幅推導)。面數與整層消耗**逐位元不變**(272 / 87.1%),輪廓保留反而 58/63% → 76/87%。"
-  },
-  {
-   "keys": [
-    "tree/bl_wood_a",
-    "tree/bl_crown_a"
-   ],
-   "method": "simple_geom_tree",
-   "consumer": "biomes VEG_DEFS.broadleaf 的整樹節點(def.whole 兩列:木質 c 0x6b4a2f / 葉冠 key foliage)",
-   "rev": "§5z-s 闊葉樹頂包覆(2026-08-08)",
-   "at": "2026-08-08",
-   "imgs": [
+      "keys": [
+        "tree/canopy_j22"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS klinki(克林奇南洋杉)四列冠簇",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "cf_araucaria",
+          "query": "monkey puzzle tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078341/monkey-puzzle-tree",
+          "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
+        "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 250,
+        "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
+      },
+      "note": "形 j = 南洋杉。**照片就是南洋杉屬**(monkey puzzle / Araucaria araucana),而 klinki 是 Araucaria hunsteinii —— 同屬。klinki 在第 7 輪之前**一列都沒有**:它的冠簇只有 2.2~3.0m,比當時最小的節點(3.325)還小,硬塞會破包絡契約 ⇒ 這一輪才補得上使用者說的「各種**大小**神木」。"
+    },
     {
-     "role": "primary",
-     "id": "ov_26750ed5-e0a1-4a46-a301-68040c9d4075",
-     "family": "tree",
-     "part": "bl_oak",
-     "query": "dense oak canopy",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": null,
-     "source_url": "https://openverse.org/image/26750ed5-e0a1-4a46-a301-68040c9d4075",
-     "file": "photos/tree/bl_oak/ov_26750ed5-e0a1-4a46-a301-68040c9d4075.jpg",
-     "note": "密冠橡樹;冠形維持 ico 圓潤葉團 —— 使用者 2026-08-08 定案「寧可從 shrub 挖額度也不換成八面體的稜角冠」(八面體 704 面雖然省一半,列圖上冠變結晶感)"
-    }
-   ],
-   "gen": {
-    "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
-    "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
-    "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
-    "params": "--major 0.3 --density sparse --touch 1.15 --cap(冠頂包覆,新增);--group BL=3.15x3.6051 共用變換",
-    "measured": "木質 336 / 葉冠 940 = 1,276(含冠頂包覆 1 顆 ico 20 面)"
-   },
-   "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。 **2026-08-08 §5z-s 樹頂包覆**(使用者「闊葉林的樹頂,使用闊葉樹冠包覆(跟其他葉冠相似的形狀)」):旁瓣一律擺在 r_mid > 0 上(語料量到的是離軸的葉團)⇒ **軸心是空的**,幹與枝從那個洞直直戳出去 ⇒ 補一顆同款 ico 葉團(同 key、同季節色)。**尺寸由「要蓋住什麼」解出來**(縱向 = 分岔到幹頂的一半、水平 = 最內圈葉團的內緣,兩者 ÷ ico 內切半徑),MUST NOT 取中位數尺寸 —— 那一版實測 144 方位 45 → 45,與沒有這一顆一模一樣。射線可見性 233 → **0**,成本 +20 面(1,256 → 1,276),整層消耗 87.1% → 87.8%。"
-  },
-  {
-   "keys": [
-    "building/mass_a"
-   ],
-   "method": "trellis2_spz",
-   "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊 + buildBldBucket.mass;只換「全圖最高的 pick_n 棟高層商辦」這個子集 —— 整桶換的逐節點上限只有 36 tris,見 tri_budget families.building.mass)",
-   "rev": "(本輪)",
-   "at": "2026-08-08",
-   "imgs": [
+      "keys": [
+        "tree/canopy_k22"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes GIANT_DEFS alerce(智利柏)兩列冠簇",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "wc_133471453",
+          "family": "tree",
+          "part": "sp_conifer",
+          "query": "lone spruce tree field",
+          "api": "commons",
+          "license": "Public domain",
+          "creator": "NPS",
+          "source_url": "https://commons.wikimedia.org/wiki/File:A_lone_spruce_tree_in_a_grassy_meadow_(8ac97ae4-0422-4f25-a250-d828e19a9d8d).JPG",
+          "file": "photos/tree/sp_conifer/wc_133471453.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB;giant 批 10 張 / veg 批 8 張各一次批次;照片 82 張人眼複核後語意可用 13 張(~1/6),過 SF3D 後實心可用 9 顆",
+        "note": "**同一張照片跑兩種 tvc**:giant 批 520(families.tree 上限 402)、veg 批 90(families.veg node_cap 140 —— 一叢灌木 1909 個 instance,逐件上限只有神木的三分之一)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 250,
+        "note": "縮放目標一律「r x hy」非等向:實拍樹冠比 ico 球扁,等比縮會填不滿縱向包絡,零件表的 sy 再壓一次就成薄餅(§5g)。"
+      },
+      "note": "形 k = 窄錐冠。與 klinki 同一個理由(冠簇 2.4~2.6m)第一次接得上。"
+    },
     {
-     "role": "primary(mass_a;Art Deco 摩天樓 —— 退縮量體逐階可見 + 裙樓,正是這一桶要的「天際線塔樓」)",
-     "id": "ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9",
-     "family": "building",
-     "part": "bld_tower",
-     "query": "art deco skyscraper",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "athrasher",
-     "source_url": "https://www.flickr.com/photos/56544547@N00/36797225970",
-     "file": "photos/building/bld_tower/ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9.jpg"
-    }
-   ],
-   "gen": {
-    "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-    "runner": "app 的 api_spz 路徑 — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows,全預編 cp311 wheel,逐階段 CPU offload)",
-    "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(§5n 閘門那一輪的產出直接沿用,本輪未重跑 —— 產出還在 `out_gate/`)",
-    "machine": "RTX 3060 12GB",
-    "measured": "sample 198.4s + decode 19.1s + glb 9.0s = 226.4s;torch 峰值 3,409 MiB;raw 12,187,288 面 → 匯出 49,845 面(雙層薄殼:34,751 開放邊 / 3,123 元件 / v:f 0.91)",
-    "note": "**建築是 T2 的甜蜜點**(§5n:幾何 + PBR 一次出);貼圖不入庫(CLAUDE.md §1 幾何 + 底色),立面窗格改由消費端的程序貼圖負責 ⇒ 節點只需要盒投影 UV。"
-   },
-   "post": {
-    "tool": "tools/ai3d/solidify_parts.py --mode resample(實體化 + quadric)→ tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
-    "params": "--cells 72 --offset 0.006 --target 2900 ⇒ 2,900 面 / 16 開放邊 / 6 元件 / v:f 0.50 / kf_p95 0.95%;normalize `--mirror mass_a=auto`(挑到 z 軸,不對稱 12.3%,留 +z 半)+ 非等向 0.5×0.5(單位方盒包絡)+ `--boxuv` ⇒ **2,921 面 / 15 開放邊 / 6 元件**",
-    "note": "**`--cells` 在建築上是「濾掉立面凹槽」的旋鈕,不是解析度旋鈕** —— 預設 256 會把 T2 生出來的垂直窗格凹槽逐條重採樣成隨機凸起,整棟讀起來像侵蝕岩(384/512 更糟)。往粗調到 72 讓凹槽落在取樣解析度之下被抹平,而尺度大一個量級的退縮階梯完整保留;再粗(56)裙樓會斷成浮塊。逐檔黏土對照 56/72/96/128/160/256/384/512。\n\n**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,使用鏡像貼補空的部分」):單張照片只約束得到被拍到的那幾面,退縮階/簷帶/裙樓只長在那一半。**這一刀 MUST 落在 Blender 端**(bisect + clip + merge threshold 焊頂點,不重建等值面 ⇒ 一條新的自由邊都不生):在 solidify 端試過的兩種寫法都把網格撕爛 —— 切半再鏡射(開放邊 16 → 362、裙樓整條不見)、整份鏡射再疊合(1,119 / 5,016 開放邊,x 軸連目標面數都打不到),共同的錯誤前提是「resample 會幫我熔合」,而它只對**單層**輸入成立。鏡射後開放邊 18 → **15**(比沒鏡射還乾淨)。"
-   },
-   "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。"
-  },
-  {
-   "keys": [
-    "building/mass_b"
-   ],
-   "method": "trellis2_spz",
-   "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊第 2 顆 —— 名冊只有一顆時,同一張圖上挑中的十幾棟塔樓是同一個剪影)",
-   "rev": "c51e5a8",
-   "at": "2026-08-09",
-   "imgs": [
+      "keys": [
+        "tree/vleaf_a27",
+        "tree/vleaf_a20",
+        "tree/vleaf_a17",
+        "tree/vleaf_a12"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes VEG_DEFS broadleaf(闊葉)兩列 / birch(白樺)兩列 / mangrove(紅樹林)一列",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_b1917d71-440a-4499-9172-d65dcf7d9676",
+          "family": "tree",
+          "part": "canopy",
+          "query": "oak tree canopy",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078531/tree-with-wide-canopy",
+          "file": "photos/tree/canopy/ov_b1917d71-440a-4499-9172-d65dcf7d9676.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 520",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB",
+        "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 218,
+        "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
+      },
+      "note": "使用者定案「闊葉林」。**這三型原本吃 Quaternius 的 MapleTree/BirchTree**(NATURE_MANIFEST):掛在那份名冊裡的型別連 buildVegMeshes 都不會被呼叫,`lib:` 列等於接在沒人看得到的路徑上 ⇒ 第 8 輪把 broadleaf/birch/shrub 三型退出名冊,改走零件表 + 照片冠簇(使用者定案「連 Quaternius 一起換掉」)。**只換冠簇,樹幹維持 primitive**(§3 rule 1:parts, never finished props)。"
+    },
     {
-     "role": "primary(mass_b;Fisher Building, Detroit —— 寬裙樓 + 細塔身 + 綠色錐頂與尖塔,與 mass_a 的退縮階梯方塔是兩種天際線)",
-     "id": "ov_8811db29-201d-4640-9aa8-3deebbc7df35",
-     "family": "building",
-     "part": "bld_tower",
-     "query": "art deco skyscraper",
-     "api": "openverse",
-     "license": "cc0",
-     "creator": "TheWxResearcher",
-     "source_url": "https://commons.wikimedia.org/w/index.php?curid=174893747",
-     "file": "photos/building/bld_tower/ov_8811db29-201d-4640-9aa8-3deebbc7df35.jpg"
+      "keys": [
+        "tree/bush_a09"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes VEG_DEFS shrub(灌木)主團那一列",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_331ba448-3fc1-472d-8f43-b0626b0096a7",
+          "family": "tree",
+          "part": "sh_boxwood",
+          "query": "boxwood shrub garden",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://n2t.net/ark:/65665/ax7f7b06212-92f9-4b77-8bd6-5ff2f00f1645",
+          "file": "photos/tree/sh_boxwood/ov_331ba448-3fc1-472d-8f43-b0626b0096a7.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB",
+        "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 218,
+        "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
+      },
+      "note": "使用者定案「灌木」。頂端小簇刻意留保險絲:灌木 1909 個 instance 是全族最貴的一列,兩列都接的話 node_cap 只有 140,而 140 逼出來的減面比正好落在「Blender 硬減面把殼撕出洞」那個區間(§5e)—— 外廓與預算全綠,截圖上是冠簇裂成一片片。 **2026-08-08(§5z-o)減面 213 → 140**:整層總量閘上線後量到這一列吃掉成長額度的 59.1%(213 tris × 1909 instance);使用者定案「闊葉保圓潤冠、寧可從 shrub 挖額度」⇒ 以同一支 normalize_parts 重跑減面(來源網格不變,只是 tri_cap 143)。灌木是 1909 叢的填充植物,單株 213 面本來就與它在畫面上的份量不成比例。"
+    },
+    {
+      "keys": [
+        "tree/vcone_a20",
+        "tree/vcone_a16",
+        "tree/vcone_a14"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes VEG_DEFS conifer2(針葉;老雲杉簇疊冠)下三列",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "wc_133471453",
+          "family": "tree",
+          "part": "sp_conifer",
+          "query": "lone spruce tree field",
+          "api": "commons",
+          "license": "Public domain",
+          "creator": "NPS",
+          "source_url": "https://commons.wikimedia.org/wiki/File:A_lone_spruce_tree_in_a_grassy_meadow_(8ac97ae4-0422-4f25-a250-d828e19a9d8d).JPG",
+          "file": "photos/tree/sp_conifer/wc_133471453.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB",
+        "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 218,
+        "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
+      },
+      "note": "使用者定案「針葉林」。conifer/conifer3/conifer4 的冠層是 cone/cyl 包絡,把一團樹冠塞進去會被拉成柱子 ⇒ **只換 conifer2 的 ico 簇疊冠**。"
+    },
+    {
+      "keys": [
+        "tree/vcone_b09"
+      ],
+      "method": "sf3d",
+      "consumer": "biomes VEG_DEFS conifer2 頂梢那一列(ico 0.9)",
+      "rev": "d4b8c63",
+      "at": "2026-08-06",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "cf_araucaria",
+          "query": "monkey puzzle tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://www.rawpixel.com/image/6078341/monkey-puzzle-tree",
+          "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "stabilityai/stable-fast-3d (SF3D)",
+        "runner": "vendor/stable-fast-3d/run.py — tools/ai3d/.venv (CPython 3.11 + torch 2.5.1+cu121)",
+        "params": "--texture-resolution 512 --remesh_option triangle --target_vertex_count 90",
+        "machine": "RTX 3060 12GB",
+        "measured": "峰值 VRAM 6.13 GB",
+        "note": "**同一張照片按消費端跑不同 tvc**:GIANT_DEFS 那一批 520(families.tree 逐件 402),VEG_DEFS 這一批 90(families.veg node_cap 218 —— 一叢灌木 1909 個 instance)。低 tvc 會把直線磨圓(§5i),對樹冠/灌木這種團塊無影響。"
+      },
+      "post": {
+        "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
+        "fit": 0.95,
+        "tri_cap": 218,
+        "note": "縮放一律「R x R」拉滿包絡:veg 這一列的冠簇**就是整棵樹的冠**,共用一顆節點服務多列的話,大半徑那一列會拿到明顯偏小的冠 —— 包絡契約(≤ fallback、≥ 一半)照樣全綠,而畫面上是樹冠與樹幹之間開了一道縫;外廓稽核不看 y、y 又正是接合那一軸,**只有截圖抓得到**(§5g/§4-B ④)。"
+      },
+      "note": "同一株上兩種輪廓(雲杉錐冠 + 猴謎樹頂梢)—— 這正是使用者說的「不同樹種」在同一片林子裡混著出現。"
+    },
+    {
+      "key": "rock/hoodoo_a",
+      "method": "hunyuan_2gp",
+      "consumer": "biomes synthMegalith(MEGA_LIB.hoodoo 呼叫點啟用:蘑菇岩整柱,逐柱一顆、柱數 2~4;單位包絡節點,呼叫端 scale (r×1.5, h×0.55, r×1.5)。§5j 待續① 的缺口 —— 同一張照片 SF3D 在細腰處斷成兩截,2GP 保住帽岩/細頸/基座)",
+      "rev": "§5m Hunyuan3D-2GP 閘門量測輪(2026-08-06 晚)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "wc_112762573",
+          "family": "rock",
+          "part": "hoodoo",
+          "query": "hoodoo rock formation",
+          "api": "commons",
+          "license": "Public domain",
+          "creator": "John Good",
+          "source_url": "https://commons.wikimedia.org/wiki/File:A_hoodoo_in_Hoodoo_Basin.jpg",
+          "note": "乾淨單體:平衡帽岩 + 細頸 + 藍天(§5l 曾以同張量 SF3D 基準,兩種參數皆塌成薄片 fill 0.065/0.227)",
+          "file": "photos/rock/hoodoo/wc_112762573.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "Hunyuan3D-2GP(shape-only;tencent/Hunyuan3D-2 dit-v2-0 fp16)",
+        "runner": "WSL2 Ubuntu 24.04 ~/ai3d/.venv311hy(CPython 3.11 + torch 2.5.1+cu121 + mmgp 3.2.7)",
+        "params": "profile 3 / steps 30 / octree 256 / mc_algo=mc(diso 不裝)/ seed 2025",
+        "machine": "RTX 3060 12GB(WSL2 GPU 直通)",
+        "note": "量測:torch 峰值 2524MiB(GPU 全程 free ≥10.2GB)、67.4s/張(七張批次逐張 61~67s、模型熱載 3.6s);原生 213,682 面 watertight"
+      },
+      "post": {
+        "tool": "hy3dgen FaceReducer(pymeshlab,WSL)213,682→560 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)560→382",
+        "fit": 0.95,
+        "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
+      }
+    },
+    {
+      "key": "tree/snag_a",
+      "method": "trellis2_spz",
+      "consumer": "biomes VEG_DEFS.deadtree 的整樹節點(def.whole;§5u 新縫:lib 載到 ⇒ 這一型只畫這一顆、保險絲三件式全藏,載不到 ⇒ 逐位元退回舊制三件式。deadtree 同輪退出 NATURE_MANIFEST —— Quaternius DeadTree_1/2 退場,blackforest 實測釋出 30,706 tris;散布/佈局零 rnd 變化)",
+      "rev": "§5u 樹族首件(2026-08-07;§5q 定案樹族 img→3D 只收雕塑性主體 —— 枯幹/板根/扭曲幹,漂白枯幹是範本)",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_6f0ad84c-3565-4acb-8578-b633c9016b54",
+          "family": "tree",
+          "part": "cf_juniper_tree",
+          "query": "bristlecone pine tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "U.S. Forest Service (source)",
+          "source_url": "https://www.rawpixel.com/image/3388298/free-photo-image-blue-bristlecone-pines-california",
+          "file": "photos/tree/cf_juniper_tree/ov_6f0ad84c-3565-4acb-8578-b633c9016b54.jpg",
+          "note": "漂白刺果松枯幹(§5p F0 黏土複驗 ◎ 的那張 —— 無葉冠的雕塑性主體是 T2 樹族甜蜜點);matte 先二值化 alpha >16→255(§5n)"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2-4B(IgorAherne stableprojectorz fork,O-Voxel)",
+        "runner": "study clone Documents/study/TRELLIS.2-stableprojectorz 的 .venv(Windows 原生,§5n)",
+        "params": "1024_cascade 快檔 / seed 1234(§5p F0 複驗那一注,出來就 ◎ 不需重抽)",
+        "machine": "RTX 3060 12GB",
+        "note": "原生 48,673 面 / 27,447 開放邊 / 1,428 元件 —— 細枝主體的 T2 原殼是空間上斷開的孤島群(§5t 三連敗的成因),與岩族的緊密團塊是兩種病"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode wrap(alpha wrap 2% 橋接 + 取最大元件(棄 0.7% 面積的離體浮枝)+ 拓樸保護 quadric)48,673→200 水密單元件 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)非等向拉滿 ico(3.2) 包絡",
+        "fit": 0.95,
+        "note": "kf_p95 2.4% / dev_p95 1.7%;逐件上限 225(§5u 以 uluru deadtree 121 instance + Quaternius 退場釋出重推)收在 200 留餘裕(§5j 教訓);缺枝/補接痕當砍伐或雷擊損毀 —— 使用者定案「自然的樹木本來就不完美」"
+      }
+    },
+    {
+      "keys": [
+        "tree/cf2_wood_a",
+        "tree/cf2_crown_a"
+      ],
+      "method": "simple_geom_tree",
+      "consumer": "biomes VEG_DEFS.conifer2 的整樹節點(def.whole 兩列:木質 c 0x54402a / 葉冠 key conifer)",
+      "rev": "§5z-s 星盤第二輪(2026-08-08;尖銳度改由輪廓凹面給 + 所有參數加誤差)",
+      "at": "2026-08-08",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_61a8c242-5841-4892-847c-ab6278bf0fce",
+          "family": "tree",
+          "part": "cf_araucaria",
+          "query": "araucaria tree",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/61a8c242-5841-4892-847c-ab6278bf0fce",
+          "file": "photos/tree/cf_araucaria/ov_61a8c242-5841-4892-847c-ab6278bf0fce.jpg",
+          "note": "南洋杉(§5p F0 選片閘通過的針葉語料)。**語料只提供佈局** —— 層數 8 / 層間距 / 冠的最寬與最窄兩端 / 幹的寬度剖面 / 樹高;出貨幾何是使用者手稿指定的星盤基本體,角數 / 內凹深度 / 下緣凹度 / 裙深 / 尖銳度 / 錯開角度是造型參數(浮雕板量不出「角」這種東西)"
+        }
+      ],
+      "gen": {
+        "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
+        "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
+        "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
+        "params": "--crown star --species spruce --density mid --touch 1.15(6 角 × arc 2 / 谷底 .50 / 下緣凹度 .55 / 裙 .62 / **輪廓凹度 1.9** / 尖銳 +0.15 / **誤差 .10**(角長・層高・錯開角三組零均值)/ 錯開 30° 推導 / 逐層收分 .90);--group CF2=1.98x4.475 共用變換",
+        "measured": "木質 80 / 葉冠 192(8 層 × 2·6·2)= 272;整層消耗 87.1%"
+      },
+      "note": "**兩顆節點共用一個變換**(normalize_parts --group CF2=1.98x4.475)⇒ 相對位置烤進頂點,消費端兩列共用同一個 y=4.251。**2026-08-08 §5z-r 改星盤**(使用者手稿七句:上視各角邊長內凹 / 側視每層下緣內凹 / 層間平面錯開疊加 / 越上層角越短但頂角越尖 / 頂部不露幹 / 不需要樹枝 / 參數視樹種而定):一層 = 2·角數·arc 面;層間距與幹頂高都是**解**出來的(前者要求最上層頂點落在冠頂、後者量最上層**谷底**母線 —— 角尖那條最寬,拿它算幹會從兩角之間的凹口穿出來)。樹枝與木質頂梢(--spire)同輪整組退場 ⇒ 木質 92 → 80,而**葉冠的頂就是整株的頂** ⇒ 消費端葉冠包絡 cyl 高 7.41 → 8.52(沿用舊值會讓 intake 的縱向契約紅在「葉冠比包絡高」上,而那正是這一輪要的形狀)。arc 全族取 2:價目表實測 arc 2/3/4 的側視疊起來看不出差別,而 ×3 是 +37% 面數(使用者定案)。逐句稽核 check_star.py 四樹種 40 條 + --break-notch/-cave/-cover 反向驗證。272 面 vs 現值 155 ⇒ 整層消耗 85.9% → 87.1%。 **2026-08-08 §5z-s 第二輪**(使用者「上層的頂角不要那麼高,每層高度相近,用凹面的方法增加尖銳度,旋轉角度/角長/層高等所有參數都適度加入誤差」):`sharp` 1.3 → **0.15**(層高全距 2.30 → 1.15 = 「相近」),尖銳度改由 **`--star-curve` 側輪廓凹度**給(R_k = R_top + (R₀−R_top)(1−u^curve);curve>1 ⇒ 下半近乎等寬、上半急收 = 手稿那條長弧);三組零均值誤差 .10。**凹面與適度誤差在同一個序列上互斥** —— 底部相鄰層只差 2.3% 而誤差是 10% ⇒ 「越上層越短/越尖」的定律搬到**名目階梯**(未加誤差),realized 改驗「誤差零均值有界 +趨勢跨 lag 遞減」(lag 由誤差幅推導)。面數與整層消耗**逐位元不變**(272 / 87.1%),輪廓保留反而 58/63% → 76/87%。"
+    },
+    {
+      "keys": [
+        "tree/bl_wood_a",
+        "tree/bl_crown_a"
+      ],
+      "method": "simple_geom_tree",
+      "consumer": "biomes VEG_DEFS.broadleaf 的整樹節點(def.whole 兩列:木質 c 0x6b4a2f / 葉冠 key foliage)",
+      "rev": "§5z-s 闊葉樹頂包覆(2026-08-08)",
+      "at": "2026-08-08",
+      "imgs": [
+        {
+          "role": "primary",
+          "id": "ov_26750ed5-e0a1-4a46-a301-68040c9d4075",
+          "family": "tree",
+          "part": "bl_oak",
+          "query": "dense oak canopy",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": null,
+          "source_url": "https://openverse.org/image/26750ed5-e0a1-4a46-a301-68040c9d4075",
+          "file": "photos/tree/bl_oak/ov_26750ed5-e0a1-4a46-a301-68040c9d4075.jpg",
+          "note": "密冠橡樹;冠形維持 ico 圓潤葉團 —— 使用者 2026-08-08 定案「寧可從 shrub 挖額度也不換成八面體的稜角冠」(八面體 704 面雖然省一半,列圖上冠變結晶感)"
+        }
+      ],
+      "gen": {
+        "tool": "simple_tree.py(study clone;§5z 簡單幾何版 v16)+ tools/ai3d/normalize_parts.py --group",
+        "runner": "TRELLIS.2-stableprojectorz/.venv(CPython 3.11)+ Blender 5.2 headless",
+        "machine": "RTX 3060 12GB(語料那一步;重建本身純 CPU)",
+        "params": "--major 0.3 --density sparse --touch 1.15 --cap(冠頂包覆,新增);--group BL=3.15x3.6051 共用變換",
+        "measured": "木質 336 / 葉冠 940 = 1,276(含冠頂包覆 1 顆 ico 20 面)"
+      },
+      "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。 **2026-08-08 §5z-s 樹頂包覆**(使用者「闊葉林的樹頂,使用闊葉樹冠包覆(跟其他葉冠相似的形狀)」):旁瓣一律擺在 r_mid > 0 上(語料量到的是離軸的葉團)⇒ **軸心是空的**,幹與枝從那個洞直直戳出去 ⇒ 補一顆同款 ico 葉團(同 key、同季節色)。**尺寸由「要蓋住什麼」解出來**(縱向 = 分岔到幹頂的一半、水平 = 最內圈葉團的內緣,兩者 ÷ ico 內切半徑),MUST NOT 取中位數尺寸 —— 那一版實測 144 方位 45 → 45,與沒有這一顆一模一樣。射線可見性 233 → **0**,成本 +20 面(1,256 → 1,276),整層消耗 87.1% → 87.8%。"
+    },
+    {
+      "keys": [
+        "building/mass_a"
+      ],
+      "method": "trellis2_spz",
+      "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊 + buildBldBucket.mass;只換「全圖最高的 pick_n 棟高層商辦」這個子集 —— 整桶換的逐節點上限只有 36 tris,見 tri_budget families.building.mass)",
+      "rev": "(本輪)",
+      "at": "2026-08-08",
+      "imgs": [
+        {
+          "role": "primary(mass_a;Art Deco 摩天樓 —— 退縮量體逐階可見 + 裙樓,正是這一桶要的「天際線塔樓」)",
+          "id": "ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9",
+          "family": "building",
+          "part": "bld_tower",
+          "query": "art deco skyscraper",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "athrasher",
+          "source_url": "https://www.flickr.com/photos/56544547@N00/36797225970",
+          "file": "photos/building/bld_tower/ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+        "runner": "app 的 api_spz 路徑 — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows,全預編 cp311 wheel,逐階段 CPU offload)",
+        "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(§5n 閘門那一輪的產出直接沿用,本輪未重跑 —— 產出還在 `out_gate/`)",
+        "machine": "RTX 3060 12GB",
+        "measured": "sample 198.4s + decode 19.1s + glb 9.0s = 226.4s;torch 峰值 3,409 MiB;raw 12,187,288 面 → 匯出 49,845 面(雙層薄殼:34,751 開放邊 / 3,123 元件 / v:f 0.91)",
+        "note": "**建築是 T2 的甜蜜點**(§5n:幾何 + PBR 一次出);貼圖不入庫(CLAUDE.md §1 幾何 + 底色),立面窗格改由消費端的程序貼圖負責 ⇒ 節點只需要盒投影 UV。"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode resample(實體化 + quadric)→ tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
+        "params": "--cells 72 --offset 0.006 --target 2900 ⇒ 2,900 面 / 16 開放邊 / 6 元件 / v:f 0.50 / kf_p95 0.95%;normalize `--mirror mass_a=auto`(挑到 z 軸,不對稱 12.3%,留 +z 半)+ 非等向 0.5×0.5(單位方盒包絡)+ `--boxuv` ⇒ **2,921 面 / 15 開放邊 / 6 元件**",
+        "note": "**`--cells` 在建築上是「濾掉立面凹槽」的旋鈕,不是解析度旋鈕** —— 預設 256 會把 T2 生出來的垂直窗格凹槽逐條重採樣成隨機凸起,整棟讀起來像侵蝕岩(384/512 更糟)。往粗調到 72 讓凹槽落在取樣解析度之下被抹平,而尺度大一個量級的退縮階梯完整保留;再粗(56)裙樓會斷成浮塊。逐檔黏土對照 56/72/96/128/160/256/384/512。\n\n**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,使用鏡像貼補空的部分」):單張照片只約束得到被拍到的那幾面,退縮階/簷帶/裙樓只長在那一半。**這一刀 MUST 落在 Blender 端**(bisect + clip + merge threshold 焊頂點,不重建等值面 ⇒ 一條新的自由邊都不生):在 solidify 端試過的兩種寫法都把網格撕爛 —— 切半再鏡射(開放邊 16 → 362、裙樓整條不見)、整份鏡射再疊合(1,119 / 5,016 開放邊,x 軸連目標面數都打不到),共同的錯誤前提是「resample 會幫我熔合」,而它只對**單層**輸入成立。鏡射後開放邊 18 → **15**(比沒鏡射還乾淨)。"
+      },
+      "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。"
+    },
+    {
+      "keys": [
+        "building/mass_b"
+      ],
+      "method": "trellis2_spz",
+      "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊第 2 顆 —— 名冊只有一顆時,同一張圖上挑中的十幾棟塔樓是同一個剪影)",
+      "rev": "c51e5a8",
+      "at": "2026-08-09",
+      "imgs": [
+        {
+          "role": "primary(mass_b;Fisher Building, Detroit —— 寬裙樓 + 細塔身 + 綠色錐頂與尖塔,與 mass_a 的退縮階梯方塔是兩種天際線)",
+          "id": "ov_8811db29-201d-4640-9aa8-3deebbc7df35",
+          "family": "building",
+          "part": "bld_tower",
+          "query": "art deco skyscraper",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "TheWxResearcher",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=174893747",
+          "file": "photos/building/bld_tower/ov_8811db29-201d-4640-9aa8-3deebbc7df35.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+        "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+        "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
+        "machine": "RTX 3060 12GB",
+        "out": "out_mass_b/ov_8811db29-201d-4640-9aa8-3deebbc7df35.glb(逐圖一檔,不是編號子目錄)+ out_mass_b/stats/ 同名 json",
+        "measured": "sample 94.7s + decode 7.0s + glb 15.4s = 117.0s;torch 峰值 2,890 MiB;raw 4,309,688 面 → 匯出 49,169 面(雙層薄殼:36,435 開放邊 / 2,910 元件 / v:f 0.93);跑批當下 avail RAM 19.7GB(貼著 §5n 記的 20GB 門檻,這一次沒有無聲死亡)",
+        "note": "**輸出目錄與檔名記在 `out` 欄**(§5ab-a 的新規矩:chimney_a/ac_a 就是因為沒記到這一層,原檔再也對不回出貨的那一顆)。矮塔候選 `wc_378871`(GE Building)與 `ov_c343cdcb`(布魯托主義板樓)已 matte 但未生成,留給 mass_c。"
+      },
+      "post": {
+        "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
+        "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 1.06% / dev_p95 0.84%;normalize 非等向 0.5×0.5 +  ⇒ 2,900 面、水平徑向 0.475、縱向 ±0.475",
+        "note": "沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕),**未重新掃描** —— 同一族同一種主體。這一顆的實體化結果比 mass_a 乾淨(0 開放邊 / 1 元件 vs 16 / 6),因此**不需要鏡像貼補**:mesh_sym 量到的半空間面積不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
+      },
+      "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
     }
-   ],
-   "gen": {
-    "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
-    "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
-    "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
-    "machine": "RTX 3060 12GB",
-    "out": "out_mass_b/ov_8811db29-201d-4640-9aa8-3deebbc7df35.glb(逐圖一檔,不是編號子目錄)+ out_mass_b/stats/ 同名 json",
-    "measured": "sample 94.7s + decode 7.0s + glb 15.4s = 117.0s;torch 峰值 2,890 MiB;raw 4,309,688 面 → 匯出 49,169 面(雙層薄殼:36,435 開放邊 / 2,910 元件 / v:f 0.93);跑批當下 avail RAM 19.7GB(貼著 §5n 記的 20GB 門檻,這一次沒有無聲死亡)",
-    "note": "**輸出目錄與檔名記在 `out` 欄**(§5ab-a 的新規矩:chimney_a/ac_a 就是因為沒記到這一層,原檔再也對不回出貨的那一顆)。矮塔候選 `wc_378871`(GE Building)與 `ov_c343cdcb`(布魯托主義板樓)已 matte 但未生成,留給 mass_c。"
-   },
-   "post": {
-    "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
-    "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 1.06% / dev_p95 0.84%;normalize 非等向 0.5×0.5 +  ⇒ 2,900 面、水平徑向 0.475、縱向 ±0.475",
-    "note": "沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕),**未重新掃描** —— 同一族同一種主體。這一顆的實體化結果比 mass_a 乾淨(0 開放邊 / 1 元件 vs 16 / 6),因此**不需要鏡像貼補**:mesh_sym 量到的半空間面積不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
-   },
-   "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
-  }
- ]
+  ]
 }

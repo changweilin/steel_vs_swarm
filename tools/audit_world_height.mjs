@@ -40,6 +40,11 @@ import {
 const BREAK_CEIL = process.argv.includes('--break-ceil');
 const BREAK_OBJ = process.argv.includes('--break-obj');
 if (BREAK_OBJ) WORLD_H.OBJ_F = WORLD_H.CEIL_PEAK_F + 0.5;
+// `--break-cap` = 把物件上限調回 2026-08-08 的 2 倍(52m)。這**不是**假造的壞值,是
+// 2026-08-09 之前 main 上真正的狀態 —— 重現那次「兩個 PR 各自綠、合起來把整棟量體
+// 庫節點變成死碼」的語意衝突,用來證明 Ⅲ 的門檻守門線真的咬得住(`--break-obj`
+// 是把上限往**上**推,咬不到這一條)。
+if (process.argv.includes('--break-cap')) WORLD_H.OBJ_F = 2;
 // `--break-ceil` = 把天花板換成**手寫常數**版(今天的塔高剛好算出來的那兩個數字)。
 // 它在 Ⅰ・Ⅱ 之外一切照舊 ⇒ 反向驗證要咬住的正是「改了砲塔量體之後還跟不跟得上」。
 const CEIL = BREAK_CEIL ? (avg, peak) => Math.max((avg || 0) + 104, (peak || 0) + 65) : worldCeilY;
@@ -109,10 +114,17 @@ console.log('Ⅰ 公式:三個係數全是砲塔高的倍數,推導不手寫');
     near(ceil2, Math.max(10 + t0 * 2 * WORLD_H.CEIL_AVG_F, 20 + t0 * 2 * WORLD_H.CEIL_PEAK_F)));
 
   // 取 max 而不是 min:平原由平均海拔那一項勝出、高山由最高海拔那一項接手
-  t('平坦場地(avg ≈ peak)由「平均海拔 + 4 倍塔高」勝出',
+  // 標題吃常數,MUST NOT 手寫倍數:2026-08-09 把三個係數整組抬高時,寫死「4 倍 / 2.5 倍」的
+  // 標題會**照樣印綠字**、只是講的是別的數字 —— 稽核的可讀性也會過期。
+  t(`平坦場地(avg ≈ peak)由「平均海拔 + ${WORLD_H.CEIL_AVG_F} 倍塔高」勝出`,
     near(CEIL(30, 33), 30 + TOW * WORLD_H.CEIL_AVG_F));
-  t('落差大的場地由「最高海拔 + 2.5 倍塔高」接手(谷底也飛得過稜線)',
+  t(`落差大的場地由「最高海拔 + ${WORLD_H.CEIL_PEAK_F} 倍塔高」接手(谷底也飛得過稜線)`,
     near(CEIL(400, 900), 900 + TOW * WORLD_H.CEIL_PEAK_F));
+  // 上面兩條各自成立的**前提**:地表恆 ≤ 最高海拔 ⇒ 平均項的係數不大於峰頂項的話,
+  // 平坦那一項永遠贏不了(規則 ③ 退化成單一項,而畫面上只表現成「天花板好像變低了」)。
+  t('CEIL_AVG_F > CEIL_PEAK_F(「取 max 的兩端各自勝出」的前提)',
+    WORLD_H.CEIL_AVG_F > WORLD_H.CEIL_PEAK_F,
+    `avg=${WORLD_H.CEIL_AVG_F} peak=${WORLD_H.CEIL_PEAK_F}`);
   t('兩個輸入各自單調不減',
     CEIL(50, 20) >= CEIL(10, 20) && CEIL(10, 900) >= CEIL(10, 20));
   t('取不到高程統計 ⇒ 退回 0 基準而不是 NaN(原則 6)',
@@ -156,6 +168,22 @@ console.log('\nⅢ 現役物件:五族逐款重算世界高度');
   t('建物高度的每一個生成點都夾 OVER.bldCap',
     count(bioCode, /Math\.min\([^\n]*OVER\.bldCap\)/g) >= 4,
     `${count(bioCode, /OVER\.bldCap/g)} 處`);
+
+  // ---- 守門線:**吃建物高度的門檻 MUST 在上限之下**(2026-08-09 補) ----
+  // 這一條是本檔存在以來唯一一次真的抓到東西的那個坑的補救:2026-08-08 的 `OVER.bldCap`
+  // 2 倍(52m)與 `biomes.js` 手寫的「高層商辦」門檻 55m 是**兩個 PR 各自綠燈**、合起來
+  // 才壞的語意衝突 —— 建物高度上限一夾,`b.h > 55` 就再也不成立 ⇒ 整棟量體庫節點
+  // (`building/mass_a`·`mass_b`)一顆都擺不出去、退縮頂塔剪影整個消失,而 intake、
+  // audit_siteplan(連 `--break-mass` 反向驗證都照樣紅)、對照台孤兒數 **全部是綠的**。
+  // 門檻**從原文抽**而不是手抄:之後有人再加一條 `b.h > N`,這裡自動跟著驗。
+  {
+    const th = [...bioCode.matchAll(/\bb\.h\s*>\s*(\d+(?:\.\d+)?)/g)].map((m) => +m[1]);
+    const mn = /MIN_H:\s*(\d+(?:\.\d+)?)/.exec(bioCode);
+    if (mn) th.push(+mn[1]);
+    const dead = [...new Set(th)].filter((v) => v >= CAP).sort((a, b) => a - b);
+    t(`吃建物高度的門檻 ${new Set(th).size} 個全數 < 物件上限 ${CAP}m(否則那條規則永遠不成立)`,
+      !dead.length && th.length >= 3, dead.length ? `構不到:${dead.join(' / ')}m` : `只抽到 ${th.length} 個`);
+  }
 
   // 神木(群落 base 的上下端 × 株高變異的上下端)
   const bad = [];
