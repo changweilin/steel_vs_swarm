@@ -14,7 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
-| **⭐ 下一輪從這裡開始 — §5an 外牆圖層分型別/風格/屋頂形式 + 同型差異化 + 參考 2D 照片** | **待執行 2026-08-09** | 使用者定案原句與規格見 **§5an**(含現制量測、四個獨立改動與**兩條會踩到的既有約束**:立面款數就是 `mass`/`masslow` 兩桶 `pick_n` 的推導來源、`facadeTex` 的快取鍵沒帶參數)。§5aj-C(只補有洞的)仍未動;§5aj-A = §5ak、§5aj-B = §5am 已落地 |
+| **⭐ 下一輪從這裡開始 — 屋頂帶 UV(斜屋頂上還有窗格)+ §5aj-C(只補有洞的)** | **待執行 2026-08-09** | 屋頂帶 UV 的設計與範圍見 **§5an-d**(只需重跑 masslow 兩顆的 normalize);§5aj-C 規格見該節。已落地:§5ak(配比含設計圖)・§5am(第二個量體桶 + 兩顆節點)・§5an(外牆圖層分型別/風格/屋頂形式)|
 | §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
@@ -4028,6 +4028,63 @@ masslow_b **0.037 / 0.006** —— 遠在 `EMPTY_ASYM` 0.12 之下。這是 §5a
 `measure_building_tris --live --osm-cache`(draw call 與 tris 逐位元對帳)+
 `shot_scene` 的 `mass_near` / 新增一個低矮街廓機位(**這一項只有截圖看得出來**)+
 `audit_cel_pipeline`(貼圖仍走 ramp/描邊那一套)+ 真機冒煙。
+
+## 5an. Trial log (2026-08-09 第四場 — 外牆圖層:**斜頂被貼上玻璃帷幕**,以及「同一種建築也要差異化」)
+
+> 使用者回報 + 定案:「**斜頂屋頂外觀變摩天大樓的玻璃,請修正**。不同類型、不同風格、
+> 平頂和斜頂等的建築外牆圖層都要不同;**就算是摩天大樓外牆圖層也不要只有一種,同一種建築
+> 也要差異化**;圖層也參考 2D 照片。」
+
+### 5an-a. 成因:庫節點是**單一材質群組**,而方盒那條路的屋頂走另一個材質
+
+方盒路徑是 `[wall, wall, roof, roof, wall, wall]` —— BoxGeometry 的六個材質群組裡,
+第 3/4 格(±Y)吃的是**素色屋頂材質**。庫節點只有一個群組 ⇒ three 取 `material[0]` = 立面貼圖,
+**整顆都貼窗格**。對平頂塔樓那是 §5aa ⑥ 就寫明的刻意取捨(俯視看得到頂面的機會低),
+對**斜屋頂**卻剛好相反:那一面就是整個剪影最顯眼的地方。
+
+### 5an-b. 外牆圖層(`wallLayer`):牆本身是什麼做的,與窗格分開
+
+舊制**只有一種牆**(純白 + 底部暗帶),所有差異都靠窗格節奏與 tint ⇒ 每一棟的牆其實是同一面牆。
+新增一層畫在窗格**之前**的圖樣,八款程序生成(Canvas2D,不進二進位資產),
+**比例與配色參考語料庫的 CC0 照片**,逐款在原文註明參考哪一張:
+
+| 圖層 | 參考照片 |
+|---|---|
+| `boardv` 直紋木板 + 壓縫條 | `bld_barn/ov_910e1b06`(Highsmith 紅色穀倉)|
+| `boardh` 橫紋雨淋板 | `bld_church/ov_16f1257f`(白色木造教堂)|
+| `stone` 亂石砌 | `bld_stonecottage/ov_3966cc35` |
+| `brick` 磚砌(交丁 + 灰縫)| `bld_warehouse/ov_bd624950` |
+| `stucco` 灰泥(低頻污漬)| `bld_medit/ov_f42bb333` |
+| `panel` 預鑄混凝土板 | `bld_office/ov_e62e476d` |
+| `spandrel` 帷幕裙板帶 | `bld_tower/ov_8811db29` |
+| `plainw` 純白(**舊制**,預設)| —— |
+
+既有 16 款(住宅 8 / 商辦 8)**逐款配一種**:摩天大樓那一組因此不再是同一面牆
+(`panel` / `spandrel` / `brick` / `stucco` 四種輪著配),而「同一種建築也要差異化」是
+**款式 × 窗格節奏 × 街區色相 × 逐棟 tint** 四層疊出來的,不是在貼圖裡逐棟重畫。
+`plainw` 不抽亂數 ⇒ 沒指定 `wall` 的呼叫端(地標那六支)逐位元不變。
+
+### 5an-c. 斜頂家族 `FACADES_PITCHED`
+
+低矮那一桶(`masslow`)改吃自己的六款:木板穀倉 / 雨淋板教堂 / 石砌農舍 / 灰泥民宅 /
+磚造校舍 / 深色木造 —— 窗小、亮燈率 0.12~0.20、**沒有帷幕玻璃也沒有店面遮陽棚**。
+款式由**落點雜湊**選(零 `rnd()`,§2.3)⇒ 同一張圖上的穀倉彼此不同。
+桶建構器仍**只有一個呼叫點**(稽核釘住 4 處)—— 材質先攤平成 `libEmit` 再一次發出去。
+
+### 5an-d. 驗收與**還沒解決的那一半**
+
+新機位 `masslow_near`(§5am-f 的第一條):`mass_near` 是對著**最高**那一叢拍的,兩張永遠不同框
+⇒ 低矮桶換了什麼在離線這一側**一張證據都拿不出來**。同輪也修掉「兩張機位對著同一棟拍」——
+`massGeo`(兩桶合計,給讀數對帳)與 `highGeo`(只給 mass_near 取景)要分開,
+拿合計去挑「第一顆」會挑到穀倉。
+
+截圖結論:斜頂建物**不再是玻璃帷幕**,現在是灰泥/木板/石砌牆。
+⚠ **但窗格仍會出現在斜屋頂面上** —— 因為單一材質群組這件事沒變,只是那張貼圖換成了
+材質感的牆。要讓屋頂真的是屋頂,下一步是**屋頂帶 UV**:
+`normalize_parts.py` 加 `--roofband <node>=<frac>`,把**朝上面**(Blender 軸 2 為主軸且法線向上)
+的 UV 壓進 `v ∈ [0, frac]`、側面壓進 `[frac, 1]`,而 `facadeTex` 在那一帶畫屋頂色與瓦縫。
+只需重跑 masslow 兩顆的 normalize(實體化 GLB 還在),平頂那兩顆可維持原狀(俯視機會低)。
+`npm run bal` / `npm test` 不受影響(㋒ 純表現層)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
