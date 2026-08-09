@@ -14,7 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
-| **⭐ 下一輪從這裡開始 — §5aj-C(只補有洞的;推翻 §5ad 的觸發條件)** | **待執行 2026-08-09** | 規格全文 **§5aj-C**(含回退清單與「樹族 MUST 排除在貼平之外」)。**§5aj-A 已落地 = §5ak;§5aj-B 已落地 = §5am**(第二個整棟量體桶 8/8 切分 + `masslow_a`/`masslow_b` 兩顆節點同輪出貨)。§5am-f 另留三項材料到位就能做的收尾 |
+| **⭐ 下一輪從這裡開始 — §5an 外牆圖層分型別/風格/屋頂形式 + 同型差異化 + 參考 2D 照片** | **待執行 2026-08-09** | 使用者定案原句與規格見 **§5an**(含現制量測、四個獨立改動與**兩條會踩到的既有約束**:立面款數就是 `mass`/`masslow` 兩桶 `pick_n` 的推導來源、`facadeTex` 的快取鍵沒帶參數)。§5aj-C(只補有洞的)仍未動;§5aj-A = §5ak、§5aj-B = §5am 已落地 |
 | §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
@@ -3965,6 +3965,69 @@ masslow_b **0.037 / 0.006** —— 遠在 `EMPTY_ASYM` 0.12 之下。這是 §5a
   同一份包絡內(水平徑向 0.475 = 與 mass_a/b 同值)⇒ 理由上不影響,但**節點入庫那一輪
   不可省**(CLAUDE.md 那一列的原話)。
 - `mass_c`(GE Building / 布魯托主義板樓已 matte 未生成)、`chimney_a` 的來源帳缺口。
+
+## 5an. ⭐ 使用者定案:**外牆圖層要分型別/風格/屋頂形式,同型還要差異化,並參考 2D 照片**(2026-08-09;規格,**尚未實作**)
+
+> 使用者原句:「不是每一棟建築外觀都用摩天大樓處理,不同類型,不同風格,平頂和斜頂等的
+> 建築外牆圖層都不同;就算是摩天大樓外牆也不只一種,同一種建築也要差異化;圖層也參考 2D 照片」
+
+### 5an-a. 現制是什麼(先量,再改)
+
+- 立面貼圖 = `facadeTex()` 現畫的 128×256 canvas,**共 16 張**(`FACADES.residential` 8 +
+  `commercial` 8),五種樣式模式(plain / curtain / hband / balcony / shop)。
+- 選哪一張 = `facadeStyle(b)`:**只有兩個維度** —— ㋐ 商辦/住宅(OSM 型別)㋑ 樓高分桶
+  (`FACADE_BUCKETS`,3 段)。桶內以收錄期抽好的 `b.v` 取模。
+- 同一張貼圖之上,逐棟的差異**只有色調**(`PALETTE` × `blockTone` 街區家族 × 逐實例明度抖)。
+- **屋頂形式完全不參與**:`gable` 是在 emit 迴圈裡才由 `rv = rnd()` 三分決定的(人字 / 四坡 /
+  平頂),而那時材質早就選好了 ⇒ **斜屋頂的低層住宅照樣掛著騎樓遮陽棚與帷幕窗**。
+- 用途也只有商辦/住宅兩格:`building=church` / `school` / `barn` 只要不是地標,一律落進住宅那 8 張。
+- 沒有任何一個參數來自照片語料。
+
+**規模感**(taipei101 --live 實測,§5al-a):617 棟建物、高度中位數 13.19m、> 55m 只有 18 棟
+⇒ 絕大多數落在住宅低層那一桶(`idx: [3, 5, 7]`)= **約 500 棟共用 3 張貼圖**。
+使用者說的「每一棟都用摩天大樓處理」在數字上是反過來的(高樓那一組反而選得比較細),
+但**體感一致**:低矮那 500 棟只有 3 種立面,而且其中兩張帶著店面/陽台這種市街語彙。
+
+### 5an-b. 四條要求 → 四個獨立的改動(依相依排序)
+
+**① 屋頂形式進選擇維度(結構性,最先做)**
+
+`gable` MUST 變成**建物的純函式**(同 `facadeStyle`),而不是 emit 迴圈裡的一枚 `rnd()`;
+否則分組的時候還不知道這一棟是不是斜屋頂。作法沿用本檔已經用過兩次的紀律:
+**`rnd()` 照抽(枚數不變 ⇒ 佈局逐位元不動),決定改吃位置雜湊**(同 `vis()` 的「只換推去哪裡」
+與 `djAt` 的落點雜湊)。⚠ 直接把那一枚 `rnd()` 刪掉 = 之後每一株植被/每一棟樓的序列整條推移
+(§2.3),而畫面上只表現成「這張圖的佈局變了」。
+
+**② 用途維度**(不只商辦/住宅):OSM 的 `building=` 值本來就在(`3155` 那一段已經在讀它),
+現制把它壓成一個 bool。至少要分出 **住宅 / 商辦 / 工業倉儲 / 宗教 / 教育醫療 / 農舍**六類,
+而分類 MUST 在既有那一支型別判定裡擴充(第二份 `building=` 對照表 = 兩份會分家)。
+
+**③ 同型差異化 MUST NOT 靠加 draw call**:每多一款立面就是多一個 InstancedMesh,而
+**立面段現行的 16 個 draw call 正是 `mass`/`masslow` 兩桶 `pick_n` 的推導來源**(§5am-a)——
+立面款一膨脹,那個預算的前提就跟著動。正解是**圖集 + 逐實例 UV**:同一張貼圖畫 N 個變體格,
+逐實例用 `InstancedBufferAttribute` 給一組 uv 偏移(draw call 不變、幾何不變)。
+這一條同時滿足使用者的「摩天大樓外牆也不只一種」與「同一種建築也要差異化」。
+
+**④ 參數取自照片(不是把照片貼上去)**:語料裡每一類都有整棟入鏡的照片
+(bld_office / bld_apartment / bld_warehouse / bld_barn / bld_church / bld_shophouse …)。
+可以**離線量**出來的東西:窗格節奏(去背後主體內部暗區的自相關 → cols/rows)、
+窗色與牆色(取樣中位色)、有沒有連續橫帶(hband)、有沒有騎樓(底層暗帶)。
+產出寫成一份資料表(同 `venueText.js` 的做法),`FACADES` 改讀它 ⇒ 「量出來的,不是手寫
+好看數字」。**MUST NOT 直接把照片當貼圖**:授權沒問題(CC0),但那是 2048² 的相片,
+與整套賽璐璐 + 硬邊窗格的畫面語言不相容,而且 draw call/記憶體都是另一個量級。
+
+### 5an-c. 這一輪 MUST 一起看的兩條既有約束
+
+- **draw call 預算**:見 ② —— 改 `FACADES` 長度 MUST 回頭重推 `tri_budget` 的 `mass.pick_n`。
+- **`facadeTex` 的快取鍵**是 `key` 字串,而參數(cols/rows/style)沒有進鍵 ⇒ 同名不同參數會
+  **靜默拿到第一次那一張**。加維度之前要先把鍵改成參數的函式。
+
+### 5an-d. 驗收(建議)
+
+`audit_siteplan`(立面款與屋頂形式的對應、`rnd()` 枚數不變的逐位元 A/B)+
+`measure_building_tris --live --osm-cache`(draw call 與 tris 逐位元對帳)+
+`shot_scene` 的 `mass_near` / 新增一個低矮街廓機位(**這一項只有截圖看得出來**)+
+`audit_cel_pipeline`(貼圖仍走 ramp/描邊那一套)+ 真機冒煙。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
