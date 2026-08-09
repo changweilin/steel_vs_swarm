@@ -79,6 +79,11 @@ function skyStops(skyC, fogC, W) {
   return { horiz, mid, zen };
 }
 
+// **穹頂刻意不吃世界曲面**(2026-08-09):它自寫 vertexShader ⇒ 天生吃不到 `project_vertex`
+// 的那一刀,而這正是對的 —— 天空在無限遠,沉降的是地面不是天。地表沉到地平線以下之後
+// 露出來的就是這片穹頂(它 `depthWrite: false` + `renderOrder: -10`,本來就墊在最底下),
+// 所以「遠處只剩天色」是這兩件事湊出來的,不需要任何新程式。
+// MUST NOT 為了統一而把它改成標準材質(那會讓穹頂整片跟著沉,地平線當場塌掉)。
 function makeSkyDome(span, skyC, fogC, W) {
   const { horiz, mid, zen } = skyStops(skyC, fogC, W);
   const mat = new THREE.ShaderMaterial({

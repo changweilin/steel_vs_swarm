@@ -600,12 +600,21 @@ export function damageNumber(scene, effects, pos, dmg, { big = false, text = nul
 // 依計畫 Task 3.2:平時近乎透明只剩 fresnel 邊緣光,受擊瞬間整面亮起
 // 六角能量格 + 波紋衰減(動漫式能量漣漪);格紋隨時間垂直流動。
 const SHIELD_VERT = /* glsl */`
+  #include <common>
   varying vec3 vN;
   varying vec3 vV;
   varying vec3 vP;
   void main() {
     vN = normalize( normalMatrix * normal );
-    vec4 mv = modelViewMatrix * vec4( position, 1.0 );
+    // 世界曲面(toon.js installWorldCurve):護盾泡泡是全專案**唯二**自寫頂點著色器的東西,
+    // 天生吃不到 project_vertex 的那一刀 ⇒ 得自己呼叫同一支 worldCurve。少了這一行,
+    // 遠處被護盾罩住的機體會沉下去、泡泡留在原處 = 罩子與機體脫開,而且沒有任何錯誤訊息。
+    // (另一個自寫的是 environment.js 的天空穹頂 —— 那一個**本來就該**留在無限遠。)
+    // ⚠ 這一段註解裡 MUST NOT 出現反引號:整支 SHIELD_VERT 是 JS 樣板字串,
+    //    註解裡的反引號會直接把字串結束掉(2026-08-09 實測:整支 vfx.js 當場語法錯誤)。
+    vec4 _sw = modelMatrix * vec4( position, 1.0 );
+    _sw.xyz = worldCurve( _sw.xyz, cameraPosition );
+    vec4 mv = viewMatrix * _sw;
     vV = -mv.xyz;
     vP = position;
     gl_Position = projectionMatrix * mv;

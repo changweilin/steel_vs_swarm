@@ -9,6 +9,114 @@
 import * as THREE from 'three';
 import { visualPref, onVisualChange } from './visualPrefs.js';
 import { makeField, bakeFieldTexture } from './field.js';
+import { curveKneeM, curveR } from './data.js';
+
+// ============ 世界曲面(2026-08-09;規則與推導全文見 data.js 的 CURVE 區塊)============
+// 使用者要的東西只有一句:**平面算完、擺完,最後一步才轉成曲面**。這裡就是那「最後一步」,
+// 而它落在**頂點著色器**是刻意的 —— JS 那一側(座標/朝向/碰撞/彈道/準星/小地圖/伺服器回報)
+// 一行都不必改,於是「平面算完再彎」不是靠約定維持的,是**結構上沒有第二份實作可以分家**
+// (原則 2 / A30 家族最常見的死法就是同一件事有兩份幾何)。
+//
+// 沉降發生在**世界空間**、量的是**離相機的水平距離** ⇒ ①等高水平面整片跟著彎(y = 常數
+// 變成繞著相機的旋轉拋物面,在本專案 5° 以內的張角上與真球面差 2cm);②「近處是平的」
+// 由拐點保證(見 data.js);③ 每一顆相機各彎各的 —— 主視窗 / 副視窗(僚機) / 陣亡運鏡 /
+// 定場鏡頭組共用同一份程式,`cameraPosition` 是 three 逐 pass 給的,不必各寫一份。
+//
+// **只彎頂點,不彎法線**:法線的正確傾角是 `(d − D0)/R`,在本專案的距離上限只有 3.2°,
+// 而畫面上那是 cel ramp 的同一階(A14 的階梯本來就是 60~90° 一階)⇒ 收它只會多付每頂點
+// 一次 normalMatrix 重算而看不出差別。
+//
+// **絕對直線類攻擊自動就是直的**:光束/曳光/貫穿管道全部是 `heightSegments = 1` 的單位圓柱
+// (`vfx.js unitCylinder`),兩端各自沉降、中間線性內插 = 曲面空間裡的**弦** —— 正是使用者
+// 說的「絕對直線類攻擊在彎曲後計算軌跡」。反過來,拋物線彈道(榴彈/導引)是逐幀移動的
+// 小物件,每一幀各自沉降 ⇒ 整條航跡跟著曲面走。兩者都不需要任何特判。
+// MUST NOT 為了「平滑」去細分光束幾何 —— 細分回來的中間點會各自往下沉,那條光束就彎了。
+//
+// **裝法 = 改 three 的共用 chunk,不是逐材質包裝**:`project_vertex` 是每一種 mesh 材質
+// (basic/toon/lambert/standard/points/line/depth,含本檔自己的 cel 補丁與反轉外殼)在
+// 頂點著色器**唯一**算 `gl_Position` 的地方,`ShaderLib.sprite` 是唯一的例外。改這兩處
+// = 全場一次到位,而且**日後任何人新建的材質自動吃到**(逐材質包裝的下場是「某一種特效
+// 沒有跟著彎」,而那要等到有人截圖才看得出來)。
+// 例外(自寫 vertexShader ⇒ 天生不吃這個 chunk):`environment.js` 的漸層天空穹頂 —— 它
+// **本來就該留在無限遠**,不彎是對的;`vfx.js` 的護盾泡泡另外呼叫 `worldCurve()`(它包著
+// 一台機體,不跟著沉就會在遠處與機體脫開)。
+const CURVE_SENTINEL = 'mvPosition = modelViewMatrix * mvPosition;';
+const SPRITE_SENTINEL = 'vec4 mvPosition = modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );';
+/** GLSL 浮點字面值(MUST 帶小數點或指數,否則是 int 型別 ⇒ 編譯失敗) */
+const glslF = (v) => {
+  const s = Number(v).toPrecision(9);
+  return /[.e]/.test(s) ? s : `${s}.0`;
+};
+/**
+ * 全域曲面函式,注入 `ShaderChunk.common`(頂點/片段兩邊都會展開,而 `common` 是
+ * **每一種**材質都 `#include` 的那一塊 ⇒ 函式一定在作用域內)。
+ * 相機位置**當參數傳**,函式本身不依賴任何 uniform ⇒ 自寫 shader 也直接呼叫得到。
+ *
+ * 停用時(`?curve=0` 或錨點對不上)兩個常數一起變成恆等式 —— 函式**永遠存在**,呼叫端
+ * 才不會因為補丁沒裝上而編譯失敗(降級,不例外)。
+ */
+const curveFn = (knee, inv2r) => `
+vec3 worldCurve( vec3 wp, vec3 cam ) {
+	float _cu = length( vec2( wp.x - cam.x, wp.z - cam.z ) ) - ${glslF(knee)};
+	if ( _cu > 0.0 ) wp.y -= _cu * _cu * ${glslF(inv2r)};
+	return wp;
+}
+`;
+let _curveOn = false;
+/** 曲面是否真的裝上了(稽核與 `?curve=0` 的回報用) */
+export function worldCurveOn() { return _curveOn; }
+/**
+ * 一次性安裝。**MUST 在任何材質編譯之前**跑 —— 但那是免費的:three 是在建 program 時才
+ * 展開 `#include`,而 program 要到第一次 render 才建,所以在本檔 import 時裝上必然夠早。
+ * 重複呼叫是 no-op(chunk 只准被改一次,改兩次就疊出兩層沉降)。
+ */
+function installWorldCurve() {
+  if (THREE.ShaderChunk.__worldCurve) return;
+  // `typeof` 守衛:本檔理論上只在瀏覽器跑(它 import three),但這一行是在**模組載入時**
+  // 執行的 —— 沒有守衛的話,任何一支想 import toon.js 的離線工具會死在這裡而不是死在
+  // three 上,錯誤訊息指向完全無關的地方。
+  const qs = typeof location !== 'undefined' ? location.search : '';
+  const off = new URLSearchParams(qs).get('curve') === '0';
+  const chunkOk = THREE.ShaderChunk.project_vertex.includes(CURVE_SENTINEL);
+  const spriteOk = THREE.ShaderLib.sprite.vertexShader.includes(SPRITE_SENTINEL);
+  // 錨點是 three r160 的**原文**;升級 three MUST 重新核對。對不上就整套退成平面
+  // (原則 6:寧缺勿錯 —— 半套曲面 = 有些東西沉有些不沉,比完全不彎難看也難查)
+  _curveOn = !off && chunkOk && spriteOk;
+  if (!off && !(chunkOk && spriteOk)) {
+    console.warn('[curve] three 的頂點錨點對不上,世界曲面退回平面', { chunkOk, spriteOk });
+  }
+  const knee = _curveOn ? curveKneeM() : 0;
+  const inv2r = _curveOn ? 1 / (2 * curveR()) : 0;
+  THREE.ShaderChunk.common += curveFn(knee, inv2r);
+  THREE.ShaderChunk.__worldCurve = true;
+  if (!_curveOn) return;
+  // `modelViewMatrix` = viewMatrix × modelMatrix,拆開只為了在世界空間插一刀;
+  // 不彎的材質(`NO_WORLD_CURVE`)逐位元走回原本那一行。
+  THREE.ShaderChunk.project_vertex = THREE.ShaderChunk.project_vertex.replace(
+    CURVE_SENTINEL,
+    `#ifdef NO_WORLD_CURVE
+	mvPosition = modelViewMatrix * mvPosition;
+#else
+	vec4 _cwp = modelMatrix * mvPosition;
+	_cwp.xyz = worldCurve( _cwp.xyz, cameraPosition );
+	mvPosition = viewMatrix * _cwp;
+#endif`,
+  );
+  // sprite 的中心點在自己的 shader 裡算(它不吃 project_vertex);四邊形展開仍在視域空間,
+  // 所以只要把**中心**沉下去,billboard 的朝向與大小逐位元不變。
+  THREE.ShaderLib.sprite.vertexShader = THREE.ShaderLib.sprite.vertexShader.replace(
+    SPRITE_SENTINEL,
+    `vec4 mvPosition;
+	#ifdef NO_WORLD_CURVE
+		mvPosition = modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );
+	#else
+		vec4 _cwc = modelMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );
+		_cwc.xyz = worldCurve( _cwc.xyz, cameraPosition );
+		mvPosition = viewMatrix * _cwc;
+	#endif`,
+  );
+}
+installWorldCurve();
 
 // ---- cel ramp 家族(NearestFilter = 硬邊界)----
 // **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
