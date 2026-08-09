@@ -126,14 +126,19 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
   // 這正是「勾線對新冠形是加分還是扣分」那一項卡了三輪沒答案的原因:
   // `shot_veg` 載庫但**沒有管線**(黏土)、`shot_scene` 有管線但**不載庫** —— 兩邊各缺一半。
   // `--lib=0` 保留舊行為當**前後對照的「前」**(保險絲路徑),而不是預設。
-  let libN = 0;
+  let libN = 0, massGeo = null;
   if (layers.lib) {
-    const { loadPartLibs, libGeo } = await import('/public/js/partlib.js');
+    const { loadPartLibs, libGeo, libNames } = await import('/public/js/partlib.js');
     await loadPartLibs();
     // 載到幾顆 MUST 印出來:載入失敗時 `libGeo` 一律回 null、消費端**逐位元**退回保險絲,
     // 而那與「根本沒載庫」畫出來的圖一模一樣 —— 沒有這個讀數就分不出這兩件事。
-    libN = ['tree/cf2_crown_a', 'tree/cf2_wood_a', 'tree/bl_crown_a', 'tree/bl_wood_a',
-            'tree/snag_a', 'tree/bush_a09'].filter((n) => libGeo(n)).length;
+    // 清單 MUST 由 `libNames()` 推導,MUST NOT 手寫 —— 手寫的那一份在名冊擴充時會靜默過期
+    // (2026-08-09 §5ae:`mass` 名冊補到第 2 顆,而這裡與下面的機位都還只認得 mass_a)。
+    const names = libNames();
+    libN = names.length;
+    // 整棟量體庫節點:下面的 mass_near 機位靠它認人 —— **整個 mass 家族都要認**,
+    // 否則挑中 mass_b 的那幾棟拍不到,而畫面上只表現成「這張圖好像沒換到庫節點」。
+    massGeo = names.filter((n) => n.startsWith('building/mass_')).map((n) => libGeo(n)).filter(Boolean);
   }
 
   const terrain = await buildTerrain(cfg, () => {});
@@ -239,6 +244,27 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay }) 
         name: 'veg_near',
         p: [tx + dist * 0.80, base + th * 0.55, tz + dist * 0.60],
         look: [tx, base + th * 0.45, tz],
+      });
+    }
+  }
+  // 整棟量體庫節點的近景(佇列 F;2026-08-08):那一桶只換「全圖最高的十幾棟」⇒ 既有機位
+  // 幾乎拍不到它,而它正是**唯一吃立面貼圖**的庫節點(盒投影 UV 一錯,畫面上是一塊沒有窗的
+  // 純色板,而外廓契約與三角形預算全綠)。認人 MUST 比對**幾何物件本身**(庫節點是共用
+  // 參照),MUST NOT 靠 mesh 名字或面數猜。庫沒載到(`--lib=0`)就沒有這一張。
+  if (massGeo && massGeo.length && bio) {
+    let hit = null;
+    bio.traverse((o) => {
+      if (hit || !o.isInstancedMesh || !massGeo.includes(o.geometry) || !o.count) return;
+      const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
+      o.getMatrixAt(0, M); M.decompose(P, Q, S);
+      hit = { p: P.clone(), s: S.clone() };
+    });
+    if (hit) {
+      const th = hit.s.y, dist = th * 1.6;
+      stations.push({
+        name: 'mass_near',
+        p: [hit.p.x + dist * 0.8, hit.p.y + th * 0.35, hit.p.z + dist * 0.6],
+        look: [hit.p.x, hit.p.y, hit.p.z],
       });
     }
   }

@@ -434,6 +434,14 @@ alternatives; they split **by geometry class**:
 
 ### 8.1 Scope narrowed to organic geometry only (user decision, 2026-08-08)
 
+> **⚠ 同日稍晚被部分覆寫 —— `BUILDERS` 那一列改成「做」。** 使用者接著指示
+> 「ai3d_runbook.md 接著處理建築的部分」,被問到「這與 §8.1 的『不做』直接衝突,要往哪邊走」
+> 時選擇 **執行 runbook 佇列 F**(整棟量體的消費端縫 + T2 入庫路徑)。落地紀錄見
+> `docs/ai3d_runbook.md` **§5aa**(預算 + 縫已出貨,零節點)。§8.1 其餘各列(`CIVIC_PARTS`
+> 婉拒、`KIND_PARTS` 凍結、`BLD_LIB` 維持)**不受影響**;下面「roster 是旋鈕」那一段對樹族
+> 仍然成立。整棟量體走的是 **GLB 那一軌**(與 `BLD_LIB` 屋頂配件同一種消費端形狀),
+> 不是下表所寫的「LLM 寫純資料零件列」—— 而那正是下面第 1 點早就記下來的分岔。
+
 User decision, verbatim: **「一般景觀樹木/石頭等複雜幾何形狀的可以建立就好」** — build the AI part
 library **only** for complex organic shapes (landscape trees, rocks). This settles the open
 recommendation from the previous pass (extend `CIVIC_PARTS` next): **it is declined.**
@@ -447,7 +455,7 @@ What the decision changes:
 | `MEGALITHS` / `MEGA_LIB` rocks(rock/*)| live, 19 of 29 slots used | **in scope, the only family with real headroom** |
 | `CIVIC_PARTS` civic props | recommended next | **not doing** — declined |
 | `KIND_PARTS` landmarks | 6 `['lib',…]` descriptors declared | **freeze at what is declared** — no new nodes |
-| `BUILDERS` building masses | table says "LLM writes part rows" | **not doing** |
+| `BUILDERS` building masses | table says "LLM writes part rows" | ~~**not doing**~~ → **覆寫 2026-08-08:做**(runbook 佇列 F / §5aa;走 GLB 整棟節點那一軌,不是 LLM 純資料列。名稱另有一筆更正:城市建物的消費端不是 `hazards.js BUILDERS`,是 `biomes.js` 一般建物繪製段那個 6 材質群組的 InstancedMesh)|
 | `BLD_LIB` roof deco(building/*)| live, `node_caps` measured 2026-08-06 | **stays as-is** — do not rip out; it is already measured and wired |
 
 The decision is a scope gate on *new* families, not a rollback. Nothing that already ships gets

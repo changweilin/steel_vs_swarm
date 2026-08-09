@@ -147,9 +147,13 @@ function build(phase, src, kind, seed, builder = 'beacon') {
     } else if (builder === 'bld' && gfx.biomes.buildBldBucket?.[kind]) {
       // 建物屋頂配件桶:遊戲自己的桶建構表(count = 1 取樣)。instance scale 就是尺寸,
       // 這裡只給一組代表性尺寸讓幾何看得出比例 —— 台子不模擬佈局,數字是取樣不是第二份佈局。
-      const DIM = { chimney: [1.15, 4.2, 1.15], tank: [1.75, 3.5, 1.75], acbox: [2.2, 2.6, 2.2] };
+      // mass = 整棟量體(佇列 F):代表尺寸取「挑得中的那一群」的量級(高層商辦 h > 55m),
+      // 不是配件的那個量級 —— 拿 2m 的機房尺寸去縮一整棟樓,台上會看到一塊薄片。
+      // 第三參數 = 名冊輪替索引,借用座號:`mass` 是輪替名冊(一款打天下 = 同一條天際線
+      // 十幾棟同剪影),台上逐座號正好把整份名冊都翻一遍;舊三桶多收一個參數無作用。
+      const DIM = { chimney: [1.15, 4.2, 1.15], tank: [1.75, 3.5, 1.75], acbox: [2.2, 2.6, 2.2], mass: [22, 90, 22] };
       const [sx, sy, sz] = DIM[kind] || [1, 1, 1];
-      const im = gfx.biomes.buildBldBucket[kind](1);
+      const im = gfx.biomes.buildBldBucket[kind](1, undefined, seed);
       im.setMatrixAt(0, new gfx.THREE.Matrix4().compose(
         new gfx.THREE.Vector3(0, sy / 2, 0), new gfx.THREE.Quaternion(),
         new gfx.THREE.Vector3(sx, sy, sz)));

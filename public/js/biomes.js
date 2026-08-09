@@ -1871,21 +1871,59 @@ const NBLK = MEGA_LIB.block.length;
 // 全桶所有 instance,draw call 逐位元不變;屋頂配件本無碰撞柱(佈局/碰撞無庫可讀的問題
 // 天然不存在);換幾何消耗 0 枚 rnd(§2.3)。不 clone —— 這些桶不過 bakeContactAO,
 // 幾何唯讀共用(與 megaGeo 的差異點,理由在各自的消費方式)。
+// ---- 第四桶 `mass` = **整棟量體**(佇列 F;2026-08-08 使用者定案「執行佇列 F」)----
+// 與上面三桶的差別只有一個,但它決定了整條縫的形狀:**這一桶不整桶換,只換一個子集**,
+// 而那是**量出來的**不是挑出來的 —— 主量體是單位方盒(12 tris)× 全圖 1,325 個 instance
+// (taipei101 --live 實測上界),整桶換的逐節點上限只有 **36 tris**
+// (tri_budget families.building.mass.full_swap_cap),而 §5o 已實測 500 面就留不住
+// Art Deco 的退縮量體 ⇒ 整桶換出來的每一棟還是同一團方塊。故改成「全圖最高的
+// `MASS.PICK_N` 棟高層商辦」,上限因此拉到 2,981 面。挑選規則見下方 `MASS`。
+// 名冊值的第一格**可以是陣列**(輪替名冊,同 MEGA_LIB.block):整棟量體一款打天下的話,
+// 同一條天際線上會出現十幾棟一模一樣的剪影(零件庫紀律「烤整棟樓會把逐實例變化丟掉」的
+// 同一個病)。輪替除數由名冊長度推導,MUST NOT 寫死(MEGA_LIB 那條教訓:名冊擴充後
+// 第 N 顆以後永遠取不到,檔案在、intake 綠、遊戲裡一顆都沒出現過)。
 const BLD_LIB = {
   chimney: ['building/chimney_a', ['box', 1, 1, 1]],   // 磚砌煙囪(chimneys 桶)
   // tank: ['building/tank_a', ['cyl', 1, 1, 1]],      // 圓筒水塔 —— 節點入庫時再開這一列
   //   (2026-08-06:rooftank 候選照全是場景照/有人入鏡,tank_wood 木製水塔列等節流窗)
   acbox:   ['building/ac_a', ['box', 1, 1, 1]],        // 空調機組/機房(roofBoxes 桶)
+  // 整棟量體(高層商辦子集;§5aa/§5ab)。**輪替名冊 MUST ≥2 顆** —— 只有一顆的話
+  // 同一張圖上挑中的十幾棟塔樓是同一個剪影(尺寸各異、形狀相同),而所有離線閘門全綠。
+  // a = 退縮階梯式方塔、b = 寬裙樓 + 細塔身 + 尖頂(§5ae)。
+  mass: [['building/mass_a', 'building/mass_b'], ['box', 1, 1, 1]],
 };
-const bldGeo = (key) => (BLD_LIB[key] ? libGeo(BLD_LIB[key][0]) : null);
-// 桶建構表(凍結三桶):單位 primitive 保險絲 + 桶色 + InstancedMesh 一次定案在這裡。
-// 兩個消費端:①下方一般建物繪製段的三個桶(遊戲內唯一呼叫點);②`tools/parts_review`
+// `i` = 輪替索引(只有陣列名冊吃得到;單一字串的舊三桶逐位元不受影響)
+const bldGeo = (key, i = 0) => {
+  const row = BLD_LIB[key];
+  if (!row) return null;
+  const n = row[0];
+  return libGeo(Array.isArray(n) ? n[((i % n.length) + n.length) % n.length] : n);
+};
+/** 該桶名冊有幾顆節點(0 = 這一桶還沒入庫;輪替除數的唯一來源) */
+const bldLibN = (key) => { const n = BLD_LIB[key]?.[0]; return n ? (Array.isArray(n) ? n.length : 1) : 0; };
+// 整棟量體的挑選規則(兩個值都與 tri_budget families.building.mass 同一份,audit_siteplan Ⅴ 釘住相等)
+const MASS = {
+  MIN_H: 55,    // 高層商辦門檻:沿用 biomes 既有的退縮頂塔門檻,MUST NOT 另發明數字
+  PICK_N: 16,   // 全圖挑中棟數上限(推導值:額外 draw call ≤ 立面段現行的 16 個)
+};
+// 桶建構表(凍結四桶:煙囪/水塔/空調機組/整棟量體):單位 primitive 保險絲 + 桶色 +
+// InstancedMesh 一次定案在這裡。
+// 兩個消費端:①下方一般建物繪製段的四個桶(遊戲內唯一呼叫點);②`tools/parts_review`
 // 3D 零件對照台(dev-only、唯讀,count=1 取樣)—— 台上另抄 primitive/桶色就是第二套
 // 組裝器(runbook §7 紀律 ①),它壞掉的樣子是「對照台上的原版與遊戲裡的不是同一個東西」。
 export const buildBldBucket = {
   chimney: (n) => new THREE.InstancedMesh(bldGeo('chimney') || new THREE.BoxGeometry(1, 1, 1), bmat(0x9a5a44, { wash: 0.5 }), n),
   tank: (n) => new THREE.InstancedMesh(bldGeo('tank') || new THREE.CylinderGeometry(1, 1, 1, 8), bmat(0xb0b8be), n),
   acbox: (n) => new THREE.InstancedMesh(bldGeo('acbox') || new THREE.BoxGeometry(1, 1, 1), bmat(0x8a9096), n),
+  // 整棟量體:材質由呼叫端傳入 —— 立面貼圖是**逐立面款**現做的(窗格 + 夜間自發光),
+  // 這裡自己 new 一份就是第二套立面材質,而症狀是「那幾棟高樓晚上不亮」。庫節點是單一
+  // 群組 ⇒ three 取材質陣列的第 0 格,故傳單一 wall 材質即可(頂面也吃立面貼圖,是
+  // 刻意的取捨:換到的是最高的十幾棟,俯視看得到頂面的機會遠低於「晚上不亮」的代價)。
+  // 節點契約因此多一條:匯出端 MUST 給**盒投影 UV**(沿用原 BoxGeometry 的 0..1 逐面
+  // 慣例),否則整棟只採到 (0,0) 那一個 texel = 一塊沒有窗的純色板。
+  // 對照台(count = 1 取樣)不傳材質 ⇒ 退回素色,只看幾何。
+  mass: (n, mat, i = 0) => new THREE.InstancedMesh(bldGeo('mass', i) || new THREE.BoxGeometry(1, 1, 1),
+    mat || bmat(0xb9b3a8, { wash: 0.5 }), n),
 };
 
 // 巨岩的三支建構器**具名匯出**(2026-08-06):第二個消費端 = `tools/parts_review`(3D 零件
@@ -7670,6 +7708,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
+    // 名冊裡**真的載到**的節點索引(整批取不到 ⇒ 下面一棟都不挑 ⇒ 逐位元同舊制)。
+    // 探詢只在這裡做一次:放進逐棟迴圈就是同一個名字每棟查一遍,而且會多一個消費點。
+    const massOk = [];
+    for (let k = 0; k < bldLibN('mass'); k++) if (bldGeo('mass', k)) massOk.push(k);
+    // 整棟量體庫節點的**選取**:全圖一次定案,不是逐立面款各挑各的 —— 預算的除數是
+    // 「全圖挑中幾棟」(tri_budget families.building.mass.pick_n),逐款各挑會讓總數
+    // 隨款數翻倍。純函式:只讀 b.commercial/h/x/z(權威佈局資料),**零 rnd() 消耗**
+    // (§2.3 / A4)、**不讀庫幾何**(佈局數學只讀保險絲;能不能換成由上面的 massOk 決定)。
+    // 排序尾巴帶 x/z 是為了跨客戶端逐位元同一組:等高的兩棟不能靠 sort 的實作穩定性決定。
+    const massPick = new Set(massOk.length
+      ? generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
+        .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z).slice(0, MASS.PICK_N)
+      : []);
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
       // 各立面樣式一個 InstancedMesh(共 16 個 draw call,仍是常數級);
@@ -7700,7 +7751,19 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             gy = Math.min(gy, terrain.heightAt(b.x + lx * ca + lz * sa, b.z - lx * sa + lz * ca));
           }
           const palC = pal[((i * 2654435761) >>> 0) % pal.length];
-          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC });
+          // 挑中整棟庫節點的那幾棟:**純視覺的屋頂/立面附件一律不掛** —— 節點自己帶著
+          // 退縮頂塔與立面,再疊一頂程序頂塔或一塊懸空看板就是「兩頂帽子」(實測:附件
+          // 掛在**方盒**頂 gy+b.h,而庫節點的頂在 0.95×b.h 且末端收成尖塔 ⇒ 看板/天線
+          // 浮在半空)。**MUST 只換「推去哪裡」,rnd() 照抽**(同 synthMegalith 整座型
+          // 分支:庫節點只換 add 進場景,枚數有無零件庫逐位元相同,§2.3 / A4)。
+          // 帶碰撞柱的兩件(主量體、臨街裙樓)**MUST NOT 進丟棄桶** —— 少掛一根碰撞柱
+          // 會讓「載到庫的客戶端」與「沒載到的」權威幾何分家(A30 + §2.3)。
+          const libMass = massPick.has(b);
+          const sink = [];
+          const vis = (arr) => (libMass ? sink : arr);
+          // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
+          // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
+          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.has(b) });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
           // ty = **可見**盒頂(= 上面 inst 那一項的頂面,推導不手寫):碰撞柱刻意比實體高 0.5m
@@ -7715,11 +7778,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const tw = b.w * 0.62, td = b.d * 0.62, th = b.h * 0.22;
             const ox = (rnd() - 0.5) * (b.w - tw) * 0.8, oz = (rnd() - 0.5) * (b.d - td) * 0.8;
             [crownX, crownZ] = toW(ox, oz);
-            inst.push({ x: crownX, y: gy + crownTop + th / 2 - 0.5, z: crownZ, ry: b.ry, w: tw, h: th, d: td, c: palC });
+            vis(inst).push({ x: crownX, y: gy + crownTop + th / 2 - 0.5, z: crownZ, ry: b.ry, w: tw, h: th, d: td, c: palC });
             crownTop += th;
             if (b.h > 100 && rnd() < 0.55) {
               const t2 = th * 0.7;
-              inst.push({ x: crownX, y: gy + crownTop + t2 / 2 - 0.5, z: crownZ, ry: b.ry, w: tw * 0.62, h: t2, d: td * 0.62, c: palC });
+              vis(inst).push({ x: crownX, y: gy + crownTop + t2 / 2 - 0.5, z: crownZ, ry: b.ry, w: tw * 0.62, h: t2, d: td * 0.62, c: palC });
               crownTop += t2;
             }
           }
@@ -7745,17 +7808,17 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             gable = true;
             const rh = 2.5 + rnd() * 3;
             // 人字屋頂:脊沿較長那一軸(短軸當脊 = 屋頂比立面還窄,讀成戴錯帽子)
-            (rv < 0.32 ? roofPrisms : roofGables).push(rv < 0.32
+            vis(rv < 0.32 ? roofPrisms : roofGables).push(rv < 0.32
               ? { x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry + (b.w >= b.d ? 0 : Math.PI / 2),
                   w: Math.max(b.w, b.d) * 1.08, d: Math.min(b.w, b.d) * 1.08, h: rh }
               : { x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: b.w, d: b.d, h: rh });
             if (rnd() < 0.55) {                                 // 磚煙囪:根植屋頂平面、貫穿斜屋面冒出
               const [cxw, czw] = toW((rnd() - 0.5) * b.w * 0.3, (rnd() - 0.5) * b.d * 0.2);
               // 從簷口面起算、高過該點屋面(≤0.85rh)→ 永不懸空,也必露頭
-              chimneys.push({ x: cxw, z: czw, y: gy + b.h - 0.5, ry: b.ry, w: 0.9 + rnd() * 0.5, h: rh * 0.85 + 1.2 + rnd() * 1.0 });
+              vis(chimneys).push({ x: cxw, z: czw, y: gy + b.h - 0.5, ry: b.ry, w: 0.9 + rnd() * 0.5, h: rh * 0.85 + 1.2 + rnd() * 1.0 });
             }
           } else if (rnd() < 0.5) {                             // 平屋頂:頂緣簷口外挑帶
-            cornices.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: b.w * 1.07, d: b.d * 1.07, c: fd.roof });
+            vis(cornices).push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: b.w * 1.07, d: b.d * 1.07, c: fd.roof });
           }
           // 屋頂配件(斜屋頂棟跳過):機房/水塔照舊,擴充太陽能板陣列/屋頂花園
           // (綠地墊 + 灌木花盆 + 盆栽闊葉樹)/行動基地台。屋頂是唯一允許的附著面
@@ -7766,38 +7829,38 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             const [wx, wz] = toW(ox, oz);
             const topY = gy + b.h - 0.5;
             if (rr < 0.2) {
-              roofBoxes.push({
+              vis(roofBoxes).push({
                 x: wx, z: wz, y: topY, ry: b.ry,
                 w: 1.6 + rnd() * b.w * 0.12, h: 1.4 + rnd() * 2.4, d: 1.6 + rnd() * b.d * 0.12,
               });
             } else if (rr < 0.36) {
-              roofTanks.push({ x: wx, z: wz, y: topY, r: 1.1 + rnd() * 1.3, h: 2.4 + rnd() * 2.2 });
+              vis(roofTanks).push({ x: wx, z: wz, y: topY, r: 1.1 + rnd() * 1.3, h: 2.4 + rnd() * 2.2 });
             } else if (rr < 0.58) {
               // 太陽能板:沿建物軸向一排同向斜板(排長受屋頂寬度夾限)
               const nP = Math.max(1, Math.min(2 + Math.floor(rnd() * 3), Math.floor(b.w * 0.8 / 3.2)));
               for (let p = 0; p < nP; p++) {
                 const [px2, pz2] = toW(ox * 0.4 + (p - (nP - 1) / 2) * 3.2, oz);
-                roofPanels.push({ x: px2, z: pz2, y: topY, ry: b.ry });
+                vis(roofPanels).push({ x: px2, z: pz2, y: topY, ry: b.ry });
               }
             } else if (rr < 0.72 && Math.min(b.w, b.d) > 11) {
               // 屋頂花園:綠地墊 + 灌木簇 + (六成)一株盆栽闊葉樹
-              roofPads.push({ x: wx, z: wz, y: topY, ry: b.ry, w: b.w * 0.45, d: b.d * 0.4 });
+              vis(roofPads).push({ x: wx, z: wz, y: topY, ry: b.ry, w: b.w * 0.45, d: b.d * 0.4 });
               const nB = 2 + Math.floor(rnd() * 2);
               for (let p = 0; p < nB; p++) {
                 const [bx2, bz2] = toW(ox + (rnd() - 0.5) * b.w * 0.3, oz + (rnd() - 0.5) * b.d * 0.26);
-                roofBushes.push({ x: bx2, z: bz2, y: topY + 0.3, s: 0.7 + rnd() * 0.6 });
+                vis(roofBushes).push({ x: bx2, z: bz2, y: topY + 0.3, s: 0.7 + rnd() * 0.6 });
               }
-              if (rnd() < 0.6) roofTreeList.push({ x: wx, z: wz, y: topY + 0.3, s: 0.9 + rnd() * 0.5 });
+              if (rnd() < 0.6) vis(roofTreeList).push({ x: wx, z: wz, y: topY + 0.3, s: 0.9 + rnd() * 0.5 });
             } else if (rr < 0.82) {
               // 行動基地台:桅桿 + 頂端三向扇區天線
               const mh = 4.5 + rnd() * 2.5;
-              cellMasts.push({ x: wx, z: wz, y: topY, h: mh });
+              vis(cellMasts).push({ x: wx, z: wz, y: topY, h: mh });
               for (let p = 0; p < 3; p++) {
-                cellPanels.push({ x: wx, z: wz, y: topY + mh - 1.0, ry: b.ry + p * (Math.PI * 2 / 3) });
+                vis(cellPanels).push({ x: wx, z: wz, y: topY + mh - 1.0, ry: b.ry + p * (Math.PI * 2 / 3) });
               }
             } else {
               // 單簇花盆灌木(小屋頂也放得下)
-              roofBushes.push({ x: wx, z: wz, y: topY, s: 0.7 + rnd() * 0.6 });
+              vis(roofBushes).push({ x: wx, z: wz, y: topY, s: 0.7 + rnd() * 0.6 });
             }
             // 大平頂第二件配件(2026-08-05;sakura-crossing「獨立地面掃描」的屋頂版):
             // 面積夠大的屋頂只放一件會顯空。位置雜湊決定(零共享 rnd,§2.3 —— 既有佈局
@@ -7806,8 +7869,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
               const h2 = djAt(b.x + 31.7, b.z - 17.3);
               if (h2 < 0.55) {
                 const [w2x, w2z] = toW(-ox, -oz);
-                if (h2 < 0.22) roofTanks.push({ x: w2x, z: w2z, y: topY, r: 0.9 + h2 * 2.2, h: 2.2 + h2 * 4 });
-                else roofBoxes.push({ x: w2x, z: w2z, y: topY, ry: b.ry, w: 1.4 + h2 * 2, h: 1.2 + h2 * 2.4, d: 1.4 + h2 * 2 });
+                if (h2 < 0.22) vis(roofTanks).push({ x: w2x, z: w2z, y: topY, r: 0.9 + h2 * 2.2, h: 2.2 + h2 * 4 });
+                else vis(roofBoxes).push({ x: w2x, z: w2z, y: topY, ry: b.ry, w: 1.4 + h2 * 2, h: 1.2 + h2 * 2.4, d: 1.4 + h2 * 2 });
               }
             }
           }
@@ -7815,7 +7878,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             // 看板長寬比 MUST 由圖集儲存格推導(signAspect):牌面比例與貼圖比例不合不會報錯,
             // 只會把上面的字橫向壓成一條糊帶(A37)。舊制 h 是獨立亂數 ⇒ 比例逐塊亂跑。
             const bw = Math.min(b.w * 0.7, 10) * (0.8 + rnd() * 0.2);
-            billboards.push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: bw, h: bw / signAspect('billboard') });
+            vis(billboards).push({ x: b.x, z: b.z, y: gy + b.h - 0.5, ry: b.ry, w: bw, h: bw / signAspect('billboard') });
           }
           if ((commercial || fd.style === 'shop') && b.h > 14 && rnd() < 0.35) {
             // 直式招牌:亞洲街景的垂直長條招牌,掛在牆面微凸 0.4m
@@ -7837,7 +7900,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             // 這裡 MUST 是 `if` 不是 `return` —— 外層是 `list.forEach`,`return` 會**連同底下
             // 的天線一起跳掉**(改到的是別的系統,而畫面上只表現成「高樓的天線變少了」)。
             if (!resolveName(b.tags)) {
-              wallSigns.push({
+              vis(wallSigns).push({
                 x: sx2, z: sz2, y: gy + b.h * 0.55 - 0.5,
                 ry: b.ry + (alongW ? 0 : Math.PI / 2),
                 w: sw, h: sh,
@@ -7845,29 +7908,51 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             }
           }
           if (commercial && b.h > 60 && rnd() < 0.6) {
-            antennas.push({ x: crownX, z: crownZ, y: gy + crownTop - 0.5, h: 5 + rnd() * 7 });   // 偏心頂塔時跟著塔頂
+            vis(antennas).push({ x: crownX, z: crownZ, y: gy + crownTop - 0.5, h: 5 + rnd() * 7 });   // 偏心頂塔時跟著塔頂
           }
         });
+        // 色抖的雜湊吃**這一列在 inst 裡的原始序**:下面會把挑中整棟節點的那幾列拆去
+        // 另一個 mesh,拿拆完後的新索引去雜湊會讓其餘每一棟的色相都跟著平移(沒有錯誤
+        // 訊息,只表現成「這張圖的街廓配色跟上次不一樣」)。名冊空著時 ord === 索引 ⇒
+        // 逐位元同舊制。
+        inst.forEach((t, i) => { t.ord = i; });
+        // 一組實例 → 一個 InstancedMesh(幾何/材質由呼叫端給,其餘逐位元照舊)
+        const emitMass = (rows, mesh) => {
+          rows.forEach((t, i) => {
+            E.set(0, t.ry, 0); Q.setFromEuler(E);
+            P.set(t.x, t.y, t.z);
+            S.set(t.w, t.h, t.d);
+            M.compose(P, Q, S);
+            mesh.setMatrixAt(i, M);
+            // 色盤之上先疊**街區色相家族**(同街區同家族、跨街區換家族,見 blockTone 檔頭),
+            // 再疊每實例色相/明度微抖:同色相鄰棟不再完全同色(水彩手感)
+            const bt = blockTone(t.x, t.z);
+            const jh = ((t.ord * 2654435761) >>> 0) % 100 / 100;
+            const jl = ((t.ord * 1597334677) >>> 0) % 100 / 100;
+            tint.setHex(t.c).offsetHSL(bt.dh + (jh - 0.5) * 0.03, bt.ds, bt.dl + (jl - 0.5) * 0.1);
+            mesh.setColorAt(i, tint);
+          });
+          mesh.instanceMatrix.needsUpdate = true;
+          if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+          mesh.frustumCulled = false;
+          group.add(mesh);
+        };
+        // 整棟量體庫節點:挑中的那幾棟幾何與方盒不同 ⇒ 只能另開 mesh,並依**位置雜湊**
+        // 分到名冊裡的哪一顆(零 rnd,同屋頂第二件配件那條;逐棟輪替除數取自名冊長度)。
+        // 庫沒載到 ⇒ `bldGeo` 回 null ⇒ 該列落回方盒桶 = **逐位元同舊制**(保險絲,原則 6)。
+        const boxRows = [], libRows = new Map();
+        for (const t of inst) {
+          if (!t.lib) { boxRows.push(t); continue; }
+          const k = massOk[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * massOk.length) % massOk.length];
+          if (!libRows.has(k)) libRows.set(k, []);
+          libRows.get(k).push(t);
+        }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
-        const m = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), [wall, wall, roof, roof, wall, wall], inst.length);
-        inst.forEach((t, i) => {
-          E.set(0, t.ry, 0); Q.setFromEuler(E);
-          P.set(t.x, t.y, t.z);
-          S.set(t.w, t.h, t.d);
-          M.compose(P, Q, S);
-          m.setMatrixAt(i, M);
-          // 色盤之上先疊**街區色相家族**(同街區同家族、跨街區換家族,見 blockTone 檔頭),
-          // 再疊每實例色相/明度微抖:同色相鄰棟不再完全同色(水彩手感)
-          const bt = blockTone(t.x, t.z);
-          const jh = ((i * 2654435761) >>> 0) % 100 / 100;
-          const jl = ((i * 1597334677) >>> 0) % 100 / 100;
-          tint.setHex(t.c).offsetHSL(bt.dh + (jh - 0.5) * 0.03, bt.ds, bt.dl + (jl - 0.5) * 0.1);
-          m.setColorAt(i, tint);
-        });
-        m.instanceMatrix.needsUpdate = true;
-        if (m.instanceColor) m.instanceColor.needsUpdate = true;
-        m.frustumCulled = false;
-        group.add(m);
+        if (boxRows.length) {
+          emitMass(boxRows, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+            [wall, wall, roof, roof, wall, wall], boxRows.length));
+        }
+        for (const [k, rows] of libRows) emitMass(rows, buildBldBucket.mass(rows.length, wall, k));
       }
     }
     if (cornices.length) {

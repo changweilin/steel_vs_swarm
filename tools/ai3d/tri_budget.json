@@ -18,22 +18,45 @@
    "staleness": "①synthMegalith 的 marble/崩落塊/伴生丘、decorateMegalith 的疊石堆**任一迴圈上限一改** MUST 重數 max_lib_parts_per_rock(新增第五個吃 MEGA_LIB 的呼叫點同理);②岩體零件表一改 MUST 重跑 measure_megalith_tris.mjs 重量 measured_max_tris;③factor 是推導值(= whole_factor ÷ max_lib_parts_per_rock),MUST NOT 手改。"
   },
   "building": {
-   "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於三個最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名;2026-08-06)。instance 上界(三場取最大):chimneys 212(shibuya)/ roofTanks 97(seoul)/ roofBoxes 117(seoul);配件桶總量上界 50,936 tris(seoul;shibuya 47,416、manhattan 35,940);全場三角形 1.47M~1.72M(配件佔比 2.5~3.1%)",
-   "measured_deco_total_max": 50936,
+   "measured_what": "建物屋頂配件 InstancedMesh 桶(biomes.js 一般建物繪製段)於**四個**最密市區場地實測(tools/ai3d/measure_building_tris.mjs:playwright 頁內執行真品 buildTerrain+buildBiomes+真 three,--live 真 Overpass 圖資,逐 InstancedMesh 以幾何型別+材質色指紋對回桶名)。**2026-08-08 重取樣並採用**(舊值來自 2026-08-06 的三場,沒取到 taipei101 —— 全套場地裡建物最多的一張,1,114 棟 ⇒ instance 上界被系統性低估):instance 上界(四場取最大)chimneys **269** / roofTanks **160** / roofBoxes **209**(全在 taipei101);配件桶總量上界 **59,736** tris(taipei101;seoul 53,644、shibuya 38,316、manhattan 37,108);全場三角形 1.06M~1.23M(配件佔比 2.8~5.0%)。舊值留檔:212/97/117、50,936",
+   "measured_deco_total_max": 59736,
    "measured_max_instances": {
-    "chimney": 212,
-    "tank": 97,
-    "acbox": 117
+    "chimney": 269,
+    "tank": 160,
+    "acbox": 209
    },
    "roster_size": 3,
    "whole_factor": 4,
    "node_caps": {
-    "chimney": 240,
-    "tank": 525,
-    "acbox": 435
+    "chimney": 222,
+    "tank": 373,
+    "acbox": 285
    },
    "justification": "InstancedMesh 桶的 GPU 成本 = 節點 tris × instance 數 ⇒ 逐件看毫無意義,上限由桶量反推:node_cap(桶) = (whole_factor − 1) × 配件桶總量上界 ÷ 名冊桶數 ÷ 該桶實測最大 instance 數。⇒ 名冊全數換滿的最壞情況,配件桶總量 ≤ whole_factor × 現值(與 tree 族 kind_factor、megalith whole_factor 同一條「整件閘」規則;換滿最壞 ≈ 204k tris,佔最重場景 11.8%)。",
-   "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。"
+   "staleness": "①BLD_LIB 名冊增列 MUST 重算(roster_size 是除數,桶數一多逐桶份額就變小);②屋頂配件散布機率/尺寸或市區場地一改 MUST 重跑 measure_building_tris.mjs 重量 instance 上界;③node_caps 是推導值(= 3×50936÷3÷N),三個輸入一改就重算,MUST NOT 手改。",
+   "resample_2026_08_08": {
+    "what": "佇列 F(整棟量體)開縫前的重取樣:同一支 measure_building_tris.mjs --live,取樣面由三場擴到**四場**(加入 taipei101 —— 它是全套場地裡建物最多的一張,1,114 棟)。逐場:shibuya 建物 558・全場 1,062,292・配件桶合計 38,316;manhattan 479・1,183,325・37,108;seoul 887・1,225,097・53,644;taipei101 1,114・1,205,428・**59,736**",
+    "deco_total_max": 59736,
+    "deco_max_instances": { "chimney": 269, "tank": 160, "acbox": 209 },
+    "adopted": "**2026-08-08 使用者定案「減面」⇒ 這一輪的取樣已採用**(上面的 measured_* 與 node_caps 就是它),兩顆已出貨節點同輪重減面:chimney_a 234 → **217**(≤222)、ac_a 426 → **279**(≤285)。**刀落在已出貨的節點本身**(1.08:1 / 1.53:1 的溫和減面,遠離 §5e 那個 2.4~3:1 的撕裂區),不是從 SF3D 原始輸出重跑 —— 原因是重跑**復現不出**已出貨的那兩顆:拿 `sf3d_bld_final/{chimney,ac}/0/mesh.glb` 配 manifest 記著的 0.6×0.5 / 0.65×0.5 只得到 220 / 402(不是 234 / 426),而且黏土對照的剪影明顯是另一顆(垛口狀的頂沒了)⇒ **出貨那兩顆的真正來源沒有被完整記下來**(manifest 只記了照片與 fit,沒記是哪一批 SF3D 輸出的第幾顆)。這是一筆**來源帳的缺口**,不是這一輪造成的;修法只有一條 —— 下一批建築節點的 manifest MUST 記到「哪一個輸出目錄的第幾顆」。人眼複核(mesh_sheet 黏土 4 格對照)已做:垛口頂/凹槽/收分與方箱頂脊在減面後全部還在。",
+    "derived_caps_if_adopted": { "chimney": 222, "tank": 373, "acbox": 285 },
+    "finding": "**採用這一輪的取樣會讓兩顆已出貨節點超標**:chimney_a 234 > 222、ac_a 426 > 285。成因是 2026-08-06 那一輪只取三場、且沒取到建物最多的 taipei101 ⇒ instance 上界被低估(212→269 / 97→160 / 117→209),而上界是**除數** ⇒ 上限被高估。(已依 `adopted` 那一列處理完畢。)",
+    "variance_warning": "instance 上界是**噪音很大**的統計量:同一支指令、同一張圖(shibuya)、相隔五分鐘的兩次 --live,建物 558 ↔ 842 棟、facade_wall 671 ↔ 982 個、chimneys 144 ↔ 249 座 —— 差到 ±70%,來源是 Overpass 逐次回傳量不同(§2.4 的鏡像輪替)。⇒ 「跨場地取最大」會隨取樣次數單調往上爬,而上限跟著往下掉。這一條 MUST 記著:看到某顆已出貨節點忽然超標,先問是不是又多抽了一次樣,而不是先去減面。",
+    "contamination_note": "`cornices(簷口帶)` 那一桶的指紋是「BoxGeometry + 材質色 ffffff」,四場都量到比 facade_wall 還多的 instance(1,091~1,219 對 590~1,325)—— 白色單位方盒的 InstancedMesh 不只簷口帶一種(公設/世界文字/地被拼圖都可能命中),那一桶是**高估**的。它只進 `deco_total_max`(分子,偏保守),不進任何除數 ⇒ 不影響本輪 mass 的推導,但下一輪修 deco 閘門時 MUST 先把指紋收窄。"
+   },
+   "mass": {
+    "measured_what": "**整棟量體**(biomes.js 一般建物繪製段的 facade_wall 桶:單位 BoxGeometry × 6 材質群組,逐實例 scale = (w,h,d))在四個最密市區場地 --live 實測(tools/ai3d/measure_building_tris.mjs,2026-08-08;逐實例矩陣拆解出尺寸做普查)。instance 上界 1,325(taipei101;shibuya 671 / manhattan 590 / seoul 1,035);桶總量上界 15,900 tris(= 1,325 × 12);高度普查(寬 ≥8m,濾掉窄長的梯間塔/裙樓)—— 高過 40m:59/100/82/**157**、高過 55m:21/55/39/**71**、高過 100m:2/**9**/0/0(依序 shibuya/manhattan/seoul/taipei101);最高一棟 132m",
+    "measured_mass_total_max": 15900,
+    "measured_mass_instances_max": 1325,
+    "measured_over55_max": 71,
+    "whole_factor": 4,
+    "full_swap_cap": 36,
+    "pick_n": 16,
+    "min_h": 55,
+    "node_cap": 2981,
+    "justification": "**「整桶換」對這一桶結構性不成立,而這是量出來的不是選出來的**:成長額度 = (whole_factor − 1) × 15,900 = 47,700 tris,除以 1,325 個 instance ⇒ 逐節點只有 **36 tris**(`full_swap_cap`),比現行的單位方盒(12)只多兩打三角形 —— 而 §5o 已實測 **500 面就留不住 Art Deco 的退縮量體**。⇒ 縫 MUST 是「全圖挑最高的 N 棟高層商辦」而不是整桶替換。N 由兩條約束反推,取較嚴者:①**畫面細節下限** cap ≥ 2 × §5o 的 500 面失敗點 ⇒ N ≤ 47,700 ÷ 1,000 = 47;②**draw call**:整棟庫節點的幾何與方盒不同 ⇒ 挑中的棟數上限就是額外 InstancedMesh 的上限,而立面段現行是 16 個 draw call 並自述「仍是常數級」⇒ 再加同一個量級為止 ⇒ N ≤ 16。②較嚴 ⇒ `pick_n = 16`,`node_cap` = 47,700 ÷ 16 = 2,981。高度門檻 `min_h = 55` **沿用 biomes.js 既有的退縮頂塔門檻**(MUST NOT 另發明數字);四場的合格棟數 21/55/39/71 都 > 16 ⇒ 密市區恆由 pick_n 夾住,郊區場地則自然少於 16 棟。**這一桶刻意不併進 deco 的 roster_size 除數**:deco 那條式子是三個屋頂配件桶**共分同一份家族額度**,把 mass 併進去會讓除數 3→4、兩顆已出貨節點當場超標(見 resample 的 finding);mass 換掉的是 facade_wall 這個**另一個**桶,額度就從那一桶自己的現值算 —— 逐桶各自 ≤ whole_factor × 自己的現值,比「均分家族總額」更緊。最壞情況 16 × 2,981 = 47,696 tris,佔最重場景(1.2M)的 **4.0%**。",
+    "staleness": "①`pick_n` 與 `min_h` 是**兩份**東西的同一個值(這裡 + biomes.js 的 `MASS` 常數),audit_siteplan 釘住兩邊相等 —— 改一邊沒改另一邊不會報錯,只會讓預算與實際挑中的棟數分家;②立面段的 draw call 數一改 MUST 重推 `pick_n`(它是那條約束的來源);③`measured_mass_total_max` 隨圖資量浮動(見 variance_warning),MUST NOT 因為某一次抽樣變大就把 cap 調鬆;④`node_cap` 是推導值(= 3 × 15,900 ÷ 16),MUST NOT 手改。"
+   }
   },
   "veg": {
    "measured_what": "一般植被(biomes.js VEG_DEFS)在四個綠地場地 team 3 的逐型 instance 數與逐零件三角形數,量法 = tools/ai3d/measure_veg_tris.mjs(playwright 頁內執行真品 buildTerrain+buildBiomes+真 three;指紋 = 幾何參數 + 材質色,兩者都由頁內呼叫真品 buildVegMeshes 逐型建樣本取得,MUST NOT 在工具端抄一份季節色表)。**2026-08-06 第二次量測**(五型冠層骨架重寫後):植被層總量 yangmingshan 212,963 / blackforest 197,973(佔全場 12.4~14.1%);逐型 instance 上界(四場取最大)shrub 1909 / broadleaf 211 / birch 98 / mangrove 98 / conifer2 73。**2026-08-07 第三次量測(§5u deadtree 遷移輪)**:uluru(裸露地,bare 0.95)加入取樣面 —— deadtree instance 上界 121(blackforest 僅 15;裸露地才是它的上界場地);blackforest 全場 1,591,970 → 1,561,264 = deadtree 的 Quaternius 檔(DeadTree_1/2)退場再釋出 30,706",

@@ -23,6 +23,8 @@
 //   --break-shy     冠緣間隙歸零 ⇒ Ⅲ 的「冠緣不相碰」MUST 紅字
 //   --break-strike  長軸抖動放大 ⇒ Ⅳ 的「長軸同向」MUST 紅字
 //   --break-gate    邊界樓的聚落場閘改成恆放行 ⇒ Ⅶ 的「荒野邊界零棟」MUST 紅字
+//   --break-mass    整棟量體那一段退回舊制(pick_n 與預算分家 / 拿掉保險絲閘 / 色抖吃拆桶後
+//                   的新索引)⇒ Ⅴ 的整棟量體三條 MUST 紅字
 import { readSrc } from './audit_src.mjs';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
@@ -32,6 +34,7 @@ const BREAK_LINE = process.argv.includes('--break-line');
 const BREAK_SHY = process.argv.includes('--break-shy');
 const BREAK_STRIKE = process.argv.includes('--break-strike');
 const BREAK_GATE = process.argv.includes('--break-gate');
+const BREAK_MASS = process.argv.includes('--break-mass');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -493,18 +496,72 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     ok((bioC.match(/libGeo\(/g) || []).length === 3
       && /const partGeo = \(p\) => \(p\.lib && libGeo\(p\.lib\)\) \|\| p\.g;/.test(bioC)
       && /const megaGeo = \(name\) => \{ const g2 = name \? libGeo\(name\) : null; return g2 \? g2\.clone\(\) : null; \};/.test(bioC)
-      && /const bldGeo = \(key\) => \(BLD_LIB\[key\] \? libGeo\(BLD_LIB\[key\]\[0\]\) : null\);/.test(bioC),
+      && /const bldGeo = \(key, i = 0\) => \{/.test(bioC) && /BLD_LIB\[key\]/.test(bioC),
       'AI 零件庫解析恰三份:partGeo(宣告式零件表)+ megaGeo(命令式巨岩呼叫點守衛;'
       + '一律 clone —— 巨岩群組會過 bakeContactAO 就地烤頂點色,共用庫幾何被烤一次全場帶著別顆岩的 AO)'
       + '+ bldGeo(建物屋頂配件桶守衛;不 clone —— 配件桶不過 bakeContactAO,幾何唯讀共用)');
-    {   // bldGeo 只住 buildBldBucket 桶建構表(凍結三桶:煙囪/水塔/空調機組),逐桶
-        // 恆以 `|| 原 primitive` 收尾(保險絲,原則 6;載入失敗 = 舊畫面);遊戲內消費點
-        // 恰 3 處(一般建物繪製段的三個 InstancedMesh 桶)。增刪桶 MUST 同步這裡與
-        // tri_budget families.building 的 roster_size/node_caps(名冊桶數是預算的除數)。
-      const uses = (bioC.match(/bldGeo\('(?:chimney|tank|acbox)'\) \|\| new THREE\.(?:Box|Cylinder)Geometry\(/g) || []).length;
-      const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox)\(/g) || []).length;
-      ok(uses === 3 && (bioC.match(/bldGeo\(/g) || []).length === 3 && calls === 3,
-        `bldGeo 只在 buildBldBucket 三桶且逐桶帶原 primitive 保險絲、遊戲內消費點恰 3 處(實得 ${uses}/${calls})`);
+    {   // bldGeo 只住 buildBldBucket 桶建構表(凍結四桶:煙囪/水塔/空調機組/**整棟量體**),
+        // 逐桶恆以 `|| 原 primitive` 收尾(保險絲,原則 6;載入失敗 = 舊畫面);遊戲內消費點
+        // 恰 4 處(屋頂配件三桶 + 一般建物繪製段的整棟量體桶)+ 一處**探詢**(繪製段開頭
+        // 一次問完名冊裡哪幾顆真的載到 —— 放進逐棟迴圈就是同一個名字每棟查一遍)。
+        // 增刪桶 MUST 同步這裡與 tri_budget families.building(名冊桶數是 deco 那三桶的除數;
+        // mass 刻意不進那個除數,理由見 tri_budget 的 mass.justification)。
+      const uses = (bioC.match(/bldGeo\('(?:chimney|tank|acbox)'\) \|\| new THREE\.(?:Box|Cylinder)Geometry\(/g) || []).length
+        + (bioC.match(/bldGeo\('mass', i\) \|\| new THREE\.BoxGeometry\(/g) || []).length;
+      const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox|mass)\(/g) || []).length;
+      const probe = (bioC.match(/if \(bldGeo\('mass', k\)\) massOk\.push\(k\);/g) || []).length;
+      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 5 && calls === 4 && probe === 1,
+        `bldGeo 只在 buildBldBucket 四桶且逐桶帶原 primitive 保險絲、遊戲內消費點恰 4 處 + 探詢 1 處(實得 ${uses}/${calls}/${probe})`);
+    }
+    {   // 整棟量體(佇列 F,2026-08-08):**只換子集**是 tri_budget 推導出來的,不是偏好 ——
+        // 整桶換的逐節點上限只有 36 tris。三條契約逐一釘住。
+      const budget = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.mass;
+      // 反向驗證:把這一段退回舊制(pick_n 與預算分家 / 拿掉保險絲閘 / 色抖吃新索引)
+      const bioM = BREAK_MASS
+        ? bioC.replace('PICK_N: 16,', 'PICK_N: 24,')
+          .replace('const massPick = new Set(massOk.length', 'const massPick = new Set(1')
+          .replace('((t.ord * 2654435761)', '((i * 2654435761)')
+        : bioC;
+      const M = bioM.match(/const MASS = \{\s*MIN_H:\s*(\d+),[^}]*?PICK_N:\s*(\d+),/);
+      ok(!!M && +M[1] === budget.min_h && +M[2] === budget.pick_n,
+        `MASS 的挑選門檻與 tri_budget 同一份(min_h ${M?.[1]}/${budget.min_h}、pick_n ${M?.[2]}/${budget.pick_n})`);
+      ok(budget.node_cap === Math.floor((budget.whole_factor - 1) * budget.measured_mass_total_max / budget.pick_n),
+        `整棟節點上限是推導值(3 × ${budget.measured_mass_total_max} ÷ ${budget.pick_n} = ${budget.node_cap})`);
+      ok(budget.full_swap_cap < 50 && budget.full_swap_cap
+        === Math.floor((budget.whole_factor - 1) * budget.measured_mass_total_max / budget.measured_mass_instances_max),
+        `「整桶換」被量測否決的那個數也是推導值(${budget.full_swap_cap} tris ≪ §5o 的 500 面下限)`);
+      // ①挑選是純函式:零 rnd、只讀權威佈局資料、不讀庫幾何(§2.3 / A4)
+      const pickBlk = bioM.slice(bioM.indexOf('const massOk = []'), bioM.indexOf('for (const commercial of'));
+      ok(pickBlk.length > 80 && !/rnd\(/.test(pickBlk) && /\.slice\(0, MASS\.PICK_N\)/.test(pickBlk)
+        && /q\.h - p\.h \|\| p\.x - q\.x \|\| p\.z - q\.z/.test(pickBlk),
+        '整棟量體的挑選:零 rnd 消耗、由 pick_n 夾住、等高時以座標定序(跨客戶端逐位元同一組)');
+      // ②庫沒載到 ⇒ 一棟都不挑 ⇒ 逐位元同舊制(保險絲)
+      ok(/const massPick = new Set\(massOk\.length/.test(bioM),
+        '名冊/庫整批取不到 ⇒ massPick 空 ⇒ 主量體全數落回單位方盒(逐位元同舊制)');
+      // ③色抖的雜湊吃原始序:拆桶後拿新索引去雜湊會讓其餘每一棟的配色跟著平移
+      const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = []'));
+      ok(/inst\.forEach\(\(t, i\) => \{ t\.ord = i; \}\);/.test(bioM)
+        && /\(\(t\.ord \* 2654435761\)/.test(emitBlk) && /\(\(t\.ord \* 1597334677\)/.test(emitBlk)
+        && !/\(\(i \* \d+\) >>> 0\) % 100/.test(emitBlk),
+        '逐實例色抖吃 inst 的原始序 t.ord(拆桶不改其餘建物的配色)');
+      // ④碰撞/LOS 一格不動(A30):有向盒仍由 b.w/h/d 推導,MUST NOT 讀庫幾何
+      const blkSeg = bioC.slice(bioC.indexOf('blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d)'));
+      ok(/hw2: b\.w \/ 2, hd2: b\.d \/ 2, ry: b\.ry/.test(blkSeg.slice(0, 400)),
+        '整棟庫節點不動碰撞/LOS:有向盒仍是 b.w/b.d/b.ry(A30,權威幾何一格不動)');
+      // ⑤純視覺附件改推丟棄桶(節點自帶頂部造型 ⇒ 程序頂塔/看板/天線會浮在半空),
+      //   而**帶碰撞柱的兩件 MUST NOT 進丟棄桶** —— 少掛一根碰撞柱 = 載到庫的客戶端與
+      //   沒載到的權威幾何分家。`vis()` 只換「推去哪裡」,rnd() 一枚都不能少(A4)。
+      {
+        const fSeg = bioM.slice(bioM.indexOf('const inst = [];'), bioM.indexOf('inst.forEach((t, i) => { t.ord = i; });'));
+        const visN = (fSeg.match(/\bvis\([a-zA-Z]/g) || []).length;
+        ok(/const vis = \(arr\) => \(libMass \? sink : arr\);/.test(fSeg) && visN >= 15,
+          `純視覺附件經 vis() 分流(實得 ${visN} 處;丟棄桶只換目的地,不動 rnd)`);
+        ok(!/vis\(blockers\)/.test(fSeg) && (fSeg.match(/blockers\.push\(/g) || []).length === 2,
+          '兩處 blockers.push(主量體 + 臨街裙樓)MUST NOT 走丟棄桶(碰撞柱不隨庫的有無增減)');
+        // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
+        ok(/\n\s+inst\.push\(\{ x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5,/.test(fSeg),
+          '主量體那一列直接進 inst(它才是被庫節點取代的那一列,不進丟棄桶)');
+      }
     }
     {   // megaGeo 呼叫點 = 凍結清單 7 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石/tower 整座/mesa 整座),名字一律出自 MEGA_LIB 名冊
       const uses = (bioC.match(/megaGeo\(/g) || []).length;   // 定義式是 `= (name) =>`,不含 `megaGeo(`

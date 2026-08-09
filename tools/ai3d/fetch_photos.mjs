@@ -213,7 +213,11 @@ export const PHOTO_CATALOG = {
     bld_lighthouse: { want: 4, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                // 海岸
     bld_rowhouse:   { want: 4, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] }, // 歐洲城市
     bld_shophouse:  { want: 4, q: ['shophouse facade', 'colonial shophouse'] },                         // 東南亞城鎮
-    bld_tower:      { want: 4, q: ['art deco skyscraper', 'apartment tower block', 'brutalist tower'] }, // 城市高樓
+    // 城市高樓。2026-08-09(§5ae)擴充:整棟量體那一桶的名冊只有一顆 ⇒ 同一張圖十幾棟塔樓同剪影,
+    // 而舊的三句查詢在 Openverse 只有個位數結果(`art deco skyscraper` 全庫 6 筆)。加的都是
+    // **具名的單一主體**(skill §2「最大的槓桿是查詢用字」:要的是一棟樓,不是一條街的場景照)。
+    bld_tower:      { want: 8, q: ['art deco skyscraper', 'stepped skyscraper setback', 'brutalist concrete tower block',
+      'modernist office tower', 'gothic revival skyscraper', 'apartment tower block'] },
     bld_warehouse:  { want: 4, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] }, // 工業
     bld_yurt:       { want: 3, q: ['mongolian yurt', 'ger tent grassland'] },                           // 蒙古草原
   },
@@ -269,9 +273,15 @@ async function jget(url) {
 // 石版畫、立體鏡雙聯卡、鉛筆素描明信片。那些東西 img→3D 生不出可用幾何,而**授權完全合法**
 // ⇒ 篩不掉的話,每一輪的 GPU 時間都花在注定要丟的候選上。這裡排掉純館藏型供應者;
 // rawpixel 刻意留著(它同時供應現代攝影與公版版畫,砍掉會連最好的那幾張一起砍)。
+// 2026-08-09 補一列 `smithsonian_african_american_history_museum`(§5ae):`bld_tower` 的 4 張
+// 語料裡有 2 張是**同一本 1932 年畢業紀念冊的封面與封底**(浮雕的裝飾藝術大樓 + 空白卡紙背面)。
+// 它們同時踩中兩個機制:①這個館藏源不在排除清單裡;②API 回不出尺寸 ⇒ `size_unknown` ⇒
+// 短邊 1024 那道閘**結構性地量不到**(`Math.min(null || Infinity, …)`)。兩者都合法、都不報錯,
+// 而 `--plan` 因此一直顯示「這一列抓夠了」—— 直到有人真的把圖點開來看。
 const EXCLUDED_SOURCES = ['smithsonian_cooper_hewitt_museum', 'museumsvictoria', 'digitaltmuseum',
   'sciencemuseum', 'statensmuseum', 'clevelandmuseum', 'smithsonian_national_museum_of_natural_history',
-  'smithsonian_institution_archives', 'smithsonian_libraries', 'brooklynmuseum', 'thorvaldsensmuseum',
+  'smithsonian_institution_archives', 'smithsonian_libraries', 'smithsonian_african_american_history_museum',
+  'brooklynmuseum', 'thorvaldsensmuseum',
   'floraon', 'inaturalist', 'biodiversity_heritage_library'].join(',');
 
 /** Openverse:免金鑰;license=cc0 已含 public domain mark */
