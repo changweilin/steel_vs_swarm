@@ -1,4 +1,45 @@
 {
   "version": 1,
-  "items": {}
+  "items": {
+    "beacon/tank": {
+      "status": "ok",
+      "at": "2026-08-05T13:18:44.986Z"
+    },
+    "rock/facet_b": {
+      "status": "ok",
+      "at": "2026-08-05T13:19:23.557Z"
+    },
+    "rock/facet_a": {
+      "status": "ok",
+      "at": "2026-08-05T13:19:26.864Z"
+    },
+    "rock/collapse_a": {
+      "status": "ok",
+      "at": "2026-08-05T13:19:31.160Z"
+    },
+    "building/mass_a": {
+      "status": "regen",
+      "note": "太薄不立體",
+      "at": "2026-08-09T13:45:16.084Z"
+    },
+    "building/mass_b": {
+      "status": "regen",
+      "note": "太薄不立體",
+      "at": "2026-08-09T13:45:12.290Z"
+    },
+    "building/masslow_a": {
+      "status": "regen",
+      "note": "太薄不立體",
+      "at": "2026-08-09T13:45:37.121Z"
+    },
+    "building/ac_a": {
+      "status": "regen",
+      "note": "邊角已風化",
+      "at": "2026-08-09T13:46:26.388Z"
+    },
+    "tree/snag_a": {
+      "status": "ok",
+      "at": "2026-08-09T13:46:53.988Z"
+    }
+  }
 }

@@ -30,6 +30,15 @@ body.pr::before, body.pr::after { display: none; }
 .pr-row .pr-rn b { display: block; font-size: 12px; word-break: break-all; }
 .pr-row .pr-rn span { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
 
+/* 附註標籤(清單上只留標籤,整句進 title 懸浮看 —— 一列塞三句話會把清單撐爆) */
+.pr-row .pr-notes { display: block; margin-top: 2px; }
+.pr-note {
+  display: inline-block; margin: 1px 3px 0 0; padding: 0 4px; border-radius: 3px;
+  font-size: 9px; font-style: normal; line-height: 14px; background: rgba(255, 255, 255, 0.08); color: var(--dim);
+}
+.pr-note.n-hole, .pr-note.n-debris { background: rgba(255, 90, 90, 0.18); color: #ff9d9d; }
+.pr-note.n-review { background: rgba(255, 180, 70, 0.18); color: #ffcf8a; }
+
 .pr-pill {
   font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 8px;
   background: rgba(255, 255, 255, 0.1); color: var(--dim); white-space: nowrap;

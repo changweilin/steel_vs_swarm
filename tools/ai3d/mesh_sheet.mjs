@@ -26,9 +26,15 @@ const COLS = +arg('--cols', 8);
 const CELL = +arg('--cell', 190);
 const PORT = +arg('--port', 8646);
 
-const dirs = fs.readdirSync(SRC).filter((d) => /^\d+$/.test(d) && fs.existsSync(join(SRC, d, 'mesh.glb')))
-  .sort((a, b) => +a - +b);
-if (!dirs.length) { console.error('找不到 <i>/mesh.glb'); process.exit(1); }
+// 兩種版面(同 mesh_stats):SF3D `<i>/mesh.glb`、T2-spz 扁平 `<名字>.glb`。
+// index 仍是「產生時的字典序」,只是名字改成檔名 —— 對照表印的就是它。
+const srcItems = fs.readdirSync(SRC)
+  .flatMap((d) => (/^d+$/.test(d) && fs.existsSync(join(SRC, d, 'mesh.glb')))
+    ? [{ label: d, path: join(SRC, d, 'mesh.glb') }]
+    : d.toLowerCase().endsWith('.glb') ? [{ label: d.slice(0, -4), path: join(SRC, d) }] : [])
+  .sort((a, b) => (/^d+$/.test(a.label) && /^d+$/.test(b.label)
+    ? +a.label - +b.label : a.label < b.label ? -1 : 1));
+if (!srcItems.length) { console.error('找不到 <i>/mesh.glb 或扁平的 *.glb'); process.exit(1); }
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('contact sheet');
@@ -95,12 +101,12 @@ await page.evaluate(async ({ cell }) => {
 }, { cell: CELL });
 
 const tiles = [];
-for (const d of dirs) {
-  const b64 = fs.readFileSync(join(SRC, d, 'mesh.glb')).toString('base64');
+for (const [n, it] of srcItems.entries()) {
+  const b64 = fs.readFileSync(it.path).toString("base64");
   try {
     const png = await page.evaluate((b) => window.__shoot(b), b64);
-    tiles.push({ i: +d, png });
-  } catch (e) { console.log(`  ✗ ${d}:${String(e).slice(0, 120)}`); }
+    tiles.push({ i: /^d+$/.test(it.label) ? +it.label : n, label: it.label, png });
+  } catch (e) { console.log(`  ✗ ${it.label}:${String(e).slice(0, 120)}`); }
 }
 
 // 拼版(Node 端 canvas 不可用 ⇒ 就在頁裡拼)

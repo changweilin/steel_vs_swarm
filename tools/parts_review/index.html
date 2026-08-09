@@ -27,6 +27,9 @@
   <b>3D 零件對照台</b>
   <span class="pr-dim">dev-only ・ 不進遊戲建置</span>
   <span class="pr-stat" id="prStat">載入中…</span>
+  <!-- 服務中的 checkout(懸浮看完整路徑):這座台子可能被跑在別的 worktree 的遊戲伺服器
+       spawn 起來,那時每一件都停在那個 commit 而不會有任何錯誤訊息 —— 見 renderStat -->
+  <span class="pr-dim" id="prCheckout" title=""></span>
   <span class="pr-grow"></span>
   <div class="seg pr-filter" id="prFilter">
     <!-- 「全部」= 全部**成品**:半成品由伺服器端量出來(mesh_sym.nodeFlaws),

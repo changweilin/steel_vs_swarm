@@ -24,6 +24,9 @@ image→3D GLB、小植被維持程序生成)。
 | `fetch_photos.mjs` | **照片庫抓取器**(Track B §4.1):逐族查詢型錄、可續跑補缺、CC0 雙重硬閘、記帳。沙箱代理連不到 Openverse/Commons(㋓)⇒ 在 3060 真機或 Actions 上跑 |
 | `photo_manifest.json` | 照片帳本(產出後自動生成):`{source_url, license, creator, retrieved_at, …}` 一項不少 |
 | `photos/{family}/{part}/` | 照片本體(**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB) |
+| `inbox/{family}/{part}/` | **自己放圖的地方**(2026-08-10 使用者定案):丟圖進去 + 同一層一個 `sources.json` 記授權,`fetch_photos.mjs --adopt` 收編成正式語料。授權硬閘不因為是手動放的就鬆(只收 CC0/PD),短邊 <1024 或非影像位元組一律不收、原檔留著。`--inbox` 印格式與路徑 |
+| `harvest_loop.mjs` | **週期採集迴圈**(2026-08-10 使用者定案「成功率太低 ⇒ 跑腳本週期性抓更多 img」):收編 inbox → 抓照片 → 去背 → 選片閘 → SF3D → 快篩 → contact sheet,`--every` 分鐘跑一輪。每一站可缺席(沒 venv/GPU 就跳過)、只餵新的且未被選片閘淘汰的 matte、**刻意不入庫**(人眼那一步不可省)|
+| `harvest_log.jsonl` / `harvest_state.json` | 迴圈的帳(每輪收編/下載/生成幾張)與「哪些 matte 送過 SF3D」|
 
 ---
 

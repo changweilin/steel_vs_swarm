@@ -88,6 +88,25 @@ export function manifest(items = {}, photosOpt = null) {
   const rows = [];
   const seenNodes = new Set();   // `${family}/${node}` — 用來算孤兒
 
+  // 同一件消費端由**幾顆節點**組成(推導,MUST NOT 手寫名冊)。
+  //
+  // 為什麼要有這一欄:2026-08-10 使用者回報「有的沒有樹根、有的只有樹根」—— 那不是破圖,
+  // 是 §5z-n/o 定案的「一株 = 木質 + 葉冠兩顆節點」被單顆攤在台上看。台上一列 = 一顆節點,
+  // 而**一件成品可能要好幾顆**,少了這一句就只能從畫面推測,而畫面正好長得像半成品。
+  // ⚠ 兄弟有**兩種**,寫成同一句話就是騙人:①**組件**(beacons `KIND_PARTS` / biomes
+  // `VEG_DEFS`·`GIANT_DEFS`)一次全部一起建,少一顆就真的少一塊 ⇒「這一顆是整件的一層」;
+  // ②**輪替名冊**(`MEGA_LIB` / `BLD_LIB`)一顆節點服務一整個桶、逐座號**挑一顆**用 ⇒ 它自己
+  // 就是完整的一件,兄弟是「同一格的其他款」。把 ② 講成「整件的一層」會讓人以為 mass_a 只是
+  // 大樓的一層 —— 而它就是整棟。分流只認 `table`,MUST NOT 逐節點手寫名冊。
+  // 鍵取 (builder, table, kind):同一張零件表、同一個型別的那幾列才是兄弟。
+  const ROSTER_TABLES = new Set(['MEGA_LIB', 'BLD_LIB']);
+  const sibKey = (d) => `${d.builder || d.consumer}|${d.table || ''}|${d.kind}`;
+  const bySib = new Map();
+  for (const d of descs) {
+    if (!bySib.has(sibKey(d))) bySib.set(sibKey(d), new Set());
+    bySib.get(sibKey(d)).add(d.name);
+  }
+
   // ── (A) 每一個 lib 描述子指到的節點 ────────────────────────────────────
   const byName = new Map();
   for (const d of descs) {
@@ -106,7 +125,32 @@ export function manifest(items = {}, photosOpt = null) {
     // 台上**預設不顯示**但不刪節點,遊戲照舊吃它;「半成品」分頁看得到(缺的不准藏,邊界 ③)
     const topo = node ? topoStats(node) : null;
     const flaws = topo ? nodeFlaws(topo, d0.family) : [];
+    // 附註(使用者 2026-08-10:「未完成的圖加上附註」)= 三種來源合成一份,**全部推導**:
+    //   ㋐ `part-of`  這一顆只是整件的一層(上面 bySib);沒有它,「只有樹根」讀起來像破圖
+    //   ㋑ 量出來的缺陷(mesh_sym.nodeFlaws:破口 / 碎屑)
+    //   ㋒ 人的覆核意見(state.json 的 note,例:「太薄不立體」)
+    // 三者刻意分開列而不合成一句話:一顆節點可以同時「只是一層」**且**「有破口」,
+    // 併成一句就得挑一個講,而挑掉的那一個正好可能是使用者要看的那一個。
+    const sibs = [...(bySib.get(sibKey(d0)) || [])].filter((n) => n !== name);
+    const st = items[name];
+    const notes = [
+      ...(sibs.length ? [ROSTER_TABLES.has(d0.table)
+        ? {
+          code: 'alt-of', label: '輪替名冊',
+          detail: `「${d0.kind}」這一格有 ${sibs.length + 1} 顆輪替節點,逐座號挑一顆用`
+            + `(其餘:${sibs.join('、')})—— 這一顆本身就是完整的一件`,
+        }
+        : {
+          code: 'part-of', label: '整件的一層',
+          detail: `這一顆是「${d0.kind}」的其中一層,同一件還有 ${sibs.join('、')}`
+            + ' —— 單看這一顆本來就不是完整的一件',
+        }] : []),
+      ...flaws,
+      ...(st?.note ? [{ code: 'review', label: '覆核意見', detail: st.note }] : []),
+    ];
     rows.push({
+      notes,
+      siblings: sibs,
       key: name,
       title: name,
       family: d0.family,
@@ -213,9 +257,32 @@ export function manifest(items = {}, photosOpt = null) {
     missing,
     wip,
     issues: prov.issues,
+    checkout: checkout(),
     libs,
     photoRoots: roots.map((r) => r.replace(ROOT + sep, '') || r),
     methods: Object.values(METHODS),
+  };
+}
+
+/**
+ * 這座台子**正在服務哪一份 checkout**。存在的理由是一個沒有任何錯誤訊息的坑:
+ * `dev_supervisor` 的 spawn 是 `{ cwd: ROOT }`,而 ROOT = 啟動它的**那支遊戲伺服器自己的**
+ * 儲存庫根 ⇒ 從一支跑在舊 worktree 的遊戲按「開發工具 ▶ 啟動」,台上讀的就是那個 worktree 的
+ * GLB/manifest,埠不衝突、頁面照常打得開,只是每一件都停在那個 commit(2026-08-10 實測:
+ * 三支舊 server 全部少了 mass_c 與三種針葉,而使用者看到的結論是「worktree 裡調整的都沒進來」)。
+ * 取不到 git 就只印路徑(原則 6:降級不例外)。
+ */
+function checkout() {
+  const git = (args) => {
+    try { return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim(); }
+    catch { return null; }
+  };
+  return {
+    root: ROOT,
+    rev: git(['rev-parse', '--short', 'HEAD']),
+    branch: git(['rev-parse', '--abbrev-ref', 'HEAD']),
+    at: git(['log', '-1', '--format=%ad', '--date=format:%m-%d %H:%M']),
+    dirty: !!git(['status', '--porcelain', '--', 'public/assets/models/parts']),
   };
 }
 
@@ -246,6 +313,9 @@ async function report() {
   const st = await loadState();
   const m = manifest(st.items, arg('--photos'));
   console.log('3D 零件對照台 — 對照表');
+  const ck = m.checkout;
+  console.log(`  服務中的 checkout  ${ck.root}${ck.rev ? `  ${ck.branch}@${ck.rev}(${ck.at})` : ''}`
+    + `${ck.dirty ? '  ⚑ 零件庫有未 commit 的改動' : ''}`);
   console.log(`  零件庫家族  [${m.libs.join(', ') || '空'}];照片探測路徑 ${m.photoRoots.length} 個`);
   for (const r of m.rows) {
     const meth = r.method ? `${r.method.short}` : '⚑ 未記載來源';
@@ -257,6 +327,7 @@ async function report() {
     console.log(`    方法  ${meth}${r.method ? ` — ${r.method.label}` : ''}`);
     console.log(`    來源圖 ${img}`);
     console.log(`    消費端 ${r.consumer || '—'}`);
+    for (const n of r.notes || []) console.log(`    附註  ${n.label}:${n.detail}`);
     if (r.measured) {
       console.log(`    實測  ${r.measured.tris} tris ・ 水平徑向 ${r.measured.rMax.toFixed(3)}`
         + ` / fallback ${r.env.r.toFixed(3)}(${(r.pct * 100).toFixed(0)}%)`);

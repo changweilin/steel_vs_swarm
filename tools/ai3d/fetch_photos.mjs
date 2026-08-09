@@ -38,9 +38,11 @@
  *   node tools/ai3d/fetch_photos.mjs --limit 10           本輪最多下載幾張
  *   node tools/ai3d/fetch_photos.mjs --review             列出已抓照片供人工挑選(路徑 + 尺寸 + 來源)
  *   node tools/ai3d/fetch_photos.mjs --home <資料家>      語料不在本 checkout 底下時(帳本與 photos/ 同住那裡)
+ *   node tools/ai3d/fetch_photos.mjs --inbox             印出「自己放圖的地方」在哪、格式怎麼寫(順便建好資料夾)
+ *   node tools/ai3d/fetch_photos.mjs --adopt             把 inbox 裡的圖收編成正式語料(授權硬閘照跑)
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -300,6 +302,38 @@ export const PHOTO_CATALOG = {
 //      **照片**校準的(主體佔比、亮度、bbox 填滿率),線稿的統計是另一個分布 —— 而且設計圖
 //      根本不需要去背。它的品質閘是 `plan_to_mesh.py --screen` 那三道(輪廓圍不圍得起來 /
 //      是不是渲染圖 / 圖框),回寫的欄位與選片閘同一個(`entry.screen`)⇒ have() 一視同仁。
+// ============ 取景階梯(2026-08-10 使用者定案)============
+// 「搜索 img 要使用更精準的關鍵字,盡量抓背景乾淨、無太多干擾、目標清晰的圖」。
+//
+// 為什麼是**階梯**而不是把字直接改進型錄的 `q`:
+//   ① 型錄的 `q` 已經是「具名單一主體」句式(§5c 實測:句式勝過所有模型旋鈕),那是**主體**;
+//      這裡加的是**取景**(背景乾不乾淨、光夠不夠),兩個維度混寫進同一行就再也拆不開,
+//      而下一輪要調的通常只有其中一個。
+//   ② 加了取景字的查詢**候選池必然更小** —— CC0 圖庫本來就不大,先問窄的會讓某些零件
+//      一張都撈不到。故:先跑型錄原本的查詢,**只有缺額還在**才往下走這幾階
+//      ⇒ 供給充足時逐位元同舊行為(既有 390 筆帳本不受影響)。
+//   ③ 逐族分開:「plain sky」對曠野孤木/巨岩是對的,對建物要的是「立面正面、無遮擋」;
+//      共用一份就會把建物查成天空照。
+// 取景字只取**已量到有效的那一類**:isolated / plain background / clear sky / unobstructed
+// (§5c 的 `lone tree field` 一族);MUST NOT 寫 studio / product shot —— CC0 圖庫裡那是
+// 商品照,對岩體與樹是空的。
+// 只給照片列:設計圖(`src: 'drawing'`)的查詢是測繪圖名,套取景字只會把它查成 0 筆。
+export const CLEAN_Q = {
+  tree:     ['isolated against plain sky', 'clear background full tree', 'unobstructed daylight'],
+  rock:     ['isolated against plain sky', 'clear background sunlit', 'unobstructed single boulder'],
+  building: ['whole building unobstructed', 'clear sky plain background', 'sunlit facade no trees'],
+  landmark: ['isolated against sky', 'unobstructed clear background'],
+  _:        ['isolated plain background', 'unobstructed daylight'],
+};
+const CLEAN_BASE_N = 2;      // 只拿型錄前 N 條當底(全展開會把一輪的 API 額度燒在同一個零件上)
+
+/** 這個零件這一輪要跑的查詢序:型錄原句在前,取景階梯在後(缺額還在才會走到)。 */
+export function queryLadder(fam, def) {
+  if (srcOf(def) !== 'photo') return [...def.q];
+  const tail = CLEAN_Q[fam] || CLEAN_Q._;
+  return [...def.q, ...def.q.slice(0, CLEAN_BASE_N).flatMap((q) => tail.map((t) => `${q} ${t}`))];
+}
+
 export const BUILDING_MIX = { urban: 0.50, rural: 0.25, civic: 0.25 };
 const MIX_TOL = 0.02;                                        // 配額是整數 ⇒ 允許的四捨五入餘裕
 export const SRC_KINDS = ['photo', 'drawing'];               // 輸入格式(預設 photo)
@@ -461,7 +495,116 @@ async function download(it, fam, part) {
   return file;
 }
 
+// ============ 自己放圖的地方(2026-08-10 使用者定案)============
+// `<資料家>/inbox/<族>/<零件>/` 丟圖進去,`--adopt` 收編成正式語料(搬進 photos/、寫進帳本),
+// 之後跟抓下來的照片走**完全同一條路**(去背 → 選片閘 → img→3D)。
+//
+// 三條紀律,一條都不能省:
+//   ① **授權硬閘不因為是手動放的就鬆開**。烤進 repo 的石頭沒有地方放署名(檔頭 ①),而
+//      「這張是我自己找的」不是授權。⇒ 每個零件資料夾要有 `sources.json` 記每張圖的授權
+//      與出處;沒記到的**不收**,原檔留在 inbox 不動(不是刪掉 —— 那是使用者的檔案)。
+//   ② **inbox MUST 在 photos/ 之外**。放在 photos/ 底下的話,`_inbox` 會被 matte_photos.py
+//      當成一個「族」整個去背,而它的統計對不上任何一族的門檻 = 一批看起來很奇怪的淘汰。
+//   ③ 尺寸與位元組照驗(短邊 ≥1024 / magic bytes)—— 這兩道跟來源無關,是 img→3D 的輸入條件。
+const INBOX = join(HOME, 'inbox');
+
+/** 影像尺寸:PNG/JPEG/WebP 直接讀檔頭(A2 不准加相依,而短邊 1024 是硬閘 ⇒ 自己解)。
+ *  認不出來回 null ⇒ 走帳本既有的 `size_unknown` 語意(降級不例外,原則 6)。*/
+export function imageSize(b) {
+  if (b.length > 24 && b.readUInt32BE(0) === 0x89504e47) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8) {
+    for (let i = 2; i + 9 < b.length;) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m >= 0xd0 && m <= 0xd9) { i += 2; continue; }
+      const len = b.readUInt16BE(i + 2);
+      // SOF0..SOF15,扣掉 DHT(c4)/JPG(c8)/DAC(cc) —— 那三個不是影格標頭
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+        return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) };
+      }
+      i += 2 + len;
+    }
+    return null;
+  }
+  if (b.length > 30 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') {
+    const t = b.toString('ascii', 12, 16);
+    if (t === 'VP8X') return { w: (b.readUIntLE(24, 3) & 0xffffff) + 1, h: (b.readUIntLE(27, 3) & 0xffffff) + 1 };
+    if (t === 'VP8 ') return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+    if (t === 'VP8L') {
+      const n = b.readUInt32LE(21);
+      return { w: (n & 0x3fff) + 1, h: ((n >> 14) & 0x3fff) + 1 };
+    }
+  }
+  return null;
+}
+
+const licenceOk = (l) => CC0_RE.test(String(l || '').trim()) || COMMONS_OK.test(String(l || ''));
+
+function adoptInbox() {
+  mkdirSync(INBOX, { recursive: true });
+  const fams = readdirSync(INBOX, { withFileTypes: true }).filter((d) => d.isDirectory());
+  if (!fams.length) {
+    console.log(`自己放圖的地方(空的):${INBOX}`);
+    console.log('  結構  inbox/<族>/<零件>/圖檔 + 同一層一個 sources.json');
+    console.log(`  族/零件 用型錄裡現成的名字(例:${Object.keys(PHOTO_CATALOG).join(' / ')});`);
+    console.log('        零件名見 `--plan` 印的那份清單,寫錯了本工具會告訴你。');
+    console.log('  sources.json 例:');
+    console.log('    {');
+    console.log('      "_default": { "license": "cc0", "creator": "我自己拍的", "source_url": "" },');
+    console.log('      "big-rock.jpg": { "license": "cc0", "creator": "Jane Doe", "source_url": "https://…" }');
+    console.log('    }');
+    console.log('  授權**只收 CC0 / Public domain**(CC-BY 也不行:烤進 repo 的零件沒地方放署名)。');
+    return;
+  }
+  let took = 0; let left = 0;
+  for (const f of fams) {
+    for (const p of readdirSync(join(INBOX, f.name), { withFileTypes: true }).filter((d) => d.isDirectory())) {
+      const dir = join(INBOX, f.name, p.name);
+      const known = PHOTO_CATALOG[f.name]?.[p.name];
+      if (!known) { console.warn(`✗ ${f.name}/${p.name}:型錄裡沒有這個零件(--plan 看清單);整個資料夾原樣留著`); left++; continue; }
+      let src = {};
+      try { src = JSON.parse(readFileSync(join(dir, 'sources.json'), 'utf8')); }
+      catch { console.warn(`✗ ${f.name}/${p.name}:缺 sources.json ⇒ 沒有授權就不收(檔案原樣留著)`); left++; continue; }
+      for (const name of readdirSync(dir)) {
+        if (name === 'sources.json') continue;
+        const rec = src[name] || src._default;
+        if (!rec) { console.warn(`✗ ${f.name}/${p.name}/${name}:sources.json 裡沒有這一張(也沒有 _default)`); left++; continue; }
+        if (!licenceOk(rec.license)) { console.warn(`✗ ${f.name}/${p.name}/${name}:授權「${rec.license}」不是 CC0/PD ⇒ 不收`); left++; continue; }
+        const buf = readFileSync(join(dir, name));
+        const kind = sniffImage(buf);
+        if (!kind) { console.warn(`✗ ${f.name}/${p.name}/${name}:非影像位元組(${buf.subarray(0, 4).toString('hex')})`); left++; continue; }
+        const size = imageSize(buf);
+        if (size && Math.min(size.w, size.h) < 1024) {
+          console.warn(`✗ ${f.name}/${p.name}/${name}:短邊 ${Math.min(size.w, size.h)} < 1024 ⇒ 不夠餵 img→3D`); left++; continue;
+        }
+        const id = `manual_${name.replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '_').slice(0, 48)}`;
+        if (manifest.some((e) => e.id === id && e.family === f.name && e.part === p.name)) {
+          console.log(`・ ${f.name}/${p.name}/${name}:已收編過(id ${id}),略過`); continue;
+        }
+        const outDir = join(PHOTOS, f.name, p.name);
+        mkdirSync(outDir, { recursive: true });
+        const outFile = join(outDir, `${id}.${kind}`);
+        writeFileSync(outFile, buf);
+        rmSync(join(dir, name));
+        manifest.push({
+          family: f.name, part: p.name, id, query: '(手動放圖)', api: 'manual',
+          source_url: rec.source_url || '', license: rec.license, creator: rec.creator || null,
+          retrieved_at: new Date().toISOString(), w: size?.w || null, h: size?.h || null,
+          size_unknown: size ? undefined : true,
+          file: relative(HOME, outFile).split('\\').join('/'), ok: true,
+        });
+        writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));
+        took++;
+        console.log(`✓ ${f.name}/${p.name} ← ${name}(${rec.license})`);
+      }
+    }
+  }
+  console.log(`\n收編 ${took} 張${left ? `;${left} 張留在 inbox 沒收(理由見上)` : ''}。`);
+  if (took) console.log('下一步:去背 → 選片閘 → img→3D(或直接 `node tools/ai3d/harvest_loop.mjs --rounds 1`)。');
+}
+
 async function main() {
+  if (flag('adopt') || flag('inbox')) { adoptInbox(); return; }
   // 配比守門線排在最前面:型錄本身寫壞了,抓下來的每一張都是照著壞配額抓的(而照片有配額成本)。
   const drift = buildingMixDrift();
   if (drift) { console.error(`❌ ${drift}`); process.exit(1); }
@@ -526,7 +669,7 @@ async function main() {
     const PERSIST_FAIL_RE = /非影像位元組|HTTP 40[34]/;
     const seen = new Set(manifest.filter((e) => e.family === fam && e.part === part
       && (e.ok || PERSIST_FAIL_RE.test(e.error || ''))).map((e) => e.id));
-    for (const q of def.q) {
+    for (const q of queryLadder(fam, def)) {
       if (cooled || fetched >= LIMIT) break;
       const tryItems = async (items) => {
         for (const it of items) {

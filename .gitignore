@@ -33,6 +33,10 @@ tools/ai3d/weights/
 tools/ai3d/vendor/
 tools/ai3d/out/
 tools/ai3d/photo_manifest.json
+# 自己放圖的地方 + 週期採集迴圈的帳(都是資料家的東西,與照片同一條規矩)
+tools/ai3d/inbox/
+tools/ai3d/harvest_log.jsonl
+tools/ai3d/harvest_state.json
 
 # 離線視覺工具(shot_*.mjs)用的全域 playwright 連結:npm link 產生,MUST NOT 進版控 ——
 # 這個儲存庫的 node_modules 是**受版控**的(唯一依賴 ws 隨庫附帶,A2),

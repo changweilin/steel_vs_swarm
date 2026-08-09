@@ -426,6 +426,21 @@ function statOf(r) {
  */
 const isWip = (r) => !!r.flaws?.length;
 
+/**
+ * 附註(使用者 2026-08-10:「未完成的圖加上附註」)。伺服器端已把三種來源合成 `r.notes`
+ * (整件的一層 / 輪替名冊 / 量到的缺陷 / 覆核意見),這裡只負責畫。
+ *
+ * MUST 畫在**清單**上而不是只有右側細節:使用者的原話是「有的沒有樹根、有的只有樹根」——
+ * 那是掃過整份清單得到的印象,而細節頁一次只看得到一件,答案藏在那裡等於沒答。
+ * 完整句子進 `title`(懸浮看),列上只留標籤 —— 一列塞三句話會把清單撐爆。
+ */
+function noteLine(r) {
+  if (!r.notes?.length) return '';
+  const full = r.notes.map((n) => `${n.label}:${n.detail}`).join('\n');
+  const tag = (n) => `<i class="pr-note n-${esc(n.code)}">${esc(n.label)}</i>`;
+  return `<span class="pr-notes" title="${esc(full)}">${r.notes.map(tag).join('')}</span>`;
+}
+
 function renderList() {
   const keep = (r) => {
     const s = statOf(r);
@@ -447,7 +462,8 @@ function renderList() {
       ? `<span class="pr-pill gen">${esc(r.method.short)}</span>`
       : '<span class="pr-pill miss">未記載</span>';
     return `<div class="pr-row ${app.cur === r.key ? 'on' : ''}" data-key="${esc(r.key)}">
-      <div class="pr-rn"><b>${esc(r.key)}</b><span>${esc(r.consumer || '—')}</span></div>
+      <div class="pr-rn"><b>${esc(r.key)}</b><span>${esc(r.consumer || '—')}</span>
+        ${noteLine(r)}</div>
       ${meth}${pill}</div>`;
   }).join('') || '<div class="pr-dim" style="padding:12px">(這個篩選沒有結果)</div>';
   for (const el of $('prList').querySelectorAll('.pr-row')) el.onclick = () => select(el.dataset.key);
@@ -465,6 +481,14 @@ function renderStat() {
     + ` ・ 半成品 ${wip}(已收起) ・ 缺件 ${app.data.missing.length} ・ 孤兒節點 ${app.data.orphans.length}`
     + ` ・ 未記載來源 ${app.data.undocumented.length}`
     + (app.data.issues.length ? ` ・ 帳目問題 ${app.data.issues.length}` : '');
+  // 服務中的 checkout:台子可能被一支跑在舊 worktree 的遊戲伺服器 spawn 起來(cwd 跟著它走),
+  // 那時每一件都停在那個 commit 而完全不報錯 —— 印出來才分得出「沒進來」和「看錯台子」
+  const ck = app.data.checkout;
+  const el = $('prCheckout');
+  if (el && ck) {
+    el.textContent = ck.rev ? `${ck.branch}@${ck.rev}(${ck.at})${ck.dirty ? ' ⚑ 零件庫未 commit' : ''}` : ck.root;
+    el.title = ck.root;
+  }
 }
 
 // ---- 右側 ------------------------------------------------------------------
@@ -576,6 +600,8 @@ function renderBody() {
     <div>${r.flaws.map((f) => `<b>${esc(f.label)}</b>:${esc(f.detail)}`).join('<br>')}</div>
     <div class="pr-dim">節點沒有被刪 —— 遊戲照舊吃它。判定住 <code>tools/ai3d/mesh_sym.mjs</code>
       (<code>--flaws</code> 印同一份名單);要它回到台上,把網格封起來重新入庫即可。</div></div>` : ''}
+  ${r.notes?.length ? `<div class="pr-sec"><h3>附註</h3>
+    <div>${r.notes.map((n) => `<b>${esc(n.label)}</b>:${esc(n.detail)}`).join('<br>')}</div></div>` : ''}
 
   <div class="pr-tools">
     <span class="pr-dim">座號</span>

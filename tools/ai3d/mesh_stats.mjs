@@ -62,9 +62,16 @@ function meshVolume(path) {
            w: maxX - minX, h: maxY - minY, d: maxZ - minZ };
 }
 
-const rows = [];
+// **兩種版面都要吃**:SF3D 是逐圖子目錄 `<i>/mesh.glb`,T2-spz 是**扁平** `<名字>.glb`。
+// 只認前者的話,建築那一族(2026-08-10 起走 T2)在這支眼裡永遠是空的 —— 而空的輸出與
+// 「這一批都很好」印出來一模一樣(表頭照印、一列都沒有),沒有任何錯誤訊息。
+const entries = [];
 for (const sub of readdirSync(dir)) {
-  const p = join(dir, sub, 'mesh.glb');
+  if (sub.toLowerCase().endsWith('.glb')) { entries.push([sub.slice(0, -4), join(dir, sub)]); continue; }
+  entries.push([sub, join(dir, sub, 'mesh.glb')]);
+}
+const rows = [];
+for (const [sub, p] of entries) {
   try { statSync(p); } catch { continue; }
   const v = meshVolume(p);
   if (!v) continue;
