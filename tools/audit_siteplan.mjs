@@ -27,6 +27,10 @@
 //                   低矮桶拿掉保險絲 / 兩桶資格重疊
 //   --break-mass    整棟量體那一段退回舊制(pick_n 與預算分家 / 等高不再以座標定序 / 色抖吃拆桶後
 //                   的新索引)⇒ Ⅴ 的整棟量體三條 MUST 紅字
+//   --break-roof    屋頂帶退回壞版(帶寬與 tri_budget 分家 / 斜頂那條呼叫端不傳屋頂色)
+//                   ⇒ Ⅴ 的屋頂帶兩條 MUST 紅字
+//   --break-storey  層高不再夾在帶內(拿掉「先取落在帶內的候選」那一步)
+//                   ⇒ Ⅴ 的層高全域不變式 MUST 紅字
 import { readSrc } from './audit_src.mjs';
 import { objHeightMax, objScaleFit } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
@@ -38,6 +42,8 @@ const BREAK_SHY = process.argv.includes('--break-shy');
 const BREAK_STRIKE = process.argv.includes('--break-strike');
 const BREAK_GATE = process.argv.includes('--break-gate');
 const BREAK_MASS = process.argv.includes('--break-mass');
+const BREAK_ROOF = process.argv.includes('--break-roof');
+const BREAK_STOREY = process.argv.includes('--break-storey');
 // 第二個整棟量體桶(低矮建物)的反向驗證:①兩桶挑選數加起來超出總額度
 // ②低矮桶拿掉保險絲 ③兩桶資格重疊(低矮那一邊漏掉門檻)
 const BREAK_MASS2 = process.argv.includes('--break-mass2');
@@ -537,7 +543,9 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           .replace('q.h - p.h || p.x - q.x || p.z - q.z', 'q.h - p.h')
           .replace('((t.ord * 2654435761)', '((i * 2654435761)')
         : bioC;
-      const M = bioM.match(/MIN_H:\s*(\d+),[\s\S]*?PICK_N:\s*(\d+),[\s\S]*?PICK_N_LOW:\s*(\d+),/);
+      // 錨到 `const MASS = {`:`FACADE_PX` 也有一個 `MIN_H`(貼圖高度下限),
+      // 不錨就會抓到它 —— 而那條斷言的訊息會說「門檻 256/55」,看起來像是門檻被改壞了
+      const M = bioM.slice(bioM.indexOf('const MASS = {')).match(/MIN_H:\s*(\d+),[\s\S]*?PICK_N:\s*(\d+),[\s\S]*?PICK_N_LOW:\s*(\d+),/);
       ok(!!M && +M[1] === budget.min_h && +M[2] === budget.pick_n_high && +M[3] === budget.pick_n_low,
         `MASS 的挑選門檻與 tri_budget 同一份(min_h ${M?.[1]}/${budget.min_h}、`
         + `pick_n 高 ${M?.[2]}/${budget.pick_n_high}、低 ${M?.[3]}/${budget.pick_n_low})`);
@@ -575,7 +583,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       ok(/const take = \(key, ok, list, n\) => \{ if \(ok\.length\)/.test(bioM),
         '名冊/庫整批取不到 ⇒ 該桶一棟都不挑 ⇒ 主量體落回單位方盒(逐位元同舊制;逐桶各自成立)');
       // ③色抖的雜湊吃原始序:拆桶後拿新索引去雜湊會讓其餘每一棟的配色跟著平移
-      const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = []'));
+      const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = new Map()'));
       ok(/inst\.forEach\(\(t, i\) => \{ t\.ord = i; \}\);/.test(bioM)
         && /\(\(t\.ord \* 2654435761\)/.test(emitBlk) && /\(\(t\.ord \* 1597334677\)/.test(emitBlk)
         && !/\(\(i \* \d+\) >>> 0\) % 100/.test(emitBlk),
@@ -597,6 +605,116 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
         ok(/\n\s+inst\.push\(\{ x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5,/.test(fSeg),
           '主量體那一列直接進 inst(它才是被庫節點取代的那一列,不進丟棄桶)');
+      }
+      // ⑥**屋頂帶**(2026-08-09 §5ao):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它
+      //   不生效(窗格印在斜屋頂上),而拆群組會多一個 draw call ⇒ 區分移進 UV。
+      //   這裡驗的是「兩份數字沒有分家」與「只有斜頂那一桶吃得到」;**成品 GLB 的 UV 帶
+      //   由 intake_parts 直接量**(那才是節點真的長什麼樣,指令打對了沒不算數)。
+      {
+        const bioR = BREAK_ROOF
+          ? bioC.replace('ROOF_BAND: 0.273,', 'ROOF_BAND: 0.2,')
+            .replace('pd.style, pd.wall, pd.roof, pd.rf)', 'pd.style, pd.wall)')
+          : bioC;
+        const R = bioR.match(/ROOF_BAND:\s*([\d.]+),[\s\S]*?ROOF_MINZ:\s*([\d.]+),/);
+        ok(!!R && +R[1] === budLow.roof_band && +R[2] === budLow.roof_minz,
+          `屋頂帶的兩個數字與 tri_budget 同一份(帶寬 ${R?.[1]}/${budLow.roof_band}、`
+          + `朝上門檻 ${R?.[2]}/${budLow.roof_minz};節點那一側是 --roofband 烤進 UV 的同一組)`);
+        // 斜頂那條呼叫端 MUST 傳屋頂色與屋頂形式;方盒那條(FACADES 16 款)MUST NOT 傳
+        // ⇒ `band = 0` ⇒ `WH === H` ⇒ 既有 16 款與六支地標**逐位元不變**
+        ok(/facadeTex\(`\$\{pd\.key\}r\$\{rw\}`, pd\.cols, rw, pd\.winC, pd\.lit, pd\.style, pd\.wall, pd\.roof, pd\.rf\)/.test(bioR)
+          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}`, fd\.cols, rows, fd\.winC, fd\.lit, fd\.style, fd\.wall\)/.test(bioR),
+          '屋頂帶只餵給斜頂那一桶(方盒那條仍只傳到 wall ⇒ 16 款與地標逐位元不變)');
+        // 牆的繪製一律吃 `WH`(= H − 帶高):殘留一個 `H` 就是基座暗帶/遮陽棚被屋頂帶蓋掉
+        const fx = bioR.slice(bioR.indexOf('function facadeTex('), bioR.indexOf('// 一般建物外牆色盤'));
+        ok(!/\bH - \d/.test(fx) && (fx.match(/\bWH\b/g) || []).length >= 6
+          && /const band = roofC \? Math\.round\(H \* MASS\.ROOF_BAND\) : 0;/.test(fx),
+          '牆的繪製全部吃 WH(H − 帶高);沒有屋頂色 ⇒ band = 0 ⇒ WH === H');
+        // 屋頂圖樣一份實作一個呼叫點,且畫在畫布**底部**那一條(v=0 那一側)
+        ok((bioR.match(/function roofLayer\(/g) || []).length === 1
+          && (bioR.match(/\broofLayer\(/g) || []).length === 2
+          && /if \(band\) roofLayer\(cx, W, WH, band,/.test(fx),
+          '屋頂圖樣只有 roofLayer 一份實作、一個呼叫點,畫在畫布底部那一條(= UV 的 v ∈ [0, BAND])');
+        // 六款的「牆 × 屋頂形式」MUST 兩兩不同 —— 使用者要的「不同類型/風格/屋頂形式都要
+        // 不同」在這張表上就是這件事;少了它,新增一款只要複製貼上就會多一款一模一樣的
+        const pit = [...bioR.matchAll(/\{ key: 'pit\d'[^}]*wall: '(\w+)',\s*roof: 0x[0-9a-f]+, rf: '(\w+)' \}/g)]
+          .map((m) => `${m[1]}/${m[2]}`);
+        ok(pit.length === 6 && new Set(pit).size === 6,
+          `斜頂六款的「牆 × 屋頂形式」兩兩不同(${pit.join('、')})`);
+      }
+      // ⑦**樓層間距**(2026-08-09 使用者定案:「不同建築可以有不同窗戶大小,但上下樓層
+      //   間距要在合理差異範圍以內」)。立面貼圖沒有 per-instance repeat ⇒ 一張圖被拉滿
+      //   **那一件**的高度 ⇒ 層高 = 件高 ÷ 列數。舊制列數是款自帶的常數 ⇒ 實測全面出界
+      //   (商辦 h=13m → 1.1m、100m 塔樓的裙樓 → 0.75m)。這一段驗的就是那個量。
+      {
+        const bioS = BREAK_STOREY
+          ? bioC.replace('  const inBand = ROW_LADDER.filter((r) => h / r >= STOREY.MIN && h / r <= STOREY.MAX);',
+            '  const inBand = [];')
+          : bioC;
+        const cut = (a, b) => { const i = bioS.indexOf(a), j = bioS.indexOf(b, i + 1); return i < 0 || j < 0 ? '' : bioS.slice(i, j); };
+        // 結束錨點 MUST 是**程式碼**:bioC 已經剝掉註解,拿註解當錨會切到空字串,
+        // 而症狀是「STOREY is not defined」—— 看起來像原文壞了,其實是錨壞了
+        const seg = cut('const STOREY = {', 'function facadeStyle(');
+        let S = null, ranErr = null;
+        try { S = new Function('objHeightMax', `${seg}\n return { STOREY, ROW_LADDER, facadeRows };`)(objHeightMax); }
+        catch (e) { ranErr = e; }
+        ok(!ranErr && S, `層高區塊原文執行不炸${ranErr ? ` —— ${ranErr.message}` : ''}`);
+        if (S) {
+          const { STOREY, ROW_LADDER, facadeRows } = S;
+          // 級距上界推導自世界物件高度上限,MUST NOT 手寫(改 objHeightMax 自己跟著長)
+          // 頂級只需**放得下最高的那一棟**(層高 ≤ MAX);再往上加級只會多開桶
+          const top = ROW_LADDER[ROW_LADDER.length - 1];
+          const need = objHeightMax() / Math.min(STOREY.residential, STOREY.commercial);
+          ok(top >= need && ROW_LADDER[ROW_LADDER.length - 2] < need,
+            `列數級距的上界是推導值(頂級 ${top} 恰好蓋過 ${objHeightMax().toFixed(1)} ÷ ${Math.min(STOREY.residential, STOREY.commercial)} = ${need.toFixed(1)},不多開一級)`);
+          ok(ROW_LADDER[0] === 1 && ROW_LADDER.every((r, i) => i === 0 || r > ROW_LADDER[i - 1]),
+            `列數級距自 1 起嚴格遞增(${ROW_LADDER.length} 級)`);
+          // 級距比 MUST < 帶寬比,否則某些高度會「找不到落在帶內的列數」而靜默出界
+          const step = Math.max(...ROW_LADDER.map((r, i) => (i ? r / ROW_LADDER[i - 1] : 1)));
+          ok(step <= STOREY.MAX / STOREY.MIN + 1e-9,
+            `級距比 ${step.toFixed(2)} ≤ 帶寬比 ${(STOREY.MAX / STOREY.MIN).toFixed(2)}(恆有落在帶內的候選)`);
+          // **核心不變式**:掃過整個高度域,層高一律落在使用者說的那個「合理差異範圍」
+          let bad = null, lo = Infinity, hi = 0;
+          for (const com of [false, true]) {
+            for (let h = STOREY.MIN; h <= objHeightMax() + 1e-9; h += 0.02) {
+              const s = h / facadeRows(h, com);
+              if (s < lo) lo = s;
+              if (s > hi) hi = s;
+              if (!bad && (s < STOREY.MIN - 1e-9 || s > STOREY.MAX + 1e-9)) bad = `${com ? '商辦' : '住宅'} h=${h.toFixed(2)} → 層高 ${s.toFixed(2)}`;
+            }
+          }
+          ok(!bad, `層高全域收在 [${STOREY.MIN}, ${STOREY.MAX}](實測 [${lo.toFixed(2)}, ${hi.toFixed(2)}])${bad ? ` —— ${bad}` : ''}`);
+          // 「每棟差異不大」= **同一類**建物之間的離散度(住宅與商辦的目標本來就差
+          // 1.26×,那是設計不是漂移 ⇒ 兩類混在一起量會把它算進離散度裡)
+          for (const com of [false, true]) {
+            let lo2 = Infinity, hi2 = 0;
+            for (let h = 10; h <= objHeightMax(); h += 0.02) {
+              const s = h / facadeRows(h, com);
+              lo2 = Math.min(lo2, s); hi2 = Math.max(hi2, s);
+            }
+            ok(hi2 / lo2 <= 1.5,
+              `${com ? '商辦' : '住宅'}:10m 以上的層高離散度 ${(hi2 / lo2).toFixed(2)}× ≤ 1.5×`
+              + `(實測 [${lo2.toFixed(2)}, ${hi2.toFixed(2)}],目標 ${com ? STOREY.commercial : STOREY.residential}m)`);
+          }
+          ok(Math.abs(STOREY.commercial / STOREY.residential - 1.26) < 0.15,
+            `兩類的目標層高差 ${(STOREY.commercial / STOREY.residential).toFixed(2)}×(現實:商辦/店面本來就比住宅挑高)`);
+          // 逐件而非逐棟:退縮頂塔(0.22h)與臨街裙樓(max(6, 0.12h))吃自己的高度
+          ok(facadeRows(100, true) !== facadeRows(12, true) && facadeRows(12, true) >= 2,
+            `同一棟的附件件另外取列數(100m 主體 ${facadeRows(100, true)} 列、12m 裙樓 ${facadeRows(12, true)} 列)`);
+        }
+        // 單一縫:一份定義、三個消費端都經 `rowsOf`,而快取鍵 MUST 帶列數
+        ok((bioC.match(/function facadeRows\(/g) || []).length === 1
+          && /const rowsOf = \(t\) => facadeRows\(t\.h, commercial\);/.test(bioC)
+          && (bioC.match(/rowsOf\(/g) || []).length === 3
+          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}`/.test(bioC) && /facadeTex\(`\$\{pd\.key\}r\$\{rw\}`/.test(bioC),
+          '列數只有 facadeRows 一份、逐件經 rowsOf、貼圖快取鍵帶列數(不帶 = 第一個算出來的列數被全場共用)');
+        // 舊制退場:款表不再帶 rows、樓高分桶表不得復辟
+        ok(!/FACADE_BUCKETS/.test(bioC) && !/\{ key: '(?:res|com)\d', cols: \d+, rows:/.test(bioC),
+          '款表不再自帶 rows、FACADE_BUCKETS 已退場(款只管窗長什麼樣,層高歸 STOREY)');
+        // 貼圖高度隨列數長:10 列以下維持 256 ⇒ 絕大多數建物的貼圖逐位元不變
+        const H = new Function(`${cut('const FACADE_PX = {', '\nfunction facadeTex(')}\n return facadeTexH;`)();
+        ok(H(1) === 256 && H(10) === 256 && H(24) === 576 && H(40) === 960
+          && [1, 5, 10, 20, 40].every((r, i, a) => i === 0 || H(r) >= H(a[i - 1])),
+          `貼圖高度隨列數單調不減且 10 列以下維持 256(24 列 → ${H(24)}、40 列 → ${H(40)})`);
       }
     }
     {   // megaGeo 呼叫點 = 凍結清單 7 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石/tower 整座/mesa 整座),名字一律出自 MEGA_LIB 名冊

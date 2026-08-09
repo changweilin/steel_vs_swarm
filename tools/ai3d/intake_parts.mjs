@@ -21,7 +21,7 @@
 import { existsSync } from 'node:fs';
 import {
   beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs, megaLibDescs, bldLibDescs,
-  fbEnvelope, parseGlb, nodeExtent, glbPath, triBudget,
+  fbEnvelope, parseGlb, nodeExtent, uvBandStats, glbPath, triBudget,
 } from './parts_src.mjs';
 
 let pass = 0, fail = 0;
@@ -92,6 +92,31 @@ for (const gp of targets) {
       const u = vegUse.get(kind) || { tris: 0, whole: false, rows: 0 };
       u.tris += node.tris; u.rows += 1; u.whole = u.whole || !!whole;
       vegUse.set(kind, u);
+    }
+    // ①-b **UV 契約**(整棟量體那一桶專用;2026-08-09 §5ao)。只有它吃貼圖,而貼圖壞掉的
+    //    兩種樣子都沒有錯誤訊息:上下顛倒(基座暗帶印在屋簷)、窗格印在斜屋頂上。
+    //    要不要驗、帶多寬、門檻多少,一律取 tri_budget 那一份(與 biomes 的 MASS 同值,
+    //    audit_siteplan 釘住);這裡驗的是**成品 GLB**,不是那行指令打對了沒。
+    const uvSpec = budget?.families?.building?.[kind]?.uv;
+    if (uvSpec && !seen.has(name)) {
+      const bandF = budget.families.building[kind].roof_band;
+      const minz = budget.families.building[kind].roof_minz ?? 0.30;
+      const st = uvBandStats(node, minz);
+      ok(!!st, `${tag}:有 UV(整棟量體是唯一吃貼圖的桶;沒有 UV = 整棟採到一個 texel 的純色板)`);
+      if (st) {
+        // 方向:牆面的 v MUST 隨高度遞增。glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端
+        // 會把 v 翻過來,不補償就是**整面立面上下顛倒**,而方盒那條路是正的(兩種方向)
+        ok(st.corr > 0.9, `${tag}:立面方向正確(牆面 corr(高度, v) = ${st.corr.toFixed(3)} > 0.9)`);
+        if (uvSpec === 'roofband') {
+          ok(st.upMaxV <= bandF + 1e-3, `${tag}:朝上面收在屋頂帶內(v 上界 ${st.upMaxV.toFixed(3)} ≤ ${bandF})`);
+          ok(st.wallMinV >= bandF - 1e-3, `${tag}:牆面不踩進屋頂帶(v 下界 ${st.wallMinV.toFixed(3)} ≥ ${bandF})`);
+          // 帶寬是**推導值**(兩帶 texel 密度相同):量出來的比例要對得上宣告的那個數字
+          ok(Math.abs(st.parity - bandF) <= 0.03,
+            `${tag}:屋頂帶寬 = 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ 0.03)`);
+        } else {
+          ok(st.upMaxV > 0.5, `${tag}:沒有屋頂帶(平頂桶刻意共用立面貼圖;朝上面 v 上界 ${st.upMaxV.toFixed(3)})`);
+        }
+      }
     }
     if (!budget) ok(false, `${name}:tri_budget.json 存在(預算 MUST 量測,不准手寫)`);
     else if (!seen.has(name)) {

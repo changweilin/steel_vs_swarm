@@ -14,6 +14,8 @@
 #      —— **唯一例外 `--boxuv <node>`**:整棟量體那一桶的消費端是 biomes 的立面材質
 #      (窗格貼圖 + 夜間自發光),節點沒有 UV 就整棟採到 (0,0) 一個 texel = 純色板。
 #      剝掉來源 UV(T2/SF3D 自己貼圖的那一份)之後**重建**盒投影 UV,見下方 BOXUV。
+#      斜屋頂那一桶再多一條 `--roofband <node>=<frac>`:把朝上的面分到貼圖底部那一帶
+#      (單一材質群組換不掉屋頂材質,只好把區分移進 UV),見下方 ROOFBAND。
 #
 # 用法(Blender 5.x;欄位分隔用 `|` —— `:` 會撞上 Windows 磁碟機代號):
 #   blender --background --python tools/ai3d/normalize_parts.py -- \
@@ -103,6 +105,31 @@ DROP = set(opt_all('drop'))
 # 投影規則沿用原 BoxGeometry 的「逐面 0..1」慣例:依主導法線分軸,另兩軸各自 +0.5。
 # 座標系:Blender Z-up,匯出 +Y up ⇒ 遊戲的 (X, Y, Z) = Blender 的 (x, z, −y)。
 BOXUV = set(opt_all('boxuv'))
+# --roofband "<node>=<frac>[|<minz>]":**屋頂帶 UV**(2026-08-09 使用者回報「斜頂屋頂外觀
+# 變摩天大樓的玻璃」的**後半**)。前半(換一張材質感的牆)已在 biomes 那一側落地,但庫節點
+# 是**單一材質群組** ⇒ three 只取 `material[0]`,方盒那條路的「第 3/4 格 = 屋頂材質」對它
+# 完全不生效 ⇒ 窗格照樣印在斜屋頂上。單一群組這件事不能改(拆群組 = 每一棟多一個 draw call,
+# 而 `pick_n` 的整條推導就是 draw call 上界),於是把區分**移進 UV**:
+#   朝上面(法線 Blender z > minz)→ **平面投影**壓進 v ∈ [0, frac]
+#   其餘(牆面 + 真朝下的底面)   → 原本的逐面盒投影,v 壓進 [frac, 1]
+# 消費端 `facadeTex` 於是把畫布底部那 `frac` 條畫成屋頂(瓦縫/浪板),上面 (1−frac) 照舊畫牆。
+# **兩個數字 MUST 與 biomes 的 `MASS.ROOF_BAND` / `ROOF_MINZ` 同值**(tri_budget 存量測、
+# audit_siteplan 釘住相等、intake_parts 直接量 GLB 的 UV 帶)—— 分家不會報錯,只會讓屋頂
+# 的那一條接縫落在牆上。
+#
+# **為什麼是「法線門檻」而不是沿用盒投影的「主導軸」**:主導軸等價於門檻 0.577(1/√3),
+# 而實測 masslow_a 的屋頂面落在 n.y ∈ [0.45, 0.55](非等向 fit 把穀倉拉高 ⇒ 坡更陡)、
+# masslow_b 的尖頂落在 [0.65, 0.80] —— 用主導軸判,穀倉那一顆的**整個屋頂**會被判成牆。
+# 門檻取兩顆量出來的空檔中點(牆的尖峰止於 0.15、屋頂的尖峰起於 0.45)。
+ROOFBAND = {}
+for spec in opt_all('roofband'):
+    rbname, rest = spec.split('=', 1)
+    bits = rest.split('|')
+    rb_frac = float(bits[0])
+    rb_minz = float(bits[1]) if len(bits) > 1 else 0.30
+    assert 0.0 < rb_frac < 1.0, f'--roofband {rbname}:frac 要在 (0,1) 之間'
+    assert 0.0 < rb_minz < 1.0, f'--roofband {rbname}:minz 要在 (0,1) 之間'
+    ROOFBAND[rbname] = (rb_frac, rb_minz)
 # --mirror <node>=<x|z|auto>:**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,
 # 使用鏡像貼補空的部分」)。單張照片只約束得到看得見的那幾面 —— 退縮階/簷帶/裙樓只長在
 # 被拍到的那半,另一半是模型自己補的一片平板。切一半、鏡射過去、**焊住接縫**。
@@ -548,26 +575,56 @@ for gname, obs in pending.items():
         print(f'NODE {o.name}: tris={t} r={rr:.3f} z=[{z0:.3f},{z1:.3f}] (群組 {gname})')
 
 # ---- 盒投影 UV(MUST 排在置中/縮放/dy **之後**:它吃的是最終座標)----
+# `--roofband` 走**同一段**:它不是另一種投影,只是在同一份逐面盒投影上多分一條帶
+# —— 分兩段寫就是「兩份 UV 規則」,而它們分家的樣子是「牆對得上、屋頂差一條縫」。
+# 這一段吃 `made`,而 `--base` 帶進來的既有節點也在裡面 ⇒ 對已出貨節點只重建 UV、
+# **幾何逐位元不動**(同 `--rework` 的那條路,但連頂點都不碰)。
 for o in made:
-    if o.name.split('.')[0] not in BOXUV:
+    nm = o.name.split('.')[0]
+    band = ROOFBAND.get(nm)
+    if nm not in BOXUV and not band:
         continue
     me = o.data
+    # base 節點本來就帶著上一輪的 UV ⇒ 先清乾淨,否則 `uv_layers.new` 只是加**第二層**
+    # (three 取第 0 層 = 舊的那一份),看起來就是「這一輪的 UV 完全沒有生效」
+    for old in list(me.uv_layers):
+        me.uv_layers.remove(old)
     uv = me.uv_layers.new(name='UVMap')
+    frac, minz = band or (0.0, 1.0)
+    up_n = 0
     for poly in me.polygons:
         n = poly.normal
         ax = max(range(3), key=lambda i: abs(n[i]))   # 0=x 1=y 2=z(Blender)
+        roof = n.z > minz                             # Blender z = 遊戲 Y
+        if roof:
+            up_n += 1
         for li in poly.loop_indices:
             v = me.vertices[me.loops[li].vertex_index].co
-            if ax == 0:      # 遊戲 ±X 面:u ← 遊戲 Z(= −y)、v ← 遊戲 Y(= z)
+            if roof:         # 屋頂:一律**平面投影**(從上往下看),不看主導軸
+                u2, v2 = v.x + 0.5, -v.y + 0.5
+            elif ax == 0:    # 遊戲 ±X 面:u ← 遊戲 Z(= −y)、v ← 遊戲 Y(= z)
                 u2, v2 = -v.y + 0.5, v.z + 0.5
             elif ax == 1:    # 遊戲 ±Z 面:u ← 遊戲 X(= x)、v ← 遊戲 Y(= z)
                 u2, v2 = v.x + 0.5, v.z + 0.5
             else:            # 遊戲 ±Y 面(頂/底):u ← X、v ← 遊戲 Z(= −y)
                 u2, v2 = v.x + 0.5, -v.y + 0.5
-            uv.data[li].uv = (min(max(u2, 0.0), 1.0), min(max(v2, 0.0), 1.0))
-    print(f'BOXUV {o.name}: {len(me.polygons)} 面重建盒投影 UV')
-missing = BOXUV - {o.name.split('.')[0] for o in made}
-assert not missing, f'--boxuv 指到不存在的節點:{sorted(missing)}'
+            v2 = min(max(v2, 0.0), 1.0)
+            if band:
+                v2 = v2 * frac if roof else frac + v2 * (1.0 - frac)
+            # ⚠ **glTF 匯出端會把 v 翻過來**(glTF 的 UV 原點在左上、Blender 在左下)——
+            # 實測已出貨的四顆節點 corr(高度, glTF v) = **−1.0000**,而消費端那張立面貼圖是
+            # 我們自己的 `CanvasTexture`(`flipY` 預設 true ⇒ v=0 採到畫布**底部**)⇒
+            # 舊制的庫節點立面是**上下顛倒**的:基座暗帶印在屋簷、女兒牆帶與店面遮陽棚
+            # 印在地面(方盒那條路走 BoxGeometry 自己的 UV,是正的 ⇒ 同一張圖上兩種方向,
+            # 而且沒有任何錯誤訊息)。這裡先在**消費端座標**(v = 高度)算完,存檔前再翻回去。
+            uv.data[li].uv = (min(max(u2, 0.0), 1.0), 1.0 - v2)
+    if band:
+        print(f'ROOFBAND {o.name}: {len(me.polygons)} 面,朝上 {up_n} 面 '
+              f'({up_n / len(me.polygons) * 100:.1f}%)壓進 v ∈ [0, {frac}](minz {minz})')
+    else:
+        print(f'BOXUV {o.name}: {len(me.polygons)} 面重建盒投影 UV')
+missing = (BOXUV | set(ROOFBAND)) - {o.name.split('.')[0] for o in made}
+assert not missing, f'--boxuv / --roofband 指到不存在的節點:{sorted(missing)}'
 
 # 只留產出節點,其他(SF3D 場景空節點等)全刪
 for o in list(bpy.data.objects):
