@@ -46,6 +46,13 @@ export const METHODS = {
     short: 'T2-spz',
     doc: '幾何 + PBR 一次出的 O-Voxel 原生 3D:官方 TRELLIS.2 在 12GB 卡出局(§5l),IgorAherne fork 以預編 wheel + 逐階段 CPU offload 翻案(§5n:7/7@1024³、峰值 ≤3.4GB、59~226s/張、載入需 ≥20GB 空閒 RAM)。輸出是撕裂薄殼 ⇒ MUST 先過 tools/ai3d/solidify_parts.py(§5o C 路徑:實體化再減面)才進 normalize;岩石類逐 seed 重抽(§5r)+ V5a 楔形補丁備援(§5s)',
   },
+  plan_hull: {
+    key: 'plan_hull',
+    label: '設計圖→3D(正投影視覺外殼)',
+    kind: 'glb',
+    short: '設計圖外殼',
+    doc: '使用者 2026-08-09 定案「建築部分也加入設計圖轉 3D 的功能,轉 3D 時只要處理外層表面就好」。**這一支不是另一個生成模型,是幾何**:照片只給一個視角 + 明暗線索(深度得用模型猜,§5ag-c 的 hoodoo 就是猜不出厚度而塌成薄板),而設計圖給的是**正投影的精確輪廓** ⇒ 逐視圖取外輪廓 → 沿自己那一軸拉伸成稜柱 → **稜柱取交集** = 視覺外殼,解出來的不是生成出來的。零 GPU / 零權重 / 零亂數 / 離線可驗(`tools/ai3d/audit_plan_mesh.py` 18 項 + `--break-outer`/`--break-frame` 反向)。**階梯上排在 T2-spz 之前:有設計圖就別去猜。**「只要處理外層表面」是兩件事而剛好同一個實作 —— ㋐只取最外層那條輪廓線(窗/樓層線/隔間一律填掉,那些是貼圖的事)㋑只有外殼沒有室內。實作 `tools/ai3d/plan_to_mesh.py`,下游與 img→3D 完全共用(normalize_parts → intake_parts)',
+  },
   simple_geom_tree: {
     key: 'simple_geom_tree',
     label: '語料導出佈局 + 基本體重建(簡單幾何版整樹)',

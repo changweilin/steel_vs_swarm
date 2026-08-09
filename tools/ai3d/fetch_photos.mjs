@@ -16,9 +16,15 @@
  *   ④ **降級不例外**(原則 6):單一 API 掛掉/單張下載失敗只記 fail 繼續,
  *      MUST NOT 中止整批;Openverse 沒料改問 Wikimedia Commons。
  *
- * 選片標準(skill §1;能過濾的在這裡過濾,其餘靠人眼在 --review 清單上挑):
- *   短邊 ≥1024(API 有回尺寸才驗,沒回的照收並在帳本標 `size_unknown`)、
- *   單一主體/乾淨背景/平光交給 §5.3 的去背與人工挑選 —— 一張好照片勝過三張拼湊的。
+ * 選片標準(2026-08-09 使用者定案:「挑選的照片盡可能乾淨,只有目標物件無其他物件,
+ * 且光源充足」;一張好照片勝過三張拼湊的):
+ *   ㋐ 這裡能過濾的:授權(CC0/PD)、短邊 ≥1024(API 有回尺寸才驗,沒回的照收並在帳本
+ *      標 `size_unknown`)。**查詢用字是唯一能在下載之前影響「乾淨/單一主體」的旋鈕**
+ *      ⇒ 一律具名單一主體(`glacial erratic` 而不是 `rocks`),MUST NOT 寫場景詞。
+ *   ㋑ 這裡過濾不了的:「畫面裡有幾個東西」「光夠不夠」——那要看**去背之後的 matte**
+ *      才量得到 ⇒ 住 `screen_mattes.py` 的 ④多主體 / ⑤光源不足(門檻拿已出貨來源校準,
+ *      零誤殺),統計分不開的一帶進該支的觀察名單 sheet 交給人眼。
+ *   ⇒ **這兩支是同一道閘的兩半**:改了任一邊的標準,另一邊要跟著看。
  *
  * ⚠ 沙箱跑不動(CLAUDE.md ㋓):api.openverse.org / commons.wikimedia.org 走不出代理
  *    ⇒ 本工具在真機(3060 那台)或 GitHub Actions 上跑。
@@ -31,6 +37,7 @@
  *   node tools/ai3d/fetch_photos.mjs --part rock/facet    只抓某一個零件
  *   node tools/ai3d/fetch_photos.mjs --limit 10           本輪最多下載幾張
  *   node tools/ai3d/fetch_photos.mjs --review             列出已抓照片供人工挑選(路徑 + 尺寸 + 來源)
+ *   node tools/ai3d/fetch_photos.mjs --home <資料家>      語料不在本 checkout 底下時(帳本與 photos/ 同住那裡)
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -38,8 +45,13 @@ import { join, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const PHOTOS = join(HERE, 'photos');
-const MANIFEST = join(HERE, 'photo_manifest.json');
+// 資料家(photos/ 與帳本)= `--home`,不給就是腳本自己的目錄(舊行為逐位元不變)。
+// ⚠ 語料家會搬:runbook §5af-g 記過一次「worktree 被刪掉,整份 305 筆 superset 跟著沒了」——
+// 把資料家綁在「腳本住哪」等於逼每一個 checkout 各養一份語料。同 screen_mattes.py --home。
+const _HOME_I = process.argv.indexOf('--home');
+const HOME = _HOME_I >= 0 ? process.argv[_HOME_I + 1] : HERE;
+const PHOTOS = join(HOME, 'photos');
+const MANIFEST = join(HOME, 'photo_manifest.json');
 const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo issues)';
 
 // ============ 照片型錄(唯一縫)============
@@ -183,6 +195,7 @@ export const PHOTO_CATALOG = {
     st_pinnacle:{ want: 4, q: ['limestone stone forest pinnacle', 'pinnacles desert limestone'] },                 // 中國石林/澳洲
   },
   building: {                                                // hazards BUILDERS:窗格/簷口/陽台/外管
+    // ⚠ 本族的**整棟建物**列(帶 `grp` 欄那些)受配比約束,見檔尾 BUILDING_MIX 與 buildingMix()。
     window:   { want: 4, q: ['window facade', 'office building facade', 'factory windows'] },
     roofcap:  { want: 4, q: ['rooftop parapet', 'building rooftop', 'roof cornice'] },
     balcony:  { want: 3, q: ['concrete balcony facade', 'apartment balcony module'] },
@@ -199,27 +212,48 @@ export const PHOTO_CATALOG = {
     // 明知 SF3D 會出薄殼,仍收 —— fill 預篩會擋,留作立面模組語料。列序 = 抓取優先序:
     // 本批接線的模組列在前(tank_wood 供水塔第二款式),整棟風格列供本批與後續批次。
     tank_wood:      { want: 5, q: ['wooden water tower rooftop', 'wooden water tank tower', 'rooftop wooden water tower new york'] },
-    bld_barn:       { want: 5, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },          // 美國鄉間
-    bld_windmill:   { want: 5, q: ['dutch windmill', 'stone windmill isolated', 'old windmill field'] }, // 荷蘭
-    bld_chalet:     { want: 5, q: ['alpine chalet', 'swiss chalet mountain', 'wooden mountain hut alps'] }, // 瑞士山城
-    bld_minka:      { want: 5, q: ['japanese thatched farmhouse', 'gassho zukuri house', 'thatched roof cottage'] }, // 日本合掌造
-    bld_hanok:      { want: 4, q: ['korean hanok house', 'hanok traditional building'] },               // 韓國
-    bld_pagoda:     { want: 4, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },         // 東亞塔樓
-    bld_medit:      { want: 5, q: ['santorini white house', 'whitewashed greek house', 'mediterranean house isolated'] }, // 地中海
-    bld_adobe:      { want: 4, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },        // 美洲西南/北非
-    bld_halftimber: { want: 5, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },             // 德/英老鎮
-    bld_stonecottage:{ want: 5, q: ['stone cottage', 'scottish blackhouse', 'stone farmhouse countryside'] }, // 蘇格蘭/愛爾蘭
-    bld_church:     { want: 4, q: ['village church', 'white wooden church', 'country church steeple'] }, // 歐美小鎮
-    bld_lighthouse: { want: 4, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                // 海岸
-    bld_rowhouse:   { want: 4, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] }, // 歐洲城市
-    bld_shophouse:  { want: 4, q: ['shophouse facade', 'colonial shophouse'] },                         // 東南亞城鎮
-    // 城市高樓。2026-08-09(§5ae)擴充:整棟量體那一桶的名冊只有一顆 ⇒ 同一張圖十幾棟塔樓同剪影,
-    // 而舊的三句查詢在 Openverse 只有個位數結果(`art deco skyscraper` 全庫 6 筆)。加的都是
-    // **具名的單一主體**(skill §2「最大的槓桿是查詢用字」:要的是一棟樓,不是一條街的場景照)。
-    bld_tower:      { want: 8, q: ['art deco skyscraper', 'stepped skyscraper setback', 'brutalist concrete tower block',
-      'modernist office tower', 'gothic revival skyscraper', 'apartment tower block'] },
-    bld_warehouse:  { want: 4, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] }, // 工業
-    bld_yurt:       { want: 3, q: ['mongolian yurt', 'ger tent grassland'] },                           // 蒙古草原
+    // —— 設計圖(2026-08-09 使用者定案「建築部分也加入設計圖轉 3D 的功能」)——
+    // 走的是 `plan_to_mesh.py` 那條**幾何**路(正投影輪廓 → 視覺外殼),不是 img→3D。
+    // **刻意不帶 `grp`**:設計圖是**輸入格式**不是建物類別 ⇒ 進了分母就會把 50/25/25 稀釋掉,
+    // 而使用者那句話講的是「建築照片」的組成。要不要讓設計圖也照那個比例分類型,是另一個決定。
+    // 查詢用的是**測繪圖**的專名(HABS = 美國歷史建築調查,聯邦公版;`measured drawing`
+    // 是這一類的通稱)—— 泛稱的 `architectural drawing` 會撈回一堆室內裝飾與柱頭大樣。
+    bld_drawing:    { want: 6, q: ['HABS measured drawing elevation', 'measured drawing building elevation',
+      'building elevation drawing survey', 'architectural elevation drawing facade'] },
+    // ============ 整棟建物(`grp` 欄 = 配比分組;見上方 BUILDING_MIX)============
+    // ⚠ 只有帶 `grp` 的列進配比;上面那些是**零件**(窗格/屋頂配件)不是建物,不在其中。
+    // —— ㋐ 一般市區(50%):街廓裡真的排成一排的那些樓。整棟量體那一桶(building/mass_*)
+    //        的語料來源,也是 planBlocks 沿街配置看得到的主體 ——
+    bld_tower:      { grp: 'urban', want: 9, q: ['art deco skyscraper', 'stepped skyscraper setback', 'brutalist concrete tower block',
+      'modernist office tower', 'gothic revival skyscraper', 'apartment tower block'] },               // 市中心高樓
+    bld_office:     { grp: 'urban', want: 6, q: ['curtain wall office building', 'mid century modern office building', 'concrete office block sunlit'] }, // 一般辦公樓
+    bld_apartment:  { grp: 'urban', want: 6, q: ['walk up apartment building', 'residential apartment block', 'housing block facade sunlit'] },          // 一般住宅樓
+    bld_corner:     { grp: 'urban', want: 5, q: ['corner commercial building', 'street corner building', 'mixed use building street'] },                 // 街角商業樓
+    bld_rowhouse:   { grp: 'urban', want: 5, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] },                // 歐洲城市街屋
+    bld_shophouse:  { grp: 'urban', want: 4, q: ['shophouse facade', 'colonial shophouse'] },                                                            // 東南亞城鎮
+    bld_warehouse:  { grp: 'urban', want: 5, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] },                          // 工業
+    // —— ㋑ 鄉村 / 觀光旅宿(25%)——
+    bld_inn:        { grp: 'rural', want: 3, q: ['country inn building', 'mountain lodge hotel', 'ryokan traditional inn'] },   // 觀光旅宿
+    bld_barn:       { grp: 'rural', want: 2, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },                    // 美國鄉間
+    bld_windmill:   { grp: 'rural', want: 2, q: ['dutch windmill', 'stone windmill isolated', 'old windmill field'] },          // 荷蘭
+    bld_chalet:     { grp: 'rural', want: 2, q: ['alpine chalet', 'swiss chalet mountain', 'wooden mountain hut alps'] },       // 瑞士山城
+    bld_minka:      { grp: 'rural', want: 2, q: ['japanese thatched farmhouse', 'gassho zukuri house', 'thatched roof cottage'] }, // 日本合掌造
+    bld_hanok:      { grp: 'rural', want: 2, q: ['korean hanok house', 'hanok traditional building'] },                         // 韓國
+    bld_medit:      { grp: 'rural', want: 2, q: ['santorini white house', 'whitewashed greek house', 'mediterranean house isolated'] }, // 地中海
+    bld_stonecottage:{ grp: 'rural', want: 2, q: ['stone cottage', 'scottish blackhouse', 'stone farmhouse countryside'] },     // 蘇格蘭/愛爾蘭
+    bld_halftimber: { grp: 'rural', want: 1, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },                       // 德/英老鎮
+    bld_adobe:      { grp: 'rural', want: 1, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },                  // 美洲西南/北非
+    bld_yurt:       { grp: 'rural', want: 1, q: ['mongolian yurt', 'ger tent grassland'] },                                     // 蒙古草原
+    // —— ㋒ 功能型(25%):使用者點名的寺廟/教堂/醫院/車站/學校/博物館/公家機構 ——
+    bld_temple:     { grp: 'civic', want: 3, q: ['buddhist temple building', 'shinto shrine building', 'taoist temple hall'] }, // 寺廟
+    bld_church:     { grp: 'civic', want: 3, q: ['village church', 'white wooden church', 'country church steeple'] },          // 教堂
+    bld_station:    { grp: 'civic', want: 3, q: ['railway station building', 'historic train station building'] },              // 車站
+    bld_school:     { grp: 'civic', want: 3, q: ['red brick schoolhouse', 'school building exterior'] },                        // 學校
+    bld_museum:     { grp: 'civic', want: 2, q: ['neoclassical museum building', 'museum building exterior'] },                 // 博物館
+    bld_civic:      { grp: 'civic', want: 2, q: ['city hall building', 'courthouse building'] },                                // 公家機構
+    bld_hospital:   { grp: 'civic', want: 2, q: ['hospital building exterior', 'clinic building exterior'] },                   // 醫院
+    bld_pagoda:     { grp: 'civic', want: 1, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },                   // 東亞塔樓(宗教)
+    bld_lighthouse: { grp: 'civic', want: 1, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                          // 海岸公共設施
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
@@ -228,6 +262,44 @@ export const PHOTO_CATALOG = {
     container:{ want: 3, q: ['shipping container single', 'cargo container isolated'] },
   },
 };
+
+// ============ 整棟建物的語料配比(2026-08-09 使用者定案)============
+// 「建築照片的部分 50% 挑一般市區建築,25% 挑鄉村或觀光旅宿建築,25% 挑功能型建築
+//   如寺廟/教堂/醫院/車站/學校/博物館/公家機構等等」
+//
+// 三條紀律:
+//   ① **配比只約束「整棟建物」**(帶 `grp` 欄的列)。窗格/簷口/冷氣機/屋頂水塔/煙囪那些
+//      是**零件**不是建物 —— 把它們算進分母,50% 就會隨「這一輪加了幾個零件列」浮動,
+//      而那與使用者說的那句話無關。
+//   ② **配比是驗出來的,不是註解**:`buildingMix()` 逐列加總 `want` 現算,`--plan` 與每次
+//      抓取前都印;偏差超過 MIX_TOL 直接紅字擋下。手寫在註解裡的比例會在下一次有人改
+//      某一列 want 時**靜默過期**(同 §5ae-e 那兩份手寫清單),而照片是真金白銀的配額。
+//   ③ 分組是**用途**不是風格:同一種立面既可能是市區辦公樓也可能是鄉間旅館 ⇒ 以「這棟樓
+//      在城市裡扮演什麼角色」歸類,因為消費端(planBlocks 沿街配置 / 整棟量體桶)吃的正是角色。
+export const BUILDING_MIX = { urban: 0.50, rural: 0.25, civic: 0.25 };
+const MIX_TOL = 0.02;                                        // 配額是整數 ⇒ 允許的四捨五入餘裕
+
+/** 現行型錄的實際配比(逐列 want 加總;只計帶 grp 的整棟建物列)。 */
+export function buildingMix(catalog = PHOTO_CATALOG) {
+  const by = {}; let total = 0;
+  for (const [part, def] of Object.entries(catalog.building || {})) {
+    if (!def.grp) continue;
+    if (!(def.grp in BUILDING_MIX)) throw new Error(`building/${part}:未知分組 ${def.grp}`);
+    by[def.grp] = (by[def.grp] || 0) + def.want; total += def.want;
+  }
+  const share = {};
+  for (const g of Object.keys(BUILDING_MIX)) share[g] = total ? (by[g] || 0) / total : 0;
+  return { by, total, share };
+}
+
+/** 偏離定案配比就回傳訊息(呼叫端負責印/擋);沒偏離回 null。 */
+export function buildingMixDrift(catalog = PHOTO_CATALOG) {
+  const { by, total, share } = buildingMix(catalog);
+  const bad = Object.entries(BUILDING_MIX).filter(([g, t]) => Math.abs(share[g] - t) > MIX_TOL);
+  if (!bad.length) return null;
+  const row = (g) => `${g} ${by[g] || 0}/${total} = ${(share[g] * 100).toFixed(1)}%(定案 ${(BUILDING_MIX[g] * 100).toFixed(0)}%)`;
+  return `整棟建物配比偏離定案:${Object.keys(BUILDING_MIX).map(row).join('・')}`;
+}
 
 // ---- CLI ----
 const argv = process.argv.slice(2);
@@ -340,6 +412,9 @@ async function download(it, fam, part) {
 }
 
 async function main() {
+  // 配比守門線排在最前面:型錄本身寫壞了,抓下來的每一張都是照著壞配額抓的(而照片有配額成本)。
+  const drift = buildingMixDrift();
+  if (drift) { console.error(`❌ ${drift}`); process.exit(1); }
   const work = workList();
   if (flag('review')) {
     for (const e of manifest.filter((e) => e.ok)) {
@@ -354,6 +429,20 @@ async function main() {
         const rej = screened(fam, part);
         console.log(`  ${fam}/${part}: ${have(fam, part)}/${def.want}${rej ? `(選片閘另淘汰 ${rej} 張)` : ''}`);
       }
+    }
+    // 整棟建物配比:目標(型錄 want)與**手上真的有幾張**分開印 —— 前者是定案、後者是現況,
+    // 混成一個數字就看不出「還缺哪一組」(而缺的那一組正是下一輪要抓的)。
+    const mix = buildingMix();
+    const got = {}; let gotTotal = 0;
+    for (const [part, def] of Object.entries(PHOTO_CATALOG.building)) {
+      if (!def.grp) continue;
+      const n = have('building', part); got[def.grp] = (got[def.grp] || 0) + n; gotTotal += n;
+    }
+    console.log('\n整棟建物配比(使用者 2026-08-09 定案 50/25/25):');
+    for (const g of Object.keys(BUILDING_MIX)) {
+      const tgt = `${mix.by[g] || 0}/${mix.total} = ${(mix.share[g] * 100).toFixed(1)}%`;
+      const cur = gotTotal ? `${got[g] || 0}/${gotTotal} = ${((got[g] || 0) / gotTotal * 100).toFixed(1)}%` : '0';
+      console.log(`  ${g.padEnd(6)} 目標 ${tgt.padEnd(20)} 現有 ${cur}`);
     }
     if (!work.length) console.log('\n缺額為零,不用抓。');
     return;
@@ -397,9 +486,11 @@ async function main() {
             size_unknown: !(it.w && it.h) || undefined,
           };
           try {
-            // 帳本一律記「相對 HERE 的 POSIX 路徑」:舊制 replace(HERE + '/') 在 Windows 上
+            // 帳本一律記「相對**資料家**的 POSIX 路徑」:舊制 replace(HERE + '/') 在 Windows 上
             // 因分隔符不符靜默失效 ⇒ 別台 worktree 的絕對路徑漏進帳本(2026-08-05 實測 28 筆)。
-            entry.file = relative(HERE, await download(it, fam, part)).split('\\').join('/');
+            // 基準 MUST 是 HOME 不是 HERE —— 帳本與照片住同一個資料家,拿腳本位置當基準的話
+            // `--home` 一給,帳本裡就會出現 `../../…` 這種跨 worktree 的相對路徑。
+            entry.file = relative(HOME, await download(it, fam, part)).split('\\').join('/');
             entry.ok = true;
             fetched++;
             console.log(`✓ ${fam}/${part} ← ${it.id}(${it.license})`);

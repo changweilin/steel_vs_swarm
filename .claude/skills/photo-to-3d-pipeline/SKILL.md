@@ -20,6 +20,7 @@ Both routes start from the same CC0 photo. They diverge on **what the photo beco
 
 | Route | What the photo becomes | Cost | When |
 |---|---|---|---|
+| **0 — drawing→hull** (`method: plan_hull`) | Not a photo at all: an **orthographic drawing**. Take each view's outer contour, extrude along its own axis, intersect the prisms — the visual hull is *solved*, not generated | Zero GPU, zero weights, zero randomness, offline-verifiable | **Whenever a measured drawing exists.** A photo forces the model to guess depth; an elevation states it. This rung sits *above* every generative one — if you have the drawing, don't guess |
 | **A — img→three.js** (`method: llm_parts`) | You *read* the photo and write pure-data primitive rows (`['cyl', r0, r1, h, seg]`, `ico(r)`, …) into the existing part table | Zero GPU, zero binary, zero licence exposure, extents verifiable offline | **Regular / man-made geometry**: landmarks (`beacons.js KIND_PARTS`), civic parts, road props — anything a primitive can honestly express |
 | **B — local Blender** (`method: sf3d`) | You *run* the photo through SF3D on the 3060, normalise headless, ship a named node in `assets/models/parts/{family}.glb` | 4 GB weights, ~6 GB VRAM, ~7 s/image, binary in repo, offline extent contract needed | **Organic / irregular geometry**: rock bodies, tree canopies, buttress roots, hoodoos — shapes a primitive cannot express, plus **building modules** (user decision 2026-08-05) |
 | **neither** (`method: procedural`) | Nothing — it stays as it is | — | Small/ordinary vegetation (orders of magnitude more instances ⇒ draw-call and triangle budget), and **mechs**, which go Track A (2D slot images into existing rig slots) and never through this pipeline |
@@ -60,9 +61,28 @@ node tools/ai3d/fetch_photos.mjs --part rock/facet
 node tools/ai3d/fetch_photos.mjs --review               # list what is on disk, for human picking
 ```
 
-The catalog (`PHOTO_CATALOG`) is the single seam: family → part → `{want, q[]}`. **Catalog order is
+The catalog (`PHOTO_CATALOG`) is the single seam: family → part → `{want, q[], grp?}`. **Catalog order is
 priority order** — put the rows you actually need next above the rows whose candidates are throttle-heavy,
 or they never get their turn.
+
+**Whole-building rows carry a corpus mix (user decision 2026-08-09): 50% ordinary urban / 25% rural or
+tourist-lodging / 25% functional (temple, church, hospital, station, school, museum, government).** It is
+declared as `BUILDING_MIX`, tagged per row with `grp`, and **checked from the `want` totals** — `--plan`
+prints target vs. holdings and the fetcher refuses to run on drift. Two rules that are easy to get wrong:
+the mix covers *buildings*, not the module rows (window/parapet/AC unit — counting those makes 50% drift
+with every part you add), and rebalancing means **lowering `want`, not deleting rows** (a deleted row
+orphans photos already on disk).
+
+**The mix spans photos *and* drawings** (user decision 2026-08-09, second pass — supersedes the earlier
+"drawings are an input format, not a building category" carve-out). Keep the two dimensions orthogonal:
+`grp` is the building *type* and is the only thing the mix counts; a separate `src` field says which
+conversion route the row feeds. Folding format into `grp` turns "drawing" into a fourth category and the
+50/25/25 stops being computable. Drawings must **not** go through the photo screening gates — those
+thresholds are calibrated on photographs, and a drawing is never matted at all; its quality gate is
+`plan_to_mesh`'s own (line-art vs rendering, gap, frame).
+
+The data home is a **parameter** (`--home`), not wherever the script happens to live: a worktree was once
+deleted and took a 305-entry corpus with it.
 
 **Four things the fetcher already knows; do not re-derive them**
 
@@ -81,6 +101,31 @@ or they never get their turn.
 tool, same parameters. Ask for a **named single subject** (`glacial erratic`, `italian cypress tree`,
 `umbrella thorn acacia`), never a scene or a category.
 
+**Selection standard (user decision 2026-08-09): as clean as possible — the target object and nothing
+else — and well lit.** It lands in two places, and knowing which half is which saves a round:
+
+- *Before download*, the only lever is query wording (above). Licence and short-edge are the only other
+  things checkable from metadata.
+- *After matting*, `screen_mattes.py` measures what wording cannot: `④ 多主體` (largest connected alpha
+  component < 0.70 of subject area) and `⑤ 光源不足` (mean subject luma < 35 **and** shadow fraction ≥ 0.70).
+  Thresholds are calibrated against **sources that already shipped a node**, zero false kills.
+
+Three things that round cost:
+1. **Measure the matte, not the photo.** The winning hoodoo source was a cluttered hillside with three
+   mushroom rocks and a power line; matting left exactly one (`main` 0.984). A dirty photo is not a dirty
+   input — and the converse holds too (a clean 3-chimney photo shattered into 6 components at 222 tris).
+2. **Area share, not blob count.** A lattice water tower's legs are 4 blobs of *one* subject.
+3. **Where statistics cannot separate, watch — do not tighten.** Balloons sat at 0.760 and a shipped water
+   tower at 0.778. Narrowing the threshold to catch the balloons is overfitting to two samples; those cases
+   go to a `*_screen_watch.png` sheet with their numbers, for the human pass.
+
+**Thresholds carry a shape assumption — check it before applying a gate to a new family.** The original
+`BLANK_COV` (canvas coverage) and `PRINT_FILL` (bbox fill = "the subject is a sheet of paper") were
+calibrated on trees. Trees are dense blobs; a lattice tower is not, and *a building is a box*. Applied
+family-wide as-is they would have killed four already-shipped sources (including the Devils Tower one).
+Scope them to the calibrated families and demote them to the watch list elsewhere — do not simply drop
+them, because what they catch (yearbook covers, near-empty mattes) exists in every family.
+
 **The structural limit you will hit** (do not mistake it for bad wording): CC0 corpora are dominated by
 *digitised museum and library holdings*. Per-species queries can hit their photo target in full and still
 yield an 1832 lithograph, a 19th-century albumen print, a pressed herbarium sheet and a stereograph card —
@@ -89,6 +134,32 @@ providers (rawpixel deliberately stays: it supplies both modern photography and 
 **Do not loosen the CC0 regexes or the 1024 px filter to make a number move.**
 
 ---
+
+## 2b. Route 0 — drawing→hull (`tools/ai3d/plan_to_mesh.py`)
+
+```bash
+python tools/ai3d/plan_to_mesh.py --front elev.png [--side s.png] [--plan p.png] --out raw.glb
+python tools/ai3d/audit_plan_mesh.py                       # 21 assertions, no GPU/network
+python tools/ai3d/audit_plan_mesh.py --break-outer          # must go red (9)
+```
+
+**"Outer surface only" is two things with one implementation**: take only the outermost contour
+(windows, floor lines and partitions get filled in — those are texture, and filling them is also the
+main triangle-budget lever), and emit only the envelope (no floors, no rooms). The rule is enforced in
+**three** places — fill, `RETR_EXTERNAL`, and `prism` using `exterior` only. That redundancy is why a
+reverse check that breaks only one of them **passes anyway**: break all three or the test proves nothing.
+
+Three failure modes that produce no error, all measured:
+
+1. **Every real drawing sheet has a border frame.** The obvious implementation — flood from the canvas
+   edge, everything unreached is solid — measures *the sheet*, not the building (0.6678 → 0.7366 wide,
+   mesh looks fine). Pick the outline by contour instead and drop near-canvas-sized candidates, but only
+   while another candidate remains.
+2. **A rendering is not a line drawing.** In a watercolour elevation the ink is *tone*, not outline, so
+   the silhouette crumbles and highlights become holes. Ink density inside the contour separates them
+   cleanly: HABS measured drawing 11.4%, four renderings 32–71%.
+3. **Order the gates.** "Outline has a gap" must be checked *before* "this is a rendering" — a broken
+   line's mask is the line itself, so its ink density is 100% and the error points at the wrong cause.
 
 ## 3. Route A — img→three.js (pure-data parts)
 

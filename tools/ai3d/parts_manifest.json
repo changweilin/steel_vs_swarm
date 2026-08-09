@@ -1016,34 +1016,37 @@
       "key": "rock/hoodoo_a",
       "method": "hunyuan_2gp",
       "consumer": "biomes synthMegalith(MEGA_LIB.hoodoo 呼叫點啟用:蘑菇岩整柱,逐柱一顆、柱數 2~4;單位包絡節點,呼叫端 scale (r×1.5, h×0.55, r×1.5)。§5j 待續① 的缺口 —— 同一張照片 SF3D 在細腰處斷成兩截,2GP 保住帽岩/細頸/基座)",
-      "rev": "§5m Hunyuan3D-2GP 閘門量測輪(2026-08-06 晚)",
+      "rev": "(本輪)",
       "imgs": [
         {
-          "role": "primary",
-          "id": "wc_112762573",
+          "role": "primary(hoodoo_a;蘑菇岩單柱 —— 寬帽岩 + 層理石柱 + 裙狀基座。**換語料**:出貨版那張(wc_112762573)主體只佔畫面約 15%、細頸與帽岩糊在藍天裡,2GP 生出來的是「一顆大團塊頂著一根小角」)",
+          "id": "ov_929bc3d9-0f01-401b-8834-49c26d838e8b",
           "family": "rock",
           "part": "hoodoo",
           "query": "hoodoo rock formation",
-          "api": "commons",
-          "license": "Public domain",
-          "creator": "John Good",
-          "source_url": "https://commons.wikimedia.org/wiki/File:A_hoodoo_in_Hoodoo_Basin.jpg",
-          "note": "乾淨單體:平衡帽岩 + 細頸 + 藍天(§5l 曾以同張量 SF3D 基準,兩種參數皆塌成薄片 fill 0.065/0.227)",
-          "file": "photos/rock/hoodoo/wc_112762573.jpg"
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Kent G. Budge",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=90399660",
+          "file": "photos/rock/hoodoo/ov_929bc3d9-0f01-401b-8834-49c26d838e8b.jpg"
         }
       ],
       "gen": {
         "tool": "Hunyuan3D-2GP(shape-only;tencent/Hunyuan3D-2 dit-v2-0 fp16)",
         "runner": "WSL2 Ubuntu 24.04 ~/ai3d/.venv311hy(CPython 3.11 + torch 2.5.1+cu121 + mmgp 3.2.7)",
-        "params": "profile 3 / steps 30 / octree 256 / mc_algo=mc(diso 不裝)/ seed 2025",
+        "params": "profile 3 / steps 30 / octree 256 / mc_algo=mc / seed 2025(§5m 配方一字未改)",
         "machine": "RTX 3060 12GB(WSL2 GPU 直通)",
-        "note": "量測:torch 峰值 2524MiB(GPU 全程 free ≥10.2GB)、67.4s/張(七張批次逐張 61~67s、模型熱載 3.6s);原生 213,682 面 watertight"
+        "out": "~/ai3d/out_hoodoo2/ov_929bc3d9-…_raw.glb(餵入 = reverent-pascal-fcd63e 語料家的 out/matte/rock/hoodoo/ 同名 matte)",
+        "measured": "torch 峰值 2524MiB、61.6s/張(模型冷載 46.5s);原生 225,518 面 watertight 單元件"
       },
       "post": {
-        "tool": "hy3dgen FaceReducer(pymeshlab,WSL)213,682→560 + tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)560→382",
+        "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py(Blender 5.2 headless,--base)",
+        "params": "--cells 256 --offset 0.008 --target 382 ⇒ 382 面 / 0 開放邊 / 1 元件 / watertight / kf_p95 1.72% / dev_p95 1.25%;normalize 非等向 1x1(fallback ico(1) 兩軸各自拉滿)⇒ **382 面**、水平徑向 0.950、縱向 ±0.950",
         "fit": 0.95,
-        "note": "單位包絡 1×1(= fallback ico(1));兩段式減面 —— 2GP 原生是 mc 實心網格,quadric 大比例安全(§5e 的撕裂警告是 SF3D 薄殼那條路),末段 Blender 1.5:1 溫和;逐件上限 430 收在 382 留餘裕(§5j 教訓)"
-      }
+        "note": "外廓與面數**與舊版逐位元相同**(0.950 / ±0.950 / 382)⇒ 消費端 synthMegalith 的 scale(r×1.5, h×0.55, r×1.5)與 RX/RZ 碰撞語意一格不動,純粹同名取代。**舊制的兩段式 quadric 退場**:hy3dgen FaceReducer(pymeshlab)213,682→560 + Blender 560→382 出來的網格焊完只有 V=139(閉合流形應為 F/2+2=193)⇒ 非流形,§5ad 的鏡像刀在它身上直接把面數打成 128/96。改走 solidify 的體積重採樣之後焊點 **恰好 193** = 閉合流形理論值。**不做鏡像貼補**:mesh_sym 半空間不對稱 x 0.159 仍在 EMPTY_ASYM 之上,但那是「石柱本身歪 + 帽岩偏心」的天然形狀不是空的一面 —— union 刀的元件閘當場擋下(1 → 3,§5ad-d 三道閘之一),half 刀同樣不過(1 → 2)。"
+      },
+      "at": "2026-08-09",
+      "note": "§5ag-f 第 1 條(§5ad-f 起掛了三輪的「hoodoo_a 待重生成」)。**兩件事一起換才成立**:①語料(見 imgs;使用者 2026-08-09 定案「挑選的照片盡可能乾淨,只有目標物件無其他物件,且光源充足」)②後處理路徑(兩段式 quadric → solidify)。單獨換後處理只是把舊那顆歪塊做成流形(實測 asymZ 0.167→0.189、黏土仍是「團塊 + 小角」);單獨換語料則卡在 2 元件不收斂。詳見 runbook §5ah。"
     },
     {
       "key": "tree/snag_a",
