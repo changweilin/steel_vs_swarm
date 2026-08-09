@@ -203,10 +203,13 @@ console.log(`場地 ${VENUE} 隊制 ${TEAM}${LIVE ? '(真圖資)' : '(離線 fal
 // 就是「上限看起來很寬鬆」,而且沒有任何錯誤訊息。
 console.log(`建物 ${res.stats?.buildings ?? '?'} 棟(其中地標 ${res.stats?.landmarks ?? '?'})・道路 ${res.stats?.roads ?? '?'} 條`);
 console.log(`全場三角形 ${res.sceneTris.toLocaleString()}・mesh ${res.meshN}`);
-console.log('桶名                          instance   單件tris   桶總tris');
+// `draws` = 這一桶實際生出幾個 InstancedMesh。2026-08-09 起立面桶會依**列數**再分桶
+// (層高由樓高推導),draw call 不再是「款數」這個常數 ⇒ 它是 tri_budget 那條
+// `pick_n` 推導引用的量,MUST 印出來(算出來卻不印 = 下次還是得重跑一遍才知道)。
+console.log('桶名                          instance   單件tris   桶總tris   draw');
 let bldTris = 0;
 for (const [n, c] of [...byBucket.entries()].sort((a, b) => b[1].count * b[1].tris - a[1].count * a[1].tris)) {
-  console.log(`  ${n.padEnd(26)} ${String(c.count).padStart(8)} ${String(c.tris).padStart(9)} ${String(c.count * c.tris).padStart(10)}`);
+  console.log(`  ${n.padEnd(26)} ${String(c.count).padStart(8)} ${String(c.tris).padStart(9)} ${String(c.count * c.tris).padStart(10)} ${String(c.draws).padStart(6)}`);
   bldTris += c.count * c.tris;
 }
 console.log(`建物相關桶合計 ${bldTris.toLocaleString()} tris(佔全場 ${(bldTris / res.sceneTris * 100).toFixed(1)}%)`);
