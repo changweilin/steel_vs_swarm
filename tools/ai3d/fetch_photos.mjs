@@ -212,6 +212,14 @@ export const PHOTO_CATALOG = {
     // 明知 SF3D 會出薄殼,仍收 —— fill 預篩會擋,留作立面模組語料。列序 = 抓取優先序:
     // 本批接線的模組列在前(tank_wood 供水塔第二款式),整棟風格列供本批與後續批次。
     tank_wood:      { want: 5, q: ['wooden water tower rooftop', 'wooden water tank tower', 'rooftop wooden water tower new york'] },
+    // —— 設計圖(2026-08-09 使用者定案「建築部分也加入設計圖轉 3D 的功能」)——
+    // 走的是 `plan_to_mesh.py` 那條**幾何**路(正投影輪廓 → 視覺外殼),不是 img→3D。
+    // **刻意不帶 `grp`**:設計圖是**輸入格式**不是建物類別 ⇒ 進了分母就會把 50/25/25 稀釋掉,
+    // 而使用者那句話講的是「建築照片」的組成。要不要讓設計圖也照那個比例分類型,是另一個決定。
+    // 查詢用的是**測繪圖**的專名(HABS = 美國歷史建築調查,聯邦公版;`measured drawing`
+    // 是這一類的通稱)—— 泛稱的 `architectural drawing` 會撈回一堆室內裝飾與柱頭大樣。
+    bld_drawing:    { want: 6, q: ['HABS measured drawing elevation', 'measured drawing building elevation',
+      'building elevation drawing survey', 'architectural elevation drawing facade'] },
     // ============ 整棟建物(`grp` 欄 = 配比分組;見上方 BUILDING_MIX)============
     // ⚠ 只有帶 `grp` 的列進配比;上面那些是**零件**(窗格/屋頂配件)不是建物,不在其中。
     // —— ㋐ 一般市區(50%):街廓裡真的排成一排的那些樓。整棟量體那一桶(building/mass_*)

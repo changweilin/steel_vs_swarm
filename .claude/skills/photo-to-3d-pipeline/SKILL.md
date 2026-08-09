@@ -20,6 +20,7 @@ Both routes start from the same CC0 photo. They diverge on **what the photo beco
 
 | Route | What the photo becomes | Cost | When |
 |---|---|---|---|
+| **0 — drawing→hull** (`method: plan_hull`) | Not a photo at all: an **orthographic drawing**. Take each view's outer contour, extrude along its own axis, intersect the prisms — the visual hull is *solved*, not generated | Zero GPU, zero weights, zero randomness, offline-verifiable | **Whenever a measured drawing exists.** A photo forces the model to guess depth; an elevation states it. This rung sits *above* every generative one — if you have the drawing, don't guess |
 | **A — img→three.js** (`method: llm_parts`) | You *read* the photo and write pure-data primitive rows (`['cyl', r0, r1, h, seg]`, `ico(r)`, …) into the existing part table | Zero GPU, zero binary, zero licence exposure, extents verifiable offline | **Regular / man-made geometry**: landmarks (`beacons.js KIND_PARTS`), civic parts, road props — anything a primitive can honestly express |
 | **B — local Blender** (`method: sf3d`) | You *run* the photo through SF3D on the 3060, normalise headless, ship a named node in `assets/models/parts/{family}.glb` | 4 GB weights, ~6 GB VRAM, ~7 s/image, binary in repo, offline extent contract needed | **Organic / irregular geometry**: rock bodies, tree canopies, buttress roots, hoodoos — shapes a primitive cannot express, plus **building modules** (user decision 2026-08-05) |
 | **neither** (`method: procedural`) | Nothing — it stays as it is | — | Small/ordinary vegetation (orders of magnitude more instances ⇒ draw-call and triangle budget), and **mechs**, which go Track A (2D slot images into existing rig slots) and never through this pipeline |
@@ -125,6 +126,32 @@ providers (rawpixel deliberately stays: it supplies both modern photography and 
 **Do not loosen the CC0 regexes or the 1024 px filter to make a number move.**
 
 ---
+
+## 2b. Route 0 — drawing→hull (`tools/ai3d/plan_to_mesh.py`)
+
+```bash
+python tools/ai3d/plan_to_mesh.py --front elev.png [--side s.png] [--plan p.png] --out raw.glb
+python tools/ai3d/audit_plan_mesh.py                       # 21 assertions, no GPU/network
+python tools/ai3d/audit_plan_mesh.py --break-outer          # must go red (9)
+```
+
+**"Outer surface only" is two things with one implementation**: take only the outermost contour
+(windows, floor lines and partitions get filled in — those are texture, and filling them is also the
+main triangle-budget lever), and emit only the envelope (no floors, no rooms). The rule is enforced in
+**three** places — fill, `RETR_EXTERNAL`, and `prism` using `exterior` only. That redundancy is why a
+reverse check that breaks only one of them **passes anyway**: break all three or the test proves nothing.
+
+Three failure modes that produce no error, all measured:
+
+1. **Every real drawing sheet has a border frame.** The obvious implementation — flood from the canvas
+   edge, everything unreached is solid — measures *the sheet*, not the building (0.6678 → 0.7366 wide,
+   mesh looks fine). Pick the outline by contour instead and drop near-canvas-sized candidates, but only
+   while another candidate remains.
+2. **A rendering is not a line drawing.** In a watercolour elevation the ink is *tone*, not outline, so
+   the silhouette crumbles and highlights become holes. Ink density inside the contour separates them
+   cleanly: HABS measured drawing 11.4%, four renderings 32–71%.
+3. **Order the gates.** "Outline has a gap" must be checked *before* "this is a rendering" — a broken
+   line's mask is the line itself, so its ink density is 100% and the error points at the wrong cause.
 
 ## 3. Route A — img→three.js (pure-data parts)
 
