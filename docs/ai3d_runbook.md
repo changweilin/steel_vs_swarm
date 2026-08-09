@@ -14,6 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
+| **⭐ 下一輪從這裡開始 — 使用者定案三條(配比含設計圖 / 開第二個量體桶 / 只補有洞的)** | **待執行 2026-08-09** | 規格全文 **§5aj**(含做法、陷阱、驗收與相依順序)。三條都還沒實作;§5aj-C 會**推翻** §5ad 的觸發條件(現制的尺是半空間不對稱,而使用者要的是「有洞才補」——數據支持:被鏡射的 collapse_a / mega_c 現在開放邊是 0,本來就沒有洞,而 mega_d 鏡射前 246 → 後 221,**那把刀從頭到尾沒關上任何一個洞**)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
 | Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
@@ -3557,6 +3558,122 @@ voxel 路還有進步空間,但「圓角 + 高面數」是它的本質。
    復現方式寫在 §5ai-g:三條路 + 剪影 IoU + 同一個三角形預算。再用到第二次就照
    「reused 就 promote」升格(同 `photo_sheet.mjs`/`mesh_sheet.mjs` 的來歷)。
 
+## 5aj. ⭐ 下一輪的執行清單(2026-08-09 使用者定案三條;**本節就是交接狀態,從這裡開始**)
+
+> 使用者對 §5ai-h 的三個待決問題逐一回覆:
+> ①「**設計圖 + 照片總比例滿足 50 + 25 + 25 即可**」
+> ②「**開**」(低矮建物的第二個「整棟量體」桶)
+> ③「**只補有洞的,洞很小的話直接貼平,不需要用對稱法補**」
+> 三條**都還沒實作**,本節是給下一輪照著做的規格。
+
+### 5aj-A. 配比改成「設計圖 + 照片」合計 50/25/25
+
+**現況**:`bld_drawing` 是單獨一列、**不帶 `grp`**、不進配比(§5ai-e 當時的理由是「輸入格式
+不是建物類別」)。使用者定案推翻它:**分母含設計圖**。
+
+**做法**(`tools/ai3d/fetch_photos.mjs`):
+
+1. 欄位拆成**兩個正交的維度** —— `grp`(建物**類別**:urban / rural / civic,**唯一**決定配比)
+   與新的 `src`(輸入**格式**:`'photo'` 預設 / `'drawing'`,決定走哪一條轉換路)。
+   MUST NOT 把格式塞進 `grp`,那會讓「設計圖」變成第四個類別、50/25/25 當場算不出來。
+2. `bld_drawing` 退場,改成**逐類別的設計圖列**(例:`dwg_tower` grp urban、`dwg_civic` grp civic、
+   `dwg_house` grp rural),每列 `src: 'drawing'`、查詢仍走測繪圖專名(`HABS measured drawing`
+   一類;泛稱的 `architectural drawing` 會撈回柱頭大樣與室內裝飾)。
+3. `buildingMix()` **只看 `grp`**(現在的實作已經是這樣,所以這一步其實是「把 `grp` 補上」而不是
+   改公式);群組總額維持 40 / 20 / 20 的比例,**組內**照片與設計圖各佔多少由這一輪決定並寫進註解。
+4. `--plan` 多印一列 `src` 拆帳(每組各有幾張是設計圖)—— 沒有這一列,「配比對了」會蓋掉
+   「這一組全是設計圖、一張照片都沒有」。
+
+**⚠ 設計圖 MUST NOT 走照片的選片閘**:`matte_photos.py` / `screen_mattes.py` 的 ④⑤ 門檻是拿
+**照片**校準的(主體面積佔比、亮度),線稿的統計完全是另一個分布,而且設計圖**根本不需要去背**
+(`plan_to_mesh` 直接吃原圖)。設計圖的品質閘是 `plan_to_mesh` 自己那三道(`LINEART_INK` 擋渲染圖 /
+`SOLID_MIN` 擋斷線 / `FRAME_MAX` 剔圖框)。**建議**:給 `plan_to_mesh.py` 加一個 `--screen <目錄>`
+模式,把那三道跑遍設計圖語料並回寫 `entry.screen`,語意與 `screen_mattes.py` 對齊
+(`have()` 才算得到「可用張數」而不是「下載成功張數」)。
+
+### 5aj-B. 開第二個「整棟量體」桶(低矮建物)
+
+**為什麼要開**:現在唯一吃整棟量體的桶是 `BLD_LIB.mass`,而它服務 `b.commercial && b.h > MASS.MIN_H`
+(55m)。⇒ **rural / civic 那兩組語料就算抓齊了也沒有消費端**,設計圖那條路的第一顆節點也卡在這裡
+(§5ai-e:唯一乾淨線稿是寬高比 3.6:1 的兩層宅邸,硬塞進塔樓桶會被非等向 fit 拉成帶山牆的高塔)。
+
+**規格 MUST 照 §5aa 那一套推導,不可手寫**:
+
+1. **先量再開**(§5aa-b 的紀律):`node tools/ai3d/measure_building_tris.mjs --live --osm-cache`
+   量新桶的 instance 上界與桶總量(四個最密市區場地取最大)。
+2. `pick_n` 取兩條約束的較嚴者:細節下限(逐節點 cap ≥ 2 × 500)與 draw call
+   (額外 mesh ≤ 立面段現行的 16);`node_cap = 3 × 桶總量 ÷ pick_n`。
+3. 選擇規則是**純函式、零 `rnd()`**、等高以座標定序(靠 sort 穩定性 = 跨客戶端分家)。
+4. **名冊或庫取不到 ⇒ 一棟都不挑 ⇒ 逐位元同舊制**(保險絲)。
+5. 碰撞/LOS 有向盒**一格不動**(A30);逐實例色抖仍吃拆桶前的原始序 `t.ord`。
+6. 挑中的那幾棟純視覺附件推丟棄桶(`vis()`,只換目的地、`rnd()` 照抽),而**帶碰撞柱的兩件
+   MUST NOT 進丟棄桶**。
+7. 材質由呼叫端傳 ⇒ 節點 MUST 帶盒投影 UV(`normalize_parts.py --boxuv`)。
+8. `pick_n` / 高度門檻在 `biomes.js` 與 `tri_budget.json` 是**同一份值**(稽核釘住相等)。
+9. **逐位元不變用量的**:`measure_building_tris.mjs --live --osm-cache` 錄播 Overpass 後 A/B
+   (同一張圖兩次 `--live` 差到 ±70%,各抓各的圖資量到的全是圖資差異)。
+
+**連帶**:`audit_siteplan.mjs` 要多一組斷言 + 反向旗標(比照 `--break-mass`);
+CLAUDE.md「建物零件庫消費端」那一列要補上第二個桶(名冊 ≥2 顆的規則同樣適用 —— 只有一顆時
+同一張圖上挑中的那幾棟是同一個剪影)。**`audit_traverse`(㋓)**:swap 幾何零 `rnd()` 消耗 ⇒
+理由上不影響佈局,但這一輪動到 `vis()` 的分流,**確認 `rnd()` 枚數不變之後**才可以省。
+
+### 5aj-C. 鏡像貼補改成「只補有洞的;洞很小直接貼平」
+
+**這一條推翻的是 §5ad 的觸發條件本身。** 現制的閘是 `EMPTY_ASYM = 0.12`,量的是**半空間面積
+不對稱**(「沒被拍到的那半是空的」),而**那不是洞**。使用者定案把觸發條件換成**真的有洞**,
+並依洞的大小分兩種補法。
+
+**現況數據(執行 `node tools/ai3d/mesh_sym.mjs --gate` 即得,2026-08-09 出貨值)**:
+
+| 開放邊 | 節點 |
+|---|---|
+| 0 | hoodoo_a・mega_a・mega_b・mega_c・collapse_a・tower_a・chimney_a・mass_b |
+| 8 / 15 | facet_a・mass_a |
+| 64 | facet_b |
+| 167~274 | ac_a 167・mesa_a 179・mega_d 221・mega_e 264・mega_f 274 |
+
+⚠ **最重要的一筆**:§5ad 那四顆被鏡射的節點裡,`collapse_a` 與 `mega_c` **現在的開放邊是 0**
+—— 它們**本來就沒有洞**,鏡射補的是「空的那一面」;而 `mega_d` 鏡射前 246、鏡射後 **221**
+(`facet_a` 4 → 8)⇒ **那把刀從頭到尾沒有關上任何一個洞**,它做的是另一件事。
+使用者這一條等於把兩件事分開,而數據支持它。
+
+**做法**:
+
+1. **觸發條件換成洞**:`mesh_sym --gate` 的名單改以**邊界迴圈**(boundary loop)為準,不再以
+   `EMPTY_ASYM` 為準。`EMPTY_ASYM` 保留為一個**印出來的欄位**(它仍是有用的診斷),但不再驅動動刀。
+2. **洞的大小要有尺,而且 MUST 校準不可手寫**:建議量「該迴圈圍出的面積 ÷ 該節點總表面積」
+   (與 `mesh_sym` 既有的面積語彙同一把尺),掃過全部 46 顆節點取分布再定門檻,
+   紀律同 §5ah-d(拿已出貨節點當硬約束、把「從哪個值開始誤判」記下來)。
+3. **小洞 → 直接貼平**(planar cap:沿邊界迴圈補一個平面蓋)。這是使用者指定的作法,
+   而且比鏡射便宜得多、不會動到外廓、不產生對稱凹槽。
+4. **大洞 → 才考慮鏡射**(沿用 §5ad 的 `--rework`,三道閘不變:面數 ≥0.8×、鬆散元件不增、
+   邊界邊 ≤ +5% 面數;`half` 給人造物 / `union` 給圓渾岩體;有破口的節點 warp MUST 0)。
+5. **回退那三顆「交換」節點**:`collapse_a` / `mega_c`(0 洞)MUST 回到鏡射前;
+   `facet_a`(8 條)改走貼平。回退方式 = 從 §5ad 之前的 `rock.glb` 基準重跑,**不是**再動一次刀
+   (工具是決定性的,重跑就回得去);⚠ `rock.glb` 之後又因 `hoodoo_a`(§5ah)動過一次,
+   所以基準要**逐節點**取,不能整檔回滾。
+6. **樹族 MUST 排除在「貼平」之外**:冠層的葉片本來就是**開放面片**(數百條邊界邊是設計,
+   不是破口),把它們補平會變成實心團塊。範圍限定在實心主體(rock / building),
+   或以「邊界邊佔面數比例」把「天生開放」的節點結構性地排除。
+7. **文件**:CLAUDE.md §2.1 的「鏡像貼補」那一列與 §5 矩陣對應列 MUST 同步改寫 ——
+   現在那一列寫的是「尺 = 半空間表面積不對稱、門檻 `EMPTY_ASYM` 錨在 mass_a 0.123」,
+   這條定案之後那句話不再成立。A 編號不動(這是同一條規則的修訂,不是新規則)。
+
+**驗收**:`intake_parts`(外廓與預算 MUST 逐位元不動)+ `node_sheet.mjs --ref <舊 glb>` 四面黏土
+(這一族的錯只有截圖看得到)+ `audit_object_joints --seeds 8` + `audit_beacons` ± 反向 +
+`audit_siteplan` ± 反向 + cel / visual_prefs / gpu / soft_stroke + `npm test` + `npm run bal`
+(㋒ 地物幾何 ⇒ MUST 逐項不動)+ 3D 對照台 0-0-0 + **反向驗證**(拿一顆已知撐不住的節點跑鏡射,
+三道閘 MUST 紅字)。
+
+### 5aj-D. 建議的執行順序(有相依)
+
+1. **先把 A 做完**(語料配比 + 設計圖列)—— 它最便宜,而且 B 的語料靠它。
+2. **B**(第二個桶)—— 它解鎖 rural / civic / 設計圖三條語料的消費端,是目前最大的瓶頸。
+3. **C**(貼平/鏡射改制)—— 與 A/B 完全獨立,可以任何時候插隊;它只動 `rock.glb`/`building.glb`。
+4. 這三條都完成之後,才輪得到 §5ah-i / §5ai-h 上那些「材料到位就能做」的項目
+   (mass_c、設計圖第一顆節點、真人冒煙、`audit_traverse`)。
+
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 
 - **SF3D gate re-probed: still closed.** Token itself is healthy — `whoami-v2` shows a classic
@@ -3696,6 +3813,9 @@ readout still measures the whole prop, so it cannot lie. `near`/`far` track the 
 
 ## 6. Open questions for the repo owner (do not guess)
 
+0. ~~設計圖要不要進 50/25/25 配比 / 低矮建物要不要開第二個量體桶 / 鏡像貼補的觸發條件~~
+   — **RESOLVED 2026-08-09**(使用者定案三條,規格見 §5aj:①配比含設計圖 ②開 ③只補有洞的、
+   小洞直接貼平)。
 1. Add an `HF_TOKEN` repo secret (with SF3D licence accepted) if CPU inference in Actions should ever
    be attempted; otherwise all inference stays on the 3060.
 2. `fetch-photos.yml`'s push trigger is pinned to branch `claude/photo-db-img-to-3d-8j9tbe`;

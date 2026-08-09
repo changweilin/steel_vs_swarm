@@ -73,6 +73,14 @@ the mix covers *buildings*, not the module rows (window/parapet/AC unit — coun
 with every part you add), and rebalancing means **lowering `want`, not deleting rows** (a deleted row
 orphans photos already on disk).
 
+**The mix spans photos *and* drawings** (user decision 2026-08-09, second pass — supersedes the earlier
+"drawings are an input format, not a building category" carve-out). Keep the two dimensions orthogonal:
+`grp` is the building *type* and is the only thing the mix counts; a separate `src` field says which
+conversion route the row feeds. Folding format into `grp` turns "drawing" into a fourth category and the
+50/25/25 stops being computable. Drawings must **not** go through the photo screening gates — those
+thresholds are calibrated on photographs, and a drawing is never matted at all; its quality gate is
+`plan_to_mesh`'s own (line-art vs rendering, gap, frame).
+
 The data home is a **parameter** (`--home`), not wherever the script happens to live: a worktree was once
 deleted and took a 305-entry corpus with it.
 
