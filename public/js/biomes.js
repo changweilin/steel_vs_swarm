@@ -1902,6 +1902,15 @@ const BLD_LIB = {
   // 同一張圖上挑中的十幾棟塔樓是同一個剪影(尺寸各異、形狀相同),而所有離線閘門全綠。
   // a = 退縮階梯式方塔、b = 寬裙樓 + 細塔身 + 尖頂(§5ae)。
   mass: [['building/mass_a', 'building/mass_b'], ['box', 1, 1, 1]],
+  // 低矮建物的整棟量體(2026-08-09 使用者定案「開」第二個桶 + §5al-c 選 (a) 8/8 切分)。
+  // **它與上面那一桶吃同一個 facade_wall 桶** ⇒ 額度是同一份:`MASS.PICK_N` 與
+  // `MASS.PICK_N_LOW` 加起來才是 tri_budget 的 `pick_n`,`node_cap` 因此一格不動
+  // (已出貨的 mass_a/mass_b 不受影響)。開這一桶的理由是**消費端**:rural / civic /
+  // 設計圖三條語料在此之前沒有任何出口(唯一的 mass 桶只服務 `commercial && h > 55`)。
+  // 名冊空著 ⇒ `bldLibN` 回 0 ⇒ 一棟都不挑 ⇒ **逐位元同舊制**(保險絲,原則 6)。
+  // ⚠ 輪替名冊 MUST ≥2 顆才算「開好」(同上一列的理由:一款打天下 = 同一張圖上
+  //   挑中的那幾棟是同一個剪影,而所有離線閘門全綠)。
+  masslow: [[], ['box', 1, 1, 1]],
 };
 // `i` = 輪替索引(只有陣列名冊吃得到;單一字串的舊三桶逐位元不受影響)
 const bldGeo = (key, i = 0) => {
@@ -1914,8 +1923,21 @@ const bldGeo = (key, i = 0) => {
 const bldLibN = (key) => { const n = BLD_LIB[key]?.[0]; return n ? (Array.isArray(n) ? n.length : 1) : 0; };
 // 整棟量體的挑選規則(兩個值都與 tri_budget families.building.mass 同一份,audit_siteplan Ⅴ 釘住相等)
 const MASS = {
-  MIN_H: 55,    // 高層商辦門檻:沿用 biomes 既有的退縮頂塔門檻,MUST NOT 另發明數字
-  PICK_N: 16,   // 全圖挑中棟數上限(推導值:額外 draw call ≤ 立面段現行的 16 個)
+  // **兩個既有的判準各切一刀,對角線兩格換節點**:
+  //   commercial && h > MIN_H  → `mass`(高層商辦:退縮量體、婚禮蛋糕剪影)
+  //   !commercial && h <= MIN_H → `masslow`(低矮非商辦:農舍/教堂/穀倉那一類坡屋頂量體)
+  //   其餘兩格(低矮商辦 / 高層住宅)**維持方盒** —— 那個空隙是刻意留的:為它們再訂
+  //   一個門檻就是第三個手寫數字,而語料裡也沒有對得上的東西。
+  // 門檻沿用 biomes 既有的退縮頂塔門檻,MUST NOT 另發明數字;`commercial` 是既有的
+  // OSM 型別判定(commercial/office/retail/hotel/10 層以上公寓)⇒ 非商辦正好就是
+  // 住宅/教堂/穀倉/學校那一類,也正是 rural + civic 兩條語料抓的東西。
+  MIN_H: 55,
+  // 兩個桶**共用同一份成長額度**(它們是同一個 facade_wall 桶)⇒
+  // `PICK_N + PICK_N_LOW` 才是 tri_budget 的 `pick_n`(= 額外 draw call ≤ 立面段現行的 16),
+  // 而 `node_cap` 的除數是那個總數 ⇒ 切分比例改不動逐節點上限。8/8 是使用者 2026-08-09
+  // 的定案(§5al-c 選 (a)):兩邊都沒有量得出來的偏袒理由。
+  PICK_N: 8,      // 高層商辦(排最高的)
+  PICK_N_LOW: 8,  // 低矮建物(排足跡面積最大的)
 };
 // 桶建構表(凍結四桶:煙囪/水塔/空調機組/整棟量體):單位 primitive 保險絲 + 桶色 +
 // InstancedMesh 一次定案在這裡。
@@ -1933,7 +1955,10 @@ export const buildBldBucket = {
   // 節點契約因此多一條:匯出端 MUST 給**盒投影 UV**(沿用原 BoxGeometry 的 0..1 逐面
   // 慣例),否則整棟只採到 (0,0) 那一個 texel = 一塊沒有窗的純色板。
   // 對照台(count = 1 取樣)不傳材質 ⇒ 退回素色,只看幾何。
-  mass: (n, mat, i = 0) => new THREE.InstancedMesh(bldGeo('mass', i) || new THREE.BoxGeometry(1, 1, 1),
+  // `key` = 哪一個整棟量體名冊('mass' 高層 / 'masslow' 低矮):兩桶只差名冊與挑選規則,
+  // 幾何/材質/保險絲逐條相同 ⇒ **一份實作**。另開一支 `masslow:` 就是第二套桶建構器,
+  // 而它壞掉的樣子是「低矮那一桶的保險絲跟高層的不一樣」。
+  mass: (n, mat, i = 0, key = 'mass') => new THREE.InstancedMesh(bldGeo(key, i) || new THREE.BoxGeometry(1, 1, 1),
     mat || bmat(0xb9b3a8, { wash: 0.5 }), n),
 };
 
@@ -7739,17 +7764,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const P = new THREE.Vector3(), S = new THREE.Vector3();
     // 名冊裡**真的載到**的節點索引(整批取不到 ⇒ 下面一棟都不挑 ⇒ 逐位元同舊制)。
     // 探詢只在這裡做一次:放進逐棟迴圈就是同一個名字每棟查一遍,而且會多一個消費點。
-    const massOk = [];
-    for (let k = 0; k < bldLibN('mass'); k++) if (bldGeo('mass', k)) massOk.push(k);
+    const libOk = (key) => { const a = []; for (let k = 0; k < bldLibN(key); k++) if (bldGeo(key, k)) a.push(k); return a; };
+    const massOk = libOk('mass'), lowOk = libOk('masslow');
     // 整棟量體庫節點的**選取**:全圖一次定案,不是逐立面款各挑各的 —— 預算的除數是
     // 「全圖挑中幾棟」(tri_budget families.building.mass.pick_n),逐款各挑會讓總數
     // 隨款數翻倍。純函式:只讀 b.commercial/h/x/z(權威佈局資料),**零 rnd() 消耗**
     // (§2.3 / A4)、**不讀庫幾何**(佈局數學只讀保險絲;能不能換成由上面的 massOk 決定)。
     // 排序尾巴帶 x/z 是為了跨客戶端逐位元同一組:等高的兩棟不能靠 sort 的實作穩定性決定。
-    const massPick = new Set(massOk.length
-      ? generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
-        .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z).slice(0, MASS.PICK_N)
-      : []);
+    // 兩桶**互斥**且各有各的排序:高層排「最高」、低矮排「足跡面積最大」(低矮建物在
+    // 畫面上最顯眼的是屋頂面積,不是高度)。等大時一律再以座標定序。
+    const massPick = new Map();
+    const take = (key, ok, list, n) => { if (ok.length) for (const b of list.slice(0, n)) massPick.set(b, key); };
+    take('mass', massOk, generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
+      .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z), MASS.PICK_N);
+    take('masslow', lowOk, generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)
+      .sort((p, q) => q.w * q.d - p.w * p.d || p.x - q.x || p.z - q.z), MASS.PICK_N_LOW);
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
       // 各立面樣式一個 InstancedMesh(共 16 個 draw call,仍是常數級);
@@ -7792,7 +7821,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const vis = (arr) => (libMass ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
-          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.has(b) });
+          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.get(b) || null });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
           // ty = **可見**盒頂(= 上面 inst 那一項的頂面,推導不手寫):碰撞柱刻意比實體高 0.5m
@@ -7969,19 +7998,23 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 整棟量體庫節點:挑中的那幾棟幾何與方盒不同 ⇒ 只能另開 mesh,並依**位置雜湊**
         // 分到名冊裡的哪一顆(零 rnd,同屋頂第二件配件那條;逐棟輪替除數取自名冊長度)。
         // 庫沒載到 ⇒ `bldGeo` 回 null ⇒ 該列落回方盒桶 = **逐位元同舊制**(保險絲,原則 6)。
+        // `t.lib` = 哪一個名冊('mass' / 'masslow');同一個名冊裡分到哪一顆走**位置雜湊**
+        // (零 rnd,同屋頂第二件配件那條;輪替除數取自該名冊長度)。
         const boxRows = [], libRows = new Map();
         for (const t of inst) {
           if (!t.lib) { boxRows.push(t); continue; }
-          const k = massOk[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * massOk.length) % massOk.length];
-          if (!libRows.has(k)) libRows.set(k, []);
-          libRows.get(k).push(t);
+          const ok = t.lib === 'masslow' ? lowOk : massOk;
+          const k = ok[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * ok.length) % ok.length];
+          const bk = `${t.lib}#${k}`;
+          if (!libRows.has(bk)) libRows.set(bk, { key: t.lib, k, rows: [] });
+          libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
         if (boxRows.length) {
           emitMass(boxRows, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
             [wall, wall, roof, roof, wall, wall], boxRows.length));
         }
-        for (const [k, rows] of libRows) emitMass(rows, buildBldBucket.mass(rows.length, wall, k));
+        for (const { key, k, rows } of libRows.values()) emitMass(rows, buildBldBucket.mass(rows.length, wall, k, key));
       }
     }
     if (cornices.length) {
