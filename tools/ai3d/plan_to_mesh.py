@@ -147,8 +147,11 @@ def outer_mask(path, close_px=CLOSE_PX):
         if framed and max(areas) > 0 and cv2.contourArea(best) < FRAME_KEEP_F * max(areas):
             raise ViewReject(
                 f'{os.path.basename(path)}:最大的墨輪廓佔滿整張紙(> {FRAME_MAX:.0%})被當成圖框剔掉,'
-                f'剩下的候選只有它的 {cv2.contourArea(best) / max(areas):.1%} —— 這多半是「**整張紙就是圖**」'
-                f'的掃描,被剔掉的其實是建築本身。請換一張四周有留白的測繪圖(HABS 那一類),'
+                f'剩下的候選只有它的 {cv2.contourArea(best) / max(areas):.1%} —— 兩種可能:'
+                f'①「**整張紙就是圖**」的掃描(紙緣被當成圖框,剔掉的其實是建築);'
+                f'②**這根本不是線稿而是相片**(HABS 的相片與測繪圖共用同一套命名,'
+                f'標題也叫 「… ELEVATION -」;相片沒有可填實的外輪廓,量到的是天空或牆面的色塊)。'
+                f'請換一張四周有留白的測繪圖(檔名以 Photocopy of drawing 開頭那一類),'
                 f'或以 screen_mattes.py --family building --human pass <id> 人工救回', 'frame')
         mask = np.zeros((h, w), np.uint8)
         cv2.drawContours(mask, [best], -1, 1, cv2.FILLED)        # 填實 = 內部線條全數忽略

@@ -227,8 +227,14 @@ export const PHOTO_CATALOG = {
     bld_rowhouse:   { grp: 'urban', want: 5, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] },                // 歐洲城市街屋
     bld_shophouse:  { grp: 'urban', want: 4, q: ['shophouse facade', 'colonial shophouse'] },                                                            // 東南亞城鎮
     bld_warehouse:  { grp: 'urban', want: 5, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] },                          // 工業
-    dwg_tower:      { grp: 'urban', src: 'drawing', want: 4, q: ['HABS measured drawing elevation commercial building',
-      'measured drawing elevation office building', 'HABS drawing elevation warehouse', 'measured drawing elevation apartment building'] },
+    // ⚠ 查詢 MUST 帶 **`photocopy of (measured) drawing`** 這個字面詞組(2026-08-09 實測,§5ak-g):
+    //   HABS 的**相片**與**測繪圖**在 Commons 上共用同一套命名(相片的標題也叫
+    //   `SOUTH (FRONT) ELEVATION - …`),所以 `HABS drawing elevation X` 撈回來的多半是相片;
+    //   而測繪圖掃描的檔名一律以 `Photocopy of drawing` / `Photocopy of measured drawing` 開頭。
+    //   撈到相片不會報錯 —— 它會一路走到 plan_to_mesh 才被判退,浪費一整輪配額。
+    dwg_tower:      { grp: 'urban', src: 'drawing', want: 4, q: ['photocopy of measured drawing elevation commercial building',
+      'photocopy of drawing elevation office building', 'photocopy of measured drawing elevation warehouse',
+      'photocopy of drawing elevation apartment building'] },
     // —— ㋑ 鄉村 / 觀光旅宿(25%)——
     bld_inn:        { grp: 'rural', want: 3, q: ['country inn building', 'mountain lodge hotel', 'ryokan traditional inn'] },   // 觀光旅宿
     bld_barn:       { grp: 'rural', want: 2, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },                    // 美國鄉間
@@ -241,8 +247,9 @@ export const PHOTO_CATALOG = {
     bld_halftimber: { grp: 'rural', want: 1, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },                       // 德/英老鎮
     bld_adobe:      { grp: 'rural', want: 1, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },                  // 美洲西南/北非
     bld_yurt:       { grp: 'rural', want: 1, q: ['mongolian yurt', 'ger tent grassland'] },                                     // 蒙古草原
-    dwg_house:      { grp: 'rural', src: 'drawing', want: 2, q: ['HABS measured drawing elevation house',
-      'measured drawing elevation farmhouse', 'HABS drawing elevation barn', 'measured drawing elevation cottage'] },
+    dwg_house:      { grp: 'rural', src: 'drawing', want: 2, q: ['photocopy of measured drawing elevation house',
+      'photocopy of drawing elevation farmhouse', 'photocopy of measured drawing elevation barn',
+      'photocopy of drawing elevation cottage'] },
     // —— ㋒ 功能型(25%):使用者點名的寺廟/教堂/醫院/車站/學校/博物館/公家機構 ——
     bld_temple:     { grp: 'civic', want: 3, q: ['buddhist temple building', 'shinto shrine building', 'taoist temple hall'] }, // 寺廟
     bld_church:     { grp: 'civic', want: 3, q: ['village church', 'white wooden church', 'country church steeple'] },          // 教堂
@@ -253,8 +260,9 @@ export const PHOTO_CATALOG = {
     bld_hospital:   { grp: 'civic', want: 2, q: ['hospital building exterior', 'clinic building exterior'] },                   // 醫院
     bld_pagoda:     { grp: 'civic', want: 1, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },                   // 東亞塔樓(宗教)
     bld_lighthouse: { grp: 'civic', want: 1, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                          // 海岸公共設施
-    dwg_civic:      { grp: 'civic', src: 'drawing', want: 2, q: ['HABS measured drawing elevation church',
-      'measured drawing elevation school building', 'HABS drawing elevation courthouse', 'measured drawing elevation station building'] },
+    dwg_civic:      { grp: 'civic', src: 'drawing', want: 2, q: ['photocopy of measured drawing elevation church',
+      'photocopy of drawing elevation school building', 'photocopy of measured drawing front elevation courthouse',
+      'photocopy of drawing elevation railroad station'] },
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
@@ -415,7 +423,10 @@ async function searchCommons(q, n) {
     // 1024 的下限(⇒ 尺寸閘 MUST 改吃**縮圖的**尺寸,吃原圖就會放行一張其實只有 800px 的檔案)。
     // ⚠ **只放行 TIFF**:PDF/DjVu 的「縮圖」是第一頁的渲染,而 2026-08-05 那張「照片」正是
     //   148 頁的 PDF —— 那不是我們要的東西,維持拒收(嗅探仍是最後一道)。
-    const tif = /\.tiff?$/i.test(ii.url || '');
+    // ⚠ 副檔名 MUST 允許後面接查詢字串:`ii.url` 帶著 `?utm_source=…&utm_content=original`
+    //   ⇒ 錨在字串尾的 `\.tiff?$` **一張都比對不到**,而症狀與完全沒改一樣(照樣一排
+    //   「非影像位元組」)。同一條寫法早就在 download() 的副檔名解析裡了。
+    const tif = /\.tiff?(?:\?|$)/i.test(ii.url || '');
     const url = tif && ii.thumburl ? ii.thumburl : ii.url;
     const [w, h] = tif && ii.thumburl ? [ii.thumbwidth, ii.thumbheight] : [ii.width, ii.height];
     return {

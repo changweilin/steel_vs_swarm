@@ -3767,19 +3767,43 @@ PDF,那正是嗅探存在的理由;③帳本裡那 12 筆 TIFF 誤拒 MUST **刪
   版畫**與**新藝術風格的人像圓牌**(後者是 `window` 查詢撈錯的東西)—— 也就是說 ③ 在別族**沒有**
   ①② 那種「樹形狀」的誤殺問題(§5ah-e),不需要比照放寬。
 
+### 5ak-g. 補抓那一輪:**HABS 的相片與測繪圖共用同一套命名**
+
+TIFF 那條路通了之後第一輪補抓,`dwg_tower` 四張全被 `frame` 判退。看圖才發現它們**根本不是設計圖**
+—— 是 HABS 的**大片幅相片**(`wc_34054579` = 一棟商業街屋的正面照)。成因是命名:HABS 的相片
+標題也長成 `NORTH (FRONT) ELEVATION - Commercial Building, …`,所以 `HABS drawing elevation X`
+撈回來的多半是相片;而**測繪圖掃描的檔名一律以 `Photocopy of drawing` / `Photocopy of measured
+drawing` 開頭**。同一條查詢實測對照:
+
+| 查詢 | 前五筆 |
+|---|---|
+| `HABS drawing elevation courthouse` | 五筆**全是相片**(`SOUTH (FRONT) ELEVATION FROM SOUTHWEST - …`)|
+| `photocopy of measured drawing front elevation courthouse` | 前兩筆是測繪圖掃描 |
+
+⇒ 三個設計圖列的查詢一律改帶 `photocopy of (measured) drawing` 字面詞組(這正是 skill 那句
+「查詢用字勝過所有模型旋鈕」的第 N 次印證)。改完之後 `dwg_house` 2/2、`dwg_civic` 2/2 達標
+(Christ Church 南立面:墨密度 5.3%、實體 67.5%),`dwg_tower` 仍 0/4 —— 商業街屋那一組的查詢
+還是撈回相片,下一輪換字再試。
+
+**而 `frame` 這個判退理由現在身兼兩職**:①整張紙就是圖的掃描 ②這根本是相片。兩者的訊息都已
+寫進同一句(相片沒有可填實的外輪廓,量到的是天空或牆面的色塊)。**閘本身沒有誤殺** ——
+被它判退的九張,人眼看過全部確實不該進管線。
+
 ### 5ak-e. 驗收
 
 - `audit_plan_mesh.py` **23 綠 / 0 紅**;`--break-outer` 9 紅、`--break-frame` 2 紅(反向驗證仍咬得住)。
 - `fetch_photos.mjs --plan`:配比守門線綠(目標 44/22/22 = 50.0/25.0/25.0%);
   現有 26/74・29/74・19/74 = 35.1 / 39.2 / 25.7%(**urban 缺口最大**,而那正是 §5aj-B 那個桶的語料)。
-- 設計圖現況:`dwg_civic` 1 可用(Tudor Place)、`dwg_tower` 0、`dwg_house` 0。
+- 設計圖現況(補抓 + 查詢改字之後):**18 張下載、4 張可用** —— `dwg_house` 2/2 ✅、
+  `dwg_civic` 2/2 ✅(Tudor Place + Christ Church)、`dwg_tower` 0/4(見 §5ak-g)。
+  判退 14 張:render 4(水彩/版畫渲染)、frame 10(整張紙就是圖 5 / 其實是相片 5)。
 - ㋒ 這一輪一行遊戲程式碼都沒動(全在 `tools/ai3d/`)⇒ `npm test` / `npm run bal` 結構上不受影響。
 
 ### 5ak-f. 未做
 
-- **設計圖語料補抓卡在限流**:TIFF 縮圖那條路已驗過(API 回得出 2400px thumburl),但
-  `upload.wikimedia.org` 在本輪稍早已被 429 封住(`Retry-After: 600`)⇒ 下一輪冷卻後重跑
-  `--part building/dwg_{tower,house,civic}` 即可續補,**不需要再改任何程式碼**。
+- **`dwg_tower` 仍 0/4**:商業街屋那一組的查詢還是撈回 HABS 相片(§5ak-g)。下一輪換字再試
+  (可試 `photocopy of drawing front elevation store building` / `… bank building` 這種帶
+  建物型別的專名),或接受它由 civic/house 那兩組補足 —— 配比守門線看的是**組**不是列。
 - urban 照片缺 14 張(26/40)、civic 缺 2、rural 已超額 —— 補抓清單見 `--plan`。
 - §5aj-B(第二個量體桶)、§5aj-C(只補有洞的)**未動**。
 
