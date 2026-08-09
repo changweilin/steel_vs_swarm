@@ -14,7 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
-| **⭐ 下一輪從這裡開始 — 屋頂帶 UV(斜屋頂上還有窗格)+ §5aj-C(只補有洞的)** | **待執行 2026-08-09** | 屋頂帶 UV 的設計與範圍見 **§5an-d**(只需重跑 masslow 兩顆的 normalize);§5aj-C 規格見該節。已落地:§5ak(配比含設計圖)・§5am(第二個量體桶 + 兩顆節點)・§5an(外牆圖層分型別/風格/屋頂形式)|
+| **⭐ 下一輪從這裡開始 — §5aj-C(鏡像貼補改成「只補有洞的;洞很小直接貼平」)** | **待執行 2026-08-09** | 規格(含回退清單、「樹族 MUST 排除在貼平之外」)見 **§5aj-C**;它與語料/量體那兩條完全獨立,只動 `rock.glb`/`building.glb`。已落地:§5ak(配比含設計圖)・§5am(第二個量體桶 + 兩顆節點)・§5an(外牆圖層分型別/風格/屋頂形式)・**§5ao(屋頂帶 UV —— 斜屋頂終於是屋頂;同輪翻正了四顆節點上下顛倒的立面)**。之後才輪到 §5ah-i / §5ai-h 那些「材料到位就能做」的(mass_c、設計圖第一顆節點、真機冒煙、`audit_traverse`)|
 | §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
 | Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
@@ -4071,7 +4071,7 @@ masslow_b **0.037 / 0.006** —— 遠在 `EMPTY_ASYM` 0.12 之下。這是 §5a
 款式由**落點雜湊**選(零 `rnd()`,§2.3)⇒ 同一張圖上的穀倉彼此不同。
 桶建構器仍**只有一個呼叫點**(稽核釘住 4 處)—— 材質先攤平成 `libEmit` 再一次發出去。
 
-### 5an-d. 驗收與**還沒解決的那一半**
+### 5an-d. 驗收與**還沒解決的那一半**(⚠ 這一半已於 **§5ao** 做完,以下保留當時的診斷)
 
 新機位 `masslow_near`(§5am-f 的第一條):`mass_near` 是對著**最高**那一叢拍的,兩張永遠不同框
 ⇒ 低矮桶換了什麼在離線這一側**一張證據都拿不出來**。同輪也修掉「兩張機位對著同一棟拍」——
@@ -4085,6 +4085,93 @@ masslow_b **0.037 / 0.006** —— 遠在 `EMPTY_ASYM` 0.12 之下。這是 §5a
 的 UV 壓進 `v ∈ [0, frac]`、側面壓進 `[frac, 1]`,而 `facadeTex` 在那一帶畫屋頂色與瓦縫。
 只需重跑 masslow 兩顆的 normalize(實體化 GLB 還在),平頂那兩顆可維持原狀(俯視機會低)。
 `npm run bal` / `npm test` 不受影響(㋒ 純表現層)。
+
+## 5ao. Trial log (2026-08-09 第五場 — 屋頂帶 UV:斜屋頂終於是屋頂;**順手量到已出貨的立面是上下顛倒的**)
+
+> 接 §5an-d 的「還沒解決的那一半」。使用者那句話的前半(牆換成材質感圖層)上一場已落地,
+> 這一場處理後半:**窗格仍印在斜屋頂上**。
+
+### 5ao-a. 為什麼答案是 UV 而不是「拆材質群組」
+
+方盒那條路的屋頂之所以是屋頂,是因為 `BoxGeometry` 有**六個材質群組**
+(`[wall, wall, roof, roof, wall, wall]`)。庫節點只有**一個**群組 ⇒ three 取 `material[0]`。
+「那就把節點拆成兩個群組」聽起來最直接,但它會讓**每一棟多一個 draw call** ——
+而 `pick_n = 16` 的整條推導(§5aa)就是 draw call 上界,拆群組等於把那個上界砍半。
+⇒ 區分移進 **UV**:朝上的面壓進 `v ∈ [0, BAND]`、其餘壓進 `[BAND, 1]`,
+`facadeTex` 在畫布底部那一條畫屋頂。一個材質、一張貼圖、draw call 一格都沒有多。
+
+### 5ao-b. 兩個數字都是量出來的(逐面積直方圖)
+
+| | masslow_a(穀倉) | masslow_b(教堂) | 對照:mass_a / mass_b(平頂) |
+|---|---|---|---|
+| 牆的尖峰(n.y) | [0, 0.05] 23.7% | [0, 0.05] 20.7% | 32.3% / 28.0% |
+| 屋頂的尖峰 | **[0.45, 0.55] 19.9%** | **[0.65, 0.80] 16.8%** | [0.95, 1.00] 6.4% / 2.4% |
+| 中間空檔 | 0.05~0.45 幾乎是零 | 同左 | —— |
+| `parity` = 朝上 ÷(朝上 + 側面) | **0.272** | **0.275** | 0.138 / 0.124 |
+
+⇒ `ROOF_MINZ = 0.30`(兩顆共同的空檔中點)、`ROOF_BAND = 0.273`(名冊平均;
+語意 = **兩帶 texel 密度相同**,瓦縫與窗框在畫面上是同一個顆粒度)。
+
+**沿用盒投影的「主導軸」會壞掉**:主導軸等價於門檻 0.577,而穀倉的屋頂面落在 0.45~0.55
+(非等向 fit 把它拉高 ⇒ 坡角變陡)⇒ **整個屋頂會被判成牆**。這也是為什麼平頂那一桶
+刻意不開屋頂帶:它的 parity 只有 0.13,而俯視看得到頂面的機會本來就低(§5aa ⑥ 的原話)。
+
+### 5ao-c. 順手量到的那個 bug:**已出貨的庫節點立面是上下顛倒的**
+
+寫稽核時多釘了一條「牆面的 v 要隨高度遞增」,結果**四顆節點全紅**:
+`corr(高度, v) = −1.0000`。成因是 glTF 的 UV 原點在左上、Blender 在左下 ⇒ **匯出端會把 v
+翻過來**,而消費端那張立面貼圖是我們自己的 `CanvasTexture`(`flipY` 預設 true ⇒ v=0 採到
+畫布**底部**)。⇒ 庫節點的基座暗帶印在屋簷、女兒牆帶與**店面遮陽棚印在地面**,
+而方盒那條路走 `BoxGeometry` 自己的 UV 是正的 —— **同一張圖上兩種方向**,
+沒有任何錯誤訊息,§5aa/§5ae 兩輪的截圖都沒看出來(窗格陣列近乎上下對稱)。
+修法是在匯出前補償那一次翻轉,`--boxuv` 的兩顆一起修。
+
+### 5ao-d. 落地了什麼
+
+| 檔 | 改動 |
+|---|---|
+| `normalize_parts.py` | `--roofband <node>=<frac>[\|<minz>]`;與 `--boxuv` **同一段**(不是第二種投影);對 `--base` 裡的既有節點只重建 UV,**幾何逐位元不動**(六顆節點位置最大差 0.0e+0、索引相同);既有 UV 層先清掉(不清 = 只是加第二層,看起來像「這一輪完全沒生效」);存檔前補償匯出端的 v 翻轉 |
+| `biomes.js` | `MASS.ROOF_BAND`/`ROOF_MINZ`;`facadeTex` 多兩個參數(屋頂色 + 屋頂形式),牆改畫進 `WH = H − 帶高`;新增 `roofLayer` 四款(metal / shingle / pantile / tile);`FACADES_PITCHED` 六款各配一種屋頂形式;`stone` 牆的逐塊明暗改走**灰階**(排面複核:三通道各擲 0/255 會擲出洋紅/青/黃 = 粉彩拼布,而參考照片是同色系塊石;亂數枚數維持 3 枚 ⇒ 序列不動) |
+| `parts_src.mjs` | `parseGlb` 多讀 `TEXCOORD_0`;新增 `uvBandStats()`(方向 + 帶界 + parity 的唯一取數處) |
+| `intake_parts.mjs` | UV 契約 16 項:有沒有 UV / 方向 / 朝上面收在帶內 / 牆不踩進帶 / **帶寬 = 量出來的 parity(±0.03)** |
+| `tri_budget.json` | `families.building.{mass,masslow}.uv` + `roof_band` / `roof_minz` + `measured_roof` |
+| `audit_siteplan.mjs` | 屋頂帶 5 項(兩份數字同值 / 只餵斜頂那一桶 / 牆全吃 WH / roofLayer 單一縫 / 六款「牆 × 屋頂形式」兩兩不同) |
+| **`tools/shot_facades.mjs`(新)** | 立面貼圖排面:執行 biomes 原文畫出 22 款 × (貼圖 + 自發光),斜頂那六款加畫屋頂帶邊界標尺。`--only pit --cols 3` 只排改動的那幾款 |
+
+**屋頂形式逐款參考語料庫的 CC0 照片**(人眼看過那一張,不是憑印象):
+metal ← `bld_barn/ov_910e1b06`(Highsmith 紅穀倉的鍍鋅浪板)/ shingle ← `bld_church/ov_16f1257f`
+(草原教堂的深色木瓦)/ pantile ← `bld_stonecottage/ov_3966cc35`(托斯卡尼石屋的紅陶筒瓦)/
+tile ← `bld_chalet/ov_35100e42`(阿爾卑斯木屋的交丁方瓦)。
+**看照片改掉了一個原本要寫的答案**:石砌農舍本來打算配深色石板瓦,照片上是**紅陶筒瓦**。
+
+**圖樣 MUST NOT 假設坡向**:兩顆節點的屋脊軸實測就不同(masslow_a 屋頂面的水平法線
+|x| 0.739 ≫ |z| 0.054 = 坡向 X;masslow_b 反過來 |z| 0.394 ≫ |x| 0.064),
+而屋頂面吃的是**平面投影** ⇒ 同一張貼圖在兩顆上差 90°。四款一律做成
+「一向排列 + 另一向接縫」的雙向紋理(真實瓦作本來就是這樣)。
+
+### 5ao-e. 驗收
+
+- `intake_parts` **269**(253 + 16 條 UV 契約)/ `audit_siteplan` **206**(201 + 5)
+- **反向驗證三支**:①`--roofband masslow_*=0.10`(帶寬與宣告分家)⇒ intake 2 紅
+  ②拿掉匯出端翻轉的補償(= 這一輪之前的實際狀態)⇒ intake **8 紅**(四顆方向全倒 + 帶界)
+  ③`audit_siteplan --break-roof` ⇒ 2 紅;既有的 `--break-mass` 4 紅 / `--break-mass2` 4 紅
+  / `--break-shy` 3 紅照舊
+- `audit_object_joints --seeds 8`(21,611 接合 0 異常)/ beacons 68(`--break-extent` 1 紅)
+  / gpu 54 / soft_stroke 73 / cel 52 / visual_prefs 124 / world_height 49
+- `parts_review --report` 0 缺件 / 0 孤兒 / 0 未記載來源
+- `npm test`(fresh server + `WS_URL`)、`npm run bal`:㋒ 純表現層 ⇒ 逐項不動
+- 視覺:`shot_facades` 排面(22 款 + 只排斜頂六款的放大版)—— 六款的屋頂帶各是
+  浪板/木瓦/筒瓦/平瓦,而 16 款商辦住宅**一條帶都沒有**(方盒那條路不傳屋頂色)
+
+### 5ao-f. 未做
+
+- **真機冒煙**與 `shot_scene --venue taipei101 --live` 的 `masslow_near`/`mass_near`:
+  ㋓ 需 Overpass。離線這一側已由 `shot_facades` 蓋掉「貼圖長什麼樣」,
+  但「貼到那顆節點上、從街上看過去長什麼樣」仍要真圖資才拍得到。
+  **`mass_a`/`mass_b` 這一輪翻正了立面方向 ⇒ 那兩張機位的畫面會變**(基座暗帶回到地面)。
+- `audit_traverse`(㋓):幾何逐位元不動 ⇒ 理由上不受影響,但仍列著。
+- 語料觀察:`bld_minka` 的 `ov_68f57b0d` 是一張 19 世紀**鉛筆速寫**(授權/解析度/統計全過關,
+  只有人眼看得出來)—— 那一列目前沒有消費端,但補圖時 MUST 先把它換掉(skill §9.5 那一族)。
 
 ## 5d. Trial log (2026-08-05, 3060-machine session — gate re-probe + photo-DB integrity)
 

@@ -27,6 +27,8 @@
 //                   低矮桶拿掉保險絲 / 兩桶資格重疊
 //   --break-mass    整棟量體那一段退回舊制(pick_n 與預算分家 / 等高不再以座標定序 / 色抖吃拆桶後
 //                   的新索引)⇒ Ⅴ 的整棟量體三條 MUST 紅字
+//   --break-roof    屋頂帶退回壞版(帶寬與 tri_budget 分家 / 斜頂那條呼叫端不傳屋頂色)
+//                   ⇒ Ⅴ 的屋頂帶兩條 MUST 紅字
 import { readSrc } from './audit_src.mjs';
 import { objHeightMax, objScaleFit } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
@@ -38,6 +40,7 @@ const BREAK_SHY = process.argv.includes('--break-shy');
 const BREAK_STRIKE = process.argv.includes('--break-strike');
 const BREAK_GATE = process.argv.includes('--break-gate');
 const BREAK_MASS = process.argv.includes('--break-mass');
+const BREAK_ROOF = process.argv.includes('--break-roof');
 // 第二個整棟量體桶(低矮建物)的反向驗證:①兩桶挑選數加起來超出總額度
 // ②低矮桶拿掉保險絲 ③兩桶資格重疊(低矮那一邊漏掉門檻)
 const BREAK_MASS2 = process.argv.includes('--break-mass2');
@@ -597,6 +600,41 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
         ok(/\n\s+inst\.push\(\{ x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5,/.test(fSeg),
           '主量體那一列直接進 inst(它才是被庫節點取代的那一列,不進丟棄桶)');
+      }
+      // ⑥**屋頂帶**(2026-08-09 §5ao):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它
+      //   不生效(窗格印在斜屋頂上),而拆群組會多一個 draw call ⇒ 區分移進 UV。
+      //   這裡驗的是「兩份數字沒有分家」與「只有斜頂那一桶吃得到」;**成品 GLB 的 UV 帶
+      //   由 intake_parts 直接量**(那才是節點真的長什麼樣,指令打對了沒不算數)。
+      {
+        const bioR = BREAK_ROOF
+          ? bioC.replace('ROOF_BAND: 0.273,', 'ROOF_BAND: 0.2,')
+            .replace('pd.style, pd.wall, pd.roof, pd.rf)', 'pd.style, pd.wall)')
+          : bioC;
+        const R = bioR.match(/ROOF_BAND:\s*([\d.]+),[\s\S]*?ROOF_MINZ:\s*([\d.]+),/);
+        ok(!!R && +R[1] === budLow.roof_band && +R[2] === budLow.roof_minz,
+          `屋頂帶的兩個數字與 tri_budget 同一份(帶寬 ${R?.[1]}/${budLow.roof_band}、`
+          + `朝上門檻 ${R?.[2]}/${budLow.roof_minz};節點那一側是 --roofband 烤進 UV 的同一組)`);
+        // 斜頂那條呼叫端 MUST 傳屋頂色與屋頂形式;方盒那條(FACADES 16 款)MUST NOT 傳
+        // ⇒ `band = 0` ⇒ `WH === H` ⇒ 既有 16 款與六支地標**逐位元不變**
+        ok(/facadeTex\(pd\.key, pd\.cols, pd\.rows, pd\.winC, pd\.lit, pd\.style, pd\.wall, pd\.roof, pd\.rf\)/.test(bioR)
+          && /facadeTex\(fd\.key, fd\.cols, fd\.rows, fd\.winC, fd\.lit, fd\.style, fd\.wall\)/.test(bioR),
+          '屋頂帶只餵給斜頂那一桶(方盒那條仍只傳到 wall ⇒ 16 款與地標逐位元不變)');
+        // 牆的繪製一律吃 `WH`(= H − 帶高):殘留一個 `H` 就是基座暗帶/遮陽棚被屋頂帶蓋掉
+        const fx = bioR.slice(bioR.indexOf('function facadeTex('), bioR.indexOf('// 一般建物外牆色盤'));
+        ok(!/\bH - \d/.test(fx) && (fx.match(/\bWH\b/g) || []).length >= 6
+          && /const band = roofC \? Math\.round\(H \* MASS\.ROOF_BAND\) : 0;/.test(fx),
+          '牆的繪製全部吃 WH(H − 帶高);沒有屋頂色 ⇒ band = 0 ⇒ WH === H');
+        // 屋頂圖樣一份實作一個呼叫點,且畫在畫布**底部**那一條(v=0 那一側)
+        ok((bioR.match(/function roofLayer\(/g) || []).length === 1
+          && (bioR.match(/\broofLayer\(/g) || []).length === 2
+          && /if \(band\) roofLayer\(cx, W, WH, band,/.test(fx),
+          '屋頂圖樣只有 roofLayer 一份實作、一個呼叫點,畫在畫布底部那一條(= UV 的 v ∈ [0, BAND])');
+        // 六款的「牆 × 屋頂形式」MUST 兩兩不同 —— 使用者要的「不同類型/風格/屋頂形式都要
+        // 不同」在這張表上就是這件事;少了它,新增一款只要複製貼上就會多一款一模一樣的
+        const pit = [...bioR.matchAll(/\{ key: 'pit\d'[^}]*wall: '(\w+)',\s*roof: 0x[0-9a-f]+, rf: '(\w+)' \}/g)]
+          .map((m) => `${m[1]}/${m[2]}`);
+        ok(pit.length === 6 && new Set(pit).size === 6,
+          `斜頂六款的「牆 × 屋頂形式」兩兩不同(${pit.join('、')})`);
       }
     }
     {   // megaGeo 呼叫點 = 凍結清單 7 處(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石/tower 整座/mesa 整座),名字一律出自 MEGA_LIB 名冊

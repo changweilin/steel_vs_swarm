@@ -187,8 +187,10 @@ export function fbEnvelope(fb) {
 }
 
 /**
- * 手寫最小 GLB 解析(glTF 2.0:JSON chunk + BIN chunk;只讀 POSITION 與 indices)。
+ * 手寫最小 GLB 解析(glTF 2.0:JSON chunk + BIN chunk;讀 POSITION、indices、TEXCOORD_0)。
  * 節點世界變換刻意不套:partlib 取的就是節點**局部**幾何(匯出端已把原點對齊接合語意)。
+ * UV 只有整棟量體那一桶有(`--boxuv` / `--roofband`),沒有的節點回 `uv: null`
+ * —— 消費端 MUST 自己判空,MUST NOT 拿零長度陣列冒充「有 UV 但全是 0」。
  */
 export function parseGlb(path) {
   const buf = readFileSync(path);
@@ -209,13 +211,14 @@ export function parseGlb(path) {
     const CT = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }[a.componentType];
     return new CT(bin.buffer, bin.byteOffset + start, a.count * compN);
   };
-  const out = new Map();   // name → { pos: Float32Array, idx: Uint32Array, tris: number }
+  const out = new Map();   // name → { pos: Float32Array, idx: Uint32Array, uv: Float32Array|null, tris: number }
   for (const node of json.nodes || []) {
     if (node.mesh == null || !node.name) continue;
     const mesh = json.meshes[node.mesh];
-    let tris = 0; const posArrs = [], idxArrs = [];
+    let tris = 0; const posArrs = [], idxArrs = [], uvArrs = [];
     for (const prim of mesh.primitives) {
       const pos = acc(prim.attributes.POSITION);
+      uvArrs.push(prim.attributes.TEXCOORD_0 != null ? acc(prim.attributes.TEXCOORD_0) : null);
       // 多 primitive 時頂點是串接的 ⇒ 索引 MUST 加上前面幾段的頂點數(不加 = 第二段
       // 的三角形全部指回第一段 = 面積/連通量出來是另一顆網格,而且不會報錯)
       const base = posArrs.reduce((s, a) => s + a.length / 3, 0);
@@ -231,7 +234,14 @@ export function parseGlb(path) {
     let o = 0; for (const a of posArrs) { pos.set(a, o); o += a.length; }
     const idx = new Uint32Array(idxArrs.reduce((s, a) => s + a.length, 0));
     o = 0; for (const a of idxArrs) { idx.set(a, o); o += a.length; }
-    out.set(node.name, { pos, idx, tris });
+    // UV 與頂點同序(串接同一份 base 位移)；只要有一段沒有 TEXCOORD_0 就整顆算沒有 UV
+    // —— 半份 UV 拼出來的陣列會讓消費端拿到「對得起來的長度、對不起來的值」
+    let uv = null;
+    if (uvArrs.every((a) => a)) {
+      uv = new Float32Array(uvArrs.reduce((s, a) => s + a.length, 0));
+      o = 0; for (const a of uvArrs) { uv.set(a, o); o += a.length; }
+    }
+    out.set(node.name, { pos, idx, uv, tris });
   }
   return out;
 }
@@ -245,6 +255,49 @@ export function nodeExtent(node) {
     yMax = Math.max(yMax, node.pos[i + 1]);
   }
   return { rMax, yMin, yMax, verts: node.pos.length / 3, tris: node.tris };
+}
+
+/**
+ * 逐節點量 **UV 的方向與屋頂帶**(整棟量體那一桶的節點契約;入庫閘的唯一取數處)。
+ * 回傳 `null` = 這顆沒有 UV。量的是**消費端座標**:GLB 存的值就是 three 取樣用的 v,
+ * 而消費端那張 `CanvasTexture` 的 `flipY` 是預設的 true ⇒ v=0 採到畫布底部。
+ *   `corr`     牆面(近垂直)頂點的 corr(高度, v) —— MUST > 0,否則立面是**上下顛倒**的
+ *              (基座暗帶印在屋簷)。這件事沒有任何錯誤訊息,只有貼圖排面看得出來。
+ *   `upMaxV`   朝上面(n.y > minz)的 v 上界 —— 屋頂帶在 [0, frac] ⇒ MUST ≤ frac
+ *   `wallMinV` 近垂直面的 v 下界 —— MUST ≥ frac(牆不准踩進屋頂帶)
+ *   `parity`   朝上面積 ÷(朝上 + 側面)= 兩帶 texel 密度相同時的 frac(`roof_band` 的推導式)
+ */
+export function uvBandStats(node, minz = 0.30) {
+  const { pos, idx, uv } = node;
+  if (!uv) return null;
+  let upA = 0, sideA = 0, upMaxV = 0, wallMinV = 1;
+  const ys = [], vs = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const A = idx[i], B = idx[i + 1], C = idx[i + 2];
+    const a = A * 3, b = B * 3, c = C * 3;
+    const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2];
+    const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const L = Math.hypot(nx, ny, nz);
+    if (!L) continue;
+    const up = ny / L, area = L / 2;
+    const vv = [uv[A * 2 + 1], uv[B * 2 + 1], uv[C * 2 + 1]];
+    if (up > minz) { upA += area; upMaxV = Math.max(upMaxV, ...vv); continue; }
+    if (Math.abs(up) <= minz) sideA += area;
+    // 「牆」取近垂直的那一群(±0.15):斜的過渡面兩邊都不算,免得把屋簷底當成牆
+    if (Math.abs(up) < 0.15) {
+      wallMinV = Math.min(wallMinV, ...vv);
+      for (const V of [A, B, C]) { ys.push(pos[V * 3 + 1]); vs.push(uv[V * 2 + 1]); }
+    }
+  }
+  let corr = 0;
+  if (ys.length > 2) {
+    const n = ys.length, my = ys.reduce((s, x) => s + x, 0) / n, mv = vs.reduce((s, x) => s + x, 0) / n;
+    let sxy = 0, sxx = 0, svv = 0;
+    for (let i = 0; i < n; i++) { const dx = ys[i] - my, dv = vs[i] - mv; sxy += dx * dv; sxx += dx * dx; svv += dv * dv; }
+    corr = sxx && svv ? sxy / Math.sqrt(sxx * svv) : 0;
+  }
+  return { corr, upMaxV, wallMinV, upA, sideA, parity: upA / Math.max(upA + sideA, 1e-9) };
 }
 
 export const glbPath = (family) => join(ROOT, 'public', 'assets', 'models', 'parts', `${family}.glb`);

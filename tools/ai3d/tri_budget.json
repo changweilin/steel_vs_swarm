@@ -66,6 +66,7 @@
     "node_cap": 2981,
     "justification": "**「整桶換」對這一桶結構性不成立,而這是量出來的不是選出來的**:成長額度 = (whole_factor − 1) × 15,900 = 47,700 tris,除以 1,325 個 instance ⇒ 逐節點只有 **36 tris**(`full_swap_cap`),比現行的單位方盒(12)只多兩打三角形 —— 而 §5o 已實測 **500 面就留不住 Art Deco 的退縮量體**。⇒ 縫 MUST 是「全圖挑最高的 N 棟高層商辦」而不是整桶替換。N 由兩條約束反推,取較嚴者:①**畫面細節下限** cap ≥ 2 × §5o 的 500 面失敗點 ⇒ N ≤ 47,700 ÷ 1,000 = 47;②**draw call**:整棟庫節點的幾何與方盒不同 ⇒ 挑中的棟數上限就是額外 InstancedMesh 的上限,而立面段現行是 16 個 draw call 並自述「仍是常數級」⇒ 再加同一個量級為止 ⇒ N ≤ 16。②較嚴 ⇒ `pick_n = 16`,`node_cap` = 47,700 ÷ 16 = 2,981。高度門檻 `min_h = 55` **沿用 biomes.js 既有的退縮頂塔門檻**(MUST NOT 另發明數字);四場的合格棟數 21/55/39/71 都 > 16 ⇒ 密市區恆由 pick_n 夾住,郊區場地則自然少於 16 棟。**這一桶刻意不併進 deco 的 roster_size 除數**:deco 那條式子是三個屋頂配件桶**共分同一份家族額度**,把 mass 併進去會讓除數 3→4、兩顆已出貨節點當場超標(見 resample 的 finding);mass 換掉的是 facade_wall 這個**另一個**桶,額度就從那一桶自己的現值算 —— 逐桶各自 ≤ whole_factor × 自己的現值,比「均分家族總額」更緊。最壞情況 16 × 2,981 = 47,696 tris,佔最重場景(1.2M)的 **4.0%**。",
     "staleness": "①`pick_n` 與 `min_h` 是**兩份**東西的同一個值(這裡 + biomes.js 的 `MASS` 常數),audit_siteplan 釘住兩邊相等 —— 改一邊沒改另一邊不會報錯,只會讓預算與實際挑中的棟數分家;②立面段的 draw call 數一改 MUST 重推 `pick_n`(它是那條約束的來源);③`measured_mass_total_max` 隨圖資量浮動(見 variance_warning),MUST NOT 因為某一次抽樣變大就把 cap 調鬆;④`node_cap` 是推導值(= 3 × 15,900 ÷ 16),MUST NOT 手改。",
+    "uv": "boxup",
     "measured_low_pool_min": 471,
     "justification_low": "**第二個桶(低矮建物;2026-08-09 使用者定案「開」+ 選 (a))**:它與高層那一桶吃的是**同一個** facade_wall 桶 ⇒ 額度是同一份 —— `pick_n` 仍是**總**挑選棟數(draw call 約束:額外 mesh ≤ 立面段現行的 16),`node_cap` 仍 = 3 × 15,900 ÷ 16 = 2,981(已出貨的 mass_a 2,921 / mass_b 2,900 因此逐位元不受影響)。⇒ **開第二個桶只能從那 16 棟裡切**,取 8 / 8:兩邊都沒有量得出來的偏袒理由(低矮候選池 471~1,321 棟、高層 13~108 棟,雙方都遠超過 8)。使用者 2026-08-09 於 §5al-c 兩個選項中選 (a)(另一個是把這一桶的 whole_factor 抬到 8,代價是整件閘比 tree/megalith 鬆一倍)。**資格是同一個門檻的另一邊**:高層 = `commercial && h > min_h`、低矮 = `h <= min_h` ⇒ 中間那一段(高於 55m 的非商辦)兩邊都不換,維持方盒 —— 為它再訂一個門檻就是第三個手寫數字。低矮桶的排序取**足跡面積**(高層排「最高」;低矮最顯眼的是屋頂面積)。`measured_low_pool_min` = 四場最小的候選池(shibuya 471;manhattan 576 / taipei101 599 / seoul 1,321)⇒ 密市區恆由 pick_n_low 夾住。",
     "staleness_low": "①`pick_n_high + pick_n_low` MUST === `pick_n`(稽核釘住)—— 分開加總對不上就是「額度憑空多出來一份」;②低矮桶的名冊擴充**不改** node_cap(除數是總挑選棟數,不是名冊長度);③改 8/8 的切分比例 MUST 同步 biomes.js 的 `MASS`(兩份同值,稽核釘住)。"
@@ -74,7 +75,11 @@
     "measured_what": "低矮建物的整棟量體桶(2026-08-09 §5am)。**它與 `mass` 共用同一份推導** —— 兩桶吃的是同一個 facade_wall 桶,額度、總挑選棟數(pick_n)、逐節點上限全部是那一份;這一格存在的唯一理由是 `parts_src.mjs nodeCap(fam, kind)` 以**名冊鍵**查表(kind = 'masslow')。稽核釘住 `masslow.node_cap === mass.node_cap` ⇒ 兩邊分家寫不出來。",
     "node_cap": 2981,
     "same_as": "mass",
-    "staleness": "MUST NOT 手改 —— 改 `mass.node_cap` 時這一格要跟著,而 audit_siteplan 會在分家時紅字。"
+    "uv": "roofband",
+    "roof_band": 0.273,
+    "roof_minz": 0.3,
+    "measured_roof": "**屋頂帶**(2026-08-09 §5ao;使用者回報「斜頂屋頂外觀變摩天大樓的玻璃」的後半)。庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它不生效,而拆群組會讓每一棟多一個 draw call(`pick_n` 的整條推導就是 draw call 上界)⇒ 把區分移進 UV。兩個數字都是量出來的(逐面積直方圖,tools/ai3d/parts_src.mjs uvBandStats 用同一份定義複驗):①`roof_minz` = 牆的尖峰與屋頂的尖峰之間那個**空檔的中點** —— 實測牆止於 n.y 0.15,屋頂起於 0.45(masslow_a,非等向 fit 把穀倉拉高 ⇒ 坡角變陡)與 0.65(masslow_b);⚠ 沿用盒投影的「主導軸」等價於門檻 0.577,那會把穀倉**整個屋頂**判成牆。②`roof_band` = 朝上面積 ÷(朝上 + 側面)的**名冊平均** = 兩帶 texel 密度相同(瓦縫與窗框在畫面上同一個顆粒度):masslow_a 0.272 / masslow_b 0.275。對照組 —— 平頂那一桶(mass)同一式只有 0.138 / 0.124,這也是它刻意不開屋頂帶的量化理由(朝上面小、俯視機會低)。",
+    "staleness": "MUST NOT 手改 —— ①`node_cap`:改 `mass.node_cap` 時這一格要跟著,而 audit_siteplan 會在分家時紅字;②`roof_band`/`roof_minz` 與 biomes.js 的 `MASS.ROOF_BAND`/`ROOF_MINZ` 是**同一份**值(audit_siteplan 釘住相等),而節點那一側是 `normalize_parts.py --roofband <node>=<frac>|<minz>` 烤進 UV 的 ⇒ **名冊增減或重烤節點 MUST 重量 parity 並重跑 `intake_parts`**(它直接量 GLB 的 UV 帶,對不上就紅字)。"
    }
   },
   "veg": {
