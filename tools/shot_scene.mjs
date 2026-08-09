@@ -150,7 +150,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   // 這正是「勾線對新冠形是加分還是扣分」那一項卡了三輪沒答案的原因:
   // `shot_veg` 載庫但**沒有管線**(黏土)、`shot_scene` 有管線但**不載庫** —— 兩邊各缺一半。
   // `--lib=0` 保留舊行為當**前後對照的「前」**(保險絲路徑),而不是預設。
-  let libN = 0, massGeo = null, rockCount = null, megaOrbit = null, massInst = null, megaDrop = 0;
+  let libN = 0, massGeo = null, lowGeo = null, highGeo = null, rockCount = null, megaOrbit = null, massInst = null, lowInst = null, megaDrop = 0;
   if (layers.lib) {
     const { loadPartLibs, libGeo, libNames } = await import('/public/js/partlib.js');
     await loadPartLibs();
@@ -162,7 +162,19 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     libN = names.length;
     // 整棟量體庫節點:下面的 mass_near 機位靠它認人 —— **整個 mass 家族都要認**,
     // 否則挑中 mass_b 的那幾棟拍不到,而畫面上只表現成「這張圖好像沒換到庫節點」。
-    massGeo = names.filter((n) => n.startsWith('building/mass_')).map((n) => libGeo(n)).filter(Boolean);
+    // ⚠ 前綴 MUST 是 `building/mass`(**沒有底線**):2026-08-09 開了第二個桶
+    // `masslow_*`(低矮建物),而 `building/mass_` 的底線剛好把它整組排除掉 —— 同一個
+    // 「手寫清單靜默過期」的坑換一種寫法再犯一次(這一份是推導的,只是推導式太緊)。
+    massGeo = names.filter((n) => n.startsWith('building/mass')).map((n) => libGeo(n)).filter(Boolean);
+    // 低矮那一桶另拍一張:`mass_near` 是對著**最高**的那一叢拍的,而 masslow 服務的是
+    // `!commercial && h <= 55` —— 兩者在畫面上永遠不會同框,只拍高的那一張就等於
+    // 「低矮桶換了什麼」從來沒有人看過(2026-08-09 使用者回報「斜頂屋頂變成玻璃」時,
+    // 離線這一側**一張證據都拿不出來**)。
+    lowGeo = names.filter((n) => n.startsWith('building/masslow')).map((n) => libGeo(n)).filter(Boolean);
+    // ⚠ **兩張機位各自認自己那一桶**:`massGeo` 是「兩桶合計」(給讀數用,要與 pick_n 對帳),
+    // 而 mass_near 的取景 MUST 只認高層那一桶 —— 用合計去挑「第一顆」會挑到穀倉,
+    // 於是兩張機位對著同一棟拍(2026-08-09 實測:eye 不同、look 同一點)。
+    highGeo = names.filter((n) => n.startsWith('building/mass_')).map((n) => libGeo(n)).filter(Boolean);
     // 巨岩那一族**不能**比對幾何參照:`megaGeo` 一律 `.clone()`(群組要過 bakeContactAO,
     // 共用幾何被就地烤一次全場都帶著別顆岩的頂點色)⇒ 下面的 mega_orbit 改認**頂點數**
     // (clone 不動頂點數,§7 對照台的同一條)。名冊照樣由 `libNames()` 推導。
@@ -297,7 +309,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     massInst = 0;
     bio.traverse((o) => { if (o.isInstancedMesh && massGeo.includes(o.geometry)) massInst += o.count; });
     bio.traverse((o) => {
-      if (hit || !o.isInstancedMesh || !massGeo.includes(o.geometry) || !o.count) return;
+      if (hit || !o.isInstancedMesh || !highGeo.includes(o.geometry) || !o.count) return;
       const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
       o.getMatrixAt(0, M); M.decompose(P, Q, S);
       hit = { p: P.clone(), s: S.clone() };
@@ -308,6 +320,25 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
         name: 'mass_near',
         p: [hit.p.x + dist * 0.8, hit.p.y + th * 0.35, hit.p.z + dist * 0.6],
         look: [hit.p.x, hit.p.y, hit.p.z],
+      });
+    }
+    // 低矮桶:同一套認人 + 取景,只換幾何名冊(**低矮建物的鏡頭要更近更平** ——
+    // 拿高層那組係數拍 8m 的穀倉會變成一個遠景小點)
+    let lowHit = null;
+    lowInst = 0;
+    bio.traverse((o) => { if (o.isInstancedMesh && lowGeo.includes(o.geometry)) lowInst += o.count; });
+    bio.traverse((o) => {
+      if (lowHit || !o.isInstancedMesh || !lowGeo.includes(o.geometry) || !o.count) return;
+      const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
+      o.getMatrixAt(0, M); M.decompose(P, Q, S);
+      lowHit = { p: P.clone(), s: S.clone() };
+    });
+    if (lowHit) {
+      const d = Math.max(lowHit.s.x, lowHit.s.z, lowHit.s.y) * 2.2;
+      stations.push({
+        name: 'masslow_near',
+        p: [lowHit.p.x + d * 0.85, lowHit.p.y + lowHit.s.y * 0.55, lowHit.p.z + d * 0.65],
+        look: [lowHit.p.x, lowHit.p.y, lowHit.p.z],
       });
     }
   }
@@ -410,7 +441,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
       p: st.p.map((v) => Math.round(v)), look: st.look.map((v) => Math.round(v)) });
   }
-  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, megaDrop, imagery: !!terrain.sampleColor };
+  return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor };
 }, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV });
 
 for (const s of shots.shots) {
@@ -425,6 +456,8 @@ console.log(`  地物 mesh ${shots.objN}・零件庫節點 ${shots.libN}${LAYERS
 if (LAYERS.lib) {
   console.log(`  mass_near → 整棟量體挑中 ${shots.massInst} 棟`
     + (shots.massInst ? '' : '(這一局的圖資沒有高於門檻的商辦 ⇒ 沒拍)'));
+  console.log(`  masslow_near → 低矮量體挑中 ${shots.lowInst} 棟`
+    + (shots.lowInst ? '' : '(這一局沒有低於門檻的非商辦 ⇒ 沒拍)'));
   const m = shots.megaOrbit;
   console.log(m ? `  mega_orbit → ${m.node}(候選 ${m.n} 顆・外接半徑 ${m.r.toFixed(1)}m・高 ${m.h.toFixed(1)}m`
     + `${shots.megaDrop ? `・擋掉 ${shots.megaDrop} 顆過大的誤配` : ''})`

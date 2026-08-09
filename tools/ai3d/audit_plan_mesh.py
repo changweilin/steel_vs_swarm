@@ -211,6 +211,27 @@ finally:
     p2m.ALLOW_RENDER = False
 chk('線稿不被誤擋(同一棟樓的線稿版照過)', i_pl['faces'] == 12, f"{i_pl['faces']} 面")
 
+print('\n— Ⅶ-c 「整張紙就是圖」MUST 出聲,不可靜默拿一塊碎屑當主體(§5ak-b)—')
+
+
+def edge_to_edge(img):
+    """掃描件:紙緣 = 最大墨輪廓(佔滿畫布),建築的線條在裡面。
+
+    這是真的踩到的那個坑(palazzo 那張):紙緣 > FRAME_MAX 被當成圖框剔掉 ⇒ 剩下最大的
+    候選是簷口的一小塊碎屑,而它的**實體佔比剛好爬過 SOLID_MIN** ⇒ 三道閘一起放行 = 假綠。
+    """
+    cv2.rectangle(img, (5, 5), (594, 794), 0, 3)          # 紙緣(佔畫布 98%)
+    cv2.rectangle(img, (200, 300), (400, 340), 0, 2)      # 建築只剩碎片式的線
+    cv2.line(img, (200, 300), (400, 300), 0, 6)
+
+
+try:
+    p2m.build(front=draw('sheet_edge.png', edge_to_edge), **B)
+    chk('整張紙就是圖 → 出聲', False, '沒有報錯')
+except SystemExit as ex:
+    chk('整張紙就是圖 → 出聲(指到圖框而不是缺口)', '圖框剔掉' in str(ex), str(ex)[:52])
+chk('有留白的正常圖框不被誤擋(對照組)', i_sh['faces'] == 12, f"{i_sh['faces']} 面")
+
 print('\n— Ⅶ 輪廓有缺口 MUST 出聲,不可回空殼 —')
 try:
     p2m.build(front=draw('gap.png', lambda im: cv2.line(im, (100, 100), (500, 100), 0, 2)), **B)

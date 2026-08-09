@@ -1089,7 +1089,81 @@ function flag(w, h, d, color, x = 0, y = 0, z = 0) {
 const _facadeCache = new Map();
 // style:'plain' 標準窗格 | 'curtain' 玻璃帷幕(整格寬窗)| 'balcony' 每層陽台帶 |
 //       'shop' 底層店面(彩色遮陽棚 + 亮櫥窗)| 'hband' 整層水平帶窗(現代主義商辦)
-function facadeTex(key, cols, rows, winC, litRatio, style = 'plain') {
+// ---- 外牆圖層(2026-08-09 使用者定案:「不同類型、不同風格、平頂和斜頂等的建築外牆
+// 圖層都要不同」「就算是摩天大樓外牆圖層也不要只有一種,同一種建築也要差異化」)----
+//
+// **這一層畫的是「牆本身是什麼做的」**,窗格是疊在它上面的另一件事 —— 舊制只有一種牆
+// (純白 + 底部暗帶),所有差異都靠窗格節奏與 tint,結果是「每一棟的牆都是同一面牆」。
+// 圖樣一律 **Canvas2D 程序生成**(skill procedural-canvas-textures / A2:不進二進位資產),
+// 而**比例與配色參考語料庫那幾張 CC0 照片** —— 每一款下面註明參考的是哪一張:
+//   boardv  直紋木板 + 壓縫條 ← `bld_barn/ov_910e1b06`(Highsmith 紅色穀倉:寬板 + 細壓條)
+//   boardh  橫紋雨淋板         ← `bld_church/ov_16f1257f`(白色木造教堂:一層層的陰影線)
+//   stone   亂石砌             ← `bld_stonecottage/ov_3966cc35`(蘇格蘭石屋:大小不一的塊石)
+//   brick   磚砌               ← `bld_warehouse/ov_bd624950`(紅磚倉庫:交丁砌 + 灰縫)
+//   stucco  灰泥               ← `bld_medit/ov_f42bb333`(地中海白牆:低頻污漬)
+//   panel   預鑄混凝土板       ← `bld_office/ov_e62e476d`(板縫格線 + 板面明暗差)
+//   spandrel 帷幕裙板帶        ← `bld_tower/ov_8811db29`(層間實心帶,玻璃只佔一部分)
+//   plainw  純白(**舊制**,預設)—— 既有八款不指定 wall 時逐位元不變
+//
+// 逐款自帶種子(`key` 的雜湊)⇒ 同一款在不同建物上是同一張(貼圖有快取),差異落在
+// **款式 × 窗格節奏 × 街區色相 × 逐棟 tint** 四層,而不是在這裡逐棟重畫一張。
+function wallLayer(cx, W, H, kind, rnd) {
+  const line = (a) => `rgba(0,0,0,${a})`;
+  if (kind === 'boardv') {                       // 直紋木板:寬板 + 壓縫條
+    const bw = W / 9;
+    for (let i = 0; i <= 9; i++) {
+      cx.fillStyle = line(0.16); cx.fillRect(i * bw - 0.5, 0, 1, H);
+      cx.fillStyle = 'rgba(255,255,255,0.10)'; cx.fillRect(i * bw + 0.5, 0, 1.5, H);
+    }
+  } else if (kind === 'boardh') {                // 橫紋雨淋板:逐層下緣陰影
+    const bh = 7;
+    for (let y = 0; y < H; y += bh) {
+      cx.fillStyle = line(0.13); cx.fillRect(0, y + bh - 1.5, W, 1.5);
+      cx.fillStyle = 'rgba(255,255,255,0.08)'; cx.fillRect(0, y, W, 1);
+    }
+  } else if (kind === 'stone') {                 // 亂石砌:錯縫塊石 + 逐塊明暗
+    const rh = 11;
+    for (let y = 0, r = 0; y < H; y += rh, r++) {
+      let x = -((r * 13) % 26);
+      while (x < W) {
+        const w = 14 + rnd() * 16;
+        cx.fillStyle = `rgba(${rnd() < 0.5 ? 0 : 255},${rnd() < 0.5 ? 0 : 255},${rnd() < 0.5 ? 0 : 255},0.07)`;
+        cx.fillRect(x + 1, y + 1, w - 2, rh - 2);
+        cx.fillStyle = line(0.15); cx.fillRect(x, y, 1, rh); cx.fillRect(x, y + rh - 1, w, 1);
+        x += w;
+      }
+    }
+  } else if (kind === 'brick') {                 // 磚砌:交丁 + 灰縫
+    const bh = 5, bw = 15;
+    for (let y = 0, r = 0; y < H; y += bh, r++) {
+      cx.fillStyle = line(0.12); cx.fillRect(0, y + bh - 1, W, 1);
+      for (let x = (r % 2) * bw / 2; x < W; x += bw) { cx.fillStyle = line(0.10); cx.fillRect(x, y, 1, bh - 1); }
+    }
+  } else if (kind === 'stucco') {                // 灰泥:低頻污漬(沒有幾何線)
+    for (let i = 0; i < 26; i++) {
+      const r = 8 + rnd() * 22;
+      cx.fillStyle = `rgba(0,0,0,${0.02 + rnd() * 0.035})`;
+      cx.beginPath(); cx.arc(rnd() * W, rnd() * H, r, 0, Math.PI * 2); cx.fill();
+    }
+  } else if (kind === 'panel') {                 // 預鑄混凝土板:板縫格線 + 逐板明暗差
+    const pw = W / 4, ph = 26;
+    for (let y = 0, r = 0; y < H; y += ph, r++) {
+      for (let c = 0; c < 4; c++) {
+        cx.fillStyle = `rgba(0,0,0,${0.02 + ((r + c) % 3) * 0.022})`;
+        cx.fillRect(c * pw, y, pw, ph);
+      }
+      cx.fillStyle = line(0.14); cx.fillRect(0, y, W, 1);
+    }
+    for (let c = 0; c <= 4; c++) { cx.fillStyle = line(0.14); cx.fillRect(c * pw - 0.5, 0, 1, H); }
+  } else if (kind === 'spandrel') {              // 帷幕裙板帶:層間實心帶(玻璃只佔一部分)
+    for (let y = 0; y < H; y += 18) {
+      cx.fillStyle = line(0.10); cx.fillRect(0, y, W, 6);
+      cx.fillStyle = 'rgba(255,255,255,0.12)'; cx.fillRect(0, y + 6, W, 1);
+    }
+  }
+}
+
+function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'plainw') {
   if (_facadeCache.has(key)) return _facadeCache.get(key);
   const W = 128, H = 256;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -1100,6 +1174,9 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain') {
   cx.fillStyle = 'rgba(0,0,0,0.18)'; cx.fillRect(0, H - 14, W, 14);      // 底層基座暗帶
   ex.fillStyle = '#000000'; ex.fillRect(0, 0, W, H);
   const rnd = mulberry32(0xFACADE ^ (cols * 131 + rows * 7));
+  // 外牆圖層排在窗格**之前**:窗要蓋在牆上,不是牆蓋在窗上。`plainw` = 舊制純白 ⇒
+  // 沒有指定 wall 的八款逐位元不變(而且它們的 rnd 序列也不動:plainw 不抽數)。
+  wallLayer(cx, W, H, wall, rnd);
   const cw = W / cols, ch = (H - 26) / rows;                             // 頂部留女兒牆帶
   // 窗格幾何依樣式:[x偏,y偏,寬,高](格內比例);帷幕窗近乎滿格
   const [ox, oy, fw, fh] = style === 'curtain' ? [0.07, 0.2, 0.86, 0.62] : [0.24, 0.28, 0.52, 0.48];
@@ -1165,26 +1242,42 @@ const PALETTE = {
 // 街景擺脫「同一張貼圖複製貼上」;v 在建物生成時決定性分配
 const FACADES = {
   residential: [
-    { key: 'res0', cols: 5, rows: 7, winC: '#3a4046', lit: 0.3,  style: 'shop',    roof: 0x9c8e7c },
-    { key: 'res1', cols: 4, rows: 6, winC: '#46525e', lit: 0.22, style: 'balcony', roof: 0x8a6f5a },
-    { key: 'res2', cols: 6, rows: 8, winC: '#333b42', lit: 0.36, style: 'plain',   roof: 0x7a8577 },
-    { key: 'res3', cols: 3, rows: 5, winC: '#4a3f38', lit: 0.26, style: 'balcony', roof: 0xa2543e },
-    { key: 'res4', cols: 5, rows: 6, winC: '#3d4750', lit: 0.32, style: 'shop',    roof: 0x6e7f8a },
-    { key: 'res5', cols: 4, rows: 5, winC: '#3f4a3a', lit: 0.28, style: 'plain',   roof: 0xb98455 },
-    { key: 'res6', cols: 6, rows: 7, winC: '#52453c', lit: 0.24, style: 'balcony', roof: 0x87795f },
-    { key: 'res7', cols: 4, rows: 4, winC: '#43382e', lit: 0.3,  style: 'shop',    roof: 0x8a5a40 },   // 低層町屋(2026-08-05:低樓專用的疏窗格節奏)
+    { key: 'res0', cols: 5, rows: 7, winC: '#3a4046', lit: 0.3,  style: 'shop',    wall: 'stucco',  roof: 0x9c8e7c },
+    { key: 'res1', cols: 4, rows: 6, winC: '#46525e', lit: 0.22, style: 'balcony', wall: 'panel',   roof: 0x8a6f5a },
+    { key: 'res2', cols: 6, rows: 8, winC: '#333b42', lit: 0.36, style: 'plain',   wall: 'brick',   roof: 0x7a8577 },
+    { key: 'res3', cols: 3, rows: 5, winC: '#4a3f38', lit: 0.26, style: 'balcony', wall: 'stucco',  roof: 0xa2543e },
+    { key: 'res4', cols: 5, rows: 6, winC: '#3d4750', lit: 0.32, style: 'shop',    wall: 'panel',   roof: 0x6e7f8a },
+    { key: 'res5', cols: 4, rows: 5, winC: '#3f4a3a', lit: 0.28, style: 'plain',   wall: 'boardh',  roof: 0xb98455 },
+    { key: 'res6', cols: 6, rows: 7, winC: '#52453c', lit: 0.24, style: 'balcony', wall: 'brick',   roof: 0x87795f },
+    { key: 'res7', cols: 4, rows: 4, winC: '#43382e', lit: 0.3,  style: 'shop',    wall: 'boardv',  roof: 0x8a5a40 },   // 低層町屋(2026-08-05:低樓專用的疏窗格節奏)
   ],
   commercial: [
-    { key: 'com0', cols: 7, rows: 13, winC: '#2e3c4a', lit: 0.55, style: 'plain',   roof: 0x707c88 },
-    { key: 'com1', cols: 9, rows: 16, winC: '#243240', lit: 0.68, style: 'curtain', roof: 0x5c6874 },
-    { key: 'com2', cols: 6, rows: 11, winC: '#35424e', lit: 0.45, style: 'shop',    roof: 0x86766a },
-    { key: 'com3', cols: 5, rows: 14, winC: '#1f3a38', lit: 0.6,  style: 'hband',   roof: 0x4f6a66 },
-    { key: 'com4', cols: 8, rows: 12, winC: '#2c3350', lit: 0.5,  style: 'curtain', roof: 0x5a5f7c },
-    { key: 'com5', cols: 10, rows: 15, winC: '#1e2e3e', lit: 0.62, style: 'hband',  roof: 0x6a7a6a },
-    { key: 'com6', cols: 6, rows: 12, winC: '#2a3a46', lit: 0.4,  style: 'shop',    roof: 0x7c6a58 },
-    { key: 'com7', cols: 7, rows: 9,  winC: '#2e3d3a', lit: 0.48, style: 'hband',   roof: 0x6a7468 },   // 低層商辦(2026-08-05:低樓專用的疏窗格節奏)
+    { key: 'com0', cols: 7, rows: 13, winC: '#2e3c4a', lit: 0.55, style: 'plain',   wall: 'panel',    roof: 0x707c88 },
+    { key: 'com1', cols: 9, rows: 16, winC: '#243240', lit: 0.68, style: 'curtain', wall: 'spandrel', roof: 0x5c6874 },
+    { key: 'com2', cols: 6, rows: 11, winC: '#35424e', lit: 0.45, style: 'shop',    wall: 'brick',    roof: 0x86766a },
+    { key: 'com3', cols: 5, rows: 14, winC: '#1f3a38', lit: 0.6,  style: 'hband',   wall: 'spandrel', roof: 0x4f6a66 },
+    { key: 'com4', cols: 8, rows: 12, winC: '#2c3350', lit: 0.5,  style: 'curtain', wall: 'panel',    roof: 0x5a5f7c },
+    { key: 'com5', cols: 10, rows: 15, winC: '#1e2e3e', lit: 0.62, style: 'hband',  wall: 'spandrel', roof: 0x6a7a6a },
+    { key: 'com6', cols: 6, rows: 12, winC: '#2a3a46', lit: 0.4,  style: 'shop',    wall: 'stucco',   roof: 0x7c6a58 },
+    { key: 'com7', cols: 7, rows: 9,  winC: '#2e3d3a', lit: 0.48, style: 'hband',   wall: 'brick',    roof: 0x6a7468 },   // 低層商辦(2026-08-05:低樓專用的疏窗格節奏)
   ],
 };
+
+// **斜頂低矮建物專用的立面家族**(2026-08-09 使用者回報「斜頂屋頂外觀變摩天大樓的玻璃」)。
+// 成因是庫節點是**單一材質群組** ⇒ three 取 material[0] = 那一款的立面貼圖,而方盒路徑
+// 的屋頂本來走另一個材質(`[wall, wall, roof, roof, wall, wall]` 的第 3/4 格)—— 對平頂
+// 塔樓那是刻意的取捨(俯視看得到頂面的機會低),對**斜屋頂**卻是整個剪影最顯眼的那一面。
+// ⇒ 這一桶改吃自己的家族:**木板/石砌/灰泥/磚**這類鄉村與公共建築的牆,窗小、亮燈率低、
+// 沒有帷幕玻璃也沒有店面遮陽棚 —— 就算貼到斜屋頂上,讀起來也是「同一種材料蓋的屋頂」
+// 而不是玻璃帷幕。款式由**落點雜湊**決定(零 rnd,§2.3)⇒ 同一張圖上的穀倉彼此不同。
+const FACADES_PITCHED = [
+  { key: 'pit0', cols: 4, rows: 3, winC: '#3a2f28', lit: 0.12, style: 'plain', wall: 'boardv', roof: 0x8a5a40 },  // 木板穀倉
+  { key: 'pit1', cols: 3, rows: 3, winC: '#44505c', lit: 0.16, style: 'plain', wall: 'boardh', roof: 0x6e7f8a },  // 雨淋板教堂/木屋
+  { key: 'pit2', cols: 3, rows: 2, winC: '#4a4238', lit: 0.18, style: 'plain', wall: 'stone',  roof: 0x54636e },  // 石砌農舍
+  { key: 'pit3', cols: 4, rows: 3, winC: '#4e463c', lit: 0.2,  style: 'plain', wall: 'stucco', roof: 0xa2543e },  // 灰泥民宅
+  { key: 'pit4', cols: 5, rows: 3, winC: '#38404a', lit: 0.16, style: 'plain', wall: 'brick',  roof: 0x7d8a70 },  // 磚造校舍/倉庫
+  { key: 'pit5', cols: 3, rows: 3, winC: '#332c26', lit: 0.14, style: 'plain', wall: 'boardv', roof: 0x5e6e52 },  // 深色木造
+];
 
 // ---- 街區色相家族(2026-08-05;sakura-crossing「變化要落在正確層級」)----
 // 逐棟全隨機的色抖是均勻雜訊,反而讀成單調;真正讀得出「這一帶」的是:同一街區的樓
@@ -1902,6 +1995,15 @@ const BLD_LIB = {
   // 同一張圖上挑中的十幾棟塔樓是同一個剪影(尺寸各異、形狀相同),而所有離線閘門全綠。
   // a = 退縮階梯式方塔、b = 寬裙樓 + 細塔身 + 尖頂(§5ae)。
   mass: [['building/mass_a', 'building/mass_b'], ['box', 1, 1, 1]],
+  // 低矮建物的整棟量體(2026-08-09 使用者定案「開」第二個桶 + §5al-c 選 (a) 8/8 切分)。
+  // **它與上面那一桶吃同一個 facade_wall 桶** ⇒ 額度是同一份:`MASS.PICK_N` 與
+  // `MASS.PICK_N_LOW` 加起來才是 tri_budget 的 `pick_n`,`node_cap` 因此一格不動
+  // (已出貨的 mass_a/mass_b 不受影響)。開這一桶的理由是**消費端**:rural / civic /
+  // 設計圖三條語料在此之前沒有任何出口(唯一的 mass 桶只服務 `commercial && h > 55`)。
+  // 名冊空著 ⇒ `bldLibN` 回 0 ⇒ 一棟都不挑 ⇒ **逐位元同舊制**(保險絲,原則 6)。
+  // ⚠ 輪替名冊 MUST ≥2 顆才算「開好」(同上一列的理由:一款打天下 = 同一張圖上
+  //   挑中的那幾棟是同一個剪影,而所有離線閘門全綠)。
+  masslow: [['building/masslow_a', 'building/masslow_b'], ['box', 1, 1, 1]],
 };
 // `i` = 輪替索引(只有陣列名冊吃得到;單一字串的舊三桶逐位元不受影響)
 const bldGeo = (key, i = 0) => {
@@ -1914,8 +2016,21 @@ const bldGeo = (key, i = 0) => {
 const bldLibN = (key) => { const n = BLD_LIB[key]?.[0]; return n ? (Array.isArray(n) ? n.length : 1) : 0; };
 // 整棟量體的挑選規則(兩個值都與 tri_budget families.building.mass 同一份,audit_siteplan Ⅴ 釘住相等)
 const MASS = {
-  MIN_H: 55,    // 高層商辦門檻:沿用 biomes 既有的退縮頂塔門檻,MUST NOT 另發明數字
-  PICK_N: 16,   // 全圖挑中棟數上限(推導值:額外 draw call ≤ 立面段現行的 16 個)
+  // **兩個既有的判準各切一刀,對角線兩格換節點**:
+  //   commercial && h > MIN_H  → `mass`(高層商辦:退縮量體、婚禮蛋糕剪影)
+  //   !commercial && h <= MIN_H → `masslow`(低矮非商辦:農舍/教堂/穀倉那一類坡屋頂量體)
+  //   其餘兩格(低矮商辦 / 高層住宅)**維持方盒** —— 那個空隙是刻意留的:為它們再訂
+  //   一個門檻就是第三個手寫數字,而語料裡也沒有對得上的東西。
+  // 門檻沿用 biomes 既有的退縮頂塔門檻,MUST NOT 另發明數字;`commercial` 是既有的
+  // OSM 型別判定(commercial/office/retail/hotel/10 層以上公寓)⇒ 非商辦正好就是
+  // 住宅/教堂/穀倉/學校那一類,也正是 rural + civic 兩條語料抓的東西。
+  MIN_H: 55,
+  // 兩個桶**共用同一份成長額度**(它們是同一個 facade_wall 桶)⇒
+  // `PICK_N + PICK_N_LOW` 才是 tri_budget 的 `pick_n`(= 額外 draw call ≤ 立面段現行的 16),
+  // 而 `node_cap` 的除數是那個總數 ⇒ 切分比例改不動逐節點上限。8/8 是使用者 2026-08-09
+  // 的定案(§5al-c 選 (a)):兩邊都沒有量得出來的偏袒理由。
+  PICK_N: 8,      // 高層商辦(排最高的)
+  PICK_N_LOW: 8,  // 低矮建物(排足跡面積最大的)
 };
 // 桶建構表(凍結四桶:煙囪/水塔/空調機組/整棟量體):單位 primitive 保險絲 + 桶色 +
 // InstancedMesh 一次定案在這裡。
@@ -1933,7 +2048,10 @@ export const buildBldBucket = {
   // 節點契約因此多一條:匯出端 MUST 給**盒投影 UV**(沿用原 BoxGeometry 的 0..1 逐面
   // 慣例),否則整棟只採到 (0,0) 那一個 texel = 一塊沒有窗的純色板。
   // 對照台(count = 1 取樣)不傳材質 ⇒ 退回素色,只看幾何。
-  mass: (n, mat, i = 0) => new THREE.InstancedMesh(bldGeo('mass', i) || new THREE.BoxGeometry(1, 1, 1),
+  // `key` = 哪一個整棟量體名冊('mass' 高層 / 'masslow' 低矮):兩桶只差名冊與挑選規則,
+  // 幾何/材質/保險絲逐條相同 ⇒ **一份實作**。另開一支 `masslow:` 就是第二套桶建構器,
+  // 而它壞掉的樣子是「低矮那一桶的保險絲跟高層的不一樣」。
+  mass: (n, mat, i = 0, key = 'mass') => new THREE.InstancedMesh(bldGeo(key, i) || new THREE.BoxGeometry(1, 1, 1),
     mat || bmat(0xb9b3a8, { wash: 0.5 }), n),
 };
 
@@ -7739,17 +7857,21 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const P = new THREE.Vector3(), S = new THREE.Vector3();
     // 名冊裡**真的載到**的節點索引(整批取不到 ⇒ 下面一棟都不挑 ⇒ 逐位元同舊制)。
     // 探詢只在這裡做一次:放進逐棟迴圈就是同一個名字每棟查一遍,而且會多一個消費點。
-    const massOk = [];
-    for (let k = 0; k < bldLibN('mass'); k++) if (bldGeo('mass', k)) massOk.push(k);
+    const libOk = (key) => { const a = []; for (let k = 0; k < bldLibN(key); k++) if (bldGeo(key, k)) a.push(k); return a; };
+    const massOk = libOk('mass'), lowOk = libOk('masslow');
     // 整棟量體庫節點的**選取**:全圖一次定案,不是逐立面款各挑各的 —— 預算的除數是
     // 「全圖挑中幾棟」(tri_budget families.building.mass.pick_n),逐款各挑會讓總數
     // 隨款數翻倍。純函式:只讀 b.commercial/h/x/z(權威佈局資料),**零 rnd() 消耗**
     // (§2.3 / A4)、**不讀庫幾何**(佈局數學只讀保險絲;能不能換成由上面的 massOk 決定)。
     // 排序尾巴帶 x/z 是為了跨客戶端逐位元同一組:等高的兩棟不能靠 sort 的實作穩定性決定。
-    const massPick = new Set(massOk.length
-      ? generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
-        .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z).slice(0, MASS.PICK_N)
-      : []);
+    // 兩桶**互斥**且各有各的排序:高層排「最高」、低矮排「足跡面積最大」(低矮建物在
+    // 畫面上最顯眼的是屋頂面積,不是高度)。等大時一律再以座標定序。
+    const massPick = new Map();
+    const take = (key, ok, list, n) => { if (ok.length) for (const b of list.slice(0, n)) massPick.set(b, key); };
+    take('mass', massOk, generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
+      .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z), MASS.PICK_N);
+    take('masslow', lowOk, generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)
+      .sort((p, q) => q.w * q.d - p.w * p.d || p.x - q.x || p.z - q.z), MASS.PICK_N_LOW);
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
       // 各立面樣式一個 InstancedMesh(共 16 個 draw call,仍是常數級);
@@ -7758,7 +7880,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         const list = generic.filter((b) => b.commercial === commercial && facadeStyle(b) === v);
         if (!list.length) continue;
         const fd = FACADES[cat][v];
-        const f = facadeTex(fd.key, fd.cols, fd.rows, fd.winC, fd.lit, fd.style);
+        const f = facadeTex(fd.key, fd.cols, fd.rows, fd.winC, fd.lit, fd.style, fd.wall);
         const wall = bmat(0xffffff, {
           map: f.map,
           emissiveMap: f.emissiveMap,
@@ -7792,7 +7914,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const vis = (arr) => (libMass ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
-          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.has(b) });
+          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.get(b) || null });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
           // ty = **可見**盒頂(= 上面 inst 那一項的頂面,推導不手寫):碰撞柱刻意比實體高 0.5m
@@ -7969,19 +8091,52 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 整棟量體庫節點:挑中的那幾棟幾何與方盒不同 ⇒ 只能另開 mesh,並依**位置雜湊**
         // 分到名冊裡的哪一顆(零 rnd,同屋頂第二件配件那條;逐棟輪替除數取自名冊長度)。
         // 庫沒載到 ⇒ `bldGeo` 回 null ⇒ 該列落回方盒桶 = **逐位元同舊制**(保險絲,原則 6)。
+        // `t.lib` = 哪一個名冊('mass' / 'masslow');同一個名冊裡分到哪一顆走**位置雜湊**
+        // (零 rnd,同屋頂第二件配件那條;輪替除數取自該名冊長度)。
         const boxRows = [], libRows = new Map();
         for (const t of inst) {
           if (!t.lib) { boxRows.push(t); continue; }
-          const k = massOk[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * massOk.length) % massOk.length];
-          if (!libRows.has(k)) libRows.set(k, []);
-          libRows.get(k).push(t);
+          const ok = t.lib === 'masslow' ? lowOk : massOk;
+          const k = ok[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * ok.length) % ok.length];
+          const bk = `${t.lib}#${k}`;
+          if (!libRows.has(bk)) libRows.set(bk, { key: t.lib, k, rows: [] });
+          libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
         if (boxRows.length) {
           emitMass(boxRows, new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
             [wall, wall, roof, roof, wall, wall], boxRows.length));
         }
-        for (const [k, rows] of libRows) emitMass(rows, buildBldBucket.mass(rows.length, wall, k));
+        // 斜頂桶(`masslow`)**不吃這一款的立面貼圖** —— 見 FACADES_PITCHED 檔頭:庫節點是
+        // 單一材質群組,方盒那條路的屋頂材質對它不生效 ⇒ 玻璃帷幕會直接貼到斜屋頂上。
+        // 材質逐款建一次(貼圖本身有 `_facadeCache`),款式由**落點雜湊**選(零 rnd)。
+        const pitchMat = new Map();
+        const pitchWall = (t) => {
+          const pi = Math.floor(djAt(t.x + 3.7, t.z + 9.1) * FACADES_PITCHED.length) % FACADES_PITCHED.length;
+          if (!pitchMat.has(pi)) {
+            const pd = FACADES_PITCHED[pi];
+            const pf = facadeTex(pd.key, pd.cols, pd.rows, pd.winC, pd.lit, pd.style, pd.wall);
+            pitchMat.set(pi, bmat(0xffffff, {
+              map: pf.map,
+              emissiveMap: pf.emissiveMap,
+              emissive: new THREE.Color(night ? 0xffb45e : 0x000000),
+              emissiveIntensity: night ? 0.4 : 0,
+            }));
+          }
+          return pitchMat.get(pi);
+        };
+        // 先把「哪幾棟 × 哪個材質 × 哪一顆節點」攤平,**桶建構器仍只有一個呼叫點**
+        // (稽核釘住 4 處;分兩處呼叫等於這一桶有兩條生成路)。同一顆節點的那幾棟可能
+        // 分到不同的斜頂款 ⇒ 逐款再分一次桶,仍在 draw call 上界內(每一棟至多一個 mesh,
+        // 而挑中的總數就是 pick_n)。
+        const libEmit = [];
+        for (const { key, k, rows } of libRows.values()) {
+          if (key !== 'masslow') { libEmit.push({ rows, mat: wall, k, key }); continue; }
+          const byMat = new Map();
+          for (const t of rows) { const m = pitchWall(t); if (!byMat.has(m)) byMat.set(m, []); byMat.get(m).push(t); }
+          for (const [m, rs] of byMat) libEmit.push({ rows: rs, mat: m, k, key });
+        }
+        for (const g of libEmit) emitMass(g.rows, buildBldBucket.mass(g.rows.length, g.mat, g.k, g.key));
       }
     }
     if (cornices.length) {
