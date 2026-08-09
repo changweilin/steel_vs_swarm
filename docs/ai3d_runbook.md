@@ -3406,9 +3406,24 @@ tree 族的三桶讀數 **27 / 10 / 3 與 F0 逐位元相同**(那三條一格�
 
 ### 5ah-i. 未做
 
-1. **建築語料只補到一半**:第一輪 29 張後撞 429(`urban 14.3% → 33.3%`),`upload.wikimedia.org`
-   是逐主機 10 分鐘窗 ⇒ 重跑同指令續補即可(`node tools/ai3d/fetch_photos.mjs --home <資料家>
-   --family building --limit 40`),要幾輪冷卻才滿。
+1. **建築語料只補到一半,而卡住的是「下載主機」不是「語料池」** —— 這一條量過了,別重新診斷:
+   第一輪 29 張(`urban 14.3% → 33.3%`),之後三輪冷卻只再拿到 **1 / 0 / 1** 張,
+   輸出裡滿版都是 `Commons 失敗(…):HTTP 429`,很容易讀成「CC0 沒料了 ⇒ 該改查詢用字」。
+   **不是。** 直接打 Openverse 查(唯讀、不下載)量到的**未收且短邊 ≥1024** 的候選:
+
+   | 查詢 | 未收 ≥1024 | | 查詢 | 未收 ≥1024 |
+   |---|---|---|---|---|
+   | `railway station building` | **18** | | `brick townhouse facade` | **10** |
+   | `city hall building` | **18** | | `country inn building` | **8** |
+   | `residential apartment block` | **8** | | `buddhist temple building` | **6** |
+   | `curtain wall office building` | 5 | | `corner commercial building` | 3 |
+
+   ⇒ 供給充足,綁住的是 `upload.wikimedia.org` 的 IP 級下載窗(大多數 Openverse CC0 命中
+   都託管在那裡)。**症狀會誤導**:候選被 `hostCool` 跳過 ⇒ 該列當輪視同沒料 ⇒ 退到 Commons ⇒
+   印出來的是一整排 Commons 429,而**真正的瓶頸從頭到尾是下載那一步**。
+   對策只有「時間」:同指令每 ~11 分鐘重跑一輪,urban 還缺 17 張 ≈ 1~1.5 小時的無人值守滴流
+   (`node tools/ai3d/fetch_photos.mjs --home <資料家> --family building --limit 40`)。
+   **MUST NOT** 因為看到那排 429 就去放寬 CC0 / 1024px 兩道硬閘,或急著改查詢用字。
 2. **新語料一張都還沒 matte**(新增 12 列 + 補抓的 29 張)⇒ ④⑤ 兩桶還沒看過它們,
    `--plan` 那兩欄現在算的是「下載成功」不是「可用」。順序是
    `matte_photos.py building` → `screen_mattes.py --home … --family building --sheet` → 看 watch sheet。
