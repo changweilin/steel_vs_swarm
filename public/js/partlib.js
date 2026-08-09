@@ -40,6 +40,15 @@ let _loaded = null;        // 單航班(與 main.js warmModels 同一套守衛�
 export function libGeo(name) { return _geos.get(name) || null; }
 
 /**
+ * 這一次真的載進來的節點名(唯讀快照)。**只給離線量測/出圖工具用** —— 遊戲路徑一律
+ * 走 `libGeo(具名節點)`,MUST NOT 拿這一支去枚舉「有什麼就畫什麼」(那會讓畫面隨
+ * GLB 的內容漂移,而消費端的零件表才是真相)。
+ * 存在的理由:`shot_scene` 的「載到幾顆」讀數與 `mass_near` 機位原本各**手寫一份節點清單**,
+ * 名冊一擴充就悄悄過期(同 `% 3` 輪替除數那個坑:檔案在、intake 綠,而工具永遠看不到新節點)。
+ */
+export function libNames() { return [..._geos.keys()]; }
+
+/**
  * 載入全部零件庫(戰鬥預載階段呼叫,與 `preloadModels` 並行)。
  * 個別家族失敗只印警告、該族全部查 null ⇒ 該族零件全數走 fallback,絕不 reject。
  */

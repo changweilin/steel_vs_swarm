@@ -140,11 +140,15 @@ export function bldLibDescs(src = biomesSrc()) {
   const BLD_LIB = new Function(`${blockOf(src, 'BLD_LIB')}; return BLD_LIB;`)();
   return {
     BLD_LIB,
-    rows: Object.entries(BLD_LIB).map(([key, [name, fb]]) => ({
-      name, family: name.split('/')[0], node: name.split('/').slice(1).join('/'),
-      fb, kind: key, index: 0, table: 'BLD_LIB',
-      consumer: 'biomes-bld', budgetFam: 'building', p: [0, 0, 0],
-    })),
+    // 名冊值的第一格可以是**字串或陣列**(2026-08-08 佇列 F:整棟量體 `mass` 是輪替名冊 ——
+    // 一款打天下的話同一條天際線會出現十幾棟一樣的剪影)。攤平時 MUST 保留 `index`:
+    // 同一桶的每一顆節點共用同一個 node_cap,但缺件/孤兒/來源帳是逐顆的。
+    rows: Object.entries(BLD_LIB).flatMap(([key, [name, fb]]) =>
+      (Array.isArray(name) ? name : [name]).map((n, index) => ({
+        name: n, family: n.split('/')[0], node: n.split('/').slice(1).join('/'),
+        fb, kind: key, index, table: 'BLD_LIB',
+        consumer: 'biomes-bld', budgetFam: 'building', p: [0, 0, 0],
+      }))),
   };
 }
 
@@ -205,20 +209,29 @@ export function parseGlb(path) {
     const CT = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array }[a.componentType];
     return new CT(bin.buffer, bin.byteOffset + start, a.count * compN);
   };
-  const out = new Map();   // name → { pos: Float32Array, tris: number }
+  const out = new Map();   // name → { pos: Float32Array, idx: Uint32Array, tris: number }
   for (const node of json.nodes || []) {
     if (node.mesh == null || !node.name) continue;
     const mesh = json.meshes[node.mesh];
-    let tris = 0; const posArrs = [];
+    let tris = 0; const posArrs = [], idxArrs = [];
     for (const prim of mesh.primitives) {
       const pos = acc(prim.attributes.POSITION);
-      posArrs.push(pos);
-      tris += (prim.indices != null ? json.accessors[prim.indices].count : pos.length / 3) / 3;
+      // 多 primitive 時頂點是串接的 ⇒ 索引 MUST 加上前面幾段的頂點數(不加 = 第二段
+      // 的三角形全部指回第一段 = 面積/連通量出來是另一顆網格,而且不會報錯)
+      const base = posArrs.reduce((s, a) => s + a.length / 3, 0);
+      const src = prim.indices != null ? acc(prim.indices) : null;
+      const n = src ? src.length : pos.length / 3;
+      const ix = new Uint32Array(n);
+      for (let k = 0; k < n; k++) ix[k] = (src ? src[k] : k) + base;
+      posArrs.push(pos); idxArrs.push(ix);
+      tris += n / 3;
     }
     const total = posArrs.reduce((s, a) => s + a.length, 0);
     const pos = new Float32Array(total);
     let o = 0; for (const a of posArrs) { pos.set(a, o); o += a.length; }
-    out.set(node.name, { pos, tris });
+    const idx = new Uint32Array(idxArrs.reduce((s, a) => s + a.length, 0));
+    o = 0; for (const a of idxArrs) { idx.set(a, o); o += a.length; }
+    out.set(node.name, { pos, idx, tris });
   }
   return out;
 }
@@ -265,8 +278,13 @@ export function triBudget() {
      *                       故均分「總額度」再各自除以自己的 instance 數)
      *   `node_cap`        = 全族一個上限(veg:名冊列均分「成長額度」⇒ 推導出來就是單一值;
      *                       逐型再寫一次只是同一個數字抄 N 遍,而抄本會漂)
-     * 兩者都沒有就回 null(intake 退回 capOf)。
+     *   `families[fam][kind].node_cap` = 該桶**自己有一整塊推導區**時住在自己那一塊
+     *                       (building 的 `mass`:整棟量體不與屋頂配件共分額度,額度來自
+     *                        它自己換掉的那一桶 ⇒ 量測/推導/staleness 收在同一個物件裡,
+     *                        MUST NOT 為了讓查表方便再把數字抄一份進 `node_caps`)
+     * 三者都沒有就回 null(intake 退回 capOf)。
      */
-    nodeCap: (fam, kind) => b.families?.[fam]?.node_caps?.[kind] ?? b.families?.[fam]?.node_cap ?? null,
+    nodeCap: (fam, kind) => b.families?.[fam]?.node_caps?.[kind]
+      ?? b.families?.[fam]?.[kind]?.node_cap ?? b.families?.[fam]?.node_cap ?? null,
   };
 }

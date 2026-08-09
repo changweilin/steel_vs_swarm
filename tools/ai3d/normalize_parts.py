@@ -11,6 +11,9 @@
 #      且水平徑向 ≥ 包絡 × 0.5(intake 的「fallback 沒有虛胖」下界)
 #   ③ 減面:Decimate 到三角形預算內(tri_budget.json 的量測上界)
 #   ④ 剝材質/貼圖/UV:partlib 只吃幾何,顏色由零件表 `c:` 決定(CLAUDE.md §1)
+#      —— **唯一例外 `--boxuv <node>`**:整棟量體那一桶的消費端是 biomes 的立面材質
+#      (窗格貼圖 + 夜間自發光),節點沒有 UV 就整棟採到 (0,0) 一個 texel = 純色板。
+#      剝掉來源 UV(T2/SF3D 自己貼圖的那一份)之後**重建**盒投影 UV,見下方 BOXUV。
 #
 # 用法(Blender 5.x;欄位分隔用 `|` —— `:` 會撞上 Windows 磁碟機代號):
 #   blender --background --python tools/ai3d/normalize_parts.py -- \
@@ -28,6 +31,7 @@
 import bpy
 import sys
 import math
+import random
 
 FIT = 0.95          # 包絡餘裕:縮到 fallback × 0.95(浮點與後續 stretch 都吃不掉契約)
 
@@ -92,6 +96,267 @@ made = []
 # 刪之前先確認消費端真的不引用了(node tools/parts_review.mjs --report)。
 BASE = (opt_all('base') or [None])[0]
 DROP = set(opt_all('drop'))
+# --boxuv <node>:替該節點**重建盒投影 UV**(可重複)。給「整棟量體」那一桶用 ——
+# 它是四桶裡唯一**吃貼圖**的消費端(biomes 的立面材質:窗格 + 夜間自發光),而 ④ 一律
+# 把來源 UV 剝掉(來源是 T2/SF3D 自己貼圖的 UV,留著會把立面貼圖映成亂碼)。
+# 沒有 UV 也不會報錯,只是整棟採到 (0,0) 那一個 texel = 一塊沒有窗的純色板。
+# 投影規則沿用原 BoxGeometry 的「逐面 0..1」慣例:依主導法線分軸,另兩軸各自 +0.5。
+# 座標系:Blender Z-up,匯出 +Y up ⇒ 遊戲的 (X, Y, Z) = Blender 的 (x, z, −y)。
+BOXUV = set(opt_all('boxuv'))
+# --mirror <node>=<x|z|auto>:**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,
+# 使用鏡像貼補空的部分」)。單張照片只約束得到看得見的那幾面 —— 退縮階/簷帶/裙樓只長在
+# 被拍到的那半,另一半是模型自己補的一片平板。切一半、鏡射過去、**焊住接縫**。
+#
+# **為什麼住在這裡(Blender)而不是 solidify_parts(pymeshlab/trimesh)**:那一端試過兩種
+# 寫法都把網格撕爛(§5ac 實測,對照組留檔)——(a)切半再鏡射 = 沿切面再開一圈自由邊,
+# 留下的與鏡射過去的是**兩張各自開口的殼**,開放邊 16 → 362、裙樓整條不見;
+# (b)整份鏡射再疊合 = 重疊的雙層殼讓等值面重採樣的內外號誌打架,開放邊 → 1,119(z 軸)
+# / 5,016(x 軸,連目標面數都打不到)。兩者的共同前提都是「resample 會幫我熔合」,
+# 而它只對**單層**輸入成立。Blender 的 Mirror modifier 走的是完全不同的路:
+# bisect 切面 + clip + **merge threshold 直接焊頂點**,不重建等值面 ⇒ 一條新的自由邊都不生。
+#
+# 留哪半 = **面積大的那半**(空的那半在網格上不是洞、是一片光滑的板,開放邊與元件數都
+# 判不出來,面積才判得出來:細節多 = 面積大)。`auto` 再從兩個水平軸裡挑不對稱較大的。
+# 軸是**遊戲座標**:遊戲 x = Blender X、遊戲 z = **Blender Y**(匯出 +Y up 時互換)。
+# **MUST NOT 對非對稱典型的主體套用**(岩體/枯幹:鏡射會做出一顆假的雙生岩)。
+MIRROR = {}
+for spec in opt_all('mirror'):
+    mname, mtgt = spec.split('=', 1)
+    if mtgt not in ('x', 'z', 'auto'):
+        raise SystemExit(f'--mirror {mname}:軸只能是 x / z / auto(遊戲座標的水平兩軸)')
+    MIRROR[mname] = mtgt
+
+# --rework "<node>=<x|z|auto|none>[|<warp>]":**對 `--base` 裡已出貨的節點就地動刀**
+# (2026-08-09 使用者定案「img to 3D 會出現另一面是空的問題,由正面對稱的區塊去補對應的區塊,
+#  包含建築 / 巨岩 / 假山都這樣處理」)。
+#
+# **為什麼不是「重跑 --node」**:出貨節點的 SF3D 原檔多半已經對不回來(parts_manifest 的
+# `source_gap`:同一個 fit 重跑只得到 220/402 而出貨的是 234/426,剪影明顯是另一顆),
+# 而且重跑會把減面/縮放整條重算 = 一顆本來沒人要動的零件位元漂移。§5ab 重減面那一輪
+# 已經走過這條路(「刀落在已出貨的節點本身」),這裡把它做成具名旗標。
+#
+# **外廓逐位元不動是這條路的核心不變式**:動刀前先記下 `nodeExtent` 量的那兩個數
+# (水平徑向 rMax、縱向 y 兩端),動完等比還原 —— 於是 intake 的外廓契約(上界 fallback 包絡、
+# 下界 0.5×)**兩邊都不可能因為這一刀而改變**,唯一變的是殼裡面的形狀。
+# (鏡射本身也不會撐大:鏡射面過包圍盒中點 ⇒ 該軸包圍盒不變,其餘軸只會縮不會脹。)
+#
+# `warp` = **去對稱化**振幅(× 最長跨距):鏡射之後兩半逐位元相同 = 一顆假的雙生岩
+# (§5ac-c 因此把岩體列為禁區)。低頻位移場沿頂點法線推開之後,鏡射殘差回到天然岩體的
+# 水準,而「空的那一面被填滿」不受影響 —— 兩件事各有各的量測(tools/ai3d/mesh_sym.mjs)。
+# 位移是**逐頂點**的連續場 ⇒ 不新增任何一條自由邊、三角形數逐位元不變。
+# 建築 MUST 給 0:對稱正是那一型的取捨(§5ac-c),歪掉的摩天樓不是「更自然」。
+REWORK = {}
+for spec in opt_all('rework'):
+    rname, rest = spec.split('=', 1)
+    bits = rest.split('|')
+    if bits[0] not in ('x', 'z', 'auto', 'none'):
+        raise SystemExit(f'--rework {rname}:軸只能是 x / z / auto / none')
+    mode = bits[2] if len(bits) > 2 else 'half'
+    if mode not in ('half', 'union'):
+        raise SystemExit(f'--rework {rname}:第三欄只能是 half / union')
+    REWORK[rname] = (bits[0], float(bits[1]) if len(bits) > 1 else 0.0, mode)
+
+
+def _ext(ob):
+    """`nodeExtent`(入庫閘與對照台的那把尺)在 Blender 端的對應:水平徑向 + 縱向兩端。
+    Blender Z-up、匯出 +Y up ⇒ 遊戲水平 = Blender XY、遊戲縱向 = Blender Z。"""
+    vs = ob.data.vertices
+    return (max(math.hypot(v.co.x, v.co.y) for v in vs),
+            min(v.co.z for v in vs), max(v.co.z for v in vs))
+
+
+def _restore_ext(ob, e0):
+    """把外廓還原成 e0(等比縮水平、縮+平移縱向)—— 動刀前後 `nodeExtent` 逐位元相同。"""
+    r0, z0, z1 = e0
+    vs = ob.data.vertices
+    r1 = max(math.hypot(v.co.x, v.co.y) for v in vs)
+    s = r0 / r1 if r1 > 0 else 1.0
+    for v in vs:
+        v.co.x *= s; v.co.y *= s
+    a = min(v.co.z for v in vs); b = max(v.co.z for v in vs)
+    sz = (z1 - z0) / (b - a) if b > a else 1.0
+    for v in vs:
+        v.co.z = z0 + (v.co.z - a) * sz
+
+
+def _weld(ob, name):
+    """依距離焊頂點,並回報**原本的拆分比**(頂點數 ÷ 面數)。
+
+    ⚠ 這一步對 `--rework` 是必要條件,不是保險:glTF 匯出器為了法線接縫把頂點拆開,
+    而 **Blender 的 glTF 匯入器預設不會焊回去** ⇒ 平面著色的節點(拆分比 ≈ 3)在
+    Blender 眼裡是一堆**互不相連的三角形**。對三角形湯做 bisect/clip 的下場實測:
+    hoodoo_a 382 面 → 96 面(整顆爛掉)、tower_a 開放邊 0 → 170。焊完才是真正的拓樸。
+
+    焊接會抹掉來源的自訂分裂法線 ⇒ 著色風格由呼叫端依拆分比還原(見 `_shade`)。"""
+    me = ob.data
+    ratio = len(me.vertices) / max(1, len(me.polygons))
+    span = max(max(v.co[a] for v in me.vertices) - min(v.co[a] for v in me.vertices) for a in range(3))
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.remove_doubles(threshold=max(span * 1e-4, 1e-6))
+    bpy.ops.object.mode_set(mode='OBJECT')
+    print(f'WELD {name}: 頂點 {ratio * len(me.polygons):.0f} → {len(me.vertices)}(原拆分比 {ratio:.2f})')
+    return ratio
+
+
+# 拆分比 ≥ 這個數 = 來源是**逐面**拆開的(平面著色);以下 = 平滑著色(帶硬邊)。
+# 現役節點兩群分得很開:平滑 0.64~1.14、平面 2.92~3.00 ⇒ 門檻放中間,不是校準值。
+FLAT_RATIO = 2.0
+
+
+def _shade(ob, ratio):
+    """把著色風格還原成來源那一種(焊接會把自訂分裂法線抹掉,不還原 = 低面數岩體
+    從有稜有角變成一顆平滑的馬鈴薯,而所有讀數都正常)。"""
+    if ratio >= FLAT_RATIO:
+        bpy.ops.object.shade_flat()
+    else:
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(30))
+
+
+def _mirror(ob, axis, name, mode='half'):
+    """鏡像貼補。回 (軸, 不對稱度) 或 None(量不到)。
+
+    兩種刀,**依主體是不是人造的**選,不是喜好問題:
+
+    `half`(切一半 → 翻過去 → 焊接縫):量體本來就左右對稱的東西(建築)用這把。
+      對圓渾的岩體它會做出**葉緣** —— 保留的那半在切面上是最寬的斷面,而表面是斜著離開
+      切面的,翻一份接上去就在切面接成一道銳脊:實測 mega_c 從一顆卵石變成一片有中脊的
+      葉子、mesa_a 的平頂變成尖峰、collapse_a 變成楔形(§5ad 黏土對照留檔)。
+
+    `union`(整份鏡射 → **精確布林聯集**):岩體用這把。聯集取的是兩者的**外包絡** ——
+      本來就厚的那半原封不動、空的那半被鏡像撐出來,接縫是內凹的岩溝而不是外凸的銳脊,
+      平頂/塊狀輪廓因此保得住。與 §5ac-b 失敗的「整份鏡射再疊合」不是同一件事:那一版
+      是把兩張殼疊在一起交給等值面重採樣自己想辦法(內外號誌打架 ⇒ 開放邊 1,119),
+      這裡是真的做布林。"""
+    vs = ob.data.vertices
+    # 遊戲 x/z → Blender X/Y(匯出 +Y up 時 Blender Z 才是遊戲的縱向)
+    axes = [0, 1] if axis == 'auto' else [{'x': 0, 'z': 1}[axis]]
+    pick = None
+    for ax in axes:
+        lo = min(v.co[ax] for v in vs); hi = max(v.co[ax] for v in vs)
+        mid = (lo + hi) / 2
+        aP = sum(p.area for p in ob.data.polygons if p.center[ax] >= mid)
+        aN = sum(p.area for p in ob.data.polygons if p.center[ax] < mid)
+        tot = aP + aN
+        if tot <= 0:
+            continue
+        asym = abs(aP - aN) / tot
+        if pick is None or asym > pick[0]:
+            pick = (asym, ax, mid, aP >= aN)
+    if pick is None:
+        print(f'MIRROR {name}: 量不到不對稱(退化輸入)—— 略過')
+        return None
+    asym, ax, mid, keep_pos = pick
+    for v in vs:
+        v.co[ax] -= mid
+    span = max(abs(v.co[ax]) for v in vs) or 1.0
+    if mode == 'union':
+        dup = ob.copy()
+        dup.data = ob.data.copy()
+        bpy.context.collection.objects.link(dup)
+        for v in dup.data.vertices:
+            v.co[ax] = -v.co[ax]
+        # 單軸取負 = 座標系換手 ⇒ 面的朝向整份翻過來,不翻回來布林會判錯內外
+        dup.data.flip_normals()
+        mod = ob.modifiers.new('bool', 'BOOLEAN')
+        mod.operation = 'UNION'
+        mod.object = dup
+        mod.solver = 'EXACT'
+        bpy.ops.object.modifier_apply(modifier='bool')
+        bpy.data.objects.remove(dup, do_unlink=True)
+        print(f'MIRROR {name}: 軸 {"xz"[ax]}(遊戲座標)・不對稱 {asym:.3f}・聯集・'
+              f'面 {sum(len(p.vertices) - 2 for p in ob.data.polygons)}')
+        return (ax, asym)
+    mod = ob.modifiers.new('mir', 'MIRROR')
+    mod.use_axis = tuple(i == ax for i in range(3))
+    mod.use_bisect_axis = mod.use_axis
+    # bisect 預設留**負**側;要留正側就翻 bisect 方向
+    mod.use_bisect_flip_axis = tuple((i == ax) and keep_pos for i in range(3))
+    mod.use_clip = True
+    mod.use_mirror_merge = True
+    mod.merge_threshold = span * 1e-3      # 焊接縫;比例值,絕對值不可移植(§5r ⑥)
+    bpy.ops.object.modifier_apply(modifier='mir')
+    print(f'MIRROR {name}: 軸 {"xz"[ax]}(遊戲座標)・不對稱 {asym:.3f}・'
+          f'留 {"+" if keep_pos else "-"} 半・面 {sum(len(p.vertices) - 2 for p in ob.data.polygons)}')
+    return (ax, asym)
+
+
+def _topo(ob):
+    """(邊界邊數, 鬆散元件數) —— 這一刀有沒有把網格撕爛的兩個讀數(與
+    `tools/ai3d/mesh_sym.mjs` 同一組定義,一邊在 Blender 一邊在 Node,結論可互相對帳)。"""
+    me = ob.data
+    ecnt, adj = {}, {}
+    for p in me.polygons:
+        vv = list(p.vertices)
+        for i in range(len(vv)):
+            a, b = vv[i], vv[(i + 1) % len(vv)]
+            k = (a, b) if a < b else (b, a)
+            ecnt[k] = ecnt.get(k, 0) + 1
+            adj.setdefault(a, []).append(b); adj.setdefault(b, []).append(a)
+    seen, comps = set(), 0
+    for v in adj:
+        if v in seen:
+            continue
+        comps += 1
+        st = [v]; seen.add(v)
+        while st:
+            u = st.pop()
+            for w in adj[u]:
+                if w not in seen:
+                    seen.add(w); st.append(w)
+    return sum(1 for c in ecnt.values() if c == 1), comps
+
+
+# 鏡射後的面數下界(× 原面數)。切一半再翻一份 ⇒ 面數只會**持平或上升**;真的掉下來
+# 表示 bisect 在這顆網格上崩了(實測 hoodoo_a 的 z 平面:382 → 96 —— 那顆是
+# Hunyuan3D-2GP 的產出,焊完 V=139/F=382 已經不是流形,同一顆的 x 平面卻好端端 616)。
+# 少了這道閘,壞掉的節點會**安靜地**出貨:外廓照樣還原、預算照樣綠、intake 一句話都不會說。
+MIRROR_MIN_F = 0.8
+
+
+# 去對稱化的位移場:三個低頻正弦(1~5 個瓣跨過整顆),相位/方向由**節點名**決定
+# ⇒ 同一個名字永遠得到同一顆(決定性;產出是要進版控的二進位檔)。
+WARP_F = (1.3, 2.6, 4.7)      # 頻率(每跨距的瓣數):低頻 = 「這一側比較胖」而不是砂紙
+WARP_W = (1.0, 0.55, 0.30)    # 各階權重(和為 1.85,下面正規化)
+
+
+def _warp(ob, amp, name):
+    """低頻場把鏡射造成的完美對稱打散。位移**只是位置的函數** ⇒ 拓樸、面數、開放邊
+    逐位元不變。
+
+    ⚠ 方向 MUST 取**徑向**(離節點中心),MUST NOT 取頂點法線:glTF 匯入器不會把匯出時
+    為了法線接縫拆開的頂點焊回去(mega_a 219 個頂點裡只有 144 個相異座標)⇒ 逐頂點法線
+    在那些**座標重合但各自獨立**的頂點上是不同的向量,推一下就把網格沿每一條硬邊撕開
+    (實測 mega_a 開放邊 0 → 164、元件 1 → 7)。位置的函數對重合頂點給出同一個位移,
+    結構上不可能撕。岩體對中心近似星形 ⇒ 徑向與法線本來就幾乎同向。"""
+    me = ob.data
+    vs = me.vertices
+    span = max(max(v.co[a] for v in vs) - min(v.co[a] for v in vs) for a in range(3))
+    ctr = [(max(v.co[a] for v in vs) + min(v.co[a] for v in vs)) / 2 for a in range(3)]
+    rng = random.Random(f'warp:{name}')
+    waves = []
+    for k in range(3):
+        d = [rng.gauss(0, 1) for _ in range(3)]
+        ln = math.sqrt(sum(c * c for c in d)) or 1.0
+        waves.append(([c / ln for c in d], rng.uniform(0, 2 * math.pi),
+                      2 * math.pi * WARP_F[k] / span, WARP_W[k]))
+    wsum = sum(WARP_W)
+    moved = 0.0
+    for v in vs:
+        t = 0.0
+        for (d, ph, kf, w) in waves:
+            t += w * math.sin((d[0] * v.co.x + d[1] * v.co.y + d[2] * v.co.z) * kf + ph)
+        t /= wsum
+        rx = v.co.x - ctr[0]; ry = v.co.y - ctr[1]; rz = v.co.z - ctr[2]
+        ln = math.sqrt(rx * rx + ry * ry + rz * rz)
+        if ln <= 1e-9:
+            continue
+        dz = amp * span * t
+        v.co.x += rx / ln * dz; v.co.y += ry / ln * dz; v.co.z += rz / ln * dz
+        moved += abs(dz)
+    print(f'WARP {name}: 振幅 {amp:.3f}×跨距 {span:.3f}・平均位移 {moved / len(vs):.4f}')
+
+
 if BASE:
     bpy.ops.import_scene.gltf(filepath=BASE)
     regen = {n[0] for n in NODES} | DROP
@@ -105,6 +370,60 @@ if BASE:
             continue
         o.data.materials.clear()
         made.append(o)
+
+# ---- `--rework`:對 base 裡已出貨的節點就地動刀(鏡像貼補 + 去對稱化)----
+# MUST 排在 BOXUV **之前**(它吃的是最終座標),也 MUST 與 `--node` 互斥 —— 同一顆節點
+# 又重生又就地改,重生那條會先把它刪掉,rework 只會安靜地什麼都沒做。
+if REWORK:
+    assert BASE, '--rework 要有 --base(它動的是已出貨節點)'
+    byname = {o.name.split('.')[0]: o for o in made}
+    dup = set(REWORK) & {n[0] for n in NODES}
+    assert not dup, f'同一顆節點不可同時 --node 與 --rework:{sorted(dup)}'
+    miss = set(REWORK) - set(byname)
+    assert not miss, f'--rework 指到 base 裡不存在的節點:{sorted(miss)}'
+    for rname, (axis, warp, mode) in REWORK.items():
+        ob = byname[rname]
+        bpy.ops.object.select_all(action='DESELECT')
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        e0 = _ext(ob)
+        t0 = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        try:
+            bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        except RuntimeError:
+            pass          # 這顆本來就沒有自訂分裂法線
+        ratio = _weld(ob, rname)
+        o0, c0 = _topo(ob)
+        if axis != 'none':
+            _mirror(ob, axis, rname, mode)
+        # 一顆岩是一顆岩:鬆散元件變多 = 這一刀把它炸成漂浮的碎片(實測 tower_a 走聯集
+        # 那把刀:元件 1 → 14,而面數只掉 6% —— 光看面數的閘門完全攔不住,黏土圖上是
+        # 一地碎屑)。MUST 在減面之前驗:減面會把碎屑磨掉一部分,讀數反而變好看。
+        o1, c1 = _topo(ob)
+        assert c1 <= c0, f'{rname}:鏡射把網格炸成碎片(鬆散元件 {c0} → {c1})—— 別出貨'
+        assert o1 <= o0 + 0.05 * t0, f'{rname}:鏡射開出新的破口(邊界邊 {o0} → {o1})—— 別出貨'
+        # 面數 MUST NOT 上升:鏡射會多出切面那一圈(+17~26% 實測),而現役節點的預算餘裕
+        # 只有 2%(chimney_a 217/222、ac_a 279/285)—— 「就地動刀」的意思是**預算與外廓
+        # 都不動**,只有殼裡的形狀變。減面比 1.2:1 以下,遠離 §5e 量到的 2.4~3:1 撕裂區。
+        t1 = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        assert axis == 'none' or t1 >= t0 * MIRROR_MIN_F, \
+            f'{rname}:鏡射把面數打掉了({t0} → {t1})—— 這顆網格撐不住這一刀,別出貨'
+        if t1 > t0:
+            mod = ob.modifiers.new('dec', 'DECIMATE')
+            mod.ratio = t0 / t1 * 0.98
+            bpy.ops.object.modifier_apply(modifier='dec')
+        if warp:
+            _warp(ob, warp, rname)
+        _restore_ext(ob, e0)
+        _shade(ob, ratio)
+        e1 = _ext(ob)
+        assert max(abs(a - b) for a, b in zip(e0, e1)) < 1e-5, \
+            f'{rname}:外廓還原失敗 {e0} → {e1}'
+        t2 = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        assert t2 <= t0, f'{rname}:面數上升 {t0} → {t2}(預算餘裕吃不下)'
+        print(f'REWORK {rname}: tris {t0} → {t2}・邊界邊 {o0} → {o1}・元件 {c0} → {c1}・'
+              f'外廓 r={e1[0]:.4f} y=[{e1[1]:.4f},{e1[2]:.4f}](逐位元還原)')
+
 pending = {}        # group → [ob, ...](置中與縮放延到全群備齊之後)
 for (name, src, target_r, target_hy, tri_cap, ry_deg, dy, grp) in NODES:
     before = set(bpy.data.objects)
@@ -127,8 +446,21 @@ for (name, src, target_r, target_hy, tri_cap, ry_deg, dy, grp) in NODES:
 
     # 變化朝向(facet_b 與 facet_a 同源,轉個角度別讓玩家一眼看出同一顆)
     if ry_deg:
+        # ⚠ `rotation_mode = 'XYZ'` MUST 先設(2026-08-08 實測):**glTF importer 把物件設成
+        # `QUATERNION`**,而在那個模式下賦值 `rotation_euler` 是**靜默無效**的 —— `transform_apply`
+        # 照樣回 FINISHED、euler 照樣歸零,頂點一個都沒動。⇒ 這個旗標從第一天起就是 no-op
+        # (所有帶 ry 的節點都沒有真的轉過;所幸 facet_a/b 各自有自己的來源與減面比,
+        #  沒有退化成同一顆)。判準:轉 60° 之後包圍盒 MUST 變(x ±0.378 → ±0.446)。
+        ob.rotation_mode = 'XYZ'
         ob.rotation_euler = (0.0, 0.0, math.radians(ry_deg))   # Blender Z-up;匯出時轉 glTF Y-up
         bpy.ops.object.transform_apply(rotation=True)
+
+    # ②-b 鏡像貼補(MUST 排在減面**之前**:鏡射保留一半的面、再翻一份 ⇒ 面數大致不變,
+    #     排在減面之後會直接把預算翻倍)。鏡射面過**物件原點** ⇒ 先把該軸的包圍盒中點
+    #     平移到 0(後面 ① 的置中會再收一次,所以不必平移回來)。
+    if name in MIRROR:
+        bpy.context.view_layer.objects.active = ob
+        _mirror(ob, MIRROR[name], name)
 
     # ③ 減面(先減後量:減面本身會微動外廓)
     tris = sum(len(p.vertices) - 2 for p in ob.data.polygons)
@@ -215,6 +547,28 @@ for gname, obs in pending.items():
         z0 = min(v.co.z for v in vv); z1 = max(v.co.z for v in vv)
         print(f'NODE {o.name}: tris={t} r={rr:.3f} z=[{z0:.3f},{z1:.3f}] (群組 {gname})')
 
+# ---- 盒投影 UV(MUST 排在置中/縮放/dy **之後**:它吃的是最終座標)----
+for o in made:
+    if o.name.split('.')[0] not in BOXUV:
+        continue
+    me = o.data
+    uv = me.uv_layers.new(name='UVMap')
+    for poly in me.polygons:
+        n = poly.normal
+        ax = max(range(3), key=lambda i: abs(n[i]))   # 0=x 1=y 2=z(Blender)
+        for li in poly.loop_indices:
+            v = me.vertices[me.loops[li].vertex_index].co
+            if ax == 0:      # 遊戲 ±X 面:u ← 遊戲 Z(= −y)、v ← 遊戲 Y(= z)
+                u2, v2 = -v.y + 0.5, v.z + 0.5
+            elif ax == 1:    # 遊戲 ±Z 面:u ← 遊戲 X(= x)、v ← 遊戲 Y(= z)
+                u2, v2 = v.x + 0.5, v.z + 0.5
+            else:            # 遊戲 ±Y 面(頂/底):u ← X、v ← 遊戲 Z(= −y)
+                u2, v2 = v.x + 0.5, -v.y + 0.5
+            uv.data[li].uv = (min(max(u2, 0.0), 1.0), min(max(v2, 0.0), 1.0))
+    print(f'BOXUV {o.name}: {len(me.polygons)} 面重建盒投影 UV')
+missing = BOXUV - {o.name.split('.')[0] for o in made}
+assert not missing, f'--boxuv 指到不存在的節點:{sorted(missing)}'
+
 # 只留產出節點,其他(SF3D 場景空節點等)全刪
 for o in list(bpy.data.objects):
     if o not in made:
@@ -223,6 +577,8 @@ for o in list(bpy.data.objects):
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(
     filepath=OUT, export_format='GLB', export_yup=True,
-    export_materials='NONE', export_normals=True, export_apply=True,
+    # `export_texcoords` 顯式為真:BOXUV 那幾顆的 UV 是消費端立面貼圖的唯一依據,
+    # 而 `export_materials='NONE'` 很容易讓人以為「反正沒材質,UV 也不用留」。
+    export_materials='NONE', export_normals=True, export_texcoords=True, export_apply=True,
 )
 print('WROTE', OUT)

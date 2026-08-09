@@ -5,6 +5,14 @@
 import sys
 from pathlib import Path
 
+# 進度行有 `✓`,而**繁中 Windows 的主控台預設是 cp950** ⇒ 印到第一個非 cp950 字元就
+# `UnicodeEncodeError` **整支中止**(2026-08-09 實測:批次跑到第 4 張才死,前 3 張的
+# 產出留著、後面的沒有,而回頭看目錄只會覺得「怎麼少了幾張」)。
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 from PIL import Image
 from rembg import remove, new_session
 

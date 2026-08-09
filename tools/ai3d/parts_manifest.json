@@ -33,7 +33,8 @@
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
     "fit": 0.95,
     "dy": -0.12,
-    "note": "縮放目標 = 這一列 lib 描述子自己的 fallback 包絡(不在本檔複製數字);dy 讓扁岩基座沉到「底 = 消費端 p.y」貼地,任何 stretch 都不離地"
+    "note": "縮放目標 = 這一列 lib 描述子自己的 fallback 包絡(不在本檔複製數字);dy 讓扁岩基座沉到「底 = 消費端 p.y」貼地,任何 stretch 都不離地",
+    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):collapse_a 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(938 → 918)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
    },
    "note": "批跑第 6 顆(方正塊狀)。照片家族(facet)≠ 節點角色(collapse_a):挑的是形狀,不是分類。",
    "keys": [
@@ -69,7 +70,8 @@
    "post": {
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless)",
     "fit": 0.95,
-    "note": "縮放目標 = 該列 fallback 包絡 × FIT"
+    "note": "縮放目標 = 該列 fallback 包絡 × FIT",
+    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):facet_a(有 4 條邊界邊 ⇒ warp 0,位移會把裂縫拉開) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(882 → 864)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
    },
    "note": "批跑第 11 顆(渾圓多瘤)。",
    "keys": [
@@ -394,7 +396,8 @@
    "post": {
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;新增 --base 保留既有節點合併匯出)",
     "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1)):呼叫端 megaGeo 以 mesh.scale 拉到各自尺寸,同一顆節點服務任意大小的岩塊;mega_a +210° / mega_c +90° yaw 與同源的疊石節點錯開"
+    "note": "單位包絡 1×1(= fallback ico(1)):呼叫端 megaGeo 以 mesh.scale 拉到各自尺寸,同一顆節點服務任意大小的岩塊;mega_a +210° / mega_c +90° yaw 與同源的疊石節點錯開",
+    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_c**(mega_a 0.070 / mega_b 0.049 在門檻之下,逐位元未動) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0.05|union\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(274 → 268)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
    },
    "note": "巨岩縫首批(runbook §5f 預告的『guarded libGeo ?? primitive』落地):biomes MEGA_LIB 名冊 + megaGeo(一律 clone —— 巨岩過 bakeContactAO 就地烤頂點色)5 個呼叫點;audit_siteplan Ⅴ 釘凍結清單並反向驗證。"
   },
@@ -444,7 +447,8 @@
    "post": {
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;內建 decimate 到逐桶預算)",
     "fit": 0.95,
-    "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理"
+    "note": "單位包絡:chimney_a 非等向 0.6×0.5(box(1,1,1) 包絡 r 0.707 容得下,但桶的 instance S=(w,h,w) 以軸寬為準 ⇒ 收在 0.6 免得比原單位盒視覺胖一圈);ac_a 0.65×0.5 同理。**2026-08-08 重減面(佇列 F 同輪)**:四場重取樣把逐桶上限收到 chimney 222 / acbox 285(舊 240/435 是三場樣本、沒取到 taipei101 ⇒ instance 上界低估)⇒ 兩顆各補一刀溫和減面 chimney_a 234 → **217**、ac_a 426 → **279**(1.08:1 / 1.53:1,遠離 §5e 的 2.4~3:1 撕裂區),黏土四格對照人眼複核:垛口頂/凹槽/收分/方箱頂脊全部還在。**刀落在已出貨的節點本身**而不是從 SF3D 原檔重跑 —— 後者復現不出出貨的那兩顆(見下方 source_gap)。",
+    "source_gap": "⚠ 這一列的來源記到照片與 fit 就停了,**沒記是哪一批 SF3D 輸出的第幾顆**。2026-08-08 想從原檔重跑時發現 `sf3d_bld_final/{chimney,ac}/0/mesh.glb` 配同一組 fit 只得到 220 / 402(不是 234 / 426),而且黏土剪影明顯是另一顆 ⇒ 出貨那兩顆的真正來源已經找不回來。下一批建築節點的帳 MUST 記到輸出目錄與序號。"
    },
    "note": "建築族首批(2026-08-06 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」):水塔桶(tank_a)候選照全是場景照/有人入鏡 ⇒ 本批不出貨,等 tank_wood(木製水塔)列補抓 —— 名冊與呼叫點已就位,節點未入庫前 BLD_LIB 的 tank 列保持註解。"
   },
@@ -505,7 +509,8 @@
    "post": {
     "tool": "tools/ai3d/normalize_parts.py(Blender 5.2 LTS headless;--base 保留既有節點)",
     "fit": 0.95,
-    "note": "單位包絡 1×1(= fallback ico(1));mega_e +55° / mega_f +190° yaw 與同源錯開"
+    "note": "單位包絡 1×1(= fallback ico(1));mega_e +55° / mega_f +190° yaw 與同源錯開",
+    "rework": "rework 2026-08-09(runbook §5ad,鏡像貼補):**只有 mega_d**(mega_e 0.035 在門檻之下;mega_f 0.104 亦未達門檻,且兩把刀都過不了元件閘) 走 tools/ai3d/normalize_parts.py --rework \"<node>=auto|0|half\" —— 刀落在**已出貨的節點本身**(--base 匯入,不重跑 SF3D 原檔),外廓(nodeExtent 的 rMax 與 y 兩端)**逐位元還原**、面數只降不升(291 → 285)。閘門 = mesh_sym.mjs 量到的半空間面積不對稱 ≥ EMPTY_ASYM(0.12,錨在 §5ac-a 的 mass_a 0.123);同一批未達門檻的節點一格都沒動。"
    }
   },
   {
@@ -1112,6 +1117,81 @@
     "measured": "木質 336 / 葉冠 940 = 1,276(含冠頂包覆 1 顆 ico 20 面)"
    },
    "note": "--group bl=3.15x3.605(遊戲端實測全高 7.21m / 半徑 3.15m),兩列共用 y=3.425。同輪退掉 vleaf_a27/a17 兩列 per-part lib。 **2026-08-08 §5z-s 樹頂包覆**(使用者「闊葉林的樹頂,使用闊葉樹冠包覆(跟其他葉冠相似的形狀)」):旁瓣一律擺在 r_mid > 0 上(語料量到的是離軸的葉團)⇒ **軸心是空的**,幹與枝從那個洞直直戳出去 ⇒ 補一顆同款 ico 葉團(同 key、同季節色)。**尺寸由「要蓋住什麼」解出來**(縱向 = 分岔到幹頂的一半、水平 = 最內圈葉團的內緣,兩者 ÷ ico 內切半徑),MUST NOT 取中位數尺寸 —— 那一版實測 144 方位 45 → 45,與沒有這一顆一模一樣。射線可見性 233 → **0**,成本 +20 面(1,256 → 1,276),整層消耗 87.1% → 87.8%。"
+  },
+  {
+   "keys": [
+    "building/mass_a"
+   ],
+   "method": "trellis2_spz",
+   "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊 + buildBldBucket.mass;只換「全圖最高的 pick_n 棟高層商辦」這個子集 —— 整桶換的逐節點上限只有 36 tris,見 tri_budget families.building.mass)",
+   "rev": "(本輪)",
+   "at": "2026-08-08",
+   "imgs": [
+    {
+     "role": "primary(mass_a;Art Deco 摩天樓 —— 退縮量體逐階可見 + 裙樓,正是這一桶要的「天際線塔樓」)",
+     "id": "ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9",
+     "family": "building",
+     "part": "bld_tower",
+     "query": "art deco skyscraper",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "athrasher",
+     "source_url": "https://www.flickr.com/photos/56544547@N00/36797225970",
+     "file": "photos/building/bld_tower/ov_5846d9e4-4d1f-49d2-9a88-4918275c8ad9.jpg"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+    "runner": "app 的 api_spz 路徑 — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows,全預編 cp311 wheel,逐階段 CPU offload)",
+    "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024(§5n 閘門那一輪的產出直接沿用,本輪未重跑 —— 產出還在 `out_gate/`)",
+    "machine": "RTX 3060 12GB",
+    "measured": "sample 198.4s + decode 19.1s + glb 9.0s = 226.4s;torch 峰值 3,409 MiB;raw 12,187,288 面 → 匯出 49,845 面(雙層薄殼:34,751 開放邊 / 3,123 元件 / v:f 0.91)",
+    "note": "**建築是 T2 的甜蜜點**(§5n:幾何 + PBR 一次出);貼圖不入庫(CLAUDE.md §1 幾何 + 底色),立面窗格改由消費端的程序貼圖負責 ⇒ 節點只需要盒投影 UV。"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py --mode resample(實體化 + quadric)→ tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
+    "params": "--cells 72 --offset 0.006 --target 2900 ⇒ 2,900 面 / 16 開放邊 / 6 元件 / v:f 0.50 / kf_p95 0.95%;normalize `--mirror mass_a=auto`(挑到 z 軸,不對稱 12.3%,留 +z 半)+ 非等向 0.5×0.5(單位方盒包絡)+ `--boxuv` ⇒ **2,921 面 / 15 開放邊 / 6 元件**",
+    "note": "**`--cells` 在建築上是「濾掉立面凹槽」的旋鈕,不是解析度旋鈕** —— 預設 256 會把 T2 生出來的垂直窗格凹槽逐條重採樣成隨機凸起,整棟讀起來像侵蝕岩(384/512 更糟)。往粗調到 72 讓凹槽落在取樣解析度之下被抹平,而尺度大一個量級的退縮階梯完整保留;再粗(56)裙樓會斷成浮塊。逐檔黏土對照 56/72/96/128/160/256/384/512。\n\n**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,使用鏡像貼補空的部分」):單張照片只約束得到被拍到的那幾面,退縮階/簷帶/裙樓只長在那一半。**這一刀 MUST 落在 Blender 端**(bisect + clip + merge threshold 焊頂點,不重建等值面 ⇒ 一條新的自由邊都不生):在 solidify 端試過的兩種寫法都把網格撕爛 —— 切半再鏡射(開放邊 16 → 362、裙樓整條不見)、整份鏡射再疊合(1,119 / 5,016 開放邊,x 軸連目標面數都打不到),共同的錯誤前提是「resample 會幫我熔合」,而它只對**單層**輸入成立。鏡射後開放邊 18 → **15**(比沒鏡射還乾淨)。"
+   },
+   "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。"
+  },
+  {
+   "keys": [
+    "building/mass_b"
+   ],
+   "method": "trellis2_spz",
+   "consumer": "biomes 一般建物繪製段的**整棟量體**桶(BLD_LIB.mass 輪替名冊第 2 顆 —— 名冊只有一顆時,同一張圖上挑中的十幾棟塔樓是同一個剪影)",
+   "rev": "c51e5a8",
+   "at": "2026-08-09",
+   "imgs": [
+    {
+     "role": "primary(mass_b;Fisher Building, Detroit —— 寬裙樓 + 細塔身 + 綠色錐頂與尖塔,與 mass_a 的退縮階梯方塔是兩種天際線)",
+     "id": "ov_8811db29-201d-4640-9aa8-3deebbc7df35",
+     "family": "building",
+     "part": "bld_tower",
+     "query": "art deco skyscraper",
+     "api": "openverse",
+     "license": "cc0",
+     "creator": "TheWxResearcher",
+     "source_url": "https://commons.wikimedia.org/w/index.php?curid=174893747",
+     "file": "photos/building/bld_tower/ov_8811db29-201d-4640-9aa8-3deebbc7df35.jpg"
+    }
+   ],
+   "gen": {
+    "tool": "TRELLIS.2 (IgorAherne / StableProjectorz fork)",
+    "runner": "run_t2_gate.py — venv `Documents\\study\\TRELLIS.2-stableprojectorz\\.venv`(原生 Windows;ATTN_BACKEND=xformers)",
+    "params": "pipeline 1024_cascade / steps 12 / seed 1234 / decimate_k 50 / texsize 1024",
+    "machine": "RTX 3060 12GB",
+    "out": "out_mass_b/ov_8811db29-201d-4640-9aa8-3deebbc7df35.glb(逐圖一檔,不是編號子目錄)+ out_mass_b/stats/ 同名 json",
+    "measured": "sample 94.7s + decode 7.0s + glb 15.4s = 117.0s;torch 峰值 2,890 MiB;raw 4,309,688 面 → 匯出 49,169 面(雙層薄殼:36,435 開放邊 / 2,910 元件 / v:f 0.93);跑批當下 avail RAM 19.7GB(貼著 §5n 記的 20GB 門檻,這一次沒有無聲死亡)",
+    "note": "**輸出目錄與檔名記在 `out` 欄**(§5ab-a 的新規矩:chimney_a/ac_a 就是因為沒記到這一層,原檔再也對不回出貨的那一顆)。矮塔候選 `wc_378871`(GE Building)與 `ov_c343cdcb`(布魯托主義板樓)已 matte 但未生成,留給 mass_c。"
+   },
+   "post": {
+    "tool": "tools/ai3d/solidify_parts.py --mode resample → tools/ai3d/normalize_parts.py --boxuv(Blender 5.2 headless)",
+    "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 1.06% / dev_p95 0.84%;normalize 非等向 0.5×0.5 +  ⇒ 2,900 面、水平徑向 0.475、縱向 ±0.475",
+    "note": "沿用 §5ab-b 定案的 `--cells 72`(建築上它是「濾掉立面凹槽」的旋鈕),**未重新掃描** —— 同一族同一種主體。這一顆的實體化結果比 mass_a 乾淨(0 開放邊 / 1 元件 vs 16 / 6),因此**不需要鏡像貼補**:mesh_sym 量到的半空間面積不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
+   },
+   "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
   }
  ]
 }

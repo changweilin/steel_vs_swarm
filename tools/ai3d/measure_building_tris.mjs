@@ -13,7 +13,7 @@
  * 逐 InstancedMesh 以(幾何型別, 幾何參數, 材質色)指紋對回 biomes.js 的桶名。
  * `--live` 吃真 Overpass 圖資(instance 數要真市區才有代表性);圖磚由 Node 轉送。
  *
- * 用法:node tools/ai3d/measure_building_tris.mjs --venue shibuya [--team 1] [--live]
+ * 用法:node tools/ai3d/measure_building_tris.mjs --venue shibuya [--team 1] [--live] [--osm-cache]
  */
 import fs from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -69,7 +69,32 @@ const relay = async (route, contentType) => {
 };
 await page.route(/elevation-tiles-prod/, (r) => relay(r, 'image/png'));
 await page.route(/arcgisonline\.com/, (r) => relay(r, 'image/jpeg'));
-if (LIVE) {
+// `--osm-cache`:把 Overpass 的回應錄下來重播。**這不是加速用的**,是為了讓「同一張圖」
+// 真的是同一張圖 —— Overpass 逐次回傳量差到 ±70%(shibuya 五分鐘內 558 ↔ 842 棟),而
+// 改動前後的 A/B 若各抓各的圖資,量到的差異全是圖資的、與這次改動無關。錄下來的檔在
+// `.tri_measure/osm/`(gitignore 之下),重跑同一個 venue 就重播,想重錄就刪掉。
+const OSM_CACHE = process.argv.includes('--osm-cache');
+const osmDir = join(ROOT, 'tools', 'ai3d', '.tri_measure', 'osm', VENUE);
+const osmKey = (body) => { let h = 2166136261; for (let i = 0; i < body.length; i++) { h ^= body.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+if (LIVE && OSM_CACHE) {
+  fs.mkdirSync(osmDir, { recursive: true });
+  await page.route(/overpass|api\/interpreter/, async (route) => {
+    const f = join(osmDir, `${osmKey(route.request().postData() || route.request().url())}.json`);
+    if (fs.existsSync(f)) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: fs.readFileSync(f), headers: { 'access-control-allow-origin': '*' } });
+    }
+    const req = route.request();
+    try {
+      const r = await fetch(req.url(), req.method() === 'POST'
+        ? { method: 'POST', body: req.postData(), headers: { 'User-Agent': 'steel-vs-swarm-tri-budget/1.0', 'Content-Type': 'application/x-www-form-urlencoded' } }
+        : { headers: { 'User-Agent': 'steel-vs-swarm-tri-budget/1.0' } });
+      if (!r.ok) return route.abort();
+      const buf = Buffer.from(await r.arrayBuffer());
+      fs.writeFileSync(f, buf);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: buf, headers: { 'access-control-allow-origin': '*' } });
+    } catch { return route.abort(); }
+  });
+} else if (LIVE) {
   await page.route(/overpass|api\/interpreter/, (r) => relay(r, 'application/json'));
 } else {
   const osm = (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"elements":[]}' });
@@ -87,6 +112,7 @@ await page.route(PROBE_URL, (r) => r.fulfill({
 await page.goto(PROBE_URL, { waitUntil: 'domcontentloaded' });
 
 const res = await page.evaluate(async ({ venueId, teamSize }) => {
+  const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
   const { buildBiomes } = await import('/public/js/biomes.js');
@@ -100,6 +126,10 @@ const res = await page.evaluate(async ({ venueId, teamSize }) => {
   const tri = (g) => Math.round(((g.index ? g.index.count : g.attributes.position?.count) || 0) / 3);
   const rows = [];
   let sceneTris = 0, meshN = 0;
+  // 整棟量體的**逐實例尺寸普查**(佇列 F「先量再開」用):整棟庫節點的 instance 上界不是
+  // 「這張圖有幾棟樓」而是「這條選取規則挑中幾棟」,所以要把 facade_wall 桶的實例矩陣拆開
+  // 量高度。MUST 從矩陣量,MUST NOT 在 biomes.js 埋量測鉤子(那是把量測工具的需求寫進遊戲)。
+  const massDims = [];
   const walk = (root) => root.traverse((o) => {
     if (!o.isMesh && !o.isInstancedMesh) return;
     meshN++;
@@ -108,6 +138,10 @@ const res = await page.evaluate(async ({ venueId, teamSize }) => {
     sceneTris += t * n;
     if (!o.isInstancedMesh) return;
     const mat = Array.isArray(o.material) ? o.material : [o.material];
+    if (mat.length === 6 && o.geometry.type === 'BoxGeometry') {
+      const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3();
+      for (let i = 0; i < n; i++) { o.getMatrixAt(i, M); M.decompose(P, Q, S); massDims.push([+S.x.toFixed(2), +S.y.toFixed(2), +S.z.toFixed(2)]); }
+    }
     rows.push({
       geo: o.geometry.type,
       params: JSON.stringify(o.geometry.parameters || null),
@@ -118,7 +152,7 @@ const res = await page.evaluate(async ({ venueId, teamSize }) => {
     });
   });
   walk(bio); walk(terrain.group);
-  return { rows, sceneTris, meshN, osmOk: !!bio.userData?.osmOk, stats: bio.userData?.stats || null };
+  return { rows, sceneTris, meshN, massDims, osmOk: !!bio.userData?.osmOk, stats: bio.userData?.stats || null };
 }, { venueId: VENUE, teamSize: TEAM });
 
 // —— 指紋 → biomes.js 桶名(對照 biomes.js 建物配件 InstancedMesh 建構段;色值一改要跟著改)——
@@ -164,6 +198,10 @@ for (const r of res.rows) {
   byBucket.set(n, cur);
 }
 console.log(`場地 ${VENUE} 隊制 ${TEAM}${LIVE ? '(真圖資)' : '(離線 fallback)'}`);
+// 圖資到底有沒有拿到 MUST 印出來:`--live` 只是「有沒有讓它連出去」,Overpass 掛掉會**靜默**
+// 退回程序生成街區(§2.4),而那一輪量到的 instance 數會偏低一整個量級 —— 拿它去反推 node_cap
+// 就是「上限看起來很寬鬆」,而且沒有任何錯誤訊息。
+console.log(`建物 ${res.stats?.buildings ?? '?'} 棟(其中地標 ${res.stats?.landmarks ?? '?'})・道路 ${res.stats?.roads ?? '?'} 條`);
 console.log(`全場三角形 ${res.sceneTris.toLocaleString()}・mesh ${res.meshN}`);
 console.log('桶名                          instance   單件tris   桶總tris');
 let bldTris = 0;
@@ -172,11 +210,21 @@ for (const [n, c] of [...byBucket.entries()].sort((a, b) => b[1].count * b[1].tr
   bldTris += c.count * c.tris;
 }
 console.log(`建物相關桶合計 ${bldTris.toLocaleString()} tris(佔全場 ${(bldTris / res.sceneTris * 100).toFixed(1)}%)`);
+// —— 整棟量體普查:選取規則挑中幾棟 ⇒ 整棟庫節點的 instance 上界 ——
+// 門檻刻意取 biomes.js **已經在用**的那兩條(退縮頂塔 h>55、第二階頂塔 h>100),不另發明數字;
+// 寬度下限 8m 濾掉窄長的梯間塔/裙樓(那些不是「一棟樓」,拿去湊 instance 數會把上限撐大)。
+const dims = res.massDims || [];
+const census = (h0) => dims.filter((d) => d[1] > h0 && Math.min(d[0], d[2]) >= 8).length;
+const tallSorted = dims.map((d) => d[1]).sort((a, b) => b - a);
+console.log(`整棟量體實例 ${dims.length}(高度中位數 ${tallSorted[Math.floor(tallSorted.length / 2)] ?? '-'}m、最高 ${tallSorted[0] ?? '-'}m)`);
+console.log(`  高過 40m 且寬 ≥8m:${census(40)}・高過 55m(退縮頂塔門檻):${census(55)}・高過 100m(第二階門檻):${census(100)}`);
 const unmatched = res.rows.filter((r) => !label(r));
 console.log(`未對應 InstancedMesh ${unmatched.length} 筆(植被/道路/其他系統,不在建物預算內)`);
 fs.mkdirSync(join(ROOT, 'tools', 'ai3d', '.tri_measure'), { recursive: true });
 fs.writeFileSync(join(ROOT, 'tools', 'ai3d', '.tri_measure', `${VENUE}_t${TEAM}${LIVE ? '_live' : ''}.json`),
   JSON.stringify({ venue: VENUE, team: TEAM, live: LIVE, sceneTris: res.sceneTris,
+    buildings: res.stats?.buildings ?? null, roads: res.stats?.roads ?? null,
+    mass: { instances: dims.length, over40: census(40), over55: census(55), over100: census(100), maxH: tallSorted[0] ?? null },
     buckets: Object.fromEntries(byBucket), measured_at: new Date().toISOString() }, null, 2));
 await browser.close();
 srv.close();
