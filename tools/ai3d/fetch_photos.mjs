@@ -212,16 +212,11 @@ export const PHOTO_CATALOG = {
     // 明知 SF3D 會出薄殼,仍收 —— fill 預篩會擋,留作立面模組語料。列序 = 抓取優先序:
     // 本批接線的模組列在前(tank_wood 供水塔第二款式),整棟風格列供本批與後續批次。
     tank_wood:      { want: 5, q: ['wooden water tower rooftop', 'wooden water tank tower', 'rooftop wooden water tower new york'] },
-    // —— 設計圖(2026-08-09 使用者定案「建築部分也加入設計圖轉 3D 的功能」)——
-    // 走的是 `plan_to_mesh.py` 那條**幾何**路(正投影輪廓 → 視覺外殼),不是 img→3D。
-    // **刻意不帶 `grp`**:設計圖是**輸入格式**不是建物類別 ⇒ 進了分母就會把 50/25/25 稀釋掉,
-    // 而使用者那句話講的是「建築照片」的組成。要不要讓設計圖也照那個比例分類型,是另一個決定。
-    // 查詢用的是**測繪圖**的專名(HABS = 美國歷史建築調查,聯邦公版;`measured drawing`
-    // 是這一類的通稱)—— 泛稱的 `architectural drawing` 會撈回一堆室內裝飾與柱頭大樣。
-    bld_drawing:    { want: 6, q: ['HABS measured drawing elevation', 'measured drawing building elevation',
-      'building elevation drawing survey', 'architectural elevation drawing facade'] },
     // ============ 整棟建物(`grp` 欄 = 配比分組;見上方 BUILDING_MIX)============
     // ⚠ 只有帶 `grp` 的列進配比;上面那些是**零件**(窗格/屋頂配件)不是建物,不在其中。
+    // ⚠ `src` 欄 = **輸入格式**('photo' 預設 / 'drawing' 測繪線稿),與 `grp` **正交**:
+    //    前者決定走哪一條轉換路(img→3D vs plan_to_mesh 的視覺外殼),後者決定配比。
+    //    詳見檔尾 BUILDING_MIX 註解 ④。
     // —— ㋐ 一般市區(50%):街廓裡真的排成一排的那些樓。整棟量體那一桶(building/mass_*)
     //        的語料來源,也是 planBlocks 沿街配置看得到的主體 ——
     bld_tower:      { grp: 'urban', want: 9, q: ['art deco skyscraper', 'stepped skyscraper setback', 'brutalist concrete tower block',
@@ -232,6 +227,8 @@ export const PHOTO_CATALOG = {
     bld_rowhouse:   { grp: 'urban', want: 5, q: ['brick townhouse facade', 'amsterdam canal house facade', 'victorian terraced house'] },                // 歐洲城市街屋
     bld_shophouse:  { grp: 'urban', want: 4, q: ['shophouse facade', 'colonial shophouse'] },                                                            // 東南亞城鎮
     bld_warehouse:  { grp: 'urban', want: 5, q: ['brick warehouse', 'old factory building', 'industrial warehouse exterior'] },                          // 工業
+    dwg_tower:      { grp: 'urban', src: 'drawing', want: 4, q: ['HABS measured drawing elevation commercial building',
+      'measured drawing elevation office building', 'HABS drawing elevation warehouse', 'measured drawing elevation apartment building'] },
     // —— ㋑ 鄉村 / 觀光旅宿(25%)——
     bld_inn:        { grp: 'rural', want: 3, q: ['country inn building', 'mountain lodge hotel', 'ryokan traditional inn'] },   // 觀光旅宿
     bld_barn:       { grp: 'rural', want: 2, q: ['red barn field', 'old wooden barn', 'lone barn meadow'] },                    // 美國鄉間
@@ -244,6 +241,8 @@ export const PHOTO_CATALOG = {
     bld_halftimber: { grp: 'rural', want: 1, q: ['half timbered house', 'fachwerkhaus', 'tudor house'] },                       // 德/英老鎮
     bld_adobe:      { grp: 'rural', want: 1, q: ['adobe house', 'pueblo adobe building', 'mud brick house'] },                  // 美洲西南/北非
     bld_yurt:       { grp: 'rural', want: 1, q: ['mongolian yurt', 'ger tent grassland'] },                                     // 蒙古草原
+    dwg_house:      { grp: 'rural', src: 'drawing', want: 2, q: ['HABS measured drawing elevation house',
+      'measured drawing elevation farmhouse', 'HABS drawing elevation barn', 'measured drawing elevation cottage'] },
     // —— ㋒ 功能型(25%):使用者點名的寺廟/教堂/醫院/車站/學校/博物館/公家機構 ——
     bld_temple:     { grp: 'civic', want: 3, q: ['buddhist temple building', 'shinto shrine building', 'taoist temple hall'] }, // 寺廟
     bld_church:     { grp: 'civic', want: 3, q: ['village church', 'white wooden church', 'country church steeple'] },          // 教堂
@@ -254,6 +253,8 @@ export const PHOTO_CATALOG = {
     bld_hospital:   { grp: 'civic', want: 2, q: ['hospital building exterior', 'clinic building exterior'] },                   // 醫院
     bld_pagoda:     { grp: 'civic', want: 1, q: ['japanese pagoda', 'five storied pagoda', 'stone pagoda'] },                   // 東亞塔樓(宗教)
     bld_lighthouse: { grp: 'civic', want: 1, q: ['lighthouse tower', 'coastal lighthouse isolated'] },                          // 海岸公共設施
+    dwg_civic:      { grp: 'civic', src: 'drawing', want: 2, q: ['HABS measured drawing elevation church',
+      'measured drawing elevation school building', 'HABS drawing elevation courthouse', 'measured drawing elevation station building'] },
   },
   landmark: {                                                // beacons KIND_PARTS:桁架節/微波碟/水塔桶/貨櫃
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
@@ -276,20 +277,46 @@ export const PHOTO_CATALOG = {
 //      某一列 want 時**靜默過期**(同 §5ae-e 那兩份手寫清單),而照片是真金白銀的配額。
 //   ③ 分組是**用途**不是風格:同一種立面既可能是市區辦公樓也可能是鄉間旅館 ⇒ 以「這棟樓
 //      在城市裡扮演什麼角色」歸類,因為消費端(planBlocks 沿街配置 / 整棟量體桶)吃的正是角色。
+//   ④ **`grp`(建物類別)與 `src`(輸入格式)是正交的兩維,MUST NOT 併成一欄**
+//      (2026-08-09 使用者第二輪定案:「設計圖 + 照片**總比例**滿足 50 + 25 + 25 即可」)。
+//      設計圖曾經是**不帶 grp** 的單獨一列(§5ai-e 的理由:「輸入格式不是建物類別」)——
+//      使用者這句話推翻了它:分母含設計圖。而「把設計圖當第四個類別」是另一種錯:
+//      50/25/25 三個數字加起來就是 1,多一個類別**當場算不出來**,drift 守門線只會在
+//      每一組都印出一個錯的百分比。故:`grp` 唯一決定配比、`src` 唯一決定走哪條轉換路
+//      (photo → matte + img→3D;drawing → plan_to_mesh 的正投影視覺外殼)。
+//      逐組的設計圖配額取**同一個比例**(各組 want 的 ~9%:urban 4/44、rural 2/22、civic 2/22)
+//      ⇒ 加進分母之後 50/25/25 仍然是**整除**的,不吃 MIX_TOL 的餘裕。比例壓得低是因為
+//      §5ai-e 的產出率:六張測繪圖只有一張是乾淨線稿(其餘是水彩/版畫渲染,`plan_to_mesh`
+//      的 LINEART_INK 會擋);但它是**唯一**能給出精確正投影輪廓的輸入,值一成的配額。
+//   ⑤ **設計圖 MUST NOT 走照片的選片閘**:`matte_photos.py`/`screen_mattes.py` 的門檻是拿
+//      **照片**校準的(主體佔比、亮度、bbox 填滿率),線稿的統計是另一個分布 —— 而且設計圖
+//      根本不需要去背。它的品質閘是 `plan_to_mesh.py --screen` 那三道(輪廓圍不圍得起來 /
+//      是不是渲染圖 / 圖框),回寫的欄位與選片閘同一個(`entry.screen`)⇒ have() 一視同仁。
 export const BUILDING_MIX = { urban: 0.50, rural: 0.25, civic: 0.25 };
 const MIX_TOL = 0.02;                                        // 配額是整數 ⇒ 允許的四捨五入餘裕
+export const SRC_KINDS = ['photo', 'drawing'];               // 輸入格式(預設 photo)
+export const srcOf = (def) => def.src || 'photo';
 
-/** 現行型錄的實際配比(逐列 want 加總;只計帶 grp 的整棟建物列)。 */
+/** 現行型錄的實際配比(逐列 want 加總;只計帶 grp 的整棟建物列)。
+ *
+ * `bySrc` = 逐組的 photo / drawing 拆帳:沒有這一欄,「配比對了」會蓋掉「這一組全是設計圖、
+ * 一張照片都沒有」(兩者的轉換路完全不同 ⇒ 那不是同一份語料)。
+ */
 export function buildingMix(catalog = PHOTO_CATALOG) {
-  const by = {}; let total = 0;
+  const by = {}; const bySrc = {}; let total = 0;
   for (const [part, def] of Object.entries(catalog.building || {})) {
+    const src = srcOf(def);
+    if (!SRC_KINDS.includes(src)) throw new Error(`building/${part}:未知輸入格式 ${src}`);
+    // 設計圖沒有 grp 就會**靜默逃出分母** —— 那正是使用者這一輪推翻的舊行為(④)。
+    if (src !== 'photo' && !def.grp) throw new Error(`building/${part}:${src} 列缺 grp,配比會漏算它`);
     if (!def.grp) continue;
     if (!(def.grp in BUILDING_MIX)) throw new Error(`building/${part}:未知分組 ${def.grp}`);
     by[def.grp] = (by[def.grp] || 0) + def.want; total += def.want;
+    (bySrc[def.grp] ||= {})[src] = (bySrc[def.grp]?.[src] || 0) + def.want;
   }
   const share = {};
   for (const g of Object.keys(BUILDING_MIX)) share[g] = total ? (by[g] || 0) / total : 0;
-  return { by, total, share };
+  return { by, bySrc, total, share };
 }
 
 /** 偏離定案配比就回傳訊息(呼叫端負責印/擋);沒偏離回 null。 */
@@ -333,6 +360,7 @@ function workList() {
 // ---- 授權複驗(硬閘的第二道:不信任查詢參數,逐張再驗一次)----
 const CC0_RE = /^(cc0|pdm)$/i;                               // Openverse 的 license 欄
 const COMMONS_OK = /cc0|public domain/i;                     // Commons 的 LicenseShortName
+const TIFF_THUMB_W = 2400;                                   // TIFF 走 MediaWiki 縮圖(見 searchCommons)
 
 async function jget(url) {
   const r = await fetch(url, { headers: { 'User-Agent': UA } });
@@ -372,15 +400,26 @@ async function searchOpenverse(q, n) {
 async function searchCommons(q, n) {
   const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
     + `&generator=search&gsrnamespace=6&gsrlimit=${n}&gsrsearch=${encodeURIComponent(q)}`
-    + '&prop=imageinfo&iiprop=url|size|extmetadata';
+    + `&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=${TIFF_THUMB_W}`;
   const j = await jget(u);
   const pages = Object.values(j?.query?.pages || {});
   return pages.map((p) => {
     const ii = p.imageinfo?.[0]; if (!ii) return null;
     const lic = ii.extmetadata?.LicenseShortName?.value || '';
     if (!COMMONS_OK.test(lic)) return null;                  // 硬閘:CC-BY 一律拒收
+    // **TIFF 改吃 MediaWiki 幫我們算好的 JPEG 縮圖**(2026-08-09;§5ak-c)。
+    // 理由是語料本身:使用者要的測繪圖幾乎全是 HABS 那一批,而 **HABS 在 Commons 上一律是
+    // 5000px 的典藏 TIFF** ⇒ 舊制的 magic-byte 嗅探把每一張都判成「非影像位元組」並記成
+    // **持續性失敗**(那條規則會讓同一張永遠不再重試)= 三個設計圖列**結構性地**永遠抓不到東西,
+    // 而畫面上只看得到一排 ✗。縮圖那條路同時省掉幾十 MB 的下載,而 2400px 的短邊仍遠高於
+    // 1024 的下限(⇒ 尺寸閘 MUST 改吃**縮圖的**尺寸,吃原圖就會放行一張其實只有 800px 的檔案)。
+    // ⚠ **只放行 TIFF**:PDF/DjVu 的「縮圖」是第一頁的渲染,而 2026-08-05 那張「照片」正是
+    //   148 頁的 PDF —— 那不是我們要的東西,維持拒收(嗅探仍是最後一道)。
+    const tif = /\.tiff?$/i.test(ii.url || '');
+    const url = tif && ii.thumburl ? ii.thumburl : ii.url;
+    const [w, h] = tif && ii.thumburl ? [ii.thumbwidth, ii.thumbheight] : [ii.width, ii.height];
     return {
-      id: `wc_${p.pageid}`, url: ii.url, w: ii.width, h: ii.height,
+      id: `wc_${p.pageid}`, url, w, h,
       license: lic, creator: ii.extmetadata?.Artist?.value?.replace(/<[^>]*>/g, '') || null,
       source_url: ii.descriptionurl, api: 'commons',
     };
@@ -433,16 +472,24 @@ async function main() {
     // 整棟建物配比:目標(型錄 want)與**手上真的有幾張**分開印 —— 前者是定案、後者是現況,
     // 混成一個數字就看不出「還缺哪一組」(而缺的那一組正是下一輪要抓的)。
     const mix = buildingMix();
-    const got = {}; let gotTotal = 0;
+    const got = {}; const gotSrc = {}; let gotTotal = 0;
     for (const [part, def] of Object.entries(PHOTO_CATALOG.building)) {
       if (!def.grp) continue;
       const n = have('building', part); got[def.grp] = (got[def.grp] || 0) + n; gotTotal += n;
+      (gotSrc[def.grp] ||= {})[srcOf(def)] = (gotSrc[def.grp]?.[srcOf(def)] || 0) + n;
     }
-    console.log('\n整棟建物配比(使用者 2026-08-09 定案 50/25/25):');
+    console.log('\n整棟建物配比(使用者 2026-08-09 定案 50/25/25;分母含設計圖):');
     for (const g of Object.keys(BUILDING_MIX)) {
       const tgt = `${mix.by[g] || 0}/${mix.total} = ${(mix.share[g] * 100).toFixed(1)}%`;
       const cur = gotTotal ? `${got[g] || 0}/${gotTotal} = ${((got[g] || 0) / gotTotal * 100).toFixed(1)}%` : '0';
       console.log(`  ${g.padEnd(6)} 目標 ${tgt.padEnd(20)} 現有 ${cur}`);
+    }
+    // 逐組的**輸入格式**拆帳:配比對了不代表語料對了 —— 照片與設計圖走的是兩條完全不同的
+    // 轉換路(img→3D vs plan_to_mesh),混成一個數字就看不出「這一組全是設計圖」。
+    console.log('  ── 輸入格式拆帳(目標 → 現有;drawing 走 plan_to_mesh 那條幾何路)──');
+    for (const g of Object.keys(BUILDING_MIX)) {
+      const cell = (s) => `${s} ${mix.bySrc[g]?.[s] || 0}→${gotSrc[g]?.[s] || 0}`;
+      console.log(`  ${g.padEnd(6)} ${SRC_KINDS.map(cell).join('・')}`);
     }
     if (!work.length) console.log('\n缺額為零,不用抓。');
     return;
@@ -481,6 +528,9 @@ async function main() {
           if (short < 1024) continue;
           const entry = {
             family: fam, part, id: it.id, query: q, api: it.api,
+            // 輸入格式進帳本(預設 photo 不寫 ⇒ 既有條目逐位元不變):下游的 python 端靠
+            // 這一欄認出「這張不是照片」,MUST NOT 在那邊再抄一份零件名單(第二份實作)。
+            ...(srcOf(def) === 'photo' ? {} : { src: srcOf(def) }),
             source_url: it.source_url, license: it.license, creator: it.creator,
             retrieved_at: new Date().toISOString(), w: it.w || null, h: it.h || null,
             size_unknown: !(it.w && it.h) || undefined,

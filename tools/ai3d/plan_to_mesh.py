@@ -49,6 +49,8 @@
 #   python tools/ai3d/plan_to_mesh.py --front elev.png --out out.glb
 #   python tools/ai3d/plan_to_mesh.py --front elev.png --side side.png --plan plan.png --out out.glb
 #   python tools/ai3d/plan_to_mesh.py --front elev.png --debug out_dbg/   # 逐視圖存輪廓圖
+#   python tools/ai3d/plan_to_mesh.py --screen <資料家>    # 批次品質閘:設計圖語料 → entry.screen
+#       (§5aj-A ⑤:設計圖 MUST NOT 走照片的選片閘,但**可用張數**要記在同一欄)
 import argparse
 import os
 import sys
@@ -67,11 +69,34 @@ for _s in (sys.stdout, sys.stderr):
 INK = 0.72          # 二值化:灰階 < INK×255 視為墨(設計圖是白底線稿)
 SOLID_MIN = 0.02    # 外輪廓圍出來的實體佔畫布比例下限(低於此 = 輪廓有缺口)
 FRAME_MAX = 0.70    # 大於這個比例的輪廓視為**圖框**(還剩得下候選時才淘汰)
+# 「剔掉的那塊真的是圖框」⇔「剔掉之後還剩得下一個**像樣的主體**」。剩下的是碎屑就代表
+# 剔掉的其實是**建築本身**(整張紙就是圖的掃描:紙緣 = 最大墨輪廓 > FRAME_MAX)。
+# ⚠ 這條的校準樣本只有一個(§5ak-b 的 palazzo:0.024,人眼確認是簷口的一小塊碎屑,
+#    而 `實體 2.1%` 剛好爬過 SOLID_MIN 的 2% ⇒ 三道閘一起放行 = **假綠**)。
+#    取 0.25 是「離那個樣本一個量級、又遠低於 1」,**不是**統計出來的;設計圖語料變多之後
+#    MUST 重掃這一欄的分布(紀律同 §5ah-d)。方向刻意偏保守:誤拒進人眼名單救得回來
+#    (人眼救濟走 `screen_mattes.py --family building --human pass <id>` —— 那一支的人眼判決
+#    只吃帳本、不需要 matte,設計圖照樣救得回來),誤放行就是拿一塊碎屑去生一顆節點。
+FRAME_KEEP_F = 0.25
 LINEART_INK = 0.25  # 輪廓**內**的墨密度上限:線稿 ≤ 這個數,渲染圖遠高於它(見下)
 DEPTH_F = 0.55      # 只有一張立面時的深度假設(× 正面寬);有 plan/side 就用不到
 SIMPLIFY = 0.004    # 多邊形簡化容差(× 該輪廓周長)
 CLOSE_PX = 3        # 形態學閉運算核(接起細線的斷點)
 ALLOW_RENDER = False  # --allow-render:明知是渲染圖也要硬跑(模組層旗標,見 main())
+
+
+class ViewReject(SystemExit):
+    """一張輸入圖過不了品質閘。
+
+    **繼承 SystemExit 是刻意的**:這幾道閘本來就是 `raise SystemExit(訊息)`,單張轉檔的
+    CLI 行為(印訊息、離開碼 1)因此逐位元不變;`--screen` 批次模式只是多了一個接得住它
+    並讀得到 `why` 的地方 —— 兩條路共用**同一份**判定,MUST NOT 在選片那邊另抄一次門檻
+    (抄了就會出現「選片說可用、真的轉檔卻報渲染圖」)。
+    """
+
+    def __init__(self, msg, why):
+        super().__init__(msg)
+        self.why = why
 
 
 def outer_mask(path, close_px=CLOSE_PX):
@@ -87,14 +112,14 @@ def outer_mask(path, close_px=CLOSE_PX):
     """
     im = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     if im is None:
-        raise SystemExit(f'讀不到圖:{path}')
+        raise ViewReject(f'讀不到圖:{path}', 'unreadable')
     h, w = im.shape[:2]
     canvas = float(h * w)
     if im.ndim == 3 and im.shape[2] == 4 and im[:, :, 3].min() < 250:
         solid = (im[:, :, 3] > 128).astype(np.uint8)
         n, lab, stats, _ = cv2.connectedComponentsWithStats(solid, 8)
         if n <= 1:
-            raise SystemExit(f'{os.path.basename(path)}:alpha 裡找不到主體')
+            raise ViewReject(f'{os.path.basename(path)}:alpha 裡找不到主體', 'empty')
         big = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
         mask = lab == big
         how, drop = 'alpha', 1.0 - mask.sum() / max(1, solid.sum())
@@ -106,7 +131,7 @@ def outer_mask(path, close_px=CLOSE_PX):
             ink = cv2.morphologyEx(ink, cv2.MORPH_CLOSE, k)
         cnts, _ = cv2.findContours(ink, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if not cnts:
-            raise SystemExit(f'{os.path.basename(path)}:圖上沒有任何線條')
+            raise ViewReject(f'{os.path.basename(path)}:圖上沒有任何線條', 'empty')
         areas = [cv2.contourArea(c) for c in cnts]
         # 圖框 = 幾乎與整張紙同大的那個輪廓。**只有還剩得下候選時才淘汰它** ——
         # 建築本身佔滿整張紙的圖是合法的,不能因為「大」就把它當圖框丟掉。
@@ -116,6 +141,15 @@ def outer_mask(path, close_px=CLOSE_PX):
             keep = list(zip(areas, cnts))
             framed = False
         best = max(keep, key=lambda t: t[0])[1]
+        # 圖框剔除的**自我檢查**:剩下的是碎屑 ⇒ 剛才剔掉的就是建築(見 FRAME_KEEP_F)。
+        # 這一關 MUST 排在 SOLID_MIN 之前:碎屑常常剛好爬得過 2%,而那時的訊息會把人指向
+        # 「輪廓有缺口,加大 --close」—— 完全錯的方向(輪廓好得很,只是挑錯了那一條)。
+        if framed and max(areas) > 0 and cv2.contourArea(best) < FRAME_KEEP_F * max(areas):
+            raise ViewReject(
+                f'{os.path.basename(path)}:最大的墨輪廓佔滿整張紙(> {FRAME_MAX:.0%})被當成圖框剔掉,'
+                f'剩下的候選只有它的 {cv2.contourArea(best) / max(areas):.1%} —— 這多半是「**整張紙就是圖**」'
+                f'的掃描,被剔掉的其實是建築本身。請換一張四周有留白的測繪圖(HABS 那一類),'
+                f'或以 screen_mattes.py --family building --human pass <id> 人工救回', 'frame')
         mask = np.zeros((h, w), np.uint8)
         cv2.drawContours(mask, [best], -1, 1, cv2.FILLED)        # 填實 = 內部線條全數忽略
         mask = mask.astype(bool)
@@ -128,19 +162,19 @@ def outer_mask(path, close_px=CLOSE_PX):
         # ⚠ 順序:先驗「輪廓圍不圍得起來」再驗「是不是渲染圖」。反過來的話,一條斷掉的線
         # 其遮罩就是那條線本身 ⇒ 墨密度 100% ⇒ 報成「這是渲染圖」,把人指到錯的方向。
         if float(mask.mean()) < SOLID_MIN:
-            raise SystemExit(f'{os.path.basename(path)}:外輪廓只圍出 {mask.mean():.3%} 的畫布 —— '
-                             f'輪廓多半有缺口,試著加大 --close(現在是 {close_px})')
+            raise ViewReject(f'{os.path.basename(path)}:外輪廓只圍出 {mask.mean():.3%} 的畫布 —— '
+                             f'輪廓多半有缺口,試著加大 --close(現在是 {close_px})', 'gap')
         dens = float(ink[mask].mean()) if mask.any() else 1.0
         if dens > LINEART_INK and not ALLOW_RENDER:
-            raise SystemExit(
+            raise ViewReject(
                 f'{os.path.basename(path)}:輪廓內墨密度 {dens:.1%} > {LINEART_INK:.0%} —— '
                 f'這看起來是**渲染圖**不是線稿測繪圖。渲染圖的墨是調子,剪影會碎掉;'
-                f'請換一張線稿(HABS/measured drawing 那一類),或加 --allow-render 硬跑')
+                f'請換一張線稿(HABS/measured drawing 那一類),或加 --allow-render 硬跑', 'render')
         how += f'・墨密度 {dens:.1%}'
     frac = float(mask.mean())
     if frac < SOLID_MIN:
-        raise SystemExit(f'{os.path.basename(path)}:外輪廓只圍出 {frac:.3%} 的畫布 —— '
-                         f'輪廓多半有缺口,試著加大 --close(現在是 {close_px})')
+        raise ViewReject(f'{os.path.basename(path)}:外輪廓只圍出 {frac:.3%} 的畫布 —— '
+                         f'輪廓多半有缺口,試著加大 --close(現在是 {close_px})', 'gap')
     return mask, f'{how}・實體 {frac:.1%}・最大候選外的墨塊剔除 {drop:.1%}'
 
 
@@ -232,9 +266,64 @@ def build(front=None, side=None, plan=None, depth=None, simplify=SIMPLIFY, close
     return mesh, info
 
 
+def screen_home(home, close_px=CLOSE_PX, dry=False):
+    """設計圖語料的品質閘(§5aj-A ⑤):把 `src: 'drawing'` 的條目跑過三道閘,回寫 entry.screen。
+
+    **為什麼不能走 `screen_mattes.py`**:那三道統計門檻(主體佔比 / 亮度 / bbox 填滿率)是拿
+    **照片的 matte** 校準的,而線稿是另一個分布 —— 一張白底立面圖的「主體亮度」是紙的亮度,
+    「bbox 填滿率」在圖框內接近 1 ⇒ 照片的閘會把每一張測繪圖都判成印刷品(而它**就是**印刷品,
+    那正是我們要的東西)。設計圖也根本不需要去背。
+
+    但**回寫的欄位 MUST 是同一個** `entry.screen`:`fetch_photos.mjs` 的 `have()` 只認這一欄,
+    另開一個欄位的話設計圖的「可用張數」永遠等於「下載張數」,配比報表會一路綠著騙人。
+    人眼判決恆勝統計(與選片閘同一條紀律);判決不變不改寫 `at`。
+    """
+    import json
+    from datetime import datetime, timezone
+    mf_path = os.path.join(home, 'photo_manifest.json')
+    with open(mf_path, encoding='utf-8') as f:
+        manifest = json.load(f)
+    rows = [e for e in manifest if e.get('src') == 'drawing' and e.get('ok')]
+    if not rows:
+        raise SystemExit(f'{mf_path} 裡沒有 src=drawing 的可用條目')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    counts, changed = {}, 0
+    for e in rows:
+        path = os.path.join(home, e['file'])
+        try:
+            _, note = outer_mask(path, close_px)
+            v, why, detail = 'pass', 'plan', note
+        except ViewReject as rj:
+            v, why, detail = 'reject', rj.why, str(rj)
+        prev = e.get('screen')
+        if prev and prev.get('why') == 'human':          # 人眼恆勝
+            v, why = prev['v'], 'human'
+        elif not prev or prev.get('v') != v or prev.get('why') != why:
+            e['screen'] = {'v': v, 'why': why, 'at': now}
+            changed += 1
+        counts[why if v == 'reject' else 'pass'] = counts.get(why if v == 'reject' else 'pass', 0) + 1
+        print(f'{"✓" if v == "pass" else "✗"} [{why:9s}] {e["part"]}/{e["id"][:18]}  {detail[:110]}')
+    print('\n設計圖語料 {} 張:{} ⇒ 可用 {}'.format(
+        len(rows), '、'.join(f'{k} {n}' for k, n in sorted(counts.items()) if k != 'pass') or '無淘汰',
+        counts.get('pass', 0)))
+    if dry:
+        print('(--dry:未寫入)')
+    elif changed:
+        with open(mf_path, 'w', encoding='utf-8') as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        print(f'帳本已回寫({changed} 筆 screen 變更)→ fetch_photos.mjs --plan 計的是可用張數')
+    else:
+        print('判決與帳上相同 —— 未寫入')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--front'), ap.add_argument('--side'), ap.add_argument('--plan')
+    ap.add_argument('--screen', default=None,
+                    help='批次品質閘:給**資料家**(photo_manifest.json 與 photos/ 住的那個目錄),'
+                         '把 src=drawing 的條目跑過三道閘並回寫 entry.screen')
+    ap.add_argument('--dry', action='store_true', help='--screen 只印不寫')
     ap.add_argument('--out', default=None)
     ap.add_argument('--depth', type=float, default=None)
     ap.add_argument('--simplify', type=float, default=SIMPLIFY)
@@ -244,6 +333,8 @@ def main():
                     help='明知輸入是渲染圖(非線稿)也要硬跑 —— 剪影多半會碎')
     a = ap.parse_args()
     globals()['ALLOW_RENDER'] = a.allow_render
+    if a.screen:
+        return screen_home(a.screen, a.close, a.dry)
     mesh, info = build(a.front, a.side, a.plan, a.depth, a.simplify, a.close, a.debug)
     print(f"out: {info['faces']} 面 / {info['verts']} 點 / 元件 {info['components']} / "
           f"watertight {info['watertight']} / 外廓 {info['extent']}")

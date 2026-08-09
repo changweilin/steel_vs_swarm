@@ -94,6 +94,12 @@ deleted and took a 305-entry corpus with it.
 3. Bytes are checked, not extensions: `sniffImage()` accepts JPEG/PNG/WebP headers only. Two whole PDFs once
    passed the licence audit as `ok` photos — *Public domain* was true, the bytes were the lie.
 4. Manifest paths are relative POSIX. Never let the manifest encode which machine fetched it.
+5. **Commons TIFFs are fetched as MediaWiki's own JPEG render** (`iiurlwidth`), because the drawing corpus
+   *is* TIFF: HABS measured drawings are archival 5000px `.tif`, so rule 3 booked every single one as a
+   permanent failure — and permanent failures are never retried. Three drawing rows were structurally
+   unfillable and the only symptom was a column of `✗`. The size gate must then read the **thumb**
+   dimensions, not the original's. Only TIFF gets this: a PDF's "thumbnail" is page 1 of a document, which
+   is exactly the thing rule 3 exists to reject.
 
 **Query wording beats every model knob** — this is the largest measured lever in the whole pipeline.
 `tree crown isolated sky` returns herbarium sheets and dark forest scenes (14 photos → 1 usable mesh);
