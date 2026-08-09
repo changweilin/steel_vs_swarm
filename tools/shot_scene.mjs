@@ -10,12 +10,12 @@
 //   bridge     第一座橋的橋頭(有才拍)   hilltop      全圖最高點俯瞰兵線
 //   waterline  水岸(有水域才拍)         aerial       圖心高空俯瞰
 //
-// 圖層隔離:`--ink=0` / `--grade=0` / `--fxaa=0` / `--post=0` 各關一層,同一組機位再拍一次
+// 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` 各關一層,同一組機位再拍一次
 // ⇒ 「這張圖變醜是哪一層造成的」變成可回答的問題,而不是憑印象猜。
 //
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
-// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--lib=0] [--live]
+// 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--lib=0] [--live]
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -66,7 +66,10 @@ const ENV_DEF = { season: 'summer', time: 'day', weather: 'clear' };
     }
   }
 }
-const LAYERS = { ink: flag('ink'), grade: flag('grade'), fxaa: flag('fxaa'), post: flag('post'), lib: flag('lib') };
+const LAYERS = {
+  ink: flag('ink'), dof: flag('dof'), grade: flag('grade'), fxaa: flag('fxaa'),
+  post: flag('post'), lib: flag('lib'),
+};
 const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('')
   + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('');
 
@@ -136,7 +139,8 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
   const { updateCelLight } = await import('/public/js/toon.js');
-  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax } = await import('/public/js/data.js');
+  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax, dofNearM, dofFarM }
+    = await import('/public/js/data.js');
 
   const venue = VENUES.find((v) => v.id === venueId);
   if (!venue) throw new Error(`找不到場地 ${venueId}`);
@@ -207,6 +211,10 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     Math.max(terrain.worldW, terrain.worldH) * 2);
   scene.add(camera);
   const pipe = layers.post ? new Pipeline(renderer, scene, camera, layers) : null;
+  // 景深的兩個轉折點 MUST 餵進去,理由與 `--time night` 那一段同源:沒餵 = `_dofRange` 恆為
+  // null = 這一 pass **永遠不掛**,而每一張定場照、每一行讀數都照樣正常 ⇒ 這支工具就再也
+  // 拍不到交付版本真正長的樣子(而它的賣點正是「改動前後各拍一次」)。距離到 data.js 取。
+  pipe?.setDof(dofNearM(), dofFarM());
 
   // ---- 機位推導(零手打座標)----
   // 機位是在**第一次 render 之前**算的,而 three 的 `matrixWorld` 要等到 render 才更新

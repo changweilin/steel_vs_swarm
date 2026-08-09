@@ -23,8 +23,20 @@
 // 「細」= 抬高門檻而不是縮小取樣半徑:半徑已經是 1 像素(`INK.THICK`,再小就斷線),
 // 而 `|e|` 從邊緣往外遞減 ⇒ 門檻抬高,越過門檻的像素帶真的變窄(不是只變淡)。
 //
+// ---- 景深模糊(2026-08-09;距離與不變式住 `data.js DOF`)----
+// 使用者定案「加入遠的物件隨距離景深模糊的效果」。四件事先講清楚,因為每一件寫反了都不報錯:
+//   ① **這一 pass 是加成本的**。它不省效能(同日已向使用者說明);採用理由是畫面。
+//      代價收在兩處:拉桿 0% 時**整個 pass 退出鏈**(不是跑一個乘 0 的 pass),
+//      以及焦內像素在第一行就早退(只留 1 次深度 + 1 次顏色取樣)。
+//   ② **順序 MUST 排在勾線之後**。勾線讀的是**深度**、畫的是線;先糊後勾 = 深度仍然銳利
+//      ⇒ 在已經糊掉的色塊上畫出銳利的黑線(「糊掉的物件卻有清楚的輪廓」)。反過來排,
+//      線本身跟著一起糊,遠景才真的退到背景去。
+//   ③ **鄰居取樣 MUST 過焦外閘**(`step(coc*0.5, ct)`):不擋的話近處清晰物件的顏色會被抹進
+//      遠景 = 前景剪影外一圈光暈,而剪影正是玩家在看的東西(FPV 的座艙/武器占畫面很大一塊)。
+//   ④ 取樣點是**黃金角螺旋**(填滿圓盤)不是單一圓環:圓環在低取樣數下會糊成甜甜圈邊。
+//
 // ---- A25 GPU 生命週期 ----
-// 這支持有 3 個 RenderTarget + 1 張 depthTexture + 3 個 FullScreenQuad 材質,
+// 這支持有 3 個 RenderTarget + 1 張 depthTexture + 4 個 FullScreenQuad 材質,
 // **全部** MUST 在 `dispose()` 釋放。`audit_gpu_lifecycle.mjs` ⑦ 逐項釘住。
 //
 // ---- RES_GOV 交互(最容易靜默壞掉的一條)----
@@ -34,6 +46,7 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { visualPref, onVisualChange } from './visualPrefs.js';
+import { DOF } from './data.js';
 
 // ---- 勾線參數 ----
 const INK = {
@@ -64,6 +77,17 @@ const QUAD_VS = `
   varying vec2 vUv;
   void main() { vUv = uv; gl_Position = vec4( position.xy, 0.0, 1.0 ); }`;
 
+/**
+ * 圓盤取樣點(黃金角螺旋 = 向日葵排列):`a = i × 137.5°`、`r = √((i+0.5)/n)`。
+ * √ 是**面積均勻**的來源(不開根號會全部擠在圓心);單一圓環則在低取樣數下糊成甜甜圈邊。
+ * 展開成一串具名運算式而不是 GLSL 迴圈 + const 陣列:WebGL1 的 GLSL ES 1.00 沒有陣列
+ * 建構式,而這一層本來就該完全展開。
+ */
+const dofTaps = (n) => Array.from({ length: n }, (_, i) => {
+  const a = i * 2.39996323, r = Math.sqrt((i + 0.5) / n);
+  return `TAP( ${(Math.cos(a) * r).toFixed(4)}, ${(Math.sin(a) * r).toFixed(4)} )`;
+}).join('\n          ');
+
 /** 線性 → sRGB(RT 是 NoColorSpace,最後一 pass 自己轉;three 只對預設 framebuffer 轉) */
 const SRGB_GLSL = `
   vec3 toSRGB( vec3 c ) {
@@ -80,7 +104,10 @@ export class Pipeline {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
-    this.enabled = { ink: opts.ink !== false, grade: opts.grade !== false, fxaa: opts.fxaa !== false };
+    this.enabled = {
+      ink: opts.ink !== false, dof: opts.dof !== false,
+      grade: opts.grade !== false, fxaa: opts.fxaa !== false,
+    };
     // 半浮點 RT 在 tile GPU 上是**頻寬**成本(與 game.js 關 MSAA 同一個瓶頸)⇒ 低功耗走 8bit。
     // 8bit 線性緩衝在暗部會有輕微色帶,但那遠比掉幀好。
     const type = opts.lowPower ? THREE.UnsignedByteType : THREE.HalfFloatType;
@@ -102,16 +129,65 @@ export class Pipeline {
     this._size = size.clone();
 
     this.inkQuad = new FullScreenQuad(this._inkMaterial());
+    // 取樣數折半走與 8bit RT 同一條降級規則(tile GPU 的瓶頸是頻寬,而這一 pass 對焦外
+    // 的每個像素都是 1 + n 次取樣)。展開在 shader 原始碼裡 ⇒ 兩者是不同的程式,不是分支。
+    this.dofQuad = new FullScreenQuad(this._dofMaterial(opts.lowPower ? Math.max(2, DOF.TAPS >> 1) : DOF.TAPS));
     this.gradeQuad = new FullScreenQuad(this._gradeMaterial());
     this.fxaaQuad = new FullScreenQuad(this._fxaaMaterial());
+    this._quads = { ink: this.inkQuad, dof: this.dofQuad, grade: this.gradeQuad, fxaa: this.fxaaQuad };
+    // 景深的兩個轉折點由呼叫端餵(`setDof`)。**沒餵過就不掛這一 pass** —— 猜一個距離的話
+    // 就是「某個消費端的遠景莫名其妙糊掉」,而預設不生效才是寧缺勿錯(原則 6)。
+    this._dofRange = null;
+    // 進鏡程度(0~1)。**預設 1 = 不做狙擊閘**:那是戰場才有的概念,設定頁樣品與定場鏡頭組
+    // 沒有「瞄準」這回事,預設 0 的話它們會靜靜地什麼都不糊 = 拉桿與定場照都看不到這一層。
+    this._dofBlend = 1;
 
     // 勾線強度拉桿(visualPrefs.js):線的濃淡是**口味**,不同螢幕看起來差很多 ——
     // 給一個 uniform 讓玩家自己定案,而不是把某一台螢幕上調出來的數字寫死給所有人。
     // 拉到 0 = 沒有線(等同 `?ink=0`,但不必重開);預設 1 = 定場照調校出來的現值。
     // MUST 是 uniform 不是重建材質:重建會在拉桿拖動時每一格丟一次 shader 編譯。
-    this._syncPrefs = () => { this.inkQuad.material.uniforms.uInk.value = visualPref('ink'); };
+    this._syncPrefs = () => {
+      this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
+      // 景深強度同理走 uniform;但**拉到 0 時整個 pass 退出鏈**(見 render 組 chain 那一段)
+      // —— 這一 pass 與勾線不同,它是後加的成本,0% MUST 是「不跑」而不是「跑一個乘 0 的」。
+      this._dofA = DOF.MAX_R * visualPref('dof');
+      this._pushDofA();
+    };
     this._syncPrefs();
     this._offPrefs = onVisualChange(this._syncPrefs);
+  }
+
+  /**
+   * 景深的兩個轉折點(公尺;`near` = 開始糊、`far` = 全糊)。**唯一寫入點** ——
+   * 戰場與定場鏡頭組餵 `data.js dofNearM()/dofFarM()`(由全場最遠交戰距離推導,456 / 608m)、
+   * 設定頁樣品餵它自己那個 24m 場景的尺度 —— **兩軌同 `toon.js _rampTint` 的 mech/env:
+   * 同一套規則、兩組尺度**。沒有這一支的話樣品那 24m 全部落在 456m 的焦內帶裡 = 拉桿拉了
+   * 看不出差異,而那正是陰影偏色與風化密度各踩過一次的同一個坑。
+   */
+  setDof(near, far) {
+    if (!(near >= 0) || !(far > near)) { this._dofRange = null; return; }
+    this._dofRange = [near, far];
+    const u = this.dofQuad.material.uniforms;
+    u.uDofNear.value = near;
+    u.uDofFar.value = far;
+  }
+
+  /**
+   * 進鏡程度 0~1(2026-08-09 使用者補充「遠景景深模糊只有在狙擊模式」)。**逐幀呼叫** ——
+   * 值由 `data.js dofAimBlend` 自當下 fov 反解,本檔 MUST NOT 自己判 `aiming` 或自己跑淡入
+   * (那就是第二條時間曲線,模糊會比鏡頭慢半拍)。0 ⇒ 整個 pass 退出鏈 ⇒ 一般視角的成本
+   * 逐位元回到這批改動之前,而這也是這一層真正便宜的地方:它只在進鏡那幾秒跑。
+   */
+  setDofBlend(f) {
+    const v = Math.max(0, Math.min(1, f || 0));
+    if (v === this._dofBlend) return;      // 逐幀呼叫 ⇒ 沒變就不要碰 uniform
+    this._dofBlend = v;
+    this._pushDofA();
+  }
+
+  /** `uDofA` 的**唯一寫入點**:拉桿強度 × 進鏡程度。兩個來源各寫一次 = 後寫的把前一個蓋掉 */
+  _pushDofA() {
+    this.dofQuad.material.uniforms.uDofA.value = this._dofA * this._dofBlend;
   }
 
   _inkMaterial() {
@@ -176,6 +252,53 @@ export class Pipeline {
           ink = clamp( ink * uInk, 0.0, 1.0 );
           // ① 墨色與底色相混,不是塗黑
           gl_FragColor = vec4( mix( base.rgb, base.rgb * ${INK.DARK.toFixed(2)}, ink ), base.a );
+        }`,
+    });
+  }
+
+  /**
+   * 景深模糊(檔頭「景深模糊」那一段)。距離一律吃 `uDofNear`/`uDofFar`(公尺,由 `setDof`
+   * 餵入)—— 本檔 MUST NOT 手寫任何公尺數:那兩個轉折點是 `data.js dofNearM/dofFarM` 由
+   * 狙擊模式可視範圍推導的,寫死在著色器裡就與「這台機體看得多遠」分家了。
+   * @param taps 圓盤取樣數(低功耗折半)
+   */
+  _dofMaterial(taps) {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        tColor: { value: null }, tDepth: { value: null },
+        uTexel: { value: new THREE.Vector2() },
+        uNear: { value: 0.5 }, uFar: { value: 1000 },
+        uDofNear: { value: 1e9 }, uDofFar: { value: 2e9 }, uDofA: { value: 0 },
+      },
+      vertexShader: QUAD_VS,
+      fragmentShader: `
+        uniform sampler2D tColor; uniform sampler2D tDepth;
+        uniform vec2 uTexel; uniform float uNear; uniform float uFar;
+        uniform float uDofNear; uniform float uDofFar; uniform float uDofA;
+        varying vec2 vUv;
+        float lin( vec2 uv ) {                     // 非線性深度 → 視線距離(公尺),與勾線同式
+          float z = texture2D( tDepth, uv ).x * 2.0 - 1.0;
+          return ( 2.0 * uNear * uFar ) / ( uFar + uNear - z * ( uFar - uNear ) );
+        }
+        void main() {
+          vec4 base = texture2D( tColor, vUv );
+          // 焦外程度 0~1。天空的深度就是 far ⇒ coc 恆為 1,**刻意不早退**:天空本來就在全糊帶
+          // 裡,而它是平滑漸層 ⇒ 糊它看不出差別也幾乎沒有成本,特判反而會在天際線切出一條
+          // 「糊的地面 / 清晰的天空」的硬邊(勾線那邊要早退是因為它畫的是**線**,不是同一件事)。
+          float coc = smoothstep( uDofNear, uDofFar, lin( vUv ) );
+          float rp = coc * uDofA / uTexel.y;       // 半徑(像素)= 焦外程度 × 螢幕高度比例
+          // 焦內早退:半徑不到半個像素就沒有任何取樣意義。絕大多數交戰畫面落在這裡 ⇒
+          // 這一 pass 的平均成本 = 一次深度 + 一次顏色取樣。
+          if ( rp < 0.5 ) { gl_FragColor = base; return; }
+          vec3 sum = base.rgb; float wsum = 1.0;
+          // 焦外閘:只收「自己也在糊帶裡」的鄰居。不擋的話近處清晰物件會被抹進遠景 =
+          // 前景剪影外一圈光暈(見檔頭 ③)。門檻取中心的一半 = 容許糊帶內的漸層互相混合。
+          #define TAP(dx,dy) { vec2 o = vec2( dx, dy ) * rp * uTexel; \
+            float w = step( coc * 0.5, smoothstep( uDofNear, uDofFar, lin( vUv + o ) ) ); \
+            sum += texture2D( tColor, vUv + o ).rgb * w; wsum += w; }
+          ${dofTaps(taps)}
+          #undef TAP
+          gl_FragColor = vec4( sum / wsum, base.a );
         }`,
     });
   }
@@ -257,6 +380,11 @@ export class Pipeline {
     const texel = new THREE.Vector2(1 / this._size.x, 1 / this._size.y);
     const chain = [];
     if (this.enabled.ink) chain.push('ink');
+    // 景深 MUST 排在勾線**之後**(檔頭 ②:先糊後勾 = 糊掉的色塊配上銳利的黑線)。
+    // 四個關法任一成立就整個 pass 退出鏈,而不是跑一個沒有作用的 pass:`?dof=0` /
+    // 呼叫端沒餵距離 / 拉桿 0% / **不在狙擊模式**(`_dofBlend = 0`,逐幀由呼叫端餵)。
+    // 退出時輸出**逐位元**同這一批改動之前 —— 一般視角因此完全不付這一 pass 的錢。
+    if (this.enabled.dof && this._dofRange && this._dofA * this._dofBlend > 0) chain.push('dof');
     if (this.enabled.grade) chain.push('grade');
     // 最後一 pass **一定要跑**:它同時負責線性 → sRGB。`?fxaa=0` 只是把邊緣混合關掉
     // (`uAA = 0`),MUST NOT 整個 pass 跳過 —— 跳過的話畫面會整片變暗變濁(少了色彩空間轉換),
@@ -272,7 +400,7 @@ export class Pipeline {
     for (let i = 0; i < chain.length; i++) {
       const last = i === chain.length - 1;
       const dst = last ? null : (src === this.rtA ? this.rtB : this.rtA);
-      const quad = chain[i] === 'ink' ? this.inkQuad : chain[i] === 'grade' ? this.gradeQuad : this.fxaaQuad;
+      const quad = this._quads[chain[i]];
       const u = quad.material.uniforms;
       u.tColor.value = src.texture;
       if (u.uTexel) u.uTexel.value.copy(texel);
@@ -288,7 +416,7 @@ export class Pipeline {
     r.setRenderTarget(null);
   }
 
-  /** A25:3 個 RT + depthTexture + 3 個全螢幕材質,一個都不能漏(拉桿訂閱也要退掉) */
+  /** A25:3 個 RT + depthTexture + 4 個全螢幕材質,一個都不能漏(拉桿訂閱也要退掉) */
   dispose() {
     this._offPrefs?.();   // 不解訂閱 = 已 dispose 的材質被拉桿的 closure 抓著不放
     this._offPrefs = null;
@@ -296,7 +424,7 @@ export class Pipeline {
       rt.depthTexture?.dispose();
       rt.dispose();
     }
-    for (const q of [this.inkQuad, this.gradeQuad, this.fxaaQuad]) {
+    for (const q of [this.inkQuad, this.dofQuad, this.gradeQuad, this.fxaaQuad]) {
       q.material.dispose();
       q.dispose();
     }

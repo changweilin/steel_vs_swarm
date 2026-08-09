@@ -1,4 +1,4 @@
-// ============ 畫面表現旋鈕 / 陰影偏色 / 風化場 / 零件抖動 稽核(離線)============
+// ============ 畫面表現旋鈕 / 陰影偏色 / 風化場 / 零件抖動 / 景深模糊 稽核(離線)============
 // 涵蓋 docs/visual_upgrade_plan.md 的 P1-B(陰影偏色搬進 ramp)、P2-A(風化屬性場)、
 // P2-B(零件級細節抖動延伸到障礙與地標),以及把三者接上使用者的那一層(visualPrefs.js
 // + 設定頁拉桿 + 樣品畫面)。
@@ -19,6 +19,10 @@ import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsD
   from '../public/js/visualPrefs.js';
 import { partId, partJitter, vegPartXform } from '../public/js/xform.js';
 import { makeField, bakeFieldTexture } from '../public/js/field.js';
+import {
+  DOF, combatReachM, dofNearM, dofFarM, dofAimBlend, UNITS, HERO_SIZE, CHARACTERS, GAME, MAPGEO,
+  heroWeapon, heroAbility, altRangeMax, RANGE_TOL, hyperMaxArcM,
+} from '../public/js/data.js';
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -34,6 +38,7 @@ const bioSrc = readSrc('public', 'js', 'biomes.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
 const sampSrc = readSrc('public', 'js', 'matsample.js');
 const prefSrc = readSrc('public', 'js', 'visualPrefs.js');
+const dataSrc = readSrc('public', 'js', 'data.js');
 const htmlSrc = readSrc('public', 'index.html');
 const cssSrc = readSrc('public', 'css', 'style.css');
 const helpSrc = readSrc('public', 'js', 'help.js');
@@ -414,6 +419,165 @@ console.log('\nⅤ 設定頁與樣品');
   ok(/visual: \{/.test(helpSrc) && /data-tipkey="visual"/.test(htmlSrc), '設定區塊有 ⓘ 懸浮說明(常駐說明已下架的規矩)');
   ok(/\.vset-sample \{/.test(cssSrc) && /max-width: 100%/.test(cssSrc.slice(cssSrc.indexOf('.vset-sample'))),
     '樣品畫布夾 max-width(直式手機不得把設定頁撐出橫向捲軸,A20 家族)');
+}
+
+// ============ Ⅵ 景深模糊:距離推導、交戰距離恆清晰、0% 真的不跑 ============
+// 這一項與本檔其餘三項的差別:它是**唯一會增加繪圖成本**的效果(多一個全螢幕 pass),
+// 而且它動到的是「玩家看不看得清楚敵人」—— 起糊點一旦滑進交戰距離,就不再是表現層改動
+// 而是玩法改動(原則 4),而畫面上只表現成「這場好像比較難瞄」,沒有任何錯誤訊息。
+console.log('\nⅥ 景深模糊(data.js DOF + postfx 的 pass)');
+{
+  const gameSrc = readSrc('public', 'js', 'game.js');
+  const bp = bare(postSrc), bd = bare(dataSrc), bs = bare(sampSrc), bg = bare(gameSrc);
+
+  // ---- Ⅵ-a 兩個轉折點是推導的,不是寫死的 ----
+  // 定義式裡不得出現任何公尺數字面值:那兩個點 = 交戰距離上界 × 係數。手寫 456 的話,
+  // 之後任何一次射程 / 砲塔 / 招式的調整都不會跟著走,而且不會有任何錯誤訊息。
+  const defs = /export const dofNearM = ([^\n]*)\n[\s\S]*?export const dofFarM = ([^\n]*)/.exec(bd);
+  ok(!!defs, 'dofNearM / dofFarM 都是具名匯出');
+  ok(!!defs && !/\d{2,}/.test(defs[1] + defs[2]), '兩個轉折點的定義式內沒有公尺數字面值(推導不手寫)');
+  ok(near(dofNearM() / combatReachM(), DOF.NEAR_F) && near(dofFarM() / combatReachM(), DOF.FAR_F),
+    `兩個轉折點 = 交戰距離上界 ${combatReachM().toFixed(0)}m × 各自係數`);
+  ok(dofFarM() > dofNearM(), '全糊距離嚴格大於起糊距離');
+  // 全糊那一圈 = 使用者原本要「不顯示」的那一圈:日後真做距離剔除時,消失的邊界才會落在
+  // 全糊帶裡(憑空消失的那一下被模糊蓋住)。兩者 MUST 是同一組係數。
+  ok(near(DOF.NEAR_F, 1.5) && near(DOF.FAR_F, 2.0), '兩圈係數 = 使用者 2026-08-09 提的 1.5× / 2×');
+
+  // ---- Ⅵ-b **核心不變式**:打得到的東西恆為全清晰 ----
+  // 這一條就是「這是表現層改動而不是玩法改動」的全部依據(原則 4)。
+  // 上界在此**獨立重算**,MUST NOT 呼叫 `combatReachM` 去驗它自己。
+  {
+    const wF = altRangeMax() * RANGE_TOL;
+    let towerR = UNITS.tower?.range || 0, wMax = 0, aMax = 0;
+    for (const ch of Object.keys(CHARACTERS)) {
+      for (let lv = 1; lv <= 4; lv++) {
+        for (const s of ['light', 'heavy']) wMax = Math.max(wMax, heroWeapon(ch, s, lv, true)?.range || 0);
+        for (const s of ['skill', 'ult']) aMax = Math.max(aMax, heroAbility(ch, s, lv, true)?.range || 0);
+      }
+    }
+    const reach = Math.max(towerR, wMax * wF, aMax, hyperMaxArcM());
+    ok(near(reach, combatReachM(), 1e-6),
+      `交戰上界獨立重算對得上(塔 ${towerR} / 武器 ${(wMax * wF).toFixed(0)} / 招式 ${aMax.toFixed(0)}`
+      + ` / 載具航程 ${hyperMaxArcM().toFixed(0)} → ${reach.toFixed(0)}m)`);
+    ok(dofNearM() > reach,
+      `起糊距離 ${dofNearM().toFixed(0)}m > 全場最遠交戰距離 ${reach.toFixed(0)}m(交戰距離內恆為全清晰)`);
+    ok(dofNearM() / reach >= 1.4,
+      `而且留有餘裕(${(dofNearM() / reach).toFixed(2)}× ≥ 1.4)—— 貼著界跑的話射程一調就侵入交戰距離`);
+    // 錨 MUST NOT 退回「狙擊模式可視範圍」:COMBAT_SCALE 把 sight 砍半而地圖沒砍 ⇒ 現役的
+    // 狙擊可視(192~216m)比交戰上界還近,照那個錨取 1.5× 會讓起糊點落進交戰距離裡面。
+    const aimSight = Math.max(...Object.keys(HERO_SIZE).filter((k) => UNITS[k]?.sight)
+      .map((k) => UNITS[k].sight * GAME.AIM_SIGHT_MULT));
+    ok(aimSight < reach,
+      `反例存證:最遠狙擊可視 ${aimSight.toFixed(0)}m < 交戰上界 ${reach.toFixed(0)}m`
+      + ' ⇒ 錨在可視範圍會侵入交戰距離(這就是換錨的理由)');
+    ok(!/aimSightM/.test(bd), '舊的 aimSightM 錨沒有殘留');
+    // 起糊點 MUST 仍在最小地圖的視線範圍內,否則這個效果在 L1 等於不存在
+    const sideMin = (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM) * 1000 / MAPGEO.REAL_SCALE;
+    ok(dofFarM() < sideMin * Math.SQRT2,
+      `全糊距離 ${dofFarM().toFixed(0)}m < 最小地圖對角 ${(sideMin * Math.SQRT2).toFixed(0)}m(L1 也看得到這個效果)`);
+  }
+
+  // ---- Ⅵ-c 單一縫:公尺數只有 data.js 一份 ----
+  ok(!/\d+\.?\d*\s*\/\*\s*m\s*\*\//.test(bp) && !/uDofNear\.value = \d/.test(bp),
+    'postfx.js 不手寫任何公尺數(距離一律由 setDof 餵入)');
+  ok(count(bp, /setDof\s*\(/g) === 1, 'setDof 在 postfx.js 恰一份實作');
+  ok(count(bg, /setDof\(/g) === 1 && /setDof\(dofNearM\(\), dofFarM\(\)\)/.test(bg),
+    'game.js 恰一處餵距離,而且是直接轉呼 data.js(不自己算)');
+  ok(!/DOF\./.test(bg) && !/combatReachM/.test(bg),
+    'game.js 沒有第二份景深算式(射程一調,起糊距離 MUST 自己跟著走)');
+  ok(count(bs, /setDof\(/g) === 1 && /DOF_NEAR, DOF_FAR/.test(bs),
+    '樣品餵自己那一組尺度(規則同一份、尺度兩軌)');
+  // 定場鏡頭組是「改動前後各拍一次」的工具:沒餵距離 ⇒ `_dofRange` 恆為 null ⇒ 這一 pass
+  // 永遠不掛,而每一張圖與每一行讀數都照樣正常 = 它從此拍不到交付版本真正的樣子。
+  {
+    const shotSrc = bare(readSrc('tools', 'shot_scene.mjs'));
+    ok(/pipe\?\.setDof\(dofNearM\(\), dofFarM\(\)\)/.test(shotSrc), '定場鏡頭組也餵距離(否則永遠拍不到景深)');
+    ok(/dof: flag\('dof'\)/.test(shotSrc), '定場鏡頭組有 --dof=0 圖層隔離(與 ink/grade/fxaa 同一組)');
+  }
+
+  // ---- Ⅵ-c2 只在狙擊模式(2026-08-09 使用者補充)----
+  // 強度 MUST 由**當下的 fov** 反解而不是判 `aiming` 布林:右鍵拉近本來就有一條緩動,
+  // 布林是硬切、自己再跑一條淡入是第二條時間曲線(模糊比鏡頭慢半拍,而且不會報錯)。
+  {
+    const b = UNITS.robot.fov, z = UNITS.robot.zoomFov;
+    ok(dofAimBlend(b, b, z) === 0 && dofAimBlend(z, b, z) === 1, '一般視角 0 / 完全進鏡 1(兩端是定義)');
+    ok(near(dofAimBlend((b + z) / 2, b, z), 0.5), '中途線性 —— 與 fov 緩動同一條曲線');
+    let mono = true;
+    for (let i = 1; i <= 40; i++) {
+      const f0 = b - (b - z) * (i - 1) / 40, f1 = b - (b - z) * i / 40;
+      if (dofAimBlend(f1, b, z) < dofAimBlend(f0, b, z)) mono = false;
+    }
+    ok(mono, '拉近過程單調不回頭');
+    ok(dofAimBlend(b + 20, b, z) === 0 && dofAimBlend(z - 20, b, z) === 1, '帶外夾制(觀戰滾輪縮放不會溢出)');
+    ok(dofAimBlend(50, 68, 68) === 0 && dofAimBlend(50, 68, undefined) === 0,
+      'zoomFov 未設 / 與 baseFov 相同 ⇒ 恆 0(原則 6:偏差朝「看得清楚」)');
+    // 現役三機種都真的有進鏡帶(A8:全機種 fov 68 / zoomFov 35)
+    ok(Object.keys(HERO_SIZE).every((k) => dofAimBlend(UNITS[k].zoomFov, UNITS[k].fov, UNITS[k].zoomFov) === 1),
+      '現役每一種機體都進得了鏡(zoomFov < fov)');
+    // 單一呼叫點,而且 MUST 涵蓋陣亡 / 觀戰(留著上一幀的值 = 死了畫面還糊著)
+    ok(count(bg, /setDofBlend\(/g) === 1, 'game.js:setDofBlend 恰一個呼叫點');
+    ok(/this\.side && !this\.dead[\s\S]{0,140}: 0\)/.test(bg), '陣亡 / 觀戰恆 0(觀戰的滾輪縮放不得被誤讀成進鏡)');
+    ok(!/aiming \? .{0,40}dof/i.test(bg) && !/setDofBlend\(this\.aiming/.test(bg),
+      'MUST NOT 判 aiming 布林(硬切)—— 由 fov 反解才與拉近動畫同一條曲線');
+    // pass 端:0 ⇒ 整個退出鏈;uDofA 只有一個寫入點(拉桿與進鏡各寫一次 = 後寫的蓋掉前一個)
+    ok(/this\._dofA \* this\._dofBlend > 0/.test(bp), '不在狙擊模式時整個 pass 退出鏈(一般視角不付這一 pass 的錢)');
+    ok(count(bp, /uniforms\.uDofA\.value =/g) === 1 && /_pushDofA\(\)/.test(bp), 'uDofA 恰一個寫入點');
+    ok(/this\._dofBlend = 1;/.test(bp) && !/setDofBlend/.test(bs),
+      '預設 1 ⇒ 樣品與定場鏡頭組不必知道有「瞄準」這回事(預設 0 的話它們會靜靜地什麼都不糊)');
+  }
+
+  // ---- Ⅵ-d 順序:MUST 排在勾線之後 ----
+  // 先糊後勾 = 勾線讀的深度仍然銳利 ⇒ 在糊掉的色塊上畫出清楚的黑線。
+  {
+    const chain = /const chain = \[\][\s\S]*?chain\.push\('fxaa'\)/.exec(bp)?.[0] || '';
+    const iInk = chain.indexOf(`push('ink')`), iDof = chain.indexOf(`push('dof')`);
+    const iGrade = chain.indexOf(`push('grade')`);
+    ok(iInk >= 0 && iDof > iInk, '景深排在勾線之後(否則糊掉的物件有銳利輪廓)');
+    ok(iGrade > iDof, '景深排在調色之前');
+  }
+
+  // ---- Ⅵ-e 0% MUST 是「不跑」而不是「跑一個乘 0 的 pass」----
+  ok(/this\.enabled\.dof && this\._dofRange && this\._dofA \* this\._dofBlend > 0/.test(bp),
+    '四個關法任一成立即整個 pass 退出鏈(?dof=0 / 沒餵距離 / 拉桿 0% / 不在狙擊模式)');
+  ok(/dof: !off\('dof'\)/.test(bg), 'game.js 有 ?dof=0 的圖層隔離旗標(與 ink/grade/fxaa 同一組)');
+  ok(/this\._dofRange = null/.test(bp) && /if \(!\(near >= 0\) \|\| !\(far > near\)\)/.test(bp),
+    '非法距離退回「不掛這一 pass」(原則 6:預設不生效,MUST NOT 猜一個距離)');
+  ok(VISUAL_KNOBS.dof.min === 0 && VISUAL_KNOBS.dof.def === 1,
+    '拉桿可以拉到 0(= 這一層完全不跑),預設 1 = 交付定案值');
+
+  // ---- Ⅵ-f 前景不得被抹進遠景 / 取樣點填滿圓盤 ----
+  ok(/step\( coc \* 0\.5, smoothstep\( uDofNear, uDofFar, lin\( vUv \+ o \) \) \)/.test(bp),
+    '鄰居取樣過焦外閘(近處清晰物件 MUST NOT 被抹進遠景 = 剪影外一圈光暈)');
+  ok(/if \( rp < 0\.5 \) \{ gl_FragColor = base; return; \}/.test(bp),
+    '焦內像素早退(這一 pass 的平均成本 = 一次深度 + 一次顏色取樣)');
+  ok(/Math\.sqrt\(\(i \+ 0\.5\) \/ n\)/.test(bp) && /2\.39996/.test(bp),
+    '取樣點是黃金角螺旋且半徑開根號(面積均勻;單一圓環會糊成甜甜圈邊)');
+  ok(/_dofA = DOF\.MAX_R \* visualPref\('dof'\)/.test(bp) && /uDofA \/ uTexel\.y/.test(bp),
+    '最大半徑是螢幕高度的比例(與解析度和 RES_GOV 降階無關),不是寫死的像素');
+  ok(count(bp, /new FullScreenQuad\(/g) === 4
+    && /\[this\.inkQuad, this\.dofQuad, this\.gradeQuad, this\.fxaaQuad\]/.test(bp),
+    'A25:四個全螢幕材質都在 dispose 的名冊裡');
+
+  // ---- Ⅵ-g 樣品的景深帶 MUST 夾住樣品場景 ----
+  // 沿用戰場那一組(576~864m)的話,24m 深的樣品每一個像素都在焦內 = 拉桿拉了看不出差異
+  // ——陰影偏色與風化密度各踩過一次的同一個坑。
+  {
+    const nm = /const DOF_NEAR = ([\d.]+), DOF_FAR = ([\d.]+)/.exec(bs);
+    const bz = /const BG_Z = (-?[\d.]+)/.exec(bs);
+    ok(!!nm && !!bz, '樣品的景深帶與背景排位置都是具名常數');
+    const [dn, df] = [Number(nm?.[1]), Number(nm?.[2])];
+    const camZ = 9.2, camY = 2.1;
+    ok(df > dn && dn > 0, `樣品景深帶合法(${dn} → ${df}m)`);
+    // 前景三件(z ≈ 0~1.4)MUST 全部在 NEAR 之內;背景排 MUST 在 FAR 之外
+    const dist = (x, y, z) => Math.hypot(x, y - camY, z - camZ);
+    ok(dist(2.2, 1.1, 1.3) < dn && dist(-2.3, 1.0, 1.4) < dn,
+      `前景全部落在焦內(最近 ${dist(-2.3, 1.0, 1.4).toFixed(1)}m < ${dn}m ⇒ 恆為全清晰`);
+    const bgD = dist(0, 1.3, Number(bz?.[1]));
+    ok(bgD >= df * 0.94, `背景排吃滿模糊(${bgD.toFixed(1)}m ≈ ${df}m 的全糊帶)`);
+    ok(dist(0, 0, -12) > df, '地面遠端也在全糊帶裡(24m 那片地的後緣)');
+    ok(/const bgGeo = new THREE\.BoxGeometry/.test(bs) && /this\._geos = \[[^\]]*bgGeo\]/.test(bs),
+      '背景排共用一份幾何且進了 _geos(A25)');
+  }
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
