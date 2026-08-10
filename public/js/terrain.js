@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { envMat } from './hazards.js';
 import { setWeatherField } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
-import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites, curveMaxEdgeM } from './data.js';
+import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites, curveMaxEdgeM, edgeBufferM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -514,6 +514,7 @@ export async function buildTerrain(cfg, onProgress) {
   // 水面(有低於海平面的區域才加);waterY = 水面高(無水域 = null,供 game.js 涉水/深水物理)。
   // 水面高的唯一真相 = data.js WATER.LEVEL(涉水深/道路跨水判定共用同一數字)。
   let waterY = null;
+  let waterMat = null;   // 緩衝空間的外環水面共用**同一份**材質(見檔尾 buildEdgeSkirt)
   if (minH < WATER.LEVEL + 0.2) {
     waterY = WATER.LEVEL;
     // 分段數由 `curveMaxEdgeM()` 推導(MUST NOT 手寫):世界曲面是**逐頂點**沉降,一整片
@@ -531,6 +532,7 @@ export async function buildTerrain(cfg, onProgress) {
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);
     group.add(water);
+    waterMat = water.material;
   }
 
   // 世界座標高度取樣。
@@ -559,6 +561,110 @@ export async function buildTerrain(cfg, onProgress) {
   // 快照時機 = 地形建完(carve* / gradeRoadBeds 都在 buildBiomes 才呼叫)⇒ 恆是原始地形。
   const heights0 = new Float32Array(heights);
   const natureAt = (x, z) => sampleField(heights0, x, z);
+
+  // ---- 緩衝空間:地形範圍之外的外緣裙(2026-08-10 使用者定案)----
+  // 使用者原話的後半:「會再延伸可視距離但**不可進入**的緩衝空間」。「不可進入」是**既有的**
+  // 保證(`game.js` 的 x/z 夾制與高度無關,連飛行機體翻過障礙環也進不來)⇒ 這一段只負責
+  // 「看得到」:把地形往外再鋪 `edgeBufferM()`,舊制走到邊界往外看是「40m 的地,然後什麼
+  // 都沒有」,改制後那個方向一路連到地平線。
+  // 五條紀律:
+  //  ①**深度推導不手寫** = `edgeBufferM()`(← `curveHorizonM()`):曲面把地表視角的極大值鎖在
+  //    地平線那一圈,更遠的地面一律被較近的地面擋住 ⇒ 裙的外緣恰好落在「再往外也看不到」的
+  //    位置,**地圖結構性地不會露出硬邊**;而視點恆在障礙環之內(離地形邊 ≥ `WALL_M`)⇒ 還
+  //    多出那一段餘裕。手寫公尺數的下場是改了射程/塔/機體之後地平線自己跑掉、裙留在原地。
+  //  ②**與地形逐點水密**:內緣頂點取地形自己的格距(N−1),外帶取 `curveMaxEdgeM()`
+  //    (與水面同一把尺)。內緣若用粗格,一條 52m 的弦跨過真實起伏就是**幾公尺的裂縫**。
+  //    高度在 d=0 恰為 `heightAt(邊點)`(= 地形那一顆頂點),接縫逐位元對齊。
+  //  ③**外推是地形自己的坡度,不是憑空造山**:以邊上一格的落差往外延伸並指數收斂,
+  //    再夾回全圖的 [minH, maxH] ⇒ d=0 連續、切線連續、不會長出比這張圖更高的山。
+  //  ④**材質共用地形那一份**(影像路徑靠 UV 夾制取到邊緣像素、無影像路徑走同一支
+  //    `paintTerrainTones`)⇒ 顏色天生接得上,也**不新增第四份 envMat**(cel 管線稽核以
+  //    「地形兩條路徑 + 水面共三處」釘住這個計數)。水面同理共用 `waterMat`。
+  //  ⑤**純表現層**:不進 blockers / occ / LOS / heightAt / 小地圖框(那些全吃
+  //    `minX..maxX`),伺服器完全不知道它的存在(原則 4)。
+  //  已知界線:①的餘裕錨在**地面視點**(`curveEyeM`,與地平線的反解同一個錨)—— 飛到天花板
+  //  高度時視野本來就遠得多,裙的外緣會露出來;那是世界曲面本身的界線,不是這一段的。
+  //  另:`carveTunnels`/`gradeRoadBeds` 是**之後**才動 `heights` 的局部開挖,裙是靜態幾何
+  //  ⇒ 若有道路一路挖到圖界,接縫會差一個開挖深度(現制的路在障礙環處就封死了)。
+  {
+    const B = edgeBufferM(), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
+    const S = Math.max(1, (maxX - minX) / (N - 1));   // 一格地形(外推坡度的取樣距)
+    const DEC = B / 3;                                 // 外推衰減長度
+    // 非均勻軸:外帶(粗) + 內域(地形格距) + 外帶(粗);內域頂點與地形邊逐點對齊
+    const axis = (lo, hi) => {
+      const a = [];
+      for (let k = 0; k <= OUT; k++) a.push(lo - B + (B * k) / OUT);
+      for (let k = 1; k <= N - 1; k++) a.push(lo + ((hi - lo) * k) / (N - 1));
+      for (let k = 1; k <= OUT; k++) a.push(hi + (B * k) / OUT);
+      return a;
+    };
+    const xs = axis(minX, maxX), zs = axis(minZ, maxZ);
+    const W = xs.length;
+    const clampX = (x) => Math.min(maxX, Math.max(minX, x));
+    const clampZ = (z) => Math.min(maxZ, Math.max(minZ, z));
+    const outerH = (x, z) => {
+      const cx = clampX(x), cz = clampZ(z);
+      const d = Math.hypot(x - cx, z - cz);
+      const h0 = heightAt(cx, cz);
+      if (d < 1e-6) return h0;
+      const ux = (x - cx) / d, uz = (z - cz) / d;
+      const g = (h0 - heightAt(cx - ux * S, cz - uz * S)) / S;   // 往外的坡度
+      return Math.min(maxH, Math.max(minH, h0 + g * DEC * (1 - Math.exp(-d / DEC))));
+    };
+    const uvOf = (x, z) => {
+      if (!imagery) return [0, 0];
+      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * (clampX(x) - minX) / (maxX - minX);
+      const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * (clampZ(z) - minZ) / (maxZ - minZ);
+      return [((lon2tx(lng, imagery.z) - imagery.tx0) * 256) / imagery.canvas.width,
+        1 - ((lat2ty(lat, imagery.z) - imagery.ty0) * 256) / imagery.canvas.height];
+    };
+    // 只為真的用到的頂點配空間(內域那一大塊的頂點一顆都不建)
+    const seen = new Map(), Pv = [], Uv = [], Ig = [], Iw = [];
+    const vid = (i, j) => {
+      const k = i * W + j;
+      let v = seen.get(k);
+      if (v === undefined) {
+        seen.set(k, v = Pv.length / 3);
+        Pv.push(xs[j], outerH(xs[j], zs[i]), zs[i]);
+        const [u, vv] = uvOf(xs[j], zs[i]);
+        Uv.push(u, vv);
+      }
+      return v;
+    };
+    for (let i = 0; i < zs.length - 1; i++) {
+      for (let j = 0; j < W - 1; j++) {
+        // 內域的格交給真地形(這裡只鋪「地形範圍之外」那一圈)
+        if (i >= OUT && i < OUT + N - 1 && j >= OUT && j < OUT + N - 1) continue;
+        const a = vid(i, j), b = vid(i, j + 1), c = vid(i + 1, j), dd = vid(i + 1, j + 1);
+        Ig.push(a, c, b, b, c, dd);
+        Iw.push(a, c, b, b, c, dd);
+      }
+    }
+    const spos = new Float32Array(Pv);
+    const sgeo = new THREE.BufferGeometry();
+    sgeo.setAttribute('position', new THREE.BufferAttribute(spos, 3));
+    sgeo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(Uv), 2));
+    sgeo.setIndex(Ig);
+    if (!imagery) paintTerrainTones(sgeo, spos, { minX, maxX, minZ, maxZ }, center);
+    sgeo.computeVertexNormals();
+    const skirt = new THREE.Mesh(sgeo, mat);   // 與地形共用材質(見 ④)
+    skirt.receiveShadow = true;
+    skirt.frustumCulled = false;   // 環繞相機:整體包圍球恆與視錐相交,逐幀剔除只是白算
+    group.add(skirt);
+    if (waterY != null && waterMat) {
+      // 外環水面:同一組座標軸鋪平在 waterY(內域同樣留給既有的水盤)⇒ 沿海場地的海面
+      // 一路連到地平線,而不是在圖界戛然而止露出乾河床
+      const wp = new Float32Array(Pv.length);
+      for (let k = 0; k < Pv.length; k += 3) { wp[k] = Pv[k]; wp[k + 1] = waterY; wp[k + 2] = Pv[k + 2]; }
+      const wgeo = new THREE.BufferGeometry();
+      wgeo.setAttribute('position', new THREE.BufferAttribute(wp, 3));
+      wgeo.setIndex(Iw);
+      wgeo.computeVertexNormals();
+      const wRing = new THREE.Mesh(wgeo, waterMat);
+      wRing.frustumCulled = false;
+      group.add(wRing);
+    }
+  }
 
   // ---- 地形射線(解析版;取代 three Mesh.raycast 的逐三角掃描)----
   // 地形是**高度場**:193² 網格 = 73,728 個三角形,three 的 Mesh.raycast 每次都整批線性掃完

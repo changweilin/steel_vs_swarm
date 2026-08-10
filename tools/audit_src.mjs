@@ -55,7 +55,18 @@ export const grabMethod = (src, name) => {
 export const grabFn = (src, name) => {
   const m = new RegExp(`\\n(export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(src);
   if (!m) throw new Error(`找不到 function ${name}`);
-  return grabAt(src, m.index + 1 + (m[1]?.length ?? 0));
+  const start = m.index + 1 + (m[1]?.length ?? 0);
+  // 大括號配對 MUST 從**函式本體**那一個 `{` 起算:參數列可以是解構樣式
+  // (`function f({ a, b })`),從 `function` 起算會停在**參數列**的右大括號上 ⇒ 抽出來的
+  // 原文少了整個函式本體,而 `new Function` 丟的是「Unexpected token 'return'」——
+  // 指向呼叫端拼在後面的那一行,看起來完全像別的問題。
+  let d = 0, i = src.indexOf('(', start);
+  for (; i < src.length; i++) {
+    if (src[i] === '(') d++;
+    else if (src[i] === ')') { d--; if (d === 0) { i++; break; } }
+  }
+  const body = src.indexOf('{', i);
+  return src.slice(start, body) + grabAt(src, body);
 };
 
 /**

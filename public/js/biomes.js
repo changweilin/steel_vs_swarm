@@ -25,7 +25,10 @@
 // 三者皆登記碰撞柱作障礙與隱蔽;神木與巨岩先於一般植被佔位,小植被/地被自動避開。
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit } from './data.js';
+import {
+  ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
+  WORLD_EDGE, edgeWallInsetM, edgeWallHM,
+} from './data.js';
 import { llToWorld } from './terrain.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
@@ -6896,14 +6899,108 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
   return built;
 }
 
-// ---- 邊界帶(空氣牆死區)的視覺邊界 ----
-// 空氣牆在地形內縮 40m(game.js 夾 pos);邊界帶(內縮 8~34m)玩家永遠到不了。
+// ---- 邊界障礙環(2026-08-10 使用者定案「邊界加入不可越過的障礙」)----
+// 舊制的邊界是一道**隱形**空氣牆(game.js 夾 x/z):走到那裡莫名停住,而邊界帶的樓群/神木/
+// 巨岩只是「看起來被圍住」—— 真正擋人的東西看不見、也打不到。改制:沿四緣鋪一圈**連續**的
+// 實體環,內緣恰好貼在夾制線上 ⇒ 地面機體恆先撞到看得見的東西,那兩行夾制永遠用不到。
+// 六條紀律,每一條壞掉都沒有錯誤訊息:
+//  ①**環是權威幾何**:進 `blockers` ⇒ 客戶端 `_collide`/`_sweepBlockers` 與伺服器 `occ`/
+//    `_losBlocked` 吃**同一個有向盒**(A30),而演出的盒子與那個盒子逐位元同尺寸
+//    (看到多粗 = 撞到多粗 = 打到多粗,原則 4)。
+//  ②**「不可越過」是結構保證不是校準**:相鄰段以 `SEG_LAP_F` 互相咬住 ⇒ 環上沒有縫,
+//    不必回頭問「最窄的機體有多寬」;四個角落由 X 邊與 Z 邊互相跨過封死(兩組邊都跑滿整個
+//    worldW/worldH,刻意不各自讓開)。飛行那一半仍歸 x/z 夾制(見 data.js WORLD_EDGE 檔頭)。
+//  ③**零共享 `rnd()` 消耗**(§2.3):段位/高度/選色全由座標與地形推導 —— 選色走
+//    `classifyImg`(純影像判、零亂數),MUST NOT 改吃 `classify`(那一支會抽 `rnd()`,
+//    當場把後面每一株植被的佈局整條推移)。
+//  ④**MUST 排在 `blockers` 陣列最前面**:`main.js` 的 occ 上傳是 `slice(0, LOS.MAX_OCC)`,
+//    環擺在尾端的話密集市區會把它整段切掉 ⇒ 客戶端擋得住、伺服器不知道有牆(兩端分家)。
+//  ⑤**頂面不可站立**(不掛 `bld`/`std`):環頂是邊界不是平台,掛上去就變成「跳上牆沿著邊界跑」。
+//  ⑥`ry` 只取 0 / π/2:對稱盒在這兩個角度上「繞 +ry 還是 −ry」逐位元同判(|lx|/|lz| 只是
+//    對調),⇒ 客戶端 `_collide`、`makeBlockerTopIndex`、伺服器 occ 的 ry 反號三者天生同判,
+//    A30 那個「差一個負號 = 牆在另一邊」的坑在這裡結構性地不存在。
+function buildEdgeWall({ group, terrain, blockers }) {
+  const inset = edgeWallInsetM(), T = WORLD_EDGE.WALL_T, WH = edgeWallHM();
+  const hd2 = T / 2;                                          // 橫向(厚度)半寬
+  const half = WORLD_EDGE.SEG_M / 2 * WORLD_EDGE.SEG_LAP_F;   // 沿邊半長(> 半間距 ⇒ 段段重疊)
+  const mid = inset - hd2;                                    // 環心內縮:內緣恰好落在夾制線上
+  const STYLE = {   // 地貌 → 環體型式(body / cap 兩色;cap 腳印 MUST NOT 大於 body,見 ①)
+    urban: [0x9aa2a8, 0x7f868c],   // 混凝土擋牆
+    water: [0x93999e, 0x787e83],   // 消波堤(水域段照樣連續 —— 缺一段就是「不可越過」不成立)
+    bare: [0x8a8072, 0x70685c],    // 岩壁
+    green: [0x6f7355, 0x565a41],   // 土堤
+  };
+  const segs = [];
+  const edges = [
+    { ax: 1, x0: terrain.minX, z0: terrain.minZ + mid, len: terrain.worldW, ry: 0 },
+    { ax: 1, x0: terrain.minX, z0: terrain.maxZ - mid, len: terrain.worldW, ry: 0 },
+    { ax: 0, x0: terrain.minX + mid, z0: terrain.minZ, len: terrain.worldH, ry: Math.PI / 2 },
+    { ax: 0, x0: terrain.maxX - mid, z0: terrain.minZ, len: terrain.worldH, ry: Math.PI / 2 },
+  ];
+  for (const e of edges) {
+    const n = Math.max(1, Math.round(e.len / WORLD_EDGE.SEG_M));
+    const step = e.len / n;
+    for (let i = 0; i < n; i++) {
+      const d = (i + 0.5) * step;
+      const x = e.ax ? e.x0 + d : e.x0;
+      const z = e.ax ? e.z0 : e.z0 + d;
+      // 沿段身取樣:底埋到最低點之下、頂面高過最高點 WH ⇒ 斜坡上不懸空也不被地形吃掉
+      let lo = Infinity, hi = -Infinity;
+      for (let k = -2; k <= 2; k++) {
+        const t = k / 2 * half;
+        const h = terrain.heightAt(e.ax ? x + t : x, e.ax ? z : z + t);
+        lo = Math.min(lo, h); hi = Math.max(hi, h);
+      }
+      const y = lo - 1.5;
+      const st = classifyImg(terrain.sampleColor?.(x, z)) || 'green';
+      segs.push({ x, z, y, h: hi - y + WH, hw2: half, hd2, ry: e.ry, st: STYLE[st] ? st : 'green' });
+    }
+  }
+  // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
+  for (const s of segs) {
+    blockers.push({ x: s.x, z: s.z, y: s.y, h: s.h, hw2: s.hw2, hd2: s.hd2, ry: s.ry, r: Math.hypot(s.hw2, s.hd2) });
+  }
+  // 演出:逐型式各一個 InstancedMesh(body + cap)。盒身尺寸 = 碰撞盒尺寸,逐位元相同。
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
+  const P = new THREE.Vector3(), S = new THREE.Vector3();
+  const capH = Math.min(0.9, WH * 0.14);
+  for (const key of Object.keys(STYLE)) {
+    const list = segs.filter((s) => s.st === key);
+    if (!list.length) continue;
+    const [cBody, cCap] = STYLE[key];
+    const bodyM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), envMat(cBody, { wash: 0.4, cool: 0.4 }), list.length);
+    const capM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), envMat(cCap, { wash: 0.3, cool: 0.45 }), list.length);
+    list.forEach((s, i) => {
+      E.set(0, s.ry, 0); Q.setFromEuler(E);
+      P.set(s.x, s.y + s.h / 2, s.z);
+      S.set(s.hw2 * 2, s.h, s.hd2 * 2);
+      M.compose(P, Q, S);
+      bodyM.setMatrixAt(i, M);
+      P.set(s.x, s.y + s.h - capH / 2, s.z);
+      S.set(s.hw2 * 2, capH, s.hd2 * 2);
+      M.compose(P, Q, S);
+      capM.setMatrixAt(i, M);
+    });
+    for (const m of [bodyM, capM]) {
+      m.instanceMatrix.needsUpdate = true;
+      m.castShadow = false;
+      m.frustumCulled = false;   // 環繞全圖:整體包圍球比視錐大,逐幀剔除只會整圈忽隱忽現
+      group.add(m);
+    }
+  }
+  return segs;
+}
+
+// ---- 邊界帶(障礙環外的緩衝空間)的視覺邊界 ----
+// 障礙環佔內縮 [WALL_M − WALL_T, WALL_M];本帶在它**之外**(內縮 8m ~ 環的外緣)玩家永遠到不了。
 // 沿四緣依地貌放置邊界物:市區 → 樓群、綠地/濕地 → 神木、裸露地 → 巨岩簇,
 // 讓「打不開的邊」看起來是被城市/森林/岩壁圍住,而不是隱形牆。
 // 全部走既有管線(generic 建物 / items 植被 InstancedMesh);邊界樓沿管線
 // 也會登記碰撞柱 —— 反正在空氣牆外不可達,無礙。
 function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
-  const IN0 = 8, IN1 = 34;
+  // 帶的內緣 = 障礙環的外緣(推導不手寫:改環厚/內縮量,這一帶自己跟著讓開)。
+  // 現值與舊制的 34 逐位元相同 ⇒ 這一支的亂數序列與佈局完全不變。
+  const IN0 = 8, IN1 = edgeWallInsetM() - WORLD_EDGE.WALL_T;
   const species = Object.keys(GIANT_DEFS);
   const edges = [
     { x0: terrain.minX, z0: terrain.minZ, dx: 1, dz: 0, len: terrain.worldW },
@@ -6981,12 +7078,14 @@ function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
   return placed;
 }
 
-// ---- 邊界道路封鎖事件:道路穿出空氣牆處,以車禍/施工/巨坑封路 ----
-// 對每條實體道路折線,找「內 → 外」跨越內縮 40m 空氣牆線的交點,
-// 在交點內側放事件障礙(沿路面朝向)—— 向玩家解釋「這條路斷了」,
-// 而不是開到隱形牆前莫名停下。障礙登記小碰撞柱(它就是封鎖物)。
+// ---- 邊界道路封鎖事件:道路穿出障礙環處,以車禍/施工/巨坑封路 ----
+// 對每條實體道路折線,找「內 → 外」跨越障礙環內緣的交點,在交點內側放事件障礙(沿路面朝向)
+// —— 向玩家解釋「這條路斷了」。障礙環上線後這一支仍留著:環是**沿著邊界**的一堵牆,
+// 而封路事件是**沿著這條路**的敘事(路為什麼到此為止),兩者說的不是同一件事。
+// 內縮量吃 `edgeWallInsetM()` 單一縫 —— 手寫 40 的話改了環的位置,封路障礙會留在原處
+// (症狀:車禍現場離牆十幾公尺,中間一段沒有理由的柏油)。
 function buildRoadBlocks(group, roads, terrain, center, blockers, rnd) {
-  const INSET = 40;
+  const INSET = edgeWallInsetM();
   const x0 = terrain.minX + INSET, x1 = terrain.maxX - INSET;
   const z0 = terrain.minZ + INSET, z1 = terrain.maxZ - INSET;
   const inside = (p) => p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1;
@@ -7236,7 +7335,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   onProgress?.(0.02, '規劃兵線淨空走廊…');
   const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
   const blocked = buildClearance(cfg, center);
-  const inb = 30;   // 邊界內縮
+  // 地物散布的邊界內縮 = 障礙環內緣(推導不手寫):舊制的 30 讓落點可以抽在環體 [34,40] 之內,
+  // 樹幹/岩塊會長在牆裡。改吃同一支之後,散布範圍恰好就是「玩家進得去的那一塊」。
+  const inb = edgeWallInsetM();
   const rx = () => terrain.minX + inb + rnd() * (terrain.worldW - inb * 2);
   const rz = () => terrain.minZ + inb + rnd() * (terrain.worldH - inb * 2);
 
@@ -7484,6 +7585,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // ---- 神木群落 + 巨岩地標:先於一般植被佔位(小植被/地被/建物自動避開)----
   onProgress?.(0.04, '安置神木群落與巨岩地標…');
   const blockers = [];   // 建物/神木/巨岩碰撞柱(main.js → terrain.blockers → game.js _collide)
+  // 邊界障礙環:MUST 是 blockers 的**第一批**(main.js 的 occ 上傳 slice(0, LOS.MAX_OCC),
+  // 排在尾端會被密集市區擠掉 = 伺服器不知道有牆);排在這裡也保證地形開挖/整平都已定案。
+  // 零共享 rnd 消耗 ⇒ 插在這一行不會推移後面任何一株植被的佈局(§2.3)。
+  const edgeSegs = buildEdgeWall({ group, terrain, blockers });
   const greenSites = [], bareSites = [];
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
     const x = rx(), z = rz();
@@ -7575,6 +7680,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 全建物共用占位網格(OSM/離線/地標/補間):佔地是隨機抽的、不是 OSM 實測輪廓,
   // 相鄰 OSM 種子放大後會彼此互穿 —— 一律先驗占位再收
   const occ = makeOccupancy();
+  // 障礙環先佔位:邊界帶的樓群/神木/巨岩經既有的 `occ.room` 自動縮到環外(不佔位就是
+  // 巨幹/樓身長進環體)。環在 blockers 定案時就算好了,這裡只是把同一份幾何登記進占位網格。
+  for (const s of edgeSegs) occ.add(s.x, s.z, Math.hypot(s.hw2, s.hd2));
   // 街道淨空(2026-07-17 巴黎建物騎路案):OSM 建物只有中心點、量體與朝向是程序抽的,
   // 沿街種子與補間網格會直接壓上路面 —— 道路以占位圓帶進 occ,建物系統(種子/補間/邊界物)
   // 經既有 occ.free 檢查自動避讓。占位圓只作用於建物,植被/危險區不查 occ,影響面最小;
