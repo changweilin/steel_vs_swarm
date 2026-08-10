@@ -70,6 +70,20 @@ export const grabFn = (src, name) => {
 };
 
 /**
+ * 從**任意標記**起做大括號配對,抽出那一段區塊的原文(`if (m.t === 'osm') {` 這類
+ * 訊息分派分支)。方法 / 頂層函式 / const 三支都定位不到它們 —— 沒有這一支的話,消費端
+ * 只能對整檔跑 regex,那會**跨分支誤命中**(別的分支裡出現同一個字串就算過),而且看起來
+ * 一樣綠。大括號配對走 `grabAt` 同一份實作。
+ * @param {string} src    已正規化的原文
+ * @param {string} marker 區塊起點的字面標記(取第一個出現處,其後第一個 `{` 開始配對)
+ */
+export const grabBlock = (src, marker) => {
+  const i = src.indexOf(marker);
+  if (i < 0) throw new Error(`找不到區塊 ${marker}`);
+  return grabAt(src, src.indexOf('{', i));
+};
+
+/**
  * 抽出**頂層 const 物件字面值**的原文(含大括號區塊),回傳可直接丟進 `new Function` 的
  * `const NAME = {...}`(去掉 `export`)。
  * 用途:一批表(`biomes.js` 的 `GIANT_DEFS`/`MEGALITHS`/`LANDMARK_COL`、`beacons.js` 的

@@ -11,7 +11,7 @@ import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
-  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc,
+  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
@@ -24,7 +24,12 @@ import { avatarURL, portraitURL } from './portraits.js';
 
 import { MapSelect } from './mapSelect.js';
 import { buildTerrain, battleBBox } from './terrain.js';
-import { buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm } from './biomes.js';
+import {
+  buildBiomes, makeDeckIndex, makeTunnelIndex, makeBlockerTopIndex, terrainEnvCode, warmOsm,
+  commitOsmIn, osmInReady, resetOsmMisses, fetchGridRoads,
+} from './biomes.js';
+import { roadGridRotDeg } from './roadgrid.js';
+import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from './osmrelay.js';
 import { makeClimbIndex } from './climb.js';
 import { envLabel } from './environment.js';
 import { preloadModels } from './models.js';
@@ -197,6 +202,8 @@ const NET_HANDLERS = {
     if (app.phaseShown === 'story' && app.story) { app.story = null; $('storyDeploy').style.display = 'none'; renderStoryChapters(); }
   },
   info: (m) => toast(m.msg),
+  // 路網中繼:房主抓到的 OSM 圖資(見 osmGate)。可能比 sync 早到,也可能晚到 —— 兩種都要收。
+  osm: (m) => onOsmRelay(m),
   // 對局中 WS 斷線重連,伺服器會補送 battleConfig:戰場還活著就不重建(快照恢復即續戰);
   // 只有沒有現役戰場(初載/跳頁後回連/中途觀戰加入)才走載入流程
   battleConfig: (m) => { if (!app.battle) enterLoading(m.config); },
@@ -701,14 +708,49 @@ function leaveBattle() {
   location.reload();
 }
 
+/**
+ * 自訂地圖的**主方位**(2026-08-10;A42 ③ 的執行期那一半)。預設場地吃 `venueGrid.js` 的離線
+ * 烘焙表,手動點選的地圖沒有那一份 ⇒ 在這裡量一次,寫死進 cfg。
+ *
+ * **為什麼是「存入最愛」這一刻**:θ 是**座標框**,MUST 在 battleConfig 定案之前就凍結成常數。
+ * 建圖期(`startPrebuild`/`buildBiomes`)量是致命的 —— 那是每台客戶端各跑一次的,而
+ * Overpass 逐局成敗不同 ⇒ A 量到 −29°、B 量到 0°,兩台的**所有**座標差一個旋轉(比「少幾座橋」
+ * 嚴重一個量級)。存最愛則是:使用者主動觸發、一次性、由房主自己做、輸出直接進 battleConfig
+ * 廣播全房。取樣面與量測框與離線烘焙同一支(`roadgrid.roadGridRotDeg`)。
+ *
+ * 舊的「我的最愛」沒有這一欄 ⇒ `mapRot()` 回 0 = 不旋轉 = 逐位元同舊制,**刻意不追溯量測**
+ * (開戰時刻畫面再加一次網路依賴,換來的只是舊存檔轉個角度)。
+ * 量不到(沒有大馬路 / Overpass 掛掉)一律定案 0:降級不例外,而且**定案**才不會下次又問一遍。
+ */
+async function resolveMapRot(cfg) {
+  if (!cfg?.center || cfg.center.rot != null) return cfg;   // 預設場地已有烘焙值(含「量不到 ⇒ 0」)
+  const c0 = { lat: cfg.center.lat, lng: cfg.center.lng };   // 量測框 MUST **未旋轉**(見 roadGridRotDeg ②)
+  let deg = null;
+  try {
+    const ways = await fetchGridRoads(battleBBox(cfg));
+    deg = ways?.length ? roadGridRotDeg(ways, (p) => llToXZ(p.lat, p.lon, c0)) : null;
+  } catch { /* 降級不例外(§2.4):量不到就不旋轉 */ }
+  cfg.center.rot = deg == null ? 0 : deg * Math.PI / 180;
+  return cfg;
+}
+
 $('saveFavBtn')?.addEventListener('click', async () => {
   const cfg = app.favCfg || app.mapSel?.buildConfig();
   if (!cfg) return;
-  await app.mapSel.fetchPlaceName(cfg);
+  const btn = $('saveFavBtn');
+  const prevStatus = $('mapStatus').innerHTML;   // 量測是短暫的過場,MUST 還原原本的選址摘要
+  btn.disabled = true;
+  try {
+    await app.mapSel.fetchPlaceName(cfg);
+    if (cfg.center?.rot == null) $('mapStatus').textContent = '量測地圖主方位(對齊大馬路)…';
+    await resolveMapRot(cfg);
+  } finally { btn.disabled = false; $('mapStatus').innerHTML = prevStatus; }
   const name = prompt('地圖名稱:', cfg.placeName)?.trim();
   if (!name) return;
   saveFavorite(name, app.teamSize, cfg);
-  toast(`⭐ 已存入最愛:${name}(可到「開戰時刻」選用)`);
+  const rotDeg = cfg.center.rot * 180 / Math.PI;
+  toast(`⭐ 已存入最愛:${name}(可到「開戰時刻」選用)`
+    + (Math.abs(rotDeg) > 0.05 ? ` ・地圖主方位 ${rotDeg.toFixed(1)}°` : ''));
 });
 
 $('resetSiteBtn')?.addEventListener('click', () => {
@@ -1643,6 +1685,89 @@ function renderPreloadStatus() {
     : `⏳ 戰場預載 ${Math.round(pre.prog * 100)}% ・ ${pre.label}`;
 }
 
+// ---- 路網中繼(2026-08-10 使用者定案「圖資儲存在開房者,再由開房者透過 server 傳給入房者」)----
+// 【修的是既有的跨客戶端分家】`startPrebuild` 是每台客戶端各跑一次的,而 `scheduleOsmRetry`
+// 的存在本身就證明「這一輪 Overpass 被限流」是常態 ⇒ A 抓到、B 沒抓到,兩台在建**不同的
+// 世界**:橋、隧道、明隧道、地下道、建物、碰撞柱、街廓朝向全不一樣,而且沒有任何錯誤訊息。
+// 中繼之後全房逐位元同一份路網,Overpass 也從「每人一次」變成「每房一次」。
+// 【三條紀律】
+//  ① 走**一次性訊息**,MUST NOT 塞進 `sync`(它會重播多次,幾百 KB 乘上去不可接受);
+//     入房者 MUST 等它,**等不到才退回自己抓** = 退回今天的行為,仍是嚴格改善。
+//  ② 等待與模型/地形建構**並行**:閘在 `startPrebuild` 開頭就開,到 `buildBiomes` 之前才 await。
+//     高程磚與衛星影像那幾秒本來就要花,中繼幾乎總是在那段時間裡到齊 ⇒ 這段等待是免費的。
+//  ③ 房主自己吃的 MUST 是**送出去的那一份**(`sanitizeOsmRelay` 之後、`osmRelayFit` 裁過的)——
+//     兩邊從不同的資料建圖,中繼就白做了。
+// 【MUST NOT 從中繼取得 θ】座標框(含地圖主方位)隨 battleConfig 在開房當下凍結(A42 ③);
+// 這條路徑只搬路網。路網可以從無到有,座標框不行。
+let _osmWait = null;   // { key, p, done, timer } —— 入房者的等待閘(同一房只有一份)
+
+function waitOsmRelay(bbox) {
+  const key = osmRelayKey(bbox);
+  if (_osmWait?.key === key) return _osmWait.p;
+  if (_osmWait) { clearTimeout(_osmWait.timer); _osmWait.done(); }   // 換房:舊的等待立刻放行
+  const st = { key, p: null, done: null, timer: null };
+  st.p = new Promise((res) => { st.done = res; });
+  st.timer = setTimeout(() => { if (_osmWait === st) { _osmWait = null; st.done(); } }, OSM_RELAY.WAIT_MS);
+  _osmWait = st;
+  return st.p;
+}
+
+/** 中繼抵達(房主的那一份,或伺服器對晚到者的補送) */
+function onOsmRelay(m) {
+  const clean = sanitizeOsmRelay(m);
+  if (!clean) return;
+  // 鍵 MUST 對得上**本房這張圖**。房主是不可信輸入:一則指向別張圖的中繼會讓定案表換鍵
+  // (`commitOsmIn` 認到不同鍵就整份重來)⇒ 已經到手的路網被清掉、這一台又退回自己抓。
+  // 順帶擋掉「換房之後才姍姍來遲的上一房中繼」。
+  const cfg = app.lobby?.battleConfig;
+  const key = osmRelayKey(clean.bbox);
+  if (!cfg || key !== osmRelayKey(battleBBox(cfg))) return;
+  // 只定案**帶資料**的格:房主第一輪可能只抓到路網,建物那格要留在「未定案」,
+  // 這樣逾時退回自己抓時才抓得到(寫成 null 等於替房主的失敗背書)。
+  const fresh = commitOsmIn(clean.bbox, { feats: clean.feats || undefined, roads: clean.roads || undefined });
+  if (_osmWait?.key === key) { clearTimeout(_osmWait.timer); _osmWait.done(); _osmWait = null; }
+  if (!fresh) return;
+  // 中繼晚到(自己已經先建好一份)⇒ 比照 scheduleOsmRetry:房間階段清掉重建,與全房重新對齊。
+  // **只在房間階段做** —— loading 之後重建會把所有人卡在載入畫面,而閘本來就已經等過它了。
+  if (app.phaseShown === 'room' && app.pre && app.pre.key === prebuildKey(cfg)) {
+    app.pre = null;
+    startPrebuild(cfg);
+  }
+}
+
+/**
+ * 中繼閘:房主抓 + 送,入房者等。`startPrebuild` 在開頭呼叫、到 `buildBiomes` 之前才 await。
+ * 房主 MUST 在**建圖之前**取得原始圖資(`warmOsm`)—— buildBiomes 內的那一份已經被量化與
+ * 就地變異過,中繼它等於把下游的加工結果當原料發給全房。
+ */
+async function osmGate(cfg) {
+  const bbox = battleBBox(cfg);
+  if (!app.isHost) {
+    // 兩道不等的閘,少一道就是白等 20 秒:
+    //  ・已經收到過任何一格 ⇒ 中繼晚到觸發的重建會抱著已到手的資料乾等(缺的那一格本來就
+    //    該由 fetcher 自己抓 = 逾時退回的行為);
+    //  ・只在**房間階段**等 —— 進了 loading/game 才建圖的(中途觀戰加入 / 斷線重連 / 預建
+    //    失敗重來),房主早就跑完自己的 OSM 那一步了:有東西的話伺服器已經在 joinRoom /
+    //    reattach 當下推給我們,沒有就是真的沒有。在載入畫面上乾等會拖著全房一起等
+    //    (`maybeLaunch` 要所有人 loaded 才開戰)。
+    if (!osmInReady(bbox, false) && app.lobby?.phase === 'room') await waitOsmRelay(bbox);
+    return;
+  }
+  if (osmInReady(bbox)) return;          // 兩格都定案(再戰回房的重建;補抓成功時已由 resetOsmMisses 解鎖)
+  let feats = null, roads = null;
+  try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
+  const fit = osmRelayFit(sanitizeOsmRelay({ bbox, feats, roads: roads?.length ? roads : null }));
+  // 超限退化 MUST 講出來:實測密市區 5v5 的中繼訊息已達 1.05MB(MAX_BYTES 餘裕 1.6×),
+  // 這條分支不是理論上的 —— 它一旦觸發,建物/招牌就退回「每台各自抓」= 又會長不一樣,
+  // 而房主是唯一看得到原因的人(console.warn 沒有人在看)。
+  if (fit?.dropFeats) toast('⚠️ 圖資過大,本房建物/招牌改由各客戶端自行抓取(路網仍統一)');
+  // 兩格都定案(親自查過)—— null = 「查過且沒有」,fetcher 據此不再多發一次同樣的查詢
+  // (少了這一條,抓不到的那一格會在 buildBiomes 裡再吃一整份逾時預算)。
+  // 房間階段的補抓成功後由 `resetOsmMisses()` 把 null 退回未定案,重試才有意義。
+  commitOsmIn(bbox, { feats: fit?.msg.feats || null, roads: fit?.msg.roads || null });
+  if (fit) app.net?.send(fit.msg);
+}
+
 // ---- OSM 房間階段補抓(2026-07-23,單航班)----
 // 開房當下 Overpass 恰被限流 → 該房預建走兵線/程序備援,且殘缺結果不入 geocache。
 // 玩家還坐在房間選角 → 用這段等待期間隔 90s 背景重試(限流是分鐘級),成功即由 fetcher
@@ -1667,6 +1792,10 @@ function scheduleOsmRetry(cfg, key) {
     if (_osmRetry !== st) return;
     if (feats && roads?.length) {
       _osmRetry = null;
+      // 中繼閘把「查過且沒有」記成 null:補抓成功後 MUST 把那些格退回未定案,
+      // 否則第一輪的失敗會把自己永久鎖死,這一整段重試等於沒做(拿到資料的格刻意不動 ——
+      // 那是全房已經在用的那一份)。房主重跑 osmGate 時會把補到的那一格再中繼出去。
+      resetOsmMisses();
       if (app.phaseShown === 'room' && app.pre?.key === key) {
         // 冪等 key 會擋重建 → 先清再建;loading 在途消費握著舊 pre 參照,不受影響
         app.pre = null;
@@ -1696,8 +1825,13 @@ function startPrebuild(cfg) {
   };
   pre.promise = (async () => {
     setP(0.02, '載入 3D 模型(Quaternius CC0)…');
+    // 路網中繼閘:與模型/地形建構**並行**跑(見 osmGate ②)。失敗一律吞掉 —— 這條路徑的
+    // 每一種失敗都有備援(房主自己抓不到 = 走兵線備援;入房者等不到 = 退回自己抓),
+    // MUST NOT 讓它把整份預建判成 pre.error。
+    const gate = osmGate(cfg).catch((e) => { console.warn('路網中繼略過:', e); });
     await warmModels((f) => setP(0.02 + f * 0.16, '載入 3D 模型(Quaternius CC0)…'));
     const terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
+    await gate;
     const biomes = await buildBiomes(cfg, terrain, (f, label) => setP(0.60 + f * 0.36, label));
     terrain.group.add(biomes);
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態

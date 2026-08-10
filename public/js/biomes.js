@@ -30,8 +30,9 @@ import {
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, xzToLL,
 } from './data.js';
 import { llToWorld } from './terrain.js';
-import { quantizeRoads } from './roadgrid.js';
+import { quantizeRoads, GRID_HW } from './roadgrid.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
+import { osmRelayKey } from './osmrelay.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
@@ -3470,8 +3471,64 @@ async function overpassQuery(q, parse, tryMs, totalMs) {
   return null;
 }
 
+// ---- 本輪 OSM 輸入的定案表(路網中繼的客戶端這一半;**唯一 store**)----
+// 逐格三態:`undefined` = 還沒定案(fetcher 照舊自己抓)/ `null` = 定案為「沒有」
+// (本客戶端親自查過且失敗 ⇒ MUST NOT 再多發一次同樣的查詢,否則房主要多吃一整份逾時預算)/
+// 資料 = 定案為這一份。store 刻意住在 biomes.js 而非 osmrelay.js:單機模式下 `rooms.js`
+// 與客戶端共用模組實例,把可變狀態放進 osmrelay.js 等於伺服器與客戶端共用同一份 store。
+let _osmIn = null;   // { key, feats, roads }
+
+/**
+ * 定案本輪的 OSM 輸入(中繼抵達 / 房主自查完成)。`slots` 的 `undefined` 代表「不動這一格」。
+ * **已定案的格 MUST NOT 被覆蓋**(單調):中繼與自查會先後抵達,反覆換料等於同一間房裡
+ * 有人用 v1、有人用 v2 —— 那正是中繼要修的病。
+ * @returns {boolean} 這次有沒有真的定案到**新的資料**(呼叫端據此決定要不要重建預建;
+ *   定案為 null 不算 —— 那沒有給世界帶來任何新東西)
+ */
+export function commitOsmIn(bbox, slots) {
+  const key = osmRelayKey(bbox);
+  if (!key) return false;
+  if (_osmIn?.key !== key) _osmIn = { key, feats: undefined, roads: undefined };
+  let fresh = false;
+  for (const k of ['feats', 'roads']) {
+    if (slots?.[k] === undefined || _osmIn[k] !== undefined) continue;
+    _osmIn[k] = slots[k];
+    if (slots[k]) fresh = true;
+  }
+  return fresh;
+}
+/** 取本輪定案值;`undefined` = 還沒定案(fetcher 與 main.js 的閘門共用這一支判定) */
+export function osmInOf(bbox, slot) {
+  return _osmIn?.key === osmRelayKey(bbox) ? _osmIn[slot] : undefined;
+}
+/**
+ * 定案進度。`all=true`(預設)= 兩格都定案(房主的閘門據此直接放行);
+ * `all=false` = 至少一格定案 —— 入房者的閘門用這一版:中繼晚到觸發的重建若再等一次
+ * `WAIT_MS`,就是抱著已經到手的資料乾等 20 秒,而缺的那一格本來就該由 fetcher 自己抓。
+ */
+export function osmInReady(bbox, all = true) {
+  const f = osmInOf(bbox, 'feats') !== undefined, r = osmInOf(bbox, 'roads') !== undefined;
+  return all ? (f && r) : (f || r);
+}
+/**
+ * 把「定案為沒有」的格退回未定案 —— 房間階段的 OSM 補抓(main.js scheduleOsmRetry)成功後
+ * MUST 呼叫,否則房主第一輪抓不到的那一格會被自己的 null 永久鎖死,重試等於沒做。
+ * 拿到資料的格刻意不動(那是全房已經在用的那一份)。
+ */
+export function resetOsmMisses() {
+  if (!_osmIn) return;
+  if (_osmIn.feats === null) _osmIn.feats = undefined;
+  if (_osmIn.roads === null) _osmIn.roads = undefined;
+}
+
 /** Overpass 圖資(逾時就放棄 → 程序生成備援):建物 + 鐵路/捷運 + 瀑布 */
 async function fetchOsmFeatures(bbox) {
+  // 路網中繼:本輪已定案(伺服器轉來的房主那一份,或本客戶端親自查過的結果)⇒ 直接用,
+  // 不查網路也不查快取。深拷貝理由同 geocache(下游 buildRails/harvestOsm 就地變異)。
+  // **刻意不寫進 geocache**:中繼的來源是房主 = 不可信輸入,持久化它會污染這台機器之後
+  // 每一場(含它自己當房主的那一場),而快取的紀律正是「只准存自己完整抓到的東西」。
+  const inj = osmInOf(bbox, 'feats');
+  if (inj !== undefined) return inj && structuredClone(inj);
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   const nBld = quotaOf(bboxKm2(bbox), 850, 400, 1200);
   // Overpass 回應快取(geocache.js):同 bbox 首次完整成功即定案(remark = 伺服器截斷/逾時,不入庫)。
@@ -3527,6 +3584,8 @@ async function fetchOsmFeatures(bbox) {
  * 連帶拖垮既有的建物/鐵路渲染。失敗回 null → buildBiomes 退回以兵線為主要道路。
  */
 async function fetchOsmRoads(bbox) {
+  const inj = osmInOf(bbox, 'roads');   // 路網中繼(理由同 fetchOsmFeatures)
+  if (inj !== undefined) return inj && structuredClone(inj);
   const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
   // 路網快取:兵線橋/地下道/隧道的唯一 OSM 輸入 —— 首次完整成功即定案,
   // 之後每場真橋/隧道 way 集合恆定(dropLaneBridges/dedupe/carve 皆純幾何 → 整條管線可重現)。
@@ -3556,7 +3615,36 @@ async function fetchOsmRoads(bbox) {
 }
 
 /**
- * OSM 補抓(main.js 房間階段重試用):只發兩個 Overpass 查詢,不建任何幾何。
+ * 大馬路(主方位量測專用;`main.js resolveMapRot` 是唯一消費端)。
+ * **只在自訂地圖存入最愛那一次發**:那是使用者主動觸發、一次性、而且輸出直接寫死進
+ * battleConfig 的地方。MUST NOT 在建圖期(`buildBiomes`)呼叫 —— 那是每台客戶端各跑一次的,
+ * 而 Overpass 逐局成敗不同 ⇒ 不同客戶端量到不同角度 = 整個世界的座標對不上(A42 ③)。
+ * 取樣面走 `roadgrid.GRID_HW`(`.source` 就是 Overpass 要的字串),與離線烘焙同一份。
+ * 額度刻意固定 900(同烘焙工具):主方位是**方向**的統計量,和 bbox 面積無關。
+ */
+export async function fetchGridRoads(bbox) {
+  const bb = `${bbox.minLat.toFixed(5)},${bbox.minLng.toFixed(5)},${bbox.maxLat.toFixed(5)},${bbox.maxLng.toFixed(5)}`;
+  const ckey = geoKey('osmG', 1, bbox);
+  const cached = await geoGet(ckey);
+  if (cached?.length) return cached;
+  const q = `[out:json][timeout:15];way["highway"~"${GRID_HW.source}"](${bb});out geom 900;`;
+  return overpassQuery(q, (data) => {
+    const roads = [];
+    for (const el of data.elements || []) {
+      if (el.type === 'way' && el.geometry && GRID_HW.test(el.tags?.highway || '')) {
+        roads.push({ tags: el.tags, geometry: el.geometry });
+      }
+    }
+    if (!roads.length) return null;
+    if (!data.remark) geoPut(ckey, structuredClone(roads));
+    return roads;
+  }, OVERPASS_TRY.road, OVERPASS_TOTAL.road);
+}
+
+/**
+ * OSM 取用(main.js 的路網中繼閘 `osmGate` 與房間階段重試共用):只發兩個 Overpass 查詢,
+ * 不建任何幾何 —— 房主要在建圖**之前**拿到原始圖資才送得出去(buildBiomes 內的那一份
+ * 已經被量化與就地變異過,中繼它等於把下游的加工結果當成原料發給全房)。
  * 命中 geocache 即回(零網路);成功結果由 fetcher 自身定案入庫 → 之後的
  * buildBiomes(重建預建或下一場)直接命中快取。回傳 [features|null, roads|null]。
  */
