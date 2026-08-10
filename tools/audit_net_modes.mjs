@@ -280,21 +280,36 @@ try {
     const sup = await import('./dev_supervisor.mjs');
     const srcOf = { codex: 'codex_review', parts: 'parts_review' };
     for (const key of Object.keys(sup.TOOLS)) {
+      const t = sup.TOOLS[key];
+      ok(t.kind === 'server' || t.kind === 'job', `${key}:kind 是 server / job 其中之一(實得 ${t.kind})`);
+      ok(!/^\d+$/.test(String(t.script)) && t.script.startsWith('tools' + path.sep),
+        `${key}:script 是 tools/ 底下的常數路徑`);
+      // **只有 server 有埠**。2026-08-10 加入的採集迴圈是 `job` —— 它不聽任何埠,
+      // 拿 `listening()` 去問它會永遠回「沒開」,鈕面停在「▶ 啟動」而背景每按一次多開一支。
+      if (t.kind !== 'server') {
+        ok(t.port === undefined, `${key}(job):MUST NOT 宣告埠(有埠 = 存活判準會被誤用成探埠)`);
+        continue;
+      }
       const mod = srcOf[key];
       ok(!!mod && new RegExp(`import \\{ DEFAULT_PORT as \\w+ \\} from '\\./${mod}\\.mjs'`).test(supSrc),
         `${key}:埠號 MUST 從 tools/${mod || '?'}.mjs import,MUST NOT 抄一份`);
       const m = await import(`./${mod}.mjs`);
-      ok(sup.TOOLS[key].port === m.DEFAULT_PORT,
-        `${key}:TOOLS 的埠(${sup.TOOLS[key].port})= 工具自己的 DEFAULT_PORT(${m.DEFAULT_PORT})`);
-      ok(!/^\d+$/.test(String(sup.TOOLS[key].script)) && sup.TOOLS[key].script.startsWith('tools' + path.sep),
-        `${key}:script 是 tools/ 底下的常數路徑`);
+      ok(t.port === m.DEFAULT_PORT,
+        `${key}:TOOLS 的埠(${t.port})= 工具自己的 DEFAULT_PORT(${m.DEFAULT_PORT})`);
     }
-    const ports = Object.values(sup.TOOLS).map((t) => t.port);
-    ok(new Set(ports).size === ports.length, `每一支工具的埠互不相同(${ports.join(', ')})`);
+    const ports = Object.values(sup.TOOLS).filter((t) => t.kind === 'server').map((t) => t.port);
+    ok(new Set(ports).size === ports.length, `每一支伺服器型工具的埠互不相同(${ports.join(', ')})`);
+    // job 的存活判準 MUST 是「我們自己的子行程還在」;server 才問埠
+    ok(/const alive = \(rec\) =>/.test(supSrc) && /kind === 'job'/.test(supSrc),
+      'job 的存活判準是自己的子行程(沒有埠可以探)');
   }
-  ok(/spawn\(process\.execPath, \[t\.script, \.\.\.t\.args\]/.test(supSrc)
+  // argv 仍然零信任,只是多了一段**推導**:`argvOf` 會把資料家接上去(語料家會搬 ⇒ 寫死等於下次就錯),
+  // 而那條路徑是從檔案系統算出來的 —— 請求一個字都碰不到。
+  ok(/spawn\(process\.execPath, \[t\.script, \.\.\.argv\]/.test(supSrc)
+    && /export function argvOf\(t\)/.test(supSrc)
+    && !/argvOf\([^)]*req/.test(supSrc)
     && !/spawn\([^)]*req\./.test(supSrc),
-    'spawn 的 argv MUST 全部來自 TOOLS 常數,請求只能挑一個 key(參數零信任)');
+    'spawn 的 argv MUST 來自 TOOLS 常數 + argvOf 推導,請求只能挑一個 key(參數零信任)');
   ok(/\/\^\\\/dev\\\/tools\\\/\(\[a-z0-9_-\]\{1,32\}\)\\\/\(start\|stop\)\$\//.test(supSrc)
     || /\[a-z0-9_-\]\{1,32\}/.test(supSrc),
     '動作路徑 MUST 以白名單字元集比對(key 進不了命令列,也進不了檔案路徑)');
@@ -318,10 +333,15 @@ try {
   const lo = await devReq('127.0.0.1', '/dev/tools');
   let tools = [];
   try { tools = JSON.parse(lo.body).tools || []; } catch { /* 下一行會紅 */ }
-  ok(lo.code === 200 && tools.some((t) => t.key === 'codex') && tools.some((t) => t.key === 'parts'),
-    'loopback 拿得到工具清單(含 codex 2D 生圖對照台與 parts 3D 零件對照台)');
-  ok(tools.every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
-    '清單自己帶網址(客戶端因此一個埠號都不用寫死)');
+  ok(lo.code === 200 && ['codex', 'parts', 'harvest'].every((k) => tools.some((t) => t.key === k)),
+    'loopback 拿得到工具清單(codex 2D 生圖對照台 / parts 3D 零件對照台 / harvest 採集迴圈)');
+  ok(tools.filter((t) => t.kind === 'server')
+    .every((t) => typeof t.url === 'string' && /^http:\/\/localhost:\d+\/$/.test(t.url)),
+    '伺服器型工具自己帶網址(客戶端因此一個埠號都不用寫死)');
+  // job 回一個假的 `http://localhost:undefined/` 會讓客戶端畫出一個點不開的連結,
+  // 而那看起來像「台子壞了」⇒ 沒有埠就**不要回網址**
+  ok(tools.filter((t) => t.kind === 'job').every((t) => t.url === undefined && t.port === undefined),
+    '工作型工具不回網址也不回埠(沒有埠就不要假裝有)');
   const lan = Object.values(os.networkInterfaces()).flat()
     .find((i) => i.family === 'IPv4' && !i.internal)?.address;
   if (!lan) console.log('  ⏭  跳過區網位址那一項:這台機器沒有對外 IPv4');
@@ -346,9 +366,19 @@ try {
       continue;
     }
     const started = await sup.start(t.key);
-    ok(started.listening && started.owned, `${t.key}:start 之後埠 ${started.port} 真的聽得到,而且是我們開的`);
+    // **「起來了」對兩種 kind 是兩件事**:server 問埠、job 問自己的子行程。
+    // 這裡拿錯尺的下場正是這一輪要防的那個 bug —— job 永遠回報「沒起來」。
+    const up = t.kind === 'job' ? started.running : started.listening;
+    // job 起不來最常見的理由是「這台機器上沒有語料」,那不是回歸 ⇒ 標未驗而不是紅字
+    if (t.kind === 'job' && !up && started.error) {
+      console.log(`  ⏭  跳過 ${t.key} 啟停直測:${started.error}`);
+      continue;
+    }
+    ok(up && started.owned,
+      `${t.key}:start 之後${t.kind === 'job' ? '子行程還活著' : `埠 ${started.port} 真的聽得到`},而且是我們開的`);
     const stopped = await sup.stop(t.key);
-    ok(!stopped.listening && !stopped.owned, `${t.key}:stop 之後埠放掉了`);
+    ok(!(t.kind === 'job' ? stopped.running : stopped.listening) && !stopped.owned,
+      `${t.key}:stop 之後${t.kind === 'job' ? '行程收掉了' : '埠放掉了'}`);
     ok((await sup.stop(t.key)).error === '這一支不是從這裡啟動的', `${t.key}:重複 stop 不炸,而且明講原因`);
   }
 } finally {

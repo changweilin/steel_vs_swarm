@@ -584,8 +584,13 @@ function adoptInbox() {
           console.warn(`✗ ${f.name}/${p.name}/${name}:短邊 ${Math.min(size.w, size.h)} < 1024 ⇒ 不夠餵 img→3D`); left++; continue;
         }
         const id = `manual_${name.replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '_').slice(0, 48)}`;
-        if (manifest.some((e) => e.id === id && e.family === f.name && e.part === p.name)) {
-          console.log(`・ ${f.name}/${p.name}/${name}:已收編過(id ${id}),略過`); continue;
+        // 去重吃的是**帳本條目在不在**,而不是 `ok` —— 被 `screen_mattes.py --purge` 刪掉的圖
+        // 條目仍留著(那份條目就是黑名單本身,見該支的 apply_purge 檔頭)⇒ 同一張圖再放一次
+        // 也不會被收編回來。理由要講出來,不然使用者只看到「已收編過」而檔案明明不在 photos/。
+        const prev = manifest.find((e) => e.id === id && e.family === f.name && e.part === p.name);
+        if (prev) {
+          console.log(`・ ${f.name}/${p.name}/${name}:${prev.purged ? '這張圖先前被判 ✕ 刪除(黑名單)' : `已收編過(id ${id})`},略過`);
+          continue;
         }
         const outDir = join(PHOTOS, f.name, p.name);
         mkdirSync(outDir, { recursive: true });

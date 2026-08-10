@@ -105,3 +105,32 @@ body.pr::before, body.pr::after { display: none; }
 .pr-saved { font-family: var(--mono); font-size: 10px; color: #9fe7bb; margin-left: 6px; }
 .pr-warn { border-left: 2px solid #ffb446; padding-left: 9px; }
 .pr-warn h3 { color: #ffcf8a; }
+
+/* ---- 採集迴圈啟停 + 圖檔三態(2026-08-10)----------------------------------
+   一條窄帶,不跟下面的清單搶高度:它是「現在該做什麼」的儀表,不是主畫面。
+   狀態色沿用既有 .pr-pill 家族(ok/flag/miss),不新增第二套配色。 */
+.pr-harvest {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+  padding: 7px 14px; flex: 0 0 auto;
+  border-bottom: 1px solid var(--railS); background: rgba(255, 255, 255, 0.03);
+}
+.pr-hs { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.pr-hdot { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }
+.pr-hdot.on { background: #7fe0a4; box-shadow: 0 0 6px rgba(127, 224, 164, 0.8); }
+/* 狀態鈕:按下去展開那一態的清單。`aria-pressed` 才是選取態的真相,class 只是外觀 */
+.pr-hst {
+  font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 9px; cursor: pointer;
+  border: 1px solid transparent; background: rgba(255, 255, 255, 0.07); color: var(--railW);
+}
+.pr-hst[aria-pressed="true"] { border-color: var(--railW); background: rgba(255, 255, 255, 0.16); }
+.pr-hst.todo { color: #a9c8ff; }
+.pr-hst.done { color: #9fe7bb; }
+.pr-hst.fix { color: #ffcf8a; }
+.pr-hst.dropped { color: var(--dim); }
+.pr-hlist {
+  width: 100%; max-height: 168px; overflow-y: auto;
+  font-family: var(--mono); font-size: 10px; color: var(--dim);
+  border-top: 1px dashed var(--railS); padding-top: 6px;
+}
+.pr-hlist div { padding: 1px 0; }
+.pr-hlist b { color: var(--railW); font-weight: 400; }

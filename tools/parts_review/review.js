@@ -21,11 +21,18 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString());
 
-/** 覆核狀態:三個出口各自對得上 runbook 的下一步動作 */
+/**
+ * 覆核狀態:每一個出口各自對得上 `tools/ai3d/apply_verdicts.mjs` 的**一個**動作。
+ * 2026-08-10 自動入庫上線後,人眼這一步從「入庫之前」搬到「入庫之後」⇒ 判決要能**撤**,
+ * 於是多了第四個出口 `purge`(使用者定案:刪原始照片時**連節點一起撤下**)。
+ * `ok` 以外一律算「有意見」⇒ 那個判斷 MUST 由本表推導,MUST NOT 再手寫一份狀態清單
+ * (手寫的那份會在加第五個出口時靜默過期:新出口不進「有意見」的篩選,而畫面完全正常)。
+ */
 const STATUS = {
   ok: ['✔ 通過', 'ok'],
   regen: ['⟳ 重生(同圖換參數)', 'flag'],
   reimg: ['⇄ 換來源圖', 'flag'],
+  purge: ['✕ 刪除來源圖(連節點撤下)', 'flag'],
 };
 /**
  * 對照用的座號:同一顆 seed 兩側才比得起來(buildBeacon 的 stretch 由 seed 決定)。
@@ -57,7 +64,7 @@ const DISTS = { part: '零件', whole: '整件', lane: '兵線 22m' };
 const FIT_PAD = 1.3;
 
 const app = {
-  data: null, cur: null, filter: 'all',
+  data: null, cur: null, filter: 'all', list: 'nodes',
   seed: SEEDS[0], dist: 'part', collider: true, spin: true,
 };
 
@@ -415,7 +422,8 @@ function tick() {
 // ---- 左側清單 --------------------------------------------------------------
 function statOf(r) {
   const it = itemOf(r.key);
-  return { status: it?.status || '', flag: ['regen', 'reimg'].includes(it?.status || '') };
+  const st = it?.status || '';
+  return { status: st, flag: !!st && STATUS[st]?.[1] === 'flag' };
 }
 
 /**
@@ -441,7 +449,29 @@ function noteLine(r) {
   return `<span class="pr-notes" title="${esc(full)}">${r.notes.map(tag).join('')}</span>`;
 }
 
+/**
+ * 左側清單有兩種內容(2026-08-10 使用者需求:「還沒轉 3D 的 image 也都加入清單,以便手動篩選」):
+ *   `app.list === 'nodes'`  生成物(節點 / 純資料件)—— 原本就有的那一份
+ *   `app.list === <狀態>`   語料圖檔(未處理 / 已處理 / 需修正 / 已淘汰)
+ * 切換由上方那一條窄帶的四顆狀態鈕負責。**刻意不把 415 張圖直接倒進節點清單** ——
+ * 那會把 52 件生成物淹掉,而「找不到那顆節點」看起來就像它不見了。
+ */
+function renderPhotoList() {
+  const rows = (harvest.photos?.rows || []).filter((r) => r.state === app.list);
+  const label = harvest.photos?.states?.[app.list]?.label || app.list;
+  $('prList').innerHTML = rows.map((r) => {
+    const key = `img:${r.id}`;
+    return `<div class="pr-row ${app.cur === key ? 'on' : ''}" data-key="${esc(key)}">
+      <div class="pr-rn"><b>${esc(r.family)}/${esc(r.part)}</b><span>${esc(r.id)}</span>
+      ${r.verdict ? `<span class="pr-note">${esc(r.verdict.status)} ${esc(r.verdict.node)}</span>` : ''}</div>
+      ${r.targets ? `<span class="pr-pill">切 ${r.targets}</span>` : ''}
+      <span class="pr-pill ${app.list === 'fix' ? 'flag' : app.list === 'dropped' ? 'miss' : 'ok'}">${esc(label)}</span></div>`;
+  }).join('') || `<div class="pr-dim" style="padding:12px">(${esc(label)} 是空的)</div>`;
+  for (const el of $('prList').querySelectorAll('.pr-row')) el.onclick = () => select(el.dataset.key);
+}
+
 function renderList() {
+  if (app.list !== 'nodes') return renderPhotoList();
   const keep = (r) => {
     const s = statOf(r);
     if (app.filter === 'wip') return isWip(r);
@@ -498,15 +528,27 @@ function select(key) { app.cur = key; renderList(); renderBody(); }
  *  條件只有「兩側各建得起一組、而且這一列真的有一顆 GLB 節點」;**MUST NOT 再看描述子有沒有
  *  座標**(單位包絡節點的座標恆 `[0,0,0]`,那個條件把 mega 整批擋在門外)。粒度對不上時由
  *  `sliceOf` 回 null,取景退回整件並在工具列講明(缺的不准藏,紀律 ④)。 */
-const partFramable = (r) => r.view?.mode === 'fuse-vs-lib' && !!r.measured;
+// 「零件」取景要的是「這一列有沒有一顆 GLB 節點可以隔離」,與並不並排無關 ——
+// 綁在 mode 上的話,2026-08-10 把 GLB 那一路改成單獨陳列之後這顆鈕會整批變灰,
+// 而理由(「沒有節點可隔離」)是假的
+const partFramable = (r) => !!r.view?.node && !!r.measured;
 /** 這一列**實際**用的取景:零件取景不成立時退回整件 —— 鈕面 MUST 跟著亮那一顆,
  *  否則畫面已經是整件、三顆鈕卻一顆都沒亮(看起來像壞掉,而它其實正常) */
 const effDist = (r) => (partFramable(r) || app.dist !== 'part' ? app.dist : 'whole');
 
+/**
+ * 兩側的標題。**只有同源的新舊版本才並排**(2026-08-10 使用者定案)——
+ * `baseline-vs-now` 是同一份零件表改寫前/後,那才是「新舊版本」。
+ * img→3D 新生成的節點沒有前一版(保險絲 primitive 是降級路徑,不是舊物件)⇒ 單獨陳列,
+ * 右側標題改成**標注繪製方法**(由 `r.method` 帶進來,見 `paneLabels`)。
+ */
 const PANE_LABEL = {
-  'fuse-vs-lib': ['原版(保險絲 primitive,零件庫未載入)', 'AI 生成(零件庫 GLB)'],
   'baseline-vs-now': ['原版(改寫前的零件表)', 'AI 生成(現行零件表)'],
-  'now-only': [null, '現行(沒有可比的原版)'],
+  'now-only': [null, null],
+};
+const paneLabels = (r) => {
+  const [l, right] = PANE_LABEL[r.view?.mode] || PANE_LABEL['now-only'];
+  return [l, right || `現行 ・ 繪製方法:${r.method ? r.method.label : '未記載來源'}`];
 };
 
 function imgCard(im) {
@@ -586,10 +628,11 @@ function dataSection(r) {
 }
 
 function renderBody() {
+  if (String(app.cur).startsWith('img:')) return renderPhotoBody(String(app.cur).slice(4));
   const r = rowOf(app.cur);
   const body = $('prBody');
   if (!r) { body.innerHTML = '<div class="pr-dim">← 左側挑一件生成物</div>'; return; }
-  const [lLab, rLab] = PANE_LABEL[r.view?.mode] || PANE_LABEL['now-only'];
+  const [lLab, rLab] = paneLabels(r);
 
   body.innerHTML = `
   <h2 class="pr-h2">${esc(r.title)}</h2>
@@ -683,16 +726,22 @@ function mountStage(r) {
   }
   const v = r.view;
   const bld = v.builder || 'beacon';
-  const sides = [];
-  if (v.mode === 'fuse-vs-lib') {
-    sides.push({ g: build('pre', 'now', v.kind, app.seed, bld), read: 'prReadL' });
-    sides.push({ g: build('post', 'now', v.kind, app.seed, bld), read: 'prReadR' });
-  } else if (v.mode === 'baseline-vs-now') {
-    sides.push({ g: build('pre', `rev:${v.rev}`, v.kind, app.seed, bld), read: 'prReadL' });
-    sides.push({ g: build('post', 'now', v.kind, app.seed, bld), read: 'prReadR' });
+  // `panes` = 真的畫出來的那幾側;`diff` = 給 sliceOf 算「換掉的是哪幾顆 mesh」的兩側。
+  // **兩者刻意分開**:img→3D 的節點沒有同源舊版可比(保險絲是降級路徑不是舊物件)⇒ 只畫一側;
+  // 但要隔離出「換掉的就是它」仍然需要一份沒載零件庫的群組當索引 —— 那是**定位**不是比對,
+  // 所以它只存在於這個函式裡,不佔 pane、也沒有標題。
+  const panes = [];
+  let diff = null;
+  if (v.mode === 'baseline-vs-now') {
+    panes.push({ g: build('pre', `rev:${v.rev}`, v.kind, app.seed, bld), read: 'prReadL' });
+    panes.push({ g: build('post', 'now', v.kind, app.seed, bld), read: 'prReadR' });
+    diff = panes;
   } else {
-    sides.push({ g: v.kind ? build('post', 'now', v.kind, app.seed, bld) : null, read: 'prReadR' });
+    const post = { g: v.kind ? build('post', 'now', v.kind, app.seed, bld) : null, read: 'prReadR' };
+    panes.push(post);
+    if (v.node) diff = [{ g: build('pre', 'now', v.kind, app.seed, bld) }, post];
   }
+  const sides = panes;
   sides.forEach((side, i) => {
     const viewer = gfx.viewers[i];
     const slot = slots[i];
@@ -717,8 +766,10 @@ function mountStage(r) {
   const groups = sides.map((s) => s.g).filter(Boolean);
   for (const g of groups) for (const m of meshesOf(g)) m.visible = true;
   const want = effDist(r) === 'part';
-  const got = want ? sliceOf(sides, r) : null;
+  const got = want && diff ? sliceOf(diff, r) : null;
   const slice = got?.per ? got : null;
+  // 隔離索引是對著 `diff` 兩側算的;單獨陳列時畫出來的只有 diff[1](= panes[0])⇒ 對位要平移
+  const perOf = (i) => (diff === panes ? slice.per[i] : (i === 0 ? slice.per[1] : null));
   if (slice) {
     // 「零件」取景 = **只顯示換掉的那幾顆 mesh**。隱藏不是第二套組裝器(群組仍是遊戲自己
     // 建的、一顆頂點都沒動),而是把「換掉的就是它」真的畫出來 —— 不隔離的話,4m 的冠簇
@@ -726,8 +777,9 @@ function mountStage(r) {
     // 而讀數(三角形/mesh 數)量的仍是整件 ⇒ 不會因為隱藏而說謊。
     // 兩側各有各的名冊(見 sliceOf ①:巨岩的兩側粒度本來就不同),MUST NOT 共用一份索引。
     sides.forEach((side, i) => {
-      if (!side.g || !slice.per[i]) return;
-      meshesOf(side.g).forEach((m, k) => { m.visible = slice.per[i].includes(k); });
+      const keep = perOf(i);
+      if (!side.g || !keep) return;
+      meshesOf(side.g).forEach((m, k) => { m.visible = keep.includes(k); });
     });
   }
   gfx.frame = slice
@@ -746,7 +798,8 @@ function mountStage(r) {
           : '(三顆座號都沒用到這個節點 —— 先看整件)')
         : '(兩側逐位元相同,沒有換到東西 —— 先看整件)';
     }
-    note.textContent = !want ? '' : slice ? `(只顯示換掉的 ${slice.per[1].length} 顆 mesh)` : why;
+    note.textContent = !want ? '' : slice ? `(只顯示換掉的 ${slice.per[1].length} 顆 mesh)`
+      : (diff ? why : '(這一列沒有 GLB 節點可以隔離)');
   }
 }
 
@@ -777,6 +830,135 @@ function renderGaps() {
   $('prBody').appendChild(box);
 }
 
+// ---- 採集迴圈啟停 + 圖檔三態 -------------------------------------------------
+// 使用者需求(2026-08-10):「設定腳本可以在零件台執行/關閉,會自動判斷圖檔未處理/已處理/需修正」。
+//
+// **這一段一個判斷都不做**:狀態由 `tools/ai3d/photo_state.mjs` 推導、啟停由
+// `tools/dev_supervisor.mjs` 那一支 `handle` 把關(loopback + 參數零信任 + CSRF 標頭)。
+// 頁面自己再判一次的話,面板會與迴圈說出兩套話,而兩邊都不會報錯。
+const harvest = { photos: null, tool: null, busy: false };
+
+const devApi = async (path, method = 'GET') => (await fetch(path, method === 'GET' ? undefined
+  // 邊界 ④:非簡單標頭 ⇒ 惡意網頁送不出來(它需要 CORS 預檢,而伺服器不回應預檢)
+  : { method, headers: { 'x-dev-tools': '1' } })).json();
+
+async function loadHarvest() {
+  const [photos, dev] = await Promise.all([
+    fetch('/api/photos').then((r) => r.json()).catch(() => null),
+    devApi('/dev/tools').catch(() => null),
+  ]);
+  harvest.photos = photos;
+  harvest.tool = (dev?.tools || []).find((t) => t.key === 'harvest') || null;
+  renderHarvest();
+}
+
+function renderHarvest() {
+  const el = $('prHarvest');
+  const t = harvest.tool;
+  const p = harvest.photos;
+  if (!el) return;
+  if (!t) { el.innerHTML = '<span class="pr-hs">採集迴圈:這個台子不是由開發工具管理者啟動的(啟停端點不可用)</span>'; return; }
+  const on = !!t.running;
+  const counts = p?.counts || {};
+  const states = p?.states || {};
+  // 順序 = photo_state.STATES 的宣告順序(需修正排最前面 —— 它是唯一「下一步在人身上」的那一態)
+  const order = ['fix', 'todo', 'done', 'dropped'];
+  // 狀態鈕 = **左側清單的內容切換**(而不是就地展開一段文字):使用者要的是「把圖加進清單、
+  // 一張一張看著判」,而清單那一欄本來就是為了逐件挑選存在的
+  const pills = order.filter((k) => states[k]).map((k) =>
+    `<button class="pr-hst ${k}" data-st="${k}" aria-pressed="${app.list === k}"
+       title="${esc(states[k].hint)}">${esc(states[k].label)} ${counts[k] ?? 0}</button>`).join('');
+  const homeTip = (p?.homes || []).map((h) => `${h.entries} 筆 ${h.home}`).join('\n');
+  el.innerHTML = `
+    <button class="segb ${on ? '' : 'on'}" id="prHrun" ${harvest.busy ? 'disabled' : ''}>${on ? '⏹ 停止採集迴圈' : '▶ 啟動採集迴圈'}</button>
+    <span class="pr-hdot ${on ? 'on' : ''}"></span>
+    <span class="pr-hs">${on ? '執行中(每 15 分鐘一輪;入庫只寫工作區,不 commit)' : '未執行'}</span>
+    <button class="pr-hst" data-st="nodes" aria-pressed="${app.list === 'nodes'}"
+      title="回到生成物清單(節點與純資料件)">生成物</button>
+    ${pills}
+    <span class="pr-grow"></span>
+    <span class="pr-hs" title="${esc(homeTip)}">${p?.ok
+      ? `資料家 ${esc(String(p.home).split(/[\\/]/).slice(-3).join('/'))}${(p.homes || []).length > 1 ? `(另有 ${p.homes.length - 1} 個候選)` : ''}`
+      : `⚠ ${esc(p?.why || '讀不到語料帳本')}`}</span>
+    ${t.log ? `<div class="pr-hlist">${esc(t.log).split('\n').map((l) => `<div>${l}</div>`).join('')}</div>` : ''}`;
+
+  $('prHrun').onclick = async () => {
+    harvest.busy = true; renderHarvest();
+    try { harvest.tool = await devApi(`/dev/tools/harvest/${on ? 'stop' : 'start'}`, 'POST'); }
+    finally { harvest.busy = false; renderHarvest(); }
+    // 跑完一輪語料狀態會變 ⇒ 停下來時重讀一次(啟動時還來不及變,但重讀也不貴)
+    loadHarvest();
+  };
+  for (const b of el.querySelectorAll('.pr-hst')) {
+    b.onclick = () => {
+      app.list = b.dataset.st;
+      // 換清單就把選取清掉 —— 留著上一份清單的 key 會讓右邊顯示一件左邊根本不在的東西
+      app.cur = app.list === 'nodes' ? (app.data.rows[0]?.key ?? null) : null;
+      renderHarvest(); renderList(); renderBody();
+    };
+  }
+}
+
+/**
+ * 語料圖檔的細節頁 —— **手動篩選就在這裡做**(2026-08-10 使用者需求)。
+ *
+ * 三顆鈕對到 `screen_mattes.py` 既有的兩支,而不是在這裡改帳本:
+ *   ✔ 保留 → `--human pass`   (救回統計誤殺;人眼恆勝統計)
+ *   ✕ 淘汰 → `--human reject` (不再送生成,**檔案留著** —— Route A 仍要看照片)
+ *   🗑 刪除 → `--purge`        (真刪檔 + 進黑名單;連同它切出來的每一個目標)
+ * 判決的紀律(恆勝、roll_up 到母照片、黑名單怎麼表達)全部住那一支,台上只是按鈕。
+ */
+function renderPhotoBody(id) {
+  const body = $('prBody');
+  const r = (harvest.photos?.rows || []).find((x) => x.id === id);
+  if (!r) { body.innerHTML = '<div class="pr-dim">← 左側挑一張圖(或按上方狀態鈕換一態)</div>'; return; }
+  const st = harvest.photos?.states?.[r.state];
+  body.innerHTML = `
+  <h2 class="pr-h2">${esc(r.family)}/${esc(r.part)} ・ ${esc(r.id)}</h2>
+  <div class="pr-mline">${esc(st?.label || r.state)} —— ${esc(st?.hint || '')}
+    ${r.purged ? ' ・ <span class="pr-bad">已刪除來源圖(黑名單)</span>' : ''}</div>
+  <div class="pr-sec"><h3>圖(有去背就顯示去背後的 —— 「這張到底能不能用」看的是那一張)</h3>
+    <div class="pr-imgs">
+      <div class="pr-img" style="max-width:460px">
+        <img src="/api/photo?id=${encodeURIComponent(r.id)}" alt="" loading="lazy">
+        <div class="pr-dim">母照片 ・ 選片閘 ${esc(r.screen || '(還沒驗過)')}</div>
+      </div>
+      ${/* 切出來的目標才是**真的餵進生成器**的東西 ⇒ 有切就一起攤開,不然判的是另一張圖 */
+    Array.from({ length: r.targets || 0 }, (_, i) => `<div class="pr-img" style="max-width:300px">
+        <img src="/api/photo?id=${encodeURIComponent(r.id)}&t=${i}" alt="" loading="lazy">
+        <div class="pr-dim">目標 #${i + 1}(送進 img→3D 的就是它)</div></div>`).join('')}
+    </div></div>
+  <div class="pr-sec"><h3>下一步</h3>
+    <div>${esc(r.next)}</div>
+    ${r.nodes?.length ? `<div class="pr-dim">出貨成:${r.nodes.map(esc).join('、')}</div>` : ''}
+    ${r.verdict ? `<div class="pr-dim">待執行判決:<b>${esc(r.verdict.status)}</b> ${esc(r.verdict.node)}${r.verdict.note ? `(${esc(r.verdict.note)})` : ''}</div>` : ''}
+  </div>
+  <div class="pr-sec"><h3>手動篩選</h3>
+    <div class="seg" id="prScreen">
+      <button class="segb" data-act="pass">✔ 保留(送回待跑池)</button>
+      <button class="segb" data-act="reject">✕ 淘汰(不再送生成,檔案留著)</button>
+      <button class="segb" data-act="purge">🗑 刪除來源圖(真刪 + 黑名單)</button>
+    </div>
+    <div class="pr-dim" id="prScreenOut">判決寫回 photo_manifest.json;人眼判決恆勝統計(重跑選片閘不會被覆寫)。</div>
+  </div>`;
+  for (const b of body.querySelectorAll('#prScreen .segb')) {
+    b.onclick = async () => {
+      // 刪除是不可逆的(檔案真的不見)⇒ 明講會刪掉什麼再問一次。其餘兩個只是改帳本,不必問。
+      if (b.dataset.act === 'purge'
+        && !confirm(`真的刪除 ${r.id}?\n原圖、matte${r.targets ? `、切出來的 ${r.targets} 個目標` : ''} 都會從硬碟刪掉,\n並進黑名單(之後不會再被抓/收編/送生成)。`)) return;
+      const out = $('prScreenOut');
+      out.textContent = '執行中…';
+      const res = await fetch('/api/screen', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-dev-tools': '1' },
+        body: JSON.stringify({ id: r.id, act: b.dataset.act }),
+      }).then((x) => x.json()).catch((e) => ({ ok: false, error: String(e) }));
+      out.textContent = res.ok ? (res.out || '已寫回') : `失敗:${res.error || '?'}`;
+      if (res.ok) { await loadHarvest(); renderList(); renderBody(); }
+    };
+  }
+}
+
 // ---- 啟動 ------------------------------------------------------------------
 app.data = await api();
 try { await initGfx(app.data); }
@@ -791,3 +973,8 @@ for (const b of $('prFilter').querySelectorAll('.segb')) {
     renderList();
   };
 }
+// 採集迴圈那一條放**最後**載入:它會去問啟停端點與語料帳本,而那兩件都可能不在
+// (終端機直接跑這個台子、或語料家不在本機)⇒ 失敗一律只影響這一條窄帶,主畫面照常。
+loadHarvest();
+// 跑著的時候每 20 秒重讀一次:輪距是 15 分鐘,再密只是多敲檔案系統;停著就不必輪詢。
+setInterval(() => { if (harvest.tool?.running) loadHarvest(); }, 20000);

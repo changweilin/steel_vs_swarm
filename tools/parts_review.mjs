@@ -46,6 +46,17 @@ const STATE_FILE = join(ROOT, 'tools', 'parts_review', 'state.json');
 /** 這支自己的預設埠 —— **它是這個數字的唯一真相**(同 codex_review:`dev_supervisor` MUST import) */
 export const DEFAULT_PORT = 8622;
 
+const readJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
+/** 語料家自己的 venv(screen_mattes 吃 numpy/PIL/scipy);沒有就退回 PATH 的 python,
+ *  兩者都不行時由呼叫端把錯誤原樣送到頁面 —— MUST NOT 靜靜地當成「判決存好了」 */
+const venvPython = (home) => {
+  const win = process.platform === 'win32';
+  for (const p of [join(home || '', '.venv', win ? 'Scripts' : 'bin', win ? 'python.exe' : 'python')]) {
+    if (p && existsSync(p)) return p;
+  }
+  return 'python';
+};
+
 const argv = process.argv.slice(2);
 const arg = (k, d = null) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : d; };
 
@@ -159,10 +170,16 @@ export function manifest(items = {}, photosOpt = null) {
       prov: p,
       imgs: imgOut(name),
       consumer: ds.map((x) => `${x.kind}[${x.index}]`).join('、'),
-      // 對照的兩側:左 = 原版(保險絲 primitive),右 = AI 生成(GLB)。
+      // **單獨陳列,不並排比對**(2026-08-10 使用者定案:「只比對同源物件的新舊版本;
+      // 透過 img→3D 新生成與舊物件無關,不該一起比對,各自陳列,標注繪製方法即可」)。
+      //
+      // 保險絲 primitive **不是這顆節點的前一版** —— 它是載入失敗時的降級路徑,兩者不同源。
+      // 把它們並排會讀成「AI 版 vs 原版」,而那個「原版」從來沒有出貨過。
+      // ⚠ 保險絲群組仍然**會被建出來**,但只當「換掉的是哪幾顆 mesh」的索引(取景用,
+      //   見 review.js 的 sliceOf)—— 那是定位不是比對,所以它不佔一個 pane。
       // `builder` 決定由**誰的**建構器建 —— beacons 的 buildBeacon / biomes 的 buildVegMeshes,
       // 兩者都是遊戲自己那一支(台上沒有第二套組裝器,紀律 ①)
-      view: { mode: 'fuse-vs-lib', builder: d0.builder, kind: d0.kind, node: d0.node, fb: d0.fb, at: d0.p },
+      view: { mode: 'now-only', builder: d0.builder, kind: d0.kind, node: d0.node, fb: d0.fb, at: d0.p },
       missing: !node,
       glbPath: fam ? fam.path.replace(ROOT + sep, '') : null,
       glbError: fam?.error || null,
@@ -367,6 +384,77 @@ async function serve() {
     };
     try {
       const u = new URL(req.url, 'http://localhost');
+
+      // 採集迴圈的啟停(2026-08-10 使用者需求:「設定腳本可以在零件台執行/關閉」)。
+      // **掛的是 `dev_supervisor` 那一支 `handle`,不是自己寫一份**:那是全專案唯一
+      // 「HTTP 進來 → spawn 行程」的閘門(loopback + 參數零信任 + CSRF 標頭三道),
+      // 各寫一份 = 兩個入口兩套閘,而漏掉的那一套沒有任何錯誤訊息。
+      // 這個台子是 dev-only 且只綁本機 —— 與遊戲伺服器那條路同樣的邊界(見 dev_supervisor 檔頭)。
+      if (u.pathname.startsWith('/dev/tools')) {
+        const sup = await import('./dev_supervisor.mjs');
+        if (await sup.handle(req, res, u.pathname)) return undefined;
+        return send(404, '{"error":"not found"}');
+      }
+
+      // 圖檔三態(未處理 / 已處理 / 需修正 + 已淘汰);推導縫住 tools/ai3d/photo_state.mjs,
+      // 這裡只轉呼(頁面更不准自己判 —— 那會變成第六本帳)
+      if (u.pathname === '/api/photos') {
+        const { corpusHomes } = await import('./ai3d/provenance.mjs');
+        const { photoStates, STATES } = await import('./ai3d/photo_state.mjs');
+        const homes = corpusHomes(photos);
+        return send(200, JSON.stringify({ ...photoStates(homes[0]?.home ?? null), homes, states: STATES }));
+      }
+
+      // 語料原圖(還沒轉 3D 的也要看得到 —— 手動篩選就是看著圖判)。
+      // **路徑一律由伺服器從帳本解析**(同 /api/img 的零信任):請求只送 id,
+      // 檔名從 `entry.file` 來 —— 讓請求決定路徑等於開一個任意讀檔的洞。
+      if (u.pathname === '/api/photo') {
+        const { corpusHomes } = await import('./ai3d/provenance.mjs');
+        const home = corpusHomes(photos)[0]?.home;
+        const id = u.searchParams.get('id');
+        const man = home ? readJson(join(home, 'photo_manifest.json'), []) : [];
+        const e = man.find((x) => x.id === id);
+        if (!e) return send(404, 'not found', 'text/plain; charset=utf-8');
+        // `?t=<i>` = 切出來的第 i 個目標(那才是真的餵進生成器的東西);沒給就是母照片。
+        // ⚠ `entry.matte` 是**去背的 bbox 物件**(`{wh, origin}`)不是路徑 —— 當成路徑用會
+        //   `String()` 成 "[object Object]"、`existsSync` 回 false,然後安靜地退回原圖:
+        //   看起來一切正常,而你以為在看去背後的樣子。matte 的路徑是**約定**的
+        //   `out/matte/<族>/<零件>/<id>.png`(與 screen_mattes 的 apply_purge 同一條)。
+        const ti = u.searchParams.get('t');
+        const rel = ti != null
+          ? e.targets?.[Number(ti)]?.file
+          : [join('out', 'matte', e.family, e.part, `${e.id}.png`), e.file]
+            .find((p) => existsSync(join(home, p)));
+        const hit = rel && join(home, String(rel).replace(/\\/g, '/'));
+        if (!hit || !existsSync(hit)) return send(404, 'not found', 'text/plain; charset=utf-8');
+        return send(200, readFileSync(hit), MIME[extname(hit).toLowerCase()] || 'application/octet-stream');
+      }
+
+      // 手動篩選:人眼對**還沒轉 3D 的圖**下判決。三個出口對應 screen_mattes.py 既有的兩支
+      // (`--human pass|reject` / `--purge`)—— 判決的紀律(人眼恆勝統計、roll_up 到母照片、
+      // 黑名單怎麼表達)全部住那一支,這裡**只轉呼**,MUST NOT 自己改帳本(第二份實作)。
+      if (u.pathname === '/api/screen' && req.method === 'POST') {
+        if (req.headers['x-dev-tools'] !== '1') return send(403, '{"error":"缺少 x-dev-tools 標頭"}');
+        const chunks = [];
+        for await (const c of req) chunks.push(c);
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        const { corpusHomes } = await import('./ai3d/provenance.mjs');
+        const home = corpusHomes(photos)[0]?.home;
+        const man = home ? readJson(join(home, 'photo_manifest.json'), []) : [];
+        // **id 與 family 都從帳本取**,不是從請求抄過去(零信任;請求只能「挑一筆現有的」)
+        const e = man.find((x) => x.id === body.id);
+        if (!e) return send(404, '{"error":"帳本裡沒有這一筆"}');
+        const act = { pass: ['--human', 'pass', e.id], reject: ['--human', 'reject', e.id], purge: ['--purge', e.id] }[body.act];
+        if (!act) return send(400, '{"error":"只收 pass / reject / purge"}');
+        const py = venvPython(home);
+        try {
+          const out = execFileSync(py, ['screen_mattes.py', '--home', home, '--family', e.family, ...act],
+            { cwd: join(ROOT, 'tools', 'ai3d'), encoding: 'utf8', timeout: 120000 });
+          return send(200, JSON.stringify({ ok: true, out: out.trim().split(/\r?\n/).slice(-4).join('\n') }));
+        } catch (err) {
+          return send(500, JSON.stringify({ ok: false, error: `${py}:${(err.stderr || err.message || '').toString().split(/\r?\n/).slice(-3).join(' ')}` }));
+        }
+      }
 
       if (u.pathname === '/api/parts') {
         if (req.method === 'GET') {

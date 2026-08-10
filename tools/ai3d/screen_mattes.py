@@ -113,6 +113,9 @@
 #   .venv/Scripts/python screen_mattes.py --sheet             # 另產倖存者/淘汰者 contact sheet
 #   .venv/Scripts/python screen_mattes.py --human reject ov_x1,ov_x2   # 人眼淘汰(含人/不是樹)
 #   .venv/Scripts/python screen_mattes.py --human pass ov_x1           # 人眼救回統計誤殺
+#   .venv/Scripts/python screen_mattes.py --purge ov_x1                # ✕ 刪除來源圖 + 進黑名單
+#       (2026-08-10:對照台判 ✕ 時由 apply_verdicts.mjs 呼叫;黑名單的表達方式見 apply_purge 檔頭
+#        —— 帳本條目 MUST 留著且 ok 維持 True,否則下一輪會把同一張圖重新下載回來)
 import argparse
 import glob
 import json
@@ -412,6 +415,52 @@ def apply_human(manifest, fam, mode, ids):
     return len(hit), changed
 
 
+def apply_purge(manifest, fam, ids, dry=False):
+    """✕ 刪除來源圖(2026-08-10 使用者定案:人眼判 purge 時**連節點一起撤下**,照片真的刪掉)。
+
+    做兩件事,而**兩件都要做**:
+      ① **真刪檔**:原圖 + 它的 matte + 它切出來的每一個目標。留著的話下一輪去背又把它
+         推進管線一次(GPU 白燒),而日誌上完全正常。
+      ② **黑名單**:帳本條目**留著**且 `ok` 維持 True —— 這一條反直覺但它才是黑名單本身:
+         `fetch_photos.mjs` 的 `seen` 是「`e.ok` 或持續性失敗」,把 ok 改成 False 會讓這張圖
+         **下一輪被重新下載**(擋了一邊、漏了另一邊,而兩邊都不會報錯)。淘汰改由
+         `screen = {v:'reject', why:'human'}` 表達 ⇒ `usable()` 不算它、`--adopt` 的
+         id 去重也擋得住、`harvest_loop.pendingMattes` 的 rejected 集合同樣吃這一欄。
+         `why` 用 `'human'` 是必要的:統計重跑只讓過 `why == 'human'` 的條目(人眼恆勝),
+         寫成 `'purged'` 的話下一次跑統計就把判決洗掉了。
+
+    id 一律當**母照片**解:使用者的判決是「刪除原始照片」,而目標是它切出來的
+    (只想擋掉其中一個目標請用 `--human reject <目標 id>`)。回 (命中數, 刪檔數)。
+    """
+    ids = set(ids)
+    hit = 0
+    removed = 0
+    for e in manifest:
+        if e.get('family') != fam or e.get('id') not in ids:
+            continue
+        hit += 1
+        files = [e.get('file')] + [t.get('file') for t in e.get('targets') or []]
+        files.append(os.path.join('out', 'matte', fam, e.get('part') or '', f"{e['id']}.png"))
+        for rel in files:
+            if not rel:
+                continue
+            p = rel if os.path.isabs(rel) else os.path.join(_HOME, rel)
+            if not os.path.exists(p):
+                continue
+            print(f"  − {os.path.relpath(p, _HOME)}")
+            if not dry:
+                os.remove(p)
+            removed += 1
+        e['purged'] = {'at': now_iso(), 'by': 'apply_verdicts'}
+        e['screen'] = {'v': 'reject', 'why': 'human', 'at': now_iso()}
+        for t in e.get('targets') or []:
+            t['screen'] = {'v': 'reject', 'why': 'human', 'at': now_iso()}
+    for i in ids:
+        if not any(e.get('family') == fam and e.get('id') == i for e in manifest):
+            print(f'⚠ 帳本裡沒有 {fam} 族的 {i},跳過')
+    return hit, removed
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--family', default='tree')
@@ -419,10 +468,23 @@ def main():
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--sheet', action='store_true')
     ap.add_argument('--human', nargs=2, metavar=('pass|reject', 'id[,id..]'))
+    ap.add_argument('--purge', metavar='id[,id..]',
+                    help='刪除來源圖:真刪原圖/matte/目標 + 進黑名單(對照台判 ✕ 時由 apply_verdicts.mjs 呼叫)')
     args = ap.parse_args()
     fam = args.family
 
     manifest = load_manifest()
+
+    if args.purge:
+        hit, removed = apply_purge(manifest, fam, [s for s in args.purge.split(',') if s], args.dry)
+        if args.dry:
+            print(f'刪除來源圖 {hit} 筆 / {removed} 個檔(--dry:未寫入也未刪檔)')
+        elif hit:
+            save_manifest(manifest)
+            print(f'刪除來源圖 {hit} 筆,共刪 {removed} 個檔;帳本條目留著當黑名單(不會再被抓/收編/送生成)')
+        else:
+            print('沒有命中任何條目 —— 未寫入')
+        return
 
     if args.human:
         mode, raw = args.human
