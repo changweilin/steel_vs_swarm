@@ -6,7 +6,8 @@
 //     ⑦規律結構都市規劃朝向(2026-07-29:gridA 主方位執行原文 + ink 恆對齊三段退避靜態規則)
 // node tools/audit_ground_qc.mjs
 'use strict';
-import { readSrc } from './audit_src.mjs';
+import { readSrc, grabFn } from './audit_src.mjs';
+import { gridAngle } from '../public/js/roadgrid.js';
 let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
@@ -192,10 +193,13 @@ console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太�
   const bsrc = readSrc('public', 'js', 'biomes.js');
   // —— 執行 gridA 原文(全圖格網主方位:道路線段長度加權的 mod 90° 圓平均)——
   // `\r?\n`:CRLF 檢出(Windows core.autocrlf)下 `;\n` 抽不到原文 ⇒ 整段體檢靜默不驗
-  const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = Math\.atan2\(gsz, gsx\) \/ 4;\r?\n  \}/);
+  // 公式本體自 2026-08-10 起住 `roadgrid.js gridAngle`(場地主方位的離線烘焙吃同一支)⇒ 沙箱注入它。
+  // 這一段因此同時驗兩件事:ground.js 這個消費端有沒有把線段餵對、那支共用公式的行為對不對。
+  const gm = gsrc.match(/const GRID_FAR_R2 = [\s\S]*?gridA = gridAngle\(segs\);\r?\n  \}/);
   if (!gm) bad('ground.js 找不到 gridA 主方位原文');
   else {
-    const runGrid = (body, roadPolys) => new Function('roadPolys', `${body}\nreturn { GRID_FAR_R2, gridA };`)(roadPolys);
+    const runGrid = (body, roadPolys, ga = gridAngle) =>
+      new Function('roadPolys', 'gridAngle', `${body}\nreturn { GRID_FAR_R2, gridA };`)(roadPolys, ga);
     const deg = (d) => d * Math.PI / 180;
     const road = (a, len, n = 4) => {   // 方位 a、總長 len 的折線
       const pts = [];
@@ -224,10 +228,15 @@ console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太�
     g1.GRID_FAR_R2 > 46 * 46
       ? ok(`離路擴大半徑 GRID_FAR ${Math.sqrt(g1.GRID_FAR_R2)}m > 近路 46m(找得到同街區幹道)`)
       : bad('GRID_FAR 未大於近路半徑');
-    // 對照組:拿掉 4 倍角摺疊 → 垂直街道互相抵銷/平均偏斜,mod 90° 檢查必紅
-    const flat = gm[0].replace('Math.atan2(dz, dx) * 4', 'Math.atan2(dz, dx) * 1')
-                      .replace('Math.atan2(gsz, gsx) / 4', 'Math.atan2(gsz, gsx) / 1');
-    const gBad = runGrid(flat, [road(deg(25), 500), road(deg(115), 500)]);
+    // 對照組:拿掉 4 倍角摺疊 → 垂直街道互相抵銷/平均偏斜,mod 90° 檢查必紅。
+    // 摺疊自 2026-08-10 起住 `roadgrid.js gridAngle` ⇒ 要動刀的是**那一支的原文**,
+    // 在 ground.js 這段消費端原文上做字串替換是無聲的 no-op(對照組會永遠通過 = 沒驗到)。
+    const gaSrc = grabFn(readSrc('public', 'js', 'roadgrid.js'), 'gridAngle');
+    const flatGA = new Function(`return ${gaSrc
+      .replace('Math.atan2(dz, dx) * 4', 'Math.atan2(dz, dx) * 1')
+      .replace('Math.atan2(sz, sx) / 4', 'Math.atan2(sz, sx) / 1')}`)();
+    if (flatGA.toString() === gaSrc) bad('對照組:gridAngle 的 4 倍角替換沒生效(原文樣式已變)');
+    const gBad = runGrid(gm[0], [road(deg(25), 500), road(deg(115), 500)], flatGA);
     (gBad.gridA === null || diff90(gBad.gridA * 180 / Math.PI, 25) >= 0.5)
       ? ok('對照組:無摺疊的平均在垂直街道下失準(4 倍角檢查有牙)')
       : bad('對照組:無摺疊版本竟仍正確(檢查驗不到東西)');

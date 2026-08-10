@@ -9,6 +9,7 @@
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
 import { MAPGEO, lanesFor, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
+import { VENUE_GRID } from './venueGrid.js';
 
 /**
  * 1v1(L1)兵線立體場景標記(2026-07-28 使用者需求:九種場景各要有一張預設地圖可測)。
@@ -338,7 +339,10 @@ export function venueConfig(venue, teamSize) {
   // distM 用實際兩堡距離(預算路線的端點吸附到道路節點,與理想值有數十公尺差)
   const distGame = distMeters(A, B) / MAPGEO.REAL_SCALE;
   return {
-    center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 },
+    // rot = 地圖主方位(弧度):把整張地圖轉這麼多度,該場地的大馬路就對齊世界軸
+    // (2026-08-10 使用者定案)。離線烘焙的表沒有這個場地 ⇒ 0 = 不旋轉 = 逐位元同舊制。
+    // **旋轉是投影的一部分**(見 data.js llToXZ),隨 battleConfig 廣播全房 ⇒ 兩端同一個世界。
+    center: { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2, rot: (VENUE_GRID[venue.id] || 0) * Math.PI / 180 },
     bases: { SWARM: A, STEEL: B },
     lanes,
     laneCount: L,

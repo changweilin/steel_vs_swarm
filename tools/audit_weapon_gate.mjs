@@ -1508,11 +1508,19 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
     ok(!/REAL_SCALE|COMBAT_SCALE/.test(G),
       'game.js 全檔無比例尺常數(彈道/射程/光暈全在遊戲空間,MUST NOT 換算回真實世界)');
     ok(!/COMBAT_SCALE/.test(S), 'sim.js 全檔無 COMBAT_SCALE(def.range 進來就已經是遊戲公尺)');
-    // sim.js 的 REAL_SCALE 只准出現在經緯度換算那一支
+    // sim.js 的 REAL_SCALE 自 2026-08-10 起是 **0 處**:投影(比例尺 + 地圖主方位旋轉)整支
+    // 收進 `data.js llToXZ`,`llToMeters` 只剩 **z 鏡射**(客戶端框 z=南 / 伺服器框 z=北,A30)。
     const realHits = S.split('\n').map((l, i) => [i + 1, l])
       .filter(([, l]) => /MAPGEO\.REAL_SCALE/.test(l) && !/^\s*(\/\/|\*)/.test(l));
-    ok(realHits.length === 1 && /const s = 1 \/ MAPGEO\.REAL_SCALE;/.test(realHits[0][1]),
-      `sim.js 的 REAL_SCALE 只在 llToMeters(經緯度→遊戲公尺的邊界)出現一次(實得 ${realHits.length} 處)`);
+    ok(realHits.length === 0,
+      `sim.js 全檔無 REAL_SCALE —— 經緯度投影唯一縫 = data.js llToXZ(實得 ${realHits.length} 處)`);
+    const llm = /export function llToMeters[\s\S]*?\n}/.exec(S)?.[0] || '';
+    ok(/llToXZ\(lat, lng, center\)/.test(llm) && /return \[x, -z\];/.test(llm),
+      'sim.llToMeters = data.js llToXZ 的 z 鏡射薄殼(投影本體不在 sim)');
+    // z 鏡射已把 R(θ) 共軛成 R(−θ):在這裡再套一次旋轉 = 兩端世界差 2θ,而畫面上只表現成
+    // 「塔的位置跟畫面對不上 / 打得到卻沒傷害」(A30 靜默丟包家族)。
+    ok(!/rotXZ|Math\.cos|Math\.sin|mapRot/.test(llm),
+      'sim.llToMeters 內沒有第二份旋轉(旋轉方向由 z 鏡射自動反號,MUST NOT 手動再轉一次)');
     for (const m of ['heroHit', 'heroPlasma', 'heroLance', 'heroBurst', '_lanceHits', 'botFire']) {
       ok(!/REAL_SCALE|COMBAT_SCALE/.test(methodSrc(m, S)), `${m} 的判定內無任何比例尺換算`);
     }

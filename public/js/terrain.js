@@ -10,16 +10,13 @@ import * as THREE from 'three';
 import { envMat } from './hazards.js';
 import { setWeatherField } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
-import { MAPGEO, TERRAIN, GAME, WATER, battleBBox, solveTowerSites, curveMaxEdgeM, edgeBufferM } from './data.js';
+import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, curveMaxEdgeM, edgeBufferM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
 // 舊引用路徑照舊有效。
 export { battleBBox };
 
-const R_EARTH = 6371000;
-// 真實↔遊戲世界比例尺(與 sim.js/llToMeters 必須同倍率,否則單位錯位)
-const WORLD_S = 1 / MAPGEO.REAL_SCALE;
 const GRID_N = TERRAIN.GRID_N;         // 地形頂點解析度
 const ELEV_ZOOM = TERRAIN.ELEV_ZOOM;
 const TERRARIUM = (z, x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
@@ -106,11 +103,13 @@ function loadImage(url) {
   });
 }
 
-/** 經緯度 → 世界公尺(x 東、z 南) */
+/**
+ * 經緯度 → 世界公尺(x 東、z 南)。
+ * **實作已收進 `data.js llToXZ`**(含地圖主方位旋轉;伺服器 `sim.llToMeters` 吃同一支的
+ * z 反號版)—— 兩份實作 = 兩端世界分家,MUST NOT 在這裡復辟第二份投影公式。
+ */
 export function llToWorld(lat, lng, center) {
-  const x = (lng - center.lng) * Math.PI / 180 * R_EARTH * Math.cos(d2r(center.lat)) * WORLD_S;
-  const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH * WORLD_S;
-  return [x, -zN];
+  return llToXZ(lat, lng, center);
 }
 
 // ---- 高程來源 1:AWS terrarium tiles ----
@@ -253,7 +252,8 @@ function stylizeImagery(canvas) {
  * sampleColor:取衛星影像該點的 [r,g,b],供 biomes.js 做地被分類。
  */
 export async function buildTerrain(cfg, onProgress) {
-  const bbox = battleBBox(cfg);
+  const bbox = battleBBox(cfg);   // 資料抓取範圍(經緯度;已覆蓋旋轉後的世界方框)
+  const rect = battleRect(cfg);   // 世界方框(遊戲公尺,恆軸對齊)
   const center = cfg.center;
 
   onProgress?.(0.02, '下載高程資料…');
@@ -273,10 +273,15 @@ export async function buildTerrain(cfg, onProgress) {
       sampleElev = await fetchElevOpenMeteo(bbox, (f) => onProgress?.(0.02 + f * 0.30, '下載高程資料(備援來源)…'));
     }
     rawElev = new Float32Array(GRID_N * GRID_N);
-    for (let i = 0; i < GRID_N; i++) {         // 取樣網格 MUST 與下方 heights 網格同一組經緯點
-      const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (GRID_N - 1);
+    // 取樣網格 MUST 與下方 heights 網格**同一組點**:那一份是**世界方框**上的規則格
+    // (i:z 北→南、j:x 西→東),所以這裡也走世界格再逆投影回經緯度 —— 地圖主方位一旋轉,
+    // 高程網格就跟著轉到地表上的同一塊,heightAt(x,z) 的直接索引維持不變(熱路徑零成本)。
+    // rot=0 時這組點與舊制的「經緯度線性內插」是同一組(差一次投影往返的浮點尾差)。
+    for (let i = 0; i < GRID_N; i++) {
+      const z = rect.minZ + (rect.maxZ - rect.minZ) * i / (GRID_N - 1);
       for (let j = 0; j < GRID_N; j++) {
-        const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (GRID_N - 1);
+        const x = rect.minX + (rect.maxX - rect.minX) * j / (GRID_N - 1);
+        const [lat, lng] = xzToLL(x, z, center);
         const h = sampleElev(lat, lng);
         rawElev[i * GRID_N + j] = Number.isFinite(h) ? h : 0;
       }
@@ -315,9 +320,8 @@ export async function buildTerrain(cfg, onProgress) {
     }
     const iw = imagery.canvas.width, ih = imagery.canvas.height;
     sampleColor = (x, z) => {
-      // 遊戲世界公尺 → 真實公尺(×REAL_SCALE)→ 經緯度(llToWorld 的逆運算)
-      const lng = center.lng + x * MAPGEO.REAL_SCALE / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
-      const lat = center.lat + (-z) * MAPGEO.REAL_SCALE / R_EARTH * 180 / Math.PI;
+      // 遊戲世界公尺 → 經緯度(`llToWorld` 的逆運算,含地圖主方位的反向旋轉)
+      const [lat, lng] = xzToLL(x, z, center);
       const px = Math.round((lon2tx(lng, imagery.z) - imagery.tx0) * 256);
       const py = Math.round((lat2ty(lat, imagery.z) - imagery.ty0) * 256);
       if (px < 0 || py < 0 || px >= iw || py >= ih) return null;
@@ -329,10 +333,8 @@ export async function buildTerrain(cfg, onProgress) {
 
   onProgress?.(0.68, '建構地形網格…');
 
-  // 世界範圍(公尺)
-  const [minX, maxZs] = llToWorld(bbox.minLat, bbox.minLng, center); // minLng→minX;minLat→z 南(最大 z)
-  const [maxX, minZs] = llToWorld(bbox.maxLat, bbox.maxLng, center);
-  const minZ = Math.min(minZs, maxZs), maxZ = Math.max(minZs, maxZs);
+  // 世界範圍(公尺)—— 單一縫 `data.js battleRect`(伺服器 sim.bounds 吃同一份的 z 反號版)
+  const { minX, maxX, minZ, maxZ } = rect;
   const worldW = maxX - minX, worldH = maxZ - minZ;
 
   const N = GRID_N;
@@ -450,10 +452,11 @@ export async function buildTerrain(cfg, onProgress) {
   const uv = new Float32Array(N * N * 2);
   for (let i = 0; i < N; i++) {
     const z = minZ + (maxZ - minZ) * i / (N - 1);
-    const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * i / (N - 1);
     for (let j = 0; j < N; j++) {
       const x = minX + (maxX - minX) * j / (N - 1);
-      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * j / (N - 1);
+      // 貼圖 UV 的經緯度 MUST 走逆投影(地圖主方位一旋轉,lat 就不再只是 i 的函式);
+      // 拿 bbox 逐軸線性內插 = 影像相對地形整片轉了 −rot,而畫面上只表現成「衛星底圖與道路對不上」
+      const [lat, lng] = xzToLL(x, z, center);
       const k = i * N + j;
       pos[k * 3] = x;
       pos[k * 3 + 1] = heights[k];
@@ -613,8 +616,7 @@ export async function buildTerrain(cfg, onProgress) {
     };
     const uvOf = (x, z) => {
       if (!imagery) return [0, 0];
-      const lng = bbox.minLng + (bbox.maxLng - bbox.minLng) * (clampX(x) - minX) / (maxX - minX);
-      const lat = bbox.maxLat + (bbox.minLat - bbox.maxLat) * (clampZ(z) - minZ) / (maxZ - minZ);
+      const [lat, lng] = xzToLL(clampX(x), clampZ(z), center);   // 同上:逆投影,MUST NOT 拿 bbox 逐軸內插
       return [((lon2tx(lng, imagery.z) - imagery.tx0) * 256) / imagery.canvas.width,
         1 - ((lat2ty(lat, imagery.z) - imagery.ty0) * 256) / imagery.canvas.height];
     };
@@ -851,8 +853,7 @@ export async function buildTerrain(cfg, onProgress) {
     if (imagery && mat?.map) {
       const ictx = imagery.canvas.getContext('2d');
       const toPx = (x, z) => {
-        const lng = center.lng + x * MAPGEO.REAL_SCALE / (R_EARTH * Math.cos(d2r(center.lat))) * 180 / Math.PI;
-        const lat = center.lat + (-z) * MAPGEO.REAL_SCALE / R_EARTH * 180 / Math.PI;
+        const [lat, lng] = xzToLL(x, z, center);
         return [(lon2tx(lng, imagery.z) - imagery.tx0) * 256, (lat2ty(lat, imagery.z) - imagery.ty0) * 256];
       };
       const [ox] = toPx(0, 0), [tx] = toPx(10, 0);

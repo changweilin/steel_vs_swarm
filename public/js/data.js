@@ -145,41 +145,109 @@ export const MAPGEO = {
 // 對稱方框之外,若只給百分比 pad,最外側兵線頂點會貼著內縮 40m 的空氣牆(玩家沿線飛就撞牆)。
 export const ROUTE_EDGE_MARGIN_M = 160;
 
+// ============ 地圖主方位(2026-08-10 使用者定案)============
+// 使用者原句:「處理圖資時先找出地圖上下左右對準哪一個方向時,可以對齊最多的大馬路
+// 組成正交網格」。⇒ 旋轉是**投影的一部分**:經緯度 → 世界公尺的最後一步整份轉
+// `center.rot` 弧度,地形/兵線/主堡/圖資/建物/中立物全部一起轉。
+//
+// 為什麼可以這樣做而不動任何戰鬥判定:旋轉是**等距同構** —— 距離、夾角、面積、
+// 兵線分離、砲塔佈局、重合率一律逐位元不變(它們全是旋轉不變量),變的只有「北在哪」。
+// 角度來源 = `venueGrid.js` 的離線烘焙(大馬路長度加權的 mod 90° 主方位取負);
+// 拿不到(自訂地圖 / 舊的最愛 / 離線)→ 0 = 不旋轉 = 逐位元同舊制(原則 6 降級不例外)。
+//
+// ⚠ **兩端旋轉方向相反,這是本縫唯一會靜默壞掉的地方**:客戶端框 z = 南、伺服器框
+//   z = 北(A30「sim 座標 z 鏡射」)。z 鏡射把 R(θ) 共軛成 R(−θ) ⇒ `sim.llToMeters`
+//   MUST 是本檔 `llToXZ` 的 **z 反號**,MUST NOT 在 sim 自己再寫一次旋轉 —— 寫成同號的話
+//   兩端世界差 2θ,而畫面上只表現成「打得到卻沒傷害 / 塔的位置跟畫面對不上」(A30 家族)。
+const R_EARTH_M = 6371000;
+/** 地圖主方位(rad)。全專案唯一讀取縫;缺席一律 0。 */
+export const mapRot = (center) => (Number.isFinite(center?.rot) ? center.rot : 0);
+/** 平面旋轉。a = 0 是**恆等式**(x*1−z*0 === x、x*0+z*1 === z,IEEE754 逐位元)。 */
+export function rotXZ(x, z, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [x * c - z * s, x * s + z * c];
+}
 /**
- * 依戰場設定算出地形涵蓋範圍(路線包絡外擴 ∪ 對稱方框,再 pad 5%)。
- * 幾何真相只有一份:客戶端地形(terrain.js buildTerrain)與伺服器中立物散布
- * (sim.js 障礙/防空/中繼站的越界判定)共用 —— 伺服器沒有地形網格,
- * 但用同一個 bbox 就能保證中立物不落在地形外(HAZ_LANE_MAX 300 > 邊距 160)。
+ * 經緯度 → 世界公尺(**客戶端框**:x 東、z 南)。
+ * 全專案唯一的經緯度投影實作:`terrain.llToWorld` 與 `sim.llToMeters`(z 反號)MUST 轉呼這一支。
+ */
+export function llToXZ(lat, lng, center) {
+  const s = 1 / MAPGEO.REAL_SCALE;
+  const x = (lng - center.lng) * Math.PI / 180 * R_EARTH_M * Math.cos(center.lat * Math.PI / 180) * s;
+  const zN = (lat - center.lat) * Math.PI / 180 * R_EARTH_M * s;
+  return rotXZ(x, -zN, mapRot(center));
+}
+/** 世界公尺(客戶端框)→ 經緯度,`llToXZ` 的逆運算。回 `[lat, lng]`。 */
+export function xzToLL(x, z, center) {
+  const [ux, uz] = rotXZ(x, z, -mapRot(center));
+  return [
+    center.lat + (-uz) * MAPGEO.REAL_SCALE / R_EARTH_M * 180 / Math.PI,
+    center.lng + ux * MAPGEO.REAL_SCALE / (R_EARTH_M * Math.cos(center.lat * Math.PI / 180)) * 180 / Math.PI,
+  ];
+}
+
+/**
+ * 戰場**世界方框**(遊戲公尺,客戶端框):路線包絡外擴 ∪ 對稱方框,再繞中心放大 MAP_EXPAND。
+ * 幾何真相只有一份:客戶端地形(terrain.js buildTerrain 的 minX/maxX/minZ/maxZ)與伺服器
+ * 中立物散布(sim.js 障礙/防空/中繼站的越界判定,z 反號)共用 —— 伺服器沒有地形網格,
+ * 但用同一個方框就能保證中立物不落在地形外(HAZ_LANE_MAX 300 > 邊距 160)。
+ *
+ * 這一份**恆為世界軸對齊**(地形網格/邊界障礙環/小地圖都是軸對齊的)。
+ *
+ * ⚠ **旋轉只准讓方框長大,MUST NOT 讓它縮小**:包絡是「旋轉後的兵線」的外接框,而兵線一旦
+ *   被轉到與某一軸平行,那一軸的包絡就會塌掉(實測 barcelona 5v5 轉 45° ⇒ 面積剩 66%)。
+ *   MAP_EXPAND 是等比放大,救不了扁掉的那一軸 —— 而它存在的理由正是「第三方野營要有側翼
+ *   合法區(離每座砲塔 ≥ 388m)」,面積掉三分之一就是那個機制無聲失效。
+ *   故逐軸取「旋轉後包絡」與「rot=0 包絡」的較寬者。rot=0 時兩者同一組數,補正恆為 0(逐位元)。
+ */
+export function battleRect(cfg) {
+  const c = cfg.center;
+  const envAt = (rot) => {
+    const cr = { lat: c.lat, lng: c.lng, rot };
+    // 1) 路線包絡(主堡 + 全兵線頂點),外擴 ROUTE_EDGE_MARGIN_M(本來就是遊戲公尺)
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [la, ln] of [cfg.bases.SWARM, cfg.bases.STEEL, ...cfg.lanes.flat()]) {
+      const [x, z] = llToXZ(la, ln, cr);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z;
+      if (z > maxZ) maxZ = z;
+    }
+    minX -= ROUTE_EDGE_MARGIN_M; maxX += ROUTE_EDGE_MARGIN_M;
+    minZ -= ROUTE_EDGE_MARGIN_M; maxZ += ROUTE_EDGE_MARGIN_M;
+    // 2) 與對稱方框(原點 ± 半邊長;llToXZ(center) 恆為 [0,0])取聯集,兵線很短也維持基本尺寸
+    const half = cfg.sizeM / 2;
+    minX = Math.min(minX, -half); maxX = Math.max(maxX, half);
+    minZ = Math.min(minZ, -half); maxZ = Math.max(maxZ, half);
+    // 3) 繞方框中心等比放大 MAP_EXPAND(兵線不動;為第三方野營留側翼合法區)
+    const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+    const hx = (maxX - minX) / 2 * MAPGEO.MAP_EXPAND, hz = (maxZ - minZ) / 2 * MAPGEO.MAP_EXPAND;
+    return { minX: cx - hx, maxX: cx + hx, minZ: cz - hz, maxZ: cz + hz };
+  };
+  const r = envAt(mapRot(c));
+  const b = envAt(0);   // 尺寸地板(= 舊制的方框大小)
+  const dx = Math.max(0, ((b.maxX - b.minX) - (r.maxX - r.minX)) / 2);
+  const dz = Math.max(0, ((b.maxZ - b.minZ) - (r.maxZ - r.minZ)) / 2);
+  return { minX: r.minX - dx, maxX: r.maxX + dx, minZ: r.minZ - dz, maxZ: r.maxZ + dz };
+}
+
+/**
+ * 戰場**資料抓取範圍**(經緯度 AABB)= `battleRect` 四角的經緯外接框。
+ * 高程磚 / 衛星影像 / Overpass 三條 fetch 與 geocache 鍵一律吃這一份 ⇒ 地圖主方位一旋轉,
+ * 抓取範圍自動擴到覆蓋旋轉後的世界方框(最壞 45° 時邊長 ×√2)。
+ * rot = 0 時與舊制同一個框(差異只有一次投影往返的浮點尾差,遠小於 geoKey 的 1e-5 度分度)。
  */
 export function battleBBox(cfg) {
-  const R_EARTH = 6371000;
-  const d2r = (d) => d * Math.PI / 180;
-  // 1) 路線包絡(主堡 + 全兵線頂點),外擴 ROUTE_EDGE_MARGIN_M(換算真實公尺 → 度)
-  const mReal = ROUTE_EDGE_MARGIN_M * MAPGEO.REAL_SCALE;
-  const mLat = mReal / R_EARTH * 180 / Math.PI;
-  const mLng = mReal / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
+  const r = battleRect(cfg);
   let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-  for (const [la, ln] of [cfg.bases.SWARM, cfg.bases.STEEL, ...cfg.lanes.flat()]) {
+  for (const [x, z] of [[r.minX, r.minZ], [r.maxX, r.minZ], [r.minX, r.maxZ], [r.maxX, r.maxZ]]) {
+    const [la, ln] = xzToLL(x, z, cfg.center);
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
     if (ln < minLng) minLng = ln;
     if (ln > maxLng) maxLng = ln;
   }
-  minLat -= mLat; maxLat += mLat; minLng -= mLng; maxLng += mLng;
-
-  // 2) 與對稱方框(center ± 半邊長)取聯集,保證即使兵線很短也維持基本地圖尺寸
-  const half = cfg.sizeM / 2 * MAPGEO.REAL_SCALE;   // 遊戲邊長 → 真實半徑
-  const dLat = half / R_EARTH * 180 / Math.PI;
-  const dLng = half / (R_EARTH * Math.cos(d2r(cfg.center.lat))) * 180 / Math.PI;
-  minLat = Math.min(minLat, cfg.center.lat - dLat);
-  maxLat = Math.max(maxLat, cfg.center.lat + dLat);
-  minLng = Math.min(minLng, cfg.center.lng - dLng);
-  maxLng = Math.max(maxLng, cfg.center.lng + dLng);
-
-  // 3) 繞 bbox 中心等比放大 MAP_EXPAND(兵線不動;取代舊 5% pad,為第三方野營留側翼合法區)
-  const cLat = (minLat + maxLat) / 2, cLng = (minLng + maxLng) / 2;
-  const hLat = (maxLat - minLat) / 2 * MAPGEO.MAP_EXPAND, hLng = (maxLng - minLng) / 2 * MAPGEO.MAP_EXPAND;
-  return { minLat: cLat - hLat, maxLat: cLat + hLat, minLng: cLng - hLng, maxLng: cLng + hLng };
+  return { minLat, maxLat, minLng, maxLng };
 }
 
 /**
