@@ -126,13 +126,19 @@ const ok = (cond, msg) => {
     '機種圖示 MUST 吃 currentColor(選取態 .char-btn.on 才翻得動色)');
   ok(icons.kindIconHTML('不存在的機種').includes(icons.NPC_ICONS._),
     '未知機種回退問號圖(與 NPC 圖示同一條保底規則,漏畫看得出來而不是破圖)');
-  ok((mainJs.match(/function charAvatarHTML/g) || []).length === 1,
-    '頭像 + 機種角標只有一份標記產生器(main.js `charAvatarHTML`)');
-  ok(!/<img class="char-av"/.test(mainJs) && !/<img src="\$\{avatarURL/.test(mainJs),
+  // 2026-08-11:頭像/小卡/劇情版面的標記唯一縫自 main.js 搬到 `storyui.js`(遊戲本體與
+  // 本地故事書 tools/story_book 共用同一份)。**規則沒有變**,只是縫換了家。
+  const storyUi = readSrc('public', 'js', 'storyui.js');
+  ok((storyUi.match(/function charAvatarHTML/g) || []).length === 1
+    && !/function charAvatarHTML/.test(mainJs),
+    '頭像 + 機種角標只有一份標記產生器(storyui.js `charAvatarHTML`,main.js 不得留第二份)');
+  ok(![mainJs, storyUi].some((s) => /<img class="char-av"/.test(s) || /<img src="\$\{avatarURL/.test(s)),
     '所有頭像 MUST 走 `charAvatarHTML`,MUST NOT 自己拼 <img>(漏一處 = 那面牆沒有角標)');
-  ok(/charKind\(id\)/.test(mainJs.slice(mainJs.indexOf('function charAvatarHTML'),
-    mainJs.indexOf('function charAvatarHTML') + 500)),
+  ok(/charKind\(id\)/.test(storyUi.slice(storyUi.indexOf('function charAvatarHTML'),
+    storyUi.indexOf('function charAvatarHTML') + 500)),
     '機種取自 `charKind()`(2026-08-02 混編後陣營 ≠ 機種,MUST NOT 由 side 推)');
+  ok(!/three/.test(storyUi.split('\n').filter((l) => l.startsWith('import ')).join('\n')),
+    'storyui.js MUST 維持零 three(離線稽核與故事書都要載得起來,見該檔檔頭邊界 ①)');
   ok(/\.av-kind \{/.test(css) && /\.kind-ico \{/.test(css), 'style.css 有角標版位規則');
 
   // (7) 商店掃貨 / 預約(2026-08-02 使用者定案):鈕在 HTML、判定在 game.js,兩邊各一份

@@ -13,6 +13,7 @@ import {
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
+  SIEGE, siegeSiteStages, siegeOpenStage,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
@@ -190,6 +191,11 @@ export class BattleSim {
     // 權威只有這一份(_creepMul 是唯一讀取縫);客戶端商店讀快照的 cu 欄(唯讀顯示),
     // 購買一律走 buy(pid, 'creep', lane)。長度於下方 this.lanes 定案後補齊。
     this.creepUpg = { SWARM: [], STEEL: [] };
+    // 攻堅順序(劇情戰役專用;見 data.js SIEGE)。旗標由開房的 battleConfig 帶進來,
+    // 一般對戰恆 false ⇒ 下面兩張表全空、`siegeLocked()` 恆 false = 逐位元同舊制。
+    this.siege = !!config.siege;
+    this._siegeLeft = { SWARM: [], STEEL: [] };   // [階段] = 該方該階仍存活的建築數(_spawnStructures 填)
+    this._siegeOpen = { SWARM: 0, STEEL: 0 };     // 該方目前打得動的最高階段(siegeOpenStage 推導)
 
     // 兵線折線轉公尺;lane[laneIdx] 方向:SWARM 主堡 → STEEL 主堡
     this.lanes = config.lanes.map((line) =>
@@ -1321,7 +1327,7 @@ export class BattleSim {
   _spawnStructures() {
     for (const side of ['SWARM', 'STEEL']) {
       const [x, z] = this.basePos[side];
-      this._add({ kind: 'base', side, x, z, hp: UNITS.base.hp });
+      this._add({ kind: 'base', side, x, z, hp: UNITS.base.hp, sg: SIEGE.BASE });
     }
     // 塔位一律走 data.js 的 solveTowerSites()(與 biomes 淨空同一個縫):
     // 最前線敵我塔的直線距離 = tower.range × TOWER_SEP_F(射程重疊 TOWER_OVERLAP、且不對射)。
@@ -1329,18 +1335,52 @@ export class BattleSim {
     // MUST 吃同一份解(再解一次 = 第二份實作,兩邊會分家)。
     const sites = this.towerSites = solveTowerSites(this.lanes);
     for (let li = 0; li < sites.length; li++) {
-      for (const st of sites[li]) {
+      // 攻堅階段一律走 `siegeSiteStages`(唯一縫;MUST NOT 拿 st 的陣列索引推,見 data.js SIEGE 註)
+      const stages = siegeSiteStages(sites[li]);
+      for (let si = 0; si < sites[li].length; si++) {
+        const st = sites[li][si];
         for (const side of ['SWARM', 'STEEL']) {
           const p = st[side];
           for (const s of [-1, 1]) {
             this._add({
-              kind: 'tower', side, lane: li, hp: UNITS.tower.hp,
+              kind: 'tower', side, lane: li, hp: UNITS.tower.hp, sg: stages[si],
               x: p.x + p.nx * GAME.TOWER_SIDE_OFF * s, z: p.z + p.nz * GAME.TOWER_SIDE_OFF * s,
             });
           }
         }
       }
     }
+    // 逐階存活數 —— 建築只減不增(沒有重建),故只在 `_kill` 遞減、開場點一次名
+    for (const side of ['SWARM', 'STEEL']) {
+      const left = this._siegeLeft[side] = new Array(SIEGE.STAGES.length).fill(0);
+      for (const e of this.ents.values()) if (e.side === side && e.sg != null) left[e.sg]++;
+      this._siegeOpen[side] = siegeOpenStage(left);
+    }
+  }
+
+  /**
+   * 攻堅鎖血(劇情戰役):前一階建築沒清完,後一階完全免傷。
+   * **三個消費端 MUST 全吃這一支**(`_damage` 擋傷害、`_tgBlockedD` 與 `bots._acquire` 擋索敵)——
+   * 只擋傷害的話,小兵與砲塔會停在打不動的目標前面把整條兵線卡死,而畫面上只表現成「兵不推了」。
+   */
+  siegeLocked(t) {
+    return this.siege && t.sg != null && t.sg > this._siegeOpen[t.side];
+  }
+
+  /**
+   * 建築陣亡後推進階段;整階被推平時發事件(客戶端劇情對話的觸發來源,見 public/js/storytalk.js)。
+   * `stage` = **剛被推平的那一階**(不是新開放的那一階):對話的語意是「你剛剛拔掉了他們的前線砲塔」。
+   * 非劇情戰役照樣記帳(成本是一個整數遞減),但不發事件也不鎖血 ⇒ 對局行為逐位元不變。
+   */
+  _siegeFell(t) {
+    const left = this._siegeLeft[t.side];
+    if (!left || t.sg == null) return;
+    left[t.sg] = Math.max(0, left[t.sg] - 1);
+    const open = siegeOpenStage(left);
+    if (open === this._siegeOpen[t.side]) return;
+    const fell = this._siegeOpen[t.side];
+    this._siegeOpen[t.side] = open;
+    if (this.siege) this.events.push({ e: 'siege', side: t.side, stage: fell });
   }
 
   _add(e) {
@@ -3587,6 +3627,7 @@ export class BattleSim {
    *  環境傷害(沼澤/地雷/火場)與塔 SAM 一律不帶 ⇒ 中性參數 = 逐位元同舊制。 */
   _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
+    if (this.siegeLocked(t)) return;               // 攻堅順序未到:前一階沒清完的建築完全免傷(劇情戰役)
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
@@ -3902,6 +3943,7 @@ export class BattleSim {
     }
     this.ents.delete(t.id);
     if (t.tp) { this._onThirdDeath(t, by); return; }   // 第三方軍隊:進重生池(碉堡沒了就暫停倒數;全清釋出平民)
+    this._siegeFell(t);                                // 攻堅階段推進(整階推平時發 siege 事件)
     if (t.kind === 'base') {
       this.over = true;
       this.winner = OTHER_SIDE[t.side];
@@ -4655,6 +4697,7 @@ export class BattleSim {
    *  回 true = 不可鎖定;條款自舊制 _acquireTarget 逐字搬入,語意一字未動。 */
   _tgBlockedD(e, u, wd, t, d) {
     if (t.side === e.side || t.neutral || t.hp <= 0) return true;   // 中立障礙不當目標
+    if (this.siegeLocked(t)) return true;   // 鎖血建築不列入索敵(只擋傷害會把兵線卡死,見 siegeLocked)
     if (e.tp && t.tp) return true;   // 第三方不打第三方(游擊隊/民兵互不為敵,只防衛正規軍)
     if (t.gar) return true;   // 駐守碉堡中的第三方步槍兵:躲在工事裡,不可鎖定
     if (t.hero && (t.dead || (t.stealthUntil || 0) > this.t)) return true;   // 匿蹤英雄不被鎖定
@@ -4778,6 +4821,8 @@ export class BattleSim {
   _serializeEnt(e) {
     const o = { id: e.id, k: e.kind, s: e.side, x: Math.round(e.x * 10) / 10, z: Math.round(e.z * 10) / 10, hp: Math.round(e.hp), m: e.maxHp };
     if (e.sc) o.sc = e.sc;   // 障礙物實例尺寸(客戶端外觀 / 碰撞半徑)
+    // 攻堅鎖血:客戶端血條變灰 + 掛鎖,並把它排除在射程光暈之外(打不掉的東西不該亮燈)
+    if (this.siegeLocked(e)) o.lk = 1;
     if (e.kind === 'heli') o.y = Math.round((e.y || 0) * 10) / 10;   // 攻擊直升機巡航高度(純渲染用)
     if (e.gar) o.gar = 1;    // 第三方步槍兵駐守碉堡中(客戶端隱藏機體)
     if (e.civ) {             // 平民/間諜:客戶端只知陣營(cs)與職業(pf)——MUST NOT 送 spy(生前只能靠移速猜)
@@ -4947,6 +4992,9 @@ export class BattleSim {
       nextWave: Math.max(0, Math.round(this.nextWaveAt - this.t)), wave: this.wave,
       // 陣營小兵強化等級(唯讀顯示;每側每兵線一個整數)—— 商店與 HUD 讀這份權威值,MUST NOT 客戶端自算
       cu: { SWARM: [...this.creepUpg.SWARM], STEEL: [...this.creepUpg.STEEL] },
+      // 攻堅開放階段(只在劇情戰役發;一般對戰整個欄位不存在 ⇒ 快照逐位元同舊制)。
+      // HUD 的「目前該打哪一階」MUST 讀這一份權威值,MUST NOT 客戶端自己數塔(A1 家族)。
+      ...(this.siege ? { sg: { SWARM: this._siegeOpen.SWARM, STEEL: this._siegeOpen.STEEL } } : {}),
       ents, ev, sm, lt, ad, stats: this.stats, over: this.over, winner: this.winner,
     };
   }

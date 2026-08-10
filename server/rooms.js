@@ -335,6 +335,10 @@ export class RoomHub {
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
+        // 攻堅順序(前線塔 → 中段塔 → 主堡;劇情戰役開房時帶上)。**MUST 在這裡正規化成布林**:
+        // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
+        // 這是房間規則(同 botDiff),對雙方對稱生效。
+        cfg.siege = !!cfg.siege;
         rollSideSwap(cfg);                     // 主堡陣營歸屬 50% 對調(再戰時於 backToRoom 重擲)
         cfg.teamSize = teamSize;
         const pin = hub._genPin();

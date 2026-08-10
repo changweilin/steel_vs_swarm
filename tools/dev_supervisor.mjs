@@ -21,6 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
 import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
+import { DEFAULT_PORT as STORY_PORT } from './story_book.mjs';
 import { corpusHome } from './ai3d/provenance.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -58,6 +59,17 @@ export const TOOLS = {
     hint: '把 docs/ai3d_runbook.md 生成的 3D 物件與原版並排比較(同一顆座號、同一顆相機):'
       + '零件庫 GLB vs 保險絲 primitive、純資料件 vs 改寫前的零件表;逐件說明用哪個生成方法、'
       + '吃哪一張來源圖(授權與出處),並列出缺件 / 孤兒節點 / 未記載來源。',
+  },
+  story: {
+    key: 'story',
+    kind: 'server',
+    label: '本地故事書',
+    port: STORY_PORT,
+    script: path.join('tools', 'story_book.mjs'),
+    args: [],
+    hint: '直接翻看六章 × 兩陣營的劇情與對話,不用真的通關:開戰簡報 → 前線/中段砲塔的無線電對白 '
+      + '→ 主堡那一階的結算對照稿 → 勝敗文案。呈現走遊戲的真品(storyui.js / dialogue.js / style.css),'
+      + '對白可自動播或逐句翻。唯讀,不動 localStorage 的通關進度。',
   },
   harvest: {
     key: 'harvest',

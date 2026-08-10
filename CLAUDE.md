@@ -82,6 +82,10 @@
 | 圖鑑六角能力圖 | `HEX_AXES` + `heroHexStats()`/`hexBand()`/`HEX.FLOOR` + `strikeAreaM2()`/`zoneAreaM2()`;持續 DPS 縫 `weaponCycleS()`/`weaponDps()`;繪製 `main.heroHexHTML()` | 生存 3(耐久/護甲/電力)+ 輸出 3(火力/制域/機動)。六軸值全走既有唯一縫,UI 只負責畫;滿格基準 `hexBand` 推導;半徑取**對數**內插 + 內圈留 `HEX.FLOOR`;制域 = 射程 × 打擊足跡等效直徑(分類走 `aoeClass`,單體直擊取 `hitR` 不是 0);持續 DPS 只有 `weaponDps` 一份;軸說明只寫在 `help.js UI_TIPS.charHex`。稽核 `audit_hex_stats` |
 | 波次編制/節奏 | `waveComp()`/`waveMarchSpeed()`/`waveSpacingM()` + `sim.waveInterval()` | 出兵間隔**固定**(`GAME.WAVE_S`);`_prefillLanes()` 間距吃 `waveSpacingM()`,擺位與常規出兵共用 `_spawnLaneWave()`;預置上限 = 該兵線第一座砲塔(吃 `sim.towerSites` 那一份解) |
 | 陣營小兵強化 | `CREEP_UPG`/`creepUpgMul()` + `sim._creepMul()`/`_bounty()` | 等級住 `sim.creepUpg[side][lane]`(同陣營共用、兵線分開);倍率於生成當下寫進 `e.cu`(不追溯),四個消費端同吃。賞金只准經 `_bounty()`。解鎖門檻 = `_upgAllMax()`;解鎖後該區塊 MUST 排商店**最前面** |
+| 攻堅順序(劇情戰役鎖血) | `SIEGE`/`siegeSiteStages()`/`siegeOpenStage()` + `sim.siegeLocked()`/`_siegeFell()` | **前線砲塔 → 中段砲塔 → 主堡**,前一階沒清完後一階**完全免傷**;旗標只有 `battleConfig.siege`(rooms.js 正規化成布林),一般對戰恆 false = 逐位元同舊制。①**前線 = frac 最大**(`solveTowerSites` 回傳序是 `[後塔, 前塔]`、短兵線只有一個元素 ⇒ 拿陣列索引當判據會在半數兵線上剛好相反);②階段是**全戰場**的不是逐兵線的(「每階段」對白一階只演一場);③鎖血 MUST 同時擋**傷害與索敵**(三個消費端 `_damage`/`_tgBlockedD`/`bots._acquire`)—— 只擋傷害的話小兵會停在打不動的塔前面把兵線卡死;④事件 `{e:'siege', stage}` 送的是**剛被推平**的那一階;⑤HUD 的目標階段吃快照 `sg`,客戶端 MUST NOT 自己數塔。稽核 `audit_story_talk` |
+| 劇情階段對話 | 內容 `storytalk.js`(`STORY_TALK`/`talkOf()`/`stageKey()`)+ 演出 `dialogue.js` | 分工三層:**內容**(誰說什麼)/ **演出**(怎麼畫)/ **觸發**(伺服器 `siege` 事件),MUST NOT 互相滲透。選角四條:發言者 ⊆ 該章 story.js 雙方名冊、每場雙方都要有人、每人 4~5 句、三場加起來蓋滿名冊。`base` 那一場在**結算畫面**播(主堡一倒就 gameOver,戰鬥中沒有暫停);`front`/`mid` 是不擋畫面的下緣無線電條。`radio(sc, { manual })` 的逐句模式**只給故事書**,遊戲本體 MUST NOT 傳(戰鬥中沒有人能按「下一句」)。稽核 `audit_story_talk` |
+| 劇情畫面標記(章節卡 / 開戰簡報 / 結算文案 / 頭像小卡) | `storyui.js`(`charAvatarHTML()`/`heroChip()`/`chapterCardHTML()`/`briefHTML()`/`overText()`/`progressText()`) | **兩個消費端**:遊戲本體 `main.js` 與本地故事書 `tools/story_book/`。使用者要的是「完全仿照正式遊戲的呈現」⇒ 兩邊 MUST 是**同一份標記 + 同一份 CSS + 同一支演出**;對照台各寫一份「長得很像」的版面 = 它從此獨立演化,你在那裡看到的東西從來沒在遊戲裡出現過。三條邊界:①**零 DOM、零 three**(故 `envLabel` 取自 `data.js` 而非 `environment.js`)⇒ 離線稽核吃得到真品;②解鎖/通關/選中主駕一律由呼叫端**傳參數**(故事書全開 = `unlocked: true`,MUST NOT 改去寫 localStorage 進度);③不綁事件(只帶 `data-i`/`data-ch`)。稽核 `audit_story_talk` Ⅷ + `audit_ui_layout` |
+| 環境標籤 | `data.js envLabel()`(`environment.js` re-export 舊入口) | 只是 `ENV` 的取名查表;住 data.js 是因為 environment.js import three ⇒ Node 端載不動(同 `hazards.js` → `rng.js`)|
 | 對進戰模型 | `tools/duel.mjs`(bal ⑤) | **只算武器是刻意的**;招式導向角色走具名豁免 |
 | 前線交戰模型 | `tools/lanesim.mjs`(bal ⑦);擊發排程唯一縫 = `reFire()` | 場景距離/秒數全部由 `data.js` 推導,MUST NOT 手寫。與 `duel.mjs` **分工不合併**(本支是攻擊範圍唯一被計價的模型)。三個曾量錯的地方:升級 MUST NOT 重建槽位、站位要同時有下限與上限、閃避不吃「這一步有沒有位移」。長按 = 大招兩組都在模型內(載具當**真的實體**跑 / 自身型走 `castSelfUlt` 且效果值經 `selfUltBoost`);施放有兩道閘(交戰中才放、補血型等真的掉血);記帳 MUST 分桶(hero/tower/creep)。本模型看不到的價值 MUST 逐項列在檔頭並在 ⑦f 印出來 |
 
@@ -312,6 +316,7 @@ npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓�
 npm run audit:net    # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射 / dev 路由)
 npm run codex        # 2D 生圖對照台(dev-only,埠 8621)  --report = 直接印配對表
 npm run parts        # 3D 零件對照台(dev-only,埠 8622)  --report = 直接印對照表
+npm run story        # 本地故事書(dev-only,埠 8623)  --report = 直接印頁面索引(缺頁)
 ```
 
 **離線稽核**(一律不需伺服器/瀏覽器/網路;`--break-*` = 反向驗證,見原則 9):
@@ -334,6 +339,8 @@ node tools/audit_bot_role.mjs        # 定位分類與策略(末段印現役定�
 node tools/audit_bot_policy.mjs      # 學習策略(夾制 / 中性 / 白名單)
 node tools/audit_npc_collide.mjs     # NPC 飛行高度基準 + NPC ⇄ 機體碰撞
 node tools/audit_shop_auto.mjs       # 商店掃貨 / 預約
+node tools/audit_story_talk.mjs      # 劇情戰役攻堅順序鎖血 + 階段對話 + 本地故事書(含 BattleSim 行為直測)
+node tools/story_book.mjs --report   # 本地故事書的頁面索引(章 × 陣營 × 頁;缺頁一律列出來)
 node tools/audit_blood_splat.mjs     # 受擊濺血提示
 node tools/audit_cc_flash.mjs        # 異常狀態致盲白幕 + 蓄力跳水平移速
 node tools/audit_world_height.mjs    # 世界高度上限(遊戲天花板 / 物件上限)
@@ -458,6 +465,8 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 陣營小兵強化 | e2e 該段 + **bal 四不變式 MUST 不動**(bal 模型是未強化的基準波次) |
 | `ECON.UPG_*` | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
 | 商店掃貨 / 預約 | `audit_shop_auto` + `audit_ui_layout` + ㋒(bal 不模型化購買順序) |
+| 攻堅順序鎖血 / 劇情階段對話 | `audit_story_talk` ±`--break-stage`/`--break-gate`/`--break-cast`/`--break-quota` + **`npm test`(MUST 先重啟伺服器;旗標關掉時 sim 逐項不變)** + `npm run bal` MUST 逐項不動(鎖血只在劇情房生效,bal/duel/lanesim 都沒有 `siege`)+ `audit_weapon_gate`/`audit_bot_vision`/`audit_bot_tactics`(`_damage`/`_tgBlockedD`/`bots._acquire` 各多一道閘)+ `audit_client_syntax`(㋖)+ `audit_ui_layout` + 改對白內容 ⇒ 只需本支 |
+| 劇情畫面標記 `storyui.js` / 本地故事書 `tools/story_book` | `audit_story_talk` Ⅷ ±`--break-book` + **`audit_ui_layout`**(頭像唯一縫換了家,規則沒變)+ `npm run audit:net`(新增一支可啟停的 dev 工具 ⇒ ⑦ 段的埠號 import 與 kind 分流會多一列)+ `audit_solo_boot` + `audit_client_syntax`(㋖)+ `story_book --report`(缺頁 0)+ **真瀏覽器開一次遊戲的劇情分頁**(㋕:標記從 main.js 搬走了,章節卡/簡報/選主駕要仍然一模一樣)。改 `storyui.js` 的任何一行 = **兩個消費端一起動**,MUST 兩邊都看 |
 | 對進戰模型 / `ALTITUDE.*` / `FAN_*` / `CLASS_SYM.K` | bal ⑤(陣營與機種 50±5pp、**較高方 50±3pp**、非豁免角色 ∈ 20~80%、接近期損失 ≤40%);改 `K` 一併看 ① |
 | 前線交戰模型(`lanesim.mjs`) | `npm run bal` ⑦ 全段(**b 的三條單軸自驗是模型有沒有壞掉的哨兵**)+ `audit_aoe_trim` Ⅴ + ㋒ |
 | 招式配置 `fx`/`add` | bal ⑥:雙扇形 MUST 兩招貼身、單扇形 ≥1、密度 ≥ 非扇形 ×2;s07/m07 具名豁免 MUST NOT 為湊標換掉 |

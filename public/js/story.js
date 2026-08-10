@@ -14,6 +14,13 @@
 //   稽核:node -e 讀本檔驗「每陣營 t/s 各 12 不重複、每 m 出現 STEEL 側 1 次 + SWARM 側 1 次、同章兩側傭兵不交集」。
 //
 // img = 開戰前簡報過場立繪(assets/story/*,STEEL 用 _steel、SWARM 用 _swarm)。
+//
+// 【攻堅順序(2026-08-10 使用者定案)】劇情戰役 MUST 依序打:前線砲塔 → 中段砲塔 → 主堡,
+//   前一階沒清完後一階完全免傷(結算住 `sim.siegeLocked`、階段定義住 `data.js SIEGE`;
+//   旗標由 `main.startStoryChapter` 的 `cfg.siege = true` 帶進開房)。
+//   每推平一階播一場雙方對白 —— 內容住 `storytalk.js`、演出住 `dialogue.js`,
+//   **本檔的 `heroes`/`mercs` 就是那三場對白的選角名冊**(改陣容 MUST 回頭看 storytalk,
+//   稽核 `tools/audit_story_talk.mjs` 會擋下「發言者不在場」與「有人整章沒開口」)。
 
 export const WORLD = `這是一場誰都負擔得起的戰爭。
 

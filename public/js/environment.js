@@ -8,13 +8,9 @@ import { ENV } from './data.js';
 import { setCelSun, WIND, celWindTime } from './toon.js';
 import { mulberry32 } from './rng.js';
 
-export function envLabel(env) {
-  if (!env) return '';
-  const s = ENV.seasons[env.season]?.name || '?';
-  const t = ENV.times[env.time]?.name || '?';
-  const w = ENV.weathers[env.weather]?.name || '?';
-  return `${s}・${t}・${w}`;
-}
+// 環境標籤的唯一縫已抽到 `data.js`(它只是 ENV 的取名查表,而本檔 import three ⇒ Node 端載不動)。
+// 這裡只留**舊入口**(同 `hazards.js` re-export `rng.js` 的 mulberry32),MUST NOT 在此重寫一份。
+export { envLabel } from './data.js';
 
 // 日夜基調
 const TIMES = {

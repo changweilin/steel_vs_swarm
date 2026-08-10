@@ -278,7 +278,7 @@ try {
   // 「▶ 啟動」)。這一條 MUST 隨 TOOLS 一起長:新增一支工具就會多一列 import 要驗。
   {
     const sup = await import('./dev_supervisor.mjs');
-    const srcOf = { codex: 'codex_review', parts: 'parts_review' };
+    const srcOf = { codex: 'codex_review', parts: 'parts_review', story: 'story_book' };
     for (const key of Object.keys(sup.TOOLS)) {
       const t = sup.TOOLS[key];
       ok(t.kind === 'server' || t.kind === 'job', `${key}:kind 是 server / job 其中之一(實得 ${t.kind})`);

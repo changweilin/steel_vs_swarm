@@ -7,7 +7,10 @@
 
 import { CHARACTERS, SIDES, charKind } from './data.js';
 import { LORE } from './lore.js';
-import { mulberry32 } from './hazards.js';
+// 亂數直取唯一縫 `rng.js`(`hazards.js` 只是舊入口的 re-export,而它 import three)——
+// 走舊入口的話,本檔連同所有 import 它的模組(storyui.js …)在 Node 端就再也載不起來,
+// 離線稽核只好退回「讀原文用 regex 猜」。行為逐位元不變:兩邊是同一支 `mulberry32`。
+import { mulberry32 } from './rng.js';
 
 /** 已有手繪立繪/頭像的角色 id(對齊 public/assets/characters・avatars 現有檔案)。
  * 新角色上線但美術未到位時,不列入此表即自動退回程序生成 fallback。 */
