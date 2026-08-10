@@ -53,9 +53,13 @@ for (const useLib of [false, true]) {
       );
       wire.position.y = col.h / 2;
       scene.add(wire);
-      // 近景(疊石細節)+ 兵線距離(17m 走廊半寬外看)兩張
-      for (const [tag, d, h, lookY] of [['near', 9, 3.2, 2.2], ['lane', 22, 4.5, 4]]) {
-        camera.position.set(d * 0.82, h, d * 0.57);
+      // 全身 + 兵線距離兩張。**取景 MUST 由量到的碰撞柱推導**(`col.r`/`col.h`),
+      // MUST NOT 寫死距離:舊版的 9m / 22m 是照 `cairn`(13m)調的,套到 mast(29m)與
+      // pylon(35m)只框得到基座 —— 那兩款**從來沒有一張圖看得到碟/橫擔**,而每一行讀數
+      // 都正常(同零件對照台 §5 那條「取景框要量台上真的建出來的那一團幾何」)。
+      const fit = (m) => Math.max(col.h, col.r * 2) * m / (2 * Math.tan(camera.fov * Math.PI / 360));
+      for (const [tag, d, lookY] of [['full', fit(1.15), col.h * 0.5], ['lane', Math.max(22, fit(1.9)), col.h * 0.42]]) {
+        camera.position.set(d * 0.82, col.h * 0.62, d * 0.57);
         camera.lookAt(0, lookY, 0);
         renderer.render(scene, camera);
         out.push({ name: `${KIND}_s${seed}_${tag}_${useLib ? 'lib' : 'fallback'}`, png: canvas.toDataURL('image/png'), r: col.r.toFixed(2), h: col.h.toFixed(2) });

@@ -270,7 +270,13 @@ export const PHOTO_CATALOG = {
     lattice:  { want: 4, q: ['electricity pylon', 'transmission tower', 'steel lattice tower'] },
     dish:     { want: 3, q: ['microwave dish antenna tower', 'parabolic antenna'] },
     tank:     { want: 3, q: ['water tower', 'water tank', 'elevated water tank'] },
-    container:{ want: 3, q: ['shipping container single', 'cargo container isolated'] },
+    // ⚠ 舊查詢字 `shipping container single` / `cargo container isolated` 抓回來的 3 張是
+    // **兩張維多利亞玻璃魚缸 + 一張港口全景**(2026-08-10 §5av-c 人眼複核):博物館把玻璃
+    // 容器編目成 "container",而「單一主體」那類修飾字對館藏標題完全無效。改用**具名的
+    // 那個東西**(skill:「Ask for a named single subject, never a scene or a category」)——
+    // 貨櫃的具名說法是 intermodal / corten / conex,而 `stacked` 才是這一款要的樣子。
+    container:{ want: 3, q: ['intermodal freight container', 'stacked shipping containers yard',
+                             'conex box container'] },
   },
 };
 
