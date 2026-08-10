@@ -4737,19 +4737,18 @@ export class BattleClient {
    * **唯一判定縫**:每幀在 `_tickWeapons`(擊發)之前更新 `this._aaAim`,擊發與瞄準虛線
    * 消費同一份結果 ⇒ 所見即所射;MUST NOT 在擊發處另做一次掃描(兩份會分家)。
    *
-   * **準星優先**(2026-08-02 使用者定案「榴彈鎖定目標以準星優先」):目標一律由準星射線
-   * (`_lobCrosshair` 單一縫,與 `_lobAim` 的瞄準點同源)定案 —— 解到飛行單位才進彈射模式,
-   * 解到地面單位/建物一律走 45° 對地拋投。錐形輔助 `_aaTarget` 降級成**準星什麼都沒解到時**
-   * (壓在空無處打機群)才接手;舊制無條件吃錐內最正對者 ⇒ 8° 錐內任何一架飛行單位都能把
-   * 瞄準點從準星底下拉走(使用者回報「遠離準星瞄準目標卻還是被拉過去」),而 `_aimTarget`
-   * 對 lob 又是直接吃火控解 ⇒ 連鎖定也跟著被拉走。
+   * **準星是唯一目標來源**(2026-08-02 使用者定案「榴彈鎖定目標以準星優先」→ 2026-08-10 收成
+   * 唯一規則「拋物線準星沒有瞄敵人時就是打地面」):目標一律由準星射線(`_lobCrosshair` 單一縫,
+   * 與 `_lobAim` 的瞄準點同源)定案 —— 準星底下是飛行單位才進彈射模式,**其餘一律 45° 對地拋投**。
+   * 錐形瞄準輔助 `_aaTarget`(8° 錐內最正對的飛行單位)自此**整支退場**:它是唯一能把瞄準點從
+   * 準星底下拉走的路徑(使用者兩次回報「遠離準星的目標卻還是被拉過去」),而 `_aimTarget` 對 lob
+   * 又是直接吃火控解 ⇒ 連鎖定也跟著被拉走。MUST NOT 以「準星什麼都沒解到時才接手」之類的條件復辟
+   * —— 準星沒解到單位就是打地面,那是規則不是缺口。
    */
   _updateAaMode() {
     const def = (this.side && !this.dead && !this.shopOpen) ? this._curWeapon().def : null;
-    const cross = def && def.type === 'launcher' ? this._lobCrosshair(def) : null;
-    this._aaEnt = !cross ? null
-      : cross.ent ? (TARGET_CLASS[cross.ent.kind] === 'air' ? cross.ent : null)
-        : this._aaTarget(this._maxRange(def));
+    const ent = def && def.type === 'launcher' ? this._lobCrosshair(def).ent : null;
+    this._aaEnt = ent && TARGET_CLASS[ent.kind] === 'air' ? ent : null;
     const on = !!this._aaEnt;
     if (on === this._aaAim) return;
     this._aaAim = on;
@@ -4758,29 +4757,6 @@ export class BattleClient {
       this._aaFeedAt = now;
       this.hud.feed?.('🎯 對空彈射模式:切換為高速平射彈道');
     }
-  }
-
-  /** 準星錐(BALLISTIC.AA_CONE ≈ 8°)內、射程內、無障礙遮擋的飛行類敵方單位(TARGET_CLASS 'air');
-   *  取最正對的一個。純本地瞄準輔助(不送伺服器、不影響結算),逐幀跑故一律用純量運算不配置向量。 */
-  _aaTarget(rng) {
-    const ro = this.camera.position;
-    const fwd = this.camera.getWorldDirection(this._aaFwd || (this._aaFwd = new THREE.Vector3()));
-    let best = null, bestAng = BALLISTIC.AA_CONE;
-    for (const ent of this.ents.values()) {
-      if (TARGET_CLASS[ent.kind] !== 'air') continue;   // 先過最便宜的條件(每幀掃全場)
-      if (ent.side === this.side || ent.neutral || ent.dead || !ent.mesh.visible) continue;
-      const p = ent.mesh.position;
-      const cy = p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5);   // 瞄機體幾何中心
-      const dx = p.x - ro.x, dy = cy - ro.y, dz = p.z - ro.z;
-      const d = Math.hypot(dx, dy, dz);
-      if (d > rng || d < 1e-3) continue;
-      const ang = Math.acos(Math.max(-1, Math.min(1, (fwd.x * dx + fwd.y * dy + fwd.z * dz) / d)));
-      if (ang >= bestAng) continue;
-      const dB = this._obstHitT(ro.x, ro.y, ro.z, p.x, cy, p.z);
-      if (dB != null && dB < d - 1) continue;   // 障礙擋在目標前 = 沒有火控
-      best = ent; bestAng = ang;
-    }
-    return best;
   }
 
   // ---------------- 榴彈火控(trajClass 'lob';2026-07-22 瞄準指示 → 2026-07-23 改火控解)----------------
@@ -5515,7 +5491,7 @@ export class BattleClient {
     if (this.gunGroup) this.gunGroup.localToWorld(from.copy(this._muzzle));
     else from.copy(this.camera.position);
     const p = ent.mesh.position;
-    // 瞄機體幾何中心(與 _aaTarget / _coneAcquire 同一條):打頭/打腳都算打中同一具機體
+    // 瞄機體幾何中心(與 _coneAcquire 同一條):打頭/打腳都算打中同一具機體
     aim.set(p.x, p.y + (ent.dimTop != null ? ent.dimTop - ent.dimH * 0.5 : 1.5), p.z);
     const hr = this._hitR(ent);
     const full = from.distanceTo(aim);
