@@ -27,9 +27,10 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
-  WORLD_EDGE, edgeWallInsetM, edgeWallHM,
+  WORLD_EDGE, edgeWallInsetM, edgeWallHM, xzToLL,
 } from './data.js';
 import { llToWorld } from './terrain.js';
+import { quantizeRoads } from './roadgrid.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 import { toonMat, toonGradient, envMat, bakeContactAO } from './hazards.js';
 import { mulberry32 } from './rng.js';
@@ -4429,13 +4430,11 @@ function dedupeCrossingBridges(roads, center, wetPieces = [], rails = []) {
   };
 }
 
-/** 世界公尺 → 經緯度(llToWorld 逆運算;兵線跨水補橋的偽 way 用)*/
+/** 世界公尺 → 經緯度(`llToWorld` 逆運算;道路格網量化與兵線跨水補橋的偽 way 用)。
+ *  實作住 `data.js xzToLL`(含地圖主方位的反向旋轉)—— 本檔 MUST NOT 復辟第二份公式。 */
 function worldToLL(x, z, center) {
-  const R = 6371000;
-  return {
-    lat: center.lat + (-z) * MAPGEO.REAL_SCALE / R * 180 / Math.PI,
-    lon: center.lng + x * MAPGEO.REAL_SCALE / (R * Math.cos(center.lat * Math.PI / 180)) * 180 / Math.PI,
-  };
+  const [lat, lon] = xzToLL(x, z, center);
+  return { lat, lon };
 }
 
 /** 水面判定(高程低於水面 或 衛星影像水色;純色規則不吃場地 mix、不耗共享 rnd)*/
@@ -7350,6 +7349,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
   let [osmData, osmRoads] = await Promise.all([fetchOsmFeatures(terrain.bbox), fetchOsmRoads(terrain.bbox)]);
+  // ---- 道路格網量化(2026-08-10 使用者定案;唯一接線點)----
+  // 「將所有道路量化成 16 個方向」。MUST 排在**這裡** —— 也就是拿到圖資之後、任何消費端
+  // (mergeGradeChains / 橋隧去重 / markGradeCorridors / carveTunnels / gradeRoadBeds /
+  // buildRoads / roadPolys / nearestRoadAngle)之前:量化過的路網從此是唯一的一份,
+  // 沒有任何一條路徑吃得到未量化的原始幾何(在下游補做 = 走廊與實際路面分家)。
+  // 只作用在**真的圖資**上:離線備援(roadInput 退回兵線)刻意不量化 —— 兵線是伺服器
+  // 也在吃的權威幾何(sim.lanes 直接吃 config.lanes),客戶端單方面量化 = 兩端分家。
+  // 快取存的是量化**前**的圖資(fetchOsmRoads 自己入庫)⇒ 換參數不必清快取;
+  // 量化本身零亂數、純函式 ⇒ 同一份快取在每個客戶端算出逐位元相同的路網。
+  if (osmRoads?.length) {
+    osmRoads = quantizeRoads(
+      osmRoads,
+      (p) => llToWorld(p.lat, p.lon, center),
+      (x, z) => worldToLL(x, z, center),
+    );
+  }
   const osm = osmData?.buildings || null;
   // 隧道/橋樑分段合併(2026-07-15 二修):OSM 常把一條隧道/橋切成多條 way,共用節點
   // 深在山體內/河道上 —— 把「way 端點」當洞口/橋台會讓路面剖面在結構中段爬回地表

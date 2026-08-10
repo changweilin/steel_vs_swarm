@@ -145,6 +145,9 @@
 | 明隧道判定 | `tunnelWallProfile()` | **明隧道 = 一側在地形內部(整面牆)+ 一側在地形外部(柱列);貫穿整個地形一律以隧道處理,兩側都是牆**。開放側 MUST 三條件同時成立:①`WALL_MIN` 內藏不住頂板 ②牆背 `NEAR_W` 內無高過頂板的實體支撐 ③**牆外 `OUT_W` 內地表落到路面以下**。判定跑三次 MUST 同解:①② 吃 heightAt(開挖只降不升),③ 吃 `terrain.natureAt`(**天然**地形快照,自家路塹不算證據)。地下道恆非明隧道。構件共用同一份 `open/gy/nx,nz`;落地基準只有 `galBase`;開放側 = 矮牆 + 連續柱列,柱間**透明可穿透**(tunnelSegs 附 `gal` 遮罩 → slab 第 7 欄 → 伺服器 `tunnelSideExit`/`_slabSep` 放行,兩端同判);幾何 MUST 與 gal 無關;柱列純視覺 MUST NOT 進 `cols`。**近帶岩背**維持整面牆;**洞內三淨空** = `galBores`(併入 `punchPortalHoles` 同一次呼叫)+ `markGradeCorridors` 照樣 blockArea + `_slopeDegAlong` 洞內豁免;**落石棚**(`tunnel=avalanche_protector`)整段強制視為覆蓋;隧道鏈 MUST 同 tunnel 值才併;**柱外淨空帶** `carveGalleryBands`(只降不升、只動頂板以下)。稽核 `audit_open_tunnel` |
 | 道路路基整平 | `terrain.gradeRoadBeds()`(呼叫端唯一一處) | 一般道路乾地走廊橫向整成切填平台。四紀律:填方超過 `fillMax` 漸退、水域/沼澤節點不動、隧道開挖足跡優先、每節點認**最近的那條路**(MUST NOT 混平均)。全深帶 = 塗裝寬 + 半格;零 rnd;floors 修改前整批取樣。稽核 `audit_road_bed` |
 | 地形坡度移動 | `SLOPE` + `slopeDeg()`/`slopeMoveF()`/`slopeBlocked()`;量測 `game._slopeDegAlong()` | 平緩帶 `EASE_DEG` = `MAPGEO.MAX_ROAD_GRADE_DEG`、阻擋角 = ×`BLOCK_F` 推導(設計語意:**兵線走廊恆全速**)。坡度一律量**裸地形 `heightAt`**;倍率吃固定前瞻 `PROBE_M`。三條豁免 = 飛行/騰空、人造鋪面、零位移;**下坡一律不擋**;「爬不上去」MUST 由 `slopeBlocked` 表達而非倍率 0。稽核 `audit_slope_move` |
+| 經緯度 → 世界公尺(**含地圖主方位**) | `data.js` 的 `mapRot()`/`rotXZ()`/`llToXZ()`/`xzToLL()`;消費端 `terrain.llToWorld`(轉呼)、`sim.llToMeters`(轉呼 + **z 反號**)、`biomes.worldToLL`(轉呼) | 旋轉是**投影的一部分**,地形/兵線/主堡/圖資/建物一起轉 ⇒ 等距同構(距離/夾角/塔位/兵線分離/重合率一律不變)。角度來源 = `venueGrid.js` 離線烘焙(`tools/bake_venue_grid.mjs`,大馬路 mod 90° 主方位取負),拿不到 = 0 = 逐位元同舊制。⚠ **兩端旋轉方向相反**:z 鏡射(A30)把 R(θ) 共軛成 R(−θ) ⇒ `sim.llToMeters` MUST 只是 z 反號薄殼,MUST NOT 自己再轉一次(兩端差 2θ,畫面上只表現成「塔的位置對不上/打得到卻沒傷害」)。`center.rot` 只准經 `mapRot` 讀。稽核 `audit_road_grid` |
+| 戰場世界方框 / 資料抓取範圍 | `battleRect()`(遊戲公尺,客戶端框)/ `battleBBox()`(經緯度 AABB) | 方框恆軸對齊,客戶端地形 minX/maxX 與伺服器 `bounds`(z 反號)同吃 `battleRect`;抓取範圍 = 方框四角的經緯外接框 ⇒ 旋轉後自動擴到蓋得住。**旋轉只准讓方框長大**(逐軸取「旋轉後」與 rot=0 的較寬者)—— 兵線被轉到與某軸平行時那一軸會塌(實測 45° 面積剩 66%),而 MAP_EXPAND 是等比放大救不了,側翼野營合法區會無聲消失。稽核 `audit_road_grid` Ⅲ |
+| 道路 16 方向量化 | `roadgrid.js`(`ROAD_GRID`/`dirAngle`/`halfBin`/`densifyM`/`minStraightM`/`gridAngle`/`waySegs`/`quantizeRoads`/`dirErrorDeg`);接線**恰一處** = `biomes.js` 取得 `osmRoads` 之後、任何消費端之前 | **零 import、零亂數**。三個不變式缺一不可:①真的落格(逐條路的角度誤差中位數,不是全網統計 —— 一整條沒被量化的路在 p90 上看不出來)②路不走掉(硬上限 `MAX_DRIFT_M`;卡在格界的長直路硬吸到鄰格會甩出數百公尺,那條路就此離開衛星底圖與自己的兵線)③路口不裂(路口是共用節點,量化 MUST 是「解出新的節點位置」而非逐 way 各轉各的)。去鋸齒靠**位置空間**的遲滯(沿路走、偏離真實路線超過預算才換格),直段長度因此有推導下界 `minStraightM()` —— **MUST NOT 改用「事後把短方向段併進鄰段」**(會把階梯併回單一方向 ⇒ 長度重解退化成「兩錨點之間拉直」= 那條路等於沒被量化)。量化前 MUST 先細分(`densifyM()`;OSM 直路頂點可以隔一兩百公尺,單段就吃光位移預算)。**MUST NOT 作用在兵線**(伺服器也在吃)。稽核 `audit_road_grid` |
 | 立體結構的建置範圍 | `buildRoads()`(簽章**無兵線參數**)+ 剔除記帳 `strucDrop` | 高架橋/地下道/隧道/明隧道**就算在兵線之外也建立**;防線是**簽章**(結構性地看不見兵線/主堡/塔位)。會讓結構消失的刀**恰三把**且 MUST 記帳:`laneWet` / `crossing` / `parallel`。**新增第四把刀 MUST 同步記帳**。結構鏈排在一般道路之前;`strucTunnel` 資格閘。稽核 `audit_road_joint` Ⅵ |
 | 飛行體的貼地渲染基準 | `game._flySurf()`;消費端只有 `_updateEnts` 的 `ent.flies` 分支 | **MUST 是 (x,z) 的純函式**,MUST NOT 沿用地面單位那條逐幀棘輪(`surfaceAt(x,z,curY)`)。基準面 = 地表 ∪ 橋面(`deckAt`)∪ 隧道頂板取最高者 ⇒ 核心不變式 = **路徑無關**(同一座標不管從哪飛來都逐位元相同)。**點狀地物刻意不收**(`blockerTopAt` 的建物/神木/巨岩/地標:那不是連續結構面,收了直升機經過路邊電塔會整台彈上去)。地面單位那半 MUST 逐位元維持舊制。稽核 `audit_npc_collide` |
 | 世界高度上限 | `WORLD_H` + `objHeightMax()`/`objScaleCap()`/`objScaleFit()`/`worldCeilY()`;`terrain.avgH`;客戶端唯一取值處 `game._ceilY()`(三個消費端);物件端 `OVER.bldCap` + 四個縮放夾制點 | 現值 `OBJ_F 4 / CEIL_PEAK_F 4.5 / CEIL_AVG_F 6`(物件 104m、峰頂餘裕 117m、平原 156m)。①尺只有一把 = `TARGET_H.tower`,三個係數全是它的倍數。②`CEIL_PEAK_F > OBJ_F` ⇒ **物件恆構不到天花板**(結構保證);`CEIL_AVG_F > CEIL_PEAK_F` 是「取 max 兩端各自勝出」的前提。③取 max 不是 min(天花板 MUST 是全圖一個值)。④上限一律**夾縮放**,MUST NOT 事後截幾何;夾制不消耗亂數且 MUST 夾在第一個消費端之前。⑤分布版 `objScaleFit` 不是第二條規則(硬夾會把整片森林壓成同一高度)。⑥地標標稱高 MUST **實測**(`Box3`)而不是讀 `LANDMARK_COL[].h`。⑦位置本就客戶端權威 ⇒ 伺服器 MUST NOT 再驗;bot/直升機/飛彈靠「高度本來就低於最小餘裕」(稽核守門)。⑧飛行夾制兩道取嚴者。⑨取不到地形統計 ⇒ 回 `Infinity` 不設限。**吃建物高度的門檻 MUST 全部 < `objHeightMax()`**(`MASS.MIN_H` 55 / `b.h > 55` / `> 100` / `> 60`)。稽核 `audit_world_height` |
@@ -277,6 +280,7 @@
 | A38 | **三個地貌的排列規則各只有一份、全住 `siteplan.js` 的純區塊**。①規則 MUST 是純幾何,落點只准問呼叫端給的 `probe` 回呼(規劃器 MUST NOT 認得地形/`blocked`/`occ`,也 MUST NOT 出現 `THREE`);②街廓配置與公設 MUST **零共享 `rnd()` 消耗**;③建築線、排距、冠幅、走向一律**推導不手寫**;④公設的開放鋪面 MUST NOT 登記碰撞柱,有量體零件的碰撞體 MUST 由零件表實算且**長條件登記有向盒**(A30);⑤朝街朝向只有 `roadFaceRy` 一份;⑥樹冠羞避 MUST 走**縮冠**而非淘汰、傾斜 MUST 併進既有 `tx/tz`(A27);⑦巨岩長軸 MUST 吃 `cell.ry`,`g.rotation.y = rnd() * Math.PI * 2` MUST NOT 復辟。稽核 `audit_siteplan` |
 | A39 | **軟性物質:一個旗標管兩件事、細勾線只走 alpha 契約、擺動只動頂點**。①「這個零件是不是軟的」MUST 是**同一個旗標**同時決定勾線粗細與擺動;分類 MUST 由既有 `part.key`/`sf` 推導;②細勾線 MUST 只經「場景 RT 的 alpha ≡ 勾線門檻倍率」這條契約傳到 `postfx.js`,倍率 MUST 乘進 `smoothstep` 的**輸入**且取四鄰最小值(`postfx.js` MUST NOT 手抄那個倍率);③擺動 MUST 是**純頂點位移**(伺服器一格都不能改);④權重 MUST 錨在整株局部座標,相位取實例原點、風向 MUST 轉進局部座標;⑤`span` MUST 推導;⑥風向與時鐘全場**各一份**(雲/植被/旗幟同吃);⑦軟性 MUST 進 `customProgramCacheKey`。稽核 `audit_soft_stroke` |
 | A40 | **角色與機體的檔案格式只有一份、原型層由 `visual` 推導、生成文字只由 `codex.js` 組裝**。①段/欄/必填只准住 `codex.js`;②兩種檔案的**生成段鍵集 MUST 逐位元相同且順序相同**;③機體原型 MUST 是結構化的層且**層集由 `visual` 推導**,變形者 MUST 有飛行型 + 地面型**兩層**、每層分 `{src, note}`;④自由字串的 `lore.proto` 與 `main.js` 的標籤正規式切割 MUST NOT 復辟;⑤全高/機體名/主色/機種/陣營 MUST 到原處取;⑥三份對外生成文字 MUST 只由 `codex.js` 組裝;⑦`mecha.js` MUST 維持零 import、`codex.js` 只 import 三支純資料檔;⑧型態姿態語只准住 `FORM_POSE`、取得只准經 `formPose()`(型態存不存在 MUST 由原型層推導),飛行那一組取景 MUST NOT 是 `standing`、地面那一組 MUST 逐字維持舊制;⑨用不到的 `visual` 欄位 MUST NOT 進生圖與切圖清單(只准經 `visualUses()`);⑩出圖管線的設計敘述 MUST 取 `codex.js`。稽核 `audit_codex` |
+| A42 | **地圖主方位與道路量化**(2026-08-10 使用者定案)。①經緯度投影只有 `data.js llToXZ` 一份,旋轉是它的一部分 —— `terrain.llToWorld`/`sim.llToMeters`/`biomes.worldToLL` 一律轉呼,MUST NOT 復辟第二份等距圓柱公式;②`sim.llToMeters` MUST 只是 **z 反號薄殼**(z 鏡射已把 R(θ) 共軛成 R(−θ),再轉一次 = 兩端差 2θ);③`center.rot` 只准經 `mapRot()` 讀,角度只准來自離線烘焙(執行期算 = 不同客戶端量到不同角度 = 整個世界的座標對不上);④旋轉 MUST 只讓 `battleRect` 長大、`battleBBox` 跟著蓋住;⑤量化接線**恰一處**且排在所有消費端之前,MUST NOT 作用在兵線;⑥去鋸齒 MUST 是位置空間遲滯,**MUST NOT 用「事後併短段」**;⑦量化前 MUST 先細分;⑧位移硬上限 MUST 逐節點夾。稽核 `audit_road_grid` |
 | A41 | **導引彈的追蹤目標只認擊發當下的準星解**(2026-08-10 自重複的 A38 移來)。`game._tryFire` 決定 `homing` 時 MUST NOT 讀 `this._lockId` —— 那是**上一個**伺服器複驗過的鎖定,準星移開後要等 `_tickLock` 下一次 4Hz 心跳才清得掉,那段空窗裡開火彈體會繞過準星飛向玩家已經不再瞄的人。準星解不到 ⇒ **不追蹤**(直飛),MUST NOT 退回任何舊目標;鎖定該有的黏著住在 `_coneAcquire` 的遲滯錨 `keepId`,不在擊發端。仍 MUST 用**擊發當下**的準星解而非等鎖定成立。稽核 `audit_weapon_gate` Ⅵ③ |
 
 ---
@@ -348,6 +352,7 @@ node tools/audit_codex.mjs           # 角色 / 機體檔案格式
 node tools/audit_layer_block.mjs     # 塗層雙面阻擋 + 隧道頂板(A6b)
 node tools/audit_open_tunnel.mjs     # 明隧道
 node tools/audit_underpass.mjs       # 地下道 + 結構資格閘
+node tools/audit_road_grid.mjs       # 地圖主方位(旋轉)+ 道路 16 方向量化
 node tools/audit_road_joint.mjs      # 道路塗裝寬 / 結構接合 / 立體結構建置範圍
 node tools/audit_road_bed.mjs        # 道路路基整平
 node tools/audit_slope_move.mjs      # 地形坡度移動
@@ -378,6 +383,7 @@ node tools/audit_traverse.mjs        # 兵線與結構可通行泛洪(27 場地;
 node tools/audit_lane_scenarios.mjs  # 場地場景標記 MUST 由實測產生
 node tools/audit_venue_biome.mjs     # 完整版:宣告 vs 圖資實測的地被組成與建蔽率
 node tools/bake_venue_lanes.mjs      # 重烤 venueLanes.js
+node tools/bake_venue_grid.mjs       # 重烤 venueGrid.js(場地主方位;--only <ids> / --dry)
 node tools/bake_venue_text.mjs       # 重烤 venueText.js(在地文字語料)
 node tools/shot_scene.mjs --venue taroko     # 定場鏡頭組(--ink=0/--grade=0/--post=0/--dof=0/?curve=0)
 node tools/shot_facades.mjs / shot_signs.mjs / shot_tunnels.mjs / shot_units.mjs
@@ -498,6 +504,8 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 塗層阻擋 / 隧道頂板 | `audit_layer_block` ±反向對照 + `audit_underpass`/`audit_open_tunnel`(幾何 MUST 逐位元不變)+ ㋒ |
 | 明隧道 | `audit_open_tunnel` + `audit_underpass` + `audit_slope_move` + `shot_tunnels`(㋓) |
 | 地下道 / 結構資格閘 | `audit_underpass` ±反向驗證(`gMinOf` 只量中心線 / 拿掉基準線收斂 / 拿掉全寬拆縫) |
+| 地圖主方位(`mapRot`/`rotXZ`/`llToXZ`/`xzToLL`/`battleRect`/`battleBBox`/`venueGrid.js`) | `audit_road_grid` ±`--break-drift`/`--break-dense`/`--break-relax` + **`audit_world_edge`**(裙的原文沙箱自由變數清單要跟著走,漏一個就是 `ReferenceError` 而其餘原文斷言照樣全綠)+ `audit_ground_qc` ⑦ + `audit_weapon_gate` Ⅻ⑷(sim.js 的比例尺原文閘)+ `npm test`(**MUST 先重啟伺服器**)+ **`npm run bal` MUST 逐項不動**(旋轉是等距同構)+ 改 `gridAngle`/大馬路取樣面 MUST **重烤 `venueGrid.js`**(㋓)|
+| 道路 16 方向量化(`roadgrid.js` / `biomes.js` 的接線) | `audit_road_grid` ±三支 `--break` + `audit_road_joint`/`audit_road_bed`/`audit_underpass`/`audit_open_tunnel`/`audit_bridge_crossing`/`audit_water_skirt`(走廊/橋隧全部吃量化後的同一份路網)+ `audit_siteplan`/`audit_ground_qc`(建物與擺件朝向取自道路)+ **`audit_traverse`(㋓:路網幾何動了,兵線與結構要仍走得通;沙箱降級的未驗結果 MUST NOT 當綠燈)** + 真機看一張市區圖(㋕)|
 | 道路塗裝寬 / 結構接合 / 立體結構建置範圍 | `audit_road_joint` + `audit_underpass`/`audit_open_tunnel` 不變式 MUST 不動 |
 | 道路路基整平 | `audit_road_bed` + `audit_slope_move` + 隧道兩支不變式 |
 | 地形坡度移動 / `MAX_ROAD_GRADE_DEG` | `audit_slope_move` |
@@ -579,6 +587,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | `docs/smoke_tests.md` | 真機冒煙清單(§5 矩陣的 ㋕) |
 | `docs/ai3d_runbook.md` | img→3D 資產管線逐輪紀錄(§5aj-C 等待執行的改制在此) |
 | `docs/ai3d_asset_plan.md` | 資產計畫與生成方法選型 |
+| `docs/map_grid_alignment.md` | 地圖主方位旋轉 + 道路 16 方向量化:定案原句 / 實測數字 / **已排除的選項** / 未驗項 / 下一階段「路網中繼」的設計與待決問題 |
 | `docs/bot_roles.md` / `docs/bot_learning.md` | 電腦玩家定位分類 / 學習迴圈設計全文 |
 | `docs/codex_format.md` | 角色 / 機體檔案格式規格書 |
 | `docs/visual_upgrade_plan.md` | 畫面升級計畫(P1/P2 項目編號的家) |

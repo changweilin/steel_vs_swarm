@@ -29,7 +29,7 @@
 import { readSrc, grabFn } from './audit_src.mjs';
 import {
   WORLD_EDGE, edgeWallInsetM, heroTallestH, edgeWallHM, edgeBufferM,
-  objHeightMax, curveHorizonM, curveMaxEdgeM, CHARACTERS, charKind, heroTargetH,
+  objHeightMax, curveHorizonM, curveMaxEdgeM, CHARACTERS, charKind, heroTargetH, xzToLL,
 } from '../public/js/data.js';
 
 if (process.argv.includes('--break-lap')) WORLD_EDGE.SEG_LAP_F = 0.8;
@@ -287,11 +287,13 @@ console.log('\nⅤ-b 外緣裙行為直測(執行 terrain.js 原文)');
   const hAt = (x, z) => 40 + Math.sin(x / 60) * 20 + Math.cos(z / 80) * 15;
   const run = (imagery) => {
     meshes.length = 0;
+    // 沙箱的自由變數清單 MUST 跟著 terrain.js 走:裙的 uvOf 自 2026-08-10 起改吃 `xzToLL`
+    // (地圖主方位的逆旋轉),漏掉它就是 ReferenceError —— 而那正是這一段存在的理由
     new Function('THREE', 'edgeBufferM', 'curveMaxEdgeM', 'minX', 'maxX', 'minZ', 'maxZ', 'N', 'minH', 'maxH',
-      'heightAt', 'imagery', 'bbox', 'lon2tx', 'lat2ty', 'paintTerrainTones', 'center', 'mat', 'group', 'waterY', 'waterMat', blk)(
+      'heightAt', 'imagery', 'bbox', 'lon2tx', 'lat2ty', 'paintTerrainTones', 'center', 'mat', 'group', 'waterY', 'waterMat', 'xzToLL', blk)(
       TH, edgeBufferM, curveMaxEdgeM, mnX, mxX, mnZ, mxZ, N, mnH, mxH, hAt, imagery,
       { minLng: 0, maxLng: 1, minLat: 0, maxLat: 1 }, (l) => l, (l) => l,
-      (g, p) => { g.att.color = new BA(new Float32Array(p.length), 3); }, { lat: 25, lng: 121 }, {}, { add() {} }, 2, {});
+      (g, p) => { g.att.color = new BA(new Float32Array(p.length), 3); }, { lat: 25, lng: 121 }, {}, { add() {} }, 2, {}, xzToLL);
     return meshes;
   };
   let err = null, plain = null, sat = null;

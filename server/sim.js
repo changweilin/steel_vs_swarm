@@ -4,7 +4,7 @@
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
-  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES, MAPGEO,
+  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
   vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
@@ -12,7 +12,7 @@ import {
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
-  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleBBox, solveTowerSites, shieldSplit,
+  dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
@@ -46,13 +46,13 @@ const TG_OFF = 2048, TG_SPAN = 4096;   // 格座標 → 單一整數鍵(±2048 �
 const TG_RESCAN = 2;     // 索敵快取強制重掃週期(tick):黏著窗 ≤ 2×125ms,克制/英雄偏好的重排語意保留
 
 /** 經緯度 → 以 center 為原點的「遊戲世界」公尺平面(等距圓柱,5km 內誤差可忽略)。
- *  ×(1/REAL_SCALE):真實範圍縮小,但遊戲世界公尺不變 — 與 terrain.js/llToWorld 必須同倍率。 */
+ *  投影本體(含比例尺與**地圖主方位旋轉**)只有 `data.js llToXZ` 一份 —— 本支只負責
+ *  **z 鏡射**:客戶端框 z = 南、伺服器框 z = 北(A30)。
+ *  ⚠ 鏡射同時把旋轉共軛成反向 ⇒ 這裡 MUST 只是 `[x, -z]`,MUST NOT 自己再套一次 `rotXZ`
+ *  (套同號 = 兩端世界差 2θ,而畫面上只表現成「塔的位置對不上 / 打得到卻沒傷害」)。 */
 export function llToMeters(lat, lng, center) {
-  const R = 6371000;
-  const s = 1 / MAPGEO.REAL_SCALE;
-  const x = (lng - center.lng) * Math.PI / 180 * R * Math.cos(center.lat * Math.PI / 180) * s;
-  const z = (lat - center.lat) * Math.PI / 180 * R * s;
-  return [x, z];
+  const [x, z] = llToXZ(lat, lng, center);
+  return [x, -z];
 }
 
 function dist2d(ax, az, bx, bz) { return Math.hypot(ax - bx, az - bz); }
@@ -199,16 +199,15 @@ export class BattleSim {
       SWARM: llToMeters(config.bases.SWARM[0], config.bases.SWARM[1], this.center),
       STEEL: llToMeters(config.bases.STEEL[0], config.bases.STEEL[1], this.center),
     };
-    // 地形涵蓋範圍(與 terrain.js buildTerrain 同一份 battleBBox 幾何)內縮空氣牆 40m:
+    // 地形涵蓋範圍(與 terrain.js buildTerrain 同一份 battleRect 幾何)內縮空氣牆 40m:
     // 中立物(地雷/障礙/防空/中繼站)散布的越界防線 —— 兵線蜿蜒出對稱方框的路段,
     // 地形邊緣離兵線只有 ROUTE_EDGE_MARGIN_M(160),HAZ_LANE_MAX(300)側偏會落到地形外懸空。
     {
-      const bb = battleBBox(config);
-      const [x1, z1] = llToMeters(bb.minLat, bb.minLng, this.center);
-      const [x2, z2] = llToMeters(bb.maxLat, bb.maxLng, this.center);
+      // 世界方框只有 `data.js battleRect` 一份(客戶端框);伺服器框 z 鏡射 ⇒ z 上下界互換取負
+      const r = battleRect(config);
       this.bounds = {
-        minX: Math.min(x1, x2) + 40, maxX: Math.max(x1, x2) - 40,
-        minZ: Math.min(z1, z2) + 40, maxZ: Math.max(z1, z2) - 40,
+        minX: r.minX + 40, maxX: r.maxX - 40,
+        minZ: -r.maxZ + 40, maxZ: -r.minZ - 40,
       };
     }
 

@@ -48,6 +48,7 @@
 import * as THREE from 'three';
 import { ENV } from './data.js';
 import { envMat } from './toon.js';
+import { gridAngle } from './roadgrid.js';
 
 const MAX_DETAIL = 19000;  // 3D 細節實例總上限(特徵層 + 底毯撒佈;全 InstancedMesh,draw call 不變;
                            // 2026-07-12 15000→19000:綠地雜草/花帶密集散佈需要更多實例配額)
@@ -1580,19 +1581,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // mod 90° 圓平均;地籍格網對 90° 旋轉對稱 ⇒ 取 4 倍角圓平均,垂直街道不互相抵銷)。
   // 無圖資(roadPolys 空)→ gridA=null,退回隨機(離線備援行為不變)。零 rnd 純幾何。
   const GRID_FAR_R2 = 220 * 220;
+  // 主方位公式只有 `roadgrid.gridAngle` 一份(2026-08-10 收口):場地主方位的離線烘焙吃的是
+  // 同一支,差別只在取樣面 —— 那邊只收大馬路(要的是「地籍格網對準哪」),這裡收全部道路
+  // (要的是「這一帶的擺件該朝哪」)。逐位元同舊制。
   let gridA = null;
   if (roadPolys?.length) {
-    let gsx = 0, gsz = 0;
+    const segs = [];
     for (const [pts] of roadPolys) {
-      for (let i = 1; i < pts.length; i++) {
-        const dx = pts[i][0] - pts[i - 1][0], dz = pts[i][1] - pts[i - 1][1];
-        const len = Math.hypot(dx, dz);
-        if (len < 1e-3) continue;
-        const a4 = Math.atan2(dz, dx) * 4;
-        gsx += Math.cos(a4) * len; gsz += Math.sin(a4) * len;
-      }
+      for (let i = 1; i < pts.length; i++) segs.push([pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]]);
     }
-    if (gsx * gsx + gsz * gsz > 1e-12) gridA = Math.atan2(gsz, gsx) / 4;
+    gridA = gridAngle(segs);
   }
   // 整齊度 → 沿路對齊:reg = 該型拼圖/物件沿最近道路方向擺放的機率,其餘機率
   // (或附近無路)隨機朝向;ink 規律結構不擲骰,恆走三段退避對齊(見上)。
