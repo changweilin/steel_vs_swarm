@@ -4561,6 +4561,85 @@ readout still measures the whole prop, so it cannot lie. `near`/`far` track the 
    PR #147's output was on the board and unviewable. Fixed as above; `far` was also pinned at 500,
    which turned the 290 m outcrop into an all-black pane once the camera did back off far enough.
 
+## 5ar. 採集端改制 + 首跑實測(2026-08-10 — 使用者四條:附註 / 週期跑 / 更精準的字 + 自己放圖)
+
+使用者對著零件台的原話:「**有的沒有樹根、有的只有樹根、有的破洞,幾乎沒看到成品**」,
+接著四條:①未完成的加附註 ②因為成功率太低,跑腳本週期性抓更多 img 跑 img→3D
+③搜圖要用更精準的關鍵字,盡量抓背景乾淨、干擾少、目標清晰的圖 ④提供自己放圖的地方。
+
+**① 附註 —— 「沒有樹根」大多不是破圖,是台上一列 = 一顆節點。**
+`parts_review.mjs` 每一列多一個 `notes[]`,四種來源合成、**全部推導**:
+
+| 來源 | 例 |
+|---|---|
+| 整件的一層(組件:`KIND_PARTS` / `VEG_DEFS`·`GIANT_DEFS`)| `tree/bl_wood_a`:「這一顆是『broadleaf』的其中一層,同一件還有 `tree/bl_crown_a`」|
+| 輪替名冊(`MEGA_LIB` / `BLD_LIB`)| `building/mass_a`:「『mass』這一格有 3 顆輪替節點,逐座號挑一顆用 —— 這一顆本身就是完整的一件」|
+| 量到的缺陷(`mesh_sym.nodeFlaws`)| 破口 16 條邊界環・周長 15.3× 跨距 |
+| 覆核意見(`state.json` 的 note)| 太薄不立體 |
+
+**兩種兄弟 MUST 分開講**:把輪替名冊講成「整件的一層」會讓人以為 `mass_a` 只是大樓的一層,
+而它就是整棟。分流只認 `table`,MUST NOT 逐節點手寫名冊。附註畫在**清單**上(整句進 `title`)
+—— 使用者那句話是掃過整份清單得到的印象,只放在細節頁等於沒答。
+
+同輪補上**「服務中的 checkout」戳記**(標頭 + `--report` 第一行):`dev_supervisor` 的 spawn 是
+`{ cwd: ROOT }` = 啟動它的那支遊戲伺服器自己的儲存庫根 ⇒ 從舊 worktree 開的台子每一件都停在
+那個 commit,埠不衝突、頁面正常、沒有任何錯誤訊息。實測三支舊 server 全部少了 `mass_c` 與
+三種針葉,而結論被讀成「worktree 裡調整的都沒進來」。
+
+**② 週期採集 `tools/ai3d/harvest_loop.mjs`** —— **不是新管線**,只是把既有七站照順序、隔一段
+時間再跑一輪:收編 inbox → 抓照片 → 去背 → 選片閘 → img→3D → 實心度快篩 → contact sheet。
+`--every` 預設 15 分鐘(`upload.wikimedia.org` 撞 429 之後 `Retry-After: 600`,調短只會讓封鎖續期);
+`--rounds 0` = 一直跑。四條紀律:每一站可缺席、只餵**新的且選片閘沒淘汰**的 matte
+(`harvest_state.json`)、**刻意跑到 contact sheet 為止不入庫**(自動入庫擋不住的正是「統計全綠、
+內容是一張版畫」那一類,§5h 一輪擋下六顆)、每輪一列 JSONL 進 `harvest_log.jsonl`。
+
+**逐族選模型**(§5n:T2-spz 對建築是雙 ◎,SF3D 在同一張仰拍煙囪上出的是歪塊):building 走
+`run_t2_gate.py`(餵入先過 `binarize_feed.py` —— T2 的 preprocess 以 alpha>204 取 bbox,軟 alpha
+漸層段會被整段裁掉),其餘走 SF3D。**沒給 `--t2` 就不生成建築,而不是退回 SF3D** —— 悄悄退回去
+只會讓語料庫多幾顆一樣要重生成的節點。
+
+**③ 取景階梯 `CLEAN_Q`** —— 加的是**取景**(背景乾不乾淨、光夠不夠),型錄的 `q` 是**主體**
+(具名單一主體句式,§5c)。混寫進同一行就再也拆不開;而且取景字必然讓候選池更小
+⇒ **先跑型錄原句,缺額還在才走階梯** ⇒ 供給充足時逐位元同舊行為。逐族分開;設計圖列不套。
+
+**④ 自己放圖 `<資料家>/inbox/<族>/<零件>/` + `--adopt`** —— 收編後與抓下來的照片走完全同一條路。
+三道閘一道都不鬆:授權只收 CC0/PD(**CC-BY 也拒**)、magic bytes、短邊 ≥1024(自己解 PNG/JPEG/WebP
+檔頭,A2 不准加相依)。不合格的**留在 inbox 不動**。`inbox/` MUST 在 `photos/` 之外(放進去會被
+`matte_photos.py` 當成一個「族」整批去背)。
+
+### 5ar-a. 首跑實測(3060 那台,`harvest_log.jsonl` 逐輪記帳)
+
+| 量 | 值 |
+|---|---|
+| 輪數 / 總生成 | 10 輪 / **157 顆**(SF3D 111・T2-spz 46)|
+| 總下載 | **12 張** —— 見下方「供給側才是瓶頸」|
+| SF3D 實心度「塊狀候選 ◎」| 36~46%(逐輪 29~50% 抖動)|
+| 積壓 | 148 → 31 張(rock / landmark / tree 已清空,剩 building)|
+
+**迴圈自己的三個 bug —— 全部同一族:跑起來很正常,只是某一半靜靜地沒有輸出**
+
+1. **選片閘只跑 tree**:`screen_mattes.py --family` 預設 `tree`,不逐族傳的話另外三族一張都不驗。
+   實得影響比第一時間判斷的小(①cov / ②fill 兩條門檻本來就只在 tree 生效,非校準族只剩 ④⑤)——
+   真正掉的是**那三族的觀察名單 sheet 從來沒產出**(building 15 / rock 8 / landmark 3)。
+   修法:逐族各跑一次,族名 = matte 目錄 ∩ 帳本 `family`(兩邊都推導)。
+2. **`out/matte/` 裡的空殼目錄**(實測 `bld_tower/` 只剩一張 .sheet —— 那是零件名不是族名)⇒
+   直接拿目錄當族名會餵給 screen_mattes 一個不存在的族,回傳 1、一張都沒驗,日誌上只是一行雜訊。
+3. **⑤⑥ 只吃 SF3D 目錄**,而且 `mesh_stats`/`mesh_sheet` 只認 `<i>/mesh.glb` 版面(T2 是扁平
+   `<名字>.glb`)⇒ **46 顆 T2 建築既無統計也無任何一張圖**,而「人眼那一步不可省」正是這一族的
+   驗收方式。修法**刻意不對稱**:⑥ contact sheet 兩路都跑(黏土縮圖與形狀假設無關);
+   ⑤ 實心度快篩**只對 SF3D** —— 它的門檻是拿 SF3D 產出校準的,而 T2 原始輸出本來就是雙層撕裂
+   薄殼(必須先過 `solidify_parts.py`)⇒ 同一把尺會把每顆建築判成「殼/碎片 ✗」(實測 fill 0.003~0.12),
+   那是尺用錯了不是東西壞了。兩支工具同時補上扁平版面支援,舊版面逐位元不變。
+
+**供給側才是瓶頸,不是產出率**:九輪只下載到 12 張(Openverse/Commons 的 CC0 池對這批查詢已近
+抽乾,`upload.wikimedia.org` 全程 429)。`--limit` 調大無效 —— 這也正是 `CLEAN_Q` 只在缺額時
+才啟用的理由(池子本來就小,先問窄的會一張都撈不到)。真正能改變供給的是**使用者自己放圖**。
+
+**還沒做的**(交接):151+ 顆產出**一顆都還沒經過人眼**(sheet 已全數產出:9 張 T2 + 7 張 SF3D,
+住 `out/{sf3d_auto,t2_auto}/<時戳>/.sheet/`);使用者判「重生」的四顆仍未重生成
+(`mass_a`/`mass_b`/`masslow_a` 太薄不立體、`ac_a` 邊角已風化),候選要從 building 那批 T2 產出裡挑
+(判準 = §5ae 的「整棟入鏡,不是最好看的局部」—— 那是 `mass_c` 成功而 `mass_a` 太薄的唯一差別)。
+
 ## 6. Open questions for the repo owner (do not guess)
 
 0. ~~設計圖要不要進 50/25/25 配比 / 低矮建物要不要開第二個量體桶 / 鏡像貼補的觸發條件~~
