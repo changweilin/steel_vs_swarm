@@ -14,7 +14,7 @@
 
 | Item | Status | Evidence |
 |---|---|---|
-| **⭐ 下一輪從這裡開始 — 等使用者放圖(`inbox/`)才動得了那四顆 + `ac_a` 路線待定(§6-5)+ 真機冒煙 + §5aj-C** | **待執行 2026-08-10** | §5as:169 顆首跑產出**全部過人眼**(補齊三張缺席 sheet;可用率 建築 19% / 冠層 0% —— §5q 再次成立)。四顆「重生」**掃完 27 次 solidify 沒有更好的候選**,而高層那一桶是**結構性**沒有(`bld_tower` 的照片全跑過了,活下來的三張就是 mass_a/b/c 本身)⇒ 零節點出貨,理由在供給側。順手補上迴圈的兩道閘(**已出貨的來源不重跑**、**沒有消費端的族不生成**)—— 首輪有 26% 的 GPU 時間本來就沒有出路;兩道閘逐條行為驗過。細節與「放哪三種圖最有效」見 §5as-f |
+| **⭐ 下一輪從這裡開始 — 等使用者放圖(`inbox/`)才動得了那四顆(含 `ac_a`,2026-08-10 定案維持 img→3D)+ 真機冒煙 + §5aj-C** | **待執行 2026-08-10** | §5as:169 顆首跑產出**全部過人眼**(補齊三張缺席 sheet;可用率 建築 19% / 冠層 0% —— §5q 再次成立)。四顆「重生」**掃完 27 次 solidify 沒有更好的候選**,而高層那一桶是**結構性**沒有(`bld_tower` 的照片全跑過了,活下來的三張就是 mass_a/b/c 本身)⇒ 零節點出貨,理由在供給側。順手補上迴圈的兩道閘(**已出貨的來源不重跑**、**沒有消費端的族不生成**)—— 首輪有 26% 的 GPU 時間本來就沒有出路;兩道閘逐條行為驗過。細節與「放哪三種圖最有效」見 §5as-f |
 | ~~真機冒煙(四種針葉 / mass_c / vleaf 減面)+ §5aj-C~~ (併入上一列) | **待執行 2026-08-09** | §5aq 那一輪把三件事一起落地:①零件台**收起半成品**(判定住 `mesh_sym.nodeFlaws`,收起不刪、「半成品」分頁看得到)②`measure_veg_tris` 的**逐型歸屬**改讀建造端的章(`userData.vegKind`;舊制指紋反推 = 碰撞群互相灌帳 + **靜默丟掉 261 個 InstancedMesh**)⇒ veg 預算重推(`node_cap` 225 → 249、整層用量 87.8% → 75.7%)③**7 顆新節點**:針葉三種 6 顆(`cf1`/`cf3`/`cf4` —— `STAR_SPECIES` 的 fir/cypress/cedar 自 §5z-r 寫出來就沒上過畫面)+ `building/mass_c`(**第一顆背面不是空的整棟量體**,asymZ 0.001 vs mass_a 0.123;差別只有選片)。未做的見 §5aq-g;§5aj-C(鏡像貼補改成「只補有洞的」)規格仍在,與這一輪完全獨立 |
 | §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
 | P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
@@ -4733,7 +4733,8 @@ readout still measures the whole prop, so it cannot lie. `near`/`far` track the 
    放圖時最有效的三張:①一整棟 Art Deco / 現代高層,整棟連冠頂入鏡、光線均勻(→ mass_a / mass_b)
    ②一棟普通兩三層透天/公寓,四十五度角整棟入鏡(→ masslow_a)③一台屋頂空調冷凝機組的正面
    斜拍、背景乾淨(→ ac_a)。
-2. **`ac_a` 是路線問題不是品質問題,需要使用者定案**(見 §6 第 5 條)。
+2. ~~`ac_a` 路線待定~~ — **2026-08-10 使用者定案「等乾淨照片再重生成」**(維持 img→3D)⇒
+   它與另外三顆併成同一件事:等 `inbox/` 的圖。改走 Route A 那一案不採用(§6-5)。
 3. `--mode resample` 沒有「取最大元件」⇒ 磚造倉庫那種「量體好、旁邊浮一塊」的候選現在無解;
    `--mode wrap` 有(§5t ②),但它是給細枝主體的。要不要幫 resample 也加一道,是下一輪的題目。
 4. 兩道新閘讓下一輪的有效產出率結構性上升(首輪 64 顆裡的 6 顆 + 11 顆 landmark = **26%**
@@ -4751,12 +4752,9 @@ readout still measures the whole prop, so it cannot lie. `near`/`far` track the 
 3. ~~Accept the SF3D licence~~ — **RESOLVED 2026-08-05** (owner accepted on `winniexchang`;
    weights downloaded, P2c executed same day, §5e).
 4. ~~Approve installing Blender~~ — **RESOLVED 2026-08-05** (Blender 5.2 LTS via winget, §5c).
-5. **`ac_a`(屋頂空調機組)要重生成,還是改走 Route A?** —— 使用者的判詞「邊角已風化」正是
-   img→3D 對**小型人造方箱**的固有失真(等值面外推 + quadric 各磨一次稜線;§5as-c)。
-   兩條路都成立,而選哪一條是設計決定不是技術決定:
-   ㋐ **重生成**:等一張乾淨的冷凝機組照片(§5as-f 1),配方不變 —— 但同一個磨圓機制還在,
-      箱體越小磨得越兇。
-   ㋑ **改走 Route A**:一台冷凝機組就是「方箱 + 柵格 + 頂蓋風扇」,是 skill §0 說的
-      「primitive 誠實表達得了」的那一類(`tank` 水塔就是這樣出貨的)—— 把 `ac_a` 從
-      `BLD_LIB` 撤下、改寫消費端那一列的純資料 primitive。代價:少一顆 AI 生成節點,
-      而且要動 `biomes.js` ⇒ 全套稽核電池 + `audit_traverse`。
+5. ~~`ac_a`(屋頂空調機組)要重生成,還是改走 Route A?~~ — **RESOLVED 2026-08-10:使用者選
+   「等乾淨照片再重生成」**(維持 Route B / img→3D,配方不變)。⇒ `ac_a` 與另外三顆同一條路:
+   **等 `inbox/building/acunit/` 進來一張背景乾淨、光線充足的冷凝機組斜拍**(§5as-f 1)。
+   撤下改走 Route A 純資料 primitive 那一案**不採用**,MUST NOT 自行復辟。
+   ⚠ 已知代價要記著:磨圓機制(等值面外推 + quadric 各磨一次稜線)還在,而**箱體越小磨得越兇**
+   ⇒ 這一顆對選片的要求比整棟量體那三顆更嚴(主體要占滿畫面、稜線要清楚)。
