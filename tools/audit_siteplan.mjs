@@ -32,7 +32,7 @@
 //   --break-storey  層高不再夾在帶內(拿掉「先取落在帶內的候選」那一步)
 //                   ⇒ Ⅴ 的層高全域不變式 MUST 紅字
 import { readSrc } from './audit_src.mjs';
-import { objHeightMax, objScaleFit } from '../public/js/data.js';
+import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
 import { bioLibDescs, partLibs } from './ai3d/parts_src.mjs';
@@ -956,6 +956,9 @@ console.log('\nⅦ 建物來源信任階梯(biomes.js)');
         objScaleFit,
         terrainEnvCode: () => 0,
         sinkBaseY: () => 50,
+        // 帶的內緣自 2026-08-10 起由邊界障礙環推導(IN1 = 內縮 − 環厚,見 data.js WORLD_EDGE):
+        // 這兩支不注入的話原文一執行就 ReferenceError,而那會被讀成「這段程式碼壞了」
+        WORLD_EDGE, edgeWallInsetM,
       };
       const names = Object.keys(env);
       const fn = new Function(...names, `${helpers}\n${pbSrc}\n return placeBoundary;`)(

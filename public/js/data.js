@@ -2512,6 +2512,52 @@ export const worldCeilY = (avgH, peakH) => Math.max(
   (peakH || 0) + TARGET_H.tower * WORLD_H.CEIL_PEAK_F,
 );
 
+// ---- 世界邊界:不可越過的障礙環 + 不可進入的緩衝空間(2026-08-10 使用者定案)----
+// 使用者原話:「邊界加入不可越過的障礙,會再延伸可視距離但不可進入的緩衝空間」。
+// 兩件事各有各的縫,而它們共用**同一條線** `edgeWallInsetM()`:
+//   ①**障礙環**(`biomes.js buildEdgeWall`)= 沿四緣一圈**連續**的實體環,內緣恰好貼在
+//     舊制那道空氣牆線上 ⇒ 地面機體是被**看得見的東西**擋下來的,不再是走到某處莫名停住。
+//     環體是權威幾何(進 `blockers` ⇒ 客戶端 `_collide` + 伺服器 `occ`/LOS **同一個盒**,
+//     A30);段與段**重疊**(`SEG_LAP_F > 1`)⇒「不可越過」是**結構保證**不是校準 ——
+//     只要環上沒有縫,任何半徑的機體都穿不過去,不必回頭看最窄的那一台有多寬。
+//   ②**緩衝空間**(`terrain.js` 的外緣裙)= 地形範圍**之外**再鋪一圈地,深度
+//     `edgeBufferM()`。它不可進入是**既有的**保證(x/z 夾制與高度無關 ⇒ 飛行機體越過環頂
+//     也照樣進不去),新增的只有「看得到」。
+//
+// **深度推導不手寫** = `curveHorizonM()`(世界曲面那一圈地平線)。理由是結構性的:曲面把
+// 地表的視角極大值鎖在那個距離上,更遠的地面一律被較近的地面擋住 ⇒ 裙的外緣恰好落在
+// 「再往外也看不到」的那一圈 ⇒ **地圖永遠不會露出硬邊**,而視點恆在障礙環之內(離地形邊
+// 至少 `WALL_M`)⇒ 還多出那一段餘裕。手寫一個公尺數的下場是改了射程/塔/機體之後地平線
+// 自己跑掉,而裙留在原地 —— 症狀是「某些場地站在邊界看得到世界的盡頭」,沒有任何錯誤訊息。
+//
+// **環高由機體全高推導**(`edgeWallHM`),而且**刻意不追飛行天花板**:物件上限只有
+// `objHeightMax()`(4 × 砲塔高),天花板恆在它之上(WORLD_H 檔頭的結構不等式)⇒ 一道
+// 「連飛的都翻不過去」的牆在這個專案裡不可能存在,而且真做出來也會把 ② 整個擋掉。
+// 飛行那一半的權威一律是 `game.js` 的 x/z 夾制(高度無關),環只負責地面那一半。
+export const WORLD_EDGE = {
+  WALL_M: 40,        // 障礙環**內緣**的內縮量(公尺;= 舊制空氣牆線,夾制吃同一支)
+  WALL_T: 6,         // 環厚(公尺):環體佔內縮 [WALL_M − WALL_T, WALL_M],全在夾制線之外
+  WALL_H_F: 1.6,     // 環高 = 最高機體全高 × 此比(> 1 ⇒ 沒有任何機體看得到自己越過它)
+  SEG_M: 24,         // 單段長度(公尺)= 一根碰撞柱;perimeter/SEG_M ≈ 200 段 ≪ LOS.MAX_OCC
+  SEG_LAP_F: 1.06,   // 段長重疊係數(> 1 ⇒ 相鄰段互相咬住,環上結構性地沒有縫)
+  BUFFER_F: 1,       // 緩衝深度 = 地平線距離 × 此比(MUST ≥ 1,見上)
+};
+/** 障礙環內緣 = 不可進入界線的內縮量(公尺)。`game.js` 的 x/z 夾制與環體佈置同吃這一支 */
+export const edgeWallInsetM = () => WORLD_EDGE.WALL_M;
+let _tallestH = 0;
+/** 全場最高機體全高(公尺;`heroTargetH` 單一縫的上界)—— 環高的推導基準 */
+export const heroTallestH = () => {
+  if (_tallestH) return _tallestH;
+  let h = 0;
+  for (const ch of Object.keys(CHARACTERS)) h = Math.max(h, heroTargetH(charKind(ch), ch));
+  _tallestH = h;
+  return _tallestH;
+};
+/** 障礙環高(公尺)。夾在物件高度上限之內(與建物/地標/巨岩共用同一個天花板) */
+export const edgeWallHM = () => Math.min(objHeightMax(), heroTallestH() * WORLD_EDGE.WALL_H_F);
+/** 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭 */
+export const edgeBufferM = () => curveHorizonM() * WORLD_EDGE.BUFFER_F;
+
 // ---- 自機碰撞量體(2026-08-02 由 game.js 移入本檔)----
 // 住 data.js 的理由與 hitR/hitH 相同:**伺服器也要用**。使用者定案「電腦玩家的碰撞法則一律跟
 // 正常玩家一樣」⇒ bots.js 的移動走 `sim.solidResolve`,那支是客戶端 `_collide` 的鏡像,

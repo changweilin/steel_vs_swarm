@@ -12,7 +12,7 @@ import {
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
-  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY,
+  FLIGHT, airSinkM, liftMax, liftRegen, liftDrainPS, worldCeilY, edgeWallInsetM,
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
@@ -7778,9 +7778,13 @@ export class BattleClient {
     // 碰撞:不能穿過單位 / 塔 / 主堡 / 建物 / 神木 / 巨岩(px0,pz0 = 本幀位移起點,供掃掠防穿透)
     this._collide(px0, pz0);
 
-    // 邊界(地形範圍內縮 40m)
-    this.pos.x = Math.max(this.terrain.minX + 40, Math.min(this.terrain.maxX - 40, this.pos.x));
-    this.pos.z = Math.max(this.terrain.minZ + 40, Math.min(this.terrain.maxZ - 40, this.pos.z));
+    // 邊界(= 障礙環內緣;唯一縫 `data.js edgeWallInsetM()`,環體佈置與封路障礙同吃這一支)。
+    // 這道夾制**與高度無關** ⇒ 它才是「緩衝空間不可進入」的權威:障礙環只有 `edgeWallHM()` 高,
+    // 飛行機體翻得過環頂,但翻過去照樣被這兩行擋在同一條線上(見 data.js WORLD_EDGE 檔頭)。
+    // 地面那一半反過來:環體在夾制線**之外**且與夾制線齊平 ⇒ 機體恆先撞到環、這兩行永遠用不到。
+    const eIn = edgeWallInsetM();
+    this.pos.x = Math.max(this.terrain.minX + eIn, Math.min(this.terrain.maxX - eIn, this.pos.x));
+    this.pos.z = Math.max(this.terrain.minZ + eIn, Math.min(this.terrain.maxZ - eIn, this.pos.z));
 
     // 後座力回復 + 鏡頭震動(trauma² 噪聲)
     // 回穩速率 = RECOIL.DECAY(唯一縫):位移懲罰的時間窗 `_recoiling()` 量的正是這條衰減曲線,
