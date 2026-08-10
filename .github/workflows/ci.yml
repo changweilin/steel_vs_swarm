@@ -24,6 +24,11 @@ jobs:
       - name: 三種連線機制稽核
         run: node tools/audit_net_modes.mjs
 
+      # 客戶端模組半數要 CDN 的 three ⇒ 沒有任何離線稽核 import 得了它們:語法錯誤會讓底下
+      # 整批稽核 + bal + e2e 一起全綠,而真人一開頁面就是白畫面(見該腳本檔頭)。排最前面。
+      - name: 客戶端模組語法閘
+        run: node tools/audit_client_syntax.mjs
+
       - name: 離線稽核
         run: |
           node tools/audit_map_rules.mjs

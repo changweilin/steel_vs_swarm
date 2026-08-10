@@ -365,6 +365,7 @@ node tools/audit_ctrl_mode.mjs       # 操作方式 + 戰場選單 + 按鍵風�
 node tools/audit_ui_layout.mjs       # 選單版型 / 鈕面文字 / 懸浮提示 / 圖示
 node tools/audit_touch_layout.mjs / audit_touch_gesture.mjs
 node tools/audit_solo_boot.mjs       # 單機開機(data.js 單一模組實例)
+node tools/audit_client_syntax.mjs   # 客戶端模組語法閘(全部 public/js/*.js 逐支 node --check)
 node tools/audit_venue_biome.mjs --offline   # 場地地貌宣告自洽(CI 收這一半)
 ```
 
@@ -424,11 +425,13 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 - ㋓ 需外網/真瀏覽器的項目沙箱跑不動 → GitHub Actions / 真機,MUST 在交付說明中**標註未驗項**。
 - ㋔ **同一支檔案的相鄰稽核一律連帶跑**:改 `data.js` → 幾乎全部;改 `sim.js` 的 `_damage`/`_gateFire`/`tick` → weapon_gate / lance_hit / shield_counter / fire_rate / bot_tactics / bot_vision / blood_splat / self_ult / ult_carrier;改 `game.js` → npc_collide / climb Ⅲ / layer_block / slope_move / view_lock / spectator_cam;改 `biomes.js` → siteplan / beacons / open_tunnel / underpass / road_joint / world_text / object_joints;改 `terrain.js` → 上列 + cel_pipeline / world_curve / world_edge;改 `toon.js`/`postfx.js` → cel_pipeline / visual_prefs / soft_stroke / world_curve / gpu_lifecycle。
 - ㋕ 真機冒煙清單見 [`docs/smoke_tests.md`](docs/smoke_tests.md)。
+- ㋖ **動過任何 `public/js/*.js` → `node tools/audit_client_syntax.mjs`**。半數客戶端模組(game.js / models.js / vfx.js / postfx.js / mobile.js …)要 CDN 的 three ⇒ 沒有任何離線稽核 import 得了它們:語法錯誤會讓**整套回歸驗證照樣全綠**,而真人一開頁面就是白畫面。
 
 ### 5.5 改了什麼 → MUST 跑什麼
 
 | 改動 | 驗證 |
 |---|---|
+| 任何 `public/js/*.js`;**GLSL 住在 JS 樣板字串**的那幾支尤其(`vfx.js` `SHIELD_VERT`/`SHIELD_FRAG`、`toon.js` 曲面與賽璐璐補丁、`environment.js` 天空穹頂 —— 這些檔案的 GLSL `//` 註解裡 **MUST NOT 出現反引號**,一個就把整支 .js 的字串收掉,而 node 報的位置指向註解那一行的中文字) | `audit_client_syntax` ±`--break-glsl`;名冊由目錄推導、副檔名 MUST 換 `.mjs`(`.js` 走 CommonJS 解析 ⇒ 頂層 `import` 整批誤報)。㋖ |
 | 任何平衡數值(小兵/角色武器/`SQUAD.BUFF`/HEROIC/塔/賞金/八軌價格) | `npm run bal` 全綠;動角色武器一併看 ⑤ 離群列 |
 | 射程/傷害/`sight`/`RANGE_SIGHT_F` | e2e:輕武器 NPC range ≥170(#INC-104)、t01/s02 `crit:0`、s02 heavy = launcher、「塔 310 > 所有輕武器」與「所有重武器 > 塔 310」雙不等式 |
 | 角色機種編制(`CHARACTERS[].kind`/`visual`/換機種的 `mods.armor`) | e2e「機體混編陣營分佈」(7/3/2・3/7/2・2/2/4 + 32 名皆有 kind + 12/12/8 款 1:1)+ bal ①(EHP 池與推導值)+ ⑤(`CLASS_SYM` 分組)+ `audit_muzzle`/`audit_cockpit`/`audit_cast_jump`(㋓) |
@@ -471,7 +474,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | NPC 飛行高度基準 / 客戶端單位碰撞 | `audit_npc_collide` ±`--break-ratchet`/`--break-deck`/`--break-sweep` + `audit_bot_vision`(伺服器那半 MUST 逐位元不動)+ ㋔ + ㋒ |
 | 世界高度上限 | `audit_world_height` ±`--break-ceil`/`--break-obj`/`--break-cap` + `audit_siteplan`(`placeBoundary` 多吃 `objScaleFit`)+ ㋔ + ㋒ |
 | 世界邊界 | `audit_world_edge` ±`--break-lap`/`--break-buffer` + `audit_siteplan` + **裙 MUST 擺在 terrain.js 開挖/射線/打洞三支稽核抽原文的標題之外**(落在裡面那些沙箱會一起執行而 `ReferenceError`)+ `audit_cel_pipeline`/`audit_world_curve`(envMat 計數與水面分段 MUST 逐位元不動)+ ㋔ + ㋒ |
-| 世界曲面 | `audit_world_curve` ±`--break-knee`/`--break-edge` + ㋔ + **`node --check` 觸及檔案**(GLSL 住在 JS 樣板字串裡:在 GLSL 註解寫一個反引號會吃掉整支 .js,而錯誤指向註解那一行的中文字;`npm test`/`bal`/定場鏡頭組**全都不載入 vfx.js**)+ `npm run audit:net`/`audit_solo_boot`(toon.js 多一條 data.js import)+ **`npm test`/`bal` MUST 逐項不動** + `shot_scene ?curve=0`(㋓) |
+| 世界曲面 | `audit_world_curve` ±`--break-knee`/`--break-edge` + ㋔ + **`audit_client_syntax`**(㋖;曲面的 GLSL 都住樣板字串裡,舊 Ⅷ 段的窄版語法閘已整併進那一支)+ `npm run audit:net`/`audit_solo_boot`(toon.js 多一條 data.js import)+ **`npm test`/`bal` MUST 逐項不動** + `shot_scene ?curve=0`(㋓) |
 | 景深模糊 | `audit_visual_prefs` Ⅵ ±八支 `--break` + `audit_gpu_lifecycle` ⑦ + `audit_cel_pipeline`/`audit_soft_stroke`(**勾線的 alpha 契約 MUST 逐位元不動**)+ **`npm test`(data.js 動了 ⇒ 不是 ㋒,但 MUST 逐項不動)** + `npm run audit:net`/`audit_solo_boot` + `audit_ui_layout` + `shot_scene --dof=0`(㋓) |
 | 畫面旋鈕 / 陰影偏色 / 風化場 / 零件抖動 | `audit_visual_prefs` ±反向驗證 + `audit_cel_pipeline`/`audit_gpu_lifecycle` + `audit_object_joints` + `audit_ui_layout`/`audit_ctrl_mode` + ㋒ |
 | 軟性物質 | `audit_soft_stroke` ±`--break-ink`/`--break-anchor` + `audit_cel_pipeline`/`audit_gpu_lifecycle`/`audit_visual_prefs` + `audit_object_joints`(擺動是頂點位移 ⇒ 零件表接合 MUST 逐位元不動)+ `audit_siteplan`/`audit_beacons` + ㋒ |
