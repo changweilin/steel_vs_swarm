@@ -292,6 +292,12 @@ function lanUrls() {
 // (LOS.HGT_MAX² × 2 字元)⇒ 整包合計上探 ~800KB,舊的 1MiB 只剩 1.3 倍餘裕。**超過就是 ws
 // 直接關連線** = 房主整份 world 靜默上傳失敗(LOS 遮蔽/走廊淨空/稜線全滅),提前留足餘裕。
 // ws 預設 100MiB —— 惡意巨型訊息會讓單執行緒 JSON.parse 阻塞全部房間,先在框架層封頂。
+// 2026-08-10 新增路網中繼 `t:'osm'`(房主的原始 Overpass 圖資):**實測**(`tools/measure_osm_relay.mjs`,
+// 5v5 密市區)barcelona 1051KB / paris 1068KB / manhattan 972KB ⇒ 餘裕只有 **1.9×**,
+// 仍在 2MiB 之內、不必壓縮也不必碰 perMessageDeflate,但**餘裕掉到 1.5× 以下就要回頭看這裡**。
+// 客戶端另有 `OSM_RELAY.MAX_BYTES`(1.8MB)自我封頂:超過就先丟 feats 再整份放棄 ——
+// 這一則若被 ws 以 1009 擋下,斷的是**房主的連線**,症狀看起來完全像伺服器壞掉。
+// **改任一上限 MUST 兩邊一起看**(這裡的 2MiB 與 osmrelay.js 的 MAX_BYTES)。
 //
 // `noServer` + 兩個 http 伺服器各自轉交 upgrade:ws / wss 共用**同一個** WebSocketServer 實例。
 // MUST NOT 改成一邊一個實例 —— 心跳掃的是 `wss.clients`,分兩份就有一半的死連線不會被回收

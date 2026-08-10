@@ -109,6 +109,35 @@ export function waySegs(ways, toXZ, filter = null) {
   return segs;
 }
 
+/**
+ * 主方位的**取樣面**:大馬路。使用者定案的原句是「對齊最多的**大馬路**組成正交網格」,
+ * 不是「對齊最多的路」—— 巷弄與 service 道路在市區的總長度遠大於幹道,收進來的話主方位
+ * 會被停車場通道與後巷帶著走(它們本來就不成格網)。
+ * `.source` 就是 Overpass 查詢要的字串 ⇒ **離線烘焙與執行期共用同一份定義**,
+ * MUST NOT 在查詢字串裡再手寫一次(那是第二份會過期的取樣面)。
+ */
+export const GRID_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
+
+/**
+ * 地圖主方位(**度**):把地圖轉這麼多度,這一帶的大馬路就會對齊世界軸。量不到回 null。
+ *
+ * 這是「一組 way → 一個角度」的**唯一縫**,離線烘焙(`tools/bake_venue_grid.mjs`)與
+ * 執行期(自訂地圖存入最愛時量一次)同吃。三件事綁在一起,拆開任何一件都會讓兩條路徑
+ * 算出不同的角度(而畫面上只表現成「這張圖沒轉正」):
+ *   ① 取樣面 = `GRID_HW`(大馬路);
+ *   ② 量測 MUST 在**未旋轉**的框裡做(`toXZ` 的 center MUST NOT 帶 rot)—— 量到的是
+ *      「格網相對正北偏多少」;
+ *   ③ 旋轉量是它的**負值**(把格網轉回軸對齊)。
+ * @param {Array<{tags:object, geometry:Array<{lat:number,lon:number}>}>} ways
+ * @param {(p:{lat:number,lon:number}) => [number, number]} toXZ 未旋轉框的投影
+ */
+export function roadGridRotDeg(ways, toXZ) {
+  const segs = waySegs(ways, toXZ, (w) => GRID_HW.test(w.tags?.highway || ''));
+  if (!segs.length) return null;
+  const a = gridAngle(segs);
+  return a == null ? null : -a * 180 / Math.PI;
+}
+
 /** 方位角 → 最近的格(0..DIRS-1) */
 function nearestDir(a) {
   const N = ROAD_GRID.DIRS;

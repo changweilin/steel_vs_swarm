@@ -120,7 +120,7 @@ export const VENUES = [
   { id: 'shibuya',    name: '東京・澀谷十字路口',     country: '🇯🇵', type: '市區', ll: [35.659538, 139.700442], bearing: 280, mix: { urban: 0.9, green: 0.1 }, scen: ['underBridge'], relief: 14 },
   { id: 'manhattan',  name: '紐約・曼哈頓中城',       country: '🇺🇸', type: '市區', ll: [40.754938, -73.984047], bearing: 30,  mix: { urban: 0.85, green: 0.15 }, relief: 2 },
   { id: 'paris',      name: '巴黎・艾菲爾鐵塔',       country: '🇫🇷', type: '市區', ll: [48.859026, 2.293461],   bearing: 95,  mix: { urban: 0.8, green: 0.15, water: 0.05 }, relief: 6 },
-  { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.497891, 127.027621], bearing: 150, mix: { urban: 0.9, green: 0.1 }, relief: 23 },
+  { id: 'seoul',      name: '首爾・江南',             country: '🇰🇷', type: '市區', ll: [37.497891, 127.027621], bearing: 150, mix: { urban: 0.9, green: 0.1 }, relief: 22 },
   // 2026-08-02 使用者需求「找兵線有地下道 / 陸上高架橋 / 水上高架橋的地圖加入預設地圖」。
   // 三張新場地各鎖定一種場景,錨點由 `--probe` 實測選定(座標 = 探測回報的結構中點):
   //   berlin  ③ 陸上高架橋 —— 華沙大街跨東站調車場,橋下是鐵道不是水(⇒ 純陸域)。
@@ -137,13 +137,13 @@ export const VENUES = [
   { id: 'madrid',     name: '馬德里・卡斯提亞大道',   country: '🇪🇸', type: '市區', ll: [40.437794, -3.685632], bearing: 245, mix: { urban: 0.85, green: 0.15 }, scen: ['overTunnel'], relief: 11 },
 
   // ---- 綠地單一(≥80%)----
-  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'], relief: 28 },   // 天母(南麓路網)
-  { id: 'aokigahara',  name: '富士山麓・青木原樹海',  country: '🇯🇵', type: '綠地', ll: [35.497619, 138.754966], bearing: 260, mix: { green: 0.9, bare: 0.1 }, relief: 22 },      // 河口湖町
-  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 }, scen: ['crossing'], relief: 21 },      // Freudenstadt
-  { id: 'yosemite',    name: '優勝美地・谷地',        country: '🇺🇸', type: '綠地', ll: [37.748470, -119.588441], bearing: 85, mix: { green: 0.8, bare: 0.15, water: 0.05 }, relief: 17 },   // 谷底環道(L3 無解 → synth)
+  { id: 'yangmingshan', name: '陽明山國家公園',       country: '🇹🇼', type: '綠地', ll: [25.118243, 121.530123], bearing: 100, mix: { green: 0.85, bare: 0.15 }, scen: ['highGround'], relief: 27 },   // 天母(南麓路網)
+  { id: 'aokigahara',  name: '富士山麓・青木原樹海',  country: '🇯🇵', type: '綠地', ll: [35.497619, 138.754966], bearing: 260, mix: { green: 0.9, bare: 0.1 }, relief: 23 },      // 河口湖町
+  { id: 'blackforest', name: '德國・黑森林',          country: '🇩🇪', type: '綠地', ll: [48.466999, 8.411523],   bearing: 10,  mix: { green: 0.9, bare: 0.1 }, scen: ['crossing'], relief: 26 },      // Freudenstadt
+  { id: 'yosemite',    name: '優勝美地・谷地',        country: '🇺🇸', type: '綠地', ll: [37.748470, -119.588441], bearing: 85, mix: { green: 0.8, bare: 0.15, water: 0.05 }, relief: 16 },   // 谷底環道(L3 無解 → synth)
 
   // ---- 裸露地單一(≥80%)----
-  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 }, scen: ['underBridge', 'highGround'], relief: 35 },   // Nazlet El-Semman
+  { id: 'giza',       name: '開羅・吉薩金字塔群',     country: '🇪🇬', type: '裸露地', ll: [29.986967, 31.142024],  bearing: 210, mix: { bare: 0.85, urban: 0.15 }, scen: ['underBridge', 'highGround'], relief: 36 },   // Nazlet El-Semman
   { id: 'uluru',      name: '澳洲・烏魯魯巨岩',       country: '🇦🇺', type: '裸露地', ll: [-25.240662, 130.989010], bearing: 80, mix: { bare: 0.95, green: 0.05 }, relief: 13 },   // Yulara(L3 無解 → synth)
   { id: 'phoenix',    name: '鳳凰城・索諾拉沙漠',     country: '🇺🇸', type: '裸露地', ll: [33.495000, -112.170000], bearing: 30, mix: { bare: 0.7, urban: 0.3 }, relief: 2 },      // 西鳳凰城沙漠格柵
   { id: 'hehuanshan', name: '合歡山・箭竹草原',       country: '🇹🇼', type: '裸露地', ll: [23.965067, 120.967128], bearing: 25, mix: { bare: 0.8, green: 0.2 }, relief: 14 },      // 埔里鎮
@@ -154,12 +154,12 @@ export const VENUES = [
   // green 50%(錨點是 Puerto Iguazú 鎮,四周是亞熱帶雨林),water 只有 40%,而且沒有任何
   // 一項 ≥80% ⇒ 依本檔開頭的規則(單一型 = 主要地貌 ≥80%;否則混合型)應標「混合」。
   // 舊值「水體」寫的是**場地名字**(瀑布)而不是**這張圖**的地貌。
-  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '混合', ll: [-25.598749, -54.573988], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 }, relief: 23 },    // Puerto Iguazú
-  { id: 'tamsui',     name: '淡水河口・紅樹林濕地',   country: '🇹🇼', type: '濕地', ll: [25.168155, 121.444729], bearing: 140, mix: { wet: 0.5, water: 0.3, green: 0.2 }, relief: 25 },     // 淡水市區(L3 無解 → synth)
-  { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.983022, 23.416720], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 }, relief: 8 },   // Maun
+  { id: 'iguazu',     name: '伊瓜蘇大瀑布',           country: '🇦🇷', type: '混合', ll: [-25.598749, -54.573988], bearing: 250, mix: { water: 0.4, green: 0.5, wet: 0.1 }, relief: 26 },    // Puerto Iguazú
+  { id: 'tamsui',     name: '淡水河口・紅樹林濕地',   country: '🇹🇼', type: '濕地', ll: [25.168155, 121.444729], bearing: 140, mix: { wet: 0.5, water: 0.3, green: 0.2 }, relief: 21 },     // 淡水市區(L3 無解 → synth)
+  { id: 'okavango',   name: '波札那・奧卡萬戈三角洲', country: '🇧🇼', type: '濕地', ll: [-19.983022, 23.416720], bearing: 45,  mix: { wet: 0.6, water: 0.25, green: 0.15 }, relief: 9 },   // Maun
 
   // ---- 混合型 ----
-  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 }, scen: ['highGround'], relief: 73 },
+  { id: 'rio',        name: '里約・基督山海岸',       country: '🇧🇷', type: '混合', ll: [-22.969255, -43.184768], bearing: 245, mix: { urban: 0.4, green: 0.35, water: 0.25 }, scen: ['highGround'], relief: 72 },
   // 金龍路 ↔ 金湖路,兵線穿金龍隧道(山體隧道手動測試場)。2026-08-01 明隧道判定改制後 ④ 不再成立:
   // 金龍是**貫穿山體**的真隧道(側向地表在 40m 外仍高出路面 3.7~9.8m),舊判定只因覆蓋比頂板薄
   // 0.2~1.5m 就判成明隧道 —— 使用者實測回報後改判,標記跟著實測退掉(見 tunnelWallProfile)。
@@ -172,17 +172,17 @@ export const VENUES = [
   // **偏好卻留著** —— 選線於是一路去追一條挖不出來的隧道,把兵線帶離市民大道本身。
   // 改制:錨點移到探測回報的「市民大道高架道路」覆蓋段中點(1526m @25.04974,121.51228),
   // 偏好改 `PREFER_BRIDGE` + 方位角夾在高架軸(東西向)上。scen/relief 待重烤後實測填入。
-  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.049740, 121.512280], bearing: 80,  mix: { urban: 0.9, green: 0.1 }, relief: 27 },
+  { id: 'civicblvd',  name: '台北・市民大道',         country: '🇹🇼', type: '市區', ll: [25.049740, 121.512280], bearing: 80,  mix: { urban: 0.9, green: 0.1 }, scen: ['bridge'], relief: 27 },
   // ② 地下道的**第二張**測試場地(2026-08-04 探測選定;在此之前 ② 只有 taroko 一張,
   // 見 docs/lane_scenarios.md「② 為什麼市區地下道咬不住」)。探測回報六本木一帶有 7 條
   // 引擎真的挖得出來的車行地下道,是掃過最密的一區 —— 而 2026-07-28 那張「八個候選點
   // 全部 0 條成洞」的表是 `underpassPlan` **上線前**量的,早就過期了。
   // scen / relief 刻意留白:MUST 由 `tools/audit_lane_scenarios.mjs` 實測產生(同 crimea)。
-  { id: 'roppongi',   name: '東京・六本木',           country: '🇯🇵', type: '市區', ll: [35.661630, 139.728510], bearing: 200, mix: { urban: 0.9, green: 0.1 }, scen: ['underpass'], relief: 13 },
+  { id: 'roppongi',   name: '東京・六本木',           country: '🇯🇵', type: '市區', ll: [35.661630, 139.728510], bearing: 200, mix: { urban: 0.9, green: 0.1 }, relief: 13 },
   // ④ 明隧道的指定測試場地(2026-07-29 廣域探測選定):台8線燕子口—錐麓段,短隧道的側向
   // 是立霧溪峽谷、土牆藏不住結構。實測 1v1 兵線(2026-07-30 複掃):④ 明隧道 72m、
   // ② 地下道 171m(首個實測走得到 ② 的預設場地)、① 60m、⑧ 399m/+416m(峽谷絕壁)。
-  { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 416 },
+  { id: 'taroko',     name: '太魯閣・燕子口',         country: '🇹🇼', type: '混合', ll: [24.171200, 121.556000], bearing: 262, mix: { green: 0.5, bare: 0.4, water: 0.1 }, scen: ['tunnel', 'underpass', 'gallery', 'highGround'], relief: 371 },
   { id: 'barcelona',  name: '巴塞隆納・地中海濱',     country: '🇪🇸', type: '混合', ll: [41.390000, 2.162000],   bearing: 135, mix: { urban: 0.55, water: 0.25, green: 0.2 }, relief: 15 },   // Eixample 格柵
   // 2026-08-02 錨點改貼西敏橋西橋頭 + PREFER_BRIDGE + 方位角夾東西向 ⇒ L1 兵線重新走上橋面
   //(使用者回報「倫敦也沒有橋了」:07-29 主軸偏航規則重烤後兵線改走同一岸)。
@@ -202,7 +202,7 @@ export const VENUES = [
   // `reliefTier()` 回 null、venueTip 自動略過「起伏」那一段,不會顯示臆測的地形說明。
   // 同理 venueLanes.js / venueText.js 也沒有這張圖的烘焙資料:兵線退回 synthLane 合成弧、
   // 在地文字退回執行期即時抓的圖資 tag,兩條都是既有的降級路徑(MUST NOT 為它另開特例)。
-  { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 }, scen: ['highGround'], relief: 31 },
+  { id: 'crimea',     name: '克里米亞・塞瓦斯托波爾', country: '🇺🇦', type: '混合', ll: [44.617200, 33.524300], bearing: 205, mix: { urban: 0.7, water: 0.2, green: 0.1 }, scen: ['highGround'], relief: 32 },
 ];
 
 // ---- 預先計算場地設定(確定性幾何,零網路,即選即用)----

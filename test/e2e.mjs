@@ -2085,6 +2085,30 @@ guest.send({ t: 'pickChar', ch: 't04' });
 await guest.wait((c) => c.sync.lobby.clients.find((x) => x.id === c.sync.youId)?.ch === 't04');
 assert(true, `guest 選角「${CHARACTERS.t04.code}」`);
 
+log('— 路網中繼:房主的 OSM 圖資經伺服器轉給入房者 —');
+// 形狀/上限/單調的完整斷言住 tools/audit_osm_relay.mjs(離線、含反向驗證);
+// 這裡驗的是**真的 WebSocket 來回**:訊息走得過傳輸層、非房主進不來、晚到的觀戰者補得到。
+{
+  const relayBox = { minLat: 25.03, minLng: 121.55, maxLat: 25.06, maxLng: 121.59 };
+  const mkRoads = (name) => [{
+    tags: { highway: 'primary', name },
+    geometry: [{ lat: 25.04, lon: 121.56 }, { lat: 25.05, lon: 121.57 }],
+  }];
+  host.send({ t: 'osm', bbox: relayBox, feats: null, roads: mkRoads('中繼大道') });
+  const got = await guest.wait((c) => c.msgs.find((m) => m.t === 'osm'));
+  assert(got.roads?.[0]?.tags?.name === '中繼大道', '路網中繼:入房者收到房主那一份路網');
+  // 單調:房主重試成功再送一次,已定案的格 MUST NOT 被換掉(否則早/晚進房的人建不同的世界)
+  host.send({ t: 'osm', bbox: relayBox, feats: null, roads: mkRoads('第二份') });
+  guest.send({ t: 'osm', bbox: relayBox, feats: null, roads: mkRoads('冒名') });
+  await new Promise((r) => setTimeout(r, 300));
+  assert(guest.msgs.filter((m) => m.t === 'osm').length === 1, '路網中繼:已定案的格不再轉播(非房主的一律丟棄)');
+  const lateSpec = await client('lateSpec');
+  lateSpec.send({ t: 'joinRoom', pin, name: '晚到觀戰', mode: 'spectator' });
+  const lateGot = await lateSpec.wait((c) => c.msgs.find((m) => m.t === 'osm'));
+  assert(lateGot.roads?.[0]?.tags?.name === '中繼大道', '路網中繼:晚到者一進房就補到同一份');
+  lateSpec.ws.close();
+}
+
 log('— 滿房拒收第三位玩家(2N=2)—');
 const third = await client('third');
 third.send({ t: 'joinRoom', pin, name: '第三者', mode: 'player' });
