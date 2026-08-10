@@ -864,16 +864,30 @@ const OUTLINE_COLOR = new THREE.Color(0x0a0b12);
 // 手寫一個常數換算 = 一開鏡描邊全部變粗(而那正是最需要看清輪廓的時候)。
 const OUTLINE_MIN_NDC = 0.0022;
 
-function outlineMaterial(w) {
+/**
+ * @param w    描邊寬度,**已除以該 mesh 的世界縮放**(= 局部單位;呼叫端 `outlinify` 算)
+ * @param invS `1 / 世界縮放` —— 與 `w` 吃**同一個** s。
+ *
+ * 兩個外推量都住在 `position` 那一側 ⇒ **兩個都 MUST 換成局部單位**(2026-08-10 使用者回報
+ * 「主堡黑球」)。`uOW` 一開始就除過了,而螢幕下限 `oMinW` 是由**視距**(世界公尺)換算來的
+ * 卻直接加在局部座標上 ⇒ 實得線寬 = 下限 × 世界縮放,而且 `oMinW ∝ 視距` ⇒ **離越遠脹越大、
+ * 沒有上界**。這件事在低縮放的機體上只是「遠處的線略粗」(塔 1.39×、直升機 2.38× — 看不出來),
+ * 但主堡的 `dome.glb` 建模單位極小,`fitToHeight(42m)` 之後世界縮放是 **795×**:200m 外那顆
+ * 黑殼被推出 236m、450m 外推出 530m —— 就是使用者看到的「主堡上空異常過大的球面輪廓」,
+ * 而它**擋不住任何射線也量不到**(位移只發生在頂點著色器,`Raycaster` 走的是 CPU 幾何 ⇒
+ * 稽核與冒煙的數值全是對的,只有畫面不對)。
+ * 折進 `uOMin` 而不另開 uniform:兩者恆一起出現,分成兩個遲早有人只傳其中一個。
+ */
+function outlineMaterial(w, invS) {
   const m = new THREE.MeshBasicMaterial({ color: OUTLINE_COLOR, side: THREE.BackSide });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uOW = { value: w };
-    shader.uniforms.uOMin = { value: OUTLINE_MIN_NDC };
+    shader.uniforms.uOMin = { value: OUTLINE_MIN_NDC * invS };
     shader.vertexShader = ('uniform float uOW;\nuniform float uOMin;\n' + shader.vertexShader)
       .replace('#include <begin_vertex>', `
         // 視距:骨骼變形前的綁定姿勢即可(同一根骨頭上的頂點距離差異遠小於一個像素)
         float oDist = max( 0.05, -( modelViewMatrix * vec4( position, 1.0 ) ).z );
-        // uOMin(NDC)換回這個距離上的世界寬度;projectionMatrix[1][1] = 1/tan(fov/2)
+        // uOMin(NDC ÷ 世界縮放)換回這個距離上的**局部**寬度;projectionMatrix[1][1] = 1/tan(fov/2)
         float oMinW = uOMin * oDist / max( 0.001, projectionMatrix[1][1] );
         vec3 transformed = position + normal * max( uOW, oMinW );`);
   };
@@ -897,19 +911,21 @@ export function outlinify(root, width = 0.08) {
     const m = Array.isArray(o.material) ? o.material[0] : o.material;
     if (!m || m.transparent) return;
     const ws = o.getWorldScale(_ws);
+    // 世界縮放只量**一次**:固定寬度與螢幕下限 MUST 吃同一個 s(見 outlineMaterial 檔頭 ——
+    // 只換其中一個,另一個就會隨 fitToHeight 的縮放倍率無聲脹大)
     const s = (Math.abs(ws.x) + Math.abs(ws.y) + Math.abs(ws.z)) / 3 || 1;
-    jobs.push([o, width / s]);
+    jobs.push([o, width / s, 1 / s]);
   });
-  for (const [o, w] of jobs) {
+  for (const [o, w, invS] of jobs) {
     let shell;
     if (o.isSkinnedMesh) {
-      shell = new THREE.SkinnedMesh(o.geometry, outlineMaterial(w));
+      shell = new THREE.SkinnedMesh(o.geometry, outlineMaterial(w, invS));
       shell.bindMode = o.bindMode;
       shell.bind(o.skeleton, o.bindMatrix);   // 共用骨骼:描邊跟著動畫走
     } else {
       // 鑿刻岩等 per-face 硬邊法線幾何:外殼沿面法線外推會裂縫,
       // 改用建構時附帶的平滑法線副本(userData.outlineGeo)
-      shell = new THREE.Mesh(o.userData.outlineGeo || o.geometry, outlineMaterial(w));
+      shell = new THREE.Mesh(o.userData.outlineGeo || o.geometry, outlineMaterial(w, invS));
     }
     shell.userData.isOutline = true;
     shell.frustumCulled = false;
