@@ -271,29 +271,10 @@ console.log('\nⅦ 不回歸(權威與判定側零涉入)');
   ok(files.length === 4, `曲面的消費端只有 ${files.join(' / ')}`);
 }
 
-// ============ Ⅷ 這一批動到的檔案真的解析得過 ============
-// 本專案的 GLSL 住在 **JS 樣板字串**裡(`SHIELD_VERT` / `curveFn` / 天空穹頂),而樣板字串
-// 對反引號沒有轉義概念 —— 在 GLSL 的 `//` 註解裡寫一個反引號,**整支 .js 當場語法錯誤**,
-// 而錯誤指向的是註解那一行的中文字,看起來完全像是別的問題(2026-08-09 實測踩到:
-// vfx.js 整支掛掉,而 `npm test` / `npm run bal` / 定場鏡頭組全部照樣綠 —— 它們都不載入 vfx.js)。
-// 這幾支需要 three ⇒ 沒有任何離線稽核 import 得了它們,`node --check` 是唯一驗得到的方式。
-console.log('\nⅧ 觸及檔案的語法(GLSL 住在樣板字串裡 ⇒ 反引號會吃掉整支檔)');
-{
-  const { execFileSync } = await import('node:child_process');
-  const { writeFileSync, mkdtempSync } = await import('node:fs');
-  const { join } = await import('node:path');
-  const { tmpdir } = await import('node:os');
-  const dir = mkdtempSync(join(tmpdir(), 'svs-curve-'));
-  for (const f of ['data.js', 'toon.js', 'terrain.js', 'vfx.js', 'environment.js']) {
-    // 副檔名 MUST 是 .mjs:`node --check` 對 .js 走 CommonJS 解析,頂層 import 會直接紅
-    const tmp = join(dir, f.replace(/\.js$/, '.mjs'));
-    writeFileSync(tmp, readSrc('public', 'js', f));
-    let err = '';
-    try { execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' }); }
-    catch (e) { err = String(e.stderr || e.message).split('\n').find((l) => /Error/.test(l)) || '解析失敗'; }
-    ok(!err, `public/js/${f} 解析得過${err ? `(${err})` : ''}`);
-  }
-}
+// ============ 語法閘搬家了 ============
+// 舊 Ⅷ 段在這裡跑過本批觸及的五支檔案的 `node --check`(GLSL 住在 JS 樣板字串裡 ⇒ 註解裡一個
+// 反引號會吃掉整支檔)。那道閘已經整條擴充成 `tools/audit_client_syntax.mjs`,覆蓋
+// **全部** `public/js/*.js` ⇒ 這裡再留一份就是第二份實作(§0.2),移除。改曲面照樣要跑那一支。
 
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項${fail ? `,失敗 ${fail} 項` : ''}`);
 if ((BREAK_KNEE || BREAK_EDGE) && !fail) {
