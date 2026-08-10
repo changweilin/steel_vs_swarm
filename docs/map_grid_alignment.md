@@ -152,7 +152,7 @@ shibuya 的 −6.19° 就是東京街廓本來就沒那麼正交 + 小路把平�
   航點集合本身**(量化會併/改橋 way ⇒ shibuya 航點 30→34、giza 15→25、paris 26→16)。
   結論:旋轉沒有引入新的不可通行模式,總量還變好了。
 
-**⚠ 旋轉的遺留:`VENUES[].relief` 沒有跟著重產生(2026-08-10 補驗才發現)**
+**旋轉的遺留:`VENUES[].relief` 沒有跟著重產生(2026-08-10 補驗才發現,**已修**)**
 
 `audit_lane_scenarios` 全 29 場地:**9/9 種場景都有預設場地**(退出碼的判準),但**標記不符 14**。
 三棵樹對照(同一份 `.scen_cache`):
@@ -161,21 +161,33 @@ shibuya 的 −6.19° 就是東京街廓本來就沒那麼正交 + 小路把平�
 |---|---|
 | `0afe260`(旋轉前)| **2**(civicblvd 漏標 bridge、roppongi 多標 underpass)|
 | `main` | 14 |
-| 本輪(第二・三階段)| 14 —— **與 main 逐條相同** |
+| 本輪(重烤**前**)| 14 —— **與 main 逐條相同**(⇒ 一條都不是本輪造成的)|
+| 本輪(重烤**後**)| **0** —— 退出碼 0 |
 
 旋轉後多出來的 **12 條全部是 `relief` 數值**(場景標記一條都沒多):seoul 23→22、yangmingshan 28→27、
 aokigahara 22→23、blackforest 21→26、yosemite 17→16、giza 35→36、iguazu 23→26、tamsui 25→21、
 okavango 8→9、rio 73→72、crimea 31→32、**taroko 416→371**。
 
-**成因**:`relief` 是**實測**的起伏值,而旋轉讓 `battleBBox` 長大 ⇒ 取樣範圍變了。CLAUDE.md 明訂
-`scen`/`relief` MUST 由實測產生、且改 `battleBBox` 一族要**重烤**(§5.5)—— PR #186 漏了這一步。
-消費端是場地選單的地形說明(`reliefTier`/`RELIEF_TIERS`/`venueBrief`),症狀是「選單上的起伏描述
-與實際差一階」。**刻意不併進本輪**:它是 main 的既有偏差(本輪逐條相同),而且 12 條裡有 8 條只差 1
-—— 直接寫進去等於把一次量測的雜訊固化;taroko 差 11% 才是該先看一眼的那一個。
+**成因**:`relief` 是**實測**的側翼峰值,而旋轉改變了**高程取樣點**(世界格跟著轉;方框也可能
+長大)。CLAUDE.md 明訂 `scen`/`relief` MUST 由實測產生、且改 `battleBBox` 一族要**重烤**(§5.5)
+—— PR #186 漏了這一步。消費端是場地選單的地形說明(`reliefTier`/`RELIEF_TIERS`/`venueBrief`)。
+
+**已重烤(2026-08-10)**:`venues.js` 的 12 個 `relief` 值 + civicblvd 補標 `bridge` + roppongi 移除
+`underpass`,全部改吃實測值 ⇒ `audit_lane_scenarios` **標記不符 0、退出碼 0**(旋轉前是 2,
+這支從來沒有全綠過)。寫死之前先驗過**兩次量測逐項相同**(暖快取 ⇒ 確定性),不是把雜訊固化。
+
+⚠ **不是解析度變粗**:一度以為是「同一個 `GRID_N` 攤在更大的框上 ⇒ 峰值被平滑」,實測否掉了 ——
+yosemite / iguazu / seoul / aokigahara / manhattan 的方框**逐位元沒變**(格距比 1.000×)而 relief 照樣動,
+taroko 格距只粗 1.036× 卻掉 11%。真正的原因是**取樣點轉了**:同一片山在旋轉後的世界格上被取到不同的
+位置,峰值有升有降(iguazu +3、blackforest +5、aokigahara/giza/okavango/crimea +1 vs taroko −45、
+tamsui −4、seoul/yosemite/rio/yangmingshan −1)。所以這不是退化,只是**沒有重烤**。
+
+`civicblvd` 的 `relief: 27` **刻意留著**:這一輪實測是 `null`(它的兵線側翼幾乎全落在橋/洞段,而那些
+要扣掉),而稽核對 `peakSide == null` 刻意不判 —— 分不出「這次沒量到」與「量到就是沒有」。
 
 **完整版 `audit_venue_biome`**:4 過 / 1 敗 —— Ⅲ「12 個場地的手寫 `mix` 與圖資實測不符」。
-本輪**不可能**造成它:那支只 import `venues.js` / `data.js` / `venue_field.mjs`(三支都沒動)+
-`audit_src.mjs`(純追加),Ⅱ/Ⅲ 的資料是它自己去抓的。CI 也只收 `--offline` 那一半(Ⅰ 段全綠),
+本輪**不可能**造成它:它讀的是 `VENUES[].mix`/`type`(本輪只動 `scen`/`relief`)+ `data.js` /
+`venue_field.mjs`(兩支沒動)+ `audit_src.mjs`(純追加),Ⅱ/Ⅲ 的資料是它自己去抓的。CI 也只收 `--offline` 那一半(Ⅰ 段全綠),
 而該支檔頭自陳 `TOL` 是「挑出該看的圖,不是判死」。
 
 **需外網 / 真瀏覽器(㋓ / ㋕)**
