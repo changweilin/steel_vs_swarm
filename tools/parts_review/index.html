@@ -42,6 +42,10 @@
     <button class="segb" data-f="wip">半成品</button>
   </div>
 </header>
+<!-- 採集迴圈的啟停 + 圖檔三態(2026-08-10)。整條由伺服器推導後送過來,頁面只負責畫:
+     狀態的判準住 tools/ai3d/photo_state.mjs、啟停的閘門住 tools/dev_supervisor.mjs,
+     這裡再判一次就是第六本帳。 -->
+<section class="pr-harvest" id="prHarvest"></section>
 <div class="pr-main">
   <nav class="pr-list" id="prList"></nav>
   <section class="pr-body" id="prBody"></section>

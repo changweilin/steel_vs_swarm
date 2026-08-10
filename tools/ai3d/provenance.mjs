@@ -136,6 +136,34 @@ export function photoRoots(extra = null) {
   return [...new Set(roots)].filter((r) => existsSync(r));
 }
 
+/**
+ * **資料家**候選(= `photoRoots()` 裡真的有帳本的那幾個),依帳本筆數由多到少。
+ *
+ * 為什麼要排序而不是「取第一個」:語料家會搬(§5af-g:一個 worktree 被刪掉,整份 superset
+ * 跟著沒了),而探測順序是**目錄名的字典序**,與「哪一份是 superset」完全無關 ——
+ * 實測兩個候選 415 筆 vs 81 筆,取第一個有 50% 機率挑到那份小的,而畫面上只表現成
+ * 「語料怎麼變少了」。⇒ 取筆數最多的那一個,**並且把其他候選一起回傳**:
+ * 呼叫端(零件台的圖檔面板)MUST 把挑中的那一個顯示出來,MUST NOT 靜靜地替使用者決定。
+ *
+ * 這一支是「資料家在哪」的唯一推導縫。要指定別的一律走各工具的 `--home` 參數。
+ */
+export function corpusHomes(extra = null) {
+  const out = [];
+  for (const root of photoRoots(extra)) {
+    const man = join(root, 'photo_manifest.json');
+    if (!existsSync(man)) continue;
+    let n = 0;
+    try { n = JSON.parse(readFileSync(man, 'utf8')).length || 0; } catch { continue; }
+    // **明指的那一個永遠排第一**(`--photos` / `--home`):筆數排序是「沒人告訴我用哪個」
+    // 時的推導,拿它去覆蓋使用者明講的選擇就是自作主張(而症狀是「我指定了 A,它讀 B」)。
+    out.push({ home: root, entries: n, explicit: !!extra && root === resolve(extra) });
+  }
+  return out.sort((a, b) => (b.explicit - a.explicit) || (b.entries - a.entries));
+}
+
+/** 挑中的那一個資料家(沒有任何候選 ⇒ null,呼叫端印理由,MUST NOT 假裝有) */
+export const corpusHome = (extra = null) => corpusHomes(extra)[0]?.home ?? null;
+
 /** 解析一張來源圖的實體路徑;找不到回 null(對照台照實顯示「原圖不在本機」,MUST NOT 假裝有) */
 export function resolvePhoto(file, roots) {
   if (!file) return null;

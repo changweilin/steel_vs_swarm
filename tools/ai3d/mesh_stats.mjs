@@ -9,17 +9,30 @@
 // intake_parts 的外廓/預算閘 + 對照台人眼。
 //
 // 用法:node tools/ai3d/mesh_stats.mjs <dir>   # 掃 <dir>/**/mesh.glb(SF3D 逐圖子目錄)
+//
+// 2026-08-10:自動入庫(第 ⑦ 站 auto_intake.mjs)要問的是**一模一樣的三個數**(fill / tris /
+// aspect)與**一模一樣的門檻** ⇒ 本檔改成「可 import 的模組 + CLI」,判讀字串與排序逐位元不變。
+// 各抄一份的下場是「快篩說是殼、入庫站說是塊」,而兩邊都不會報錯(原則 2)。
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parseGlb } from './parts_src.mjs';
 import { readFileSync } from 'node:fs';
 
-const dir = process.argv[2];
-if (!dir) { console.error('用法:node tools/ai3d/mesh_stats.mjs <sf3d 輸出目錄>'); process.exit(1); }
+/** 判讀門檻(唯一真相;§5c/§5e 拿 SF3D 產出校準,**只適用 SF3D 那一路** —— 見檔頭與 harvest_loop ⑤) */
+export const FILL_SOLID = 0.22;
+export const FILL_THIN = 0.10;
+export const ASPECT_LO = 0.6;
+export const ASPECT_HI = 2.2;
+
+/** 判讀字串(CLI 與 auto_intake 同吃;`◎` 才是自動入庫收的那一檔) */
+export const verdictOf = (r) => (r.fill >= FILL_SOLID
+  ? (r.aspect >= ASPECT_LO && r.aspect <= ASPECT_HI ? '塊狀候選 ◎' : '實心但比例偏(柱/板)')
+  : r.fill >= FILL_THIN ? '偏薄' : '殼/碎片 ✗');
 
 // parseGlb 只回 POSITION + tris;體積要 indices ⇒ 這裡自己解一次(同一支手寫解析器的
 // 延伸;仍零 npm 依賴)。
-function meshVolume(path) {
+export function meshVolume(path) {
   const buf = readFileSync(path);
   if (buf.readUInt32LE(0) !== 0x46546c67) return null;
   let off = 12, json = null, bin = null;
@@ -62,29 +75,40 @@ function meshVolume(path) {
            w: maxX - minX, h: maxY - minY, d: maxZ - minZ };
 }
 
-// **兩種版面都要吃**:SF3D 是逐圖子目錄 `<i>/mesh.glb`,T2-spz 是**扁平** `<名字>.glb`。
-// 只認前者的話,建築那一族(2026-08-10 起走 T2)在這支眼裡永遠是空的 —— 而空的輸出與
-// 「這一批都很好」印出來一模一樣(表頭照印、一列都沒有),沒有任何錯誤訊息。
-const entries = [];
-for (const sub of readdirSync(dir)) {
-  if (sub.toLowerCase().endsWith('.glb')) { entries.push([sub.slice(0, -4), join(dir, sub)]); continue; }
-  entries.push([sub, join(dir, sub, 'mesh.glb')]);
+/**
+ * 掃一個產出目錄,逐顆回 `{ sub, path, tris, fill, aspect }`(依 fill 由高到低,同 CLI)。
+ *
+ * **兩種版面都要吃**:SF3D 是逐圖子目錄 `<i>/mesh.glb`,T2-spz 是**扁平** `<名字>.glb`。
+ * 只認前者的話,建築那一族(2026-08-10 起走 T2)在這支眼裡永遠是空的 —— 而空的輸出與
+ * 「這一批都很好」印出來一模一樣(表頭照印、一列都沒有),沒有任何錯誤訊息。
+ */
+export function scanDir(dir) {
+  const entries = [];
+  for (const sub of readdirSync(dir)) {
+    if (sub.toLowerCase().endsWith('.glb')) { entries.push([sub.slice(0, -4), join(dir, sub)]); continue; }
+    entries.push([sub, join(dir, sub, 'mesh.glb')]);
+  }
+  const rows = [];
+  for (const [sub, p] of entries) {
+    try { statSync(p); } catch { continue; }
+    const v = meshVolume(p);
+    if (!v) continue;
+    const nodes = parseGlb(p);
+    const tris = [...nodes.values()].reduce((s, n) => s + n.tris, 0);
+    // 長寬比:水平最大跨 ÷ 縱向跨(塊狀 ≈ 0.8~1.6;柱/板會偏離)
+    const aspect = Math.max(v.w, v.d) / Math.max(1e-6, v.h);
+    rows.push({ sub, path: p, tris, fill: v.fill, aspect });
+  }
+  rows.sort((a, b) => b.fill - a.fill);
+  return rows;
 }
-const rows = [];
-for (const [sub, p] of entries) {
-  try { statSync(p); } catch { continue; }
-  const v = meshVolume(p);
-  if (!v) continue;
-  const nodes = parseGlb(p);
-  const tris = [...nodes.values()].reduce((s, n) => s + n.tris, 0);
-  // 長寬比:水平最大跨 ÷ 縱向跨(塊狀 ≈ 0.8~1.6;柱/板會偏離)
-  const aspect = Math.max(v.w, v.d) / Math.max(1e-6, v.h);
-  rows.push({ sub, tris, fill: v.fill, aspect });
-}
-rows.sort((a, b) => b.fill - a.fill);
-console.log('name'.padEnd(46), 'tris', 'fill', 'aspect', ' 判讀');
-for (const r of rows) {
-  const verdict = r.fill >= 0.22 ? (r.aspect >= 0.6 && r.aspect <= 2.2 ? '塊狀候選 ◎' : '實心但比例偏(柱/板)')
-    : r.fill >= 0.1 ? '偏薄' : '殼/碎片 ✗';
-  console.log(r.sub.padEnd(46), String(r.tris).padStart(4), r.fill.toFixed(3), r.aspect.toFixed(2), ' ' + verdict);
+
+// ---- CLI ----
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const dir = process.argv[2];
+  if (!dir) { console.error('用法:node tools/ai3d/mesh_stats.mjs <sf3d 輸出目錄>'); process.exit(1); }
+  console.log('name'.padEnd(46), 'tris', 'fill', 'aspect', ' 判讀');
+  for (const r of scanDir(dir)) {
+    console.log(r.sub.padEnd(46), String(r.tris).padStart(4), r.fill.toFixed(3), r.aspect.toFixed(2), ' ' + verdictOf(r));
+  }
 }

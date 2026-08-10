@@ -21,13 +21,26 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
 import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
+import { corpusHome } from './ai3d/provenance.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-/** 可啟停的工具型錄。`script`/`args` 是**常數**,MUST NOT 由請求拼出來(邊界 ③) */
+/**
+ * 可啟停的工具型錄。`script`/`args` 是**常數**,MUST NOT 由請求拼出來(邊界 ③)。
+ *
+ * `kind` 有兩種,而差別**只在「怎麼知道它還活著」**:
+ *   `server` —— 對照台那兩支。活著 = **那個埠上有人在聽**(使用者可能是在終端機起的,
+ *               那種我們停不掉也不該假裝停得掉)。
+ *   `job`   —— 2026-08-10 加入的採集迴圈。它**不聽任何埠** ⇒ 拿 `listening()` 去問它
+ *               會**永遠回報「沒開」**,鈕面就停在「▶ 啟動」而背景其實跑著好幾支
+ *               (每按一次就多開一支,而畫面完全正常)。⇒ 活著 = 我們自己的子行程還在。
+ *               代價要講清楚:終端機起的那一支我們**看不到**(沒有埠可以探),
+ *               所以 job 的狀態語意是「**這個台子有沒有在跑它**」而不是「機器上有沒有在跑」。
+ */
 export const TOOLS = {
   codex: {
     key: 'codex',
+    kind: 'server',
     label: '2D 生圖對照台',
     port: CODEX_PORT,
     script: path.join('tools', 'codex_review.mjs'),
@@ -37,6 +50,7 @@ export const TOOLS = {
   },
   parts: {
     key: 'parts',
+    kind: 'server',
     label: '3D 零件對照台',
     port: PARTS_PORT,
     script: path.join('tools', 'parts_review.mjs'),
@@ -45,7 +59,29 @@ export const TOOLS = {
       + '零件庫 GLB vs 保險絲 primitive、純資料件 vs 改寫前的零件表;逐件說明用哪個生成方法、'
       + '吃哪一張來源圖(授權與出處),並列出缺件 / 孤兒節點 / 未記載來源。',
   },
+  harvest: {
+    key: 'harvest',
+    kind: 'job',
+    label: 'img→3D 採集迴圈',
+    script: path.join('tools', 'ai3d', 'harvest_loop.mjs'),
+    // `--rounds 0` = 一直跑到按停為止(採集是機率的,「跑到夠為止」沒有一個算得出來的輪數);
+    // `--every 15` 是來源限流的節奏(撞到 429 之後 Retry-After 600s,調短只會讓封鎖續期)。
+    args: ['--rounds', '0', '--every', '15'],
+    // 資料家**不是常數**(語料家會搬)⇒ 由 `corpusHome()` 從檔案系統推導後接在 args 後面。
+    // 它仍然沒有違反邊界 ③:那是我們自己算出來的路徑,**請求一個字都碰不到**。
+    needsHome: true,
+    hint: '收編 inbox → 抓照片 → 去背 → 圈選分離 → 選片閘 → img→3D → 快篩 → contact sheet '
+      + '→ 自動入庫 → 收尾稽核,每 15 分鐘一輪,按停為止。入庫只寫工作區**不 commit**;'
+      + '人眼複核排在入庫之後(就在這個台子上),判決由 tools/ai3d/apply_verdicts.mjs 執行。',
+  },
 };
+
+/** 真正要 spawn 的 argv(常數 + 推導出來的資料家)。**請求碰不到這裡的任何一格**(邊界 ③) */
+export function argvOf(t) {
+  if (!t.needsHome) return [...t.args];
+  const home = corpusHome();
+  return home ? [...t.args, '--home', home] : null;    // 找不到語料 ⇒ null,呼叫端印理由不啟動
+}
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 /** 這條連線是不是從本機來的?(邊界 ②;拿不到位址一律當成不是) */
@@ -59,6 +95,7 @@ export function isLoopback(req) {
 const running = new Map();
 const LOG_LINES = 40;
 const START_WAIT_MS = 5000;
+const JOB_SETTLE_MS = 1200;   // job 沒有埠可等 ⇒ 等「有沒有立刻死掉」(起不來都是頭一秒的事)
 const PROBE_MS = 400;
 const POLL_MS = 100;    // 等待迴圈的間隔:連不上時 ECONNREFUSED 是立刻回的,不歇會變成猛敲那個埠
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,14 +113,22 @@ function listening(port) {
   });
 }
 
+/** 我們自己開的那支還活著嗎(job 的存活判準;server 另外還要問埠) */
+const alive = (rec) => !!rec && rec.child.exitCode === null && !rec.child.killed;
+
 async function statusOf(t) {
   const rec = running.get(t.key);
-  return {
-    key: t.key, label: t.label, hint: t.hint, port: t.port,
-    url: `http://localhost:${t.port}/`,
-    listening: await listening(t.port),
-    owned: !!rec && rec.child.exitCode === null && !rec.child.killed,
+  const owned = alive(rec);
+  const base = {
+    key: t.key, kind: t.kind, label: t.label, hint: t.hint, owned,
     log: rec ? rec.log.slice(-6).join('\n') : '',
+  };
+  // job 沒有埠 ⇒ **不回 url / listening**(回一個假的 `http://localhost:undefined/` 會讓
+  // 客戶端畫出一個點不開的連結,而那看起來像「台子壞了」)。`running` 就是它的 listening。
+  if (t.kind === 'job') return { ...base, running: owned, home: t.needsHome ? corpusHome() : null };
+  return {
+    ...base, port: t.port, url: `http://localhost:${t.port}/`,
+    listening: await listening(t.port),
   };
 }
 
@@ -94,10 +139,17 @@ export async function list() {
 export async function start(key) {
   const t = TOOLS[key];
   if (!t) return { error: '沒有這個工具' };
-  if (await listening(t.port)) return statusOf(t);          // 已經有人在聽(可能是終端機起的)⇒ 不再開第二支
+  if (t.kind === 'job') {
+    // job 沒有埠可以探 ⇒ 「已經在跑了嗎」只能問自己那支。少了這一道,每按一次啟動就多開
+    // 一支採集迴圈:兩支同時對同一個資料家寫 harvest_state.json,而畫面完全正常。
+    if (alive(running.get(t.key))) return statusOf(t);
+  } else if (await listening(t.port)) return statusOf(t);   // 已經有人在聽(可能是終端機起的)⇒ 不再開第二支
+  const argv = argvOf(t);
+  if (!argv) return { ...(await statusOf(t)), error: '找不到任何有 photo_manifest.json 的資料家(語料家會搬 ⇒ 請用終端機帶 --home 跑)' };
   const log = [];
-  // argv 全部來自 TOOLS 常數(邊界 ③);cwd 固定在儲存庫根,工具自己解析相對路徑
-  const child = spawn(process.execPath, [t.script, ...t.args],
+  // argv 全部來自 TOOLS 常數 + `argvOf` 推導出來的資料家(邊界 ③:請求只能挑一個 key);
+  // cwd 固定在儲存庫根,工具自己解析相對路徑
+  const child = spawn(process.execPath, [t.script, ...argv],
     { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
   const keep = (buf) => {
     for (const line of String(buf).split(/\r?\n/)) if (line.trim()) log.push(line.trim());
@@ -108,10 +160,12 @@ export async function start(key) {
   child.once('exit', (code) => keep(`(行程結束,代碼 ${code})`));
   running.set(t.key, { child, log });
 
-  // 等到真的聽得到才回報 —— 回得太早,鈕面會先閃一下「還沒起來」再自己變好(看起來像壞掉)
-  const until = Date.now() + START_WAIT_MS;
+  // 等到真的聽得到才回報 —— 回得太早,鈕面會先閃一下「還沒起來」再自己變好(看起來像壞掉)。
+  // job 沒有埠可以等 ⇒ 改成「等它**沒有立刻死掉**」:採集迴圈第一件事是印資料家與第一輪標題,
+  // 起不來(路徑錯/相依缺)是在頭一秒就退出的,而那正是要讓使用者看到的那一種失敗。
+  const until = Date.now() + (t.kind === 'job' ? JOB_SETTLE_MS : START_WAIT_MS);
   while (Date.now() < until && child.exitCode === null) {
-    if (await listening(t.port)) break;
+    if (t.kind !== 'job' && await listening(t.port)) break;
     await sleep(POLL_MS);
   }
   return statusOf(t);
@@ -126,10 +180,16 @@ export async function stop(key) {
   if (!rec || rec.child.exitCode !== null) return { ...(await statusOf(t)), error: '這一支不是從這裡啟動的' };
   rec.child.kill();
   const until = Date.now() + 2000;
-  while (Date.now() < until && await listening(t.port)) await sleep(POLL_MS);   // 等它把埠放掉
+  // server 等它把埠放掉;job 沒有埠 ⇒ 等行程真的收掉(採集迴圈可能正卡在 15 分鐘的等待,
+  // 但 `kill()` 對它是立刻的 —— 等的是 Node 把 exitCode 填上)
+  while (Date.now() < until && (t.kind === 'job' ? rec.child.exitCode === null : await listening(t.port))) await sleep(POLL_MS);
   running.delete(key);
   return statusOf(t);
 }
+
+// ⚠ `kill()` 只收掉我們開的**那一支**。採集迴圈當下若正卡在 `spawnSync`(去背 / SF3D 那幾站),
+// 那支孫行程會跑完自己那一輪才消失 —— 這是刻意不做行程樹砍殺(`taskkill /T` 是平台專屬,
+// 而半途砍掉 Blender/SF3D 會留下寫到一半的 GLB)。按下停止 = **不再開新的一輪**。
 
 /** 父行程收掉時把開過的子行程一起帶走(否則 8621 會留下一支沒人管的 server)。
  *  只涵蓋得了「正常收掉」那幾條路:`taskkill /F` 是 SIGKILL,handler 根本不會跑,

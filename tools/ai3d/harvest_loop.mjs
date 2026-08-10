@@ -13,15 +13,25 @@
  *   ④ img→3D      vendor/stable-fast-3d/run.py  只餵**這一輪新過閘**的目標
  *   ⑤ 實心度快篩   mesh_stats.mjs                薄殼/碎片排序
  *   ⑥ contact sheet mesh_sheet.mjs               人眼複核那一步的輸入
+ *   ⑦ 自動入庫     auto_intake.mjs               normalize → intake 閘 → 名冊追加 → 來源帳
+ *   ⑧ 收尾稽核     auto_intake --gate-full       紅字 ⇒ 整輪回滾(逐位元)
  *
  * 為什麼要週期跑而不是一次跑完(這三條都是量出來的,不是保守):
  *   ・**限流是逐主機的、而且以十分鐘計**:upload.wikimedia.org 撞 429 之後 `Retry-After: 600`,
  *     之後每十分鐘只放 2~3 張(fetch_photos 檔頭)。一輪抓不完不是失敗,是這個來源的節奏
  *     ⇒ 預設 `--every 15`(分鐘)留餘裕。把它調到 5 分鐘不會更快,只會讓封鎖一直續期。
  *   ・**可用率 ~1/15**(skill §4):照片與網格兩階段各刷掉一次 ⇒ 產出是機率的,只能靠輪數累積。
- *   ・**人眼那一步不可省**(§5h 一輪擋下六顆內容錯誤的網格)⇒ 本迴圈刻意**不入庫**,
- *     它只跑到 contact sheet 為止。入庫仍走 normalize_parts → intake_parts → 3D 零件對照台。
- *     想讓它自動入庫的話,擋不住的就是「統計全綠、內容是一張版畫」那一類(MUST NOT)。
+ *   ・**人眼那一步仍然不可省**(§5h 一輪擋下六顆內容錯誤的網格)—— 2026-08-10 使用者定案
+ *     「先全部自動化,人眼再審查,決定要刪除原始照片或調整參數重新處理」⇒ 人眼**沒有被省掉,
+ *     是換到入庫之後**。舊版檔頭那條「MUST NOT 自動入庫」於此改寫,而讓它擋得住的不是
+ *     多一道統計閘(那正是擋不住「統計全綠、內容是一張版畫」的那種東西),是三件結構性的:
+ *       ㋐ **不 commit** —— ⑦⑧ 只寫工作區;沒有 commit 就是沒有出貨,人眼永遠排在出貨之前。
+ *       ㋑ **可撤** —— 對照台四種判決由 `apply_verdicts.mjs` 執行:`purge` 連原始照片一起刪
+ *          並進黑名單、`reimg`/`regen` 撤節點重來。撤節點 = GLB + 名冊 + 來源帳三邊同時。
+ *       ㋒ **只准追加到既有輪替名冊** —— 開新格要寫 fallback 描述子(降級幾何 + 離線外廓
+ *          上界 + 縮放目標三合一),那是設計不是轉換,自動化不碰。
+ *     ⇒ 最壞情況是「工作區裡多了一顆醜東西」,而不是「出貨了一張版畫」。
+ *     `--no-intake` 退回 2026-08-10 之前的行為(只跑到 contact sheet)。
  *
  * 紀律:
  *   ① **每一站都可以缺席**(原則 6):沒有 venv / 沒有 vendor / 沒有 GPU ⇒ 印出理由跳過那一站,
@@ -39,6 +49,7 @@
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --rounds 8 --every 15
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --rounds 1 --family tree
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-gen        只跑採集端(無 GPU 的機器)
+ *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-intake     只跑到 contact sheet(舊行為)
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --dry           只印每一站要跑什麼,不執行
  */
 import { spawnSync } from 'node:child_process';
@@ -70,6 +81,11 @@ const T2_LIMIT = Number(opt('t2-limit', 4));
 const FAMILY = opt('family');
 const DRY = flag('dry');
 const NO_GEN = flag('no-gen');
+const NO_INTAKE = flag('no-intake');
+// 一輪最多自動入庫幾顆。刻意小:名冊每多一顆,同一張圖上的剪影分佈就整個重排
+// (`bldGeo`/`megaGeo` 的輪替除數是名冊長度)⇒ 一次塞十顆等於一次改十次全場外觀,
+// 而人眼要在對照台上逐顆比對的正是那個差別。
+const INTAKE_LIMIT = Number(opt('intake-limit', 4));
 
 // **逐族選模型,不是全族一把**(runbook §5n 量出來的:T2-spz 對建築/規則幾何是雙 ◎,
 // SF3D 在同一張仰拍煙囪上出的是一顆歪塊)。`--t2` 指到 TRELLIS.2-stableprojectorz 的 checkout;
@@ -161,7 +177,10 @@ function pendingMattes(done) {
         for (const u of units) {
           const key = `${fam.name}/${part.name}/${u.id}`;
           if (done[key] || !existsSync(u.path)) continue;
-          out.push({ key, fam: fam.name, path: u.path });
+          // `pid` = **母照片** id(目標是它切出來的)。來源帳記的是照片、而「已出貨」與
+          // 「刪除來源圖」兩件事都以母照片為單位 ⇒ 投料帳 MUST 同時帶著兩層,
+          // 少了 pid 的話第 ⑦ 站只能去拆檔名(而命名規則只在 split_targets.py 定義一次)。
+          out.push({ key, fam: fam.name, part: part.name, id: u.id, pid: id, path: u.path });
         }
       }
     }
@@ -185,6 +204,20 @@ function screenFams() {
   const legit = new Set(loadJson(MANIFEST, []).map((e) => e.family).filter(Boolean));
   return readdirSync(MATTE_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory() && legit.has(d.name)).map((d) => d.name);
+}
+
+/**
+ * 投料帳 `<產出目錄>/.feed.json` —— 第 ⑦ 站的入場券(沒有它就不入庫,規則 9)。
+ * 兩層 id 都要記:`id` = 母照片(來源帳與「已出貨/黑名單」都以它為單位)、
+ * `target` = 這一顆真的吃進去的那張(可能是切出來的目標)。
+ */
+function writeFeed(dir, pend, gen) {
+  const items = pend.map((p, index) => ({
+    index, id: p.pid, target: p.id, family: p.fam, part: p.part,
+    matte: relative(HOME, p.path).split('\\').join('/'), ...gen,
+  }));
+  writeFileSync(join(dir, '.feed.json'),
+    JSON.stringify({ at: new Date().toISOString(), home: HOME, python, items }, null, 2));
 }
 
 async function round(n) {
@@ -247,6 +280,15 @@ async function round(n) {
     for (const p of sfPend) done[p.key] = tag;
     rec.generated += sfPend.length;
     rec.outDir = relative(HOME, outDir).split('\\').join('/');
+    // **投料帳**:index → 哪一張圖。SF3D 的輸出目錄是 `<i>/mesh.glb`,而 `i` 就是**投料順序**
+    // —— 這份對應只有生成當下知道,事後從檔名回推不出來。tri_budget 的 resample_2026_08_08
+    // 記著這個洞的代價:出貨的 chimney_a/ac_a 因為沒記「哪個輸出目錄的第幾顆」而**復現不出**
+    // (同一張照片配同一組參數得到的是另一顆網格,黏土剪影明顯不同)。第 ⑦ 站沒有這一份就不入庫。
+    writeFeed(outDir, sfPend, {
+      tool: 'sf3d',
+      runner: `${SF3D} — ${python}`,
+      params: '--texture-resolution 512 --remesh_option triangle --target_vertex_count 520',
+    });
   }
 
   // ④-b T2-spz(建築)。餵入 MUST 先二值化 —— T2 的 preprocess 以 alpha>204 取 bbox,
@@ -267,6 +309,8 @@ async function round(n) {
     for (const p of t2Pend) done[p.key] = tag;
     rec.generated += t2Pend.length;
     rec.t2Dir = relative(HOME, t2Dir).split('\\').join('/');
+    // T2 的版面是扁平 `<目標 id>.glb` ⇒ 對應看檔名就有,但**母照片 id 仍然只有這裡知道**
+    writeFeed(t2Dir, t2Pend, { tool: 'trellis2_spz', runner: `${T2_GATE} — ${T2_PY}`, params: 'run_t2_gate.py(預設)' });
   }
   if (!DRY) writeFileSync(STATE, JSON.stringify(done, null, 2));
 
@@ -284,8 +328,26 @@ async function round(n) {
   step('contact sheet · T2', process.execPath, ['tools/ai3d/mesh_sheet.mjs', t2Dir],
     { skip: (!t2Skip && rec.generated) ? null : '這一輪 T2 沒有新產出' });
 
+  // ⑦⑧ 自動入庫 + 收尾稽核(2026-08-10;`--no-intake` 退回舊行為)。**逐批各跑一次** ——
+  // 兩批的投料帳分開,而第 ⑦ 站的入場券就是投料帳。收尾稽核由 `--gate-full` 在該支裡跑完,
+  // 紅字它自己整批回滾(逐位元)⇒ 這裡只要把回報記進本輪的帳。
+  rec.intake = 0; rec.rolledBack = 0;
+  for (const [label, dir, skip] of [
+    ['SF3D', outDir, noOut], ['T2', t2Dir, (!t2Skip && rec.generated) ? null : '這一輪 T2 沒有新產出'],
+  ]) {
+    const s = NO_INTAKE ? '--no-intake' : skip;
+    const r = step(`自動入庫 · ${label}`, process.execPath,
+      ['tools/ai3d/auto_intake.mjs', '--src', dir, '--home', HOME,
+        '--limit', String(INTAKE_LIMIT), '--gate-full'], { skip: s });
+    if (r.out) {
+      rec.intake += Number(r.out.match(/自動入庫:收 (\d+) 顆/)?.[1] || 0);
+      if (/整輪回滾/.test(r.out)) { rec.rolledBack += 1; rec.intake = 0; }
+    }
+  }
+
   if (!DRY) appendFileSync(LOG, `${JSON.stringify(rec)}\n`);
   console.log(`  ── 本輪:收編 ${rec.adopted}・下載 ${rec.fetched}・生成 ${rec.generated}`
+    + `・入庫 ${rec.intake}${rec.rolledBack ? `(回滾 ${rec.rolledBack} 批)` : ''}`
     + `${rec.throttled ? '(撞到來源限流)' : ''}`);
   return rec;
 }
@@ -304,9 +366,17 @@ async function main() {
     }
   }
   const sum = (k) => all.reduce((a, r) => a + (r[k] || 0), 0);
-  console.log(`\n🎯 ${all.length} 輪合計:收編 ${sum('adopted')}・下載 ${sum('fetched')}・生成 ${sum('generated')}`);
+  console.log(`\n🎯 ${all.length} 輪合計:收編 ${sum('adopted')}・下載 ${sum('fetched')}・生成 ${sum('generated')}`
+    + `・入庫 ${sum('intake')}`);
   console.log(`   紀錄 ${LOG}`);
-  console.log('   下一步(人眼那一步不可省):看 contact sheet 挑幾顆 → normalize_parts.py → intake_parts.mjs → npm run parts 覆核');
+  if (NO_INTAKE) {
+    console.log('   下一步(--no-intake:停在 contact sheet):挑幾顆 → normalize_parts.py → intake_parts.mjs → npm run parts');
+  } else {
+    console.log('   下一步(人眼那一步沒有省掉,是換到入庫之後):');
+    console.log('     ① npm run parts —— 逐顆覆核,判 ✔ / ⟳ 重生 / ⇄ 換來源圖 / ✕ 刪除來源圖');
+    console.log(`     ② node tools/ai3d/apply_verdicts.mjs --home ${HOME} —— 把判決執行掉`);
+    console.log('     ③ 通過的那幾顆才 commit(**這一支從不 commit** —— 沒 commit 就是還沒出貨)');
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
