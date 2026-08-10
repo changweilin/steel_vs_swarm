@@ -1440,6 +1440,78 @@
         "params": "--cells 72 --offset 0.006 --target 2900 ⇒ **2,900 面 / 0 開放邊 / 1 元件** / v:f 0.50 / kf_p95 0.92% / dev_p95 0.88%;normalize 非等向 0.5×0.5 ⇒ 水平徑向 0.475、縱向 ±0.475",
         "note": "沿用 mass_a / mass_b 那一組參數,一格未調(同一族同一種主體)。UV 走 `--boxuv`(平頂桶不開屋頂帶,朝上面 v 上界 0.948);立面方向 corr(高度, v) = 1.000。這一顆**不需要鏡像貼補** —— 不對稱遠在 EMPTY_ASYM 0.12 之下(§5ad 的閘門)。"
       }
+    },
+    {
+      "method": "llm_parts",
+      "consumer": "beacons 高壓電塔(BEACON_KINDS.pylon;兵線錨點三款輪替之一)",
+      "key": "beacon/pylon",
+      "rev": "(本輪)",
+      "baseline": {
+        "rev": "5b311f7"
+      },
+      "at": "2026-08-10",
+      "imgs": [
+        {
+          "role": "reference",
+          "id": "ov_e382c09a-90e6-41dc-8e61-5811666cebdf",
+          "family": "landmark",
+          "part": "lattice",
+          "query": "transmission tower lattice",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Hiroshi Sato",
+          "source_url": "https://wordpress.org/photos/photo/4766922b6a/",
+          "file": "photos/landmark/lattice/ov_e382c09a-90e6-41dc-8e61-5811666cebdf.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_74aada95-6d17-4bce-abdb-81a90f79d97f",
+          "family": "landmark",
+          "part": "lattice",
+          "query": "electricity pylon",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Novoklimov",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=85787217",
+          "file": "photos/landmark/lattice/ov_74aada95-6d17-4bce-abdb-81a90f79d97f.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_bf94972e-caab-4443-80a0-32e53c423673",
+          "family": "landmark",
+          "part": "lattice",
+          "query": "electricity pylon",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "DimiTalen",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=31174585",
+          "file": "photos/landmark/lattice/ov_bf94972e-caab-4443-80a0-32e53c423673.jpg"
+        },
+        {
+          "role": "reference",
+          "id": "ov_63cf1d91-359f-4c98-be96-5045391faff6",
+          "family": "landmark",
+          "part": "lattice",
+          "query": "transmission tower",
+          "api": "openverse",
+          "license": "cc0",
+          "creator": "Wikideas1",
+          "source_url": "https://commons.wikimedia.org/w/index.php?curid=137563993",
+          "file": "photos/landmark/lattice/ov_63cf1d91-359f-4c98-be96-5045391faff6.jpg"
+        }
+      ],
+      "gen": {
+        "tool": "LLM agent(讀照片 → 寫零件表資料列)",
+        "params": "無模型權重、無 GPU、無二進位資產;輸出是 KIND_PARTS 的純資料列(計畫書 §8:規則/人造幾何走這條)",
+        "machine": "—(沙箱可跑)",
+        "measured": "讀 4 張 CC0 電塔照片(lattice 列全數,型錄 4/4 已滿)。改的是**格構本身**:逐面 X 斜撐(下段/腰身各一組,共 16 塊)+ 上下橫箍(共 8 塊)—— 舊表是四根光禿禿的柱子加兩層橫擔,而照片裡整座塔看過去就是一片斜撐。斜撐的長度與傾角由跨距/落差推導(手寫的話改一次腳的座標就會脫離腳而浮空,且外廓稽核照樣全綠)。"
+      },
+      "post": {
+        "tool": "—(純資料,無後處理)",
+        "note": "**foot 8.0 → 9.2**:kindExtent 對傾斜件是保守的(位置半徑 + 該件 3D 半對角,不是真的旋轉後外廓)⇒ 12.4m 長的斜撐記 9.12m。與 P2b 水塔補 X 斜撐時 foot 5.2 → 5.6 是同一筆帳:照實算改標稱。腳的座標一格未動 ⇒ 這一項不是「塔變胖了」,是稽核模型對斜撐收的稅。",
+        "checks": "audit_beacons 68 綠 + --break-extent 反向紅;audit_object_joints --seeds 8 = 21611 接合 / 0 異常(斜撐真的釘在腳上);intake 300;siteplan 218;cel 52 / gpu 54 / soft_stroke 73 / world_height 49;npm test 全通過;npm run bal 全綠;tools/shot_beacons.mjs --kind pylon 目視(X 斜撐與腳接得住)"
+      },
+      "note": "Route A 第 2 顆(2026-08-10 §5at)。剩 mast(landmark/dish 3 張)與 depot(landmark/container 3 張)兩款尚未讀照片重寫,兩批照片都已在型錄達標。"
     }
   ]
 }
