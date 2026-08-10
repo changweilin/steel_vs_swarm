@@ -8,8 +8,9 @@
  *   ⓪ 收編 inbox   fetch_photos.mjs --adopt      使用者自己放的圖(零網路,永遠先跑)
  *   ① 抓照片       fetch_photos.mjs --limit N    型錄缺額 + 取景階梯(CLEAN_Q)
  *   ② 去背         matte_photos.py               photos/ → out/matte/
- *   ③ 選片閘       screen_mattes.py --sheet      統計五桶淘汰 + 倖存者 contact sheet
- *   ④ img→3D      vendor/stable-fast-3d/run.py  只餵**這一輪新過閘**的 matte
+ *   ②b 圈選 + 分離 split_targets.py              一張多目標的 matte → out/targets/ 逐目標各一張
+ *   ③ 選片閘       screen_mattes.py --sheet      統計七桶淘汰(逐**目標**)+ 倖存者 contact sheet
+ *   ④ img→3D      vendor/stable-fast-3d/run.py  只餵**這一輪新過閘**的目標
  *   ⑤ 實心度快篩   mesh_stats.mjs                薄殼/碎片排序
  *   ⑥ contact sheet mesh_sheet.mjs               人眼複核那一步的輸入
  *
@@ -108,8 +109,16 @@ function step(label, cmd, args, opts = {}) {
 const loadJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
 
 /**
- * 這一輪要餵 img→3D 的 matte:**新的** ∧ **選片閘沒淘汰** ∧ **已出貨的來源不重跑**
+ * 這一輪要餵 img→3D 的**目標**:**新的** ∧ **選片閘沒淘汰** ∧ **已出貨的來源不重跑**
  * ∧ **這一族真的有消費端**。淘汰名單以帳本的 id 為鍵(matte 檔名 = 照片 id + .png)。
+ *
+ * 2026-08-10 §5au 起單位是**目標**不是照片:`split_targets.py` 把多目標的 matte 切成
+ * `entry.targets[]`,有切的就餵那幾張、母 matte 不餵(餵了 = 同一批像素送兩次 GPU,而且
+ * 那一張本來就是「一座水塔加一整棟房子」)。兩條紀律:
+ *   ・**目標 → 母照片的對應 MUST 由帳本推導**(`entry.targets[].id`),MUST NOT 去拆檔名 ——
+ *     命名規則只在 `split_targets.py` 定義一次,這邊再拼一次就是第二份實作,而它壞掉的樣子是
+ *     「已出貨的來源被重新餵上 GPU」(§5as-d 那個坑),沒有任何錯誤訊息。
+ *   ・**「已出貨」比對的是母照片 id**:目標是同一張照片切出來的,來源帳記的是照片。
  *
  * 後兩道閘 2026-08-10 補(§5as 的首輪實測;兩者都是「跑起來很正常,只是那幾顆 GPU 白燒」):
  *
@@ -127,11 +136,13 @@ const loadJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); }
  */
 function pendingMattes(done) {
   if (!existsSync(MATTE_DIR)) return [];
-  const rejected = new Set(loadJson(MANIFEST, [])
-    .filter((e) => e.screen?.v === 'reject').map((e) => e.id));
+  const man = loadJson(MANIFEST, []);
+  const rejected = new Set(man.filter((e) => e.screen?.v === 'reject').map((e) => e.id));
+  // 母照片 id → 它切出來的目標(帳本是唯一真相,見檔頭)
+  const split = new Map(man.filter((e) => e.targets?.length).map((e) => [e.id, e.targets]));
   const shipped = new Set(loadProvenance().parts.flatMap((p) => (p.imgs || []).map((i) => i.id)).filter(Boolean));
   const consumable = new Set(partLibs());
-  const out = [], held = { shipped: 0, noSeam: new Map() };
+  const out = [], held = { shipped: 0, cut: 0, noSeam: new Map() };
   for (const fam of readdirSync(MATTE_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     if (FAMILY && fam.name !== FAMILY) continue;
     const famDir = join(MATTE_DIR, fam.name);
@@ -139,16 +150,26 @@ function pendingMattes(done) {
       for (const f of readdirSync(join(famDir, part.name))) {
         if (!f.toLowerCase().endsWith('.png')) continue;
         const id = f.replace(/\.png$/i, '');
-        if (rejected.has(id) || done[`${fam.name}/${part.name}/${id}`]) continue;
-        if (shipped.has(id)) { held.shipped++; continue; }
+        if (shipped.has(id)) { held.shipped++; continue; }   // 母照片出過貨 ⇒ 連它的目標一起不重跑
         if (!consumable.has(fam.name)) { held.noSeam.set(fam.name, (held.noSeam.get(fam.name) || 0) + 1); continue; }
-        out.push({ key: `${fam.name}/${part.name}/${id}`, fam: fam.name, path: join(famDir, part.name, f) });
+        // 被切開的照片:餵目標、不餵母 matte(母 matte 裡是好幾個物件)
+        const units = split.has(id)
+          ? split.get(id).filter((t) => t.screen?.v !== 'reject')
+              .map((t) => ({ id: t.id, path: join(HOME, t.file) }))
+          : (rejected.has(id) ? [] : [{ id, path: join(famDir, part.name, f) }]);
+        if (split.has(id)) held.cut += split.get(id).length - units.length;
+        for (const u of units) {
+          const key = `${fam.name}/${part.name}/${u.id}`;
+          if (done[key] || !existsSync(u.path)) continue;
+          out.push({ key, fam: fam.name, path: u.path });
+        }
       }
     }
   }
   // **擋掉幾張 MUST 印出來**(skill「no silent caps」):靜默略過讀起來就是「本輪沒有新的」,
   // 而那正是要修的那個症狀 —— 看起來一切正常,只是某一半沒有輸出。
   if (held.shipped) console.log(`  ·  ${held.shipped} 張已經出貨成節點(來源帳 imgs[].id)⇒ 不重跑`);
+  if (held.cut) console.log(`  ·  ${held.cut} 個切出來的目標被選片閘淘汰(太模糊 / 太小 / 完整度太低)`);
   for (const [fam, n] of held.noSeam) console.log(`  ·  ${n} 張屬於 ${fam} 族 ⇒ 沒有 ${fam}.glb 這個消費端(PART_LIBS),生成了也載不進遊戲`);
   return out;
 }
@@ -183,9 +204,15 @@ async function round(n) {
   rec.fetched = Number(f.out?.match(/本輪下載 (\d+) 張/)?.[1] || 0);
   rec.throttled = /限流/.test(f.out || '');
 
-  // ② 去背 / ③ 選片閘
-  const noPy = python ? null : `找不到 venv python(${PY})—— 去背/選片/生成三站跳過`;
+  // ② 去背 / ②b 圈選+分離 / ③ 選片閘
+  const noPy = python ? null : `找不到 venv python(${PY})—— 去背/分離/選片/生成四站跳過`;
   step('去背', python || 'python', ['matte_photos.py', ...(FAMILY ? [FAMILY] : []), '--home', HOME],
+    { cwd: HERE, skip: noPy });
+  // ②b **MUST 排在選片閘之前**:切開之後判決的單位才是「一個目標」。反過來的話,一張
+  // 「水塔 + 一整棟房子」的照片會先被 ④多主體 整張淘汰掉,那兩個目標從此再也回不來
+  // (而畫面上只表現成「可用率就是這麼低」)。
+  step('圈選 + 分離', python || 'python',
+    ['split_targets.py', '--sheet', '--home', HOME, ...(FAMILY ? ['--family', FAMILY] : [])],
     { cwd: HERE, skip: noPy });
   // ③ 選片閘 —— **逐族各跑一次**:`screen_mattes.py` 的 `--family` 預設是 `tree`,
   // 不逐族傳的話 rock/building/landmark 的 matte **永遠不會過閘**,而下游只跳過
