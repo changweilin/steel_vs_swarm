@@ -1241,30 +1241,70 @@ sec('Ⅹ 爆炸傷害:射程只限制擴散中心點,擴散範圍不受射程限
 }
 
 // =================================================================================
-sec('Ⅺ 榴彈:準星優先 + 對地 45° 拋投 + 射程量直線(2026-08-02 使用者定案)');
+sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直線(2026-08-02 → 08-10 使用者定案)');
 // ---------------------------------------------------------------------------------
-// 使用者四條:①鎖定目標以準星優先(不可以有飛行單位就把瞄準點從準星底下拉走)
+// 使用者四條:①目標只認準星(**沒有瞄到敵人就是打地面** —— 任何瞄準輔助都不准把落點拉走)
 //            ②準星瞄地面敵人 → 投擲角 45°、落點 = 目標瞄準點
 //            ③準星瞄空中敵人 → 維持彈射模式(高初速近直線)
 //            ④中途碰撞就爆、目標移開就繼續飛,超出射程原地爆
 {
-  // ---- ① 準星優先:目標解只有一份,錐形輔助只在準星解不到實體時接手 ----
+  // ---- ① 準星是唯一目標來源:錐形瞄準輔助整支退場 ----
   {
     const aa = methodSrc('_updateAaMode', G);
-    ok(/this\._lobCrosshair\(def\)/.test(aa),
+    ok(/this\._lobCrosshair\(def\)\.ent/.test(aa),
       '_updateAaMode 的目標來自準星解 _lobCrosshair(與 _lobAim 的瞄準點同一份)');
-    ok(/cross\.ent \? \(TARGET_CLASS\[cross\.ent\.kind\] === 'air' \? cross\.ent : null\)/.test(aa),
-      '準星解到實體 ⇒ 是不是飛行單位就決定進不進彈射模式(地面單位一律不進 = 不被拉走)');
-    ok(/: this\._aaTarget\(this\._maxRange\(def\)\)/.test(aa)
-      && aa.indexOf('_aaTarget') > aa.indexOf('cross.ent ?'),
-      '錐形輔助 _aaTarget 只在準星什麼都沒解到時才接手(舊制無條件吃錐內最正對者)');
-    ok((G.match(/this\._aaTarget\(/g) || []).length === 1, '_aaTarget 只有一個呼叫端');
+    ok(/TARGET_CLASS\[ent\.kind\] === 'air' \? ent : null/.test(aa),
+      '準星底下是不是飛行單位就決定進不進彈射模式(其餘一律 45° 對地)');
+    // 2026-08-10 使用者定案「拋物線準星沒有瞄敵人時就是打地面」:錐形輔助 `_aaTarget` 是唯一
+    // 能把落點從準星底下拉走的路徑(前一版把它降級成「準星什麼都沒解到才接手」仍不夠 ——
+    // 規則本身就沒有「準星沒解到單位時另找一個目標」這回事)。整支刪掉,連常數一併退場。
+    ok(!/this\._aaTarget\(/.test(G) && !/\n {2}_aaTarget\(/.test(G),
+      '錐形瞄準輔助 _aaTarget 的定義與呼叫在 game.js 零殘留(MUST NOT 復辟;退場註解不算)');
+    ok(!/AA_CONE\s*:/.test(D) && !/BALLISTIC\.AA_CONE/.test(G),
+      '準星錐常數 AA_CONE 一併退場(沒有消費端的旋鈕 = 死碼)');
+    ok(!/this\.ents/.test(aa) && !/_coneAcquire|_obstHitT/.test(aa),
+      '_updateAaMode 不掃全場、不做任何錐形/遮擋判定 —— 它只讀準星那一份解');
     const cross = methodSrc('_lobCrosshair', G);
     ok(/this\._resolveAim\(this\._maxRange\(def\)\)/.test(cross)
       && !/this\._resolveAim\(/.test(methodSrc('_lobAim', G)),
       '榴彈的準星射線只打在 _lobCrosshair 一處(_lobAim 不再自己打一條 = 兩份會分家)');
     ok(/_lobFc/.test(methodSrc('_aimTarget', G)),
       '對照:_aimTarget(鎖定 / 追蹤)對 lob 直接吃火控解 ⇒ 瞄準點被拉走 = 鎖定也被拉走');
+  }
+
+  // ---- ① 行為直測:準星沒瞄到敵人 ⇒ 不進彈射模式(落點留在準星底下的地面)----
+  {
+    const upd = pickMethod('_updateAaMode', G, { TARGET_CLASS });
+    const air = Object.keys(TARGET_CLASS).find((k) => TARGET_CLASS[k] === 'air');
+    const gnd = Object.keys(TARGET_CLASS).find((k) => TARGET_CLASS[k] !== 'air');
+    const { def } = heavyOf('lob');
+    // 誘餌:錐形輔助一旦復辟就會來拿這幾個東西(直接讓斷言紅字,而不是丟例外)
+    let bait = 0;
+    const mk = (cross) => {
+      const c = {
+        side: 'SWARM', dead: false, shopOpen: false, hud: {},
+        _curWeapon: () => ({ def }),
+        _lobCrosshair: () => cross,
+        _updateAaMode: upd,
+        _aaTarget: () => { bait++; return { kind: air, id: 'heli' }; },
+        _maxRange: () => { bait++; return def.range * altRangeMax(); },
+        _obstHitT: () => { bait++; return null; },
+        camera: { position: { x: 0, y: 2, z: 0 }, getWorldDirection: (v) => { bait++; return v; } },
+        ents: new Map([['heli', { kind: air, id: 'heli' }]]),
+      };
+      c._updateAaMode();
+      return c._aaEnt;
+    };
+    ok(mk({ ent: null }) === null,
+      '準星沒瞄到敵人(地形/建物/天空一律 ent=null):不進彈射模式 ⇒ 45° 對地、落點就在準星');
+    ok(mk({ ent: { kind: air, id: 'x' } })?.id === 'x',
+      `準星直接壓在飛行單位(${air})上:目標就是它(彈射模式)`);
+    ok(mk({ ent: { kind: gnd, id: 'g' } }) === null,
+      `準星壓在地面單位(${gnd})上:一律 45° 對地拋投`);
+    ok(bait === 0, `三種準星解全程沒碰過索敵/射程/遮擋(誘餌計數 ${bait} = 0)—— 目標來源只有準星`);
+    // 沒有「錐內有飛行單位」這個輸入了 —— 本函式的可觀察行為只由 cross.ent 決定(純函式化的證明)
+    ok(!/_aaTarget|_maxRange/.test(methodSrc('_updateAaMode', G)),
+      '_updateAaMode 不再需要射程/索敵參數:輸入只有準星解一個');
   }
 
   // ---- ②③ 45° 行為直測:落點 = 瞄準點、出膛角恆 45°、對空維持階梯 ----
