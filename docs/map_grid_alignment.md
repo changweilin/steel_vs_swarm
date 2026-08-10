@@ -152,8 +152,33 @@ shibuya 的 −6.19° 就是東京街廓本來就沒那麼正交 + 小路把平�
   航點集合本身**(量化會併/改橋 way ⇒ shibuya 航點 30→34、giza 15→25、paris 26→16)。
   結論:旋轉沒有引入新的不可通行模式,總量還變好了。
 
+**⚠ 旋轉的遺留:`VENUES[].relief` 沒有跟著重產生(2026-08-10 補驗才發現)**
+
+`audit_lane_scenarios` 全 29 場地:**9/9 種場景都有預設場地**(退出碼的判準),但**標記不符 14**。
+三棵樹對照(同一份 `.scen_cache`):
+
+| 樹 | 標記不符 |
+|---|---|
+| `0afe260`(旋轉前)| **2**(civicblvd 漏標 bridge、roppongi 多標 underpass)|
+| `main` | 14 |
+| 本輪(第二・三階段)| 14 —— **與 main 逐條相同** |
+
+旋轉後多出來的 **12 條全部是 `relief` 數值**(場景標記一條都沒多):seoul 23→22、yangmingshan 28→27、
+aokigahara 22→23、blackforest 21→26、yosemite 17→16、giza 35→36、iguazu 23→26、tamsui 25→21、
+okavango 8→9、rio 73→72、crimea 31→32、**taroko 416→371**。
+
+**成因**:`relief` 是**實測**的起伏值,而旋轉讓 `battleBBox` 長大 ⇒ 取樣範圍變了。CLAUDE.md 明訂
+`scen`/`relief` MUST 由實測產生、且改 `battleBBox` 一族要**重烤**(§5.5)—— PR #186 漏了這一步。
+消費端是場地選單的地形說明(`reliefTier`/`RELIEF_TIERS`/`venueBrief`),症狀是「選單上的起伏描述
+與實際差一階」。**刻意不併進本輪**:它是 main 的既有偏差(本輪逐條相同),而且 12 條裡有 8 條只差 1
+—— 直接寫進去等於把一次量測的雜訊固化;taroko 差 11% 才是該先看一眼的那一個。
+
+**完整版 `audit_venue_biome`**:4 過 / 1 敗 —— Ⅲ「12 個場地的手寫 `mix` 與圖資實測不符」。
+本輪**不可能**造成它:那支只 import `venues.js` / `data.js` / `venue_field.mjs`(三支都沒動)+
+`audit_src.mjs`(純追加),Ⅱ/Ⅲ 的資料是它自己去抓的。CI 也只收 `--offline` 那一半(Ⅰ 段全綠),
+而該支檔頭自陳 `TOL` 是「挑出該看的圖,不是判死」。
+
 **需外網 / 真瀏覽器(㋓ / ㋕)**
-- `audit_lane_scenarios`、完整版 `audit_venue_biome`
 - 真機看一張旋轉過的市區圖(建議 manhattan 或 barcelona:主方位大、效果最明顯)
 - **路網中繼的兩台同房實測**:一台開房、一台入房,比對橋隧與建物是否逐項一致。中繼壞掉的
   症狀是「你說的那座橋我這邊沒有」—— 單機與單一客戶端的測試永遠看不到它。同場再看
