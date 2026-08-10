@@ -28,6 +28,9 @@
  *   ② **只餵新的**:已經送過 SF3D 的 matte 記在 `<資料家>/harvest_state.json`,重跑不會把
  *      整個語料庫重算一遍(390 張 × 7 秒 = 45 分鐘,而且每一輪都燒同樣的電)。
  *   ③ **選片閘淘汰的不餵**:那一批本來就是要丟的,送進 SF3D 等於拿 GPU 去證明它們是垃圾。
+ *      同一條的另外兩半(2026-08-10 §5as 首輪實測補上,見 `pendingMattes` 檔頭):
+ *      **已經出貨成節點的來源不重跑**(同一張圖 + 同一組參數 = 同一顆網格)、
+ *      **沒有消費端的族不生成**(`PART_LIBS` 推導;landmark 走 Route A,沒有 landmark.glb)。
  *   ④ 一輪一列 JSONL 記在 `<資料家>/harvest_log.jsonl` —— 「跑了幾輪、每輪產出幾顆」是這一批
  *      改動唯一能回答「成功率有沒有變好」的東西,不記就只剩印象。
  *
@@ -41,6 +44,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, appendFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { partLibs } from './parts_src.mjs';
+import { loadProvenance } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -103,14 +108,30 @@ function step(label, cmd, args, opts = {}) {
 const loadJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return d; } };
 
 /**
- * 這一輪要餵 SF3D 的 matte:**新的** ∧ **選片閘沒淘汰**。
- * 淘汰名單以帳本的 id 為鍵(matte 檔名 = 照片 id + .png,matte_photos.py 的命名)。
+ * 這一輪要餵 img→3D 的 matte:**新的** ∧ **選片閘沒淘汰** ∧ **已出貨的來源不重跑**
+ * ∧ **這一族真的有消費端**。淘汰名單以帳本的 id 為鍵(matte 檔名 = 照片 id + .png)。
+ *
+ * 後兩道閘 2026-08-10 補(§5as 的首輪實測;兩者都是「跑起來很正常,只是那幾顆 GPU 白燒」):
+ *
+ * ① **已出貨的來源**(來源帳 `imgs[].id`):`harvest_state.json` 只記得**這支迴圈**餵過誰,
+ *    而已出貨那幾顆的 matte 是更早的手動輪做的 ⇒ 首輪實測 64 顆 T2 產出裡有 **6 顆**
+ *    (9.4%)是 mass_a / mass_b / mass_c / masslow_a / masslow_b / chimney_a 的**同一張照片**。
+ *    同一張圖 + 同一組參數 = 同一顆網格(工具是決定性的),燒了 GPU 還把已經判過的東西
+ *    塞回人眼複核的池子裡。
+ *
+ * ② **沒有消費端的族**:能載進遊戲的零件庫只有 `PART_LIBS`(推導,MUST NOT 手寫)——
+ *    現役是 rock / tree / building。`landmark` 族**沒有 landmark.glb**,它走的是 Route A
+ *    (讀照片、手寫純資料 primitive 進 `beacons.js KIND_PARTS`)⇒ 首輪那 11 顆 landmark 網格
+ *    今天沒有任何東西載得到。這一閘**只擋生成**:照片與 matte 照收(Route A 要看照片),
+ *    而且**不寫進 `done`** —— 哪天真的開了 `landmark.glb`,它自己就會回到待跑名單。
  */
 function pendingMattes(done) {
   if (!existsSync(MATTE_DIR)) return [];
   const rejected = new Set(loadJson(MANIFEST, [])
     .filter((e) => e.screen?.v === 'reject').map((e) => e.id));
-  const out = [];
+  const shipped = new Set(loadProvenance().parts.flatMap((p) => (p.imgs || []).map((i) => i.id)).filter(Boolean));
+  const consumable = new Set(partLibs());
+  const out = [], held = { shipped: 0, noSeam: new Map() };
   for (const fam of readdirSync(MATTE_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     if (FAMILY && fam.name !== FAMILY) continue;
     const famDir = join(MATTE_DIR, fam.name);
@@ -119,10 +140,16 @@ function pendingMattes(done) {
         if (!f.toLowerCase().endsWith('.png')) continue;
         const id = f.replace(/\.png$/i, '');
         if (rejected.has(id) || done[`${fam.name}/${part.name}/${id}`]) continue;
+        if (shipped.has(id)) { held.shipped++; continue; }
+        if (!consumable.has(fam.name)) { held.noSeam.set(fam.name, (held.noSeam.get(fam.name) || 0) + 1); continue; }
         out.push({ key: `${fam.name}/${part.name}/${id}`, fam: fam.name, path: join(famDir, part.name, f) });
       }
     }
   }
+  // **擋掉幾張 MUST 印出來**(skill「no silent caps」):靜默略過讀起來就是「本輪沒有新的」,
+  // 而那正是要修的那個症狀 —— 看起來一切正常,只是某一半沒有輸出。
+  if (held.shipped) console.log(`  ·  ${held.shipped} 張已經出貨成節點(來源帳 imgs[].id)⇒ 不重跑`);
+  for (const [fam, n] of held.noSeam) console.log(`  ·  ${n} 張屬於 ${fam} 族 ⇒ 沒有 ${fam}.glb 這個消費端(PART_LIBS),生成了也載不進遊戲`);
   return out;
 }
 
