@@ -592,7 +592,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | `docs/smoke_tests.md` | 真機冒煙清單(§5 矩陣的 ㋕) |
 | `docs/ai3d_runbook.md` | img→3D 資產管線逐輪紀錄(§5aj-C 等待執行的改制在此) |
 | `docs/ai3d_asset_plan.md` | 資產計畫與生成方法選型 |
-| `docs/map_grid_alignment.md` | 地圖主方位旋轉 + 道路 16 方向量化:定案原句 / 實測數字 / **已排除的選項** / 未驗項 / 下一階段「路網中繼」的設計與待決問題 |
+| `docs/map_grid_alignment.md` | 地圖主方位旋轉 / 道路量化 / 路網中繼 —— **只留未完事項**:使用者定案原句、**已排除的選項與理由**、㋕ 未驗項、還沒決定的。三階段的設計與禁令住 A42/A43 與各 `audit_*` 檔頭,逐檔改了什麼住 git 歷史與 PR #186/#188 |
 | `docs/bot_roles.md` / `docs/bot_learning.md` | 電腦玩家定位分類 / 學習迴圈設計全文 |
 | `docs/codex_format.md` | 角色 / 機體檔案格式規格書 |
 | `docs/visual_upgrade_plan.md` | 畫面升級計畫(P1/P2 項目編號的家) |
