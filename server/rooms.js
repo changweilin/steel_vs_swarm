@@ -15,6 +15,10 @@ import {
 // 就是第二份選項表(新增第四種操控時必漏改)。該檔刻意零 import、頂層不碰 window ⇒
 // Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
 import { CTRL_MODES, DEFAULT_CTRL_MODE } from '../public/js/ctrlmode.js';
+// 路網中繼的 payload 形狀/上限:房主送出前與伺服器收到後 MUST 是**同一支**淨化函式
+// (在這裡照抄一組上限就是第二份會過期的規格)。該檔零 import、零模組級狀態 ⇒
+// Node 與瀏覽器(單機)都載得起來,與 data.js 同樣走鏡射佈局的相對路徑。
+import { sanitizeOsmRelay, osmRelayKey } from '../public/js/osmrelay.js';
 
 // 兵線(lat/lng)→ 遊戲公尺(原點任取,towerLayoutAudit 只用相對距離)。與 mapSelect / 烘焙同一換算。
 const EARTH_M = 6371000, SC_GAME = 1 / MAPGEO.REAL_SCALE;
@@ -78,6 +82,8 @@ function rollSideSwap(cfg) {
  *                           ready, loaded, connected, token}>,
  *   bots: Map<botId('b1'...), {name, side}>,   // 電腦玩家(房主增減,佔正式席位)
  *   battleConfig,          // 開房時就鎖定(地圖在開房前建立/選好)
+ *   osm,                   // 路網中繼:{ key, bbox, feats, roads } —— 房主抓到的原始 OSM 圖資,
+ *                          // 轉給全房 ⇒ 整房逐位元同一份世界(逐格單調,見 t:'osm')
  *   battle: BattleSim|null, botBrains: BotBrain[], tickTimer,
  * }
  */
@@ -175,6 +181,16 @@ export class RoomHub {
     }
     out.sort((a, b) => ((a.phase !== 'room') - (b.phase !== 'room')) || (b.isPublic - a.isPublic));
     return out;
+  }
+
+  /**
+   * 房間已中繼到的 OSM 圖資(晚到的入房者 / 重連者補送用;沒有就回 null)。
+   * 逐格可能只有一半(房主的第一輪只抓到路網,建物那格等它 90 秒後的補抓)——
+   * 收件端的 `commitOsmIn` 是單調的,補上來的那一格會自己觸發一次重建。
+   */
+  osmPayload(room) {
+    const o = room.osm;
+    return o && (o.feats || o.roads) ? { t: 'osm', bbox: o.bbox, feats: o.feats, roads: o.roads } : null;
   }
 
   /** 廣播房間(大廳/配對)狀態 */
@@ -369,6 +385,11 @@ export class RoomHub {
         room = r;
         room.clients.set(myId, client);
         hub.broadcast(room);
+        // 路網中繼:房主早就上傳完了 ⇒ 晚到的人立刻補一份(**所有階段**都要,房間階段
+        // 才是主要情境 —— 客戶端一收到 sync 就開始預建,這一則決定它建的是哪一張圖)。
+        // MUST NOT 塞進 `sync`:那則會重播多次,幾百 KB 乘上去不可接受(§7.4-1)。
+        const relay = hub.osmPayload(room);
+        if (relay) send(relay);
         // 加入中途對局:立即補送階段與戰場設定(含危險區)
         if (room.phase === 'game' || room.phase === 'loading') {
           send({ t: 'battleConfig', config: room.battleConfig });
@@ -384,6 +405,8 @@ export class RoomHub {
               c.send = send; c.connected = true;
               room = r; client = c; myId = id;   // 認回原座位鍵(英雄 pid / hostId / 清位全靠它)
               hub.broadcast(room);
+              const relay = hub.osmPayload(room);   // 重連後可能整份預建要重來 → 圖資照樣要跟上
+              if (relay) send(relay);
               if (room.battleConfig && (room.phase === 'loading' || room.phase === 'game')) {
                 send({ t: 'battleConfig', config: room.battleConfig });
                 if (room.battle) send(room.battle.fieldPayload());
@@ -488,6 +511,32 @@ export class RoomHub {
           room.world = { occ: m.occ, cor: m.cor, wet: m.wet, slabs: m.slabs, hgt: m.hgt };   // wet:水沼粗網格;slabs:橋面/隧道天花薄板(LOS);hgt:粗高程網格(稜線遮蔽,避免隔山打牛)
           if (room.battle) room.battle.setWorld(room.world);
         }
+        return;
+      }
+      if (m.t === 'osm') {
+        // ---- 路網中繼(2026-08-10 使用者定案「圖資儲存在開房者,再由開房者透過 server 傳給入房者」)----
+        // 房主上傳它抓到的原始 Overpass 圖資 → 存房間一份 → 轉給其他人。修的是**既有**的
+        // 跨客戶端分家:今天每台各自抓,A 抓到而 B 被限流時兩人的橋隧/建物/碰撞柱全不一樣。
+        // 三條紀律:
+        //  ① **不可信輸入**:房主送什麼都要過 `sanitizeOsmRelay`(形狀 + 筆數上限),
+        //     而且存進房間的 MUST 是它回傳的**新物件** —— 單機模式的 hub 跑在同一個分頁裡,
+        //     直接存 `m.roads` 會與客戶端共用參照,而下游是就地變異那些陣列的。
+        //  ② **單調**:已定案的格 MUST NOT 被覆蓋。路網可以從無到有(房主 90 秒後重試成功),
+        //     但**換掉**已經發出去的那一份,等於同一間房裡有人用 v1、有人用 v2。
+        //  ③ **MUST NOT 碰 `room.battleConfig`**:座標框(含地圖主方位 θ)在開房當下就凍結,
+        //     中繼只搬路網。選角途中把整房的世界轉一次,比抓不到圖資嚴重得多(A42 ③)。
+        // 房間清掉時整份隨 room 物件回收(雲端 `--max-rooms` × 單房上限 = 記憶體上界)。
+        if (myId !== room.hostId) return;
+        const clean = sanitizeOsmRelay(m);
+        if (!clean) return;
+        const key = osmRelayKey(clean.bbox);
+        if (!room.osm) room.osm = { key, bbox: clean.bbox, feats: null, roads: null };
+        if (room.osm.key !== key) return;      // 換圖了才會不同鍵 —— 那份中繼不屬於這一房
+        const add = { t: 'osm', bbox: room.osm.bbox, feats: null, roads: null };
+        if (!room.osm.feats && clean.feats) add.feats = room.osm.feats = clean.feats;
+        if (!room.osm.roads && clean.roads) add.roads = room.osm.roads = clean.roads;
+        if (!add.feats && !add.roads) return;  // 沒有新的格 ⇒ 不轉播(免得入房者白重建一次)
+        for (const [id, c] of room.clients) if (id !== myId) c.send(add);
         return;
       }
 

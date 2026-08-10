@@ -2,18 +2,26 @@
 // 使用者定案:「先找出地圖上下左右對準哪一個方向時,可以對齊最多的大馬路組成正交網格」。
 // 本工具離線量出每個預設場地的主方位,寫進 `public/js/venueGrid.js`(純資料,人手 MUST NOT 編輯)。
 //
-// **為什麼是離線烘焙,不是執行期算**:旋轉是投影的一部分,而投影是**兩端共用的權威座標框**
-// (客戶端 `terrain.llToWorld` / 伺服器 `sim.llToMeters`)。執行期算的話有兩個致命點:
+// **為什麼是離線烘焙,不是建圖時算**:旋轉是投影的一部分,而投影是**兩端共用的權威座標框**
+// (客戶端 `terrain.llToWorld` / 伺服器 `sim.llToMeters`)。在建圖期算有兩個致命點:
 //   ① 地形 `buildTerrain` 跑在抓道路**之前** —— 那時還沒有路網可量;
-//   ② 就算硬抓,Overpass 逐局可能失敗/被截斷 ⇒ 不同客戶端量到不同角度 ⇒ **整個世界的座標
-//      對不上**(比「少幾座橋」嚴重一個量級:所有單位的位置都會差一個旋轉)。
-// 烘焙進資料檔 = 全房吃同一個常數,拿不到就 0(不旋轉,逐位元同舊制)。
+//   ② 就算硬抓,`startPrebuild` 是每台客戶端**各跑一次**的,而 Overpass 逐局可能失敗/被截斷
+//      ⇒ 不同客戶端量到不同角度 ⇒ **整個世界的座標對不上**(比「少幾座橋」嚴重一個量級:
+//      所有單位的位置都會差一個旋轉)。
+// 真正的規則因此是「θ MUST 在 battleConfig 定案**之前**就凍結成常數」(A42 ③):預設場地烤成
+// 資料檔(本工具),自訂地圖由房主在「存入最愛」那一次量一次寫死(`main.resolveMapRot`,
+// 與本工具共用 `roadGridRotDeg`)。拿不到一律 0(不旋轉,逐位元同舊制)。
 //
-// 取樣面 = **大馬路**(motorway/trunk/primary/secondary/tertiary):使用者說的是「對齊最多的
-// 大馬路」,而不是「對齊最多的路」。巷弄與 service 道路在市區的總長度遠大於幹道,收進來的話
-// 主方位會被停車場通道與後巷帶著走(它們本來就不成格網)。
+// 取樣面 = **大馬路**:使用者說的是「對齊最多的大馬路」,不是「對齊最多的路」。定義只有
+// `roadgrid.GRID_HW` 一份(`.source` 直接就是 Overpass 查詢字串)。
 //
-// 公式只有 `public/js/roadgrid.js gridAngle()` 一份(執行期 `ground.js` 的擺件格網吃同一支)。
+// 推導只有 `public/js/roadgrid.js roadGridRotDeg()` 一份(它內含的 `gridAngle()` 另供
+// `ground.js` 的擺件格網使用)。
+//
+// ⚠ **本工具 MUST 冪等**:抓取範圍與量測框都在 rot=0 的框裡算 —— `venueConfig` 會把上一輪
+// 烤出來的 rot 寫進 center,而旋轉只讓 `battleBBox` 長大,不剝掉就會一輪比一輪偏(見 bakeOne)。
+// 重烤基準(MUST 逐一吻合):manhattan −28.995 / barcelona 42.803 / shibuya 14.527 /
+// kyoto −2.542 / chicago −0.003。
 //
 // 用法:
 //   node tools/bake_venue_grid.mjs              # 全部場地
@@ -24,7 +32,7 @@ import { join } from 'node:path';
 import { ROOT } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { battleBBox, llToXZ } from '../public/js/data.js';
-import { gridAngle, waySegs } from '../public/js/roadgrid.js';
+import { GRID_HW, roadGridRotDeg, waySegs } from '../public/js/roadgrid.js';
 
 const OSM_UA = 'steel-vs-swarm/1.0 (venue grid bake)';
 const OVERPASS = [
@@ -32,7 +40,6 @@ const OVERPASS = [
   'https://overpass.kumi.systems/api/interpreter',
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
-const MAIN_HW = /^(motorway|trunk|primary|secondary|tertiary)$/;
 const REQ_MS = 45000, DEAD_N = 2, ROUNDS = 2;
 const RETRYABLE = new Set([429, 502, 503, 504]);
 const fails = new Map();
@@ -78,24 +85,33 @@ async function overpass(q) {
  * —— 一個場地一個角度,MUST NOT 逐人數各烤一份(那會讓同一張圖在 1v1 與 5v5 轉不同角度)。
  */
 async function bakeOne(v) {
-  const cfg = venueConfig(v, 1);
+  const cfg0 = venueConfig(v, 1);
+  // ⚠ 抓取範圍 MUST 也在 **rot = 0** 的框裡算,否則烘焙**不是冪等的**:`venueConfig` 會把
+  // 上一輪烤出來的 rot 寫進 center,而旋轉只會讓 `battleBBox` 長大(實測 shibuya 1.77×、
+  // barcelona 2.27×)⇒ 第二輪在一塊大得多的區域上取樣,量到的主方位跟著漂
+  // (實測 shibuya 14.53° → 19.49°,而三個檔案都沒改、稽核也全綠)。
+  // 量測框(下面的 `c`)本來就不帶 rot;這裡是同一條規則的另一半。
+  const cfg = { ...cfg0, center: { lat: cfg0.center.lat, lng: cfg0.center.lng } };
   const bb = battleBBox(cfg);
   const bbs = `${bb.minLat.toFixed(5)},${bb.minLng.toFixed(5)},${bb.maxLat.toFixed(5)},${bb.maxLng.toFixed(5)}`;
-  const q = `[out:json][timeout:60];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${bbs});out geom 900;`;
+  // 取樣面(大馬路)只有 `roadgrid.GRID_HW` 一份 —— `.source` 直接就是 Overpass 要的字串,
+  // 在這裡手寫第二次 = 改了取樣面卻只改到一邊,而兩條路徑仍然各自算得出一個角度。
+  const q = `[out:json][timeout:60];way["highway"~"${GRID_HW.source}"](${bbs});out geom 900;`;
   const els = await overpass(q);
   if (!els) return { rotDeg: null, why: '圖資取得失敗' };
   const ways = els
-    .filter((e) => e.type === 'way' && e.geometry && MAIN_HW.test(e.tags?.highway || ''))
+    .filter((e) => e.type === 'way' && e.geometry && GRID_HW.test(e.tags?.highway || ''))
     .map((e) => ({ tags: e.tags, geometry: e.geometry }));
   if (!ways.length) return { rotDeg: null, why: '此範圍沒有大馬路' };
-  // 量測 MUST 在 **未旋轉** 的框裡做(cfg.center 沒有 rot)⇒ 得到的是「格網相對正北偏多少」,
-  // 旋轉量就是它的**負值**(把格網轉回軸對齊)。
+  // 量測框 MUST 是**未旋轉**的(`c` 不帶 rot);取樣面、量測、取負號三件事全在
+  // `roadGridRotDeg` 這一支裡 —— 執行期(自訂地圖存入最愛)吃的是同一支。
   const c = { lat: cfg.center.lat, lng: cfg.center.lng };
-  const segs = waySegs(ways, (p) => llToXZ(p.lat, p.lon, c));
-  const a = gridAngle(segs);
-  if (a == null) return { rotDeg: null, why: '線段長度不足' };
-  const totalM = segs.reduce((s, g) => s + Math.hypot(g[2] - g[0], g[3] - g[1]), 0);
-  return { rotDeg: -a * 180 / Math.PI, ways: ways.length, km: totalM / 1000 };
+  const toXZ = (p) => llToXZ(p.lat, p.lon, c);
+  const rotDeg = roadGridRotDeg(ways, toXZ);
+  if (rotDeg == null) return { rotDeg: null, why: '線段長度不足' };
+  const totalM = waySegs(ways, toXZ, (w) => GRID_HW.test(w.tags?.highway || ''))
+    .reduce((s, g) => s + Math.hypot(g[2] - g[0], g[3] - g[1]), 0);
+  return { rotDeg, ways: ways.length, km: totalM / 1000 };
 }
 
 const argv = process.argv.slice(2);

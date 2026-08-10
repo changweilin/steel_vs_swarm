@@ -40,7 +40,9 @@
 //   --break-drift  位移上限放到 1e9   ⇒ Ⅵ「路不會走掉」(實測 90.6m)+「落格」MUST 紅
 //   --break-dense  量化前不細分       ⇒ Ⅵ「逐條路落格」MUST 紅(斜街整條 10.25° 沒被量化)
 //   --break-relax  節點鬆弛關掉       ⇒ Ⅵ「逐條路落格」MUST 紅(路口不動 ⇒ 長度重解整批退化)
-import { readSrc } from './audit_src.mjs';
+//   --break-rotbox 烘焙抓取範圍吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅(重烤會把角度越推越偏)
+//   --break-rotover 執行期量測不讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅
+import { readSrc, grabFn } from './audit_src.mjs';
 import {
   MAPGEO, ROUTE_EDGE_MARGIN_M, mapRot, rotXZ, llToXZ, xzToLL, battleRect, battleBBox,
   laneSeparationAudit, towerLayoutAudit, solveTowerSites,
@@ -462,10 +464,80 @@ sec('Ⅷ 烘焙表:值域、來源、降級');
 }
 
 // =================================================================================
+sec('Ⅸ 主方位的兩條產線(離線烘焙 / 自訂地圖執行期量一次)');
+// ---------------------------------------------------------------------------------
+// θ 是**座標框**,不是地貌細節:它一旦兩台不一樣,所有單位的位置都差一個旋轉。
+// 因此規則不是「不准在執行期算」,而是「MUST 在 battleConfig 定案**之前**凍結成常數」——
+// 預設場地取離線烘焙表,自訂地圖只准在**存入最愛那一次**由房主量一次寫死(A42 ③)。
+// 兩條產線 MUST 共用同一個推導,否則同一個地點會因為「你是點選的還是選預設的」轉不同角度。
+{
+  // 原文已經過 readSrc 正規化(換行一律 \n)⇒ 這裡用 \n 樣式是安全的;
+  // 替換無效一律當場失敗,免得旗標變成無聲 no-op = break 永遠是綠的(§5.4 ㋑)。
+  const patch = (src, re, rep, why) => {
+    const out = src.replace(re, rep);
+    if (out === src) { console.error(`❌ --break 替換無效(${why});稽核本身已失效,先修這裡`); process.exit(2); }
+    return out;
+  };
+  let bakeSrc = readSrc('tools', 'bake_venue_grid.mjs');
+  let mainSrc = readSrc('public', 'js', 'main.js');
+  if (argv.includes('--break-rotbox')) {
+    bakeSrc = patch(bakeSrc, /const cfg = \{ \.\.\.cfg0, center: \{ lat: cfg0\.center\.lat, lng: cfg0\.center\.lng \} \};/,
+      'const cfg = cfg0;', 'rotbox');
+  }
+  if (argv.includes('--break-rotover')) {
+    mainSrc = patch(mainSrc, /if \(!cfg\?\.center \|\| cfg\.center\.rot != null\) return cfg;[^\n]*/, 'if (!cfg?.center) return cfg;', 'rotover');
+  }
+  const bake = strip(bakeSrc), main = strip(mainSrc), rg = strip(rgSrc), bio = strip(bioSrc);
+
+  t('「一組 way → 旋轉度數」只有 roadGridRotDeg 一份(取樣面 + 未旋轉量測框 + 取負號綁在一起)',
+    /export function roadGridRotDeg\(/.test(rg)
+    && /roadGridRotDeg\(ways, toXZ\)/.test(bake) && /roadGridRotDeg\(ways,/.test(main));
+  t('兩條產線都沒有自己的「取負號換算成度」(那是第二份推導)',
+    !/-\s*a\s*\*\s*180\s*\/\s*Math\.PI/.test(bake) && !/gridAngle\(/.test(bake) && !/gridAngle\(/.test(main));
+  t('取樣面(大馬路)只有 GRID_HW 一份,Overpass 查詢一律吃 GRID_HW.source',
+    /export const GRID_HW = /.test(rg)
+    && /way\["highway"~"\$\{GRID_HW\.source\}"\]/.test(bake) && /way\["highway"~"\$\{GRID_HW\.source\}"\]/.test(bio)
+    && !/motorway\|trunk\|primary/.test(bake.replace(/GRID_HW/g, '')));
+
+  // 烘焙 MUST 冪等:`venueConfig` 會把**上一輪**的 rot 寫進 center,而旋轉只讓 battleBBox 長大
+  // ⇒ 不剝掉 rot 的話第二輪在大得多的區域上取樣,角度自己漂走(實測 shibuya 14.53° → 19.49°,
+  // 而三個檔案都沒改、其餘斷言照樣全綠)。這一條同時是行為證明與原文閘。
+  const bcn = VENUES.find((v) => v.id === 'barcelona');
+  const cfgR = venueConfig(bcn, 1);
+  const cfg0 = { ...cfgR, center: { lat: cfgR.center.lat, lng: cfgR.center.lng } };
+  const area = (b) => (b.maxLat - b.minLat) * (b.maxLng - b.minLng);
+  const ratio = area(battleBBox(cfgR)) / area(battleBBox(cfg0));
+  t(`已烤過的場地:帶 rot 的抓取範圍確實比 rot=0 大(barcelona ×${ratio.toFixed(2)})⇒ 不剝 rot 就不冪等`,
+    Math.abs(mapRot(cfgR.center)) > 0.1 && ratio > 1.5);
+  t('烘焙的抓取範圍 MUST 在 rot=0 的框裡算(與量測框同一條規則)',
+    /const cfg = \{ \.\.\.cfg0, center: \{ lat: cfg0\.center\.lat, lng: cfg0\.center\.lng \} \};/.test(bake)
+    && /const bb = battleBBox\(cfg\);/.test(bake));
+
+  // 執行期那一半:只准在「存入最愛」那一次量,MUST NOT 滲進建圖期
+  const resolve = strip(grabFn(mainSrc, 'resolveMapRot'));
+  t('執行期量測只住 resolveMapRot(fetchGridRoads / roadGridRotDeg 在 main.js 只出現在這一支)',
+    (main.match(/fetchGridRoads\(/g) || []).length === 1 && (main.match(/roadGridRotDeg\(/g) || []).length === 1
+    && /fetchGridRoads\(/.test(resolve) && /roadGridRotDeg\(/.test(resolve));
+  t('resolveMapRot 的呼叫點恰一處(存入最愛),MUST NOT 出現在預建/中繼閘裡',
+    (main.match(/await resolveMapRot\(/g) || []).length === 1
+    && !/resolveMapRot/.test(strip(grabFn(mainSrc, 'startPrebuild')))
+    && !/resolveMapRot/.test(strip(grabFn(mainSrc, 'osmGate'))));
+  t('已有 rot 就不覆蓋(預設場地的烘焙值 MUST NOT 被執行期量測蓋掉)',
+    /cfg\.center\.rot != null\) return cfg;/.test(resolve));
+  t('量測框 MUST 未旋轉(c0 只取 lat/lng),量不到一律**定案** 0(降級不例外,也不會下次再問)',
+    /const c0 = \{ lat: cfg\.center\.lat, lng: cfg\.center\.lng \};/.test(resolve)
+    && /cfg\.center\.rot = deg == null \? 0 : deg \* Math\.PI \/ 180;/.test(resolve));
+  t('大馬路查詢不進建圖路徑(biomes.js 自己不呼叫 fetchGridRoads —— 那是每台各跑一次的地方)',
+    !/[^n] fetchGridRoads\(/.test(bio.replace(/export async function fetchGridRoads\(/, '')));
+}
+
+// =================================================================================
 console.log(`\n${fail ? '❌' : '✅'} 地圖主方位 / 道路格網量化稽核:${pass} 綠 / ${fail} 紅`);
 for (const [flag, why] of [
   ['--break-drift', '位移上限放到 1e9 ⇒ Ⅵ「路不會走掉」MUST 紅'],
   ['--break-dense', '量化前不細分 ⇒ Ⅵ「真的落格」MUST 紅'],
   ['--break-relax', '節點鬆弛關掉 ⇒ Ⅵ「真的落格」MUST 紅'],
+  ['--break-rotbox', '烘焙的抓取範圍改吃帶 rot 的 cfg ⇒ Ⅸ「冪等」MUST 紅'],
+  ['--break-rotover', '執行期量測不再讓過已有的 rot ⇒ Ⅸ「不覆蓋烘焙值」MUST 紅'],
 ]) if (argv.includes(flag)) console.log(`(${flag}:${why})`);
 process.exit(fail ? 1 : 0);
