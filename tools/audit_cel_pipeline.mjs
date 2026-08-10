@@ -22,8 +22,15 @@
 //   Ⅳ 描邊寬度(toon.js outlineMaterial)
 //     ・螢幕下限 MUST 由 `projectionMatrix[1][1]` 反推(手寫換算 = 狙擊一開鏡描邊全變粗);
 //     ・MUST 是 `max(世界寬, 螢幕下限)` ⇒ 近距離逐位元同舊制(15 處呼叫端不必重調);
+//     ・**兩個外推量都 MUST 換成局部單位**(2026-08-10「主堡黑球」):它們一起加在
+//       `position` 上,而螢幕下限是由**視距**(世界公尺)換算來的 ⇒ 少除一次世界縮放,
+//       實得線寬就是「下限 × 世界縮放」,又因為它 ∝ 視距 ⇒ 離越遠脹越大、沒有上界。
+//       主堡的 dome.glb 世界縮放 795× ⇒ 450m 外的黑殼被推出 530m。**執行原文的兩條
+//       運算式**(uOMin 的值 + outlinify 的 jobs.push)還原整條 GLSL,量的是**螢幕半寬**
+//       —— 這是唯一與世界縮放無關的量,而它也正是這個常數宣稱要鎖住的東西。
+//       反向驗證 `--break-scale`(退回不除世界縮放)。
 //     ・SkinnedMesh 的 bind 分支與 `userData.outlineGeo` 平滑法線分支 MUST 留著。
-// 跑法:node tools/audit_cel_pipeline.mjs
+// 跑法:node tools/audit_cel_pipeline.mjs [--break-scale]
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { makeField, makeToneLadder } from '../public/js/field.js';
@@ -34,6 +41,8 @@ const terr = readSrc('public', 'js', 'terrain.js');
 const field = readSrc('public', 'js', 'field.js');
 const game = readSrc('public', 'js', 'game.js');
 
+/** 反向驗證:把螢幕下限退回「不除世界縮放」的舊制 ⇒ Ⅳ MUST 紅字 */
+const BREAK_SCALE = process.argv.includes('--break-scale');
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 /** 只留「真的會執行的程式碼」—— 註解裡提到某個名字不算違規 */
@@ -184,6 +193,46 @@ console.log('\nⅣ 描邊寬度');
   ok(/max\( uOW, oMinW \)/.test(O),
     '取 max(世界寬, 螢幕下限)⇒ 近距離逐位元同舊制(15 處呼叫端不必重調)');
   ok(/const OUTLINE_MIN_NDC = /.test(O), '螢幕最小半寬是具名常數');
+  // ---- 螢幕半寬與世界縮放無關(2026-08-10「主堡黑球」)----
+  // 執行**原文**的兩條運算式:`uOMin` 的值 與 `outlinify` 餵給材質的 (w, invS)。
+  // 世界縮放只准量一次 ⇒ 兩者 MUST 由同一個 s 推出來,否則其中一個會隨 fitToHeight 無聲脹大。
+  const MIN_NDC = +/const OUTLINE_MIN_NDC = ([\d.]+);/.exec(O)[1];
+  const uOMinSrc = /shader\.uniforms\.uOMin = \{ value: ([^}]+?) \};/.exec(O)[1].trim();
+  const jobsSrc = /jobs\.push\(\[o, ([^,\]]+), ([^,\]]+)\]\);/.exec(O);
+  ok(!!jobsSrc, 'outlinify 把 (寬度, 1/世界縮放) 一起餵給材質');
+  ok(/const s = \(Math\.abs\(ws\.x\) \+ Math\.abs\(ws\.y\) \+ Math\.abs\(ws\.z\)\) \/ 3 \|\| 1;/.test(O)
+    && [...O.matchAll(/getWorldScale\(_ws\)/g)].length === 1,
+    '世界縮放只量一次(兩個外推量吃同一個 s)');
+  const uOMinOf = new Function('OUTLINE_MIN_NDC', 'invS', `return ${BREAK_SCALE ? 'OUTLINE_MIN_NDC' : uOMinSrc};`);
+  const wOf = new Function('width', 's', `return ${jobsSrc[1]};`);
+  const invSOf = new Function('width', 's', `return ${jobsSrc[2]};`);
+  // GLSL 那三行的等價實作(oMinW / transformed 的外推量;proj = 1/tan(fov/2))
+  const screenNdc = (width, s, oDist, proj) => {
+    const uOW = wOf(width, s), uOMin = uOMinOf(MIN_NDC, invSOf(width, s));
+    const oMinW = uOMin * oDist / Math.max(0.001, proj);
+    return Math.max(uOW, oMinW) * s * proj / oDist;   // 局部外推量 → 世界 → NDC 半寬
+  };
+  const PROJ = { '一般 fov 68°': 1 / Math.tan(68 / 2 * Math.PI / 180), '狙擊 fov 35°': 1 / Math.tan(35 / 2 * Math.PI / 180) };
+  // 現役世界縮放取樣面:步兵 0.66 / 塔 1.39 / 直升機 2.38 / **主堡 dome.glb 795**(實測)
+  let worst = 0, worstAt = '';
+  for (const s of [0.66, 1, 1.39, 2.38, 795]) {
+    for (const [pn, proj] of Object.entries(PROJ)) {
+      for (let d = 5; d <= 900; d += 5) {
+        const want = Math.max(MIN_NDC, 0.1 * proj / d);   // 呼叫端最大固定寬 0.45m,取 0.1 當代表
+        const got = screenNdc(0.1, s, d, proj);
+        const ratio = got / want;
+        if (ratio > worst) { worst = ratio; worstAt = `s=${s} d=${d}m ${pn}`; }
+      }
+    }
+  }
+  ok(worst <= 1.001, `螢幕半寬與世界縮放無關:實得 ÷ 應得 ≤ 1(實測最壞 ${worst.toFixed(1)}× @ ${worstAt})`);
+  // 下限那一半仍要成立:遠處線不得消失
+  ok(screenNdc(0.1, 795, 450, PROJ['一般 fov 68°']) >= MIN_NDC * 0.999
+    && screenNdc(0.1, 0.66, 450, PROJ['一般 fov 68°']) >= MIN_NDC * 0.999,
+    '遠距離仍守得住螢幕下限(線不會消失)');
+  // 近距離逐位元同舊制:世界寬勝出時外推量恰 = 呼叫端給的公尺數
+  ok(Math.abs(screenNdc(0.1, 795, 5, PROJ['一般 fov 68°']) - 0.1 * PROJ['一般 fov 68°'] / 5) < 1e-12,
+    '近距離世界寬勝出 ⇒ 逐位元同舊制');
   ok(/shell\.bind\(o\.skeleton, o\.bindMatrix\)/.test(O), 'SkinnedMesh 的 bind 分支仍在(描邊跟著動畫走)');
   ok(/o\.userData\.outlineGeo \|\| o\.geometry/.test(O), '硬邊幾何的平滑法線副本分支仍在(否則外殼會裂縫)');
   // 呼叫端寬度不得被順手改掉(單位沒變,改了就是憑感覺調)
