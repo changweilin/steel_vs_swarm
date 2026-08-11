@@ -57,7 +57,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, appendFileSync, write
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partLibs } from './parts_src.mjs';
-import { loadProvenance } from './provenance.mjs';
+import { corpusMeta, loadProvenance } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -81,7 +81,12 @@ const T2_LIMIT = Number(opt('t2-limit', 4));
 const FAMILY = opt('family');
 const DRY = flag('dry');
 const NO_GEN = flag('no-gen');
-const NO_INTAKE = flag('no-intake');
+// **非出貨語料家強制停在 contact sheet**(2026-08-11 使用者定案)。旗標掛在**家**上面
+// (`<家>/corpus.json` 的 shipping:false),不是掛在指令列上 —— 使用者選的就是「只跑到
+// contact sheet 就停」這條路,而它唯一的弱點是「每次都要記得加 --no-intake」,忘一次就
+// 進了第 ⑦⑧ 站。沒宣告的家逐位元同舊行為。
+const CORPUS = corpusMeta(opt('home', HERE));
+const NO_INTAKE = flag('no-intake') || !CORPUS.shipping;
 // 一輪最多自動入庫幾顆。刻意小:名冊每多一顆,同一張圖上的剪影分佈就整個重排
 // (`bldGeo`/`megaGeo` 的輪替除數是名冊長度)⇒ 一次塞十顆等於一次改十次全場外觀,
 // 而人眼要在對照台上逐顆比對的正是那個差別。
@@ -111,6 +116,12 @@ const ts = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
 /** 跑一站;缺工具不是例外(紀律 ①)—— 回 { ok, skipped, out }。 */
 function step(label, cmd, args, opts = {}) {
+  // **結構性的略過在 `--dry` 底下也要講**(`opts.hard`)。`--dry` 是拿來確認「這一輪會做
+  // 什麼」的,而「非出貨語料家不進第 ⑦⑧ 站」正是要在那裡看得到的事 —— 印成 `[dry] 自動入庫`
+  // 等於謊報它會入庫,而那正是這道閘要保證不會發生的事。
+  // 其餘的略過(「這一輪沒有新產出」那種)仍讓 `--dry` 先講:那是**因為 dry 才沒產出**,
+  // 真的跑起來會有,提前報成略過反而不實。
+  if (opts.skip && opts.hard) { console.log(`  ⏭  ${label}:${opts.skip}`); return { ok: true, skipped: opts.skip }; }
   if (DRY) { console.log(`  [dry] ${label}: ${cmd} ${args.join(' ')}`); return { ok: true, dry: true }; }
   if (opts.skip) { console.log(`  ⏭  ${label}:${opts.skip}`); return { ok: true, skipped: opts.skip }; }
   console.log(`  ▶ ${label}`);
@@ -223,6 +234,7 @@ function writeFeed(dir, pend, gen) {
 async function round(n) {
   const tag = ts();
   console.log(`\n══ 第 ${n}${FOREVER ? "" : `/${ROUNDS}`} 輪(${tag})資料家 ${HOME}`);
+  if (!CORPUS.shipping) console.log(`   ⚠ 非出貨語料家:${CORPUS.why || '不進遊戲'}`);
   const rec = { round: n, at: new Date().toISOString(), home: HOME, adopted: 0, fetched: 0, generated: 0 };
 
   // ⓪ 收編 inbox —— 零網路,所以永遠先跑:使用者放進去的圖不必等抓取那一站成不成功
@@ -230,10 +242,17 @@ async function round(n) {
     ['tools/ai3d/fetch_photos.mjs', '--adopt', '--home', HOME]);
   rec.adopted = Number(a.out?.match(/收編 (\d+) 張/)?.[1] || 0);
 
-  // ① 抓照片
+  // ① 抓照片。**非出貨語料家不抓**(2026-08-11 實測踩到):型錄補缺是為了餵**出貨**語料庫,
+  // 在非出貨家跑它有三個代價,而且三個都沒有錯誤訊息 ——
+  //   ㋐ 限流是 **IP 級**的(upload.wikimedia.org 撞 429 之後十分鐘只放 2~3 張)⇒ 它花掉的
+  //      是正牌語料庫的額度;
+  //   ㋑ 抓下來的是 CC0,卻從此困在一個「不進遊戲」的家裡 —— 它本來是可以出貨的;
+  //   ㋒ 兩份語料開始長得一樣,而這個家存在的理由就是「跟正式語料分開」。
+  // ⓪ 收編 inbox 照跑(零網路、就是這個家的輸入)。
   const f = step('抓照片', process.execPath,
     ['tools/ai3d/fetch_photos.mjs', '--limit', String(LIMIT), '--home', HOME,
-      ...(FAMILY ? ['--family', FAMILY] : [])]);
+      ...(FAMILY ? ['--family', FAMILY] : [])],
+    { skip: CORPUS.shipping ? null : '非出貨語料家不補型錄缺額(限流是 IP 級的,額度留給正式語料庫)', hard: !CORPUS.shipping });
   rec.fetched = Number(f.out?.match(/本輪下載 (\d+) 張/)?.[1] || 0);
   rec.throttled = /限流/.test(f.out || '');
 
@@ -335,10 +354,12 @@ async function round(n) {
   for (const [label, dir, skip] of [
     ['SF3D', outDir, noOut], ['T2', t2Dir, (!t2Skip && rec.generated) ? null : '這一輪 T2 沒有新產出'],
   ]) {
-    const s = NO_INTAKE ? '--no-intake' : skip;
+    const s = NO_INTAKE
+      ? (CORPUS.shipping ? '--no-intake' : `非出貨語料家(corpus.json shipping:false)⇒ 停在 contact sheet,不進遊戲`)
+      : skip;
     const r = step(`自動入庫 · ${label}`, process.execPath,
       ['tools/ai3d/auto_intake.mjs', '--src', dir, '--home', HOME,
-        '--limit', String(INTAKE_LIMIT), '--gate-full'], { skip: s });
+        '--limit', String(INTAKE_LIMIT), '--gate-full'], { skip: s, hard: NO_INTAKE });
     if (r.out) {
       rec.intake += Number(r.out.match(/自動入庫:收 (\d+) 顆/)?.[1] || 0);
       if (/整輪回滾/.test(r.out)) { rec.rolledBack += 1; rec.intake = 0; }
@@ -369,7 +390,10 @@ async function main() {
   console.log(`\n🎯 ${all.length} 輪合計:收編 ${sum('adopted')}・下載 ${sum('fetched')}・生成 ${sum('generated')}`
     + `・入庫 ${sum('intake')}`);
   console.log(`   紀錄 ${LOG}`);
-  if (NO_INTAKE) {
+  if (NO_INTAKE && !CORPUS.shipping) {
+    console.log('   下一步(非出貨語料家:停在 contact sheet,刻意不進第 ⑦⑧ 站):');
+    console.log(`     npm run parts -- --photos ${HOME} —— 在零件台上跟其他版本並排比較`);
+  } else if (NO_INTAKE) {
     console.log('   下一步(--no-intake:停在 contact sheet):挑幾顆 → normalize_parts.py → intake_parts.mjs → npm run parts');
   } else {
     console.log('   下一步(人眼那一步沒有省掉,是換到入庫之後):');
