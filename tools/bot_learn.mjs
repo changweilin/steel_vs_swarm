@@ -11,7 +11,7 @@
 //   node tools/bot_learn.mjs --dry                 # 學習但不寫檔(看報告)
 //   其餘旋鈕:--cands 4 --seeds 4 --team 2 --cap 240 --dt 0.125 --sigma 0.12 --seed 1 --diff high
 //
-// ---- 方法(為什麼是這個形狀;詳見 docs/bot_learning.md)----
+// ---- 方法(為什麼是這個形狀;詳見 docs/bot_design.md)----
 // ①**評測 = 候選策略 vs 現行策略的真自對戰**(真 BattleSim + 真 BotBrain,兩邊同難度),
 //   不是代理模型 —— 策略的價值只能在「對手也在打」的環境量到(lanesim/duel 都沒有 AI 決策)。
 // ②**CRN(共同亂數)+ 側別鏡射**:每顆種子把 Math.random 換成 mulberry32(seed),同一顆種子

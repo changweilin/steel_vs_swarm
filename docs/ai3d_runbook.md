@@ -1,281 +1,279 @@
-# AI 3D Asset Pipeline — Execution Runbook
+# AI 3D Asset Pipeline — Plan and Execution Runbook
 
-> **Audience: AI agents.** This is the operational sequel to `docs/ai3d_asset_plan.md`
-> (decisions + method split, esp. §8 Appendix A) and the skills
-> `.claude/skills/photo-to-prop-forge/` (static contract) / `.claude/skills/mech-part-forge/` (dynamic) /
-> **`.claude/skills/photo-to-3d-pipeline/` (the procedure: photo sourcing → route by geometry class →
-> img→three.js parts or local Blender GLB → gates)**.
-> Read those first; this file tells you **what to run next, where it can run, and how to prove it worked**.
-> Update the Status Ledger and Trial Log below as you complete steps — this file is the hand-off state.
+> **Audience: AI agents.** Merged 2026-08-11 from the former `ai3d_asset_plan.md` (settled
+> decisions) and this runbook (state + trial log). Companion skills:
+> `.claude/skills/photo-to-3d-pipeline/` (the procedure), `photo-to-prop-forge/` (static contract),
+> `mech-part-forge/` (dynamic contract).
+> §0–§4 are **live state — keep them current**. §5* is the **trial log**: append-only history,
+> referenced by anchor (`§5aj-C` etc.) from ~25 files under `tools/ai3d/` and from CLAUDE.md, so
+> **anchors must never be renumbered or deleted**.
 
 ---
 
-## 1. Status ledger (update on every completed step)
+## 0. Settled decisions
 
-| Item | Status | Evidence |
+Goal: raise detail density of **dynamic units** (mechs / building-unit NPCs) and **static props**
+(buildings, giant trees, megaliths, landmarks) one tier without touching the rig contract,
+determinism, or A2 (zero npm deps). Hardware anchor: **RTX 3060 12GB**.
+
+| Item | Decision | Reason |
 |---|---|---|
-| **語料圖進清單可手動篩選 + 「原版 vs 生成」只留同源那一半** | **SHIPPED 2026-08-10** | §5ay;使用者兩條:①還沒轉 3D 的 image 也加入清單 ②img→3D 新生成與舊物件無關,各自陳列標注繪製方法。**`glb` 那一路的「原版」從來不是同源** —— 左邊那顆白球是保險絲(載不到時的降級幾何),不是舊的巨岩 ⇒ 改單獨陳列 + 標繪製方法;`baseline-vs-now`(同一份零件表改寫前/後)原樣保留。保險絲群組**降級成取景索引**(定位不是比對),「零件」隔離照樣運作。狀態鈕改成**左側清單的內容切換**(415 張直接倒進 52 件生成物裡會把節點淹掉);細節頁顯示母照片 + **切出來的每一個目標**(目標才是真的餵進生成器的)。手動篩選三顆鈕只轉呼 `screen_mattes.py`(`--human pass/reject` / `--purge`),id 與 family **從帳本取**。⚠ 兩個安靜的坑:`entry.matte` 是 bbox 物件不是路徑(當路徑用會退回原圖而畫面正常)、`--break-panel` 的注入錨點被同輪改寫成無聲 no-op(旗標空轉而反向驗證是綠的)⇒ 所有注入改走 `inject()`,錨點不存在當場 exit 2。`audit_auto_intake` 104 綠 + **六支** break、`npm run audit:net` 全通過 |
-| **零件台變成駕駛艙 — 採集迴圈的啟停 + 圖檔三態(未處理/已處理/需修正)** | **SHIPPED 2026-08-10** | §5ax;啟停掛的是 `dev_supervisor` **那一支** `handle`(全專案唯一「HTTP → spawn」的三道閘;零件台自己不 spawn)。採集迴圈是新的 `kind: 'job'` —— 它**不聽任何埠**,拿 `listening()` 問它會永遠回「沒開」⇒ 每按一次啟動就多開一支,而畫面完全正常;job 因此 MUST NOT 宣告 port / 回 url。資料家由 `corpusHomes()` **依帳本筆數**排序推導(實測 415 vs 81,取第一個有一半機率挑到小的那份)且候選 MUST 顯示出來。三態**零新狀態檔**,由既有四本帳推導,分支順序 `需修正 > 已淘汰 > 已處理 > 未處理` 本身是語意(稽核用四條固定期望值釘死);「已淘汰」MUST 獨立成一態、「送過生成但沒出貨」算已處理(可用率 ~1/15 是本質)。`audit_auto_intake` 93 綠 + **五支** break、`npm run audit:net` 全通過;真機起在 **8642** 實測(8622 跨 session 存活著舊的一支)|
-| **⑦⑧⑨ 全自動入庫 + 人眼事後判決迴路(「先全部自動化,人眼再審查」)** | **SHIPPED 2026-08-10** | §5aw;`harvest_loop` 檔頭那條「MUST NOT 自動入庫」改寫成「自動入庫 + 事後可撤」,而讓它擋得住的**不是多一道統計閘**(那正是擋不住「統計全綠、內容是一張版畫」的東西),是三件結構性的:**不 commit**(沒 commit = 沒出貨)/ **可撤**(GLB + 名冊 + 來源帳三邊同時)/ **只准追加到既有輪替名冊**(可追加的格由「值是陣列」推導 —— 開新格要寫 fallback 描述子,那是設計不是轉換)。新縫:配方 `intake_recipes.mjs`(**只有兩欄手寫**)、第 ⑦⑧ 站 `auto_intake.mjs`(紅字整批回滾**逐位元**)、第 ⑨ 站 `apply_verdicts.mjs`、黑名單 `screen_mattes.py --purge`、對照台第四個判決 `✕ purge`。同輪補掉 `tri_budget resample_2026_08_08` 記著的來源帳洞(投料帳 `.feed.json`:index → 母照片 id)。`audit_auto_intake` 77 綠 + 三支 `--break` 各紅一條;intake 300、siteplan 218、beacons 68、object_joints 21,611/0、對照台 0-0-0、**`npm test` 與 `npm run bal` 逐項不變**(遊戲一行未動)|
-| **圈選 + 分離 + 三道篩選(一張照片好幾個目標)** | **SHIPPED 2026-08-10** | §5au;新站 `split_targets.py` 排在去背與選片閘之間(順序不可對調),判決單位從「一張照片」變成「一個目標」。分離 = 面積佔比 + bbox 包含(不是數塊數);**單一主體且碎屑 <3% 一個檔都不產** ⇒ 既有 181 張逐位元不變。篩選:太小 = **既有的 ①**(切開後自動變成逐目標的量)、太模糊 ⑥ 0.25、完整度 ⑦ 頂邊 0.35 + 邊框接觸。**校準名單訂正**:零誤殺只算 matte 真的餵過生成器的 27 個來源 —— 被切開的那兩張 `landmark/tank` 走 Route A,而它們**本來就各有兩個物件**(§5au-b)。實跑:切開 5 張 → 11 目標、171 張原樣不動、零誤殺。`audit_split_targets.py` 48 綠 + 三支反向紅。**端到端驗過**(§5au-h):5 個目標餵 SF3D ⇒ 2 顆可用(一顆礫岩體、一顆立石),而那兩顆的母照片在舊制下會**連著兩個物件**一起送進去。順手修掉 `mesh_sheet.mjs` 的 `/^d+$/`(少一個反斜線)—— SF3D 那一半的 contact sheet 自 §5ar 起就沒產出過(§5au-i)|
-| **Route A(img→three.js 純資料零件)第 3 顆 — `beacon/mast` 讀 3 張 CC0 拋物面天線照片重寫** | **SHIPPED 2026-08-10** | §5av;碟深由 f/D 推導(不是手寫)、饋源走中心臂(刻意不做三腳支架 —— 複合尤拉角換不到畫面只換到 A26 風險)、逐面 X 斜撐 24 塊(三角斷面解析解 `ry = −(b+90°)`,另以 three 的 Euler XYZ **數值複驗端點偏差 1.6e-15 m**)。15 件 → 54 件,`foot` 3.8 → 3.9(撐大的是最下段斜撐不是碟)。**順手修掉 `shot_beacons.mjs` 的機位**:寫死的 9m/22m 是照 13m 疊石調的,29m 的 mast 與 35m 的 pylon **從沒被拍到過**(§5av-b)。audit_beacons 68 綠 + 反向紅、object_joints 11,908/0、intake 300、npm test、bal 全綠 |
-| **⭐ 下一輪從這裡開始 — 等使用者放圖(`inbox/`)才動得了那四顆(含 `ac_a`)與 `depot` + 真機冒煙 + §5aj-C** | **待執行 2026-08-10** | ⚠ **`depot` 由「純執行」改判 BLOCKED(語料)**:§5at-d 寫的「3/3 已滿 ⇒ 純執行」是**只數了張數**,人眼一看是**兩張維多利亞玻璃魚缸 + 一張港口全景**(博物館把玻璃容器編目成 "container",§5av-c)。查詢字已改成具名單一主體(intermodal / conex / stacked),下一輪採集才有機會。**教訓**:型錄達標數與 `--plan` 的綠字都只保證張數,Route A 的第一步 MUST 是把照片打開來看。以下為原本那一列的內容 —— | §5as:169 顆首跑產出**全部過人眼**(補齊三張缺席 sheet;可用率 建築 19% / 冠層 0% —— §5q 再次成立)。四顆「重生」**掃完 27 次 solidify 沒有更好的候選**,而高層那一桶是**結構性**沒有(`bld_tower` 的照片全跑過了,活下來的三張就是 mass_a/b/c 本身)⇒ 零節點出貨,理由在供給側。順手補上迴圈的兩道閘(**已出貨的來源不重跑**、**沒有消費端的族不生成**)—— 首輪有 26% 的 GPU 時間本來就沒有出路;兩道閘逐條行為驗過。細節與「放哪三種圖最有效」見 §5as-f |
-| **Route A(img→three.js 純資料零件)第 2 顆 — `beacon/pylon` 讀 4 張 CC0 電塔照片重寫** | **SHIPPED 2026-08-10** | §5at-b;逐面 X 斜撐 + 上下橫箍(斜撐長度/傾角由跨距推導,手寫會脫離腳而浮空且外廓稽核照樣全綠);`foot` 8.0 → 9.2 是 `kindExtent` 對傾斜件的保守模型收的稅(腳的座標一格未動,同 P2b 水塔 5.2 → 5.6)。audit_beacons 68 綠 + 反向紅、object_joints 21,611/0、intake 300、siteplan 218、npm test、bal 全綠。**Route A 剩 mast / depot 兩款**,語料 3/3 已滿 |
-| **Route 0(設計圖→外殼)第二次嘗試 — 仍然零節點,但阻塞換了** | **BLOCKED 2026-08-10(語料形狀)** | §5at-a;§5ai 記的「沒有低矮量體桶」已由 §5am 解除 ⇒ 這一輪真的把兩張 HABS 立面跑成外殼(446 面 / watertight / 平面比 0.97)。擋下它的是兩個**新的**理由:①**兩視圖視覺外殼會把任何突出物變成貫穿全深的刀刃**(煙囪 × 全深度;每一個讀數都是綠的,只有黏土圖看得出來)⇒ 需要 `--plan` 或本身沒有突出物的主體;②平頂量體的屋頂帶 parity 0.147 vs `masslow` 名冊平均 0.273 ⇒ **`ROOF_BAND` 取名冊平均只在屋頂型式同質時成立**。順手量到 `plan_to_mesh` 的渲染圖閘門在真 HABS 圖上假陽性(27.3% vs 門檻 25%)|
-| ~~真機冒煙(四種針葉 / mass_c / vleaf 減面)+ §5aj-C~~ (併入上一列) | **待執行 2026-08-09** | §5aq 那一輪把三件事一起落地:①零件台**收起半成品**(判定住 `mesh_sym.nodeFlaws`,收起不刪、「半成品」分頁看得到)②`measure_veg_tris` 的**逐型歸屬**改讀建造端的章(`userData.vegKind`;舊制指紋反推 = 碰撞群互相灌帳 + **靜默丟掉 261 個 InstancedMesh**)⇒ veg 預算重推(`node_cap` 225 → 249、整層用量 87.8% → 75.7%)③**7 顆新節點**:針葉三種 6 顆(`cf1`/`cf3`/`cf4` —— `STAR_SPECIES` 的 fir/cypress/cedar 自 §5z-r 寫出來就沒上過畫面)+ `building/mass_c`(**第一顆背面不是空的整棟量體**,asymZ 0.001 vs mass_a 0.123;差別只有選片)。未做的見 §5aq-g;§5aj-C(鏡像貼補改成「只補有洞的」)規格仍在,與這一輪完全獨立 |
-| §5aj-A 配比含設計圖(`grp` × `src` 兩維 + 設計圖專屬品質閘) | **DONE 2026-08-09** | §5ak;`audit_plan_mesh` 23 綠(新增 Ⅶ-c)、`--break-outer`/`--break-frame` 反向紅;`--plan` 目標 44/22/22 = 50/25/25 整除。同輪修掉兩個**假綠**:三道閘放行一塊碎屑(§5ak-b)、HABS 全是 TIFF 導致三個設計圖列結構性抓不到東西(§5ak-c)|
-| P1 seam (`public/js/partlib.js` + `beacons.js` `['lib', name, fallback]` + `main.js warmModels` preload) | **DONE 2026-08-05** | PR #127; `audit_beacons` 68 green, `--break-extent` reverse-red; full audit battery + `npm test` + `npm run bal` green |
-| Photo fetcher `tools/ai3d/fetch_photos.mjs` (CC0 double gate, resumable, manifest) | **DONE 2026-08-05** | Same PR |
-| Photo DB round 1 (GitHub Actions `fetch-photos.yml`) | **DONE 2026-08-05** | Run 30973968007 success: **35 photos, all CC0/PD**, artifact `photo-db` id 8917619002 (63 MB, expires 2026-09-04) |
-| Photo DB gap-fill (parts at 0, see §4 step A) | **DONE 2026-08-05** (3060 local run, not Actions — see Trial Log) | Broadened queries + 3 fetcher fixes; **all 14 parts at target** (55 photos), licence re-audit 55/55 CC0/PD; throttle-cooldown loop needed 3 extra rounds for `lattice`/`tank` |
-| Photo DB integrity pass (magic-bytes gate + manifest path portability) | **DONE 2026-08-05** (§5d) | 2 whole PDFs had passed the licence audit as `ok` photos (bytes, not licence, was the lie) — de-booked, deleted, refetched; 28 absolute-path manifest rows migrated to relative POSIX; final audit **61/61 ok = real image + file present + CC0/PD**, all 14 parts at target |
-| P2b pilot — LLM-written pure-data parts (regular geometry) | **DONE 2026-08-05** | `tank` (watertower) KIND_PARTS rewritten: 2-segment legs, central riser, 2 X-brace panels ×4 faces, 3 drum ribs; foot 5.2→5.6 (measured 5.56); `audit_beacons` 68 green + `--break-extent` red; `audit_object_joints --seeds 8` 0 anomalies; `npm test` green (fresh worktree server, WS_URL=8666); `npm run bal` **bit-identical** (diff vs pre-change baseline); before/after lane-distance renders with collider overlay |
-| P2c pilot — img→3D GLB parts (organic geometry) | **DONE 2026-08-05** (§5e; gate opened same day) | `public/assets/models/parts/rock.glb` shipped: 3 nodes (`collapse_a`/`facet_a`/`facet_b`, 938/882/588 tris) consumed by beacons `cairn` via `['lib', …]`; SF3D measured on the 3060 (peak VRAM 6.17 GB, warm 13.6 s / 2 images); intake 14/14; `audit_beacons` 68 + reverse-red; `audit_object_joints --seeds 8` 21311/0; cel 52 / visual_prefs 124 / gpu 54 / siteplan 168; e2e green; bal green (structurally bit-identical — balance tooling imports neither beacons nor partlib); fallback-vs-lib renders with collider overlay (`tools/shot_beacons.mjs`) |
-| biomes consumption-loop seam (`p.lib` field; plan §8 correction 1) | **DONE 2026-08-05** (§5f) | `partGeo(p) = (p.lib && libGeo(p.lib)) \|\| p.g` in `buildVegMeshes` (draw only; no `lib:` rows yet ⇒ frame bit-identical); pinned by `audit_siteplan` Ⅴ (+3 assertions, manual reverse-verify both red modes); full battery green |
-| `giantCrownR` GLB-compat (plan §8 correction 1) | **DONE 2026-08-05 — by contract, zero code change** (§5f) | Vertex scan would be a determinism bug (layout ← load state, §2.3); layout math pinned to the fuse `p.g` (audit red if it touches `libGeo`/`partGeo`/`.lib`); intake envelope makes fuse crown radii conservative. Canopy GLBs unblocked |
-| 3D 零件對照台 (`tools/parts_review.mjs` + `tools/ai3d/parts_manifest.json` provenance ledger) | **DONE 2026-08-05** (§7) | Settings-page dev tool (`npm run parts`, port 8622); generated-vs-original side by side from the **real** `buildBeacon`; states method + source img per part. Found two silent bugs on first run — see §7 |
-| **D-1 static scale-out — 綠地首批(神木樹冠)** | **DONE 2026-08-05** (§5g) | `tree.glb` 12 nodes (4 shapes × size ladder 10/8/7/6/5/4.5/3.5, 212–215 tris each) consumed by **biomes** `GIANT_DEFS` via the `lib:` field — 25 rows across 9 of 11 species; intake extended to the biomes consumer (113 green, reverse-red); `audit_siteplan` 171→174 (both new gates reverse-red); object_joints 21311/0; beacons 68 + reverse-red; soft_stroke 73 / cel 52 / visual_prefs 124 / gpu 54; e2e green (fresh server :8666); `npm run bal` green (⑦f 1.63× unchanged); review board extended to biomes (16 rows, 0 gaps) with side-by-side render |
-| **D-2 megalith seam — 巨岩呼叫點守衛 + 首批低面數岩塊** | **DONE 2026-08-05** (§5h) | `biomes.js MEGA_LIB` 名冊 + `megaGeo`(一律 clone,bakeContactAO 就地烤頂點色)5 呼叫點(marble 塊/崩落塊/伴生丘/hoodoo 整柱/疊石);`rock.glb` +3 單位包絡節點 `mega_a/b/c`(284/272/274 tris);`families.megalith` 逐件上限 306 = 4×1071÷14(推導);intake 125 green + bogus-node reverse-red;siteplan 176 + reverse-red;object_joints 21311/0;beacons 68 ± reverse;gpu/cel/visual_prefs/soft_stroke green |
-| Photo catalog round 5 — 逐樹種大擴充(使用者定案「大量下載不同樹種」) | **IN PROGRESS 2026-08-05** | +12 tree-species rows / +4 rock kinds / +4 img→3D-friendly building modules;fetcher 改**逐主機**節流 + `excluded_source` 排館藏(§5h)+ 樹種列優先;4 輪抓到 sequoia/baobab/maple/cypress/strata/chimney/rooftank **7 個零件達標**,conifer/pine/willow/banyan/tropical/karst/acunit/dormer 待續 |
-| **D-3 逐樹種冠簇拆分(第一步)** | **PARTIAL 2026-08-05** (§5h) | `tree.glb` +6 節點(e/f 兩形 × 3 尺寸階):dougfir/sitka/taiwania 三種原本共用 `canopy_d35` **一顆**,現各有自己的冠形;sequoia/meranti 各多接一列原本無 lib 的 ico。**4 形 → 6 形,不是 11 形** —— 卡在語料而非管線,見 §5h |
-| P3 dynamic track (mech slots) | **BLOCKED on agy quota**(2026-08-05 §5h) | t01 七槽兩輪全 429 RESOURCE_EXHAUSTED(gemini-3.1-flash-image);`--no-ref` 也一樣 = 模型級額度。models.js 刻意續留不動(無真零件可校準的縫 = 10× 貴的失敗)。額度重置後:`node tools/ai3d/gen2d.mjs --only t01 --no-ref --limit 7` |
-| **D-4 建築族首批 — 屋頂配件桶幾何縫 + families.building 預算量測** | **PARTIAL 2026-08-06** (§5i) | 使用者定案「大量下載不同國家、城市、小鎮、風格的建築物照片,再 img→3D;無視舊有物件直接畫,禁止使用原版重繪」。`families.building` 預算**先量測後生成**(新工具 `measure_building_tris.mjs`,shibuya/manhattan/seoul 三場 --live 實測;InstancedMesh 桶的逐桶節點上限由 instance 上界反推);`building.glb` 首批 2 節點(`chimney_a` 220 tris / `ac_a` 402 tris)接進 `BLD_LIB` + `buildBldBucket` 桶建構表(零 rnd、draw call 不變);照片目錄 +19 列(module + 17 國家/風格整棟列),第 1 輪收 55 張;**tank_a 未出貨**(候選全是場景照/有人入鏡,等 tank_wood 冷卻輪);對照台 + intake + audit_siteplan(184,含反向)+ bal 全綠 |
+| Output form | **Part-library GLB + existing assembly code** | Assembly / paint / gait / jitter stay where they are ⇒ per-instance variation, determinism and `partJitter` unchanged; zero contact with the rig contract |
+| Auto-rigging (UniRig et al.) | **Deliberately not used** | This rig is not a skinned skeleton, it is a **named part hierarchy** (`rig.legL` / `rig.chest` / `rig.muzzles`…) driven per frame by `locomotion.js`. A skinned skeleton scraps `MOVE_SIG` / `CAST_SIG` and three audits at once |
+| Part splitting | **P3-SAM** as cross-validation only | Per-slot generation guarantees the mapping; P3-SAM is used to check the parts still read as one machine |
+| Decimate / clean / export | **Blender headless (bpy)** | Offline, no npm, scriptable |
+| 2D drafts | **`agy`** for mechs (subscription quota) / local **FLUX.1 Kontext dev GGUF** for bulk | Gemini CLI dropped consumer tiers 2026-06-18; route C (paid Gemini API key) is archived in §5.1-era notes |
+| Photo sourcing | **Openverse API** + Wikimedia Commons, **CC0/PD only** | A hard gate, not a recommendation — a rock baked into the repo has nowhere to carry attribution, and a licence violation produces no error message |
 
-| **D-5 巨岩族第二批 — 跨國地質岩層/奇石 img→3D + 預算錯帳修正 + 決定性修正** | **PARTIAL 2026-08-06** (§5j) | 使用者定案「大量下載不同國家地區的地質岩層或奇石/巨岩的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」。照片目錄 rock 族 +17 列(逐岩型對位 `synthMegalith` 11 型 + 跨國地質/奇石列)且族序提前;5 輪抓到 **69 張**。`rock.glb` +5 節點:`mega_d/e/f`(294 tris,block 名冊 3 → 6)+ **`tower_a`/`mesa_a`(372/371,整座庫節點**,實拍魔鬼塔;新增 tower/mesa 兩個呼叫點,megaGeo 凍結清單 5 → 7)。**兩筆既有錯帳一併修掉**:①`families.megalith` 的分子分母量的不是同一個東西(新工具 `measure_megalith_tris.mjs`:整顆 max 1071 → **3114**、件數 14 → **29**、逐件上限 306 → **430**);②`cliffPlant` 傘色與 `nest` 蛋位/鳥抽的是**共用 `rnd()`** 而那兩支只在 `rockProbe` 量到壁面時才跑 ⇒ 有沒有載到零件庫會走出兩條佈局(§2.3 / A4;實測改前 block 名冊已 1/300 分家,整座型節點上線後 62/300)。intake 170 / siteplan 187(+3,兩條反向驗證逐條紅)/ joints 21516-0 / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73;e2e 全綠(fresh server :8666)、`npm run bal` 全綠(⑦f 1.63× 不動);對照台 0 缺件 / 0 孤兒 / 0 未記載來源 |
+### 0.1 The img→3D ladder (measured on this card, not assumed)
 
-| **D-6 樹族第二批 — 逐樹種冠形補齊 + 一般植被開族(灌木/闊葉/針葉)+ Quaternius 退場** | **PARTIAL 2026-08-06** (§5k) | 使用者定案「大量下載不同國家地區的不同樹種,如灌木/闊葉林/針葉林/各種大小神木的照片,再進行 img to 3D;無視舊有的物件直接畫,禁止使用原版重繪」+ 追問後定案「**連 Quaternius 一起換掉**」。①照片目錄 tree 族 +26 列(灌木 6 / 闊葉 8 / 針葉 6 / 神木 6,逐列點名國家地區)、族序提前;3 輪抓到 **25 張**後撞上小時級 IP 節流(§5i 同款,3 輪 ×0 張)。②**新工具 `photo_sheet.mjs`**(§5j「人眼先看照片」升格為正式工具):82 張逐張看,語意可用 13 張(~1/6),其中 CGI/館藏/明信片/有人入鏡/浮水印一次擋掉。③`tree.glb` **+18 節點**:神木 9 顆(g/h/i/j/k 五形)⇒ 11 種神木**各有專屬節點名,但不是 11 個專屬形狀**(**2026-08-06 使用者質疑後更正**:`i` 與舊制 `a` 同一張照片、`g` 與舊制 `b` 同一張 ⇒ 11 種實際只對到 **9 張**照片;且 `lib:` 這條縫換不掉骨架,見 §5k),且 klinki/alerce 這兩種**第一次接得上**(冠簇 2.2~3.0m 小於舊制最小節點 3.325 —— 這正是使用者說的「各種**大小**神木」);一般植被 9 顆(bush/vleaf/vcone)。④**`families.veg` 預算先量測後生成**(新工具 `measure_veg_tris.mjs`,四個綠地場地 team 3 實測),且 `whole_factor = 4.0` 這一次是**量出來的**(Quaternius 退場釋出 585,966~1,669,392 tris)。⑤**broadleaf/birch/shrub 退出 `NATURE_MANIFEST`** 改走零件表 + 照片冠簇(掛在名冊裡的型別連 `buildVegMeshes` 都不會被呼叫 ⇒ `lib:` 列會接在沒人看得到的路徑上);silvergrass/deadtree 留著(不在使用者這一輪點名的四類裡,草葉鏤空貼圖 SF3D 生不出來)。intake 234 / siteplan 187 / joints 21516-0 / beacons 68 / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73;e2e 全綠(fresh server :8666)、`npm run bal` 全綠(⑦f 1.09× 不動);對照台 0 缺件 / 0 孤兒 / 0 未記載 |
+`T2-spz (buildings / anything textured) → Hunyuan3D-2GP (solid rock) → SF3D (fast prescreen) →
+keep the procedural part`. Drop a rung whenever one fails. **Never change a rule or a contract to
+make a tool fit.**
 
-| **D-8 樹族首件 — deadtree 遷零件表 + 整樹節點縫(`whole:`)+ `tree/snag_a` T2 入庫** | **DONE 2026-08-07 夜** (§5u) | 使用者定案「缺口補平當作被砍伐或雷擊損毀,自然的樹木本來就不完美,繼續」⇒ §5t 神木那半的縫 + 預算同輪定案。①**縫 = `VEG_DEFS` 新增 def 層 `whole:`**(整樹節點:lib 載到 ⇒ 這一型只畫那一顆、保險絲零件全藏 —— synthMegalith tower 的資料路徑版;載不到 ⇒ **逐位元**退回 parts;解析仍只經 `partGeo` 三份縫之一);deadtree 退出 `NATURE_MANIFEST`(§5k ⑤ broadleaf 同路,Quaternius DeadTree_1/2 退場)。②**預算先量再開**:uluru(bare 0.95)加入取樣面 —— deadtree instance 上界 **121**(blackforest 僅 15);blackforest 重量 1,591,970 → 1,561,264 = Quaternius 枯木退場釋出 30,706 ⇒ 成長額度 592,199 → **622,905**、`node_cap` 223 → **225**(分母 2,917 → 3,038;既有節點 max 214 仍綠)。③`tree/snag_a` = §5p 漂白刺果松 ◎(seed 1234)走 `--mode wrap` 刀 48,673→200 水密單元件,非等向拉滿 ico(3.2)、200 ≤ 225 留餘裕。intake 244 / siteplan 187 / soft 73 / beacons 68 / joints 21611-0 / gpu 54 / cel 52 / visual 124 / bal 全綠 / e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載 |
-| **D-7 T2 首件入庫 — 實體化刀進 `tools/ai3d` + `rock/tower_a` 改 T2 重生成** | **DONE 2026-08-07 晚** (§5t) | 使用者指示「跑」(巨石首件入庫 + 實體化刀定案)。**零縫改動**:同名取代 `rock/tower_a`(§5l 記錄 SF3D 版「柱狀節理全失、頂面變圓」;§5o 實測 T2 C→500 柱身+裙錐都在)⇒ biomes.js 一行未動、rnd 枚數/座號組逐位元不變。鏈 = T2-spz seed 42 天然閉合注(47,725 面撕裂薄殼)→ **`tools/ai3d/solidify_parts.py`**(§5o C 路徑出貨版;佇列 F.3 選項 (a) 定案 + 3×3 參數掃描全平台)→ 500 面水密單元件(kf_p95 0.94%)→ normalize 同名取代 → **392 tris**(上限 430 留餘裕)。`METHODS` +`trellis2_spz`(§5p 待續③ 兌現)、manifest 拆列(mesa_a 留 sf3d)。intake 240 / siteplan 187 / beacons 68 ± 兩反向紅 / joints 21611-0 / gpu 54 / soft 73 / cel 52 / visual 124 / megalith rnd 對帳 1000 顆 + cap 430 重推不動 / bal 全綠(⑦f 1.78×)/ e2e 全綠(fresh :8666)/ 對照台 0 缺件 0 孤兒 0 未記載;黏土人眼:柱身直紋 + 裙錐 + 平頂都在 |
-| **Hunyuan3D-2GP gate(fallback chain 下一階)+ 首個 2GP 節點 `rock/hoodoo_a`** | **DONE 2026-08-06 晚** (§5m) | 閘門**開**:WSL2 獨立 venv(.venv311hy;torch 2.5.1+cu121 + mmgp 3.2.7),profile 3 / steps 30 / octree 256 / mc,§5l 同組知名主體 7 張全過 —— **逐張 torch 峰值恆 2524MiB(GPU 全程 free ≥10.2GB)、61~67s/張**、權重 4.9GB(下載 16 分)。品質恰好收復 §5l 的兩個 SF3D 失敗型態:hoodoo 同一張 wc_112762573 SF3D 塌片(0.065/0.227)→ 2GP **0.274 ◎ 帽岩/細頸/基座全在**;Art Deco 摩天樓 SF3D 0.048 立面殼 → 2GP **0.447 ◎ 退縮量體逐階可見**;魔鬼塔 0.404 ◎ 裙錐+平頂。人眼 7 取 3(~1/2,遠高於 SF3D 的 ~1/6)。**`rock/hoodoo_a` 出貨**(§5j 待續① 補完):MEGA_LIB.hoodoo 列啟用、兩段式減面 213,682→560(pymeshlab)→382(Blender)、包絡 95%、預算 430 留餘裕;分母 29 不動(hoodoo ≤4 < marble 8,tri_budget 註記);intake 240 / siteplan 187 / joints **21611-0** / beacons 68 ± reverse / cel 52 / visual_prefs 124 / gpu 54 / soft_stroke 73 / megalith rnd 對帳 1000-1000;bal 全綠(⑦f 1.09× 不動);對照台 0 缺件/0 孤兒/0 未記載(METHODS +`hunyuan_2gp`),座號組重掃 [1,7,10]→[1,7,10,**22**](hoodoo 型只在 #22/#33);保險絲 vs 零件庫並排截圖 |
-| **TRELLIS gate (plan §1 `⚠ must measure first`)** | **MEASURED — FAILS on this card, 2026-08-06**(§5l;plan §1/§7/§8 更正已於同日晚寫入)| 使用者問「有其他更適合的模型嗎」⇒ 十天沒人撞過的那道閘終於被撞。WSL2 Ubuntu 24.04 遷到 `D:\wsl\Ubuntu`(C: 23GB → 119GB)、GPU 直通 OK、零 sudo 裝完 TRELLIS(7.5GB venv + 2.9GB 權重,`kaolin` 走 NVIDIA 預編 wheel、`flash-attn` 以 `ATTN_BACKEND=xformers` 取代、`nvdiffrast`/`nvdiffrec` 幾何路徑不需要)。**TRELLIS-image-large 前三階全過、flexicubes 網格抽取在 9.58GB 空閒下 OOM**;TRELLIS.2-4B 官方 24GB 且解析度下限 512³ ⇒ plan §1 fallback chain 上面兩階在這張卡上是空的,而 §1 那一行把兩代的 VRAM 數字混寫了。**零節點出貨**(來源帳與 `METHODS` 不動)。同輪建立三族知名主體的 SF3D 基準:摩天樓 fill 0.048 ✗ / 神木 0.274 / Devils Tower 0.313 ◎,三者皆失去識別特徵;「最乾淨的照片 fill 最低」為 plan §8 的分流原則提供了第一組實測數字 |
-| **薄殼大比例減面閘門(T2 產出 50k→~500;§5n 待續②)** | **MEASURED 2026-08-07 凌晨**(§5o)| **直接減面關、先實體化再減面開**。A trimesh quadric **打不到預算又不報錯**(2000/900/500 三個目標回同一個 2,865~6,076 面 = 預算 5.7~12.2 倍);B pymeshlab 打得到但產出是**三角形湯**(499 面 / 468~479 元件 / v:f 2.8 = 每元件 1~1.5 面);C 先 uniform volumetric resample 再 quadric = 唯一兩者成立(500 面 / 元件 1~9 / v:f 0.48~0.58 / 開放邊 0~97,dev_mean 恆 ≈ offset 本身)。**方法論**:表面偏差量不出撕裂(B→500 的 dev_p95 只有 0.0034~0.0057 卻是彩紙)⇒ 判準是 **v:f 與 面/元件**。原生網格更乾淨那條假設**被否掉**:`--decimate 500` 重跑得 473,280 面仍有 205,236 開放邊 / 9,898 元件(0.434/面,50k 版 0.653/面)⇒ 兇手不是 fork 的 86:1 減面,O-Voxel 輸出本身就不封閉;且 50k 與 473k 黏土渲染肉眼分不出來。500 面留不住建築識別特徵(Art Deco 退縮量體被抹平)⇒ 建築節點的預算與消費端縫要一起定。零節點出貨 |
-| **佇列 F0 — 神木語料重採(選片閘 + 可用帳 + 孤立單株重採 + T2 複驗)** | **PARTIAL 2026-08-07**(§5p;閘與帳 DONE,**冠簇路線已定案(§5q:葉冠不走 img→3D,只收雕塑性主體)**,剩語料續補)| `screen_mattes.py` 三統計桶 + 人眼回寫,known-good 16 張零誤殺、反向驗證紅;`fetch_photos --plan` 改計**可用**張數、sequoia want 歸零;兩輪重採 +6 可用(樹族 16→22,canopy 6→9);T2 黏土 5/5 不碎不生遊客(枯幹 ◎ 體積型、茂密冠層 △ 浮雕);授權 264/264;photo DB 搬家至 F0 分支 worktree |
-| **冠層造型路線 — 瓣化(v5~v7 + 降級鏈)vs 簡單幾何版 → **首批入庫**(conifer2 / broadleaf 整樹節點)** | **SHIPPED 2026-08-08**(§5w~§5z-o;`--touch` 1.15 與入庫路線皆已定案)+ **針葉冠形第六輪 SHIPPED 2026-08-08**(§5z-r 星盤 → §5z-s 凹面 + 誤差 + 闊葉樹頂包覆)| **§5z-r 星盤(使用者手稿)**:針葉葉冠改「上視各角邊長內凹 + 側視每層下緣內凹 + 層間平面錯開疊加 + 越上層角越短而頂角越尖 + 頂部不露幹 + **不需要樹枝**」。一層 = **2·n·arc** 面(`prim_star`);層間距與幹頂高都是**解**出來的(前者要求最上層頂點落在冠頂、後者量最上層**谷底**母線);逐句稽核 `check_star.py` 四樹種 40 條全綠 + `--break-notch/-cave/-cover` 各只咬紅該咬的一條。**兩個坑**:逐層照抄語料 `r_out` ⇒ 整冠塌成牙籤(輪廓 112% → **10.2%**,而面數/契約/watertight 全綠)⇒ 角長改等比階梯、兩端量出來;`notch` 的實際深度會隨 `arc` 漂(arc 3 的 .5 實測是 .567)⇒ 正規化。**第六次「指標與目的不同軸」**:星盤輪廓 58~64% 對上現行 112~123% 是「大退步」,而俯視那一格直接把話講完 —— 現行版從上面看是一個**乾淨的六邊形**。價目表:`arc` 幾乎不影響畫面 ⇒ 使用者定案 **arc 2 全族**(角數與谷底逐樹種)、**直接入庫** ⇒ `cf2_wood_a` 80 / `cf2_crown_a` 192 = **272 面**、整層 85.9% → **87.1%**;消費端只改一個數(葉冠包絡 cyl 高 7.41 → 8.52,因為**葉冠的頂現在就是整株的頂** —— 木質頂梢同輪退場)。`tree.glb` 與另一分支已逐節點對過帳:**只差這兩顆** ⇒ 乾淨取代。驗收 intake 237 / joints 11908-0 / e2e / bal 全綠 / 對照台 0-0-0。**同日 §5z-s 第二輪**:尖銳度改由**側輪廓凹面**(`--star-curve`)給而不是把上層拉高(`sharp` 1.3 → 0.15,層高全距 2.30 → 1.15),角長/層高/錯開角各加一組零均值誤差 —— **凹面與適度誤差在同一個序列上互斥**(底部相鄰層只差 2.3%、誤差 10%)⇒ 「越上層越短/越尖」的定律搬到**名目階梯**,realized 改驗「誤差零均值有界 + 趨勢跨 lag 遞減」(lag 推導);面數不變而輪廓 58/63% → **76/87%**。同輪**闊葉樹頂包覆**:軸心是空的(旁瓣全在 r>0)⇒ 補一顆同款 ico 葉團,尺寸由「要蓋住什麼」解出來(中位數尺寸那一版實測 45 → 45 = 沒有作用),射線可見 233 → **0**,+20 面。以下為前一輪:**§5z-o 入庫輪**:一株 = 木質 + 葉冠**兩顆節點**(`VEG_DEFS.whole` 改陣列 + 全有全無;一列 = 一份材質 ⇒ 併成一顆會同時吃掉季節色與 A39 軟性),兩顆由 `normalize_parts --group` **共用同一個變換**(各自縮放 = 樹散開,而契約與預算全綠、只有截圖看得出來)。**預算模型換本尊**:flat `node_cap` 對整樹節點結構性失效 ⇒ 改鎖整層總量(`measure_veg_tris --kinds` 量逐型現值);量到成長額度早已用掉 **92.4%**、shrub 一列佔 **59.1%** ⇒ `bush_a09` 減面 213 → 140 讓額度。**最貴的發現**:§5z 五輪的剪影全對 v7 瓣化原型量、從沒對過遊戲裡那棵樹 —— 闊葉因此是進步、針葉是退步(7.9 倍面數換更稀疏),針葉改**疊層多角錐(凸角朝上、平整面朝下)172 面**後整層消耗 98.2% → **85.9%**。新工具 `tools/shot_veg.mjs`(fallback vs lib 並排,走遊戲自己的 `buildVegMeshes`)。intake 237 / siteplan 187 / beacons 68 / joints 21611-0 / soft 73 / gpu 54 / cel 52 / visual 124 / e2e / bal 全綠 / 對照台 0-0-0。**定場圖(賽璐璐 + 勾線)仍未補**。以下為原型期紀錄:使用者手稿「冠層莢化放射 + 樹幹迴轉」→ 逐瓣誤差 → 逐叢瓣化 → 五顆降級旋鈕 → **簡單幾何版**(旁瓣佈局照舊、葉冠整組換基本體:針葉多角錐 / 闊葉橢球或多面體 / 幹枝圓台多面柱 / 尖端細錐;茂密度一顆旋鈕;拿掉葉冠 = 枯木)。佈局收成三個縫(`trunk_cut`/`clump_metrics`/`plan_lobes`),抽出前後 v7 **逐位元相同**。針葉:簡單幾何 `mid` **1,138 面**同時過成長額度(13.3%)與 tree 族 `kind_factor`(2,000),而 v7 的目標是 2,949(只過前者);闊葉主旋鈕是 `--major` 不是茂密度。**`--touch` 定案 = 1.15**(§5z-n,使用者 2026-08-08):兩族**同面數** ⇒ 預算逐位元不動(針葉 1,220×73 = 14.3% / 闊葉 1,256×211 = 42.5% / 合計 56.8%),只是孤兒多拉長、**刪除數不變**;歷史對照組以 `R4` 常數顯式釘死,重跑逐格對上舊值。列圖 `out_simple/sheet_*.png` 十一張。**零節點出貨、儲存庫只有 runbook 改動**;原型住 study clone `simple_tree.py`/`canopy_petals.py`/`sheet_simple.py`(⚠ 該 clone **無 `.git`** ⇒ 定案值 MUST 在 §5z-n 留字面紀錄) |
-| **D-10 建築整棟量體 — 首顆節點 `building/mass_a` 入庫 + deco 上限欠帳清掉(佇列 F 步驟 3~5)** | **SHIPPED 2026-08-08 深夜** (§5ab) | 使用者對 §5aa 的兩個收尾問題各回一字:**「減面」**+**「開」**。①**deco 欠帳清掉**:採用四場取樣(`node_caps` 222/373/285),chimney_a 234 → **217**、ac_a 426 → **279**;刀落在**已出貨的節點本身**(1.08:1 / 1.53:1),因為 SF3D 原檔**復現不出**出貨那兩顆(只得到 220/402、黏土一看是另一顆)⇒ 記下 `post.source_gap` 與新規矩「來源帳 MUST 記到輸出目錄與序號」。②**首顆整棟節點**:來源是 §5n 閘門那一輪就生好、還躺在 `out_gate/` 的 Art Deco 摩天樓 ⇒ **不必重跑 T2**(避開 free RAM 19.8GB 貼著 20GB 門檻的風險)。③**最貴的發現**:`--cells` 在建築上**不是解析度旋鈕而是「濾掉立面凹槽」的旋鈕** —— 預設 256 把 T2 生出來的垂直窗格凹槽逐條重採樣成隨機凸起,整棟讀起來是**侵蝕岩**;往細調(384/512)`kf_p95` 從 0.91% 掉到 0.51% 而畫面更糟(§5o「表面偏差量不出撕裂」換了個面貌),往粗調到 **72** 才讓凹槽落在取樣解析度之下、而尺度大一個量級的退縮階梯完整保留(再粗到 56 裙樓斷成浮塊)。逐檔黏土 56/72/96/128/160/256/384/512。⇒ `mass_a` **2,898 面**(上限 2,981)。④**只有截圖看得到的缺陷**:附件掛在**方盒**頂而庫節點收在 0.95×b.h 且末端是尖塔 ⇒ 看板/天線/程序頂塔**浮在半空** ⇒ 挑中的那幾棟純視覺附件一律改推丟棄桶(`vis()` 19 處,**只換目的地、rnd 照抽**),而**帶碰撞柱的兩件 MUST NOT 進丟棄桶**(少一根碰撞柱 = 載到庫與沒載到的權威幾何分家)。**亂數不變是量的**:載庫 vs 不載庫的 `veg 530 / mega 10 / beacon 9 / climb 122` 逐項相同。⑤新機位 `shot_scene mass_near`(比對幾何物件本身找到 instance 再反推鏡位)—— 整棟量體是**唯一吃立面貼圖**的庫節點,UV 一錯就是純色板而離線閘門全綠。實測 shibuya:主量體桶 671 → 647(13 棟換 + 11 頂程序頂塔退場),`mass_a` 佔全場 2.9%。intake **241** / siteplan **197**(`--break-mass` 4 條紅)/ joints 21611-0 / beacons 68 / gpu 54 / soft 73 / cel 52 / visual 124 / e2e 全綠 / bal 全綠且逐項不動 / 對照台 0-0-0 / **traverse 96-19**(與上線前同一組既有基準紅字)。**§5ac 同輪追加鏡像貼補**(使用者看過定場圖後定案「另一面是空的,使用鏡像貼補空的部分」):空的不是破面(六個方向都有面),是**沒被拍到的那半沒有內容** —— 量得出來的指標是半空間**面積**不對稱(z 12.3% / x 0.6%;空的那半是一片光滑的板,開放邊與元件數判不出來)。**刀的位置比刀本身重要**:放在 solidify 端的兩種寫法都把網格撕爛(切半鏡射 開放邊 16 → 362、裙樓整條不見;整份疊合 1,119 / 5,016 開放邊),共同的錯誤前提是「resample 會幫我熔合」——它只對**單層**輸入成立 ⇒ `solidify_parts.py --mirror` 整支退回。正確位置 = **`normalize_parts.py --mirror <node>=<x|z|auto>`**(Blender Mirror modifier 的 bisect + clip + 焊頂點,不重建等值面 ⇒ 一條新的自由邊都不生),留哪半由面積決定、MUST 排在減面之前。實測**鏡射後比不鏡射還乾淨**(開放邊 18 → **15**),面 2,898 → 2,921(仍 ≤ 2,981)。未做:真機冒煙、名冊只有一顆(十幾棟塔樓同剪影) |
-| **D-11 鏡像貼補推廣到巨岩/假山 — 先量「哪一面真的是空的」,再決定用哪一把刀** | **SHIPPED 2026-08-09** (§5ad) | 使用者定案「img to 3D 會出現另一面是空的問題,由正面對稱的區塊去補對應的區塊,包含建築/巨岩/假山都這樣處理」。**這是條件句 ⇒ 先做尺再做刀**:兩支新儀器 `mesh_sym.mjs`(半空間面積不對稱 / 鏡射殘差 / 邊界邊 / 鬆散元件 —— 空的那半是**光滑的板**不是洞,只有面積判得出來)+ `node_sheet.mjs`(節點的**四個面**黏土對照,繞相機不轉模型 ⇒ 結構上不會重蹈 §5ac-e 的 `ry` no-op)。閘門 `EMPTY_ASYM = 0.12` **錨在使用者自己判定過的那一顆**(§5ac-a 的 `mass_a` 0.123)⇒ 15 顆現役節點只有 **6 顆**該補,MUST NOT 退回逐顆手挑的名冊。刀改成 `--rework`(落在**已出貨節點**上,`source_gap` 讓重跑原檔不可行),**外廓與面數逐位元不動**(`nodeExtent` 那兩個數動完等比還原;鏡射多出的切面一律減面回原值 ≤1.2:1)。**必要前置 = 先焊頂點**(glTF 匯入器不會焊回匯出時的法線接縫拆分 ⇒ 平面著色節點在 Blender 眼裡是三角形湯:hoodoo_a 382→96 面、tower_a 開放邊 0→170),著色風格依原拆分比還原。**兩把刀依主體是不是人造的選**:`half`(bisect,建築)對圓渾岩體會做出**葉緣**(mega_c 變成有中脊的葉子、mesa_a 平頂變尖峰、chimney_a 變帳篷);`union`(精確布林)取外包絡 ⇒ 接縫是內凹岩溝而非外凸銳脊。**三道閘各對應一次實測失敗**(面數 ≥0.8×、鬆散元件不增(tower_a union 1→**14** 而面數只掉 6%)、邊界邊 ≤ +5% 面數),MUST 排在減面之前。去對稱化 `warp` 的方向 **MUST 取徑向不取頂點法線**(法線在座標重合的獨立頂點上不同 ⇒ 沿每條硬邊撕開,mega_a 開放邊 0→164),振幅錨在天然殘差帶(0.030~0.274,中位 0.073);**有破口的節點 MUST warp 0**。出貨 **4 顆岩節點**(collapse_a/facet_a/mega_c union、mega_d half;不對稱 0.13~0.18 → ≤0.014),`mega_d` 是明確的贏(舊版整塊缺角+破洞),另三顆是**交換**(補滿 ↔ 接縫多一道對稱凹槽)。**沒出貨**:hoodoo_a(兩刀皆撐不住,來源 V=139/F=382 非流形 ⇒ 該重生成)、chimney_a(union 過不了閘、half 是回歸 ⇒ `building.glb` **逐位元不變**)、ac_a 與其餘 7 顆岩節點(門檻之下 = 沒有空的那一面)。intake 241 / siteplan 197(`--break-shy` 紅)/ beacons 68(`--break-extent` 紅)/ joints 21611-0 / cel 52 / visual 124 / gpu 54 / soft 73 / bal 全綠 / e2e 全綠(fresh :8666)/ 對照台 0-0-0;**反向驗證**:hoodoo_a 與 tower_a 的兩道閘實測會紅。未跑:真機冒煙、traverse(㋓;理由上不受影響 —— 巨岩碰撞算式 MUST NOT 讀庫幾何,而外廓逐位元還原) |
-| **D-12 建築續 — `mass` 名冊補到 2 顆 + 語料端兩個「合法但沒用」的坑** | **SHIPPED 2026-08-09** (§5ae) | 使用者「繼續處理建築」⇒ 收 §5ab-f 的第 2 條(名冊只有一顆 = 十幾棟塔樓同剪影)。①**「還有 3 張沒用過」裡有 2 張不是建築** —— 是同一本 1932 年畢業紀念冊的封面與封底;兩個機制同時放行且都不報錯:館藏源 `smithsonian_african_american_history_museum` 不在 `EXCLUDED_SOURCES`、而 Openverse 對它回不出尺寸 ⇒ `size_unknown` 讓短邊 1024 那道閘**結構性地量不到**。補上排除源 + 人眼 reject(id 留在 seen,不會重抓)⇒ `--plan` 才開始說實話。**規矩**:`--plan` 的「抓夠了」只證明下載成功,不證明內容對。②`want` 4 → 8、查詢改成六句**具名單一主體**(舊的 `art deco skyscraper` 全庫只有 6 筆);補抓 3 張,採用 **Fisher Building**(藍天下整棟入鏡)。③生成配方**一個字沒改**(T2-spz 1024_cascade/seed 1234 → `--cells 72 --offset 0.006 --target 2900` → 非等向 0.5×0.5 + `--boxuv`):117.0s / 2,890 MiB / raw 4.31M → 49,169 面;實體化結果**比 mass_a 乾淨**(0 開放邊 / 1 元件 vs 16 / 6),`mass_b` **2,900 面** ≤ 2,981。④**最有價值的發現**:mass_b 的半空間面積不對稱 x 0.004 / z 0.014,**遠在 §5ad 的 0.12 閘門之下 = 不需要鏡像貼補**。與 mass_a 鏡射前的 z 0.123 對照,兩顆的差別只有**語料**(緊裁的夜景 crown vs 藍天下的整棟)⇒ **「另一面是空的」是單張照片只約束得到被拍到的那幾面的後果,上游修語料勝過下游動刀**;選片準則多一條「這一桶要整棟入鏡」。⑤**兩份會靜默過期的手寫清單**(`shot_scene` 的載入讀數 + `mass_near` 認人,名冊擴充時兩處都還只認得 mass_a —— 同 `% 3` 輪替除數那個坑)⇒ 新讀取縫 `partlib.js libNames()`(唯讀快照,**只給離線工具**,遊戲路徑一律走 `libGeo(具名節點)`)。⑥順手修掉 `matte_photos.py` 在繁中 Windows 主控台的 cp950 `UnicodeEncodeError`(批次跑到第 4 張才死、前 3 張留著)。intake **245** / siteplan 197(`--break-mass` 3 條紅)/ joints 21611-0 / beacons 68 / cel 52 / visual 124 / gpu 54 / soft 73 / bal 全綠 / e2e 全綠(fresh :8668)/ 對照台 0-0-0(mass_b 的帳含 `gen.out` 輸出目錄與檔名)/ 定場圖 `mass_near` **同時看得到兩種剪影**。draw call 不隨名冊長度增加(上限仍是 pick_n = 16,分配走位置雜湊、零 rnd)。未做:真機冒煙、`chimney_a` 仍待重生成、mass_c(GE Building / 布魯托主義板樓已 matte)|
-| **D-14 `chimney_a` 重生成 — 換模型不換語料;hoodoo 判退(階梯要走對那一階)** | **SHIPPED 2026-08-09** (§5ag) | 使用者「繼續」⇒ 收 §5af-g 的第 1、3 條(§5ad-f 起掛了兩輪的兩顆重生成)。§5af 記的 RAM 障礙自己解除(15.1 → **23.0GB avail**)。①**先看照片**(既有紀律)當場解釋了兩顆的失敗:chimney 出貨版那張是**仰角極陡、基座出框**、hoodoo 出貨版那張**主體只佔畫面 15% 且 alpha 糊成一片**(T2 以 alpha>204 取 bbox ⇒ 餵進去的是一小塊)。②三注一起跑(配方一字未改):chimney 舊語料 **270 面 / 0 開放邊 / 2 元件 / watertight / kf_p95 0.72%** ◎;chimney 三連煙囪(平視整組入鏡)**6 元件** ✗;hoodoo 乾淨單體 500 面 / 單元件 / kf_p95 0.98% —— **讀數全綠而黏土是一片薄板** ✗。③**hoodoo 判退,`rock.glb` 逐位元不變**:單張照片只約束得到被拍到那一面,而 hoodoo 的辨識特徵**恰好全在剪影上** ⇒ 模型沒理由給它厚度(「幾何品質指標量不出形狀對不對」,同 §5ab-b 的另一面)。§5ad-f 說「正解是重生成」沒錯,但**重生成 MUST 走階梯上對的那一階** —— hoodoo 是實心岩體 ⇒ 2GP(WSL2),拿 T2 換是把階梯走反。④**chimney 採用:同一張照片、換模型**(SF3D → T2-spz;§5n 早已量到 T2 對建築/規則幾何雙 ◎)。**216 面**、邊界邊 **189 → 0**、半空間不對稱 **0.214 → 0.053**(掉到 `EMPTY_ASYM = 0.12` 之下)⇒ §5ad-f 列為「兩把鏡像刀都不適用」的那個問題**重生成之後不存在了** —— §5ae-d「上游修勝過下游動刀」的第二次兌現,而 §5ad 那把刀當初正是為了救這一顆才被逼出來的。**外廓逐位元相同**(0.570 / ±0.475)⇒ 純粹同名取代,消費端與碰撞語意一格不動。⑤**準則補一句**:三連煙囪輸給仰拍那張,與 §5ae-d 的「整體入鏡」表面矛盾 —— 差別是**主體數**,222 面的預算分不出三根柱子,而**碎法是元件數不是面數**。⇒「整體入鏡」的前提是**主體只有一個**。intake 245 / mesh_sym 名冊 16 → **15 顆** / siteplan 197(`--break-mass` 3 紅)/ beacons 68 ± 反向 / joints 21611-0 / world_height 49 / cel 52 / visual 124 / gpu 54 / soft 73 / e2e 全綠(fresh :8672)/ bal 全綠 / 對照台 0-0-0 (`parts_manifest` 30 → 31 列,ac_a 與 chimney_a **拆列**,同 §5t 的 mesa_a)。未做見 §5ag-f |
-| **D-16 設計圖 → 3D 外殼(`plan_hull`)** | **功能 SHIPPED / 零節點出貨 2026-08-09** (§5ai) | 使用者定案「建築部分也加入設計圖轉 3D 的功能,轉 3D 時只要處理外層表面就好」。①**這一段不是模型是幾何**:照片只給一個視角 + 明暗線索(深度得猜,§5ag-c 的 hoodoo 就是猜不出厚度而讀數全綠地塌成薄板),而設計圖給的是**正投影的精確輪廓** ⇒ 逐視圖取外輪廓 → 沿自己那一軸拉伸 → **稜柱取交集** = 視覺外殼,**解出來的**。零 GPU / 零權重 / 零亂數 / 離線可驗;階梯多一階且排最前:**有設計圖就別去猜**。②**「只要處理外層表面」是兩件事而剛好同一個實作**:只取最外層輪廓(窗/樓層線/隔間一律填實 —— 那些是貼圖的事,也是三角形預算的主要旋鈕:不填實光窗格就上千面,而 mass 桶上限 2,981)+ 只有外殼沒有室內。**這條規則在三處各擋一次**(填實 / RETR_EXTERNAL / prism 只吃 exterior),而這件事是**被反向驗證逼出來的** —— 只拆前兩處第三處會把洞再吃一次 ⇒ 窗戶版仍是 12 面盒 = **假綠**。③三個「不報錯只給爛結果」的坑全部量過:**每一張真設計圖都有圖框**(最直覺的邊界泛洪寫法會量到「那張紙」不是「那棟樓」,合成實測寬 0.6678 → 0.7366 而網格看起來正常)⇒ 改挑輪廓 + `FRAME_MAX`;**渲染圖不是線稿**(墨是調子不是輪廓 ⇒ 剪影碎掉、亮處變洞;CC0 六張實測 HABS 線稿墨密度 **11.4%** vs 四張渲染圖 **32~71%**)⇒ `LINEART_INK = 0.25` 硬擋 + `--allow-render`;**缺口報錯 MUST 排在渲染圖判定之前**(斷線遮罩的墨密度是 100%,反過來會把人指到錯的方向)。④真圖實測 HABS Tudor Place 南立面:圖框/標題欄剔除、窗與線腳填實、煙囪山牆保留 ⇒ **160 面 / 單元件 / watertight**。⑤**零節點出貨,而理由是形狀不是品質**:那張唯一乾淨線稿是**寬高比 3.6:1 的兩層宅邸**,而唯一吃整棟量體的桶服務 >55m 商辦塔樓、非等向 fit 會把它拉成帶山牆煙囪的高塔 ⇒ 缺的是**塔樓立面測繪圖**(同 §5ag-c 判退 hoodoo 那一條:讀數不能替形狀背書)。`bld_drawing` 語料列**刻意不帶 `grp`**(輸入格式不是建物類別,進分母會稀釋 50/25/25)。⑥**使用者條件「跟開源工具差不多就繼續使用」⇒ 量過了**:這一格**沒有**對位的開源工具(FloorplanToBlender3d 吃平面圖產**室內**牆與房間、3dfier 吃 GIS 多邊形產 LOD1、FloorNet/CubiCasa 是平面圖向量化 —— 全是「室內重建」,正好是「只要處理外層表面」的反面)⇒ 對照組改成**通用演算法**:`voxel visual hull + marching cubes` 與 `bbox 擠出`,同一張輸入、**同一個三角形預算(≤2,981)**、尺 = 剪影 IoU(真值 = 設計圖自己,上界 1.0)。真圖 HABS:bbox 0.5899(12 面)/ voxel+MC 0.7487(2,980 ← 259,924,**掉了水密**)/ **ours 0.9209(160 面)**;合成雙視圖:0.8472 / 0.7456 / **ours 0.9935(20 面)**。**不是差不多,是好一個級距而且理由是結構性的**(建築輪廓是分段直線 ⇒ 多邊形稜柱逐段重現;marching cubes 把每個角磨圓、再從十幾萬面減到預算內又磨一次)⇒ 條件成立,續用。⚠ 這個對照本身**踩了三次「看起來合理但排名相反」的坑**(批次 `fillPoly` 走偶奇規則量到描邊不是面積、參考遮罩多翻一次 y 讓**外接盒因上下對稱反而最高**、3D IoU 兩邊框不同量到的是「誰對深度做了假設」)—— 三次都不報錯。`audit_plan_mesh.py` **21 項全綠**;反向 `--break-outer` **9 條紅**、`--break-frame` 1 條紅。遊戲程式碼一行未動。未做見 §5ai-h |
-| **D-15 `hoodoo_a` 換掉(語料 + 後處理一起)+ 選片標準與建築語料配比兩條定案** | **SHIPPED 2026-08-09** (§5ah) | 使用者「繼續」⇒ 收 §5ag-f 第 1 條(掛了三輪的 hoodoo 重生成);中途追加兩條定案(選片乾淨單一主體 + 光源充足;建築 50/25/25)。①**「重生成」這個處方只對一半**:2GP 的原生輸出**一直都是水密的**(213,682 面 / 開放邊 0 / 元件 1),非流形是**後處理**做出來的 —— 舊路 `FaceReducer(pymeshlab quadric) 380:1` 把邊塌成非流形(焊點 139,閉合流形理論值 193),換成 `solidify --mode resample` 之後焊點 **192**。**這條會靜默傳染**:`mesh_sym` 的「邊界邊 0」對非流形完全無感,只有真的動刀才現形。②**但只換後處理不夠** —— 黏土仍是「團塊 + 小角」(照片主體只佔 15%,2GP 忠實地把底下那面崖壁一起生了出來)⇒ 同一階(2GP)換語料 `ov_929bc3d9`:焊點**恰好 193 = 閉合流形理論值**,黏土四面是**層理石柱 + 過寬帽岩 + 裙狀基座** = 消費端註解寫的那個東西。**外廓與面數逐位元相同**(0.950 / ±0.950 / 382)⇒ 純粹同名取代。⚠ 目標欄 MUST 是非等向 `1x1`;一度寫成等比 ⇒ 徑向 0.5997(契約仍過)= 整柱比碰撞柱細 37%,而**所有離線閘門全綠**。③**鏡像刀這次跑得動了,而結果該退**:網格變流形之後 union 在第一顆候選上 `382 → 374 / 元件 1 → 1 / 三道閘全過`(對比 §5ad-f 的 382 → 128)⇒ **那道閘從頭到尾沒錯,它擋的是上游的爛網格**;但黏土否決(z 聯集把**頸部**做成兩根叉開的柱子,而頸部是 hoodoo 的辨識特徵),新語料那顆兩把刀更是被元件閘直接擋下(1→3 / 1→2)⇒ **出貨不做鏡像貼補**,x 0.159 是「石柱歪 + 帽岩偏心」的天然形狀不是空的一面。§5ad-f 那行因果講反了:撐不住的原因在網格,該重生成的原因在照片。④**選片標準**落在兩支工具各一半(下載前只有查詢用字管得到「乾淨」;「幾個主體 / 光夠不夠」要看 matte)⇒ `screen_mattes.py` 新增 ④多主體(最大連通元件**面積**佔比 < 0.70)與 ⑤光源不足(`lum<35 ∧ dark≥0.70`),門檻拿**已出貨的 25 張來源**校準、**零誤殺**(反向掃描:0.778 起開始誤殺桁架水塔)。三個決定:**量在 matte 不是照片**(本輪贏家原圖三顆蘑菇岩 + 電線桿,去背只剩一顆)、**取面積佔比不取塊數**(水塔的腿是 4 塊但只有一個主體)、**統計分不開的一帶進觀察名單 sheet**(熱氣球 0.760 vs 水塔 0.778 ⇒ 收到 0.77 就是拿兩個樣本過擬合)。⑤**順手撞到既有兩道閘是「樹形狀」的**:①`BLANK_COV`(樹是密實團塊)誤殺 3 張已出貨(含魔鬼塔)、②`PRINT_FILL`(前提是主體留得下輪廓縫,而**建物就是個方盒**)誤殺 1 張 ⇒ 收成 `TREE_CAL_FAMS` + 別族實測校準的 `PRINT_FILL_OTHER 0.93`,兩條在非校準族**降級成觀察線而不是放棄**;tree 三桶讀數 **27/10/3 與 F0 逐位元相同**。⑥**建築配比**只約束帶 `grp` 的整棟建物列(零件列進分母 = 50% 會隨零件數浮動),新增 12 列、舊區域風格列**一列沒刪**只降 `want`(刪列會讓已抓照片變孤兒);**配比是驗出來的**(`buildingMix()` 現算、`--plan` 印目標 vs 現有、抓取前 `buildingMixDrift()` 擋)。⑦兩支工具的資料家改成參數 `--home`(§5af-g 記過一次「worktree 被刪 ⇒ 語料跟著沒」)。intake 245 / mesh_sym 15 顆 / siteplan 197(`--break-shy` 3 紅)/ beacons 68 ± 反向 / joints 21611-0 / world_height 49 / cel 52 / visual 124 / gpu 54 / soft 73 / e2e **584 綠**(fresh :8674;⚠ 埠走 `WS_URL=` 不是 `PORT=`)/ bal 全綠且逐項同 §5af/§5ag。未做見 §5ah-i |
-| **D-13 冒煙那一項終於跑得動 — 而它一跑就發現整條建築線在 main 上是死碼** | **SHIPPED 2026-08-09** (§5af) | 使用者「繼續 ai3d_runbook.md」⇒ 收連三輪(§5ab-f/§5ad-g/§5ae-g)未做清單的第 1 條**真機冒煙**。①**沒人跑得動的原因與 §5z-t 同款**:`shot_scene` 的 `cfg.env` 寫死 `day`,而立面 `emissiveMap` 只在 `time === 'night'` 點亮 ⇒ 整棟量體節點**唯一真正要驗的東西**(它是唯一吃立面貼圖的庫節點,盒投影 UV 一錯白天只是「有 tint 的板」、夜裡才看得出「沒有窗的板」)**從來沒有被畫過**。補 `--time/--season/--weather` 透傳,非預設值進檔名後綴,**合法值當場驗打錯就停**(`TIMES[x] || TIMES.day` 會讓 `--time nigth` 拍出一組白天的圖而讀數全正常)。②**冒煙第一回合就撞到更大的事**:`mass_near` 機位連兩個場地整個消失 ⇒ 補讀數(機位消失 MUST 講得出原因)⇒ `挑中 0 棟`。追出來是**兩個 PR 各自綠、合起來壞**的語意衝突:`7135050`(PR #170 = §5aa~§5ae 整條建築線)寫在 `bldCap: 170` 的底上、`MASS.MIN_H = 55` 完全合理;`f94515f`(PR #169 = 世界高度上限)獨立把 `bldCap` 改成 `objHeightMax()` = 2×26 = **52**;兩者改的不是同幾行、git 合得乾乾淨淨,而 main 上 `b.commercial && b.h > 55` **結構性地永遠是空的** ⇒ `mass_a`+`mass_b`(5,821 tris、兩輪 img→3D 的產出)**一顆都沒被擺出去過**,同一刀還砍掉退縮頂塔(`b.h > 55`)、第二層退縮(`b.h > 100`)、屋頂天線(`b.h > 60`)。**沒有任何東西會說**:intake 245 綠、siteplan 197 綠且 `--break-mass` 照樣紅、對照台 0 孤兒、e2e/bal 全綠。③使用者定案**提高物件高度上限** ⇒ `OBJ_F 2 → 4`(104m);連帶 `CEIL_PEAK_F 2.5 → 4.5`(結構保證)與**使用者沒點名的第三個** `CEIL_AVG_F 4 → 6` —— 地表恆 ≤ 最高海拔 ⇒ 平均項係數不大於峰頂項的話「取 max 的兩端各自勝出」當場退化成單一項(稽核 Ⅰ 補一條把這個前提明寫)。④**守門線**:稽核 Ⅲ 新增「吃建物高度的門檻 MUST 全部 < `objHeightMax()`」,門檻**自 biomes 原文抽**(之後再加一條 `b.h > N` 自動跟著驗),新反向旗標 `--break-cap` ⇒ 紅字並逐一列出構不到的 55/60/100m(既有 `--break-obj` 是把上限往上推,咬不到這一條)。⑤**冒煙結果**:夜間立面**通過**(挑中 15~16 棟,兩顆庫節點的窗格與程序方盒一樣亮著橘光 ⇒ 盒投影 UV 契約成立);岩體四面**通過**(新機位 `mega_orbit_{0,90,180,270}` **繞相機不轉模型** ⇒ §5ac-e 的 `ry` no-op 結構上不可能重蹈;shibuya 拍到 `rock/tower_a` 四面實心);碰撞**用量的**(水平徑向 0.475 / 縱向 ±0.47 對權威方盒 ±0.5 ⇒ 可見量體恆收在碰撞柱內,方向是對的;代價「被空氣擋住」≤2.5% 寬 / 3% 高,上限翻倍後絕對值最壞約 3.1m —— 有造型的節點裝進方盒碰撞柱的**固有**取捨,A30 不准動碰撞柱 ⇒ 記錄不修)。⑥順手修掉兩個「讀數正常但拍錯東西」的坑:機位算在第一次 render **之前**(`matrixWorld` 未更新)、頂點數相同**不保證**是單獨一顆(合併桶撞號 ⇒ 實測「外接半徑 733.5m」把相機擺到 1.4km 外拍空氣;門檻吃 `objHeightMax()×2`,擋掉幾顆一律印出來,正常門檻下 taroko 那一局就擋掉 1 顆)。world_height **49**(+2)/ intake 245 / siteplan 197(`--break-mass` 3 紅)/ beacons 68 ± 反向 / joints 21611-0 / cel 52 / visual 124 / gpu 54 / soft 73 / e2e 全綠(fresh :8670)/ bal 全綠且**逐項與 §5ae 逐位元相同**(⑦f 1.78×;WORLD_H 不進平衡模型)/ **traverse 93-19 —— 敗數與改動前(§5ab 的 96-19)相同且是同一組**(門檻活過來 ⇒ 那幾行的 `rnd()` 重新被消耗 ⇒ 全圖佈局重排,這一項因此非跑不可;19 條逐條對回既有基線的四個成因,一條新的都沒有)。未做見 §5af-g |
-| **D-9 建築整棟量體 — 預算級距 + 消費端縫(佇列 F 步驟 1~2)** | **SHIPPED 2026-08-08(縫);零節點出貨** (§5aa) | 使用者定案「接著處理建築的部分」→ 選「**執行佇列 F**」,**推翻 plan §8.1 的 `BUILDERS` 那一列**(同日稍早的「只做景觀樹木與石頭」;plan 已標注覆寫)。①**量測直接否決「整桶換」**:四場 `--live` 實測(新增 taipei101 —— 建物最多的一張,1,114 棟)主量體 instance 上界 **1,325**、桶總量 15,900 tris ⇒ 整桶換的逐節點上限只有 **36 tris**,而 §5o 已證 500 面就留不住 Art Deco 的退縮量體 ⇒ 「只換子集」是**推導出來的**。②子集大小由兩條約束取較嚴者:細節下限(cap ≥ 2 × 500)⇒ N ≤ 47、draw call(額外 mesh ≤ 立面段現行的 16)⇒ N ≤ **16** ⇒ `node_cap` = 3 × 15,900 ÷ 16 = **2,981**;高度門檻沿用既有的退縮頂塔 55m。③縫 = `BLD_LIB` 第四桶 `mass`(值可為**輪替名冊**陣列,除數由長度推導),`bldGeo(key, i)` 仍是唯一解析縫(`libGeo(` 全檔恰 3 處);碰撞/LOS 有向盒一格不動(A30)、零 rnd(A4)、庫沒載到全數落回方盒。④**材質契約**:傳該立面款現做的 `wall` 材質(窗格 + 夜間自發光 + tint 全保住)⇒ 節點 MUST 帶**盒投影 UV**(`normalize_parts.py --boxuv`,本輪一併實作 + round-trip 驗過)。④-b **那條路真的走過一次**(§5aa-c2:暫時把 `mass` 指到既有節點實測)—— 主量體 671 → 658、13 棟落進 5 個帶貼圖的新 mesh(額外 draw call 5 < 上界 16)。⑤**逐位元不變是量的**:新旗標 `--osm-cache` 錄播 Overpass(同一張圖兩次 `--live` 差到 ±70%),A/B 後全場 tris / mesh 數 / 每個桶 / 671 筆逐實例尺寸普查逐位元相同。⑥**順手量到一筆欠帳**:同一批資料重推 deco 三桶,上限 chimney 240→222 / acbox 435→285 ⇒ 已出貨的 234/426 會超標(2026-08-06 那輪沒取到 taipei101)—— 本輪刻意不動閘門,記在 `tri_budget.resample_2026_08_08`。intake 237 / siteplan **194**(`--break-mass` 恰 3 條紅)/ joints 21611-0 / beacons 68 ± 反向 / gpu 54 / soft 73 / cel 52 / visual 124 / e2e 全綠(fresh :8666)/ bal 全綠且**逐項不動** / 對照台 0-0-0。未做清單見 §5aa-g |
-| **TRELLIS.2-spz fork gate(§5l 頭兩階的翻案)** | **MEASURED — OPEN 2026-08-06 深夜**(§5n)| 使用者指示「先在 3060 上跑閘門量測」。IgorAherne StableProjectorz fork = Windows 原生 + 全預編 cp311 wheel + 逐階段 CPU offload;§5l/§5m 同組 7 張 **7/7 全過 @1024_cascade,59~226s/張、torch 峰值 2.7~3.4GB、裝置 free 恆 ≥5.4GB** —— §5l 殺掉 TRELLIS 1 的網格抽取在 O-Voxel 路徑上不是事。**真門檻是 RAM**(low_vram 模型駐留 CPU ~19GB,avail <20GB 載入無聲死);fill 前篩對 O-Voxel 雙層薄殼**結構性不適用**(七張全 ✗ 而人眼兩張 ◎);建築雙 ◎ 是甜蜜點(幾何+PBR 一次出);「同一張 matte ≠ 同一個輸入」(T2 裁 alpha>204 bbox + 預乘,軟 alpha matte 整段被裁)。**零節點出貨**(METHODS 不動);階梯更新 = `T2-spz(建築/要貼圖)→ 2GP(實心岩體)→ SF3D(快篩)→ procedural`;venv 住 study clone `Documents\study\TRELLIS.2-stableprojectorz\.venv` |
+| Tool | Verdict | Measured |
+|---|---|---|
+| TRELLIS.2-4B / TRELLIS 1, official builds | ❌ **out on this card** (§5l) | TRELLIS 1 clears cond/sparse-structure/slat but flexicubes mesh extraction OOMs with 9.58GB free after every offload trick; TRELLIS.2-4B needs 24GB and floors at 512³. The old "8GB@256 / 12GB@512" line conflated two generations |
+| **TRELLIS.2 stableprojectorz fork** | ✅ **open** (§5n) | Native Windows, prebuilt cp311 wheels, per-stage CPU offload: 7/7 @1024³, torch peak ≤3.4GB, 59–226s/image. **The real threshold is system RAM** — the model sits in CPU at ~19GB, and loading dies silently below ~20GB free |
+| **Hunyuan3D-2GP** | ✅ **open** (§5m) | WSL2, torch peak a constant 2524MiB, 61–67s/image, weights 4.9GB. Recovers both SF3D failure modes (hoodoo, Art Deco tower). Human-eye yield ~1/2 vs SF3D's ~1/6 |
+| **Stable Fast 3D** | ✅ loosest | 6GB, peak 6.17GB measured, warm 13.6s / 2 images; delight + UV included. Regular man-made geometry collapses to a facade shell — it is a prescreen, not a finisher |
+| Blender headless | ✅ | CPU |
 
-## 2. Environment matrix (measured 2026-08-05 — do not rediscover, trust this)
+Hunyuan's paint stage (21GB) is **never run** — this project does not want PBR.
+
+### 0.2 Boundary: a part library, not whole-unit GLBs
+
+`MODEL_MANIFEST` supports whole-unit GLBs, but the mech column is all `null` on purpose:
+`locomotion.js` writes **named nodes** every frame; `paint.js` liveries, `toon.js` ramps and the
+`uPaintFace` gate all hang off **per-part materials**; and on the static side the entire value of
+`VEG_DEFS` / `MEGALITHS` / `KIND_PARTS` **is** per-instance variation. Bake a whole tree and every
+tree in the forest is identical.
+
+```
+AI output      →  part-library GLB (one named node per part; geometry + one base colour)
+existing code  →  which part, where, what rotation, how much jitter, what colour, how it moves
+```
+
+Seam: `public/js/partlib.js` — `libGeo(name) → BufferGeometry | null`, `loadPartLib(url)` loads once
+and `markShared()`s. Three consumers changed one line each: `beacons.js _geo(p.g)` accepts
+`['lib', name, <original descriptor>]`; `biomes.js` resolves `p.lib` **in the build-time consumption
+loop** (a module-scope `libGeo()` can never work — `VEG_DEFS` is constructed at import time, before
+any async fetch); `models.js` changes geometry source only.
+
+**Hard invariants (acceptance conditions, not advice):**
+
+1. **Fuse** — library load failure ⇒ today's frame, bit for bit.
+2. **Measured extents** — collider / `foot` / `col.r` always from `Box3.setFromObject` *after* the
+   swap; never the nominal value (A30, `audit_beacons` Ⅰ).
+3. **Zero extra randomness** — swapping geometry must not consume an extra `rnd()`, or the whole
+   map's layout sequence shifts (CLAUDE.md §2.3).
+4. **Shared geometry** — always `markShared()`; `disposeTree` skips it (A25).
+5. **Geometry + base colour only** — no normal/metal/roughness maps (CLAUDE.md §1).
+6. **Triangle budget derived by measurement** — measure the family's current count first; the new
+   budget is that value × a justified factor. Never hand-write a nice-sounding number.
+7. **Layout maths reads the fuse `p.g`, never the library geometry.** `giantCrownR` was resolved
+   *by contract, not by vertex scan* — a vertex scan would make crown radius depend on GLB load
+   success, i.e. layout diverging per client (§2.3). The intake envelope (GLB extent ≤ fallback,
+   ≥ half) keeps fuse-derived radii conservative. **Do not "fix" this into a vertex scan.**
+
+### 0.3 Method split by geometry class
+
+| Family | Method | Why |
+|---|---|---|
+| Landmarks `KIND_PARTS` | **LLM reads photos → writes pure-data part rows** ("Route A") | Part tables are already pure-data primitives — the only reason `audit_beacons` Ⅰ can verify extents offline. Zero binary weight, zero licence exposure, native fit with `stretch`/`partJitter`. Output is **part-table data rows, not three.js code** (A38) |
+| Megaliths `MEGALITHS`, giant-tree sculptural parts | **img→3D → partlib GLB** | Organic and irregular — primitives cannot express them; the only class worth the GLB payload |
+| Building whole masses (`biomes.js` general-building InstancedMesh) | **img→3D GLB** (queue F) | Overrides the 2026-08-08 "organic only" scope narrowing — see below |
+| Building roof deco `BLD_LIB` | GLB, already shipped | Different consumer from the masses; both are true |
+| Small vegetation, generic building masses | **Stay procedural** | Wholesale GLB swap explodes draw calls and the triangle budget; `procedural-object-detail` already covers variation |
+| `CIVIC_PARTS` civic props | **Declined** (user, 2026-08-08) | — |
+| Mechs / NPCs | Track A only (§0.4) | Out of scope of the static proposal |
+
+**Scope history, because it reads as a contradiction otherwise.** On 2026-08-08 the user narrowed
+scope to *"only complex organic shapes — landscape trees, rocks"*, declining `CIVIC_PARTS` and
+freezing `KIND_PARTS` at what was declared. Later the same day they directed "now handle the
+buildings", and when asked which way to go chose **execute queue F** (whole-mass consumption seam +
+T2 intake path). So `BUILDERS`/building masses are **in**, via the GLB lane, not the LLM-part-row
+lane. Nothing already shipped was removed — pulling `BLD_LIB` back out would burn measured budget
+work nobody asked to change.
+
+**"Just add more rows" is not free.** For trees the roster **is** the knob and it is at its economic
+limit: `node_cap = growth allowance ÷ Σ(roster rows × that type's instance ceiling) + current part
+tris`. Every new `lib:` row is another instance-row in the divisor — wiring *every* canopy clump
+would drop the cap back into the 2.4–3:1 decimation band where Blender tears holes in the canopy
+shell, and **extents and budget both stay green in that state**; it only shows up as split canopies
+in a screenshot. Within trees, "build more" means **swapping which clumps are wired**. Rocks are the
+opposite and still have headroom.
+
+### 0.4 Track A — dynamic (slot contract)
+
+Slots are already defined per chassis kind (`models.js` is authoritative): `aerial` —
+`tilt`/body/`wpn.{light,heavy}.g`/`muzzles.*.n`; `biped`/`quad` — `hips` `chest` `neck` `head`
+`legL/R` `armL/R` `legChainL/R` `armChainL/R` `tailSegs` `gunR/gunL`; `morph` — `torso` `head`
+limbs + `kneeL/R` `ankleL/R` `elbowL/R` `wristL/R` `vents` `thrusters` `rotors` `flapWings`.
+
+- Muzzle nodes and `rig.wpn` local pose **must not move** — forward-facing muzzles rely on a
+  build-time world-alignment inverse. `audit_muzzle.mjs` must stay green after a re-skin.
+- Whole-unit bbox drift **≤ ±5%**, or `fitToHeight` rescales and the health bar / marker / glow all skew.
+- Hydraulic-style **single-end anchored, angled** parts must not become two-end joint-spanning parts
+  — the gait will stretch them apart.
+- **Transformers get one part set, not two.** `makePoser` interpolates `p.a` (ground) → `p.b`
+  (flight) through **the same `p.g`**; a per-form part set turns "transform" into "swap model".
+  Split images are drawn from the ground form (pivots are legible there); flight masters are for
+  **acceptance** — a shin that only works on the ground fails once it folds into a nacelle.
+- Volume rules that make the quota feasible: mirror-symmetric parts are generated **once** and
+  mirrored in Blender (~40% fewer unique slots); retry only the slots that split badly.
+- Gates: `audit_muzzle` + `audit_cockpit` + `audit_cast_jump` + `audit_gpu_lifecycle` green,
+  `shot_units.mjs` before/after, and `npm test` / `npm run bal` **bit-identical**.
+
+### 0.5 Prompt spec for image→3D inputs
+
+Image→3D models do not want a pretty illustration; they want an image that **states the shape and
+removes interference**. Nine rules, all of them in every prompt: ①exactly one object, isolated,
+complete ②uncropped, ~85% of frame, even margins ③three-quarter view ~35° yaw / ~20° elevation,
+long-lens (100mm) flattened perspective ④flat even ambient light, no cast shadow, no rim light
+⑤flat single-colour neutral background (#808080), no gradient, no ground plane ⑥**fully opaque — no
+glass, transparency, glow or emissive** (the #1 failure mode; the existing concept masters have
+translucent emissive wings and must never be submitted unmodified) ⑦crisp panel lines and bolts,
+matte surface ⑧no text, logos, arrows, dimensions, watermark or turntable sheet ⑨≥1024 short side,
+square.
+
+Pre-processing: matte to alpha (`rembg`/BiRefNet), check the alpha edge for leftover outline strokes
+(concept art outlines read as a groove around the part), and never submit a short side < 1024. A
+matte fed to T2 **must be binarised** (alpha >16 → 255): T2 crops to an `alpha>204` bbox and eats a
+soft matte.
+
+**Two prompt seams, both in `codex.js`, neither writable by its consumers:**
+
+- `FORM_POSE` — the flight master **must state the machine is off the ground and in flight**, and
+  its framing must not contain `standing`. Ground framing stays byte-identical so non-transformer
+  prompts do not change at all. (Six of eight flight masters came back as correctly transformed
+  airframes standing on the ground: the instruction said "the same parts rearranged", which is
+  equally true on the ground, while the framing line still said `standing`.)
+- `SHOT_POSES` — pose (static / moving / heavy) is **orthogonal** to form; `shotFraming(ch, form,
+  pose)` composes them. `static` declares no framing override; `moving`/`heavy` declare framing
+  **per medium**, because one shared sentence makes a flying unit sprint along the floor.
+  Design anchor: `slots.mjs refShotOf()` resolves a per-unit reference in two tiers — an approved
+  in-repo shot first, this round's unreviewed shot second. **A rejected shot is never an anchor.**
+
+A recurring lesson from the first review pass: most review notes were not art direction, they were
+the artist hand-patching pipeline bugs — a design brief that was never sent (reading a field deleted
+by the A40 restructure, so the prompt still *looked* long), a limb count contradicting itself inside
+one paragraph, and stale `visual` fields being fed to the model for chassis that no longer consume
+them. See §5.0.4-era trial entries.
+
+---
+
+## 1. Status
+
+**⭐ Current state: blocked on the user supplying photos.** Four nodes marked "regenerate"
+(`mass_a`/`mass_b`/`masslow_a` too flat, `ac_a` weathered corners) plus `beacon/depot` have no better
+candidate — 27 solidify passes found nothing, and the tall-building bucket is *structurally* out
+(every `bld_tower` photo has been run; the survivors are mass_a/b/c themselves). The only remaining
+input is `<home>/inbox/<family>/<part>/` + `--adopt`. `ac_a` stays on img→3D by user ruling ("wait
+for a clean photo") — the Route-A pure-primitive fallback was **rejected and must not be revived**.
+
+Also outstanding: real-device smoke (four conifer species distinguishable / `mass_near` shows the
+third tower / vleaf decimation invisible), `audit_traverse` (needs network), and **§5aj-C** (user's
+ruling "only fill actual holes; cap small ones flat" — spec written, not implemented; it overturns
+the shipped mirror-fill's trigger condition, whose measure is half-space asymmetry rather than holes.
+Trees must be excluded from flat-capping: open leaf cards are design, not damage).
+
+`depot`'s "corpus is ready" was **false** — the count was met but the photos were two Victorian glass
+aquaria (a museum catalogues glass vessels as "container") and one harbour panorama. **Roster counts
+and `--plan`'s green only ever guarantee *how many*; Route A's first step is to open the photos.**
+
+### Shipped
+
+Evidence for every row is in the cited trial-log section; the ledger deliberately does not repeat it.
+
+| Item | Shipped | §ref |
+|---|---|---|
+| Corpus images in the review list + "original vs generated" split to same-source pairs only | 2026-08-10 | §5ay |
+| Parts board as cockpit — harvest-loop start/stop + three photo states | 2026-08-10 | §5ax |
+| Fully automatic intake + after-the-fact human verdicts (⑦⑧⑨) | 2026-08-10 | §5aw |
+| Target selection + separation + three screens (several subjects per photo) | 2026-08-10 | §5au |
+| Route A parts: `beacon/mast`, `beacon/pylon` | 2026-08-10 | §5av, §5at-b |
+| Harvest loop + first full run (169 outputs, all human-reviewed, zero nodes shipped) | 2026-08-10 | §5ar, §5as |
+| Parts board hides work-in-progress; per-type veg attribution fix; 7 new nodes (3 conifer species + `mass_c`) | 2026-08-09 | §5aq |
+| Building line: storey height from height, roof-band UV, facade layers, second (low-rise) mass bucket, mix incl. drawings | 2026-08-09 | §5ak–§5ap |
+| Drawing→3D visual hull `plan_hull` (function shipped, zero nodes) | 2026-08-09 | §5ai |
+| `hoodoo_a` replaced (corpus **and** post-processing together); selection + building-mix rulings | 2026-08-09 | §5ah |
+| `chimney_a` regenerated (same photo, different model); hoodoo rejected | 2026-08-09 | §5ag |
+| Smoke test finally ran — and found the whole building line was dead code on main | 2026-08-09 | §5af |
+| `mass` roster to 2 nodes; the corpus is the root cause of "the other side is empty" | 2026-08-09 | §5ae |
+| Mirror-fill extended to megaliths (measure which side is empty, then pick the cutter) | 2026-08-09 | §5ad |
+| `building/mass_a` — first whole-mass node; deco caps cleared | 2026-08-08 | §5ab, §5ac |
+| Whole-mass budget + consumption seam (queue F steps 1–2) | 2026-08-08 | §5aa |
+| Canopy shape: petal route vs simple-geometry route → conifer/broadleaf whole-tree nodes; star canopy | 2026-08-08 | §5w–§5z-t |
+| Tree corpus rework F0 (selection gate, usable-count ledger, resampling) | 2026-08-07 | §5p, §5q |
+| First T2 node (`rock/tower_a`) + `solidify_parts.py`; first tree node (`tree/snag_a`) + `whole:` seam | 2026-08-07 | §5t, §5u |
+| Thin-shell decimation gate — direct decimation **closed**, solidify-then-decimate **open** | 2026-08-07 | §5o |
+| TRELLIS.2-spz gate **open**; Hunyuan3D-2GP gate **open** + `rock/hoodoo_a`; official TRELLIS **out** | 2026-08-06 | §5n, §5m, §5l |
+| Scale-out batches: buildings D-4, megaliths D-5, trees D-6 | 2026-08-06 | §5i, §5j, §5k |
+| D-1 giant-tree canopies, D-2 megalith seam, D-3 per-species canopy split | 2026-08-05 | §5g, §5h |
+| P1 seam (`partlib.js`), photo fetcher, photo DB + integrity pass, P2b (LLM parts), P2c (first GLB parts), biomes `p.lib` seam, `giantCrownR` by contract, parts review board | 2026-08-05 | §5b–§5f, §7 |
+
+**Blocked:** Track A / P3 mech slots — `agy` returned 429 RESOURCE_EXHAUSTED for every slot across
+two rounds (model-level quota, `--no-ref` too). `models.js` is deliberately untouched: a seam with no
+real parts to calibrate against is a 10×-expensive failure. Resume with
+`node tools/ai3d/gen2d.mjs --only t01 --no-ref --limit 7`.
+
+## 2. Environment matrix (measured; do not rediscover)
 
 | Environment | Can do | Cannot do (measured) |
 |---|---|---|
-| **CC sandbox** (this repo's remote sessions) | All offline audits; e2e (`node server/server.js` then `npm test`); `npm run bal`; editing + push; GitHub MCP (PR/Actions API); HF MCP (search + the curated `dynamic_space` roster) | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` / `*.blob.core.windows.net` — all CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio calls**. No GPU (`nvidia-smi` absent). Raw `api.github.com` REST is gated (MCP tools work; `curl` with `$GITHUB_TOKEN` returns "GitHub access is not enabled") |
-| **GitHub Actions** (ubuntu runner) | Open egress ⇒ photo fetching (proven, run 1); licence re-audit; artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference here would need an `HF_TOKEN` secret **which only the repo owner can add** — do not attempt without it |
-| **User's RTX 3060 12 GB machine** | **SF3D proven 2026-08-05** (weights local, peak VRAM 6.17 GB, warm 13.6 s / 2 images); Blender 5.2 LTS (headless normalise proven); `agy` 2D; **photo fetching (open egress — measured 2026-08-05; step A does not need Actions)**; `uv 0.5.30` present. **WSL2 Ubuntu 24.04 with working GPU passthrough** (measured 2026-08-06 §5l; VHD moved to `D:\wsl\Ubuntu` — see right) — this is the only viable home for the CUDA-extension model stack; **Hunyuan3D-2GP proven there 2026-08-06 晚 (§5m): torch peak 2524MiB constant, 61–67s/image, weights 4.9GB, venv `~/ai3d/.venv311hy`**; **TRELLIS.2 via the stableprojectorz fork proven on native Windows 2026-08-06 深夜 (§5n): 7/7 @1024³, torch peak ≤3.4GB, 59–226s/image, needs ≥20GB free RAM to load, venv `Documents\study\TRELLIS.2-stableprojectorz\.venv`** — the img→3D ladder on this card is now `T2-spz(buildings/textured)→ 2GP(solid rock)→ SF3D(fast prescreen)→ procedural` | Python 3.13 is system default — the model stack lives in the **3.11 venv** at `<venv home>/tools/ai3d/.venv` (never in `package.json`, A2; venv home = worktree `zen-albattani-b33990`, §5d; **photo-DB home moved 2026-08-07 (§5p)** to the F0 branch worktree `self-buff-support-scaling-866a87` — the 305-entry superset; the copy that had grown in `reverent-pascal-fcd63e` is now stale). **Official TRELLIS builds are out on this card — measured, not assumed** (§5l): TRELLIS-image-large clears cond/sparse-structure/slat but its flexicubes mesh extraction OOMs with **9.58 GB free**, after removing unused decoders, per-stage CPU offload and `expandable_segments`; official TRELLIS.2-4B needs 24 GB and its floor resolution is 512³. **The stableprojectorz fork reverses this for TRELLIS.2 (§5n, measured)** — those rungs are no longer empty, but only via that fork's build. Native Windows cannot build the stack (no MSVC) ⇒ WSL2 only; its `ext4.vhdx` was 95.69 GB on a 98 %-full C: and **cannot grow at the host level** (WSL-side `df` shows the virtual 1 TB and will mislead you). **Wikimedia IP throttle**: bulk original-size downloads from `upload.wikimedia.org` trip HTTP 429 with `Retry-After: 600` after ~30 images, then ~2–3 images per 10-min window; most Openverse CC0 results are Wikimedia-hosted, so this throttles both APIs' downloads (search quota itself is fine — 200/day anon, measured) |
-| **HF Spaces** | `stabilityai/stable-fast-3d` (official gradio Space) as no-GPU fallback — drive it from a machine that can reach `huggingface.co`, i.e. the 3060 box or a browser; **not** from the sandbox | The HF MCP `dynamic_space` roster has **no mesh-generating space** (checked: only image/video/audio tools; `stabilityai/stable-fast-3d` is not MCP-enabled → HTTP 404 via MCP) |
+| **CC sandbox** | All offline audits; e2e; `npm run bal`; editing + push; GitHub/HF MCP | Egress to `api.openverse.org` / `commons.wikimedia.org` / `huggingface.co` / `upload.wikimedia.org` — CONNECT 403 ⇒ **no photo ingress, no artifact ingress, no HF gradio**. No GPU |
+| **GitHub Actions** | Open egress ⇒ photo fetching, licence re-audit, artifact publishing | No GPU. SF3D weights are licence-gated on HF ⇒ inference needs an `HF_TOKEN` secret only the repo owner can add |
+| **User's RTX 3060 12GB** | SF3D, Blender 5.2 headless, `agy` 2D, photo fetching, T2-spz (native Windows), Hunyuan3D-2GP (WSL2 Ubuntu 24.04 with GPU passthrough) | Python 3.13 is the system default — the model stack lives in a 3.11 venv, never in `package.json` (A2). Native Windows cannot build the CUDA-extension stack (no MSVC) ⇒ WSL2 only; the WSL `ext4.vhdx` cannot grow at host level and WSL-side `df` reports a virtual 1TB that will mislead you |
+| **HF Spaces** | `stabilityai/stable-fast-3d` as a no-GPU fallback, driven from a machine that can reach `huggingface.co` | The HF MCP `dynamic_space` roster has **no mesh-generating space** |
 
-**Consequence an agent must internalise**: photos and GLBs cannot pass through the sandbox.
-The sandbox's role is seams, tools, audits, docs, and PRs. Anything touching pixels or meshes runs on
-the 3060 (or Actions for photo fetching only).
+**Wikimedia IP throttle**: bulk original-size downloads trip HTTP 429 with `Retry-After: 600` after
+~30 images, then ~2–3 images per 10-minute window. Most Openverse CC0 results are Wikimedia-hosted,
+so this throttles both APIs' downloads (search quota itself is fine — 200/day anon).
+
+**The consequence to internalise**: photos and GLBs cannot pass through the sandbox. The sandbox does
+seams, tools, audits, docs and PRs. Anything touching pixels or meshes runs on the 3060 (or Actions,
+for photo fetching only). Current homes and venv paths are listed in the memory note
+`ai3d-pipeline-state`, because they move.
 
 ## 3. Fixed rules (violating any of these = revert, no discussion)
 
-1. **Parts, never finished props** — assembly/variation stays in existing code (skill §0; plan §2).
-2. **CC0/PD only, photos never enter the repo** — only part-library GLBs do (plan §4.1; `.gitignore` has `tools/ai3d/photos/`).
-3. **Fuse stays** — `['lib', name, <fallback primitive>]`: the fallback descriptor is the degradation path AND the offline extent bound. Export tooling MUST reject a GLB part whose measured extent exceeds its fallback's extent (encoded in `partExtent`, `partlib.js` header).
+1. **Parts, never finished props** — assembly and variation stay in existing code.
+2. **CC0/PD only; photos never enter the repo** — only part-library GLBs do
+   (`.gitignore` covers `tools/ai3d/photos/`).
+3. **The fuse stays** — `['lib', name, <fallback primitive>]`: the fallback is both the degradation
+   path and the offline extent bound. Export tooling must reject a GLB part whose measured extent
+   exceeds its fallback's (`partExtent`, `partlib.js` header).
 4. **Zero extra `rnd()` consumption** when swapping geometry (CLAUDE.md §2.3 / A4).
-5. **`markShared()` for library geometry; consumers that mutate must `.clone()`** (A25; `beacons._geo` does).
-6. **Geometry + base colour only** — no normal/metal/roughness maps (CLAUDE.md §1).
-7. **Triangle budget derived from measured current values**, never hand-written (plan §2.1-6).
-8. **Method split by geometry class** (plan §8 Appendix A): regular/man-made → LLM-written pure-data part rows; organic → img→3D GLB; small vegetation → stays procedural; mechs → Track A only.
-9. **Every generated object carries a provenance record** — one row in `tools/ai3d/parts_manifest.json`
-   naming **which method** (key from `tools/ai3d/provenance.mjs METHODS`) and **which img**
-   (id + licence + source URL). No record ⇒ the review board lists it under 未記載來源 and it is not
-   done. Never copy derivable numbers (extents, triangle counts, part counts) into that file —
-   they come from the consumer part table and the GLB itself.
+5. **`markShared()` for library geometry**; consumers that mutate must `.clone()` (A25).
+6. **Geometry + base colour only** — no normal/metal/roughness maps.
+7. **Triangle budget derived from measured current values**, never hand-written.
+8. **Method split by geometry class** (§0.3).
+9. **Every generated object carries a provenance record** — one row in `parts_manifest.json` naming
+   the method (a key of `provenance.mjs METHODS`) and the image (id + licence + source URL). No
+   record ⇒ the review board lists it as unsourced and it is not done. Never copy derivable numbers
+   (extents, triangle counts, part counts) into that file.
 
-## 4. Execution queue (in order; each step names its environment)
+## 4. Queue
 
-### A. Photo gap-fill — env: GitHub Actions — ~15 min
-Round 1 left these at/below half: `rock/collapse 0/4`, `rock/talus 1/4`, `landmark/lattice 1/4`,
-`landmark/tank 0/3`, `building/window 1/4`, `building/roofcap 0/4`.
-Root cause is almost certainly query wording + the ≥1024 px short-side filter, not supply.
+Steps A–F0 (photo gap-fill, LLM-part pilot, first GLB parts, static scale-out, tree corpus rework,
+building whole-mass seam) are **all shipped** — see §1 and their trial-log sections. What remains:
 
-1. Edit `PHOTO_CATALOG` queries in `tools/ai3d/fetch_photos.mjs` for the deficient parts
-   (broader nouns, e.g. `"water tower"`, `"rooftop parapet"`, `"fallen boulder"`; keep 2–3 queries/part).
-2. Push to the dev branch (path-filtered auto-trigger) **or** dispatch `照片庫抓取` manually
-   (`workflow_dispatch`, inputs `family`, `limit`).
-3. Success = `--plan` step shows all parts at target, licence re-audit step green, new `photo-db` artifact.
-4. Do **not** loosen the CC0 regexes or the 1024 px filter to make numbers move.
+1. **Wait for photos in `inbox/`**, then regenerate the four blocked nodes + `depot` (§1).
+2. **First real `auto_intake` run on the 3060 with `--limit 1`**, then `git diff --stat` immediately:
+   exactly three files should move (`<family>.glb`, the `biomes.js` roster, `parts_manifest.json`).
+   Everything else about that path is sandbox-verified; what is not is whether the Blender command
+   line is spelled right.
+3. **§5aj-C** — hole-driven fill (§1).
+4. **Real-device smoke + `audit_traverse`.**
+5. **Track A (mechs)** — do not start before the static batches are stable; the rig contract makes
+   failures 10× more expensive. Currently blocked on `agy` quota.
 
-### B. P2b pilot — LLM-written parts for one landmark — env: 3060 (or any machine with the photo artifact) — ½ day
-Target: `watertower` (or `pylon`) in `public/js/beacons.js KIND_PARTS` — the plan's P2 pilot family.
+Standing discipline for any new family: **measure the family before generating for it** (its own
+`tri_budget.json families.<fam>` entry), and **match the AI part to the fallback's *shape*, not to
+the slot's name** — the envelope is what the offline contract checks.
 
-1. Download the `photo-db` artifact; open the `landmark/tank/*` photos.
-2. Rewrite/extend that kind's part rows (pure primitives, richer silhouette: tank ribs, riser legs,
-   cross-braces) using the photo as **measurement reference only**. Keep nominal `foot` honest — the
-   audit checks it **both ways** (no under-report, no padding).
-3. Gates: `node tools/audit_beacons.mjs` (+ `--break-extent`), `node tools/audit_object_joints.mjs --seeds 8`,
-   `npm test`, `npm run bal` (must be bit-identical — this is presentation-layer),
-   then the review board (§7): add the provenance row, look at old-vs-new side by side, tick 通過.
-   In-game smoke: the landmark reads better at lane distance, collider matches visuals.
-4. This pilot needs **no Python, no GPU, no GLB** — it is the cheapest end-to-end proof of the method split.
-
-### C. P0 + P2c pilot — first GLB parts (rock family) — env: 3060 — 1–2 days
-1. **P0 (unchanged from plan §6)**: `tools/ai3d/.venv` with Python 3.10/3.11; install SF3D first;
-   measure VRAM + seconds; record in this file. Fallback chain: SF3D → keep procedural.
-   (TRELLIS/Hunyuan can wait; rocks do not need them.)
-2. Pick 2–3 `rock/facet` photos from the artifact → `rembg` matte → SF3D → Blender headless:
-   decimate, **origin on the mating face**, +Y up, strip textures, export
-   `public/assets/models/parts/rock.glb` with named nodes (`facet_a`, `facet_b`, `collapse_a`).
-3. Write the intake checker (extend `tools/ai3d/`): measures each GLB part's extent, verifies
-   ≤ its fallback descriptor's extent, verifies triangle budget vs measured current rock triangle count.
-4. Wire consumption: add `'rock'` to `PART_LIBS` in `public/js/partlib.js`; **beacons-style consumers
-   only** at first. For `MEGALITHS`/`VEG_DEFS` (biomes), first implement the consumption-loop seam
-   (plan §8 correction 1: optional `p.lib` next to `p.g`, resolved at build time — module-scope
-   `libGeo()` can never work; and solve `giantCrownR` before ANY canopy part).
-5. Gates: full static battery (skill §5) — `audit_object_joints --seeds 8`, `audit_beacons` ±reverse,
-   `audit_traverse`, `audit_cel_pipeline`, `audit_visual_prefs`, `audit_gpu_lifecycle`,
-   `npm test`, `npm run bal` (bit-identical), `shot_scene.mjs --venue taroko` before/after,
-   30 s steady-state frame-time (desktop + touch emulation).
-6. Provenance + review: `node tools/ai3d/intake_parts.mjs` must be green **and** the part needs its
-   row in `parts_manifest.json` (method + img) before the review board (§7) counts it as done.
-
-### D. Scale-out static (only after B and C are both green)
-Batches of ≤5 assets, full gate set per batch (plan §6). Order: megalith facets → landmark upgrades
-(mixed method) → building modules (LLM parts) → giant-tree parts (**after** `giantCrownR` fix).
-
-**D-1 giant-tree canopies: DONE 2026-08-05** (§5g). What the next batch inherits from it:
-1. **Measure the family before generating for it.** The per-part cap that fits rocks was meaningless
-   for trees; the gate that mattered (per-species total) did not exist until the measurement did.
-   Any new family gets its own `tri_budget.json families.<fam>` entry, measured, before wiring.
-2. **Match the AI part to the fallback's *shape*, not to the slot's name** — `ico` rows only, because
-   the envelope is what the offline contract checks. A `cone`/`box` row needs a part generated to that
-   proportion, not a blob squeezed into it.
-3. Remaining tree work: `buttress` + `fork` nodes (photo supply still short — Wikimedia PDFs/429s),
-   then `VEG_DEFS` ordinary trees (**check the draw-call and triangle maths again**: ordinary
-   vegetation has orders of magnitude more instances than the handful of giant trees).
-
-### F0. 神木語料重採 — env: 3060(開放 egress)— **最優先;使用者定案 2026-08-07**
-
-> 使用者定案:「**神木要重新找,有神木全身照片的圖,無其他干擾的照片**」。
-> 下一支分支**先做這一項**,F(建築縫)排其後。
-> **進度 2026-08-07(§5p + §5q)**:①選片閘 `screen_mattes.py` 上線(known-good 16 零誤殺 +
-> 反向驗證)②`--plan` 改計可用張數 ③重採 +6 可用(16→22)④T2 黏土複驗 5/5 **不再碎裂、
-> 不再生出遊客**(枯幹 ◎ 體積型)⑤**冠簇路線已定案(§5q)**:葉冠逐 seed 三注全不可用 +
-> 斜側語料採集端死 ⇒ 冠簇維持程序 ico + 貼圖,img→3D 只收雕塑性主體(枯幹/板根/扭曲樹幹)。
-> 剩:缺額續補(小時級節流,冷卻重跑同指令)。
-
-**這是語料問題不是模型問題,而且已經有三組獨立證據**:SF3D(§5c/§5k)、Hunyuan3D-2GP
-(§5m③)、TRELLIS.2-spz(§5n③/§5o 逐族對照)在**同一批 sequoia** 上全數碎裂,而同樣這三個
-模型在岩石/建築上都出得來 ⇒ 差別只可能在輸入。換模型救不回來,已經換過兩次了。
-
-**病灶具體是什麼**(§5o 的逐族對照表 `out_sheets/t2_tree.png` 一眼看得到):
-①**畫面裡有人** —— 站在樹下當比例尺的遊客被當成主體的一部分,T2 兩張都**把人也生成出來**;
-②**不是全身** —— 樹幹局部特寫,樹冠與樹根都不在框內,模型沒有輪廓可推,只能生出一片樹皮板;
-③matte 剝不掉他們 —— RMBG 把站在樹前的人一併判成前景(它做的是前景/背景,不是「主體/非主體」)。
-
-**採集條件(硬性,四條)**:
-1. **全身**:基部/樹根到樹冠頂端都在同一個框內,樹佔畫面高度 ≥60%,但四邊要留白
-   (matte 之後要取 bbox;貼邊會被裁掉,§5n 的 hoodoo 就是這樣變石板的)。
-2. **無干擾**:畫面內**無人/車/欄杆/解說牌/步道護欄**;背景**不可有同高度的鄰樹交疊**
-   —— 剝背景會把交疊的鄰樹連著剝進來,那和遊客是同一個病。
-3. 單株、正面或 3/4;天空或均質背景最佳(§5m 落選族的同一條理由:背景同質才剝得乾淨)。
-4. 授權仍是 **CC0/PD 雙閘 + 短邊 ≥1024**。**MUST NOT 為了湊數放寬**(§4-A 的原話),
-   也 MUST NOT 用裁切/合成假造一張「全身照」。
-
-**先看語料庫再決定抓不抓 —— 已經看過了,結論是「污染」不是「不足」**(2026-08-07,
-`tree_matte_sheet.py` → `out_sheets/tree_mattes.png`,把既有 **82 張 tree 族 matte** 一次攤開):
-人眼分桶大約是 —— **剝空/主體太小 ~25 張**(matte 之後畫面上什麼都不剩)、**葉片特寫/植物標本
-~11 張**、**古書掃描/版畫/明信片等平面印刷品 ~13 張**、**主體根本不是樹 ~9 張**
-(掃到烏龜、魚、骨頭、岩柱)、**含遊客 2 張**(正是 §5n/§5o 餵給 T2 的那兩張 sequoia,
-matte 上就看得到人)、**真正可用的全身單株只有 ~16~18 張**。
-⇒ **fetcher 的兩道閘(CC0/PD 授權 + 短邊 ≥1024)擋不住「這張是不是一棵完整的樹」** ——
-查詢字是拿去比對圖庫的**文字後設資料**,不是比對畫面。所以 F0 的第一步不是再抓一輪,
-是**補上選片閘**;再抓一輪只會等比例地再抓進 4/5 的垃圾。
-既有語料裡當場可用的名單(sheet 編號 → 家/檔名,下一支分支可直接餵):
-`03 bl_jacaranda` / `15·16·19·20·21·25 canopy` / `27 cf_araucaria` /
-`34·35·36 cf_juniper_tree` / `45 gt_cryptomeria` / `56 sp_acacia` /
-`58·60 sp_baobab` / `64 sp_conifer` —— **acacia / baobab / canopy 這幾家正是「曠野孤立單株、
-背景是天空、沒有遊客」的典型**,與下面的策略互相印證。
-
-**取得策略(關鍵:別再往 sequoia 鑽)**:
-- **紅杉的失敗是結構性的** —— 它出名的原因就是「大到拍不下」,所以絕大多數照片不是
-  遊客當比例尺就是仰角局部;換查詢字救不回這件事。
-- **樹種放寬**:遊戲要的是「神木 = 巨木」,不必是紅杉。**猴麵包樹 / 龍血樹 / 曠野孤立橡樹 /
-  孤立松柏**這一類天生就是單株立在空地上、背景是天空、沒有遊客 —— 命中率高一個量級,
-  而且正好滿足全部四條。`VEG_DEFS` 消費的是**冠簇/樹幹/板根**這些零件,不是「這是哪一種樹」。
-- 查詢字往**孤立單株**走(`lone tree`, `isolated tree against sky`, `solitary baobab`,
-  `tree full height silhouette`),而不是 `sequoia trunk` 這種必然回傳局部特寫的字。
-- 每一株候選 MUST 跑 `tools/ai3d/photo_sheet.mjs` 人眼複核(既有紀律:**先看照片再看網格**)——
-  「有沒有人、是不是全身」這兩件事**沒有便宜的統計特徵**,別想用 fill 之類的尺代勞。
-
-**選片閘要做成什麼**(便宜的先做,別一開始就想自動化):
-- **人眼 sheet 是主判準**(`photo_sheet.mjs` / 上面那支 `tree_matte_sheet.py`)——「有沒有人、
-  是不是全身」沒有便宜的統計特徵,MUST NOT 想用 fill 之類的尺代勞(§5n 已經示範過一次
-  「拿為別的模型設計的尺去判死」會發生什麼事)。
-- 但**四個桶裡有三個是統計抓得到的**,值得先自動淘汰掉再送人眼:①**剝空** = matte 的
-  alpha 覆蓋率過低(這一桶最大,~25 張,而且純算術);②**平面印刷品**(古書掃描/版畫/
-  明信片)= alpha 幾乎填滿整個矩形 + 四角都是不透明 ⇒ 「主體是一張紙」;③**葉片標本** =
-  極高的 alpha 覆蓋率 + 長寬比接近 1 + 背景純色。剩下的「不是樹」與「含人」才需要人眼。
-- 這一支腳本住 `tools/ai3d/`(離線,零 npm 依賴,A2)還是留在 study clone,由下一支分支定;
-  真正重要的是**結論要回寫進 `fetch_photos.mjs` 的 `--plan` 帳**,否則下一輪又會以為抓夠了。
-
-**驗收**:①選片閘跑完後 `tree/*` 的**可用**張數(不是下載張數)到位 + 授權稽核仍綠;
-②contact sheet 逐張人眼確認「全身 + 無人 + 無交疊鄰樹」;③選 3~5 張重餵一次 T2
-(**matte MUST 先二值化 alpha**,>16 → 255,§5n)並出**黏土**對照 —— 通過才輪得到入庫,
-不通過就回到 ① 繼續採。**MUST NOT 拿 §5k 那批舊 sequoia matte 重跑**(matte 上就看得到
-遊客,重跑只會再證明一次同一件事)。
-
-### F. 建築整棟節點的消費端縫 + T2 入庫路徑 — env: 3060 — **步驟 1~2 DONE 2026-08-08(§5aa);3~5 待續**
-
-> **範圍覆寫(2026-08-08 使用者定案)**:`docs/ai3d_asset_plan.md` §8.1 同日稍早把 `BUILDERS`
-> 列為「不做」(「只做景觀樹木與石頭」);使用者被問到這條衝突時選擇**執行佇列 F**。
-> plan §8.1 已標注這條覆寫,以本節為準。
->
-> **進度:步驟 1~5 全數 DONE**。①**先量再開**(§5aa-b:四場 `--live` 實測 + 逐實例尺寸普查;
-> 量測直接否決「整桶換」—— 逐節點只有 36 tris)②**縫**(§5aa-c:`BLD_LIB` 第四桶
-> `mass`,輪替名冊 + `pick_n = 16` 子集;A/B 逐位元相同)③**入庫路徑**(§5t 的
-> `solidify_parts.py` + 本輪補上的 `normalize_parts --boxuv`)④**首顆節點入庫**
-> (§5ab:`building/mass_a` 2,898 面,來源是 §5n 就生好的 Art Deco 摩天樓)
-> ⑤**驗收全綠含 `audit_traverse`**。剩下的只有**真機冒煙**與**名冊擴充**,見 §5ab-f。
-
-前置全部備齊:生成器有了(§5n,T2-spz 建築雙 ◎、幾何 + PBR 一次出)、減面路徑量過了
-(§5o,**MUST 先實體化**)。缺的只有**消費端** —— 建築目前沒有「整棟」這個節點,
-所以 §5i 以來每一顆建築產出都只能停在硬碟上(§5i/§5m/§5n/§5o 待續同一條)。
-順序 MUST 是**先開縫、再入庫**(§5m ④ 的原話:「先開縫再入庫」)。
-
-1. **先量再開**:建築整棟的三角形預算沒有量過,而 §5o 已證明 **500 面這一級留不住識別特徵**
-   (Art Deco 的退縮量體被抹平,`dev_p95` 0.0088 → 0.0144)。先跑
-   `tools/ai3d/measure_building_tris.mjs` 取得現值,再定 `tri_budget.json families.building`
-   的整棟級距 —— 預算與縫 **MUST 同一輪定案**,分兩次做的話縫會照舊 400~900 開下去,
-   而那個級距生出來的每一棟都是同一團方塊(D-1 教訓的同一條:先量家族再為它生成)。
-2. **縫開在哪**:~~建物是 `biomes.js` 的 `BUILDERS`~~ ⚠ **筆誤,已更正(§5aa-a)**:`BUILDERS`
-   住 **`hazards.js`**(障礙物),與城市建物無關;真正的消費端是 `biomes.js` 一般建物繪製段的
-   `InstancedMesh`(單位 `BoxGeometry` + **6 材質群組** + 逐實例 `scale = (w,h,d)` + 逐實例 tint,
-   逐立面款各一個)。它與 `beacons.js KIND_PARTS` 的零件式**不是同一種消費端**。整棟節點 MUST 維持
-   ①碰撞/LOS 仍走既有有向盒(A30:看得見多粗 = 撞得到多粗 = 打得到多粗,權威幾何一格不動)
-   ②`['lib', name, fallback]` 的保險絲契約(`partlib.js`;庫載不到就走程序生成)
-   ③**佈局數學只讀保險絲**(§2.3:庫幾何隨載入成敗而異,佈局讀它 = 跨客戶端分家)。
-3. **T2 入庫路徑要先定案**(→ §5t 已定案:選項 (a) 落地為 `tools/ai3d/solidify_parts.py`,
-   參數已掃描;建築批直接沿用):`normalize_parts.py` 目前沒有實體化那一刀,而 Blender 沒有
-   volumetric resample。兩個選項 ——(a)入庫**前**的離線步驟(pymeshlab,住 study clone
-   或 `tools/ai3d/` 的 venv,**MUST NOT 進 `package.json`**,A2);(b)`normalize_parts.py`
-   多吃一個 `--solidify` 旗標。傾向 (a):新相依不進出貨路徑,且 §5o 的 C 路徑參數
-   (cell = 對角線/256、offset = 對角線 ×0.6%)還沒掃描過,先留在量測側。
-4. **入庫閘照舊**:`intake_parts.mjs` 外廓契約 + 三角形兩道閘(單件 ≤ 族上限、逐款
-   Σ 庫零件 ≤ `kind_factor` × 該款現值);`provenance.mjs METHODS` 這一輪才第一次加
-   `trellis2_spz` 鍵(§5n/§5o 都是零節點出貨所以沒加),帳列 MUST 含 `imgs[].file`。
-5. **驗收**:`intake` / `siteplan` / `audit_object_joints` / `beacons` ±reverse / `gpu` /
-   `soft_stroke` / `cel` / `visual_prefs` 全綠 + `npm test` + `npm run bal` 不動(地物散布,
-   伺服器不涉入)+ 3D 零件對照台 0 缺件 / 0 孤兒 / 0 未記載 + 真機冒煙。
-   **`audit_traverse`(㋓)這次不能省** —— 整棟建物會動到街廓夾出來的通道寬。
-6. **不要順手做的事**:①神木族**不要拿現有語料**再餵 T2(§5n③/§5o 逐族對照都證明碎裂 +
-   把照片裡的遊客一起生出來)—— 那條走**佇列 F0**(重採全身無干擾照片)才有意義;
-   ②hoodoo 那張的失敗是 matte 軟 alpha
-   被 T2 前處理裁掉(§5n),餵 T2 的 matte **MUST 先二值化 alpha**(>16 → 255);
-   ③岩石類有逐 seed 方差(浮雕化/貼圖掉色),要出貨得 per-seed 重抽,別只跑一顆就下結論。
-
-### E. Track A dynamic (plan §3/P3–P4) — env: 3060 — unchanged
-Do not start before D's first batch ships; the rig contract makes failures 10× more expensive.
-
+---
 ## 5b. Trial log (2026-08-05, 3060-machine session — step A + step B)
 
 - **Step A ran locally, not on Actions** (allowed by §2: the 3060 box has open egress; faster feedback
@@ -2448,7 +2446,7 @@ truthy 用(`layers.post ? new Pipeline(…) : null`)—— **同一個旗標兩�
 ## 5aa. Trial log (2026-08-08, 3060-machine session — 佇列 F 第一段:整棟量體的**預算 + 消費端縫**;零節點出貨)
 
 > 使用者定案:「**ai3d_runbook.md 接著處理建築的部分**」→ 追問後選「**執行佇列 F**」,
-> 明知這**推翻 `docs/ai3d_asset_plan.md` §8.1 的 `BUILDERS` 那一列**(同日稍早定的
+> 明知這**推翻 `docs/ai3d_runbook.md` §0.3 的 `BUILDERS` 那一列**(同日稍早定的
 > 「只做景觀樹木與石頭」)。plan §8.1 已同步標注這條覆寫。
 
 ### 5aa-a. 佇列 F 步驟 2 的「`biomes.js` 的 `BUILDERS`」是**筆誤**

@@ -7,7 +7,7 @@ compatibility: Offline pipeline (Python 3.11 venv + Blender headless under tools
 
 # Mech Part Forge (AI geometry → existing rig slots)
 
-> Read `docs/ai3d_asset_plan.md` first (plan and phase gates). Generic external-pipeline knowledge lives in
+> Read `docs/ai3d_runbook.md` first (plan and phase gates). Generic external-pipeline knowledge lives in
 > `ai-mesh-generation` / `ai-rigging-motion`. This skill covers **only this repo's contract and what breaks silently**.
 
 ## 0. Core premise

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 2D 圖片生成驅動(docs/ai3d_asset_plan.md §5)
+ * 2D 圖片生成驅動(docs/ai3d_runbook.md §0.5)
  *
  * 路線 A:`agy --print`(Antigravity 內建 Nano Banana Pro,訂閱額度、無 API key)。
  *

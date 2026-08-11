@@ -1,4 +1,4 @@
-# 照片庫抓取(docs/ai3d_asset_plan.md §4.1 / Track B)
+# 照片庫抓取(docs/ai3d_runbook.md §0.3 / Track B)
 #
 # 為什麼在 Actions 跑:沙箱代理連不到 api.openverse.org / commons.wikimedia.org(㋓),
 # 而 Actions runner 的對外網路是通的。照片**永不入版控**(.gitignore 已擋)——

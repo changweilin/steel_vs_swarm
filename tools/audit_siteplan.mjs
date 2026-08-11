@@ -499,7 +499,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
     'GIANT_DEFS 沒有手寫的冠幅欄(推導值 MUST NOT 手寫)');
   ok(/parameters/.test(strip(bio.slice(bio.indexOf('function giantCrownR'), bio.indexOf('function placeGiantGroves')))),
     'giantCrownR 由零件表的幾何參數推導(不是抄一組常數)');
-  // AI 零件庫消費端縫(2026-08-05;docs/ai3d_asset_plan.md §8 修正 1):
+  // AI 零件庫消費端縫(2026-08-05;docs/ai3d_runbook.md §0.2 不變式 7):
   // 解析只有 build 時的 partGeo 一份(模組載入期 VEG_DEFS 建表早於 GLB 抓取,表內解析恆
   // miss);佈局數學(冠幅/擺動分母)MUST 只讀保險絲 `p.g` —— 庫幾何隨載入成敗而異,
   // 佈局讀它 = 跨客戶端逐位元分家(§2.3),intake 契約(GLB 外廓 ≤ fallback)讓保險絲恆保守。
