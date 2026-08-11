@@ -52,7 +52,7 @@ import { npcIconHTML, kindIconHTML } from './npcicon.js';
 import {
   installTouchUI, touchCapable, touchDiagnostics, lowPower, setLowPower as setLowPowerPref,
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
-  renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest,
+  renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest, toggleFullscreen,
 } from './mobile.js';
 import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange } from './ctrlmode.js';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
@@ -168,6 +168,9 @@ const LOBBY_SCREENS = new Set(['connect', 'mapbuilder', 'openroom', 'story']);
 function show(screen) {
   for (const s of screens) $(s).style.display = s === screen ? '' : 'none';
   app.phaseShown = screen;
+  // 半透明全螢幕鍵(#fsToggleBtn)排除 game 頁的唯一寫入點:那頁已有自己的全螢幕鍵
+  // (見 index.html #fsToggleBtn 註解、style.css `body[data-screen="game"]`)。
+  document.body.dataset.screen = screen;
   if (screen !== 'room') { closeStageModal?.(); stopStages?.(); app.charTarget = null; }   // 離開房間:收放大視窗、兩台展示台停 rAF,不與戰場搶 GPU
   // 操作方式:整房一致、由房主定案(套用在 onSync;規則住 ctrlmode.js)。
   // 這裡只負責「回到大廳 ⇒ 解除戰區定案」,MUST NOT 在 UI 端另判一次能不能改(A21 同精神)。
@@ -2778,6 +2781,7 @@ onCtrlChange(() => {
   mountHelp($('lobbyHelpCats'), $('lobbyHelpBody'));
   syncTips();          // 提示文字也有鍵鼠 / 搖桿兩版(UI_TIPS 的 pTouch)
   syncTouchSetupBtn();
+  syncFsToggleBtn();
 });
 
 // ── 說明:類別子分頁 + 內文清單(來源 = help.js HELP)──
@@ -2949,6 +2953,15 @@ function syncTouchSetupBtn() {
   if (b) b.style.display = touchCapable() || TOUCH_UI() ? '' : 'none';
 }
 syncTouchSetupBtn();
+
+// 半透明全螢幕鍵(#fsToggleBtn):同一套「觸控硬體才顯示」判準,與上面 touchSetupBtn 共用
+// —— game 頁的排除住 CSS(`body[data-screen="game"]`),這裡只管裝置判定。
+function syncFsToggleBtn() {
+  const b = $('fsToggleBtn');
+  if (b) b.hidden = !(touchCapable() || TOUCH_UI());
+}
+syncFsToggleBtn();
+$('fsToggleBtn')?.addEventListener('click', () => toggleFullscreen());
 
 window.addEventListener('DOMContentLoaded', () => {
   $('myName').value = localStorage.getItem('svs_name') || '';
