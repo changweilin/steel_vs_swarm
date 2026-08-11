@@ -1742,8 +1742,11 @@ function onOsmRelay(m) {
  * 中繼閘:房主抓 + 送,入房者等。`startPrebuild` 在開頭呼叫、到 `buildBiomes` 之前才 await。
  * 房主 MUST 在**建圖之前**取得原始圖資(`warmOsm`)—— buildBiomes 內的那一份已經被量化與
  * 就地變異過,中繼它等於把下游的加工結果當原料發給全房。
+ * `onLabel` = 進度文字的**內容**由這裡決定(房主等 Overpass / 入房者等中繼是兩件不同的事,
+ * 而這個分岔只有這一支認得);**什麼時候顯示**由 `startPrebuild` 決定(等待與地形建構並行
+ * ⇒ 一般到 await 那一刻早就清空了,不會多出一個一閃而過的狀態)。空字串 = 沒在等。
  */
-async function osmGate(cfg) {
+async function osmGate(cfg, onLabel = () => {}) {
   const bbox = battleBBox(cfg);
   if (!app.isHost) {
     // 兩道不等的閘,少一道就是白等 20 秒:
@@ -1753,12 +1756,18 @@ async function osmGate(cfg) {
     //    失敗重來),房主早就跑完自己的 OSM 那一步了:有東西的話伺服器已經在 joinRoom /
     //    reattach 當下推給我們,沒有就是真的沒有。在載入畫面上乾等會拖著全房一起等
     //    (`maybeLaunch` 要所有人 loaded 才開戰)。
-    if (!osmInReady(bbox, false) && app.lobby?.phase === 'room') await waitOsmRelay(bbox);
+    if (!osmInReady(bbox, false) && app.lobby?.phase === 'room') {
+      onLabel('等待房主的道路圖資…');
+      await waitOsmRelay(bbox);
+      onLabel('');
+    }
     return;
   }
   if (osmInReady(bbox)) return;          // 兩格都定案(再戰回房的重建;補抓成功時已由 resetOsmMisses 解鎖)
   let feats = null, roads = null;
+  onLabel('取得道路圖資(全房共用一份)…');
   try { [feats, roads] = await warmOsm(bbox); } catch { /* 缺席照走備援 */ }
+  onLabel('');
   const fit = osmRelayFit(sanitizeOsmRelay({ bbox, feats, roads: roads?.length ? roads : null }));
   // 超限退化 MUST 講出來:實測密市區 5v5 的中繼訊息已達 1.05MB(MAX_BYTES 餘裕 1.6×),
   // 這條分支不是理論上的 —— 它一旦觸發,建物/招牌就退回「每台各自抓」= 又會長不一樣,
@@ -1820,7 +1829,7 @@ function scheduleOsmRetry(cfg, key) {
 function startPrebuild(cfg) {
   const key = prebuildKey(cfg);
   if (app.pre && app.pre.key === key && !app.pre.error) return app.pre;
-  const pre = { key, prog: 0, label: '', terrain: null, ud: null, error: null, onProg: null };
+  const pre = { key, prog: 0, label: '', osmLabel: '', terrain: null, ud: null, error: null, onProg: null };
   const setP = (f, label) => {
     pre.prog = f; pre.label = label;
     pre.onProg?.(f, label);
@@ -1831,9 +1840,14 @@ function startPrebuild(cfg) {
     // 路網中繼閘:與模型/地形建構**並行**跑(見 osmGate ②)。失敗一律吞掉 —— 這條路徑的
     // 每一種失敗都有備援(房主自己抓不到 = 走兵線備援;入房者等不到 = 退回自己抓),
     // MUST NOT 讓它把整份預建判成 pre.error。
-    const gate = osmGate(cfg).catch((e) => { console.warn('路網中繼略過:', e); });
+    const onOsmLabel = (t) => { pre.osmLabel = t; };
+    const gate = osmGate(cfg, onOsmLabel).catch((e) => { console.warn('路網中繼略過:', e); });
     await warmModels((f) => setP(0.02 + f * 0.16, '載入 3D 模型(Quaternius CC0)…'));
     const terrain = await buildTerrain(cfg, (f, label) => setP(0.18 + f * 0.42, label));
+    // 只有到這一刻**還在等**才寫進度列(見 osmGate 的 onLabel)。地形建完中繼通常早就到了 ⇒
+    // 平時一個字都不會多;真的卡住時(房主整組失敗)入房者會停最多 WAIT_MS,那段沉默正是
+    // 唯一「畫面沒說明」的窗口 —— 它不寫,狀態列就停在上一句地形文案上乾等 20 秒。
+    if (pre.osmLabel) setP(0.60, pre.osmLabel);
     await gate;
     const biomes = await buildBiomes(cfg, terrain, (f, label) => setP(0.60 + f * 0.36, label));
     terrain.group.add(biomes);
