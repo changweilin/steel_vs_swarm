@@ -276,7 +276,7 @@ console.log('== Ⅳ 靜態規則(單一縫 / 舊制不回歸 / 圖層與塑形�
     ? ok('planSeamOverlays 原文零 rnd / 零 Math.random / 零 THREE(純函式,A4)')
     : bad('planSeamOverlays 摻入 rnd / Math.random / THREE');
   (src.match(/const subCoarse = new Map\(\)/g) || []).length === 1
-    ? ok('subCoarse 分區表只有一份(交界樣式與邊界遮蔽物共用,單一縫)')
+    ? ok('subCoarse 分區表只有一份(交界樣式與地貌界線拼圖共用,單一縫)')
     : bad('subCoarse 分區表出現多份實作');
 }
 
