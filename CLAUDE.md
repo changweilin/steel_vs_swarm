@@ -315,7 +315,7 @@ npm run lan          # 區網 / Tailscale 對戰(--https;印出區網 + Tailscal
 npm run cloud        # 雲端節點($PORT 監聽、/healthz、--max-rooms 戰區上限)
 npm run build:solo   # 打包單機特化版到 dist/(純檔案複製,無 bundler)
 npm test             # node test/e2e.mjs(不會自動啟動伺服器!見 5.2)
-npm run bal          # 平衡七不變式(見 5.3)
+npm run bal          # 平衡不變式(見 5.3;③ 已退場,編號不重排)
 npm run sim          # headless 加速模擬完整 bot 對局(平衡/難度壓測)
 npm run audit:net    # 三種連線機制稽核(瀏覽器安全 / 單一真相縫 / URL 佈局鏡射 / dev 路由)
 npm run codex        # 2D 生圖對照台(dev-only,埠 8621)  --report = 直接印配對表
@@ -432,10 +432,10 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 
 **e2e 結構備忘**:前段 import `BattleSim` 直測(測試假人無 `lane`,tick 前 MUST 刪掉);迷霧下偵察 MUST 另開 `mode:'spectator'` client。瀏覽器冒煙借 mapping_elf 的 Playwright,`window.__SVS` 存取 app 狀態。
 
-### 5.3 `npm run bal` 七不變式
+### 5.3 `npm run bal` 不變式(③ 已退場;**編號不重排** —— 各處引用序號)
 1. 一波 NPC = 玩家 60% EHP
 2. 前線敵我塔重疊 80% 且不對射
-3. 單線 30% 擊殺 / 40% 助攻 10 分鐘 ≈ 八軌升滿
+3. ~~單線 30% 擊殺 / 40% 助攻 10 分鐘 ≈ 八軌升滿~~ **已退場**(2026-08-11 使用者定案「移除此標準」):八軌自 `UPG_STEPS` 起是「金錢 + 戰鬥分數」雙閘,升滿時間不再只由錢決定,拿收入預算除總價量不到原本要量的東西。數字仍印出來當參考,不判定
 4. 滿級單推同塔位雙塔剩 0~20%
 5. 對進戰勝率(陣營/機種/較高方皆 ≈50%、角色不離群、接近期損失 ≤40% EHP)
 6. 招式配置 ← 武器射程剖面(扇形武器優先貼身套件)
@@ -467,10 +467,10 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 對建築 DPS 收斂 / 任一 `vs.building` | `audit_shield_counter` Ⅵ + `npm test` 該段 + **bal ④ 是主要校準錨**、⑤ 逐角色離群一併看 |
 | 建築加乘 / 護盾分軌 / 護盾軸配置 | `audit_shield_counter` + **bal 四不變式會位移** + `npm test` 該段 + ㋔ |
 | 圖鑑六角能力圖 | `audit_hex_stats` + `audit_shield_counter` Ⅵ(`buildDps` 改吃 `weaponDps`)+ `audit_ui_layout`/`audit_ctrl_mode` + ㋒ |
-| 波次節奏 `GAME.WAVE_S` / `waveComp` / `_prefillLanes` | bal ③(收入預算 ±10%)+ e2e「出兵間隔固定 + 開場預置兵線」(期望值 MUST 由同一份規則推出) |
+| 波次節奏 `GAME.WAVE_S` / `waveComp` / `_prefillLanes` | e2e「出兵間隔固定 + 開場預置兵線」(期望值 MUST 由同一份規則推出)+ bal ①(波次 EHP/DPS)|
 | 陣營小兵強化 | e2e 該段 + **bal 四不變式 MUST 不動**(bal 模型是未強化的基準波次) |
-| 八軌階梯 / 戰鬥分數 | `npm test`(**MUST 先重啟伺服器**)+ `audit_shop_auto` + **`npm run bal` ③**(總價 ≈ 收入預算 ±10%;改價格必動這一條)+ `audit_bot_role`(bot 採購前置篩選)+ `audit_client_syntax`(㋖)|
-| `ECON.UPG_*` | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
+| 八軌階梯 / 戰鬥分數 | `npm test`(**MUST 先重啟伺服器**)+ `audit_shop_auto` + **`npm run bal`**(③ 已退場不判定,但 ⑦ 的升級節奏會位移 —— 交付率與對局長度都要看)+ `audit_bot_role`(bot 採購前置篩選)+ `audit_client_syntax`(㋖)|
+| `ECON.UPG_STEPS` | e2e「八軌升級階梯 + 戰鬥分數門檻」+ `audit_shop_auto` + bal ⑦(升級節奏)|
 | 商店掃貨 / 預約 | `audit_shop_auto` + `audit_ui_layout` + ㋒(bal 不模型化購買順序) |
 | 攻堅順序鎖血 / 劇情階段對話 | `audit_story_talk` ±`--break-stage`/`--break-gate`/`--break-cast`/`--break-quota` + **`npm test`(MUST 先重啟伺服器;旗標關掉時 sim 逐項不變)** + `npm run bal` MUST 逐項不動(鎖血只在劇情房生效,bal/duel/lanesim 都沒有 `siege`)+ `audit_weapon_gate`/`audit_bot_vision`/`audit_bot_tactics`(`_damage`/`_tgBlockedD`/`bots._acquire` 各多一道閘)+ `audit_client_syntax`(㋖)+ `audit_ui_layout` + 改對白內容 ⇒ 只需本支 |
 | 劇情畫面標記 `storyui.js` / 本地故事書 `tools/story_book` | `audit_story_talk` Ⅷ ±`--break-book` + **`audit_ui_layout`**(頭像唯一縫換了家,規則沒變)+ `npm run audit:net`(新增一支可啟停的 dev 工具 ⇒ ⑦ 段的埠號 import 與 kind 分流會多一列)+ `audit_solo_boot` + `audit_client_syntax`(㋖)+ `story_book --report`(缺頁 0)+ **真瀏覽器開一次遊戲的劇情分頁**(㋕:標記從 main.js 搬走了,章節卡/簡報/選主駕要仍然一模一樣)。改 `storyui.js` 的任何一行 = **兩個消費端一起動**,MUST 兩邊都看 |
@@ -575,6 +575,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 
 | 退場 | 日期 | 取而代之 |
 |---|---|---|
+| **bal ③「10 分鐘升滿」不變式**(八軌總價 ≈ 賞金收入 ±10%) | 2026-08-11 | 使用者定案「移除此標準」。八軌改雙閘後升滿時間不再只由錢決定,這個比值量不到原本要量的東西;數字仍印出來當參考,**不判定、不計入 fail**。**編號不重排**(④~⑦ 保留原號) |
 | **逐機種擊殺分數表** `KILL_SCORE`/`killScore()` 與**刷 bot 折價** `BOT_KILL_SCORE`(3) | 2026-08-11 | 戰鬥分數 `BATTLE_SCORE`/`battleScoreGain()`(擊殺 4 / 助攻 1,玩家**含電腦玩家**與砲塔 ×5)—— 使用者這一輪明講「玩家(含電腦)」同一個係數,兩份分數表並存就是兩套規則 |
 | 八軌階梯常數 `ECON.UPG_BASE`/`UPG_INC`/`UPG_L3`/`UPG_L3_LVL` | 2026-08-11 | `ECON.UPG_STEPS` 逐階表(價格 + 戰鬥分數門檻同一列) |
 | 陣營小兵強化的 `hp ×cu` 與**賞金 ×cu** | 2026-08-11 | 強化收斂成「只對非玩家生效」:傷害看目標、耐久看攻擊者(`creepDmgTakenF`)。hp 是全域的 ⇒ 留著它等於對玩家也變硬;賞金加成在小兵不再更難打之後就是白送 |
