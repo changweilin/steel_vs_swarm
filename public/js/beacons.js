@@ -497,30 +497,44 @@ export function buildBeacon(kind, seed = 1) {
 
 /**
  * 合併一組已套好變換的幾何(只保留 position/normal;零件表用不到 uv)。
- * **唯一縫**:`siteplan.js` 的公設也吃這一支 —— 兩份合併程式碼分家的症狀是
- * 「某一類物件的 A25 回收漏掉」(暫時幾何沒 dispose),而畫面上完全看不出來。
+ * **唯一縫**:`siteplan.js` 的公設、`biomes.js` 的邊界牆/緩衝布景也吃這一支 —— 兩份合併
+ * 程式碼分家的症狀是「某一類物件的 A25 回收漏掉」(暫時幾何沒 dispose),而畫面上完全看不出來。
+ *
+ * `colors`(選用)= 逐幾何的顏色(0xRRGGBB)。給了就多烤一份 `color` 頂點屬性,呼叫端便能把
+ * **上千個不同顏色的零件併成一個 mesh**(邊界牆整圈 = 1 個 draw call;逐色一個 mesh 的話
+ * 光是型錄的色票就上百個 draw call,而本渲染器是 draw call 瓶頸)。不給 = 逐位元同舊制。
  */
-export function mergeGeos(geos) {
+export function mergeGeos(geos, colors = null) {
   let nv = 0, ni = 0;
   for (const gm of geos) {
     nv += gm.attributes.position.count;
     ni += gm.index ? gm.index.count : gm.attributes.position.count;
   }
   const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3);
+  const col = colors ? new Float32Array(nv * 3) : null;
   const idx = new Uint32Array(ni);
-  let vo = 0, io = 0;
+  let vo = 0, io = 0, gi = 0;
   for (const gm of geos) {
     const p = gm.attributes.position, n = gm.attributes.normal;
     pos.set(p.array.subarray(0, p.count * 3), vo * 3);
     if (n) nor.set(n.array.subarray(0, n.count * 3), vo * 3);
+    if (col) {
+      const c = colors[gi] | 0;
+      // sRGB → linear:MeshToonMaterial 的 color 走的是線性空間,直接塞 /255 會整批偏亮
+      const rgb = [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255]
+        .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      for (let i = 0; i < p.count; i++) col.set(rgb, (vo + i) * 3);
+    }
     if (gm.index) for (let i = 0; i < gm.index.count; i++) idx[io++] = gm.index.array[i] + vo;
     else for (let i = 0; i < p.count; i++) idx[io++] = i + vo;
     vo += p.count;
+    gi++;
     gm.dispose();   // A25:合併後的暫時幾何不留在 GPU
   }
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  if (col) out.setAttribute('color', new THREE.BufferAttribute(col, 3));
   out.setIndex(new THREE.BufferAttribute(idx, 1));
   out.computeBoundingSphere();
   return out;
