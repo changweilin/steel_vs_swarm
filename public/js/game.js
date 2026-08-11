@@ -16,7 +16,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
-  reachRule, blastCoreR, shotV0, SEEK, seekTurn,
+  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG,
@@ -3142,6 +3142,14 @@ export class BattleClient {
     // 陣營小兵強化等級(伺服器權威;每側每兵線一個整數)—— MUST 在 ents 迴圈之前落地,
     // 商店重繪簽章要讀得到本快照的值。
     if (m.cu) this.creepUpg = m.cu;
+    // 攻堅開放階段(劇情戰役才發;伺服器權威 —— 客戶端 MUST NOT 自己數還剩幾座塔)。
+    // 斷線重連補快照時 HUD 也拿得到正確的目標,不必靠「開場一定是第 0 階」猜。
+    // 快照 8Hz ⇒ 只在**變動時**上拋(每幀重繪進度條 = 每秒 8 次 innerHTML,純浪費)
+    if (m.sg) {
+      const sig = `${m.sg.SWARM}/${m.sg.STEEL}`;
+      this.siegeOpen = m.sg;
+      if (sig !== this._sgSig) { this._sgSig = sig; this.onSiegeTrack?.(m.sg); }
+    }
     const seen = new Set();
     for (const e of m.ents) {
       seen.add(e.id);
@@ -3150,6 +3158,7 @@ export class BattleClient {
       // 工事受擊回饋:hp 下降的那個快照閃亮 + 波紋(工事無護盾層,掉的一律是裝甲)
       if (ent.hitShell && e.hp < ent.hp) ent.hitShell.userData.hit();
       ent.hp = e.hp; ent.max = e.m;
+      ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
@@ -4279,6 +4288,12 @@ export class BattleClient {
       if (ev.side === this.side) this.hud.feed?.(`🐜 第 ${ev.lane + 1} 兵線小兵強化 LV${ev.lvl}${ev.pid === this.youId ? '' : '(隊友出資)'}`);
     } else if (ev.e === 'penalty') {
       if (ev.pid === this.youId && ev.v > 0) this.hud.feed?.(`💀 陣亡罰金 -$${ev.v}`);
+    } else if (ev.e === 'siege') {
+      // 攻堅階段被推平(劇情戰役;階段由伺服器定案,客戶端 MUST NOT 自己數塔)。
+      // **只有敵方那一階倒下才演出** —— 自己的塔被拔掉播一段勝利者的對白等於幫對手慶祝。
+      // 演出本身住 main.js(它才知道現在打的是哪一章、哪一個陣營),這裡只上拋。
+      if (ev.side !== this.side) this.onSiege?.(ev.stage, ev.side);
+      else this.hud.feed?.(`🛡 我方${SIEGE.NAMES[ev.stage] || ''}全數失守`);
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {
@@ -5315,7 +5330,8 @@ export class BattleClient {
     const mat = this._rgMaterial(shot.warn);
     const lit = this._rgLit || (this._rgLit = new Set());
     lit.clear();
-    for (const ent of shot.hits) if (ent.id !== this._lockId) lit.add(ent);   // 鎖定目標另有 lockGlow,不疊兩層
+    // 鎖定目標另有 lockGlow,不疊兩層;攻堅鎖血的建築完全免傷 ⇒ 亮燈是騙人(伺服器 siegeLocked 同判)
+    for (const ent of shot.hits) if (ent.id !== this._lockId && !ent.lk) lit.add(ent);
     for (const ent of this.ents.values()) {
       if (!lit.has(ent)) { drop(ent); continue; }
       if (ent._rgGlow) { ent._rgGlow.material = mat; continue; }

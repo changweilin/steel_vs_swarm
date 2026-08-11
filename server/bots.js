@@ -582,6 +582,7 @@ export class BotBrain {
     const cand = [];
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.gar || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙/駐守兵
+      if (this.sim.siegeLocked(t)) continue;   // 攻堅順序未到的建築完全免傷 ⇒ 不當目標(唯一縫 sim.siegeLocked)
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)

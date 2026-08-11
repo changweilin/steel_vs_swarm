@@ -4498,6 +4498,48 @@ export const creepUpgMul = (lv) =>
   1 + Math.log10(1 + Math.max(0, Math.min(CREEP_UPG.MAX, Math.floor(lv || 0))));
 
 /**
+ * 攻堅順序(2026-08-10 使用者定案「劇情戰役時,一定要按照順序打:前線砲塔>中段砲塔>主堡,
+ * 前面沒打爆後面會鎖血」)—— **階段定義的唯一縫**,伺服器結算(sim)、客戶端 HUD(game)、
+ * 對話觸發(storytalk)與稽核共吃這一份。
+ *
+ * 兩件事在這裡定死,消費端 MUST NOT 各自重算:
+ *   ① **哪一座塔算前線** —— 由 `solveTowerSites()` 回傳的 `frac` 推導:同一條兵線內 frac 最大
+ *      (最靠戰場中線 = 最先撞上的那一組)= 前線,其餘 = 中段。**MUST NOT 拿陣列索引當判據**:
+ *      `solveTowerSites` 的回傳是 `[後塔, 前塔]`(後塔求解在後、unshift 在前),而兵線太短塞不下
+ *      後塔時只回一個元素 —— 拿 index 0 當前線在「單塔位兵線」上剛好對、在雙塔位兵線上剛好相反,
+ *      而症狀只是「這張圖的鎖血順序反了」,沒有任何錯誤訊息。
+ *   ② **階段是全戰場的,不是逐兵線的** —— 一個陣營所有兵線的前線砲塔全數擊毀,中段砲塔才解鎖;
+ *      全部中段砲塔擊毀,主堡才解鎖(`siegeOpenStage()`)。逐兵線制會讓「推掉每階段」變成一章
+ *      觸發 2×兵線數 次,而劇情對話一階只有一場。
+ *
+ * 鎖血 = **完全免傷**(不是減傷):`sim._damage` 早退、`_tgBlockedD`/`bots._acquire` 一併把它排除在
+ * 索敵之外 —— 只擋傷害不擋索敵的話,小兵會停在打不動的塔前面把兵線卡死。
+ */
+export const SIEGE = {
+  STAGES: ['front', 'mid', 'base'],
+  NAMES: ['前線砲塔', '中段砲塔', '主堡'],
+};
+SIEGE.BASE = SIEGE.STAGES.length - 1;   // 主堡恆為最後一階(推導,MUST NOT 手寫 2)
+
+/**
+ * 一條兵線的塔位 → 逐塔位階段(0 = 前線塔、1 = 中段塔)。
+ * sites = `solveTowerSites(lanes)[li]`(元素帶 `frac`)。單一塔位的兵線 ⇒ 那一座就是前線。
+ */
+export function siegeSiteStages(sites) {
+  const maxF = Math.max(...sites.map((s) => s.frac));
+  return sites.map((s) => (s.frac >= maxF - 1e-9 ? 0 : 1));
+}
+
+/**
+ * 某一方目前「打得動的最高階段」= 仍有存活建築的最低階段。
+ * counts[i] = 該方第 i 階仍存活的建築數(塔以座計、主堡 1)。全滅回 SIEGE.BASE(主堡沒了 = 已結束)。
+ */
+export function siegeOpenStage(counts) {
+  for (let i = 0; i < SIEGE.STAGES.length; i++) if ((counts[i] || 0) > 0) return i;
+  return SIEGE.BASE;
+}
+
+/**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
  * lanes: [[x,z], …][] — 兵線折線(世界公尺;每條 index 0 = SWARM 主堡端、末端 = STEEL 主堡端)。
  * 回傳 lanes.map(sites[]),每個 site = { frac, SWARM:{x,z,nx,nz}, STEEL:{…} };
@@ -5253,6 +5295,20 @@ export const ENV = {
     fog:    { name: '濃霧' },
   },
 };
+
+/**
+ * 環境標籤(「夏・正午・晴」)——**全專案唯一縫**。
+ * 住 data.js 而不住 environment.js:它只是 `ENV` 的取名查表,而 environment.js import three
+ * ⇒ 放那裡的話,任何在 Node 端(離線稽核 / 故事書的純標記模組)要印這一行的人都載不起來。
+ * `environment.js` 保留舊入口 re-export(同 `hazards.js` → `rng.js` 的處理)。
+ */
+export function envLabel(env) {
+  if (!env) return '';
+  const s = ENV.seasons[env.season]?.name || '?';
+  const t = ENV.times[env.time]?.name || '?';
+  const w = ENV.weathers[env.weather]?.name || '?';
+  return `${s}・${t}・${w}`;
+}
 
 /** env = { season, time, weather };'random'/缺值 → 抽一個具體值 */
 export function resolveEnv(env = {}) {

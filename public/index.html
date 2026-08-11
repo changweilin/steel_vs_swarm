@@ -358,6 +358,8 @@
   <canvas id="gameCanvas"></canvas>
   <!-- 招式立繪演出層(cutin.js 掛節點;純 2D,不進 3D 場景) -->
   <div id="cutinLayer" class="cutin-layer"></div>
+  <!-- 劇情戰役對話層(dialogue.js 掛節點:攻堅進度條 + 下緣無線電對話條) -->
+  <div id="dialogueLayer" class="dlg-layer"></div>
 
   <!-- HUD -->
   <div class="hud-top">
@@ -539,6 +541,8 @@
     <div class="overlay-box">
       <div class="over-title" id="overTitle"></div>
       <div class="over-sub" id="overSub"></div>
+      <!-- 劇情戰役:主堡那一階的對白(戰鬥已結束 ⇒ 這裡才播得完,也才重讀得到) -->
+      <div id="overTalk"></div>
       <div class="over-stats" id="overStats"></div>
       <div class="row" style="justify-content:center">
         <button id="backRoomBtn" class="btn big">◀ 返回戰區</button>

@@ -16,7 +16,7 @@ import {
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
   FLIGHT, SQUAD, scopeRvmin,
-  heroHexStats,
+  heroHexStats, SIEGE,
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
@@ -37,6 +37,13 @@ import { loadPartLibs } from './partlib.js';
 import { CharPreview } from './charPreview.js';
 import { VENUES, venueTip, venueBrief, venueConfig, migrateFavCfg, loadFavorites, saveFavorite, removeFavorite } from './venues.js';
 import { STORY, WORLD, chapterSide, loadStoryCleared, isCleared, chapterUnlocked, markCleared } from './story.js';
+import { talkOf, stageKey } from './storytalk.js';
+// 劇情畫面的標記唯一縫 —— 遊戲本體與本地故事書(tools/story_book)共用同一份,見 storyui.js 檔頭
+import {
+  charAvatarHTML, heroChip, kindLabelOf,
+  chapterCardHTML, briefHTML, overText, progressText,
+} from './storyui.js';
+import { Dialogue } from './dialogue.js';
 import { BattleClient } from './game.js';
 import { GameAudio } from './audio.js';
 import { CONTROLS_BY_KIND, TOUCH_CONTROLS, HELP, helpItemP, helpCatLabel, uiTip, specControls } from './help.js';
@@ -129,6 +136,7 @@ const app = {
   storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
   storyPilot: null,     // 簡報中選定的出戰主駕
   venueSelOpen: null,   // 開戰時刻現場選的預設場地(與最愛互斥)
+  dlg: null,            // Dialogue(劇情戰役對話演出層;與 battle 同生死)
   battle: null,         // BattleClient
   audio: null,          // GameAudio(app 層,跨戰局存活;BGM 大廳↔戰場切換)
   terrain: null,
@@ -597,90 +605,28 @@ function renderStorySide() {
 function renderStoryChapters() {
   const side = app.storySide;
   const grid = $('storyChapters');
-  grid.innerHTML = '';
   let clearedN = 0;
-  STORY.forEach((ch, i) => {
-    const sc = chapterSide(ch, side);
-    const unlocked = chapterUnlocked(side, i);
+  // 卡片標記走 storyui.chapterCardHTML(與故事書同一份);解鎖/通關狀態是**參數**不是分支
+  grid.innerHTML = STORY.map((ch, i) => {
     const cleared = isCleared(side, ch.id);
     if (cleared) clearedN++;
-    const v = VENUES.find((x) => x.id === ch.venueId);
-    const card = document.createElement(unlocked ? 'button' : 'div');
-    card.className = 'chapter-card' + (unlocked ? '' : ' locked') + (cleared ? ' cleared' : '');
-    const state = cleared ? '<span class="chapter-state done">✓ 已通關</span>'
-      : unlocked ? '<span class="chapter-state go">▶ 可出戰</span>'
-      : '<span class="chapter-state lock">🔒 未解鎖</span>';
-    card.innerHTML = `
-      <span class="chapter-num">${i + 1}</span>
-      <div class="chapter-body">
-        <span class="chapter-title">${esc(ch.act)} ・ ${esc(sc.title)}</span>
-        <span class="chapter-place">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</span>
-      </div>
-      ${state}`;
-    if (unlocked) card.onclick = () => showStoryBrief(i);
-    grid.appendChild(card);
+    return chapterCardHTML(ch, i, side, { unlocked: chapterUnlocked(side, i), cleared });
+  }).join('');
+  // 點擊委派:卡片只帶 data-i(storyui 不綁事件),鎖住的那些是 <div> ⇒ 自然不會有 button 可點
+  grid.querySelectorAll('button.chapter-card').forEach((b) => {
+    b.onclick = () => showStoryBrief(Number(b.dataset.i));
   });
-  $('storyProgress').textContent = `${SIDES[side].name}戰線:已通關 ${clearedN} / ${STORY.length}`
-    + (clearedN >= STORY.length ? ' ・ 🏆 全戰線肅清!' : '');
-}
-
-/**
- * **頭像 + 機種角標**(2026-08-02 使用者定案「設計無人機/機甲/變形者的圖示,標示在頭像旁邊」)。
- * 四處頭像(選角牆 / 放大視窗選角牆 / 劇情主駕小卡 / 角色卡立繪標籤)MUST 全走這一支 ——
- * 各拼一次 `<img>` + `<svg>` 就是四份會漂的標記,而「某一面牆沒有角標」在畫面上只像是漏渲染。
- * 機種一律取 `charKind(id)`(2026-08-02 混編後陣營 ≠ 機種,MUST NOT 由 side 推)。
- */
-function charAvatarHTML(id, cls = 'char-av') {
-  const kind = charKind(id);
-  return `<span class="av-wrap"><img class="${cls}" src="${avatarURL(id)}" alt="" draggable="false">`
-    + `<span class="av-kind" aria-label="${esc(kindLabelOf(kind))}">${kindIconHTML(kind)}</span></span>`;
-}
-
-/** 角色小卡(選主駕 / 敵方預覽共用) */
-function heroChip(id, opts = {}) {
-  const c = CHARACTERS[id] || {};
-  const cls = 'sb-chip' + (opts.merc ? ' merc' : '') + (opts.on ? ' on' : '') + (opts.enemy ? ' enemy' : '');
-  return `<button class="${cls}" data-ch="${id}"${opts.enemy ? ' disabled' : ''}>
-      ${charAvatarHTML(id, 'sb-chip-av')}
-      <span class="sb-chip-txt"><b>「${esc(c.code || '')}」</b>${esc(c.name || '')}${opts.merc ? '<i>傭兵</i>' : ''}</span>
-    </button>`;
+  $('storyProgress').textContent = progressText(side, clearedN, STORY.length);
 }
 
 function showStoryBrief(i) {
   const ch = STORY[i];
-  const side = app.storySide, foe = side === 'STEEL' ? 'SWARM' : 'STEEL';
-  const sc = chapterSide(ch, side), ec = chapterSide(ch, foe);
-  const v = VENUES.find((x) => x.id === ch.venueId);
-  const roster = [...sc.heroes, ...sc.mercs];
-  app.storyPilot = roster[0];             // 預設主駕 = 第一名陣營角色
-  const cine = sc.img
-    ? `<img class="sb-cine-img" src="${esc(sc.img)}" alt="${esc(sc.title)}" onerror="this.classList.add('sb-cine-fail')">`
-    : '';
-  const mercSet = new Set(sc.mercs);
-  const yourChips = roster.map((id) => heroChip(id, { merc: mercSet.has(id), on: id === app.storyPilot })).join('');
-  const foeMerc = new Set(ec.mercs);
-  const foeChips = [...ec.heroes, ...ec.mercs].map((id) => heroChip(id, { merc: foeMerc.has(id), enemy: true })).join('');
-  // 圖文並茂:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標
-  $('storyBriefBody').innerHTML = `
-    <div class="sb-cine sb-cine-${side}">
-      ${cine}
-      <div class="sb-cine-scrim"></div>
-      <div class="sb-cine-corners"><i></i><i></i><i></i><i></i></div>
-      <div class="sb-cine-tag">${side === 'STEEL' ? '協約 · 鋼鐵征討' : '同盟 · 蜂群逆襲'}</div>
-      <div class="sb-cine-cap">
-        <div class="sb-cine-act">${esc(ch.act)} ／ CH.${String(i + 1).padStart(2, '0')}</div>
-        <div class="sb-cine-name">${esc(sc.title)}</div>
-        <div class="sb-cine-meta">📍 ${esc(v ? v.name : ch.venueId)} ・ ${esc(envLabel(ch.env))} ・ ${ch.teamSize}v${ch.teamSize}</div>
-      </div>
-    </div>
-    <div class="sb-prose"><p class="sb-intro">${esc(sc.intro).replace(/\n\n+/g, '</p><p class="sb-intro">')}</p></div>
-    <div class="sb-roster" style="--own:var(${side === 'STEEL' ? '--steel' : '--swarm'});--foe:var(${side === 'STEEL' ? '--swarm' : '--steel'})">
-      <div class="sb-roster-h your">◈ 你的部隊 — 點選出戰主駕,其餘為 AI 僚機</div>
-      <div class="sb-chips" id="sbYourChips">${yourChips}</div>
-      <div class="sb-roster-h foe">✖ 當面之敵</div>
-      <div class="sb-chips">${foeChips}</div>
-    </div>
-    <div class="sb-obj">${esc(sc.objective)}</div>`;
+  const side = app.storySide;
+  const sc = chapterSide(ch, side);
+  app.storyPilot = [...sc.heroes, ...sc.mercs][0];   // 預設主駕 = 第一名陣營角色
+  // 圖文並茂:全幅立繪 → 長篇敘事 → 雙方陣容(選主駕)→ 任務目標。
+  // 標記走 storyui.briefHTML(與故事書同一份);這裡只負責掛事件與出擊。
+  $('storyBriefBody').innerHTML = briefHTML(ch, i, side, app.storyPilot);
   $('sbYourChips').querySelectorAll('.sb-chip').forEach((btn) => {
     btn.onclick = () => {
       app.storyPilot = btn.dataset.ch;
@@ -703,6 +649,7 @@ function startStoryChapter(i) {
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
   const cfg = venueConfig(v, ch.teamSize);
   cfg.env = { ...ch.env };
+  cfg.siege = true;   // 劇情戰役:攻堅順序鎖血(前線塔 → 中段塔 → 主堡;結算在 sim,見 data.js SIEGE)
   const pilot = app.storyPilot || sc.heroes[0];
   const allies = [...sc.heroes, ...sc.mercs].filter((id) => id !== pilot);   // 我方僚機(指名 AI)
   const enemies = [...ec.heroes, ...ec.mercs];                              // 敵方陣容(指名 AI)
@@ -739,6 +686,7 @@ function launchStoryBattle() {
 function exitStoryBattle() {
   app.net?.send({ t: 'leaveRoom' });
   if (app.battle) { app.battle.dispose(); app.battle = null; }
+  app.dlg?.dispose(); app.dlg = null;   // 對話層與戰場同生死(定時器漏收 = 下一場冒出上一場的台詞)
   app.terrain = null;
   app.lobby = null;
   app.story = null;
@@ -1233,7 +1181,6 @@ function unitStatCells(kind) {
   if (u.speed) rows.push(['機動', u.speed, 'speed']);
   return rows.map(([label, v, k]) => statCell(label, v, UNIT_BAR_MAX[k])).join('');
 }
-const kindLabelOf = (kind) => kind === 'drone' ? '無人機' : kind === 'morph' ? '變形者' : '機甲';
 const sideName = (side) => sideInfo(side).name;   // SWARM/STEEL/第三方(GUER/MILI)統一查表
 const unitClassLabel = (kind) => CLASS_NAME[TARGET_CLASS[kind]] || '';
 
@@ -1987,6 +1934,7 @@ function startPrebuild(cfg) {
 async function enterLoading(cfg) {
   app.battleCfg = cfg;
   if (app.battle) { app.battle.dispose(); app.battle = null; }
+  app.dlg?.dispose(); app.dlg = null;   // 對話層與戰場同生死(定時器漏收 = 下一場冒出上一場的台詞)
   
   // Select a dynamic background based on room participants
   try {
@@ -2098,6 +2046,7 @@ function enterGame() {
   const hud = makeHud();
   const meLobby = app.lobby?.clients.find((c) => c.id === app.youId);
   const myCh = meLobby?.ch || null;   // 開戰時伺服器已定案(隨機也回寫)
+  app.dlg = new Dialogue($('dialogueLayer'));
   app.battle = new BattleClient({
     canvas: $('gameCanvas'),
     minimapCanvas: $('minimap'),
@@ -2109,6 +2058,15 @@ function enterGame() {
     terrain: app.terrain,
     audio: app.audio,
     hud,
+    // 攻堅階段被推平 → 播該章該階的雙方對白(內容 storytalk.js、演出 dialogue.js)。
+    // **主堡那一階不在這裡播**:主堡一倒就 gameOver,對白會被結算畫面當場蓋掉 ⇒ 改由 hud.over 播。
+    onSiege: (stage) => {
+      if (!app.story || stage >= SIEGE.BASE) return;
+      const sc = talkOf(app.story.chapterId, app.story.side, stageKey(stage));
+      if (sc) app.dlg?.radio(sc);
+    },
+    // 攻堅進度條:目前打得動敵方的哪一階(權威值來自快照,客戶端不自己數塔)
+    onSiegeTrack: (sg) => app.dlg?.track(app.story ? sg[app.story.foe] : null),
   });
   if (app.fieldMsg) app.battle.onField(app.fieldMsg);   // 開戰前就收到的危險區資料
   // 陣營樣式 & 操作說明
@@ -2338,17 +2296,23 @@ function makeHud() {
       const won = app.mySide === winner;
       // 劇情戰役:勝利即通關解鎖同陣營下一章;敘事文案改用該章該陣營的 victory/defeat
       const chapter = app.story && STORY[app.story.index];
-      const csc = chapter && chapterSide(chapter, app.story.side);
       if (chapter && won) markCleared(app.story.side, chapter.id);
-      $('overTitle').textContent = chapter
-        ? (won ? '任務達成' : '任務失敗')
-        : `${win.name} 勝利!`;
-      $('overTitle').style.color = won ? win.color : (chapter ? 'var(--danger)' : win.color);
-      $('overSub').textContent = chapter
-        ? (won ? csc.victory : csc.defeat)
+      // 劇情文案走 storyui.overText(與故事書同一份);一般對戰仍是原本那三句
+      const ot = chapter ? overText(chapter, app.story.side, won) : null;
+      $('overTitle').textContent = ot ? ot.title : `${win.name} 勝利!`;
+      $('overTitle').style.color = ot ? (won ? win.color : ot.color) : win.color;
+      $('overSub').textContent = ot ? ot.sub
         : app.mySide
           ? (won ? '🏆 敵方主堡已化為廢墟,你贏得了這場戰役!' : '💀 你的主堡被摧毀了…下次再戰。')
           : '戰役結束。';
+      // 劇情戰役的**主堡那一階**對白:戰鬥中沒有暫停,主堡一倒就 gameOver ⇒ 那一場天生
+      // 屬於結算畫面(也才重讀得到)。只有贏的那一方才是「推掉對方主堡」,輸了不演。
+      app.dlg?.clear();
+      $('overTalk').innerHTML = '';
+      if (chapter && won) {
+        const sc = talkOf(chapter.id, app.story.side, stageKey(SIEGE.BASE));
+        if (sc) app.dlg?.scene($('overTalk'), sc);
+      }
       $('overStats').textContent =
         `◆ ${SIDES.SWARM.name}:擊殺 ${stats.SWARM.kills}/助攻 ${stats.SWARM.assists ?? 0}/陣亡 ${stats.SWARM.deaths}/補刀 ${stats.SWARM.creepKills}   ` +
         `◆ ${SIDES.STEEL.name}:擊殺 ${stats.STEEL.kills}/助攻 ${stats.STEEL.assists ?? 0}/陣亡 ${stats.STEEL.deaths}/補刀 ${stats.STEEL.creepKills}`;
@@ -2946,7 +2910,7 @@ function onSync(m) {
   setRoomCtrlMode(m.lobby.config?.ctrl || null);
 
   if (phase === 'room') {
-    if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; }
+    if (app.battle) { app.battle.dispose(); app.battle = null; app.terrain = null; app.dlg?.dispose(); app.dlg = null; }
     app.fieldMsg = null;   // 回房再戰會重新生成危險區
     $('overOverlay').style.display = 'none';
     $('shopOverlay').style.display = 'none';
