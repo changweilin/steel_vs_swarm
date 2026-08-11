@@ -719,6 +719,14 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- 半透明全螢幕鍵(2026-08-11 使用者需求「手機版每個頁面都加入」):MUST 留在 body 層
+     (position:fixed)—— 這樣才能跨越 index.html 全部 `.screen`,不必在每個畫面各掛一顆。
+     戰場(#game)刻意排除:那裡已有自己的全螢幕鍵(見 #touchLayer 的 tl-sys-l
+     `data-act="full"`,隨虛擬搖桿整組收放),排除規則住 style.css `body[data-screen="game"]`。
+     顯示與否、點擊行為一律轉呼 mobile.js 既有的唯一縫(touchCapable() / toggleFullscreen()),
+     MUST NOT 在這裡另寫一份判斷或另開一條全螢幕邏輯 —— 接線見 main.js syncFsToggleBtn()。 -->
+<button id="fsToggleBtn" class="fs-toggle-btn" type="button" aria-label="全螢幕切換" hidden>⛶</button>
+
 <!-- 角色簡歷跳出視窗(點頭像預覽,不影響選角)-->
 <div id="charBioModal" class="bio-modal" hidden>
   <div class="bio-modal-box">

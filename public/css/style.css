@@ -772,6 +772,28 @@ body.touch-ui .ov-close { width: 44px; height: 44px; font-size: 17px; top: 8px; 
 .toast::after { content: none; }
 .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---------- 半透明全螢幕鍵(手機版每個頁面共用一顆;見 index.html #fsToggleBtn 註解) ----------
+   位置固定右上角,退避掉頂部 .sysbar 的裝飾文字(padding 5px 44px)與 .scanlines 的兩個 L 形
+   邊角(左上 / 右下)—— 右上角是唯一在 connect/openroom/story/room/loading 五個畫面都淨空的角。
+   z-index 刻意落在 .hud-top(10)之上、.overlay(20)/.map-panel(1000)之下:疊層或選址面板蓋住
+   時 MUST 讓那些畫面內容贏,而不是浮在它們的關閉鍵 / 地圖控件上面搶點擊。 */
+.fs-toggle-btn {
+  position: fixed;
+  top: calc(30px + env(safe-area-inset-top, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  z-index: 15;
+  width: 38px; height: 38px; padding: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 10, 15, 0.42); border: 1px solid rgba(122, 158, 178, 0.45);
+  color: var(--text); font-size: 17px; line-height: 1;
+  opacity: 0.72; transition: opacity 0.1s, background 0.1s;
+}
+.fs-toggle-btn:active { opacity: 1; background: rgba(var(--railS-rgb), 0.3); }
+.fs-toggle-btn[hidden] { display: none; }
+/* 戰場(#game)已有自己的全螢幕鍵(#touchLayer 的 tl-sys-l),排除避免疊兩顆
+   (main.js `show()` 是 `body[data-screen]` 的唯一寫入點,見該函式)。 */
+body[data-screen="game"] .fs-toggle-btn { display: none; }
+
 /* ---------- 手機 / 窄視窗(非觸控裝置也吃這段;觸控版另有 body.touch-ui.ori-* 特化)----------
    陣營卡 MUST 維持左右並排(STEEL 左 / SWARM 右 = 主視覺方位),窄屏只收窄不換向 ——
    換成上下堆疊會讓「左藍右黃」的對抗語意消失,也和桌機的操作位置對不上。 */
