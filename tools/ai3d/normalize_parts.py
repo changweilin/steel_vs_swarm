@@ -31,6 +31,7 @@
 #   而實拍樹冠天生比球扁 —— 等比縮的話填不滿縱向,零件表的 sy 再壓一次就成薄餅;
 #   拉滿球包絡後,消費端 sy 壓出來的比例才與舊 ico 同款(板根同理:cone 的 r 與 h/2 差很遠)。
 import bpy
+import os
 import sys
 import math
 import random
@@ -104,6 +105,9 @@ DROP = set(opt_all('drop'))
 # 沒有 UV 也不會報錯,只是整棟採到 (0,0) 那一個 texel = 一塊沒有窗的純色板。
 # 投影規則沿用原 BoxGeometry 的「逐面 0..1」慣例:依主導法線分軸,另兩軸各自 +0.5。
 # 座標系:Blender Z-up,匯出 +Y up ⇒ 遊戲的 (X, Y, Z) = Blender 的 (x, z, −y)。
+# 平面整平的總開關(預設**開**;`--no-planar` 給樹族那幾支呼叫端)
+NO_PLANAR = '--no-planar' in argv
+
 BOXUV = set(opt_all('boxuv'))
 # --roofband "<node>=<frac>[|<minz>]":**屋頂帶 UV**(2026-08-09 使用者回報「斜頂屋頂外觀
 # 變摩天大樓的玻璃」的**後半**)。前半(換一張材質感的牆)已在 biomes 那一側落地,但庫節點
@@ -248,6 +252,246 @@ def _shade(ob, ratio):
         bpy.ops.object.shade_flat()
     else:
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(30))
+
+
+# ============ 平面整平 + 底部貼平(2026-08-11 使用者定案)============
+#
+# 平面整平:「平面整平只有建築」。**「只有建築」是推導不是名冊**,而且需要**兩把尺** ——
+#   ㋐ 平面分數(法線分群後前 6 群佔總面積):岩 .052~.188 / 建築 .266~.566,中間乾淨空隙
+#      ⇒ 取幾何中點 .224。
+#   ㋑ 碎屑佔比(最大連通元件以外的面積):岩+建築 ≤.414 / 樹族木質 .697~.856 ⇒ 取中點 .54。
+#   只用 ㋐ 的話**木質幹會被整平**(圓柱分群少 ⇒ 分數 .88~.95,比任何建築都高),而且
+#   呼叫端沒帶旗標就靜默發生 —— 所以排除做成幾何推導,不靠「記得加 --no-planar」。
+PLANAR_SPLIT = 0.224
+PLANAR_ISLAND_MAX = 0.54
+PLANAR_DEG = 12.0         # 法線夾角在此之內視為同一個平面群
+PLANAR_MIN_F = 0.02       # 群面積佔比低於此 ⇒ 不值得整(整了只會抹掉細節)
+PLANAR_MAX_F = 0.01       # 單一頂點最多推動 跨距 × 此值(避免整棟被拉塌)
+
+# 底部貼平:使用者定義「放在平面時,最下緣要貼齊平面」+ 手繪圖(2026-08-11):
+# **把凸出平面以下的那一段整個切掉**。嚴格度階梯「建築最嚴、岩石其次、樹最寬鬆」。
+# ⚠ 這三個值是**設計目標不是校準值**:掃過已出貨 46 顆,建築接觸率 .0014~.3575(中位 .080)、
+# 樹中位 0、新產出 .000~.0195 —— 整個零件庫沒有一顆是貼齊的,沒有正例可以錨。明講勝過假裝。
+BASE_TARGET = {'building': 0.90, 'rock': 0.35}   # 樹族缺席 = 不動
+BASE_EPS_F = 0.02          # 「貼齊」的容差 = 跨距 × 此值
+BASE_MAX_CUT_F = 0.12      # 最多鏟掉跨距的這麼多(寧可不達標也不砍掉一截樓)
+
+
+def _family_of_out(out_path):
+    """族 = 產出檔名(零件庫就是逐族一個 GLB)⇒ 推導,不是名冊。"""
+    return os.path.splitext(os.path.basename(out_path))[0]
+
+
+def _planar_score(ob):
+    """法線分群後前 6 群佔總面積 —— 「這顆是不是人造平面主體」。"""
+    me = ob.data
+    tot, grp = 0.0, {}
+    for p in me.polygons:
+        n = p.normal
+        k = (round(n.x, 1), round(n.y, 1), round(n.z, 1))
+        grp[k] = grp.get(k, 0.0) + p.area
+        tot += p.area
+    return sum(sorted(grp.values(), reverse=True)[:6]) / tot if tot > 0 else 0.0
+
+
+def _island_share(ob):
+    """最大連通元件以外的面積佔比。"""
+    me = ob.data
+    adj = {}
+    for p in me.polygons:
+        vv = list(p.vertices)
+        for i in range(len(vv)):
+            a, b = vv[i], vv[(i + 1) % len(vv)]
+            adj.setdefault(a, set()).add(b)
+            adj.setdefault(b, set()).add(a)
+    seen, comp_of, cid = set(), {}, 0
+    for v in adj:
+        if v in seen:
+            continue
+        st = [v]
+        seen.add(v)
+        comp_of[v] = cid
+        while st:
+            u = st.pop()
+            for w in adj[u]:
+                if w not in seen:
+                    seen.add(w)
+                    comp_of[w] = cid
+                    st.append(w)
+        cid += 1
+    if cid <= 1:
+        return 0.0
+    area = {}
+    for p in me.polygons:
+        c = comp_of.get(p.vertices[0], 0)
+        area[c] = area.get(c, 0.0) + p.area
+    tot = sum(area.values()) or 1.0
+    return (tot - max(area.values())) / tot
+
+
+def _planarize(ob, name):
+    """把近似共面的面群壓到它自己的最佳平面。**只動位置不動拓樸** ⇒ 面數 / 元件數 /
+    邊界邊逐項不變,三角形預算不受影響(這是它與鏡射/貼平最大的差別)。"""
+    score = _planar_score(ob)
+    island = _island_share(ob)
+    if score < PLANAR_SPLIT or island >= PLANAR_ISLAND_MAX:
+        why = (f'平面分數 {score:.3f} < {PLANAR_SPLIT}' if score < PLANAR_SPLIT
+               else f'碎屑佔比 {island:.3f} ≥ {PLANAR_ISLAND_MAX}(不是實心單體)')
+        print(f'PLANAR {name}: 略過 —— {why}')
+        return
+    me = ob.data
+    span = max(max(v.co[a] for v in me.vertices) - min(v.co[a] for v in me.vertices) for a in range(3))
+    lim = span * PLANAR_MAX_F
+    cos_t = math.cos(math.radians(PLANAR_DEG))
+    tot = sum(p.area for p in me.polygons) or 1.0
+    groups = []
+    for p in me.polygons:                       # 貪心分群;零亂數、依面索引定序 ⇒ 決定性
+        n = p.normal
+        for g in groups:
+            c = g['n']
+            if n.x * c.x + n.y * c.y + n.z * c.z >= cos_t:
+                g['faces'].append(p.index)
+                g['area'] += p.area
+                break
+        else:
+            groups.append({'n': n.copy(), 'faces': [p.index], 'area': p.area})
+    moved = 0
+    for g in groups:
+        if g['area'] / tot < PLANAR_MIN_F:
+            continue
+        nx = ny = nz = cx = cy = cz = 0.0
+        for fi in g['faces']:
+            p = me.polygons[fi]
+            nx += p.normal.x * p.area; ny += p.normal.y * p.area; nz += p.normal.z * p.area
+            cx += p.center.x * p.area; cy += p.center.y * p.area; cz += p.center.z * p.area
+        ln = math.sqrt(nx * nx + ny * ny + nz * nz)
+        if ln < 1e-9:
+            continue
+        nx, ny, nz = nx / ln, ny / ln, nz / ln
+        cx, cy, cz = cx / g['area'], cy / g['area'], cz / g['area']
+        for vi in {vi for fi in g['faces'] for vi in me.polygons[fi].vertices}:
+            v = me.vertices[vi].co
+            d = (v.x - cx) * nx + (v.y - cy) * ny + (v.z - cz) * nz
+            d = max(-lim, min(lim, d))          # 只准推這麼多
+            v.x -= d * nx; v.y -= d * ny; v.z -= d * nz
+        moved += 1
+    print(f'PLANAR {name}: 分數 {score:.3f} / 碎屑 {island:.3f} ⇒ 整平 {moved} 群'
+          f'(位移上限 {lim:.4f})')
+
+
+def _hull_area(pts):
+    """2D 凸包面積(monotone chain);Blender 的 python 沒有 scipy ⇒ 自己寫。
+    **只拿來當足跡(整顆的影子)**,MUST NOT 拿它當斷面積 —— 見 `_cut_cap` 的警語。"""
+    p = sorted(set((round(x, 9), round(y, 9)) for x, y in pts))
+    if len(p) < 3:
+        return 0.0
+
+    def half(seq):
+        h = []
+        for q in seq:
+            while len(h) >= 2 and ((h[-1][0] - h[-2][0]) * (q[1] - h[-2][1])
+                                   - (h[-1][1] - h[-2][1]) * (q[0] - h[-2][0])) <= 0:
+                h.pop()
+            h.append(q)
+        return h
+    hull = half(p)[:-1] + half(list(reversed(p)))[:-1]
+    a = 0.0
+    for i in range(len(hull)):
+        x1, y1 = hull[i]
+        x2, y2 = hull[(i + 1) % len(hull)]
+        a += x1 * y2 - x2 * y1
+    return abs(a) / 2.0
+
+
+def _cut_cap(me, z, apply_to=None):
+    """在高度 z 切一刀、丟掉下面那一段、補平面蓋。回蓋子總面積。
+    `apply_to=None` ⇒ 在**副本**上量(掃描用);給 mesh ⇒ 真的寫回去。
+
+    ⚠ **量的就是「這一刀會得到多大的蓋子」本身,不是任何替身。** 2026-08-11 的錯就出在
+    拿**凸包面積**當斷面積:裙邊那一段的斷面是幾片細長、彼此分開的碎片,凸包把它們框成
+    一大塊(實測 0.786 × 足跡 ⇒ 掃描判定「這一層可以」),而真正有材料的只有十分之一
+    (蓋子 0.0075 vs 足跡 0.0938 = 8%)。選層與讀數都繼承同一個替身,所以連改四次都沒改到。
+    """
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    res = bmesh.ops.bisect_plane(
+        bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces),
+        plane_co=(0.0, 0.0, z), plane_no=(0.0, 0.0, 1.0), clear_inner=True)
+    # 只補**切環**(`geom_cut`):網格本來就有的破洞不該被這一刀順手補掉
+    ring = [g for g in res['geom_cut'] if isinstance(g, bmesh.types.BMEdge)]
+    area = 0.0
+    if ring:
+        for f in bmesh.ops.contextual_create(bm, geom=ring).get('faces', []):
+            area += f.calc_area()
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    if apply_to is not None:
+        bm.to_mesh(apply_to)
+        apply_to.update()
+    bm.free()
+    return area
+
+
+def _base_contact(ob, eps):
+    """接觸率 = 貼在平面上的投影面積 ÷ **足跡**(整顆的影子)。回 (接觸率, 最低 z)。
+    分母 MUST 是足跡而不是「所有朝下的面」—— 後者把簷口/陽台/退縮階的下緣全算進去,
+    一顆底部完美平整、上方懸挑很多的量體讀數照樣很低。"""
+    me = ob.data
+    z0 = min(v.co.z for v in me.vertices)
+    foot = _hull_area([(v.co.x, v.co.y) for v in me.vertices])
+    hit = 0.0
+    for p in me.polygons:
+        if p.normal.z > -0.3:
+            continue
+        if max(me.vertices[i].co.z for i in p.vertices) <= z0 + eps:
+            hit += abs(p.normal.z) * p.area
+    return (hit / foot if foot > 0 else float('nan')), z0
+
+
+def _base_flatten(ob, name, fam):
+    """底部貼平:把凸出平面以下的那一段整個切掉,斷面補成一個平面蓋(使用者手繪圖)。
+
+    切到哪一層 = 掃最底 `BASE_MAX_CUT_F` 這一段,**逐層真的切一刀量蓋子**,取第一個達到
+    `target × 平坦值` 的高度 —— 裙邊那一段蓋子面積陡升、本體那一段平坦,膝點就是裙邊的頂。
+    """
+    target = BASE_TARGET.get(fam)
+    if target is None:
+        return
+    me = ob.data
+    span = max(max(v.co[a] for v in me.vertices) - min(v.co[a] for v in me.vertices) for a in range(3))
+    eps = span * BASE_EPS_F
+    c0, z0 = _base_contact(ob, eps)
+    # ⚠ `target` 是「斷面要達到**平坦值**的幾成」,**不是**接觸率的門檻。兩者不可混用:
+    # 接觸率的分母是**凸包**足跡,而 L 形 / 雙瓣這種非凸量體的凸包會把中間的空隙也算進去
+    # ⇒ 接觸率天生達不到 0.9,拿它當閘門就變成「永遠要鏟」或「永遠鏟不夠」
+    # (2026-08-11 實測:twin1 的底部是兩瓣,鏟到 0.105 × 跨距 接觸率也只有 0.192)。
+    # 閘門改成「**現在的底面已經夠平了嗎**」= t≈0 那一層的斷面有沒有到平坦值的 target。
+    steps = 24
+    levels = [BASE_MAX_CUT_F * span * i / steps for i in range(0, steps + 1)]
+    areas = [_cut_cap(me, z0 + t) for t in levels]          # 直接切、直接量,沒有替身
+    plateau = max(areas) if areas else 0.0
+    if plateau <= 0:
+        print(f'BASE {name}({fam}): 量不到斷面 ⇒ 不動')
+        return
+    if areas[0] >= target * plateau:
+        print(f'BASE {name}({fam}): 底面斷面已達平坦值的 {areas[0] / plateau:.2f} '
+              f'(≥ {target})⇒ 不動')
+        return
+    best = None
+    for t, a in zip(levels[1:], areas[1:]):
+        if a >= target * plateau:
+            best = t
+            break
+    if best is None:
+        print(f'BASE {name}({fam}): 鏟到上限 {BASE_MAX_CUT_F} × 跨距 斷面仍只有平坦值的 '
+              f'{max(areas) and areas[-1] / plateau:.2f} ⇒ 不鏟(寧可不達標也不砍掉一截)')
+        return
+    cap = _cut_cap(me, z0 + best, apply_to=me)
+    c1, _ = _base_contact(ob, eps)
+    # 接觸率是**診斷**不是驗收(分母是凸包 ⇒ 非凸量體天生 <1);驗收看「斷面/平坦值」
+    print(f'BASE {name}({fam}): 鏟掉 {best / span:.3f} × 跨距 ⇒ 斷面 {cap:.5f} '
+          f'= 平坦值的 {cap / plateau:.2f}(目標 {target});'
+          f'接觸率(診斷,對凸包){c0:.3f} → {c1:.3f}')
 
 
 def _mirror(ob, axis, name, mode='half'):
@@ -499,6 +743,13 @@ for (name, src, target_r, target_hy, tri_cap, ry_deg, dy, grp) in NODES:
         ob.rotation_mode = 'XYZ'
         ob.rotation_euler = (0.0, 0.0, math.radians(ry_deg))   # Blender Z-up;匯出時轉 glTF Y-up
         bpy.ops.object.transform_apply(rotation=True)
+
+    # ②-a 平面整平 / ②-a2 底部貼平(2026-08-11;**預設開**,對象由推導決定)。
+    #     MUST 排在減面**之前**:整平讓共面的面真的共面、鏟平改變斷面,
+    #     排在減面之後就是對著已收進預算的網格再動一刀。
+    if not NO_PLANAR:
+        _planarize(ob, name)
+    _base_flatten(ob, name, _family_of_out(OUT))
 
     # ②-b 鏡像貼補(MUST 排在減面**之前**:鏡射保留一半的面、再翻一份 ⇒ 面數大致不變,
     #     排在減面之後會直接把預算翻倍)。鏡射面過**物件原點** ⇒ 先把該軸的包圍盒中點

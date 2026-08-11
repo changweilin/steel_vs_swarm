@@ -20,6 +20,8 @@
 //   --break-spawn      零件台自己 spawn 行程 ⇒ Ⅸ 紅(閘門變成兩份)
 //   --break-panel      面板自己判圖檔狀態    ⇒ Ⅸ 紅(第六本帳)
 //   --break-pane       保險絲又被當成「原版」並排 ⇒ Ⅸ 紅(那不是同源新舊版本)
+//   --break-home       掃姊妹 worktree 又綁回「ROOT 是不是 worktree」 ⇒ Ⅸ 紅(從主檢出找不到語料)
+//   --break-corpus     第 ⑦⑧ 站的閘退回只看指令列旗標 ⇒ Ⅹ 紅(非出貨語料家會進遊戲)
 // Ⅸ 的**三態順序**沒有 break 旗標,理由是它已經被四條固定期望值釘死(todo/done/dropped/fix
 // 各一條,且 fix 那一條刻意同時滿足 dropped)—— 分支被調換位置時至少有一條會紅。
 //
@@ -28,8 +30,8 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROOT, readSrc } from '../audit_src.mjs';
 import { biomesSrc, fbEnvelope, triBudget } from './parts_src.mjs';
 import {
@@ -38,6 +40,7 @@ import {
 import { appendRoster, verifyRoster, snapshot, restore, pickSlot } from './auto_intake.mjs';
 import { removeRoster } from './apply_verdicts.mjs';
 import { photoStates, STATES } from './photo_state.mjs';
+import { corpusMeta } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BREAK_APPEND = process.argv.includes('--break-append');
@@ -46,6 +49,8 @@ const BREAK_BLACKLIST = process.argv.includes('--break-blacklist');
 const BREAK_SPAWN = process.argv.includes('--break-spawn');
 const BREAK_PANEL = process.argv.includes('--break-panel');
 const BREAK_PANE = process.argv.includes('--break-pane');
+const BREAK_HOME = process.argv.includes('--break-home');
+const BREAK_CORPUS = process.argv.includes('--break-corpus');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -358,6 +363,15 @@ console.log('\nⅨ 圖檔三態(未處理/已處理/需修正)與零件台的啟
     'argvOf 只吃工具本身(請求進不了命令列)');
   ok(/spawn\(process\.execPath, \[t\.script, \.\.\.argv\]/.test(dsSrc), 'spawn 的 argv 來自 argvOf');
   ok(/corpusHome\(\)/.test(dsSrc), '資料家由 corpusHome() 推導(語料家會搬,寫死等於下次就錯)');
+  // 語料家與模型棧家是**兩件事**(runbook §5d 刻意不同住)。少了 `--venv`,harvest_loop 的
+  // VENV_HOME 預設成 --home ⇒ 去背/圈選分離/選片閘/生成四站全跳過,而鈕面顯示「執行中」、
+  // 每輪照印「生成 0」—— 迴圈啟動了,但永遠產不出東西,且沒有任何錯誤訊息。
+  ok(/venvHome\(\)/.test(dsSrc) && /'--venv'/.test(dsSrc),
+    '模型棧家另外由 venvHome() 推導後帶 --venv(讓它預設等於語料家 = 四站全部靜默跳過)');
+  ok(/argv\.push\('--t2', process\.env\.SVS_T2_HOME\)/.test(dsSrc),
+    'T2-spz 的 checkout 在儲存庫之外 ⇒ 由環境變數給,MUST NOT 寫死某一台機器的路徑');
+  ok(!/venvHome\(\)\s*\|\|\s*corpusHome\(\)|corpusHome\(\)\s*\|\|\s*venvHome\(\)/.test(dsSrc),
+    '兩個家 MUST NOT 互相當預設值(推不到就不加旗標,降級不例外)');
   // job 的存活判準 MUST NOT 是埠 —— 採集迴圈不聽任何埠,拿 listening 去問它會永遠回「沒開」,
   // 而每按一次啟動就多開一支(兩支同時寫 harvest_state.json,畫面完全正常)
   ok(/kind === 'job'/.test(dsSrc) && /alive\(running\.get\(t\.key\)\)/.test(dsSrc),
@@ -407,6 +421,93 @@ console.log('\nⅨ 圖檔三態(未處理/已處理/需修正)與零件台的啟
   // (h) 明指的資料家排第一 —— 筆數排序是「沒人告訴我用哪個」時的推導,不該蓋掉明講的選擇
   ok(/b\.explicit - a\.explicit/.test(readSrc('tools', 'ai3d', 'provenance.mjs')),
     '`--photos` / `--home` 明指的資料家排在筆數排序之前');
+
+  // (i) **從主檢出也要找得到語料**(2026-08-11 修的那個 bug)。
+  //     照片 gitignore ⇒ 主檢出的 `tools/ai3d/` 永遠沒有帳本,語料一律住某個 worktree。
+  //     舊版把「掃姊妹 worktree」綁在「ROOT 自己是不是 worktree」上 ⇒ 使用者從主檢出
+  //     `npm start` / `npm run parts` 時 `corpusHome()` 回 null,採集迴圈那顆鈕按下去只說
+  //     「找不到任何有 photo_manifest.json 的資料家」。而開發時每一支稽核都在 worktree 裡跑
+  //     (那裡剛好匹配)⇒ **全綠**。⇒ 這一條 MUST 是**行為**斷言:搭一棵主檢出形狀的假樹,
+  //     語料只放在姊妹 worktree,直接問 `corpusHome()`。原文斷言驗不到這種「只在別的
+  //     checkout 形狀下才成立」的錯。
+  const fake = mkdtempSync(join(tmpdir(), 'svs-home-'));
+  try {
+    let pvSrc = readSrc('tools', 'ai3d', 'provenance.mjs');
+    if (BREAK_HOME) {
+      // 單行注入(㋑:含換行的字面替換在 CRLF 工作區是無聲 no-op)——
+      // 把「不是 worktree 就用 ROOT 自己」改掉 = 等價於那一圈沒跑
+      pvSrc = inject(pvSrc, 'const main = m ? m[1] : ROOT;',
+        "const main = m ? m[1] : join(ROOT, '__no_sweep__');", '--break-home');
+    }
+    mkdirSync(join(fake, 'tools', 'ai3d'), { recursive: true });
+    writeFileSync(join(fake, 'tools', 'audit_src.mjs'),
+      "import { dirname } from 'node:path';\nimport { fileURLToPath } from 'node:url';\n"
+      + 'export const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));\n');
+    writeFileSync(join(fake, 'tools', 'ai3d', 'provenance.mjs'), pvSrc);
+    // 語料只住姊妹 worktree(如實重現:主檢出那一份沒有帳本)
+    const corpus = join(fake, '.claude', 'worktrees', 'corpus-wt', 'tools', 'ai3d');
+    mkdirSync(corpus, { recursive: true });
+    writeFileSync(join(corpus, 'photo_manifest.json'), JSON.stringify([{ id: 'a' }, { id: 'b' }]));
+    const mod = await import(pathToFileURL(join(fake, 'tools', 'ai3d', 'provenance.mjs')).href);
+    const got = mod.corpusHome();
+    ok(got !== null && resolve(got) === resolve(corpus),
+      'ROOT 是主檢出時也掃得到姊妹 worktree 的語料(否則採集迴圈在使用者那台永遠啟動不了)');
+  } finally { rmSync(fake, { recursive: true, force: true }); }
+}
+
+// ============ Ⅹ 非出貨語料家(corpus.json) ============
+// 2026-08-11 使用者定案:「授權問題的照片放在專案外一樣的路徑跑 img to 3D 管線,**先別放
+// 遊戲中**」+ 出貨閘選「只跑到 contact sheet 就停」。那條路唯一的弱點是「每次都要記得加
+// `--no-intake`」⇒ 旗標改掛在**家**上面(`<家>/corpus.json`),忘不掉。
+console.log('\nⅩ 非出貨語料家(corpus.json:授權未確認的那一份只跑到 contact sheet)');
+{
+  const dir = mkdtempSync(join(tmpdir(), 'svs-corpus-'));
+  try {
+    // (a) 預設與退化方向 —— **兩個都 MUST 是「當出貨用」**:沒宣告要逐位元同舊行為,
+    //     而壞掉的宣告檔 MUST NOT 變成放行非 CC0 的後門(寧缺勿錯)
+    ok(corpusMeta(dir).shipping === true, '沒有 corpus.json ⇒ 出貨用(現役語料逐位元同舊行為)');
+    ok(corpusMeta(null).shipping === true, '家是 null ⇒ 出貨用');
+    writeFileSync(join(dir, 'corpus.json'), '{ 這不是 JSON');
+    ok(corpusMeta(dir).shipping === true, 'corpus.json 讀不懂 ⇒ 當出貨用(壞掉的宣告 MUST NOT 變成後門)');
+    writeFileSync(join(dir, 'corpus.json'), JSON.stringify({ shipping: false, why: '授權未確認' }));
+    const m = corpusMeta(dir);
+    ok(m.shipping === false && m.declared === true && /授權/.test(m.why || ''),
+      'shipping:false 讀得出來,而且理由帶得出來(面板要標給人看)');
+    // 只有明講 false 才算 —— 少了這一條,任何一個手滑寫進去的鍵都會變成「不出貨」
+    writeFileSync(join(dir, 'corpus.json'), JSON.stringify({ note: 'x' }));
+    ok(corpusMeta(dir).shipping === true, '沒寫 shipping 欄 ⇒ 仍是出貨用(只有明講 false 才算)');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+
+  // (b) 兩個消費端。第 ⑦⑧ 站的閘是**推導自家**而不是指令列旗標
+  let hlSrc = readSrc('tools', 'ai3d', 'harvest_loop.mjs');
+  if (BREAK_CORPUS) {
+    hlSrc = inject(hlSrc, "const NO_INTAKE = flag('no-intake') || !CORPUS.shipping;",
+      "const NO_INTAKE = flag('no-intake');", '--break-corpus');
+  }
+  ok(/const NO_INTAKE = flag\('no-intake'\) \|\| !CORPUS\.shipping;/.test(hlSrc),
+    '非出貨語料家強制 --no-intake(掛在家上面,不是靠每次記得加旗標)');
+  // `--dry` 也要講:dry 是拿來確認「這一輪會做什麼」的,印成 [dry] 自動入庫 = 謊報會入庫
+  ok(/opts\.skip && opts\.hard/.test(hlSrc) && /hard: NO_INTAKE/.test(hlSrc),
+    '結構性的略過在 --dry 底下也照講(否則 dry 會謊報它要入庫)');
+  // 2026-08-11 實測踩到:非出貨家照樣去補型錄缺額,抓了 8 張 CC0 進來。限流是 IP 級的
+  // ⇒ 它花掉的是正牌語料庫的額度,而抓下來的 CC0 從此困在「不進遊戲」的家裡
+  ok(/非出貨語料家不補型錄缺額/.test(hlSrc),
+    '非出貨語料家不跑第 ① 站抓照片(限流是 IP 級的,而抓到的 CC0 會被困在不出貨的家裡)');
+
+  // (c) 授權硬閘**只在非出貨家鬆掉「是不是 CC0」這一條**,而且仍要求有記
+  let fpSrc = readSrc('tools', 'ai3d', 'fetch_photos.mjs');
+  ok(/if \(meta\.shipping\) \{[\s\S]{0,200}?licenceOk\(rec\.license\)/.test(fpSrc),
+    'CC0/PD 硬閘在出貨家一字未改(A 級 MUST:烤進 repo 的零件沒地方放署名)');
+  ok(/非出貨家仍要記授權/.test(fpSrc),
+    '非出貨家鬆的只有「是不是 CC0」—— 仍 MUST 逐張記下實際授權(不記 = 沒有帳)');
+  ok(/restricted: meta\.shipping \? undefined : true/.test(fpSrc),
+    '非出貨家收進來的逐筆蓋 restricted 戳記(帳本自己說得出「這張不能出貨」)');
+
+  // (d) 面板 MUST 標出來 —— 非出貨語料長得跟正式語料一模一樣
+  ok(/corpus: corpusMeta\(home\)/.test(readSrc('tools', 'parts_review.mjs')),
+    '/api/photos 帶出這個家出不出貨');
+  ok(/corpus\.shipping === false/.test(readSrc('tools', 'parts_review', 'review.js')),
+    '零件台把非出貨語料標出來(不標的話台上兩份混在一起,而人眼判決是照著台上做的)');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項,失敗 ${fail} 項${unverified ? `,未驗 ${unverified} 項` : ''}`);

@@ -877,6 +877,9 @@ function renderHarvest() {
       title="回到生成物清單(節點與純資料件)">生成物</button>
     ${pills}
     <span class="pr-grow"></span>
+    ${/* 非出貨語料家 MUST 標出來 —— 它與正式語料長得一模一樣,不標的話台上兩份混在一起 */
+    p?.corpus && p.corpus.shipping === false
+      ? `<span class="pr-bad" title="${esc(p.corpus.why || '')}">⚠ 非出貨語料(不進遊戲)</span>` : ''}
     <span class="pr-hs" title="${esc(homeTip)}">${p?.ok
       ? `資料家 ${esc(String(p.home).split(/[\\/]/).slice(-3).join('/'))}${(p.homes || []).length > 1 ? `(另有 ${p.homes.length - 1} 個候選)` : ''}`
       : `⚠ ${esc(p?.why || '讀不到語料帳本')}`}</span>

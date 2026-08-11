@@ -45,6 +45,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { corpusMeta } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 // 資料家(photos/ 與帳本)= `--home`,不給就是腳本自己的目錄(舊行為逐位元不變)。
@@ -548,6 +549,15 @@ const licenceOk = (l) => CC0_RE.test(String(l || '').trim()) || COMMONS_OK.test(
 
 function adoptInbox() {
   mkdirSync(INBOX, { recursive: true });
+  // 這個家出不出貨(`corpus.json`;沒宣告 = 出貨用,以下逐位元同舊行為)。
+  // **非出貨家才鬆授權**,而且鬆的只有「是不是 CC0/PD」這一條 —— 仍然要求逐張**有記**授權字串
+  // (來源帳的意義就是「這張是哪來的」,不記等於沒帳)。收進來的每一筆蓋 `restricted` 戳記。
+  const meta = corpusMeta(HOME);
+  if (!meta.shipping) {
+    console.log(`⚠ 非出貨語料家(${HOME}/corpus.json 宣告 shipping:false)`);
+    console.log(`   ${meta.why || ''}`);
+    console.log('   ⇒ 授權不限 CC0/PD,但每一張仍 MUST 記下實際授權;收進來的逐筆蓋 restricted 戳記。');
+  }
   const fams = readdirSync(INBOX, { withFileTypes: true }).filter((d) => d.isDirectory());
   if (!fams.length) {
     console.log(`自己放圖的地方(空的):${INBOX}`);
@@ -575,7 +585,11 @@ function adoptInbox() {
         if (name === 'sources.json') continue;
         const rec = src[name] || src._default;
         if (!rec) { console.warn(`✗ ${f.name}/${p.name}/${name}:sources.json 裡沒有這一張(也沒有 _default)`); left++; continue; }
-        if (!licenceOk(rec.license)) { console.warn(`✗ ${f.name}/${p.name}/${name}:授權「${rec.license}」不是 CC0/PD ⇒ 不收`); left++; continue; }
+        if (meta.shipping) {
+          if (!licenceOk(rec.license)) { console.warn(`✗ ${f.name}/${p.name}/${name}:授權「${rec.license}」不是 CC0/PD ⇒ 不收`); left++; continue; }
+        } else if (!String(rec.license || '').trim()) {
+          console.warn(`✗ ${f.name}/${p.name}/${name}:非出貨家仍要記授權(license 空白)⇒ 不收`); left++; continue;
+        }
         const buf = readFileSync(join(dir, name));
         const kind = sniffImage(buf);
         if (!kind) { console.warn(`✗ ${f.name}/${p.name}/${name}:非影像位元組(${buf.subarray(0, 4).toString('hex')})`); left++; continue; }
@@ -602,6 +616,9 @@ function adoptInbox() {
           source_url: rec.source_url || '', license: rec.license, creator: rec.creator || null,
           retrieved_at: new Date().toISOString(), w: size?.w || null, h: size?.h || null,
           size_unknown: size ? undefined : true,
+          // 非出貨家的每一筆都帶戳記 —— 帳本自己就說得出「這張不能出貨」,
+          // 不必回頭去問它住在哪個目錄(而目錄是會被搬的)
+          restricted: meta.shipping ? undefined : true,
           file: relative(HOME, outFile).split('\\').join('/'), ok: true,
         });
         writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2));

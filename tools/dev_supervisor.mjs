@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_PORT as CODEX_PORT } from './codex_review.mjs';
 import { DEFAULT_PORT as PARTS_PORT } from './parts_review.mjs';
 import { DEFAULT_PORT as STORY_PORT } from './story_book.mjs';
-import { corpusHome } from './ai3d/provenance.mjs';
+import { corpusHome, venvHome } from './ai3d/provenance.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -79,8 +79,8 @@ export const TOOLS = {
     // `--rounds 0` = 一直跑到按停為止(採集是機率的,「跑到夠為止」沒有一個算得出來的輪數);
     // `--every 15` 是來源限流的節奏(撞到 429 之後 Retry-After 600s,調短只會讓封鎖續期)。
     args: ['--rounds', '0', '--every', '15'],
-    // 資料家**不是常數**(語料家會搬)⇒ 由 `corpusHome()` 從檔案系統推導後接在 args 後面。
-    // 它仍然沒有違反邊界 ③:那是我們自己算出來的路徑,**請求一個字都碰不到**。
+    // 語料家 / 模型棧家**都不是常數**(會搬,而且刻意不同住)⇒ 由 `argvOf` 從檔案系統推導後
+    // 接在 args 後面。它仍然沒有違反邊界 ③:那是我們自己算出來的路徑,**請求一個字都碰不到**。
     needsHome: true,
     hint: '收編 inbox → 抓照片 → 去背 → 圈選分離 → 選片閘 → img→3D → 快篩 → contact sheet '
       + '→ 自動入庫 → 收尾稽核,每 15 分鐘一輪,按停為止。入庫只寫工作區**不 commit**;'
@@ -88,11 +88,27 @@ export const TOOLS = {
   },
 };
 
-/** 真正要 spawn 的 argv(常數 + 推導出來的資料家)。**請求碰不到這裡的任何一格**(邊界 ③) */
+/**
+ * 真正要 spawn 的 argv(常數 + 推導出來的那幾個家)。**請求碰不到這裡的任何一格**(邊界 ③)。
+ *
+ * 三個家是**三件事**,MUST NOT 讓其中一個預設等於另一個(runbook §5d):
+ *   ・語料家 `--home` —— 照片與帳本。推不到 ⇒ 回 null,呼叫端印理由不啟動。
+ *   ・模型棧家 `--venv` —— `.venv` + `vendor/stable-fast-3d/`。少了它,`harvest_loop`
+ *     的 `VENV_HOME` 預設成 `--home` ⇒ 找不到 python ⇒ **去背/圈選分離/選片閘/生成
+ *     四站全部跳過**,而鈕面顯示「執行中」、每輪照印「生成 0」(沒有任何錯誤訊息)。
+ *   ・T2-spz `--t2` —— checkout 在儲存庫**之外**(study clone)⇒ 推導不出來,只能由
+ *     環境變數給。沒有不是例外:建築那一族本輪不生成,而 `harvest_loop` 會印出理由。
+ * 後兩個推不到就**不加旗標**(降級不例外,原則 6),MUST NOT 硬塞一個猜出來的路徑。
+ */
 export function argvOf(t) {
   if (!t.needsHome) return [...t.args];
   const home = corpusHome();
-  return home ? [...t.args, '--home', home] : null;    // 找不到語料 ⇒ null,呼叫端印理由不啟動
+  if (!home) return null;    // 找不到語料 ⇒ null,呼叫端印理由不啟動
+  const argv = [...t.args, '--home', home];
+  const venv = venvHome();
+  if (venv) argv.push('--venv', venv);
+  if (process.env.SVS_T2_HOME) argv.push('--t2', process.env.SVS_T2_HOME);
+  return argv;
 }
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);

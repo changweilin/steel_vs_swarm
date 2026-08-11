@@ -129,10 +129,49 @@ def stats(m, ref=None):
     return out
 
 
+# ============ 元件分流:碎屑丟掉、夠大的當成不同物件(2026-08-11 使用者定案)============
+#
+# 使用者原句:「大小小於最大物件到某個程度就當碎屑,足夠大就當成不同物件」。
+#
+# **為什麼落在這一支而不是 2D 那一支**:2026-08-11 量過三個低階影像線索(腐蝕細頸 / 天際線
+# 台階 / 垂直邊),重疊的樓在**剪影**上完全分不開(已出貨單棟的讀數比該切的樓群還高)。
+# 但 solidify 之後在**3D** 裡它們本來就是分開的連通元件 —— 有了深度,那個訊號就存在了。
+# 實測(4 顆 T2 建築,面積 ÷ 最大元件):
+#   建案雙塔  #1 = 0.965   兩棟塔在 z 上完全錯開
+#   DJI~1     #1 = 0.604   兩棟,錯開
+#   DJI~2     #1 = 0.054   單一融合體(這一顆真的只有一棟)
+#   台北 101  #1 = 0.005   單一物件
+#   碎屑尾巴  ≤ 0.068
+# 真物件 0.604~0.965 vs 碎屑 ≤0.068 ⇒ 中間有 **9 倍**的空隙,門檻取幾何中點
+# √(0.068 × 0.604) ≈ 0.203。不是拿兩個樣本過擬合 —— 四顆的分界都落在同一個空隙裡。
+#
+# **blast radius**:這一支只吃 T2 的新產出(管線位置見檔頭),已出貨的 46 顆節點一格都不動。
+SPLIT_OBJ_F = 0.20        # 面積 ÷ 最大元件 ≥ 此值 ⇒ 另一個物件;以下 ⇒ 碎屑,丟掉
+
+
+def split_objects(m, keep_f=SPLIT_OBJ_F):
+    """回 ([夠大的元件…(面積由大到小)], 丟掉幾個, 丟掉的面積佔比)。
+
+    決定性:依面積排序,同面積比包圍盒最小角 ⇒ 同一顆網格跑兩次的順序逐位元相同。
+    """
+    comps = m.split(only_watertight=False)
+    if len(comps) <= 1:
+        return list(comps), 0, 0.0
+    areas = [float(c.area) for c in comps]
+    top = max(areas) or 1.0
+    order = sorted(range(len(comps)), key=lambda i: (-areas[i], tuple(np.round(comps[i].bounds[0], 6))))
+    keep = [i for i in order if areas[i] / top >= keep_f]
+    drop = [i for i in order if areas[i] / top < keep_f]
+    tot = sum(areas) or 1.0
+    return [comps[i] for i in keep], len(drop), sum(areas[i] for i in drop) / tot
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('src')
     ap.add_argument('--out', default=None)
+    ap.add_argument('--split', action='store_true',
+                    help='把夠大的連通元件各存成一顆(碎屑丟掉);單一物件時逐位元同舊行為')
     ap.add_argument('--target', type=int, default=500)
     ap.add_argument('--cells', type=float, default=256)
     ap.add_argument('--offset', type=float, default=0.006)
@@ -174,6 +213,27 @@ def main():
     solidify(a.src, a.target, out, a.cells, a.offset, mode=a.mode, alpha_pct=a.alpha)
     s = stats(load_concat(out), ref)
     print(f'out: {out}\n     {s}', flush=True)
+
+    if a.split:
+        w = load_concat(out)
+        w.merge_vertices()
+        keep, ndrop, dropf = split_objects(w)
+        # **丟掉多少 MUST 印出來**(skill「no silent caps」):靜默丟棄讀起來就是「這顆本來
+        # 就長這樣」,而那正是要看見的事
+        print(f'split: 保留 {len(keep)} 個物件、丟掉 {ndrop} 個碎屑(佔面積 {dropf:.4f};'
+              f'門檻 面積÷最大 ≥ {SPLIT_OBJ_F})', flush=True)
+        if len(keep) <= 1:
+            print('split: 單一物件 ⇒ 輸出不變(逐位元同 --split 之前)', flush=True)
+        else:
+            stem = os.path.splitext(out)[0]
+            for i, c in enumerate(keep, 1):
+                p = f'{stem}.p{i}.glb'
+                c.export(p)
+                cs = stats(c, ref)
+                print(f'  p{i}: {p}\n      {cs}', flush=True)
+            print(f'split: 母檔 {out} 保留不動(誤切要救得回來)', flush=True)
+        return
+
     if not s['watertight'] or s['components'] != 1:
         print('⚠ 未收斂成水密單元件 —— 調 --cells/--offset 或回黏土人眼', flush=True)
         sys.exit(1)

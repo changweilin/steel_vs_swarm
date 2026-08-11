@@ -399,10 +399,15 @@ async function serve() {
       // 圖檔三態(未處理 / 已處理 / 需修正 + 已淘汰);推導縫住 tools/ai3d/photo_state.mjs,
       // 這裡只轉呼(頁面更不准自己判 —— 那會變成第六本帳)
       if (u.pathname === '/api/photos') {
-        const { corpusHomes } = await import('./ai3d/provenance.mjs');
+        const { corpusHomes, corpusMeta } = await import('./ai3d/provenance.mjs');
         const { photoStates, STATES } = await import('./ai3d/photo_state.mjs');
         const homes = corpusHomes(photos);
-        return send(200, JSON.stringify({ ...photoStates(homes[0]?.home ?? null), homes, states: STATES }));
+        const home = homes[0]?.home ?? null;
+        // 這個家出不出貨 —— **一定要講**:非出貨語料(授權未確認的那一份)長得跟正式語料
+        // 一模一樣,不標的話台上兩份混在一起,而人眼判決是照著台上做的。
+        return send(200, JSON.stringify({
+          ...photoStates(home), homes, states: STATES, corpus: corpusMeta(home),
+        }));
       }
 
       // 語料原圖(還沒轉 3D 的也要看得到 —— 手動篩選就是看著圖判)。

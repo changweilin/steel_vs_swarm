@@ -117,21 +117,27 @@ export function loadProvenance(path = MANIFEST_PATH) {
 
 /**
  * 照片可能住哪裡。照片是 gitignore 的(runbook §3 規則 2),而 §5d 記著資料家目錄住**另一個
- * worktree** ⇒ 逐一探測:呼叫端指定 → 本 worktree → 主檢出 → 每一個姊妹 worktree。
+ * worktree** ⇒ 逐一探測:呼叫端指定 → 本 checkout → 主檢出 → 每一個姊妹 worktree。
  * 路徑裡帶著照片 id,命中就一定是同一張,不會挑錯。
+ *
+ * ⚠ 姊妹 worktree 那一圈 **MUST NOT 綁在「ROOT 自己是不是 worktree」上**(2026-08-11 修):
+ * 照片 gitignore ⇒ **主檢出的 `tools/ai3d/` 永遠沒有 `photo_manifest.json`**,語料一律住某個
+ * worktree。舊版只在 ROOT 匹配 `.claude/worktrees/<名>` 時才掃姊妹 ⇒ 從**主檢出**跑的時候
+ * 候選集只剩它自己那一個(沒有帳本)⇒ `corpusHome()` 回 null ⇒ 採集迴圈那顆鈕按下去只回
+ * 「找不到任何有 photo_manifest.json 的資料家」。而開發時每一支稽核與每一次手測都是在 worktree
+ * 裡跑的(那裡正好匹配)⇒ 全綠,只有使用者從主檢出 `npm start` / `npm run parts` 時壞掉。
  */
 export function photoRoots(extra = null) {
   const roots = [];
   if (extra) roots.push(resolve(extra));
   roots.push(join(ROOT, 'tools', 'ai3d'));
+  // ROOT 是 worktree ⇒ 回推一層拿到主檢出;不是 ⇒ ROOT 自己就是主檢出(重複的由 Set 收掉)
   const m = ROOT.replace(/\\/g, '/').match(/^(.*)\/\.claude\/worktrees\/[^/]+$/);
-  if (m) {
-    const main = m[1];
-    roots.push(join(main, 'tools', 'ai3d'));
-    const wt = join(main, '.claude', 'worktrees');
-    if (existsSync(wt)) {
-      for (const d of readdirSync(wt)) roots.push(join(wt, d, 'tools', 'ai3d'));
-    }
+  const main = m ? m[1] : ROOT;
+  roots.push(join(main, 'tools', 'ai3d'));
+  const wt = join(main, '.claude', 'worktrees');
+  if (existsSync(wt)) {
+    for (const d of readdirSync(wt)) roots.push(join(wt, d, 'tools', 'ai3d'));
   }
   return [...new Set(roots)].filter((r) => existsSync(r));
 }
@@ -163,6 +169,61 @@ export function corpusHomes(extra = null) {
 
 /** 挑中的那一個資料家(沒有任何候選 ⇒ null,呼叫端印理由,MUST NOT 假裝有) */
 export const corpusHome = (extra = null) => corpusHomes(extra)[0]?.home ?? null;
+
+/**
+ * **模型棧家**(`.venv` 與 `vendor/stable-fast-3d/` 住哪)—— 與語料家是**兩件事**。
+ *
+ * runbook §5d 記著兩者刻意不同住:weights/venv 在一個 worktree、照片在另一個
+ * (本機實測 venv 在 `zen-albattani-*`、語料在 `reverent-pascal-*`)⇒ `harvest_loop`
+ * 的 `--venv` 與 `--home` 是兩個獨立參數。呼叫端只推導語料家、讓 venv 家預設等於它的話,
+ * `harvest_loop` 找不到 python ⇒ **去背 / 圈選分離 / 選片閘 / 生成四站全部跳過**,
+ * 而鈕面照樣顯示「執行中」、每一輪照樣印「本輪:生成 0」——
+ * 看起來完全正常,只是這個迴圈永遠不會產出任何東西。
+ *
+ * 排序:有 SF3D vendor 的排前面(只有 venv 沒有 vendor 的那一份跑得了去背與選片、
+ * 跑不了生成)。推不到回 null ⇒ 呼叫端 MUST NOT 硬塞一個路徑進去。
+ */
+export function venvHomes() {
+  const out = [];
+  for (const root of photoRoots()) {
+    const py = [join(root, '.venv', 'Scripts', 'python.exe'), join(root, '.venv', 'bin', 'python')];
+    if (!py.some((p) => existsSync(p))) continue;
+    out.push({ home: root, sf3d: existsSync(join(root, 'vendor', 'stable-fast-3d', 'run.py')) });
+  }
+  return out.sort((a, b) => b.sf3d - a.sf3d);
+}
+
+/** 挑中的那一個模型棧家(沒有 ⇒ null;`harvest_loop` 會印「找不到 venv python」並跳過那幾站) */
+export const venvHome = () => venvHomes()[0]?.home ?? null;
+
+/**
+ * **資料家的身分宣告** `<家>/corpus.json`(2026-08-11 使用者定案:「授權問題的照片放在專案外
+ * 一樣的路徑跑 img to 3D 管線,**先別放遊戲中**」)。
+ *
+ * 為什麼是一個檔而不是一個旗標:使用者選的是「只跑到 contact sheet 就停」,而那條路唯一的
+ * 弱點就是「每次都要記得加 `--no-intake`」—— 忘記一次就進了第 ⑦⑧ 站。把它掛在**家**上面,
+ * 忘不掉:同一個家不管誰用什麼指令跑,答案都一樣。
+ *
+ * 兩個消費端:`fetch_photos --adopt`(非出貨家才收非 CC0,並逐筆蓋 `restricted` 戳記)、
+ * `harvest_loop`(非出貨家強制 `--no-intake`)。
+ *
+ * 三條紀律:
+ *   ① **沒有這個檔 = 出貨用**(舊行為逐位元不變 —— 現役那 415 筆一個字都沒動)。
+ *   ② **讀不懂就當出貨用**(寧缺勿錯:壞掉的宣告檔 MUST NOT 變成放行非 CC0 的後門)。
+ *   ③ 這個家刻意住**儲存庫之外** ⇒ `photoRoots()` 永遠推導不到它,只有明著帶
+ *      `--home` / `--photos` 才讀得到。⇒「不會被誤拿去出貨」是**構造保證**,不是紀律。
+ */
+export function corpusMeta(home) {
+  const p = join(home || '', 'corpus.json');
+  if (!home || !existsSync(p)) return { shipping: true, why: null, declared: false };
+  try {
+    const j = JSON.parse(readFileSync(p, 'utf8'));
+    return { shipping: j.shipping !== false, why: j.why || null, declared: true };
+  } catch { return { shipping: true, why: null, declared: false }; }   // 紀律 ②
+}
+
+/** 這個家的產出可不可以進遊戲?(沒宣告 = 可以,逐位元同舊行為) */
+export const corpusShips = (home) => corpusMeta(home).shipping;
 
 /** 解析一張來源圖的實體路徑;找不到回 null(對照台照實顯示「原圖不在本機」,MUST NOT 假裝有) */
 export function resolvePhoto(file, roots) {
