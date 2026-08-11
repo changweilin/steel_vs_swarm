@@ -33,7 +33,8 @@ import {
   RANGE_TOL, altRangeMax, altRangeF, ALTITUDE, BLAST, blastCoreR, blastFalloff,
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
-  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO,
+  BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
+  evadable, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
@@ -1698,6 +1699,177 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
         'sim.tick 一跑就記下這一格的位置(取樣點真的接上,不是只寫在原文裡)');
     }
   }
+}
+
+
+// =================================================================================
+sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算,「原先的目標」閃掉不影響其他人(2026-08-11 使用者定案)');
+// ---------------------------------------------------------------------------------
+// 使用者原句:「榴彈類/導彈類等爆炸傷害爆炸時,就算沒擊中原先的目標,也會造成範圍傷害
+// (閃避率各自計算)」。兩件事一起定案:
+//   ① 爆炸傷害從此**吃閃避**(舊制「有爆風 r ⇒ 不可閃」與「招式不吃閃避」兩條同時退場);
+//   ② 閃避降級成**逐目標**的事 —— 爆風照樣鋪開,範圍內每個目標各自擲自己的骰。
+// 兩條缺一不可,而且**第二條才是真正會壞掉的那一半**:把閃避做成整發早退(`return`)最省事,
+// 症狀是「小隊裡最快的那一台一閃,站在他旁邊的重甲與砲塔一起免傷」—— 畫面上看起來只是
+// 「這發榴彈好像沒傷害」,傷害數字一個都不會跳,而所有既有斷言照樣全綠。
+//
+// 判定範圍只有 `data.js evadable()` 一份:扇形與貫穿**依機制豁免**(錐/圓柱一次掃過整排目標,
+// 沒有「這一發瞄的是誰」可閃),其餘全吃。塔/主堡的制式火砲無 `wid` ⇒ def 為空 ⇒ 不可閃。
+{
+  // ---- ① 分類縫:逐類對帳(MUST NOT 有第二份 type 比對)----
+  ok(evadable({ id: 'light' }) === true, 'evadable:輕武器直射吃閃避(舊制唯一的一類)');
+  ok(evadable(WEAPONS.rgun) === true && evadable(WEAPONS.siege) === true,
+    'evadable:NPC 直射武器吃閃避 —— 它們沒有 `id`,拿 id 比對當判據會靜默判成不可閃');
+  ok(evadable(WEAPONS.rocket) === true, 'evadable:NPC 肩射火箭(爆炸型)吃閃避');
+  ok(evadable({ dmg: 100, r: 20, pen: 4, vs: {} }) === true,
+    'evadable:招式/載具戰鬥部的爆風 def(無 `id`)吃閃避 —— aoeClass 認不得它們,判據不能拿 blast');
+  ok(evadable(null) === false && evadable(undefined) === false,
+    'evadable:塔/主堡無 wid ⇒ def 為空 ⇒ 制式火砲不可閃');
+  {
+    const byCls = { blast: [], fan: [], line: [] };
+    for (const id of Object.keys(CHARACTERS)) {
+      for (const slot of ['light', 'heavy']) {
+        for (const lv of [1, 4]) {
+          const def = heroWeapon(id, slot, lv, true);
+          const cls = aoeClass(def);
+          if (byCls[cls]) byCls[cls].push({ id, slot, lv, def });
+        }
+      }
+    }
+    ok(byCls.blast.length > 0 && byCls.blast.every((w) => evadable(w.def)),
+      `全 ${byCls.blast.length} 把爆炸型重武器(32 角 × 兩槽 × 首末階)吃閃避`);
+    ok(byCls.fan.length > 0 && byCls.fan.every((w) => !evadable(w.def)),
+      `全 ${byCls.fan.length} 把扇形武器依機制豁免`);
+    ok(byCls.line.length > 0 && byCls.line.every((w) => !evadable(w.def)),
+      `全 ${byCls.line.length} 把貫穿武器依機制豁免`);
+  }
+  // ---- ② 單一縫:閃避判據 MUST NOT 在消費端各寫一份 ----
+  const code = (s) => s.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
+  const simCode = code(S);
+  ok(!/\.id === 'light' && this\._dodges/.test(simCode),
+    'sim.js 三條直擊路徑改吃 evadable(MUST NOT 留任何「id 是 light 才擲骰」的第二份規則)');
+  ok(!/!wd\.r && e\.kind !== 'tower'/.test(simCode),
+    'sim.js NPC 分支不再以「沒有爆風 r」當可閃的判據(那條規則已退場)');
+  for (const [f, src] of [['duel.mjs', read(['tools', 'duel.mjs'])], ['lanesim.mjs', read(['tools', 'lanesim.mjs'])]]) {
+    ok(/\bevadable\(/.test(code(src)),
+      `${f} 的閃避判定走 evadable 同一個縫(平衡模型與伺服器分家 = 模型量的是另一個遊戲)`);
+  }
+  // ---- ③ _blast 原文:擲骰在傷害之前、只對敵方、且 MUST 是逐目標 continue ----
+  const blast = code(methodSrc('_blast', S));
+  ok(/!same && this\._dodges\(t, h\)/.test(blast),
+    '_blast:逐目標擲 _dodges,且只對敵方(自損是榴彈最小安全射程的代價,不是別人打過來的攻擊)');
+  ok(/this\._dodges\(t, h\)[\s\S]*?continue;[\s\S]*?this\._damage\(/.test(blast)
+    && !/this\._dodges\(t, h\)[\s\S]{0,240}?return;/.test(blast),
+    '_blast:閃掉的目標只 continue(跳過自己這一份),MUST NOT return —— 整發早退 = 一台閃全隊免傷');
+}
+{
+  // ---- ④ 行為直測:同一個爆點,一台閃掉、旁邊的照樣掉血 ----
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  // 挑一台「機動高到跨得過閃避門檻」的角色(不寫死代號:資料改了稽核仍成立)
+  const fast = Object.keys(CHARACTERS).find((c) => {
+    const k = charKind(c);
+    return heroMobility(k, CHARACTERS[c].mods, k === 'drone') > evasionMinSpeed();
+  });
+  ok(!!fast, '資料中存在跨得過閃避門檻的機體(否則本段量不到東西)');
+  const atk = sim.addHero('SWARM', 'p_atk', Object.keys(CHARACTERS)[0]);
+  atk.x = 0; atk.z = 0;
+  // addHero 不保證給到指定角色(席位/重複由它自己決定)⇒ 機體剖面在這裡釘死,
+  // 否則抽到低機動的重甲就整段量不到東西,而稽核只會顯示「沒閃」看起來像功能壞了
+  const mkFoe = (pid, x) => {
+    const f = sim.addHero('STEEL', pid, fast);
+    for (const b of [f, ...sim._bodies(f)]) {
+      b.ch = fast; b.kind = charKind(fast);
+      b.x = x; b.z = 0; b.y = 0; b.sp = 0; b.hp = 100000; b.maxHp = 100000;
+    }
+    f._spd = 999;   // 移動中(閃避門檻之一)
+    return f;
+  };
+  const A = mkFoe('p_a', 1), B = mkFoe('p_b', 2);
+  ok([A, B].every((f) => heroMobility(f.kind, CHARACTERS[f.ch].mods, f.kind === 'drone') > evasionMinSpeed()),
+    '兩名受測目標都跨過閃避門檻(剖面釘死,不靠 addHero 給到誰)');
+  const creep = sim._add({ kind: 'soldier', side: 'STEEL', x: 3, z: 0, y: 0, hp: 100000, maxHp: 100000 });
+  const def = { dmg: 500, r: 40, pen: 0, vs: {} };
+  const hp0 = (e) => (e.sp || 0) + e.hp;
+  const orig = Math.random;
+  // 骰**恆閃**:能閃的兩台都閃掉,不能閃的小兵照吃。刻意不用「第一顆骰閃、第二顆不閃」的序列
+  // —— 那會把斷言綁在 `ents` 的走訪順序上,而順序不是這段要驗的東西(壞掉時紅的條目會亂跳)。
+  Math.random = () => 0;
+  const before = [hp0(A), hp0(B), hp0(creep)];
+  sim._blast(atk, def, 1.5, 0, 0);
+  Math.random = orig;
+  ok(hp0(A) === before[0] && hp0(B) === before[1],
+    '「原先的目標」閃掉 ⇒ 自己這一份完全免傷(使用者定案:整發閃開)');
+  ok(hp0(creep) < before[2],
+    '**同一個爆點、閃不掉的那個照樣掉血** —— 這就是「就算沒擊中原先的目標,也會造成範圍傷害」'
+    + '(整發早退的寫法會讓這一項當場紅字)');
+  ok(sim.events.filter((e) => e.e === 'dodge' && e.pid === atk.pid).length === 2,
+    '每一份被閃的都各送一次 dodge 事件(逐目標 ⇒ 兩台就是兩筆;帶射手 pid ⇒ 客戶端跳 Miss)');
+  // 對照:同一顆爆風、骰恆不中 ⇒ 兩台都掉血(排除「他們本來就吃不到這顆爆風」)
+  const b2 = [hp0(A), hp0(B)];
+  Math.random = () => 0.999;
+  sim._blast(atk, def, 1.5, 0, 0);
+  Math.random = orig;
+  ok(hp0(A) < b2[0] && hp0(B) < b2[1], '對照:骰不中時兩台都在爆風內掉血(上一段的免傷確實來自閃避)');
+}
+{
+  // ---- ⑤ 對照組:同一顆爆風,骰全部不中就是全額 —— 免得上一段的「掉血」其實是別的原因 ----
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  const fast = Object.keys(CHARACTERS).find((c) => {
+    const k = charKind(c);
+    return heroMobility(k, CHARACTERS[c].mods, k === 'drone') > evasionMinSpeed();
+  });
+  const atk = sim.addHero('SWARM', 'p_atk2', Object.keys(CHARACTERS)[0]);
+  atk.x = 0; atk.z = 0;
+  const foe = sim.addHero('STEEL', 'p_f2', fast);
+  for (const b of [foe, ...sim._bodies(foe)]) {
+    b.ch = fast; b.kind = charKind(fast);
+    b.x = 1; b.z = 0; b.y = 0; b.sp = 0; b.hp = 100000; b.maxHp = 100000;
+  }
+  foe._spd = 999;
+  const def = { dmg: 500, r: 40, pen: 0, vs: {} };
+  const orig = Math.random;
+  Math.random = () => 0.999;                       // 恆不中
+  const h0 = foe.hp;
+  sim._blast(atk, def, 1, 0, 0);
+  const full = h0 - foe.hp;
+  Math.random = () => 0;                           // 恆閃開
+  const h1 = foe.hp;
+  sim._blast(atk, def, 1, 0, 0);
+  const dodged = h1 - foe.hp;
+  Math.random = orig;
+  ok(full > 0 && dodged === 0,
+    `同一發爆風:不閃 ${full.toFixed(0)} 傷害 / 閃開 0 —— 差別只有那一顆骰(實得 ${dodged})`);
+  // 自損(榴彈最小安全射程的無差別模式)刻意不擲骰
+  const orig2 = Math.random;
+  Math.random = () => 0;
+  const s0 = atk.hp + (atk.sp || 0);
+  sim._blast(atk, def, atk.x, atk.z, 0, null, true);
+  Math.random = orig2;
+  ok(atk.hp + (atk.sp || 0) < s0,
+    '自損不吃閃避:最小安全射程的自傷是代價,能閃開就變成擲骰躲懲罰');
+}
+{
+  // ---- ⑥ NPC 肩射火箭:從「不可閃的單體直擊」變成真的爆炸(一發傷到範圍內所有敵方)----
+  ok((WEAPONS.rocket.r || 0) > 0, 'NPC 肩射火箭是爆炸型(有爆風半徑)');
+  const code = (s) => s.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
+  const npcTick = code(S.slice(S.indexOf('const wd = WEAPONS[u.wid];')));
+  ok(/wd\?\.r && !struct[\s\S]{0,600}?this\._blast\(e, wd,[\s\S]{0,200}?u\.dmg\)/.test(npcTick),
+    'NPC 爆炸型武器走 _blast(傷害基準 MUST 是 UNITS[kind].dmg —— NPC 傷害刻意不吃 vs 剋制)');
+  ok(/wd\?\.r && !struct[\s\S]{0,900}?e: 'boom'/.test(npcTick),
+    '補發 boom 事件:20m 的超壓帶要看得見才讀得出危險區(演出取用的尺寸來自權威值)');
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  const rk = sim._add({ kind: 'rocketeer', side: 'SWARM', x: 0, z: 0, y: 0, hp: 999, maxHp: 999 });
+  const t1 = sim._add({ kind: 'soldier', side: 'STEEL', x: 30, z: 0, y: 0, hp: 100000, maxHp: 100000 });
+  // z 取 18m:核心帶是 0.5r = 10m,擺在核心帶內兩個都是全額 —— 量不到遞減
+  const t2 = sim._add({ kind: 'soldier', side: 'STEEL', x: 30, z: 18, y: 0, hp: 100000, maxHp: 100000 });
+  const b1 = t1.hp, b2 = t2.hp;
+  sim._blast(rk, WEAPONS.rocket, t1.x, t1.z, 0, null, false, UNITS.rocketeer.dmg);
+  ok(t1.hp < b1 && t2.hp < b2,
+    '一發火箭同時傷到爆風內的兩名敵方(舊制只有被瞄準的那一個掉血,旁邊的毫髮無傷)');
+  ok(b1 - t1.hp > b2 - t2.hp, '離爆心越遠吃得越少(走同一支 blastFalloff)');
 }
 
 // ---------------------------------------------------------------------------------
