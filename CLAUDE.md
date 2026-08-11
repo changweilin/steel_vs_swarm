@@ -402,6 +402,7 @@ node tools/measure_osm_relay.mjs     # 路網中繼 payload 實測(核對 maxPay
 node tools/bake_venue_text.mjs       # 重烤 venueText.js(在地文字語料)
 node tools/shot_scene.mjs --venue taroko     # 定場鏡頭組(--ink=0/--grade=0/--post=0/--dof=0/?curve=0)
 node tools/shot_facades.mjs / shot_signs.mjs / shot_tunnels.mjs / shot_units.mjs
+node tools/shot_borders.mjs --port 8641    # 地貌界線拼圖全組合實拍圖錄(--seeds N / --only zoneA|zoneB)
 node tools/audit_gyro.mjs            # 陀螺儀(MUST 用 https/localhost 真機)
 node tools/audit_cockpit.mjs / audit_muzzle.mjs / audit_cast_jump.mjs
 ```
@@ -539,6 +540,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 塔或機甲任一數值 | 重算 `towerHp = 1.8 × heroEHP × heroDPS / towerDPS` |
 | `MAP_EXPAND`/`CLEAR_F`/`LANE_MIN`/塔位 | headless 建 `BattleSim` 數 `sim.camps.length`(L1 2/2、L2 4/4、L3 6/6) |
 | 地貌交界(`planSeamOverlays`/`SEAM_STYLES`/`seamAlpha`)/ 小區域組合風格(`planEnclaves`/`ENCLAVE_STYLES`)/ 都市規劃朝向(`ground.js` orient/`gridA`) | `audit_ground_seam` / `audit_ground_enclave`(**消費端 MUST NOT 硬編第二份組合表**)/ `audit_ground_qc` ⑦(垂直街道網 mod 90° 摺疊不抵銷;orient 固定抽 2 枚 rnd)—— 三支皆需 `audit_ground_qc` 全綠 |
+| 地貌界線拼圖(`planBorderPuzzle`/`BORDER_KINDS`/`BORDER_STYLES`/`borderKindOf`/**`borderCornerArc`**;16 方向直線/轉彎/岔路,接力連結;**轉彎與岔路是整片畫出來的接頭拼圖** —— 直段退縮讓位、圓弧與兩臂相切、逐臂楔形在中心交會,MUST NOT 退回對接+墊片) | `audit_ground_border`(對照組內建)+ `audit_ground_seam`(subCoarse 仍一份)+ `audit_ground_qc` + `audit_client_syntax`(㋖)+ **`tools/shot_borders.mjs`(㋓:26 種底毯地表兩兩 325 組的實拍圖錄;走真品 `buildGroundCover`,取景瞄真的畫出來的分界線頂點並與 `borderKindOf` 雙向核對 —— 「哪一組交界看起來不對」只有這裡看得到)** + ㋒ |
 | 小地圖顯示範圍 | `audit_minimap_view` |
 | 視野鎖定 | `audit_view_lock` + `audit_touch_layout` + `audit_ui_layout` |
 | 觀戰相機 | `audit_spectator_cam` + `audit_ctrl_mode` Ⅶ + `audit_touch_layout` + `audit_ui_layout` + ㋒ |

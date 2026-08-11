@@ -19,6 +19,12 @@
 //            過渡帶再以準晶體場擾動出手繪碎形邊,無硬縫、無 90° 階梯。
 //   特徵層 — 原 patch 散佈,降級為「場所」點綴(農田/球場/遺跡/工地…),
 //            疊在底毯上;fade 邊融入底毯、ink 邊讀作田埂/路緣,不再是磁磚縫。
+//   界線拼圖 — 異「地表」大區塊交界再鋪一條分界線(2026-08-11 使用者需求):
+//            planBorderPuzzle 把交界邊鏈成 16 方向直線/轉彎/岔路拼圖(卡卡頌語彙),
+//            逐交界對配專屬圖案(步道小徑/林道/碎石土徑/田埂/水溝/小溪/圍籬/灌木矮牆/
+//            沙灘/岩塊/紅樹林),異種類切點共用 = 接力連結;取代舊「邊界遮蔽物」。
+//            轉彎與岔路是**整片畫出來的接頭拼圖**(直段先退縮讓位;圓弧與兩臂相切 /
+//            逐臂楔形在中心交會),MUST NOT 退回「把直段對接再貼墊片」。
 // 無縫拼接原則(避免大面積重複感,無限延伸;2026-07-12 反重複改制):
 //   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與底毯(或彼此)交融
 //   2. 底毯 tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰花紋自動連續延伸;
@@ -1548,6 +1554,415 @@ export function planEnclaves(zones, gnx, gnz, opts = {}) {
   return out;
 }
 
+// ==== 地貌界線拼圖(2026-08-11 使用者需求)====
+// 「不同類型大面積地貌區塊之間的邊界,透過設計 16 個方向的直線/轉彎/岔路的拼圖組合拼接,
+//   作為地貌類型的分界(拼圖概念類似卡卡頌);地貌界線拼圖採用步道小徑/林道/碎石土徑/
+//   田埂/水溝/小溪/圍籬/灌木矮牆/沙灘/岩塊/紅樹林等自然或人工分界線作為專屬拼貼圖案,
+//   不同類型的分界線可接力連結。」
+// 分層(單一縫 = 本區塊;稽核 tools/audit_ground_border.mjs 執行原文,對照組內建):
+//   型錄 BORDER_KINDS —— 11 種分界線(flat 貼地紋理帶 / ridge 立體梯形脊,或兩者兼有);
+//   樣式 BORDER_STYLES(coarse 分區無序對 → 種類;查無 = 不擺,寧缺勿錯)+
+//        BORDER_SUB_RULES(地表級覆寫:竹林/枯木 → 林道、花田 → 田埂、沙 → 沙灘);
+//        解析只有 borderKindOf 一份,消費端 MUST NOT 另寫第二份對照表;
+//   規劃 planBorderPuzzle —— 純函式(零 rnd / 零 Math.random / 零 THREE,§2.3):
+//     ① 底毯 keys 格網上「地表(sub)不同」的相鄰實心格之間收邊界邊(同地表異變體花紋
+//        本就連續,不成界;'!' 崖與 null 未鋪不成界),逐邊解析種類(null 的邊不收);
+//     ② 邊接共享角點成圖,度數 ≠2 的角點 = 鏈端點/岔路(fork),圖遍歷成鏈(含閉環);
+//     ③ 16 方向量化(BORDER_DIRS):鏈內貪婪合併直段 —— 被略過角點到弦的垂距 ≤ driftMax
+//        才併入;切點恆取自原始共享角點(端點錨定 ⇒ 鏈間/岔路拼接零開縫;拼接優先於
+//        「弦角恰為格心」—— 弦方位與 bin 中心的誤差由 round 保證 ≤ 半格 11.25°);
+//     ④ tile 輸出 { x0,z0,x1,z1, bin, kind, turn, drift }:相鄰 tile bin 改變 = 轉彎;
+//        種類逐邊解析、同鏈內隨鄰區改變 = 接力(切點雙方共用);度數 ≥3 的角點進 forks
+//        (岔路拼圖,多種分界線在此交會接力)。
+// 發射(buildGroundCover 內的消費端)只負責畫;純表現層:無碰撞、不描邊、不進 raycast
+// (原則 4;空地照常通行)。
+export const BORDER_DIRS = 16;   // 拼圖方向數(22.5° 一格;與道路 16 方向量化同語彙)
+// flat = 貼地紋理帶(w 寬 m、tex 畫筆鍵)/ ridge = 梯形脊(w 底寬/wt 頂寬/h 高/jit 頂高
+// 抖動比/color,'foliage' = 季節葉色);aq = 貼水種類(允許落在水線下,頂點夾到水面上)
+export const BORDER_KINDS = {
+  trail:      { name: '步道小徑', flat: { w: 1.8, tex: 'trail' } },
+  forestroad: { name: '林道',     flat: { w: 3.0, tex: 'forestroad' } },
+  gravelpath: { name: '碎石土徑', flat: { w: 2.4, tex: 'gravelpath' } },
+  fieldridge: { name: '田埂',     ridge: { w: 0.85, wt: 0.5, h: 0.32, jit: 0.18, color: 0x87704a } },
+  ditch:      { name: '水溝',     flat: { w: 1.6, tex: 'ditch' } },
+  stream:     { name: '小溪',     flat: { w: 2.6, tex: 'stream' } },
+  fence:      { name: '圍籬',     ridge: { w: 0.16, wt: 0.16, h: 1.25, jit: 0, color: 0x6b5138 } },
+  hedgerow:   { name: '灌木矮牆', ridge: { w: 1.15, wt: 0.72, h: 1.4, jit: 0.55, color: 'foliage' } },
+  beach:      { name: '沙灘',     flat: { w: 4.2, tex: 'beach' }, aq: 1 },
+  rocks:      { name: '岩塊',     ridge: { w: 1.3, wt: 0.7, h: 0.7, jit: 0.6, color: 0x8f8c83 }, aq: 1 },
+  mangrove:   { name: '紅樹林',   flat: { w: 2.8, tex: 'mangrove' }, ridge: { w: 1.6, wt: 1.35, h: 1.15, jit: 0.5, color: 0x3f6b3f }, aq: 1 },
+};
+// 地貌(coarse 分區)無序對 → 種類。**只有不同地貌之間才有分界線**(2026-08-11 使用者定案
+// 「兩側若是相同地貌,則不需要分界線」)—— 同一片綠地裡換底毯款式(草皮↔芒草原↔灌木叢)
+// 那是同一種地貌的花紋變化,不是界;逐款畫線會把大片綠地切成密集網狀。
+// 15 個跨地貌對 MUST 全數有解(沒有哪一種交界是「畫不出來」的);水域交界一律貼水種類
+// (沙灘/岩塊/紅樹林),泡沫與潮間帶仍住 buildWaterEdges。
+export const BORDER_STYLES = {
+  'bare|green': 'gravelpath', 'green|urban': 'hedgerow',  'green|wet': 'stream',
+  'green|water': 'beach',     'alpine|green': 'trail',
+  'bare|urban': 'fence',      'bare|wet': 'ditch',        'bare|water': 'rocks',
+  'alpine|bare': 'rocks',     'urban|wet': 'ditch',       'urban|water': 'rocks',
+  'alpine|urban': 'fence',    'water|wet': 'mangrove',    'alpine|wet': 'rocks',
+  'alpine|water': 'rocks',
+};
+// 地表級覆寫(某些底毯款式自帶專屬分界):sub 命中且「對側」地貌 ∈ vs 才作用
+// (市區界不覆寫 = 人工界優先)。`vs` **MUST NOT 含該 sub 自己的地貌** —— 同地貌不畫線,
+// 列進去只是永遠不會命中的死設定。表序即優先序,兩側同時命中取先命中列。
+export const BORDER_SUB_RULES = [
+  { sub: 'sand',        kind: 'beach',      vs: ['water', 'wet'] },
+  { sub: 'flowerfield', kind: 'fieldridge', vs: ['bare'] },
+  { sub: 'arrowbamboo', kind: 'forestroad', vs: ['bare', 'alpine'] },
+  { sub: 'deadwood',    kind: 'forestroad', vs: ['bare', 'alpine'] },
+  { sub: 'fallenlogs',  kind: 'forestroad', vs: ['bare', 'alpine'] },
+  { sub: 'deadforest',  kind: 'forestroad', vs: ['green', 'alpine'] },
+];
+// 分界線種類解析唯一縫(對稱:交換兩側回傳相同;查無 → null = 不擺)。
+// **同地貌恆回 null 是結構保證**(擋在最前面),不是靠查表查不到 —— 地表級覆寫也一併擋掉。
+export function borderKindOf(subA, subB, za, zb) {
+  if (!za || !zb || za === zb) return null;
+  for (const r of BORDER_SUB_RULES) {
+    if (subA === r.sub && r.vs.includes(zb)) return r.kind;
+    if (subB === r.sub && r.vs.includes(za)) return r.kind;
+  }
+  return BORDER_STYLES[za < zb ? `${za}|${zb}` : `${zb}|${za}`] || null;
+}
+// 轉彎接頭的解(純函式;規劃器與稽核同吃)——「完整畫出來的轉彎拼圖」的幾何定義。
+// 兩臂單位方向 a、b 皆**背離節點**;Lmax = 允許的最大退縮長;hw = 帶半寬。
+// 圓角(arc):與兩臂相切的圓弧,半徑 R = L·tan(ψ/2)(ψ = 兩臂夾角)⇒ 切點恰在退縮後的
+//   直段端點上、切線方向恰等於臂向 ⇒ 圖案彎過轉角而不是在轉角對接。
+// 圓帽(cap):彎太急(R 容不下帶寬,內緣會翻面)時退圓帽接頭 —— 半徑 hw 的圓盤,
+//   等同標準的 round line join;仍是完整畫出來的一片,不是把兩段直帶疊在一起。
+// 回傳含 `L`(實際要退縮多少)—— 呼叫端 MUST 用它設退縮量,直段端點才會與接頭切點重合。
+export function borderCornerArc(px, pz, ax, az, bx, bz, Lmax, hw) {
+  const psi = Math.acos(Math.max(-1, Math.min(1, ax * bx + az * bz)));   // 兩臂夾角
+  const phi = Math.PI - psi;                                            // 路徑偏轉角
+  const at = (L) => ({ Pa: [px + ax * L, pz + az * L], Pb: [px + bx * L, pz + bz * L] });
+  if (phi < 1e-4) return { mode: 'straight', L: 0, phi, len: 0, ...at(0) };
+  const tan = Math.tan(psi / 2);
+  const Lneed = hw * 1.1 / Math.max(tan, 1e-6);      // R ≥ 1.1·hw 才容得下帶寬(內緣不翻面)
+  if (!(Lneed <= Lmax)) {
+    const L = Math.min(Lmax, hw);
+    return { mode: 'cap', L, phi, cx: px, cz: pz, r: hw, len: hw * phi, ...at(L) };
+  }
+  const L = Lmax, R = L * tan;
+  const sx = ax + bx, sz = az + bz, sl = Math.hypot(sx, sz) || 1;
+  const d = L / Math.cos(psi / 2);                   // 圓心沿角平分線的距離
+  const cx = px + sx / sl * d, cz = pz + sz / sl * d;
+  const g = at(L);
+  const a0 = Math.atan2(g.Pa[1] - cz, g.Pa[0] - cx);
+  let sweep = Math.atan2(g.Pb[1] - cz, g.Pb[0] - cx) - a0;
+  while (sweep > Math.PI) sweep -= Math.PI * 2;
+  while (sweep < -Math.PI) sweep += Math.PI * 2;
+  return { mode: 'arc', L, phi, cx, cz, R, a0, sweep, len: Math.abs(sweep) * R, ...g };
+}
+
+export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
+  // zoneOf(i,j) = 該格**真正的地貌**(呼叫端已算好的 zoneGrid)。MUST 優先於用款式反查
+  // (coarseOf):`steppe`/`scree` 同時在裸露地與高地的底毯清單裡,反查恆取先出現的那個
+  // ⇒ 高地格會被判成裸露地,於是高地內部憑空長出一片「跨地貌」的界線網。
+  const { zoneOf = null, coarseOf = null, cornerXZ = (ci, cj) => [ci, cj], driftMax = 1,
+          kindOf = borderKindOf, halfWidthOf = () => 1, jointF = 2.2, forkF = 1 } = opts;
+  const solid = (k) => k != null && k !== '!';
+  const subOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
+  const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
+  // ① 邊界邊:兩實心格、地表不同、種類解得出來;邊 = 兩共享角點(角點格網 (gnx+1)×(gnz+1))
+  const NKW = gnx + 2;                                  // 節點鍵步幅(角點 ci ∈ 0..gnx)
+  const zoneAt = (i, j) => {
+    if (zoneOf) return zoneOf(i, j) ?? null;
+    const k = keyAt(i, j);
+    return (coarseOf && solid(k)) ? coarseOf(k) : null;
+  };
+  const edges = [];                                     // { a, b: 節點鍵, kind, used }
+  const adj = new Map();                                // 節點鍵 → [edges 索引](插入序 = 決定性)
+  const addEdge = (ci0, cj0, ci1, cj1, k0, k1, z0, z1) => {
+    const s0 = subOf(k0), s1 = subOf(k1);
+    if (s0 === s1) return;                              // 同地表異變體:花紋連續,不成界
+    const kind = kindOf(s0, s1, z0, z1);                // 同地貌 → borderKindOf 恆回 null
+    if (!kind) return;
+    const e = { a: cj0 * NKW + ci0, b: cj1 * NKW + ci1, kind, used: false };
+    const ei = edges.length;
+    edges.push(e);
+    for (const n of [e.a, e.b]) {
+      let l = adj.get(n);
+      if (!l) { l = []; adj.set(n, l); }
+      l.push(ei);
+    }
+  };
+  for (let j = 0; j < gnz; j++) {
+    for (let i = 0; i < gnx; i++) {
+      const k0 = keyAt(i, j);
+      if (!solid(k0)) continue;
+      const z0 = zoneAt(i, j);
+      const kR = keyAt(i + 1, j), kD = keyAt(i, j + 1);
+      if (solid(kR)) addEdge(i + 1, j, i + 1, j + 1, k0, kR, z0, zoneAt(i + 1, j));   // 與右鄰共享的豎邊
+      if (solid(kD)) addEdge(i, j + 1, i + 1, j + 1, k0, kD, z0, zoneAt(i, j + 1));   // 與下鄰共享的橫邊
+    }
+  }
+  // ② 角點圖遍歷成鏈:先從度數 ≠2 的節點(端點/岔路)起走,剩下的是閉環
+  const deg = (n) => (adj.get(n) || []).length;
+  const walk = (ei0, n0) => {
+    const pts = [n0], kinds = [];
+    let e = edges[ei0], n = n0;
+    for (;;) {
+      e.used = true;
+      const m = e.a === n ? e.b : e.a;
+      pts.push(m);
+      kinds.push(e.kind);
+      if (deg(m) !== 2) break;                          // 端點(1)/岔路(≥3):鏈到此為止
+      const ni = adj.get(m).find((k) => !edges[k].used);
+      if (ni == null) break;                            // 閉環走回起點
+      e = edges[ni]; n = m;
+    }
+    return { pts, kinds };
+  };
+  const raw = [];
+  for (const [n, l] of adj) {
+    if (l.length === 2) continue;
+    for (const ei of l) if (!edges[ei].used) raw.push(walk(ei, n));
+  }
+  for (let ei = 0; ei < edges.length; ei++) if (!edges[ei].used) raw.push(walk(ei, edges[ei].a));
+  // ③④ 16 方向量化 + 接力切分 → tile
+  const STEP = (Math.PI * 2) / BORDER_DIRS;
+  const binOf = (dx, dz) => ((Math.round(Math.atan2(dz, dx) / STEP) % BORDER_DIRS) + BORDER_DIRS) % BORDER_DIRS;
+  const posOf = (n) => cornerXZ(n % NKW, (n / NKW) | 0);
+  const chains = [];
+  for (const ch of raw) {
+    const P = ch.pts.map(posOf);
+    const closed = ch.pts.length > 2 && ch.pts[0] === ch.pts[ch.pts.length - 1];
+    // 先依種類切段(接力切點與岔路切點一樣是共享角點),段內再做方向量化
+    const segs = [];
+    let s0 = 0;
+    for (let e = 1; e <= ch.kinds.length; e++) {
+      if (e === ch.kinds.length || ch.kinds[e] !== ch.kinds[s0]) { segs.push([s0, e, ch.kinds[s0]]); s0 = e; }
+    }
+    const tiles = [];
+    for (const [e0, e1, kind] of segs) {
+      let i0 = e0;
+      while (i0 < e1) {
+        let i1 = i0 + 1;
+        while (i1 < e1) {                               // 貪婪延伸:略過角點的垂距全 ≤ driftMax 才併
+          const [ax, az] = P[i0], [bx, bz] = P[i1 + 1];
+          const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1;
+          let fit = true;
+          for (let k = i0 + 1; k <= i1; k++) {
+            const d = Math.abs((P[k][0] - ax) * dz - (P[k][1] - az) * dx) / L;
+            if (d > driftMax) { fit = false; break; }
+          }
+          if (!fit) break;
+          i1++;
+        }
+        const [ax, az] = P[i0], [bx, bz] = P[i1];
+        const dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz) || 1;
+        let drift = 0;                                  // 誠實重算(貪婪檢查壞掉時稽核仍量得到)
+        for (let k = i0 + 1; k < i1; k++) {
+          const d = Math.abs((P[k][0] - ax) * dz - (P[k][1] - az) * dx) / L;
+          if (d > drift) drift = d;
+        }
+        tiles.push({ x0: ax, z0: az, x1: bx, z1: bz, bin: binOf(dx, dz), kind, drift,
+                     n0: ch.pts[i0], n1: ch.pts[i1] });
+        i0 = i1;
+      }
+    }
+    for (let t = 0; t < tiles.length; t++) {
+      const tl = tiles[t];
+      const prev = tiles[t - 1] || (closed ? tiles[tiles.length - 1] : null);
+      const next = tiles[t + 1] || (closed ? tiles[0] : null);
+      tl.turn = !!(prev && prev !== tl && prev.bin !== tl.bin);   // 轉彎拼圖:與前一片方向格不同
+      tl.j0 = !!prev; tl.j1 = !!next;                             // 端點是否接續(接力/同段續接)
+    }
+    chains.push({ closed, ns: ch.pts, tiles });
+  }
+  // ---- ⑤ 接頭:轉彎與岔路一律「完整畫出來的拼圖片」,MUST NOT 把直段對接 ----
+  // 作法只有一條:直段自接頭處**退縮**(tr0/tr1),讓出來的空間專屬接頭拼圖 ⇒ 沒有重疊、
+  // 沒有共面互吃、也沒有「兩段疊在一起假裝轉彎」。退縮量由接頭自己解(borderCornerArc 回
+  // 傳的 L),兩側同值 ⇒ 直段端點與接頭切點逐位元重合(端點錨定的推廣)。
+  // 一個節點只被一個接頭處理(tile 的每一端恰屬於一個節點)⇒ tr0/tr1 不會被寫兩次。
+  const hwOf = (k) => halfWidthOf(k) || 1;
+  const arms = new Map();                        // 節點 → 入射臂(方向恆「背離節點」)
+  for (const ch of chains) {
+    for (const tl of ch.tiles) {
+      const dx = tl.x1 - tl.x0, dz = tl.z1 - tl.z0, l = Math.hypot(dx, dz) || 1;
+      for (const e of [0, 1]) {
+        const n = e ? tl.n1 : tl.n0, s = e ? -1 : 1;
+        let a = arms.get(n);
+        if (!a) { a = []; arms.set(n, a); }
+        a.push({ tl, e, dx: dx / l * s, dz: dz / l * s, kind: tl.kind, len: l });
+      }
+    }
+  }
+  const corners = [], forks = [];
+  for (const [n, l] of arms) {
+    const [x, z] = posOf(n);
+    if (l.length === 2) {
+      const [A, B] = l;
+      if (A.tl.bin === B.tl.bin) continue;       // 同方向格(純接力換款)= 直線,不需轉彎拼圖
+      const hw = Math.max(hwOf(A.kind), hwOf(B.kind));
+      const g = borderCornerArc(x, z, A.dx, A.dz, B.dx, B.dz,
+        Math.min(jointF * hw, A.len * 0.4, B.len * 0.4), hw);
+      if (g.mode === 'straight') continue;
+      A.tl[A.e ? 'tr1' : 'tr0'] = g.L;
+      B.tl[B.e ? 'tr1' : 'tr0'] = g.L;
+      const cor = { type: 'corner', n, x, z, hw, geo: g,
+                    a: { dx: A.dx, dz: A.dz, kind: A.kind, hw: hwOf(A.kind) },
+                    b: { dx: B.dx, dz: B.dz, kind: B.kind, hw: hwOf(B.kind) } };
+      corners.push(cor);
+      A.tl[A.e ? 'c1' : 'c0'] = cor; B.tl[B.e ? 'c1' : 'c0'] = cor;
+    } else if (l.length >= 3) {
+      // 岔路:共用一個退縮長 ⇒ 逐臂斷面等距,接頭多邊形規整。
+      // 係數與轉彎**分開**(forkF 而不是 jointF):轉彎的 L 決定圓弧半徑要大一點才順,
+      // 交叉口的 L 卻是「路口有多大」—— 取 ~一個帶半寬,路口才是帶寬見方的一塊;
+      // 沿用 jointF 會把逐臂楔形拉成星芒(2026-08-11 實拍踩過)。
+      let hw = 0, lim = Infinity;
+      for (const a of l) { hw = Math.max(hw, hwOf(a.kind)); lim = Math.min(lim, a.len * 0.4); }
+      const L = Math.min(forkF * hw, lim);
+      const list = l.map((a) => {
+        a.tl[a.e ? 'tr1' : 'tr0'] = L;
+        a.tl[a.e ? 'f1' : 'f0'] = true;      // 這一端接的是岔路(≠ 鏈內有下一片)⇒ 端點不得淡出
+        return { dx: a.dx, dz: a.dz, kind: a.kind, hw: hwOf(a.kind) };
+      });
+      list.sort((p, q) => Math.atan2(p.dz, p.dx) - Math.atan2(q.dz, q.dx));   // 逆時針排序
+      const ks = [];
+      for (const a of list) if (!ks.includes(a.kind)) ks.push(a.kind);
+      forks.push({ type: 'fork', n, x, z, L, hw, arms: list, kinds: ks });
+    }
+  }
+  // 退縮後的端點(發射端只讀這一組;未退縮處與原端點逐位元相同)
+  for (const ch of chains) {
+    for (const tl of ch.tiles) {
+      tl.tr0 = tl.tr0 || 0; tl.tr1 = tl.tr1 || 0;
+      const dx = tl.x1 - tl.x0, dz = tl.z1 - tl.z0, l = Math.hypot(dx, dz) || 1;
+      tl.ax = tl.x0 + dx / l * tl.tr0; tl.az = tl.z0 + dz / l * tl.tr0;
+      tl.bx = tl.x1 - dx / l * tl.tr1; tl.bz = tl.z1 - dz / l * tl.tr1;
+      tl.len = l - tl.tr0 - tl.tr1;
+    }
+  }
+  return { chains, corners, forks };
+}
+
+// ---- 地貌界線拼圖:貼地帶畫筆(透明底 + 沿 x 圖案;鏡射重複 = 跨 tile 無縫)----
+// **畫筆契約**:圖案 MUST 鋪滿整個 v 值域(= 整個貼圖高度)—— 帶的柔邊由**頂點 α**
+// 負責(sweepFlat 兩緣 α0、中線 α1)。只在貼圖中央畫一小條的話,實得寬度遠小於型錄
+// 宣告的 `w`,再被頂點 α 淡一次就整條糊掉;而畫布只有瀏覽器裡才畫得出來 ⇒ **沒有任何
+// 離線稽核量得到這件事**,只有 tools/shot_borders.mjs 的實拍看得見(2026-08-11 踩過)。
+// 橫向位置一律經 bandY 表達,MUST NOT 在畫筆裡手寫 S * 0.xx 的 y 偏移。
+const bandY = (S, f) => S / 2 + f * S * 0.46;      // f ∈ [-1,1] 橫過帶的位置 → 畫布 y
+// 沿 x 手繪帶:重疊色塊 = 有機邊緣(photoreal 噪點禁用,同 PAINTERS 語彙)
+function bandBlob(g, S, rnd, f, color, alpha = 1) {
+  const h = S * 0.92 * f;                          // f = 佔滿帶寬的比例
+  g.fillStyle = color;
+  for (let x = -12; x < S + 12; x += 9) {
+    g.globalAlpha = alpha * (0.7 + rnd() * 0.3);
+    brushBlob(g, x, S / 2 + (rnd() - 0.5) * S * 0.04, h / 2 + rnd() * h * 0.16, rnd);
+  }
+  g.globalAlpha = 1;
+}
+const BORDER_PAINTERS = {
+  trail(g, S, rnd) {                                   // 步道小徑:土色踏面 + 踏石 + 兩緣草撇
+    bandBlob(g, S, rnd, 1, 'rgb(150,124,90)');
+    g.fillStyle = 'rgb(126,102,72)';
+    for (let x = 8; x < S; x += 26 + (rnd() * 10 | 0)) {
+      g.beginPath();
+      g.ellipse(x, bandY(S, (rnd() - 0.5) * 0.7), 9 + rnd() * 5, 7 + rnd() * 4, rnd(), 0, 7); g.fill();
+      g.fillStyle = rnd() < 0.5 ? 'rgb(166,140,104)' : 'rgb(126,102,72)';
+    }
+    g.strokeStyle = 'rgba(74,110,52,0.7)'; g.lineWidth = 2;
+    for (let i = 0; i < 34; i++) {                     // 草撇貼兩緣
+      const x = rnd() * S, y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.72 + rnd() * 0.26));
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 5, y - 6 - rnd() * 5); g.stroke();
+    }
+  },
+  forestroad(g, S, rnd) {                              // 林道:雙輪轍 + 中央草帶 + 落葉點
+    bandBlob(g, S, rnd, 1, 'rgb(122,100,72)', 0.92);
+    g.fillStyle = 'rgba(88,70,50,0.85)';
+    for (const f of [-0.5, 0.5]) {                     // 輪轍:一左一右
+      for (let x = -8; x < S + 8; x += 10) brushBlob(g, x, bandY(S, f + (rnd() - 0.5) * 0.06), 13 + rnd() * 4, rnd);
+    }
+    g.strokeStyle = 'rgba(96,128,66,0.8)'; g.lineWidth = 2;
+    for (let i = 0; i < 24; i++) {                     // 中央草帶
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 0.22);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 6); g.stroke();
+    }
+    g.fillStyle = 'rgba(150,110,60,0.7)';
+    for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 2.2, 0, 7); g.fill(); }
+  },
+  gravelpath(g, S, rnd) {                              // 碎石土徑:灰土帶 + 深淺碎石斑
+    bandBlob(g, S, rnd, 1, 'rgb(160,148,128)');
+    for (let i = 0; i < 150; i++) {
+      g.fillStyle = rnd() < 0.5 ? 'rgba(120,112,98,0.9)' : 'rgba(196,188,170,0.9)';
+      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.8), 1.4 + rnd() * 2.2, 0, 7); g.fill();
+    }
+  },
+  ditch(g, S, rnd) {                                   // 水溝:混凝土溝緣直線 + 深色水面 + 藻斑水光
+    const y = (f) => bandY(S, f);
+    g.fillStyle = 'rgb(70,84,88)';                     // 溝內水面(中央 60%)
+    g.fillRect(0, y(-0.3), S, y(0.3) - y(-0.3));
+    g.fillStyle = 'rgb(178,180,176)';                  // 兩側混凝土溝緣
+    g.fillRect(0, y(-0.98), S, y(-0.3) - y(-0.98));
+    g.fillRect(0, y(0.3), S, y(0.98) - y(0.3));
+    g.fillStyle = 'rgba(140,142,138,0.7)';             // 溝緣暗邊(收邊)
+    g.fillRect(0, y(-0.36), S, 3); g.fillRect(0, y(0.33), S, 3);
+    g.fillStyle = 'rgba(96,120,96,0.6)';
+    for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, y((rnd() - 0.5) * 0.5), 4 + rnd() * 5, rnd);
+    g.strokeStyle = 'rgba(210,220,222,0.5)'; g.lineWidth = 1.4;
+    for (let i = 0; i < 10; i++) {
+      const x = rnd() * S, yy = y((rnd() - 0.5) * 0.45);
+      g.beginPath(); g.moveTo(x, yy); g.lineTo(x + 8 + rnd() * 8, yy); g.stroke();
+    }
+  },
+  stream(g, S, rnd) {                                  // 小溪:藍綠水帶 + 白水光 + 兩岸溪石
+    bandBlob(g, S, rnd, 1, 'rgb(88,138,148)');
+    bandBlob(g, S, rnd, 0.5, 'rgb(70,120,134)', 0.8);  // 深槽
+    g.strokeStyle = 'rgba(226,240,242,0.75)'; g.lineWidth = 1.6; g.lineCap = 'round';
+    for (let i = 0; i < 18; i++) {
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 0.9);
+      g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 2, x + 12 + rnd() * 6, y); g.stroke();
+    }
+    g.fillStyle = 'rgb(140,138,126)';
+    for (let i = 0; i < 14; i++) {                     // 兩岸溪石
+      const y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.66 + rnd() * 0.3));
+      g.beginPath(); g.ellipse(rnd() * S, y, 4.5 + rnd() * 3, 3.5 + rnd() * 2.5, rnd(), 0, 7); g.fill();
+      g.fillStyle = rnd() < 0.5 ? 'rgb(158,154,142)' : 'rgb(126,124,114)';
+    }
+  },
+  beach(g, S, rnd) {                                   // 沙灘:淺沙帶 + 濕沙斑 + 貝殼/卵石點
+    bandBlob(g, S, rnd, 1, 'rgb(216,198,158)');
+    g.fillStyle = 'rgba(186,166,128,0.55)';
+    for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 9 + rnd() * 14, rnd);
+    for (let i = 0; i < 34; i++) {
+      g.fillStyle = rnd() < 0.6 ? 'rgba(240,232,214,0.9)' : 'rgba(150,140,120,0.9)';
+      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.6, 0, 7); g.fill();
+    }
+  },
+  mangrove(g, S, rnd) {                                // 紅樹林:泥灘帶 + 支柱根短豎 + 綠冠斑
+    bandBlob(g, S, rnd, 1, 'rgb(112,98,76)');
+    g.strokeStyle = 'rgba(84,66,48,0.9)'; g.lineWidth = 2; g.lineCap = 'round';
+    for (let i = 0; i < 40; i++) {                     // 支柱根
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.5);
+      g.beginPath(); g.moveTo(x, y + 5 + rnd() * 4); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 5); g.stroke();
+    }
+    g.fillStyle = 'rgba(63,107,63,0.8)';
+    for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 7 + rnd() * 9, rnd);
+    g.fillStyle = 'rgba(96,140,80,0.7)';
+    for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.3), 4 + rnd() * 6, rnd);
+  },
+};
+const _bdTexCache = new Map();
+function borderTex(kind) {
+  let t = _bdTexCache.get(kind);
+  if (t) return t;
+  const S = 256;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  let hs = 0;
+  for (let i = 0; i < kind.length; i++) hs = (hs * 31 + kind.charCodeAt(i)) | 0;
+  BORDER_PAINTERS[kind](cv.getContext('2d'), S, mulberry32(0xB07D ^ hs));
+  t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+  _bdTexCache.set(kind, t);
+  return t;
+}
+
 /**
  * 鋪設地被覆蓋層。加進 biomes group,回傳統計 { patches, details }。
  * @param group     biomes 的 THREE.Group
@@ -1597,6 +2012,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 亂數紀律(§2.3):兩分支都固定先抽兩枚再決策 —— 對齊與否不改變 rnd 消耗序列;
   // roadDirAt / gridA 本身不吃 rnd。回傳 atLocal 平面角。
   let aligned = 0;   // 沿路對齊次數(拼圖 + 物件;冒煙稽核用)
+  let bStat = { planned: 0, drawn: 0, forks: 0, forksDrawn: 0 };   // 界線拼圖:規劃 vs 實畫
   const orient = (x, z, reg, halfTurn, ink = false) => {
     const ra = rnd() * (halfTurn ? Math.PI : Math.PI * 2);   // 隨機朝向候選(固定枚數)
     const roll = rnd();                                       // 對齊擲骰(固定枚數)
@@ -2335,50 +2751,35 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       else if (pass === 2) m.renderOrder = -1.2;
       m.frustumCulled = false;
       m.userData.noOutline = true;
+      // 冒煙測試識別標記(同特徵拼圖的 gsub/gvar 慣例):截圖工具據此認出「這一格是哪種地表」
+      m.userData.gsub = sub; m.userData.gvar = +v;
+      m.userData.glayer = pass === 0 ? 'carpet' : pass === 1 ? 'spill' : 'band';
       group.add(m);
     }
   }
 
-  // ==== 邊界遮蔽物(2026-07-24 使用者需求)====
-  // 不同地貌/拼圖區塊交界(= 底毯 cell 的抖動角點邊,即可見拼接縫)擺長條人造/自然物,
-  // 遮住拼接的不連續感:樹籬(hedge)/矮牆(stonewall)/圍籬(fence)/堤防(dike),依交界兩側
-  // coarse 分區選型。與地被同契約:純視覺、無碰撞、不描邊、不進 raycast(空地照常通行);
-  // 合併成單一 Mesh(每型 1 draw call)且與底毯/特徵拼圖同樣進 coverMeshes → 洞口一併打洞。
-  // 決定性只吃 seed + 格索引雜湊(不動用共享 rnd 序列、不用 Math.random)⇒ §2.3 佈局不變、跨客戶端一致。
+  // ==== 地貌界線拼圖發射(2026-08-11 使用者需求;取代 2026-07-24 邊界遮蔽物)====
+  // 配置全住 planBorderPuzzle(純函式單一縫:16 方向直線/轉彎/岔路、種類解析 borderKindOf、
+  // 接力切點共用、'!'/null 不成界),這裡只發幾何:
+  //   flat 種類 = 貼地紋理帶(透明;lift 帶 [0.126, 0.134] 介於不規律 fade 上限 0.124 與
+  //   規律 ink 下限 0.135 之間、renderOrder ∈ [-1.1, -1.05] 恆晚於脊帶 -1.2 早於特徵層 0);
+  //   ridge 種類 = 梯形脊(沿用舊遮蔽物的幾何語彙;接續端各外延半寬 → 轉角互搭無楔縫)。
+  // 與地被同契約:純視覺、無碰撞、不描邊、不進 raycast(空地照常通行)。
+  // 道路/兵線淨空/規律結構拼圖優先 —— 沿 tile 密取樣任一點命中即整片跳過(鏈斷口兩端
+  // alpha 收尾 = 步道讓路給馬路);貼水種類(aq)頂點夾到水面上,其餘不下水。
+  // 決定性只吃 seed + 節點索引雜湊(零共享 rnd,§2.3)⇒ 佈局不變、跨客戶端一致。
   {
-    const subOf = (key) => key.slice(0, key.indexOf('#'));
     // 與交界樣式(planSeamOverlays 的 coarseOf)共用同一份 subCoarse 表(單一縫)
     const coarseOf = (key) => (key && key !== '!') ? coarseOfKey(key) : null;
+    bStat = { planned: 0, drawn: 0, forks: 0, forksDrawn: 0 };
     const ehash = (a, b, c) => {
       let n = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2246822519) ^ seed) | 0;
       n = Math.imul(n ^ (n >>> 13), 1274126177);
       return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
     };
     const snB = ENV.seasons[season] || ENV.seasons.summer;
-    // w 底寬 / wt 頂寬(梯形收頂)/ h 高 / jit 頂高抖動比(樹籬蓬亂)/ color
-    const KINDS = {
-      hedge:     { w: 1.15, wt: 0.72, h: 1.5,  jit: 0.55, color: snB.foliage },
-      fence:     { w: 0.16, wt: 0.16, h: 1.25, jit: 0.0,  color: 0x6b5138 },
-      stonewall: { w: 0.55, wt: 0.42, h: 1.0,  jit: 0.14, color: 0x8f8c83 },
-      dike:      { w: 2.4,  wt: 1.1,  h: 0.85, jit: 0.1,  color: 0x6e5c3f },
-    };
-    const PROB = { hedge: 0.42, fence: 0.32, stonewall: 0.3, dike: 0.55 };
-    const pickKind = (za, zb, h) => {
-      if (!za || !zb || za === 'water' || zb === 'water') return null;   // 水邊交給 buildWaterEdges 泡沫/潮間帶
-      const has = (z) => za === z || zb === z;
-      if (has('wet')) return 'dike';                          // 濕地↔旱地 → 堤防
-      if (has('alpine')) return h < 0.45 ? 'stonewall' : null; // 高地岩坡少量石牆(其餘不擺,岩地無田界)
-      if (has('urban')) return h < 0.6 ? 'stonewall' : 'fence'; // 市區界 → 矮牆/圍籬
-      if (has('bare')) return h < 0.55 ? 'stonewall' : 'hedge'; // 荒地↔綠地 → 矮牆/樹籬
-      return h < 0.6 ? 'hedge' : 'fence';                      // 綠地↔綠地(含農田拼布不同款)→ 田界樹籬/圍籬
-    };
-    const bB = {};
-    for (const k in KINDS) bB[k] = { pos: [], nrm: [], idx: [], base: 0 };
-    const wy = terrain.waterY;
-    const okPt = (x, z) => !isBlocked(x, z) && !(roadClear && roadClear(x, z))
-      && terrain.heightAt(x, z) > (wy != null ? wy + 0.15 : 0.45);
-    // 規律結構拼圖(edge:'ink' 球場/停車場/農田/廣場…)覆蓋範圍:邊界物件一律避開,不切穿整齊區塊
-    // (使用者回報「球場/停車場上放邊界拼圖很亂」)。查特徵拼圖登錄 pGrid 的 ink 標記。
+    // 規律結構拼圖(edge:'ink' 球場/停車場/農田/廣場…)覆蓋範圍:分界線一律避開,不切穿
+    // 整齊區塊(2026-07-25 使用者回報「球場/停車場上放邊界拼圖很亂」的裁決沿用)。
     const onRegular = (x, z) => {
       const R = MAXRE * SEP_F;
       const i0 = Math.floor((x - R) / PCELL), i1 = Math.floor((x + R) / PCELL);
@@ -2390,74 +2791,390 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       }
       return false;
     };
-    const emitRidge = (b, A, Bp, kd, ei, ej, ed) => {
-      const dx = Bp[0] - A[0], dz = Bp[1] - A[1], len = Math.hypot(dx, dz) || 1;
-      const pxv = -dz / len, pzv = dx / len;                   // 單位法向(垂直於邊)
-      const spans = Math.max(1, Math.round(len / 5));
+    const wy = terrain.waterY;
+    // 接頭退縮量由**真實帶寬**推導(型錄是唯一真相,MUST NOT 手寫公尺數):
+    // flat 取帶半寬、純 ridge 取脊半寬;兩者兼有的(紅樹林)取較寬者
+    const plan = planBorderPuzzle(keys, gnx, gnz, {
+      // 地貌取**格子自己的分區**(zoneGrid,與底毯選款同一份),不由款式反查
+      zoneOf: (i, j) => zoneGrid[j * gnx + i],
+      coarseOf, cornerXZ: cornerAt, driftMax: cell * 0.6,
+      halfWidthOf: (k) => {
+        const d = BORDER_KINDS[k];
+        return Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0);
+      },
+    });
+    const bKinds = Object.keys(BORDER_KINDS);
+    const bLift = (kind) => 0.126 + bKinds.indexOf(kind) * 0.0008;  // 異種類互疊(接力/岔路)不共面
+    const BTEXL = 9;                                                // 帶紋理一輪世界長(m)
+    const flatB = new Map(), ridgeB = new Map();
+    const bkOf = (m, kind, uv) => {
+      let b = m.get(kind);
+      if (!b) {
+        b = uv ? { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0 } : { pos: [], nrm: [], idx: [], base: 0 };
+        m.set(kind, b);
+      }
+      return b;
+    };
+    const gY = (px, pz, aq) => {
+      const h = terrain.heightAt(px, pz);
+      return aq && wy != null ? Math.max(h, wy + 0.05) : h;
+    };
+    // 讓路判定唯一縫:道路走廊 / 兵線淨空 / 規律結構拼圖 / 不下水。
+    // **直段與接頭吃同一支** —— 接頭只驗節點那一個點的話,轉彎圓弧掃過的那一塊完全沒驗到,
+    // 分界線就會橫過馬路(道路的圖層本來就在分界線之上,但那只保證被蓋住,不保證不該畫)。
+    const ptOk = (px, pz, aq) => !isBlocked(px, pz) && !(roadClear && roadClear(px, pz))
+      && !onRegular(px, pz)
+      && (aq || terrain.heightAt(px, pz) > (wy != null ? wy + 0.15 : 0.45));
+    const hwOfKind = (k) => {
+      const d = BORDER_KINDS[k];
+      return Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0);
+    };
+    // 逐 ~3m 取樣,**每個取樣點連兩側帶緣一起驗**(帶是有寬度的:只驗中心線的話,
+    // 中心線剛好貼著走廊外緣時帶緣仍伸進馬路 —— 實測 150 個頂點漏 2 個就是這樣來的)
+    const segOk = (x0, z0, x1, z1, aq, hw) => {
+      const dx = x1 - x0, dz = z1 - z0, l = Math.hypot(dx, dz) || 1;
+      const nx = -dz / l * hw, nz = dx / l * hw;
+      const steps = Math.max(2, Math.ceil(l / 3));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps, px = x0 + dx * t, pz = z0 + dz * t;
+        if (!ptOk(px, pz, aq) || !ptOk(px + nx, pz + nz, aq) || !ptOk(px - nx, pz - nz, aq)) return false;
+      }
+      return true;
+    };
+    // 直段的可畫區間(沿退縮後的中心線,參數 0..1):逐 ~3m 判定,連續可畫的收成一段。
+    // MUST NOT 退回「整片一個布林」—— 見 chains 迴圈的檔頭。
+    const tileRuns = (tl, aq, hw) => {
+      const dx = tl.bx - tl.ax, dz = tl.bz - tl.az, l = Math.hypot(dx, dz) || 1;
+      const nx = -dz / l * hw, nz = dx / l * hw;
+      const steps = Math.max(2, Math.ceil(l / 3));
+      const runs = [];
+      let s0 = -1;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps, px = tl.ax + dx * t, pz = tl.az + dz * t;
+        const good = ptOk(px, pz, aq) && ptOk(px + nx, pz + nz, aq) && ptOk(px - nx, pz - nz, aq);
+        if (good) { if (s0 < 0) s0 = s; } else if (s0 >= 0) {
+          if (s - 1 > s0) runs.push([s0 / steps, (s - 1) / steps]);
+          s0 = -1;
+        }
+      }
+      if (s0 >= 0 && steps > s0) runs.push([s0 / steps, 1]);
+      return runs;
+    };
+    // 接頭:轉彎沿弧取樣(半徑取 R 與 R±hw 三圈)、圓帽驗整個圓盤、岔路逐臂連帶緣
+    const cornerOk = (cor, aq) => {
+      const g = cor.geo, hw = cor.hw;
+      if (g.mode === 'cap') {
+        if (!ptOk(g.cx, g.cz, aq)) return false;
+        for (let s = 0; s < 8; s++) {
+          const a = s / 8 * Math.PI * 2;
+          if (!ptOk(g.cx + Math.cos(a) * g.r, g.cz + Math.sin(a) * g.r, aq)) return false;
+        }
+        return true;
+      }
+      const n = Math.max(3, Math.round(g.len / 3));
+      for (let s = 0; s <= n; s++) {
+        const a = g.a0 + g.sweep * (s / n), ca = Math.cos(a), sa = Math.sin(a);
+        for (const rr of [g.R - hw, g.R, g.R + hw]) {
+          if (!ptOk(g.cx + ca * rr, g.cz + sa * rr, aq)) return false;
+        }
+      }
+      return true;
+    };
+    const forkOkAt = (fk) => {
+      if (!ptOk(fk.x, fk.z, fk.arms.some((a) => BORDER_KINDS[a.kind].aq))) return false;
+      for (const a of fk.arms) {
+        if (!segOk(fk.x, fk.z, fk.x + a.dx * fk.L, fk.z + a.dz * fk.L,
+                   !!BORDER_KINDS[a.kind].aq, hwOfKind(a.kind))) return false;
+      }
+      return true;
+    };
+    const forkOk = new Map();
+    for (const fk of plan.forks) forkOk.set(fk.n, forkOkAt(fk));
+    // 冒煙統計(同 aligned/arrays 性質):規劃了幾片 vs 真的畫出幾片 —— 分得開
+    // 「沒有交界」與「有交界但整段讓路掉了」,否則兩者在畫面上都是「什麼都沒有」
+    bStat.planned = plan.chains.reduce((s, c) => s + c.tiles.length, 0);
+    bStat.forks = plan.forks.length;
+    // ---- 掃掠核心:直段與轉彎共用同一支,差別只在中心線 ----
+    // path(t) → [cx, cz, nx, nz](中心點 + 單位法向);直段是直線、轉彎是圓弧
+    // ⇒ 轉彎不是「兩段直帶對接」,是同一套斷面沿著彎過去的中心線掃出來的完整一片。
+    // flat:三頂點斷面(兩緣 α0、中線 α1)貼地;u = 沿線累計弧長 / BTEXL(圖案連續彎過轉角)
+    // 橫斷面:α 中段是**平台**不是尖峰 —— 只用三點(0,1,0)會讓整條帶變成軟糊的暈,
+    // 讀不出「這是一條有邊的小徑」;平台佔內側 62%,柔邊只留最外側兩成。
+    const XS = [[-1, 0, 0], [-0.62, 0.19, 1], [0, 0.5, 1], [0.62, 0.81, 1], [1, 1, 0]];
+    // 接頭(楔形/圓帽)逐點取同一條剖面:平台 62%、外側兩成柔邊 —— 與直段同一把尺,
+    // 接起來才是同一條帶,MUST NOT 在接頭另寫線性淡出
+    const xsAlpha = (t, hw) => Math.min(1, Math.max(0, (1 - Math.abs(t) / hw) / 0.38));
+    const sweepFlat = (kind, kd, aq, path, rings, u0, len, a0, a1) => {
+      const b = bkOf(flatB, kind, true);
+      const w2 = kd.w / 2, lift = bLift(kind), NC = XS.length;
+      for (let s = 0; s <= rings; s++) {
+        const t = s / rings;
+        const [cx, cz, nx, nz] = path(t);
+        const ea = s === 0 ? a0 : s === rings ? a1 : 1;   // 自由端 α=0 收尾、接頭端 α=1 對接
+        const u = (u0 + len * t) / BTEXL;
+        for (const [f, v, va] of XS) {
+          const gx = cx + nx * w2 * f, gz = cz + nz * w2 * f;
+          const wsh = wash(gx, gz);
+          b.pos.push(gx, gY(gx, gz, aq) + lift, gz);
+          b.nrm.push(0, 1, 0);
+          b.uv.push(u, v);
+          b.col.push(wsh, wsh, wsh, va * ea);
+        }
+        if (s) {
+          const p0 = b.base + (s - 1) * NC, q0 = p0 + NC;
+          for (let k = 0; k < NC - 1; k++) b.idx.push(p0 + k, q0 + k, p0 + k + 1, p0 + k + 1, q0 + k, q0 + k + 1);
+        }
+      }
+      b.base += (rings + 1) * NC;
+    };
+    // ridge:梯形斷面沿同一條中心線掃掠;端面封口(DoubleSide,繞向不拘)
+    const sweepRidge = (kind, kd, aq, path, spans, hseed) => {
+      const b = bkOf(ridgeB, kind, false);
       const w2 = kd.w / 2, wt2 = kd.wt / 2;
       const nrm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
-      const NL = nrm([-pxv, 0.25, -pzv]), NR = nrm([pxv, 0.25, pzv]);       // 側面外法線(略朝上,倒角)
-      const NLt = nrm([-pxv * 0.4, 1, -pzv * 0.4]), NRt = nrm([pxv * 0.4, 1, pzv * 0.4]);
       const first = b.base;
       let prev = null;
       for (let s = 0; s <= spans; s++) {
-        const t = s / spans, cx = A[0] + dx * t, cz = A[1] + dz * t;
-        const gy = terrain.heightAt(cx, cz) - 0.12;           // 底埋入地表,無縫接地
-        const topY = gy + kd.h * (1 + (ehash(ei * 131 + s, ej * 197, ed) - 0.5) * kd.jit);
+        const [cx, cz, nx, nz] = path(s / spans);
+        const NL = nrm([-nx, 0.25, -nz]), NR = nrm([nx, 0.25, nz]);   // 側面外法線(略朝上,倒角)
+        const NLt = nrm([-nx * 0.4, 1, -nz * 0.4]), NRt = nrm([nx * 0.4, 1, nz * 0.4]);
+        const gy = gY(cx, cz, aq) - 0.12;                             // 底埋入地表,無縫接地
+        const topY = gy + kd.h * (1 + (ehash(hseed + s, hseed * 7, 13) - 0.5) * kd.jit);
         const idx0 = b.base;
         const push = (px, py, pz, n) => { b.pos.push(px, py, pz); b.nrm.push(n[0], n[1], n[2]); };
-        push(cx - pxv * w2, gy, cz - pzv * w2, NL);           // 0 Lb
-        push(cx + pxv * w2, gy, cz + pzv * w2, NR);           // 1 Rb
-        push(cx - pxv * wt2, topY, cz - pzv * wt2, NLt);      // 2 Lt
-        push(cx + pxv * wt2, topY, cz + pzv * wt2, NRt);      // 3 Rt
+        push(cx - nx * w2, gy, cz - nz * w2, NL);
+        push(cx + nx * w2, gy, cz + nz * w2, NR);
+        push(cx - nx * wt2, topY, cz - nz * wt2, NLt);
+        push(cx + nx * wt2, topY, cz + nz * wt2, NRt);
         b.base += 4;
         if (prev != null) {
-          const a0 = prev, c0 = idx0;
-          b.idx.push(a0, a0 + 2, c0, c0, a0 + 2, c0 + 2);           // 左側面
-          b.idx.push(a0 + 1, c0 + 1, a0 + 3, a0 + 3, c0 + 1, c0 + 3); // 右側面
-          b.idx.push(a0 + 2, a0 + 3, c0 + 2, c0 + 2, a0 + 3, c0 + 3); // 頂面
+          const p0 = prev, q0 = idx0;
+          b.idx.push(p0, p0 + 2, q0, q0, p0 + 2, q0 + 2);             // 左側面
+          b.idx.push(p0 + 1, q0 + 1, p0 + 3, p0 + 3, q0 + 1, q0 + 3); // 右側面
+          b.idx.push(p0 + 2, p0 + 3, q0 + 2, q0 + 2, p0 + 3, q0 + 3); // 頂面
         }
         prev = idx0;
       }
-      b.idx.push(first, first + 1, first + 3, first, first + 3, first + 2);   // 端面封口(DoubleSide,繞向不拘)
+      b.idx.push(first, first + 1, first + 3, first, first + 3, first + 2);
       b.idx.push(prev, prev + 3, prev + 1, prev, prev + 2, prev + 3);
     };
-    const consider = (k0, k1, A, Bp, i, j, ed) => {
-      if (!k1 || k1 === '!' || subOf(k1) === subOf(k0)) return;   // 同款 = 無縫;'!'/空 = 崖/未鋪,交由外溢淡出
-      const za = coarseOf(k0), zb = coarseOf(k1);
-      // 使用者定案:邊界物件「只在不同類型地貌交會的邊界」擺 —— 同地貌內的換款(含農田/球場/停車場等
-      // 規律區塊)一律不擺,避免整齊區塊被切亂。跨地貌交界(za≠zb)才是要遮的拼接不連續。
-      if (za === zb) return;
-      const kind = pickKind(za, zb, ehash(i, j, ed === 1 ? 11 : 37));
-      if (!kind || ehash(i, j, ed === 1 ? 23 : 41) >= PROB[kind]) return;
-      // 沿線密取樣(每 ~3m):任一點落在道路走廊 / 建物 / 水面 / 規律結構拼圖上 → 整段不擺。
-      // 道路為最高優先(ROAD_LIFT 0.45)不可被 3D 邊界物遮住(「道路沒出現」修正);規律區塊保持完整。
-      const dx = Bp[0] - A[0], dz = Bp[1] - A[1];
-      const steps = Math.max(2, Math.ceil((Math.hypot(dx, dz) || 1) / 3));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps, px = A[0] + dx * t, pz = A[1] + dz * t;
-        if (!okPt(px, pz) || onRegular(px, pz)) return;
-      }
-      emitRidge(bB[kind], A, Bp, KINDS[kind], i, j, ed);
+    // 直段中心線(吃**退縮後**的端點:接頭那一段空間讓給接頭拼圖)
+    const linePath = (tl) => {
+      const dx = tl.bx - tl.ax, dz = tl.bz - tl.az, l = Math.hypot(dx, dz) || 1;
+      const nx = -dz / l, nz = dx / l;
+      return [(t) => [tl.ax + dx * t, tl.az + dz * t, nx, nz], l];
     };
-    for (let j = 0; j < gnz; j++) {
-      for (let i = 0; i < gnx; i++) {
-        const k0 = keys[j * gnx + i];
-        if (!k0 || k0 === '!') continue;
-        if (i + 1 < gnx) consider(k0, keys[j * gnx + i + 1], cornerAt(i + 1, j), cornerAt(i + 1, j + 1), i, j, 1);
-        if (j + 1 < gnz) consider(k0, keys[(j + 1) * gnx + i], cornerAt(i, j + 1), cornerAt(i + 1, j + 1), i, j, 2);
+    // 圓弧中心線(轉彎接頭):法向 = 徑向,取「指向圓心外側」的一致方向
+    const arcPath = (g, t0, t1) => {
+      const sgn = g.sweep >= 0 ? 1 : -1;
+      return (t) => {
+        const a = g.a0 + g.sweep * (t0 + (t1 - t0) * t);
+        const rx = Math.cos(a), rz = Math.sin(a);
+        return [g.cx + rx * g.R, g.cz + rz * g.R, rx * sgn, rz * sgn];
+      };
+    };
+    // 圓帽接頭(急彎):半徑 hw 的圓盤 —— 標準 round join,一片完整拼圖。
+    // 接力急彎時沿角平分線切半,兩臂各畫各的;立體脊另立一根接頭墩。
+    const emitCap = (cor, fromA, tlKind) => {
+      const g = cor.geo;
+      const arms2 = [cor.a, cor.b];
+      const halves = cor.a.kind === cor.b.kind ? [[0, 2, tlKind]] : [[0, 1, cor.a.kind], [1, 2, cor.b.kind]];
+      // 切半基準:角平分線的法線方向(a 臂那半 / b 臂那半)
+      const sx = cor.a.dx + cor.b.dx, sz = cor.a.dz + cor.b.dz;
+      const sl2 = Math.hypot(sx, sz) || 1;
+      const base = Math.atan2(-sx / sl2, sz / sl2);   // 平分線的法線 ⇒ 半圓切在兩臂之間
+      const NF = 12;
+      const bxu = sx / sl2, bzu = sz / sl2;            // 平分線單位向量 = 圓帽的局部框
+      for (const [h0, h1, kk] of halves) {
+        const kdef = BORDER_KINDS[kk];
+        if (!kdef.flat) continue;
+        const b = bkOf(flatB, kk, true), lift = bLift(kk), aq = !!kdef.aq;
+        // 以平分線為框取 UV 與 α:橫過帶的方向仍走**帶剖面**(中線實、兩緣 0),
+        // MUST NOT 用「徑向淡出 + v 固定」—— 那會把紋理最深的中線鋪成一塊實心圓斑
+        const put = (px, pz) => {
+          const s2 = (px - g.cx) * bxu + (pz - g.cz) * bzu;
+          const t2 = (px - g.cx) * -bzu + (pz - g.cz) * bxu;
+          const wsh = wash(px, pz);
+          b.pos.push(px, gY(px, pz, aq) + lift, pz);
+          b.nrm.push(0, 1, 0);
+          b.uv.push(s2 / BTEXL, Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2))));
+          b.col.push(wsh, wsh, wsh, xsAlpha(t2, g.r));
+        };
+        put(g.cx, g.cz);
+        const n2 = Math.max(3, Math.round(NF * (h1 - h0) / 2));
+        for (let s = 0; s <= n2; s++) {
+          const ang = base + Math.PI * (h0 + (h1 - h0) * (s / n2));
+          put(g.cx + Math.cos(ang) * g.r, g.cz + Math.sin(ang) * g.r);
+          if (s) b.idx.push(b.base, b.base + s, b.base + s + 1);
+        }
+        b.base += n2 + 2;
+      }
+      for (const arm of arms2) {                       // 立體脊:自節點沿臂掃到斷面 = 接頭墩
+        const kdef = BORDER_KINDS[arm.kind];
+        if (!kdef.ridge) continue;
+        const nx = -arm.dz, nz = arm.dx;
+        sweepRidge(arm.kind, kdef.ridge, !!kdef.aq,
+          (t) => [g.cx + arm.dx * g.L * t, g.cz + arm.dz * g.L * t, nx, nz],
+          Math.max(1, Math.round(g.L / 2)), cor.n);
+      }
+    };
+    // 接頭端的累計弧長(節點+種類為鍵):岔路拼圖據此接上該臂的圖案相位,不會在交會處跳格
+    const uAt = new Map();
+    const uKey = (n, kind) => `${n}|${kind}`;
+    for (const ch of plan.chains) {
+      const nT = ch.tiles.length;
+      // 逐片先算「可畫的區間」:讓路 MUST 是**逐段**的,不是整片全有或全無 ——
+      // 共線的交界會被 16 方向量化併成一整片(實測一條 900m 的直線交界 = 1 片),
+      // 整片判定的話,沿線任何一處有停車場就讓整條界線消失(2026-08-11 實測:
+      // 市區側規劃 1 片 → 實畫 0 片 = 0% 覆蓋)。改逐段後,界線只在該讓的地方斷開。
+      const info = ch.tiles.map((tl) => {
+        const kdef = BORDER_KINDS[tl.kind];
+        const runs = tileRuns(tl, !!kdef.aq, hwOfKind(tl.kind));
+        return { kdef, runs, head: runs.length > 0 && runs[0][0] === 0,
+                 tail: runs.length > 0 && runs[runs.length - 1][1] === 1 };
+      });
+      let u = 0;
+      for (let t = 0; t < nT; t++) {
+        const tl = ch.tiles[t], nf = info[t];
+        const kdef = nf.kdef;
+        const [path, len] = linePath(tl);
+        if (!nf.runs.length) { u = 0; continue; }       // 整片都該讓路:紋理弧長歸零重起
+        // 接續端 = 相鄰 tile 那一頭真的畫到底,或這一端接的是**真的畫得出來的**岔路
+        // (岔路是鏈的邊界 ⇒ j0/j1 恆 false,只看 j 會讓每條臂在路口前淡出成殘影);
+        // 轉彎同理:接頭讓路而沒畫時,直段那一端 MUST 收成 α=0,不能停在半空
+        const cOk0 = !tl.c0 || cornerOk(tl.c0, !!kdef.aq);
+        const cOk1 = !tl.c1 || cornerOk(tl.c1, !!kdef.aq);
+        const okPrev = nf.head && cOk0
+          && (tl.f0 ? forkOk.get(tl.n0) : (tl.j0 && info[(t - 1 + nT) % nT].tail));
+        const okNext = nf.tail && cOk1
+          && (tl.f1 ? forkOk.get(tl.n1) : (tl.j1 && info[(t + 1) % nT].head));
+        uAt.set(uKey(tl.n0, tl.kind), u);
+        bStat.drawn++;
+        for (const [r0, r1] of nf.runs) {
+          const sl = len * (r1 - r0);
+          const p = (tt) => path(r0 + (r1 - r0) * tt);
+          const a0 = r0 === 0 ? (okPrev ? 1 : 0) : 0;    // 區間內側的斷口一律淡出收尾
+          const a1 = r1 === 1 ? (okNext ? 1 : 0) : 0;
+          if (kdef.flat) sweepFlat(tl.kind, kdef.flat, !!kdef.aq, p,
+                                   Math.max(1, Math.round(sl / 4)), u + len * r0, sl, a0, a1);
+          if (kdef.ridge) sweepRidge(tl.kind, kdef.ridge, !!kdef.aq, p,
+                                     Math.max(1, Math.round(sl / 5)), tl.n0 + ((r0 * 97) | 0));
+        }
+        u += len;
+        uAt.set(uKey(tl.n1, tl.kind), u);
+        // ---- 轉彎拼圖:整片畫出來(圓弧掃掠 / 急彎走圓帽),不是把下一段直帶黏上來 ----
+        const cor = tl.c1;
+        if (!cor || !okNext || !cOk1) { u += cor ? cor.geo.len : 0; continue; }
+        const g = cor.geo;
+        const mixed = cor.a.kind !== cor.b.kind;        // 接力轉彎:前後半各畫各的圖案
+        // 這一片是自 tl 那一臂轉向另一臂:tl 的臂在 cor 裡可能是 a 也可能是 b,
+        // 弧的參數方向恆自 Pa→Pb,所以要先認出自己是哪一端
+        const fromA = Math.abs(g.Pa[0] - tl.bx) + Math.abs(g.Pa[1] - tl.bz) < 1e-6;
+        if (g.mode === 'arc') {
+          const segs = mixed ? [[0, 0.5, fromA ? cor.a.kind : cor.b.kind],
+                               [0.5, 1, fromA ? cor.b.kind : cor.a.kind]]
+                             : [[0, 1, tl.kind]];
+          let uu = u;
+          for (const [s0, s1, kk] of segs) {
+            const kdf = BORDER_KINDS[kk];
+            const sl = g.len * (s1 - s0);
+            const p = fromA ? arcPath(g, s0, s1) : arcPath(g, 1 - s0, 1 - s1);
+            const rings = Math.max(2, Math.round(sl / 2.2));   // 弧段取樣密一點,彎才圓順
+            if (kdf.flat) sweepFlat(kk, kdf.flat, !!kdf.aq, p, rings, uu, sl, 1, 1);
+            if (kdf.ridge) sweepRidge(kk, kdf.ridge, !!kdf.aq, p, rings, cor.n);
+            uu += sl;
+          }
+          u = uu;
+        } else if (g.mode === 'cap') {
+          // 急彎:圓帽接頭(標準 round join)—— 一片完整的圓盤,兩臂各佔半邊圖案
+          emitCap(cor, fromA, tl.kind);
+          u += g.len;
+        }
       }
     }
-    for (const kind in bB) {
-      const b = bB[kind];
+    // ---- 岔路拼圖:逐臂楔形在中心交會,各自帶自己的圖案(接力);MUST NOT 用墊片蓋縫 ----
+    // 多邊形(逆時針)= [B0,A0,B1,A1,…],Bi/Ai = 第 i 臂斷面的兩緣;臂與臂之間以中點切開,
+    // 每一楔形進自己那一種的桶 ⇒ 三種分界線交會處是三片真的拼圖,不是一張蓋板。
+    for (const fk of plan.forks) {
+      if (!forkOk.get(fk.n)) continue;     // 讓路判定與直段同一支(逐臂取樣,不是只驗中心點)
+      bStat.forksDrawn++;
+      const k = fk.arms.length;
+      // 逐臂斷面:**沿用直段的 XS 橫斷面表**(自 f=-1 到 +1;A = 逆時針側 f=+1)。
+      // 只放兩緣的話,α 會自中心線性內插到 0,正好在直段起點開一個洞(路口變成白十字)。
+      const E = fk.arms.map((a) => {
+        const nx = -a.dz, nz = a.dx;
+        const cx = fk.x + a.dx * fk.L, cz = fk.z + a.dz * fk.L;
+        const hw = (BORDER_KINDS[a.kind].flat?.w ?? BORDER_KINDS[a.kind].ridge.w) / 2;
+        const xs = XS.map(([f]) => [cx + nx * hw * f, cz + nz * hw * f]);
+        return { xs, B: xs[0], A: xs[xs.length - 1] };
+      });
+      const M = E.map((e, i) => {                       // 相鄰臂之間的切分中點
+        const nx = E[(i + 1) % k].B;
+        return [(e.A[0] + nx[0]) / 2, (e.A[1] + nx[1]) / 2];
+      });
+      for (let i = 0; i < k; i++) {
+        const a = fk.arms[i], kdef = BORDER_KINDS[a.kind];
+        const aq = !!kdef.aq;
+        if (kdef.flat) {
+          const b = bkOf(flatB, a.kind, true);
+          const lift = bLift(a.kind), hw = kdef.flat.w / 2;
+          const u0 = uAt.get(uKey(fk.n, a.kind)) ?? 0;
+          // 楔形 = 扇形過 [M(i-1), B_i, A_i, M_i];UV 與 α 都取**該臂的局部框 + 帶剖面**
+          // (中線實、兩緣 0)⇒ 交會處讀起來是三條帶匯進來,MUST NOT 用徑向淡出(會糊成一團)
+          const ring = [M[(i - 1 + k) % k], ...E[i].xs, M[i]];
+          const put = (px, pz) => {
+            const s = (px - fk.x) * a.dx + (pz - fk.z) * a.dz;
+            const t2 = (px - fk.x) * -a.dz + (pz - fk.z) * a.dx;
+            const wsh = wash(px, pz);
+            b.pos.push(px, gY(px, pz, aq) + lift, pz);
+            b.nrm.push(0, 1, 0);
+            b.uv.push((u0 - fk.L + s) / BTEXL, Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2))));
+            b.col.push(wsh, wsh, wsh, xsAlpha(t2, hw));
+          };
+          put(fk.x, fk.z);
+          for (const p of ring) put(p[0], p[1]);
+          for (let s = 0; s < ring.length - 1; s++) b.idx.push(b.base, b.base + 1 + s, b.base + 2 + s);
+          b.base += 1 + ring.length;
+        }
+        if (kdef.ridge) {
+          // 立體脊的交會 = 一根接頭墩(角柱/樹叢/岩堆),自節點沿該臂掃到斷面
+          const dx = a.dx, dz = a.dz, nx = -dz, nz = dx;
+          sweepRidge(a.kind, kdef.ridge, aq,
+            (t) => [fk.x + dx * fk.L * t, fk.z + dz * fk.L * t, nx, nz],
+            Math.max(1, Math.round(fk.L / 2)), fk.n + i);
+        }
+      }
+    }
+    for (const [kind, b] of flatB) {
       if (!b.idx.length) continue;
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
       geo.setIndex(b.idx);
-      const m = new THREE.Mesh(geo, envMat(KINDS[kind].color, { wash: 0.4, cool: 0.45, side: THREE.DoubleSide }));
+      const m = new THREE.Mesh(geo, envMat(0xffffff, {
+        map: borderTex(kind), vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,
+        transparent: true, side: THREE.DoubleSide,   // 弦走向不定 ⇒ 繞向不定,雙面保險
+      }));
+      m.renderOrder = -1.1 + bKinds.indexOf(kind) * 0.005;   // ∈ [-1.1, -1.05]:晚於脊帶 -1.2、早於特徵層 0
       m.frustumCulled = false;
       m.userData.noOutline = true;
+      m.userData.gborder = kind; m.userData.glayer = 'border';   // 冒煙識別標記(同上)
+      group.add(m);
+    }
+    for (const [kind, b] of ridgeB) {
+      if (!b.idx.length) continue;
+      const kd = BORDER_KINDS[kind].ridge;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+      geo.setIndex(b.idx);
+      const m = new THREE.Mesh(geo, envMat(kd.color === 'foliage' ? snB.foliage : kd.color,
+        { wash: 0.4, cool: 0.45, side: THREE.DoubleSide }));
+      m.frustumCulled = false;
+      m.userData.noOutline = true;
+      m.userData.gborder = kind; m.userData.glayer = 'border';   // 冒煙識別標記(同上)
       group.add(m);
     }
   }
@@ -2524,5 +3241,6 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       group.add(m);
     }
   }
-  return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN };
+  return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN,
+           border: bStat };
 }
