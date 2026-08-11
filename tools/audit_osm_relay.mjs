@@ -34,6 +34,7 @@
 //   --break-clone     伺服器直接存 m.roads(繞過淨化)⇒ Ⅲ MUST 紅
 //   --break-wait      入房者不等中繼                  ⇒ Ⅳ MUST 紅
 //   --break-cache     中繼早退搬到 geoGet 之後        ⇒ Ⅳ MUST 紅
+//   --break-label     等待期間不寫進度列              ⇒ Ⅳ MUST 紅
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import { OSM_RELAY, osmRelayKey, sanitizeOsmRelay, osmRelayFit } from '../public/js/osmrelay.js';
 import { RoomHub } from '../server/rooms.js';
@@ -67,7 +68,11 @@ if (argv.includes('--break-clone')) {
   roomsSrc = patch(roomsSrc, /const clean = sanitizeOsmRelay\(m\);/, 'const clean = m;', 'clone');
 }
 if (argv.includes('--break-wait')) {
-  mainSrc = patch(mainSrc, /if \(!osmInReady\(bbox, false\) && app\.lobby\?\.phase === 'room'\) await waitOsmRelay\(bbox\);/, ';', 'wait');
+  mainSrc = patch(mainSrc, /if \(!osmInReady\(bbox, false\) && app\.lobby\?\.phase === 'room'\) \{[\s\S]*?await waitOsmRelay\(bbox\);[\s\S]*?\n    \}/, ';', 'wait');
+}
+if (argv.includes('--break-label')) {
+  // 等待期間不寫進度列 ⇒「卡住時畫面要說明」的斷言 MUST 咬住
+  mainSrc = patch(mainSrc, /\n *if \(pre\.osmLabel\) setP\(0\.60, pre\.osmLabel\);/, '', 'label');
 }
 if (argv.includes('--break-cache')) {
   // 把兩支 fetcher 的中繼早退整段拿掉 ⇒「早退排在 geoGet 之前」的順序斷言 MUST 咬住
@@ -293,11 +298,24 @@ sec('Ⅳ 客戶端接線:早退順序、真的等、與地形建構並行');
     /osmRelayFit\(sanitizeOsmRelay\(/.test(gate));
 
   const pre = strip(grabFn(mainSrc, 'startPrebuild'));
-  const iGate = pre.indexOf('osmGate(cfg)'), iModels = pre.indexOf('await warmModels'), iAwait = pre.indexOf('await gate;'), iBio = pre.indexOf('buildBiomes(');
+  const iGate = pre.indexOf('osmGate(cfg'), iModels = pre.indexOf('await warmModels'), iAwait = pre.indexOf('await gate;'), iBio = pre.indexOf('buildBiomes(');
   t('閘門與模型/地形建構**並行**:開閘排在 warmModels 之前,await 排在 buildBiomes 之前',
     iGate >= 0 && iModels > iGate && iAwait > iModels && iBio > iAwait);
   t('閘門失敗一律吞掉(每一種失敗都有備援,MUST NOT 把整份預建判成 pre.error)',
-    /osmGate\(cfg\)\.catch\(/.test(pre));
+    /osmGate\(cfg, onOsmLabel\)\.catch\(/.test(pre));
+  // 【進度回饋】等待與地形建構並行 ⇒ 平時看不出來;房主整組失敗時入房者會多停最多 WAIT_MS,
+  // 那段沉默是唯一「畫面沒說明」的窗口。文字的**內容**只准住 osmGate(房主等 Overpass 與
+  // 入房者等中繼是兩件事,而那個分岔只有它認得),**顯示時機**只准住 startPrebuild 的
+  // await 那一刻(閘一開就寫 = 蓋掉正在跑的模型/地形文案,而那兩段本來就在並行)。
+  const iLabel = pre.indexOf('if (pre.osmLabel) setP(');
+  t('等待中繼 MUST 有畫面說明(否則狀態列停在地形文案上乾等 WAIT_MS)', iLabel >= 0);
+  t('顯示時機 MUST 排在 await gate 之前、地形之後(閘一開就寫會蓋掉並行中的地形進度)',
+    iLabel > pre.indexOf('buildTerrain(') && iLabel < iAwait);
+  t('文字內容 MUST 由 osmGate 決定(房主等 Overpass / 入房者等中繼是兩件事,分岔只有它認得)',
+    /onLabel\('等待房主的道路圖資…'\)/.test(gate) && /onLabel\('取得道路圖資/.test(gate)
+    && !/pre\.osmLabel = '[^']/.test(pre));
+  t('等到了 MUST 清空(留著 = 下一次 await 顯示一句早就過期的說明)',
+    (gate.match(/onLabel\(''\)/g) || []).length === 2);
 
   const arrive = strip(grabFn(mainSrc, 'onOsmRelay'));
   t('中繼只定案帶資料的格(寫成 null 等於替房主的失敗背書,入房者從此不會自己去抓)',
@@ -359,5 +377,6 @@ for (const [flag, why] of [
   ['--break-clone', '伺服器直接存 m.roads(繞過淨化)⇒ Ⅲ MUST 紅'],
   ['--break-wait', '入房者不等中繼 ⇒ Ⅳ MUST 紅'],
   ['--break-cache', '中繼早退搬到 geoGet 之後 ⇒ Ⅳ MUST 紅'],
+  ['--break-label', '等待期間不寫進度列 ⇒ Ⅳ MUST 紅'],
 ]) if (argv.includes(flag)) console.log(`(${flag}:${why})`);
 process.exit(fail ? 1 : 0);
