@@ -19,7 +19,7 @@
 //     還早到(RTT > 125ms),沒有「同一階只送一次」的閘就會重送,第二筆被拒 ⇒ 玩家看到
 //     一句莫名其妙的「資金不足」。逾時窗是被拒時的救濟閥,MUST NOT 短到蓋不住一次往返。
 import { readSrc, grabMethod } from './audit_src.mjs';
-import { ECON, upgradePrice, CREEP_UPG } from '../public/js/data.js';
+import { ECON, upgradePrice, canUpgrade, BATTLE_SCORE, CREEP_UPG } from '../public/js/data.js';
 
 const gameSrc = readSrc('public', 'js', 'game.js');
 const mainSrc = readSrc('public', 'js', 'main.js');
@@ -41,7 +41,7 @@ const code = (s) => s.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
 // 這裡要驗的是「挑哪一項、挑幾次、送不送」)。
 const RES_CREEP = /const RES_CREEP = '([^']+)'/.exec(gameSrc)?.[1];
 const proto = new Function(
-  'ECON', 'upgradePrice', 'CREEP_UPG', 'RESERVE_RESEND_S', 'RES_CREEP', 'performance',
+  'ECON', 'upgradePrice', 'canUpgrade', 'CREEP_UPG', 'RESERVE_RESEND_S', 'RES_CREEP', 'performance',
   `return ({
     ${grabMethod(gameSrc, '_sweepPick')},
     ${grabMethod(gameSrc, '_sweepBuy')},
@@ -51,7 +51,7 @@ const proto = new Function(
     ${grabMethod(gameSrc, '_creepResKey')},
     ${grabMethod(gameSrc, '_resCreepLane')},
   });`,
-)(ECON, upgradePrice, CREEP_UPG, Number(/const RESERVE_RESEND_S = ([\d.]+)/.exec(gameSrc)?.[1]), RES_CREEP,
+)(ECON, upgradePrice, canUpgrade, CREEP_UPG, Number(/const RESERVE_RESEND_S = ([\d.]+)/.exec(gameSrc)?.[1]), RES_CREEP,
   { now: () => (globalThis.__t ?? 0) * 1000 });   // 真品吃 performance.now()/1000 ⇒ 這裡回毫秒
 
 const RESEND_S = Number(/const RESERVE_RESEND_S = ([\d.]+)/.exec(gameSrc)?.[1]);
@@ -60,10 +60,10 @@ const zeroUpg = () => Object.fromEntries(TRACKS.map((k) => [k, 0]));
 const maxUpg = () => Object.fromEntries(TRACKS.map((k) => [k, ECON.UPGRADES[k].max]));
 
 /** 造一個最小可跑的交戰客戶端;`sent` 記下所有送出的購買(小兵強化記成 `creep:<lane>`)*/
-const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0]) => {
+const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0], kn = BATTLE_SCORE.MAX) => {
   const sent = [];
   const c = Object.assign(Object.create(null), proto, {
-    side: 'SWARM', money, upg, shopOpen: false,
+    side: 'SWARM', money, upg, kn, shopOpen: false,
     creepUpg: { SWARM: creep },
     _reserve: new Set(), _resSent: {},
     hud: { feed() {}, shop() {} },
@@ -73,10 +73,8 @@ const mkClient = (money, upg = zeroUpg(), creep = [0, 0, 0]) => {
     _optimisticBuy(item) {
       const up = ECON.UPGRADES[item];
       const lvl = this.upg[item] || 0;
-      if (lvl >= up.max) return;
-      const price = upgradePrice(up, lvl);
-      if (this.money < price) return;
-      this.money -= price; this.upg[item] = lvl + 1;
+      if (!canUpgrade(up, lvl, this.money, this.kn)) return;
+      this.money -= upgradePrice(up, lvl); this.upg[item] = lvl + 1;
       sent.push(item);
     },
   });
@@ -109,7 +107,8 @@ sec('Ⅱ 掃貨(貪心便宜優先)');
 {
   const L1 = upgradePrice(ECON.UPGRADES[TRACKS[0]], 0);
   const L2 = upgradePrice(ECON.UPGRADES[TRACKS[0]], 1);
-  ok(L2 > L1, `階梯單價隨等級遞增(Lv0→1 $${L1} < Lv1→2 $${L2})—— 貪心便宜優先才會是最佳解`);
+  const L3 = upgradePrice(ECON.UPGRADES[TRACKS[0]], 2);
+  ok(L2 > L1 && L3 > L2, `階梯單價嚴格遞增($${L1} < $${L2} < $${L3})—— 貪心便宜優先才會是最佳解`);
 
   const c = mkClient(L1 * 2 + L1 - 1);       // 剛好買得起兩階、差一元買不起第三階
   const n = c._sweepBuy();
@@ -121,6 +120,12 @@ sec('Ⅱ 掃貨(貪心便宜優先)');
 
   const poor = mkClient(L1 - 1);
   ok(poor._sweepBuy() === 0 && poor.money === L1 - 1, '一項都買不起時掃貨不下單也不扣錢');
+
+  // 戰鬥分數門檻(2026-08-11):錢無限但零戰績 ⇒ 只買得到每一軌的第一階
+  const green = mkClient(1e9, zeroUpg(), [0, 0, 0], 0);
+  ok(green._sweepBuy() === TRACKS.length,
+    `戰鬥分數 0 時掃貨只買得到八軌各自的第一階(預期 ${TRACKS.length},實得 ${green.sent.length})`);
+  ok(TRACKS.every((k) => green.upg[k] === 1), '第二階被戰鬥分數門檻擋下(錢再多也不行)');
 
   // 滿級池:掃貨 MUST 停手(且不會空轉到迴圈上限)
   const full = mkClient(999999, Object.fromEntries(TRACKS.map((k) => [k, ECON.UPGRADES[k].max])));

@@ -1,5 +1,5 @@
 // ============ 平衡稽核(離線,純 Node,無依賴):`npm run bal` ============
-// 六條 CLAUDE.md 的不變式,改平衡數值後 MUST 重跑:
+// CLAUDE.md 的不變式,改平衡數值後 MUST 重跑(③ 已退場,編號不重排):
 //
 // ① 一波 NPC = 玩家 60% EHP
 //    一波 = 同線同側 WAVE_SOLDIERS 步槍兵 + WAVE_EXTRAS(火箭兵/榴彈兵/坦克/攻擊直升機)。
@@ -10,8 +10,11 @@
 // ② 最前線敵我砲塔:射程重疊 TOWER_OVERLAP(0.8)且互不在對方射程內(d = 1.2R > R)。
 //    對全部預設場地 × 1/2/3 線實際起一份 BattleSim,量最近的一對敵我塔。
 //
-// ③ 10 分鐘升滿(2026-07-20 面向經濟):單一兵線 30% 擊殺 + 40% 助攻(×ASSIST.F)
-//    的 10 分鐘賞金收入 + 開局資金 ≈ 八軌全滿總價(8 軌 × 各 max 級 × 固定單價,±10%;無擊殺門檻)。
+// ③ **已退場**(2026-08-11 使用者定案「移除此標準」):舊的「10 分鐘升滿」把八軌總價釘死在
+//    賞金收入上。八軌自本日起是**雙閘**(金錢 + 戰鬥分數,見 data.ECON.UPG_STEPS)——
+//    升滿的時間不再只由錢決定,拿收入預算去除總價已經量不到原本要量的東西。
+//    數字仍印出來當參考,但不判定、不計入 fail。**編號不重排**(④~⑦ 保留原號):
+//    CLAUDE.md §5 矩陣與各工具註解逐處引用這些序號。
 //
 // ④ 滿級單推同塔位雙塔:八軌全滿的玩家攻擊一組塔位。
 //    機甲/變形者(單機)= 近戰互轟模型(前段雙塔回擊、殺一座後單塔;無距離衰減/
@@ -130,23 +133,21 @@ if (!okT) fail++;
 console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最近敵我塔距 ${lo.toFixed(0)}~${hi.toFixed(0)}m`
   + `(重疊 ${(ovLo * 100).toFixed(1)}~${(ovHi * 100).toFixed(1)}%)、對射組數 ${dual}`);
 
-// ---------- ③ 10 分鐘升滿(單線 30% 擊殺 / 40% 助攻)----------
+// ---------- ③ 已退場(2026-08-11 使用者定案「移除此標準」;編號不重排,理由見檔頭)----------
+// 現況仍印出來當**參考數字**(不判定、不計入 fail):八軌升滿現在是「錢 + 戰鬥分數」兩道閘,
+// 單看錢的比值已經不是升滿速度的代理指標。
 {
   const KILL_R = 0.30, ASSIST_R = 0.40, HORIZON = 600, TRAVEL = 60;   // TRAVEL:波次行軍+交戰折讓
   let t = 0, waves = 0;
   for (; t <= HORIZON - TRAVEL;) { waves++; t += waveInterval(); }   // 2026-07-30:出兵間隔固定
   const waveBounty = waveComp().reduce((s, k) => s + ECON.BOUNTY[k], 0);
   const income = ECON.START + (KILL_R + ASSIST_R * ECON.ASSIST.F) * waves * waveBounty;
-  // 八軌全滿 = 8 軌各級階梯單價 upgradePrice(u,lvl) 之和(2026-07-20;無擊殺門檻,隨等級遞增)
   const totalCost = Object.values(ECON.UPGRADES)
     .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0);
-  const ratio = totalCost / income;
-  const okE = ratio >= 0.9 && ratio <= 1.1;
-  if (!okE) fail++;
-  console.log(`\n③ 10 分鐘升滿 — 目標:八軌總價 ≈ 收入預算(±10%)\n`);
-  console.log(`${okE ? '✅' : '❌'} ${waves} 波 × 波賞金 $${waveBounty} × 有效分成 ${(KILL_R + ASSIST_R * ECON.ASSIST.F).toFixed(2)}`
-    + ` + 開局 $${ECON.START} = 預算 $${Math.round(income)};八軌總價 $${totalCost}`
-    + `(階梯 $${ECON.UPG_BASE}+$${ECON.UPG_INC}×lvl、第三階固定 $${ECON.UPG_L3},比 ${(ratio * 100).toFixed(1)}%)`);
+  console.log(`\n③ 經濟參考(已退場,不判定)— 八軌雙閘:金錢 + 戰鬥分數\n`);
+  console.log(`   ⓘ ${waves} 波 × 波賞金 $${waveBounty} × 有效分成 ${(KILL_R + ASSIST_R * ECON.ASSIST.F).toFixed(2)}`
+    + ` + 開局 $${ECON.START} = 10 分鐘收入 $${Math.round(income)};八軌總價 $${totalCost}`
+    + `(階梯 ${ECON.UPG_STEPS.map((st) => `$${st.price}/${st.score}分`).join(' → ')},比 ${(totalCost / income * 100).toFixed(1)}%)`);
 }
 
 // ---------- ④ 滿級單推同塔位雙塔 ----------

@@ -454,7 +454,7 @@ sec('Ⅳ 行為直測(真 BattleSim + 真 BotBrain)');
     const ch = chOfRole('support', 'STEEL') || chOfRole('support', 'SWARM');
     const side = CHARACTERS[ch].side === 'SWARM' ? 'SWARM' : 'STEEL';
     const { h, br } = brainOf(sim, side, ch, 'high');
-    h.money = ECON.UPG_BASE * 3;
+    h.money = ECON.UPG_STEPS.reduce((s, st) => s + st.price, 0);   // 三階全額(首階 $0)
     const order = botBuyOrder(br._role);
     for (const item of order) if (sim.buy(br.pid, item) === null) {
       t('支援型的第一筆消費落在招式軌(採購順序真的換了一條路)', item === 'sk' || item === 'ult');

@@ -8,7 +8,7 @@ import {
   cloudUrl, setCloudUrl, modeReady,
 } from './netmode.js';
 import {
-  SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice,
+  SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice, upgradeScore, canUpgrade, BATTLE_SCORE,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
   UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
@@ -2425,7 +2425,7 @@ function renderShop(open, st) {
   const ov = $('shopOverlay');
   ov.style.display = open ? '' : 'none';
   if (!open || !st) return;
-  $('shopMoney').textContent = `💰 ${Math.floor(st.money)} ・ ☠ ${st.kn} 擊殺`;
+  $('shopMoney').textContent = `💰 ${Math.floor(st.money)} ・ ⚔ 戰鬥分數 ${st.kn}/${BATTLE_SCORE.MAX}`;
   // 掃貨(2026-08-02 使用者需求):把現在買得起的升級一次買到底。判定與下單全在 game.js
   // `_sweepBuy`/`_sweepPick` —— 這裡 MUST NOT 自己再算一次「買不買得起」(兩份判定會漂:
   // 鈕面說可以按、按下去卻沒反應)。
@@ -2465,6 +2465,11 @@ function renderShop(open, st) {
     d.textContent = t;
     box.appendChild(d);
   };
+  // 戰鬥分數門檻的鈕面註記(門檻值一律問 data.js 的 `upgradeScore`,MUST NOT 在此手寫階梯)
+  const scoreNote = (up, lvl, kn) => {
+    const need = upgradeScore(up, lvl);
+    return need > 0 ? `・需戰鬥分數 ${need}(現有 ${kn}${kn >= need ? ' 已達標' : ''})` : '';
+  };
   // 下一階數值預覽(戰鬥面向:輕/重武器 → 傷害/彈夾/填彈;小招/大招 → CD/電力/傷害)
   const facetNext = (slot, nextTier) => {
     if (slot === 'light' || slot === 'heavy') {
@@ -2489,7 +2494,7 @@ function renderShop(open, st) {
       const full = lvl >= CREEP_UPG.MAX;
       const mul = creepUpgMul(lvl), next = creepUpgMul(lvl + 1);
       row(`<b>第 ${li + 1} 兵線</b> LV${lvl}/${CREEP_UPG.MAX}`
-        + ` <span class="dim">全能力與陣亡賞金 ×${mul.toFixed(2)}</span>`,
+        + ` <span class="dim">對非玩家目標的傷害與耐久 ×${mul.toFixed(2)}</span>`,
         full ? null : CREEP_UPG.PRICE, !full && st.money >= CREEP_UPG.PRICE, () => st.buyCreep(li),
         full ? '已滿級' : `下一階:×${next.toFixed(2)}(下一波起生效)`, st.creepKey(li));
     });
@@ -2501,10 +2506,9 @@ function renderShop(open, st) {
       const upg = st.upg[id] || 0;           // 已購步數(0~3);目前階級 = 1 + upg
       const tier = 1 + upg, full = upg >= up.max;
       const price = full ? null : upgradePrice(up, upg);
-      const nm = c[up.abil]?.name || up.desc;
-      row(`<b>${up.name}</b> <span class="tag dim">${nm}・${KEYS[up.abil]}</span> Lv.${tier}/4`,
-        price, !full && st.money >= price, () => st.buy(id),
-        full ? '已滿階(Lv4)' : facetNext(up.abil, tier + 1), id);
+      row(`<b>${up.name}</b> <span class="tag dim">${c[up.abil]?.name || up.desc}・${KEYS[up.abil]}</span> Lv.${tier}/4`,
+        price, canUpgrade(up, upg, st.money, st.kn), () => st.buy(id),
+        full ? '已滿階(Lv4)' : `${facetNext(up.abil, tier + 1)}${scoreNote(up, upg, st.kn)}`, id);
     }
   }
   head('⬆️ 防禦/系統強化(隨處可買,立即生效;充能影響護盾/電力回速)');
@@ -2514,7 +2518,8 @@ function renderShop(open, st) {
     const full = lvl >= up.max;
     const price = full ? null : upgradePrice(up, lvl);
     row(`<b>${up.name}</b> Lv.${lvl}/${up.max} <span class="dim">${up.desc}</span>`,
-      price, !full && st.money >= price, () => st.buy(id), full ? '已滿級' : '', id);
+      price, canUpgrade(up, lvl, st.money, st.kn), () => st.buy(id),
+      full ? '已滿級' : scoreNote(up, lvl, st.kn).replace(/^・/, ''), id);
   }
 }
 $('shopCloseBtn')?.addEventListener('click', () => app.battle?._toggleShop(false));
