@@ -419,6 +419,10 @@ sec('Ⅳ 行為直測(真 BattleSim)');
     const sim = new BattleSim(mkCfg());
     const h = hero(sim, 'SWARM', 'a7', 's11');
     h.hp = 1;
+    // 量治療量的兩段 MUST 與戰場火力隔離:`deploy()` 是**真的在跑 tick**,兵波照樣出、火箭兵照樣開火。
+    // 2026-08-11 起 NPC 肩射火箭是真的爆炸(逐目標擲閃避的那一版)⇒ 殘血 1 的受測機體會被路過的
+    // 濺射掃到,這一段就變成擲骰決定綠不綠(實測 8 跑紅 2)。無敵幀是既有的隔離手段,不改被測邏輯。
+    h.invUntil = sim.t + 1e6;
     const A = d.heroAbility('s11', 'ult', 1);
     const B = d.selfUltBoost('s11', 1, h.abil);
     sim.heroCast('a7', 'ult');
@@ -628,6 +632,7 @@ sec('Ⅴ 跟隨玩家的輔助機隊(2026-08-07 使用者定案)');
     {
       const { sim, h } = mk('SWARM', 'v2', 's11');
       h.hp = 1;
+      h.invUntil = sim.t + 1e6;   // 同上:量治療量 MUST 與路過的爆風隔離(deploy 是真的在跑 tick)
       sim.heroCast('v2', 'ult');
       const cs = fleet(sim, 'v2');
       ok(cs.length === d.supportN('s11') && d.selfUltTempo('s11') === 'burst',

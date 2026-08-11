@@ -39,7 +39,7 @@
 //    (承傷減免 / 治療 / 召喚 / 攔截)等於貼不上就一項都兌現不了。雙扇形 MUST 兩招都是貼身套件、
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
 import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
-  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, weaponDps,
+  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, evadable, evadeExpF, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
   AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, ultDelivered, SELF_ULT } from '../public/js/data.js';
 import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
@@ -72,7 +72,8 @@ function fightWave(ch) {
   const kind = charKind(ch), u = UNITS[kind], m = CHARACTERS[ch].mods;
   const n = kind === 'drone' ? SQUAD.N : 1;   // 無人機單機(N=1);EHP/DPS 不再 ×N
   const armor = heroArmor(ch);   // 無人機護甲已等比縮放至機甲平均 ×HP_F(與 sim 同一個縫)
-  // 無人機恆飛行 → 移動中,對「直射(無爆風)」武器有 EVASION 閃避(比照 sim _dodges 觸發條件);
+  // 無人機恆飛行 → 移動中,對「吃閃避的攻擊」有 EVASION 閃避(範圍與補償走 data.js 的 evadeExpF
+  // 單一縫;2026-08-11 起爆炸傷害也在內,但 08-12「維持 DPS」的補償讓火箭兵那一份的**期望**不變);
   // 這是蜂群的正規求生機制(單機 80% EHP 的補償)。機甲仍以「站樁不閃」的最壞情況估。
   const flying = kind === 'drone';
   let ar = Math.round(u.hp * (m.hp ?? 1)) * n;
@@ -80,9 +81,9 @@ function fightWave(ch) {
   const ehp0 = ar + sh;
   const foes = WAVE.map((k) => {
     const wd = WEAPONS[UNITS[k].wid];
-    const ev = flying && wd && !wd.r ? EVASION.GROUND + EVASION.AIR_BONUS : 0;
+    const ev = flying && wd && evadable(wd) ? EVASION.GROUND + EVASION.AIR_BONUS : 0;
     return { hp: UNITS[k].hp, dps: heroDps(ch, k),
-      dmg: UNITS[k].dmg * UNITS[k].rate * (1 - ev), pen: wd?.pen || 0 };
+      dmg: UNITS[k].dmg * UNITS[k].rate * evadeExpF(wd, ev), pen: wd?.pen || 0 };
   }).sort((a, b) => b.dmg * armorMul(armor, b.pen) - a.dmg * armorMul(armor, a.pen));
   const dt = 0.05;
   let t = 0, i = 0;

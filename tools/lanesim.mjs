@@ -51,7 +51,7 @@
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit
 // 雙層拆分 → 裝甲層吃 armorMul。差別只有「擲骰改期望值」(稽核要確定性,見全域 A4)。
 import {
-  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE, SQUAD, DECOY,
+  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
@@ -176,7 +176,8 @@ function towers(side) {
 /** 爆擊期望倍率(同高度 ⇒ 無 ALTITUDE 修正;高度差那一軸由 duel.mjs 的 ⑤ 掃描負責) */
 const critF = (def) => (def.crit ? 1 + def.crit * ((def.critX || VITALS.CRIT_X) - 1) : 1);
 /**
- * 閃避期望存活率(對齊 sim._dodges:輕武器直射限定;有效機動 > 門檻;飛行加成)。
+ * 閃避期望存活率(對齊 sim._dodges;吃不吃閃避由 data.js 的 `evadable` 單一縫判 —— 輕武器直射
+ * 與一切爆炸傷害;有效機動 > 門檻;飛行加成)。
  * **刻意不吃「這一步有沒有位移」**:本模型只有兵線軸一個自由度,沒有橫向走位,而真人在交火中
  * 幾乎恆在走位 ⇒ 拿「走到定位就停下 = 不閃避」建模,結果是**加速反而變弱**(2026-08-02 實測:
  * 同一台機體 +15% 移速的鏡像對局勝率 42.2%,方向與常識相反)。那是建模瑕疵,不是設計。
@@ -184,8 +185,9 @@ const critF = (def) => (def.crit ? 1 + def.crit * ((def.critX || VITALS.CRIT_X) 
  */
 const dodgeP = (tgt, U = null) => {
   if (!tgt.hero || tgt.mob <= evasionMinSpeed()) return 0;
-  // 招式帶來的閃避率增額(recon / overdrive)疊在基準之上,對齊 sim._dodges 的 `_buffVal(t,'evade')`
-  return Math.min(0.95, EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0) + (U ? U.evade : 0));
+  // 招式帶來的閃避率增額(recon / overdrive)疊在基準之上,對齊 sim._dodgeP 的 `_buffVal(t,'evade')`
+  // 上限走 `EVASION.P_MAX`(舊制手寫 0.95 在這一行;補償係數的分母是 1−p ⇒ 兩端 MUST 同一個夾)
+  return Math.min(EVASION.P_MAX, EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0) + (U ? U.evade : 0));
 };
 
 /** 目前生效的大招時窗(自身型的補償 / 載具遞送的團隊 buff 共用同一份紀錄;過期 = null) */
@@ -193,11 +195,13 @@ const ufAt = (e, now) => (e.hero && e.uf && e.uf.until > now ? e.uf : null);
 
 /** 對目標結算一次傷害(雙層拆分 → 裝甲層吃 armorMul);回傳實際扣掉的 EHP。
  *  now = 模擬時鐘:大招的減傷 / 閃避在此消費(未傳 = 不吃 buff,舊行為)。 */
-function damage(tgt, dmg, def, byLight, now = -Infinity) {
+// evd0 = 這一擊吃不吃閃避(呼叫端先過 `evadable`;NPC 那條刻意維持 false,見該處註)
+function damage(tgt, dmg, def, evd0, now = -Infinity) {
   const U = ufAt(tgt, now);
   const takenF = U ? U.takenF : 1;
-  const evd = byLight ? dodgeP(tgt, U) : 0;
-  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * takenF * (1 - evd);
+  // 期望倍率:輕武器直射 = (1−p);爆炸傷害有補償 ⇒ 恆 1(見 data.js evadeExpF)
+  const evF = evd0 ? evadeExpF(def, dodgeP(tgt, U)) : 1;
+  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * takenF * evF;
   const before = (tgt.sp || 0) + tgt.hp;
   const { toSp, toHp } = shieldSplit(def, raw, Math.max(0, tgt.sp || 0));
   if (tgt.sp != null) tgt.sp -= toSp;
@@ -206,7 +210,7 @@ function damage(tgt, dmg, def, byLight, now = -Infinity) {
   // 「少挨的」入帳(bal ⑦f 的自身型組):傷害鏈在夾到 0 之前是**線性**的 ⇒
   // 沒有這一招時會扣掉 got × (fBase / fNow),差額就是這一招擋下來的 EHP —— 是等式不是估計。
   if (U && got > 0) {
-    const fNow = takenF * (1 - evd), fBase = 1 - (byLight ? dodgeP(tgt, null) : 0);
+    const fNow = takenF * evF, fBase = evd0 ? evadeExpF(def, dodgeP(tgt, null)) : 1;
     if (fNow > 1e-9 && fBase > fNow) tgt.ultBy.prevented += got * (fBase / fNow - 1);
   }
   // 挨打即結束(t02 超載的 `brk`):對齊 sim._breakOnHit —— 全滿彈匣 + 零裝填的爆發
@@ -281,7 +285,7 @@ function dpsAt(S, T, d) {
     const cyc = s.def.mag / (s.def.rate || 3) + s.def.reload;
     const fall = s.def.fan ? fanFalloff(s.def.range, d) : dmgFalloff(s.def, d);
     v += s.def.dmg * vsMult(s.def, T.kind) * fall * critF(s.def)
-      * (1 - (s.id === 'light' ? dodgeP(T) : 0)) * s.def.mag / cyc * armorMul(T.armor, s.def.pen);
+      * evadeExpF(s.def, dodgeP(T)) * s.def.mag / cyc * armorMul(T.armor, s.def.pen);
   }
   return v;
 }
@@ -381,7 +385,7 @@ function fire(M, foe, enemyTower, t, foes) {
     for (const h of hits(M, aim, def, foes)) {
       if (h.f <= 0 || h.ent.hp <= 0) continue;
       if (h.ent.hero) h.ent.hurtT = t;
-      const got = damage(h.ent, def.dmg * dmgF * h.f, def, s.id === 'light', t);
+      const got = damage(h.ent, def.dmg * dmgF * h.f, def, evadable(def), t);
       // 「多打出的」入帳:免裝填那幾發整發都算,火力加成則只算增額那一份。
       // **分桶與 detonate 同一條原則**:清兵那一份不計 —— 兵波每 waveInterval 補一批,
       // 對「先擊毀敵方機體或一座砲塔」兩個勝利條件幾乎沒有貢獻。少了這一刀,爆風型武器的
@@ -454,7 +458,8 @@ function detonate(M, wdef, cx, cy, t, foes) {
   for (const h of blastHits(cx, cy, def, foes)) {
     if (h.f <= 0) continue;
     if (h.ent.hero) h.ent.hurtT = t;
-    const got = damage(h.ent, def.dmg * h.f, def, false, t);
+    // 招式/載具戰鬥部的爆風自 2026-08-11 起也吃閃避(使用者定案「所有攻擊招式也加入閃避機制」)
+    const got = damage(h.ent, def.dmg * h.f, def, evadable(def), t);
     M.abilDmg += got;
     M.abilBy[h.ent.hero ? 'hero' : h.ent.tower ? 'tower' : 'creep'] += got;
     reward(M, h.ent);
@@ -838,6 +843,9 @@ export function laneBattle(chA, chB, twA = null, twB = null) {
       if ((c.empUntil || 0) > t) continue;   // 大招 EMP:武器離線(仍會推進,對齊 sim)
       if (t < c.next) continue;
       c.next = reFire(c.next, t, 1 / u.rate);
+      // 小兵的武器在本模型裡是**一團**(pen/vs/爆風全部攤掉,與 bal ①/④ 同一個簡化)⇒
+      // 閃避那一欄刻意維持 false:這裡改成 evadable 等於順手把「小兵直射也會被閃」一起補進模型,
+      // 那是另一件事(既有的模型落差),會讓 bal ⑦ 的位移分不清是哪一項造成的。
       const wd = { pen: 0, vs: {} };
       if (tgt.hero) { tgt.hurtT = t; }
       damage(tgt, u.dmg, wd, false, t);
