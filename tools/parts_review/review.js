@@ -25,13 +25,17 @@ const n3 = (v) => (v == null ? '—' : (Math.round(v * 1000) / 1000).toString())
  * 覆核狀態:每一個出口各自對得上 `tools/ai3d/apply_verdicts.mjs` 的**一個**動作。
  * 2026-08-10 自動入庫上線後,人眼這一步從「入庫之前」搬到「入庫之後」⇒ 判決要能**撤**,
  * 於是多了第四個出口 `purge`(使用者定案:刪原始照片時**連節點一起撤下**)。
+ * 2026-08-11 再多一個 `archive`(使用者:「加入移除鍵,移除遊戲與零件台,放到封存區」)——
+ * 它與 `regen`/`reimg` 的差別是**下一步在誰身上**:那兩個是「再試一次」⇒ 照片回待跑池;
+ * 移除是「這顆結案了」⇒ 撤出遊戲、來源帳整列搬進封存帳,不再自動重跑。
  * `ok` 以外一律算「有意見」⇒ 那個判斷 MUST 由本表推導,MUST NOT 再手寫一份狀態清單
- * (手寫的那份會在加第五個出口時靜默過期:新出口不進「有意見」的篩選,而畫面完全正常)。
+ * (手寫的那份會在加第六個出口時靜默過期:新出口不進「有意見」的篩選,而畫面完全正常)。
  */
 const STATUS = {
   ok: ['✔ 通過', 'ok'],
   regen: ['⟳ 重生(同圖換參數)', 'flag'],
   reimg: ['⇄ 換來源圖', 'flag'],
+  archive: ['⊘ 移除(撤出遊戲並封存)', 'flag'],
   purge: ['✕ 刪除來源圖(連節點撤下)', 'flag'],
 };
 /**
@@ -471,6 +475,15 @@ function renderPhotoList() {
 }
 
 function renderList() {
+  // 左側清單有四種內容:生成物 / 語料圖檔(四態)/ 封存區 / 執行進度。
+  // 執行進度沒有「一件一件」可挑 ⇒ 清單只放一列當作它自己的入口(不留空白,也不假裝有列表)
+  if (app.list === RUN_KEY) {
+    $('prList').innerHTML = `<div class="pr-row on" data-key="${RUN_KEY}">
+      <div class="pr-rn"><b>採集迴圈</b><span>逐站進度 / 命令列 / 上次啟動結果</span></div></div>`;
+    $('prList').querySelector('.pr-row').onclick = () => select(RUN_KEY);
+    return undefined;
+  }
+  if (app.list === 'archive') return renderArchiveList();
   if (app.list !== 'nodes') return renderPhotoList();
   const keep = (r) => {
     const s = statOf(r);
@@ -510,6 +523,8 @@ function renderStat() {
   $('prStat').textContent = `生成物 ${shown.length} 件 ・ 已通過 ${ok} ・ 有意見 ${flag}`
     + ` ・ 半成品 ${wip}(已收起) ・ 缺件 ${app.data.missing.length} ・ 孤兒節點 ${app.data.orphans.length}`
     + ` ・ 未記載來源 ${app.data.undocumented.length}`
+    // 封存的**不算在生成物裡**(它已經不在遊戲裡了)⇒ 另外一個數字,而不是把分母撐大
+    + (app.data.archive?.length ? ` ・ 已封存 ${app.data.archive.length}` : '')
     + (app.data.issues.length ? ` ・ 帳目問題 ${app.data.issues.length}` : '');
   // 服務中的 checkout:台子可能被一支跑在舊 worktree 的遊戲伺服器 spawn 起來(cwd 跟著它走),
   // 那時每一件都停在那個 commit 而完全不報錯 —— 印出來才分得出「沒進來」和「看錯台子」
@@ -627,7 +642,52 @@ function dataSection(r) {
   return '';
 }
 
+/**
+ * 覆核那一段(判決鈕 + 意見 + 儲存)。**擺在畫面/圖片正下方**(2026-08-11 使用者需求:
+ * 「零件台的審核按鈕放在圖片/3D物件下方,方便快速審核」)—— 舊版排在來源圖/生成方法/
+ * 數據對照**之後**,一件要捲兩三個畫面才按得到,而覆核的動作是「看一眼、判一下、換下一件」。
+ * (封存區那一頁**刻意沒有這一段**:那幾件已經撤出遊戲了,再判一次沒有對應的動作。)
+ */
+function verdictSection(key) {
+  return `<div class="pr-sec pr-verdict"><h3>覆核</h3>
+    <div class="seg" id="prSt">
+      ${Object.entries(STATUS).map(([k, [label]]) =>
+    `<button class="segb ${itemOf(key)?.status === k ? 'on' : ''}" data-st="${k}">${label}</button>`).join('')}
+      <button class="segb" data-st="">✕ 清除</button></div>
+    <div class="pr-acts">
+      <input class="pr-note" id="prNote" value="${esc(itemOf(key)?.note || '')}"
+        placeholder="這一件哪裡不對 / 下一步(換哪張圖、換什麼參數)">
+      <button class="segb on" id="prSave">儲存</button>
+      <span class="pr-saved" id="prSaved"></span>
+    </div>
+    <div class="pr-dim">判決存進 tools/parts_review/state.json;真正的動作由
+      <code>node tools/ai3d/apply_verdicts.mjs --home &lt;資料家&gt;</code> 執行(這裡只記帳)。</div>
+  </div>`;
+}
+
+/** 覆核那一段的事件(兩個呼叫點共用;`renderBody` 畫完之後掛) */
+function bindVerdict(key) {
+  const body = $('prBody');
+  if (!$('prSt')) return;
+  let status = itemOf(key)?.status || '';
+  for (const b of body.querySelectorAll('#prSt .segb')) {
+    b.onclick = () => {
+      status = b.dataset.st;
+      for (const x of body.querySelectorAll('#prSt .segb')) x.classList.toggle('on', !!status && x.dataset.st === status);
+    };
+  }
+  $('prSave').onclick = async () => {
+    const note = $('prNote').value.trim();
+    const res = await api({ key, item: status || note ? { status, note: note || undefined } : null });
+    app.data.state.items = res.items;
+    $('prSaved').textContent = '已存檔 ✔';
+    renderList(); renderStat();
+  };
+}
+
 function renderBody() {
+  if (app.cur === RUN_KEY) return renderRunBody();
+  if (String(app.cur).startsWith('arc:')) return renderArchiveBody(String(app.cur).slice(4));
   if (String(app.cur).startsWith('img:')) return renderPhotoBody(String(app.cur).slice(4));
   const r = rowOf(app.cur);
   const body = $('prBody');
@@ -669,25 +729,14 @@ function renderBody() {
       <div class="pr-slot"></div><div class="pr-read" id="prReadR"></div></div>
   </div>
 
+  ${verdictSection(r.key)}
+
   <div class="pr-sec"><h3>來源圖(img)</h3>
     <div class="pr-imgs">${r.imgs.length ? r.imgs.map(imgCard).join('')
     : '<div class="pr-none">來源帳裡沒有記載任何來源圖</div>'}</div></div>
 
   ${methodSection(r)}
-  ${dataSection(r)}
-
-  <div class="pr-sec"><h3>覆核</h3>
-    <div class="seg" id="prSt">
-      ${Object.entries(STATUS).map(([k, [label]]) =>
-    `<button class="segb ${itemOf(r.key)?.status === k ? 'on' : ''}" data-st="${k}">${label}</button>`).join('')}
-      <button class="segb" data-st="">✕ 清除</button></div>
-    <div class="pr-acts">
-      <input class="pr-note" id="prNote" value="${esc(itemOf(r.key)?.note || '')}"
-        placeholder="這一件哪裡不對 / 下一步(換哪張圖、換什麼參數)">
-    </div>
-    <div class="pr-acts"><button class="segb on" id="prSave">儲存</button>
-      <span class="pr-saved" id="prSaved"></span></div>
-  </div>`;
+  ${dataSection(r)}`;
 
   mountStage(r);
   renderGaps();
@@ -696,20 +745,7 @@ function renderBody() {
   for (const b of body.querySelectorAll('#prDist .segb')) b.onclick = () => { app.dist = b.dataset.dist; renderBody(); };
   $('prCol').onchange = (e) => { app.collider = e.target.checked; mountStage(r); };
   $('prSpin').onchange = (e) => { app.spin = e.target.checked; };
-  let status = itemOf(r.key)?.status || '';
-  for (const b of body.querySelectorAll('#prSt .segb')) {
-    b.onclick = () => {
-      status = b.dataset.st;
-      for (const x of body.querySelectorAll('#prSt .segb')) x.classList.toggle('on', !!status && x.dataset.st === status);
-    };
-  }
-  $('prSave').onclick = async () => {
-    const note = $('prNote').value.trim();
-    const res = await api({ key: r.key, item: status || note ? { status, note: note || undefined } : null });
-    app.data.state.items = res.items;
-    $('prSaved').textContent = '已存檔 ✔';
-    renderList(); renderStat();
-  };
+  bindVerdict(r.key);
 }
 
 function syncTools() {
@@ -836,20 +872,53 @@ function renderGaps() {
 // **這一段一個判斷都不做**:狀態由 `tools/ai3d/photo_state.mjs` 推導、啟停由
 // `tools/dev_supervisor.mjs` 那一支 `handle` 把關(loopback + 參數零信任 + CSRF 標頭)。
 // 頁面自己再判一次的話,面板會與迴圈說出兩套話,而兩邊都不會報錯。
-const harvest = { photos: null, tool: null, busy: false };
+const harvest = { photos: null, tool: null, busy: false, home: null, log: null };
+
+/** 執行進度那一頁在清單/內文兩邊的鍵(不是節點也不是圖檔 ⇒ 自己一個具名值,不跟 key 撞) */
+const RUN_KEY = 'run';
 
 const devApi = async (path, method = 'GET') => (await fetch(path, method === 'GET' ? undefined
   // 邊界 ④:非簡單標頭 ⇒ 惡意網頁送不出來(它需要 CORS 預檢,而伺服器不回應預檢)
   : { method, headers: { 'x-dev-tools': '1' } })).json();
 
+/**
+ * 「現在看的是哪一個資料家」的**索引**。
+ *
+ * 版權未確認的那一份住儲存庫之外(2026-08-11 使用者:「版權問題不在專案的管線也要顯示在
+ * 零件台」)⇒ 台上要挑得到它,而挑法 MUST 是索引:路徑一律由伺服器自己推導,請求只能說
+ * 「第幾個」(同 `/api/photo` 與 `/api/screen` 既有的零信任)。
+ *
+ * ⚠ 兩份候選清單**未必等長**:零件台可能是帶 `--photos` 起的(那一個會多排在最前面),
+ * 而採集迴圈那一支問的是 `dev_supervisor` 自己的清單 ⇒ **索引 MUST 逐清單各查一次**,
+ * 頁面自己記的是**路徑**。共用一個數字的話,在零件台上挑了 A、按啟動跑的卻是 B。
+ */
+const idxIn = (list, home) => (list || []).findIndex((h) => h.home === home);
+const homeIdx = () => (harvest.home ? idxIn(harvest.photos?.homes, harvest.home) : -1);
+const homeParam = () => (homeIdx() >= 0 ? `&home=${homeIdx()}` : '');
+/** 送進 POST body 的選擇:查不到就**不送**(送 -1 會被伺服器當成「指名了一個不存在的候選」
+ *  而回錯誤,但那時使用者根本沒挑過 —— 沒挑就該走伺服器的預設挑選) */
+const homeSel = () => (homeIdx() >= 0 ? homeIdx() : undefined);
+
 async function loadHarvest() {
+  const i = homeIdx();
+  const q = i >= 0 ? `?home=${i}` : '';
   const [photos, dev] = await Promise.all([
-    fetch('/api/photos').then((r) => r.json()).catch(() => null),
+    fetch(`/api/photos${q}`).then((r) => r.json()).catch(() => null),
     devApi('/dev/tools').catch(() => null),
   ]);
   harvest.photos = photos;
   harvest.tool = (dev?.tools || []).find((t) => t.key === 'harvest') || null;
+  // 記住的是**路徑**(見 idxIn);第一次載入由伺服器的預設挑選定案 —— 台上預設看到的家
+  // MUST 等於按下「▶ 啟動」會跑的那一個(兩邊各自挑 = 面板顯示 A 而迴圈跑 B)
+  if (photos?.homes?.length) harvest.home = photos.homes[photos.homeIdx ?? 0]?.home ?? null;
   renderHarvest();
+  if (app.cur === RUN_KEY) renderBody();
+}
+
+/** 執行進度:全量日誌 + 上一次啟動的經過(清單那一支只帶最後 6 行,不夠看一輪) */
+async function loadRunLog() {
+  harvest.log = await devApi('/dev/tools/harvest/log').catch(() => null);
+  if (app.cur === RUN_KEY) renderBody();
 }
 
 function renderHarvest() {
@@ -858,7 +927,9 @@ function renderHarvest() {
   const p = harvest.photos;
   if (!el) return;
   if (!t) { el.innerHTML = '<span class="pr-hs">採集迴圈:這個台子不是由開發工具管理者啟動的(啟停端點不可用)</span>'; return; }
-  const on = !!t.running;
+  // **「跑起來了嗎」只讀伺服器推導的 `on`**(dev_supervisor.statusOf):存活判準依 kind 分流,
+  // 而分流住那一支一份。客戶端自己挑欄位的下場見 main.js 那一段註解(鈕面永遠停在「▶ 啟動」)。
+  const on = !!t.on;
   const counts = p?.counts || {};
   const states = p?.states || {};
   // 順序 = photo_state.STATES 的宣告順序(需修正排最前面 —— 它是唯一「下一步在人身上」的那一態)
@@ -868,38 +939,160 @@ function renderHarvest() {
   const pills = order.filter((k) => states[k]).map((k) =>
     `<button class="pr-hst ${k}" data-st="${k}" aria-pressed="${app.list === k}"
        title="${esc(states[k].hint)}">${esc(states[k].label)} ${counts[k] ?? 0}</button>`).join('');
-  const homeTip = (p?.homes || []).map((h) => `${h.entries} 筆 ${h.home}`).join('\n');
+  // 資料家選單:版權未確認的那一份也在裡面(註冊縫 provenance.extraHomes)⇒ **逐列標出貨與否**,
+  // 兩份語料長得一模一樣,而人眼判決是照著台上做的
+  const homeOpts = (p?.homes || []).map((h, i) =>
+    `<option value="${i}" ${h.home === harvest.home ? 'selected' : ''}>`
+    + `${esc(String(h.home).split(/[\\/]/).slice(-2).join('/'))} ・ ${h.entries} 筆`
+    + `${h.shipping === false ? ' ・ ⚠ 不進遊戲' : ''}</option>`).join('');
   el.innerHTML = `
     <button class="segb ${on ? '' : 'on'}" id="prHrun" ${harvest.busy ? 'disabled' : ''}>${on ? '⏹ 停止採集迴圈' : '▶ 啟動採集迴圈'}</button>
     <span class="pr-hdot ${on ? 'on' : ''}"></span>
     <span class="pr-hs">${on ? '執行中(每 15 分鐘一輪;入庫只寫工作區,不 commit)' : '未執行'}</span>
+    <button class="pr-hst run" data-st="${RUN_KEY}" aria-pressed="${app.list === RUN_KEY}"
+      title="這一輪跑到哪一站、完整命令列、上一次啟動的結果">執行進度</button>
     <button class="pr-hst" data-st="nodes" aria-pressed="${app.list === 'nodes'}"
       title="回到生成物清單(節點與純資料件)">生成物</button>
     ${pills}
+    <button class="pr-hst arc" data-st="archive" aria-pressed="${app.list === 'archive'}"
+      title="判過「⊘ 移除」而撤出遊戲的那些(來源圖留著)">封存區 ${app.data?.archive?.length ?? 0}</button>
     <span class="pr-grow"></span>
     ${/* 非出貨語料家 MUST 標出來 —— 它與正式語料長得一模一樣,不標的話台上兩份混在一起 */
     p?.corpus && p.corpus.shipping === false
       ? `<span class="pr-bad" title="${esc(p.corpus.why || '')}">⚠ 非出貨語料(不進遊戲)</span>` : ''}
-    <span class="pr-hs" title="${esc(homeTip)}">${p?.ok
-      ? `資料家 ${esc(String(p.home).split(/[\\/]/).slice(-3).join('/'))}${(p.homes || []).length > 1 ? `(另有 ${p.homes.length - 1} 個候選)` : ''}`
-      : `⚠ ${esc(p?.why || '讀不到語料帳本')}`}</span>
+    <span class="pr-hs">資料家</span>
+    <select id="prHome" class="pr-hsel" title="切換要看/要跑的語料家(索引由伺服器推導,頁面只挑第幾個)">${homeOpts}</select>
+    ${p?.ok ? '' : `<span class="pr-bad">⚠ ${esc(p?.why || '讀不到語料帳本')}</span>`}
+    ${/* 啟動失敗的理由 MUST 留在畫面上:只回在那一次 POST 裡的話,重整一次就永遠消失,
+         而使用者看到的就是「按了沒反應」 */
+    t.run?.error ? `<span class="pr-bad" title="${esc(t.run.error)}">⚠ 上次啟動失敗 —— 看執行進度</span>` : ''}
     ${t.log ? `<div class="pr-hlist">${esc(t.log).split('\n').map((l) => `<div>${l}</div>`).join('')}</div>` : ''}`;
 
   $('prHrun').onclick = async () => {
     harvest.busy = true; renderHarvest();
-    try { harvest.tool = await devApi(`/dev/tools/harvest/${on ? 'stop' : 'start'}`, 'POST'); }
+    // 啟動一律**指名資料家**(在 dev_supervisor 自己那份清單裡的索引;見 idxIn):
+    // 沒指名時它會挑「出貨家優先」的那一個 —— 而台上正在看的可能正是另一個
+    const i = on ? -1 : idxIn(harvest.tool?.homes, harvest.home);
+    const path = on ? '/dev/tools/harvest/stop' : `/dev/tools/harvest/start${i >= 0 ? `/${i}` : ''}`;
+    try { harvest.tool = await devApi(path, 'POST'); }
     finally { harvest.busy = false; renderHarvest(); }
+    // 按下去就把執行進度攤開 —— 使用者的原話是「點下去提供執行進度頁面」:
+    // 這條迴圈第一輪要跑十幾站、十幾分鐘,不給進度就只剩一顆會變色的點
+    app.list = RUN_KEY; app.cur = RUN_KEY;
+    renderHarvest(); renderList();
+    await loadRunLog();
     // 跑完一輪語料狀態會變 ⇒ 停下來時重讀一次(啟動時還來不及變,但重讀也不貴)
+    loadHarvest();
+  };
+  $('prHome').onchange = (e) => {
+    const h = (harvest.photos?.homes || [])[Number(e.target.value)];
+    if (!h) return;
+    harvest.home = h.home;
+    app.cur = null;
     loadHarvest();
   };
   for (const b of el.querySelectorAll('.pr-hst')) {
     b.onclick = () => {
       app.list = b.dataset.st;
       // 換清單就把選取清掉 —— 留著上一份清單的 key 會讓右邊顯示一件左邊根本不在的東西
-      app.cur = app.list === 'nodes' ? (app.data.rows[0]?.key ?? null) : null;
+      app.cur = app.list === 'nodes' ? (app.data.rows[0]?.key ?? null)
+        : app.list === RUN_KEY ? RUN_KEY : null;
       renderHarvest(); renderList(); renderBody();
+      if (app.list === RUN_KEY) loadRunLog();
     };
   }
+}
+
+/**
+ * 執行進度頁(2026-08-11 使用者需求:「點下去提供執行進度頁面」)。
+ *
+ * 這一頁存在的理由是「按了沒反應」的另一半:鈕面修好之後,採集迴圈仍然是一支**跑十幾分鐘、
+ * 十幾站**的背景工作,而畫面上原本只有一顆綠點與最後六行日誌。這裡把三件事攤開,
+ * 全部由伺服器送來(頁面一個都不判):
+ *   ① **完整命令列**(`run.argv`)—— 三個家推不推導得到是這條迴圈最常見的失敗:少了 `--venv`
+ *      就是去背/分離/選片/生成四站靜默跳過,而每一輪照印「生成 0」,看起來完全正常。
+ *   ② **逐站進度** —— 日誌裡的 `▶ 站名` / `⏭ 略過` / `── 本輪` 就是那條管線自己的分站,
+ *      這裡只是把最後一輪抓出來標色,MUST NOT 另外定義一份站名清單(那會跟迴圈說出兩套話)。
+ *   ③ **上一次啟動的結果** —— 失敗理由留在 `run.error`(重整不會消失)。
+ */
+function renderRunBody() {
+  const body = $('prBody');
+  const t = harvest.tool;
+  const g = harvest.log;
+  if (!t) { body.innerHTML = '<div class="pr-dim">這個台子不是由開發工具管理者啟動的 ⇒ 沒有啟停端點,也就沒有進度可看。</div>'; return; }
+  const on = !!(g?.on ?? t.on);
+  const run = g?.run || t.run;
+  const lines = (g?.log || t.log || '').split('\n').filter(Boolean);
+  // 最後一輪 = 最後一個「══ 第 N 輪」之後的全部(迴圈自己印的分隔線,不是這裡定義的)
+  const head = lines.map((l, i) => (l.startsWith('══') ? i : -1)).filter((i) => i >= 0).pop();
+  const round = head == null ? lines : lines.slice(head);
+  const cls = (l) => (l.startsWith('▶') ? 'st-run' : l.startsWith('⏭') ? 'st-skip'
+    : /^(⚠|💥|❌)/.test(l) ? 'st-warn' : l.startsWith('══') || l.startsWith('──') ? 'st-head' : '');
+  body.innerHTML = `
+  <h2 class="pr-h2">採集迴圈 ・ 執行進度</h2>
+  <div class="pr-mline">${on ? '執行中' : '未執行'}
+    ${run?.at ? ` ・ 上次啟動 ${esc(String(run.at).replace('T', ' ').slice(0, 19))}` : ''}
+    ${run?.exit != null ? ` ・ 行程已結束(代碼 ${run.exit})` : ''}</div>
+  ${run?.error ? `<div class="pr-sec pr-warn"><h3>⚠ 啟動失敗</h3><div>${esc(run.error)}</div>
+    <div class="pr-dim">語料家住儲存庫之外時(版權未確認的那一份)MUST 先註冊:
+      在 <code>tools/ai3d/corpus_homes.json</code> 寫 <code>{"homes":["&lt;絕對路徑&gt;"]}</code>,
+      或設環境變數 <code>SVS_PHOTO_HOMES</code>;也可以直接在終端機帶 <code>--home</code> 跑。</div></div>` : ''}
+  <div class="pr-sec"><h3>${run?.argv ? '這一輪在跑什麼' : '按下啟動會跑什麼'}</h3>
+    <div class="pr-kv">
+      <b>資料家</b><div>${esc(run?.home || t.home || '(推導不到任何資料家)')}${run?.argv ? '' : '(預設值;上方選單可以改)'}</div>
+      <b>命令列</b><div class="pr-cmd">${esc((run?.argv || []).join(' ')
+    || (run ? '(上一次沒有啟動成功 —— 見上面的理由)' : '(還沒從這個台子啟動過)'))}</div>
+    </div>
+    <div class="pr-dim">三個家是三件事(語料 <code>--home</code> / 模型棧 <code>--venv</code> /
+      T2-spz <code>--t2</code>):少了 <code>--venv</code> ⇒ 去背・圈選分離・選片閘・生成四站全部跳過,
+      而每一輪照印「生成 0」,沒有任何錯誤訊息。上面那一行就是用來確認它們在不在的。</div></div>
+  <div class="pr-sec"><h3>最後一輪(${round.length} 行${lines.length > round.length ? `,更早的另有 ${lines.length - round.length} 行` : ''})</h3>
+    <div class="pr-runlog">${round.length
+    ? round.map((l) => `<div class="${cls(l)}">${esc(l)}</div>`).join('')
+    : '<div class="pr-dim">(還沒有輸出 —— 第一站是「收編 inbox」,通常幾秒內就會出現)</div>'}</div>
+    <div class="pr-dim">日誌只留在這個台子的記憶體裡(逐工具封頂);長期紀錄是資料家的
+      <code>harvest_log.jsonl</code>(每輪一列)。</div></div>`;
+}
+
+/**
+ * 封存區(2026-08-11 使用者需求:「加入移除鍵,移除遊戲與零件台,放到封存區」)。
+ * 這裡的每一列都是**已經不在遊戲裡**的節點 —— GLB / 名冊 / 來源帳三邊都撤掉了,
+ * 只有墓碑帳(`tools/ai3d/archive_manifest.json`)說得出它存在過、吃過哪張圖、為什麼被移除。
+ */
+function renderArchiveList() {
+  const rows = app.data.archive || [];
+  $('prList').innerHTML = rows.map((a) => `<div class="pr-row ${app.cur === `arc:${a.key}` ? 'on' : ''}" data-key="arc:${esc(a.key)}">
+      <div class="pr-rn"><b>${esc(a.key)}</b><span>${esc(String(a.at || '').slice(0, 10))} ・ ${esc(a.family || '—')}</span></div>
+      <span class="pr-pill">已封存</span></div>`).join('')
+    || '<div class="pr-dim" style="padding:12px">(封存區是空的 —— 判「⊘ 移除」並跑過 apply_verdicts 的會出現在這裡)</div>';
+  for (const el of $('prList').querySelectorAll('.pr-row')) el.onclick = () => select(el.dataset.key);
+}
+
+function renderArchiveBody(key) {
+  const body = $('prBody');
+  const a = (app.data.archive || []).find((x) => x.key === key);
+  if (!a) { body.innerHTML = '<div class="pr-dim">← 左側挑一件封存的</div>'; return; }
+  body.innerHTML = `
+  <h2 class="pr-h2">${esc(a.key)}</h2>
+  <div class="pr-mline">已封存 ${esc(String(a.at || '').replace('T', ' ').slice(0, 19))}
+    ・ ${esc(a.method?.label || '?')}${a.consumer ? ` ・ 原消費端 ${esc(a.consumer)}` : ''}</div>
+  <div class="pr-sec pr-warn"><h3>⊘ 已撤出遊戲</h3>
+    <div>${a.why ? esc(a.why) : '(覆核時沒有留下理由)'}</div>
+    <div class="pr-dim">節點已從 <code>${esc(a.family || '?')}.glb</code>、<code>biomes.js</code> 名冊、
+      來源帳三邊撤掉 ⇒ 遊戲裡沒有它,台上的生成物清單也沒有它。**來源圖留著**,
+      而且不再自動重跑(採集迴圈把「封存過」算成人眼已處置)。要再生一顆:把這張圖的
+      <code>screen</code> 判回 pass 之後手動跑一輪,或走 <code>⟳ 重生</code> 那條路。</div></div>
+  <div class="pr-sec"><h3>來源圖(img)</h3>
+    <div class="pr-imgs">${a.imgs?.length ? a.imgs.map(imgCard).join('')
+    : '<div class="pr-none">封存帳裡沒有記載任何來源圖</div>'}</div></div>
+  <div class="pr-sec"><h3>當時的生成參數</h3>
+    <div class="pr-kv">
+      <b>工具</b><div>${esc(a.gen?.tool || '—')}</div>
+      <b>參數</b><div>${esc(a.gen?.params || '—')}</div>
+      <b>產出</b><div>${esc([a.gen?.out_dir, a.gen?.out_index != null ? `第 ${a.gen.out_index} 顆` : ''].filter(Boolean).join(' ・ ') || '—')}</div>
+      <b>實測</b><div>${esc(a.gen?.measured || '—')}</div>
+      <b>出貨版本</b><div>${esc([a.rev, a.shipped_at].filter(Boolean).join(' ・ ') || '—')}</div>
+    </div></div>`;
 }
 
 /**
@@ -916,6 +1109,9 @@ function renderPhotoBody(id) {
   const r = (harvest.photos?.rows || []).find((x) => x.id === id);
   if (!r) { body.innerHTML = '<div class="pr-dim">← 左側挑一張圖(或按上方狀態鈕換一態)</div>'; return; }
   const st = harvest.photos?.states?.[r.state];
+  // 圖檔一律帶著**現在看的是哪一個資料家**(索引):兩個家可能有同名的 id,而
+  // 「我在 A 家上按的判決落到 B 家」是這一族最惡劣的一種 —— 兩邊都不會報錯。
+  const hp = homeParam();
   body.innerHTML = `
   <h2 class="pr-h2">${esc(r.family)}/${esc(r.part)} ・ ${esc(r.id)}</h2>
   <div class="pr-mline">${esc(st?.label || r.state)} —— ${esc(st?.hint || '')}
@@ -923,26 +1119,26 @@ function renderPhotoBody(id) {
   <div class="pr-sec"><h3>圖(有去背就顯示去背後的 —— 「這張到底能不能用」看的是那一張)</h3>
     <div class="pr-imgs">
       <div class="pr-img" style="max-width:460px">
-        <img src="/api/photo?id=${encodeURIComponent(r.id)}" alt="" loading="lazy">
+        <img src="/api/photo?id=${encodeURIComponent(r.id)}${hp}" alt="" loading="lazy">
         <div class="pr-dim">母照片 ・ 選片閘 ${esc(r.screen || '(還沒驗過)')}</div>
       </div>
       ${/* 切出來的目標才是**真的餵進生成器**的東西 ⇒ 有切就一起攤開,不然判的是另一張圖 */
     Array.from({ length: r.targets || 0 }, (_, i) => `<div class="pr-img" style="max-width:300px">
-        <img src="/api/photo?id=${encodeURIComponent(r.id)}&t=${i}" alt="" loading="lazy">
+        <img src="/api/photo?id=${encodeURIComponent(r.id)}&t=${i}${hp}" alt="" loading="lazy">
         <div class="pr-dim">目標 #${i + 1}(送進 img→3D 的就是它)</div></div>`).join('')}
     </div></div>
-  <div class="pr-sec"><h3>下一步</h3>
-    <div>${esc(r.next)}</div>
-    ${r.nodes?.length ? `<div class="pr-dim">出貨成:${r.nodes.map(esc).join('、')}</div>` : ''}
-    ${r.verdict ? `<div class="pr-dim">待執行判決:<b>${esc(r.verdict.status)}</b> ${esc(r.verdict.node)}${r.verdict.note ? `(${esc(r.verdict.note)})` : ''}</div>` : ''}
-  </div>
-  <div class="pr-sec"><h3>手動篩選</h3>
+  <div class="pr-sec pr-verdict"><h3>手動篩選</h3>
     <div class="seg" id="prScreen">
       <button class="segb" data-act="pass">✔ 保留(送回待跑池)</button>
       <button class="segb" data-act="reject">✕ 淘汰(不再送生成,檔案留著)</button>
       <button class="segb" data-act="purge">🗑 刪除來源圖(真刪 + 黑名單)</button>
     </div>
     <div class="pr-dim" id="prScreenOut">判決寫回 photo_manifest.json;人眼判決恆勝統計(重跑選片閘不會被覆寫)。</div>
+  </div>
+  <div class="pr-sec"><h3>下一步</h3>
+    <div>${esc(r.next)}</div>
+    ${r.nodes?.length ? `<div class="pr-dim">出貨成:${r.nodes.map(esc).join('、')}</div>` : ''}
+    ${r.verdict ? `<div class="pr-dim">待執行判決:<b>${esc(r.verdict.status)}</b> ${esc(r.verdict.node)}${r.verdict.note ? `(${esc(r.verdict.note)})` : ''}</div>` : ''}
   </div>`;
   for (const b of body.querySelectorAll('#prScreen .segb')) {
     b.onclick = async () => {
@@ -954,7 +1150,7 @@ function renderPhotoBody(id) {
       const res = await fetch('/api/screen', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-dev-tools': '1' },
-        body: JSON.stringify({ id: r.id, act: b.dataset.act }),
+        body: JSON.stringify({ id: r.id, act: b.dataset.act, home: homeSel() }),
       }).then((x) => x.json()).catch((e) => ({ ok: false, error: String(e) }));
       out.textContent = res.ok ? (res.out || '已寫回') : `失敗:${res.error || '?'}`;
       if (res.ok) { await loadHarvest(); renderList(); renderBody(); }
@@ -980,4 +1176,7 @@ for (const b of $('prFilter').querySelectorAll('.segb')) {
 // (終端機直接跑這個台子、或語料家不在本機)⇒ 失敗一律只影響這一條窄帶,主畫面照常。
 loadHarvest();
 // 跑著的時候每 20 秒重讀一次:輪距是 15 分鐘,再密只是多敲檔案系統;停著就不必輪詢。
-setInterval(() => { if (harvest.tool?.running) loadHarvest(); }, 20000);
+setInterval(() => { if (harvest.tool?.on) loadHarvest(); }, 20000);
+// 執行進度攤開著的時候另外每 3 秒抓一次日誌 —— 那一頁的用途就是「現在跑到哪一站」,
+// 20 秒一次會讓一站看起來像卡住(去背那一站本來就要跑好幾分鐘,但它一開始就會印標題)。
+setInterval(() => { if (app.cur === RUN_KEY) loadRunLog(); }, 3000);

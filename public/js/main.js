@@ -2742,26 +2742,36 @@ function renderDevTools(mount) {
 }
 
 function devToolRow(t) {
+  // **「跑起來了嗎」只讀伺服器推導的那一欄 `t.on`**(2026-08-11 修):存活判準依 kind 分流
+  // (對照台問埠、採集迴圈問子行程),而分流住 `dev_supervisor.statusOf` 一份。
+  // 舊版這裡直接讀 `t.listening` —— 而 job **刻意不回這一欄**(它不聽任何埠)⇒ 值恆 undefined:
+  // 鈕面永遠寫「▶ 啟動」、網址永遠寫「未啟動」、按下去每次都送 start,而背景其實已經在跑。
+  // 使用者看到的就是「img→3D 採集迴圈點啟動沒反應」。
+  const on = !!t.on;
   const row = document.createElement('div');
   row.className = 'set-row';
   row.style.flexWrap = 'wrap';   // 網址那一段比其他設定列長,窄螢幕塞不下就折行(A20:不准推出摺線)
-  row.innerHTML = `<span class="set-label">${t.label}</span>`
-    + `<span class="set-hint">${t.listening ? t.url : '未啟動'}</span>`;
+  // 沒有埠的工作型工具沒有網址可以給 ⇒ 那一格改講「在不在跑、跑的是哪一個資料家」;
+  // 上一次啟動失敗的理由也要留在畫面上(只回在那一次 POST 裡的話,重整一次就永遠消失)。
+  const state = t.url ? (on ? t.url : '未啟動')
+    : on ? `執行中${t.home ? ` ・ ${String(t.home).split(/[\\/]/).slice(-3).join('/')}` : ''}`
+      : (t.run?.error ? `⚠ ${t.run.error}` : '未執行');
+  row.innerHTML = `<span class="set-label">${t.label}</span><span class="set-hint">${state}</span>`;
   attachTip(row.querySelector('.set-label'), t.hint);   // 逐項說明走 ⓘ 懸浮提示(觸控長按)
 
-  // 啟停:鈕面吃**埠上有沒有人在聽**而不是「我的子行程活著嗎」—— 使用者關心的是開不開得起來。
-  // 聽得到但不是這裡啟動的(終端機 `npm run codex`)⇒ 停不掉也不假裝停得掉,鈕變灰並說明原因。
+  // 啟停:鈕面吃**伺服器推導的 `on`** —— 使用者關心的是開不開得起來,而那對兩種工具是兩件事。
+  // 起來了但不是這裡啟動的(終端機 `npm run codex`)⇒ 停不掉也不假裝停得掉,鈕變灰並說明原因。
   const power = document.createElement('button');
   power.className = 'btn small';
   power.type = 'button';
-  power.textContent = t.listening ? '⏹ 停止' : '▶ 啟動';
-  power.disabled = t.listening && !t.owned;
+  power.textContent = on ? '⏹ 停止' : '▶ 啟動';
+  power.disabled = on && !t.owned;
   if (power.disabled) attachTip(power, '這一支是在終端機啟動的,請回終端機停(Ctrl+C)');
   power.addEventListener('click', async () => {
     power.disabled = true;
-    power.textContent = t.listening ? '停止中…' : '啟動中…';
+    power.textContent = on ? '停止中…' : '啟動中…';
     app.audio?.ui('click');
-    await devToolAction(t.key, t.listening ? 'stop' : 'start');
+    await devToolAction(t.key, on ? 'stop' : 'start');
   });
   row.appendChild(power);
 
@@ -2769,7 +2779,7 @@ function devToolRow(t) {
   open.className = 'btn small';
   open.type = 'button';
   open.textContent = '↗ 開啟';
-  open.disabled = !t.listening;   // 沒起來就別開一個連線錯誤的分頁
+  open.disabled = !t.url || !on;   // 沒起來(或沒有網址的工作型)就別開一個連線錯誤的分頁
   // window.open 在點擊處理器裡不會被擋;`noopener` 免得那一頁拿得到本頁的 window
   open.addEventListener('click', () => { window.open(t.url, '_blank', 'noopener'); app.audio?.ui('click'); });
   row.appendChild(open);

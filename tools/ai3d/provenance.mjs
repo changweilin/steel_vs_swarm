@@ -15,7 +15,7 @@
 // 照片不進儲存庫(runbook §3 規則 2)⇒ 只記相對路徑,能不能顯示由 `photoRoots` 當下解析。
 // A2:零 npm 依賴。
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import { ROOT } from '../audit_src.mjs';
 
 /**
@@ -79,6 +79,51 @@ export const METHODS = {
 export const MANIFEST_PATH = join(ROOT, 'tools', 'ai3d', 'parts_manifest.json');
 
 /**
+ * **封存帳**(2026-08-11 使用者需求:「加入移除鍵,移除遊戲與零件台,放到封存區」)。
+ *
+ * 判 `⊘ 移除`的那一顆會被撤得乾乾淨淨(GLB / 名冊 / 來源帳三邊,同 `regen`/`reimg`)——
+ * 而撤完之後**沒有任何一本帳說得出它存在過**:來源帳那一列就是它的說明,刪掉之後
+ * 「這顆為什麼不見了」「它吃的是哪張圖」「能不能再生一次」全部無解,而台上看起來就是
+ * 「本來就沒有這顆」。⇒ 撤下來的那一列原封不動搬進這裡當**墓碑**(同語料庫那條
+ * 「被淘汰的照片刪檔、留帳」的規矩)。
+ *
+ * 這**不是第五本帳**(`photo_state` 檔頭那條):它記的是**別處已經沒有的東西**,
+ * 而不是把別人記過的事再抄一份。三個消費端:零件台的「封存區」分頁、
+ * `photo_state` 的「這張圖人眼碰過了」、`harvest_loop` 的「不再自動重跑」。
+ *
+ * 網格本身**不留**(GLB 節點真的被 `--drop` 掉了):留得住的是配方 + 來源圖,
+ * 而那才是重生一顆所需要的東西 —— 存一份 GLB 拷貝反而會變成第二個「載得到的節點」。
+ */
+export const ARCHIVE_PATH = join(ROOT, 'tools', 'ai3d', 'archive_manifest.json');
+
+/** 讀封存帳(不存在 = 還沒封存過任何東西,不是例外)。回 `{ version, parts, byKey }` */
+export function loadArchive(path = ARCHIVE_PATH) {
+  let raw = { version: 1, parts: [] };
+  if (existsSync(path)) {
+    try { raw = JSON.parse(readFileSync(path, 'utf8')); } catch { raw = { version: 0, parts: [] }; }
+  }
+  const parts = Array.isArray(raw.parts) ? raw.parts : [];
+  const byKey = new Map();
+  for (const p of parts) for (const k of (p.keys || [])) byKey.set(k, p);
+  return { version: raw.version || 0, parts, byKey };
+}
+
+/** 封存帳裡記著的**母照片 id**(「這張圖人眼已經處置過」的其中一種) */
+export const archivedPhotoIds = (arch = loadArchive()) =>
+  new Set(arch.parts.flatMap((p) => (p.imgs || []).map((i) => i.id)).filter(Boolean));
+
+/**
+ * 一列帳掛著哪幾個鍵 —— **兩種寫法都合法**(`key:` 單顆 / `keys: []` 一組同源節點,見
+ * `loadProvenance` 裡的理由)⇒ 正規化只准有這一份。
+ *
+ * 為什麼是縫而不是各寫各的:2026-08-11 實測到 `apply_verdicts.withdraw()` 只讀 `keys`,
+ * 於是**以 `key:` 寫的那些列在判決時整列查不到** —— 節點從 GLB 與名冊撤掉了、來源帳那一列
+ * 卻留著,而且「這顆吃哪張圖」查出來是空的 ⇒ 判 `⇄ 換來源圖` / `✕ 刪除來源圖` 會回報
+ * 「0 張」而看起來一切正常(下一輪照樣把同一張圖抓回來重跑)。
+ */
+export const partKeys = (p) => (Array.isArray(p?.keys) && p.keys.length ? p.keys : (p?.key ? [p.key] : []));
+
+/**
  * 讀來源帳並**驗一遍**。回傳 `{ version, parts, byKey, issues }`;
  * 檔案不存在不是例外(還沒生成過任何東西)—— 回空帳 + 一則 issue。
  */
@@ -96,8 +141,8 @@ export function loadProvenance(path = MANIFEST_PATH) {
   for (const p of parts) {
     // 一次生成作業可能產出**一組同源節點**(尺寸階梯:同一張圖、同一組參數,只是烤成
     // 幾個級距)⇒ 允許 `keys: []` 一筆帳掛多個鍵。拆成 N 筆會讓同一件事有 N 份說明,
-    // 改一個參數就得改 N 個地方(而漏改的那幾筆看起來仍然正常)。
-    const keys = Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []);
+    // 改一個參數就得改 N 個地方(而漏改的那幾筆看起來仍然正常)。正規化走 `partKeys` 那一份。
+    const keys = partKeys(p);
     if (!keys.length) { issues.push({ level: 'err', msg: '有一筆沒有 key / keys' }); continue; }
     if (keys.some((k) => byKey.has(k))) issues.push({ level: 'err', msg: `${keys.join('、')}:重複記載(兩筆帳 = 沒有帳)` });
     const tag = keys.join('、');
@@ -143,7 +188,41 @@ export function photoRoots(extra = null) {
 }
 
 /**
- * **資料家**候選(= `photoRoots()` 裡真的有帳本的那幾個),依帳本筆數由多到少。
+ * **註冊在案的儲存庫外資料家**(2026-08-11 使用者需求:「版權問題不在專案的管線也要顯示在
+ * 零件台」)。
+ *
+ * 版權未確認的那一份**刻意住儲存庫之外** ⇒ `photoRoots()` 推導不到它(那是設計,見
+ * `corpusMeta` 紀律 ③)。代價是它在台上**整份看不見**,而「台上沒有」跟「沒跑過」長得
+ * 一模一樣 —— 使用者手動放進去的建築/樹木照片就是這樣消失的:迴圈那顆鈕按下去跑的永遠是
+ * 另一個家,而畫面上沒有任何錯誤訊息。
+ *
+ * ⇒ 開一條**明講**的註冊縫,而不是把它併回 `photoRoots()`:
+ *   ・`<任一 photoRoot>/corpus_homes.json` —— gitignore 的本機指標檔(`{"homes":[絕對路徑]}`,
+ *     裸陣列也收)。放在主檢出那一份就對每一個 worktree 生效(那些目錄本來就互相掃得到)。
+ *   ・環境變數 `SVS_PHOTO_HOMES` —— 以平台的路徑分隔符分隔(CI / 一次性覆寫)。
+ *
+ * **出貨那道閘一格未動**:註冊只讓它「看得見、選得到」,能不能進遊戲仍然只由 `<家>/corpus.json`
+ * 的 `shipping` 決定(`harvest_loop` 強制 `--no-intake`),而 `corpusHome()` 的**預設**挑選
+ * MUST NOT 挑到非出貨家(見該函式)。⇒ 「不會被誤拿去出貨」仍是構造保證,只是那道保證從
+ * 「推導不到」搬到「推導得到但預設不選,而且它本來就進不了第 ⑦⑧ 站」。
+ */
+export function extraHomes() {
+  const out = [];
+  const push = (p) => { const r = p && resolve(p.trim()); if (r && !out.includes(r)) out.push(r); };
+  for (const root of photoRoots()) {
+    const f = join(root, 'corpus_homes.json');
+    if (!existsSync(f)) continue;
+    try {
+      const j = JSON.parse(readFileSync(f, 'utf8'));
+      for (const p of Array.isArray(j) ? j : (j.homes || [])) push(String(p));
+    } catch { /* 讀不懂就當沒註冊(寧缺勿錯:壞掉的指標檔 MUST NOT 變成亂讀目錄的後門) */ }
+  }
+  for (const p of (process.env.SVS_PHOTO_HOMES || '').split(delimiter)) if (p) push(p);
+  return out;
+}
+
+/**
+ * **資料家**候選(= `photoRoots()` ∪ `extraHomes()` 裡真的有帳本的那幾個),依帳本筆數由多到少。
  *
  * 為什麼要排序而不是「取第一個」:語料家會搬(§5af-g:一個 worktree 被刪掉,整份 superset
  * 跟著沒了),而探測順序是**目錄名的字典序**,與「哪一份是 superset」完全無關 ——
@@ -151,24 +230,44 @@ export function photoRoots(extra = null) {
  * 「語料怎麼變少了」。⇒ 取筆數最多的那一個,**並且把其他候選一起回傳**:
  * 呼叫端(零件台的圖檔面板)MUST 把挑中的那一個顯示出來,MUST NOT 靜靜地替使用者決定。
  *
+ * 每一列都帶著 `shipping`/`why`(`corpusMeta` 那一份,不是第二次判斷):非出貨語料與正式語料
+ * 長得一模一樣,而人眼判決是照著台上做的 ⇒ 呼叫端 MUST 標出來。
+ *
  * 這一支是「資料家在哪」的唯一推導縫。要指定別的一律走各工具的 `--home` 參數。
  */
 export function corpusHomes(extra = null) {
   const out = [];
-  for (const root of photoRoots(extra)) {
+  for (const root of [...photoRoots(extra), ...extraHomes()]) {
+    if (out.some((o) => o.home === root)) continue;
     const man = join(root, 'photo_manifest.json');
     if (!existsSync(man)) continue;
     let n = 0;
     try { n = JSON.parse(readFileSync(man, 'utf8')).length || 0; } catch { continue; }
+    const meta = corpusMeta(root);
     // **明指的那一個永遠排第一**(`--photos` / `--home`):筆數排序是「沒人告訴我用哪個」
     // 時的推導,拿它去覆蓋使用者明講的選擇就是自作主張(而症狀是「我指定了 A,它讀 B」)。
-    out.push({ home: root, entries: n, explicit: !!extra && root === resolve(extra) });
+    out.push({
+      home: root, entries: n, explicit: !!extra && root === resolve(extra),
+      shipping: meta.shipping, why: meta.why, declared: meta.declared,
+    });
   }
   return out.sort((a, b) => (b.explicit - a.explicit) || (b.entries - a.entries));
 }
 
-/** 挑中的那一個資料家(沒有任何候選 ⇒ null,呼叫端印理由,MUST NOT 假裝有) */
-export const corpusHome = (extra = null) => corpusHomes(extra)[0]?.home ?? null;
+/**
+ * 挑中的那一個資料家(沒有任何候選 ⇒ null,呼叫端印理由,MUST NOT 假裝有)。
+ *
+ * **預設 MUST 是出貨家**:註冊縫(`extraHomes`)讓版權未確認的那一份看得見了,而它的筆數
+ * 排序完全可能剛好在前面 —— 沒有這一條的話,「什麼都沒指定就按啟動」會去跑一個不進遊戲的家,
+ * 而那正是原本靠「推導不到」擋住的事。要跑它一律得**明講**(`--home` / `--photos`,
+ * 或零件台上從候選清單裡挑一個)。全部候選都不出貨時仍回第一個 —— 那時使用者只有那一份,
+ * 假裝沒有比較糟(呼叫端會標「非出貨」)。
+ */
+export const corpusHome = (extra = null) => {
+  const all = corpusHomes(extra);
+  if (all[0]?.explicit) return all[0].home;
+  return (all.find((h) => h.shipping) || all[0])?.home ?? null;
+};
 
 /**
  * **模型棧家**(`.venv` 與 `vendor/stable-fast-3d/` 住哪)—— 與語料家是**兩件事**。

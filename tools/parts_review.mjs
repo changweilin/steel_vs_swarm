@@ -36,7 +36,7 @@ import {
   beaconsPure, beaconsSrc, partLibs, libDescs, bioLibDescs, megaLibDescs, bldLibDescs, fbEnvelope,
   parseGlb, nodeExtent, glbPath, triBudget,
 } from './ai3d/parts_src.mjs';
-import { METHODS, loadProvenance, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
+import { METHODS, loadArchive, loadProvenance, partKeys, photoRoots, resolvePhoto } from './ai3d/provenance.mjs';
 // 半成品判定的唯一縫(使用者 2026-08-09「零件台清掉半成品」+「不要在零件台顯示,不是刪除」)。
 // 規則與兩個常數的語意見 mesh_sym.mjs 檔頭那一段;`mesh_sym --flaws` 印的就是這裡隱藏的那幾顆。
 import { topoStats, nodeFlaws } from './ai3d/mesh_sym.mjs';
@@ -91,10 +91,11 @@ export function manifest(items = {}, photosOpt = null) {
     catch (e) { families.set(fam, { path: p, nodes: null, error: `GLB 解析失敗:${e.message}` }); }
   }
 
-  const imgOut = (key) => (prov.byKey.get(key)?.imgs || []).map((im, i) => {
+  const imgsOut = (key, imgs) => (imgs || []).map((im, i) => {
     const hit = resolvePhoto(im.file, roots);
     return { ...im, has: !!hit, url: hit ? `/api/img?key=${encodeURIComponent(key)}&i=${i}` : null };
   });
+  const imgOut = (key) => imgsOut(key, prov.byKey.get(key)?.imgs);
 
   const rows = [];
   const seenNodes = new Set();   // `${family}/${node}` — 用來算孤兒
@@ -205,11 +206,11 @@ export function manifest(items = {}, photosOpt = null) {
   // ── (B) 純資料件(生成物 = 零件表本身;原版來自 baseline rev)────────────
   for (const p of prov.parts) {
     if (METHODS[p.method]?.kind !== 'parts') continue;
-    // 鍵一律走 `keys ?? [key]` 這個正規化(與 provenance.mjs loadProvenance 同一條規則):
+    // 鍵一律走 `partKeys` 那一份正規化(唯一縫,住 provenance.mjs):
     // 這裡原本直接讀 `p.key`,而來源帳**兩種寫法都合法**(一筆帳掛多個鍵是刻意允許的,
     // 見 provenance.mjs 檔頭)⇒ 一筆用 `keys:` 寫的純資料件會讓整支對照台 TypeError 掛掉,
     // 而 `--report` 是「這一輪到底交付了什麼」的唯一離線出口(2026-08-06 實際踩到)。
-    const allKeys = (Array.isArray(p.keys) && p.keys.length ? p.keys : (p.key ? [p.key] : []));
+    const allKeys = partKeys(p);
     const pk = allKeys.find((k) => k.startsWith('beacon/'));
     const kind = pk ? pk.slice('beacon/'.length) : null;
     // 列的鍵 MUST 走同一份正規化 —— 舊制直接讀 `p.key`,而以 `keys:` 寫的帳沒有那一欄
@@ -266,6 +267,17 @@ export function manifest(items = {}, photosOpt = null) {
   // 半成品(台上預設不顯示;判定住 mesh_sym,這裡只是把名冊帶出去給頁面與 --report)
   const wip = rows.filter((r) => r.flaws?.length).map((r) => r.key);
 
+  // ── 封存區(判過「⊘ 移除」而撤下來的)────────────────────────────────────
+  // **不是缺口而是墓碑**:節點已經不在遊戲裡、也不在來源帳裡(所以上面每一種推導都看不到它)。
+  // 少了這一段,「我把它移除了」與「它從來沒存在過」在台上長得一模一樣 —— 而使用者要的正是
+  // 「移除遊戲與零件台,**放到封存區**」:移掉的東西要看得到、說得出理由、找得回那張來源圖。
+  const archive = loadArchive().parts.map((p) => ({
+    ...p,
+    key: (p.keys || [])[0] || null,
+    method: METHODS[p.method] || { key: p.method, short: p.method || '?', label: `未知方法「${p.method}」` },
+    imgs: imgsOut((p.keys || [])[0] || '', p.imgs),
+  })).sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+
   rows.sort((a, b) => (a.key < b.key ? -1 : 1));
   return {
     rows,
@@ -273,6 +285,7 @@ export function manifest(items = {}, photosOpt = null) {
     undocumented,
     missing,
     wip,
+    archive,
     issues: prov.issues,
     checkout: checkout(),
     libs,
@@ -353,7 +366,16 @@ async function report() {
     if (r.flaws?.length) console.log(`    ⚑ 半成品(台上預設不顯示)${r.flaws.map((f) => `${f.label}:${f.detail}`).join(' ・ ')}`);
     if (r.missing) console.log('    ❌ 缺件:執行期整件走 fallback');
   }
-  console.log(`\n  半成品  ${m.wip.length}${m.wip.length ? `:${m.wip.join('、')}` : ''}（台上預設不顯示;節點仍在遊戲裡）`);
+  // 封存區:**MUST 印出來**。`gapsClean()` 抓的是缺件/孤兒/未記載三行,而封存刻意不是缺口
+  // ⇒ 不印的話「撤下了幾顆、為什麼」在離線出口上完全看不到(而那是唯一的離線出口)。
+  for (const a of m.archive) {
+    console.log(`\n  ⊘ 封存 ${a.key}(${a.at || '?'})`);
+    console.log(`    方法  ${a.method.short} ・ 原消費端 ${a.consumer || '—'}`);
+    console.log(`    來源圖 ${(a.imgs || []).map((i) => i.id).join('、') || '(無)'}`);
+    if (a.why) console.log(`    理由  ${a.why}`);
+  }
+  console.log(`\n  封存    ${m.archive.length}${m.archive.length ? `:${m.archive.map((a) => a.key).join('、')}` : ''}(已撤出遊戲;來源圖留著)`);
+  console.log(`  半成品  ${m.wip.length}${m.wip.length ? `:${m.wip.join('、')}` : ''}（台上預設不顯示;節點仍在遊戲裡）`);
   console.log(`  缺件    ${m.missing.length}${m.missing.length ? `:${m.missing.join('、')}` : ''}`);
   console.log(`  孤兒節點 ${m.orphans.length}${m.orphans.length ? `:${m.orphans.map((o) => o.name).join('、')}` : ''}`);
   console.log(`  未記載來源 ${m.undocumented.length}${m.undocumented.length ? `:${m.undocumented.join('、')}` : ''}`);
@@ -377,6 +399,32 @@ function safePath(url) {
 async function serve() {
   const port = Number(arg('--port', DEFAULT_PORT));
   const photos = arg('--photos');
+
+  /**
+   * 「這個請求要看哪一個資料家」—— **本檔唯一一處**(三支語料 API 同吃)。
+   *
+   * 2026-08-11 使用者需求:「版權問題不在專案的管線也要顯示在零件台」。那一份住儲存庫之外、
+   * 由 `provenance.extraHomes()` 註冊進候選清單 ⇒ 台上要挑得到它。而挑法 MUST 是**索引**:
+   * 路徑一律由伺服器自己推導(同 `/api/photo` 與 `/api/screen` 的零信任),請求只能說「第幾個」。
+   *
+   * 沒指定 ⇒ 走 `corpusHome()` 那一份**預設挑選**(出貨家優先)—— 台上預設看到的家 MUST 等於
+   * 按下「▶ 啟動」會跑的那一個,兩邊各自挑的話面板顯示 A 而迴圈跑 B,而畫面完全正常。
+   * 指定了但對不上 ⇒ **回錯誤**,MUST NOT 退回預設(靜靜地換一個家 = 人眼判決落在別份語料上)。
+   */
+  const pickHome = async (idxRaw) => {
+    const { corpusHome, corpusHomes } = await import('./ai3d/provenance.mjs');
+    const homes = corpusHomes(photos);
+    if (idxRaw != null && idxRaw !== '') {
+      const i = Number(idxRaw);
+      if (!Number.isInteger(i) || i < 0 || i >= homes.length) {
+        return { error: `第 ${idxRaw} 個資料家候選不存在(清單變了?重新整理再挑一次)`, homes };
+      }
+      return { home: homes[i].home, idx: i, homes };
+    }
+    const def = corpusHome(photos);
+    return { home: def, idx: Math.max(0, homes.findIndex((h) => h.home === def)), homes };
+  };
+
   const srv = createServer(async (req, res) => {
     const send = (code, body, type = 'application/json; charset=utf-8') => {
       res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store' });
@@ -399,14 +447,15 @@ async function serve() {
       // 圖檔三態(未處理 / 已處理 / 需修正 + 已淘汰);推導縫住 tools/ai3d/photo_state.mjs,
       // 這裡只轉呼(頁面更不准自己判 —— 那會變成第六本帳)
       if (u.pathname === '/api/photos') {
-        const { corpusHomes, corpusMeta } = await import('./ai3d/provenance.mjs');
+        const { corpusMeta } = await import('./ai3d/provenance.mjs');
         const { photoStates, STATES } = await import('./ai3d/photo_state.mjs');
-        const homes = corpusHomes(photos);
-        const home = homes[0]?.home ?? null;
+        const pick = await pickHome(u.searchParams.get('home'));
+        if (pick.error) return send(404, JSON.stringify({ ok: false, why: pick.error, homes: pick.homes, rows: [], counts: {} }));
         // 這個家出不出貨 —— **一定要講**:非出貨語料(授權未確認的那一份)長得跟正式語料
         // 一模一樣,不標的話台上兩份混在一起,而人眼判決是照著台上做的。
         return send(200, JSON.stringify({
-          ...photoStates(home), homes, states: STATES, corpus: corpusMeta(home),
+          ...photoStates(pick.home), homes: pick.homes, homeIdx: pick.idx,
+          states: STATES, corpus: corpusMeta(pick.home),
         }));
       }
 
@@ -414,8 +463,7 @@ async function serve() {
       // **路徑一律由伺服器從帳本解析**(同 /api/img 的零信任):請求只送 id,
       // 檔名從 `entry.file` 來 —— 讓請求決定路徑等於開一個任意讀檔的洞。
       if (u.pathname === '/api/photo') {
-        const { corpusHomes } = await import('./ai3d/provenance.mjs');
-        const home = corpusHomes(photos)[0]?.home;
+        const home = (await pickHome(u.searchParams.get('home'))).home;
         const id = u.searchParams.get('id');
         const man = home ? readJson(join(home, 'photo_manifest.json'), []) : [];
         const e = man.find((x) => x.id === id);
@@ -443,8 +491,11 @@ async function serve() {
         const chunks = [];
         for await (const c of req) chunks.push(c);
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-        const { corpusHomes } = await import('./ai3d/provenance.mjs');
-        const home = corpusHomes(photos)[0]?.home;
+        // 判決 MUST 落在**面板正在看的那一個家**(挑法同 `/api/photos`,索引不是路徑)——
+        // 這裡自己取第一個的話,在別的家上按下的「刪除來源圖」會刪到正牌語料庫那一張同名的圖
+        const pick = await pickHome(body.home);
+        if (pick.error) return send(404, JSON.stringify({ ok: false, error: pick.error }));
+        const home = pick.home;
         const man = home ? readJson(join(home, 'photo_manifest.json'), []) : [];
         // **id 與 family 都從帳本取**,不是從請求抄過去(零信任;請求只能「挑一筆現有的」)
         const e = man.find((x) => x.id === body.id);
@@ -486,8 +537,10 @@ async function serve() {
       // 來源圖:客戶端只送 key + 索引,路徑一律由伺服器從來源帳解析(零信任;
       // 照片住 gitignore 的資料家目錄,不在 ROOT 底下 ⇒ 走不了靜態那條路)
       if (u.pathname === '/api/img') {
-        const prov = loadProvenance();
-        const rec = prov.byKey.get(u.searchParams.get('key'));
+        const key = u.searchParams.get('key');
+        // 封存的那幾件在來源帳裡已經沒有了(墓碑帳才有)⇒ 兩本都問,否則封存區那一頁
+        // 的來源圖會整批變成「原圖不在本機」,而檔案其實好端端地躺在那裡
+        const rec = loadProvenance().byKey.get(key) || loadArchive().byKey.get(key);
         const im = rec?.imgs?.[Number(u.searchParams.get('i'))];
         const hit = im && resolvePhoto(im.file, photoRoots(photos));
         if (!hit) return send(404, 'not found', 'text/plain; charset=utf-8');
