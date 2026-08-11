@@ -32,8 +32,12 @@ const rulesM = src.match(/export const BORDER_SUB_RULES = \[[\s\S]*?\n\];/);
 const kindOfM = src.match(/export function borderKindOf\(subA, subB, za, zb\) \{[\s\S]*?\n\}/);
 const arcM = src.match(/export function borderCornerArc\(px, pz, ax, az, bx, bz, Lmax, hw\) \{[\s\S]*?\n\}/);
 const planM = src.match(/export function planBorderPuzzle\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/);
-if (!dirsM || !kindsM || !stylesM || !rulesM || !kindOfM || !arcM || !planM) {
-  bad('ground.js 找不到 BORDER_DIRS / BORDER_KINDS / BORDER_STYLES / BORDER_SUB_RULES / borderKindOf / borderCornerArc / planBorderPuzzle 原文');
+const cutM = src.match(/export const BORDER_CUT = .*$/m);
+const bandM = src.match(/export const BORDER_BAND = .*$/m);
+const cutFnM = src.match(/export function borderCutAlpha\(d, w\) \{[\s\S]*?\n\}/);
+const upM = src.match(/export function sweepUpY\(tx, tz, nx, nz\) \{.*\}/);
+if (!dirsM || !kindsM || !stylesM || !rulesM || !kindOfM || !arcM || !planM || !cutM || !bandM || !cutFnM || !upM) {
+  bad('ground.js 找不到 BORDER_DIRS / BORDER_KINDS / BORDER_STYLES / BORDER_SUB_RULES / BORDER_CUT / BORDER_BAND / borderKindOf / borderCutAlpha / sweepUpY / borderCornerArc / planBorderPuzzle 原文');
   console.log(`\nFAIL(${fail} 項)`); process.exit(1);
 }
 const build = (planText, arcText = arcM[0]) => new Function(`
@@ -41,13 +45,22 @@ const build = (planText, arcText = arcM[0]) => new Function(`
   ${kindsM[0].replace('export ', '')}
   ${stylesM[0].replace('export ', '')}
   ${rulesM[0].replace('export ', '')}
+  ${cutM[0].replace('export ', '')}
+  ${bandM[0].replace('export ', '')}
+  ${cutFnM[0].replace('export ', '')}
+  ${upM[0].replace('export ', '')}
   ${kindOfM[0].replace('export ', '')}
   ${arcText.replace('export ', '')}
   ${planText.replace('export ', '')}
-  return { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, borderKindOf, borderCornerArc, planBorderPuzzle };
+  return { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, BORDER_CUT, BORDER_BAND,
+           borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle };
 `)();
-const { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, borderKindOf, borderCornerArc, planBorderPuzzle } = build(planM[0]);
+const { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, BORDER_CUT, BORDER_BAND,
+        borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle } = build(planM[0]);
 const truthCarpet = new Function(src.match(/const CARPET = \{[\s\S]*?\n\};/)[0] + '\nreturn CARPET;')();
+// 畫筆名冊(逐頂層方法名抽,不 eval 整包 canvas 程式碼)
+const paintersM = src.match(/const BORDER_PAINTERS = \{[\s\S]*?\n\};/);
+const PAINTERS = paintersM ? [...paintersM[0].matchAll(/\n  (\w+)\(g, S, rnd\)/g)].map((m) => m[1]) : [];
 
 // ===== 工具 =====
 const grid = (gnx, gnz, fn) => {
@@ -85,6 +98,26 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
       && (!k.flat || (k.flat.w > 0 && k.flat.tex)) && (!k.ridge || (k.ridge.w > 0 && k.ridge.h > 0)))
     ? ok('每種都有 flat(w/tex)或 ridge(w/h)幾何定義')
     : bad('BORDER_KINDS 有型錄列缺幾何定義');
+  // 2026-08-11 使用者定案「分界線可以粗一點、上面的圖畫可以更細緻」⇒ **每一種都要有貼地帶**:
+  // 貼地帶才是界線本體(看得出圖案 / 蓋住 13m 格網被拉直時跳過的那段真實界線 / 兩側地貌在它
+  // 底下換手)。純立體脊只有一根細桿 = 使用者說的「意義不明的線條」
+  const noFlat = Object.entries(BORDER_KINDS).filter(([, d]) => !d.flat).map(([k]) => k);
+  noFlat.length === 0
+    ? ok('每一種分界線都有貼地帶(純立體脊不成界;脊只是加在帶上的擺件)')
+    : bad(`缺貼地帶的種類:${noFlat.join(' ')}`);
+  // 帶寬 MUST 蓋得住量化位移半徑之外還讀得出圖案:下限錨在「兩台機體並肩」= SOLDIER_H×2
+  const thin = Object.entries(BORDER_KINDS).filter(([, d]) => d.flat.w < 3);
+  thin.length === 0 ? ok('每一種貼地帶寬 ≥ 3m(遠看仍讀得出是一條有圖案的界線)')
+    : bad(`帶太窄:${thin.map(([k, d]) => `${k} ${d.flat.w}`).join(' ')}`);
+  // 畫筆鍵是**有消費端的欄位**:borderTex 取 BORDER_KINDS[kind].flat.tex 去查 BORDER_PAINTERS,
+  // MUST NOT 退回「拿種類名當畫筆鍵」(那讓 tex 變成改了也不會有人報錯的裝飾欄位)
+  const noTex = Object.entries(BORDER_KINDS).filter(([, d]) => !PAINTERS.includes(d.flat.tex)).map(([k]) => k);
+  (PAINTERS.length >= Object.keys(BORDER_KINDS).length && noTex.length === 0)
+    ? ok(`每一種的 flat.tex 都在 BORDER_PAINTERS 名冊內(${PAINTERS.length} 支畫筆)`)
+    : bad(`flat.tex 查無畫筆:${noTex.join(' ')}(畫筆名冊 ${PAINTERS.join(',')})`);
+  /BORDER_PAINTERS\[BORDER_KINDS\[kind\]\.flat\.tex\]/.test(src)
+    ? ok('borderTex 經 flat.tex 取畫筆(型錄是唯一真相)')
+    : bad('borderTex 未走 flat.tex ⇒ tex 欄位沒有消費端');
   BORDER_DIRS === 16 ? ok('BORDER_DIRS = 16(與道路 16 方向量化同語彙)')
     : bad(`BORDER_DIRS = ${BORDER_DIRS} ≠ 16`);
 
@@ -440,6 +473,143 @@ const OPT_J = { coarseOf, cornerXZ: jitM, driftMax: DRIFT * CELL_M, halfWidthOf:
     ? ok('borderCornerArc:急彎回圓帽且退縮長收到半寬') : bad(`急彎未回圓帽 ${JSON.stringify(tight)}`);
 }
 
+console.log('== Ⅶ 掃掠繞向 / 兩側地貌切線 / 拼圖迴避(2026-08-11 使用者回報三項)==');
+{
+  // ---- ① 繞向:sweepUpY 是唯一縫,且它真的等於「三角形幾何法線的 y 分量」 ----
+  // 這條在畫面上壞掉的樣子是「整段帶死黑」,而所有既有斷言(頂點/α/UV/貼圖)照樣全綠 ⇒
+  // 稽核只能從**幾何定義**下手:拿獨立算的叉積對答案。
+  let upOk = true;
+  for (const [tx, tz] of [[1, 0], [0, 1], [-1, 0], [0.6, -0.8], [-0.3, -0.95]]) {
+    for (const sgn of [1, -1]) {
+      const nx = -tz * sgn, nz = tx * sgn;                       // 斷面橫向(左法線 / 右法線)
+      // 三角形 A=(0,0)、B=A+t、C=A+n:幾何法線 y = uz*vx − ux*vz
+      const ref = tz * nx - tx * nz;
+      if (Math.sign(sweepUpY(tx, tz, nx, nz)) !== Math.sign(ref)) upOk = false;
+    }
+  }
+  upOk ? ok('sweepUpY = 「先切向後橫向」繞向的幾何法線 y 分量(與獨立叉積逐例同號)')
+    : bad('sweepUpY 與幾何叉積不符');
+  // 直段的斷面橫向恆取 n = (−dz, dx)/l ⇒ upY = −l < 0 恆為負:**每一片直段都要翻**。
+  // 這就是 2026-08-11 實測「flat 帶 100% 背面朝上 = 全部死黑」的成因,寫成斷言釘住
+  sweepUpY(1, 0, 0, 1) < 0 && sweepUpY(0, 1, -1, 0) < 0
+    ? ok('linePath 的斷面取向恆為負 ⇒ 直段一律需要翻繞向(舊制沒翻 = 全部死黑)')
+    : bad('linePath 取向假設漂移,請同步 sweepFlat 的 flipOf');
+  (/const flipOf = \(path, rings\) => \{[\s\S]{0,260}?sweepUpY\(bx - ax, bz - az, nx, nz\) < 0;/.test(src))
+    ? ok('flipOf 由 sweepUpY 判(直段/圓弧共用一支,不是逐處手寫繞向)')
+    : bad('flipOf 未走 sweepUpY');
+  (/const flip = flipOf\(path, rings\);/.test(src) && /const flip = !flipOf\(path, spans\);/.test(src))
+    ? ok('flat 與 ridge 都吃 flipOf(ridge 斷面順序是鏡像 ⇒ 判準取反)')
+    : bad('flat / ridge 有一邊沒接繞向判定');
+  (/if \(flip\) b\.idx\.push\(p0 \+ k, p0 \+ k \+ 1, q0 \+ k, p0 \+ k \+ 1, q0 \+ k \+ 1, q0 \+ k\);/.test(src)
+    && /const tri = \(a2, b2, c2\) => \(flip \? b\.idx\.push\(a2, c2, b2\) : b\.idx\.push\(a2, b2, c2\)\);/.test(src)
+    && /const cap = \(a2, b2, c2\) => \(flip \? b\.idx\.push\(a2, c2, b2\) : b\.idx\.push\(a2, b2, c2\)\);/.test(src))
+    ? ok('掃掠三角形(帶面 / 脊側面 / 脊端封口)全數依 flip 送繞向')
+    : bad('有掃掠面沒吃 flip ⇒ 該面會被 three 反轉法線 = 死黑');
+  // 扇形件(圓帽 / 岔路楔形)沿遞增角展開 ⇒ 俯視是逆向,繞向恆倒過來
+  (/if \(s\) b\.idx\.push\(b\.base, b\.base \+ s \+ 1, b\.base \+ s\);/.test(src)
+    && /b\.idx\.push\(b\.base, b\.base \+ 2 \+ s, b\.base \+ 1 \+ s\);/.test(src))
+    ? ok('圓帽與岔路楔形的扇形繞向已倒轉(正面朝上)')
+    : bad('扇形件繞向未倒轉 ⇒ 接頭死黑而直段正常 = 顏色不連續');
+  src.includes('side: THREE.DoubleSide,   // 弦走向不定 ⇒ 繞向不定,雙面保險')
+    ? bad('材質註解仍宣稱「繞向不定靠雙面保險」—— DoubleSide 只保證看得見,不保證亮度')
+    : ok('不再以 DoubleSide 當繞向的替代品(它只讓背面看得見,法線照樣被反轉)');
+
+  // ---- ② 兩側地貌以分界線為界 ----
+  const W = BORDER_CUT.W;
+  (borderCutAlpha(-W, W) === 0 && borderCutAlpha(W, W) === 1 && borderCutAlpha(0, W) === 0.5)
+    ? ok(`borderCutAlpha 端點恆定(±${W / 2}m 外恆 0/1、線上恰 0.5)⇒ 與不透明底毯水密`)
+    : bad('borderCutAlpha 端點/中點不對');
+  let mono = true;
+  for (let d = -W; d <= W; d += W / 16) if (borderCutAlpha(d, W) < borderCutAlpha(d - W / 16, W)) mono = false;
+  mono ? ok('borderCutAlpha 單調遞增(換手只發生一次,不會來回跳)') : bad('borderCutAlpha 非單調');
+  // 換手帶 MUST 收在**最窄**那一種的帶寬之內 —— 否則換手處露在圖案之外就是看得見的滲透
+  const minHW = Math.min(...Object.values(BORDER_KINDS).map((d) => d.flat.w / 2));
+  (W / 2 + BORDER_CUT.JIT / 2 <= minHW + 1e-9)
+    ? ok(`換手半寬 ${(W / 2 + BORDER_CUT.JIT / 2).toFixed(2)}m ≤ 最窄帶半寬 ${minHW.toFixed(2)}m(換手恆藏在圖案底下)`)
+    : bad(`換手帶比最窄的分界線還寬(${(W / 2 + BORDER_CUT.JIT / 2).toFixed(2)} > ${minHW.toFixed(2)})⇒ 滲透露在帶外`);
+  // planSeamOverlays:有線的組合 ⇒ 帶 cut 且**不出**中間過渡脊帶(橫跨界線的第三種地表)
+  const seamM = src.match(/export function planSeamOverlays\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/);
+  const seamFn = seamM ? new Function(
+    src.match(/export const SEAM_STYLES = \{[\s\S]*?\n\};/)[0].replace('export ', '') + '\n' +
+    src.match(/export const SEAM_SOFT = .*$/m)[0].replace('export ', '') + '\n' +
+    src.match(/export function seamAlpha\(a, q, st\) \{[\s\S]*?\n\}/)[0].replace('export ', '') + '\n' +
+    seamM[0].replace('export ', '') + '\nreturn planSeamOverlays;')() : null;
+  if (!seamFn) bad('抽不到 planSeamOverlays 原文(標題漂移,請同步稽核)');
+  else {
+    const N = 8;
+    const zc = (k) => ({ t: 'green', w: 'bare' }[k[0]]);
+    const g2 = grid(N, N, (i) => i < 4 ? 'turf#0' : 'wild#0');
+    const soft = seamFn(g2, N, N, { coarseOf: zc, seed: 7 });
+    const hard = seamFn(g2, N, N, { coarseOf: zc, seed: 7, hardOf: () => true });
+    (soft.every((o) => !o.cut) && hard.every((o) => o.st?.band || o.cut))
+      ? ok('hardOf 命中 ⇒ 逐張外溢帶 cut(鄰格方向);未命中維持舊制淡出(逐位元不變)')
+      : bad('hardOf 未正確標記 cut');
+    (hard.every((o) => o.cut == null || (Math.abs(o.cut.di) <= 1 && Math.abs(o.cut.dj) <= 1
+                                         && (o.cut.di !== 0 || o.cut.dj !== 0))))
+      ? ok('cut 帶的是鄰格方向(格索引差,非零)⇒ 消費端判得出哪一側是鄰格的地盤')
+      : bad('cut 的鄰格方向不合法');
+    const midSoft = seamFn(g2, N, N, { coarseOf: zc, seed: 7 }).filter((o) => o.st?.band);
+    const midHard = hard.filter((o) => o.st?.band);
+    (midSoft.length > 0 && midHard.length === 0)
+      ? ok(`有分界線的組合不出中間過渡脊帶(舊制 ${midSoft.length} 張 → 0;它是橫跨界線的第三種地表)`)
+      : bad(`中間過渡脊帶未被切線抑制(soft=${midSoft.length} hard=${midHard.length})`);
+    JSON.stringify(seamFn(g2, N, N, { coarseOf: zc, seed: 7, hardOf: () => false }))
+      === JSON.stringify(soft)
+      ? ok('hardOf 恆 false ⇒ 逐位元同未注入(舊制不受影響)') : bad('hardOf=false 與未注入不等價');
+  }
+
+  // ---- ③ 田/停車場/球場/3D 物件不得橫跨分界線 ----
+  (/const bdCross = \(x, z, r\) => \{[\s\S]{0,300}?bdSegD\(sg, x, z\) < r \+ sg\.hw \+ BORDER_BAND\.PAD/.test(src))
+    ? ok('bdCross:足跡半徑 + 帶半寬 + PAD 淨距(迴避的是帶,不是中心線)')
+    : bad('bdCross 未把帶寬與淨距算進去');
+  // 拒絕 MUST 排在首個 rnd() 之前(與 roadClear 同位)—— 否則散布序列被拒絕與否改寫
+  const tpM = src.match(/const tryPatch = \(x, z, sub, variant, r, rot, depth\) => \{[\s\S]*?\n  \};/);
+  if (!tpM) bad('抽不到 tryPatch 原文');
+  else {
+    // 剝掉行註解再找 —— 註解裡寫著「排在首個 rnd() 之前」的那個 `rnd()` 會讓這條斷言誤判
+    const body = tpM[0].replace(/\/\/[^\r\n]*/g, '');
+    const iBd = body.indexOf('bdCross('), iRnd = body.indexOf('rnd()');
+    (iBd > 0 && iBd < iRnd)
+      ? ok('tryPatch 的分界線迴避排在首個 rnd() 之前(確定性序列不變)')
+      : bad('tryPatch 的分界線迴避晚於首個 rnd() ⇒ 散布序列被改寫');
+  }
+  /if \(detCount >= detCap \|\| isBlocked\(px, pz\) \|\| bdCross\(px, pz, 0\)\) return;/.test(src)
+    ? ok('addDetail 早退含分界線迴避(3D 擺件不站在界線上;與既有早退同位,不吃 rnd)')
+    : bad('3D 細節未迴避分界線');
+  // 讓路的方向:界線是結構、拼圖是點綴 ⇒ onRegular 降級為保險絲(註解與斷言一起釘住)
+  src.includes('onRegular 自 2026-08-11 起是**保險絲**')
+    ? ok('onRegular 降級為保險絲(主力改成 tryPatch 先迴避;讓路方向已反轉)')
+    : bad('讓路方向的定案沒有留在原文裡');
+  // 規劃 MUST 只有一份:發射端吃的是上面就規劃好的 bdPlan
+  ((src.match(/planBorderPuzzle\(keys, gnx, gnz, \{/g) || []).length === 1 && src.includes('const plan = bdPlan;'))
+    ? ok('planBorderPuzzle 全檔只呼叫一次,底毯切線 / 拼圖迴避 / 幾何發射同吃一份(單一縫)')
+    : bad('planBorderPuzzle 被呼叫多次 ⇒ 切線與畫出來的線可能不是同一條');
+  // 規劃 + 索引區塊零共享 rnd(§2.3):它排在特徵散布之前,吃一枚就把整張圖的佈局推移
+  const planBlk = src.match(/==== 地貌界線拼圖:規劃 \+ 空間索引[\s\S]*?\n  \/\/ 異類交界/);
+  const planCode = planBlk ? planBlk[0].replace(/\/\/[^\r\n]*/g, '') : '';   // 剝行註解(理由同 tryPatch)
+  (planBlk && !/\brnd\(/.test(planCode) && !planCode.includes('Math.random'))
+    ? ok('規劃 + 空間索引區塊零共享 rnd()(提前呼叫不推移任何散布,§2.3)')
+    : bad(planBlk ? '規劃區塊消耗了共享 rnd()' : '找不到規劃區塊(標題漂移,請同步稽核)');
+  // 帶緣有機起伏:吃**世界座標**才會在共用端點上同值(吃沿線參數 = 接頭處開叉)
+  (/const eN = \(x, z, s\) => 1 \+ BORDER_BAND\.EDGE_A/.test(src)
+    && /vnoise\(x \* BORDER_BAND\.EDGE_W, z \* BORDER_BAND\.EDGE_W, seed \^ s\)/.test(src))
+    ? ok('帶緣起伏吃世界座標的 vnoise(相鄰 tile 與接頭共用端點同值,邊緣不開叉)')
+    : bad('帶緣起伏未吃世界座標');
+  (/const eL = eN\(cx, cz, 0x1F17\), eR = eN\(cx, cz, 0x2E29\)/.test(src)
+    && (src.match(/eN\(cx, cz, 0x1F17\)/g) || []).length === 2)
+    ? ok('直段與岔路楔形取同一組起伏種子(楔形與直段接得上)')
+    : bad('岔路楔形未與直段共用帶緣起伏 ⇒ 路口處帶寬對不上');
+  // 讓路取樣半徑 MUST 是**起伏後的最外緣**,畫出來的邊才恆在驗過的走廊裡
+  (/d\.flat\.w \/ 2 \* \(1 \+ BORDER_BAND\.EDGE_A\)/.test(src))
+    ? ok('hwOfKind 取起伏後的最外緣(讓路取樣與迴避半徑蓋得住真的畫出來的邊)')
+    : bad('hwOfKind 仍取標稱半寬 ⇒ 起伏出去的帶緣沒被驗到');
+  // 貼圖節距 MUST 隨帶寬推導(固定 9m 會把窄帶橫向拉扁成「意義不明的線條」)
+  (/const bTexL = \(kd\) => Math\.max\(BORDER_BAND\.TEX_MIN, kd\.w \* BORDER_BAND\.TEX_F\)/.test(src)
+    && !/BTEXL/.test(src))
+    ? ok('貼圖一輪世界長由帶寬推導(bTexL),固定 BTEXL 已退場')
+    : bad('貼圖節距仍是手寫固定值');
+}
+
 console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
 {
   const N = 24;
@@ -509,6 +679,43 @@ console.log('== Ⅳ 對照組(反向驗證內建:壞版本必須被抓到)==');
       ? ok('對照組ⓒ:整鏈單一種類的壞版本切點消失(Ⅱ-⑥ 接力檢查有牙)')
       : bad('對照組ⓒ:壞版本未呈現預期缺陷(Ⅱ-⑥ 驗不到東西)');
   }
+  // ⓕ 繞向不翻(退回舊制的無條件繞向)→ Ⅶ① 的原文斷言必須紅
+  //   sweepFlat 住 buildGroundCover 裡(要 THREE),離線只驗得到原文 ⇒ 對照組也對原文動刀
+  const noFlip = src.replace(
+    /if \(flip\) b\.idx\.push\(p0 \+ k, p0 \+ k \+ 1, q0 \+ k, p0 \+ k \+ 1, q0 \+ k \+ 1, q0 \+ k\);\r?\n\s*else /,
+    '');
+  if (noFlip === src) bad('對照組 ⓕ 替換點失配(原文已漂移,請同步稽核)');
+  else {
+    !/if \(flip\) b\.idx\.push\(p0 \+ k, p0 \+ k \+ 1, q0 \+ k, p0 \+ k \+ 1, q0 \+ k \+ 1, q0 \+ k\);/.test(noFlip)
+      ? ok('對照組ⓕ:拿掉繞向翻轉的壞版本被 Ⅶ① 抓到(死黑那條有牙)')
+      : bad('對照組ⓕ:壞版本未呈現預期缺陷(Ⅶ① 驗不到東西)');
+  }
+  // ⓖ 切線不抑制中間過渡脊帶 → Ⅶ② 的「橫跨界線的第三種地表」檢查必須紅(**執行原文**)
+  const seamSrc = src.match(/export function planSeamOverlays\(keys, gnx, gnz, opts = \{\}\) \{[\s\S]*?\n\}/);
+  const seamBuild = (text) => new Function(
+    src.match(/export const SEAM_STYLES = \{[\s\S]*?\n\};/)[0].replace('export ', '') + '\n' +
+    src.match(/export const SEAM_SOFT = .*$/m)[0].replace('export ', '') + '\n' +
+    src.match(/export function seamAlpha\(a, q, st\) \{[\s\S]*?\n\}/)[0].replace('export ', '') + '\n' +
+    text.replace('export ', '') + '\nreturn planSeamOverlays;')();
+  const midBad = seamSrc[0].replace('if (st.mid && z0 && !hard && !seenMid.has(st.mid))',
+                                    'if (st.mid && z0 && !seenMid.has(st.mid))');
+  if (midBad === seamSrc[0]) bad('對照組 ⓖ 替換點失配(原文已漂移,請同步稽核)');
+  else {
+    const N = 8, zc = (k) => ({ t: 'green', w: 'bare' }[k[0]]);
+    const g3 = grid(N, N, (i) => i < 4 ? 'turf#0' : 'wild#0');
+    seamBuild(midBad)(g3, N, N, { coarseOf: zc, seed: 7, hardOf: () => true }).some((o) => o.st?.band)
+      ? ok('對照組ⓖ:不抑制脊帶的壞版本又冒出橫跨界線的第三種地表(Ⅶ② 有牙)')
+      : bad('對照組ⓖ:壞版本未呈現預期缺陷(Ⅶ② 驗不到東西)');
+  }
+  // ⓗ 切線 α 不夾端點 → Ⅶ② 的水密檢查必須紅(**執行原文**)
+  const cutBad = cutFnM[0].replace('d <= -w / 2 ? 0 : d >= w / 2 ? 1 : ', '');
+  if (cutBad === cutFnM[0]) bad('對照組 ⓗ 替換點失配(原文已漂移,請同步稽核)');
+  else {
+    const f = new Function(cutBad.replace('export ', '') + '\nreturn borderCutAlpha;')();
+    (f(-BORDER_CUT.W, BORDER_CUT.W) !== 0 || f(BORDER_CUT.W, BORDER_CUT.W) !== 1)
+      ? ok('對照組ⓗ:不夾端點的壞版本 α 溢出 [0,1](與不透明底毯的水密檢查有牙)')
+      : bad('對照組ⓗ:壞版本未呈現預期缺陷(Ⅶ② 驗不到東西)');
+  }
 }
 
 console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==');
@@ -532,7 +739,7 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
   (src.includes('const [path, len] = linePath(tl)') && src.includes('arcPath(g, s0, s1)'))
     ? ok('直段與轉彎共用同一支掃掠(linePath / arcPath 只換中心線)')
     : bad('轉彎未走共用掃掠(可能另寫了對接幾何)');
-  src.includes('halfWidthOf: (k)')
+  src.includes('halfWidthOf: hwOfKind')
     ? ok('發射端把型錄半寬注入規劃器(接頭退縮量由真實帶寬推導,不手寫)')
     : bad('規劃器未取得帶寬 ⇒ 退縮量與帶寬脫鉤');
   src.includes('zoneOf: (i, j) => zoneGrid[j * gnx + i]')

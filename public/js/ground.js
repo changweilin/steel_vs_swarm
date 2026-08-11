@@ -25,13 +25,22 @@
 //            沙灘/岩塊/紅樹林),異種類切點共用 = 接力連結;取代舊「邊界遮蔽物」。
 //            轉彎與岔路是**整片畫出來的接頭拼圖**(直段先退縮讓位;圓弧與兩臂相切 /
 //            逐臂楔形在中心交會),MUST NOT 退回「把直段對接再貼墊片」。
+//            2026-08-11 使用者回報四項的改法(細節見各縫檔頭):①繞向唯一縫 sweepUpY ——
+//            舊制每一片直段的正面都朝下,DoubleSide 把法線反轉成死黑,而轉彎隨 sweep
+//            正負忽明忽暗 =「分界線顏色不連續」;②界線是**結構**、拼圖是點綴 ⇒ 田/停車場/
+//            球場/3D 擺件先讓開(tryPatch/addDetail 的 bdCross),不是界線讓路;③兩側地貌
+//            的換手改吃「到畫出來的線」的帶號距離(borderCutAlpha),橫跨界線的中間過渡
+//            脊帶不出 ⇒ 恰以線為界;④帶加寬(每種都有貼地帶)、圖案加細、帶緣沿世界座標
+//            起伏(中心線仍是直的)、接力短 run 併回鄰段(不再每格換一次色)。
 // 無縫拼接原則(避免大面積重複感,無限延伸;2026-07-12 反重複改制):
 //   1. 自然類 edge:'fade' — 外圈頂點 alpha 淡出,與底毯(或彼此)交融
 //   2. 底毯 tile 型 UV 用世界座標投影 + 鏡射重複:同類相鄰花紋自動連續延伸;
 //      特徵 patch 的 blob UV 每塊隨機旋轉 + rect fit 隨機鏡射(U/V)→ 同款不同貌
 //   3. 低頻水彩 wash 頂點色 + 家族延伸擺放(農田拼布/運動園區/綠地群落)
-//   4. 特徵拼圖不疊置:僅允許邊緣小比例交疊(SEP_F 圓近似間距);且英雄視野
-//      (VIS_R)內同款「地表#變體」只准出現一次,同款用罄輪替其他變體/地表
+//   4. 特徵拼圖不疊置:**功能性區塊(edge:'ink' 的田/停車場/球場…)量真實足跡零重疊**
+//      (footNear + PATCH_GAP;2026-08-11 使用者定案),自然類彼此才容邊緣小比例交疊
+//      (SEP_F 圓近似,fade 邊互融是刻意的);且英雄視野(VIS_R)內同款「地表#變體」
+//      只准出現一次,同款用罄輪替其他變體/地表。3D 物件同樣互不穿模、且不站進別人的區塊。
 //   5. 特徵層分區走純圖資分類(classifyPure,不吃場地 mix 隨機改寫)→
 //      球場/停車場只落市區、水田/果園只落綠地、沙漠/碎石只落裸露地
 //   6. 整齊度沿路對齊(2026-07-23):每型拼圖/物件帶 reg(0..1)整齊規律程度,
@@ -63,8 +72,48 @@ const VARIANTS = 6;        // 每種地表的貼圖變體數(變體貼圖惰性�
                            // 2026-07-12 4→6:視野內同款不重複需要更多款式輪替)
 const RSCALE = 1.3;        // 特徵 patch 半徑全域放大
 const VIS_R = 300;         // 反重複半徑 = 英雄最大視野(UNITS.drone.sight)
-const SEP_F = 0.85;        // 拼圖間距係數(圓近似):d ≥ (r1+r2)×0.85,僅容邊緣小比例交疊
-const INK_SEP_F = 1.06;    // 規律結構(edge:'ink')↔ 規律結構完全分離係數(1.0=相切;+6% 結構間隙,不切穿整齊區塊,如停車場不疊球場)
+const SEP_F = 0.85;        // **自然類**拼圖間距係數(圓近似):d ≥ (r1+r2)×0.85,僅容邊緣小比例交疊(fade 邊互融,刻意)
+const INK_SEP_F = 1.06;    // 廣相搜尋半徑用的保守係數(舊制的規律↔規律圓近似係數;精判已改真實足跡,見 footNear)
+// ==== 功能性區塊 / 3D 物件的「不可互相重疊」(2026-08-11 使用者定案)====
+// 「田/停車場/球場這類功能性區塊與 3D 物件等等也不可互相重疊」。三件事分開量:
+//   ① 功能性區塊(edge:'ink' 的田/停車場/球場/廣場/太陽能場…)對**任何**拼圖零重疊 ——
+//      判定改吃**真實足跡**(rect = 有向盒、blob = 手繪輪廓的外接圓),MUST NOT 退回等面積
+//      圓近似:等面積圓在長軸上短 16%、短軸上長 20% ⇒ 一塊球場的角疊進停車場而圓判定
+//      說「沒事」,而畫面上那是兩塊互相切穿的整齊區塊。
+//   ② 3D 物件彼此不穿模:足跡半徑**量零件實幾何**(detailR,同 beacons 的 foot 紀律)× 實例縮放。
+//   ③ 3D 物件不得站進**不屬於它的**功能性區塊(停車場裡不會長出隔壁草地的蘆葦)。
+// 自然類↔自然類(fade↔fade)刻意維持 SEP_F 的邊緣互融:那是 2026-07-12 的反重複手段,
+// 而且它們不是「功能性區塊」——兩叢草的輪廓互相咬進去正是自然的樣子。
+export const PATCH_GAP = 1.0;     // 功能性區塊的淨距(m)。MUST < 陣列間隙 ARR_GAP(1.6)與家族延伸間隙(1.2),
+                           // 否則沿街連續格陣與農田拼布會被自己的規則拆散
+export const DET_GAP = 0.0;       // 3D 物件之間:足跡相切即可(0 = 不重疊;再加淨距會把密植草叢打稀）
+
+// 三支都 export:離線稽核 MUST 執行原文(自己抄一份幾何公式去驗 = 驗自己抄對沒有)
+// 點到有向盒的最近距離(0 = 落在盒內);ry 的軸向與 emitRect 同調(局部 x 軸 = (cos, sin))
+export function obbDist(px, pz, o) {
+  const ca = Math.cos(o.ry), sa = Math.sin(o.ry), dx = px - o.x, dz = pz - o.z;
+  const lx = dx * ca + dz * sa, lz = -dx * sa + dz * ca;
+  return Math.hypot(Math.max(0, Math.abs(lx) - o.hw), Math.max(0, Math.abs(lz) - o.hd));
+}
+// 兩個有向盒是否靠得比 gap 近(SAT 四軸;分離軸上的間距 ≥ gap 就不算近)
+export function obbNear(a, b, gap) {
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const axes = [[Math.cos(a.ry), Math.sin(a.ry)], [-Math.sin(a.ry), Math.cos(a.ry)],
+                [Math.cos(b.ry), Math.sin(b.ry)], [-Math.sin(b.ry), Math.cos(b.ry)]];
+  for (const [ax, az] of axes) {
+    const proj = (o) => Math.abs(Math.cos(o.ry) * ax + Math.sin(o.ry) * az) * o.hw
+                      + Math.abs(-Math.sin(o.ry) * ax + Math.cos(o.ry) * az) * o.hd;
+    if (Math.abs(dx * ax + dz * az) >= proj(a) + proj(b) + gap) return false;
+  }
+  return true;
+}
+// 足跡唯一縫:{ x, z, r }(圓)或 { x, z, hw, hd, ry, r }(有向盒,r = 外接半徑供廣相用)
+export function footNear(a, b, gap) {
+  if (!a.hd && !b.hd) return Math.hypot(a.x - b.x, a.z - b.z) < a.r + b.r + gap;
+  if (a.hd && b.hd) return obbNear(a, b, gap);
+  const c = a.hd ? b : a, o = a.hd ? a : b;
+  return obbDist(c.x, c.z, o) < c.r + gap;
+}
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -1228,6 +1277,23 @@ const REG = {
   miscanthus: 0, weed: 0, cabbage: 0, billboard: 0.85, planter: 0.6, hoop: 0.9,
 };
 
+// 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
+// (換模型/加零件)手寫值就靜默過期,而畫面上的症狀是「兩台貨櫃長在一起」
+const _detR = new Map();
+function detailR(type) {
+  let r = _detR.get(type);
+  if (r != null) return r;
+  r = 0;
+  for (const p of DETAIL_DEFS[type]) {
+    p.geo.computeBoundingBox();
+    const bb = p.geo.boundingBox;
+    r = Math.max(r, Math.hypot(Math.max(Math.abs(bb.min.x), Math.abs(bb.max.x)),
+                               Math.max(Math.abs(bb.min.z), Math.abs(bb.max.z))));
+  }
+  _detR.set(type, r);
+  return r;
+}
+
 function bucketOf(buckets, key) {
   let b = buckets.get(key);
   if (!b) { b = { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0 }; buckets.set(key, b); }
@@ -1235,6 +1301,9 @@ function bucketOf(buckets, key) {
 }
 
 // 不規則色塊。edge:'fade' 外圈 alpha=0 淡入地形;'ink' 外圈墨線頂點色(手繪描邊)
+// 手繪輪廓的半徑抖動範圍(×r):**外緣最遠到 (MIN+JIT)·r,不是 r** —— 迴避半徑
+// (tryPatch 的 bdCross)與這裡同源,拿 r 去算會讓 14% 的外緣壓上分界線帶
+const BLOB_R = { MIN: 0.72, JIT: 0.42 };
 function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
   const n = 12;
   // 每塊 UV 隨機旋轉:同款貼圖不同朝向(視野內同款已不重複,無需跨塊花紋連續)
@@ -1249,7 +1318,7 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
   const angs = [], rads = [];
   for (let i = 0; i < n; i++) {
     angs.push(ph - i / n * Math.PI * 2);        // 角度遞減 → 三角形面朝 +y
-    rads.push(r * (0.72 + rnd() * 0.42));       // 邊界抖動 = 手繪輪廓
+    rads.push(r * (BLOB_R.MIN + rnd() * BLOB_R.JIT));   // 邊界抖動 = 手繪輪廓
   }
   const eC = edge === 'fade' ? [1, 1, 1, 0] : [0.55, 0.56, 0.62, 1];
   const mR = edge === 'fade' ? 0.66 : 0.6;
@@ -1365,8 +1434,11 @@ export function seamAlpha(a, q, st) {
   return Math.min(1, Math.max(0, a + q * (s.noise ?? 0.4) * band));
 }
 
+// hardOf(k0, kn, i, j, ni, nj) → 這一對「畫得出分界線」嗎(呼叫端注入,規則仍只有 borderKindOf
+// 一份)。true ⇒ ①外溢改走 borderCutAlpha 的切線(overlay 帶 `cut`,見 emitCell)②中間過渡
+// 樣態脊帶**不出**:那是一條橫跨界線的第三種地表,恰好就是使用者說的「沒有正確分隔兩側地貌」。
 export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
-  const { coarseOf = null, seed = 0, variants = 6 } = opts;
+  const { coarseOf = null, seed = 0, variants = 6, hardOf = null } = opts;
   const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
   const solid = (k) => k != null && k !== '!';          // 有毯格才算隸屬度分母/外溢來源
   const zoneOf = (k) => (coarseOf && k != null && k !== '!') ? coarseOf(k) : null;
@@ -1418,11 +1490,16 @@ export function planSeamOverlays(keys, gnx, gnz, opts = {}) {
           if (!solid(kn) || kn === k0 || seen.has(kn)) continue;
           seen.add(kn);
           const st = styleOf(z0, zoneOf(kn));
+          const hard = hardOf ? !!hardOf(k0, kn, i, j, i + oi, j + oj) : false;
           const alphas = [cornerW(kn, i, j), cornerW(kn, i + 1, j),
                           cornerW(kn, i + 1, j + 1), cornerW(kn, i, j + 1)];
-          if (alphas[0] || alphas[1] || alphas[2] || alphas[3]) out.push({ i, j, key: kn, alphas, st });
+          // cut = 鄰格方向(格索引差,只取方向)⇒ 消費端據此判「分界線的哪一側是鄰格的地盤」。
+          // 取方向而不是取鄰格中心點:拉直後的弦可能從格子中間穿過,拿點去比會讓整格翻面。
+          if (alphas[0] || alphas[1] || alphas[2] || alphas[3]) {
+            out.push({ i, j, key: kn, alphas, st, cut: hard ? { di: oi, dj: oj } : null });
+          }
           // 中間過渡樣態:兩 key 權重乘積的脊帶(50/50 混色線達峰 → 蓋住殘縫),間歇出現
-          if (st.mid && z0 && !seenMid.has(st.mid)) {
+          if (st.mid && z0 && !hard && !seenMid.has(st.mid)) {
             const bandAl = [0, 0, 0, 0];
             let mx = 0;
             for (let c = 0; c < 4; c++) {
@@ -1577,20 +1654,31 @@ export function planEnclaves(zones, gnx, gnz, opts = {}) {
 // 發射(buildGroundCover 內的消費端)只負責畫;純表現層:無碰撞、不描邊、不進 raycast
 // (原則 4;空地照常通行)。
 export const BORDER_DIRS = 16;   // 拼圖方向數(22.5° 一格;與道路 16 方向量化同語彙)
-// flat = 貼地紋理帶(w 寬 m、tex 畫筆鍵)/ ridge = 梯形脊(w 底寬/wt 頂寬/h 高/jit 頂高
-// 抖動比/color,'foliage' = 季節葉色);aq = 貼水種類(允許落在水線下,頂點夾到水面上)
+// flat = 貼地紋理帶(w 寬 m、tex 畫筆鍵 → BORDER_PAINTERS)/ ridge = 梯形脊(w 底寬/wt 頂寬/
+// h 高/jit 頂高抖動比/color,'foliage' = 季節葉色);aq = 貼水種類(允許落在水線下,頂點夾
+// 到水面上)。
+// **每一種 MUST 有 flat**(2026-08-11 使用者定案「分界線可以粗一點、上面的圖畫可以更細緻」):
+// 貼地帶才是「界線」本體 —— 它同時扛三件事 ①看得出這是一條有圖案的界線(純立體脊只有一根
+// 細桿,遠看就是「意義不明的線條」)②蓋住底毯 13m 格網被拉直時跳過的那段真實界線
+// (§ planBorderPuzzle 的 driftMax)③兩側地貌的切線(borderCut)恰在它底下換手。
+// 立體脊自此是**加在帶上的擺件**(田埂的土埂、圍籬的木樁、樹籬、岩塊),不再單獨成界。
 export const BORDER_KINDS = {
-  trail:      { name: '步道小徑', flat: { w: 1.8, tex: 'trail' } },
-  forestroad: { name: '林道',     flat: { w: 3.0, tex: 'forestroad' } },
-  gravelpath: { name: '碎石土徑', flat: { w: 2.4, tex: 'gravelpath' } },
-  fieldridge: { name: '田埂',     ridge: { w: 0.85, wt: 0.5, h: 0.32, jit: 0.18, color: 0x87704a } },
-  ditch:      { name: '水溝',     flat: { w: 1.6, tex: 'ditch' } },
-  stream:     { name: '小溪',     flat: { w: 2.6, tex: 'stream' } },
-  fence:      { name: '圍籬',     ridge: { w: 0.16, wt: 0.16, h: 1.25, jit: 0, color: 0x6b5138 } },
-  hedgerow:   { name: '灌木矮牆', ridge: { w: 1.15, wt: 0.72, h: 1.4, jit: 0.55, color: 'foliage' } },
-  beach:      { name: '沙灘',     flat: { w: 4.2, tex: 'beach' }, aq: 1 },
-  rocks:      { name: '岩塊',     ridge: { w: 1.3, wt: 0.7, h: 0.7, jit: 0.6, color: 0x8f8c83 }, aq: 1 },
-  mangrove:   { name: '紅樹林',   flat: { w: 2.8, tex: 'mangrove' }, ridge: { w: 1.6, wt: 1.35, h: 1.15, jit: 0.5, color: 0x3f6b3f }, aq: 1 },
+  trail:      { name: '步道小徑', flat: { w: 4.2, tex: 'trail' } },
+  forestroad: { name: '林道',     flat: { w: 6.0, tex: 'forestroad' } },
+  gravelpath: { name: '碎石土徑', flat: { w: 5.0, tex: 'gravelpath' } },
+  fieldridge: { name: '田埂',     flat: { w: 4.2, tex: 'fieldpath' },
+                ridge: { w: 0.85, wt: 0.5, h: 0.32, jit: 0.18, color: 0x87704a } },
+  ditch:      { name: '水溝',     flat: { w: 4.2, tex: 'ditch' } },
+  stream:     { name: '小溪',     flat: { w: 5.4, tex: 'stream' } },
+  fence:      { name: '圍籬',     flat: { w: 4.2, tex: 'fenceline' },
+                ridge: { w: 0.16, wt: 0.16, h: 1.25, jit: 0, color: 0x6b5138 } },
+  hedgerow:   { name: '灌木矮牆', flat: { w: 4.4, tex: 'hedgebank' },
+                ridge: { w: 1.15, wt: 0.72, h: 1.4, jit: 0.55, color: 'foliage' } },
+  beach:      { name: '沙灘',     flat: { w: 9.0, tex: 'beach' }, aq: 1 },
+  rocks:      { name: '岩塊',     flat: { w: 5.2, tex: 'rubble' },
+                ridge: { w: 1.3, wt: 0.7, h: 0.7, jit: 0.6, color: 0x8f8c83 }, aq: 1 },
+  mangrove:   { name: '紅樹林',   flat: { w: 7.0, tex: 'mangrove' },
+                ridge: { w: 1.6, wt: 1.35, h: 1.15, jit: 0.5, color: 0x3f6b3f }, aq: 1 },
 };
 // 地貌(coarse 分區)無序對 → 種類。**只有不同地貌之間才有分界線**(2026-08-11 使用者定案
 // 「兩側若是相同地貌,則不需要分界線」)—— 同一片綠地裡換底毯款式(草皮↔芒草原↔灌木叢)
@@ -1656,12 +1744,48 @@ export function borderCornerArc(px, pz, ax, az, bx, bz, Lmax, hw) {
   return { mode: 'arc', L, phi, cx, cz, R, a0, sweep, len: Math.abs(sweep) * R, ...g };
 }
 
+// ---- 兩側地貌以分界線為界(2026-08-11 使用者需求)----
+// 「很多地方分界線沒有正確分隔兩側地貌,有一側地貌滲透過去另一側」的成因是**兩條不同的線**:
+// 底毯交界的原始解析度是 13m 抖動格網,舊制外溢(planSeamOverlays 的角點隸屬度)把兩側各往
+// 對面推一整格 ⇒ 混色帶寬 ~26m;而分界線是格邊鏈**拉直後的弦**(driftMax 內偏離)。兩者
+// 從來沒有對齊過,畫面上就是「線在這裡、地貌卻換在那裡」。
+// 新制:凡**畫得出分界線**的組合(borderKindOf ≠ null),外溢 α 改由頂點到**畫出來的那條線**
+// 的帶號距離決定 ⇒ 換手處恰在線上、且恆落在帶寬之內被圖案蓋住;查不到線才退回舊制淡出。
+// 同地貌換款(草皮↔芒草原)本來就沒有線,維持柔和淡出不受影響。
+// 純函式:d = 帶號距離(正 = 落在鄰格那一側),端點恆定 0/1 ⇒ 與不透明底毯水密。
+// 換手帶寬 m / 有機擾動振幅 m / 找線半徑(×cell)。
+// **不變式**:W/2 + JIT/2 ≤ 最窄那一種的帶半寬 —— 換手若寬過圖案,滲透就露在帶外面了。
+export const BORDER_CUT = { W: 2.8, JIT: 1.2, R_F: 1.7 };
+// 帶本身的量測與外觀旋鈕(單一縫;讓路取樣、迴避半徑、貼圖節距一律由這裡推導,MUST NOT 手寫)
+//   EDGE_A/EDGE_W = 帶緣有機起伏的振幅比與波數(1/m)——「分界線本身是直的,線的兩側邊緣
+//     可以不用筆直」(2026-08-11 使用者):中心線仍是 16 方向的弦,只有兩緣沿世界座標起伏
+//     (純函式 vnoise ⇒ 相鄰 tile 與接頭在共用端點上取到同值,邊緣連續不開叉)。
+//   PAD  = 特徵拼圖 / 3D 細節與帶緣之間的淨距(田/停車場/球場不得橫跨,也不得貼著壓上來)。
+//   TEX_F/TEX_MIN = 貼圖一輪的世界長 = max(TEX_MIN, w × TEX_F):寬帶配長節距,圖案才不會
+//     被橫向拉扁成「意義不明的線條」。
+//   RUN_MIN_CELL = 一段接力至少要走過幾個底毯格 —— 種類是逐邊解析的,而底毯款式本身就是
+//     13m 格網上挑的:短於這個長度的「換款」是格網雜訊而不是地貌變化,MUST 併回鄰居。
+//     **3 是實測的上界**:拉到 5 會把只在小片花田邊上出現的田埂整種併掉(11 種裡有一種
+//     永遠不出現,而 shot_borders 只會安靜地說「實見地貌級的解」);2 以下逐格抖動就回來了。
+export const BORDER_BAND = { EDGE_A: 0.26, EDGE_W: 0.2, PAD: 1.6, TEX_F: 1.5, TEX_MIN: 7, RUN_MIN_CELL: 3 };
+export function borderCutAlpha(d, w) {
+  return d <= -w / 2 ? 0 : d >= w / 2 ? 1 : 0.5 + d / w;
+}
+// 掃掠繞向唯一縫(純函式):斷面掃掠出來的三角形**幾何法線的 y 分量**正負。
+// t = 中心線切向、n = 斷面橫向(f 遞增方向);flat 以「先切向後橫向」的繞向送出 ⇒ 本函式
+// 回傳 > 0 才是正面朝上(ridge 的斷面順序是鏡像的,判準取反,見 sweepRidge)。
+// **這件事會完全無聲地壞掉**:繞向反了在 DoubleSide 底下不會破圖,three 只是把法線反轉 ⇒
+// 整段帶變成「從地底下打光」的死黑,而頂點數/位置/α/UV/貼圖每一條離線斷言照樣全綠。
+// 2026-08-11 實測:linePath 恆為負(每一片直段都死黑)、arcPath 隨 sweep 正負翻面(轉彎
+// 忽明忽暗)= 使用者回報的「好幾個分界線顏色不連續」。
+export function sweepUpY(tx, tz, nx, nz) { return tz * nx - tx * nz; }
+
 export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
   // zoneOf(i,j) = 該格**真正的地貌**(呼叫端已算好的 zoneGrid)。MUST 優先於用款式反查
   // (coarseOf):`steppe`/`scree` 同時在裸露地與高地的底毯清單裡,反查恆取先出現的那個
   // ⇒ 高地格會被判成裸露地,於是高地內部憑空長出一片「跨地貌」的界線網。
   const { zoneOf = null, coarseOf = null, cornerXZ = (ci, cj) => [ci, cj], driftMax = 1,
-          kindOf = borderKindOf, halfWidthOf = () => 1, jointF = 2.2, forkF = 1 } = opts;
+          kindOf = borderKindOf, halfWidthOf = () => 1, jointF = 2.2, forkF = 1, runMinM = 0 } = opts;
   const solid = (k) => k != null && k !== '!';
   const subOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
   const keyAt = (i, j) => (i < 0 || j < 0 || i >= gnx || j >= gnz) ? null : keys[j * gnx + i];
@@ -1729,6 +1853,40 @@ export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
   for (const ch of raw) {
     const P = ch.pts.map(posOf);
     const closed = ch.pts.length > 2 && ch.pts[0] === ch.pts[ch.pts.length - 1];
+    // ---- 接力是「換一段」不是「每格換一次」:短 run 併回鄰居 ----
+    // 種類逐邊解析,而底毯款式是 13m 格網上挑的 ⇒ 沿著界線走,款式會在區界附近來回抖動,
+    // 解出來的種類就跟著碎成「碎石土徑 / 林道 / 碎石土徑」的雜訊(2026-08-11 實拍每 ~20m
+    // 換一次色)= 使用者回報的「分界線顏色不連續」的另一半。併法與 edgewall 的 run 併法
+    // 同紀律(A44 ⑦):短的讓給**較長**的鄰居、併完同款再併、逐輪取最短者 ⇒ 決定性且收斂。
+    // runMinM = 0(預設)逐位元同未併。
+    if (runMinM > 0 && ch.kinds.length > 1) {
+      const eLen = [];
+      for (let e = 0; e < ch.kinds.length; e++) {
+        eLen.push(Math.hypot(P[e + 1][0] - P[e][0], P[e + 1][1] - P[e][1]));
+      }
+      const mkRuns = () => {
+        const rs = [];
+        for (let e = 0; e < ch.kinds.length; e++) {
+          const last = rs[rs.length - 1];
+          if (last && last.kind === ch.kinds[e]) { last.e = e + 1; last.len += eLen[e]; }
+          else rs.push({ s: e, e: e + 1, kind: ch.kinds[e], len: eLen[e] });
+        }
+        return rs;
+      };
+      let runs = mkRuns();
+      while (runs.length > 1) {
+        let pick = -1;
+        for (let r = 0; r < runs.length; r++) {
+          if (runs[r].len >= runMinM) continue;
+          if (pick < 0 || runs[r].len < runs[pick].len) pick = r;
+        }
+        if (pick < 0) break;
+        const pv = runs[pick - 1], nx = runs[pick + 1];
+        const into = !pv ? nx : !nx ? pv : (nx.len > pv.len ? nx : pv);
+        for (let e = runs[pick].s; e < runs[pick].e; e++) ch.kinds[e] = into.kind;
+        runs = mkRuns();
+      }
+    }
     // 先依種類切段(接力切點與岔路切點一樣是共享角點),段內再做方向量化
     const segs = [];
     let s0 = 0;
@@ -1856,20 +2014,32 @@ function bandBlob(g, S, rnd, f, color, alpha = 1) {
   }
   g.globalAlpha = 1;
 }
+// 兩緣草撇(多數畫筆共用):貼在帶的兩側邊緣,把「筆直的幾何邊」咬碎成有機邊
+function bandFringe(g, S, rnd, color, n = 34, len = 6) {
+  g.strokeStyle = color; g.lineWidth = 2; g.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const x = rnd() * S, y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.7 + rnd() * 0.3));
+    g.beginPath(); g.moveTo(x, y);
+    g.lineTo(x + (rnd() - 0.5) * 5, y + (y < S / 2 ? -1 : 1) * (len + rnd() * len * 0.9));
+    g.stroke();
+  }
+  g.lineCap = 'butt';
+}
 const BORDER_PAINTERS = {
-  trail(g, S, rnd) {                                   // 步道小徑:土色踏面 + 踏石 + 兩緣草撇
+  trail(g, S, rnd) {                                   // 步道小徑:土色踏面 + 踏石 + 車轍水窪 + 兩緣草撇
     bandBlob(g, S, rnd, 1, 'rgb(150,124,90)');
+    bandBlob(g, S, rnd, 0.44, 'rgb(133,108,76)', 0.75);   // 踏實的中央踏道(比兩側深)
     g.fillStyle = 'rgb(126,102,72)';
     for (let x = 8; x < S; x += 26 + (rnd() * 10 | 0)) {
       g.beginPath();
       g.ellipse(x, bandY(S, (rnd() - 0.5) * 0.7), 9 + rnd() * 5, 7 + rnd() * 4, rnd(), 0, 7); g.fill();
       g.fillStyle = rnd() < 0.5 ? 'rgb(166,140,104)' : 'rgb(126,102,72)';
     }
-    g.strokeStyle = 'rgba(74,110,52,0.7)'; g.lineWidth = 2;
-    for (let i = 0; i < 34; i++) {                     // 草撇貼兩緣
-      const x = rnd() * S, y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.72 + rnd() * 0.26));
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 5, y - 6 - rnd() * 5); g.stroke();
-    }
+    g.fillStyle = 'rgba(96,84,64,0.5)';                // 淺水窪(踏面低窪處)
+    for (let i = 0; i < 5; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 0.5), 5 + rnd() * 7, rnd);
+    g.fillStyle = 'rgba(188,166,128,0.8)';             // 乾燥浮土斑
+    for (let i = 0; i < 22; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.6), 1.2 + rnd() * 2, 0, 7); g.fill(); }
+    bandFringe(g, S, rnd, 'rgba(74,110,52,0.7)', 40, 7);
   },
   forestroad(g, S, rnd) {                              // 林道:雙輪轍 + 中央草帶 + 落葉點
     bandBlob(g, S, rnd, 1, 'rgb(122,100,72)', 0.92);
@@ -1884,13 +2054,40 @@ const BORDER_PAINTERS = {
     }
     g.fillStyle = 'rgba(150,110,60,0.7)';
     for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 2.2, 0, 7); g.fill(); }
+    bandFringe(g, S, rnd, 'rgba(84,116,58,0.65)', 30, 8);
   },
-  gravelpath(g, S, rnd) {                              // 碎石土徑:灰土帶 + 深淺碎石斑
+  gravelpath(g, S, rnd) {                              // 碎石土徑:灰土帶 + 深淺碎石斑 + 級配粗細分層
     bandBlob(g, S, rnd, 1, 'rgb(160,148,128)');
-    for (let i = 0; i < 150; i++) {
+    bandBlob(g, S, rnd, 0.5, 'rgb(178,168,148)', 0.6);    // 中央被輾亮的細級配
+    for (let i = 0; i < 190; i++) {                       // 細粒:滿版
       g.fillStyle = rnd() < 0.5 ? 'rgba(120,112,98,0.9)' : 'rgba(196,188,170,0.9)';
-      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.8), 1.4 + rnd() * 2.2, 0, 7); g.fill();
+      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.8, 0, 7); g.fill();
     }
+    for (let i = 0; i < 26; i++) {                        // 粗粒:多角形碎石(有稜有角才讀得出「碎石」)
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.7), r = 2.6 + rnd() * 3.4;
+      g.fillStyle = rnd() < 0.5 ? 'rgb(146,138,124)' : 'rgb(206,198,182)';
+      g.beginPath();
+      for (let a = 0; a < 5; a++) {
+        const t = a / 5 * Math.PI * 2, rr = r * (0.65 + rnd() * 0.55);
+        a ? g.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr) : g.moveTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr);
+      }
+      g.closePath(); g.fill();
+    }
+    bandFringe(g, S, rnd, 'rgba(122,132,86,0.55)', 22, 5);
+  },
+  fieldpath(g, S, rnd) {                               // 田埂:夯土埂道 + 兩側田水映邊 + 稻梗屑 + 草冠
+    bandBlob(g, S, rnd, 1, 'rgb(146,124,88)');
+    bandBlob(g, S, rnd, 0.36, 'rgb(122,102,72)', 0.85);   // 中央踏實的埂頂
+    g.fillStyle = 'rgba(108,120,96,0.55)';                // 兩側田水/濕土映邊
+    for (const f of [-0.86, 0.86]) {
+      for (let x = -8; x < S + 8; x += 11) brushBlob(g, x, bandY(S, f + (rnd() - 0.5) * 0.12), 9 + rnd() * 5, rnd);
+    }
+    g.strokeStyle = 'rgba(186,164,112,0.85)'; g.lineWidth = 1.5;   // 稻梗屑
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.2), a = rnd() * Math.PI;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 7, y + Math.sin(a) * 4); g.stroke();
+    }
+    bandFringe(g, S, rnd, 'rgba(96,128,60,0.8)', 46, 8);
   },
   ditch(g, S, rnd) {                                   // 水溝:混凝土溝緣直線 + 深色水面 + 藻斑水光
     const y = (f) => bandY(S, f);
@@ -1908,6 +2105,53 @@ const BORDER_PAINTERS = {
       const x = rnd() * S, yy = y((rnd() - 0.5) * 0.45);
       g.beginPath(); g.moveTo(x, yy); g.lineTo(x + 8 + rnd() * 8, yy); g.stroke();
     }
+    g.fillStyle = 'rgba(150,148,142,0.6)';             // 溝緣接縫(預鑄溝蓋的節)
+    for (let x = 6; x < S; x += 30 + (rnd() * 12 | 0)) { g.fillRect(x, y(-0.98), 2, y(-0.3) - y(-0.98)); g.fillRect(x, y(0.3), 2, y(0.98) - y(0.3)); }
+    bandFringe(g, S, rnd, 'rgba(92,124,64,0.7)', 26, 6);
+  },
+  fenceline(g, S, rnd) {                               // 圍籬腳:踩踏出來的土帶 + 樁腳陰影 + 高雜草
+    bandBlob(g, S, rnd, 1, 'rgb(138,132,96)');
+    bandBlob(g, S, rnd, 0.34, 'rgb(120,110,80)', 0.8);    // 沿籬走出來的細徑
+    g.fillStyle = 'rgba(74,66,48,0.5)';                   // 樁腳落影(規律間距 = 人工界)
+    for (let x = 10; x < S + 10; x += 32) brushBlob(g, x, bandY(S, 0.02), 5 + rnd() * 2, rnd);
+    g.fillStyle = 'rgba(158,150,112,0.7)';
+    for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.8), 1.3 + rnd() * 2, 0, 7); g.fill(); }
+    bandFringe(g, S, rnd, 'rgba(112,134,66,0.85)', 52, 10);
+  },
+  hedgebank(g, S, rnd) {                               // 樹籬腳:落葉腐土 + 苔痕 + 枯枝(樹籬本體是立體脊)
+    bandBlob(g, S, rnd, 1, 'rgb(104,94,68)');
+    g.fillStyle = 'rgba(70,64,48,0.6)';                   // 樹籬落下的濃蔭(壓在中線)
+    for (let x = -8; x < S + 8; x += 10) brushBlob(g, x, bandY(S, (rnd() - 0.5) * 0.2), 13 + rnd() * 5, rnd);
+    for (let i = 0; i < 46; i++) {                        // 落葉
+      g.fillStyle = rnd() < 0.5 ? 'rgba(146,116,62,0.85)' : 'rgba(112,92,54,0.85)';
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.8);
+      g.beginPath(); g.ellipse(x, y, 3.4 + rnd() * 2.4, 1.8 + rnd() * 1.2, rnd() * 3, 0, 7); g.fill();
+    }
+    g.fillStyle = 'rgba(96,132,74,0.55)';                 // 苔痕
+    for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 5 + rnd() * 6, rnd);
+    g.strokeStyle = 'rgba(84,70,50,0.85)'; g.lineWidth = 1.6;
+    for (let i = 0; i < 14; i++) {                        // 枯枝
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.4), a = rnd() * Math.PI;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 12, y + Math.sin(a) * 6); g.stroke();
+    }
+    bandFringe(g, S, rnd, 'rgba(88,124,58,0.8)', 40, 9);
+  },
+  rubble(g, S, rnd) {                                  // 岩塊帶:崩落的多角岩屑 + 地衣 + 石縫暗線
+    bandBlob(g, S, rnd, 1, 'rgb(150,146,138)');
+    for (let i = 0; i < 60; i++) {                        // 多角岩塊(大小分層,不是均勻噪點)
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.9), r = 3 + rnd() * rnd() * 12;
+      const c = 120 + (rnd() * 70 | 0);
+      g.fillStyle = `rgb(${c},${c - 3},${c - 10})`;
+      g.beginPath();
+      for (let a = 0; a < 6; a++) {
+        const t = a / 6 * Math.PI * 2, rr = r * (0.6 + rnd() * 0.6);
+        a ? g.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr) : g.moveTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr);
+      }
+      g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(78,76,72,0.5)'; g.lineWidth = 1.2; g.stroke();   // 石縫暗線
+    }
+    g.fillStyle = 'rgba(154,168,118,0.45)';               // 地衣
+    for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.7), 3.5 + rnd() * 4, rnd);
   },
   stream(g, S, rnd) {                                  // 小溪:藍綠水帶 + 白水光 + 兩岸溪石
     bandBlob(g, S, rnd, 1, 'rgb(88,138,148)');
@@ -1918,19 +2162,32 @@ const BORDER_PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 2, x + 12 + rnd() * 6, y); g.stroke();
     }
     g.fillStyle = 'rgb(140,138,126)';
-    for (let i = 0; i < 14; i++) {                     // 兩岸溪石
+    for (let i = 0; i < 18; i++) {                     // 兩岸溪石
       const y = bandY(S, (rnd() < 0.5 ? -1 : 1) * (0.66 + rnd() * 0.3));
       g.beginPath(); g.ellipse(rnd() * S, y, 4.5 + rnd() * 3, 3.5 + rnd() * 2.5, rnd(), 0, 7); g.fill();
       g.fillStyle = rnd() < 0.5 ? 'rgb(158,154,142)' : 'rgb(126,124,114)';
     }
+    g.fillStyle = 'rgba(214,236,238,0.45)';            // 石頭下游的白沫尾
+    for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 0.8), 4 + rnd() * 5, rnd);
+    bandFringe(g, S, rnd, 'rgba(88,126,66,0.8)', 34, 9);
   },
-  beach(g, S, rnd) {                                   // 沙灘:淺沙帶 + 濕沙斑 + 貝殼/卵石點
+  beach(g, S, rnd) {                                   // 沙灘:淺沙帶 + 潮線 + 濕沙斑 + 貝殼/卵石點
     bandBlob(g, S, rnd, 1, 'rgb(216,198,158)');
-    g.fillStyle = 'rgba(186,166,128,0.55)';
+    bandBlob(g, S, rnd, 0.5, 'rgb(190,172,136)', 0.55);   // 濕沙(近水側較深)
+    g.strokeStyle = 'rgba(168,150,116,0.7)'; g.lineWidth = 2.2;   // 潮線:沿帶起伏的細波紋
+    for (const f of [-0.42, 0.06, 0.5]) {
+      g.beginPath();
+      for (let x = -8; x <= S + 8; x += 12) {
+        const y = bandY(S, f + (rnd() - 0.5) * 0.16);
+        x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(186,166,128,0.5)';
     for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 9 + rnd() * 14, rnd);
-    for (let i = 0; i < 34; i++) {
+    for (let i = 0; i < 44; i++) {                        // 貝殼/卵石
       g.fillStyle = rnd() < 0.6 ? 'rgba(240,232,214,0.9)' : 'rgba(150,140,120,0.9)';
-      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.6, 0, 7); g.fill();
+      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.8, 0, 7); g.fill();
     }
   },
   mangrove(g, S, rnd) {                                // 紅樹林:泥灘帶 + 支柱根短豎 + 綠冠斑
@@ -1944,8 +2201,12 @@ const BORDER_PAINTERS = {
     for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 7 + rnd() * 9, rnd);
     g.fillStyle = 'rgba(96,140,80,0.7)';
     for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.3), 4 + rnd() * 6, rnd);
+    g.fillStyle = 'rgba(58,74,62,0.45)';                 // 潮溝積水
+    for (let i = 0; i < 8; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.1), 6 + rnd() * 8, rnd);
   },
 };
+// 畫筆鍵取自型錄的 `flat.tex`(單一縫;快取仍以種類為鍵)—— MUST NOT 退回「拿種類名直接
+// 當畫筆鍵」:那讓 `tex` 變成沒有消費端的裝飾欄位,改名時不會有任何地方報錯
 const _bdTexCache = new Map();
 function borderTex(kind) {
   let t = _bdTexCache.get(kind);
@@ -1955,7 +2216,7 @@ function borderTex(kind) {
   cv.width = cv.height = S;
   let hs = 0;
   for (let i = 0; i < kind.length; i++) hs = (hs * 31 + kind.charCodeAt(i)) | 0;
-  BORDER_PAINTERS[kind](cv.getContext('2d'), S, mulberry32(0xB07D ^ hs));
+  BORDER_PAINTERS[BORDER_KINDS[kind].flat.tex](cv.getContext('2d'), S, mulberry32(0xB07D ^ hs));
   t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
@@ -2031,7 +2292,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ry:null = 依 REG[type] 整齊度擲骰(沿路對齊或隨機朝向);
   // 傳入固定角 = 對齊列陣(藤架/太陽能板/貨櫃與貼圖行列同向),不經整齊度擲骰
   const addDetail = (type, px, pz, s, tintHex = null, sy = 1, ry = null) => {
-    if (detCount >= detCap || isBlocked(px, pz)) return;
+    // 3D 擺件同樣不得站在分界線上(使用者:「還有各種 3D 物件都不應該橫跨分界線」)——
+    // 界線本身該長什麼(踏石/樁/樹籬/岩塊)由 BORDER_KINDS 的 ridge 出,不是讓地被的
+    // 雜草稻苗貨櫃長到界線上。與既有早退同位 ⇒ 不消耗 rnd
+    if (detCount >= detCap || isBlocked(px, pz) || bdCross(px, pz, 0)) return;
+    // 互不重疊 + 不站進別人的功能性區塊(足跡量零件實幾何 × 本實例縮放);
+    // 與既有早退同位 ⇒ 不消耗 rnd(s 由呼叫端先抽好,序列不變)
+    const dr = detailR(type) * s;
+    if (!detFree(px, pz, dr)) return;
     let y = terrain.heightAt(px, pz);
     if (y < 0.4) {
       if (!AQ_DET.has(type)) return;                   // 水生細節(蘆葦/荷葉)放行:貼水面擺放
@@ -2041,6 +2309,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // atLocal 平面角 → three.js rotation.y 取負(同 rows 的 ry=-rot 慣例)
     det[type].push({ x: px, y, z: pz, s, sy, ry: ry ?? -orient(px, pz, REG[type] || 0, false),
                      tx: (rnd() - 0.5) * 2 * tl, tz: (rnd() - 0.5) * 2 * tl, tint: tintHex });
+    detPut(px, pz, dr);
     detCount++;
   };
 
@@ -2222,7 +2491,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   };
   // cell 幾何:3×3 貼地網格(邊中點 = 共用角點的中點 → 相鄰 cell 完全同點,水密;
   // ~半格取樣讓 cell 貼合地形起伏,丘頂不再戳穿底毯),頂點色 = wash
-  const emitCell = (bmap, key, ti, tj, alphas, st) => {
+  // cut = { di, dj }(鄰格方向)⇒ 這一張外溢的 α 不取角點雙線性,改由 bdCutAt 以
+  // 「到畫出來的分界線的帶號距離」決定(兩側地貌以線為界);查不到線才退回舊制淡出。
+  const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {
     const P0 = cornerAt(ti, tj), P1 = cornerAt(ti + 1, tj);
     const P2 = cornerAt(ti + 1, tj + 1), P3 = cornerAt(ti, tj + 1);
     const mid = (a2, b2) => [(a2[0] + b2[0]) / 2, (a2[1] + b2[1]) / 2];
@@ -2248,7 +2519,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     G.forEach(([px, pz], k) => {
       const w = wash(px, pz);
       let a = AL[k];
-      if (alphas && a > 0 && a < 1) {
+      // 切線優先且**逐頂點無條件覆寫**(不看角點權重):線可能自格子中間穿過,拿角點權重
+      // 當閘門會讓「該換手卻權重為 0」的那半格留在原本的地貌上 = 滲透照樣發生
+      const cutA = cut ? bdCutAt(px, pz, cut.di, cut.dj) : null;
+      if (cutA != null) a = cutA;
+      else if (alphas && a > 0 && a < 1) {
         // 交界頂點 α 塑形(seamAlpha 純函式,樣式 = 逐分區組合查表):明確邊界壓窄、
         // 柔和淡出疊碎形擾動、雪線推成斑塊。端點 α=0/1 恆定 ⇒ 與不透明底毯/淡出盡頭
         // 仍水密;純函數(世界座標+seed)⇒ 相鄰外溢格共用頂點同值不開縫(§2.3 零 rnd)
@@ -2299,13 +2574,108 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       landCells.push([mid[0], mid[1], key]);
     }
   }
+  // ==== 地貌界線拼圖:規劃 + 空間索引(2026-08-11)====
+  // 規劃 MUST 排在**底毯之後、外溢與特徵拼圖之前** —— 三個消費端全吃這一份(單一縫):
+  //   ①外溢切線 bdCutAt(兩側地貌恰以線為界)
+  //   ②特徵拼圖與 3D 細節的迴避 bdCross(田/停車場/球場/擺件不得橫跨分界線)
+  //   ③幾何發射(下方「地貌界線拼圖發射」區塊)
+  // planBorderPuzzle 是純函式(零 rnd)⇒ 提前呼叫不動共享 rnd 序列(§2.3);tryPatch 的
+  // bdCross 拒絕與 roadClear 同位,排在首個 rnd() 之前 ⇒ 散布序列的紀律不變。
+  const coarseOf = (key) => (key && key !== '!') ? coarseOfKey(key) : null;
+  const bdSubOf = (k) => { const p = k.indexOf('#'); return p < 0 ? k : k.slice(0, p); };
+  // 半寬取型錄真值;flat 再乘上帶緣起伏的最外緣 ⇒ 讓路取樣與迴避半徑恆蓋得住真的畫出來的邊
+  const hwOfKind = (k) => {
+    const d = BORDER_KINDS[k];
+    return Math.max(d.flat ? d.flat.w / 2 * (1 + BORDER_BAND.EDGE_A) : 0, d.ridge ? d.ridge.w / 2 : 0);
+  };
+  const bdPlan = planBorderPuzzle(keys, gnx, gnz, {
+    // 地貌取**格子自己的分區**(zoneGrid,與底毯選款同一份),不由款式反查
+    zoneOf: (i, j) => zoneGrid[j * gnx + i],
+    coarseOf, cornerXZ: cornerAt, driftMax: cell * 0.6,
+    halfWidthOf: hwOfKind, runMinM: cell * BORDER_BAND.RUN_MIN_CELL,
+  });
+  // 中心線段空間索引:存**退縮前**的端點 —— 那才是完整連續的界線曲線(退縮只是把接頭那一小段
+  // 空間讓給轉彎/岔路拼圖,界線並沒有斷)。逐段沿線走訪、每個取樣點連 3×3 鄰格一起登記 ⇒
+  // 查詢只掃自己那一格,而半徑 ≤ BSC 的東西保證找得到。
+  const BSC = Math.max(24, cell * 2);
+  const BD_HW_MAX = Math.max(...Object.keys(BORDER_KINDS).map(hwOfKind));   // 最寬的一種(掃描格數用)
+  const bdGrid = new Map();
+  for (const ch of bdPlan.chains) {
+    for (const tl of ch.tiles) {
+      const sg = { x0: tl.x0, z0: tl.z0, x1: tl.x1, z1: tl.z1, hw: hwOfKind(tl.kind) };
+      const dx = sg.x1 - sg.x0, dz = sg.z1 - sg.z0;
+      const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / (BSC * 0.5)));
+      const seenC = new Set();
+      for (let s = 0; s <= n; s++) {
+        const ci = Math.floor((sg.x0 + dx * s / n) / BSC), cj = Math.floor((sg.z0 + dz * s / n) / BSC);
+        for (let oj = -1; oj <= 1; oj++) {
+          for (let oi = -1; oi <= 1; oi++) {
+            const gk = `${ci + oi},${cj + oj}`;
+            if (seenC.has(gk)) continue;
+            seenC.add(gk);
+            let arr = bdGrid.get(gk);
+            if (!arr) { arr = []; bdGrid.set(gk, arr); }
+            arr.push(sg);
+          }
+        }
+      }
+    }
+  }
+  // 掃過查詢半徑覆蓋到的每一格。**格數 MUST 由半徑推導**:索引只保證「段附近一圈」的格子
+  // 有它,而拼圖的迴避半徑(足跡 + 帶半寬 + PAD)可以到 45m 遠大於一格 —— 只掃自己那一格
+  // 的話,大塊水田的中心離線 30m 就查不到那條線,而它的角早就壓在帶上了(2026-08-11 實測)
+  const bdEach = (x, z, R, fn) => {
+    const n = Math.ceil(R / BSC);
+    const ci = Math.floor(x / BSC), cj = Math.floor(z / BSC);
+    for (let dj = -n; dj <= n; dj++) {
+      for (let di = -n; di <= n; di++) {
+        const l = bdGrid.get(`${ci + di},${cj + dj}`);
+        if (l) for (const sg of l) fn(sg);
+      }
+    }
+  };
+  const bdSegD = (sg, x, z) => {
+    const dx = sg.x1 - sg.x0, dz = sg.z1 - sg.z0, l2 = dx * dx + dz * dz || 1;
+    let t = ((x - sg.x0) * dx + (z - sg.z0) * dz) / l2;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    return Math.hypot(sg.x0 + dx * t - x, sg.z0 + dz * t - z);
+  };
+  // 迴避:半徑 r 的足跡與任何分界線帶(含帶緣起伏 + PAD 淨距)相交即擋下
+  const bdCross = (x, z, r) => {
+    let hit = false;
+    bdEach(x, z, r + BD_HW_MAX + BORDER_BAND.PAD, (sg) => {
+      if (!hit && bdSegD(sg, x, z) < r + sg.hw + BORDER_BAND.PAD) hit = true;
+    });
+    return hit;
+  };
+  // 底毯切線:頂點落在「鄰格那一側」多遠 → borderCutAlpha。側別由**鄰格方向**判(格索引差),
+  // 不拿鄰格中心點去比 —— 拉直後的弦可能自格子中間穿過,拿點比會整格翻面
+  const bdCutAt = (x, z, di, dj) => {
+    let best = null, bd = cell * BORDER_CUT.R_F;
+    bdEach(x, z, bd, (sg) => { const d = bdSegD(sg, x, z); if (d < bd) { bd = d; best = sg; } });
+    if (!best) return null;
+    const ex = best.x1 - best.x0, ez = best.z1 - best.z0;
+    const nb = ex * dj - ez * di;                        // 鄰格方向落在線的哪一側
+    if (!nb) return null;
+    const vs = ex * (z - best.z0) - ez * (x - best.x0);  // 這個頂點落在哪一側
+    const sgn = (vs >= 0) === (nb > 0) ? 1 : -1;
+    // 切線本身不必筆直:沿世界座標的低頻擾動(純函式,相鄰格共用頂點恆同值)
+    return borderCutAlpha(sgn * bd + BORDER_CUT.JIT * (vnoise(x * 0.19, z * 0.19, seed ^ 0x2B0D) - 0.5) * 2,
+                          BORDER_CUT.W);
+  };
+
   // 異類交界(含對角)外溢:角點隸屬度雙線性淡出 —— 配置全住 planSeamOverlays
   // (純函式,稽核執行原文;舊制單向整格外溢的鋸齒病灶見該函式檔頭),此處只發幾何。
   // 兩側對稱互溢 + 對角補角 ⇒ 交界中線 = 50/50 混色的平滑等值線,90° 階梯縫消失。
   // 交界樣式逐分區組合查表(明確/柔和/斑塊/中間過渡帶,SEAM_STYLES);中間樣態脊帶
   // 進獨立 bandBuckets(固定壓在兩側淡出之上,renderOrder 見 mesh 段)。
-  for (const ov of planSeamOverlays(keys, gnx, gnz, { coarseOf: coarseOfKey, seed, variants: VARIANTS })) {
-    emitCell(ov.st?.band ? bandBuckets : spillBuckets, ov.key, ov.i, ov.j, ov.alphas, ov.st);
+  // hardOf = 「這一對畫得出分界線嗎」(規則仍只有 borderKindOf 一份):畫得出來就改走切線,
+  // 中間過渡脊帶也不出 —— 那條橫跨界線的第三種地表正是「沒有正確分隔兩側地貌」的一半成因。
+  const bdHard = (k0, kn, i, j, ni, nj) => !!borderKindOf(
+    bdSubOf(k0), bdSubOf(kn), zoneGrid[j * gnx + i], zoneGrid[nj * gnx + ni]);
+  for (const ov of planSeamOverlays(keys, gnx, gnz,
+      { coarseOf: coarseOfKey, seed, variants: VARIANTS, hardOf: bdHard })) {
+    emitCell(ov.st?.band ? bandBuckets : spillBuckets, ov.key, ov.i, ov.j, ov.alphas, ov.st, ov.cut);
   }
 
   // ---- 特徵拼圖登錄:不疊置(邊緣小比例交疊)+ 視野內同款不重複 ----
@@ -2315,8 +2685,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const keyPos = new Map();               // 'sub#variant' -> [{x,z}]:同款反重複
   // 有效半徑:rect 以等面積圓近似(半寬 × √aspect),blob 直接用 r
   const rEffOf = (def, r) => def.shape === 'rect' ? r * Math.sqrt(def.aspect || 0.7) : r;
-  const overlapPs = (x, z, re, isInk) => {
-    const R = (re + MAXRE) * (isInk ? INK_SEP_F : SEP_F);   // isInk 用較大搜尋半徑免漏掉全分離鄰居
+  // 廣相搜尋半徑:**外接**半徑的上界(推導,MUST NOT 手寫)—— 等面積半徑 MAXRE 不夠,
+  // 一塊長條球場的角比它的等面積圓遠 15%,漏掉就等於沒判
+  const MAXRC = Math.max(...Object.keys(SIZE).map((s) => {
+    const d = DEFS[s];
+    if (!d) return 0;
+    const rr = (SIZE[s][0] + SIZE[s][1]) * RSCALE;
+    return rr * (d.shape === 'rect' ? Math.hypot(1, d.aspect || 0.7) : (BLOB_R.MIN + BLOB_R.JIT));
+  }));
+  const overlapPs = (x, z, re, foot, isInk) => {
+    const R = Math.max((re + MAXRE) * INK_SEP_F, foot.r + MAXRC + PATCH_GAP);
     const i0 = Math.floor((x - R) / PCELL), i1 = Math.floor((x + R) / PCELL);
     const j0 = Math.floor((z - R) / PCELL), j1 = Math.floor((z + R) / PCELL);
     for (let j = j0; j <= j1; j++) {
@@ -2324,8 +2702,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const arr = pGrid.get(`${i},${j}`);
         if (!arr) continue;
         for (const p of arr) {
-          const f = (isInk && p.ink) ? INK_SEP_F : SEP_F;   // 規律↔規律完全分離;其餘容邊緣小交疊
-          const dx = p.x - x, dz = p.z - z, rr = (re + p.re) * f;
+          // 任一方是功能性區塊 ⇒ 量**真實足跡**零重疊(rect 有向盒 / blob 外接圓);
+          // 自然類彼此才走圓近似的邊緣互融
+          if (isInk || p.ink) { if (footNear(foot, p.foot, PATCH_GAP)) return true; continue; }
+          const dx = p.x - x, dz = p.z - z, rr = (re + p.re) * SEP_F;
           if (dx * dx + dz * dz < rr * rr) return true;
         }
       }
@@ -2341,14 +2721,62 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     return false;
   };
-  const regPatch = (x, z, re, key, ink) => {
+  // 功能性區塊(ink)專屬索引:3D 物件的「不得站進別人的區塊」逐件都要查一次 ⇒
+  // 用比 PCELL 細的格,查詢只掃一格(拿 pGrid 的 64m 格逐次掃 3×3 會是每個擺件近百次比對)
+  const ICELL = 32;
+  const iGrid = new Map();
+  const regPatch = (x, z, re, key, ink, foot) => {
     const gk = `${Math.floor(x / PCELL)},${Math.floor(z / PCELL)}`;
     let arr = pGrid.get(gk);
     if (!arr) { arr = []; pGrid.set(gk, arr); }
-    arr.push({ x, z, re, ink });   // ink = 規律結構拼圖(edge:'ink'):邊界物件避開其覆蓋範圍
+    arr.push({ x, z, re, ink, foot });   // ink = 規律結構拼圖(edge:'ink'):邊界物件避開其覆蓋範圍
+    if (ink) {
+      const i0 = Math.floor((x - foot.r) / ICELL), i1 = Math.floor((x + foot.r) / ICELL);
+      const j0 = Math.floor((z - foot.r) / ICELL), j1 = Math.floor((z + foot.r) / ICELL);
+      for (let j = j0; j <= j1; j++) {
+        for (let i = i0; i <= i1; i++) {
+          const ik = `${i},${j}`;
+          let l = iGrid.get(ik);
+          if (!l) { l = []; iGrid.set(ik, l); }
+          l.push(foot);
+        }
+      }
+    }
     let ps = keyPos.get(key);
     if (!ps) { ps = []; keyPos.set(key, ps); }
     ps.push({ x, z });
+  };
+  // ---- 3D 物件:互不重疊 + 不站進別人的功能性區塊 ----
+  const DCELL = 6;
+  const dGrid = new Map();          // 已擺放的 3D 物件足跡(圓)
+  const DET_R_MAX = Math.max(...Object.keys(DETAIL_DEFS).map(detailR)) * 2;   // 廣相上界(含實例放大)
+  let curInk = null;                // 正在撒細節的那一塊功能性區塊(它自己的擺件當然站得上去)
+  const detFree = (px, pz, dr) => {
+    const R = dr + DET_R_MAX + DET_GAP;
+    const i0 = Math.floor((px - R) / DCELL), i1 = Math.floor((px + R) / DCELL);
+    const j0 = Math.floor((pz - R) / DCELL), j1 = Math.floor((pz + R) / DCELL);
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const l = dGrid.get(`${i},${j}`);
+        if (!l) continue;
+        for (const o of l) {
+          const rr = dr + o.r + DET_GAP;
+          if ((o.x - px) ** 2 + (o.z - pz) ** 2 < rr * rr) return false;
+        }
+      }
+    }
+    const il = iGrid.get(`${Math.floor(px / ICELL)},${Math.floor(pz / ICELL)}`);
+    if (il) {
+      const me = { x: px, z: pz, r: dr };
+      for (const f of il) if (f !== curInk && footNear(me, f, 0)) return false;
+    }
+    return true;
+  };
+  const detPut = (px, pz, dr) => {
+    const gk = `${Math.floor(px / DCELL)},${Math.floor(pz / DCELL)}`;
+    let l = dGrid.get(gk);
+    if (!l) { l = []; dGrid.set(gk, l); }
+    l.push({ x: px, z: pz, r: dr });
   };
   // 自雜訊指定變體起輪替,回傳視野內未用的變體;全數用罄回 -1(改試其他地表)
   const freeVariant = (sub, x, z, v0) => {
@@ -2371,6 +2799,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 「市區內的小綠地」格上,不會因此漏到整片綠地 —— 放行閘只看 encAt 命中的格)
     if (!subZones.get(sub)?.has(zn) && !enc?.set.has(sub)) return false;
     const def = DEFS[sub];
+    // 田/停車場/球場…一律不得橫跨分界線(2026-08-11 使用者定案)。理由不只是「線被蓋住」——
+    // 規律結構的 lift(.135↑)本來就高過帶(.126~.134)⇒ 它會**整片壓在界線上**;而一塊
+    // 橫跨界線的水田同時也是「一側地貌滲透到另一側」。擋在這裡而不是讓界線讓路:界線是
+    // 地貌的分界(結構),拼圖是點綴。半徑取**外接**(rect 的角落比 r 遠:半寬 r × 半深
+    // r·aspect ⇒ 用 r 會讓角壓上帶緣)。與 roadClear 同位 = 首個 rnd() 之前,確定性紀律不變
+    if (bdCross(x, z, def.shape === 'rect' ? r * Math.hypot(1, def.aspect || 0.7)
+                                           : r * (BLOB_R.MIN + BLOB_R.JIT))) return false;
     // 坡度/水面檢查:整塊落在陸地、高差在容許內(田與球場要平)
     let mn = Infinity, mx = -Infinity;
     for (const [ox, oz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
@@ -2383,9 +2818,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const dx = x - bl.x, dz = z - bl.z, rr = bl.r + r * 0.7;
       if (dx * dx + dz * dz < rr * rr) return false;
     }
-    // 拼圖不疊置:與既有特徵拼圖圓近似間距,僅容邊緣小比例交疊(fade 邊互融)
+    // 拼圖不疊置。**功能性區塊(ink)量真實足跡零重疊**(含陣列 tile 與家族延伸 —— 舊制
+    // 的 `depth === 0` 把它們排除在外,於是沿街格陣與農田拼布之間可以互切);自然類彼此
+    // 才走圓近似的邊緣互融(fade 邊互融是刻意的)
     const rEff = rEffOf(def, r);
-    if (overlapPs(x, z, rEff, def.edge === 'ink' && depth === 0)) return false;   // 獨立規律結構對既有規律零互疊
+    const foot = def.shape === 'rect'
+      ? { x, z, hw: r, hd: r * (def.aspect || 0.7), ry: rot, r: r * Math.hypot(1, def.aspect || 0.7) }
+      : { x, z, r: r * (BLOB_R.MIN + BLOB_R.JIT) };
+    if (overlapPs(x, z, rEff, foot, def.edge === 'ink')) return false;
 
     // 圖層優先(使用者定):規律(ink)疊不規律(fade)之上;規律再依所對齊道路分級抬高(大馬路>小馬路),
     // 整體仍 < 道路 0.18。rank 為決定性查詢(不吃 rnd);每分支恰一枚 rnd。ink_min .135 > fade_max .124 恆成立。
@@ -2400,10 +2840,15 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const b = bucketOf(buckets, `${sub}#${variant}`);
     if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd);
     else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd);
-    regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink');
+    regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink', foot);
     placed++;
 
+    // curInk = 這一塊自己的足跡:它自己的擺件當然站得上去(球場的籃球架/加油站的油槍),
+    // 擋的是**別人的**擺件走進來。家族延伸在 scatterDetails 之後才遞迴 ⇒ 還原後再往下走
+    const prevInk = curInk;
+    curInk = def.edge === 'ink' ? foot : null;
     scatterDetails(sub, x, z, r, rot, def, zn, enc);
+    curInk = prevInk;
 
     // 家族延伸:農田拼布 / 運動園區 / 綠地群落(rect 沿軸毗鄰、blob 邊緣淡接);
     // 每鄰塊經 freeVariant 換款 → 拼布連片但視野內無同款重複
@@ -2769,8 +3214,6 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // alpha 收尾 = 步道讓路給馬路);貼水種類(aq)頂點夾到水面上,其餘不下水。
   // 決定性只吃 seed + 節點索引雜湊(零共享 rnd,§2.3)⇒ 佈局不變、跨客戶端一致。
   {
-    // 與交界樣式(planSeamOverlays 的 coarseOf)共用同一份 subCoarse 表(單一縫)
-    const coarseOf = (key) => (key && key !== '!') ? coarseOfKey(key) : null;
     bStat = { planned: 0, drawn: 0, forks: 0, forksDrawn: 0 };
     const ehash = (a, b, c) => {
       let n = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2246822519) ^ seed) | 0;
@@ -2792,20 +3235,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       return false;
     };
     const wy = terrain.waterY;
-    // 接頭退縮量由**真實帶寬**推導(型錄是唯一真相,MUST NOT 手寫公尺數):
-    // flat 取帶半寬、純 ridge 取脊半寬;兩者兼有的(紅樹林)取較寬者
-    const plan = planBorderPuzzle(keys, gnx, gnz, {
-      // 地貌取**格子自己的分區**(zoneGrid,與底毯選款同一份),不由款式反查
-      zoneOf: (i, j) => zoneGrid[j * gnx + i],
-      coarseOf, cornerXZ: cornerAt, driftMax: cell * 0.6,
-      halfWidthOf: (k) => {
-        const d = BORDER_KINDS[k];
-        return Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0);
-      },
-    });
+    // 配置吃上面就規劃好的那一份(bdPlan;底毯切線與拼圖迴避是同一份 = 單一縫),
+    // 接頭退縮量由**真實帶寬**推導(hwOfKind:型錄是唯一真相,MUST NOT 手寫公尺數)
+    const plan = bdPlan;
     const bKinds = Object.keys(BORDER_KINDS);
     const bLift = (kind) => 0.126 + bKinds.indexOf(kind) * 0.0008;  // 異種類互疊(接力/岔路)不共面
-    const BTEXL = 9;                                                // 帶紋理一輪世界長(m)
+    // 帶紋理一輪的世界長:寬帶配長節距(推導,MUST NOT 手寫固定公尺)—— 固定 9m 會把
+    // 9m 寬的沙灘壓成 1:1 而 3.6m 的步道橫向拉扁 2.5×,圖案就讀不出是什麼了
+    const bTexL = (kd) => Math.max(BORDER_BAND.TEX_MIN, kd.w * BORDER_BAND.TEX_F);
     const flatB = new Map(), ridgeB = new Map();
     const bkOf = (m, kind, uv) => {
       let b = m.get(kind);
@@ -2822,13 +3259,12 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 讓路判定唯一縫:道路走廊 / 兵線淨空 / 規律結構拼圖 / 不下水。
     // **直段與接頭吃同一支** —— 接頭只驗節點那一個點的話,轉彎圓弧掃過的那一塊完全沒驗到,
     // 分界線就會橫過馬路(道路的圖層本來就在分界線之上,但那只保證被蓋住,不保證不該畫)。
+    // onRegular 自 2026-08-11 起是**保險絲**而不是主力:tryPatch 的 bdCross 已讓規律結構
+    // 一開始就不落在界線上(讓路的方向反過來了 —— 界線是結構,拼圖是點綴),留著只為
+    // 擋住家族延伸之類的漏網。
     const ptOk = (px, pz, aq) => !isBlocked(px, pz) && !(roadClear && roadClear(px, pz))
       && !onRegular(px, pz)
       && (aq || terrain.heightAt(px, pz) > (wy != null ? wy + 0.15 : 0.45));
-    const hwOfKind = (k) => {
-      const d = BORDER_KINDS[k];
-      return Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0);
-    };
     // 逐 ~3m 取樣,**每個取樣點連兩側帶緣一起驗**(帶是有寬度的:只驗中心線的話,
     // 中心線剛好貼著走廊外緣時帶緣仍伸進馬路 —— 實測 150 個頂點漏 2 個就是這樣來的)
     const segOk = (x0, z0, x1, z1, aq, hw) => {
@@ -2897,23 +3333,38 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // ---- 掃掠核心:直段與轉彎共用同一支,差別只在中心線 ----
     // path(t) → [cx, cz, nx, nz](中心點 + 單位法向);直段是直線、轉彎是圓弧
     // ⇒ 轉彎不是「兩段直帶對接」,是同一套斷面沿著彎過去的中心線掃出來的完整一片。
-    // flat:三頂點斷面(兩緣 α0、中線 α1)貼地;u = 沿線累計弧長 / BTEXL(圖案連續彎過轉角)
+    // flat:三頂點斷面(兩緣 α0、中線 α1)貼地;u = 沿線累計弧長 / bTexL(圖案連續彎過轉角)
     // 橫斷面:α 中段是**平台**不是尖峰 —— 只用三點(0,1,0)會讓整條帶變成軟糊的暈,
     // 讀不出「這是一條有邊的小徑」;平台佔內側 62%,柔邊只留最外側兩成。
     const XS = [[-1, 0, 0], [-0.62, 0.19, 1], [0, 0.5, 1], [0.62, 0.81, 1], [1, 1, 0]];
     // 接頭(楔形/圓帽)逐點取同一條剖面:平台 62%、外側兩成柔邊 —— 與直段同一把尺,
     // 接起來才是同一條帶,MUST NOT 在接頭另寫線性淡出
     const xsAlpha = (t, hw) => Math.min(1, Math.max(0, (1 - Math.abs(t) / hw) / 0.38));
+    // 帶緣有機起伏(純函式,吃**世界座標**):中心線仍是 16 方向的弦,只有兩緣沿線起伏 ——
+    // 田埂/土路/灌木/潮間帶/海灘的邊本來就不是尺畫出來的。取世界座標而不是取沿線參數 ⇒
+    // 相鄰 tile 與轉彎接頭在共用端點上取到同一個值,邊緣連續、不會在接頭處開叉。
+    const eN = (x, z, s) => 1 + BORDER_BAND.EDGE_A
+      * (vnoise(x * BORDER_BAND.EDGE_W, z * BORDER_BAND.EDGE_W, seed ^ s) - 0.5) * 2;
+    // 掃掠繞向:正面 MUST 朝上(sweepUpY 唯一縫)。DoubleSide 底下繞向反了不會破圖,
+    // three 只是把法線反轉 ⇒ 整段帶像從地底打光的死黑,而每一條離線斷言照樣全綠。
+    const flipOf = (path, rings) => {
+      const [ax, az, nx, nz] = path(0);
+      const [bx, bz] = path(Math.min(1, 1 / Math.max(1, rings)));
+      return sweepUpY(bx - ax, bz - az, nx, nz) < 0;
+    };
     const sweepFlat = (kind, kd, aq, path, rings, u0, len, a0, a1) => {
       const b = bkOf(flatB, kind, true);
-      const w2 = kd.w / 2, lift = bLift(kind), NC = XS.length;
+      const w2 = kd.w / 2, lift = bLift(kind), NC = XS.length, texL = bTexL(kd);
+      const flip = flipOf(path, rings);
       for (let s = 0; s <= rings; s++) {
         const t = s / rings;
         const [cx, cz, nx, nz] = path(t);
         const ea = s === 0 ? a0 : s === rings ? a1 : 1;   // 自由端 α=0 收尾、接頭端 α=1 對接
-        const u = (u0 + len * t) / BTEXL;
+        const u = (u0 + len * t) / texL;
+        const eL = eN(cx, cz, 0x1F17), eR = eN(cx, cz, 0x2E29);   // 兩緣各自起伏
         for (const [f, v, va] of XS) {
-          const gx = cx + nx * w2 * f, gz = cz + nz * w2 * f;
+          const ff = f * (f < 0 ? eL : eR);
+          const gx = cx + nx * w2 * ff, gz = cz + nz * w2 * ff;
           const wsh = wash(gx, gz);
           b.pos.push(gx, gY(gx, gz, aq) + lift, gz);
           b.nrm.push(0, 1, 0);
@@ -2922,15 +3373,21 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         }
         if (s) {
           const p0 = b.base + (s - 1) * NC, q0 = p0 + NC;
-          for (let k = 0; k < NC - 1; k++) b.idx.push(p0 + k, q0 + k, p0 + k + 1, p0 + k + 1, q0 + k, q0 + k + 1);
+          for (let k = 0; k < NC - 1; k++) {
+            if (flip) b.idx.push(p0 + k, p0 + k + 1, q0 + k, p0 + k + 1, q0 + k + 1, q0 + k);
+            else b.idx.push(p0 + k, q0 + k, p0 + k + 1, p0 + k + 1, q0 + k, q0 + k + 1);
+          }
         }
       }
       b.base += (rings + 1) * NC;
     };
-    // ridge:梯形斷面沿同一條中心線掃掠;端面封口(DoubleSide,繞向不拘)
+    // ridge:梯形斷面沿同一條中心線掃掠;端面封口。斷面順序(底左/底右/頂左/頂右)是
+    // flat 的鏡像 ⇒ 繞向判準取反(sweepUpY > 0 才要翻)。DoubleSide 只保證看得見,
+    // 不保證亮度 —— 側面繞向反了同樣是整根死黑
     const sweepRidge = (kind, kd, aq, path, spans, hseed) => {
       const b = bkOf(ridgeB, kind, false);
       const w2 = kd.w / 2, wt2 = kd.wt / 2;
+      const flip = !flipOf(path, spans);
       const nrm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
       const first = b.base;
       let prev = null;
@@ -2949,14 +3406,16 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         b.base += 4;
         if (prev != null) {
           const p0 = prev, q0 = idx0;
-          b.idx.push(p0, p0 + 2, q0, q0, p0 + 2, q0 + 2);             // 左側面
-          b.idx.push(p0 + 1, q0 + 1, p0 + 3, p0 + 3, q0 + 1, q0 + 3); // 右側面
-          b.idx.push(p0 + 2, p0 + 3, q0 + 2, q0 + 2, p0 + 3, q0 + 3); // 頂面
+          const tri = (a2, b2, c2) => (flip ? b.idx.push(a2, c2, b2) : b.idx.push(a2, b2, c2));
+          tri(p0, p0 + 2, q0); tri(q0, p0 + 2, q0 + 2);               // 左側面
+          tri(p0 + 1, q0 + 1, p0 + 3); tri(p0 + 3, q0 + 1, q0 + 3);   // 右側面
+          tri(p0 + 2, p0 + 3, q0 + 2); tri(q0 + 2, p0 + 3, q0 + 3);   // 頂面
         }
         prev = idx0;
       }
-      b.idx.push(first, first + 1, first + 3, first, first + 3, first + 2);
-      b.idx.push(prev, prev + 3, prev + 1, prev, prev + 2, prev + 3);
+      const cap = (a2, b2, c2) => (flip ? b.idx.push(a2, c2, b2) : b.idx.push(a2, b2, c2));
+      cap(first, first + 1, first + 3); cap(first, first + 3, first + 2);
+      cap(prev, prev + 3, prev + 1); cap(prev, prev + 2, prev + 3);
     };
     // 直段中心線(吃**退縮後**的端點:接頭那一段空間讓給接頭拼圖)
     const linePath = (tl) => {
@@ -2997,7 +3456,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const wsh = wash(px, pz);
           b.pos.push(px, gY(px, pz, aq) + lift, pz);
           b.nrm.push(0, 1, 0);
-          b.uv.push(s2 / BTEXL, Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2))));
+          b.uv.push(s2 / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2))));
           b.col.push(wsh, wsh, wsh, xsAlpha(t2, g.r));
         };
         put(g.cx, g.cz);
@@ -3005,7 +3464,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         for (let s = 0; s <= n2; s++) {
           const ang = base + Math.PI * (h0 + (h1 - h0) * (s / n2));
           put(g.cx + Math.cos(ang) * g.r, g.cz + Math.sin(ang) * g.r);
-          if (s) b.idx.push(b.base, b.base + s, b.base + s + 1);
+          // 扇形沿**遞增角**展開 ⇒ 在 (x,z) 俯視是逆向,繞向必須倒過來才正面朝上(同 sweepUpY)
+          if (s) b.idx.push(b.base, b.base + s + 1, b.base + s);
         }
         b.base += n2 + 2;
       }
@@ -3105,7 +3565,12 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const nx = -a.dz, nz = a.dx;
         const cx = fk.x + a.dx * fk.L, cz = fk.z + a.dz * fk.L;
         const hw = (BORDER_KINDS[a.kind].flat?.w ?? BORDER_KINDS[a.kind].ridge.w) / 2;
-        const xs = XS.map(([f]) => [cx + nx * hw * f, cz + nz * hw * f]);
+        // 帶緣起伏取**斷面中心的世界座標** ⇒ 與該臂直段退縮端那一圈同值,楔形與直段接得上
+        const eL = eN(cx, cz, 0x1F17), eR = eN(cx, cz, 0x2E29);
+        const xs = XS.map(([f]) => {
+          const ff = f * (f < 0 ? eL : eR);
+          return [cx + nx * hw * ff, cz + nz * hw * ff];
+        });
         return { xs, B: xs[0], A: xs[xs.length - 1] };
       });
       const M = E.map((e, i) => {                       // 相鄰臂之間的切分中點
@@ -3128,12 +3593,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             const wsh = wash(px, pz);
             b.pos.push(px, gY(px, pz, aq) + lift, pz);
             b.nrm.push(0, 1, 0);
-            b.uv.push((u0 - fk.L + s) / BTEXL, Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2))));
+            b.uv.push((u0 - fk.L + s) / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2))));
             b.col.push(wsh, wsh, wsh, xsAlpha(t2, hw));
           };
           put(fk.x, fk.z);
           for (const p of ring) put(p[0], p[1]);
-          for (let s = 0; s < ring.length - 1; s++) b.idx.push(b.base, b.base + 1 + s, b.base + 2 + s);
+          // 楔形扇自 f=-1 掃到 +1 ⇒ 俯視是逆向,繞向倒過來才正面朝上(同 sweepUpY / emitCap)
+          for (let s = 0; s < ring.length - 1; s++) b.idx.push(b.base, b.base + 2 + s, b.base + 1 + s);
           b.base += 1 + ring.length;
         }
         if (kdef.ridge) {
@@ -3155,7 +3621,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       geo.setIndex(b.idx);
       const m = new THREE.Mesh(geo, envMat(0xffffff, {
         map: borderTex(kind), vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,
-        transparent: true, side: THREE.DoubleSide,   // 弦走向不定 ⇒ 繞向不定,雙面保險
+        // 繞向由 sweepUpY / flipOf 定案(正面恆朝上);DoubleSide 只是「自下方也看得見」的
+        // 保險,MUST NOT 拿它當繞向的替代品 —— 它讓背面看得見,卻同時把法線反轉成死黑
+        transparent: true, side: THREE.DoubleSide,
       }));
       m.renderOrder = -1.1 + bKinds.indexOf(kind) * 0.005;   // ∈ [-1.1, -1.05]:晚於脊帶 -1.2、早於特徵層 0
       m.frustumCulled = false;

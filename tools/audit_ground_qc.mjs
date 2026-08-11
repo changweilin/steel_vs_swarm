@@ -158,16 +158,103 @@ console.log('== ④ 主散佈準晶體走訪雙射(qStride ⊥ nCells 每格恰�
   if (allBij) ok('全情境走訪雙射 → 不規律候選非週期不重複且無漏格');
 }
 
-console.log('== ⑤ ink 全分離 > 邊緣交疊 ==');
+console.log('== ⑤ 功能性區塊 / 3D 物件不可互相重疊(2026-08-11 使用者定案;執行原文)==');
 {
-  const SEP_F = 0.85, INK_SEP_F = 1.06;
-  (INK_SEP_F > 1.0 && INK_SEP_F > SEP_F)
-    ? ok(`INK_SEP_F=${INK_SEP_F} > 1.0(相切)且 > SEP_F=${SEP_F} → 規律↔規律零互疊、其餘容邊緣交疊`)
-    : bad('INK_SEP_F 未大於 1.0/SEP_F');
-  // 兩個等大 ink patch 相切(圓距 = r1+r2)在 INK_SEP_F 判定下應「重疊」被擋
-  const r = 16, d = r + r;                       // 恰相切
-  const rejected = d * d < ((r + r) * INK_SEP_F) ** 2;
-  rejected ? ok('相切的兩規律結構被 INK_SEP_F 判為互疊而擋下(留 6% 間隙)') : bad('相切規律結構未被擋');
+  // 幾何全部**執行 ground.js 的原文**(自己抄一份公式去驗 = 只驗到自己抄對沒有)
+  const gsrc = readSrc('public', 'js', 'ground.js');
+  const pick = (re, name) => {
+    const m = gsrc.match(re);
+    if (!m) { bad(`ground.js 抽不到 ${name} 原文(漂移,請同步稽核)`); return ''; }
+    return m[0].replace('export ', '');
+  };
+  const G = new Function([
+    pick(/export const PATCH_GAP = .*$/m, 'PATCH_GAP'),
+    pick(/export const DET_GAP = .*$/m, 'DET_GAP'),
+    pick(/export function obbDist\(px, pz, o\) \{[\s\S]*?\n\}/, 'obbDist'),
+    pick(/export function obbNear\(a, b, gap\) \{[\s\S]*?\n\}/, 'obbNear'),
+    pick(/export function footNear\(a, b, gap\) \{[\s\S]*?\n\}/, 'footNear'),
+  ].join('\n') + '\nreturn { PATCH_GAP, DET_GAP, obbDist, obbNear, footNear };')();
+  const rect = (x, z, hw, hd, ry) => ({ x, z, hw, hd, ry, r: Math.hypot(hw, hd) });
+  const circ = (x, z, r) => ({ x, z, r });
+
+  // ① obbDist:盒內 0、沿軸外推 = 超出量、斜角 = 角點距離
+  const B = rect(0, 0, 4, 2, 0);
+  (G.obbDist(0, 0, B) === 0 && G.obbDist(3, 1, B) === 0
+    && Math.abs(G.obbDist(6, 0, B) - 2) < 1e-9
+    && Math.abs(G.obbDist(7, 5, B) - Math.hypot(3, 3)) < 1e-9)
+    ? ok('obbDist:盒內 0 / 沿軸 = 超出量 / 斜角 = 角點距離') : bad('obbDist 幾何不對');
+  // 旋轉同調:轉 90° 後長短軸互換(軸向寫反會讓「看得見的長邊」與「擋得住的長邊」差 90°)
+  const R90 = rect(0, 0, 4, 2, Math.PI / 2);
+  (Math.abs(G.obbDist(0, 6, R90) - 2) < 1e-9 && G.obbDist(0, 3, R90) === 0)
+    ? ok('obbDist 的 ry 軸向與 emitRect 同調(局部 x 軸 = (cos, sin)))') : bad('obbDist 旋轉軸向寫反');
+
+  // ② 這一輪要修的病灶:等面積圓近似會放行「角疊角」的兩塊功能性區塊
+  //    半寬 16 / 半深 11.2 的兩塊沿長軸相距 30 —— 真實足跡疊了 2m,而等面積圓(13.4)
+  //    連舊制**最嚴**的那條(INK_SEP_F 1.06)都放行(ink↔fade 走 0.85 更寬)
+  const r0 = 16, asp = 0.7, rEff = r0 * Math.sqrt(asp), D2 = 30;
+  const A2 = rect(0, 0, r0, r0 * asp, 0), B2 = rect(D2, 0, r0, r0 * asp, 0);
+  const circleSaysOk = (D2 * D2) >= ((rEff + rEff) * 1.06) ** 2;
+  (circleSaysOk && G.footNear(A2, B2, G.PATCH_GAP))
+    ? ok('等面積圓放行、真實足跡擋下的「切穿」案例被抓到(這就是改判定的理由)')
+    : bad(circleSaysOk ? 'footNear 沒擋下互切的兩塊功能性區塊' : '對照案例失效(常數漂移,請同步稽核)');
+  // ③ 分離軸上真的分開了就 MUST 放行(否則沿街格陣與農田拼布會被自己的規則拆散)
+  const B3 = rect(2 * r0 + 1.6, 0, r0, r0 * asp, 0);      // 陣列相鄰 tile:邊緣間距 = ARR_GAP 1.6
+  const B4 = rect(0, 2 * r0 * asp + 1.2, r0, r0 * asp, 0); // 家族延伸:邊緣間距 1.2
+  (!G.footNear(A2, B3, G.PATCH_GAP) && !G.footNear(A2, B4, G.PATCH_GAP))
+    ? ok(`PATCH_GAP=${G.PATCH_GAP} 放得過陣列間隙 1.6 與家族延伸間隙 1.2(格陣不被自己拆散)`)
+    : bad(`PATCH_GAP=${G.PATCH_GAP} 太大,沿街格陣/農田拼布會被擋掉`);
+  (G.PATCH_GAP > 0 && G.PATCH_GAP < 1.2)
+    ? ok('PATCH_GAP ∈ (0, 1.2):留得出結構間隙又不拆散既有佈局') : bad('PATCH_GAP 越界');
+  // ④ 混合型(rect ↔ blob):圓心到盒的最近點判定,兩個方向對稱
+  const C1 = circ(r0 + 3, 0, 4);                          // 圓緣壓進盒(距盒 3 < 4)
+  const C2 = circ(r0 + 9, 0, 4);                          // 圓緣離盒 5 > PATCH_GAP
+  (G.footNear(A2, C1, G.PATCH_GAP) && G.footNear(C1, A2, G.PATCH_GAP)
+    && !G.footNear(A2, C2, G.PATCH_GAP) && !G.footNear(C2, A2, G.PATCH_GAP))
+    ? ok('rect ↔ blob 混合判定正確且兩個方向對稱(自然拼圖不會疊上功能性區塊)')
+    : bad('rect ↔ blob 判定不對稱或判錯');
+  // ⑤ 圓↔圓退化成距離判定
+  (G.footNear(circ(0, 0, 3), circ(0, 5, 3), 0) && !G.footNear(circ(0, 0, 3), circ(0, 7, 3), 0))
+    ? ok('blob ↔ blob 退化成圓距判定') : bad('圓↔圓判定不對');
+
+  // ⑥ 接線:功能性區塊只要**任一方**是 ink 就走真實足跡(舊制的 `depth === 0` 把陣列
+  //    tile 與家族延伸排除在外 ⇒ 沿街格陣可以切穿農田);3D 物件足跡量零件實幾何
+  /if \(isInk \|\| p\.ink\) \{ if \(footNear\(foot, p\.foot, PATCH_GAP\)\) return true; continue; \}/.test(gsrc)
+    ? ok('overlapPs:任一方是功能性區塊即走 footNear(不再看 depth)')
+    : bad('overlapPs 未接真實足跡判定');
+  /overlapPs\(x, z, rEff, foot, def\.edge === 'ink'\)/.test(gsrc)
+    ? ok('tryPatch 以 def.edge 判功能性區塊(陣列 tile 與家族延伸一併納管)')
+    : bad('tryPatch 仍以 depth 排除陣列/家族延伸');
+  (/function detailR\(type\) \{[\s\S]*?computeBoundingBox\(\)/.test(gsrc)
+    && /const dr = detailR\(type\) \* s;/.test(gsrc) && /if \(!detFree\(px, pz, dr\)\) return;/.test(gsrc))
+    ? ok('3D 物件足跡量零件實幾何 × 實例縮放,擺放前逐件查(detFree)')
+    : bad('3D 物件互不重疊未接上(或足跡是手寫的)');
+  /for \(const f of il\) if \(f !== curInk && footNear\(me, f, 0\)\) return false;/.test(gsrc)
+    ? ok('3D 物件不得站進**別人的**功能性區塊(自己那一塊 curInk 豁免)')
+    : bad('3D 物件可以站進別人的功能性區塊');
+  // ⑦ 對照組(反向驗證):把 footNear 退回「一律圓近似」⇒ ② 的切穿案例必須又被放行
+  const fnSrc = gsrc.match(/export function footNear\(a, b, gap\) \{[\s\S]*?\n\}/);
+  const fnBad = fnSrc && fnSrc[0].replace(
+    'if (a.hd && b.hd) return obbNear(a, b, gap);',
+    'if (a.hd && b.hd) return Math.hypot(a.x - b.x, a.z - b.z) < a.r * 0.72 + b.r * 0.72 + gap;');
+  if (!fnBad || fnBad === fnSrc[0]) bad('對照組替換點失配(footNear 原文已漂移,請同步稽核)');
+  else {
+    const bad2 = new Function(
+      pick(/export function obbDist\(px, pz, o\) \{[\s\S]*?\n\}/, 'obbDist') + '\n' +
+      pick(/export function obbNear\(a, b, gap\) \{[\s\S]*?\n\}/, 'obbNear') + '\n' +
+      fnBad.replace('export ', '') + '\nreturn footNear;')();
+    !bad2(A2, B2, G.PATCH_GAP)
+      ? ok('對照組:退回圓近似的壞版本又放行了互切的兩塊功能性區塊(② 有牙)')
+      : bad('對照組:壞版本未呈現預期缺陷(② 驗不到東西)');
+  }
+  // 拒絕 MUST 排在首個 rnd() 之前(否則散布序列被「有沒有被擋」改寫)
+  const adM = gsrc.match(/const addDetail = \(type, px, pz, s, tintHex = null, sy = 1, ry = null\) => \{[\s\S]*?\n  \};/);
+  if (!adM) bad('抽不到 addDetail 原文');
+  else {
+    const body = adM[0].replace(/\/\/[^\r\n]*/g, '');
+    const iF = body.indexOf('detFree('), iR = body.indexOf('rnd()');
+    (iF > 0 && iF < iR) ? ok('addDetail 的重疊拒絕排在首個 rnd() 之前(確定性序列不變)')
+      : bad('addDetail 的重疊拒絕晚於首個 rnd()');
+  }
 }
 
 console.log('== ⑥ 細節疏密調變總量守恆(E[0.35+1.3q]=1, q=0.5+0.5·qcVal, E[qcVal]=0)==');
