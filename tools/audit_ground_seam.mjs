@@ -245,17 +245,27 @@ console.log('== Ⅲ 對照組(反向驗證內建:壞版本必須被 Ⅰ 抓到)=
 
 console.log('== Ⅳ 靜態規則(單一縫 / 舊制不回歸 / 圖層與塑形紀律)==');
 {
-  /for \(const ov of planSeamOverlays\(keys, gnx, gnz, \{ coarseOf: coarseOfKey, seed, variants: VARIANTS \}\)\)/.test(src)
-    ? ok('buildGroundCover 經 planSeamOverlays 發外溢且傳入 coarse 分區查詢(單一縫)')
+  /for \(const ov of planSeamOverlays\(keys, gnx, gnz,\s*\{ coarseOf: coarseOfKey, seed, variants: VARIANTS, hardOf: bdHard \}\)\)/.test(src)
+    ? ok('buildGroundCover 經 planSeamOverlays 發外溢且傳入 coarse 分區查詢 + 切線判準(單一縫)')
     : bad('外溢發射未走 planSeamOverlays / 未接分區樣式(第二份實作?)');
-  src.includes('emitCell(ov.st?.band ? bandBuckets : spillBuckets, ov.key, ov.i, ov.j, ov.alphas, ov.st)')
-    ? ok('中間樣態脊帶進獨立 bandBuckets(與一般外溢分桶)')
+  src.includes('emitCell(ov.st?.band ? bandBuckets : spillBuckets, ov.key, ov.i, ov.j, ov.alphas, ov.st, ov.cut)')
+    ? ok('中間樣態脊帶進獨立 bandBuckets(與一般外溢分桶);切線旗標一併傳給 emitCell')
     : bad('脊帶未分桶(renderOrder/lift 會與一般外溢打架)');
+  // 切線判準 MUST 轉呼 borderKindOf(規則只有一份;MUST NOT 在這裡另寫一張「哪些對要切」的表)
+  /const bdHard = \(k0, kn, i, j, ni, nj\) => !!borderKindOf\(/.test(src)
+    ? ok('切線判準 bdHard 轉呼 borderKindOf(「畫得出分界線」的規則仍只有一份)')
+    : bad('切線判準另寫了第二份對照表');
   !src.includes('spillPair') ? ok('舊制 spillPair(單向整格外溢)已移除,不得回歸')
     : bad('spillPair 仍存在(舊制回歸)');
-  (src.includes('a = seamAlpha(a, qcVal(px, pz, SEAM_QC_W), st)') && /if \(alphas && a > 0 && a < 1\) \{/.test(src))
+  (src.includes('a = seamAlpha(a, qcVal(px, pz, SEAM_QC_W), st)') && /else if \(alphas && a > 0 && a < 1\) \{/.test(src))
     ? ok('emitCell 交界塑形只走 seamAlpha 且只作用外溢層(單一縫)')
     : bad('emitCell 塑形缺失或另寫第二份');
+  // 有分界線的組合改走切線,且 MUST **逐頂點無條件覆寫** —— 拿角點權重當閘門的話,
+  // 拉直後的線從格子中間穿過時,「該換手卻權重為 0」的那半格會留在原本的地貌上(滲透照舊)
+  (/const cutA = cut \? bdCutAt\(px, pz, cut\.di, cut\.dj\) : null;/.test(src)
+    && /if \(cutA != null\) a = cutA;/.test(src))
+    ? ok('切線 α 逐頂點無條件覆寫(不看角點權重),查不到線才退回 seamAlpha 淡出')
+    : bad('切線 α 被角點權重閘住 ⇒ 界線兩側仍會滲透');
   (alphaM[0].includes('if (a <= 0) return 0;') && alphaM[0].includes('if (a >= 1) return 1;')
     && alphaM[0].includes('a * (1 - a) * 4'))
     ? ok('seamAlpha 端點恆定 + band 包絡(與不透明底毯水密)')
