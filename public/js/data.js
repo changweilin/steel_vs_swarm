@@ -2653,12 +2653,20 @@ export const selfCollider = (H, fly) => ({
 // hitR/hitH 推導,與命中判定同步。英雄不在此表(體型綁角色,逐機由 hitR/hitH 動態推導)。
 export const COLLIDE_KINDS = ['base', 'tower', 'tank', 'apc', 'soldier'];
 
-// ---- 擊殺分數(kn:純供 HUD 統計,2026-07-20 起不再作升級門檻)----
-// 擊殺數 kn:小兵 1、坦克/直升機 2、塔 3、英雄 4。升級全改「金錢階梯單價」(隨等級遞增,見 ECON.UPGRADES / upgradePrice)。
-export const KILL_SCORE = { drone: 4, robot: 4, morph: 4, tower: 3, tank: 2, heli: 2, bunker: 2 };
-// 電腦玩家(bot;含駕駛傭兵變形者的 bot)只算 3 分 — 刷 bot 解招式比打真人便宜,但沒那麼便宜。
-export const BOT_KILL_SCORE = 3;
-export const killScore = (kind) => KILL_SCORE[kind] ?? 1;
+// ---- 戰鬥分數(kn;2026-08-11 使用者定案:八軌升級的第二道門檻,金錢之外還要打出戰績)----
+// 助攻 +1 / 擊殺 +4;打「玩家(含電腦玩家)與砲塔」×HARD_F —— 硬目標才是戰績,刷小兵不算。
+// 上限 MAX 分、**只增不減**(陣亡不扣、升級不消耗:它是資格不是貨幣)。
+// 舊制的 KILL_SCORE 逐機種分數表與 BOT_KILL_SCORE(刷 bot 折價)一併退場 —— 使用者這一輪
+// 明講「玩家(含電腦)」同一個係數,兩份分數表並存就是兩套規則。
+export const BATTLE_SCORE = { MAX: 100, KILL: 4, ASSIST: 1, HARD_F: 5 };
+/** 硬目標(玩家機體/電腦玩家機體/砲塔)倍率;其餘(小兵/碉堡/中立)×1 */
+export const scoreHardF = (kind, hero) => (hero || kind === 'tower' ? BATTLE_SCORE.HARD_F : 1);
+/** 這一次擊殺/助攻的得分(唯一縫:sim 的擊殺與助攻兩條路徑同吃) */
+export const battleScoreGain = (kind, hero, assist = false) =>
+  (assist ? BATTLE_SCORE.ASSIST : BATTLE_SCORE.KILL) * scoreHardF(kind, hero);
+/** 累加(夾上限、只增不減) */
+export const addBattleScore = (cur, gain) =>
+  Math.min(BATTLE_SCORE.MAX, (cur || 0) + Math.max(0, gain || 0));
 
 // 階級數值取值:陣列 = [Lv1, Lv2, Lv3, …];純量 = 各階相同。
 // 2026-07-20 四面向升級(開場 Lv1 → 可升到 Lv4):超出資料階(Lv4+)沿「最後一段成長」線性外推 —
@@ -3625,17 +3633,26 @@ export const ECON = {
     sp:  { name: '護盾強化', desc: '護盾上限 +27%/級', max: 3, step: 0.27 },
     ch:  { name: '充能系統', desc: '護盾/電力回復速度提升(滿級 = 現役最高規格)', max: 3 },
   },
-  // 全軌統一階梯單價:price(lvl) = BASE + INC × 該軌現有等級 —— 隨等級遞增(Lv0→1=75、1→2=125),
-  // **第三階(lvl 2→3)一律 UPG_L3**(2026-07-27 使用者需求:所有升級的第三階金額都改成 200)。
-  // 八軌全滿 = 8 ×(75+125+200) = $3200(≈ 10 分鐘收入,見 npm run bal ③);改任一值 MUST 重跑 bal。
-  UPG_BASE: 75, UPG_INC: 50, UPG_L3: 200,
+  // 全軌統一階梯(2026-08-11 使用者定案):逐階「金額 + 戰鬥分數門檻」——
+  // 第一階 $75 無門檻、第二階 $150 且戰鬥分數 ≥20、第三階 $300 且 ≥100。
+  // **一張表兩欄**:價格與門檻是同一個階梯的兩個維度,MUST NOT 拆成兩份表(改一邊漏另一邊)。
+  // 列數 MUST = 各軌 max(逐軌 3 階);八軌全滿 = 8 ×(75+150+300) = $4200,見 npm run bal ③。
+  UPG_STEPS: [
+    { price: 75,  score: 0 },
+    { price: 150, score: 20 },
+    { price: 300, score: 100 },
+  ],
   CHARGE_MIN: 0.4,     // 充能 Lv0 的回復速度比例(滿級 = 1.0 = VITALS.SP_REGEN_PS / mpRegen 現值)
 };
-/** 「第三階」的 lvl 索引(0-based:Lv2 → Lv3 這一次購買) */
-export const UPG_L3_LVL = 2;
-/** 升級單價:全軌統一階梯 = BASE + INC × 該軌現有等級 lvl;**第三階(lvl=2)固定 UPG_L3 = 200**
- *  (2026-07-27 使用者需求)。八軌共用這一支 —— MUST NOT 在商店 UI / sim.buy 另寫價格。 */
-export const upgradePrice = (u, lvl) => ((lvl || 0) === UPG_L3_LVL ? ECON.UPG_L3 : ECON.UPG_BASE + ECON.UPG_INC * (lvl || 0));
+/** 這一次購買(0-based lvl)落在階梯的哪一列;超出表尾夾在最後一列 */
+const upgStep = (lvl) => ECON.UPG_STEPS[Math.min(Math.max(0, lvl || 0), ECON.UPG_STEPS.length - 1)];
+/** 升級單價(八軌共用這一支 —— MUST NOT 在商店 UI / sim.buy 另寫價格) */
+export const upgradePrice = (u, lvl) => upgStep(lvl).price;
+/** 這一階所需的最低戰鬥分數(同上:唯一縫,商店鈕面/sim.buy/bot 採購同吃) */
+export const upgradeScore = (u, lvl) => upgStep(lvl).score;
+/** 買不買得起 = 錢 + 戰鬥分數兩道閘一起看(單一縫;拆開判會出現「鈕面亮著按不動」) */
+export const canUpgrade = (u, lvl, money, score) =>
+  (lvl || 0) < u.max && (money || 0) >= upgradePrice(u, lvl) && (score || 0) >= upgradeScore(u, lvl);
 /** 充能倍率:護盾/電力回復速度 ×(CHARGE_MIN → 1.0);現役回復速度即滿級規格 */
 export const chargeF = (lvl) => ECON.CHARGE_MIN + (1 - ECON.CHARGE_MIN) * (lvl || 0) / ECON.UPGRADES.ch.max;
 /** 重武器每發電力(解析後 def)。輕武器不耗電。彈夾週期 = mag/rate + reload 秒,週期總耗電 =
@@ -4489,13 +4506,67 @@ export const waveSpacingM = () => GAME.WAVE_S * waveMarchSpeed();
 // 「全能力與陣亡提供的報酬成長率 = log(LV)」⇒ 倍率 creepUpgMul = 1 + log10(1 + LV):
 //   LV0 ×1.00(未強化)/ LV1 ×1.30 / LV10 ×2.04 / LV100 ×3.00。取 1+LV 是因為 log(0) 無定義,
 //   且要讓 LV0 恰好落在 ×1.00(未購買 = 原數值)。
-// 套用範圍(sim._creepMul 單一縫):hp / dmg / armor / 陣亡賞金(擊殺 + 助攻同吃)。
+// 套用範圍(2026-08-11 使用者改制:**只強化「對玩家(含電腦玩家)以外」的護甲與傷害**)——
+//   ・傷害:小兵打**非英雄**目標(敵方小兵/砲塔/主堡)×cu;打玩家機體一律 ×1。
+//   ・耐久:hp 不再 ×cu(hp 是全域的,連打玩家時都會變硬)⇒ 整份耐久折進「**非英雄**攻擊者
+//     造成的傷害 ×creepDmgTakenF」,使該情境下的 EHP **逐位元等於**舊制的 hp×cu + armor×cu。
+//   ・陣亡賞金不再 ×cu:小兵對玩家已不再更難打,賞金還加成就是純白送(見 sim._bounty)。
+//   ⇒ DPS 與總耐久的「強化幅度」與舊制相同,只是作用面收斂到非玩家對象。
 //   **刻意不吃 range / sight / speed / rate**:射程會撞破「小兵射程一律 < 防禦塔」的設計底線
 //   (見 UNITS.tower)、移速會拆掉波次間距與凝聚錨定(waveSpacingM)、rate 與 dmg 疊乘會變成 ×9 DPS。
 export const CREEP_UPG = { MAX: 100, PRICE: 200 };
-/** 小兵強化倍率(全能力與賞金共用同一條曲線);超出 0~MAX 一律夾制。 */
+/** 小兵強化倍率(傷害與耐久共用同一條曲線);超出 0~MAX 一律夾制。 */
 export const creepUpgMul = (lv) =>
   1 + Math.log10(1 + Math.max(0, Math.min(CREEP_UPG.MAX, Math.floor(lv || 0))));
+/**
+ * 強化小兵「受非英雄攻擊」時的傷害倍率(耐久側唯一縫)。
+ * 舊制 EHP = hp×cu / armorMul(ar×cu, pen);新制 hp 不動 ⇒ EHP = hp / (armorMul(ar,pen) × F)。
+ * 兩者相等解出 F = armorMul(ar×cu, pen) /(cu × armorMul(ar, pen))—— 逐 pen 精確,MUST NOT 手寫近似。
+ */
+export const creepDmgTakenF = (cu, ar, pen = 0) =>
+  (cu || 1) > 1 ? armorMul((ar || 0) * cu, pen) / (cu * armorMul(ar || 0, pen)) : 1;
+
+/**
+ * 攻堅順序(2026-08-10 使用者定案「劇情戰役時,一定要按照順序打:前線砲塔>中段砲塔>主堡,
+ * 前面沒打爆後面會鎖血」)—— **階段定義的唯一縫**,伺服器結算(sim)、客戶端 HUD(game)、
+ * 對話觸發(storytalk)與稽核共吃這一份。
+ *
+ * 兩件事在這裡定死,消費端 MUST NOT 各自重算:
+ *   ① **哪一座塔算前線** —— 由 `solveTowerSites()` 回傳的 `frac` 推導:同一條兵線內 frac 最大
+ *      (最靠戰場中線 = 最先撞上的那一組)= 前線,其餘 = 中段。**MUST NOT 拿陣列索引當判據**:
+ *      `solveTowerSites` 的回傳是 `[後塔, 前塔]`(後塔求解在後、unshift 在前),而兵線太短塞不下
+ *      後塔時只回一個元素 —— 拿 index 0 當前線在「單塔位兵線」上剛好對、在雙塔位兵線上剛好相反,
+ *      而症狀只是「這張圖的鎖血順序反了」,沒有任何錯誤訊息。
+ *   ② **階段是全戰場的,不是逐兵線的** —— 一個陣營所有兵線的前線砲塔全數擊毀,中段砲塔才解鎖;
+ *      全部中段砲塔擊毀,主堡才解鎖(`siegeOpenStage()`)。逐兵線制會讓「推掉每階段」變成一章
+ *      觸發 2×兵線數 次,而劇情對話一階只有一場。
+ *
+ * 鎖血 = **完全免傷**(不是減傷):`sim._damage` 早退、`_tgBlockedD`/`bots._acquire` 一併把它排除在
+ * 索敵之外 —— 只擋傷害不擋索敵的話,小兵會停在打不動的塔前面把兵線卡死。
+ */
+export const SIEGE = {
+  STAGES: ['front', 'mid', 'base'],
+  NAMES: ['前線砲塔', '中段砲塔', '主堡'],
+};
+SIEGE.BASE = SIEGE.STAGES.length - 1;   // 主堡恆為最後一階(推導,MUST NOT 手寫 2)
+
+/**
+ * 一條兵線的塔位 → 逐塔位階段(0 = 前線塔、1 = 中段塔)。
+ * sites = `solveTowerSites(lanes)[li]`(元素帶 `frac`)。單一塔位的兵線 ⇒ 那一座就是前線。
+ */
+export function siegeSiteStages(sites) {
+  const maxF = Math.max(...sites.map((s) => s.frac));
+  return sites.map((s) => (s.frac >= maxF - 1e-9 ? 0 : 1));
+}
+
+/**
+ * 某一方目前「打得動的最高階段」= 仍有存活建築的最低階段。
+ * counts[i] = 該方第 i 階仍存活的建築數(塔以座計、主堡 1)。全滅回 SIEGE.BASE(主堡沒了 = 已結束)。
+ */
+export function siegeOpenStage(counts) {
+  for (let i = 0; i < SIEGE.STAGES.length; i++) if ((counts[i] || 0) > 0) return i;
+  return SIEGE.BASE;
+}
 
 /**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
@@ -5253,6 +5324,20 @@ export const ENV = {
     fog:    { name: '濃霧' },
   },
 };
+
+/**
+ * 環境標籤(「夏・正午・晴」)——**全專案唯一縫**。
+ * 住 data.js 而不住 environment.js:它只是 `ENV` 的取名查表,而 environment.js import three
+ * ⇒ 放那裡的話,任何在 Node 端(離線稽核 / 故事書的純標記模組)要印這一行的人都載不起來。
+ * `environment.js` 保留舊入口 re-export(同 `hazards.js` → `rng.js` 的處理)。
+ */
+export function envLabel(env) {
+  if (!env) return '';
+  const s = ENV.seasons[env.season]?.name || '?';
+  const t = ENV.times[env.time]?.name || '?';
+  const w = ENV.weathers[env.weather]?.name || '?';
+  return `${s}・${t}・${w}`;
+}
 
 /** env = { season, time, weather };'random'/缺值 → 抽一個具體值 */
 export function resolveEnv(env = {}) {

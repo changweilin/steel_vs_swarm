@@ -6,7 +6,7 @@
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
 import {
-  SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
+  SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
@@ -16,7 +16,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
-  reachRule, blastCoreR, shotV0, SEEK, seekTurn,
+  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG,
@@ -406,7 +406,7 @@ export class BattleClient {
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
-    this.kn = 0;                      // 擊殺數(招式解鎖門檻)
+    this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.stealthLeft = 0;
@@ -3142,6 +3142,14 @@ export class BattleClient {
     // 陣營小兵強化等級(伺服器權威;每側每兵線一個整數)—— MUST 在 ents 迴圈之前落地,
     // 商店重繪簽章要讀得到本快照的值。
     if (m.cu) this.creepUpg = m.cu;
+    // 攻堅開放階段(劇情戰役才發;伺服器權威 —— 客戶端 MUST NOT 自己數還剩幾座塔)。
+    // 斷線重連補快照時 HUD 也拿得到正確的目標,不必靠「開場一定是第 0 階」猜。
+    // 快照 8Hz ⇒ 只在**變動時**上拋(每幀重繪進度條 = 每秒 8 次 innerHTML,純浪費)
+    if (m.sg) {
+      const sig = `${m.sg.SWARM}/${m.sg.STEEL}`;
+      this.siegeOpen = m.sg;
+      if (sig !== this._sgSig) { this._sgSig = sig; this.onSiegeTrack?.(m.sg); }
+    }
     const seen = new Set();
     for (const e of m.ents) {
       seen.add(e.id);
@@ -3150,6 +3158,7 @@ export class BattleClient {
       // 工事受擊回饋:hp 下降的那個快照閃亮 + 波紋(工事無護盾層,掉的一律是裝甲)
       if (ent.hitShell && e.hp < ent.hp) ent.hitShell.userData.hit();
       ent.hp = e.hp; ent.max = e.m;
+      ent.lk = !!e.lk;   // 攻堅鎖血:這一座打不動(範圍光暈把它排除,見 _updateRangeGlows)
       ent.tgt.set(e.x, 0, -e.z);           // 模擬 z=北 → three z=南
       if (e.k === 'heli') ent.heroY = e.y ?? 0;   // 攻擊直升機巡航高度(共用英雄的高度渲染欄位)
       // 第三方步槍兵駐守碉堡:人在工事裡,機體隱藏(出堡的快照會把 gar 拿掉 → 復現)
@@ -4279,6 +4288,12 @@ export class BattleClient {
       if (ev.side === this.side) this.hud.feed?.(`🐜 第 ${ev.lane + 1} 兵線小兵強化 LV${ev.lvl}${ev.pid === this.youId ? '' : '(隊友出資)'}`);
     } else if (ev.e === 'penalty') {
       if (ev.pid === this.youId && ev.v > 0) this.hud.feed?.(`💀 陣亡罰金 -$${ev.v}`);
+    } else if (ev.e === 'siege') {
+      // 攻堅階段被推平(劇情戰役;階段由伺服器定案,客戶端 MUST NOT 自己數塔)。
+      // **只有敵方那一階倒下才演出** —— 自己的塔被拔掉播一段勝利者的對白等於幫對手慶祝。
+      // 演出本身住 main.js(它才知道現在打的是哪一章、哪一個陣營),這裡只上拋。
+      if (ev.side !== this.side) this.onSiege?.(ev.stage, ev.side);
+      else this.hud.feed?.(`🛡 我方${SIEGE.NAMES[ev.stage] || ''}全數失守`);
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {
@@ -5315,7 +5330,8 @@ export class BattleClient {
     const mat = this._rgMaterial(shot.warn);
     const lit = this._rgLit || (this._rgLit = new Set());
     lit.clear();
-    for (const ent of shot.hits) if (ent.id !== this._lockId) lit.add(ent);   // 鎖定目標另有 lockGlow,不疊兩層
+    // 鎖定目標另有 lockGlow,不疊兩層;攻堅鎖血的建築完全免傷 ⇒ 亮燈是騙人(伺服器 siegeLocked 同判)
+    for (const ent of shot.hits) if (ent.id !== this._lockId && !ent.lk) lit.add(ent);
     for (const ent of this.ents.values()) {
       if (!lit.has(ent)) { drop(ent); continue; }
       if (ent._rgGlow) { ent._rgGlow.material = mat; continue; }
@@ -5664,9 +5680,10 @@ export class BattleClient {
     let pick = null, best = Infinity;
     for (const [id, up] of Object.entries(ECON.UPGRADES)) {
       const lvl = this.upg[id] || 0;
-      if (lvl >= up.max) continue;
+      // 兩道閘一起看(錢 + 戰鬥分數)—— 與鈕面、伺服器 sim.buy 同一支 `canUpgrade`
+      if (!canUpgrade(up, lvl, this.money, this.kn)) continue;
       const price = upgradePrice(up, lvl);
-      if (price > this.money || price >= best) continue;
+      if (price >= best) continue;
       pick = id; best = price;
     }
     return pick;
@@ -5724,6 +5741,8 @@ export class BattleClient {
       if (lvl >= max) { this._reserve.delete(item); continue; }
       // 八軌未滿:伺服器根本不受理小兵強化 ⇒ 靜靜等著(門檻與 `_shopState().allMax` 同一份)
       if (lane != null && !this._upgAllMax()) continue;
+      // 八軌的戰鬥分數門檻同樣是「送出去會不會被拒」的一部分(與 `_sweepPick` 同一支 canUpgrade)
+      if (lane == null && !canUpgrade(up, lvl, this.money - pend, this.kn)) continue;
       if (this.money - pend < price) continue;
       // **同一階只送一次**:樂觀更新會被下一份快照的權威值校正回去,而那份快照可能比伺服器處理
       // 這筆購買還早到(RTT > 125ms 就會發生)⇒ 沒有這道閘就會對同一階重複下單,第二筆被拒
@@ -5757,10 +5776,8 @@ export class BattleClient {
       const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
       if (!up) return false;
       const lvl = this.upg[item] || 0;
-      if (lvl >= up.max) return false;
-      const price = upgradePrice(up, lvl);
-      if (this.money < price) return false;
-      this.money -= price; this.upg[item] = lvl + 1;
+      if (!canUpgrade(up, lvl, this.money, this.kn)) return false;
+      this.money -= upgradePrice(up, lvl); this.upg[item] = lvl + 1;
       // 戰鬥面向:同步樂觀推進 abil 階(權威快照會校正);光/重武器另重算武器數值
       if (up.abil) {
         this.abil[up.abil] = 1 + this.upg[item];

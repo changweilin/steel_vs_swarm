@@ -358,6 +358,8 @@
   <canvas id="gameCanvas"></canvas>
   <!-- 招式立繪演出層(cutin.js 掛節點;純 2D,不進 3D 場景) -->
   <div id="cutinLayer" class="cutin-layer"></div>
+  <!-- 劇情戰役對話層(dialogue.js 掛節點:攻堅進度條 + 下緣無線電對話條) -->
+  <div id="dialogueLayer" class="dlg-layer"></div>
 
   <!-- HUD -->
   <div class="hud-top">
@@ -426,7 +428,7 @@
         <!-- 空白鍵機動能力:無人機=完美迴避 / 機甲=蓄力跳躍 / 變形機甲=升空變形(CD 顯示) -->
         <div class="ab-box" id="abMobil"><span class="ab-key">␣</span><span class="ab-name" id="abMobilName">—</span><span class="ab-cd" id="abMobilCd"></span></div>
       </div>
-      <div class="money-box">$ <span id="moneyText">0</span> ・ KILL <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
+      <div class="money-box">$ <span id="moneyText">0</span> ・ 分 <span id="knText">0</span> <span class="shop-hint" id="shopHint">B 升級</span></div>
       <!-- 觀戰限定:跟隨中那位玩家的八軌商店升級(內容由 main.js renderSpecUpg 灌,
            軌名/上限的唯一真相 = data.js ECON.UPGRADES;非觀戰時恆為空字串 + CSS 收起) -->
       <div class="spec-upg" id="specUpg"></div>
@@ -539,6 +541,8 @@
     <div class="overlay-box">
       <div class="over-title" id="overTitle"></div>
       <div class="over-sub" id="overSub"></div>
+      <!-- 劇情戰役:主堡那一階的對白(戰鬥已結束 ⇒ 這裡才播得完,也才重讀得到) -->
+      <div id="overTalk"></div>
       <div class="over-stats" id="overStats"></div>
       <div class="row" style="justify-content:center">
         <button id="backRoomBtn" class="btn big">◀ 返回戰區</button>

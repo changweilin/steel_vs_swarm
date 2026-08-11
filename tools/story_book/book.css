@@ -1,0 +1,63 @@
+/* ============ 本地故事書:台子自己的框(dev-only)============
+   **只畫側欄、頁碼、翻頁鈕、示意戰場的容器**。
+   MUST NOT 覆寫任何 `.chapter-*` / `.sb-*` / `.dlg-*` / `.overlay-box` 的樣式 ——
+   那些是遊戲的真品版面,一覆寫就不是「完全仿照正式遊戲的呈現」,而故事書的全部意義就在那裡。
+   (稽核 `tools/audit_story_talk.mjs` Ⅷ 段會擋下這件事。) */
+
+body.storybook {
+  margin: 0; display: grid; grid-template-columns: 290px 1fr; height: 100vh;
+  overflow: hidden; background: #0a0c10;
+}
+
+/* -- 側欄 -- */
+.bk-side { display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.1); background: rgba(6, 8, 12, 0.6); }
+.bk-brand { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; display: flex; flex-direction: column; }
+.bk-brand span { font-size: 10px; font-weight: 400; opacity: 0.45; letter-spacing: 0.04em; margin-top: 3px; }
+.bk-sides { align-self: stretch; }
+.bk-chapters { display: flex; flex-direction: column; gap: 6px; }
+/* 選中的章節只加一圈外框 —— 卡片本體的樣式仍然是遊戲的 .chapter-card */
+.bk-chapters .chapter-card.bk-on { outline: 2px solid var(--accent, #ffd98a); outline-offset: 1px; }
+.bk-pages { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.bk-page { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 5px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; color: inherit;
+  font: inherit; font-size: 12px; text-align: left; }
+.bk-page i { font-style: normal; opacity: 0.4; font-size: 10px; min-width: 12px; }
+.bk-page.on { background: rgba(255, 217, 138, 0.14); border-color: rgba(255, 217, 138, 0.45); }
+.bk-page.miss { color: var(--danger, #ff6b6b); }
+.bk-keys { margin-top: auto; font-size: 10.5px; opacity: 0.4; line-height: 1.7; }
+.bk-world { font-size: 11.5px; opacity: 0.72; line-height: 1.75; }
+.bk-world summary { cursor: pointer; opacity: 0.9; font-size: 12px; margin-bottom: 6px; }
+.bk-world div { margin: 0 0 8px; }
+
+/* -- 主畫面 -- */
+.bk-main { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.bk-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.bk-where { flex: 1; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.bk-where b { font-size: 15px; }
+.bk-where span { font-size: 11px; opacity: 0.5; margin-top: 2px; }
+.bk-nav[disabled] { opacity: 0.3; pointer-events: none; }
+.bk-stage { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column;
+  gap: 12px; align-items: center; }
+.bk-sheet { width: min(880px, 100%); max-width: 100%; }
+/* 簡報那一頁沿用遊戲的 `.overlay-box.story-brief-box`(含它自己的 max-height/捲動);
+   這裡**只**放寬台子這一側的寬度上限,不動它的內距、邊框、捲動行為。 */
+/* 示意戰場:對話條需要一個 position:relative 的框才貼得住(遊戲裡那個框是 #game) */
+.bk-field { position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden;
+  background: #11151c center/cover no-repeat; box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.75); }
+.bk-field::after { content: '示意背景'; position: absolute; right: 8px; top: 8px; font-size: 10px;
+  opacity: 0.4; letter-spacing: 0.1em; }
+/* 勝敗兩格並排:**寬度由外框的 grid 軌道給**,MUST NOT 去改 `.overlay-box` 自己的規則
+   —— 一改就等於故事書裡的結算面板長得跟遊戲裡不一樣,而那正是這座台子要避免的事。 */
+.bk-overlay { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.bk-overs { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.bk-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.bk-note { width: min(880px, 100%); font-size: 11.5px; line-height: 1.8; opacity: 0.5;
+  border-left: 2px solid rgba(255, 255, 255, 0.15); padding-left: 10px; }
+
+@media (max-width: 900px) {
+  body.storybook { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .bk-side { flex-direction: row; flex-wrap: wrap; overflow-x: auto; max-height: 38vh; }
+  .bk-keys { display: none; }
+}

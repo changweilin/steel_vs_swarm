@@ -74,7 +74,7 @@ jobs:
           node tools/audit_vernacular.mjs
           node tools/audit_codex.mjs
 
-      - name: 平衡七不變式
+      - name: 平衡不變式
         run: npm run bal
 
       # `npm test` 只是 WS client,**不會自己啟動伺服器**(見 /CLAUDE.md §5 測試標準流程)

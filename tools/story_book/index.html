@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地故事書 — 無人戰略:鋼鐵與蜂群</title>
+<!-- 遊戲的網頁根目錄是 `public/`(server.js 供應),所以 `portraits.js` 與 `story.js` 給的圖檔路徑
+     一律是相對的 `assets/…`。這座台子供應的是**儲存庫根目錄**(才讀得到 tools/),
+     於是那些相對路徑會落在 `/assets/…` 而 404。
+     用 `<base>` 把相對網址的基準搬回 `/public/` —— 這樣兩邊吃的是**同一份路徑字串**,
+     MUST NOT 改 `portraits.js` 去遷就這座台子(那會把整個遊戲的圖檔路徑綁在 dev 工具的佈局上)。
+     本頁自己的 css/js 全用絕對路徑(`/public/…`、`/tools/…`),不受 base 影響。 -->
+<base href="/public/">
+<!-- **遊戲的真品樣式**:章節卡 / 簡報 / 對話條 / 結算面板全部靠它。
+     book.css 只畫台子自己的框(側欄、頁碼、翻頁鈕),MUST NOT 覆寫任何 .chapter-* / .sb-* / .dlg-* 規則
+     —— 一覆寫就不是「完全仿照正式遊戲的呈現」了。 -->
+<link rel="stylesheet" href="/public/css/style.css">
+<link rel="stylesheet" href="/tools/story_book/book.css">
+</head>
+<body class="storybook" data-side="STEEL">
+
+<aside class="bk-side">
+  <div class="bk-brand">📖 本地故事書<span>dev-only ・ 唯讀 ・ 不動通關進度</span></div>
+  <div class="seg seg-sm bk-sides" id="bkSides">
+    <button class="segb on" data-side="STEEL">協約戰線</button>
+    <button class="segb" data-side="SWARM">同盟戰線</button>
+  </div>
+  <div class="bk-chapters" id="bkChapters"></div>
+  <div class="bk-pages" id="bkPages"></div>
+  <div class="bk-keys">← → 翻頁 ・ ↑ ↓ 換章 ・ Tab 換陣營 ・ 空白鍵 下一句</div>
+</aside>
+
+<main class="bk-main">
+  <header class="bk-bar">
+    <button class="btn bk-nav" id="bkPrev">◀ 上一頁</button>
+    <div class="bk-where"><b id="bkWhere"></b><span id="bkWhere2"></span></div>
+    <button class="btn bk-nav" id="bkNext">下一頁 ▶</button>
+  </header>
+  <div class="bk-stage" id="bkStage"></div>
+</main>
+
+<script type="module" src="/tools/story_book/book.js"></script>
+</body>
+</html>

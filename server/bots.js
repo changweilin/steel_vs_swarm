@@ -8,7 +8,7 @@ import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, bot
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
-  botRoleOf, botRoleTactic, botBuyOrder } from '../public/js/data.js';
+  botRoleOf, botRoleTactic, botBuyOrder, canUpgrade, CREEP_UPG } from '../public/js/data.js';
 import { cumLen, pointAt } from './sim.js';
 
 const CRUISE_ALT = { min: 26, max: 52 };   // 無人機巡航高度(離地;≥AA_MIN_ALT 會吃防空飛彈,故意讓 bot 有風險)
@@ -188,9 +188,13 @@ export class BotBrain {
     const target = this._target(h);
     if (!this._pulling()) this.state = target ? 'ENGAGE' : 'PUSH';
 
-    // 經濟:依 BUY_ORDER 逐項升級(階梯單價,資金/滿級門檻由 sim.buy 把關)。
+    // 經濟:依 BUY_ORDER 逐項升級(階梯單價 + 戰鬥分數門檻,一律由 sim.buy 複驗)。
+    // 前置篩選走 `canUpgrade` 同一支(2026-08-11):升級多了戰鬥分數這道閘 ⇒ 光看錢會在
+    // 「錢夠但分數不夠」時每一輪都吃掉一格手速去問一輪必被拒的採購。
     // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
-    if (h.money >= ECON.UPG_BASE && this._op('buy')) {
+    const canBuy = Object.entries(ECON.UPGRADES)
+      .some(([k, u]) => canUpgrade(u, h.upg[k] || 0, h.money, h.kn));
+    if ((canBuy || h.money >= CREEP_UPG.PRICE) && this._op('buy')) {
       let bought = false;
       // 採購順序隨定位換(攻堅先買重武器與護甲、支援先買招式與充能…);無定位 = 舊制順序
       for (const item of botBuyOrder(this._role)) {
@@ -582,6 +586,7 @@ export class BotBrain {
     const cand = [];
     for (const t of this.sim.ents.values()) {
       if (t.side === h.side || t.neutral || t.gar || t.hp <= 0 || (t.hero && t.dead)) continue;   // 不浪費彈藥打中立障礙/駐守兵
+      if (this.sim.siegeLocked(t)) continue;   // 攻堅順序未到的建築完全免傷 ⇒ 不當目標(唯一縫 sim.siegeLocked)
       if (t.hero && (t.stealthUntil || 0) > this.sim.t) continue;    // 匿蹤英雄鎖不到
       let d = Math.hypot(h.x - t.x, h.z - t.z, (h.y || 0) - (t.hero ? (t.y || 0) : 0));
       if (d > range * 1.15) continue;                    // 稍微超程也接近(移動中會進圈)
