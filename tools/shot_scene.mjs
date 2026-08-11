@@ -9,6 +9,7 @@
 //   lane_mid   各兵線中段                portal_a/b   第一座結構隧道的兩端洞口(有才拍)
 //   bridge     第一座橋的橋頭(有才拍)   hilltop      全圖最高點俯瞰兵線
 //   waterline  水岸(有水域才拍)         aerial       圖心高空俯瞰
+//   edge_wall  邊界牆(退一步看那一段是哪一款)   edge_far     邊界抬高看緩衝空間與視線邊界背景
 //
 // 圖層隔離:`--ink=0` / `--dof=0` / `--grade=0` / `--fxaa=0` / `--post=0` / `--curve=0` 各關一層,同一組機位再拍一次
 // ⇒ 「這張圖變醜是哪一層造成的」變成可回答的問題,而不是憑印象猜。
@@ -146,7 +147,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   const { applyEnvironment } = await import('/public/js/environment.js');
   const { Pipeline } = await import('/public/js/postfx.js');
   const { updateCelLight, worldCurveOn } = await import('/public/js/toon.js');
-  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax, dofNearM, dofFarM, curveKneeM, curveHorizonM }
+  const { SOLDIER_H, WATER, solveTowerSites, MAPGEO, objHeightMax, edgeWallInsetM, edgeWallHM, dofNearM, dofFarM, curveKneeM, curveHorizonM }
     = await import('/public/js/data.js');
 
   const venue = VENUES.find((v) => v.id === venueId);
@@ -435,6 +436,54 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
       }
     }
     if (found) add('waterline', found, [found[0] + 120, WATER.LEVEL, found[1]]);
+  }
+  // **世界邊界**(2026-08-11 邊界牆改吃型錄之後補的兩張):這一整套 —— 障礙環的 15 款型式、
+  // 緩衝空間的地貌拼圖與 3D 物件、視線邊界的假山/假海/假森林/假城市 —— 全是**只有站在
+  // 邊界往外看**才看得到的東西,而既有 11 個機位沒有任何一個朝那個方向。位置照樣是推導的:
+  // 站在夾制線內側一步(玩家能走到的最外緣),沿四條邊各取「離圖心那一側的中點」。
+  //   edge_wall 貼著牆看牆(型式對不對、有沒有浮在坡上、內面有沒有破洞)
+  //   edge_far  站同一點但抬高、看向緩衝空間深處(拼圖接縫、布景、背景天際線)
+  {
+    const eIn = edgeWallInsetM();
+    const cx = (terrain.minX + terrain.maxX) / 2, cz = (terrain.minZ + terrain.maxZ) / 2;
+    // 四條邊各量一次「這一側是不是水」,優先挑陸域那一側(水域那一側拍到的是海堤/貨輪,
+    // 也要看 —— 故第二張刻意挑**另一種**水陸域,兩張合起來兩種都拍得到)
+    const sides = [
+      { p: [cx, terrain.minZ + eIn], out: [cx, terrain.minZ - 1] },
+      { p: [cx, terrain.maxZ - eIn], out: [cx, terrain.maxZ + 1] },
+      { p: [terrain.minX + eIn, cz], out: [terrain.minX - 1, cz] },
+      { p: [terrain.maxX - eIn, cz], out: [terrain.maxX + 1, cz] },
+    ].map((s) => ({
+      ...s,
+      wet: terrain.waterY != null && surf(s.p[0], s.p[1]) < terrain.waterY + WATER.SHORE,
+      // 這一側的地有多陡(用來挑機位;取樣距與 `buildEdgeWall` 的坡度取樣同量級)
+      rise: Math.abs(surf(s.p[0] + (s.out[0] - s.p[0] ? 0 : 12), s.p[1] + (s.out[1] - s.p[1] ? 0 : 12))
+        - surf(s.p[0] - (s.out[0] - s.p[0] ? 0 : 12), s.p[1] - (s.out[1] - s.p[1] ? 0 : 12))),
+    }));
+    // `edge_wall` 挑**最平的那一側**:峽谷型場地四條邊都掛在崖上,相機無論退多遠都被地形塞滿
+    // (taroko 實測整張圖只有兩塊色)。這一張要看的是「牆長什麼樣」,而崖面那一款在
+    // `aerial` / `hilltop` 本來就看得到。
+    const dry = sides.filter((s) => !s.wet);
+    const wall = (dry.length ? dry : sides).slice().sort((a, b) => a.rise - b.rise)[0];
+    const far = sides.find((s) => s.wet !== wall.wet) || wall;
+    // 站在夾制線**退開一段**再拍:貼著站的話相機就埋在環體裡(taroko 那一段是 30m 高的
+    // 懸崖峭壁,實測整個畫面只有兩塊色)。退距與抬高一律由**物件高度上限**推導 —— 型錄最高
+    // 的那一款(懸崖 30m)也收在那個天花板之下,故它就是「一定框得住」的那把尺。
+    const backF = objHeightMax() * 0.4;
+    const wIn = [wall.p[0] - Math.sign(wall.out[0] - wall.p[0]) * backF,
+      wall.p[1] - Math.sign(wall.out[1] - wall.p[1]) * backF];
+    const base = surf(wIn[0], wIn[1]);
+    stations.push({
+      name: 'edge_wall',
+      p: [wIn[0], base + EYE + edgeWallHM() * 0.6, wIn[1]],
+      look: [wall.out[0], base + edgeWallHM(), wall.out[1]],
+    });
+    const fb = surf(far.p[0], far.p[1]);
+    stations.push({
+      name: 'edge_far',
+      p: [far.p[0], fb + objHeightMax() * 0.35, far.p[1]],
+      look: [far.p[0] + (far.out[0] - far.p[0]) * 400, fb, far.p[1] + (far.out[1] - far.p[1]) * 400],
+    });
   }
   {   // 空拍:圖心正上方(相機直接定位,這一支不經過玩家狀態機)
     const span = Math.max(terrain.worldW, terrain.worldH);

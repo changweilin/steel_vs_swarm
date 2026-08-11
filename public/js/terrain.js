@@ -585,10 +585,20 @@ export async function buildTerrain(cfg, onProgress) {
   //    「地形兩條路徑 + 水面共三處」釘住這個計數)。水面同理共用 `waterMat`。
   //  ⑤**純表現層**:不進 blockers / occ / LOS / heightAt / 小地圖框(那些全吃
   //    `minX..maxX`),伺服器完全不知道它的存在(原則 4)。
+  //  ⑥**地貌拼圖**(2026-08-11 使用者定案「緩衝空間也要貼地貌拼圖」):影像路徑的 UV 由
+  //    **夾制**改成**鏡射平鋪**(`mirrorUV`)。夾制取的是圖界那一排像素 ⇒ 往外 455m 是同一個
+  //    texel 拉成一條射線狀的糊斑(「地圖邊緣有一圈掃把痕」);鏡射把整張衛星圖沿邊翻過去,
+  //    接縫處**逐點同色**(鏡射在邊界上是恆等)而往外是這張圖自己的地貌繼續延伸 —— 拼圖的
+  //    塊就是這張圖自己的田、林、市街。無影像路徑本來就走 `paintTerrainTones`(屬性場覆蓋
+  //    整個平面),拼圖天生成立。
+  //  ⑦**對外的高度查詢**:`bufferHeightAt` 是裙的外推高度**唯一縫** —— 緩衝空間的 3D 物件
+  //    與視線邊界背景(`biomes.js`)靠它落地。它們若改吃 `heightAt`,座標會被夾回圖界 ⇒
+  //    整排物件貼在錯誤的高度上(近處陷進地裡、遠處浮在半空)。
   //  已知界線:①的餘裕錨在**地面視點**(`curveEyeM`,與地平線的反解同一個錨)—— 飛到天花板
   //  高度時視野本來就遠得多,裙的外緣會露出來;那是世界曲面本身的界線,不是這一段的。
   //  另:`carveTunnels`/`gradeRoadBeds` 是**之後**才動 `heights` 的局部開挖,裙是靜態幾何
   //  ⇒ 若有道路一路挖到圖界,接縫會差一個開挖深度(現制的路在障礙環處就封死了)。
+  let bufferHeightAt = null;
   {
     const B = edgeBufferM(), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
     const S = Math.max(1, (maxX - minX) / (N - 1));   // 一格地形(外推坡度的取樣距)
@@ -614,9 +624,18 @@ export async function buildTerrain(cfg, onProgress) {
       const g = (h0 - heightAt(cx - ux * S, cz - uz * S)) / S;   // 往外的坡度
       return Math.min(maxH, Math.max(minH, h0 + g * DEC * (1 - Math.exp(-d / DEC))));
     };
+    bufferHeightAt = outerH;
+    // 地貌拼圖(見 ⑥):把界外座標**鏡射**回圖內再取樣。三角波在圖界上是恆等 ⇒ 接縫逐點同色;
+    // 週期 2×跨距 ⇒ 往外一路是「這張圖自己的地貌翻過來又翻回去」,而不是一排拉長的邊緣像素。
+    const mirror = (v, lo, hi) => {
+      const span = hi - lo;
+      if (!(span > 0)) return lo;
+      const t = Math.abs(((v - lo) % (2 * span) + 2 * span) % (2 * span));
+      return lo + (t <= span ? t : 2 * span - t);
+    };
     const uvOf = (x, z) => {
       if (!imagery) return [0, 0];
-      const [lat, lng] = xzToLL(clampX(x), clampZ(z), center);   // 同上:逆投影,MUST NOT 拿 bbox 逐軸內插
+      const [lat, lng] = xzToLL(mirror(x, minX, maxX), mirror(z, minZ, maxZ), center);   // 同上:逆投影,MUST NOT 拿 bbox 逐軸內插
       return [((lon2tx(lng, imagery.z) - imagery.tx0) * 256) / imagery.canvas.width,
         1 - ((lat2ty(lat, imagery.z) - imagery.ty0) * 256) / imagery.canvas.height];
     };
@@ -1186,5 +1205,5 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, natureAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, natureAt, bufferHeightAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
 }

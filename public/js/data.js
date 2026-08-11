@@ -2604,10 +2604,18 @@ export const worldCeilY = (avgH, peakH) => Math.max(
 // `objHeightMax()`(4 × 砲塔高),天花板恆在它之上(WORLD_H 檔頭的結構不等式)⇒ 一道
 // 「連飛的都翻不過去」的牆在這個專案裡不可能存在,而且真做出來也會把 ② 整個擋掉。
 // 飛行那一半的權威一律是 `game.js` 的 x/z 夾制(高度無關),環只負責地面那一半。
+// **2026-08-11 使用者定案「邊界牆使用城牆/連排民房/…等等」之後,環厚變成逐款的真實尺寸**
+// (`edgewall.js WALL_KINDS[].depth`;貨輪 18m、懸崖 12m、列車 3.4m)。`WALL_T` 從此是**基準厚**,
+// 最深的那一款由 `edgeWallDeepM()` 表達 —— 兩者的分工:
+//   `WALL_T`        = 型錄還沒挑到之前的預設/基準(也是薄型式的量級)
+//   `edgeWallDeepM` = **邊界帶要讓開多少**(`placeBoundary` 的 IN1 吃它)
+// 稽核以「型錄裡最深的一款 === `edgeWallDeepM()`」雙向釘住:低報 = 邊界樓群長進船身,
+// 虛胖 = 邊界帶被無謂地擠掉。內緣一律貼夾制線,厚度往圖界方向長 ⇒ 「沿邊沒有縫」不受影響。
 export const WORLD_EDGE = {
   WALL_M: 40,        // 障礙環**內緣**的內縮量(公尺;= 舊制空氣牆線,夾制吃同一支)
-  WALL_T: 6,         // 環厚(公尺):環體佔內縮 [WALL_M − WALL_T, WALL_M],全在夾制線之外
-  WALL_H_F: 1.6,     // 環高 = 最高機體全高 × 此比(> 1 ⇒ 沒有任何機體看得到自己越過它)
+  WALL_T: 6,         // 基準環厚(公尺):薄型式的量級,全在夾制線之外
+  WALL_T_F: 3,       // 最深型式 = 基準厚 × 此比(現值 18m = 小型沿海貨輪的船寬)
+  WALL_H_F: 1.6,     // 環高**下界** = 最高機體全高 × 此比(> 1 ⇒ 沒有任何機體看得到自己越過它)
   SEG_M: 24,         // 單段長度(公尺)= 一根碰撞柱;perimeter/SEG_M ≈ 200 段 ≪ LOS.MAX_OCC
   SEG_LAP_F: 1.06,   // 段長重疊係數(> 1 ⇒ 相鄰段互相咬住,環上結構性地沒有縫)
   BUFFER_F: 1,       // 緩衝深度 = 地平線距離 × 此比(MUST ≥ 1,見上)
@@ -2623,8 +2631,10 @@ export const heroTallestH = () => {
   _tallestH = h;
   return _tallestH;
 };
-/** 障礙環高(公尺)。夾在物件高度上限之內(與建物/地標/巨岩共用同一個天花板) */
+/** 障礙環高的**下界**(公尺)。夾在物件高度上限之內(與建物/地標/巨岩共用同一個天花板) */
 export const edgeWallHM = () => Math.min(objHeightMax(), heroTallestH() * WORLD_EDGE.WALL_H_F);
+/** 最深型式的環厚(公尺)= 邊界帶要讓開的距離。單一縫,見上方檔頭 */
+export const edgeWallDeepM = () => WORLD_EDGE.WALL_T * WORLD_EDGE.WALL_T_F;
 /** 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭 */
 export const edgeBufferM = () => curveHorizonM() * WORLD_EDGE.BUFFER_F;
 

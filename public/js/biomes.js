@@ -27,7 +27,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
-  WORLD_EDGE, edgeWallInsetM, edgeWallHM, xzToLL,
+  WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, edgeBufferM, xzToLL, SLOPE, slopeDeg,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { quantizeRoads, GRID_HW } from './roadgrid.js';
@@ -38,7 +38,13 @@ import { mulberry32 } from './rng.js';
 import { buildGroundCover } from './ground.js';
 import { vegPartXform, partId, partJitter } from './xform.js';
 import { SignSheet, resolveName, resolveRef, signAspect } from './worldtext.js';
-import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed } from './beacons.js';
+import { beaconAnchors, planBeaconSites, buildBeacon, beaconCollider, beaconSeed, mergeGeos } from './beacons.js';
+// 邊界牆型錄 / 緩衝空間布景 / 視線邊界背景(2026-08-11 使用者定案)——
+// 型錄、切分規則、落點規劃全在那一支(純資料、零 THREE、離線可驗);本檔只負責取樣地貌與建幾何。
+import {
+  EDGE_WALL, WALL_KINDS, BACKDROP_KINDS, planWallRuns, wallParts, wallSlopeTier, edgeSeed, partBox,
+  planBufferProps, propParts, planBackdrop, backdropParts,
+} from './edgewall.js';
 import { libGeo } from './partlib.js';
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
 // 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
@@ -7015,76 +7021,215 @@ function buildWaterfalls(group, falls, terrain, center, dynamics) {
 //  ⑥`ry` 只取 0 / π/2:對稱盒在這兩個角度上「繞 +ry 還是 −ry」逐位元同判(|lx|/|lz| 只是
 //    對調),⇒ 客戶端 `_collide`、`makeBlockerTopIndex`、伺服器 occ 的 ry 反號三者天生同判,
 //    A30 那個「差一個負號 = 牆在另一邊」的坑在這裡結構性地不存在。
+//
+// **2026-08-11 使用者定案:環體改吃型錄**(城牆/連排民房/河堤/海堤/軍工級路障/土石流/懸崖
+// 峭壁/山崩地/消波塊/倒塌神木/倒塌摩天樓/倒塌高架橋/停駛的列車/連排大貨車/連排貨輪),
+// 「地貌切換或太長的時候,會隨機更換符合地貌與水陸域的牆」。型錄與切分規則全在 `edgewall.js`
+// (純資料、零 THREE ⇒ 離線稽核跑得動);本函式只負責三件事:取樣地貌 → 問規劃器 → 建幾何。
+// 上面六條紀律**一條都沒有變**,另外多兩條:
+//  ⑦**厚度是逐款的真實尺寸**(貨輪 18m、懸崖 12m):碰撞盒的**內面恆貼夾制線**,厚度往圖界
+//    方向長 ⇒ ② 的「沿邊沒有縫」與「內緣在夾制線上」逐條照舊,而 `placeBoundary` 的邊界帶
+//    改吃 `edgeWallDeepM()` 讓開最深的那一款。
+//  ⑧**演出 ⊆ 碰撞盒**:零件表整份收在「段長 × depth × 高」的盒子裡(`wallFit`),而盒子的
+//    內面被實體零件蓋滿到機體視線高(`wallFaceCover`)。**縱向尤其** —— 碰撞盒只到頂,視覺
+//    若更高,從上方斜射進緩衝空間的彈道會穿過看得見的船樓而伺服器毫無所悉(A30 家族)。
 function buildEdgeWall({ group, terrain, blockers }) {
-  const inset = edgeWallInsetM(), T = WORLD_EDGE.WALL_T, WH = edgeWallHM();
-  const hd2 = T / 2;                                          // 橫向(厚度)半寬
+  const inset = edgeWallInsetM(), WH = edgeWallHM();
   const half = WORLD_EDGE.SEG_M / 2 * WORLD_EDGE.SEG_LAP_F;   // 沿邊半長(> 半間距 ⇒ 段段重疊)
-  const mid = inset - hd2;                                    // 環心內縮:內緣恰好落在夾制線上
-  const STYLE = {   // 地貌 → 環體型式(body / cap 兩色;cap 腳印 MUST NOT 大於 body,見 ①)
-    urban: [0x9aa2a8, 0x7f868c],   // 混凝土擋牆
-    water: [0x93999e, 0x787e83],   // 消波堤(水域段照樣連續 —— 缺一段就是「不可越過」不成立)
-    bare: [0x8a8072, 0x70685c],    // 岩壁
-    green: [0x6f7355, 0x565a41],   // 土堤
+  const wy = terrain.waterY;
+  // 地貌/水陸域取樣:**零亂數**(classifyImg 是純影像判;MUST NOT 改吃會抽 rnd 的 classify)。
+  // 水陸域先判 —— 水面上的段不管衛星色是什麼都只能放水域型式。
+  const probe = (x, z) => {
+    const px = Math.min(terrain.maxX, Math.max(terrain.minX, x));
+    const pz = Math.min(terrain.maxZ, Math.max(terrain.minZ, z));
+    if (wy != null && terrain.heightAt(px, pz) < wy + WATER.SHORE) return 'water';
+    return classifyImg(terrain.sampleColor?.(px, pz)) || 'green';
   };
   const segs = [];
+  // 演出:逐節取零件表 → 套上這一節的位置/朝向 → 整圈**合併成一個** mesh(顏色走頂點色)。
+  // 逐件一個 mesh 的話一圈牆就是上千個 draw call(本渲染器是 draw call 瓶頸,見 beacons 紀律④)。
+  const batch = newBatch();
   const edges = [
-    { ax: 1, x0: terrain.minX, z0: terrain.minZ + mid, len: terrain.worldW, ry: 0 },
-    { ax: 1, x0: terrain.minX, z0: terrain.maxZ - mid, len: terrain.worldW, ry: 0 },
-    { ax: 0, x0: terrain.minX + mid, z0: terrain.minZ, len: terrain.worldH, ry: Math.PI / 2 },
-    { ax: 0, x0: terrain.maxX - mid, z0: terrain.minZ, len: terrain.worldH, ry: Math.PI / 2 },
+    { ax: 1, x0: terrain.minX, z0: terrain.minZ + inset, len: terrain.worldW, fry: 0, sz: -1 },
+    { ax: 1, x0: terrain.minX, z0: terrain.maxZ - inset, len: terrain.worldW, fry: Math.PI, sz: 1 },
+    { ax: 0, x0: terrain.minX + inset, z0: terrain.minZ, len: terrain.worldH, fry: Math.PI / 2, sz: -1 },
+    { ax: 0, x0: terrain.maxX - inset, z0: terrain.minZ, len: terrain.worldH, fry: -Math.PI / 2, sz: 1 },
   ];
   for (const e of edges) {
     const n = Math.max(1, Math.round(e.len / WORLD_EDGE.SEG_M));
     const step = e.len / n;
+    const row = [];
     for (let i = 0; i < n; i++) {
       const d = (i + 0.5) * step;
-      const x = e.ax ? e.x0 + d : e.x0;
-      const z = e.ax ? e.z0 : e.z0 + d;
-      // 沿段身取樣:底埋到最低點之下、頂面高過最高點 WH ⇒ 斜坡上不懸空也不被地形吃掉
-      let lo = Infinity, hi = -Infinity;
+      // (fx, fz) = 這一節**內面**的中心(恰在夾制線上);盒心等 run 配好款、知道厚度才算得出來
+      const fx = e.ax ? e.x0 + d : e.x0;
+      const fz = e.ax ? e.z0 : e.z0 + d;
+      // 沿段身取樣:底埋到最低點之下、頂面高過最高點 ⇒ 斜坡上不懸空也不被地形吃掉。
+      // 同一趟順便量**坡度**(2026-08-11 使用者追加):取樣距 = 段身取樣間距(≈ 半個段長的
+      // 一半,大於地形格距 ⇒ 量到的是地形本身的坡而不是網格雜訊);逐相鄰對取最陡的那一段,
+      // 再補一對橫向(沿牆厚方向)—— 只量沿邊那一軸的話,一道橫切過來的崖會整段判成平地。
+      // 坡度一律量**裸地形 `heightAt`**(§2.1 地形坡度移動的同一條規則)。
+      const hs = [];
       for (let k = -2; k <= 2; k++) {
         const t = k / 2 * half;
-        const h = terrain.heightAt(e.ax ? x + t : x, e.ax ? z : z + t);
-        lo = Math.min(lo, h); hi = Math.max(hi, h);
+        hs.push(terrain.heightAt(e.ax ? fx + t : fx, e.ax ? fz : fz + t));
       }
-      const y = lo - 1.5;
-      const st = classifyImg(terrain.sampleColor?.(x, z)) || 'green';
-      segs.push({ x, z, y, h: hi - y + WH, hw2: half, hd2, ry: e.ry, st: STYLE[st] ? st : 'green' });
+      const lo = Math.min(...hs), hi = Math.max(...hs), sp = half / 2;
+      let deg = 0;
+      for (let k = 1; k < hs.length; k++) deg = Math.max(deg, Math.abs(slopeDeg(hs[k] - hs[k - 1], sp)));
+      const cx = terrain.heightAt(e.ax ? fx : fx + sp, e.ax ? fz + sp : fz);
+      const cz = terrain.heightAt(e.ax ? fx : fx - sp, e.ax ? fz - sp : fz);
+      deg = Math.max(deg, Math.abs(slopeDeg(cx - cz, sp * 2)));
+      const biome = probe(fx, fz);
+      row.push({
+        x: fx, z: fz, lo, hi, len: step, biome, water: biome === 'water', e,
+        tier: wallSlopeTier(deg, SLOPE.EASE_DEG, SLOPE.BLOCK_DEG), deg,
+      });
+    }
+    // 切 run + 配款(唯一縫;純函式、零共享亂數);零件、碰撞柱、演出**同一趟**定案 ——
+    // 盒高是逐段實測的(見下),分兩趟就要嘛把零件表存起來、要嘛重算一次,兩條都是第二份真相。
+    for (const r of planWallRuns(row)) {
+      const def = WALL_KINDS[r.kind] || WALL_KINDS.barricade;
+      const hd2 = def.depth / 2, kh0 = Math.max(WH, def.h);
+      for (let i = r.i0; i < r.i1; i++) {
+        const s = row[i];
+        // 盒心 = 內面往圖界方向退半個厚度 ⇒ 內緣恆落在夾制線上(不管這一款多厚)
+        const x = e.ax ? s.x : s.x + e.sz * hd2;
+        const z = e.ax ? s.z + e.sz * hd2 : s.z;
+        const parts = wallParts(r.kind, { len: half * 2, depth: def.depth, h: kh0, seed: edgeSeed(x, z) });
+        // **盒高逐段實測**,不是逐款一個值(2026-08-11 城牆加了城門/城樓/砲台之後的必然):
+        // 同一款的節有高有矮(素牆 9m / 箭樓 11m / 城樓 14m),拿型錄宣告的最高值當每一節的
+        // 盒高,素牆那幾節的頂上就多出一截**撞得到卻看不見**的空氣(A30 家族的反面)。
+        // 宣告的 `def.h` 從此只是「這一款最高長到哪」= 授權上界(零件表 MUST 收在它之內)。
+        let top = 0;
+        for (const p of parts) top = Math.max(top, partBox(p).y1);
+        const kh = Math.max(WH, top);
+        // 零件的落地基準:段內最高的地形,水域段改取水面(否則海堤/貨輪整艘沉在水面下)
+        const ground = wy != null && s.water ? Math.max(s.hi, wy) : s.hi;
+        const y = s.lo - 1.5;
+        segs.push({
+          x, z, y, h: ground + kh - y, hw2: half, hd2,
+          ry: e.ax ? 0 : Math.PI / 2, fry: e.fry,
+          kind: r.kind, biome: s.biome, water: s.water, tier: r.tier, ground, kh,
+        });
+        // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
+        blockers.push({ x, z, y, h: ground + kh - y, hw2: half, hd2, ry: e.ax ? 0 : Math.PI / 2, r: Math.hypot(half, hd2) });
+        // 底座:段底到落地基準之間那一截(地形起伏 + 埋深)。沒有它就是「牆浮在坡上」——
+        // 而那一截**在碰撞盒之內**,漏掉即是撞得到卻看不見。
+        const plinth = ground - y;
+        if (plinth > 0.01) parts.push({ g: ['box', half * 2, plinth, def.depth], c: PLINTH_C, p: [0, -plinth / 2, 0] });
+        emitWallParts(batch, parts, x, ground, z, e.fry, 1);
+      }
     }
   }
-  // 碰撞柱:與建物走同一條有向盒路徑(hw2/hd2/ry);刻意不掛 bld/std(見 ⑤)、不掛 cl(不可攀爬)
-  for (const s of segs) {
-    blockers.push({ x: s.x, z: s.z, y: s.y, h: s.h, hw2: s.hw2, hd2: s.hd2, ry: s.ry, r: Math.hypot(s.hw2, s.hd2) });
-  }
-  // 演出:逐型式各一個 InstancedMesh(body + cap)。盒身尺寸 = 碰撞盒尺寸,逐位元相同。
-  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
-  const P = new THREE.Vector3(), S = new THREE.Vector3();
-  const capH = Math.min(0.9, WH * 0.14);
-  for (const key of Object.keys(STYLE)) {
-    const list = segs.filter((s) => s.st === key);
-    if (!list.length) continue;
-    const [cBody, cCap] = STYLE[key];
-    const bodyM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), envMat(cBody, { wash: 0.4, cool: 0.4 }), list.length);
-    const capM = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), envMat(cCap, { wash: 0.3, cool: 0.45 }), list.length);
-    list.forEach((s, i) => {
-      E.set(0, s.ry, 0); Q.setFromEuler(E);
-      P.set(s.x, s.y + s.h / 2, s.z);
-      S.set(s.hw2 * 2, s.h, s.hd2 * 2);
-      M.compose(P, Q, S);
-      bodyM.setMatrixAt(i, M);
-      P.set(s.x, s.y + s.h - capH / 2, s.z);
-      S.set(s.hw2 * 2, capH, s.hd2 * 2);
-      M.compose(P, Q, S);
-      capM.setMatrixAt(i, M);
-    });
-    for (const m of [bodyM, capM]) {
-      m.instanceMatrix.needsUpdate = true;
-      m.castShadow = false;
-      m.frustumCulled = false;   // 環繞全圖:整體包圍球比視錐大,逐幀剔除只會整圈忽隱忽現
-      group.add(m);
-    }
-  }
+  flushPartBatch(group, batch, { wash: 0.42, cool: 0.42 });
   return segs;
+}
+
+// ---- 型錄零件 → 世界幾何(邊界牆 / 緩衝空間物件 / 視線邊界背景共用)----
+// 三者的零件描述子詞彙完全相同(`edgewall.js` 檔頭),故合併/發射也共用這兩支:
+// **第二份實作的代價是「某一類物件的 A25 回收漏掉」**,而畫面上完全看不出來(同 beacons
+// 的 `mergeGeos` 檔頭)。
+const PLINTH_C = 0x7b7367;   // 底座色(埋在地形裡的那一截,看得到的只有貼著坡面的一線)
+function wallGeo(spec) {
+  const [t, a, b, c] = spec;
+  if (t === 'box') return new THREE.BoxGeometry(a, b, c);
+  if (t === 'cyl') return new THREE.CylinderGeometry(a, b, c, spec[4] || 6);
+  if (t === 'cone') return new THREE.ConeGeometry(a, b, spec[3] || 6);
+  return new THREE.IcosahedronGeometry(a, 0);
+}
+const _wm = new THREE.Matrix4(), _wq = new THREE.Quaternion(), _we = new THREE.Euler();
+const _wp = new THREE.Vector3(), _ws = new THREE.Vector3();
+/** 把一份零件表套上「這一件的位置/朝向/縮放」後推進批次(顏色隨幾何一起記帳) */
+function emitWallParts(batch, parts, ox, oy, oz, ry, scale) {
+  for (const p of parts) {
+    const geo = wallGeo(p.g);
+    const [px = 0, py = 0, pz = 0] = p.p || [];
+    const [rx = 0, pry = 0, rz = 0] = p.r || [];
+    // 先套零件自己的位移/旋轉(局部),再整件轉 ry、縮放、平移到世界
+    _we.set(rx, pry, rz);
+    _wm.compose(_wp.set(px, py, pz), _wq.setFromEuler(_we), _ws.set(1, 1, 1));
+    geo.applyMatrix4(_wm);
+    _we.set(0, ry, 0);
+    _wm.compose(_wp.set(ox, oy, oz), _wq.setFromEuler(_we), _ws.set(scale, scale, scale));
+    geo.applyMatrix4(_wm);
+    batch.geos.push(geo);
+    batch.cols.push(p.c);
+  }
+}
+/**
+ * 一批零件 → **一個** mesh(合併走 beacons 的 `mergeGeos` 唯一縫,含 A25 的暫時幾何回收)。
+ * 顏色走頂點色 ⇒ 整圈牆不管用了幾十個色票都只有一個 draw call(逐色一個 mesh 的話,
+ * 光是型錄的色票就上百個 —— 本渲染器是 draw call 瓶頸)。
+ */
+function flushPartBatch(group, batch, matOpts) {
+  if (!batch.geos.length) return;
+  const m = new THREE.Mesh(mergeGeos(batch.geos, batch.cols),
+    envMat(0xffffff, { vertexColors: true, ...matOpts }));
+  m.castShadow = false;
+  // 環繞全圖:整體包圍球恆與視錐相交,逐幀剔除只是白算(同舊制的環)
+  m.frustumCulled = false;
+  group.add(m);
+}
+const newBatch = () => ({ geos: [], cols: [] });
+
+// ---- 緩衝空間的 3D 物件(使用者定案:「邊界延伸不可進入的緩衝空間…並加入少許 3D 物件」)----
+// 純表現層:不進 blockers / occ / LOS / heightAt(玩家被 x/z 夾制在障礙環之內,永遠碰不到
+// 這些東西)。落地高度走 `terrain.bufferHeightAt`(裙自己那份外推高度的**單一縫**)——
+// 拿 `heightAt` 會夾回圖界,整排物件會沿著邊界貼在錯誤的高度上。
+function buildBufferProps({ group, terrain }) {
+  if (!terrain.bufferHeightAt) return 0;
+  const probe = (x, z) => classifyImg(terrain.sampleColor?.(
+    Math.min(terrain.maxX, Math.max(terrain.minX, x)),
+    Math.min(terrain.maxZ, Math.max(terrain.minZ, z)),
+  )) || 'bare';
+  const wy = terrain.waterY;
+  const plan = planBufferProps({
+    minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ,
+    buffer: edgeBufferM(),
+    step: EDGE_WALL.PROP_STEP_M * (lowPower ? 1.6 : 1),
+    margin: edgeWallInsetM(),   // 讓開障礙環那一圈:布景的零件散得比落點遠,貼著圖界擺會伸進可玩區
+    probe: (x, z) => {
+      const h = terrain.bufferHeightAt(x, z);
+      return wy != null && h < wy + WATER.SHORE ? 'water' : probe(x, z);
+    },
+  });
+  const batch = newBatch();
+  for (const p of plan) {
+    const y = terrain.bufferHeightAt(p.x, p.z);
+    // 水域物件坐在水面上(礁岩露出水面才看得見);陸域坐在裙的地表上
+    const base = p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
+    emitWallParts(batch, propParts(p.kind, p.seed), p.x, base, p.z, p.ry, p.s);
+  }
+  flushPartBatch(group, batch, { wash: 0.5, cool: 0.5 });
+  return plan.length;
+}
+
+// ---- 視線邊界的背景(使用者定案:「視線邊界的空氣牆貼上假山/假海/假森林/假城市」)----
+// 落在緩衝深度的 `BACK_INSET_F` 上,逐段由**最近的圖界點**的地貌決定貼哪一種。
+// 高度上限吃 `objHeightMax()`(與建物/地標/巨岩同一個天花板)⇒ 背景永遠構不到世界天花板;
+// 而它離可玩區 400m 以上、又被 x/z 夾制擋著,飛行機體也永遠到不了 —— 兩件事各自成立。
+function buildBackdrop({ group, terrain }) {
+  if (!terrain.bufferHeightAt) return 0;
+  const wy = terrain.waterY;
+  const probe = (x, z) => {
+    if (wy != null && terrain.heightAt(x, z) < wy + WATER.SHORE) return 'water';
+    return classifyImg(terrain.sampleColor?.(x, z)) || 'bare';
+  };
+  const plan = planBackdrop({
+    minX: terrain.minX, maxX: terrain.maxX, minZ: terrain.minZ, maxZ: terrain.maxZ,
+    buffer: edgeBufferM(), probe,
+  });
+  const batch = newBatch();
+  for (const b of plan) {
+    const h = objHeightMax() * (BACKDROP_KINDS[b.kind]?.hF ?? 1);
+    const y = terrain.bufferHeightAt(b.x, b.z);
+    emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed }),
+      b.x, wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y, b.z, b.ry, 1);
+  }
+  // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形
+  flushPartBatch(group, batch, { wash: 0.78, cool: 0.72, rim: 0 });
+  return plan.length;
 }
 
 // ---- 邊界帶(障礙環外的緩衝空間)的視覺邊界 ----
@@ -7096,7 +7241,9 @@ function buildEdgeWall({ group, terrain, blockers }) {
 function placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement }) {
   // 帶的內緣 = 障礙環的外緣(推導不手寫:改環厚/內縮量,這一帶自己跟著讓開)。
   // 現值與舊制的 34 逐位元相同 ⇒ 這一支的亂數序列與佈局完全不變。
-  const IN0 = 8, IN1 = edgeWallInsetM() - WORLD_EDGE.WALL_T;
+  // 2026-08-11:內緣改吃 `edgeWallDeepM()`(最深的那一款牆的厚度)—— 環體自從吃型錄之後
+  // 厚度是逐款的真實尺寸(貨輪 18m),沿用 `WALL_T` 的話邊界樓群會長進船身裡。
+  const IN0 = 8, IN1 = edgeWallInsetM() - edgeWallDeepM();
   const species = Object.keys(GIANT_DEFS);
   const edges = [
     { x0: terrain.minX, z0: terrain.minZ, dx: 1, dz: 0, len: terrain.worldW },
@@ -7701,6 +7848,10 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 排在尾端會被密集市區擠掉 = 伺服器不知道有牆);排在這裡也保證地形開挖/整平都已定案。
   // 零共享 rnd 消耗 ⇒ 插在這一行不會推移後面任何一株植被的佈局(§2.3)。
   const edgeSegs = buildEdgeWall({ group, terrain, blockers });
+  // 緩衝空間布景與視線邊界背景:純表現層(不進 blockers/occ/LOS)、零共享 rnd ⇒ 插在這裡
+  // 不會推移任何一株植被的佈局,也不影響 occ 上傳的段數。
+  const bufferProps = buildBufferProps({ group, terrain });
+  const backdropSegs = buildBackdrop({ group, terrain });
   const greenSites = [], bareSites = [];
   for (let a = 0; a < 1400 && (greenSites.length < 20 || bareSites.length < 28); a++) {
     const x = rx(), z = rz();
