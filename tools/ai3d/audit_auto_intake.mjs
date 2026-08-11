@@ -22,6 +22,11 @@
 //   --break-pane       保險絲又被當成「原版」並排 ⇒ Ⅸ 紅(那不是同源新舊版本)
 //   --break-home       掃姊妹 worktree 又綁回「ROOT 是不是 worktree」 ⇒ Ⅸ 紅(從主檢出找不到語料)
 //   --break-corpus     第 ⑦⑧ 站的閘退回只看指令列旗標 ⇒ Ⅹ 紅(非出貨語料家會進遊戲)
+//   --break-home-arg   指名資料家改收路徑字串        ⇒ Ⅸ 紅(請求可以指定任意目錄)
+//   --break-on         客戶端自己挑存活欄位          ⇒ Ⅸ 紅(job 的鈕面永遠停在「▶ 啟動」)
+//   --break-keys       來源帳的鍵只讀 `keys`         ⇒ Ⅺ 紅(以 `key:` 寫的那些列判決查不到)
+//   --break-redo       未覆核重跑插到新圖前面        ⇒ Ⅺ 紅(順位是使用者定的)
+//   --break-archive    封存不寫墓碑帳                ⇒ Ⅺ 紅(撤完之後沒有任何一本帳說得出它存在過)
 // Ⅸ 的**三態順序**沒有 break 旗標,理由是它已經被四條固定期望值釘死(todo/done/dropped/fix
 // 各一條,且 fix 那一條刻意同時滿足 dropped)—— 分支被調換位置時至少有一條會紅。
 //
@@ -40,7 +45,7 @@ import {
 import { appendRoster, verifyRoster, snapshot, restore, pickSlot } from './auto_intake.mjs';
 import { removeRoster } from './apply_verdicts.mjs';
 import { photoStates, STATES } from './photo_state.mjs';
-import { corpusMeta } from './provenance.mjs';
+import { archivedPhotoIds, corpusMeta, loadArchive, partKeys } from './provenance.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BREAK_APPEND = process.argv.includes('--break-append');
@@ -51,6 +56,11 @@ const BREAK_PANEL = process.argv.includes('--break-panel');
 const BREAK_PANE = process.argv.includes('--break-pane');
 const BREAK_HOME = process.argv.includes('--break-home');
 const BREAK_CORPUS = process.argv.includes('--break-corpus');
+const BREAK_HOME_ARG = process.argv.includes('--break-home-arg');
+const BREAK_ON = process.argv.includes('--break-on');
+const BREAK_KEYS = process.argv.includes('--break-keys');
+const BREAK_REDO = process.argv.includes('--break-redo');
+const BREAK_ARCHIVE = process.argv.includes('--break-archive');
 
 let pass = 0, fail = 0, unverified = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -358,9 +368,21 @@ console.log('\nⅨ 圖檔三態(未處理/已處理/需修正)與零件台的啟
     '零件台自己不 spawn(兩個入口兩套閘 ⇒ 漏掉的那一套沒有任何錯誤訊息)');
 
   // (d) argv 零信任:資料家是**推導**出來的,請求碰不到
-  const dsSrc = readSrc('tools', 'dev_supervisor.mjs');
-  ok(/export function argvOf\(t\)/.test(dsSrc) && !/argvOf\([^)]*req/.test(dsSrc),
-    'argvOf 只吃工具本身(請求進不了命令列)');
+  let dsSrc = readSrc('tools', 'dev_supervisor.mjs');
+  // 2026-08-11 起可以**指名**資料家(版權未確認那一份筆數少、又不出貨,不給挑就永遠跑不到)。
+  // 鬆的只有「挑哪一個」,而且鬆的方式 MUST 是**索引**:路徑仍然只由 `corpusHomes()` 算出來。
+  // 這一族最容易鬆錯的就是這裡 —— 直接收一個路徑字串,閘門當場從「請求只能挑一個 key」
+  // 變成「請求可以指定任意目錄」,而功能看起來一模一樣。
+  if (BREAK_HOME_ARG) {
+    dsSrc = inject(dsSrc, 'pick = corpusHomes()[homeIdx]?.home || null;',
+      'pick = String(homeIdx);', '--break-home-arg');
+  }
+  ok(/export function argvOf\(t, home = null\)/.test(dsSrc) && !/argvOf\([^)]*req/.test(dsSrc),
+    'argvOf 只吃工具本身 + 一個已經解析好的資料家(請求進不了命令列)');
+  ok(/pick = corpusHomes\(\)\[homeIdx\]\?\.home \|\| null;/.test(dsSrc),
+    '指名資料家 = **索引**進 corpusHomes() 的推導結果(請求送的是第幾個,不是路徑)');
+  ok(/\(start\|stop\)\(\?:\\\/\(\\d\{1,3\}\)\)\?\$/.test(dsSrc),
+    '路由第三段只收數字(它進不了命令列,也進不了檔案路徑)');
   ok(/spawn\(process\.execPath, \[t\.script, \.\.\.argv\]/.test(dsSrc), 'spawn 的 argv 來自 argvOf');
   ok(/corpusHome\(\)/.test(dsSrc), '資料家由 corpusHome() 推導(語料家會搬,寫死等於下次就錯)');
   // 語料家與模型棧家是**兩件事**(runbook §5d 刻意不同住)。少了 `--venv`,harvest_loop 的
@@ -376,6 +398,31 @@ console.log('\nⅨ 圖檔三態(未處理/已處理/需修正)與零件台的啟
   // 而每按一次啟動就多開一支(兩支同時寫 harvest_state.json,畫面完全正常)
   ok(/kind === 'job'/.test(dsSrc) && /alive\(running\.get\(t\.key\)\)/.test(dsSrc),
     'job 的「已經在跑了嗎」問的是自己的子行程,不是埠');
+
+  // (d2) **「跑起來了嗎」是一欄推導值 `on`,客戶端 MUST NOT 自己挑欄位**(2026-08-11 修的那個 bug)。
+  // 兩種 kind 的存活判準不同一件事,而客戶端只想知道那顆鈕要畫成啟動還是停止 ——
+  // 舊版 `main.js` 對 job 讀了 `t.listening`(job **刻意不回**這一欄)⇒ 恆 undefined:
+  // 鈕面永遠停在「▶ 啟動」、網址欄永遠寫「未啟動」,而背景其實跑著。
+  // 使用者回報的原話就是「img→3D 採集迴圈點啟動沒反應」。
+  let mainSrc = readSrc('public', 'js', 'main.js');
+  let rvOnSrc = readSrc('tools', 'parts_review', 'review.js');
+  if (BREAK_ON) {
+    mainSrc = inject(mainSrc, 'const on = !!t.on;', 'const on = !!t.listening;', '--break-on');
+    rvOnSrc = inject(rvOnSrc, 'const on = !!t.on;', 'const on = !!t.running;', '--break-on');
+  }
+  ok(/on: owned, running: owned/.test(dsSrc) && /listening: isUp, on: isUp/.test(dsSrc),
+    '`on` 由 statusOf 逐 kind 推導(job = 子行程活著 / server = 埠聽得到)');
+  ok(/const on = !!t\.on;/.test(mainSrc) && !/t\.listening \? '⏹ 停止'/.test(mainSrc),
+    '設定頁那一列讀推導欄 `on`(讀 t.listening = job 的鈕面永遠停在「▶ 啟動」)');
+  ok(/const on = !!t\.on;/.test(rvOnSrc) && !/const on = !!t\.running;/.test(rvOnSrc),
+    '零件台那一條窄帶也讀 `on`(兩個客戶端 MUST 同一個判準)');
+  // 停下來之後才是最想回頭看日誌的時候 ⇒ 紀錄 MUST NOT 在 stop 時被刪掉
+  ok(!/running\.delete\(key\)/.test(dsSrc),
+    'stop 之後日誌留著(刪掉 = 按下停止的瞬間執行進度頁整個清空,看起來像剛才什麼都沒跑)');
+  ok(/child\.once\('error'/.test(dsSrc),
+    'spawn 的 error 有人接(沒接 = 未捕捉例外,會把承載它的伺服器整個帶走)');
+  ok(dsSrc.includes(String.raw`\/log$/`),
+    '有一條唯讀的全量日誌端點(清單那一支只帶最後 6 行,不夠看一輪)');
 
   // (e) 面板只負責畫 —— 判準一個都不准住在頁面上
   let rvSrc = readSrc('tools', 'parts_review', 'review.js');
@@ -504,10 +551,111 @@ console.log('\nⅩ 非出貨語料家(corpus.json:授權未確認的那一份只
     '非出貨家收進來的逐筆蓋 restricted 戳記(帳本自己說得出「這張不能出貨」)');
 
   // (d) 面板 MUST 標出來 —— 非出貨語料長得跟正式語料一模一樣
-  ok(/corpus: corpusMeta\(home\)/.test(readSrc('tools', 'parts_review.mjs')),
+  ok(/corpus: corpusMeta\(pick\.home\)/.test(readSrc('tools', 'parts_review.mjs')),
     '/api/photos 帶出這個家出不出貨');
   ok(/corpus\.shipping === false/.test(readSrc('tools', 'parts_review', 'review.js')),
     '零件台把非出貨語料標出來(不標的話台上兩份混在一起,而人眼判決是照著台上做的)');
+}
+
+// ============ Ⅺ 封存區 + 未覆核重跑 + 來源帳鍵的正規化 ============
+// 2026-08-11 使用者需求三條:「加入移除鍵,移除遊戲與零件台,放到封存區」/
+// 「採集迴圈預設未覆核的全重跑(順位在後面)」/「版權問題不在專案的管線也要顯示在零件台」。
+console.log('\nⅪ 封存區 / 未覆核重跑 / 來源帳鍵的正規化');
+{
+  // (a) **兩種寫法都要查得到**(行為直測)。帳本允許 `key:` 與 `keys: []`,而現役那幾列
+  //     (mass_a / mass_b / mass_c / chimney_a …)寫的是 `key:` ——
+  //     只讀 `keys` 的話,判 ⇄/✕ 時「這顆吃哪張圖」查出來是空集合:節點撤了、帳留著、
+  //     照片一張都沒處置,而畫面上只印「(0 張)」。2026-08-11 實測踩到。
+  ok(partKeys({ key: 'a/b' }).join() === 'a/b', "單顆寫法 `key:` 查得到");
+  ok(partKeys({ keys: ['a/b', 'a/c'] }).join() === 'a/b,a/c', '一組寫法 `keys:` 查得到');
+  ok(partKeys({}).length === 0 && partKeys(null).length === 0, '兩者皆空 ⇒ 空陣列(不炸)');
+  ok(partKeys({ key: 'x', keys: [] }).join() === 'x', '空 `keys` 退回 `key`(與 loadProvenance 同一條)');
+  let vsrc1 = readSrc('tools', 'ai3d', 'apply_verdicts.mjs');
+  let pssrc = readSrc('tools', 'ai3d', 'photo_state.mjs');
+  if (BREAK_KEYS) {
+    vsrc1 = inject(vsrc1, 'man.parts.filter((p) => partKeys(p).includes(key))',
+      'man.parts.filter((p) => (p.keys || []).includes(key))', '--break-keys');
+    pssrc = inject(pssrc, 'nodesOf.get(im.id).push(...partKeys(p));',
+      'nodesOf.get(im.id).push(...(p.keys || []));', '--break-keys');
+  }
+  ok(/partKeys\(p\)\.includes\(key\)/.test(vsrc1), '撤節點時的來源帳查找走 partKeys');
+  ok(/push\(\.\.\.partKeys\(p\)\)/.test(pssrc), '圖檔三態的「這張圖出貨成哪幾顆」也走 partKeys');
+
+  // (b) 封存帳 = **墓碑**(行為直測:合成一份,看得出來源圖與「這張圖人眼處置過了」)
+  const dir = mkdtempSync(join(tmpdir(), 'svs-arc-'));
+  try {
+    const ap = join(dir, 'archive.json');
+    ok(loadArchive(ap).parts.length === 0, '沒有封存帳 ⇒ 空的(不是例外)');
+    writeFileSync(ap, JSON.stringify({
+      version: 1,
+      parts: [{ keys: ['building/mass_z'], at: '2026-08-11T00:00:00Z', why: '太薄', imgs: [{ id: 'p_arc' }] }],
+    }));
+    const arc = loadArchive(ap);
+    ok(arc.byKey.get('building/mass_z')?.why === '太薄', '封存帳逐鍵查得到(理由帶得出來)');
+    ok(archivedPhotoIds(arc).has('p_arc'), '封存帳說得出「這一顆吃的是哪張母照片」');
+
+    // 封存過的照片 ⇒ **人眼處置過了** ⇒ MUST NOT 再進未覆核重跑池(否則判了移除、
+    // 下一輪又生成一顆一模一樣的回來,而每一支稽核都是綠的)
+    const home = mkdtempSync(join(tmpdir(), 'svs-arc-home-'));
+    try {
+      writeFileSync(join(home, 'photo_manifest.json'), JSON.stringify([
+        { family: 'rock', part: 'facet', id: 'p_arc', ok: true },
+        { family: 'rock', part: 'facet', id: 'p_raw', ok: true },
+      ]));
+      writeFileSync(join(home, 'harvest_state.json'), JSON.stringify({
+        'rock/facet/p_arc': 'x', 'rock/facet/p_raw': 'x',
+      }));
+      const rev = join(home, 'review.json'); writeFileSync(rev, JSON.stringify({ items: {} }));
+      const prov = join(home, 'prov.json'); writeFileSync(prov, JSON.stringify({ version: 1, parts: [] }));
+      const st = photoStates(home, { reviewPath: rev, provPath: prov, archivePath: ap });
+      const of = (id) => st.rows.find((r) => r.id === id);
+      ok(of('p_arc').state === 'done' && of('p_arc').reviewed === true,
+        '封存過的照片:已處理 **且** 已覆核(不再重跑)');
+      ok(of('p_raw').state === 'done' && of('p_raw').reviewed === false,
+        '送過生成、沒人看過的:已處理但**未覆核** ⇒ 這一批才是要重跑的');
+      ok(st.redo === 1, '「未覆核」是與狀態正交的另一個維度(不是第五態)');
+    } finally { rmSync(home, { recursive: true, force: true }); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+
+  // (c) 判 `⊘ 移除` MUST 寫墓碑 —— 撤完之後來源帳那一列就沒了,不搬過去的話
+  //     「它存在過、吃過哪張圖、為什麼被移除」整組消失,而台上看起來像它從來沒出現過
+  let vsrc2 = readSrc('tools', 'ai3d', 'apply_verdicts.mjs');
+  if (BREAK_ARCHIVE) {
+    vsrc2 = inject(vsrc2, 'arch.parts.push(archiveRow(key, w.rows, it, w.slot));', '', '--break-archive');
+  }
+  ok(/it\.status === 'archive'/.test(vsrc2), 'apply_verdicts 認得 archive');
+  ok(/arch\.parts\.push\(archiveRow\(/.test(vsrc2), '移除 = 撤節點 + 把那一列搬進封存帳');
+  ok(/if \(arch\.parts\.length\) writeJson\(ARCHIVE_PATH/.test(vsrc2), '封存帳只在真的有東西進去時落地');
+  // 移除**不動照片**:使用者要的是「不要在遊戲與台上出現」,不是「這張照片不能用」。
+  // 取**那一個分支的原文**來驗 —— 抓個大概(前後 N 個字元)會把隔壁 reimg/purge 分支
+  // 的 `screen_mattes.py` 一起吃進來,而那條斷言從此永遠紅字(或永遠綠,看寫法)。
+  // 註解裡本來就寫著「判決的紀律只有 screen_mattes.py 一份」⇒ 驗的是**程式碼**,
+  // 剝掉行註解再看(㋐:逐行剝註解 MUST 吃 `\r?\n`,而 readSrc 已經正規化過換行)
+  const arcBranch = (vsrc2.split("it.status === 'archive'")[1]?.split('} else if')[0] || '')
+    .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  ok(arcBranch.length > 0 && !/screen_mattes\.py|writeJson\(HARVEST_STATE|ovr\[/.test(arcBranch),
+    '移除 MUST NOT 順手改語料帳本或覆寫表(判決紀律只有 screen_mattes 一份;不重跑靠的是封存帳)');
+
+  // (d) 重跑**排在新圖後面**(使用者定的順位)+ 最早餵過的先跑(不然每輪重跑同樣那十幾張)
+  let hlsrc = readSrc('tools', 'ai3d', 'harvest_loop.mjs');
+  if (BREAK_REDO) hlsrc = inject(hlsrc, 'return [...out, ...redo];', 'return [...redo, ...out];', '--break-redo');
+  ok(/return \[\.\.\.out, \.\.\.redo\];/.test(hlsrc), '新圖排前面、未覆核重跑接在後面(順位在後面)');
+  ok(/redo\.sort\(\(a, b\) => a\.fedAt\.localeCompare\(b\.fedAt\)\)/.test(hlsrc),
+    '重跑取最早餵過的優先(不排序 ⇒ 每一輪都重跑同樣那十幾張)');
+  ok(/photoStates\(HOME\)\.rows\.filter\(\(r\) => r\.state === 'done' && !r\.reviewed\)/.test(hlsrc),
+    '「未覆核」走 photo_state 那一份推導(迴圈自己判 = 面板與迴圈說出兩套話)');
+  ok(/const NO_REDO = flag\('no-redo'\);/.test(hlsrc), '`--no-redo` 退回 2026-08-11 之前的行為');
+  ok(/一輪一列 JSONL|rec\.redone/.test(hlsrc), '本輪重跑了幾顆有記(靜默略過讀起來就是「沒有新的」)');
+
+  // (e) 儲存庫外的資料家:註冊縫是**明講**的,而預設挑選 MUST 仍然挑出貨家
+  const pvsrc = readSrc('tools', 'ai3d', 'provenance.mjs');
+  ok(/export function extraHomes\(\)/.test(pvsrc) && /corpus_homes\.json/.test(pvsrc)
+    && /SVS_PHOTO_HOMES/.test(pvsrc),
+    '儲存庫外的資料家由註冊縫帶進候選(檔案 + 環境變數兩條路)');
+  ok(/return \(all\.find\(\(h\) => h\.shipping\) \|\| all\[0\]\)\?\.home \?\? null;/.test(pvsrc),
+    '預設挑選仍然只挑出貨家(要跑非出貨那一份 MUST 明講 —— 構造保證從「推導不到」搬到這裡)');
+  ok(/shipping: meta\.shipping, why: meta\.why/.test(pvsrc),
+    '每一個候選自帶「出不出貨」(面板要逐列標,而不是只標選中的那一個)');
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 通過 ${pass} 項,失敗 ${fail} 項${unverified ? `,未驗 ${unverified} 項` : ''}`);

@@ -127,6 +127,13 @@ body.pr::before, body.pr::after { display: none; }
 .pr-hst.done { color: #9fe7bb; }
 .pr-hst.fix { color: #ffcf8a; }
 .pr-hst.dropped { color: var(--dim); }
+.pr-hst.run { color: #a9c8ff; }
+.pr-hst.arc { color: var(--dim); }
+.pr-hsel {
+  font-family: var(--mono); font-size: 11px; max-width: 260px;
+  background: rgba(0, 0, 0, 0.35); color: var(--railW);
+  border: 1px solid var(--railS); border-radius: 3px; padding: 2px 4px;
+}
 .pr-hlist {
   width: 100%; max-height: 168px; overflow-y: auto;
   font-family: var(--mono); font-size: 10px; color: var(--dim);
@@ -134,3 +141,22 @@ body.pr::before, body.pr::after { display: none; }
 }
 .pr-hlist div { padding: 1px 0; }
 .pr-hlist b { color: var(--railW); font-weight: 400; }
+
+/* ---- 覆核那一段:擺在畫面正下方(2026-08-11)--------------------------------
+   審核的動作是「看一眼、判一下、換下一件」⇒ 判決鈕要**在圖旁邊**,不是捲到最底下。
+   給一條左邊框把它與上下的資料段分開(它是要動手的那一段,不是要讀的那一段)。 */
+.pr-verdict { border-left: 2px solid rgba(var(--railW-rgb), 0.5); padding-left: 9px; }
+.pr-verdict .pr-note { max-width: 420px; }
+
+/* ---- 執行進度(採集迴圈)---------------------------------------------------- */
+.pr-cmd { font-family: var(--mono); font-size: 10px; word-break: break-all; line-height: 1.55; }
+.pr-runlog {
+  max-height: 420px; overflow-y: auto; font-family: var(--mono); font-size: 10.5px;
+  line-height: 1.55; color: var(--dim); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--railS); border-radius: 3px; padding: 6px 8px;
+}
+.pr-runlog div { white-space: pre-wrap; word-break: break-all; }
+.pr-runlog .st-head { color: var(--railW); }
+.pr-runlog .st-run { color: #a9c8ff; }
+.pr-runlog .st-skip { color: #8a8f98; }
+.pr-runlog .st-warn { color: #ffcf8a; }

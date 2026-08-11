@@ -5,12 +5,19 @@
  * 2026-08-10 使用者定案:「先全部自動化,人眼再審查,決定要刪除原始照片或調整參數重新處理」。
  * 第 ⑦ 站(`auto_intake.mjs`)負責前半;這一支負責後半 —— 把台上的判決變成真的動作。
  *
- * 判決字彙的唯一真相是 `tools/parts_review/review.js` 的 `STATUS`,四個出口在這裡各對一個動作:
+ * 判決字彙的唯一真相是 `tools/parts_review/review.js` 的 `STATUS`,五個出口在這裡各對一個動作:
  *
- *   ✔ ok     什麼都不做(它已經是出貨狀態;commit 是使用者的事,這一支**不 commit**)
- *   ⟳ regen  同一張圖換參數重跑:撤節點 → 寫覆寫參數 → 把它從「已餵過」名單放回待跑池
- *   ⇄ reimg  換來源圖:撤節點 + 這張圖標記不再挑(**照片留著** —— Route A 仍要看照片)
- *   ✕ purge  刪除來源圖:撤節點 + **真的刪檔** + 進黑名單(使用者定案「連節點一起撤下」)
+ *   ✔ ok      什麼都不做(它已經是出貨狀態;commit 是使用者的事,這一支**不 commit**)
+ *   ⟳ regen   同一張圖換參數重跑:撤節點 → 寫覆寫參數 → 把它從「已餵過」名單放回待跑池
+ *   ⇄ reimg   換來源圖:撤節點 + 這張圖標記不再挑(**照片留著** —— Route A 仍要看照片)
+ *   ⊘ archive 移除:撤節點 + **原來源帳整列搬進封存帳**,照片留著、不再自動重跑
+ *   ✕ purge   刪除來源圖:撤節點 + **真的刪檔** + 進黑名單(使用者定案「連節點一起撤下」)
+ *
+ * `archive` 與 `regen`/`reimg` 的差別是**下一步在誰身上**:那兩個是「這顆不行,再試一次」
+ * ⇒ 照片回到待跑池;`archive` 是使用者 2026-08-11 要的「移除遊戲與零件台,放到封存區」——
+ * 這顆結案了,不要再自動生成它,但它存在過的事實(方法 / 來源圖 / 授權 / 量測)MUST 留著。
+ * 撤完之後來源帳裡那一列就沒了 ⇒ **不搬進封存帳的話,那些事實整組消失**,而台上看起來
+ * 就像它從來沒有出現過。
  *
  * ---- 「撤節點」是三件事,少做一件就是對照台上的一道缺口 ----
  *
@@ -35,7 +42,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROOT } from '../audit_src.mjs';
-import { MANIFEST_PATH } from './provenance.mjs';
+import { ARCHIVE_PATH, MANIFEST_PATH, loadArchive, partKeys } from './provenance.mjs';
 import { rosterSlots } from './intake_recipes.mjs';
 import { dropNode, gapsClean } from './auto_intake.mjs';
 
@@ -99,11 +106,15 @@ function withdraw(key) {
   const rm = removeRoster(readFileSync(BIOMES, 'utf8'), key);
   if (!rm.ok) return { ok: false, why: rm.why };
   if (!DRY) writeFileSync(BIOMES, Buffer.from(rm.src, 'utf8'));
-  // ③ 來源帳(整列只服務這一顆才刪列;一列掛多顆時只拔掉那一個 key)
-  const rows = man.parts.filter((p) => (p.keys || []).includes(key));
+  // ③ 來源帳(整列只服務這一顆才刪列;一列掛多顆時只拔掉那一個 key)。
+  // 鍵一律走 `partKeys` 正規化 —— 帳本**兩種寫法都合法**,而舊版只讀 `keys` ⇒ 以 `key:` 寫的
+  // 那些列(現役的 mass_a/mass_b/mass_c/chimney_a… 都是)在這裡查出來是空的:節點撤了、
+  // 帳留著、而且「這顆吃哪張圖」是空集合 ⇒ 判 ⇄/✕ 會回報「0 張」而看起來完全正常。
+  const rows = man.parts.filter((p) => partKeys(p).includes(key));
   for (const p of rows) {
-    if (p.keys.length === 1) man.parts.splice(man.parts.indexOf(p), 1);
-    else p.keys = p.keys.filter((k) => k !== key);
+    const ks = partKeys(p);
+    if (ks.length === 1) man.parts.splice(man.parts.indexOf(p), 1);
+    else p.keys = ks.filter((k) => k !== key);   // 兩種寫法都收斂成 keys
   }
   if (!DRY) writeJson(MANIFEST_PATH, man);
   return { ok: true, slot, rows };
@@ -114,6 +125,30 @@ function imgsOf(rows) {
   return rows.flatMap((p) => p.imgs || []).filter((i) => i.id);
 }
 
+/**
+ * 墓碑一列(`⊘ 移除` 專用)。**欄位一律抄自剛被撤掉的那一列來源帳**,MUST NOT 在這裡重新
+ * 描述那顆節點 —— 抄一份就是第二種說法,而原版已經不存在、對不起來也沒人會知道。
+ * `at` 是**封存那一刻**(列的自己的時間;原本的出貨日另外留在 `shipped_at`)。
+ */
+function archiveRow(key, rows, it, slot) {
+  const rec = rows[0] || {};
+  return {
+    keys: [key],
+    at: new Date().toISOString(),
+    why: it.note || null,
+    family: slot?.family || null,
+    slot: slot?.id || null,
+    shipped_at: rec.at || null,
+    method: rec.method || null,
+    consumer: rec.consumer || null,
+    rev: rec.rev || null,
+    imgs: rec.imgs || [],
+    gen: rec.gen || null,
+    post: rec.post || null,
+    note: rec.note || null,
+  };
+}
+
 function main() {
   const state = loadJson(STATE_FILE, { items: {} });
   const todo = Object.entries(state.items || {})
@@ -122,6 +157,7 @@ function main() {
 
   const ovr = loadJson(OVERRIDES, {});
   const hstate = loadJson(HARVEST_STATE, {});
+  const arch = loadArchive();
   let done = 0, held = 0;
 
   for (const [key, it] of todo) {
@@ -143,6 +179,15 @@ function main() {
       }
       console.log(`   ⟳ ${DRY ? '(dry)會' : '已'}撤節點;覆寫表 ${imgs.length} 筆 → ${OVERRIDES}`
         + '(要調的參數請直接編這一份:cells/offset/target/fit/tool)');
+    } else if (it.status === 'archive') {
+      // 移除 = 撤下(上面 withdraw 已經做完三件事)+ **把那一列搬進墓碑帳**。
+      // 照片一格不動:使用者要的是「不要在遊戲與台上出現」,不是「這張照片不能用」——
+      // 同一張圖之後想換個參數重生仍然合法(手動 `--only` 走 regen 那一條)。
+      // 不重跑靠的是 `photo_state` 把封存帳算成「人眼已處置」(⇒ 不進未覆核重跑池),
+      // 而不是在這裡改語料帳本 —— 判決的紀律只有 `screen_mattes.py` 一份。
+      arch.parts.push(archiveRow(key, w.rows, it, w.slot));
+      console.log(`   ⊘ ${DRY ? '(dry)會' : '已'}撤節點並封存(${imgs.length} 張來源圖留著;`
+        + `帳 ${ARCHIVE_PATH.replace(ROOT, '').replace(/^[\\/]/, '')})`);
     } else if (it.status === 'reimg' || it.status === 'purge') {
       // **兩個判決吃的 id 不同一層,而那是使用者的用字決定的**:
       //   ✕ 刪除來源圖 → **母照片**(整張連同它切出來的每一個目標一起刪)
@@ -169,10 +214,15 @@ function main() {
     writeJson(STATE_FILE, state);
     writeJson(OVERRIDES, ovr);
     if (existsSync(HARVEST_STATE)) writeJson(HARVEST_STATE, hstate);
+    // 封存帳只在真的有東西進去時才落地(空檔案會讓「有沒有封存過」看起來像有)
+    if (arch.parts.length) writeJson(ARCHIVE_PATH, { version: 1, parts: arch.parts });
   }
   const clean = DRY ? true : gapsClean();
   console.log(`\n── 執行 ${done} 筆、擱置 ${held} 筆;對照台缺口:${clean ? '乾淨' : '**有缺口 —— 先修再 commit**'}`);
-  if (done) console.log('   判 regen 的請編 intake_overrides.json 後重跑 harvest_loop;判 purge/reimg 的下一輪自動不會再挑到。');
+  if (done) {
+    console.log('   判 regen 的請編 intake_overrides.json 後重跑 harvest_loop;判 purge/reimg 的下一輪自動不會再挑到。');
+    console.log('   判 archive 的已進封存區(零件台「封存區」分頁看得到;來源圖留著但不再自動重跑)。');
+  }
   return clean ? 0 : 1;
 }
 

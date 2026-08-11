@@ -50,6 +50,7 @@
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --rounds 1 --family tree
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-gen        只跑採集端(無 GPU 的機器)
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-intake     只跑到 contact sheet(舊行為)
+ *   node tools/ai3d/harvest_loop.mjs --home <資料家> --no-redo       不重跑未覆核的(送過就不再送)
  *   node tools/ai3d/harvest_loop.mjs --home <資料家> --dry           只印每一站要跑什麼,不執行
  */
 import { spawnSync } from 'node:child_process';
@@ -58,6 +59,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { partLibs } from './parts_src.mjs';
 import { corpusMeta, loadProvenance } from './provenance.mjs';
+import { photoStates } from './photo_state.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
@@ -91,6 +93,9 @@ const NO_INTAKE = flag('no-intake') || !CORPUS.shipping;
 // (`bldGeo`/`megaGeo` 的輪替除數是名冊長度)⇒ 一次塞十顆等於一次改十次全場外觀,
 // 而人眼要在對照台上逐顆比對的正是那個差別。
 const INTAKE_LIMIT = Number(opt('intake-limit', 4));
+// **未覆核的重跑**(2026-08-11 使用者定案:「採集迴圈預設未覆核的全重跑(順位在後面)」)。
+// 預設開;`--no-redo` 退回 2026-08-11 之前的行為(送過就永遠不再送)。細節見 `pendingMattes`。
+const NO_REDO = flag('no-redo');
 
 // **逐族選模型,不是全族一把**(runbook §5n 量出來的:T2-spz 對建築/規則幾何是雙 ◎,
 // SF3D 在同一張仰拍煙囪上出的是一顆歪塊)。`--t2` 指到 TRELLIS.2-stableprojectorz 的 checkout;
@@ -160,6 +165,25 @@ const loadJson = (p, d) => { try { return JSON.parse(readFileSync(p, 'utf8')); }
  *    (讀照片、手寫純資料 primitive 進 `beacons.js KIND_PARTS`)⇒ 首輪那 11 顆 landmark 網格
  *    今天沒有任何東西載得到。這一閘**只擋生成**:照片與 matte 照收(Route A 要看照片),
  *    而且**不寫進 `done`** —— 哪天真的開了 `landmark.glb`,它自己就會回到待跑名單。
+ *
+ * ---- 未覆核的**重跑**(2026-08-11 使用者定案:「預設未覆核的全重跑(順位在後面)」)----
+ *
+ * 紀律 ② 的「只餵新的」有一個代價:可用率 ~1/15 ⇒ **十四份之十四**的語料送過一次生成之後
+ * 就永遠躺在 `harvest_state.json` 裡不再被碰,而它們絕大多數根本沒有人看過(沒出貨就沒有節點,
+ * 沒有節點就沒有東西可以覆核)。新圖抓完之後這支迴圈就會空轉,而畫面上只表現成「本輪生成 0」。
+ * ⇒ 「已經餵過**而且沒人看過**」的那些排在新圖**後面**重跑一次。
+ *
+ * 三件事要講清楚:
+ *   ㋐ **順位在後面是使用者指定的,也是對的**:新圖是這一輪唯一沒被試過的東西,額度先給它。
+ *   ㋑ 「覆核過了沒有」**MUST 走 `photo_state.photoStates()` 那一份推導**(節點覆核 / 封存帳 /
+ *      已淘汰),MUST NOT 在這裡自己判 —— 那正是「面板說未處理、迴圈說跑過了」那一族的成因。
+ *      已出貨的仍由上面那道 `shipped` 閘擋著(等人覆核,不是等重跑)。
+ *   ㋒ **同一張圖 + 同一組參數 = 同一顆網格**(工具是決定性的)⇒ 重跑的價值不在「這次會不會
+ *      比較好看」,而在**下游整條管線一直在動**(圈選分離、實體化參數、破口閘、名冊額度都改過)
+ *      ⇒ 同一顆網格這次可能過得了閘。要真的換一顆網格得改參數:判 `⟳ 重生` 寫進
+ *      `intake_overrides.json`,那一條路仍然只有人眼開得了。
+ *   排序取**最早餵過的優先**:`--rounds 0` 跑起來時,每輪只吃得下 GEN_LIMIT 顆,不排序的話
+ *   會反覆重跑同樣那十幾張(而它們每一輪都變成「最新餵過的」)。
  */
 function pendingMattes(done) {
   if (!existsSync(MATTE_DIR)) return [];
@@ -169,7 +193,10 @@ function pendingMattes(done) {
   const split = new Map(man.filter((e) => e.targets?.length).map((e) => [e.id, e.targets]));
   const shipped = new Set(loadProvenance().parts.flatMap((p) => (p.imgs || []).map((i) => i.id)).filter(Boolean));
   const consumable = new Set(partLibs());
-  const out = [], held = { shipped: 0, cut: 0, noSeam: new Map() };
+  // 「餵過但沒人看過」的母照片(推導縫 = photo_state;`--no-redo` 退回舊行為)
+  const unreviewed = NO_REDO ? new Set()
+    : new Set(photoStates(HOME).rows.filter((r) => r.state === 'done' && !r.reviewed).map((r) => r.id));
+  const out = [], redo = [], held = { shipped: 0, cut: 0, noSeam: new Map() };
   for (const fam of readdirSync(MATTE_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())) {
     if (FAMILY && fam.name !== FAMILY) continue;
     const famDir = join(MATTE_DIR, fam.name);
@@ -187,11 +214,13 @@ function pendingMattes(done) {
         if (split.has(id)) held.cut += split.get(id).length - units.length;
         for (const u of units) {
           const key = `${fam.name}/${part.name}/${u.id}`;
-          if (done[key] || !existsSync(u.path)) continue;
+          if (!existsSync(u.path)) continue;
           // `pid` = **母照片** id(目標是它切出來的)。來源帳記的是照片、而「已出貨」與
           // 「刪除來源圖」兩件事都以母照片為單位 ⇒ 投料帳 MUST 同時帶著兩層,
           // 少了 pid 的話第 ⑦ 站只能去拆檔名(而命名規則只在 split_targets.py 定義一次)。
-          out.push({ key, fam: fam.name, part: part.name, id: u.id, pid: id, path: u.path });
+          const unit = { key, fam: fam.name, part: part.name, id: u.id, pid: id, path: u.path };
+          if (!done[key]) out.push(unit);
+          else if (unreviewed.has(id)) redo.push({ ...unit, fedAt: String(done[key]), redo: true });
         }
       }
     }
@@ -201,7 +230,11 @@ function pendingMattes(done) {
   if (held.shipped) console.log(`  ·  ${held.shipped} 張已經出貨成節點(來源帳 imgs[].id)⇒ 不重跑`);
   if (held.cut) console.log(`  ·  ${held.cut} 個切出來的目標被選片閘淘汰(太模糊 / 太小 / 完整度太低)`);
   for (const [fam, n] of held.noSeam) console.log(`  ·  ${n} 張屬於 ${fam} 族 ⇒ 沒有 ${fam}.glb 這個消費端(PART_LIBS),生成了也載不進遊戲`);
-  return out;
+  // 最早餵過的先重跑(見檔頭 ㋒ 的排序那一段);**接在新的後面**,額度先給沒試過的
+  redo.sort((a, b) => a.fedAt.localeCompare(b.fedAt));
+  if (redo.length) console.log(`  ·  ${redo.length} 個已餵過但**沒人覆核**的目標排在新圖後面重跑(--no-redo 關掉)`);
+  else if (!NO_REDO && !out.length) console.log('  ·  沒有未覆核的可以重跑(每一張都有人看過了)');
+  return [...out, ...redo];
 }
 
 
@@ -280,8 +313,11 @@ async function round(n) {
   // ④ img→3D:只餵這一輪新過閘的(紀律 ②③),而且**逐族選模型**(§5n:建築走 T2-spz)
   const done = loadJson(STATE, {});
   const all = pendingMattes(done);
+  // 逐族切額度時**順序不能重排**:`pendingMattes` 已經把「新的在前、未覆核重跑的在後」
+  // 排好了(使用者定案的順位),這裡再 sort 一次就等於把那個順位丟掉
   const t2Pend = all.filter((p) => T2_FAMS.has(p.fam)).slice(0, T2_LIMIT);
   const sfPend = all.filter((p) => !T2_FAMS.has(p.fam)).slice(0, GEN_LIMIT);
+  rec.redone = [...sfPend, ...t2Pend].filter((p) => p.redo).length;
   const outDir = join(HOME, 'out', 'sf3d_auto', tag);
   const t2Dir = join(HOME, 'out', 't2_auto', tag);
   const feedDir = join(t2Dir, 'feed');
@@ -368,6 +404,7 @@ async function round(n) {
 
   if (!DRY) appendFileSync(LOG, `${JSON.stringify(rec)}\n`);
   console.log(`  ── 本輪:收編 ${rec.adopted}・下載 ${rec.fetched}・生成 ${rec.generated}`
+    + `${rec.generated && rec.redone ? `(其中 ${rec.redone} 顆是未覆核重跑)` : ''}`
     + `・入庫 ${rec.intake}${rec.rolledBack ? `(回滾 ${rec.rolledBack} 批)` : ''}`
     + `${rec.throttled ? '(撞到來源限流)' : ''}`);
   return rec;

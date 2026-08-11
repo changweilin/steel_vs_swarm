@@ -184,11 +184,19 @@ const ok = (cond, msg) => {
   ok(!/function devHost\(/.test(mainJs),
     '客戶端 MUST NOT 自己判一次 hostname —— 說了算的是伺服器那條路由的 loopback 閘');
 
-  // 鈕面吃「埠上有沒有人在聽」;停不掉的(終端機起的)MUST 變灰而不是假裝停得掉
-  ok(/t\.listening \? '⏹ 停止' : '▶ 啟動'/.test(mainJs), '啟停鈕面吃 `listening`');
-  ok(/power\.disabled = t\.listening && !t\.owned/.test(mainJs),
+  // 鈕面吃**伺服器推導的那一欄 `on`**;停不掉的(終端機起的)MUST 變灰而不是假裝停得掉。
+  // 2026-08-11 之前這裡吃的是 `listening` —— 而工作型工具(採集迴圈)不聽任何埠、
+  // `statusOf` 也**刻意不回**那一欄 ⇒ 值恆 undefined:鈕面永遠停在「▶ 啟動」、網址欄永遠寫
+  // 「未啟動」,按下去每次都送 start 而背景其實已經在跑。使用者的原話是「點啟動沒反應」。
+  ok(/const on = !!t\.on;/.test(mainJs) && /on \? '⏹ 停止' : '▶ 啟動'/.test(mainJs),
+    '啟停鈕面吃伺服器推導的 `on`(存活判準依 kind 分流,而分流住 dev_supervisor 一份)');
+  // 註解裡本來就寫著「舊版這裡直接讀 t.listening」⇒ 驗的是**程式碼**,剝掉行註解再看
+  ok(!/t\.listening/.test(mainJs.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')),
+    'MUST NOT 直接讀 `listening` —— 那是伺服器型工具專屬的欄位,工作型工具身上恆 undefined');
+  ok(/power\.disabled = on && !t\.owned/.test(mainJs),
     '不是這裡啟動的那一支 MUST 停不掉(鈕變灰),MUST NOT 憑一個埠號決定殺誰');
-  ok(/open\.disabled = !t\.listening/.test(mainJs), '沒起來時「開啟」是灰的(免得開出一頁連線錯誤)');
+  ok(/open\.disabled = !t\.url \|\| !on/.test(mainJs),
+    '沒起來(或根本沒有網址的工作型)時「開啟」是灰的(免得開出一頁連線錯誤)');
 }
 
 const chromium = await chromiumOrNull();

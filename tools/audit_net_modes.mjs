@@ -305,18 +305,26 @@ try {
   }
   // argv 仍然零信任,只是多了一段**推導**:`argvOf` 會把資料家接上去(語料家會搬 ⇒ 寫死等於下次就錯),
   // 而那條路徑是從檔案系統算出來的 —— 請求一個字都碰不到。
+  // 2026-08-11 起請求可以**指名**要跑哪一個資料家(儲存庫外那一份不給挑就永遠跑不到),
+  // 而鬆的方式 MUST 是**索引**:第二個參數是已經解析好的路徑,解析只發生在 `start` 裡面。
   ok(/spawn\(process\.execPath, \[t\.script, \.\.\.argv\]/.test(supSrc)
-    && /export function argvOf\(t\)/.test(supSrc)
+    && /export function argvOf\(t, home = null\)/.test(supSrc)
+    && /corpusHomes\(\)\[homeIdx\]\?\.home/.test(supSrc)
     && !/argvOf\([^)]*req/.test(supSrc)
     && !/spawn\([^)]*req\./.test(supSrc),
-    'spawn 的 argv MUST 來自 TOOLS 常數 + argvOf 推導,請求只能挑一個 key(參數零信任)');
+    'spawn 的 argv MUST 來自 TOOLS 常數 + argvOf 推導,請求只能挑一個 key 與一個索引(參數零信任)');
   ok(/\/\^\\\/dev\\\/tools\\\/\(\[a-z0-9_-\]\{1,32\}\)\\\/\(start\|stop\)\$\//.test(supSrc)
     || /\[a-z0-9_-\]\{1,32\}/.test(supSrc),
     '動作路徑 MUST 以白名單字元集比對(key 進不了命令列,也進不了檔案路徑)');
   ok(/x-dev-tools'\] !== '1'/.test(supSrc),
     '改變狀態的請求 MUST 要一個非簡單標頭(擋跨來源網頁的 CSRF)');
-  ok(/if\s*\(!rec \|\| rec\.child\.exitCode !== null\)/.test(supSrc),
+  // 「還是不是我們的」判準 MUST 與 `alive()` 同一份:紀錄在停掉之後刻意留著(執行進度頁要看
+  // 日誌)⇒「這一格還在」不再等於「它還跑著」,而伺服器型工具收埠比行程退出快 ——
+  // 只看 exitCode 的話第二次按停止會再 kill 一次並回報成功。
+  ok(/if\s*\(!rec \|\| !alive\(rec\)\)/.test(supSrc),
     '停止 MUST 只停自己開的那支(憑一個埠號決定殺誰 = 寧缺勿錯的反面)');
+  ok(!/running\.delete\(/.test(supSrc),
+    '停掉之後日誌留著(刪掉 = 按下停止的瞬間執行進度頁整個清空,看起來像剛才什麼都沒跑)');
   ok(!read('tools', 'build_solo.mjs').includes('dev_supervisor'),
     '單機打包 MUST NOT 把這支複製出去(它只複製 public/** 與白名單三支 server 模組)');
 
