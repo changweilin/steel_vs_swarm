@@ -4005,6 +4005,10 @@ function roadWidth(tags) {
   const lanes = parseInt(tags.lanes, 10) || 0;
   return lanes ? Math.max(base, lanes * 3.2) : base;   // 寬度依圖資車道數
 }
+// 由寬度反推車道數(單一縫;3.2m/線是全檔唯一換算比例,markings 車道分隔線與路面鋪裝判定
+// 共用這一支,MUST NOT 各自手寫 /3.2)。roadWidth 已把圖資 lanes 值折進寬度,故此處不必
+// 再讀一次 tags.lanes。
+const roadLaneN = (tags) => roadWidth(tags) / 3.2;
 /**
  * 立體結構(橋/隧道/地下道)的通行半寬 —— **單一縫**:buildRoads 的路面/牆、markGradeCorridors
  * 的走廊、carveTunnels 的開挖剖面共用這一支。分家的後果是開挖寬度小於路面寬度 ⇒ 路面兩緣埋進土裡。
@@ -5162,6 +5166,11 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
       // 橋面;跨河橋中點恆取到水色 ⇒ 舊版整座橋鋪成 roadColor('water') 的青灰、郊區橋鋪成泥土,
       // 與洞內柏油、與標線(只畫柏油)三種風格。定調柏油後橋面才與隧道/一般市區路同一套外觀。
       if (strc || brg) biome = 'urban';
+      // 雙線道以上鋪柏油(2026-08-11 使用者定案「就算是裸露地或綠地,只要是雙線道或以上也都
+      // 鋪設公路」):中點取樣落在路旁植被/裸岩色上時常見(林道遮蔭、路緣曝光偏移),但雙線道
+      // 以上本來就是鋪面公路而非產業道路/林道,MUST NOT 因為取樣點誤判而退回泥土/礫石。
+      // 只收 bare/green(濕地/水面另有各自的定調規則,不在此列)。
+      if ((biome === 'bare' || biome === 'green') && roadLaneN(way.tags) >= 2) biome = 'urban';
       const b = bucketOf(biome, main);
       const nP = run.length, vbase = b.base;
       const cum = [0];
@@ -5773,8 +5782,8 @@ function buildRoads(group, roads, terrain, center, mix, rnd, season, covers = []
           }
         };
         if (main) {
-          // 車道數由車道寬推導(單一縫,不硬編各路):main 恆 ≥ 雙線道
-          const lanes = Math.max(2, Math.round(mHw * 2 / 3.2));
+          // 車道數由車道寬推導(單一縫 roadLaneN,不硬編各路):main 恆 ≥ 雙線道
+          const lanes = Math.max(2, Math.round(roadLaneN(way.tags)));
           if (arterial) {                        // 幹道:雙黃實線分向
             emitLine(run, mHw, 0.58, 0.33, 0.2, MARK_Y, markYB, dropSeg);
             emitLine(run, mHw, 0.58, -0.33, 0.2, MARK_Y, markYB, dropSeg);
