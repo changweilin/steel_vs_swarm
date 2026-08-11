@@ -15,7 +15,7 @@ import {
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
   SIEGE, siegeSiteStages, siegeOpenStage,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
-  EVASION, evadable, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
+  EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
@@ -1842,20 +1842,26 @@ export class BattleSim {
    * 條件:目標是英雄機體 + 有效機動 > 閃避門檻(evasionMinSpeed,與機體速度同一張映射)+ 移動中;飛行單位額外加成。
    * 只有英雄機體具閃避(NPC 移速 ≤ 20,永遠不符合) ⇒ 玩家打小兵不受影響。
    */
-  _dodges(t, shooter) {
-    if (!t || !t.hero) return false;
+  _dodgeP(t, shooter) {
+    if (!t || !t.hero) return 0;
     // 完美迴避(招式追加效果 dodge):生效期間直射武器必閃,不吃機動/移動門檻
-    if (this._buffVal(t, 'dodge') > 0) return true;
+    if (this._buffVal(t, 'dodge') > 0) return 1;
     const flying = t.kind === 'drone' || (t.y || 0) >= GAME.AA_MIN_ALT;
     const mob = heroMobility(t.kind, CHARACTERS[t.ch]?.mods, flying);
-    if (mob <= evasionMinSpeed() || !this._isMoving(t)) return false;
+    if (mob <= evasionMinSpeed() || !this._isMoving(t)) return 0;
     let p = EVASION.GROUND + (flying ? EVASION.AIR_BONUS : 0) + this._buffVal(t, 'evade');
     // 高度差:目標比射手高過門檻 → +閃避率(較高方 +DODGE 封頂;見 data.js ALTITUDE)
     if (shooter) {
       const dh = this._altDh(t, shooter);   // 同框比較(見 _altDh:跨框相減 = 拿場地海拔當高度差)
       if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);
     }
-    return Math.random() < p;
+    return Math.min(p, EVASION.P_MAX);
+  }
+
+  /** 擲骰。`p > 0` 的短路 MUST 留著:不合格的目標**不消耗亂數**(與拆成 _dodgeP 之前逐位元同流) */
+  _dodges(t, shooter) {
+    const p = this._dodgeP(t, shooter);
+    return p > 0 && Math.random() < p;
   }
 
   /** 瞄準模式切換(按住右鍵):熱兵器(rocket/railgun/siege 等)需瞄準中才能開火 */
@@ -3558,14 +3564,18 @@ export class BattleSim {
       // (武器爆炸型 / 攻擊招式 / 三種載具戰鬥部 / NPC 肩射火箭全部匯流到這一支)。
       // 自損不擲(`!same`):榴彈最小安全射程的無差別模式是**代價**不是別人打過來的攻擊,
       // 讓射手有機會閃開自己的砲等於把那道懲罰做成擲骰。
-      if (!same && this._dodges(t, h)) {
+      const p = same ? 0 : this._dodgeP(t, h);
+      if (p > 0 && Math.random() < p) {
         // pid = 射手(有才附):客戶端據此讓「自己的攻擊被閃」跳 Miss;NPC 爆風無 pid ⇒ 只跳「閃」
         this.events.push({ e: 'dodge', ...(h.pid != null ? { pid: h.pid } : {}),
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
         continue;
       }
       const base = npcDmg != null ? npcDmg * (t.hero ? 1 : (h.cu || 1)) : this._heroDmg(h, def, t.kind);
-      this._damage(t, base * f, same ? null : h, def.pen, 0, def);
+      // 閃避補償(2026-08-12 使用者定案「維持 DPS 提高傷害,閃避率不動」):被閃掉的那一份還給
+      // 沒被閃掉的這一發 ⇒ 期望傷害 = base × (1−p) × 1/(1−p) ≡ base。分母 MUST 是**這個目標自己的**
+      // p(逐目標,與上面那一顆骰同一個值)—— 閃不掉的小兵/建築/重甲 p = 0 ⇒ 係數恆 1 ⇒ 逐位元同舊制。
+      this._damage(t, base * f * evadeCompF(p), same ? null : h, def.pen, 0, def);
     }
   }
 

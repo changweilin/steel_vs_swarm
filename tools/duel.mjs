@@ -24,11 +24,11 @@
 //
 // ---- 與 server/sim.js 的對齊 ----
 // 傷害鏈逐項對齊 heroHit():dmgFalloff(實際距離)→ vsMult → 爆擊(_rollCrit 的期望值)→
-// 閃避(_dodges;範圍走 data.js 的 evadable 單一縫 = 輕武器直射 + 一切爆炸傷害)→
-// 護盾先扣(不吃護甲)→ 裝甲吃 armorMul(armor, pen)。
+// 閃避(_dodgeP + 補償;範圍與補償一律走 data.js 的 `evadeExpF` 單一縫 —— 輕武器直射吃 (1−p),
+// 爆炸傷害吃 (1−p)×1/(1−p) ≡ 1「維持 DPS」)→ 護盾先扣(不吃護甲)→ 裝甲吃 armorMul(armor, pen)。
 // 差別只有「擲骰改期望值」(稽核要確定性,MUST NOT 用 Math.random —— 見全域 A4)與
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
-import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, evadable, altScale, altTier,
+import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, evadeExpF, altScale, altTier,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, heavyMpCost, shieldSplit } from '../public/js/data.js';
 
@@ -67,12 +67,13 @@ function critF(def, dh) {
   return 1 + p * ((def.critX || VITALS.CRIT_X) - 1) * dmgF;
 }
 
-/** 閃避期望存活率(對齊 sim._dodges;吃不吃閃避由 evadable 判 —— 移動中 + 有效機動 > 門檻;飛行加成;較高方 +DODGE) */
+/** 閃避率(對齊 sim._dodgeP:移動中 + 有效機動 > 門檻;飛行加成;較高方 +DODGE)。
+ *  **吃不吃閃避、補不補償**一律由 data.js 的 `evadeExpF(def, p)` 判 —— 本函式只回 p。 */
 function dodgeP(target, dh) {
   if (target.mob <= evasionMinSpeed()) return 0;   // 重甲慢速機體站著吃彈
   let p = EVASION.GROUND + (target.flying ? EVASION.AIR_BONUS : 0);
   if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);     // 目標比射手高
-  return Math.max(0, Math.min(1, p));
+  return Math.max(0, Math.min(EVASION.P_MAX, p));
 }
 
 /** 建一名對局者(Lv1 基準,與 bal ① 同一組解析縫) */
@@ -126,9 +127,9 @@ export function duel(A, B, dh = 0) {
     let v = 0;
     S.f.slots.forEach((s, i) => {
       if (dist > effR[i]) return;
-      const dodge = evadable(s.def) ? dodgeP(T.f, -cF[side]) : 0;
+      const evF = evadeExpF(s.def, dodgeP(T.f, -cF[side]));   // 期望倍率(爆炸傷害有補償 ⇒ 恆 1)
       v += s.def.dmg * vsMult(s.def, T.f.kind) * shieldEqF(s.def, T.f)
-        * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * (1 - dodge) * s.rps
+        * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * evF * s.rps
         * armorMul(T.f.armor, s.def.pen);                        // 交換比要看「打進去的」傷害
     });
     return v;
@@ -169,9 +170,9 @@ export function duel(A, B, dh = 0) {
     S.f.slots.forEach((s, i) => {
       if (dist > effR[i]) return;
       if (s.def.id === 'heavy' && S.mp < s.mp) return;
-      const dodge = evadable(s.def) ? dodgeP(T.f, -cF[side]) : 0;
+      const evF = evadeExpF(s.def, dodgeP(T.f, -cF[side]));   // 期望倍率(爆炸傷害有補償 ⇒ 恆 1)
       const dmg = s.def.dmg * vsMult(s.def, T.f.kind)
-        * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * (1 - dodge) * s.rps * dt;
+        * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * evF * s.rps * dt;
       apply(T, dmg, s.def.pen, s.def);
       if (s.def.id === 'heavy') mpUse += s.mp * s.rps * dt;
     });

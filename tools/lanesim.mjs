@@ -51,7 +51,7 @@
 // 傷害鏈逐項對齊 sim.heroHit/_blast:dmgFalloff → vsMult → 爆擊期望 → 閃避期望 → shieldSplit
 // 雙層拆分 → 裝甲層吃 armorMul。差別只有「擲骰改期望值」(稽核要確定性,見全域 A4)。
 import {
-  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, LANCE, SQUAD, DECOY,
+  CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, evadable, evadeExpF, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
   shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
@@ -185,8 +185,9 @@ const critF = (def) => (def.crit ? 1 + def.crit * ((def.critX || VITALS.CRIT_X) 
  */
 const dodgeP = (tgt, U = null) => {
   if (!tgt.hero || tgt.mob <= evasionMinSpeed()) return 0;
-  // 招式帶來的閃避率增額(recon / overdrive)疊在基準之上,對齊 sim._dodges 的 `_buffVal(t,'evade')`
-  return Math.min(0.95, EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0) + (U ? U.evade : 0));
+  // 招式帶來的閃避率增額(recon / overdrive)疊在基準之上,對齊 sim._dodgeP 的 `_buffVal(t,'evade')`
+  // 上限走 `EVASION.P_MAX`(舊制手寫 0.95 在這一行;補償係數的分母是 1−p ⇒ 兩端 MUST 同一個夾)
+  return Math.min(EVASION.P_MAX, EVASION.GROUND + (tgt.flying ? EVASION.AIR_BONUS : 0) + (U ? U.evade : 0));
 };
 
 /** 目前生效的大招時窗(自身型的補償 / 載具遞送的團隊 buff 共用同一份紀錄;過期 = null) */
@@ -198,8 +199,9 @@ const ufAt = (e, now) => (e.hero && e.uf && e.uf.until > now ? e.uf : null);
 function damage(tgt, dmg, def, evd0, now = -Infinity) {
   const U = ufAt(tgt, now);
   const takenF = U ? U.takenF : 1;
-  const evd = evd0 ? dodgeP(tgt, U) : 0;
-  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * takenF * (1 - evd);
+  // 期望倍率:輕武器直射 = (1−p);爆炸傷害有補償 ⇒ 恆 1(見 data.js evadeExpF)
+  const evF = evd0 ? evadeExpF(def, dodgeP(tgt, U)) : 1;
+  const raw = dmg * vsMult(def, tgt.kind) * critF(def) * takenF * evF;
   const before = (tgt.sp || 0) + tgt.hp;
   const { toSp, toHp } = shieldSplit(def, raw, Math.max(0, tgt.sp || 0));
   if (tgt.sp != null) tgt.sp -= toSp;
@@ -208,7 +210,7 @@ function damage(tgt, dmg, def, evd0, now = -Infinity) {
   // 「少挨的」入帳(bal ⑦f 的自身型組):傷害鏈在夾到 0 之前是**線性**的 ⇒
   // 沒有這一招時會扣掉 got × (fBase / fNow),差額就是這一招擋下來的 EHP —— 是等式不是估計。
   if (U && got > 0) {
-    const fNow = takenF * (1 - evd), fBase = 1 - (evd0 ? dodgeP(tgt, null) : 0);
+    const fNow = takenF * evF, fBase = evd0 ? evadeExpF(def, dodgeP(tgt, null)) : 1;
     if (fNow > 1e-9 && fBase > fNow) tgt.ultBy.prevented += got * (fBase / fNow - 1);
   }
   // 挨打即結束(t02 超載的 `brk`):對齊 sim._breakOnHit —— 全滿彈匣 + 零裝填的爆發
@@ -283,7 +285,7 @@ function dpsAt(S, T, d) {
     const cyc = s.def.mag / (s.def.rate || 3) + s.def.reload;
     const fall = s.def.fan ? fanFalloff(s.def.range, d) : dmgFalloff(s.def, d);
     v += s.def.dmg * vsMult(s.def, T.kind) * fall * critF(s.def)
-      * (1 - (evadable(s.def) ? dodgeP(T) : 0)) * s.def.mag / cyc * armorMul(T.armor, s.def.pen);
+      * evadeExpF(s.def, dodgeP(T)) * s.def.mag / cyc * armorMul(T.armor, s.def.pen);
   }
   return v;
 }

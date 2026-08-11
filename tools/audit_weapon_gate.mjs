@@ -34,7 +34,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
-  evadable, heroMobility, evasionMinSpeed, charKind,
+  evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
@@ -925,7 +925,7 @@ sec('Ⅶ 光暈 ⇔ 傷害:沒有射程光暈的敵人 MUST NOT 掉血(2026-08-0
   const rangeM = methodSrc('_altRange', S);
   ok(/altRangeF\(this\._altDh\(shooter, target\)\)/.test(rangeM),
     '_altRange 走 data.js altRangeF + _altDh 兩個唯一縫(MUST NOT 自寫曲線或自己相減 _sightY)');
-  for (const m of ['_altCrit', '_dodges']) {
+  for (const m of ['_altCrit', '_dodgeP']) {   // 閃避率的算式 2026-08-12 拆進 _dodgeP(_dodges 只剩擲骰)
     ok(/this\._altDh\(/.test(methodSrc(m, S)) && !/this\._sightY\([a-z]+\) - this\._sightY\(/.test(methodSrc(m, S)),
       `${m} 的高度差也走 _altDh(三個消費端同一把尺,MUST NOT 只修射程那一份)`);
   }
@@ -1703,7 +1703,7 @@ sec('Ⅻ 全攻擊路徑對帳:射程 = 以射擊點為中心的球面(含扇形
 
 
 // =================================================================================
-sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算,「原先的目標」閃掉不影響其他人(2026-08-11 使用者定案)');
+sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償(2026-08-11 / 08-12 使用者定案)');
 // ---------------------------------------------------------------------------------
 // 使用者原句:「榴彈類/導彈類等爆炸傷害爆炸時,就算沒擊中原先的目標,也會造成範圍傷害
 // (閃避率各自計算)」。兩件事一起定案:
@@ -1751,16 +1751,20 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算,「原先的目標」閃掉
   ok(!/!wd\.r && e\.kind !== 'tower'/.test(simCode),
     'sim.js NPC 分支不再以「沒有爆風 r」當可閃的判據(那條規則已退場)');
   for (const [f, src] of [['duel.mjs', read(['tools', 'duel.mjs'])], ['lanesim.mjs', read(['tools', 'lanesim.mjs'])]]) {
-    ok(/\bevadable\(/.test(code(src)),
-      `${f} 的閃避判定走 evadable 同一個縫(平衡模型與伺服器分家 = 模型量的是另一個遊戲)`);
+    ok(/\bevadeExpF\(/.test(code(src)) && !/id === 'light' \? dodgeP|byLight/.test(code(src)),
+      `${f} 的閃避判定與補償走 evadeExpF 同一個縫(平衡模型與伺服器分家 = 模型量的是另一個遊戲)`);
   }
   // ---- ③ _blast 原文:擲骰在傷害之前、只對敵方、且 MUST 是逐目標 continue ----
   const blast = code(methodSrc('_blast', S));
-  ok(/!same && this\._dodges\(t, h\)/.test(blast),
-    '_blast:逐目標擲 _dodges,且只對敵方(自損是榴彈最小安全射程的代價,不是別人打過來的攻擊)');
-  ok(/this\._dodges\(t, h\)[\s\S]*?continue;[\s\S]*?this\._damage\(/.test(blast)
-    && !/this\._dodges\(t, h\)[\s\S]{0,240}?return;/.test(blast),
+  ok(/const p = same \? 0 : this\._dodgeP\(t, h\)/.test(blast),
+    '_blast:逐目標取**該目標自己的** p,且只對敵方(自損是榴彈最小安全射程的代價,不是別人打過來的攻擊)');
+  ok(/p > 0 && Math\.random\(\) < p[\s\S]*?continue;[\s\S]*?this\._damage\(/.test(blast)
+    && !/Math\.random\(\) < p[\s\S]{0,240}?return;/.test(blast),
     '_blast:閃掉的目標只 continue(跳過自己這一份),MUST NOT return —— 整發早退 = 一台閃全隊免傷');
+  ok(/this\._damage\(t, base \* f \* evadeCompF\(p\)/.test(blast),
+    '_blast:沒被閃掉的那一發吃 evadeCompF(p) 補償,分母是**同一顆骰的 p**(維持 DPS)');
+  ok(/const p = this\._dodgeP\(t, shooter\);[\s\S]{0,120}?p > 0 && Math\.random\(\) < p/.test(code(methodSrc('_dodges', S))),
+    '_dodges 拆成「算率 + 擲骰」後仍保留 `p > 0` 短路 —— 不合格的目標不消耗亂數(逐位元同拆之前的亂數流)');
 }
 {
   // ---- ④ 行為直測:同一個爆點,一台閃掉、旁邊的照樣掉血 ----
@@ -1870,6 +1874,85 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算,「原先的目標」閃掉
   ok(t1.hp < b1 && t2.hp < b2,
     '一發火箭同時傷到爆風內的兩名敵方(舊制只有被瞄準的那一個掉血,旁邊的毫髮無傷)');
   ok(b1 - t1.hp > b2 - t2.hp, '離爆心越遠吃得越少(走同一支 blastFalloff)');
+}
+
+{
+  // ---- ⑦ 閃避補償:「維持 DPS 提高傷害,閃避率不動」(2026-08-12 使用者定案)----
+  // 把爆炸傷害納入閃避,代價是它對機動機體的期望輸出整組 ×(1−p)(實測讓 bal ①⑤⑦e 三項出界)。
+  // 使用者的收法不是調閃避率,而是把被閃掉的那一份**還給沒被閃掉的那幾發**:
+  //     期望傷害 = dmg × (1−p) × 1/(1−p) ≡ dmg
+  // 會靜默壞掉的兩種寫法:①拿**全體平均**當單一係數 —— 閃不掉的小兵/建築/重甲會平白吃到那份
+  // 補償,那是通膨不是補償;②把補償也套到**輕武器**上 —— 它自 2026-07-14 就吃閃避,基準 DPS
+  // 早就含著那份損失,補它等於憑空加傷。兩種都不會有任何錯誤訊息,只會讓平衡整組漂掉。
+  ok(evadeCompF(0) === 1, 'evadeCompF(0) === 1 ⇒ 閃不掉的目標(小兵/建築/低機動重甲)逐位元同舊制');
+  for (const p of [0.2, 0.35, 0.45, 0.78]) {
+    ok(Math.abs((1 - p) * evadeCompF(p) - 1) < 1e-12,
+      `p=${p}:期望輸出 (1−p)×${evadeCompF(p).toFixed(3)} ≡ 1(維持 DPS 是等式不是估計)`);
+  }
+  ok(Number.isFinite(evadeCompF(1)) && evadeCompF(1) === 1 / (1 - EVASION.P_MAX),
+    `p→1 由 EVASION.P_MAX 夾住(分母是 1−p,沒有夾就會炸;實得上限 ×${evadeCompF(1).toFixed(0)})`);
+  ok(evadeComped(WEAPONS.rocket) && !evadeComped(WEAPONS.rgun) && !evadeComped(WEAPONS.siege),
+    'evadeComped:只補「這一輪新納入閃避的那一批」= 爆炸傷害;直射槍械 MUST NOT 補(它本來就吃閃避)');
+  ok(evadeComped({ dmg: 100, r: 20, pen: 4, vs: {} }) && !evadeComped({ id: 'light' }),
+    'evadeComped:招式/載具戰鬥部的爆風要補、輕武器直射不補');
+  {
+    const byCls = { blast: 0, other: 0 };
+    for (const id of Object.keys(CHARACTERS)) {
+      for (const slot of ['light', 'heavy']) {
+        const def = heroWeapon(id, slot, 1, true);
+        if (aoeClass(def) === 'blast') byCls.blast += evadeComped(def) ? 1 : -99;
+        else byCls.other += evadeComped(def) ? -99 : 1;
+      }
+    }
+    ok(byCls.blast > 0 && byCls.other > 0,
+      `全 32 角兩槽位:爆炸型 ${byCls.blast} 把全部有補償、其餘 ${byCls.other} 把全部沒有`);
+  }
+  // 期望值縫:平衡模型吃的那一支 MUST 與伺服器的擲骰同源
+  ok(evadeExpF(WEAPONS.rocket, 0.35) === 1 && evadeExpF(WEAPONS.rgun, 0.35) === 0.65,
+    'evadeExpF:爆炸傷害的期望倍率恆 1(有補償)、直射槍械是 1−p(無補償)');
+  ok(evadeExpF({ id: 'heavy', type: 'beam' }, 0.35) === 1,
+    'evadeExpF:貫穿/扇形依機制豁免 ⇒ 期望倍率 1(不是因為補償,是根本不擲)');
+  {
+    // 行為直測:同一個目標、同一顆爆風,閃與不閃的**期望值**等於沒有閃避時的傷害
+    const sim = new BattleSim(fakeCfg());
+    purge(sim);
+    const fast = Object.keys(CHARACTERS).find((c) => {
+      const k = charKind(c);
+      return heroMobility(k, CHARACTERS[c].mods, k === 'drone') > evasionMinSpeed();
+    });
+    const atk = sim.addHero('SWARM', 'p_atk3', Object.keys(CHARACTERS)[0]);
+    atk.x = 0; atk.z = 0;
+    const foe = sim.addHero('STEEL', 'p_f3', fast);
+    for (const b of [foe, ...sim._bodies(foe)]) {
+      b.ch = fast; b.kind = charKind(fast);
+      b.x = 1; b.z = 0; b.y = 0; b.sp = 0; b.hp = 1e9; b.maxHp = 1e9;
+    }
+    foe._spd = 999;
+    const def = { dmg: 500, r: 40, pen: 0, vs: {} };
+    const p = sim._dodgeP(foe, atk);
+    ok(p > 0, `受測目標的閃避率 p = ${p.toFixed(2)}(> 0,否則本段量不到補償)`);
+    const orig = Math.random;
+    Math.random = () => 0.999;                 // 恆不中 ⇒ 量到的一律是「沒被閃掉」的那一發
+    // 基準:**同一台機體**站著不動 ⇒ 不符合閃避條件 ⇒ p = 0 ⇒ 沒有補償。
+    // 拿同一個實體當基準是刻意的 —— 換一台機體就換了護甲/量體,量到的差就不只是補償係數。
+    foe._spd = 0;
+    const b0 = foe.hp;
+    sim._blast(atk, def, 1, 0, 0);
+    const plain = b0 - foe.hp;
+    foe._spd = 999;                            // 移動中 ⇒ p > 0 ⇒ 這一發吃補償
+    const h0 = foe.hp;
+    sim._blast(atk, def, 1, 0, 0);
+    const hit = h0 - foe.hp;
+    Math.random = orig;
+    ok(plain > 0 && Math.abs(hit - plain * evadeCompF(p)) < 1e-6,
+      `補償是**實得的**:站樁 ${plain.toFixed(1)} → 移動中 ${hit.toFixed(1)}(= ×${evadeCompF(p).toFixed(3)});`
+      + '拿全體平均當單一係數會在這裡對不上');
+    ok(Math.abs(hit * (1 - p) - plain) < 1e-6,
+      `期望值回到改制前:${hit.toFixed(1)} × (1−${p.toFixed(2)}) = ${plain.toFixed(1)}(維持 DPS 是等式不是估計)`);
+    // 閃不掉的目標:同一發爆風的傷害 MUST 逐位元不吃補償
+    const creep = sim._add({ kind: 'soldier', side: 'STEEL', x: 1, z: 0, y: 0, hp: 1e9, maxHp: 1e9 });
+    ok(sim._dodgeP(creep, atk) === 0, '小兵的 p = 0 ⇒ 補償係數 1 ⇒ 爆風傷害逐位元同舊制');
+  }
 }
 
 // ---------------------------------------------------------------------------------
