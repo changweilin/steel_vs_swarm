@@ -54,7 +54,7 @@ import {
   CHARACTERS, UNITS, GAME, ECON, VITALS, EVASION, LANCE, SQUAD, DECOY,
   BOT_TACTIC, armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
   dmgFalloff, fanFalloff, blastFalloff, offAxisFalloff, fanConeHalf, blastFootprintR, aoeClass,
-  shieldSplit, heavyMpCost, upgradePrice, waveComp, waveMarchSpeed, hitR, lanceR,
+  shieldSplit, heavyMpCost, upgradePrice, canUpgrade, battleScoreGain, addBattleScore, waveComp, waveMarchSpeed, hitR, lanceR,
   kamiHp, kamiSide, decoyHp, hyperHp, hyperRange, hyperApex, hyperClimbVx, hyperDiveSpd, hyperTrackR,
   heroAbility, ultDelivered, ultParts, ultPartN, ULT_CARRIER, SELF_ULT, selfUltBoost,
   supportN, supportHp, supportLegS, supportSpeed, supportF, selfUltTempo,
@@ -97,7 +97,7 @@ export function mech(ch, side, tw = null) {
   const flying = kind === 'drone';
   const M = {
     ch, kind, side, hero: true, flying, dir: side === 'SWARM' ? 1 : -1,
-    x: 0, y: 0, up: Object.fromEntries(LANE.TRACKS.map((k) => [k, 0])), cash: ECON.START,
+    x: 0, y: 0, up: Object.fromEntries(LANE.TRACKS.map((k) => [k, 0])), cash: ECON.START, score: 0,
     hp0: Math.round(u.hp * (m.hp ?? 1)), sp0: Math.round(u.shield * (m.sp ?? 1)),
     armor0: heroArmor(ch), mp0: u.mp * (m.mp ?? 1), mpRegenBase: u.mpRegen,
     mob: heroMobility(kind, m, flying), slots: [], hurtT: -99,
@@ -303,13 +303,14 @@ function towerHold(M) {
   return best > UNITS.tower.range ? Math.min(best, UNITS.tower.range + 1) : best;
 }
 
-/** 有錢就升級:貪心買最便宜的一階(與 game.js `_sweepPick` 同一條規則) */
+/** 有錢又有戰績就升級:貪心買最便宜的一階(與 game.js `_sweepPick` 同一條規則)。
+ *  2026-08-11 起第二/三階另有戰鬥分數門檻 ⇒ 門檻一律問 `canUpgrade`(MUST NOT 只看錢)。 */
 function buyUp(M) {
   const U = ECON.UPGRADES;
   for (;;) {
     let pick = null, cost = Infinity;
     for (const k of LANE.TRACKS) {
-      if (M.up[k] >= U[k].max) continue;
+      if (!canUpgrade(U[k], M.up[k], M.cash, M.score)) continue;
       const p = upgradePrice(U[k], M.up[k]);
       if (p < cost) { cost = p; pick = k; }
     }
@@ -400,11 +401,12 @@ function fire(M, foe, enemyTower, t, foes) {
   }
 }
 
-/** 擊殺賞金入帳(1v1 無友軍 ⇒ 助攻不模型化);每個實體只付一次 */
+/** 擊殺賞金 + 戰鬥分數入帳(1v1 無友軍 ⇒ 助攻不模型化);每個實體只付一次 */
 function reward(M, e) {
   if (e.hp > 0 || e.paid) return;
   e.paid = 1;
   M.cash += ECON.BOUNTY[e.kind] ?? 0;
+  M.score = addBattleScore(M.score, battleScoreGain(e.kind, !!e.hero));
 }
 
 // ---------- 長按 = 大招(2026-08-06 使用者定案:一般模式 → 小招 / 狙擊模式 → 大招)----------

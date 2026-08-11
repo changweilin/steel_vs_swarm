@@ -9,13 +9,13 @@ import {
   UNITS, ECON, GAME, FIELD, HAZARDS, AFFIXES, MAPGEO,
   CHARACTERS, charsOf, heroWeapon, heroAbility, chargeF, heavyMpCost,
   HEROIC, VITALS, armorMul, SQUAD, tierVal, WEAPONS, DECOY_BOMB, HYPER,
-  charKind, heroArmor, rangeCap, DECOY, LOCK, BOT_KILL_SCORE, killScore, IFRAME, THIRD, COMBAT_SCALE, hitR,
+  charKind, heroArmor, rangeCap, DECOY, LOCK, IFRAME, THIRD, COMBAT_SCALE, hitR,
   SPECIAL, specialTier, specialBudget, kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast,
   specialBlastR, hyperShare,
   hyperApex, hyperRange, hyperFlightS, hyperMaxArcM, hyperHp, hyperTrackR, hyperTerminalF,
   kamiHp, kamiSide, decoyHp, towerDps, kamiExposureS, decoyExposureS,
   TOWER_SITE_N, frontDps, overflyDps, waveDps, blastFootprintR,
-  upgradePrice, UPG_L3_LVL, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
+  upgradePrice, upgradeScore, BATTLE_SCORE, battleScoreGain, addBattleScore, BOT_DIFF, BOT_DIFF_KEYS, BOT_OPS, botOpGap,
   BALLISTIC, lobMinRange, offAxisFalloff, AOE_EDGE,
   FLIGHT, airSinkM,
   waveComp, waveMarchSpeed, waveSpacingM, CREEP_UPG, creepUpgMul,
@@ -1172,19 +1172,30 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(Math.abs(sb._buffMul(hb, 'dmg') - 1) < 1e-9, '小招輔助機被打光 ⇒ 加成整份下線(效果可以被打斷)');
   }
 
-  log('— data:八軌升級第三階單價 = $200(2026-07-27)—');
+  log('— data:八軌升級階梯 = $75/$150/$300 + 戰鬥分數 0/20/100(2026-08-11)—');
   {
+    const WANT = [[75, 0], [150, 20], [300, 100]];
     for (const [key, up] of Object.entries(ECON.UPGRADES)) {
-      assert(upgradePrice(up, UPG_L3_LVL) === ECON.UPG_L3,
-        `${key}(${up.name})第三階 $${upgradePrice(up, UPG_L3_LVL)} = $${ECON.UPG_L3}`);
+      assert(up.max === WANT.length, `${key}(${up.name})階數 ${up.max} = 階梯列數 ${WANT.length}`);
+      for (let l = 0; l < WANT.length; l++) {
+        assert(upgradePrice(up, l) === WANT[l][0] && upgradeScore(up, l) === WANT[l][1],
+          `${key} 第 ${l + 1} 階 $${upgradePrice(up, l)} / 戰鬥分數 ${upgradeScore(up, l)}`);
+      }
     }
-    assert(ECON.UPG_L3 === 200, `第三階單價常數 = $200(實得 $${ECON.UPG_L3})`);
-    assert(upgradePrice(ECON.UPGRADES.lw, 0) === ECON.UPG_BASE
-      && upgradePrice(ECON.UPGRADES.lw, 1) === ECON.UPG_BASE + ECON.UPG_INC,
-      `前兩階仍走階梯 $${ECON.UPG_BASE} / $${ECON.UPG_BASE + ECON.UPG_INC}`);
     const total = Object.values(ECON.UPGRADES)
       .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0);
-    assert(total === 3200, `八軌全滿總價 $${total}(8 ×(75+125+200))`);
+    assert(total === 4200, `八軌全滿總價 $${total}(8 ×(75+150+300))`);
+  }
+
+  log('— data:戰鬥分數(擊殺 +4 / 助攻 +1;玩家與砲塔 ×5;夾 100 只增不減)—');
+  {
+    assert(battleScoreGain('soldier', false) === 4 && battleScoreGain('soldier', false, true) === 1,
+      '小兵:擊殺 4 分 / 助攻 1 分');
+    assert(battleScoreGain('robot', true) === 20 && battleScoreGain('tower', false) === 20,
+      '硬目標(玩家機體 / 砲塔)擊殺 ×5 = 20 分');
+    assert(battleScoreGain('tower', false, true) === 5, '砲塔助攻 5 分');
+    assert(addBattleScore(BATTLE_SCORE.MAX - 1, 20) === BATTLE_SCORE.MAX, `分數夾在 ${BATTLE_SCORE.MAX}`);
+    assert(addBattleScore(30, -50) === 30, '只增不減(負增益不扣分)');
   }
 
   log('— sim:升級快照傳「值」不傳權威物件參考(單機不經 JSON;否則客戶端樂觀購買雙重遞增 → 兩次就滿)—');
@@ -1197,7 +1208,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     assert(h.upg.lw === 0 && h.abil.light === 1, 'mutate 快照不污染伺服器權威 upg/abil');
     // 單機真實路徑:每次購買前「客戶端 this.upg = e.up」再樂觀 +1,伺服器再權威結算一次。
     // 修復前 e.up === h.upg ⇒ 樂觀 +1 就地污染權威 ⇒ 伺服器再 +1 = 雙重遞增,三階軌兩次就滿。
-    h.money = 99999;
+    h.money = 99999; h.kn = BATTLE_SCORE.MAX;   // 本段只驗「有沒有雙重遞增」⇒ 戰鬥分數門檻先給滿
     let presses = 0;
     while ((h.upg.lw || 0) < ECON.UPGRADES.lw.max && presses < 10) {
       presses++;
@@ -1268,15 +1279,17 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     }
   }
 
-  log('— sim:擊殺電腦玩家只算 3 分 —');
+  log('— sim:擊殺電腦玩家 = 玩家同一個係數(2026-08-11;舊制的刷 bot 折價已退場)—');
   {
     const botHero = sim.addHero('STEEL', 'b9', 't06');
     const killer = sim.heroes.get('p_d');
+    killer.kn = 0;
     const kn0 = killer.kn;
     botHero.hp = 0; botHero.sp = 0;
     sim._kill(botHero, killer);
-    assert(killer.kn - kn0 === BOT_KILL_SCORE,
-      `擊殺 bot 機甲 = ${BOT_KILL_SCORE} 分(真人英雄仍是 ${killScore('robot')} 分)`);
+    assert(killer.kn - kn0 === battleScoreGain('robot', true),
+      `擊殺 bot 機甲 = ${battleScoreGain('robot', true)} 分(與真人同一個係數)`);
+    killer.kn = 0;
     sim.squads.delete('b9');
     sim.heroes.delete('b9');
     for (const b of botHero.sq.bodies) sim.ents.delete(b.id);
@@ -1321,10 +1334,22 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   assert(dr.hp > hpNow, '回主堡 → 裝甲開始修復');
   assert(dr.mp < dr.maxMp || dr.mp === dr.maxMp, `電力欄存在(mp=${Math.floor(dr.mp)}/${dr.maxMp})`);
 
-  log('— sim:八軌養成(2026-07-20 面向改制:開場 Lv1、階梯單價隨等級遞增、無擊殺門檻、Lv4 外推)—');
+  log('— sim:八軌養成(開場 Lv1、階梯 $75/$150/$300、戰鬥分數門檻 0/20/100、Lv4 外推)—');
   dr.money = 9999; dr.kn = 0;
   assert(dr.abil.skill === 1 && dr.abil.ult === 1, '招式開場即 Lv1 可用(無需擊殺解鎖)');
-  // 輕/重武器為獨立面向:kn=0 也能買(無擊殺門檻)
+  // 第一階無戰鬥分數門檻:錢夠就過。第二階起要戰鬥分數(下面驗完門檻再補滿)
+  assert(sim.buy('p_d', 'ar') === null && (dr.upg.ar || 0) === 1, '第一階無戰鬥分數門檻(只看錢)');
+  assert(/戰鬥分數不足/.test(sim.buy('p_d', 'ar') || ''),
+    `戰鬥分數 0 買不起第二階(需 ${upgradeScore(ECON.UPGRADES.ar, 1)} 分)`);
+  dr.kn = upgradeScore(ECON.UPGRADES.ar, 1);
+  const $ar0 = dr.money;
+  assert(sim.buy('p_d', 'ar') === null && (dr.upg.ar || 0) === 2
+    && $ar0 - dr.money === upgradePrice(ECON.UPGRADES.ar, 1), '分數達標 ⇒ 第二階成交(分數不被扣掉)');
+  assert(dr.kn === upgradeScore(ECON.UPGRADES.ar, 1), '戰鬥分數是資格不是貨幣(購買後不減)');
+  assert(/戰鬥分數不足/.test(sim.buy('p_d', 'ar') || ''),
+    `第三階要 ${upgradeScore(ECON.UPGRADES.ar, 2)} 分`);
+  dr.kn = BATTLE_SCORE.MAX;
+  // 輕/重武器為獨立面向
   assert(sim.buy('p_d', 'lw') === null && dr.abil.light === 2 && dr.abil.heavy === 1,
     '輕武器強化升 Lv.2(只動輕武器,重武器不變)');
   assert(sim.buy('p_d', 'hw') === null && dr.abil.heavy === 2, '重武器強化升 Lv.2(獨立面向)');
@@ -1351,7 +1376,7 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
   for (let i = 0; i < 400 && dr.mods.length === 0; i++) sim.tick(0.125);
   assert(dr.mods.length > 0, '增益類小招載具抵達 ⇒ 掛上 mods(蜂群協奏)');
   const rb2 = sim.addHero('STEEL', 'p_r2', 't05');
-  rb2.money = 999;
+  rb2.money = 999; rb2.kn = BATTLE_SCORE.MAX;
   assert(sim.buy('p_r2', 'hp') === null && rb2.maxHp > Math.round(UNITS.robot.hp * CHARACTERS.t05.mods.hp),
     `裝甲強化隨處可買(HP 上限 → ${rb2.maxHp})`);
   const sp0max = rb2.maxSp;
@@ -1483,21 +1508,34 @@ log('— sim:地雷佈設(非正規路線)+ 機甲踩雷 —');
     b.money = CREEP_UPG.PRICE;
     assert(cs.buy('p_c2', 'creep', 1) === null && cs.creepUpg.SWARM[1] === 2, '同陣營全玩家共用同一份等級(隊友續購疊加)');
     assert(cs.buy('p_c2', 'creep', 1) !== null, '資金不足被拒(不透支)');
-    // 生成當下定案:hp / dmg / armor / 賞金同吃倍率
+    // 2026-08-11 使用者改制:強化只作用於「對玩家(含電腦玩家)以外」——
+    // 生成當下定案的只有 e.cu;hp 與賞金**不再**吃倍率。
     cs.creepUpg.SWARM[2] = CREEP_UPG.MAX;
     const mul = creepUpgMul(CREEP_UPG.MAX);
     cs._spawnLaneWave(2, 'SWARM', 7, GAME.WAVE_SPAWN_OFF_M);
     const up = [...cs.ents.values()].find((e) => e.wv === 7 && e.kind === 'tank');
     const plain = cs._add({ kind: 'tank', side: 'STEEL', x: 1e5, z: 1e5, hp: UNITS.tank.hp });
-    assert(up.hp === Math.round(UNITS.tank.hp * mul) && Math.abs(up.cu - mul) < 1e-9,
-      `LV${CREEP_UPG.MAX} 小兵 hp ${up.hp}(= ${UNITS.tank.hp} × ${mul.toFixed(2)})`);
-    assert(Math.abs(cs._bounty(up) - ECON.BOUNTY.tank * mul) < 1e-9 && cs._bounty(plain) === ECON.BOUNTY.tank,
-      `陣亡賞金同步 ×${mul.toFixed(2)}(${ECON.BOUNTY.tank} → ${Math.round(cs._bounty(up))});未強化者不變`);
-    // 護甲值同吃倍率 ⇒ 同一發傷害打強化兵吃得更少
+    assert(up.hp === UNITS.tank.hp && Math.abs(up.cu - mul) < 1e-9,
+      `hp 不吃倍率(${up.hp} = 表列 ${UNITS.tank.hp};耐久改走受擊側)`);
+    assert(cs._bounty(up) === ECON.BOUNTY.tank && cs._bounty(plain) === ECON.BOUNTY.tank,
+      `陣亡賞金不再 ×${mul.toFixed(2)}(強化兵與未強化兵同為 $${ECON.BOUNTY.tank})`);
+    // 耐久側:非英雄攻擊者打強化兵 ⇒ 總耐久的強化幅度與舊制(hp×cu + armor×cu)逐位元相同
+    const AR = UNITS.tank.armor || 0;
+    const oldEhp = UNITS.tank.hp * mul / armorMul(AR * mul, 0);
     const hp0 = up.hp, hp1 = plain.hp;
     cs._damage(up, 100, null, 0); cs._damage(plain, 100, null, 0);
-    assert(hp0 - up.hp < hp1 - plain.hp,
-      `護甲值同吃倍率(同一發 100 傷害:強化兵扣 ${(hp0 - up.hp).toFixed(1)} < 未強化 ${(hp1 - plain.hp).toFixed(1)})`);
+    const tookUp = hp0 - up.hp, tookPlain = hp1 - plain.hp;
+    assert(tookUp < tookPlain, `非玩家來源的傷害吃強化護甲(強化兵扣 ${tookUp.toFixed(1)} < 未強化 ${tookPlain.toFixed(1)})`);
+    assert(Math.abs(UNITS.tank.hp / (tookUp / 100) - oldEhp) < 1e-6,
+      `對非玩家的總耐久 = 舊制 hp×${mul.toFixed(2)} + armor×${mul.toFixed(2)}(EHP ${Math.round(oldEhp)},逐位元相同)`);
+    // 玩家(含電腦玩家)打強化兵:與未強化逐位元相同
+    const hero = cs.heroes.get('p_c2');
+    const up2 = cs._add({ kind: 'tank', side: 'STEEL', x: 1e5, z: 1e5, hp: UNITS.tank.hp, cu: mul });
+    const pl2 = cs._add({ kind: 'tank', side: 'STEEL', x: 1e5, z: 1e5, hp: UNITS.tank.hp });
+    const a0 = up2.hp, b0 = pl2.hp;
+    cs._damage(up2, 100, hero, 0); cs._damage(pl2, 100, hero, 0);
+    assert(Math.abs((a0 - up2.hp) - (b0 - pl2.hp)) < 1e-9,
+      `玩家打強化兵 = 打未強化兵(各扣 ${(a0 - up2.hp).toFixed(1)});強化在玩家眼裡完全不存在`);
     assert(JSON.stringify(cs.snapshot().cu.SWARM) === JSON.stringify(cs.creepUpg.SWARM), '快照帶陣營小兵強化等級(商店唯讀顯示)');
   }
 
@@ -2143,7 +2181,7 @@ assert(specSnap.ents.filter((e) => e.k === 'drone').length === 1,
 const myHero = snap.ents.find((h) => h.pid === host.sync.youId && h.act);
 assert(myHero && myHero.k === 'drone', `英雄快照帶 pid,能認出自己的座機(pid=${myHero?.pid})`);
 assert(typeof myHero.$ === 'number' && myHero.ab && typeof myHero.kn === 'number',
-  `英雄快照帶金錢/招式階級/擊殺數($${myHero.$}・ab=${JSON.stringify(myHero.ab)})`);
+  `英雄快照帶金錢/招式階級/戰鬥分數($${myHero.$}・ab=${JSON.stringify(myHero.ab)})`);
 assert(myHero.ch === 's02', `快照帶角色 id(ch=${myHero.ch},客戶端渲染專屬機體)`);
 assert(myHero.sp != null && myHero.msp > 0 && myHero.mp != null && myHero.mm > 0,
   `快照帶護盾/電力(sp=${myHero.sp}/${myHero.msp}・mp=${myHero.mp}/${myHero.mm})`);
@@ -2274,9 +2312,9 @@ const homeIv = setInterval(() => host.send({ t: 'pos', x: swarmBase.x, y: 30, z:
 const meOf = (c) => c.snaps.at(-1).ents.find((e) => e.pid === host.sync.youId && e.act);
 const richSnap = await host.wait((c) => {
   const me = meOf(c);
-  return me && me.$ >= ECON.UPG_BASE ? me : null;   // 首級階梯價 = UPG_BASE;START 200 ≥ 之,必然足夠
+  return me && me.$ >= upgradePrice(ECON.UPGRADES.hw, 0) ? me : null;   // 首階階梯價;START 200 ≥ 之,必然足夠
 }, 30000);
-assert(richSnap.$ >= ECON.UPG_BASE, `開局資金 + 擊殺賞金累積 $${richSnap.$}(無被動收入)`);
+assert(richSnap.$ >= upgradePrice(ECON.UPGRADES.hw, 0), `開局資金 + 擊殺賞金累積 $${richSnap.$}(無被動收入)`);
 host.send({ t: 'buy', item: 'hw' });
 await host.wait((c) => (meOf(c)?.up?.hw || 0) >= 1, 5000);
 clearInterval(homeIv);

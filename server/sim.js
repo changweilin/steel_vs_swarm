@@ -5,8 +5,8 @@
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
   SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
-  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, killScore, tierVal,
-  vsMult, upgradePrice, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, BOT_KILL_SCORE, isBotId,
+  CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
+  vsMult, upgradePrice, upgradeScore, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
   hyperClimbVx, hyperArcY, hyperTrackR,
   kamiSide, kamiHp, decoyHp, hyperHp, airSinkM,
@@ -18,7 +18,7 @@ import {
   EVASION, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
-  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, BOT_TACTIC, botThreatDecay, FLIGHT,
+  waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
 } from '../public/js/data.js';
 
 let nextEntId = 1;
@@ -1444,7 +1444,7 @@ export class BattleSim {
         mp, maxMp: mp, mpRegen: u.mpRegen,
         // 招式開場即 Lv1 可用(2026-07-20;不再需擊殺數解鎖)
         abil: { light: 1, heavy: 1, skill: 1, ult: 1 },
-        acd: { skill: 0, ult: 0 }, kn: 0,
+        acd: { skill: 0, ult: 0 }, kn: 0,   // kn = 戰鬥分數(八軌升級門檻;只增不減,見 data.BATTLE_SCORE)
         mods: [],                    // 招式增益 [{k, m, until}]
         empUntil: 0, stealthUntil: 0, aiming: false, lastBurst: 0,
         markUntil: 0,                // 定位標記(下一擊必中必爆;小隊共用 —— 任一架出手都算)
@@ -3568,7 +3568,9 @@ export class BattleSim {
     if (!up) return '沒有這項商品';
     const lvl = h.upg[item] || 0;
     if (lvl >= up.max) return `${up.name} 已滿級`;
-    const price = upgradePrice(up, lvl);
+    const price = upgradePrice(up, lvl), need = upgradeScore(up, lvl);
+    // 兩道閘(2026-08-11):金錢 + 戰鬥分數。分數是資格不是貨幣 —— 通過不扣分。
+    if ((h.kn || 0) < need) return `戰鬥分數不足(${up.name} 需 ${need} 分,現有 ${h.kn || 0} 分)`;
     if (h.money < price) return `資金不足(${up.name} 需 $${price})`;
     h.money -= price;
     h.upg[item] = lvl + 1;
@@ -3666,8 +3668,12 @@ export class BattleSim {
       // NPC/建築沒有護盾層 ⇒ 同一支 shieldSplit 以 sp=0 呼叫,結果就是「整發吃 vsHp」——
       // 「主 HP 傷害較弱」對小兵/塔一樣成立(只對英雄生效的話那是隱形的第二套規則)。
       dmg = shieldSplit(wd, dmg, 0).toHp;
-      // 陣營小兵強化:護甲值同吃 t.cu(與 hp/dmg/賞金同一條曲線;無此欄的塔/主堡/第三方 ×1)
-      dmg *= armorMul((UNITS[t.kind]?.armor ?? 0) * (t.cu || 1), pen);
+      const ar = UNITS[t.kind]?.armor ?? 0;
+      dmg *= armorMul(ar, pen);
+      // 陣營小兵強化的耐久側(2026-08-11 使用者改制):**只對非玩家攻擊者生效**。
+      // hp 不再 ×cu ⇒ 整份耐久折進這個係數(creepDmgTakenF 逐 pen 還原舊制 EHP);
+      // 攻擊者是玩家(含電腦玩家)機體時 ×1 = 這隻小兵在玩家眼裡與未強化逐位元相同。
+      if (t.cu > 1 && !by?.hero) dmg *= creepDmgTakenF(t.cu, ar, pen);
       dealt = Math.min(t.hp, dmg);
     }
     this._dmgOut(by, t, dealt);
@@ -3805,11 +3811,11 @@ export class BattleSim {
     if (f > 0) by.hp = Math.min(by.maxHp, by.hp + dealt * f);
   }
 
-  /** 陣亡賞金(擊殺全額 / 助攻 ×ASSIST.F 共用的唯一縫)= 表列賞金 × 該單位生成時定案的
-   *  陣營小兵強化倍率(e.cu;未強化的單位沒有這個欄位 ⇒ ×1)。
-   *  「陣亡提供的報酬」與「全能力」同一條 log 曲線 —— 打得更硬的兵,賞金就更高。 */
+  /** 陣亡賞金(擊殺全額 / 助攻 ×ASSIST.F 共用的唯一縫)= 表列賞金。
+   *  2026-08-11 起**不再**乘小兵強化倍率 e.cu:強化已收斂成「只對非玩家生效」,
+   *  這隻兵在玩家眼裡與未強化一樣好打 —— 還加成賞金就是白送錢(見 data.CREEP_UPG)。 */
   _bounty(t) {
-    return (ECON.BOUNTY[t.kind] || 0) * (t.cu || 1);
+    return ECON.BOUNTY[t.kind] || 0;
   }
 
   _kill(t, by) {
@@ -3835,8 +3841,8 @@ export class BattleSim {
     // 擊殺賞金:高價值單位報酬越高(自毀/中立傷害不給錢)
     if (by && by.hero && bySide !== t.side) {
       by.money += this._bounty(t) * this._buffMul(by, 'bounty');
-      // 擊殺數:招式解鎖/升級的門檻。電腦玩家(bot)只算 BOT_KILL_SCORE 分,不能靠刷 bot 速成。
-      if (!t.neutral) by.kn += (t.hero && isBotId(t.pid)) ? BOT_KILL_SCORE : killScore(t.kind);
+      // 戰鬥分數(八軌升級的第二道門檻):擊殺 +4,對玩家(含電腦玩家)與砲塔 ×5;夾 MAX、只增不減。
+      if (!t.neutral) by.kn = addBattleScore(by.kn, battleScoreGain(t.kind, !!t.hero));
     }
     // 助攻(2026-07-17):曾造成傷害/負面狀態的其他英雄,賞金 × ASSIST.F。
     // 「離開可視半徑 10 秒後不算」:tick 內的在場刷新讓「仍在半徑內」的戳記恆新;
@@ -3845,11 +3851,14 @@ export class BattleSim {
     if (t.asst) {
       const bounty = this._bounty(t);
       for (const pid in t.asst) {
-        if (!bounty) break;
         if (by && by.hero && pid === by.pid) continue;   // 擊殺者本人拿全額,不重複領助攻
         const a = this.heroes.get(pid);
         if (!a || a.side === t.side) continue;
         if (this.t - t.asst[pid] > ECON.ASSIST.TTL_S) continue;
+        // 戰鬥分數:助攻 +1(硬目標 ×5)。**與賞金脫鉤** —— 賞金 0 的目標(如砲塔)一樣算戰績,
+        // 舊制的 `if (!bounty) break` 只該擋錢,擋到分數就是「拆塔的助攻不計分」。
+        if (!t.neutral) a.kn = addBattleScore(a.kn, battleScoreGain(t.kind, !!t.hero, true));
+        if (!bounty) continue;
         const v = bounty * ECON.ASSIST.F * this._buffMul(a, 'bounty');
         a.money += v;
         if (this.stats[a.side]) this.stats[a.side].assists++;   // 計分板「助攻」欄(玩家看得到入帳)
@@ -4081,8 +4090,10 @@ export class BattleSim {
           if (wd && !wd.r && e.kind !== 'tower' && e.kind !== 'base' && this._dodges(target, e)) {
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
-            // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1)。高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
-            this._damage(target, u.dmg * (e.cu || 1), e, wd?.pen || 0, 0, wd);
+            // 陣營小兵強化:傷害吃 e.cu(生成時定案;塔/主堡/第三方無此欄 ⇒ ×1),但
+            // **只對非玩家目標**(2026-08-11 使用者改制:打玩家機體一律原始傷害)。
+            // 高度差不改基礎傷害(見 §3;閃避/射程仍吃高度差)
+            this._damage(target, u.dmg * (target.hero ? 1 : (e.cu || 1)), e, wd?.pen || 0, 0, wd);
           }
           // 開火事件(2026-07-17 起全兵種發送,附射手 id/kind):客戶端解析射手機體的
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
@@ -4563,7 +4574,7 @@ export class BattleSim {
     }
   }
 
-  /** 陣營小兵強化倍率(唯一縫):hp / dmg / armor / 陣亡賞金共用同一條 log 曲線。
+  /** 陣營小兵強化倍率(唯一縫):對非玩家目標的傷害 + 對非玩家攻擊者的耐久共用同一條 log 曲線。
    *  第三方(GUER/MILI)與無兵線的單位查不到等級 ⇒ 恆 ×1。 */
   _creepMul(side, lane) {
     return creepUpgMul(this.creepUpg?.[side]?.[lane] ?? 0);
@@ -4573,8 +4584,8 @@ export class BattleSim {
    * 下一波(或開場預置波)在單一兵線單一陣營的落位。**波次編制與擺位只有這一份實作** ——
    * _spawnWave(常規出兵)與 _prefillLanes(開場預置)共用,MUST NOT 各寫一套。
    * lead = 領隊的沿線進度(公尺,從己方端起算);其餘成員往己方端列隊錯開。
-   * 強化倍率在**生成當下**定案並存進 e.cu:同一波的數值不會因為中途買強化而追溯變動,
-   * 陣亡賞金(_bounty)也吃同一份 ⇒ 打得更硬的那一波,賞金就是更高的那一波。
+   * 強化倍率在**生成當下**定案並存進 e.cu:同一波的數值不會因為中途買強化而追溯變動。
+   * 賞金自 2026-08-11 起不吃 cu(強化只對非玩家生效,見 data.CREEP_UPG)。
    */
   _spawnLaneWave(li, side, wv, lead) {
     const pts = this.lanes[li];
@@ -4590,7 +4601,7 @@ export class BattleSim {
         kind, side, lane: li, wv,
         x: sx + jx, z: sz + jz,
         y: kind === 'heli' ? GAME.HELI_ALT : 0,
-        hp: Math.round(UNITS[kind].hp * cu),
+        hp: UNITS[kind].hp,          // hp 不吃 cu(那對玩家也生效)—— 耐久側走 _damage 的 creepDmgTakenF
         ...(cu > 1 ? { cu } : {}),   // ×1 不寫欄位:未強化的對局逐位元同舊制
         prog,
       });
@@ -4861,7 +4872,7 @@ export class BattleSim {
         // WS 路徑 JSON.stringify 後位元級不變。abil 同理(客戶端雖已 spread,seam 一併收口不留地雷)。
         o.$ = Math.floor(e.money); o.up = { ...e.upg };           // 經濟(客戶端 HUD / 商店)
         o.mp = Math.floor(e.mp); o.mm = e.maxMp;                 // 電力(招式資源)
-        o.ab = { ...e.abil }; o.kn = e.kn;                        // 招式階級 / 擊殺數
+        o.ab = { ...e.abil }; o.kn = e.kn;                        // 招式階級 / 戰鬥分數
         o.cds = [Math.max(0, Math.round((e.acd.skill - this.t) * 10) / 10),
                  Math.max(0, Math.round((e.acd.ult - this.t) * 10) / 10)];   // 招式冷卻倒數
       }

@@ -137,7 +137,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   for (; t <= HORIZON - TRAVEL;) { waves++; t += waveInterval(); }   // 2026-07-30:出兵間隔固定
   const waveBounty = waveComp().reduce((s, k) => s + ECON.BOUNTY[k], 0);
   const income = ECON.START + (KILL_R + ASSIST_R * ECON.ASSIST.F) * waves * waveBounty;
-  // 八軌全滿 = 8 軌各級階梯單價 upgradePrice(u,lvl) 之和(2026-07-20;無擊殺門檻,隨等級遞增)
+  // 八軌全滿 = 8 軌各級階梯單價 upgradePrice(u,lvl) 之和(2026-08-11 階梯 $0/$150/$300)
   const totalCost = Object.values(ECON.UPGRADES)
     .reduce((s, u) => { for (let l = 0; l < u.max; l++) s += upgradePrice(u, l); return s; }, 0);
   const ratio = totalCost / income;
@@ -146,7 +146,7 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   console.log(`\n③ 10 分鐘升滿 — 目標:八軌總價 ≈ 收入預算(±10%)\n`);
   console.log(`${okE ? '✅' : '❌'} ${waves} 波 × 波賞金 $${waveBounty} × 有效分成 ${(KILL_R + ASSIST_R * ECON.ASSIST.F).toFixed(2)}`
     + ` + 開局 $${ECON.START} = 預算 $${Math.round(income)};八軌總價 $${totalCost}`
-    + `(階梯 $${ECON.UPG_BASE}+$${ECON.UPG_INC}×lvl、第三階固定 $${ECON.UPG_L3},比 ${(ratio * 100).toFixed(1)}%)`);
+    + `(階梯 ${ECON.UPG_STEPS.map((st) => `$${st.price}/${st.score}分`).join(' → ')},比 ${(ratio * 100).toFixed(1)}%)`);
 }
 
 // ---------- ④ 滿級單推同塔位雙塔 ----------

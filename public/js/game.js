@@ -6,7 +6,7 @@
 //  - 2D 戰術地圖(minimap,繼承 mapping_elf 的 2D 地圖概念)
 import * as THREE from 'three';
 import {
-  SIDES, UNITS, GAME, ECON, upgradePrice, HAZARDS, FIELD, AFFIXES,
+  SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
@@ -406,7 +406,7 @@ export class BattleClient {
     this.sp = 0; this.maxSp = 1;      // 護盾(雙層 HP 第一層,脫戰自然回復)
     this.mp = 0; this.maxMp = 1;      // 電力(招式資源)
     this._mpAuth = false;             // maxMp 是否已收到伺服器權威值(爬升動力上限 MUST NOT 拿上面那個佔位的 1 去解析)
-    this.kn = 0;                      // 擊殺數(招式解鎖門檻)
+    this.kn = 0;                      // 戰鬥分數(八軌升級的第二道門檻;伺服器權威,只增不減)
     this.cds = [0, 0];                // [小招, 大招] 冷卻(伺服器倒數)
     this.empLeft = 0;                 // 遭電磁癱瘓剩餘秒數(武器/招式離線)
     this.stealthLeft = 0;
@@ -5680,9 +5680,10 @@ export class BattleClient {
     let pick = null, best = Infinity;
     for (const [id, up] of Object.entries(ECON.UPGRADES)) {
       const lvl = this.upg[id] || 0;
-      if (lvl >= up.max) continue;
+      // 兩道閘一起看(錢 + 戰鬥分數)—— 與鈕面、伺服器 sim.buy 同一支 `canUpgrade`
+      if (!canUpgrade(up, lvl, this.money, this.kn)) continue;
       const price = upgradePrice(up, lvl);
-      if (price > this.money || price >= best) continue;
+      if (price >= best) continue;
       pick = id; best = price;
     }
     return pick;
@@ -5740,6 +5741,8 @@ export class BattleClient {
       if (lvl >= max) { this._reserve.delete(item); continue; }
       // 八軌未滿:伺服器根本不受理小兵強化 ⇒ 靜靜等著(門檻與 `_shopState().allMax` 同一份)
       if (lane != null && !this._upgAllMax()) continue;
+      // 八軌的戰鬥分數門檻同樣是「送出去會不會被拒」的一部分(與 `_sweepPick` 同一支 canUpgrade)
+      if (lane == null && !canUpgrade(up, lvl, this.money - pend, this.kn)) continue;
       if (this.money - pend < price) continue;
       // **同一階只送一次**:樂觀更新會被下一份快照的權威值校正回去,而那份快照可能比伺服器處理
       // 這筆購買還早到(RTT > 125ms 就會發生)⇒ 沒有這道閘就會對同一階重複下單,第二筆被拒
@@ -5773,10 +5776,8 @@ export class BattleClient {
       const up = Object.hasOwn(ECON.UPGRADES, item) ? ECON.UPGRADES[item] : null;
       if (!up) return false;
       const lvl = this.upg[item] || 0;
-      if (lvl >= up.max) return false;
-      const price = upgradePrice(up, lvl);
-      if (this.money < price) return false;
-      this.money -= price; this.upg[item] = lvl + 1;
+      if (!canUpgrade(up, lvl, this.money, this.kn)) return false;
+      this.money -= upgradePrice(up, lvl); this.upg[item] = lvl + 1;
       // 戰鬥面向:同步樂觀推進 abil 階(權威快照會校正);光/重武器另重算武器數值
       if (up.abil) {
         this.abil[up.abil] = 1 + this.upg[item];

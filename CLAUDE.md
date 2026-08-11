@@ -81,7 +81,9 @@
 | 開火中位移懲罰 | `RECOIL`(`MOVE_K`/`DECAY`/`END_RAD`)+ `RECOIL_CLIMB_MAX` + `recoilMoveF()`;客戶端 `_recoiling()`/`_recoilMoveF()`/`_tryFire` 定案點 | 尺只有一把 = 準星上踢 `climb`(`kick`/`back` MUST NOT 當第二把尺);兩個端點都是定義而非校準。時間窗 = `recoil.p` 這個狀態本身(MUST NOT 退回計時器);係數 MUST 在 `recoil.p +=` **之前**定案(否則退化成單向棘輪);只夾**移動輸入**(`back` 擊退不吃);飛行另套 `AIR_F`。伺服器不涉入。稽核 `audit_recoil_move` |
 | 圖鑑六角能力圖 | `HEX_AXES` + `heroHexStats()`/`hexBand()`/`HEX.FLOOR` + `strikeAreaM2()`/`zoneAreaM2()`;持續 DPS 縫 `weaponCycleS()`/`weaponDps()`;繪製 `main.heroHexHTML()` | 生存 3(耐久/護甲/電力)+ 輸出 3(火力/制域/機動)。六軸值全走既有唯一縫,UI 只負責畫;滿格基準 `hexBand` 推導;半徑取**對數**內插 + 內圈留 `HEX.FLOOR`;制域 = 射程 × 打擊足跡等效直徑(分類走 `aoeClass`,單體直擊取 `hitR` 不是 0);持續 DPS 只有 `weaponDps` 一份;軸說明只寫在 `help.js UI_TIPS.charHex`。稽核 `audit_hex_stats` |
 | 波次編制/節奏 | `waveComp()`/`waveMarchSpeed()`/`waveSpacingM()` + `sim.waveInterval()` | 出兵間隔**固定**(`GAME.WAVE_S`);`_prefillLanes()` 間距吃 `waveSpacingM()`,擺位與常規出兵共用 `_spawnLaneWave()`;預置上限 = 該兵線第一座砲塔(吃 `sim.towerSites` 那一份解) |
-| 陣營小兵強化 | `CREEP_UPG`/`creepUpgMul()` + `sim._creepMul()`/`_bounty()` | 等級住 `sim.creepUpg[side][lane]`(同陣營共用、兵線分開);倍率於生成當下寫進 `e.cu`(不追溯),四個消費端同吃。賞金只准經 `_bounty()`。解鎖門檻 = `_upgAllMax()`;解鎖後該區塊 MUST 排商店**最前面** |
+| 陣營小兵強化 | `CREEP_UPG`/`creepUpgMul()`/`creepDmgTakenF()` + `sim._creepMul()` | 等級住 `sim.creepUpg[side][lane]`(同陣營共用、兵線分開);倍率於生成當下寫進 `e.cu`(不追溯)。**2026-08-11 使用者改制:只強化「對玩家(含電腦玩家)以外」的護甲與傷害** —— 傷害只在目標**不是英雄**時 ×cu;`hp` 不再 ×cu(那對玩家也生效),整份耐久折進 `_damage` 的 `creepDmgTakenF`(只在**攻擊者不是英雄**時套用,逐 pen 還原舊制 EHP ⇒ DPS 與總耐久的強化幅度不變);賞金不再 ×cu(對玩家已不更難打,加成 = 白送)。解鎖門檻 = `_upgAllMax()`;解鎖後該區塊 MUST 排商店**最前面** |
+| 八軌階梯(價格 + 戰鬥分數門檻) | `ECON.UPG_STEPS` + `upgradePrice()`/`upgradeScore()`/`canUpgrade()` | 2026-08-11 使用者定案 $75/$150/$300 配戰鬥分數 0/20/100(第一階無門檻)。**一張表兩欄**(價格與門檻是同一階梯的兩個維度,MUST NOT 拆兩份表);列數 MUST = 各軌 `max`。「買不買得起」只有 `canUpgrade` 一份 —— 四個消費端(`sim.buy` 複驗、`game._sweepPick`/`_tickReserve`/`_optimisticBuy`、`main.renderShop` 鈕面、`bots` 採購前置篩選)MUST 全吃,任一端自己比 `money >= price` = 鈕面亮著按不動 |
+| 戰鬥分數 | `BATTLE_SCORE` + `battleScoreGain()`/`addBattleScore()`/`scoreHardF()`;狀態 `h.kn`(SQUAD_SHARED) | 擊殺 +4 / 助攻 +1,對**玩家(含電腦玩家)與砲塔** ×5;夾 `MAX`、**只增不減**(陣亡不扣、購買不消耗 —— 它是資格不是貨幣)。兩條記帳路徑(`_kill` 的擊殺 + 助攻迴圈)MUST 同吃 `battleScoreGain`;助攻計分 MUST **與賞金脫鉤**(賞金 0 的目標一樣算戰績) |
 | 攻堅順序(劇情戰役鎖血) | `SIEGE`/`siegeSiteStages()`/`siegeOpenStage()` + `sim.siegeLocked()`/`_siegeFell()` | **前線砲塔 → 中段砲塔 → 主堡**,前一階沒清完後一階**完全免傷**;旗標只有 `battleConfig.siege`(rooms.js 正規化成布林),一般對戰恆 false = 逐位元同舊制。①**前線 = frac 最大**(`solveTowerSites` 回傳序是 `[後塔, 前塔]`、短兵線只有一個元素 ⇒ 拿陣列索引當判據會在半數兵線上剛好相反);②階段是**全戰場**的不是逐兵線的(「每階段」對白一階只演一場);③鎖血 MUST 同時擋**傷害與索敵**(三個消費端 `_damage`/`_tgBlockedD`/`bots._acquire`)—— 只擋傷害的話小兵會停在打不動的塔前面把兵線卡死;④事件 `{e:'siege', stage}` 送的是**剛被推平**的那一階;⑤HUD 的目標階段吃快照 `sg`,客戶端 MUST NOT 自己數塔。稽核 `audit_story_talk` |
 | 劇情階段對話 | 內容 `storytalk.js`(`STORY_TALK`/`talkOf()`/`stageKey()`)+ 演出 `dialogue.js` | 分工三層:**內容**(誰說什麼)/ **演出**(怎麼畫)/ **觸發**(伺服器 `siege` 事件),MUST NOT 互相滲透。選角四條:發言者 ⊆ 該章 story.js 雙方名冊、每場雙方都要有人、每人 4~5 句、三場加起來蓋滿名冊。`base` 那一場在**結算畫面**播(主堡一倒就 gameOver,戰鬥中沒有暫停);`front`/`mid` 是不擋畫面的下緣無線電條。`radio(sc, { manual })` 的逐句模式**只給故事書**,遊戲本體 MUST NOT 傳(戰鬥中沒有人能按「下一句」)。稽核 `audit_story_talk` |
 | 劇情畫面標記(章節卡 / 開戰簡報 / 結算文案 / 頭像小卡) | `storyui.js`(`charAvatarHTML()`/`heroChip()`/`chapterCardHTML()`/`briefHTML()`/`overText()`/`progressText()`) | **兩個消費端**:遊戲本體 `main.js` 與本地故事書 `tools/story_book/`。使用者要的是「完全仿照正式遊戲的呈現」⇒ 兩邊 MUST 是**同一份標記 + 同一份 CSS + 同一支演出**;對照台各寫一份「長得很像」的版面 = 它從此獨立演化,你在那裡看到的東西從來沒在遊戲裡出現過。三條邊界:①**零 DOM、零 three**(故 `envLabel` 取自 `data.js` 而非 `environment.js`)⇒ 離線稽核吃得到真品;②解鎖/通關/選中主駕一律由呼叫端**傳參數**(故事書全開 = `unlocked: true`,MUST NOT 改去寫 localStorage 進度);③不綁事件(只帶 `data-i`/`data-ch`)。稽核 `audit_story_talk` Ⅷ + `audit_ui_layout` |
@@ -298,7 +300,7 @@
 **權威狀態流**
 - 快照 8Hz;`snapshotFor(side)` 只過濾「單位」,塔/主堡/中立物恆可見;同 tick 三份快照共用一份 frame 快取(`_tickN`),events 只能清一次 — 動快照邏輯 MUST 維持此共用。
 - 雙層 HP:護盾(先扣、不吃護甲、脫戰回復)→ 裝甲 hp(吃 `armorMul`)。爆擊只在直擊武器,**AoE 不爆**(刻意)。
-- 擊殺 bot 一律 `BOT_KILL_SCORE`(3)— 刷 bot 不能速成招式,MUST NOT 移除。
+- 戰鬥分數:擊殺 +4 / 助攻 +1,玩家(**含電腦玩家**)與砲塔 ×5,夾 100 只增不減(2026-08-11 使用者定案取代舊的 `KILL_SCORE`/`BOT_KILL_SCORE`)。
 - `createRoom` MUST 附合法預建 `battleConfig`;環境由 `resolveEnv` 開房定案進 `cfg.env` 全房一致,MUST NOT 客戶端各自重算。
 
 ---
@@ -467,6 +469,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 圖鑑六角能力圖 | `audit_hex_stats` + `audit_shield_counter` Ⅵ(`buildDps` 改吃 `weaponDps`)+ `audit_ui_layout`/`audit_ctrl_mode` + ㋒ |
 | 波次節奏 `GAME.WAVE_S` / `waveComp` / `_prefillLanes` | bal ③(收入預算 ±10%)+ e2e「出兵間隔固定 + 開場預置兵線」(期望值 MUST 由同一份規則推出) |
 | 陣營小兵強化 | e2e 該段 + **bal 四不變式 MUST 不動**(bal 模型是未強化的基準波次) |
+| 八軌階梯 / 戰鬥分數 | `npm test`(**MUST 先重啟伺服器**)+ `audit_shop_auto` + **`npm run bal` ③**(總價 ≈ 收入預算 ±10%;改價格必動這一條)+ `audit_bot_role`(bot 採購前置篩選)+ `audit_client_syntax`(㋖)|
 | `ECON.UPG_*` | bal ③(±10%)+ e2e「八軌升級第三階單價」 |
 | 商店掃貨 / 預約 | `audit_shop_auto` + `audit_ui_layout` + ㋒(bal 不模型化購買順序) |
 | 攻堅順序鎖血 / 劇情階段對話 | `audit_story_talk` ±`--break-stage`/`--break-gate`/`--break-cast`/`--break-quota` + **`npm test`(MUST 先重啟伺服器;旗標關掉時 sim 逐項不變)** + `npm run bal` MUST 逐項不動(鎖血只在劇情房生效,bal/duel/lanesim 都沒有 `siege`)+ `audit_weapon_gate`/`audit_bot_vision`/`audit_bot_tactics`(`_damage`/`_tgBlockedD`/`bots._acquire` 各多一道閘)+ `audit_client_syntax`(㋖)+ `audit_ui_layout` + 改對白內容 ⇒ 只需本支 |
@@ -572,6 +575,9 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 
 | 退場 | 日期 | 取而代之 |
 |---|---|---|
+| **逐機種擊殺分數表** `KILL_SCORE`/`killScore()` 與**刷 bot 折價** `BOT_KILL_SCORE`(3) | 2026-08-11 | 戰鬥分數 `BATTLE_SCORE`/`battleScoreGain()`(擊殺 4 / 助攻 1,玩家**含電腦玩家**與砲塔 ×5)—— 使用者這一輪明講「玩家(含電腦)」同一個係數,兩份分數表並存就是兩套規則 |
+| 八軌階梯常數 `ECON.UPG_BASE`/`UPG_INC`/`UPG_L3`/`UPG_L3_LVL` | 2026-08-11 | `ECON.UPG_STEPS` 逐階表(價格 + 戰鬥分數門檻同一列) |
+| 陣營小兵強化的 `hp ×cu` 與**賞金 ×cu** | 2026-08-11 | 強化收斂成「只對非玩家生效」:傷害看目標、耐久看攻擊者(`creepDmgTakenF`)。hp 是全域的 ⇒ 留著它等於對玩家也變硬;賞金加成在小兵不再更難打之後就是白送 |
 | **機種絕招**(飽和攻擊 / 集束炸彈 / 極音速飛彈)三個入口 `heroKamikaze`/`heroDecoy`/`heroHyper`、`rooms.js` 三條訊息、客戶端三支 `_launch*`、bots 三個區塊 | 2026-08-06 | 長按右鍵 = 招式手勢(`abilHoldSlot`);三種載具只服務大招遞送(`_launchUltCarrier`/`_launchUltSupport` 恰兩個生成點) |
 | **常駐護衛機外觀** `ESCORT`/`escortSlot()`/`escortLagBase()`/`escortLagK()`/`escortDrift()`、`game._buildDroneEscorts`/`_updateEscorts`、`audit_escort_form.mjs`;HUD 的 `kcd` | 2026-08-06 | 「攻擊時再出現」= 把常駐那一段刪掉即可(衝出後的 kami 本來就是伺服器實體、走一般渲染路徑)。那批模型看得見、跟著飛、卻不在 sim = 原則 4 的反面 |
 | **重砲模式 / 巨砲** `BARRAGE`/`barrageShots`/`barrageDur`/`LANCE.BARRAGE_F`/`_barragingDmg`;`lanceR` 的第二參數 | 2026-08-01 | 重武器射擊路徑上 MUST NOT 再有任何「免彈夾/免電力/免射速閘」的旁路 |
