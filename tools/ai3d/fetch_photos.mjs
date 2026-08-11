@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 照片庫抓取器(docs/ai3d_asset_plan.md §4.1;Track B 靜態零件的照片來源)
+ * 照片庫抓取器(docs/ai3d_runbook.md §0.3;Track B 靜態零件的照片來源)
  *
  * 「照片數據庫」= 下方 PHOTO_CATALOG(逐物件族 × 逐零件的查詢型錄)+ photo_manifest.json
  * (帳本)+ photos/(檔案,**勿入版控** —— 照片只是離線輸入,入庫的只有零件 GLB)。

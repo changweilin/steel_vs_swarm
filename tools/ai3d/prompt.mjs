@@ -1,5 +1,5 @@
 /**
- * 2D 提示詞唯一縫(docs/ai3d_asset_plan.md §5.2 的九條規則 + 逐槽位 /edit 樣板)
+ * 2D 提示詞唯一縫(docs/ai3d_runbook.md §0.5 的九條規則 + 逐槽位 /edit 樣板)
  *
  * 兩種產出、兩套規格,MUST NOT 混用:
  *

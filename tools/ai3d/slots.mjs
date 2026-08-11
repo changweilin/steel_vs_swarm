@@ -1,5 +1,5 @@
 /**
- * 2D 切圖工作清單(docs/ai3d_asset_plan.md §5.0.1 / §5.0.2 的唯一縫)
+ * 2D 切圖工作清單(docs/ai3d_runbook.md §0.4 的唯一縫)
  *
  * 這一支回答兩個問題,兩個都 MUST 推導、MUST NOT 手寫:
  *   ① 哪些 master 還沒畫  ← 掃 public/assets/cyberpunk_art/mechs/ 實際檔案

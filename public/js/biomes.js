@@ -980,7 +980,7 @@ function seasonColor(key, fixed, season) {
 const SOFT_BY_VEG_KEY = { foliage: 'leaf', gleaf: 'leaf', conifer: 'leaf', grass: 'grass' };
 const vegSoftKind = (part) => part.sf ?? SOFT_BY_VEG_KEY[part.key] ?? null;
 
-// ---- AI 零件庫的消費端縫(2026-08-05;docs/ai3d_asset_plan.md §8 修正 1)----
+// ---- AI 零件庫的消費端縫(2026-08-05;docs/ai3d_runbook.md §0.2 不變式 7)----
 // 零件列可帶選用欄 `lib: '家族/節點'`(例 `lib: 'rock/facet_a'`),**解析只在 build 時**
 // 走這一支:VEG_DEFS 這些表在模組載入期就建好,那時 GLB 還沒抓 ⇒ 表內解析恆 miss
 // (修正 1 的成因)。`p.g` 仍是保險絲 —— 載入失敗/查無此名 ⇒ 原 primitive(原則 6)。

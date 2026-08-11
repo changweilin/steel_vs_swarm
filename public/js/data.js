@@ -5048,7 +5048,7 @@ export const botKiteF = (ready, T = BOT_TACTIC) => (ready ? T.KITE_NEAR : T.KITE
 // 平衡數值一改(指紋 `balanceFingerprint()` 變了)⇒ 重跑 bot_learn 即以現行策略暖啟動再學 —— 這
 // 就是「平衡性調整時可不斷學習」的落點:策略不追 commit,追**平衡指紋**。
 //
-// 四條紀律(缺一即是 A32/A33 倒退,詳見 docs/bot_learning.md 與 audit_bot_policy.mjs):
+// 四條紀律(缺一即是 A32/A33 倒退,詳見 docs/bot_design.md 與 audit_bot_policy.mjs):
 // ①**只學「取捨」,不學「能力」**:白名單全是決策權重/距離環/集結參數 —— 視野(BOT_VIEW)、
 //   手速(BOT_DIFF.gap/react)、準度(aimErr)一律不可學,學了就是把「比真人多看/多走」偷渡回來。
 // ②**使用者定案值不可學**:PULL_SP(=0.5)/BASE_HP(=0.25)/PULL_HP/RESUME_HP/EXEC_MAX 是

@@ -1,6 +1,6 @@
 # tools/ai3d — AI 3D 資產管線的離線工具
 
-> 計畫與階段閘門:[`docs/ai3d_asset_plan.md`](../../docs/ai3d_asset_plan.md);
+> 計畫與階段閘門:[`docs/ai3d_runbook.md`](../../docs/ai3d_runbook.md);
 > **後續執行狀態與工作佇列:[`docs/ai3d_runbook.md`](../../docs/ai3d_runbook.md)**(agent 可讀,英文)。
 > 本目錄**不進 `package.json`、不進任何 build step**(CLAUDE.md A2)。全部只吃 Node 內建模組。
 
