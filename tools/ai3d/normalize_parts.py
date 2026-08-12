@@ -14,8 +14,9 @@
 #      —— **唯一例外 `--boxuv <node>`**:整棟量體那一桶的消費端是 biomes 的立面材質
 #      (窗格貼圖 + 夜間自發光),節點沒有 UV 就整棟採到 (0,0) 一個 texel = 純色板。
 #      剝掉來源 UV(T2/SF3D 自己貼圖的那一份)之後**重建**盒投影 UV,見下方 BOXUV。
-#      斜屋頂那一桶再多一條 `--roofband <node>=<frac>`:把朝上的面分到貼圖底部那一帶
-#      (單一材質群組換不掉屋頂材質,只好把區分移進 UV),見下方 ROOFBAND。
+#      整棟量體那兩桶再多一條 `--uvbands <node>=<roof>|<plain>[|<minz>|<wall_ny>]`:把朝上的
+#      面分到貼圖底部那一帶、傾斜與朝下的分到中間那一帶(單一材質群組換不掉屋頂材質,
+#      只好把區分移進 UV),見下方 UVBANDS。`--roofband` 是它的兩帶特例,保留可用。
 #
 # 用法(Blender 5.x;欄位分隔用 `|` —— `:` 會撞上 Windows 磁碟機代號):
 #   blender --background --python tools/ai3d/normalize_parts.py -- \
@@ -125,7 +126,18 @@ BOXUV = set(opt_all('boxuv'))
 # 而實測 masslow_a 的屋頂面落在 n.y ∈ [0.45, 0.55](非等向 fit 把穀倉拉高 ⇒ 坡更陡)、
 # masslow_b 的尖頂落在 [0.65, 0.80] —— 用主導軸判,穀倉那一顆的**整個屋頂**會被判成牆。
 # 門檻取兩顆量出來的空檔中點(牆的尖峰止於 0.15、屋頂的尖峰起於 0.45)。
-ROOFBAND = {}
+#
+# ---- 2026-08-12:兩帶 → **三帶**(`--uvbands`;`--roofband` 是它的兩帶特例,保留可用)----
+# 使用者定案「建築外部的密集窗戶圖層與外掛招牌只貼垂直地面且平整的平面牆」。
+# 貼圖是盒投影上去的 ⇒ **面越斜,同一段 u/v 就攤在越長的表面上**:退縮頂的斜切面、尖塔、
+# 屋簷底上的窗格是被拉糊的一片。舊制只分兩群(朝上 / 其餘),那些斜面全在「其餘」= 窗格帶。
+# 三帶把傾斜獨立出來:
+#   朝上   n.z > minz              → v ∈ [0, roof)              屋頂
+#   傾斜   wall_ny < |n.z| ≤ minz、或朝下 → v ∈ [roof, roof+plain)  **素牆**(沒有窗)
+#   近垂直 |n.z| ≤ wall_ny         → v ∈ [roof+plain, 1]        窗牆
+# 三個數字 MUST 與 biomes 的 `MASS.UVB[桶]` 同值(tri_budget 存量測、audit_siteplan 釘住
+# 相等、intake_parts 直接量 GLB 的 UV 帶)—— 分家不會報錯,只會讓那兩條接縫落在錯的地方。
+UVBANDS = {}
 for spec in opt_all('roofband'):
     rbname, rest = spec.split('=', 1)
     bits = rest.split('|')
@@ -133,7 +145,18 @@ for spec in opt_all('roofband'):
     rb_minz = float(bits[1]) if len(bits) > 1 else 0.30
     assert 0.0 < rb_frac < 1.0, f'--roofband {rbname}:frac 要在 (0,1) 之間'
     assert 0.0 < rb_minz < 1.0, f'--roofband {rbname}:minz 要在 (0,1) 之間'
-    ROOFBAND[rbname] = (rb_frac, rb_minz)
+    UVBANDS[rbname] = (rb_frac, 0.0, rb_minz, 0.0)   # plain = 0、wall_ny = 0 ⇒ 逐位元同兩帶
+for spec in opt_all('uvbands'):
+    ubname, rest = spec.split('=', 1)
+    bits = rest.split('|')
+    assert len(bits) >= 2, f'--uvbands {ubname}:至少要 <roof>|<plain>[|<minz>|<wall_ny>]'
+    ub_roof, ub_plain = float(bits[0]), float(bits[1])
+    ub_minz = float(bits[2]) if len(bits) > 2 else 0.30
+    ub_wall = float(bits[3]) if len(bits) > 3 else 0.15
+    assert 0.0 < ub_roof and 0.0 <= ub_plain and ub_roof + ub_plain < 1.0, \
+        f'--uvbands {ubname}:roof + plain 要在 (0,1) 之間'
+    assert 0.0 < ub_wall < ub_minz < 1.0, f'--uvbands {ubname}:要滿足 0 < wall_ny < minz < 1'
+    UVBANDS[ubname] = (ub_roof, ub_plain, ub_minz, ub_wall)
 # --mirror <node>=<x|z|auto>:**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,
 # 使用鏡像貼補空的部分」)。單張照片只約束得到看得見的那幾面 —— 退縮階/簷帶/裙樓只長在
 # 被拍到的那半,另一半是模型自己補的一片平板。切一半、鏡射過去、**焊住接縫**。
@@ -850,7 +873,7 @@ for gname, obs in pending.items():
 # **幾何逐位元不動**(同 `--rework` 的那條路,但連頂點都不碰)。
 for o in made:
     nm = o.name.split('.')[0]
-    band = ROOFBAND.get(nm)
+    band = UVBANDS.get(nm)
     if nm not in BOXUV and not band:
         continue
     me = o.data
@@ -859,14 +882,19 @@ for o in made:
     for old in list(me.uv_layers):
         me.uv_layers.remove(old)
     uv = me.uv_layers.new(name='UVMap')
-    frac, minz = band or (0.0, 1.0)
+    frac, pfrac, minz, wall_ny = band or (0.0, 0.0, 1.0, 0.0)
     up_n = 0
+    tilt_n = 0
     for poly in me.polygons:
         n = poly.normal
         ax = max(range(3), key=lambda i: abs(n[i]))   # 0=x 1=y 2=z(Blender)
         roof = n.z > minz                             # Blender z = 遊戲 Y
+        # 素牆(傾斜 / 朝下):只有宣告了 plain 帶才分出來;pfrac = 0 ⇒ 逐位元同兩帶舊制
+        tilt = (not roof) and pfrac > 0.0 and abs(n.z) > wall_ny
         if roof:
             up_n += 1
+        elif tilt:
+            tilt_n += 1
         for li in poly.loop_indices:
             v = me.vertices[me.loops[li].vertex_index].co
             if roof:         # 屋頂:一律**平面投影**(從上往下看),不看主導軸
@@ -879,7 +907,12 @@ for o in made:
                 u2, v2 = v.x + 0.5, -v.y + 0.5
             v2 = min(max(v2, 0.0), 1.0)
             if band:
-                v2 = v2 * frac if roof else frac + v2 * (1.0 - frac)
+                if roof:
+                    v2 = v2 * frac
+                elif tilt:
+                    v2 = frac + v2 * pfrac
+                else:
+                    v2 = frac + pfrac + v2 * (1.0 - frac - pfrac)
             # ⚠ **glTF 匯出端會把 v 翻過來**(glTF 的 UV 原點在左上、Blender 在左下)——
             # 實測已出貨的四顆節點 corr(高度, glTF v) = **−1.0000**,而消費端那張立面貼圖是
             # 我們自己的 `CanvasTexture`(`flipY` 預設 true ⇒ v=0 採到畫布**底部**)⇒
@@ -888,12 +921,14 @@ for o in made:
             # 而且沒有任何錯誤訊息)。這裡先在**消費端座標**(v = 高度)算完,存檔前再翻回去。
             uv.data[li].uv = (min(max(u2, 0.0), 1.0), 1.0 - v2)
     if band:
-        print(f'ROOFBAND {o.name}: {len(me.polygons)} 面,朝上 {up_n} 面 '
-              f'({up_n / len(me.polygons) * 100:.1f}%)壓進 v ∈ [0, {frac}](minz {minz})')
+        print(f'UVBANDS {o.name}: {len(me.polygons)} 面,朝上 {up_n} 面 '
+              f'({up_n / len(me.polygons) * 100:.1f}%)→ v ∈ [0, {frac}](minz {minz});'
+              f'傾斜 {tilt_n} 面({tilt_n / len(me.polygons) * 100:.1f}%)→ [{frac}, {frac + pfrac}]'
+              f'(wall_ny {wall_ny})')
     else:
         print(f'BOXUV {o.name}: {len(me.polygons)} 面重建盒投影 UV')
-missing = (BOXUV | set(ROOFBAND)) - {o.name.split('.')[0] for o in made}
-assert not missing, f'--boxuv / --roofband 指到不存在的節點:{sorted(missing)}'
+missing = (BOXUV | set(UVBANDS)) - {o.name.split('.')[0] for o in made}
+assert not missing, f'--boxuv / --roofband / --uvbands 指到不存在的節點:{sorted(missing)}'
 
 # 只留產出節點,其他(SF3D 場景空節點等)全刪
 for o in list(bpy.data.objects):

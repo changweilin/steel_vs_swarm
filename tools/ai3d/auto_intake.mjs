@@ -43,7 +43,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ROOT } from '../audit_src.mjs';
-import { biomesSrc, glbPath, parseGlb, partLibs, triBudget } from './parts_src.mjs';
+import { biomesSrc, glbPath, parseGlb, nodeProfile, partLibs, triBudget } from './parts_src.mjs';
 import { topoStats, nodeFlaws } from './mesh_sym.mjs';
 import { scanDir, verdictOf } from './mesh_stats.mjs';
 import { MANIFEST_PATH, loadProvenance } from './provenance.mjs';
@@ -125,20 +125,35 @@ export function restore(snap) {
  * 換行正規化成 `\n`,拿它寫回去等於**把整支 biomes.js 從 CRLF 改成 LF**:遊戲照跑、每一支
  * 稽核照樣綠,而 diff 是「一萬行全改」。錨點本身不含換行 ⇒ 兩種檢出下計數與插入點都一樣。
  */
-export function appendRoster(src, slot, newName) {
+export function appendRoster(src, slot, newName, prof = null) {
   const last = slot.names[slot.names.length - 1];
   const anchor = `'${last}'`;
   const n = src.split(anchor).length - 1;
   if (n !== 1) return { ok: false, why: `名冊錨點 ${anchor} 在 biomes.js 出現 ${n} 次(要恰 1 次才敢動刀)` };
   const i = src.indexOf(anchor) + anchor.length;
-  return { ok: true, src: `${src.slice(0, i)}, '${newName}'${src.slice(i)}` };
+  let out = `${src.slice(0, i)}, '${newName}'${src.slice(i)}`;
+  // **剖面與名冊同序**(2026-08-12):第三格是逐節點一筆的輪廓剖面,少補一筆就會讓
+  // `bldProfile(key, i)` 錯位 —— 碰撞柱長成別顆節點的形狀,而畫面與所有既有閘門都正常。
+  // 錨點取**具名哨兵註解**(名字裡有格名 ⇒ 兩個格不會互相插錯):剖面是巢狀陣列,
+  // 拿「最後一筆的字面」當錨等於要求我把格式抄得逐字元相同,那遲早會錯。
+  if (slot.profs) {
+    if (!prof?.length) return { ok: false, why: `${slot.id} 是有剖面的格,但這一顆量不到剖面` };
+    const sent = `/* +prof:${slot.key} */`;
+    const m = out.split(sent).length - 1;
+    if (m !== 1) return { ok: false, why: `剖面錨點 ${sent} 出現 ${m} 次(要恰 1 次才敢動刀)` };
+    const j = out.indexOf(sent);
+    const row = `[${prof.map((s) => `[${s.join(', ')}]`).join(', ')}],\n    `;
+    out = `${out.slice(0, j)}${row}${out.slice(j)}`;
+  }
+  return { ok: true, src: out };
 }
 
 /**
  * 追加後**重新執行真品原文**驗證(不是比對我剛才拼的字串 —— 那只會證明我拼對了自己)。
- * 三條:①格數不變 ②目標格恰多一顆且在最後 ③**其餘每一格逐位元不變,含 fallback 描述子**。
+ * 四條:①格數不變 ②目標格恰多一顆且在最後 ③**其餘每一格逐位元不變,含 fallback 描述子**
+ *      ④有剖面的格,剖面筆數 MUST 與名冊同長且**其餘每一筆逐位元不變**。
  */
-export function verifyRoster(newSrc, slot, newName) {
+export function verifyRoster(newSrc, slot, newName, prof = null) {
   let after;
   try { after = rosterSlots(newSrc); } catch (e) { return { ok: false, why: `追加後 biomes.js 解析不了:${e.message}` }; }
   const before = rosterSlots();
@@ -150,6 +165,12 @@ export function verifyRoster(newSrc, slot, newName) {
     const want = b.id === slot.id ? [...b.names, newName] : b.names;
     if (JSON.stringify(a.names) !== JSON.stringify(want)) {
       return { ok: false, why: `格 ${b.id} 名冊對不上(期望 ${JSON.stringify(want)},實得 ${JSON.stringify(a.names)})` };
+    }
+    if (b.profs || a.profs) {
+      const wantP = b.id === slot.id ? [...(b.profs || []), prof] : b.profs;
+      if (JSON.stringify(a.profs) !== JSON.stringify(wantP)) {
+        return { ok: false, why: `格 ${b.id} 剖面對不上(名冊 ${a.names.length} 顆 / 剖面 ${a.profs?.length ?? 0} 筆)` };
+      }
     }
   }
   return { ok: true };
@@ -276,20 +297,30 @@ function intakeOne({ row, item, slot, nodeName, blender, budget, feed }) {
   const ip = run('intake 閘', process.execPath, ['tools/ai3d/intake_parts.mjs', '--glb', glb], { echo: false });
   if (!ip.ok) { console.log(ip.out.split(/\r?\n/).filter((l) => l.includes('❌')).map((l) => `     ${l}`).join('\n')); return undo('intake 閘紅字'); }
 
-  // ④ 破口 / 碎屑(既有量測;T2 那一路真正的守門員)
+  // ④ 破口 / 碎屑(既有量測;T2 那一路真正的守門員)+ **輪廓剖面實測**(2026-08-12)
+  let prof = null;
   if (!DRY) {
     const n = parseGlb(glb).get(node);
     if (!n) return undo('normalize 之後 GLB 裡找不到這顆節點');
     const flaws = nodeFlaws(topoStats(n), slot.family);
     if (flaws.length) return undo(`半成品:${flaws.map((f) => `${f.label}(${f.detail})`).join('、')}`);
+    // 剖面是消費端拿來登記**碰撞柱**、疊保險絲幾何、掛招牌、貼合尺寸的那一份形狀
+    // (`biomes.js bldProfile` 檔頭)。它 MUST 是量出來的、與名冊同序寫進第三格 ——
+    // 佈局數學讀不到庫幾何(讀了就是碰撞柱跨客戶端分家)⇒ 沒有這一步就沒有第二條路。
+    if (slot.profs) {
+      const ps = budget?.families?.[slot.budgetFam]?.profile_spec;
+      if (!ps) return undo('tri_budget 缺 families.building.profile_spec(剖面量測參數)');
+      prof = nodeProfile(n, { bands: ps.bands, maxSlabs: ps.slabs })?.slabs || null;
+      if (!prof) return undo('量不到輪廓剖面(節點是空的?)');
+    }
   }
 
   // ⑤ 名冊追加 + 重新執行真品原文驗證(讀寫走 raw,驗證走正規化 —— 見 appendRoster 檔頭)
   if (!DRY) {
-    const app = appendRoster(readFileSync(BIOMES, 'utf8'), slot, nodeName);
+    const app = appendRoster(readFileSync(BIOMES, 'utf8'), slot, nodeName, prof);
     if (!app.ok) return undo(app.why);
     writeFileSync(BIOMES, Buffer.from(app.src, 'utf8'));
-    const v = verifyRoster(biomesSrc(), slot, nodeName);
+    const v = verifyRoster(biomesSrc(), slot, nodeName, prof);
     if (!v.ok) return undo(v.why);
   }
 

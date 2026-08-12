@@ -1188,6 +1188,13 @@
           "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --boxuv mass_a --boxuv mass_b --roofband masslow_a=0.273 --roofband masslow_b=0.273",
           "why": "①**屋頂帶**(使用者「斜頂屋頂外觀變摩天大樓的玻璃」的後半):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它不生效,而拆群組會讓每一棟多一個 draw call(pick_n 的推導就是 draw call 上界)⇒ 把區分移進 UV,朝上面壓進 v ∈ [0, 0.273]。②**立面方向**:glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端會翻 v,而消費端那張 CanvasTexture 的 flipY 預設為真 ⇒ **四顆已出貨節點的立面本來是上下顛倒的**(corr(高度, v) = −1.0000:基座暗帶印在屋簷、店面遮陽棚印在地面),這一輪一併翻正。",
           "checks": "intake 269 綠(新增 16 條 UV 契約:有無 UV / 方向 corr > 0.9 / 朝上面收在帶內 / 牆不踩進帶 / 帶寬 = 量出來的 parity ±0.03);反向驗證兩支各 2 紅與 8 紅;audit_siteplan 206 綠(--break-roof 2 紅);視覺 tools/shot_facades.mjs 排面"
+        },
+        "rework_2026_08_12_uvbands": {
+          "what": "三帶 UV 重烤(§5ar;使用者定案「建築外部的密集窗戶圖層與外掛招牌只貼垂直地面且平整的平面牆」)。舊制只分兩群(朝上 / 其餘)⇒ 退縮頂的斜切面、尖塔、屋簷底全在窗格帶裡,而貼圖是盒投影上去的:面越斜同一段 u/v 就攤在越長的表面上 ⇒ 那些面上的窗是被拉糊的一片。這一輪把傾斜獨立成第三帶(素牆,沒有窗)。",
+          "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --uvbands \"mass_a=0.125|0.176|0.3|0.15\" --uvbands \"mass_b=0.125|0.176|0.3|0.15\" --uvbands \"mass_c=0.125|0.176|0.3|0.15\" --uvbands \"masslow_a=0.216|0.262|0.3|0.15\" --uvbands \"masslow_b=0.216|0.262|0.3|0.15\"",
+          "bands": "帶寬取該群面積佔比的名冊平均(三帶 texel 密度相同):mass 朝上 0.120/0.111/0.145 → 0.125、傾斜 0.158/0.179/0.190 → 0.176;masslow 朝上 0.215/0.216 → 0.216、傾斜 0.252/0.271 → 0.262。門檻 minz 0.30 / wall_ny 0.15 沿用兩帶制那一組。",
+          "invariant": "**幾何逐位元不動**:走 `--base` 那條路只重建 UV,節點名與逐頂點座標實測 maxΔ = 0(三角形數 279/216/2921/2900/2900/2900/2900 一格未變)。mass 那三顆同輪由 `--boxuv`(無帶)改成三帶 —— 2026-08-09「平頂桶刻意不開屋頂帶」的理由(朝上面小、俯視機會低)已作廢:這一輪要擋的不是屋頂而是**斜面上的窗**,而平頂塔的退縮切面正是斜面佔比最高的一群。",
+          "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
       },
       "note": "佇列 F 首顆整棟量體節點(2026-08-08)。縫與預算見 runbook §5aa,本顆的入庫見 §5ab。"
@@ -1234,6 +1241,13 @@
           "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --boxuv mass_a --boxuv mass_b --roofband masslow_a=0.273 --roofband masslow_b=0.273",
           "why": "①**屋頂帶**(使用者「斜頂屋頂外觀變摩天大樓的玻璃」的後半):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它不生效,而拆群組會讓每一棟多一個 draw call(pick_n 的推導就是 draw call 上界)⇒ 把區分移進 UV,朝上面壓進 v ∈ [0, 0.273]。②**立面方向**:glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端會翻 v,而消費端那張 CanvasTexture 的 flipY 預設為真 ⇒ **四顆已出貨節點的立面本來是上下顛倒的**(corr(高度, v) = −1.0000:基座暗帶印在屋簷、店面遮陽棚印在地面),這一輪一併翻正。",
           "checks": "intake 269 綠(新增 16 條 UV 契約:有無 UV / 方向 corr > 0.9 / 朝上面收在帶內 / 牆不踩進帶 / 帶寬 = 量出來的 parity ±0.03);反向驗證兩支各 2 紅與 8 紅;audit_siteplan 206 綠(--break-roof 2 紅);視覺 tools/shot_facades.mjs 排面"
+        },
+        "rework_2026_08_12_uvbands": {
+          "what": "三帶 UV 重烤(§5ar;使用者定案「建築外部的密集窗戶圖層與外掛招牌只貼垂直地面且平整的平面牆」)。舊制只分兩群(朝上 / 其餘)⇒ 退縮頂的斜切面、尖塔、屋簷底全在窗格帶裡,而貼圖是盒投影上去的:面越斜同一段 u/v 就攤在越長的表面上 ⇒ 那些面上的窗是被拉糊的一片。這一輪把傾斜獨立成第三帶(素牆,沒有窗)。",
+          "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --uvbands \"mass_a=0.125|0.176|0.3|0.15\" --uvbands \"mass_b=0.125|0.176|0.3|0.15\" --uvbands \"mass_c=0.125|0.176|0.3|0.15\" --uvbands \"masslow_a=0.216|0.262|0.3|0.15\" --uvbands \"masslow_b=0.216|0.262|0.3|0.15\"",
+          "bands": "帶寬取該群面積佔比的名冊平均(三帶 texel 密度相同):mass 朝上 0.120/0.111/0.145 → 0.125、傾斜 0.158/0.179/0.190 → 0.176;masslow 朝上 0.215/0.216 → 0.216、傾斜 0.252/0.271 → 0.262。門檻 minz 0.30 / wall_ny 0.15 沿用兩帶制那一組。",
+          "invariant": "**幾何逐位元不動**:走 `--base` 那條路只重建 UV,節點名與逐頂點座標實測 maxΔ = 0(三角形數 279/216/2921/2900/2900/2900/2900 一格未變)。mass 那三顆同輪由 `--boxuv`(無帶)改成三帶 —— 2026-08-09「平頂桶刻意不開屋頂帶」的理由(朝上面小、俯視機會低)已作廢:這一輪要擋的不是屋頂而是**斜面上的窗**,而平頂塔的退縮切面正是斜面佔比最高的一群。",
+          "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
       },
       "note": "§5ae:名冊補到 2 顆。語料端同輪修掉兩個「合法但沒用」的坑 —— 館藏源 `smithsonian_african_american_history_museum` 進 EXCLUDED_SOURCES、bld_tower 的 4 張裡有 2 張是同一本 1932 年畢業紀念冊的封面/封底(人眼 reject)。"
@@ -1292,6 +1306,13 @@
           "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --boxuv mass_a --boxuv mass_b --roofband masslow_a=0.273 --roofband masslow_b=0.273",
           "why": "①**屋頂帶**(使用者「斜頂屋頂外觀變摩天大樓的玻璃」的後半):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它不生效,而拆群組會讓每一棟多一個 draw call(pick_n 的推導就是 draw call 上界)⇒ 把區分移進 UV,朝上面壓進 v ∈ [0, 0.273]。②**立面方向**:glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端會翻 v,而消費端那張 CanvasTexture 的 flipY 預設為真 ⇒ **四顆已出貨節點的立面本來是上下顛倒的**(corr(高度, v) = −1.0000:基座暗帶印在屋簷、店面遮陽棚印在地面),這一輪一併翻正。",
           "checks": "intake 269 綠(新增 16 條 UV 契約:有無 UV / 方向 corr > 0.9 / 朝上面收在帶內 / 牆不踩進帶 / 帶寬 = 量出來的 parity ±0.03);反向驗證兩支各 2 紅與 8 紅;audit_siteplan 206 綠(--break-roof 2 紅);視覺 tools/shot_facades.mjs 排面"
+        },
+        "rework_2026_08_12_uvbands": {
+          "what": "三帶 UV 重烤(§5ar;使用者定案「建築外部的密集窗戶圖層與外掛招牌只貼垂直地面且平整的平面牆」)。舊制只分兩群(朝上 / 其餘)⇒ 退縮頂的斜切面、尖塔、屋簷底全在窗格帶裡,而貼圖是盒投影上去的:面越斜同一段 u/v 就攤在越長的表面上 ⇒ 那些面上的窗是被拉糊的一片。這一輪把傾斜獨立成第三帶(素牆,沒有窗)。",
+          "cmd": "blender --background --python tools/ai3d/normalize_parts.py -- --base <當時的 building.glb> --out building.glb --uvbands \"mass_a=0.125|0.176|0.3|0.15\" --uvbands \"mass_b=0.125|0.176|0.3|0.15\" --uvbands \"mass_c=0.125|0.176|0.3|0.15\" --uvbands \"masslow_a=0.216|0.262|0.3|0.15\" --uvbands \"masslow_b=0.216|0.262|0.3|0.15\"",
+          "bands": "帶寬取該群面積佔比的名冊平均(三帶 texel 密度相同):mass 朝上 0.120/0.111/0.145 → 0.125、傾斜 0.158/0.179/0.190 → 0.176;masslow 朝上 0.215/0.216 → 0.216、傾斜 0.252/0.271 → 0.262。門檻 minz 0.30 / wall_ny 0.15 沿用兩帶制那一組。",
+          "invariant": "**幾何逐位元不動**:走 `--base` 那條路只重建 UV,節點名與逐頂點座標實測 maxΔ = 0(三角形數 279/216/2921/2900/2900/2900/2900 一格未變)。mass 那三顆同輪由 `--boxuv`(無帶)改成三帶 —— 2026-08-09「平頂桶刻意不開屋頂帶」的理由(朝上面小、俯視機會低)已作廢:這一輪要擋的不是屋頂而是**斜面上的窗**,而平頂塔的退縮切面正是斜面佔比最高的一群。",
+          "verified": "intake_parts 全綠(333 項):三帶各自的 v 界、帶寬 ≈ 面積佔比、立面方向 corr = 1.000;另加這一輪的剖面契約(宣告 = 實測)。"
         }
       }
     },

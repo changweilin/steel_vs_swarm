@@ -143,10 +143,14 @@ export function bldLibDescs(src = biomesSrc()) {
     // 名冊值的第一格可以是**字串或陣列**(2026-08-08 佇列 F:整棟量體 `mass` 是輪替名冊 ——
     // 一款打天下的話同一條天際線會出現十幾棟一樣的剪影)。攤平時 MUST 保留 `index`:
     // 同一桶的每一顆節點共用同一個 node_cap,但缺件/孤兒/來源帳是逐顆的。
-    rows: Object.entries(BLD_LIB).flatMap(([key, [name, fb]]) =>
+    // 第三格 = **輪廓剖面**(2026-08-12;逐節點一筆,與名冊同序)。宣告值住消費端名冊,
+    // 因為佈局數學(碰撞柱 / 尺寸 / 招牌落點)MUST 只讀純資料 —— 讀庫幾何就是碰撞柱跨
+    // 客戶端分家。`intake_parts` 拿它跟 `nodeProfile(GLB)` 逐顆比對 ⇒ 名冊不會靜默過期。
+    rows: Object.entries(BLD_LIB).flatMap(([key, [name, fb, prof]]) =>
       (Array.isArray(name) ? name : [name]).map((n, index) => ({
         name: n, family: n.split('/')[0], node: n.split('/').slice(1).join('/'),
         fb, kind: key, index, table: 'BLD_LIB',
+        prof: prof ? (Array.isArray(prof[0]?.[0]) ? prof[index] : prof) : null,
         consumer: 'biomes-bld', budgetFam: 'building', p: [0, 0, 0],
       }))),
   };
@@ -258,19 +262,90 @@ export function nodeExtent(node) {
 }
 
 /**
- * 逐節點量 **UV 的方向與屋頂帶**(整棟量體那一桶的節點契約;入庫閘的唯一取數處)。
+ * 逐節點量 **輪廓剖面**(2026-08-12 使用者回報「物理碰撞實質上還是立方體」的量測端)。
+ *
+ * ---- 為什麼是「一疊有向盒」而不是真網格 ----
+ * A30 訂死了:障礙的碰撞 / 彈道 / 伺服器 LOS MUST 是**同一個橫斷面**,而三端共同吃得到的
+ * 形狀只有「有向盒」與「圓柱」兩種(occ 上傳的欄位、`_blockerHitT`、`solidResolve` 全是)。
+ * 換成真網格 = 伺服器要收網格 = 三端各寫一份求交 —— 那正是 A18/A30 那一族「靜默丟包」的
+ * 溫床。⇒ 剖面 = **把單一方盒換成一疊方盒**:每一段仍是既有的有向盒,三端一行都不用改。
+ *
+ * 量法:縱向切 `bands` 段,逐段取 |x|、|z| 的**最大值**(⇒ 該段的盒恆**包住**該段的網格,
+ * 「演出 ⊆ 碰撞盒」的同一條紀律,A44 ③),再貪心合併相鄰段直到剩 `maxSlabs` 段 ——
+ * 合併成本 = 多出來的實體體積(合併後的盒體積 − 逐段盒體積和)。取最大值而不是分位數是
+ * 刻意的:少算一格就是「看得見的牆打得穿」,那比多算一格嚴重得多。
+ *
+ * 回傳的座標是**單位盒座標**(消費端逐實例 scale 之前),欄位刻意與消費端同名:
+ *   `slabs` [[y0, y1, hw, hd], …] 由下而上、首尾相接、四位小數(名冊是要寫進 biomes.js 的原文)
+ *   `hw/hd/hy`  整顆的半跨(消費端據此把網格**填滿基地**,見 Q1:0.13 的半寬縮在 1.0 的
+ *               基地中央 = 一片浮在空地裡的薄牆,而碰撞盒還是整塊基地)
+ *   `solid`     剖面體積 ÷ 單位盒(= 舊制那顆方盒有多少是空氣;實測 0.16~0.38)
+ */
+export function nodeProfile(node, { bands = 16, maxSlabs = 4 } = {}) {
+  const { pos } = node;
+  let y0 = Infinity, y1 = -Infinity;
+  for (let i = 1; i < pos.length; i += 3) { y0 = Math.min(y0, pos[i]); y1 = Math.max(y1, pos[i]); }
+  const dy = (y1 - y0) / bands;
+  if (!(dy > 0)) return null;
+  const hx = new Array(bands).fill(0), hz = new Array(bands).fill(0);
+  for (let i = 0; i < pos.length; i += 3) {
+    const k = Math.min(bands - 1, Math.max(0, Math.floor((pos[i + 1] - y0) / dy)));
+    hx[k] = Math.max(hx[k], Math.abs(pos[i]));
+    hz[k] = Math.max(hz[k], Math.abs(pos[i + 2]));
+  }
+  // 空段(網格在這個高度沒有頂點)沿用下一段的外廓 —— 留 0 會在剖面裡開一道「看得見卻
+  // 打得穿」的縫(chimney_a 第 13 段實測就是 0)
+  for (let k = 0; k < bands; k++) if (!hx[k] && !hz[k]) { hx[k] = hx[k - 1] || hx[k + 1] || 0; hz[k] = hz[k - 1] || hz[k + 1] || 0; }
+  let sl = hx.map((_, k) => ({ a: k, b: k }));
+  const ext = (s) => { let x = 0, z = 0; for (let k = s.a; k <= s.b; k++) { x = Math.max(x, hx[k]); z = Math.max(z, hz[k]); } return [x, z]; };
+  const vol = (s) => { const [x, z] = ext(s); return 4 * x * z * (s.b - s.a + 1) * dy; };
+  while (sl.length > maxSlabs) {
+    let bi = 0, bc = Infinity;
+    for (let i = 0; i + 1 < sl.length; i++) {
+      const c = vol({ a: sl[i].a, b: sl[i + 1].b }) - vol(sl[i]) - vol(sl[i + 1]);
+      if (c < bc) { bc = c; bi = i; }
+    }
+    sl.splice(bi, 2, { a: sl[bi].a, b: sl[bi + 1].b });
+  }
+  const r4 = (v) => Math.round(v * 1e4) / 1e4;
+  const slabs = sl.map((s) => { const [x, z] = ext(s); return [r4(y0 + s.a * dy), r4(y0 + (s.b + 1) * dy), r4(x), r4(z)]; });
+  const solid = slabs.reduce((t, [a, b, w, d]) => t + 4 * w * d * (b - a), 0) / Math.max(1e-9, y1 - y0);
+  return {
+    slabs, solid: r4(solid),
+    hw: r4(Math.max(...hx)), hd: r4(Math.max(...hz)), hy: r4(Math.max(Math.abs(y0), Math.abs(y1))),
+  };
+}
+
+/**
+ * 逐節點量 **UV 的方向與三條帶**(整棟量體那一桶的節點契約;入庫閘的唯一取數處)。
  * 回傳 `null` = 這顆沒有 UV。量的是**消費端座標**:GLB 存的值就是 three 取樣用的 v,
  * 而消費端那張 `CanvasTexture` 的 `flipY` 是預設的 true ⇒ v=0 採到畫布底部。
- *   `corr`     牆面(近垂直)頂點的 corr(高度, v) —— MUST > 0,否則立面是**上下顛倒**的
- *              (基座暗帶印在屋簷)。這件事沒有任何錯誤訊息,只有貼圖排面看得出來。
- *   `upMaxV`   朝上面(n.y > minz)的 v 上界 —— 屋頂帶在 [0, frac] ⇒ MUST ≤ frac
- *   `wallMinV` 近垂直面的 v 下界 —— MUST ≥ frac(牆不准踩進屋頂帶)
- *   `parity`   朝上面積 ÷(朝上 + 側面)= 兩帶 texel 密度相同時的 frac(`roof_band` 的推導式)
+ *
+ * ---- 為什麼是三條帶(2026-08-12 使用者定案「密集窗戶圖層與外掛招牌只貼垂直地面且平整的
+ *      平面牆」)----
+ * 貼圖是**盒投影**上去的:面越斜,同一段 u/v 就攤在越長的表面上 ⇒ 斜面上的窗格是被拉糊的
+ * 一片。舊制只分兩帶(朝上 / 其餘),於是「其餘」把退縮頂的斜切面、尖塔、屋簷底一起收進
+ * 窗格帶。這一輪把**傾斜**獨立成第三帶(素牆:只有牆的材質感、沒有窗),分類純看面的傾角:
+ *   朝上 n.y > `roofMinz`            → 屋頂帶  v ∈ [0, roof)
+ *   傾斜 `wallNy` < |n.y| ≤ roofMinz、或朝下 → 素牆帶  v ∈ [roof, roof + plain)
+ *   近垂直 |n.y| ≤ `wallNy`          → 窗牆帶  v ∈ [roof + plain, 1]
+ * 「平整」那半**不靠這一帶兌現**:實測 AI 網格的垂直面本來就有起伏(逐平面分群只認得
+ * mass_a 的 4~9% 面積),把九成立面判成素牆只會更糟。⇒ 窗格吃「垂直」這一條(盒投影對
+ * 起伏不敏感,窗格照樣是正的),而**招牌**那半吃更嚴的一條 —— 它掛在 `nodeProfile` 的
+ * 剖面側面上,那些面依構造就是垂直且平整的矩形。
+ *
+ *   `corr`      牆面(近垂直)頂點的 corr(高度, v) —— MUST > 0,否則立面是**上下顛倒**的
+ *               (基座暗帶印在屋簷)。這件事沒有任何錯誤訊息,只有貼圖排面看得出來。
+ *   `upMaxV`    朝上面的 v 上界 —— MUST ≤ roof
+ *   `tiltMinV`/`tiltMaxV` 傾斜面的 v 範圍 —— MUST 收在 [roof, roof + plain]
+ *   `wallMinV`  近垂直面的 v 下界 —— MUST ≥ roof + plain(牆不准踩進前兩帶)
+ *   `parity`    朝上面積佔比 = 三帶 texel 密度相同時的 `roof_band`(推導式)
+ *   `plainParity` 傾斜面積佔比 = 同一條推導出來的 `plain_band`
  */
-export function uvBandStats(node, minz = 0.30) {
+export function uvBandStats(node, minz = 0.30, wallNy = 0.15) {
   const { pos, idx, uv } = node;
   if (!uv) return null;
-  let upA = 0, sideA = 0, upMaxV = 0, wallMinV = 1;
+  let upA = 0, tiltA = 0, sideA = 0, upMaxV = 0, wallMinV = 1, tiltMinV = 1, tiltMaxV = 0;
   const ys = [], vs = [];
   for (let i = 0; i < idx.length; i += 3) {
     const A = idx[i], B = idx[i + 1], C = idx[i + 2];
@@ -283,11 +358,15 @@ export function uvBandStats(node, minz = 0.30) {
     const up = ny / L, area = L / 2;
     const vv = [uv[A * 2 + 1], uv[B * 2 + 1], uv[C * 2 + 1]];
     if (up > minz) { upA += area; upMaxV = Math.max(upMaxV, ...vv); continue; }
-    if (Math.abs(up) <= minz) sideA += area;
-    // 「牆」取近垂直的那一群(±0.15):斜的過渡面兩邊都不算,免得把屋簷底當成牆
-    if (Math.abs(up) < 0.15) {
+    // 「牆」取近垂直的那一群:斜的過渡面與朝下的屋簷底一律歸素牆帶(舊制它們混在窗格帶裡)
+    if (Math.abs(up) <= wallNy) {
+      sideA += area;
       wallMinV = Math.min(wallMinV, ...vv);
       for (const V of [A, B, C]) { ys.push(pos[V * 3 + 1]); vs.push(uv[V * 2 + 1]); }
+    } else {
+      tiltA += area;
+      tiltMinV = Math.min(tiltMinV, ...vv);
+      tiltMaxV = Math.max(tiltMaxV, ...vv);
     }
   }
   let corr = 0;
@@ -297,7 +376,11 @@ export function uvBandStats(node, minz = 0.30) {
     for (let i = 0; i < n; i++) { const dx = ys[i] - my, dv = vs[i] - mv; sxy += dx * dv; sxx += dx * dx; svv += dv * dv; }
     corr = sxx && svv ? sxy / Math.sqrt(sxx * svv) : 0;
   }
-  return { corr, upMaxV, wallMinV, upA, sideA, parity: upA / Math.max(upA + sideA, 1e-9) };
+  const T = Math.max(upA + tiltA + sideA, 1e-9);
+  return {
+    corr, upMaxV, wallMinV, tiltMinV, tiltMaxV, upA, tiltA, sideA,
+    parity: upA / T, plainParity: tiltA / T,
+  };
 }
 
 export const glbPath = (family) => join(ROOT, 'public', 'assets', 'models', 'parts', `${family}.glb`);

@@ -21,7 +21,7 @@
 import { existsSync } from 'node:fs';
 import {
   beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs, megaLibDescs, bldLibDescs,
-  fbEnvelope, parseGlb, nodeExtent, uvBandStats, glbPath, triBudget,
+  fbEnvelope, parseGlb, nodeExtent, nodeProfile, uvBandStats, glbPath, triBudget,
 } from './parts_src.mjs';
 
 let pass = 0, fail = 0;
@@ -67,9 +67,10 @@ for (const gp of targets) {
   const descs = libDescs.get(fam) || [];
   ok(descs.length > 0, `消費端有引用這一族的 lib 描述子(${descs.length} 筆)`);
   const perKind = new Map();   // kind → Σ 庫零件三角形(逐株閘用)
+  const aspects = new Map();   // 節點 → 自然平面長寬比(名冊涵蓋率閘用,見迴圈之後)
   const seen = new Set();
   const vegUse = new Map();    // kind → { tris: Σ 庫節點, whole: bool, rows: n }(整層總量閘用)
-  for (const { name, fb, kind, consumer, budgetFam, whole } of descs) {
+  for (const { name, fb, kind, consumer, budgetFam, whole, prof } of descs) {
     // 逐件預算依**消費角色**取(巨岩塊走 families.megalith:一顆巨岩最多 29 件庫零件,
     // 上限比同一支 GLB 裡的 beacons 疊石緊得多 —— 族相同、角色不同、預算不同)。
     // InstancedMesh 消費端(building 桶)另有**逐桶**節點上限:一顆節點被全桶共用,
@@ -99,24 +100,58 @@ for (const gp of targets) {
     //    audit_siteplan 釘住);這裡驗的是**成品 GLB**,不是那行指令打對了沒。
     const uvSpec = budget?.families?.building?.[kind]?.uv;
     if (uvSpec && !seen.has(name)) {
-      const bandF = budget.families.building[kind].roof_band;
-      const minz = budget.families.building[kind].roof_minz ?? 0.30;
-      const st = uvBandStats(node, minz);
+      const spec = budget.families.building[kind];
+      const bandF = spec.roof_band;
+      const plainF = spec.plain_band ?? 0;
+      const minz = spec.roof_minz ?? 0.30;
+      const wallNy = spec.wall_ny ?? 0.15;
+      const st = uvBandStats(node, minz, wallNy);
       ok(!!st, `${tag}:有 UV(整棟量體是唯一吃貼圖的桶;沒有 UV = 整棟採到一個 texel 的純色板)`);
       if (st) {
         // 方向:牆面的 v MUST 隨高度遞增。glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端
         // 會把 v 翻過來,不補償就是**整面立面上下顛倒**,而方盒那條路是正的(兩種方向)
         ok(st.corr > 0.9, `${tag}:立面方向正確(牆面 corr(高度, v) = ${st.corr.toFixed(3)} > 0.9)`);
-        if (uvSpec === 'roofband') {
+        if (uvSpec === 'uvbands' || uvSpec === 'roofband') {
+          const wallLo = bandF + plainF;
           ok(st.upMaxV <= bandF + 1e-3, `${tag}:朝上面收在屋頂帶內(v 上界 ${st.upMaxV.toFixed(3)} ≤ ${bandF})`);
-          ok(st.wallMinV >= bandF - 1e-3, `${tag}:牆面不踩進屋頂帶(v 下界 ${st.wallMinV.toFixed(3)} ≥ ${bandF})`);
-          // 帶寬是**推導值**(兩帶 texel 密度相同):量出來的比例要對得上宣告的那個數字
-          ok(Math.abs(st.parity - bandF) <= 0.03,
-            `${tag}:屋頂帶寬 = 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ 0.03)`);
+          ok(st.wallMinV >= wallLo - 1e-3, `${tag}:窗牆面不踩進前兩帶(v 下界 ${st.wallMinV.toFixed(3)} ≥ ${wallLo.toFixed(3)})`);
+          // 帶寬是**推導值**(三帶 texel 密度相同):量出來的比例要對得上宣告的那個數字。
+          // 名冊平均 ⇒ 逐顆容差放到 0.06(舊制兩顆同族時 0.03;三顆的 mass 桶散度較大)
+          ok(Math.abs(st.parity - bandF) <= 0.06,
+            `${tag}:屋頂帶寬 ≈ 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ 0.06)`);
+          if (plainF > 0) {
+            // 素牆帶(2026-08-12:「窗只貼垂直平整的牆」)—— 傾斜/朝下的面全部收在中間那一條
+            ok(st.tiltMinV >= bandF - 1e-3 && st.tiltMaxV <= wallLo + 1e-3,
+              `${tag}:傾斜/朝下面收在素牆帶內(v ∈ [${st.tiltMinV.toFixed(3)}, ${st.tiltMaxV.toFixed(3)}] ⊆ [${bandF}, ${wallLo.toFixed(3)}])`);
+            ok(Math.abs(st.plainParity - plainF) <= 0.06,
+              `${tag}:素牆帶寬 ≈ 傾斜面積佔比(實測 ${st.plainParity.toFixed(3)} vs 宣告 ${plainF},差 ${Math.abs(st.plainParity - plainF).toFixed(3)} ≤ 0.06)`);
+          }
         } else {
-          ok(st.upMaxV > 0.5, `${tag}:沒有屋頂帶(平頂桶刻意共用立面貼圖;朝上面 v 上界 ${st.upMaxV.toFixed(3)})`);
+          ok(st.upMaxV > 0.5, `${tag}:沒有屋頂帶(朝上面 v 上界 ${st.upMaxV.toFixed(3)})`);
         }
       }
+    }
+    // ①-c **輪廓剖面契約**(2026-08-12;使用者「物理碰撞應該要與建模的 3D 外表一致」)。
+    //    宣告值住消費端名冊(碰撞柱 / 保險絲幾何 / 招牌落點 / 尺寸貼合全吃它),而**佈局
+    //    數學讀不到庫幾何** ⇒ 名冊與 GLB 分家不會有任何錯誤訊息,只會讓碰撞盒對不上網格。
+    //    這一段就是那道閘:逐段比對宣告與實測,並驗兩條設計不變式。
+    if (budget?.families?.building?.[kind]?.profile && !seen.has(`prof:${name}`)) {
+      const ps = budget.families.building.profile_spec;
+      const mea = nodeProfile(node, { bands: ps.bands, maxSlabs: ps.slabs });
+      ok(!!prof, `${tag}:名冊有宣告剖面(缺 = 碰撞柱退回整顆方盒 = 這一輪要修的那個東西)`);
+      if (prof && mea) {
+        const same = prof.length === mea.slabs.length
+          && prof.every((s, i) => s.every((v, j) => Math.abs(v - mea.slabs[i][j]) <= 1e-3));
+        ok(same, `${tag}:宣告剖面 = 實測剖面(${prof.length} 段;實測 ${JSON.stringify(mea.slabs)})`);
+        // 「盒恆包住網格」——「演出 ⊆ 碰撞盒」(A44 ③)在這一族的兌現:少算一格的代價是
+        // 「看得見的牆打得穿」。驗最寬那一段的外接半徑蓋得過整顆的實測徑向。
+        const hw = Math.max(...prof.map((s) => s[2])), hd = Math.max(...prof.map((s) => s[3]));
+        const { rMax } = nodeExtent(node);
+        ok(Math.hypot(hw, hd) >= rMax - 1e-3,
+          `${tag}:剖面包住網格(最寬一段的外接半徑 ${Math.hypot(hw, hd).toFixed(3)} ≥ 實測 ${rMax.toFixed(3)})`);
+        aspects.set(name, { kind, a: hw / hd });
+      }
+      seen.add(`prof:${name}`);
     }
     if (!budget) ok(false, `${name}:tri_budget.json 存在(預算 MUST 量測,不准手寫)`);
     else if (!seen.has(name)) {
@@ -159,6 +194,27 @@ for (const gp of targets) {
     ok(total <= quota,
       `families.veg 整層消耗 ${total} ≤ 成長額度 ${quota}(用量 ${(total / quota * 100).toFixed(1)}%)`);
     for (const l of lines) console.log(`     · ${l}`);
+  }
+  // ②-c **名冊涵蓋率閘**(2026-08-12;使用者「調整目標物件到適合的大小,避免真實感太差」)。
+  // 消費端拿單位方盒逐實例 scale(w,h,d) ⇒ 節點的自然平面長寬比與基地差越多,拉伸就越兇。
+  // 消費端的處置是「拉伸超過 `aspect_max` 就不換這一棟」(退回方盒,原則 6),於是**逐顆**
+  // 沒有上限可言 —— 薄板塔本來就只該落在長條基地上。真正會出事的是**整份名冊**:
+  // 一顆都收不下方正基地的話,零件庫載到了而畫面跟沒載一樣(密市區的樓多半接近方形),
+  // 而所有既有閘門全綠。⇒ 閘在名冊層級:允許整顆轉 90°(自然比取倒數),涵蓋範圍
+  // MUST 蓋得住 1:1。
+  const spec = budget?.families?.building?.profile_spec;
+  if (spec && aspects.size) {
+    const byKind = new Map();
+    for (const [n, { kind, a }] of aspects) {
+      if (!byKind.has(kind)) byKind.set(kind, []);
+      byKind.get(kind).push({ n, a });
+    }
+    for (const [kind, rows] of byKind) {
+      const cover = rows.some(({ a }) => [a, 1 / a].some((A) => Math.max(A, 1 / A) <= spec.aspect_max));
+      ok(cover, `families.building.${kind}:名冊蓋得住方正基地(自然平面比 `
+        + `${rows.map((r) => `${r.n.split('/').pop()} ${r.a.toFixed(2)}`).join(' / ')};`
+        + `拉伸上限 ${spec.aspect_max}×,允許轉 90°)`);
+    }
   }
   // ③ 逐株(逐款)閘:單件合格 ≠ 整株合格 —— 一株神木十幾件,全換掉每一件都「合格」卻是 20 倍
   for (const [kind, tris] of perKind) {
