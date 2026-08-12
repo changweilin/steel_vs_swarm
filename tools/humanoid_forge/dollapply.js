@@ -246,7 +246,9 @@ export function applyDoll(unit, raw) {
     if (q.glow != null && mesh.material?.emissiveIntensity != null) {
       mesh.material.emissiveIntensity = base.glow * q.glow;
     }
-    if (q.hide) mesh.visible = false;
+    // 隱藏 MUST 留戳記:武器獨立檢視在切回機體時會把整棵樹重新打開,
+    // 沒有戳記的話使用者藏起來的零件會自己冒出來(見 wpnview.showWpn)
+    if (q.hide) { mesh.visible = false; mesh.userData.dollHidden = true; }
   }
 
   // ③ 黏貼件(排在零件變換之後:黏貼的是**現在這一顆**的樣子,含它剛換過的形狀)

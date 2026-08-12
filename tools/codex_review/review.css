@@ -135,12 +135,30 @@ body.cr::before, body.cr::after { display: none; }
 .cr-fref img { width: 100%; display: block; border: 1px solid var(--railS); border-radius: 6px; }
 .cr-fref.star img { outline: 2px solid #ffd479; }
 .cr-fref figcaption { color: var(--dim); font-size: 11px; text-align: center; padding-top: 2px; }
-.cr-forge { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
-.cr-fstage { position: relative; width: 380px; height: 380px; flex: 0 0 auto;
+.cr-forge { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+/* 動作鈕 MUST 在畫布**外面**:疊上去的那一排(舊 .cr-fstage .cr-stage-btns)同時吃到
+   `bottom: 6px`(上面那條共用規則)與 `top: 6px`,絕對定位因此被撐成整格高 ——
+   flex 子項跟著 stretch,四顆鈕變成 380px 高的柱子把機體整台蓋住(2026-08-12 使用者回報)。
+   疊層版面在 380px 見方的台子上本來就沒有餘裕,收成一列擺在台子底下。 */
+.cr-fcol { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
+.cr-fstage { position: relative; width: 380px; height: 380px;
   background: #171a21; border: 1px solid var(--railS); border-radius: 3px; overflow: hidden; }
-.cr-fstage canvas { width: 100%; height: 100%; display: block; }
-.cr-fstage .cr-stage-btns { position: absolute; left: 6px; top: 6px; display: flex; gap: 4px; z-index: 2; }
+.cr-fstage canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.cr-fbar { display: flex; gap: 4px; flex-wrap: wrap; }
+.cr-fhint { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+/* 抬頭列(檢視分頁 + 紙娃娃開關):鍛造區塊離頁首兩個畫面,入口 MUST 在抬頭看得到 */
+.cr-fhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 8px; }
+.cr-fhead .cr-dim { font-size: 10.5px; }
+/* 跳轉小片(頁首 → 鍛造區塊、機體 ⇄ 武器):與展示台的 .jump 同語意 */
+.cr-jump { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.cr-fjumps { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.cr-jchip { display: inline-block; padding: 3px 9px; font-size: 11.5px; cursor: pointer;
+  border: 1px solid #3a4a63; border-radius: 6px; color: #9fd8ff; background: #1b2129; }
+.cr-jchip:hover { background: #232c38; }
 .cr-fctl { flex: 1 1 300px; min-width: 280px; }
+.cr-refs { margin: 4px 0 8px; }
+.cr-refs .dim { color: var(--dim); font-size: 11px; }
+#crDollPanel { flex: 1 1 260px; min-width: 250px; border-left: 1px solid var(--railS); padding-left: 12px; }
 .cr-frow { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-family: var(--mono); font-size: 10.5px; }
 .cr-frow span { width: 76px; color: var(--dim); }
 .cr-frow input[type="range"] { flex: 1; accent-color: #6fb7ff; }

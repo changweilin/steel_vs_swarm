@@ -12,12 +12,13 @@
 //   node tools/humanoid_forge.mjs            # 起 dev server(預設 :8631)
 //   node tools/humanoid_forge.mjs --port 9000
 import { createServer } from 'node:http';
-import { readFile, stat, mkdir, writeFile, readdir } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { ROOT } from './audit_src.mjs';
-import { rosterEntries, rosterByCat } from './humanoid_forge/roster.js';
+import { rosterByCat } from './humanoid_forge/roster.js';
 import { handleForgeApi } from './humanoid_forge/specstore.mjs';
+import { handleBoardApi } from './humanoid_forge/boardapi.mjs';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -46,58 +47,9 @@ const srv = createServer(async (req, res) => {
     // 與覆核台 :8621 是**同一支**處理器 —— 兩座看板寫同一份檔,MUST NOT 各寫一套語意。
     if (await handleForgeApi(req, res, send)) return;
     let url = req.url.split('?')[0];
-    // 截圖落盤(headless 檢視:pane 不合成時 window.__shot 顯式渲染一幀 POST 回來)
-    if (req.method === 'POST' && url.startsWith('/__shot/')) {
-      const name = url.slice('/__shot/'.length).replace(/[^\w.-]/g, '');
-      if (!name) return send(400, 'name?');
-      const chunks = [];
-      for await (const c of req) chunks.push(c);
-      const s = Buffer.concat(chunks).toString('utf8');
-      const b64 = s.startsWith('data:') ? s.slice(s.indexOf(',') + 1) : s;
-      const dir = join(ROOT, 'tools', 'humanoid_forge', 'shots');
-      await mkdir(dir, { recursive: true });
-      await writeFile(join(dir, `${name}.png`), Buffer.from(b64, 'base64'));
-      return send(200, JSON.stringify({ ok: true, path: `tools/humanoid_forge/shots/${name}.png` }), MIME['.json']);
-    }
-    // 2D 原型圖名冊(2026-08-12 使用者:「下載原型圖片放在機體台,3D建模時需參考2D圖片」):
-    // 名冊 = public/assets/cyberpunk_art/mechs/ 目錄本身(單一真相,MUST NOT 客戶端拼檔名);
-    // 地面型排前(人形鍛造建模的是地面人形),姿態 static → moving → heavy。
-    if (req.method === 'GET' && url === '/api/protoimgs') {
-      const q = new URLSearchParams(req.url.split('?')[1] || '');
-      const id = (q.get('id') || '').replace(/[^\w]/g, '');
-      if (!id) return send(400, 'id?');
-      const dir = join(ROOT, 'public', 'assets', 'cyberpunk_art', 'mechs');
-      const files = (await readdir(dir).catch(() => []))
-        .filter((f) => f.startsWith(`${id}_`) && /\.(png|jpe?g)$/i.test(f));
-      const score = (f) => (f.includes('_flight_') ? 10 : 0)
-        + (f.includes('moving') ? 1 : f.includes('heavy') ? 2 : 0);
-      files.sort((a, b) => score(a) - score(b) || (a < b ? -1 : 1));
-      return send(200, JSON.stringify({
-        imgs: files.map((f) => ({ file: f, url: `/public/assets/cyberpunk_art/mechs/${f}` })),
-      }), MIME['.json']);
-    }
-    // 真實原型參考照(2026-08-12 第四輪:「除了機體圖也搜集下載原型動物或機型圖案」):
-    // 名冊 = tools/proto_refs/manifest.json(採集帳本,由 tools/fetch_protorefs.mjs 寫),
-    // 原型層 = roster.protoRefsOf() —— 兩份都是既有的縫,展示台 MUST NOT 掃目錄自己拼。
-    // 帳本沒有那一格 = 還沒採集(回空陣列讓看板明講),**不是**錯誤。
-    if (req.method === 'GET' && url === '/api/protorefs') {
-      const q = new URLSearchParams(req.url.split('?')[1] || '');
-      const key = q.get('key') || '';
-      const entry = rosterEntries().find((e) => e.key === key);
-      if (!entry) return send(404, JSON.stringify({ error: 'key?' }), MIME['.json']);
-      let man = { entries: {} };
-      try { man = JSON.parse(await readFile(join(ROOT, 'tools', 'proto_refs', 'manifest.json'), 'utf8')); }
-      catch { /* 還沒採集過 */ }
-      const safe = key.replace(/@/g, '_').replace(/[^\w.-]/g, '');
-      const layers = entry.protos.map((L) => ({
-        key: L.key, label: L.label, src: L.src, note: L.note,
-        imgs: ((man.entries?.[key] || {})[L.key] || []).map((r) => ({
-          file: r.file, license: r.license, creator: r.creator, source_url: r.source_url,
-          url: `/tools/proto_refs/${safe}/${L.key}/${r.file}`,
-        })),
-      }));
-      return send(200, JSON.stringify({ key, layers }), MIME['.json']);
-    }
+    // 截圖落盤 + 原型圖名冊(2D 定案圖 / CC0 原型照):住 boardapi.mjs,與覆核台 :8641
+    // 同一支 —— 兩邊各寫一份的話,同一格在兩座看板上會列出不一樣的圖,而兩邊都很正常。
+    if (await handleBoardApi(req, res, send)) return;
     // 名冊與分類(看板以外的消費端 —— 例如截圖工具 —— 直接吃這一份)
     if (req.method === 'GET' && url === '/api/roster') {
       return send(200, JSON.stringify({ cats: rosterByCat() }), MIME['.json']);

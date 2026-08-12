@@ -309,5 +309,116 @@ console.log('■ Ⅶ 編輯器紀律(dolledit:只寫草稿文件、拖曳與重�
     /want\.includes\(ed\.sel\.type\)\) ed\.sel = null/.test(ec));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:同一支編輯器、同一份標記與樣式)');
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  const revJs = readSrc('tools', 'codex_review', 'review.js');
+  let revCss = readSrc('tools', 'codex_review', 'review.css');
+  const revHtml = readSrc('tools', 'codex_review', 'index.html');
+  const fwdHtml = readSrc('tools', 'humanoid_forge', 'index.html');
+  const boardCss = readSrc('tools', 'humanoid_forge', 'board.css');
+  const refSrc = readSrc('tools', 'humanoid_forge', 'refstrip.js');
+  const apiSrc = readSrc('tools', 'humanoid_forge', 'boardapi.mjs');
+  let revForge = revJs;
+
+  // ── 使用者 2026-08-12 回報:「武器招式按鍵擋住機體3D建模」──
+  // 病因不是按鈕太多,是**疊層**:`.cr-stage-btns` 同時吃到共用規則的 `bottom: 6px` 與
+  // 鍛造台自己那條 `top: 6px` ⇒ 絕對定位被撐成整格高(實測 366px / 380px 的台子),
+  // flex 子項跟著 stretch,四顆鈕變成蓋住整台機體的柱子。
+  // 故驗的是**結構**:動作鈕 MUST 在畫布外面,而不是「疊得剛剛好」。
+  if (brk('overlay')) {
+    revCss += '\n.cr-fstage .cr-stage-btns { position: absolute; left: 6px; top: 6px; }\n';
+    revForge = revForge.replace('<div class="cr-fstage" id="crForgeStage"></div>',
+      '<div class="cr-fstage" id="crForgeStage"><div class="cr-stage-btns"></div></div>');
+  }
+  t('鍛造台的畫布容器裡沒有別的東西(動作鈕 MUST 在畫布外面)',
+    /<div class="cr-fstage" id="crForgeStage"><\/div>/.test(revForge),
+    (revForge.match(/<div class="cr-fstage"[^\n]*/) || [''])[0]);
+  t('CSS 沒有任何「疊在鍛造畫布上」的絕對定位子選擇器',
+    !/\.cr-fstage\s+\.[\w-]+\s*\{[^}]*position:\s*absolute/.test(revCss));
+  t('動作鈕列是普通的一列(MUST NOT 絕對定位)',
+    /\.cr-fbar\s*\{[^}]*display:\s*flex/.test(revCss) && !/\.cr-fbar\s*\{[^}]*position:\s*absolute/.test(revCss));
+
+  // ── 使用者同一輪:「紙娃娃系統與原型照片也加入機體美術台整合」──
+  t('編輯器只有一支:覆核台動態 import dolledit.js(MUST NOT 自己寫一個)',
+    /import\('\/tools\/humanoid_forge\/dolledit\.js'\)/.test(revJs)
+    && /makeDollEditor\(\{/.test(revJs)
+    && (code(revJs).match(/function makeDollEditor/g) || []).length === 0);
+  t('覆核台只提供場景與回呼(rebuild / save / stored / specKey)',
+    /rebuild: \(doc\) =>/.test(revJs) && /save: async \(doc\)/.test(revJs)
+    && /stored: \(\) =>/.test(revJs) && /specKey: \(\) =>/.test(revJs));
+  t('原型照標記只有一份:兩座看板都 import refstrip.js',
+    /from '\/tools\/humanoid_forge\/refstrip\.js'/.test(revJs)
+    && /from '\.\/refstrip\.js'/.test(readSrc('tools', 'humanoid_forge', 'viewer.js')));
+  t('兩座看板都沒有自己拼原型照的標記(figure.proto 只在 refstrip.js 裡)',
+    !/figure class="proto"/.test(code(revJs))
+    && !/figure class="proto"/.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js')))
+    && /figure class="proto"/.test(refSrc));
+  t('共用樣式只有一份:兩張 index.html 都掛 board.css',
+    /humanoid_forge\/board\.css/.test(revHtml) && /humanoid_forge\/board\.css/.test(fwdHtml));
+  t('紙娃娃面板樣式 MUST NOT 留在任一頁的 inline style(那就是第二份 CSS)',
+    !/\.d-row\s*\{/.test(fwdHtml) && !/\.d-row\s*\{/.test(revCss) && /\.d-row\s*\{/.test(boardCss));
+  t('原型圖路由只有一份:兩支 server 都轉呼 boardapi',
+    /handleBoardApi\(req, res, send\)/.test(readSrc('tools', 'humanoid_forge.mjs'))
+    && /handleBoardApi\(req, res, send\)/.test(readSrc('tools', 'codex_review.mjs'))
+    && /export async function handleBoardApi/.test(apiSrc));
+  t('名冊推導在伺服器端(客戶端 MUST NOT 拼原型照檔名)',
+    /manifest\.json/.test(apiSrc) && !/proto_refs\//.test(code(revJs))
+    && !/proto_refs\//.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js'))));
+  // 一邊自轉一邊拖 gizmo = 零件被拉往「拖的那一瞬間鏡頭在的地方」
+  t('覆核台編輯時停自轉(與展示台同一條)', /autoRotate = !fapp\.editOn/.test(code(revJs)));
+  t('覆核台重鍛不重新取景(每拖一格就重新取景 = 鏡頭一直跳)',
+    /fapp\.framedKey !== fapp\.key/.test(code(revJs)));
+  // 這座台先前沒有任何 headless 入口 ⇒ 純視覺的壞法在離線這端一條都量不到
+  t('覆核台有 headless 入口(手動步進 + 顯式渲染 + 落盤)',
+    /window\.__cr = \{/.test(revJs) && /step: \(n = 1/.test(revJs) && /shot: async \(name\)/.test(revJs));
+  t('截圖落盤路由與展示台同一支(boardapi)', /'\/__shot\/'/.test(apiSrc)
+    && !/'\/__shot\/'/.test(code(readSrc('tools', 'humanoid_forge.mjs'))));
+
+  // ── 使用者同一輪:「機體美術台沒看到武器模組跳轉頁面」──
+  let wpnSrc = readSrc('tools', 'humanoid_forge', 'wpnview.js');
+  const viewerSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  if (brk('dollvis')) wpnSrc = wpnSrc.replace(
+    'unit.group.traverse((o) => { if (o.isMesh) o.visible = !o.userData.dollHidden; });',
+    'unit.group.traverse((o) => { if (o.isMesh) o.visible = true; });');
+  t('武器檢視只有一支實作(wpnview.js),兩座看板都轉呼',
+    /export function showWpn/.test(wpnSrc)
+    && /from '\.\/wpnview\.js'/.test(viewerSrc)
+    && /import\('\/tools\/humanoid_forge\/wpnview\.js'\)/.test(revJs));
+  t('兩座看板都沒有自己撈 wpn.nodes(那就是第二份武器檢視)',
+    !/wpn\?\.\[?\w*\]?\.nodes|for \(const n of w\.nodes/.test(code(revJs))
+    && (code(viewerSrc).match(/w\.nodes/g) || []).length === 0);
+  // 切回機體時「全部顯示」MUST 尊重紙娃娃的隱藏覆寫,否則藏起來的零件會自己冒出來
+  t('回到機體的全開 MUST 跳過紙娃娃藏起來的零件',
+    /o\.visible = !o\.userData\.dollHidden/.test(wpnSrc)
+    && /mesh\.userData\.dollHidden = true/.test(code(applySrc)));
+  t('鈕面只列掛得到的槽位(點下去卻退回機體 = 鈕面在說謊)',
+    /wl \? `<button[^`]*data-view="light"/.test(revJs) && /wh \? `<button[^`]*data-view="heavy"/.test(revJs));
+  // 入口:鍛造區塊在第三段、離頁首兩個畫面 ⇒ 沒有頁首入口就等於沒有這個功能
+  let entry = revJs;
+  if (brk('entry')) entry = entry.replace('<div class="cr-jump" id="crForgeJump"></div>', '');
+  t('頁首有跳轉入口(⚙ 機體鍛造 / 🧷 紙娃娃 / 武器)',
+    /id="crForgeJump"/.test(entry) && /data-jump="doll"/.test(entry) && /data-jump="light"/.test(entry));
+  t('抬頭列有檢視分頁與紙娃娃開關(捲兩個畫面才看得到的入口 = 沒有入口)',
+    /id="crForgeView"/.test(revJs) && /class="cr-fhead"/.test(revJs) && /id="cfDoll"/.test(revJs));
+  t('三個入口同吃一支切換(MUST NOT 各自寫一份「開啟編輯器」)',
+    (code(revJs).match(/function setForgeView/g) || []).length === 1
+    && /data-jump/.test(revJs) && /\$\('cfDoll'\)\.click\(\)/.test(revJs));
+  t('武器頁停止移動(取景框定住而機體繼續走 ⇒ 武器飄出畫面)',
+    /if \(fapp\.view !== 'mech'\) \{ fapp\.speedTgt = 0; fapp\.speed = 0; \}/.test(code(revJs)));
+  // 取景是在**鍛造靜姿**下量的,而切過去的第一幀手臂就彈到據槍姿(t01 實測位移 >1.5m)
+  // ⇒ 武器當場被甩出畫面。兩座看板 MUST 都在姿勢落定後補一次取景。
+  let reframeV = code(viewerSrc), reframeC = code(revJs);
+  if (brk('reframe')) {
+    reframeV = reframeV.replace(/if \(reframeNext && view !== 'mech'\)[^\n]*\n/, '');
+    reframeC = reframeC.replace(/if \(fapp\.reframeNext && fapp\.view !== 'mech'\)[^\n]*\n/g, '');
+  }
+  t('展示台:切武器頁後在姿勢落定的那一幀重取景',
+    /reframeNext && view !== 'mech'/.test(reframeV) && /reframeNext = true/.test(reframeV));
+  t('覆核台:同一條(rAF 迴圈與 headless step 都要有)',
+    (reframeC.match(/fapp\.reframeNext && fapp\.view !== 'mech'/g) || []).length === 2);
+}
+
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);
 process.exit(fail ? 1 : 0);

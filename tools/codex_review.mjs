@@ -30,6 +30,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
 import { handleForgeApi } from './humanoid_forge/specstore.mjs';
+import { handleBoardApi } from './humanoid_forge/boardapi.mjs';
 import { CHARACTERS, SIDES, charKind } from '../public/js/data.js';
 import { KIND_WORD, SHOT_POSES } from '../public/js/codex.js';
 
@@ -256,6 +257,8 @@ async function serve() {
     try {
       // 一次只覆寫一台、逐欄 patch(同 /api/review 的局部寫紀律);ovr = null 即還原出廠
       if (await handleForgeApi(req, res, send)) return;
+      // 截圖落盤 + 原型圖名冊(2D 定案圖 / CC0 原型照):與機體展示台 :8631 同一支
+      if (await handleBoardApi(req, res, send)) return;
       if (req.url.startsWith('/api/review')) {
         if (req.method === 'GET') {
           const st = await loadState();

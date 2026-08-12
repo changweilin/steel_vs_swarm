@@ -26,6 +26,8 @@ import { updateCelLight, disposeTree } from '/public/js/toon.js';
 import { SPECS, forgeHumanoidMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from './forge.js';
 import { CATS, rosterByCat, splitKey, FORM_LABEL } from './roster.js';
 import { makeDollEditor } from './dolledit.js';
+import { fetchArt, fetchRefs, artStripHTML, refStripHTML } from './refstrip.js';
+import { wpnOf, showWpn, wpnFrame, applyWpnCamera, wpnSlotName } from './wpnview.js';
 
 // 使用者調整覆寫層(specs.json;/api/forge 讀寫)—— 合併只走 mergeSpec 單一縫。
 // 2026-08-12 第五輪起本台**可寫**(紙娃娃編輯器存 `doll` 那一欄);比例滑桿仍住覆核台,
@@ -82,6 +84,7 @@ let ent = null;                     // 餵給 locomotion 的假實體
 let spec = SPECS[0];
 let speed = 0, speedTgt = 0, travel = 0, spdSel = 'spdIdle';
 let draftDoll = null;               // 紙娃娃草稿(尚未存檔的那一份;null = 照已存檔的走)
+let reframeNext = false;            // 切武器頁後的第一幀要重取景(姿勢落定才量得準)
 let editor = null;
 let firing = false, nextShot = 0;
 let heavyAt = -1;
@@ -121,15 +124,13 @@ function setSpec(s) {
 }
 
 // ---- 武器獨立檢視 ------------------------------------------------------------
-// 「哪些節點屬於這把武器」的唯一真相 = rig.wpn[slot].nodes(FPV 座艙同源的那一份)。
-// 顯示 = 只讓那些子樹可見;取景 = 依它們的世界包圍盒。MUST NOT 複製一份武器幾何。
-function wpnOf(slot) { return unit?.rig?.wpn?.[slot] || null; }
-
+// 邏輯整組住 wpnview.js(2026-08-12 第五輪起覆核台 :8641 也有這一頁 ⇒ 兩個消費端);
+// 這裡只剩本台的取景高、跑步機地面與鈕面。
 function applyView(reframe = true) {
   const H = spec.height;
-  const w = view === 'mech' ? null : wpnOf(view);
-  // 顯示切換:先全開,再在武器模式關掉不屬於該武器的網格
-  unit.group.traverse((o) => { if (o.isMesh) o.visible = true; });
+  if (reframe) reframeNext = true;   // 姿勢落定後再量一次(見 stepWorld 那一條)
+  const w = view === 'mech' ? null : wpnOf(unit, view);
+  showWpn(unit, view);                       // 顯示子集(切回機體時尊重紙娃娃的隱藏覆寫)
   grid.visible = plate.visible = view === 'mech';
   // 武器頁**停止移動**:武器掛在會動的肢體/樞軸上,取景框一旦定住而機體繼續走,
   // 武器就慢慢飄出畫面(2026-08-12 實測 t01 的臂在頭兩幀就從靜姿彈到步態姿)。
@@ -142,21 +143,11 @@ function applyView(reframe = true) {
     }
     $('stageTag').textContent = `${spec.label} ・ ${spec.kind} 鷹架`;
   } else {
-    const keep = new Set();
-    for (const n of w.nodes || []) n.traverse((o) => keep.add(o));
-    unit.group.traverse((o) => { if (o.isMesh && !keep.has(o)) o.visible = false; });
     // 取景:武器世界包圍盒(空盒 = 這一格沒掛那個 slot,退回機體取景)
-    unit.group.updateMatrixWorld(true);
-    const box = new THREE.Box3();
-    for (const n of w.nodes || []) box.expandByObject(n);
-    if (box.isEmpty()) { view = 'mech'; return applyView(reframe); }
-    const ctr = box.getCenter(new THREE.Vector3());
-    const d = Math.max(0.6, box.getSize(new THREE.Vector3()).length());
-    if (reframe) {
-      controls.target.copy(ctr);
-      camera.position.set(ctr.x + d * 0.9, ctr.y + d * 0.45, ctr.z + d * 1.15);
-    }
-    $('stageTag').textContent = `${spec.label} ・ ${view === 'light' ? '輕' : '重'}武器(rig.wpn.${view})`;
+    const f = wpnFrame(unit, view);
+    if (!f) { view = 'mech'; return applyView(reframe); }
+    if (reframe) applyWpnCamera(camera, controls.target, f);
+    $('stageTag').textContent = `${spec.label} ・ ${wpnSlotName(view)}武器(rig.wpn.${view})`;
   }
   camera.near = 0.05; camera.far = 400;
   // **MUST 當場定向**:互動時是 loop 裡的 controls.update() 在轉鏡頭,而 headless 檢視
@@ -208,52 +199,25 @@ function renderSpecButtons() {
   }
 }
 
-// ---- 2D 定案圖 / 原型參考照(名冊皆由伺服器推導;MUST NOT 在這裡拼檔名)----
-const IMG_CACHE = new Map();
-async function apiImgs(url) {
-  if (!IMG_CACHE.has(url)) {
-    try {
-      const r = await fetch(url);
-      IMG_CACHE.set(url, r.ok ? await r.json() : {});
-    } catch { IMG_CACHE.set(url, {}); }
-  }
-  return IMG_CACHE.get(url);
-}
-const protoCap = (file) => {
-  const form = file.includes('_flight_') ? '飛行型・' : file.includes('_ground_') ? '地面型・' : '';
-  const pose = file.includes('moving') ? '移動' : file.includes('heavy') ? '重擊' : '定裝';
-  return form + pose;
-};
-/** 2D 定案圖:變形者只列**本型態**那幾張(飛行型的頁面不該拿地面型的圖當建模依據) */
+// ---- 2D 定案圖 / 原型參考照 ----------------------------------------------------
+// 標記與名冊取得整組住 refstrip.js(2026-08-12 第五輪:覆核台也要這兩帶)——
+// 兩座看板 MUST 是同一份標記 + 同一份 CSS(board.css),各寫一份就會各自演化。
+// 這裡只剩「這一格要看哪幾張」:變形者只列**本型態**那幾張(飛行型的頁面不該拿地面型的
+// 圖當建模依據),以及「面板已換機就別把上一台的圖畫進去」那道時序閘。
 async function fillArtStrip(forId) {
   const box = $('artStrip');
   if (!box) return;
-  const j = await apiImgs(`/api/protoimgs?id=${spec.ch}`);
+  const j = await fetchArt(spec.ch);
   if (spec.id !== forId || !$('artStrip')) return;             // 面板已換機
   const want = spec.form === 'flight' ? '_flight_' : spec.form === 'ground' ? '_ground_' : null;
-  const imgs = (j.imgs || []).filter((m) => !want || m.file.includes(want));
-  box.innerHTML = imgs.length
-    ? imgs.map((m) => `<figure class="proto"><a href="${m.url}" target="_blank" rel="noopener">
-        <img src="${m.url}" alt="${esc(m.file)}" loading="lazy"></a>
-        <figcaption>${protoCap(m.file)}</figcaption></figure>`).join('')
-    : '<div class="dim">(這一格還沒有 2D 定案圖)</div>';
+  box.innerHTML = artStripHTML((j.imgs || []).filter((m) => !want || m.file.includes(want)));
 }
-/** 真實原型照片(動物/機型):關鍵詞來自 MECHA[].proto,採集與授權帳走 fetch_protorefs.mjs */
 async function fillRefStrip(forId) {
   const box = $('refStrip');
   if (!box) return;
-  const j = await apiImgs(`/api/protorefs?key=${encodeURIComponent(spec.id)}`);
+  const j = await fetchRefs(spec.id);
   if (spec.id !== forId || !$('refStrip')) return;
-  const rows = j.layers || [];
-  box.innerHTML = rows.length ? rows.map((L) => `
-    <div class="ref-src"><b>${esc(L.label)}</b> ${esc(L.src)}
-      ${L.note ? `<span>—— ${esc(L.note)}</span>` : ''}</div>
-    <div class="proto-strip">${L.imgs.length
-    ? L.imgs.map((m) => `<figure class="proto"><a href="${m.url}" target="_blank" rel="noopener">
-          <img src="${m.url}" alt="${esc(m.file)}" loading="lazy"></a>
-          <figcaption>${esc(m.license)} ・ ${esc(m.creator || '—')}</figcaption></figure>`).join('')
-    : '<div class="dim">(未採集;跑 node tools/fetch_protorefs.mjs)</div>'}</div>`).join('')
-    : '<div class="dim">(這一格沒有原型層)</div>';
+  box.innerHTML = refStripHTML(j.layers || []);
 }
 
 function renderPanel() {
@@ -394,6 +358,9 @@ function stepWorld(dt) {
     // MUST 在 stepLocomotion 之前:本幀步態才吃得到射姿/後座/蓄力驅動場(charPreview:650)
     stepCombatFx(ent, simT, dt);
     stepLocomotion(ent, dt, simT, 0, -speed * dt, 0);
+    // 切到武器頁的**第一幀**:手臂從鍛造靜姿彈到步態/據槍姿(t01 的臂位移超過 1.5m),
+    // 而取景是在靜姿下算的 ⇒ 武器當場被甩出畫面。等姿勢落定再重取一次景。
+    if (reframeNext && view !== 'mech') { reframeNext = false; applyView(true); }
   }
   // 旋翼自轉:與戰場同一份名冊(userData.spin);轉速隨速度(靜止仍怠速轉)
   if (unit?.spin?.length) {
