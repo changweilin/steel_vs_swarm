@@ -7139,9 +7139,21 @@ function wallGeo(spec) {
   return new THREE.IcosahedronGeometry(a, 0);
 }
 const _wm = new THREE.Matrix4(), _wq = new THREE.Quaternion(), _we = new THREE.Euler();
-const _wp = new THREE.Vector3(), _ws = new THREE.Vector3();
-/** 把一份零件表套上「這一件的位置/朝向/縮放」後推進批次(顏色隨幾何一起記帳) */
-function emitWallParts(batch, parts, ox, oy, oz, ry, scale) {
+const _wp = new THREE.Vector3(), _ws = new THREE.Vector3(), _wg = new THREE.Vector3();
+/**
+ * 把一份零件表套上「這一件的位置/朝向/縮放」後推進批次(顏色隨幾何一起記帳)。
+ *
+ * `groundY`(選用)= **逐零件落地**(2026-08-12 使用者定案「視線邊界的假山/假海/假森林/
+ * 假城市也要在地形上放置好,在斜坡不要懸空」):一段背景 150m、一叢林塊的外圍零件散到 ±11m,
+ * 拿**段心**一個高度擺全部零件 ⇒ 坡上那一端整片浮在半空、坡下那一端埋進土裡。給了這個回呼
+ * 就逐零件取自己腳下那一點當落地基準。兩條:
+ *   ①**水平位置走同一個矩陣**求(MUST NOT 自己寫一份 sin/cos —— A30 那一族的正負號坑:
+ *     寫錯的話零件會落在鏡射的位置取高度,而畫面上只表現成「有些還是浮的」);
+ *   ②堆疊件(雪冠疊山頂、塔尖疊樓頂、屋頂疊房子)的局部 x/z 與主體相同 ⇒ 取到同一個基準,
+ *     相對關係一格未動。障礙環(`buildEdgeWall`)**刻意不傳** —— 它的碰撞盒是以段的落地基準
+ *     量出來的,逐零件落地會讓演出掉出盒子(Ⅲ 演出 ⊆ 碰撞盒)。
+ */
+function emitWallParts(batch, parts, ox, oy, oz, ry, scale, groundY = null) {
   for (const p of parts) {
     const geo = wallGeo(p.g);
     const [px = 0, py = 0, pz = 0] = p.p || [];
@@ -7151,7 +7163,13 @@ function emitWallParts(batch, parts, ox, oy, oz, ry, scale) {
     _wm.compose(_wp.set(px, py, pz), _wq.setFromEuler(_we), _ws.set(1, 1, 1));
     geo.applyMatrix4(_wm);
     _we.set(0, ry, 0);
-    _wm.compose(_wp.set(ox, oy, oz), _wq.setFromEuler(_we), _ws.set(scale, scale, scale));
+    let by = oy;
+    if (groundY) {   // 先用 y=0 的外層矩陣求這顆零件在世界的水平位置,再取它腳下的高度
+      _wm.compose(_wp.set(ox, 0, oz), _wq.setFromEuler(_we), _ws.set(scale, scale, scale));
+      _wg.set(px, py, pz).applyMatrix4(_wm);
+      by = groundY(_wg.x, _wg.z);
+    }
+    _wm.compose(_wp.set(ox, by, oz), _wq.setFromEuler(_we), _ws.set(scale, scale, scale));
     geo.applyMatrix4(_wm);
     batch.geos.push(geo);
     batch.cols.push(p.c);
@@ -7196,10 +7214,13 @@ function buildBufferProps({ group, terrain }) {
   });
   const batch = newBatch();
   for (const p of plan) {
-    const y = terrain.bufferHeightAt(p.x, p.z);
-    // 水域物件坐在水面上(礁岩露出水面才看得見);陸域坐在裙的地表上
-    const base = p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
-    emitWallParts(batch, propParts(p.kind, p.seed), p.x, base, p.z, p.ry, p.s);
+    // 水域物件坐在水面上(礁岩露出水面才看得見);陸域坐在裙的地表上。
+    // **逐零件落地**:一叢林塊的外圍樹散到 ±11m,拿落點一個高度擺全部零件會讓坡上那幾棵懸空
+    const gy = (x, z) => {
+      const y = terrain.bufferHeightAt(x, z);
+      return p.kind === 'islet' && wy != null ? Math.max(y, wy) - 0.6 : y;
+    };
+    emitWallParts(batch, propParts(p.kind, p.seed), p.x, gy(p.x, p.z), p.z, p.ry, p.s, gy);
   }
   flushPartBatch(group, batch, { wash: 0.5, cool: 0.5 });
   return plan.length;
@@ -7223,9 +7244,14 @@ function buildBackdrop({ group, terrain }) {
   const batch = newBatch();
   for (const b of plan) {
     const h = objHeightMax() * (BACKDROP_KINDS[b.kind]?.hF ?? 1);
-    const y = terrain.bufferHeightAt(b.x, b.z);
+    // **逐零件落地**(使用者:「在斜坡不要懸空」):一段背景 150m 長,山稜逐座沿段軸散開 ——
+    // 拿段心一個高度擺整段,坡上那幾座就整片浮在半空(假海刻意仍以海平面為準)
+    const gy = (x, z) => {
+      const y = terrain.bufferHeightAt(x, z);
+      return wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y;
+    };
     emitWallParts(batch, backdropParts(b.kind, { len: b.len, h, seed: b.seed }),
-      b.x, wy != null && b.kind === 'sea' ? Math.max(y, wy) - 1 : y, b.z, b.ry, 1);
+      b.x, gy(b.x, b.z), b.z, b.ry, 1, gy);
   }
   // 遠景:洗白拉高、冷色重一點(大氣透視)⇒ 與近處的世界分得開,不會誤讀成可以走過去的地形
   flushPartBatch(group, batch, { wash: 0.78, cool: 0.72, rim: 0 });
@@ -9188,6 +9214,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     ground: ground.patches,
     groundDetails: ground.details,
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
+    groundBuffer: ground.bufCells,   // 緩衝空間的底毯格數(2026-08-12;0 = 那一圈沒鋪成)
     buildings: generic.length + landmarks.length,
     landmarks: landmarks.length,
     roads: roadsBuilt,
