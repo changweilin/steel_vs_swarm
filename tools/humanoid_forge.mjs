@@ -17,6 +17,7 @@ import { existsSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { ROOT } from './audit_src.mjs';
 import { rosterEntries, rosterByCat } from './humanoid_forge/roster.js';
+import { handleForgeApi } from './humanoid_forge/specstore.mjs';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -41,6 +42,9 @@ const srv = createServer(async (req, res) => {
     res.end(body);
   };
   try {
+    // 使用者調整覆寫層(比例/旋鈕/**紙娃娃**):讀寫與 patch 語意住 specstore.mjs,
+    // 與覆核台 :8621 是**同一支**處理器 —— 兩座看板寫同一份檔,MUST NOT 各寫一套語意。
+    if (await handleForgeApi(req, res, send)) return;
     let url = req.url.split('?')[0];
     // 截圖落盤(headless 檢視:pane 不合成時 window.__shot 顯式渲染一幀 POST 回來)
     if (req.method === 'POST' && url.startsWith('/__shot/')) {

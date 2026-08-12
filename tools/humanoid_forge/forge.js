@@ -50,6 +50,7 @@ import * as THREE from 'three';
 import { outlinify } from '/public/js/toon.js';
 import { heroPalette } from '/public/js/paint.js';
 import { segLimbF, outlineWF } from './geo.js';
+import { applyDoll, outlineAdds } from './dollapply.js';
 import { MECH_DETAIL } from './mechs/index.js';
 import { rosterEntries } from './roster.js';
 
@@ -84,6 +85,9 @@ export function mergeSpec(base, ovr) {
     hue: ovr?.hue ?? base.hue,
     prop: { ...base.prop, ...(ovr?.prop || {}) },
     knobs: { ...(base.knobs || {}), ...(ovr?.knobs || {}) },
+    // 紙娃娃覆寫層(拖曳調整的骨架/零件/彩繪):**整份取代**而不是逐欄合併 ——
+    // 它自己內部就是「只存差異」的文件(doll.js sanitizeDoll),再合併一次 = 兩層差異疊差異。
+    doll: ovr?.doll ?? base.doll ?? null,
   };
 }
 
@@ -142,6 +146,18 @@ function finishRig(g, rig, W, K, H, D, ctx, F) {
     ? { glow: [...rig.heavy.glow, ...hg], pivot: W.heavyPivot || [] }
     : { glow: hg, pivot: W.heavyPivot || [] };
   outlinify(g, outlineWF(H));
+}
+
+/**
+ * 收尾:套上使用者的**紙娃娃覆寫層**(拖曳調整的骨架角度/長度/位置、零件變換/形狀/邊緣/
+ * 配色、黏貼件、塗鴉/圖騰/烙印)。三支鷹架的最後一行都經這裡 ⇒ 兩座看板同形,
+ * 且編輯器拿到的索引(unit.doll)與檢視台看到的是**同一份**。
+ * 覆寫層缺席 = 只建索引不改任何值(逐位元同出廠)。
+ */
+function finishUnit(unit, spec, H) {
+  const ix = applyDoll(unit, spec.doll);
+  outlineAdds(ix, outlineWF(H));       // 黏貼件是 outlinify 之後才掛的,補描它那一棵
+  return unit;
 }
 
 /**
@@ -262,7 +278,7 @@ export function forgeHumanoidMech(spec) {
     s: 1,
   };
   finishRig(g, rig, W, K, H, D, baseCtx, F);
-  return { group: g, rig, joints };
+  return finishUnit({ group: g, rig, joints }, spec, H);
 }
 
 /**
@@ -370,7 +386,7 @@ function forgeQuadMech(spec, D) {
     s: 1,
   };
   finishRig(g, rig, W, K, H, D, baseCtx, F);
-  return { group: g, rig, joints };
+  return finishUnit({ group: g, rig, joints }, spec, H);
 }
 
 /**
@@ -443,5 +459,5 @@ function forgeAirMech(spec, D) {
   // 自轉名冊(戰場 game.js spinners / 展示台 viewer 同吃這一份)
   g.userData.spin = (L.spin || []).slice();
   finishRig(g, rig, W, K, H, D, baseCtx, F);
-  return { group: g, rig, joints, spin: g.userData.spin };
+  return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H);
 }

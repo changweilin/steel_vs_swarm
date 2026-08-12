@@ -62,6 +62,28 @@
           cursor: pointer; }
   .jump:hover { background: #232c38; }
   .note { color: #7a8496; font-size: 11.5px; margin-top: 4px; }
+  /* ---- 紙娃娃編輯面板 ---- */
+  #dollPanel h4 { margin: 0 0 6px; font-size: 14px; color: #dfe5ee; }
+  #dollPanel h4 small { color: #7a8496; font-weight: normal; }
+  .d-note { color: #8f9bb0; font-size: 11.5px; margin: 6px 0; line-height: 1.45; }
+  .d-dim { color: #6c7480; font-size: 11.5px; }
+  .d-row { display: flex; align-items: center; gap: 6px; margin: 5px 0; font-size: 12.5px; }
+  .d-row > span { width: 46px; color: #9fb4d8; flex: none; }
+  .d-row input[type=range] { flex: 1; min-width: 0; }
+  .d-row input[type=text], .d-row select { flex: 1; min-width: 0; background: #12141a; color: #dfe5ee;
+    border: 1px solid #2a3040; border-radius: 5px; padding: 3px 6px; font: inherit; font-size: 12.5px; }
+  .d-row input[type=color] { width: 42px; height: 24px; background: none; border: 1px solid #2a3040; }
+  .d-row i { width: 68px; text-align: right; color: #cfd6e2; font-style: normal; font-size: 11.5px; }
+  .d-sel { font-size: 12px; color: #ffd479; margin: 6px 0; word-break: break-all; }
+  .d-btns { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }
+  .d-btns .segb, .segb.sm { border: 1px solid #2a3040; background: #1b2129; }
+  .d-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 7px 0; }
+  .d-chip { font-size: 11.5px; padding: 2px 7px; border: 1px solid #3a4a63; border-radius: 5px;
+    color: #9fd8ff; background: #1b2129; cursor: pointer; }
+  .d-chip.on { background: #2d3646; color: #fff; }
+  .d-foot { display: flex; gap: 5px; margin-top: 10px; border-top: 1px solid #232936; padding-top: 8px; }
+  .d-stat { font-size: 11.5px; color: #8fd8a0; margin: 6px 0; }
+  .d-stat b { color: #ffd479; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -89,11 +111,15 @@
     <button class="segb" id="btnSpin">環繞檢視</button>
     <button class="segb" id="btnJoints">特徵樞軸</button>
   </div>
+  <div class="seg">
+    <button class="segb" id="btnEdit">🧷 紙娃娃編輯</button>
+  </div>
 </header>
 <div class="seg" id="specSeg" style="margin:6px 12px 0;"></div>
 <div class="main">
   <div class="stagewrap"><canvas id="stage"></canvas><div id="stageTag"></div></div>
   <aside id="panel"></aside>
+  <aside id="dollPanel" hidden></aside>
 </div>
 <script type="module" src="/tools/humanoid_forge/viewer.js"></script>
 </body>

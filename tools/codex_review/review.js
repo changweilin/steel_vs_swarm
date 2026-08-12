@@ -424,11 +424,14 @@ async function mountForge(id) {
       const v = fapp.draft.knobs?.[k];
       if (v != null && v !== 1) ovr.knobs[k] = v;
     }
-    if (!Object.keys(ovr.prop).length) delete ovr.prop;
-    if (!Object.keys(ovr.knobs).length) delete ovr.knobs;
-    const payload = Object.keys(ovr).length ? ovr : null;
+    // 逐欄 patch:沒有差異的欄位送 null(= 清掉那一欄),**MUST NOT 送整包 null** ——
+    // 那會把機體台紙娃娃編輯器存在同一格的 `doll` 一起洗掉(specstore.mjs 檔頭)。
+    const payload = {
+      prop: Object.keys(ovr.prop).length ? ovr.prop : null,
+      knobs: Object.keys(ovr.knobs).length ? ovr.knobs : null,
+    };
     fapp.ovr = (await forgeApi({ id: key, ovr: payload })).mechs || {};
-    $('cfMsg').textContent = payload ? '已儲存 ✔' : '與出廠值相同,已清除覆寫';
+    $('cfMsg').textContent = (payload.prop || payload.knobs) ? '已儲存 ✔' : '與出廠值相同,已清除比例/旋鈕覆寫';
   };
   $('cfReset').onclick = async () => {
     fapp.ovr = (await forgeApi({ id: key, ovr: null })).mechs || {};
