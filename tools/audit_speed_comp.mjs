@@ -129,9 +129,12 @@ console.log('\nⅢ 現役 32 台機體');
 // ---------------- Ⅳ 取速唯一縫(原文) ----------------
 console.log('\nⅣ 取速唯一縫');
 {
-  t('game.js 的 `_mobility` 只有一份實作,且就是 heroMobility 的轉呼',
+  // 2026-08-12:唯一取速處多了一個乘數 —— 高地壓制折速(HIGH_SUP,見 data.js)。
+  // 斷言仍釘死形狀:一份實作、主體是 heroMobility 的轉呼,**只准**再乘 highSupSpeedF 這一個縫。
+  t('game.js 的 `_mobility` 只有一份實作,且就是 heroMobility 轉呼 × highSupSpeedF',
     count(gameCode, /_mobility\(flying\) \{/g) === 1
-    && /_mobility\(flying\) \{ return heroMobility\(this\.heroKind, CHARACTERS\[this\.ch\]\?\.mods, flying\); \}/.test(gameCode));
+    && /heroMobility\(this\.heroKind, CHARACTERS\[this\.ch\]\?\.mods, flying\) \* sup;/.test(gameCode)
+    && /const sup = highSupSpeedF\(/.test(gameCode));
   const moveCalls = count(gameCode, /this\._mobility\(/g);
   t(`game.js 的三個移動端全走 _mobility(地面 / 飛行 / 蓄力跳,實得 ${moveCalls} 處)`, moveCalls >= 3);
   t('game.js 不再有 `u.speed` / `u.fly` 當自機移速(那是機種基準,少了角色修正與壓縮)',

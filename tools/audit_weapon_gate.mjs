@@ -36,6 +36,7 @@ import {
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
+  HIGH_SUP, highSupF, altTier, altDhMax,
 } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 import { readSrc } from './audit_src.mjs';
@@ -1758,13 +1759,42 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   const blast = code(methodSrc('_blast', S));
   ok(/const p = same \? 0 : this\._dodgeP\(t, h\)/.test(blast),
     '_blast:逐目標取**該目標自己的** p,且只對敵方(自損是榴彈最小安全射程的代價,不是別人打過來的攻擊)');
-  ok(/p > 0 && Math\.random\(\) < p[\s\S]*?continue;[\s\S]*?this\._damage\(/.test(blast)
-    && !/Math\.random\(\) < p[\s\S]{0,240}?return;/.test(blast),
+  ok(/pm > 0 && Math\.random\(\) < pm[\s\S]*?continue;[\s\S]*?this\._damage\(/.test(blast)
+    && !/Math\.random\(\) < pm[\s\S]{0,240}?return;/.test(blast),
     '_blast:閃掉的目標只 continue(跳過自己這一份),MUST NOT return —— 整發早退 = 一台閃全隊免傷');
-  ok(/this\._damage\(t, base \* f \* evadeCompF\(p\)/.test(blast),
-    '_blast:沒被閃掉的那一發吃 evadeCompF(p) 補償,分母是**同一顆骰的 p**(維持 DPS)');
-  ok(/const p = this\._dodgeP\(t, shooter\);[\s\S]{0,120}?p > 0 && Math\.random\(\) < p/.test(code(methodSrc('_dodges', S))),
+  // 2026-08-12 高地壓制(HIGH_SUP)之後,骰的是「打不中」= 閃避 ⊕ 射手失準,而**補償的分母只有閃避那一半**:
+  // 補償是 A45 ⑦「維持 DPS」的規則,把壓制也補回去 = 這條新規則對爆炸傷害完全沒有作用(而且沒有任何錯誤訊息)。
+  ok(/const pm = same \? 0 : this\._missP\(t, h\)/.test(blast),
+    '_blast:擲的是 `_missP`(閃避 ⊕ 射手被高地壓制而失準),兩者是獨立事件不是相加');
+  ok(/this\._damage\(t, base \* f \* evadeCompF\(p\)/.test(blast) && !/evadeCompF\(pm\)/.test(blast),
+    '_blast:補償吃 evadeCompF(**p**)= 只補閃避那一半,MUST NOT 拿 pm(壓制不在「維持 DPS」的帳裡)');
+  ok(/const p = this\._missP\(t, shooter\);[\s\S]{0,120}?p > 0 && Math\.random\(\) < p/.test(code(methodSrc('_dodges', S))),
     '_dodges 拆成「算率 + 擲骰」後仍保留 `p > 0` 短路 —— 不合格的目標不消耗亂數(逐位元同拆之前的亂數流)');
+  // ---- ③b 高地壓制原文(2026-08-12 使用者定案:高度優勢越高,被擊中後 1 秒內命中/閃避/速度掉越多)----
+  const stamp = code(methodSrc('_stampSup', S));
+  ok(/if \(!by\) return;/.test(stamp) && /highSupF\(this\._altDh\(t, by\)\)/.test(stamp),
+    '_stampSup:高度優勢相對**打你的那個人**取(同 _altRange/_altCrit/_dodgeP 的 dh 來源);無攻擊者(地雷/火場)不留壓制');
+  ok(/t\.supF = Math\.max\(this\._supF\(t\), f\)/.test(stamp) && /t\.supUntil = this\.t \+ HIGH_SUP\.DUR_S/.test(stamp),
+    '_stampSup:同窗多發取較強、窗一律續到最新一發(與 slowF 同一個處理)');
+  ok(/this\._stampSup\(t, by\);/.test(code(methodSrc('_damage', S))),
+    '_damage 的英雄分支是壓制的**唯一戳記處**(砲塔/主堡/小兵刻意不壓制:那會直接動到 bal ①④ 的校準錨)');
+  ok(/Math\.min\(p, EVASION\.P_MAX\) \* highSupDodgeF\(this\._supF\(t\)\)/.test(code(methodSrc('_dodgeP', S))),
+    '_dodgeP:壓制折扣套在**加總與夾制之後**(折的是「現在還閃不閃得掉」,不是逐項扣掉某一份加成)');
+  for (const [f, src] of [['bots.js', read(['server', 'bots.js'])], ['game.js', read(['public', 'js', 'game.js'])]]) {
+    ok(/highSupSpeedF\(/.test(code(src)),
+      `${f} 的唯一取速處吃 highSupSpeedF —— 速度只在「位置權威」那一端折(伺服器 MUST NOT 對真人再折一次)`);
+  }
+  ok(!/highSupSpeedF/.test(simCode),
+    'sim.js 不對真人再折一次速度(位置本就客戶端權威;bot 那半住 bots._speed)');
+  // 強度形狀:一階(FLOOR)+ 斜坡。高地的**報酬**量出來就是這個形狀(跨過門檻先跳一段、再線性加碼),
+  // 代價寫成純斜坡的話那個截距永遠配不掉 —— 症狀是「不管站多高,較高方恆多留 8.7% EHP」而斷言全綠。
+  ok(/HIGH_SUP\.FLOOR \+ \(1 - HIGH_SUP\.FLOOR\) \* s/.test(code(D)),
+    'highSupF 是「門檻一階 + 隨高度的斜坡」,MUST NOT 退回純 altScale(截距配不掉,見 bal ⑤c1)');
+  ok(highSupF(0) === 0 && highSupF(altTier()) === 0 && highSupF(-altDhMax()) === 0,
+    'highSupF:門檻以下與較低方一律 0(沒有高度優勢 = 逐位元同舊制)');
+  ok(highSupF(altDhMax()) === 1 && highSupF(altTier() * 1.001) >= HIGH_SUP.FLOOR
+    && highSupF(altDhMax()) > highSupF(altTier() * 2),
+    'highSupF:剛跨過門檻就有 FLOOR、封頂 1、且中間嚴格遞增(「越高越多」是使用者定案的原句)');
 }
 {
   // ---- ④ 行為直測:同一個爆點,一台閃掉、旁邊的照樣掉血 ----

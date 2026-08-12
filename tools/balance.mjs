@@ -29,7 +29,10 @@
 //    ±3 個砲塔高的高度差上對稱掃描取平均勝率(模型見 tools/duel.mjs,唯一縫)。
 //    a 陣營對稱:SWARM vs STEEL 全對局平均勝率 50% ±SIDE_TOL
 //    b 機種對稱:三機種各自 vs 全體的平均勝率 50% ±KIND_TOL
-//    c 高度差中性:較高方平均勝率 50% ±HIGH_TOL —— 高地換的是視野與機動,不該直接換勝負
+//    c 高度差中性(2026-08-12 使用者定案「**先調整同機體在不同高度勝率相近**,後續再回來調整
+//      三種機體之間」⇒ 判定面換成控制變因的鏡像對局):
+//        c1 同機體鏡像:同一台機體自己打自己、只有一方站高處,逐高度差量勝率與剩餘 EHP 差
+//        c2 跨機體:舊的「全角色兩兩、A 站高處」平均 —— 保留為參考與防退化欄杆(理由見該段)
 //    d 角色離群:非豁免角色的平均勝率 ∈ [CH_LO, CH_HI];豁免一律具名附理由(見 DUEL_EXEMPT)
 //    e 射程壓制上限:接近期單方面挨打的損失 ≤ 對手初始 EHP 的 FREE_MAX
 //       —— 射程差可以換到先手,但不該在對手還沒進場前就分出勝負。
@@ -38,11 +41,12 @@
 //    匿蹤暗殺等、控場或走位的大小招」)。扇形武器沒有近距平台、實用交戰帶最短,拿到站樁型套件
 //    (承傷減免 / 治療 / 召喚 / 攔截)等於貼不上就一項都兌現不了。雙扇形 MUST 兩招都是貼身套件、
 //    單扇形 MUST 至少一招,另驗「優先配置」的密度(扇形人均 ≥ 非扇形人均 ×2)。
-import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, chargeF, upgradePrice,
-  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, EVASION, evadable, evadeExpF, weaponDps,
+import { CHARACTERS, UNITS, WEAPONS, GAME, SQUAD, ECON, ALTITUDE, altScale, chargeF, upgradePrice,
+  armorMul, vsMult, heroWeapon, heroAbility, charKind, heroArmor, rangeCap, EVASION, evadable, evadeExpF, weaponDps,
   shieldSplit, dmgFalloff, waveComp, aoeClass, AOE_NAME, blastFalloff, TARGET_R,
-  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, ultDelivered, SELF_ULT } from '../public/js/data.js';
-import { fighter, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
+  AREA_WEAPONS, towerPairSepM, soloBlastRmax, TOWER_SITE_N, ultDelivered, SELF_ULT,
+  HIGH_SUP } from '../public/js/data.js';
+import { fighter, chassisFighter, neutralArmor, duel, duelSweep, dhSweep, DUEL } from './duel.mjs';
 import { laneMatrix, laneWin, LANE } from './lanesim.mjs';
 
 const ALT_R = ALTITUDE.RANGE, ALT_D = ALTITUDE.DODGE;   // ⑤c 說明用(封頂加成)
@@ -270,17 +274,49 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
     console.log(`${okK ? '✅' : '❌'} 機種對稱  ${k.padEnd(6)} vs 全體 ${(v * 100).toFixed(1)}%(目標 50±${KIND_TOL * 100}pp)`);
   }
 
-  // c 高度差中性(較高方 = dh > 0 的那一側)
+  // ---- c 高度差中性 ----
+  // 2026-08-12 使用者定案:「**先調整同機體在不同高度勝率相近**,後續再回來調整三種機體之間」
+  // ⇒ 判定面是 **c1 同機體鏡像對局**(唯一變因就是高度差),跨機體那一份降為參考(c2)。
+  //
+  // **為什麼換儀器**(這不是把標準改鬆,是原本那一把量不到它宣稱要量的東西):
+  //   舊 c 拿「全角色兩兩對局、A 站高處」平均。那個平均被**對局本身的強弱差**主導 —— 強角色站高處
+  //   照樣贏、弱角色站高處照樣輸,高度只翻得動接近平手的那幾組。實測對照:高地壓制上線前它讀 48.9%
+  //   (「中性」),而同一份數值下同機體鏡像對局的較高方勝率是 **100 / 94 / 84 / 77%**(逐 s 階)——
+  //   高地其實壓倒性有利,舊 c 完全沒看見。
+  // **鏡像對局同時量兩個東西**:①勝率(0/1 的正負號檢定:雙方一模一樣 ⇒ 任何淨優勢都會贏下整場)
+  //   ②**剩餘 EHP 差**(連續量,看得出「贏多少」)。只看勝率會在知更鳥邊緣抖動,只看 EHP 差看不出
+  //   誰真的死掉 —— 兩個一起判。
+  const MIRROR_TOL = 0.08, MIRROR_MG = 0.05;   // 逐 dh:勝率 50±8pp、剩餘 EHP 差 ≤ 5pp
+  const hiDh = sweep.filter((x) => x > 0);
+  const mir = hiDh.map((dh) => {
+    const r = chs.map((c) => duel(F[c], F[c], dh));
+    return { dh, s: altScale(dh), win: mean(r.map((x) => x.win)), mg: mean(r.map((x) => x.leftA - x.leftB)) };
+  });
+  const okM = mir.every((r) => Math.abs(r.win - 0.5) <= MIRROR_TOL && Math.abs(r.mg) <= MIRROR_MG);
+  if (!okM) fail++;
+  console.log(`${okM ? '✅' : '❌'} c1 高度差中性(同機體鏡像)逐高度差 較高方勝率 / 剩餘 EHP 差`
+    + `(目標 50±${MIRROR_TOL * 100}pp、|EHP 差| ≤ ${MIRROR_MG * 100}pp)`);
+  console.log(`   ${mir.map((r) => `${r.dh}m(s=${r.s.toFixed(2)}) ${(r.win * 100).toFixed(0)}%/${r.mg >= 0 ? '+' : ''}${(r.mg * 100).toFixed(1)}`).join('  ')}`);
+  console.log(`   ⓘ 高地報酬 +${(ALT_R * 100).toFixed(0)}% 射程 / +${(ALT_D * 100).toFixed(0)}% 閃避`
+    + `;代價 = 高地壓制(被擊中後 ${HIGH_SUP.DUR_S}s:命中 −${(HIGH_SUP.HIT * 100).toFixed(0)}%`
+    + ` / 閃避 −${(HIGH_SUP.DODGE * 100).toFixed(0)}% / 移速 −${(HIGH_SUP.SPEED * 100).toFixed(0)}%,封頂值;`
+    + `門檻階 ${(HIGH_SUP.FLOOR * 100).toFixed(0)}% —— 報酬有截距,代價就要有,見 data.js highSupF)`);
+
+  // c2 跨機體(參考;**使用者定案「後續再回來」** ⇒ 防退化欄杆而非驗收線,同 ⑤f / ⑦c 的處理)。
+  // 它現在低於 50% 是高地壓制的**設計推論**而不是實作錯誤:壓制在「正在挨打的那一方」身上續期
+  // ⇒ 誰居於下風誰被壓得越久。同機體對局雙方對稱(c1 判得到),跨機體對局則會放大既有的強弱差。
+  const CROSS_LO = 0.40;
   let hw = 0, hn = 0;
-  for (const dh of sweep.filter((x) => x > 0)) for (const a of chs) for (const b of chs) {
+  for (const dh of hiDh) for (const a of chs) for (const b of chs) {
     if (a === b) continue;
     hw += duel(F[a], F[b], dh).win; hn++;
   }
   const high = hw / hn;
-  const okH = Math.abs(high - 0.5) <= HIGH_TOL;
+  const okH = high >= CROSS_LO && high <= 1 - CROSS_LO;
   if (!okH) fail++;
-  console.log(`${okH ? '✅' : '❌'} 高度差中性 較高方 ${(high * 100).toFixed(1)}%(目標 50±${HIGH_TOL * 100}pp)`
-    + ` — 高地換視野與機動(+${(ALT_R * 100).toFixed(0)}% 射程 / +${(ALT_D * 100).toFixed(0)}% 閃避),不換勝負`);
+  console.log(`${okH ? '✅' : '❌'} c2 高度差中性(跨機體,參考)較高方 ${(high * 100).toFixed(1)}%`
+    + `(目標 50±${HIGH_TOL * 100}pp;現行守門線 ${(CROSS_LO * 100).toFixed(0)}% = 防退化欄杆`
+    + ` —— 使用者定案先修 c1,跨機體留待下一輪)`);
 
   // d 角色離群(具名豁免除外)
   const bad = chs.filter((c) => !DUEL_EXEMPT[c] && (avg[c] < CH_LO || avg[c] > CH_HI));
@@ -303,6 +339,73 @@ console.log(`${okT ? '✅' : '❌'} ${VENUES.length} 場地 × 3 種線數:最�
   if (!okF) fail++;
   console.log(`${okF ? '✅' : '❌'} 射程壓制  接近期單方面損失最大 ${(mx * 100).toFixed(1)}% EHP`
     + `(${mxPair};上限 ${FREE_MAX * 100}%)`);
+
+  // ---- f 機種底盤對稱(同輕重武器組合,只換底盤)----
+  // 使用者定案(2026-08-12):「三種機體使用不同武器類型交叉對戰,**同輕重武器組合時**,三種機體
+  // (機甲、變形者、無人機)平均不同高度差之間的交叉戰鬥測試,勝率要接近。」
+  // b 與 f 量的不是同一件事,**兩條都要**:b 是「這個機種的角色們強不強」(武器與 mods 跟底盤綁在
+  // 一起 ⇒ 弱底盤可以靠強武器補回來,現況正是如此);f 把武器控制住,只換底盤 ⇒ 勝率差只剩底盤的
+  // 四個軸 —— 耐久(UNITS[kind].hp/shield)、機動(speed/fly)、飛行閃避(EVASION.AIR_BONUS)、
+  // 射程上限(rangeCap ← UNITS[kind].sight)。模型縫 = duel.mjs 的 chassisFighter(三條紀律見該處)。
+  //
+  // **現況達不到 50±5pp,守門線是防退化欄杆而非驗收線**(同 ⑦c 的處理,MUST NOT 當成「調鬆就過了」讀):
+  //   實測 robot/morph 50.0%(兩者在本模型的底盤逐位元相同 ⇒ 這一格是結構保證,動了 UNITS.morph
+  //   的耐久/視野/移速就會當場紅字)、robot/drone 與 morph/drone 皆 41.6%(無人機側 58.4%)。
+  //   逐軸拆解(改制前 39.9% 的那一版量的):飛行閃避 ≈ 4pp、射程上限(sight 270 vs 240 ⇒ 解析射程
+  //   +12.5%)≈ 5pp,而且**兩者相乘不相加**(同時拿掉 = 14.2pp);其餘由耐久 84%(723 vs 860)吃回約 5pp。
+  //   2026-08-12 的高地壓制(HIGH_SUP)買回 1.7pp —— 壓制折的正是無人機吃最重的那一份(閃避)。
+  //   **買不到更多是因為 ⑤c**:壓制最有效的那一軸(命中率)同時也是讓「較高方」掉最快的那一軸,
+  //   而 ⑤c 要求高地維持勝負中性 ⇒ HIT 只吃得起 0.04(逐軸實測見 data.js HIGH_SUP 檔頭)。
+  // **已排除的兩條路,MUST NOT 再繞回去**:
+  //   ① 調 RANGE_BUDGET.K 買不回來 —— K 0.15 → 0.40 只把 39.9% 推到 40.0%(+12.5% 射程只換到
+  //      −4.6% 火力,而 dmgFalloff 的平台/衰減段都是射程的比例)。這與 RANGE_BUDGET 檔頭的結論一致。
+  //   ② 壓無人機耐久要 ×0.85 才打平(見下方 ⓘ),那會當場推倒 ①(HP_F 是清波剩餘率的校準錨)。
+  // ⇒ 真正的旋鈕是**機種射程上限**(`UNITS[kind].sight`)與**飛行閃避**(`EVASION.AIR_BONUS`),
+  //   兩者都牽動迷霧/索敵/#INC-104 高空射擊與 ①④⑤⑦ 全部,**MUST 另案由使用者定案**。
+  const CHASSIS_MAX = 0.62;                       // 防退化欄杆(現值 60.1%)
+  const KINDS3 = ['robot', 'morph', 'drone'];
+  const CH_F = Object.fromEntries(KINDS3.map((k) => [k, chs.map((c) => chassisFighter(c, k))]));
+  // 合成角色 MUST NOT 留在名冊上:漏刪 = 之後每一個 `Object.keys(CHARACTERS)` 迴圈都多一台,
+  // 而它的症狀是「平衡數字整批微動」,沒有任何錯誤訊息。
+  if (Object.keys(CHARACTERS).length !== chs.length) { fail++; console.log('❌ f 合成角色外洩'); }
+  const all = chs.map((_, i) => i);
+  const pairWin = (x, y, idx) => mean(idx.map((i) => duelSweep(CH_F[x][i], CH_F[y][i], sweep).win));
+  console.log(`\n   f 機種底盤對稱 — 同一份輕重武器組合裝上三個底盤(mods 中性、有效護甲 ${neutralArmor().toFixed(1)} 逐位元相同)`);
+  for (const k of KINDS3) {
+    const f = CH_F[k][0];
+    console.log(`   ⓘ ${k.padEnd(6)} EHP ${f.sh0 + f.ar0}(盾 ${f.sh0}/甲 ${f.ar0}) 機動 ${f.mob.toFixed(2)}`
+      + ` 飛行 ${f.flying ? '是' : '否'} 射程上限 輕 ${rangeCap(k, 'light').toFixed(0)}m / 重 ${rangeCap(k, 'heavy').toFixed(0)}m`);
+  }
+  let worst = null;
+  for (const [x, y] of [['robot', 'morph'], ['robot', 'drone'], ['morph', 'drone']]) {
+    const v = pairWin(x, y, all);
+    const okC = v <= CHASSIS_MAX && v >= 1 - CHASSIS_MAX;
+    if (!okC) fail++;
+    if (!worst || Math.abs(v - 0.5) > Math.abs(worst.v - 0.5)) worst = { x, y, v };
+    // 逐重武器類型(使用者「使用不同武器類型交叉對戰」):底盤差會不會被某一類武器放大
+    const byCls = ['blast', 'line', 'fan'].map((g) => {
+      const idx = all.filter((i) => aoeClass(heroWeapon(chs[i], 'heavy', 1, true)) === g);
+      return idx.length ? `${AOE_NAME[g]} ${(pairWin(x, y, idx) * 100).toFixed(1)}%` : null;
+    }).filter(Boolean);
+    console.log(`${okC ? '✅' : '❌'} f 機種底盤  ${x.padEnd(5)} vs ${y.padEnd(5)} ${(v * 100).toFixed(1)}%`
+      + `(目標 50±${KIND_TOL * 100}pp;現行守門線 ${(CHASSIS_MAX * 100).toFixed(0)}% = 防退化欄杆)`
+      + `  [${byCls.join(' / ')}]`);
+  }
+  // ⓘ 耐久當量:把勝率差換成一個可以談的數字 —— 落後那一側要把對手的底盤耐久乘上多少才打平。
+  //    ×1 = 已經平衡;越小代表對方底盤越吃香(現值 0.80 = 無人機底盤多了約兩成耐久當量)。
+  if (Math.abs(worst.v - 0.5) > 0.01) {
+    let lo = 0.5, hi = 1.5;
+    for (let it = 0; it < 6; it++) {
+      const f = (lo + hi) / 2;
+      const w = mean(all.map((i) => {
+        const t = CH_F[worst.y][i];
+        return duelSweep(CH_F[worst.x][i], { ...t, sh0: t.sh0 * f, ar0: t.ar0 * f }, sweep).win;
+      }));
+      if (w > 0.5) lo = f; else hi = f;          // f 越大 ⇒ y 越硬 ⇒ x 勝率越低
+    }
+    console.log(`   ⓘ f 耐久當量  ${worst.y} 底盤耐久 ×${((lo + hi) / 2).toFixed(2)} 才與 ${worst.x} 打平`
+      + `(×1 = 已平衡;這是「差多少」的可談數字,不是建議值 —— HP_F 是 ① 的校準錨)`);
+  }
 }
 
 // ---------- ⑥ 招式配置 ← 武器射程剖面 ----------
