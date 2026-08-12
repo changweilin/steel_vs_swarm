@@ -9,8 +9,9 @@
 //        + 口部通風柵;面鬚 = chainF 三節收分 ×5(垂墜前捲)+ cablesF 側細鬚;
 //   步行腿 ×4 = 鏈契約不動(root+四節小 k),節身改 tboxF 甲殼 + latheF 側關節盤 + hydCyl
 //        活塞 + 雙爪蹄(★ 圖是甲殼多節腿不是軟管);
-//   持武觸手 ×4 = chainF 六節環節(節間 IRON 關節環 + 腹面吸盤列),上對持 25mm 空爆機砲
-//        / 諧振器 orb、下對各托一枚攔截彈(latheF 彈體 + finF 尾翼 ×4);
+//   持武觸手 ×4 = chainF 六節環節(節間 IRON 關節環 + 腹面吸盤列),生根點方位 = 對應
+//        步行腿 (±legX, fz/hz) 的方位(章魚八臂環狀輻射、上下成對;_tentAt 同一份推導),
+//        自錨點向外上弧起再回捲;前對持 25mm 空爆機砲 / 諧振器 orb、後對各托一枚攔截彈;
 //   腹下 = chainF 虹吸管 + 發射軌條;全機纜束 = cablesF(罩下垂落,★ 圖前肩明顯)。
 import * as THREE from 'three';
 import {
@@ -36,7 +37,7 @@ export default {
     ['背頂(艙盒 + 雷達碟)', 'tboxF 艙盒(bxF 通風柵 ×3)+ latheF 雷達碟(cylF 桅杆/饋源三桿 + sphF 饋源燈)'],
     ['頭(複眼群 + 面鬚)', 'prismF 蒼白臉板 + 雙大複眼(torusF 眶環 + sphF 玻璃頂)+ 小眼列 ×6 + torusF 弧眉 + 口柵;面鬚 = chainF 三節收分 ×5 + cablesF 側細鬚'],
     ['觸手步行腿 ×4(五節行進波)', '節身 tboxF 甲殼(逐節收分)+ latheF 側關節盤 + hydCyl 活塞 + prismF 根部護甲弧板 + 雙爪蹄(tboxF 爪 + coneF 後距)'],
-    ['持武觸手 ×4(rig.tents)', 'chainF 六節環節(IRON 關節環 + 腹面吸盤列)+ sphF 球窩罩;末端世界對齊樞軸(槍口恆朝前)'],
+    ['持武觸手 ×4(rig.tents)', 'chainF 六節環節(IRON 關節環 + 腹面吸盤列)+ sphF 球窩罩;生根點 = 對應步行腿方位貼殼收斂(右前/左前/右後/左後上下成對),向外上弧起再回捲;末端世界對齊樞軸(槍口恆朝前)'],
     ['武裝(25mm 空爆機砲 / 諧振器 / 攔截彈 ×2)', '機砲 = tboxF 機匣 + latheF 階狀砲身 + 彈鼓;諧振器 = latheF 托座 + sphF 諧振球 + torusF 環 ×2;攔截彈 = latheF 彈體 + coneF 彈頭 + finF 尾翼 ×4'],
     ['腹部(虹吸管 + 發射軌)', 'chainF 三節下垂虹吸管 + bxF 發射軌條 ×2'],
   ],
@@ -93,11 +94,23 @@ export default {
     }, GUNMETAL, { metalness: 0.5 });
     for (const sx of [-1, 1])
       bxF(spine, 0.09, 0.07, 1.5, sx * 0.22, -0.72, 0.05, COAL, { metalness: 0.6 });
-    // 持武觸手根部球窩罩 ×4(觸手在罩內轉動;位置 = mount 的四個生根點)
-    for (const [ox, oy, oz] of [[-0.7, 0.68, -0.5], [0.7, 0.68, -0.5], [-1.0, 0.28, -0.7], [1.0, 0.28, -0.7]]) {
-      const sock = sphF(chest, 0.24, ox, oy, oz, dimF(PAL.deep, 0.8), { metalness: 0.6 });
+    // 持武觸手根部球窩罩 ×4(觸手在罩內轉動;生根點 = mount 同一份 _tentAt 推導)
+    for (const [sx, front] of [[-1, true], [1, true], [-1, false], [1, false]]) {
+      const sock = sphF(chest, 0.24, ...this._tentAt(c, sx, front).p, dimF(PAL.deep, 0.8), { metalness: 0.6 });
       sock.scale.y = 0.75;
     }
+  },
+  // 持武觸手生根點(body 球窩罩與 mount 共用的唯一推導):
+  // 方位 = 對應步行腿 —— 腿掛世界根 (±legX, fz/hz)、外套膜中心在 chest 座標是 (0, ·, -chest.z)
+  // ⇒ 自中心看的腿方位向量恰為 (±legX, fz/hz);沿它貼殼收斂(半徑 rad)、y 取外套膜上側翼。
+  // yaw = 讓 chain 初始 -z 指向該方位(root 'YXZ':先仰後轉方位,弧線恆落在腿的鉛直方位面)。
+  _tentAt(c, sx, front) {
+    const d = c.dims, zLeg = front ? d.fz : d.hz, rad = front ? 0.85 : 0.9;
+    const n = Math.hypot(d.legX, zLeg);
+    return {
+      p: [sx * (d.legX / n) * rad, 0.5, -d.chest[2] + (zLeg / n) * rad],
+      yaw: Math.atan2(-sx * d.legX, -zLeg),
+    };
   },
   neckHead(c, neck, head) {
     const { PAL, accent } = c;
@@ -200,14 +213,18 @@ export default {
   },
   mount(c, F) {
     const { PAL, accent } = c;
-    // ── 持武觸手 ×4(★ 圖:環節 + 腹面吸盤列,打結上弓再前捲)──
-    // 上對(高弓越頂):右 = 25mm 空爆機砲、左 = 諧振器 orb;下對(側弓):各托一枚攔截彈。
+    // ── 持武觸手 ×4(★ 圖:環節 + 腹面吸盤列;章魚式自外套膜側翼向外上弧起再回捲)──
+    // 生根點方位 = 對應步行腿(_tentAt 唯一推導;右前/左前/右後/左後一一對應、上下成對):
+    // 前對:右 = 25mm 空爆機砲、左 = 諧振器 orb;後對:各托一枚攔截彈。
     // 末端掛「世界對齊樞軸」(models.js 同款單一保證縫):槍口恆朝機體正前,蠕動波不歪槍口。
-    const mkTent = (sx, def) => {
-      // 抬升角住根部 wrapper(chainF 的 rot0 是逐關節相對角 —— 塞大角 = 整條捲死結)
+    const mkTent = (sx, front, def) => {
+      // 抬升角住根部 wrapper(chainF 的 rot0 是逐關節相對角 —— 塞大角 = 整條捲死結);
+      // 'YXZ' = 先仰(x)再轉到腿方位(y):初始指向「方位 × 仰角」,curl(+x)續在同一鉛直方位面內
+      const at = this._tentAt(c, sx, front);
       const root = new THREE.Group();
-      root.position.set(sx * def.x, def.y, def.z);
-      root.rotation.set(def.pitch, sx * def.yaw, sx * -def.roll);
+      root.position.set(...at.p);
+      root.rotation.order = 'YXZ';
+      root.rotation.set(def.pitch, at.yaw, sx * -def.roll);
       F.chest.add(root);
       const { segs, tip } = chainF(root, {
         n: 6, len0: 0.7, len1: 0.36, r0: 0.16, r1: 0.055,
@@ -226,12 +243,12 @@ export default {
       tipP.quaternion.copy(tip.getWorldQuaternion(new THREE.Quaternion()).invert());
       return { segs, tip, tipP };
     };
-    // 彎度平均分到每一關節(累積 ≈ π + 微過捲),root roll 把捲曲面往外傾 = ★ 圖的側向大迴圈;
-    // 根部攤開到殼背兩側(不擠成一撮鹿角)
-    const upper = { x: 0.7, y: 0.68, z: -0.5, yaw: 0.4, roll: 1.15, pitch: 1.05, rot0: 0.3, rotD: 0.045 };
-    const lower = { x: 1.0, y: 0.28, z: -0.7, yaw: 0.85, roll: 1.35, pitch: 0.9, rot0: 0.28, rotD: 0.04 };
-    const tGun = mkTent(1, upper), tOrb = mkTent(-1, upper);
-    const tPodL = mkTent(-1, lower), tPodR = mkTent(1, lower);
+    // 彎度平均分到每一關節(累積 ≈ 0.6π:向外上弧起、頂端回捲但不過頂下扎 —— 過捲會讓
+    // 梢節垂到臉前);roll 把捲曲面往外傾(★ 圖的側向迴圈外倒,梢端收在外上角不擠向中線)
+    const front = { pitch: 0.95, roll: 0.75, rot0: 0.26, rotD: 0.03 };
+    const rear = { pitch: 0.9, roll: 0.75, rot0: 0.24, rotD: 0.028 };
+    const tGun = mkTent(1, true, front), tOrb = mkTent(-1, true, front);
+    const tPodL = mkTent(-1, false, rear), tPodR = mkTent(1, false, rear);
     // 25mm 空爆機砲(右上觸手梢):tboxF 機匣 + latheF 階狀砲身 + 側彈鼓 + 砲口充能環
     const gp = tGun.tipP;
     tboxF(gp, { w0: 0.2, d0: 0.44, w1: 0.17, d1: 0.36, h: 0.2 }, 0, 0, 0, GUNMETAL, { metalness: 0.75 });

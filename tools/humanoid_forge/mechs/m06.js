@@ -6,6 +6,8 @@
 // 背骨板 = prismF 後掠五角板 ×8 **交錯兩列**,格格掛貨(6 管集束莢 ×2 + 方彈筒 ×2 +
 // 摺翼子機 ×4)—— mecha.js gen.note:排成一列或空著 = 一般獸型機甲,直接錯。
 // 尾錘 = 素鐵(STEEL 灰)波浪剖面 latheF(被打得變形)+ 橫軸副錘;圖騰塗裝歸 paint 層。
+// 2026-08-12 修補:尾巴補成完整量體(骨架照:尾 = 脊線延伸、粗根收梢、長度接近體長、上弧高舉)——
+// 節環 6 節 + 沿尾小背板 3 對逐對縮小 + 錘頭接尾梢;上弧姿勢全寫進節身幾何(whipTail 覆寫樞軸 rotation)。
 import * as THREE from 'three';
 import {
   matF, dimF, bxF, cylF, sphF, coneF, torusF, tboxF, prismF, latheF, finF, fanF, chainF, cablesF,
@@ -15,12 +17,15 @@ import {
 // 素鐵灰(尾錘/副錘;「素鐵」明講不上塗裝 → 不吃 PAL 金黃階)
 const STEEL = 0x7d838b;
 
+// 後掠五角背板輪廓(body 背軌 ×8 與尾部小背板共用同一份語彙;縮放住呼叫端)
+const PLATE = [[-0.5, 0], [0.5, 0], [0.7, 0.35], [0.45, 1.0], [-0.25, 0.45]];
+
 export default {
   label: '傾盆(m06 機甲・劍龍)', hue: 0xf0c24a, kind: 'quad', height: 5.0,
   frame: {
     hipY: 1.9, legX: 0.95, fz: 1.2, hz: -1.6,
     chest: [0, 0.1, 0.6], neck: [0, -0.05, 1.25], head: [0, -0.2, 0.7],
-    tailY: 0.1, tailZ: -1.7, tail2Z: 0.9,
+    tailY: 0.15, tailZ: -2.0, tail2Z: 1.6,
   },
   gait: { gait: 'walk', stride: 2.3, top: 8, bob: 0.05, rollSway: 0.11, pitchAmp: 0.03 },
   moveSig: { poise: 0.48, idleF: 0.48, idleA: 1.85, launch: 0.10, spool: 0.88, brake: 0.10, settle: 2.10 },
@@ -31,7 +36,8 @@ export default {
     ['子機掛格(每格掛貨)', '6 管集束莢 ×2(外側軌位)+方彈筒 ×2(兩列之間中溝)+摺翼子機 ×4(tboxF 艙身+coneF 鼻錐+finF 摺翼+IRON 托架)—— 貨滿到像會走路的碼頭'],
     ['小頭+層疊頸甲', 'latheF 八角頸甲環 ×3 逐環收分+tboxF 楔顱/喙吻/下顎+prismF 怒眉稜+sphF 雙眼+cablesF 頸下管束'],
     ['象柱腿 ×4(後肢加粗)', 'tboxF 肩殼+cylF 直柱+hydCyl 後腱+膝防塵環+prismF 外側甲片+三楔趾;肩髖 latheF 大圓盤(髖側 torusF 大圓口)'],
-    ['尾錘(素鐵、被打得變形)', 'latheF 節環尾上捲+IRON 節環;錘頭 = STEEL 灰 latheF 波浪剖面(打凹)+橫軸副錘+COAL 凹痕補片'],
+    ['節環尾(粗根收梢、上弧高舉)', 'latheF 微鼓節身 ×6(根半徑貼後軀下緣、逐節收分抬升)+IRON 節間環 ×3+prismF 沿尾小背板 3 對逐對縮小(同背板語彙);長度接近體長'],
+    ['尾錘(素鐵、被打得變形)', '錘頭 = STEEL 灰 latheF 波浪剖面(打凹)接在尾梢高舉+IRON 錘柄+橫軸副錘+COAL 凹痕補片'],
     ['武裝', '輕:頸側雙聯機槍莢;重:左前集束莢(hMuz 充能格),charge 時全部掛載仰起(heavyPivot ×4);圖騰塗裝歸 paint 層'],
   ],
   body(c, spine, chest) {
@@ -82,11 +88,10 @@ export default {
     c2.rotation.x = Math.PI / 2;
     // ── 背骨板 ×8:交錯兩列(±x 錯開、z 交錯;高度前升後降;基部沉進背脊)──
     // 後掠五角板:局部 +x(apex 偏移側)經 rotation.y=π/2 轉成世界 −z = 朝尾後掠
-    const plate = [[-0.5, 0], [0.5, 0], [0.7, 0.35], [0.45, 1.0], [-0.25, 0.45]];
     const tier = [PAL.lite, PAL.main, PAL.mid];             // 圖騰逐板異色歸 paint 層,幾何以三階近似
     const plateAt = (parent, i, y, z, h) => {
       const sx = i % 2 ? 1 : -1;
-      const p = prismF(parent, plate.map(([px, py]) => [px * 0.66 * h, py * h]), 0.14,
+      const p = prismF(parent, PLATE.map(([px, py]) => [px * 0.66 * h, py * h]), 0.14,
         sx * 0.26, y, z, tier[i % 3], { metalness: 0.5 });
       p.rotation.y = -Math.PI / 2;                          // 實拍校正:−π/2 才是 apex 朝尾(後掠)
       return p;
@@ -183,34 +188,58 @@ export default {
   },
   tail(c, tail, tail2) {
     const { PAL } = c;
-    // 節環尾:latheF 微鼓節身(沿 −z)+ IRON 節間環;逐節上捲(art:尾上捲、錘頭抬高)
-    const segAt = (parent, z, y, r, tilt, col) => {
-      const s = latheF(parent, [[r * 0.8, -0.24], [r, -0.06], [r, 0.08], [r * 0.86, 0.22]], 10, 0, y, z, col, { metalness: 0.5 });
-      s.rotation.x = Math.PI / 2 - tilt;
+    // 節環尾(骨架照:粗根收梢、長度接近體長、向後上弧高舉)——
+    // whipTail 每幀覆寫 tail/tail2 樞軸 rotation ⇒ 上弧姿勢全寫進節身幾何:
+    // 逐節 y 抬升 + tilt 住 mesh;rotation.x = tilt − π/2(節身軸沿「上‑後」= 弧的切線)
+    const segAt = (parent, z, y, r, len, tilt, col) => {
+      const s = latheF(parent, [[r * 0.8, -len * 0.5], [r, -len * 0.13], [r, len * 0.17], [r * 0.86, len * 0.5]], 10, 0, y, z, col, { metalness: 0.5 });
+      s.rotation.x = tilt - Math.PI / 2;
       return s;
     };
-    segAt(tail, -0.15, 0.02, 0.34, 0.1, PAL.main);
-    const r1 = cylF(tail, 0.22, 0.22, 0.14, 8, 0, 0.08, -0.44, IRON, { metalness: 0.8 });
-    r1.rotation.x = Math.PI / 2 - 0.2;
-    segAt(tail, -0.6, 0.16, 0.29, 0.35, PAL.mid);
-    segAt(tail2, -0.12, 0.12, 0.25, 0.6, PAL.main);
-    const r2 = cylF(tail2, 0.16, 0.16, 0.12, 8, 0, 0.28, -0.32, IRON, { metalness: 0.8 });
-    r2.rotation.x = Math.PI / 2 - 0.7;
-    segAt(tail2, -0.45, 0.42, 0.2, 0.9, PAL.mid);
-    // 尾錘(素鐵、被打得變形):上翹柄 + STEEL 波浪剖面主錘(打凹輪廓)+ 橫軸副錘 + 凹痕補片
-    const hf = cylF(tail2, 0.08, 0.1, 0.42, 8, 0, 0.75, -0.6, IRON, { metalness: 0.8 });
-    hf.rotation.x = Math.PI / 2 - 1.2;
-    const bd = torusF(tail2, 0.12, 0.028, 0, 0.68, -0.66, COAL, { metalness: 0.8 });
-    bd.rotation.x = -1.2;
+    const ringAt = (parent, z, y, r, tilt) => {
+      const rg = cylF(parent, r, r, 0.14, 8, 0, y, z, IRON, { metalness: 0.8 });
+      rg.rotation.x = tilt - Math.PI / 2;
+      return rg;
+    };
+    // tail 前三節:根粗(半徑貼後軀下緣量體)→ 收分;根節咬進後殼(不懸空)
+    segAt(tail, -0.35, -0.05, 0.55, 0.8, 0.12, PAL.main);
+    ringAt(tail, -0.78, 0.06, 0.42, 0.25);
+    segAt(tail, -1.05, 0.15, 0.44, 0.7, 0.3, PAL.mid);
+    ringAt(tail, -1.42, 0.3, 0.33, 0.45);
+    segAt(tail, -1.5, 0.36, 0.37, 0.55, 0.5, PAL.main);
+    // tail2 後三節:先向後伸展、再續上弧高舉(骨架照:尾先拉長再起弧,不貼著身體直上)
+    segAt(tail2, -0.3, 0.42, 0.3, 0.6, 0.55, PAL.mid);
+    ringAt(tail2, -0.62, 0.6, 0.24, 0.75);
+    segAt(tail2, -0.85, 0.72, 0.24, 0.55, 0.9, PAL.main);
+    segAt(tail2, -1.1, 0.98, 0.19, 0.5, 1.15, PAL.mid);
+    // 沿尾小背板 3 對(±x 交錯、逐對縮小;同 body PLATE 語彙,apex 朝尾後掠)
+    const tplateAt = (parent, sx, z, y, h) => {
+      const p = prismF(parent, PLATE.map(([px, py]) => [px * 0.66 * h, py * h]), 0.1,
+        sx * 0.16, y, z, sx > 0 ? PAL.lite : PAL.mid, { metalness: 0.5 });
+      p.rotation.y = -Math.PI / 2;
+      return p;
+    };
+    tplateAt(tail, 1, -0.55, 0.4, 0.72);
+    tplateAt(tail, -1, -0.82, 0.44, 0.62);
+    tplateAt(tail, 1, -1.3, 0.56, 0.52);
+    tplateAt(tail, -1, -1.54, 0.62, 0.46);
+    tplateAt(tail2, 1, -0.4, 0.64, 0.38);
+    tplateAt(tail2, -1, -0.66, 0.74, 0.32);
+    // 尾錘(素鐵、被打得變形):柄自末節頂端接出(不懸空)、錘頭高舉 + 橫軸副錘 + 凹痕補片
+    const hf = cylF(tail2, 0.08, 0.1, 0.5, 8, 0, 1.32, -1.22, IRON, { metalness: 0.8 });
+    hf.rotation.x = 1.3 - Math.PI / 2;
+    const bd = torusF(tail2, 0.12, 0.028, 0, 1.18, -1.18, COAL, { metalness: 0.8 });
+    bd.rotation.x = 1.3;
     const hd = latheF(tail2, [
       [0.23, -0.44], [0.38, -0.34], [0.33, -0.18], [0.4, -0.02], [0.34, 0.14], [0.39, 0.28], [0.25, 0.4], [0.0001, 0.44],
-    ], 9, 0, 1.08, -0.72, STEEL, { metalness: 0.7 });
-    hd.rotation.x = Math.PI / 2 - 1.2;
-    const pl = cylF(tail2, 0.17, 0.19, 0.46, 8, 0, 1.38, -0.6, GUNMETAL, { metalness: 0.8 });
+    ], 9, 0, 1.72, -1.28, STEEL, { metalness: 0.7 });
+    hd.rotation.x = 1.3 - Math.PI / 2;
+    // 橫軸副錘:長過錘頭最大半徑(0.4)⇒ 兩端露出錘頭輪廓(★ 圖錘頂橫軸)
+    const pl = cylF(tail2, 0.15, 0.17, 0.95, 8, 0, 1.95, -1.34, GUNMETAL, { metalness: 0.8 });
     pl.rotation.z = Math.PI / 2;
-    const dt1 = bxF(tail2, 0.2, 0.15, 0.06, 0.2, 1.1, -0.85, COAL, { metalness: 0.5 });
+    const dt1 = bxF(tail2, 0.2, 0.15, 0.06, 0.2, 1.78, -1.42, COAL, { metalness: 0.5 });
     dt1.rotation.z = 0.4;
-    const dt2 = bxF(tail2, 0.16, 0.12, 0.06, -0.18, 0.95, -0.62, INK, { metalness: 0.5 });
+    const dt2 = bxF(tail2, 0.16, 0.12, 0.06, -0.18, 1.55, -1.15, INK, { metalness: 0.5 });
     dt2.rotation.x = 0.5;
   },
   mount(c, F) {
