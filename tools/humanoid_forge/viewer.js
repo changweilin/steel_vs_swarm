@@ -26,6 +26,7 @@ import { updateCelLight, disposeTree } from '/public/js/toon.js';
 import { SPECS, forgeHumanoidMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from './forge.js';
 import { CATS, rosterByCat, splitKey, FORM_LABEL } from './roster.js';
 import { makeDollEditor } from './dolledit.js';
+import { fetchArt, fetchRefs, artStripHTML, refStripHTML } from './refstrip.js';
 
 // 使用者調整覆寫層(specs.json;/api/forge 讀寫)—— 合併只走 mergeSpec 單一縫。
 // 2026-08-12 第五輪起本台**可寫**(紙娃娃編輯器存 `doll` 那一欄);比例滑桿仍住覆核台,
@@ -208,52 +209,25 @@ function renderSpecButtons() {
   }
 }
 
-// ---- 2D 定案圖 / 原型參考照(名冊皆由伺服器推導;MUST NOT 在這裡拼檔名)----
-const IMG_CACHE = new Map();
-async function apiImgs(url) {
-  if (!IMG_CACHE.has(url)) {
-    try {
-      const r = await fetch(url);
-      IMG_CACHE.set(url, r.ok ? await r.json() : {});
-    } catch { IMG_CACHE.set(url, {}); }
-  }
-  return IMG_CACHE.get(url);
-}
-const protoCap = (file) => {
-  const form = file.includes('_flight_') ? '飛行型・' : file.includes('_ground_') ? '地面型・' : '';
-  const pose = file.includes('moving') ? '移動' : file.includes('heavy') ? '重擊' : '定裝';
-  return form + pose;
-};
-/** 2D 定案圖:變形者只列**本型態**那幾張(飛行型的頁面不該拿地面型的圖當建模依據) */
+// ---- 2D 定案圖 / 原型參考照 ----------------------------------------------------
+// 標記與名冊取得整組住 refstrip.js(2026-08-12 第五輪:覆核台也要這兩帶)——
+// 兩座看板 MUST 是同一份標記 + 同一份 CSS(board.css),各寫一份就會各自演化。
+// 這裡只剩「這一格要看哪幾張」:變形者只列**本型態**那幾張(飛行型的頁面不該拿地面型的
+// 圖當建模依據),以及「面板已換機就別把上一台的圖畫進去」那道時序閘。
 async function fillArtStrip(forId) {
   const box = $('artStrip');
   if (!box) return;
-  const j = await apiImgs(`/api/protoimgs?id=${spec.ch}`);
+  const j = await fetchArt(spec.ch);
   if (spec.id !== forId || !$('artStrip')) return;             // 面板已換機
   const want = spec.form === 'flight' ? '_flight_' : spec.form === 'ground' ? '_ground_' : null;
-  const imgs = (j.imgs || []).filter((m) => !want || m.file.includes(want));
-  box.innerHTML = imgs.length
-    ? imgs.map((m) => `<figure class="proto"><a href="${m.url}" target="_blank" rel="noopener">
-        <img src="${m.url}" alt="${esc(m.file)}" loading="lazy"></a>
-        <figcaption>${protoCap(m.file)}</figcaption></figure>`).join('')
-    : '<div class="dim">(這一格還沒有 2D 定案圖)</div>';
+  box.innerHTML = artStripHTML((j.imgs || []).filter((m) => !want || m.file.includes(want)));
 }
-/** 真實原型照片(動物/機型):關鍵詞來自 MECHA[].proto,採集與授權帳走 fetch_protorefs.mjs */
 async function fillRefStrip(forId) {
   const box = $('refStrip');
   if (!box) return;
-  const j = await apiImgs(`/api/protorefs?key=${encodeURIComponent(spec.id)}`);
+  const j = await fetchRefs(spec.id);
   if (spec.id !== forId || !$('refStrip')) return;
-  const rows = j.layers || [];
-  box.innerHTML = rows.length ? rows.map((L) => `
-    <div class="ref-src"><b>${esc(L.label)}</b> ${esc(L.src)}
-      ${L.note ? `<span>—— ${esc(L.note)}</span>` : ''}</div>
-    <div class="proto-strip">${L.imgs.length
-    ? L.imgs.map((m) => `<figure class="proto"><a href="${m.url}" target="_blank" rel="noopener">
-          <img src="${m.url}" alt="${esc(m.file)}" loading="lazy"></a>
-          <figcaption>${esc(m.license)} ・ ${esc(m.creator || '—')}</figcaption></figure>`).join('')
-    : '<div class="dim">(未採集;跑 node tools/fetch_protorefs.mjs)</div>'}</div>`).join('')
-    : '<div class="dim">(這一格沒有原型層)</div>';
+  box.innerHTML = refStripHTML(j.layers || []);
 }
 
 function renderPanel() {

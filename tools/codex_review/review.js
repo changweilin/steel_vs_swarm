@@ -20,18 +20,27 @@ const threeReady = import('/public/js/charPreview.js')
   .catch((e) => { console.warn('3D 展示台停用:', e?.message || e); return false; });
 // 人形鍛造區塊(2026-08-12):同一條降級紀律 —— forge.js 靜態拉 three,CDN 擋掉時
 // 只讓鍛造那一格顯示原因,覆核台其餘功能照常(原則 6)。
-let FORGE = null;   // { forge, loco, toon, THREE }
+let FORGE = null;   // { forge, loco, toon, THREE, doll, orbit }
 const forgeReady = Promise.all([
   import('/tools/humanoid_forge/forge.js'),
   import('/public/js/locomotion.js'),
   import('/public/js/toon.js'),
   import('three'),
-]).then(([forge, loco, toon, THREE]) => { FORGE = { forge, loco, toon, THREE }; return true; })
-  .catch((e) => { console.warn('人形鍛造停用:', e?.message || e); return false; });
+  // 2026-08-12 第五輪:「紙娃娃系統與原型照片也加入機體美術台整合」——
+  // 編輯器與展示台 :8631 是**同一支**(dolledit.js),覆核台只負責給它場景與存檔回呼。
+  import('/tools/humanoid_forge/dolledit.js'),
+  import('three/addons/controls/OrbitControls.js'),
+]).then(([forge, loco, toon, THREE, doll, orbit]) => {
+  FORGE = { forge, loco, toon, THREE, doll, orbit };
+  return true;
+}).catch((e) => { console.warn('人形鍛造停用:', e?.message || e); return false; });
 import {
   CHARACTERS, charKind, heroWeapon, heroAbility, heroArmor, heroMobility,
 } from '/public/js/data.js';
 import { LORE } from '/public/js/lore.js';
+// 原型參考照帶:與機體展示台 :8631 同一份標記 + 同一份 CSS(board.css);
+// 本檔零 three ⇒ 靜態 import 不會把三維那條降級路徑一起拖下水。
+import { fetchRefs, refStripHTML } from '/tools/humanoid_forge/refstrip.js';
 import {
   protoOf, mechaCodex, charCodex, textSeed, imagePrompt, modelSheet,
 } from '/public/js/codex.js';
@@ -234,7 +243,8 @@ function renderBody() {
 // 使用者調整存 specs.json 覆寫層(/api/forge;一次一台),合併只走 mergeSpec()。
 // canvas 存活照 mountStage 同款:模組級持有、每次 renderBody 後 re-prepend。
 const fapp = { canvas: null, renderer: null, scene: null, camera: null, unit: null, ent: null,
-  id: null, draft: null, ovr: {}, speed: 0, speedTgt: 0, simT: 0, last: 0, timer: 0 };
+  id: null, draft: null, ovr: {}, speed: 0, speedTgt: 0, simT: 0, last: 0, timer: 0,
+  controls: null, editor: null, framedKey: null, editOn: false };
 
 const forgeApi = async (body) => (await fetch('/api/forge', body
   ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
@@ -258,6 +268,11 @@ function forgeScene() {
   const dir = new THREE.DirectionalLight(0xffffff, 2.1);
   dir.position.set(20, 40, 20);
   fapp.scene.add(dir, new THREE.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
+  fapp.controls = new FORGE.orbit.OrbitControls(fapp.camera, fapp.canvas);
+  fapp.controls.enableDamping = true;
+  fapp.controls.dampingFactor = 0.08;
+  fapp.controls.autoRotateSpeed = 1.6;
+  fapp.controls.autoRotate = true;
   const grid = new THREE.GridHelper(30, 15, 0x39414f, 0x262c36);
   fapp.scene.add(grid);
   fapp.grid = grid;
@@ -272,10 +287,12 @@ function forgeScene() {
     fapp.st = (fapp.st || 0) + dt;
     FORGE.loco.stepCombatFx(fapp.ent, fapp.st, dt);
     FORGE.loco.stepLocomotion(fapp.ent, dt, fapp.st, 0, -fapp.speed * dt, 0);
-    fapp.yaw = (fapp.yaw || 0) + dt * 0.5;                       // 自動環繞(全角度檢視)
-    const H = fapp.draft.height, d2 = H * 2.3;
-    fapp.camera.position.set(Math.sin(fapp.yaw) * d2, H * 0.62, Math.cos(fapp.yaw) * d2);
-    fapp.camera.lookAt(0, H * 0.5, 0);
+    // 自動環繞交給軌道鏡頭(全角度檢視);紙娃娃編輯時**自轉 MUST 停** ——
+    // 一邊自轉一邊拖 gizmo,拖到的是「拖的那一瞬間鏡頭在的地方」,零件會被拉往
+    // 完全不相干的方向(同展示台的那一條)。改用真的 OrbitControls 也讓覆核者
+    // 能自己轉去看背面,而不是等它轉過來。
+    fapp.controls.autoRotate = !fapp.editOn;
+    fapp.controls.update();
     const w = fapp.canvas.clientWidth, h2 = fapp.canvas.clientHeight;
     if (w && (fapp.canvas.width !== w || fapp.canvas.height !== h2)) {
       fapp.renderer.setSize(w, h2, false);
@@ -295,6 +312,14 @@ function forgeBuild() {
   fapp.unit = forge.forgeHumanoidMech(fapp.draft);
   fapp.scene.add(fapp.unit.group);
   fapp.ent = { id: fapp.id, mesh: fapp.unit.group, heroY: 0 };
+  if (fapp.framedKey !== fapp.key) {          // 取景只在換機體那一次(重鍛不動鏡頭)
+    const H = fapp.draft.height;
+    fapp.controls.target.set(0, H * 0.5, 0);
+    fapp.camera.position.set(H * 1.6, H * 0.62, H * 2.3);
+    fapp.camera.lookAt(fapp.controls.target);
+    fapp.controls.update();
+    fapp.framedKey = fapp.key;
+  }
   const doc = forge.conversionDoc(fapp.draft)
     .map((r2) => `<tr><td>${esc(r2.feat)}</td><td>${esc(r2.part)}</td></tr>`).join('');
   const docBox = $('crForgeDoc');
@@ -366,13 +391,16 @@ async function mountForge(id) {
     <div class="cr-dim">2D 原型圖(3D 建模的設計權威 —— 零件多面體照著它拼;點圖開大圖)</div>
     <div class="cr-frefs">${refHTML}</div>
     <div class="cr-forge">
-      <div class="cr-fstage" id="crForgeStage">
-        <div class="cr-stage-btns">
+      <div class="cr-fcol">
+        <div class="cr-fstage" id="crForgeStage"></div>
+        <div class="cr-fbar">
           <button class="segb" id="cfRun">▶ 奔跑</button>
           <button class="segb" id="cfFire">輕武器</button>
           <button class="segb" id="cfHeavy">重武器</button>
           <button class="segb" id="cfCast">招式</button>
+          <button class="segb" id="cfDoll">🧷 紙娃娃</button>
         </div>
+        <div class="cr-fhint">拖曳可自由轉動視角;放開後自動環繞。</div>
       </div>
       <div class="cr-fctl">
         <div class="cr-dim">${air ? '航空鷹架:機體比例住 mechs/*.js 的 air 與逐機幾何(無人形滑桿)'
@@ -388,8 +416,12 @@ async function mountForge(id) {
         </div>
         <div id="crForgeDoc"></div>
       </div>
-    </div>`;
+      <aside class="cr-fctl d-panel" id="crDollPanel" hidden></aside>
+    </div>
+    <div class="cr-dim" style="margin-top:10px">真實原型參考照(CC0/PD;關鍵詞取自 mecha.js proto)</div>
+    <div class="cr-refs" id="crRefStrip"><div class="dim">載入中…</div></div>`;
   $('crForgeStage').prepend(fapp.canvas);
+  fillRefStrip(key);
   for (const b of sec.querySelectorAll('button[data-form]'))
     b.onclick = () => { fapp.wantKey = b.dataset.form; mountForge(id); };
   forgeBuild();
@@ -452,6 +484,40 @@ async function mountForge(id) {
     }, 1050);
   };
   $('cfCast').onclick = () => { fapp.ent.castFx = { t0: fapp.st, slot: 'ult', dir: 0 }; };
+
+  // ---- 紙娃娃編輯器(與機體展示台 :8631 同一支 dolledit.js)----
+  // 覆核台只提供「場景四件 + 重鍛 + 存檔」四個回呼;文件格式、夾制、拖曳語意、面板標記
+  // 全部住共用模組 —— 覆核台自己寫一份的話,同一份覆寫在兩座台上會被解讀成兩種東西。
+  if (!fapp.editor) {
+    fapp.editor = FORGE.doll.makeDollEditor({
+      scene: fapp.scene, camera: fapp.camera, canvas: fapp.canvas, orbit: fapp.controls,
+      unit: () => fapp.unit,
+      rebuild: (doc) => { fapp.draft.doll = doc; forgeBuild(); },
+      save: async (doc) => { fapp.ovr = (await forgeApi({ id: fapp.key, ovr: { doll: doc } })).mechs || {}; },
+      stored: () => fapp.ovr[fapp.key]?.doll || null,
+      specKey: () => fapp.key,
+    });
+  }
+  fapp.editor.mount($('crDollPanel'));
+  fapp.editor.load(fapp.draft.doll || null);
+  fapp.editor.setOn(fapp.editOn);
+  $('crDollPanel').hidden = !fapp.editOn;
+  $('cfDoll').classList.toggle('on', fapp.editOn);
+  $('cfDoll').onclick = () => {
+    fapp.editOn = !fapp.editOn;
+    fapp.editor.setOn(fapp.editOn);
+    $('crDollPanel').hidden = !fapp.editOn;
+    $('cfDoll').classList.toggle('on', fapp.editOn);
+  };
+}
+
+/** 真實原型參考照(名冊由伺服器的採集帳本推導;標記與展示台同一份) */
+async function fillRefStrip(key) {
+  const box = $('crRefStrip');
+  if (!box) return;
+  const j = await fetchRefs(key);
+  if (!$('crRefStrip') || fapp.key !== key) return;      // 面板已換機
+  $('crRefStrip').innerHTML = refStripHTML(j.layers || []);
 }
 
 /** 來源標籤:哪一格是「已入庫」、哪一格只是 AI 稿,MUST 在圖上就看得出來 ——
@@ -704,5 +770,37 @@ for (const b of $('crFilter').querySelectorAll('.segb')) {
   };
 }
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('crModal').hidden = true; });
+
+// ---- headless 檢視(.claude/skills/headless-3d-inspection)------------------------
+// 這座台先前**完全沒有** headless 入口:pane 不合成時 rAF 不跑 ⇒ 鍛造區塊那一格從來
+// 沒有被畫出來過,於是「按鍵疊在畫布上把機體整台蓋住」這種純視覺的壞法在離線這一端
+// 一條都量不到(2026-08-12 使用者回報)。與展示台 :8631 的 `window.__forge` 同形:
+// 手動步進 + 顯式渲染一幀 + POST /__shot 落盤(路由住 boardapi.mjs,兩座台同一支)。
+window.__cr = {
+  select,
+  key: () => fapp.key,
+  step: (n = 1, dt = 1 / 60) => {
+    for (let i = 0; i < n; i++) {
+      fapp.st = (fapp.st || 0) + dt;
+      if (!fapp.ent) continue;
+      FORGE.loco.stepCombatFx(fapp.ent, fapp.st, dt);
+      FORGE.loco.stepLocomotion(fapp.ent, dt, fapp.st, 0, -fapp.speed * dt, 0);
+    }
+  },
+  doll: (doc) => { fapp.draft.doll = doc; forgeBuild(); fapp.editor?.load(doc); },
+  edit: (on) => { $('cfDoll').click(); return fapp.editOn === !!on; },
+  shot: async (name) => {
+    const w = fapp.canvas.clientWidth || 380, h = fapp.canvas.clientHeight || 380;
+    fapp.renderer.setSize(w, h, false);
+    fapp.camera.aspect = w / h;
+    fapp.camera.updateProjectionMatrix();
+    fapp.controls.update();
+    FORGE.toon.updateCelLight(fapp.camera);
+    fapp.renderer.render(fapp.scene, fapp.camera);
+    const r = await fetch('/__shot/' + name, { method: 'POST', body: fapp.canvas.toDataURL('image/png') });
+    return (await r.json()).path;
+  },
+};
+
 await load();
 select(app.data.rows[0].id);

@@ -1,0 +1,46 @@
+/* ============ 兩座看板共用樣式(dev-only)============
+ * 消費端恰兩個:機體展示台 :8631(tools/humanoid_forge/index.html)與
+ * 機體美術覆核台 :8641(tools/codex_review/index.html)。
+ *
+ * 為什麼收成一份:這兩塊(**原型參考照帶** + **紙娃娃編輯面板**)的標記由共用模組產生
+ * (refstrip.js / dolledit.js),樣式再各寫一份的話它就從此各自演化 ——
+ * 你在覆核台看到的版面從來沒有在展示台出現過,而兩邊的程式碼是同一份(CLAUDE.md
+ * 對 storyui.js 的同一條:同一份標記 + 同一份 CSS + 同一支演出)。
+ *
+ * 顏色一律寫死(展示台沒有 CSS 變數;覆核台的變數在 style.css)—— 兩座看板皆為暗底。
+ */
+
+/* ---- 原型參考照帶(2D 定案圖 / CC0 原型照共用)---- */
+.proto-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+.proto-strip .dim { color: #7a8496; font-size: 12px; }
+figure.proto { margin: 0; width: calc(50% - 4px); }
+figure.proto img { width: 100%; display: block; border: 1px solid #2a3040; border-radius: 6px; }
+figure.proto figcaption { color: #9fb4d8; font-size: 11px; text-align: center; padding-top: 2px; }
+.ref-src { color: #cfd6e2; font-size: 12px; margin: 2px 0 4px; }
+.ref-src b { color: #ffd479; font-weight: 600; }
+.ref-src span { color: #7a8496; }
+/* 覆核台的鍛造欄比展示台窄一半 ⇒ 一列擺四張(展示台側欄仍是兩張) */
+.cr-fctl figure.proto, .cr-refs figure.proto { width: calc(25% - 6px); }
+
+/* ---- 紙娃娃編輯面板 ---- */
+.d-panel h4 { margin: 0 0 6px; font-size: 14px; color: #dfe5ee; }
+.d-panel h4 small { color: #7a8496; font-weight: normal; }
+.d-note { color: #8f9bb0; font-size: 11.5px; margin: 6px 0; line-height: 1.45; }
+.d-dim { color: #6c7480; font-size: 11.5px; }
+.d-row { display: flex; align-items: center; gap: 6px; margin: 5px 0; font-size: 12.5px; }
+.d-row > span { width: 46px; color: #9fb4d8; flex: none; }
+.d-row input[type=range] { flex: 1; min-width: 0; }
+.d-row input[type=text], .d-row select { flex: 1; min-width: 0; background: #12141a; color: #dfe5ee;
+  border: 1px solid #2a3040; border-radius: 5px; padding: 3px 6px; font: inherit; font-size: 12.5px; }
+.d-row input[type=color] { width: 42px; height: 24px; background: none; border: 1px solid #2a3040; padding: 0; }
+.d-row i { width: 68px; text-align: right; color: #cfd6e2; font-style: normal; font-size: 11.5px; }
+.d-sel { font-size: 12px; color: #ffd479; margin: 6px 0; word-break: break-all; }
+.d-btns { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }
+.d-btns .segb, .segb.sm { border: 1px solid #2a3040; background: #1b2129; }
+.d-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 7px 0; }
+.d-chip { font-size: 11.5px; padding: 2px 7px; border: 1px solid #3a4a63; border-radius: 5px;
+  color: #9fd8ff; background: #1b2129; cursor: pointer; }
+.d-chip.on { background: #2d3646; color: #fff; }
+.d-foot { display: flex; gap: 5px; margin-top: 10px; border-top: 1px solid #232936; padding-top: 8px; }
+.d-stat { font-size: 11.5px; color: #8fd8a0; margin: 6px 0; }
+.d-stat b { color: #ffd479; margin-left: 6px; }
