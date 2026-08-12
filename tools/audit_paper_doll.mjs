@@ -25,6 +25,9 @@
 //   node tools/audit_paper_doll.mjs --break-order   # 貼花排到換形狀之前 ⇒ Ⅴ 紅
 //   node tools/audit_paper_doll.mjs --break-roster  # 形狀型錄少一款 ⇒ Ⅳ 紅
 //   node tools/audit_paper_doll.mjs --break-patch   # 存檔改回整格取代 ⇒ Ⅵ 紅
+//   node tools/audit_paper_doll.mjs --break-pilot   # 抬頭退回建模註記/名冊不帶駕駛員 ⇒ Ⅸ 紅
+//   node tools/audit_paper_doll.mjs --break-layout  # 武器檢視的第二份入口長回來 ⇒ Ⅹ 紅
+//   node tools/audit_paper_doll.mjs --break-marktab # 標記時把資訊欄蓋掉 ⇒ Ⅹ 紅
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -418,6 +421,150 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
     /reframeNext && view !== 'mech'/.test(reframeV) && /reframeNext = true/.test(reframeV));
   t('覆核台:同一條(rAF 迴圈與 headless step 都要有)',
     (reframeC.match(/fapp\.reframeNext && fapp\.view !== 'mech'/g) || []).length === 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ Ⅸ 機體 ⇄ 角色(機體台抬頭的駕駛員關係:每一欄都到原處取)');
+// ═══════════════════════════════════════════════════════════════════════════
+// 2026-08-12 使用者:「機體台中,機體與角色的關係還沒更新」。
+// 這一段守的是**同一件事在兩座看板說同一句話**:機體名/陣營/機種/全高/羈絆全部由
+// codex.js 的識別段推導,MUST NOT 在看板端手寫,也 MUST NOT 拿 mechs/*.js 的建模註記
+// (`label`)當機體名 —— 那份註記換陣營/改 `machine` 時不會跟著動,而畫面上只表現成
+// 「名冊鈕與抬頭寫著兩個不一樣的機體名」,沒有任何錯誤訊息。
+{
+  const { rosterEntries } = await import('./humanoid_forge/roster.js');
+  const { CHARACTERS } = await import('../public/js/data.js');
+  const { mechaCodex, charCodex } = await import('../public/js/codex.js');
+  const { LORE } = await import('../public/js/lore.js');
+
+  const rows = rosterEntries();
+  t('每一格都解得出駕駛員(缺一格 = 那台機體在台上沒有主人)',
+    rows.length > 0 && rows.every((e) => e.pilot?.name && e.pilot?.machine && e.pilot?.bond));
+  t('欄位逐一等於原處的值(機體名/陣營/機種/全高/呼號/羈絆)',
+    rows.every((e) => {
+      const mc = mechaCodex(e.id), cc = charCodex(e.id), lo = LORE[e.id] || {};
+      return e.pilot.machine === mc.ident.name && e.pilot.machine === CHARACTERS[e.id].machine
+        && e.pilot.code === mc.ident.code && e.pilot.name === mc.ident.pilot
+        && e.pilot.sideName === mc.ident.side && e.pilot.kindWord === mc.ident.kind
+        && e.pilot.heightM === mc.scaleM && e.pilot.callsign === cc.ident.code
+        && e.pilot.bond === mc.deep.bond && e.pilot.role === (lo.role || '');
+    }));
+  // 變形者兩格是同一個人開的:兩格的駕駛員資料 MUST 逐欄相同(分家 = 地面型與飛行型
+  // 在台上看起來像兩台不同的機體)
+  t('變形者兩個型態共用同一份駕駛員關係',
+    rows.filter((e) => e.form).every((e) => {
+      const other = rows.find((x) => x.id === e.id && x.form && x.form !== e.form);
+      return other && JSON.stringify(other.pilot) === JSON.stringify(e.pilot);
+    }));
+
+  let rosterSrc = readSrc('tools', 'humanoid_forge', 'roster.js');
+  let viewSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  if (brk('pilot')) {
+    // 壞版 = 退回「看板自己拼一份」:抬頭改印建模註記、名冊格不再帶駕駛員
+    const before = rosterSrc + viewSrc;
+    rosterSrc = rosterSrc.replace(/\r?\n\s*pilot: pilotOf\(id\),/, '');
+    viewSrc = viewSrc.replace(/const mechName = [^\n]*\n/, "const mechName = (s) => s.label;\n");
+    if (before === rosterSrc + viewSrc) {
+      console.log('  ✗ --break-pilot 沒有咬到目標原文(樣式過期)'); process.exit(1);
+    }
+  }
+  t('名冊格帶著駕駛員(pilotOf 單一縫;看板端 MUST NOT 自己查 CHARACTERS)',
+    /export function pilotOf/.test(rosterSrc) && /pilot: pilotOf\(id\)/.test(rosterSrc)
+    && !/CHARACTERS\[/.test(code(viewSrc)));
+  // `spec.label` 只准出現在「查不到駕駛員」的那條缺料分支(缺了要看得出來,不准靜默留白)
+  t('機體名只有一個來源(mechName → pilot.machine,MUST NOT 退回 spec.label)',
+    /const mechName = \(s\) => s\.pilot\?\.machine/.test(code(viewSrc))
+    && (code(viewSrc).match(/spec\.label/g) || []).length === 1);
+  t('抬頭有駕駛員區塊(姓名/呼號/陣營/機種/全高/羈絆)',
+    /function pilotHTML/.test(code(viewSrc)) && /pl-bond/.test(viewSrc)
+    && /p\.heightM\.toFixed\(2\)/.test(viewSrc) && /p\.callsign/.test(viewSrc));
+  // 取景高是展示台自己的常數(mechs/*.js),拿它當機體全高 = 有人照著它改機體比例
+  t('全高與展示台取景高分開印(兩個數字 MUST NOT 併成一個)',
+    /全高 \$\{p\.heightM/.test(viewSrc) && /取景高 \$\{spec\.height\}/.test(viewSrc));
+  t('頭像走 portraits.js 的 avatarURL(MUST NOT 自己拼 assets/avatars 路徑)',
+    /from '\/public\/js\/portraits\.js'/.test(viewSrc)
+    && !/assets\/avatars/.test(code(viewSrc)));
+  t('spec 那一層有把駕駛員帶下去(MECH_SPECS 的 pilot 欄)',
+    /pilot: e\.pilot/.test(code(readSrc('tools', 'humanoid_forge', 'forge.js'))));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ Ⅹ 機體台版面(三欄重排 / 控制只留一份 / 覆核意見標記)');
+// ═══════════════════════════════════════════════════════════════════════════
+// 2026-08-12 使用者:「目前的機體台 UI 很亂,須重構,以可讀性、易於標記為主,整併重複的
+// 資訊與功能」。這一段守的是**整併之後不會再長回來**:
+//   ① 同一個功能兩個入口(武器檢視:舞台工具列 + 側欄文字跳轉)—— 兩邊各自維護選取態,
+//      遲早說出不一樣的話;
+//   ② 編輯模式兩顆開關(頁首鈕 + 分頁)—— 有一條路徑忘了同步,就會停在「看起來沒在編輯、
+//      點機體卻會選到零件」;
+//   ③ 標記時把資訊欄整個蓋掉 —— 正在對照的 2D 定案圖當場消失,而那是標記時唯一要看的東西。
+{
+  let viewSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  let htmlSrc = readSrc('tools', 'humanoid_forge', 'index.html');
+  if (brk('layout')) {
+    // 壞版 = 把武器檢視的第二份入口(側欄文字跳轉)加回去
+    viewSrc = viewSrc.replace('const body = {',
+      'const jumps = `<span class="jump" data-go="light">→ 檢視輕武器</span>`;\n  const body = {');
+  }
+  if (brk('marktab')) {
+    // 壞版 = 標記時把資訊欄整個藏起來(改版前的行為)
+    viewSrc = viewSrc.replace("$('dollPanel').hidden = !on;", "$('panelBody').hidden = on; $('dollPanel').hidden = !on;");
+  }
+
+  t('三欄骨架:左名冊欄 / 中舞台 / 右分頁欄',
+    /id="rail"/.test(htmlSrc) && /id="railList"/.test(htmlSrc)
+    && /class="stagebar"/.test(htmlSrc) && /id="panelTabs"/.test(htmlSrc) && /id="panelBody"/.test(htmlSrc));
+  t('名冊是逐列一格(頭像 + 機體名 + 駕駛員 + 覆核徽章),MUST NOT 退回頂部橫條',
+    /function renderRail/.test(code(viewSrc)) && /class="rl-p"/.test(viewSrc)
+    && !/specSeg/.test(code(viewSrc)) && !/id="specSeg"/.test(htmlSrc));
+  t('演出/視角/檢視控制收在舞台工具列一條(頁首只剩身分)',
+    /class="stagebar"/.test(htmlSrc)
+    && !/<header>[\s\S]*id="btnFire"[\s\S]*<\/header>/.test(htmlSrc)
+    && !/<header>[\s\S]*id="vWpnL"[\s\S]*<\/header>/.test(htmlSrc));
+  // ① 武器檢視只有一份入口
+  t('武器檢視只有一組控制(側欄的文字跳轉整組退場)',
+    (code(viewSrc).match(/data-go=/g) || []).length === 0
+    && /id="vWpnL"/.test(htmlSrc) && /id="vWpnH"/.test(htmlSrc));
+  // ② 編輯模式只有一個開關
+  t('紙娃娃編輯模式的開關只有「標記」分頁一個(btnEdit 全域鈕已退場)',
+    /function setTab/.test(code(viewSrc)) && /editor\.setOn\(on\)/.test(code(viewSrc))
+    && !/btnEdit/.test(code(viewSrc)) && !/id="btnEdit"/.test(htmlSrc)
+    && (code(viewSrc).match(/editor\.setOn/g) || []).length === 1);
+  t('headless 入口與人走同一條路(__forge.edit 轉呼 setTab,MUST NOT 自己開關面板)',
+    /edit: \(on\) => setTab\(/.test(code(viewSrc)));
+  // ③ 標記時參考圖不被蓋掉
+  t('標記分頁 MUST NOT 藏掉資訊欄(2D 定案圖是標記時唯一要對照的東西)',
+    !/panelBody'\)\.hidden/.test(code(viewSrc)));
+
+  // ---- 覆核意見標記 ----
+  t('判決字彙只有 MARK_STATUS 一份(鈕面/徽章/計數全由它推導)',
+    /export const MARK_STATUS/.test(code(viewSrc))
+    && /MARK_STATUS\.map/.test(code(viewSrc))
+    && (code(viewSrc).match(/'✔'|'✎'/g) || []).length === 2);   // 只在字彙表裡各出現一次
+  t('意見存在既有覆寫層的 review 欄(逐欄 patch,MUST NOT 另開第二本帳)',
+    /saveOvr\(spec\.id, \{ review \}\)/.test(code(viewSrc))
+    && !/api\/(review|marks)/.test(code(viewSrc)));
+  t('意見是逐格的(名冊鍵),不是逐角色',
+    /const markOf = \(key\) => OVR\[key\]\?\.review/.test(code(viewSrc))
+    && /markIcon\(e\.key\)/.test(code(viewSrc)));
+  t('清除走同一條寫入路徑(status 為空 ⇒ patch 掉整欄)',
+    /const review = status \|\| note/.test(code(viewSrc))
+    && /: null;/.test(code(viewSrc)));
+
+  // 行為直測:review 與 doll 併存(逐欄 patch —— 在標記分頁打一個 ✔ 不可以洗掉紙娃娃)
+  {
+    const dir = await mkdtemp(join(tmpdir(), 'svs-mark-'));
+    const f = join(dir, 'specs.json');
+    await patchOvr('t01', { doll: { bones: {}, parts: { '1.0': { color: 1 } }, marks: [], adds: [] } }, f);
+    await patchOvr('t01', { review: { status: 'fix', note: '腰甲要再厚', at: '2026-08-12 14:00' } }, f);
+    const st1 = await loadSpecs(f);
+    await patchOvr('t01', { review: null }, f);
+    const st2 = await loadSpecs(f);
+    t('打一個意見不會洗掉紙娃娃(逐欄 patch)',
+      !!st1.mechs.t01.doll && st1.mechs.t01.review.status === 'fix'
+      && !!st2.mechs.t01.doll && st2.mechs.t01.review === undefined);
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);

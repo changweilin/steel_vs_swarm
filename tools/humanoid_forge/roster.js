@@ -22,8 +22,9 @@
 // 而 Node 端(fetch_protorefs.mjs)只有相對路徑載得動 —— 兩端同吃一份分類的前提就是這個。
 
 import { CHARACTERS, charKind, MORPH_HUMANOID } from '../../public/js/data.js';
-import { protoLayers, PROTO_LAYERS } from '../../public/js/codex.js';
+import { protoLayers, PROTO_LAYERS, mechaCodex, charCodex } from '../../public/js/codex.js';
 import { MECHA } from '../../public/js/mecha.js';
+import { LORE } from '../../public/js/lore.js';
 
 /** 三類管理頁。scaffold = 鍛造鷹架(forge.js 依此分流);proto = 這一類的原型層鍵。 */
 export const CATS = [
@@ -95,6 +96,41 @@ export function protoRefsOf(id, form = null) {
   return out;
 }
 
+/**
+ * 這一格的**駕駛員關係**(機體 ⇄ 角色)。
+ * 2026-08-12 使用者:「機體台中,機體與角色的關係還沒更新」—— 機體台原本只印機體暱稱與
+ * 一個裸的角色 id(`t01`),而「這台是誰在開、他跟這台機體是什麼關係」整組不在畫面上;
+ * 同一份東西在覆核台 :8641 是右欄的主體。兩座看板看的是同一件事的兩個角度,MUST 說同一句話。
+ *
+ * **每一欄都到原處取**(A40 ⑤:全高/機體名/主色/機種/陣營 MUST 到原處取):
+ *   機體名/代號/陣營/機種/駕駛員 ← `mechaCodex().ident`(codex.js 的識別段)
+ *   全高                          ← `mechaCodex().scaleM`(= `heroTargetH`,隨護甲內插)
+ *   羈絆(機體與駕駛的關係)      ← `mechaCodex().deep.bond`(內容住 lore.js)
+ *   呼號                          ← `charCodex().ident.code`
+ *   國籍/職務/台詞                ← `LORE`
+ * 這裡 MUST NOT 出現任何手寫的字串:mechs/*.js 的 `label` 是**建模註記**(「t01 重機甲」),
+ * 拿它當機體名 = 同一台機體在名冊鈕與抬頭上叫兩個名字,而換陣營/改 machine 時只有一邊會跟著改。
+ */
+export function pilotOf(id) {
+  const mc = mechaCodex(id);
+  if (!mc) return null;
+  const lo = LORE[id] || {};
+  return {
+    id,
+    name: mc.ident.pilot,
+    callsign: charCodex(id)?.ident.code || '',
+    sideName: mc.ident.side,
+    kindWord: mc.ident.kind,
+    code: mc.ident.code,
+    machine: mc.ident.name,
+    heightM: mc.scaleM,
+    nat: lo.nat || '',
+    role: lo.role || '',
+    quote: lo.quote || '',
+    bond: mc.deep?.bond || '',
+  };
+}
+
 /** 全名冊(逐格 = 一個管理頁項目);順序 = CHARACTERS 宣告序 × 型態序 */
 export function rosterEntries() {
   const out = [];
@@ -109,6 +145,7 @@ export function rosterEntries() {
         formLabel: form ? FORM_LABEL[form] : '',
         code: MECHA[id]?.code || '',
         side: c.side, hue: c.visual?.hue ?? 0xffffff,
+        pilot: pilotOf(id),
         protos: protoRefsOf(id, form),
       });
     }

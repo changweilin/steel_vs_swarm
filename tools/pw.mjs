@@ -47,23 +47,36 @@ export function chromePath() {
   return CHROME.find((p) => existsSync(p));
 }
 
+/** 這一頁到底是不是遊戲?(見 serve() 的沿用閘) */
+const GAME_MARK = 'id="touchLayer"';
+const isGame = async (url) => {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(800) });
+    return r.ok && (await r.text()).includes(GAME_MARK);
+  } catch { return false; }
+};
+
 /**
  * 開一個本專案的靜態伺服器(量測只需要 HTTP + 靜態檔,不必連 WS)。
  * 回傳 { url, close }。已經有人在該埠聽就直接沿用(不重複起,見 /CLAUDE.md 測試標準流程)。
+ *
+ * ⚠ **沿用前 MUST 確認那真的是遊戲**(2026-08-12 補):舊版只問「有沒有人在聽」,而
+ * 預設埠 8631 與**機體展示台**(tools/humanoid_forge.mjs 的 DEFAULT_PORT)是同一個 ——
+ * 開著看板跑 `audit_ui_layout`,量到的是看板那一頁:這一次它剛好炸在 `#touchLayer` 是
+ * null,但同一個坑在別的量測工具上會安靜地量到別的頁面然後**全綠**。
+ * 認不出來 MUST 換一個埠自己起,MUST NOT 沿用(也 MUST NOT 殺掉別人的伺服器)。
  */
 export async function serve(port = 8631) {
-  const url = `http://localhost:${port}/`;
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(800) });
-    if (r.ok) return { url, close: () => {} };
-  } catch { /* 沒人在聽 → 自己起一個 */ }
-  const ps = spawn(process.execPath, [join(ROOT, 'server', 'server.js'), '--port', String(port)],
+  let p = port;
+  if (await isGame(`http://localhost:${p}/`)) return { url: `http://localhost:${p}/`, close: () => {} };
+  // 這個埠上有東西但不是遊戲 ⇒ 往後找一個沒人聽的埠自己起
+  for (let i = 0; i < 20 && await fetch(`http://localhost:${p}/`, { signal: AbortSignal.timeout(400) })
+    .then(() => true).catch(() => false); i++) p += 1;
+  const url = `http://localhost:${p}/`;
+  const ps = spawn(process.execPath, [join(ROOT, 'server', 'server.js'), '--port', String(p)],
     { stdio: 'ignore', cwd: ROOT });
   for (let i = 0; i < 40; i++) {
-    try {
-      const r = await fetch(url, { signal: AbortSignal.timeout(500) });
-      if (r.ok) return { url, close: () => ps.kill() };
-    } catch { /* 還沒起來 */ }
+    if (await isGame(url)) return { url, close: () => ps.kill() };
     await new Promise((r) => setTimeout(r, 150));
   }
   ps.kill();
