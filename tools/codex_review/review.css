@@ -129,6 +129,12 @@ body.cr::before, body.cr::after { display: none; }
 .cr-orph .cr-shot { width: 150px; }
 
 /* ---- 人形鍛造區塊(特徵 → 零件;/api/forge 覆寫層)---- */
+/* 人形鍛造的 2D 原型圖參考帶(3D 建模的設計權威) */
+.cr-frefs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.cr-fref { margin: 0; width: 132px; }
+.cr-fref img { width: 100%; display: block; border: 1px solid var(--railS); border-radius: 6px; }
+.cr-fref.star img { outline: 2px solid #ffd479; }
+.cr-fref figcaption { color: var(--dim); font-size: 11px; text-align: center; padding-top: 2px; }
 .cr-forge { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
 .cr-fstage { position: relative; width: 380px; height: 380px; flex: 0 0 auto;
   background: #171a21; border: 1px solid var(--railS); border-radius: 3px; overflow: hidden; }

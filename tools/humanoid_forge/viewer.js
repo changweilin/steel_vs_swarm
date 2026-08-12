@@ -92,6 +92,35 @@ function renderSpecButtons() {
   }
 }
 
+// ---- 2D 原型圖(2026-08-12 使用者:「3D建模時需參考2D圖片設計零件進行組合」)----
+// 名冊走 /api/protoimgs(= 目錄本身),MUST NOT 在這裡拼檔名(第二份來源表)。
+const PROTO_IMGS = new Map();   // id → [{ file, url }]
+async function protoImgs(id) {
+  if (!PROTO_IMGS.has(id)) {
+    try {
+      const r = await fetch(`/api/protoimgs?id=${id}`);
+      PROTO_IMGS.set(id, r.ok ? (await r.json()).imgs || [] : []);
+    } catch { PROTO_IMGS.set(id, []); }
+  }
+  return PROTO_IMGS.get(id);
+}
+const protoCap = (file) => {
+  const form = file.includes('_flight_') ? '飛行型・' : file.includes('_ground_') ? '地面型・' : '';
+  const pose = file.includes('moving') ? '移動' : file.includes('heavy') ? '重擊' : '定裝';
+  return form + pose;
+};
+async function fillProtoStrip(forId) {
+  const box = document.getElementById('protoStrip');
+  if (!box) return;
+  const imgs = await protoImgs(forId);
+  if (spec.id !== forId || !document.getElementById('protoStrip')) return;   // 面板已換機
+  box.innerHTML = imgs.length
+    ? imgs.map((m) => `<figure class="proto"><a href="${m.url}" target="_blank" rel="noopener">
+        <img src="${m.url}" alt="${m.file}" loading="lazy"></a>
+        <figcaption>${protoCap(m.file)}</figcaption></figure>`).join('')
+    : '<div class="dim">(這台還沒有 2D 定案圖)</div>';
+}
+
 function renderPanel() {
   const p = resolveProp(spec);
   const rows = conversionDoc(spec)
@@ -114,12 +143,15 @@ function renderPanel() {
   ].map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
   $('panel').innerHTML = `
     <h3>${spec.label} <small>${spec.height} m</small></h3>
+    <h4>2D 原型圖(建模設計權威;點圖開大圖)</h4>
+    <div id="protoStrip" class="proto-strip"><div class="dim">載入中…</div></div>
     <h4>特徵 → 零件轉換</h4>
     <table><tr><th>人形特徵(VRM 骨)</th><th>機器人零件</th></tr>${rows}</table>
     <h4>人形比例(身高 1.0 正規化;<span class="ovr-k">黃 = 本機覆寫</span>)</h4>
     <table><tr><th>特徵</th><th>值</th><th>VRM 對應</th></tr>${propRows}</table>
     <h4>rig 契約(locomotion.js 消費通道)</h4>
     <ul class="chan">${chan}</ul>`;
+  fillProtoStrip(spec.id);   // 非同步補圖(換機時以 spec.id 守衛,不會補到別台的面板)
 }
 
 function bindToggle(id, fn) {

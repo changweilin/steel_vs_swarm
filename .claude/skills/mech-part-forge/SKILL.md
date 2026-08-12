@@ -9,6 +9,10 @@ compatibility: Offline pipeline (Python 3.11 venv + Blender headless under tools
 
 > Read `docs/ai3d_runbook.md` first (plan and phase gates). Generic external-pipeline knowledge lives in
 > `ai-mesh-generation` / `ai-rigging-motion`. This skill covers **only this repo's contract and what breaks silently**.
+>
+> **Route disambiguation**: this skill is the **AI-GLB-parts** route into shipped `models.js` units.
+> For the humanoid-forge prototype (`tools/humanoid_forge/`) where parts are **hand-written procedural
+> polyhedra traced from 2D art** and verified by screenshot loop, use `mecha-polyhedron-modeling` instead.
 
 ## 0. Core premise
 
