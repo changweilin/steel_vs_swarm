@@ -32,6 +32,14 @@ const OUT = join(ROOT, 'tools', 'proto_refs');
 const MANIFEST = join(OUT, 'manifest.json');
 const MAX_BYTES = 6e6;        // 單張上限(見下方 download 段的理由)
 const COMMONS_GAP_MS = 1200;  // Commons 查詢節流(見下方 searchCommons 呼叫點的理由)
+// **下載也要節流**(2026-08-12 補):先前只節流「查詢」,而每一層查完會連續抓 3 張圖 ——
+// 全名冊一趟 80 幾層 ⇒ 從中段開始 Openverse 與 Commons 的**檔案主機**一起回 429,
+// 實測前半段 15 張成功、後半段 15 次 429。429 不是「這張圖有問題」而是「我們抓太快」,
+// 但它在帳本上與「這一層找不到圖」長得一模一樣:那幾格就這樣空著,沒有任何錯誤訊息。
+const DL_GAP_MS = 700;
+const DL_RETRY = 3;           // 429 的退避重試次數(見下方 download())
+const DL_BACKOFF_MS = 4000;   // 首次退避;逐次 ×2
+const DL_WAIT_MAX = 90000;    // 單次退避上限:超過這個數字代表「被擋了」,本輪放棄這一張
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---- 視覺代號 → 搜尋關鍵詞 --------------------------------------------------
@@ -68,6 +76,14 @@ const ZH_Q = {
   裝甲: 'armored vehicle', 砲塔: 'gun turret', 獵槍: 'double barrel shotgun',
   彈炮合一: 'air defence gun missile system', 攔截彈: 'interceptor missile',
   星型引擎: 'radial engine aircraft', 感測轉塔: 'electro optical turret',
+  // 2026-08-12 補:`--list` 印出「(無可用查詢:純中文原型敘述)」的那 5 層 —— 拉丁抽取
+  // 一個字都撈不到(整句中文)⇒ 那幾格永遠採集不到圖,而畫面上只是「這台沒有原型照」。
+  // 補的一律是**構型通名**(這張表的既定語域),不是機體的內部代號:代號(「熾天使」
+  // 「神盾」)是我們自己取的名字,拿它去圖庫搜只會撈回一堆不相干的東西。
+  同步機: 'powered exoskeleton', 持盾兵: 'roman legionary shield scutum',
+  子母彈: 'cluster munition dispenser', 發射軌: 'missile launch rail',
+  四足: 'quadruped robot', 匿蹤: 'stealth aircraft faceted',
+  鋸齒: 'serrated trailing edge', 消音: 'owl feather silent flight',
 };
 export function zhTerms(src) {
   const hit = Object.keys(ZH_Q).filter((k) => src.includes(k));
@@ -100,6 +116,30 @@ export function queryFor(entry, layer) {
 }
 
 const safeKey = (k) => k.replace(/@/g, '_').replace(/[^\w.-]/g, '');
+
+/**
+ * 取一張圖:**429 要退避重試,不能當成「這張圖有問題」**(2026-08-12 補)。
+ * 2026-08-12 實測全名冊一趟下來,兩家的檔案主機都會開始整片回 429;而這個錯誤在帳本上
+ * 與「找不到圖」完全一樣 —— 那一格就這樣空著。退避是**指數**的(429 是「請等一下」,
+ * 固定間隔重試等於再撞一次),`Retry-After` 有給就聽它的。
+ * 非 429 的 HTTP 錯誤一律直接放棄(那才是這張圖真的有問題)。
+ */
+async function download(url, tries = DL_RETRY) {
+  for (let i = 0; ; i++) {
+    const r = await fetch(url, { headers: { 'User-Agent': UA } });
+    if (r.ok) return Buffer.from(await r.arrayBuffer());
+    if (r.status !== 429 || i >= tries) throw new Error(`HTTP ${r.status}`);
+    const hdr = Number(r.headers.get('retry-after'));
+    const wait = Number.isFinite(hdr) && hdr > 0 ? hdr * 1000 : DL_BACKOFF_MS * 2 ** i;
+    // 對方叫我們等很久(實測 Wikimedia 給過 `Retry-After: 600`)⇒ 這一輪就是**被擋了**,
+    // MUST NOT 照著睡:一張圖最壞會卡 3×10 分鐘,而整趟有幾十張 ⇒ 這支工具看起來像當掉。
+    // 直接放棄這一張、把對方要求的冷卻時間印出來,由人決定什麼時候再跑一趟(未採集的層
+    // 下一趟自然會補;帳本沒有那一列 = 還沒採集,不是錯誤)。
+    if (wait > DL_WAIT_MAX) throw new Error(`HTTP 429(對方要求冷卻 ${Math.round(wait / 1000)}s,本輪放棄)`);
+    console.log(`    · 429,等 ${(wait / 1000).toFixed(1)}s 重試(${i + 1}/${tries})`);
+    await sleep(wait);
+  }
+}
 
 async function loadManifest() {
   try { return JSON.parse(await readFile(MANIFEST, 'utf8')); }
@@ -156,9 +196,8 @@ async function main() {
         const path = join(dir, file);
         if (!existsSync(path)) {
           try {
-            const r = await fetch(it.url, { headers: { 'User-Agent': UA } });
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            const buf = Buffer.from(await r.arrayBuffer());
+            await sleep(DL_GAP_MS);
+            const buf = await download(it.url);
             if (!sniffImage(buf)) throw new Error('非影像位元組');   // 副檔名與 content-type 都不可信
             // 這些圖只當**看的**參考(不進 img→3D 管線)⇒ 不需要典藏解析度;
             // Commons 的原圖動輒數十 MB,收下來只是把工作目錄撐大。
