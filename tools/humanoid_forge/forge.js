@@ -12,8 +12,17 @@
 //   mechs/<id>.js  逐機「特徵 → 零件」檔(一台一檔,對照各自的 2D 定案圖)
 //   forge.js       特徵表 + 規格合併 + 鍛造鷹架(本檔;不含任何逐機幾何)
 //
+// 2026-08-12 使用者指示(第四輪):「機體展示台從人形機體擴充到所有機體,根據不同的原型
+// 切換管理頁面,飛機/無人機這類有現實機體原型的歸在同一類。」⇒ 名冊的單位從「機體」改成
+// **(機體, 型態)**(變形者的地面型與飛行型是兩個原型、兩張定案圖、兩個管理頁),
+// 分類**推導**自 roster.js(zero 手寫清單),鍛造鷹架因此有三支:
+//   forgeHumanoidMech(biped)/ forgeQuadMech(quad)/ forgeAirMech(air)
+// 航空鷹架的 rig 契約鏡射 models.js buildDrone / buildFixedWing / buildAvianDrone,
+// 由真品 locomotion.js `stepAerial` 驅動(壓坡/浮沉/撲翼/噴焰/甩尾)。
+//
 // 名冊 = 遊戲真名冊的人形子集(8 台)+ 仿生機甲子集(8 台;2026-08-12 使用者:
-// 「以機體台標注的最愛(★)圖像為 2D 定案圖,設計仿生機型生成 3D 建模」):
+// 「以機體台標注的最愛(★)圖像為 2D 定案圖,設計仿生機型生成 3D 建模」)
+// + 航空子集(20 格 = 12 台無人機/飛機 + 8 個變形者飛行型):
 //   機甲 4:t01 bastion / t02 seraph / t10 aegis / t12 colossus
 //   變形者人形地面型 4(data.js MORPH_HUMANOID):t06 monkey / t11 atlas / m01 vampire / m05 wolf
 //   仿生四足 4(D.kind 'quad';rig 鏡射 models.js buildBeastMech):
@@ -42,6 +51,7 @@ import { outlinify } from '/public/js/toon.js';
 import { heroPalette } from '/public/js/paint.js';
 import { segLimbF, outlineWF } from './geo.js';
 import { MECH_DETAIL } from './mechs/index.js';
+import { rosterEntries } from './roster.js';
 
 // ══════════ ① 標準化人形特徵表(對齊 VRM 1.0 必要骨)══════════
 // 比例以身高 1.0 正規化;def = 預設值,逐機規格(spec.prop)只覆寫想改的格子,
@@ -77,23 +87,35 @@ export function mergeSpec(base, ovr) {
   };
 }
 
-// ══════════ ② 名冊與規格解析(逐機幾何住 mechs/<id>.js)══════════
-export const FORGE_IDS = ['t01', 't02', 't10', 't12', 't06', 't11', 'm01', 'm05',
-  's06', 's07', 't04', 'm06', 's09', 't03', 't05', 'm02'];
+// ══════════ ② 名冊與規格解析(逐機幾何住 mechs/<key>.js)══════════
+// 2026-08-12 第四輪起,名冊的單位是 **(機體, 型態)** 而不是機體 —— 鍵 = roster.js 的
+// `entryKey()`(`t01` / `t06@ground` / `t06@flight`),分類由 roster.js **推導**。
+// 本檔 MUST NOT 再出現任何手寫的機體清單(舊 FORGE_IDS 就是那份清單,已退場):
+// 名冊 = 「roster 有這一格 ∩ mechs/ 有這一檔」,少寫一個檔就是那一格不出現,而不是分類錯位。
 
-/** 出廠規格(單一真相;specs.json 只放覆寫) */
-export const MECH_SPECS = FORGE_IDS.map((id) => {
-  const d = MECH_DETAIL[id];
+/** 已建模的名冊格(roster key 陣列;缺檔的格子由看板另列「未建模」) */
+export const FORGE_KEYS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map((e) => e.key);
+
+/** 出廠規格(單一真相;specs.json 只放覆寫)
+ *  id   = roster key(覆寫層 / 截圖檔名 / URL 片段同吃這一個字串)
+ *  ch   = 駕駛員 id(2D 定案圖、原型參考圖、圖鑑跳轉一律用它)
+ *  cat  = 管理頁分類(humanoid / bionic / airframe;推導自 roster.js)
+ *  kind = 鍛造鷹架('biped' / 'quad' / 'air') */
+export const MECH_SPECS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map((e) => {
+  const d = MECH_DETAIL[e.key];
   return {
-    id, label: d.label, hue: d.hue,
-    kind: d.kind || 'biped',           // 'quad' = 四足獸鷹架(比例滑桿不適用,看板依此分流)
+    id: e.key, ch: e.id, form: e.form, cat: e.cat,
+    label: d.label, hue: d.hue,
+    kind: d.kind || 'biped',
     height: d.height ?? 6.0,           // 展示台統一取景高;正式整合走 heroTargetH
-    prop: d.prop || {}, gait: d.gait, knobs: { barrelF: 1, accentF: 1 },
+    prop: d.prop || {}, gait: d.gait || {}, air: d.air || null,
+    knobs: { barrelF: 1, accentF: 1 },
     moveSig: d.moveSig, castSig: d.castSig,
   };
 });
 // 舊介面相容(檢視台/機體台都以 SPECS 列名冊)
 export const SPECS = MECH_SPECS;
+export const specOf = (key) => MECH_SPECS.find((s) => s.id === key) || null;
 
 /** 特徵 → 零件轉換表(逐機;檢視台/機體台顯示用) */
 export function conversionDoc(spec) {
@@ -133,6 +155,7 @@ export function forgeHumanoidMech(spec) {
   const D = MECH_DETAIL[spec.id];
   if (!D) throw new Error(`未知機型:${spec.id}`);
   if (D.kind === 'quad') return forgeQuadMech(spec, D);
+  if (D.kind === 'air') return forgeAirMech(spec, D);
   const P = resolveProp(spec);
   const H = spec.height;
   const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
@@ -348,4 +371,77 @@ function forgeQuadMech(spec, D) {
   };
   finishRig(g, rig, W, K, H, D, baseCtx, F);
   return { group: g, rig, joints };
+}
+
+/**
+ * 鍛造一台航空機體(D.kind === 'air')—— rig 契約鏡射 models.js buildDrone(:372)/
+ * buildFixedWing(:749)/buildAvianDrone(:1161),真品 locomotion.js `stepAerial` 一行不改驅動。
+ * 2026-08-12 使用者第四輪:「飛機/無人機這類有現實機體原型的歸在同一類」—— 12 台純無人機
+ * 與 8 個變形者飛行型共用本鷹架與同一個管理頁。
+ *
+ * 逐機幾何仍全住 mechs/<key>.js:
+ *   D.air = { tiltY, bob, top, level?, insect?, span? }(公尺/弧度;語意同 models.js 那三支)
+ *     tiltY 壓坡樞軸離地高(= rig.tiltY0,浮沉基準)/ level 定翼機(巡航不低頭,MUST 見
+ *     stepAerial 的 rig.level 分支)/ insect 昆蟲震翅(高頻 8 字軌跡,與鳥類撲翼不同支)
+ *   D.body(c, tilt)                     機身/艙體(必填)
+ *   D.lift(c, tilt) → {                 升力系統(擇一或混用)
+ *     rotors: [Group…]                    自轉槳盤(展示台/戰場同吃 userData.spin)
+ *     wings:  [{ w, outer, sgn, pair? }]  撲翼(sgn = ±1 分邊;pair 標後翅 → 相位落後)
+ *     jets:   [{ g, m1, m2 }]             噴射尾焰(geo.jetF 的回傳)
+ *     thrusters: [], vents: []            推進器/排氣口(輝度由變形驅動;純無人機留空)
+ *   }
+ *   D.tail(c, tilt) → tailSegs?         長重尾配重舵面(機械龍;whipTail 吃)
+ *   D.mount(c, F) / D.extra(c, F, rig)  武裝/加掛(契約同人形 mount)
+ *
+ * ⚠ 旋翼自轉**不在 locomotion 裡**(那支只管 kind 'morph' 的 rig.rotors):
+ * 戰場走 game.js 的 spinners 吃 `g.userData.spin`,展示台由 viewer 推進同一份名冊 ——
+ * 兩端同一份清單,MUST NOT 在展示台另抓一次場景裡的槳葉。
+ */
+function forgeAirMech(spec, D) {
+  const A = D.air || {};
+  const H = spec.height;
+  const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
+  const accent = new THREE.Color(spec.hue);
+  const K = { barrelF: spec.knobs?.barrelF ?? 1, accentF: spec.knobs?.accentF ?? 1 };
+
+  const g = new THREE.Group();
+  const joints = new THREE.Group();
+  joints.visible = false;
+  g.add(joints);
+  const jointDot = jointDotF(joints);
+
+  // 壓坡樞軸:所有部件掛 tilt 之下(橫移壓坡/前傾/懸停浮沉都轉這一個 Group,
+  // 不動根節點 —— 定位與描邊不受影響;同 buildDrone 的慣例)
+  const tilt = new THREE.Group();
+  tilt.position.y = A.tiltY ?? 1.3;
+  g.add(tilt);
+
+  const baseCtx = { PAL, accent, G: 1, H, K, dark: PAL.dark, binderPivots: [], vlsPorts: [], dims: { ...A } };
+  D.body(baseCtx, tilt);
+  const L = (D.lift && D.lift(baseCtx, tilt)) || {};
+  const tailSegs = (D.tail && D.tail(baseCtx, tilt)) || null;
+  jointDot(0, A.tiltY ?? 1.3, 0);
+  if (A.span) { jointDot(-A.span / 2, A.tiltY ?? 1.3, 0); jointDot(A.span / 2, A.tiltY ?? 1.3, 0); }
+
+  const F = { g, tilt, chest: tilt, head: tilt, tailSegs };
+  const W = D.mount(baseCtx, F);
+
+  const rig = g.userData.rig = {
+    kind: 'aerial', tilt, tiltY0: A.tiltY ?? 1.3,
+    bob: A.bob ?? 0.06, top: A.top ?? 30,
+    level: A.level ? 1 : 0, insect: A.insect ? 1 : 0,
+    wings: L.wings || null, jets: L.jets || null, rotors: L.rotors || null,
+    thrusters: L.thrusters || [], vents: L.vents || [],
+    tailSegs: tailSegs || null,
+    weap: W.weap, hvy: W.hvy,
+    gunR: W.gunR || null, gunL: W.gunL || null, aimPose: W.aimPose || null,
+    muzzles: W.muzzles, wpn: W.wpn,
+    kickAmp: { light: 1, heavy: 1.3 },
+    moveSig: spec.moveSig, castSig: spec.castSig,
+    s: 1,
+  };
+  // 自轉名冊(戰場 game.js spinners / 展示台 viewer 同吃這一份)
+  g.userData.spin = (L.spin || []).slice();
+  finishRig(g, rig, W, K, H, D, baseCtx, F);
+  return { group: g, rig, joints, spin: g.userData.spin };
 }

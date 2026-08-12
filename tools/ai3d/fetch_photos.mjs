@@ -55,7 +55,7 @@ const _HOME_I = process.argv.indexOf('--home');
 const HOME = _HOME_I >= 0 ? process.argv[_HOME_I + 1] : HERE;
 const PHOTOS = join(HOME, 'photos');
 const MANIFEST = join(HOME, 'photo_manifest.json');
-const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo issues)';
+export const UA = 'steel-vs-swarm-asset-pipeline/1.0 (CC0 photo sourcing; contact: repo issues)';
 
 // ============ 照片型錄(唯一縫)============
 // 族/零件對齊計畫書 §4.2 的「AI 該產出什麼」:查詢是**零件**不是成品(拍整棵樹沒有用,
@@ -434,7 +434,7 @@ const EXCLUDED_SOURCES = ['smithsonian_cooper_hewitt_museum', 'museumsvictoria',
   'floraon', 'inaturalist', 'biodiversity_heritage_library'].join(',');
 
 /** Openverse:免金鑰;license=cc0 已含 public domain mark */
-async function searchOpenverse(q, n) {
+export async function searchOpenverse(q, n) {
   const u = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(q)}&license=cc0&page_size=${n}`
     + `&excluded_source=${EXCLUDED_SOURCES}`;
   const j = await jget(u);
@@ -446,7 +446,7 @@ async function searchOpenverse(q, n) {
 }
 
 /** Wikimedia Commons:補地標類;逐張驗 extmetadata 的授權欄 */
-async function searchCommons(q, n) {
+export async function searchCommons(q, n) {
   const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
     + `&generator=search&gsrnamespace=6&gsrlimit=${n}&gsrsearch=${encodeURIComponent(q)}`
     + `&prop=imageinfo&iiprop=url|size|extmetadata&iiurlwidth=${TIFF_THUMB_W}`;
@@ -480,7 +480,7 @@ async function searchCommons(q, n) {
 
 // magic bytes 嗅探:副檔名與 Content-Type 都不可信(2026-08-05 實測 Commons 一張「照片」
 // 是 148 頁 PDF)⇒ 只認檔案開頭位元組;認得的三種 = 影像管線吃得下的三種格式。
-function sniffImage(buf) {
+export function sniffImage(buf) {
   if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpg';
   if (buf.length >= 4 && buf.readUInt32BE(0) === 0x89504e47) return 'png';
   if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'webp';
@@ -545,7 +545,7 @@ export function imageSize(b) {
   return null;
 }
 
-const licenceOk = (l) => CC0_RE.test(String(l || '').trim()) || COMMONS_OK.test(String(l || ''));
+export const licenceOk = (l) => CC0_RE.test(String(l || '').trim()) || COMMONS_OK.test(String(l || ''));
 
 function adoptInbox() {
   mkdirSync(INBOX, { recursive: true });

@@ -307,6 +307,131 @@ export function chainF(parent, spec, color, opts) {
   return { segs, tip: segs[n - 1], tipZ: -(len0 + (len1 - len0)) };
 }
 
+// ══════════ 航空語彙(2026-08-12 第四輪:機體台擴充到航空機體)══════════
+// 三個字母服務「飛機/無人機這類有現實機體原型」的那一頁:翼面 / 旋翼 / 尾焰。
+// 與生物語彙同一條紀律 —— 逐機檔只准用字母拼字,MUST NOT 自己 new BufferGeometry。
+
+/**
+ * 翼面(有翼型剖面的梯形機翼)—— 沿 +X 伸出,原點在翼根前後緣中點。
+ * 「一片薄板」是這一類機體最容易畫錯的地方:真機翼有**弦長收分 + 後掠 + 上反 + 扭轉**,
+ * 剖面是拱形不是矩形。逐段三剖面(根/中/梢)拼出多面體,側視看得到翼型厚度。
+ * spec = { span, c0, c1, t, sweep = 0, dihedral = 0, twist = 0 }
+ *   c0 根弦 → c1 梢弦(沿 Z;+z = 前緣);t 根厚(往梢自動收薄);
+ *   sweep 梢端後移量(−z 方向為正);dihedral 梢端上抬量;twist 梢端洗流扭轉(弧度)。
+ */
+export function wingF(parent, spec, x, y, z, color, opts) {
+  const { span, c0, c1, t, sweep = 0, dihedral = 0, twist = 0 } = spec;
+  // 翼型剖面(6 邊形:前緣尖 → 上表面拱起 → 後緣尖 → 下表面近平)
+  const sec = (u) => {
+    const c = c0 + (c1 - c0) * u;
+    const th = t * (1 - 0.55 * u);
+    const tw = twist * u;
+    const pts = [[0.5, 0], [1 / 6, 0.5], [-1 / 3, 0.35], [-0.5, 0], [-1 / 3, -0.2], [1 / 6, -0.3]];
+    return pts.map(([cz, cy]) => {
+      const pz = cz * c, py = cy * th;
+      // 扭轉繞翼展軸(+X):剖面在 ZY 平面內轉 tw
+      return [u * span, py * Math.cos(tw) - pz * Math.sin(tw) + dihedral * u,
+        pz * Math.cos(tw) + py * Math.sin(tw)];
+    });
+  };
+  const s0 = sec(0), s1 = sec(0.5), s2 = sec(1);
+  const band = (a, b) => a.map((_, i) => {
+    const j = (i + 1) % a.length;
+    return [a[i], a[j], b[j], b[i]];
+  });
+  const cap = (s, flip) => (flip
+    ? [[s[0], s[1], s[2], s[3]], [s[3], s[4], s[5], s[0]]]
+    : [[s[3], s[2], s[1], s[0]], [s[0], s[5], s[4], s[3]]]);
+  return mesh(parent, quadsGeo([...cap(s0, false), ...band(s0, s1), ...band(s1, s2), ...cap(s2, true)]),
+    x, y, z, color, opts);
+}
+
+/**
+ * 旋翼(多零件:定向臂座 + 自轉槳盤 + n 片收分槳葉)—— 旋翼機的視覺主角。
+ * spec = { r, blades = 2, pitch = 0.12, hub = r*0.14, thick = 0.03, tilt = [x,z] }
+ *   tilt = 臂座朝向(傾轉旋翼/尾旋翼給非零值);pitch = 槳距(逐片繞自身長軸)。
+ * 回傳 { holder(定向), prop(自轉;呼叫端推進 rotation.y), blades[] } ——
+ * 自轉由**呼叫端**每幀推進(戰場走 game.js spinners 吃 userData.spin,展示台同一份名冊)。
+ */
+export function rotorF(parent, spec, x, y, z, color, opts) {
+  const { r, blades = 2, pitch = 0.12, hub, thick = 0.03, tilt } = spec;
+  const hr = hub ?? r * 0.14;
+  const holder = new THREE.Group();
+  holder.position.set(x, y, z);
+  if (tilt) { holder.rotation.x = tilt[0] || 0; holder.rotation.z = tilt[1] || 0; }
+  parent.add(holder);
+  cylF(holder, hr * 0.85, hr, hr * 1.6, 8, 0, 0, 0, COAL, { metalness: 0.85 });   // 馬達
+  const prop = new THREE.Group();
+  prop.position.y = hr * 1.1;
+  holder.add(prop);
+  latheF(prop, [[0, 0], [hr * 0.9, 0.01], [hr * 0.75, hr * 0.5], [0, hr * 0.62]], 8, 0, 0, 0, GUNMETAL, { metalness: 0.9 });
+  const out = [];
+  for (let i = 0; i < blades; i++) {
+    // 逐葉一個方位 Group,槳葉自身只往 +x 長 —— **MUST NOT 在同一顆網格上同時寫
+    // rotation.y 與極座標 position**:那兩者的 z 號相反(rotation.y 把 +x 送到
+    // (cos, 0, −sin),而 (cos, 0, +sin) 是另一個方向)⇒ 槳葉會離開槳轂浮在旁邊,
+    // 而在正面視角剛好看不出來(2026-08-12 s04 實測)。
+    const arm = new THREE.Group();
+    arm.rotation.y = i * Math.PI * 2 / blades;
+    prop.add(arm);
+    const b = tboxF(arm, { w0: r * 0.94, d0: r * 0.2, w1: r * 0.94, d1: r * 0.1, h: thick, sz: -r * 0.05 },
+      r * 0.5, 0, 0, color, opts);
+    b.rotation.x = pitch;              // 槳距(攻角)
+    out.push(b);
+  }
+  return { holder, prop, blades: out };
+}
+
+/**
+ * 機載武器莢(旋翼/定翼/撲翼機共用)—— 莢殼(收分楔台)+ 收分砲管 + 膛口制退器 + 槍口燈。
+ * 幾何一律沿局部 **+z 朝前**(rig.wpn 的 `fwd:'z'` 契約;FPV 座艙複製時方向才對得上)。
+ * spec = { len, r, accent, muzR = r*0.55, brake = true }
+ * 回傳 { g, muz } —— muz 是**發光網格**(lightGlowM/heavyGlowM 直接吃它的 material)。
+ */
+export function gunPodF(parent, spec, x, y, z, color, opts) {
+  const { len, r, accent, muzR = r * 0.55, brake = true } = spec;
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  parent.add(g);
+  const sh = tboxF(g, { w0: r * 2.0, d0: r * 2.0, w1: r * 1.35, d1: r * 1.15, h: len * 0.52 },
+    0, 0, -len * 0.18, color, opts);
+  sh.rotation.x = Math.PI / 2;
+  const bl = cylF(g, muzR * 0.82, muzR, len * 0.6, 8, 0, 0, len * 0.28, GUNMETAL, { metalness: 0.85 });
+  bl.rotation.x = Math.PI / 2;
+  if (brake) {
+    const bk = cylF(g, muzR * 1.55, muzR * 1.55, r * 0.42, 8, 0, 0, len * 0.5, COAL, { metalness: 0.9 });
+    bk.rotation.x = Math.PI / 2;
+  }
+  const muz = cylF(g, muzR * 0.9, muzR * 0.9, 0.03, 8, 0, 0, len * 0.58, accent,
+    { emissive: accent, emissiveIntensity: 1.4 });
+  muz.rotation.x = Math.PI / 2;
+  return { g, muz };
+}
+
+/**
+ * 噴射尾焰 —— 逐字鏡射 models.js jetFlame(:175)的**回傳契約** `{ g, m1, m2 }`,
+ * locomotion.js stepAerial 直接吃(推力 ∝ 速度:焰長/亮度/抖動)。
+ * 錐尖朝局部 −y;呼叫端轉 rotation.x = π/2 讓噴流指向機尾(−z)。
+ */
+export function jetF(parent, r, len, x, y, z, accent) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  parent.add(g);
+  const mk = (rr, ll, c, op, ei) => {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(rr, ll, 8),
+      matF(c, { transparent: true, opacity: op, emissive: c, emissiveIntensity: ei }));
+    cone.rotation.x = Math.PI;
+    cone.position.y = -ll / 2;
+    cone.userData.noOutline = true;
+    g.add(cone);
+    return cone;
+  };
+  const outer = mk(r, len, accent, 0.5, 2.2);
+  const inner = mk(r * 0.5, len * 0.62, 0xfff1cf, 0.85, 2.8);
+  g.visible = false;                   // 熄火起步(由 locomotion 點燃)
+  return { g, m1: outer.material, m2: inner.material };
+}
+
 /**
  * 纜束(外露肌腱/管線,多零件)—— p0 → p1 之間 k 條細管微散開 + 下垂;
  * 生體感來自「每條各自成件」而不是一根粗管。零亂數:散開角 = 索引均分。

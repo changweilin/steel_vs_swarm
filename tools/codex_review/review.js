@@ -298,7 +298,8 @@ function forgeBuild() {
   const doc = forge.conversionDoc(fapp.draft)
     .map((r2) => `<tr><td>${esc(r2.feat)}</td><td>${esc(r2.part)}</td></tr>`).join('');
   const docBox = $('crForgeDoc');
-  const featTh = fapp.draft.kind === 'quad' ? '生物特徵' : '人形特徵(VRM 骨)';
+  const featTh = fapp.draft.kind === 'air' ? '機體特徵'
+    : fapp.draft.kind === 'quad' ? '生物特徵' : '人形特徵(VRM 骨)';
   if (docBox) docBox.innerHTML = `<table class="cr-ftab"><tr><th>${featTh}</th><th>機器人零件</th></tr>${doc}</table>`;
 }
 
@@ -311,14 +312,20 @@ async function mountForge(id) {
     return;
   }
   const { forge } = FORGE;
-  const base = forge.MECH_SPECS.find((s) => s.id === id);
-  if (!base) { sec.hidden = true; return; }                      // 不在鍛造名冊(無人機/未建模)不出鍛造區塊
+  // 2026-08-12 第四輪:名冊的單位是 **(機體, 型態)** ⇒ 一台變形者有兩格(地面型/飛行型),
+  // 用駕駛員 id 去 find 只會撈到 undefined(症狀:那四台的鍛造區塊整塊消失,而不會報錯)。
+  // 覆寫層/儲存/還原一律以 **roster key** 為鍵,MUST NOT 退回用角色 id。
+  const forms = forge.MECH_SPECS.filter((s) => s.ch === id);
+  if (!forms.length) { sec.hidden = true; return; }              // 這一格還沒建模 ⇒ 不出鍛造區塊
+  const base = forms.find((s) => s.id === (fapp.wantKey || '')) || forms[0];
+  const key = base.id;
   sec.hidden = false;
   // 2D 原型圖參考帶(2026-08-12 使用者:「下載原型圖片放在機體台,3D建模時需參考2D圖片
   // 設計零件進行組合」):資料 = 伺服器端 manifest 推導的 shots(MUST NOT 在這裡另拼檔名);
   // 只列地面型(人形鍛造建模的是地面人形),★ = 外觀權威排最前。
+  const wantForm = base.form === 'flight' ? 'flight' : base.form === 'ground' ? 'ground' : null;
   const refs = (rowOf(id)?.shots || [])
-    .filter((s) => s.has && s.form !== 'flight')
+    .filter((s) => s.has && (wantForm ? s.form === wantForm : s.form !== 'flight'))
     .sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0));
   const refHTML = refs.length
     ? refs.map((s) => `<figure class="cr-fref${s.star ? ' star' : ''}">
@@ -331,11 +338,12 @@ async function mountForge(id) {
     fapp.ovr = (await forgeApi()).mechs || {};
   }
   fapp.id = id;
-  fapp.draft = forge.mergeSpec(base, fapp.ovr[id]);
+  fapp.key = key;
+  fapp.draft = forge.mergeSpec(base, fapp.ovr[key]);
   // 版面:左 canvas、右控制欄(滑桿由 HUMANOID 特徵表推導,不手寫清單)。
   // 四足獸鷹架(spec.kind 'quad')不吃人形比例 ⇒ 不出滑桿(比例住 mechs/<id>.js 的 frame)。
-  const quad = base.kind === 'quad';
-  const propRows = quad ? '' : Object.keys(forge.HUMANOID).map((k) => {
+  const quad = base.kind === 'quad', air = base.kind === 'air';
+  const propRows = (quad || air) ? '' : Object.keys(forge.HUMANOID).map((k) => {
     const [lo, hi] = PROP_RANGE[k] || [0, 1];
     const v = fapp.draft.prop?.[k] ?? forge.HUMANOID[k].def;
     return `<label class="cr-frow"><span>${k}</span>
@@ -348,8 +356,13 @@ async function mountForge(id) {
       <input type="range" data-knob="${k}" min="${lo}" max="${hi}" step="0.01" value="${v}">
       <i data-val="${k}">${v}</i></label>`;
   }).join('');
-  sec.innerHTML = `<h3>人形鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
+  const formSeg = forms.length > 1
+    ? `<div class="seg">${forms.map((f) => `<button class="segb${f.id === key ? ' on' : ''}"
+        data-form="${esc(f.id)}">${f.form === 'flight' ? '飛行型' : '地面型'}</button>`).join('')}</div>`
+    : '';
+  sec.innerHTML = `<h3>機體鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
       ${esc(base.label)} ・ 出廠規格住 forge.js,調整存 specs.json 覆寫層</span></h3>
+    ${formSeg}
     <div class="cr-dim">2D 原型圖(3D 建模的設計權威 —— 零件多面體照著它拼;點圖開大圖)</div>
     <div class="cr-frefs">${refHTML}</div>
     <div class="cr-forge">
@@ -362,19 +375,23 @@ async function mountForge(id) {
         </div>
       </div>
       <div class="cr-fctl">
-        <div class="cr-dim">${quad ? '四足獸鷹架:骨架比例住 mechs/*.js 的 frame(無人形滑桿)' : '人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)'}</div>
+        <div class="cr-dim">${air ? '航空鷹架:機體比例住 mechs/*.js 的 air 與逐機幾何(無人形滑桿)'
+      : quad ? '四足獸鷹架:骨架比例住 mechs/*.js 的 frame(無人形滑桿)'
+        : '人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)'}</div>
         ${propRows}
         <div class="cr-dim">細節旋鈕</div>
         ${knobRows}
         <div class="cr-fbtns">
           <button class="segb" id="cfSave">💾 儲存覆寫</button>
           <button class="segb" id="cfReset">還原出廠</button>
-          <span class="cr-dim" id="cfMsg">${fapp.ovr[id] ? '（此機已有使用者覆寫）' : ''}</span>
+          <span class="cr-dim" id="cfMsg">${fapp.ovr[key] ? '（此機已有使用者覆寫）' : ''}</span>
         </div>
         <div id="crForgeDoc"></div>
       </div>
     </div>`;
   $('crForgeStage').prepend(fapp.canvas);
+  for (const b of sec.querySelectorAll('button[data-form]'))
+    b.onclick = () => { fapp.wantKey = b.dataset.form; mountForge(id); };
   forgeBuild();
 
   // 滑桿:即時重鍛(150ms 去抖);值先進草稿,按「儲存」才落 specs.json
@@ -410,15 +427,16 @@ async function mountForge(id) {
     if (!Object.keys(ovr.prop).length) delete ovr.prop;
     if (!Object.keys(ovr.knobs).length) delete ovr.knobs;
     const payload = Object.keys(ovr).length ? ovr : null;
-    fapp.ovr = (await forgeApi({ id, ovr: payload })).mechs || {};
+    fapp.ovr = (await forgeApi({ id: key, ovr: payload })).mechs || {};
     $('cfMsg').textContent = payload ? '已儲存 ✔' : '與出廠值相同,已清除覆寫';
   };
   $('cfReset').onclick = async () => {
-    fapp.ovr = (await forgeApi({ id, ovr: null })).mechs || {};
+    fapp.ovr = (await forgeApi({ id: key, ovr: null })).mechs || {};
     mountForge(id);   // 重畫滑桿回出廠值
   };
   $('cfRun').onclick = () => {
-    fapp.speedTgt = fapp.speedTgt ? 0 : fapp.draft.gait.top;
+    fapp.speedTgt = fapp.speedTgt ? 0 : (fapp.draft.kind === 'air'
+      ? (fapp.draft.air?.top ?? 30) : (fapp.draft.gait?.top ?? 8));
     $('cfRun').textContent = fapp.speedTgt ? '⏸ 靜止' : '▶ 奔跑';
   };
   $('cfFire').onclick = () => { fapp.ent.fireFx = { t0: fapp.st, slot: 'light' }; };

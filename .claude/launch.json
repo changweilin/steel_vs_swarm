@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["tools/humanoid_forge.mjs", "--port", "8631"],
       "port": 8631
+    },
+    {
+      "name": "codex-review",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/codex_review.mjs", "--port", "8641"],
+      "port": 8641
     }
   ]
 }
