@@ -71,10 +71,27 @@ const ROSTER_MIN = 2;
  * 讀寫一律走 raw 位元組解出來的字串 —— `readSrc` 會把 CRLF 正規化成 LF,拿它寫回去
  * 等於把整支 biomes.js 換行全改(遊戲照跑、稽核全綠、diff 一萬行)。
  */
-export function removeRoster(src, name) {
+export function removeRoster(src, name, slots = null) {
+  // **剖面與名冊同序**(2026-08-12):撤節點時第三格那一筆也要撤,否則 `bldProfile(key, i)`
+  // 從這一顆之後整排錯位 —— 碰撞柱長成別顆節點的形狀,而畫面與所有既有閘門都正常。
+  // 先撤剖面再撤名字:撤完名字之後就查不到它排第幾了。
+  let out = src;
+  const list = slots || rosterSlots(src.replace(/\r\n?/g, '\n'));
+  const slot = list.find((s) => s.profs && s.names.includes(name));
+  if (slot) {
+    const i = slot.names.indexOf(name);
+    const row = `[${slot.profs[i].map((s) => `[${s.join(', ')}]`).join(', ')}],`;
+    const n = out.split(row).length - 1;
+    if (n !== 1) return { ok: false, why: `剖面樣式 ${row.slice(0, 40)}… 出現 ${n} 次(要恰 1 次才敢動刀)` };
+    const j = out.indexOf(row);
+    // 連同該行的縮排與換行一起收掉(留下空行 = 追加/撤下不再逐位元可逆)
+    let a = j; while (a > 0 && (out[a - 1] === ' ' || out[a - 1] === '\t')) a--;
+    let b = j + row.length; while (out[b] === '\r' || out[b] === '\n') b++;
+    out = out.slice(0, a) + out.slice(b);
+  }
   for (const pat of [`, '${name}'`, `'${name}', `, `'${name}'`]) {
-    const n = src.split(pat).length - 1;
-    if (n === 1) return { ok: true, src: src.replace(pat, '') };
+    const n = out.split(pat).length - 1;
+    if (n === 1) return { ok: true, src: out.replace(pat, '') };
     if (n > 1) return { ok: false, why: `移除樣式 ${pat} 出現 ${n} 次(要恰 1 次才敢動刀)` };
   }
   return { ok: false, why: `biomes.js 裡找不到 '${name}'` };

@@ -15,7 +15,8 @@
 // 與款式表 / 層高規則切出來在頁內 eval —— 與離線稽核同一條紀律(驗真品,不抄一份近似)。
 //
 // 排面的**軸是樓高**(列數由它推導),每一格標著「N 列 = 層高 X m」並在出帶時標紅;
-// 左 = 貼圖本身、右 = 夜間自發光圖。斜頂那六款在 v ∈ [0, ROOF_BAND] 畫紅色標尺 = 屋頂帶邊界。
+// 左 = 貼圖本身、右 = 夜間自發光圖。有屋頂色那幾款畫兩道紅色標尺 = 屋頂帶 / 素牆帶邊界
+// (`MASS.UVB`;2026-08-12 起是三條帶,見 biomes.js 那一段檔頭)。
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromiumOrNull, chromePath, serve, skipNoPlaywright } from './pw.mjs';
@@ -99,7 +100,8 @@ const res = await page.evaluate(async ({ ONLY, COLS, HEIGHTS }) => {
   cx.fillStyle = '#141619'; cx.fillRect(0, 0, cv.width, cv.height);
   cx.font = '13px sans-serif'; cx.textBaseline = 'top';
   shown.forEach((d, i) => {
-    const t = facadeTex(`${d.key}r${d.rw}`, d.cols, d.rw, d.winC, d.lit, d.style, d.wall, d.roof, d.rf);
+    const t = facadeTex(`${d.key}r${d.rw}`, d.cols, d.rw, d.winC, d.lit, d.style, d.wall, d.roof, d.rf,
+      d.roof ? MASS.UVB.masslow : null, d.win);
     const ox = (i % COLS) * cellW, oy = Math.floor(i / COLS) * cellH;
     cx.fillStyle = '#cfd6dd';
     cx.fillText(`${d.grp} ${d.key}`, ox + PAD, oy + 2);
@@ -117,18 +119,21 @@ const res = await page.evaluate(async ({ ONLY, COLS, HEIGHTS }) => {
       // 是**建物**決定的 ⇒ 排面一律用同一個框,格子才可比
       cx.drawImage(img, x, y, CW, CH);
       cx.strokeStyle = '#59616b'; cx.strokeRect(x - 0.5, y - 0.5, CW + 1, CH + 1);
-      if (d.roof) {   // 屋頂帶邊界(v = ROOF_BAND);翻轉後它在下緣往上 BAND 的位置
-        const by = y + CH - Math.round(CH * MASS.ROOF_BAND);
-        cx.strokeStyle = '#e0483a'; cx.beginPath(); cx.moveTo(x, by + 0.5); cx.lineTo(x + CW, by + 0.5); cx.stroke();
+      if (d.roof) {   // 兩條帶界(v = roof、roof+plain);翻轉後它們在下緣往上的位置
+        cx.strokeStyle = '#e0483a';
+        for (const f of [MASS.UVB.masslow.roof, MASS.UVB.masslow.roof + MASS.UVB.masslow.plain]) {
+          const by = y + CH - Math.round(CH * f);
+          cx.beginPath(); cx.moveTo(x, by + 0.5); cx.lineTo(x + CW, by + 0.5); cx.stroke();
+        }
       }
     }
   });
-  return { png: cv.toDataURL('image/png'), n: shown.length, band: MASS.ROOF_BAND, ladder: ROW_LADDER.join(','), storey: [STOREY.MIN, STOREY.MAX] };
+  return { png: cv.toDataURL('image/png'), n: shown.length, band: `${MASS.UVB.masslow.roof}/${MASS.UVB.masslow.plain}`, ladder: ROW_LADDER.join(','), storey: [STOREY.MIN, STOREY.MAX] };
 }, { ONLY, COLS, HEIGHTS });
 
 if (res.error) { console.error(res.error); process.exit(1); }
 fs.writeFileSync(path.join(OUT, 'facades.png'), Buffer.from(res.png.split(',')[1], 'base64'));
-console.log(`✅ ${res.n} 格立面貼圖(層高帶 ${res.storey.join('~')}m・列數級距 ${res.ladder}・屋頂帶 ${res.band})→ ${path.join(OUT, 'facades.png')}`);
+console.log(`✅ ${res.n} 格立面貼圖(層高帶 ${res.storey.join('~')}m・列數級距 ${res.ladder}・屋頂/素牆帶 ${res.band})→ ${path.join(OUT, 'facades.png')}`);
 if (errs.length) { console.log('⚠ 頁面錯誤:'); errs.slice(0, 8).forEach((e) => console.log('   ' + e)); }
 await browser.close();
 srv.close();

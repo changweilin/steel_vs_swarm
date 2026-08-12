@@ -104,8 +104,9 @@ console.log('\nⅠ 配方表與消費端雙向釘住(可自動追加的格 = 值
     const declared = budget?.families?.[s.budgetFam]?.[s.budgetKind]?.uv ?? null;
     ok(uv === declared, `${s.id} 的 UV 契約取自 tri_budget(${uv ?? '無'})`);
     const args = normalizeArgs(s, nextNodeName(s), 'SRC.glb', budget) || [];
-    const wantUv = uv === 'roofband' ? '--roofband' : uv ? '--boxuv' : null;
-    ok(wantUv ? args.includes(wantUv) : !args.some((a) => a === '--boxuv' || a === '--roofband'),
+    const UVFLAG = { uvbands: '--uvbands', roofband: '--roofband', boxup: '--boxuv' };
+    const wantUv = uv ? (UVFLAG[uv] || '--boxuv') : null;
+    ok(wantUv ? args.includes(wantUv) : !args.some((a) => Object.values(UVFLAG).includes(a)),
       `${s.id} 的 normalize 旗標與 UV 契約同調(${wantUv || '不吃貼圖'})`);
   }
 }
@@ -153,12 +154,18 @@ console.log('\nⅢ 節點命名推導');
   } else skip('沒有 ≥3 顆的名冊格可以驗「中間撤掉一顆」');
 }
 
+// 追加測試用的假剖面:有宣告剖面的格才需要(值不重要,形狀要對 —— 四段、由下而上、
+// 首尾相接)。拿真的量測值會讓這一段依賴 GLB 在不在,而它驗的是**字串動刀**那一半。
+const fakeProf = (s) => (s.profs
+  ? [[-0.475, -0.1, 0.4, 0.4], [-0.1, 0.1, 0.3, 0.3], [0.1, 0.3, 0.2, 0.2], [0.3, 0.475, 0.1, 0.1]]
+  : null);
+
 // ============ Ⅳ 只准追加(verifyRoster 是那道閘)============
 console.log('\nⅣ 只准追加到既有格');
 {
   const s = slots[0];
   const n = nextNodeName(s);
-  const a = appendRoster(RAW, s, n);
+  const a = appendRoster(RAW, s, n, fakeProf(s));
   ok(a.ok, `${s.id}:錨定追加成功(${a.ok ? '' : a.why})`);
   if (a.ok) {
     // `--break-append`:讓追加的產物**多開一格**(腳本瞎編一個 fallback 描述子的那種壞法)
@@ -167,24 +174,24 @@ console.log('\nⅣ 只准追加到既有格');
       produced = inject(produced, 'const MEGA_LIB = {',
         "const MEGA_LIB = {\n  bogus: ['rock/bogus_a', 'rock/bogus_b'],", '--break-append');
     }
-    const v = verifyRoster(produced.replace(/\r\n?/g, '\n'), s, n);
+    const v = verifyRoster(produced.replace(/\r\n?/g, '\n'), s, n, fakeProf(s));
     ok(v.ok, `追加後重新執行真品原文:格數不變、目標格恰多一顆、其餘逐位元不變${v.ok ? '' : ` ── ${v.why}`}`);
     // 換行 MUST 原樣(readSrc 會正規化成 \n;拿它寫回去 = 整支 biomes.js 換行全改)
     ok(RAW.includes('\r\n') === a.src.includes('\r\n'), '追加不改變換行形式(CRLF 工作區逐位元安全)');
   }
   // 三種「不是純追加」的產物 MUST 被擋下來
   const bogusSlot = RAW.replace(/const MEGA_LIB = \{/, "const MEGA_LIB = {\n  bogus: ['rock/bogus_a'],");
-  ok(!verifyRoster(bogusSlot.replace(/\r\n?/g, '\n'), s, n).ok, '開新格 ⇒ 擋下');
+  ok(!verifyRoster(bogusSlot.replace(/\r\n?/g, '\n'), s, n, fakeProf(s)).ok, '開新格 ⇒ 擋下');
   const other = slots.find((x) => x.id !== s.id);
   if (other) {
     const touched = RAW.replace(`'${other.names[other.names.length - 1]}'`,
       `'${other.names[other.names.length - 1]}', '${other.family}/sneaky_z'`);
-    ok(!verifyRoster(touched.replace(/\r\n?/g, '\n'), s, n).ok, '順手動到別格的名冊 ⇒ 擋下');
+    ok(!verifyRoster(touched.replace(/\r\n?/g, '\n'), s, n, fakeProf(s)).ok, '順手動到別格的名冊 ⇒ 擋下');
   }
   const fbTouched = RAW.replace("mass: [['building/mass_a'", "mass: [['building/mass_a'")
     .replace(/masslow: \[\[('building\/masslow_a'[^\]]*)\], \['box', 1, 1, 1\]\]/,
       "masslow: [[$1], ['box', 2, 1, 1]]");
-  ok(!verifyRoster(fbTouched.replace(/\r\n?/g, '\n'), s, n).ok, '動到別格的 fallback 描述子 ⇒ 擋下');
+  ok(!verifyRoster(fbTouched.replace(/\r\n?/g, '\n'), s, n, fakeProf(s)).ok, '動到別格的 fallback 描述子 ⇒ 擋下');
 }
 
 // ============ Ⅴ 撤下:名冊移除逐位元可逆 ============
@@ -192,8 +199,8 @@ console.log('\nⅤ 撤下(apply_verdicts 的名冊移除)');
 {
   for (const s of slots.filter((x) => x.recipe)) {
     const n = nextNodeName(s);
-    const a = appendRoster(RAW, s, n);
-    if (!a.ok) { ok(false, `${s.id} 追加失敗,無法驗往返`); continue; }
+    const a = appendRoster(RAW, s, n, fakeProf(s));
+    if (!a.ok) { ok(false, `${s.id} 追加失敗,無法驗往返 ── ${a.why}`); continue; }
     const r = removeRoster(a.src, n);
     ok(r.ok && r.src === RAW, `${s.id}:追加 → 撤下 **逐位元**回到原文${r.ok ? '' : ` ── ${r.why}`}`);
   }

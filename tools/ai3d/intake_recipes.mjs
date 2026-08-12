@@ -80,19 +80,21 @@ export function rosterSlots(src = biomesSrc()) {
     out.push(mkSlot('MEGA_LIB', key, val, ['ico', 1], 'megalith', 'megalith'));
   }
   for (const [key, row] of Object.entries(BLD_LIB)) {
-    const [names, fb] = row;
+    const [names, fb, profs] = row;
     if (!Array.isArray(names)) continue;
-    out.push(mkSlot('BLD_LIB', key, names, fb, 'building', key));
+    out.push(mkSlot('BLD_LIB', key, names, fb, 'building', key, profs));
   }
   return out;
 }
 
-function mkSlot(table, key, names, fb, budgetFam, budgetKind) {
+function mkSlot(table, key, names, fb, budgetFam, budgetKind, profs = null) {
   const id = `${table}.${key}`;
   const family = names[0].split('/')[0];
   const { prefix } = splitNodeName(names[0]);
   return {
     id, table, key, names: [...names], fb, family, prefix, budgetFam, budgetKind,
+    // 輪廓剖面(2026-08-12;有宣告的格才有,與 `names` 同序)—— 追加時 MUST 一起補一筆
+    profs: profs ? profs.map((p) => p.map((s) => [...s])) : null,
     recipe: RECIPES[id] || null,
   };
 }
@@ -125,9 +127,10 @@ export function slotUv(slot, budget = triBudget()) {
 
 /**
  * 這一格追加一顆時要下給 `normalize_parts.py` 的旗標(不含 `--base`/`--out`,那是呼叫端的事)。
- * UV 那兩支的形式由 `slotUv` 決定:`boxup` ⇒ `--boxuv <node>`;`roofband` ⇒
- * `--roofband <node>=<帶寬>|<minz>`,兩個數字一律取量測檔那一份(與 intake 驗的是同一份,
- * 抄第二份 = 匯出端與驗收端對同一顆節點用兩個帶寬,而兩邊都不會報錯)。
+ * UV 那幾支的形式由 `slotUv` 決定:`boxup` ⇒ `--boxuv <node>`;`uvbands`(2026-08-12,
+ * 三帶:屋頂 / 素牆 / 窗牆)⇒ `--uvbands <node>=<roof>|<plain>|<minz>|<wall_ny>`;
+ * `roofband` 是它的兩帶前身,保留可用。數字一律取量測檔那一份(與 intake 驗的是同一份,
+ * 抄第二份 = 匯出端與驗收端對同一顆節點用兩組帶寬,而兩邊都不會報錯)。
  */
 export function normalizeArgs(slot, nodeName, srcGlb, budget = triBudget()) {
   const cap = slotTriCap(slot, budget);
@@ -137,7 +140,9 @@ export function normalizeArgs(slot, nodeName, srcGlb, budget = triBudget()) {
   const args = ['--node', `${node}=${srcGlb}|${fit}|${cap}`];
   const uv = slotUv(slot, budget);
   const b = budget?.families?.[slot.budgetFam]?.[slot.budgetKind];
-  if (uv === 'roofband') args.push('--roofband', `${node}=${b.roof_band}|${b.roof_minz ?? 0.30}`);
+  if (uv === 'uvbands') {
+    args.push('--uvbands', `${node}=${b.roof_band}|${b.plain_band}|${b.roof_minz ?? 0.30}|${b.wall_ny ?? 0.15}`);
+  } else if (uv === 'roofband') args.push('--roofband', `${node}=${b.roof_band}|${b.roof_minz ?? 0.30}`);
   else if (uv) args.push('--boxuv', node);
   return args;
 }

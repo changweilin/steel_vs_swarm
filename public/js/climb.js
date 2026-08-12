@@ -406,7 +406,9 @@ function planLink(b, { nearby, clearance, surfDist, bounds, linked }) {
     const pair = `${H.x},${H.z},${H.h}|${L.x},${L.z},${L.h}`;
     if (linked.has(pair)) continue;                                  // A→B 與 B→A 只留一條
     const dx = L.x - H.x, dz = L.z - H.z;
-    if (!dx && !dz) continue;                                        // 同心(不該發生)
+    // 同心:自 2026-08-12 起**會**發生 —— 整棟量體節點的碰撞柱是一疊同心的有向盒
+    // (`biomes.js bldProfile`),而同一棟樓的兩段之間不該長出「相鄰相接」的跨接梯
+    if (!dx && !dz) continue;
     const dl = Math.hypot(dx, dz);
     // 高者**面向低者的那個正面**:候選集與一般路線同一支 attachFaces(同樣不准斜角),
     // 取法線最朝向低者的那一面(MUST NOT 直接拿「指向低者的方位」去射盒面 —— 那會落在牆角)

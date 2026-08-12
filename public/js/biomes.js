@@ -1202,7 +1202,7 @@ function wallLayer(cx, W, H, kind, rnd) {
   }
 }
 
-// 屋頂帶圖樣(2026-08-09):畫在貼圖**底部** `MASS.ROOF_BAND` 那一條 —— 庫節點的朝上面
+// 屋頂帶圖樣(2026-08-09):畫在貼圖**底部** `MASS.UVB[桶].roof` 那一條 —— 庫節點的朝上面
 // 被 `--roofband` 壓進 v ∈ [0, BAND],而 v=0 是畫布底邊(CanvasTexture 的 flipY 預設為真)。
 // **MUST NOT 假設坡向**:兩顆節點的屋脊軸實測就不同(masslow_a 坡向 X、masslow_b 坡向 Z),
 // 而屋頂面吃的是**平面投影** ⇒ 同一張貼圖在兩顆上轉了 90°。故四款一律「一向排列 + 另一向
@@ -1242,6 +1242,17 @@ function roofLayer(cx, W, y0, h, col, kind, rnd) {
         cx.fillStyle = line(0.12); cx.fillRect(x, y, 1, rh - 1.5);
       }
     }
+  } else if (kind === 'flat') {
+    // 平屋頂(2026-08-12,高層那一桶開屋頂帶用):防水層分格 + 設備基座 + 女兒牆內緣。
+    // 高層的屋頂在畫面上多半是俯視或遠景剪影 ⇒ 要的是「不是玻璃帷幕」而不是細節。
+    const gw = 21;
+    for (let x = 0; x < W; x += gw) { cx.fillStyle = line(0.09); cx.fillRect(x, y0, 1, h); }
+    for (let y = y0 + 10; y < y0 + h; y += 14) { cx.fillStyle = line(0.09); cx.fillRect(0, y, W, 1); }
+    for (let i = 0; i < 3; i++) {                // 機房/水塔基座:低對比方塊
+      const bwd = 10 + rnd() * 16, bht = Math.min(h * 0.4, 7 + rnd() * 9);
+      cx.fillStyle = line(0.16); cx.fillRect(rnd() * (W - bwd), y0 + h * 0.2 + rnd() * (h * 0.4), bwd, bht);
+    }
+    cx.fillStyle = 'rgba(255,255,255,0.10)'; cx.fillRect(0, y0 + h - 5, W, 3);   // 女兒牆內緣受光
   }
   // 屋脊/檐口:帶的兩個邊緣各壓一道 —— 底邊(v=0)是屋頂最外那一圈,頂邊接著牆
   cx.fillStyle = line(0.24); cx.fillRect(0, y0, W, 1.5);
@@ -1258,30 +1269,62 @@ const FACADE_PX = { PER_STOREY: 24, H_MIN: 256, H_MAX: 1024 };
 const facadeTexH = (rows) =>
   Math.min(FACADE_PX.H_MAX, Math.max(FACADE_PX.H_MIN, Math.round(rows * FACADE_PX.PER_STOREY)));
 
-function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'plainw', roofC = 0, roofKind = '') {
+function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'plainw', roofC = 0, roofKind = '', bands = null, win = null) {
   if (_facadeCache.has(key)) return _facadeCache.get(key);
   const W = 128, H = facadeTexH(rows);
-  // 屋頂帶佔畫布底部 `ROOF_BAND`;沒有屋頂色 ⇒ band = 0 ⇒ `WH === H` ⇒ 既有 16 款
-  // 與六支地標**逐位元不變**(連 wallLayer 的 rnd 消耗都不動 —— 它的迴圈吃 WH)。
-  const band = roofC ? Math.round(H * MASS.ROOF_BAND) : 0;
-  const WH = H - band;
+  // 三條帶由畫布**底部**往上排(v=0 是底邊,`CanvasTexture.flipY` 預設為真):
+  //   [0, roof)              屋頂帶      —— 庫節點的朝上面
+  //   [roof, roof+plain)     素牆帶      —— 傾斜/朝下的面(2026-08-12,見 `MASS.UVB` 檔頭)
+  //   [roof+plain, 1]        窗牆帶      —— 近垂直的面,只有這一帶畫窗
+  // 沒有屋頂色 ⇒ band = pband = 0 ⇒ `WW === H` ⇒ 既有 16 款與六支地標**逐位元不變**
+  // (連 wallLayer 的 rnd 消耗都不動 —— 它的迴圈吃高度)。
+  const band = roofC ? Math.round(H * (bands ? bands.roof : 0)) : 0;
+  const pband = roofC && bands ? Math.round(H * bands.plain) : 0;
+  const WH = H - band;                                                   // 屋頂帶以外(= 牆的全部)
+  const WW = WH - pband;                                                 // 其中真的畫窗的那一段
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const cx = cv.getContext('2d');
   const em = document.createElement('canvas'); em.width = W; em.height = H;
   const ex = em.getContext('2d');
   cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, W, WH);
-  cx.fillStyle = 'rgba(0,0,0,0.18)'; cx.fillRect(0, WH - 14, W, 14);     // 底層基座暗帶
-  ex.fillStyle = '#000000'; ex.fillRect(0, 0, W, H);                     // 屋頂帶恆不發光
+  cx.fillStyle = 'rgba(0,0,0,0.18)'; cx.fillRect(0, WW - 14, W, 14);     // 底層基座暗帶
+  ex.fillStyle = '#000000'; ex.fillRect(0, 0, W, H);                     // 屋頂/素牆帶恆不發光
   const rnd = mulberry32(0xFACADE ^ (cols * 131 + rows * 7));
   // 外牆圖層排在窗格**之前**:窗要蓋在牆上,不是牆蓋在窗上。`plainw` = 舊制純白 ⇒
   // 沒有指定 wall 的八款逐位元不變(而且它們的 rnd 序列也不動:plainw 不抽數)。
+  // **素牆帶吃同一份牆材質**(它就是「這棟樓的牆,只是沒有窗」)⇒ 一次畫到 WH。
   wallLayer(cx, W, WH, wall, rnd);
-  const cw = W / cols, ch = (WH - 26) / rows;                            // 頂部留女兒牆帶
-  // 窗格幾何依樣式:[x偏,y偏,寬,高](格內比例);帷幕窗近乎滿格
-  const [ox, oy, fw, fh] = style === 'curtain' ? [0.07, 0.2, 0.86, 0.62] : [0.24, 0.28, 0.52, 0.48];
-  if (style === 'hband') {                                               // 整層絲帶窗 + 豎框
+  const cw = W / cols, ch = (WW - 26) / rows;                            // 頂部留女兒牆帶
+  // 窗格幾何依樣式:[x偏,y偏,寬,高](格內比例);帷幕窗近乎滿格。
+  // **`win` 是逐款覆寫**(2026-08-12 使用者定案「不同建築使用窗戶圖層間距不要都一樣,
+  // 也可以使用幾乎無間距的玻璃牆」):`[fw, fh]` = 窗在格內的寬高佔比,間距 = 1 − fh。
+  // 沒給 ⇒ 走舊制那兩組 ⇒ 逐位元不變。y 偏移由 fh 反推**置中**(給了高卻讓它黏在上緣的話,
+  // 窗越高裙板就越偏,而使用者要的正是「間距不一樣」而不是「窗往上跑」)。
+  const base = style === 'curtain' ? [0.07, 0.2, 0.86, 0.62] : [0.24, 0.28, 0.52, 0.48];
+  const [ox, oy, fw, fh] = win
+    ? [(1 - win[0]) / 2, (1 - win[1]) / 2, win[0], win[1]]
+    : base;
+  if (style === 'glass') {
+    // **幾乎無間距的玻璃牆**(2026-08-12 使用者定案的後半):整面玻璃 + 髮絲級橫豎框,
+    // 沒有裙板帶 —— 這是與 `curtain`(有 spandrel 裙板)本質不同的一種立面,不是它的參數。
+    // 亮燈仍逐格擲(整層一起亮會讀成霓虹燈管而不是辦公室)。
+    cx.fillStyle = winC; cx.fillRect(0, 12, W, WW - 26);
+    for (let r = 0; r <= rows; r++) {
+      const y = 12 + r * ch;
+      cx.fillStyle = 'rgba(255,255,255,0.22)'; cx.fillRect(0, y - 0.5, W, 1);       // 樓層橫框
+      cx.fillStyle = 'rgba(0,0,0,0.10)'; cx.fillRect(0, y + 0.5, W, 1);
+    }
+    for (let c = 0; c <= cols; c++) { cx.fillStyle = 'rgba(255,255,255,0.18)'; cx.fillRect(c * cw - 0.5, 12, 1, WW - 26); }
     for (let r = 0; r < rows; r++) {
-      const y = 12 + r * ch + ch * 0.26, h = ch * 0.5;
+      const y = 12 + r * ch;
+      cx.fillStyle = 'rgba(255,255,255,0.14)'; cx.fillRect(0, y + ch * 0.06, W, ch * 0.14);   // 反射帶
+      for (let c = 0; c < cols; c++) {
+        if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(c * cw + 1, y + 1, cw - 2, ch - 2); }
+      }
+    }
+  } else if (style === 'hband') {                                        // 整層絲帶窗 + 豎框
+    for (let r = 0; r < rows; r++) {
+      const y = 12 + r * ch + ch * (0.5 - fh / 2), h = ch * fh;
       cx.fillStyle = winC; cx.fillRect(3, y, W - 6, h);
       cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(3, y, W - 6, h * 0.22);
       cx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -1307,10 +1350,16 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
     for (let c = 0; c < cols; c++) {
       const x = c * cw + cw * 0.12;
       cx.fillStyle = awn[Math.floor(rnd() * awn.length)];
-      cx.fillRect(x, WH - 34, cw * 0.76, 8);
-      cx.fillStyle = '#2c343c'; cx.fillRect(x + cw * 0.06, WH - 25, cw * 0.64, 11);
-      if (rnd() < 0.7) { ex.fillStyle = '#ffd9a0'; ex.fillRect(x + cw * 0.06, WH - 25, cw * 0.64, 11); }
+      cx.fillRect(x, WW - 34, cw * 0.76, 8);
+      cx.fillStyle = '#2c343c'; cx.fillRect(x + cw * 0.06, WW - 25, cw * 0.64, 11);
+      if (rnd() < 0.7) { ex.fillStyle = '#ffd9a0'; ex.fillRect(x + cw * 0.06, WW - 25, cw * 0.64, 11); }
     }
+  }
+  // 素牆帶:牆的材質已經畫到 WH 了,這裡只補「它不是窗牆」的兩道界線
+  // ——上緣一道暗縫(退縮處的陰角)、下緣一道受光(斜面朝天的那一側比較亮)
+  if (pband) {
+    cx.fillStyle = 'rgba(0,0,0,0.16)'; cx.fillRect(0, WW, W, 2);
+    cx.fillStyle = 'rgba(255,255,255,0.10)'; cx.fillRect(0, WH - 3, W, 3);
   }
   if (band) roofLayer(cx, W, WH, band, `#${(roofC >>> 0).toString(16).padStart(6, '0')}`, roofKind, rnd);
   const mk = (c) => {
@@ -1342,26 +1391,33 @@ const PALETTE = {
 // 街景擺脫「同一張貼圖複製貼上」;v 在建物生成時決定性分配。
 // **`rows`(窗格列數)刻意不在這張表上** —— 見下方 `facadeRows`:它由**那一件的高度**推導。
 // 款只管「窗長什麼樣」(落地窗/帷幕/小窗),層高由 STOREY 那一帶管(2026-08-09 使用者定案)。
+// **`win: [寬佔比, 高佔比]`**(2026-08-12 使用者定案「不同建築使用窗戶圖層間距不要都一樣,
+// 也可以使用幾乎無間距的玻璃牆」)。窗在一個樓層格內佔多少 ⇒ **上下間距 = 1 − 高佔比**。
+// 舊制只有兩組幾何(帷幕 0.86×0.62、其餘一律 0.52×0.48)⇒ 十六款樓的窗間距只有兩種,
+// 一整條街讀起來是同一張貼圖。層高本身**仍夾在 `STOREY` 帶內**(2026-08-09 使用者定案
+// 「上下樓層間距要在合理差異範圍以內」不動)—— 這一輪改的是**窗在那一層裡佔多少**,
+// 兩件事正交:層高是現實約束,窗佔比是建築風格。
+// `glass` 是一種**立面**不是一組參數:整面玻璃 + 髮絲框、沒有裙板帶(見 facadeTex)。
 const FACADES = {
   residential: [
-    { key: 'res0', cols: 5, winC: '#3a4046', lit: 0.3,  style: 'shop',    wall: 'stucco',  roof: 0x9c8e7c },
-    { key: 'res1', cols: 4, winC: '#46525e', lit: 0.22, style: 'balcony', wall: 'panel',   roof: 0x8a6f5a },
-    { key: 'res2', cols: 6, winC: '#333b42', lit: 0.36, style: 'plain',   wall: 'brick',   roof: 0x7a8577 },
-    { key: 'res3', cols: 3, winC: '#4a3f38', lit: 0.26, style: 'balcony', wall: 'stucco',  roof: 0xa2543e },
-    { key: 'res4', cols: 5, winC: '#3d4750', lit: 0.32, style: 'shop',    wall: 'panel',   roof: 0x6e7f8a },
-    { key: 'res5', cols: 4, winC: '#3f4a3a', lit: 0.28, style: 'plain',   wall: 'boardh',  roof: 0xb98455 },
-    { key: 'res6', cols: 6, winC: '#52453c', lit: 0.24, style: 'balcony', wall: 'brick',   roof: 0x87795f },
-    { key: 'res7', cols: 4, winC: '#43382e', lit: 0.3,  style: 'shop',    wall: 'boardv',  roof: 0x8a5a40 },
+    { key: 'res0', cols: 5, winC: '#3a4046', lit: 0.3,  style: 'shop',    wall: 'stucco',  roof: 0x9c8e7c, win: [0.50, 0.44] },
+    { key: 'res1', cols: 4, winC: '#46525e', lit: 0.22, style: 'balcony', wall: 'panel',   roof: 0x8a6f5a, win: [0.56, 0.38] },
+    { key: 'res2', cols: 6, winC: '#333b42', lit: 0.36, style: 'plain',   wall: 'brick',   roof: 0x7a8577, win: [0.44, 0.56] },
+    { key: 'res3', cols: 3, winC: '#4a3f38', lit: 0.26, style: 'balcony', wall: 'stucco',  roof: 0xa2543e, win: [0.62, 0.42] },
+    { key: 'res4', cols: 5, winC: '#3d4750', lit: 0.32, style: 'shop',    wall: 'panel',   roof: 0x6e7f8a, win: [0.48, 0.62] },
+    { key: 'res5', cols: 4, winC: '#3f4a3a', lit: 0.28, style: 'plain',   wall: 'boardh',  roof: 0xb98455, win: [0.36, 0.34] },
+    { key: 'res6', cols: 6, winC: '#52453c', lit: 0.24, style: 'balcony', wall: 'brick',   roof: 0x87795f, win: [0.52, 0.46] },
+    { key: 'res7', cols: 4, winC: '#43382e', lit: 0.3,  style: 'shop',    wall: 'boardv',  roof: 0x8a5a40, win: [0.58, 0.50] },
   ],
   commercial: [
-    { key: 'com0', cols: 7, winC: '#2e3c4a', lit: 0.55, style: 'plain',   wall: 'panel',    roof: 0x707c88 },
-    { key: 'com1', cols: 9, winC: '#243240', lit: 0.68, style: 'curtain', wall: 'spandrel', roof: 0x5c6874 },
-    { key: 'com2', cols: 6, winC: '#35424e', lit: 0.45, style: 'shop',    wall: 'brick',    roof: 0x86766a },
-    { key: 'com3', cols: 5, winC: '#1f3a38', lit: 0.6,  style: 'hband',   wall: 'spandrel', roof: 0x4f6a66 },
-    { key: 'com4', cols: 8, winC: '#2c3350', lit: 0.5,  style: 'curtain', wall: 'panel',    roof: 0x5a5f7c },
-    { key: 'com5', cols: 10, winC: '#1e2e3e', lit: 0.62, style: 'hband',  wall: 'spandrel', roof: 0x6a7a6a },
-    { key: 'com6', cols: 6, winC: '#2a3a46', lit: 0.4,  style: 'shop',    wall: 'stucco',   roof: 0x7c6a58 },
-    { key: 'com7', cols: 7, winC: '#2e3d3a', lit: 0.48, style: 'hband',   wall: 'brick',    roof: 0x6a7468 },
+    { key: 'com0', cols: 7, winC: '#2e3c4a', lit: 0.55, style: 'plain',   wall: 'panel',    roof: 0x707c88, win: [0.62, 0.54] },
+    { key: 'com1', cols: 9, winC: '#243240', lit: 0.68, style: 'glass',   wall: 'spandrel', roof: 0x5c6874 },
+    { key: 'com2', cols: 6, winC: '#35424e', lit: 0.45, style: 'shop',    wall: 'brick',    roof: 0x86766a, win: [0.56, 0.46] },
+    { key: 'com3', cols: 5, winC: '#1f3a38', lit: 0.6,  style: 'hband',   wall: 'spandrel', roof: 0x4f6a66, win: [0.90, 0.38] },
+    { key: 'com4', cols: 8, winC: '#2c3350', lit: 0.5,  style: 'curtain', wall: 'panel',    roof: 0x5a5f7c, win: [0.90, 0.74] },
+    { key: 'com5', cols: 10, winC: '#1e2e3e', lit: 0.62, style: 'glass',  wall: 'panel',    roof: 0x6a7a6a },
+    { key: 'com6', cols: 6, winC: '#2a3a46', lit: 0.4,  style: 'shop',    wall: 'stucco',   roof: 0x7c6a58, win: [0.50, 0.60] },
+    { key: 'com7', cols: 7, winC: '#2e3d3a', lit: 0.48, style: 'hband',   wall: 'brick',    roof: 0x6a7468, win: [0.90, 0.28] },
   ],
 };
 
@@ -1373,15 +1429,15 @@ const FACADES = {
 // 沒有帷幕玻璃也沒有店面遮陽棚 —— 就算貼到斜屋頂上,讀起來也是「同一種材料蓋的屋頂」
 // 而不是玻璃帷幕。款式由**落點雜湊**決定(零 rnd,§2.3)⇒ 同一張圖上的穀倉彼此不同。
 // **2026-08-09 第二輪**:上面那一段只換掉了牆的材質感,窗格仍印在斜屋頂上(單一材質群組
-// 這件事沒變)。這一輪把區分移進 UV(`MASS.ROOF_BAND`),於是這張表多一個 `rf` 欄
+// 這件事沒變)。這一輪把區分移進 UV(`MASS.UVB`),於是這張表多一個 `rf` 欄
 // —— 「屋頂形式」自此是真的屋頂形式,而不是牆的顏色換一換。
 const FACADES_PITCHED = [
-  { key: 'pit0', cols: 4, rows: 3, winC: '#3a2f28', lit: 0.12, style: 'plain', wall: 'boardv', roof: 0x8f9298, rf: 'metal' },    // 木板穀倉 + 鍍鋅浪板
-  { key: 'pit1', cols: 3, rows: 3, winC: '#44505c', lit: 0.16, style: 'plain', wall: 'boardh', roof: 0x4a4a48, rf: 'shingle' },  // 雨淋板教堂 + 深色木瓦
-  { key: 'pit2', cols: 3, rows: 2, winC: '#4a4238', lit: 0.18, style: 'plain', wall: 'stone',  roof: 0xa2543e, rf: 'pantile' },  // 石砌農舍 + 紅陶筒瓦
-  { key: 'pit3', cols: 4, rows: 3, winC: '#4e463c', lit: 0.2,  style: 'plain', wall: 'stucco', roof: 0x8a4a3a, rf: 'tile' },     // 灰泥民宅 + 平瓦
-  { key: 'pit4', cols: 5, rows: 3, winC: '#38404a', lit: 0.16, style: 'plain', wall: 'brick',  roof: 0x6a7078, rf: 'metal' },    // 磚造校舍/倉庫 + 金屬浪板
-  { key: 'pit5', cols: 3, rows: 3, winC: '#332c26', lit: 0.14, style: 'plain', wall: 'boardv', roof: 0x5e6e52, rf: 'shingle' },  // 深色木造 + 苔綠木瓦
+  { key: 'pit0', cols: 4, rows: 3, winC: '#3a2f28', lit: 0.12, style: 'plain', wall: 'boardv', roof: 0x8f9298, rf: 'metal', win: [0.34, 0.40] },    // 木板穀倉 + 鍍鋅浪板
+  { key: 'pit1', cols: 3, rows: 3, winC: '#44505c', lit: 0.16, style: 'plain', wall: 'boardh', roof: 0x4a4a48, rf: 'shingle', win: [0.30, 0.58] },  // 雨淋板教堂 + 深色木瓦(細長窗)
+  { key: 'pit2', cols: 3, rows: 2, winC: '#4a4238', lit: 0.18, style: 'plain', wall: 'stone',  roof: 0xa2543e, rf: 'pantile', win: [0.42, 0.36] },  // 石砌農舍 + 紅陶筒瓦
+  { key: 'pit3', cols: 4, rows: 3, winC: '#4e463c', lit: 0.2,  style: 'plain', wall: 'stucco', roof: 0x8a4a3a, rf: 'tile', win: [0.50, 0.48] },     // 灰泥民宅 + 平瓦
+  { key: 'pit4', cols: 5, rows: 3, winC: '#38404a', lit: 0.16, style: 'plain', wall: 'brick',  roof: 0x6a7078, rf: 'metal', win: [0.56, 0.30] },    // 磚造校舍/倉庫 + 金屬浪板(橫向長窗)
+  { key: 'pit5', cols: 3, rows: 3, winC: '#332c26', lit: 0.14, style: 'plain', wall: 'boardv', roof: 0x5e6e52, rf: 'shingle', win: [0.38, 0.52] },  // 深色木造 + 苔綠木瓦
 ];
 
 // ---- 街區色相家族(2026-08-05;sakura-crossing「變化要落在正確層級」)----
@@ -2144,7 +2200,17 @@ const BLD_LIB = {
   // c 是**第一顆背面不是空的整棟量體節點**(半空間面積不對稱 asymZ 0.001,而 a 是 0.123)——
   // 選片那一條(§5ae「整棟入鏡,不是最好看的局部」)兌現在這裡:同一族的另一張候選照
   // 生出來的是一塊中空的立面碎片,而它在任何離線閘門上都是綠的(見 §5aq-b)。
-  mass: [['building/mass_a', 'building/mass_b', 'building/mass_c'], ['box', 1, 1, 1]],
+  // 第三格 = **輪廓剖面**(2026-08-12;逐節點一筆,與名冊同序)。見 `bldProfile` 檔頭:
+  // 它是這一顆節點的形狀在 Node 端唯一拿得到的樣子,而佈局數學(碰撞柱 / 尺寸 / 招牌落點)
+  // MUST 只讀它、MUST NOT 讀庫幾何(§2.1「AI 零件庫消費」:庫載不載得到逐客戶端不同 ⇒
+  // 讀庫幾何 = 權威幾何跨客戶端分家)。值由 `tools/ai3d/parts_src.mjs nodeProfile` 量,
+  // `intake_parts` 逐顆比對宣告與實測(對不上就紅字 ⇒ 名冊不會靜默過期)。
+  mass: [['building/mass_a', 'building/mass_b', 'building/mass_c'], ['box', 1, 1, 1], [
+    [[-0.475, -0.1187, 0.378, 0.4198], [-0.1187, 0.1187, 0.3044, 0.2268], [0.1187, 0.4156, 0.2978, 0.1715], [0.4156, 0.475, 0.1347, 0.0813]],
+    [[-0.475, -0.0594, 0.1291, 0.4708], [-0.0594, 0.0594, 0.1298, 0.4128], [0.0594, 0.2969, 0.1261, 0.1673], [0.2969, 0.475, 0.0518, 0.0614]],
+    [[-0.475, 0, 0.3653, 0.3618], [0, 0.1781, 0.3424, 0.3414], [0.1781, 0.2375, 0.2067, 0.208], [0.2375, 0.475, 0.1177, 0.1094]],
+    /* +prof:mass */
+  ]],
   // 低矮建物的整棟量體(2026-08-09 使用者定案「開」第二個桶 + §5al-c 選 (a) 8/8 切分)。
   // **它與上面那一桶吃同一個 facade_wall 桶** ⇒ 額度是同一份:`MASS.PICK_N` 與
   // `MASS.PICK_N_LOW` 加起來才是 tri_budget 的 `pick_n`,`node_cap` 因此一格不動
@@ -2153,7 +2219,11 @@ const BLD_LIB = {
   // 名冊空著 ⇒ `bldLibN` 回 0 ⇒ 一棟都不挑 ⇒ **逐位元同舊制**(保險絲,原則 6)。
   // ⚠ 輪替名冊 MUST ≥2 顆才算「開好」(同上一列的理由:一款打天下 = 同一張圖上
   //   挑中的那幾棟是同一個剪影,而所有離線閘門全綠)。
-  masslow: [['building/masslow_a', 'building/masslow_b'], ['box', 1, 1, 1]],
+  masslow: [['building/masslow_a', 'building/masslow_b'], ['box', 1, 1, 1], [
+    [[-0.475, 0.1187, 0.2795, 0.3986], [0.1187, 0.2969, 0.2105, 0.3975], [0.2969, 0.4156, 0.1077, 0.3969], [0.4156, 0.475, 0.0382, 0.3961]],
+    [[-0.475, 0, 0.4195, 0.2396], [0, 0.1187, 0.4184, 0.0997], [0.1187, 0.3562, 0.3844, 0.077], [0.3562, 0.475, 0.2879, 0.0285]],
+    /* +prof:masslow */
+  ]],
 };
 // `i` = 輪替索引(只有陣列名冊吃得到;單一字串的舊三桶逐位元不受影響)
 const bldGeo = (key, i = 0) => {
@@ -2164,6 +2234,48 @@ const bldGeo = (key, i = 0) => {
 };
 /** 該桶名冊有幾顆節點(0 = 這一桶還沒入庫;輪替除數的唯一來源) */
 const bldLibN = (key) => { const n = BLD_LIB[key]?.[0]; return n ? (Array.isArray(n) ? n.length : 1) : 0; };
+
+/**
+ * 這一顆整棟量體節點的**輪廓剖面**(2026-08-12 使用者回報「非簡單幾何的建築…物理碰撞
+ * 實質上還是立方體」「招牌會懸空」的唯一縫)。
+ *
+ * ---- 它修的是什麼 ----
+ * 舊制:挑中庫節點的那幾棟,**碰撞柱仍是整個 OSM 足跡的單一方盒**(A30 的有向盒),
+ * 而節點自己是退縮塔 / 薄板 / 人字屋頂 —— 實測剖面體積只佔那顆方盒的 **16%~38%**
+ * (mass_b 0.157、masslow_b 0.256)。看得到的樣子與撞得到的樣子差到三、四倍:
+ *   ・退縮塔上半段整圈是空氣,卻擋彈、擋 LOS、爬得上去;
+ *   ・招牌掛在方盒的側面 `b.d/2`,而那個高度的塔身只有方盒的 0.2 倍寬 ⇒ **牌子浮在半空**
+ *     (§5ab-c 當時的處理是「挑中的那幾棟純視覺附件一律不掛」—— 那是繞過去,不是修好)。
+ *
+ * ---- 為什麼是一疊有向盒,不是真網格 ----
+ * A30:碰撞 / 彈道 / 伺服器 LOS MUST 同一橫斷面,而三端共同吃得到的形狀只有有向盒與圓柱
+ * (occ 上傳欄位、`_blockerHitT`、`sim.solidResolve` 全是)。⇒ 把**一顆方盒換成一疊方盒**,
+ * 三端一行都不用改,而剖面跟著退縮階、山牆、裙樓一起收。
+ *
+ * ---- 三條紀律 ----
+ * ① **純資料**:值住名冊(離線量、`intake_parts` 比對),消費端 MUST NOT 讀庫幾何 ——
+ *    庫載不載得到逐客戶端不同,讀它就是碰撞柱跨客戶端分家(§2.1 / §2.3 / A30)。
+ *    同一條也決定了**挑選 MUST 與庫載入解耦**(見 `massPick`):選中誰是純資料的函式,
+ *    載到庫的只是「畫出來的是網格還是保險絲」。
+ * ② **保險絲同源**:載不到庫時畫的那顆(`buildBldBucket.mass`)也由**同一份剖面**疊出來
+ *    ⇒ 不論載不載得到,看到的與撞到的都是同一個形狀。
+ * ③ **包住不切齊**:每一段取該段的**最大**半跨 ⇒ 盒恆包住網格(「演出 ⊆ 碰撞盒」,A44 ③)。
+ *    少算一格的代價是「看得見的牆打得穿」,比多算一格嚴重得多。
+ * @returns {{slabs:number[][], hw:number, hd:number, hy:number}|null} 單位盒座標;無宣告回 null
+ */
+function bldProfile(key, i = 0) {
+  const rows = BLD_LIB[key]?.[2];
+  if (!rows) return null;
+  const n = bldLibN(key);
+  const slabs = Array.isArray(rows[0]?.[0]) ? rows[((i % n) + n) % n] : rows;
+  if (!slabs?.length) return null;
+  let hw = 0, hd = 0, hy = 0;
+  for (const [y0, y1, w, d] of slabs) {
+    hw = Math.max(hw, w); hd = Math.max(hd, d);
+    hy = Math.max(hy, Math.abs(y0), Math.abs(y1));
+  }
+  return { slabs, hw, hd, hy };
+}
 // 整棟量體的挑選規則(兩個值都與 tri_budget families.building.mass 同一份,audit_siteplan Ⅴ 釘住相等)
 const MASS = {
   // **兩個既有的判準各切一刀,對角線兩格換節點**:
@@ -2181,21 +2293,104 @@ const MASS = {
   // 的定案(§5al-c 選 (a)):兩邊都沒有量得出來的偏袒理由。
   PICK_N: 8,      // 高層商辦(排最高的)
   PICK_N_LOW: 8,  // 低矮建物(排足跡面積最大的)
-  // **屋頂帶**(2026-08-09 使用者回報「斜頂屋頂外觀變摩天大樓的玻璃」的後半;§5an-d)。
+  // **三條 UV 帶**(2026-08-12 使用者定案「建築外部的密集窗戶圖層與外掛招牌只貼垂直地面
+  // 且平整的平面牆」;前身是 2026-08-09 的兩帶屋頂帶 §5an-d)。
   // 庫節點只有**一個材質群組** ⇒ three 取 material[0],方盒那條路「第 3/4 格 = 屋頂材質」
   // 對它不生效;拆群組又會讓每一棟多一個 draw call(而 `PICK_N` 的整條推導就是 draw call
-  // 上界)⇒ 把區分移進 **UV**:`normalize_parts.py --roofband` 把朝上的面壓進 v ∈ [0, BAND]、
-  // 其餘壓進 [BAND, 1],這裡就把貼圖底部那一條畫成屋頂。**兩個數字與 tri_budget 的
-  // families.building.masslow 同一份**(audit_siteplan 釘住相等;intake_parts 直接量 GLB 的
-  // UV 帶)—— 分家不會報錯,只會讓屋頂那條接縫落在牆上。
-  // `ROOF_BAND` 是**量出來的**:取兩顆節點「朝上面積 ÷(朝上 + 側面)」的平均
-  // (= 屋頂帶與牆帶的 texel 密度相同 ⇒ 瓦縫與窗框在畫面上是同一個顆粒度),
-  // masslow_a 0.272 / masslow_b 0.275。`ROOF_MINZ` 取兩顆量到的**空檔中點**:
-  // 牆的尖峰止於 n.y 0.15、屋頂的尖峰起於 0.45(masslow_a)與 0.65(masslow_b)。
+  // 上界)⇒ 把區分移進 **UV**:`normalize_parts.py --uvbands` 依**面的傾角**把三群分別壓進
+  //   朝上(n.y > MINZ)          → v ∈ [0, roof)          這裡畫屋頂
+  //   傾斜 / 朝下(其餘)          → v ∈ [roof, roof+plain) 這裡畫**素牆**(沒有窗)
+  //   近垂直(|n.y| ≤ WALL_NY)    → v ∈ [roof+plain, 1]    這裡才畫窗格
+  // 中間那條就是這一輪加的:貼圖是盒投影上去的,面越斜同一段 u/v 就攤在越長的表面上
+  // ⇒ 退縮頂的斜切面、尖塔、屋簷底上的窗格是被拉糊的一片(舊制它們全在窗格帶裡)。
+  // **每一桶各一組**(兩桶本來就各有自己的立面材質家族),值都是量出來的:帶寬 = 該群
+  // 面積佔比的**名冊平均** ⇒ 三帶 texel 密度相同(瓦縫、素牆的抹紋與窗框同一個顆粒度)。
+  // 實測(tools/ai3d/parts_src.mjs uvBandStats,MINZ 0.30 / WALL_NY 0.15):
+  //   mass    朝上 0.120/0.111/0.145、傾斜 0.158/0.179/0.190 → 0.125 / 0.176
+  //   masslow 朝上 0.215/0.216、傾斜 0.252/0.271           → 0.216 / 0.262
+  // `MINZ` 取兩顆量到的**空檔中點**(牆的尖峰止於 n.y 0.15、屋頂起於 0.45~0.65);
   // ⚠ 沿用盒投影的「主導軸」等價於門檻 0.577,而那會把穀倉**整個屋頂**判成牆。
-  ROOF_BAND: 0.273,
-  ROOF_MINZ: 0.30,
+  // 這幾個數字與 tri_budget 的 families.building.<桶> **同一份**(audit_siteplan 釘住相等;
+  // intake_parts 直接量 GLB 的 UV 帶)—— 分家不會報錯,只會讓屋頂那條接縫落在牆上。
+  UVB: {
+    mass: { roof: 0.125, plain: 0.176 },
+    masslow: { roof: 0.216, plain: 0.262 },
+    MINZ: 0.30,
+    WALL_NY: 0.15,
+  },
+  // ---- 輪廓剖面(2026-08-12;見 `bldProfile` 檔頭)----
+  // 量測參數:縱向切幾段、合併到剩幾段。段數是**碰撞柱數**與**保險絲面數**的旋鈕:
+  // 挑中的至多 `PICK_N + PICK_N_LOW` = 16 棟 × (SLABS − 1) = 至多 +48 根柱
+  // (`LOS.MAX_OCC` = 4000,佔 1.2%);實測 5 段只比 4 段再省 4% 體積 ⇒ 取 4。
+  PROF_BANDS: 16,
+  PROF_SLABS: 4,
+  // **變形上限**(2026-08-12 使用者定案「管線最後要再加入調整目標物件到適合的大小,
+  // 避免放在遊戲後看起來真實感太差」的消費端那一半)。
+  // 消費端是拿**單位方盒**逐實例 scale(w,h,d),而節點的自然平面長寬比是量出來的
+  // (mass_a 0.90 / mass_b 0.276 / mass_c 1.01 / masslow_a 0.70 / masslow_b 1.75)——
+  // 把 0.276 的薄板塞進正方形基地就是橫向拉 3.6 倍,窗格與退縮階跟著糊掉。
+  // ⇒ 指派時逐棟挑「拉伸最小」的那一顆(允許整顆轉 90°,自然比取倒數),**超過上限就不換**
+  // (退回方盒 = 既有那條路,原則 6 寧缺勿錯)。1.6 與 STOREY 那條「合理差異範圍」同一個
+  // 量級:再寬就看得出來是被拉過的。
+  ASPECT_MAX: 1.6,
+  // 同分帶:落在最佳拉伸 `PICK_TOL` 倍內的節點視為同樣好,再由落點雜湊挑一顆
+  // ——純取最小值的話同一種基地永遠拿到同一顆,天際線又變成一個剪影(名冊輪替的初衷)。
+  PICK_TOL: 1.15,
 };
+
+/**
+ * 剖面 → **保險絲幾何**(一疊方盒;`bldProfile` 檔頭紀律 ②)。
+ * 庫載不到時畫的就是這一顆 —— 與碰撞柱吃**同一份剖面** ⇒ 不論載不載得到,
+ * 看到的與撞到的都是同一個形狀(舊制保險絲是單顆方盒,而碰撞柱這一輪已經改成剖面 ⇒
+ * 不同源的話,沒載到庫的那台客戶端會看到一面走得過去的牆)。
+ * UV 逐面**盒投影 + 三帶**,規則與 `normalize_parts.py --uvbands` 逐條相同:
+ * 分兩份寫就是「牆對得上、屋頂差一條縫」(那條註解的同一個坑)。
+ */
+function profGeo(prof, uvb) {
+  const { roof, plain } = uvb;
+  const pos = [], nor = [], uv = [], idx = [];
+  const cl = (v) => Math.min(1, Math.max(0, v));
+  for (const [y0, y1, hw, hd] of prof.slabs) {
+    const cy = (y0 + y1) / 2, hh = (y1 - y0) / 2;
+    // 逐面 [法線, u 切向, v 切向];MUST 是右手系(u × v = n),否則那一面背朝外 = 從外面看穿
+    const FACES = [
+      [[1, 0, 0], [0, 0, -1], [0, 1, 0], hd, hh],
+      [[-1, 0, 0], [0, 0, 1], [0, 1, 0], hd, hh],
+      [[0, 1, 0], [1, 0, 0], [0, 0, -1], hw, hd],
+      [[0, -1, 0], [1, 0, 0], [0, 0, 1], hw, hd],
+      [[0, 0, 1], [1, 0, 0], [0, 1, 0], hw, hh],
+      [[0, 0, -1], [-1, 0, 0], [0, 1, 0], hw, hh],
+    ];
+    for (const [n, tu, tv, hu, hv] of FACES) {
+      const c = [n[0] * hw, cy + n[1] * hh, n[2] * hd];
+      const b = pos.length / 3;
+      for (const [du, dv] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const x = c[0] + tu[0] * du * hu + tv[0] * dv * hv;
+        const y = c[1] + tu[1] * du * hu + tv[1] * dv * hv;
+        const z = c[2] + tu[2] * du * hu + tv[2] * dv * hv;
+        pos.push(x, y, z);
+        nor.push(n[0], n[1], n[2]);
+        // 盒投影:±X 面 u←z、其餘 u←x;±Y 面 v←z、其餘 v←y(與 normalize_parts 同式)
+        const u2 = n[0] ? z + 0.5 : x + 0.5;
+        let v2 = cl(n[1] ? z + 0.5 : y + 0.5);
+        // 三帶:朝上→屋頂帶、朝下→素牆帶、近垂直→窗牆帶(方盒沒有傾斜面)
+        if (n[1] > MASS.UVB.MINZ) v2 *= roof;
+        else if (Math.abs(n[1]) > MASS.UVB.WALL_NY) v2 = roof + v2 * plain;
+        else v2 = roof + plain + v2 * (1 - roof - plain);
+        uv.push(cl(u2), v2);
+      }
+      idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeBoundingSphere();
+  return g;
+}
+
 // 桶建構表(凍結四桶:煙囪/水塔/空調機組/整棟量體):單位 primitive 保險絲 + 桶色 +
 // InstancedMesh 一次定案在這裡。
 // 兩個消費端:①下方一般建物繪製段的四個桶(遊戲內唯一呼叫點);②`tools/parts_review`
@@ -2214,13 +2409,20 @@ export const buildBldBucket = {
   // (2026-08-09):v MUST 隨高度遞增 —— glTF 的 UV 原點在左上、Blender 在左下,匯出端會把 v
   // 翻過來,而消費端這張 `CanvasTexture` 的 `flipY` 是預設的 true ⇒ 不補償的話庫節點的立面
   // 是**上下顛倒**的(基座暗帶印在屋簷、遮陽棚印在頂樓),而方盒那條路走 BoxGeometry 自己的
-  // UV 是正的 = 同一張圖上兩種方向,沒有任何錯誤訊息。斜頂那一桶再多一條屋頂帶(`ROOF_BAND`)。
+  // UV 是正的 = 同一張圖上兩種方向,沒有任何錯誤訊息。兩桶自 2026-08-12 起都吃**三帶**
+  // (`MASS.UVB`:屋頂 / 素牆 / 窗牆),見那一段檔頭。
   // 對照台(count = 1 取樣)不傳材質 ⇒ 退回素色,只看幾何。
   // `key` = 哪一個整棟量體名冊('mass' 高層 / 'masslow' 低矮):兩桶只差名冊與挑選規則,
   // 幾何/材質/保險絲逐條相同 ⇒ **一份實作**。另開一支 `masslow:` 就是第二套桶建構器,
   // 而它壞掉的樣子是「低矮那一桶的保險絲跟高層的不一樣」。
-  mass: (n, mat, i = 0, key = 'mass') => new THREE.InstancedMesh(bldGeo(key, i) || new THREE.BoxGeometry(1, 1, 1),
-    mat || bmat(0xb9b3a8, { wash: 0.5 }), n),
+  // **保險絲改吃剖面**(2026-08-12):庫載不到時畫的那顆由 `bldProfile` 疊出來,與碰撞柱
+  // 同源 ⇒ 看到的與撞到的恆為同一個形狀(舊制是單顆方盒,而碰撞柱這一輪已改成剖面)。
+  // 連剖面都沒宣告(舊名冊 / 新開的桶)才退回單位方盒 —— 那是保險絲的保險絲。
+  mass: (n, mat, i = 0, key = 'mass') => {
+    const prof = bldProfile(key, i);
+    const geo = bldGeo(key, i) || (prof ? profGeo(prof, MASS.UVB[key] || MASS.UVB.mass) : new THREE.BoxGeometry(1, 1, 1));
+    return new THREE.InstancedMesh(geo, mat || bmat(0xb9b3a8, { wash: 0.5 }), n);
+  },
 };
 
 // 巨岩的三支建構器**具名匯出**(2026-08-06):第二個消費端 = `tools/parts_review`(3D 零件
@@ -2949,7 +3151,7 @@ function nearestDir(sites, x, z) {
 }
 
 function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, pois, lowPower,
-  corpus, rnd, used, roads, features, isBlocked, wallSigns = [], billboards = [] }) {
+  corpus, rnd, used, roads, features, isBlocked, wallSigns = [], billboards = [], bldFaces = null }) {
   const sheet = new SignSheet(lowPower);
   const posts = [];
   // 語料庫招牌的落點:全部在這裡先算好(位置一律取自既有幾何 + 路網,零 `rnd()`)
@@ -2998,16 +3200,29 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
   }
   // ④ 建物立面招牌:只給**有名字的商業建物**(住宅掛名牌不合理,而且量會爆掉)。
   //    貼在正面(ry 方向)牆上緣下方,寬度收在牆寬內。
+  //    **落點吃真的存在的那一面牆**(2026-08-12 使用者回報「招牌會懸空」):換上整棟量體
+  //    節點的那幾棟不是方盒 —— 退縮塔在 0.82×樓高 那裡只有足跡的兩成寬,而這一支原本
+  //    一律推到 `b.d / 2`(= 方盒側面)⇒ 牌子掛在塔身外面的空氣裡。`bldFaces` 是建物迴圈
+  //    量好的剖面側面(唯一縫 `bldProfile`),這裡只挑「涵蓋這個高度的那一段」。
   for (const b of generic) {
     if (sheet.full) break;
     if (!b.commercial) continue;
     const text = resolveName(b.tags);
     if (!text) continue;
     const h = Math.min(2.2, b.w * 0.7 / 4);
+    const gy = terrain.heightAt(b.x, b.z);
+    let y = gy + Math.min(b.h - h, b.h * 0.82);
+    let hd = b.d / 2;
+    const faces = bldFaces?.get(b);
+    if (faces?.length) {
+      // 牌面高度先夾在節點真的有實體的範圍內(頂端那一段可能是尖塔),再取那一段的牆面
+      y = Math.min(y, faces[faces.length - 1].y1 - h * 0.6);
+      hd = (faces.find((k) => y >= k.y0 && y <= k.y1) || faces[faces.length - 1]).hd2;
+    }
     // 建物的 ry 是「牆面朝向」;招牌法線取 +ry 那一面,往外推半個牆厚 + 0.2 避免與牆共面
     const nx = Math.sin(b.ry), nz = Math.cos(b.ry);
-    sheet.add({ text, x: b.x + nx * (b.d / 2 + 0.2), z: b.z + nz * (b.d / 2 + 0.2),
-      y: terrain.heightAt(b.x, b.z) + Math.min(b.h - h, b.h * 0.82), ry: b.ry, h, style: 'lightbox' });
+    sheet.add({ text, x: b.x + nx * (hd + 0.2), z: b.z + nz * (hd + 0.2),
+      y, ry: b.ry, h, style: 'lightbox' });
   }
 
   // ---- 以下五種走**語料庫挑字**(vernacular.js):字不是這個構件自己的名字,而是
@@ -8378,28 +8593,125 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const cellMasts = [];    // 行動基地台桅桿
   const cellPanels = [];   // 基地台三向扇區天線
   const wallSigns = [];    // 牆面直式招牌:建物垂直面唯一允許的附著物(垂直長條、微凸牆面)
+  // 挑中整棟量體節點的那幾棟的**剖面側面**(世界座標,由下而上)。`buildWorldSigns` ④ 的
+  // lightbox 立面招牌吃它 —— 那一支只認得 OSM 方盒(`b.d / 2`),而節點在牌子的高度上
+  // 可能只有方盒的兩成寬 ⇒ 牌子浮在半空(使用者 2026-08-12 回報)。
+  const bldFaces = new Map();
   const bldStart = group.children.length;   // 碉堡淨空用:此後加入 group 的都是建物 InstancedMesh(供 clearAround 篩選)
   {
     const tint = new THREE.Color();
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler();
     const P = new THREE.Vector3(), S = new THREE.Vector3();
-    // 名冊裡**真的載到**的節點索引(整批取不到 ⇒ 下面一棟都不挑 ⇒ 逐位元同舊制)。
-    // 探詢只在這裡做一次:放進逐棟迴圈就是同一個名字每棟查一遍,而且會多一個消費點。
-    const libOk = (key) => { const a = []; for (let k = 0; k < bldLibN(key); k++) if (bldGeo(key, k)) a.push(k); return a; };
-    const massOk = libOk('mass'), lowOk = libOk('masslow');
     // 整棟量體庫節點的**選取**:全圖一次定案,不是逐立面款各挑各的 —— 預算的除數是
     // 「全圖挑中幾棟」(tri_budget families.building.mass.pick_n),逐款各挑會讓總數
-    // 隨款數翻倍。純函式:只讀 b.commercial/h/x/z(權威佈局資料),**零 rnd() 消耗**
-    // (§2.3 / A4)、**不讀庫幾何**(佈局數學只讀保險絲;能不能換成由上面的 massOk 決定)。
+    // 隨款數翻倍。純函式:只讀 b.commercial/h/w/d/x/z(權威佈局資料)與**名冊裡的剖面**
+    // (純資料),**零 rnd() 消耗**(§2.3 / A4)。
     // 排序尾巴帶 x/z 是為了跨客戶端逐位元同一組:等高的兩棟不能靠 sort 的實作穩定性決定。
     // 兩桶**互斥**且各有各的排序:高層排「最高」、低矮排「足跡面積最大」(低矮建物在
     // 畫面上最顯眼的是屋頂面積,不是高度)。等大時一律再以座標定序。
+    //
+    // ⚠ **2026-08-12:挑選與「庫載到了沒」解耦**。舊制的閘是 `if (ok.length)`(該族 GLB
+    //   載得到才挑)—— 那在碰撞柱還是單一方盒的年代無害(挑不挑中都登記同一根柱)。
+    //   這一輪碰撞柱改吃剖面之後它是**致命**的:載到庫的客戶端登記剖面柱、沒載到的登記
+    //   方盒柱 ⇒ 權威幾何跨客戶端分家,而畫面上只表現成「你說你打中了,我這邊沒掉血」
+    //   (A30 + §2.3)。⇒ 挑選只讀純資料,載入成敗只決定**畫出來的是網格還是保險絲**,
+    //   而保險絲(profGeo)與碰撞柱同源 ⇒ 兩台看到的與撞到的都一樣。
+    //
+    // 另一半是使用者這一輪的第 ① 條(尺寸):節點的自然平面長寬比是量出來的,把 0.276 的
+    // 薄板塞進正方形基地就是橫向拉 3.6 倍。⇒ 逐棟挑「拉伸最小」的那一顆(允許整顆轉 90°),
+    // **拉伸超過 `ASPECT_MAX` 就不換這一棟**(退回方盒,原則 6),再往名冊後面找下一棟。
     const massPick = new Map();
-    const take = (key, ok, list, n) => { if (ok.length) for (const b of list.slice(0, n)) massPick.set(b, key); };
-    take('mass', massOk, generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
+    /**
+     * 這一棟該用名冊裡的哪一顆、要不要轉 90°、拉伸多少。純函式(零 rnd;`djAt` 是落點雜湊)。
+     * `rot` = 節點繞 Y 轉 90°(平面自然比取倒數)—— 名冊只有三顆,不給這個自由度的話
+     * 長寬比涵蓋範圍會剩下一半,密市區大半的長條基地一棟都換不到。
+     */
+    const fitNode = (key, b) => {
+      const n = bldLibN(key);
+      const T = Math.max(b.w, 1e-3) / Math.max(b.d, 1e-3);
+      let best = null;
+      for (let k = 0; k < n; k++) {
+        const p = bldProfile(key, k);
+        if (!p) continue;
+        for (const rot of [0, 1]) {
+          const A = rot ? p.hd / p.hw : p.hw / p.hd;
+          const dist = Math.abs(Math.log(T / A));
+          if (!best || dist < best.dist) best = { k, rot, dist, prof: p };
+        }
+      }
+      if (!best || Math.exp(best.dist) > MASS.ASPECT_MAX) return null;
+      // 同分帶內再由落點雜湊挑一顆:純取最小值的話同一種基地永遠拿到同一顆
+      const pool = [];
+      for (let k = 0; k < n; k++) {
+        const p = bldProfile(key, k);
+        if (!p) continue;
+        for (const rot of [0, 1]) {
+          const A = rot ? p.hd / p.hw : p.hw / p.hd;
+          const d = Math.abs(Math.log(T / A));
+          if (Math.exp(d) <= Math.exp(best.dist) * MASS.PICK_TOL) pool.push({ k, rot, prof: p });
+        }
+      }
+      const pick = pool[Math.floor(djAt(b.x + 7.1, b.z + 3.3) * pool.length) % pool.length] || best;
+      return { key, k: pick.k, rot: pick.rot, prof: pick.prof };
+    };
+    const take = (key, list, n) => {
+      let taken = 0;
+      for (const b of list) {
+        if (taken >= n) break;
+        const f = fitNode(key, b);
+        if (!f) continue;                       // 拉伸過頭 ⇒ 這一棟維持方盒,額度留給下一棟
+        massPick.set(b, f);
+        taken++;
+      }
+    };
+    take('mass', generic.filter((b) => b.commercial && b.h > MASS.MIN_H)
       .sort((p, q) => q.h - p.h || p.x - q.x || p.z - q.z), MASS.PICK_N);
-    take('masslow', lowOk, generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)
+    take('masslow', generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)
       .sort((p, q) => q.w * q.d - p.w * p.d || p.x - q.x || p.z - q.z), MASS.PICK_N_LOW);
+    /**
+     * 挑中的那一棟:**把網格撐滿基地**的逐實例縮放(使用者這一輪第 ① 條的兌現點)。
+     * 舊制直接拿 (w, h, d) 縮單位方盒,而節點只佔單位盒的一部分(實測 hw 0.13~0.42)——
+     * 症狀是那幾棟塔樓縮在自己的空地中央、四周一圈看不見的碰撞盒。
+     * 撐滿之後:最寬那一段恰好等於 OSM 足跡(⇒ 地面層的通行寬與舊制**逐位元相同**,
+     * `audit_traverse` 不動),上面的退縮階與山牆才是收窄的那幾段。
+     * 縱向同理(節點收在 ±0.475 ⇒ 舊制的頂比 `b.h` 矮 5%,而屋頂附件掛在 `b.h` = §5ab-c
+     * 那個「附件浮在半空」的成因本體)。
+     */
+    // 回傳的是**逐實例縮放**(節點局部軸;`M.compose` 是 T·R·S ⇒ S 吃的是局部軸)。
+    // `rot` 把節點的局部 X 轉到基地的深度那一邊 ⇒ 兩軸的目標邊長跟著換手。
+    const fitScale = (f, b) => {
+      const p = f.prof;
+      return {
+        sx: (f.rot ? b.d : b.w) * 0.5 / p.hw,
+        sy: b.h * 0.5 / p.hy,
+        sz: (f.rot ? b.w : b.d) * 0.5 / p.hd,
+      };
+    };
+    /**
+     * 剖面某一段的**建物座標**半跨與高度區間(碰撞柱與招牌落點同吃)。
+     * 轉 90° 的那一顆只是把兩個半跨換手 —— 有向盒的 `ry` 因此一律維持 `b.ry`
+     * (盒轉 90° ≡ 換手半跨,而碰撞柱不在意節點的正面朝哪一邊)。
+     */
+    const slabBox = (f, b, s, gy) => {
+      const sc = fitScale(f, b);
+      const ax = s[2] * sc.sx, az = s[3] * sc.sz;      // 節點局部 X / Z 兩軸的世界半跨
+      return {
+        hw2: f.rot ? az : ax, hd2: f.rot ? ax : az,
+        y0: gy - 0.5 + (s[0] + f.prof.hy) * sc.sy, y1: gy - 0.5 + (s[1] + f.prof.hy) * sc.sy,
+      };
+    };
+    /**
+     * **招牌能掛在哪一面牆**(2026-08-12 使用者「招牌會懸空」+「只貼垂直地面且平整的
+     * 平面牆」的兌現點)。回傳的是剖面**某一段的側面** —— 那些面依構造就是垂直且平整的
+     * 矩形,而牌子是剛性矩形:窗格貼圖對起伏不敏感,牌子會。
+     * 挑法:取「涵蓋這個高度」的那一段;高過整棟就退回最上面那一段(牌子跟著收到真的頂)。
+     * 方盒那條路回 null ⇒ 呼叫端照舊用 `b.w/2`、`b.d/2`(逐位元同舊制)。
+     */
+    const bldFace = (f, b, gy, y) => {
+      if (!f) return null;
+      const boxes = f.prof.slabs.map((s) => slabBox(f, b, s, gy));
+      return boxes.find((k) => y >= k.y0 && y <= k.y1) || boxes[boxes.length - 1];
+    };
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
       // 立面款一個外迴圈(款只管窗長什麼樣);**列數逐件**再分一次桶(見 facadeRows:
@@ -8413,17 +8725,22 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         // 逐列數的立面材質(貼圖本身有 `_facadeCache`;快取鍵 MUST 帶列數,
         // 少了它就是「第一次算出來的那個列數」被全場共用 = 這一整條改制沒有生效)
         const wallMat = new Map();
-        const wallOf = (rows) => {
-          if (!wallMat.has(rows)) {
-            const f = facadeTex(`${fd.key}r${rows}`, fd.cols, rows, fd.winC, fd.lit, fd.style, fd.wall);
-            wallMat.set(rows, bmat(0xffffff, {
+        // `band` = 要不要走三帶(整棟量體庫節點那幾棟才要;方盒走六材質群組,屋頂本來就
+        // 是另一個材質 ⇒ 加帶只會浪費貼圖並讓窗格連同屋頂帶一起被採到)。
+        // 貼圖快取鍵 MUST 帶這一位:同一款同一列數的「有帶 / 無帶」是兩張不同的圖。
+        const wallOf = (rows, band = false) => {
+          const mk = band ? `b${rows}` : rows;
+          if (!wallMat.has(mk)) {
+            const f = facadeTex(`${fd.key}r${rows}${band ? 'b' : ''}`, fd.cols, rows, fd.winC, fd.lit,
+              fd.style, fd.wall, band ? fd.roof : 0, band ? 'flat' : '', band ? MASS.UVB.mass : null, fd.win);
+            wallMat.set(mk, bmat(0xffffff, {
               map: f.map,
               emissiveMap: f.emissiveMap,
               emissive: new THREE.Color(night ? 0xffb45e : 0x000000),
               emissiveIntensity: night ? (commercial ? 0.9 : 0.55) : 0,
             }));
           }
-          return wallMat.get(rows);
+          return wallMat.get(mk);
         };
         // 屋頂/底面用素色材質(色塊分離):窗格貼圖只留在四面牆,
         // 屋頂不再出現「躺平的窗」;instance tint 兩材質同吃 → 每棟仍有色差
@@ -8440,24 +8757,53 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             gy = Math.min(gy, terrain.heightAt(b.x + lx * ca + lz * sa, b.z - lx * sa + lz * ca));
           }
           const palC = pal[((i * 2654435761) >>> 0) % pal.length];
-          // 挑中整棟庫節點的那幾棟:**純視覺的屋頂/立面附件一律不掛** —— 節點自己帶著
-          // 退縮頂塔與立面,再疊一頂程序頂塔或一塊懸空看板就是「兩頂帽子」(實測:附件
-          // 掛在**方盒**頂 gy+b.h,而庫節點的頂在 0.95×b.h 且末端收成尖塔 ⇒ 看板/天線
-          // 浮在半空)。**MUST 只換「推去哪裡」,rnd() 照抽**(同 synthMegalith 整座型
-          // 分支:庫節點只換 add 進場景,枚數有無零件庫逐位元相同,§2.3 / A4)。
+          // 挑中整棟庫節點的那幾棟:**屋頂上的純視覺附件一律不掛** —— 節點自己帶著
+          // 退縮頂塔與立面,再疊一頂程序頂塔或一塊看板就是「兩頂帽子」。
+          // **MUST 只換「推去哪裡」,rnd() 照抽**(同 synthMegalith 整座型分支:庫節點只換
+          // add 進場景,枚數有無零件庫逐位元相同,§2.3 / A4)。
           // 帶碰撞柱的兩件(主量體、臨街裙樓)**MUST NOT 進丟棄桶** —— 少掛一根碰撞柱
           // 會讓「載到庫的客戶端」與「沒載到的」權威幾何分家(A30 + §2.3)。
-          const libMass = massPick.has(b);
+          // ⚠ 牆面直式招牌**不再**進丟棄桶(2026-08-12):它當初被丟掉的理由是「掛在方盒
+          //   側面而節點比方盒瘦 ⇒ 浮在半空」,而這一輪招牌改吃剖面 ⇒ 掛的是那個高度**真的
+          //   存在**的那一段的牆面。丟掉它等於「最顯眼的十幾棟樓一塊招牌都沒有」。
+          const fit = massPick.get(b) || null;
           const sink = [];
-          const vis = (arr) => (libMass ? sink : arr);
+          const vis = (arr) => (fit ? sink : arr);
           // `lib` 只掛在**主量體**這一列(退縮頂塔/裙樓/梯間塔仍走方盒:它們是主體的
           // 附加輪廓件,整棟節點本身已經帶著自己的頂部造型,兩者疊起來會長出第二頂帽子)
-          inst.push({ x: b.x, y: gy + b.h / 2 - 0.5, z: b.z, ry: b.ry, w: b.w, h: b.h, d: b.d, c: palC, lib: massPick.get(b) || null });
+          // 縮放:方盒走 (w,h,d) 照舊;庫節點走 `fitScale`(把網格撐滿基地,見該支檔頭)
+          const fsc = fit ? fitScale(fit, b) : null;
+          inst.push({
+            x: b.x, y: gy + b.h / 2 - 0.5, z: b.z,
+            ry: b.ry + (fit?.rot ? Math.PI / 2 : 0),
+            w: fsc ? fsc.sx : b.w, h: fsc ? fsc.sy : b.h, d: fsc ? fsc.sz : b.d,
+            bh: b.h,                                   // 真樓高(縮放係數 ≠ 樓高;列數吃這個)
+            c: palC, lib: fit,
+          });
           // r = 圓柱近似(投影彈道 _blockerHitT 用,A6 刻意保留);hw2/hd2/ry = 真實盒面(_collide/_cameraDeClip
           // 用有向盒,免玩家/鏡頭斜向鑽進盒角破圖 —— 內切圓柱 r=0.8×盒角 < 盒角實體)
           // ty = **可見**盒頂(= 上面 inst 那一項的頂面,推導不手寫):碰撞柱刻意比實體高 0.5m
           // (站上屋頂才不會被 _collide 的垂直閘推下去),攀爬設施改吃 ty 貼齊屋頂(climb.js facilityEndY)
-          blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld', hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 });
+          //
+          // **挑中庫節點的那幾棟改登記剖面**(2026-08-12;使用者「物理碰撞應該要與建模的
+          // 3D 外表一致」)—— 一段一根有向盒,三端(客戶端 `_collide`/`_blockerHitT`、
+          // 伺服器 occ)一行都不用改(A30 只認有向盒與圓柱)。三條:
+          //   ㋐ **地面那一段恆等於整個足跡**(剖面最寬的一段被 `fitScale` 撐到 OSM 足跡)
+          //      ⇒ 街廓通行寬與舊制逐位元相同(`audit_traverse` 不動),收窄的只有上面的
+          //      退縮階與山牆 —— 舊制那裡是實心的方盒,而畫面上是空氣。
+          //   ㋑ 每一段各帶自己的 `ty` ⇒ 退縮平台**站得上去**(`blockerTopAt` 取含入者的最高頂)。
+          //   ㋒ 每一段的 `h` 一律比可見頂高 0.5m(與舊制同一條:站上屋頂不被垂直閘推下去)。
+          const cols = fit
+            ? fit.prof.slabs.map((s, si) => {
+              const bx = slabBox(fit, b, s, gy);
+              const bot = si === 0 ? gy - 1 : bx.y0;           // 最底那一段照舊沉進地形 1m
+              return { x: b.x, z: b.z, y: bot, r: Math.hypot(bx.hw2 * 2, bx.hd2 * 2) / 2 * 0.8,
+                h: bx.y1 + 0.5 - bot, bld: 1, cl: 'bld', hw2: bx.hw2, hd2: bx.hd2, ry: b.ry, ty: bx.y1 };
+            })
+            : [{ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld',
+              hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 }];
+          for (const c of cols) blockers.push(c);
+          if (fit) bldFaces.set(b, fit.prof.slabs.map((s) => slabBox(fit, b, s, gy)));
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
@@ -8572,14 +8918,20 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           if ((commercial || fd.style === 'shop') && b.h > 14 && rnd() < 0.35) {
             // 直式招牌:亞洲街景的垂直長條招牌,掛在牆面微凸 0.4m
             // 高度吃樓高、寬度由長寬比反推(同上:比例是硬約束,不是兩個各自的亂數)
-            const sh = Math.min(14, b.h * (0.45 + rnd() * 0.2));
-            const sw = sh * signAspect('wallsign');
+            const sh0 = Math.min(14, b.h * (0.45 + rnd() * 0.2));
             const face = Math.floor(rnd() * 4);              // 0:+x 1:−x 2:+z 3:−z
             const alongW = face < 2;
-            const off = (rnd() - 0.5) * (alongW ? b.d : b.w) * 0.5;
+            const roff = rnd() - 0.5;
+            // 掛牌的那一面:方盒吃整個足跡;庫節點吃**這個高度真的存在的那一段**的側面
+            // (舊制掛在方盒側面,而節點在那個高度只有方盒的 0.2 倍寬 ⇒ 牌子浮在半空,
+            //  §5ab-c 當時的處理是整批不掛 —— 那是繞過去不是修好)。
+            const sy = gy + b.h * 0.55 - 0.5;
+            const fw = bldFace(fit, b, gy, sy);
+            const hwF = fw ? fw.hw2 : b.w / 2, hdF = fw ? fw.hd2 : b.d / 2;
+            const off = roff * (alongW ? hdF : hwF) * 1.0;
             const [sx2, sz2] = alongW
-              ? toW((face === 0 ? 1 : -1) * (b.w / 2 + 0.4), off)
-              : toW(off, (face === 2 ? 1 : -1) * (b.d / 2 + 0.4));
+              ? toW((face === 0 ? 1 : -1) * (hwF + 0.4), off)
+              : toW(off, (face === 2 ? 1 : -1) * (hdF + 0.4));
             // **這棟已經有名字就讓給 worldtext**(2026-08-03 合併 main 的世界文字):
             // `buildWorldSigns` ④ 給每一棟有 `name` 的商業建物掛一塊 lightbox 立面招牌,
             // 而這裡挑的是同一批建物 ⇒ 不擋掉就是同一棟樓掛兩塊牌、而且寫**兩個不同的名字**
@@ -8589,10 +8941,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             // 這裡 MUST 是 `if` 不是 `return` —— 外層是 `list.forEach`,`return` 會**連同底下
             // 的天線一起跳掉**(改到的是別的系統,而畫面上只表現成「高樓的天線變少了」)。
             if (!resolveName(b.tags)) {
-              vis(wallSigns).push({
-                x: sx2, z: sz2, y: gy + b.h * 0.55 - 0.5,
+              // 牌高再收在那一段的高度內(剖面上半段只有幾公尺高時,14m 的長條會戳出去);
+              // 牌寬 MUST 由 `signAspect` 反推 —— 高一改寬就要跟著,否則牌面比例與貼圖不合,
+              // 字會被橫向壓成一條糊帶(A37 ⑤)
+              const sh = fw ? Math.min(sh0, (fw.y1 - fw.y0) * 0.9) : sh0;
+              wallSigns.push({
+                x: sx2, z: sz2, y: sy,
                 ry: b.ry + (alongW ? 0 : Math.PI / 2),
-                w: sw, h: sh,
+                w: sh * signAspect('wallsign'), h: sh,
               });
             }
           }
@@ -8626,13 +8982,14 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           mesh.frustumCulled = false;
           group.add(mesh);
         };
-        // 整棟量體庫節點:挑中的那幾棟幾何與方盒不同 ⇒ 只能另開 mesh,並依**位置雜湊**
-        // 分到名冊裡的哪一顆(零 rnd,同屋頂第二件配件那條;逐棟輪替除數取自名冊長度)。
-        // 庫沒載到 ⇒ `bldGeo` 回 null ⇒ 該列落回方盒桶 = **逐位元同舊制**(保險絲,原則 6)。
-        // `t.lib` = 哪一個名冊('mass' / 'masslow');同一個名冊裡分到哪一顆走**位置雜湊**
-        // (零 rnd,同屋頂第二件配件那條;輪替除數取自該名冊長度)。
-        // **列數逐件取**(`t.h` 是這一件自己的高度:主量體 / 退縮頂塔 / 臨街裙樓各不相同)
-        const rowsOf = (t) => facadeRows(t.h, commercial);
+        // 整棟量體庫節點:挑中的那幾棟幾何與方盒不同 ⇒ 只能另開 mesh。
+        // **哪一顆節點在 `fitNode` 就定案了**(2026-08-12):那裡是依「拉伸最小」挑的,
+        // 而拉伸倍率正是 `fitScale` 與碰撞剖面吃的東西 ⇒ 這裡再依位置雜湊挑一次就是
+        // 「畫的是 A、撞的是 B」。庫沒載到 ⇒ `buildBldBucket.mass` 退回**同一份剖面**疊的
+        // 保險絲幾何(不是落回方盒桶):碰撞柱已經是剖面,落回方盒會讓看到的與撞到的分家。
+        // **列數逐件取**(`t.h` 是這一件自己的高度:主量體 / 退縮頂塔 / 臨街裙樓各不相同;
+        // 庫節點那一列的 `t.h` 是**縮放係數**不是樓高 ⇒ 另存 `bh` 供列數用)
+        const rowsOf = (t) => facadeRows(t.bh ?? t.h, commercial);
         const boxRows = new Map(), libRows = new Map();
         for (const t of inst) {
           if (!t.lib) {
@@ -8641,10 +8998,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             boxRows.get(rw).push(t);
             continue;
           }
-          const ok = t.lib === 'masslow' ? lowOk : massOk;
-          const k = ok[Math.floor(djAt(t.x + 7.1, t.z + 3.3) * ok.length) % ok.length];
-          const bk = `${t.lib}#${k}`;
-          if (!libRows.has(bk)) libRows.set(bk, { key: t.lib, k, rows: [] });
+          const bk = `${t.lib.key}#${t.lib.k}`;
+          if (!libRows.has(bk)) libRows.set(bk, { key: t.lib.key, k: t.lib.k, rows: [] });
           libRows.get(bk).rows.push(t);
         }
         // BoxGeometry 群組順序 +x,-x,+y,-y,+z,-z
@@ -8655,8 +9010,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         }
         // 斜頂桶(`masslow`)**不吃這一款的立面貼圖** —— 見 FACADES_PITCHED 檔頭:庫節點是
         // 單一材質群組,方盒那條路的屋頂材質對它不生效 ⇒ 玻璃帷幕會直接貼到斜屋頂上。
-        // 屋頂本身走**同一張貼圖的底部那一條**(`MASS.ROOF_BAND`;節點的朝上面被
-        // `--roofband` 壓進去)⇒ 一個材質群組同時供牆與屋頂,draw call 一格都沒有多。
+        // 屋頂本身走**同一張貼圖的底部那一條**(`MASS.UVB.masslow.roof`;節點的朝上面被
+        // `--uvbands` 壓進去)⇒ 一個材質群組同時供牆與屋頂,draw call 一格都沒有多。
         // 材質逐款建一次(貼圖本身有 `_facadeCache`),款式由**落點雜湊**選(零 rnd)。
         // 列數同樣逐件取:低矮那一桶的高度跨到 MASS.MIN_H(55m),一款吃到底就是
         // 「穀倉三層、五十米的教堂也三層」= 這一輪要修的那個東西。
@@ -8667,7 +9022,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           const mk = `${pi}|${rw}`;
           if (!pitchMat.has(mk)) {
             const pd = FACADES_PITCHED[pi];
-            const pf = facadeTex(`${pd.key}r${rw}`, pd.cols, rw, pd.winC, pd.lit, pd.style, pd.wall, pd.roof, pd.rf);
+            const pf = facadeTex(`${pd.key}r${rw}`, pd.cols, rw, pd.winC, pd.lit, pd.style, pd.wall,
+              pd.roof, pd.rf, MASS.UVB.masslow, pd.win);
             pitchMat.set(mk, bmat(0xffffff, {
               map: pf.map,
               emissiveMap: pf.emissiveMap,
@@ -8685,7 +9041,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
         for (const { key, k, rows } of libRows.values()) {
           const byMat = new Map();
           for (const t of rows) {
-            const m = key === 'masslow' ? pitchWall(t) : wallOf(rowsOf(t));
+            // 兩桶都吃**三帶**(2026-08-12):高層那一桶原本刻意共用方盒的無帶貼圖,而那
+            // 正是「窗格印在退縮頂的斜切面與尖塔上」的成因(使用者這一輪的第 ③ 條)。
+            const m = key === 'masslow' ? pitchWall(t) : wallOf(rowsOf(t), true);
             if (!byMat.has(m)) byMat.set(m, []);
             byMat.get(m).push(t);
           }
@@ -9163,7 +9521,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
     pois: osmData?.pois, lowPower: lowPower(),
     // 語料庫招牌(直式招牌/屋頂看板/路標/佈告欄/解說牌)的字與落點
-    corpus: vtext, rnd: signRnd, used: signUsed, wallSigns, billboards,
+    corpus: vtext, rnd: signRnd, used: signUsed, wallSigns, billboards, bldFaces,
     roads: osmRoads || [],
     features: [
       ...landmarkG.map((lm) => ({ x: lm.x, z: lm.z, r: lm.r })),

@@ -47,6 +47,14 @@ const BREAK_STOREY = process.argv.includes('--break-storey');
 // 第二個整棟量體桶(低矮建物)的反向驗證:①兩桶挑選數加起來超出總額度
 // ②低矮桶拿掉保險絲 ③兩桶資格重疊(低矮那一邊漏掉門檻)
 const BREAK_MASS2 = process.argv.includes('--break-mass2');
+// 2026-08-12 三支(使用者「物理碰撞應該要與建模的 3D 外表一致」「調整目標物件到適合的大小」
+// 「不同建築使用窗戶圖層間距不要都一樣」):
+//   --break-prof  碰撞柱退回整顆方盒(剖面白量了)⇒ 碰撞剖面四條 MUST 紅字
+//   --break-fill  實例縮放退回直接吃 (w,h,d) 且拿掉拉伸夾制 ⇒ 尺寸貼合那一條 MUST 紅字
+//   --break-glass 窗格覆寫整批拿掉 ⇒ 間距種類與玻璃牆那兩條 MUST 紅字
+const BREAK_PROF = process.argv.includes('--break-prof');
+const BREAK_FILL = process.argv.includes('--break-fill');
+const BREAK_GLASS = process.argv.includes('--break-glass');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -519,12 +527,12 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         // 增刪桶 MUST 同步這裡與 tri_budget families.building(名冊桶數是 deco 那三桶的除數;
         // mass 刻意不進那個除數,理由見 tri_budget 的 mass.justification)。
       const uses = (bioC.match(/bldGeo\('(?:chimney|tank|acbox)'\) \|\| new THREE\.(?:Box|Cylinder)Geometry\(/g) || []).length
-        + (bioC.match(/bldGeo\(key, i\) \|\| new THREE\.BoxGeometry\(/g) || []).length;
+        // 整棟量體那一桶的保險絲自 2026-08-12 起是**剖面疊出來的**(與碰撞柱同源),
+        // 連剖面都沒宣告才退回單位方盒 —— 那是保險絲的保險絲
+        + (bioC.match(/bldGeo\(key, i\) \|\| \(prof \? profGeo\(prof, MASS\.UVB\[key\] \|\| MASS\.UVB\.mass\) : new THREE\.BoxGeometry\(1, 1, 1\)\)/g) || []).length;
       const calls = (bioC.match(/buildBldBucket\.(?:chimney|tank|acbox|mass)\(/g) || []).length;
-      // 探詢收成一支 `libOk(key)`(兩個整棟量體名冊共用)—— 逐桶各抄一次就是第二份實作
-      const probe = (bioC.match(/const libOk = \(key\) => \{ const a = \[\]; for \(let k = 0; k < bldLibN\(key\); k\+\+\) if \(bldGeo\(key, k\)\) a\.push\(k\); return a; \};/g) || []).length;
-      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 5 && calls === 4 && probe === 1,
-        `bldGeo 只在 buildBldBucket 四桶且逐桶帶原 primitive 保險絲、遊戲內消費點恰 4 處 + 探詢 1 處(實得 ${uses}/${calls}/${probe})`);
+      ok(uses === 4 && (bioC.match(/bldGeo\(/g) || []).length === 4 && calls === 4,
+        `bldGeo 只在 buildBldBucket 四桶且逐桶帶保險絲、遊戲內消費點恰 4 處(實得 ${uses}/${calls})`);
       // 兩個整棟量體桶只差**名冊與挑選規則**,幾何/材質/保險絲同一份實作 ⇒ 桶建構表
       // MUST NOT 長出第二支;`buildBldBucket.masslow` 一出現就是「兩桶的保險絲不一樣」。
       ok(/mass: \(n, mat, i = 0, key = 'mass'\) =>/.test(bioC) && !/masslow: \(n/.test(bioC),
@@ -536,7 +544,6 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       // 反向驗證:把這一段退回舊制(pick_n 與預算分家 / 拿掉保險絲閘 / 色抖吃新索引)
       const bioM = BREAK_MASS2
         ? bioC.replace('PICK_N_LOW: 8,', 'PICK_N_LOW: 16,')
-          .replace('const take = (key, ok, list, n) => { if (ok.length)', 'const take = (key, ok, list, n) => { if (1)')
           .replace('generic.filter((b) => !b.commercial && b.h <= MASS.MIN_H)', 'generic.filter((b) => true)')
         : BREAK_MASS
         ? bioC.replace('PICK_N: 8,', 'PICK_N: 24,')
@@ -565,46 +572,137 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       ok(budget.full_swap_cap < 50 && budget.full_swap_cap
         === Math.floor((budget.whole_factor - 1) * budget.measured_mass_total_max / budget.measured_mass_instances_max),
         `「整桶換」被量測否決的那個數也是推導值(${budget.full_swap_cap} tris ≪ §5o 的 500 面下限)`);
-      // ①挑選是純函式:零 rnd、只讀權威佈局資料、不讀庫幾何(§2.3 / A4)
-      const pickBlk = bioM.slice(bioM.indexOf('const libOk = (key)'), bioM.indexOf('for (const commercial of'));
+      // ①挑選是純函式:零 rnd、只讀權威佈局資料與**名冊裡的剖面**(純資料),不讀庫幾何
+      //   (§2.3 / A4)。2026-08-12 起額度是「挑到 n 棟為止」而不是 `.slice(0, n)` ——
+      //   拉伸過頭的那一棟會被跳過(退回方盒),額度留給下一棟。
+      const pickBlk = bioM.slice(bioM.indexOf('const massPick = new Map();'), bioM.indexOf('for (const commercial of'));
       ok(pickBlk.length > 80 && !/rnd\(/.test(pickBlk)
-        && /\.slice\(0, n\)/.test(pickBlk) && /MASS\.PICK_N\)/.test(pickBlk) && /MASS\.PICK_N_LOW\)/.test(pickBlk)
+        && /if \(taken >= n\) break;/.test(pickBlk) && /MASS\.PICK_N\)/.test(pickBlk) && /MASS\.PICK_N_LOW\)/.test(pickBlk)
         && /q\.h - p\.h \|\| p\.x - q\.x \|\| p\.z - q\.z/.test(pickBlk)
         && /q\.w \* q\.d - p\.w \* p\.d \|\| p\.x - q\.x \|\| p\.z - q\.z/.test(pickBlk),
         '整棟量體的挑選:零 rnd 消耗、兩桶各由自己的 pick_n 夾住、'
         + '高層排最高/低矮排足跡面積、同值時以座標定序(跨客戶端逐位元同一組)');
+      // ①-b **挑選與「庫載到了沒」解耦**(2026-08-12;碰撞柱改吃剖面之後這一條是致命的):
+      //     舊制的閘是 `if (ok.length)`,而它會讓「載到庫的客戶端登記剖面柱、沒載到的登記
+      //     方盒柱」⇒ 權威幾何跨客戶端分家(A30 + §2.3),畫面上只表現成「你說你打中了,
+      //     我這邊沒掉血」。挑選 MUST 只讀純資料;載入成敗只決定畫出來的是網格還是保險絲。
+      ok(!/bldGeo\(/.test(pickBlk) && !/libOk/.test(pickBlk) && /bldProfile\(key, k\)/.test(pickBlk),
+        '挑選只讀名冊純資料(bldProfile),不問庫載到了沒 —— 否則碰撞柱跨客戶端分家');
+      // ①-c **尺寸貼合**(使用者這一輪第 ①):實例縮放由剖面實測外廓推導(把網格撐滿基地),
+      //     拉伸倍率超過 `ASPECT_MAX` 就不換這一棟。舊制直接拿 (w,h,d) 縮單位方盒,而節點
+      //     只佔單位盒的 0.13~0.42 ⇒ 那幾棟塔樓縮在自己的空地中央、外面一圈看不見的碰撞盒。
+      const bioF = BREAK_FILL
+        ? bioC.replace('        sx: (f.rot ? b.d : b.w) * 0.5 / p.hw,', '        sx: (f.rot ? b.d : b.w),')
+          .replace('      if (!best || Math.exp(best.dist) > MASS.ASPECT_MAX) return null;', '      if (!best) return null;')
+        : bioC;
+      const fitBlk = bioF.slice(bioF.indexOf('const fitNode = (key, b) =>'), bioF.indexOf('for (const commercial of'));
+      ok(/sx: \(f\.rot \? b\.d : b\.w\) \* 0\.5 \/ p\.hw,/.test(fitBlk)
+        && /sy: b\.h \* 0\.5 \/ p\.hy,/.test(fitBlk)
+        && /sz: \(f\.rot \? b\.w : b\.d\) \* 0\.5 \/ p\.hd,/.test(fitBlk)
+        && /Math\.exp\(best\.dist\) > MASS\.ASPECT_MAX\) return null;/.test(fitBlk),
+        '實例縮放由剖面外廓推導(網格撐滿基地)且拉伸夾在 ASPECT_MAX 內(超過就不換這一棟)');
       // ②-a 兩桶**互斥**且共用同一個門檻:高層 = commercial && h > MIN_H、低矮 = h <= MIN_H。
       //     低矮那一邊漏掉門檻 ⇒ 同一棟樓可能被兩個名冊各挑一次(後挑的覆寫前一個),
       //     而預算是照「總共挑幾棟」算的 ⇒ 帳與畫面同時錯,兩邊都不報錯。
       ok(/b\.commercial && b\.h > MASS\.MIN_H/.test(pickBlk) && /!b\.commercial && b\.h <= MASS\.MIN_H/.test(pickBlk),
         '兩桶資格取自同兩個既有判準的對角線兩格(高層 commercial && h > MIN_H / '
         + '低矮 !commercial && h <= MIN_H,互斥;另兩格刻意維持方盒)');
-      // ②-b 庫沒載到 ⇒ 那一桶一棟都不挑 ⇒ 逐位元同舊制(保險絲;**逐桶各自成立**)
-      ok(/const take = \(key, ok, list, n\) => \{ if \(ok\.length\)/.test(bioM),
-        '名冊/庫整批取不到 ⇒ 該桶一棟都不挑 ⇒ 主量體落回單位方盒(逐位元同舊制;逐桶各自成立)');
+      // ②-b 名冊沒宣告剖面 ⇒ `bldProfile` 回 null ⇒ `fitNode` 挑不到 ⇒ 那一桶一棟都不換
+      //     ⇒ 逐位元同舊制(保險絲;**逐桶各自成立**)
+      ok(/const f = fitNode\(key, b\);\s*\r?\n\s*if \(!f\) continue;/.test(bioM)
+        && /if \(!best \|\| Math\.exp\(best\.dist\) > MASS\.ASPECT_MAX\) return null;/.test(bioM),
+        '名冊剖面缺席或拉伸過頭 ⇒ 該棟不換 ⇒ 主量體落回單位方盒(逐位元同舊制;逐桶各自成立)');
       // ③色抖的雜湊吃原始序:拆桶後拿新索引去雜湊會讓其餘每一棟的配色跟著平移
       const emitBlk = bioM.slice(bioM.indexOf('const emitMass = (rows, mesh) =>'), bioM.indexOf('const boxRows = new Map()'));
       ok(/inst\.forEach\(\(t, i\) => \{ t\.ord = i; \}\);/.test(bioM)
         && /\(\(t\.ord \* 2654435761\)/.test(emitBlk) && /\(\(t\.ord \* 1597334677\)/.test(emitBlk)
         && !/\(\(i \* \d+\) >>> 0\) % 100/.test(emitBlk),
         '逐實例色抖吃 inst 的原始序 t.ord(拆桶不改其餘建物的配色)');
-      // ④碰撞/LOS 一格不動(A30):有向盒仍由 b.w/h/d 推導,MUST NOT 讀庫幾何
-      const blkSeg = bioC.slice(bioC.indexOf('blockers.push({ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d)'));
-      ok(/hw2: b\.w \/ 2, hd2: b\.d \/ 2, ry: b\.ry/.test(blkSeg.slice(0, 400)),
-        '整棟庫節點不動碰撞/LOS:有向盒仍是 b.w/b.d/b.ry(A30,權威幾何一格不動)');
-      // ⑤純視覺附件改推丟棄桶(節點自帶頂部造型 ⇒ 程序頂塔/看板/天線會浮在半空),
+      // ④**碰撞剖面**(2026-08-12;使用者「物理碰撞應該要與建模的 3D 外表一致」)。
+      //   舊制:挑中庫節點的那幾棟碰撞柱仍是整個足跡的單一方盒,而剖面體積只佔它的
+      //   16%~38%(tri_budget profile_spec.measured_solid)⇒ 退縮塔上半段整圈是空氣卻擋彈、
+      //   擋 LOS、爬得上去。改成**一段一根有向盒**:三端(客戶端 `_collide`/`_blockerHitT`、
+      //   伺服器 occ)一行都不用改(A30 只認有向盒與圓柱)。
+      {
+        const bioP = BREAK_PROF
+          ? bioC.replace('const cols = fit\n', 'const cols = false\n')
+          : bioC;
+        const blkSeg = bioP.slice(bioP.indexOf('const cols = fit'), bioP.indexOf('if (fit) bldFaces.set(b,'));
+        ok(/fit\.prof\.slabs\.map\(\(s, si\) => \{/.test(blkSeg) && /hw2: bx\.hw2, hd2: bx\.hd2, ry: b\.ry, ty: bx\.y1/.test(blkSeg),
+          '挑中庫節點的那幾棟:碰撞柱逐段登記(有向盒仍是 A30 那一種,只是一顆變一疊)');
+        // 地面那一段 MUST 仍是整個足跡(剖面最寬的一段被 `fitScale` 撐到 OSM 足跡)⇒
+        // 街廓通行寬逐位元同舊制(`audit_traverse` 不動);收窄的只有上面的退縮階與山牆
+        ok(/const bot = si === 0 \? gy - 1 : bx\.y0;/.test(blkSeg),
+          '最底那一段仍沉進地形 1m(地面層的通行寬與舊制逐位元相同)');
+        // 每一段各帶自己的 ty ⇒ 退縮平台站得上去;h 一律比可見頂高 0.5m(同舊制那一條)
+        ok(/h: bx\.y1 \+ 0\.5 - bot,/.test(blkSeg),
+          '每一段的碰撞柱比自己的可見頂高 0.5m(站上退縮平台不被垂直閘推下去)');
+        // 方盒那條路**逐位元不變**:沒挑中的仍是整顆 b.w/b.d/b.ry
+        ok(/hw2: b\.w \/ 2, hd2: b\.d \/ 2, ry: b\.ry, ty: gy \+ b\.h - 0\.5 \}\]/.test(blkSeg),
+          '沒挑中庫節點的仍是單顆有向盒 b.w/b.d/b.ry(逐位元同舊制)');
+      }
+      // ④-b **保險絲幾何直測**(執行 `profGeo` 原文,THREE 給樁)。這一支只有兩種壞法,
+      //     而兩種在離線讀原文時都看不出來:①面的繞向反了 ⇒ 那一面背朝外,從外面看穿;
+      //     ②UV 的三帶算錯 ⇒ 窗格印在屋頂帶或素牆帶上。兩者都要真的算一次才知道。
+      {
+        // `bioC` 已剝註解 ⇒ 錨點取程式碼本身(下一個 `export const`),MUST NOT 拿註解當界
+        const seg = bioC.slice(bioC.indexOf('function profGeo('),
+          bioC.indexOf('export const buildBldBucket'));
+        const THREE = {
+          BufferGeometry: class { constructor() { this.a = {}; } setAttribute(k, v) { this.a[k] = v; } setIndex(i) { this.idx = i; } computeBoundingSphere() {} },
+          Float32BufferAttribute: class { constructor(arr) { this.array = arr; } },
+        };
+        const UVB = { mass: { roof: 0.125, plain: 0.176 }, masslow: { roof: 0.216, plain: 0.262 }, MINZ: 0.30, WALL_NY: 0.15 };
+        let g = null, err = null;
+        const prof = { slabs: [[-0.475, -0.1187, 0.378, 0.4198], [-0.1187, 0.1187, 0.3044, 0.2268],
+          [0.1187, 0.4156, 0.2978, 0.1715], [0.4156, 0.475, 0.1347, 0.0813]] };
+        try {
+          g = new Function('THREE', 'MASS', `${seg}\n return profGeo;`)(THREE, { UVB })(prof, UVB.mass);
+        } catch (e) { err = e.message; }
+        if (!g) ok(false, `profGeo 原文跑不起來:${err}`);
+        else {
+          const pos = g.a.position.array, nor = g.a.normal.array, uv = g.a.uv.array, idx = g.idx;
+          let bad = 0; const band = { roof: [], plain: [], wall: [] };
+          for (let i = 0; i < idx.length; i += 3) {
+            const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
+            const ux = pos[b] - pos[a], uy = pos[b + 1] - pos[a + 1], uz = pos[b + 2] - pos[a + 2];
+            const vx = pos[c] - pos[a], vy = pos[c + 1] - pos[a + 1], vz = pos[c + 2] - pos[a + 2];
+            const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+            const L = Math.hypot(nx, ny, nz) || 1;
+            if ((nx / L) * nor[a] + (ny / L) * nor[a + 1] + (nz / L) * nor[a + 2] < 0.99) bad++;
+            for (const V of [idx[i], idx[i + 1], idx[i + 2]]) {
+              const n1 = nor[V * 3 + 1], v = uv[V * 2 + 1];
+              band[n1 > UVB.MINZ ? 'roof' : Math.abs(n1) > UVB.WALL_NY ? 'plain' : 'wall'].push(v);
+            }
+          }
+          ok(pos.length / 3 === prof.slabs.length * 24 && idx.length / 3 === prof.slabs.length * 12 && !bad,
+            `保險絲幾何 = 剖面疊盒(${prof.slabs.length} 段 → ${idx.length / 3} 面),每一面都朝外(繞向錯 ${bad} 面)`);
+          const lo = UVB.mass.roof, hi = lo + UVB.mass.plain;
+          const inb = (a, x, y) => a.length && Math.min(...a) >= x - 1e-6 && Math.max(...a) <= y + 1e-6;
+          ok(inb(band.roof, 0, lo) && inb(band.plain, lo, hi) && inb(band.wall, hi, 1),
+            `保險絲的 UV 三帶與庫節點同一份規則(屋頂 ≤ ${lo}、素牆 ∈ [${lo}, ${hi.toFixed(3)}]、窗牆 ≥ ${hi.toFixed(3)})`);
+        }
+      }
+      // ⑤屋頂上的純視覺附件改推丟棄桶(節點自帶頂部造型 ⇒ 程序頂塔/看板/天線會浮在半空),
       //   而**帶碰撞柱的兩件 MUST NOT 進丟棄桶** —— 少掛一根碰撞柱 = 載到庫的客戶端與
       //   沒載到的權威幾何分家。`vis()` 只換「推去哪裡」,rnd() 一枚都不能少(A4)。
       {
         const fSeg = bioM.slice(bioM.indexOf('const inst = [];'), bioM.indexOf('inst.forEach((t, i) => { t.ord = i; });'));
         const visN = (fSeg.match(/\bvis\([a-zA-Z]/g) || []).length;
-        ok(/const vis = \(arr\) => \(libMass \? sink : arr\);/.test(fSeg) && visN >= 15,
+        ok(/const vis = \(arr\) => \(fit \? sink : arr\);/.test(fSeg) && visN >= 15,
           `純視覺附件經 vis() 分流(實得 ${visN} 處;丟棄桶只換目的地,不動 rnd)`);
-        ok(!/vis\(blockers\)/.test(fSeg) && (fSeg.match(/blockers\.push\(/g) || []).length === 2,
-          '兩處 blockers.push(主量體 + 臨街裙樓)MUST NOT 走丟棄桶(碰撞柱不隨庫的有無增減)');
+        ok(!/vis\(blockers\)/.test(fSeg) && (fSeg.match(/blockers\.push\(/g) || []).length === 2
+          && /for \(const c of cols\) blockers\.push\(c\);/.test(fSeg),
+          '碰撞柱兩個 push 出口(主量體逐段 + 臨街裙樓)MUST NOT 走丟棄桶(不隨庫的有無增減)');
         // 主量體那一列自己也不能被分流掉 —— 它就是要被庫節點取代的那一列
-        ok(/\n\s+inst\.push\(\{ x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5,/.test(fSeg),
+        ok(/\n\s+inst\.push\(\{\r?\n\s+x: b\.x, y: gy \+ b\.h \/ 2 - 0\.5, z: b\.z,/.test(fSeg),
           '主量體那一列直接進 inst(它才是被庫節點取代的那一列,不進丟棄桶)');
+        // ⑤-b **牆面直式招牌不再整批丟掉**(2026-08-12 使用者「招牌會懸空」)——
+        //     它當初被丟的理由是「掛在方盒側面而節點比方盒瘦 ⇒ 浮在半空」,而落點改吃剖面
+        //     之後那個理由消失了。丟著不管等於「最顯眼的十幾棟樓一塊招牌都沒有」。
+        ok(!/vis\(wallSigns\)/.test(fSeg) && /wallSigns\.push\(\{/.test(fSeg)
+          && /const fw = bldFace\(fit, b, gy, sy\);/.test(fSeg),
+          '牆面招牌落點吃剖面側面(不再整批丟掉,也不再掛在方盒側面的空氣裡)');
       }
       // ⑥**屋頂帶**(2026-08-09 §5ao):庫節點只有一個材質群組 ⇒ 方盒那條路的屋頂材質對它
       //   不生效(窗格印在斜屋頂上),而拆群組會多一個 draw call ⇒ 區分移進 UV。
@@ -612,34 +710,63 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       //   由 intake_parts 直接量**(那才是節點真的長什麼樣,指令打對了沒不算數)。
       {
         const bioR = BREAK_ROOF
-          ? bioC.replace('ROOF_BAND: 0.273,', 'ROOF_BAND: 0.2,')
-            .replace('pd.style, pd.wall, pd.roof, pd.rf)', 'pd.style, pd.wall)')
+          ? bioC.replace('    masslow: { roof: 0.216, plain: 0.262 },', '    masslow: { roof: 0.2, plain: 0.262 },')
+            .replace('pd.style, pd.wall,\n              pd.roof, pd.rf, MASS.UVB.masslow, pd.win)', 'pd.style, pd.wall)')
           : bioC;
-        const R = bioR.match(/ROOF_BAND:\s*([\d.]+),[\s\S]*?ROOF_MINZ:\s*([\d.]+),/);
-        ok(!!R && +R[1] === budLow.roof_band && +R[2] === budLow.roof_minz,
-          `屋頂帶的兩個數字與 tri_budget 同一份(帶寬 ${R?.[1]}/${budLow.roof_band}、`
-          + `朝上門檻 ${R?.[2]}/${budLow.roof_minz};節點那一側是 --roofband 烤進 UV 的同一組)`);
-        // 斜頂那條呼叫端 MUST 傳屋頂色與屋頂形式;方盒那條(FACADES 16 款)MUST NOT 傳
-        // ⇒ `band = 0` ⇒ `WH === H` ⇒ 既有 16 款與六支地標**逐位元不變**
-        ok(/facadeTex\(`\$\{pd\.key\}r\$\{rw\}`, pd\.cols, rw, pd\.winC, pd\.lit, pd\.style, pd\.wall, pd\.roof, pd\.rf\)/.test(bioR)
-          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}`, fd\.cols, rows, fd\.winC, fd\.lit, fd\.style, fd\.wall\)/.test(bioR),
-          '屋頂帶只餵給斜頂那一桶(方盒那條仍只傳到 wall ⇒ 16 款與地標逐位元不變)');
-        // 牆的繪製一律吃 `WH`(= H − 帶高):殘留一個 `H` 就是基座暗帶/遮陽棚被屋頂帶蓋掉
+        const budHi = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.mass;
+        const R = bioR.match(/UVB: \{\s*\r?\n\s*mass: \{ roof: ([\d.]+), plain: ([\d.]+) \},\s*\r?\n\s*masslow: \{ roof: ([\d.]+), plain: ([\d.]+) \},\s*\r?\n\s*MINZ: ([\d.]+),\s*\r?\n\s*WALL_NY: ([\d.]+),/);
+        ok(!!R && +R[1] === budHi.roof_band && +R[2] === budHi.plain_band
+          && +R[3] === budLow.roof_band && +R[4] === budLow.plain_band
+          && +R[5] === budLow.roof_minz && +R[6] === budLow.wall_ny,
+          `三帶的六個數字與 tri_budget 同一份(高層 ${R?.[1]}/${R?.[2]}、低矮 ${R?.[3]}/${R?.[4]}、`
+          + `門檻 ${R?.[5]}/${R?.[6]};節點那一側是 --uvbands 烤進 UV 的同一組)`);
+        // 兩個庫節點桶都 MUST 傳帶(2026-08-12:高層那一桶原本刻意不傳,而那正是「窗格印在
+        // 退縮頂的斜切面與尖塔上」的成因);方盒那條(FACADES 16 款)MUST NOT 傳
+        // ⇒ `band = pband = 0` ⇒ `WW === H` ⇒ 既有 16 款與六支地標**逐位元不變**
+        ok(/pd\.roof, pd\.rf, MASS\.UVB\.masslow, pd\.win\)/.test(bioR)
+          && /band \? fd\.roof : 0, band \? 'flat' : '', band \? MASS\.UVB\.mass : null, fd\.win\)/.test(bioR)
+          && /wallOf\(rowsOf\(t\), true\)/.test(bioR) && /const wall = wallOf\(rw\);/.test(bioR),
+          '兩個庫節點桶都吃三帶,方盒那條不吃(⇒ 16 款與地標逐位元不變)');
+        // 牆的繪製一律吃 `WW`(= H − 屋頂帶 − 素牆帶):殘留一個 `H` 就是基座暗帶/遮陽棚
+        // 被帶蓋掉;而 `wallLayer` 吃 `WH`(素牆帶就是「這棟樓的牆,只是沒有窗」)
         const fx = bioR.slice(bioR.indexOf('function facadeTex('), bioR.indexOf('// 一般建物外牆色盤'));
-        ok(!/\bH - \d/.test(fx) && (fx.match(/\bWH\b/g) || []).length >= 6
-          && /const band = roofC \? Math\.round\(H \* MASS\.ROOF_BAND\) : 0;/.test(fx),
-          '牆的繪製全部吃 WH(H − 帶高);沒有屋頂色 ⇒ band = 0 ⇒ WH === H');
+        ok(!/\bH - \d/.test(fx) && (fx.match(/\bWW\b/g) || []).length >= 6
+          && /const band = roofC \? Math\.round\(H \* \(bands \? bands\.roof : 0\)\) : 0;/.test(fx)
+          && /const pband = roofC && bands \? Math\.round\(H \* bands\.plain\) : 0;/.test(fx)
+          && /wallLayer\(cx, W, WH, wall, rnd\);/.test(fx),
+          '窗的繪製全部吃 WW(H − 兩帶)、牆材質吃 WH;沒有屋頂色 ⇒ 兩帶皆 0 ⇒ WW === H');
         // 屋頂圖樣一份實作一個呼叫點,且畫在畫布**底部**那一條(v=0 那一側)
         ok((bioR.match(/function roofLayer\(/g) || []).length === 1
           && (bioR.match(/\broofLayer\(/g) || []).length === 2
           && /if \(band\) roofLayer\(cx, W, WH, band,/.test(fx),
-          '屋頂圖樣只有 roofLayer 一份實作、一個呼叫點,畫在畫布底部那一條(= UV 的 v ∈ [0, BAND])');
+          '屋頂圖樣只有 roofLayer 一份實作、一個呼叫點,畫在畫布底部那一條(= UV 的 v ∈ [0, roof))');
         // 六款的「牆 × 屋頂形式」MUST 兩兩不同 —— 使用者要的「不同類型/風格/屋頂形式都要
         // 不同」在這張表上就是這件事;少了它,新增一款只要複製貼上就會多一款一模一樣的
-        const pit = [...bioR.matchAll(/\{ key: 'pit\d'[^}]*wall: '(\w+)',\s*roof: 0x[0-9a-f]+, rf: '(\w+)' \}/g)]
+        const pit = [...bioR.matchAll(/\{ key: 'pit\d'[^}]*wall: '(\w+)',\s*roof: 0x[0-9a-f]+, rf: '(\w+)'/g)]
           .map((m) => `${m[1]}/${m[2]}`);
         ok(pit.length === 6 && new Set(pit).size === 6,
           `斜頂六款的「牆 × 屋頂形式」兩兩不同(${pit.join('、')})`);
+      }
+      // ⑥-b **窗戶圖層間距逐款不同 + 幾乎無間距的玻璃牆**(2026-08-12 使用者定案)。
+      //     舊制只有兩組窗格幾何(帷幕 0.86×0.62、其餘一律 0.52×0.48)⇒ 十六款樓的窗間距
+      //     只有兩種,一整條街讀起來是同一張貼圖。層高本身仍夾在 STOREY 帶內(2026-08-09
+      //     的定案不動)—— 兩件事正交:層高是現實約束,窗佔比是建築風格。
+      {
+        // 壞版 = 這一輪之前的樣子:窗格幾何只有兩組、沒有無縫玻璃牆這一款
+        const bioG = BREAK_GLASS
+          ? bioC.replace(/win: \[0\.\d+, 0\.\d+\] \}/g, '}').replace(/style: 'glass'/g, "style: 'curtain'")
+          : bioC;
+        const wins = [...bioG.matchAll(/win: \[([\d.]+), ([\d.]+)\]/g)].map((m) => +m[2]);
+        ok(wins.length >= 20 && new Set(wins).size >= 8,
+          `窗的高佔比逐款不同(${wins.length} 款、${new Set(wins).size} 種間距;舊制只有 2 種)`);
+        const glass = (bioG.match(/style: 'glass'/g) || []).length;
+        const fxG = bioG.slice(bioG.indexOf('function facadeTex('), bioG.indexOf('// 一般建物外牆色盤'));
+        ok(glass >= 1 && /style === 'glass'/.test(fxG) && /cx\.fillRect\(0, 12, W, WW - 26\);/.test(fxG),
+          `幾乎無間距的玻璃牆是一種立面而不是一組參數(${glass} 款走 glass:整面玻璃 + 髮絲框,沒有裙板帶)`);
+        // 覆寫 MUST **置中**:給了高卻讓窗黏在上緣的話,窗越高裙板就越偏,而使用者要的正是
+        // 「間距不一樣」而不是「窗往上跑」
+        ok(/\? \[\(1 - win\[0\]\) \/ 2, \(1 - win\[1\]\) \/ 2, win\[0\], win\[1\]\]/.test(fxG),
+          '窗格覆寫由佔比反推置中偏移(不是把窗黏在格子上緣)');
       }
       // ⑦**樓層間距**(2026-08-09 使用者定案:「不同建築可以有不同窗戶大小,但上下樓層
       //   間距要在合理差異範圍以內」)。立面貼圖沒有 per-instance repeat ⇒ 一張圖被拉滿
@@ -702,11 +829,14 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
             `同一棟的附件件另外取列數(100m 主體 ${facadeRows(100, true)} 列、12m 裙樓 ${facadeRows(12, true)} 列)`);
         }
         // 單一縫:一份定義、三個消費端都經 `rowsOf`,而快取鍵 MUST 帶列數
+        // `t.h` 對庫節點那一列自 2026-08-12 起是**縮放係數**不是樓高(fitScale 把網格撐滿基地)
+        // ⇒ 列數 MUST 改吃另存的真樓高 `t.bh`;吃錯的話那幾棟塔樓的層高會是「係數公尺」
         ok((bioC.match(/function facadeRows\(/g) || []).length === 1
-          && /const rowsOf = \(t\) => facadeRows\(t\.h, commercial\);/.test(bioC)
+          && /const rowsOf = \(t\) => facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)
+          && /bh: b\.h,/.test(bioC)
           && (bioC.match(/rowsOf\(/g) || []).length === 3
-          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}`/.test(bioC) && /facadeTex\(`\$\{pd\.key\}r\$\{rw\}`/.test(bioC),
-          '列數只有 facadeRows 一份、逐件經 rowsOf、貼圖快取鍵帶列數(不帶 = 第一個算出來的列數被全場共用)');
+          && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}\$\{band \? 'b' : ''\}`/.test(bioC) && /facadeTex\(`\$\{pd\.key\}r\$\{rw\}`/.test(bioC),
+          '列數只有 facadeRows 一份、逐件經 rowsOf(庫節點吃真樓高 bh)、貼圖快取鍵帶列數與帶位');
         // 舊制退場:款表不再帶 rows、樓高分桶表不得復辟
         ok(!/FACADE_BUCKETS/.test(bioC) && !/\{ key: '(?:res|com)\d', cols: \d+, rows:/.test(bioC),
           '款表不再自帶 rows、FACADE_BUCKETS 已退場(款只管窗長什麼樣,層高歸 STOREY)');
