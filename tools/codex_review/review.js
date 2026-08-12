@@ -298,7 +298,8 @@ function forgeBuild() {
   const doc = forge.conversionDoc(fapp.draft)
     .map((r2) => `<tr><td>${esc(r2.feat)}</td><td>${esc(r2.part)}</td></tr>`).join('');
   const docBox = $('crForgeDoc');
-  if (docBox) docBox.innerHTML = `<table class="cr-ftab"><tr><th>人形特徵(VRM 骨)</th><th>機器人零件</th></tr>${doc}</table>`;
+  const featTh = fapp.draft.kind === 'quad' ? '生物特徵' : '人形特徵(VRM 骨)';
+  if (docBox) docBox.innerHTML = `<table class="cr-ftab"><tr><th>${featTh}</th><th>機器人零件</th></tr>${doc}</table>`;
 }
 
 async function mountForge(id) {
@@ -311,7 +312,7 @@ async function mountForge(id) {
   }
   const { forge } = FORGE;
   const base = forge.MECH_SPECS.find((s) => s.id === id);
-  if (!base) { sec.hidden = true; return; }                      // 非人形名冊(四足/無人機)不出鍛造區塊
+  if (!base) { sec.hidden = true; return; }                      // 不在鍛造名冊(無人機/未建模)不出鍛造區塊
   sec.hidden = false;
   // 2D 原型圖參考帶(2026-08-12 使用者:「下載原型圖片放在機體台,3D建模時需參考2D圖片
   // 設計零件進行組合」):資料 = 伺服器端 manifest 推導的 shots(MUST NOT 在這裡另拼檔名);
@@ -331,8 +332,10 @@ async function mountForge(id) {
   }
   fapp.id = id;
   fapp.draft = forge.mergeSpec(base, fapp.ovr[id]);
-  // 版面:左 canvas、右控制欄(滑桿由 HUMANOID 特徵表推導,不手寫清單)
-  const propRows = Object.keys(forge.HUMANOID).map((k) => {
+  // 版面:左 canvas、右控制欄(滑桿由 HUMANOID 特徵表推導,不手寫清單)。
+  // 四足獸鷹架(spec.kind 'quad')不吃人形比例 ⇒ 不出滑桿(比例住 mechs/<id>.js 的 frame)。
+  const quad = base.kind === 'quad';
+  const propRows = quad ? '' : Object.keys(forge.HUMANOID).map((k) => {
     const [lo, hi] = PROP_RANGE[k] || [0, 1];
     const v = fapp.draft.prop?.[k] ?? forge.HUMANOID[k].def;
     return `<label class="cr-frow"><span>${k}</span>
@@ -359,7 +362,7 @@ async function mountForge(id) {
         </div>
       </div>
       <div class="cr-fctl">
-        <div class="cr-dim">人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)</div>
+        <div class="cr-dim">${quad ? '四足獸鷹架:骨架比例住 mechs/*.js 的 frame(無人形滑桿)' : '人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)'}</div>
         ${propRows}
         <div class="cr-dim">細節旋鈕</div>
         ${knobRows}

@@ -12,9 +12,14 @@
 //   mechs/<id>.js  逐機「特徵 → 零件」檔(一台一檔,對照各自的 2D 定案圖)
 //   forge.js       特徵表 + 規格合併 + 鍛造鷹架(本檔;不含任何逐機幾何)
 //
-// 名冊 = 遊戲真名冊的人形子集(8 台):
+// 名冊 = 遊戲真名冊的人形子集(8 台)+ 仿生機甲子集(8 台;2026-08-12 使用者:
+// 「以機體台標注的最愛(★)圖像為 2D 定案圖,設計仿生機型生成 3D 建模」):
 //   機甲 4:t01 bastion / t02 seraph / t10 aegis / t12 colossus
 //   變形者人形地面型 4(data.js MORPH_HUMANOID):t06 monkey / t11 atlas / m01 vampire / m05 wolf
+//   仿生四足 4(D.kind 'quad';rig 鏡射 models.js buildBeastMech):
+//     s06 centaur 半人馬 / s07 cthulhu 頭足類 / t04 hound 獵犬 / m06 stego 劍龍
+//   仿生雙足 4(既有 biped 鷹架 + 獸型旗標,rig 鏡射 models.js buildBipedBeast):
+//     s09 roo 袋鼠 / t03 gorilla 大猩猩 / t05 ostrich 鴕鳥 / m02 trex 暴龍
 // 每台的關節「機構語彙」刻意互異(這正是獨特細節的骨幹):
 //   t01 外露液壓缸+缸頭環 / t02 雙件式肌腱缸 / t10 全包覆+彈匣筒 / t12 疊板+節端軸環 /
 //   t06 裸缸+亮桿芯 / t11 工業液壓+鉚釘 / m01 烤漆蓋板細縫 / m05 圓盤螺栓+外露腱桿。
@@ -73,15 +78,17 @@ export function mergeSpec(base, ovr) {
 }
 
 // ══════════ ② 名冊與規格解析(逐機幾何住 mechs/<id>.js)══════════
-export const FORGE_IDS = ['t01', 't02', 't10', 't12', 't06', 't11', 'm01', 'm05'];
+export const FORGE_IDS = ['t01', 't02', 't10', 't12', 't06', 't11', 'm01', 'm05',
+  's06', 's07', 't04', 'm06', 's09', 't03', 't05', 'm02'];
 
 /** 出廠規格(單一真相;specs.json 只放覆寫) */
 export const MECH_SPECS = FORGE_IDS.map((id) => {
   const d = MECH_DETAIL[id];
   return {
     id, label: d.label, hue: d.hue,
-    height: 6.0,                       // 展示台統一取景高;正式整合走 heroTargetH
-    prop: d.prop, gait: d.gait, knobs: { barrelF: 1, accentF: 1 },
+    kind: d.kind || 'biped',           // 'quad' = 四足獸鷹架(比例滑桿不適用,看板依此分流)
+    height: d.height ?? 6.0,           // 展示台統一取景高;正式整合走 heroTargetH
+    prop: d.prop || {}, gait: d.gait, knobs: { barrelF: 1, accentF: 1 },
     moveSig: d.moveSig, castSig: d.castSig,
   };
 });
@@ -93,13 +100,39 @@ export function conversionDoc(spec) {
   return (MECH_DETAIL[spec.id]?.doc || []).map(([feat, part]) => ({ feat, part }));
 }
 
+// ---- 兩座鷹架共用的收尾(關節點標記 / 發光登記 / 描邊)----------------------
+const jointDotF = (joints) => (x, y, z) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7fd8ff, depthTest: false }));
+  m.userData.noOutline = true;
+  m.renderOrder = 5;
+  m.position.set(x, y, z);
+  joints.add(m);
+};
+function finishRig(g, rig, W, K, H, D, ctx, F) {
+  if (D.extra) D.extra(ctx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
+  // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
+  if (K.accentF !== 1) g.traverse((o) => {
+    if (o.isMesh && o.material?.emissiveIntensity) o.material.emissiveIntensity *= K.accentF;
+  });
+  rig.lightGlow = (W.lightGlowM || []).map((m) => ({ mesh: m, base: m.material.emissiveIntensity }));
+  const hg = (W.heavyGlowM || []).map((m) => ({ mesh: m, base: m.material.emissiveIntensity }));
+  rig.heavy = rig.heavy && rig.heavy.glow.length
+    ? { glow: [...rig.heavy.glow, ...hg], pivot: W.heavyPivot || [] }
+    : { glow: hg, pivot: W.heavyPivot || [] };
+  outlinify(g, outlineWF(H));
+}
+
 /**
- * 鍛造一台人形機體:規格 → 具名 Group 零件樹 + 完整 rig 契約。
+ * 鍛造一台機體:規格 → 具名 Group 零件樹 + 完整 rig 契約。
  * 回傳 { group, rig, joints }。knobs:barrelF 武器長度倍率 / accentF 發光強度倍率。
+ * D.kind 'quad' 分流到四足獸鷹架(forgeQuadMech);其餘走人形/獸型雙足 biped 鷹架 ——
+ * 獸型雙足(roo/gorilla/ostrich/trex)沿用本鷹架,獸型旗標(hop/bound/knuckle/grounded/
+ * tuckArms/tinyArms/leanF/tailUp/tailSegs)由 D.extra 直接掛回 rig(t06 先例)。
  */
 export function forgeHumanoidMech(spec) {
   const D = MECH_DETAIL[spec.id];
   if (!D) throw new Error(`未知機型:${spec.id}`);
+  if (D.kind === 'quad') return forgeQuadMech(spec, D);
   const P = resolveProp(spec);
   const H = spec.height;
   const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
@@ -122,13 +155,7 @@ export function forgeHumanoidMech(spec) {
   const joints = new THREE.Group();
   joints.visible = false;
   g.add(joints);
-  const jointDot = (x, y, z) => {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7fd8ff, depthTest: false }));
-    m.userData.noOutline = true;
-    m.renderOrder = 5;
-    m.position.set(x, y, z);
-    joints.add(m);
-  };
+  const jointDot = jointDotF(joints);
 
   const baseCtx = { PAL, accent, G, H, K, dark: PAL.dark, binderPivots: [], vlsPorts: [], dims: { shoulderYl, waistYl, shoulderX } };
   const pose = D.pose || {};
@@ -157,9 +184,21 @@ export function forgeHumanoidMech(spec) {
   const chest = new THREE.Group();
   hips.add(chest);
   D.chest(baseCtx, chest, { shoulderX, shoulderY: shoulderYl, waistY: waistYl });
+  // 選用頸樞軸(D.neckAt = 胸腔局部 [x,y,z]):插在 chest 與 head 之間,世界位置不變 ——
+  // 長頸獸型雙足(鴕鳥/暴龍)的凝視穩定走兩段分攤(locomotion stabilizeHead 的 neck 分支)。
   const head = new THREE.Group();
-  head.position.set(0, headYl, 0.04);
-  chest.add(head);
+  let neckG = null;
+  if (D.neckAt) {
+    neckG = new THREE.Group();
+    neckG.position.set(D.neckAt[0], D.neckAt[1], D.neckAt[2]);
+    chest.add(neckG);
+    head.position.set(-D.neckAt[0], headYl - D.neckAt[1], 0.04 - D.neckAt[2]);
+    neckG.add(head);
+    if (D.neck) D.neck(baseCtx, neckG);
+  } else {
+    head.position.set(0, headYl, 0.04);
+    chest.add(head);
+  }
   D.head(baseCtx, head);
   jointDot(0, hipY, 0); jointDot(0, shoulderY, 0); jointDot(0, headY, 0.04);
 
@@ -183,7 +222,7 @@ export function forgeHumanoidMech(spec) {
   const stride = (thighL + shinL) * spec.gait.strideF * 2;
   const rig = g.userData.rig = {
     kind: 'biped',
-    hips, chest, head, legL, legR, armL, armR,
+    hips, chest, head, neck: neckG, legL, legR, armL, armR,
     legChainL, legChainR, armChainL, armChainR,
     hipsY0: hipY, headY0: headYl,
     stride, bob: spec.gait.bob, sway: spec.gait.sway, top: spec.gait.top,
@@ -199,18 +238,114 @@ export function forgeHumanoidMech(spec) {
     moveSig: spec.moveSig, castSig: spec.castSig,
     s: 1,
   };
-  if (D.extra) D.extra(baseCtx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
+  finishRig(g, rig, W, K, H, D, baseCtx, F);
+  return { group: g, rig, joints };
+}
 
-  // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
-  if (K.accentF !== 1) g.traverse((o) => {
-    if (o.isMesh && o.material?.emissiveIntensity) o.material.emissiveIntensity *= K.accentF;
-  });
-  rig.lightGlow = (W.lightGlowM || []).map((m) => ({ mesh: m, base: m.material.emissiveIntensity }));
-  const hg = (W.heavyGlowM || []).map((m) => ({ mesh: m, base: m.material.emissiveIntensity }));
-  rig.heavy = rig.heavy && rig.heavy.glow.length
-    ? { glow: [...rig.heavy.glow, ...hg], pivot: W.heavyPivot || [] }
-    : { glow: hg, pivot: W.heavyPivot || [] };
+/**
+ * 鍛造一台四足獸型機體(D.kind === 'quad')—— rig 契約鏡射 models.js buildBeastMech(:2585),
+ * 真品 locomotion.js stepQuad 一行不改直接驅動。逐機幾何仍全住 mechs/<id>.js:
+ *   D.frame = { hipY, chest:[x,y,z], neck:[x,y,z], head:[x,y,z], legX, fz, hz,
+ *               tailY, tailZ, tail2Z }(公尺;chest 掛 spine、neck 掛 chest、head 掛 neck)
+ *   D.gait  = { gait:'trot'|'walk'|'crawl', gallopType?, stride, top, bob,
+ *               rollSway?, pitchAmp?, legAmp?, soft?, gallop? }(語意同 models.js BEAST 表)
+ *   D.body(c, spine, chest)                      軀幹殼(前半掛 chest、後半掛 spine)
+ *   D.neckHead(c, neck, head)                    頸+頭(非騎乘);騎乘改給 D.rider
+ *   D.rider(c, neck)                             人馬:neck = 騎士腰樞軸,回傳
+ *     { humChest, humNeck, head, armSh:[L,R], armEl:[L,R], armBase:[{shX,shZ,elX}×2], gunR? }
+ *   D.legF(c)/D.legH(c) → segLimbF segs          前/後腿分節(c.sx 分邊;soft 腿 = 多節小 k)
+ *   D.tail(c, tail, tail2) → tailSegs?           尾(回傳多節鏈則整條進 whipTail;省略 = [tail, tail2])
+ *   D.mount(c, F) / D.extra(c, F, rig)           武裝/加掛(契約同人形;克蘇魯 rig.tents 在 extra 掛)
+ */
+function forgeQuadMech(spec, D) {
+  const FR = D.frame, GA = D.gait;
+  const H = spec.height;
+  const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
+  const accent = new THREE.Color(spec.hue);
+  const K = { barrelF: spec.knobs?.barrelF ?? 1, accentF: spec.knobs?.accentF ?? 1 };
 
-  outlinify(g, outlineWF(H));
+  const g = new THREE.Group();
+  const joints = new THREE.Group();
+  joints.visible = false;
+  g.add(joints);
+  const jointDot = jointDotF(joints);
+  const baseCtx = { PAL, accent, G: 1, H, K, dark: PAL.dark, binderPivots: [], vlsPorts: [], dims: { ...FR } };
+
+  // 骨架:spine(hipY)→ chest → neck → head;tail → tail2;四腿掛根節點(脊椎浮沉不帶腳底)
+  const spine = new THREE.Group();
+  spine.position.y = FR.hipY;
+  g.add(spine);
+  const chest = new THREE.Group();
+  chest.position.set(...(FR.chest || [0, 0.1, 0.55]));
+  spine.add(chest);
+  const neck = new THREE.Group();
+  neck.position.set(...(FR.neck || [0, 0.2, 0.8]));
+  chest.add(neck);
+  const head = new THREE.Group();
+  head.position.set(...(FR.head || [0, 0.15, 0.45]));
+  neck.add(head);
+  const tail = new THREE.Group();
+  tail.position.set(0, FR.tailY ?? 0, FR.tailZ ?? -0.9);
+  spine.add(tail);
+  const tail2 = new THREE.Group();
+  tail2.position.set(0, 0, -(FR.tail2Z ?? 1.0));
+  tail.add(tail2);
+
+  D.body(baseCtx, spine, chest);
+  // 騎乘(人馬):neck = 騎士腰樞軸,上身分節鏈(腰→胸→頸→頭)反向吸收馬軀起伏;
+  // 非騎乘:靈活長頸主動反屈 + 頭部畫弧補償(headArm 由骨架水平力臂推導)
+  let humChest = null, humNeck = null, armSh = null, armEl = null, armBase = null, riderHead = null, riderGunR = null;
+  if (D.rider) {
+    const R = D.rider(baseCtx, neck);
+    humChest = R.humChest; humNeck = R.humNeck; riderHead = R.head;
+    armSh = R.armSh; armEl = R.armEl; armBase = R.armBase; riderGunR = R.gunR || null;
+  } else {
+    D.neckHead(baseCtx, neck, head);
+  }
+
+  // 四腿(建腿順序 = chains 順序 FL, FR, HL, HR;前肢肘朝後折、後肢跗朝前折 —— 符號住逐機 k 值)
+  const legChains = [[], [], [], []];
+  const mkLeg = (sx, z, front, ci) => {
+    const ctx = { ...baseCtx, sx, front };
+    // 方法呼叫(不解構)—— 逐機檔的 legF/legH 可用 this 共用同一支 _leg
+    return segLimbF(g, [sx * FR.legX, FR.hipY, z], front ? D.legF(ctx) : D.legH(ctx), legChains[ci]);
+  };
+  const legFL = mkLeg(-1, FR.fz, true, 0), legFR = mkLeg(1, FR.fz, true, 1);
+  const legHL = mkLeg(-1, FR.hz, false, 2), legHR = mkLeg(1, FR.hz, false, 3);
+  for (const [sx, z] of [[-1, FR.fz], [1, FR.fz], [-1, FR.hz], [1, FR.hz]]) jointDot(sx * FR.legX, FR.hipY, z);
+  jointDot(0, FR.hipY, 0);
+  jointDot(0, FR.hipY + (FR.chest?.[1] ?? 0.1), (FR.chest?.[2] ?? 0.55));
+  jointDot(0, FR.hipY + (FR.tailY ?? 0), FR.tailZ ?? -0.9);
+
+  const tailSegs = (D.tail && D.tail(baseCtx, tail, tail2)) || [tail, tail2];
+
+  // ---- 武裝(逐機掛法;契約同人形 mount)----
+  const F = { g, spine, chest, neck, head: riderHead || head, tail, tail2, tailSegs, humChest, humNeck };
+  const W = D.mount(baseCtx, F);
+
+  const rig = g.userData.rig = {
+    kind: 'quad', spine, chest, neck, head: riderHead || head, tail, tail2,
+    tailSegs,
+    neckY0: neck.position.y,
+    headArm: (FR.chest?.[2] ?? 0.55) + (FR.neck?.[2] ?? 0.8) + (FR.head?.[2] ?? 0.45),
+    headArmN: FR.head?.[2] ?? 0.45,
+    rider: !!D.rider,
+    legFL, legFR, legHL, legHR,
+    chFL: legChains[0], chFR: legChains[1], chHL: legChains[2], chHR: legChains[3],
+    tents: null,                        // 持武觸手(克蘇魯):D.extra 掛 [{g,base,k,d}…] 鏈列
+    humChest, humNeck, armSh, armEl, armBase,
+    gunR: W.gunR || riderGunR, gunL: W.gunL || null,
+    aimPose: W.aimPose || null,
+    weap: W.weap, hvy: W.hvy,
+    muzzles: W.muzzles,
+    wpn: W.wpn,
+    kickAmp: { light: 1, heavy: 1.3 },
+    hipsY0: FR.hipY, stride: GA.stride, top: GA.top ?? 10,
+    gait: GA.gait, gallopType: GA.gallopType, bob: GA.bob ?? 0.09, rollSway: GA.rollSway,
+    pitchAmp: GA.pitchAmp, legAmp: GA.legAmp, soft: GA.soft, gallop: GA.gallop,
+    moveSig: spec.moveSig, castSig: spec.castSig,
+    s: 1,
+  };
+  finishRig(g, rig, W, K, H, D, baseCtx, F);
   return { group: g, rig, joints };
 }
