@@ -18,6 +18,16 @@ let CharPreview = null;
 const threeReady = import('/public/js/charPreview.js')
   .then((m) => { CharPreview = m.CharPreview; return true; })
   .catch((e) => { console.warn('3D 展示台停用:', e?.message || e); return false; });
+// 人形鍛造區塊(2026-08-12):同一條降級紀律 —— forge.js 靜態拉 three,CDN 擋掉時
+// 只讓鍛造那一格顯示原因,覆核台其餘功能照常(原則 6)。
+let FORGE = null;   // { forge, loco, toon, THREE }
+const forgeReady = Promise.all([
+  import('/tools/humanoid_forge/forge.js'),
+  import('/public/js/locomotion.js'),
+  import('/public/js/toon.js'),
+  import('three'),
+]).then(([forge, loco, toon, THREE]) => { FORGE = { forge, loco, toon, THREE }; return true; })
+  .catch((e) => { console.warn('人形鍛造停用:', e?.message || e); return false; });
 import {
   CHARACTERS, charKind, heroWeapon, heroAbility, heroArmor, heroMobility,
 } from '/public/js/data.js';
@@ -173,6 +183,8 @@ function renderBody() {
 
   <div class="cr-sec"><h3>武器 / 招式(點一列在展示台播演出)</h3>${weaponRows(id)}</div>
 
+  <div class="cr-sec" id="crForgeSec" hidden></div>
+
   <div class="cr-sec"><h3>原型層</h3>
     <div class="cr-kv">${protoOf(id).map((L) =>
     `<b>${esc(L.label)}</b><div><b>${esc(L.src)}</b> ${esc(L.note)}</div>`).join('')}</div>
@@ -210,10 +222,198 @@ function renderBody() {
     el.onclick = () => app.preview?.play(el.dataset.play);
   }
   mountStage(id);
+  mountForge(id);
   // 孤兒區/被取代區跟著每一次重繪掛回去 —— 只在 load() 掛一次的話,點掉第一名角色之後它就被
   // innerHTML 洗掉了,而畫面上只表現成「孤兒檔不見了」(檔頭 ④:漏掉的東西不准藏)
   renderSuperseded();
   renderOrphans();
+}
+
+// ---- 人形鍛造區塊(人形特徵 → 機器人零件;dev 原型 tools/humanoid_forge)------------
+// 涵蓋 = forge.FORGE_IDS(機甲人形 4 + 變形者人形地面型 4)。出廠規格住 forge.js,
+// 使用者調整存 specs.json 覆寫層(/api/forge;一次一台),合併只走 mergeSpec()。
+// canvas 存活照 mountStage 同款:模組級持有、每次 renderBody 後 re-prepend。
+const fapp = { canvas: null, renderer: null, scene: null, camera: null, unit: null, ent: null,
+  id: null, draft: null, ovr: {}, speed: 0, speedTgt: 0, simT: 0, last: 0, timer: 0 };
+
+const forgeApi = async (body) => (await fetch('/api/forge', body
+  ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+  : undefined)).json();
+
+/** 比例滑桿的值域(涵蓋八台出廠值;head 上限 1.05 給 t12 的大頭) */
+const PROP_RANGE = {
+  hips: [0.35, 0.62], legSplay: [0.04, 0.16], thigh: [0.35, 0.55], shin: [0.3, 0.6],
+  shoulderY: [0.7, 0.9], shoulderX: [0.1, 0.28], upperArm: [0.1, 0.35], foreArm: [0.1, 0.35],
+  head: [0.7, 1.05], girth: [0.6, 1.6],
+};
+const KNOB_RANGE = { barrelF: [0.5, 1.6, '武器長度'], accentF: [0.2, 2.5, '發光強度'] };
+
+function forgeScene() {
+  const { THREE, toon } = FORGE;
+  fapp.canvas = document.createElement('canvas');
+  fapp.renderer = new THREE.WebGLRenderer({ canvas: fapp.canvas, antialias: true, alpha: true });
+  fapp.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  fapp.scene = new THREE.Scene();
+  fapp.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
+  const dir = new THREE.DirectionalLight(0xffffff, 2.1);
+  dir.position.set(20, 40, 20);
+  fapp.scene.add(dir, new THREE.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
+  const grid = new THREE.GridHelper(30, 15, 0x39414f, 0x262c36);
+  fapp.scene.add(grid);
+  fapp.grid = grid;
+  const loop = (t) => {
+    requestAnimationFrame(loop);
+    if (!fapp.canvas.isConnected || !fapp.unit) return;
+    const dt = Math.min(0.05, (t - fapp.last) / 1000 || 0.016);
+    fapp.last = t;
+    fapp.speed += (fapp.speedTgt - fapp.speed) * Math.min(1, 2.2 * dt);
+    fapp.trav = (fapp.trav || 0) + fapp.speed * dt;
+    fapp.grid.position.z = -(fapp.trav % 2);
+    fapp.st = (fapp.st || 0) + dt;
+    FORGE.loco.stepCombatFx(fapp.ent, fapp.st, dt);
+    FORGE.loco.stepLocomotion(fapp.ent, dt, fapp.st, 0, -fapp.speed * dt, 0);
+    fapp.yaw = (fapp.yaw || 0) + dt * 0.5;                       // 自動環繞(全角度檢視)
+    const H = fapp.draft.height, d2 = H * 2.3;
+    fapp.camera.position.set(Math.sin(fapp.yaw) * d2, H * 0.62, Math.cos(fapp.yaw) * d2);
+    fapp.camera.lookAt(0, H * 0.5, 0);
+    const w = fapp.canvas.clientWidth, h2 = fapp.canvas.clientHeight;
+    if (w && (fapp.canvas.width !== w || fapp.canvas.height !== h2)) {
+      fapp.renderer.setSize(w, h2, false);
+      fapp.camera.aspect = w / h2;
+      fapp.camera.updateProjectionMatrix();
+    }
+    FORGE.toon.updateCelLight(fapp.camera);                      // 兩座台各自 set→render,互不留殘影
+    fapp.renderer.render(fapp.scene, fapp.camera);
+  };
+  requestAnimationFrame(loop);
+}
+
+/** 以目前草稿(出廠 ⊕ 覆寫 ⊕ 滑桿未存值)重鍛,並重畫特徵→零件表 */
+function forgeBuild() {
+  const { forge, toon } = FORGE;
+  if (fapp.unit) { fapp.scene.remove(fapp.unit.group); toon.disposeTree(fapp.unit.group); }
+  fapp.unit = forge.forgeHumanoidMech(fapp.draft);
+  fapp.scene.add(fapp.unit.group);
+  fapp.ent = { id: fapp.id, mesh: fapp.unit.group, heroY: 0 };
+  const doc = forge.conversionDoc(fapp.draft)
+    .map((r2) => `<tr><td>${esc(r2.feat)}</td><td>${esc(r2.part)}</td></tr>`).join('');
+  const docBox = $('crForgeDoc');
+  if (docBox) docBox.innerHTML = `<table class="cr-ftab"><tr><th>人形特徵(VRM 骨)</th><th>機器人零件</th></tr>${doc}</table>`;
+}
+
+async function mountForge(id) {
+  const sec = $('crForgeSec');
+  if (!sec) return;
+  if (!(await forgeReady)) {
+    sec.hidden = false;
+    sec.innerHTML = '<h3>人形鍛造(特徵 → 零件)</h3><div class="cr-none">鍛造停用(three CDN 連不到)</div>';
+    return;
+  }
+  const { forge } = FORGE;
+  const base = forge.MECH_SPECS.find((s) => s.id === id);
+  if (!base) { sec.hidden = true; return; }                      // 非人形名冊(四足/無人機)不出鍛造區塊
+  sec.hidden = false;
+  if (!fapp.canvas) {
+    forgeScene();
+    fapp.ovr = (await forgeApi()).mechs || {};
+  }
+  fapp.id = id;
+  fapp.draft = forge.mergeSpec(base, fapp.ovr[id]);
+  // 版面:左 canvas、右控制欄(滑桿由 HUMANOID 特徵表推導,不手寫清單)
+  const propRows = Object.keys(forge.HUMANOID).map((k) => {
+    const [lo, hi] = PROP_RANGE[k] || [0, 1];
+    const v = fapp.draft.prop?.[k] ?? forge.HUMANOID[k].def;
+    return `<label class="cr-frow"><span>${k}</span>
+      <input type="range" data-prop="${k}" min="${lo}" max="${hi}" step="0.005" value="${v}">
+      <i data-val="${k}">${v}</i></label>`;
+  }).join('');
+  const knobRows = Object.entries(KNOB_RANGE).map(([k, [lo, hi, label]]) => {
+    const v = fapp.draft.knobs?.[k] ?? 1;
+    return `<label class="cr-frow"><span>${label}</span>
+      <input type="range" data-knob="${k}" min="${lo}" max="${hi}" step="0.01" value="${v}">
+      <i data-val="${k}">${v}</i></label>`;
+  }).join('');
+  sec.innerHTML = `<h3>人形鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
+      ${esc(base.label)} ・ 出廠規格住 forge.js,調整存 specs.json 覆寫層</span></h3>
+    <div class="cr-forge">
+      <div class="cr-fstage" id="crForgeStage">
+        <div class="cr-stage-btns">
+          <button class="segb" id="cfRun">▶ 奔跑</button>
+          <button class="segb" id="cfFire">輕武器</button>
+          <button class="segb" id="cfHeavy">重武器</button>
+          <button class="segb" id="cfCast">招式</button>
+        </div>
+      </div>
+      <div class="cr-fctl">
+        <div class="cr-dim">人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)</div>
+        ${propRows}
+        <div class="cr-dim">細節旋鈕</div>
+        ${knobRows}
+        <div class="cr-fbtns">
+          <button class="segb" id="cfSave">💾 儲存覆寫</button>
+          <button class="segb" id="cfReset">還原出廠</button>
+          <span class="cr-dim" id="cfMsg">${fapp.ovr[id] ? '（此機已有使用者覆寫）' : ''}</span>
+        </div>
+        <div id="crForgeDoc"></div>
+      </div>
+    </div>`;
+  $('crForgeStage').prepend(fapp.canvas);
+  forgeBuild();
+
+  // 滑桿:即時重鍛(150ms 去抖);值先進草稿,按「儲存」才落 specs.json
+  const applyDraft = () => {
+    clearTimeout(fapp.timer);
+    fapp.timer = setTimeout(forgeBuild, 150);
+  };
+  for (const inp of sec.querySelectorAll('input[data-prop]')) {
+    inp.oninput = () => {
+      fapp.draft.prop = { ...fapp.draft.prop, [inp.dataset.prop]: +inp.value };
+      sec.querySelector(`i[data-val="${inp.dataset.prop}"]`).textContent = inp.value;
+      applyDraft();
+    };
+  }
+  for (const inp of sec.querySelectorAll('input[data-knob]')) {
+    inp.oninput = () => {
+      fapp.draft.knobs = { ...fapp.draft.knobs, [inp.dataset.knob]: +inp.value };
+      sec.querySelector(`i[data-val="${inp.dataset.knob}"]`).textContent = inp.value;
+      applyDraft();
+    };
+  }
+  $('cfSave').onclick = async () => {
+    // 覆寫層只存與出廠值的差異(存整份 = 出廠值一改覆寫就把舊值釘死)
+    const ovr = { prop: {}, knobs: {} };
+    for (const k of Object.keys(forge.HUMANOID)) {
+      const v = fapp.draft.prop?.[k];
+      if (v != null && v !== (base.prop?.[k] ?? forge.HUMANOID[k].def)) ovr.prop[k] = v;
+    }
+    for (const k of Object.keys(KNOB_RANGE)) {
+      const v = fapp.draft.knobs?.[k];
+      if (v != null && v !== 1) ovr.knobs[k] = v;
+    }
+    if (!Object.keys(ovr.prop).length) delete ovr.prop;
+    if (!Object.keys(ovr.knobs).length) delete ovr.knobs;
+    const payload = Object.keys(ovr).length ? ovr : null;
+    fapp.ovr = (await forgeApi({ id, ovr: payload })).mechs || {};
+    $('cfMsg').textContent = payload ? '已儲存 ✔' : '與出廠值相同,已清除覆寫';
+  };
+  $('cfReset').onclick = async () => {
+    fapp.ovr = (await forgeApi({ id, ovr: null })).mechs || {};
+    mountForge(id);   // 重畫滑桿回出廠值
+  };
+  $('cfRun').onclick = () => {
+    fapp.speedTgt = fapp.speedTgt ? 0 : fapp.draft.gait.top;
+    $('cfRun').textContent = fapp.speedTgt ? '⏸ 靜止' : '▶ 奔跑';
+  };
+  $('cfFire').onclick = () => { fapp.ent.fireFx = { t0: fapp.st, slot: 'light' }; };
+  $('cfHeavy').onclick = () => {
+    fapp.ent.heavyFx = { phase: 'charge', t0: fapp.st };
+    setTimeout(() => {
+      if (!fapp.ent) return;
+      fapp.ent.fireFx = { t0: fapp.st, slot: 'heavy' };
+      fapp.ent.heavyFx = { phase: 'fire', t0: fapp.st };
+    }, 1050);
+  };
+  $('cfCast').onclick = () => { fapp.ent.castFx = { t0: fapp.st, slot: 'ult', dir: 0 }; };
 }
 
 /** 來源標籤:哪一格是「已入庫」、哪一格只是 AI 稿,MUST 在圖上就看得出來 ——

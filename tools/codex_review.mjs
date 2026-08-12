@@ -179,6 +179,20 @@ async function saveState(s) {
   await writeFile(STATE_FILE, `${JSON.stringify(s, null, 2)}\n`);
 }
 
+// ---- 人形鍛造覆寫層(/api/forge)------------------------------------------
+// 出廠規格的單一真相住 tools/humanoid_forge/forge.js 的 MECH_SPECS;這裡只存**使用者調整的差異**
+// (specs.json,缺檔 = 全走出廠值)。兩座檢視台(覆核台鍛造區塊 / :8631 鍛造台)同讀這一份,
+// 合併一律走 forge.js 的 mergeSpec() —— MUST NOT 在任一端自己展開覆寫。
+const FORGE_FILE = join(ROOT, 'tools', 'humanoid_forge', 'specs.json');
+async function loadForge() {
+  try { return JSON.parse(await readFile(FORGE_FILE, 'utf8')); }
+  catch { return { version: 1, mechs: {} }; }
+}
+async function saveForge(s) {
+  await mkdir(join(ROOT, 'tools', 'humanoid_forge'), { recursive: true });
+  await writeFile(FORGE_FILE, `${JSON.stringify(s, null, 2)}\n`);
+}
+
 // ---- --report:不開瀏覽器的配對表 ----------------------------------------
 async function report() {
   const st = await loadState();
@@ -246,6 +260,23 @@ async function serve() {
       res.end(body);
     };
     try {
+      if (req.url.startsWith('/api/forge')) {
+        if (req.method === 'GET') return send(200, JSON.stringify(await loadForge()));
+        if (req.method === 'POST') {
+          const chunks = [];
+          for await (const c of req) chunks.push(c);
+          const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          if (!body.id) return send(400, '{"error":"id?"}');
+          const st = await loadForge();
+          st.mechs = st.mechs || {};
+          // 一次只覆寫一台(同 /api/review 的局部寫紀律);ovr = null 即還原出廠
+          if (body.ovr == null) delete st.mechs[body.id];
+          else st.mechs[body.id] = body.ovr;
+          await saveForge(st);
+          return send(200, JSON.stringify({ ok: true, mechs: st.mechs }));
+        }
+        return send(405, '{"error":"method"}');
+      }
       if (req.url.startsWith('/api/review')) {
         if (req.method === 'GET') {
           const st = await loadState();
