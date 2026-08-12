@@ -83,7 +83,11 @@ if (BREAK_INK) INK_SOFT_A = 1;
   for (const [name, src] of [['biomes.js', biomes], ['siteplan.js', site]]) {
     ok(!/DIR_DEG|windDir|WIND_DEG/.test(code(src)), `${name} 沒有自己的風向(全場一份)`);
   }
-  ok(/import \{ setCelSun, WIND, celWindTime \} from '\.\/toon\.js'/.test(envSrc),
+  // 比對的是**具名匯入**不是整行原文:同一支 import 之後還會加別的東西(2026-08-12 加了
+  // 勾線資訊緩衝的 INK_INFO_*),寫死整行等於「以後有人多 import 一個名字就紅字」,
+  // 而這一條要釘的是「風向與時鐘來自 toon.js 那一份」。
+  const envToonImp = /import \{([^}]*)\} from '\.\/toon\.js'/.exec(envSrc)?.[1] || '';
+  ok(['setCelSun', 'WIND', 'celWindTime'].every((n) => new RegExp(`\\b${n}\\b`).test(envToonImp)),
     'environment.js 的雲吃 toon.js 那一份 WIND 與同一支時鐘');
   ok(WIND.WAVE_M > 5 && WIND.BEAT > 1 && WIND.CLOUD_MPS > 0,
     `風的形狀參數合理(波長 ${WIND.WAVE_M}m、諧波比 ${WIND.BEAT}、雲速 ${WIND.CLOUD_MPS}m/s)`);

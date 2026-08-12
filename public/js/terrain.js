@@ -256,7 +256,7 @@ export async function buildTerrain(cfg, onProgress) {
   const rect = battleRect(cfg);   // 世界方框(遊戲公尺,恆軸對齊)
   const center = cfg.center;
 
-  onProgress?.(0.02, '下載高程資料…');
+  await onProgress?.(0.02, '下載高程資料…');
   // 高程網格快取(geocache.js):同 bbox 首次由主來源(terrarium)完整取樣成功即定案入庫
   // (raw N×N,平滑/AMP/乾地帶處理前)。之後每場直接取用 → 高度場逐局位元級一致,
   // 兵線跨水段/橋數不再隨「terrarium vs open-meteo」來源切換浮動(倫敦橋數 1~3 案根因之一)。
@@ -289,7 +289,7 @@ export async function buildTerrain(cfg, onProgress) {
     if (!usedFallback) geoPut(elevKey, rawElev);
   }
 
-  onProgress?.(0.34, '下載衛星影像…');
+  await onProgress?.(0.34, '下載衛星影像…');
   // 衛星影像快取:原始像素(stylize 前)整塊入庫,只有「零缺磚」的完整拼接才定案 ——
   // 缺磚底色入庫會讓水色/地被分類永久帶洞。命中時以 putImageData 重建 canvas,
   // 之後的取樣/賽璐璐化/貼圖管線與網路版全同。
@@ -331,7 +331,7 @@ export async function buildTerrain(cfg, onProgress) {
     stylizeImagery(imagery.canvas);   // 原始像素已捕捉進 idata,底圖轉水彩色塊
   }
 
-  onProgress?.(0.68, '建構地形網格…');
+  await onProgress?.(0.68, '建構地形網格…');
 
   // 世界範圍(公尺)—— 單一縫 `data.js battleRect`(伺服器 sim.bounds 吃同一份的 z 反號版)
   const { minX, maxX, minZ, maxZ } = rect;
@@ -1204,6 +1204,6 @@ export async function buildTerrain(cfg, onProgress) {
     return { rims, touched };
   }
 
-  onProgress?.(1, '地形完成');
+  await onProgress?.(1, '地形完成');
   return { group, mesh, heightAt, natureAt, bufferHeightAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
 }

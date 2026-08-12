@@ -7816,7 +7816,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const group = new THREE.Group();
   group.name = 'biomes';
 
-  onProgress?.(0.02, '規劃兵線淨空走廊…');
+  await onProgress?.(0.02, '規劃兵線淨空走廊…');
   const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
   const blocked = buildClearance(cfg, center);
   // 地物散布的邊界內縮 = 障礙環內緣(推導不手寫):舊制的 30 讓落點可以抽在環體 [34,40] 之內,
@@ -7829,7 +7829,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 順序是硬約束:①洞口開挖先於植被/神木/建物 → 引道上的地物不再「先種在原地表、開挖後漂浮」;
   // ②隧道敞開段與橋樑走廊先進 blocked → 建物/巨木/巨石等障礙不會生成在地下道/隧道內與橋下淨空。
   // 此區全程不耗共享 rnd(fetch/合併/開挖/走廊皆確定性)⇒ 佈局亂數序列與舊版一致。
-  onProgress?.(0.03, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
+  await onProgress?.(0.03, '讀取 OSM 圖資(建物/鐵路/道路/瀑布)…');
   // OSM 抓取不再以影像成敗為前提(2026-07-22 倫敦橋數浮動案):舊版 `if (terrain.sampleColor)`
   // 讓 Esri 影像失敗連鎖放棄整組 Overpass → 道路/真橋整套換成兵線備援,圖資逐局忽有忽無。
   // 影像與路網是獨立服務,各自失敗各自降級;離線時 fetch 快速失敗,不拖載入。
@@ -8083,7 +8083,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   };
 
   // ---- 神木群落 + 巨岩地標:先於一般植被佔位(小植被/地被/建物自動避開)----
-  onProgress?.(0.04, '安置神木群落與巨岩地標…');
+  await onProgress?.(0.04, '安置神木群落與巨岩地標…');
   const blockers = [];   // 建物/神木/巨岩碰撞柱(main.js → terrain.blockers → game.js _collide)
   // 邊界障礙環:MUST 是 blockers 的**第一批**(main.js 的 occ 上傳 slice(0, LOS.MAX_OCC),
   // 排在尾端會被密集市區擠掉 = 伺服器不知道有牆);排在這裡也保證地形開挖/整平都已定案。
@@ -8119,7 +8119,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   const attempts = vegTarget * 3;
   for (let a = 0; a < attempts && placed < vegTarget; a++) {
-    if ((a & 1023) === 0) onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
+    if ((a & 1023) === 0) await onProgress?.(0.05 + (a / attempts) * 0.30, '鋪設植被地貌…');
     const x = rx(), z = rz();
     if (blocked.has(cellKey(x, z))) continue;
     const h = terrain.heightAt(x, z);
@@ -8280,7 +8280,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     && terrainEnvCode(terrain, x, z) === 0;   // 水域/沼澤不蓋建物(單一縫:OSM 建物/地標/離線街區共用)
 
   if (osm && osm.length) {
-    onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
+    await onProgress?.(0.6, `建置圖資建物(${osm.length} 筆)…`);
     // 特殊地標優先,一般建物均勻抽樣到上限
     osm.sort((p, q) => (buildingType(q.tags) !== 'residential') - (buildingType(p.tags) !== 'residential'));
     for (const el of osm) {
@@ -8329,7 +8329,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 太魯閣/合歡山長出一座城。市區/混合場地(urban ≥ 15%)不受影響。
   if (!osm && (!mix || (mix.urban || 0) > 0.1)
     && !landmarks.length && !generic.length && urbanPts.length > 8) {
-    onProgress?.(0.6, '離線模式:程序生成市區…');
+    await onProgress?.(0.6, '離線模式:程序生成市區…');
     const lmTypes = Object.keys(LANDMARKS);
     urbanPts.forEach(([x, z], i) => {
       if (!tryPlace(x, z)) return;
@@ -8422,7 +8422,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 的存在與否不會推移任何一株植被、任何一棟圖資建物的亂數序列(§2.3)。
   const civics = [];
   if (frontSegs.length && (generic.length || landmarks.length)) {
-    onProgress?.(0.63, '劃設街廓與公設用地…');
+    await onProgress?.(0.63, '劃設街廓與公設用地…');
     const nearUrban = settlement;   // 「市區」閘 = 聚落場(單一縫;MUST NOT 在此另判一次)
     const dryAt = (x, z) => terrain.heightAt(x, z) > 0.4 && terrainEnvCode(terrain, x, z) === 0;
     const res = planBlocks({
@@ -8508,7 +8508,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       civics.push({ x: c.x, z: c.z, ry: c.ry, kind: c.kind, w: def.w, d: def.d });
     }
     if (res.plots.length || civics.length) {
-      onProgress?.(0.66, `沿街配置 ${res.plots.length} 棟、公設 ${civics.length} 處…`);
+      await onProgress?.(0.66, `沿街配置 ${res.plots.length} 棟、公設 ${civics.length} 處…`);
     }
   }
 
@@ -8517,11 +8517,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 回頭讀 `generic` —— 那一份此刻已混進 planBlocks 剛配出來的臨街樓(見 infillSeeds 註解)。
   if (infillSeeds.length) {
     const n = densifyUrban({ seeds: infillSeeds, generic, blocked, terrain, rnd, inb, occ, roadFacing: nearestRoadAngle });
-    if (n) onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
+    if (n) await onProgress?.(0.68, `補間街廓建物(+${n} 棟)…`);
   }
 
   // 邊界帶視覺牆:放在補間之後(邊界樓不當補間種子)、植被過濾之前
-  onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
+  await onProgress?.(0.69, '築起邊界帶(樓群/神木/巨岩)…');
   const boundaryN = placeBoundary({ terrain, items, generic, rnd, mix, occ, settlement });
 
   // 建物腳印內/貼牆的植被拔除:植被先散布、建物(圖資/補間)後放且互不看對方,
@@ -8591,7 +8591,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     }
   }
 
-  onProgress?.(0.7, '建置植被模型(Quaternius CC0)…');
+  await onProgress?.(0.7, '建置植被模型(Quaternius CC0)…');
   const nature = await naturePromise;
   for (const type in items) {
     const meshes = nature[type]
@@ -9295,7 +9295,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const bldMeshes = group.children.slice(bldStart);   // 建物實例(不含之後的地標/植被/道路),供 clearAround 篩選
   const landmarkG = [];                               // 地標群組 + 佔地半徑(clearAround 一併隱藏整棟)
   // 特殊地標(超尺度 + 碰撞柱)
-  onProgress?.(0.85, '放置地標建物…');
+  await onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
     LANDMARKS[lm.type](g, rnd);   // rnd → 同型地標逐座變化(塔高/層數/徽色;巨岩準則)
@@ -9453,7 +9453,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 地被覆蓋層:開闊地的賽璐璐地表色塊 + 表面細節(ground.js)----
   // 專用 rnd(同心種子異或常數):不動用共享 rnd 序列,建物/植被佈局不受影響
-  onProgress?.(0.88, '鋪設地表覆蓋層…');
+  await onProgress?.(0.88, '鋪設地表覆蓋層…');
   const gseed = (Math.round(center.lat * 1e4) * 31 + Math.round(center.lng * 1e4)) >>> 0;
   const grnd = mulberry32(gseed ^ 0x51AB);
   const gcStart = group.children.length;   // 洞口打洞用:此後加入 group 的都是地被層(底毯拼圖 + 細節實例)
@@ -9472,7 +9472,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   });
 
   // ---- 道路(圖資主/次要;離線則以兵線為主要道路備援;roadInput 已於開頭與走廊共用定案)----
-  onProgress?.(0.9, '鋪設道路路面…');
+  await onProgress?.(0.9, '鋪設道路路面…');
   // 地被層一併送進 buildRoads:洞口打洞時地形與地被拼圖/細節 MUST 用同一把尺讓開,
   // 只挖地形的話洞口望進去仍是一坡貼在崖面上的草皮拼圖(地被是獨立圖層)。
   const coverMeshes = group.children.slice(gcStart);
@@ -9506,7 +9506,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const roadBlockN = buildRoadBlocks(group, roadInput, terrain, center, blockers, rnd);
 
   // ---- 鐵路/捷運(含行駛列車)+ 瀑布(動態物件)----
-  onProgress?.(0.92, '鋪設鐵路與瀑布…');
+  await onProgress?.(0.92, '鋪設鐵路與瀑布…');
   const dynamics = [];
   buildWaterEdges(group, terrain, dynamics);   // 水岸波浪(動態)+ 沼澤潮間帶(靜態)
   const railLines = osmData?.rails?.length ? buildRails(group, osmData.rails, terrain, center, dynamics, osmData.crossings) : 0;
@@ -9524,7 +9524,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 亂數走**專屬 seed**(不動既有 rnd/grnd 序列 ⇒ 植被/建物/道路佈局逐位元不變)。
   // 上下兩端的提示箭頭是動態的(chevron 沿上/下方向流動)⇒ 併進既有的 dynamics 桶,
   // 走火車/瀑布同一條 `group.userData.update` 路徑,**MUST NOT** 在 game.js 另開第二條更新迴圈。
-  onProgress?.(0.95, '架設攀爬路線…');
+  await onProgress?.(0.95, '架設攀爬路線…');
   const climbs = planClimbRoutes({
     blockers,
     heightAt: (x, z) => terrain.heightAt(x, z),
@@ -9541,7 +9541,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
 
   // ---- 世界文字圖層(唯一的文字圖層:構件名牌 + 語料庫招牌全在同一張 sheet)----
   // MUST 排在攀爬之後 —— 語料庫那五種的落點要看得到**最終**的 blocked 走廊(招牌不擋路)。
-  onProgress?.(0.96, '掛上世界文字…');
+  await onProgress?.(0.96, '掛上世界文字…');
   const signsBuilt = buildWorldSigns({
     group, terrain, center,
     portals: roadRes.portals, signSpots: roadRes.signSpots, generic,
@@ -9560,7 +9560,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     group.userData.update = (dt) => { for (const fn of dynamics) fn(dt); };
   }
 
-  onProgress?.(1, '地貌完成');
+  await onProgress?.(1, '地貌完成');
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
   group.userData.gradeCorridors = gradeCorridors;

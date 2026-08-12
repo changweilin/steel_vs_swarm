@@ -1821,6 +1821,41 @@ function scheduleOsmRetry(cfg, key) {
   st.timer = setTimeout(attempt, 90000);
 }
 
+// ---- 建構期讓步(2026-08-12)----
+// `buildTerrain` / `buildBiomes` 只在網路等待處 await,兩次等待之間是**幾秒鐘的同步程式**。
+// 那段時間裡瀏覽器一幀都畫不出來 ⇒ 進度列停在上一句話上、房間 UI 點不動、分頁還會被判成
+// 沒有回應。進度回報本來就標在每一個階段邊界上,**讓步點就掛在那裡**:標籤更新與重畫變成
+// 同一件事,而不是「標籤更新了但沒人看得到」。
+//
+// 三條:
+//   ① 節流:兩次讓步之間 MUST 至少隔 `SLICE_MS`。不節流的話密集的回報(植被那個迴圈每
+//      1024 次一報)會讓排程成本自己變成瓶頸。
+//   ② 保底逾時:`requestIdleCallback` 在**背景分頁**可能整段不觸發(而房間階段正是玩家
+//      最常切走去貼邀請連結的時候)—— 光靠 rIC 的話預建會停在半路,而畫面上只是「卡住」。
+//      `timeout` 選項加上更長的 setTimeout 兩道保底,先到的那個算數。
+//   ③ **讓步 MUST NOT 改變任何取樣順序**:它只是把同一段同步程式切開,`rnd()` 的消耗序列
+//      逐位元不動(§2.3)。這也是為什麼讓步點只准掛在既有的回報處 —— 那些點本來就在
+//      階段邊界上,不會落在某個抽樣迴圈的中間。
+const SLICE_MS = 16;         // 一格 60Hz:吃滿一幀才值得付一次排程的錢
+const SLICE_TIMEOUT_MS = 60;
+let _lastYield = 0;
+function buildYield() {
+  // **分頁在背景就不要讓步**(2026-08-12 實測):讓步是為了讓瀏覽器把畫面畫出來,而背景
+  // 分頁根本不畫;更糟的是那裡的計時器被夾到 **1 秒**一次 —— 每個階段邊界多等 1 秒,一場
+  // 預建就是二十幾秒的純等待,而使用者切回來只看到「怎麼還在讀取」。
+  // 房間階段正是玩家切走去貼邀請連結的時候 ⇒ 這一條擋的不是邊角案例。
+  if (typeof document !== 'undefined' && document.hidden) return null;
+  const t = performance.now();
+  if (t - _lastYield < SLICE_MS) return null;   // `await null` 只過一次微任務,不排程
+  _lastYield = t;
+  return new Promise((res) => {
+    let done = false;
+    const fin = () => { if (done) return; done = true; _lastYield = performance.now(); res(); };
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(fin, { timeout: SLICE_TIMEOUT_MS });
+    setTimeout(fin, SLICE_TIMEOUT_MS * 2);
+  });
+}
+
 /**
  * 啟動(或沿用)地圖預建。冪等:同 key(同房同圖)重複呼叫回傳同一份在途/完成的預建。
  * 失敗不外拋(記在 pre.error,房間 UI 不受影響);enterLoading 消費時會重建一次,再失敗才顯示錯誤。
@@ -1830,10 +1865,13 @@ function startPrebuild(cfg) {
   const key = prebuildKey(cfg);
   if (app.pre && app.pre.key === key && !app.pre.error) return app.pre;
   const pre = { key, prog: 0, label: '', osmLabel: '', terrain: null, ud: null, error: null, onProg: null };
+  // 回傳值是**讓步的 promise**:建構端 `await onProgress?.(…)` 就等於在階段邊界上把主執行緒
+  // 還給瀏覽器一次。節流與保底全在 `buildYield` 一處 —— 建構端 MUST NOT 自己排程。
   const setP = (f, label) => {
     pre.prog = f; pre.label = label;
     pre.onProg?.(f, label);
     if (app.phaseShown === 'room') renderPreloadStatus();
+    return buildYield();
   };
   pre.promise = (async () => {
     setP(0.02, '載入 3D 模型(Quaternius CC0)…');

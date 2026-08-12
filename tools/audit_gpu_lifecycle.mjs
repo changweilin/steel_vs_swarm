@@ -21,11 +21,26 @@ const postfx = read('postfx.js');
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
+// ---- 反向驗證(原則 9)----
+// 把判定改回壞版本,稽核 MUST 在對應條目紅字。替換無效 MUST **當場失敗** —— `readSrc` 已把
+// 換行正規化成 \n,但樣式一旦與原文對不上,break 會安靜地變成 no-op 而整支照樣全綠。
+const BREAKS = new Set(process.argv.slice(2).filter((a) => a.startsWith('--break-')));
+const bend = (src, tag, re, to) => {
+  if (!BREAKS.has(tag)) return src;
+  const out = src.replace(re, to);
+  if (out === src) { console.error(`✗ ${tag}:替換無效(樣式沒咬到原文,反向驗證等於沒跑)`); process.exit(1); }
+  return out;
+};
 /** 去掉註解與樣板字串,只留「真的會執行的程式碼」—— 註解裡提到 terrain.mesh 不算違規 */
 const code = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-const G = code(game), V = code(vfx);
+const gameSrc = [
+  ['--break-resgov-all', /\n(\s*)this\._resGov = \{/, '\n$1if (isTouchUI()) this._resGov = {'],
+  ['--break-resgov-flip', /if \(g\.flips >= RES_GOV\.FLIP_MAX\) g\.off = true;/, ''],
+  ['--break-resgov-hidden', /if \(typeof document !== 'undefined' && document\.hidden\) return;/, ''],
+].reduce((s, [tag, re, to]) => bend(s, tag, re, to), game);
+const G = code(gameSrc), V = code(vfx);
 
 console.log('== 表現層資源生命週期稽核 ==\n');
 
@@ -111,18 +126,33 @@ console.log('\n⑤ 觸控裝置的填充率設定');
   ok(/lowPower\(\)\) return 1/.test(G), '低功耗模式仍夾到 1(舊行為不得回歸)');
 }
 
-console.log('\n⑥ 自適應解析度調節器(觸控限定,天花板以下浮動)');
+console.log('\n⑥ 自適應解析度調節器(全平台,天花板以下浮動)');
 {
   ok(/const RES_GOV = \{/.test(G) && /_tickResGov\(/.test(G), '調節器存在(RES_GOV + _tickResGov)');
-  ok(/if \(isTouchUI\(\)\) this\._resGov =/.test(G), '只在觸控裝置啟用(桌機 _resGov 不存在 ⇒ 早退,行為不變)');
-  ok(/if \(!g \|\| !\(ms > 0\) \|\| ms > RES_GOV\.SPIKE_MS\) return/.test(G),
-    '尖峰幀過濾(GC / 載入 / 分頁切回不觸發降階)');
+  // 2026-08-12:桌機一併啟用。舊制的「只在觸控建 _resGov」MUST NOT 復辟 —— 桌機 4K 螢幕的
+  // 天花板是 2(每幀 4 倍像素),而內顯與獨顯差一個量級,舊制在那裡的行為就只是掉幀。
+  ok(/\n\s*this\._resGov = \{/.test(G) && !/if \(isTouchUI\(\)\) this\._resGov =/.test(G),
+    '全平台啟用(撐得住時 _resScale 恆 1 ⇒ 一次 setPixelRatio 都不會打,逐位元同舊制)');
+  ok(/if \(!g \|\| g\.off \|\| !\(ms > 0\) \|\| ms > RES_GOV\.SPIKE_MS\) return/.test(G),
+    '尖峰幀過濾(GC / 載入 / 分頁切回不觸發降階)+ 熄火後完全退出');
+  ok(/document\.hidden\) return;/.test(G),
+    '背景分頁不入帳(切回來的補償幀不代表穩態負載,會白白吃掉一階)');
   ok(/Math\.max\(RES_GOV\.MIN, /.test(G), '降階有下限 RES_GOV.MIN(不會無限降到糊)');
   ok(/this\._resScale = Math\.min\(1, /.test(G), '升階上限 = 1(動態縮放 MUST NOT 突破 _dpr() 天花板)');
   ok(/this\.renderer\.setPixelRatio\(this\._dpr\(\) \* this\._resScale\)/.test(G),
     '像素比落地唯一出口 _applyRes(天花板 × 縮放,勿散寫 setPixelRatio)');
   ok(/g\.cool = Math\.min\(RES_GOV\.COOL_MAX, g\.cool \* 2\)/.test(G),
     '升階指數退避(能力邊界不震盪)');
+  // 震盪熄火:退避拉長的是「多久再試一次」,救不了「能力剛好卡在兩階之間」——
+  // 那種機器上升降會一直交替,而每次調整都要重配整條後製鏈的 RT。
+  ok(/FLIP_MAX/.test(G) && /if \(g\.flips >= RES_GOV\.FLIP_MAX\) g\.off = true;/.test(G),
+    '震盪熄火(方向反轉累計 FLIP_MAX 次 ⇒ 永久停手)');
+  ok(/if \(g\.dir !== 0 && dir !== g\.dir\) g\.flips\+\+;/.test(G),
+    '只數**方向反轉**(連續同向是在收斂,數進去會提早熄火)');
+  // 熄火 MUST NOT 回彈:停在當下那一階才是量測認可撐得住的那一階
+  const govBody = G.slice(G.indexOf('_tickResGov(ms, now)'), G.indexOf('// ---------------- 快照同步'));
+  ok(govBody.length > 100 && !/this\._resScale = 1\b/.test(govBody),
+    '熄火 MUST NOT 把 _resScale 拉回 1(那等於把玩家丟回撐不住的那一階)');
   // 落地出口唯一性:game.js 內 setPixelRatio 只准出現在 _initScene 初始化與 _applyRes 兩處
   ok([...G.matchAll(/setPixelRatio\(/g)].length === 2, 'setPixelRatio 全檔僅 2 處(初始化 + _applyRes)');
 }

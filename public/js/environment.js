@@ -5,7 +5,7 @@
 // 粒子手法參考 mapping_elf/weatherFx3D.js(程序生成、無外部資產)。
 import * as THREE from 'three';
 import { ENV } from './data.js';
-import { setCelSun, WIND, celWindTime } from './toon.js';
+import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 import { mulberry32 } from './rng.js';
 
 // 環境標籤的唯一縫已抽到 `data.js`(它只是 ENV 的取名查表,而本檔 import three ⇒ Node 端載不動)。
@@ -59,6 +59,22 @@ function capLum(c, cap) {
   return l > cap && l > 1e-4 ? c.multiplyScalar(cap / l) : c;
 }
 
+// 空氣透視(雙色霧)的近端色:**近處的散射帶著日照的顏色**,遠處才收斂到地平線。
+// 單色霧的問題不是「不夠濃」而是「沒有方向」—— 整片同色的霧讀起來像一層灰玻璃,
+// 而真實的空氣在背光側偏冷、向光側偏暖。強度由拉桿定案(visualPrefs `air`,預設 0)。
+const AIR_SUN_MIX = 0.35;
+/**
+ * 近霧色。**與 `skyStops` 同一條規則**:由 fogC / sunC / skyC / W 推導(不開第四張色表),
+ * 並吃同一道亮度封頂 —— 夜戰的 `sun` 是冷藍**而且比霧色亮**,不封頂的話近處會浮出一層
+ * 比天空還亮的藍霧(A14 那條「夜空不可以把場地照亮」的同一個坑)。
+ * 封頂把夜戰與雨霧天自動壓回接近霧色本身 ⇒ 那些場景等於沒有這一層,這是刻意的。
+ */
+function nearFogColor(fogC, sunC, skyC, W) {
+  const near = fogC.clone().lerp(sunC, AIR_SUN_MIX);
+  const cap = W.fogFar <= 1.0 ? Math.min(lum(skyC), lum(fogC)) : lum(skyC);
+  return capLum(near, cap);
+}
+
 /**
  * 三個停點(地平線 / 中段 / 天頂)。**單一縫**:顏色全部由 skyC / fogC / W 推導,
  * 這裡出現任何十六進位色值就是開了第四張色表(見上方註解)。稽核直測這一支。
@@ -92,9 +108,11 @@ function makeSkyDome(span, skyC, fogC, W) {
         gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
       }`,
     fragmentShader: `
+      ${INK_INFO_DECL}
       uniform vec3 uH; uniform vec3 uM; uniform vec3 uZ;
       varying float vH;
       void main() {
+        ${INK_INFO_NONE}   // 天空沒有法線可給:寫哨兵 0,勾線 pass 會退回深度那一份
         // 柔量化:26 階再混回 35%,交界看得出來但不是色票
         float t = clamp( vH * 1.15 + 0.02, 0.0, 1.0 );
         float q = floor( t * ${SKY_QUANT}.0 ) / ${SKY_QUANT}.0;
@@ -261,10 +279,10 @@ export function applyEnvironment(scene, terrain, env) {
   const hemi = new THREE.HemisphereLight(T.hemiSky, T.hemiGnd, T.hemiI * (W.light * 0.6 + 0.4) * S.mul);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(
-    new THREE.Color(T.sun).multiply(new THREE.Color(S.tint)),
-    T.sunI * W.light * S.mul,
-  );
+  // 陽光色**先取出來**:太陽本體與近霧色吃同一份(近霧偏的就是「今天的日照」,
+  // 兩處各算一次的話換季/換時段時霧與光會走不同的色相)
+  const sunC = new THREE.Color(T.sun).multiply(new THREE.Color(S.tint));
+  const sun = new THREE.DirectionalLight(sunC, T.sunI * W.light * S.mul);
   const az = env?.time === 'dusk' ? 0.9 : 0.4;   // 黃昏太陽壓低偏西
   sun.position.set(span * Math.cos(az), span * T.elev, span * Math.sin(az) * 0.5);
   scene.add(sun);
@@ -277,6 +295,10 @@ export function applyEnvironment(scene, terrain, env) {
   }
 
   return {
+    // 空氣透視(雙色霧)給後製管線的四個值。**近/遠色與 scene.fog 的兩段距離 MUST 一起給** ——
+    // 後製那一 pass 是用同一份 near/far 重算 fogFactor 再把近端色的差額補回去的(exact,
+    // 不是近似);距離對不上就會在遠景留一圈色帶,而那看起來像「霧壞掉了」。
+    air: { near: nearFogColor(fogC, sunC, skyC, W), far: fogC.clone(), fogNear: span * W.fogNear, fogFar: span * W.fogFar },
     update(dt, camera) {
       particles?.update(dt, camera);
       // 穹頂/雲**恆以相機為中心**:天空沒有視差,不然走到地圖邊緣會看到「天空的邊」

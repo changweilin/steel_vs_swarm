@@ -302,10 +302,17 @@ const PROJ_POOL_MAX = 24;
 // 觸控裝置的像素比上限:手機 DPR 常見 2.5~3.5,照單全收等於算 6~12 倍於邏輯解析度的像素,
 // 行動 GPU 是**填充率**瓶頸 ⇒ 高功耗模式一樣掉幀。1.5 已看不出鋸齒差(還有 FXAA 級的 DPR 抗鋸齒)。
 const TOUCH_DPR_MAX = 1.5;
-// 自適應解析度(觸控限定):`_dpr()` 是畫質**天花板**(低功耗 1 / 觸控 1.5,稽核鎖定),
-// 調節器只在天花板以下浮動 —— 幀時撐不住就降算圖解析度換幀率,有餘裕就升回滿檔。
+// 自適應解析度(**全平台**;2026-08-12 起桌機一併啟用):`_dpr()` 是畫質**天花板**
+//(低功耗 1 / 觸控 1.5 / 桌機 2,稽核鎖定),調節器只在天花板以下浮動 —— 幀時撐不住就降
+// 算圖解析度換幀率,有餘裕就升回滿檔。
 // 手機 GPU 效能跨度極大(同一份場景在旗艦與中階機差 3 倍),固定像素比注定兩頭不討好:
 // 訂高了弱機掉幀、訂低了強機白白犧牲畫質;讓量測到的幀時自己決定,才同時兼顧速度與畫質。
+//
+// **為什麼桌機也要**(舊制刻意只開觸控,2026-08-12 改):桌機的跨度一樣大 —— 4K 螢幕的
+// `_dpr()` 天花板是 2 ⇒ 每幀 4 倍於邏輯解析度的像素,而內顯與獨顯差一個量級。舊制在那裡
+// 的行為是「就這樣掉幀」,而畫面上沒有任何東西告訴玩家可以換畫質;調節器把那件事變成
+// 自動的。桌機恆能撐滿檔時 `_resScale` 一路停在 1 ⇒ **逐位元同舊制**(升階分支在
+// `_resScale < 1` 就早退,一次 `setPixelRatio` 都不會打)。
 const RES_GOV = {
   MIN: 0.7,        // 縮放下限(乘在 _dpr() 天花板上):再糊就影響瞄準辨識,寧可掉幀
   STEP: 0.1,       // 每次調整一階(drawing buffer 重配有成本,小步走 + 冷卻防震盪)
@@ -317,6 +324,12 @@ const RES_GOV = {
   COOL_MAX: 24,    // 升階冷卻上限(避免在能力邊界永久震盪,也不至於永不再試)
   SPIKE_MS: 80,    // 單幀尖峰(GC / 資源載入 / 分頁切回)不入帳,只看穩態
   EMA: 0.1,        // 指數移動平均權重(時間常數約 10 幀)
+  // **震盪熄火**:方向反轉這麼多次就永久停手,停在當下那一階。指數退避拉長的是「多久
+  // 再試一次」,它救不了「這台機器的能力剛好卡在兩階之間」—— 那種機器上升降會一直交替,
+  // 而每一次調整都要重配 drawing buffer(整條後製鏈的 RT 跟著重建)。與其永遠付那個成本,
+  // 不如認賠停在一階。⚠ 熄火 MUST NOT 順手把 `_resScale` 拉回 1:那等於把玩家丟回撐不住
+  // 的那一階,而且下一輪又會降下來 —— 熄火要的是「停在現在這裡」。
+  FLIP_MAX: 4,
 };
 
 export class BattleClient {
@@ -498,9 +511,9 @@ export class BattleClient {
     });
     this.renderer.setPixelRatio(this._dpr());   // 低功耗模式(svs_lowpower)夾到 1
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight, false);
-    // 自適應解析度調節器:只在觸控裝置啟用(桌機像素比行為完全不變,見 RES_GOV 註解)
+    // 自適應解析度調節器:**全平台**(2026-08-12;桌機恆撐得住時一次都不會調 ⇒ 行為不變)
     this._resScale = 1;
-    if (isTouchUI()) this._resGov = { ema: (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2, last: 0, raiseAt: -1e9, cool: RES_GOV.COOL_S };
+    this._resGov = { ema: (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2, last: 0, raiseAt: -1e9, cool: RES_GOV.COOL_S, dir: 0, flips: 0, off: false };
     this.scene = new THREE.Scene();
     const span = Math.max(this.terrain.worldW, this.terrain.worldH);
     // FPV 一律 UNITS[kind].fov = 68(2026-07-12 起全機種相同):同距離目標的視覺大小雙陣營必須一致,
@@ -535,6 +548,10 @@ export class BattleClient {
     // 而那要等到有人抱怨「打得到卻看不清楚」才會發現。與機種無關(交戰上界是全場的性質:
     // 對面那台帶什麼武器不由你決定)⇒ 換座機不必重設。
     this.pipeline?.setDof(dofNearM(), dofFarM());
+    // 空氣透視(雙色霧):顏色與距離**一律取 environment.js 那一份**(它同時寫了 scene.fog)——
+    // 這裡自己乘一次 span × W.fogNear 就是第二份實作,而症狀是遠景多一圈色帶(見 postfx AIR)。
+    const air = this.envFx?.air;
+    if (air) this.pipeline?.setAirFog(air.near, air.far, air.fogNear, air.fogFar);
 
     this.raycaster = new THREE.Raycaster();
     // 障礙碰撞柱空間索引(建物/神木/巨岩/橋墩):彈道/準星射線的遮蔽判定用。
@@ -3118,23 +3135,37 @@ export class BattleClient {
   }
 
   /**
-   * 自適應解析度調節器(觸控限定;每幀餵入未夾制的原始幀時)。
+   * 自適應解析度調節器(**全平台**;每幀餵入未夾制的原始幀時)。
    * 規則:EMA 幀時 > HI_MS 降一階、< LO_MS 升一階;降階只受 HOLD_S 節流(掉幀要快救),
    * 升階吃指數退避(升上去 FAIL_S 內又被打回 ⇒ 冷卻翻倍),避免在 GPU 能力邊界反覆震盪。
    * 尖峰幀(GC / 載入 / 分頁切回的補償幀)不入帳 —— 調節器只回應穩態負載。
+   * 退避仍壓不住(方向反轉累計 FLIP_MAX 次)⇒ **永久熄火**,停在當下那一階。
+   *
+   * 分頁在背景時 MUST NOT 入帳:`requestAnimationFrame` 在背景分頁停擺,切回來的第一幀
+   * 幀時是整段背景時間 —— 那一幀被 SPIKE_MS 濾掉,但緊接著的幾幀(重新編譯/貼圖回填)
+   * 是真的慢而且不代表穩態負載,會白白吃掉一階。
    */
   _tickResGov(ms, now) {
     const g = this._resGov;
-    if (!g || !(ms > 0) || ms > RES_GOV.SPIKE_MS) return;
+    if (!g || g.off || !(ms > 0) || ms > RES_GOV.SPIKE_MS) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
     g.ema += (ms - g.ema) * RES_GOV.EMA;
     if (now - g.last < RES_GOV.HOLD_S) return;
+    let dir = 0;
     if (g.ema > RES_GOV.HI_MS && this._resScale > RES_GOV.MIN) {
       this._resScale = Math.max(RES_GOV.MIN, +(this._resScale - RES_GOV.STEP).toFixed(2));
       if (now - g.raiseAt < RES_GOV.FAIL_S) g.cool = Math.min(RES_GOV.COOL_MAX, g.cool * 2);
+      dir = -1;
     } else if (g.ema < RES_GOV.LO_MS && this._resScale < 1 && now - g.last >= g.cool) {
       this._resScale = Math.min(1, +(this._resScale + RES_GOV.STEP).toFixed(2));
       g.raiseAt = now;
+      dir = 1;
     } else return;
+    // 震盪熄火:只數**方向反轉**(連續同向是在收斂,不是震盪)。熄火後停在當下這一階,
+    // MUST NOT 回彈到 1 —— 那一階正是量測認可撐得住的那一階。
+    if (g.dir !== 0 && dir !== g.dir) g.flips++;
+    g.dir = dir;
+    if (g.flips >= RES_GOV.FLIP_MAX) g.off = true;
     g.last = now;
     g.ema = (RES_GOV.HI_MS + RES_GOV.LO_MS) / 2;   // 調整後重新量測(舊均值屬於舊解析度)
     this._applyRes();
@@ -8843,7 +8874,7 @@ export class BattleClient {
     const raw = this.clock.getDelta();          // 未夾制幀時:自適應解析度要看真實負載
     let dt = Math.min(0.1, raw);
     const now = performance.now() / 1000;
-    this._tickResGov(raw * 1000, now);          // 觸控限定(桌機 _resGov 為 undefined 直接早退)
+    this._tickResGov(raw * 1000, now);          // 全平台(撐得住時一次都不會調)
 
     // Hitstop(頓點):拆塔/擊殺瞬間全域凍結 50~120ms 強調打擊重量,期間照常渲染
     if (this._hitstop > 0) { this._hitstop -= dt; dt = 0; }

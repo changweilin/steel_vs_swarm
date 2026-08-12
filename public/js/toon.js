@@ -118,6 +118,47 @@ function installWorldCurve() {
 }
 installWorldCurve();
 
+// ---- 勾線資訊緩衝的材質契約(2026-08-12;消費端住 `postfx.js` 的同名段)----
+// 深度的二階差分**分不出同深度相接的同色面**:牆腳與地面、退縮平台的轉折、機體零件的接縫。
+// 那不是門檻調不好 —— 資訊本身不在深度緩衝裡(`INK.K_S` 的掠射項為了壓掉高度場的網格折邊,
+// 會連同這些邊一起壓掉,而內插後的頂點法線在網格上是平滑的、在牆角是 90°)。
+// 補的訊號寫進**第二張附件**:`gInfo = vec4( 視空間法線.xy × 0.5 + 0.5, surfaceId, 1.0 )`,
+// `.a` 是「這一格有寫」的哨兵。
+//
+// ---- 為什麼是「全體無條件宣告」而不是跟著開關走 ----
+// WebGL2 的規則(2026-08-12 三方實測):
+//   ・啟用中的 draw buffer **沒有**對應的 fragment output ⇒ `INVALID_OPERATION`,
+//     而畫面上表現成**那一批物件整批不畫**、console 一個字都沒有;
+//   ・反過來(宣告了但沒有那個 draw buffer)⇒ **合法**,單附件 RT 與預設 framebuffer 都 OK。
+// 兩個方向的代價差這麼多 ⇒ 宣告一律無條件掛上,開關只准控制「管線要不要配第二張附件」。
+// 這也讓開關可以即時切換:場景材質恆寫,切開關只需要重建 RT 與勾線材質,不必重編譯任何材質。
+//
+// **涵蓋範圍由 `opaque_fragment` 推導,MUST NOT 手寫名冊**:會進場景的內建材質(basic /
+// lambert / phong / standard / physical / toon / matcap / points / sprite / dashed)全部包含它,
+// 而陰影與背景那幾支(depth / distanceRGBA / shadow / background / cube)**都不包含** ——
+// 那正是我們不想碰的:它們畫進單附件的陰影圖,補上去只是白付一個輸出。
+export const INK_INFO_DECL = 'layout(location = 1) out highp vec4 gInfo;';
+export const INK_INFO_NONE = 'gInfo = vec4( 0.0 );';   // 哨兵 0 = 這一格沒有法線資訊
+function installInkInfo() {
+  if (THREE.ShaderChunk.__inkInfo) return;
+  const OPAQUE = '#include <opaque_fragment>';
+  let n = 0;
+  for (const lib of Object.values(THREE.ShaderLib)) {
+    if (!lib.fragmentShader.includes(OPAQUE)) continue;
+    lib.fragmentShader = `${INK_INFO_DECL}\n${lib.fragmentShader}`;
+    n++;
+  }
+  // 預設寫「沒有資訊」;掛了 cel 補丁的材質會在這一行**之後**覆寫成真的法線與 id。
+  THREE.ShaderChunk.opaque_fragment += `\n${INK_INFO_NONE}`;
+  THREE.ShaderChunk.__inkInfo = true;
+  // 一支都沒補到 = three 換了 chunk 名字 ⇒ 開關一開就是滿場物件消失。寧可現在就吵。
+  if (n === 0) console.warn('[ink] 找不到任何含 opaque_fragment 的 ShaderLib,勾線資訊緩衝不可用');
+}
+installInkInfo();
+let _surfSeq = 0;
+/** 逐材質的 surfaceId(量化到 [0,1] 的 64 階;相鄰材質撞號 = 少一條線,不是壞掉)*/
+const nextSurfId = () => ((_surfSeq = (_surfSeq + 23) & 63) + 0.5) / 64;
+
 // ---- cel ramp 家族(NearestFilter = 硬邊界)----
 // **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
 // 散在各處 new DataTexture 就是「同一個場景裡有兩套明暗規則」,而畫面上只表現成
@@ -486,7 +527,13 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   }
   mat.defines = defines;
   mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands };
+  // surfaceId 逐材質定案一次(MUST NOT 在 onBeforeCompile 裡抽 —— 那支會因為 defines 改變或
+  // needsUpdate 重跑,同一塊裝甲會在重編譯之後換號,而畫面上只表現成「線閃了一下」)。
+  // **逐材質不是逐頂點**:逐頂點 id 要動到每一支幾何產生器,而這裡九成的價值在法線那一項;
+  // 逐材質 id 免費拿到「建物 vs 地面」「機體 vs 岩石」這一類分界。是刻意的降級,不是假裝有。
+  if (mat.userData.celSurfId == null) mat.userData.celSurfId = nextSurfId();
   mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uSurfId = { value: mat.userData.celSurfId };
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
     shader.uniforms.uSoftInk = { value: sk ? INK_SOFT_A : 1 };
@@ -690,10 +737,16 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         // MUST 排在 opaque_fragment **之後**:那一段的 \`#ifdef OPAQUE diffuseColor.a = 1.0\`
         // 會把先寫的值蓋掉。之後的 colorspace / fog / dithering 都只動 rgb,寫在這裡最穩。
         gl_FragColor.a = uSoftInk;
-        #endif`)
+        #endif
+        // 勾線資訊緩衝(檔頭那一段):覆寫 opaque_fragment 寫下的「沒有資訊」。
+        // **MUST 是視空間法線** —— 勾線是螢幕空間的,世界法線在鏡頭轉動時不會變而畫面上的
+        // 折邊會,兩者在轉身時會整批對不上。\`normal\` 是 three 在 normal_fragment_begin
+        // 之後留在 scope 裡的視空間法線。
+        gInfo = vec4( normalize( normal ).xy * 0.5 + 0.5, uSurfId, 1.0 );`)
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
+        uniform float uSurfId;
         #ifdef CEL_SOFT
         uniform float uSoftInk;
         #endif
