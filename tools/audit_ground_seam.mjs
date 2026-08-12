@@ -132,6 +132,7 @@ console.log('== Ⅰ planSeamOverlays 配置直測(執行原文)==');
   // 的比例(分母 = 有毯格)
   const refPlan = (keys, gnx, gnz) => {
     const at = (i, j) => (i >= 0 && j >= 0 && i < gnx && j < gnz) ? keys[j * gnx + i] : null;
+    const sub = (k) => k.split('#')[0];   // 同款異變體不外溢(2026-08-12;鏡射實作照樣要有這一條)
     const w = (k, ci, cj) => {
       const cells = [at(ci - 1, cj - 1), at(ci, cj - 1), at(ci - 1, cj), at(ci, cj)]
         .filter((c) => c != null && c !== '!');
@@ -144,7 +145,7 @@ console.log('== Ⅰ planSeamOverlays 配置直測(執行原文)==');
       const near = new Set();
       for (const [oi, oj] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) {
         const kn = at(i + oi, j + oj);
-        if (kn != null && kn !== '!' && kn !== k0) near.add(kn);
+        if (kn != null && kn !== '!' && kn !== k0 && sub(kn) !== sub(k0)) near.add(kn);
       }
       for (const kn of near) {
         const al = [w(kn, i, j), w(kn, i + 1, j), w(kn, i + 1, j + 1), w(kn, i, j + 1)];
@@ -293,7 +294,8 @@ console.log('== Ⅳ 靜態規則(單一縫 / 舊制不回歸 / 圖層與塑形�
 console.log('== Ⅴ 逐組合交界樣式(明確/柔和/斑塊/中間樣態帶)==');
 {
   // coarse 分區替身:key 首字母 → 分區
-  const ZMAP = { G: 'green', B: 'bare', U: 'urban', W: 'wet', A: 'alpine', Q: 'water' };
+  // 每個分區兩個字母 = 「同分區異款」的替身(同款異變體是另一件事,見 ②-b)
+  const ZMAP = { G: 'green', M: 'green', B: 'bare', U: 'urban', P: 'urban', W: 'wet', A: 'alpine', Q: 'water' };
   const coarseOf = (key) => ZMAP[key[0]];
   const N = 8;
   const opt = { coarseOf, seed: 0xC0FFEE | 0, variants: 6 };
@@ -304,16 +306,33 @@ console.log('== Ⅴ 逐組合交界樣式(明確/柔和/斑塊/中間樣態帶)=
   (hard && hard.st.sharp === 3.2 && hard.st.noise === 0.12)
     ? ok('綠地↔市區 → 明確邊界樣式(sharp 3.2、noise 0.12:路緣式直線切換)')
     : bad(`綠地↔市區樣式錯誤 st=${JSON.stringify(hard?.st)}`);
-  const outUU = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'U#0' : 'U#1'), N, N, opt);
+  // 同分區**異款**(水泥地↔人行道磚)—— MUST NOT 拿 'U#0'/'U#1' 當替身:那是同款異變體,
+  // 而同款異變體自 2026-08-12 起刻意不發外溢(見下方「同款異變體」段),用它當替身會把
+  // 「urban|urban 樣式查得到嗎」驗成「同款有沒有外溢」兩件不同的事
+  const outUU = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'U#0' : 'P#0'), N, N, opt);
   (outUU.length && outUU.every((o) => o.st.sharp === 3.6))
     ? ok('市區↔市區換鋪面 → 切線最直(sharp 3.6)')
     : bad('市區↔市區樣式未命中 urban|urban');
 
   // ② 同分區異款 → 預設柔和(green|green 不在表上)
-  const outGG = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'G#0' : 'G#1'), N, N, opt);
+  const outGG = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'G#0' : 'M#0'), N, N, opt);
   (outGG.length && outGG.every((o) => !o.st.sharp && !o.st.dither && !o.st.mid && o.st.noise === 0.4))
     ? ok('同分區異款(草皮↔花田)→ 預設柔和淡出(SEAM_SOFT)')
     : bad('同分區異款未走預設柔和');
+
+  // ②-b 同款異變體(2026-08-12 使用者需求「同顏色的相鄰拼圖的紋路盡可能不同」的代價):
+  //     底毯自從逐格挑變體之後,每一格周圍幾乎都有異變體同款鄰格 —— 為它發外溢等於在整張圖
+  //     上再鋪兩層半透明底毯(每格約 2 張)。而變體之間共用底色(baseFill)⇒ 交界只換花紋、
+  //     沒有顏色要 cross-fade。**這一條紅字 = 整片地被的 overdraw 翻倍,而畫面幾乎看不出差別**
+  const outVar = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'G#0' : 'G#1'), N, N, opt);
+  outVar.length === 0
+    ? ok('同款異變體不發外溢(共用底色,只換花紋 → 沒有要 cross-fade 的東西)')
+    : bad(`同款異變體仍發了 ${outVar.length} 張外溢(整張圖多兩層半透明底毯)`);
+  const mixed = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'G#0' : (i < 6 ? 'G#1' : 'B#0')), N, N, opt);
+  mixed.length > 0 && mixed.every((o) => o.key.startsWith('B#') || o.key.startsWith('steppe#')
+    || o.key.startsWith('G#'))
+    ? ok('異款照樣發外溢(同款豁免沒有把真正的交界一起吃掉)')
+    : bad('同款豁免波及異款交界');
 
   // ③ 雪線斑塊:alpine 交界 dither
   const outAG = planSeamOverlays(grid(N, N, (i) => i < 4 ? 'A#0' : 'G#0'), N, N, opt);

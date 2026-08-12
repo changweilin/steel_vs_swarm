@@ -6,7 +6,9 @@
 // 真品路徑(這是本工具唯一有意義的理由):場景一律由 public/js/ground.js 的 buildGroundCover
 // 建 —— 真材質、真畫筆、真 planBorderPuzzle,不另寫一份鏡射渲染。
 //
-// 怎麼讓「指定的兩種地表」同框:底毯款式由 cellKeyAt 的低頻值雜訊沿世界座標挑(波長 ~166m),
+// 怎麼讓「指定的兩種地表」同框:底毯款式由 cellSubAt 的低頻值雜訊沿世界座標挑(波長 ~166m;
+// 2026-08-12 起取值點量化成**選款區塊** carpetLotAt ⇒ 一塊色至少一個 lot 寬,而相鄰區塊的索引
+// 可以跳不只 1 格 —— 自然可達的組合因此變多,但同一顆種子上換得比較慢),
 // 消費端無從指定 —— 所以**不指定**:每個分區對建一座夠大的場地(左右各一個分區),讓兩側
 // 自然把該分區的款式整批鋪出來,再從**真的建出來的網格**找「哪兩款在哪裡相鄰」下鏡頭。
 // 取樣點 = carpet mesh 的逐格中心頂點(emitCell 每格 9 頂點,index%9===4 = G[4] 中心),
@@ -32,7 +34,7 @@ const OUT = path.resolve(arg('--out', 'tools/.shots/borders'));
 const W = parseInt(arg('--w', '400'), 10);
 const H = parseInt(arg('--h', '300'), 10);
 const ONLY = arg('--only', '');
-// 同分區內只有**清單相鄰**的款式會接壤(cellKeyAt 的 t 是連續雜訊 ⇒ 索引一次只跳 1),
+// 同分區內接壤的款式仍受清單順序約束(t 仍是連續場,只是改在**選款區塊中心**取值 ⇒ 相鄰區塊的索引可以跳不只 1),
 // 換種子 = 換雜訊場的空間排列 ⇒ 掃多輪才把自然可達的組合收滿
 const SEEDS = parseInt(arg('--seeds', '4'), 10);
 fs.mkdirSync(OUT, { recursive: true });

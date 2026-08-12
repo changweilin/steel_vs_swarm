@@ -36,7 +36,7 @@
 //       盒子、內面蓋得滿、「地貌 / 水陸域 / 坡度級改變 或 太長」的切分規則都真的會切、
 //       短 run 併回去時取**較陡**的那一級、零共享亂數、決定性。
 //   Ⅷ 緩衝布景與視線邊界背景 —— 只擺在地形範圍之外、四種背景各對應陸/水域、高度吃
-//       `objHeightMax()` 同一個天花板、零共享亂數、決定性。
+//       `objHeightMax()` 同一個天花板、零共享亂數、決定性、**逐零件落地不懸空**(2026-08-12)。
 //
 // 跑法:`node tools/audit_world_edge.mjs`(不需伺服器/瀏覽器/網路)
 //       反向驗證:`--break-lap`    段長重疊係數 < 1 ⇒ 環上出現縫 ⇒ Ⅱ 紅
@@ -45,6 +45,7 @@
 //                 `--break-face`   把貼著內面的實體零件抽掉 ⇒ Ⅶ 紅(撞得到卻看得穿)
 //                 `--break-run`    拿掉「太長就換一款」那一條 ⇒ Ⅶ 紅
 //                 `--break-slope`  把每一款都改成三級都站得住 ⇒ Ⅶ 紅(崖面上會擺出貨櫃車)
+//                 `--break-land`   關掉逐零件落地 ⇒ Ⅷ 紅(斜坡上整段布景/背景浮在半空)
 //                 `--break-boxh`   盒高改回逐款一個值 ⇒ Ⅲ 紅(素牆頂上撞得到卻看不見)
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
@@ -59,6 +60,7 @@ const BREAK_FIT = process.argv.includes('--break-fit');
 const BREAK_FACE = process.argv.includes('--break-face');
 const BREAK_RUN = process.argv.includes('--break-run');
 const BREAK_BOXH = process.argv.includes('--break-boxh');
+const BREAK_LAND = process.argv.includes('--break-land');   // 逐零件落地關掉 ⇒ 斜坡上整段浮起來
 // 坡度分級失效:把每一款都改成「三級都站得住」⇒ 崖面上會擺出貨櫃車 / 連排民房
 if (process.argv.includes('--break-slope')) {
   for (const k of Object.values(EW.WALL_KINDS)) k.slope = 'steep';
@@ -99,7 +101,12 @@ const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
 //      檔案裡,Node 端 import 不了整支;抄一份擺位公式進稽核則永遠會通過)----
 // THREE 樁帶**真的 4×4 矩陣運算**:幾何只記 AABB 的八個角,`applyMatrix4` 逐角轉換 ⇒ 每一顆
 // 零件的**世界 AABB** 算得出來,Ⅲ 才驗得到「演出真的收在碰撞盒裡」而不是只驗字串。
-class V3 { constructor(x = 0, y = 0, z = 0) { this.set(x, y, z); } set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } }
+class V3 {
+  constructor(x = 0, y = 0, z = 0) { this.set(x, y, z); }
+  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  // 逐零件落地要拿「這顆零件在世界的水平位置」—— 走的是**同一個矩陣**(不是另寫一份 sin/cos)
+  applyMatrix4(m) { const [x, y, z] = m.apply([this.x, this.y, this.z]); return this.set(x, y, z); }
+}
 class Eul { constructor() { this.set(0, 0, 0); } set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; } }
 class Quat {
   constructor() { this.x = 0; this.y = 0; this.z = 0; this.w = 1; }
@@ -169,8 +176,17 @@ if (BREAK_BOXH) {
   wallSrc = wallSrc.replace(/const kh = Math[.]max\(WH, top\);/, 'const kh = Math.max(WH, kh0);');
   if (wallSrc === before) { console.log('x --break-boxh 的字面替換沒有生效(原文改了?)'); process.exit(1); }
 }
-const HELPERS = bioSrc.slice(bioSrc.indexOf('const PLINTH_C = '), bioSrc.indexOf('// ---- 緩衝空間的 3D 物件'));
-const mkWall = (extra = '') => new Function(
+let HELPERS = bioSrc.slice(bioSrc.indexOf('const PLINTH_C = '), bioSrc.indexOf('// ---- 緩衝空間的 3D 物件'));
+// `--break-land`:把「逐零件落地」關掉 ⇒ 整段布景/背景回到「拿段心一個高度擺全部零件」,
+// 坡上那一端浮在半空、坡下那一端埋進土裡
+if (BREAK_LAND) {
+  const before = HELPERS;
+  HELPERS = HELPERS.replace(/if \(groundY\) \{/, 'if (false) {');
+  if (HELPERS === before) { console.log('x --break-land 的字面替換沒有生效(原文改了?)'); process.exit(1); }
+}
+// `over` = 覆寫注入的規劃器/零件表(Ⅷ 的逐零件落地量測靠它把「這一顆零件是誰的第幾件」錄下來,
+// 而不是在稽核裡抄一份擺位公式)
+const mkWall = (extra = '', over = {}) => new Function(
   'THREE', 'envMat', 'mergeGeos', 'WORLD_EDGE', 'edgeWallInsetM', 'edgeWallHM', 'WATER',
   'SLOPE', 'slopeDeg', 'wallSlopeTier',
   'classifyImg', 'planWallRuns', 'WALL_KINDS', 'wallParts', 'edgeSeed',
@@ -181,7 +197,8 @@ const mkWall = (extra = '') => new Function(
 )(THREE_STUB, (c, o) => ({ c, o }), mergeGeosStub, WORLD_EDGE, edgeWallInsetM, edgeWallHM, WATER,
   SLOPE, slopeDeg, EW.wallSlopeTier,
   classifyImg, EW.planWallRuns, EW.WALL_KINDS, wallParts, EW.edgeSeed,
-  EW.planBufferProps, EW.propParts, EW.planBackdrop, EW.backdropParts, EW.BACKDROP_KINDS,
+  over.planBufferProps || EW.planBufferProps, over.propParts || EW.propParts,
+  over.planBackdrop || EW.planBackdrop, over.backdropParts || EW.backdropParts, EW.BACKDROP_KINDS,
   EW.EDGE_WALL, edgeBufferM, objHeightMax, false, EW.partBox);
 const B = mkWall();
 
@@ -779,6 +796,49 @@ console.log('\nⅧ 緩衝空間的 3D 物件 + 視線邊界的假山/假海/假�
   t('拿不到 bufferHeightAt 就一件都不擺(寧缺勿錯,不憑空猜高度)',
     B.buildBufferProps({ group, terrain: { ...T, bufferHeightAt: null } }) === 0
     && B.buildBackdrop({ group, terrain: { ...T, bufferHeightAt: null } }) === 0);
+
+  // ---- 逐零件落地:斜坡上不懸空、也不埋進去(2026-08-11 使用者定案「視線邊界的假山/假海/
+  //      假森林/假城市也要在地形上放置好,在斜坡不要懸空」)----
+  // 量法:給裙一個**有明顯坡度的平面**,逐顆零件把「世界 AABB 的底」與「它自己腳下的裙高度
+  // + 它在局部座標裡的離地高」對照。逐零件落地 ⇒ 逐顆恰好吻合(±LAND_TOL);拿段心一個高度
+  // 擺整段 ⇒ 一段 150m 的背景在 0.22 的坡上兩端差到 ±16m(`--break-land` 就是那個壞版本)。
+  // 對應關係不靠稽核抄一份擺位公式:注入的規劃器/零件表把「這一顆是誰的第幾件」錄下來,
+  // 而 `mergeGeos` 收到的順序就是 `emitWallParts` 推進批次的順序。
+  {
+    const TILT = { ...T, bufferHeightAt: (x, z) => 18 + (x - T.minX) * 0.22 + (z - T.minZ) * 0.14 };
+    const LAND_TOL = 1e-6;
+    const run = (which) => {
+      let plan = [], n = 0;
+      const rec = [];
+      const take = (ps, sc, kind) => { for (const p of ps) rec.push({ p, sc, kind }); return ps; };
+      const RB = mkWall('', {
+        planBufferProps: (o) => (plan = EW.planBufferProps(o)),
+        propParts: (k, s) => take(EW.propParts(k, s), plan[n]?.s ?? 1, plan[n++]?.kind),
+        planBackdrop: (o) => (plan = EW.planBackdrop(o)),
+        backdropParts: (k, o) => take(EW.backdropParts(k, o), 1, plan[n++]?.kind),
+      });
+      emitted.length = 0;
+      (which === 'props' ? RB.buildBufferProps : RB.buildBackdrop)({ group, terrain: TILT });
+      return { rec, boxes: emitted.slice() };
+    };
+    for (const [which, label] of [['props', '緩衝空間的 3D 物件'], ['back', '視線邊界背景']]) {
+      const { rec, boxes } = run(which);
+      // 水域款的落地基準刻意是海平面(礁岩露出水面 / 假海坐在海面上),不吃裙的坡度
+      const AQ = new Set(['islet', 'sea']);
+      let n = 0, worst = 0, worstK = '';
+      for (let k = 0; k < Math.min(rec.length, boxes.length); k++) {
+        if (AQ.has(rec[k].kind) || rec[k].p.r) continue;
+        const b = boxes[k];
+        const g = TILT.bufferHeightAt((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2);
+        const d = Math.abs(b.y0 - (g + EW.partBox(rec[k].p).y0 * rec[k].sc));
+        if (d > worst) { worst = d; worstK = rec[k].kind; }
+        n++;
+      }
+      t(`${label}:零件數與批次逐一對應(${rec.length} 件)`, rec.length > 0 && rec.length === boxes.length);
+      t(`${label}:逐零件坐在自己腳下那一點的裙上(${n} 件實測,最大偏差 ${worst.toFixed(3)}m ≤ ${LAND_TOL})`,
+        n > 0 && worst <= LAND_TOL, `（最差 ${worstK}）`);
+    }
+  }
 }
 
 for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
@@ -787,7 +847,8 @@ for (const [f, m] of [['--break-lap', '段長重疊係數 < 1,Ⅱ MUST 紅字'],
   ['--break-face', '抽掉貼著內面的實體零件,Ⅶ MUST 紅字'],
   ['--break-run', '拿掉「太長就換一款」,Ⅶ MUST 紅字'],
   ['--break-boxh', '盒高改回逐款一個值,Ⅲ MUST 紅字(素牆頂上的空氣)'],
-  ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)']]) {
+  ['--break-slope', '每一款都改成三級都站得住,Ⅶ MUST 紅字(崖面上的貨櫃車)'],
+  ['--break-land', '關掉逐零件落地,Ⅷ MUST 紅字(斜坡上浮在半空的假山)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
 }
 console.log(`\n${fail === 0 ? '🎉' : '❌'} 世界邊界稽核:${pass} 通過 / ${fail} 失敗`);
