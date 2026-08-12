@@ -122,6 +122,7 @@ async function fillProtoStrip(forId) {
 }
 
 function renderPanel() {
+  const quad = spec.kind === 'quad';
   const p = resolveProp(spec);
   const rows = conversionDoc(spec)
     .map((r) => `<tr><td>${r.feat}</td><td>${r.part}</td></tr>`).join('');
@@ -131,7 +132,17 @@ function renderPanel() {
       return `<tr class="${ovr ? 'ovr' : ''}"><td>${k}</td><td>${p[k]}</td><td>${HUMANOID[k].vrm}</td></tr>`;
     }).join('');
   const rig = unit.rig;
-  const chan = [
+  // rig 契約檢查依鷹架分流:quad 鏡射 models.js buildBeastMech、biped 同 buildRobotMech
+  const chan = (quad ? [
+    ['spine/chest/neck/head', !!(rig.spine && rig.chest && rig.neck && rig.head)],
+    ['legFL/FR/HL/HR + ch ×4', !!(rig.legFL && rig.legFR && rig.legHL && rig.legHR
+      && rig.chFL?.length && rig.chFR?.length && rig.chHL?.length && rig.chHR?.length)],
+    ['tailSegs(尾鞭)', !!(rig.tailSegs && rig.tailSegs.length >= 2)],
+    ['gait 參數(stride/top/bob)', !!(rig.stride && rig.top && rig.bob != null)],
+    ['weap/hvy/kickAmp(後座)', !!(rig.weap && rig.hvy && rig.kickAmp)],
+    ['muzzles + wpn(槍口/FPV 同源)', !!(rig.muzzles?.light && rig.muzzles?.heavy && rig.wpn?.light && rig.wpn?.heavy)],
+    ['moveSig / castSig(性格層)', !!(rig.moveSig && rig.castSig)],
+  ] : [
     ['hips/chest/head', !!(rig.hips && rig.chest && rig.head)],
     ['legL/R + legChain ×2', !!(rig.legL && rig.legChainL.length === 2 && rig.legChainR.length === 2)],
     ['armL/R + armChain ×2', !!(rig.armL && rig.armChainL.length === 2 && rig.armChainR.length === 2)],
@@ -140,15 +151,15 @@ function renderPanel() {
     ['weap/hvy/kickAmp(後座)', !!(rig.weap && rig.hvy && rig.kickAmp)],
     ['muzzles + wpn(槍口/FPV 同源)', !!(rig.muzzles?.light && rig.muzzles?.heavy && rig.wpn?.light && rig.wpn?.heavy)],
     ['moveSig / castSig(性格層)', !!(rig.moveSig && rig.castSig)],
-  ].map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
+  ]).map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
   $('panel').innerHTML = `
     <h3>${spec.label} <small>${spec.height} m</small></h3>
     <h4>2D 原型圖(建模設計權威;點圖開大圖)</h4>
     <div id="protoStrip" class="proto-strip"><div class="dim">載入中…</div></div>
     <h4>特徵 → 零件轉換</h4>
-    <table><tr><th>人形特徵(VRM 骨)</th><th>機器人零件</th></tr>${rows}</table>
-    <h4>人形比例(身高 1.0 正規化;<span class="ovr-k">黃 = 本機覆寫</span>)</h4>
-    <table><tr><th>特徵</th><th>值</th><th>VRM 對應</th></tr>${propRows}</table>
+    <table><tr><th>${quad ? '生物特徵' : '人形特徵(VRM 骨)'}</th><th>機器人零件</th></tr>${rows}</table>
+    ${quad ? '' : `<h4>人形比例(身高 1.0 正規化;<span class="ovr-k">黃 = 本機覆寫</span>)</h4>
+    <table><tr><th>特徵</th><th>值</th><th>VRM 對應</th></tr>${propRows}</table>`}
     <h4>rig 契約(locomotion.js 消費通道)</h4>
     <ul class="chan">${chan}</ul>`;
   fillProtoStrip(spec.id);   // 非同步補圖(換機時以 spec.id 守衛,不會補到別台的面板)

@@ -271,6 +271,11 @@ export function fanF(parent, spec, x, y, z, color, opts) {
 /**
  * 節鏈(多零件尾巴/觸手/鞭)—— 每節 = 樞軸 Group + 收分節身 + 節間關節環,
  * 節身沿 −Z(尾巴慣例,同 t06/m05;rig.tailSegs 直接吃回傳的 segs)。
+ * ⚠ rot0/rotD 只在**靜態展示**成立:segs 一旦掛進 rig.tailSegs,locomotion whipTail
+ * 每幀直接覆寫節樞軸 rotation.x/y(segs[0] 只留 base、其餘 ≈0)—— 垂掛/上捲的基礎姿勢
+ * MUST 放在 chainF 之上的**靜態中介 Group**,或把曲線寫進節身幾何(2026-08-12 仿生批次
+ * 四台實測同一個坑:s06/s09/m02 走中介 Group、s09 尾另走位置編碼手排)。
+ * rig.tents 不受此限(tentGuard 寫入含 j.base ⇒ 基礎角保留)。
  * spec = { n, x, y, z, len0, len1, r0, r1, rot0 = 0.5, rotD = -0.05,
  *          ring = true, ringColor = IRON, seg = 8, drawSeg? }
  *   drawSeg(group, i, { r, len }):逐節加料(鱗片/毛簇/發光環)的掛點。
