@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "game-8642",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/server.js", "--port", "8642"],
+      "port": 8642
+    },
+    {
       "name": "humanoid-forge",
       "runtimeExecutable": "node",
       "runtimeArgs": ["tools/humanoid_forge.mjs", "--port", "8631"],

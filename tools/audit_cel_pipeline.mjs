@@ -30,7 +30,8 @@
 //       —— 這是唯一與世界縮放無關的量,而它也正是這個常數宣稱要鎖住的東西。
 //       反向驗證 `--break-scale`(退回不除世界縮放)。
 //     ・SkinnedMesh 的 bind 分支與 `userData.outlineGeo` 平滑法線分支 MUST 留著。
-// 跑法:node tools/audit_cel_pipeline.mjs [--break-scale]
+// 跑法:node tools/audit_cel_pipeline.mjs [--break-scale] [--break-inkinfo]
+import { readdirSync } from 'node:fs';
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
 import { makeField, makeToneLadder } from '../public/js/field.js';
@@ -40,9 +41,12 @@ const env = readSrc('public', 'js', 'environment.js');
 const terr = readSrc('public', 'js', 'terrain.js');
 const field = readSrc('public', 'js', 'field.js');
 const game = readSrc('public', 'js', 'game.js');
+const postfx = readSrc('public', 'js', 'postfx.js');
 
 /** 反向驗證:把螢幕下限退回「不除世界縮放」的舊制 ⇒ Ⅳ MUST 紅字 */
 const BREAK_SCALE = process.argv.includes('--break-scale');
+/** 反向驗證:模擬新增了一支進場景的 ShaderMaterial 卻忘了宣告 gInfo ⇒ Ⅵ MUST 紅字 */
+const BREAK_INK = process.argv.includes('--break-inkinfo');
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 /** 只留「真的會執行的程式碼」—— 註解裡提到某個名字不算違規 */
@@ -249,6 +253,74 @@ console.log('\nⅤ 後製管線的接線(細節在 audit_gpu_lifecycle ⑦)');
   ok([...G.matchAll(/this\.renderer\.render\(this\.scene, this\.camera\)/g)].length === 1,
     '主畫面的 renderer.render 只剩一處(?post=0 的退路)');
   ok(/this\.pipeline\.render\(\); else this\.renderer\.render/.test(G), '主畫面改走管線,保留退路');
+}
+
+// ============ Ⅵ 勾線資訊緩衝的材質契約(2026-08-12)============
+// WebGL2 的規則:**啟用中的 draw buffer 沒有對應的 fragment output ⇒ INVALID_OPERATION**,
+// 而症狀是那一批物件整批不畫、console 一個字都沒有。反過來(宣告了但沒有那個 draw buffer)
+// 合法 —— 所以契約是「進場景的材質**一律**宣告」,開關只控制管線配不配第二張附件。
+//
+// 這一段就是那道閘:**新增任何進場景的 ShaderMaterial 而忘了宣告,就在這裡紅字**,
+// 而不是等到有人把開關打開才發現半個世界不見了。
+console.log('\nⅥ 勾線資訊緩衝的材質契約(A 方案)');
+{
+  const T = code(toon), P = code(postfx);
+  // ---- 安裝端:涵蓋範圍 MUST 由 opaque_fragment 推導,MUST NOT 手寫名冊 ----
+  ok(/function installInkInfo\(\)/.test(T) && /installInkInfo\(\);/.test(T),
+    '安裝函式存在且在模組載入時執行(program 要到第一次 render 才建 ⇒ 必然夠早)');
+  ok(/for \(const lib of Object\.values\(THREE\.ShaderLib\)\)/.test(T)
+    && /lib\.fragmentShader\.includes\(OPAQUE\)/.test(T),
+    '涵蓋範圍由 `opaque_fragment` 推導(內建材質名冊 MUST NOT 手寫)');
+  ok(/THREE\.ShaderChunk\.opaque_fragment \+= /.test(T) && /INK_INFO_NONE/.test(T),
+    'opaque_fragment 補上預設「沒有資訊」的寫入(cel 材質之後覆寫成真的法線)');
+  ok(/export const INK_INFO_DECL = 'layout\(location = 1\) out highp vec4 gInfo;'/.test(T),
+    '宣告字串只有一份(消費端一律 import,MUST NOT 各自手抄一行 layout)');
+  // cel 補丁的覆寫 MUST 排在 opaque_fragment 之後(不然被預設值蓋掉)
+  const celI = T.indexOf('#include <opaque_fragment>');
+  const celW = T.indexOf('gInfo = vec4( normalize( normal ).xy');
+  ok(celI > 0 && celW > celI, 'cel 補丁的法線寫入排在 `#include <opaque_fragment>` 之後');
+  ok(/uniform float uSurfId;/.test(T) && /shader\.uniforms\.uSurfId = \{ value: mat\.userData\.celSurfId \}/.test(T),
+    'surfaceId 逐材質定案一次(在 onBeforeCompile 裡抽 = 重編譯就換號)');
+
+  // ---- 消費端閘門:進場景的自寫 ShaderMaterial MUST 宣告 ----
+  // `postfx.js` 是**具名例外**:它的全螢幕四邊形畫進單附件 RT 或畫布,從來不進場景。
+  const EXEMPT = new Set(['postfx.js']);
+  const dir = new URL('../public/js/', import.meta.url);
+  const files = readdirSync(dir).filter((f) => f.endsWith('.js'));
+  const offenders = [];
+  let scanned = 0;
+  for (const f of files) {
+    if (EXEMPT.has(f)) continue;
+    // **import 那一行不算數**:一支檔案裡有兩支材質、只有一支宣告時,連 import 一起數就會
+    // 剛好湊到門檻而放行 —— 那正是這道閘要擋的情況。
+    let src = code(readSrc('public', 'js', f)).replace(/^import[^\n]*\n/gm, '');
+    // 反向驗證:模擬「有人新增了一支進場景的 ShaderMaterial 卻忘了宣告」
+    if (BREAK_INK && f === 'vfx.js') {
+      const bent = src.replaceAll('INK_INFO_DECL', '');
+      if (bent === src) { console.error('✗ --break-inkinfo:樣式沒咬到 vfx.js,反向驗證等於沒跑'); process.exit(1); }
+      src = bent;
+    }
+    const n = (src.match(/new THREE\.(Raw)?ShaderMaterial\(/g) || []).length;
+    if (!n) continue;
+    scanned += n;
+    const decl = (src.match(/INK_INFO_DECL/g) || []).length;
+    if (decl < n) offenders.push(`${f}(${n} 支材質 / ${decl} 處宣告)`);
+  }
+  ok(scanned > 0, `掃到 ${scanned} 支進場景的自寫 ShaderMaterial(掃不到 = 這道閘失效了)`);
+  ok(offenders.length === 0,
+    `每一支都宣告了 gInfo${offenders.length ? ` —— 缺:${offenders.join('、')}` : ''}`);
+
+  // ---- 管線端 ----
+  ok(/this\._mrtCap = renderer\.capabilities\.isWebGL2 === true/.test(P),
+    '能力閘只問 WebGL2 + WebGLMultipleRenderTargets(0.160 沒有 `{ count }`)');
+  ok(/_syncMrt\(\)/.test(P) && /this\.inkQuad\.material = this\._inkMaterial\(\)/.test(P),
+    '開關即時切換:重建場景 RT 與勾線材質(材質恆寫 ⇒ 不必重編譯場景材質)');
+  ok(/gl\.clearBufferfv\(gl\.COLOR, 1, \[0, 0, 0, 0\]\)/.test(P),
+    '第二張單獨清成 0 —— 哨兵靠它成立(clear() 用的是 renderer 的 clearColor)');
+  ok(/Array\.isArray\(src\.texture\) \? src\.texture\[0\] : src\.texture/.test(P),
+    'MRT 的 `.texture` 是陣列:餵整個陣列給 sampler 會整片黑而不報錯');
+  ok(/min\( min\( i0\.a, min\( il\.a, ir\.a \) \), min\( iu\.a, ib\.a \) \) > 0\.5/.test(P),
+    '五格哨兵齊全才採用第二訊號(天空/特效/招牌一條線都不會多)');
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);

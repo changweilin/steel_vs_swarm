@@ -8,7 +8,7 @@
 // 特效物件全部走 game.js 的 effects 陣列({ obj, ttl, fade(o, f, dt) },
 // f = 剩餘壽命比例 1→0),不自帶迴圈。
 import * as THREE from 'three';
-import { toonMat, outlinify, markShared } from './toon.js';
+import { toonMat, outlinify, markShared, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 
 // ---------------- canvas 貼圖(快取)----------------
 const _texCache = new Map();
@@ -621,6 +621,7 @@ const SHIELD_VERT = /* glsl */`
   }
 `;
 const SHIELD_FRAG = /* glsl */`
+  ${INK_INFO_DECL}
   uniform vec3 uColor;
   uniform float uTime;
   uniform float uFlash;   // 受擊 1 → 0 衰減
@@ -652,6 +653,7 @@ const SHIELD_FRAG = /* glsl */`
     float glow = edge * ( 0.25 + uFlash * 1.4 ) + fres * 0.55 + ripple;
     float alpha = 0.05 + edge * 0.08 + fres * 0.22 + uFlash * ( 0.30 + edge * 0.45 );
     gl_FragColor = vec4( uColor * ( 0.6 + glow * 1.8 ), alpha );
+    ${INK_INFO_NONE}   // 半透明加成殼不該畫輪廓線:寫哨兵 0(見 toon.js 的材質契約)
   }
 `;
 

@@ -935,10 +935,14 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     buildCivic: (kind) => ({ kind, position: { set() {} }, rotation: { y: 0 }, userData: {} }),
   };
   const names = Object.keys(env);
+  // 沙箱 MUST 是 **async**:這一段原文帶著階段回報的讓步點(`await onProgress?.(…)`,
+  // 2026-08-12 建構期讓步)。用同步的 `new Function` 包會直接是 SyntaxError,而錯誤訊息
+  // (「await is only valid in async functions」)看起來完全像是 biomes.js 壞了。
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   let ranErr = null, out = null, seeds = null;
   try {
     // `infillSeeds` 是這一段的產出之一(補間的種子名冊),一併取回來驗
-    [out, seeds] = new Function(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => env[k]));
+    [out, seeds] = await new AsyncFunction(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => env[k]));
   } catch (e) { ranErr = e; }
   ok(!ranErr, `區塊原文執行不炸(自由變數全對得上)${ranErr ? ` —— ${ranErr.message}` : ''}`);
   if (!ranErr) {
@@ -964,15 +968,15 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
       && Number.isFinite(t.s) && Number.isFinite(t.dj)), '園樹實例欄位齊全(x/y/z/s/ry/tx/tz/dj)');
     // 市區閘:聚落在 5km 外(圖資建物存在,但這條街周邊沒有)⇒ 一棟都不配。
     // 這正是「穿過山區的一條 primary 兩旁長出整排街屋」那個病灶的直測。
-    const run = (g0, lm = [], segs = null) => {
+    const run = async (g0, lm = [], segs = null) => {
       const b2 = [], it2 = {}, ad2 = [];
       const e2 = { ...env, generic: g0, landmarks: lm, items: it2, blockers: b2,
         ...(segs ? { frontSegs: segs } : {}), group: { add: (g) => ad2.push(g) } };
-      const [, sd] = new Function(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => e2[k]));
+      const [, sd] = await new AsyncFunction(...names, `${blockSrc}\n return [civics, infillSeeds];`)(...names.map((k) => e2[k]));
       return { added: g0.length - (Array.isArray(g0) ? 0 : 0), civics: ad2.length, seeds: sd };
     };
     const g2 = [{ x: 5000, z: 5000, w: 20, d: 20 }];
-    const r2 = run(g2);
+    const r2 = await run(g2);
     ok(g2.length === 1 && r2.civics === 0, '**市區閘**:聚落在 5km 外 ⇒ 這條街一棟都不配、一處公設都不劃');
 
     // ---- 孤立設施(2026-08-04 使用者回報「太魯閣、合歡山不在市區還這麼多建築」)----
@@ -982,13 +986,13 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     // (9 棟)才照配 —— 兩組的差別只有密度,證明量到的是「街廓」而不是「附近有房子」。
     for (const n of [1, 3, 8]) {
       const gN = cluster(n);
-      const rN = run(gN);
+      const rN = await run(gN);
       ok(gN.length === n && rN.civics === 0 && rN.seeds.length === 0,
         `**孤立設施**:路旁只有 ${n} 棟圖資建物(< 最小街廓 9 棟)⇒ 一棟都不配、補間種子也是 0`);
     }
     {
       const gN = cluster(9);
-      const rN = run(gN);
+      const rN = await run(gN);
       ok(gN.length > 9 && rN.seeds.length === 9,
         `門檻上緣:密到一塊最小街廓(9 棟)⇒ 照配(+${gN.length - 9} 棟),補間種子 9 棵`);
     }
@@ -996,7 +1000,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
     {
       const gN = cluster(5);
       const lm = Array.from({ length: 5 }, (_, i) => ({ x: 10 + (i % 4) * 30, z: 70 }));
-      const rN = run(gN, lm);
+      const rN = await run(gN, lm);
       ok(gN.length > 5 && rN.seeds.length === 5,
         `地標與建物同權計數:5 棟 + 5 座地標 = 一塊街廓 ⇒ 配得出來(+${gN.length - 5} 棟)`);
     }
@@ -1011,7 +1015,7 @@ console.log('\nⅥ 接線原文行為直測(biomes.js 街廓配置區塊)');
       // 幹道 MUST 一路延伸到散戶那裡 —— 不然「散戶周邊 0 棟」只是因為那邊沒有街道可配,
       // 量不到閘門有沒有生效(這一組的整個意義就在於兩端**都有街**)。
       const longSeg = [{ x1: -800, z1: 0, x2: 800, z2: 0, hw: 5, main: true }];
-      const rN = run(gN, [], longSeg);
+      const rN = await run(gN, [], longSeg);
       const added = gN.slice(core.length + outliers.length);
       const nearCore = added.filter((b) => Math.abs(b.x) < 300).length;
       const nearOut = added.filter((b) => b.x > 500).length;

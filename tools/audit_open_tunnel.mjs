@@ -666,7 +666,10 @@ function fakeBattleConfig() {
 {
   const tsrc = readSrc('public', 'js', 'terrain.js');
   const p0 = tsrc.indexOf('  function punchPortalHoles(');
-  const p1 = tsrc.indexOf("  onProgress?.(1, '地形完成');");
+  // 尾錨 MUST 容忍 `await`(2026-08-12 建構期讓步把階段回報改成讓步點),而且**要把它切掉** ——
+  // 只錨在 `onProgress` 上的話,切下來的原文尾巴會留一個裸的 `await `,沙箱當場 ReferenceError,
+  // 而錯誤訊息與明隧道一點關係都沒有
+  const p1 = tsrc.search(/(await )?onProgress\?\.\(1, '地形完成'\);/);
   if (p0 < 0 || p1 <= p0) throw new Error('找不到 punchPortalHoles 區塊');
   const PUNCH = tsrc.slice(p0, p1);
   const N3 = 17, STEP = 5, ORG = -40;                       // 座標 = ORG + j*STEP

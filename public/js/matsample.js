@@ -46,6 +46,16 @@ const SUN_DIR = new THREE.Vector3(0.9, 0.42, -0.35).normalize();
 const DOF_NEAR = 11.0, DOF_FAR = 15.5;
 const BG_Z = -5.5;   // 背景排的 z(與 DOF_FAR 一起挑的:那一排 MUST 落在全糊帶裡)
 
+// 樣品自己的霧帶與兩個霧色(「空氣透視」那根拉桿的示範對象)——**尺度兩軌、規則一份**,
+// 同上一段那個第三次不必再踩的坑。
+// FOG_FAR 刻意**大於**場景最遠處(21m 的地面遠端):遠端 f 只到 ≈0.72 ⇒ 畫面上沒有任何
+// 一個像素落在「補正歸零」的那一端,整條近→遠的色相過渡才全段可見。
+// 顏色:遠端 = 背景色本身(戰場那邊是地平線色,同一條「遠景融進背景」的恆等式);
+// 近端 = 樣品鍵光的暖色(戰場那邊由 `environment.js nearFogColor` 從當天的太陽推導)。
+const FOG_NEAR = 6.0, FOG_FAR = 27.0;
+const FOG_FAR_C = new THREE.Color(0x0f1622);    // MUST === scene.background
+const FOG_NEAR_C = new THREE.Color(0x4a3a2a);
+
 export class MatSample {
   /** @param mount 要掛 canvas 的容器 */
   constructor(mount) {
@@ -58,7 +68,11 @@ export class MatSample {
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(W, H, false);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0f1622);
+    this.scene.background = FOG_FAR_C.clone();
+    // 樣品也要有霧 —— 後製那一段補的是「近端色與遠端色的**差額**」,底下沒有霧的話補上去
+    // 的差額會浮在沒被霧化的幾何上(拉桿一動整個畫面染色,而戰場不是那樣)。
+    // 霧色 MUST === 遠端色:這樣拉桿在 0% 時樣品就是單色霧 = 戰場 0% 的同一件事。
+    this.scene.fog = new THREE.Fog(FOG_FAR_C.clone(), FOG_NEAR, FOG_FAR);
     this.camera = new THREE.PerspectiveCamera(38, W / H, 0.5, 60);
     this.camera.position.set(0, 2.1, 9.2);
     this.camera.lookAt(0, 0.6, 0);
@@ -116,6 +130,8 @@ export class MatSample {
       lowPower: lowPower() || isTouchUI(),
     });
     this.pipeline.setDof(DOF_NEAR, DOF_FAR);   // 樣品尺度(見檔頭那一段;戰場走 game._syncDof)
+    // 距離 MUST 與上面那個 scene.fog 逐位元相同(postfx AIR 的恆等式前提)
+    this.pipeline.setAirFog(FOG_NEAR_C, FOG_FAR_C, FOG_NEAR, FOG_FAR);
 
     this._draw = () => this.render();
     this._off = onVisualChange(this._draw);
