@@ -375,6 +375,49 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
     /window\.__cr = \{/.test(revJs) && /step: \(n = 1/.test(revJs) && /shot: async \(name\)/.test(revJs));
   t('截圖落盤路由與展示台同一支(boardapi)', /'\/__shot\/'/.test(apiSrc)
     && !/'\/__shot\/'/.test(code(readSrc('tools', 'humanoid_forge.mjs'))));
+
+  // ── 使用者同一輪:「機體美術台沒看到武器模組跳轉頁面」──
+  let wpnSrc = readSrc('tools', 'humanoid_forge', 'wpnview.js');
+  const viewerSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  if (brk('dollvis')) wpnSrc = wpnSrc.replace(
+    'unit.group.traverse((o) => { if (o.isMesh) o.visible = !o.userData.dollHidden; });',
+    'unit.group.traverse((o) => { if (o.isMesh) o.visible = true; });');
+  t('武器檢視只有一支實作(wpnview.js),兩座看板都轉呼',
+    /export function showWpn/.test(wpnSrc)
+    && /from '\.\/wpnview\.js'/.test(viewerSrc)
+    && /import\('\/tools\/humanoid_forge\/wpnview\.js'\)/.test(revJs));
+  t('兩座看板都沒有自己撈 wpn.nodes(那就是第二份武器檢視)',
+    !/wpn\?\.\[?\w*\]?\.nodes|for \(const n of w\.nodes/.test(code(revJs))
+    && (code(viewerSrc).match(/w\.nodes/g) || []).length === 0);
+  // 切回機體時「全部顯示」MUST 尊重紙娃娃的隱藏覆寫,否則藏起來的零件會自己冒出來
+  t('回到機體的全開 MUST 跳過紙娃娃藏起來的零件',
+    /o\.visible = !o\.userData\.dollHidden/.test(wpnSrc)
+    && /mesh\.userData\.dollHidden = true/.test(code(applySrc)));
+  t('鈕面只列掛得到的槽位(點下去卻退回機體 = 鈕面在說謊)',
+    /wl \? `<button[^`]*data-view="light"/.test(revJs) && /wh \? `<button[^`]*data-view="heavy"/.test(revJs));
+  // 入口:鍛造區塊在第三段、離頁首兩個畫面 ⇒ 沒有頁首入口就等於沒有這個功能
+  let entry = revJs;
+  if (brk('entry')) entry = entry.replace('<div class="cr-jump" id="crForgeJump"></div>', '');
+  t('頁首有跳轉入口(⚙ 機體鍛造 / 🧷 紙娃娃 / 武器)',
+    /id="crForgeJump"/.test(entry) && /data-jump="doll"/.test(entry) && /data-jump="light"/.test(entry));
+  t('抬頭列有檢視分頁與紙娃娃開關(捲兩個畫面才看得到的入口 = 沒有入口)',
+    /id="crForgeView"/.test(revJs) && /class="cr-fhead"/.test(revJs) && /id="cfDoll"/.test(revJs));
+  t('三個入口同吃一支切換(MUST NOT 各自寫一份「開啟編輯器」)',
+    (code(revJs).match(/function setForgeView/g) || []).length === 1
+    && /data-jump/.test(revJs) && /\$\('cfDoll'\)\.click\(\)/.test(revJs));
+  t('武器頁停止移動(取景框定住而機體繼續走 ⇒ 武器飄出畫面)',
+    /if \(fapp\.view !== 'mech'\) \{ fapp\.speedTgt = 0; fapp\.speed = 0; \}/.test(code(revJs)));
+  // 取景是在**鍛造靜姿**下量的,而切過去的第一幀手臂就彈到據槍姿(t01 實測位移 >1.5m)
+  // ⇒ 武器當場被甩出畫面。兩座看板 MUST 都在姿勢落定後補一次取景。
+  let reframeV = code(viewerSrc), reframeC = code(revJs);
+  if (brk('reframe')) {
+    reframeV = reframeV.replace(/if \(reframeNext && view !== 'mech'\)[^\n]*\n/, '');
+    reframeC = reframeC.replace(/if \(fapp\.reframeNext && fapp\.view !== 'mech'\)[^\n]*\n/g, '');
+  }
+  t('展示台:切武器頁後在姿勢落定的那一幀重取景',
+    /reframeNext && view !== 'mech'/.test(reframeV) && /reframeNext = true/.test(reframeV));
+  t('覆核台:同一條(rAF 迴圈與 headless step 都要有)',
+    (reframeC.match(/fapp\.reframeNext && fapp\.view !== 'mech'/g) || []).length === 2);
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);

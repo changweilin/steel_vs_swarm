@@ -30,8 +30,10 @@ const forgeReady = Promise.all([
   // 編輯器與展示台 :8631 是**同一支**(dolledit.js),覆核台只負責給它場景與存檔回呼。
   import('/tools/humanoid_forge/dolledit.js'),
   import('three/addons/controls/OrbitControls.js'),
-]).then(([forge, loco, toon, THREE, doll, orbit]) => {
-  FORGE = { forge, loco, toon, THREE, doll, orbit };
+  // 武器獨立檢視:與展示台 :8631 同一支(使用者「機體美術台沒看到武器模組跳轉頁面」)
+  import('/tools/humanoid_forge/wpnview.js'),
+]).then(([forge, loco, toon, THREE, doll, orbit, wpn]) => {
+  FORGE = { forge, loco, toon, THREE, doll, orbit, wpn };
   return true;
 }).catch((e) => { console.warn('人形鍛造停用:', e?.message || e); return false; });
 import {
@@ -174,6 +176,7 @@ function renderBody() {
       <h2>「${esc(r.code)}」${esc(r.name)}</h2>
       <div class="cr-mline">${esc(mc.ident.code)} ・ ${esc(r.sideName)} ・ ${esc(r.kindWord)}
         ・ 全高 ${mc.scaleM.toFixed(2)}m</div>
+      <div class="cr-jump" id="crForgeJump"></div>
       <div class="cr-kv">${kv({
     機體: r.machine,
     國籍: `${lo.nat} ・ ${lo.age} 歲 ・ ${lo.sex}`,
@@ -244,7 +247,7 @@ function renderBody() {
 // canvas 存活照 mountStage 同款:模組級持有、每次 renderBody 後 re-prepend。
 const fapp = { canvas: null, renderer: null, scene: null, camera: null, unit: null, ent: null,
   id: null, draft: null, ovr: {}, speed: 0, speedTgt: 0, simT: 0, last: 0, timer: 0,
-  controls: null, editor: null, framedKey: null, editOn: false };
+  controls: null, editor: null, framedKey: null, editOn: false, view: 'mech' };
 
 const forgeApi = async (body) => (await fetch('/api/forge', body
   ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
@@ -287,6 +290,8 @@ function forgeScene() {
     fapp.st = (fapp.st || 0) + dt;
     FORGE.loco.stepCombatFx(fapp.ent, fapp.st, dt);
     FORGE.loco.stepLocomotion(fapp.ent, dt, fapp.st, 0, -fapp.speed * dt, 0);
+    // 切武器頁的第一幀手臂會從靜姿彈到據槍姿 ⇒ 取景框被甩開(展示台的同一條)
+    if (fapp.reframeNext && fapp.view !== 'mech') { fapp.reframeNext = false; applyForgeView(true); }
     // 自動環繞交給軌道鏡頭(全角度檢視);紙娃娃編輯時**自轉 MUST 停** ——
     // 一邊自轉一邊拖 gizmo,拖到的是「拖的那一瞬間鏡頭在的地方」,零件會被拉往
     // 完全不相干的方向(同展示台的那一條)。改用真的 OrbitControls 也讓覆核者
@@ -305,6 +310,62 @@ function forgeScene() {
   requestAnimationFrame(loop);
 }
 
+/**
+ * 套用目前的檢視(機體 / 輕武器 / 重武器)。
+ * 武器頁 = **同一棵樹的可見性子集 + 依包圍盒取景**(wpnview.js 唯一縫,與展示台同一支);
+ * 這一格沒掛那個槽位就退回機體 —— 鈕面本來也只列掛得到的槽位。
+ * 武器頁**停止移動**:武器掛在會動的肢體上,取景框定住而機體繼續走,武器會慢慢飄出畫面。
+ */
+function applyForgeView(reframe = true) {
+  const { wpn } = FORGE;
+  if (!fapp.unit) return;
+  if (fapp.view !== 'mech') { fapp.speedTgt = 0; fapp.speed = 0; }
+  if (reframe) fapp.reframeNext = true;   // 姿勢落定後再量一次
+  wpn.showWpn(fapp.unit, fapp.view);
+  if (fapp.grid) fapp.grid.visible = fapp.view === 'mech';
+  if (fapp.view === 'mech') {
+    if (reframe) {
+      const H = fapp.draft.height;
+      fapp.controls.target.set(0, H * 0.5, 0);
+      fapp.camera.position.set(H * 1.6, H * 0.62, H * 2.3);
+      fapp.camera.lookAt(fapp.controls.target);
+    }
+  } else {
+    const f = wpn.wpnFrame(fapp.unit, fapp.view);
+    if (!f) { fapp.view = 'mech'; return applyForgeView(reframe); }
+    if (reframe) wpn.applyWpnCamera(fapp.camera, fapp.controls.target, f);
+  }
+  fapp.controls.update();
+  const seg = $('crForgeView');
+  if (seg) for (const b of seg.querySelectorAll('[data-view]')) b.classList.toggle('on', b.dataset.view === fapp.view);
+}
+
+/** 切檢視(抬頭分頁 / 面板跳轉連結 / 頁首跳轉鈕**三個入口同吃**這一支) */
+function setForgeView(v) {
+  fapp.view = v;
+  applyForgeView(true);
+  const run = $('cfRun');
+  if (run) run.disabled = v !== 'mech';
+  const jump = $('crForgeJumps');
+  if (jump) jump.innerHTML = forgeJumpHTML();
+  for (const b of document.querySelectorAll('#crForgeSec [data-go]')) b.onclick = () => setForgeView(b.dataset.go);
+}
+
+/** 機體 ⇄ 武器的跳轉連結(與展示台同一組語意:兩邊是同一棵樹的兩個取景) */
+function forgeJumpHTML() {
+  const wl = fapp.unit?.rig?.wpn?.light, wh = fapp.unit?.rig?.wpn?.heavy;
+  if (fapp.view === 'mech') {
+    return `${wl ? '<span class="cr-jchip" data-go="light">→ 檢視輕武器</span>' : ''}
+      ${wh ? '<span class="cr-jchip" data-go="heavy">→ 檢視重武器</span>' : ''}`;
+  }
+  const other = fapp.view === 'light' ? 'heavy' : 'light';
+  const has = fapp.unit?.rig?.wpn?.[other];
+  return `<span class="cr-jchip" data-go="mech">← 回到機體</span>
+    ${has ? `<span class="cr-jchip" data-go="${other}">→ 換${other === 'light' ? '輕' : '重'}武器</span>` : ''}
+    <span class="cr-dim">武器檢視 = 同一棵零件樹的 rig.wpn.${fapp.view}.nodes 子集(FPV 同源),
+      不是另建的第二份幾何;長度旋鈕 = 武器長度。</span>`;
+}
+
 /** 以目前草稿(出廠 ⊕ 覆寫 ⊕ 滑桿未存值)重鍛,並重畫特徵→零件表 */
 function forgeBuild() {
   const { forge, toon } = FORGE;
@@ -312,14 +373,8 @@ function forgeBuild() {
   fapp.unit = forge.forgeHumanoidMech(fapp.draft);
   fapp.scene.add(fapp.unit.group);
   fapp.ent = { id: fapp.id, mesh: fapp.unit.group, heroY: 0 };
-  if (fapp.framedKey !== fapp.key) {          // 取景只在換機體那一次(重鍛不動鏡頭)
-    const H = fapp.draft.height;
-    fapp.controls.target.set(0, H * 0.5, 0);
-    fapp.camera.position.set(H * 1.6, H * 0.62, H * 2.3);
-    fapp.camera.lookAt(fapp.controls.target);
-    fapp.controls.update();
-    fapp.framedKey = fapp.key;
-  }
+  applyForgeView(fapp.framedKey !== fapp.key);   // 可見性每次重鍛都要重套;取景只在換機體那次
+  fapp.framedKey = fapp.key;
   const doc = forge.conversionDoc(fapp.draft)
     .map((r2) => `<tr><td>${esc(r2.feat)}</td><td>${esc(r2.part)}</td></tr>`).join('');
   const docBox = $('crForgeDoc');
@@ -341,7 +396,12 @@ async function mountForge(id) {
   // 用駕駛員 id 去 find 只會撈到 undefined(症狀:那四台的鍛造區塊整塊消失,而不會報錯)。
   // 覆寫層/儲存/還原一律以 **roster key** 為鍵,MUST NOT 退回用角色 id。
   const forms = forge.MECH_SPECS.filter((s) => s.ch === id);
-  if (!forms.length) { sec.hidden = true; return; }              // 這一格還沒建模 ⇒ 不出鍛造區塊
+  const jumpBox = $('crForgeJump');
+  if (!forms.length) {
+    sec.hidden = true;                                            // 這一格還沒建模 ⇒ 不出鍛造區塊
+    if (jumpBox) jumpBox.innerHTML = '<span class="cr-dim">(這一格還沒建模 —— 沒有鍛造台)</span>';
+    return;
+  }
   const base = forms.find((s) => s.id === (fapp.wantKey || '')) || forms[0];
   const key = base.id;
   sec.hidden = false;
@@ -385,8 +445,20 @@ async function mountForge(id) {
     ? `<div class="seg">${forms.map((f) => `<button class="segb${f.id === key ? ' on' : ''}"
         data-form="${esc(f.id)}">${f.form === 'flight' ? '飛行型' : '地面型'}</button>`).join('')}</div>`
     : '';
-  sec.innerHTML = `<h3>機體鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
+  // 檢視分頁只列**掛得到的槽位**(沒掛就不出現;點下去卻退回機體 = 鈕面在說謊)
+  const wl = fapp.unit?.rig?.wpn?.light, wh = fapp.unit?.rig?.wpn?.heavy;
+  const viewSeg = `<div class="seg" id="crForgeView">
+      <button class="segb${fapp.view === 'mech' ? ' on' : ''}" data-view="mech">機體</button>
+      ${wl ? `<button class="segb${fapp.view === 'light' ? ' on' : ''}" data-view="light">武器・輕</button>` : ''}
+      ${wh ? `<button class="segb${fapp.view === 'heavy' ? ' on' : ''}" data-view="heavy">武器・重</button>` : ''}
+    </div>`;
+  sec.innerHTML = `<h3 id="crForgeH">機體鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
       ${esc(base.label)} ・ 出廠規格住 forge.js,調整存 specs.json 覆寫層</span></h3>
+    <div class="cr-fhead">
+      ${viewSeg}
+      <button class="segb" id="cfDoll">🧷 紙娃娃編輯</button>
+      <span class="cr-dim">骨架拖曳 / 零件改造 / 彩繪 —— 存進同一份覆寫層</span>
+    </div>
     ${formSeg}
     <div class="cr-dim">2D 原型圖(3D 建模的設計權威 —— 零件多面體照著它拼;點圖開大圖)</div>
     <div class="cr-frefs">${refHTML}</div>
@@ -398,11 +470,11 @@ async function mountForge(id) {
           <button class="segb" id="cfFire">輕武器</button>
           <button class="segb" id="cfHeavy">重武器</button>
           <button class="segb" id="cfCast">招式</button>
-          <button class="segb" id="cfDoll">🧷 紙娃娃</button>
         </div>
         <div class="cr-fhint">拖曳可自由轉動視角;放開後自動環繞。</div>
       </div>
       <div class="cr-fctl">
+        <div class="cr-fjumps" id="crForgeJumps"></div>
         <div class="cr-dim">${air ? '航空鷹架:機體比例住 mechs/*.js 的 air 與逐機幾何(無人形滑桿)'
       : quad ? '四足獸鷹架:骨架比例住 mechs/*.js 的 frame(無人形滑桿)'
         : '人形比例(身高 1.0 正規化;HUMANOID 特徵表推導)'}</div>
@@ -422,6 +494,26 @@ async function mountForge(id) {
     <div class="cr-refs" id="crRefStrip"><div class="dim">載入中…</div></div>`;
   $('crForgeStage').prepend(fapp.canvas);
   fillRefStrip(key);
+  for (const b of sec.querySelectorAll('[data-view]')) b.onclick = () => setForgeView(b.dataset.view);
+  $('crForgeJumps').innerHTML = forgeJumpHTML();
+  // 頁首跳轉:捲到鍛造區塊並直接切到那個模式 —— 三個入口全走 setForgeView / cfDoll,
+  // MUST NOT 在這裡另寫一份「開啟編輯器」(第二份實作 ⇒ 兩個入口的行為會分家)
+  if (jumpBox) {
+    jumpBox.innerHTML = `<span class="cr-jchip" data-jump="mech">⚙ 機體鍛造</span>
+      <span class="cr-jchip" data-jump="doll">🧷 紙娃娃編輯</span>
+      ${fapp.unit?.rig?.wpn?.light ? '<span class="cr-jchip" data-jump="light">🔫 輕武器</span>' : ''}
+      ${fapp.unit?.rig?.wpn?.heavy ? '<span class="cr-jchip" data-jump="heavy">💥 重武器</span>' : ''}`;
+    for (const b of jumpBox.querySelectorAll('[data-jump]')) {
+      b.onclick = () => {
+        const j = b.dataset.jump;
+        if (j === 'doll') { if (!fapp.editOn) $('cfDoll').click(); } else setForgeView(j);
+        // 捲動 MUST 是**瞬間**的:平滑捲動由合成器驅動,pane 不合成(rAF 不跑)時
+        // 它一格都不會動 —— 按鈕看起來沒反應,而該開的面板其實已經開在兩個畫面之外。
+        $('crForgeH').scrollIntoView({ block: 'start' });
+      };
+    }
+  }
+  for (const b of sec.querySelectorAll('[data-go]')) b.onclick = () => setForgeView(b.dataset.go);
   for (const b of sec.querySelectorAll('button[data-form]'))
     b.onclick = () => { fapp.wantKey = b.dataset.form; mountForge(id); };
   forgeBuild();
@@ -484,6 +576,7 @@ async function mountForge(id) {
     }, 1050);
   };
   $('cfCast').onclick = () => { fapp.ent.castFx = { t0: fapp.st, slot: 'ult', dir: 0 }; };
+  $('cfRun').disabled = fapp.view !== 'mech';        // 武器頁不跑步(取景框會被步態甩開)
 
   // ---- 紙娃娃編輯器(與機體展示台 :8631 同一支 dolledit.js)----
   // 覆核台只提供「場景四件 + 重鍛 + 存檔」四個回呼;文件格式、夾制、拖曳語意、面板標記
@@ -779,12 +872,16 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('crModal
 window.__cr = {
   select,
   key: () => fapp.key,
+  view: (v) => (v ? setForgeView(v) : fapp.view),
+  // 場景四件(同展示台的 window.__scene):headless 檢視要量得到取景對不對
+  scene: () => ({ scene: fapp.scene, camera: fapp.camera, controls: fapp.controls, unit: fapp.unit }),
   step: (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) {
       fapp.st = (fapp.st || 0) + dt;
       if (!fapp.ent) continue;
       FORGE.loco.stepCombatFx(fapp.ent, fapp.st, dt);
       FORGE.loco.stepLocomotion(fapp.ent, dt, fapp.st, 0, -fapp.speed * dt, 0);
+      if (fapp.reframeNext && fapp.view !== 'mech') { fapp.reframeNext = false; applyForgeView(true); }
     }
   },
   doll: (doc) => { fapp.draft.doll = doc; forgeBuild(); fapp.editor?.load(doc); },
