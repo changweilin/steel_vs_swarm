@@ -29,6 +29,7 @@ import { existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ROOT } from './audit_src.mjs';
+import { handleForgeApi } from './humanoid_forge/specstore.mjs';
 import { CHARACTERS, SIDES, charKind } from '../public/js/data.js';
 import { KIND_WORD, SHOT_POSES } from '../public/js/codex.js';
 
@@ -183,15 +184,8 @@ async function saveState(s) {
 // 出廠規格的單一真相住 tools/humanoid_forge/forge.js 的 MECH_SPECS;這裡只存**使用者調整的差異**
 // (specs.json,缺檔 = 全走出廠值)。兩座檢視台(覆核台鍛造區塊 / :8631 鍛造台)同讀這一份,
 // 合併一律走 forge.js 的 mergeSpec() —— MUST NOT 在任一端自己展開覆寫。
-const FORGE_FILE = join(ROOT, 'tools', 'humanoid_forge', 'specs.json');
-async function loadForge() {
-  try { return JSON.parse(await readFile(FORGE_FILE, 'utf8')); }
-  catch { return { version: 1, mechs: {} }; }
-}
-async function saveForge(s) {
-  await mkdir(join(ROOT, 'tools', 'humanoid_forge'), { recursive: true });
-  await writeFile(FORGE_FILE, `${JSON.stringify(s, null, 2)}\n`);
-}
+// 2026-08-12 第五輪:機體台的紙娃娃編輯器也寫這一份(`doll` 欄)⇒ 讀寫與 patch 語意整組
+// 搬到 humanoid_forge/specstore.mjs,兩支 dev server 同吃一份(見該檔檔頭)。
 
 // ---- --report:不開瀏覽器的配對表 ----------------------------------------
 async function report() {
@@ -260,23 +254,8 @@ async function serve() {
       res.end(body);
     };
     try {
-      if (req.url.startsWith('/api/forge')) {
-        if (req.method === 'GET') return send(200, JSON.stringify(await loadForge()));
-        if (req.method === 'POST') {
-          const chunks = [];
-          for await (const c of req) chunks.push(c);
-          const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-          if (!body.id) return send(400, '{"error":"id?"}');
-          const st = await loadForge();
-          st.mechs = st.mechs || {};
-          // 一次只覆寫一台(同 /api/review 的局部寫紀律);ovr = null 即還原出廠
-          if (body.ovr == null) delete st.mechs[body.id];
-          else st.mechs[body.id] = body.ovr;
-          await saveForge(st);
-          return send(200, JSON.stringify({ ok: true, mechs: st.mechs }));
-        }
-        return send(405, '{"error":"method"}');
-      }
+      // 一次只覆寫一台、逐欄 patch(同 /api/review 的局部寫紀律);ovr = null 即還原出廠
+      if (await handleForgeApi(req, res, send)) return;
       if (req.url.startsWith('/api/review')) {
         if (req.method === 'GET') {
           const st = await loadState();

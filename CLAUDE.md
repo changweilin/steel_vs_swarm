@@ -371,6 +371,7 @@ node tools/audit_beacons.mjs         # 語意化地標
 node tools/audit_world_text.mjs      # 世界文字(圖集 / 版面 / 裝箱 / 接線)
 node tools/audit_vernacular.mjs      # 在地文字語料
 node tools/audit_codex.mjs           # 角色 / 機體檔案格式
+node tools/audit_paper_doll.mjs      # 機體台紙娃娃系統(骨架/零件/彩繪覆寫層 + 存檔語意)
 node tools/audit_layer_block.mjs     # 塗層雙面阻擋 + 隧道頂板(A6b)
 node tools/audit_open_tunnel.mjs     # 明隧道
 node tools/audit_underpass.mjs       # 地下道 + 結構資格閘
@@ -538,6 +539,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 世界文字 | `audit_world_text` ±反向驗證 + `audit_vernacular` + **`shot_signs`(㋓:版面與缺字偵測只有這裡看得到)** + `audit_visual_prefs`(旋鈕表多一個 `choices`)+ ㋔ + ㋒ |
 | 在地文字語料 | `audit_vernacular` ±反向驗證 + `audit_world_text` + **重跑 `bake_venue_text.mjs`**(不重烤 = 底本走舊規則、執行期補收走新規則,兩份語料在同一張圖上打架)+ ㋒ |
 | 角色 / 機體檔案格式 | `audit_codex` ±`--break-layer`/`--break-align`/`--break-pose` + `gen2d --audit` + `audit_hex_stats`/`audit_ui_layout`/`audit_ctrl_mode` + `audit_net_modes`/`audit_solo_boot`(新增客戶端模組)+ ㋒ |
+| 機體台紙娃娃系統(`tools/humanoid_forge/` 的 `doll.js`/`shapes.js`/`mark.js`/`dollapply.js`/`dolledit.js`/`specstore.mjs` 與 forge.js 的 `finishUnit`) | `audit_paper_doll` ±`--break-clamp`/`--break-key`/`--break-seam`/`--break-order`/`--break-roster`/`--break-patch`/`--break-socket` + **兩座看板各開一次**(㋕:覆寫層是共用的,覆核台調比例之後機體台的紙娃娃 MUST 還在)+ ㋒(全在 `tools/`,遊戲一行未動 ⇒ `npm test`/`npm run bal` MUST 逐項不變)。改 `mechs/<key>.js` 的**零件順序** ⇒ 舊覆寫會落到別的零件上(鍵 = 建構序路徑),MUST 在該機體台上目視覆核一次 |
 | 塗層阻擋 / 隧道頂板 | `audit_layer_block` ±反向對照 + `audit_underpass`/`audit_open_tunnel`(幾何 MUST 逐位元不變)+ ㋒ |
 | 明隧道 | `audit_open_tunnel` + `audit_underpass` + `audit_slope_move` + `shot_tunnels`(㋓) |
 | 地下道 / 結構資格閘 | `audit_underpass` ±反向驗證(`gMinOf` 只量中心線 / 拿掉基準線收斂 / 拿掉全寬拆縫) |

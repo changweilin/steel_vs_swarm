@@ -106,7 +106,7 @@ export function seg2(p, w, len, d, y, main, sub) {
 // ══════════ 多面體語彙 ══════════
 
 /** 位置焊接(容差 1e-4)→ 索引幾何 + 平滑法線:描邊外殼專用副本。 */
-function weldSmooth(geo) {
+export function weldSmooth(geo) {
   const pos = geo.attributes.position;
   const map = new Map();
   const verts = [];
@@ -130,7 +130,7 @@ function weldSmooth(geo) {
 }
 
 /** 硬邊化:非索引 + 逐面法線(多面體的「面」),並掛描邊救援副本(紀律 ①)。 */
-function facet(geo) {
+export function facet(geo) {
   const flat = geo.index ? geo.toNonIndexed() : geo;
   flat.computeVertexNormals();
   flat.userData.outlineGeo = weldSmooth(flat);
@@ -145,7 +145,7 @@ const mesh = (parent, geo, x, y, z, color, opts) => {
 };
 
 /** 由「逐面四角」清單組非索引幾何(內部:tbox/fin 共用)。每 quad = [a,b,c,d] 逆時針。 */
-function quadsGeo(quads) {
+export function quadsGeo(quads) {
   const arr = [];
   for (const [a, b, c, d] of quads) arr.push(...a, ...b, ...c, ...a, ...c, ...d);
   const g = new THREE.BufferGeometry();

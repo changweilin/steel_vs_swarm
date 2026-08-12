@@ -25,13 +25,23 @@ import { stepLocomotion, stepCombatFx } from '/public/js/locomotion.js';
 import { updateCelLight, disposeTree } from '/public/js/toon.js';
 import { SPECS, forgeHumanoidMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from './forge.js';
 import { CATS, rosterByCat, splitKey, FORM_LABEL } from './roster.js';
+import { makeDollEditor } from './dolledit.js';
 
-// 使用者調整覆寫層(機體台 /api/forge 寫入;本檢視台唯讀)—— 合併只走 mergeSpec 單一縫
+// 使用者調整覆寫層(specs.json;/api/forge 讀寫)—— 合併只走 mergeSpec 單一縫。
+// 2026-08-12 第五輪起本台**可寫**(紙娃娃編輯器存 `doll` 那一欄);比例滑桿仍住覆核台,
+// 兩邊寫的是同一份檔、同一個路由,而且是**逐欄**寫入(見 specstore.mjs 的 patch 語意)。
 let OVR = {};
 try {
-  const r = await fetch('/tools/humanoid_forge/specs.json');
+  const r = await fetch('/api/forge');
   if (r.ok) OVR = (await r.json()).mechs || {};
 } catch { /* 沒有覆寫檔 = 全走出廠規格 */ }
+async function saveOvr(id, patch) {
+  const r = await fetch('/api/forge', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, ovr: patch }),
+  });
+  return (await r.json()).mechs || {};
+}
 
 const canvas = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -71,6 +81,8 @@ let unit = null;                    // { group, rig, joints, spin? }
 let ent = null;                     // 餵給 locomotion 的假實體
 let spec = SPECS[0];
 let speed = 0, speedTgt = 0, travel = 0, spdSel = 'spdIdle';
+let draftDoll = null;               // 紙娃娃草稿(尚未存檔的那一份;null = 照已存檔的走)
+let editor = null;
 let firing = false, nextShot = 0;
 let heavyAt = -1;
 let simT = 0;
@@ -78,17 +90,27 @@ const clock = new THREE.Clock();
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 
-function setSpec(s) {
-  spec = s;
-  cat = s.cat;
+/** 重鍛目前這一台(換機體 / 紙娃娃編輯的每一次結構改動都走這裡)。
+ *  紙娃娃**草稿**優先於已存檔的那一份 —— 編輯中看到的就是還沒存的樣子。 */
+function buildUnit() {
   if (unit) {
     scene.remove(unit.group);
     disposeTree(unit.group);   // A25:換機體釋放 GPU 資源
   }
-  unit = forgeHumanoidMech(mergeSpec(spec, OVR[spec.id]));
+  const merged = mergeSpec(spec, OVR[spec.id]);
+  if (draftDoll) merged.doll = draftDoll;
+  unit = forgeHumanoidMech(merged);
   scene.add(unit.group);
   unit.joints.visible = $('btnJoints').classList.contains('on');
-  ent = { id: spec.id, mesh: unit.group, heroY: 0 };   // loco 狀態綁 mesh,換機體重建
+  ent = { id: spec.id, mesh: unit.group, heroY: 0 };   // loco 狀態綁 mesh,重鍛即重建
+}
+
+function setSpec(s) {
+  spec = s;
+  cat = s.cat;
+  draftDoll = OVR[s.id]?.doll || null;
+  buildUnit();
+  editor?.load(draftDoll);
   speedTgt = 0; speed = 0;
   for (const o of ['spdIdle', 'spdWalk', 'spdRun']) $(o).classList.toggle('on', o === 'spdIdle');
   spdSel = 'spdIdle';
@@ -103,7 +125,7 @@ function setSpec(s) {
 // 顯示 = 只讓那些子樹可見;取景 = 依它們的世界包圍盒。MUST NOT 複製一份武器幾何。
 function wpnOf(slot) { return unit?.rig?.wpn?.[slot] || null; }
 
-function applyView() {
+function applyView(reframe = true) {
   const H = spec.height;
   const w = view === 'mech' ? null : wpnOf(view);
   // 顯示切換:先全開,再在武器模式關掉不屬於該武器的網格
@@ -114,8 +136,10 @@ function applyView() {
   // 這也是語意上對的 —— 武器頁看的是這把武器,不是它的步態。
   if (w) { speedTgt = 0; speed = 0; firing = false; $('btnFire').classList.remove('on'); }
   if (!w) {
-    controls.target.set(0, H * 0.52, 0);
-    camera.position.set(H * 1.6, H * 0.62, H * 2.1);
+    if (reframe) {
+      controls.target.set(0, H * 0.52, 0);
+      camera.position.set(H * 1.6, H * 0.62, H * 2.1);
+    }
     $('stageTag').textContent = `${spec.label} ・ ${spec.kind} 鷹架`;
   } else {
     const keep = new Set();
@@ -125,11 +149,13 @@ function applyView() {
     unit.group.updateMatrixWorld(true);
     const box = new THREE.Box3();
     for (const n of w.nodes || []) box.expandByObject(n);
-    if (box.isEmpty()) { view = 'mech'; return applyView(); }
+    if (box.isEmpty()) { view = 'mech'; return applyView(reframe); }
     const ctr = box.getCenter(new THREE.Vector3());
     const d = Math.max(0.6, box.getSize(new THREE.Vector3()).length());
-    controls.target.copy(ctr);
-    camera.position.set(ctr.x + d * 0.9, ctr.y + d * 0.45, ctr.z + d * 1.15);
+    if (reframe) {
+      controls.target.copy(ctr);
+      camera.position.set(ctr.x + d * 0.9, ctr.y + d * 0.45, ctr.z + d * 1.15);
+    }
     $('stageTag').textContent = `${spec.label} ・ ${view === 'light' ? '輕' : '重'}武器(rig.wpn.${view})`;
   }
   camera.near = 0.05; camera.far = 400;
@@ -324,6 +350,14 @@ $('btnHeavy').onclick = () => {
 $('btnCastO').onclick = () => { ent.castFx = { t0: simT, slot: 'ult', dir: 0 }; };
 $('btnCastD').onclick = () => { ent.castFx = { t0: simT, slot: 'skill', dir: 1 }; };
 bindToggle('btnSpin', (on) => { controls.autoRotate = on; });
+// 紙娃娃編輯模式:接管點選與拖曳。環繞檢視 MUST 當場關掉 —— 一邊自轉一邊拖 gizmo
+// 拖到的是「拖的那一瞬間鏡頭在的地方」,零件會被拉到完全不相干的方向。
+bindToggle('btnEdit', (on) => {
+  if (on && controls.autoRotate) { controls.autoRotate = false; $('btnSpin').classList.remove('on'); }
+  editor.setOn(on);
+  $('panel').hidden = on;
+  $('dollPanel').hidden = !on;
+});
 bindToggle('btnJoints', (on) => { if (unit) unit.joints.visible = on; });
 $('btnSpin').classList.add('on');
 controls.autoRotate = true;
@@ -419,7 +453,27 @@ window.__forge = {
   step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) stepWorld(dt); },
   simT: () => simT,
   joints: (on) => { if (unit) unit.joints.visible = !!on; },
+  // 紙娃娃(headless 檢視:直接餵一份覆寫文件,不必操作面板)。
+  // MUST 同時餵給編輯器 —— 只改草稿的話,面板統計說 0、而下一次面板觸發的重鍛會把
+  // 這份文件整份蓋掉(兩份草稿 = 兩個真相)。
+  doll: (doc) => { draftDoll = doc; buildUnit(); applyView(false); editor.load(doc); },
+  dollIndex: () => ({
+    parts: [...(unit?.doll?.parts.keys() || [])],
+    bones: [...(unit?.doll?.bones.keys() || [])],
+  }),
+  edit: (on) => { editor.setOn(!!on); $('panel').hidden = !!on; $('dollPanel').hidden = !on; },
 };
+
+editor = makeDollEditor({
+  scene, camera, canvas, orbit: controls,
+  unit: () => unit,
+  // 結構改動(換形狀/邊緣/黏貼/貼花/配色/骨長)→ 重鍛;取景刻意不動
+  rebuild: (doc) => { draftDoll = doc; buildUnit(); applyView(false); },
+  save: async (doc) => { OVR = await saveOvr(spec.id, { doll: doc }); },
+  stored: () => OVR[spec.id]?.doll || null,
+  specKey: () => spec.id,
+});
+editor.mount($('dollPanel'));
 
 setSpec(SPECS[0]);
 loop();
