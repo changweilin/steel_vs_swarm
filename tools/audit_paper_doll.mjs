@@ -39,9 +39,17 @@ const brk = (k) => BREAK.has(`--break-${k}`);
 
 let pass = 0, fail = 0;
 const t = (n, ok, extra = '') => { ok ? (pass++, console.log(`  ✓ ${n}`)) : (fail++, console.log(`  ✗ ${n} ${extra}`)); };
-/** 執行原文(剝掉區塊/行註解;註解裡提得到同一個名字,連著數會把「說明寫得詳細」誤判成縫破了) */
-const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
-  .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n');
+/**
+ * 執行原文(剝掉區塊/行註解;註解裡提得到同一個名字,連著數會把「說明寫得詳細」誤判成縫破了)。
+ *
+ * ⚠ **行註解 MUST 先剝**(2026-08-13 修):反過來的話,一行註解裡只要出現 `/**`
+ * (例如 `// 住 tools/ 不住 public/**`)就會被當成區塊註解的開頭,一路吃到底下第一個
+ * `*​/` —— 實測 `fetch_protorefs.mjs` 因此有 88 行**真的程式碼**在稽核眼中消失,
+ * 而症狀是「這幾條斷言恆紅,但原文明明就在那裡」。
+ */
+const code = (s) => s
+  .split('\n').map((l) => l.replace(/(^|[^:'"`])\/\/.*$/, '$1')).join('\n')
+  .replace(/\/\*[\s\S]*?\*\//g, '');
 
 const dollSrcRaw = readSrc('tools', 'humanoid_forge', 'doll.js');
 const shapesSrc = readSrc('tools', 'humanoid_forge', 'shapes.js');
@@ -565,6 +573,144 @@ console.log('■ Ⅹ 機體台版面(三欄重排 / 控制只留一份 / 覆核�
       && !!st2.mechs.t01.doll && st2.mechs.t01.review === undefined);
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ Ⅺ 原型參考照的判決 / 重搜 / 使用者自貼(帳本形狀只有一份)');
+// ═══════════════════════════════════════════════════════════════════════════
+// 2026-08-12 使用者:「有些機體搜索的照片完全不符合機體原型,加入標記與註解以重新搜索,
+// 或是使用者直接貼上照片」。這一段守三件會靜默壞掉的事:
+//   ① 判不符只刪檔、不記黑名單 ⇒ 同一個查詢詞下一輪把同一張抓回來(看起來像標記沒有用);
+//   ② 關鍵詞覆寫看板寫了、採集端沒讀 ⇒ 使用者改了搜尋詞而下一輪還是照舊去找;
+//   ③ 使用者自己貼的圖混進 cc0 那一堆 ⇒ 帳本在說謊(CC0 硬閘管的是我們去抓的那些)。
+{
+  const store = await import('./humanoid_forge/refstore.mjs');
+  let fetchSrc = readSrc('tools', 'fetch_protorefs.mjs');
+  const apiSrc2 = readSrc('tools', 'humanoid_forge', 'boardapi.mjs');
+  const stripSrc = readSrc('tools', 'humanoid_forge', 'refstrip.js');
+  const viewSrc2 = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  if (brk('reject')) fetchSrc = fetchSrc.replace(/\n\s*if \(rejected\(man[^\n]*\n/, '\n');
+  if (brk('override')) fetchSrc = fetchSrc.replace('const q = over || queryFor(e, layer);', 'const q = queryFor(e, layer);');
+
+  t('帳本的形狀只有一份(refstore.mjs;兩個寫入端同吃)',
+    /export async function loadManifest/.test(readSrc('tools', 'humanoid_forge', 'refstore.mjs'))
+    && /from '\.\/humanoid_forge\/refstore\.mjs'/.test(fetchSrc)
+    && /from '\.\/refstore\.mjs'/.test(apiSrc2)
+    && !/async function loadManifest/.test(code(fetchSrc)));   // 採集端不准自己再開一份
+  t('採集端讀關鍵詞覆寫(看板改了搜尋詞,下一輪就要用它)',
+    /queryOverride\(man, e\.key, layer\.key\)/.test(code(fetchSrc))
+    && /const q = over \|\| queryFor/.test(code(fetchSrc)));
+  t('判不符的 id 進黑名單且採集端會跳過(否則下一輪抓回同一張)',
+    /if \(rejected\(man, e\.key, layer\.key, it\.id\)\) continue;/.test(code(fetchSrc)));
+  t('看板的三條寫入路由只改帳本,MUST NOT 在請求裡連外網',
+    /url\.startsWith\('\/api\/protorefs\/'\)/.test(code(apiSrc2))
+    && !/searchOpenverse|searchCommons/.test(code(apiSrc2)));
+  t('使用者自貼的圖標成 user(MUST NOT 混進 cc0)',
+    /license: 'user'/.test(code(readSrc('tools', 'humanoid_forge', 'refstore.mjs')))
+    && /m\.user \? '使用者提供'/.test(stripSrc));
+  t('上傳 MUST 嗅探真實位元組並夾大小(副檔名與 content-type 都是輸入方說了算)',
+    /sniffImage\(buf\)/.test(code(apiSrc2)) && /MAX_UPLOAD/.test(code(apiSrc2)));
+  t('標記/重搜的標記只有一份(兩座看板共用 refstrip.js,viewer 不自己拼)',
+    /function refTuneHTML/.test(code(stripSrc)) && /data-refbad=/.test(stripSrc)
+    && !/data-refbad="/.test(code(viewSrc2).replace(/querySelectorAll\('\[data-refbad\]'\)/g, '')));
+  t('寫入只有一個呼叫處(refPost),貼上三條路只有一個落地點',
+    /export const refPost/.test(code(stripSrc))
+    && (code(stripSrc).match(/refPost\('upload'/g) || []).length === 1
+    && (code(viewSrc2).match(/fetch\('\/api\/protorefs\//g) || []).length === 0
+    && (code(viewSrc2).match(/refPost\(/g) || []).length === 0);
+  t('行為也只有一份:兩座看板都轉呼 bindRefStrip(MUST NOT 各綁一套)',
+    /export function bindRefStrip/.test(code(stripSrc))
+    && /bindRefStrip\(box, spec\.id/.test(code(viewSrc2))
+    && /bindRefStrip\(\$\('crRefStrip'\), key/.test(code(readSrc('tools', 'codex_review', 'review.js'))));
+  t('改過帳本要丟快取(否則畫面停在改之前那一份)',
+    /export const dropRefsCache/.test(code(stripSrc)) && /dropRefsCache\(spec\.id\)/.test(code(viewSrc2)));
+  // import 這支去看查詢詞不可以觸發一整趟採集(2026-08-12 踩過:當場把圖庫限流撞更深)
+  t('fetch_protorefs 只有被當成程式跑才採集(import 是惰性的)',
+    /if \(entry\) main\(\)/.test(code(fetchSrc)) && /import\.meta\.url\.endsWith/.test(code(fetchSrc)));
+
+  // 行為直測:判不符 → 黑名單 + 移列;覆寫 → 讀得回來;自貼 → 標 user
+  {
+    const dir = await mkdtemp(join(tmpdir(), 'svs-refs-'));
+    const man = { version: 1, entries: {}, tune: {} };
+    store.slotOf(man, 't01', 'frame').push({ id: 'ov_x', file: 'ov_x.jpg', license: 'cc0', api: 'openverse' });
+    const r = await store.rejectImg(man, 't01', 'frame', 'ov_x.jpg', '這是坦克不是機甲', dir);
+    store.retune(man, 't01', 'frame', { q: 'main battle tank turret' });
+    const row = await store.addUserImg(man, 't01', 'frame', Buffer.from([0x89, 0x50, 0x4e, 0x47]), 'png', '我自己拍的', dir);
+    t('判不符:移列 + 進黑名單 + 刪檔,三件一起',
+      r.ok && store.slotOf(man, 't01', 'frame').every((x) => x.id !== 'ov_x')
+      && store.rejected(man, 't01', 'frame', 'ov_x'));
+    t('覆寫讀得回來(採集端問的就是這一支)',
+      store.queryOverride(man, 't01', 'frame') === 'main battle tank turret'
+      && store.tuneOf(man, 't01', 'frame').note === '這是坦克不是機甲');
+    t('自貼的列:license/api 都是 user,且不帶 source_url',
+      row.license === 'user' && row.api === 'user' && row.source_url === null);
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ Ⅻ 來源與構圖(Google 官方 API / 全身照 + 背景乾淨的篩選)');
+// ═══════════════════════════════════════════════════════════════════════════
+// 2026-08-13 使用者:「不要只搜索 wiki,直接搜索 google」「必須搜索全身照,盡可能背景乾淨,
+// 現有的照片不符合條件的也重新搜索」。三件會靜默壞掉的事:
+//   ① 爬 google 的搜尋頁 ⇒ 違反服務條款、而且哪天被擋的樣子是「今天開始一張都抓不到」;
+//   ② 沒設金鑰時如果用拋的,整趟採集會在第一層就死掉(而其他兩個來源本來還能用);
+//   ③ 構圖門檻散成兩份(採集端一份、重新打分一份)⇒ 剛抓進來的合格、隔天重跑變不合格。
+{
+  let fetchSrc3 = readSrc('tools', 'fetch_protorefs.mjs');
+  const photoSrc = readSrc('tools', 'ai3d', 'fetch_photos.mjs');
+  const screenSrc = readSrc('tools', 'screen_protorefs.mjs');
+  const pySrc = readSrc('tools', 'screen_protorefs.py');
+  if (brk('screen')) {
+    // 壞版 = 採集端不篩構圖(抓到什麼就落帳)。**改的 MUST 是採集端那一支**:
+    // 先前這一行改的是 screen_protorefs.mjs,而斷言讀的是 fetch_protorefs.mjs
+    // ⇒ `--break-screen` 是個安靜的 no-op(紅 0 條 = 那條斷言根本沒被驗到)
+    const was = fetchSrc3;
+    fetchSrc3 = fetchSrc3.replace(/\r?\n\s*const sc = await screenOne\(path\);/, '');
+    if (was === fetchSrc3) { console.log('  ✗ --break-screen 沒有咬到目標原文(樣式過期)'); process.exit(1); }
+  }
+
+  t('Google 走官方 Custom Search API(MUST NOT 爬搜尋頁)',
+    /googleapis\.com\/customsearch\/v1/.test(code(photoSrc))
+    && !/google\.com\/search/.test(code(photoSrc)));
+  t('沒設金鑰 = 跳過這個來源(回空陣列,MUST NOT 拋)',
+    /if \(!key \|\| !cx\) return \[\];/.test(code(photoSrc)));
+  t('授權硬閘照舊(查詢帶 rights,且帳本不假裝它跟 CC0 同級)',
+    /rights=cc_publicdomain/.test(code(photoSrc)) && /license: 'pd\(google 回報\)'/.test(code(photoSrc)));
+  t('三個來源都在採集端串起來,Google 先跑',
+    /searchGoogle\(`\$\{q\} \$\{COMPOSE_Q\}`/.test(code(fetchSrc3))
+    && /searchOpenverse\(q/.test(code(fetchSrc3)) && /searchCommons\(q/.test(code(fetchSrc3)));
+  t('構圖詞只加在 Google(其他兩家的 metadata 不寫這種話,加了會把命中打成 0)',
+    (code(fetchSrc3).match(/COMPOSE_Q/g) || []).length === 2);   // 定義一次 + 用一次
+  t('構圖門檻只有一份(採集端與重新打分同吃 SCREEN)',
+    /export const SCREEN = \{/.test(code(screenSrc))
+    && /import \{ screenOne \}/.test(code(fetchSrc3))
+    && !/BG_MIN|COV_MAX|TOUCH_MAX/.test(code(fetchSrc3)));
+  t('採集端在**落帳之前**篩(不合格的當場刪檔 + 進黑名單)',
+    /const sc = await screenOne\(path\)/.test(code(fetchSrc3))
+    && /if \(sc && !sc\.ok\)/.test(code(fetchSrc3)));
+  // Python 的註解裡本來就會提到 manifest(檔頭在講「為什麼不碰它」)⇒ 驗的是**程式碼**
+  const pyCode = pySrc.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n');
+  t('量在 Python、判與寫帳本在 Node(Python MUST NOT 碰帳本)',
+    /import json/.test(pyCode) && !/manifest/.test(pyCode)
+    && /spawn\('python'/.test(code(screenSrc)));
+  t('沒有 python/PIL ⇒ 降級成不篩,MUST NOT 把整批判成不合格',
+    /ps\.on\('error', \(\) => res\(null\)\)/.test(code(screenSrc))
+    && /if \(lines === null\) return null;/.test(code(screenSrc)));
+  t('使用者自己貼的照片不進構圖篩選(他知道自己要什麼)',
+    /if \(r\.api === 'user'\) continue;/.test(code(screenSrc)));
+  t('--annotate 只標不刪(還沒有替代品時,刪光比留著更糟)',
+    /if \(note && !apply\)/.test(code(screenSrc)) && /annotate\(man, b\.key/.test(code(screenSrc)));
+
+  // 行為直測:三個門檻各自咬得住(量測值是假的,驗的是判準)
+  const S = await import('./screen_protorefs.mjs');
+  const good = { bg_clean: 0.92, coverage: 0.3, edge_touch: 0.01 };
+  t('判準:乾淨棚拍過、雜背景/特寫/壓邊各自不過',
+    S.verdict(good).ok
+    && !S.verdict({ ...good, bg_clean: 0.4 }).ok
+    && !S.verdict({ ...good, coverage: 0.95 }).ok
+    && !S.verdict({ ...good, edge_touch: 0.3 }).ok
+    && S.verdict({ ...good, bg_clean: S.SCREEN.BG_MIN }).ok);   // 門檻是「≥」不是「>」
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);

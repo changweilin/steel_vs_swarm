@@ -42,7 +42,7 @@ import {
 import { LORE } from '/public/js/lore.js';
 // 原型參考照帶:與機體展示台 :8631 同一份標記 + 同一份 CSS(board.css);
 // 本檔零 three ⇒ 靜態 import 不會把三維那條降級路徑一起拖下水。
-import { fetchRefs, refStripHTML } from '/tools/humanoid_forge/refstrip.js';
+import { fetchRefs, dropRefsCache, refStripHTML, bindRefStrip } from '/tools/humanoid_forge/refstrip.js';
 import {
   protoOf, mechaCodex, charCodex, textSeed, imagePrompt, modelSheet,
 } from '/public/js/codex.js';
@@ -605,12 +605,15 @@ async function mountForge(id) {
 }
 
 /** 真實原型參考照(名冊由伺服器的採集帳本推導;標記與展示台同一份) */
-async function fillRefStrip(key) {
+async function fillRefStrip(key, fresh = false) {
   const box = $('crRefStrip');
   if (!box) return;
+  if (fresh) dropRefsCache(key);
   const j = await fetchRefs(key);
   if (!$('crRefStrip') || fapp.key !== key) return;      // 面板已換機
-  $('crRefStrip').innerHTML = refStripHTML(j.layers || []);
+  $('crRefStrip').innerHTML = refStripHTML(j.layers || [], key);
+  // 判不符/註解/改搜尋詞/自己貼照片:兩座看板同一套(行為住 refstrip.js,見那支的 bindRefStrip)
+  bindRefStrip($('crRefStrip'), key, () => fillRefStrip(key, true));
 }
 
 /** 來源標籤:哪一格是「已入庫」、哪一格只是 AI 稿,MUST 在圖上就看得出來 ——

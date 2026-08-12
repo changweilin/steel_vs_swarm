@@ -20,8 +20,24 @@ import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ROOT } from '../audit_src.mjs';
 import { rosterEntries } from './roster.js';
+// 帳本的形狀與判決語意只有一份(refstore.mjs);查詢詞的推導也只有一份(fetch_protorefs
+// 的 `queryFor`)—— 看板要顯示「這一層現在是用什麼關鍵詞找的」,MUST 到那裡取,
+// MUST NOT 自己再翻一次代號表(翻出來的與採集端下一輪真的用的會是兩個東西)。
+import {
+  loadManifest, saveManifest, slotOf, tuneOf, safeKey, rejectImg, annotate, retune, addUserImg,
+} from './refstore.mjs';
+import { queryFor } from '../fetch_protorefs.mjs';
+import { sniffImage } from '../ai3d/fetch_photos.mjs';
 
 const JSON_T = 'application/json; charset=utf-8';
+const MAX_UPLOAD = 6e6;   // 與採集端的單張上限同一個數量級(這些圖只是拿來看的)
+
+/** 讀 POST 的 JSON body(壞 JSON 當空物件 —— 這是 dev 路由,壞輸入只該不動作) */
+async function readJson(req) {
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return {}; }
+}
 
 /**
  * 兩支 dev server 的原型圖路由(MUST NOT 各寫一份)。
@@ -48,6 +64,41 @@ export async function handleBoardApi(req, res, send) {
     send(200, JSON.stringify({ ok: true, path: `tools/humanoid_forge/shots/${name}.png` }), JSON_T);
     return true;
   }
+  // ---- 原型照的判決 / 重搜 / 自己貼(2026-08-12 使用者:「有些機體搜索的照片完全不符合
+  // 機體原型,加入標記與註解以重新搜索,或是使用者直接貼上照片」)----
+  // 三條路由全部只改帳本(refstore 單一縫);**這裡不連外網** —— 重搜是下一次跑
+  // `node tools/fetch_protorefs.mjs` 的事,看板負責的是把「要找什麼」講清楚。
+  if (req.method === 'POST' && url.startsWith('/api/protorefs/')) {
+    const act = url.slice('/api/protorefs/'.length);
+    const b = await readJson(req);
+    const key = String(b.key || ''), layer = String(b.layer || '');
+    if (!key || !layer || !rosterEntries().some((e) => e.key === key)) {
+      send(400, '{"error":"key/layer?"}', JSON_T); return true;
+    }
+    const man = await loadManifest();
+    let out = { ok: false };
+    if (act === 'reject') {
+      out = await rejectImg(man, key, layer, String(b.file || ''), String(b.note || ''));
+    } else if (act === 'annotate') {
+      out = annotate(man, key, layer, String(b.file || ''), String(b.note || ''));
+    } else if (act === 'retune') {
+      out = { ok: true, tune: retune(man, key, layer, { q: b.q, note: b.note }) };
+    } else if (act === 'upload') {
+      // 使用者直接貼上的照片:dataURL → 位元組。**MUST 嗅探真實位元組**(副檔名與
+      // content-type 都是輸入方說了算),而授權欄一律 `user`(refstore 檔頭紀律 ③)
+      const m = /^data:image\/(png|jpe?g|webp);base64,(.+)$/s.exec(String(b.data || ''));
+      if (!m) { send(400, '{"error":"只收 png/jpeg/webp 的 dataURL"}', JSON_T); return true; }
+      const buf = Buffer.from(m[2], 'base64');
+      if (buf.length > MAX_UPLOAD) { send(413, '{"error":"圖太大(> 6MB)"}', JSON_T); return true; }
+      if (!sniffImage(buf)) { send(400, '{"error":"非影像位元組"}', JSON_T); return true; }
+      const row = await addUserImg(man, key, layer, buf, m[1] === 'jpeg' ? 'jpg' : m[1], String(b.note || ''));
+      out = { ok: true, row };
+    } else { send(404, '{"error":"act?"}', JSON_T); return true; }
+    if (out.ok) await saveManifest(man);
+    send(out.ok ? 200 : 400, JSON.stringify(out), JSON_T);
+    return true;
+  }
+
   if (req.method !== 'GET') return false;
 
   // 2D 定案圖:地面型排前(人形鍛造建模的是地面人形),姿態 static → moving → heavy
@@ -71,17 +122,23 @@ export async function handleBoardApi(req, res, send) {
     const key = q.get('key') || '';
     const entry = rosterEntries().find((e) => e.key === key);
     if (!entry) { send(404, '{"error":"key?"}', JSON_T); return true; }
-    let man = { entries: {} };
-    try { man = JSON.parse(await readFile(join(ROOT, 'tools', 'proto_refs', 'manifest.json'), 'utf8')); }
-    catch { /* 還沒採集過 */ }
-    const safe = key.replace(/@/g, '_').replace(/[^\w.-]/g, '');
-    const layers = entry.protos.map((L) => ({
-      key: L.key, label: L.label, src: L.src, note: L.note,
-      imgs: ((man.entries?.[key] || {})[L.key] || []).map((r) => ({
-        file: r.file, license: r.license, creator: r.creator, source_url: r.source_url,
-        url: `/tools/proto_refs/${safe}/${L.key}/${r.file}`,
-      })),
-    }));
+    const man = await loadManifest();
+    const safe = safeKey(key);
+    const layers = entry.protos.map((L) => {
+      const t = tuneOf(man, key, L.key);
+      return {
+        key: L.key, label: L.label, src: L.src, note: L.note,
+        // 「這一層現在是用什麼關鍵詞找的」:覆寫優先,沒有覆寫就印推導出來的那一個
+        // (欄位空白 = 使用者還沒改過,MUST NOT 讓他自己猜現在在找什麼)
+        q: t?.q || queryFor(entry, L) || '',
+        over: !!t?.q, tuneNote: t?.note || '', rejects: t?.rejects?.length || 0,
+        imgs: slotOf(man, key, L.key).map((r) => ({
+          file: r.file, license: r.license, creator: r.creator, source_url: r.source_url,
+          note: r.note || '', user: r.api === 'user',
+          url: `/tools/proto_refs/${safe}/${L.key}/${r.file}`,
+        })),
+      };
+    });
     send(200, JSON.stringify({ key, layers }), JSON_T);
     return true;
   }

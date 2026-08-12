@@ -20,16 +20,19 @@
 //   node tools/fetch_protorefs.mjs                     # 全名冊採集(逐層 N 張,已有的跳過)
 //   node tools/fetch_protorefs.mjs --key t06@flight    # 只跑一格
 //   node tools/fetch_protorefs.mjs --cat airframe --n 4
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT } from './audit_src.mjs';
 import { rosterEntries } from './humanoid_forge/roster.js';
 import { CHARACTERS } from '../public/js/data.js';
-import { searchOpenverse, searchCommons, sniffImage, licenceOk, UA } from './ai3d/fetch_photos.mjs';
-
-const OUT = join(ROOT, 'tools', 'proto_refs');
-const MANIFEST = join(OUT, 'manifest.json');
+import { searchOpenverse, searchCommons, searchGoogle, sniffImage, licenceOk, UA } from './ai3d/fetch_photos.mjs';
+// 構圖篩選(全身 + 背景乾淨):門檻與量測只有一份,見 screen_protorefs.mjs 檔頭
+import { screenOne } from './screen_protorefs.mjs';
+// 帳本的形狀與「使用者的判決」只有一份(refstore.mjs 檔頭)—— 關鍵詞覆寫與黑名單都住那裡,
+// 看板寫、這裡讀。這支 MUST NOT 自己再開一份 loadManifest/saveManifest。
+import {
+  REFS_DIR as OUT, loadManifest, saveManifest, slotOf, safeKey, queryOverride, rejected, tuneOf,
+} from './humanoid_forge/refstore.mjs';
 const MAX_BYTES = 6e6;        // 單張上限(見下方 download 段的理由)
 const COMMONS_GAP_MS = 1200;  // Commons 查詢節流(見下方 searchCommons 呼叫點的理由)
 // **下載也要節流**(2026-08-12 補):先前只節流「查詢」,而每一層查完會連續抓 3 張圖 ——
@@ -40,6 +43,10 @@ const DL_GAP_MS = 700;
 const DL_RETRY = 3;           // 429 的退避重試次數(見下方 download())
 const DL_BACKOFF_MS = 4000;   // 首次退避;逐次 ×2
 const DL_WAIT_MAX = 90000;    // 單次退避上限:超過這個數字代表「被擋了」,本輪放棄這一張
+// 構圖詞(2026-08-13 使用者:「必須搜索全身照,盡可能背景乾淨」)。
+// **只加在 Google 那一支**:它吃得到頁面文字,加了真的會偏向棚拍全身;Openverse/Commons
+// 的 metadata 幾乎不寫這種話,加上去只會把命中數打成 0(而那看起來就像「這一層找不到圖」)。
+const COMPOSE_Q = 'full body whole plain white background studio';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---- 視覺代號 → 搜尋關鍵詞 --------------------------------------------------
@@ -115,8 +122,6 @@ export function queryFor(entry, layer) {
   return lat ? lat.join(' ') : zhTerms(layer.src);   // 兩條都沒命中 ⇒ 這一層沒有可用查詢,略過
 }
 
-const safeKey = (k) => k.replace(/@/g, '_').replace(/[^\w.-]/g, '');
-
 /**
  * 取一張圖:**429 要退避重試,不能當成「這張圖有問題」**(2026-08-12 補)。
  * 2026-08-12 實測全名冊一趟下來,兩家的檔案主機都會開始整片回 429;而這個錯誤在帳本上
@@ -127,7 +132,15 @@ const safeKey = (k) => k.replace(/@/g, '_').replace(/[^\w.-]/g, '');
 async function download(url, tries = DL_RETRY) {
   for (let i = 0; ; i++) {
     const r = await fetch(url, { headers: { 'User-Agent': UA } });
-    if (r.ok) return Buffer.from(await r.arrayBuffer());
+    if (r.ok) {
+      const buf = Buffer.from(await r.arrayBuffer());
+      // 限流頁**有時是 200 + HTML**(實測 Wikimedia)⇒ 不講清楚的話,日誌上會寫
+      // 「非影像位元組」,讀起來像「這張圖壞了」,而真正的原因是我們抓太快
+      if (buf.subarray(0, 32).toString('utf8').trimStart().startsWith('<')) {
+        throw new Error('對方回了 HTML 而不是圖(多半是限流頁),本輪放棄');
+      }
+      return buf;
+    }
     if (r.status !== 429 || i >= tries) throw new Error(`HTTP ${r.status}`);
     const hdr = Number(r.headers.get('retry-after'));
     const wait = Number.isFinite(hdr) && hdr > 0 ? hdr * 1000 : DL_BACKOFF_MS * 2 ** i;
@@ -141,17 +154,7 @@ async function download(url, tries = DL_RETRY) {
   }
 }
 
-async function loadManifest() {
-  try { return JSON.parse(await readFile(MANIFEST, 'utf8')); }
-  catch { return { version: 1, entries: {} }; }
-}
-
-async function saveManifest(man) {
-  await mkdir(OUT, { recursive: true });
-  await writeFile(MANIFEST, `${JSON.stringify(man, null, 2)}\n`);
-}
-
-async function main() {
+export async function main() {
   const argv = process.argv.slice(2);
   const arg = (f, d = null) => { const i = argv.indexOf(f); return i < 0 ? d : argv[i + 1]; };
   const only = arg('--key'), cat = arg('--cat'), n = Number(arg('--n', 3));
@@ -160,14 +163,16 @@ async function main() {
     .filter((e) => (!only || e.key === only) && (!cat || e.cat === cat));
 
   const man = await loadManifest();
-  let got = 0, skipped = 0, failed = 0;
+  let got = 0, skipped = 0, failed = 0, screened = 0;
   for (const e of entries) {
     for (const layer of e.protos) {
-      const q = queryFor(e, layer);
+      // 使用者在看板上打的關鍵詞覆寫優先(「這些照片完全不符合原型」的修正入口)
+      const over = queryOverride(man, e.key, layer.key);
+      const q = over || queryFor(e, layer);
       const dir = join(OUT, safeKey(e.key), layer.key);
-      const slot = (man.entries[e.key] ||= {})[layer.key] ||= [];
+      const slot = slotOf(man, e.key, layer.key);
       if (list) {
-        console.log(`${e.key.padEnd(12)} ${layer.key.padEnd(7)} ${q ? `「${q}」` : '(無可用查詢:純中文原型敘述)'}`
+        console.log(`${e.key.padEnd(12)} ${layer.key.padEnd(7)} ${q ? `「${q}」${over ? ' ←覆寫' : ''}` : '(無可用查詢:純中文原型敘述)'}`
           + `  ← ${layer.src.slice(0, 42)}`);
         continue;
       }
@@ -178,12 +183,19 @@ async function main() {
       // 是「我們問太快」⇒ 那一層被記成沒圖,畫面上看不出差別。
       // Commons 掛掉 MUST NOT 連 Openverse 的收穫一起丟(降級不例外,原則 6)。
       let hits = [];
-      try { hits = await searchOpenverse(q, n * 2); }
-      catch (err) { console.warn(`✗ ${e.key}/${layer.key}:Openverse ${err.message}`); failed++; }
+      // **Google 先跑**(2026-08-13 使用者:「不要只搜索 wiki,直接搜索 google」)——
+      // 它是三個來源裡唯一能在**搜尋階段**就偏向全身照/白底的(吃得到頁面文字),
+      // 而且沒設金鑰時回空陣列 ⇒ 這一行對還沒接金鑰的機器逐位元同舊行為。
+      try { hits = await searchGoogle(`${q} ${COMPOSE_Q}`, n * 2); }
+      catch (err) { console.warn(`  · ${e.key}/${layer.key}:Google ${err.message}(換下一個來源)`); }
+      if (hits.length < n) {
+        try { hits = [...hits, ...await searchOpenverse(q, n * 2)]; }
+        catch (err) { console.warn(`✗ ${e.key}/${layer.key}:Openverse ${err.message}`); failed++; }
+      }
       if (hits.length < n) {
         await sleep(COMMONS_GAP_MS);
         try { hits = [...hits, ...await searchCommons(q, n)]; }
-        catch (err) { console.warn(`  · ${e.key}/${layer.key}:Commons ${err.message}(只用 Openverse 的結果)`); }
+        catch (err) { console.warn(`  · ${e.key}/${layer.key}:Commons ${err.message}(只用前面的結果)`); }
       }
       if (!hits.length) { failed++; continue; }
       await mkdir(dir, { recursive: true });
@@ -191,6 +203,9 @@ async function main() {
         if (slot.length >= n) break;
         if (!licenceOk(it.license)) continue;                 // 硬閘第二道(不信任查詢參數)
         if (slot.some((r) => r.id === it.id)) continue;
+        // 使用者判過「完全不符」的那幾張:只刪檔不記黑名單的話,同一個查詢詞下一輪
+        // 會把同一張抓回來,而畫面上看起來就是「我標了它還在」
+        if (rejected(man, e.key, layer.key, it.id)) continue;
         const ext = (it.url.match(/\.(jpe?g|png|webp)(?:\?|$)/i)?.[1] || 'jpg').toLowerCase();
         const file = `${it.id}.${ext}`;
         const path = join(dir, file);
@@ -206,6 +221,18 @@ async function main() {
           } catch (err) {
             console.warn(`  ✗ ${e.key}/${layer.key}/${it.id}:${err.message}`);
             failed++;
+            continue;
+          }
+          // 構圖篩選(全身 + 背景乾淨)**在落帳之前**:不合格的當場刪檔 + 進黑名單 ——
+          // 讓它落帳再由人判退,等於每一輪都要有人重看一次同樣的雜背景照。
+          // 沒有 python/PIL ⇒ `screenOne` 回 null = 不篩(降級,不是判退)。
+          const sc = await screenOne(path);
+          if (sc && !sc.ok) {
+            console.log(`  ⊘ ${e.key}/${layer.key}/${it.id}:${sc.why.join(' / ')}`);
+            await rm(path, { force: true });
+            const t = tuneOf(man, e.key, layer.key, true);
+            if (!t.rejects.includes(it.id)) t.rejects.push(it.id);
+            screened++;
             continue;
           }
         }
@@ -225,4 +252,8 @@ async function main() {
   console.log(`帳本:tools/proto_refs/manifest.json(展示台 /api/protorefs 只讀這一份)`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// **只有被當成程式跑才執行**(2026-08-12 補):先前是無條件 `main()`,而本檔匯出了
+// `queryFor`/`zhTerms`/`latinTerms` —— 任何人 import 它來看「這一層的查詢詞是什麼」
+// 都會意外觸發一整趟採集(當場把圖庫的限流撞更深,實測踩過)。
+const entry = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+if (entry) main().catch((e) => { console.error(e); process.exit(1); });
