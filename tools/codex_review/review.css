@@ -127,3 +127,19 @@ body.cr::before, body.cr::after { display: none; }
 
 .cr-orph { margin-top: 22px; }
 .cr-orph .cr-shot { width: 150px; }
+
+/* ---- 人形鍛造區塊(特徵 → 零件;/api/forge 覆寫層)---- */
+.cr-forge { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+.cr-fstage { position: relative; width: 380px; height: 380px; flex: 0 0 auto;
+  background: #171a21; border: 1px solid var(--railS); border-radius: 3px; overflow: hidden; }
+.cr-fstage canvas { width: 100%; height: 100%; display: block; }
+.cr-fstage .cr-stage-btns { position: absolute; left: 6px; top: 6px; display: flex; gap: 4px; z-index: 2; }
+.cr-fctl { flex: 1 1 300px; min-width: 280px; }
+.cr-frow { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-family: var(--mono); font-size: 10.5px; }
+.cr-frow span { width: 76px; color: var(--dim); }
+.cr-frow input[type="range"] { flex: 1; accent-color: #6fb7ff; }
+.cr-frow i { width: 44px; font-style: normal; text-align: right; }
+.cr-fbtns { display: flex; gap: 6px; align-items: center; margin: 10px 0; flex-wrap: wrap; }
+.cr-ftab { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+.cr-ftab th, .cr-ftab td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--railS); }
+.cr-ftab th { color: var(--dim); font-weight: normal; }

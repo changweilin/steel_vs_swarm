@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "humanoid-forge",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/humanoid_forge.mjs", "--port", "8631"],
+      "port": 8631
+    }
+  ]
+}
