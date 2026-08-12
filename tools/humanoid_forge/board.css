@@ -16,6 +16,24 @@
 figure.proto { margin: 0; width: calc(50% - 4px); }
 figure.proto img { width: 100%; display: block; border: 1px solid #2a3040; border-radius: 6px; }
 figure.proto figcaption { color: #9fb4d8; font-size: 11px; text-align: center; padding-top: 2px; }
+figure.proto.user img { border-color: #6ea8ff; }
+/* 逐張的判決/註解(標記由 refstrip.js 產生 ⇒ 樣式也只准這一份) */
+.ref-act { display: flex; gap: 3px; justify-content: center; margin-top: 2px; }
+.ref-act .segb.sm { padding: 1px 6px; font-size: 11px; border: 1px solid #2a3040; background: #1b2129; }
+.ref-note { color: #ffd479; font-size: 11px; text-align: center; line-height: 1.35; }
+/* 逐層的重搜控制 */
+.ref-tune { margin: 4px 0 10px; padding: 6px 7px; background: #151920;
+            border: 1px solid #232936; border-radius: 7px; }
+.ref-q { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 11.5px; }
+.ref-q span { width: 44px; color: #9fb4d8; flex: none; }
+.ref-q input { flex: 1; min-width: 0; background: #12141a; color: #dfe5ee;
+               border: 1px solid #2a3040; border-radius: 5px; padding: 3px 6px;
+               font: inherit; font-size: 11.5px; }
+.ref-tbtn { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+.ref-tbtn .segb.sm { padding: 2px 7px; font-size: 11px; border: 1px solid #2a3040; background: #1b2129; }
+.ref-tstat { color: #7a8496; font-size: 11px; }
+.ref-tune.drop { border-color: #6ea8ff; background: #19212c; }
+
 .ref-src { color: #cfd6e2; font-size: 12px; margin: 2px 0 4px; }
 .ref-src b { color: #ffd479; font-weight: 600; }
 .ref-src span { color: #7a8496; }

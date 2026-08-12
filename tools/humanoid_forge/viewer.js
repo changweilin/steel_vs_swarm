@@ -26,7 +26,9 @@ import { updateCelLight, disposeTree } from '/public/js/toon.js';
 import { SPECS, forgeHumanoidMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from './forge.js';
 import { CATS, catOf, rosterByCat, splitKey, FORM_LABEL } from './roster.js';
 import { makeDollEditor } from './dolledit.js';
-import { fetchArt, fetchRefs, artStripHTML, refStripHTML } from './refstrip.js';
+import {
+  fetchArt, fetchRefs, dropRefsCache, artStripHTML, refStripHTML, bindRefStrip,
+} from './refstrip.js';
 // 頭像路徑只有 portraits.js 一份(手繪在冊就回檔案、不在冊回程序生成的 data URI)。
 // 回傳值是**相對 public/ 的路徑** —— 遊戲頁面的根就是 public/,而本台的根是儲存庫根,
 // 故消費端補前綴;MUST NOT 在這裡另寫一份 `assets/avatars/${id}.png`(換成手繪/退回生成
@@ -273,12 +275,16 @@ async function fillArtStrip(forId) {
   const want = spec.form === 'flight' ? '_flight_' : spec.form === 'ground' ? '_ground_' : null;
   box.innerHTML = artStripHTML((j.imgs || []).filter((m) => !want || m.file.includes(want)));
 }
-async function fillRefStrip(forId) {
+async function fillRefStrip(forId, fresh = false) {
   const box = $('refStrip');
   if (!box) return;
+  if (fresh) dropRefsCache(spec.id);          // 剛改過帳本 ⇒ 快取那一份已經是舊的
   const j = await fetchRefs(spec.id);
   if (spec.id !== forId || !$('refStrip')) return;
-  box.innerHTML = refStripHTML(j.layers || []);
+  box.innerHTML = refStripHTML(j.layers || [], spec.id);
+  // 判決/註解/重搜/自己貼的行為也住 refstrip.js(標記與行為同一份 —— 兩座看板各綁一份的話,
+  // 其中一座遲早少一個 dropRefsCache,而症狀是「我標了它還在」)
+  bindRefStrip(box, spec.id, () => fillRefStrip(spec.id, true));
 }
 
 /**

@@ -445,6 +445,36 @@ export async function searchOpenverse(q, n) {
   }));
 }
 
+/**
+ * Google 圖片(官方 Custom Search JSON API;2026-08-13 使用者:「不要只搜索 wiki,直接搜索 google」)。
+ *
+ * 三條:
+ *   ① **走官方 API 不爬網頁** —— 爬 google.com/search 違反它的服務條款,而且隨時會被擋,
+ *      壞掉的樣子是「今天開始一張都抓不到」。要金鑰:`GOOGLE_API_KEY` + `GOOGLE_CSE_ID`
+ *      (Programmable Search Engine 的 cx),**兩個缺一就整支跳過**(回空陣列讓呼叫端降級,
+ *      MUST NOT 拋 —— 沒設金鑰不是錯誤,是這台機器還沒接這個來源)。
+ *   ② **授權硬閘照舊**:查詢一律帶 `rights=cc_publicdomain`(使用者 2026-08-13 裁決「只收
+ *      授權可用的」)。Google 回報的授權是**頁面宣告**,證據力比 Openverse/Commons 的
+ *      metadata 弱 ⇒ 逐張記 `license: 'pd(google 回報)'`,帳本不假裝它跟 CC0 同級。
+ *   ③ **構圖詞在查詢裡就講**(`full body`/`white background`)—— Google 吃得到頁面文字,
+ *      這是三個來源裡唯一能在**搜尋階段**就偏向全身照/白底的;其餘來源靠事後的構圖篩選。
+ */
+export async function searchGoogle(q, n) {
+  const key = process.env.GOOGLE_API_KEY, cx = process.env.GOOGLE_CSE_ID;
+  if (!key || !cx) return [];
+  const u = 'https://www.googleapis.com/customsearch/v1?searchType=image'
+    + `&key=${encodeURIComponent(key)}&cx=${encodeURIComponent(cx)}`
+    + `&q=${encodeURIComponent(q)}&num=${Math.min(10, n)}`
+    + '&rights=cc_publicdomain&imgType=photo&safe=active';
+  const j = await jget(u);
+  return (j.items || []).map((it) => ({
+    id: `gg_${Buffer.from(it.link).toString('base64url').slice(0, 22)}`,
+    url: it.link, w: it.image?.width, h: it.image?.height,
+    license: 'pd(google 回報)', creator: it.displayLink || null,
+    source_url: it.image?.contextLink || it.link, api: 'google',
+  }));
+}
+
 /** Wikimedia Commons:補地標類;逐張驗 extmetadata 的授權欄 */
 export async function searchCommons(q, n) {
   const u = 'https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*'
