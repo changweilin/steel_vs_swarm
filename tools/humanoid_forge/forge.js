@@ -101,14 +101,16 @@ export function mergeSpec(base, ovr) {
 export const FORGE_KEYS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map((e) => e.key);
 
 /** 出廠規格(單一真相;specs.json 只放覆寫)
- *  id   = roster key(覆寫層 / 截圖檔名 / URL 片段同吃這一個字串)
- *  ch   = 駕駛員 id(2D 定案圖、原型參考圖、圖鑑跳轉一律用它)
- *  cat  = 管理頁分類(humanoid / bionic / airframe;推導自 roster.js)
- *  kind = 鍛造鷹架('biped' / 'quad' / 'air') */
+ *  id    = roster key(覆寫層 / 截圖檔名 / URL 片段同吃這一個字串)
+ *  ch    = 駕駛員 id(2D 定案圖、原型參考圖、圖鑑跳轉一律用它)
+ *  pilot = 駕駛員關係(姓名/呼號/陣營/機種/全高/羈絆;**整組推導自 roster.pilotOf**)
+ *  label = 建模註記(mechs/*.js 手寫;**不是機體名** —— 機體名恆取 pilot.machine)
+ *  cat   = 管理頁分類(humanoid / bionic / airframe;推導自 roster.js)
+ *  kind  = 鍛造鷹架('biped' / 'quad' / 'air') */
 export const MECH_SPECS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map((e) => {
   const d = MECH_DETAIL[e.key];
   return {
-    id: e.key, ch: e.id, form: e.form, cat: e.cat,
+    id: e.key, ch: e.id, form: e.form, cat: e.cat, pilot: e.pilot,
     label: d.label, hue: d.hue,
     kind: d.kind || 'biped',
     height: d.height ?? 6.0,           // 展示台統一取景高;正式整合走 heroTargetH

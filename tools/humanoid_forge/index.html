@@ -14,46 +14,115 @@
 }
 </script>
 <style>
+  /* ============ 版面(2026-08-12 第六輪重構)============
+   * 使用者:「目前的機體台 UI 很亂,須重構,以可讀性、易於標記為主,整併重複的資訊與功能」。
+   * 三欄:**左名冊 / 中舞台 / 右分頁資訊**。改版前的三個病灶:
+   *   ① 頁首 7 組 16 顆鈕擠成兩三行,沒有階層 —— 分類、名冊、演出、視角全平鋪;
+   *   ② 名冊是頂部橫條(20 顆寬鈕)⇒ 吃掉整個畫面上緣,而且掃不到「誰是誰」;
+   *   ③ 標記(紙娃娃)一開就把整個資訊欄蓋掉 —— 正在對照的 2D 定案圖當場消失,
+   *      而那正是你標記時唯一要看的東西。
+   * 所有控制**只留一份**:武器檢視只在舞台工具列(舊的側欄文字跳轉整組退場)。
+   */
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
   body { display: flex; flex-direction: column; background: #12141a; color: #dfe5ee;
          font: 14px/1.5 "Noto Sans TC", system-ui, sans-serif; }
-  header { display: flex; align-items: center; gap: 10px; padding: 7px 12px;
-           background: #1a1e27; border-bottom: 1px solid #2a3040; flex-wrap: wrap; }
+
+  /* ---- 頁首:只留身分與一句話,控制全部下放 ---- */
+  header { display: flex; align-items: baseline; gap: 10px; padding: 6px 12px;
+           background: #1a1e27; border-bottom: 1px solid #2a3040; }
   header b { font-size: 15px; }
   header .dim { color: #7a8496; font-size: 12px; }
-  .seg { display: inline-flex; gap: 4px; background: #12141a; border: 1px solid #2a3040;
+  header .grow { flex: 1; }
+
+  /* ---- 共用鈕面 ---- */
+  .seg { display: inline-flex; gap: 3px; background: #12141a; border: 1px solid #2a3040;
          border-radius: 8px; padding: 3px; flex-wrap: wrap; }
-  .segb { border: 0; background: transparent; color: #aab3c2; padding: 5px 11px;
-          border-radius: 6px; cursor: pointer; font: inherit; font-size: 13px; }
+  .segb { border: 0; background: transparent; color: #aab3c2; padding: 4px 10px;
+          border-radius: 6px; cursor: pointer; font: inherit; font-size: 12.5px; }
   .segb.on { background: #2d3646; color: #fff; }
-  .segb.cat-on { background: #3a4a63; color: #fff; }
-  .segb .fm { color: #7fd8ff; font-size: 11px; }
-  .segb.missing { color: #5d6472; font-style: italic; cursor: not-allowed; }
+  .segb:disabled { color: #5d6472; cursor: not-allowed; }
+
   .main { flex: 1; display: flex; min-height: 0; }
-  .stagewrap { flex: 1; min-width: 0; position: relative; }
-  #stage { width: 100%; height: 100%; display: block; }
+
+  /* ---- 左:名冊欄(逐列一格,掃得到「誰開哪一台」)---- */
+  #rail { width: 264px; flex: none; display: flex; flex-direction: column;
+          background: #171a21; border-right: 1px solid #2a3040; min-height: 0; }
+  #rail .rail-top { padding: 8px 9px 6px; border-bottom: 1px solid #232936; }
+  #rail .seg { display: flex; width: 100%; }
+  #rail .seg .segb { flex: 1; padding: 4px 6px; }
+  #railList { flex: 1; overflow: auto; padding: 6px; }
+  .rl-h { color: #7a8496; font-size: 11px; padding: 8px 4px 3px; }
+  .rl { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
+        padding: 5px 6px; border: 1px solid transparent; border-radius: 7px;
+        background: none; color: inherit; font: inherit; cursor: pointer; }
+  .rl:hover { background: #1d232d; }
+  .rl.on { background: #2d3646; border-color: #3a4a63; }
+  .rl.missing { color: #5d6472; cursor: not-allowed; font-style: italic; }
+  .rl img { width: 26px; height: 26px; flex: none; border-radius: 5px;
+            border: 1px solid #2a3040; background: #12141a; object-fit: cover; }
+  .rl .rl-txt { flex: 1; min-width: 0; }
+  .rl .rl-m { display: block; font-size: 12.5px; white-space: nowrap;
+              overflow: hidden; text-overflow: ellipsis; }
+  .rl .rl-p { display: block; color: #8f9bb0; font-size: 11px; white-space: nowrap;
+              overflow: hidden; text-overflow: ellipsis; }
+  .rl.on .rl-p { color: #b9c4d4; }
+  .rl .fm { color: #7fd8ff; font-size: 10.5px; }
+  .rl .rl-mk { flex: none; font-size: 12px; }
+
+  /* ---- 中:舞台 + 一條演出工具列 ---- */
+  .stagewrap { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; }
+  #stage { flex: 1; width: 100%; min-height: 0; display: block; }
   #stageTag { position: absolute; left: 12px; top: 10px; font-size: 12px; color: #9fb4d8;
               background: rgba(18,20,26,.72); border: 1px solid #2a3040; border-radius: 6px;
               padding: 3px 9px; pointer-events: none; }
-  aside { width: 350px; overflow: auto; padding: 12px 14px; background: #171a21;
-          border-left: 1px solid #2a3040; }
-  aside h3 { font-size: 16px; margin-bottom: 4px; }
-  aside h3 small { color: #7a8496; font-weight: normal; }
-  aside h4 { font-size: 13px; color: #9fb4d8; margin: 12px 0 4px; }
-  aside table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  aside th, aside td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #232936; }
-  aside th { color: #7a8496; font-weight: normal; }
-  aside tr.ovr td { color: #ffd479; }
+  .stagebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+              padding: 7px 10px; background: #1a1e27; border-top: 1px solid #2a3040; }
+  .stagebar .lb { color: #7a8496; font-size: 11px; }
+
+  /* ---- 右:分頁資訊欄 ---- */
+  aside#panel { width: 366px; flex: none; display: flex; flex-direction: column;
+                background: #171a21; border-left: 1px solid #2a3040; min-height: 0; }
+  #panelTabs { display: flex; gap: 3px; padding: 7px 8px 0; }
+  #panelTabs .segb { flex: 1; border-bottom: 2px solid transparent; border-radius: 6px 6px 0 0; }
+  #panelTabs .segb.on { background: #232b38; border-bottom-color: #6ea8ff; }
+  #panelBody { flex: 1; overflow: auto; padding: 10px 12px 16px; }
+  /* 紙娃娃面板與「覆核意見」同時在畫面上(標記分頁的下半):給它自己的捲動區,
+     否則零件分頁一長就把上半的意見欄擠出視野 —— 那就等於又回到「一開標記就看不到別的」 */
+  #dollPanel { flex: none; max-height: 46%; overflow: auto;
+               padding: 9px 12px 14px; border-top: 1px solid #2a3040; background: #151920; }
+  #panelBody h3 { font-size: 15px; margin-bottom: 2px; }
+  #panelBody h3 small { color: #7a8496; font-weight: normal; font-size: 11.5px; }
+  #panelBody h4 { font-size: 12.5px; color: #9fb4d8; margin: 12px 0 4px; }
+  #panelBody table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  #panelBody th, #panelBody td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #232936; }
+  #panelBody th { color: #7a8496; font-weight: normal; }
+  #panelBody tr.ovr td { color: #ffd479; }
   .ovr-k { color: #ffd479; }
   ul.chan { list-style: none; font-size: 12.5px; }
   ul.chan li.ok { color: #8fd8a0; }
   ul.chan li.bad { color: #ff8a80; }
-  .jump { display: inline-block; margin: 4px 6px 0 0; padding: 3px 9px; font-size: 12px;
-          border: 1px solid #3a4a63; border-radius: 6px; color: #9fd8ff; background: #1b2129;
-          cursor: pointer; }
-  .jump:hover { background: #232c38; }
-  .note { color: #7a8496; font-size: 11.5px; margin-top: 4px; }
+  .note { color: #7a8496; font-size: 11.5px; margin-top: 6px; line-height: 1.5; }
+
+  /* ---- 機體 ⇄ 角色 ---- */
+  .pilot { display: flex; gap: 9px; align-items: flex-start; margin: 6px 0 4px; }
+  .pilot img { width: 54px; height: 54px; flex: none; border-radius: 7px;
+               border: 1px solid #2a3040; background: #12141a; object-fit: cover; }
+  .pl-name { font-size: 13.5px; color: #dfe5ee; }
+  .pl-name .dim { color: #7a8496; font-size: 11px; }
+  .pl-line { font-size: 12px; color: #9fb4d8; }
+  .pl-line.dim { color: #7a8496; }
+  .pl-quote { color: #ffd479; font-size: 12px; margin: 4px 0 2px; }
+  .pl-bond { color: #cfd6e2; font-size: 12px; line-height: 1.6; }
+
+  /* ---- 覆核意見(標記分頁上半)---- */
+  .mk-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+  .mk-note { width: 100%; min-height: 58px; resize: vertical; background: #12141a;
+             color: #dfe5ee; border: 1px solid #2a3040; border-radius: 6px;
+             padding: 6px 7px; font: inherit; font-size: 12.5px; }
+  .mk-stat { font-size: 11.5px; color: #8f9bb0; margin-top: 5px; }
+  .mk-stat b { color: #ffd479; }
+  .mk-sep { border-top: 1px solid #232936; margin: 12px 0 8px; }
 </style>
 <!-- 與覆核台 :8641 共用的兩塊(原型參考照帶 + 紙娃娃面板):標記由 refstrip.js /
      dolledit.js 產生,樣式 MUST 也是同一份 —— 各寫一份就會各自演化(見 board.css 檔頭)。 -->
@@ -62,37 +131,52 @@
 <body>
 <header>
   <b>機體展示台</b>
-  <span class="dim">dev-only ・ 依原型分三頁 ・ locomotion.js 真品驅動</span>
-  <div class="seg" id="catSeg"></div>
-  <div class="seg" id="viewSeg">
-    <button class="segb on" id="vMech">機體</button>
-    <button class="segb" id="vWpnL">武器・輕</button>
-    <button class="segb" id="vWpnH">武器・重</button>
-  </div>
-  <div class="seg">
-    <button class="segb" id="spdIdle">靜止</button>
-    <button class="segb" id="spdWalk">巡航</button>
-    <button class="segb" id="spdRun">全速</button>
-  </div>
-  <div class="seg">
-    <button class="segb" id="btnFire">輕武器連射</button>
-    <button class="segb" id="btnHeavy">重武器蓄力</button>
-    <button class="segb" id="btnCastO">全向招式</button>
-    <button class="segb" id="btnCastD">定向招式</button>
-  </div>
-  <div class="seg">
-    <button class="segb" id="btnSpin">環繞檢視</button>
-    <button class="segb" id="btnJoints">特徵樞軸</button>
-  </div>
-  <div class="seg">
-    <button class="segb" id="btnEdit">🧷 紙娃娃編輯</button>
-  </div>
+  <span class="dim">dev-only ・ locomotion.js 真品驅動</span>
+  <span class="grow"></span>
+  <span class="dim" id="hdCount"></span>
 </header>
-<div class="seg" id="specSeg" style="margin:6px 12px 0;"></div>
 <div class="main">
-  <div class="stagewrap"><canvas id="stage"></canvas><div id="stageTag"></div></div>
-  <aside id="panel"></aside>
-  <aside id="dollPanel" class="d-panel" hidden></aside>
+  <nav id="rail">
+    <div class="rail-top"><div class="seg" id="catSeg"></div></div>
+    <div id="railList"></div>
+  </nav>
+  <div class="stagewrap">
+    <canvas id="stage"></canvas>
+    <div id="stageTag"></div>
+    <div class="stagebar">
+      <span class="lb">檢視</span>
+      <div class="seg">
+        <button class="segb on" id="vMech">機體</button>
+        <button class="segb" id="vWpnL">輕武器</button>
+        <button class="segb" id="vWpnH">重武器</button>
+      </div>
+      <span class="lb">速度</span>
+      <div class="seg">
+        <button class="segb on" id="spdIdle">靜止</button>
+        <button class="segb" id="spdWalk">巡航</button>
+        <button class="segb" id="spdRun">全速</button>
+      </div>
+      <span class="lb">演出</span>
+      <div class="seg">
+        <!-- 鈕面在「演出」這個標籤底下 ⇒ 不必逐顆重述「武器/招式」(工具列擠成兩行,
+             舞台就少一截;短鈕面加群組標籤讀起來反而更快) -->
+        <button class="segb" id="btnFire" title="輕武器連射(持續開火)">連射</button>
+        <button class="segb" id="btnHeavy" title="重武器蓄力擊發">蓄力</button>
+        <button class="segb" id="btnCastO" title="全向招式">全向招式</button>
+        <button class="segb" id="btnCastD" title="定向招式">定向招式</button>
+      </div>
+      <span class="lb">視角</span>
+      <div class="seg">
+        <button class="segb" id="btnSpin">環繞</button>
+        <button class="segb" id="btnJoints">樞軸</button>
+      </div>
+    </div>
+  </div>
+  <aside id="panel">
+    <div class="seg" id="panelTabs"></div>
+    <div id="panelBody"></div>
+    <div id="dollPanel" class="d-panel" hidden></div>
+  </aside>
 </div>
 <script type="module" src="/tools/humanoid_forge/viewer.js"></script>
 </body>
