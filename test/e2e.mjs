@@ -2330,7 +2330,10 @@ const iv = setInterval(() => {
   host.send({ t: 'aim', on: true });   // 重武器需瞄準模式(死亡重生會被重置,循環內重送)
   host.send({ t: 'burst', x: steelBase.x, z: steelBase.z });
 }, 300);
-const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 480000);
+// 2026-08-12 高地壓制(data.js HIGH_SUP)再放寬一次:本測試是**站在高空**打主堡,而主堡的回擊
+// 會讓射手一直處於壓制狀態 ⇒ 命中率 −HIT(封頂 10%)⇒ 拆堡時間 ×1/(1−0.10)。實測 451s → 約 480s,
+// 剛好貼著舊上限 = 會間歇性紅字的假警報。**這是設計上的變慢,不是退化**(高處挨打就打不準)。
+const overSnap = await host.wait((c) => c.snaps.at(-1).over ? c.snaps.at(-1) : null, 600000);
 clearInterval(iv);
 assert(overSnap.winner === 'SWARM', `蜂群獲勝(${((Date.now() - t0) / 1000).toFixed(0)}s 拆完主堡)`);
 

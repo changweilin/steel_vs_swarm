@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
   CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
-  heroMobility,
+  heroMobility, highSupSpeedF,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
   BLOOD, bloodDur, bloodAlpha, bloodFrac, bloodDropR, bloodDropN, bloodScreenUv,
@@ -2354,7 +2354,12 @@ export class BattleClient {
    * ⇒ 伺服器閃避門檻(EVASION 吃 heroMobility)、平衡模型、圖鑑機動欄與腳下實際跑起來的速度
    * 會分成兩份,而這種分歧只有拿碼表量才看得出來。
    */
-  _mobility(flying) { return heroMobility(this.heroKind, CHARACTERS[this.ch]?.mods, flying); }
+  _mobility(flying) {
+    // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):位置是客戶端權威 ⇒ 真人這一半住這裡,
+    // 電腦玩家那一半住 `bots._speed`,兩端同一支 `highSupSpeedF`;強度由伺服器快照給(hsf)。
+    const sup = highSupSpeedF((this.hiSupLeft || 0) > 0 ? this.hiSupF || 0 : 0);
+    return heroMobility(this.heroKind, CHARACTERS[this.ch]?.mods, flying) * sup;
+  }
 
   /**
    * 移動輸入唯一縫:回傳 { f 前後, r 左右, mag 推杆量, boost 衝刺 }。
@@ -3231,6 +3236,9 @@ export class BattleClient {
           this.stunLeft = e.pz || 0;
           this.slowLeft = e.sl || 0;
           this.slowF = e.slf ?? 0.6;
+          // 高地壓制(伺服器權威;欄位缺省 = 窗已過)—— 只折移速,命中/閃避由伺服器結算
+          this.hiSupLeft = e.hs || 0;
+          this.hiSupF = e.hsf || 0;
           this.confLeft = e.cf || 0;
           this.markLeft = e.mk || 0;
           this.bleedLeft = e.bl || 0;

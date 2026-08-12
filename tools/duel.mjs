@@ -28,9 +28,10 @@
 // 爆炸傷害吃 (1−p)×1/(1−p) ≡ 1「維持 DPS」)→ 護盾先扣(不吃護甲)→ 裝甲吃 armorMul(armor, pen)。
 // 差別只有「擲骰改期望值」(稽核要確定性,MUST NOT 用 Math.random —— 見全域 A4)與
 // 「彈夾/裝填攤平成持續 DPS」(與 bal ①/④ 同一個簡化)。
-import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, evadeExpF, altScale, altTier,
+import { CHARACTERS, UNITS, GAME, VITALS, ALTITUDE, EVASION, SQUAD, evadeExpF, altScale, altTier,
   armorMul, vsMult, heroWeapon, charKind, heroArmor, heroMobility, evasionMinSpeed, chargeF,
-  dmgFalloff, heavyMpCost, shieldSplit } from '../public/js/data.js';
+  dmgFalloff, heavyMpCost, shieldSplit, mobMid, rangeMid, speedMid,
+  HIGH_SUP, highSupF, highSupDodgeF, highSupSpeedF, highSupMissP } from '../public/js/data.js';
 
 export const DUEL = {
   DT: 0.05,           // 步進(秒)
@@ -67,14 +68,19 @@ function critF(def, dh) {
   return 1 + p * ((def.critX || VITALS.CRIT_X) - 1) * dmgF;
 }
 
-/** 閃避率(對齊 sim._dodgeP:移動中 + 有效機動 > 門檻;飛行加成;較高方 +DODGE)。
- *  **吃不吃閃避、補不補償**一律由 data.js 的 `evadeExpF(def, p)` 判 —— 本函式只回 p。 */
-function dodgeP(target, dh) {
+/** 閃避率(對齊 sim._dodgeP:移動中 + 有效機動 > 門檻;飛行加成;較高方 +DODGE;高地壓制折扣)。
+ *  **吃不吃閃避、補不補償**一律由 data.js 的 `evadeExpF(def, p)` 判 —— 本函式只回 p。
+ *  `S` = 目標的**對局狀態**(不是 fighter):壓制是逐 tick 變動的狀態,拿 fighter 取不到。 */
+function dodgeP(S, dh) {
+  const target = S.f;
   if (target.mob <= evasionMinSpeed()) return 0;   // 重甲慢速機體站著吃彈
   let p = EVASION.GROUND + (target.flying ? EVASION.AIR_BONUS : 0);
   if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);     // 目標比射手高
-  return Math.max(0, Math.min(EVASION.P_MAX, p));
+  // 高地壓制:剛被打到的高處目標閃不掉(套在加總之後,與 sim._dodgeP 同一個順序)
+  return Math.max(0, Math.min(EVASION.P_MAX, p)) * highSupDodgeF(S.sup || 0);
 }
+/** 射手被壓制時「這一發真的打中」的期望倍率 —— 由 `highSupMissP` 反推(MUST NOT 手寫 1 − HIT×f) */
+const supHitF = (f) => 1 - highSupMissP(0, f || 0);
 
 /** 建一名對局者(Lv1 基準,與 bal ① 同一組解析縫) */
 export function fighter(ch, lvl = 1) {
@@ -97,13 +103,53 @@ export function fighter(ch, lvl = 1) {
   };
 }
 
+// ---- 機種底盤控制變因(bal ⑤f 的唯一縫)----
+// 使用者定案(2026-08-12):「三種機體使用不同武器類型交叉對戰,**同輕重武器組合時**,三種機體
+// (機甲、變形者、無人機)平均不同高度差之間的交叉戰鬥測試,勝率要接近。」
+// ⑤b 量的是「這個機種的**角色們**強不強」—— 武器與 mods 跟底盤綁在一起,弱底盤可以靠強武器補回來
+// (現況正是如此:b 全綠而 f 不是)。本縫把武器那一軸**控制住**:同一份輕重武器組合分別裝上三個
+// 底盤,其餘全部中性 ⇒ 勝率差只剩底盤本身的四個軸(耐久 / 機動 / 飛行閃避 / 射程上限)。
+//
+// 三條紀律:
+// ① **解析一律走既有的縫**(heroWeapon / heroArmor / heroMobility / rangeCap):換底盤會同時改動
+//    射程上限(rangeCap ← UNITS[kind].sight)、機動、以及**經 mobDmgF/rngDmgF 折算後的基礎火力** ——
+//    在這裡手抄一份「換了底盤之後的武器數值」就是第二份 heroWeapon,而它的錯只會表現成
+//    「測出來的機種差跟遊戲裡的不一樣」。做法 = 暫時註冊一名合成角色 → 解析 → **當場移除**。
+// ② **中點快取 MUST 先定案**:mobMid / rangeMid / speedMid 都吃 `Object.keys(CHARACTERS)`,合成角色
+//    若落進取樣面,整批預算中點就會隨「這一輪測了幾台」漂移(而印出來的數字看起來完全正常)。
+//    現況三者實際上在 data.js 模組初始化就凍結了(對建築 DPS 收斂迴圈會呼叫 heroWeapon)⇒ 這一行
+//    是**保住這件事與呼叫順序無關**的保險,不是現在就會壞掉的東西(拿掉它今天量到的數字不變)。
+// ③ **護甲比的是有效值不是宣告值**:無人機的 mods.armor 是另一個尺度(heroArmor 會 ×SQUAD.ARMOR_F,
+//    現值 2.14×;宣告區間 HERO_SIZE 也不同)⇒ 三個底盤直接餵同一個宣告值 = 拿兩把尺量同一件事。
+//    這裡逐機種**反解**回宣告值,讓三者的 heroArmor 輸出逐位元相同。
+const CHASSIS_SYN = '__chassis';      // 合成角色鍵(插入 → 解析 → finally 移除,不留在名冊上)
+let _neutralArmor = 0;
+/** 中性有效護甲 = 全表 heroArmor 的平均(推導不手寫;首次呼叫定案並快取) */
+export function neutralArmor() {
+  if (!_neutralArmor) {
+    const cs = Object.keys(CHARACTERS);
+    _neutralArmor = cs.reduce((s, c) => s + heroArmor(c), 0) / cs.length;
+  }
+  return _neutralArmor;
+}
+/** 把 ch 的輕重武器組合裝到 `kind` 底盤上(其餘中性)。回傳與 fighter() 同形的對局者。 */
+export function chassisFighter(ch, kind, lvl = 1) {
+  mobMid(); rangeMid('light'); rangeMid('heavy'); speedMid(); neutralArmor();   // 紀律②
+  if (CHARACTERS[CHASSIS_SYN]) throw new Error('chassisFighter:合成角色未清乾淨(重入)');
+  const armor = kind === 'drone' ? neutralArmor() / SQUAD.ARMOR_F : neutralArmor();   // 紀律③
+  CHARACTERS[CHASSIS_SYN] = { ...CHARACTERS[ch], kind, mods: { armor } };
+  try { return { ...fighter(CHASSIS_SYN, lvl), ch, chassis: kind }; }             // 紀律①
+  finally { delete CHARACTERS[CHASSIS_SYN]; }
+}
+
 /**
  * 打一場對進戰。dh = A 相對 B 的視線高程差(公尺,可正可負)。
  * 回傳 { win, t, leftA, leftB, freeA, freeB } —— free* = 該方在「單方面射程優勢期」(自己打得到、
  * 對方還進不了場)打掉對手的 EHP 比例(護甲減免後的實際損失;射程壓制強度指標)。
  */
 export function duel(A, B, dh = 0) {
-  const st = (F) => ({ f: F, sh: F.sh0, ar: F.ar0, mp: F.mp0, ehp0: F.sh0 + F.ar0 });
+  // sup / supUntil = 高地壓制狀態(見 data.js HIGH_SUP):逐 tick 變動 ⇒ 住對局狀態不住 fighter
+  const st = (F) => ({ f: F, sh: F.sh0, ar: F.ar0, mp: F.mp0, ehp0: F.sh0 + F.ar0, sup: 0, supUntil: -1 });
   const a = st(A), b = st(B);
   const rF = { a: altRangeF(dh), b: altRangeF(-dh) };            // 較高方 +射程
   const cF = { a: dh, b: -dh };                                  // 各自視角的高度差(爆擊/閃避用)
@@ -127,7 +173,7 @@ export function duel(A, B, dh = 0) {
     let v = 0;
     S.f.slots.forEach((s, i) => {
       if (dist > effR[i]) return;
-      const evF = evadeExpF(s.def, dodgeP(T.f, -cF[side]));   // 期望倍率(爆炸傷害有補償 ⇒ 恆 1)
+      const evF = evadeExpF(s.def, dodgeP(T, -cF[side]));   // 期望倍率(爆炸傷害有補償 ⇒ 恆 1)
       v += s.def.dmg * vsMult(s.def, T.f.kind) * shieldEqF(s.def, T.f)
         * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * evF * s.rps
         * armorMul(T.f.armor, s.def.pen);                        // 交換比要看「打進去的」傷害
@@ -147,15 +193,18 @@ export function duel(A, B, dh = 0) {
     }
     return best || max;
   };
+  // 偏好距離是**開場一次定案**的啟發式 ⇒ 刻意不含高地壓制(逐 tick 變動的狀態放進來會讓兩台機體
+  // 每一幀重新選距離,那不是這個模型要表達的東西;壓制的效果全部落在下面的逐 tick 結算)
   const prefA = prefer(a, b, effA, effB, 'a', 'b');
   const prefB = prefer(b, a, effB, effA, 'b', 'a');
   const dNear = Math.min(prefA, prefB), dFar = Math.max(prefA, prefB);
   // 拉鋸:偏好近的一方前壓、偏好遠的一方後撤 ⇒ 淨接近速度 = 移速差(跑不贏就貼不上)
-  const pushMob = prefA <= prefB ? A.mob : B.mob;
-  const backMob = prefA <= prefB ? B.mob : A.mob;
+  // 兩邊的速度**逐 tick 取**:高地壓制會把剛挨打的那一方的移速折下來(壓制 = 0 ⇒ 逐位元同舊制)
+  const pusher = prefA <= prefB ? a : b, backer = prefA <= prefB ? b : a;
+  const mobOf = (S) => S.f.mob * highSupSpeedF(S.sup);
   let retreatLeft = DUEL.KITE_M;                                  // 後撤方還能讓出的地面(公尺)
   let d = Math.max(...effA, ...effB) * DUEL.D_START_F;
-  const close = A.mob + B.mob;                                    // 接近期:雙方同時前進
+  const close = () => mobOf(a) + mobOf(b);                        // 接近期:雙方同時前進(壓制同樣折速)
 
   // 雙層拆分走 shieldSplit(與 sim._damage 同一支;含反護盾/穿盾/反裝甲三型)→ 裝甲層吃 armorMul
   const apply = (T, dmg, pen, def) => {
@@ -170,31 +219,41 @@ export function duel(A, B, dh = 0) {
     S.f.slots.forEach((s, i) => {
       if (dist > effR[i]) return;
       if (s.def.id === 'heavy' && S.mp < s.mp) return;
-      const evF = evadeExpF(s.def, dodgeP(T.f, -cF[side]));   // 期望倍率(爆炸傷害有補償 ⇒ 恆 1)
+      // 期望倍率兩項:①目標閃避(爆炸傷害有補償 ⇒ 恆 1)②射手被高地壓制而失準。
+      // ②MUST NOT 併進 evadeExpF —— 補償只補閃避那一半(A45 ⑦),併進去這條新規則就消失了。
+      const evF = evadeExpF(s.def, dodgeP(T, -cF[side])) * supHitF(S.sup);
       const dmg = s.def.dmg * vsMult(s.def, T.f.kind)
         * dmgFalloff(s.def, dist) * critF(s.def, cF[side]) * evF * s.rps * dt;
       apply(T, dmg, s.def.pen, s.def);
       if (s.def.id === 'heavy') mpUse += s.mp * s.rps * dt;
     });
     S.mp = Math.min(S.f.mp0, S.mp - mpUse + S.f.mpRegen * dt);
-    return before - (T.sh + T.ar);                                 // 實際 EHP 損失(護甲減免後)
+    const dealt = before - (T.sh + T.ar);                          // 實際 EHP 損失(護甲減免後)
+    // 高地壓制戳記(對齊 sim._stampSup:只在**真的挨到**且自己站得比射手高時留下)
+    if (dealt > 0) {
+      const f = highSupF(-cF[side]);
+      if (f > 0) { T.sup = Math.max(T.sup, f); T.supUntil = tNow + HIGH_SUP.DUR_S; }
+    }
+    return dealt;
   };
 
-  let t = 0, freeA = 0, freeB = 0;
+  let t = 0, tNow = 0, freeA = 0, freeB = 0;
   const inR = (effR, dist) => effR.some((r) => dist <= r);
   while (t < DUEL.MAX_T && a.sh + a.ar > 0 && b.sh + b.ar > 0) {
     const dt = DUEL.DT;
+    tNow = t;
+    for (const S of [a, b]) if (t >= S.supUntil) S.sup = 0;      // 壓制窗到期(持續火力下逐發續期)
     const aFires = inR(effA, d), bFires = inR(effB, d);
     const dA = strike(a, b, effA, 'a', d, dt);
     const dB = strike(b, a, effB, 'b', d, dt);
     if (aFires && !bFires) freeA += dA;                          // 單方面射程優勢期
     if (bFires && !aFires) freeB += dB;
     if (d > dFar) {
-      d = Math.max(dFar, d - close * dt);                        // ①接近期:雙方同時前進
+      d = Math.max(dFar, d - close() * dt);                      // ①接近期:雙方同時前進
     } else if (d > dNear) {                                      // ②拉鋸期:前壓 vs 後撤
-      const back = retreatLeft > 0 ? Math.min(backMob, retreatLeft / dt) : 0;
+      const back = retreatLeft > 0 ? Math.min(mobOf(backer), retreatLeft / dt) : 0;
       retreatLeft = Math.max(0, retreatLeft - back * dt);
-      d = Math.max(dNear, d - Math.max(0, pushMob - back) * dt);
+      d = Math.max(dNear, d - Math.max(0, mobOf(pusher) - back) * dt);
     }                                                            // ③定點期:d 已收斂
     t += dt;
   }

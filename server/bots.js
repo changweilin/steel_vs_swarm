@@ -4,7 +4,7 @@
 // 行為狀態機:PUSH(沿兵線推進)→ ENGAGE(交戰)→ RALLY(退到砲塔後方等護盾)→ RETREAT(回堡補血)。
 // NPC 路線 = 房間兵線(與小兵同一份折線),不用另外算路。
 import { UNITS, GAME, ECON, LOS, heroWeapon, heroAbility, vsMult, botDiffOf, botOpGap, isThirdSide,
-  CHARACTERS, heroMobility,
+  CHARACTERS, heroMobility, highSupSpeedF,
   VITALS,
   BOT_VIEW, botFovHalf, viewLockStep, wrapPi,
   BOT_TACTIC, botTargetPrio, botThreatDecay, botSalvo, botExecW, botKiteF,
@@ -86,7 +86,10 @@ export class BotBrain {
    *  取速一律經 `heroMobility`(A32「電腦玩家 MUST NOT 比真人多看/多走」的同一條):
    *  那支才含角色 `mods.speed` 與移速壓縮,直接讀 `UNITS[kind].speed` = bot 跑的是機種基準速。 */
   _speed(h) {
-    return heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h);
+    // 高地壓制折速(2026-08-12;見 data.js HIGH_SUP ⑤):真人那一半住客戶端 `game._mobility`,
+    // bot 的「客戶端」就是這裡 —— 兩端同一支 `highSupSpeedF`,伺服器不對真人再折一次。
+    const sup = highSupSpeedF(this.sim._supF(h));
+    return heroMobility(h.kind, CHARACTERS[h.ch]?.mods, this._fly(h)) * this._ccF(h) * sup;
   }
 
   /** 這架機體的水平半視角(弧度);推導不手寫,見 data.js botFovHalf */

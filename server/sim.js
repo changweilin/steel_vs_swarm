@@ -16,6 +16,7 @@ import {
   SIEGE, siegeSiteStages, siegeOpenStage,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
+  HIGH_SUP, highSupF, highSupDodgeF, highSupMissP,
   selfCollider, COLLIDE_KINDS,
   ALTITUDE, altScale, altRangeF, altRangeMax, RANGE_TOL, HGT_CHARS, HGT_STEP, WATER, TERRAIN_FX, offGround, airUnit,
   waveComp, waveSpacingM, CREEP_UPG, creepUpgMul, creepDmgTakenF, BOT_TACTIC, botThreatDecay, FLIGHT,
@@ -1855,12 +1856,47 @@ export class BattleSim {
       const dh = this._altDh(t, shooter);   // 同框比較(見 _altDh:跨框相減 = 拿場地海拔當高度差)
       if (dh > 0) p += ALTITUDE.DODGE * altScale(dh);
     }
-    return Math.min(p, EVASION.P_MAX);
+    // 高地壓制:剛被打到的高處目標閃不掉(2026-08-12;見 data.js HIGH_SUP)。
+    // 套在**加總之後**是刻意的 —— 壓制打折的是「這台機體現在還閃不閃得掉」,不是逐項扣掉某一份加成。
+    return Math.min(p, EVASION.P_MAX) * highSupDodgeF(this._supF(t));
+  }
+
+  /**
+   * 高地壓制的**唯一戳記處**(`_damage` 的英雄分支)。強度 = 這一擊當下的高度優勢 `altScale(dh)`,
+   * 窗長固定 `HIGH_SUP.DUR_S` —— 持續火力下逐發續期是這條規則的重點,不是漏算(見 data.js HIGH_SUP)。
+   *
+   * 兩條範圍限制:
+   * ① **只壓制機體**(英雄與電腦玩家):砲塔/主堡/小兵沒有機動也不閃避,把命中率壓制加到它們身上
+   *    等於直接改動 `towerHp` 的推導錨(bal ④)與一波 NPC 的火力(bal ①)—— 那是另一件事。
+   * ② **沒有攻擊者就沒有壓制**:地雷/火場/沼澤/淹水的傷害不帶 `by`,而「高度優勢」是相對某個
+   *    射手才成立的量(同 `_altRange`/`_altCrit`/`_dodgeP` 三處的 dh 來源)。
+   * 同一個窗內多發:取**較強**的那一份(與 slowF「取較強」同一個處理),窗一律續到最新一發。
+   */
+  _stampSup(t, by) {
+    if (!by) return;
+    const f = highSupF(this._altDh(t, by));
+    if (f <= 0) return;
+    t.supF = Math.max(this._supF(t), f);
+    t.supUntil = this.t + HIGH_SUP.DUR_S;
+  }
+
+  /** 這台機體當下的高地壓制強度(0 = 沒被壓制;窗過期即歸零)。唯一讀取處。 */
+  _supF(e) {
+    return e && (e.supUntil || 0) > this.t ? (e.supF || 0) : 0;
+  }
+
+  /**
+   * 這一發打不中的機率 = 目標閃避 ⊕ **射手**被高地壓制而失準(獨立事件,見 data.highSupMissP)。
+   * 伺服器只擲一顆骰 ⇒ 兩條路徑(`_dodges` 與 `_blast`)MUST 都經這一支;
+   * 而閃避補償 `evadeCompF` 的分母 MUST 仍只吃 `_dodgeP`(壓制不在「維持 DPS」那個帳裡,A45 ⑦)。
+   */
+  _missP(t, shooter) {
+    return highSupMissP(this._dodgeP(t, shooter), this._supF(shooter));
   }
 
   /** 擲骰。`p > 0` 的短路 MUST 留著:不合格的目標**不消耗亂數**(與拆成 _dodgeP 之前逐位元同流) */
   _dodges(t, shooter) {
-    const p = this._dodgeP(t, shooter);
+    const p = this._missP(t, shooter);
     return p > 0 && Math.random() < p;
   }
 
@@ -2492,6 +2528,7 @@ export class BattleSim {
     b.lastHitAt = this.t;
     b.invUntil = this.t + SELF_ULT.REVIVE_INV_S;   // 站起來那一瞬不該被同一發爆風再收一次
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.asst = null;
+    b.supUntil = 0; b.supF = 0;   // 高地壓制:站起來那一刻不該還帶著倒下前的壓制
     b._trail = null;
     this.events.push({ e: 'respawn', id: b.id, side: b.side, pid: b.pid, revive: 1 });
   }
@@ -3564,8 +3601,12 @@ export class BattleSim {
       // (武器爆炸型 / 攻擊招式 / 三種載具戰鬥部 / NPC 肩射火箭全部匯流到這一支)。
       // 自損不擲(`!same`):榴彈最小安全射程的無差別模式是**代價**不是別人打過來的攻擊,
       // 讓射手有機會閃開自己的砲等於把那道懲罰做成擲骰。
+      // 骰的是「打不中」(閃避 ⊕ 射手被高地壓制而失準),補償的分母只有閃避那一半 ——
+      // 壓制不在 A45 ⑦「維持 DPS」的帳裡,補進去等於這條新規則對爆炸傷害完全沒有作用。
+      // 兩者在 supF = 0 時逐位元相同(`highSupMissP(p, 0) === p`)⇒ 亂數流不變。
       const p = same ? 0 : this._dodgeP(t, h);
-      if (p > 0 && Math.random() < p) {
+      const pm = same ? 0 : this._missP(t, h);
+      if (pm > 0 && Math.random() < pm) {
         // pid = 射手(有才附):客戶端據此讓「自己的攻擊被閃」跳 Miss;NPC 爆風無 pid ⇒ 只跳「閃」
         this.events.push({ e: 'dodge', ...(h.pid != null ? { pid: h.pid } : {}),
           x: t.x, z: t.z, y: t.hero ? (t.y || 0) : 0, side: t.side });
@@ -3680,6 +3721,7 @@ export class BattleSim {
     if (t.hero) {
       dmg *= this._buffMul(t, 'dmgTaken');   // 複合裝甲詞綴 / 護盾類招式
       t.lastHitAt = this.t;                  // 進入戰鬥:護盾回復重新計時
+      this._stampSup(t, by);                 // 高地壓制:站得越高、挨這一發之後越打不準/閃不掉/跑不動
       this._breakOnHit(t);                   // 「挨一發就結束」的招式(t02 超載)在此撤銷
       // 雙層拆分走 shieldSplit 單一縫(反護盾 / 穿盾 / 反裝甲三型;中性參數 = 舊制的「護盾先吃、
       // 溢出進裝甲」)。護盾層恆不吃護甲減免 —— 能量護盾與裝甲板是兩套防護,這一點沒有改。
@@ -4189,6 +4231,7 @@ export class BattleSim {
     b.rg = b.kind === 'drone';   // 僚機:先沿標準路線歸隊
     // 每架獨立的控場狀態(非 SQUAD_SHARED):重生一律清乾淨(助攻貢獻戳記一併清)
     b.stunUntil = 0; b.slowUntil = 0; b.confUntil = 0; b.bleed = null; b.invUntil = 0; b.asst = null;
+    b.supUntil = 0; b.supF = 0;   // 高地壓制:重生一律清乾淨(同上列控場狀態)
     if (soloWipe) {
       b.mp = b.maxMp;
       b.empUntil = 0; b.stealthUntil = 0; b.mods = []; b.markUntil = 0;
@@ -4937,6 +4980,8 @@ export class BattleSim {
       if ((e.stunUntil || 0) > this.t) o.pz = Math.round((e.stunUntil - this.t) * 10) / 10;
       if ((e.slowUntil || 0) > this.t) { o.sl = Math.round((e.slowUntil - this.t) * 10) / 10; o.slf = e.slowF ?? 0.6; }
       if ((e.confUntil || 0) > this.t) o.cf = Math.round((e.confUntil - this.t) * 10) / 10;
+      // 高地壓制:客戶端要這兩欄才折得出移速(位置本就客戶端權威 ⇒ 伺服器 MUST NOT 再折一次)
+      if (this._supF(e) > 0) { o.hs = Math.round((e.supUntil - this.t) * 100) / 100; o.hsf = Math.round(e.supF * 100) / 100; }
       if ((e.markUntil || 0) > this.t) o.mk = Math.round((e.markUntil - this.t) * 10) / 10;
       if (e.bleed && e.bleed.until > this.t) o.bl = Math.round((e.bleed.until - this.t) * 10) / 10;
       if ((e.invUntil || 0) > this.t) o.iv = Math.round((e.invUntil - this.t) * 10) / 10;   // 無敵幀
