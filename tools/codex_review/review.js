@@ -313,6 +313,18 @@ async function mountForge(id) {
   const base = forge.MECH_SPECS.find((s) => s.id === id);
   if (!base) { sec.hidden = true; return; }                      // 非人形名冊(四足/無人機)不出鍛造區塊
   sec.hidden = false;
+  // 2D 原型圖參考帶(2026-08-12 使用者:「下載原型圖片放在機體台,3D建模時需參考2D圖片
+  // 設計零件進行組合」):資料 = 伺服器端 manifest 推導的 shots(MUST NOT 在這裡另拼檔名);
+  // 只列地面型(人形鍛造建模的是地面人形),★ = 外觀權威排最前。
+  const refs = (rowOf(id)?.shots || [])
+    .filter((s) => s.has && s.form !== 'flight')
+    .sort((a, b) => (b.star ? 1 : 0) - (a.star ? 1 : 0));
+  const refHTML = refs.length
+    ? refs.map((s) => `<figure class="cr-fref${s.star ? ' star' : ''}">
+        <a href="/${s.url}" target="_blank" rel="noopener"><img src="/${s.url}" alt="" loading="lazy"></a>
+        <figcaption>${esc(s.poseLabel)}${s.form ? `・${esc(s.form)}` : ''}${s.star ? '・★ 外觀權威' : ''}</figcaption>
+      </figure>`).join('')
+    : '<div class="cr-none">(這台還沒有 2D 定案圖 —— 建模參考缺席)</div>';
   if (!fapp.canvas) {
     forgeScene();
     fapp.ovr = (await forgeApi()).mechs || {};
@@ -335,6 +347,8 @@ async function mountForge(id) {
   }).join('');
   sec.innerHTML = `<h3>人形鍛造(特徵 → 零件)<span class="cr-dim" style="font-weight:normal">
       ${esc(base.label)} ・ 出廠規格住 forge.js,調整存 specs.json 覆寫層</span></h3>
+    <div class="cr-dim">2D 原型圖(3D 建模的設計權威 —— 零件多面體照著它拼;點圖開大圖)</div>
+    <div class="cr-frefs">${refHTML}</div>
     <div class="cr-forge">
       <div class="cr-fstage" id="crForgeStage">
         <div class="cr-stage-btns">

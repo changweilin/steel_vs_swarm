@@ -12,7 +12,7 @@
 //   node tools/humanoid_forge.mjs            # 起 dev server(預設 :8631)
 //   node tools/humanoid_forge.mjs --port 9000
 import { createServer } from 'node:http';
-import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
+import { readFile, stat, mkdir, writeFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { ROOT } from './audit_src.mjs';
@@ -53,6 +53,23 @@ const srv = createServer(async (req, res) => {
       await mkdir(dir, { recursive: true });
       await writeFile(join(dir, `${name}.png`), Buffer.from(b64, 'base64'));
       return send(200, JSON.stringify({ ok: true, path: `tools/humanoid_forge/shots/${name}.png` }), MIME['.json']);
+    }
+    // 2D 原型圖名冊(2026-08-12 使用者:「下載原型圖片放在機體台,3D建模時需參考2D圖片」):
+    // 名冊 = public/assets/cyberpunk_art/mechs/ 目錄本身(單一真相,MUST NOT 客戶端拼檔名);
+    // 地面型排前(人形鍛造建模的是地面人形),姿態 static → moving → heavy。
+    if (req.method === 'GET' && url === '/api/protoimgs') {
+      const q = new URLSearchParams(req.url.split('?')[1] || '');
+      const id = (q.get('id') || '').replace(/[^\w]/g, '');
+      if (!id) return send(400, 'id?');
+      const dir = join(ROOT, 'public', 'assets', 'cyberpunk_art', 'mechs');
+      const files = (await readdir(dir).catch(() => []))
+        .filter((f) => f.startsWith(`${id}_`) && /\.(png|jpe?g)$/i.test(f));
+      const score = (f) => (f.includes('_flight_') ? 10 : 0)
+        + (f.includes('moving') ? 1 : f.includes('heavy') ? 2 : 0);
+      files.sort((a, b) => score(a) - score(b) || (a < b ? -1 : 1));
+      return send(200, JSON.stringify({
+        imgs: files.map((f) => ({ file: f, url: `/public/assets/cyberpunk_art/mechs/${f}` })),
+      }), MIME['.json']);
     }
     if (url === '/' || url === '') url = '/tools/humanoid_forge/index.html';
     const p = safePath(url);
