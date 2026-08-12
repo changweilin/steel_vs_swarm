@@ -1,0 +1,4 @@
+# 原型參考照:圖檔本身不進版控(CC0 但體積大,且隨時可由 manifest 重抓)
+# 帳本 manifest.json MUST 進版控 —— 它是「這張圖哪來的、什麼授權」的唯一紀錄
+*/
+!manifest.json

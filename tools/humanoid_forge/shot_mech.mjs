@@ -1,8 +1,11 @@
 // ============ 定裝照工具:一台機體 × 多角度/多姿態(dev-only;headless)============
-// 人形鍛造台的閉環驗證縫:改完 mechs/<id>.js → 跑本支 → 用眼睛比對 2D 定案圖。
+// 機體展示台的閉環驗證縫:改完 mechs/<key>.js → 跑本支 → 用眼睛比對 2D 定案圖。
 // 走 viewer.js 的 __forge/__shot 鉤(headless-3d-inspection 技能同款:手動步進 + 顯式渲染)。
 //
 //   node tools/humanoid_forge/shot_mech.mjs --id t01 [--port 8635] [--prefix t01]
+//
+// `--id` 吃的是 **roster key**(`t01` / `t06@ground` / `t06@flight` / `s01`),與名冊同一套鍵;
+// 檔名前綴預設把 `@` 換成 `_`(伺服器落盤會把非 \w 字元剝掉 ⇒ 不換的話兩個型態會撞檔名)。
 //
 // 前提:dev server 已在該埠跑著(node tools/humanoid_forge.mjs --port 8635)。
 // Playwright 取自全域 npm(本專案零 npm 依賴,A2 —— dev 驗證工具借用全域安裝不入 package.json)。
@@ -22,7 +25,7 @@ const arg = (k, d) => {
 };
 const id = arg('id');
 const port = Number(arg('port', '8635'));
-const prefix = arg('prefix', id);
+const prefix = arg('prefix', id && id.replace('@', '_'));
 if (!id) {
   console.error('用法:node tools/humanoid_forge/shot_mech.mjs --id t01 [--port 8635] [--prefix t01]');
   process.exit(1);

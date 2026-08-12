@@ -16,6 +16,7 @@ import { readFile, stat, mkdir, writeFile, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { ROOT } from './audit_src.mjs';
+import { rosterEntries, rosterByCat } from './humanoid_forge/roster.js';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -70,6 +71,32 @@ const srv = createServer(async (req, res) => {
       return send(200, JSON.stringify({
         imgs: files.map((f) => ({ file: f, url: `/public/assets/cyberpunk_art/mechs/${f}` })),
       }), MIME['.json']);
+    }
+    // 真實原型參考照(2026-08-12 第四輪:「除了機體圖也搜集下載原型動物或機型圖案」):
+    // 名冊 = tools/proto_refs/manifest.json(採集帳本,由 tools/fetch_protorefs.mjs 寫),
+    // 原型層 = roster.protoRefsOf() —— 兩份都是既有的縫,展示台 MUST NOT 掃目錄自己拼。
+    // 帳本沒有那一格 = 還沒採集(回空陣列讓看板明講),**不是**錯誤。
+    if (req.method === 'GET' && url === '/api/protorefs') {
+      const q = new URLSearchParams(req.url.split('?')[1] || '');
+      const key = q.get('key') || '';
+      const entry = rosterEntries().find((e) => e.key === key);
+      if (!entry) return send(404, JSON.stringify({ error: 'key?' }), MIME['.json']);
+      let man = { entries: {} };
+      try { man = JSON.parse(await readFile(join(ROOT, 'tools', 'proto_refs', 'manifest.json'), 'utf8')); }
+      catch { /* 還沒採集過 */ }
+      const safe = key.replace(/@/g, '_').replace(/[^\w.-]/g, '');
+      const layers = entry.protos.map((L) => ({
+        key: L.key, label: L.label, src: L.src, note: L.note,
+        imgs: ((man.entries?.[key] || {})[L.key] || []).map((r) => ({
+          file: r.file, license: r.license, creator: r.creator, source_url: r.source_url,
+          url: `/tools/proto_refs/${safe}/${L.key}/${r.file}`,
+        })),
+      }));
+      return send(200, JSON.stringify({ key, layers }), MIME['.json']);
+    }
+    // 名冊與分類(看板以外的消費端 —— 例如截圖工具 —— 直接吃這一份)
+    if (req.method === 'GET' && url === '/api/roster') {
+      return send(200, JSON.stringify({ cats: rosterByCat() }), MIME['.json']);
     }
     if (url === '/' || url === '') url = '/tools/humanoid_forge/index.html';
     const p = safePath(url);
