@@ -128,6 +128,9 @@ const report = await page.evaluate(async ({ W, H, ONLY, SUBZ_OBJ, SEEDS, INK_LIS
     };
   };
 
+  // 帶半寬(型錄唯一真相):橫斷面濾片與兩側取樣的偏移都吃它
+  const HW = Object.fromEntries(Object.entries(G.BORDER_KINDS).map(([k, d]) =>
+    [k, Math.max(d.flat ? d.flat.w / 2 : 0, d.ridge ? d.ridge.w / 2 : 0)]));
   const WATER_Y = 2.0;
   const makeWorld = (zA, zB) => {
     const worldW = 2600, worldH = 900;
@@ -158,8 +161,13 @@ const report = await page.evaluate(async ({ W, H, ONLY, SUBZ_OBJ, SEEDS, INK_LIS
       const zn = sideOf(x);
       return zn === 'water' ? 1 : zn === 'wet' ? 2 : 0;
     };
+    // `gridM` **不是選用的**:2026-08-13「陸域地貌認養地形三角形」之後,emitCell 由它回推
+    // 地形頂點網格(NTV = worldW/gridM + 1)—— 缺了它 NTV = NaN ⇒ 一格都認養不到,
+    // 整層地被靜默建成空的(實測 cells=0 / border=0 而 buildGroundCover 照樣回傳統計、不報錯)。
+    // 值取 buildTerrain 的量級(worldW / (N−1));這裡的假地形是解析式,格距只影響法線取樣距。
+    const gridM = 8.5;
     return { terrain: { heightAt, minX, maxX: minX + worldW, minZ, maxZ: minZ + worldH,
-                        worldW, worldH, waterY: WATER_Y }, classifyPureAt, envCodeAt };
+                        worldW, worldH, waterY: WATER_Y, gridM }, classifyPureAt, envCodeAt, sideOf };
   };
 
   const disposeTree = (root) => {
@@ -180,7 +188,7 @@ const report = await page.evaluate(async ({ W, H, ONLY, SUBZ_OBJ, SEEDS, INK_LIS
     const rec = { zonePair: `${zA}|${zB}`, si };
     let group = null;
     try {
-      const { terrain, classifyPureAt, envCodeAt } = makeWorld(zA, zB);
+      const { terrain, classifyPureAt, envCodeAt, sideOf } = makeWorld(zA, zB);
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x93b9da);
       const dir = new THREE.DirectionalLight(0xffffff, 2.0);
@@ -202,7 +210,7 @@ const report = await page.evaluate(async ({ W, H, ONLY, SUBZ_OBJ, SEEDS, INK_LIS
       });
 
       // ---- 取樣真品網格:carpet 每 9 頂點一格,index%9===4 = 格中心 ----
-      const centres = [], borders = [];
+      const centres = [], borders = [], rings = [];
       group.traverse((o) => {
         if (!o.isMesh) return;
         const ud = o.userData, pos = o.geometry.attributes?.position;
@@ -215,9 +223,38 @@ const report = await page.evaluate(async ({ W, H, ONLY, SUBZ_OBJ, SEEDS, INK_LIS
           for (let i = 0; i < pos.count; i += 2) {
             borders.push({ x: pos.getX(i), y: pos.getY(i), z: pos.getZ(i), kind: ud.gborder });
           }
+          // 帶的橫斷面 = XS 五點(兩緣 + 中線)⇒ 逐 5 個頂點一圈,取 [0]=左緣 [2]=中線 [4]=右緣。
+          // 圓帽/岔路楔形的頂點數不是 5 的倍數 ⇒ 以「兩緣間距 ≈ 帶寬」濾掉(下面 W_OK)
+          const w = HW[ud.gborder] * 2;
+          for (let i = 0; i + 4 < pos.count; i += 5) {
+            const ax = pos.getX(i), az = pos.getZ(i), bx = pos.getX(i + 4), bz = pos.getZ(i + 4);
+            const l = Math.hypot(bx - ax, bz - az);
+            if (!(l > w * 0.6 && l < w * 1.5)) continue;
+            rings.push({ kind: ud.gborder, cx: pos.getX(i + 2), cz: pos.getZ(i + 2),
+                         nx: (bx - ax) / l, nz: (bz - az) / l, hw: l / 2 });
+          }
         }
       });
       rec.cells = centres.length; rec.borderPts = borders.length;
+      // ---- 「分界線的兩側真的是不同地貌嗎」(2026-08-13 使用者:「海灘的左右兩邊都是水域,
+      //      但作為分界線的話應該是兩邊不同類型的區域才對」)----
+      // 這座場地的**真值**是解析的:`sideOf(x)` 就是那一格屬於哪個分區。逐圈自中線往兩側量到
+      // 帶緣外 PAD 取樣 —— 兩側取到同一個分區 = 這條線畫在某一個分區的**內部**,畫面上就是
+      // 「海灘的兩邊都是水」。線與真界的偏離上限是 planBorderPuzzle 的 driftMax(cell × 0.6),
+      // 而帶只有半寬那麼寬 ⇒ 帶蓋不住偏離量的地方就會露出來。
+      // ⚠ **高地對不算數**:alpine 是由相對高程晉升的,真界落在等高線上而不是 x=0
+      // ⇒ 那裡的 sideOf 不是真值,拿它判會把 trail/rocks 誤報成 100% 出問題(實測)。
+      if (zA !== 'alpine' && zB !== 'alpine') {
+        const PAD = 2.5, by = {};
+        for (const r of rings) {
+          const o = r.hw + PAD;
+          const zl = sideOf(r.cx - r.nx * o), zr = sideOf(r.cx + r.nx * o);
+          const s = (by[r.kind] = by[r.kind] || { n: 0, same: 0, off: 0 });
+          s.n++;
+          if (zl === zr) { s.same++; s.off = Math.max(s.off, Math.abs(r.cx)); }
+        }
+        rec.sides = by;
+      }
       rec.subs = [...new Set(centres.map((c) => c.sub))].sort().join(',');
 
       // ---- 「有沒有東西橫跨分界線」(2026-08-11 使用者第二項)----
@@ -498,6 +535,30 @@ console.log(crossBad === 0
 console.log(olapBad === 0
   ? '互相重疊:0(功能性區塊零重疊、3D 物件零互穿)'
   : `⚠ 互相重疊:${olapBad} 座場景有功能性區塊/3D 物件互疊`);
+// 第三條硬指標(2026-08-13 使用者:「作為分界線的話應該是兩邊不同類型的區域才對」)——
+// 逐種分界線量「帶緣外 2.5m 的兩側取到同一個分區」的比例。> 0 就是那條線畫在某個分區的
+// 內部,畫面上讀起來就是「海灘的左右兩邊都是水」。
+{
+  const agg = {};
+  for (const b of report.builds) {
+    for (const k in (b.sides || {})) {
+      const s = (agg[k] = agg[k] || { n: 0, same: 0, off: 0 });
+      s.n += b.sides[k].n; s.same += b.sides[k].same;
+      s.off = Math.max(s.off, b.sides[k].off);
+    }
+  }
+  const rows = Object.entries(agg).sort((a, b2) => b2[1].same / b2[1].n - a[1].same / a[1].n);
+  let sideBad = 0;
+  for (const [k, s] of rows) {
+    const p = s.same / s.n * 100;
+    if (s.same) sideBad++;
+    console.log(`  兩側同區 ${k.padEnd(11)} ${p.toFixed(1).padStart(5)}%  (${s.same}/${s.n}` +
+                (s.same ? `,最遠離真界 ${s.off.toFixed(1)}m` : '') + ')');
+  }
+  console.log(sideBad === 0
+    ? '分界線兩側:全數落在兩種不同地貌之間'
+    : `⚠ 分界線兩側:${sideBad} 種分界線有畫在同一分區內部的片段`);
+}
 
 // ---- 落檔 + 期望值核對 ----
 const got = new Map(report.shots.map((s) => [s.key, s]));

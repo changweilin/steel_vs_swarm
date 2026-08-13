@@ -1561,6 +1561,15 @@ const SAG = {
   ROAD: 0.10,  // 道路走廊內(路面 lift 0.18 − 底毯 CLIFT 0.07 = 0.11 的餘裕)
   BUF: 6,      // 緩衝空間(格距 ×BUF_CELL_F,實測未修正時 p99 10.8m / max 37.6m)
 };
+//   ⑥**尺寸 MUST 是「這一層自己的弦長」**(2026-08-13 使用者回報「分界線如果是土路/潮間帶/
+//     海灘不要凸起…田埂之類的也不要凸太多」的**根因**):抬升量 ∝ 弦長²,而舊制三個消費端
+//     一律吃底毯的 `cell/2`(6.5m)。界線拼圖的環距只有 2m 上下、田埂的取樣間距 3m ——
+//     拿 6.5m 的虧損去抬 2m 的弦,抬的是**十倍於自己需要**的量,直接頂到 `MAX` 0.6m。
+//     這在底毯也吃 sag 的年代只是「整條 lift 階梯平移」(檔頭「同一份場餵給每一層」的理由);
+//     自從底毯/外溢/脊帶改成**認養地形三角形**(sag ≡ 0)之後,那個理由就沒了 —— 界線與
+//     田埂變成浮在**恰好貼著地形**的底毯上方半公尺的一條台,正是使用者看到的「凸起」。
+//     故 `drapeSag` 收一個選用的 `r`,呼叫端 MUST 傳自己的弦長;不傳 = 底毯尺度(特徵拼圖
+//     的 7×6 網格恰是那個量級,維持舊制)。
 // ⑤**多尺度**:一條弦的虧損 ∝ 弦長 × 折角,而地被不是只有一種弦長 —— 底毯是半個 cell
 //   (6.5m)、界線拼圖的環距只有 2m 上下。只量最長的那一尺,近處的小凸起就漏掉了
 //   (2026-08-13 實測:單尺度把底毯的破圖從 22.0% 壓到 3.8%,而界線拼圖 29.6% → 29.5%
@@ -1647,7 +1656,10 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
 // 「夠大片才加」= `BUND.MIN_N`:一塊孤田圍一圈埂讀起來像花壇,連成一片的拼布才是農地。
 export const BUND = {
   HW: 0.6,      // 半寬(m):只往外長。FARM_GAP = 2×HW 是**推導**不是巧合(見上)
-  RISE: 0.30,   // 埂高(m);田塊自己有 rim 時取較高者 ⇒ 埂恆蓋得住 rim,不會兩條脊打架
+  // 埂高(m);田塊自己有 rim 時取較高者 ⇒ 埂恆蓋得住 rim,不會兩條脊打架。
+  // 2026-08-13 使用者「田埂之類的也不要凸太多」:0.30 → 0.18(真實水田埂就是腳踝高;
+  // 另一半的「凸」是貼合抬升拿錯弦長,見 SAG 檔頭 ⑥ 與上面 emitBund 的呼叫端)
+  RISE: 0.18,
   MIN_N: 3,     // 「組合夠大片」的門檻(同一叢集內的農田塊數)
   SEG_M: 3,     // 沿埂的取樣間距(m):要跟得上地形起伏,又不必比田塊自己的 7×6 網格細
   UVS: 1 / 6,   // 埂頂的世界投影 UV 尺度 ⇒ 相鄰兩塊的夯土紋路連續延伸
@@ -2127,23 +2139,45 @@ export const BORDER_DIRS = 16;   // 拼圖方向數(22.5° 一格;與道路 16 �
 // 細桿,遠看就是「意義不明的線條」)②蓋住底毯 13m 格網被拉直時跳過的那段真實界線
 // (§ planBorderPuzzle 的 driftMax)③兩側地貌的切線(borderCut)恰在它底下換手。
 // 立體脊自此是**加在帶上的擺件**(田埂的土埂、圍籬的木樁、樹籬、岩塊),不再單獨成界。
+//
+// **`form` = 這個東西在現實裡是連續的還是離散的**(2026-08-13 使用者「柵欄要看起來像木柵欄
+// 而不是單調土牆」+「土路/潮間帶/海灘不要凸起…以此類推」)。舊制只有一種脊 = 沿中心線掃出來
+// 的**連續梯形柱**,那對田埂與樹籬是對的(它們本來就是連續的土堤/樹牆),對圍籬/岩塊/紅樹林
+// 就是把「一排木樁」「幾顆落石」「一叢支柱根」畫成一道齊高的實心牆 —— 顏色再土一點就是使用者
+// 說的「單調土牆」。三種:
+//   (無)  連續梯形柱(田埂、樹籬)—— 逐位元同舊制;
+//   posts 樁 + 橫桿(木柵欄):樁**恆落在兩端**(n = round(len/pitch),i/n)⇒ 相鄰片與轉角
+//         共用端樁,接縫處不會擠成兩根;桿在樁與樁之間、`rail.y` 是佔全高的比例;
+//   clumps 離散團塊(岩塊、紅樹林支柱根叢):pitch 一顆,尺寸/高度/橫向偏移吃 ehash 抖動。
+// 離散件一律**低於**舊制的連續脊 —— 使用者要的是「看得出是什麼」而不是「擋在那裡」。
 export const BORDER_KINDS = {
   trail:      { name: '步道小徑', flat: { w: 4.2, tex: 'trail' } },
   forestroad: { name: '林道',     flat: { w: 6.0, tex: 'forestroad' } },
   gravelpath: { name: '碎石土徑', flat: { w: 5.0, tex: 'gravelpath' } },
   fieldridge: { name: '田埂',     flat: { w: 4.2, tex: 'fieldpath' },
-                ridge: { w: 0.85, wt: 0.5, h: 0.32, jit: 0.18, color: 0x87704a } },
+                // 0.32 → 0.18:與 BUND.RISE 同一個決定(「田埂之類的也不要凸太多」)
+                ridge: { w: 0.85, wt: 0.5, h: 0.18, jit: 0.18, color: 0x87704a } },
   ditch:      { name: '水溝',     flat: { w: 4.2, tex: 'ditch' } },
   stream:     { name: '小溪',     flat: { w: 5.4, tex: 'stream' } },
+  // 木柵欄:2.4m 一根樁(真實牧場圍籬的柱距),樁 0.14 見方、兩道橫桿在 40%/76% 高。
+  // 色改成曬過的木頭(0x6b5138 深土色正是「土牆」讀感的一半)
   fence:      { name: '圍籬',     flat: { w: 4.2, tex: 'fenceline' },
-                ridge: { w: 0.16, wt: 0.16, h: 1.25, jit: 0, color: 0x6b5138 } },
+                ridge: { form: 'posts', w: 0.14, wt: 0.14, h: 1.15, jit: 0.10, color: 0x9c7a4c,
+                         pitch: 2.4, pw: 0.14, rail: { y: [0.40, 0.76], h: 0.18, t: 0.07 } } },
   hedgerow:   { name: '灌木矮牆', flat: { w: 4.4, tex: 'hedgebank' },
                 ridge: { w: 1.15, wt: 0.72, h: 1.4, jit: 0.55, color: 'foliage' } },
-  beach:      { name: '沙灘',     flat: { w: 9.0, tex: 'beach' }, aq: 1 },
+  beach:      { name: '沙灘',     flat: { w: 9.0, tex: 'beach', wet: 1 }, aq: 1 },
+  // 泥灘過渡帶(2026-08-13 使用者「水域與沼澤的分界使用專屬的泥地過渡帶」)——
+  // 水域↔沼澤自此走這一款,紅樹林退到蓮花池那一格(見 BORDER_SUB_RULES)
+  mudflat:    { name: '泥灘',     flat: { w: 8.0, tex: 'mudflat', wet: 1 }, aq: 1 },
+  // 岩塊:一道 0.7m 高的灰牆 → 3m 一顆的落石(高度只剩 0.42,細節回到 rubble 畫筆上)
   rocks:      { name: '岩塊',     flat: { w: 5.2, tex: 'rubble' },
-                ridge: { w: 1.3, wt: 0.7, h: 0.7, jit: 0.6, color: 0x8f8c83 }, aq: 1 },
-  mangrove:   { name: '紅樹林',   flat: { w: 7.0, tex: 'mangrove' },
-                ridge: { w: 1.6, wt: 1.35, h: 1.15, jit: 0.5, color: 0x3f6b3f }, aq: 1 },
+                ridge: { form: 'clumps', w: 1.3, wt: 0.7, h: 0.42, jit: 0.6, color: 0x8f8c83,
+                         pitch: 3.0, lat: 0.55 }, aq: 1 },
+  // 紅樹林(潮間帶):1.15m 的連續綠牆 → 3.4m 一叢的支柱根,泥灘那一半全交給畫筆
+  mangrove:   { name: '紅樹林',   flat: { w: 7.0, tex: 'mangrove', wet: 1 },
+                ridge: { form: 'clumps', w: 1.6, wt: 1.35, h: 0.5, jit: 0.5, color: 0x3f6b3f,
+                         pitch: 3.4, lat: 0.6 }, aq: 1 },
 };
 // 地貌(coarse 分區)無序對 → 種類。**只有不同地貌之間才有分界線**(2026-08-11 使用者定案
 // 「兩側若是相同地貌,則不需要分界線」)—— 同一片綠地裡換底毯款式(草皮↔芒草原↔灌木叢)
@@ -2155,13 +2189,17 @@ export const BORDER_STYLES = {
   'green|water': 'beach',     'alpine|green': 'trail',
   'bare|urban': 'fence',      'bare|wet': 'ditch',        'bare|water': 'rocks',
   'alpine|bare': 'rocks',     'urban|wet': 'ditch',       'urban|water': 'rocks',
-  'alpine|urban': 'fence',    'water|wet': 'mangrove',    'alpine|wet': 'rocks',
+  // 水域↔沼澤 = 專屬的泥灘過渡帶(2026-08-13 使用者定案;舊制是紅樹林)
+  'alpine|urban': 'fence',    'water|wet': 'mudflat',     'alpine|wet': 'rocks',
   'alpine|water': 'rocks',
 };
 // 地表級覆寫(某些底毯款式自帶專屬分界):sub 命中且「對側」地貌 ∈ vs 才作用
 // (市區界不覆寫 = 人工界優先)。`vs` **MUST NOT 含該 sub 自己的地貌** —— 同地貌不畫線,
 // 列進去只是永遠不會命中的死設定。表序即優先序,兩側同時命中取先命中列。
 export const BORDER_SUB_RULES = [
+  // 紅樹林在 2026-08-13 把 water|wet 讓給泥灘之後的家:蓮花池(熱帶水生)臨開闊水面那一格。
+  // 沼澤本體(marsh)↔ 水域走泥灘 —— 那正是使用者要的「專屬的泥地過渡帶」
+  { sub: 'lotus',       kind: 'mangrove',   vs: ['water'] },
   { sub: 'sand',        kind: 'beach',      vs: ['water', 'wet'] },
   { sub: 'flowerfield', kind: 'fieldridge', vs: ['bare'] },
   { sub: 'arrowbamboo', kind: 'forestroad', vs: ['bare', 'alpine'] },
@@ -2179,6 +2217,19 @@ export function borderKindOf(subA, subB, za, zb) {
   }
   return BORDER_STYLES[za < zb ? `${za}|${zb}` : `${zb}|${za}`] || null;
 }
+// 離散脊件(木樁/橫桿/岩塊/根叢)的盒子面表。局部框 (t, up, n) 恆右手(t × up = n),
+// 每一列 = [局部外法線, 四角 (i,j,k) 自外側看的逆時針序];i 沿 t、j 沿 up(−1 底 / +1 頂)、
+// k 沿 n。四點序是由右手三元組推出來的,**MUST NOT 憑感覺重排** —— 排錯的那一面法線朝內,
+// three 把它畫成死黑,而每一條離線斷言照樣全綠(同 sweepUpY 檔頭那一族)。
+// 六面各自四頂點(不共用)⇒ 折邊真的出得了線,盒子讀起來才是有稜角的木頭/石頭。
+const BOX_FACES = [
+  [[1, 0, 0], [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]]],
+  [[-1, 0, 0], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]]],
+  [[0, 1, 0], [[-1, 1, -1], [-1, 1, 1], [1, 1, 1], [1, 1, -1]]],
+  [[0, -1, 0], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]]],
+  [[0, 0, 1], [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]],
+  [[0, 0, -1], [[-1, -1, -1], [-1, 1, -1], [1, 1, -1], [1, -1, -1]]],
+];
 // 轉彎接頭的解(純函式;規劃器與稽核同吃)——「完整畫出來的轉彎拼圖」的幾何定義。
 // 兩臂單位方向 a、b 皆**背離節點**;Lmax = 允許的最大退縮長;hw = 帶半寬。
 // 圓角(arc):與兩臂相切的圓弧,半徑 R = L·tan(ψ/2)(ψ = 兩臂夾角)⇒ 切點恰在退縮後的
@@ -2490,6 +2541,15 @@ function bandFringe(g, S, rnd, color, n = 34, len = 6) {
   }
   g.lineCap = 'butt';
 }
+// **v 契約(2026-08-13 使用者:「海灘的左右兩邊都是水域,但作為分界線的話應該是兩邊不同
+// 類型的區域才對」)**:多數分界線是**對稱**的(小徑/林道/碎石徑/田埂/水溝/小溪/圍籬/樹籬/
+// 岩塊 —— 兩側同性質,一條路的兩邊本來就一樣),畫筆愛怎麼畫都行。
+// 但**過渡型**的三種(沙灘 / 泥灘 / 紅樹林)兩側是不同的東西:一邊是水、一邊是陸。畫成對稱的
+// 就是「海灘的左右兩邊都是水」—— 浪花跑到陸側去了。這三種在型錄標 `flat.wet: 1`,
+// 發射端據此把 v 軸轉正(見 wetFlipAt),契約是:
+//     **f = +1(v = 1)恆為水側,f = −1(v = 0)恆為陸側**。
+// 標了 `wet` 的畫筆 MUST 把水的元素(浪花/潮溝/積水)畫在 f > 0 那半,陸的元素(乾沙/貝殼/
+// 草/樹冠)畫在 f < 0 那半;沒標的畫筆 MUST NOT 依賴 f 的正負(方向不保證)。
 const BORDER_PAINTERS = {
   trail(g, S, rnd) {                                   // 步道小徑:土色踏面 + 踏石 + 車轍水窪 + 兩緣草撇
     bandBlob(g, S, rnd, 1, 'rgb(150,124,90)');
@@ -2537,6 +2597,18 @@ const BORDER_PAINTERS = {
         a ? g.lineTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr) : g.moveTo(x + Math.cos(t) * rr, y + Math.sin(t) * rr);
       }
       g.closePath(); g.fill();
+    }
+    // 從碎石縫裡長出來的雜草(2026-08-13 使用者「土路有碎石雜草」):bandFringe 只長在兩緣,
+    // 而土路的草是**長在路面上**的 —— 少了它,不凸起的碎石帶就只剩一條灰色的紋理
+    for (let i = 0; i < 26; i++) {
+      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.75);
+      g.strokeStyle = rnd() < 0.5 ? 'rgba(112,134,72,0.85)' : 'rgba(146,152,88,0.8)';
+      g.lineWidth = 1.3;
+      for (let k = 0; k < 3; k++) {                        // 一叢三葉
+        g.beginPath(); g.moveTo(x, y);
+        g.quadraticCurveTo(x + (rnd() - 0.5) * 4, y - 4, x + (rnd() - 0.5) * 8, y - 6 - rnd() * 4);
+        g.stroke();
+      }
     }
     bandFringe(g, S, rnd, 'rgba(122,132,86,0.55)', 22, 5);
   },
@@ -2636,11 +2708,15 @@ const BORDER_PAINTERS = {
     for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 0.8), 4 + rnd() * 5, rnd);
     bandFringe(g, S, rnd, 'rgba(88,126,66,0.8)', 34, 9);
   },
-  beach(g, S, rnd) {                                   // 沙灘:淺沙帶 + 潮線 + 濕沙斑 + 貝殼/卵石點
+  // ⚠ 以下三支標了 `wet`(見上面的 v 契約):**f > 0 是水、f < 0 是陸**,MUST NOT 畫成對稱
+  beach(g, S, rnd) {                                   // 沙灘:陸側乾沙 → 潮線 → 水側濕沙 + 浪花
     bandBlob(g, S, rnd, 1, 'rgb(216,198,158)');
-    bandBlob(g, S, rnd, 0.5, 'rgb(190,172,136)', 0.55);   // 濕沙(近水側較深)
-    g.strokeStyle = 'rgba(168,150,116,0.7)'; g.lineWidth = 2.2;   // 潮線:沿帶起伏的細波紋
-    for (const f of [-0.42, 0.06, 0.5]) {
+    g.save(); g.beginPath();                              // 濕沙只鋪水側(f > 0.05)
+    g.rect(0, bandY(S, 0.05), S, S); g.clip();
+    bandBlob(g, S, rnd, 1, 'rgb(186,168,132)', 0.75);
+    g.restore();
+    g.strokeStyle = 'rgba(168,150,116,0.7)'; g.lineWidth = 2.2;   // 潮線:沖刷到最遠的那幾道
+    for (const f of [-0.1, 0.14]) {
       g.beginPath();
       for (let x = -8; x <= S + 8; x += 12) {
         const y = bandY(S, f + (rnd() - 0.5) * 0.16);
@@ -2648,26 +2724,83 @@ const BORDER_PAINTERS = {
       }
       g.stroke();
     }
-    g.fillStyle = 'rgba(186,166,128,0.5)';
-    for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 9 + rnd() * 14, rnd);
-    for (let i = 0; i < 44; i++) {                        // 貝殼/卵石
+    for (let i = 0; i < 44; i++) {                        // 貝殼/卵石:堆在潮線與陸側
       g.fillStyle = rnd() < 0.6 ? 'rgba(240,232,214,0.9)' : 'rgba(150,140,120,0.9)';
-      g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1.2 + rnd() * 1.8, 0, 7); g.fill();
+      g.beginPath(); g.arc(rnd() * S, bandY(S, -0.95 + rnd() * 1.1), 1.2 + rnd() * 1.8, 0, 7); g.fill();
     }
+    g.strokeStyle = 'rgba(150,152,102,0.75)'; g.lineWidth = 1.5;  // 陸側:沙丘草
+    for (let i = 0; i < 22; i++) {
+      const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.28);
+      g.beginPath(); g.moveTo(x, y);
+      g.quadraticCurveTo(x + (rnd() - 0.5) * 5, y + 4, x + (rnd() - 0.5) * 9, y + 8 + rnd() * 4);
+      g.stroke();
+    }
+    // 浪花(2026-08-13 使用者「海灘有浪花」)—— **只在水側**。畫成對稱的話兩邊都讀成水,
+    // 而分界線的兩側本來就該是不同類型的區域(使用者同日第二輪回報)
+    for (const [f, a] of [[0.42, 0.7], [0.8, 0.9]]) {
+      g.fillStyle = `rgba(252,252,250,${a})`;
+      for (let x = -6; x < S + 6; x += 7) {               // 沫線本體:一顆顆氣泡連成扇貝邊
+        const y = bandY(S, f + (rnd() - 0.5) * 0.13);
+        g.beginPath(); g.arc(x + rnd() * 5, y, 2 + rnd() * 3.4, 0, 7); g.fill();
+      }
+      g.strokeStyle = `rgba(206,228,234,${a * 0.7})`; g.lineWidth = 1.4;   // 沫線後緣的濕沙暗邊
+      g.beginPath();
+      for (let x = -6; x <= S + 6; x += 10) {
+        const y = bandY(S, f - 0.1 + (rnd() - 0.5) * 0.1);
+        x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,0.5)';                // 餘沫:只散在水側
+    for (let i = 0; i < 46; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, 0.2 + rnd() * 0.8), 0.8 + rnd() * 1.4, 0, 7); g.fill(); }
   },
-  mangrove(g, S, rnd) {                                // 紅樹林:泥灘帶 + 支柱根短豎 + 綠冠斑
+  mudflat(g, S, rnd) {                                 // 泥灘過渡帶(水域↔沼澤):陸側鹽生草 → 泥灘 → 水側潮溝積水
+    bandBlob(g, S, rnd, 1, 'rgb(122,110,88)');
+    g.save(); g.beginPath();                              // 水側:泡水的深色濕泥
+    g.rect(0, bandY(S, 0.1), S, S); g.clip();
+    bandBlob(g, S, rnd, 1, 'rgb(92,86,72)', 0.8);
+    g.restore();
+    g.fillStyle = 'rgba(70,92,96,0.55)';                  // 潮溝:退潮留下的積水蜿蜒帶(水側)
+    for (let i = 0; i < 10; i++) {
+      const y0 = bandY(S, 0.15 + rnd() * 0.8);
+      g.beginPath(); g.moveTo(-8, y0);
+      for (let x = 0; x <= S + 8; x += 18) g.quadraticCurveTo(x + 6, y0 + (rnd() - 0.5) * 9, x + 18, y0 + (rnd() - 0.5) * 5);
+      g.lineWidth = 3 + rnd() * 5; g.strokeStyle = 'rgba(70,92,96,0.5)'; g.stroke();
+    }
+    g.fillStyle = 'rgba(150,140,116,0.6)';                // 乾裂泥龜背(陸側)
+    for (let i = 0; i < 26; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 1.0), 4 + rnd() * 7, rnd);
+    g.strokeStyle = 'rgba(96,84,64,0.5)'; g.lineWidth = 1;
+    for (let i = 0; i < 30; i++) {                        // 泥裂縫
+      const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.9), a = rnd() * Math.PI;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 9, y + Math.sin(a) * 6); g.stroke();
+    }
+    g.fillStyle = 'rgba(140,132,104,0.85)';               // 貝殼/蟹洞
+    for (let i = 0; i < 34; i++) { g.beginPath(); g.arc(rnd() * S, bandY(S, (rnd() - 0.5) * 1.9), 1 + rnd() * 1.6, 0, 7); g.fill(); }
+    g.strokeStyle = 'rgba(118,138,84,0.8)'; g.lineWidth = 1.6; g.lineCap = 'round';
+    for (let i = 0; i < 34; i++) {                        // 陸側:鹽生草叢(沼澤那一邊)
+      const x = rnd() * S, y = bandY(S, -1 + rnd() * 0.35);
+      g.beginPath(); g.moveTo(x, y + 5); g.lineTo(x + (rnd() - 0.5) * 4, y - 4 - rnd() * 6); g.stroke();
+    }
+    g.lineCap = 'butt';
+  },
+  mangrove(g, S, rnd) {                                // 紅樹林:陸側樹冠 → 支柱根 → 水側潮溝
     bandBlob(g, S, rnd, 1, 'rgb(112,98,76)');
+    g.save(); g.beginPath();
+    g.rect(0, bandY(S, 0.15), S, S); g.clip();            // 水側:泡水的深泥
+    bandBlob(g, S, rnd, 1, 'rgb(84,80,68)', 0.75);
+    g.restore();
+    g.fillStyle = 'rgba(63,107,63,0.8)';                  // 陸側:密實樹冠
+    for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 0.85), 7 + rnd() * 9, rnd);
+    g.fillStyle = 'rgba(96,140,80,0.7)';
+    for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, -1 + rnd() * 0.7), 4 + rnd() * 6, rnd);
     g.strokeStyle = 'rgba(84,66,48,0.9)'; g.lineWidth = 2; g.lineCap = 'round';
-    for (let i = 0; i < 40; i++) {                     // 支柱根
-      const x = rnd() * S, y = bandY(S, (rnd() - 0.5) * 1.5);
+    for (let i = 0; i < 40; i++) {                        // 支柱根:自樹冠往水側伸出去
+      const x = rnd() * S, y = bandY(S, -0.35 + rnd() * 1.1);
       g.beginPath(); g.moveTo(x, y + 5 + rnd() * 4); g.lineTo(x + (rnd() - 0.5) * 4, y - 5 - rnd() * 5); g.stroke();
     }
-    g.fillStyle = 'rgba(63,107,63,0.8)';
-    for (let i = 0; i < 18; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.5), 7 + rnd() * 9, rnd);
-    g.fillStyle = 'rgba(96,140,80,0.7)';
-    for (let i = 0; i < 14; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.3), 4 + rnd() * 6, rnd);
-    g.fillStyle = 'rgba(58,74,62,0.45)';                 // 潮溝積水
-    for (let i = 0; i < 8; i++) brushBlob(g, rnd() * S, bandY(S, (rnd() - 0.5) * 1.1), 6 + rnd() * 8, rnd);
+    g.lineCap = 'butt';
+    g.fillStyle = 'rgba(58,74,62,0.5)';                   // 潮溝積水:只在水側
+    for (let i = 0; i < 12; i++) brushBlob(g, rnd() * S, bandY(S, 0.25 + rnd() * 0.75), 6 + rnd() * 8, rnd);
   },
 };
 // 畫筆鍵取自型錄的 `flat.tex`(單一縫;快取仍以種類為鍵)—— MUST NOT 退回「拿種類名直接
@@ -2838,15 +2971,15 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const carpetBuckets = new Map(), spillBuckets = new Map(), bandBuckets = new Map();
   const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 [0.100,0.107] < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
-  // 貼合抬升(見檔頭 SAG):**同一份場餵給每一層** —— 界線 / 特徵拼圖 / 緩衝空間底毯在同一點
-  // 抬同一個量 ⇒ 上面那條 lift 階梯整條平移,層與層的先後一格未動。
+  // 貼合抬升(見檔頭 SAG):同一支場、但**每一層傳自己的弦長**(檔頭 ⑥)—— 界線拼圖的環距
+  // 2m 上下、田埂 3m,拿底毯的 6.5m 去抬就是抬十倍(∝ 弦長²)⇒ 頂到 MAX 0.6m 浮成一條台。
   // 圖內底毯 / 外溢 / 脊帶**不在消費端之列**(2026-08-13 起直接吃地形三角形,虧損恆 0)。
   // 上限依所在位置分流,而三個分支全是 (x,z) 的純函式 ⇒ 同一點恆同值,抬升本身不會撕開皮。
   const inMap = (x, z) => x >= terrain.minX && x <= terrain.maxX && z >= terrain.minZ && z <= terrain.maxZ;
-  const drapeSag = (hAt, x, z) => {
+  const drapeSag = (hAt, x, z, r) => {
     if (SAG_OFF) return 0;
     const inb = inMap(x, z);
-    const s = groundSagAt(hAt, x, z, (inb ? cell : cell * BUF_CELL_F) / 2);
+    const s = groundSagAt(hAt, x, z, r ?? (inb ? cell : cell * BUF_CELL_F) / 2);
     if (!inb) return Math.min(s, SAG.BUF);
     // 道路走廊內夾得更緊:路基已被 gradeRoadBeds 整平 ⇒ 那裡本來就幾乎沒有折角,
     // 而抬過 0.11 就會把草皮推到路面之上(§lift 階梯)
@@ -3058,6 +3191,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const TGX = terrain.worldW / (NTV - 1), TGZ = terrain.worldH / (NTV - 1);
   const tvx = (a) => terrain.minX + a * TGX;
   const tvz = (b) => terrain.minZ + b * TGZ;
+  // 切線帶內的細分數**推導不手寫**:子邊長 ≤ 半個 `BORDER_CUT.W` ⇒ α 的斜坡收得進換手帶。
+  // 只作用在線真的穿過的那一排四邊形(見 emitCell),其餘一格未動。
+  const CUT_SUB = Math.max(1, Math.ceil(Math.max(TGX, TGZ) / BORDER_CUT.W));
   const quadOf = (ti, tj) => [cornerAt(ti, tj), cornerAt(ti + 1, tj),
                               cornerAt(ti + 1, tj + 1), cornerAt(ti, tj + 1)];
   // PNPOLY:半開邊 ⇒ 落在兩格共用邊上的點恰有一個主人(不會兩格都畫或都不畫)
@@ -3124,6 +3260,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       (cellQuads[own] || (cellQuads[own] = [])).push(a, b);
     }
   }
+  // 這一格的底毯是不是貼水種類(切線細分的閘;subGrid 在下面才建,呼叫時早已定案)
+  const cellAq = (ti, tj) => {
+    const s = subGrid[tj * gnx + ti];
+    return !!(s && s !== '!' && DEFS[s]?.aq);
+  };
   const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {
     const sub = key.slice(0, key.indexOf('#'));
     const aq = !!DEFS[sub].aq;                          // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
@@ -3139,9 +3280,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
     const wy = aq && terrain.waterY != null ? terrain.waterY + 0.05 : null;
     const b = bucketOf(bmap, key);
-    for (let n = 0; n < quads.length; n += 2) {
-      const x0 = tvx(quads[n]), x1 = tvx(quads[n] + 1);
-      const z0 = tvz(quads[n + 1]), z1 = tvz(quads[n + 1] + 1);
+    const putQuad = (x0, x1, z0, z1) => {
       // 頂點序 (x,z)/(x+1,z)/(x,z+1)/(x+1,z+1),索引取**反對角線** —— 與 terrain.js 的
       // (a,c,b)(b,c,d) 逐字同向 ⇒ 兩張皮的三角形完全重合(共面的本錢在這一行)
       for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) {
@@ -3171,6 +3310,35 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       }
       b.idx.push(b.base, b.base + 2, b.base + 1, b.base + 1, b.base + 2, b.base + 3);
       b.base += 4;
+    };
+    for (let n = 0; n < quads.length; n += 2) {
+      const x0 = tvx(quads[n]), x1 = tvx(quads[n] + 1);
+      const z0 = tvz(quads[n + 1]), z1 = tvz(quads[n + 1] + 1);
+      // ---- 切線的解析度(2026-08-13 使用者「還是看到沙灘兩側都有海水」)----
+      // 換手是**逐頂點**算的,而自 08-13 認養地形三角形之後頂點就是地形網格頂點(格距 8.5m)
+      // ⇒ α 從 1 掉到 0 的斜坡實際寬度是**一整格**,不是 `BORDER_CUT.W`(2.8m)。水那一側的
+      // 外溢因此一路淡進陸地將近十公尺,而它是貼水種類(頂點夾到水面)⇒ 讀起來就是
+      // 「沙灘的陸側也有海水」。斜坡比帶還寬,帶再怎麼畫都蓋不住。
+      // 修法:線真的穿過的那些四邊形細分到 ≤ 半個切線帶寬。**只細分穿過的那一排**
+      // (四角 α 不全等)⇒ 其餘逐位元同舊制;而 `terrain.heightAt` 與地形網格是**同一組
+      // 三角形內插**(sampleField 的 (a,c,b)/(b,c,d) 分割)⇒ 子頂點恆落在地形面上,
+      // 共面一格未失、不會回頭長出貼合破圖。
+      // **只給沾到水的那些外溢**:水藍 vs 陸綠是全場色差最大的一對,斜坡寬過帶就直接讀成
+      // 「這一側也是水」;陸對陸(圍籬/樹籬/碎石徑那幾種)的兩款顏色相近,同樣寬的斜坡在
+      // 畫面上讀不出來,而細分整份外溢層要多十倍的三角形(實測 buildBiomes 1.2 → 4.2s)。
+      let div = 1;                                       // (MUST NOT 叫 sub —— 那是上面的地表名)
+      if (cut && (aq || cellAq(ti, tj))) {
+        const a4 = [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]
+          .map(([px, pz]) => bdCutAt(px, pz, cut.di, cut.dj));
+        if (a4.some((v) => v !== a4[0])) div = CUT_SUB;
+      }
+      if (div === 1) { putQuad(x0, x1, z0, z1); continue; }
+      for (let sj = 0; sj < div; sj++) {
+        for (let si = 0; si < div; si++) {
+          putQuad(x0 + (x1 - x0) * si / div, x0 + (x1 - x0) * (si + 1) / div,
+                  z0 + (z1 - z0) * sj / div, z0 + (z1 - z0) * (sj + 1) / div);
+        }
+      }
     }
     return G[4];
   };
@@ -3501,8 +3669,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const out = fn();
     if (farmCluster.length >= BUND.MIN_N) {
       const b = bucketOf(bundBuckets, 'fieldbund');
+      // 弦長傳 `BUND.SEG_M`(埂自己的取樣間距)不是底毯的 cell/2 —— 見 SAG 檔頭 ⑥:
+      // 拿 6.5m 的弦虧損去抬 3m 的弦就是「凸太多」的來源
       for (const p of farmCluster) emitBund(b, terrain, p.x, p.z, p.r, p.rot, p.def, p.lift + 0.004,
-                                            (px, pz) => drapeSag(terrain.heightAt, px, pz));
+                                            (px, pz) => drapeSag(terrain.heightAt, px, pz, BUND.SEG_M));
     }
     farmCluster = prev;
     return out;
@@ -4098,10 +4268,25 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const [bx, bz] = path(Math.min(1, 1 / Math.max(1, rings)));
       return sweepUpY(bx - ax, bz - az, nx, nz) < 0;
     };
+    // 這一層自己的弦長(餵 drapeSag,見 SAG 檔頭 ⑥):沿線 = 環距、橫向 = XS 的 0.38 步 × 半寬,
+    // 取大者。**MUST NOT 用底毯的 cell/2** —— 抬升 ∝ 弦長²,拿 6.5m 去抬 2m 的環就是頂到
+    // MAX 0.6m 浮成一條台(使用者:「土路/潮間帶/海灘不要凸起」)
+    const bandSagR = (kd, ringLen) => Math.max(ringLen, kd.w * 0.38 / 2);
+    // 帶的方向性(2026-08-13 使用者「作為分界線的話應該是兩邊不同類型的區域才對」):
+    // 標了 `flat.wet` 的過渡型畫筆約定 **v = 1 是水側**(見 BORDER_PAINTERS 檔頭的 v 契約),
+    // 而中心線的法向由鏈的走向決定 —— 同一種分界線在圖上兩處可以剛好相反。發射端據此把 v 軸
+    // 轉正:水側 = **地形較低**的那一邊(貼水種類的水面恆低於陸地,這是判準而不是查表)。
+    // 逐**片**定案不是逐頂點 —— 逐頂點在兩側幾乎等高處會來回翻,那是把圖案沿線撕開。
+    // (ax, az) = v 遞增方向;沒標 wet 的畫筆恆回 false ⇒ 逐位元同舊制。
+    const wetFlipAt = (kd, x, z, ax, az, r) => !!kd.wet
+      && terrain.heightAt(x - ax * r, z - az * r) < terrain.heightAt(x + ax * r, z + az * r);
     const sweepFlat = (kind, kd, aq, path, rings, u0, len, a0, a1) => {
       const b = bkOf(flatB, kind, true);
       const w2 = kd.w / 2, lift = bLift(kind), NC = XS.length, texL = bTexL(kd);
+      const sagR = bandSagR(kd, len / Math.max(1, rings));
       const flip = flipOf(path, rings);
+      const [mx, mz, mnx, mnz] = path(0.5);
+      const vflip = wetFlipAt(kd, mx, mz, mnx, mnz, w2);
       for (let s = 0; s <= rings; s++) {
         const t = s / rings;
         const [cx, cz, nx, nz] = path(t);
@@ -4112,10 +4297,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const ff = f * (f < 0 ? eL : eR);
           const gx = cx + nx * w2 * ff, gz = cz + nz * w2 * ff;
           const wsh = wash(gx, gz);
-          b.pos.push(gx, gY(gx, gz, aq) + lift + drapeSag(terrain.heightAt, gx, gz), gz);
+          b.pos.push(gx, gY(gx, gz, aq) + lift + drapeSag(terrain.heightAt, gx, gz, sagR), gz);
           b.nrm.push(0, 1, 0);
           pushLandN(b, terrain.heightAt, gx, gz, terrain.gridM);
-          b.uv.push(u, v);
+          b.uv.push(u, vflip ? 1 - v : v);
           b.col.push(wsh, wsh, wsh, va * ea);
         }
         if (s) {
@@ -4128,11 +4313,77 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       }
       b.base += (rings + 1) * NC;
     };
+    // 離散件的盒子(木柵欄的樁與橫桿 / 岩塊 / 紅樹林支柱根叢):沿路徑的局部框
+    // (t 切向、up、n 法向;t×up = n ⇒ 右手系,六個面各自帶外法線)。
+    // 六面各自四頂點 = 折邊真的出得了線;繞向逐面由右手三元組定,**不吃 flip** ——
+    // 盒子是封閉體,朝向由自己的面法線決定,與掃掠帶「哪一側朝上」無關。
+    const ridgeBox = (b, cx, cz, tx, tz, hl, hw, y0, y1) => {
+      const nx = -tz, nz = tx;                       // n = t × up(右手系)
+      // 角點:i 沿 t、j 沿 up(−1 = y0 / +1 = y1)、k 沿 n
+      const P = (i, j, k) => [cx + tx * hl * i + nx * hw * k, j > 0 ? y1 : y0, cz + tz * hl * i + nz * hw * k];
+      for (const [N, Q] of BOX_FACES) {
+        const o = b.base;
+        for (const [i, j, k] of Q) {
+          const p = P(i, j, k);
+          b.pos.push(p[0], p[1], p[2]);
+          b.nrm.push(N[0] * tx + N[2] * nx, N[1], N[0] * tz + N[2] * nz);   // 局部法線 → 世界
+        }
+        b.idx.push(o, o + 1, o + 2, o, o + 2, o + 3);
+        b.base += 4;
+      }
+    };
+    // 離散脊:`form` 決定「這東西在現實裡是不是連續的」(見 BORDER_KINDS 檔頭)。
+    //   posts —— 樁恆落在**兩端**(i/n)⇒ 相鄰片與轉角共用端樁,接縫不擠成兩根;
+    //            橫桿在樁與樁之間、`rail.y` 是佔全高的比例 ⇒ 讀起來是木柵欄不是一道牆。
+    //   clumps —— pitch 一顆,尺寸/高度/橫向偏移吃 ehash(零共享 rnd,§2.3)。
+    const partRidge = (kind, kd, aq, path, hseed, len) => {
+      const b = bkOf(ridgeB, kind, false);
+      const n = Math.max(1, Math.round((len || kd.pitch) / kd.pitch));
+      const at = (t) => {
+        const [cx, cz, nx, nz] = path(Math.min(1, Math.max(0, t)));
+        return [cx, cz, nz, -nx];                    // 切向 = 法向轉 90°(path 的 n = (−dz, dx))
+      };
+      if (kd.form === 'posts') {
+        const R = kd.rail, pw = (kd.pw ?? kd.w) / 2, hw = kd.w / 2;
+        const P = [];
+        for (let i = 0; i <= n; i++) {
+          const [cx, cz, tx, tz] = at(i / n);
+          const gy = gY(cx, cz, aq) - 0.12;
+          const h = kd.h * (1 + (ehash(hseed + i, hseed * 7, 13) - 0.5) * (kd.jit || 0));
+          ridgeBox(b, cx, cz, tx, tz, pw, hw, gy, gy + h);
+          P.push([cx, cz, gy, h]);
+        }
+        if (!R) return;
+        for (let i = 0; i < n; i++) {                 // 橫桿:兩樁之間,量到樁心(端頭埋進樁裡)
+          const [ax, az, ay, ah] = P[i], [bx, bz, by, bh] = P[i + 1];
+          const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz);
+          if (l < 1e-3) continue;
+          const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+          for (const ry of R.y) {
+            const y0 = (ay + ah * ry + by + bh * ry) / 2;
+            ridgeBox(b, mx, mz, dx / l, dz / l, l / 2, R.t / 2, y0, y0 + R.h);
+          }
+        }
+        return;
+      }
+      for (let i = 0; i < n; i++) {                   // clumps
+        const [cx, cz, tx, tz] = at((i + 0.5) / n);
+        const j1 = ehash(hseed + i, hseed * 7, 13), j2 = ehash(hseed * 3 + i, 5, hseed | 1);
+        const j3 = ehash(i, hseed * 11, 29);
+        const off = (j3 - 0.5) * 2 * (kd.lat ?? 0) * (kd.w / 2);
+        const ox = cx - tz * off, oz = cz + tx * off;
+        const gy = gY(ox, oz, aq) - 0.12;
+        const sc = 1 + (j1 - 0.5) * (kd.jit || 0);
+        ridgeBox(b, ox, oz, tx, tz, kd.wt / 2 * sc, kd.w / 2 * (0.45 + j2 * 0.4),
+          gy, gy + kd.h * sc);
+      }
+    };
     // ridge:梯形斷面沿同一條中心線掃掠;端面封口。斷面順序(底左/底右/頂左/頂右)是
     // flat 的鏡像 ⇒ 繞向判準取反(sweepUpY > 0 才要翻)。DoubleSide 只保證看得見,
     // 不保證亮度 —— 側面繞向反了同樣是整根死黑
-    const sweepRidge = (kind, kd, aq, path, spans, hseed) => {
+    const sweepRidge = (kind, kd, aq, path, spans, hseed, len) => {
       const b = bkOf(ridgeB, kind, false);
+      if (kd.form) { partRidge(kind, kd, aq, path, hseed, len); return; }
       const w2 = kd.w / 2, wt2 = kd.wt / 2;
       const flip = !flipOf(path, spans);
       const nrm = (v) => { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
@@ -4195,16 +4446,19 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const kdef = BORDER_KINDS[kk];
         if (!kdef.flat) continue;
         const b = bkOf(flatB, kk, true), lift = bLift(kk), aq = !!kdef.aq;
+        const sagR = bandSagR(kdef.flat, g.r * Math.PI / NF);   // 扇形的弦 = 圓帽半徑上的弧步
+        const vflip = wetFlipAt(kdef.flat, g.cx, g.cz, -bzu, bxu, g.r);   // v 軸 = 平分線的法線
         // 以平分線為框取 UV 與 α:橫過帶的方向仍走**帶剖面**(中線實、兩緣 0),
         // MUST NOT 用「徑向淡出 + v 固定」—— 那會把紋理最深的中線鋪成一塊實心圓斑
         const put = (px, pz) => {
           const s2 = (px - g.cx) * bxu + (pz - g.cz) * bzu;
           const t2 = (px - g.cx) * -bzu + (pz - g.cz) * bxu;
           const wsh = wash(px, pz);
-          b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz), pz);
+          b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz, sagR), pz);
           b.nrm.push(0, 1, 0);
           pushLandN(b, terrain.heightAt, px, pz, terrain.gridM);
-          b.uv.push(s2 / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2))));
+          const vv = Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2)));
+          b.uv.push(s2 / bTexL(kdef.flat), vflip ? 1 - vv : vv);
           b.col.push(wsh, wsh, wsh, xsAlpha(t2, g.r));
         };
         put(g.cx, g.cz);
@@ -4223,7 +4477,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         const nx = -arm.dz, nz = arm.dx;
         sweepRidge(arm.kind, kdef.ridge, !!kdef.aq,
           (t) => [g.cx + arm.dx * g.L * t, g.cz + arm.dz * g.L * t, nx, nz],
-          Math.max(1, Math.round(g.L / 2)), cor.n);
+          Math.max(1, Math.round(g.L / 2)), cor.n, g.L);
       }
     };
     // 接頭端的累計弧長(節點+種類為鍵):岔路拼圖據此接上該臂的圖案相位,不會在交會處跳格
@@ -4263,10 +4517,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const p = (tt) => path(r0 + (r1 - r0) * tt);
           const a0 = r0 === 0 ? (okPrev ? 1 : 0) : 0;    // 區間內側的斷口一律淡出收尾
           const a1 = r1 === 1 ? (okNext ? 1 : 0) : 0;
+          // 環距 4 → 2.2m(與轉彎圓弧同密度):弦短一截,貼合抬升就少 (2.2/4)² ≈ 三成
           if (kdef.flat) sweepFlat(tl.kind, kdef.flat, !!kdef.aq, p,
-                                   Math.max(1, Math.round(sl / 4)), u + len * r0, sl, a0, a1);
+                                   Math.max(1, Math.round(sl / 2.2)), u + len * r0, sl, a0, a1);
           if (kdef.ridge) sweepRidge(tl.kind, kdef.ridge, !!kdef.aq, p,
-                                     Math.max(1, Math.round(sl / 5)), tl.n0 + ((r0 * 97) | 0));
+                                     Math.max(1, Math.round(sl / 5)), tl.n0 + ((r0 * 97) | 0), sl);
         }
         u += len;
         uAt.set(uKey(tl.n1, tl.kind), u);
@@ -4289,7 +4544,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             const p = fromA ? arcPath(g, s0, s1) : arcPath(g, 1 - s0, 1 - s1);
             const rings = Math.max(2, Math.round(sl / 2.2));   // 弧段取樣密一點,彎才圓順
             if (kdf.flat) sweepFlat(kk, kdf.flat, !!kdf.aq, p, rings, uu, sl, 1, 1);
-            if (kdf.ridge) sweepRidge(kk, kdf.ridge, !!kdf.aq, p, rings, cor.n);
+            if (kdf.ridge) sweepRidge(kk, kdf.ridge, !!kdf.aq, p, rings, cor.n, sl);
             uu += sl;
           }
           u = uu;
@@ -4331,6 +4586,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         if (kdef.flat) {
           const b = bkOf(flatB, a.kind, true);
           const lift = bLift(a.kind), hw = kdef.flat.w / 2;
+          const sagR = bandSagR(kdef.flat, fk.L);              // 楔形自節點量到斷面 = fk.L
+          const vflip = wetFlipAt(kdef.flat, fk.x, fk.z, -a.dz, a.dx, hw);
           const u0 = uAt.get(uKey(fk.n, a.kind)) ?? 0;
           // 楔形 = 扇形過 [M(i-1), B_i, A_i, M_i];UV 與 α 都取**該臂的局部框 + 帶剖面**
           // (中線實、兩緣 0)⇒ 交會處讀起來是三條帶匯進來,MUST NOT 用徑向淡出(會糊成一團)
@@ -4339,10 +4596,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             const s = (px - fk.x) * a.dx + (pz - fk.z) * a.dz;
             const t2 = (px - fk.x) * -a.dz + (pz - fk.z) * a.dx;
             const wsh = wash(px, pz);
-            b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz), pz);
+            b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz, sagR), pz);
             b.nrm.push(0, 1, 0);
             pushLandN(b, terrain.heightAt, px, pz, terrain.gridM);
-            b.uv.push((u0 - fk.L + s) / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2))));
+            const vv = Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2)));
+            b.uv.push((u0 - fk.L + s) / bTexL(kdef.flat), vflip ? 1 - vv : vv);
             b.col.push(wsh, wsh, wsh, xsAlpha(t2, hw));
           };
           put(fk.x, fk.z);
@@ -4356,7 +4614,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const dx = a.dx, dz = a.dz, nx = -dz, nz = dx;
           sweepRidge(a.kind, kdef.ridge, aq,
             (t) => [fk.x + dx * fk.L * t, fk.z + dz * fk.L * t, nx, nz],
-            Math.max(1, Math.round(fk.L / 2)), fk.n + i);
+            Math.max(1, Math.round(fk.L / 2)), fk.n + i, fk.L);
         }
       }
     }
