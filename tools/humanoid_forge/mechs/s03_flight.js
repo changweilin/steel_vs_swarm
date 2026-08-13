@@ -23,9 +23,10 @@ export default {
   castSig: { omni: 'roar', dir: 'kick' },
   doc: [
     ['龍體(75%)', '地面型軀幹/龍骨突/電戰艙/龍首(s03.body/neckHead)整組沿用'],
-    ['前爪展開成翼 ×2', '同一組前肢 + 同一批飛羽(s03.featherRow,spread 0→1)⇒ rig.wings'],
-    ['尾羽水平展開', 'chainF 六節尾 + s03.tailFan 攤平成水平尾翼(進 rig.tailSegs)'],
-    ['獵足 ×2(後收)', '同一組後肢與鐮爪(s03.legH)向後收折'],
+    ['前爪展開成翼 ×2', '同一組前肢 + 同一批羽(s03.featherRow,spread 0→1);展翼角掛靜態 Group 上(w.rotation.z 每幀被覆寫)。翼展(揮翼相位最大值)**8.30m**,÷ 全長 8.31 = **1.00**'],
+    ['三層羽', '覆羽(肱骨)/ 次級飛羽(前臂)/ 初級飛羽(掌,最長且後掠最深)—— 一片羽 = 一顆 finF,羽面攤平朝上。`len × foldF` 是收合長度、`len` 是展開長度 ⇒ 加翼展**不動**地面型收翼姿態'],
+    ['尾羽水平展開', 'chainF **十二節** 4.44m 硬直長骨尾 + s03.tailVane:羽片沿尾**兩側成對**往後拖,攤平成始祖鳥的長菱形尾翼(進 rig.tailSegs);羽寬 0.24 ⇒ 俯視不再露出尾椎的人字紋'],
+    ['獵足 ×2(後收)', '同一組四節後肢(股/脛/**蹠**/趾)與鐮爪(s03.legH)向後收折;段長 股 1 : 脛 1.07 : 蹠 0.50 : 趾 0.31'],
     ['武裝(後背朝前)', 's03.backGuns 同一組長短莢,槍口恆朝機首'],
   ],
 
@@ -48,37 +49,47 @@ export default {
     c._spine = spine;
 
     // ---- 前肢張開成翼(rig.wings 的兩段樞軸:肩 = w、肘 = outer)----
+    // ⚠ **展翼角 MUST 掛在 w 底下的靜態 Group**:stepAerial 每幀 `w.rotation.z = sgn·sin(…)·amp`
+    //   是**絕對指派**(locomotion.js:667)⇒ 寫在 w 上的那個 π/2 開場就被歸零,兩翼於是
+    //   垂在體側往後拖(b_s03f_front.png / b_s03f_side45.png 的病灶),而每一條斷言都正常。
+    //   `outer.rotation.z` 同樣被覆寫;`rotation.x` 兩者都安全 —— 展開後肢體局部 x 已經被
+    //   那 90° 轉成**世界垂直軸** ⇒ x 在翼上讀作「後掠」,正好拿來排初級/次級的翼形。
     const wings = [];
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx, front: true };
       const w = new THREE.Group();
       w.position.set(sx * FR.legX, 0.08, FR.fz);
-      w.rotation.set(-0.16, 0, sx * (Math.PI / 2 - 0.10));   // 肢體朝 −y ⇒ 繞 z 轉 90° 成翼展
+      w.rotation.x = -0.16;                                  // 迎角(x 不被覆寫)
       spine.add(w);
+      const wg = new THREE.Group();
+      wg.rotation.z = sx * (Math.PI / 2 - 0.13);             // 肢體朝 −y ⇒ 轉 90° 成水平翼展 + 上反 0.13
+      w.add(wg);
       const segs = s03.legF(cx);
-      // 第一節畫在 w、其餘掛進 outer ⇒ 撲翼的內/外兩段(stepAerial 對 outer 加相位延遲)
-      segs[0].draw(w);
+      // 第一節畫在 wg、其餘掛進 outer ⇒ 撲翼的內/外兩段(stepAerial 對 outer 加相位延遲)
+      segs[0].draw(wg);
       const outer = new THREE.Group();
-      outer.position.y = -segs[0].len;
-      outer.rotation.x = -0.25;
-      w.add(outer);
+      const pv = segs[1].piv;
+      outer.position.set(pv ? pv[0] : 0, pv ? pv[1] : -segs[0].len, pv ? pv[2] : 0);
+      outer.rotation.x = 0.13;                               // 外翼後掠(展開後 x = 垂直軸 ⇒ 這是掠角不是俯仰)
+      wg.add(outer);
       segs[1].draw(outer);
       const handG = new THREE.Group();
-      handG.position.y = -segs[1].len;
-      handG.rotation.x = -0.3;
+      const pv2 = segs[2].piv;
+      handG.position.set(pv2 ? pv2[0] : 0, pv2 ? pv2[1] : -segs[1].len, pv2 ? pv2[2] : 0);
+      handG.rotation.x = 0.17;                               // 翼端(掌)再掠一點
       outer.add(handG);
       segs[2].draw(handG);
       wings.push({ w, outer, sgn: sx });
     }
     c._wings = wings;
 
-    // ---- 後肢向後收折(同一組腿件)----
+    // ---- 後肢向後收折(同一組腿件;四節 ⇒ 姿態表四格)----
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx, front: false };
-      staticLimb(spine, s03.legH(cx), [0, -1.5, 1.0], [sx * FR.legX, -0.02, FR.hz], [0.75, 0, sx * 0.16]);
+      staticLimb(spine, s03.legH(cx), [0, 1.15, -0.95, 0.55], [sx * FR.legX, -0.02, FR.hz], [0.62, 0, sx * 0.16]);
     }
 
-    // ---- 尾:六節配平尾 + 水平展開的尾羽扇 ----
+    // ---- 尾:十二節長骨尾 + 水平展開的尾羽面(姿態與配平角全住 s03.tail)----
     const tail = new THREE.Group();
     tail.position.set(0, FR.tailY, FR.tailZ);
     spine.add(tail);

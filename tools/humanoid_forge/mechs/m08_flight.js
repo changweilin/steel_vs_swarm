@@ -24,8 +24,8 @@ export default {
   doc: [
     ['豹身(75%)', '地面型軀幹/脊椎護套/迷彩背板/絨質分片(m08.body)整組沿用'],
     ['豹首 + 面盤(現形)', 'm08.neckHead 同一顆豹首;m08.faceHalf 兩半向前合攏成夜梟聲學碟'],
-    ['翅膀 ×2(張開)', 'm08.wing 同一對:翼板 + 覆羽 ×7 + 前緣鋸齒 ×11 + 後緣流蘇 ×9 ⇒ rig.wings'],
-    ['四腿(收折)', '同一組貓科腿件(m08.legF/legH)向後收折成著陸姿'],
+    ['翅膀 ×2(張開)', 'm08.wing 同一對:**三段鳥骨 + 逐段實心翼板 ×3**(肱骨 → 橈尺骨 → 腕掌骨,長比 1:1.18:0.77 ← 鴞骨架)+ 初級 ×8 / 次級 ×7 / 三級 ×3 + 覆羽 ×7 + 小翼羽 + 前緣鋸齒 ×11 + 後緣流蘇 ×7;板是翼面主體、羽片自板的後緣排開(翼展÷翼弦 = 3.13 的短寬鴞翼)⇒ 前兩段進 rig.wings 撲翼、第三段靠繼承跟上'],
+    ['四腿(收折)', '同一組四節貓科腿件(m08.legF/legH;段長與站姿角照豹骨架反解,含躺平的掌骨/蹠骨)向後收折成著陸姿'],
     ['尾', 'm08.tail 的五節細長尾(進 rig.tailSegs ⇒ 依轉向甩尾)'],
     ['武裝(雙肩朝前)', '同一具長狙擊莢(右肩)+ 短莢(左肩),兩者改朝航向'],
   ],
@@ -49,9 +49,13 @@ export default {
     c._spine = spine; c._head = head;
 
     // ---- 翅膀張開(隱藏在後背的那一對現形)----
+    // ⚠ 靜態姿態只准放 **rotation.y / rotation.x** —— locomotion.stepAerial 的鳥類撲翼每幀改寫
+    //   `w.rotation.z` 與 `outer.rotation.z`(那兩個是撲翼通道),擺在 z 的上反角一格都留不下來。
+    //   三段累積後掠 −0.10 + 0.26 + 0.24 = 0.40 rad ⇒ 每個關節都有可見的折角,正面讀得出三段骨。
     for (const mw of c.wings) {
-      mw.w.rotation.set(-0.10, 0, mw.sgn * 0.16);
-      mw.outer.rotation.set(0, 0, mw.sgn * 0.08);
+      mw.w.rotation.set(-0.05, -mw.sgn * 0.10, mw.sgn * 0.16);   // z 只是撲翼的起始值
+      mw.outer.rotation.set(0, mw.sgn * 0.26, 0);
+      mw.hand.rotation.set(0, mw.sgn * 0.24, -mw.sgn * 0.10);    // 第三段不進契約 ⇒ 翼梢下垂留得住
     }
     // ---- 面盤向前合攏(夜梟現形)----
     for (const { piv, sx } of c.faceHalves || []) {
@@ -60,10 +64,14 @@ export default {
     }
 
     // ---- 四腿向後收折(同一組腿件;規格陣列由 staticLimb 靜態組起來)----
+    // ⚠ 2026-08-14 起第一節(肱骨/股骨)的傾角**烤在幾何裡**(m08._leg 的傾斜 Group + 子關節 piv)
+    //   ⇒ poses[0] 只轉根節點、轉不掉那個傾角,而肘/膝的樞軸已隨骨頭挪到遠端 ⇒ 收折仍然接得起來。
+    //   poses[1] 起是**絕對**角(第一節不進關節鏈,geo.js segLimbF 只對 i>0 建群組)。
     for (const [sx, z, front] of [[-1, FR.fz, true], [1, FR.fz, true], [-1, FR.hz, false], [1, FR.hz, false]]) {
       const cx = { ...c, sx, front };
+      // 四節腿 ⇒ 姿態陣列補到四格(第四格 = 掌骨/蹠骨那一節;省略會落回宣告的 base = 站姿)
       staticLimb(spine, front ? m08.legF(cx) : m08.legH(cx),
-        [0, front ? 1.5 : -1.6, front ? -0.9 : 1.0],
+        [0, front ? 1.5 : -1.6, front ? -0.9 : 1.0, front ? -0.5 : 0.6],
         [sx * FR.legX, -0.06, z], [front ? 0.9 : 0.55, 0, sx * 0.3]);
     }
     // ---- 尾(進 rig.tailSegs;細長尾在飛行時當配平舵)----
