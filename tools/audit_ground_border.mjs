@@ -88,12 +88,26 @@ const angDiff = (a, b) => {
 console.log('== Ⅰ 型錄與種類解析(執行原文)==');
 {
   // ① 11 種名冊 = 使用者原句逐項(不多不少)
+  // 2026-08-13 追加泥灘(使用者「水域與沼澤的分界使用專屬的泥地過渡帶」);紅樹林沒有被撤掉,
+  // 它退到 BORDER_SUB_RULES 的蓮花池↔水域那一格
   const WANT = ['trail', 'forestroad', 'gravelpath', 'fieldridge', 'ditch', 'stream',
-                'fence', 'hedgerow', 'beach', 'rocks', 'mangrove'];
+                'fence', 'hedgerow', 'beach', 'mudflat', 'rocks', 'mangrove'];
   const got = Object.keys(BORDER_KINDS);
   (got.length === WANT.length && WANT.every((k) => got.includes(k)))
-    ? ok(`BORDER_KINDS = 使用者定案的 11 種分界線(步道小徑…紅樹林),不多不少`)
-    : bad(`BORDER_KINDS 鍵集 ${JSON.stringify(got)} ≠ 定案 11 種`);
+    ? ok(`BORDER_KINDS = 使用者定案的 ${WANT.length} 種分界線(步道小徑…紅樹林),不多不少`)
+    : bad(`BORDER_KINDS 鍵集 ${JSON.stringify(got)} ≠ 定案 ${WANT.length} 種`);
+  // 過渡型(兩側是不同性質的東西)MUST 標 wet 且 MUST 是貼水種類 —— 該標而沒標、或標了卻把
+  // 圖案畫成對稱,症狀都是「分界線的兩側看起來是同一種區域」(使用者 2026-08-13 回報)
+  {
+    const WET = ['beach', 'mangrove', 'mudflat'];
+    const gotW = Object.entries(BORDER_KINDS).filter(([, d]) => d.flat?.wet).map(([k]) => k).sort();
+    (gotW.length === WET.length && WET.every((k) => gotW.includes(k)))
+      ? ok(`過渡型(flat.wet)恰為 ${WET.join('/')} —— v = 1 恆為水側`)
+      : bad(`flat.wet 名冊 ${JSON.stringify(gotW)} ≠ ${JSON.stringify(WET)}`);
+    Object.values(BORDER_KINDS).every((d) => !d.flat?.wet || d.aq)
+      ? ok('過渡型全數是貼水種類(aq):不貼水的東西沒有「水側」可言')
+      : bad('有 flat.wet 的種類不是 aq');
+  }
   Object.values(BORDER_KINDS).every((k) => k.name && (k.flat || k.ridge)
       && (!k.flat || (k.flat.w > 0 && k.flat.tex)) && (!k.ridge || (k.ridge.w > 0 && k.ridge.h > 0)))
     ? ok('每種都有 flat(w/tex)或 ridge(w/h)幾何定義')
