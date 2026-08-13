@@ -4763,8 +4763,9 @@ export class BattleSim {
       if (!target) continue;
       e.gunCd[i] = 1 / g.rate;
       // 主堡火砲是爆炸彈頭(2026-08-13「所有爆炸傷害武器都套用」;防禦塔是具名例外 —— 它改回
-      // 單體攻擊)。半徑走 data.js STRUCT_W.base(合併前兩把各自推導值的較大者);傷害基準走
-      // npcDmg = g.dmg(建築不吃 vs 剋制,與 NPC 分支同一條);對主目標的期望輸出不變(閃避有補償)。
+      // 單體攻擊)。半徑走 data.js STRUCT_W.base(單管 dps / 塔 dps 兩者推導值的較大者,見該處
+      // BASE_DPS_MULT 推導);傷害基準走 npcDmg = g.dmg(建築不吃 vs 剋制,與 NPC 分支同一條);
+      // 對主目標的期望輸出不變(閃避有補償)。
       const ty = target.hero || target.kind === 'heli' ? (target.y || 0) : 0;
       this._blast(e, STRUCT_W.base, target.x, target.z, ty, this._unitLev(target), false, g.dmg);
       this.events.push({ e: 'boom', x: target.x, z: target.z, y: ty, r: STRUCT_W.base.r, side: e.side });

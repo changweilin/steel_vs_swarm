@@ -34,7 +34,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
-  GAME, STRUCT_W, NPC_BLAST, npcBlastR,
+  GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
   HIGH_SUP, highSupF, altTier, altDhMax,
@@ -1946,7 +1946,7 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   const dps = (k) => UNITS[k].dmg * UNITS[k].rate;
   const code = (s) => s.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
   ok(STRUCT_W.base.r === Math.max(npcBlastR(dps('base'), NPC_BLAST.DPS), npcBlastR(dps('tower'), NPC_BLAST.DPS)),
-    `主堡火砲的爆風半徑 = 合併前兩把推導值的**較大者**(${STRUCT_W.base.r}m;拿合併後的 DPS 重推會縮回本體那一份)`);
+    `主堡火砲的爆風半徑 = 「主堡單管 dps / 塔 dps」兩者推導值的**較大者**(${STRUCT_W.base.r}m)`);
   // 防禦塔是**單體攻擊武器**(2026-08-13 使用者定案「塔換成單體攻擊武器,傷害不變」)。
   // 這裡釘的是**查不到 def**,不是「r = 0 的 def」—— 後者會讓 evadable() 判 true(判據是排除法),
   // 塔火從此可閃**而且沒有補償**(evadeComped 要 r > 0)⇒ 期望傷害掉 ×(1−p),與「傷害不變」衝突,
@@ -1959,15 +1959,18 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   ok(STRUCT_W.base.r < WEAPONS.siege.r && WEAPONS.siege.r < WEAPONS.rocket.r,
     '同一條預算下的排序:火力越猛半徑越小(主堡 < 攻城榴彈砲 < 肩射火箭)');
   {
-    // ---- 主堡兩把武器合併(2026-08-13 使用者定案「射程/範圍/傷害等參數都挑最大值」)----
+    // ---- 主堡兩把武器合併(2026-08-13 使用者定案「射程/範圍/傷害等參數都挑最大值」,----
+    // ---- 同日追加「主堡的 DPS 提高至砲塔的 1.68 倍」)----
     // 合併前:本體火砲(dmg 90 / rate 1.2 / range 230)+ 雙聯裝砲(整組 derive 自砲塔)。
-    // 這裡逐項釘住「取最大值」,並釘住**開火路徑只剩一條** —— 合併卻留著主迴圈那一支的話,
+    // 射程/射速/砲管數仍逐項取最大值;傷害改由「兩管總 DPS = BASE_DPS_MULT × towerDps()」反解
+    // (唯一推導處,MUST NOT 手寫)。這裡釘住**開火路徑只剩一條** —— 合併卻留著主迴圈那一支的話,
     // 主堡會同時用兩套射控開火,總火力不減反增,而每一條既有斷言都還是綠的。
     const g = UNITS.base.guns;
     ok(g.range === Math.max(UNITS.base.range, UNITS.tower.range)
-      && g.dmg === Math.max(UNITS.base.dmg, UNITS.tower.dmg)
       && g.rate === Math.max(UNITS.base.rate, UNITS.tower.rate) && g.n === 2,
-    `主堡火砲逐項取最大值(射程 ${g.range} / 傷害 ${g.dmg} / 射速 ${g.rate} / 砲管 ${g.n})`);
+    `主堡火砲射程/射速/砲管數逐項取最大值(射程 ${g.range} / 射速 ${g.rate} / 砲管 ${g.n})`);
+    ok(Math.abs(g.n * g.dmg * g.rate - BASE_DPS_MULT * towerDps()) < 1e-9,
+      `主堡總 DPS(${(g.n * g.dmg * g.rate).toFixed(2)})= 砲塔 DPS(${towerDps()})× BASE_DPS_MULT(${BASE_DPS_MULT})`);
     ok(UNITS.base.range === g.range && UNITS.base.dmg === g.dmg && UNITS.base.rate === g.rate,
       '主堡自己的 range/dmg/rate 也是合併後那一份(否則賞金與圖鑑還在讀合併前的本體火砲)');
     ok(/if \(e\.cd === 0 && !u\.guns &&/.test(code(S)),
