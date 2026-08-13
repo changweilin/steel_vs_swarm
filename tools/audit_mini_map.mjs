@@ -165,10 +165,10 @@ console.log('\nⅢ 兵線只有前線砲塔 + 主堡(而前線那一趟的解 MU
   t('趟 2 由 towerStages 整趟跳過(biomes 淨空 / 地標錨點 / 橋上墩座吃同一份解 ⇒ 解出來卻不生成 = 世界繞著不存在的塔讓路)',
     /if \(towerStages\(mini\) < 2\) return frontSites\.map/.test(dataCode));
   t('三個建圖消費端與伺服器都把 mini 傳進 solveTowerSites',
-    /solveTowerSites\(lanesW, cfg\.mini\)/.test(bioSrc) && /solveTowerSites\(lanesW, mini\)/.test(bioSrc)
-    && /solveTowerSites\(this\.lanes, this\.mini\)/.test(simSrc));
+    /solveTowerSites\(lanesW, mapArg\(cfg\)\)/.test(bioSrc) && /solveTowerSites\(lanesW, mapA\)/.test(bioSrc)
+    && /solveTowerSites\(this\.lanes, this\.mapArg\)/.test(simSrc));
   t('砲塔佈局複驗也吃 mini(漏傳 = 拿不存在的後塔去驗,把合法地圖擋在門外)',
-    /towerLayoutAudit\(game, mini\)/.test(roomsSrc) && /const sites = solveTowerSites\(lanes, mini\)/.test(dataCode));
+    /towerLayoutAudit\(game, mapA\)/.test(roomsSrc) && /const sites = solveTowerSites\(lanes, mini\)/.test(dataCode));
 }
 
 // ============ Ⅳ 地圖對應縮小 + 據點距離縮小 + 邊緣緩衝 1/3 ============
@@ -184,7 +184,7 @@ console.log('\nⅣ 地圖 / 據點距離 / 邊緣緩衝');
     near(m.buf, f.buf * MINI.BUFFER_F) && near(m.buf / f.buf, 1 / 3));
   // 深度只准有一個數:裙自己算完交出 bufferM,消費端一律讀它
   t('裙的深度吃 edgeBufferM(mini) 並對外交出 bufferM',
-    /const B = edgeBufferM\(mini\)/.test(terrSrc) && /bufferM = B;/.test(terrSrc) && /bufferM,/.test(terrSrc));
+    /const B = edgeBufferM\(mapArg\(cfg\)\)/.test(terrSrc) && /bufferM = B;/.test(terrSrc) && /bufferM,/.test(terrSrc));
   t('緩衝布景 / 視線背景 / 地貌底毯一律讀 terrain.bufferM,MUST NOT 各自再呼叫 edgeBufferM',
     !/edgeBufferM/.test(strip(bioSrc)) && !/edgeBufferM/.test(strip(groundSrc))
     && /buffer: terrain\.bufferM/.test(bioSrc) && /const B = terrain\.bufferM/.test(groundSrc));
@@ -252,7 +252,7 @@ console.log('\nⅦ 伺服器:人數上限是房間規則(對雙方對稱),旗標
     typeof validateBattleConfig({ ...mk(1, true), lanes: mk(3, false).lanes }, 3) === 'string');
   t('完整 + 3v3 → 照樣受理(這一條紅 = 迷你把一般對戰擋掉了)', validateBattleConfig(mk(3, false), 3) === null);
   t('cfg.mini 於 createRoom 正規化成布林(客戶端送上來的整包 MUST NOT 原樣塞進 sim)',
-    /cfg\.mini = !!cfg\.mini;/.test(roomsSrc));
+    /cfg\.mini = !!cfg\.mini && !cfg\.defSide;/.test(roomsSrc));
   t('房間列表帶 mini(手機要在**加入之前**看得到,同 ctrl)', /mini: !!room\.battleConfig\?\.mini,/.test(roomsSrc));
   t('sim 把旗標收成 this.mini(一般對戰恆 false)', /this\.mini = !!config\.mini;/.test(simSrc));
 }
@@ -273,7 +273,7 @@ console.log('\nⅧ 手機閘門:住客戶端、裝置判定只問 deviceScheme�
   t('伺服器 MUST NOT 涉入裝置判定(它無從知道對面是不是手機;A1 管的是權威狀態不是裝置能力)',
     !/miniOnlyFor|deviceScheme/.test(strip(roomsSrc)) && !/miniOnlyFor|deviceScheme/.test(strip(simSrc)));
   t('地形預建鍵帶 mini(塔位階數與緩衝深度都由它推導 ⇒ 換了就得重建)',
-    /cfg\.lanes, !!cfg\.mini\]/.test(mainCode));
+    /cfg\.lanes, !!cfg\.mini, cfg\.defSide \|\| null\]/.test(mainCode));
 }
 
 // ============ Ⅸ 行為直測:BattleSim 真的只生成前線砲塔 ============

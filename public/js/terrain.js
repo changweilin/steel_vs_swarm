@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { envMat } from './hazards.js';
 import { setWeatherField, seaSoft, seaSegM } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
-import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, curveMaxEdgeM, edgeBufferM, edgeWallInsetM } from './data.js';
+import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, siteCPs, mapArg, curveMaxEdgeM, edgeBufferM, edgeWallInsetM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -429,9 +429,9 @@ export async function buildTerrain(cfg, onProgress) {
     if (lanesW.some((l) => l.length >= 2)) {
       const OFF = GAME.TOWER_SIDE_OFF, BAND_R = 16, SKIRT = 14;   // BAND_R 半徑涵蓋塔基 + 走位餘裕;SKIRT 裙帶漸回原地表(免斷崖)
       const segs = [];
-      for (const laneSites of solveTowerSites(lanesW)) {
+      for (const laneSites of solveTowerSites(lanesW, mapArg(cfg))) {
         for (const site of laneSites) {
-          for (const cp of [site.SWARM, site.STEEL]) {   // 左右塔連線(外接寬度沿法線 ±OFF)= 抬升膠囊中軸
+          for (const cp of siteCPs(site)) {   // 左右塔連線(外接寬度沿法線 ±OFF)= 抬升膠囊中軸
             segs.push([cp.x - cp.nx * OFF, cp.z - cp.nz * OFF, cp.x + cp.nx * OFF, cp.z + cp.nz * OFF]);
           }
         }
@@ -640,11 +640,10 @@ export async function buildTerrain(cfg, onProgress) {
   //    而**深度是誰在用要對得起來** —— 裙鋪多遠只有這裡知道(它吃的是 cfg.mini),緩衝布景 /
   //    視線背景 / 地貌底毯三個消費端若各自再呼叫一次 `edgeBufferM()`,就是四份可能不同步的
   //    深度(漏傳 mini 的那一份會把物件擺到裙外的虛空裡)⇒ 對外只交出**實際用的那一個數**
-  //    `bufferM`,消費端一律讀它。
-  const mini = !!cfg.mini;
+  //    `bufferM`,消費端一律讀它。(劇情戰役刻意不縮 —— 見 data.js edgeBufferM 註)
   let bufferHeightAt = null, bufferM = 0;
   {
-    const B = edgeBufferM(mini), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
+    const B = edgeBufferM(mapArg(cfg)), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
     bufferM = B;
     const S = Math.max(1, (maxX - minX) / (N - 1));   // 一格地形(外推坡度的取樣距)
     const DEC = B / 3;                                 // 外推衰減長度

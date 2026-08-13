@@ -74,16 +74,81 @@ export const MINI = {
 };
 /** 完整戰場每側塔位數(= `solveTowerSites` 的兩趟:前線 + 後方) */
 export const FULL_STAGES = 2;
-/** 這一場每側幾階砲塔 */
-export const towerStages = (mini) => (mini ? MINI.STAGES : FULL_STAGES);
+
+// ============ 劇情戰役地圖(2026-08-13 使用者定案)============
+// 使用者原句:「劇情戰役地圖調整:同迷你地圖大小,一律單兵線,敵方主堡+中段砲塔+前線砲塔,
+// 我方前線就是主堡。敵方電腦玩家變成 NPC BOSS,限制移動區域在主堡/砲塔周圍……」
+//
+// **旗標只有一個** —— `battleConfig.defSide`(防守方 = BOSS 那一邊的陣營 id;一般對戰恆 null)。
+// 刻意不是布林:布林還要另一格說「誰在守」,而兩格必須同時設對才成立 = 又一種「半套狀態」
+// (A47 ① 那條的同一個坑)。一個 side 字串同時是旗標與內容 ⇒ 結構上設不出半套。
+// 由它推導出來的東西(消費端 MUST NOT 各自寫死):
+//   ①**單兵線**(`laneCountFor`):劇情戰役不看人數(前五章 3v3、終章 5v5 照樣一條線)。
+//   ②**敵方兩階塔 + 主堡 / 我方零塔**(`mapPlan().atkStages/defStages`)—— 「我方前線就是主堡」
+//     的字面意思就是攻方 stages = 0,而**攻方主堡遞補了「對面那座前線塔」的角色**:前線塔的
+//     位置照樣由「敵我對距 ≥ SEP(不對射)」定出來,只是對照物換成了主堡(見 solveTowerSites)。
+//   ③**同迷你地圖大小**(`mapScaleF`)—— 這一格是**推導出來的巧合而不是抄過來的數字**:
+//     塔鏈需求 = 攻方 stages + 守方 stages + 1(中間那一段)⇒ 完整 2+2+1 = 5、迷你 1+1+1 = 3、
+//     劇情 0+2+1 = 3。劇情與迷你同為 3 ⇒ 縮小比同為 3/5。改 `DEF_STAGES` 它自己跟著走,
+//     MUST NOT 改成「劇情就沿用 miniScaleF()」(那是把推導寫成別名,`DEF_STAGES` 一動就分家)。
+//     ⇒ 使用者追問定案:「**不管人數多少都跟迷你地圖 2vs2 一樣大小**」。這一句是 ① 與 ③ 的
+//     合成結果而不是第三個旋鈕:人數只准經 `laneCountFor` 影響**兵線數**,而尺度函式(`realSideMFor`
+//     ~ `overlapCellM`)只吃 L 不吃人數 ⇒ 劇情恆 L=1 ⇒ 邊長 / 對角 / 兩堡距離 / 主堡座標 / 兵線折線
+//     與「迷你 2v2」**逐位元相同**,3v3 與 5v5 一格都不會長大。這是本區塊最容易被日後改動拆掉的
+//     一條(把劇情改多兵線、或讓尺度公式讀 teamSize,兩者任一都會讓它靜默失效)⇒ 稽核
+//     `audit_story_map` Ⅰ 直接釘整份幾何的逐位元相等,而不是只驗那個倍率。
+//   ④**攻堅鎖血**(`cfg.siege`)由 rooms.js 自 defSide 推導,MUST NOT 再由客戶端各送一格。
+// **邊緣緩衝刻意不跟著縮**:`MINI.BUFFER_F` 是拿「站在邊界看得到世界盡頭」換手機幀率的
+// 明知故犯(見 MINI 檔頭 ④),使用者這一輪講的是「地圖大小」而不是緩衝 ⇒ 劇情戰役維持整圈裙。
+export const STORY_MAP = {
+  LANES: 1,                  // 一律單兵線(使用者指定)
+  ATK_STAGES: 0,             // 我方前線就是主堡 ⇒ 攻方零座塔
+  DEF_STAGES: FULL_STAGES,   // 敵方:前線砲塔 + 中段砲塔(+ 主堡 = SIEGE 的三階)
+};
+
+/**
+ * 地圖型態(尺度 / 塔位 / 兵線數 / 緩衝共用的**唯一入口**)。參數 `m` 三態:
+ *   falsy             → 'full'  完整戰場
+ *   true              → 'mini'  迷你地圖
+ *   'SWARM' / 'STEEL' → 'story' 劇情戰役,**值本身就是防守方(BOSS 方)**
+ * 省略 ⇒ 'full' ⇒ 一切推導逐位元同舊制(IEEE754:5/5 === 1、x * 1 === x)。
+ */
+export const mapPlan = (m) => (m === 'SWARM' || m === 'STEEL'
+  ? { mode: 'story', def: m, atkStages: STORY_MAP.ATK_STAGES, defStages: STORY_MAP.DEF_STAGES }
+  // 迷你只認 `true`(`mapArg` 交出來的就是布林)。**MUST NOT 寫成 truthy** —— 認不得的字串
+  // (客戶端送上來的 defSide 亂填)會被判成迷你地圖:塔位、尺度、緩衝整組換掉,而且不報錯。
+  : m === true
+    ? { mode: 'mini', def: null, atkStages: MINI.STAGES, defStages: MINI.STAGES }
+    : { mode: 'full', def: null, atkStages: FULL_STAGES, defStages: FULL_STAGES });
+/**
+ * battleConfig → 地圖型態參數(`mapPlan` 的實參)。**所有消費端 MUST 走這一支**,
+ * MUST NOT 繼續各自傳 `cfg.mini` —— 漏傳的那一份會拿完整戰場的塔位/尺度去建劇情戰役的世界。
+ */
+export const mapArg = (cfg) => (cfg && cfg.defSide) || !!(cfg && cfg.mini);
+/** 這一場防守方每側幾階砲塔(對稱地圖 = 兩側都是這個數) */
+export const towerStages = (m) => mapPlan(m).defStages;
 /** 兵線長度需求(單位 = 敵我塔距 SEP):每側 stages 座塔各一個 SEP,加上中線那半個 ×2 */
 export const laneChainF = (stages) => 2 * stages + 1;
+/** 這一場的兵線長度需求(非對稱地圖用):攻方 + 守方各自的塔,加上中間那一段 */
+export const laneChainOf = (m) => { const p = mapPlan(m); return p.atkStages + p.defStages + 1; };
 /** 迷你地圖的尺度縮小比(推導,MUST NOT 手寫)= 塔鏈需求比 = 3/5 */
 export const miniScaleF = () => laneChainF(MINI.STAGES) / laneChainF(FULL_STAGES);
-/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個) */
-export const mapScaleF = (mini) => (mini ? miniScaleF() : 1);
+/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個);完整 = 5/5 = 1 ⇒ 逐位元同舊制 */
+export const mapScaleF = (m) => laneChainOf(m) / laneChainOf(false);
+/** 這一場幾條兵線(劇情戰役恆單線,不看人數) */
+export const laneCountFor = (teamSize, m) =>
+  (mapPlan(m).mode === 'story' ? STORY_MAP.LANES : lanesFor(teamSize));
 /** 這個人數開得成迷你地圖嗎(1v1 / 2v2) */
 export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
+/**
+ * 一個塔位上**實際會生成砲塔**的控制點(帶 side)。劇情戰役我方無塔 ⇒ 只有防守方那一個。
+ * 「繞著塔位做事」的消費端(biomes 淨空 / beacons 錨點 / 橋上墩座 / sim 生成 / 佈局稽核)
+ * MUST 全走這一支,MUST NOT 直接讀 `site.SWARM` / `site.STEEL` —— 直接讀的那一份會在
+ * 劇情戰役拿到 undefined:好一點的當場炸,壞一點的(展開成 `p.x`)靜默生出 NaN 座標。
+ */
+export const siteCPs = (site) => (site
+  ? ['SWARM', 'STEEL'].filter((s) => site[s]).map((s) => ({ side: s, ...site[s] }))
+  : []);
 /**
  * 這台裝置只准打迷你地圖嗎?(使用者:「手機版只允許連線遊玩迷你地圖,桌機版不限制」)
  * 參數 = `ctrlmode.js deviceScheme()` 的回傳 —— 裝置判定全 repo 只有那一份,本檔
@@ -91,17 +156,18 @@ export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
  */
 export const miniOnlyFor = (deviceScheme) => deviceScheme === 'pad';
 
-// 地圖「真實世界」邊長 (m)。mini 省略 ⇒ 倍率 1 ⇒ 逐位元同舊制(IEEE754:x * 1 === x)
-export const realSideMFor = (L, mini) =>
-  (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000 * mapScaleF(mini);
+// 地圖「真實世界」邊長 (m)。第二參數 = 地圖型態(見 mapPlan);省略 ⇒ 倍率 1 ⇒ 逐位元同舊制
+// (IEEE754:5/5 === 1、x * 1 === x)
+export const realSideMFor = (L, m) =>
+  (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000 * mapScaleF(m);
 // 地圖「遊戲世界」邊長 (m) = 真實 ÷ REAL_SCALE;兩堡目標距離 = 邊長 × 0.85 × √2
-export const sideMFor = (L, mini) => realSideMFor(L, mini) / MAPGEO.REAL_SCALE;
-export const targetDistFor = (L, mini) => sideMFor(L, mini) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
+export const sideMFor = (L, m) => realSideMFor(L, m) / MAPGEO.REAL_SCALE;
+export const targetDistFor = (L, m) => sideMFor(L, m) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
 // 兩堡「真實世界」距離 (m)
-export const realDistFor = (L, mini) => targetDistFor(L, mini) * MAPGEO.REAL_SCALE;
+export const realDistFor = (L, m) => targetDistFor(L, m) * MAPGEO.REAL_SCALE;
 /** 重合率判定網格邊長 (m,真實世界):與兩堡真實距離等比,見 MAPGEO.OVERLAP_CELL_FRAC */
-export const overlapCellM = (L, mini) =>
-  Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L, mini) * MAPGEO.OVERLAP_CELL_FRAC);
+export const overlapCellM = (L, m) =>
+  Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L, m) * MAPGEO.OVERLAP_CELL_FRAC);
 
 // ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
@@ -2704,8 +2770,11 @@ export const edgeWallDeepM = () => WORLD_EDGE.WALL_T * WORLD_EDGE.WALL_T_F;
  * 迷你地圖另乘 `MINI.BUFFER_F`(1/3,使用者指定)—— 這一格**明知故犯**地放棄上面那條
  * 「裙的外緣落在地平線 ⇒ 不會露出硬邊」的保證,換手機的建構期與繪製量,見 `MINI` 檔頭 ④。
  * 省略參數 ⇒ 倍率 1 ⇒ 逐位元同舊制。
+ * **劇情戰役刻意不縮**(`mapPlan().mode === 'story'` 不吃這一格):地圖雖然同迷你大小,但
+ * BUFFER_F 換的是手機幀率,而使用者這一輪講的是地圖大小 —— 見 `STORY_MAP` 檔頭末段。
  */
-export const edgeBufferM = (mini) => curveHorizonM() * WORLD_EDGE.BUFFER_F * (mini ? MINI.BUFFER_F : 1);
+export const edgeBufferM = (m) =>
+  curveHorizonM() * WORLD_EDGE.BUFFER_F * (mapPlan(m).mode === 'mini' ? MINI.BUFFER_F : 1);
 
 // ---- 自機碰撞量體(2026-08-02 由 game.js 移入本檔)----
 // 住 data.js 的理由與 hitR/hitH 相同:**伺服器也要用**。使用者定案「電腦玩家的碰撞法則一律跟
@@ -4846,6 +4915,70 @@ export function siegeOpenStage(counts) {
   return SIEGE.BASE;
 }
 
+// ============ NPC BOSS(劇情戰役的敵方電腦玩家;2026-08-13 使用者定案)============
+// 使用者原句:「敵方電腦玩家變成 NPC BOSS,限制移動區域在主堡/砲塔周圍,3 名 BOSS 時分配
+// 據點前中後 = 1:1:1,5 名 BOSS 時前中後 = 1:2:2。防禦面與小兵永不升級,HP 四段,每段 HP =
+// x1:x2:x3:x4,每被擊破一段 HP 攻擊面技能升級一次(血條外圍光暈隨段數改變顏色:黑>青>銀>金),
+// 技能 HP 恢復減半,其他 HP 恢復無效」+ 追問定案:「總量 ×10、由薄到厚」「BOSS 自己(狂暴化)」
+// 「半個塔射程」「BOSS 吃鎖血、且不重生,BOSS 補血也不可以回到上一階」。
+//
+// 五條紀律(消費端 MUST 全走本區塊的函式,MUST NOT 各自算):
+// ①**分段是「小隊總量」上的事,不是逐機體** —— 無人機 BOSS 是 SQUAD.N 架一組,逐機體判段的話
+//   四架各自跑自己的四段 = 同一個 BOSS 有四條互相矛盾的狂暴進度。段位一律由
+//   `Σhp / Σmaxhp`(含已墜毀那幾架:它們不重生,那份 HP 是真的永久沒了)推導。
+// ②**HP 倍率逐機體套**(`HP_MUL`):無人機小隊的 EHP 本來就是四架加總(SQUAD.HP_F 已校準),
+//   逐機體 ×10 ⇒ 小隊總量也剛好 ×10,機甲/變形者同理 ⇒ 三個機種的 BOSS 一樣硬。
+// ③**倍率 = Σ SEG_W 推導不手寫**:段權重一改(例如改成五段),總量自己跟著走。
+// ④**恢復上限是「當前這一段的天花板」**(`bossSegCapF`):使用者明講「補血也不可以回到上一階」
+//   ⇒ 已破的段是永久的。這一條 MUST 與「技能減半 / 其他無效」寫在同一個結算點(sim._healBody),
+//   分開寫必漏其一 —— 而漏掉上限的症狀是「BOSS 被治療招式一路推回滿血,而狂暴等級留在最高」。
+// ⑤**活動半徑量到據點中心**,而據點只有三種(前線塔位 / 中段塔位 / 主堡)—— 席次分配表是
+//   使用者指定的數字,不是推導值;3 / 5 以外的人數走平均分配的保底(劇情六章只會是 3 或 5)。
+export const BOSS = {
+  // 逐段 HP 權重,自**最先被打掉的那一段**起算(使用者:由薄到厚)
+  SEG_W: [1, 2, 3, 4],
+  HP_MUL: 0,        // 於下方 derive = Σ SEG_W(MUST NOT 手寫 10)
+  // 血條外圍光暈:黑 > 青 > 銀 > 金(逐段;index = 已被擊破的段數)
+  GLOW: ['#0b0e12', '#3fe0d0', '#c8d2dc', '#ffcc33'],
+  ZONE_F: 0.5,      // 活動半徑 = 砲塔射程 × 此值(使用者:半個塔射程)
+  HEAL_SKILL_F: 0.5, // 技能 HP 恢復減半(其他來源恆 0)
+  // 據點席次分配 [前, 中, 後](使用者指定;鍵 = BOSS 人數)
+  SLOTS: { 3: [1, 1, 1], 5: [1, 2, 2] },
+  SLOT_OFF_F: 1,    // 同一據點多名 BOSS 的橫向錯開 = TOWER_SIDE_OFF × 此值
+};
+BOSS.HP_MUL = BOSS.SEG_W.reduce((a, b) => a + b, 0);
+/** 幾段 HP(= 光暈幾種顏色;兩者 MUST 同長) */
+export const bossSegN = () => BOSS.SEG_W.length;
+/** 已擊破 k 段時,HP 還剩多少比例(= 這一段的天花板;k=0 → 1、k=段數 → 0) */
+export const bossSegCapF = (k) => {
+  let left = BOSS.HP_MUL;
+  for (let i = 0; i < Math.max(0, Math.min(bossSegN(), k)); i++) left -= BOSS.SEG_W[i];
+  return left / BOSS.HP_MUL;
+};
+/** 目前 HP 比例 → 已擊破的段數(0 ~ 段數−1;末段打完就是陣亡,不再進位) */
+export const bossSegOf = (frac) => {
+  for (let k = 0; k < bossSegN(); k++) if (frac > bossSegCapF(k + 1) + 1e-9) return k;
+  return bossSegN() - 1;
+};
+/** 這一段的血條外圍光暈色 */
+export const bossGlow = (k) => BOSS.GLOW[Math.max(0, Math.min(BOSS.GLOW.length - 1, k | 0))];
+/** BOSS 活動半徑(公尺)= 半個塔射程(推導,MUST NOT 手寫) */
+export const bossZoneR = () => UNITS.tower.range * BOSS.ZONE_F;
+/** 同一據點第 i 名 BOSS 的橫向錯開量(公尺;左右輪替,0 → 0、1 → +OFF、2 → −OFF …) */
+export const bossSlotOff = (i) =>
+  (i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * GAME.TOWER_SIDE_OFF * BOSS.SLOT_OFF_F);
+/** 這一場的 BOSS 席次 → 據點階段(index = 第幾名 BOSS,值 = SIEGE.STAGES 的索引) */
+export function bossSlotPlan(n) {
+  const S = SIEGE.STAGES.length;
+  const counts = BOSS.SLOTS[n]
+    || Array.from({ length: S }, (_, i) => Math.floor(n / S) + (n % S > i ? 1 : 0));
+  const out = [];
+  for (let s = 0; s < S; s++) for (let k = 0; k < (counts[s] || 0); k++) out.push(s);
+  return out.slice(0, n);
+}
+/** BOSS 的 HP 恢復倍率:技能來源減半、其他一律無效(使用者定案)。非 BOSS MUST NOT 走這一支 */
+export const bossHealF = (src) => (src === 'skill' ? BOSS.HEAL_SKILL_F : 0);
+
 /**
  * 塔位求解(sim._spawnStructures 與 biomes 淨空共用的唯一的縫)。
  * lanes: [[x,z], …][] — 兵線折線(世界公尺;每條 index 0 = SWARM 主堡端、末端 = STEEL 主堡端)。
@@ -4862,9 +4995,12 @@ export function siegeOpenStage(counts) {
  *   - 真正 ≤80% 全達成需兵線 ≥ ~5·SEP;現尺度多數兵線做不到 → 靠放大地圖(降 REAL_SCALE)拉長兵線(見 GEO_SCALE_VER)。
  * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。稽核:tools/audit_map_rules.mjs。
  *
- * `mini`(迷你地圖,見 MINI 檔頭 ②):每側只有前線砲塔 ⇒ **第二趟根本不跑**,回傳每條兵線
- * 恰一個塔位。MUST NOT 改成「解完再由呼叫端丟掉後塔」—— biomes 淨空 / beacons 錨點 /
- * 橋上墩座吃的是這一支的回傳,解出來卻不生成 = 世界繞著一座不存在的塔讓路。
+ * 第二參數 = 地圖型態(見 `mapPlan`):
+ *   `true`(迷你地圖,見 MINI 檔頭 ②):每側只有前線砲塔 ⇒ **第二趟根本不跑**,回傳每條兵線
+ *     恰一個塔位。MUST NOT 改成「解完再由呼叫端丟掉後塔」—— biomes 淨空 / beacons 錨點 /
+ *     橋上墩座吃的是這一支的回傳,解出來卻不生成 = 世界繞著一座不存在的塔讓路。
+ *   `'SWARM'`/`'STEEL'`(劇情戰役,見 STORY_MAP 檔頭 ②):**只有防守方有塔**,回傳的 site
+ *     因此只帶那一側的鍵(消費端一律走 `siteCPs()`)。
  * 省略參數 ⇒ 逐位元同舊制。
  */
 export function solveTowerSites(lanes, mini) {
@@ -4922,6 +5058,46 @@ export function solveTowerSites(lanes, mini) {
     for (const a of S) for (const b of T) { const d = d2(a, b); if (d < m) m = d; }
     return m;
   };
+  // ---- 劇情戰役(非對稱):只有防守方有塔,「我方前線就是主堡」----
+  // 兩趟的規則**一條都沒換**,換的只是「對面那個東西是什麼」:
+  //   趟 1 前線塔的對照物 = 攻方的**主堡**(原本是攻方的前線塔)⇒ 對距 ≥ SEP 就是「不對射」;
+  //   趟 2 中段塔照舊對「己方主堡 + 己方前線塔」求 ≥ SEP,取最貼主堡者(防禦縱深)。
+  // 掃描上限也跟著換:對稱戰場的 `TOWER_MAX_FRAC` 是「不得越過戰場中線」,而劇情戰役沒有
+  // 對面的塔要爭中線 —— 真正的界線由「對距 ≥ SEP」自己夾出來,上限只需擋住「退進攻方主堡懷裡」。
+  const plan = mapPlan(mini);
+  if (plan.mode === 'story' && bases.length === 2) {
+    const def = plan.def, atk = OTHER_SIDE[def];
+    const defBase = def === 'SWARM' ? bases[0] : bases[1];
+    const atkBase = atk === 'SWARM' ? bases[0] : bases[1];
+    const FMAX = 1 - GAME.TOWER_MIN_FRAC;
+    return G.map(({ site, towers }) => {
+      // 趟 1:前線塔 —— 對距(到攻方主堡)≥ SEP 中最貼 SEP 者;塞不下取對距最大者(best-effort)
+      let front = null, fb = null;
+      for (let f = GAME.TOWER_MIN_FRAC; f <= FMAX + 1e-9; f += 0.002) {
+        const p = site(def, f), opp = nearest(towers(p), [atkBase]);
+        if (opp >= SEP - 1e-6 && (!front || opp < front.opp)) front = { f, p, opp };
+        if (!fb || opp > fb.opp) fb = { f, p, opp };
+      }
+      const fe = front || fb;
+      const out = [{ frac: fe.f, [def]: fe.p }];
+      if (plan.defStages < 2) return out;
+      // 趟 2:中段塔 —— sep(到己方主堡 / 己方前線塔)≥ SEP 中最貼主堡者;硬底線 = 不與前線塔疊
+      const fT = towers(fe.p);
+      let strict = null, spread = null;
+      for (let f = GAME.TOWER_MIN_FRAC; f < fe.f - 1e-6; f += 0.002) {
+        const p = site(def, f), T = towers(p);
+        const stack = nearest(T, fT);
+        if (stack < STACK - 1e-6) continue;
+        const sep = Math.min(nearest(T, [defBase]), stack);
+        if (sep >= SEP - 1e-6 && !strict) strict = { f, p };
+        if (!spread || sep > spread.sep) spread = { f, p, sep };
+      }
+      const mid = strict || spread;
+      // 回傳序 = [後塔, 前塔](與對稱版同約定:末項 = 前線,見 siegeSiteStages / _prefillLanes)
+      return mid ? [{ frac: mid.f, [def]: mid.p }, ...out] : out;
+    });
+  }
+
   // 趟 1:前線(爭中線,永不捨棄)。硬底線(絕不為軟規則犧牲):**敵我對距 opp**(含當前對 + 跨兵線敵塔)MUST ≥ SEP(不對射,invariant ②)、
   //   非相鄰同陣營 sameAll ≥ STACK(不疊)。**相鄰兵線同陣營 sameAdj**(|Δli|=1)偏好 ≥ SEP(重疊 ≤80%,使用者新增規則,優先滿足)。
   //   ① front:opp≥SEP 且 sameAdj≥SEP 中「og 最貼 SEP」⇒ 敵我 80% 且相鄰兵線 ≤80%;
@@ -5008,9 +5184,9 @@ export function towerLayoutAudit(lanes, mini) {
   for (let li = 0; li < sites.length; li++) {
     sites[li].forEach((st, idx) => {
       const role = idx === sites[li].length - 1 ? 'front' : 'rear';
-      for (const side of ['SWARM', 'STEEL']) {
-        const p = st[side];
-        structs.push({ side, role, li, r: R, pts: [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s })) });
+      // 劇情戰役只有防守方有塔 ⇒ 名冊走 siteCPs(直接讀 st[side] 會拿到 undefined,見該支註)
+      for (const p of siteCPs(st)) {
+        structs.push({ side: p.side, role, li, r: R, pts: [-1, 1].map((s) => ({ x: p.x + p.nx * OFF * s, z: p.z + p.nz * OFF * s })) });
       }
     });
   }
@@ -5029,6 +5205,13 @@ export function towerLayoutAudit(lanes, mini) {
     if (a.role !== 'base' && b.role !== 'base') minStack = Math.min(minStack, d);
   }
   const stackBad = minStack < STACK - 1;
+  // 劇情戰役:**軟規則降為警示,`ok` 只認硬規則(不物理疊塔)**。
+  // 理由是這一場的尺度與塔位分配都是使用者定死的(同迷你地圖大小 + 敵方兩階塔 + 我方零塔)——
+  // 三段間隙全擠在防守方那半條線上,而兵線是真實道路:蜿蜒的路段(實測 crimea)沿線量得到
+  // 一個塔距、直線量只有 85%,而 `solveTowerSites` 已經取到那條線上的最佳解(它是 best-effort,
+  // 見該支趟 2 註)。此時把房間擋掉的意思是「這一章打不開」,而錯誤訊息還會說是砲塔重疊。
+  // residual / worstRB / worstRF 照樣回報 —— 降級的是判定,不是能見度(原則 6)。
+  if (mapPlan(mini).mode === 'story') return { ok: !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront, soft: true };
   return { ok: residual === 0 && !stackBad, residual, minStack: minStack === Infinity ? 0 : minStack, stackBad, worstRB, worstRF, worstAdj, oppFront };
 }
 
@@ -5055,7 +5238,7 @@ export function towerTunnelAudit(lanes, tunSpans = [], mini) {
     for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
     sites[li].forEach((st, idx) => {
       const role = idx === sites[li].length - 1 ? 'front' : 'rear';   // 末項 = 前線塔(見 solveTowerSites 回傳序)
-      for (const side of ['SWARM', 'STEEL']) {
+      for (const { side } of siteCPs(st)) {                            // 劇情戰役只有防守方有塔
         const s = side === 'SWARM' ? total * st.frac : total * (1 - st.frac);
         for (const [a, b] of spans) {
           if (s < a || s > b) continue;

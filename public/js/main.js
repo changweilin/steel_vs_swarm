@@ -729,9 +729,11 @@ function startStoryChapter(i) {
   const v = VENUES.find((x) => x.id === ch.venueId);
   if (!v) { toast('⚠️ 找不到戰場資料'); return; }
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
-  const cfg = venueConfig(v, ch.teamSize);
+  // 劇情戰役地圖(2026-08-13 使用者定案;見 data.js STORY_MAP):**旗標只有 defSide 一格** ——
+  // 由它推導出單兵線 / 迷你尺度 / 敵方兩階塔 + 我方零塔 / NPC BOSS / 攻堅鎖血(`cfg.siege`
+  // 在 rooms.js 由它導出,MUST NOT 在這裡再送一格)。防守方 = 敵方陣營。
+  const cfg = venueConfig(v, ch.teamSize, foe);
   cfg.env = { ...ch.env };
-  cfg.siege = true;   // 劇情戰役:攻堅順序鎖血(前線塔 → 中段塔 → 主堡;結算在 sim,見 data.js SIEGE)
   const pilot = app.storyPilot || sc.heroes[0];
   const allies = [...sc.heroes, ...sc.mercs].filter((id) => id !== pilot);   // 我方僚機(指名 AI)
   const enemies = [...ec.heroes, ...ec.mercs];                              // 敵方陣容(指名 AI)
@@ -1766,7 +1768,9 @@ function warmModels(onProg) {
 function prebuildKey(cfg) {
   // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
   // mini 進 key:塔位階數(biomes 淨空/地標/墩座)與緩衝深度(裙)全由它推導 ⇒ 換了就得重建
-  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini]);
+  // `defSide` MUST 進 key:劇情戰役的塔位是非對稱的(只有防守方有塔)⇒ 換邊就是換一個世界,
+  // 漏掉它會讓房間階段預建好的地形被原樣沿用,而塔的淨空/墩座全長在錯的那一側。
+  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini, cfg.defSide || null]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */

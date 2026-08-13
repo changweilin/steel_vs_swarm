@@ -8,8 +8,9 @@
 import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
-  SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, lanesFor, resolveEnv,
+  SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, resolveEnv,
   BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit, MINI, miniAllowed,
+  laneCountFor, mapArg, mapPlan,
 } from '../public/js/data.js';
 // 操作方式(整房一致、房主定案)的合法值只有 ctrlmode.js 一份 —— 在這裡照抄一組字串
 // 就是第二份選項表(新增第四種操控時必漏改)。該檔刻意零 import、頂層不碰 window ⇒
@@ -41,22 +42,30 @@ function genToken() {
 
 /** 開房前的戰場設定驗證:回傳錯誤訊息或 null(三種機制同標準,單機也照驗) */
 export function validateBattleConfig(cfg, teamSize) {
-  const L = lanesFor(teamSize);
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
-  if (cfg.lanes.length !== L) return `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
+  // 地圖型態(完整 / 迷你 / 劇情戰役)只有 `mapArg` 一份解讀 —— 這一支與 solveTowerSites /
+  // 尺度函式 / 兵線數共用同一個入口,驗證與生成因此不可能對這一場的型態有兩種看法。
+  const mapA = mapArg(cfg);
+  const plan = mapPlan(mapA);
+  const L = laneCountFor(teamSize, mapA);
+  if (cfg.lanes.length !== L) {
+    return plan.mode === 'story'
+      ? `劇情戰役恆為 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`
+      : `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
+  }
   // 迷你地圖只開放 1v1 / 2v2(使用者定案)。這一道 MUST 在伺服器 —— 手機閘門住客戶端是因為
   // 「這台裝置畫不畫得動」只有客戶端知道,但「幾人可以打迷你地圖」是房間規則,對雙方對稱生效。
-  const mini = !!cfg.mini;
-  if (mini && !miniAllowed(teamSize)) {
+  if (plan.mode === 'mini' && !miniAllowed(teamSize)) {
     return `迷你地圖只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下(收到 ${teamSize}v${teamSize})`;
   }
   if (!(cfg.distM >= cfg.diagM * 0.8)) {
     return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
   }
   // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
-  // mini MUST 傳下去:迷你地圖沒有後塔,拿完整版的解來驗會擋掉本來合法的地圖(見 towerLayoutAudit)
+  // 型態 MUST 傳下去:迷你地圖沒有後塔、劇情戰役只有一側有塔,拿完整版的解來驗等於檢查
+  // 一批不會生成的塔,會把本來合法的地圖擋在門外(見 towerLayoutAudit)
   const game = lanesToGame(cfg.lanes);
-  if (!game || !towerLayoutAudit(game, mini).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
+  if (!game || !towerLayoutAudit(game, mapA).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
   // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
   if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
   return null;
@@ -358,16 +367,24 @@ export class RoomHub {
         }
         const teamSize = Math.max(TEAM.MIN, Math.min(TEAM.MAX, Math.round(m.teamSize) || TEAM.DEFAULT));
         const cfg = m.battleConfig;
+        // ---- 地圖型態旗標的正規化:**MUST 排在驗證之前** ----
+        // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
+        // 而且順序不能反:`defSide: 'FOO'` 這種值在驗證那一側被當成一般對戰、在正規化之後
+        // 被清成 null —— 若正規化排在驗證之後,兩側對「這場是不是劇情戰役」的看法就會分家。
+        // 劇情戰役(BOSS 方 side;一般對戰恆 null)是**唯一**一格旗標,見 data.js STORY_MAP。
+        // (cfg 可能整包缺席 —— 那由 validateBattleConfig 回「戰場設定不完整」,這裡先不碰)
+        if (cfg && typeof cfg === 'object') {
+          cfg.defSide = (cfg.defSide === 'SWARM' || cfg.defSide === 'STEEL') ? cfg.defSide : null;
+          // 迷你地圖(塔位階數 / 地圖尺度 / 緩衝深度全由它推導)正規化成布林;劇情戰役自帶尺度
+          // ⇒ 兩者互斥(同時為真 = 每側只剩一階塔的劇情地圖 = 沒有中段砲塔可打)。
+          cfg.mini = !!cfg.mini && !cfg.defSide;
+        }
         const err = validateBattleConfig(cfg, teamSize);
         if (err) { send({ t: 'error', msg: err }); return; }
         cfg.env = resolveEnv(cfg.env || {});   // 隨機項在此定案,全房共用同一組環境
-        // 攻堅順序(前線塔 → 中段塔 → 主堡;劇情戰役開房時帶上)。**MUST 在這裡正規化成布林**:
-        // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
-        // 這是房間規則(同 botDiff),對雙方對稱生效。
-        cfg.siege = !!cfg.siege;
-        // 迷你地圖(塔位階數 / 地圖尺度 / 緩衝深度全由它推導)同理正規化成布林。
-        // 幾何本身是客戶端算好送上來的,這一格只保證伺服器與全房讀到同一個型別的旗標。
-        cfg.mini = !!cfg.mini;
+        // 攻堅順序(前線塔 → 中段塔 → 主堡)**是劇情戰役的推導不是第二格旗標**:兩格各送一份
+        // 就會出現「照順序鎖血但沒有 BOSS」或反過來的半套狀態,而每一條既有斷言照樣全綠。
+        cfg.siege = !!cfg.defSide;
         rollSideSwap(cfg);                     // 主堡陣營歸屬 50% 對調(再戰時於 backToRoom 重擲)
         cfg.teamSize = teamSize;
         const pin = hub._genPin();

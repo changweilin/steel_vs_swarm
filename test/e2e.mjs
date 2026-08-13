@@ -28,6 +28,8 @@ import {
   ULT_SUPPORT, supportN, supportHp, supportLegS, supportStackable, supportTempoF, selfUltTempo,
   kindParts, frontKillHp,
 } from '../public/js/data.js';
+// 劇情戰役開房那一段要真的地圖(旗標 defSide 由 venueConfig 帶進 battleConfig)
+import { VENUES, venueConfig } from '../public/js/venues.js';
 
 /**
  * 「未折算」的基準傷害 = 階梯值 × **剋制/範圍/機動/射程四個推導係數**。
@@ -2049,6 +2051,30 @@ tooShort.distM = tooShort.diagM * 0.5;
 host.send({ t: 'createRoom', name: '蜂群女王', roomName: '太近', teamSize: 1, battleConfig: tooShort });
 await host.wait((c) => c.msgs.find((m) => m.t === 'error' && /80%/.test(m.msg)));
 assert(true, '主堡距離未達對角線 80% 被拒絕');
+
+// 劇情戰役旗標(2026-08-13):**只有 `defSide` 一格**,`siege` 由伺服器推導。
+// 這一段驗的是「客戶端送上來的整包 MUST NOT 原樣算數」那條:亂填的 defSide 要被清成 null
+// (連帶 siege 也 false),合法的則整套生效 —— 兩邊分家的症狀是「照順序鎖血但沒有 BOSS」。
+{
+  const mkRoom = async (name, cfg) => {
+    const c = await client(name);
+    c.send({ t: 'createRoom', name: '蜂群女王', roomName: name, isPublic: false, teamSize: 1, battleConfig: cfg });
+    await c.wait((x) => x.sync);
+    const out = c.sync.lobby.battleConfig;
+    c.send({ t: 'leaveRoom' });
+    c.ws.close();
+    return out;
+  };
+  const bogus = fakeBattleConfig(1);
+  bogus.defSide = 'FOO'; bogus.siege = true;
+  const bc = await mkRoom('亂填防守方', bogus);
+  assert(bc.defSide === null && bc.siege === false,
+    `亂填的 defSide 清成 null,siege 跟著 false(defSide=${bc.defSide} siege=${bc.siege})`);
+  const sc = await mkRoom('劇情戰役', venueConfig(VENUES[0], 1, 'STEEL'));
+  assert(sc.defSide === 'STEEL' && sc.siege === true && sc.mini === false,
+    '劇情戰役:defSide=STEEL ⇒ siege 推導為 true、mini 互斥為 false');
+  assert(sc.lanes.length === 1, `劇情戰役恆單兵線(收到 ${sc.lanes.length} 條)`);
+}
 
 log('— 建立房間(1v1,開房即帶地圖與環境)—');
 host.send({ t: 'createRoom', name: '蜂群女王', roomName: '測試戰區', isPublic: true, teamSize: 1, battleConfig: fakeBattleConfig(1) });

@@ -26,7 +26,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
-  ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
+  ENV, solveTowerSites, siteCPs, mapArg, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, xzToLL, SLOPE, slopeDeg,
   CHARACTERS,
 } from './data.js';
@@ -154,9 +154,10 @@ function buildClearance(cfg, center) {
   }
   // 防禦塔位置周圍清場:與 sim._spawnStructures 共用 solveTowerSites()(前線塔位是解出來的,
   // MUST NOT 用 TOWER_FRACS 自己重算 —— 那會清錯位置、讓建物長在塔上)
-  for (const sites of solveTowerSites(lanesW, cfg.mini)) {
+  // 名冊走 `siteCPs`:劇情戰役只有防守方有塔,直接讀 st[side] 會拿到 undefined(見該支註)
+  for (const sites of solveTowerSites(lanesW, mapArg(cfg))) {
     for (const st of sites) {
-      for (const side of ['SWARM', 'STEEL']) blockPoint(st[side].x, st[side].z, 30);
+      for (const p of siteCPs(st)) blockPoint(p.x, p.z, 30);
     }
   }
   for (const side of ['SWARM', 'STEEL']) {
@@ -3468,9 +3469,9 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
  * 零共享 `rnd()` 消耗(§2.3):外觀差異由落點雜湊自帶種子,不動全圖佈局序列。
  * MUST 排在一般植被散布**之前** —— blockArea 之後小植被才會自動避開整件地標。
  */
-function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mini }) {
+function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW, mapA }) {
   if (!lanesW.length) return 0;
-  const anchors = beaconAnchors({ lanesW, basesW, towerSites: solveTowerSites(lanesW, mini) });
+  const anchors = beaconAnchors({ lanesW, basesW, towerSites: solveTowerSites(lanesW, mapA) });
   const probe = (x, z, r) => {
     if (x < terrain.minX + r + 24 || x > terrain.maxX - r - 24
       || z < terrain.minZ + r + 24 || z > terrain.maxZ - r - 24) return false;
@@ -6926,10 +6927,10 @@ function planTowerBridgePads(cps, decks, terrain) {
   }
   return { pads, newDecks, cols, slabs, piers };
 }
-function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mini) {
+function buildTowerBridgePads(group, lanesW, decks, terrain, cols, mapA) {
   if (!decks.length || !lanesW.length) return [];
   const cps = [];   // 塔位控制點展平(每點左右各一座砲塔;solveTowerSites 與 sim 同一支,座標對得上)
-  for (const laneSites of solveTowerSites(lanesW, mini)) for (const site of laneSites) for (const cp of [site.SWARM, site.STEEL]) cps.push(cp);
+  for (const laneSites of solveTowerSites(lanesW, mapA)) for (const site of laneSites) for (const cp of siteCPs(site)) cps.push(cp);
   const { pads, newDecks, cols: padCols, slabs, piers } = planTowerBridgePads(cps, decks, terrain);
   const slabM = envMat(0x8f959a, { wash: 0.35, cool: 0.45 });
   const pierM = envMat(0x9aa0a4, { wash: 0.35, cool: 0.45 });
@@ -8354,7 +8355,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   const beaconsBuilt = placeBeacons({
     group, terrain, blocked, blockers,
     lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
-    basesW, mini: cfg.mini,   // 塔位錨點的階數(迷你地圖只有前線那一組)
+    basesW, mapA: mapArg(cfg),   // 塔位錨點的型態(迷你只有前線那一組;劇情戰役只有防守方有塔)
   });
   // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
   const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
@@ -9813,7 +9814,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   // 且排在 blockers.push(roadRes.cols) 之前(墩身碰撞柱走同一條路徑)。
   const towerPads = buildTowerBridgePads(
     group, (cfg.lanes || []).map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
-    roadRes.decks, terrain, roadRes.cols, cfg.mini);
+    roadRes.decks, terrain, roadRes.cols, mapArg(cfg));
   const roadsBuilt = roadRes.built;
   group.userData.towerPads = towerPads;   // 橋上砲塔落位高度(main.js → terrain.towerPadY → game.js)
   group.userData.decks = roadRes.decks;   // 橋面(main.js → terrain.decks/deckY → game.js 表面高度)

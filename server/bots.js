@@ -105,11 +105,31 @@ export class BotBrain {
    * 回傳「實際位移 ÷ 期望位移」(0~1)供撞牆繞行判斷。
    */
   _move(h, nx, nz) {
+    [nx, nz] = this._zoneClamp(nx, nz);
     const want = Math.hypot(nx - h.x, nz - h.z);
     const [rx, rz] = this.sim.solidResolve(h, h.x, h.z, nx, nz, this._fly(h));
     const got = Math.hypot(rx - h.x, rz - h.z);
     h.x = rx; h.z = rz;
     return want > 1e-4 ? got / want : 1;
+  }
+
+  /**
+   * NPC BOSS 的活動範圍(使用者:「限制移動區域在主堡/砲塔周圍」)。
+   * 夾的是**想去的那個點**,不是夾結果 —— 夾完才交給 `solidResolve`,碰撞仍是唯一權威
+   * (先解碰撞再硬拉回圓內的話,那一拉會把機體推進牆裡)。非 BOSS 恆原值回傳。
+   * 圓心/半徑住 `sim.bossHold`(伺服器定案,見 sim._bossAnchor);bots.js MUST NOT 自己算。
+   */
+  _zoneClamp(nx, nz) {
+    const z = this.sim.bossHold?.get(this.pid);
+    if (!z) return [nx, nz];
+    const dx = nx - z.x, dz = nz - z.z, d = Math.hypot(dx, dz);
+    return d <= z.r ? [nx, nz] : [z.x + dx / d * z.r, z.z + dz / d * z.r];
+  }
+
+  /** 這一台該回哪裡(撤退 / 推線的落腳點):BOSS 回自己的據點,其餘回主堡 */
+  _home() {
+    const z = this.sim.bossHold?.get(this.pid);
+    return z ? [z.x, z.z] : this.sim.basePos[this.side];
   }
 
   /** 撞牆繞行:卡住期間把目標點往側向挪一段(垂直於前進方向),讓 push-out 有機會把機體滑出牆角 */
@@ -195,9 +215,10 @@ export class BotBrain {
     // 前置篩選走 `canUpgrade` 同一支(2026-08-11):升級多了戰鬥分數這道閘 ⇒ 光看錢會在
     // 「錢夠但分數不夠」時每一輪都吃掉一格手速去問一輪必被拒的採購。
     // 開商店也是一項操作 ⇒ 巡店間隔隨難度拉長(高難度 ≈ 4s,同 2026-07-27 前的節奏)
-    const canBuy = Object.entries(ECON.UPGRADES)
+    // NPC BOSS 不使用升級系統(權威閘門在 `sim.buy`;這裡只是別白白吃掉一格手速去問必被拒的採購)
+    const canBuy = !sim.isBoss(h) && Object.entries(ECON.UPGRADES)
       .some(([k, u]) => canUpgrade(u, h.upg[k] || 0, h.money, h.kn));
-    if ((canBuy || h.money >= CREEP_UPG.PRICE) && this._op('buy')) {
+    if ((canBuy || (!sim.isBoss(h) && h.money >= CREEP_UPG.PRICE)) && this._op('buy')) {
       let bought = false;
       // 採購順序隨定位換(攻堅先買重武器與護甲、支援先買招式與充能…);無定位 = 舊制順序
       for (const item of botBuyOrder(this._role)) {
@@ -213,9 +234,10 @@ export class BotBrain {
     // 自保/輔助類招式:低血時放治療/護盾,撤退時也用
     this._castSupport(h, frac);
 
-    if (this.state === 'RETREAT') this._moveToward(h, u, sim.basePos[this.side], dt);
+    if (this.state === 'RETREAT') this._moveToward(h, u, this._home(), dt);
     else if (this.state === 'RALLY') this._rally(h, u, target, dt);
     else if (this.state === 'ENGAGE') this._engage(h, u, target, dt);
+    else if (sim.bossHold?.has(this.pid)) this._hold(h, u, dt);   // NPC BOSS:不推線,守著據點
     else this._push(h, u, dt);
 
     // 視角:狀態機先寫下「想看哪裡」,受擊警戒可以搶走,最後統一以角速度上限轉一步。
@@ -274,6 +296,16 @@ export class BotBrain {
     this._stuck(this._move(h, h.x + (gx - h.x) * k, h.z + (gz - h.z) * k), dt);
     // 掉隊修正:被擊退/重生後 prog 對不上實際位置時,吸附回最近進度
     if (Math.hypot(h.x - x, h.z - z) > 90) this.prog = Math.max(0, this.prog - this._speed(h) * dt * 4);
+  }
+
+  /**
+   * NPC BOSS 的「推線」= 守著據點(取代 `_push`)。BOSS 不沿兵線推進 —— `prog` 若照樣累加,
+   * 機體會被 `_zoneClamp` 釘在圓緣上而目標點一路跑到敵方主堡,`_stuck` 於是誤判撞牆、
+   * 整場都在左右繞行。回到據點中心 + 面向兵線的敵方端(來敵的方向),就是「站崗」。
+   */
+  _hold(h, u, dt) {
+    this._moveToward(h, u, this._home(), dt);
+    this._faceLaneFwd(h);
   }
 
   /** 目前是否處於「脫離交戰」狀態(回堡 or 退到砲塔後方)—— 兩者共用的判斷,MUST NOT 逐處展開 */
@@ -375,6 +407,9 @@ export class BotBrain {
    */
   _pickRally(h) {
     const sim = this.sim;
+    // NPC BOSS 的集結點恆是自己的據點:兵線上的「砲塔後方」多半在活動範圍之外,
+    // 退過去只會被 `_zoneClamp` 夾在圓緣、卻永遠到不了目標點(= 一路貼著邊緣滑)。
+    if (sim.bossHold?.has(this.pid)) { this._rallyProg = this.prog; this._rallyAt = this._home(); return; }
     const total = this._cum[this._cum.length - 1];
     let bestD = Infinity, bestFrac = null;
     for (const st of sim.towerSites?.[this.lane] || []) {
@@ -421,7 +456,7 @@ export class BotBrain {
       else this._faceLaneFwd(h);
       return;
     }
-    this._moveToward(h, u, this._rallyAt || this.sim.basePos[this.side], dt);
+    this._moveToward(h, u, this._rallyAt || this._home(), dt);
     if (t) { this._face(h, t.x, t.z); this._fire(t.id, 'light'); return; }
     this._faceLaneFwd(h);
   }

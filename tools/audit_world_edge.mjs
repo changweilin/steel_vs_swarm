@@ -50,7 +50,7 @@
 // 讀原文走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabFn, grabBlock } from './audit_src.mjs';
 import {
-  WORLD_EDGE, edgeWallInsetM, heroTallestH, edgeWallHM, edgeWallDeepM, edgeBufferM,
+  WORLD_EDGE, edgeWallInsetM, heroTallestH, edgeWallHM, edgeWallDeepM, edgeBufferM, mapArg,
   objHeightMax, curveHorizonM, curveMaxEdgeM, CHARACTERS, charKind, heroTargetH, xzToLL, WATER,
   SLOPE, slopeDeg,
 } from '../public/js/data.js';
@@ -438,8 +438,8 @@ console.log('\nⅤ 緩衝空間:延伸可視距離、不可進入、貼地貌拼
 {
   t('terrain.js 自 data.js import edgeBufferM(不是自己算一份深度)',
     /edgeBufferM/.test(terrSrc.split('\n').find((l) => l.includes("from './data.js'")) || ''));
-  t('裙的深度吃 edgeBufferM(mini)、外帶細度吃 curveMaxEdgeM()(與水面同一把尺)',
-    /const B = edgeBufferM\(mini\), OUT = Math\.max\(1, Math\.ceil\(B \/ curveMaxEdgeM\(\)\)\)/.test(terrCode));
+  t('裙的深度吃 edgeBufferM(mapArg(cfg))、外帶細度吃 curveMaxEdgeM()(與水面同一把尺)',
+    /const B = edgeBufferM\(mapArg\(cfg\)\), OUT = Math\.max\(1, Math\.ceil\(B \/ curveMaxEdgeM\(\)\)\)/.test(terrCode));
   // 深度只准有一個數:裙自己算完之後對外交出 `bufferM`,消費端(緩衝布景 / 視線背景 /
   // 地貌底毯)一律讀它 —— 它們各自再呼叫一次 edgeBufferM() 就是四份可能不同步的深度,
   // 而漏傳 mini 的那一份會把物件擺到裙外的虛空裡(2026-08-13 迷你地圖)
@@ -506,11 +506,11 @@ console.log('\nⅤ-b 外緣裙行為直測(執行 terrain.js 原文)');
     // 沙箱的自由變數清單 MUST 跟著 terrain.js 走:裙的 uvOf 自 2026-08-10 起改吃 `xzToLL`
     // (地圖主方位的逆旋轉)、2026-08-11 起多一個對外的 `bufferHeightAt` —— 漏掉就是
     // ReferenceError,而那正是這一段存在的理由
-    const sandbox = new Function('THREE', 'mini', 'edgeBufferM', 'curveMaxEdgeM', 'minX', 'maxX', 'minZ', 'maxZ', 'N', 'minH', 'maxH',
+    const sandbox = new Function('THREE', 'cfg', 'mapArg', 'edgeBufferM', 'curveMaxEdgeM', 'minX', 'maxX', 'minZ', 'maxZ', 'N', 'minH', 'maxH',
       'heightAt', 'imagery', 'bbox', 'lon2tx', 'lat2ty', 'paintTerrainTones', 'center', 'mat', 'group', 'waterY', 'waterMat', 'xzToLL',
       `let bufferHeightAt = null, bufferM = 0;\n${blk}\nreturn bufferHeightAt;`);
     outer = sandbox(
-      TH, false, edgeBufferM, curveMaxEdgeM, mnX, mxX, mnZ, mxZ, N, mnH, mxH, hAt, imagery,
+      TH, {}, mapArg, edgeBufferM, curveMaxEdgeM, mnX, mxX, mnZ, mxZ, N, mnH, mxH, hAt, imagery,
       { minLng: 0, maxLng: 1, minLat: 0, maxLat: 1 }, (l) => l, (l) => l,
       (g, p) => { g.att.color = new BA(new Float32Array(p.length), 3); }, { lat: 25, lng: 121 }, {}, { add() {} }, 2, {}, xzToLL);
     return meshes;
