@@ -7,12 +7,34 @@
 //   背頂 = tboxF 艙盒(前通風柵)+ latheF 雷達碟(桅杆 + 饋源三桿,★ 圖頂部招牌件);
 //   臉 = prismF 蒼白臉板 + 雙大複眼(torusF 眶環 + sphF 玻璃頂)+ 小眼列 ×6 + torusF 弧眉
 //        + 口部通風柵;面鬚 = chainF 三節收分 ×5(垂墜前捲)+ cablesF 側細鬚;
-//   步行腿 ×4 = 鏈契約不動(root+四節小 k),節身改 tboxF 甲殼 + latheF 側關節盤 + hydCyl
-//        活塞 + 雙爪蹄(★ 圖是甲殼多節腿不是軟管);
 //   持武觸手 ×4 = chainF 六節環節(節間 IRON 關節環 + 腹面吸盤列),生根點方位 = 對應
 //        步行腿 (±legX, fz/hz) 的方位(章魚八臂環狀輻射、上下成對;_tentAt 同一份推導),
 //        自錨點向外上弧起再回捲;前對持 25mm 空爆機砲 / 諧振器 orb、後對各托一枚攔截彈;
 //   腹下 = chainF 虹吸管 + 發射軌條;全機纜束 = cablesF(罩下垂落,★ 圖前肩明顯)。
+// 2026-08-13 使用者:「下四隻觸手連接點不變,但零件組成與連接要跟上四隻觸手一樣,
+//   差在功能是移動,不拿武器」—— 步行腿由「tboxF 甲殼楔台 + latheF 關節盤 + hydCyl 活塞 +
+//   爪蹄」的**機械腿**改成與持武觸手同一種生物:節身/關節環/吸盤全部改吃同一份 `TENT`
+//   參數源與同一支 `chainF`(見 `_tentLeg` 檔頭的軸向轉換推導)。三件事一格未動:
+//   ① 生根座標(frame.legX/fz/hz/hipY 與逐節 len);② 鏈契約(仍回傳 segLimbF 的 segs ⇒
+//   進 rig.chFL… 由 locomotion softLeg 逐節驅動,MUST NOT 換成 chainF —— 那是 rig.tents
+//   的另一套結構,換過去四條腿當場不動而靜止那一幀還是對的);③ 持武觸手那四隻的幾何。
+//   差別只有:粗細 ×LEG_F(承重)+ 末端是著地的觸手梢(密集吸盤、微捲)而不是爪蹄/槍口。
+// 2026-08-13 使用者手繪稿 + 原句:「克蘇魯的下觸手不要垂直地面,而是外延且呈現 S 型曲線,
+//   上觸手角度 OK 但也 S 曲線」——上一輪的四條腿 base(0.16/−0.1)累積下來幾乎是直柱,
+//   上四隻的 rot0/rotD 是**單調同號**遞增 ⇒ 只彎得出 C 弧,兩者都不是 S。本輪兩組同時改,
+//   而且用**同一種語言**:S = 逐節相對角**在鏈中途變號**,而整條 S 落在「該觸手自己的
+//   徑向鉛直面」內(上四隻本來就有 `_tentAt.yaw`,下四隻本輪補上同一份方位角)。
+//   ⇒ 八隻觸手都是「自體側向外弧起 → 中段回勾 → 梢端再翻」的同一條曲線,只差朝上/朝下。
+//
+//   兩個驅動器的既成事實(改動前逐字核對 public/js/locomotion.js 原文):
+//     softLeg(:311) / flexChain(:92) / tentGuard(:328) 全部寫 `j.g.rotation.x = j.base + …`
+//     stepQuad(:730) 對腿根寫 `rig.legFL.rotation.x = …`;jump/cast 那幾處是 `rotation.x +=`。
+//   ⇒ ① 逐節 `base`(靜態 x 角)被保留,行進波疊在它上面;② **沒有任何一處寫 y/z**,
+//      故建構期設在樞軸 Group 上的 rotation.y(方位)/ rotation.z(外撇 + S)恆存活。
+//   尤拉序:樞軸 Group 用 three 預設 'XYZ' ⇒ R = Rx·Ry·Rz(Rz 先作用於向量、Rx 最後)。
+//      腿根:Rz(外撇) → Ry(徑向方位) → Rx(步態擺動,繞**身體** x 軸 ⇒ 前後擺一格未動)。
+//      彎曲軸恆為 Ry(ψ)·(0,0,1) = (sinψ, 0, cosψ) —— 與徑向 (cosψ, 0, −sinψ) 正交且水平
+//      ⇒ 逐節的 Rz 全部繞同一根水平軸 ⇒ S 形嚴格落在同一個鉛直面內,不會被扭成螺旋。
 import * as THREE from 'three';
 import {
   matF, dimF, bxF, cylF, sphF, coneF, torusF, tboxF, prismF, latheF, finF, fanF, chainF, cablesF,
@@ -21,6 +43,35 @@ import {
 
 // 本機專用色:攔截彈淺鋼灰(★ 圖的白灰飛彈)/ 複眼玻璃深藍
 const STEEL2 = 0xcfd8e0, GLASS = 0x16222e;
+
+// ── 八隻觸手的**唯一一份輪廓參數**(上四隻持武 / 下四隻步行同吃)──────────────
+// 持武觸手直接把它餵給 chainF;步行觸手逐節餵同一支 chainF(n:1),取同一條收分曲線
+// ⇒ 節身粗細比、節間關節環、腹面吸盤的尺寸規則只有這一份,改一次兩邊一起動。
+const TENT = { n: 6, len0: 0.7, len1: 0.36, r0: 0.16, r1: 0.055, seg: 8 };
+const tentR = (u) => TENT.r0 + (TENT.r1 - TENT.r0) * u;   // = chainF 內建的收分同式
+const LEG_F = 1.3;   // 步行觸手承重 ⇒ 比持武觸手粗;粗細是使用者許可的唯一形狀差異
+
+// ── 八隻觸手共用的 **S 形語彙**(逐節相對角;正 = 朝外弧起,負 = 回勾)────────────
+// 判準只有一條:序列**中途變號** ⇒ 曲率換邊 ⇒ 側視是 S 而不是 C。單調同號(上一輪的
+// rot0 + i·rotD)不管累積多大都只彎得出 C —— 這是本輪兩組一起要收掉的那件事。
+// 下四隻(步行):寫進逐節 rotation.z(徑向鉛直面內);上四隻(持武):寫進逐節
+// rotation.x(chainF 本來的彎曲軸,root 已由 _tentAt.yaw 轉到同一個徑向面)。
+// d1 實測:累積 [0.58,0.88,0.66,0.26,0.08] 拍出來讀成「斜插的直棍」——S 要看得出來,
+// 靠的不是「有沒有變號」而是**兩段的傾角落差**。d1b 把上段推到 60°、下段壓到近 0°:
+const LEG_S = [0.72, 0.33, -0.45, -0.46, -0.16];   // 累積 0.72 / 1.05 / 0.60 / 0.14 / −0.02
+const LEG_TIP_Z = 1.05;                            // 觸手梢再外翻(續在同一個徑向面內)
+// 上四隻:前對 / 後對只差整體 ×0.98(維持既有前後細微差),角度與生根點一格未動。
+// d1 的 [0.64,0.68,0.56,0.18,−0.28,−0.38] 在第 4 關節一次轉 0.46 rad ⇒ 正面看是個折角。
+// d1b 把**逐節差**壓在 0.36 以內(0/−0.12/−0.28/−0.36/−0.24)= 曲率連續變號 = 平滑的 S。
+// d1c 再整組 +0.06(逐節差逐位元不變 ⇒ S 的形狀不動,只是整條多捲一點):d1b 的梢端翻得
+// 太開,頂端頂出 distF 0.75 的取景框;峰值 2.20 讓中段捲回舊制那個高度再往外上翹。
+const TENT_S = [0.68, 0.68, 0.56, 0.28, -0.08, -0.32];   // 累積峰 2.20 → 回勾到 1.80
+// 腿長:S 形把鉛直落差換成水平外延 ⇒ 節長 MUST 補回去,否則四隻腳一起離地。
+// 逐節 cos(累積角) 加權和 = 2.292(直柱版 2.737)⇒ 節長 ×1.06;最低點 −0.420
+// (直柱版 −0.665)—— 刻意只補一半:補滿(d1 的 ×1.14)整台撐出 distF 0.75 的取景框,
+// 而少補的那 0.25m 表現成「機體更趴」= 章魚該有的樣子,不是缺陷。
+// sin 加權和 = 1.448 + 梢端 0.220 = 單邊外延 1.67m 就是換來的東西。
+const LEG_LEN = [0.74, 0.65, 0.59, 0.51, 0.42];
 
 export default {
   label: '證明完畢(s07 機甲・頭足類)', hue: 0x7fd8ff, kind: 'quad', height: 4.8,
@@ -36,8 +87,8 @@ export default {
     ['外套膜(囊狀主體)', 'latheF 橢殼(前後拉長)+ torusF 腹縫肋環 + tboxF 三片深色背甲罩 + 罩下 cablesF 纜束 ×2'],
     ['背頂(艙盒 + 雷達碟)', 'tboxF 艙盒(bxF 通風柵 ×3)+ latheF 雷達碟(cylF 桅杆/饋源三桿 + sphF 饋源燈)'],
     ['頭(複眼群 + 面鬚)', 'prismF 蒼白臉板 + 雙大複眼(torusF 眶環 + sphF 玻璃頂)+ 小眼列 ×6 + torusF 弧眉 + 口柵;面鬚 = chainF 三節收分 ×5 + cablesF 側細鬚'],
-    ['觸手步行腿 ×4(五節行進波)', '節身 tboxF 甲殼(逐節收分)+ latheF 側關節盤 + hydCyl 活塞 + prismF 根部護甲弧板 + 雙爪蹄(tboxF 爪 + coneF 後距)'],
-    ['持武觸手 ×4(rig.tents)', 'chainF 六節環節(IRON 關節環 + 腹面吸盤列)+ sphF 球窩罩;生根點 = 對應步行腿方位貼殼收斂(右前/左前/右後/左後上下成對),向外上弧起再回捲;末端世界對齊樞軸(槍口恆朝前)'],
+    ['觸手步行腿 ×4(五節行進波 + S 形外延)', '零件組成同持武觸手(共用 TENT 參數源與同一支 chainF):收分環節身 + IRON 節間關節環 + 腹面吸盤(朝徑向內側,逐節一顆、節越遠越小)+ sphF 根部球窩罩;末端 = 兩節回勾的著地觸手梢(吸盤加密)。腿根 rotation.y 轉到該腿徑向方位、逐節 rotation.z 走 LEG_S(+ + − − −,中途變號 = S 形;上段外撇 60°、下段回到近鉛直)⇒ 自體側向外弧起 → 中段回勾 → 梢端外翻躺地,單邊外延 1.67m;節長 ×1.06 把 S 吃掉的鉛直落差補回一半,機體因此比直柱版低伏 0.245m。粗細 ×1.3(承重)'],
+    ['持武觸手 ×4(rig.tents)', 'chainF 六節環節(IRON 關節環 + 腹面吸盤列)+ sphF 球窩罩;生根點與根部三角 = 對應步行腿方位貼殼收斂(右前/左前/右後/左後上下成對),一格未動;逐節彎度改吃 TENT_S(+ + + + − −)⇒ 向外上弧起、中段捲到頂再回勾把梢端往外上翻 = 與步行腿同一種 S 形語言;末端世界對齊樞軸(槍口恆朝前)'],
     ['武裝(25mm 空爆機砲 / 諧振器 / 攔截彈 ×2)', '機砲 = tboxF 機匣 + latheF 階狀砲身 + 彈鼓;諧振器 = latheF 托座 + sphF 諧振球 + torusF 環 ×2;攔截彈 = latheF 彈體 + coneF 彈頭 + finF 尾翼 ×4'],
     ['腹部(虹吸管 + 發射軌)', 'chainF 三節下垂虹吸管 + bxF 發射軌條 ×2'],
   ],
@@ -158,58 +209,115 @@ export default {
   },
   legF(c) { return this._tentLeg(c, 1); },
   legH(c) { return this._tentLeg(c, -1); },
-  // 步行腿:鏈契約不動(root = 肩基座,stepQuad 直接擺 + 四節小 k 行進波)——
-  // 節身照 ★ 圖改甲殼多節腿:tboxF 收分殼 + latheF 側關節盤 + hydCyl 活塞 + 雙爪蹄
+  // 腹面吸盤(上下八隻**同一支**):一盤一零件,盤徑 ∝ 該節半徑 ⇒ 節越遠盤越小;
+  // 位置 = 節身內彎面(+y_local,離軸 r×0.9)× 節身中段(−len×u)。細件吞不下描邊殼。
+  _suck(c, t, r, len, u = 0.45) {
+    const pad = cylF(t, r * 0.28, r * 0.24, 0.035, 6, 0, r * 0.9, -len * u, c.PAL.lite, { metalness: 0.3 });
+    pad.userData.noOutline = true;
+    return pad;
+  },
+  // ── 步行觸手 ×4:零件組成 = 持武觸手,功能 = 移動(2026-08-13 使用者定案)──────
+  // **鏈契約一格未動**:回傳的仍是 segLimbF 的 segs(root + 四節,base/k/d 逐位元同舊制)
+  // ⇒ 進 rig.chFL/chFR/chHL/chHR,由 locomotion softLeg 逐節驅動(行進波 + 擺動相 S 形)。
+  // 換掉的只有「每一節長什麼樣」:改用建持武觸手的同一支 chainF(n:1)= 收分節身 +
+  // IRON 節間關節環 + 腹面吸盤,係數與收分曲線全部取自 TENT/tentR。
+  //
+  // 軸向轉換(本檔唯一一處,推導寫在這裡免得日後靠記憶重建):
+  //   chainF 的節身沿 **−z**(尾巴慣例),segLimbF 的節沿 **−y**(肢體慣例)⇒ 每節掛一顆
+  //   中介 Group,rotation.order='YXZ' ⇒ R = Ry·Rx(先繞 x 再繞 y):
+  //     Rx(−π/2)·(0,0,−1) = (0,−1,0)   節身轉成朝下(y′ = −z·sin(−π/2))
+  //     Rx(−π/2)·(0, 1,0) = (0,0,−1)   吸盤面(+y_local)落到 −z;再由 Ry(φ) 轉到要的方位
+  //   ⚠ 用 three 預設的 'XYZ'(R = Rx·Ry·Rz)會讓 Ry 先作用 —— 節身被轉到 +y,整條腿朝天上長。
+  //   Ry(φ) 只繞節身自己的軸轉(y 分量不變)⇒ 只換吸盤朝哪一面,節身方向一格不動:
+  //     Ry(φ)·(0,0,−1) = (−sinφ, 0, −cosφ) ⇒ φ = +π/2 → (−1,0,0) = 樞軸 −x。
+  // 吸盤朝哪一面(2026-08-13 改):主彎曲自 base(x,前後)搬到 rotation.z(徑向)之後,
+  //   內凹面不再是前/後而是**徑向內側**;而 root 的 Ry(ψ) 已把樞軸 +x 定義成該腿的外側
+  //   ⇒ 吸盤面 = −x = 朝身體中心,四隻腿**同一個 φ = π/2**(章魚八臂的吸盤一律在口側)。
+  //   舊制那個「前腿 π / 後腿 0」的分流隨主彎曲軸一起退場。
+  //
+  // 徑向方位 ψ(本輪新增;與持武觸手 _tentAt.yaw 是同一個方位、只差初始軸不同):
+  //   要 Ry(ψ)·(1,0,0) = 外側單位向量 (ox,0,oz)。Ry(ψ)·(1,0,0) = (cosψ, 0, −sinψ)
+  //   ⇒ ψ = atan2(−oz, ox) = atan2(−zLeg, sx·legX)(長度是正的、不影響 atan2)。
+  //   實算:FR(+0.95,+0.8) → −0.699,Ry 出 (0.766,0,0.645) = (0.95,0,0.8)/1.242 ✓
+  //         HL(−0.95,−1.1) → +2.283,Ry 出 (−0.654,0,−0.757) = (−0.95,0,−1.1)/1.453 ✓
+  //   持武那邊初始軸是 −z ⇒ ψ' = atan2(−ox,−oz) —— 兩式的差恰是 90°,同一個方位。
   _tentLeg(c, S) {
     const { PAL } = c;
-    const disc = (l, r, y) => {
-      const d = latheF(l, [[0.02, -r * 0.28], [r * 0.85, -r * 0.22], [r, 0], [r * 0.85, r * 0.22], [0.02, r * 0.28]], 10, c.sx * 0.17, y, 0, IRON, { metalness: 0.85 });
-      d.rotation.z = Math.PI / 2;
-      return d;
+    const d = c.dims, zLeg = c.front ? d.fz : d.hz;
+    const yaw = Math.atan2(-zLeg, c.sx * d.legX);       // 樞軸 +x → 該腿的徑向外側
+    const R = (i) => tentR(i / 4) * LEG_F;              // 五節共用 TENT 的收分曲線(u = i/4)
+    const lens = LEG_LEN;
+    const seg = (l, i, len, ring = true) => {
+      const w = new THREE.Group();
+      w.rotation.order = 'YXZ';
+      w.rotation.x = -Math.PI / 2;
+      w.rotation.y = Math.PI / 2;                       // 吸盤面 → 樞軸 −x = 徑向內側
+      l.add(w);
+      chainF(w, {
+        n: 1, len0: len, len1: len, r0: R(i), r1: R(i),
+        rot0: 0, rotD: 0, ring, ringColor: IRON, seg: TENT.seg,
+        drawSeg: (t, k, d2) => { if (i >= 1) this._suck(c, t, d2.r, d2.len); },  // 根節不放(同持武)
+      }, PAL.dark, { metalness: 0.55 });
     };
     const segs = [{
-      len: 0.7,
+      len: lens[0],
       draw: (l) => {
-        // 根節(髖甲):tboxF 收分殼 + 髖側關節盤 + 根部護甲弧板(★ 圖腿根的蒼白弧甲)
-        tboxF(l, { w0: 0.32, d0: 0.34, w1: 0.44, d1: 0.46, h: 0.62 }, 0, -0.33, 0, PAL.mid, { metalness: 0.55 });
-        disc(l, 0.14, -0.08);
-        const fd = prismF(l, [[-0.24, -0.18], [0.24, -0.18], [0.3, 0], [0.19, 0.2], [-0.19, 0.2], [-0.3, 0]], 0.07, c.sx * 0.26, -0.12, 0, PAL.lite, { metalness: 0.45 });
-        fd.rotation.y = c.sx * Math.PI / 2;
+        // 腿根:先把整條腿轉到自己的徑向面(y),再給第一段外撇(z)。
+        // locomotion stepQuad 對 legFL… 只寫 rotation.x ⇒ 這兩個角建構期設一次就恆存活。
+        l.rotation.y = yaw;
+        l.rotation.z = LEG_S[0];
+        // 根部球窩罩:與持武觸手根部同一件。倍率 1.2 而非持武的 1.5 —— 持武那顆有一半埋在
+        // 外套膜裡,腿根整顆露在外面;照抄 1.5×0.75 拍出來是一頂寬過腿身的**扁蘑菇帽**
+        // (c1 實測),讀成獨立的護肩甲而不是觸手鑽進身體的那個窩。絕對尺寸因此回到 ≈0.25
+        // (持武那顆 0.24)= 同一種生物的同一顆關節。
+        const sock = sphF(l, R(0) * 1.2, 0, 0, 0, dimF(PAL.deep, 0.8), { metalness: 0.6 });
+        sock.scale.y = 0.85;
+        seg(l, 0, lens[0], false);      // 根關節環整顆藏在球窩罩內 ⇒ 省一顆(250 顆預算)
       },
     }];
-    const lens = [0.62, 0.55, 0.48, 0.4];
-    const draws = [
-      (l) => {   // 大腿:收分殼 + 膝上關節盤 + 前側活塞
-        tboxF(l, { w0: 0.26, d0: 0.28, w1: 0.34, d1: 0.36, h: 0.58 }, 0, -0.3, 0, PAL.deep, { metalness: 0.6 });
-        disc(l, 0.12, -0.02);
-        hydCyl(l, 0.03, 0.36, -c.sx * 0.05, -0.3, 0.16, 0.14);
-      },
-      (l) => {   // 小腿上節:收分殼 + 關節盤 + 後側活塞
-        tboxF(l, { w0: 0.2, d0: 0.22, w1: 0.27, d1: 0.29, h: 0.52 }, 0, -0.27, 0, PAL.dark, { metalness: 0.6 });
-        disc(l, 0.1, -0.02);
-        hydCyl(l, 0.024, 0.3, c.sx * 0.04, -0.26, -0.13, -0.12);
-      },
-      (l) => {   // 小腿下節:收分殼 + 踝環
-        tboxF(l, { w0: 0.14, d0: 0.16, w1: 0.2, d1: 0.22, h: 0.46 }, 0, -0.24, 0, PAL.deep, { metalness: 0.6 });
-        const r = latheF(l, [[0.11, -0.04], [0.13, 0], [0.11, 0.04]], 8, 0, -0.03, 0, IRON, { metalness: 0.8 });
-        r.rotation.z = Math.PI / 2;
-      },
-      (l) => {   // 蹠節 + 雙爪蹄(★ 圖的小型二爪蹄足)+ 後距
-        tboxF(l, { w0: 0.1, d0: 0.12, w1: 0.14, d1: 0.15, h: 0.3 }, 0, -0.16, 0, GUNMETAL, { metalness: 0.7 });
-        tboxF(l, { w0: 0.2, d0: 0.2, w1: 0.13, d1: 0.15, h: 0.14, sz: 0.03 }, 0, -0.35, 0.03, PAL.deep, { metalness: 0.55 });
-        for (const ox of [-0.06, 0.06]) {
-          const toe = tboxF(l, { w0: 0.06, d0: 0.07, w1: 0.03, d1: 0.035, h: 0.16, sz: 0.03 }, ox, -0.39, 0.13, STEEL2, { metalness: 0.75 });
-          toe.rotation.x = Math.PI / 2 + 0.35;
-        }
-        const spur = coneF(l, 0.035, 0.12, 5, 0, -0.37, -0.1, STEEL2, { metalness: 0.75 });
-        spur.rotation.x = -2.5;
-      },
-    ];
-    lens.forEach((len, i) => segs.push({
-      len, base: (i === 0 ? 0.16 : -0.1) * S, k: 0.16 * S, d: (i + 1) * 0.55,
-      draw: draws[i],
-    }));
+    for (let i = 1; i <= 4; i++) {
+      segs.push({
+        len: lens[i], base: (i === 1 ? 0.16 : -0.1) * S, k: 0.16 * S, d: i * 0.55,
+        draw: (l) => {
+          // 逐節外撇/回勾:softLeg 只寫這顆樞軸的 rotation.x(base + 行進波)⇒ z 存活,
+          // 而且 z 先作用(XYZ)⇒ 靜態 S 與行進波互不轉走、兩者疊加。
+          l.rotation.z = LEG_S[i];
+          seg(l, i, lens[i]);
+          if (i === 4) this._tentTip(c, l, lens[i], R(i));
+        },
+      });
+    }
     return segs;
+  },
+  // 著地的觸手梢(步行觸手專屬;持武觸手那一端掛的是武器):兩節收分小節 + 加密吸盤。
+  // 2026-08-13:續彎自「中介 Group 的 x」搬到**外掛一顆 tw 的 rotation.z** —— 這樣梢端的
+  // 外翻與整條腿的 S 落在同一個徑向鉛直面內(同一種語言);tw 用 three 預設 'XYZ' 且只有 z。
+  // 之後才掛純軸向轉換的 w(x = −π/2、y = π/2),吸盤朝向規則因此與上面五節逐字相同。
+  // 角度帳(節長 LEG_LEN 就是照這本帳反解的,改任一項 MUST 重算):
+  //   末節樞軸累積外撇 = ΣLEG_S = −0.02;+ LEG_TIP_Z 1.05 ⇒ 梢身軸 1.03 rad(59°)。
+  //   chainF 的 rot0/rotD 為正 = 往樞軸 −x(徑向內側)回勾 ⇒ 兩小節軸 = 1.03−0.14 / 1.03−0.44。
+  //   垂直:0.19·cos(0.89) + 0.13·cos(0.59) = 0.120 + 0.108 = 0.228(舊制爪端只有 0.028)。
+  //   五節本身 Σ len·cos(累積) = 2.292 ⇒ 最低點 = 2.1 − 2.292 − 0.228 = −0.420,
+  //   舊制 = 2.1 − 2.737 − 0.028 = −0.665 ⇒ 機體離地面高 0.245m(更趴,章魚該有的樣子)。
+  //   水平:五節 Σ len·sin = 1.448,梢再 +0.220 ⇒ 單邊外延 1.67(舊制近 0)。
+  _tentTip(c, l, len, r) {
+    const tw = new THREE.Group();
+    tw.position.y = -len;
+    tw.rotation.z = LEG_TIP_Z;
+    l.add(tw);
+    const w = new THREE.Group();
+    w.rotation.order = 'YXZ';
+    w.rotation.x = -Math.PI / 2;
+    w.rotation.y = Math.PI / 2;
+    tw.add(w);
+    chainF(w, {
+      n: 2, len0: 0.19, len1: 0.13, r0: r * 0.88, r1: r * 0.42,
+      rot0: 0.14, rotD: 0.30, ring: false, seg: TENT.seg,
+      drawSeg: (t, i, d) => {
+        this._suck(c, t, d.r, d.len, 0.62);
+        if (i === 0) this._suck(c, t, d.r, d.len, 0.24);
+      },
+    }, c.PAL.dark, { metalness: 0.55 });
   },
   mount(c, F) {
     const { PAL, accent } = c;
@@ -227,15 +335,19 @@ export default {
       root.rotation.set(def.pitch, at.yaw, sx * -def.roll);
       F.chest.add(root);
       const { segs, tip } = chainF(root, {
-        n: 6, len0: 0.7, len1: 0.36, r0: 0.16, r1: 0.055,
-        rot0: def.rot0, rotD: def.rotD, ring: true, ringColor: IRON, seg: 8,
-        drawSeg: (t, i, { r, len }) => {
-          // 腹面吸盤列(內彎面;i=0 靠根不放,梢節太細不放)—— 一盤一零件
-          if (i < 1 || i > 4) return;
-          const pad = cylF(t, r * 0.28, r * 0.24, 0.035, 6, 0, r * 0.9, -len * 0.45, PAL.lite, { metalness: 0.3 });
-          pad.userData.noOutline = true;
-        },
+        n: TENT.n, len0: TENT.len0, len1: TENT.len1, r0: TENT.r0, r1: TENT.r1,
+        rot0: 0, rotD: 0, ring: true, ringColor: IRON, seg: TENT.seg,
+        // 腹面吸盤列(內彎面;i=0 靠根不放,梢節太細不放)—— 與步行觸手同一支 _suck
+        drawSeg: (t, i, { r, len }) => { if (i >= 1 && i <= 4) this._suck(c, t, r, len); },
       }, PAL.dark, { metalness: 0.55 });
+      // S 形:chainF 的 rot0 + i·rotD 是**單調同號**的等差級數 ⇒ 曲率恆同號 = 只彎得出 C。
+      // 逐節覆寫成中途變號的序列才是 S(TENT_S:+ + + + − −;累積 0.64/1.32/1.88/2.06/1.78/1.40
+      // —— 中段捲到與舊制 2.01 同高度,再由最後兩節回勾 0.66 rad 把梢端往外上翻)。
+      // 生根點與根部三個角(pitch/roll/yaw)一格未動(使用者:上觸手角度 OK)。
+      // 覆寫 MUST 排在下面 updateMatrixWorld 之前 —— tipP 是拿**當下**世界四元數反解的,
+      // 晚一步就等於用舊姿勢對齊,槍口會歪掉整條 S 的量。
+      // extra() 之後讀 t.rotation.x 當 base,tentGuard 寫 `j.base + …` ⇒ S 與蠕動波共存。
+      segs.forEach((t, i) => { t.rotation.x = def.s[i]; });
       const tipP = new THREE.Group();
       tipP.position.set(0, 0, -0.4);
       tip.add(tipP);
@@ -243,10 +355,11 @@ export default {
       tipP.quaternion.copy(tip.getWorldQuaternion(new THREE.Quaternion()).invert());
       return { segs, tip, tipP };
     };
-    // 彎度平均分到每一關節(累積 ≈ 0.6π:向外上弧起、頂端回捲但不過頂下扎 —— 過捲會讓
-    // 梢節垂到臉前);roll 把捲曲面往外傾(★ 圖的側向迴圈外倒,梢端收在外上角不擠向中線)
-    const front = { pitch: 0.95, roll: 0.75, rot0: 0.26, rotD: 0.03 };
-    const rear = { pitch: 0.9, roll: 0.75, rot0: 0.24, rotD: 0.028 };
+    // 彎度逐節給(TENT_S:中段捲到與舊制同高、末兩節回勾 ⇒ S 形而不是 C 弧);
+    // roll 把捲曲面往外傾(★ 圖的側向迴圈外倒,梢端收在外上角不擠向中線)。
+    // 後對整體 ×0.98 = 沿用舊制那一點點前後差(舊:0.26/0.03 對 0.24/0.028)。
+    const front = { pitch: 0.95, roll: 0.75, s: TENT_S };
+    const rear = { pitch: 0.9, roll: 0.75, s: TENT_S.map((v) => v * 0.98) };
     const tGun = mkTent(1, true, front), tOrb = mkTent(-1, true, front);
     const tPodL = mkTent(-1, false, rear), tPodR = mkTent(1, false, rear);
     // 25mm 空爆機砲(右上觸手梢):tboxF 機匣 + latheF 階狀砲身 + 側彈鼓 + 砲口充能環
