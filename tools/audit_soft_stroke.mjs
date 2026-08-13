@@ -416,6 +416,9 @@ console.log('\nⅧ 稻浪 / 草波 / 芒草波(ground.js 消費端;2026-08-04 �
     translate(x, y) { this.top += y; return this; }
     rotateX() { return this; }
     rotateZ() { return this; }
+    // 與 three 的 BufferGeometry 同一組就地變換 API:縮放只動 y 那一軸的頂端
+    // (漏了這一支的症狀是整支稽核在「有人用了 .scale()」時爆掉,而紅字的理由與軟性無關)
+    scale(sx, sy) { this.top *= sy; return this; }
   }
   // 置中幾何的頂端 = 半高;球狀是半徑。與 three 同值(速記的 .translate 再往上疊)。
   // **未列名的幾何一律回半徑 0 的樁而不是丟例外**:這一段驗的是「哪些零件是軟性」與

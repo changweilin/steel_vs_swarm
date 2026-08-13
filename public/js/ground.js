@@ -211,9 +211,90 @@ function baseFill(hex, rnd) {
 const SEASON_I = { spring: 0, summer: 1, autumn: 2, winter: 3 };
 const seasonI = (season) => SEASON_I[season] ?? 1;     // 認不得的季節退夏(同 ENV.seasons 預設)
 
+// ==== 底毯地表的代表色(2026-08-13 使用者需求「同一類型不要短距離快速變化子類別」)====
+// 底色本來只寫在各 PAINTERS 的第一行 `baseFill(0x…)` 裡 —— 那等於「畫得出來才知道它是什麼
+// 顏色」。而使用者這一輪的兩件事都要在**畫之前**就知道顏色:
+//   ①底毯選款清單要照顏色排序(索引相鄰 = 顏色相鄰),雜訊掃過去才是漸層而不是綠→紅→灰;
+//   ②顏色劇烈變化處要補畫分界線(borderKindOf 的同地貌分支)。
+// ⇒ 代表色收成**一張表**,畫筆與這兩個消費端同吃(MUST NOT 在排序/界線那邊另抄一份色表:
+//    改一支畫筆的底色而排序還照舊 = 清單順序悄悄不再是漸層,而畫面上只是「又開始跳色了」)。
+//
+// 三條:
+//  ①名冊 MUST **恰好**涵蓋「會出現在底毯上的款」(CARPET ∪ ENCLAVE_STYLES[].carpet 的聯集,
+//    稽核逐款雙向比對)—— 特徵拼圖(球場/加油站/工地)不進底毯格網,沒有排序也沒有界線可言;
+//  ②該款的畫筆 MUST 真的吃這張表(稽核抽原文驗 `baseFill(SUB_COL.<款>` 逐款到位);
+//  ③**磚瓦地是具名例外**:它的底是磚縫砂漿、讀出來的顏色是那五塊磚 ⇒ 代表色由磚色**推導**
+//    (BRICK_C 的平均),MUST NOT 手寫第二個數字。
+const BRICK_C = ['#b06a4a', '#a35f3f', '#bd7855', '#9d5a3e', '#b57050'];
+const hexOf = (css) => parseInt(css.slice(1), 16);
+const meanHex = (list) => {
+  let r = 0, g = 0, b = 0;
+  for (const c of list) { const h = hexOf(c); r += h >> 16 & 255; g += h >> 8 & 255; b += h & 255; }
+  const n = list.length;
+  return ((Math.round(r / n) << 16) | (Math.round(g / n) << 8) | Math.round(b / n));
+};
+export const SUB_COL = {
+  // 綠地
+  turf: 0x7db159, lawn: 0x6fae5a, meadow: 0xb3a468, bushfield: 0x6f9a4c, flowerfield: 0x78a854,
+  arrowbamboo: 0x8ba757, deadwood: 0x9c9070, fallenlogs: 0x7c8a55, park: 0x74a85c,
+  // 裸露地
+  wild: 0x8d835f, gravel: 0x9a9384, sand: 0xdcc28f, mud: 0x6d5940, crackedearth: 0xb08d5f,
+  redsoil: 0xa05f42, deadforest: 0x6b655c, steppe: 0xbca95e,
+  // 市區
+  concrete: 0xa2a49e, pavement: 0x98948b, brick: meanHex(BRICK_C),
+  // 濕地 / 水域
+  marsh: 0x5d5647, lotus: 0x41616b, watertile: 0x2f6f96, deepwater: 0x1c4560,
+  // 高地
+  plateau: 0xa08c6a, icefield: 0xd8e8ee, scree: 0x8f8c84,
+};
+// 感知色距(redmean 近似;值域 0~765)。純函式、零查表、零依賴 —— 純 RGB 歐氏距離會把
+// 「深綠 vs 深藍」判得比「草綠 vs 土黃」還近,而使用者說的「突兀」量的正是人眼的那把尺。
+export function colDist(h1, h2) {
+  const r1 = h1 >> 16 & 255, g1 = h1 >> 8 & 255, b1 = h1 & 255;
+  const r2 = h2 >> 16 & 255, g2 = h2 >> 8 & 255, b2 = h2 & 255;
+  const rm = (r1 + r2) / 2, dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
+  return Math.sqrt((2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db);
+}
+// 底毯選款清單的顏色排序(純函式;零 rnd / 零 Math.random,§2.3)。
+// 病灶:`cellSubAt` 是「低頻雜訊 t → 清單索引」,而清單本身**不是**色階 —— 綠地那一份的
+// 索引 8→9→10 是 meadow(土黃)→ deadwood(灰)→ turf(綠)。t 平滑地走過去,顏色卻在跳。
+// 選款區塊(CARPET_LOT)只能讓它**跳得沒那麼頻繁**,跳的幅度一格未動。
+// 新制:排成一條顏色路徑 ⇒ 索引相鄰 = 顏色相鄰,雜訊掃過清單就是一條漸層帶。
+//   ①**重複項 = 權重**,排序 MUST 保留重數並讓同款相鄰(權重變成漸層上的一段平台);
+//   ②路徑起點取離色彩重心最遠的那一款 —— 從中間起步的話會往兩邊各走一半,接回來就是一個
+//     大跳(貪婪最近鄰的經典壞法);
+//   ③同距並列取清單原序(決定性,跨客戶端逐位元一致)。
+export function carpetOrder(list, colOf = (s) => SUB_COL[s]) {
+  const uniq = [];
+  for (const s of list) if (!uniq.includes(s)) uniq.push(s);
+  // 只有「一款」或「有款查不到代表色」才原序退回。**兩款也要排** —— 那不是為了排序,是為了
+  // 把同款收成一段(['lotus','marsh','lotus'] 這種清單裡的 lotus 被 marsh 從中間切開,
+  // 走過去就是 荷塘→沼澤→荷塘 的來回跳)
+  if (uniq.length <= 1 || uniq.some((s) => colOf(s) == null)) return list.slice();
+  let cr = 0, cg = 0, cb = 0;
+  for (const s of uniq) { const h = colOf(s); cr += h >> 16 & 255; cg += h >> 8 & 255; cb += h & 255; }
+  const ctr = ((Math.round(cr / uniq.length) << 16) | (Math.round(cg / uniq.length) << 8)
+               | Math.round(cb / uniq.length));
+  let start = uniq[0], bd = -1;
+  for (const s of uniq) { const d = colDist(colOf(s), ctr); if (d > bd) { bd = d; start = s; } }
+  const path = [start], left = uniq.filter((s) => s !== start);
+  while (left.length) {
+    const cur = colOf(path[path.length - 1]);
+    let bi = 0, bdd = Infinity;
+    for (let i = 0; i < left.length; i++) {
+      const d = colDist(cur, colOf(left[i]));
+      if (d < bdd) { bdd = d; bi = i; }
+    }
+    path.push(left.splice(bi, 1)[0]);
+  }
+  const out = [];
+  for (const s of path) for (const q of list) if (q === s) out.push(s);
+  return out;
+}
+
 const PAINTERS = {
   turf(g, S, rnd) {                                    // 草皮:筆刷色塊 + 草叢短撇 + 野花
-    g.fillStyle = baseFill(0x7db159, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.turf, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 22; i++) {
       g.fillStyle = `rgba(214,238,160,${0.10 + rnd() * 0.12})`;
       brushBlob(g, rnd() * S, rnd() * S, 14 + rnd() * 30, rnd);
@@ -229,7 +310,7 @@ const PAINTERS = {
     }
   },
   lawn(g, S, rnd) {                                    // 市區草坪:割草機平行紋
-    g.fillStyle = baseFill(0x6fae5a, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.lawn, rnd); g.fillRect(0, 0, S, S);
     for (let x = 0; x < S; x += 64) {
       g.fillStyle = 'rgba(255,255,255,0.09)';
       g.fillRect(x, 0, 32, S);
@@ -241,7 +322,7 @@ const PAINTERS = {
     }
   },
   meadow(g, S, rnd) {                                  // 芒草原:直立草束筆觸 + 抽穗點
-    g.fillStyle = baseFill(0xb3a468, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.meadow, rnd); g.fillRect(0, 0, S, S);
     const cs = ['#d9d0a8', '#8f8352', '#c4b87e'];
     g.lineWidth = 2; g.lineCap = 'round';
     for (let i = 0; i < 110; i++) {
@@ -253,7 +334,7 @@ const PAINTERS = {
     for (let i = 0; i < 24; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4, 0, 7); g.fill(); }
   },
   bushfield(g, S, rnd) {                               // 灌木叢地:深色團塊 + 左上受光
-    g.fillStyle = baseFill(0x6f9a4c, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.bushfield, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 14; i++) {                     // 灌木淡影(灌木本體 = 3D 實例;受光壓淡不立體)
       const x = rnd() * S, y = rnd() * S, r = 12 + rnd() * 20;
       g.fillStyle = '#537c39'; brushBlob(g, x, y, r, rnd);
@@ -261,7 +342,7 @@ const PAINTERS = {
     }
   },
   flowerfield(g, S, rnd) {                             // 花田:彩色花帶漂流在綠底上
-    g.fillStyle = baseFill(0x78a854, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.flowerfield, rnd); g.fillRect(0, 0, S, S);
     const cs = ['#e88bb0', '#f2d24a', '#f5f5f5', '#c77ddb', '#e8734a'];
     for (let i = 0; i < 7; i++) {
       const c = cs[(rnd() * cs.length) | 0];
@@ -454,7 +535,7 @@ const PAINTERS = {
     }
   },
   wild(g, S, rnd) {                                    // 荒野:乾草/土斑駁色塊
-    g.fillStyle = baseFill(0x8d835f, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.wild, rnd); g.fillRect(0, 0, S, S);
     const cs = ['rgba(124,138,85,0.45)', 'rgba(156,141,102,0.45)', 'rgba(132,122,88,0.4)'];
     for (let i = 0; i < 18; i++) {
       g.fillStyle = cs[(rnd() * cs.length) | 0];
@@ -464,7 +545,7 @@ const PAINTERS = {
     for (let i = 0; i < 16; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.2 + rnd() * 1.6, 0, 7); g.fill(); }
   },
   gravel(g, S, rnd) {                                  // 碎石:兩階色卵石 + 硬邊高光點
-    g.fillStyle = baseFill(0x9a9384, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.gravel, rnd); g.fillRect(0, 0, S, S);
     const cs = ['#a8a294', '#b4ae9e', '#8c8678'];
     for (let i = 0; i < 70; i++) {
       const x = rnd() * S, y = rnd() * S, r = 3 + rnd() * 7;
@@ -478,7 +559,7 @@ const PAINTERS = {
     }
   },
   sand(g, S, rnd) {                                    // 沙漠風沙:平行風紋波線 + 亮脊
-    g.fillStyle = baseFill(0xdcc28f, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.sand, rnd); g.fillRect(0, 0, S, S);
     for (let y = 8; y < S; y += 13) {
       const ph = rnd() * 7, amp = 2 + rnd() * 3;
       for (const [c, w, dy] of [['rgba(178,144,90,0.85)', 3, 0], ['rgba(255,244,214,0.5)', 1.5, -2.5]]) {
@@ -493,7 +574,7 @@ const PAINTERS = {
     }
   },
   mud(g, S, rnd) {                                     // 越野泥地:車轍雙線 + 水窪
-    g.fillStyle = baseFill(0x6d5940, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.mud, rnd); g.fillRect(0, 0, S, S);
     g.lineCap = 'round';
     for (let t = 0; t < 3; t++) {                      // 三道彎曲車轍(左右輪距 ±7)
       const x0 = 30 + rnd() * (S - 60), ph = rnd() * 7, amp = 8 + rnd() * 10;
@@ -517,7 +598,7 @@ const PAINTERS = {
     }
   },
   crackedearth(g, S, rnd) {                            // 龜裂旱地:裂縫網 + 泥板塊亮面
-    g.fillStyle = baseFill(0xb08d5f, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.crackedearth, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 8; i++) {
       g.fillStyle = 'rgba(255,255,255,0.10)';
       brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 18, rnd);
@@ -538,7 +619,7 @@ const PAINTERS = {
     }
   },
   redsoil(g, S, rnd) {                                 // 紅土地:侵蝕條痕 + 土礫
-    g.fillStyle = baseFill(0xa05f42, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.redsoil, rnd); g.fillRect(0, 0, S, S);
     g.lineCap = 'round';
     for (let i = 0; i < 40; i++) {
       const x = rnd() * S, y = rnd() * S, l = 10 + rnd() * 30;
@@ -550,7 +631,7 @@ const PAINTERS = {
     for (let i = 0; i < 14; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
   },
   concrete(g, S, rnd) {                                // 水泥地:伸縮縫格線 + 髮絲裂縫 + 污漬(降亮:遠處不刷白)
-    g.fillStyle = baseFill(0xa2a49e, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.concrete, rnd); g.fillRect(0, 0, S, S);
     g.strokeStyle = '#8d8f8b'; g.lineWidth = 3;
     for (let p = 0; p <= S; p += 85) {
       g.beginPath(); g.moveTo(p, 0); g.lineTo(p, S); g.stroke();
@@ -570,7 +651,7 @@ const PAINTERS = {
   },
   brick(g, S, rnd) {                                   // 磚瓦地:交丁磚縫 + 每磚色差 + 受光邊
     g.fillStyle = '#b3a698'; g.fillRect(0, 0, S, S);
-    const cs = ['#b06a4a', '#a35f3f', '#bd7855', '#9d5a3e', '#b57050'];
+    const cs = BRICK_C;   // 代表色 SUB_COL.brick 由這一份推導(見該表檔頭 ③)
     const bw = 34, bh = 18;
     for (let row = 0; row * bh < S; row++) {
       const off = row % 2 ? -bw / 2 : 0;
@@ -583,7 +664,7 @@ const PAINTERS = {
     }
   },
   pavement(g, S, rnd) {                                // 人行道磚:方格地磚 + 雙色交錯(降亮:遠處不刷白)
-    g.fillStyle = baseFill(0x98948b, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.pavement, rnd); g.fillRect(0, 0, S, S);
     for (let y = 0; y < S; y += 32) {
       for (let x = 0; x < S; x += 32) {
         if ((x / 32 + y / 32) % 2 < 1) { g.fillStyle = 'rgba(255,255,255,0.07)'; g.fillRect(x, y, 32, 32); }
@@ -652,7 +733,7 @@ const PAINTERS = {
     g.beginPath(); g.moveTo(S * 0.72, OUT); g.lineTo(S * 0.72, OUT + LANES * LW); g.stroke();
   },
   marsh(g, S, rnd) {                                   // 濕地泥灘:混濁紫水窪 + 蘆葦筆觸(沼澤識別色 = 濁紫)
-    g.fillStyle = baseFill(0x5d5647, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.marsh, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 8; i++) {
       const x = rnd() * S, y = rnd() * S, r = 10 + rnd() * 16;
       g.fillStyle = 'rgba(128,106,150,0.65)'; brushBlob(g, x, y, r, rnd);
@@ -666,7 +747,7 @@ const PAINTERS = {
     }
   },
   lotus(g, S, rnd) {                                   // 荷塘:深水 + 天光 + 水深暗影(荷葉 = 3D 實例)
-    g.fillStyle = baseFill(0x41616b, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.lotus, rnd); g.fillRect(0, 0, S, S);
     g.fillStyle = 'rgba(255,255,255,0.10)';
     for (let i = 0; i < 10; i++) g.fillRect(rnd() * S, rnd() * S, 16 + rnd() * 30, 2);   // 水面天光
     for (let i = 0; i < 8; i++) {                      // 水下暗影:水深錯落
@@ -675,7 +756,7 @@ const PAINTERS = {
     }
   },
   watertile(g, S, rnd) {                               // 水域(淺):亮藍波光弧 + 岸沫點 —— 一眼可辨「這是水」
-    g.fillStyle = baseFill(0x2f6f96, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.watertile, rnd); g.fillRect(0, 0, S, S);
     g.lineCap = 'round';
     for (let i = 0; i < 16; i++) {                     // 波光弧(同向排列 = 水流感)
       const x = rnd() * S, y = rnd() * S, r = 8 + rnd() * 16;
@@ -688,7 +769,7 @@ const PAINTERS = {
     for (let i = 0; i < 6; i++) brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 14, rnd);   // 水色深斑
   },
   deepwater(g, S, rnd) {                               // 水域(深):暗藍底 + 稀疏天光 —— 與淺水同語彙、更深沉
-    g.fillStyle = baseFill(0x1c4560, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.deepwater, rnd); g.fillRect(0, 0, S, S);
     g.fillStyle = 'rgba(190,224,246,0.16)';
     for (let i = 0; i < 8; i++) g.fillRect(rnd() * S, rnd() * S, 12 + rnd() * 26, 1.6);  // 稀疏天光
     for (let i = 0; i < 9; i++) {                      // 深水暗湧
@@ -703,7 +784,7 @@ const PAINTERS = {
   },
   // ======== 綠地擴充 ========
   arrowbamboo(g, S, rnd) {                             // 箭竹林:密集細稈直豎 + 竹節 + 斜葉短撇
-    g.fillStyle = baseFill(0x8ba757, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.arrowbamboo, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 10; i++) {
       g.fillStyle = `rgba(60,96,44,${0.10 + rnd() * 0.1})`;
       brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 22, rnd);
@@ -724,7 +805,7 @@ const PAINTERS = {
     }
   },
   deadwood(g, S, rnd) {                                // 枯木林:乾草底 + 細碎小枝(枯木本體 = 3D 實例)
-    g.fillStyle = baseFill(0x9c9070, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.deadwood, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 12; i++) {
       g.fillStyle = `rgba(120,110,88,${0.2 + rnd() * 0.2})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 20, rnd);
@@ -739,7 +820,7 @@ const PAINTERS = {
     for (let i = 0; i < 18; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.3, 0, 7); g.fill(); }
   },
   fallenlogs(g, S, rnd) {                              // 混亂倒木:草土底 + 壓倒草痕(倒木本體 = 3D 實例)
-    g.fillStyle = baseFill(0x7c8a55, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.fallenlogs, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 8; i++) {
       g.fillStyle = `rgba(110,96,66,${0.2 + rnd() * 0.15})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 16, rnd);
@@ -837,7 +918,7 @@ const PAINTERS = {
   },
   // ======== 裸露地擴充 ========
   deadforest(g, S, rnd) {                              // 死林:灰燼地 + 焦木倒影 + 白灰斑
-    g.fillStyle = baseFill(0x6b655c, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.deadforest, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 10; i++) {
       g.fillStyle = `rgba(40,38,34,${0.18 + rnd() * 0.18})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 18, rnd);
@@ -862,7 +943,7 @@ const PAINTERS = {
     for (let i = 0; i < 24; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.4 + rnd() * 2, 0, 7); g.fill(); }
   },
   steppe(g, S, rnd) {                                  // 乾草原:金黃草浪(風向一致)+ 深草叢
-    g.fillStyle = baseFill(0xbca95e, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.steppe, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 14; i++) {
       g.fillStyle = `rgba(220,204,140,${0.12 + rnd() * 0.12})`;
       brushBlob(g, rnd() * S, rnd() * S, 12 + rnd() * 24, rnd);
@@ -928,7 +1009,7 @@ const PAINTERS = {
   },
   // ======== 高地擴充 ========
   plateau(g, S, rnd) {                                 // 高原:層積岩階帶 + 階緣受光 + 高地矮草
-    g.fillStyle = baseFill(0xa08c6a, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.plateau, rnd); g.fillRect(0, 0, S, S);
     for (let y = 0; y < S; y += 26 + (rnd() * 14 | 0)) {
       g.fillStyle = rnd() < 0.5 ? 'rgba(140,116,84,0.5)' : 'rgba(180,158,120,0.5)';
       g.fillRect(0, y, S, 12 + rnd() * 10);
@@ -941,7 +1022,7 @@ const PAINTERS = {
     for (let i = 0; i < 16; i++) brushBlob(g, rnd() * S, rnd() * S, 2.5 + rnd() * 3.5, rnd);
   },
   icefield(g, S, rnd) {                                // 冰原:青白冰面 + 裂隙分岔 + 雪斑 + 晶點
-    g.fillStyle = baseFill(0xd8e8ee, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.icefield, rnd); g.fillRect(0, 0, S, S);
     for (let i = 0; i < 10; i++) {
       g.fillStyle = `rgba(255,255,255,${0.25 + rnd() * 0.3})`;
       brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 20, rnd);
@@ -961,7 +1042,7 @@ const PAINTERS = {
     for (let i = 0; i < 20; i++) g.fillRect(rnd() * S, rnd() * S, 2, 2);
   },
   scree(g, S, rnd) {                                   // 岩屑坡:角礫三角碎片 + 陰影錯落
-    g.fillStyle = baseFill(0x8f8c84, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.scree, rnd); g.fillRect(0, 0, S, S);
     const cs = ['#a2a09a', '#8a8880', '#b0aea6', '#7c7a72'];
     for (let i = 0; i < 90; i++) {
       const x = rnd() * S, y = rnd() * S, r = 3 + rnd() * 6, a = rnd() * 7;
@@ -1019,7 +1100,7 @@ const PAINTERS = {
     g.strokeRect(S * 0.06, S * 0.34, 26, 30);
   },
   park(g, S, rnd) {                                    // 公園:草坪 + 蜿蜒步道 + 樹蔭 + 花圃
-    g.fillStyle = baseFill(0x74a85c, rnd); g.fillRect(0, 0, S, S);
+    g.fillStyle = baseFill(SUB_COL.park, rnd); g.fillRect(0, 0, S, S);
     const ph = rnd() * 7;
     g.strokeStyle = '#c9b98e'; g.lineWidth = 12; g.lineCap = 'round';
     g.beginPath();
@@ -1225,7 +1306,9 @@ const ZONES = {
           'veggiefield', 'pasture', 'flowerfield', 'fallenlogs', 'greenhouse', 'lumberyard'],
   bare:  ['slabruin', 'quarry', 'abandonedfarm', 'crackedearth', 'gravel', 'abandonedfarm',
           'solarfarm', 'containeryard', 'saltpan'],
-  urban: ['helipad', 'park', 'brick', 'parking', 'plaza', 'court',
+  // 2026-08-13 使用者「紅磚地和水泥地大幅調降使用率」:brick 退出特徵層(它在底毯清單裡
+  // 仍留一格 ⇒ 磚地沒有絕跡,只是不再是隨處可見的鋪面)
+  urban: ['helipad', 'park', 'parking', 'plaza', 'court',
           'construction', 'track', 'gasstation', 'cemetery', 'scrapyard'],
   wet:   ['fishpond', 'lotus', 'marsh', 'fishpond'],
   alpine: ['slabruin', 'scree', 'plateau', 'slabruin'],
@@ -1236,7 +1319,14 @@ const CARPET = {
           'arrowbamboo', 'meadow', 'deadwood', 'turf', 'fallenlogs'],
   bare:  ['wild', 'gravel', 'steppe', 'crackedearth', 'sand', 'redsoil', 'wild',
           'deadforest', 'mud', 'scree'],
-  urban: ['concrete', 'pavement', 'lawn', 'brick', 'concrete', 'park', 'pavement'],
+  // 2026-08-13 使用者「紅磚地和水泥地大幅調降使用率」:舊制 concrete×2 + brick×1 = 7 格裡的
+  // 3 格,而 concrete 與 brick 又剛好是端點 ⇒ **實測佔市區底毯 36%**(端點加成見 CARPET_SEL)。
+  // 各留一格(21 格裡的 2 格)⇒ 實測降到 11%,讓出來的份額給人行道鋪面與草坪/公園
+  // (市區的開闊地實際上多半是這些)。**權重 MUST 用格數表達** —— 顏色路徑排序之後「排在
+  // 清單哪個位置」已經由代表色決定,MUST NOT 再想靠挪位置調用量
+  urban: ['pavement', 'pavement', 'pavement', 'pavement', 'pavement', 'pavement',
+          'pavement', 'pavement', 'pavement', 'pavement', 'pavement', 'pavement',
+          'lawn', 'lawn', 'lawn', 'lawn', 'park', 'park', 'park', 'concrete', 'brick'],
   wet:   ['marsh', 'marsh', 'lotus'],
   water: ['watertile'],   // 水域專屬(深水格由 cellKeyAt 依水深改配 deepwater,不走雜訊輪替)
   alpine: ['plateau', 'scree', 'icefield', 'steppe', 'plateau'],
@@ -1437,6 +1527,19 @@ const DETAIL_DEFS = {
   hoop:     [{ geo: cyl(0.1, 0.13, 3.0, 5), c: 0x8a8f96 },                // 籃球架:柱 + 白板 + 橘框
              { geo: box(1.8, 1.15, 0.1).translate(0, 2.55, -0.08), c: 0xf2f4f0 },
              { geo: new THREE.TorusGeometry(0.29, 0.045, 4, 9).rotateX(Math.PI / 2).translate(0, 2.8, 0.32), c: 0xd9622e }],
+  // — 2026-08-13 點綴擴充:「同顏色的地貌拼圖上面可以繪製多個不同的細節,草地的小花,
+  //   沙地的小石頭,水域的游魚,以此類推」。補的是**只有一種點綴的那幾款底毯**(沙地只有
+  //   小石頭、沼澤只有蘆葦、深水一片全空、林地地被只有枯木),不是把每一款都塞滿。
+  // 游魚:魚身(八面體壓扁)+ 尾鰭。**擺在水面下**(DIVE),不是貼在水面上 —— 水盤
+  //   opacity 0.82 ⇒ 透得過去,而貼在面上就成了「浮在水上的魚」
+  fish:     [{ geo: new THREE.OctahedronGeometry(0.34, 0).scale(1.6, 0.5, 0.62), c: 0xc8823c },
+             { geo: cone(0.22, 0.34, 3).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), c: 0xd8a05a }],
+  // 貝殼:半顆壓扁的球 —— 沙灘上除了小石頭之外最不突兀的一種點綴
+  shell:    [{ geo: new THREE.SphereGeometry(0.2, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2)
+               .scale(1, 0.42, 0.78), c: 0xe8ddc8 }],
+  // 林地菇:柄 + 傘(枯木林/竹林/倒木地的地被)
+  mushroom: [{ geo: cyl(0.05, 0.06, 0.22, 5), c: 0xe4d8bc },
+             { geo: cone(0.19, 0.16, 7).translate(0, 0.2, 0), c: 0xa9603f }],
 };
 
 // 每型別的最大隨機傾角(rad;繞 x/z 各自抽):自然件歪斜、人造件近直立,
@@ -1448,6 +1551,7 @@ const TILT = {
   saltmound: 0.06, pipe: 0.06, spoil: 0.05, barrier: 0.08, pebble: 0.4, hay: 0.07,
   boulder: 0.3, drybush: 0.18, drum: 0.07, crate: 0.06, carwreck: 0.05, bench: 0.04, headstone: 0.1,
   miscanthus: 0.24, weed: 0.3, cabbage: 0.12, billboard: 0.04, planter: 0.05, hoop: 0.03,
+  fish: 0.12, shell: 0.5, mushroom: 0.14,
 };
 
 // 每型 3D 物件的整齊規律程度(0..1)= 隨機朝向路徑改為「沿最近道路方向擺放」的
@@ -1460,6 +1564,7 @@ const REG = {
   pipe: 0.5, spoil: 0, barrier: 0.75, canopy: 0.9, pump: 0.9, container: 0.9, carwreck: 0.45,
   solarpanel: 0.9, bench: 0.8, headstone: 0.85, boulder: 0, drybush: 0, drum: 0.2, crate: 0.5,
   miscanthus: 0, weed: 0, cabbage: 0, billboard: 0.85, planter: 0.6, hoop: 0.9,
+  fish: 0, shell: 0, mushroom: 0,
 };
 
 // 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
@@ -1778,7 +1883,36 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd, sa
 //   ③**抖動 MUST < 0.5 格距**:超過的話最近的 lot 中心可能落在 3×3 候選之外,分割會出現
 //     「兩格中間各自認不同 lot」的破洞,而畫面上只表現成偶爾一格顏色跳掉;
 //   ④間距以底毯格數計 ⇒ 改 cell(隨圖幅推導)時自己跟著走,MUST NOT 手寫公尺數。
-export const CARPET_LOT = { CELLS: 6, JIT: 0.42 };
+// 2026-08-13 使用者再次回報「同一類型盡可能不要短距離快速變化子類別」⇒ 這一輪三管齊下,
+// 三件事各修病灶的一半,MUST NOT 只做其中一件:
+//   ㋐ 換款的**頻率**:lot 6 → 9 格(78m → 117m)+ 選款場的波長加倍(CARPET_SEL);
+//   ㋑ 換款的**幅度**:清單改成顏色路徑(carpetOrder)⇒ 索引相鄰 = 顏色相鄰;
+//   ㋒ 剩下那幾個結構上避不掉的大跳(色距 > CARPET_DE.LINE,例如雪線 icefield↔steppe 253)
+//      改成「畫一條對應地貌的分界線」(borderKindOf 的同地貌分支)—— 界線覆蓋上去,
+//      那個跳就從「突兀」變成「這裡本來就是兩片不一樣的地」。
+export const CARPET_LOT = { CELLS: 9, JIT: 0.42 };
+// 選款場的取樣(唯一縫;`cellSubAt` 與稽核的對照組同吃 —— 手抄一份頻率進稽核,調完頻率
+// 那一段就在量一個已經不存在的舊制)。W/QC_W = 波數(1/m);SPAN/QC_A = 值域與準晶體項權重。
+// 兩項的尺度算法不同(vnoise 是單位格距的值雜訊 ⇒ 特徵尺度 = 1/W;準晶體是平面波和 ⇒
+// 波長 = 2π/QC_W):W 0.006 → 0.0032 是 167m → 313m,QC_W 0.035 → 0.018 是 180m → 349m。
+// **兩者 MUST 同步放大** —— 只放大其中一個,另一個就成了新的最短換款尺度,而畫面上看起來
+// 完全沒改善。
+// SPAN 2.2 → 1.4 是**這一輪不得不動的一格**:`vnoise` 的邊際分布是鐘形(實測 p05 0.148 /
+// p95 0.851,不是均勻),×2.2 的有效取樣窗只有 [0.273, 0.727] ⇒ **三成的取樣被夾在兩端**,
+// 首尾兩個槽位各拿到 ~20% 而中間每一格只有 4~5%(實測 8 顆種子 × 90000 格)。清單改成顏色
+// 路徑之後,「首尾」就是**顏色的兩個極端** —— 也就是說每一種地貌的畫面會被它自己最極端的
+// 兩個顏色佔掉四成,那正是使用者說的「突兀」的另一半;而「紅磚地大幅調降」在舊制下根本
+// 做不到(brick 是市區清單裡色相最遠的一款 ⇒ 恆落在端點 ⇒ 恆拿 20%,寫幾格權重都沒用)。
+// 1.4 是實測**逐槽位佔比最接近宣告權重**的值(清單長 10:7.6~11.9% vs 宣告 10%;長 15:
+// 4.1~8.6% vs 6.7%;2.2 是 6.2~22.5%,1.0 又倒過來變成中間 16.8% / 兩端 2.1%)。
+export const CARPET_SEL = { W: 0.0032, SPAN: 1.4, QC_W: 0.018, QC_A: 0.30 };
+// 「顏色劇烈變化」的門檻(redmean 色距;2026-08-13 使用者「顏色劇烈變化處也使用對應地貌的
+// 分界線覆蓋」)。實測(carpetOrder 排序後的清單內相鄰步距):p50 49 / p90 134 / max 253
+// ⇒ 100 恰好只圈住**結構上避不掉的那幾個大跳**:雪線 icefield↔steppe 253、龜裂地↔泥灘 157、
+// 磚地↔人行道 137、水泥↔公園 127、枯林↔礫石 134、草坪↔人行道 114、沙↔乾草原 103。
+// 門檻再低就會把整片綠地切成網狀(2026-08-11「同地貌不畫線」那條定案的病灶),再高就只剩
+// 雪線一種。**同地貌的線只由色距觸發**,地表級覆寫(BORDER_SUB_RULES)仍只作用在跨地貌。
+export const CARPET_DE = { LINE: 100 };
 // 回傳 [li, lj, ci, cj]:lot 索引 + lot 中心(**格索引空間**,呼叫端自行換算成世界座標取樣)
 export function carpetLotAt(i, j, seed, cells = CARPET_LOT.CELLS, jit = CARPET_LOT.JIT) {
   const S = Math.max(1, cells);
@@ -2032,7 +2166,9 @@ export const ENCLAVE_STYLES = {
   'water@urban': { name: '公園埤塘/滯洪池', det: 'pond' },
   // — 綠地內 —
   'urban@green': { name: '農村市集/村落',
-    carpet: ['brick', 'pavement', 'brick', 'lawn'],
+    // brick 由 2/4 稀釋到 1/9(小鎮/農村的 enclave 正是市區底毯最集中的地方 —— 實測 kyoto
+    // 這一格沒稀釋時,紅磚仍佔全圖底毯 21%,而 CARPET.urban 那邊早就降到 7%)
+    carpet: ['pavement', 'lawn', 'pavement', 'pavement', 'lawn', 'pavement', 'pavement', 'lawn', 'brick'],
     feats:  ['plaza', 'veggiefield', 'greenhouse', 'gasstation'] },
   'bare@green':  { name: '廢耕地/伐採跡地',
     carpet: ['crackedearth', 'gravel', 'wild'],
@@ -2046,7 +2182,8 @@ export const ENCLAVE_STYLES = {
     carpet: ['turf', 'bushfield', 'flowerfield', 'turf'],
     feats:  ['orchard', 'bushfield', 'flowerfield'] },
   'urban@bare':  { name: '小鎮/驛站聚落',
-    carpet: ['brick', 'concrete', 'pavement'],
+    carpet: ['pavement', 'pavement', 'pavement', 'pavement', 'pavement', 'pavement',
+             'pavement', 'concrete', 'brick'],
     feats:  ['gasstation', 'parking', 'plaza', 'scrapyard'] },
   'water@bare':  { name: '荒漠湧泉/鹹水湖', det: 'spring' },
   'wet@bare':    { name: '鹽沼窪地',
@@ -2057,7 +2194,7 @@ export const ENCLAVE_STYLES = {
     carpet: ['meadow', 'turf', 'bushfield'],
     feats:  ['bushfield', 'flowerfield'] },
   'urban@wet':   { name: '漁村埠頭',
-    carpet: ['brick', 'pavement'],
+    carpet: ['pavement', 'pavement', 'pavement', 'pavement', 'lawn', 'pavement', 'pavement', 'brick'],
     feats:  ['fishpond', 'plaza'] },
   // — 高地相關(alpine 由相對高程觸發,孤峰/山中草甸天然形成 enclave)—
   'green@alpine': { name: '高山草甸',
@@ -2179,9 +2316,13 @@ export const BORDER_KINDS = {
                 ridge: { form: 'clumps', w: 1.6, wt: 1.35, h: 0.5, jit: 0.5, color: 0x3f6b3f,
                          pitch: 3.4, lat: 0.6 }, aq: 1 },
 };
-// 地貌(coarse 分區)無序對 → 種類。**只有不同地貌之間才有分界線**(2026-08-11 使用者定案
+// 地貌(coarse 分區)無序對 → 種類。**不同地貌之間一律有分界線**(2026-08-11 使用者定案
 // 「兩側若是相同地貌,則不需要分界線」)—— 同一片綠地裡換底毯款式(草皮↔芒草原↔灌木叢)
 // 那是同一種地貌的花紋變化,不是界;逐款畫線會把大片綠地切成密集網狀。
+// **2026-08-13 追加一條窄門**(使用者「顏色劇烈變化處也使用對應地貌的分界線覆蓋」):同地貌
+// 之間色距 ≥ `CARPET_DE.LINE` 的那幾對改走 `BORDER_SAME_ZONE`。這**不是**推翻上面那條定案 ——
+// 08-11 擋掉的是「逐款畫線」(綠地那一份清單裡任兩款都畫 = 網狀),這一條只圈住排序之後仍
+// 避不掉的大跳(現役 7 對,見 CARPET_DE 檔頭的實測清單)。
 // 15 個跨地貌對 MUST 全數有解(沒有哪一種交界是「畫不出來」的);水域交界一律貼水種類
 // (沙灘/岩塊/紅樹林),泡沫與潮間帶仍住 buildWaterEdges。
 export const BORDER_STYLES = {
@@ -2207,10 +2348,24 @@ export const BORDER_SUB_RULES = [
   { sub: 'fallenlogs',  kind: 'forestroad', vs: ['bare', 'alpine'] },
   { sub: 'deadforest',  kind: 'forestroad', vs: ['green', 'alpine'] },
 ];
+// 同地貌內「顏色劇烈變化」時用的分界線(2026-08-13 使用者「顏色劇烈變化處也使用**對應地貌**
+// 的分界線覆蓋」)—— 一地貌一種,取那片地貌裡最不突兀的一款自然界:綠地 = 踏出來的步道、
+// 裸露地 = 碎石土徑、市區 = 行道樹籬(市區的大跳恆是鋪面↔綠地那一對)、濕地 = 水溝、
+// 高地 = 岩塊(雪線)。**水域沒有** —— 深淺水本來就是同一片水,查無 = 不擺(§4 寧缺勿錯)。
+export const BORDER_SAME_ZONE = {
+  green: 'trail', bare: 'gravelpath', urban: 'hedgerow', wet: 'ditch', alpine: 'rocks',
+};
 // 分界線種類解析唯一縫(對稱:交換兩側回傳相同;查無 → null = 不擺)。
-// **同地貌恆回 null 是結構保證**(擋在最前面),不是靠查表查不到 —— 地表級覆寫也一併擋掉。
+// 同地貌**只走色距那一道窄門**(BORDER_SAME_ZONE),地表級覆寫(BORDER_SUB_RULES)仍
+// 一律擋在跨地貌那一側 ⇒ 該表的 `vs` MUST NOT 含該 sub 自己的地貌(那仍是死設定)。
 export function borderKindOf(subA, subB, za, zb) {
-  if (!za || !zb || za === zb) return null;
+  if (!za || !zb) return null;
+  if (za === zb) {
+    if (subA === subB) return null;
+    const ca = SUB_COL[subA], cb = SUB_COL[subB];
+    if (ca == null || cb == null) return null;   // 沒有代表色 = 不是底毯款 ⇒ 不畫
+    return colDist(ca, cb) >= CARPET_DE.LINE ? (BORDER_SAME_ZONE[za] || null) : null;
+  }
   for (const r of BORDER_SUB_RULES) {
     if (subA === r.sub && r.vs.includes(zb)) return r.kind;
     if (subB === r.sub && r.vs.includes(za)) return r.kind;
@@ -2295,6 +2450,32 @@ export function borderCutAlpha(d, w) {
 // 2026-08-11 實測:linePath 恆為負(每一片直段都死黑)、arcPath 隨 sweep 正負翻面(轉彎
 // 忽明忽暗)= 使用者回報的「好幾個分界線顏色不連續」。
 export function sweepUpY(tx, tz, nx, nz) { return tz * nx - tx * nz; }
+
+// 分界線帶的「強制乾地」查詢工廠(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會
+// 觸發異常狀態」;規則本體與接線紀律見 buildGroundCover 內的呼叫點註解)。
+// **住模組層是刻意的**:回傳的函式要掛在 terrain 上活到戰鬥結束,寫成 buildGroundCover 的
+// 內層閉包會把那一整個作用域的 context(底毯 buckets / 細節清單 / landCells…)一起留住。
+// grid = 中心線段的空間索引(`${ci},${cj}` → 段陣列,段自帶自己的帶半寬 hw)、
+// sc = 索引格邊長、hwMax = 型錄裡最寬的一種半寬(掃描格數由它推導,不手寫)。
+export function makeBandMask(grid, sc, hwMax) {
+  const n = Math.max(1, Math.ceil(hwMax / sc));
+  return (x, z) => {
+    const ci = Math.floor(x / sc), cj = Math.floor(z / sc);
+    for (let dj = -n; dj <= n; dj++) {
+      for (let di = -n; di <= n; di++) {
+        const l = grid.get(`${ci + di},${cj + dj}`);
+        if (!l) continue;
+        for (const sg of l) {
+          const dx = sg.x1 - sg.x0, dz = sg.z1 - sg.z0, l2 = dx * dx + dz * dz || 1;
+          let t = ((x - sg.x0) * dx + (z - sg.z0) * dz) / l2;
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          if (Math.hypot(sg.x0 + dx * t - x, sg.z0 + dz * t - z) <= sg.hw) return true;
+        }
+      }
+    }
+    return false;
+  };
+}
 
 export function planBorderPuzzle(keys, gnx, gnz, opts = {}) {
   // zoneOf(i,j) = 該格**真正的地貌**(呼叫端已算好的 zoneGrid)。MUST 優先於用款式反查
@@ -2840,7 +3021,11 @@ function borderTex(kind) {
 export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classifyPureAt, envCodeAt, blockers, season, seed, rnd, roadDirAt, roadRank, roadClear, roadPolys }) {
   const classifyPure = classifyPureAt || classifyAt;   // 底毯用:無隨機改寫的分區
   const envAt = envCodeAt || (() => 0);                // 水/沼分類唯一縫(biomes.terrainEnvCode;缺席 = 全乾)
-  const AQ_DET = new Set(['reed', 'lotuspad']);        // 水生細節:免吃岸線高度淘汰、貼水面擺放
+  const AQ_DET = new Set(['reed', 'lotuspad', 'fish']);   // 水生細節:免吃岸線高度淘汰、貼水面擺放
+  // 沉在水面下多少(m);2026-08-13 游魚。**這是 AQ_DET 的子集而不是第二張名冊** ——
+  // 蘆葦/荷葉貼在水面上、魚在水面下,兩者共用同一道岸線豁免。水深不足(池底離水面比這個
+  // 數字還淺)就不擺:魚半個身子插在泥裡比沒有魚還糟(§4 寧缺勿錯)
+  const DIVE = { fish: 0.5 };
   const buckets = new Map();   // `${sub}#${variant}` -> 幾何桶
   const det = {};
   for (const t in DETAIL_DEFS) det[t] = [];
@@ -2900,8 +3085,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     if (!detFree(px, pz, dr)) return;
     let y = terrain.heightAt(px, pz);
     if (y < 0.4) {
-      if (!AQ_DET.has(type)) return;                   // 水生細節(蘆葦/荷葉)放行:貼水面擺放
+      if (!AQ_DET.has(type)) return;                   // 水生細節(蘆葦/荷葉/魚)放行
       if (terrain.waterY != null) y = Math.max(y, terrain.waterY);
+    }
+    const dive = DIVE[type];
+    if (dive) {                                        // 沉在水面下:水不夠深就不擺(見 DIVE)
+      const wy = terrain.waterY;
+      if (wy == null || terrain.heightAt(px, pz) > wy - dive - 0.2) return;
+      y = wy - dive;
     }
     const tl = TILT[type] || 0;   // 隨機傾角:每實例姿態互異
     // atLocal 平面角 → three.js rotation.y 取負(同 rows 的 ry=-rot 慣例)
@@ -2937,6 +3128,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     carpetLists.bare = ['icefield', ...CARPET.bare, 'icefield'];
     carpetLists.alpine = ['icefield', 'plateau', 'icefield', 'scree', 'icefield'];
   }
+  // 底毯清單排成顏色路徑(carpetOrder;2026-08-13 使用者「同一類型盡可能不要短距離快速變化
+  // 子類別」)—— 選款是「低頻雜訊 t → 清單索引」,索引相鄰若不是顏色相鄰,t 再平滑顏色照樣跳。
+  // MUST 排在冬季覆寫**之後**(冬季那兩份是新組的清單,不排就沒被排到)、且 enclave 的清單
+  // 也 MUST 排(encRt 建表處),兩條清單來源少一條就是「有些地方還在跳色」。
+  for (const zn in carpetLists) carpetLists[zn] = carpetOrder(carpetLists[zn]);
   // coarse 分區查詢(sub → zone):交界樣式(planSeamOverlays)與邊界遮蔽物共用同一份(單一縫)
   const subCoarse = new Map();
   for (const zn in carpetLists) for (const s of carpetLists[zn]) if (!subCoarse.has(s)) subCoarse.set(s, zn);
@@ -3027,7 +3223,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // 細節 blue-noise 微推:白噪落點沿最近峰偏置 0.7m(<¼ 波長 → 去叢聚不硬吸);純函數,不吃 rnd
   const DET_QC_W = (2 * Math.PI) / 2.6;
   const qcNudge = (px, pz) => { const [gx, gz] = qcGrad(px, pz, DET_QC_W); return [px + gx * 0.7, pz + gz * 0.7]; };
-  const QC_SEL_W = 0.035;   // 底毯 subtype 群聚調變波數(世界波長 ≈ 180m)
+  const QC_SEL_W = CARPET_SEL.QC_W;   // 底毯 subtype 群聚調變波數(唯一縫,見 CARPET_SEL)
 
   const cornH = (i, j, s) => {                          // 手繪顆粒(疊在準晶體場上加碎形細節)
     let n = ((i * 374761393 + j * 668265263) ^ (seed ^ s)) | 0;
@@ -3102,8 +3298,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     // 場的公式一格未動(同一支 vnoise + 同一個準晶體項),換的只有「在哪裡取樣」。
     const [, , li, lj] = carpetLotAt(i, j, seed);
     const lx = terrain.minX + li * cell, lz = terrain.minZ + lj * cell;
-    let t = (vnoise(lx * 0.006, lz * 0.006, seed) - 0.5) * 2.2 + 0.5;
-    if (zn !== 'urban') t += qcVal(lx, lz, QC_SEL_W) * 0.30;   // 不規律 zone 疊準晶體 → 群聚邊界非週期
+    let t = (vnoise(lx * CARPET_SEL.W, lz * CARPET_SEL.W, seed) - 0.5) * CARPET_SEL.SPAN + 0.5;
+    if (zn !== 'urban') t += qcVal(lx, lz, QC_SEL_W) * CARPET_SEL.QC_A;   // 不規律 zone 疊準晶體 → 群聚邊界非週期
     t = Math.min(0.999, Math.max(0, t));
     return list[(t * list.length) | 0];
   };
@@ -3350,8 +3546,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const encGrid = planEnclaves(zoneGrid, gnx, gnz, {});
   const encRt = new Map();
   for (const k in ENCLAVE_STYLES) {
+    // 樣式的底毯清單同樣排成顏色路徑(carpetOrder;與 carpetLists 同一條規則)。原樣式物件
+    // MUST NOT 就地改寫 —— ENCLAVE_STYLES 是模組級常數,改它等於這一場的排序漏到下一場
     const st = ENCLAVE_STYLES[k];
-    encRt.set(k, { key: k, style: st, set: new Set([...(st.carpet || []), ...(st.feats || [])]) });
+    const style = st.carpet ? { ...st, carpet: carpetOrder(st.carpet) } : st;
+    encRt.set(k, { key: k, style, set: new Set([...(st.carpet || []), ...(st.feats || [])]) });
   }
   const encAt = (x, z) => {   // 世界座標 → enclave 執行期樣式(非 enclave = null;不吃 rnd)
     const i = Math.floor((x - terrain.minX) / cell), j = Math.floor((z - terrain.minZ) / cell);
@@ -3518,6 +3717,25 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     });
     return hit;
   };
+  // ---- 分界線帶內不觸發地形異常狀態(2026-08-13 使用者定案)----
+  // 「確保水域/沼澤在分界線的區塊內不會觸發異常狀態」。成因是**兩條線從來沒有對齊過**:
+  // 權威的水沼分類(terrainEnvCode)量的是真實地形高程與衛星影像,而底毯的換手在**畫出來的
+  // 那條線**上(borderCut),那條線是格邊鏈拉直後的弦、最寬的一種帶(沙灘)有 9m ⇒ 兩者
+  // 最多可以差半個帶寬。畫面上你站在沙灘/泥灘/小溪的圖案上,伺服器算的卻是「泡在水裡」——
+  // 涉水凍結與陷沼扣血就在這裡冒出來,而每一條既有斷言都是綠的。
+  // 修法 = 帶內一律當乾地(比照 `terrain.inDryBand` 兵線外接帶那一層,同樣是「這一塊強制乾」)。
+  // 三條:
+  //  ①**純幾何、(x,z) 的純函式**:只問「離任何一段界線中心線的垂距 ≤ 該種類的帶半寬嗎」,
+  //    半寬取 `hwOfKind`(= 真的畫出來的外緣,含帶緣起伏)⇒ 遮罩恰好蓋住圖案,不多不少;
+  //  ②**寧缺勿錯往「不觸發」偏**:規劃出來但發射時被讓路規則(道路/建物)剔掉的那幾段仍在
+  //    索引裡 ⇒ 那裡沒畫帶卻也不觸發。反過來(畫了帶卻照樣扣血)才是使用者回報的症狀;
+  //  ③**MUST 在 buildBiomes 之外才裝上去**(見 biomes.js 的清空 + main.js 的安裝點):底毯
+  //    分區自己就吃 terrainEnvCode,建圖期就掛上等於「界線改變分區 → 分區改變界線」的循環,
+  //    而症狀是同一張圖每次建出來都不一樣。
+  //  ④遮罩要活到戰鬥結束 ⇒ MUST 走**模組層**工廠(`makeBandMask`):在 buildGroundCover 裡
+  //    寫一個閉包的話,V8 會把整個函式作用域的 context 一起留住(底毯 buckets、細節清單、
+  //    landCells…幾十 MB),而畫面上什麼都看不出來(A25 的同一條)。
+  const bandDryAt = makeBandMask(bdGrid, BSC, BD_HW_MAX);
   // 底毯切線:頂點落在「鄰格那一側」多遠 → borderCutAlpha。側別由**鄰格方向**判(格索引差),
   // 不拿鄰格中心點去比 —— 拉直後的弦可能自格子中間穿過,拿點比會整格翻面
   const bdCutAt = (x, z, di, dj) => {
@@ -3890,11 +4108,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       scatter('weed', 2 + (rnd() * 2 | 0), 0.7, 0.4); scatter('miscanthus', 2, 0.8, 0.5);   // 裸露地飄逸雜草(零星)
       if (rnd() < 0.15) scatter('flower', 1, 0.6, 0.3, FLOWER_C);   // 荒地零星野花
     }
-    else if (sub === 'sand') scatter('pebble', 3, 0.7, 1.1);
-    else if (sub === 'mud' || sub === 'crackedearth') { scatter('pebble', 2, 0.5, 0.4); scatter('weed', 2, 0.6, 0.3); if (sub === 'crackedearth') scatter('drybush', 1, 0.6, 0.4); }
+    // 沙地:小石頭 + 貝殼 + 零星乾草(2026-08-13 使用者「沙地的小石頭,以此類推」——
+    // 舊制只有一種點綴,一整片沙地上就是同一顆石頭複製貼上)
+    else if (sub === 'sand') { scatter('pebble', 4 + (rnd() * 3 | 0), 0.7, 1.1); scatter('shell', 3 + (rnd() * 3 | 0), 0.8, 0.6); if (rnd() < 0.5) scatter('drybush', 1, 0.6, 0.4); }
+    else if (sub === 'mud' || sub === 'crackedearth') { scatter('pebble', 2, 0.5, 0.4); scatter('weed', 2, 0.6, 0.3); if (sub === 'crackedearth') scatter('drybush', 1, 0.6, 0.4); else scatter('reed', 2, 0.6, 0.4); }
     else if (sub === 'redsoil') { scatter('pebble', 2, 0.5, 0.4); scatter('tuft', 1, 0.5, 0.3); scatter('weed', 1, 0.6, 0.3); }
-    else if (sub === 'marsh') scatter('reed', 8 + (rnd() * 6 | 0), 0.8, 0.6);
-    else if (sub === 'lotus') { scatter('lotuspad', 12 + (rnd() * 8 | 0), 0.8, 0.8); scatter('reed', 4, 0.7, 0.5); }
+    // 沼澤:蘆葦 + 草叢 + 漂流木 + 淺水的魚(舊制只有蘆葦)
+    else if (sub === 'marsh') { scatter('reed', 8 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.5); if (rnd() < 0.4) scatter('log', 1, 0.7, 0.3); scatter('fish', 2, 0.7, 0.4); }
+    else if (sub === 'lotus') { scatter('lotuspad', 12 + (rnd() * 8 | 0), 0.8, 0.8); scatter('reed', 4, 0.7, 0.5); scatter('fish', 3 + (rnd() * 3 | 0), 0.8, 0.5); }
     else if (sub === 'watertile') {   // 淺水點綴依包裹情境換樣(deepwater 全空;det 住 ENCLAVE_STYLES):
       // 市區埤塘/滯洪池 = 公園感荷葉;綠地天然湖 = 濃密蘆葦岸;荒漠湧泉 = 稀疏蘆葦;其餘零星蘆葦
       const det = enc?.style.det;
@@ -3902,25 +4123,31 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       else if (det === 'lake') scatter('reed', 4 + (rnd() * 4 | 0), 0.8, 0.6);
       else if (det === 'spring') { if (rnd() < 0.6) scatter('reed', 1 + (rnd() * 2 | 0), 0.8, 0.5); }
       else if (rnd() < 0.35) scatter('reed', 2 + (rnd() * 3 | 0), 0.8, 0.5);
+      // 游魚(2026-08-13 使用者「水域的游魚」):水深不足的格子由 addDetail 的 DIVE 閘擋下
+      // ⇒ 淺灘不會出現半截插在泥裡的魚,這裡照常抽數量(§2.3 序列不因地形而分岔)
+      scatter('fish', 3 + (rnd() * 4 | 0), 0.8, 0.5);
     }
+    // 深水:只有游魚(舊制一片全空;蘆葦荷葉在深水本來就不該有)
+    else if (sub === 'deepwater') scatter('fish', 4 + (rnd() * 4 | 0), 0.9, 0.6);
     // — 綠地擴充 —
-    else if (sub === 'arrowbamboo') { scatter('bamboo', 9 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.4); }
-    else if (sub === 'deadwood') { scatter('snag', 5 + (rnd() * 4 | 0), 0.8, 0.7); scatter('log', 2, 0.7, 0.4); scatter('pebble', 2, 0.5, 0.4); }
-    else if (sub === 'fallenlogs') { scatter('log', 7 + (rnd() * 5 | 0), 0.8, 0.7); scatter('stump', 2, 0.8, 0.4); scatter('tuft', 3, 0.6, 0.4); }
+    // 林地地被再加一種:朽木旁的菇(2026-08-13「以此類推」)
+    else if (sub === 'arrowbamboo') { scatter('bamboo', 9 + (rnd() * 6 | 0), 0.8, 0.6); scatter('tuft', 3, 0.6, 0.4); scatter('mushroom', 3, 0.7, 0.5); }
+    else if (sub === 'deadwood') { scatter('snag', 5 + (rnd() * 4 | 0), 0.8, 0.7); scatter('log', 2, 0.7, 0.4); scatter('pebble', 2, 0.5, 0.4); scatter('mushroom', 4, 0.7, 0.5); }
+    else if (sub === 'fallenlogs') { scatter('log', 7 + (rnd() * 5 | 0), 0.8, 0.7); scatter('stump', 2, 0.8, 0.4); scatter('tuft', 3, 0.6, 0.4); scatter('mushroom', 4, 0.8, 0.5); }
     else if (sub === 'clearcut') { scatter('stump', 8 + (rnd() * 6 | 0), 0.8, 0.5); scatter('log', 2, 0.7, 0.4); }
     else if (sub === 'lumberyard') { rows('logpile', 4.2, 3.4, 0.3, 0.28, 7, 0.2, null, 0.9, 0.4); scatter('plank', 2 + (rnd() * 3 | 0), 0.8, 0.4); scatter('crate', 1, 0.9, 0.3); }
     else if (sub === 'rottencabin') { addDetail('cabin', x, z, 0.85 + rnd() * 0.35); scatter('fencepost', 5 + (rnd() * 3 | 0), 0.9, 0.3); scatter('bush', 3, 0.6, 0.5); }
     else if (sub === 'vineyard') rows('vinerow', 3.4, 3.0, 0.36, 0.32, 16, 0.12, null, 0.9, 0.3);
     else if (sub === 'greenhouse') rows('ghouse', 3.8, 3.2, 0.3, 0.3, 10, 0.08, null, 1.1, 0.4);
     // — 裸露地/高地擴充 —
-    else if (sub === 'deadforest') { scatter('charsnag', 6 + (rnd() * 5 | 0), 0.8, 0.8); scatter('pebble', 2, 0.4, 0.4); }
+    else if (sub === 'deadforest') { scatter('charsnag', 6 + (rnd() * 5 | 0), 0.8, 0.8); scatter('pebble', 2, 0.4, 0.4); scatter('stump', 2, 0.7, 0.4); scatter('drybush', 2, 0.6, 0.4); }
     else if (sub === 'slabruin') { scatter('slab', 7 + (rnd() * 5 | 0), 0.8, 0.6); scatter('pebble', 4, 0.5, 0.6); scatter('boulder', 1, 0.6, 0.4); }
     else if (sub === 'steppe') { scatter('miscanthus', 6 + (rnd() * 4 | 0), 0.9, 0.7); scatter('tuft', 4, 0.9, 0.6); scatter('drybush', 3, 0.7, 0.5); scatter('weed', 3, 0.7, 0.4); scatter('pebble', 1, 0.5, 0.4); }
     else if (sub === 'abandonedfarm') { scatter('tuft', 4, 0.7, 0.5); scatter('drybush', 2, 0.7, 0.4); scatter('fencepost', 3, 0.9, 0.3); if (rnd() < 0.4) scatter('hay', 1, 0.7, 0.3); }
     else if (sub === 'saltpan') scatter('saltmound', 4 + (rnd() * 3 | 0), 0.7, 0.5);
     else if (sub === 'quarry') { scatter('rockflat', 4, 0.9, 0.8); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.6); scatter('boulder', 1 + (rnd() * 2 | 0), 0.7, 0.5); }
     else if (sub === 'plateau') { scatter('rockflat', 3 + (rnd() * 3 | 0), 0.8, 0.7); scatter('boulder', 1, 0.7, 0.5); scatter('tuft', 3, 0.6, 0.4); }
-    else if (sub === 'icefield') { scatter('iceshard', 6 + (rnd() * 5 | 0), 0.7, 0.8); scatter('pebble', 1, 0.4, 0.4); }
+    else if (sub === 'icefield') { scatter('iceshard', 6 + (rnd() * 5 | 0), 0.7, 0.8); scatter('pebble', 1, 0.4, 0.4); if (rnd() < 0.5) scatter('boulder', 1, 0.6, 0.4); }
     else if (sub === 'scree') { scatter('pebble', 9 + (rnd() * 7 | 0), 0.5, 0.9); scatter('rockflat', 3, 0.7, 0.6); scatter('boulder', 1, 0.6, 0.5); }
     // — 市區擴充 —
     else if (sub === 'construction') { scatter('pipe', 1 + (rnd() * 2 | 0), 0.9, 0.4); scatter('spoil', 1 + (rnd() * 2 | 0), 0.8, 0.5); scatter('barrier', 3, 0.9, 0.3); scatter('plank', 1, 0.8, 0.3); scatter('drum', 2, 0.9, 0.2, DRUM_C); scatter('crate', 1, 0.9, 0.3); }
@@ -3962,7 +4189,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     else if (sub === 'cemetery') { rows('headstone', 2.2, 2.6, 0.36, 0.3, 24, 0.25, null, 0.9, 0.3); scatter('sapling', 1, 0.9, 0.3); }
     else if (sub === 'solarfarm') rows('solarpanel', 3.0, 2.8, 0.4, 0.36, zn === 'bare' ? 32 : 18, 0.08, null, 0.9, 0.2);
     // — 濕地擴充 —
-    else if (sub === 'fishpond') scatter('reed', 6, 0.7, 0.4);
+    else if (sub === 'fishpond') { scatter('reed', 6, 0.7, 0.4); scatter('fish', 4 + (rnd() * 4 | 0), 0.8, 0.5); }
   }
 
   // ==== 沿街連續規律陣列(2026-07-25 使用者需求「規律拼貼順著道路整齊排列」)====
@@ -4751,5 +4978,5 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // orphans = 找不到主人格的地形四邊形數(結構上應恆為 0:抖動 < 0.45 格 ⇒ 主人恆在 3×3 內。
   // > 0 就是認養搜尋範圍或抖動幅度有人動過,而畫面上只表現成偶爾一格禿掉露出地形)
   return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN,
-           border: bStat, bufCells, orphans: orphanQuads };
+           border: bStat, bufCells, orphans: orphanQuads, bandDryAt };
 }

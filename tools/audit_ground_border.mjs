@@ -15,6 +15,13 @@
 //      轉彎 = bin 改變 / 相鄰 tile 端點逐位元共用)
 //   Ⅳ 對照組(反向驗證內建):ⓐ bin 摺疊 ⓑ 拿掉 drift 上限 ⓒ 拿掉接力切分
 //   Ⅴ 靜態接線(單一縫 / 舊遮蔽物不回歸 / 純函式零 rnd / lift 與 renderOrder 圖層紀律)
+//   Ⅵ 分界線帶內強制乾地(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會觸發異常
+//     狀態」)—— 底毯的換手在**畫出來的那條線**上,而 terrainEnvCode 量的是真實地形,兩者
+//     最多差半個帶寬(最寬 9m):你站在沙灘的圖案上,伺服器算的卻是泡在水裡。遮罩由
+//     ground.js `bandDryAt` 產出、biomes.terrainEnvCode 消費、main.js 在 buildBiomes
+//     **之後**裝上 —— 裝早了就是「界線改分區、分區又改界線」的循環,而症狀是同一張圖每次
+//     建出來都不一樣(每一格都還是「照規則」選的,沒有任何既有斷言看得見)。
+// 2026-08-13 另一項:同地貌之間「顏色劇烈變化」也畫線(Ⅰ⑥;窄門 = CARPET_DE.LINE)。
 'use strict';
 import { readSrc } from './audit_src.mjs';
 
@@ -22,7 +29,17 @@ let fail = 0;
 const bad = (m) => { console.log('  ✗', m); fail++; };
 const ok = (m) => console.log('  ✓', m);
 
-const src = readSrc('public', 'js', 'ground.js');
+// 反向驗證:`--break-de` 把同地貌色距門檻推到 +∞(= 退回 2026-08-11 的「同地貌恆不畫線」)
+// ⇒ Ⅰ⑥ 的「顏色劇烈變化處有線」與「跨門檻相鄰對 > 0」MUST 紅字
+const BREAK_DE = process.argv.includes('--break-de');
+const src0 = readSrc('public', 'js', 'ground.js');
+const src = BREAK_DE
+  ? src0.replace(/export const CARPET_DE = \{ LINE: \d+ \};/, 'export const CARPET_DE = { LINE: Infinity };')
+  : src0;
+if (BREAK_DE && src === src0) {
+  console.log('x --break-de 替換無效(CARPET_DE 原文樣式漂移)—— 這一支會假綠,請同步稽核');
+  process.exit(1);
+}
 
 // ===== 抽原文(零依賴 → eval 執行真品)=====
 const dirsM = src.match(/export const BORDER_DIRS = .*$/m);
@@ -36,11 +53,30 @@ const cutM = src.match(/export const BORDER_CUT = .*$/m);
 const bandM = src.match(/export const BORDER_BAND = .*$/m);
 const cutFnM = src.match(/export function borderCutAlpha\(d, w\) \{[\s\S]*?\n\}/);
 const upM = src.match(/export function sweepUpY\(tx, tz, nx, nz\) \{.*\}/);
+// 2026-08-13 追加:同地貌之間「顏色劇烈變化」也畫線 ⇒ borderKindOf 多吃三份資料
+const brickM = src.match(/const BRICK_C = \[[\s\S]*?\];/);
+const hexOfM = src.match(/const hexOf = .*$/m);
+const meanM = src.match(/const meanHex = \([\s\S]*?\n\};/);
+const colTabM = src.match(/export const SUB_COL = \{[\s\S]*?\n\};/);
+const colDistM = src.match(/export function colDist\(h1, h2\) \{[\s\S]*?\n\}/);
+const deM = src.match(/export const CARPET_DE = .*$/m);
+const sameM = src.match(/export const BORDER_SAME_ZONE = \{[\s\S]*?\n\};/);
+if (!brickM || !hexOfM || !meanM || !colTabM || !colDistM || !deM || !sameM) {
+  bad('ground.js 找不到 SUB_COL / colDist / CARPET_DE / BORDER_SAME_ZONE 原文(同地貌色距那一條)');
+  console.log(`\nFAIL(${fail} 項)`); process.exit(1);
+}
 if (!dirsM || !kindsM || !stylesM || !rulesM || !kindOfM || !arcM || !planM || !cutM || !bandM || !cutFnM || !upM) {
   bad('ground.js 找不到 BORDER_DIRS / BORDER_KINDS / BORDER_STYLES / BORDER_SUB_RULES / BORDER_CUT / BORDER_BAND / borderKindOf / borderCutAlpha / sweepUpY / borderCornerArc / planBorderPuzzle 原文');
   console.log(`\nFAIL(${fail} 項)`); process.exit(1);
 }
 const build = (planText, arcText = arcM[0]) => new Function(`
+  ${brickM[0]}
+  ${hexOfM[0]}
+  ${meanM[0]}
+  ${colTabM[0].replace('export ', '')}
+  ${colDistM[0].replace('export ', '')}
+  ${deM[0].replace('export ', '')}
+  ${sameM[0].replace('export ', '')}
   ${dirsM[0].replace('export ', '')}
   ${kindsM[0].replace('export ', '')}
   ${stylesM[0].replace('export ', '')}
@@ -53,10 +89,12 @@ const build = (planText, arcText = arcM[0]) => new Function(`
   ${arcText.replace('export ', '')}
   ${planText.replace('export ', '')}
   return { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, BORDER_CUT, BORDER_BAND,
-           borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle };
+           borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle,
+           SUB_COL, colDist, CARPET_DE, BORDER_SAME_ZONE };
 `)();
 const { BORDER_DIRS, BORDER_KINDS, BORDER_STYLES, BORDER_SUB_RULES, BORDER_CUT, BORDER_BAND,
-        borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle } = build(planM[0]);
+        borderKindOf, borderCutAlpha, sweepUpY, borderCornerArc, planBorderPuzzle,
+        SUB_COL, colDist, CARPET_DE, BORDER_SAME_ZONE } = build(planM[0]);
 const truthCarpet = new Function(src.match(/const CARPET = \{[\s\S]*?\n\};/)[0] + '\nreturn CARPET;')();
 // 畫筆名冊(逐頂層方法名抽,不 eval 整包 canvas 程式碼)
 const paintersM = src.match(/const BORDER_PAINTERS = \{[\s\S]*?\n\};/);
@@ -190,12 +228,48 @@ console.log('== Ⅰ 型錄與種類解析(執行原文)==');
     ? ok('BORDER_SUB_RULES 的 vs 一律不含自身地貌(無死設定)')
     : bad(`vs 含自身地貌:${BORDER_SUB_RULES.filter((r) => r.vs.includes(SUBZ0[r.sub])).map((r) => r.sub).join(' ')}`);
 
-  // ⑥ 同地貌 / 分區未知 → null(寧缺勿錯)
-  (borderKindOf('turf', 'meadow', 'green', 'green') === null
-    && borderKindOf('arrowbamboo', 'turf', 'green', 'green') === null
-    && borderKindOf('wild', 'sand', 'bare', 'bare') === null)
-    ? ok('同地貌恆回 null(含 sub 覆寫也擋掉)= 結構保證,不靠查表查不到')
-    : bad('同地貌仍解出分界線(密集網狀的成因)');
+  // ⑥ 同地貌:只有「顏色劇烈變化」那一道窄門(2026-08-13 使用者「顏色劇烈變化處也使用
+  //    對應地貌的分界線覆蓋」)。08-11 擋掉的是「逐款畫線」,不是這一條 —— 兩者的分水嶺
+  //    就是 CARPET_DE.LINE,所以下面**兩個方向都要有牙**:小色差恆 null、大色差恆有線。
+  (borderKindOf('turf', 'meadow', 'green', 'green') === null            // 94 < 100
+    && borderKindOf('arrowbamboo', 'turf', 'green', 'green') === null   // 30
+    && borderKindOf('turf', 'bushfield', 'green', 'green') === null)    // 55
+    ? ok('同地貌 + 色距 < CARPET_DE.LINE → null(逐款畫線 = 大片綠地被切成網狀,仍擋著)')
+    : bad('同地貌小色差仍解出分界線(密集網狀的成因)');
+  (borderKindOf('wild', 'sand', 'bare', 'bare') === 'gravelpath'        // 195
+    && borderKindOf('icefield', 'steppe', 'alpine', 'alpine') === 'rocks'   // 253(雪線)
+    && borderKindOf('brick', 'pavement', 'urban', 'urban') === 'hedgerow')  // 137
+    ? ok('同地貌 + 色距 ≥ CARPET_DE.LINE → 該地貌的專屬界線(BORDER_SAME_ZONE)')
+    : bad('顏色劇烈變化處沒有畫線(使用者 2026-08-13 定案)');
+  // 對稱 + 同款恆 null + 沒有代表色(特徵拼圖)恆 null + 水域沒有同地貌界(深淺水本是同一片水)
+  (borderKindOf('sand', 'wild', 'bare', 'bare') === borderKindOf('wild', 'sand', 'bare', 'bare')
+    && borderKindOf('sand', 'sand', 'bare', 'bare') === null
+    && borderKindOf('court', 'plaza', 'urban', 'urban') === null
+    && borderKindOf('watertile', 'deepwater', 'water', 'water') === null)
+    ? ok('同地貌分支:對稱 / 同款 null / 非底毯款 null / 水域無同地貌界')
+    : bad('同地貌分支的四條邊界情形有破口');
+  // 門檻不是空的也不是全開:排序後的清單裡**真的有**跨過門檻的相鄰對,而且是少數
+  {
+    const carpetOrderM = src.match(/export function carpetOrder\([\s\S]*?\n\}/);
+    const CO = new Function(`${brickM[0]}\n${hexOfM[0]}\n${meanM[0]}
+      ${colTabM[0].replace('export ', '')}\n${colDistM[0].replace('export ', '')}
+      ${carpetOrderM[0].replace('export ', '')}\nreturn carpetOrder;`)();
+    let over = 0, tot = 0;
+    for (const zn in truthCarpet) {
+      const a = CO(truthCarpet[zn]);
+      for (let i = 1; i < a.length; i++) {
+        if (a[i] === a[i - 1]) continue;
+        tot++;
+        if (colDist(SUB_COL[a[i - 1]], SUB_COL[a[i]]) >= CARPET_DE.LINE) over++;
+      }
+    }
+    (over > 0 && over <= tot * 0.4)
+      ? ok(`底毯清單排序後的相鄰對:${over}/${tot} 跨過門檻(> 0 = 門檻不是死設定;≤ 40% = 不成網)`)
+      : bad(`跨門檻相鄰對 ${over}/${tot} —— 0 = 這條規則永遠不生效,過半 = 又切回網狀`);
+  }
+  Object.entries(BORDER_SAME_ZONE).every(([z, k]) => BORDER_KINDS[k] && z !== 'water')
+    ? ok('BORDER_SAME_ZONE 值域合法(種類都在型錄裡)且不含水域')
+    : bad('BORDER_SAME_ZONE 值域越界');
   (borderKindOf('a', 'b', null, 'green') === null && borderKindOf('a', 'b', 'green', null) === null)
     ? ok('分區未知回 null(不擺,寧缺勿錯)') : bad('分區未知未回 null');
 }
@@ -796,6 +870,66 @@ console.log('== Ⅴ 靜態接線(單一縫 / 舊制不回歸 / 圖層紀律)==')
   (src.match(/const subCoarse = new Map\(\)/g) || []).length === 1
     ? ok('subCoarse 分區表仍只有一份(交界樣式與界線拼圖共用,單一縫)')
     : bad('subCoarse 分區表出現多份實作');
+}
+
+// ===== Ⅵ 分界線帶內不觸發地形異常狀態(2026-08-13 使用者定案)=====
+// 「確保水域/沼澤在分界線的區塊內不會觸發異常狀態」。這一段驗的是**接線的方向**:遮罩由
+// ground.js 產出、biomes.terrainEnvCode 消費、main.js 在 buildBiomes **之後**裝上。
+// 裝早了就是「界線改分區、分區又改界線」的循環相依,而症狀是同一張圖每次建出來都不一樣 ——
+// 這件事沒有任何既有斷言看得見(每一格都還是「照規則」選的)。
+console.log('\n== Ⅵ 分界線帶內強制乾地(水域/沼澤不觸發異常狀態)==');
+{
+  const bio = readSrc('public', 'js', 'biomes.js');
+  const mainSrc = readSrc('public', 'js', 'main.js');
+  const dryM = src.match(/export function makeBandMask\(grid, sc, hwMax\) \{[\s\S]*?\n\}/);
+  dryM ? ok('ground.js 有 makeBandMask(規則唯一縫)') : bad('ground.js 找不到 makeBandMask');
+  if (dryM) {
+    // 純幾何:只問「離中心線的垂距 ≤ 該種類的帶半寬」,零 rnd / 零 THREE / 不吃 terrain 高程
+    (!/\brnd\(/.test(dryM[0]) && !dryM[0].includes('Math.random') && !dryM[0].includes('THREE')
+      && !dryM[0].includes('heightAt'))
+      ? ok('makeBandMask 是 (x,z) 的純函式:零 rnd / 零 THREE / 不看高程(§2.3)')
+      : bad('makeBandMask 摻入 rnd / THREE / 高程查詢');
+    // 半寬 MUST 取索引裡那一段自己的 hw(= hwOfKind,含帶緣起伏)—— 寫死一個數字就是
+    // 「窄的那幾種多蓋一圈、寬的那一種蓋不滿」,而畫面上只是偶爾還會凍結一下
+    /<= sg\.hw\) return true;/.test(dryM[0])
+      ? ok('遮罩半徑取該段自己的帶半寬 sg.hw(hwOfKind ⇒ 恰好蓋住畫出來的圖案)')
+      : bad('遮罩半徑不是逐段帶半寬(寫死數字 = 與真正畫出來的帶脫鉤)');
+    // 掃描格數由半寬推導(只掃自己那一格 ⇒ 最寬的沙灘帶在格界附近查不到自己那一段)
+    /const n = Math\.max\(1, Math\.ceil\(hwMax \/ sc\)\);/.test(dryM[0])
+      ? ok('掃描格數由最寬帶半寬推導,不手寫') : bad('makeBandMask 的掃描範圍寫死');
+    // **住模組層**:寫成 buildGroundCover 的內層閉包會把整個建構作用域一起留住(A25)
+    /const bandDryAt = makeBandMask\(bdGrid, BSC, BD_HW_MAX\);/.test(src)
+      ? ok('遮罩由模組層工廠產出(閉包只留索引,不留整個建構作用域;A25)')
+      : bad('遮罩是建構函式的內層閉包 ⇒ 底毯 buckets / 細節清單會跟著活到戰鬥結束');
+  }
+  src.includes('orphans: orphanQuads, bandDryAt')
+    ? ok('buildGroundCover 把 bandDryAt 交出去') : bad('buildGroundCover 未回傳 bandDryAt');
+  bio.includes('group.userData.bandDryAt = ground.bandDryAt')
+    ? ok('biomes 只把遮罩掛進 userData(不在建圖期裝上去)') : bad('biomes 未交出 bandDryAt');
+  /terrain\.inBorderBand = null;/.test(bio)
+    ? ok('buildBiomes 開頭清空 terrain.inBorderBand(再戰回房重建同一個 terrain 不沿用舊遮罩)')
+    : bad('buildBiomes 未清空遮罩 ⇒ 重建時界線會反過來推分區(循環相依)');
+  // 清空 MUST 排在 buildGroundCover 之前(否則清的是這一輪剛裝上的那一份)
+  (bio.indexOf('terrain.inBorderBand = null;') < bio.indexOf('buildGroundCover(group, terrain'))
+    ? ok('清空排在 buildGroundCover 之前') : bad('清空排在建圖之後 ⇒ 等於沒清');
+  /if \(terrain\.inBorderBand\?\.\(x, z\)\) return 0;/.test(bio)
+    ? ok('terrainEnvCode 消費遮罩(客戶端 _envAt / bakeWetGrid / 沼澤面同吃這一支)')
+    : bad('terrainEnvCode 未消費遮罩 ⇒ 帶上照樣涉水凍結/陷沼扣血');
+  // 安裝點恰一處,且 MUST 在 buildBiomes 之後、bakeWetGrid 之前
+  (mainSrc.match(/terrain\.inBorderBand = /g) || []).length === 1
+    ? ok('安裝點恰一處(main.js)') : bad('terrain.inBorderBand 有多個安裝點或缺席');
+  {
+    const iBuild = mainSrc.indexOf('await buildBiomes(cfg, terrain');
+    const iSet = mainSrc.indexOf('terrain.inBorderBand = ');
+    const iBake = mainSrc.indexOf('wet: bakeWetGrid(app.terrain)');
+    (iBuild > 0 && iSet > iBuild && iBake > iSet)
+      ? ok('安裝排在 buildBiomes 之後、bakeWetGrid 之前(兩個消費端同吃同一份規則)')
+      : bad('安裝點順序錯:MUST 在 buildBiomes 之後、水沼網格烘烤之前');
+  }
+  // ground.js MUST NOT 自己讀這面遮罩(讀了就是循環相依,而且是靜默的)
+  !src.includes('inBorderBand')
+    ? ok('ground.js 不讀 terrain.inBorderBand(遮罩只出不進)')
+    : bad('ground.js 讀了 inBorderBand ⇒ 分區與界線互相決定');
 }
 
 console.log(fail ? `\nFAIL(${fail} 項)` : '\nALL PASS');

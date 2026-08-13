@@ -35,8 +35,19 @@
 //     **不只是換底色**(只差底色 = 那條濾鏡又回來了);另驗名冊對齊(吃 season 的畫筆 ⇔ 標
 //     `seasonal` 的 DEFS,漏標 = 調兩次色)、季節只進快取鍵(draw call 不變)、牧場註冊齊全。
 //
+//   Ⅵ **選款清單的顏色路徑**(2026-08-13 使用者再次回報「同一類型盡可能不要短距離快速變化
+//     子類別」)—— Ⅰ 的區塊只解決了換款的**頻率**,幅度一格未動:清單的索引相鄰若不是顏色
+//     相鄰(綠地那一份是 meadow 土黃 → deadwood 灰 → turf 綠),t 再平滑顏色照樣在跳。
+//     新制把代表色收成一張表(SUB_COL,畫筆與排序同吃)、清單排成一條顏色路徑(carpetOrder)。
+//     這一段驗名冊涵蓋(雙向)、畫筆真的吃這張表、排序保留重數與同款成段、瓶頸步距不變差,
+//     以及兩個消費端(carpetLists 冬季覆寫之後 / enclave 樣式)都排到了。
+//   Ⅶ **同顏色拼圖上的多種點綴**(使用者「草地的小花,沙地的小石頭,水域的游魚,以此類推」)
+//     —— 逐款底毯地表 MUST 撒得出兩種以上的點綴(舊制沙地只有小石頭、沼澤只有蘆葦、深水
+//     一片全空);游魚 MUST 進 AQ_DET 且 MUST 沉在水面下(貼在面上 = 浮在水上的魚)。
+//
 // 反向驗證:`--break-lot`   取值點改回格心 ⇒ Ⅰ 紅(換款間距垮回舊制)
 //           `--break-var`   花紋改回低頻雜訊 ⇒ Ⅱ 紅(共邊同款同變體)
+//           `--break-order` 清單維持原序 ⇒ Ⅵ 紅(索引相鄰不再是顏色相鄰)
 //           `--break-adopt` 認養退回對角線拆三角形 ⇒ Ⅳ 紅(凹四邊形與鄰格重疊認養)
 // 讀原文走 `audit_src.mjs` 單一縫(CRLF 工作區逐行剝註解會靜默失效)。
 'use strict';
@@ -50,6 +61,7 @@ const t = (m, cond, x = '') => (cond ? ok(m) : bad(m, x));
 const BREAK_LOT = process.argv.includes('--break-lot');
 const BREAK_VAR = process.argv.includes('--break-var');
 const BREAK_ADOPT = process.argv.includes('--break-adopt');
+const BREAK_ORDER = process.argv.includes('--break-order');
 
 const src = readSrc('public', 'js', 'ground.js');
 const grab = (re, name) => {
@@ -60,12 +72,25 @@ const grab = (re, name) => {
 // 四支皆零依賴純函式/純資料 ⇒ 抽原文直接執行真品(抄一份公式進稽核 = 驗自己抄對沒有)
 const VNOISE = grab(/function vnoise\(x, z, seed\) \{[\s\S]*?\n\}/, 'vnoise');
 const LOT_CFG = grab(/export const CARPET_LOT = .*$/m, 'CARPET_LOT');
+const SEL_CFG = grab(/export const CARPET_SEL = .*$/m, 'CARPET_SEL');
 const LOT_FN = grab(/export function carpetLotAt\([\s\S]*?\n\}/, 'carpetLotAt');
 const VAR_FN = grab(/export function planCarpetVariants\([\s\S]*?\n\}/, 'planCarpetVariants');
+// 顏色路徑排序那一族(2026-08-13):代表色表 + 色距 + 排序,四支同樣零依賴 ⇒ 執行真品
+const BRICK = grab(/const BRICK_C = \[[\s\S]*?\];/, 'BRICK_C');
+const HEXOF = grab(/const hexOf = .*$/m, 'hexOf');
+const MEANH = grab(/const meanHex = \([\s\S]*?\n\};/, 'meanHex');
+const COLTAB = grab(/export const SUB_COL = \{[\s\S]*?\n\};/, 'SUB_COL');
+const COLD = grab(/export function colDist\(h1, h2\) \{[\s\S]*?\n\}/, 'colDist');
+const ORDER = grab(/export function carpetOrder\([\s\S]*?\n\}/, 'carpetOrder');
 const CARPET = new Function(`${src.match(/const CARPET = \{[\s\S]*?\n\};/)[0]}\nreturn CARPET;`)();
-const M = new Function(`${VNOISE}\n${LOT_CFG}\n${LOT_FN}\n${VAR_FN}
-  return { vnoise, CARPET_LOT, carpetLotAt, planCarpetVariants };`)();
-const { vnoise, CARPET_LOT, carpetLotAt, planCarpetVariants } = M;
+const ENCST = new Function(`${src.match(/export const ENCLAVE_STYLES = \{[\s\S]*?\n\};/)[0].replace('export ', '')}
+  return ENCLAVE_STYLES;`)();
+const M = new Function(`${VNOISE}\n${LOT_CFG}\n${SEL_CFG}\n${LOT_FN}\n${VAR_FN}
+  ${BRICK}\n${HEXOF}\n${MEANH}\n${COLTAB}\n${COLD}\n${ORDER}
+  return { vnoise, CARPET_LOT, CARPET_SEL, carpetLotAt, planCarpetVariants,
+           SUB_COL, colDist, carpetOrder };`)();
+const { vnoise, CARPET_LOT, CARPET_SEL, carpetLotAt, planCarpetVariants,
+        SUB_COL, colDist, carpetOrder } = M;
 
 console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
 {
@@ -100,14 +125,20 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
   t('純函式:carpetLotAt / planCarpetVariants 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
     !/\brnd\s*\(|Math\.random|THREE/.test(LOT_FN) && !/\brnd\s*\(|Math\.random|THREE/.test(VAR_FN));
 
-  // ---- 換款間距:對照組 = 舊制(取值點 = 格心)----
-  // 場的公式逐字取自 cellSubAt 的 vnoise 那一項(準晶體項只會讓舊制更碎,略去 = 對舊制有利)
-  const CELL = 13, LIST = CARPET.bare.length;   // 裸露地 10 款 = 現役最長的一份清單
-  const pickAt = (wx, wz) => {
-    const t2 = Math.min(0.999, Math.max(0, (vnoise(wx * 0.006, wz * 0.006, SEED) - 0.5) * 2.2 + 0.5));
+  // ---- 換款間距:兩組對照 ----
+  //   ㋐ 現行公式 + 取值點改回格心 —— 量的是「lot 這一層自己有沒有在做事」;
+  //   ㋑ **凍結的出貨基準**(2026-08-12 那一版:格心取值 + W 0.006 + SPAN 2.2)—— 量的是
+  //      「使用者這一輪回報的東西改善了多少」。㋑ 的兩個數字 MUST 手寫並標明是歷史值:
+  //      跟著 CARPET_SEL 走的話,調完頻率之後這一條就是拿新制跟新制比,恆綠(2026-08-13
+  //      實測:㋐ 的短段比例自己就掉到 4%,舊的「≤ 對照組 1/4」當場失去牙齒)。
+  const LEGACY = { W: 0.006, SPAN: 2.2 };
+  const CELL = 13, LIST = CARPET.bare.length;
+  const pickAt = (wx, wz, cfg = CARPET_SEL) => {
+    const t2 = Math.min(0.999, Math.max(0,
+      (vnoise(wx * cfg.W, wz * cfg.W, SEED) - 0.5) * cfg.SPAN + 0.5));
     return (t2 * LIST) | 0;
   };
-  const runs = (useLot) => {
+  const runs = (useLot, cfg = CARPET_SEL) => {
     const out = [];
     for (let j = 0; j < 160; j++) {
       let cur = -1, len = 0;
@@ -117,7 +148,7 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
           const [, , li, lj] = carpetLotAt(i, j, SEED);
           wx = li * CELL; wz = lj * CELL;
         } else { wx = (i + 0.5) * CELL; wz = (j + 0.5) * CELL; }
-        const s = pickAt(wx, wz);
+        const s = pickAt(wx, wz, cfg);
         if (s === cur) len++;
         else { if (cur >= 0) out.push(len); cur = s; len = 1; }
       }
@@ -126,18 +157,22 @@ console.log('== Ⅰ 選款區塊(顏色的最小尺度)==');
     return out.sort((a, b) => a - b);
   };
   const q = (a, p) => a[Math.min(a.length - 1, Math.floor(a.length * p))];
-  const lot = runs(!BREAK_LOT), old = runs(false);
-  const lotP50 = q(lot, 0.5) * CELL, oldP50 = q(old, 0.5) * CELL;
+  const lot = runs(!BREAK_LOT), cellC = runs(false), legacy = runs(false, LEGACY);
+  const lotP50 = q(lot, 0.5) * CELL, cellP50 = q(cellC, 0.5) * CELL, legP50 = q(legacy, 0.5) * CELL;
   // 「短距離快速變化」= **短**的那一截有多常見(平均值看不出來:舊制的分布是雙峰的 ——
   // 大片穩定區 + 雜訊場陡處那幾條「每一格都換一款」的帶,而使用者看到的正是後者)
   const shortShare = (a) => a.filter((v) => v * CELL < CELL * 2).length / a.length;
-  const lotR = shortShare(lot), oldR = shortShare(old);
+  const lotR = shortShare(lot), cellR = shortShare(cellC), legR = shortShare(legacy);
   // 下界錨在區塊間距:同一個 lot 內恆為同一款 ⇒ 一段同款至少要有一個 lot 那麼寬
   const floorM = CARPET_LOT.CELLS * CELL * 0.8;
-  t(`同款連續長度中位數 ${lotP50.toFixed(0)}m ≥ 一個區塊 ${floorM.toFixed(0)}m(舊制 ${oldP50.toFixed(0)}m)`,
+  t(`同款連續長度中位數 ${lotP50.toFixed(0)}m ≥ 一個區塊 ${floorM.toFixed(0)}m`
+    + `(同公式取格心 ${cellP50.toFixed(0)}m / 2026-08-12 出貨基準 ${legP50.toFixed(0)}m)`,
     lotP50 >= floorM, `（每 ${lotP50.toFixed(0)}m 才換一次顏色）`);
-  t(`「走不到兩格就換色」的比例 ${(lotR * 100).toFixed(0)}% ≤ 舊制 ${(oldR * 100).toFixed(0)}% 的四分之一`,
-    lotR <= oldR / 4, `（這一條就是使用者說的「短距離快速變化」）`);
+  // 短段比例只跟**出貨基準**比:同公式取格心那一組印出來當參考,但它已經吃了新的低頻場
+  // ⇒ 它自己就很低,拿它當門檻等於拿新制跟新制比(有牙的是上面那條中位數)
+  t(`「走不到兩格就換色」${(lotR * 100).toFixed(1)}% ≤ 2026-08-12 出貨基準 ${(legR * 100).toFixed(0)}% 的`
+    + `四分之一(同公式取格心 ${(cellR * 100).toFixed(1)}%)`,
+    lotR <= legR / 4, `（這一條就是使用者說的「短距離快速變化」）`);
   if (BREAK_LOT) console.log('  （--break-lot:取值點改回格心 ⇒ 上面兩條 MUST 紅字）');
 }
 
@@ -220,7 +255,9 @@ console.log('\n== Ⅲ 靜態規則(執行原文)==');
   const subFn = grab(/const cellSubAt = \(i, j, zn\) => \{[\s\S]*?\n  \};/, 'cellSubAt');
   t('cellSubAt 的取值點 = 選款區塊中心(carpetLotAt 單一縫;場的公式一格未動)',
     /const \[, , li, lj\] = carpetLotAt\(i, j, seed\);/.test(subFn)
-    && /vnoise\(lx \* 0\.006, lz \* 0\.006, seed\)/.test(subFn) && /qcVal\(lx, lz, QC_SEL_W\)/.test(subFn));
+    && /vnoise\(lx \* CARPET_SEL\.W, lz \* CARPET_SEL\.W, seed\)/.test(subFn)
+    && /qcVal\(lx, lz, QC_SEL_W\)/.test(subFn)
+    && /const QC_SEL_W = CARPET_SEL\.QC_W;/.test(src));
   t('cellSubAt 只回款名(變體不在這裡挑 —— 逐格獨立挑一定挑得出相鄰同款同變體)',
     !/#\$\{/.test(subFn) && /return list\[\(t \* list\.length\) \| 0\];/.test(subFn));
   t('keys 兩段組裝:整張挑顏色(subGrid)→ 整張挑花紋(planCarpetVariants)→ 合成 key',
@@ -485,8 +522,132 @@ console.log('\n== Ⅴ 農牧地表四季設計 ==');
     `（缺:${missing.join(', ')}）`);
 }
 
+console.log('\n== Ⅵ 選款清單的顏色路徑(換款的「幅度」那一半)==');
+{
+  // 病灶:CARPET_LOT 只讓換款**沒那麼頻繁**,跳的幅度一格未動 —— 清單的索引相鄰若不是顏色
+  // 相鄰(綠地那一份的 meadow 土黃 → deadwood 灰 → turf 綠),t 再平滑顏色照樣在跳。
+  // ① 代表色名冊 MUST **恰好**涵蓋會出現在底毯上的款(雙向比對;多寫一款 = 沒有消費端的
+  //    裝飾欄位,少寫一款 = 那一款排序時被整份清單原地退回,而畫面上只是「這一區還在跳」)
+  const want = new Set(['deepwater']);   // 深水不在任何清單裡(cellSubAt 依水深直接指派),仍是底毯款
+  for (const zn in CARPET) for (const s of CARPET[zn]) want.add(s);
+  for (const k in ENCST) for (const s of ENCST[k].carpet || []) want.add(s);
+  const have = new Set(Object.keys(SUB_COL));
+  const miss = [...want].filter((s) => !have.has(s));
+  const extra = [...have].filter((s) => !want.has(s));
+  t(`SUB_COL 恰涵蓋底毯款(CARPET ∪ ENCLAVE_STYLES[].carpet;${want.size} 款)`,
+    miss.length === 0 && extra.length === 0, `（缺:${miss.join(',')} 多:${extra.join(',')}）`);
+  // ② 畫筆真的吃這張表(否則排序用的是一份與畫面無關的色票)
+  const notFed = [...want].filter((s) => s !== 'brick'
+    && !new RegExp(`\\n  ${s}\\(g, S, rnd(?:, season)?\\) \\{[\\s\\S]{0,900}?baseFill\\(SUB_COL\\.${s},`).test(src));
+  t('每一款底毯畫筆的底色都取自 SUB_COL(brick 是具名例外:代表色由 BRICK_C 推導)',
+    notFed.length === 0, `（沒吃到的:${notFed.join(',')}）`);
+  t('brick 的代表色由磚色陣列推導,不手寫第二個數字',
+    /brick: meanHex\(BRICK_C\)/.test(src) && /const cs = BRICK_C;/.test(src));
+  // ③ 排序本身:純函式、保留重數、同款相鄰、瓶頸步距不比原序差
+  t('carpetOrder 原文零 rnd / 零 Math.random / 零 THREE(§2.3、A4)',
+    !/\brnd\s*\(|Math\.random|THREE/.test(ORDER));
+  // 重數指紋 MUST 與鍵序無關(排完插入序本來就變了,直接 JSON.stringify 物件永遠不相等)
+  const cnt = (l) => JSON.stringify(Object.entries(
+    l.reduce((m2, s) => (m2[s] = (m2[s] || 0) + 1, m2), {})).sort());
+  const maxStep = (l) => {
+    let mx = 0;
+    for (let i = 1; i < l.length; i++) mx = Math.max(mx, colDist(SUB_COL[l[i - 1]], SUB_COL[l[i]]));
+    return mx;
+  };
+  const lists = { ...CARPET };
+  for (const k in ENCST) if (ENCST[k].carpet) lists['enc:' + k] = ENCST[k].carpet;
+  let weightBad = 0, adjBad = 0, worse = 0, improved = 0;
+  for (const k in lists) {
+    const a = lists[k], b = BREAK_ORDER ? a.slice() : carpetOrder(a);
+    if (cnt(a) !== cnt(b)) weightBad++;   // 重數 = 權重,不得變
+    for (const s of new Set(b)) {                                          // 同款 MUST 連成一段
+      const f = b.indexOf(s), l = b.lastIndexOf(s);
+      if (l - f + 1 !== b.filter((q) => q === s).length) adjBad++;
+    }
+    const m0 = maxStep(a), m1 = maxStep(b);
+    if (m1 > m0 + 1e-9) worse++;
+    if (m1 < m0 - 1e-9) improved++;
+  }
+  t('排序保留重數(重複項 = 權重,排完各款佔比逐位元不變)', weightBad === 0);
+  t('同款排在一起(權重成為漸層上的一段平台,不是散在清單各處)', adjBad === 0);
+  t('沒有任何一份清單的最大相鄰色距被排壞', worse === 0);
+  t(`實際改善的清單數 ${improved}/${Object.keys(lists).length}(0 = 排序沒有在做事)`, improved > 0);
+  // ④ 兩個消費端都排到了(冬季覆寫之後、enclave 樣式也要;少一條就是「有些地方還在跳色」)
+  t('carpetLists 在冬季覆寫之後才排序(冬季那兩份是新組的清單)',
+    src.indexOf('for (const zn in carpetLists) carpetLists[zn] = carpetOrder(carpetLists[zn]);')
+      > src.indexOf("carpetLists.alpine = ['icefield'"));
+  t('enclave 樣式的底毯清單也排序,且不就地改寫模組級常數',
+    /carpet: carpetOrder\(st\.carpet\)/.test(src) && /const style = st\.carpet \? \{ \.\.\.st,/.test(src));
+  // ⑤ 紅磚地與水泥地的**實得**佔比(2026-08-13 使用者「大幅調降使用率」)。
+  // 這一條 MUST 量實得而不是數格數:選款是「雜訊 → 清單索引」,而雜訊的邊際分布不是均勻的
+  // ⇒ 逐槽位的實得佔比與宣告權重不一樣(見 CARPET_SEL 檔頭)。舊制 concrete 又剛好排在
+  // 首尾兩個被加成的槽位上 —— 只數格數的話會算出 3/7,實得是 40%。
+  {
+    const CELL = 13, SEED = 0x5A17C0 | 0;
+    const share = (list, want) => {
+      const l = carpetOrder(list);
+      let hit = 0, tot = 0;
+      for (let j = 0; j < 260; j++) for (let i = 0; i < 260; i++) {
+        const [, , li, lj] = carpetLotAt(i, j, SEED);
+        let t2 = (vnoise(li * CELL * CARPET_SEL.W, lj * CELL * CARPET_SEL.W, SEED) - 0.5)
+                 * CARPET_SEL.SPAN + 0.5;
+        t2 = Math.min(0.999, Math.max(0, t2));
+        tot++;
+        if (want.includes(l[(t2 * l.length) | 0])) hit++;
+      }
+      return hit / tot;
+    };
+    // 凍結的出貨基準 = 2026-08-12 的市區底毯清單(**不排序**,那時還沒有 carpetOrder)
+    const LEGACY_URBAN = ['concrete', 'pavement', 'lawn', 'brick', 'concrete', 'park', 'pavement'];
+    const now = share(CARPET.urban, ['brick', 'concrete']);
+    const was = share(LEGACY_URBAN.slice(), ['brick', 'concrete']);   // slice ⇒ 不被就地排序
+    t(`紅磚地 + 水泥地實得佔市區底毯 ${(now * 100).toFixed(0)}% ≤ 出貨基準 ${(was * 100).toFixed(0)}% 的一半`,
+      now <= was / 2, '（使用者 2026-08-13「大幅調降使用率」）');
+    (CARPET.urban.filter((s) => s === 'brick').length === 1
+      && CARPET.urban.filter((s) => s === 'concrete').length === 1
+      && !src.match(/urban: \['helipad'[^\]]*'brick'/))
+      ? ok('brick / concrete 在市區底毯各只剩一格,且 brick 已退出特徵層 ZONES.urban')
+      : bad('brick / concrete 的格數或特徵層名冊未依定案收斂');
+  }
+  if (BREAK_ORDER) console.log('  （--break-order:清單維持原序 ⇒ 上面「實際改善的清單數」MUST 紅字）');
+}
+
+console.log('\n== Ⅶ 同顏色拼圖上的多種點綴(2026-08-13「草地的小花/沙地的小石頭/水域的游魚」)==');
+{
+  const scatFn = grab(/function scatterDetails\(sub, x, z, r, rot, def, zn, enc = null\) \{[\s\S]*?\n  \}/, 'scatterDetails');
+  const DEFS_SRC = src.match(/const DETAIL_DEFS = \{[\s\S]*?\n\};/)[0];
+  const NEW = ['fish', 'shell', 'mushroom'];
+  t(`新增三款點綴 ${NEW.join(' / ')} 都有零件表`,
+    NEW.every((n) => new RegExp(`\\n  ${n}:\\s*\\[`).test(DEFS_SRC)));
+  t('三款都登記了 TILT 與 REG(漏了的那一款會恆直立且恆隨機朝向,不會報錯)',
+    NEW.every((n) => new RegExp(`${n}: [\\d.]+`).test(src.match(/const TILT = \{[\s\S]*?\n\};/)[0])
+      && new RegExp(`${n}: [\\d.]+`).test(src.match(/const REG = \{[\s\S]*?\n\};/)[0])));
+  // 游魚:MUST 進 AQ_DET(免岸線淘汰)且 MUST 沉在水面下(貼在面上 = 浮在水上的魚)
+  t("fish 進 AQ_DET(水生細節,免吃岸線高度淘汰)", /AQ_DET = new Set\(\['reed', 'lotuspad', 'fish'\]\)/.test(src));
+  t('fish 走 DIVE(沉在水面下)且水深不足就不擺(§4 寧缺勿錯)',
+    /const DIVE = \{ fish: [\d.]+ \};/.test(src)
+    && /if \(wy == null \|\| terrain\.heightAt\(px, pz\) > wy - dive - [\d.]+\) return;/.test(src)
+    && /y = wy - dive;/.test(src));
+  // 每一款底毯 MUST 有至少兩種點綴(「同顏色的拼圖上面可以繪製**多個不同**的細節」)
+  const carpetSubs = new Set();
+  for (const zn in CARPET) for (const s of CARPET[zn]) carpetSubs.add(s);
+  const thin = [];
+  for (const s of carpetSubs) {
+    const m2 = scatFn.match(new RegExp(`sub === '${s}'[\\s\\S]*?(?=\\n *else if|\\n *\\}$)`));
+    if (!m2) { thin.push(`${s}(無分支)`); continue; }
+    const kinds = new Set([...m2[0].matchAll(/(?:scatter|addDetail)\('(\w+)'/g)].map((x) => x[1]));
+    if (kinds.size < 2) thin.push(`${s}(${kinds.size})`);
+  }
+  t(`每一款底毯地表都撒得出兩種以上的點綴(${carpetSubs.size} 款)`, thin.length === 0,
+    `（只有一種:${thin.join(', ')}）`);
+  t('水域三款(淺水/深水/荷塘)都有游魚', /sub === 'deepwater'\) scatter\('fish'/.test(scatFn)
+    && /scatter\('fish', 3 \+ \(rnd\(\) \* 4 \| 0\), 0\.8, 0\.5\);\n *\}/.test(scatFn)
+    && /sub === 'lotus'[\s\S]*?scatter\('fish'/.test(scatFn));
+}
+
 for (const [f, m] of [['--break-lot', '取值點改回格心,Ⅰ MUST 紅字(顏色又開始短距離亂跳)'],
   ['--break-var', '變體改回低頻雜訊,Ⅱ MUST 紅字(相鄰同款貼同一張貼圖)'],
+  ['--break-order', '清單維持原序,Ⅵ MUST 紅字(索引相鄰不再是顏色相鄰)'],
   ['--break-adopt', '認養退回對角線拆三角形,Ⅳ MUST 紅字(凹四邊形的對角線跑到形外 ⇒ 與鄰格重疊認養)']]) {
   if (process.argv.includes(f)) console.log(`\n（${f}:${m}）`);
 }

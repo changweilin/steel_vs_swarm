@@ -1984,6 +1984,13 @@ function startPrebuild(cfg) {
     terrain.biomesUpdate = biomes.userData.update || null;   // 火車 / 瀑布動態
     terrain.blockers = biomes.userData.blockers || [];       // 建物碰撞(限制行動不封鎖)
     terrain.clearBuildingsAround = biomes.userData.clearAround || null;   // 碉堡淨空:移除重疊建物(game.js 碉堡進場時呼叫)
+    // 地貌分界線帶 = 強制乾地(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會觸發
+    // 異常狀態」;規則住 ground.js bandDryAt、消費端只有 biomes.terrainEnvCode)。
+    // **安裝點恰此一處,且 MUST 在 buildBiomes 之後** —— 建圖期底毯分區自己就吃
+    // terrainEnvCode,提前掛上就是「界線改分區、分區又改界線」的循環(buildBiomes 開頭
+    // 會先清成 null,再戰回房重建同一個 terrain 也不會沿用上一次的遮罩)。
+    // 裝上去之後 `terrainEnvCode` 才是完整規則 ⇒ 底下的 bakeWetGrid 與 game._envAt 同吃一份。
+    terrain.inBorderBand = biomes.userData.bandDryAt || null;
     // 高架橋橋面 = 可站立平台。surfaceAt(x, z, curY):curY 高於橋面一個台階內才算「站在橋上」,
     // 否則(從橋下經過)照舊踩地形 —— 同一條規則同時服務玩家物理與 NPC/敵機的貼地渲染。
     const deckY = makeDeckIndex(biomes.userData.decks);
