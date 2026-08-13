@@ -64,10 +64,29 @@ export default {
       bxF(t, 0.02, 0.1, 0.2, (i % 2 ? 1 : -1) * 0.17, -1.16, 0.6 - Math.floor(i / 2) * 0.5,
         accent, { emissive: accent, emissiveIntensity: 0.9 });
     // 尾鰭:水平鯨尾 + 垂直尾鰭
-    for (const sx of [-1, 1])
-      finF(t, { len: 0.8, w0: 0.3, w1: 0.12, t: 0.06, sweep: -0.24 }, sx * 0.1, 0.02, -1.78,
-        PAL.lite, { metalness: 0.45 }).rotation.z = sx * 1.5;
-    finF(t, { len: 0.66, w0: 0.34, w1: 0.1, t: 0.055, sweep: -0.3 }, 0, 0.42, -1.7, PAL.lite, { metalness: 0.45 });
+    // ⚠ finF 的三軸是「長 = 局部 +y、寬 = 局部 x、厚 = 局部 z」⇒ 片面法線在局部 z。
+    //   Rz 不動局部 z:單靠 rotation.z 擺出來的「水平」鯨尾,前後弦長只剩 t(一把立起來的刀);
+    //   而 Rz(+sx·π/2) 把 +y 送到 (−sx, 0, 0) ⇒ +x 那片指向 −x,兩片在尾根互穿。
+    //   轉正 MUST 兩層:內層網格繞自身長軸 rotation.y = π/2 把「寬」送進 z(弦落在前後),
+    //   外層 Group 出 rotation.z 把它放平 —— 兩個角寫在同一顆網格上會被尤拉序互相轉走。
+    for (const sx of [-1, 1]) {
+      const fl = new THREE.Group();
+      fl.position.set(sx * 0.1, 0.02, -1.74);
+      fl.rotation.z = -sx * Math.PI / 2;             // 長軸 +y → +sx·x(同號,兩片才不交叉)
+      t.add(fl);
+      // 轉正後 sweep 沿世界 ∓y(不再是側向偏移)⇒ 逐邊反號才是對稱的鯨尾上翹
+      finF(fl, { len: 0.8, w0: 0.3, w1: 0.12, t: 0.06, sweep: -sx * 0.1 }, 0, 0, 0,
+        PAL.lite, { metalness: 0.45 }).rotation.y = Math.PI / 2;
+    }
+    // 垂直尾鰭:同樣繞長軸轉正(弦 0.34 落在前後、厚 0.055 落在左右)。
+    // 轉正後 finF 的 sweep 落在世界 ±x(側向偏移)⇒ 給不出「梢端往機尾」,
+    // 後掠改由外層 Group 的仰角表達(Rx(−θ) 把 +y 的末端送向 −z)。
+    const vf = new THREE.Group();
+    vf.position.set(0, 0.3, -1.66);
+    vf.rotation.x = -0.28;
+    t.add(vf);
+    finF(vf, { len: 0.66, w0: 0.34, w1: 0.1, t: 0.055 }, 0, 0, 0, PAL.lite, { metalness: 0.45 })
+      .rotation.y = Math.PI / 2;
   },
 
   lift(c, t) {

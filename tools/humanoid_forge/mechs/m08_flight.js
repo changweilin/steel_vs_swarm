@@ -7,6 +7,13 @@
 // 『沒有人記得看過她起飛』直接矛盾。」
 //   ⇒ 全機材質一律 **metalness 0.15 以下**(這是這一台唯一不准調的旋鈕);翼前緣鋸齒
 //     逐齒成件(SERR 齒數),翼後緣加流蘇(消音的第二個機構)。
+//
+// 2026-08-13 翼向修正(本輪唯一改動,其餘零件一格未動):
+//   本機的前後基準 —— 軀幹 lathe 繞 x 轉 π/2 後,剖面 y 軸落在世界 z:鼻端 +0.62 / 尾端 −0.66,
+//   加上尾羽扇在 z=−0.50、頭部群組在 z=+0.50 ⇒ **+z = 機首**(gunPodF/狙擊莢 fwd:'z' 同源)。
+//   ① 鉤喙 rotation.y 由 +π/2 改為 −π/2(見該行的推導註解)。這是**唯一真的裝反**的一件。
+//   ② 翼面 wingF 的剖面前緣頂點在局部 +z(geo.js:329 的 cz = +0.5)、前緣鋸齒排在 z≈+0.45、
+//      後緣流蘇排在 z≈−0.40 ⇒ 翼的前緣本來就朝機首,**刻意不動**(改它才會真的裝反)。
 import * as THREE from 'three';
 import {
   bxF, cylF, sphF, tboxF, prismF, latheF, finF, fanF, wingF, gunPodF,
@@ -53,8 +60,11 @@ export default {
       const eye = sphF(head, 0.1, sx * 0.13, 0.03, 0.2, accent, { emissive: accent, emissiveIntensity: 1.5 });
       eye.scale.z = 0.62;
     }
+    // 鉤喙:多邊形的鉤尖在局部 +x、接面在 x≈0 ⇒ 樞轉 MUST 是 −π/2(+x → 世界 +z = 機首)。
+    // 寫 +π/2 的話 +x → −z:鉤尖落在 head z = 0.26 − 0.14 = 0.12,恰好埋回面盤頂點、
+    // 而且跑到雙眼(z 0.20)後方 —— 畫面上只表現成「這隻夜梟沒有喙」,不會有任何錯誤訊息。
     prismF(head, [[0, 0.06], [0.14, 0.01], [0.09, -0.1], [0.01, -0.05]], 0.07, 0, -0.03, 0.26,
-      PAL.deep, SOFT).rotation.y = Math.PI / 2;        // 鉤喙
+      PAL.deep, SOFT).rotation.y = -Math.PI / 2;       // 鉤喙(鉤尖 → 機首 z=0.40,越過面盤前緣 0.32)
     for (const sx of [-1, 1])                          // 頭部消音進氣(面盤兩側的格柵)
       for (let i = 0; i < 3; i++)
         bxF(head, 0.02, 0.08, 0.06, sx * 0.28, 0.06 - i * 0.07, 0.1, PAL.deep, SOFT);

@@ -72,16 +72,24 @@ export default {
   lift(c, t) {
     const { PAL, accent, dark } = c;
     const wings = [];
+    // 鞘翅外廓(局部 XY):長軸 1.86m 在 y、最寬 0.72m 在 x —— 躺平後長軸落到機身前後軸
+    const ELY = [[0, -0.9], [0.5, -0.8], [0.72, -0.1], [0.6, 0.7], [0.2, 0.96], [0, 0.9]];
     for (const sx of [-1, 1]) {
       // ---- 盾狀鞘翅:掀起後**固定**的裝甲殼(不進 rig.wings)----
-      const ely = prismF(t, [[0, -0.9], [0.5, -0.8], [0.72, -0.1], [0.6, 0.7], [0.2, 0.96], [0, 0.9]], 0.11,
-        sx * 0.5, 0.44, -0.16, PAL.mid, { metalness: 0.66 });
-      ely.rotation.z = -sx * 1.15;                 // 向兩側掀起
-      ely.rotation.y = -sx * 0.3;
-      ely.scale.x = sx;
-      for (let i = 0; i < 3; i++)                  // 翅脈稜
-        bxF(t, 0.03, 0.02, 1.3, sx * (0.62 + i * 0.14), 0.5 + i * 0.06, -0.16, PAL.deep, { metalness: 0.7 })
-          .rotation.z = -sx * 1.15;
+      // prismF 的多邊形在局部 XY、沿局部 z 擠出 ⇒ 板面法線 = 局部 z、長軸 = 局部 y。
+      // 甲蟲鞘翅的長軸是**機身前後**、板面朝上 ⇒ 內層網格先 rotation.x = -π/2 躺平
+      // (局部 +y → 世界 −z 機尾、局部 +z → 世界 +y),掀起角掛在**外層 Group**:
+      // 兩個角寫在同一顆網格上會被尤拉序 'XYZ' 互相轉走。
+      // 左右鏡射改用多邊形頂點 x 反號(scale.x 取負會翻繞向,描邊反轉外殼跟著翻)。
+      const eg = new THREE.Group();
+      eg.position.set(sx * 0.5, 0.44, -0.16);
+      eg.rotation.z = sx * 1.15;                   // 繞前後軸滾轉:外緣向兩側掀起
+      eg.rotation.y = -sx * 0.3;                   // 尾端外撇
+      t.add(eg);
+      prismF(eg, ELY.map(([px, py]) => [sx * px, py]), 0.11,
+        0, 0, 0, PAL.mid, { metalness: 0.66 }).rotation.x = -Math.PI / 2;
+      for (let i = 0; i < 3; i++)                  // 翅脈稜:與殼板同框(長邊沿 eg 的 z = 殼長軸)
+        bxF(eg, 0.03, 0.02, 1.3, sx * (0.16 + i * 0.18), 0.062, -0.05, PAL.deep, { metalness: 0.7 });
       // ---- 膜翅:唯一的動力面(內/外兩段樞軸)----
       const w = new THREE.Group();
       w.position.set(sx * 0.24, 0.3, -0.1);
