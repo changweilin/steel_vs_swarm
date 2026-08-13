@@ -216,9 +216,13 @@ console.log('\nⅤ 幾何細度');
   ok(TERRAIN_CELL <= L,
     `地形格 ${TERRAIN_CELL.toFixed(2)}m ≤ 最長邊 ${L.toFixed(1)}m ⇒ 弦高 ${(TERRAIN_CELL * TERRAIN_CELL / (4 * R) * 1000).toFixed(2)}mm,不必細分`);
 
-  // 水面:整片鋪兩個三角形的舊制在曲面下是幾十公尺的弦高
-  const wSeg = /const wSeg = \(n\) => Math\.max\(1, Math\.ceil\(n \/ curveMaxEdgeM\(\)\)\);/.test(terrSrc);
-  ok(wSeg, '水面分段數由 curveMaxEdgeM() 推導');
+  // 水面:整片鋪兩個三角形的舊制在曲面下是幾十公尺的弦高。
+  // 2026-08-13 海浪上線後這條線多了**第二把尺**:浪是逐頂點的位移,53m 的格取樣不了 64m
+  // 的波(Nyquist)⇒ 邊長取兩者的**較嚴者**。曲面這一半的保證不受影響(min 只會更小),
+  // 而 `curveMaxEdgeM()` MUST 仍出現在算式裡 —— 拿掉它 = 波長一改大就退回幾十公尺的弦高。
+  const wEdge = /const wEdge = Math\.min\(curveMaxEdgeM\(\), seaSegM\(\)\);/.test(terrSrc);
+  const wSeg = /const wSeg = \(n\) => Math\.max\(1, Math\.ceil\(n \/ wEdge\)\);/.test(terrSrc);
+  ok(wEdge && wSeg, '水面分段數由 curveMaxEdgeM() 與 seaSegM() 的較嚴者推導(兩把尺都 MUST 在算式裡)');
   ok(/new THREE\.PlaneGeometry\(worldW, worldH, wSeg\(worldW\), wSeg\(worldH\)\)/.test(terrSrc), '水面真的吃到那個分段數');
   ok(/curveMaxEdgeM/.test(terrSrc.slice(0, terrSrc.indexOf('\n\n'))) || /from '\.\/data\.js'/.test(terrSrc.split('\n').find((l) => l.includes('curveMaxEdgeM')) || ''),
     'terrain.js 自 data.js import curveMaxEdgeM(不是自己算一份)');

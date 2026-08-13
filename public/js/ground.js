@@ -1184,20 +1184,30 @@ function detailTex(name) {
 // ---- 3D 細節(多零件;底部貼地,pebble 不平移 = 半埋入土)----
 // c:'grass'/'foliage' = 季節色;'palette' = 每實例指定色(材質白底 × instance tint);
 // tex = 材質塗層貼圖(detailTex;與 2D 地表同為程序 canvas)
+// sf = 軟性物質分類(A39;鍵 = toon.js SOFT_KINDS)。2026-08-13 使用者「稻浪 / 草波 / 芒草波」:
+//   這一整張表在 2026-08-04 那一輪**整批漏標** —— 芒草在 biomes.js 的 VEG_DEFS 那半會飄,
+//   而同一張圖上散在稻田/草原/河灘的這一半是硬的。症狀正是 A39 ④「那一叢草不會飄,而旁邊
+//   同款的會」:沒有錯誤訊息,只是看起來不對。稻(rice)是**稻浪**的唯一實體,漏了它
+//   「稻浪」就只剩地表那張畫上去的秧苗貼圖在原地不動。
+//   **與 biomes.js 的 VEG_DEFS 有一個關鍵差別**:那邊的零件高度住 `part.y`(幾何置中),
+//   這裡一律 `.translate(0, h/2, 0)` **烤進幾何**了 ⇒ 擺動錨點傳 `base: 0`(頂點自己的 y
+//   就已經是整株座標),傳 part.y 那一套會把權重整個推高一截。
+//   浮葉(lotuspad)刻意不標:它浮在水面上,沿風向的水平位移會讓葉片滑出水塘(同 turf 的
+//   取捨 —— 那是鋪面,擺起來只會跟步道錯開)。木質件(幹/枝/枯立木)照舊一律不是軟性。
 const cone = (r, h, n) => new THREE.ConeGeometry(r, h, n).translate(0, h / 2, 0);
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0);
 const cyl = (r0, r1, h, n) => new THREE.CylinderGeometry(r0, r1, h, n).translate(0, h / 2, 0);
 const DETAIL_DEFS = {
-  tuft:     [{ geo: cone(0.5, 1.2, 5), c: 'grass' }],
-  rice:     [{ geo: cone(0.26, 0.95, 4), c: 0x7fb257 }],
-  reed:     [{ geo: cone(0.3, 1.7, 4), c: 0xa9b06a }],
-  bush:     [{ geo: new THREE.IcosahedronGeometry(0.85, 0).translate(0, 0.55, 0), c: 'foliage', sy: 0.8 }],
+  tuft:     [{ geo: cone(0.5, 1.2, 5), c: 'grass', sf: 'grass' }],
+  rice:     [{ geo: cone(0.26, 0.95, 4), c: 0x7fb257, sf: 'grass' }],
+  reed:     [{ geo: cone(0.3, 1.7, 4), c: 0xa9b06a, sf: 'grass' }],
+  bush:     [{ geo: new THREE.IcosahedronGeometry(0.85, 0).translate(0, 0.55, 0), c: 'foliage', sy: 0.8, sf: 'leaf' }],
   pebble:   [{ geo: new THREE.IcosahedronGeometry(0.42, 0), c: 0x938c7e, sy: 0.55 }],
   hay:      [{ geo: new THREE.CylinderGeometry(1.0, 1.0, 1.5, 9).rotateZ(Math.PI / 2).translate(0, 1.0, 0), c: 0xc9a85c }],
   sapling:  [{ geo: new THREE.CylinderGeometry(0.09, 0.13, 1.3, 5).translate(0, 0.65, 0), c: 0x6b4a2f },
-             { geo: new THREE.IcosahedronGeometry(0.9, 0).translate(0, 1.7, 0), c: 'foliage', sy: 0.9 }],
-  flower:   [{ geo: cone(0.07, 0.5, 4), c: 0x5f8f44 },
-             { geo: new THREE.IcosahedronGeometry(0.16, 0).translate(0, 0.55, 0), c: 'palette' }],
+             { geo: new THREE.IcosahedronGeometry(0.9, 0).translate(0, 1.7, 0), c: 'foliage', sy: 0.9, sf: 'leaf' }],
+  flower:   [{ geo: cone(0.07, 0.5, 4), c: 0x5f8f44, sf: 'grass' },
+             { geo: new THREE.IcosahedronGeometry(0.16, 0).translate(0, 0.55, 0), c: 'palette', sf: 'grass' }],
   lotuspad: [{ geo: new THREE.CylinderGeometry(0.6, 0.65, 0.06, 9).translate(0, 0.16, 0), c: 0x4f8f4f }],
   // — 枯朽森林/伐木業 —
   bamboo:   [{ geo: cyl(0.05, 0.08, 2.6, 4), c: 0xa9c364 },
@@ -1250,13 +1260,14 @@ const DETAIL_DEFS = {
   drum:     [{ geo: cyl(0.34, 0.34, 0.95, 8), c: 'palette' }],
   crate:    [{ geo: box(0.95, 0.9, 0.95), c: 0xb8935a, tex: 'wood' }],
   // — 2026-07-12 附件擴充:飄逸芒草/雜草/菜園葉球/看板/盆栽/籃球架 —
-  miscanthus:[{ geo: cone(0.5, 1.6, 5), c: 'grass' },                     // 芒草束:斜出抽穗 = 飄逸剪影
+  miscanthus:[{ geo: cone(0.5, 1.6, 5), c: 'grass', sf: 'grass' },        // 芒草束:斜出抽穗 = 飄逸剪影
              // 花穗基部埋進草束錐內(該高度錐半徑 ~0.15),自叢心斜出才不像折枝
-             { geo: cone(0.15, 1.1, 4).rotateZ(0.4).translate(0.1, 1.1, 0), c: 0xe8dfb8 },
-             { geo: cone(0.14, 1.0, 4).rotateZ(-0.32).translate(-0.09, 1.05, 0.04), c: 0xd8cfa8 },
-             { geo: cone(0.13, 0.9, 4).rotateX(0.35).translate(0, 1.0, 0.1), c: 0xe0d5ae }],
-  weed:     [{ geo: cone(0.3, 0.75, 4), c: 0x9aa060 },                    // 雜草:歪斜雙叢
-             { geo: cone(0.2, 0.55, 4).rotateZ(0.5).translate(0.25, 0, 0), c: 0x8a9050 }],
+             // 三支花穗與草束**MUST 同一個 sf**:漏一支就是「草在飄、穗釘在空中」(A39 ④)
+             { geo: cone(0.15, 1.1, 4).rotateZ(0.4).translate(0.1, 1.1, 0), c: 0xe8dfb8, sf: 'grass' },
+             { geo: cone(0.14, 1.0, 4).rotateZ(-0.32).translate(-0.09, 1.05, 0.04), c: 0xd8cfa8, sf: 'grass' },
+             { geo: cone(0.13, 0.9, 4).rotateX(0.35).translate(0, 1.0, 0.1), c: 0xe0d5ae, sf: 'grass' }],
+  weed:     [{ geo: cone(0.3, 0.75, 4), c: 0x9aa060, sf: 'grass' },       // 雜草:歪斜雙叢
+             { geo: cone(0.2, 0.55, 4).rotateZ(0.5).translate(0.25, 0, 0), c: 0x8a9050, sf: 'grass' }],
   cabbage:  [{ geo: new THREE.IcosahedronGeometry(0.34, 0).translate(0, 0.24, 0), c: 0x6f9a44, sy: 0.75 }],
   // 街邊廣告看板:板面是抽象色塊 + 標語筆畫。**這裡刻意不寫字** —— 它是散佈細節,沒有
   // 「這塊看板屬於哪個店家」的語意可依附;有名字的招牌一律走 worldtext(唯一文字圖層)。
@@ -1297,6 +1308,26 @@ const REG = {
 // 3D 物件的水平足跡半徑(scale=1):**量零件實幾何**,MUST NOT 手寫 —— 零件表一改
 // (換模型/加零件)手寫值就靜默過期,而畫面上的症狀是「兩台貨櫃長在一起」
 const _detR = new Map();
+/**
+ * 一款細節的公稱高度(擺動權重的分母;A39 ⑤「span 推導不手寫」)。
+ * 與 `biomes.js vegSpan` 同一條紀律:改零件表(加高花穗、換 sy)擺幅自己跟著走 ——
+ * 手寫一個數字的話,加高之後梢端的權重停在 1 以下,那一款就整批擺不動而沒有任何錯誤訊息。
+ * 幾何的落地平移已烤進 boundingBox(見 DETAIL_DEFS 檔頭),故直接取 max.y × sy。
+ */
+const _detSpan = new Map();
+function detailSpan(type) {
+  let s = _detSpan.get(type);
+  if (s != null) return s;
+  s = 0;
+  for (const p of DETAIL_DEFS[type]) {
+    if (!p.geo.boundingBox) p.geo.computeBoundingBox();
+    s = Math.max(s, p.geo.boundingBox.max.y * (p.sy ?? 1));
+  }
+  s = Math.max(0.3, s);   // 分母 MUST NOT 為零(同 vegSpan 的下限)
+  _detSpan.set(type, s);
+  return s;
+}
+
 function detailR(type) {
   let r = _detR.get(type);
   if (r != null) return r;
@@ -3867,8 +3898,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     for (const part of DETAIL_DEFS[type]) {
       // 材質塗層與 2D 地表同語彙:低頻水彩 wash + 冷藍陰影(envMat),
       // 人造附件再疊程序貼圖(貨櫃浪板/太陽能電池格/看板畫面/木箱板紋)
+      // 軟性(A39):稻/草/芒草/蘆葦/花/灌木隨風飄揚 + 細勾線。錨點 base = 0 —— 這一張表的
+      // 落地平移烤在幾何裡,頂點的 y 本身就是整株座標(見 DETAIL_DEFS 檔頭那一段)。
       const mat = envMat(partColor(part.c), {
         map: part.tex ? detailTex(part.tex) : null, wash: 0.35, cool: 0.4,
+        ...(part.sf ? { soft: { k: part.sf, span: detailSpan(type), base: 0, sy: part.sy ?? 1 } } : {}),
       });
       const m = new THREE.InstancedMesh(part.geo, mat, items.length);
       items.forEach((it, i) => {

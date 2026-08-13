@@ -8,9 +8,9 @@
 // 模擬層的「北」= -z)。heightAt(x, z) 供機甲貼地、小兵放置使用。
 import * as THREE from 'three';
 import { envMat } from './hazards.js';
-import { setWeatherField } from './toon.js';
+import { setWeatherField, seaSoft, seaSegM } from './toon.js';
 import { makeField, makeToneLadder, bakeFieldTexture } from './field.js';
-import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, curveMaxEdgeM, edgeBufferM } from './data.js';
+import { TERRAIN, GAME, WATER, battleBBox, battleRect, llToXZ, xzToLL, solveTowerSites, curveMaxEdgeM, edgeBufferM, edgeWallInsetM } from './data.js';
 import { geoGet, geoPut, geoKey } from './geocache.js';
 
 // 涵蓋範圍幾何搬到 data.js(伺服器 sim.js 共用同一份,保證中立物不落在地形外);
@@ -34,6 +34,27 @@ function lat2ty(lat, z) {
 function smooth01(t) {
   t = t < 0 ? 0 : t > 1 ? 1 : t;
   return t * t * (3 - 2 * t);
+}
+/**
+ * 海浪幅度的逐頂點淡出權重(2026-08-13;消費端 = 水盤與緩衝空間外環水面)。
+ * 為什麼是**頂點屬性**而不是 uniform:兩張水面共用同一份材質(`waterMat`),而它們的網格
+ * 粗細差一個量級 —— 外環是曲面弦高那把尺(53m),取樣不了 64m 的波(低於 Nyquist ⇒ 遠處
+ * 讀成隨機起伏)。讓外環整片 0、內域在圖界前 SEA_FADE 個波長收到 0 ⇒ 接縫兩側同為平面,
+ * 既沒有折痕也沒有亂跳,而**玩家走得到的範圍恆是滿幅**。
+ * 帶寬 MUST 是 `edgeWallInsetM()`(障礙環內緣到圖界的距離)而不是手寫公尺數:那條線本來
+ * 就是「玩家最遠走得到哪裡」的唯一真相(x/z 夾制吃它),取它 ⇒ 滿幅剛好從夾制線開始,
+ * 「玩家看到的海恆是滿幅的浪」變成**結構保證**而不是某個湊出來的數字。
+ * geo = PlaneGeometry(繞 X 轉 −90° 之前):局部 x/y 就是世界的 x/z,取離最近邊的距離。
+ */
+function seaFadeOf(geo, w, h) {
+  const p = geo.attributes.position;
+  const band = Math.max(1e-3, edgeWallInsetM());
+  const a = new Float32Array(p.count);
+  for (let i = 0; i < p.count; i++) {
+    const dEdge = Math.min(w / 2 - Math.abs(p.getX(i)), h / 2 - Math.abs(p.getY(i)));
+    a[i] = smooth01(dEdge / band);   // smoothstep 而非線性:線性在滿幅那一端有折角
+  }
+  return a;
 }
 // 點到多段線集合(每段 [x1,z1,x2,z2])的最短距離
 function distToSegs(px, pz, segs) {
@@ -524,13 +545,26 @@ export async function buildTerrain(cfg, onProgress) {
     // 鋪成兩個三角形的話中間就是一條弦 —— 邊長 L 的弦高 L²/(4R),整張圖一格的舊制在 L3
     // (1200m)上是 25m,水面會從遠處的地形裡整片浮出來。地形自己的格是 6.25m ⇒ 弦高
     // 0.9mm,本來就遠在容差之內,只有水面需要補這一刀。
-    const wSeg = (n) => Math.max(1, Math.ceil(n / curveMaxEdgeM()));
+    // 邊長取兩把尺的**較嚴者**:曲面弦高(curveMaxEdgeM)與海浪取樣率(seaSegM)。
+    // 後者是 2026-08-13 加的:浪是**逐頂點**的位移,53m 的格取樣不了 64m 的波(Nyquist 要
+    // 兩倍以上),遠處會讀成隨機起伏而不是浪。兩者都 MUST NOT 手寫段數。
+    const wEdge = Math.min(curveMaxEdgeM(), seaSegM());
+    const wSeg = (n) => Math.max(1, Math.ceil(n / wEdge));
+    const wgeoIn = new THREE.PlaneGeometry(worldW, worldH, wSeg(worldW), wSeg(worldH));
+    // 浪幅的逐頂點淡出(見 seaFadeOf):自圖界往內收,到障礙環內緣恰為滿幅。
+    // 外環水面(下方 buildEdgeSkirt)整片 0 ⇒ 接縫兩側同為平面。
+    // **這是表現層的 LOD,不是物理**:waterY / 涉水深 / 道路跨水判定一格未動。
+    wgeoIn.setAttribute('seaFade', new THREE.BufferAttribute(seaFadeOf(wgeoIn, worldW, worldH), 1));
     const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(worldW, worldH, wSeg(worldW), wSeg(worldH)),
+      wgeoIn,
       // DoubleSide:視線沒入水下時抬頭仍看得到水面(單面會被背面剔除 = 水下憑空無水)。
       // 水面是淺色大面積 ⇒ ramp 取 `soft`(整條抬到亮端,兩階之間才看得出交界);
       // 透明件不吃 moss(envMat 預設就沒有),wash/cool 照走 —— 水色要跟著天色偏。
-      envMat(0x1a4a6a, { bands: 'soft', rim: 0, transparent: true, opacity: 0.82, side: THREE.DoubleSide }),
+      // soft: seaSoft() = 表面波(海浪);半透明件不吃細勾線那一半(見 toon.js 的 inkable 閘)。
+      envMat(0x1a4a6a, {
+        bands: 'soft', rim: 0, transparent: true, opacity: 0.82, side: THREE.DoubleSide,
+        soft: seaSoft(),
+      }),
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set((minX + maxX) / 2, waterY, (minZ + maxZ) / 2);
@@ -679,6 +713,10 @@ export async function buildTerrain(cfg, onProgress) {
       for (let k = 0; k < Pv.length; k += 3) { wp[k] = Pv[k]; wp[k + 1] = waterY; wp[k + 2] = Pv[k + 2]; }
       const wgeo = new THREE.BufferGeometry();
       wgeo.setAttribute('position', new THREE.BufferAttribute(wp, 3));
+      // 浪幅 0:這一圈的格邊長是曲面那把尺(53m),取樣不了 64m 的波。**MUST 顯式補這個屬性**
+      // ——「缺屬性時 WebGL 讀成 (0,0,0,1)」剛好也是 0,但那是靠未宣告的預設值成立的,
+      // 而未宣告的東西沒有任何一條斷言守得住(共用材質那一天改成非零就整圈亂跳)。
+      wgeo.setAttribute('seaFade', new THREE.BufferAttribute(new Float32Array(wp.length / 3), 1));
       wgeo.setIndex(Iw);
       wgeo.computeVertexNormals();
       const wRing = new THREE.Mesh(wgeo, waterMat);
