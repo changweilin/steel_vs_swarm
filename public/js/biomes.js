@@ -28,6 +28,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import {
   ENV, solveTowerSites, WATER, MAPGEO, LOS, GAME, objHeightMax, objScaleFit,
   WORLD_EDGE, edgeWallInsetM, edgeWallHM, edgeWallDeepM, edgeBufferM, xzToLL, SLOPE, slopeDeg,
+  CHARACTERS,
 } from './data.js';
 import { llToWorld } from './terrain.js';
 import { quantizeRoads, GRID_HW } from './roadgrid.js';
@@ -58,6 +59,9 @@ import { lowPower } from './mobile.js';
 import { planClimbRoutes, buildClimbMeshes, MAX_BODY_R } from './climb.js';
 import { harvestOsm, mergeCorpus, localeOf, signCopy } from './vernacular.js';
 import { VENUE_TEXT } from './venueText.js';
+import { drawFlag, pickFlagIso, flagSeed, sideIsoRoster, isoOfFlagEmoji, FLAG_RATIO } from './flags.js';
+import { WIND } from './toon.js';
+import { LORE } from './lore.js';
 
 const CELL = 10;                 // 淨空網格(m);走廊全寬約 34m > 4×3.5m 機甲
 const MAX_VEG = 7000;            // 植被實例上限
@@ -1102,15 +1106,75 @@ function box(w, h, d, color, x = 0, y = 0, z = 0) {
   m.position.set(x, y + h / 2, z);
   return m;
 }
+// ---- 國旗貼圖(2026-08-13;版式與挑國住 `flags.js`,本檔只負責把它畫進畫布)----
+// 畫布尺寸由 `FLAG_RATIO` 推導,MUST NOT 手寫寬高:比例一改而畫布沒跟著改,記號的座標
+// (flags.js 一律用比例)就會被拉扁,而「哪一國」仍然對 ⇒ 看得出不對卻找不到是誰錯。
+const FLAG_TEX_H = 48;
+const _flagTexCache = new Map();
+function flagTex(iso) {
+  if (_flagTexCache.has(iso)) return _flagTexCache.get(iso);
+  const H = FLAG_TEX_H, W = Math.round(H * FLAG_RATIO);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cx = cv.getContext('2d');
+  // 畫不出來(型錄沒有這一國)⇒ 回 null,呼叫端退回純色旗(原則 6:寧缺勿錯,
+  // 一面空白的白旗在戰場上讀起來是投降旗,比掛一面無名的紅旗更糟)
+  if (!drawFlag(cx, W, H, iso)) { _flagTexCache.set(iso, null); return null; }
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.anisotropy = 4;
+  _flagTexCache.set(iso, t);
+  return t;
+}
+
 /**
- * 旗面(軟性:細勾線 + 隨風飄揚;2026-08-04)。簽章與 `box()` 相同,差別只在材質旗標。
- * 擺動權重沿**旗面自己的 −x → +x** 遞增(base = 半寬 ⇒ 左緣 0、右緣 1):場上兩處旗幟
- * 都把旗桿放在旗面的 −x 側(校旗 pole x=−8 / 旗面中心 −7.2;堡旗 pole x=0 / 旗面中心 1.2),
- * 所以桿邊不動、旗尾飄得最開。**新增旗幟 MUST 沿用這個朝向**,否則會看到旗面繞著旗尾擺。
+ * 旗面(軟性:細勾線 + 隨風飄揚;2026-08-04,2026-08-13 改掛國旗)。
+ * `look` = ISO 二碼(國旗)**或**數字色(型錄查無此國時的退路,亦供不帶國籍情境的呼叫端)。
+ *
+ * 擺動權重沿**旗面自己的 −x → +x** 遞增(base = 半寬 ⇒ 左緣 0、右緣 1):場上的旗幟一律
+ * 把旗桿放在旗面的 −x 側,所以桿邊不動、旗尾飄得最開。
+ * **新增旗幟 MUST 沿用這個朝向**,否則會看到旗面繞著旗尾擺。
+ *
+ * 橫向分段(`FLAG_SEG`)是 2026-08-13 加的,而且**不是為了畫得細**:擺動是逐頂點的位移,
+ * 一段的盒子只有兩排頂點 ⇒ 旗面只能被「整片剪過去」,那是**一塊被推歪的板子**不是飄揚。
+ * 有了分段,`CEL_SWAY_H` 那條沿旗面推遲的相位才畫得出「波由旗桿往旗尾跑」。
  */
-function flag(w, h, d, color, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
-    bmat(color, { soft: { k: 'cloth', span: w, base: w / 2 } }));
+/**
+ * 國旗歸屬(2026-08-13 使用者定案:**依戰場半邊**)。回一支純函式 `(x, z) → iso|null`。
+ *   ・地圖國   = 場地的 `country` 旗幟 emoji(battleConfig 帶下來的;自訂地圖沒有 ⇒ null)
+ *   ・駐軍國   = **離這個落點最近的那一座主堡**的陣營名冊裡抽一國
+ *   ・敵對國   = 對面陣營的名冊
+ * 比例 30 : 60 : 10 由 `flags.js FLAG_MIX` 定案,本檔 MUST NOT 自己再寫一份門檻。
+ *
+ * 為什麼吃 `cfg.bases` 而不是玩家選了誰:那兩個座標在**開房當下**就由
+ * `rooms.rollSideSwap` 定案並隨 battleConfig 廣播全房(那支的檔頭明講擲點 MUST 留在房間
+ * 階段,正是為了客戶端的地形預建)⇒ 建圖期拿得到、且跨客戶端逐位元一致(§2.3)。
+ * 選角是房間階段之後的事,拿它當依據就得等開戰才建得出這一批物件。
+ */
+function makeNationPicker(cfg, basesW) {
+  const map = isoOfFlagEmoji(cfg?.venue?.country);
+  const roster = sideIsoRoster(CHARACTERS, LORE);
+  return (x, z) => {
+    let near = null, best = Infinity;
+    for (const b of basesW) {
+      const d2 = (x - b.x) ** 2 + (z - b.z) ** 2;
+      if (d2 < best) { best = d2; near = b; }
+    }
+    const gar = near?.side === 'STEEL' ? 'STEEL' : 'SWARM';
+    const foe = gar === 'SWARM' ? 'STEEL' : 'SWARM';
+    return pickFlagIso(flagSeed(x, z), { map, garrison: roster[gar] || [], enemy: roster[foe] || [] })?.iso || null;
+  };
+}
+
+const FLAG_SEG = 10;
+function flag(w, h, d, look, x = 0, y = 0, z = 0) {
+  const tex = typeof look === 'string' ? flagTex(look) : null;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d, FLAG_SEG, 2, 1),
+    // 有貼圖時底色走白:MeshToonMaterial 的 color 與 map 相乘,留著原本的紅會把整面旗染紅
+    bmat(tex ? 0xffffff : (typeof look === 'string' ? 0xd93a2b : look),
+      { soft: { k: 'cloth', span: w, base: w / 2 }, ...(tex ? { map: tex } : {}) }),
+  );
   m.position.set(x, y + h / 2, z);
   return m;
 }
@@ -1548,7 +1612,7 @@ const LANDMARKS = {
     const hMark = new THREE.Mesh(cyl(2.6, 2.6, 0.2, 12), bmat(0xe8e4dc));
     hMark.position.set(0, 18.7, -1); g.add(hMark);
   },
-  school: (g) => {
+  school: (g, rnd, iso) => {
     const f = facadeTex('school', 8, 3, '#4a5058', 0.2);
     const main = box(22, 9, 8, 0xd9c9a8); main.material.map = f.map; g.add(main);
     const wing = box(8, 9, 8, 0xd9c9a8, 10, 0, 8); wing.material.map = f.map; g.add(wing);
@@ -1557,7 +1621,9 @@ const LANDMARKS = {
     clock.rotation.x = Math.PI / 2; clock.position.set(0, 7, 4.2); g.add(clock);
     const pole = new THREE.Mesh(cyl(0.12, 0.12, 12, 6), bmat(0x9aa2a8));
     pole.position.set(-8, 6, 8); g.add(pole);
-    g.add(flag(1.4, 0.9, 0.06, 0xd93a2b, -7.2, 11, 8));         // 旗(軟性:細線 + 飄揚)
+    // 校旗 = 國旗(2026-08-13):`iso` 由呼叫端依落點的戰場半邊挑好(makeNationPicker);
+    // 拿不到(型錄查無此國 / 對照台不帶國籍)⇒ 退回原本那面紅旗,畫面逐位元同舊制。
+    g.add(flag(1.4, 0.9, 0.06, iso ?? 0xd93a2b, -7.2, 11, 8));  // 旗(軟性:細線 + 飄揚)
     for (const s of [-1, 1]) g.add(box(1, 2.6, 1, 0xb0a898, s * 4, 0, 9));   // 校門柱
   },
   station: (g) => {
@@ -1663,7 +1729,7 @@ const LANDMARKS = {
     g.add(box(6, 5, 0.6, 0x4a5058, 4, 0, 7.1));                 // 捲門
   },
   // ---- 2026-07-29 增補:四種世界地標建築(builder 吃 rnd → 逐座變化,同巨岩準則)----
-  castle: (g, rnd) => {
+  castle: (g, rnd, iso) => {
     // 歐洲石堡:主樓 + 四隅圓塔錐頂 + 雉堞圍牆 + 大門;塔高/主樓高/旗色逐座抽
     const kh = 14 + rnd() * 5;
     g.add(box(9, kh, 9, 0xb8b0a2));                             // 主樓
@@ -1687,8 +1753,11 @@ const LANDMARKS = {
     g.add(box(3.4, 4.5, 0.8, 0x4a3a2a, 0, 0, -7.4));            // 大門
     const pole = new THREE.Mesh(cyl(0.1, 0.1, 5, 5), bmat(0x9aa2a8));
     pole.position.set(0, kh + 3.5, 0); g.add(pole);
-    g.add(flag(2.2, 1.2, 0.08, [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0],
-      1.2, kh + 4.4, 0));                                       // 主樓旗(徽色逐座抽;軟性)
+    // 主樓旗 = 國旗(2026-08-13)。**rnd() MUST 照抽**(§2.3 抽樣紀律:淘汰排在抽樣之後)——
+    // 掛國旗就少抽一枚的話,後面每一株植被、每一棟建物的佈局整條推移,而畫面上只表現成
+    // 「整張圖變了」。抽到的徽色仍是型錄查無此國時的退路。
+    const heraldic = [0xd93a2b, 0x3a6ad9, 0xc7a13d, 0x2e7a4a][(rnd() * 4) | 0];
+    g.add(flag(2.2, 1.2, 0.08, iso ?? heraldic, 1.2, kh + 4.4, 0));   // 主樓旗(軟性)
   },
   lighthouse: (g, rnd) => {
     // 燈塔:白塔身 + 紅環帶 + 迴廊燈室 + 看守小屋;高度/環帶數逐座抽
@@ -3339,6 +3408,88 @@ function placeBeacons({ group, terrain, blocked, blockers, lanesW, basesW }) {
     n++;
   }
   return n;
+}
+
+// ---- 主堡旗陣(2026-08-13 使用者「遊戲中加入國旗物件」)----
+// 地標建物上的旗子逐圖數量不定(一張圖不見得抽得到學校或城堡),而**每一場都要看得到國旗**
+// ⇒ 兩座主堡外圍各立一圈旗桿。這裡也是「駐軍國」這條規則最讀得出來的地方:走向對面陣營的
+// 主堡,旗海會慢慢從自己這一國換成對方那一國(60% 換到 60%),中間夾著 30% 的地主國。
+//
+// 四條紀律:
+//  ①**純表現層**:不進 `blockers`/`occ`/LOS、不 `blockArea` —— 旗桿是 0.12m 的細桿,
+//    與球門柱/園燈同級(siteplan 的先例:「掛了就是球門後面那條看不見的牆」)。
+//  ②**零共享 `rnd()` 消耗**(§2.3):落點是等分角度的純幾何,國家由座標雜湊自帶種子。
+//    這一整段插在建構鏈的任何位置都不會推移後面每一株植被的序列。
+//  ③**逐國一個 InstancedMesh**:旗面**MUST NOT** 合併成一個 mesh —— 擺動權重吃的是
+//    `transformed.x`(旗桿側 0、旗尾 1),合併之後每一面旗的 x 都是它在合併幾何裡的位置,
+//    整批會繞著旗陣的中心擺。實例化則每一面各自吃自己的局部座標,且相位取實例原點 ⇒
+//    一圈旗子彼此差半拍,正是要的效果。
+//  ④**朝向對著下風**:旗面的 +x 是旗尾,轉到 `WIND.DIR_DEG` 那個方向 ⇒ 旗子朝風吹的方向
+//    展開。省掉這一步的話旗子會側著吹(擺動仍正確,但看起來像旗桿裝反了)。
+const FLAG_RING_N = 8;        // 每座主堡幾根旗桿
+const FLAG_POLE_H = 12;       // 旗桿高(真實公稱 6m × REAL_SCALE 2;§2.5)
+const FLAG_POLE_R = 0.12;
+// 旗面尺寸:真實公稱 2.5m × 1.5m 的旗 × REAL_SCALE 2(§2.5)。高由 `FLAG_RATIO` **推導** ——
+// 手寫兩個數字的話比例一改,貼圖上的記號(flags.js 一律用比例座標)會被拉扁而顏色還是對的。
+const FLAG_W = 5.0, FLAG_H = FLAG_W / FLAG_RATIO;
+function placeBaseFlags({ group, terrain, blocked, basesW, nation }) {
+  // 半徑 MUST 把**淨空圈**與 `areaFree` 的**格子探針**一起算進去:淨空是 `BASE_CLEAR_R`(70m),
+  // 而 `areaFree(..., 2)` 的 n = ceil(2 / CELL) = 1 ⇒ 它其實問的是「這一格與四鄰(±CELL)有
+  // 沒有被佔住」。乘個 1.12 放到 78m 看起來很安全,實際上探針往內摸到 68m < 70m ⇒ **一根都
+  // 立不起來**,而且沒有任何錯誤訊息(2026-08-13 實測:整圈 16 根全被靜默淘汰)。
+  const R = BASE_CLEAR_R + CELL * 2;
+  const sites = [];
+  for (const b of basesW) {
+    for (let i = 0; i < FLAG_RING_N; i++) {
+      const a = (i + 0.5) / FLAG_RING_N * Math.PI * 2;
+      const x = b.x + Math.cos(a) * R, z = b.z + Math.sin(a) * R;
+      if (x < terrain.minX + 30 || x > terrain.maxX - 30
+        || z < terrain.minZ + 30 || z > terrain.maxZ - 30) continue;
+      if (terrainEnvCode(terrain, x, z) !== 0) continue;     // 水域/沼澤不立(寧缺勿錯)
+      if (!areaFree(blocked, x, z, 2)) continue;             // 兵線/道路/建物佔住了就跳過
+      sites.push({ x, z, y: terrain.heightAt(x, z), iso: nation(x, z) });
+    }
+  }
+  if (!sites.length) return 0;
+  // 旗桿:同色同幾何 ⇒ 一個 InstancedMesh
+  const poleG = new THREE.CylinderGeometry(FLAG_POLE_R, FLAG_POLE_R, FLAG_POLE_H, 6)
+    .translate(0, FLAG_POLE_H / 2, 0);
+  const poles = new THREE.InstancedMesh(poleG, bmat(0x9aa2a8), sites.length);
+  const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), S = new THREE.Vector3(1, 1, 1);
+  const ry = -WIND.DIR_DEG * Math.PI / 180;   // 旗尾(局部 +x)朝下風;見紀律 ④
+  Q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), ry);
+  sites.forEach((s, i) => {
+    P.set(s.x, s.y, s.z);
+    M.compose(P, Q, S);
+    poles.setMatrixAt(i, M);
+  });
+  poles.instanceMatrix.needsUpdate = true;
+  poles.castShadow = false;
+  group.add(poles);
+  // 旗面:逐國一個 InstancedMesh(紀律 ③)。旗面掛在桿頂偏 +x 半個旗寬處 = 桿邊貼著桿。
+  const byIso = new Map();
+  for (const s of sites) {
+    const key = s.iso || '';
+    if (!byIso.has(key)) byIso.set(key, []);
+    byIso.get(key).push(s);
+  }
+  for (const [iso, list] of byIso) {
+    const proto = flag(FLAG_W, FLAG_H, 0.07, iso || 0xd93a2b);   // 幾何 + 材質(含 cloth 軟性)取自同一份 flag()
+    const fm = new THREE.InstancedMesh(proto.geometry, proto.material, list.length);
+    list.forEach((s, i) => {
+      // 局部 +x = 旗尾 ⇒ 旗面中心要往 +x 推半個旗寬,桿才落在旗面的 −x 緣(A39 的旗桿側錨點)
+      // 高度傳 `POLE_H − FLAG_H`:`flag()` 自己會再加半個旗高 ⇒ 旗面**頂緣恰在桿頂**。
+      // 傳 POLE_H 的話旗子會有一半飄在旗桿上面(而畫面上只看得出「旗桿好像短了一截」)。
+      P.set(s.x + Math.cos(ry) * (FLAG_W / 2), s.y + FLAG_POLE_H - FLAG_H,
+        s.z - Math.sin(ry) * (FLAG_W / 2));
+      M.compose(P, Q, S);
+      fm.setMatrixAt(i, M);
+    });
+    fm.instanceMatrix.needsUpdate = true;
+    fm.castShadow = false;
+    group.add(fm);
+  }
+  return sites.length;
 }
 
 /** 裸露地巨岩地標:名岩輪替 + 合成巨岩;footprint 整圓淨空後放置,登記碰撞柱 */
@@ -8107,6 +8258,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     const [x, z] = llToWorld(cfg.bases[side][0], cfg.bases[side][1], center);
     return { side, x, z };
   });
+  // 國旗歸屬(地圖 30 : 駐軍 60 : 敵對 10)。純函式、零共享 rnd ⇒ 建在哪一行都不影響序列。
+  const nation = makeNationPicker(cfg, basesW);
   const megalithsBuilt = placeMegaliths({ group, terrain, blocked, blockers, rnd, sites: bareSites, basesW });
   const giantTrees = placeGiantGroves({ terrain, blocked, blockers, items, rnd, sites: greenSites });
   // 語意化地標(P2-C):排在一般植被之前 ⇒ blockArea 之後小植被自動避開;零共享 rnd 消耗,
@@ -8116,6 +8269,8 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     lanesW: cfg.lanes.map((lane) => lane.map(([lat, lng]) => llToWorld(lat, lng, center))),
     basesW,
   });
+  // 主堡旗陣:純表現層、零共享 rnd ⇒ 排在這裡不推移後面的植被序列(§2.3)
+  const baseFlags = placeBaseFlags({ group, terrain, blocked, basesW, nation });
 
   const attempts = vegTarget * 3;
   for (let a = 0; a < attempts && placed < vegTarget; a++) {
@@ -9298,7 +9453,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   await onProgress?.(0.85, '放置地標建物…');
   for (const lm of landmarks) {
     const g = new THREE.Group();
-    LANDMARKS[lm.type](g, rnd);   // rnd → 同型地標逐座變化(塔高/層數/徽色;巨岩準則)
+    // 第三參數 = 這一座地標該掛哪一國的旗(依落點的戰場半邊;makeNationPicker)。
+    // 不掛旗的型別忽略它 ⇒ 逐位元同舊制。**rnd 仍是第二參數且照抽**(§2.3)。
+    LANDMARKS[lm.type](g, rnd, nation(lm.x, lm.z));   // rnd → 同型地標逐座變化(塔高/層數/徽色)
     bakeContactAO(g, 3);   // 接地 AO 頂點色:地標與地面接縫處手繪暗角(botw_plan Task 2.2)
     let sc = OVER.lm * (0.9 + rnd() * 0.25);
     // 物件高度上限(`WORLD_H.OBJ_F` 倍砲塔高)。標稱高 MUST **實測**而不是讀
@@ -9569,6 +9726,7 @@ export async function buildBiomes(cfg, terrain, onProgress) {
     giantTrees,
     megaliths: megalithsBuilt,
     beacons: beaconsBuilt,
+    baseFlags,
     ground: ground.patches,
     groundDetails: ground.details,
     groundAligned: ground.aligned,   // 沿路對齊件數(拼圖 + 物件;整齊度 reg 稽核用)
