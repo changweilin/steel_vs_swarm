@@ -498,15 +498,19 @@ export async function buildTerrain(cfg, onProgress) {
   // 風化屬性場(P2-A):**兩條路徑都要裝**,而且要在建材質**之前** —— 場是共享 uniform,
   // 材質只是拿到那個物件的參照,先後其實不影響,但擺在這裡才看得出「有沒有影像都有場」。
   installWeatherField({ minX, maxX, minZ, maxZ }, center);
+  // `land: true`(2026-08-13):地形是**地貌**類別的一員(勾線資訊緩衝的類別碼 + 共用
+  // surfaceId,唯一縫住 toon.js)。它與地被拼圖共用一個 id ⇒ 拼圖鋪到哪裡、拼圖之間、
+  // 拼圖與裸地形之間都不會被 id 那一項畫出線;地形自己的法線是**真的**,折邊那一項照舊
+  // ⇒ 稜線與路塹該有的線一條都沒少(使用者定案「地形變化受 LUT 與勾線作用」)。
   let mat;
   if (imagery) {
     const tex = new THREE.CanvasTexture(imagery.canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
-    mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4 });
+    mat = envMat(0xffffff, { map: tex, rim: 0, bands: 4, land: true });
   } else {
     paintTerrainTones(geo, pos, { minX, maxX, minZ, maxZ }, center);
-    mat = envMat(0xffffff, { vertexColors: true, rim: 0, bands: 4 });
+    mat = envMat(0xffffff, { vertexColors: true, rim: 0, bands: 4, land: true });
   }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
@@ -1205,5 +1209,8 @@ export async function buildTerrain(cfg, onProgress) {
   }
 
   await onProgress?.(1, '地形完成');
-  return { group, mesh, heightAt, natureAt, bufferHeightAt, rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
+  // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
+  // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
+  // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
+  return { group, mesh, heightAt, natureAt, bufferHeightAt, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
 }

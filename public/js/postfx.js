@@ -58,6 +58,15 @@ import { DOF } from './data.js';
 //   ② 哨兵靠**把第二張單獨清成 0** 成立:`renderer.clear()` 拿 renderer 的 clearColor 清
 //      **每一張**附件,而那個顏色不是 0 ⇒ MUST 另外 `clearBufferfv(COLOR, 1, [0,0,0,0])`。
 //   ③ 拿不到 MRT(WebGL1)或開關關著 ⇒ 整組退回深度那一份,**逐位元**同這批改動之前。
+//
+// ---- 第四條:`.a` 帶的是**表面類別**(2026-08-13)----
+// 類別碼與寫入端全住 `toon.js INK_CLASS`(NONE 0 / LAND 0.5 / HARD 1)。本檔兩個消費端:
+//   ・勾線:哨兵門檻因此從 `> 0.5` 改成 `> 0.25`(LAND 恰好是 0.5,用舊門檻會把整片地面
+//     判成「沒有資訊」—— 而 8bit RT 上 0.5 存成 0.50196 **剛好又 > 0.5**,那是「桌機看起來
+//     好了、低功耗裝置上又是另一個樣子」的那種壞法);
+//   ・3D LUT:見下方 `LUT` 段的「地貌」那一條。
+// 勾線本身**不再需要**為地貌寫任何特例:地貌共用一個 surfaceId(id 項自動歸零)、貼地拼圖
+// 改寫真地形法線(折邊項因此量到地形)—— 兩件事都在寫入端解決,這裡一行分支都沒有。
 const INK_MRT = {
   NRM0: 0.05,        // 法線折邊起畫(相鄰兩格視空間法線 xy 的中央差分長度)
   NRM1: 0.42,        // 全強度。實測:同一塊平板 < 0.02、90° 折邊 ≈ 1.0
@@ -123,6 +132,23 @@ const AIR = {
 // **格式刻意是 2D 條狀而不是 `sampler3D`**:①外部工具(Photoshop / Resolve / Lightroom)
 // 匯出的就是這個格式,`Data3DTexture` 還得先在瀏覽器裡拆一次;②GLSL1 就寫得出來,不必為了
 // 它把整支 shader 綁上 WebGL2 —— 而「綁上 WebGL2」正是同一輪 MRT 勾線踩到的那顆地雷。
+//
+// ---- 地貌:LUT **不吃色度、只吃亮度**(2026-08-13 使用者定案)----
+// 原話:「LUT 與勾線不針對地貌作用,不要看出地貌拼圖接縫,但地形變化受 LUT 與勾線作用」。
+// LUT 是一條任意的映射 ⇒ 它的**局部增益**可以遠大於 1(對比 S 曲線、彩度提升都是),而地被
+// 是幾十款拼圖鋪出來的:相鄰兩塊本來只差一兩階的顏色,過完表就被推開成看得見的色塊界 ——
+// 使用者看到的「地貌拼圖接縫」。同一條映射在**亮度**上做的事卻正是我們要的:坡面受光、
+// 稜線的明暗、路塹的陰影,那是**地形**。
+//
+// 故地貌走一條仿射的分解(`lutApply` 的 land 分支):
+//
+//     out = lutApply( vec3(y) ) + ( c − vec3(y) )       , y = 這一格的亮度
+//
+// 兩個性質是**恆等式**不是調校:
+//   ① 色度差**原樣通過**(增益恆為 1)⇒ 兩塊只差顏色、受光相同的拼圖,過表之後差多少
+//      就還是差多少 —— LUT 再怎麼激進都不會把接縫「顯影」出來;
+//   ② 恆等 LUT ⇒ `lutApply(vec3(y)) = vec3(y)` ⇒ `out ≡ c`,逐位元。
+// 拿不到類別(WebGL1 / 沒配第二張附件)⇒ 整片走原本那條(降級不例外,原則 6)。
 const LUT = {
   // 程序生成的邊長(條狀圖 1024×32)。**2026-08-12 兩種都量過**:`none` vs `baked` 的
   // 逐像素差 32³ 是 mean 1.28 / max 29(滿分 765)、64³ 是 mean 1.16 / max 29 ——
@@ -221,7 +247,11 @@ export class Pipeline {
     // **能力與開關分開記**:開關可以即時切,能力不會變。
     this._mrtCap = renderer.capabilities.isWebGL2 === true
       && typeof THREE.WebGLMultipleRenderTargets === 'function';
-    this._mrt = this._mrtCap && visualPref('inkMrt') === 'on';
+    // **配不配第二張**與**誰在用它**是兩件事(2026-08-13):3D LUT 的地貌分支也要讀類別碼,
+    // 而它與折邊勾線是兩個獨立的設定。合成一個旗標的話,開了 LUT 就等於偷偷把折邊勾線也
+    // 打開(墨線量 2.2 倍),而使用者只動了調色那一欄。
+    this._mrt = this._wantInfo();
+    this._inkMrt = this._mrt && visualPref('inkMrt') === 'on';
     this.rtScene = this._mkRT(true);
     this.rtA = this._mkRT(false);
     this.rtB = this._mkRT(false);
@@ -291,19 +321,39 @@ export class Pipeline {
   }
 
   /**
-   * 勾線資訊緩衝開關的**即時切換**(設定頁 `inkMrt`)。
+   * 資訊緩衝要不要配(**唯一判據**)。兩個消費端各自獨立:折邊勾線的開關、以及 3D LUT
+   * 的來源(來源 = none 時整條 LUT 不生效 ⇒ 也不必為它多配一張附件)。
+   */
+  _wantInfo() {
+    return this._mrtCap && (visualPref('inkMrt') === 'on' || visualPref('lutSrc') !== 'none');
+  }
+
+  /**
+   * 資訊緩衝與兩個消費端的**即時切換**(設定頁 `inkMrt` / `lutSrc`)。
    * **場景材質恆寫第二張**(見 toon.js 的材質契約:宣告在單附件上也合法)⇒ 切開關只需要
-   * 重建場景 RT 與勾線材質,**不必重編譯任何場景材質** —— 那正是「無條件宣告」換來的東西。
+   * 重建場景 RT 與兩支全螢幕材質,**不必重編譯任何場景材質** —— 那正是「無條件宣告」換來的。
    */
   _syncMrt() {
-    const want = this._mrtCap && visualPref('inkMrt') === 'on';
-    if (want === this._mrt) return;
-    this._mrt = want;
-    this.rtScene.depthTexture?.dispose();
-    this.rtScene.dispose();
-    this.rtScene = this._mkRT(true);
-    this.inkQuad.material.dispose();          // 著色器把 mrt 編進去了,MUST 重建
+    const want = this._wantInfo();
+    const wantInk = want && visualPref('inkMrt') === 'on';
+    if (want === this._mrt && wantInk === this._inkMrt) return;
+    if (want !== this._mrt) {
+      this._mrt = want;
+      this.rtScene.depthTexture?.dispose();
+      this.rtScene.dispose();
+      this.rtScene = this._mkRT(true);
+      this.gradeQuad.material.dispose();       // 地貌分支編進去了,MUST 重建
+      this.gradeQuad.material = this._gradeMaterial();
+      // 新材質的 uniform 是空的 ⇒ **三組值都要重掛**(漏掉哪一組就是「切了折邊勾線之後
+      // 空氣透視/LUT 自己關掉了」,而那看起來完全像另一個 bug)。LUT 直接重掛既有那一張,
+      // MUST NOT 走 _syncLutSrc —— 那支對 `file` 會再讀一次檔。
+      if (this._air) this.setAirFog(...this._air);
+      this.setLut(this._lutTex || null, this._lutN || LUT.SIZE);
+    }
+    this._inkMrt = wantInk;
+    this.inkQuad.material.dispose();           // 著色器把 mrt 編進去了,MUST 重建
     this.inkQuad.material = this._inkMaterial();
+    this.inkQuad.material.uniforms.uInk.value = visualPref('ink');
   }
 
   /**
@@ -348,7 +398,8 @@ export class Pipeline {
    * `fogNear`/`fogFar` MUST 與 `scene.fog` 逐位元相同 —— 那是恆等式成立的前提(檔頭)。
    */
   setAirFog(nearC, farC, fogNear, fogFar) {
-    if (!nearC || !farC || !(fogFar > fogNear)) { this._airOn = false; this._pushAirA(); return; }
+    if (!nearC || !farC || !(fogFar > fogNear)) { this._airOn = false; this._air = null; this._pushAirA(); return; }
+    this._air = [nearC, farC, fogNear, fogFar];   // grade 材質重建時要原樣重掛(_syncMrt)
     const u = this.gradeQuad.material.uniforms;
     u.uAirNear.value.copy(nearC);
     u.uAirFar.value.copy(farC);
@@ -391,6 +442,8 @@ export class Pipeline {
       u.uLutSize.value.set(size, 1 / size);
     }
     u.tLut.value = tex || null;
+    this._lutTex = tex || null;                  // grade 材質重建時原樣重掛(_syncMrt)
+    this._lutN = tex ? size : (this._lutN || LUT.SIZE);
     this._lutOn = !!tex;
     this._pushLutA();
   }
@@ -432,7 +485,7 @@ export class Pipeline {
   }
 
   _inkMaterial() {
-    const mrt = this._mrt;
+    const mrt = this._inkMrt;
     return new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: null }, tDepth: { value: null }, tInfo: { value: null },
@@ -484,7 +537,9 @@ export class Pipeline {
           float mrtEdge = 0.0;
           // 五格都要有資訊(哨兵)。缺一格就當這裡沒有第二訊號 —— 交界那一圈交給深度那一份,
           // 而天空/特效/招牌整片都沒有資訊 ⇒ 它們一條新線都不會多出來。
-          if ( min( min( i0.a, min( il.a, ir.a ) ), min( iu.a, ib.a ) ) > 0.5 ) {
+          // 門檻是 **0.25** 不是 0.5:.a 自 2026-08-13 起是類別碼(NONE 0 / LAND 0.5 /
+          // HARD 1),0.5 是「地貌」不是「沒有資訊」。
+          if ( min( min( i0.a, min( il.a, ir.a ) ), min( iu.a, ib.a ) ) > 0.25 ) {
             // 中央差分:與深度那一項用**同一組偏移**,兩種線才會落在同一排像素上
             float nrm = length( vec2( length( il.rg - ir.rg ), length( iu.rg - ib.rg ) ) );
             float idv = max( abs( il.b - ir.b ), abs( iu.b - ib.b ) );
@@ -574,11 +629,13 @@ export class Pipeline {
 
   _gradeMaterial() {
     const g = GRADE;
+    const info = this._mrt;
     return new THREE.ShaderMaterial({
       uniforms: {
         tColor: { value: null },
         // tDepth / uNear / uFar 由 render() 的共用接線自動餵(與勾線、景深同一段)
         tDepth: { value: null }, uNear: { value: 0.5 }, uFar: { value: 1000 },
+        ...(info ? { tInfo: { value: null } } : {}),
         uAirNear: { value: new THREE.Color(0, 0, 0) }, uAirFar: { value: new THREE.Color(0, 0, 0) },
         uFogN: { value: 0 }, uFogF: { value: 1 }, uAirA: { value: 0 },
         tLut: { value: null }, uLutA: { value: 0 }, uLutSize: { value: new THREE.Vector2(LUT.SIZE, 1 / LUT.SIZE) },
@@ -590,6 +647,7 @@ export class Pipeline {
         uniform vec3 uAirNear; uniform vec3 uAirFar;
         uniform float uFogN; uniform float uFogF; uniform float uAirA;
         uniform sampler2D tLut; uniform float uLutA; uniform vec2 uLutSize;   // x = 邊長, y = 1/邊長
+        ${info ? 'uniform sampler2D tInfo;' : ''}
         varying vec2 vUv;
         ${SRGB_GLSL}
         vec3 toLinear( vec3 c ) {
@@ -615,6 +673,16 @@ export class Pipeline {
           vec3 s1 = texture2D( tLut, vec2( uv.x + b1 * inv, uv.y ) ).rgb;
           return toLinear( mix( s0, s1, b - b0 ) );
         }
+        ${info ? `
+        /**
+         * 地貌專用(檔頭 LUT 的「地貌」那一段):**只把亮度餵給表,色度原樣通過**。
+         * 亮度取 Rec.709(與 split-tone 的 \`l\` 同一把尺 —— 兩份亮度定義會在交叉淡入時
+         * 互相拉扯,而症狀是「LUT 拉到一半的時候地面偏色」)。
+         */
+        vec3 lutApplyLand( vec3 linC ) {
+          float y = dot( linC, vec3( 0.2126, 0.7152, 0.0722 ) );
+          return max( lutApply( vec3( y ) ) + ( linC - vec3( y ) ), 0.0 );
+        }` : ''}
         void main() {
           vec3 c = texture2D( tColor, vUv ).rgb;
           // 空氣透視:MUST 排在 split-tone **之前**(霧是場景裡的東西,調色是鏡頭上的東西;
@@ -648,7 +716,15 @@ export class Pipeline {
           c = c * ( 1.0 - ${g.LIFT.toFixed(4)} ) + ${g.LIFT.toFixed(4)};
           // uLutA = 0(沒餵過 LUT / 來源是 none / 拉桿歸零)⇒ 整段跳過,連取樣都不做
           // ⇒ 逐位元同舊制。
-          if ( uLutA > 0.0 ) c = mix( c, lutApply( pre ), uLutA );
+          if ( uLutA > 0.0 ) {
+            vec3 lc = lutApply( pre );
+            ${info ? `
+            // 地貌(類別碼 0.5;NONE 0 與 HARD 1 都在帶外)⇒ 換成不吃色度的那一支。
+            // **帶而不是等號**:8bit RT 上 0.5 存成 0.50196。
+            float cls = texture2D( tInfo, vUv ).a;
+            if ( cls > 0.25 && cls < 0.75 ) lc = lutApplyLand( pre );` : ''}
+            c = mix( c, lc, uLutA );
+          }
           gl_FragColor = vec4( c, 1.0 );
         }`,
     });

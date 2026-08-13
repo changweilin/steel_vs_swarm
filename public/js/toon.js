@@ -137,6 +137,26 @@ installWorldCurve();
 // lambert / phong / standard / physical / toon / matcap / points / sprite / dashed)全部包含它,
 // 而陰影與背景那幾支(depth / distanceRGBA / shadow / background / cube)**都不包含** ——
 // 那正是我們不想碰的:它們畫進單附件的陰影圖,補上去只是白付一個輸出。
+//
+// ---- `.a` 是**表面類別**不只是哨兵(2026-08-13;使用者定案「LUT 與勾線不針對地貌作用,
+//      不要看出地貌拼圖接縫,但地形變化受 LUT 與勾線作用」)----
+// 「地貌」(地形 + 地被拼圖 + 交界外溢 + 界線拼圖 + 特徵拼圖)在畫面上是**一個連續的表面**,
+// 但在資料上是幾十份材質拼出來的 ⇒ 逐材質的 surfaceId 在每一格拼圖的邊上都不一樣,
+// `INK_MRT.ID` 那一項就沿著每一條拼圖邊畫線 = 使用者看到的「地貌拼圖接縫」。
+// 這不是門檻調不好:id 量的是**這是哪一塊拼圖**(地貌),而勾線要的是**這裡的形狀**(地形)。
+// 兩件事分開的方法有三條,缺一不可:
+//   ① 地貌材質**共用一個 surfaceId**(`LAND_SURF_ID`)⇒ 拼圖之間 id 差恆為 0,而與建物/
+//      機體/道路之間仍然差得開(牆腳那條線一條都沒少);
+//   ② 貼地拼圖的**法線是假的**((0,1,0),它只是一張鋪在地形上的皮)⇒ 由呼叫端餵
+//      `aLandN` = 真地形法線(`landNrm: true`),折邊那一項因此量到**地形**:稜線與路塹
+//      照樣出線、拼圖邊界(同一個連續法線場)不出線。餵不到就退回自己的法線(原則 6);
+//   ③ `.a` 帶類別碼 —— 3D LUT 那一端要知道「這一格是地貌」才做得到「不針對地貌作用」
+//      (postfx.js 的 `lutApply` 分支)。哨兵語意不變:0 仍是「沒有資訊」。
+export const INK_CLASS = {
+  NONE: 0,     // 沒有寫過(天空穹頂 / 護盾殼 / 粒子 / 招牌)—— 哨兵
+  LAND: 0.5,   // 地貌:地形 + 一切貼在它上面的地被層
+  HARD: 1,     // 其餘(機體 / 建物 / 道路 / 水面 / 擺件)= 舊制
+};
 export const INK_INFO_DECL = 'layout(location = 1) out highp vec4 gInfo;';
 export const INK_INFO_NONE = 'gInfo = vec4( 0.0 );';   // 哨兵 0 = 這一格沒有法線資訊
 function installInkInfo() {
@@ -158,6 +178,12 @@ installInkInfo();
 let _surfSeq = 0;
 /** 逐材質的 surfaceId(量化到 [0,1] 的 64 階;相鄰材質撞號 = 少一條線,不是壞掉)*/
 const nextSurfId = () => ((_surfSeq = (_surfSeq + 23) & 63) + 0.5) / 64;
+/**
+ * 地貌共用的 surfaceId。取 **0 是刻意的**:`nextSurfId` 的值域是 `(k + 0.5) / 64`,
+ * 最小 0.0078 ⇒ 0 永遠不會被抽到 ⇒ 地貌與任何一份非地貌材質的 id 差恆 ≥ 0.0078,
+ * 穩穩跨過 `INK_MRT` 那一項的 0.004 門檻(地貌 vs 建物的線一條都不會少)。
+ */
+const LAND_SURF_ID = 0;
 
 // ---- cel ramp 家族(NearestFilter = 硬邊界)----
 // **單一縫**:全專案的明暗階梯只有這一張表,ramp 的 DataTexture MUST 只在本檔建構 ——
@@ -501,8 +527,13 @@ export function celWindTime() { return _windT.value; }
  *   soft  — { k, span, base?, sy? } k = SOFT_KINDS 的鍵;span = 整株/整面的尺寸(局部單位);
  *           base = 這個零件的原點在整株座標裡的位置(樹冠 = part.y、旗面 = 半寬);
  *           sy = 零件自身的縱向縮放(part.sy)。三者一起決定「這個頂點在整株上有多接近梢端」。
+ * 地貌(2026-08-13;見檔頭「`.a` 是表面類別」段):
+ *   land    — 這份材質屬於地貌(地形 / 地被拼圖 / 界線拼圖 / 特徵拼圖)⇒ 共用 surfaceId
+ *             + 類別碼 LAND。**MUST NOT 掛在道路、建物、擺件上**(那些的邊界線是要的)。
+ *   landNrm — 再加一條:gInfo 的法線改吃幾何的 `aLandN` 屬性(呼叫端餵真地形法線)。
+ *             只給**貼地拼圖**(它自己的法線是 (0,1,0) 這個謊);地形自己與立體脊不傳。
  */
-function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3 } = {}) {
+function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, cool = 0, paint = null, tint = 'mech', preview = false, soft = null, bands = 3, land = false, landNrm = false } = {}) {
   if (preview) ensurePreviewField();
   const sk = soft ? (SOFT_KINDS[soft.k] || SOFT_KINDS.leaf) : null;
   const defines = { ...(mat.defines || {}) };
@@ -525,15 +556,20 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     defines.CEL_SWAY = '';
     if (sk.axis === 'x') defines.CEL_SWAY_H = '';
   }
+  // 地貌法線:只有它需要 define(共用 id 與類別碼都只是 uniform ⇒ 不必分程式)
+  if (landNrm) defines.CEL_LAND_N = '';
   mat.defines = defines;
-  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands };
+  mat.userData.celOpts = { metal, rim, wash, moss, cool, paint, tint, preview, soft, bands, land, landNrm };
   // surfaceId 逐材質定案一次(MUST NOT 在 onBeforeCompile 裡抽 —— 那支會因為 defines 改變或
   // needsUpdate 重跑,同一塊裝甲會在重編譯之後換號,而畫面上只表現成「線閃了一下」)。
   // **逐材質不是逐頂點**:逐頂點 id 要動到每一支幾何產生器,而這裡九成的價值在法線那一項;
   // 逐材質 id 免費拿到「建物 vs 地面」「機體 vs 岩石」這一類分界。是刻意的降級,不是假裝有。
-  if (mat.userData.celSurfId == null) mat.userData.celSurfId = nextSurfId();
+  // 地貌一律共用同一號(檔頭 ①):它是**類別**不是實例,MUST NOT 走 nextSurfId
+  if (land) mat.userData.celSurfId = LAND_SURF_ID;
+  else if (mat.userData.celSurfId == null) mat.userData.celSurfId = nextSurfId();
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uSurfId = { value: mat.userData.celSurfId };
+    shader.uniforms.uInkClass = { value: land ? INK_CLASS.LAND : INK_CLASS.HARD };
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
     shader.uniforms.uSoftInk = { value: sk ? INK_SOFT_A : 1 };
@@ -570,6 +606,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         uniform float uPaintS;
         varying vec3 vPaintP;
         varying vec3 vPaintN;
+        #endif
+        #ifdef CEL_LAND_N
+        attribute vec3 aLandN;
+        varying vec3 vLandN;
         #endif
         #ifdef CEL_SWAY
         uniform float uWindT;
@@ -641,6 +681,11 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           vPaintP = ( uPaintM * vec4( transformed, 1.0 ) ).xyz * uPaintS;
           vPaintN = mat3( uPaintM ) * objectNormal;
         }
+        #endif
+        #ifdef CEL_LAND_N
+        // 地貌法線 → **視空間**(與 normal 同一個框;勾線是螢幕空間的,見片段那一段)。
+        // 這條只餵勾線資訊緩衝,一行都不碰 normal ⇒ 地被的受光逐位元同舊制。
+        vLandN = normalMatrix * aLandN;
         #endif`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <normal_fragment_begin>', `
@@ -742,11 +787,24 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         // **MUST 是視空間法線** —— 勾線是螢幕空間的,世界法線在鏡頭轉動時不會變而畫面上的
         // 折邊會,兩者在轉身時會整批對不上。\`normal\` 是 three 在 normal_fragment_begin
         // 之後留在 scope 裡的視空間法線。
-        gInfo = vec4( normalize( normal ).xy * 0.5 + 0.5, uSurfId, 1.0 );`)
+        {
+          vec3 gN = normalize( normal );
+          #ifdef CEL_LAND_N
+          // 貼地拼圖:自己的法線恆 (0,1,0)(它只是一張皮)⇒ 換成呼叫端餵的真地形法線。
+          // 屬性缺席時 \`vLandN\` 是 (0,0,0) ⇒ **退回自己的法線**(原則 6:降級不例外;
+          // normalize(0) 是 NaN,那會沿著整片地面畫出隨機黑點)。
+          if ( dot( vLandN, vLandN ) > 1e-8 ) gN = normalize( vLandN );
+          #endif
+          gInfo = vec4( gN.xy * 0.5 + 0.5, uSurfId, uInkClass );
+        }`)
       .replace('void main() {', `
         uniform vec3 uCelLightDir;
         uniform float uCelRim;
         uniform float uSurfId;
+        uniform float uInkClass;
+        #ifdef CEL_LAND_N
+        varying vec3 vLandN;
+        #endif
         #ifdef CEL_SOFT
         uniform float uSoftInk;
         #endif
@@ -803,7 +861,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   // 軟性 MUST 進快取鍵:defines 不同卻共用同一支已編譯的程式 = 該材質整批沒有擺動也沒有
   // 細勾線(three 只認這把鑰匙),而畫面上只表現成「有些樹會動、有些不會」。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}` : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}` : ''}${landNrm ? 'L' : ''}${rim}`;
   return mat;
 }
 
@@ -839,11 +897,13 @@ export function toonMat(color, opts = {}) {
 export function envMat(color, opts = {}) {
   // rim 可覆寫:貼地平面(地被/道路)在遠處掠射角 rim 全開會整片洗白,傳 rim:0 關閉
   // preview:設定頁樣品專用(改吃樣品自己那張風化場,見 ensurePreviewField)
-  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, ...rest } = opts;
+  // land / landNrm:地貌(見 applyCelPatch 的同名參數)。**只有 terrain.js 與 ground.js
+  // 傳它** —— 道路、建物、擺件的邊界線是要的,掛上去就是把那些線一起關掉。
+  const { celMetal, wash = 0.5, cool = 0.5, moss = null, rim = 0.22, bands, preview = false, soft = null, land = false, landNrm = false, ...rest } = opts;
   const m = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(bands), ...rest });
   // tint: 'env' —— 陰影偏色分「機體」與「環境」兩軌(P1-B):機甲要保住陣營塗裝的色相,
   // 環境可以偏得重一點。兩軌各自一根拉桿,MUST NOT 併成一個值。
-  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands });
+  return applyCelPatch(m, { metal: !!celMetal, rim, wash, cool, moss, tint: 'env', preview, soft, bands, land: land || landNrm, landNrm });
 }
 
 /**
