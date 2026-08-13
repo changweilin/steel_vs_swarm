@@ -18,10 +18,11 @@
 //   ・讀原文 MUST 走 `audit_src.mjs readSrc()`(㋑ CRLF 紀律)。原文逐位元照抄進暫存檔 ⇒
 //     node 報的行號與原檔一致,錯誤訊息直接指得回 `public/js/xxx.js:行號`。
 //
-// 這支守得住的是「解析不過」。守不住、只能靠人守的那一半紀律:**凡是把 GLSL 放進 JS 樣板
-// 字串的檔案,它的 GLSL 註解裡 MUST NOT 出現反引號** —— 現役是 vfx.js 的 `SHIELD_VERT` /
-// `SHIELD_FRAG`、toon.js 的世界曲面與賽璐璐補丁、environment.js 的天空穹頂。反引號剛好收在
-// 一個「後面接得起來」的位置時,檔案解析得過而 shader 原始碼從那裡被截斷,那是本閘門看不到的。
+// Ⅱ 守得住的是「解析不過」。**Ⅲ 補的正是它守不住的那一半**(2026-08-13 又踩一次):
+// postfx.js 的勾線片段程式裡寫了一行 GLSL 註解 `// 門檻是 0.25:\`.a\` 是類別碼`,反引號
+// 把樣板字串收在一個「後面接得起來」的位置 ⇒ 剩下的變成 `` `…`.a( … ) ``,**node --check
+// 全綠**,而真的跑起來是 `.a is not a function`,整支管線在建構子就炸。
+// Ⅲ 逐字追蹤樣板字串的狀態,直接抓「終止樣板的那個反引號,落在一行 GLSL `//` 註解裡」。
 //
 // 用法:
 //   node tools/audit_client_syntax.mjs
@@ -81,6 +82,50 @@ console.log('\nⅡ 逐支解析(node --check;副檔名換成 .mjs 才走 ES modu
       err = ln ? `${msg} @ public/js/${f}:${ln[1]}` : msg;
     }
     ok(!err, `public/js/${f}${err ? ` —— ${err}` : ''}`);
+  }
+}
+
+// ============ Ⅲ 樣板字串裡的 GLSL 註解 MUST NOT 出現反引號 ============
+// 逐字走一次原文,追蹤「現在在不在樣板字串裡」(含 `${}` 內層可以再開一層樣板)。
+// 只在**終止樣板的那個反引號**落在一行以 `//` 起頭的樣板內容上時算違規 —— 那正好是
+// 「shader 原始碼從這裡被截斷」的充要條件,而檔案解析得過不過是另一回事。
+console.log('\nⅢ 樣板字串裡的 GLSL 註解不得出現反引號(解析得過、shader 被截斷)');
+function tickInGlslComment(src) {
+  const hits = [];
+  const st = [];                 // `${` 的框:{ depth } —— 遇到配對的 `}` 才回到樣板
+  let s = 'n', line = 1, cmtLine = false, atLineHead = true;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i], d = src[i + 1];
+    if (c === '\n') { line++; if (s === 'l') s = 'n'; cmtLine = false; atLineHead = true; continue; }
+    if (s === 'n') {
+      if (c === '/' && d === '/') { s = 'l'; i++; }
+      else if (c === '/' && d === '*') { s = 'b'; i++; }
+      else if (c === "'" || c === '"') { s = c; }
+      else if (c === '`') { s = 't'; cmtLine = false; }
+      else if (c === '{' && st.length) st[st.length - 1].depth++;
+      else if (c === '}' && st.length) { if (st[st.length - 1].depth === 0) { st.pop(); s = 't'; } else st[st.length - 1].depth--; }
+    } else if (s === 'b') { if (c === '*' && d === '/') { s = 'n'; i++; } }
+    else if (s === "'" || s === '"') { if (c === '\\') i++; else if (c === s) s = 'n'; }
+    else if (s === 'l') { /* 行註解吃到換行為止 */ }
+    else if (s === 't') {
+      if (c === '\\') { i++; atLineHead = false; continue; }
+      if (c === '$' && d === '{') { st.push({ depth: 0 }); s = 'n'; i++; atLineHead = false; continue; }
+      if (c === '`') { if (cmtLine) hits.push(line); s = st.length ? 'n' : 'n'; cmtLine = false; continue; }
+      if (atLineHead && c === '/' && d === '/') { cmtLine = true; atLineHead = false; i++; continue; }
+      if (c !== ' ' && c !== '\t') atLineHead = false;
+    }
+  }
+  return hits;
+}
+{
+  // 先自我驗證:偵測器對「已知的壞法」MUST 咬得到(否則它就是一支永遠回空陣列的假閘門)
+  const probe = tickInGlslComment('const a = `\n  void main() {\n  // 註解 `裡面有反引號`\n  }\n`;');
+  ok(probe.length > 0, `偵測器自我驗證:對已知壞法回報 ${probe.length} 處`);
+  for (const f of FILES) {
+    let src = readSrc('public', 'js', f);
+    if (BREAK_GLSL && f === 'vfx.js') src = injectBacktick(src);
+    const hits = tickInGlslComment(src);
+    ok(hits.length === 0, `public/js/${f}${hits.length ? ` —— GLSL 註解裡的反引號截斷樣板 @ 第 ${hits.join(', ')} 行` : ''}`);
   }
 }
 

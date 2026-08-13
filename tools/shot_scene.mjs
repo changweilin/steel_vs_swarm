@@ -17,6 +17,7 @@
 // 前置與 shot_tunnels.mjs 完全相同(Playwright + terrarium 高程 + 合成圖資),
 // **找不到 playwright 就印一行說明並以 0 結束**(A2:MUST NOT 寫進 package.json)。
 // 用法:node tools/shot_scene.mjs [--venue taroko] [--team 1] [--out DIR] [--ink=0] [--dof=0] [--curve=0] [--lib=0] [--live]
+//                                [--pref inkMrt=on] [--pref lutSrc=baked]  ← 設定頁旋鈕(預設全是「不生效」)
 //                                [--time day|dusk|night] [--season …] [--weather …]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -75,8 +76,20 @@ const LAYERS = {
   // 所以這一層與其他幾層不同:走探針頁的網址,不是走 `Pipeline` 的 opts。
   curve: flag('curve'),
 };
+// `--pref k=v`(可重複):把設定頁的旋鈕(visualPrefs.js)在載入前種進 localStorage。
+// 為什麼一定要有:**預設值就是「這一項不生效」**(該檔紀律①)⇒ 折邊勾線、3D LUT、空氣透視、
+// 陰影偏色這幾層在定場照裡**一張都沒被拍到過**,而它們動的是整個畫面。
+// 值一律當字串種進去,visualPrefs 自己的夾制會把非法值退回預設(名單外的選項不得穿過去)。
+const PREFS = {};
+process.argv.forEach((a, i) => {
+  if (a !== '--pref') return;
+  const [k, ...v] = String(process.argv[i + 1] || '').split('=');
+  if (k && v.length) PREFS[k] = v.join('=');
+});
 const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('')
-  + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('');
+  + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('')
+  // 旋鈕 MUST 進檔名(同 ENV):兩輪互相覆寫的話事後分不出手上這張是開著還是關著
+  + Object.entries(PREFS).map(([k, v]) => `_${k}-${v}`).join('');
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('定場鏡頭組');
@@ -93,6 +106,12 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => console.log('  [pageerror]', e.message.slice(0, 300)));
+if (Object.keys(PREFS).length) {
+  console.log('  旋鈕', JSON.stringify(PREFS));
+  await page.addInitScript((p) => {
+    try { localStorage.setItem('svs_visual', JSON.stringify(p)); } catch { /* 無所謂 */ }
+  }, PREFS);
+}
 
 if (threeLocal) {
   await page.route('**/three@0.160.0/build/three.module.js',

@@ -30,7 +30,18 @@
 //       —— 這是唯一與世界縮放無關的量,而它也正是這個常數宣稱要鎖住的東西。
 //       反向驗證 `--break-scale`(退回不除世界縮放)。
 //     ・SkinnedMesh 的 bind 分支與 `userData.outlineGeo` 平滑法線分支 MUST 留著。
-// 跑法:node tools/audit_cel_pipeline.mjs [--break-scale] [--break-inkinfo]
+//   Ⅶ 地貌不出接縫(2026-08-13 使用者定案「LUT 與勾線不針對地貌作用,不要看出地貌拼圖
+//     接縫,但地形變化受 LUT 與勾線作用」)
+//     ・**地貌共用一個 surfaceId**(`toon.js LAND_SURF_ID = 0`,永遠不會被 nextSurfId 抽到)
+//       ⇒ 拼圖之間 id 差恆 0(不出線)、與建物/道路仍差得開(牆腳那條線不會少);
+//     ・貼地拼圖的 gInfo 法線改吃 `aLandN`(真地形法線):**它是 (x,z) 的純函式** ⇒ 相鄰
+//       拼圖在共用邊上逐位元同值(接縫不是被壓下去,是根本不存在),而稜線/路塹照樣出線
+//       —— 「地形變化受勾線作用」就是這一條;取樣距 MUST 是地形網格的格距;
+//     ・LUT 的地貌分支 MUST 是 `lutApply(vec3(y)) + (c − vec3(y))` 這個**仿射分解**:
+//       色度差的增益因此恆為 1(LUT 再激進也顯不出接縫),亮度仍整條走表(受光 = 地形);
+//     ・資訊緩衝配不配 vs 誰在用它是**兩件事**:開 LUT MUST NOT 順手把折邊勾線打開。
+//     反向驗證 `--break-land`(地貌不共用 id)/ `--break-lutland`(LUT 地貌分支退回直接查表)。
+// 跑法:node tools/audit_cel_pipeline.mjs [--break-scale] [--break-inkinfo] [--break-land] [--break-lutland]
 import { readdirSync } from 'node:fs';
 import { readSrc } from './audit_src.mjs';
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -47,6 +58,10 @@ const postfx = readSrc('public', 'js', 'postfx.js');
 const BREAK_SCALE = process.argv.includes('--break-scale');
 /** 反向驗證:模擬新增了一支進場景的 ShaderMaterial 卻忘了宣告 gInfo ⇒ Ⅵ MUST 紅字 */
 const BREAK_INK = process.argv.includes('--break-inkinfo');
+/** 反向驗證:地貌退回逐材質 surfaceId(= 每一格拼圖的邊都畫線)⇒ Ⅶ MUST 紅字 */
+const BREAK_LAND = process.argv.includes('--break-land');
+/** 反向驗證:LUT 的地貌分支退回直接查表(= 色差被表放大)⇒ Ⅶ MUST 紅字 */
+const BREAK_LUTLAND = process.argv.includes('--break-lutland');
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
 /** 只留「真的會執行的程式碼」—— 註解裡提到某個名字不算違規 */
@@ -277,7 +292,7 @@ console.log('\nⅥ 勾線資訊緩衝的材質契約(A 方案)');
     '宣告字串只有一份(消費端一律 import,MUST NOT 各自手抄一行 layout)');
   // cel 補丁的覆寫 MUST 排在 opaque_fragment 之後(不然被預設值蓋掉)
   const celI = T.indexOf('#include <opaque_fragment>');
-  const celW = T.indexOf('gInfo = vec4( normalize( normal ).xy');
+  const celW = T.indexOf('gInfo = vec4( gN.xy');
   ok(celI > 0 && celW > celI, 'cel 補丁的法線寫入排在 `#include <opaque_fragment>` 之後');
   ok(/uniform float uSurfId;/.test(T) && /shader\.uniforms\.uSurfId = \{ value: mat\.userData\.celSurfId \}/.test(T),
     'surfaceId 逐材質定案一次(在 onBeforeCompile 裡抽 = 重編譯就換號)');
@@ -319,8 +334,108 @@ console.log('\nⅥ 勾線資訊緩衝的材質契約(A 方案)');
     '第二張單獨清成 0 —— 哨兵靠它成立(clear() 用的是 renderer 的 clearColor)');
   ok(/Array\.isArray\(src\.texture\) \? src\.texture\[0\] : src\.texture/.test(P),
     'MRT 的 `.texture` 是陣列:餵整個陣列給 sampler 會整片黑而不報錯');
-  ok(/min\( min\( i0\.a, min\( il\.a, ir\.a \) \), min\( iu\.a, ib\.a \) \) > 0\.5/.test(P),
+  // 門檻 0.25:`.a` 自 2026-08-13 起是類別碼(NONE 0 / LAND 0.5 / HARD 1),見 Ⅶ
+  ok(/min\( min\( i0\.a, min\( il\.a, ir\.a \) \), min\( iu\.a, ib\.a \) \) > 0\.25/.test(P),
     '五格哨兵齊全才採用第二訊號(天空/特效/招牌一條線都不會多)');
+}
+
+// ============ Ⅶ 地貌不出接縫(2026-08-13)============
+// 「地貌拼圖接縫」的成因不是門檻調不好:逐材質的 surfaceId 量的是**這是哪一塊拼圖**(地貌),
+// 而貼地拼圖的法線是 (0,1,0) 這個謊 —— 兩者都與**形狀**無關,卻都被畫成線。
+// 這一段把三件事釘死:共用 id、真地形法線(純函式 ⇒ 共用邊逐位元同值)、LUT 的仿射分解。
+console.log('\nⅦ 地貌不出接縫(LUT / 勾線只吃地形,不吃地貌)');
+{
+  const ground = readSrc('public', 'js', 'ground.js');
+  let T = code(toon), P = code(postfx);
+  const G = code(ground), TR = code(terr);
+  if (BREAK_LAND) {
+    const bent = T.replace('if (land) mat.userData.celSurfId = LAND_SURF_ID;', '');
+    if (bent === T) { console.error('✗ --break-land:樣式沒咬到 toon.js,反向驗證等於沒跑'); process.exit(1); }
+    T = bent;
+  }
+  if (BREAK_LUTLAND) {
+    const bent = P.replace('if ( cls > 0.25 && cls < 0.75 ) lc = lutApplyLand( pre );', '');
+    if (bent === P) { console.error('✗ --break-lutland:樣式沒咬到 postfx.js,反向驗證等於沒跑'); process.exit(1); }
+    P = bent;
+  }
+
+  // ---- ① 類別碼與共用 id(寫入端)----
+  const CLS = new Function(`${/export const INK_CLASS = \{[\s\S]*?\};/.exec(toon)[0].replace('export ', '')}\nreturn INK_CLASS;`)();
+  ok(CLS.NONE === 0 && CLS.LAND === 0.5 && CLS.HARD === 1,
+    `INK_CLASS 三碼 = 0 / 0.5 / 1(實測 ${JSON.stringify(CLS)})`);
+  ok(/const LAND_SURF_ID = 0;/.test(T),
+    '地貌共用 id = 0 —— nextSurfId 的值域是 (k+0.5)/64,最小 0.0078 ⇒ 0 永遠不會撞號');
+  ok(/if \(land\) mat\.userData\.celSurfId = LAND_SURF_ID;/.test(T),
+    '`land` 直接指定共用 id(走 nextSurfId = 每一格拼圖各一號 = 每一條拼圖邊都出線)');
+  ok(/gInfo = vec4\( gN\.xy \* 0\.5 \+ 0\.5, uSurfId, uInkClass \);/.test(T),
+    'gInfo 的 `.a` 寫類別碼(寫死 1.0 ⇒ LUT 那一端永遠分不出地貌)');
+  ok(/if \( dot\( vLandN, vLandN \) > 1e-8 \) gN = normalize\( vLandN \);/.test(T),
+    'aLandN 缺席時退回自己的法線(normalize(0) 是 NaN = 滿地黑點,原則 6)');
+  ok(/\$\{landNrm \? 'L' : ''\}/.test(T),
+    'landNrm 進 customProgramCacheKey(defines 不同卻共用程式 = 整批沒換到法線)');
+  // 機體不是地貌:`toonMat` 一路都不該吃這兩個旗標
+  const toonFn = /export function toonMat\([\s\S]*?\n\}/.exec(T)[0];
+  ok(!/land/.test(toonFn), '`toonMat`(機體/英雄/武器)MUST NOT 吃 land —— 機體之間的線是要的');
+
+  // ---- ② 真地形法線:直接執行 ground.js 的真品 ----
+  const landNrmAt = new Function(`${grabFn(ground, 'landNrmAt')}\nreturn landNrmAt;`)();
+  const flat = () => 12.5;
+  const n0 = landNrmAt(flat, 3, 7, 10);
+  ok(n0[0] === 0 && n0[1] === 1 && n0[2] === 0, `平地 ⇒ (0,1,0)(實測 ${n0.map((v) => v.toFixed(3))})`);
+  // 定坡:h = k·x ⇒ 法線 ∝ (−k, 1, 0)
+  const k = 0.4, slope = (x) => 0.4 * x;
+  const n1 = landNrmAt((x) => slope(x), 11, 5, 8);
+  const l1 = Math.hypot(k, 1);
+  ok(Math.abs(n1[0] + k / l1) < 1e-9 && Math.abs(n1[1] - 1 / l1) < 1e-9,
+    `定坡 ⇒ 解析法線(誤差 ${Math.abs(n1[0] + k / l1).toExponential(1)})`);
+  // **共用邊逐位元同值**:相鄰兩格從各自的迴圈算同一個點,MUST 得到同一組浮點數
+  const bumpy = (x, z) => Math.sin(x * 0.07) * 9 + Math.cos(z * 0.05) * 6 + x * 0.02;
+  let same = true;
+  for (let t = 0; t < 64; t++) {
+    const x = -300 + t * 9.37, z = 120 - t * 4.11;
+    const a = landNrmAt(bumpy, x, z, 10.4), b = landNrmAt(bumpy, x, z, 10.4);
+    if (a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2]) same = false;
+  }
+  ok(same, '純函式:同一個 (x,z) 逐位元同值 ⇒ 相鄰拼圖的共用邊上沒有折邊可畫');
+  // 「地形變化受勾線作用」:稜線兩側的法線 MUST 真的差得過 INK_MRT.NRM0(0.05)
+  const ridge = (x) => 40 - Math.abs(x) * 0.5;
+  const rl = landNrmAt(ridge, -6, 0, 10), rr = landNrmAt(ridge, 6, 0, 10);
+  const dn = Math.hypot(rl[0] - rr[0], rl[1] - rr[1]);
+  ok(dn > 0.05, `稜線兩側法線差 ${dn.toFixed(3)} > NRM0 0.05(地形變化仍出線)`);
+
+  // ---- ③ 接線:誰是地貌 ----
+  ok(/pushLandN\(b, hAt, px, pz, terrain\.gridM\)/.test(G), '底毯/緩衝空間底毯走呼叫端給的 hAt');
+  const flatN = (G.match(/nrm\.push\(0, 1, 0\)/g) || []).length;
+  // **縮排過的那幾行才是呼叫端** —— 連定義那一行一起數就會多一份而剛好湊到門檻
+  const landN = (G.match(/\n\s+pushLandN\(/g) || []).length;
+  ok(flatN > 0 && flatN === landN,
+    `每一處貼地 (0,1,0) 都配一份地形法線(${flatN} 處 / ${landN} 份)`);
+  ok((G.match(/landNrm: true/g) || []).length === 3,
+    '三層貼地拼圖(底毯+外溢+脊帶 / 界線 flat / 特徵)都掛 landNrm');
+  ok(/side: THREE\.DoubleSide, land: true/.test(G),
+    '立體脊只共用 id、**不換法線**(它是真的有形狀的東西)');
+  ok((TR.match(/land: true/g) || []).length === 2 && /gridM: worldW \/ \(N - 1\)/.test(TR),
+    '地形自己也是地貌(兩條路徑都掛)+ 對外給出格距 gridM');
+  ok(/取樣距[\s\S]{0,80}格距/.test(readSrc('public', 'js', 'ground.js')),
+    '取樣距 = 地形網格格距的理由寫在原地(取更小 = 折邊線長回格線)');
+
+  // ---- ④ LUT 的地貌分支 ----
+  ok(/vec3 lutApplyLand\( vec3 linC \)/.test(P) && /return max\( lutApply\( vec3\( y \) \) \+ \( linC - vec3\( y \) \), 0\.0 \);/.test(P),
+    'LUT 地貌分支 = 仿射分解(色度差增益恆 1、亮度整條走表)');
+  ok(/if \( cls > 0\.25 && cls < 0\.75 \) lc = lutApplyLand\( pre \);/.test(P),
+    '地貌以**帶**判定(8bit RT 上 LAND 存成 0.50196,等號判定會整片失效)');
+  ok(/float y = dot\( linC, vec3\( 0\.2126, 0\.7152, 0\.0722 \) \);/.test(P),
+    '亮度與 split-tone 的 `l` 同一把尺(兩份定義會在交叉淡入時互相拉扯)');
+
+  // ---- ⑤ 資訊緩衝:配不配 vs 誰在用 ----
+  ok(/_wantInfo\(\) \{[\s\S]{0,220}visualPref\('inkMrt'\) === 'on' \|\| visualPref\('lutSrc'\) !== 'none'/.test(P),
+    '配不配只有一個判據 `_wantInfo`(兩個消費端各自獨立)');
+  ok(/_inkMaterial\(\) \{\s*const mrt = this\._inkMrt;/.test(P),
+    '勾線讀的是 `_inkMrt` 不是 `_mrt` —— 開 LUT MUST NOT 順手把折邊勾線打開');
+  ok(/min\( min\( i0\.a, min\( il\.a, ir\.a \) \), min\( iu\.a, ib\.a \) \) > 0\.25/.test(P),
+    '哨兵門檻 0.25(LAND 是 0.5:舊的 > 0.5 會把整片地面判成「沒有資訊」)');
+  ok(/if \(this\._air\) this\.setAirFog\(\.\.\.this\._air\);/.test(P) && /this\.setLut\(this\._lutTex \|\| null/.test(P),
+    'grade 材質重建後三組 uniform 全部重掛(漏掉 = 切開關之後空氣透視/LUT 自己關掉)');
 }
 
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);

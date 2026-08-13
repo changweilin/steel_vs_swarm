@@ -1344,21 +1344,107 @@ function detailR(type) {
 
 function bucketOf(buckets, key) {
   let b = buckets.get(key);
-  if (!b) { b = { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0 }; buckets.set(key, b); }
+  if (!b) { b = { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0, lnrm: [] }; buckets.set(key, b); }
   return b;
+}
+
+// ==== 貼地地被層的「地形法線」(2026-08-13 使用者定案「地形變化受 LUT 與勾線作用」)====
+// 一切貼地拼圖的 `normal` 都是 **(0,1,0)** —— 它是一張鋪在地形上的皮,受光刻意不隨坡面走。
+// 那個謊在勾線資訊緩衝上要付兩次錢:①拼圖底下的稜線與路塹一條線都畫不出來(法線是常數);
+// ②拼圖鋪到盡頭接上裸地形時,常數法線撞上真法線 ⇒ 沿著拼圖的外緣畫出一條**假的**折邊線。
+// 故另存一份 `aLandN` 只餵 gInfo(受光一行未動,見 toon.js 的 CEL_LAND_N)。
+//
+// 三條:
+//   ①**取樣距 = 地形高程網格的格距**(`terrain.gridM`)。取更小是在同一個雙線性面內取樣
+//     ⇒ 法線在格內是常數、差分退化成逐格階梯,折邊線又長回成格線;取更大則把稜線抹平。
+//   ②**只吃 (x,z) 的純函式** ⇒ 相鄰拼圖在共用邊上取到**逐位元相同**的法線(拼圖之間天生
+//     沒有折邊,seam 因此不是「壓下去」而是根本不存在)。
+//   ③高度取樣走呼叫端給的 `hAt`:圖內 `terrain.heightAt`、緩衝空間 `terrain.bufferHeightAt`
+//     (拿錯那一支 = 界外整圈法線被夾回圖界的值)。
+function landNrmAt(hAt, x, z, d) {
+  const s = d > 0 ? d : 1;
+  const nx = (hAt(x - s, z) - hAt(x + s, z)) / (2 * s);
+  const nz = (hAt(x, z - s) - hAt(x, z + s)) / (2 * s);
+  const l = Math.hypot(nx, 1, nz) || 1;
+  return [nx / l, 1 / l, nz / l];
+}
+/** 與 `b.nrm.push(0, 1, 0)` 成對出現的那一行(稽核逐檔比對兩者的數量) */
+function pushLandN(b, hAt, x, z, d) {
+  const n = landNrmAt(hAt, x, z, d);
+  b.lnrm.push(n[0], n[1], n[2]);
+}
+// ==== 貼合抬升:斜坡破圖(2026-08-13 使用者回報「斜坡時地貌拼圖很容易破圖」)====
+// 地被是一層皮:頂點取 `heightAt` ⇒ **頂點恆在地形上**,而頂點與頂點之間是**直的**。
+// 地形不是 —— 它是逐格三角化的高度場,兩片三角面相接處有折角。一條跨過折角的皮邊(弦)
+// 因此沉在地形之下,沉多少 = 折角 × 弦長 ÷ 4。皮的邊長是半個 cell(6.5m)、地形格距 8.5m
+// ⇒ 幾乎每一條皮邊都跨過折角,而底毯的抬升只有 `CLIFT = 0.07m`。
+// 2026-08-13 taroko 實測(`audit_ground_drape`):**22% 的三角形被地形戳穿**,
+// p90 0.057m / p99 0.446m。平地看不到(折角 = 0),坡越陡越碎越明顯 —— 正是「斜坡時」。
+//
+// 修法 = **逐頂點把弦虧損補回去**:抬升量 = 該點往八方的「中點高 − 兩端平均」最大值。
+// 四條:
+//   ①**MUST 是 (x,z) 的純函式**(同 landNrmAt)—— 相鄰面在共用頂點上取到逐位元同值,
+//     否則抬升本身就把皮撕開;
+//   ②**平面恆 0**(折角 = 0 ⇒ 虧損 = 0)⇒ 平地與緩坡**逐位元同舊制**,這一層只在真的
+//     有折角的地方生效;
+//   ③**兩端對稱**:邊 (v,n) 的中點虧損在 v 與 n 兩邊算出來是同一個數 ⇒ 兩端都抬了它,
+//     弦在中點恰好回到地形上(不是「差不多」);
+//   ④**MUST 夾上限**:抬過頭就不是貼合而是**浮在地形上**(懸空的地被同樣是破圖)。
+//     上限分三種:道路走廊內 `ROAD` < 路面 lift 0.18 − 底毯 0.07 的餘裕(抬到比路面高
+//     = 草皮蓋過馬路);圖內 `MAX`;緩衝空間 `BUF` 放寬(格距 ×BUF_CELL_F、離玩家 400m 以上,
+//     那裡沒有別的東西要疊,而不放寬就是 30m 級的破口)。
+const SAG = {
+  MAX: 0.6,    // 圖內抬升上限(m)
+  ROAD: 0.10,  // 道路走廊內(路面 lift 0.18 − 底毯 CLIFT 0.07 = 0.11 的餘裕)
+  BUF: 6,      // 緩衝空間(格距 ×BUF_CELL_F,實測未修正時 p99 10.8m / max 37.6m)
+};
+// ⑤**多尺度**:一條弦的虧損 ∝ 弦長 × 折角,而地被不是只有一種弦長 —— 底毯是半個 cell
+//   (6.5m)、界線拼圖的環距只有 2m 上下。只量最長的那一尺,近處的小凸起就漏掉了
+//   (2026-08-13 實測:單尺度把底毯的破圖從 22.0% 壓到 3.8%,而界線拼圖 29.6% → 29.5%
+//   **一格未動**)。故三個尺度取最大值:大尺度給底毯、小尺度給窄帶,同一份場照樣單調。
+// `?sag=0`:整層關掉,給定場照與 `audit_ground_drape --break-sag` 做前後對照 ——
+// 同 `toon.js` 的 `?curve=0`(那一層也是「只有前後兩張擺在一起才看得出來」)。
+const SAG_OFF = typeof location !== 'undefined' && /[?&]sag=0/.test(location.search);
+const SAG_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1],
+  [0.70711, 0.70711], [0.70711, -0.70711], [-0.70711, 0.70711], [-0.70711, -0.70711]];
+// 尺度與方向數的取捨(2026-08-13 實測,taroko):最大尺度**要八方**(皮的三角化對角線在
+// 那一尺上),小尺度只取四軸就夠 —— 逐頂點 48 次取樣 → 32 次,`buildBiomes` 1331 → 1252ms,
+// 而三層破圖率一格未動(3.8% / 2.8% / 0.0%)。整條加起來的代價是 963 → 1252ms(+30%),
+// 全部落在建構期(§建構期讓步的 buildYield 會讓出畫面),執行期一格未動。
+const SAG_SCALES = [[1, 8], [0.45, 4], [0.2, 4]];
+function groundSagAt(hAt, x, z, r) {
+  if (!(r > 0)) return 0;
+  const h0 = hAt(x, z);
+  let s = 0;
+  for (const [f, nd] of SAG_SCALES) {
+    const rr = r * f;
+    for (let k = 0; k < nd; k++) {
+      const [dx, dz] = SAG_DIRS[k];
+      // 中點高 − 兩端平均 = 這條弦在中點沉下去多少(平面恆 0 ⇒ 平地逐位元同舊制)
+      const d = hAt(x + dx * rr * 0.5, z + dz * rr * 0.5)
+        - (h0 + hAt(x + dx * rr, z + dz * rr)) * 0.5;
+      if (d > s) s = d;
+    }
+  }
+  return s;
+}
+/** 幾何附上 `aLandN`(缺席 ⇒ 材質端退回自己的法線,原則 6) */
+function setLandN(geo, b) {
+  if (b.lnrm?.length === b.pos.length) geo.setAttribute('aLandN', new THREE.Float32BufferAttribute(b.lnrm, 3));
 }
 
 // 不規則色塊。edge:'fade' 外圈 alpha=0 淡入地形;'ink' 外圈墨線頂點色(手繪描邊)
 // 手繪輪廓的半徑抖動範圍(×r):**外緣最遠到 (MIN+JIT)·r,不是 r** —— 迴避半徑
 // (tryPatch 的 bdCross)與這裡同源,拿 r 去算會讓 14% 的外緣壓上分界線帶
 const BLOB_R = { MIN: 0.72, JIT: 0.42 };
-function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
+function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
   const n = 12;
   // 每塊 UV 隨機旋轉:同款貼圖不同朝向(視野內同款已不重複,無需跨塊花紋連續)
   const ua = rnd() * Math.PI * 2, cu = Math.cos(ua), su = Math.sin(ua);
   const push = (vx, vz, cr, cg, cb, ca) => {
-    b.pos.push(vx, terrain.heightAt(vx, vz) + lift, vz);
+    b.pos.push(vx, terrain.heightAt(vx, vz) + lift + sag(vx, vz), vz);
     b.nrm.push(0, 1, 0);
+    pushLandN(b, terrain.heightAt, vx, vz, terrain.gridM);
     b.uv.push((vx * cu - vz * su) * uvS, (vx * su + vz * cu) * uvS);
     b.col.push(cr * pt[0], cg * pt[1], cb * pt[2], ca);
   };
@@ -1382,7 +1468,7 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd) {
 }
 
 // 矩形田塊/場地:6×7 網格貼地;rim = 外圈隆起田埂(暖土頂點色),否則外圈墨線
-function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
+function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd, sag) {
   const w = r * 2, d = r * 2 * (def.aspect || 0.7);
   const nx = 7, nz = 6;
   const ca = Math.cos(rot), sa = Math.sin(rot);
@@ -1396,8 +1482,9 @@ function emitRect(b, terrain, x, z, r, rot, def, lift, pt, flipU, flipV, rnd) {
         if (def.rim) { dy = def.rim; cr = 0.78; cg = 0.66; cb = 0.5; }
         else { cr = 0.6; cg = 0.6; cb = 0.64; }
       }
-      b.pos.push(vx, terrain.heightAt(vx, vz) + lift + dy, vz);
+      b.pos.push(vx, terrain.heightAt(vx, vz) + lift + dy + sag(vx, vz), vz);
       b.nrm.push(0, 1, 0);
+      pushLandN(b, terrain.heightAt, vx, vz, terrain.gridM);
       if (def.uv === 'fit') {
         const u = i / (nx - 1), v = j / (nz - 1);
         b.uv.push(flipU ? 1 - u : u, flipV ? 1 - v : v);   // 隨機雙軸鏡射:同變體場地四款朝向
@@ -2504,6 +2591,19 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const carpetBuckets = new Map(), spillBuckets = new Map(), bandBuckets = new Map();
   const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 [0.100,0.107] < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
+  // 貼合抬升(見檔頭 SAG):**同一份場餵給每一層** —— 底毯 / 外溢 / 脊帶 / 界線 / 特徵拼圖
+  // 在同一點抬同一個量 ⇒ 上面那條 lift 階梯整條平移,層與層的先後一格未動。
+  // 上限依所在位置分流,而三個分支全是 (x,z) 的純函式 ⇒ 同一點恆同值,抬升本身不會撕開皮。
+  const inMap = (x, z) => x >= terrain.minX && x <= terrain.maxX && z >= terrain.minZ && z <= terrain.maxZ;
+  const drapeSag = (hAt, x, z) => {
+    if (SAG_OFF) return 0;
+    const inb = inMap(x, z);
+    const s = groundSagAt(hAt, x, z, (inb ? cell : cell * BUF_CELL_F) / 2);
+    if (!inb) return Math.min(s, SAG.BUF);
+    // 道路走廊內夾得更緊:路基已被 gradeRoadBeds 整平 ⇒ 那裡本來就幾乎沒有折角,
+    // 而抬過 0.11 就會把草皮推到路面之上(§lift 階梯)
+    return Math.min(s, roadClear?.(x, z) ? SAG.ROAD : SAG.MAX);
+  };
   // 外溢每 key 微升差(0~0.007,合計仍 < fade 下限 0.110):異 key 外溢在同一格互疊時
   // 避免共面深度互吃(舊制後畫的整張被深度測試丟棄 = 交界轉角硬缺口);繪序(renderOrder)
   // 依同一雜湊 ⇒ 低者先畫、高者後蓋,混色連續且跨客戶端決定性(§2.3,不吃 rnd)
@@ -2662,8 +2762,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         // 仍水密;純函數(世界座標+seed)⇒ 相鄰外溢格共用頂點同值不開縫(§2.3 零 rnd)
         a = seamAlpha(a, qcVal(px, pz, SEAM_QC_W), st);
       }
-      b.pos.push(px, hs[k] + lift, pz);
+      b.pos.push(px, hs[k] + lift + drapeSag(hAt, px, pz), pz);
       b.nrm.push(0, 1, 0);
+      pushLandN(b, hAt, px, pz, terrain.gridM);
       b.uv.push(px * uvS, pz * uvS);
       b.col.push(w, w, w, a);
     });
@@ -3054,8 +3155,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
     const pt = [0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24, 0.88 + rnd() * 0.24];   // 每塊色調抖動
     const b = bucketOf(buckets, `${sub}#${variant}`);
-    if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd);
-    else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd);
+    const patchSag = (px, pz) => drapeSag(terrain.heightAt, px, pz);
+    if (def.shape === 'rect') emitRect(b, terrain, x, z, r, rot, def, lift, pt, rnd() < 0.5, rnd() < 0.5, rnd, patchSag);
+    else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd, patchSag);
     regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink', foot);
     placed++;
 
@@ -3396,12 +3498,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
+      setLandN(geo, b);
       geo.setIndex(b.idx);
       const tint = DEFS[sub].green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
       const m = new THREE.Mesh(geo, envMat(tint, {
         map: groundTex(sub, +v, false),
         vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim:掠射角全開會把遠處洗白
         transparent: pass > 0,   // 外溢/脊帶靠頂點 alpha 淡出;depthWrite 保持 true
+        landNrm: true,           // 地貌類別 + 真地形法線(見 landNrmAt 那一段)
       }));
       // 外溢在透明佇列裡必須早於特徵 patch / 特效(renderOrder 0)繪製,
       // 否則 depthWrite 會把後畫的底層擋掉出現描圈破洞。
@@ -3463,7 +3567,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     const bkOf = (m, kind, uv) => {
       let b = m.get(kind);
       if (!b) {
-        b = uv ? { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0 } : { pos: [], nrm: [], idx: [], base: 0 };
+        // flat(貼地紋理帶)吃 aLandN;ridge(立體脊)的法線是**真的**,不需要也不准換
+        b = uv ? { pos: [], nrm: [], uv: [], col: [], idx: [], base: 0, lnrm: [] } : { pos: [], nrm: [], idx: [], base: 0 };
         m.set(kind, b);
       }
       return b;
@@ -3582,8 +3687,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const ff = f * (f < 0 ? eL : eR);
           const gx = cx + nx * w2 * ff, gz = cz + nz * w2 * ff;
           const wsh = wash(gx, gz);
-          b.pos.push(gx, gY(gx, gz, aq) + lift, gz);
+          b.pos.push(gx, gY(gx, gz, aq) + lift + drapeSag(terrain.heightAt, gx, gz), gz);
           b.nrm.push(0, 1, 0);
+          pushLandN(b, terrain.heightAt, gx, gz, terrain.gridM);
           b.uv.push(u, v);
           b.col.push(wsh, wsh, wsh, va * ea);
         }
@@ -3670,8 +3776,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
           const s2 = (px - g.cx) * bxu + (pz - g.cz) * bzu;
           const t2 = (px - g.cx) * -bzu + (pz - g.cz) * bxu;
           const wsh = wash(px, pz);
-          b.pos.push(px, gY(px, pz, aq) + lift, pz);
+          b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz), pz);
           b.nrm.push(0, 1, 0);
+          pushLandN(b, terrain.heightAt, px, pz, terrain.gridM);
           b.uv.push(s2 / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (g.r * 2))));
           b.col.push(wsh, wsh, wsh, xsAlpha(t2, g.r));
         };
@@ -3807,8 +3914,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             const s = (px - fk.x) * a.dx + (pz - fk.z) * a.dz;
             const t2 = (px - fk.x) * -a.dz + (pz - fk.z) * a.dx;
             const wsh = wash(px, pz);
-            b.pos.push(px, gY(px, pz, aq) + lift, pz);
+            b.pos.push(px, gY(px, pz, aq) + lift + drapeSag(terrain.heightAt, px, pz), pz);
             b.nrm.push(0, 1, 0);
+            pushLandN(b, terrain.heightAt, px, pz, terrain.gridM);
             b.uv.push((u0 - fk.L + s) / bTexL(kdef.flat), Math.min(1, Math.max(0, 0.5 + t2 / (hw * 2))));
             b.col.push(wsh, wsh, wsh, xsAlpha(t2, hw));
           };
@@ -3834,9 +3942,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
+      setLandN(geo, b);
       geo.setIndex(b.idx);
       const m = new THREE.Mesh(geo, envMat(0xffffff, {
-        map: borderTex(kind), vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,
+        map: borderTex(kind), vertexColors: true, wash: 0.5, cool: 0.5, rim: 0, landNrm: true,
         // 繞向由 sweepUpY / flipOf 定案(正面恆朝上);DoubleSide 只是「自下方也看得見」的
         // 保險,MUST NOT 拿它當繞向的替代品 —— 它讓背面看得見,卻同時把法線反轉成死黑
         transparent: true, side: THREE.DoubleSide,
@@ -3854,8 +3963,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
       geo.setIndex(b.idx);
+      // 立體脊:`land` 但**不換法線** —— 它是真的有形狀的東西(梯形斷面),折邊那一項照舊
+      // 出線;共用 id 只是讓它與底下的地被之間不再多一條「不同材質」的假線。
       const m = new THREE.Mesh(geo, envMat(kd.color === 'foliage' ? snB.foliage : kd.color,
-        { wash: 0.4, cool: 0.45, side: THREE.DoubleSide }));
+        { wash: 0.4, cool: 0.45, side: THREE.DoubleSide, land: true }));
       m.frustumCulled = false;
       m.userData.noOutline = true;
       m.userData.gborder = kind; m.userData.glayer = 'border';   // 冒煙識別標記(同上)
@@ -3873,12 +3984,14 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));   // RGBA:fade 邊用頂點 alpha
+    setLandN(geo, b);
     geo.setIndex(b.idx);
     const tint = def.green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
     const m = new THREE.Mesh(geo, envMat(tint, {
       map: groundTex(sub, +v, def.uv === 'fit'),
       vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim(同底毯)
       transparent: def.edge === 'fade',   // 淡出邊融入地形;depthWrite 保持 true(貼花式)
+      landNrm: true,                      // 地貌類別 + 真地形法線(同底毯)
     }));
     m.frustumCulled = false;
     m.userData.noOutline = true;

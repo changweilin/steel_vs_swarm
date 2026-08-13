@@ -231,10 +231,11 @@ console.log('\nⅡ 陰影偏色(P1-B)');
     && count(bare(toonSrc), /uCelRampLo = \{ value:/g) === 1,
     'uCelRampLo 由 rampFloor(bands) 推導且只有一個寫入點');
   ok(/uniform float uCelRampLo;/.test(toonSrc), 'uCelRampLo 的宣告頂在片段程式最前(展開後的 chunk 比 main 早)');
-  ok(/applyCelPatch\(m, \{ metal: !!celMetal, rim, soft, bands \}\)/.test(bare(toonSrc))
-    && /tint: 'env', preview, soft, bands \}\)/.test(bare(toonSrc)),
+  // 樣式只釘「bands 有沒有一路傳下去」;後面還接不接別的參數(land / landNrm …)不管
+  ok(/applyCelPatch\(m, \{ metal: !!celMetal, rim, soft, bands\s*[,}]/.test(bare(toonSrc))
+    && /tint: 'env', preview, soft, bands\s*[,}]/.test(bare(toonSrc)),
     'toonMat / envMat 都把 bands 傳給 applyCelPatch(同一份 ramp 餵貼圖也餵權重基準)');
-  ok(/celOpts = \{[^}]*bands \}/.test(bare(toonSrc)),
+  ok(/celOpts = \{[^}]*\bbands\b[^}]*\}/.test(bare(toonSrc)),
     'celOpts 記著 bands(applyPaint 事後重注入時不得掉基準)');
   // 兩軌:機體與環境各一根拉桿,MUST NOT 併成一個值
   ok(/_rampTint = \{[\s\S]{0,200}mech:[\s\S]{0,200}env:/.test(toonSrc), '偏色分機體 / 環境兩軌');
