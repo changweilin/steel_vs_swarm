@@ -13,6 +13,12 @@ import t06g from './t06.js';
 import t11g from './t11.js';
 import m01g from './m01.js';
 import m05g from './m05.js';
+// 變形者的**仿生地面型**(2026-08-13 使用者的變形者重製:這四格原本缺檔 ⇒ 名冊上是空的,
+// 而它們的飛行型早就在架上 —— 兩態同零件的前提是地面型先有一份可被呼叫的建構器)
+import m07g from './m07.js';
+import m08g from './m08.js';
+import s03g from './s03.js';
+import s10g from './s10.js';
 // 仿生批次(2026-08-12:★ 定案圖 → 仿生機型;四足 kind:'quad' + 獸型雙足)
 import s06 from './s06.js';
 import s07 from './s07.js';
@@ -50,6 +56,7 @@ export const MECH_DETAIL = {
   't06@ground': t06g, 't11@ground': t11g, 'm01@ground': m01g, 'm05@ground': m05g,
   // ── 仿生機體(quad 鷹架 / 獸型雙足 biped 鷹架)──
   s06, s07, t04, m06, s09, t03, t05, m02,
+  'm07@ground': m07g, 'm08@ground': m08g, 's03@ground': s03g, 's10@ground': s10g,
   // ── 航空機體(air 鷹架)──
   s01, s02, s04, s05, s08, s11, s12, t07, t08, t09, m03, m04,
   's03@flight': s03f, 's10@flight': s10f, 't06@flight': t06f, 't11@flight': t11f,

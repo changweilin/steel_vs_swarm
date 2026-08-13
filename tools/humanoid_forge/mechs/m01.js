@@ -85,23 +85,42 @@ export default {
     prismF(ch, [[-0.12, 0.02], [0.12, 0.02], [0.15, 0.30], [0, 0.46], [-0.15, 0.30]], 0.03, 0, top + 0.07, -0.30 * G + 0.04, 0x8a1f2a, { metalness: 0.4 });  // 內襯紅
     tboxF(ch, { w0: 0.40, w1: 0.52, d0: 0.10, d1: 0.15, h: 0.80, sz: -0.02 }, 0, 1.35, -0.36, PAL.dark, { metalness: 0.75 });  // 背脊整流罩(旋翼基座)
     bxF(ch, 0.05, 0.68, 0.02, 0, 1.35, -0.44, accent, { emissive: accent, emissiveIntensity: 0.6 });  // 整流罩燈條
-    // 摺收旋翼 = 長刃羽組(一片一零件):左右各 3 片向下後掠(長短遞減)+ 1 片上揚 —— 2D 靜態
-    // 圖的下垂長刀 + 奔跑/heavy 圖背後 X 剪影;取代舊「一根桅 + 兩片槳葉」
+    // 三角滑翔翼(**兩態同一片**;2026-08-13 使用者:「移除旋翼,改成三角滑翔翼;地面模式
+    // 收起滑翔翼變成披風」)—— 地面態 = 垂下貼背的斗篷,飛行態由 m01_flight 轉成水平三角翼。
     for (const sx of [-1, 1]) {
-      const wing = new THREE.Group();
-      wing.position.set(sx * 0.22, 1.68, -0.46);
-      wing.rotation.x = Math.PI + 0.42;                  // 指向下後方(收攏貼背)
-      ch.add(wing);
-      latheF(wing, [[0.04, -0.06], [0.12, -0.035], [0.12, 0.06], [0.05, 0.10]], 8, 0, 0, 0, COAL, { metalness: 0.8 });  // 旋翼轂
-      const L = [2.15, 1.75, 1.40];
-      for (let i = 0; i < 3; i++) {
-        const bl = finF(wing, { len: L[i], w0: 0.30, w1: 0.07, t: 0.06, sweep: 0.22 },
-          0, 0, 0.05 + i * 0.07, i === 1 ? COAL : PAL.deep, { metalness: 0.7 });
-        bl.rotation.z = -sx * (0.08 + i * 0.22);         // 逐片外展(扇形遞開)
-      }
-      const up = finF(ch, { len: 1.55, w0: 0.26, w1: 0.07, t: 0.06, sweep: 0.14 }, sx * 0.30, 1.76, -0.42, PAL.deep, { metalness: 0.7 });
-      up.rotation.set(-0.55, 0, -sx * 0.44);             // 上揚刃羽(奔跑/heavy 的 X 剪影;外撥不遮頭)
+      const w = this.glider(c, ch, sx, sx * 0.24, 1.72, -0.44);
+      w.rotation.set(0.20, 0, sx * 0.12);                // 收攏:翼面垂下、面法線朝後 = 披風
     }
+  },
+  /**
+   * 三角滑翔翼一半(**兩態共用的同一片零件**)。
+   * 幾何一律以「收攏態」定義:翼根在原點、翼面沿 −y 垂下、面法線 = 局部 +z(= 披風的背面);
+   * 展開只由呼叫端的 pivot 旋轉決定 —— 兩態各畫一片的話,披風與三角翼會是兩個不同的形狀,
+   * 而兩張圖分開看都很正常(這正是「盡量用相同零件變形」要擋掉的那件事)。
+   * 回傳 pivot Group(呼叫端定向)。
+   */
+  glider(c, parent, sx, x, y, z) {
+    const { PAL, accent } = c;
+    const piv = new THREE.Group();
+    piv.position.set(x, y, z);
+    parent.add(piv);
+    // 膜面 = **三角形**(局部 x = 展開後的翼弦、−y = 翼展):根弦寬 1.1、往翼尖收成一點。
+    // 這個收分兩態都對:當披風時是「肩寬、下擺收尖」的斗篷,展開時是根弦寬的三角翼。
+    // 反過來(尖端在根、寬在梢)當披風還讀得過去,當翼就是一片倒錐 —— 兩態共用一片零件的
+    // 代價就是這種收分方向 MUST 同時滿足兩邊。
+    prismF(piv, mir([[0, 0.55], [1.10, -0.05], [0.10, -2.85]], sx), 0.05, 0, 0, 0, COAL, { metalness: 0.72 });
+    prismF(piv, mir([[0.06, 0.44], [0.96, -0.05], [0.13, -2.62]], sx), 0.02, 0, 0, 0.045, 0x8a1f2a, { metalness: 0.4 });  // 內襯紅(同高立領)
+    // 翼樑 ×3(一根一件;由翼根扇向翼尖)+ 前緣金滾邊 + 翼根鉸鏈鼓 + 翼尖燈
+    for (let i = 0; i < 3; i++) {
+      const t = i / 2;
+      const sp = finF(piv, { len: 2.75 - t * 0.55, w0: 0.12, w1: 0.03, t: 0.055 }, sx * (0.05 + t * 0.30), 0.10 - t * 0.22, -0.03, PAL.deep, { metalness: 0.8 });
+      sp.rotation.z = Math.PI + sx * (0.02 + t * 0.14);  // Rz(π+a):+y → (sin a, −cos a) = 朝下外側
+    }
+    const edge = bxF(piv, 0.04, 2.9, 0.035, sx * 0.55, -1.28, 0.04, GOLD, { metalness: 0.9 });
+    edge.rotation.z = -sx * 0.34;                        // 前緣金滾邊(貼三角的長斜邊)
+    latheF(piv, [[0.05, -0.08], [0.15, -0.05], [0.15, 0.08], [0.06, 0.12]], 8, 0, 0.10, 0, COAL, { metalness: 0.8 });  // 翼根鉸鏈鼓
+    bxF(piv, 0.09, 0.09, 0.06, sx * 0.12, -2.78, 0.04, accent, { emissive: accent, emissiveIntensity: 0.8 });          // 翼尖燈
+    return piv;
   },
   pelvis(c, hips, d) {
     const { PAL, accent, G } = c;
@@ -135,11 +154,11 @@ export default {
       const tr = bxF(l, 0.02, d.len * 0.7, 0.02, st * 0.11 * G, -d.len * 0.45, 0.135, GOLD, { metalness: 0.9 });
       tr.rotation.z = -st * 0.05; tr.rotation.x = 0.03;  // 前稜金滾邊
     }
-    // 小腿摺收旋翼:3 片短刃羽扇(fanF 多零件)收攏貼小腿後側
+    // 小腿導流鰭:3 片短刃羽扇(fanF 多零件)貼小腿後側 —— 2026-08-13 使用者「移除旋翼」,
+    // 這一組從「摺收旋翼」改判為滑翔時的安定鰭(零件不動、轂座移除:它是旋翼才需要的軸承)
     const rot = fanF(l, { n: 3, arc: 0.42, len: 0.68, edgeF: 0.72, gap: 0.05, fin: { w0: 0.09, w1: 0.03, t: 0.028, sweep: 0.08 } },
       0, -d.len * 0.35, -0.19 * G, PAL.deep, { metalness: 0.75 });
     rot.g.rotation.x = Math.PI + 0.5;                    // 指向下後方
-    latheF(rot.g, [[0.02, -0.04], [0.06, -0.02], [0.06, 0.03], [0.025, 0.06]], 8, 0, 0, 0, COAL, { metalness: 0.8 });  // 旋翼轂
     bxF(l, 0.045, 0.045, 0.045, sx * 0.15 * G, -d.len * 0.7, -0.1, sx < 0 ? 0xd23b3b : 0x3bd25a, { emissive: sx < 0 ? 0xd23b3b : 0x3bd25a, emissiveIntensity: 0.8 });  // 航行燈左紅右綠
   },
   foot(c, l, d) {

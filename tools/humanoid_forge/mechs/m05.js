@@ -124,35 +124,58 @@ export default {
         sphF(fan.fins[i], 0.028, 0, L * 0.97, 0.07, c.accent, { emissive: c.accent, emissiveIntensity: 0.9 });
       }
     }
+    // ── 飛膜(收摺態):自肩側掛下、貼體側垂成半透明皮褶 ——
+    // 飛行型由 m05_flight 轉成水平實體膜(同一片零件;見 this.patagium 檔頭)
+    for (const sx of [-1, 1]) {
+      const w = this.patagium(c, ch, sx, false);
+      w.position.set(sx * (d.shoulderX * 0.62), top - 0.42, -0.05);
+      w.rotation.set(0.12, sx * Math.PI / 2, -sx * Math.PI / 2);
+      // 收摺 = **同一片膜縮起來**(飛鼠收翼時皮膜真的是往體側聚攏,不是換一片小的):
+      // 轉正之後局部 x = 垂下深度、局部 y = 前後長 ⇒ 兩軸各縮一次就是聚攏的皮褶。
+      // 不縮的話那是一片 2.8×2.2m 的立牌貼在腰上(2026-08-13 實測第一版)。
+      w.scale.set(0.38, 0.66, 1);
+    }
   },
   pelvis(c, hips, d) {
     const { PAL, accent, G } = c;
     tboxF(hips, { w0: 0.5 * G, d0: 0.4 * G, w1: 0.62 * G, d1: 0.5 * G, h: 0.3 }, 0, 0.02, 0, PAL.deep, { metalness: 0.6 });  // 楔台骨盆
     tboxF(hips, { w0: 0.16 * G, d0: 0.08, w1: 0.24 * G, d1: 0.1, h: 0.2, sz: 0.03 }, 0, -0.02, 0.26 * G, PAL.mid, { metalness: 0.6 });  // 前檔楔板
-    // ── 摺收飛行尾翼組(2D 腰後右側:大型垂直安定面 + 斜置翼面 ×2;prismF 翼形一片一件)──
-    const pack = new THREE.Group();
-    pack.position.set(0.3 * G, 0.06, -0.28 * G);
-    pack.rotation.y = -0.35;                                                     // 整組往 +x 外側掠(+0.35 會掃進身體中線被軀幹遮死)
-    hips.add(pack);
-    tboxF(pack, { w0: 0.2, d0: 0.26, w1: 0.16, d1: 0.2, h: 0.34 }, 0, 0, 0, IRON, { metalness: 0.8 });  // 摺收鉸鏈座
-    const wing = (pts, depth, roll, color, oy = 0) => {                          // 翼片:稜柱輪廓(+x=向後)掛在滾轉樞架上
-      const piv = new THREE.Group();
-      piv.position.set(0, oy, -0.06);
-      piv.rotation.z = roll;
-      pack.add(piv);
-      const w = prismF(piv, pts, depth, 0, 0, 0, color, { metalness: 0.65 });
-      w.rotation.y = Math.PI / 2;                                                // 輪廓面轉入矢狀面(+x → −z 向後)
-      return w;
-    };
-    const stab = wing([[0, 0], [1.0, -0.04], [1.45, 0.78], [0.74, 1.06], [0.11, 0.5]], 0.09, -0.1, PAL.mid, 0.06);    // 垂直安定面(大)
-    bxF(stab, 0.9, 0.08, 0.1, 0.85, 0.78, 0, dimF(accent, 0.7), { emissive: accent, emissiveIntensity: 0.5 });        // 安定面 accent 稜線
-    wing([[0, 0], [0.92, -0.18], [1.34, -0.08], [1.08, 0.18], [0.26, 0.24]], 0.08, -1.1, PAL.main);                   // 斜置主翼面
-    wing([[0, 0], [0.7, -0.15], [1.0, -0.04], [0.78, 0.15], [0.19, 0.19]], 0.07, -1.75, PAL.deep);                    // 斜置下翼面(小)
-    // 左側:摺平的小襟翼一片(2D 主包在右側,左側只留收摺薄片)
-    const flapL = prismF(hips, [[0, 0], [0.62, -0.05], [0.82, 0.13], [0.48, 0.25], [0.08, 0.16]], 0.06,
-      -0.28 * G, -0.02, -0.28 * G, PAL.mid, { metalness: 0.65 });
-    flapL.rotation.y = Math.PI / 2 + 0.25;
-    flapL.rotation.z = -0.35;
+    // ⚠ 2026-08-13 使用者定案「狼人+飛鼠:重製為狼人為主體,**移除羽翼**」——
+    // 舊制腰後那一整組摺收飛行尾翼(垂直安定面 + 斜置翼面 ×2 + 左側襟翼)整組退場,
+    // 升力面改由**飛膜**(patagium,見下方 this.patagium)承擔:飛鼠不靠翼靠膜。
+    // 這裡只留摺收鉸鏈座(飛膜的收摺機構,兩態同一顆)。
+    tboxF(hips, { w0: 0.2, d0: 0.26, w1: 0.16, d1: 0.2, h: 0.3 }, 0.3 * G, 0.04, -0.26 * G, IRON, { metalness: 0.8 });
+    tboxF(hips, { w0: 0.2, d0: 0.26, w1: 0.16, d1: 0.2, h: 0.3 }, -0.3 * G, 0.04, -0.26 * G, IRON, { metalness: 0.8 });
+  },
+  /**
+   * 飛膜(patagium)—— **兩態同一片零件**(2026-08-13 使用者:「四肢飛鼠一樣打開,
+   * 飛膜由透明轉實體」)。幾何一律以「展開態」定義:膜面在局部 XY、面法線 = 局部 +z,
+   * 局部 +x·sx = 翼展方向、局部 ±y = 前後弦向。兩態的差別只有**呼叫端的 pivot 旋轉**與
+   * `solid`(實體/半透明)—— 各畫一片的話,收起來的皮褶與展開的膜會是兩個形狀。
+   *   展開(飛行):rotation.set(−π/2, 0, 0) —— 膜面轉成水平(法線朝天)。
+   *   收摺(地面):rotation.set(0, sx·π/2, −sx·π/2) —— 膜面轉進體側矢狀面、長軸垂下 = 皮褶。
+   * 回傳 pivot Group。
+   */
+  patagium(c, parent, sx, solid) {
+    const { PAL, accent } = c;
+    const piv = new THREE.Group();
+    parent.add(piv);
+    const skin = solid ? PAL.mid : PAL.lite;
+    const opt = solid ? { metalness: 0.45 } : { metalness: 0.2, transparent: true, opacity: 0.4 };
+    const mirX = (pts) => (sx >= 0 ? pts : pts.map(([x, y]) => [-x, y]));
+    // 膜面(腕—踝之間的大片皮膜;前緣略前伸 = 飛鼠的針狀腕骨撐開的那一段)
+    const m = prismF(piv, mirX([[0.02, -1.30], [2.18, -0.86], [2.02, 0.92], [0.02, 1.46]]), 0.03, 0, 0, 0, skin, opt);
+    m.userData.noOutline = !solid;                       // 半透明薄片:反轉外殼會糊成黑片(A16)
+    // 膜骨 ×4(一根一件;由體側扇向膜緣)+ 前緣加強稜
+    for (let i = 0; i < 4; i++) {
+      const t = i / 3;
+      const rib = finF(piv, { len: 2.15 - t * 0.16, w0: 0.075, w1: 0.02, t: 0.03 },
+        0.02 * sx, -1.05 + t * 0.78, -0.035, PAL.deep, { metalness: 0.7 });
+      rib.rotation.z = -sx * (Math.PI / 2 + 0.20 - t * 0.30);   // Rz(−sx·π/2):+y → +sx·x(geo.js finF ③)
+    }
+    const le = bxF(piv, 2.1, 0.05, 0.05, sx * 1.08, -1.12, 0.03, dimF(accent, 0.8), { emissive: accent, emissiveIntensity: 0.5 });
+    le.rotation.z = sx * 0.20;                           // 前緣識別稜
+    return piv;
   },
   thigh(c, l, d) {
     const { PAL, G, sx } = c;
@@ -183,10 +206,11 @@ export default {
       0, -d.clear * 0.5, d.footL * 0.25, PAL.deep, { metalness: 0.6 });
     for (const ox of [-0.09, 0, 0.09]) {                                         // 三趾:趾節楔台 + 彎爪錐(一趾兩件)
       tboxF(l, { w0: 0.06, d0: 0.14, w1: 0.07, d1: 0.16, h: 0.07 }, ox, -d.clear * 0.5, d.footL * 0.6, PAL.mid, { metalness: 0.6 });
-      const claw = coneF(l, 0.032, 0.2, 5, ox, -d.clear * 0.55, d.footL * 0.76, BONE, { metalness: 0.7 });
+      // 爪加大(2026-08-13 使用者「爪子更顯眼」):飛鼠態的抓握是這台機的識別點之一
+      const claw = coneF(l, 0.055, 0.34, 6, ox, -d.clear * 0.55, d.footL * 0.82, BONE, { metalness: 0.7 });
       claw.rotation.x = 1.85;                                                    // 前伸微扣地
     }
-    const dew = coneF(l, 0.04, 0.18, 5, 0, -d.clear * 0.3, -d.footL * 0.2, BONE, { metalness: 0.7 });
+    const dew = coneF(l, 0.06, 0.26, 6, 0, -d.clear * 0.3, -d.footL * 0.22, BONE, { metalness: 0.7 });
     dew.rotation.x = -2.6;                                                       // 後距突 dewclaw(不觸地)
   },
   armUp(c, a, d) {
@@ -220,8 +244,8 @@ export default {
     const REST = 1.62, AIM = { sh: -0.78, el: -0.5 }, AIMA = 1.57 - (AIM.sh + AIM.el);  // rest 近水平:趾行手位低防戳地
     for (const [g, sx] of [[F.handL, -1], [F.handR, 1]]) {
       tboxF(g, { w0: 0.18, d0: 0.2, w1: 0.2, d1: 0.22, h: 0.2 }, 0, -0.09, 0.02, c.dark);   // 掌甲楔台
-      for (const ox of [-0.07, 0, 0.07]) {                                       // 握槍仍露三爪(彎爪錐)
-        const claw = coneF(g, 0.03, 0.17, 5, ox + sx * 0.02, -0.17, 0.15, BONE, { metalness: 0.7 });
+      for (const ox of [-0.085, 0, 0.085]) {                                     // 握槍仍露三爪(彎爪錐;2026-08-13 加大)
+        const claw = coneF(g, 0.055, 0.32, 6, ox + sx * 0.02, -0.19, 0.18, BONE, { metalness: 0.7 });
         claw.rotation.x = 1.9; claw.rotation.z = sx * 0.12;
       }
     }
