@@ -19,6 +19,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readSrc } from '../audit_src.mjs';
+// 平整垂直牆面板的**唯一**分群規則(零 import 的純模組;遊戲端 biomes.js 吃同一支)
+import { wallPanels } from '../../public/js/wallpanel.js';
 
 /** beacons.js 的純區塊邊界(THREE 以上那一段)—— 兩個消費端同吃,MUST NOT 各寫一份字串 */
 export const PURE_HEAD = 'export const BEACON = {';
@@ -250,6 +252,124 @@ export function parseGlb(path) {
   return out;
 }
 
+// ============ 平面分群(2026-08-13 使用者「建築外部不平整的多塊法線角小的平面牆合併平整」)============
+//
+// 這一段回答一個問題:**這一片面是不是某一整面平牆的一部分**。三個消費端:
+//   ㋐ `uvBandStats` —— 窗牆帶的資格(「垂直」之外再加「完全平整」那一條)
+//   ㋑ `nodeProfile` —— 逐段的「這個高度真的有一面平整垂直牆嗎」(招牌落點)
+//   ㋒ `wallFlatness` —— 二面角分布(這一輪整平前後的驗收尺,也是反向驗證的判據)
+//
+// **與 `normalize_parts.py` 的關係是「刀」與「尺」不是兩份實作**:那一支照這條規則把頂點推到
+// 平面上並把分帶烤進 UV,本支照同一條規則**從成品 GLB 重新量一次**再與宣告值比對
+// (`intake_parts`)。兩邊寫法不同正是這道閘的本錢 —— 抄同一份程式碼就只驗得到「我抄對了」。
+// 門檻一律由呼叫端注入(唯一真相 = `tri_budget.json` 的 `families.building.planar_spec`),
+// 本檔 MUST NOT 自己寫死度數。
+//
+// ---- 為什麼分群要同時看「法線角」與「平面偏移」----
+// 只看法線的話,退縮塔的**前牆與退縮後的前牆**(法線完全相同、相差一階)會落進同一群,
+// 群的最佳平面落在兩者中間 ⇒ 兩面牆各被推向對方,而它們本來各自就是平的。加上偏移這一條之後,
+// 「合併」的語意才真的是使用者說的那一句:**法線角小而且本來就幾乎同一個平面**的那幾塊。
+
+/** 依位置焊頂點 + 建面表(GLB 是逐面拆開的平面著色網格 ⇒ 不焊就是一堆互不相連的三角形) */
+export function meshFaces(node) {
+  const { pos, idx } = node;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], pos[i + a]); hi[a] = Math.max(hi[a], pos[i + a]); }
+  const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  const q = Math.max(span * 1e-4, 1e-6);
+  const key = new Map(), P = [], map = new Int32Array(pos.length / 3);
+  for (let i = 0; i < pos.length / 3; i++) {
+    const k = `${Math.round(pos[i * 3] / q)},${Math.round(pos[i * 3 + 1] / q)},${Math.round(pos[i * 3 + 2] / q)}`;
+    if (!key.has(k)) { key.set(k, P.length / 3); P.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]); }
+    map[i] = key.get(k);
+  }
+  const F = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const A = map[idx[i]], B = map[idx[i + 1]], C = map[idx[i + 2]];
+    const a = A * 3, b = B * 3, c = C * 3;
+    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const L = Math.hypot(nx, ny, nz);
+    if (!L) continue;
+    F.push({
+      i: i / 3, tri: [idx[i], idx[i + 1], idx[i + 2]], v: [A, B, C],
+      n: [nx / L, ny / L, nz / L], area: L / 2,
+      c: [(P[a] + P[b] + P[c]) / 3, (P[a + 1] + P[b + 1] + P[c + 1]) / 3, (P[a + 2] + P[b + 2] + P[c + 2]) / 3],
+      y0: Math.min(P[a + 1], P[b + 1], P[c + 1]), y1: Math.max(P[a + 1], P[b + 1], P[c + 1]),
+    });
+  }
+  return { P, F, span };
+}
+
+/**
+ * 「這一片面是不是平整垂直牆」的**唯一判據**(三個消費端同吃)。兩個條件:
+ *   ① 近垂直:|n.y| ≤ `wallNy`(與 UV 三帶同一條線)
+ *   ② 真的平整:法線落在自己那一群的最佳平面 `flatDeg` 之內,而且那一群夠大(≥ `minF` 面積)
+ * `flatDeg` MUST ≪ 分群容差 `deg` —— 分群是「這幾塊算不算同一面牆」,平整是「整完之後真的
+ * 貼上去了沒」。兩個用同一個數字的話,這道閘就退化成「有分到群就算平」(恆真)。
+ *
+ * **分群本體不住這裡**:規則只有 `public/js/wallpanel.js` 一份(執行期的窗格對齊吃同一支)。
+ * 本函式只是把它的 `faceOf` 翻成「逐面 + 面積」的形式給入庫閘與剖面用 —— 抄第二份分群的話,
+ * 離線量到的牆與遊戲裡貼窗的牆會是兩組面,而兩邊都不會報錯。
+ * @returns {{flat:Set, wallA:number, flatA:number, totA:number, panels:Array}}
+ */
+export function flatWalls(F, { deg, off, flatDeg, minF, wallNy }, node = null) {
+  const totA = F.reduce((s, f) => s + f.area, 0) || 1;
+  if (!node) throw new Error('flatWalls 需要原節點(分群走 wallpanel.js 的原始頂點/索引)');
+  const { panels, faceOf } = wallPanels(node.pos, node.idx, {
+    DEG: deg, OFF_F: off / (spanOf(node) || 1), WALL_NY: wallNy, FLAT_DEG: flatDeg, MIN_F: minF,
+  });
+  const flat = new Set();
+  let wallA = 0, flatA = 0;
+  for (const f of F) {
+    if (Math.abs(f.n[1]) > wallNy) continue;
+    wallA += f.area;
+    if (faceOf[f.i] >= 0) { flat.add(f); flatA += f.area; }
+  }
+  return { flat, wallA, flatA, totA, panels };
+}
+
+/** 節點的最長軸跨距(`wallPanels` 的 `OFF_F` 是它的比例;呼叫端給的是絕對值 ⇒ 這裡反算) */
+export function spanOf(node) {
+  const { pos } = node;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < pos.length; i += 3) for (let a = 0; a < 3; a++) { lo[a] = Math.min(lo[a], pos[i + a]); hi[a] = Math.max(hi[a], pos[i + a]); }
+  return Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+}
+
+/**
+ * 二面角分布(**驗收尺**):相鄰兩片近垂直面之間的夾角,面積加權。
+ * 使用者說的「不平整的多塊法線角小的平面牆」就是 `small` 這一欄 —— 夾角落在
+ * (0.5°, deg] 的那些相鄰對,合併整平之後它們 MUST 掉下來(反向驗證的判據)。
+ * 真正的轉角(> deg)不在這一欄裡:整平會讓它們更清楚,`p90` 因此**可以上升**。
+ */
+export function wallFlatness(F, deg, wallNy) {
+  const edge = new Map();
+  for (const f of F) {
+    for (let k = 0; k < 3; k++) {
+      const a = f.v[k], b = f.v[(k + 1) % 3], key = a < b ? `${a}_${b}` : `${b}_${a}`;
+      if (!edge.has(key)) edge.set(key, []);
+      edge.get(key).push(f);
+    }
+  }
+  const rows = [];
+  for (const pair of edge.values()) {
+    if (pair.length !== 2) continue;
+    const [p, q] = pair;
+    if (Math.abs(p.n[1]) > wallNy || Math.abs(q.n[1]) > wallNy) continue;
+    const d = Math.max(-1, Math.min(1, p.n[0] * q.n[0] + p.n[1] * q.n[1] + p.n[2] * q.n[2]));
+    rows.push([Math.acos(d) * 180 / Math.PI, p.area + q.area]);
+  }
+  rows.sort((a, b) => a[0] - b[0]);
+  const T = rows.reduce((s, r) => s + r[1], 0) || 1;
+  const at = (p) => { let s = 0; for (const r of rows) { s += r[1]; if (s >= T * p) return r[0]; } return 0; };
+  return {
+    pairs: rows.length, p50: at(0.5), p90: at(0.9),
+    small: rows.filter((r) => r[0] > 0.5 && r[0] <= deg).reduce((s, r) => s + r[1], 0) / T,
+  };
+}
+
 /** 逐節點量外廓:水平徑向最遠點 + 縱向兩端(入庫閘與對照台同一把尺) */
 export function nodeExtent(node) {
   let rMax = 0, yMin = Infinity, yMax = -Infinity;
@@ -276,12 +396,19 @@ export function nodeExtent(node) {
  * 刻意的:少算一格就是「看得見的牆打得穿」,那比多算一格嚴重得多。
  *
  * 回傳的座標是**單位盒座標**(消費端逐實例 scale 之前),欄位刻意與消費端同名:
- *   `slabs` [[y0, y1, hw, hd], …] 由下而上、首尾相接、四位小數(名冊是要寫進 biomes.js 的原文)
+ *   `slabs` [[y0, y1, hw, hd, wall], …] 由下而上、首尾相接、四位小數(名冊是要寫進 biomes.js 的原文)
  *   `hw/hd/hy`  整顆的半跨(消費端據此把網格**填滿基地**,見 Q1:0.13 的半寬縮在 1.0 的
  *               基地中央 = 一片浮在空地裡的薄牆,而碰撞盒還是整塊基地)
  *   `solid`     剖面體積 ÷ 單位盒(= 舊制那顆方盒有多少是空氣;實測 0.16~0.38)
+ *
+ * ---- 第五欄 `wall`(2026-08-13 使用者「外掛招牌只貼在垂直地面且完全平整的平面牆」)----
+ * = 這一段的高度區間裡,**平整垂直牆**佔該段全部面積的比例(判據唯一縫 `flatWalls`)。
+ * 招牌是剛性矩形,牌面與牆面差一點就讀成「浮在半空」;而剖面側面是構造上的垂直矩形,
+ * 它**不保證那個高度的網格真的是一面平牆**(尖塔、山牆、退縮斜切面照樣落在某一段的側面上)。
+ * ⇒ 消費端拿它與 `MASS.SIGN_FLAT_MIN` 比,挑不到合格的段就**不掛牌**(原則 6 寧缺勿錯)。
+ * 沒給 `flat` 規格 ⇒ 不量、逐位元回四欄舊制(名冊沒宣告第五欄時消費端一律放行)。
  */
-export function nodeProfile(node, { bands = 16, maxSlabs = 4 } = {}) {
+export function nodeProfile(node, { bands = 16, maxSlabs = 4, flat = null } = {}) {
   const { pos } = node;
   let y0 = Infinity, y1 = -Infinity;
   for (let i = 1; i < pos.length; i += 3) { y0 = Math.min(y0, pos[i]); y1 = Math.max(y1, pos[i]); }
@@ -308,7 +435,30 @@ export function nodeProfile(node, { bands = 16, maxSlabs = 4 } = {}) {
     sl.splice(bi, 2, { a: sl[bi].a, b: sl[bi + 1].b });
   }
   const r4 = (v) => Math.round(v * 1e4) / 1e4;
-  const slabs = sl.map((s) => { const [x, z] = ext(s); return [r4(y0 + s.a * dy), r4(y0 + (s.b + 1) * dy), r4(x), r4(z)]; });
+  // 逐段的「平整垂直牆」佔比:面歸到**重心所在的那一段**(一片面可能跨兩段,而重心只有一個
+  // ⇒ 分母不會被重複計數;段高遠大於單片面的高度,邊界效應在小數點後兩位以下)
+  let wallF = null;
+  if (flat) {
+    const { F } = meshFaces(node);
+    const { flat: fs } = flatWalls(F, flat, node);
+    const tA = new Array(bands).fill(0), wA = new Array(bands).fill(0);
+    for (const f of F) {
+      const k = Math.min(bands - 1, Math.max(0, Math.floor((f.c[1] - y0) / dy)));
+      tA[k] += f.area;
+      if (fs.has(f)) wA[k] += f.area;
+    }
+    wallF = (s) => {
+      let t = 0, w = 0;
+      for (let k = s.a; k <= s.b; k++) { t += tA[k]; w += wA[k]; }
+      return t > 0 ? w / t : 0;
+    };
+  }
+  const slabs = sl.map((s) => {
+    const [x, z] = ext(s);
+    const row = [r4(y0 + s.a * dy), r4(y0 + (s.b + 1) * dy), r4(x), r4(z)];
+    if (wallF) row.push(r4(wallF(s)));
+    return row;
+  });
   const solid = slabs.reduce((t, [a, b, w, d]) => t + 4 * w * d * (b - a), 0) / Math.max(1e-9, y1 - y0);
   return {
     slabs, solid: r4(solid),
@@ -329,10 +479,17 @@ export function nodeProfile(node, { bands = 16, maxSlabs = 4 } = {}) {
  *   朝上 n.y > `roofMinz`            → 屋頂帶  v ∈ [0, roof)
  *   傾斜 `wallNy` < |n.y| ≤ roofMinz、或朝下 → 素牆帶  v ∈ [roof, roof + plain)
  *   近垂直 |n.y| ≤ `wallNy`          → 窗牆帶  v ∈ [roof + plain, 1]
- * 「平整」那半**不靠這一帶兌現**:實測 AI 網格的垂直面本來就有起伏(逐平面分群只認得
- * mass_a 的 4~9% 面積),把九成立面判成素牆只會更糟。⇒ 窗格吃「垂直」這一條(盒投影對
- * 起伏不敏感,窗格照樣是正的),而**招牌**那半吃更嚴的一條 —— 它掛在 `nodeProfile` 的
- * 剖面側面上,那些面依構造就是垂直且平整的矩形。
+ *
+ * ---- 2026-08-13:窗牆帶再加一條「**完全平整**」(使用者這一輪的第 ② 條)----
+ * 上一輪把「平整」留給招牌那一半,理由是**當時的網格沒有平整的立面可言** ——
+ * 實測近垂直面裡真的貼在自己那一群平面上(≤6°)的只有 50%/60%/77%/90%/74%,
+ * 相鄰近垂直面之間夾角落在 (0.5°, 12°] 的更佔 53%~64% 的面積:那正是使用者這一輪說的
+ * 「不平整的多塊法線角小的平面牆」。⇒ 同一輪先把它們**合併整平**(normalize_parts 的
+ * `_planarize` 改成「法線角 + 平面偏移」分群 + 累計夾制 + 多趟收斂),窗牆帶才吃得起
+ * 這一條。分類因此是 **傾角 ∧ 平整**:
+ *   近垂直 **且** 落在夠大的平面群、法線離群平面 ≤ `flat.flatDeg` → 窗牆帶
+ *   近垂直但不平整                                              → **素牆帶**(與斜面同一條)
+ * 判據唯一縫 = `flatWalls`(招牌那半的第五欄吃同一支)。`flat` 不給 ⇒ 逐位元回上一輪。
  *
  *   `corr`      牆面(近垂直)頂點的 corr(高度, v) —— MUST > 0,否則立面是**上下顛倒**的
  *               (基座暗帶印在屋簷)。這件事沒有任何錯誤訊息,只有貼圖排面看得出來。
@@ -342,9 +499,21 @@ export function nodeProfile(node, { bands = 16, maxSlabs = 4 } = {}) {
  *   `parity`    朝上面積佔比 = 三帶 texel 密度相同時的 `roof_band`(推導式)
  *   `plainParity` 傾斜面積佔比 = 同一條推導出來的 `plain_band`
  */
-export function uvBandStats(node, minz = 0.30, wallNy = 0.15) {
+export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null) {
   const { pos, idx, uv } = node;
   if (!uv) return null;
+  // 平整判定走焊接後的面表(GLB 是逐面拆開的 ⇒ 不焊就分不出「相鄰」);以三角形序對回原索引
+  let flatOf = null, live = null;
+  if (flat) {
+    const { F } = meshFaces(node);
+    const { flat: fs } = flatWalls(F, { ...flat, wallNy }, node);
+    flatOf = new Set();
+    for (const f of fs) flatOf.add(f.i);
+    // **退化面(焊接後面積歸零)整批排除**:它們看不見、法線是雜訊,而分類器會把它們
+    // 隨機丟進某一帶 —— 實測 mass_a 有兩片,足以讓「傾斜面收在素牆帶內」那條斷言紅字,
+    // 而畫面上一個像素都沒有變。兩支量測 MUST 吃**同一份**面表,否則分歧的是量法不是節點。
+    live = new Set(F.map((f) => f.i));
+  }
   let upA = 0, tiltA = 0, sideA = 0, upMaxV = 0, wallMinV = 1, tiltMinV = 1, tiltMaxV = 0;
   const ys = [], vs = [];
   for (let i = 0; i < idx.length; i += 3) {
@@ -355,11 +524,13 @@ export function uvBandStats(node, minz = 0.30, wallNy = 0.15) {
     const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
     const L = Math.hypot(nx, ny, nz);
     if (!L) continue;
+    if (live && !live.has(i / 3)) continue;          // 退化面(見上)
     const up = ny / L, area = L / 2;
     const vv = [uv[A * 2 + 1], uv[B * 2 + 1], uv[C * 2 + 1]];
     if (up > minz) { upA += area; upMaxV = Math.max(upMaxV, ...vv); continue; }
-    // 「牆」取近垂直的那一群:斜的過渡面與朝下的屋簷底一律歸素牆帶(舊制它們混在窗格帶裡)
-    if (Math.abs(up) <= wallNy) {
+    // 「牆」取近垂直**且平整**的那一群:斜的過渡面、朝下的屋簷底、以及近垂直但起伏的那些
+    // 一律歸素牆帶(前者是 2026-08-12 那一輪、後者是 2026-08-13 這一輪加的)
+    if (Math.abs(up) <= wallNy && (!flatOf || flatOf.has(i / 3))) {
       sideA += area;
       wallMinV = Math.min(wallMinV, ...vv);
       for (const V of [A, B, C]) { ys.push(pos[V * 3 + 1]); vs.push(uv[V * 2 + 1]); }
