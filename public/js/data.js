@@ -36,16 +36,72 @@ export const OTHER_SIDE = { SWARM: 'STEEL', STEEL: 'SWARM' };
 // 不再有大/中/小尺寸選項。
 export const TEAM = { MIN: 1, MAX: 5, DEFAULT: 5 };
 export const lanesFor = (n) => Math.ceil(n / 2);
-// 地圖「真實世界」邊長 (m)
-export const realSideMFor = (L) => (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000;
+
+// ============ 迷你地圖(2026-08-13 使用者定案)============
+// 使用者原句:「為了讓手機版更順暢,新增迷你地圖:只有 1vs1/2vs2,兵線只有前線砲塔 + 主堡,
+// 地圖對應縮小,邊緣緩衝縮小到 1/3,必要的話也縮小據點之間的距離。手機版只允許連線遊玩
+// 迷你地圖,桌機版不限制」。
+//
+// **這是同一個旗標的四個推論,不是四個旋鈕** —— `battleConfig.mini` 一個布林,由它推導出
+// 塔位階數、地圖邊長、據點距離、緩衝深度。四者各自寫死的下場是「塔拆了但地圖沒縮」這種
+// 半套狀態,而每一條既有斷言照樣全綠。
+//
+// ①**只有 1v1 / 2v2**:`TEAM_MAX = 2` ⇒ `lanesFor(2) = 1` ⇒ 迷你地圖恆為**單兵線**。
+//   兩件事因此是構造保證而不是額外的判斷:兵線分離規則無事可做、剪短兵線的兩端就是兩座主堡。
+// ②**每側只剩前線砲塔**:`STAGES = 1`(完整版 `FULL_STAGES = 2`)。這一格餵 `solveTowerSites`
+//   的第二趟(後塔)—— 直接不跑,而不是解完再丟掉:biomes 淨空 / beacons 錨點 / 橋上墩座
+//   全吃同一份解,解出來卻不生成 = 建物繞著一座不存在的塔讓路。
+// ③**地圖縮小比 MUST 推導**(`miniScaleF()`):尺就是塔鏈本身 —— 一條兵線要塞得下
+//   「每側 stages 座塔各佔一個敵我塔距 SEP + 中線那半個 SEP ×2」⇒ `laneChainF(stages)
+//   = 2·stages + 1`(完整 5、迷你 3)。縮小比 = 3/5 = 0.6,而且**改 STAGES 它自己跟著走**。
+//   MUST NOT 手寫 0.6:手寫的下場是日後把迷你版改成兩階塔(或完整版改成三階)之後,地圖
+//   大小留在原地 —— 症狀只是「這張圖的塔擠在一起」,沒有任何錯誤訊息。
+//   ⇒ 使用者那句「必要的話也縮小據點之間的距離」是**同一個係數**:邊長與兩堡距離是同一條
+//   公式的兩端(`targetDistFor = sideMFor × 0.85 × √2`),縮邊長就是縮據點距離。
+// ④**邊緣緩衝縮到 1/3**(`BUFFER_F`,使用者指定的數字,不是推導值)。⚠ 這一格**明知故犯**地
+//   放棄了 `WORLD_EDGE` 檔頭那條「裙的外緣恰好落在地平線 ⇒ 地圖結構性地不會露出硬邊」的
+//   保證 —— 緩衝深度是逐邊 `edgeBufferM()` 的一圈裙,而迷你地圖的可玩區只有完整版的
+//   七成,裙反而佔掉建構期與繪製量的大頭。使用者要的就是拿「站在邊界往外看得到世界盡頭」
+//   換手機的幀率。MUST NOT 因為看到 `audit_world_edge` 那條不等式就「修」回 1。
+//
+// 手機閘門(`miniOnlyFor`)刻意**只住客戶端**:那是「這台裝置畫不動」的裝置能力判斷,不是
+// 權威狀態也不是防作弊(A1 管的是後者)—— 伺服器根本無從知道對面是不是手機,真要驗也只能
+// 驗一個客戶端自己宣告的欄位。桌機不限制,所以這一格恆是「少數裝置自我設限」而非規則。
+export const MINI = {
+  TEAM_MAX: 2,      // 只有 1v1 / 2v2(使用者指定)⇒ 恆為單兵線
+  STAGES: 1,        // 每側塔位數:只有前線砲塔
+  BUFFER_F: 1 / 3,  // 邊緣緩衝深度倍率(使用者指定)
+};
+/** 完整戰場每側塔位數(= `solveTowerSites` 的兩趟:前線 + 後方) */
+export const FULL_STAGES = 2;
+/** 這一場每側幾階砲塔 */
+export const towerStages = (mini) => (mini ? MINI.STAGES : FULL_STAGES);
+/** 兵線長度需求(單位 = 敵我塔距 SEP):每側 stages 座塔各一個 SEP,加上中線那半個 ×2 */
+export const laneChainF = (stages) => 2 * stages + 1;
+/** 迷你地圖的尺度縮小比(推導,MUST NOT 手寫)= 塔鏈需求比 = 3/5 */
+export const miniScaleF = () => laneChainF(MINI.STAGES) / laneChainF(FULL_STAGES);
+/** 這一場的地圖尺度倍率(邊長 / 兩堡距離共用同一個) */
+export const mapScaleF = (mini) => (mini ? miniScaleF() : 1);
+/** 這個人數開得成迷你地圖嗎(1v1 / 2v2) */
+export const miniAllowed = (teamSize) => teamSize <= MINI.TEAM_MAX;
+/**
+ * 這台裝置只准打迷你地圖嗎?(使用者:「手機版只允許連線遊玩迷你地圖,桌機版不限制」)
+ * 參數 = `ctrlmode.js deviceScheme()` 的回傳 —— 裝置判定全 repo 只有那一份,本檔
+ * (伺服器也 import)MUST NOT 自己碰 navigator/matchMedia。
+ */
+export const miniOnlyFor = (deviceScheme) => deviceScheme === 'pad';
+
+// 地圖「真實世界」邊長 (m)。mini 省略 ⇒ 倍率 1 ⇒ 逐位元同舊制(IEEE754:x * 1 === x)
+export const realSideMFor = (L, mini) =>
+  (MAPGEO.REAL_SIDE_BASE_KM + MAPGEO.REAL_SIDE_PER_LANE_KM * L) * 1000 * mapScaleF(mini);
 // 地圖「遊戲世界」邊長 (m) = 真實 ÷ REAL_SCALE;兩堡目標距離 = 邊長 × 0.85 × √2
-export const sideMFor = (L) => realSideMFor(L) / MAPGEO.REAL_SCALE;
-export const targetDistFor = (L) => sideMFor(L) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
+export const sideMFor = (L, mini) => realSideMFor(L, mini) / MAPGEO.REAL_SCALE;
+export const targetDistFor = (L, mini) => sideMFor(L, mini) * MAPGEO.BASE_DIST_FRAC * Math.SQRT2;
 // 兩堡「真實世界」距離 (m)
-export const realDistFor = (L) => targetDistFor(L) * MAPGEO.REAL_SCALE;
+export const realDistFor = (L, mini) => targetDistFor(L, mini) * MAPGEO.REAL_SCALE;
 /** 重合率判定網格邊長 (m,真實世界):與兩堡真實距離等比,見 MAPGEO.OVERLAP_CELL_FRAC */
-export const overlapCellM = (L) =>
-  Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L) * MAPGEO.OVERLAP_CELL_FRAC);
+export const overlapCellM = (L, mini) =>
+  Math.max(MAPGEO.OVERLAP_CELL_MIN_M, realDistFor(L, mini) * MAPGEO.OVERLAP_CELL_FRAC);
 
 // ---- 地圖幾何(緊湊節奏)----
 export const MAPGEO = {
@@ -2643,8 +2699,13 @@ export const heroTallestH = () => {
 export const edgeWallHM = () => Math.min(objHeightMax(), heroTallestH() * WORLD_EDGE.WALL_H_F);
 /** 最深型式的環厚(公尺)= 邊界帶要讓開的距離。單一縫,見上方檔頭 */
 export const edgeWallDeepM = () => WORLD_EDGE.WALL_T * WORLD_EDGE.WALL_T_F;
-/** 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭 */
-export const edgeBufferM = () => curveHorizonM() * WORLD_EDGE.BUFFER_F;
+/**
+ * 緩衝空間深度(公尺):地形範圍再往外鋪這麼遠的地。推導不手寫,見檔頭。
+ * 迷你地圖另乘 `MINI.BUFFER_F`(1/3,使用者指定)—— 這一格**明知故犯**地放棄上面那條
+ * 「裙的外緣落在地平線 ⇒ 不會露出硬邊」的保證,換手機的建構期與繪製量,見 `MINI` 檔頭 ④。
+ * 省略參數 ⇒ 倍率 1 ⇒ 逐位元同舊制。
+ */
+export const edgeBufferM = (mini) => curveHorizonM() * WORLD_EDGE.BUFFER_F * (mini ? MINI.BUFFER_F : 1);
 
 // ---- 自機碰撞量體(2026-08-02 由 game.js 移入本檔)----
 // 住 data.js 的理由與 hitR/hitH 相同:**伺服器也要用**。使用者定案「電腦玩家的碰撞法則一律跟
@@ -4800,8 +4861,13 @@ export function siegeOpenStage(counts) {
  *     非相鄰兵線(如 L3 上↔下,中路隔開)仍只防物理疊塔 ≥ STACK。相鄰約束**絕不覆蓋敵我前線 opp≥SEP**(invariant ②):塞不下時退回舊行為(frontNoAdj/spreadNoAdj),塔數與 ② 不回歸。
  *   - 真正 ≤80% 全達成需兵線 ≥ ~5·SEP;現尺度多數兵線做不到 → 靠放大地圖(降 REAL_SCALE)拉長兵線(見 GEO_SCALE_VER)。
  * MUST 用直線距離判定 —— 兵線 90° 急彎時沿線距離會騙過去。稽核:tools/audit_map_rules.mjs。
+ *
+ * `mini`(迷你地圖,見 MINI 檔頭 ②):每側只有前線砲塔 ⇒ **第二趟根本不跑**,回傳每條兵線
+ * 恰一個塔位。MUST NOT 改成「解完再由呼叫端丟掉後塔」—— biomes 淨空 / beacons 錨點 /
+ * 橋上墩座吃的是這一支的回傳,解出來卻不生成 = 世界繞著一座不存在的塔讓路。
+ * 省略參數 ⇒ 逐位元同舊制。
  */
-export function solveTowerSites(lanes) {
+export function solveTowerSites(lanes, mini) {
   const R = UNITS.tower.range, SEP = R * GAME.TOWER_SEP_F, OFF = GAME.TOWER_SIDE_OFF;
   const d2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
   const geom = (pts) => {
@@ -4888,6 +4954,8 @@ export function solveTowerSites(lanes) {
   //   軟目標(皆 ≥ SEP ⇒ ≤80%):sep = 後塔↔己方主堡/同兵線前塔、sameAdj = 後塔↔**相鄰兵線**同陣營塔(前/後皆算,使用者新增規則,優先滿足)。
   //   ① strict:sep≥SEP 且 sameAdj≥SEP 時取最貼主堡(防禦縱深);② spread:相鄰塞得下(sameAdj≥SEP)時 sep 最大;
   //   ③ spreadNoAdj:相鄰塞不下時退回舊行為(只保 opp/sameAll,sep 最大);④ fb:皆難 → min(sep,opp,sameAll,sameAdj) 最大。
+  // 迷你地圖(towerStages = 1)整趟不跑 —— 每條兵線就只有前線那一組。
+  if (towerStages(mini) < 2) return frontSites.map((frontSite) => [frontSite]);
   return frontSites.map((frontSite, li) => {
     const { site, towers } = G[li];
     const fS = towers(frontSite.SWARM), fT = towers(frontSite.STEEL);   // 己方前塔
@@ -4922,13 +4990,15 @@ export function solveTowerSites(lanes) {
  *   合規 = 無「殘餘 >80%」(後塔↔己方主堡 / 後塔↔同兵線己方前塔 / 相鄰兵線同陣營塔)且無物理疊塔(≥ STACK)。
  *   敵我前線塔重疊 ≤80% 是固有設計(invariant ②,solveTowerSites 保證),不算殘餘。
  * lanes: [[x,z], …][](遊戲公尺;index 0 = SWARM 端、末端 = STEEL 端,與 solveTowerSites 同)。
+ * `mini` MUST 與開房的 battleConfig 同值 —— 迷你地圖沒有後塔,拿完整版的解來驗等於
+ * 檢查一批不會生成的塔(而且會因為兵線縮短而殘餘超標,把本來合法的地圖擋在門外)。
  */
-export function towerLayoutAudit(lanes) {
+export function towerLayoutAudit(lanes, mini) {
   const R = UNITS.tower.range, OFF = GAME.TOWER_SIDE_OFF;
   const BASE_R = Math.max(UNITS.base.range, UNITS.base.guns.range);
   const STACK = 2 * OFF + 10;
   const overlapPct = (d, ra, rb) => Math.max(0, (ra + rb - d) / Math.min(ra, rb)) * 100;
-  const sites = solveTowerSites(lanes);
+  const sites = solveTowerSites(lanes, mini);
   const ep = lanes[0] || [];
   const structs = [];
   if (ep.length) {
@@ -4972,9 +5042,9 @@ export function towerLayoutAudit(lanes) {
  * 開局時 solveTowerSites 手上只有兵線 ⇒ 本規則是**選線期**的判定(烘焙/稽核),
  * MUST NOT 改成執行期挪塔 —— 伺服器與客戶端拿不到同一份洞口資料,塔位會分家。
  */
-export function towerTunnelAudit(lanes, tunSpans = []) {
+export function towerTunnelAudit(lanes, tunSpans = [], mini) {
   const need = UNITS.tower.range * (1 - GAME.TOWER_TUNNEL_OUT_F);
-  const sites = solveTowerSites(lanes);
+  const sites = solveTowerSites(lanes, mini);
   const bad = [];
   let worst = 0, inside = 0;
   for (let li = 0; li < sites.length; li++) {

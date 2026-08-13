@@ -71,7 +71,7 @@
 // 純視覺:不進射擊 raycast、不描邊、不產生碰撞柱(空地依然自由通行)。
 // 亂數決定性:呼叫端傳入以戰場中心為種子的 rnd + seed,全房間一致。
 import * as THREE from 'three';
-import { ENV, edgeBufferM } from './data.js';
+import { ENV } from './data.js';
 import { envMat } from './toon.js';
 import { gridAngle } from './roadgrid.js';
 
@@ -3212,7 +3212,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     }
   }
   // ==== 緩衝空間的底毯(2026-08-12 使用者需求「邊界延伸不可進入的緩衝空間也要貼地貌拼圖」)====
-  // 緩衝空間 = terrain.js 那一圈外緣裙(深度 edgeBufferM());舊制它只有地形材質(影像鏡射
+  // 緩衝空間 = terrain.js 那一圈外緣裙(深度 terrain.bufferM,見該檔 ⑧);舊制它只有地形材質(影像鏡射
   // 平鋪 / 屬性場色階)⇒ 站在邊界往外看是「圖內鋪著拼圖、過了圖界突然變回一張照片」的硬界。
   // 五條:
   //  ①**分區與選款一律鏡射回圖內取**(與 terrain.js 裙的 UV 同一個三角波):鏡射在圖界上是
@@ -3229,7 +3229,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   //    角點**不准抖**(那是與真地形的接縫,動了就開縫);外溢走的是圖內同一支 planSeamOverlays。
   let bufCells = 0;
   if (terrain.bufferHeightAt) {
-    const B = edgeBufferM();
+    const B = terrain.bufferM;   // 深度讀地形實際鋪的那一份(迷你地圖縮到 1/3;見 terrain.js ⑧)
     const bcell = cell * BUF_CELL_F;
     const nOut = Math.max(1, Math.ceil(B / bcell));
     // 三角波鏡射(同 terrain.js 裙):在 [lo, hi] 的兩端恆等 ⇒ 接縫逐點同款

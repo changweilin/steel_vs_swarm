@@ -636,9 +636,16 @@ export async function buildTerrain(cfg, onProgress) {
   //  高度時視野本來就遠得多,裙的外緣會露出來;那是世界曲面本身的界線,不是這一段的。
   //  另:`carveTunnels`/`gradeRoadBeds` 是**之後**才動 `heights` 的局部開挖,裙是靜態幾何
   //  ⇒ 若有道路一路挖到圖界,接縫會差一個開挖深度(現制的路在障礙環處就封死了)。
-  let bufferHeightAt = null;
+  //  ⑧**迷你地圖**(2026-08-13 使用者「邊緣緩衝縮小到 1/3」):深度另乘 `MINI.BUFFER_F`,
+  //    而**深度是誰在用要對得起來** —— 裙鋪多遠只有這裡知道(它吃的是 cfg.mini),緩衝布景 /
+  //    視線背景 / 地貌底毯三個消費端若各自再呼叫一次 `edgeBufferM()`,就是四份可能不同步的
+  //    深度(漏傳 mini 的那一份會把物件擺到裙外的虛空裡)⇒ 對外只交出**實際用的那一個數**
+  //    `bufferM`,消費端一律讀它。
+  const mini = !!cfg.mini;
+  let bufferHeightAt = null, bufferM = 0;
   {
-    const B = edgeBufferM(), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
+    const B = edgeBufferM(mini), OUT = Math.max(1, Math.ceil(B / curveMaxEdgeM()));
+    bufferM = B;
     const S = Math.max(1, (maxX - minX) / (N - 1));   // 一格地形(外推坡度的取樣距)
     const DEC = B / 3;                                 // 外推衰減長度
     // 非均勻軸:外帶(粗) + 內域(地形格距) + 外帶(粗);內域頂點與地形邊逐點對齊
@@ -1250,5 +1257,5 @@ export async function buildTerrain(cfg, onProgress) {
   // `gridM` = 高程網格的格距(公尺)。對外只有一個用途:**貼地地被層要拿地形法線**
   // (ground.js 的 landN)—— 中央差分的取樣距 MUST 是這一格,取更小是在同一個雙線性面內
   // 取樣(法線在格內是常數,差分退化成逐格階梯 = 折邊線又長回格線),取更大則把稜線抹平。
-  return { group, mesh, heightAt, natureAt, bufferHeightAt, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
+  return { group, mesh, heightAt, natureAt, bufferHeightAt, bufferM, gridM: worldW / (N - 1), rayTerrain, carveTunnels, carveGalleryBands, gradeRoadBeds, punchPortalHoles, sampleColor, waterY, center, bbox, worldW, worldH, minX, minZ, maxX, maxZ, minH, maxH, avgH, usedFallback, inDryBand: dryBand };
 }

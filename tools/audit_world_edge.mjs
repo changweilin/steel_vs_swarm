@@ -219,6 +219,9 @@ const T = {
   },
   sampleColor: (x, z) => (z < -260 ? [60, 90, 160] : (x < 0 ? [120, 120, 120] : [150, 120, 80])),
   bufferHeightAt: (x, z) => 20 + Math.sin(x / 90) * 6 + Math.cos(z / 110) * 5,
+  // 裙實際鋪的深度:2026-08-13 起 terrain 對外交出這一個數(迷你地圖縮到 1/3),
+  // 緩衝布景 / 視線背景 / 地貌底毯一律讀它,MUST NOT 各自再呼叫 edgeBufferM()
+  bufferM: edgeBufferM(),
 };
 const group = { add: () => {} };
 const blockers = [];
@@ -435,8 +438,14 @@ console.log('\nⅤ 緩衝空間:延伸可視距離、不可進入、貼地貌拼
 {
   t('terrain.js 自 data.js import edgeBufferM(不是自己算一份深度)',
     /edgeBufferM/.test(terrSrc.split('\n').find((l) => l.includes("from './data.js'")) || ''));
-  t('裙的深度吃 edgeBufferM()、外帶細度吃 curveMaxEdgeM()(與水面同一把尺)',
-    /const B = edgeBufferM\(\), OUT = Math\.max\(1, Math\.ceil\(B \/ curveMaxEdgeM\(\)\)\)/.test(terrCode));
+  t('裙的深度吃 edgeBufferM(mini)、外帶細度吃 curveMaxEdgeM()(與水面同一把尺)',
+    /const B = edgeBufferM\(mini\), OUT = Math\.max\(1, Math\.ceil\(B \/ curveMaxEdgeM\(\)\)\)/.test(terrCode));
+  // 深度只准有一個數:裙自己算完之後對外交出 `bufferM`,消費端(緩衝布景 / 視線背景 /
+  // 地貌底毯)一律讀它 —— 它們各自再呼叫一次 edgeBufferM() 就是四份可能不同步的深度,
+  // 而漏傳 mini 的那一份會把物件擺到裙外的虛空裡(2026-08-13 迷你地圖)
+  t('深度對外只交出實際用的那一個數 bufferM(biomes / ground MUST NOT 再自己呼叫 edgeBufferM)',
+    /bufferM = B;/.test(terrCode) && /bufferM,/.test(terrCode)
+    && !/edgeBufferM/.test(bioCode) && !/edgeBufferM/.test(codeOf(readSrc('public', 'js', 'ground.js'))));
   t('裙的內緣取地形自己的格距 N−1(粗格會在起伏地形上裂出幾公尺的縫)',
     /for \(let k = 1; k <= N - 1; k\+\+\) a\.push\(lo \+ \(\(hi - lo\) \* k\) \/ \(N - 1\)\)/.test(terrCode));
   t('內域的格留給真地形(只鋪「地形範圍之外」那一圈)',
@@ -481,7 +490,7 @@ console.log('\nⅤ 緩衝空間:延伸可視距離、不可進入、貼地貌拼
 // 只驗字串的話,一個 `ReferenceError` 會讓整張圖的地形建構當場失敗,而每一條原文斷言照樣全綠。
 console.log('\nⅤ-b 外緣裙行為直測(執行 terrain.js 原文)');
 {
-  const blk = terrSrc.slice(terrSrc.indexOf('  {\n    const B = edgeBufferM()'), terrSrc.indexOf('  // ---- 地形射線'));
+  const blk = terrSrc.slice(terrSrc.indexOf('  {\n    const B = edgeBufferM('), terrSrc.indexOf('  // ---- 地形射線'));
   class BA { constructor(a, i) { this.array = a; this.itemSize = i; } }
   const meshes = [];
   const TH = {
@@ -497,11 +506,11 @@ console.log('\nⅤ-b 外緣裙行為直測(執行 terrain.js 原文)');
     // 沙箱的自由變數清單 MUST 跟著 terrain.js 走:裙的 uvOf 自 2026-08-10 起改吃 `xzToLL`
     // (地圖主方位的逆旋轉)、2026-08-11 起多一個對外的 `bufferHeightAt` —— 漏掉就是
     // ReferenceError,而那正是這一段存在的理由
-    const sandbox = new Function('THREE', 'edgeBufferM', 'curveMaxEdgeM', 'minX', 'maxX', 'minZ', 'maxZ', 'N', 'minH', 'maxH',
+    const sandbox = new Function('THREE', 'mini', 'edgeBufferM', 'curveMaxEdgeM', 'minX', 'maxX', 'minZ', 'maxZ', 'N', 'minH', 'maxH',
       'heightAt', 'imagery', 'bbox', 'lon2tx', 'lat2ty', 'paintTerrainTones', 'center', 'mat', 'group', 'waterY', 'waterMat', 'xzToLL',
-      `let bufferHeightAt = null;\n${blk}\nreturn bufferHeightAt;`);
+      `let bufferHeightAt = null, bufferM = 0;\n${blk}\nreturn bufferHeightAt;`);
     outer = sandbox(
-      TH, edgeBufferM, curveMaxEdgeM, mnX, mxX, mnZ, mxZ, N, mnH, mxH, hAt, imagery,
+      TH, false, edgeBufferM, curveMaxEdgeM, mnX, mxX, mnZ, mxZ, N, mnH, mxH, hAt, imagery,
       { minLng: 0, maxLng: 1, minLat: 0, maxLat: 1 }, (l) => l, (l) => l,
       (g, p) => { g.att.color = new BA(new Float32Array(p.length), 3); }, { lat: 25, lng: 121 }, {}, { add() {} }, 2, {}, xzToLL);
     return meshes;
@@ -543,7 +552,7 @@ console.log('\nⅥ 純表現層(伺服器對這一整套一無所知)');
   // 開挖/射線/打洞三段 —— 裙**刻意**擺在那三段之外,不然它會被連帶抽進那些沙箱裡執行)
   // 切片一律在**未剝註解**的原文上做(`codeOf` 會把 `// ----` 標題整行拿掉 ⇒ 在它上面
   // 找標題必然 indexOf = −1,slice 悄悄變成「從這裡到檔尾」,而斷言看起來只是紅了一條)
-  const skirt = strip(terrSrc.slice(terrSrc.indexOf('const B = edgeBufferM()'), terrSrc.indexOf('  // ---- 地形射線')));
+  const skirt = strip(terrSrc.slice(terrSrc.indexOf('const B = edgeBufferM('), terrSrc.indexOf('  // ---- 地形射線')));
   t('裙的區塊不碰 blockers / occ / heights(不進權威幾何、不改高度場)',
     skirt.length > 200 && !/blockers|\bocc\b|heights\[/.test(skirt));
   t('裙不影響 terrain 的對外範圍(minX..maxX 仍是可玩區;小地圖/高程網格/兵線稽核同框)',

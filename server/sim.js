@@ -195,6 +195,9 @@ export class BattleSim {
     // 攻堅順序(劇情戰役專用;見 data.js SIEGE)。旗標由開房的 battleConfig 帶進來,
     // 一般對戰恆 false ⇒ 下面兩張表全空、`siegeLocked()` 恆 false = 逐位元同舊制。
     this.siege = !!config.siege;
+    // 迷你地圖(見 data.js MINI):每側只有前線砲塔。旗標由開房的 battleConfig 帶進來(rooms.js
+    // 已正規化成布林),一般對戰恆 false ⇒ solveTowerSites 逐位元同舊制。
+    this.mini = !!config.mini;
     this._siegeLeft = { SWARM: [], STEEL: [] };   // [階段] = 該方該階仍存活的建築數(_spawnStructures 填)
     this._siegeOpen = { SWARM: 0, STEEL: 0 };     // 該方目前打得動的最高階段(siegeOpenStage 推導)
 
@@ -1324,7 +1327,8 @@ export class BattleSim {
     return best;
   }
 
-  // ---------- 建置:主堡 + 每線每方 2 個塔位 ×(左右各 1 座)----------
+  // ---------- 建置:主堡 + 每線每方 towerStages 個塔位 ×(左右各 1 座)----------
+  // 塔位階數 = 完整戰場 2(前線 + 後方)/ 迷你地圖 1(只有前線);由 solveTowerSites 定案。
   _spawnStructures() {
     for (const side of ['SWARM', 'STEEL']) {
       const [x, z] = this.basePos[side];
@@ -1334,7 +1338,7 @@ export class BattleSim {
     // 最前線敵我塔的直線距離 = tower.range × TOWER_SEP_F(射程重疊 TOWER_OVERLAP、且不對射)。
     // 留存塔位(帶 frac):開場預置兵線 _prefillLanes 要「第一座砲塔」的沿線位置,
     // MUST 吃同一份解(再解一次 = 第二份實作,兩邊會分家)。
-    const sites = this.towerSites = solveTowerSites(this.lanes);
+    const sites = this.towerSites = solveTowerSites(this.lanes, this.mini);
     for (let li = 0; li < sites.length; li++) {
       // 攻堅階段一律走 `siegeSiteStages`(唯一縫;MUST NOT 拿 st 的陣列索引推,見 data.js SIEGE 註)
       const stages = siegeSiteStages(sites[li]);
