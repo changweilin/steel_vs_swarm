@@ -11,7 +11,7 @@ import {
   SIDES, ENV, TEAM, lanesFor, sideMFor, MAPGEO, ECON, upgradePrice, upgradeScore, canUpgrade, BATTLE_SCORE,
   CHARACTERS, charsOf, charKind, heroWeapon, heroAbility, selfUltBoost, SELF_ULT, recoilName, recoilTier, recoilMoveF,
   aoeClass, trajClass, lanceR, armingOf, AOE_NAME, TRAJ_NAME, shieldRoleName,
-  UNITS, WEAPONS, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
+  UNITS, WEAPONS, STRUCT_W, CLASS_NAME, TARGET_CLASS, LOS, WATER, hgtEnc, llToXZ,
   BOT_DIFF, BOT_DIFF_KEYS, DEFAULT_BOT_DIFF,
   THIRD, isThirdSide, sideInfo, CIVILIAN, CIVILIANS,
   CREEP_UPG, creepUpgMul,
@@ -1192,18 +1192,23 @@ const WTYPE_NAME = { gun: '動能', launcher: '榴彈', missile: '飛彈', rail:
 function unitWeaponList(kind) {
   const u = UNITS[kind];
   const gun = (label, name, o) => ({ label, name, type: 'gun', dmg: o.dmg, rate: o.rate, range: o.range, mag: o.mag, r: 0 });
-  const launcher = (label, name, o) => ({ label, name, type: 'launcher', dmg: o.dmg, rate: o.rate, range: o.range, mag: o.mag, r: o.r || 15 });
+  // r 取真值不補預設(2026-08-13):舊制的 `|| 15` 讓圖鑑替沒有爆風的武器**編一個半徑**出來 ——
+  // 攻城榴彈砲當時的結算是單體直擊,面板卻寫著「爆風 15m」(原則 4 的反面:演出/數值 MUST 取權威值)。
+  // 現在兩把 NPC 爆炸型都帶推導出來的 r;沒有 r 的武器就該一行都不顯示(1214 行的 `if (w.r)`)。
+  const launcher = (label, name, o) => ({ label, name, type: 'launcher', dmg: o.dmg, rate: o.rate, range: o.range, mag: o.mag, r: o.r });
   switch (kind) {
     case 'soldier': case 'heli': { const w = WEAPONS[u.wid]; return [gun('主武', w.name, w)]; }
     case 'rocketeer': { const w = WEAPONS.rocket; return [launcher('主武', w.name, w)]; }
     case 'howitzer': { const w = WEAPONS.siege; return [launcher('主武', '手持榴彈槍', w)]; }   // 步兵化:顯示名改手持,數值同 siege 表
     case 'tank': { const w = WEAPONS.siege; return [launcher('主砲', '滑膛戰車砲', w)]; }
+    // 防禦塔是**單體攻擊武器**(2026-08-13 使用者定案)⇒ 面板照舊不寫爆風;
+    // 主堡兩門砲是爆炸彈頭(見 data.js STRUCT_W),半徑取的是**結算用的那一份**(看到多大 = 炸到多大)。
     case 'tower':
       return [gun('主砲', '防禦砲塔', { dmg: u.dmg, rate: u.rate, range: u.range })];
+    // 主堡的兩把武器 2026-08-13 起已合併成一把(逐項取最大值)⇒ 面板 MUST 只有一列
     case 'base': {
       const g = u.guns;
-      return [gun('主砲', '主堡火砲', { dmg: u.dmg, rate: u.rate, range: u.range }),
-        gun('雙聯', '主堡雙聯裝砲', { dmg: g.dmg, rate: g.rate, range: g.range })];
+      return [launcher('主砲', `主堡雙聯裝砲(${g.n} 管)`, { dmg: g.dmg, rate: g.rate, range: g.range, r: STRUCT_W.base.r })];
     }
     default: return [];
   }

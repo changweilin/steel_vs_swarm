@@ -3823,8 +3823,18 @@ UNITS.morph = {
   fly: 36, vspeed: 20,                  // 飛行型態:巡航 / 垂直速度(略慢於無人機)
   fov: 68, fovAir: 68, zoomFov: 35, sight: 240,   // 全型態 = 人眼視角(FPV 視覺大小雙陣營一致,飛行不再放寬)
 };
-// 主堡加裝兩門大砲:射程/傷害/射速一律 derive 自砲塔(MUST NOT 手抄),獨立於主堡本體火砲。
-UNITS.base.guns = { n: 2, range: UNITS.tower.range, dmg: UNITS.tower.dmg, rate: UNITS.tower.rate };
+// 主堡的武器**只有一把**(2026-08-13 使用者定案「主堡兩個武器合併,射程/範圍/傷害等參數都挑
+// 最大值」)。舊制是兩把:本體火砲(dmg/rate/range 住 UNITS.base)+ 加裝雙聯裝砲(整組 derive
+// 自砲塔)—— 同一棟建築掛兩套射控、兩份 CD、兩條開火路徑(主迴圈 + _tickBaseGuns)。
+// 合併 = **逐項取最大值**,MUST NOT 手抄任何一個數字:
+//   射程 max(主堡 230, 塔 310)/ 傷害 max(90, 65)/ 射速 max(1.2, 1)/ 砲管數 max(1, 2)
+// 砲管數也照這條規則 ⇒ 保留兩根砲管輪替(演出不變;總火力 216 vs 舊制兩把加起來 238)。
+// **開火路徑因此也只剩一條**(`_tickBaseGuns`)—— sim 主迴圈那一支對 `u.guns` 的單位不開火,
+// 否則合併之後反而變成三條路徑。爆風半徑見下方 STRUCT_W(同樣取兩者的較大者)。
+UNITS.base.range = Math.max(UNITS.base.range, UNITS.tower.range);
+UNITS.base.dmg = Math.max(UNITS.base.dmg, UNITS.tower.dmg);
+UNITS.base.rate = Math.max(UNITS.base.rate, UNITS.tower.rate);
+UNITS.base.guns = { n: 2, range: UNITS.base.range, dmg: UNITS.base.dmg, rate: UNITS.base.rate };
 // 擊殺賞金推導(2026-07-17;「對應難度的金錢」唯一推導處,MUST NOT 手寫表列單位):
 // 賞金 = 戰力(EHP + DPS × BOUNTY_DPS_S)× BOUNTY_F,取 5 的倍數。
 // 第三方(GUER/MILI)沿用正規 kind ⇒ 同一張表;改 UNITS 任一數值賞金自動連動。
@@ -3833,6 +3843,56 @@ for (const k of ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'apc', 'tow
   const u = UNITS[k];
   const v = u.hp / armorMul(u.armor || 0) + (u.dmg || 0) * (u.rate || 0) * ECON.BOUNTY_DPS_S;
   ECON.BOUNTY[k] = Math.round(v * ECON.BOUNTY_F / 5) * 5;
+}
+// ================= NPC / 建築 / 第三方的爆風半徑(2026-08-13 使用者定案)=================
+// 原句:「榴彈類/導彈類等爆炸傷害爆炸時,**無論是對地或對目標發射**,都會對範圍內所有單位
+// 造成傷害(閃避率各自計算)」+「**所有爆炸傷害武器都套用**」。帶 `r` 的攻擊早已如此(全部匯流
+// 到 sim._blast,逐目標各自擲骰 —— 見 evadable / A45),落在規則之外的是**沒有 r 的那幾把**:
+//   ・`WEAPONS.siege` 攻城榴彈砲(榴彈兵 + 坦克):名為榴彈砲、客戶端畫拋物線曳光,結算卻是單體直擊
+//   ・主堡火砲(2026-08-13 起是合併後的唯一一把):連武器 def 都沒有(無 `wid`)⇒ 舊制既不可閃也不爆風
+//     **防禦塔是具名例外** —— 使用者同日定案「塔換成單體攻擊武器,傷害不變」,見 STRUCT_W 檔頭
+//   ・第三方防空伏擊飛彈:`boom` 事件寫著 r = 14 而結算是單發直擊(演出與結算分家的典型)
+// 補上半徑之後,消費端全部是**既有**的那一支(sim NPC 分支的 `wd?.r` / `_tickBaseGuns` / `_tickMissiles`
+// 各自改呼 `_blast`),**沒有第二份傷害實作**。
+//
+// **不在名冊裡的就是真的不爆**:`WEAPONS.rgun` 重型機槍(動能)、英雄輕武器(動能/定向能)、
+// 貫穿與扇形重武器(機制上一次掃一整排,沒有「這一發瞄的是誰」)—— 它們不是爆炸傷害武器。
+//
+// 半徑 MUST 推導不手寫,而且**只有一條規則**:以表內既有的唯一 NPC 爆炸型(肩射火箭)為軸,
+// 「爆風面積 × 火力」守恆 ⇒ r = rocket.r × √(軸的火力 ÷ 這一把的火力) —— 打得越猛,單發炸得越小。
+// 「火力」有兩種單位,**軸與被算的那一把 MUST 同單位**:
+//   ・持續射擊(小兵 / 塔 / 主堡):用**持續 DPS**(dmg × rate)
+//   ・一次性彈藥(第三方伏擊飛彈,每架機體 3 分鐘冷卻):用**單發傷害** —— 拿 DPS 算會除到接近 0,
+//     半徑當場爆掉(實測 95m)。
+// 改 UNITS 的 dmg/rate 或 rocket.r 一律自動連動;**改完 MUST 重跑 `npm run bal` ①**(爆炸型自動
+// 吃閃避補償 evadeComped ⇒ 對飛行機體的期望傷害會從 ×(1−p) 回到全額,那是 ① 的直接位移)。
+export const NPC_BLAST = { DPS: 0, SHOT: 0 };   // 軸的兩種單位(UNITS 之後 derive)
+/** 爆風半徑唯一縫:fire = 這一把的火力,anchor = 同單位的軸(NPC_BLAST.DPS 或 .SHOT) */
+export const npcBlastR = (fire, anchor) => Math.round(WEAPONS.rocket.r * Math.sqrt(anchor / fire) * 10) / 10;
+/**
+ * 建築制式火砲的 def(唯一縫)—— 它們沒有 `wid`,舊制 def 為空 ⇒ 既不可閃也不爆風。
+ * 只帶「爆風半徑 + 破甲」:傷害/射速/射程仍住 UNITS(MUST NOT 在這裡複製第二份)。
+ *
+ * **`tower` 刻意不在這張表裡**(2026-08-13 使用者定案「塔換成單體攻擊武器,傷害不變」):
+ * 防禦塔的主砲是**單體攻擊武器**,不是爆炸彈頭。這裡 MUST 是「查不到 ⇒ def 為 undefined」而不是
+ * 「給一個 `r: 0` 的 def」—— 後者會讓 `evadable()` 判 true(它的判據是排除法:不是 fan/line 就吃
+ * 閃避),塔火從此可以被閃開**而且沒有補償**(`evadeComped` 要 `r > 0`)⇒ 期望傷害掉 ×(1−p),
+ * 與「傷害不變」正面衝突,而畫面上只表現成「塔好像變弱了」。
+ */
+export const STRUCT_W = { base: { r: 0, pen: 0 } };
+{
+  const dps = (k) => UNITS[k].dmg * UNITS[k].rate;
+  NPC_BLAST.DPS = dps('rocketeer');
+  NPC_BLAST.SHOT = UNITS.rocketeer.dmg;
+  // 攻城榴彈砲由**榴彈兵與坦克共用**(兩者 DPS 差一倍)⇒ 取兩者的**幾何中點**,與 mobMid/
+  // speedMid/rangeMid 同一條慣例(算術平均會被快的那一邊主導)。現值 ≈18.1m(單獨算 21.6 / 15.2)
+  WEAPONS.siege.r = npcBlastR(Math.sqrt(dps('howitzer') * dps('tank')), NPC_BLAST.DPS);
+  // 主堡合併後只有一把武器 ⇒ 只有一個半徑,而「範圍也挑最大值」是使用者這一輪的原句 ⇒
+  // 取**合併前兩把各自推導值的較大者**,MUST NOT 拿合併後的 DPS 重推(那會回到本體火砲那一份
+  // 7.1m,等於雙聯裝砲的範圍在合併時被吃掉)。雙聯那一半的火力 = 砲塔的(它整組 derive 自砲塔)。
+  STRUCT_W.base.r = Math.max(npcBlastR(dps('base'), NPC_BLAST.DPS), npcBlastR(dps('tower'), NPC_BLAST.DPS));
+  // 第三方伏擊飛彈的半徑接在 `GAME.AA_AMBUSH.DMG` 那一支 derive 的後面(它自己也是推導值,
+  // 而 GAME 在本區塊之後才宣告)—— 搬上來只會拿到 TDZ。
 }
 
 // ---- 平民與間諜(2026-07-18;非兵線隨機放置的非戰鬥人員,DOTA 野區思想的變體)----
@@ -4989,6 +5049,11 @@ FIELD.AA_SITE.range = Math.round(
   Math.sqrt(GAME.THREAT_AREA_PER_LANE * GAME.THREAT_AA_AREA_FRAC / (Math.PI * FIELD.AA_SITES_PER_LANE)));
 // 防空伏擊傷害 = 初始無人機平均總血量(護盾+裝甲)的 1/3(2026-07-17:不再命中即墜)。
 GAME.AA_AMBUSH.DMG = Math.round(SQUAD.DRONE_AVG_HP / 3);
+// 爆風半徑(2026-08-13「所有爆炸傷害武器都套用」):飛彈 = 導彈類,MUST 真的炸開 —— 舊制的
+// `boom` 事件寫著 r = 14 而結算是單發直擊(演出與結算分家)。它是**一次性彈藥**(每架機體吃過
+// 一次要冷卻 THREAT_CD_S = 3 分鐘)⇒ 走 `NPC_BLAST.SHOT`(單發傷害為單位)那一條;拿持續 DPS
+// 算的話分母趨近 0,半徑會膨脹到 95m。現值 ≈7.5m。
+GAME.AA_AMBUSH.R = npcBlastR(GAME.AA_AMBUSH.DMG, NPC_BLAST.SHOT);
 
 // ---- 戰場物資(Diablo 式隨機掉落:擊毀障礙物有機率掉,靠近拾取)----
 // TIERS 依序 = 普通 → 稀有;TC(TreasureClass,D2 思想)= 越硬的障礙掉越高階:

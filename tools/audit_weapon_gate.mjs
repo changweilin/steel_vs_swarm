@@ -34,6 +34,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
+  GAME, STRUCT_W, NPC_BLAST, npcBlastR,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
   HIGH_SUP, highSupF, altTier, altDhMax,
@@ -1719,9 +1720,10 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
 {
   // ---- ① 分類縫:逐類對帳(MUST NOT 有第二份 type 比對)----
   ok(evadable({ id: 'light' }) === true, 'evadable:輕武器直射吃閃避(舊制唯一的一類)');
-  ok(evadable(WEAPONS.rgun) === true && evadable(WEAPONS.siege) === true,
-    'evadable:NPC 直射武器吃閃避 —— 它們沒有 `id`,拿 id 比對當判據會靜默判成不可閃');
-  ok(evadable(WEAPONS.rocket) === true, 'evadable:NPC 肩射火箭(爆炸型)吃閃避');
+  ok(evadable(WEAPONS.rgun) === true,
+    'evadable:NPC 重型機槍(直射)吃閃避 —— 它沒有 `id`,拿 id 比對當判據會靜默判成不可閃');
+  ok(evadable(WEAPONS.rocket) === true && evadable(WEAPONS.siege) === true,
+    'evadable:NPC 兩把爆炸型(肩射火箭 / 攻城榴彈砲)吃閃避');
   ok(evadable({ dmg: 100, r: 20, pen: 4, vs: {} }) === true,
     'evadable:招式/載具戰鬥部的爆風 def(無 `id`)吃閃避 —— aoeClass 認不得它們,判據不能拿 blast');
   ok(evadable(null) === false && evadable(undefined) === false,
@@ -1888,11 +1890,11 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   // ---- ⑥ NPC 肩射火箭:從「不可閃的單體直擊」變成真的爆炸(一發傷到範圍內所有敵方)----
   ok((WEAPONS.rocket.r || 0) > 0, 'NPC 肩射火箭是爆炸型(有爆風半徑)');
   const code = (s) => s.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
-  const npcTick = code(S.slice(S.indexOf('const wd = WEAPONS[u.wid];')));
-  ok(/wd\?\.r && !struct[\s\S]{0,600}?this\._blast\(e, wd,[\s\S]{0,200}?u\.dmg\)/.test(npcTick),
+  const npcTick = code(S.slice(S.indexOf('const wd = WEAPONS[u.wid] || STRUCT_W[e.kind];')));
+  ok(/wd\?\.r[\s\S]{0,600}?this\._blast\(e, wd,[\s\S]{0,200}?u\.dmg\)/.test(npcTick),
     'NPC 爆炸型武器走 _blast(傷害基準 MUST 是 UNITS[kind].dmg —— NPC 傷害刻意不吃 vs 剋制)');
-  ok(/wd\?\.r && !struct[\s\S]{0,900}?e: 'boom'/.test(npcTick),
-    '補發 boom 事件:20m 的超壓帶要看得見才讀得出危險區(演出取用的尺寸來自權威值)');
+  ok(/wd\?\.r[\s\S]{0,900}?e: 'boom'/.test(npcTick),
+    '補發 boom 事件:十幾二十公尺的超壓帶要看得見才讀得出危險區(演出取用的尺寸來自權威值)');
   const sim = new BattleSim(fakeCfg());
   purge(sim);
   const rk = sim._add({ kind: 'rocketeer', side: 'SWARM', x: 0, z: 0, y: 0, hp: 999, maxHp: 999 });
@@ -1904,6 +1906,135 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   ok(t1.hp < b1 && t2.hp < b2,
     '一發火箭同時傷到爆風內的兩名敵方(舊制只有被瞄準的那一個掉血,旁邊的毫髮無傷)');
   ok(b1 - t1.hp > b2 - t2.hp, '離爆心越遠吃得越少(走同一支 blastFalloff)');
+}
+{
+  // ---- ⑥b 攻城榴彈砲也是爆炸型(2026-08-13 使用者定案「榴彈類…無論是對地或對目標發射,
+  //      都會對範圍內所有單位造成傷害」)----
+  // 舊制 `WEAPONS.siege` 沒有 `r` ⇒ 榴彈兵與坦克的砲彈是**單體直擊**:客戶端照樣畫拋物線曳光
+  // (game._arcTracer 認 howitzer/tank),伺服器卻只有被瞄準的那一個掉血 —— 一把名為「榴彈砲」
+  // 的武器落在使用者這條規則之外,而畫面上完全看不出來(曳光、砲管仰角、命中特效都正常)。
+  ok((WEAPONS.siege.r || 0) > 0, 'NPC 攻城榴彈砲是爆炸型(有爆風半徑)—— 榴彈類 MUST 真的爆');
+  // 半徑 MUST 推導不手寫:以肩射火箭為軸的「爆風面積 × 持續 DPS」預算,榴彈兵與坦克共用
+  // 這把武器 ⇒ 取兩者的幾何中點。手寫一個數字進去 = 改 UNITS 的 dmg/rate 之後它自己漂走。
+  const dps = (k) => UNITS[k].dmg * UNITS[k].rate;
+  const want = Math.round(WEAPONS.rocket.r
+    * Math.sqrt(dps('rocketeer') / Math.sqrt(dps('howitzer') * dps('tank'))) * 10) / 10;
+  ok(WEAPONS.siege.r === want,
+    `攻城榴彈砲爆風半徑是推導值(${WEAPONS.siege.r}m = 火箭 ${WEAPONS.rocket.r}m × √(火箭兵 DPS ÷ 榴彈兵·坦克幾何中點))`);
+  ok(want < WEAPONS.rocket.r,
+    '打得越頻繁、單發炸得越小(榴彈兵 0.3/s + 坦克 0.6/s vs 火箭兵 0.4/s ⇒ 半徑 MUST 小於火箭)');
+  // 行為直測:坦克一發砲彈同時傷到爆風內的兩名敵方(NPC 分支的 `wd?.r` 那一支真的接上了)。
+  // 兩人的間距取**推導值**的核心帶(不是現值)—— 拿 `WEAPONS.siege.r` 當間距的話,退回舊制
+  // (r = 0)會讓兩個假人重疊在爆心上,兩個都吃滿 ⇒ 反向驗證恆綠。
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  const tk = sim._add({ kind: 'tank', side: 'SWARM', x: 0, z: 0, y: 0, hp: 999, maxHp: 999 });
+  const c = want * BLAST.CORE * 0.9;   // 兩個都擺核心帶內 ⇒ 全額(遞減另由火箭那段量)
+  const g1 = sim._add({ kind: 'soldier', side: 'STEEL', x: 30, z: 0, y: 0, hp: 100000, maxHp: 100000 });
+  const g2 = sim._add({ kind: 'soldier', side: 'STEEL', x: 30, z: c, y: 0, hp: 100000, maxHp: 100000 });
+  sim._blast(tk, WEAPONS.siege, g1.x, g1.z, 0, null, false, UNITS.tank.dmg);
+  ok(g1.hp < 100000 && g2.hp < 100000,
+    '一發攻城榴彈同時傷到爆風內的兩名敵方(舊制只有被瞄準的那一個掉血)');
+}
+{
+  // ---- ⑥c 名冊擴到「**所有**爆炸傷害武器」(2026-08-13 使用者追加)----
+  // 還漏在外面的都不是小兵武器,所以不會被 ⑥/⑥b 的 `wd?.r` 那一支涵蓋:
+  //   ・主堡火砲:連 def 都沒有(無 `wid`)⇒ 舊制既不可閃也不爆風
+  //   ・第三方防空伏擊飛彈:近炸引信 `_damage` 單體結算,而同一行的 `boom` 畫著 r = 14 的超壓帶
+  // 半徑一律走同一個縫 `npcBlastR`(面積 × 火力守恆),**軸與被算的那一把 MUST 同單位**:
+  // 持續射擊用 DPS、一次性彈藥用單發傷害(拿 DPS 算伏擊飛彈會除到近 0 ⇒ 半徑膨脹到 95m)。
+  const dps = (k) => UNITS[k].dmg * UNITS[k].rate;
+  const code = (s) => s.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '');
+  ok(STRUCT_W.base.r === Math.max(npcBlastR(dps('base'), NPC_BLAST.DPS), npcBlastR(dps('tower'), NPC_BLAST.DPS)),
+    `主堡火砲的爆風半徑 = 合併前兩把推導值的**較大者**(${STRUCT_W.base.r}m;拿合併後的 DPS 重推會縮回本體那一份)`);
+  // 防禦塔是**單體攻擊武器**(2026-08-13 使用者定案「塔換成單體攻擊武器,傷害不變」)。
+  // 這裡釘的是**查不到 def**,不是「r = 0 的 def」—— 後者會讓 evadable() 判 true(判據是排除法),
+  // 塔火從此可閃**而且沒有補償**(evadeComped 要 r > 0)⇒ 期望傷害掉 ×(1−p),與「傷害不變」衝突,
+  // 而畫面上只表現成「塔好像變弱了」,沒有任何錯誤訊息。
+  ok(STRUCT_W.tower === undefined, '防禦塔 MUST NOT 有 def(單體攻擊武器;`r: 0` 的 def 也不行)');
+  ok(evadable(STRUCT_W.tower) === false && evadeComped(STRUCT_W.tower) === false,
+    '塔火不可閃、也不進補償 ⇒ 對主目標的傷害逐位元同舊制');
+  ok(GAME.AA_AMBUSH.R === npcBlastR(GAME.AA_AMBUSH.DMG, NPC_BLAST.SHOT) && GAME.AA_AMBUSH.R > 0,
+    `第三方伏擊飛彈的爆風半徑是推導值(${GAME.AA_AMBUSH.R}m;一次性彈藥 ⇒ 軸取單發傷害)`);
+  ok(STRUCT_W.base.r < WEAPONS.siege.r && WEAPONS.siege.r < WEAPONS.rocket.r,
+    '同一條預算下的排序:火力越猛半徑越小(主堡 < 攻城榴彈砲 < 肩射火箭)');
+  {
+    // ---- 主堡兩把武器合併(2026-08-13 使用者定案「射程/範圍/傷害等參數都挑最大值」)----
+    // 合併前:本體火砲(dmg 90 / rate 1.2 / range 230)+ 雙聯裝砲(整組 derive 自砲塔)。
+    // 這裡逐項釘住「取最大值」,並釘住**開火路徑只剩一條** —— 合併卻留著主迴圈那一支的話,
+    // 主堡會同時用兩套射控開火,總火力不減反增,而每一條既有斷言都還是綠的。
+    const g = UNITS.base.guns;
+    ok(g.range === Math.max(UNITS.base.range, UNITS.tower.range)
+      && g.dmg === Math.max(UNITS.base.dmg, UNITS.tower.dmg)
+      && g.rate === Math.max(UNITS.base.rate, UNITS.tower.rate) && g.n === 2,
+    `主堡火砲逐項取最大值(射程 ${g.range} / 傷害 ${g.dmg} / 射速 ${g.rate} / 砲管 ${g.n})`);
+    ok(UNITS.base.range === g.range && UNITS.base.dmg === g.dmg && UNITS.base.rate === g.rate,
+      '主堡自己的 range/dmg/rate 也是合併後那一份(否則賞金與圖鑑還在讀合併前的本體火砲)');
+    ok(/if \(e\.cd === 0 && !u\.guns &&/.test(code(S)),
+      '主迴圈對 `u.guns` 的單位不開火 ⇒ 合併後開火路徑只剩 `_tickBaseGuns` 一條');
+    // 行為直測:主堡在一個 tick 內只由砲管路徑開火,且發數 = 砲管數
+    const sim2 = new BattleSim(fakeCfg());
+    purge(sim2);
+    for (const e of [...sim2.ents.values()]) sim2.ents.delete(e.id);
+    const bs = sim2._add({ kind: 'base', side: 'STEEL', x: 4000, z: 4000, y: 0, hp: 9999, maxHp: 9999, cd: 0 });
+    const vv = sim2._add({ kind: 'soldier', side: 'SWARM', x: bs.x + 60, z: bs.z, y: 0, hp: 1e7, maxHp: 1e7 });
+    sim2.events.length = 0;
+    sim2.tick(0.125);
+    const shots = sim2.events.filter((ev) => ev.e === 'shot' && ev.id === bs.id);
+    ok(shots.length === g.n && shots.every((ev) => ev.gi != null),
+      `主堡一輪開 ${shots.length} 發、全部來自砲管路徑(MUST = 砲管數 ${g.n};本體火砲那一支已不再開火)`);
+    ok(vv.hp < 1e7, '合併後的主堡火砲照樣打得到目標');
+  }
+  ok(!('r' in WEAPONS.rgun),
+    '重型機槍 MUST NOT 有爆風 —— 動能武器不是爆炸傷害武器(名冊不是「全部都給」)');
+  {
+    // 行為直測(走真的 tick,不是直呼 _blast):塔開一發 ⇒ **只有目標**掉血,旁邊那個一格未動
+    const sim = new BattleSim(fakeCfg());
+    purge(sim);
+    for (const e of [...sim.ents.values()]) sim.ents.delete(e.id);   // 清場:只留受測三個實體
+    const tw = sim._add({ kind: 'tower', side: 'STEEL', x: 4000, z: 4000, y: 0, hp: 9999, maxHp: 9999, cd: 0 });
+    const v1 = sim._add({ kind: 'soldier', side: 'SWARM', x: tw.x + 60, z: tw.z, y: 0, hp: 1e7, maxHp: 1e7 });
+    const v2 = sim._add({ kind: 'soldier', side: 'SWARM', x: tw.x + 60, z: tw.z + 4, y: 0, hp: 1e7, maxHp: 1e7 });
+    sim.tick(0.125);
+    const hurt = [v1, v2].filter((v) => v.hp < 1e7).length;
+    ok(hurt === 1, `塔開火只傷到瞄準的那一個(實得 ${hurt} 個;4m 外的旁觀者 MUST 毫髮無傷)`);
+    // 「傷害不變」= 這一發等於「拿 UNITS.tower.dmg 直接走 _damage」(對照組自己算,免得把
+    // 護甲減免手抄成第二份公式)
+    const ref = sim._add({ kind: 'soldier', side: 'SWARM', x: tw.x - 400, z: tw.z, y: 0, hp: 1e7, maxHp: 1e7 });
+    sim._damage(ref, UNITS.tower.dmg, tw, 0);
+    ok(Math.abs((1e7 - Math.min(v1.hp, v2.hp)) - (1e7 - ref.hp)) < 1e-6,
+      `塔的單發傷害逐位元同「UNITS.tower.dmg 直接結算」(${(1e7 - ref.hp).toFixed(2)})—— 「傷害不變」`);
+  }
+  // 原文:每個消費端都接到既有的那一支,MUST NOT 各自寫第二份傷害
+  ok(/const wd = WEAPONS\[u\.wid\] \|\| STRUCT_W\[e\.kind\]/.test(code(S)),
+    '建築制式火砲走 STRUCT_W 這個 def 縫(傷害/射速/射程仍住 UNITS,MUST NOT 複製第二份)');
+  const guns = code(S.slice(S.indexOf('_tickBaseGuns(e, g, dt)')));
+  ok(/this\._blast\(e, STRUCT_W\.base,[\s\S]{0,120}?g\.dmg\)/.test(guns)
+    && !/this\._damage\(target, g\.dmg/.test(guns.slice(0, 1200)),
+  '主堡火砲走 _blast(舊制的單體 _damage MUST 已經不在)');
+  const mis = code(S.slice(S.indexOf('_samBlast(m, x, z, y')));
+  ok(/_blast\(by, \{ r: GAME\.AA_AMBUSH\.R, pen: m\.pen \|\| 0 \}/.test(mis)
+    && /r: GAME\.AA_AMBUSH\.R, side: m\.side, sam: true/.test(mis),
+  '伏擊飛彈的結算與演出取**同一個** GAME.AA_AMBUSH.R(舊制手寫 14 / 8,誰都對不上)');
+  // 只掃 `_tickMissiles` 這一段:別處的 `r: 8` 是**攔截成功**的煙火(極音速飛彈被擊落刻意不引爆、
+  // 玩家打掉來襲飛彈),那是「完全否定」的定案,MUST NOT 被這條順手改掉。
+  const misTick = code(S.slice(S.indexOf('  _tickMissiles(dt) {'), S.indexOf('  _creepMul(side, lane)')));
+  ok(misTick.length > 200 && !/r: 14|r: 8/.test(misTick),
+    '飛彈引爆點的手寫半徑(14 / 8 / 8)MUST 已全數退場');
+  ok((code(S).match(/this\._samBlast\(/g) || []).length === 3,
+    '飛彈的三個引爆點(近炸引信 / 追蹤中撞障礙 / 失鎖後撞障礙)MUST 全走同一支 _samBlast');
+  // 行為直測:伏擊飛彈引爆傷到爆風內的兩名敵方 + 演出半徑 = 結算半徑
+  const sim = new BattleSim(fakeCfg());
+  purge(sim);
+  const site = sim._add({ kind: 'aasite', side: 'STEEL', x: 0, z: 0, y: 0, hp: 999, maxHp: 999 });
+  const a1 = sim._add({ kind: 'soldier', side: 'SWARM', x: 60, z: 0, y: 0, hp: 100000, maxHp: 100000 });
+  const a2 = sim._add({ kind: 'soldier', side: 'SWARM', x: 60, z: GAME.AA_AMBUSH.R * BLAST.CORE * 0.9, y: 0, hp: 100000, maxHp: 100000 });
+  sim.events.length = 0;
+  sim._samBlast({ byId: site.id, side: 'STEEL', dmg: GAME.AA_AMBUSH.DMG, pen: GAME.AA_AMBUSH.PEN },
+    a1.x, a1.z, 0, 0);
+  ok(a1.hp < 100000 && a2.hp < 100000, '伏擊飛彈引爆同時傷到爆風內的兩名敵方');
+  ok(sim.events.some((ev) => ev.e === 'boom' && ev.r === GAME.AA_AMBUSH.R),
+    'boom 事件帶的半徑 = 結算用的那一份(演出取用權威值)');
 }
 
 {
@@ -1921,8 +2052,8 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   }
   ok(Number.isFinite(evadeCompF(1)) && evadeCompF(1) === 1 / (1 - EVASION.P_MAX),
     `p→1 由 EVASION.P_MAX 夾住(分母是 1−p,沒有夾就會炸;實得上限 ×${evadeCompF(1).toFixed(0)})`);
-  ok(evadeComped(WEAPONS.rocket) && !evadeComped(WEAPONS.rgun) && !evadeComped(WEAPONS.siege),
-    'evadeComped:只補「這一輪新納入閃避的那一批」= 爆炸傷害;直射槍械 MUST NOT 補(它本來就吃閃避)');
+  ok(evadeComped(WEAPONS.rocket) && evadeComped(WEAPONS.siege) && !evadeComped(WEAPONS.rgun),
+    'evadeComped:只補「這一輪新納入閃避的那一批」= 爆炸傷害(NPC 兩把爆炸型都在內);直射槍械 MUST NOT 補(它本來就吃閃避)');
   ok(evadeComped({ dmg: 100, r: 20, pen: 4, vs: {} }) && !evadeComped({ id: 'light' }),
     'evadeComped:招式/載具戰鬥部的爆風要補、輕武器直射不補');
   {
