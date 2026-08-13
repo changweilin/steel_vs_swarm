@@ -27,6 +27,9 @@ const id = arg('id');
 const port = Number(arg('port', '8635'));
 const prefix = arg('prefix', id && id.replace('@', '_'));
 const distF = Number(arg('distF', '1'));
+// 俯角覆寫(選用):水平翼面在預設的 0.12 俯角下幾乎是一條線 —— 「翼展開了沒/翼面多寬」
+// 只有從上方看得到。省略 = 逐位元同舊行為。
+const pitchO = process.argv.includes('--pitch') ? Number(arg('pitch', '0.12')) : null;
 if (!id) {
   console.error('用法:node tools/humanoid_forge/shot_mech.mjs --id t01 [--port 8635] [--prefix t01] [--distF 1.6]');
   process.exit(1);
@@ -40,7 +43,7 @@ try {
   await page.goto(`http://localhost:${port}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction('!!window.__forge && !!window.__shot', null, { timeout: 20000 });
 
-  const paths = await page.evaluate(async ({ id, prefix, distF }) => {
+  const paths = await page.evaluate(async ({ id, prefix, distF, pitchO }) => {
     const F = window.__forge;
     if (!F.specs().includes(id)) throw new Error(`未知機型 ${id}(名冊:${F.specs().join(',')})`);
     F.setSpec(id);
@@ -49,7 +52,11 @@ try {
     // 取景距離倍率(--distF):__shot 的預設鏡距 = 機高 ×2.6,是**人形**的取景 ——
     // 翼展遠大於機高的航空機體(鷹/翼龍/龍/定翼機)在那個距離只佔畫面一小塊,
     // 而「翅膀展開了沒」正是要看那一塊。distF 只縮放鏡距,distF=1 逐位元同舊行為。
-    const D = (o) => (distF === 1 ? o : { ...o, dist: F.height() * 2.6 * distF });
+    const D = (o) => {
+      const r = distF === 1 ? { ...o } : { ...o, dist: F.height() * 2.6 * distF };
+      if (pitchO != null) r.pitch = pitchO;
+      return r;
+    };
     const shot = async (name, opts) => out.push(await window.__shot(`${prefix}_${name}`, 900, 760, D(opts)));
     // 靜姿三視角(正面 / 前側 45° / 背面)—— 與 2D 定案圖比對的主力
     F.step(30);
@@ -79,7 +86,7 @@ try {
     F.step(18);
     await shot('cast', { yaw: 0.4, pitch: 0.14 });
     return out;
-  }, { id, prefix, distF });
+  }, { id, prefix, distF, pitchO });
 
   console.log(paths.join('\n'));
 } finally {

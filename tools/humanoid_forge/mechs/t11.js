@@ -178,10 +178,13 @@ export default {
     cylF(a, 0.05, 0.05, 0.05, 8, 0, 0.4, -0.1, COAL, { metalness: 0.7 });        // 肩頂排氣口
     tboxF(a, { w0: 0.26 * G, d0: 0.3 * G, w1: 0.29 * G, d1: 0.33 * G, h: d.len * 1.0, sz: 0.02 },
       0, -d.len * 0.5, 0, PAL.main, { metalness: 0.6 });                         // 上臂主殼(楔台)
-    const wing = finF(a, { len: d.len * 1.0, w0: 0.36, w1: 0.5, t: 0.07, sweep: 0 },
-      c.sx * 0.17 * G, 0.0, -0.02, PAL.mid, { metalness: 0.6 });
-    wing.rotation.set(0, Math.PI / 2, Math.PI);                                  // 臂側主翼板(薄刃鰭片,朝下、寬面朝外)
-    bxF(a, 0.025, d.len * 0.85, 0.05, c.sx * 0.17 * G, -d.len * 0.5, 0.2, accent, { emissive: accent, emissiveIntensity: 0.7 });  // 翼前緣識別條
+    // 臂側主翼板(薄刃鰭片;寬面朝外、長軸沿臂)—— **飛行型的主翼就是這一片**:
+    // 雙臂側伸之後片面法線轉成垂直 = 水平翼面,弦長 = 這裡的 w0/w1。
+    // 弦太窄(舊制 0.36/0.5)在飛行型上讀不出翼,只剩兩根細手臂 ⇒ 加寬到接近 2D 圖的翼弦比例。
+    const wing = finF(a, { len: d.len * 1.0, w0: 0.62, w1: 0.86, t: 0.08, sweep: 0 },
+      c.sx * 0.18 * G, 0.0, -0.06, PAL.mid, { metalness: 0.6 });
+    wing.rotation.set(0, Math.PI / 2, Math.PI);
+    bxF(a, 0.03, d.len * 0.85, 0.05, c.sx * 0.18 * G, -d.len * 0.5, 0.33, accent, { emissive: accent, emissiveIntensity: 0.7 });  // 翼前緣識別條
     hydCyl(a, 0.03, d.len * 0.42, c.sx * 0.04, -d.len * 0.3, 0.19 * G, -0.22, PAL.lite);  // 肩前液壓撐桿
   },
   armFore(c, a, d) {
@@ -189,10 +192,33 @@ export default {
     hydCyl(a, 0.035, d.len * 0.5, 0, -d.len * 0.2, -0.16 * G, -0.25, PAL.lite);  // 肘內側液壓撐桿
     tboxF(a, { w0: 0.29 * G, d0: 0.33 * G, w1: 0.24 * G, d1: 0.27 * G, h: d.len * 1.0, sz: 0.02 },
       0, -d.len * 0.5, 0.02, PAL.main, { metalness: 0.6 });                      // 前臂殼(楔台,往腕外擴)
-    const wing = finF(a, { len: d.len * 0.65, w0: 0.3, w1: 0.2, t: 0.05, sweep: 0 },
-      c.sx * 0.16 * G, -d.len * 0.28, -0.02, PAL.mid, { metalness: 0.6 });
-    wing.rotation.set(0, Math.PI / 2, Math.PI);                                  // 前臂翼板段(薄刃鰭片)
+    const wing = finF(a, { len: d.len * 0.92, w0: 0.8, w1: 0.5, t: 0.06, sweep: 0 },
+      c.sx * 0.17 * G, -d.len * 0.06, -0.08, PAL.mid, { metalness: 0.6 });
+    wing.rotation.set(0, Math.PI / 2, Math.PI);                                  // 前臂翼板段(外翼;弦往梢端收分)
     torusF(a, 0.16 * G, 0.028, 0, -d.len * 0.92, 0.02, PAL.mid, { metalness: 0.7 }).rotation.x = Math.PI / 2;  // 腕部束環
+  },
+  // 旋翼盤圓盾 —— **兩個型態的同一顆零件**:地面型握在拳側當圓盾、飛行型掛在翼端艙上當槳盤。
+  // 盤面法線 = 回傳 g 的局部 +y(定向交給呼叫端:地面 Rz(∓90°) 朝外、飛行由反傾 Group 轉成水平)。
+  // 自轉層 spin 另立:飛行檔把它登記進 userData.spin(viewer/game 同一份名冊推進 rotation.y)——
+  // 直接轉 g 的話會與定向用的 rotation.z 在尤拉序 'XYZ' 下互相轉走(geo.js rotorF 檔頭同一個坑)。
+  rotorDisc(c, parent, x, y, z) {
+    const { PAL, accent } = c;
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    parent.add(g);
+    torusF(g, 0.57, 0.04, 0, -0.005, 0, dimF(accent, 0.85), { emissive: accent, emissiveIntensity: 0.6 }).rotation.x = Math.PI / 2;  // accent 輪緣環(不轉:飛行型的槳環護框)
+    const spin = new THREE.Group();
+    g.add(spin);
+    latheF(spin, [[0.55, -0.03], [0.57, -0.005], [0.55, 0.015], [0.37, 0.032], [0.18, 0.052], [0.0001, 0.07]],
+      12, 0, 0, 0, PAL.mid, { metalness: 0.65 });                                // 碟形盤面(旋成體,外緣→中心微拱)
+    cylF(spin, 0.53, 0.53, 0.03, 12, 0, -0.03, 0, PAL.deep, { metalness: 0.6 }); // 盤背板
+    latheF(spin, [[0.13, 0], [0.12, 0.045], [0.075, 0.085], [0.0001, 0.105]], 10, 0, 0.05, 0, PAL.deep, { metalness: 0.8 });  // 槳轂圓頂
+    torusF(spin, 0.16, 0.02, 0, 0.055, 0, COAL, { metalness: 0.8 }).rotation.x = Math.PI / 2;  // 中心孔環(2D 的中心圓)
+    for (let i = 0; i < 4; i++) {
+      const rib = bxF(spin, 0.05, 0.025, 1.07, 0, 0.022, 0, PAL.deep, { metalness: 0.7 });
+      rib.rotation.y = i * Math.PI / 4;                                          // 四條徑肋(一肋一件;飛行型即槳葉)
+    }
+    return { g, spin };
   },
   mount(c, F) {
     const { PAL, accent, G, K } = c;
@@ -200,20 +226,9 @@ export default {
     for (const [g, sx] of [[F.handL, -1], [F.handR, 1]]) {
       tboxF(g, { w0: 0.34, d0: 0.3, w1: 0.27, d1: 0.34, h: 0.32, sz: 0.04 }, 0, -0.15, 0.02, c.dark);  // 梯形拳
       bxF(g, 0.26, 0.1, 0.08, 0, -0.1, 0.19, PAL.mid, { metalness: 0.6 });       // 指節板
-      const disc = new THREE.Group();
-      disc.position.set(sx * 0.26 * G, -0.14, 0.02);
-      disc.rotation.z = -sx * Math.PI / 2;                                       // 局部 +y = 朝外
-      g.add(disc);
-      latheF(disc, [[0.55, -0.03], [0.57, -0.005], [0.55, 0.015], [0.37, 0.032], [0.18, 0.052], [0.0001, 0.07]],
-        12, 0, 0, 0, PAL.mid, { metalness: 0.65 });                              // 碟形盤面(旋成體,外緣→中心微拱)
-      cylF(disc, 0.53, 0.53, 0.03, 12, 0, -0.03, 0, PAL.deep, { metalness: 0.6 });  // 盤背板
-      torusF(disc, 0.57, 0.04, 0, -0.005, 0, dimF(accent, 0.85), { emissive: accent, emissiveIntensity: 0.6 }).rotation.x = Math.PI / 2;  // accent 輪緣環
-      latheF(disc, [[0.13, 0], [0.12, 0.045], [0.075, 0.085], [0.0001, 0.105]], 10, 0, 0.05, 0, PAL.deep, { metalness: 0.8 });  // 槳轂圓頂
-      torusF(disc, 0.16, 0.02, 0, 0.055, 0, COAL, { metalness: 0.8 }).rotation.x = Math.PI / 2;  // 中心孔環(2D 的中心圓)
-      for (let i = 0; i < 4; i++) {
-        const rib = bxF(disc, 0.05, 0.025, 1.07, 0, 0.022, 0, PAL.deep, { metalness: 0.7 });
-        rib.rotation.y = i * Math.PI / 4;                                        // 四條徑肋(一肋一件)
-      }
+      const d = this.rotorDisc(c, g, sx * 0.26 * G, -0.14, 0.02);
+      d.g.rotation.z = -sx * Math.PI / 2;                                        // 局部 +y = 朝外
+      (c.discs || (c.discs = [])).push({ ...d, sx, hand: g });                   // 飛行型改定向成水平槳盤(t11_flight)
     }
     // 右架雙聯機槍莢(輕武器)—— 掛在右貨架下方
     const pod = new THREE.Group();

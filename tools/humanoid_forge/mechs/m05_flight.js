@@ -1,125 +1,118 @@
 // ============ m05@flight 逐機零件檔(航空機體;dev-only)============
-// m05「鎖喉」電戰可變機甲 —— **飛行型**(jet 噴射戰機):機身壓平 + 肩部進氣口 + 干擾吊艙
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/m05_flight_static.jpg(/ _moving / _heavy)
-// 設計權威 = mecha.js gen.sil:「飛行型機身壓平、肩部進氣口張開,翼下掛著粗短的干擾吊艙。」
-// gen.parts 逐件:趾行後肢 ×2(飛行時後伸當推進艙)/ 前傾軀幹 / 頸背鬃刺天線 / 干擾吊艙 ×2 /
-//   肩部進氣口 / 爪手 ×2。
-// 頸背鬃刺**天線**在飛行型照留(它是電戰機的天線陣,不是裝飾毛):MUST NOT 因為壓平就收掉。
-// 頭部取地面型 m05.head() —— 同一台機的同一顆頭。
-// jet 機種 ⇒ moveSig.flare = 0(定翼式攻角管理,不揚頭煞停)且掛 rig.jets(速度驅動尾焰)。
+// m05「鎖喉」電戰可變機甲 —— **飛行型**(飛鼠滑翔態)。
+// 2D 定案圖:public/assets/cyberpunk_art/mechs/m05_ground_static.jpg(地面型 = 建模主體)
+//
+// 2026-08-13 使用者定案:「狼人+飛鼠:**重製為狼人為主體,移除羽翼**,飛行型態狼頭朝前,
+// 四肢飛鼠一樣打開,飛膜由透明轉實體,爪子更顯眼,尾巴控制方向。」
+//   ⇒ 舊制那台「噴射戰機」(壓平機身 + wingF 後掠翼 + 進氣口 + 干擾吊艙 + 尾焰)整組退場:
+//     mecha.js gen.sil 的「機身壓平、肩部進氣口、翼下干擾吊艙」是 2D 圖的描述,使用者這一輪
+//     把飛行原型從噴射機改成**飛鼠**,升力面因此是**飛膜**不是翼。
+//   ⇒ 零件比例:狼人(地面型)75% / 飛鼠 25% —— 飛鼠那 25% 就是「四肢張開的姿態 + 實體飛膜」,
+//     其餘(頭/胸/鬃冠/四肢/爪/尾/武器)全部是 m05.js 的同一批零件。
+//   ⇒ **尾巴進 rig.tailSegs**:locomotion whipTail 依轉向角速度把尾甩向反側 = 使用者說的
+//     「尾巴控制方向」(這一台與 t06 相反 —— t06 的尾是武器瞄準架,刻意不掛)。
 import * as THREE from 'three';
-import {
-  bxF, cylF, sphF, tboxF, prismF, latheF, finF, wingF, jetF, gunPodF,
-  IRON, GUNMETAL, COAL,
-} from '../geo.js';
 import m05 from './m05.js';
+import { bipedDims, groundCtx, upright } from './_morph.js';
+
+const PITCH = 1.44;           // 軀幹幾乎水平(滑翔;狼頭朝航向)
+const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
 
 export default {
-  label: '鎖喉・飛行型(m05 噴射戰機)', hue: 0x5555cc, kind: 'air', height: 4.2,
-  air: { tiltY: 1.45, bob: 0.03, top: 38, level: true, span: 3.2 },
-  moveSig: { hover: 0.24, hoverF: 0.9, hoverA: 0.05, surge: 0.95, flare: 0, bank: 0.72 },
+  // 色相 MUST = 地面型(同一台機的同一批塗裝)
+  label: '鎖喉・飛行型(m05 飛鼠滑翔)', hue: m05.hue, kind: 'air', height: HG,
+  air: { tiltY: 3.0, bob: 0.05, top: 30, span: 6.0 },
+  moveSig: { hover: 0.22, hoverF: 0.8, hoverA: 0.12, surge: 0.80, flare: 0.70, bank: 0.75 },
   castSig: { omni: 'roar', dir: 'swing' },
   doc: [
-    ['壓平軀幹', '前傾軀幹壓成航向軸(tbox)+ 胸脊 + 腹側稜'],
-    ['頭部', '直接取地面型 m05.head()(狼首;同一顆)'],
-    ['肩部進氣口 ×2', '張開的方形進氣口(prism 唇口)+ 內壁隔板 + 附面層分離板'],
-    ['頸背鬃刺天線', '鬃刺列 ×7(finF,逐根變短)—— 電戰天線陣,不是裝飾毛'],
-    ['後肢推進艙 ×2', '趾行長蹠骨後伸成推進艙 + 噴口 + 尾焰(jetF)'],
-    ['翼面 ×2', 'wingF 中後掠翼(壓平後的手臂/披掛面)'],
-    ['干擾吊艙 ×2', '粗短吊艙(lathe)+ 螺旋天線 + 散熱鰭'],
+    ['狼首朝航向', '地面型楔形狼首(m05.head:錯咬齒列/犬齒/怒眉稜/三角耳殼)+ 反傾中介 Group'],
+    ['軀幹 + 鬃冠', '地面型主甲/胸毛疊瓦板/電戰背包/頸背鬃冠(m05.chest)整組壓平成滑翔線'],
+    ['四肢張開', '同一組臂件/腿件(m05.armUp/armFore/thigh/shin/foot)向四角張開 = 飛鼠姿態'],
+    ['飛膜 ×2(實體)', 'm05.patagium 展開:膜面 + 膜骨 ×4 + 前緣識別稜(地面態 = 半透明皮褶)'],
+    ['爪 ×2 + 足爪 ×6', '加大的彎爪錐(兩態同一組;張開時是全機最顯眼的一批零件)'],
+    ['方向舵尾', '三節狼尾節鏈(m05.extra)進 rig.tailSegs ⇒ whipTail 依轉向甩尾控向'],
+    ['武裝', '同一具六管電磁旋砲(右)+ 追債者 2×2 制導彈箱(左),由爪直接握著'],
   ],
 
   body(c, t) {
-    const { PAL, accent, dark } = c;
-    tboxF(t, { w0: 0.56, d0: 0.42, w1: 0.44, d1: 0.32, h: 1.5, sz: 0.05 }, 0, 0, 0.12, PAL.main, { metalness: 0.62 })
-      .rotation.x = -Math.PI / 2;
-    prismF(t, [[-0.24, -0.16], [0.24, -0.16], [0.18, 0.16], [-0.18, 0.16]], 0.6, 0, 0.12, 0.4,
-      PAL.mid, { metalness: 0.66 });                              // 胸脊
-    for (const sx of [-1, 1])
-      prismF(t, [[-0.7, 0], [0.7, 0], [0.6, 0.09], [-0.62, 0.08]], 0.05, sx * 0.28, -0.16, 0.05,
-        PAL.deep, { metalness: 0.7 }).rotation.y = Math.PI / 2;    // 腹側稜
-    // 頭(同一顆:地面型 m05.head)
-    const head = new THREE.Group();
-    head.position.set(0, 0.1, 0.84);
-    head.rotation.x = 0.85;
-    t.add(head);
-    m05.head(c, head);
-    // 肩部進氣口 ×2(張開;唇口 + 內壁隔板 + 附面層分離板)
+    const dim = bipedDims(m05, HG);
+    groundCtx(c, dim);
+    const hull = new THREE.Group();
+    hull.position.set(0, 0.1, -0.35);
+    hull.rotation.x = PITCH;
+    t.add(hull);
+
+    const hips = new THREE.Group();
+    hull.add(hips);
+    m05.pelvis(c, hips, { shoulderX: dim.shoulderX });
+    const chest = new THREE.Group();
+    hips.add(chest);
+    m05.chest(c, chest, { shoulderX: dim.shoulderX, shoulderY: dim.shoulderYl, waistY: dim.waistYl });
+    m05.head(c, upright(chest, PITCH - 0.34, 0, dim.headYl, 0.04));   // 狼頭抬起朝航向
+
+    // ---- 四肢像飛鼠一樣張開(前肢朝前外、後肢朝後外;膜就撐在這四點之間)----
+    const hands = {};
     for (const sx of [-1, 1]) {
-      const lip = prismF(t, [[-0.16, -0.14], [0.16, -0.14], [0.13, 0.14], [-0.13, 0.14]], 0.34,
-        sx * 0.42, 0.06, 0.42, dark, { metalness: 0.75 });
-      lip.rotation.y = -sx * 0.16;
-      bxF(t, 0.02, 0.24, 0.3, sx * 0.42, 0.06, 0.42, COAL, { metalness: 0.85 });
-      bxF(t, 0.03, 0.2, 0.26, sx * 0.28, 0.06, 0.5, PAL.deep, { metalness: 0.8 });   // 附面層分離板
+      const cx = { ...c, sx };
+      const arm = new THREE.Group();
+      arm.position.set(sx * dim.shoulderX, dim.shoulderYl, 0);
+      // 繞 z 轉 ≈90° 把肢體(朝 −y)甩到 ±x = 翼展方向;再繞 x 微前擺(前肢在膜的前緣)
+      arm.rotation.set(-0.42, 0, sx * (Math.PI / 2 - 0.16));
+      chest.add(arm);
+      m05.armUp(cx, arm, { len: dim.upperArmL });
+      const fore = new THREE.Group();
+      fore.position.y = -dim.upperArmL;
+      fore.rotation.x = -0.20;
+      arm.add(fore);
+      m05.armFore(cx, fore, { len: dim.foreArmL });
+      const hand = new THREE.Group();
+      hand.position.y = -dim.foreArmL;
+      fore.add(hand);
+      hands[sx] = hand;
     }
-    // 頸背鬃刺天線 ×7(逐根變短)
-    for (let i = 0; i < 7; i++)
-      finF(t, { len: 0.4 - i * 0.04, w0: 0.07, w1: 0.02, t: 0.028, sweep: -0.12 },
-        0, 0.24, 0.34 - i * 0.16, PAL.lite, { metalness: 0.75 }).rotation.x = -0.3;
-    // 干擾吊艙 ×2(粗短 + 螺旋天線 + 散熱鰭)
     for (const sx of [-1, 1]) {
-      latheF(t, [[0, -0.42], [0.16, -0.32], [0.19, 0.1], [0.14, 0.34], [0, 0.4]], 10,
-        sx * 0.94, -0.34, -0.1, PAL.mid, { metalness: 0.65 }).rotation.x = Math.PI / 2;
-      for (let i = 0; i < 6; i++)                                  // 螺旋天線
-        cylF(t, 0.015, 0.015, 0.1, 5, sx * 0.94 + Math.cos(i) * 0.13, -0.34 + Math.sin(i) * 0.13, 0.34 + i * 0.05,
-          accent, { emissive: accent, emissiveIntensity: 0.9 });
-      for (let i = 0; i < 3; i++)
-        bxF(t, 0.06, 0.014, 0.2, sx * 1.08, -0.28 + i * 0.06, -0.14, PAL.deep, { metalness: 0.75 });
+      const cx = { ...c, sx };
+      const root = new THREE.Group();
+      root.position.set(sx * dim.legX, 0, 0);
+      root.rotation.set(0.44, 0, sx * (Math.PI / 2 - 0.28));   // 後肢朝後外(膜的後緣)
+      hull.add(root);
+      m05.thigh(cx, root, { len: dim.thighL });
+      const shin = new THREE.Group();
+      shin.position.y = -dim.thighL;
+      shin.rotation.x = 0.18;
+      root.add(shin);
+      m05.shin(cx, shin, { len: dim.shinL });
+      const foot = new THREE.Group();
+      foot.position.y = -dim.shinL;
+      foot.rotation.x = -0.30;
+      shin.add(foot);
+      m05.foot(cx, foot, { clear: dim.clear, footL: dim.footL });
     }
+
+    // ---- 飛膜:同一片零件轉成水平實體膜 ----
+    // **MUST 掛在反傾錨上**:−π/2 是相對世界算的;掛 chest 會被軀幹前傾再轉一次 ⇒ 膜立起來
+    // 變成兩片側板(而每一條斷言都正常)。
+    for (const sx of [-1, 1]) {
+      const anch = upright(chest, PITCH, sx * (dim.shoulderX * 0.66), dim.shoulderYl * 0.30, -0.05);
+      const w = m05.patagium(c, anch, sx, true);
+      w.rotation.set(-Math.PI / 2, 0, 0);
+    }
+
+    // ---- 方向舵尾(m05.extra 的同一條三節狼尾)----
+    // **MUST 掛在反傾錨上**:節鏈沿局部 −z 往後長,直接掛 hips 會被軀幹前傾 1.44 轉成朝天
+    // 的一根立桿(實測第一版就是這樣),而 whipTail 只覆寫節樞軸、不會把它轉回來。
+    const stub = { muzzles: {}, heavy: { glow: [] }, wpn: {} };
+    m05.extra(c, { hips: upright(hips, PITCH) }, stub);
+    c._tail = stub.tailSegs;
+
+    c._W = m05.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });
   },
 
-  lift(c, t) {
-    const { PAL, accent, dark } = c;
-    // 翼面 ×2(壓平後的手臂/披掛面 → 中後掠翼)
-    for (const sx of [-1, 1]) {
-      const w = wingF(t, { span: 1.4, c0: 0.8, c1: 0.4, t: 0.12, sweep: 0.5, dihedral: 0.06, twist: -0.05 },
-        sx * 0.26, -0.06, -0.12, PAL.main, { metalness: 0.58 });
-      w.scale.x = sx;
-    }
-    // 後肢推進艙 ×2(趾行長蹠骨後伸)+ 噴口 + 尾焰
-    const jets = [];
-    for (const sx of [-1, 1]) {
-      tboxF(t, { w0: 0.26, d0: 0.3, w1: 0.2, d1: 0.24, h: 1.0 }, sx * 0.24, -0.14, -0.86, PAL.mid, { metalness: 0.66 })
-        .rotation.x = -Math.PI / 2;
-      latheF(t, [[0.17, 0], [0.19, 0.1], [0.13, 0.28], [0.15, 0.34]], 10, sx * 0.24, -0.14, -1.36, COAL, { metalness: 0.85 })
-        .rotation.x = Math.PI / 2;
-      const ring = cylF(t, 0.11, 0.11, 0.04, 10, sx * 0.24, -0.14, -1.54, accent,
-        { emissive: accent, emissiveIntensity: 1.6 });
-      ring.rotation.x = Math.PI / 2;
-      const fl = jetF(t, 0.1, 1.3, sx * 0.24, -0.14, -1.6, accent);
-      fl.g.rotation.x = Math.PI / 2;
-      jets.push(fl);
-    }
-    return { jets };
-  },
+  // 升力全部來自飛膜滑翔(無翼、無旋翼、無噴口)
+  lift() { return {}; },
 
-  mount(c, F) {
-    const { accent, PAL, K, dark } = c;
-    const t = F.tilt;
-    // 爪手 ×2 前伸(飛行型仍是爪,不是掛架)+ 爪握的莢
-    const pods = [];
-    for (const sx of [-1, 1]) {
-      const claw = new THREE.Group();
-      claw.position.set(sx * 0.44, -0.16, 0.5);
-      claw.rotation.x = 1.35;
-      t.add(claw);
-      cylF(claw, 0.09, 0.1, 0.16, 8, 0, -0.08, 0, PAL.deep, { metalness: 0.78 });
-      for (let i = 0; i < 3; i++) {
-        const th = -0.4 + i * 0.4;
-        const f = cylF(claw, 0.018, 0.026, 0.2, 5, Math.sin(th) * 0.07, -0.22, Math.cos(th) * 0.07,
-          GUNMETAL, { metalness: 0.88 });
-        f.rotation.x = 0.45;
-      }
-      pods.push(gunPodF(claw, { len: (sx < 0 ? 0.9 : 1.16) * K.barrelF, r: sx < 0 ? 0.1 : 0.14, accent },
-        0, -0.3, 0.1, dark, { metalness: 0.8 }));
-    }
-    const [lp, hp] = pods;
-    return {
-      muzzles: { light: { n: lp.muz, r: 0.05 }, heavy: { n: hp.muz, r: 0.09 } },
-      lightGlowM: [lp.muz], heavyGlowM: [hp.muz],
-      weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.05 },
-      wpn: { light: { nodes: [lp.g], ref: lp.g, muz: lp.muz, fwd: 'z' },
-        heavy: { nodes: [hp.g], ref: hp.g, muz: hp.muz, fwd: 'z' } },
-    };
-  },
+  // 尾巴 = 方向舵:掛進 rig.tailSegs ⇒ whipTail 依 yawRate 甩向反側(使用者「尾巴控制方向」)
+  tail(c) { return c._tail || null; },
+
+  mount(c) { return { ...c._W, gunR: null, gunL: null, aimPose: null }; },
 };

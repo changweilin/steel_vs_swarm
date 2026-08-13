@@ -1,143 +1,172 @@
 // ============ t06@flight 逐機零件檔(航空機體;dev-only)============
-// t06「輕功」齊天式可變機甲 —— **飛行型**(uav 觔斗雲):壓平人形 + 兩束光翼 + 長尾前捲過頂
-// 2D 定案圖:public/assets/cyberpunk_art/mechs/t06_flight_static.jpg(/ _moving / _heavy)
-// 設計權威 = mecha.js gen.sil:「飛行型身體壓平、雙腿併攏,背後兩束光翼不揮動,多節長尾
-// 前捲過頂。」gen.note:「光翼 MUST NOT 畫成會揮動的翅膀,它是兩束固定的噴焰;飛行型也
-// MUST NOT 變成飛機外形 —— 身體壓平就是它的飛行姿態。」
-//   ⇒ 本檔因此**不回傳 rig.wings**(那會讓 stepAerial 拍它);光翼是 jets 家族的發光刃,
-//     靠 accentF 與速度增輝表達,不進撲翼通道。
-// 頭部**直接呼叫地面型那一顆**(`t06.head`)—— 同一台機的兩個型態,頭 MUST 是同一顆:
-// 各畫一顆的下場是兩頁看起來像兩台機,而兩邊都不會報錯。
+// t06「輕功」齊天式可變機甲 —— **飛行型**(觔斗雲)。
+// 2D 定案圖:public/assets/cyberpunk_art/mechs/t06_flight_static.jpg / t06_ground_static.jpg
+//
+// 2026-08-13 使用者定案(四條,**取代 2D 定案圖的壓平姿態**):
+//   ①「飛行姿態調整為**直立前傾**」⇒ 舊制那個「身體壓平」的姿態退場(mecha.js gen.sil 的
+//      那一句是 2D 圖的描述,使用者這一輪改了姿態;幾何仍是同一台機的同一批零件)。
+//   ②「**噴射背包要有動畫**」⇒ 背後噴口接 `jetF`(rig.jets ⇒ locomotion stepAerial 依速度
+//      推焰長/亮度/抖焰);舊制那三片「固定不揮動的光翼刃」是純靜態發光片,沒有任何動畫通道。
+//   ③「尾焰噴射尾端生成**凝結雲**」⇒ 焰尾接一團半透明球(觔斗雲意象;一顆球一件、零亂數)。
+//   ④「尾巴繞到背上、尾端**向前瞄準**」+「金箍棒背在後背朝前」。
+// 加上總則「盡量用相同零件變形切換地面/飛行形態」⇒ 本檔**一顆自己的機體幾何都沒有**:
+//   頭/胸/骨盆/四肢/如意棒/尾砲全部由 `t06.js` 的建構器組出來,只有噴焰與雲是飛行型專屬。
+//
+// ⚠ **尾巴刻意不進 `rig.tailSegs`**:locomotion whipTail 每幀覆寫每一節的 rotation.x/y
+//   (geo.js chainF 檔頭那條)—— 掛進去的話「繞到背上、尾端向前瞄準」當場被打平成一根直桿
+//   (地面型現在就是這樣)。這一型的尾巴是**重武器的瞄準架**,靜止指向才是它的語意。
 import * as THREE from 'three';
-import {
-  bxF, cylF, sphF, tboxF, prismF, latheF, finF, chainF, jetF, gunPodF,
-  IRON, GUNMETAL, COAL, BRASS,
-} from '../geo.js';
+import { sphF, jetF } from '../geo.js';
 import t06 from './t06.js';
+import { bipedDims, groundCtx, upright } from './_morph.js';
+
+const PITCH = 0.52;           // 直立前傾角(≈30°;使用者定案的飛行姿態)
+const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
+
+/**
+ * 觔斗雲:尾焰末端的凝結雲。**一朵雲 = 一顆球一件**(生物/自然多重元件的同一條紀律),
+ * 位置與大小逐顆由索引推導(§2.3 零亂數)。沿 pod 的 +y(= 噴流方向)往後長。
+ */
+function condCloud(parent, y0, r, n) {
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1);                                   // 0 → 1 由焰尾往外
+    const th = i * 2.399;                                    // 黃金角:球團不排成一直線
+    const rr = r * (0.55 + 0.75 * Math.sin(Math.PI * (0.25 + 0.75 * u)));
+    const p = sphF(parent, rr,
+      Math.cos(th) * r * (0.35 + 0.9 * u), y0 + u * r * 3.4, Math.sin(th) * r * (0.35 + 0.9 * u),
+      0xf2f6ff, { transparent: true, opacity: 0.42, emissive: 0xdCE8ff, emissiveIntensity: 0.55 });
+    p.scale.set(1.15, 0.72, 1.15);                           // 壓扁 = 雲團不是泡泡
+    p.userData.noOutline = true;                             // 半透明軟件:反轉外殼會糊成黑團(A16)
+  }
+}
 
 export default {
-  label: '輕功・飛行型(t06 觔斗雲)', hue: 0xffd84d, kind: 'air', height: 4.2,
-  air: { tiltY: 1.5, bob: 0.05, top: 30, span: 2.4 },
+  // 色相 MUST = 地面型(同一台機的同一批塗裝)
+  label: '輕功・飛行型(t06 觔斗雲)', hue: t06.hue, kind: 'air', height: HG,
+  air: { tiltY: 3.3, bob: 0.05, top: 30, span: 2.4 },
   moveSig: { hover: 0.30, hoverF: 0.7, hoverA: 0.15, surge: 0.70, flare: 0.85, bank: 0.62 },
   castSig: { omni: 'dance', dir: 'swing' },
   doc: [
-    ['壓平軀幹', '輕量骨架軀幹(tbox)壓成水平航向軸 + 胸甲 + 腰環'],
-    ['頭部', '直接取地面型 t06.head() —— 同一台機的同一顆頭(金箍在內)'],
-    ['併攏雙腿', '兩腿貼合成單一推進體(tbox ×2)+ 足底噴口 ×2'],
-    ['長臂 ×2', '沿航向前伸的長臂(掌行機的長臂;飛行時當前緣配平)'],
-    ['光翼 ×2', '背後兩束固定噴焰刃(finF 發光片 ×3/束)—— 不揮動,不進 rig.wings'],
-    ['多節長尾 + 熔核砲', 'chainF 七節前捲過頂 + 尾端砲口(全機最重的一點)'],
-    ['如意棒', '背插長棍(lathe 收分 + 兩端金箍環)'],
+    ['直立前傾軀幹', '地面型胸腔/骨盆(t06.chest/pelvis)整組前傾 30° —— 使用者定案的飛行姿態'],
+    ['頭部', '地面型猴首(t06.head:金箍/紫金冠/火眼金睛)+ 反傾中介 Group 平視航向'],
+    ['噴射背包 ×2', '地面型噴口與噴焰翎(t06 的 jetPods 錨)+ jetF 動畫尾焰(推力 ∝ 速度)'],
+    ['觔斗雲 ×2', '焰尾凝結雲:半透明球團(一顆一件、黃金角散布、零亂數)'],
+    ['長臂 ×2', '掌行長臂(t06.armUp/armFore/mount 的掌行前腳)後掠收攏'],
+    ['雙腿', '同一組腿件併攏後伸(t06.thigh/shin/foot;足底噴口朝後)'],
+    ['多節長尾 + 熔核砲', 'chainF 十節尾(t06.extra 同一條)繞上背、尾端熔核砲朝前瞄準'],
+    ['如意金箍棒', '同一根金棒(t06.mount)改背在後背、棒身朝航向'],
   ],
 
   body(c, t) {
-    const { PAL, accent, dark } = c;
-    // 壓平軀幹:航向軸 = +z;胸腔在前、骨盆在後(人形被壓成水平)
-    tboxF(t, { w0: 0.62, d0: 0.44, w1: 0.5, d1: 0.34, h: 1.1, sz: 0.04 }, 0, 0, 0.1, PAL.main, { metalness: 0.6 })
-      .rotation.x = -Math.PI / 2;
-    prismF(t, [[-0.3, -0.2], [0.3, -0.2], [0.24, 0.18], [-0.24, 0.18]], 0.5, 0, 0.12, 0.44,
-      PAL.mid, { metalness: 0.65 });                                       // 胸甲
-    cylF(t, 0.26, 0.28, 0.14, 10, 0, -0.02, -0.36, PAL.deep, { metalness: 0.7 }).rotation.x = Math.PI / 2;  // 腰環
-    // 頭(同一顆:地面型 t06.head)
-    const head = new THREE.Group();
-    head.position.set(0, 0.12, 0.78);
-    head.rotation.x = 0.9;                     // 壓平飛行 ⇒ 頭抬起看航向
-    t.add(head);
-    t06.head(c, head);
-    // 併攏雙腿(貼合成單一推進體)+ 足底噴口
+    const dim = bipedDims(t06, HG);
+    groundCtx(c, dim);
+    const hull = new THREE.Group();
+    hull.position.set(0, -0.35, 0);
+    hull.rotation.x = PITCH;
+    t.add(hull);
+
+    const hips = new THREE.Group();
+    hull.add(hips);
+    t06.pelvis(c, hips, { shoulderX: dim.shoulderX });
+    const chest = new THREE.Group();
+    hips.add(chest);
+    t06.chest(c, chest, { shoulderX: dim.shoulderX, shoulderY: dim.shoulderYl, waistY: dim.waistYl });
+    c._chest = chest;                          // lift() 的噴射包掛回同一個胸腔框
+    // 猴首:反傾平視航向(前傾飛行時頭仍看得到前方)
+    t06.head(c, upright(chest, PITCH, 0, dim.headYl, 0.04));
+
+    // ---- 長臂 ×2:後掠收攏(掌行機的長臂在飛行時貼身)----
+    const hands = {};
     for (const sx of [-1, 1]) {
-      tboxF(t, { w0: 0.2, d0: 0.26, w1: 0.15, d1: 0.2, h: 0.9 }, sx * 0.11, -0.06, -0.86, PAL.mid, { metalness: 0.65 })
-        .rotation.x = -Math.PI / 2;
-      cylF(t, 0.1, 0.12, 0.16, 8, sx * 0.11, -0.06, -1.32, COAL, { metalness: 0.85 }).rotation.x = Math.PI / 2;
-    }
-    // 長臂 ×2(沿航向前伸;掌行機的長臂在飛行時當前緣配平)
-    for (const sx of [-1, 1]) {
+      const cx = { ...c, sx };
       const arm = new THREE.Group();
-      arm.position.set(sx * 0.34, 0.04, 0.4);
-      arm.rotation.x = 1.35;
-      arm.rotation.z = -sx * 0.16;
-      t.add(arm);
-      tboxF(arm, { w0: 0.17, d0: 0.17, w1: 0.13, d1: 0.13, h: 0.56 }, 0, -0.28, 0, PAL.mid, { metalness: 0.68 });
-      cylF(arm, 0.09, 0.09, 0.1, 8, 0, -0.58, 0, COAL, { metalness: 0.88 }).rotation.z = Math.PI / 2;
-      tboxF(arm, { w0: 0.14, d0: 0.14, w1: 0.11, d1: 0.11, h: 0.5 }, 0, -0.86, 0.02, PAL.main, { metalness: 0.68 });
-      bxF(arm, 0.15, 0.1, 0.2, 0, -1.16, 0.06, PAL.deep, { metalness: 0.6 });          // 掌
+      arm.position.set(sx * dim.shoulderX, dim.shoulderYl, 0);
+      arm.rotation.set(0.92, 0, sx * 0.42);     // 肩:後掠 + 外張(飛行時長臂貼向身後)
+      chest.add(arm);
+      t06.armUp(cx, arm, { len: dim.upperArmL });
+      const fore = new THREE.Group();
+      fore.position.y = -dim.upperArmL;
+      fore.rotation.x = -0.95;                  // 肘前折(−x = 末端前移)⇒ 前臂收回身側
+      arm.add(fore);
+      t06.armFore(cx, fore, { len: dim.foreArmL });
+      const hand = new THREE.Group();
+      hand.position.y = -dim.foreArmL;
+      hand.rotation.x = 0.5;
+      fore.add(hand);
+      hands[sx] = hand;
     }
-    // 如意棒(背插;收分長棍 + 兩端金箍環)
-    const staff = new THREE.Group();
-    staff.position.set(0, 0.24, -0.1);
-    staff.rotation.z = 0.5;
-    t.add(staff);
-    const st = latheF(staff, [[0.05, -0.9], [0.062, -0.6], [0.062, 0.6], [0.05, 0.9]], 8, 0, 0, 0,
-      dark, { metalness: 0.85 });
-    for (const y of [-0.76, 0.76]) cylF(staff, 0.078, 0.078, 0.1, 10, 0, y, 0, BRASS, { metalness: 0.9 });
+
+    // ---- 雙腿:併攏後伸(足底噴口朝後 = 推進面)----
+    for (const sx of [-1, 1]) {
+      const cx = { ...c, sx };
+      const root = new THREE.Group();
+      root.position.set(sx * dim.legX * 0.55, 0, 0);
+      root.rotation.set(0.34, 0, -sx * 0.06);   // 腿後伸併攏
+      hull.add(root);
+      t06.thigh(cx, root, { len: dim.thighL });
+      const shin = new THREE.Group();
+      shin.position.y = -dim.thighL;
+      shin.rotation.x = 0.2;
+      root.add(shin);
+      t06.shin(cx, shin, { len: dim.shinL });
+      const foot = new THREE.Group();
+      foot.position.y = -dim.shinL;
+      foot.rotation.x = -0.5;                   // 腳背繃直(飛行姿態)
+      shin.add(foot);
+      t06.foot(cx, foot, { clear: dim.clear, footL: dim.footL });
+    }
+
+    // ---- 武裝:同一根如意金箍棒,改背在後背、棒身朝航向 ----
+    c._W = t06.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });
+    const staff = c._W.wpn.light.ref;
+    staff.position.set(0.16, dim.shoulderYl * 0.62, -0.46 * dim.G);
+    // 棒身沿局部 +y ⇒ Rx(π/2 − PITCH) 把它送到世界 +z(航向):前傾多少就補回多少
+    staff.rotation.set(Math.PI / 2 - PITCH, 0, 0.04);
+
+    // ---- 多節長尾:繞上背、尾端熔核砲朝前瞄準(t06.extra 的同一條鏈與同一門砲)----
+    // 尾長固定 2.8m,要把梢端轉到朝前就得轉滿 ≈π ⇒ 弧半徑恆 ≈0.9m(比軀幹窄)。
+    // 因此**不追求「大圈套過頭頂」**,而是把基座壓低往後、整個弧偏到右後方升起:
+    // 砲口落在右肩前方朝航向,弧線在背後看得見(基座擺在背心正中的話整條尾埋進背包)。
+    c.tailCurl = { rot0: 0.44, rotD: -0.024 };            // 累積 ≈3.3 rad ⇒ 梢端朝前略下
+    const tailBase = new THREE.Group();
+    tailBase.position.set(0.40 * dim.G, -0.16, -0.50 * dim.G);
+    tailBase.rotation.set(-0.42, 0.22, -0.36);
+    chest.add(tailBase);
+    const stub = { muzzles: {}, heavy: { glow: [] }, wpn: {} };
+    t06.extra(c, { hips: tailBase }, stub);
+    c._tail = stub;
   },
 
-  lift(c, t) {
-    const { accent, PAL, K } = c;
-    // ---- 光翼 ×2:兩束**固定**噴焰刃(不揮動 ⇒ 不進 rig.wings)----
-    for (const sx of [-1, 1]) {
-      const root = cylF(t, 0.07, 0.09, 0.2, 8, sx * 0.26, 0.16, -0.02, GUNMETAL, { metalness: 0.9 });
-      root.rotation.z = -sx * 0.5;
-      for (let i = 0; i < 3; i++) {
-        const blade = finF(t, { len: 1.5 - i * 0.28, w0: 0.16, w1: 0.03, t: 0.035, sweep: -0.5 },
-          sx * (0.34 + i * 0.06), 0.22, -0.1 - i * 0.16, accent,
-          { emissive: accent, emissiveIntensity: 2.4 * K.accentF, transparent: true, opacity: 0.62 });
-        blade.rotation.z = -sx * (0.72 + i * 0.12);
-        blade.rotation.x = -0.28;
-        blade.userData.noOutline = true;      // 焰刃沒有輪廓線(它不是實體)
-      }
-    }
-    // 足底主推(jets:速度驅動焰長,同噴射機種)
+  // 升力:背後噴射包(動畫尾焰;推力 ∝ 速度 —— locomotion stepAerial 的 rig.jets 通道)
+  lift(c) {
+    const { accent } = c;
     const jets = [];
-    for (const sx of [-1, 1]) {
-      const fl = jetF(t, 0.1, 1.1, sx * 0.11, -0.06, -1.42, accent);
-      fl.g.rotation.x = Math.PI / 2;
+    for (const p of c.jetPods || []) {
+      // 錨點吃地面型的噴口座標,但**朝向另算**:噴焰翎是站姿的上揚裝飾,飛行的噴流要朝
+      // 世界後下方。反傾 Group 先把座標系轉回世界對齊,朝向才不會跟著軀幹前傾一起被轉走。
+      const pod = upright(c._chest, PITCH, p.x, p.y, p.z);
+      const jg = new THREE.Group();
+      jg.rotation.set(-1.5, 0, -0.30 * p.sx);    // 噴流朝世界 −z(略下、略外撇)
+      pod.add(jg);
+      const fl = jetF(jg, 0.16, 1.8, 0, 0.18, 0, accent);
+      fl.g.rotation.x = Math.PI;                 // jetF 錐尖朝 −y ⇒ 翻正朝 +y = 噴流方向
       jets.push(fl);
+      condCloud(jg, 1.45, 0.34, 7);              // 觔斗雲:焰尾之外的凝結雲團
     }
     return { jets };
   },
 
-  tail(c, t) {
-    const { PAL, accent } = c;
-    // 多節長尾前捲過頂(蠍式):基礎彎曲寫進**節位置編碼**,不靠 chainF 靜姿角
-    // (geo.js chainF 檔頭:rot0/rotD 掛進 rig.tailSegs 後會被 whipTail 每幀覆寫)
-    const base = new THREE.Group();
-    base.position.set(0, 0.2, -0.5);
-    base.rotation.x = -1.5;                    // 靜態中介 Group:整條尾先立起來
-    t.add(base);
-    const ch = chainF(base, {
-      n: 7, len0: 0.34, len1: 0.2, r0: 0.14, r1: 0.08, rot0: 0, rotD: 0, seg: 8,
-      drawSeg: (gp, i, { r }) => {
-        finF(gp, { len: r * 1.4, w0: r * 0.8, w1: r * 0.25, t: 0.025 }, 0, r * 0.6, -0.05,
-          PAL.lite, { metalness: 0.7 }).rotation.x = -0.2;
-        if (i === 6) {                          // 尾端熔核砲(全機最重的一點)
-          latheF(gp, [[0.16, 0], [0.2, 0.12], [0.13, 0.3], [0.16, 0.36]], 10, 0, 0, -0.22,
-            COAL, { metalness: 0.9 }).rotation.x = -Math.PI / 2;
-          cylF(gp, 0.1, 0.1, 0.03, 10, 0, 0, -0.4, accent, { emissive: accent, emissiveIntensity: 2.0 })
-            .rotation.x = Math.PI / 2;
-        }
-      },
-    }, PAL.main, { metalness: 0.66 });
-    return ch.segs;
-  },
+  // 尾巴**不進 rig.tailSegs**(檔頭 ⚠):它是重武器的瞄準架,whipTail 會把指向打平
+  tail() { return null; },
 
-  mount(c, F) {
-    const { accent, K, dark } = c;
-    const t = F.tilt;
-    // 輕武器:前臂下掛短莢(掌行機的手仍要能出拳 ⇒ 掛小的)
-    const lp = gunPodF(t, { len: 0.62 * K.barrelF, r: 0.085, accent }, -0.34, -0.24, 0.72, dark, { metalness: 0.8 });
-    // 重武器 = 尾端熔核砲(尾鏈末節;槍口另立以免被 whipTail 帶走取景)
-    const segs = F.tailSegs || [];
-    const tip = segs[segs.length - 1] || t;
-    const hMuz = cylF(tip, 0.11, 0.11, 0.03, 10, 0, 0, -0.44, accent,
-      { emissive: accent, emissiveIntensity: 2.2 });
-    hMuz.rotation.x = Math.PI / 2;
+  mount(c) {
+    const W = c._W, T = c._tail;
     return {
-      muzzles: { light: { n: lp.muz, r: 0.05 }, heavy: { n: hMuz, r: 0.11 } },
-      lightGlowM: [lp.muz], heavyGlowM: [hMuz],
-      weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.05 },
-      wpn: { light: { nodes: [lp.g], ref: lp.g, muz: lp.muz, fwd: 'z' },
-        heavy: { nodes: [tip], ref: tip, muz: hMuz, fwd: '-z' } },
+      ...W,
+      gunR: null, gunL: null,                    // 肩扛樞軸只屬於地面型據槍(航空 rig 不驅動)
+      muzzles: { light: W.muzzles.light, heavy: T.muzzles.heavy },
+      heavyGlowM: T.heavy.glow.map((g) => g.mesh),
+      wpn: { light: W.wpn.light, heavy: T.wpn.heavy },
     };
   },
 };

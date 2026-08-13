@@ -106,6 +106,9 @@ export default {
       fo.g.rotation.set(-0.7, 0, -sx * 0.38);
       const fi = fanF(ch, { n: 3, arc: 0.66, len: 0.6, edgeF: 0.6, gap: 0.026, fin: { w0: 0.12, w1: 0.035, t: 0.045, sweep: 0.1, camber: 0.1 } }, fx, fy, fz + 0.016, 0xffe9a8, { emissive: 0xffd76a, emissiveIntensity: 1.6 });
       fi.g.rotation.set(-0.7, 0, -sx * 0.38);
+      // 噴焰翎的錨(位置 + 朝向):飛行型在同一個錨上接**會動的**噴射尾焰(jetF)與焰尾凝結雲。
+      // 讓飛行檔自己抄一份座標的話,這裡改了噴口位置那邊不會跟著改(而兩張圖分開看都正常)。
+      (c.jetPods || (c.jetPods = [])).push({ x: fx, y: fy, z: fz, rot: [-0.7, 0, -sx * 0.38], sx });
     }
   },
   pelvis(c, hips, d) {
@@ -230,10 +233,14 @@ export default {
     const { PAL, accent, G } = c;
     // 十節收分節鏈長尾(chainF 多零件;2D 是 10+ 節球關節收分尾)——
     // 逐節上捲蓄勢(rot0/rotD)語意同舊制;行軍上捲由 whipTail 的 base 疊加。
+    // 逐節捲角:地面型的值是預設(逐位元同舊制);飛行型改由 c.tailCurl 指定 ——
+    // 「尾巴繞到背上、尾端向前瞄準」要的是不同的累積轉角,而那是**同一條尾巴的另一個姿態**,
+    // MUST NOT 在飛行檔另生一條尾(那就是第二條尾巴,地面型加一節它不會跟著有)。
+    const CU = c.tailCurl || { rot0: 0.5, rotD: -0.05 };
     const { segs, tip } = chainF(F.hips, {
       n: 10, y: -0.05, z: -0.3 * G,
       len0: 0.34, len1: 0.22, r0: 0.1 * G, r1: 0.062 * G,
-      rot0: 0.5, rotD: -0.05, ring: true, ringColor: IRON, seg: 8,
+      rot0: CU.rot0, rotD: CU.rotD, ring: true, ringColor: IRON, seg: 8,
     }, PAL.main, { metalness: 0.55 });
     const tipL = 0.22;
     // 尾端熔核砲:latheF 階狀砲身(朝 −z)+ 機匣環 + 砲口內膛 + 充能環
