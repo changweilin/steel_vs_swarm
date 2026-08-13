@@ -5005,6 +5005,11 @@ function isWaterPt(terrain, x, z) {
  */
 export function terrainEnvCode(terrain, x, z) {
   if (terrain.inDryBand?.(x, z)) return 0;   // 兵線砲塔外接帶:強制乾地(壓過影像藍色分支,見 terrain.js 抬升)
+  // 地貌分界線帶(2026-08-13 使用者「確保水域/沼澤在分界線的區塊內不會觸發異常狀態」):
+  // 沙灘/泥灘/小溪那條帶畫在哪裡,那裡就不算泡在水裡 —— 底毯的換手在「畫出來的那條線」上,
+  // 而這一支量的是真實地形,兩者最多差半個帶寬(最寬 9m)。遮罩本身住 ground.js bandDryAt,
+  // 由 main.js 在 buildBiomes **之後**裝上(建圖期恆為 null,見 buildBiomes 開頭的清空)
+  if (terrain.inBorderBand?.(x, z)) return 0;
   const h = terrain.heightAt(x, z);
   const wy = terrain.waterY;
   const c = terrain.sampleColor?.(x, z);
@@ -8053,6 +8058,11 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   );
   const group = new THREE.Group();
   group.name = 'biomes';
+  // 地貌分界線帶的「強制乾地」遮罩(2026-08-13;見 ground.js bandDryAt 檔頭 ③)MUST 在建圖
+  // 開頭清掉:那一層是 buildGroundCover **產出**的,而底毯分區自己就吃 terrainEnvCode ——
+  // 同一個 terrain 再建一次圖(再戰回房)時若還掛著上一次的遮罩,分區就會被上一次的界線
+  // 推著走,而症狀是「同一張地圖每次進去長得不一樣」。安裝點只有 main.js 一處。
+  terrain.inBorderBand = null;
 
   await onProgress?.(0.02, '規劃兵線淨空走廊…');
   const naturePromise = loadNatureModels(season);   // Quaternius 植被:與散佈並行載入
@@ -9882,6 +9892,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
   group.userData.blockers = blockers;   // 建物碰撞柱(main.js → terrain.blockers → game.js _collide)
   // 立體交通走廊(隧道全段 + 橋樑走廊):main.js 上傳伺服器 → sim 清除走廊內第三方障礙/地雷
   group.userData.gradeCorridors = gradeCorridors;
+  // 分界線帶遮罩(2026-08-13):main.js → terrain.inBorderBand → terrainEnvCode。
+  // **只交出來,不在這裡裝上去** —— 裝了就是建圖期的循環相依(見開頭那一段的清空)
+  group.userData.bandDryAt = ground.bandDryAt;
   group.userData.stats = {
     veg: placed,
     giantTrees,
