@@ -22,6 +22,7 @@ import { existsSync } from 'node:fs';
 import {
   beaconsPure, beaconsSrc, partLibs, libDescs as collectLibDescs, bioLibDescs, megaLibDescs, bldLibDescs,
   fbEnvelope, parseGlb, nodeExtent, nodeProfile, uvBandStats, glbPath, triBudget,
+  meshFaces, flatWalls, wallFlatness,
 } from './parts_src.mjs';
 
 let pass = 0, fail = 0;
@@ -43,6 +44,18 @@ for (const d of all) {
 }
 
 const budget = triBudget();
+
+/**
+ * 「平整」那一條的規格(2026-08-13;`families.building.planar_spec` 是唯一真相 ——
+ * 匯出端 `normalize_parts.py` 的 `PLANAR_*` 與 `--uvbands` 第 5/6 欄吃的是同一份)。
+ * `off` 是跨距的比例 ⇒ 逐節點量一次跨距才算得出來。規格缺席 ⇒ 回 null = 這道閘不生效。
+ */
+function flatSpec(node) {
+  const ps = budget?.families?.building?.planar_spec;
+  if (!ps?.flat_deg) return null;
+  const { span } = meshFaces(node);
+  return { deg: ps.deg, off: span * ps.off_f, flatDeg: ps.flat_deg, minF: ps.min_f, wallNy: ps.wall_ny };
+}
 
 // biomes 原文裡的 `lib:` 筆數 MUST 與可執行零件表解析到的相同 —— 對不上代表有 lib 列住在
 // 樁餵不進去的表(如 GIANT_DECO 直接用 THREE.TorusGeometry)⇒ 那一列從來沒被驗過(不准靜默跳過)
@@ -105,7 +118,10 @@ for (const gp of targets) {
       const plainF = spec.plain_band ?? 0;
       const minz = spec.roof_minz ?? 0.30;
       const wallNy = spec.wall_ny ?? 0.15;
-      const st = uvBandStats(node, minz, wallNy);
+      // 2026-08-13:窗牆帶的第二個條件「完全平整」。規格住 `planar_spec`(匯出端的
+      // `normalize_parts.py --uvbands` 第 5/6 欄吃同一份)⇒ 缺席就退回純傾角分帶。
+      const flat = flatSpec(node);
+      const st = uvBandStats(node, minz, wallNy, flat);
       ok(!!st, `${tag}:有 UV(整棟量體是唯一吃貼圖的桶;沒有 UV = 整棟採到一個 texel 的純色板)`);
       if (st) {
         // 方向:牆面的 v MUST 隨高度遞增。glTF 的 UV 原點在左上、Blender 在左下 ⇒ 匯出端
@@ -116,15 +132,30 @@ for (const gp of targets) {
           ok(st.upMaxV <= bandF + 1e-3, `${tag}:朝上面收在屋頂帶內(v 上界 ${st.upMaxV.toFixed(3)} ≤ ${bandF})`);
           ok(st.wallMinV >= wallLo - 1e-3, `${tag}:窗牆面不踩進前兩帶(v 下界 ${st.wallMinV.toFixed(3)} ≥ ${wallLo.toFixed(3)})`);
           // 帶寬是**推導值**(三帶 texel 密度相同):量出來的比例要對得上宣告的那個數字。
-          // 名冊平均 ⇒ 逐顆容差放到 0.06(舊制兩顆同族時 0.03;三顆的 mass 桶散度較大)
-          ok(Math.abs(st.parity - bandF) <= 0.06,
-            `${tag}:屋頂帶寬 ≈ 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ 0.06)`);
+          // 名冊平均 ⇒ 逐顆容差取量測檔那一份(屋頂 `band_tol` / 素牆 `plain_tol`;素牆那條
+          // 放寬的理由住 `mass.measured_uv` 的 mass_a 那一段 —— 那是節點品質的量測)。
+          const pspec = budget.families.building.profile_spec || {};
+          const tolB = pspec.band_tol ?? 0.06, tolP = pspec.plain_tol ?? 0.06;
+          ok(Math.abs(st.parity - bandF) <= tolB,
+            `${tag}:屋頂帶寬 ≈ 朝上面積佔比(實測 ${st.parity.toFixed(3)} vs 宣告 ${bandF},差 ${Math.abs(st.parity - bandF).toFixed(3)} ≤ ${tolB})`);
           if (plainF > 0) {
-            // 素牆帶(2026-08-12:「窗只貼垂直平整的牆」)—— 傾斜/朝下的面全部收在中間那一條
+            // 素牆帶(2026-08-12「窗只貼垂直平整的牆」;2026-08-13 起再收「近垂直但不平整」)
             ok(st.tiltMinV >= bandF - 1e-3 && st.tiltMaxV <= wallLo + 1e-3,
-              `${tag}:傾斜/朝下面收在素牆帶內(v ∈ [${st.tiltMinV.toFixed(3)}, ${st.tiltMaxV.toFixed(3)}] ⊆ [${bandF}, ${wallLo.toFixed(3)}])`);
-            ok(Math.abs(st.plainParity - plainF) <= 0.06,
-              `${tag}:素牆帶寬 ≈ 傾斜面積佔比(實測 ${st.plainParity.toFixed(3)} vs 宣告 ${plainF},差 ${Math.abs(st.plainParity - plainF).toFixed(3)} ≤ 0.06)`);
+              `${tag}:傾斜/朝下/不平整的面收在素牆帶內(v ∈ [${st.tiltMinV.toFixed(3)}, ${st.tiltMaxV.toFixed(3)}] ⊆ [${bandF}, ${wallLo.toFixed(3)}])`);
+            ok(Math.abs(st.plainParity - plainF) <= tolP,
+              `${tag}:素牆帶寬 ≈ 素牆面積佔比(實測 ${st.plainParity.toFixed(3)} vs 宣告 ${plainF},差 ${Math.abs(st.plainParity - plainF).toFixed(3)} ≤ ${tolP})`);
+            // **這一輪的驗收尺**(2026-08-13):相鄰近垂直面之間夾角落在 (0.5°, deg] 的面積
+            // 佔比 = 使用者說的「不平整的多塊法線角小的平面牆」,MUST 已經被整平掉。
+            // 門檻取整平前的實測下界(0.526)—— 沒跑過 `--replanar` 的節點會停在那個量級。
+            if (flat) {
+              const { F } = meshFaces(node);
+              const wf = wallFlatness(F, flat.deg, flat.wallNy);
+              const fw2 = flatWalls(F, flat, node);
+              ok(wf.small <= 0.45,
+                `${tag}:近垂直面已合併整平(法線角小的相鄰對佔 ${(wf.small * 100).toFixed(1)}% ≤ 45%;整平前五顆是 52.6~64.1%)`);
+              ok(fw2.flatA / Math.max(fw2.wallA, 1e-9) >= 0.60,
+                `${tag}:近垂直面裡真的平整的 ${(fw2.flatA / fw2.wallA * 100).toFixed(1)}% ≥ 60%(整平前 53.9~90.2%)`);
+            }
           }
         } else {
           ok(st.upMaxV > 0.5, `${tag}:沒有屋頂帶(朝上面 v 上界 ${st.upMaxV.toFixed(3)})`);
@@ -137,12 +168,20 @@ for (const gp of targets) {
     //    這一段就是那道閘:逐段比對宣告與實測,並驗兩條設計不變式。
     if (budget?.families?.building?.[kind]?.profile && !seen.has(`prof:${name}`)) {
       const ps = budget.families.building.profile_spec;
-      const mea = nodeProfile(node, { bands: ps.bands, maxSlabs: ps.slabs });
+      const mea = nodeProfile(node, { bands: ps.bands, maxSlabs: ps.slabs, flat: flatSpec(node) });
       ok(!!prof, `${tag}:名冊有宣告剖面(缺 = 碰撞柱退回整顆方盒 = 這一輪要修的那個東西)`);
       if (prof && mea) {
         const same = prof.length === mea.slabs.length
-          && prof.every((s, i) => s.every((v, j) => Math.abs(v - mea.slabs[i][j]) <= 1e-3));
+          && prof.every((s, i) => s.length === mea.slabs[i].length
+            && s.every((v, j) => Math.abs(v - mea.slabs[i][j]) <= 1e-3));
         ok(same, `${tag}:宣告剖面 = 實測剖面(${prof.length} 段;實測 ${JSON.stringify(mea.slabs)})`);
+        // **第五欄 = 招牌落點的資格**(2026-08-13)。宣告值缺席不是「放行」而是「這一顆
+        // 從來沒被量過」—— 消費端拿不到就一律放行,於是牌子照樣掛在尖塔前面的空氣裡。
+        ok(!flatSpec(node) || prof.every((s) => s.length > 4),
+          `${tag}:剖面逐段都宣告了平整垂直牆佔比(招牌落點吃它;缺 = 消費端一律放行)`);
+        const okSlab = prof.filter((s) => (s[4] ?? 1) >= ps.sign_flat_min).length;
+        ok(!ps.sign_flat_min || okSlab > 0,
+          `${tag}:至少有一段掛得了招牌(≥ ${ps.sign_flat_min} 的段 ${okSlab}/${prof.length};全不合格 = 這一顆整棟不掛牌)`);
         // 「盒恆包住網格」——「演出 ⊆ 碰撞盒」(A44 ③)在這一族的兌現:少算一格的代價是
         // 「看得見的牆打得穿」。驗最寬那一段的外接半徑蓋得過整顆的實測徑向。
         const hw = Math.max(...prof.map((s) => s[2])), hd = Math.max(...prof.map((s) => s[3]));

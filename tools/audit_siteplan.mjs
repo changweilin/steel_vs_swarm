@@ -35,7 +35,9 @@ import { readSrc } from './audit_src.mjs';
 import { objHeightMax, objScaleFit, WORLD_EDGE, edgeWallInsetM, edgeWallDeepM } from '../public/js/data.js';
 // AI 零件庫的消費端讀取縫(入庫閘與 3D 對照台同一支;這裡驗的是「接線有沒有漏」,
 // 不是外廓 —— 外廓歸 intake_parts.mjs,兩邊 MUST 吃同一份解析)
-import { bioLibDescs, partLibs } from './ai3d/parts_src.mjs';
+import { bioLibDescs, partLibs, parseGlb } from './ai3d/parts_src.mjs';
+// 窗格貼齊面板的**行為直測**(⑥-d):規則本體零 import ⇒ 這裡直接載真品跑一次
+import * as WALLPANEL from '../public/js/wallpanel.js';
 
 const BREAK_LINE = process.argv.includes('--break-line');
 const BREAK_SHY = process.argv.includes('--break-shy');
@@ -52,6 +54,8 @@ const BREAK_MASS2 = process.argv.includes('--break-mass2');
 //   --break-prof  碰撞柱退回整顆方盒(剖面白量了)⇒ 碰撞剖面四條 MUST 紅字
 //   --break-fill  實例縮放退回直接吃 (w,h,d) 且拿掉拉伸夾制 ⇒ 尺寸貼合那一條 MUST 紅字
 //   --break-glass 窗格覆寫整批拿掉 ⇒ 間距種類與玻璃牆那兩條 MUST 紅字
+//   --break-flat  平整那一條退回上一輪(窗牆帶只看傾角 / 招牌不篩平整段)⇒ ⑥-c 四條 MUST 紅字
+const BREAK_FLAT = process.argv.includes('--break-flat');
 const BREAK_PROF = process.argv.includes('--break-prof');
 const BREAK_FILL = process.argv.includes('--break-fill');
 const BREAK_GLASS = process.argv.includes('--break-glass');
@@ -652,10 +656,13 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           BufferGeometry: class { constructor() { this.a = {}; } setAttribute(k, v) { this.a[k] = v; } setIndex(i) { this.idx = i; } computeBoundingSphere() {} },
           Float32BufferAttribute: class { constructor(arr) { this.array = arr; } },
         };
-        const UVB = { mass: { roof: 0.125, plain: 0.176 }, masslow: { roof: 0.216, plain: 0.262 }, MINZ: 0.30, WALL_NY: 0.15 };
+        const UVB = { mass: { roof: 0.128, plain: 0.275 }, masslow: { roof: 0.203, plain: 0.259 },
+          MINZ: 0.30, WALL_NY: 0.15, FLAT_DEG: 6, FLAT_MIN: 0.005 };
         let g = null, err = null;
-        const prof = { slabs: [[-0.475, -0.1187, 0.378, 0.4198], [-0.1187, 0.1187, 0.3044, 0.2268],
-          [0.1187, 0.4156, 0.2978, 0.1715], [0.4156, 0.475, 0.1347, 0.0813]] };
+        // 名冊的第五欄(平整垂直牆佔比)對 `profGeo` 無語意 —— 它只讀前四欄。刻意帶著它跑,
+        // 驗的是「多一欄不會把保險絲幾何算歪」(消費端 MUST 只解構前四欄)。
+        const prof = { slabs: [[-0.475, -0.1187, 0.376, 0.4093, 0.5931], [-0.1187, 0.1187, 0.3026, 0.242, 0.5803],
+          [0.1187, 0.4156, 0.303, 0.1914, 0.3589], [0.4156, 0.475, 0.1222, 0.0313, 0.0416]] };
         try {
           g = new Function('THREE', 'MASS', `${seg}\n return profGeo;`)(THREE, { UVB })(prof, UVB.mass);
         } catch (e) { err = e.message; }
@@ -710,7 +717,7 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
       //   由 intake_parts 直接量**(那才是節點真的長什麼樣,指令打對了沒不算數)。
       {
         const bioR = BREAK_ROOF
-          ? bioC.replace('    masslow: { roof: 0.216, plain: 0.262 },', '    masslow: { roof: 0.2, plain: 0.262 },')
+          ? bioC.replace('    masslow: { roof: 0.203, plain: 0.259 },', '    masslow: { roof: 0.2, plain: 0.259 },')
             .replace('pd.style, pd.wall,\n              pd.roof, pd.rf, MASS.UVB.masslow, pd.win)', 'pd.style, pd.wall)')
           : bioC;
         const budHi = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.mass;
@@ -747,6 +754,128 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         ok(pit.length === 6 && new Set(pit).size === 6,
           `斜頂六款的「牆 × 屋頂形式」兩兩不同(${pit.join('、')})`);
       }
+      // ⑥-c **平整那一條**(2026-08-13 使用者「建築外部不平整的多塊法線角小的平面牆合併平整」
+      //      +「密集窗戶圖層與外掛招牌只貼在垂直地面且完全平整的平面牆」)。
+      //      三個消費端的門檻 MUST 與量測檔同一份;成品 GLB 那一半由 intake_parts 直接量。
+      {
+        const bioF = BREAK_FLAT
+          // 壞版 = 上一輪:窗牆帶只看傾角、招牌不篩平整段
+          ? bioC.replace(/const okBox = bldFaceList\(f, b, gy\);\n\s+if \(!okBox\.length\) return null;/,
+            'const okBox = f.prof.slabs.map((s) => slabBox(f, b, s, gy));')
+            .replace('    FLAT_DEG: 6,\n', '')
+            .replace(/(\[-?[\d.]+, -?[\d.]+, [\d.]+, [\d.]+), [\d.]+\]/g, '$1]')
+          : bioC;
+        const ps = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.planar_spec;
+        const pspec = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.profile_spec;
+        const FD = bioF.match(/FLAT_DEG: ([\d.]+),\s*\r?\n\s*FLAT_MIN: ([\d.]+),/);
+        ok(!!FD && +FD[1] === ps.flat_deg && +FD[2] === ps.min_f && ps.flat_deg < ps.deg,
+          `平整門檻與 tri_budget 的 planar_spec 同一份(FLAT_DEG ${FD?.[1]} / FLAT_MIN ${FD?.[2]};`
+          + `MUST ≪ 分群容差 ${ps.deg}° —— 同一個數字這道閘就退化成「有分到群就算平」)`);
+        const SF = bioF.match(/SIGN_FLAT_MIN: ([\d.]+),/);
+        ok(!!SF && +SF[1] === pspec.sign_flat_min,
+          `招牌落點的平整門檻與量測檔同一份(SIGN_FLAT_MIN ${SF?.[1]} = profile_spec.sign_flat_min)`);
+        // 名冊逐段 MUST 帶第五欄 —— 缺席時消費端一律放行 ⇒ 牌子照樣掛在尖塔前面的空氣裡
+        // 取值範圍 MUST 收在 BLD_LIB 這一塊:biomes.js 別處也有四個數字的陣列字面量
+        const libBlk = bioF.slice(bioF.indexOf('const BLD_LIB = {'), bioF.indexOf('const bldGeo = '));
+        const rows = [...libBlk.matchAll(/\[(-?[\d.]+), (-?[\d.]+), ([\d.]+), ([\d.]+)(, ([\d.]+))?\]/g)];
+        const five = rows.filter((m) => m[5] !== undefined).length;
+        ok(rows.length >= 20 && five === rows.length,
+          `BLD_LIB 剖面逐段都帶第五欄(平整垂直牆佔比;${five}/${rows.length} 段)`);
+        // 篩選只有一份(兩個招牌消費端同吃);挑不到就回 null = 這一棟不掛牌,
+        // **MUST NOT** 退回方盒側面 —— 那正是「招牌懸空」那個成因本體
+        ok(/const bldFaceList = \(f, b, gy\) =>\s*\r?\n\s*f\.prof\.slabs\.map\(\(s\) => slabBox\(f, b, s, gy\)\)\.filter\(\(k\) => k\.wall >= MASS\.SIGN_FLAT_MIN\);/.test(bioF)
+          && /const okBox = bldFaceList\(f, b, gy\);/.test(bioF)
+          && /if \(!okBox\.length\) return null;/.test(bioF)
+          && /if \(fit\) bldFaces\.set\(b, bldFaceList\(fit, b, gy\)\);/.test(bioF),
+          '「掛得了牌的那幾段」只有 bldFaceList 一份篩選,兩個招牌消費端同吃;一段都不合格 ⇒ 回 null');
+        ok(/if \(!resolveName\(b\.tags\) && !\(fit && !fw\)\) \{/.test(bioF)
+          && /if \(!faces\.length\) continue;/.test(bioF),
+          '兩個招牌消費端都會在「挑不到平整段」時放棄這一棟(MUST NOT 退回 b.w/2、b.d/2)');
+        // ⑥-c2 **窗格輪廓**(使用者「窗戶圖層輪廓都太模糊」):畫進去就要是硬邊。
+        const fxF = bioF.slice(bioF.indexOf('function facadeTex('), bioF.indexOf('// 一般建物外牆色盤'));
+        ok(/const snap = \(x, y, w, h\) => \{/.test(fxF) && /Math\.max\(1, R\(x \+ w\) - x0\)/.test(fxF)
+          && /const pane = \(x, y, w, h\) => \{/.test(fxF) && /cx\.fillStyle = WIN_INK;/.test(fxF),
+          '窗格邊界對齊整數 texel + 補一道窗框(Canvas2D 對非整數 fillRect 會反鋸齒 ⇒ NearestFilter 把那條漸層原封不動放大)');
+        ok(/t\.anisotropy = FACADE_PX\.ANISO;/.test(fxF) && /t\.magFilter = THREE\.NearestFilter;/.test(fxF),
+          '立面貼圖同時設 NearestFilter(放大)與 anisotropy(縮小;立面幾乎永遠是掠射角)');
+        // 自發光層 MUST 吃 `pane` 回傳的**同一組**座標:兩層各自 round 會差半個 texel
+        ok(!/ex\.fillRect\(x, y, w, h\)/.test(fxF)
+          && (fxF.match(/ex\.fillRect\(px, py, pw, ph\)/g) || []).length >= 2,
+          '夜間自發光吃窗格 snap 後的同一組座標(各自 round 會讓亮的那一塊與窗錯開一條邊)');
+      }
+      // ⑥-d **窗格貼齊面板**(2026-08-13 使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉
+      //      的時候也不渲染」)。規則本體在 `wallpanel.js`(零 import、離線工具吃同一支);
+      //      這裡驗接線與三條不變式,**行為**由下面的直測跑真的一次。
+      {
+        const wpSrc = readSrc('public', 'js', 'wallpanel.js');
+        ok(!/^\s*import\s/m.test(wpSrc),
+          'wallpanel.js 零 import(離線工具與遊戲端吃同一份面板定義;抄第二份 = 兩邊切出不同的牆)');
+        const ps = JSON.parse(readSrc('tools', 'ai3d', 'tri_budget.json')).families.building.planar_spec;
+        const PN = bioC.match(/PANEL: \{ DEG: ([\d.]+), OFF_F: ([\d.]+), WALL_NY: ([\d.]+), FLAT_DEG: ([\d.]+), MIN_F: ([\d.]+) \}/);
+        ok(!!PN && +PN[1] === ps.deg && +PN[2] === ps.off_f && +PN[3] === ps.wall_ny
+          && +PN[4] === ps.flat_deg && +PN[5] === ps.min_f,
+          `面板門檻與 tri_budget 的 planar_spec 同一份(${PN?.slice(1, 6).join(' / ')})`);
+        // 幾何/材質/instance 分組 MUST 不動 —— 只換 uv;沒有跨面板共用頂點要拆的話,
+        // 連 position/normal/index 都沿用**同一份** BufferAttribute(不是 clone)
+        ok(/im\.geometry = alignedGeo\(im\.geometry, g\.key, g\.grid\);/.test(bioC)
+          && /g2\.setAttribute\('position', c\.split \? new THREE\.Float32BufferAttribute\(c\.pos, 3\) : geo\.attributes\.position\);/.test(bioC)
+          && /g2\.setIndex\(c\.split \? new THREE\.BufferAttribute\(c\.idx, 1\) : geo\.index\);/.test(bioC)
+          && !/geo\.clone\(\)/.test(bioC),
+          '對齊只換 uv(沒有頂點要拆就連 position/normal/index 都沿用同一份 ⇒ draw call、三角形、分組逐位元不動)');
+        // 斜牆的面板可以比投影軸還寬 ⇒ u 有機會 > 1,立面貼圖因此 MUST 橫向環繞;
+        // **縱向 MUST 維持 clamp** —— v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面
+        const fxW = bioC.slice(bioC.indexOf('function facadeTex('), bioC.indexOf('const PALETTE = {'));
+        ok(/t\.wrapS = THREE\.RepeatWrapping;/.test(fxW) && !/wrapT/.test(fxW),
+          '立面貼圖橫向環繞、縱向維持 clamp(v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面)');
+        // **行為直測**:真的切一次面板、算一次格數(離線讀原文看不出「格數會不會 round 成 0」)
+        {
+          const W = WALLPANEL;
+          const nodes = parseGlb('public/assets/models/parts/building.glb');
+          let panelN = 0, wholeOK = true, tooSmall = 0, spanOK = true, splitN = 0, vLo = 1, vHi = 0;
+          for (const [nm, nd] of nodes) {
+            if (!nm.startsWith('mass')) continue;
+            const r0 = W.wallPanels(nd.pos, nd.idx, W.PANEL);
+            const sp = W.splitByPanel({ pos: nd.pos, uv: new Float32Array(nd.pos.length / 3 * 2) }, nd.idx, r0.faceOf);
+            const r = { ...r0, ...sp };
+            splitN += sp.split;
+            const hx = Math.max(r.hi[0] - r.lo[0], r.hi[2] - r.lo[2]) / 2, hy = (r.hi[1] - r.lo[1]) / 2;
+            panelN += r.panels.length;
+            for (const [cols, rows] of [[3, 1], [5, 9], [7, 26], [10, 41]]) {
+              const cells = W.panelCells(r.panels, { cols, rows, hx, hy });
+              tooSmall += cells.filter((c) => !c).length;
+              // 格數 MUST 是整數且 ≥1 —— 這一條就是「不畫半扇窗」的**構造保證**
+              wholeOK = wholeOK && cells.every((c) => !c || (Number.isInteger(c.k) && Number.isInteger(c.m) && c.k >= 1 && c.m >= 1));
+              const uv = W.panelGridUV(r.pos, r.idx, r.uv, r.panels, r.faceOf,
+                { cols, rows, roof: 0.128, plain: 0.275, hx, hy });
+              // 逐面板量 u/v 的實得跨距:**u 跨距 MUST 是 1/cols 的整數倍**(= 面板兩側的
+              // 邊界恰好落在格線上 = 不會有被裁一半的窗),v 跨距 MUST 是整數列
+              const uR = r.panels.map(() => [Infinity, -Infinity]), vR = r.panels.map(() => [Infinity, -Infinity]);
+              for (let t = 0; t < r.faceOf.length; t++) {
+                const pi = r.faceOf[t];
+                if (pi < 0) continue;
+                for (let j = 0; j < 3; j++) {
+                  const vi = r.idx[t * 3 + j];
+                  uR[pi][0] = Math.min(uR[pi][0], uv[vi * 2]); uR[pi][1] = Math.max(uR[pi][1], uv[vi * 2]);
+                  vR[pi][0] = Math.min(vR[pi][0], uv[vi * 2 + 1]); vR[pi][1] = Math.max(vR[pi][1], uv[vi * 2 + 1]);
+                }
+              }
+              cells.forEach((c, pi) => {
+                if (!c || !Number.isFinite(uR[pi][0])) return;
+                const du = (uR[pi][1] - uR[pi][0]) * cols, dv = (vR[pi][1] - vR[pi][0]) / (1 - 0.128 - 0.275) * rows;
+                if (Math.abs(du - Math.round(du)) > 1e-4 || Math.abs(dv - Math.round(dv)) > 1e-4) spanOK = false;
+                vLo = Math.min(vLo, vR[pi][0]); vHi = Math.max(vHi, vR[pi][1]);
+              });
+            }
+          }
+          ok(panelN > 20 && wholeOK,
+            `逐面板的格數恆為 ≥1 的整數(${panelN} 片面板 × 4 種網格)`);
+          ok(spanOK,
+            'u 跨距恆為 1/cols 的整數倍、v 跨距恆為整數列 ⇒ **面板兩側的邊界恆落在格線上 = 不會有被裁一半的窗**');
+          ok(tooSmall > 0, `放不下一整格的面板會被擋掉(4 種網格合計 ${tooSmall} 片改吃素牆帶)`);
+          ok(vLo >= 0.128 + 0.275 - 1e-6 && vHi <= 1 + 1e-6,
+            `窗格的 v 恆收在窗牆帶內([${vLo.toFixed(3)}, ${vHi.toFixed(3)}] ⊆ [0.403, 1];溢出就是窗印到素牆/屋頂帶上)`);
+        }
+      }
       // ⑥-b **窗戶圖層間距逐款不同 + 幾乎無間距的玻璃牆**(2026-08-12 使用者定案)。
       //     舊制只有兩組窗格幾何(帷幕 0.86×0.62、其餘一律 0.52×0.48)⇒ 十六款樓的窗間距
       //     只有兩種,一整條街讀起來是同一張貼圖。層高本身仍夾在 STOREY 帶內(2026-08-09
@@ -761,7 +890,8 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
           `窗的高佔比逐款不同(${wins.length} 款、${new Set(wins).size} 種間距;舊制只有 2 種)`);
         const glass = (bioG.match(/style: 'glass'/g) || []).length;
         const fxG = bioG.slice(bioG.indexOf('function facadeTex('), bioG.indexOf('// 一般建物外牆色盤'));
-        ok(glass >= 1 && /style === 'glass'/.test(fxG) && /cx\.fillRect\(0, 12, W, WW - 26\);/.test(fxG),
+        ok(glass >= 1 && /style === 'glass'/.test(fxG)
+          && /const gy0 = 12, gh = WW - 26;/.test(fxG) && /cx\.fillRect\(0, gy0, W, gh\);/.test(fxG),
           `幾乎無間距的玻璃牆是一種立面而不是一組參數(${glass} 款走 glass:整面玻璃 + 髮絲框,沒有裙板帶)`);
         // 覆寫 MUST **置中**:給了高卻讓窗黏在上緣的話,窗越高裙板就越偏,而使用者要的正是
         // 「間距不一樣」而不是「窗往上跑」
@@ -834,7 +964,10 @@ console.log('\nⅤ 消費端單一縫(biomes.js)');
         ok((bioC.match(/function facadeRows\(/g) || []).length === 1
           && /const rowsOf = \(t\) => facadeRows\(t\.bh \?\? t\.h, commercial\);/.test(bioC)
           && /bh: b\.h,/.test(bioC)
-          && (bioC.match(/rowsOf\(/g) || []).length === 3
+          // 消費端家數會隨功能長(2026-08-13 的窗格對齊又多兩處)⇒ 釘的是**沒有第二條取值路**:
+          // `facadeRows(` 只准出現在定義、`facadeStyle` 的帶位、與 `rowsOf` 這三處
+          && (bioC.match(/facadeRows\(/g) || []).length === 3
+          && (bioC.match(/rowsOf\(/g) || []).length >= 3
           && /facadeTex\(`\$\{fd\.key\}r\$\{rows\}\$\{band \? 'b' : ''\}`/.test(bioC) && /facadeTex\(`\$\{pd\.key\}r\$\{rw\}`/.test(bioC),
           '列數只有 facadeRows 一份、逐件經 rowsOf(庫節點吃真樓高 bh)、貼圖快取鍵帶列數與帶位');
         // 舊制退場:款表不再帶 rows、樓高分桶表不得復辟

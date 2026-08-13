@@ -128,9 +128,11 @@ export function slotUv(slot, budget = triBudget()) {
 /**
  * 這一格追加一顆時要下給 `normalize_parts.py` 的旗標(不含 `--base`/`--out`,那是呼叫端的事)。
  * UV 那幾支的形式由 `slotUv` 決定:`boxup` ⇒ `--boxuv <node>`;`uvbands`(2026-08-12,
- * 三帶:屋頂 / 素牆 / 窗牆)⇒ `--uvbands <node>=<roof>|<plain>|<minz>|<wall_ny>`;
- * `roofband` 是它的兩帶前身,保留可用。數字一律取量測檔那一份(與 intake 驗的是同一份,
- * 抄第二份 = 匯出端與驗收端對同一顆節點用兩組帶寬,而兩邊都不會報錯)。
+ * 三帶:屋頂 / 素牆 / 窗牆)⇒
+ * `--uvbands <node>=<roof>|<plain>|<minz>|<wall_ny>|<flat_deg>|<flat_min>`(後兩欄 2026-08-13
+ * 加:窗牆帶還要**完全平整**);`roofband` 是它的兩帶前身,保留可用。數字一律取量測檔
+ * 那一份(與 intake 驗的是同一份,抄第二份 = 匯出端與驗收端對同一顆節點用兩組帶寬,
+ * 而兩邊都不會報錯)。
  */
 export function normalizeArgs(slot, nodeName, srcGlb, budget = triBudget()) {
   const cap = slotTriCap(slot, budget);
@@ -141,7 +143,9 @@ export function normalizeArgs(slot, nodeName, srcGlb, budget = triBudget()) {
   const uv = slotUv(slot, budget);
   const b = budget?.families?.[slot.budgetFam]?.[slot.budgetKind];
   if (uv === 'uvbands') {
-    args.push('--uvbands', `${node}=${b.roof_band}|${b.plain_band}|${b.roof_minz ?? 0.30}|${b.wall_ny ?? 0.15}`);
+    const ps = budget?.families?.building?.planar_spec;
+    args.push('--uvbands', `${node}=${b.roof_band}|${b.plain_band}|${b.roof_minz ?? 0.30}|${b.wall_ny ?? 0.15}`
+      + `|${ps?.flat_deg ?? 0}|${ps?.min_f ?? 0.005}`);
   } else if (uv === 'roofband') args.push('--roofband', `${node}=${b.roof_band}|${b.roof_minz ?? 0.30}`);
   else if (uv) args.push('--boxuv', node);
   return args;
