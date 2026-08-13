@@ -4410,12 +4410,15 @@ export class BattleClient {
         starburst(this.scene, this.effects, from.x, from.y, from.z, 1.0, hot);
         // 拋物線曳光:榴彈兵 + 坦克攻城砲(wid 'siege' 彈道學拋物線)—— 砲管仰角與弧線一致
         if (ev.kind === 'howitzer' || ev.kind === 'tank') this._arcTracer(from, to, col, ent);
-        else {
-          // NPC/塔/主堡曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
+        else if (ev.kind !== 'base') {
+          // NPC/塔曳光被大型障礙截斷(伺服器 LOS 已擋開火,這裡吸收兩端幾何不同形的殘餘穿幫)
           const clip = this._clipBeam(from, to);
           beamLine(this.scene, this.effects, from, clip.to, col, { ttl: 0.11, w: 0.06 });
           if (clip.cut) starburst(this.scene, this.effects, clip.to.x, clip.to.y, clip.to.z, 1.2, col);
         }
+        // 主堡是射後不理導彈(2026-08-13):這裡只留槍口焰 + 砲管轉向/後座,不畫瞬發曳光 ——
+        // 命中前的飛行路徑由快照 `sm`(this.missiles)另外同步一顆真的飛彈網格(_syncMissiles),
+        // 兩者疊在一起會變成「曳光線先到、飛彈本體後到」的穿幫。
       }
     } else if (ev.e === 'wave') {
       this.hud.feed?.(`⚔️ 第 ${ev.n} 波兵線出擊(含攻擊直升機)`);

@@ -3904,6 +3904,15 @@ export const STRUCT_W = { base: { r: 0, pen: 0 } };
   // 第三方伏擊飛彈的半徑接在 `GAME.AA_AMBUSH.DMG` 那一支 derive 的後面(它自己也是推導值,
   // 而 GAME 在本區塊之後才宣告)—— 搬上來只會拿到 TDZ。
 }
+// 主堡飛彈的飛行參數(2026-08-13 使用者定案「主堡改為射後不理導彈」):`sim._tickBaseGuns` 發射後
+// 走既有的 `this.missiles` / `_tickMissiles` / `_samBlast` 通用飛彈追蹤機制(與第三方防空伏擊飛彈
+// 同一條唯一縫,MUST NOT 另寫第二套追蹤/命中/失鎖邏輯)。飛行中可被玩家擊落(`hitMissile` 對
+// `this.missiles` 一視同仁、不分來源)—— 擊落 = 完全否定,不引爆(見 A45 ⑧ 註,MUST NOT 順手改成
+// 爆風)。傷害/射速/射程仍住 `UNITS.base`、爆風半徑/破甲仍住 `STRUCT_W.base`,這裡只帶飛彈本身的
+// 飛行/生存值(MUST NOT 複製第二份傷害)。`TTL_PAD` 是失鎖後直線飛行的緩衝秒數,飛彈自毀上限
+// = 射程 ÷ 飛行速度 + `TTL_PAD`(推導,MUST NOT 手寫成固定秒數 —— 射程一動,原本的固定值就會
+// 在飛彈根本還沒到最大射程時提前自毀)。
+export const BASE_MISSILE = { SPEED: 110, HP: 70, LAUNCH_Y: 20, TTL_PAD: 3 };
 
 // ---- 平民與間諜(2026-07-18;非兵線隨機放置的非戰鬥人員,DOTA 野區思想的變體)----
 // 每陣營在非兵線空曠處隨機生成 ~10 名(隨兵線數縮放),其中 SPY_RATE(1/10)為間諜(9:1)。

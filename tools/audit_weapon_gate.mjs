@@ -34,7 +34,7 @@ import {
   HGT_CHARS, HGT_STEP, HGT_LEVELS, hgtEnc, LOS, chaseCapS, LOCK,
   REACH_RULE, reachRule, trajClass, aoeClass, fanConeHalf, armingOf, lobMinRange, lanceR, LANCE,
   BALLISTIC, TARGET_CLASS, CHARACTERS, heroWeapon, hitR, MAPGEO, WEAPONS, UNITS,
-  GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT,
+  GAME, STRUCT_W, NPC_BLAST, npcBlastR, towerDps, BASE_DPS_MULT, BASE_MISSILE,
   evadable, evadeComped, evadeCompF, evadeExpF, EVASION, heroMobility, evasionMinSpeed, charKind,
   shotV0, shotFlightS, flightCapS, shotTrailS, SEEK, seekTurn,
   HIGH_SUP, highSupF, altTier, altDhMax,
@@ -1975,7 +1975,8 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
       '主堡自己的 range/dmg/rate 也是合併後那一份(否則賞金與圖鑑還在讀合併前的本體火砲)');
     ok(/if \(e\.cd === 0 && !u\.guns &&/.test(code(S)),
       '主迴圈對 `u.guns` 的單位不開火 ⇒ 合併後開火路徑只剩 `_tickBaseGuns` 一條');
-    // 行為直測:主堡在一個 tick 內只由砲管路徑開火,且發數 = 砲管數
+    // 行為直測:主堡射後不理導彈(2026-08-13 使用者定案)—— 開火即推入 this.missiles,
+    // 傷害 MUST NOT 在擊發那一 tick 就結算,飛彈飛到才由既有 _samBlast 引爆。
     const sim2 = new BattleSim(fakeCfg());
     purge(sim2);
     for (const e of [...sim2.ents.values()]) sim2.ents.delete(e.id);
@@ -1986,7 +1987,18 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
     const shots = sim2.events.filter((ev) => ev.e === 'shot' && ev.id === bs.id);
     ok(shots.length === g.n && shots.every((ev) => ev.gi != null),
       `主堡一輪開 ${shots.length} 發、全部來自砲管路徑(MUST = 砲管數 ${g.n};本體火砲那一支已不再開火)`);
-    ok(vv.hp < 1e7, '合併後的主堡火砲照樣打得到目標');
+    ok(sim2.missiles.length === g.n
+      && sim2.missiles.every((m) => m.tid === vv.id && m.dmg === g.dmg
+        && m.r === STRUCT_W.base.r && m.pen === (STRUCT_W.base.pen || 0) && m.range === g.range),
+      `射後不理:擊發即推入 this.missiles(${sim2.missiles.length} 發,dmg/半徑/破甲/射程皆吃既有 def,MUST NOT 複製第二份)`);
+    ok(vv.hp === 1e7, '飛彈還在飛:傷害 MUST NOT 在擊發那一 tick 就結算(與舊制即時 _blast 的差異)');
+    for (let i = 0; i < 20 && vv.hp >= 1e7; i++) sim2.tick(0.125);
+    ok(vv.hp < 1e7, '飛彈飛到後照樣打得到目標(既有 _samBlast 結算,與防空伏擊飛彈同一條)');
+    // 場上沒有第二個候選目標 ⇒ 標記目標死亡讓 _acquireTarget 之後恆挑不到人(不再有新飛彈補上),
+    // 這裡只等**這一輪已經在途**的飛彈清空 —— MUST NOT 卡精確 tick 數賭下一輪砲管冷卻的時間點。
+    vv.dead = true;
+    for (let i = 0; i < 20 && sim2.missiles.length > 0; i++) sim2.tick(0.125);
+    ok(sim2.missiles.length === 0, '命中後飛彈從 this.missiles 移除(不留殘骸)');
   }
   ok(!('r' in WEAPONS.rgun),
     '重型機槍 MUST NOT 有爆風 —— 動能武器不是爆炸傷害武器(名冊不是「全部都給」)');
@@ -2011,14 +2023,22 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   // 原文:每個消費端都接到既有的那一支,MUST NOT 各自寫第二份傷害
   ok(/const wd = WEAPONS\[u\.wid\] \|\| STRUCT_W\[e\.kind\]/.test(code(S)),
     '建築制式火砲走 STRUCT_W 這個 def 縫(傷害/射速/射程仍住 UNITS,MUST NOT 複製第二份)');
+  // 主堡射後不理導彈(2026-08-13):`_tickBaseGuns` MUST NOT 再直接呼叫 `_blast`,而是推入
+  // `this.missiles`(r/pen/dmg 皆讀既有 STRUCT_W.base/g,MUST NOT 手寫第二份),交給既有的
+  // `_tickMissiles`/`_samBlast` 通用飛彈機制結算 —— 與第三方防空伏擊飛彈同一條唯一縫。
   const guns = code(S.slice(S.indexOf('_tickBaseGuns(e, g, dt)')));
-  ok(/this\._blast\(e, STRUCT_W\.base,[\s\S]{0,120}?g\.dmg\)/.test(guns)
-    && !/this\._damage\(target, g\.dmg/.test(guns.slice(0, 1200)),
-  '主堡火砲走 _blast(舊制的單體 _damage MUST 已經不在)');
+  ok(!/this\._blast\(e, STRUCT_W\.base/.test(guns) && !/this\._damage\(target, g\.dmg/.test(guns.slice(0, 1200)),
+    '主堡火砲 MUST NOT 再即時結算(舊制的 _blast/_damage 單體直擊 MUST 已經不在)');
+  ok(/this\.missiles\.push\(\{[\s\S]{0,300}?r: STRUCT_W\.base\.r,[\s\S]{0,200}?\}\);/.test(guns)
+    && /dmg: g\.dmg, pen: STRUCT_W\.base\.pen \|\| 0/.test(guns),
+    '主堡火砲推入 this.missiles 吃既有 STRUCT_W.base(r/pen)與 g.dmg(MUST NOT 複製第二份)');
+  // _samBlast 一律讀飛彈自己的 m.r(2026-08-13 主堡飛彈化後不再只有防空伏擊一個來源,
+  // MUST NOT 假設固定常數 —— 那會讓非防空伏擊來源的飛彈半徑全部讀錯)。
   const mis = code(S.slice(S.indexOf('_samBlast(m, x, z, y')));
-  ok(/_blast\(by, \{ r: GAME\.AA_AMBUSH\.R, pen: m\.pen \|\| 0 \}/.test(mis)
-    && /r: GAME\.AA_AMBUSH\.R, side: m\.side, sam: true/.test(mis),
-  '伏擊飛彈的結算與演出取**同一個** GAME.AA_AMBUSH.R(舊制手寫 14 / 8,誰都對不上)');
+  ok(/_blast\(by, \{ r: m\.r, pen: m\.pen \|\| 0 \}/.test(mis) && /r: m\.r, side: m\.side, sam: true/.test(mis),
+    '飛彈的結算與演出取**同一個** m.r(舊制手寫 14 / 8,誰都對不上;現制固定常數也 MUST NOT 復辟)');
+  ok(/r: A\.R,/.test(code(S.slice(S.indexOf('_tickAmbush(dt) {'), S.indexOf('_tickRelays(dt) {')))),
+    '防空伏擊飛彈發射時把 GAME.AA_AMBUSH.R 明寫進 m.r(與主堡飛彈同一套欄位契約)');
   // 只掃 `_tickMissiles` 這一段:別處的 `r: 8` 是**攔截成功**的煙火(極音速飛彈被擊落刻意不引爆、
   // 玩家打掉來襲飛彈),那是「完全否定」的定案,MUST NOT 被這條順手改掉。
   const misTick = code(S.slice(S.indexOf('  _tickMissiles(dt) {'), S.indexOf('  _creepMul(side, lane)')));
@@ -2033,7 +2053,7 @@ sec('ⅩⅢ 爆炸傷害:閃避逐目標各自計算 + 「維持 DPS」的補償
   const a1 = sim._add({ kind: 'soldier', side: 'SWARM', x: 60, z: 0, y: 0, hp: 100000, maxHp: 100000 });
   const a2 = sim._add({ kind: 'soldier', side: 'SWARM', x: 60, z: GAME.AA_AMBUSH.R * BLAST.CORE * 0.9, y: 0, hp: 100000, maxHp: 100000 });
   sim.events.length = 0;
-  sim._samBlast({ byId: site.id, side: 'STEEL', dmg: GAME.AA_AMBUSH.DMG, pen: GAME.AA_AMBUSH.PEN },
+  sim._samBlast({ byId: site.id, side: 'STEEL', dmg: GAME.AA_AMBUSH.DMG, pen: GAME.AA_AMBUSH.PEN, r: GAME.AA_AMBUSH.R },
     a1.x, a1.z, 0, 0);
   ok(a1.hp < 100000 && a2.hp < 100000, '伏擊飛彈引爆同時傷到爆風內的兩名敵方');
   ok(sim.events.some((ev) => ev.e === 'boom' && ev.r === GAME.AA_AMBUSH.R),
