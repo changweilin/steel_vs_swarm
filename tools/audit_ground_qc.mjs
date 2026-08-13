@@ -4,6 +4,9 @@
 //     ④主散佈點陣走訪雙射(qStride⊥nCells 每格恰一次)⑤ink 全分離係數 > 邊緣交疊係數
 //     ⑥細節疏密調變總量守恆(E[0.35+1.3q]=1)
 //     ⑦規律結構都市規劃朝向(2026-07-29:gridA 主方位執行原文 + ink 恆對齊三段退避靜態規則)
+//     ⑧田塊對齊 + 田埂(2026-08-13 使用者「田與田之間沒有整齊對準,沒對準也可以但要使用田埂
+//       隔開」:家族延伸鄰塊尺寸依毗鄰軸反解、FARM_GAP = 2×BUND.HW 讓兩條埂在中線接上、
+//       斷面有外側垂直面且繞向正確、叢集 ≥ MIN_N 才畫)
 // node tools/audit_ground_qc.mjs
 'use strict';
 import { readSrc, grabFn } from './audit_src.mjs';
@@ -343,6 +346,121 @@ console.log('== ⑦ 規律結構都市規劃朝向(球場/操場/停車場/太�
   (bsrc.includes('const roadDirAt = (x, z, r2 = RD_R2)') && bsrc.includes('Math.ceil(Math.sqrt(r2) / RD_CELL)'))
     ? ok('biomes.js roadDirAt 半徑可覆寫且掃描窗由半徑推導(預設行為 = 舊版 span 2)')
     : bad('roadDirAt 半徑參數/掃描窗推導缺失');
+}
+
+// ==== ⑧ 田塊對齊 + 田埂(2026-08-13 使用者定案「修對齊 + 組合夠大片才加田埂」)====
+// 使用者原話:「地貌拼圖部分區塊沒有接得很好,例如田與田之間沒有整齊對準,**沒對準也可以
+// 但要使用田埂隔開**」。兩件事分開量:
+//   ㋐**對齊** —— 家族延伸的鄰塊尺寸依毗鄰軸反解(側向共用長邊 ⇒ 深度相等;前後共用短邊
+//     ⇒ 寬度相等)。舊制兩種情形都取 r2 = r,aspect 不同的鄰款(0.6~0.8)側向毗鄰時長邊
+//     差 14~33%,而既有的每一條斷言都全綠 —— 那就是「沒有整齊對準」的來源。
+//   ㋑**田埂** —— 跨在足跡邊界上、只往外長 `BUND.HW`,而家族延伸的間距 `FARM_GAP = 2×HW`
+//     是**推導**:兩塊正鄰位的田,兩條埂在小路中線恰好背靠背接上 = 一條連續的埂。這一條
+//     由「真的跑一次 emitBund,量兩塊的外緣有沒有碰到」證明,不是重述那個常數。
+//     斷面 MUST 有外側垂直面(少了它,掠射角就看穿一片浮空的土色薄片),繞向 MUST 讓
+//     埂頂朝 +y、垂直面朝外 —— 繞向寫反的症狀是整條埂變死黑,而所有數值斷言照樣全綠。
+console.log('\n== ⑧ 田塊對齊 + 田埂(執行原文)==');
+{
+  const gsrc = readSrc('public', 'js', 'ground.js');
+  const pick = (re, name) => {
+    const m = gsrc.match(re);
+    if (!m) { bad(`ground.js 抽不到 ${name} 原文(漂移,請同步稽核)`); return ''; }
+    return m[0].replace('export ', '');
+  };
+  const G = new Function([
+    pick(/export const BUND = \{[\s\S]*?\n\};/, 'BUND'),
+    pick(/export const FARM_GAP = .*$/m, 'FARM_GAP'),
+    pick(/function bundRing\(a, c, ns, nd\) \{[\s\S]*?\n\}/, 'bundRing'),
+    // 埂頂也要餵勾線用的地形法線(landNrmAt / pushLandN 皆純函式,照樣執行真品)
+    pick(/function landNrmAt\(hAt, x, z, d\) \{[\s\S]*?\n\}/, 'landNrmAt'),
+    pick(/function pushLandN\(b, hAt, x, z, d\) \{[\s\S]*?\n\}/, 'pushLandN'),
+    pick(/function emitBund\(b, terrain, x, z, r, rot, def, lift, sag\) \{[\s\S]*?\n\}/, 'emitBund'),
+  ].join('\n') + '\nreturn { BUND, FARM_GAP, bundRing, emitBund };')();
+  const EXT = pick(/const as1 = def\.aspect \|\| 0\.7[\s\S]*?rot2 = rot;/, '家族延伸 rect 分支');
+  const extFn = new Function('def', 'def2', 'r', 'rot', 'x', 'z', 'rnd', 'FARM_GAP',
+    `let nx2, nz2, r2, rot2;\n${EXT}\nreturn { nx2, nz2, r2, rot2 };`);
+
+  // ㋐ 對齊:水田(aspect 0.7)旁邊擺茶園(0.8)—— 舊制 r2 = r 會讓長邊差 14%
+  const PAD = { aspect: 0.7, rim: 0.5 }, TEA = { aspect: 0.8 }, R = 16;
+  const seq = (v) => { let i = 0; return () => v[i++]; };
+  const A = extFn(PAD, TEA, R, 0, 0, 0, seq([0.2, 0.2]), G.FARM_GAP);   // side = true, sgn = +1
+  const B = extFn(PAD, TEA, R, 0, 0, 0, seq([0.8, 0.2]), G.FARM_GAP);   // side = false(前後毗鄰)
+  const eq = (p, q) => Math.abs(p - q) < 1e-9;
+  eq(R * PAD.aspect, A.r2 * TEA.aspect)
+    ? ok(`側向毗鄰:鄰塊深度反解成一樣(${(R * PAD.aspect).toFixed(2)}m,舊制 ${(R * TEA.aspect).toFixed(2)}m 差 14%)`)
+    : bad('側向毗鄰的鄰塊深度沒有對齊(長邊仍錯開)');
+  eq(Math.abs(A.nx2) - R - A.r2, G.FARM_GAP)
+    ? ok('側向毗鄰的淨距恰為 FARM_GAP(偏移吃 r + r2,不是舊制的 2r)')
+    : bad(`側向毗鄰淨距 ${(Math.abs(A.nx2) - R - A.r2).toFixed(3)} ≠ FARM_GAP ${G.FARM_GAP}`);
+  (eq(B.r2, R) && eq(Math.abs(B.nz2) - R * PAD.aspect - B.r2 * TEA.aspect, G.FARM_GAP))
+    ? ok('前後毗鄰:共用短邊 ⇒ 寬度相等,淨距同樣恰為 FARM_GAP')
+    : bad('前後毗鄰的寬度或淨距不對');
+  eq(G.FARM_GAP, G.BUND.HW * 2)
+    ? ok(`FARM_GAP = 2 × BUND.HW(${G.FARM_GAP}m;推導不手寫 —— 兩條埂才接得上)`)
+    : bad('FARM_GAP 與 BUND.HW 脫鉤(改一個不會連動另一個)');
+
+  // ㋑ 田埂:真的跑一次 emitBund
+  const bkt = () => ({ pos: [], nrm: [], uv: [], col: [], idx: [], base: 0, lnrm: [] });
+  const T0 = { heightAt: () => 0, gridM: 8.5 };
+  const flat = () => 0;
+  const b1 = bkt();
+  G.emitBund(b1, T0, 0, 0, R, 0, PAD, 0.14, flat);
+  const L = b1.pos.length / 3 / 4;
+  (Number.isInteger(L) && L >= 16 && b1.idx.length === 12 * L && b1.base === 4 * L)
+    ? ok(`斷面四環 × ${L} 段(埂頂 + 外側垂直面兩條帶;頂點 ${4 * L}、三角 ${b1.idx.length / 3})`)
+    : bad(`田埂環數/索引數不對(頂點 ${b1.pos.length / 3}、索引 ${b1.idx.length})`);
+  // 繞向:埂頂恆朝 +y、垂直面恆水平朝外
+  let topBad = 0, wallBad = 0, wallN = 0;
+  for (let t2 = 0; t2 < b1.idx.length; t2 += 3) {
+    const P = [0, 1, 2].map((k) => {
+      const i = b1.idx[t2 + k] * 3;
+      return [b1.pos[i], b1.pos[i + 1], b1.pos[i + 2]];
+    });
+    const ux = P[1][0] - P[0][0], uy = P[1][1] - P[0][1], uz = P[1][2] - P[0][2];
+    const vx = P[2][0] - P[0][0], vy = P[2][1] - P[0][1], vz = P[2][2] - P[0][2];
+    const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx];
+    const nl = Math.hypot(...n) || 1;
+    if (t2 < b1.idx.length / 2) { if (n[1] / nl < 1e-6) topBad++; }
+    else {
+      wallN++;
+      const cx = (P[0][0] + P[1][0] + P[2][0]) / 3, cz = (P[0][2] + P[1][2] + P[2][2]) / 3;
+      if (Math.abs(n[1] / nl) > 1e-6 || n[0] * cx + n[2] * cz <= 0) wallBad++;
+    }
+  }
+  topBad === 0 ? ok('埂頂全部朝 +y(繞向寫反 = 整條埂變死黑,而數值斷言照樣全綠)')
+               : bad(`埂頂有 ${topBad} 個三角形朝下`);
+  (wallN > 0 && wallBad === 0) ? ok(`外側垂直面 ${wallN} 個三角形全部水平朝外(掠射角看不穿)`)
+                               : bad(`外側垂直面繞向/法線不對(${wallBad}/${wallN})`);
+  // 兩塊正鄰位:兩條埂的外緣在小路中線恰好接上(FARM_GAP = 2×HW 的行為證明)
+  const b2 = bkt();
+  G.emitBund(b2, T0, A.nx2, 0, A.r2, 0, TEA, 0.14, flat);
+  const maxX = Math.max(...Array.from({ length: b1.pos.length / 3 }, (_, i) => b1.pos[i * 3]));
+  const minX2 = Math.min(...Array.from({ length: b2.pos.length / 3 }, (_, i) => b2.pos[i * 3]));
+  eq(maxX, minX2)
+    ? ok(`兩塊正鄰位的埂在小路中線背靠背接上(x = ${maxX.toFixed(3)},合成一條連續的埂)`)
+    : bad(`兩條埂沒接上:A 外緣 ${maxX.toFixed(3)} vs B 外緣 ${minX2.toFixed(3)}`);
+  // 埂內緣 MUST 與田塊自己的外圈同高(rim):差一點就是田從埂底下戳出來
+  const rimY = 0.14 + PAD.rim;
+  const innerOk = Array.from({ length: L }, (_, k) => b1.pos[k * 3 + 1]).every((y) => eq(y, rimY));
+  innerOk ? ok(`埂內緣 dy = def.rim(${PAD.rim}m)⇒ 與田塊外圈同高,不開縫也不互戳`)
+          : bad('埂內緣高度與 def.rim 不符(田會從埂底下戳出來)');
+
+  // ---- 接線(執行原文)----
+  /const BUND_SUBS = new Set\(\[\.\.\.FAMS\.rectFarm, \.\.\.FAMS\.panFam\]\);/.test(gsrc)
+    ? ok('BUND_SUBS 由 FAMS 推導(手寫名冊會在新增地表時靜默過期)')
+    : bad('BUND_SUBS 不是從 FAMS 推導出來的');
+  /if \(BUND_SUBS\.has\(sub\)\) farmCluster\?\.push\(/.test(gsrc)
+    ? ok('只有農田/池區進田埂帳,且記帳與淘汰閘無關(共享 rnd 序列不動)')
+    : bad('田埂帳的入帳閘缺失');
+  /if \(farmCluster\.length >= BUND\.MIN_N\)/.test(gsrc)
+    ? ok(`「組合夠大片才加田埂」= 叢集 ≥ BUND.MIN_N(${G.BUND.MIN_N} 塊;孤田不圍埂)`)
+    : bad('田埂沒有叢集門檻(孤田也會被圍成花壇)');
+  ((gsrc.match(/withCluster\(/g) || []).length === 2)
+    ? ok('withCluster 恰兩個呼叫端(主迴圈的家族延伸 + 沿街陣列的每一條路)')
+    : bad(`withCluster 呼叫端數不對(${(gsrc.match(/withCluster\(/g) || []).length} 處)`);
+  (/map: borderTex\('fieldridge'\)/.test(gsrc) && (gsrc.match(/function emitBund/g) || []).length === 1)
+    ? ok("田埂畫筆走 borderTex('fieldridge') = 界線拼圖那一份 fieldpath(同一個縫,不另養一支)")
+    : bad('田埂另開了第二支夯土畫筆,或 emitBund 有第二份實作');
 }
 
 console.log(fail ? `\nFAIL(${fail} 項)` : '\nALL PASS');

@@ -11,7 +11,10 @@
 //   濕地   — 泥灘蘆葦 / 荷塘 / 魚塭
 // 雙層結構(2026-07-10 改制):
 //   底毯層 — 抖動網格把「全部陸地」鋪滿(不留衛星底圖空隙):角點以格點雜湊
-//            抖動且相鄰 cell 共用 → 水密無縫;地表種類由低頻雜訊分區指派成大片
+//            抖動且相鄰 cell 共用 → 水密無縫;**2026-08-13 起「畫什麼」與「畫在哪些三角形
+//            上」分家** —— 規劃格照舊(含抖動),發射改成逐地形四邊形認養主人格(emitCell
+//            檔頭)⇒ 皮的三角形 === 地形的三角形、共面、斜坡破圖恆 0,圖內底毯因此不再
+//            套貼合抬升;地表種類由低頻雜訊分區指派成大片
 //            連續區域(2026-08-12 改制:**顏色與花紋分家** —— 款(顏色)的取值點量化成
 //            選款區塊 carpetLotAt,同一種地貌裡至少走過一個 lot 才換色;變體(花紋)改由
 //            planCarpetVariants 逐格挑成「共邊同款恆不同」,同款異變體共用底色 baseFill
@@ -152,21 +155,24 @@ function vnoise(x, z, seed) {
 }
 
 // ---- 程序生成地表筆刷貼圖(固定種子;「地表#變體」為鍵快取共用)----
+// 季節只進**快取鍵**(bucket 鍵仍是 `sub#variant`)⇒ 一場戰鬥只有一個季節,draw call 不變;
+// 畫筆種子仍只由 `sub#variant` 導 ⇒ 同一塊田的壟溝/缺株位置四季不動,只有作物換了(§四季設計 ③)
 const _texCache = new Map();
-function groundTex(sub, variant, fit) {
+function groundTex(sub, variant, fit, season) {
   const key = `${sub}#${variant}`;
-  if (_texCache.has(key)) return _texCache.get(key);
+  const ck = `${key}@${season}`;
+  if (_texCache.has(ck)) return _texCache.get(ck);
   const S = 256;
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   let hs = 0;
   for (let i = 0; i < key.length; i++) hs = (hs * 31 + key.charCodeAt(i)) | 0;
-  PAINTERS[sub](cv.getContext('2d'), S, mulberry32(0x67D0 ^ hs));
+  PAINTERS[sub](cv.getContext('2d'), S, mulberry32(0x67D0 ^ hs), season);
   const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   // 鏡射重複:筆刷特徵跨磚無接縫(fit 型單張鋪滿,不重複)
   t.wrapS = t.wrapT = fit ? THREE.ClampToEdgeWrapping : THREE.MirroredRepeatWrapping;
-  _texCache.set(key, t);
+  _texCache.set(ck, t);
   return t;
 }
 
@@ -192,6 +198,18 @@ function baseFill(hex, rnd) {
   for (let k = 0; k < 3; k++) rnd();
   return `rgb(${hex >> 16 & 255},${hex >> 8 & 255},${hex & 255})`;
 }
+
+// ==== 農牧地表的四季設計(2026-08-13 使用者需求)====
+// 使用者原話:「田除了田也加入菜園/牧場/魚塭與果園等農牧區,**包含原本的田在內依四季不同
+// 而對應設計**」。舊制的季節只有 `SEASON_TINT` 一個乘色濾鏡 —— 那是把整張圖調黃,不是
+// 「秋天的水田長什麼樣」(秋天的水田是割過的稻茬與金黃穗浪,不是綠稻加濾鏡)。三條:
+//  ①**畫筆吃季節,材質不吃**:季節只進 `groundTex` 的**快取鍵**,bucket 鍵仍是 `sub#variant`
+//    ⇒ 一場戰鬥只有一個季節,**draw call 一個都沒有多**。
+//  ②有四季設計的地表 MUST 標 `seasonal` 並**跳過 `SEASON_TINT`** —— 不跳就是調兩次色
+//    (畫筆已經畫成金黃,再乘一層 0xffd9a8 就成了褪色的舊照片)。
+//  ③畫筆吃的是自己那一支 `mulberry32`(不是共享 `rnd`)⇒ 季節分支要抽幾枚都不推移佈局(§2.3)。
+const SEASON_I = { spring: 0, summer: 1, autumn: 2, winter: 3 };
+const seasonI = (season) => SEASON_I[season] ?? 1;     // 認不得的季節退夏(同 ENV.seasons 預設)
 
 const PAINTERS = {
   turf(g, S, rnd) {                                    // 草皮:筆刷色塊 + 草叢短撇 + 野花
@@ -261,39 +279,79 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 5); g.stroke();
     }
   },
-  orchard(g, S, rnd) {                                 // 果園:除草帶 + 樹行淡影(果樹本體 = 3D 實例)
-    g.fillStyle = baseFill(0x82ab5e, rnd); g.fillRect(0, 0, S, S);
+  // 果園:滿樹花(春)→ 綠冠(夏)→ 結果 + 落葉(秋)→ 枯枝 + 修剪堆(冬);果樹本體 = 3D 實例
+  orchard(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x8fb864, 0x82ab5e, 0x9a9a58, 0x8e8c72][s], rnd); g.fillRect(0, 0, S, S);
     for (let y = 0; y < S; y += 42) {
-      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, y, S, 20);
+      g.fillStyle = 'rgba(255,255,255,0.06)'; g.fillRect(0, y, S, 20);   // 除草帶
     }
+    // 樹行淡影:只給定位感,不畫樹體。冬天剩下的是枝影 ⇒ 影子變小變淡
+    const shade = ['rgba(74,112,52,0.26)', 'rgba(60,100,46,0.28)',
+                   'rgba(112,96,44,0.28)', 'rgba(104,94,76,0.18)'][s];
     for (let y = 21; y < S; y += 42) {
       for (let x = 16 + (rnd() * 10 | 0); x < S; x += 40) {
-        g.fillStyle = 'rgba(60,100,46,0.28)';          // 樹行淡影:只給定位感,不畫樹體
-        brushBlob(g, x, y, 8 + rnd() * 4, rnd);
+        g.fillStyle = shade;
+        brushBlob(g, x, y, (s === 3 ? 5 : 8) + rnd() * 4, rnd);
+        if (s === 0) {                                 // 春:花冠(白粉點)
+          for (let k = 0; k < 5; k++) {
+            g.fillStyle = rnd() < 0.5 ? 'rgba(252,246,248,0.9)' : 'rgba(240,196,214,0.85)';
+            g.beginPath(); g.arc(x + (rnd() - 0.5) * 14, y + (rnd() - 0.5) * 12, 1.8 + rnd(), 0, 7); g.fill();
+          }
+        } else if (s === 2) {                          // 秋:果實 + 樹下落果落葉
+          for (let k = 0; k < 4; k++) {
+            g.fillStyle = ['#d9722e', '#e0a52c', '#c24a30'][(rnd() * 3) | 0];
+            g.beginPath(); g.arc(x + (rnd() - 0.5) * 15, y + (rnd() - 0.5) * 13, 1.7 + rnd(), 0, 7); g.fill();
+          }
+        } else if (s === 3) {                          // 冬:修剪下來的枝條堆
+          g.strokeStyle = 'rgba(96,80,58,0.8)'; g.lineWidth = 1.6;
+          for (let k = 0; k < 3; k++) {
+            const a = rnd() * Math.PI, bx = x + (rnd() - 0.5) * 12, by = y + (rnd() - 0.5) * 10;
+            g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + Math.cos(a) * 9, by + Math.sin(a) * 6); g.stroke();
+          }
+        }
       }
     }
   },
-  veggiefield(g, S, rnd) {                             // 菜園:窄畦壟溝 + 葉菜球列 + 畦邊框(fit)
-    g.fillStyle = baseFill(0x8a6e4a, rnd); g.fillRect(0, 0, S, S);
+  // 菜園:幼苗(春)→ 葉菜球(夏)→ 採收後空畦 + 殘株(秋)→ 塑膠布覆蓋(冬)
+  veggiefield(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x8d7150, 0x8a6e4a, 0x8a7452, 0x8a7a62][s], rnd); g.fillRect(0, 0, S, S);
     for (let y = 10; y < S - 8; y += 22) {
       g.fillStyle = 'rgba(110,88,60,0.55)';            // 畦溝
       g.fillRect(4, y + 13, S - 8, 6);
       g.fillStyle = 'rgba(160,132,96,0.5)';            // 畦頂受光
       g.fillRect(4, y, S - 8, 4);
-      for (let x = 12; x < S - 8; x += 14) {           // 葉菜球(缺株 = 手種不勻)
-        if (rnd() < 0.12) continue;
-        g.fillStyle = rnd() < 0.3 ? '#9ec462' : '#6f9a44';
-        g.beginPath(); g.arc(x + (rnd() - 0.5) * 4, y + 6 + (rnd() - 0.5) * 3, 4 + rnd() * 1.5, 0, 7); g.fill();
+      if (s === 3) {                                   // 冬:整畦鋪白色塑膠布(留幾個種植孔)
+        g.fillStyle = 'rgba(238,242,244,0.8)'; g.fillRect(4, y - 1, S - 8, 12);
+        g.fillStyle = 'rgba(120,104,80,0.6)';
+        for (let x = 12; x < S - 8; x += 20) { g.beginPath(); g.arc(x, y + 5, 2.2, 0, 7); g.fill(); }
+        continue;
+      }
+      // 葉菜球(缺株 = 手種不勻);春幼苗小、秋採收後只剩零星殘株
+      const [big, small, miss, rad] = [['#a8cf76', '#87ad55', 0.12, 2.4],
+                                       ['#9ec462', '#6f9a44', 0.12, 4.0],
+                                       ['#9aa86a', '#7d8a55', 0.68, 3.0]][s];
+      for (let x = 12; x < S - 8; x += 14) {
+        if (rnd() < miss) continue;
+        g.fillStyle = rnd() < 0.3 ? big : small;
+        g.beginPath(); g.arc(x + (rnd() - 0.5) * 4, y + 6 + (rnd() - 0.5) * 3, rad + rnd() * 1.5, 0, 7); g.fill();
       }
     }
     g.strokeStyle = '#7a5c3e'; g.lineWidth = 8;        // 畦邊框
     g.strokeRect(2, 2, S - 4, S - 4);
   },
-  teafield(g, S, rnd) {                                // 茶園:波浪茶壟(暗籬 + 亮頂)+ 田間小徑
-    g.fillStyle = baseFill(0x5f8f46, rnd); g.fillRect(0, 0, S, S);
+  // 茶園:新芽亮頂(春)→ 深綠(夏)→ 採後平頭(秋)→ 覆霜(冬)
+  teafield(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x6ba04b, 0x5f8f46, 0x5b8446, 0x5f7b52][s], rnd); g.fillRect(0, 0, S, S);
+    const rows = [[['#4c7a36', 12, 0], ['#a6d472', 5, -5]],      // 春:新芽最亮最厚
+                  [['#3f6b30', 12, 0], ['#7fae57', 4, -5]],      // 夏:今日的深綠
+                  [['#3d6631', 12, 0], ['#6d9a4c', 3, -5]],      // 秋:採過 ⇒ 亮頂變窄
+                  [['#3a5c38', 12, 0], ['#c8d8cc', 3, -5]]][s];  // 冬:壟頂覆霜
     for (let y = 6; y < S; y += 22) {
       const ph = rnd() * 7, amp = 2 + rnd() * 3;
-      for (const [c, w, dy] of [['#3f6b30', 12, 0], ['#7fae57', 4, -5]]) {
+      for (const [c, w, dy] of rows) {
         g.strokeStyle = c; g.lineWidth = w;
         g.beginPath();
         for (let x = -4; x <= S + 4; x += 8) {
@@ -309,30 +367,91 @@ const PAINTERS = {
       g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (rnd() - 0.5) * 20, S); g.stroke();
     }
   },
-  paddy(g, S, rnd) {                                   // 水田:淺水面 + 秧苗列 + 田埂框(fit)
-    g.fillStyle = baseFill(0x7ba393, rnd); g.fillRect(0, 0, S, S);
-    g.fillStyle = 'rgba(255,255,255,0.16)';            // 水面天光
-    for (let i = 0; i < 10; i++) g.fillRect(rnd() * S, rnd() * S, 20 + rnd() * 40, 2);
-    g.strokeStyle = '#5c8f46'; g.lineWidth = 4; g.lineCap = 'round';
+  // 水田:插秧水鏡(春)→ 綠稻分蘗(夏)→ 金黃穗浪 + 割痕(秋)→ 稻茬休耕(冬)
+  paddy(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x8fb0a6, 0x7ba393, 0xb99a4e, 0x8d8672][s], rnd); g.fillRect(0, 0, S, S);
+    const sheen = [0.22, 0.16, 0, 0.10][s];            // 水面天光(秋收前放乾 ⇒ 沒有水鏡)
+    if (sheen) {
+      g.fillStyle = `rgba(255,255,255,${sheen})`;
+      for (let i = 0; i < 10; i++) g.fillRect(rnd() * S, rnd() * S, 20 + rnd() * 40, 2);
+    }
+    // 秧苗 / 稻叢 / 稻穗 / 稻茬:同一組行列,只換筆色、筆寬與筆長
+    const [col, lw, len] = [['#6ea24f', 3, 2], ['#5c8f46', 4, 3], ['#d8b552', 5, 4], ['#9d9276', 2.5, 1.5]][s];
+    g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round';
     for (let y = 20; y < S - 14; y += 16) {
       for (let x = 12; x < S - 10; x += 9) {
         if (rnd() < 0.08) continue;                    // 缺株:手插不勻
-        g.beginPath(); g.moveTo(x, y + (rnd() - 0.5) * 2); g.lineTo(x + 3, y + (rnd() - 0.5) * 2); g.stroke();
+        g.beginPath(); g.moveTo(x, y + (rnd() - 0.5) * 2); g.lineTo(x + len, y + (rnd() - 0.5) * 2); g.stroke();
       }
+    }
+    if (s === 2) {                                     // 秋:割過的條帶(一塊田不會同一天割完)
+      g.fillStyle = 'rgba(150,132,84,0.55)';
+      for (let y = 26 + (rnd() * 30 | 0); y < S; y += 64) g.fillRect(0, y, S, 18);
     }
     g.strokeStyle = '#7a5c3e'; g.lineWidth = 14;       // 田埂(patch 外框,配外圈頂點隆起)
     g.strokeRect(3, 3, S - 6, S - 6);
   },
-  dryfield(g, S, rnd) {                                // 旱田:壟溝條紋 + 土塊(fit)
-    g.fillStyle = baseFill(0x96714a, rnd); g.fillRect(0, 0, S, S);
+  // 旱田:新耕幼苗(春)→ 作物覆蓋(夏)→ 枯莖 + 收割空帶(秋)→ 裸壟覆霜(冬)
+  dryfield(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x9a7850, 0x96714a, 0x9c8452, 0x8d7a5e][s], rnd); g.fillRect(0, 0, S, S);
     for (let x = 6; x < S; x += 18) {
       g.fillStyle = '#7a5836'; g.fillRect(x, 0, 7, S);
       g.fillStyle = '#a5825a'; g.fillRect(x + 7, 0, 3, S);   // 壟頂受光
     }
-    g.fillStyle = '#6f5030';
+    // 作物:壟頂上的一條帶(春細嫩、夏滿版、秋枯黃、冬無)
+    const crop = [['rgba(140,178,92,0.55)', 4], ['rgba(86,140,64,0.85)', 11], ['rgba(160,142,80,0.7)', 8], null][s];
+    if (crop) for (let x = 6; x < S; x += 18) { g.fillStyle = crop[0]; g.fillRect(x + 3, 0, crop[1], S); }
+    if (s === 2) {                                     // 秋:已收割的空帶(壟還在,作物沒了)
+      g.fillStyle = 'rgba(154,132,86,0.6)';
+      for (let y = 18 + (rnd() * 40 | 0); y < S; y += 88) g.fillRect(0, y, S, 26);
+    }
+    g.fillStyle = s === 3 ? 'rgba(226,232,236,0.5)' : '#6f5030';   // 冬:霜斑;其餘:土塊
     for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.5 + rnd() * 2, 0, 7); g.fill(); }
     g.strokeStyle = '#7a5c3e'; g.lineWidth = 10;
     g.strokeRect(2, 2, S - 4, S - 4);
+  },
+  // 牧場(2026-08-13 使用者「加入菜園/牧場/魚塭與果園等農牧區」):圍籬牧草地 + 啃食斑 +
+  // 獸徑 + 飲水槽。春嫩綠野花 / 夏深綠啃食斑 / 秋乾黃草捲 / 冬枯褐覆霜。
+  pasture(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x89b862, 0x6f9c52, 0xa89a5c, 0x8c8a72][s], rnd); g.fillRect(0, 0, S, S);
+    const patch = ['rgba(168,206,120,0.45)', 'rgba(122,158,80,0.5)',
+                   'rgba(188,172,104,0.5)', 'rgba(158,158,140,0.45)'][s];
+    for (let i = 0; i < 16; i++) {                     // 啃食斑:牛羊吃出來的深淺塊
+      g.fillStyle = patch;
+      brushBlob(g, rnd() * S, rnd() * S, 10 + rnd() * 18, rnd);
+    }
+    g.strokeStyle = 'rgba(150,132,96,0.55)'; g.lineWidth = 5; g.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {                      // 獸徑:往飲水槽去的踏出路
+      const y = 30 + rnd() * (S - 60);
+      g.beginPath(); g.moveTo(0, y); g.lineTo(S, y + (rnd() - 0.5) * 40); g.stroke();
+    }
+    if (s === 0) {                                     // 春:野花點
+      for (let i = 0; i < 34; i++) {
+        g.fillStyle = ['#f2e6a2', '#e8a8c2', '#fdfdfd'][(rnd() * 3) | 0];
+        g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.6 + rnd(), 0, 7); g.fill();
+      }
+    }
+    if (s === 2) {                                     // 秋:打包好的圓形草捲(俯視 = 亮邊圓餅)
+      for (let i = 0; i < 5; i++) {
+        const cx = 24 + rnd() * (S - 48), cy = 24 + rnd() * (S - 48);
+        g.fillStyle = '#c9b271'; g.beginPath(); g.arc(cx, cy, 9 + rnd() * 3, 0, 7); g.fill();
+        g.strokeStyle = 'rgba(240,228,178,0.9)'; g.lineWidth = 2;
+        g.beginPath(); g.arc(cx, cy, 5, 0, 7); g.stroke();
+      }
+    }
+    if (s === 3) {                                     // 冬:霜斑
+      g.fillStyle = 'rgba(228,236,238,0.4)';
+      for (let i = 0; i < 20; i++) brushBlob(g, rnd() * S, rnd() * S, 6 + rnd() * 10, rnd);
+    }
+    g.strokeStyle = 'rgba(120,98,66,0.8)'; g.lineWidth = 6;   // 圍籬(牧場的識別特徵)
+    g.strokeRect(3, 3, S - 6, S - 6);
+    g.strokeStyle = 'rgba(96,78,52,0.9)'; g.lineWidth = 3;    // 柵欄樁
+    for (let x = 10; x < S; x += 26) {
+      g.beginPath(); g.moveTo(x, 3); g.lineTo(x, 11); g.moveTo(x, S - 11); g.lineTo(x, S - 3); g.stroke();
+    }
   },
   wild(g, S, rnd) {                                    // 荒野:乾草/土斑駁色塊
     g.fillStyle = baseFill(0x8d835f, rnd); g.fillRect(0, 0, S, S);
@@ -673,32 +792,47 @@ const PAINTERS = {
     g.fillStyle = '#3f4a35';
     for (let i = 0; i < 8; i++) { g.beginPath(); g.arc(rnd() * S, rnd() * S, 1.6 + rnd() * 2, 0, 7); g.fill(); }
   },
-  vineyard(g, S, rnd) {                                // 葡萄園:藤蔓籬行列 + 木樁 + 行間草帶(fit)
-    g.fillStyle = baseFill(0x9a8a5e, rnd); g.fillRect(0, 0, S, S);
+  // 葡萄園:新梢(春)→ 綠帳(夏)→ 紅黃葉(秋)→ 光禿藤架(冬);木樁與行距四季不動
+  vineyard(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x9c9060, 0x9a8a5e, 0x9d8a54, 0x8f8468][s], rnd); g.fillRect(0, 0, S, S);
+    // [籬色, 籬寬, 頂色, 行間草帶色]:冬天沒有葉 ⇒ 籬退成一條細藤
+    const [vc, vw, tc, gc] = [['#568a3c', 6, '#a6d472', 'rgba(158,182,104,0.42)'],
+                              ['#3f6b30', 9, '#7fae57', 'rgba(140,160,90,0.40)'],
+                              ['#8a6a2c', 8, '#d8a94e', 'rgba(156,150,86,0.40)'],
+                              ['#6b5a44', 2.5, '#8a7a60', 'rgba(140,140,116,0.35)']][s];
     for (let y = 14; y < S - 8; y += 24) {
-      g.fillStyle = 'rgba(140,160,90,0.4)';            // 行間草帶
+      g.fillStyle = gc;                                // 行間草帶
       g.fillRect(0, y + 7, S, 10);
       const ph = rnd() * 7;
-      g.strokeStyle = '#3f6b30'; g.lineWidth = 9; g.lineCap = 'round';
+      g.strokeStyle = vc; g.lineWidth = vw; g.lineCap = 'round';
       g.beginPath();
       for (let x = 2; x <= S - 2; x += 8) {
         const yy = y + Math.sin(x * 0.08 + ph) * 1.5;
         x <= 2 ? g.moveTo(x, yy) : g.lineTo(x, yy);
       }
       g.stroke();
-      g.strokeStyle = '#7fae57'; g.lineWidth = 2.5;    // 籬頂受光
+      g.strokeStyle = tc; g.lineWidth = 2.5;           // 籬頂受光(冬天是裸藤的亮邊)
       g.beginPath(); g.moveTo(2, y - 3); g.lineTo(S - 2, y - 3); g.stroke();
       g.fillStyle = '#6e5138';
       for (let x = 8; x < S; x += 26) g.fillRect(x, y - 6, 3, 12);   // 木樁
     }
   },
-  greenhouse(g, S, rnd) {                              // 溫室棚地:土面 + 苗床帶(拱棚本體 = 3D 實例)(fit)
-    g.fillStyle = baseFill(0x8a7a5c, rnd); g.fillRect(0, 0, S, S);
+  // 溫室棚地:育苗(春)→ 滿床(夏)→ 採收後翻土(秋)→ 棚布積雪(冬);拱棚本體 = 3D 實例
+  greenhouse(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x8c7c5e, 0x8a7a5c, 0x877758, 0x8e8878][s], rnd); g.fillRect(0, 0, S, S);
+    const bed = ['rgba(140,160,90,0.30)', 'rgba(140,160,90,0.35)',
+                 'rgba(126,104,72,0.55)', 'rgba(236,240,242,0.72)'][s];   // 冬 = 積雪、秋 = 翻過的土
     for (let y = 6; y < S - 20; y += 34) {
       g.fillStyle = 'rgba(120,100,70,0.5)';            // 苗床翻土帶
       g.fillRect(4, y, S - 8, 22);
-      g.fillStyle = 'rgba(140,160,90,0.35)';           // 苗床新綠
-      g.fillRect(4, y + 8, S - 8, 7);
+      g.fillStyle = bed;                               // 苗床作物(冬天是棚頂那層雪)
+      g.fillRect(4, y + 8, S - 8, s === 3 ? 12 : 7);
+      if (s === 0) {                                   // 春:一格一格的育苗盤
+        g.strokeStyle = 'rgba(96,80,56,0.5)'; g.lineWidth = 1.2;
+        for (let x = 8; x < S - 8; x += 16) { g.beginPath(); g.moveTo(x, y + 7); g.lineTo(x, y + 16); g.stroke(); }
+      }
     }
   },
   // ======== 裸露地擴充 ========
@@ -743,13 +877,16 @@ const PAINTERS = {
     g.fillStyle = '#7d7040';
     for (let i = 0; i < 10; i++) brushBlob(g, rnd() * S, rnd() * S, 3 + rnd() * 4, rnd);
   },
-  abandonedfarm(g, S, rnd) {                           // 廢棄農田:褪色壟溝 + 雜草入侵 + 傾倒圍籬(fit)
-    g.fillStyle = baseFill(0x8f7f5e, rnd); g.fillRect(0, 0, S, S);
+  // 廢棄農田:雜草返青(春)→ 雜草茂盛(夏)→ 枯黃(秋)→ 枯褐覆霜(冬);壟溝與傾倒圍籬四季不變
+  abandonedfarm(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill([0x8f8460, 0x8f7f5e, 0x91825a, 0x8a8270][s], rnd); g.fillRect(0, 0, S, S);
     for (let x = 6; x < S; x += 18) {
       g.fillStyle = 'rgba(110,92,64,0.45)'; g.fillRect(x, 0, 7, S);
     }
+    const weed = [[140, 176, 92], [120, 150, 80], [166, 152, 82], [148, 146, 128]][s];
     for (let i = 0; i < 14; i++) {
-      g.fillStyle = `rgba(120,150,80,${0.3 + rnd() * 0.3})`;
+      g.fillStyle = `rgba(${weed[0]},${weed[1]},${weed[2]},${0.3 + rnd() * 0.3})`;
       brushBlob(g, rnd() * S, rnd() * S, 8 + rnd() * 16, rnd);
     }
     g.strokeStyle = 'rgba(90,72,50,0.8)'; g.lineWidth = 3; g.lineCap = 'round';
@@ -973,18 +1110,34 @@ const PAINTERS = {
     g.strokeRect(8, 8, S - 16, S - 16); g.setLineDash([]);
   },
   // ======== 濕地擴充 ========
-  fishpond(g, S, rnd) {                                // 魚塭:深水池格 + 水車白花 + 土堤(fit)
-    g.fillStyle = baseFill(0x9a8a68, rnd); g.fillRect(0, 0, S, S);
+  // 魚塭:放苗滿水(春)→ 水車全開(夏)→ 收成拉網 + 水位降(秋)→ 乾塘曬池(冬)
+  fishpond(g, S, rnd, season) {
+    const s = seasonI(season);
+    g.fillStyle = baseFill(0x9a8a68, rnd); g.fillRect(0, 0, S, S);   // 土堤四季不變
+    const water = [0x4a6e70, 0x3f5e63, 0x53696a, 0x8a7f66][s];       // 冬:池底泥
     const gw = 74, gh = 56;
     for (let y = 8; y < S - 10; y += gh) {
       for (let x = 8; x < S - 10; x += gw) {
-        g.fillStyle = baseFill(0x3f5e63, rnd);
+        g.fillStyle = baseFill(water, rnd);
         g.fillRect(x, y, gw - 10, gh - 10);
-        g.fillStyle = 'rgba(255,255,255,0.16)';        // 水面天光
+        if (s === 3) {                                 // 冬:曬池 —— 龜裂的池底
+          g.strokeStyle = 'rgba(122,108,82,0.8)'; g.lineWidth = 1.2;
+          for (let k = 0; k < 7; k++) {
+            const ax = x + 4 + rnd() * (gw - 18), ay = y + 4 + rnd() * (gh - 18), a = rnd() * Math.PI * 2;
+            g.beginPath(); g.moveTo(ax, ay); g.lineTo(ax + Math.cos(a) * 12, ay + Math.sin(a) * 9); g.stroke();
+          }
+          continue;
+        }
+        g.fillStyle = `rgba(255,255,255,${s === 2 ? 0.10 : 0.16})`;   // 水面天光(秋水位降 ⇒ 反光弱)
         g.fillRect(x + 4, y + 4, gw - 26, 2.5);
+        if (s === 2) {                                 // 秋:收成的拉網(池面上的網格)
+          g.strokeStyle = 'rgba(228,232,220,0.55)'; g.lineWidth = 1;
+          for (let k = 6; k < gw - 10; k += 9) { g.beginPath(); g.moveTo(x + k, y); g.lineTo(x + k, y + gh - 10); g.stroke(); }
+          continue;
+        }
         const wx = x + 10 + rnd() * (gw - 30), wy = y + 8 + rnd() * (gh - 24);
         g.fillStyle = 'rgba(240,248,250,0.85)';        // 增氧水車白花
-        for (let k = 0; k < 6; k++) {
+        for (let k = 0; k < (s === 0 ? 3 : 6); k++) {  // 春:剛放苗,水車開一半
           g.beginPath(); g.arc(wx + (rnd() - 0.5) * 10, wy + (rnd() - 0.5) * 7, 1.6, 0, 7); g.fill();
         }
       }
@@ -1003,11 +1156,12 @@ const DEFS = {
   meadow:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.45, reg: 0, green: true, fam: 'blobGreen' },
   bushfield:    { shape: 'blob', uvS: 1 / 13, edge: 'fade', slope: 0.40, reg: 0, green: true, fam: 'blobGreen' },
   flowerfield:  { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.35, reg: 0.15, green: true, fam: 'blobGreen' },
-  orchard:      { shape: 'blob', uvS: 1 / 20, edge: 'fade', slope: 0.30, reg: 0.45, green: true, fam: 'blobGreen' },
-  teafield:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.22, reg: 0.8, green: true, fam: 'rectFarm' },
-  veggiefield:  { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.8, green: true, fam: 'rectFarm' },
-  paddy:        { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.09, rim: 0.5, reg: 0.8, green: true, fam: 'rectFarm' },
-  dryfield:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.14, rim: 0.35, reg: 0.7, fam: 'rectFarm' },
+  orchard:      { shape: 'blob', uvS: 1 / 20, edge: 'fade', slope: 0.30, reg: 0.45, green: true, fam: 'blobGreen', seasonal: 1 },
+  teafield:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.22, reg: 0.8, green: true, fam: 'rectFarm', seasonal: 1 },
+  veggiefield:  { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.8, green: true, fam: 'rectFarm', seasonal: 1 },
+  pasture:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.26, reg: 0.6, green: true, fam: 'rectFarm', seasonal: 1 },
+  paddy:        { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.09, rim: 0.5, reg: 0.8, green: true, fam: 'rectFarm', seasonal: 1 },
+  dryfield:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.14, rim: 0.35, reg: 0.7, fam: 'rectFarm', seasonal: 1 },
   wild:         { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'blobBare' },
   gravel:       { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.40, reg: 0, fam: 'blobBare' },
   sand:         { shape: 'blob', uvS: 1 / 18, edge: 'fade', slope: 0.35, reg: 0, fam: 'blobBare' },
@@ -1033,13 +1187,13 @@ const DEFS = {
   clearcut:     { shape: 'blob', uvS: 1 / 14, edge: 'fade', slope: 0.35, reg: 0.2, fam: 'deadFam' },
   lumberyard:   { shape: 'blob', uvS: 1 / 11, edge: 'fade', slope: 0.20, reg: 0.65, fam: 'deadFam' },
   rottencabin:  { shape: 'blob', uvS: 1 / 12, edge: 'fade', slope: 0.25, reg: 0.3, green: true, fam: 'ruinFam' },
-  vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, reg: 0.85, green: true, fam: 'rectFarm' },
-  greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, reg: 0.9, fam: 'rectFarm' },
+  vineyard:     { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.18, reg: 0.85, green: true, fam: 'rectFarm', seasonal: 1 },
+  greenhouse:   { shape: 'rect', uv: 'fit', aspect: 0.6, edge: 'ink', slope: 0.10, reg: 0.9, fam: 'rectFarm', seasonal: 1 },
   // — 裸露地擴充:遺跡/死林/乾草原/廢耕/產業 —
   deadforest:   { shape: 'blob', uvS: 1 / 15, edge: 'fade', slope: 0.50, reg: 0, fam: 'deadFam' },
   slabruin:     { shape: 'blob', uvS: 1 / 10, edge: 'fade', slope: 0.45, reg: 0.15, fam: 'ruinFam' },
   steppe:       { shape: 'blob', uvS: 1 / 16, edge: 'fade', slope: 0.50, reg: 0, green: true, fam: 'alpFam' },
-  abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, reg: 0.55, fam: 'rectFarm' },
+  abandonedfarm:{ shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.16, reg: 0.55, fam: 'rectFarm', seasonal: 1 },
   saltpan:      { shape: 'rect', uv: 'fit', aspect: 0.75, edge: 'ink', slope: 0.06, reg: 0.85, fam: 'panFam' },
   quarry:       { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.45, reg: 0.5, fam: 'digFam' },
   // — 高地(相對高程分區;冬季裸露地也混入冰原)—
@@ -1057,7 +1211,7 @@ const DEFS = {
   solarfarm:    { shape: 'rect', uv: 'fit', aspect: 0.7, edge: 'ink', slope: 0.12, reg: 0.9, fam: 'solarFam' },
   helipad:      { shape: 'rect', uv: 'fit', aspect: 1.0, edge: 'ink', slope: 0.06, reg: 0.6 },
   // — 濕地擴充 —
-  fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, reg: 0.8, fam: 'panFam' },
+  fishpond:     { shape: 'rect', uv: 'fit', aspect: 0.8, edge: 'ink', slope: 0.06, reg: 0.8, fam: 'panFam', seasonal: 1 },
 };
 // 分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有)
 // 特徵層分區切片(值雜訊挑選;重複項 = 權重,首尾 = 稀有):
@@ -1068,7 +1222,7 @@ const DEFS = {
 const ZONES = {
   green: ['rottencabin', 'deadwood', 'paddy', 'flowerfield', 'orchard', 'arrowbamboo',
           'dryfield', 'bushfield', 'teafield', 'vineyard', 'paddy', 'clearcut',
-          'veggiefield', 'flowerfield', 'fallenlogs', 'greenhouse', 'lumberyard'],
+          'veggiefield', 'pasture', 'flowerfield', 'fallenlogs', 'greenhouse', 'lumberyard'],
   bare:  ['slabruin', 'quarry', 'abandonedfarm', 'crackedearth', 'gravel', 'abandonedfarm',
           'solarfarm', 'containeryard', 'saltpan'],
   urban: ['helipad', 'park', 'brick', 'parking', 'plaza', 'court',
@@ -1090,7 +1244,7 @@ const CARPET = {
 // 延伸擺放家族:同族 patch 相互毗鄰延伸(農田拼布 / 運動園區 / 綠地群落 /
 // 伐木跡地群 / 聚落遺跡 / 高地帶 / 鹽田魚塭 / 工地採石 / 堆置場)
 const FAMS = {
-  rectFarm:  ['paddy', 'dryfield', 'teafield', 'vineyard', 'greenhouse', 'veggiefield', 'abandonedfarm'],
+  rectFarm:  ['paddy', 'dryfield', 'teafield', 'vineyard', 'greenhouse', 'veggiefield', 'abandonedfarm', 'pasture'],
   rectUrban: ['parking', 'court', 'track', 'concrete', 'plaza', 'gasstation'],
   blobGreen: ['turf', 'meadow', 'flowerfield', 'bushfield', 'orchard', 'park', 'arrowbamboo'],
   blobBare:  ['wild', 'gravel', 'sand', 'crackedearth', 'redsoil', 'mud'],
@@ -1103,12 +1257,15 @@ const FAMS = {
   yardFam:   ['scrapyard', 'containeryard'],
   solarFam:  ['solarfarm'],
 };
+// 田埂適用名冊:**推導不手寫** —— 農田拼布(rectFarm)+ 池區(panFam,魚塭/鹽田的土堤是
+// 同一件事)。手寫一份名冊會在新增地表時靜默過期(牧場 pasture 只要進了 rectFarm 就自動有埂)。
+const BUND_SUBS = new Set([...FAMS.rectFarm, ...FAMS.panFam]);
 // 尺寸 [基準半徑, 變幅](rect 半寬;court/track 接近真實場地)
 const SIZE = {
   turf: [9, 10], meadow: [10, 12], bushfield: [8, 8], flowerfield: [10, 8], orchard: [11, 8],
   lawn: [8, 8], wild: [10, 12], gravel: [8, 9], sand: [11, 12], mud: [8, 9],
   crackedearth: [11, 10], redsoil: [10, 9], marsh: [8, 8], lotus: [8, 6], watertile: [10, 8], deepwater: [10, 8],
-  paddy: [13, 8], dryfield: [12, 8], teafield: [12, 6], veggiefield: [10, 6], concrete: [9, 7], brick: [7, 6],
+  paddy: [13, 8], dryfield: [12, 8], teafield: [12, 6], veggiefield: [10, 6], pasture: [15, 10], concrete: [9, 7], brick: [7, 6],
   pavement: [8, 6], parking: [14, 4], court: [16, 3], track: [15, 3],
   arrowbamboo: [10, 8], deadwood: [11, 10], deadforest: [12, 10], fallenlogs: [9, 8],
   clearcut: [12, 8], lumberyard: [8, 6], rottencabin: [7, 4], vineyard: [13, 6],
@@ -1381,6 +1538,12 @@ function pushLandN(b, hAt, x, z, d) {
 // 2026-08-13 taroko 實測(`audit_ground_drape`):**22% 的三角形被地形戳穿**,
 // p90 0.057m / p99 0.446m。平地看不到(折角 = 0),坡越陡越碎越明顯 —— 正是「斜坡時」。
 //
+// ⚠ **消費端自同日縮到三個**(使用者定案「A 認養地形三角形」):圖內底毯 / 外溢 / 脊帶已改
+// 成直接吃地形自己的三角形(emitCell 檔頭)⇒ 那三層的弦虧損**在結構上就是 0**,MUST NOT
+// 再對它們套這一支(再抬 = 浮在地形上,就是下面 ④ 講的另一半破圖)。剩下的三個消費端是
+// **特徵拼圖 / 界線拼圖 / 緩衝空間底毯**:前兩者是任意旋轉的獨立面(鋪到地形格上邊緣會變
+// 鋸齒,而它們本來就有坡度閘),後者站在裙上、根本沒有高程網格可以認養。
+//
 // 修法 = **逐頂點把弦虧損補回去**:抬升量 = 該點往八方的「中點高 − 兩端平均」最大值。
 // 四條:
 //   ①**MUST 是 (x,z) 的純函式**(同 landNrmAt)—— 相鄰面在共用頂點上取到逐位元同值,
@@ -1465,6 +1628,90 @@ function emitBlob(b, terrain, x, z, r, lift, uvS, edge, pt, rnd, sag) {
     b.idx.push(k + i, k + j, k + n + i, k + j, k + n + j, k + n + i, k + n + i, k + n + j, c);
   }
   b.base += 2 * n + 1;
+}
+
+// ==== 農田田埂(2026-08-13 使用者定案「修對齊 + 組合夠大片才加田埂」)====
+// 使用者原話:「地貌拼圖部分區塊沒有接得很好,例如田與田之間沒有整齊對準,**沒對準也可以
+// 但要使用田埂隔開**」。兩件事分開修 —— 對齊那半住家族延伸(鄰塊尺寸依毗鄰軸反解),
+// 這裡是田埂。
+// 田埂**跨在足跡邊界上**(只往外長 `HW`):兩塊正鄰位的田相距 `FARM_GAP = 2 × HW` ⇒ 兩條埂
+// 在小路中線背靠背接上 = 一條連續的埂;錯開的兩塊就讀成「田埂在這裡轉個折」,而真實的
+// 梯田/水田本來就長這樣。往外那半仍在 `PATCH_GAP`(1.0)與帶緣 `BORDER_BAND.PAD`(1.6)之內
+// ⇒ 不疊置與不橫跨分界線那兩道閘一格未動。
+// **斷面三環**(往外量):
+//   R0 = 足跡邊,dy = `def.rim ?? 0` —— **與田塊自己的外圈同高**,不開縫也不互戳;
+//   R1 = 埂頂外緣,dy = max(rim, RISE);
+//   R2 = R1 的正下方,dy = 0。
+// 兩條帶:R0→R1 是埂頂、**R1→R2 是外側垂直面** —— 少了垂直面,掠射角就看穿一片浮空的
+// 土色薄片(同 A44 ③「演出 ⊆ 碰撞盒」那一族的道理:看得見的東西要有厚度)。
+// 「夠大片才加」= `BUND.MIN_N`:一塊孤田圍一圈埂讀起來像花壇,連成一片的拼布才是農地。
+export const BUND = {
+  HW: 0.6,      // 半寬(m):只往外長。FARM_GAP = 2×HW 是**推導**不是巧合(見上)
+  RISE: 0.30,   // 埂高(m);田塊自己有 rim 時取較高者 ⇒ 埂恆蓋得住 rim,不會兩條脊打架
+  MIN_N: 3,     // 「組合夠大片」的門檻(同一叢集內的農田塊數)
+  SEG_M: 3,     // 沿埂的取樣間距(m):要跟得上地形起伏,又不必比田塊自己的 7×6 網格細
+  UVS: 1 / 6,   // 埂頂的世界投影 UV 尺度 ⇒ 相鄰兩塊的夯土紋路連續延伸
+};
+export const FARM_GAP = BUND.HW * 2;   // 家族延伸的田間小路寬(兩條埂恰好在中線接上)
+// 矩形環:同一組參數只差半跨 ⇒ 逐 index 對應(內外環的角落互相對到角落)
+function bundRing(a, c, ns, nd) {
+  const p = [];
+  for (let i = 0; i < ns; i++) p.push([-a + 2 * a * i / ns, -c]);
+  for (let i = 0; i < nd; i++) p.push([a, -c + 2 * c * i / nd]);
+  for (let i = 0; i < ns; i++) p.push([a - 2 * a * i / ns, c]);
+  for (let i = 0; i < nd; i++) p.push([-a, c - 2 * c * i / nd]);
+  return p;
+}
+function emitBund(b, terrain, x, z, r, rot, def, lift, sag) {
+  const hw = r, hd = r * (def.aspect || 0.7), H = BUND.HW;
+  const rim = def.rim || 0, crest = Math.max(rim, BUND.RISE);
+  const ns = Math.max(4, Math.round(2 * hw / BUND.SEG_M)), nd = Math.max(4, Math.round(2 * hd / BUND.SEG_M));
+  const IN = bundRing(hw, hd, ns, nd), OUT = bundRing(hw + H, hd + H, ns, nd);
+  const ca = Math.cos(rot), sa = Math.sin(rot);
+  const world = ([lx, lz]) => [x + lx * ca - lz * sa, z + lx * sa + lz * ca];
+  const L = IN.length;
+  // 外環的累積周長:垂直面的 u 走弧長(拿頂投影會把 0.3m 高的面拉成一條抹開的條紋)
+  const arc = new Array(L + 1).fill(0);
+  for (let k = 0; k < L; k++) {
+    const [ax, az] = OUT[k], [bx, bz] = OUT[(k + 1) % L];
+    arc[k + 1] = arc[k] + Math.hypot(bx - ax, bz - az);
+  }
+  const base0 = b.base;
+  // 四圈頂點:0 埂內緣 / 1 埂頂外緣 / 2 垂直面上緣(與 1 同位,只換 UV 與法線)/ 3 裙底。
+  // 2 之所以要另存一圈:埂頂走世界投影 UV、垂直面走弧長 UV,共用頂點就是把 0.3m 高的面
+  // 拉成一條抹開的條紋。帶 = 0→1(埂頂)與 2→3(外側垂直面)。
+  const RINGS = [[IN, rim, 0], [OUT, crest, 0], [OUT, crest, 1], [OUT, 0, 1]];
+  RINGS.forEach(([P, dy, wall]) => {
+    for (let k = 0; k < L; k++) {
+      const [wx, wz] = world(P[k]);
+      b.pos.push(wx, terrain.heightAt(wx, wz) + lift + dy + sag(wx, wz), wz);
+      if (wall) {                                       // 外側垂直面:法線朝外(折邊才畫得出線)
+        const [ox, oz] = world(OUT[k]), [ix, iz] = world(IN[k]);
+        const nl = Math.hypot(ox - ix, oz - iz) || 1;
+        b.nrm.push((ox - ix) / nl, 0, (oz - iz) / nl);
+        b.lnrm.push((ox - ix) / nl, 0, (oz - iz) / nl);   // 勾線資訊緩衝吃**真的**面法線 ⇒ 埂頂折邊出線
+        b.uv.push(arc[k] * BUND.UVS, dy > 0 ? 0 : 1);
+      } else {
+        // 埂頂與其他貼地層同規:受光走 (0,1,0)(不隨坡面翻),勾線那一份給真地形法線 ——
+        // 少了後者,埂底下的稜線畫不出來、而埂與田的交界會冒出一條假線(landNrmAt 檔頭)
+        b.nrm.push(0, 1, 0);
+        pushLandN(b, terrain.heightAt, wx, wz, terrain.gridM);
+        b.uv.push(wx * BUND.UVS, wz * BUND.UVS);
+      }
+      // 埂頂暖土、內緣略帶田色(與田塊外圈銜接)、裙底壓暗
+      const s = P === IN ? 0.88 : wall && dy === 0 ? 0.72 : 1;
+      b.col.push(0.78 * s, 0.66 * s, 0.5 * s, 1);
+    }
+  });
+  for (const A of [base0, base0 + 2 * L]) {             // 0→1 埂頂、2→3 垂直面
+    const B = A + L;
+    for (let k = 0; k < L; k++) {
+      const k2 = (k + 1) % L;
+      // 繞向同 emitRect 的 (a, f, e) 慣例:(p0, p0+沿環, p0+往外/往下)⇒ 埂頂朝 +y、面朝外
+      b.idx.push(A + k, A + k2, B + k, A + k2, B + k2, B + k);
+    }
+  }
+  b.base += 4 * L;
 }
 
 // 矩形田塊/場地:6×7 網格貼地;rim = 外圈隆起田埂(暖土頂點色),否則外圈墨線
@@ -2591,8 +2838,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   const carpetBuckets = new Map(), spillBuckets = new Map(), bandBuckets = new Map();
   const CLIFT = 0.07, SLIFT = 0.10;                     // 底毯 0.070 < 外溢 [0.100,0.107] < 不規律 fade[.110,.124] < 規律 ink[.135,.172] < 道路 0.18
   const cell = Math.max(13, Math.max(terrain.worldW, terrain.worldH) / 232);
-  // 貼合抬升(見檔頭 SAG):**同一份場餵給每一層** —— 底毯 / 外溢 / 脊帶 / 界線 / 特徵拼圖
-  // 在同一點抬同一個量 ⇒ 上面那條 lift 階梯整條平移,層與層的先後一格未動。
+  // 貼合抬升(見檔頭 SAG):**同一份場餵給每一層** —— 界線 / 特徵拼圖 / 緩衝空間底毯在同一點
+  // 抬同一個量 ⇒ 上面那條 lift 階梯整條平移,層與層的先後一格未動。
+  // 圖內底毯 / 外溢 / 脊帶**不在消費端之列**(2026-08-13 起直接吃地形三角形,虧損恆 0)。
   // 上限依所在位置分流,而三個分支全是 (x,z) 的純函式 ⇒ 同一點恆同值,抬升本身不會撕開皮。
   const inMap = (x, z) => x >= terrain.minX && x <= terrain.maxX && z >= terrain.minZ && z <= terrain.maxZ;
   const drapeSag = (hAt, x, z) => {
@@ -2730,10 +2978,12 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   // ~半格取樣讓 cell 貼合地形起伏,丘頂不再戳穿底毯),頂點色 = wash
   // cut = { di, dj }(鄰格方向)⇒ 這一張外溢的 α 不取角點雙線性,改由 bdCutAt 以
   // 「到畫出來的分界線的帶號距離」決定(兩側地貌以線為界);查不到線才退回舊制淡出。
-  // 貼地 3×3 面的發射核心(底毯 / 外溢 / 脊帶 / **緩衝空間底毯**共用的唯一實作):
+  // 貼地 3×3 面的發射核心。**2026-08-13 起只服務緩衝空間**(圖內底毯 / 外溢 / 脊帶改由
+  // emitCell 認養地形三角形,見該處檔頭):界外站的是 terrain.js 那一圈裙,沒有高程網格
+  // 可以認養 ⇒ 那半仍是「鋪一層皮」,照樣要 drapeSag 把弦虧損補回去(上限 SAG.BUF)。
   //   G  = 9 個 [x, z](3×3 排列,列沿 z、行沿 x)
-  //   hAt = 取高度的函式 —— 圖內走 terrain.heightAt、緩衝空間走 terrain.bufferHeightAt
-  //         (裙的外推高度唯一縫;拿 heightAt 會被夾回圖界,整圈底毯貼在錯誤的高度上)
+  //   hAt = 取高度的函式 —— 緩衝空間走 terrain.bufferHeightAt(裙的外推高度唯一縫;
+  //         拿 heightAt 會被夾回圖界,整圈底毯貼在錯誤的高度上)
   const emitFace = (bmap, key, G, hAt, alphas, st, cut) => {
     const sub = key.slice(0, key.indexOf('#'));
     const aq = !!DEFS[sub].aq;                          // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
@@ -2785,10 +3035,145 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
             mid(P3, P0), mid(mid(P0, P1), mid(P3, P2)), mid(P1, P2),
             P3, mid(P3, P2), P2];
   };
-  const emitCell = (bmap, key, ti, tj, alphas, st, cut) => emitFace(
-    bmap, key,
-    face9(cornerAt(ti, tj), cornerAt(ti + 1, tj), cornerAt(ti + 1, tj + 1), cornerAt(ti, tj + 1)),
-    terrain.heightAt, alphas, st, cut);
+  // ==== 圖內底毯:認養地形三角形(2026-08-13 使用者定案「A 認養地形三角形」)====
+  // 舊制底毯自己切一張 3×3 貼地網格,頂點取 heightAt ⇒ **頂點恆在地形上,而頂點與頂點之間
+  // 是直的**;地形不是(逐格三角化的高度場,格線上有折角)。皮的邊長 ≈ 半個 cell(6.5m)
+  // 而地形格距 8.5m ⇒ 幾乎每一條邊都橫跨折角,弦沉在地形下 = 使用者回報的「斜坡破圖」
+  // (taroko 實測 22% 三角形被戳穿),SAG 那一層就是在補這件事。
+  // 新制:**皮的三角形就是地形的三角形** —— 規劃層一行不動,只把「畫在哪些三角形上」改成
+  // 逐地形四邊形認養主人格。共面 ⇒ 破圖恆為 0(是結構保證,不是「小於門檻」)。四條:
+  //  ①**規劃層零改動**:cornerAt 抖動 / zoneGrid / subGrid / varGrid / planSeamOverlays 全部
+  //    照舊 ⇒ lot 尺度、SEAM_QC_W、界線 run 長、BUF_CELL_F 那一票 cell 衍生常數一個都不用重調。
+  //  ②**灘線閘仍以 face9 九點整格判**,MUST NOT 改成逐四邊形判:那一閘決定 landCells,而
+  //    landCells 餵底毯細節撒佈 ⇒ 逐四邊形會多鋪半格、多撒幾株草,共享 rnd 序列整條推移(§2.3)。
+  //  ③**圖內底毯 MUST NOT 再套 drapeSag**:頂點與三角形都已經是地形自己的,再抬就是**浮在
+  //    地形上**,那同樣是破圖(SAG 檔頭 ⑤ 的同一條)。緩衝空間那一半站在裙上、沒有地形網格
+  //    可認養,仍走 emitFace + SAG.BUF。
+  //  ④**認養判定用 PNPOLY**(射線穿越數),MUST NOT 拿對角線拆成兩個三角形:抖動後的四邊形
+  //    可以是凹的,對角線會跑到多邊形外 ⇒ 那一塊沒有主人、地形直接露出來,而畫面上只是偶爾
+  //    一格禿掉。候選只掃 3×3(抖動 < 0.45 格 ⇒ 主人恆在其中;稽核以暴力搜尋逐格對照)。
+  // 地形頂點數**推導不手寫**(terrain 只對外給 gridM = x 軸格距;z 軸格距要用 worldH 自己回推,
+  // 非方形戰場兩軸不同)。
+  const NTV = Math.round(terrain.worldW / terrain.gridM) + 1;
+  const TGX = terrain.worldW / (NTV - 1), TGZ = terrain.worldH / (NTV - 1);
+  const tvx = (a) => terrain.minX + a * TGX;
+  const tvz = (b) => terrain.minZ + b * TGZ;
+  const quadOf = (ti, tj) => [cornerAt(ti, tj), cornerAt(ti + 1, tj),
+                              cornerAt(ti + 1, tj + 1), cornerAt(ti, tj + 1)];
+  // PNPOLY:半開邊 ⇒ 落在兩格共用邊上的點恰有一個主人(不會兩格都畫或都不畫)
+  const inQuad = (Q, px, pz) => {
+    let inside = false;
+    for (let a = 0, c = 3; a < 4; c = a++) {
+      const zi = Q[a][1], zc = Q[c][1];
+      if ((zi > pz) !== (zc > pz)
+          && px < (Q[c][0] - Q[a][0]) * (pz - zi) / (zc - zi) + Q[a][0]) inside = !inside;
+    }
+    return inside;
+  };
+  // 反雙線性(P(u,v) = A + u·e + v·f + uv·g 的解):外溢 α 是給在**規劃格四角**的,而地形
+  // 頂點落在格內任意位置。角上恆等 ⇒ 相鄰格共用的那顆地形頂點兩邊算出同一個 α,淡出不開縫。
+  const invBil = (Q, px, pz) => {
+    const [A, B, C, D] = Q;
+    const ex = B[0] - A[0], ez = B[1] - A[1];
+    const fx = D[0] - A[0], fz = D[1] - A[1];
+    const gx = A[0] - B[0] + C[0] - D[0], gz = A[1] - B[1] + C[1] - D[1];
+    const hx = px - A[0], hz = pz - A[1];
+    const cr = (ax, az, bx, bz) => ax * bz - az * bx;
+    const k2 = cr(gx, gz, fx, fz);
+    const k1 = cr(ex, ez, fx, fz) + cr(hx, hz, gx, gz);
+    const k0 = cr(hx, hz, ex, ez);
+    // 給定 v 回 u:分母取兩軸絕對值大的那一個(另一軸可能剛好退化成 0)
+    const uOf = (v) => {
+      const dx = ex + gx * v, dz = ez + gz * v;
+      const u = Math.abs(dx) > Math.abs(dz) ? (hx - fx * v) / dx : (hz - fz * v) / dz;
+      return Number.isFinite(u) ? u : 0;
+    };
+    let v;
+    if (Math.abs(k2) < 1e-9) {
+      if (Math.abs(k1) < 1e-12) return [0, 0];
+      v = -k0 / k1;
+    } else {
+      const w2 = k1 * k1 - 4 * k0 * k2;
+      if (!(w2 >= 0)) return [0.5, 0.5];                 // 落在映射像之外(數值邊緣)⇒ 取格心
+      const w = Math.sqrt(w2), ik2 = 0.5 / k2;
+      v = (-k1 - w) * ik2;
+      const u0 = uOf(v);
+      if (u0 < -1e-6 || u0 > 1 + 1e-6 || v < -1e-6 || v > 1 + 1e-6) v = (-k1 + w) * ik2;
+    }
+    const u = uOf(v);
+    return [Math.min(1, Math.max(0, u)), Math.min(1, Math.max(0, v))];
+  };
+  // 主人格 → 地形四邊形索引扁平表 [a0, b0, a1, b1, …](純函式、零 rnd,建一次共用)
+  const cellQuads = new Array(gnx * gnz);
+  let orphanQuads = 0;
+  for (let b = 0; b < NTV - 1; b++) {
+    const cz = tvz(b + 0.5), nj = Math.floor((cz - terrain.minZ) / cell);
+    for (let a = 0; a < NTV - 1; a++) {
+      const cx = tvx(a + 0.5), ni = Math.floor((cx - terrain.minX) / cell);
+      let own = -1;
+      for (let dj = -1; dj <= 1 && own < 0; dj++) {
+        const tj = nj + dj;
+        if (tj < 0 || tj >= gnz) continue;
+        for (let di = -1; di <= 1; di++) {
+          const ti = ni + di;
+          if (ti < 0 || ti >= gnx) continue;
+          if (inQuad(quadOf(ti, tj), cx, cz)) { own = tj * gnx + ti; break; }
+        }
+      }
+      if (own < 0) { orphanQuads++; continue; }
+      (cellQuads[own] || (cellQuads[own] = [])).push(a, b);
+    }
+  }
+  const emitCell = (bmap, key, ti, tj, alphas, st, cut) => {
+    const sub = key.slice(0, key.indexOf('#'));
+    const aq = !!DEFS[sub].aq;                          // 水生拼圖:免灘線淘汰、頂點夾到水面上(可見)
+    const Q = quadOf(ti, tj);
+    const G = face9(Q[0], Q[1], Q[2], Q[3]);
+    // ② 灘線閘:仍以整格九點判(landCells 與共享 rnd 序列逐位元同舊制)
+    if (!aq && Math.min(...G.map(([px, pz]) => terrain.heightAt(px, pz))) < 0.45) return null;
+    const quads = cellQuads[tj * gnx + ti];
+    if (!quads) return null;
+    const uvS = DEFS[sub].uvS || 1 / 12;
+    // 中間樣態脊帶(st.band)固定壓在其他外溢之上(0.108 仍 < fade 下限 0.110)—— 它是
+    // 「疊在兩側淡出上的第三種地表」;一般外溢走每 key 微升差
+    const lift = alphas ? (st?.band ? SLIFT + 0.008 : SLIFT + seamLift(key)) : CLIFT;
+    const wy = aq && terrain.waterY != null ? terrain.waterY + 0.05 : null;
+    const b = bucketOf(bmap, key);
+    for (let n = 0; n < quads.length; n += 2) {
+      const x0 = tvx(quads[n]), x1 = tvx(quads[n] + 1);
+      const z0 = tvz(quads[n + 1]), z1 = tvz(quads[n + 1] + 1);
+      // 頂點序 (x,z)/(x+1,z)/(x,z+1)/(x+1,z+1),索引取**反對角線** —— 與 terrain.js 的
+      // (a,c,b)(b,c,d) 逐字同向 ⇒ 兩張皮的三角形完全重合(共面的本錢在這一行)
+      for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) {
+        const w = wash(px, pz);
+        let al = 1;
+        if (alphas) {
+          // 切線優先且**逐頂點無條件覆寫**(不看角點權重):線可能自格子中間穿過,拿角點權重
+          // 當閘門會讓「該換手卻權重為 0」的那半格留在原本的地貌上 = 滲透照樣發生
+          const cutA = cut ? bdCutAt(px, pz, cut.di, cut.dj) : null;
+          if (cutA != null) al = cutA;
+          else {
+            const [u, v] = invBil(Q, px, pz);
+            al = (1 - u) * (1 - v) * alphas[0] + u * (1 - v) * alphas[1]
+               + u * v * alphas[2] + (1 - u) * v * alphas[3];
+            // 交界頂點 α 塑形(seamAlpha 純函式,樣式 = 逐分區組合查表):明確邊界壓窄、
+            // 柔和淡出疊碎形擾動、雪線推成斑塊。端點 α=0/1 恆定 ⇒ 與不透明底毯/淡出盡頭
+            // 仍水密;純函數(世界座標+seed)⇒ 相鄰外溢格共用頂點同值不開縫(§2.3 零 rnd)
+            if (al > 0 && al < 1) al = seamAlpha(al, qcVal(px, pz, SEAM_QC_W), st);
+          }
+        }
+        const hy = terrain.heightAt(px, pz);
+        b.pos.push(px, (wy != null ? Math.max(hy, wy) : hy) + lift, pz);
+        b.nrm.push(0, 1, 0);
+        pushLandN(b, terrain.heightAt, px, pz, terrain.gridM);
+        b.uv.push(px * uvS, pz * uvS);
+        b.col.push(w, w, w, al);
+      }
+      b.idx.push(b.base, b.base + 2, b.base + 1, b.base + 1, b.base + 2, b.base + 3);
+      b.base += 4;
+    }
+    return G[4];
+  };
   // ==== 多層次地貌:整張 coarse 分區格網 → 小區域包裹判定(planEnclaves 唯一縫)====
   // encGrid[cell] = `${內}@${外}` 樣式鍵或 null;encRt = 樣式執行期物件(set = 該樣式
   // 允許的全部地表 —— tryPatch 放行閘,僅對 enclave 格生效,不讓樣式地表外漏到一般分區)
@@ -3104,6 +3489,25 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     return -1;
   };
 
+  // ---- 農田叢集:「組合夠大片才加田埂」(2026-08-13 使用者定案)----
+  // 一塊孤田圍一圈埂讀起來像花壇 ⇒ 田埂**不是逐塊的屬性,是叢集的屬性**。開一本帳把同一次
+  // 遞迴(或同一條路的沿街陣列)裡的農田塊記下來,收工時才決定畫不畫 —— 門檻 BUND.MIN_N。
+  // 帳本身零 rnd(只是記帳),畫不畫也不影響任何淘汰閘 ⇒ 共享 rnd 序列與佈局一格未動。
+  const bundBuckets = new Map();
+  let farmCluster = null;
+  const withCluster = (fn) => {
+    const prev = farmCluster;
+    farmCluster = [];
+    const out = fn();
+    if (farmCluster.length >= BUND.MIN_N) {
+      const b = bucketOf(bundBuckets, 'fieldbund');
+      for (const p of farmCluster) emitBund(b, terrain, p.x, p.z, p.r, p.rot, p.def, p.lift + 0.004,
+                                            (px, pz) => drapeSag(terrain.heightAt, px, pz));
+    }
+    farmCluster = prev;
+    return out;
+  };
+
   // ---- 單塊 patch:檢查 → 幾何 → 細節 → 家族延伸(遞迴,同族異款毗鄰)----
   const tryPatch = (x, z, sub, variant, r, rot, depth) => {
     if (placed >= target) return false;
@@ -3160,6 +3564,7 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     else emitBlob(b, terrain, x, z, r, lift, def.uvS, def.edge, pt, rnd, patchSag);
     regPatch(x, z, rEff, `${sub}#${variant}`, def.edge === 'ink', foot);
     placed++;
+    if (BUND_SUBS.has(sub)) farmCluster?.push({ x, z, r, rot, def, lift });   // 田埂帳(收工才決定畫不畫)
 
     // curInk = 這一塊自己的足跡:它自己的擺件當然站得上去(球場的籃球架/加油站的油槍),
     // 擋的是**別人的**擺件走進來。家族延伸在 scatterDetails 之後才遞迴 ⇒ 還原後再往下走
@@ -3178,14 +3583,20 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
         if (def2.shape !== def.shape) continue;
         let nx2, nz2, r2, rot2;
         if (def.shape === 'rect') {
-          // 沿本塊局部軸擺到正鄰位(間留 1.2m 小路),同 rot → 田字拼布
-          const w1 = r * 2, d1 = r * 2 * (def.aspect || 0.7), d2 = r * 2 * (def2.aspect || 0.7);
-          const g2 = 1.2;
-          const [ox, oz] = rnd() < 0.5
-            ? [(w1 + g2) * (rnd() < 0.5 ? 1 : -1), 0]
-            : [0, ((d1 + d2) / 2 + g2) * (rnd() < 0.5 ? 1 : -1)];
+          // 沿本塊局部軸擺到正鄰位(間留 FARM_GAP 小路),同 rot → 田字拼布。
+          // **鄰塊尺寸依毗鄰軸反解**(2026-08-13 使用者「田與田之間沒有整齊對準」):
+          //   側向毗鄰 ⇒ 共用的是**長邊** ⇒ 深度要一樣 ⇒ r2 = r × aspect ÷ aspect2;
+          //   前後毗鄰 ⇒ 共用的是**短邊** ⇒ 寬度要一樣 ⇒ r2 = r。
+          // 舊制兩種情形都取 r2 = r,於是 aspect 不同的鄰款(水田 0.7 / 茶園 0.8 / 溫室 0.6)
+          // 側向毗鄰時長邊差了 14~33% —— 畫面上就是「兩塊田沒對齊」。
+          // 兩枚 rnd 的順序與枚數逐位元同舊制(先毗鄰軸、後方向)。
+          const as1 = def.aspect || 0.7, as2 = def2.aspect || 0.7;
+          const side = rnd() < 0.5, sgn = rnd() < 0.5 ? 1 : -1;
+          r2 = side ? r * as1 / as2 : r;
+          const [ox, oz] = side ? [(r + r2 + FARM_GAP) * sgn, 0]
+                                : [0, (r * as1 + r2 * as2 + FARM_GAP) * sgn];
           const ca = Math.cos(rot), sa = Math.sin(rot);
-          nx2 = x + ox * ca - oz * sa; nz2 = z + ox * sa + oz * ca; r2 = r; rot2 = rot;
+          nx2 = x + ox * ca - oz * sa; nz2 = z + ox * sa + oz * ca; rot2 = rot;
         } else {
           r2 = (SIZE[sub2][0] + rnd() * SIZE[sub2][1]) * RSCALE;
           const th = rnd() * Math.PI * 2, dist = (r + r2) * 0.86;   // 邊緣小比例交疊:fade 邊互融(> SEP_F)
@@ -3276,6 +3687,13 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       }
     } else if (sub === 'teafield') scatter('tuft', 2, 0.5, 0.3);
     else if (sub === 'veggiefield') { rows('cabbage', 1.7, 2.4, 0.4, 0.34, 36, 0.15, null, 0.8, 0.5); if (rnd() < 0.5) scatter('fencepost', 3 + (rnd() * 3 | 0), 0.9, 0.3); }
+    // 牧場:圍籬樁沿緣 + 牧草叢 + 秋收草捲(貼圖畫的是俯視圓餅,3D 這一份給它厚度)
+    else if (sub === 'pasture') {
+      scatter('fencepost', 6 + (rnd() * 4 | 0), 1, 0.3);
+      scatter('tuft', 7 + (rnd() * 5 | 0), 0.8, 0.6);
+      scatter('weed', 3, 0.6, 0.4);
+      if (rnd() < 0.55) scatter('hay', 1 + (rnd() * 2 | 0), 0.9, 0.4);
+    }
     else if (sub === 'paddy') {
       let k = 0;                                  // 秧苗列:沿田塊軸向整齊插秧
       for (let lz = -dp * 0.32; lz <= dp * 0.32 && k < 34; lz += 2.6) {
@@ -3418,19 +3836,24 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     };
     for (const [pts, hw] of roadPolys) {
       if (placed >= arrCap) break;
-      let carry = 0, station = 0;
-      for (let si = 1; si < pts.length; si++) {
-        const x0 = pts[si - 1][0], z0 = pts[si - 1][1];
-        const dx = pts[si][0] - x0, dz = pts[si][1] - z0, segLen = Math.hypot(dx, dz);
-        if (segLen < 1e-3) continue;
-        const ux = dx / segLen, uz = dz / segLen, a = Math.atan2(dz, dx);
-        let dcur = carry;
-        while (dcur < segLen) {
-          if (placed >= arrCap) return;
-          dcur += dropAt(x0 + ux * dcur, z0 + uz * dcur, a, hw, station++);
+      // 一條路 = 一本田埂帳:沿街連續格陣本來就是「夠大片的組合」,而它與主迴圈的家族延伸
+      // 是兩條互不相干的產線 ⇒ 各記各的(外層 `placed >= arrCap` 仍是唯一的收手閘,
+      // 內層改為只結束這條路,語意與舊制的 return 相同)
+      withCluster(() => {
+        let carry = 0, station = 0;
+        for (let si = 1; si < pts.length; si++) {
+          const x0 = pts[si - 1][0], z0 = pts[si - 1][1];
+          const dx = pts[si][0] - x0, dz = pts[si][1] - z0, segLen = Math.hypot(dx, dz);
+          if (segLen < 1e-3) continue;
+          const ux = dx / segLen, uz = dz / segLen, a = Math.atan2(dz, dx);
+          let dcur = carry;
+          while (dcur < segLen) {
+            if (placed >= arrCap) return;
+            dcur += dropAt(x0 + ux * dcur, z0 + uz * dcur, a, hw, station++);
+          }
+          carry = dcur - segLen;                         // 跨段連續推進(街廓不因節點斷開)
         }
-        carry = dcur - segLen;                           // 跨段連續推進(街廓不因節點斷開)
-      }
+      });
     }
   };
   layRegularArrays();
@@ -3468,7 +3891,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       const v = freeVariant(sub, x, z, v0);
       if (v < 0) continue;
       const r = (SIZE[sub][0] + rnd() * SIZE[sub][1]) * RSCALE;
-      if (tryPatch(x, z, sub, v, r, orient(x, z, DEFS[sub].reg, true, DEFS[sub].edge === 'ink'), 0)) break;
+      // 一次遞迴 = 一本田埂帳(root + 家族延伸的全部後代 = 這一片農田拼布)
+      if (withCluster(() => tryPatch(x, z, sub, v, r, orient(x, z, DEFS[sub].reg, true, DEFS[sub].edge === 'ink'), 0))) break;
     }
   }
 
@@ -3500,9 +3924,10 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
       setLandN(geo, b);
       geo.setIndex(b.idx);
-      const tint = DEFS[sub].green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
+      // 有四季設計的地表**跳過**季節濾鏡:畫筆已經畫成那個季節了,再乘一層 = 調兩次色
+      const tint = DEFS[sub].green && !DEFS[sub].seasonal ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
       const m = new THREE.Mesh(geo, envMat(tint, {
-        map: groundTex(sub, +v, false),
+        map: groundTex(sub, +v, false, season),
         vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim:掠射角全開會把遠處洗白
         transparent: pass > 0,   // 外溢/脊帶靠頂點 alpha 淡出;depthWrite 保持 true
         landNrm: true,           // 地貌類別 + 真地形法線(見 landNrmAt 那一段)
@@ -3986,9 +4411,9 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));   // RGBA:fade 邊用頂點 alpha
     setLandN(geo, b);
     geo.setIndex(b.idx);
-    const tint = def.green ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;
+    const tint = def.green && !def.seasonal ? (SEASON_TINT[season] ?? 0xffffff) : 0xffffff;   // 同底毯:四季設計不再吃濾鏡
     const m = new THREE.Mesh(geo, envMat(tint, {
-      map: groundTex(sub, +v, def.uv === 'fit'),
+      map: groundTex(sub, +v, def.uv === 'fit', season),
       vertexColors: true, wash: 0.5, cool: 0.5, rim: 0,   // 貼地面關 rim(同底毯)
       transparent: def.edge === 'fade',   // 淡出邊融入地形;depthWrite 保持 true(貼花式)
       landNrm: true,                      // 地貌類別 + 真地形法線(同底毯)
@@ -3997,6 +4422,30 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
     m.userData.noOutline = true;
     // 特徵拼圖識別標記:冒煙測試核對不疊置/反重複/分區相符用
     m.userData.gsub = sub; m.userData.gvar = +v; m.userData.gshape = def.shape;
+    group.add(m);
+  }
+
+  // ---- 農田田埂 Mesh(全場一個 draw call;2026-08-13)----
+  // 畫筆走 `borderTex('fieldridge')` = 界線拼圖那一份 `fieldpath` 夯土畫筆(**同一個縫**;
+  // 田埂就是田埂,沒有理由多養一支)。`land: true` 但**不換法線** —— 同立體脊的處理:
+  // 它是真的有斷面的東西,折邊那一項要照樣出線(埂頂與外側垂直面的 90° 折角就是那條線),
+  // 共用 id 只是不要在埂與底下的田之間多畫一條「不同材質」的假線。
+  for (const [, b] of bundBuckets) {
+    if (!b.idx.length) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.nrm, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(b.col, 4));
+    setLandN(geo, b);
+    geo.setIndex(b.idx);
+    const m = new THREE.Mesh(geo, envMat(0xffffff, {
+      map: borderTex('fieldridge'), vertexColors: true, wash: 0.45, cool: 0.5, rim: 0,
+      land: true, landNrm: true,   // 埂頂吃真地形法線、垂直面吃自己的面法線(見 emitBund)
+    }));
+    m.frustumCulled = false;
+    m.userData.noOutline = true;
+    m.userData.glayer = 'bund';   // 冒煙識別標記(同拼圖的 gsub/glayer 慣例)
     group.add(m);
   }
 
@@ -4041,6 +4490,8 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
       group.add(m);
     }
   }
+  // orphans = 找不到主人格的地形四邊形數(結構上應恆為 0:抖動 < 0.45 格 ⇒ 主人恆在 3×3 內。
+  // > 0 就是認養搜尋範圍或抖動幅度有人動過,而畫面上只表現成偶爾一格禿掉露出地形)
   return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN,
-           border: bStat, bufCells };
+           border: bStat, bufCells, orphans: orphanQuads };
 }

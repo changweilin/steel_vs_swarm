@@ -410,8 +410,12 @@ console.log('\nⅦ 地貌不出接縫(LUT / 勾線只吃地形,不吃地貌)');
   const landN = (G.match(/\n\s+pushLandN\(/g) || []).length;
   ok(flatN > 0 && flatN === landN,
     `每一處貼地 (0,1,0) 都配一份地形法線(${flatN} 處 / ${landN} 份)`);
-  ok((G.match(/landNrm: true/g) || []).length === 3,
-    '三層貼地拼圖(底毯+外溢+脊帶 / 界線 flat / 特徵)都掛 landNrm');
+  // 四層:底毯+外溢+脊帶 / 界線 flat / 特徵 / **農田田埂**(2026-08-13)。田埂的埂頂是貼地的
+  // (受光走 (0,1,0)、勾線吃真地形法線),而它的外側垂直面在 emitBund 裡另外餵**自己的面法線**
+  // ⇒ 埂頂那道 90° 折邊照樣出線 —— 「貼地那一半掛 landNrm」與「有形狀那一半不掛」在同一個
+  // mesh 上並存,靠的是逐頂點的 aLandN 而不是逐材質的旗標
+  ok((G.match(/landNrm: true/g) || []).length === 4,
+    '四層貼地拼圖(底毯+外溢+脊帶 / 界線 flat / 特徵 / 田埂埂頂)都掛 landNrm');
   ok(/side: THREE\.DoubleSide, land: true/.test(G),
     '立體脊只共用 id、**不換法線**(它是真的有形狀的東西)');
   ok((TR.match(/land: true/g) || []).length === 2 && /gridM: worldW \/ \(N - 1\)/.test(TR),
