@@ -4,7 +4,7 @@
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
-  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
+  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, BASE_MISSILE, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
   vsMult, upgradePrice, upgradeScore, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
@@ -4407,7 +4407,7 @@ export class BattleSim {
       h.thirdCd = this.t + GAME.THREAT_CD_S;
       this.missiles.push({
         id: nextEntId++, byId: best.id, side: OTHER_SIDE[h.side], tid: h.id, tpid: h.pid,
-        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, hp: A.HP, ttl: 14,
+        x: best.x, z: best.z, y: 2, speed: A.SPEED, dmg: A.DMG, pen: A.PEN, r: A.R, hp: A.HP, ttl: 14,
         amb: true, ox: best.x, oy: 2, oz: best.z, range: S.range,   // 出了陣地射程就失鎖直飛
       });
       this.events.push({ e: 'sam', from: [best.x, best.z], side: OTHER_SIDE[h.side], tpid: h.pid, ambush: true });
@@ -4595,16 +4595,18 @@ export class BattleSim {
   }
 
   /**
-   * 防空飛彈引爆(唯一縫;2026-08-13「所有爆炸傷害武器都套用」)。三個引爆點(近炸引信命中 /
-   * 追蹤中撞障礙 / 失鎖後撞障礙)MUST 全走這一支 —— 舊制只有第一個結算傷害而且是**單體直擊**,
-   * 另兩個純放煙火,三處各自手寫 `boom` 的半徑(14 / 8 / 8),沒有一個對得上任何權威值。
-   * 半徑是推導值(`GAME.AA_AMBUSH.R`),演出取用的就是結算用的那一份(原則 4)。
-   * 傷害基準走 npcDmg = `m.dmg`(第三方陣地不吃 `vs` 剋制,與 NPC 分支同一條)。
+   * `this.missiles` 通用飛彈引爆(唯一縫;2026-08-13「所有爆炸傷害武器都套用」)。三個引爆點
+   * (近炸引信命中 / 追蹤中撞障礙 / 失鎖後撞障礙)MUST 全走這一支 —— 舊制只有第一個結算傷害而且
+   * 是**單體直擊**,另兩個純放煙火,三處各自手寫 `boom` 的半徑,沒有一個對得上任何權威值。
+   * 半徑一律讀**發射時就寫進飛彈本身的 `m.r`**(2026-08-13 主堡飛彈化後不再只有防空伏擊一個
+   * 來源,MUST NOT 在這裡假設固定常數 —— 那會讓所有非防空伏擊來源的飛彈半徑跟著讀錯);
+   * 演出取用的就是結算用的那一份(原則 4)。傷害基準走 npcDmg = `m.dmg`(建築/第三方陣地皆
+   * 不吃 `vs` 剋制,與 NPC 分支同一條)。
    */
   _samBlast(m, x, z, y, lev = null) {
     const by = this.ents.get(m.byId) || { side: m.side };
-    this._blast(by, { r: GAME.AA_AMBUSH.R, pen: m.pen || 0 }, x, z, y, lev, false, m.dmg);
-    this.events.push({ e: 'boom', x, z, y, r: GAME.AA_AMBUSH.R, side: m.side, sam: true });
+    this._blast(by, { r: m.r, pen: m.pen || 0 }, x, z, y, lev, false, m.dmg);
+    this.events.push({ e: 'boom', x, z, y, r: m.r, side: m.side, sam: true });
   }
 
   /**
@@ -4752,6 +4754,13 @@ export class BattleSim {
    * 主堡火砲(2026-08-13 起是**唯一**一把:本體火砲與雙聯裝砲已合併,逐項取最大值,見 data.js)。
    * 兩根砲管各自冷卻、獨立索敵 —— 砲管數也是那條「取最大值」的一部分,不是第二把武器。
    * 主迴圈那一支對 `u.guns` 的單位不開火,開火路徑只有這裡一條。
+   *
+   * **射後不理導彈**(2026-08-13 使用者定案「主堡改為射後不理導彈」):鎖定時**推入 `this.missiles`**
+   * 交給既有的 `_tickMissiles` / `_samBlast` 通用飛彈追蹤機制結算(與第三方防空伏擊飛彈同一條
+   * 唯一縫,MUST NOT 另寫第二套追蹤/命中/失鎖邏輯)——「射後不理」的字面意思就是**這裡不用再等
+   * 飛彈飛到**,砲管冷卻與命中結算從此解耦(舊制的即時 `_blast` 反而是兩者綁死在同一個 tick)。
+   * 傷害/半徑/破甲仍住 `UNITS.base`/`STRUCT_W.base`(MUST NOT 複製第二份),飛行參數住
+   * `BASE_MISSILE`。飛彈途中可被玩家擊落(`hitMissile` 通用,擊落 = 完全否定不引爆)。
    */
   _tickBaseGuns(e, g, dt) {
     e.gunCd ??= new Array(g.n).fill(0);
@@ -4762,16 +4771,17 @@ export class BattleSim {
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
       e.gunCd[i] = 1 / g.rate;
-      // 主堡火砲是爆炸彈頭(2026-08-13「所有爆炸傷害武器都套用」;防禦塔是具名例外 —— 它改回
-      // 單體攻擊)。半徑走 data.js STRUCT_W.base(合併前兩把各自推導值的較大者);傷害基準走
-      // npcDmg = g.dmg(建築不吃 vs 剋制,與 NPC 分支同一條);對主目標的期望輸出不變(閃避有補償)。
-      const ty = target.hero || target.kind === 'heli' ? (target.y || 0) : 0;
-      this._blast(e, STRUCT_W.base, target.x, target.z, ty, this._unitLev(target), false, g.dmg);
-      this.events.push({ e: 'boom', x: target.x, z: target.z, y: ty, r: STRUCT_W.base.r, side: e.side });
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
-      // gi = 第幾門砲:客戶端把該門砲管轉向目標、曳光自實際砲口射出
+      const mx = e.x + off, mz = e.z, my = BASE_MISSILE.LAUNCH_Y;
+      this.missiles.push({
+        id: nextEntId++, byId: e.id, side: e.side, tid: target.id, tpid: target.pid,
+        x: mx, y: my, z: mz, speed: BASE_MISSILE.SPEED, dmg: g.dmg, pen: STRUCT_W.base.pen || 0,
+        r: STRUCT_W.base.r, hp: BASE_MISSILE.HP, ttl: g.range / BASE_MISSILE.SPEED + BASE_MISSILE.TTL_PAD,
+        ox: mx, oy: my, oz: mz, range: g.range,   // 出了主堡射程就失鎖直飛(與其他飛彈同一條規則)
+      });
+      // gi = 第幾門砲:客戶端把該門砲管轉向目標、播放槍口焰(飛彈本身由 sm 快照另行渲染飛行路徑)
       this.events.push({
-        e: 'shot', id: e.id, kind: 'base', gi: i, from: [e.x + off, e.z], to: [target.x, target.z],
+        e: 'shot', id: e.id, kind: 'base', gi: i, from: [mx, mz], to: [target.x, target.z],
         ty: (target.hero || target.decoy || target.kind === 'heli') ? Math.round(target.y || 0) : 0,
         side: e.side,
       });

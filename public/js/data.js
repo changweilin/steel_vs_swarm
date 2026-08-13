@@ -3709,6 +3709,8 @@ export const UNITS = {
   // 期間兩座塔的回擊 ≈ 1.8 × 機甲 EHP(981)⇒ 剛好擊殺一位、把另一位壓到 ~20%。
   // 推導:towerHp = 1.8 × heroEHP × heroDPS / towerDPS。改任一邊 MUST 重算(tools 的 _bal 推導)。
   tower:   { name: '防禦塔', hp: 1800, armor: 30, dmg: 65, range: 310, rate: 1.0, speed: 0,  sight: 310 },
+  // base.dmg 只是佔位(UNITS 之後 derive 成 BASE_DPS_MULT × towerDps() 反解值,見該處註解),
+  // range/rate 仍與塔取最大值 ⇒ 這兩欄的初始值(230/1.2)實際會生效,dmg 的初始值(90)不會。
   base:    { name: '主堡',   hp: 3000, armor: 25, dmg: 90, range: 230, rate: 1.2, speed: 0,  sight: 230 },
   // 英雄基準(實戰值 × CHARACTERS[ch].mods):護盾 shield 非戰鬥自然回復、
   // 裝甲 hp 只能回主堡 / 治療招式回復;mp = 電力(施放小招/大招 + 重武器擊發皆消耗,
@@ -3826,19 +3828,26 @@ UNITS.morph = {
 // 主堡的武器**只有一把**(2026-08-13 使用者定案「主堡兩個武器合併,射程/範圍/傷害等參數都挑
 // 最大值」)。舊制是兩把:本體火砲(dmg/rate/range 住 UNITS.base)+ 加裝雙聯裝砲(整組 derive
 // 自砲塔)—— 同一棟建築掛兩套射控、兩份 CD、兩條開火路徑(主迴圈 + _tickBaseGuns)。
-// 合併 = **逐項取最大值**,MUST NOT 手抄任何一個數字:
-//   射程 max(主堡 230, 塔 310)/ 傷害 max(90, 65)/ 射速 max(1.2, 1)/ 砲管數 max(1, 2)
-// 砲管數也照這條規則 ⇒ 保留兩根砲管輪替(演出不變;總火力 216 vs 舊制兩把加起來 238)。
+// 合併時射程/射速**逐項取最大值**,MUST NOT 手抄任何一個數字:
+//   射程 max(主堡 230, 塔 310)/ 射速 max(1.2, 1)/ 砲管數 max(1, 2)
+// 砲管數也照這條規則 ⇒ 保留兩根砲管輪替(演出不變)。
 // **開火路徑因此也只剩一條**(`_tickBaseGuns`)—— sim 主迴圈那一支對 `u.guns` 的單位不開火,
 // 否則合併之後反而變成三條路徑。爆風半徑見下方 STRUCT_W(同樣取兩者的較大者)。
+//
+// 傷害改由**總 DPS 目標**反解(2026-08-13 使用者追加定案「主堡的 DPS 提高至砲塔的 1.68 倍」):
+// 兩根砲管輪替後的總輸出 DPS(n × dmg × rate)= BASE_DPS_MULT × towerDps(),唯一推導處,
+// MUST NOT 手寫 dmg。改 BASE_DPS_MULT、塔的 dmg/rate、或砲管數 MUST 重跑 `npm run bal` ①④
+// 與 `audit_weapon_gate`(爆風半徑吃同一個 dmg,會跟著這個目標一起動)。
+export const BASE_DPS_MULT = 1.68;
 UNITS.base.range = Math.max(UNITS.base.range, UNITS.tower.range);
-UNITS.base.dmg = Math.max(UNITS.base.dmg, UNITS.tower.dmg);
 UNITS.base.rate = Math.max(UNITS.base.rate, UNITS.tower.rate);
-UNITS.base.guns = { n: 2, range: UNITS.base.range, dmg: UNITS.base.dmg, rate: UNITS.base.rate };
+const BASE_GUN_N = 2;
+UNITS.base.dmg = (BASE_DPS_MULT * towerDps()) / (BASE_GUN_N * UNITS.base.rate);
+UNITS.base.guns = { n: BASE_GUN_N, range: UNITS.base.range, dmg: UNITS.base.dmg, rate: UNITS.base.rate };
 // 擊殺賞金推導(2026-07-17;「對應難度的金錢」唯一推導處,MUST NOT 手寫表列單位):
 // 賞金 = 戰力(EHP + DPS × BOUNTY_DPS_S)× BOUNTY_F,取 5 的倍數。
 // 第三方(GUER/MILI)沿用正規 kind ⇒ 同一張表;改 UNITS 任一數值賞金自動連動。
-// 現值:步兵 20 / 火箭 35 / 榴彈 35 / 坦克 75 / 直升機 50 / 塔 330 / 主堡 540 / 碉堡 135。
+// 現值:步兵 20 / 火箭 35 / 榴彈 35 / 坦克 75 / 直升機 50 / 塔 330 / 主堡 485 / 碉堡 135。
 for (const k of ['soldier', 'rocketeer', 'howitzer', 'tank', 'heli', 'apc', 'tower', 'base', 'bunker']) {
   const u = UNITS[k];
   const v = u.hp / armorMul(u.armor || 0) + (u.dmg || 0) * (u.rate || 0) * ECON.BOUNTY_DPS_S;
@@ -3887,13 +3896,23 @@ export const STRUCT_W = { base: { r: 0, pen: 0 } };
   // 攻城榴彈砲由**榴彈兵與坦克共用**(兩者 DPS 差一倍)⇒ 取兩者的**幾何中點**,與 mobMid/
   // speedMid/rangeMid 同一條慣例(算術平均會被快的那一邊主導)。現值 ≈18.1m(單獨算 21.6 / 15.2)
   WEAPONS.siege.r = npcBlastR(Math.sqrt(dps('howitzer') * dps('tank')), NPC_BLAST.DPS);
-  // 主堡合併後只有一把武器 ⇒ 只有一個半徑,而「範圍也挑最大值」是使用者這一輪的原句 ⇒
-  // 取**合併前兩把各自推導值的較大者**,MUST NOT 拿合併後的 DPS 重推(那會回到本體火砲那一份
-  // 7.1m,等於雙聯裝砲的範圍在合併時被吃掉)。雙聯那一半的火力 = 砲塔的(它整組 derive 自砲塔)。
+  // 主堡合併後只有一把武器 ⇒ 只有一個半徑,取「主堡單管 dps / 塔 dps」兩者推導值的**較大者**
+  // (火力越弱、半徑越大 —— 同一條「面積 × 火力守恆」規則,MUST NOT 拿別的軸重推)。
+  // 主堡總 DPS 改吃 BASE_DPS_MULT 目標(見 UNITS.base.dmg 推導)後單管 dps 會跟著動,
+  // 半徑因此自動連動,MUST NOT 手寫。
   STRUCT_W.base.r = Math.max(npcBlastR(dps('base'), NPC_BLAST.DPS), npcBlastR(dps('tower'), NPC_BLAST.DPS));
   // 第三方伏擊飛彈的半徑接在 `GAME.AA_AMBUSH.DMG` 那一支 derive 的後面(它自己也是推導值,
   // 而 GAME 在本區塊之後才宣告)—— 搬上來只會拿到 TDZ。
 }
+// 主堡飛彈的飛行參數(2026-08-13 使用者定案「主堡改為射後不理導彈」):`sim._tickBaseGuns` 發射後
+// 走既有的 `this.missiles` / `_tickMissiles` / `_samBlast` 通用飛彈追蹤機制(與第三方防空伏擊飛彈
+// 同一條唯一縫,MUST NOT 另寫第二套追蹤/命中/失鎖邏輯)。飛行中可被玩家擊落(`hitMissile` 對
+// `this.missiles` 一視同仁、不分來源)—— 擊落 = 完全否定,不引爆(見 A45 ⑧ 註,MUST NOT 順手改成
+// 爆風)。傷害/射速/射程仍住 `UNITS.base`、爆風半徑/破甲仍住 `STRUCT_W.base`,這裡只帶飛彈本身的
+// 飛行/生存值(MUST NOT 複製第二份傷害)。`TTL_PAD` 是失鎖後直線飛行的緩衝秒數,飛彈自毀上限
+// = 射程 ÷ 飛行速度 + `TTL_PAD`(推導,MUST NOT 手寫成固定秒數 —— 射程一動,原本的固定值就會
+// 在飛彈根本還沒到最大射程時提前自毀)。
+export const BASE_MISSILE = { SPEED: 110, HP: 70, LAUNCH_Y: 20, TTL_PAD: 3 };
 
 // ---- 平民與間諜(2026-07-18;非兵線隨機放置的非戰鬥人員,DOTA 野區思想的變體)----
 // 每陣營在非兵線空曠處隨機生成 ~10 名(隨兵線數縮放),其中 SPY_RATE(1/10)為間諜(9:1)。
