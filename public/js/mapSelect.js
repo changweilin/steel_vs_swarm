@@ -37,11 +37,12 @@ function midPoint(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
 // 砲塔規則合規(規則 #4):兵線(lat/lng)→ 遊戲公尺,跑 data.js 的唯一結算縫 towerLayoutAudit。
 // 只用相對距離 ⇒ 原點任取(這裡用兵線起點)。與烘焙 / 伺服器 validateBattleConfig / 稽核共用同一支。
 const SC_GAME = 1 / MAPGEO.REAL_SCALE;
-function laneRuleOK(lanes) {
+function laneRuleOK(lanes, mini) {
   const o = lanes[0]?.[0];
   if (!o) return false;
   const game = lanes.map((lane) => lane.map((p) => { const [x, z] = toMeters(p, o); return [x * SC_GAME, z * SC_GAME]; }));
-  return towerLayoutAudit(game).ok && laneSeparationAudit(game).ok;   // 規則:兵線互不接觸/交叉
+  // mini MUST 傳下去:迷你地圖沒有後塔,拿完整版的解來篩會擋掉本來合法的推薦點(同伺服器複驗)
+  return towerLayoutAudit(game, mini).ok && laneSeparationAudit(game).ok;   // 規則:兵線互不接觸/交叉
 }
 
 /** 折線重合率:網格佔用率(相對較短一條)。cell 由 overlapCellM(L) 依地圖尺度給定 */
@@ -176,8 +177,8 @@ const OFFSET_FRACS = [MAPGEO.LANE_OFFSET_FRAC, 0.45, 0.62];
  * via 全失敗才補合成弧線(synthetic 標記)。
  * 直達路線失敗(海面/無路網)回傳 null,由呼叫端淘汰該方位。
  */
-async function buildLanes(A, B, signal, directRoute = null, L = 3) {
-  const cell = overlapCellM(L);
+async function buildLanes(A, B, signal, directRoute = null, L = 3, mini = false) {
+  const cell = overlapCellM(L, mini);
   const d = distM(A, B);
   const [vx, vz] = toMeters(B, A);
   const len = Math.hypot(vx, vz) || 1;
@@ -248,6 +249,7 @@ export class MapSelect {
     this.chosen = null;
     this.venue = null;           // 使用中的預設場地(含 mix),自訂點為 null
     this.teamSize = TEAM.DEFAULT;
+    this.mini = false;           // 迷你地圖(見 data.js MINI):目標距離 / 重合網格 / 塔位階數整組跟著縮
     this._layers = [];
     this._searchAbort = null;
 
@@ -285,13 +287,21 @@ export class MapSelect {
 
   /** 兵線數(隨隊伍規模)與兩堡目標距離(遊戲世界公尺) */
   get laneCount() { return lanesFor(this.teamSize); }
-  get targetDist() { return targetDistFor(this.laneCount); }
+  get targetDist() { return targetDistFor(this.laneCount, this.mini); }
 
   /** 改隊伍規模:幾何條件全變,重置目前選點 */
   setTeamSize(n) {
     n = Math.max(TEAM.MIN, Math.min(TEAM.MAX, n | 0));
     if (n === this.teamSize) return;
     this.teamSize = n;
+    if (this.anchor) this.reset();
+  }
+
+  /** 切換迷你地圖:兩堡目標距離與砲塔階數都變 ⇒ 與換人數同樣要重掃 */
+  setMini(v) {
+    v = !!v;
+    if (v === this.mini) return;
+    this.mini = v;
     if (this.anchor) this.reset();
   }
 
@@ -389,7 +399,7 @@ export class MapSelect {
       await sleep(130);
       if (!direct) { osrmDead++; continue; }
       if (direct.dist / realD > 2.2) continue;
-      const result = await buildLanes(A, B, signal, direct, L);
+      const result = await buildLanes(A, B, signal, direct, L, this.mini);
       if (!result) continue;
       const { lanes, maxOverlap, overlaps, synthetic, roadDist } = result;
       const dist = distM(A, B) / MAPGEO.REAL_SCALE;   // 真實 → 遊戲世界公尺
@@ -411,7 +421,7 @@ export class MapSelect {
       if (elev && maxLaneGrade(lanes, elev) > gradeCap) continue;
       // 砲塔規則(規則 #4):此推薦點的兵線幾何會讓 solveTowerSites 佈出「殘餘 >80% / 疊塔」→ 淘汰
       // (自訂地圖與預設場地同標準;伺服器 validateBattleConfig 再把關一次)。
-      if (!laneRuleOK(lanes)) continue;
+      if (!laneRuleOK(lanes, this.mini)) continue;
 
       const cand = { latlng: B, lanes, maxOverlap, overlaps, distM: dist, sizeM, diagM, synthetic, roadDist: roadDist / MAPGEO.REAL_SCALE, bearing };
       cand.tactics = lanesTactics(lanes, A, maxOverlap);
@@ -434,7 +444,7 @@ export class MapSelect {
         const lanes = sides.map((s) => synthLane(A, B, s));
         let maxOverlap = 0;
         for (let i = 0; i < lanes.length; i++) {
-          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A, overlapCellM(L)));
+          for (let j = i + 1; j < lanes.length; j++) maxOverlap = Math.max(maxOverlap, overlapRatio(lanes[i], lanes[j], A, overlapCellM(L, this.mini)));
         }
         const cand = { latlng: B, lanes, distM: distM(A, B) / MAPGEO.REAL_SCALE, sizeM, diagM, bearing, maxOverlap, synthetic: true, roadDist: D };
         cand.tactics = lanesTactics(lanes, A, maxOverlap);
@@ -539,6 +549,8 @@ export class MapSelect {
       tactics: this.chosen.tactics || null,
       synthetic: this.chosen.synthetic,
       venue: this.venue ? { id: this.venue.id, name: this.venue.name, mix: this.venue.mix } : null,
+      // 迷你地圖旗標隨 battleConfig 走(塔位階數 / 緩衝深度由它推導;伺服器 validateBattleConfig 複驗)
+      mini: this.mini,
       placeName: this.venue?.name || `${c[0].toFixed(4)}, ${c[1].toFixed(4)}`,
     };
   }

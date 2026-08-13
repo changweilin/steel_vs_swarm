@@ -9,7 +9,7 @@ import { BattleSim } from './sim.js';
 import { BotBrain } from './bots.js';
 import {
   SIDES, GAME, TEAM, BOT_NAMES, CHARACTERS, lanesFor, resolveEnv,
-  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit,
+  BOT_DIFF, DEFAULT_BOT_DIFF, MAPGEO, towerLayoutAudit, laneSeparationAudit, MINI, miniAllowed,
 } from '../public/js/data.js';
 // 操作方式(整房一致、房主定案)的合法值只有 ctrlmode.js 一份 —— 在這裡照抄一組字串
 // 就是第二份選項表(新增第四種操控時必漏改)。該檔刻意零 import、頂層不碰 window ⇒
@@ -44,12 +44,19 @@ export function validateBattleConfig(cfg, teamSize) {
   const L = lanesFor(teamSize);
   if (!cfg || !cfg.bases || !cfg.center || !Array.isArray(cfg.lanes)) return '戰場設定不完整,請先建立/選擇地圖';
   if (cfg.lanes.length !== L) return `隊伍 ${teamSize}v${teamSize} 需要 ${L} 條兵線(收到 ${cfg.lanes.length} 條)`;
+  // 迷你地圖只開放 1v1 / 2v2(使用者定案)。這一道 MUST 在伺服器 —— 手機閘門住客戶端是因為
+  // 「這台裝置畫不畫得動」只有客戶端知道,但「幾人可以打迷你地圖」是房間規則,對雙方對稱生效。
+  const mini = !!cfg.mini;
+  if (mini && !miniAllowed(teamSize)) {
+    return `迷你地圖只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下(收到 ${teamSize}v${teamSize})`;
+  }
   if (!(cfg.distM >= cfg.diagM * 0.8)) {
     return `主堡距離 ${Math.round(cfg.distM)}m 未達地圖對角線 80%(${Math.round(cfg.diagM * 0.8)}m)`;
   }
   // 規則 #4(權威把關):此兵線幾何佈出的砲塔會殘餘 >80% 重疊或疊塔 → 拒絕(自訂/預設同標準;客戶端掃描已預濾)
+  // mini MUST 傳下去:迷你地圖沒有後塔,拿完整版的解來驗會擋掉本來合法的地圖(見 towerLayoutAudit)
   const game = lanesToGame(cfg.lanes);
-  if (!game || !towerLayoutAudit(game).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
+  if (!game || !towerLayoutAudit(game, mini).ok) return '此地圖的兵線幾何無法符合砲塔佈局規則(砲塔射程重疊 >80% 或重疊),請改選其他推薦點或位置';
   // 規則(權威把關):同一 L 內兵線互不接觸/交叉(任兩線中段最近距離須 ≥ 20m 真實;含立體交叉亦禁)
   if (!laneSeparationAudit(game).ok) return '此地圖的兵線互相接觸或交叉(任兩線最近距離須 ≥ 20m),請改選其他推薦點或位置';
   return null;
@@ -175,6 +182,9 @@ export class RoomHub {
         ctrl: room.config.ctrl || DEFAULT_CTRL_MODE,
         place: room.battleConfig?.placeName || null,
         env: room.battleConfig?.env || null,
+        // 迷你地圖:同 ctrl,要在**加入之前**看得到 —— 只能打迷你地圖的裝置(手機)
+        // 不該進了完整戰場的房才發現跑不動(閘門住客戶端,見 data.js miniOnlyFor)
+        mini: !!room.battleConfig?.mini,
       };
       if (isPublic) e.pin = room.pin;
       out.push(e);
@@ -355,6 +365,9 @@ export class RoomHub {
         // battleConfig 整包由客戶端送上來,原樣塞進 sim 等於讓對方決定「什麼算真」(A1 家族)。
         // 這是房間規則(同 botDiff),對雙方對稱生效。
         cfg.siege = !!cfg.siege;
+        // 迷你地圖(塔位階數 / 地圖尺度 / 緩衝深度全由它推導)同理正規化成布林。
+        // 幾何本身是客戶端算好送上來的,這一格只保證伺服器與全房讀到同一個型別的旗標。
+        cfg.mini = !!cfg.mini;
         rollSideSwap(cfg);                     // 主堡陣營歸屬 50% 對調(再戰時於 backToRoom 重擲)
         cfg.teamSize = teamSize;
         const pin = hub._genPin();

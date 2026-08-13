@@ -62,8 +62,8 @@ export function reliefTier(m) {
  * MUST NOT 在 venues.js 手寫任何長度/彎曲度(那是烘焙兵線的性質,手寫必然與重烤後分家)。
  * 彎曲度/轉角吃的是與 bake、mapSelect 選路評分同一支戰術幾何縫。
  */
-export function venueRoute(v, teamSize) {
-  const cfg = venueConfig(v, teamSize);
+export function venueRoute(v, teamSize, mini = false) {
+  const cfg = venueConfig(v, teamSize, mini);
   const o = cfg.bases.SWARM;
   const st = cfg.lanes.map((l) => laneTacticsXZ(laneToGameXZ(l, o)));
   const avg = (f) => (st.length ? st.reduce((s, t) => s + f(t), 0) / st.length : 0);
@@ -90,8 +90,8 @@ const bioText = (mix) => Object.entries(mix)
  * 大廳與開房兩處場地清單、選定後的狀態列共用同一份 —— MUST NOT 各寫一套。
  * 掛法走 `tip.js attachTip`,MUST NOT 退回 `title=`(觸控沒有 hover,原生 tooltip 永不出現)。
  */
-export function venueTip(v, teamSize) {
-  const r = venueRoute(v, teamSize);
+export function venueTip(v, teamSize, mini = false) {
+  const r = venueRoute(v, teamSize, mini);
   const route = `路線:${r.real ? '真實道路' : '離線合成'}兵線 ${r.laneCount} 條`
     + ` ・ 兩堡 ${(r.distM / 1000).toFixed(2)} km ・ 單線 ${Math.round(r.lenM)} m`
     + ` ・ 彎曲度 ${r.sinuosity.toFixed(2)} ・ 戰術轉角 ${r.turns} 個`
@@ -103,8 +103,8 @@ export function venueTip(v, teamSize) {
 }
 
 /** 選定後狀態列用的單行版(同一份摘要,只是攤平成一行) */
-export function venueBrief(v, teamSize) {
-  return venueTip(v, teamSize).replace(/\n　　/g, ' ・ ').replace(/\n/g, ' ｜ ');
+export function venueBrief(v, teamSize, mini = false) {
+  return venueTip(v, teamSize, mini).replace(/\n　　/g, ' ・ ').replace(/\n/g, ' ｜ ');
 }
 
 // ll = 兵線起點(SWARM 主堡)。**必須是有導航路網的道路節點**:兵線一律取自現實道路
@@ -235,6 +235,47 @@ function bakedLanesSeparated(entry) {
   return laneSeparationAudit(entry.lanes.map((l) => laneToGameXZ(l, entry.bases[0]))).ok;
 }
 
+/**
+ * 兵線兩端**對稱剪短**到指定的兩端直線距離(真實公尺)—— 迷你地圖的縮圖手法(唯一縫)。
+ *
+ * 為什麼是「剪短」而不是「把座標朝中心等比縮小」:烘焙兵線的每一段都是真實道路,剪短之後
+ * 剩下的仍然逐點落在同一條路上 ⇒「兵線 MUST 與現實導航路線相符」原封不動;等比縮小則是把
+ * 整條路線平移離開它自己的道路(那是 `migrateFavCfg` 對**自訂**地圖已知且刻意付出的代價,
+ * 沒有理由讓預設場地也吃)。
+ * 付出的代價只有一個:剪短後的端點(= 兩座主堡)落在路段中間而不是 OSM 節點上。位置仍在
+ * 道路中心線上,只是不保證是圖資裡的一顆頂點。
+ *
+ * 解法是**對稱二分搜尋**沿線內縮量 t:`d(t) = |at(t) − at(total−t)|` 隨 t 遞減(真實道路
+ * 偶有回頭段,不保證嚴格,但二分在單調段上收斂、非單調時仍落在容差內)。MUST NOT 改成
+ * 「按比例取中間 60% 的沿線長度」—— 那量的是**沿線**距離,而兩堡距離與地圖邊長綁的是
+ * **直線**距離(蜿蜒的路剪掉一半沿線長,直線距離可能只掉兩成)。
+ * 已經比目標還短的兵線原樣回傳(降級不例外)。
+ */
+export function trimLaneTo(pts, targetM) {
+  if (!pts || pts.length < 2 || !(targetM > 0)) return pts;
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + distMeters(pts[i - 1], pts[i]));
+  const total = cum[cum.length - 1];
+  const at = (d) => {
+    d = Math.max(0, Math.min(total, d));
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < d) i++;
+    const f = (d - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  };
+  if (distMeters(at(0), at(total)) <= targetM) return pts.map((p) => [...p]);
+  let lo = 0, hi = total / 2;
+  for (let k = 0; k < 60; k++) {
+    const mid = (lo + hi) / 2;
+    if (distMeters(at(mid), at(total - mid)) > targetM) lo = mid; else hi = mid;
+  }
+  const t = (lo + hi) / 2;
+  const out = [at(t)];
+  for (let i = 0; i < pts.length; i++) if (cum[i] > t && cum[i] < total - t) out.push([...pts[i]]);
+  out.push(at(total - t));
+  return out;
+}
+
 function destPoint([lat, lng], bearingDeg, d) {
   const br = bearingDeg * Math.PI / 180;
   return [
@@ -313,10 +354,14 @@ export function synthLane(a, b, side) {
  * 沒有預算資料的場地(路網不足)才退回 synthLane 合成弧 —— 這是離線/無圖資的最後防線,
  * MUST NOT 移除(見 CLAUDE.md「外部 API 皆會限流或掛掉」)。
  * 幾何:真實邊長 0.3+0.1L km,兩堡距離 = 邊長 × 0.85 × √2。
+ *
+ * `mini`(迷你地圖,見 data.js MINI):尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格
+ * 一起縮。烘焙兵線**不必重烤**:同一條真實道路路線兩端對稱剪短到新的目標距離(`trimLaneTo`),
+ * 剩下的每一段仍是真實道路。合成弧那條路天生吃 realD,零改動。
  */
-export function venueConfig(venue, teamSize) {
+export function venueConfig(venue, teamSize, mini = false) {
   const L = lanesFor(teamSize);
-  const D = targetDistFor(L);                   // 遊戲世界距離
+  const D = targetDistFor(L, mini);             // 遊戲世界距離
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
 
@@ -324,8 +369,15 @@ export function venueConfig(venue, teamSize) {
   const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;
   if (baked) {
-    [A, B] = baked.bases.map((p) => [...p]);
     lanes = baked.lanes.map((l) => l.map((p) => [...p]));
+    if (mini) {
+      // 迷你地圖恆為單兵線(MINI.TEAM_MAX = 2 ⇒ lanesFor ≤ 1)⇒ 剪短那一條,兩端就是兩座主堡。
+      // 多兵線時剪短會把共享端點拆成 L 組不同的主堡座標,故**只在單兵線時做**,其餘退回原樣。
+      if (lanes.length === 1) lanes = [trimLaneTo(lanes[0], realD)];
+      [A, B] = [[...lanes[0][0]], [...lanes[0][lanes[0].length - 1]]];
+    } else {
+      [A, B] = baked.bases.map((p) => [...p]);
+    }
     maxOverlap = baked.maxOverlap;
     synthetic = false;
   } else {
@@ -356,6 +408,9 @@ export function venueConfig(venue, teamSize) {
     // ②國旗物件的「地圖國」那 30%(flags.js 的 FLAG_MIX)。自訂地圖沒有這一欄 ⇒ 兩者各自降級。
     venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country },
     placeName: venue.name,
+    // 迷你地圖旗標 MUST 隨 battleConfig 廣播全房:塔位階數 / 緩衝深度都由它推導,
+    // 客戶端各自判斷 = 兩台建出不同的世界(同 cfg.siege 的紀律)。
+    mini: !!mini,
   };
 }
 
@@ -372,12 +427,13 @@ export function migrateFavCfg(fav) {
   const cfg = fav.cfg;
   if (!cfg) return cfg;
   if (cfg.geoScaleVer === MAPGEO.GEO_SCALE_VER) return cfg;
+  const mini = !!cfg.mini;   // 迷你與否是這份最愛的性質,遷移 MUST NOT 把它洗掉
   if (cfg.venue?.id) {
     const v = VENUES.find((x) => x.id === cfg.venue.id);
-    if (v) return venueConfig(v, fav.teamSize);
+    if (v) return venueConfig(v, fav.teamSize, mini);
   }
   const L = lanesFor(fav.teamSize);
-  const D = targetDistFor(L);
+  const D = targetDistFor(L, mini);
   const realNow = D * MAPGEO.REAL_SCALE;
   const realOld = distMeters(cfg.bases.SWARM, cfg.bases.STEEL);
   const s = realOld > 1 ? realNow / realOld : 1;

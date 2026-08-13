@@ -17,6 +17,7 @@ import {
   CREEP_UPG, creepUpgMul,
   FLIGHT, SQUAD, scopeRvmin,
   heroHexStats, SIEGE,
+  MINI, miniAllowed, miniOnlyFor, miniScaleF,
 } from './data.js';
 import { LORE } from './lore.js';
 import { protoOf } from './codex.js';
@@ -54,7 +55,7 @@ import {
   renderTouchSettings, syncTouchSettings, renderCtrlSettings, syncCtrlSettings,
   renderCtrlModeRow, syncCtrlModeRow, isTouchUI, openTouchTest, closeTouchTest, toggleFullscreen,
 } from './mobile.js';
-import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange } from './ctrlmode.js';
+import { CTRL_MODES, ctrlPref, setRoomCtrlMode, onCtrlChange, deviceScheme } from './ctrlmode.js';
 import { VISUAL_KNOBS, visualPref, setVisualPref, resetVisualPrefs, visualPrefsDefault } from './visualPrefs.js';
 import { MatSample } from './matsample.js';
 
@@ -131,6 +132,7 @@ const app = {
   pickSubject: null, pickSide: null, pickEditable: false, pickIsSelf: false,   // 選角上下文(供放大視窗角色格)
   mapSel: null,         // MapSelect 實例(開房前的設定畫面)
   teamSize: TEAM.DEFAULT,
+  mini: false,          // 迷你地圖(見 data.js MINI);手機一律 true 且鎖住
   favCfg: null,         // 從「我的最愛」直接取用的 battleConfig
   story: null,          // 劇情戰役進行中:{ chapterId, side, foe, ch(主駕), allies[], enemies[], index, launched }
   storySide: 'STEEL',   // 目前瀏覽的戰線陣營(協約 / 同盟)
@@ -289,6 +291,7 @@ function renderRooms(list) {
         <div class="room-name">${r.isPublic ? '🌐' : '🔒'} ${esc(r.name)} <span class="room-host">房主:${esc(r.host)}</span></div>
         <div class="room-tags">${sideTags}
           <span class="tag dim">${n}v${n}</span>
+          ${r.mini ? '<span class="tag dim">🗺 迷你地圖</span>' : ''}
           <span class="tag dim">${r.phase === 'room' ? '配對中' : r.phase === 'game' ? '交戰中' : '準備中'}</span>
           ${r.ctrl && r.ctrl !== 'any' ? `<span class="tag dim">${esc(CTRL_MODES[r.ctrl].icon)} ${esc(CTRL_MODES[r.ctrl].label)}</span>` : ''}
           ${r.place ? `<span class="tag dim">📍 ${esc(r.place)}</span>` : ''}
@@ -296,7 +299,12 @@ function renderRooms(list) {
         </div>
       </div>
       <button class="btn small">${r.phase === 'room' ? '加入' : '觀戰'}</button>`;
-    row.querySelector('button').onclick = () => {
+    // 手機只開放迷你地圖(使用者定案):完整戰場的戰區連加入鈕都不給,並講清楚理由
+    const blocked = miniLocked() && !r.mini;
+    const joinBtn = row.querySelector('button');
+    joinBtn.disabled = blocked;
+    if (blocked) attachTip(joinBtn, '本裝置判定為手機,只開放迷你地圖的戰區。');
+    joinBtn.onclick = () => {
       const mode = r.phase === 'room'
         ? (document.querySelector('input[name=joinMode]:checked')?.value || 'player')
         : 'spectator';
@@ -355,12 +363,48 @@ function enterMapBuilder() {
         }
       },
     });
+    app.mapSel.setTeamSize(app.teamSize);
+    app.mapSel.setMini(miniOn());   // 掃描的目標距離與砲塔複驗都吃它
     renderTeamSize();
     renderVenues();
     setTimeout(() => app.mapSel.map.invalidateSize(), 60);
   }
   $('mapStatus').textContent = '選一個預設場地,或在地圖上點選你的蜂群主堡位置。';
 }
+
+// ---- 迷你地圖(見 data.js MINI)----
+// 「這台裝置只能打迷你地圖嗎」只問一支 `miniOnlyFor(deviceScheme())` —— 裝置判定全 repo
+// 只有 ctrlmode.js 那一份,策略只有 data.js 那一份,main.js MUST NOT 自己看螢幕寬或 touch。
+const miniLocked = () => miniOnlyFor(deviceScheme());
+/** 目前生效的迷你旗標:手機恆真;人數超過 1v1/2v2 一律假(那個人數開不成迷你地圖)*/
+function miniOn() {
+  if (!miniAllowed(app.teamSize)) return false;
+  return miniLocked() || !!app.mini;
+}
+/**
+ * 「完整戰場 / 迷你地圖」分段鈕(兩處設定畫面共用同一支;A20:鈕面不加括號補述)。
+ * 手機一律鎖在迷你(使用者:「手機版只允許連線遊玩迷你地圖,桌機版不限制」);
+ * 人數 > MINI.TEAM_MAX 時整組停用 —— 迷你地圖恆為單兵線,3v3 以上開不成。
+ */
+function renderMiniRow(rowId, onPick) {
+  const row = $(rowId);
+  if (!row) return;
+  const locked = miniLocked(), allowed = miniAllowed(app.teamSize), on = miniOn();
+  row.innerHTML = '';
+  for (const [val, label] of [[false, '完整戰場'], [true, '迷你地圖']]) {
+    const b = document.createElement('button');
+    b.className = 'segb' + (val === on ? ' on' : '');
+    b.textContent = label;
+    b.disabled = locked || (val && !allowed);
+    attachTip(b, val
+      ? `兵線只有前線砲塔 + 主堡、地圖與據點距離縮到 ${Math.round(miniScalePct())}%、邊緣緩衝縮到 1/3。`
+        + `只開放 ${MINI.TEAM_MAX}v${MINI.TEAM_MAX} 以下;手機一律使用迷你地圖。`
+      : '前線砲塔 + 中段砲塔 + 主堡的完整戰場。手機跑不動,故手機版不開放。');
+    b.onclick = () => { app.mini = val; savePrefs({ mini: val }); renderMiniRow(rowId, onPick); onPick(); };
+    row.appendChild(b);
+  }
+}
+const miniScalePct = () => miniScaleF() * 100;
 
 function renderTeamSize() {
   const row = $('tsRow');
@@ -369,10 +413,28 @@ function renderTeamSize() {
     const b = document.createElement('button');
     b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
     b.textContent = `${n}v${n}`;
+    // 手機只准打迷你地圖,而迷你地圖恆為單兵線 ⇒ 3v3 以上整組停用(選了才報錯是更差的體驗)
+    b.disabled = miniLocked() && !miniAllowed(n);
     b.onclick = () => { setTeamSize(n); };
     row.appendChild(b);
   }
+  renderMiniRow('miniRow', () => onMiniChanged(false));
   updateTsInfo();
+}
+
+/** 迷你旗標變更後的連鎖:摘要 / 場地提示 / 已選場地的兵線全部重算(兩處設定畫面共用)*/
+function onMiniChanged(openRoom) {
+  syncVenueTips();
+  if (openRoom) {
+    updateTsInfoOpen();
+    if (app.venueSelOpen) selectVenueOpen(app.venueSelOpen);
+    else { app.favCfg = null; $('createRoomBtn').disabled = true; }
+  } else {
+    updateTsInfo();
+    app.mapSel?.setMini(miniOn());
+    if (app.venueSel) selectVenue(app.venueSel);
+    else { app.favCfg = null; $('saveFavBtn').disabled = true; }
+  }
 }
 
 function setTeamSize(n) {
@@ -380,18 +442,27 @@ function setTeamSize(n) {
   savePrefs({ teamSize: n });
   app.favCfg = null;
   app.mapSel?.setTeamSize(n);
+  app.mapSel?.setMini(miniOn());   // 人數跨過 MINI.TEAM_MAX 就開不成迷你地圖 ⇒ 掃描目標距離跟著回來
   $('saveFavBtn').disabled = true;
   for (const [i, b] of [...$('tsRow').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
+  renderMiniRow('miniRow', () => onMiniChanged(false));   // 迷你可不可選吃人數
   updateTsInfo();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   // 預設場地已選:換規模直接重算(預先計算是確定性幾何,瞬間完成)
   if (app.venueSel) selectVenue(app.venueSel);
 }
 
-function updateTsInfo() {
+function updateTsInfo() { $('tsInfo').textContent = tsInfoText(); }
+
+/** 人數/迷你摘要一行(兩處設定畫面共用同一份文字,MUST NOT 各寫一套)*/
+function tsInfoText() {
+  const mini = miniOn();
   const L = lanesFor(app.teamSize);
-  const size = sideMFor(L);
-  $('tsInfo').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`;
+  const size = sideMFor(L, mini);
+  return `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`
+    + (mini ? ` ・ 迷你地圖:每側只有前線砲塔,尺度縮到 ${Math.round(miniScalePct())}%、邊緣緩衝縮到 1/3`
+      : '')
+    + (miniLocked() ? ' ・ 本裝置判定為手機,一律使用迷你地圖' : '');
 }
 
 // 場地鈕的路線/地形說明:2026-08-02 起走 tip.js 的懸浮提示單一縫(觸控長按也看得到);
@@ -403,7 +474,7 @@ function renderVenues() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    attachTip(b, venueTip(v, app.teamSize));
+    attachTip(b, venueTip(v, app.teamSize, miniOn()));
     b.onclick = () => selectVenue(v);
     grid.appendChild(b);
   }
@@ -415,7 +486,7 @@ function syncVenueTips() {
     const grid = $(gid);
     if (!grid) continue;
     for (const [i, b] of [...grid.children].entries()) {
-      if (VENUES[i]) attachTip(b, venueTip(VENUES[i], app.teamSize));
+      if (VENUES[i]) attachTip(b, venueTip(VENUES[i], app.teamSize, miniOn()));
     }
   }
 }
@@ -423,7 +494,7 @@ function syncVenueTips() {
 /** 預設場地:路線/圖資已預先算好(確定性合成兵線),即選即用、免掃描 */
 function selectVenue(v) {
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
-  const cfg = venueConfig(v, app.teamSize);
+  const cfg = venueConfig(v, app.teamSize, miniOn());
   app.mapSel.showConfig(cfg);      // 內部會 reset(觸發 confirmReady(null)),故 favCfg 之後再設
   app.venueSel = v;
   app.favCfg = cfg;
@@ -431,7 +502,7 @@ function selectVenue(v) {
   $('mapStatus').innerHTML =
     `📍 <b>${esc(v.name)}</b>:預先計算完成 — 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,存入最愛後即可開房。` +
     `(想用真實道路兵線,可改在地圖上手動點選錨點)` +
-    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
+    `<div class="venue-desc">${esc(venueBrief(v, app.teamSize, miniOn()))}</div>`;
   $('mapProgressBar').style.width = '100%';
   $('saveFavBtn').disabled = false;
 }
@@ -445,20 +516,28 @@ function renderFavsOpenRoom() {
   for (const f of favs) {
     const b = document.createElement('button');
     b.className = 'venue-btn fav';
-    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`;
+    const favMini = !!f.cfg?.mini;
+    b.innerHTML = `★ ${esc(f.name)} <span class="venue-type">${f.teamSize}v${f.teamSize}</span>`
+      + (favMini ? '<span class="venue-type">🗺 迷你</span>' : '');
+    // 手機只能打迷你地圖 ⇒ 完整戰場的最愛整顆停用(選了才被伺服器擋是更差的體驗)
+    b.disabled = miniLocked() && !favMini;
+    if (b.disabled) attachTip(b, '本裝置判定為手機,只開放迷你地圖。請改選迷你地圖的最愛,或在桌機上遊玩。');
     b.onclick = () => {
       warmModels();   // 選定最愛地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
       app.teamSize = f.teamSize;
       const cfg = migrateFavCfg(f);        // 尺度追溯:舊尺度最愛自動遷移
-      savePrefs({ teamSize: f.teamSize });
+      app.mini = !!cfg.mini;               // 最愛的迷你與否是烤死在 cfg 裡的,鈕面要跟著它
+      savePrefs({ teamSize: f.teamSize, mini: app.mini });
       app.favCfg = cfg;
       app.venueSelOpen = null;   // 最愛的兵線是存檔時就烤死的配置,跟即時場地選擇互斥
       for (const el of grid.children) el.classList.remove('on');
       for (const el of $('venueGridOpen').children) el.classList.remove('on');
       for (const [i, tb] of [...$('tsRowOpen').children].entries()) tb.classList.toggle('on', i + TEAM.MIN === f.teamSize);
+      renderMiniRow('miniRowOpen', () => onMiniChanged(true));
       updateTsInfoOpen();
       b.classList.add('on');
-      $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize},可以開房了。`;
+      $('openRoomStatus').innerHTML = `⭐ 已選「${esc(f.name)}」(${esc(f.cfg.placeName || '')}) ・ ${f.teamSize}v${f.teamSize}`
+        + `${favMini ? ' ・ 迷你地圖' : ''},可以開房了。`;
       $('createRoomBtn').disabled = false;
     };
     const del = document.createElement('span');
@@ -500,9 +579,11 @@ function renderTeamSizeOpen() {
     const b = document.createElement('button');
     b.className = 'btn ts-btn' + (n === app.teamSize ? ' on' : '');
     b.textContent = `${n}v${n}`;
+    b.disabled = miniLocked() && !miniAllowed(n);   // 同 renderTeamSize
     b.onclick = () => setTeamSizeOpen(n);
     row.appendChild(b);
   }
+  renderMiniRow('miniRowOpen', () => onMiniChanged(true));
   updateTsInfoOpen();
 }
 
@@ -510,6 +591,7 @@ function setTeamSizeOpen(n) {
   app.teamSize = n;
   savePrefs({ teamSize: n });
   for (const [i, b] of [...$('tsRowOpen').children].entries()) b.classList.toggle('on', i + TEAM.MIN === n);
+  renderMiniRow('miniRowOpen', () => onMiniChanged(true));   // 迷你可不可選吃人數
   updateTsInfoOpen();
   syncVenueTips();   // 路線摘要吃人數(兵線條數/長度都會變)
   if (app.venueSelOpen) {
@@ -524,11 +606,7 @@ function setTeamSizeOpen(n) {
   }
 }
 
-function updateTsInfoOpen() {
-  const L = lanesFor(app.teamSize);
-  const size = sideMFor(L);
-  $('tsInfoOpen').textContent = `總共 ${app.teamSize * 2} 位玩家 ・ ${L} 條兵線 ・ 戰場約 ${(size / 1000).toFixed(1)} km 見方(真實 ${(size * MAPGEO.REAL_SCALE / 1000).toFixed(2)} km)`;
-}
+function updateTsInfoOpen() { $('tsInfoOpen').textContent = tsInfoText(); }
 
 function renderVenuesOpen() {
   const grid = $('venueGridOpen');
@@ -537,7 +615,7 @@ function renderVenuesOpen() {
     const b = document.createElement('button');
     b.className = 'venue-btn';
     b.innerHTML = `<span class="venue-type t-${v.type}">${v.type}</span>${v.country} ${esc(v.name)}`;
-    attachTip(b, venueTip(v, app.teamSize));
+    attachTip(b, venueTip(v, app.teamSize, miniOn()));
     b.onclick = () => selectVenueOpen(v);
     grid.appendChild(b);
   }
@@ -546,7 +624,7 @@ function renderVenuesOpen() {
 /** 開戰時刻現場選場地:依上方即時 teamSize 重算兵線(免先存最愛) */
 function selectVenueOpen(v) {
   warmModels();   // 選定預設地圖 = 開戰意圖明確,先抓與 cfg 無關的 3D 模型
-  const cfg = venueConfig(v, app.teamSize);
+  const cfg = venueConfig(v, app.teamSize, miniOn());
   app.venueSelOpen = v;
   app.favCfg = cfg;
   savePrefs({ lastVenueId: v.id });
@@ -555,8 +633,9 @@ function selectVenueOpen(v) {
   if (idx >= 0 && $('venueGridOpen').children[idx]) $('venueGridOpen').children[idx].classList.add('on');
   for (const el of $('favGrid').children) el.classList.remove('on');
   $('openRoomStatus').innerHTML =
-    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize} ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`
-    + `<div class="venue-desc">${esc(venueBrief(v, app.teamSize))}</div>`;
+    `📍 <b>${esc(v.name)}</b>:${app.teamSize}v${app.teamSize}${cfg.mini ? ' ・ 迷你地圖' : ''}`
+    + ` ・ 兩堡 ${(cfg.distM / 1000).toFixed(1)} km ・ ${cfg.laneCount} 條兵線,可以開房了。`
+    + `<div class="venue-desc">${esc(venueBrief(v, app.teamSize, miniOn()))}</div>`;
   $('createRoomBtn').disabled = false;
 }
 
@@ -773,6 +852,8 @@ $('createRoomBtn')?.addEventListener('click', () => {
   const cfg = app.favCfg;
   if (!cfg) return;
   if (!app.net) { toast('雲端模式尚未設定節點網址,請回大廳填入或改用其他連線機制'); return; }
+  // 手機閘門的最後一道:cfg 可能來自舊的最愛(存檔時還沒有迷你地圖)⇒ 鈕面擋過還要再驗一次
+  if (miniLocked() && !cfg.mini) { toast('本裝置判定為手機,只開放迷你地圖 —— 請改選迷你地圖'); return; }
   $('createRoomBtn').disabled = true;
   $('openRoomStatus').textContent = '建立戰區…';
   cfg.env = {
@@ -810,7 +891,8 @@ function renderRoom() {
   // 戰場資訊(開房時已鎖定)
   const cfg = lb.battleConfig;
   $('roomMapInfo').textContent = cfg
-    ? `📍 ${cfg.placeName} ・ ${N}v${N} ・ ${cfg.lanes.length} 條兵線 ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
+    ? `📍 ${cfg.placeName} ・ ${N}v${N}${cfg.mini ? ' ・ 🗺 迷你地圖' : ''} ・ ${cfg.lanes.length} 條兵線`
+      + ` ・ ${(cfg.sizeM / 1000).toFixed(1)} km 見方 ・ ${envLabel(cfg.env)}`
     : '';
   renderPreloadStatus();   // 地圖預建進度(獨立元素,見 startPrebuild)
 
@@ -883,7 +965,11 @@ function renderRoom() {
   $('specList').textContent = specs.length ? `◇ 觀戰:${specs.map((c) => c.name).join('、')}` : '';
 
   const readyBtn = $('readyBtn');
-  readyBtn.disabled = !me?.side;
+  // 私人房只能靠 PIN 進來 ⇒ 大廳列表那道閘門看不到它;這裡是手機閘門的最後一站
+  // (**不自動踢出**:留在房裡仍可觀戰,只是不能上場 —— 寧可講清楚,不要替玩家決定離開)
+  const miniBlocked = miniLocked() && cfg && !cfg.mini;
+  readyBtn.disabled = !me?.side || miniBlocked;
+  if (miniBlocked) attachTip(readyBtn, '本裝置判定為手機,只開放迷你地圖的戰區 —— 可以觀戰,但不能上場。');
   readyBtn.textContent = me?.ready ? '取消' : '✔ 準備';
   readyBtn.classList.toggle('on', !!me?.ready);
 
@@ -1679,7 +1765,8 @@ function warmModels(onProg) {
 
 function prebuildKey(cfg) {
   // 會影響地形/地貌的欄位全進 key:center/sizeM/bases/lanes(對調反轉後)/env(season/time 進地貌)/teamSize(進亂數種子)
-  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes]);
+  // mini 進 key:塔位階數(biomes 淨空/地標/墩座)與緩衝深度(裙)全由它推導 ⇒ 換了就得重建
+  return JSON.stringify([cfg.center, cfg.sizeM, cfg.teamSize, cfg.env, cfg.bases, cfg.lanes, !!cfg.mini]);
 }
 
 /** 房間畫面的預載狀態列(#roomPreload 獨立於 roomMapInfo,renderRoom 的 sync 重繪不會覆寫進度) */
@@ -3036,6 +3123,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // 還原上次的開房設定(人數 / 房名;場地在 enterOpenRoom 還原)
   const prefs = loadPrefs();
   if (prefs.teamSize >= TEAM.MIN && prefs.teamSize <= TEAM.MAX) app.teamSize = prefs.teamSize;
+  if (typeof prefs.mini === 'boolean') app.mini = prefs.mini;
   $('roomNameInput').value = prefs.roomName || '';
   $('roomNameInput').addEventListener('input', (e) => savePrefs({ roomName: e.target.value.trim() }));
 
