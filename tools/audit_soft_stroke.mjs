@@ -12,17 +12,38 @@
 //   Ⅳ 消費端漏標(那一叢草不會飄,而旁邊同款的會)
 //   Ⅴ 風的時鐘/雲的環繞算術(JS 的 % 對負數回負值 ⇒ 半邊的雲每一圈跳到另一側)
 //
+// 2026-08-13 使用者又定案兩條(同一個縫的延伸):
+//   ③「建立海浪 / 稻浪 / 草波 / 芒草波的動畫」
+//   ④「遊戲中加入國旗物件(國家比例為 地圖:駐軍國:敵對國 = 30:60:10),建立國旗飄揚的動畫」
+// 對應本檔新增的四段靜默失效:
+//   Ⅵ 海浪抄錯規則(相位取實例原點 ⇒ 整片海一起上下 = 潮汐;法線沒跟著改 ⇒ 頂點真的起伏了
+//     而賽璐璐的階梯完全不知道,水面仍是一整片死平的藍)
+//   Ⅶ 陣風包絡塌掉(GUST_F 回 0 = 整片等幅擺動 = 「波」這件事整個消失,而畫面只是「有在動」)
+//   Ⅷ ground.js 的細節漏標(稻/草/芒草在 2026-08-04 那一輪整批沒標到:同一張圖上
+//     biomes.js 那半的芒草會飄、散在稻田河灘的這一半是硬的)
+//   Ⅸ 國旗的比例/名冊/決定性(名冊手寫 ⇒ 換陣營之後靜默過期;旗面合併成一個 mesh ⇒
+//     擺動權重吃合併後的 x = 整批繞旗陣中心擺)
+//
 // GLSL 在 Node 端執行不了 ⇒ 擺動那半只能以**執行原文的文字不變式**釘住(同 audit_visual_prefs
-// 對 `RAMP_HOOK` 的做法);能執行的部分(參數表、分類、span 推導、時鐘夾制、雲的環繞算術)
-// 一律**跑真品原文**,MUST NOT 在本檔抄第二份公式。
+// 對 `RAMP_HOOK` 的做法);能執行的部分(參數表、分類、span 推導、時鐘夾制、雲的環繞算術、
+// 淡出權重、挑國比例、旗面型錄)一律**跑真品原文**,MUST NOT 在本檔抄第二份公式。
+// 旗面型錄畫得出來這件事驗得到,正是因為 `flags.js` 零 THREE 零 DOM:把一個錄音樁當
+// 2D context 交進去就行(這是那條邊界唯一的、也是全部的回報)。
 //
 // 跑法:node tools/audit_soft_stroke.mjs
 // 反向驗證:--break-ink(軟性倍率當成 1)/ --break-anchor(擺動錨點拿掉)
-//           兩者 MUST 分別讓 Ⅰ / Ⅲ 紅字,否則等於沒驗到(原則 9)。
+//           --break-wave(海浪相位改取實例原點)/ --break-gust(陣風包絡拿掉)
+//           四者 MUST 分別讓 Ⅰ / Ⅲ / Ⅵ / Ⅶ 紅字,否則等於沒驗到(原則 9)。
 import { readSrc } from './audit_src.mjs';
+import { CHARACTERS } from '../public/js/data.js';
+import { LORE } from '../public/js/lore.js';
+import { VENUES } from '../public/js/venues.js';
+import * as flagsMod from '../public/js/flags.js';
 
 const BREAK_INK = process.argv.includes('--break-ink');
 const BREAK_ANCHOR = process.argv.includes('--break-anchor');
+const BREAK_WAVE = process.argv.includes('--break-wave');
+const BREAK_GUST = process.argv.includes('--break-gust');
 
 const toon = readSrc('public', 'js', 'toon.js');
 const post = readSrc('public', 'js', 'postfx.js');
@@ -30,6 +51,11 @@ const biomes = readSrc('public', 'js', 'biomes.js');
 const site = readSrc('public', 'js', 'siteplan.js');
 const envSrc = readSrc('public', 'js', 'environment.js');
 const game = readSrc('public', 'js', 'game.js');
+const terr = readSrc('public', 'js', 'terrain.js');
+const ground = readSrc('public', 'js', 'ground.js');
+const flagsSrc = readSrc('public', 'js', 'flags.js');
+const venuesSrc = readSrc('public', 'js', 'venues.js');
+const MIX = flagsMod.FLAG_MIX;
 
 let pass = 0, fail = 0;
 const ok = (c, msg) => { c ? (pass++, console.log(`  ✓ ${msg}`)) : (fail++, console.error(`  ✗ ${msg}`)); };
@@ -67,7 +93,9 @@ if (BREAK_INK) INK_SOFT_A = 1;
   const kinds = Object.entries(SOFT_KINDS);
   ok(kinds.length >= 4, `軟性分類齊全(${kinds.map(([k]) => k).join('/')})`);
   for (const [k, v] of kinds) {
-    ok(v.amp >= 0 && v.amp < 0.5 && v.freq >= 0 && ['x', 'y'].includes(v.axis),
+    // axis 'w'(表面波,2026-08-13 海浪)是第三種:位移垂直、相位逐頂點。
+    // amp 在那一族的語意是**波陡**而不是「擺幅 ÷ 株高」,但界一樣(> 0.5 的波陡是碎浪不是海面)。
+    ok(v.amp >= 0 && v.amp < 0.5 && v.freq >= 0 && ['x', 'y', 'w'].includes(v.axis),
       `${k}:amp ${v.amp}(擺幅 ÷ span,有界)、freq ${v.freq}、axis ${v.axis}`);
   }
   ok(SOFT_KINDS.turf.amp === 0,
@@ -80,8 +108,13 @@ if (BREAK_INK) INK_SOFT_A = 1;
     '旗幟沿旗面橫軸(由桿到旗尾)、植被沿縱軸(由根到梢)');
   // 風只有一份:另寫一個風向 = 雲往東飄、草往西倒
   ok(count(code(toon), /DIR_DEG:/g) === 1, '風向恰一處定義(WIND.DIR_DEG)');
+  // 釘的是「有沒有第二份**定義**」而不是「有沒有出現過這個名字」:2026-08-13 起 biomes.js
+  // 的主堡旗陣要把旗面轉向下風,那是**讀** toon.js 那一份(`WIND.DIR_DEG`)—— 正是這條
+  // 規則要的結果。寫成「不准出現」的話,唯一正確的用法反而紅字。
   for (const [name, src] of [['biomes.js', biomes], ['siteplan.js', site]]) {
-    ok(!/DIR_DEG|windDir|WIND_DEG/.test(code(src)), `${name} 沒有自己的風向(全場一份)`);
+    const C = code(src);
+    ok(!/DIR_DEG:|windDir|WIND_DEG/.test(C) && !/(?<!WIND\.)\bDIR_DEG\b/.test(C),
+      `${name} 沒有自己的風向,要用只准讀 WIND.DIR_DEG(全場一份)`);
   }
   // 比對的是**具名匯入**不是整行原文:同一支 import 之後還會加別的東西(2026-08-12 加了
   // 勾線資訊緩衝的 INK_INFO_*),寫死整行等於「以後有人多 import 一個名字就紅字」,
@@ -104,8 +137,13 @@ console.log('\nⅡ alpha 契約(場景 RT 的 alpha ≡ 這一格的勾線門檻
   const iOpaque = T.lastIndexOf('#include <opaque_fragment>');
   ok(iOpaque >= 0 && T.indexOf('gl_FragColor.a = uSoftInk;') > iOpaque,
     '寫入排在 #include <opaque_fragment> 之後(排前面會被 OPAQUE 的 a = 1.0 蓋掉)');
-  ok(/uSoftInk = \{ value: sk \? INK_SOFT_A : 1 \}/.test(T),
-    '未標軟性的材質恆寫 1 ⇒ 其餘每一個像素逐位元同舊制');
+  // 2026-08-13:`sk` → `inkable`(= 有 sk **且不透明**)。半透明件的 alpha 是**不透明度**,
+  // 寫進勾線倍率就是把水面從 0.82 直接改成 0.30 —— 契約本來就只對不透明件成立。
+  ok(/uSoftInk = \{ value: inkable \? INK_SOFT_A : 1 \}/.test(T),
+    '未標軟性(或半透明)的材質恆寫 1 ⇒ 其餘每一個像素逐位元同舊制');
+  ok(/const inkable = !!sk && !mat\.transparent;/.test(T)
+    && /if \(inkable\) defines\.CEL_SOFT = '';/.test(T),
+    '細勾線那一半只給不透明件(半透明件的 alpha 是不透明度,不是勾線通道)');
   ok(/#ifdef CEL_SOFT[\s\S]{0,200}uniform float uSoftInk;/.test(T),
     'uSoftInk 的宣告收在 CEL_SOFT 之下(沒標軟性的程式碼一行都不多)');
   // 勾線 pass:讀 alpha、且 MUST 乘進 smoothstep 的**輸入**。
@@ -153,8 +191,10 @@ console.log('\nⅢ 擺動的不變式(toon.js 頂點原文)');
   ok(/transformed\.y -= /.test(S), '擺出去時梢端略降(少了這一項會看起來像整株在平移)');
   ok(count(code(toon), /defines\.CEL_SWAY = ''/g) === 1 && /sk\.amp > 0/.test(code(toon)),
     '擺動與細勾線分兩個 define(草坪要前者不要後者)');
-  ok(/\$\{soft \? `Q\$\{soft\.k\}` : ''\}/.test(toon),
-    '軟性進 customProgramCacheKey —— 不進的話 three 會共用舊程式 = 那批材質整批沒有擺動也沒有細線');
+  // 鑰匙 MUST 同時帶 kind 與**細勾線開關**:同一個 soft.k 在不透明件開、在半透明件關,
+  // 只帶 kind 的話兩者共用同一支已編譯的程式(水面會拿到寫死 alpha 的那一版)。
+  ok(/\$\{soft \? `Q\$\{soft\.k\}\$\{inkable \? 'I' : ''\}` : ''\}/.test(toon),
+    '軟性(kind + 細勾線開關)進 customProgramCacheKey —— 不進的話 three 會共用舊程式');
 }
 
 // ---------------------------------------------------------------- Ⅳ
@@ -274,9 +314,248 @@ console.log('\nⅤ 風的時鐘與雲(執行原文)');
     `一個週期後逐位元回到起點(= 使用者要的「重複性變化」;實測週期 ${period}s)`);
 }
 
+// ---------------------------------------------------------------- Ⅵ
+// 2026-08-13 使用者「建立海浪 / 稻浪 / 草波 / 芒草波的動畫」。
+// 海浪與上面四種軟性是**兩種不同的東西**,而它們共用同一組 uniform ⇒ 最容易的壞法是
+// 把其中一條規則抄到另一邊(相位取實例原點 = 整片海一起上下 = 潮汐不是浪)。
+console.log('\nⅥ 海浪(表面波;toon.js + terrain.js 原文)');
+{
+  let T = code(toon);
+  if (BREAK_WAVE) T = T.replace(/vec2 seaXZ = \( modelMatrix \* vec4\( transformed, 1\.0 \) \)\.xz;/,
+    'vec2 seaXZ = ( modelMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xz;');
+  if (BREAK_WAVE && !/vec4\( 0\.0, 0\.0, 0\.0, 1\.0 \) \)\.xz/.test(T)) {
+    console.error('  ✗ --break-wave 的字面替換沒有生效(原文改過了?)'); fail++;
+  }
+  ok(SOFT_KINDS.sea && SOFT_KINDS.sea.axis === 'w', '海面是獨立的 kind 且 axis = w(表面波)');
+  ok(WIND.SEA_M > 0 && WIND.SEA_SEG >= 2,
+    `海浪波長 ${WIND.SEA_M}m、取樣率 ${WIND.SEA_SEG} 段/波長(< 2 就低於 Nyquist)`);
+  // 第二諧波的空間頻率是 1.6× ⇒ 真正要取樣的是那一支
+  ok(WIND.SEA_SEG / 1.6 >= 2,
+    `合成後最短波(${(WIND.SEA_M / 1.6).toFixed(1)}m)仍有 ${(WIND.SEA_SEG / 1.6).toFixed(1)} 段 ≥ 2`);
+  // 分段數與波長 MUST 是同一個推導,消費端不得手寫
+  const seg = new Function(`${block(toon, 'export const seaSegM = ').replace('export ', '')}\nconst WIND=${JSON.stringify(WIND)};\nreturn seaSegM;`)();
+  ok(Math.abs(seg() - WIND.SEA_M / WIND.SEA_SEG) < 1e-9, `seaSegM() 由波長推導(${seg()}m)`);
+  ok(count(code(terr), /seaSegM\(\)/g) === 1 && !/SEA_M/.test(code(terr)),
+    'terrain.js 只經 seaSegM() 取邊長,MUST NOT 自己讀波長再算一次');
+  // ---- 相位:逐頂點 ----
+  // 錨在位移那一段的**第一行程式碼**(而不是 `#ifdef CEL_WAVE` 或註解):
+  //   ・`#ifdef CEL_WAVE` 在本檔出現三次(前置宣告 / 法線 / 位移),非貪婪從第一個抓
+  //     會一路跨過擺動區塊,把那邊的 instanceMatrix 也算進來 = 假紅字;
+  //   ・註解當錨在這裡行不通 —— `code()` 就是專門把註解剝掉的那一支。
+  const iSea = T.search(/vec2 seaXZ = /);
+  const W = iSea >= 0 && /^([\s\S]*?)#endif\n\s*#include <project_vertex>/.exec(T.slice(iSea));
+  ok(!!W, '海浪位移排在 #include <project_vertex> 之前');
+  const S = W ? W[1] : '';
+  ok(/modelMatrix \* vec4\( transformed, 1\.0 \)/.test(S),
+    '相位取**逐頂點**的世界 XZ —— 取實例原點的話整片海一起上下,那是潮汐不是浪');
+  ok(!/instanceMatrix/.test(S), '海浪不吃 instanceMatrix(整片海是一個 mesh,不是散佈的實例)');
+  ok(/seaUp/.test(S) && /vec3\( 0\.0, 1\.0, 0\.0 \) \* mat3\( modelMatrix \)/.test(S),
+    '位移方向是「世界 +Y 轉進局部」而不是 transformed.y(水盤自己繞 X 轉了 −90°)');
+  ok(/celSeaH\( seaXZ \) \* seaFade/.test(S), '浪高乘上逐頂點淡出權重 seaFade');
+  // ---- 法線 MUST 與位移同源、且排在 three 算 vNormal 之前 ----
+  ok(/#include <beginnormal_vertex>[\s\S]{0,900}?objectNormal = normalize\(/.test(T),
+    '法線在 beginnormal_vertex 改(three 的 normal_vertex 排在 begin_vertex 之前,晚一步就整片死平)');
+  ok(T.indexOf('objectNormal = normalize( normalize( seaNw )') >= 0
+    && T.indexOf('objectNormal = normalize( normalize( seaNw )') < iSea,
+    '法線那一段排在位移那一段之前(= three 的原生順序,不是我們自己排的)');
+  ok(count(T, /float celSeaH\( vec2/g) === 1 && count(T, /celSeaH\(/g) === 6,
+    '浪高恰一份實作(位移 1 次 + 中央差分 4 次 = 5 個呼叫點);兩份公式 = 光影的浪與幾何的浪差半個波長');
+  // ---- 淡出:兩張水面共用材質,粗網格那一張 MUST 顯式歸零 ----
+  ok(/wgeo\.setAttribute\('seaFade', new THREE\.BufferAttribute\(new Float32Array\(wp\.length \/ 3\), 1\)\)/.test(code(terr)),
+    '外環水面顯式補 seaFade = 0(靠「缺屬性讀成 0」是未宣告的預設值,沒有斷言守得住)');
+  const fadeFn = new Function('smooth01', 'edgeWallInsetM',
+    `${/^function seaFadeOf\(geo, w, h\) \{[\s\S]*?^\}/m.exec(code(terr))[0]}\nreturn seaFadeOf;`)(
+    (t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); }, () => 40);
+  const stub = (pts) => ({ attributes: { position: { count: pts.length, getX: (i) => pts[i][0], getY: (i) => pts[i][1] } } });
+  const W2 = 1200, H2 = 1200;
+  const f = fadeFn(stub([[0, 0], [W2 / 2, 0], [0, H2 / 2], [W2 / 2 - 40, 0], [W2 / 2 - 200, 0]]), W2, H2);
+  ok(f[0] === 1, '圖心滿幅');
+  ok(f[1] === 0 && f[2] === 0, '圖界(x 與 z 兩軸各驗一次)歸零');
+  ok(f[3] === 1, '障礙環內緣(edgeWallInsetM)恰好回到滿幅 ⇒ 玩家走得到的範圍恆是滿幅');
+  ok(f[4] === 1, '再往內仍是滿幅(單調不回頭)');
+}
+
+// ---------------------------------------------------------------- Ⅶ
+console.log('\nⅦ 陣風包絡(「波」的本錢在振幅也要跟著跑)');
+{
+  let T = code(toon);
+  if (BREAK_GUST) T = T.replace(/swOsc \*= celGust\( swO\.xz \);\n/, '');
+  if (BREAK_GUST && /swOsc \*= celGust\( swO\.xz \);/.test(T)) {
+    console.error('  ✗ --break-gust 的字面替換沒有生效(原文改過了?)'); fail++;
+  }
+  ok(WIND.GUST_M > WIND.WAVE_M * 3,
+    `陣風波長 ${WIND.GUST_M}m ≫ 擺動波長 ${WIND.WAVE_M}m(同量級 = 兩層互相拍頻成雜訊)`);
+  ok(WIND.GUST_F > 0 && WIND.GUST_F < 1,
+    `包絡深度 ${WIND.GUST_F} ∈ (0,1):= 0 是改制前的等幅擺動,≥ 1 會讓振幅翻負(相位跳半圈)`);
+  ok(WIND.GUST_S > 0 && Math.abs(WIND.GUST_S / SOFT_KINDS.grass.freq - Math.round(WIND.GUST_S / SOFT_KINDS.grass.freq)) > 0.05,
+    `包絡頻率 ${WIND.GUST_S} 與草的基頻不可通約(整數比 = 鎖相 = 看得出重複點)`);
+  ok(count(T, /float celGust\( vec2/g) === 1, '包絡恰一份實作(擺動與海浪同吃)');
+  // 深度是模板插值(`${WIND.GUST_F.toFixed(3)}`)⇒ 釘的是**那個常數的名字**不是它今天的值
+  ok(/return 1\.0 \+ \$\{WIND\.GUST_F[^}]*\} \* sin\(/.test(T),
+    '包絡形如 1 + F·sin ⇒ **平均值恆為 1**:這一層只重新分配擺幅,不改變平均值(也就不是偷偷調大)');
+  ok(/swOsc \*= celGust\( swO\.xz \);/.test(T),
+    '植被的包絡吃**實例原點**(逐頂點取 ⇒ 同一株的根與梢落在包絡的不同位置 = 那株被拉長)');
+  ok(/celGust\( celSxz \)/.test(T), '海浪的包絡吃逐頂點世界 XZ(它本來就是逐頂點的)');
+  ok(/uniform vec2 uGustK;/.test(T) && count(T, /_gustK/g) === 2,
+    '包絡的波數向量恰一處定義一處餵入,且與風向同源(另寫一份方向 = 陣風與擺動走不同方向)');
+}
+
+// ---------------------------------------------------------------- Ⅷ
+console.log('\nⅧ 稻浪 / 草波 / 芒草波(ground.js 消費端;2026-08-04 那一輪整批漏標)');
+{
+  const G = code(ground);
+  // 真品零件表 + 真品的 cone/box/cyl 速記(**一併抽原文**,不在本檔另抄一份 —— 抄的那一份
+  // 會在有人改速記的落地平移之後靜默分家,而 span 的斷言照樣全綠)。
+  // 幾何以「與 three 同值」的樁餵入:只追蹤包圍盒頂端(`detailSpan` 只讀 max.y)。
+  const SHORTHAND = /^const cone = [\s\S]*?^const cyl = [^\n]*\n/m.exec(G)[0];
+  const DEFS = /^const DETAIL_DEFS = \{[\s\S]*?^\};/m.exec(G)[0];
+  class Geo {
+    constructor(top) { this.top = top; }
+    get boundingBox() { return { max: { y: this.top } }; }
+    computeBoundingBox() {}
+    translate(x, y) { this.top += y; return this; }
+    rotateX() { return this; }
+    rotateZ() { return this; }
+  }
+  // 置中幾何的頂端 = 半高;球狀是半徑。與 three 同值(速記的 .translate 再往上疊)。
+  // **未列名的幾何一律回半徑 0 的樁而不是丟例外**:這一段驗的是「哪些零件是軟性」與
+  // 「span 由幾何推導」,不是零件表用了哪幾種幾何 —— 有人加一款 TorusGeometry 就整支
+  // 稽核爆掉的話,紅字的理由與真正要守的東西無關(而且那是**例外洗成跳過**的反面)。
+  const T3 = new Proxy({
+    ConeGeometry: function (r, h) { return new Geo(h / 2); },
+    BoxGeometry: function (w, h) { return new Geo(h / 2); },
+    CylinderGeometry: function (r0, r1, h) { return new Geo(h / 2); },
+    IcosahedronGeometry: function (r) { return new Geo(r); },
+    SphereGeometry: function (r) { return new Geo(r); },
+  }, {
+    get: (t, k) => t[k] || function () { return new Geo(0); },
+  });
+  const defs = new Function('THREE', `${SHORTHAND}${DEFS}\nreturn DETAIL_DEFS;`)(T3);
+  // ① 使用者點名的三種波各有實體,而且**整款每一件**都標到
+  for (const [k, why] of [['rice', '稻浪'], ['tuft', '草波'], ['miscanthus', '芒草波'],
+    ['reed', '蘆葦'], ['weed', '雜草'], ['flower', '花']]) {
+    const parts = defs[k] || [];
+    ok(parts.length > 0 && parts.every((p) => p.sf === 'grass'),
+      `${k}(${why})**每一件**都是軟性 grass(漏一支 = 草在飄、穗釘在空中)`);
+  }
+  ok((defs.bush || []).every((p) => p.sf === 'leaf'), '灌木是軟性 leaf');
+  ok(defs.sapling.some((p) => p.sf === 'leaf') && defs.sapling.some((p) => !p.sf),
+    '幼樹:葉冠軟性、樹幹不是(與 VEG_DEFS 的喬木同一條規則)');
+  // ② 硬的東西 MUST NOT 被掃進來
+  const hard = ['pebble', 'snag', 'charsnag', 'log', 'stump', 'plank', 'cabin', 'container',
+    'solarpanel', 'headstone', 'boulder', 'crate', 'lotuspad'];
+  const wrong = hard.filter((k) => (defs[k] || []).some((p) => p.sf));
+  ok(wrong.length === 0, `石/枯木/人造物/浮葉一律不是軟性${wrong.length ? `;誤標:${wrong.join(',')}` : ''}`);
+  // ③ span 推導:改零件表擺幅自己跟著走
+  const spanFn = new Function('DETAIL_DEFS',
+    `const _detSpan = new Map();\n${/^function detailSpan\(type\) \{[\s\S]*?^\}/m.exec(G)[0]}\nreturn detailSpan;`)(defs);
+  ok(Math.abs(spanFn('rice') - 0.95) < 1e-9, `稻的 span 由零件幾何實算(${spanFn('rice')}m)`);
+  ok(spanFn('miscanthus') > spanFn('rice'), '芒草比稻高 ⇒ 擺幅也大(相對擺幅 × span)');
+  ok(spanFn('__none__' in defs ? '__none__' : 'pebble') >= 0.3, '分母有下限,MUST NOT 為零');
+  // ④ 材質端真的把旗標交給 toon.js,且錨點 base = 0(這張表的落地平移烤在幾何裡)
+  ok(/soft: \{ k: part\.sf, span: detailSpan\(type\), base: 0, sy: part\.sy \?\? 1 \}/.test(G),
+    '細節材質帶 soft(base = 0 —— 這張表的落地平移烤在幾何裡,傳 part.y 那一套會把權重推高一截)');
+  ok(count(G, /detailSpan\(/g) === 2, 'span 恰一處定義一處消費');
+}
+
+// ---------------------------------------------------------------- Ⅸ
+console.log('\nⅨ 國旗(地圖 30 : 駐軍 60 : 敵對 10)');
+{
+  const F = code(flagsSrc), B = code(biomes);
+  ok(!/^import .*(three|\.\/data\.js|\.\/lore\.js)/m.test(F)
+    && (F.match(/^import /gm) || []).length === 1 && /from '\.\/rng\.js'/.test(F),
+    'flags.js 零 THREE、零 DOM、只 import rng.js(旗面是純資料 ⇒ 離線驗得到)');
+  ok(!/document\.|canvas/i.test(F.replace(/ctx|context/gi, '')),
+    'flags.js 不建立畫布(畫的動作由呼叫端交 2D context 進來)');
+  ok(Math.abs(MIX.MAP + MIX.GARRISON + MIX.ENEMY - 1) < 1e-9
+    && MIX.MAP === 0.30 && MIX.GARRISON === 0.60 && MIX.ENEMY === 0.10,
+    `比例 = 使用者定案的 30 : 60 : 10(實測 ${MIX.MAP} / ${MIX.GARRISON} / ${MIX.ENEMY})`);
+  // 名冊 MUST 推導:手寫一份會在換陣營之後靜默過期
+  ok(!/SWARM:\s*\[/.test(F) && !/STEEL:\s*\[/.test(F),
+    '陣營國家名冊 MUST NOT 手寫(由 CHARACTERS[].side × LORE[].nat 推導)');
+  const roster = flagsMod.sideIsoRoster(CHARACTERS, LORE);
+  ok(roster.SWARM?.length >= 3 && roster.STEEL?.length >= 3,
+    `名冊推導得出來(蜂群 ${roster.SWARM?.length} 國 / 鋼鐵 ${roster.STEEL?.length} 國 / 傭兵 ${roster.MERC?.length} 國)`);
+  const bad = Object.keys(CHARACTERS).filter((id) => {
+    const iso = flagsMod.natIso(LORE[id]?.nat);
+    return !iso || !flagsMod.FLAG_DESIGNS[iso];
+  });
+  ok(bad.length === 0, `32 名角色的國籍全部查得到旗面${bad.length ? `;缺:${bad.join(',')}` : ''}`);
+  ok(flagsMod.natIso('中國(重慶)') === 'CN' && flagsMod.natIso('烏克蘭(克里米亞韃靼)') === 'UA',
+    '帶括號補述的國籍(全形/半形)切得掉 —— 直接查表那兩位會從名冊裡無聲消失');
+  // 場地國:venues 的 country MUST 進 battleConfig,否則「地圖國」那 30% 恆缺席
+  ok(/venue: \{ id: venue\.id, name: venue\.name, mix: venue\.mix, country: venue\.country \}/.test(code(venuesSrc)),
+    'venueConfig 把 country 帶進 battleConfig(不帶 = 地圖國那一份恆缺席,而旗子照掛)');
+  const noDesign = [...new Set(VENUES.map((v) => flagsMod.isoOfFlagEmoji(v.country)))]
+    .filter((i) => !i || !flagsMod.FLAG_DESIGNS[i]);
+  ok(noDesign.length === 0, `29 個預設場地的國旗全部畫得出來${noDesign.length ? `;缺:${noDesign}` : ''}`);
+  // 比例:真的跑 pickFlagIso(不是讀常數)
+  const cnt = { map: 0, garrison: 0, enemy: 0 };
+  const N = 40000;
+  for (let i = 0; i < N; i++) {
+    const p = flagsMod.pickFlagIso(flagsMod.flagSeed((i % 500) * 7, Math.floor(i / 500) * 11),
+      { map: 'TW', garrison: roster.SWARM, enemy: roster.STEEL });
+    if (p) cnt[p.role]++;
+  }
+  for (const [k, want] of [['map', MIX.MAP], ['garrison', MIX.GARRISON], ['enemy', MIX.ENEMY]]) {
+    ok(Math.abs(cnt[k] / N - want) < 0.02,
+      `實測比例 ${k} ${(cnt[k] / N * 100).toFixed(1)}%(目標 ${want * 100}%,座標雜湊 ${N} 點)`);
+  }
+  // 地圖國缺席 ⇒ 併進駐軍(併進敵對的話一張圖上會有四成敵旗)
+  let foe = 0;
+  for (let i = 0; i < N; i++) {
+    const p = flagsMod.pickFlagIso(flagsMod.flagSeed(i * 3, i * 5),
+      { map: null, garrison: roster.SWARM, enemy: roster.STEEL });
+    if (p?.role === 'enemy') foe++;
+  }
+  ok(Math.abs(foe / N - MIX.ENEMY) < 0.02,
+    `自訂地圖(沒有 country)⇒ 那 30% 併進駐軍,敵旗仍是 ${(foe / N * 100).toFixed(1)}%`);
+  // 決定性 + 零共享 rnd
+  ok(flagsMod.pickFlagIso(flagsMod.flagSeed(120, -40), { map: 'JP', garrison: roster.SWARM, enemy: roster.STEEL })?.iso
+    === flagsMod.pickFlagIso(flagsMod.flagSeed(120, -40), { map: 'JP', garrison: roster.SWARM, enemy: roster.STEEL })?.iso,
+    '同一個落點恆同一國(跨客戶端逐位元一致的前提)');
+  // **MUST NOT 用 `block()` 抽這一支**:那支從錨點起做大括號配對,而本函式的第一個 `{`
+  // 是解構參數 `{ group, terrain, ... }` ⇒ 當場配平,抽到的「函式本體」只有那一行參數。
+  // 症狀是所有「本體裡沒有 X」的斷言一律變成假綠(2026-08-13 實作當下踩過一次)。
+  const PB = /^function placeBaseFlags\([\s\S]*?^\}/m.exec(biomes)?.[0] || '';
+  ok(PB.length > 800, `placeBaseFlags 抽得到本體(${PB.length} 字元;解構參數會讓大括號配對當場配平)`);
+  ok(!/rnd\(\)/.test(code(PB)),
+    '主堡旗陣零共享 rnd 消耗(多抽一枚就把後面每一株植被的佈局整條推移;§2.3)');
+  ok(/const heraldic = \[[^\]]*\]\[\(rnd\(\) \* 4\) \| 0\];/.test(B),
+    '城堡的徽色 rnd **照抽**(掛國旗就少抽一枚 = 同一條序列位移)');
+  // 每一款旗面都畫得出東西(以錄音樁當 ctx —— 這正是零 THREE 的回報)
+  const calls = [];
+  const ctx = new Proxy({}, { get: (t, k) => (typeof k === 'string' && ['fillStyle', 'strokeStyle', 'lineWidth'].includes(k) ? '' : (...a) => calls.push(k)), set: () => true });
+  const undrawable = Object.keys(flagsMod.FLAG_DESIGNS).filter((iso) => {
+    calls.length = 0;
+    return !flagsMod.drawFlag(ctx, 80, 48, iso) || calls.length < 1;
+  });
+  ok(undrawable.length === 0, `型錄 ${Object.keys(flagsMod.FLAG_DESIGNS).length} 款全部畫得出來${undrawable.length ? `;啞的:${undrawable}` : ''}`);
+  ok(flagsMod.drawFlag(ctx, 80, 48, 'ZZ') === false,
+    '認不得的 ISO 回 false 而不是畫一面白旗(戰場上的白旗讀起來是投降旗)');
+  // 飄揚:旗面 MUST 有橫向分段,否則只是被剪過去的一塊板子
+  ok(/new THREE\.BoxGeometry\(w, h, d, FLAG_SEG, 2, 1\)/.test(B) && /const FLAG_SEG = (\d+);/.test(B)
+    && Number(/const FLAG_SEG = (\d+);/.exec(B)[1]) >= 6,
+    '旗面橫向分段 ≥ 6(一段的盒子只有兩排頂點 ⇒ 只能被整片剪過去,那不是飄揚)');
+  // 推遲量是模板插值 ⇒ 釘的是「有沒有沿旗面推遲」而不是今天那個數字;
+  // 且 MUST 收在 CEL_SWAY_H 之下(植被跟著推遲的話整片林子會沿樹高扭成螺旋)
+  ok(/#ifdef CEL_SWAY_H\n\s*swP -= sw \* \$\{\(0\.8 \* Math\.PI \* 2\)[^}]*\};\n\s*#endif/.test(code(toon)),
+    '旗面沿自己推遲相位 ⇒ 波由旗桿往旗尾跑(少了它旗桿側與旗尾同時到達最大位移)');
+  // 主堡旗陣:逐國一個 InstancedMesh(合併會讓整批繞旗陣中心擺)
+  ok(/new THREE\.InstancedMesh\(proto\.geometry, proto\.material, list\.length\)/.test(PB)
+    && /for \(const \[iso, list\] of byIso\)/.test(PB),
+    '旗面逐國一個 InstancedMesh(合併成一個 mesh ⇒ 擺動權重吃合併後的 x = 整批繞旗陣中心擺)');
+  ok(!/blockers\.push|blockArea\(/.test(PB),
+    '主堡旗陣是純表現層:0.12m 的細桿不登記碰撞(掛了就是旗桿之間看不見的牆)');
+  ok(/const ry = -WIND\.DIR_DEG \* Math\.PI \/ 180;/.test(PB),
+    '旗面朝下風(旗尾 = 局部 +x;不轉的話旗子側著吹,看起來像旗桿裝反了)');
+}
+
 console.log(`\n${fail === 0 ? '✅' : '❌'} 通過 ${pass} 項,失敗 ${fail} 項`);
-if (BREAK_INK || BREAK_ANCHOR) {
-  console.log(`（反向驗證模式:${BREAK_INK ? '--break-ink ' : ''}${BREAK_ANCHOR ? '--break-anchor' : ''} —— 上面 MUST 有紅字）`);
+const BREAKS = [BREAK_INK && '--break-ink', BREAK_ANCHOR && '--break-anchor',
+  BREAK_WAVE && '--break-wave', BREAK_GUST && '--break-gust'].filter(Boolean);
+if (BREAKS.length) {
+  console.log(`（反向驗證模式:${BREAKS.join(' ')} —— 上面 MUST 有紅字）`);
   process.exit(fail === 0 ? 1 : 0);
 }
 process.exit(fail === 0 ? 0 : 1);

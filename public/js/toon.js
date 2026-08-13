@@ -472,6 +472,18 @@ export const WIND = {
   WAVE_M: 26,        // 空間波長(m):風以**波**的形式掃過林子,不是全林同步點頭
   BEAT: 1.87,        // 第二諧波的頻率比;刻意取無理數附近 ⇒ 兩波的合成週期長到看不出重複
   CLOUD_MPS: 1.7,    // 雲的漂移速度(m/s)
+  // ---- 陣風包絡(2026-08-13 使用者「稻浪 / 草波 / 芒草波」)----
+  // WAVE_M 那一層給的是**相位**梯度:全場等幅擺動、只是彼此差半拍。整片稻田同時以同一個
+  // 幅度晃,眼睛讀成「這片草在抖」而不是「有一道風掃過去」——「浪」的本錢在**振幅**也要
+  // 跟著跑。故再疊一層波長長一個量級、速度慢一半的包絡:掃到的那一帶倒得深、其餘幾乎靜止。
+  GUST_M: 210,       // 陣風包絡的空間波長(m):MUST ≫ WAVE_M,同量級的話兩層會互相拍頻成雜訊
+  GUST_S: 0.21,      // 包絡的頻率(rad/s);與各 kind 的 freq 不可通約 ⇒ 合成週期看不出重複
+  GUST_F: 0.55,      // 包絡深度。**0 = 逐位元回到 2026-08-04 的等幅擺動**(改制前後的對照組)
+  // ---- 海浪(表面波)----
+  // 波長是**尺**不是外觀旋鈕:水面的分段數由它推導(`seaSegM()`),手寫分段數的話改波長
+  // 之後取樣率會掉到 Nyquist 以下,而畫面上只表現成「遠處的海在亂跳」。
+  SEA_M: 64,         // 海浪波長(遊戲公尺;REAL_SCALE 2× ⇒ 真實 32m 的長浪)
+  SEA_SEG: 8,        // 一個波長至少切幾段(= 取樣率;8 段對兩諧波合成後的最短波 1.6× 仍有 5 段)
 };
 const WIND_DIR = [Math.cos(WIND.DIR_DEG * Math.PI / 180), Math.sin(WIND.DIR_DEG * Math.PI / 180)];
 
@@ -488,10 +500,25 @@ export const SOFT_KINDS = {
   // 頻率隨「這團東西有多重」遞減:樹冠是一大團葉子,慢;草穗輕,快;旗面最輕最快。
   // 反過來排(草比樹慢)看起來會像水草,不像風。
   leaf:  { amp: 0.035, freq: 0.62, axis: 'y' },   // 樹冠 / 葉簇 / 針葉
-  grass: { amp: 0.075, freq: 1.15, axis: 'y' },   // 芒草 / 蘆葦 / 箭竹 / 花圃
+  grass: { amp: 0.075, freq: 1.15, axis: 'y' },   // 芒草 / 蘆葦 / 箭竹 / 花圃 / 稻
   cloth: { amp: 0.110, freq: 1.70, axis: 'x' },   // 旗幟
   turf:  { amp: 0,     freq: 0,    axis: 'y' },   // 草坪 / 內場草皮(只細線,不擺動)
+  // 海浪(2026-08-13)。`axis: 'w'` = **表面波**,與上面四種是兩種不同的東西:
+  //   ・上面四種:位移**沿風向水平**推、權重由根到梢遞增、相位取**實例原點**(一株 = 一相位)
+  //   ・表面波  :位移**垂直**、無根梢之分、相位**逐頂點**取(整片海是一個 mesh,取原點的話
+  //               全場只有一個相位 = 整片海一起上下,那是潮汐不是浪)
+  // `amp` 在這一族的語意是**波陡**(波高 ÷ 波長)而不是「擺幅 ÷ 株高」,但算式同一條
+  // (`uSoftAmp = amp × span`)⇒ span 傳波長就得到波高。0.014 × 64m = 0.9m(真實 0.45m 長浪)。
+  sea:   { amp: 0.014, freq: 0.55, axis: 'w' },   // 海面 / 湖面 / 潟湖
 };
+
+/**
+ * 水面的軟性參數(單一縫)。消費端 = `terrain.js` 的水盤與緩衝空間外環水面。
+ * **MUST NOT 在消費端手寫波長**:那樣改 `WIND.SEA_M` 只會動到分段數而波形留在原地。
+ */
+export const seaSoft = () => ({ k: 'sea', span: WIND.SEA_M });
+/** 水面網格的最大邊長(m):由波長與取樣率推導,MUST NOT 手寫段數 */
+export const seaSegM = () => WIND.SEA_M / WIND.SEA_SEG;
 
 // 共享 uniform(同 `_celLightDirView` / `_rampTint`:一份物件餵給所有材質)。
 // **時鐘刻意不取模**:各 kind 的頻率彼此不可通約,取模會在週期邊界跳一下;
@@ -500,6 +527,10 @@ const _windT = { value: 0 };
 const _windDir = { value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]) };
 const _windK = {
   value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.WAVE_M),
+};
+// 陣風包絡的波數向量:同一個風向、長一個量級的波長(推導,MUST NOT 另寫一份方向)
+const _gustK = {
+  value: new THREE.Vector2(WIND_DIR[0], WIND_DIR[1]).multiplyScalar(Math.PI * 2 / WIND.GUST_M),
 };
 
 /**
@@ -551,10 +582,17 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   if (paint?.flat) defines.CEL_PAINT_FLAT = '';
   if (wash > 0 || moss) defines.CEL_WP = '';   // 需要世界座標 varying
   // 細勾線與擺動**分兩個 define**:草坪要前者不要後者(它是鋪面,擺起來只會跟步道錯開)。
-  if (sk) defines.CEL_SOFT = '';
+  // 細勾線那半**只給不透明件**:通道是「場景 RT 的 alpha」,而半透明件的 alpha 是**不透明度**
+  // ——`gl_FragColor.a = uSoftInk` 寫下去就是把水面從 0.82 直接改成 0.30。檔頭那條契約本來就
+  // 只對不透明件成立(「半透明件混合後 alpha 只會被推向 1 = 硬性 = 舊行為」),這裡把它寫成閘。
+  const inkable = !!sk && !mat.transparent;
+  if (inkable) defines.CEL_SOFT = '';
   if (sk && sk.amp > 0) {
-    defines.CEL_SWAY = '';
-    if (sk.axis === 'x') defines.CEL_SWAY_H = '';
+    if (sk.axis === 'w') defines.CEL_WAVE = '';   // 表面波(海浪):垂直位移 + 逐頂點相位
+    else {
+      defines.CEL_SWAY = '';
+      if (sk.axis === 'x') defines.CEL_SWAY_H = '';
+    }
   }
   // 地貌法線:只有它需要 define(共用 id 與類別碼都只是 uniform ⇒ 不必分程式)
   if (landNrm) defines.CEL_LAND_N = '';
@@ -572,7 +610,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uInkClass = { value: land ? INK_CLASS.LAND : INK_CLASS.HARD };
     shader.uniforms.uCelLightDir = { value: _celLightDirView };
     // 軟性:勾線門檻倍率(寫進場景 RT 的 alpha)+ 擺動的四個形狀參數
-    shader.uniforms.uSoftInk = { value: sk ? INK_SOFT_A : 1 };
+    shader.uniforms.uSoftInk = { value: inkable ? INK_SOFT_A : 1 };
     shader.uniforms.uSoftSpan = { value: Math.max(1e-3, soft?.span ?? 1) };
     shader.uniforms.uSoftBase = { value: soft?.base ?? 0 };
     shader.uniforms.uSoftSy = { value: soft?.sy ?? 1 };
@@ -581,6 +619,7 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
     shader.uniforms.uWindT = _windT;
     shader.uniforms.uWindDir = _windDir;
     shader.uniforms.uWindK = _windK;
+    shader.uniforms.uGustK = _gustK;
     // 陰影偏色(P1-B):共享 uniform 物件 ⇒ 拉桿一動,全場材質同一幀跟著換
     shader.uniforms.uCelRampTint = _rampTint[tint] || _rampTint.mech;
     // 場只換「哪一張 + 取樣框」兩個 uniform;取樣規則(celWeatherF)與強度仍是同一份
@@ -611,17 +650,58 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
         attribute vec3 aLandN;
         varying vec3 vLandN;
         #endif
-        #ifdef CEL_SWAY
+        #if defined( CEL_SWAY ) || defined( CEL_WAVE )
         uniform float uWindT;
         uniform vec2 uWindDir;
         uniform vec2 uWindK;
+        uniform vec2 uGustK;
         uniform float uSoftSpan;
         uniform float uSoftBase;
         uniform float uSoftSy;
         uniform float uSoftAmp;
         uniform float uSoftFreq;
+        // 陣風包絡(單一實作,擺動與海浪同吃)。振幅乘上一層「波長長一個量級、走得慢一半」
+        // 的行波 ⇒ 掃到的那一帶倒得深、其餘幾乎靜止 = 眼睛讀得出「一道浪推過去」。
+        // 平均值恆為 1 ⇒ 這一層**不改變平均擺幅**,只重新分配;GUST_F = 0 恆回 1.0(舊制)。
+        float celGust( vec2 celGxz ) {
+          return 1.0 + ${WIND.GUST_F.toFixed(3)} * sin( uWindT * ${WIND.GUST_S.toFixed(3)} + dot( celGxz, uGustK ) );
+        }
+        #endif
+        #ifdef CEL_WAVE
+        // 逐頂點的淡出權重(1 = 滿幅、0 = 平的)。**由呼叫端烤在幾何上**,不是 uniform:
+        // 水盤與緩衝空間外環水面共用同一份材質,而外環的網格粗到取樣不了波(邊長 53m >
+        // 波長 64m 的 Nyquist)⇒ 讓它整片為 0,接縫兩側同為平面,沒有折痕也沒有遠處亂跳。
+        attribute float seaFade;
+        // 浪高(世界 XZ 的純函式)。**位移與法線 MUST 吃同一支** —— 兩邊各寫一份的話,
+        // 光影的浪與幾何的浪會差半個波長,而畫面上只表現成「水面的亮帶跟浪對不上」。
+        float celSeaH( vec2 celSxz ) {
+          float celSp = dot( celSxz, uWindK );
+          return uSoftAmp * celGust( celSxz )
+               * ( sin( uWindT * uSoftFreq + celSp ) * 0.72
+                 + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + celSp * 1.6 + 1.7 ) * 0.28 );
+        }
         #endif
         void main() {`)
+      // 法線 MUST 在 `beginnormal_vertex` 這一段改:three 的 normal_vertex(算 vNormal)排在
+      // begin_vertex **之前**,等到 project_vertex 才動就來不及了 —— 頂點真的起伏了,而賽璐璐
+      // 的階梯完全不知道,水面看起來仍是一整片死平的藍(只有邊緣剪影會動)。
+      .replace('#include <beginnormal_vertex>', `
+        #include <beginnormal_vertex>
+        #ifdef CEL_WAVE
+        {
+          // 中央差分取斜率(解析微分要把兩個諧波各微一次 + 包絡的乘法律,寫兩份公式就是
+          // 兩份會分家的實作;差分只吃 celSeaH 這一支,改波形不必回頭改法線)。
+          vec2 seaN0 = ( modelMatrix * vec4( position, 1.0 ) ).xz;
+          float seaE = ${(WIND.SEA_M / 16).toFixed(3)};
+          vec3 seaNw = vec3(
+            celSeaH( seaN0 - vec2( seaE, 0.0 ) ) - celSeaH( seaN0 + vec2( seaE, 0.0 ) ),
+            2.0 * seaE,
+            celSeaH( seaN0 - vec2( 0.0, seaE ) ) - celSeaH( seaN0 + vec2( 0.0, seaE ) ) );
+          seaNw.xz *= seaFade;
+          // 世界 → 零件局部(同 swD / seaUp 的轉置 idiom;水盤自己繞 X 轉了 −90°)
+          objectNormal = normalize( normalize( seaNw ) * mat3( modelMatrix ) + vec3( 1e-6 ) );
+        }
+        #endif`)
       // 擺動 MUST 排在 project_vertex **之前**:那一段吃 transformed 算 mvPosition 與
       // gl_Position,擺完再算才會連 vViewPosition / 世界座標 varying 一起是同一個姿勢。
       .replace('#include <project_vertex>', `
@@ -649,6 +729,13 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           #endif
           swO = modelMatrix * swO;
           float swP = dot( swO.xz, uWindK );
+          #ifdef CEL_SWAY_H
+            // 旗面**沿自己**再推遲一段相位 ⇒ 波由旗桿往旗尾跑 = 飄揚。
+            // 少了這一項,整面旗只是被同一個相位「剪」過去 —— 那是一塊被推歪的板子,
+            // 不是布(旗桿側與旗尾同時到達最大位移,布不會這樣動)。
+            // 值 = 沿旗面走過的波數 × 2π;取 0.8 個波:整數波會讓兩端同相 = 又變回剪切。
+            swP -= sw * ${(0.8 * Math.PI * 2).toFixed(3)};
+          #endif
           // 兩個不可通約的正弦相加 = 週期性(使用者要的「重複性變化」)但看不出重複點
           float swOsc = sin( uWindT * uSoftFreq + swP ) * 0.72
                       + sin( uWindT * uSoftFreq * ${WIND.BEAT.toFixed(3)} + swP * 1.6 + 1.7 ) * 0.28;
@@ -657,10 +744,24 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
           // 正規化後方向一致。MUST NOT 省掉這一步:實例的 ry 是亂數,直接拿世界向量當局部
           // 向量的話每一株會各吹各的方向,那就不是「風」了。
           vec3 swD = normalize( vec3( uWindDir.x, 0.0, uWindDir.y ) * swM + vec3( 1e-6 ) );
+          // 陣風包絡吃**實例原點**的世界 XZ(與相位同一個點):逐頂點取的話同一株的根與梢
+          // 會落在包絡的不同位置,強弱沿著株身變化 = 那株自己被拉長,不是被風吹。
+          swOsc *= celGust( swO.xz );
           float swA = sw * uSoftAmp * swOsc;
           transformed += swD * swA;
           // 擺出去時梢端略降(弧長守恆的一階近似)—— 少了這一項會看起來像整株在平移
           transformed.y -= sw * uSoftAmp * abs( swOsc ) * 0.3;
+        }
+        #endif
+        #ifdef CEL_WAVE
+        {
+          // ---- 表面波(海浪)----
+          // 相位**逐頂點**取世界 XZ(與植被擺動刻意相反,見 SOFT_KINDS.sea 的註解)。
+          vec2 seaXZ = ( modelMatrix * vec4( transformed, 1.0 ) ).xz;
+          // 位移方向 = 世界的 +Y 轉進零件局部座標(水盤自己繞 X 轉了 −90°,直接加在
+          // transformed.y 上會把浪打到水平方向去)。與 swD 同一個轉置 idiom。
+          vec3 seaUp = normalize( vec3( 0.0, 1.0, 0.0 ) * mat3( modelMatrix ) + vec3( 1e-6 ) );
+          transformed += seaUp * ( celSeaH( seaXZ ) * seaFade );
         }
         #endif
         #include <project_vertex>
@@ -860,8 +961,10 @@ function applyCelPatch(mat, { metal = false, rim = 0.22, wash = 0, moss = null, 
   };
   // 軟性 MUST 進快取鍵:defines 不同卻共用同一支已編譯的程式 = 該材質整批沒有擺動也沒有
   // 細勾線(three 只認這把鑰匙),而畫面上只表現成「有些樹會動、有些不會」。
+  // `I` = 細勾線那一半有沒有開:同一個 soft.k 在不透明件開、在半透明件關(見上面 inkable
+  // 那道閘)⇒ 不進鑰匙的話兩者共用同一支程式,水面會拿到寫死 alpha 的那一版。
   mat.customProgramCacheKey = () =>
-    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}` : ''}${landNrm ? 'L' : ''}${rim}`;
+    `cel${metal ? 'M' : ''}${wash > 0 ? 'W' : ''}${moss ? 'S' : ''}${cool > 0 ? 'C' : ''}${paint ? 'P' : ''}${paint?.face ? 'G' : ''}${paint?.flat ? 'F' : ''}${soft ? `Q${soft.k}${inkable ? 'I' : ''}` : ''}${landNrm ? 'L' : ''}${rim}`;
   return mat;
 }
 

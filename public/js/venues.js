@@ -350,7 +350,11 @@ export function venueConfig(venue, teamSize) {
     geoScaleVer: MAPGEO.GEO_SCALE_VER,
     maxOverlap,
     synthetic, precomputed: true,
-    venue: { id: venue.id, name: venue.name, mix: venue.mix },
+    // `country`(旗幟 emoji)MUST 帶進 battleConfig:兩個消費端都在建圖期,而那時只拿得到
+    // cfg —— ①在地文字語域的備援(`biomes.js` 的 `localeOf(cfg.venue?.country)`,**這一行
+    // 2026-08-13 之前一直讀到 undefined**:VENUES 有這一欄而 venueConfig 沒帶下來);
+    // ②國旗物件的「地圖國」那 30%(flags.js 的 FLAG_MIX)。自訂地圖沒有這一欄 ⇒ 兩者各自降級。
+    venue: { id: venue.id, name: venue.name, mix: venue.mix, country: venue.country },
     placeName: venue.name,
   };
 }
