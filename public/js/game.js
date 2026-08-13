@@ -16,7 +16,7 @@ import {
   SLOPE, slopeDeg, slopeMoveF, slopeBlocked, slopeSnapM,
   aoeClass, trajClass, fanConeHalf, lanceR, LANCE, ARMING, armingOf, lobMinRange, hitR, hitH, chaseCapS,
   fireBurstN, fireBurstGap,
-  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE,
+  reachRule, blastCoreR, shotV0, SEEK, seekTurn, SIEGE, bossGlow,
   SPEC_CAM, specViewNext, specViewLocked, camSmoothF, camAngleStep,
   SELF_F, selfCollider, COLLIDE_KINDS,
   CREEP_UPG,
@@ -3219,6 +3219,9 @@ export class BattleClient {
         ent.act = !!e.act;   // 主視野機(三機小隊只有一架):觀戰玩家視角的跟隨名冊只收它
         ent.kcd = e.kcd;   // 無人機自殺攻擊機冷卻(HUD 顯示用;非無人機為 undefined)
         ent.sp = e.sp ?? 0; ent.maxSp = e.msp ?? 0;   // 護盾(血條玻璃藍段;所有英雄機體都送)
+        // NPC BOSS 段位(有這一格 = 這是 BOSS):血條外圍光暈顏色由它決定(黑>青>銀>金)。
+        // 純表現層 —— 段位本身、狂暴化、恢復規則全在伺服器(見 sim._bossSync)。
+        ent.bossSeg = e.bs;
         ent.inv = e.iv || 0;   // 無敵幀剩餘秒(伺服器完全免傷 → 本地命中回饋改跳 -0,不誤導)
         // 觀戰玩家資訊面板(2026-08-02 使用者需求「會顯示該玩家所有資訊,包括商店升級」):
         // 這些欄位**伺服器本來就發**(見 sim._serializeEnt 的 o.act 區塊),客戶端只是留存下來 ——
@@ -3605,6 +3608,14 @@ export class BattleClient {
       const grp = new THREE.Group();
       // 外框:雙層描邊(暗外緣 + 金屬灰內緣)罩住整組,擺脫舊版單調的裸長條
       const stackH = hasSp ? shY + hh : hh, cy = hasSp ? shY / 2 : 0;
+      // NPC BOSS:再往外一圈**光暈**,顏色隨已擊破的 HP 段數走(黑>青>銀>金,見 data.js BOSS)。
+      // 只有 BOSS 建這一片(一般單位連幾何都不生 ⇒ 逐位元同舊制);顏色逐幀由下方更新。
+      if (ent.bossSeg != null) {
+        const glow = plane(0x000000, 0.55, -0.05, w + M * 5.2, stackH + M * 5.2);
+        glow.position.y = cy;
+        grp.add(glow);
+        ent.barGlow = glow;
+      }
       const frame = plane(0x05070a, 0.94, -0.03, w + M * 2.4, stackH + M * 2.4); frame.position.y = cy;
       const inner = plane(0x39424c, 0.95, -0.02, w + M, stackH + M);            inner.position.y = cy;
       grp.add(frame); grp.add(inner);
@@ -3639,6 +3650,11 @@ export class BattleClient {
     }
     ent.barFg.scale.x = Math.max(0.001, frac);
     ent.barFg.position.x = -(1 - frac) * ent.barW / 2;
+    // BOSS 光暈:顏色 = 該段的顏色(每破一段換一次)。色表只有 data.js `bossGlow` 一份。
+    if (ent.barGlow && ent.bossSeg != null && ent.barGlowSeg !== ent.bossSeg) {
+      ent.barGlowSeg = ent.bossSeg;
+      ent.barGlow.material.color.set(bossGlow(ent.bossSeg));
+    }
     if (ent.barSfg) {
       ent.barSfg.scale.x = Math.max(0.001, sfrac);
       ent.barSfg.position.x = -(1 - sfrac) * ent.barW / 2;

@@ -13,7 +13,8 @@ import {
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
-  SIEGE, siegeSiteStages, siegeOpenStage,
+  SIEGE, siegeSiteStages, siegeOpenStage, mapArg, siteCPs,
+  BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
   HIGH_SUP, highSupF, highSupDodgeF, highSupMissP,
@@ -198,6 +199,13 @@ export class BattleSim {
     // 迷你地圖(見 data.js MINI):每側只有前線砲塔。旗標由開房的 battleConfig 帶進來(rooms.js
     // 已正規化成布林),一般對戰恆 false ⇒ solveTowerSites 逐位元同舊制。
     this.mini = !!config.mini;
+    // 劇情戰役(見 data.js STORY_MAP):防守方 = NPC BOSS 那一邊;一般對戰恆 null。
+    // 地圖型態只有 `mapArg` 一份解讀 —— 塔位 / 尺度 / 兵線數與客戶端建圖吃的是同一個入口。
+    this.defSide = config.defSide || null;
+    this.mapArg = mapArg(config);
+    this.teamSize = config.teamSize || 0;          // BOSS 席次分配要知道敵方總人數(見 addHero)
+    this.bossHold = new Map();                     // pid → { x, z, r } 活動範圍(bots._move 唯一消費端)
+    this._bossSlot = { SWARM: 0, STEEL: 0 };       // 已指派的 BOSS 席次(= addHero 的到場序)
     this._siegeLeft = { SWARM: [], STEEL: [] };   // [階段] = 該方該階仍存活的建築數(_spawnStructures 填)
     this._siegeOpen = { SWARM: 0, STEEL: 0 };     // 該方目前打得動的最高階段(siegeOpenStage 推導)
 
@@ -1338,17 +1346,18 @@ export class BattleSim {
     // 最前線敵我塔的直線距離 = tower.range × TOWER_SEP_F(射程重疊 TOWER_OVERLAP、且不對射)。
     // 留存塔位(帶 frac):開場預置兵線 _prefillLanes 要「第一座砲塔」的沿線位置,
     // MUST 吃同一份解(再解一次 = 第二份實作,兩邊會分家)。
-    const sites = this.towerSites = solveTowerSites(this.lanes, this.mini);
+    const sites = this.towerSites = solveTowerSites(this.lanes, this.mapArg);
     for (let li = 0; li < sites.length; li++) {
       // 攻堅階段一律走 `siegeSiteStages`(唯一縫;MUST NOT 拿 st 的陣列索引推,見 data.js SIEGE 註)
       const stages = siegeSiteStages(sites[li]);
       for (let si = 0; si < sites[li].length; si++) {
         const st = sites[li][si];
-        for (const side of ['SWARM', 'STEEL']) {
-          const p = st[side];
+        // 劇情戰役只有防守方有塔(我方前線就是主堡)⇒ 名冊走 `siteCPs`,MUST NOT 直接讀
+        // `st[side]`(那一份在劇情戰役會拿到 undefined,展開成 p.x 就是靜默的 NaN 座標)
+        for (const p of siteCPs(st)) {
           for (const s of [-1, 1]) {
             this._add({
-              kind: 'tower', side, lane: li, hp: UNITS.tower.hp, sg: stages[si],
+              kind: 'tower', side: p.side, lane: li, hp: UNITS.tower.hp, sg: stages[si],
               x: p.x + p.nx * GAME.TOWER_SIDE_OFF * s, z: p.z + p.nz * GAME.TOWER_SIDE_OFF * s,
             });
           }
@@ -1386,6 +1395,70 @@ export class BattleSim {
     const fell = this._siegeOpen[t.side];
     this._siegeOpen[t.side] = open;
     if (this.siege) this.events.push({ e: 'siege', side: t.side, stage: fell });
+  }
+
+  // ---------- NPC BOSS(劇情戰役的敵方電腦玩家;見 data.js BOSS)----------
+  /**
+   * 這一隊是 BOSS 嗎。判據 = **這一場有防守方、而且它就是那一邊** —— 劇情戰役的敵方席位
+   * 全是電腦玩家(main.launchStoryBattle 逐一 addBot),故不必也 MUST NOT 另外判「是不是 bot」:
+   * 判 bot 的話,日後只要有人以觀戰/接管的方式坐進那個席位,同一台機體就會在 BOSS 與
+   * 一般英雄之間切換(HP 上限、狂暴進度、活動範圍全部跟著跳)。
+   */
+  isBoss(h) { return !!(this.defSide && h && h.side === this.defSide); }
+
+  /**
+   * BOSS 據點的世界座標(公尺)。階段 0/1 = 前線/中段塔位,SIEGE.BASE = 主堡;
+   * 同一據點多名 BOSS 沿**該處的法線**左右錯開(`bossSlotOff`)。
+   * 塔位一律吃 `this.towerSites`(與 `_spawnStructures` 同一份解),MUST NOT 再解一次。
+   */
+  _bossAnchor(stage, k) {
+    const def = this.defSide;
+    const off = bossSlotOff(k);
+    const sites = this.towerSites?.[0] || [];
+    // 回傳序 = [後塔, 前塔] ⇒ 階段 0(前線)取末項、階段 1(中段)取其前一項(見 solveTowerSites)
+    const site = stage < SIEGE.BASE ? sites[sites.length - 1 - stage] : null;
+    const p = site && site[def];
+    if (p) return { x: p.x + p.nx * off, z: p.z + p.nz * off };
+    // 主堡沒有塔位法線可用 ⇒ 取兵線在主堡那一端的切向的法線(單兵線:index 0 / 末端 = 兩座主堡)
+    const [bx, bz] = this.basePos[def];
+    const pts = this.lanes[0] || [];
+    const a = def === 'SWARM' ? pts[0] : pts[pts.length - 1];
+    const b = def === 'SWARM' ? pts[1] : pts[pts.length - 2];
+    if (!a || !b) return { x: bx, z: bz + off };
+    const dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz) || 1;
+    return { x: bx + (dz / L) * off, z: bz - (dx / L) * off };
+  }
+
+  /**
+   * 這一隊 BOSS 的段位同步(**唯一縫**):HP 比例 → 已擊破段數,進位就讓攻擊四軌各升一級。
+   * 段位量的是**小隊總量**(含已墜毀那幾架:BOSS 不重生 ⇒ 那份 HP 是永久沒了),見 BOSS 檔頭 ①。
+   * 只增不減 —— 恢復被 `_healBody` 夾在當前段的天花板之下,理論上回不去,這一格是保險。
+   */
+  _bossSync(sq) {
+    if (!sq || !sq.boss) return;
+    let hp = 0, max = 0;
+    for (const b of sq.bodies) { hp += Math.max(0, b.hp); max += b.maxHp; }
+    const seg = max > 0 ? bossSegOf(hp / max) : 0;
+    if (seg <= sq.bossSeg) return;
+    for (let k = sq.bossSeg; k < seg; k++) this._bossEnrage(sq);
+    sq.bossSeg = seg;
+    this.events.push({ e: 'bossSeg', pid: sq.pid, side: sq.side, seg });
+  }
+
+  /**
+   * 狂暴化一級:**攻擊四軌**(輕/重/小招/大招)各 +1 階。防禦四軌與陣營小兵強化恆 Lv0
+   * (使用者:「防禦面與小兵永不升級」)—— 那兩者的入口只有 `buy`,而 `buy` 對 BOSS 直接拒絕。
+   * 階級推進走 `_applyUpg` 同一支(與玩家購買共用),MUST NOT 在這裡自己寫 `h.abil[x] = …`:
+   * 升階可能加大彈夾,漏掉那一段清空的話 BOSS 會拿著舊彈匣計數打到下一次裝填才發現。
+   */
+  _bossEnrage(sq) {
+    const h = this.heroes.get(sq.pid) || sq.bodies[0];
+    if (!h) return;
+    for (const [item, up] of Object.entries(ECON.UPGRADES)) {
+      if (!up.abil || (h.upg[item] || 0) >= up.max) continue;
+      h.upg[item] = (h.upg[item] || 0) + 1;
+      this._applyUpg(h, item, up);
+    }
   }
 
   _add(e) {
@@ -1455,13 +1528,38 @@ export class BattleSim {
         markUntil: 0,                // 定位標記(下一擊必中必爆;小隊共用 —— 任一架出手都算)
       },
     };
+    // ---- NPC BOSS(劇情戰役的防守方;見 data.js BOSS)----
+    // 席次順序 = **到場序**(main.launchStoryBattle 逐一 addBot ⇒ b1…bn 依序落在前/中/後),
+    // 名額表由 `bossSlotPlan` 定(3 名 1:1:1、5 名 1:2:2,使用者指定)。
+    // 三件事在這裡一次定案:HP ×BOSS.HP_MUL(逐機體 ⇒ 小隊總量也剛好 ×10)、據點階段 `sg`
+    // (= 攻堅鎖血吃的那一格,BOSS 因此與同階砲塔同進退)、活動範圍(bots._move 的唯一消費端)。
+    const boss = this.isBoss({ side });
+    let hold = null;
+    if (boss) {
+      const plan = bossSlotPlan(this.teamSize || 0);
+      const slot = this._bossSlot[side]++;
+      sq.bossStage = plan[slot] ?? SIEGE.BASE;
+      sq.bossSeg = 0;
+      sq.boss = true;
+      // 同一階第幾名(左右錯開用):數一數前面有幾個人也分到這一階
+      const k = plan.slice(0, slot).filter((s) => s === sq.bossStage).length;
+      hold = { ...this._bossAnchor(sq.bossStage, k), r: bossZoneR() };
+      this.bossHold.set(pid, hold);
+      // 逐階存活數點名:`_spawnStructures` 在建構期就數完了(那時還沒有英雄)⇒ BOSS 進場時
+      // MUST 自己補記一筆,否則它守的那一階在鎖血眼裡是空的 —— 前線 BOSS 還活著中段就解鎖了。
+      const left = this._siegeLeft[side];
+      if (left) { left[sq.bossStage] = (left[sq.bossStage] || 0) + 1; this._siegeOpen[side] = siegeOpenStage(left); }
+    }
     const n = kind === 'drone' ? SQUAD.N : 1;
     for (let i = 0; i < n; i++) {
-      const [ox, oz] = this._spawnPoint(side, idx, i);
+      const [ox, oz] = hold
+        ? [hold.x + bossSlotOff(i) , hold.z]          // BOSS:整組就位在據點上(小隊多架則橫向錯開)
+        : this._spawnPoint(side, idx, i);
       const b = this._add({
         kind, side, pid, ch, si: i, spawnIdx: idx,
         x: ox, z: oz, y: 0, ry: 0,
-        hp: Math.round(u.hp * (m.hp ?? 1)), hero: true,
+        ...(boss ? { boss: true, sg: sq.bossStage } : {}),
+        hp: Math.round(u.hp * (m.hp ?? 1) * (boss ? BOSS.HP_MUL : 1)), hero: true,
         dead: false, respawnAt: 0, deaths: 0, aaCd: 0,
         // 雙層 HP:護盾(脫戰自然回復)+ 裝甲(hp;護甲值 armor 減免)
         armor: heroArmor(ch), lastHitAt: -99,   // 無人機護甲等比縮放至機甲平均 ×HP_F(見 data.heroArmor)
@@ -2524,6 +2622,7 @@ export class BattleSim {
    * `_trail` 一併清掉:復活在時間軸上是一段空白,留著上一條命的位置軌跡會讓落點閘門回推到死前的位置。
    */
   _reviveBody(b, f) {
+    if (b.sq?.boss) return;   // NPC BOSS 不重生(使用者定案)⇒ 復活招式對它也是重生,一併擋掉
     b.dead = false;
     b.respawnAt = 0;
     b.dash = 0;
@@ -3125,7 +3224,7 @@ export class BattleSim {
       for (const a of targets) {
         for (const b of this._bodies(a)) {
           if (b.dead) continue;
-          b.hp = Math.min(b.maxHp, b.hp + healAmt * frac);
+          this._healBody(b, healAmt * frac, 'skill');
           if (A.sp) b.sp = Math.min(b.maxSp, b.sp + b.maxSp * frac);
         }
       }
@@ -3636,6 +3735,9 @@ export class BattleSim {
     const h = this.heroes.get(pid);
     // 陣亡等待重生也能購買(DOTA 慣例;重生點/死亡畫面補升級)
     if (!h || this.over) return '目前無法購買';
+    // NPC BOSS 不使用升級系統(使用者:「防禦面與小兵永不升級」;攻擊面改由擊破 HP 段推進,
+    // 見 `_bossEnrage`)。閘門住這裡而不是 bots.js —— 那是 AI 的節流,這裡才是權威(A1)。
+    if (this.isBoss(h)) return 'NPC BOSS 不使用升級系統';
     if (item === 'creep') return this._buyCreepUpg(h, lane);
     // hasOwn:item 是客戶端原字串,'toString' 等原型鏈鍵名會取到繼承函式(truthy)
     // → price NaN → 共用 ps.money 污染成 NaN = 八軌全免。
@@ -3649,6 +3751,16 @@ export class BattleSim {
     if (h.money < price) return `資金不足(${up.name} 需 $${price})`;
     h.money -= price;
     h.upg[item] = lvl + 1;
+    this._applyUpg(h, item, up);
+    this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
+    return null;
+  }
+
+  /**
+   * 把 `h.upg[item]` 的新等級套進實際數值(**唯一縫**)。呼叫端恰兩處:玩家購買(`buy`,付款
+   * 之後)與 BOSS 狂暴化(`_bossEnrage`,不付款)。等級本身由呼叫端遞增 —— 這一支只負責兌現。
+   */
+  _applyUpg(h, item, up) {
     if (up.abil) {
       // 戰鬥面向:直接推進該武器/招式階級(開場 Lv1 → 升 3 次到 Lv4)
       h.abil[up.abil] = 1 + h.upg[item];
@@ -3673,8 +3785,6 @@ export class BattleSim {
       const na = heroArmor(h.ch) + up.step * h.upg.ar;
       for (const b of this._bodies(h)) b.armor = na;
     }
-    this.events.push({ e: 'buy', pid, item, lvl: h.upg[item] });
-    return null;
   }
 
   /**
@@ -3765,6 +3875,9 @@ export class BattleSim {
       t.hp = 0;
       this._kill(t, by);
     }
+    // NPC BOSS 的段位推進:掛在 HP 唯一的**減損點**上(治療只會被夾在天花板之下,不會退段)。
+    // MUST 排在 `_kill` 之後 —— 這一發打死的那一架,它那份 HP 也算進段位(小隊總量,見 _bossSync)。
+    if (t.sq?.boss) this._bossSync(t.sq);
   }
 
   /**
@@ -3878,13 +3991,34 @@ export class BattleSim {
     h.sp = Math.max(0, (h.sp || 0) - amt * maxSp / denom);
     h.hp -= amt * maxHp / denom;   // 不吃裝甲:依最大值比例,與護盾同步見底
     if (h.hp <= 0) { h.hp = 0; this._kill(h, null); }
+    if (h.sq?.boss) this._bossSync(h.sq);   // 火場也扣得動 HP ⇒ 段位同步同樣要掛(見 _damage)
+  }
+
+  /**
+   * 裝甲(HP)恢復的**唯一結算點**。`src` = 恢復來源:'skill'(治療/吸血/汲能/rally 全場修)
+   * 或其他(主堡修裝甲 'base'、醫療包 'item' …)。回傳實際補上的量(呼叫端要回報數字時用)。
+   *
+   * 一般單位:恆等於舊制的 `hp = min(maxHp, hp + amt)`(倍率 1、上限 maxHp)。
+   * NPC BOSS(使用者定案):技能來源減半、其他來源無效,而且**補血不得越過當前這一段的天花板**
+   * —— 已擊破的段是永久的。三條規則 MUST 寫在同一個點:分開寫必漏其一,而漏掉上限的症狀是
+   * 「BOSS 被治療招式一路推回滿血,狂暴等級卻留在最高」—— 每一條既有斷言照樣全綠。
+   */
+  _healBody(b, amt, src) {
+    if (!b || b.dead || !(amt > 0)) return 0;
+    const boss = b.sq?.boss;
+    const f = boss ? bossHealF(src) : 1;
+    if (!(f > 0)) return 0;
+    const cap = b.maxHp * (boss ? bossSegCapF(b.sq.bossSeg) : 1);
+    const before = b.hp;
+    b.hp = Math.min(cap, b.hp + amt * f);
+    return Math.max(0, b.hp - before);
   }
 
   /** 吸血(招式追加效果 vamp):攻擊者按「實際造成傷害 × 比例」回復自身裝甲 */
   _vamp(by, dealt) {
     if (!by || !by.hero || by.dead || !(dealt > 0)) return;
     const f = this._buffVal(by, 'vamp');
-    if (f > 0) by.hp = Math.min(by.maxHp, by.hp + dealt * f);
+    if (f > 0) this._healBody(by, dealt * f, 'skill');
   }
 
   /** 陣亡賞金(擊殺全額 / 助攻 ×ASSIST.F 共用的唯一縫)= 表列賞金。
@@ -3946,7 +4080,7 @@ export class BattleSim {
     if (by && by.hero && bySide !== t.side && !t.neutral && !by.dead) {
       for (const id in by.buffs || {}) {
         if (by.buffs[id] > this.t && AFFIXES[id]?.killHeal) {
-          by.hp = Math.min(by.maxHp, by.hp + by.maxHp * AFFIXES[id].killHeal);
+          this._healBody(by, by.maxHp * AFFIXES[id].killHeal, 'skill');
         }
       }
     }
@@ -3979,6 +4113,20 @@ export class BattleSim {
       this.stats[t.side].deaths++;
       // 第三方軍隊(GUER/MILI)沒有 stats 欄:擊殺英雄只記受害方 deaths,不記殺手 kills
       if (bySide && bySide !== t.side && this.stats[bySide]) this.stats[bySide].kills++;
+      // ---- NPC BOSS:不重生(使用者定案「打掉就是打掉」)----
+      // 重生倒數推到 Infinity 而不是另外加一個旗標:`_respawn` 的條件是 `t >= respawnAt`,
+      // 一個永遠到不了的時刻就是「不重生」,重生罰金 / 倒數 HUD / 僚機邏輯全部照舊不用改。
+      // 整隊全滅 ⇒ 它守的那一階跟著推進(BOSS 與砲塔同屬一階,見 `_siegeLeft` 的點名)。
+      if (t.sq?.boss) {
+        for (const b of t.sq.bodies) b.respawnAt = Infinity;
+        t.deadTick = this._tickN;
+        if (this._aliveN(t) === 0) {
+          this._siegeFell(t);
+          this.events.push({ e: 'bossDown', pid: t.pid, side: t.side, ch: t.ch, sg: t.sg });
+        }
+        if (this.heroes.get(t.pid) === t) this._promote(t.sq);
+        return;
+      }
       // 重生冷卻:三機小隊只有「整隊全滅」才追加重生時間(全隊統一延後),個別墜毀只吃基礎重生;
       // 機甲/變形者(單機)沿用陣營死亡數累加。
       const r = UNITS[t.kind].respawn;
@@ -4104,7 +4252,9 @@ export class BattleSim {
           // 裝甲平時只有主堡修得回來;rally 生效期間**全場都修**(那正是這一招換來的東西),
           // 速率同吃 rg。MUST NOT 把「全場都修」寫成永久旗標 —— 它只活在 mods 的時窗裡。
           if (rg > 1 || dist2d(b.x, b.z, bx, bz) < GAME.HERO_HEAL_R) {
-            b.hp = Math.min(b.maxHp, b.hp + UNITS[b.kind].regen * rg * dt);
+            // 來源分流:rally 生效中(rg > 1)= 招式,否則 = 主堡修裝甲。BOSS 只認前者(減半),
+            // 主堡那一份對 BOSS 恆 0 —— 否則守在自家主堡旁的那名 BOSS 會一直把血補回去。
+            this._healBody(b, UNITS[b.kind].regen * rg * dt, rg > 1 ? 'skill' : 'base');
           }
         }
         // 沼澤滯留:緩慢扣血(火災 1/3 速率,走 _damage 護盾先擋;null 攻擊者 = 不記擊殺信用;
@@ -4224,6 +4374,7 @@ export class BattleSim {
 
   /** 單機重生:回主堡、滿血滿盾;全隊都躺著時才重置共用資源(彈藥/增益) */
   _respawn(b) {
+    if (b.sq?.boss) return;   // NPC BOSS 不重生(respawnAt 已是 Infinity,這一格是保險)
     const soloWipe = this._aliveN(b) === 0;
     b.dead = false;
     b.dash = 0;
@@ -4573,9 +4724,10 @@ export class BattleSim {
     if (reward === 'medkit') {
       const hp = Math.round(body.maxHp * R.MEDKIT_HP * mul);
       const sp = Math.round(body.maxSp * R.MEDKIT_SP * mul);
-      body.hp = Math.min(body.maxHp, body.hp + hp);
+      // 回報的 hp MUST 是**實際補上的量**(BOSS 的非技能恢復恆 0 ⇒ 拾取提示不能報一個沒發生的數字)
+      ev.hp = Math.round(this._healBody(body, hp, 'item'));
       body.sp = Math.min(body.maxSp, body.sp + sp);
-      ev.hp = hp; ev.sp = sp;
+      ev.sp = sp;
     } else if (reward === 'battery') {
       const mp = Math.round(body.maxMp * R.BATTERY_MP * mul);
       body.mp += mp;                                            // 可超過 maxMp:一次性 overcharge
@@ -4747,7 +4899,17 @@ export class BattleSim {
       // 兩陣營的預置上限沿線進度相同(對稱),MUST NOT 各自換算成絕對座標再比。
       const sites = this.towerSites?.[li];
       if (!sites?.length) continue;
-      const limit = total * sites[sites.length - 1].frac;
+      const front = sites[sites.length - 1];
+      // 逐側可預置的深度:有塔的那一側 = 自己那座前線塔(舊制);**沒有塔的那一側**(劇情戰役的
+      // 攻方 —— 我方前線就是主堡)= 「敵方前線塔往回退一個塔距」,因為對稱戰場的己方前線塔
+      // 本來就落在敵塔的一個塔距之外(invariant ②)⇒ 同語意:預置的隊伍停在敵塔火力圈外。
+      const SEP = UNITS.tower.range * GAME.TOWER_SEP_F;
+      const depth = (side) =>
+        (front[side] ? total * front.frac : Math.max(0, total * (1 - front.frac) - SEP));
+      // 上限**取兩側較小者**:預置是「開場兩軍已經走到接觸線」的替身,兩邊 MUST 等量 ——
+      // 逐側各用各的深度,在非對稱地圖上會變成「守方三十幾隻兵已經上路、攻方一隻都沒有」。
+      // 對稱戰場兩側同值 ⇒ min 取到同一個數 = 逐位元同舊制。
+      const limit = Math.min(depth('SWARM'), depth('STEEL'));
       for (let k = 1; GAME.WAVE_SPAWN_OFF_M + k * gap <= limit; k++) {
         for (const side of ['SWARM', 'STEEL']) this._spawnLaneWave(li, side, -k, GAME.WAVE_SPAWN_OFF_M + k * gap);
       }
@@ -4992,6 +5154,9 @@ export class BattleSim {
       o.ch = e.ch;                                               // 角色(客戶端渲染專屬機體)
       o.sp = Math.round(e.sp); o.msp = e.maxSp;                  // 護盾(雙層 HP 第一層)
       o.si = e.si || 0;                                          // 小隊機位(HUD 三機狀態列)
+      // NPC BOSS:目前段位(0 起算)。**存在這一格 = 這是 BOSS** —— 客戶端據此把血條外圍
+      // 光暈換成該段的顏色(黑>青>銀>金)。段位是小隊層級的,同隊每架都帶同一個值。
+      if (e.sq?.boss) o.bs = e.sq.bossSeg | 0;
       // 主視野機(小隊只有一架):共用的玩家狀態只跟著它發一份
       o.act = !e.sq || e.sq.bodies[e.sq.act] === e ? 1 : 0;
       if (o.act) {

@@ -104,8 +104,10 @@ console.log('\n■ Ⅱ 伺服器結算(sim.js:鎖血唯一縫 + 三個消費端 
     /this\.sim\.siegeLocked\(t\)\)\s*continue;/.test(acq));
   t('bots.js 不自帶第二份階段判據', !/_siegeOpen|\.sg\s*>/.test(botCode));
 
+  // 呼叫端恰兩處、且都在 `_kill`:建築陣亡那一條 + NPC BOSS 整隊全滅那一條(BOSS 與同階
+  // 砲塔同屬一階,見 sim.addHero 的點名)。加上定義本身 = 原文出現三次。
   t('階段推進只有 `_siegeFell` 一份,且只在 `_kill` 呼叫',
-    count(simCode, '_siegeFell(') === 2 && /this\._siegeFell\(t\);/.test(grabMethod(simSrc, '_kill')),
+    count(simCode, '_siegeFell(') === 3 && count(grabMethod(simSrc, '_kill'), '_siegeFell(') === 2,
     `${count(simCode, '_siegeFell(')} 處`);
   const fell = grabMethod(simSrc, '_siegeFell');
   t('事件送的是**剛被推平**的那一階(不是新開放的那一階)',
@@ -123,8 +125,11 @@ console.log('\n■ Ⅱ 伺服器結算(sim.js:鎖血唯一縫 + 三個消費端 
   t('鎖血狀態隨快照下發(客戶端血條變灰 + 排除射程光暈)', /siegeLocked\(e\)\)\s*o\.lk = 1;/.test(ser));
 
   const roomSrc = readSrc('server', 'rooms.js');
-  t('`cfg.siege` MUST 在 rooms.js 正規化成布林(battleConfig 整包由客戶端送上來)',
-    /cfg\.siege = !!cfg\.siege;/.test(roomSrc));
+  // 2026-08-13 起 `cfg.siege` 不再是獨立旗標,而是劇情戰役旗標 `cfg.defSide` 的**推導**
+  // (兩格各送一份就會出現「照順序鎖血但沒有 BOSS」的半套狀態;見 data.js STORY_MAP)。
+  t('`cfg.siege` MUST 在 rooms.js 由 `cfg.defSide` 推導(battleConfig 整包由客戶端送上來)',
+    /cfg\.siege = !!cfg\.defSide;/.test(roomSrc)
+    && /cfg\.defSide = \(cfg\.defSide === 'SWARM' \|\| cfg\.defSide === 'STEEL'\) \? cfg\.defSide : null;/.test(roomSrc));
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +222,10 @@ console.log('\n■ Ⅵ 客戶端接線(game.js 事件 / dialogue.js 演出 / mai
     /if \(ev\.side !== this\.side\) this\.onSiege\?\./.test(gameSrc));
   t('對話演出層只有 dialogue.js 一份(MUST NOT 併進 cutin.js)',
     !/STORY_TALK/.test(strip(readSrc('public', 'js', 'cutin.js'))));
-  t('main.js 只在劇情戰役開房時帶 `cfg.siege`', /cfg\.siege = true;/.test(mainSrc));
+  // 旗標只有一格:main.js 帶 `defSide`(= venueConfig 的第三參數),`cfg.siege` 由 rooms 推導 ——
+  // 客戶端 MUST NOT 再自己送一份(送了就有兩個真相,而它們可以不一致)
+  t('main.js 只帶劇情戰役旗標 `defSide`(cfg.siege 由伺服器推導)',
+    /venueConfig\(v, ch\.teamSize, foe\)/.test(mainSrc) && !/cfg\.siege\s*=/.test(mainSrc));
   t('main.js 取對白走 `talkOf`(MUST NOT 直接索引 STORY_TALK)',
     /talkOf\(/.test(mainSrc) && !/STORY_TALK\[/.test(mainSrc));
   const css = readSrc('public', 'css', 'style.css');

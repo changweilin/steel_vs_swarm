@@ -7,7 +7,7 @@
 // 完整 battleConfig(合成兵線),不需要 OSRM 掃描即可開房;
 // 想用真實道路兵線,仍可在地圖上手動點選錨點走掃描流程。
 // 「我的最愛」存整份 battleConfig(含兵線),選了即用、不必重新搜尋。
-import { MAPGEO, lanesFor, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier } from './data.js';
+import { MAPGEO, lanesFor, laneCountFor, mapPlan, targetDistFor, laneSeparationAudit, laneTacticsXZ, altTier } from './data.js';
 import { VENUE_LANES } from './venueLanes.js';
 import { VENUE_GRID } from './venueGrid.js';
 
@@ -355,13 +355,17 @@ export function synthLane(a, b, side) {
  * MUST NOT 移除(見 CLAUDE.md「外部 API 皆會限流或掛掉」)。
  * 幾何:真實邊長 0.3+0.1L km,兩堡距離 = 邊長 × 0.85 × √2。
  *
- * `mini`(迷你地圖,見 data.js MINI):尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格
- * 一起縮。烘焙兵線**不必重烤**:同一條真實道路路線兩端對稱剪短到新的目標距離(`trimLaneTo`),
- * 剩下的每一段仍是真實道路。合成弧那條路天生吃 realD,零改動。
+ * 第三參數 = 地圖型態(見 data.js `mapPlan`;迷你 = true、劇情戰役 = 防守方 side):
+ * 尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格一起縮。烘焙兵線**不必重烤**:同一條
+ * 真實道路路線兩端對稱剪短到新的目標距離(`trimLaneTo`),剩下的每一段仍是真實道路。
+ * 合成弧那條路天生吃 realD,零改動。
+ * 劇情戰役另外**恆為單兵線**(`laneCountFor`)—— 3v3 / 5v5 一樣只取 L1 那條烘焙路線,
+ * MUST NOT 拿 lanesFor(teamSize) 去查表(查到的是兩三條線,而兵線數是 STORY_MAP.LANES 定的)。
  */
-export function venueConfig(venue, teamSize, mini = false) {
-  const L = lanesFor(teamSize);
-  const D = targetDistFor(L, mini);             // 遊戲世界距離
+export function venueConfig(venue, teamSize, mapA = false) {
+  const plan = mapPlan(mapA);
+  const L = laneCountFor(teamSize, mapA);
+  const D = targetDistFor(L, mapA);             // 遊戲世界距離
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
 
@@ -370,8 +374,8 @@ export function venueConfig(venue, teamSize, mini = false) {
   let A, B, lanes, maxOverlap, synthetic;
   if (baked) {
     lanes = baked.lanes.map((l) => l.map((p) => [...p]));
-    if (mini) {
-      // 迷你地圖恆為單兵線(MINI.TEAM_MAX = 2 ⇒ lanesFor ≤ 1)⇒ 剪短那一條,兩端就是兩座主堡。
+    if (plan.mode !== 'full') {
+      // 縮小尺度的地圖(迷你 / 劇情戰役)恆為單兵線 ⇒ 剪短那一條,兩端就是兩座主堡。
       // 多兵線時剪短會把共享端點拆成 L 組不同的主堡座標,故**只在單兵線時做**,其餘退回原樣。
       if (lanes.length === 1) lanes = [trimLaneTo(lanes[0], realD)];
       [A, B] = [[...lanes[0][0]], [...lanes[0][lanes[0].length - 1]]];
@@ -410,7 +414,10 @@ export function venueConfig(venue, teamSize, mini = false) {
     placeName: venue.name,
     // 迷你地圖旗標 MUST 隨 battleConfig 廣播全房:塔位階數 / 緩衝深度都由它推導,
     // 客戶端各自判斷 = 兩台建出不同的世界(同 cfg.siege 的紀律)。
-    mini: !!mini,
+    mini: plan.mode === 'mini',
+    // 劇情戰役:防守方(BOSS 方)陣營 id。同樣 MUST 隨 battleConfig 廣播 —— 塔位是非對稱的,
+    // 少一台知道就少一台把敵方的兩座塔建在同一個地方。一般對戰恆 null ⇒ 一切推導同舊制。
+    defSide: plan.def,
   };
 }
 
