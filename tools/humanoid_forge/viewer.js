@@ -558,6 +558,7 @@ window.__forge = {
   cats: () => ROSTER.map((c) => ({ key: c.key, n: c.entries.length,
     done: c.entries.filter((e) => SPECS.some((s) => s.id === e.key)).length })),
   setSpec: (id) => setSpec(SPECS.find((s) => s.id === id) || spec),
+  height: () => spec.height,       // 取景基準(__shot 的預設鏡距 = 它 ×2.6;截圖工具 --distF 用)
   setView: (v) => { view = v; applyView(); renderPanel(); },
   reframe: () => applyView(),      // 步進之後重新取景(headless 拍武器頁用)
   ent: () => ent,

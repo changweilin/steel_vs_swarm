@@ -216,8 +216,19 @@ export function latheF(parent, profile, seg, x, y, z, color, opts) {
 /**
  * 薄刃鰭片(單片羽毛/刀刃/尖刺/槳葉)—— 沿 +Y 伸長,原點在根部(呼叫端當羽軸樞轉)。
  * spec = { len, w0, w1, t, sweep = 0, camber = 0 }
- *   w0 根寬 → w1 梢寬(x 向);t 根厚(往梢自動收薄);sweep 梢端沿 +z 後掠;camber 中段拱起。
+ *   w0 根寬 → w1 梢寬(x 向);t 根厚(往梢自動收薄);sweep/camber 梢端與中段沿 +z 位移;
  * 三段剖面(根/中/梢)= 有稜有面的「多邊形」羽片,不是一片薄板。
+ *
+ * ⚠ 三條紀律(2026-08-13 一次修掉五個檔案的同一族病灶,寫在這裡免得再來一次):
+ *  ① **片面的法線是局部 z**(長 y / 寬 x / 厚 z)。要一片**有前後緣**的舵面/尾翼/水平羽,
+ *     MUST 繞自身長軸補 `rotation.y = π/2` 把「寬」轉到弦向;少了這一步就是一片
+ *     厚度只有 t 的板正對氣流 —— 正面看是完整的一片、側視幾乎消失,而每一條斷言都正常。
+ *  ② `sweep`/`camber` 位移的是**局部 z = 厚度軸**,不是弦平面內的後掠。做完 ① 之後它會變成
+ *     出平面的偏擺/上反(水平片還會左右反號)⇒ 轉正的片一律把 sweep 歸零,後掠改由呼叫端
+ *     傾斜整片表達。(翼面的真後掠在 `wingF` 的 sweep,那一支才是弦平面內的。)
+ *  ③ 分邊時 `rotation.z = sx·π/2` 會把 +y 送到 **−sx·x** ⇒ 兩片交叉;要指向 +sx·x 得用 `−sx·π/2`。
+ *     而 ① 的 Ry 與這個 Rz **MUST 拆兩層 Group**(three 預設尤拉序 'XYZ' ⇒ R = Rx·Ry·Rz,
+ *     Rz 先作用會把 Ry 的轉正結果整個轉走);Rx 配 Ry 則安全(Ry 先、且保留 y 軸)。
  */
 export function finF(parent, spec, x, y, z, color, opts) {
   const { len, w0, w1, t, sweep = 0, camber = 0 } = spec;
@@ -329,9 +340,12 @@ export function wingF(parent, spec, x, y, z, color, opts) {
     const pts = [[0.5, 0], [1 / 6, 0.5], [-1 / 3, 0.35], [-0.5, 0], [-1 / 3, -0.2], [1 / 6, -0.3]];
     return pts.map(([cz, cy]) => {
       const pz = cz * c, py = cy * th;
-      // 扭轉繞翼展軸(+X):剖面在 ZY 平面內轉 tw
+      // 扭轉繞翼展軸(+X):剖面在 ZY 平面內轉 tw;後掠 = 整個剖面沿 −z 平移(逐位元不動翼型)
+      // ⚠ 2026-08-13 修:sweep 自本函式誕生起被解構卻**從未進過回傳值** ——
+      //   八台機體宣告的後掠角(s12 主翼自稱「大後掠」0.72、m05@flight 0.5…)實得一律 0°,
+      //   而每一條既有斷言與每一張截圖都「正常」(翼還是翼,只是平的)。
       return [u * span, py * Math.cos(tw) - pz * Math.sin(tw) + dihedral * u,
-        pz * Math.cos(tw) + py * Math.sin(tw)];
+        pz * Math.cos(tw) + py * Math.sin(tw) - sweep * u];
     });
   };
   const s0 = sec(0), s1 = sec(0.5), s2 = sec(1);
