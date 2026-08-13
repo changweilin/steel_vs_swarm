@@ -14,9 +14,13 @@
 #      —— **唯一例外 `--boxuv <node>`**:整棟量體那一桶的消費端是 biomes 的立面材質
 #      (窗格貼圖 + 夜間自發光),節點沒有 UV 就整棟採到 (0,0) 一個 texel = 純色板。
 #      剝掉來源 UV(T2/SF3D 自己貼圖的那一份)之後**重建**盒投影 UV,見下方 BOXUV。
-#      整棟量體那兩桶再多一條 `--uvbands <node>=<roof>|<plain>[|<minz>|<wall_ny>]`:把朝上的
+#      整棟量體那兩桶再多一條
+#      `--uvbands <node>=<roof>|<plain>[|<minz>|<wall_ny>[|<flat_deg>|<flat_min>]]`:把朝上的
 #      面分到貼圖底部那一帶、傾斜與朝下的分到中間那一帶(單一材質群組換不掉屋頂材質,
 #      只好把區分移進 UV),見下方 UVBANDS。`--roofband` 是它的兩帶特例,保留可用。
+#      2026-08-13 起中間那一帶再收「近垂直但**不平整**」的面(使用者「密集窗戶圖層只貼
+#      垂直地面且完全平整的平面牆」),判據與 ②-a 的整平共用 `_plane_groups`。
+#   ⑤ `--replanar <node>`:對 `--base` 裡**已出貨**的節點就地整平(見下方 REPLANAR)。
 #
 # 用法(Blender 5.x;欄位分隔用 `|` —— `:` 會撞上 Windows 磁碟機代號):
 #   blender --background --python tools/ai3d/normalize_parts.py -- \
@@ -38,6 +42,62 @@ import math
 import random
 
 FIT = 0.95          # 包絡餘裕:縮到 fallback × 0.95(浮點與後續 stretch 都吃不掉契約)
+
+# ============ 平面整平(2026-08-11 定;2026-08-13 使用者「建築外部不平整的多塊法線角小的
+#              平面牆合併平整」改寫)============
+# 「平面整平只有建築」。**「只有建築」是推導不是名冊**,而且需要**兩把尺** ——
+#   ㋐ 平面分數(法線分群後前 6 群佔總面積):岩 .052~.188 / 建築 .266~.566,中間乾淨空隙
+#      ⇒ 取幾何中點 .224。
+#   ㋑ 碎屑佔比(最大連通元件以外的面積):岩+建築 ≤.414 / 樹族木質 .697~.856 ⇒ 取中點 .54。
+#   只用 ㋐ 的話**木質幹會被整平**(圓柱分群少 ⇒ 分數 .88~.95,比任何建築都高),而且
+#   呼叫端沒帶旗標就靜默發生 —— 所以排除做成幾何推導,不靠「記得加 --no-planar」。
+# 常數住這裡(而不是與 `_planarize` 放在一起)的唯一理由:`--uvbands` 的參數檢查要用
+# `PLANAR_DEG`,而參數解析排在最前面。
+PLANAR_SPLIT = 0.224
+PLANAR_ISLAND_MAX = 0.54
+# 舊制三個結構性問題(實測見下),這一輪一起修:
+#   ㋐ **分群只看法線**:退縮塔的前牆與退縮一階之後的前牆法線完全相同 ⇒ 落進同一群,
+#      群的最佳平面落在兩者中間,於是**兩面本來各自是平的牆互相被推歪**。
+#      ⇒ 加上「平面偏移」這一條,合併的語意才真的是使用者說的那一句。
+#   ㋑ **位移上限是另一個數字**(跨距 × 0.01):與「多近算同一面牆」無關 ⇒ 該合併的合併不了。
+#      ⇒ 收成**一個**數字 `PLANAR_OFF_F`:同一個容差既決定「算不算同一面牆」也決定
+#         「最多推多遠」,而且夾的是**對原始位置的累計位移** ⇒ 多趟收斂不會累積成塌陷。
+#   ㋒ **只跑一趟**:頂點推上平面之後法線就變了,群結構要重算才收得乾淨。⇒ 跑 `PLANAR_PASSES` 趟。
+#   ㋓ **沒有焊接**:glTF 匯入的是逐面拆開的三角形湯(`_weld` 檔頭的同一個坑)⇒ 共位頂點
+#      被不同群各推各的 = 沿群界撕開。⇒ 本支自己建**共位對照表**(不動拓樸、不動頂點數、
+#      不動著色 ⇒ 對其他族逐位元無副作用),共位頂點一律一起推。
+#
+# 現役五顆整棟量體節點實測(tools/ai3d/parts_src.mjs `wallFlatness` / `flatWalls`;
+# mass_a/b/c・masslow_a/b 依序):
+#   相鄰近垂直面夾角落在 (0.5°, 12°] 的**面積佔比** 53.5 / 63.0 / 55.7 / 52.6 / 64.1%
+#     —— 這一欄就是使用者說的「不平整的多塊法線角小的平面牆」,是這一輪要消掉的東西
+#   近垂直面裡真的貼在自己那一群平面上(≤6°)的佔比 53.9 / 61.5 / 78.9 / 90.2 / 74.1%
+# 參數由這五顆掃出來(見 docs/ai3d_runbook.md §5as 的逐格對照):`OFF_F` 0.02→0.03 對
+# mass_a 是 47.5%→42.2% 素牆帶(唯一有感的一格),再大就開始把真的退縮階併掉;
+# `PASSES` 1→8 讓小角佔比再降三分之一而位移上限不變(累計夾制),8 趟之後已收斂。
+#
+# ---- 2026-08-13 第二輪:使用者「盡可能提高平整度,**水平處也要盡可能整平**,
+#      **邊角盡量修復為直角**」(圈了屋頂 / 退縮頂 / 簷口 / 牆頂交界那幾處)----
+# 第一輪只把**牆**推平,而三個成因讓水平面與邊角留在原地:
+#   ㋔ **邊角被平均磨圓**:同時屬於兩片平面的頂點,舊制是「逐群各投影一次再平均」——
+#      那個平均點恰好落在兩個平面**中間**,於是每一條牆與牆、牆與屋頂的交界都被磨成圓角。
+#      ⇒ 改成解**平面交線**(2 面)/ **交點**(3 面):頂點落在交線上 = 邊角就是那兩個平面
+#         真正的夾角,而它們若都被吸到軸上就是直角。實測小角佔比 18.0% → **8.2%**。
+#   ㋕ **平面本身沒有吸到軸上**:一面 3° 歪的「水平」屋頂,整平只會把它整成一面 3° 歪的平面。
+#      ⇒ 群的最佳平面若已經很接近水平/垂直就**吸附到恰好**(門檻沿用 `WALL_NY` = 0.15,
+#         推導不是新數字:那正是「近垂直」那條線)。軸對齊 55.0% → 65.2%。
+#   ㋖ **碎屑不屬於任何大群**:尖刺與屋頂上的碎片各自成群、都在 `MIN_F` 之下 ⇒ 一動不動。
+#      ⇒ 不屬於任何大群的頂點,若離某個大平面在容差之內就**吸上去**。
+# 實測(五顆節點平均;牆 / 屋頂 / 近水平 / 軸對齊 / 小角):
+#   第一輪 85.6 / 56.1 / 38.5 / 55.0 / 16.7%  →  這一輪 89.2 / 57.3 / 45.8 / 65.2 / **7.5%**
+PLANAR_DEG = 12.0         # 法線夾角在此之內**才可能**是同一面牆
+PLANAR_OFF_F = 0.03       # 跨距 × 此值 = 合併容差,**同時**是對原始位置的累計位移上限
+PLANAR_PASSES = 16        # 重算群結構的趟數(累計夾制 ⇒ 多跑只會更收斂,不會更歪;8→16 再降 0.7pp)
+PLANAR_MIN_F = 0.005      # 群面積佔比低於此 ⇒ 不值得整(舊值 0.02 把半數牆板擋在門外)
+PLANAR_AXIS = 0.15        # 群法線的 |n.z| ≤ 此值 ⇒ 吸成**恰好垂直**;≥ √(1−此²) ⇒ 恰好水平
+                          #   值 = `WALL_NY`(「近垂直」那條線),MUST NOT 另發明一個數字
+# `PLANAR_MAX_F`(舊的第二個位移上限)**已退場** —— 它與合併容差是同一件事的兩個數字,
+# 而兩個數字不一致的症狀正是 ㋑。MUST NOT 復辟。
 
 argv = sys.argv[sys.argv.index('--') + 1:]
 
@@ -145,18 +205,24 @@ for spec in opt_all('roofband'):
     rb_minz = float(bits[1]) if len(bits) > 1 else 0.30
     assert 0.0 < rb_frac < 1.0, f'--roofband {rbname}:frac 要在 (0,1) 之間'
     assert 0.0 < rb_minz < 1.0, f'--roofband {rbname}:minz 要在 (0,1) 之間'
-    UVBANDS[rbname] = (rb_frac, 0.0, rb_minz, 0.0)   # plain = 0、wall_ny = 0 ⇒ 逐位元同兩帶
+    UVBANDS[rbname] = (rb_frac, 0.0, rb_minz, 0.0, 0.0, 0.0)   # plain/wall_ny/flat 全 0 ⇒ 逐位元同兩帶
 for spec in opt_all('uvbands'):
     ubname, rest = spec.split('=', 1)
     bits = rest.split('|')
-    assert len(bits) >= 2, f'--uvbands {ubname}:至少要 <roof>|<plain>[|<minz>|<wall_ny>]'
+    assert len(bits) >= 2, f'--uvbands {ubname}:至少要 <roof>|<plain>[|<minz>|<wall_ny>[|<flat_deg>|<flat_min>]]'
     ub_roof, ub_plain = float(bits[0]), float(bits[1])
     ub_minz = float(bits[2]) if len(bits) > 2 else 0.30
     ub_wall = float(bits[3]) if len(bits) > 3 else 0.15
+    # 2026-08-13:窗牆帶的第二個條件「完全平整」。0 = 關掉 ⇒ 逐位元回上一輪的純傾角分帶
+    ub_fdeg = float(bits[4]) if len(bits) > 4 else 0.0
+    ub_fmin = float(bits[5]) if len(bits) > 5 else PLANAR_MIN_F
     assert 0.0 < ub_roof and 0.0 <= ub_plain and ub_roof + ub_plain < 1.0, \
         f'--uvbands {ubname}:roof + plain 要在 (0,1) 之間'
     assert 0.0 < ub_wall < ub_minz < 1.0, f'--uvbands {ubname}:要滿足 0 < wall_ny < minz < 1'
-    UVBANDS[ubname] = (ub_roof, ub_plain, ub_minz, ub_wall)
+    # 平整門檻 MUST 遠嚴於分群容差:兩個用同一個數字的話「有分到群就算平」= 這道閘恆真
+    assert ub_fdeg == 0.0 or 0.0 < ub_fdeg < PLANAR_DEG, \
+        f'--uvbands {ubname}:flat_deg 要在 (0, {PLANAR_DEG}) 之間(分群容差本身不是平整門檻)'
+    UVBANDS[ubname] = (ub_roof, ub_plain, ub_minz, ub_wall, ub_fdeg, ub_fmin)
 # --mirror <node>=<x|z|auto>:**鏡像貼補**(2026-08-08 使用者定案「建築另一面是空的,
 # 使用鏡像貼補空的部分」)。單張照片只約束得到看得見的那幾面 —— 退縮階/簷帶/裙樓只長在
 # 被拍到的那半,另一半是模型自己補的一片平板。切一半、鏡射過去、**焊住接縫**。
@@ -206,6 +272,16 @@ for spec in opt_all('mirror'):
 # 203,而 `vleaf_a12/a20` 是 211 ⇒ 差 8 個三角形。**MUST NOT 改推導式讓自己過關**(把 whole
 # 列從除數裡拿掉會讓 cap 跳到 318,那是為了讓新增品過關而放寬一道安全閘);正確的動作是
 # 把那兩顆減到上限之內,而外廓仍由 `_restore_ext` 逐位元還原 ⇒ 佈局數學一格不動。
+# --replanar <node>:**對 `--base` 裡已出貨的節點就地整平**(2026-08-13 使用者
+# 「建築外部不平整的多塊法線角小的平面牆合併平整」)。
+# 與 `--rework` 同一條紀律(外廓 `_restore_ext` 逐位元還原、面數不上升、焊接先行),
+# 差別只有這一刀做什麼:`--rework` 是鏡射貼補,本旗標只跑 `_planarize`。
+# **為什麼不是把 `--rework` 加一個模式**:那一支的第一欄是鏡射軸,而整平與鏡射沒有共同參數
+# ——塞進去就是「axis=none 又不減面又不 warp」那個已經被擋掉的空刀再開一個後門。
+# ⚠ 這一刀**改變窗牆帶的分帶結果** ⇒ 同一次呼叫 MUST 一併重烤 `--uvbands`(UV 段吃的是
+#    最終座標,順序上本來就排在後面),而且重烤完 MUST 重量 `nodeProfile` 改寫 biomes 名冊。
+REPLANAR = set(opt_all('replanar'))
+
 REWORK = {}
 for spec in opt_all('rework'):
     rname, rest = spec.split('=', 1)
@@ -277,19 +353,9 @@ def _shade(ob, ratio):
         bpy.ops.object.shade_smooth_by_angle(angle=math.radians(30))
 
 
-# ============ 平面整平 + 底部貼平(2026-08-11 使用者定案)============
+# ============ 底部貼平(2026-08-11 使用者定案)============
+# 平面整平那一半的常數住在檔頭(參數解析要用),見 `PLANAR_*`。
 #
-# 平面整平:「平面整平只有建築」。**「只有建築」是推導不是名冊**,而且需要**兩把尺** ——
-#   ㋐ 平面分數(法線分群後前 6 群佔總面積):岩 .052~.188 / 建築 .266~.566,中間乾淨空隙
-#      ⇒ 取幾何中點 .224。
-#   ㋑ 碎屑佔比(最大連通元件以外的面積):岩+建築 ≤.414 / 樹族木質 .697~.856 ⇒ 取中點 .54。
-#   只用 ㋐ 的話**木質幹會被整平**(圓柱分群少 ⇒ 分數 .88~.95,比任何建築都高),而且
-#   呼叫端沒帶旗標就靜默發生 —— 所以排除做成幾何推導,不靠「記得加 --no-planar」。
-PLANAR_SPLIT = 0.224
-PLANAR_ISLAND_MAX = 0.54
-PLANAR_DEG = 12.0         # 法線夾角在此之內視為同一個平面群
-PLANAR_MIN_F = 0.02       # 群面積佔比低於此 ⇒ 不值得整(整了只會抹掉細節)
-PLANAR_MAX_F = 0.01       # 單一頂點最多推動 跨距 × 此值(避免整棟被拉塌)
 
 # 底部貼平:使用者定義「放在平面時,最下緣要貼齊平面」+ 手繪圖(2026-08-11):
 # **把凸出平面以下的那一段整個切掉**。嚴格度階梯「建築最嚴、岩石其次、樹最寬鬆」。
@@ -352,9 +418,94 @@ def _island_share(ob):
     return (tot - max(area.values())) / tot
 
 
+def _span_of(me):
+    return max(max(v.co[a] for v in me.vertices) - min(v.co[a] for v in me.vertices) for a in range(3))
+
+
+def _coloc(me, span):
+    """共位頂點對照表(頂點索引 → 代表索引)。**不動拓樸**:只是讓「同一個位置」的那幾個
+    頂點在整平時一起走。glTF 匯入的是逐面拆開的三角形湯(見 `_weld` 檔頭),不做這一步
+    就是共位頂點被不同群各推各的 ⇒ 沿著群界撕開一條看得見的縫,而面數/元件數全部正常。"""
+    q = max(span * 1e-4, 1e-6)
+    seen, rep = {}, [0] * len(me.vertices)
+    for v in me.vertices:
+        k = (round(v.co.x / q), round(v.co.y / q), round(v.co.z / q))
+        rep[v.index] = seen.setdefault(k, v.index)
+    return rep
+
+
+def _solve3(N, d):
+    """解 3×3 線性方程(高斯消去 + 部分樞軸);奇異回 None。Blender 的 python 沒有 numpy。"""
+    m = [[N[0][0], N[0][1], N[0][2], d[0]],
+         [N[1][0], N[1][1], N[1][2], d[1]],
+         [N[2][0], N[2][1], N[2][2], d[2]]]
+    for c in range(3):
+        piv = max(range(c, 3), key=lambda r: abs(m[r][c]))
+        if abs(m[piv][c]) < 1e-7:
+            return None
+        m[c], m[piv] = m[piv], m[c]
+        for r in range(3):
+            if r == c:
+                continue
+            f = m[r][c] / m[c][c]
+            for k in range(c, 4):
+                m[r][k] -= f * m[c][k]
+    return (m[0][3] / m[0][0], m[1][3] / m[1][1], m[2][3] / m[2][2])
+
+
+def _plane_groups(me, off, deg=PLANAR_DEG, axis=0.0):
+    """貪心分群:法線夾角 ≤ `deg` **且** 平面偏移 ≤ `off`。每收一片就重擬(面積加權)⇒
+    群的平面是它自己那幾片的最佳平面,不是第一片的法線。零亂數、依面索引定序 ⇒ 決定性。
+    `public/js/wallpanel.js wallPanels` 是同一條規則的**執行期端**(離線量測轉呼它;
+    這一份是匯出端的刀,兩邊各寫一份正是那道閘的本錢)。
+
+    `axis > 0` = **軸向吸附**(2026-08-13 ㋕):最佳平面已經很接近水平/垂直就吸到恰好。
+    ⚠ 只有 `_planarize` 傳它 —— UV 分帶那一段 MUST NOT 吸附,否則烤進去的「平整」名冊與
+    執行期 `wallPanels`(不吸附)分家,而那一份才是真的決定窗貼在哪裡的。"""
+    cos_t = math.cos(math.radians(deg))
+    hi = math.sqrt(max(0.0, 1.0 - axis * axis)) if axis else 2.0
+    groups = []
+
+    def refit(g):
+        nx = ny = nz = cx = cy = cz = a = 0.0
+        for p in g['faces']:
+            f = me.polygons[p]
+            nx += f.normal.x * f.area; ny += f.normal.y * f.area; nz += f.normal.z * f.area
+            cx += f.center.x * f.area; cy += f.center.y * f.area; cz += f.center.z * f.area
+            a += f.area
+        ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+        n = (nx / ln, ny / ln, nz / ln)
+        if axis:
+            az = abs(n[2])
+            if az <= axis:                      # 近垂直 ⇒ 吸成恰好垂直(Blender z = 遊戲 Y)
+                h = math.hypot(n[0], n[1]) or 1.0
+                n = (n[0] / h, n[1] / h, 0.0)
+            elif az >= hi:                      # 近水平 ⇒ 吸成恰好水平
+                n = (0.0, 0.0, 1.0 if n[2] > 0 else -1.0)
+        g['n'] = n
+        g['c'] = (cx / a, cy / a, cz / a) if a else g['c']
+        g['area'] = a
+
+    for p in me.polygons:
+        n, c = p.normal, p.center
+        for g in groups:
+            gn, gc = g['n'], g['c']
+            if n.x * gn[0] + n.y * gn[1] + n.z * gn[2] < cos_t:
+                continue
+            if abs((c.x - gc[0]) * gn[0] + (c.y - gc[1]) * gn[1] + (c.z - gc[2]) * gn[2]) > off:
+                continue
+            g['faces'].append(p.index)
+            refit(g)
+            break
+        else:
+            groups.append({'n': (n.x, n.y, n.z), 'c': (c.x, c.y, c.z), 'faces': [p.index], 'area': p.area})
+    return groups
+
+
 def _planarize(ob, name):
-    """把近似共面的面群壓到它自己的最佳平面。**只動位置不動拓樸** ⇒ 面數 / 元件數 /
-    邊界邊逐項不變,三角形預算不受影響(這是它與鏡射/貼平最大的差別)。"""
+    """把「法線角小而且本來就幾乎同一個平面」的那幾塊**合併**成一個平面,再把它們的頂點
+    推上去。**只動位置不動拓樸** ⇒ 面數 / 元件數 / 邊界邊 / 頂點數逐項不變,三角形預算
+    不受影響(這是它與鏡射/貼平最大的差別)。"""
     score = _planar_score(ob)
     island = _island_share(ob)
     if score < PLANAR_SPLIT or island >= PLANAR_ISLAND_MAX:
@@ -363,43 +514,86 @@ def _planarize(ob, name):
         print(f'PLANAR {name}: 略過 —— {why}')
         return
     me = ob.data
-    span = max(max(v.co[a] for v in me.vertices) - min(v.co[a] for v in me.vertices) for a in range(3))
-    lim = span * PLANAR_MAX_F
-    cos_t = math.cos(math.radians(PLANAR_DEG))
-    tot = sum(p.area for p in me.polygons) or 1.0
-    groups = []
-    for p in me.polygons:                       # 貪心分群;零亂數、依面索引定序 ⇒ 決定性
-        n = p.normal
-        for g in groups:
-            c = g['n']
-            if n.x * c.x + n.y * c.y + n.z * c.z >= cos_t:
-                g['faces'].append(p.index)
-                g['area'] += p.area
-                break
-        else:
-            groups.append({'n': n.copy(), 'faces': [p.index], 'area': p.area})
+    span = _span_of(me)
+    off = span * PLANAR_OFF_F
+    rep = _coloc(me, span)
+    home = [v.co.copy() for v in me.vertices]   # 累計夾制的原點
     moved = 0
-    for g in groups:
-        if g['area'] / tot < PLANAR_MIN_F:
-            continue
-        nx = ny = nz = cx = cy = cz = 0.0
-        for fi in g['faces']:
-            p = me.polygons[fi]
-            nx += p.normal.x * p.area; ny += p.normal.y * p.area; nz += p.normal.z * p.area
-            cx += p.center.x * p.area; cy += p.center.y * p.area; cz += p.center.z * p.area
-        ln = math.sqrt(nx * nx + ny * ny + nz * nz)
-        if ln < 1e-9:
-            continue
-        nx, ny, nz = nx / ln, ny / ln, nz / ln
-        cx, cy, cz = cx / g['area'], cy / g['area'], cz / g['area']
-        for vi in {vi for fi in g['faces'] for vi in me.polygons[fi].vertices}:
+    for _ in range(PLANAR_PASSES):
+        me.update()
+        tot = sum(p.area for p in me.polygons) or 1.0
+        own = {}                                 # 代表頂點 → [群, …]
+        big = []
+        for g in _plane_groups(me, off, axis=PLANAR_AXIS):
+            if g['area'] / tot < PLANAR_MIN_F:
+                continue
+            big.append(g)
+            for vi in {rep[vi] for fi in g['faces'] for vi in me.polygons[fi].vertices}:
+                own.setdefault(vi, []).append(g)
+        moved = len(big)
+        if not own:
+            break
+        # ㋖ 殘料吸附:不屬於任何大群的頂點(尖刺 / 屋頂碎片)離某個大平面夠近就吸上去
+        for v in me.vertices:
+            if v.index != rep[v.index] or v.index in own:
+                continue
+            best, bd = None, off
+            for g in big:
+                d = ((v.co.x - g['c'][0]) * g['n'][0] + (v.co.y - g['c'][1]) * g['n'][1]
+                     + (v.co.z - g['c'][2]) * g['n'][2])
+                if abs(d) <= abs(bd):
+                    best, bd = g, d
+            if best:
+                own[v.index] = [best]
+        # ㋔ 同時屬於兩片以上平面的頂點:解**交線 / 交點**,不是逐群投影再平均 ——
+        #    平均點落在兩個平面**中間**,那就是把每一條邊角磨成圓角(這一輪要修的東西)。
+        for vi, gs in own.items():
             v = me.vertices[vi].co
-            d = (v.x - cx) * nx + (v.y - cy) * ny + (v.z - cz) * nz
-            d = max(-lim, min(lim, d))          # 只准推這麼多
-            v.x -= d * nx; v.y -= d * ny; v.z -= d * nz
-        moved += 1
-    print(f'PLANAR {name}: 分數 {score:.3f} / 碎屑 {island:.3f} ⇒ 整平 {moved} 群'
-          f'(位移上限 {lim:.4f})')
+            pick = []                            # 取彼此最不平行的最多三面(平行面沒有新約束)
+            for g in gs:
+                if all(abs(q['n'][0] * g['n'][0] + q['n'][1] * g['n'][1] + q['n'][2] * g['n'][2]) < 0.94
+                       for q in pick):
+                    pick.append(g)
+                if len(pick) == 3:
+                    break
+            ds = [g['n'][0] * g['c'][0] + g['n'][1] * g['c'][1] + g['n'][2] * g['c'][2] for g in pick]
+            tgt = None
+            if len(pick) == 1:
+                n = pick[0]['n']
+                t = ds[0] - (n[0] * v.x + n[1] * v.y + n[2] * v.z)
+                tgt = (v.x + n[0] * t, v.y + n[1] * t, v.z + n[2] * t)
+            elif len(pick) == 2:
+                a, b = pick[0]['n'], pick[1]['n']
+                L = (a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+                ll = math.sqrt(L[0] * L[0] + L[1] * L[1] + L[2] * L[2])
+                if ll > 1e-6:                    # 交線上離 v 最近的點
+                    u = (L[0] / ll, L[1] / ll, L[2] / ll)
+                    tgt = _solve3([a, b, u], [ds[0], ds[1], u[0] * v.x + u[1] * v.y + u[2] * v.z])
+            elif len(pick) == 3:
+                tgt = _solve3([pick[0]['n'], pick[1]['n'], pick[2]['n']], ds)
+            if tgt is None:                      # 退回逐群投影再平均(奇異或平行)
+                ax = ay = az = 0.0
+                for g in gs:
+                    n, c = g['n'], g['c']
+                    t = (v.x - c[0]) * n[0] + (v.y - c[1]) * n[1] + (v.z - c[2]) * n[2]
+                    ax -= t * n[0]; ay -= t * n[1]; az -= t * n[2]
+                tgt = (v.x + ax / len(gs), v.y + ay / len(gs), v.z + az / len(gs))
+            x, y, z = tgt
+            h = home[vi]
+            dx, dy, dz = x - h.x, y - h.y, z - h.z
+            ln = math.sqrt(dx * dx + dy * dy + dz * dz)
+            if ln > off:                        # 累計位移夾在合併容差之內(同一個數字)
+                s = off / ln
+                x, y, z = h.x + dx * s, h.y + dy * s, h.z + dz * s
+            v.x, v.y, v.z = x, y, z
+        # 共位頂點跟著代表走(拓樸沒變,只是它們本來就該是同一個點)
+        for v in me.vertices:
+            if rep[v.index] != v.index:
+                v.co = me.vertices[rep[v.index]].co.copy()
+    me.update()
+    far = max((v.co - home[v.index]).length for v in me.vertices) if me.vertices else 0.0
+    print(f'PLANAR {name}: 分數 {score:.3f} / 碎屑 {island:.3f} ⇒ {PLANAR_PASSES} 趟、'
+          f'末趟整平 {moved} 群(合併容差 = 累計位移上限 {off:.4f},實得最大位移 {far:.4f})')
 
 
 def _hull_area(pts):
@@ -675,6 +869,37 @@ if BASE:
         o.data.materials.clear()
         made.append(o)
 
+# ---- `--replanar`:對 base 裡已出貨的節點就地整平(2026-08-13)----
+# 紀律與 `--rework` 逐條相同:焊接先行(三角形湯整不動)、外廓逐位元還原、著色風格還原、
+# 面數 MUST NOT 上升(整平只動位置 ⇒ 這一條是結構保證,驗它是為了擋住「有人順手加了刀」)。
+if REPLANAR:
+    assert BASE, '--replanar 要有 --base(它動的是已出貨節點)'
+    byname = {o.name.split('.')[0]: o for o in made}
+    dup = REPLANAR & ({n[0] for n in NODES} | set(REWORK))
+    assert not dup, f'同一顆節點不可同時 --replanar 與 --node/--rework:{sorted(dup)}'
+    miss = REPLANAR - set(byname)
+    assert not miss, f'--replanar 指到 base 裡不存在的節點:{sorted(miss)}'
+    for rname in sorted(REPLANAR):
+        ob = byname[rname]
+        bpy.ops.object.select_all(action='DESELECT')
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        e0 = _ext(ob)
+        t0 = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        try:
+            bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        except RuntimeError:
+            pass
+        ratio = _weld(ob, rname)
+        _planarize(ob, rname)
+        _restore_ext(ob, e0)
+        _shade(ob, ratio)
+        e1 = _ext(ob)
+        assert max(abs(a - b) for a, b in zip(e0, e1)) < 1e-5, f'{rname}:外廓還原失敗 {e0} → {e1}'
+        t1 = sum(len(p.vertices) - 2 for p in ob.data.polygons)
+        assert t1 <= t0, f'{rname}:面數上升 {t0} → {t1}(整平只動位置,上升 = 有人多加了一刀)'
+        print(f'REPLANAR {rname}: tris {t0} → {t1}・外廓 r={e1[0]:.4f} y=[{e1[1]:.4f},{e1[2]:.4f}](逐位元還原)')
+
 # ---- `--rework`:對 base 裡已出貨的節點就地動刀(鏡像貼補 + 去對稱化)----
 # MUST 排在 BOXUV **之前**(它吃的是最終座標),也 MUST 與 `--node` 互斥 —— 同一顆節點
 # 又重生又就地改,重生那條會先把它刪掉,rework 只會安靜地什麼都沒做。
@@ -882,15 +1107,37 @@ for o in made:
     for old in list(me.uv_layers):
         me.uv_layers.remove(old)
     uv = me.uv_layers.new(name='UVMap')
-    frac, pfrac, minz, wall_ny = band or (0.0, 0.0, 1.0, 0.0)
+    frac, pfrac, minz, wall_ny, fdeg, fmin = band or (0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+    # 2026-08-13:窗牆帶的資格 = 近垂直 **∧** 真的貼在自己那一群的平面上。
+    # 判據與 `_planarize` 共用 `_plane_groups`(同一次分群,兩個消費端);量測端是
+    # `parts_src.mjs flatWalls`,`intake_parts` 拿它從成品 GLB 重算一次再比對。
+    flat_fi = None
+    if fdeg > 0.0:
+        off_f = _span_of(me) * PLANAR_OFF_F
+        tot_a = sum(p.area for p in me.polygons) or 1.0
+        cos_f = math.cos(math.radians(fdeg))
+        flat_fi = set()
+        for g in _plane_groups(me, off_f):
+            # **群本身也要近垂直** —— 少了這一條,一片近垂直的面只要落在一個傾斜的群裡就
+            # 算「平整的牆」,而執行期 `wallpanel.wallPanels` 是連群一起判的 ⇒ 兩邊分家
+            # (症狀:`intake_parts` 說傾斜面的 v 跑進窗牆帶,而那一面在遊戲裡真的有窗)
+            if g['area'] / tot_a < fmin or abs(g['n'][2]) > wall_ny:
+                continue
+            gn = g['n']
+            for fi in g['faces']:
+                fn = me.polygons[fi].normal
+                if abs(fn.z) <= wall_ny and fn.x * gn[0] + fn.y * gn[1] + fn.z * gn[2] >= cos_f:
+                    flat_fi.add(fi)
     up_n = 0
     tilt_n = 0
     for poly in me.polygons:
         n = poly.normal
         ax = max(range(3), key=lambda i: abs(n[i]))   # 0=x 1=y 2=z(Blender)
         roof = n.z > minz                             # Blender z = 遊戲 Y
-        # 素牆(傾斜 / 朝下):只有宣告了 plain 帶才分出來;pfrac = 0 ⇒ 逐位元同兩帶舊制
-        tilt = (not roof) and pfrac > 0.0 and abs(n.z) > wall_ny
+        # 素牆:傾斜 / 朝下(2026-08-12)+ **近垂直但不平整**(2026-08-13)。
+        # pfrac = 0 ⇒ 逐位元同兩帶舊制;fdeg = 0 ⇒ 逐位元同純傾角三帶。
+        tilt = (not roof) and pfrac > 0.0 and (
+            abs(n.z) > wall_ny or (flat_fi is not None and poly.index not in flat_fi))
         if roof:
             up_n += 1
         elif tilt:
@@ -923,8 +1170,9 @@ for o in made:
     if band:
         print(f'UVBANDS {o.name}: {len(me.polygons)} 面,朝上 {up_n} 面 '
               f'({up_n / len(me.polygons) * 100:.1f}%)→ v ∈ [0, {frac}](minz {minz});'
-              f'傾斜 {tilt_n} 面({tilt_n / len(me.polygons) * 100:.1f}%)→ [{frac}, {frac + pfrac}]'
-              f'(wall_ny {wall_ny})')
+              f'素牆 {tilt_n} 面({tilt_n / len(me.polygons) * 100:.1f}%)→ [{frac}, {frac + pfrac}]'
+              f'(wall_ny {wall_ny}、平整門檻 {fdeg}° / 群 ≥ {fmin});'
+              f'窗牆 {len(me.polygons) - up_n - tilt_n} 面')
     else:
         print(f'BOXUV {o.name}: {len(me.polygons)} 面重建盒投影 UV')
 missing = (BOXUV | set(UVBANDS)) - {o.name.split('.')[0] for o in made}

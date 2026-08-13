@@ -47,6 +47,9 @@ import {
   planBufferProps, propParts, planBackdrop, backdropParts,
 } from './edgewall.js';
 import { libGeo } from './partlib.js';
+// 平整垂直牆面板 + 窗格貼齊(2026-08-13;零 import 的純模組,離線工具吃同一支 —— 面板的
+// 定義只有一份,見該檔檔頭)
+import { wallPanels, splitByPanel, panelGridUV } from './wallpanel.js';
 // 場址配置規則(2026-08-03 使用者定案三條:市區都市計畫 / 綠地樹冠羞避 / 裸露地地質排列)——
 // 規則本體全在 siteplan.js(純幾何、零 THREE、離線可驗),本檔只負責「餵地形/淨空、收成果」。
 import {
@@ -1329,9 +1332,12 @@ function roofLayer(cx, W, y0, h, col, kind, rnd) {
 // ⚠ 欄位刻意叫 `H_MIN`/`H_MAX` 而不是 `MIN_H` —— 後者與 `MASS.MIN_H`(整棟量體的樓高門檻)
 // 同名,而**兩支稽核都以「原文裡的 MIN_H」抓那個門檻**:撞名的症狀是稽核說
 // 「門檻 256/55」或「構不到 256m」,看起來像門檻被改壞了,其實只是抓錯了那一個。
-const FACADE_PX = { PER_STOREY: 24, H_MIN: 256, H_MAX: 1024 };
+const FACADE_PX = { PER_STOREY: 24, H_MIN: 256, H_MAX: 1024, FRAME: 1, ANISO: 4 };
 const facadeTexH = (rows) =>
   Math.min(FACADE_PX.H_MAX, Math.max(FACADE_PX.H_MIN, Math.round(rows * FACADE_PX.PER_STOREY)));
+// 窗框墨色(2026-08-13):賽璐璐的窗要有一條**線**,不只是一塊比牆深的色塊。
+// 不透明度刻意不是 1 —— 全黑的框在夜景自發光那一層旁邊會讀成焦邊。
+const WIN_INK = 'rgba(22,26,30,0.86)';
 
 function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'plainw', roofC = 0, roofKind = '', bands = null, win = null) {
   if (_facadeCache.has(key)) return _facadeCache.get(key);
@@ -1368,55 +1374,89 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
   const [ox, oy, fw, fh] = win
     ? [(1 - win[0]) / 2, (1 - win[1]) / 2, win[0], win[1]]
     : base;
+  // ---- 窗格輪廓銳利化(2026-08-13 使用者「窗戶圖層輪廓都太模糊」)----
+  // 三個成因疊在一起,只修一個看不出差別:
+  //   ㋐ **畫的時候就是糊的**:`cw = W / cols` 與 `ch = (WW − 26) / rows` 都是小數 ⇒ 每一格窗
+  //      的四個邊都落在 texel **中間**,而 Canvas2D 對非整數的 `fillRect` 會反鋸齒 —— 邊緣
+  //      先變成一條半透明漸層,再被 `NearestFilter` 原封不動放大成一條糊帶。硬邊窗格那句
+  //      註解從第一天起就只兌現了一半:放大是硬的,**畫進去的本來就是軟的**。
+  //      ⇒ 邊界一律 `Math.round` 到整數 texel(寬高各留 1 texel 下限)。
+  //   ㋑ **沒有輪廓可言**:舊制的窗只是一塊比牆深的色塊 —— 牆與窗都是中間調,遠一點就糊成
+  //      一片。⇒ 補一道 `FACADE_PX.FRAME` texel 的**窗框**,那才是使用者說的「輪廓」。
+  //      窗太小(放不下框 + 1 texel 玻璃)就不畫框 —— 全框的窗會變成一個實心黑點。
+  //   ㋒ **縮小時沒有各向異性過濾**:立面幾乎永遠是掠射角,而 `anisotropy` 預設 1 ⇒ GPU 取到
+  //      很高的 mip 階 = 整面糊掉。全專案其他六張貼圖都設 4(terrain/paint/worldtext…),
+  //      只有立面這張漏了。
+  const R = Math.round, FR = FACADE_PX.FRAME;
+  /** 對齊整數 texel(寬高至少 1 texel);回傳 [x, y, w, h] */
+  const snap = (x, y, w, h) => {
+    const x0 = R(x), y0 = R(y);
+    return [x0, y0, Math.max(1, R(x + w) - x0), Math.max(1, R(y + h) - y0)];
+  };
+  /** 畫一格窗:窗框(= 輪廓)→ 玻璃 → 上緣高光帶。回傳 snap 後的矩形,**自發光層吃同一組**
+   *  座標(兩層各自 round 會差半個 texel ⇒ 夜裡亮的那一塊與白天的窗錯開一條邊) */
+  const pane = (x, y, w, h) => {
+    const [px, py, pw, ph] = snap(x, y, w, h);
+    if (pw >= FR * 2 + 1 && ph >= FR * 2 + 1) {
+      cx.fillStyle = WIN_INK; cx.fillRect(px, py, pw, ph);
+      cx.fillStyle = winC; cx.fillRect(px + FR, py + FR, pw - FR * 2, ph - FR * 2);
+      cx.fillStyle = 'rgba(255,255,255,0.35)';
+      cx.fillRect(px + FR, py + FR, pw - FR * 2, Math.max(1, R((ph - FR * 2) * 0.2)));
+    } else {
+      cx.fillStyle = winC; cx.fillRect(px, py, pw, ph);
+      cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(px, py, pw, Math.max(1, R(ph * 0.2)));
+    }
+    return [px, py, pw, ph];
+  };
   if (style === 'glass') {
     // **幾乎無間距的玻璃牆**(2026-08-12 使用者定案的後半):整面玻璃 + 髮絲級橫豎框,
     // 沒有裙板帶 —— 這是與 `curtain`(有 spandrel 裙板)本質不同的一種立面,不是它的參數。
     // 亮燈仍逐格擲(整層一起亮會讀成霓虹燈管而不是辦公室)。
-    cx.fillStyle = winC; cx.fillRect(0, 12, W, WW - 26);
+    const gy0 = 12, gh = WW - 26;
+    cx.fillStyle = winC; cx.fillRect(0, gy0, W, gh);
     for (let r = 0; r <= rows; r++) {
-      const y = 12 + r * ch;
-      cx.fillStyle = 'rgba(255,255,255,0.22)'; cx.fillRect(0, y - 0.5, W, 1);       // 樓層橫框
-      cx.fillStyle = 'rgba(0,0,0,0.10)'; cx.fillRect(0, y + 0.5, W, 1);
+      const y = R(12 + r * ch);
+      cx.fillStyle = 'rgba(255,255,255,0.22)'; cx.fillRect(0, y - 1, W, 1);       // 樓層橫框
+      cx.fillStyle = 'rgba(0,0,0,0.10)'; cx.fillRect(0, y, W, 1);
     }
-    for (let c = 0; c <= cols; c++) { cx.fillStyle = 'rgba(255,255,255,0.18)'; cx.fillRect(c * cw - 0.5, 12, 1, WW - 26); }
+    for (let c = 0; c <= cols; c++) { cx.fillStyle = 'rgba(255,255,255,0.18)'; cx.fillRect(R(c * cw) - 1, gy0, 1, gh); }
     for (let r = 0; r < rows; r++) {
-      const y = 12 + r * ch;
-      cx.fillStyle = 'rgba(255,255,255,0.14)'; cx.fillRect(0, y + ch * 0.06, W, ch * 0.14);   // 反射帶
+      const y = R(12 + r * ch), y2 = R(12 + (r + 1) * ch);
+      cx.fillStyle = 'rgba(255,255,255,0.14)';
+      cx.fillRect(0, y + R(ch * 0.06), W, Math.max(1, R(ch * 0.14)));             // 反射帶
       for (let c = 0; c < cols; c++) {
-        if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(c * cw + 1, y + 1, cw - 2, ch - 2); }
+        const x = R(c * cw), x2 = R((c + 1) * cw);
+        if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(x + 1, y + 1, Math.max(1, x2 - x - 2), Math.max(1, y2 - y - 2)); }
       }
     }
   } else if (style === 'hband') {                                        // 整層絲帶窗 + 豎框
     for (let r = 0; r < rows; r++) {
-      const y = 12 + r * ch + ch * (0.5 - fh / 2), h = ch * fh;
-      cx.fillStyle = winC; cx.fillRect(3, y, W - 6, h);
-      cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(3, y, W - 6, h * 0.22);
+      const [px, py, pw, ph] = pane(3, 12 + r * ch + ch * (0.5 - fh / 2), W - 6, ch * fh);
       cx.fillStyle = 'rgba(255,255,255,0.45)';
-      for (let c = 1; c < cols; c++) cx.fillRect(c * cw - 1, y, 2, h);
-      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(3, y, W - 6, h); }
+      for (let c = 1; c < cols; c++) cx.fillRect(R(c * cw) - 1, py, 2, ph);
+      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(px, py, pw, ph); }
     }
   } else for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const x = c * cw + cw * ox, y = 12 + r * ch + ch * oy;
-      const w = cw * fw, h = ch * fh;
-      cx.fillStyle = winC; cx.fillRect(x, y, w, h);
-      cx.fillStyle = 'rgba(255,255,255,0.35)'; cx.fillRect(x, y, w, h * 0.2);   // 窗玻璃高光帶
-      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(x, y, w, h); }
+      const [px, py, pw, ph] = pane(c * cw + cw * ox, 12 + r * ch + ch * oy, cw * fw, ch * fh);
+      if (rnd() < litRatio) { ex.fillStyle = '#ffb45e'; ex.fillRect(px, py, pw, ph); }
     }
     if (style === 'balcony') {                                           // 每層窗下的陽台欄板帶
-      const by = 12 + r * ch + ch * (oy + fh);
-      cx.fillStyle = 'rgba(0,0,0,0.14)'; cx.fillRect(cw * 0.06, by, W - cw * 0.12, ch * 0.16);
-      cx.fillStyle = 'rgba(255,255,255,0.3)'; cx.fillRect(cw * 0.06, by, W - cw * 0.12, 1.5);
+      const bx = R(cw * 0.06), by = R(12 + r * ch + ch * (oy + fh)), bw = W - bx * 2;
+      cx.fillStyle = 'rgba(0,0,0,0.14)'; cx.fillRect(bx, by, bw, Math.max(1, R(ch * 0.16)));
+      cx.fillStyle = 'rgba(255,255,255,0.3)'; cx.fillRect(bx, by, bw, 1);
     }
   }
   if (style === 'shop') {                                                // 底層店面:遮陽棚 + 櫥窗
     const awn = ['#c25c4a', '#3f7a8c', '#c7a13d', '#5c8a52'];
     for (let c = 0; c < cols; c++) {
-      const x = c * cw + cw * 0.12;
+      const [ax, , aw] = snap(c * cw + cw * 0.12, 0, cw * 0.76, 1);
+      const [wx, , ww] = snap(c * cw + cw * 0.18, 0, cw * 0.64, 1);
       cx.fillStyle = awn[Math.floor(rnd() * awn.length)];
-      cx.fillRect(x, WW - 34, cw * 0.76, 8);
-      cx.fillStyle = '#2c343c'; cx.fillRect(x + cw * 0.06, WW - 25, cw * 0.64, 11);
-      if (rnd() < 0.7) { ex.fillStyle = '#ffd9a0'; ex.fillRect(x + cw * 0.06, WW - 25, cw * 0.64, 11); }
+      cx.fillRect(ax, WW - 34, aw, 8);
+      cx.fillStyle = WIN_INK; cx.fillRect(wx - FR, WW - 25 - FR, ww + FR * 2, 11 + FR * 2);
+      cx.fillStyle = '#2c343c'; cx.fillRect(wx, WW - 25, ww, 11);
+      if (rnd() < 0.7) { ex.fillStyle = '#ffd9a0'; ex.fillRect(wx, WW - 25, ww, 11); }
     }
   }
   // 素牆帶:牆的材質已經畫到 WH 了,這裡只補「它不是窗牆」的兩道界線
@@ -1429,7 +1469,14 @@ function facadeTex(key, cols, rows, winC, litRatio, style = 'plain', wall = 'pla
   const mk = (c) => {
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
-    t.magFilter = THREE.NearestFilter;   // 硬邊窗格 = 漫畫筆觸
+    t.magFilter = THREE.NearestFilter;   // 硬邊窗格 = 漫畫筆觸(放大那一半)
+    // 縮小那一半:立面幾乎永遠是掠射角,`anisotropy` 預設 1 ⇒ GPU 取到很高的 mip 階 =
+    // 整面糊掉。這是「窗戶輪廓太模糊」在**遠景**的成因(近景是畫進去就糊,見 `pane`)。
+    t.anisotropy = FACADE_PX.ANISO;
+    // 橫向環繞:窗格貼齊面板之後(2026-08-13,`wallpanel.js`)一片斜牆的 u 可以超過 1
+    // ——貼圖橫向本來就是逐欄重複的,環繞是恆等的。**縱向 MUST 維持 clamp**:
+    // v 是三條帶,捲起來就是屋頂帶接在窗牆帶上面。
+    t.wrapS = THREE.RepeatWrapping;
     return t;
   };
   const out = { map: mk(cv), emissiveMap: mk(em) };
@@ -2274,10 +2321,14 @@ const BLD_LIB = {
   // MUST 只讀它、MUST NOT 讀庫幾何(§2.1「AI 零件庫消費」:庫載不載得到逐客戶端不同 ⇒
   // 讀庫幾何 = 權威幾何跨客戶端分家)。值由 `tools/ai3d/parts_src.mjs nodeProfile` 量,
   // `intake_parts` 逐顆比對宣告與實測(對不上就紅字 ⇒ 名冊不會靜默過期)。
+  // 第五欄(2026-08-13)= 這一段的高度區間裡**平整垂直牆**佔的面積比(量法見 `nodeProfile`)。
+  // 招牌只准掛在 ≥ `MASS.SIGN_FLAT_MIN` 的那幾段(使用者「外掛招牌只貼在垂直地面且完全平整
+  // 的平面牆」)—— 剖面側面依構造是垂直矩形,但那**不保證**那個高度的網格真的是一面平牆
+  // (尖塔、山牆、退縮斜切面照樣落在某一段的側面上)。
   mass: [['building/mass_a', 'building/mass_b', 'building/mass_c'], ['box', 1, 1, 1], [
-    [[-0.475, -0.1187, 0.378, 0.4198], [-0.1187, 0.1187, 0.3044, 0.2268], [0.1187, 0.4156, 0.2978, 0.1715], [0.4156, 0.475, 0.1347, 0.0813]],
-    [[-0.475, -0.0594, 0.1291, 0.4708], [-0.0594, 0.0594, 0.1298, 0.4128], [0.0594, 0.2969, 0.1261, 0.1673], [0.2969, 0.475, 0.0518, 0.0614]],
-    [[-0.475, 0, 0.3653, 0.3618], [0, 0.1781, 0.3424, 0.3414], [0.1781, 0.2375, 0.2067, 0.208], [0.2375, 0.475, 0.1177, 0.1094]],
+    [[-0.475, -0.1187, 0.376, 0.4093, 0.5931], [-0.1187, 0.1187, 0.3026, 0.242, 0.5803], [0.1187, 0.4156, 0.303, 0.1914, 0.3589], [0.4156, 0.475, 0.1222, 0.0313, 0.0416]],
+    [[-0.475, -0.0594, 0.1466, 0.4746, 0.7384], [-0.0594, 0.0594, 0.1504, 0.4331, 0.4632], [0.0594, 0.2969, 0.1486, 0.1645, 0.3483], [0.2969, 0.475, 0.0787, 0.074, 0]],
+    [[-0.475, 0.1187, 0.3639, 0.3583, 0.805], [0.1187, 0.1781, 0.3212, 0.3183, 0.0069], [0.1781, 0.2375, 0.2262, 0.2084, 0], [0.2375, 0.475, 0.1091, 0.1067, 0]],
     /* +prof:mass */
   ]],
   // 低矮建物的整棟量體(2026-08-09 使用者定案「開」第二個桶 + §5al-c 選 (a) 8/8 切分)。
@@ -2289,8 +2340,8 @@ const BLD_LIB = {
   // ⚠ 輪替名冊 MUST ≥2 顆才算「開好」(同上一列的理由:一款打天下 = 同一張圖上
   //   挑中的那幾棟是同一個剪影,而所有離線閘門全綠)。
   masslow: [['building/masslow_a', 'building/masslow_b'], ['box', 1, 1, 1], [
-    [[-0.475, 0.1187, 0.2795, 0.3986], [0.1187, 0.2969, 0.2105, 0.3975], [0.2969, 0.4156, 0.1077, 0.3969], [0.4156, 0.475, 0.0382, 0.3961]],
-    [[-0.475, 0, 0.4195, 0.2396], [0, 0.1187, 0.4184, 0.0997], [0.1187, 0.3562, 0.3844, 0.077], [0.3562, 0.475, 0.2879, 0.0285]],
+    [[-0.475, 0.0594, 0.2761, 0.3989, 0.817], [0.0594, 0.1781, 0.2427, 0.388, 0.2938], [0.1781, 0.3562, 0.171, 0.3979, 0.1606], [0.3562, 0.475, 0.0685, 0.3862, 0.0426]],
+    [[-0.475, -0.1781, 0.4147, 0.2093, 0.8385], [-0.1781, -0.0594, 0.4151, 0.2375, 0.3998], [-0.0594, 0.0594, 0.414, 0.1709, 0.0986], [0.0594, 0.475, 0.4037, 0.0687, 0.221]],
     /* +prof:masslow */
   ]],
 };
@@ -2374,19 +2425,48 @@ const MASS = {
   // ⇒ 退縮頂的斜切面、尖塔、屋簷底上的窗格是被拉糊的一片(舊制它們全在窗格帶裡)。
   // **每一桶各一組**(兩桶本來就各有自己的立面材質家族),值都是量出來的:帶寬 = 該群
   // 面積佔比的**名冊平均** ⇒ 三帶 texel 密度相同(瓦縫、素牆的抹紋與窗框同一個顆粒度)。
-  // 實測(tools/ai3d/parts_src.mjs uvBandStats,MINZ 0.30 / WALL_NY 0.15):
-  //   mass    朝上 0.120/0.111/0.145、傾斜 0.158/0.179/0.190 → 0.125 / 0.176
-  //   masslow 朝上 0.215/0.216、傾斜 0.252/0.271           → 0.216 / 0.262
   // `MINZ` 取兩顆量到的**空檔中點**(牆的尖峰止於 n.y 0.15、屋頂起於 0.45~0.65);
   // ⚠ 沿用盒投影的「主導軸」等價於門檻 0.577,而那會把穀倉**整個屋頂**判成牆。
   // 這幾個數字與 tri_budget 的 families.building.<桶> **同一份**(audit_siteplan 釘住相等;
   // intake_parts 直接量 GLB 的 UV 帶)—— 分家不會報錯,只會讓屋頂那條接縫落在牆上。
+  //
+  // ---- 2026-08-13:窗牆帶再加一條「**完全平整**」(使用者這一輪的第 ② 條)----
+  // 上一輪把「平整」留給招牌那一半,理由是**當時的網格根本沒有平整的立面**:近垂直面裡
+  // 真的貼在自己那一群平面上(≤`FLAT_DEG`)的只有 53.9/61.5/78.9/90.2/74.1%,而相鄰近垂直面
+  // 之間夾角落在 (0.5°, 12°] 的更佔 53~64% 的面積 —— 那正是使用者這一輪說的「不平整的多塊
+  // 法線角小的平面牆」。⇒ 同一輪先在匯出端把它們**合併整平**(`normalize_parts.py` 的
+  // `_planarize` 改成「法線角 + 平面偏移」分群 + 累計夾制 + 多趟收斂;小角面積佔比實測
+  // 降到 31.2/9.3/27.9/6.9/10.0%、平整佔比升到 64.5/85.2/92.0/97.1/89.4%),窗牆帶才吃得起
+  // 這一條。⇒ 素牆帶跟著長大(mass 0.176 → 0.308),那一段的差額就是**真的不平整的那些牆**。
+  // `FLAT_DEG` MUST ≪ 分群容差(12°):分群是「這幾塊算不算同一面牆」、平整是「整完之後
+  // 真的貼上去了沒」,兩個用同一個數字這道閘就退化成「有分到群就算平」(恆真)。
+  // 逐顆實測(tools/ai3d/parts_src.mjs uvBandStats,MINZ 0.30 / WALL_NY 0.15 / FLAT_DEG 6):
+  //   mass    朝上 0.124/0.119/0.145 → 0.129、素牆 0.423/0.269/0.232 → 0.308
+  //   masslow 朝上 0.210/0.199       → 0.205、素牆 0.245/0.280       → 0.262
+  // (⚠ mass_a 的素牆 0.423 離名冊平均 0.115 —— 它就是那顆「還是不夠平」的節點,見
+  //  docs/ai3d_runbook.md 的重生佇列。**這是量測結果不是容差問題**,MUST NOT 靠調鬆
+  //  `FLAT_DEG` 讓它好看:那等於把不平整的牆重新放回窗格帶。)
   UVB: {
-    mass: { roof: 0.125, plain: 0.176 },
-    masslow: { roof: 0.216, plain: 0.262 },
+    mass: { roof: 0.128, plain: 0.275 },
+    masslow: { roof: 0.203, plain: 0.259 },
     MINZ: 0.30,
     WALL_NY: 0.15,
+    FLAT_DEG: 6,
+    FLAT_MIN: 0.005,
   },
+  // **招牌落點的平整門檻**(2026-08-13 使用者「外掛招牌只貼在垂直地面且完全平整的平面牆」)。
+  // 與窗格那一半分開的理由:窗格是**貼圖**(盒投影,對起伏不敏感),招牌是**剛性矩形**
+  // —— 牌面與牆面差一點就讀成浮在半空。⇒ 招牌吃逐段的第五欄(`BLD_LIB` 的剖面),
+  // 挑不到合格的段就**不掛牌**(原則 6 寧缺勿錯,而不是退回方盒側面 = 掛在空氣裡)。
+  // 門檻取二十段實測值排序後**最大的那個空檔**的幾何中點:… 0.188 / 0.288 |↕| 0.387 / 0.392 …
+  // ⇒ √(0.288 × 0.387) = 0.334。空檔兩側恰好就是語意的兩邊 —— 下面那幾段是尖塔/山牆/
+  // 退縮斜切面,上面那幾段是真的立面。
+  SIGN_FLAT_MIN: 0.320,
+  // **面板切分的門檻**(2026-08-13 使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉的
+  // 時候也不渲染」)。規則本體住 `wallpanel.js`(零 import,離線工具吃同一支);門檻與
+  // `tri_budget.json` 的 `families.building.planar_spec` **同一份**(audit_siteplan 釘住相等)
+  // —— 匯出端的整平、入庫閘的量測、執行期的窗格對齊,三個消費端用的是同一組數字。
+  PANEL: { DEG: 12, OFF_F: 0.03, WALL_NY: 0.15, FLAT_DEG: 6, MIN_F: 0.005 },
   // ---- 輪廓剖面(2026-08-12;見 `bldProfile` 檔頭)----
   // 量測參數:縱向切幾段、合併到剩幾段。段數是**碰撞柱數**與**保險絲面數**的旋鈕:
   // 挑中的至多 `PICK_N + PICK_N_LOW` = 16 棟 × (SLABS − 1) = 至多 +48 根柱
@@ -2442,7 +2522,9 @@ function profGeo(prof, uvb) {
         // 盒投影:±X 面 u←z、其餘 u←x;±Y 面 v←z、其餘 v←y(與 normalize_parts 同式)
         const u2 = n[0] ? z + 0.5 : x + 0.5;
         let v2 = cl(n[1] ? z + 0.5 : y + 0.5);
-        // 三帶:朝上→屋頂帶、朝下→素牆帶、近垂直→窗牆帶(方盒沒有傾斜面)
+        // 三帶:朝上→屋頂帶、朝下→素牆帶、近垂直→窗牆帶(方盒沒有傾斜面)。
+        // 2026-08-13 那條「還要完全平整」對這裡是**恆真**:一疊方盒的側面每一面都是單一
+        // 平面矩形 ⇒ 法線與自己那一群逐位元相同。規則沒有第二份,只是這一端不必判。
         if (n[1] > MASS.UVB.MINZ) v2 *= roof;
         else if (Math.abs(n[1]) > MASS.UVB.WALL_NY) v2 = roof + v2 * plain;
         else v2 = roof + plain + v2 * (1 - roof - plain);
@@ -3283,10 +3365,15 @@ function buildWorldSigns({ group, terrain, center, portals, signSpots, generic, 
     let y = gy + Math.min(b.h - h, b.h * 0.82);
     let hd = b.d / 2;
     const faces = bldFaces?.get(b);
-    if (faces?.length) {
-      // 牌面高度先夾在節點真的有實體的範圍內(頂端那一段可能是尖塔),再取那一段的牆面
+    if (faces) {
+      // 換上庫節點的那幾棟:`faces` 只收**平整垂直牆**那幾段(2026-08-13 使用者
+      // 「外掛招牌只貼在垂直地面且完全平整的平面牆」)。一段都不合格 ⇒ 這一棟不掛牌
+      // —— MUST NOT 退回 `b.d / 2`,那正是「掛在方盒側面的空氣裡」那個成因本體。
+      if (!faces.length) continue;
+      // 牌面高度先夾在合格段的範圍內(頂端那一段可能是尖塔),再取那一段的牆面
       y = Math.min(y, faces[faces.length - 1].y1 - h * 0.6);
-      hd = (faces.find((k) => y >= k.y0 && y <= k.y1) || faces[faces.length - 1]).hd2;
+      hd = (faces.find((k) => y >= k.y0 && y <= k.y1)
+        || [...faces].reverse().find((k) => k.y1 <= y) || faces[0]).hd2;
     }
     // 建物的 ry 是「牆面朝向」;招牌法線取 +ry 那一面,往外推半個牆厚 + 0.2 避免與牆共面
     const nx = Math.sin(b.ry), nz = Math.cos(b.ry);
@@ -8879,19 +8966,32 @@ export async function buildBiomes(cfg, terrain, onProgress) {
       return {
         hw2: f.rot ? az : ax, hd2: f.rot ? ax : az,
         y0: gy - 0.5 + (s[0] + f.prof.hy) * sc.sy, y1: gy - 0.5 + (s[1] + f.prof.hy) * sc.sy,
+        // 第五欄 = 這一段真的有多少是「平整垂直牆」(名冊純資料;缺席 ⇒ 1 = 舊制照放行)
+        wall: s.length > 4 ? s[4] : 1,
       };
     };
     /**
-     * **招牌能掛在哪一面牆**(2026-08-12 使用者「招牌會懸空」+「只貼垂直地面且平整的
-     * 平面牆」的兌現點)。回傳的是剖面**某一段的側面** —— 那些面依構造就是垂直且平整的
-     * 矩形,而牌子是剛性矩形:窗格貼圖對起伏不敏感,牌子會。
-     * 挑法:取「涵蓋這個高度」的那一段;高過整棟就退回最上面那一段(牌子跟著收到真的頂)。
-     * 方盒那條路回 null ⇒ 呼叫端照舊用 `b.w/2`、`b.d/2`(逐位元同舊制)。
+     * **招牌能掛在哪一面牆**(2026-08-12 使用者「招牌會懸空」+ 2026-08-13「只貼在垂直地面
+     * 且**完全平整**的平面牆」的兌現點)。回傳的是剖面**某一段的側面**。
+     *
+     * 上一輪只挑「涵蓋這個高度的那一段」,理由是「剖面側面依構造就是垂直平整的矩形」——
+     * 那句話對**盒**成立,對**盒裡面那塊網格**不成立:尖塔、山牆、退縮斜切面照樣落在
+     * 某一段的側面上,牌子貼上去就是貼在一面斜屋頂前面的空氣裡。⇒ 這一輪改吃剖面的
+     * 第五欄(那一段的平整垂直牆面積佔比,離線量、`intake_parts` 逐顆比對)。
+     * 挑法:先取涵蓋這個高度的那一段;它不合格就**往下**找最近的合格段(招牌沿牆滑下來,
+     * 這是真實街景的樣子);整棟都沒有合格段 ⇒ 回 null = **這一棟不掛牌**(原則 6)。
+     * ⚠ 回 null 時呼叫端 MUST NOT 退回 `b.w/2`、`b.d/2` —— 那正是「掛在方盒側面的空氣裡」。
+     * 方盒那條路(`f` 為 null)才是舊制那條:回 null 且呼叫端照舊用足跡(逐位元同舊制)。
      */
+    /** 這一棟**掛得了牌**的那幾段(兩個招牌消費端同吃;各寫一次篩選就是兩套門檻) */
+    const bldFaceList = (f, b, gy) =>
+      f.prof.slabs.map((s) => slabBox(f, b, s, gy)).filter((k) => k.wall >= MASS.SIGN_FLAT_MIN);
     const bldFace = (f, b, gy, y) => {
       if (!f) return null;
-      const boxes = f.prof.slabs.map((s) => slabBox(f, b, s, gy));
-      return boxes.find((k) => y >= k.y0 && y <= k.y1) || boxes[boxes.length - 1];
+      const okBox = bldFaceList(f, b, gy);
+      if (!okBox.length) return null;
+      return okBox.find((k) => y >= k.y0 && y <= k.y1)
+        || [...okBox].reverse().find((k) => k.y1 <= y) || okBox[0];
     };
     for (const commercial of [false, true]) {
       const cat = commercial ? 'commercial' : 'residential';
@@ -8984,7 +9084,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             : [{ x: b.x, z: b.z, y: gy - 1, r: Math.hypot(b.w, b.d) / 2 * 0.8, h: b.h + 1, bld: 1, cl: 'bld',
               hw2: b.w / 2, hd2: b.d / 2, ry: b.ry, ty: gy + b.h - 0.5 }];
           for (const c of cols) blockers.push(c);
-          if (fit) bldFaces.set(b, fit.prof.slabs.map((s) => slabBox(fit, b, s, gy)));
+          // 招牌那一份**只收合格的段**(2026-08-13);空陣列 = 這一棟一段都不合格,
+          // 而它與「這是方盒建物」是兩件事 ⇒ 消費端判的是 `bldFaces.has(b)` 不是長度
+          if (fit) bldFaces.set(b, bldFaceList(fit, b, gy));
           // 局部 → 世界(依建物朝向 ry 旋轉)
           const toW = (ox, oz) => [b.x + ox * ca + oz * sa, b.z - ox * sa + oz * ca];
           let crownTop = b.h;   // 天線/告示的落點(退縮頂塔時改放塔頂)
@@ -9121,7 +9223,9 @@ export async function buildBiomes(cfg, terrain, onProgress) {
             // 淘汰檢查排在四次抽樣**之後** ⇒ 亂數序列不因這條而漂(§2.3)。
             // 這裡 MUST 是 `if` 不是 `return` —— 外層是 `list.forEach`,`return` 會**連同底下
             // 的天線一起跳掉**(改到的是別的系統,而畫面上只表現成「高樓的天線變少了」)。
-            if (!resolveName(b.tags)) {
+            // 庫節點那幾棟挑不到**平整垂直**的段 ⇒ 這一棟不掛牌(2026-08-13;`bldFace` 檔頭)。
+            // 判的是 `fit && !fw` 而不是 `!fw` —— 方盒那條路本來就回 null 而它的側面就是平牆。
+            if (!resolveName(b.tags) && !(fit && !fw)) {
               // 牌高再收在那一段的高度內(剖面上半段只有幾公尺高時,14m 的長條會戳出去);
               // 牌寬 MUST 由 `signAspect` 反推 —— 高一改寬就要跟著,否則牌面比例與貼圖不合,
               // 字會被橫向壓成一條糊帶(A37 ⑤)
@@ -9214,23 +9318,80 @@ export async function buildBiomes(cfg, terrain, onProgress) {
           }
           return pitchMat.get(mk);
         };
+        /** 斜頂桶那一件的窗格網格(欄數 = 款自帶、列數逐件推導;與 `pitchWall` 同一組鍵) */
+        const pitchGrid = (t) => ({
+          cols: FACADES_PITCHED[Math.floor(djAt(t.x + 3.7, t.z + 9.1) * FACADES_PITCHED.length) % FACADES_PITCHED.length].cols,
+          rows: rowsOf(t),
+        });
+        /**
+         * **窗格貼齊面板**(2026-08-13 使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉
+         * 的時候也不渲染」)。規則與量測全在 `wallpanel.js`(離線工具吃同一支);這裡只做
+         * 兩件事:把節點的面板切一次(逐節點快取)、逐材質桶烤一份對齊過的 uv。
+         *
+         * **幾何共用、只換 uv**:position / normal / index 三個屬性直接沿用同一份
+         * `BufferAttribute`(不是 clone)⇒ 記憶體只多一份 uv,`InstancedMesh` 的分組、
+         * draw call、三角形數全部逐位元不動。
+         */
+        const panelCache = new Map(), alignCache = new Map();
+        const alignedGeo = (geo, key, grid) => {
+          if (!geo?.attributes?.uv || !grid) return geo;
+          const ck = `${key}|${geo.uuid}|${grid.cols}|${grid.rows}`;
+          if (alignCache.has(ck)) return alignCache.get(ck);
+          const pos = geo.attributes.position.array;
+          const idx = geo.index ? geo.index.array : null;
+          if (!idx) return geo;                       // 非索引幾何不在這條路上
+          if (!panelCache.has(geo.uuid)) {
+            const r = wallPanels(pos, idx, MASS.PANEL);
+            // 跨面板的共用頂點先拆(見 wallpanel.js 檔頭 ⚠):不拆的話面板邊界上的那幾個
+            // 三角形會被另一片的 UV 拉歪,長出來的正是「被裁一半的窗」
+            panelCache.set(geo.uuid, {
+              ...r,
+              ...splitByPanel({ pos, nor: geo.attributes.normal?.array, uv: geo.attributes.uv.array }, idx, r.faceOf),
+            });
+          }
+          const c = panelCache.get(geo.uuid);
+          const uvNew = panelGridUV(c.pos, c.idx, c.uv, c.panels, c.faceOf, {
+            cols: grid.cols, rows: grid.rows,
+            roof: MASS.UVB[key].roof, plain: MASS.UVB[key].plain,
+            hx: Math.max(c.hi[0] - c.lo[0], c.hi[2] - c.lo[2]) / 2, hy: (c.hi[1] - c.lo[1]) / 2,
+          });
+          const g2 = new THREE.BufferGeometry();
+          // 沒有頂點要拆(`split === 0`)⇒ position/normal/index 沿用**同一份**屬性,
+          // 只多一份 uv;要拆才各長一點(三角形數與 draw call 兩種情況都不變)
+          g2.setAttribute('position', c.split ? new THREE.Float32BufferAttribute(c.pos, 3) : geo.attributes.position);
+          if (geo.attributes.normal) g2.setAttribute('normal', c.split && c.nor ? new THREE.Float32BufferAttribute(c.nor, 3) : geo.attributes.normal);
+          g2.setAttribute('uv', new THREE.Float32BufferAttribute(uvNew, 2));
+          g2.setIndex(c.split ? new THREE.BufferAttribute(c.idx, 1) : geo.index);
+          g2.boundingSphere = geo.boundingSphere;
+          g2.boundingBox = geo.boundingBox;
+          alignCache.set(ck, g2);
+          return g2;
+        };
         // 先把「哪幾棟 × 哪個材質 × 哪一顆節點」攤平,**桶建構器仍只有一個呼叫點**
         // (稽核釘住 4 處;分兩處呼叫等於這一桶有兩條生成路)。同一顆節點的那幾棟可能
         // 分到不同的斜頂款 ⇒ 逐款再分一次桶,仍在 draw call 上界內(每一棟至多一個 mesh,
         // 而挑中的總數就是 pick_n)。
+        // **材質桶就是窗格網格桶**(2026-08-13):窗格對齊要知道「這一桶的貼圖有幾欄幾列」,
+        // 而那正好是 `wallOf(rows)` / 斜頂款的鍵 ⇒ 分組一格不動,只多記一份 `grid`。
         const libEmit = [];
         for (const { key, k, rows } of libRows.values()) {
           const byMat = new Map();
           for (const t of rows) {
             // 兩桶都吃**三帶**(2026-08-12):高層那一桶原本刻意共用方盒的無帶貼圖,而那
-            // 正是「窗格印在退縮頂的斜切面與尖塔上」的成因(使用者這一輪的第 ③ 條)。
+            // 正是「窗格印在退縮頂的斜切面與尖塔上」的成因(使用者那一輪的第 ③ 條)。
             const m = key === 'masslow' ? pitchWall(t) : wallOf(rowsOf(t), true);
-            if (!byMat.has(m)) byMat.set(m, []);
-            byMat.get(m).push(t);
+            if (!byMat.has(m)) byMat.set(m, { rows: [], grid: key === 'masslow' ? pitchGrid(t) : { cols: fd.cols, rows: rowsOf(t) } });
+            byMat.get(m).rows.push(t);
           }
-          for (const [m, rs] of byMat) libEmit.push({ rows: rs, mat: m, k, key });
+          for (const [m, e] of byMat) libEmit.push({ rows: e.rows, mat: m, k, key, grid: e.grid });
         }
-        for (const g of libEmit) emitMass(g.rows, buildBldBucket.mass(g.rows.length, g.mat, g.k, g.key));
+        for (const g of libEmit) {
+          const im = buildBldBucket.mass(g.rows.length, g.mat, g.k, g.key);
+          // **窗格貼齊面板**(使用者「平面區域太小的話不渲染窗戶,窗戶會被裁切掉的時候也不
+          // 渲染」)—— 幾何/材質/instance 分組全部不動,只換一份對齊過的 uv 屬性。
+          im.geometry = alignedGeo(im.geometry, g.key, g.grid);
+          emitMass(g.rows, im);
+        }
       }
     }
     if (cornices.length) {
