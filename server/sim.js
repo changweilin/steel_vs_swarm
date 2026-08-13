@@ -4,7 +4,7 @@
 // 血量與傷害由伺服器結算。座標系:以戰場中心為原點的公尺平面
 // (x 東、z 北;y 高度只在客戶端管,模擬是 2D 平面 + 兵線路徑)。
 import {
-  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
+  SIDES, OTHER_SIDE, UNITS, GAME, WEAPONS, STRUCT_W, ECON, HAZARDS, FIELD, LOOT, AIRDROP, AFFIXES,
   CHARACTERS, charsOf, heroKindOf, heroWeapon, heroAbility, VITALS, armorMul, battleScoreGain, addBattleScore, tierVal,
   vsMult, upgradePrice, upgradeScore, chargeF, heavyMpCost, laneTacticsXZ, SQUAD, MORPH, LOCK, DECOY, DECOY_BOMB, MORPH_BOMB, HYPER, heroArmor, isBotId,
   kamiBlast, selfBoomBlast, decoyBlast, decoyBombBlast, hyperBlast, hyperRange, hyperDiveSpd,
@@ -4153,24 +4153,29 @@ export class BattleSim {
       const target = this._acquireCached(e, e.gar ? { ...u, range: u.range * THIRD.GAR_RANGE_F } : u);
       e._eng = !!target;   // 交戰中的不當凝聚錨點(否則整波卡在原地等它)
       if (target && !e.ret) {   // 第三方撤回中(ret)不停下交戰 —— 「馬上撤回碉堡周圍」
-        // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)
-        if (e.cd === 0 && !((e.empUntil || 0) > this.t)) {
+        // 電磁癱瘓(EMP 招式):單位武器離線,仍可移動;建築免疫(heroCast 不標記建築)。
+        // `u.guns`(主堡)在這裡**不開火**:2026-08-13 起它的兩把武器已合併成一把,
+        // 開火路徑只剩 `_tickBaseGuns` 一條(合併卻留著本體那一支 = 又變回兩把)。
+        if (e.cd === 0 && !u.guns && !((e.empUntil || 0) > this.t)) {
           e.cd = 1 / u.rate;
-          const wd = WEAPONS[u.wid];
-          // 塔/主堡是制式火砲(無 wid ⇒ wd 為 undefined),一律不可閃、也不爆風。
-          const struct = e.kind === 'tower' || e.kind === 'base';
-          if (wd?.r && !struct) {
-            // 爆炸型小兵武器(肩射火箭 r=20):2026-08-11 使用者定案「爆炸傷害就算沒擊中原先的
+          // 塔/主堡是制式火砲:沒有 `wid` ⇒ 舊制 wd 為 undefined = 既不可閃也不爆風。
+          // 2026-08-13 使用者「**所有爆炸傷害武器都套用**」⇒ 它們也是爆炸彈頭,改吃 `STRUCT_W`
+          // 這個只帶「半徑 + 破甲」的 def(傷害/射速/射程仍住 UNITS,MUST NOT 在那裡複製第二份)。
+          const wd = WEAPONS[u.wid] || STRUCT_W[e.kind];
+          if (wd?.r) {
+            // 爆炸型小兵武器(肩射火箭 r=20 / 攻城榴彈砲 r≈18 —— 後者 2026-08-13 才補上半徑,
+            // 使用者「榴彈類…無論是對地或對目標發射,都會對範圍內所有單位造成傷害」;半徑是
+            // 推導值,見 data.js 那一段)。2026-08-11 使用者定案「爆炸傷害就算沒擊中原先的
             // 目標,也會造成範圍傷害(閃避率各自計算)」⇒ 它不再是「不可閃的單體直擊」,而是
             // **真的在目標身上引爆**:範圍內敵方逐個各自擲閃避(_blast 內建),閃掉的只是自己
             // 那一份。傷害基準 MUST 走 npcDmg(NPC 傷害住 UNITS[kind].dmg 且刻意不吃 vs 剋制)。
             const ty = target.hero || target.kind === 'heli' ? (target.y || 0) : 0;
             this._blast(e, wd, target.x, target.z, ty, this._unitLev(target), false, u.dmg);
             // 爆風看得見才讀得出危險區(原則 4:演出取用的尺寸 MUST 來自權威值)——
-            // 舊制只有一條曳光,20m 半徑的超壓帶在畫面上完全沒有交代。
+            // 舊制只有一條曳光,十幾二十公尺的超壓帶在畫面上完全沒有交代。
             this.events.push({ e: 'boom', x: target.x, z: target.z, y: ty, r: wd.r, side: e.side });
-          } else if (evadable(wd) && !struct && this._dodges(target, e)) {
-            // 直射槍械(重型機槍/攻城榴彈砲):整發被閃 ⇒ 只跳 Miss。
+          } else if (evadable(wd) && this._dodges(target, e)) {
+            // 直射槍械(重型機槍):整發被閃 ⇒ 只跳 Miss。
             // 判據走 evadable 同一個縫(走到這裡的恆是無爆風的那一類 —— 爆炸型已在上一支結束)
             this.events.push({ e: 'dodge', x: target.x, z: target.z, y: target.hero ? (target.y || 0) : 0, side: target.side });
           } else {
@@ -4183,7 +4188,8 @@ export class BattleSim {
           // 槍口錨畫曳光/槍口焰 + 標記後座動畫 + 面向攻擊目標(槍口一律朝攻擊方向);
           // ty = 空中目標高度(直升機/英雄),曳光才不會打在目標腳下的地面;
           // oy = 射手離地高(直升機):迷霧邊緣查無 mesh 時曳光退路不再從地面射出;
-          // gi(主堡本體砲):兩門砲口輪替,不與 _tickBaseGuns 的 0 號砲搶同一根砲管
+          // gi(主堡):兩門砲口輪替。2026-08-13 武器合併之後主堡在這條路徑上已經不開火
+          // (見上方 `!u.guns`),這一欄留著是給其他也想輪替砲口的建築用的
           this.events.push({
             e: 'shot', id: e.id, kind: e.kind, from: [e.x, e.z], to: [target.x, target.z],
             ty: (target.hero || target.decoy || target.kind === 'heli') ? Math.round(target.y || 0) : 0,
@@ -4589,6 +4595,19 @@ export class BattleSim {
   }
 
   /**
+   * 防空飛彈引爆(唯一縫;2026-08-13「所有爆炸傷害武器都套用」)。三個引爆點(近炸引信命中 /
+   * 追蹤中撞障礙 / 失鎖後撞障礙)MUST 全走這一支 —— 舊制只有第一個結算傷害而且是**單體直擊**,
+   * 另兩個純放煙火,三處各自手寫 `boom` 的半徑(14 / 8 / 8),沒有一個對得上任何權威值。
+   * 半徑是推導值(`GAME.AA_AMBUSH.R`),演出取用的就是結算用的那一份(原則 4)。
+   * 傷害基準走 npcDmg = `m.dmg`(第三方陣地不吃 `vs` 剋制,與 NPC 分支同一條)。
+   */
+  _samBlast(m, x, z, y, lev = null) {
+    const by = this.ents.get(m.byId) || { side: m.side };
+    this._blast(by, { r: GAME.AA_AMBUSH.R, pen: m.pen || 0 }, x, z, y, lev, false, m.dmg);
+    this.events.push({ e: 'boom', x, z, y, r: GAME.AA_AMBUSH.R, side: m.side, sam: true });
+  }
+
+  /**
    * 追蹤飛彈。**失鎖規則(2026-07-12,全飛彈通用)**:目標一旦離開「發射源的攻擊範圍」
    * (m.range,以發射點為圓心),飛彈立刻失鎖 → 只沿當下航向直線飛行,不再追擊
    * (still 有近炸引信,撞上算它走運),ttl 到期自毀。飛出射程 = 逃掉了。
@@ -4625,8 +4644,11 @@ export class BattleSim {
         const dx = t.x - m.x, dy = (t.y || 0) - m.y, dz = t.z - m.z;
         const d = Math.hypot(dx, dy, dz) || 1;
         if (d <= Math.max(12, step)) {   // 命中:近炸引信
-          this._damage(t, m.dmg, this.ents.get(m.byId) || { side: m.side }, m.pen || 0);
-          this.events.push({ e: 'boom', x: t.x, z: t.z, y: t.y || 0, r: 14, side: m.side, sam: true });
+          // 飛彈 = 導彈類 ⇒ 近炸引信引爆的是**爆風**,不是單發直擊(2026-08-13 使用者「所有爆炸
+          // 傷害武器都套用」)。舊制這裡 `_damage` 單體結算,而下一行的 `boom` 事件卻畫著 r = 14
+          // 的超壓帶 —— 演出與結算分家(原則 4)。半徑是推導值 GAME.AA_AMBUSH.R(data.js),
+          // 演出取用的就是結算用的那一份。
+          this._samBlast(m, t.x, t.z, t.y || 0, this._unitLev(t));
           this.missiles.splice(i, 1);
           continue;
         }
@@ -4639,7 +4661,7 @@ export class BattleSim {
         } else {
           m.x += dx / d * step; m.y += dy / d * step; m.z += dz / d * step;
           if (hitObst(ox, oz, oy, m)) {
-            this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: m.side, sam: true });
+            this._samBlast(m, m.x, m.z, m.y);   // 半路撞上障礙就地引爆:一樣是爆風(與 A7 「中途爆炸也要有傷害」同一條)
             this.missiles.splice(i, 1);
           }
           continue;
@@ -4653,7 +4675,7 @@ export class BattleSim {
       m.y += (m.vy || 0) * dt;
       m.z += (m.vz || 0) * dt;
       if (hitObst(ox, oz, oy, m)) {
-        this.events.push({ e: 'boom', x: m.x, z: m.z, y: m.y, r: 8, side: m.side, sam: true });
+        this._samBlast(m, m.x, m.z, m.y);   // 半路撞上障礙就地引爆:一樣是爆風(與 A7 「中途爆炸也要有傷害」同一條)
         this.missiles.splice(i, 1);
       }
     }
@@ -4726,7 +4748,11 @@ export class BattleSim {
     }
   }
 
-  /** 主堡兩門大砲:各自冷卻、獨立索敵,砲塔級射程/傷害(數值 derive 自 tower,見 data.js)。 */
+  /**
+   * 主堡火砲(2026-08-13 起是**唯一**一把:本體火砲與雙聯裝砲已合併,逐項取最大值,見 data.js)。
+   * 兩根砲管各自冷卻、獨立索敵 —— 砲管數也是那條「取最大值」的一部分,不是第二把武器。
+   * 主迴圈那一支對 `u.guns` 的單位不開火,開火路徑只有這裡一條。
+   */
   _tickBaseGuns(e, g, dt) {
     e.gunCd ??= new Array(g.n).fill(0);
     const gu = { range: g.range };   // _acquireTarget 只讀 range / wid
@@ -4736,7 +4762,12 @@ export class BattleSim {
       const target = this._acquireTarget(e, gu);
       if (!target) continue;
       e.gunCd[i] = 1 / g.rate;
-      this._damage(target, g.dmg, e, 0);
+      // 主堡火砲是爆炸彈頭(2026-08-13「所有爆炸傷害武器都套用」;防禦塔是具名例外 —— 它改回
+      // 單體攻擊)。半徑走 data.js STRUCT_W.base(合併前兩把各自推導值的較大者);傷害基準走
+      // npcDmg = g.dmg(建築不吃 vs 剋制,與 NPC 分支同一條);對主目標的期望輸出不變(閃避有補償)。
+      const ty = target.hero || target.kind === 'heli' ? (target.y || 0) : 0;
+      this._blast(e, STRUCT_W.base, target.x, target.z, ty, this._unitLev(target), false, g.dmg);
+      this.events.push({ e: 'boom', x: target.x, z: target.z, y: ty, r: STRUCT_W.base.r, side: e.side });
       const off = i === 0 ? 10 : -10;   // 左右兩門砲口錯開射源(客戶端曳光管)
       // gi = 第幾門砲:客戶端把該門砲管轉向目標、曳光自實際砲口射出
       this.events.push({
