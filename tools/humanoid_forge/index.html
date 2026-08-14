@@ -72,7 +72,8 @@
 
   /* ---- 中:舞台 + 一條演出工具列 ---- */
   .stagewrap { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; }
-  #stage { flex: 1; width: 100%; min-height: 0; display: block; }
+  /* canvas 由 stage.js prepend 進來(class 是它給的);版面仍住這裡 */
+  .stagewrap > .fstage-canvas { flex: 1; width: 100%; min-height: 0; display: block; }
   #stageTag { position: absolute; left: 12px; top: 10px; font-size: 12px; color: #9fb4d8;
               background: rgba(18,20,26,.72); border: 1px solid #2a3040; border-radius: 6px;
               padding: 3px 9px; pointer-events: none; }
@@ -140,45 +141,12 @@
     <div class="rail-top"><div class="seg" id="catSeg"></div></div>
     <div id="railList"></div>
   </nav>
-  <div class="stagewrap">
-    <canvas id="stage"></canvas>
+  <!-- 舞台 = tools/humanoid_forge/stage.js(兩座看板共用的那一座):canvas 與工具列都由它
+       產生並塞進下面這兩個空容器。鈕面(檢視/型態/速度/演出/視角/版本)是**圖示鈕**,
+       名冊住 stage.js 的 BARS + versions.js —— 這裡與覆核台一行都不用重寫。 -->
+  <div class="stagewrap" id="stageHost">
     <div id="stageTag"></div>
-    <div class="stagebar">
-      <span class="lb">檢視</span>
-      <div class="seg">
-        <button class="segb on" id="vMech">機體</button>
-        <button class="segb" id="vWpnL">輕武器</button>
-        <button class="segb" id="vWpnH">重武器</button>
-      </div>
-      <!-- 型態:只有變形者有兩格(鈕面由 roster.js FORM_LABEL 推導,見 viewer.renderFormButtons);
-           按下去 = 選另一格,變形過程由真品 locomotion 演 -->
-      <span class="lb">型態</span>
-      <div class="seg" id="formSeg"></div>
-      <span class="lb">速度</span>
-      <div class="seg">
-        <button class="segb on" id="spdIdle">靜止</button>
-        <button class="segb" id="spdWalk">巡航</button>
-        <button class="segb" id="spdRun">全速</button>
-      </div>
-      <span class="lb">演出</span>
-      <div class="seg">
-        <!-- 鈕面在「演出」這個標籤底下 ⇒ 不必逐顆重述「武器/招式」(工具列擠成兩行,
-             舞台就少一截;短鈕面加群組標籤讀起來反而更快) -->
-        <button class="segb" id="btnFire" title="輕武器連射(持續開火)">連射</button>
-        <button class="segb" id="btnHeavy" title="重武器蓄力擊發">蓄力</button>
-        <button class="segb" id="btnCastO" title="全向招式">全向招式</button>
-        <button class="segb" id="btnCastD" title="定向招式">定向招式</button>
-      </div>
-      <span class="lb">視角</span>
-      <div class="seg">
-        <button class="segb" id="btnSpin">環繞</button>
-        <button class="segb" id="btnJoints">樞軸</button>
-      </div>
-      <!-- 建模版本:名冊住 versions.js(加一版 = 加一列,這裡與 viewer 都不用改);
-           每一版都上**同一座**展示台 —— 同一個取景、同一條 locomotion、同一組演出鈕 -->
-      <span class="lb">版本</span>
-      <div class="seg" id="verSeg"></div>
-    </div>
+    <div class="stagebar fbar" id="stageBar"></div>
   </div>
   <aside id="panel">
     <div class="seg" id="panelTabs"></div>

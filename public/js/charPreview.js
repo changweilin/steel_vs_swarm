@@ -10,7 +10,7 @@
 // setChar() 換機體、start()/stop() 隨 charSection 顯隱開關 rAF。
 
 import * as THREE from 'three';
-import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility } from './data.js';
+import { CHARACTERS, UNITS, charKind, heroWeapon, heroAbility, heroMobility, castDirF } from './data.js';
 import { makeUnit, heroTargetH } from './models.js';
 import { stepLocomotion, stepCombatFx } from './locomotion.js';
 import { updateCelLight } from './toon.js';
@@ -320,7 +320,7 @@ export class CharPreview {
       // 施法動作(locomotion stepCastPose;與戰場 'cast' 事件同語意):
       // 指向型(strike/dash/遠端 emp)= 定向動作,其餘 = 全向動作
       if (this._ent) {
-        const dir = a.fx === 'strike' || a.fx === 'dash' || (a.fx === 'emp' && a.range > 0) ? 1 : 0;
+        const dir = castDirF(a.fx, a.range > 0);
         this._ent.castFx = { t0: this._now(), slot, dir };
       }
       // 大招法陣/劍氣最大到 ~2.2R + 浮空,取景放大以完整入鏡

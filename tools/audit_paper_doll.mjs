@@ -32,6 +32,7 @@
 //   node tools/audit_paper_doll.mjs --break-pair    # 變形者只建一棵樹 ⇒ ⅩⅣ 紅
 //   node tools/audit_paper_doll.mjs --break-morph   # 型態不推回報高度 ⇒ ⅩⅣ 紅
 //   node tools/audit_paper_doll.mjs --break-rebuild # 換型態順手重鍛 ⇒ ⅩⅣ 紅
+//   node tools/audit_paper_doll.mjs --break-twostage # 覆核台自己再建一座展示台 ⇒ ⅩⅣ 紅
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -66,6 +67,8 @@ const forgeSrc = readSrc('public', 'js', 'forge', 'forge.js');
 const dfinSrc = readSrc('tools', 'humanoid_forge', 'dollfinish.js');
 const storeSrc = readSrc('tools', 'humanoid_forge', 'specstore.mjs');
 const reviewSrc = readSrc('tools', 'codex_review', 'review.js');
+// 2026-08-14:兩座看板共用的那一座展示台(場景/演出/型態/版本;versions.js 是它的版本表)
+const stageSrc = readSrc('tools', 'humanoid_forge', 'stage.js');
 
 // ---- 被驗的真品(doll.js 零 import ⇒ 可以直接載;--break-* 時載改過的原文)-------------
 let dollSrc = dollSrcRaw;
@@ -254,9 +257,13 @@ console.log('■ Ⅴ 套用縫(dollapply / forge 收尾:一份實作、順序、
     /applyDoll\(unit, spec\.doll\)/.test(code(dfinSrc)) && /outlineAdds\(ix/.test(code(dfinSrc)));
   // 2026-08-14 統一展示台:機體台這一端的「怎麼建」整組搬進 versions.js 的版本表
   // (viewer.js 從此不認得任何一個版本)⇒ 收尾的注入點跟著搬,規則一格未變。
+  // 2026-08-14:收尾的注入點在**版本表**(versions.js),而兩座看板同吃**同一座展示台**
+  // ⇒ 「同形」的保證從「兩邊都記得傳同一支」升級成「只有一條建構路徑」。
   t('兩座看板都傳同一支收尾(同形的唯一保證)',
     /finish: dollFinish/.test(code(readSrc('tools', 'humanoid_forge', 'versions.js')))
-    && /finish: FORGE\.dollFinish/.test(code(reviewSrc)));
+    && /ver\.build\(st\.spec/.test(code(stageSrc))
+    && !/forgeMech\(|forgeMorphUnit\(/.test(code(reviewSrc))
+    && !/forgeMech\(|forgeMorphUnit\(/.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js'))));
   t('mergeSpec 帶得動 doll 欄(覆寫層 → 鍛造)', /doll: ovr\?\.doll \?\? base\.doll \?\? null/.test(fg));
   t('applyDoll 全專案只有一個實作', (code(applySrc).match(/export function applyDoll/g) || []).length === 1);
 }
@@ -392,10 +399,16 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
   t('名冊推導在伺服器端(客戶端 MUST NOT 拼原型照檔名)',
     /manifest\.json/.test(apiSrc) && !/proto_refs\//.test(code(revJs))
     && !/proto_refs\//.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js'))));
-  // 一邊自轉一邊拖 gizmo = 零件被拉往「拖的那一瞬間鏡頭在的地方」
-  t('覆核台編輯時停自轉(與展示台同一條)', /autoRotate = !fapp\.editOn/.test(code(revJs)));
+  // 一邊自轉一邊拖 gizmo = 零件被拉往「拖的那一瞬間鏡頭在的地方」。
+  // 2026-08-14 起這一條住共用展示台(stage.setEdit),覆核台只負責在開關編輯時告訴它。
+  // ⚠ 這兩條的覆核台那一半 MUST 讀**原始碼**而不是 code(revJs):review.js 的鍛造區塊裡有
+  //   `mechs/*.js` 這種寫在**字串**裡的路徑,剝註解那一支會把它當區塊註解的開頭,一路吃到
+  //   下一個 `*/`(實測吃掉第 407~534 行)—— 判定會在原文明明就在那裡的情況下恆假。
+  t('覆核台編輯時停自轉(與展示台同一條)',
+    /controls\.autoRotate = st\._spin && !on/.test(code(stageSrc)) && /fstage\.setEdit\(fapp\.editOn\)/.test(revJs));
   t('覆核台重鍛不重新取景(每拖一格就重新取景 = 鏡頭一直跳)',
-    /fapp\.framedKey !== fapp\.key/.test(code(revJs)));
+    /reframe: fapp\.framedKey !== key/.test(revJs)
+    && /st\.rebuild = /.test(code(stageSrc)) && /st\.applyView\(false\)/.test(code(stageSrc)));
   // 這座台先前沒有任何 headless 入口 ⇒ 純視覺的壞法在離線這端一條都量不到
   t('覆核台有 headless 入口(手動步進 + 顯式渲染 + 落盤)',
     /window\.__cr = \{/.test(revJs) && /step: \(n = 1/.test(revJs) && /shot: async \(name\)/.test(revJs));
@@ -408,10 +421,11 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
   if (brk('dollvis')) wpnSrc = wpnSrc.replace(
     'unit.group.traverse((o) => { if (o.isMesh) o.visible = !o.userData.dollHidden; });',
     'unit.group.traverse((o) => { if (o.isMesh) o.visible = true; });');
-  t('武器檢視只有一支實作(wpnview.js),兩座看板都轉呼',
+  // 武器檢視自 2026-08-14 起由**共用展示台**轉呼(兩座看板都不再各自接一次)
+  t('武器檢視只有一支實作(wpnview.js),共用展示台轉呼',
     /export function showWpn/.test(wpnSrc)
-    && /from '\.\/wpnview\.js'/.test(viewerSrc)
-    && /import\('\/tools\/humanoid_forge\/wpnview\.js'\)/.test(revJs));
+    && /from '\.\/wpnview\.js'/.test(stageSrc)
+    && !/wpnview/.test(code(viewerSrc)) && !/wpnview/.test(code(revJs)));
   t('兩座看板都沒有自己撈 wpn.nodes(那就是第二份武器檢視)',
     !/wpn\?\.\[?\w*\]?\.nodes|for \(const n of w\.nodes/.test(code(revJs))
     && (code(viewerSrc).match(/w\.nodes/g) || []).length === 0);
@@ -419,31 +433,34 @@ console.log('■ Ⅷ 兩座看板整合(展示台 :8631 / 美術覆核台 :8641:
   t('回到機體的全開 MUST 跳過紙娃娃藏起來的零件',
     /o\.visible = !o\.userData\.dollHidden/.test(wpnSrc)
     && /mesh\.userData\.dollHidden = true/.test(code(applySrc)));
-  t('鈕面只列掛得到的槽位(點下去卻退回機體 = 鈕面在說謊)',
-    /wl \? `<button[^`]*data-view="light"/.test(revJs) && /wh \? `<button[^`]*data-view="heavy"/.test(revJs));
+  // 鈕面不說謊:掛不到的槽位**灰掉**(2026-08-14 由「不列出來」改成「列出來但停用」——
+  // 少一顆鈕會讓人以為那個功能不存在;停用才讀得出「這一台沒掛那個槽位」)
+  t('鈕面不說謊:掛不到的槽位停用(共用工具列一份,兩座看板同吃)',
+    /!st\.ver\.caps\.wpn \|\| !wpnOf\(st\.unit, key\)/.test(code(stageSrc))
+    && /b\.disabled = off\(kind, key\)/.test(code(stageSrc)));
   // 入口:鍛造區塊在第三段、離頁首兩個畫面 ⇒ 沒有頁首入口就等於沒有這個功能
   let entry = revJs;
   if (brk('entry')) entry = entry.replace('<div class="cr-jump" id="crForgeJump"></div>', '');
   t('頁首有跳轉入口(⚙ 機體鍛造 / 🧷 紙娃娃 / 武器)',
     /id="crForgeJump"/.test(entry) && /data-jump="doll"/.test(entry) && /data-jump="light"/.test(entry));
-  t('抬頭列有檢視分頁與紙娃娃開關(捲兩個畫面才看得到的入口 = 沒有入口)',
-    /id="crForgeView"/.test(revJs) && /class="cr-fhead"/.test(revJs) && /id="cfDoll"/.test(revJs));
+  t('鍛造區塊有工具列與紙娃娃開關(捲兩個畫面才看得到的入口 = 沒有入口)',
+    /id="crStageBar"/.test(revJs) && /class="cr-fhead"/.test(revJs) && /id="cfDoll"/.test(revJs));
   t('三個入口同吃一支切換(MUST NOT 各自寫一份「開啟編輯器」)',
     (code(revJs).match(/function setForgeView/g) || []).length === 1
     && /data-jump/.test(revJs) && /\$\('cfDoll'\)\.click\(\)/.test(revJs));
   t('武器頁停止移動(取景框定住而機體繼續走 ⇒ 武器飄出畫面)',
-    /if \(fapp\.view !== 'mech'\) \{ fapp\.speedTgt = 0; fapp\.speed = 0; \}/.test(code(revJs)));
+    /if \(w\) \{ st\._speedTgt = 0; st\._speed = 0; st\._firing = false; \}/.test(code(stageSrc)));
   // 取景是在**鍛造靜姿**下量的,而切過去的第一幀手臂就彈到據槍姿(t01 實測位移 >1.5m)
   // ⇒ 武器當場被甩出畫面。兩座看板 MUST 都在姿勢落定後補一次取景。
-  let reframeV = code(viewerSrc), reframeC = code(revJs);
+  let reframeS = code(stageSrc);
   if (brk('reframe')) {
-    reframeV = reframeV.replace(/if \(reframeNext && view !== 'mech'\)[^\n]*\n/, '');
-    reframeC = reframeC.replace(/if \(fapp\.reframeNext && fapp\.view !== 'mech'\)[^\n]*\n/g, '');
+    const before = reframeS;
+    reframeS = reframeS.replace(/if \(st\._reframe && st\.view !== 'mech'\)[^\r\n]*\r?\n/, '');
+    if (before === reframeS) { console.log('  ✗ --break-reframe 沒有咬到目標原文(樣式過期)'); process.exit(1); }
   }
-  t('展示台:切武器頁後在姿勢落定的那一幀重取景',
-    /reframeNext && view !== 'mech'/.test(reframeV) && /reframeNext = true/.test(reframeV));
-  t('覆核台:同一條(rAF 迴圈與 headless step 都要有)',
-    (reframeC.match(/fapp\.reframeNext && fapp\.view !== 'mech'/g) || []).length === 2);
+  // 兩座看板同吃一支 step ⇒ 這一條只要在共用展示台上成立一次(兩邊自動都對)
+  t('切武器頁後在姿勢落定的那一幀重取景(共用展示台一份)',
+    /st\._reframe && st\.view !== 'mech'/.test(reframeS) && /st\._reframe = true/.test(reframeS));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -536,18 +553,19 @@ console.log('■ Ⅹ 機體台版面(三欄重排 / 控制只留一份 / 覆核�
 
   t('三欄骨架:左名冊欄 / 中舞台 / 右分頁欄',
     /id="rail"/.test(htmlSrc) && /id="railList"/.test(htmlSrc)
-    && /class="stagebar"/.test(htmlSrc) && /id="panelTabs"/.test(htmlSrc) && /id="panelBody"/.test(htmlSrc));
+    && /class="stagebar/.test(htmlSrc) && /id="panelTabs"/.test(htmlSrc) && /id="panelBody"/.test(htmlSrc));
   t('名冊是逐列一格(頭像 + 機體名 + 駕駛員 + 覆核徽章),MUST NOT 退回頂部橫條',
     /function renderRail/.test(code(viewSrc)) && /class="rl-p"/.test(viewSrc)
     && !/specSeg/.test(code(viewSrc)) && !/id="specSeg"/.test(htmlSrc));
-  t('演出/視角/檢視控制收在舞台工具列一條(頁首只剩身分)',
-    /class="stagebar"/.test(htmlSrc)
-    && !/<header>[\s\S]*id="btnFire"[\s\S]*<\/header>/.test(htmlSrc)
-    && !/<header>[\s\S]*id="vWpnL"[\s\S]*<\/header>/.test(htmlSrc));
+  // 2026-08-14:工具列改由共用展示台產生 ⇒ **HTML 裡一顆控制鈕都不准寫死**
+  // (寫死的那一顆就是第二份鈕面:兩座看板遲早長得不一樣)
+  t('演出/視角/檢視控制收在舞台工具列一條(HTML 只放空容器)',
+    /id="stageBar"/.test(htmlSrc) && /id="stageHost"/.test(htmlSrc)
+    && !/<button/.test(htmlSrc.split('<div class="main">')[1] || ''));
   // ① 武器檢視只有一份入口
-  t('武器檢視只有一組控制(側欄的文字跳轉整組退場)',
+  t('武器檢視只有一組控制(側欄的文字跳轉整組退場;鈕面由共用工具列產生)',
     (code(viewSrc).match(/data-go=/g) || []).length === 0
-    && /id="vWpnL"/.test(htmlSrc) && /id="vWpnH"/.test(htmlSrc));
+    && /\['light', 'wpnL'/.test(stageSrc) && /\['heavy', 'wpnH'/.test(stageSrc));
   // ② 編輯模式只有一個開關
   t('紙娃娃編輯模式的開關只有「標記」分頁一個(btnEdit 全域鈕已退場)',
     /function setTab/.test(code(viewSrc)) && /editor\.setOn\(on\)/.test(code(viewSrc))
@@ -729,80 +747,112 @@ console.log('■ Ⅻ 來源與構圖(Google 官方 API / 全身照 + 背景乾�
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-console.log('■ ⅩⅣ 展示台版本註冊表 + 變形過程(2026-08-14:一套展示台,每一版都上同一座)');
+console.log('■ ⅩⅣ 共用展示台:版本註冊表 / 變形過程 / 圖示工具列(兩座看板同一座)');
 // ═══════════════════════════════════════════════════════════════════════════
-// 使用者:「機體台的新版展示台 UI 要跟舊版一樣,可以看變形過程,以後擴充不同版本時
-// 都用同一套展示台」。這一段守三件會靜默壞掉的事:
-//   ① **版本分支長回 viewer**:舊制是一顆布林 `legacy` + 五處 `if (legacy)`(建 unit /
-//      樞軸 / 武器頁 / rig 契約欄 / 鈕面)。第三個版本進來時漏補任何一處都不報錯,
-//      只表現成「切到某個版本時某個功能悄悄用了別版的規則」。
-//   ② **變形沒有東西可以變**:新版建模的變形者是兩棵樹,只建選中那一格的話台上根本沒有
-//      另一個型態 —— 而畫面上只是「按了型態鈕沒反應」,每一條既有斷言照樣全綠。
-//   ③ **換型態順手重鍛**:重鍛把 locomotion 的型態狀態一起丟掉 ⇒ 收摺/換樹/展開整段不見,
-//      看到的是瞬切。使用者這一輪要的正是那個「過程」。
+// 2026-08-14 使用者四條:「新版展示台 UI 要跟舊版一樣,可以看變形過程,以後擴充不同版本時
+// 都用同一套展示台」+「展示台加入輕重武器和大小招的按鍵,按鍵全部換圖示」+
+// 「機體鍛造的建模展示直接套用展示台」+「機體鍛造加入不同版本的建模切換」。
+// 這一段守五件會靜默壞掉的事:
+//   ① **版本分支長回看板**:舊制是一顆布林 legacy + 五處 if (legacy)。第三個版本進來時
+//      漏補任何一處都不報錯,只表現成「切到某個版本時某個功能悄悄用了別版的規則」。
+//   ② **變形沒有東西可以變**:新版變形者是兩棵樹,只建選中那一格的話台上根本沒有另一個
+//      型態 —— 畫面上只是「按了型態鈕沒反應」,而每一條既有斷言照樣全綠。
+//   ③ **換型態順手重鍛**:重鍛把 locomotion 的型態狀態一起丟掉 ⇒ 收摺/換樹/展開整段不見。
+//   ④ **第二座展示台**:覆核台的鍛造區塊原本自己建了一份場景/迴圈/演出鈕 —— 兩份「長得很像」
+//      的展示台各自演化(實測差異:沒有型態、沒有版本、沒有樞軸、招式恆送 ult+全向、鏡距差 0.2H)。
+//   ⑤ **鈕面各寫一份**:圖示鈕的名冊一旦落回各自的 HTML,兩座看板的工具列就會分家。
 {
   let viewSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
   let verSrc = readSrc('tools', 'humanoid_forge', 'versions.js');
+  let stgSrc = readSrc('tools', 'humanoid_forge', 'stage.js');
   const htmlSrc = readSrc('tools', 'humanoid_forge', 'index.html');
+  const crSrc = readSrc('tools', 'codex_review', 'review.js');
   const fgSrc = readSrc('public', 'js', 'forge', 'forge.js');
   const bustSrc = (name, src, from, to) => {
     if (!src.includes(from)) { console.log(`  ✗ --break-${name} 沒有咬到目標原文(樣式過期)`); process.exit(1); }
     return src.replace(from, to);
   };
   // 壞版 ①:展示台自己認得某一個版本(版本分支長回來)
-  if (brk('stageseam')) viewSrc = bustSrc('stageseam', viewSrc,
-    'unit = ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });',
-    'unit = legacy ? buildLegacyUnit(spec.ch) : ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });');
+  if (brk('stageseam')) stgSrc = bustSrc('stageseam', stgSrc,
+    'st.unit = st.ver.build(st.spec, { ovrOf, draft: st.draft });',
+    "st.unit = st.ver.key === 'legacy' ? legacyBuild(st.spec) : st.ver.build(st.spec, { ovrOf, draft: st.draft });");
   // 壞版 ②:變形者只建選中那一棵
   if (brk('pair')) verSrc = bustSrc('pair', verSrc,
     'const u = forgeMorphUnit(mergeFor(G, spec, ctx), mergeFor(A, spec, ctx), { finish: dollFinish });',
     'const u = forgeMech(mergeFor(spec, spec, ctx), { finish: dollFinish });');
   // 壞版 ③:型態不推回報高度(鈕還在、台上不動)
-  if (brk('morph')) viewSrc = bustSrc('morph', viewSrc,
-    'ent.heroY = formT * MORPH.GROUND_Y * 2;', 'ent.heroY = 0;');
+  if (brk('morph')) stgSrc = bustSrc('morph', stgSrc,
+    'st.ent.heroY = st._formT * MORPH.GROUND_Y * 2;', 'st.ent.heroY = 0;');
   // 壞版 ④:換型態照樣重鍛(變形過程被砍成瞬切)
-  if (brk('rebuild')) viewSrc = bustSrc('rebuild', viewSrc,
-    'if (keep) retargetDoll(); else buildUnit();', 'buildUnit();');
-  const vc = code(viewSrc), rc = code(verSrc);
+  if (brk('rebuild')) stgSrc = bustSrc('rebuild', stgSrc,
+    'if (keep) { if (st.unit.dolls) st.unit.doll = st.unit.dolls[spec.form] || null; } else build();', 'build();');
+  // 壞版 ⑤:覆核台自己再建一座展示台(第二份場景 + 第二組鈕面)
+  let crBad = crSrc;
+  if (brk('twostage')) crBad = bustSrc('twostage', crSrc,
+    'fstage = FORGE.stage.makeStage({', 'fstage = { scene: new FORGE.THREE.Scene() } || FORGE.stage.makeStage({');
+  const vc = code(viewSrc), rc = code(verSrc), sc = code(stgSrc), cc = code(crBad);
 
-  t('版本只有一張表(versions.js),展示台不認得任何一個版本的名字',
+  t('版本只有一張表(versions.js),兩座看板都不認得任何一個版本的名字',
     /export const STAGE_VERSIONS/.test(rc)
-    && !/legacy/i.test(vc) && !/legacy_models/.test(viewSrc));
-  t('建構只有版本表一份(viewer MUST NOT 直接呼叫任何建構器)',
-    /ver\.build\(spec/.test(vc)
-    && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(vc));
-  t('版本鈕由表推導(index.html 只放空容器,MUST NOT 寫死某一版的鈕)',
-    /for \(const v of STAGE_VERSIONS\)/.test(vc)
-    && /id="verSeg"/.test(htmlSrc) && !/btnLegacy/.test(htmlSrc));
-  t('能力旗標宣告在表上、鈕面吃它(MUST NOT 由 viewer 嗅探 unit 的副作用推回來)',
-    /caps: \{ edit:/.test(rc)
-    && /ver\.caps\.wpn/.test(vc) && /ver\.caps\.joints/.test(vc) && /ver\.caps\.edit/.test(vc));
+    && !/legacy/i.test(vc) && !/legacy/i.test(crBad) && !/legacy/i.test(sc));
+  t('建構只有版本表一份(看板與展示台 MUST NOT 直接呼叫任何建構器)',
+    /ver\.build\(st\.spec/.test(sc)
+    && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(vc)
+    && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(crBad)
+    && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(sc));
+  t('鈕面名冊只有一份(stage.js 的 BARS;兩座 HTML 都只放空容器)',
+    /const BARS = \[/.test(sc) && /id="stageBar"/.test(htmlSrc) && /id="crStageBar"/.test(crSrc)
+    && !/btnLegacy|id="vWpnL"|id="cfFire"|id="cfCast"|id="cfRun"/.test(htmlSrc + crSrc));
+  t('能力旗標宣告在表上、鈕面吃它(MUST NOT 由看板嗅探 unit 的副作用推回來)',
+    /caps: \{ edit:/.test(rc) && /st\.ver\.caps\.wpn/.test(sc) && /st\.ver\.caps\.joints/.test(sc)
+    && /stage\.ver\.caps\.edit/.test(vc));
   t('rig 契約欄由版本自己印(新版的契約拿去驗舊版一定對不上)',
-    /rigLines\(unit, spec\)/.test(vc) && /rigLines:/.test(rc));
+    /rigLines\(stage\.unit, spec\)/.test(vc) && /rigLines:/.test(rc));
   t('樞軸點是**逐棵一組**(變形者兩棵樹;收成單一 Group 只點得亮一棵)',
     /joints: \[u\.ground\.joints, u\.air\.joints\]/.test(rc)
-    && /for \(const j of unit\?\.joints \|\| \[\]\)/.test(vc));
+    && /for \(const j of st\.unit\?\.joints \|\| \[\]\)/.test(sc));
 
   t('變形者一律建兩棵樹(只建一棵 = 按了型態鈕沒有東西可以變過去)',
     /forgeMorphUnit\(mergeFor\(G/.test(rc));
   t('鍛造縫交得出兩棵子單位(看板要拿那一棵的紙娃娃索引與樞軸)',
     /ground: G, air: A/.test(code(fgSrc)));
   t('變形過程只有一條驅動:型態推 ent.heroY 過門檻,插值讓真品 locomotion 做',
-    /ent\.heroY = formT \* MORPH\.GROUND_Y/.test(vc)
-    && /from '\/public\/js\/data\.js'/.test(viewSrc));
+    /st\.ent\.heroY = st\._formT \* MORPH\.GROUND_Y/.test(sc)
+    && /from '\/public\/js\/data\.js'/.test(stgSrc));
   t('型態進度只**讀** locomotion 那一份(自己再阻尼一次 = 第二條變形曲線)',
-    /unit\?\.morph\?\.m \?\? ent\.loco\?\.morph/.test(vc)
-    && !/damp\(/.test(vc));
+    /st\.unit\?\.morph\?\.m \?\? st\.ent\?\.loco\?\.morph/.test(sc)
+    && !/damp\(/.test(sc));
   t('型態 = 選另一格(名冊的單位本來就是 (機體, 型態)),鍵只有 entryKey 一份',
-    /function setForm/.test(vc) && /siblingSpec\(spec\)/.test(vc)
+    /st\.formSpec = /.test(sc) && /siblingSpec\(st\.spec\)/.test(sc)
     && /entryKey\(spec\.ch/.test(rc) && !/`\$\{spec\.ch\}@/.test(rc));
   t('同一台變形者換型態 MUST NOT 重鍛(重鍛 = 變形過程被砍成瞬切)',
-    /unitKeyOf\(s\) === unitKey/.test(vc)
-    && /s\.form \? s\.ch : s\.id/.test(vc)
-    && /if \(keep\) retargetDoll\(\); else buildUnit\(\);/.test(vc));
-  t('型態鈕的標籤由 FORM_LABEL 推導(MUST NOT 在 HTML 手寫地面型/飛行型)',
-    /Object\.entries\(FORM_LABEL\)/.test(vc)
-    && !/地面型|飛行型/.test(htmlSrc) && /id="formSeg"/.test(htmlSrc));
+    /keyOf\(spec\) === st\._key/.test(sc)
+    && /s\.form \? s\.ch : s\.id/.test(sc)
+    && /if \(keep\) \{ if \(st\.unit\.dolls\)/.test(sc));
+  t('型態鈕的標籤由 FORM_LABEL 推導(MUST NOT 在任一座 HTML 手寫地面型/飛行型)',
+    /Object\.entries\(FORM_LABEL\)/.test(sc) && !/地面型|飛行型/.test(htmlSrc));
+
+  // ── 使用者這一輪的三條 ──
+  t('演出鈕 = 輕/重武器 + 小招/大招(舊制把槽位與動作方向混在一起)',
+    /\['light', 'fire'/.test(sc) && /\['heavy', 'heavy'/.test(sc)
+    && /\['skill', 'skill'/.test(sc) && /\['ult', 'ult'/.test(sc));
+  t('招式的定向/全向到原處取(castDirF 單一縫;戰場 / 圖鑑 / 機體台三個消費端)',
+    /export const castDirF/.test(code(readSrc('public', 'js', 'data.js')))
+    && /castDirF\(a\?\.fx/.test(sc)
+    && /castDirF\(ev\.fx/.test(code(readSrc('public', 'js', 'game.js')))
+    && /castDirF\(a\.fx/.test(code(readSrc('public', 'js', 'charPreview.js'))));
+  t('鈕面全部是圖示(名冊逐顆帶 icon;MUST NOT 混文字鈕)',
+    /export const ICONS/.test(sc) && /\$\{ICONS\[icon\] \|\| ''\}/.test(sc)
+    && /icon: 'verNew'/.test(rc) && /icon: 'verOld'/.test(rc));
+  // ⚠ 覆核台這一半 MUST 讀原始碼(見上方 Ⅷ 段的同一條:字串裡的 `mechs/*.js` 會被剝註解
+  //   那一支當成區塊註解的開頭)—— 壞版判定因此改用 crBad 的原文。
+  t('覆核台的鍛造區塊**直接套用**同一座展示台(MUST NOT 自己再建一份場景/迴圈)',
+    /FORGE\.stage\.makeStage\(\{/.test(crBad)
+    && !/new FORGE\.THREE\.Scene\(\)|new THREE\.Scene\(\)/.test(crBad)
+    && !/stepLocomotion\(|stepCombatFx\(/.test(crBad));
+  t('兩座看板的 headless 入口都問得到版本 / 型態進度(純視覺的壞法只有這裡量得到)',
+    /versions: \(\) => stage\.versions\(\)/.test(vc) && /morphM: \(\) => stage\.morphM\(\)/.test(vc)
+    && /versions: \(\) => fstage\.versions\(\)/.test(crBad) && /morphM: \(\) => fstage\.morphM\(\)/.test(crBad));
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);
