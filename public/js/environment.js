@@ -4,7 +4,10 @@
 //   - 雨 / 雪粒子(跟隨相機的粒子盒,便宜又看不出邊界)
 // 粒子手法參考 mapping_elf/weatherFx3D.js(程序生成、無外部資產)。
 import * as THREE from 'three';
-import { ENV } from './data.js';
+import {
+  clockHour, phaseBlend, sunDirAt, moonDirAt, bodyFade,
+  SHADOW, shadowRangeM,
+} from './data.js';
 import { setCelSun, WIND, celWindTime, INK_INFO_DECL, INK_INFO_NONE } from './toon.js';
 import { mulberry32 } from './rng.js';
 
@@ -12,12 +15,32 @@ import { mulberry32 } from './rng.js';
 // 這裡只留**舊入口**(同 `hazards.js` re-export `rng.js` 的 mulberry32),MUST NOT 在此重寫一份。
 export { envLabel } from './data.js';
 
-// 日夜基調
+// 日夜基調。**四個錨點的顏色,不是四種模式** —— 當下的天色一律由 `phaseBlend()` 在相鄰兩格
+// 之間內插(2026-08-14 時間流逝上線)。`elev` 欄已退場:太陽在哪由 `data.js sunDirAt()` 推導,
+// 留著它就是第二把尺(色表說 0.16、軌道說別的,而畫面上只表現成「黃昏的影子方向怪怪的」)。
+// `sun` 這一欄在夜格裝的是**月光色** ⇒ 主光換手時色相自己就接上了,不必另開一張月光表。
 const TIMES = {
-  day:   { sky: 0x8fa9bd, fogC: 0x9aacba, sun: 0xfff2dd, sunI: 1.30, hemiSky: 0x9fb4c8, hemiGnd: 0x3a352c, hemiI: 0.85, elev: 0.55 },
-  dusk:  { sky: 0x8a5a46, fogC: 0x7a5a4c, sun: 0xff9a4d, sunI: 0.95, hemiSky: 0xc98a6a, hemiGnd: 0x2a2430, hemiI: 0.60, elev: 0.16 },
-  night: { sky: 0x0a1220, fogC: 0x0d1522, sun: 0x9db8e8, sunI: 0.30, hemiSky: 0x2a3a55, hemiGnd: 0x11141a, hemiI: 0.35, elev: 0.45 },
+  dawn:  { sky: 0x8690ae, fogC: 0xa08e93, sun: 0xffc79c, sunI: 0.80, hemiSky: 0xbda6b6, hemiGnd: 0x2e2b31, hemiI: 0.62 },
+  day:   { sky: 0x8fa9bd, fogC: 0x9aacba, sun: 0xfff2dd, sunI: 1.30, hemiSky: 0x9fb4c8, hemiGnd: 0x3a352c, hemiI: 0.85 },
+  dusk:  { sky: 0x8a5a46, fogC: 0x7a5a4c, sun: 0xff9a4d, sunI: 0.95, hemiSky: 0xc98a6a, hemiGnd: 0x2a2430, hemiI: 0.60 },
+  night: { sky: 0x0a1220, fogC: 0x0d1522, sun: 0x9db8e8, sunI: 0.30, hemiSky: 0x2a3a55, hemiGnd: 0x11141a, hemiI: 0.35 },
 };
+/** 兩個基調之間的內插(顏色寫進呼叫端給的實例:每幀都要跑,不配新物件) */
+function mixTime(out, a, b, t) {
+  const A = TIMES[a] || TIMES.day, B = TIMES[b] || TIMES.day;
+  for (const k of ['sky', 'fogC', 'sun', 'hemiSky', 'hemiGnd']) {
+    out[k].setHex(A[k]).lerp(_tmpC.setHex(B[k]), t);
+  }
+  out.sunI = A.sunI + (B.sunI - A.sunI) * t;
+  out.hemiI = A.hemiI + (B.hemiI - A.hemiI) * t;
+  return out;
+}
+const _tmpC = new THREE.Color();
+const WHITE = new THREE.Color(0xffffff);
+const newPhase = () => ({
+  sky: new THREE.Color(), fogC: new THREE.Color(), sun: new THREE.Color(),
+  hemiSky: new THREE.Color(), hemiGnd: new THREE.Color(), sunI: 1, hemiI: 1,
+});
 // 季節微調(色溫/亮度)
 const SEASONS = {
   spring: { tint: 0xf2ffe8, mul: 1.0 },
@@ -207,6 +230,84 @@ function makeClouds(span, skyC, W, seed) {
   };
 }
 
+// ---- 太陽 / 月亮的圓盤(2026-08-14)----
+// 兩顆 billboard,恆掛在**相機為心**的天球上(同穹頂與雲:天空沒有視差)。
+// 三條:
+//   ① 方向只有 `data.js sunDirAt/moonDirAt` 一份 —— 圓盤畫在哪與主光從哪來 MUST 是同一個
+//      向量,否則影子的方向與看得見的太陽對不上(而那是最刺眼的一種不對)。
+//   ② 圓盤是**純表現層**:不進 blockers / 不參與任何判定,`fog:false` + 不寫深度。
+//   ③ 亮度吃同一支 `bodyFade()`:地平線以下淡出。月亮在白天另外再壓一次(白日的月亮很淡,
+//      不壓的話正午天上會掛一顆亮白圓餅)。
+const BODY_R_F = 0.055;      // 圓盤半徑 ÷ 天球半徑(太陽;月亮見 MOON_R_F)
+const MOON_R_F = 0.050;
+const BODY_DIST_F = 1.25;    // 天球半徑 ÷ span(在穹頂 1.5 之內 ⇒ 不會被穹頂蓋掉)
+function bodyTexture(kind) {
+  const S = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  const C = S / 2;
+  // 光暈(只有太陽有):硬邊圓盤外一圈徑向淡出,賽璐璐風格不做柔邊本體
+  if (kind === 'sun') {
+    const gr = g.createRadialGradient(C, C, S * 0.16, C, C, C);
+    gr.addColorStop(0, 'rgba(255,255,255,0.85)');
+    gr.addColorStop(0.45, 'rgba(255,238,200,0.28)');
+    gr.addColorStop(1, 'rgba(255,238,200,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, S, S);
+  }
+  g.fillStyle = '#fff';
+  g.beginPath(); g.arc(C, C, S * (kind === 'sun' ? 0.30 : 0.34), 0, Math.PI * 2); g.fill();
+  if (kind === 'moon') {
+    // 環形海:圓盤本體是白的,坑用半透明灰疊上去(不另開第二張貼圖)
+    g.fillStyle = 'rgba(150,162,182,0.55)';
+    for (const [dx, dy, r] of [[-0.09, -0.07, 0.085], [0.07, 0.03, 0.065], [-0.02, 0.11, 0.05], [0.12, -0.10, 0.04]]) {
+      g.beginPath(); g.arc(C + dx * S, C + dy * S, r * S, 0, Math.PI * 2); g.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function makeBodies(span) {
+  const grp = new THREE.Group();
+  const mk = (kind, rf) => {
+    const tex = bodyTexture(kind);
+    // `depthTest` MUST 留著:天體是透明佇列的東西 ⇒ 恆在不透明的地形之**後**才畫,
+    // 關掉深度測試的話山稜線後面的太陽會浮在山坡上(2026-08-14 實測 taroko lane_mid)。
+    // `renderOrder` 只在透明佇列內排序,救不了這件事。
+    const mat = new THREE.SpriteMaterial({
+      map: tex, transparent: true, depthWrite: false, fog: false,
+    });
+    const sp = new THREE.Sprite(mat);
+    const r = span * BODY_DIST_F * rf;
+    sp.scale.set(r * 2, r * 2, 1);
+    grp.add(sp);
+    return { sp, mat, tex };
+  };
+  const sun = mk('sun', BODY_R_F), moon = mk('moon', MOON_R_F);
+  grp.frustumCulled = false;
+  grp.renderOrder = -9.5;      // 穹頂(-10)之後、雲(-9)之前 ⇒ 雲可以遮住太陽
+  return {
+    obj: grp,
+    /** @param dir 單位向量;@param tint 圓盤色;@param a 不透明度 */
+    place(camera, sunDir, moonDir, sunC, moonC, dayness) {
+      const D = span * BODY_DIST_F;
+      for (const [b, d, c, a] of [
+        [sun, sunDir, sunC, bodyFade(sunDir.y)],
+        // 白天的月亮只剩淡淡一片:`1 − dayness` 就是那一層
+        [moon, moonDir, moonC, bodyFade(moonDir.y) * (0.25 + 0.75 * (1 - dayness))],
+      ]) {
+        b.sp.position.set(camera.position.x + d.x * D, camera.position.y + d.y * D, camera.position.z + d.z * D);
+        b.mat.color.copy(c);
+        b.mat.opacity = a;
+        b.sp.visible = a > 0.01;
+      }
+    },
+    dispose() { for (const b of [sun, moon]) { b.mat.dispose(); b.tex.dispose(); } },
+  };
+}
+
 /** 雨/雪粒子盒:跟著相機走,粒子落出底部就回頂部 */
 function makeParticles(kind) {
   const N = kind === 'rain' ? 1600 : 1100;
@@ -256,18 +357,30 @@ function makeParticles(kind) {
 
 /**
  * 套用環境到場景(取代原本固定的天光/太陽/霧)。
- * 回傳 { update(dt, camera), dispose() }。
+ * 回傳 { air, hour, update(dt, camera, elapsedS), dispose() }。
+ *
+ * ---- 時間流逝(2026-08-14)----
+ * 開場時段只決定**第 0 秒的鐘點**;之後每一幀都由 `clockHour(開場時段, 經過秒數)` 重算,
+ * 整份調色盤在相鄰兩個基調之間內插。三條紀律:
+ *   ① **經過秒數由呼叫端傳進來**,本檔不自己數(權威時鐘住伺服器快照 —— 自己數一份的話
+ *      兩台客戶端的天色會慢慢分家,而畫面上只表現成「你那邊天比較亮」)。
+ *   ② **每幀只改共享 uniform / 既有實例的欄位**,MUST NOT 重建穹頂、雲、燈或材質
+ *      (與 visualPrefs 的紀律③同一條:重建就會變成幻燈片)。
+ *   ③ 顏色的推導路徑**逐字沿用舊制**(skyC/fogC/sunC 三行的算式一格未動),
+ *      改的只有「T 從哪來」—— 從查表變成內插。時間停在開場錨點時逐位元同舊制。
  */
-export function applyEnvironment(scene, terrain, env) {
+export function applyEnvironment(scene, terrain, env, opts = {}) {
   const span = Math.max(terrain.worldW, terrain.worldH);
-  const T = TIMES[env?.time] || TIMES.day;
+  const startTime = TIMES[env?.time] ? env.time : 'day';
   const S = SEASONS[env?.season] || SEASONS.summer;
   const W = WEATHERS[env?.weather] || WEATHERS.clear;
+  const tintC = new THREE.Color(S.tint);
 
-  const skyC = new THREE.Color(T.sky).multiply(new THREE.Color(S.tint)).multiplyScalar(W.light * 0.7 + 0.3);
-  const fogC = new THREE.Color(W.fogTint ?? T.fogC).multiplyScalar(W.light * 0.6 + 0.4);
+  const T = newPhase();                       // 內插出來的當下基調(每幀就地覆寫)
+  const skyC = new THREE.Color(), fogC = new THREE.Color(), sunC = new THREE.Color();
+  const moonC = new THREE.Color();
   scene.background = skyC;   // 穹頂沒畫到的像素(建構失敗/極端視角)仍是舊行為
-  scene.fog = new THREE.Fog(fogC, span * W.fogNear, span * W.fogFar);
+  scene.fog = new THREE.Fog(0x000000, span * W.fogNear, span * W.fogFar);
 
   // 漸層穹頂 + 賽璐璐雲(顏色全由上面三張表推導,見 makeSkyDome 檔頭)
   const dome = makeSkyDome(span, skyC, fogC, W);
@@ -275,18 +388,34 @@ export function applyEnvironment(scene, terrain, env) {
   const clouds = makeClouds(span, skyC, W, Math.round((terrain.center?.lat ?? 0) * 1e4) * 31
     + Math.round((terrain.center?.lng ?? 0) * 1e4));
   if (clouds) scene.add(clouds.obj);
+  const bodies = makeBodies(span);
+  scene.add(bodies.obj);
 
-  const hemi = new THREE.HemisphereLight(T.hemiSky, T.hemiGnd, T.hemiI * (W.light * 0.6 + 0.4) * S.mul);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
   scene.add(hemi);
 
-  // 陽光色**先取出來**:太陽本體與近霧色吃同一份(近霧偏的就是「今天的日照」,
-  // 兩處各算一次的話換季/換時段時霧與光會走不同的色相)
-  const sunC = new THREE.Color(T.sun).multiply(new THREE.Color(S.tint));
-  const sun = new THREE.DirectionalLight(sunC, T.sunI * W.light * S.mul);
-  const az = env?.time === 'dusk' ? 0.9 : 0.4;   // 黃昏太陽壓低偏西
-  sun.position.set(span * Math.cos(az), span * T.elev, span * Math.sin(az) * 0.5);
+  // 主光:白天是太陽、夜裡是月亮,**同一盞燈**換方向與顏色(兩盞的話換手那一刻會疊光)。
+  const sun = new THREE.DirectionalLight(0xffffff, 1);
   scene.add(sun);
-  setCelSun(sun.position);   // 賽璐璐硬邊高光帶跟著本場太陽走
+  scene.add(sun.target);     // target 是獨立物件:不進場景的話它的世界矩陣不會更新
+
+  // ---- 影子 ----
+  // 正交框**跟著相機走**(全圖一張陰影圖的話每 texel 好幾公尺,機體的影子連一個像素都不到)。
+  // 開關由呼叫端給(visualPrefs `shadow` + `?shadow=0`):關著時這一整段等於不存在。
+  const shadowOn = !!opts.shadow;
+  const shSize = opts.lowPower ? SHADOW.SIZE_LOW : SHADOW.SIZE;
+  const shR = shadowRangeM(shSize);
+  if (shadowOn) {
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(shSize, shSize);
+    const c = sun.shadow.camera;
+    c.left = -shR; c.right = shR; c.top = shR; c.bottom = -shR;
+    c.near = 1; c.far = shR * 6;
+    c.updateProjectionMatrix();
+    sun.shadow.bias = SHADOW.BIAS;
+    sun.shadow.normalBias = SHADOW.NORMAL_BIAS;
+  }
+  const shTexel = (shR * 2) / shSize;   // 位置量化到 texel:不量化的話相機一動影子邊緣就爬行
 
   let particles = null;
   if (W.particle) {
@@ -294,12 +423,79 @@ export function applyEnvironment(scene, terrain, env) {
     scene.add(particles.obj);
   }
 
-  return {
-    // 空氣透視(雙色霧)給後製管線的四個值。**近/遠色與 scene.fog 的兩段距離 MUST 一起給** ——
-    // 後製那一 pass 是用同一份 near/far 重算 fogFactor 再把近端色的差額補回去的(exact,
-    // 不是近似);距離對不上就會在遠景留一圈色帶,而那看起來像「霧壞掉了」。
-    air: { near: nearFogColor(fogC, sunC, skyC, W), far: fogC.clone(), fogNear: span * W.fogNear, fogFar: span * W.fogFar },
-    update(dt, camera) {
+  // 空氣透視(雙色霧)給後製管線的四個值。**近/遠色與 scene.fog 的兩段距離 MUST 一起給** ——
+  // 後製那一 pass 是用同一份 near/far 重算 fogFactor 再把近端色的差額補回去的(exact,
+  // 不是近似);距離對不上就會在遠景留一圈色帶,而那看起來像「霧壞掉了」。
+  // 物件識別**恆定**:呼叫端每幀拿同一個物件去餵 `pipeline.setAirFog`。
+  const air = { near: new THREE.Color(), far: new THREE.Color(), fogNear: span * W.fogNear, fogFar: span * W.fogFar };
+
+  const _sunD = new THREE.Vector3(), _moonD = new THREE.Vector3(), _lit = new THREE.Vector3();
+  const _cam = new THREE.Object3D();   // 第一次 update 之前也要有相機位置(原點即可)
+  const _fwd = new THREE.Vector3();
+  const out = { air, hour: 0, sunUp: true };
+
+  /** 把整份調色盤 + 光向重算到鐘點 h(每幀一次;只寫既有實例) */
+  function setHour(h) {
+    out.hour = h;
+    const { a, b, t } = phaseBlend(h);
+    mixTime(T, a, b, t);
+
+    // 三行算式逐字沿用舊制(紀律③):只有 T 的來源換了
+    skyC.copy(T.sky).multiply(tintC).multiplyScalar(W.light * 0.7 + 0.3);
+    fogC.copy(W.fogTint !== undefined ? _tmpC.setHex(W.fogTint) : T.fogC).multiplyScalar(W.light * 0.6 + 0.4);
+    sunC.copy(T.sun).multiply(tintC);
+    scene.fog.color.copy(fogC);
+
+    const stops = skyStops(skyC, fogC, W);
+    const u = dome.material.uniforms;
+    u.uH.value.copy(stops.horiz); u.uM.value.copy(stops.mid); u.uZ.value.copy(stops.zen);
+    if (clouds) for (const m of clouds.mats) m.color.copy(skyC).lerp(WHITE, 0.55);
+
+    hemi.color.copy(T.hemiSky); hemi.groundColor.copy(T.hemiGnd);
+    hemi.intensity = T.hemiI * (W.light * 0.6 + 0.4) * S.mul;
+
+    // 主光:太陽在地平線上就用太陽,否則用月亮。強度吃 `bodyFade` ⇒ 換手發生在兩者都
+    // 淡到 0 的那一刻(A 家族的「不可以跳」:方向從西邊瞬移到東邊,但那時沒有影子可看)。
+    const sd = sunDirAt(h), md = moonDirAt(h);
+    _sunD.set(sd.x, sd.y, sd.z); _moonD.set(md.x, md.y, md.z);
+    const up = sd.y > 0;
+    out.sunUp = up;
+    _lit.copy(up ? _sunD : _moonD);
+    const fade = bodyFade(up ? sd.y : md.y);
+    sun.color.copy(sunC);
+    sun.intensity = T.sunI * W.light * S.mul * fade;
+    setCelSun(_lit);   // 賽璐璐硬邊高光帶跟著當下的主光走(不是跟著開場那一格)
+
+    // 月亮圓盤永遠是冷白,不吃季節色溫(那是日照的東西)
+    moonC.setHex(TIMES.night.sun).lerp(WHITE, 0.45);
+    // 「白天有多白」= 太陽的高度;圓盤的白日淡出吃它
+    bodies.place(_cam, _sunD, _moonD, sunC, moonC, Math.max(0, Math.min(1, sd.y / 0.35)));
+  }
+
+  setHour(clockHour(startTime, 0));
+  air.near.copy(nearFogColor(fogC, sunC, skyC, W)); air.far.copy(fogC);
+
+  return Object.assign(out, {
+    update(dt, camera, elapsedS = 0) {
+      _cam.position.copy(camera.position);
+      setHour(clockHour(startTime, elapsedS));
+      // 空氣透視的兩個顏色跟著天色走(距離不變:那是地圖尺度,與時間無關)
+      air.near.copy(nearFogColor(fogC, sunC, skyC, W)); air.far.copy(fogC);
+
+      // 主光的位置:框心以相機為基準、**往視線前方推** `AHEAD_F`(玩家看的是前面,
+      // 把框心放在腳底下等於把一半的 texel 花在背後),再沿光向退到框外。
+      // **量化到 texel**:不量化的話相機每動一格,整張陰影圖的取樣格就偏半個 texel,
+      // 影子邊緣會沿著幾何爬(shimmer)。
+      _fwd.set(0, 0, -1).applyQuaternion(camera.quaternion); _fwd.y = 0;
+      if (_fwd.lengthSq() > 1e-6) _fwd.normalize().multiplyScalar(shR * SHADOW.AHEAD_F);
+      const q = shadowOn ? shTexel : 0;
+      const px = camera.position.x + _fwd.x, pz = camera.position.z + _fwd.z;
+      const cx = q ? Math.round(px / q) * q : px;
+      const cz = q ? Math.round(pz / q) * q : pz;
+      const cy = camera.position.y;
+      sun.target.position.set(cx, cy, cz);
+      sun.position.set(cx + _lit.x * shR * 2.5, cy + _lit.y * shR * 2.5, cz + _lit.z * shR * 2.5);
+
       particles?.update(dt, camera);
       // 穹頂/雲**恆以相機為中心**:天空沒有視差,不然走到地圖邊緣會看到「天空的邊」
       dome.position.copy(camera.position);
@@ -310,12 +506,13 @@ export function applyEnvironment(scene, terrain, env) {
       }
     },
     dispose() {
-      scene.remove(hemi); scene.remove(sun);
+      scene.remove(hemi); scene.remove(sun); scene.remove(sun.target);
       if (particles) scene.remove(particles.obj);
       // A25:一次性 3D 物件移除 MUST 釋放 GPU 資源(貼圖是整場共用的快取,一律不動)
       scene.remove(dome);
       dome.geometry.dispose(); dome.material.dispose();
+      scene.remove(bodies.obj); bodies.dispose();
       if (clouds) { scene.remove(clouds.obj); clouds.mats.forEach((m) => m.dispose()); }
     },
-  };
+  });
 }

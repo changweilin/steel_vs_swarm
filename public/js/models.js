@@ -7735,6 +7735,20 @@ export function makeUnit(kind, side, { ring = true, ch = null } = {}) {
   }
 
   if (ring) g.add(teamRing(side, Math.max(1.1, target * 0.55)));
+  // ---- 投影旗標(2026-08-14 太陽/月亮與影子)----
+  // **單一縫**:所有單位(英雄 / NPC / 砲塔 / 主堡 / 載具)都經過 makeUnit ⇒ 這一段掃一次就
+  // 全場都有影子,MUST NOT 在 game.js 的各個生成點各設一次。三條排除:
+  //   ① **描邊外殼**(`isOutline`):它是沿法線外推的 BackSide 反轉殼,會投出一顆脹大一圈的
+  //      黑影 —— 而外殼本來就恆在本體之內看不見,那顆影子沒有任何東西對得上;
+  //   ② **半透明件**(光環 / 陣營環 / 槍口焰):three 的陰影圖只寫深度,半透明會投出實心黑塊;
+  //   ③ 旗標本身在「沒有投影光源」時完全惰性 ⇒ 圖鑑 / 機體台 / 設定頁樣品逐位元不受影響。
+  g.traverse((o) => {
+    if (!o.isMesh || o.userData.isOutline) return;
+    const m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!m || m.transparent) return;
+    o.castShadow = true;
+    o.receiveShadow = true;
+  });
   g.userData.kind = kind;
   g.userData.side = side;
   return { group: g, mixer };

@@ -5786,7 +5786,10 @@ export const ENV = {
     autumn: { name: '秋', foliage: 0xc9762b, grass: 0xa9924f, accent: 0xd94f2b },
     winter: { name: '冬', foliage: 0x9fb3ad, grass: 0x9aa08d, accent: 0xe8f0f4 },
   },
+  // 開場時段(**只是起點**:開打之後時間會一直走,見下方 DAYCLOCK)。
+  // 排序 = 一天的順序,讓下拉選單讀起來就是時間軸。
   times: {
+    dawn:  { name: '清晨' },
     day:   { name: '白天' },
     dusk:  { name: '黃昏' },
     night: { name: '夜晚' },
@@ -5823,6 +5826,109 @@ export function resolveEnv(env = {}) {
     weather: pick(ENV.weathers, env.weather),
   };
 }
+
+// ---- 時間流逝:日夜循環(2026-08-14 使用者定案「10 分鐘 = 遊戲 8 小時」)----
+//
+// **開場時段從此只是起點**:`env.time` 決定戰鬥第 0 秒的鐘點,之後鐘點只由
+// 「權威經過秒數 × 速率」決定 ⇒ 黃昏會自己走進夜、清晨會自己走進白天,
+// 而 `envLabel()` 仍印開場那一格(它是房間設定,不是當下的天色)。
+//
+// 四條紀律:
+//   ① **時鐘是純函式**:`clockHour(開場時段, 經過秒數)`。經過秒數的唯一來源是伺服器快照的
+//      `time`(§0 原則 1)—— 客戶端 MUST NOT 自己數一份戰鬥時鐘,那會讓兩台機器的天色不同
+//      (單機也一樣走這條路:單機的伺服器只是跑在同一個分頁裡)。
+//   ② **顏色與角度分家**:這裡只有「幾點」與「太陽在哪個方向」;色表住 `environment.js TIMES`
+//      (它是表現層,而且 import three ⇒ Node 端載不動,同 `envLabel` 住這裡的理由)。
+//      兩者的接縫只有一個:`phaseBlend(hour)` 回「哪兩個基調 + 混多少」。
+//   ③ **日出/日落時刻是定義不是校準**:`RISE_H`/`SET_H` 定死 6:00 / 18:00,仰角是它們的
+//      正弦,所以「太陽在地平線上 ⇔ 6~18 點」是恆等式而不是湊出來的。月亮 = 太陽 +12 小時
+//      (同一支 `sunDirAt`,MUST NOT 另寫一份月亮軌道)。
+//   ④ **交界不可以跳**:太陽落海那一刻主光要換成月亮,方向從西邊horizon 跳到東邊 horizon。
+//      `bodyFade()` 讓兩者在地平線附近的強度都收到 0 ⇒ 換手發生在「本來就沒有影子」的時候。
+export const DAYCLOCK = {
+  REAL_S: 600,        // 真實 10 分鐘
+  GAME_H: 8,          //   = 遊戲 8 小時
+  RISE_H: 6, SET_H: 18,          // 日出 / 日落(定義;仰角由此推導)
+  MAX_ELEV_DEG: 62,   // 正午仰角上限 —— 90°(正頂光)的影子只有一小圈,看不出時間在走
+  AZ_TILT: 0.42,      // 軌道往 +z 側偏(影子不會整天卡在同一條世界軸上)
+  FADE_Y: 0.10,       // 地平線淡出帶(取 |sin(仰角)|):主光在此帶內收到 0,見紀律 ④
+  // 四個基調的錨點鐘點。顏色住 environment.js,這裡只有時刻。
+  PHASE_H: { dawn: 6, day: 12, dusk: 17.5, night: 23 },
+  // 開場鐘點:刻意**早於**該時段的錨點一小段,讓「一開場就在過渡帶的入口」——
+  // 選黃昏的人要看到天色一路沉下去,而不是開場就已經是最紅的那一刻。
+  START_H: { dawn: 5.2, day: 9.5, dusk: 17.0, night: 21.5 },
+};
+
+/** 遊戲小時 / 真實秒 */
+export const dayHourRate = () => DAYCLOCK.GAME_H / DAYCLOCK.REAL_S;
+
+/** 當下鐘點 [0,24)。`elapsedS` = 伺服器快照的經過秒數(紀律 ①) */
+export function clockHour(time, elapsedS = 0) {
+  const h0 = DAYCLOCK.START_H[time] ?? DAYCLOCK.START_H.day;
+  return ((h0 + elapsedS * dayHourRate()) % 24 + 24) % 24;
+}
+
+/** 「06:24」;HUD 與稽核共用 */
+export function clockLabel(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  const m = Math.floor(h * 60);
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
+/**
+ * 這一刻落在哪兩個基調之間 → `{ a, b, t }`(t 已過 smoothstep:過渡帶的兩端要平順接上,
+ * 線性內插在錨點上有折角,天色會在那一秒「頓一下」)。錨點是環狀的(night → dawn 跨午夜)。
+ */
+export function phaseBlend(hour) {
+  const ks = Object.keys(DAYCLOCK.PHASE_H).sort((x, y) => DAYCLOCK.PHASE_H[x] - DAYCLOCK.PHASE_H[y]);
+  const h = ((hour % 24) + 24) % 24;
+  for (let i = 0; i < ks.length; i++) {
+    const a = ks[i], b = ks[(i + 1) % ks.length];
+    const ha = DAYCLOCK.PHASE_H[a];
+    const hb = DAYCLOCK.PHASE_H[b] > ha ? DAYCLOCK.PHASE_H[b] : DAYCLOCK.PHASE_H[b] + 24;
+    const x = h >= ha ? h : h + 24;
+    if (x <= hb) { const t = (x - ha) / (hb - ha); return { a, b, t: t * t * (3 - 2 * t) }; }
+  }
+  return { a: ks[0], b: ks[0], t: 0 };   // 到不了(錨點覆蓋整圈),留著當寧缺勿錯的出口
+}
+
+/**
+ * 太陽方向(單位向量,遊戲世界座標;+x 東、+y 上)。
+ * 仰角 = `MAX_ELEV × sin(2π(h−6)/24)` ⇒ 6/18 點恰在地平線(紀律 ③),週期恰 24 小時。
+ * **月亮 = 同一支 +12 小時**,MUST NOT 另寫一份軌道。
+ */
+export function sunDirAt(hour) {
+  const el = DAYCLOCK.MAX_ELEV_DEG * Math.PI / 180 * Math.sin(Math.PI * (hour - DAYCLOCK.RISE_H) / 12);
+  const az = Math.PI * (hour - DAYCLOCK.RISE_H) / 12;      // 0 = 正東升起,π = 正西落下
+  // 水平分量**先各自正規化再乘 cos(仰角)** —— 直接把 z 乘上偏斜再整體正規化的話,
+  // 縮掉的那一截會被分回 y 上,實得仰角比 MAX_ELEV 高一大截(實測 62° → 77°:
+  // 正午幾乎是正頂光,影子縮成一小圈,而 `MAX_ELEV_DEG` 這個旋鈕看起來完全沒作用)。
+  const hx = Math.cos(az), hz = Math.sin(az) * DAYCLOCK.AZ_TILT;
+  const hn = Math.hypot(hx, hz) || 1;
+  const ce = Math.cos(el);
+  return { x: hx / hn * ce, y: Math.sin(el), z: hz / hn * ce };
+}
+export const moonDirAt = (hour) => sunDirAt(hour + 12);
+
+/** 地平線淡出(0~1):主光與天體圓盤共用,見紀律 ④ */
+export const bodyFade = (y) => Math.max(0, Math.min(1, y / DAYCLOCK.FADE_Y));
+
+// ---- 陰影貼圖(2026-08-14 使用者「加入太陽/月亮與影子」)----
+// **範圍是推導的**:先定「一個 texel 要多細」,範圍 = 貼圖邊長 × texel。手寫範圍的話
+// 換貼圖尺寸(低功耗折半)時解析度會靜默變粗,而畫面上只表現成「影子邊緣糊掉了」。
+// 這裡是一個**取捨**不是一個推導:一張陰影圖只有這麼多 texel,寬 = 遠處也有影子、
+// 窄 = 近處的影子比較利。取 0.12 的理由寫成兩個可檢查的數:機體(4.5m)的影子橫跨
+// 約 37 texel(夠利)、涵蓋半徑 123m(2048)/ 61m(1024)。**MUST NOT 手寫涵蓋半徑** ——
+// 換貼圖尺寸(低功耗折半)時它要自己跟著走,不然低階機的影子會靜默糊掉一倍。
+// 沒有 cascade:框外就是沒有影子,而那是刻意的(第二張陰影圖 = 第二趟全場 render)。
+export const SHADOW = {
+  SIZE: 2048, SIZE_LOW: 1024,   // 低功耗 / 觸控裝置走 LOW
+  TEXEL_M: 0.12,
+  AHEAD_F: 0.5,                 // 框心往視線前方推(玩家看的是前面,不是腳底下)
+  BIAS: -0.0006, NORMAL_BIAS: 0.6,
+};
+/** 陰影正交框的半邊長(公尺);跟著相機走,MUST NOT 手寫 */
+export const shadowRangeM = (size = SHADOW.SIZE) => size * SHADOW.TEXEL_M / 2;
 
 // ---- 地貌類型(場地 mix 與地被分類共用鍵)----
 export const BIOMES = {
