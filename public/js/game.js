@@ -4958,10 +4958,11 @@ export class BattleClient {
    */
   _lobAim() {
     const fc = this._lobFc || (this._lobFc = {
-      on: false, ok: false, aa: false, high: false, close: false, ent: null, v0: 0, sup: 0, n: 0,
+      on: false, ok: false, aa: false, high: false, close: false, cut: false, ent: null,
+      v0: 0, sup: 0, n: 0, max: 0,
       aim: new THREE.Vector3(), vel: new THREE.Vector3(), impact: new THREE.Vector3(), hasImpact: false,
     });
-    fc.on = false; fc.ok = false; fc.ent = null; fc.sup = 0; fc.close = false;
+    fc.on = false; fc.ok = false; fc.ent = null; fc.sup = 0; fc.close = false; fc.cut = false;
     const { id, def } = this._curWeapon();
     // 雷射導引(trajClass 'guide')由 _updateGuideLaser 指示 —— 彈體解保險後騎波不吃重力,
     // 走拋物線火控是錯的指示,兩者互斥。
@@ -4985,9 +4986,48 @@ export class BattleClient {
     // 射程包絡 = **對這個瞄準目標**的有效射程(唯一縫 `_effRange`;瞄地面 ⇒ ent=null ⇒ 基礎射程)。
     // 火控階梯決定的是真正的出膛向量 ⇒ 這裡放寬多少,砲彈就真的飛多遠 = 射程光暈與實際落點分家。
     const max = this._effRange(def, fc.ent);
+    // ①-b **瞄準點夾進射程包絡**(2026-08-15 使用者定案「沒有引爆就繼續飛到碰撞才爆」的另一半)。
+    // 45° 拋投的落點恆為瞄準點 ⇒ 瞄準點在包絡外 = 這一發注定在**半空中**飛出射程球面,而彈體在
+    // 那裡不再武裝(見 `_updateBullets`)⇒ 打出去的是一顆不會爆的啞彈。夾進來之後落點恆在射程內的
+    // **地面**上:短彈,但一定撞得到、一定引爆、一定有傷害 —— 這正是使用者要的「碰撞後爆炸」。
+    // 三條:
+    //   ① 落點退一個**爆風核心帶**(`blastCoreR`,推導不手寫):核心超壓整個留在射程內,同時讓
+    //      「著地」與「出射程球面」不會擠在同一格浮點數上(擠在一起 = 有時引爆有時啞彈,而且隨幀率變)。
+    //   ② 夾完的瞄準點 MUST 落在**地面**(逐次以該處地表高重解水平距離,斜坡兩三次就收斂)——
+    //      沿準星射線退到「離槍口恰 max」的那一點是在半空中的,弧線會從它旁邊穿過去繼續飛。
+    //   ③ `fc.ok` MUST 跟著轉為 false:準星底下那個東西其實在射程外,鎖定光暈(`_aimTarget` 吃
+    //      `fc.ok`)亮起來就又是「光暈亮著卻沒命中」。對空彈射不夾(目標在天上,沒有地面落點可退)。
+    fc.max = max;
+    fc.cut = false;
+    // 最小安全射程(下面的太近警示與夾制的「MUST NOT 夾進自己的爆風」同吃這一份 —— 讀兩次
+    // 就是第二份規則,而它們本來就該同進同退)
+    const mr = lobMinRange(def);
+    if (!fc.aa) {
+      // 觸發條件是「準星真的在包絡外」(> max),退的距離才是 max − 核心帶 —— 兩個門檻寫成同一個
+      // 數字的話,射程界內側那一條核心帶寬的環會被當成出界:那裡的敵人射程光暈亮著、鎖定光暈卻
+      // 熄滅(而且落點被無故往回拉),又是一種兩把尺。射程內 ⇒ 這一整段是 no-op(逐位元同舊制)。
+      const lim = Math.max(1, max - Math.min(blastCoreR(def), max * 0.5));
+      if (from.distanceTo(fc.aim) > max) {
+        const hx = fc.aim.x - from.x, hz = fc.aim.z - from.z;
+        const hl = Math.hypot(hx, hz);
+        let L = Math.min(hl, lim);
+        for (let k = 0; k < 3 && hl > 0; k++) {
+          const gy = this.terrain.heightAt(from.x + hx / hl * L, from.z + hz / hl * L);
+          L = Math.min(hl, Math.sqrt(Math.max(1, lim * lim - (gy - from.y) ** 2)));
+        }
+        const gx = from.x + hx / hl * L, gz = from.z + hz / hl * L;
+        // **MUST NOT 把落點夾進自己的爆風**:準星指著天空(幾乎垂直)時水平距離趨近 0,
+        // 沿著它退下來的地面點就在腳邊 —— 那是把「打不到」夾成一發自殺砲。夾不出合法落點就
+        // 整段放棄(維持原瞄準點 ⇒ 那一發飛出球面變啞彈,原則 6 寧缺勿錯)。
+        if (hl > 0 && Math.hypot(gx - from.x, this.terrain.heightAt(gx, gz) - from.y, gz - from.z) >= mr) {
+          fc.aim.set(gx, this.terrain.heightAt(gx, gz), gz);
+          fc.cut = true;
+        }
+      }
+    }
     // ② + ③ 對地 45° / 對空逐級降裝藥:共用 `_lobLadder`(唯一縫)—— 射程光暈吃同一份解
     const { ok, v0, vel, arc, high } = this._lobLadder(from, fc.aim, max, base, BALLISTIC.LOB_TOL, true, fc.aa);
-    fc.ok = ok;
+    fc.ok = ok && !fc.cut;
     fc.v0 = v0;
     fc.high = high;
     fc.vel.copy(vel);
@@ -4996,7 +5036,6 @@ export class BattleClient {
     if (arc.impact) fc.impact.copy(arc.impact);
     // 最小安全射程警示(純 HUD 建議;命中/自損由伺服器結算):落點近於 lobMinRange ⇒ 太近,
     // 開砲會落在自身爆風內(無差別波及友軍 + 自損)。以「射手 → 落點/瞄準點」水平+垂直距離判定。
-    const mr = lobMinRange(def);
     fc.close = mr > 0 && from.distanceTo(fc.hasImpact ? fc.impact : fc.aim) < mr;
     if (fc.close && this.hud?.feed && (this._lobWarnAt || 0) < performance.now() - 1500) {
       this._lobWarnAt = performance.now();
@@ -6789,13 +6828,16 @@ export class BattleClient {
     this.bullets.push({
       slot: id, aoe, pierce, r: def.r || 0, core: blastCoreR(def),   // core:近炸引信半徑的爆風項(見 _updateBullets)
       pos: muzzle.clone(), vel: fvel,
-      max: rng, mesh, origin: muzzle.clone(),   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
+      // 射程球面 = 火控解夾制時用的**同一個**包絡(`lobFc.max`)—— 兩個數字差一格浮點數,
+      // 夾好的落點就會落在球面外側 = 那一發變成不會爆的啞彈(見 _lobAim 的瞄準點夾制 ①)。
+      max: lobFc ? lobFc.max : rng, mesh, origin: muzzle.clone(),   // origin:射程球面/失鎖判定的球心(攻擊範圍);高度制空拉遠
       oy: (this._altAG || 0) + (muzzle.y - this.pos.y),   // 擊發當下的槍口離地高(貫穿回報用;落點定案時本機可能已位移)
       cyclone: null, cycAcc: 0, cycCol: this._shotCols(this.side).col,
       mv: v0, guide: !!def.guide, homing, arm: arm ? arm.m : 0,
       // 射後不理(2026-08-01 使用者定案):鎖定之後持續追擊,不受射程影響。
       // fnf 只是「這顆彈有沒有資格改吃燃料」的旗標;真正切換在 _updateBullets 的 b.chase。
       fnf: trajClass(def) === 'fnf', fuel: chaseCapS(def), age: 0, chase: false,
+      dud: false,   // 飛出射程球面 = 解除武裝(引爆 = 碰撞;見 _updateBullets)
     });
     if (def.type === 'missile') this.hud.feed?.(homing ? '🚀 飛彈離架:追蹤鎖定目標!' : '🚀 飛彈離架:未鎖定,直飛');
     else if (def.guide) this.hud.feed?.('🔦 雷射導引:瞄準中彈體隨準星修正');
@@ -7044,7 +7086,21 @@ export class BattleClient {
       // 唯一的例外是射後不理**鎖定後**(b.chase):射程包絡整條讓位給追擊燃料 `chaseCapS`
       // (使用者定案「鎖定後持續追擊,不受射程影響」)—— 燃料只是不讓失控彈體永遠留在場上。
       const spent = b.pos.distanceTo(b.origin);
-      const done = hit || (b.chase ? b.age >= b.fuel : spent >= b.max);
+      // **引爆 = 碰撞**(2026-08-15 使用者定案「無論引爆原因是什麼都要造成範圍爆炸傷害」+
+      // 「目標移動導致沒有引爆時會繼續沿著軌跡運動,直到碰撞後爆炸」)。爆炸戰鬥部飛出自己的
+      // 射程球面時**只是解除武裝**(`b.dud`)—— 彈體照樣沿彈道飛到撞上東西為止,只是那一下不再
+      // 是引爆(不畫爆炸、不回報,見下方 aoe 分支)。舊制在球面上**原地引爆**,而球面幾乎總是
+      // 落在半空中:實測 158m 射程的榴彈,準星只要落在射程 ×1.05 處,彈頭就在 **8.7m 高空**炸開
+      // (爆風 1.8r = 7.1m 外歸零)⇒ 玩家看到一朵爆炸、地面上一個人都沒掉血;×1.5 處是 57m、
+      // 對空彈射打空是 32~130m。那正是使用者回報的「爆炸沒有傷害」。
+      // **碰撞與出界落在同一幀時 `hit` 優先** ⇒ 落在射程界上的那一發照樣引爆;拋物線的落點由
+      // `_lobAim` 的瞄準點夾制退進包絡內(退一個爆風核心帶),所以對地拋投**恆在武裝狀態下著地**。
+      // 解除武裝的門檻 MUST 維持 `b.max`(誠實界)—— 放寬成 `b.max × RANGE_TOL` 等於送給爆炸型
+      // 武器 25% 的隱形射程(光暈不亮的敵人照樣掉血,見 heroPlasma 檔頭同一條)。
+      if (b.aoe && !hit && (b.chase ? b.age >= b.fuel : spent >= b.max)) b.dud = true;
+      // 啞彈的存活上限沿用彈體本來就帶著的燃料(`chaseCapS`,推導不手寫)= 這把武器的彈頭
+      // 最長可以合法留在空中的時間;碰撞優先,所以正常情況下它在落地那一刻就結束了。
+      const done = hit || (b.aoe ? (b.dud && b.age >= b.fuel) : spent >= b.max);
       if (!done) {
         b.mesh.position.copy(b.pos);
         // 彈體一律對準航向(2026-07-22 彈藥同源:火箭/飛彈也是有頭尾的彈體,不再是無方向灰球)
@@ -7058,7 +7114,14 @@ export class BattleClient {
       const p = hit?.point || b.pos;
       const def = this.wdef[b.slot];
       if (b.aoe) {
-        // 發射器:著彈點回報伺服器結算範圍傷害(直擊/落地/射程終點皆引爆)
+        // 啞彈(已飛出射程球面才碰上東西):MUST NOT 畫爆炸、MUST NOT 回報 —— 伺服器的落點閘門
+        // (`heroBurst` 的 impCap)收不下這一發,畫了就正好是使用者回報的那個症狀:看得到爆炸、
+        // 範圍內一個人都沒掉血。落地留土塵(與下方直擊彈的地形分支同一支),彈體本身照樣回收。
+        if (b.dud) {
+          if (hit) starburst(this.scene, this.effects, p.x, p.y, p.z, 1.2, 0xcfc4a8);
+          continue;
+        }
+        // 發射器:著彈點回報伺服器結算範圍傷害(直擊/落地皆引爆)
         // 洞內著彈的「地面」是隧道路面,不是頭頂那座山:覆蓋段的地形高度**沒有**被開挖,拿
         // heightAt 當基準會把爆點抬到山頂(爆炸畫在山上、離地高歸 1、lev 掉回 0 = 洞內單位
         // 被 _slabSep 判成板體另一側 ⇒ 整發榴彈打在洞裡卻零傷害)。2026-07-30 起彈頭會真的

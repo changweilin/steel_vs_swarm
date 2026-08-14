@@ -124,8 +124,10 @@ sec('Ⅱ 兩端射程閘門同界:客戶端飛得到的,伺服器 MUST 收得下
     '客戶端 _altRangeTo 走 data.js altRangeF 這個唯一縫(MUST NOT 自寫第二份曲線)');
   ok(/this\._maxRange\(def\)/.test(methodSrc('_tryFire', G)) && /altRangeMax\(\)/.test(methodSrc('_maxRange', G)),
     '搜尋上限 _maxRange = range × altRangeMax()(= 伺服器 impCap 的誠實界)');
-  ok(/max: rng, mesh, origin: muzzle\.clone\(\),/.test(G),
-    '客戶端彈體射程上限 = 這一發的有效射程 rng、球心 = 槍口(2026-08-01 起無重砲窗:巨砲已整組移除)');
+  // 拋物線武器取火控解夾制時用的**同一個**包絡(`lobFc.max`):兩個數字只要差一格浮點數,
+  // 夾好的落點就落在球面外側 = 那一發變成不會爆的啞彈(見 Ⅺ ④ 的瞄準點夾制)。
+  ok(/max: lobFc \? lobFc\.max : rng, mesh, origin: muzzle\.clone\(\),/.test(G),
+    '客戶端彈體射程上限 = 這一發的有效射程(拋物線吃火控解的同一份 lobFc.max)、球心 = 槍口');
   ok(!/\brMul\b/.test(G.replace(/^\s*(\/\/|\*).*$/gm, '')) || /const rMul = this\._altRangeTo\(/.test(G),
     'rMul 若仍出現在可執行原文 MUST 有宣告(巨砲移除後遺留的未宣告變數 = 一開火就 ReferenceError)');
   const burst = methodSrc('heroBurst', S);
@@ -1135,7 +1137,7 @@ const FNF = heavyOf('fnf');   // 任一名射後不理角色(不寫死角色代�
     '失鎖規則(離開發射源射程 → 直線飛行)對射後不理 MUST NOT 生效(A7 已改寫)');
   ok(/if \(b\.fnf && tgt\) b\.chase = true;/.test(upd),
     '追擊旗標一經鎖定即不可逆(目標中途陣亡也照飛,不會突然被射程包絡砍掉)');
-  ok(/const done = hit \|\| \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\);/.test(upd),
+  ok(/if \(b\.aoe && !hit && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(upd),
     '追擊中射程包絡整條讓位給燃料;沒追擊的彈體維持原本的 b.max 包絡(逐位元不變)');
   const tl = methodSrc('_tickLock', G);
   ok(/this\._effRange\(def, t0\)/.test(tl), '對照:①「只能射程內鎖定」仍由 _tickLock 的 _effRange 把關');
@@ -1249,7 +1251,9 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
 // 使用者四條:①目標只認準星(**沒有瞄到敵人就是打地面** —— 任何瞄準輔助都不准把落點拉走)
 //            ②準星瞄地面敵人 → 投擲角 45°、落點 = 目標瞄準點
 //            ③準星瞄空中敵人 → 維持彈射模式(高初速近直線)
-//            ④中途碰撞就爆、目標移開就繼續飛,超出射程原地爆
+//            ④中途碰撞就爆、目標移開就繼續飛
+//              (2026-08-15 使用者改制:**引爆 = 碰撞** —— 超出射程不再原地爆,只解除武裝;
+//               而火控解的瞄準點會被夾進射程包絡,所以對地拋投恆在武裝狀態下著地)
 {
   // ---- ① 準星是唯一目標來源:錐形瞄準輔助整支退場 ----
   {
@@ -1415,15 +1419,143 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
       '射程界不再依彈道分支(seek / lob 旗標整組退場 —— 一顆球面管全部)');
     ok(/const armed = prev\.distanceTo\(b\.origin\) >= \(b\.arm \|\| 0\);/.test(ub),
       '軌跡修正期(ARMING)也量同一顆球 —— 光暈的琥珀帶 `surf < arm` 本來就是直線量的');
-    ok(/const done = hit \|\| \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\);/.test(ub),
-      '彈體終止條件 = 命中 or 出球面(中途碰撞就爆、沒碰撞就繼續飛;唯一例外 = 射後不理鎖定後的追擊燃料)');
+    // ---- ④-b 引爆 = 碰撞(2026-08-15 使用者定案)----
+    // 「無論引爆原因是什麼都要造成範圍爆炸傷害」+「目標移動導致沒有引爆時會繼續沿著軌跡運動,
+    // 直到碰撞後爆炸」。舊制在射程球面上**原地引爆**,而球面幾乎總是落在半空中(實測見下方
+    // 行為直測)⇒ 玩家看到一朵爆炸、地面上一個人都沒掉血。改制:出球面只**解除武裝**。
+    ok(/if \(b\.aoe && !hit && \(b\.chase \? b\.age >= b\.fuel : spent >= b\.max\)\) b\.dud = true;/.test(ub),
+      '爆炸戰鬥部飛出射程球面/燒完追擊燃料 = **解除武裝**(b.dud),MUST NOT 在那裡原地引爆');
+    ok(/const done = hit \|\| \(b\.aoe \? \(b\.dud && b\.age >= b\.fuel\) : spent >= b\.max\);/.test(ub),
+      '彈體終止條件 = 碰撞優先(引爆 = 碰撞);啞彈續飛到自己的燃料燒完才丟(推導不手寫)');
+    ok(/if \(b\.dud\) \{\n\s*if \(hit\) starburst\(/.test(ub),
+      '啞彈碰撞只留土塵:MUST NOT 畫爆炸、MUST NOT 回報 burst(伺服器 impCap 收不下 = 爆炸沒有傷害)');
     ok(/if \(b\.aoe\) \{/.test(ub) && /t: 'burst'/.test(ub),
-      '終止當下一律回報爆點(直擊/落地/射程終點皆引爆 —— 原地爆炸)');
+      '武裝狀態下的碰撞一律回報爆點(直擊/落地皆引爆)');
+    // 解除武裝的門檻 MUST 是誠實界 b.max —— 放寬成 b.max × RANGE_TOL 等於送給爆炸型武器
+    // 25% 的隱形射程(光暈不亮的敵人照樣掉血,與 heroPlasma 檔頭同一條)。
+    ok(!/b\.max \* RANGE_TOL|b\.max \* 1\./.test(ub),
+      '解除武裝門檻 = 誠實界 b.max(MUST NOT 乘 RANGE_TOL —— 那是網路寬容,不是額外射程)');
   }
 
-  // ---- ⑤ 雷射導引吃同一條規則(2026-08-02 使用者定案)----
-  // 「中途碰撞就爆炸,因為目標移動而沒碰撞的話會繼續飛,直到超出射程就原地爆炸」——
-  // 導引失效(導引點出球面)MUST 只是「不再修正航向」,MUST NOT 讓彈體提早消失。
+  // ---- ④-c 瞄準點夾進射程包絡 + 引爆必有傷害(客戶端彈道 → 伺服器結算的端對端直測)----
+  // 這一段是 2026-08-15 使用者回報的兩句話:「爆炸範圍內的單位沒有傷害」+「沒有引爆會繼續沿著
+  // 軌跡運動,直到碰撞後爆炸」。舊制的病灶量得出來:準星只要落在射程 ×1.05 處,45° 拋投的
+  // 彈頭就在 8.7m 高空引爆(爆風 1.8r = 7.1m 外歸零)⇒ 爆炸看得到、地面上零傷害。
+  {
+    class V3 {
+      constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+      set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+      clone() { return new V3(this.x, this.y, this.z); }
+      copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
+      add(v) { this.x += v.x; this.y += v.y; this.z += v.z; return this; }
+      sub(v) { this.x -= v.x; this.y -= v.y; this.z -= v.z; return this; }
+      addScaledVector(v, s) { this.x += v.x * s; this.y += v.y * s; this.z += v.z * s; return this; }
+      multiplyScalar(s) { this.x *= s; this.y *= s; this.z *= s; return this; }
+      divideScalar(s) { this.x /= s; this.y /= s; this.z /= s; return this; }
+      dot(v) { return this.x * v.x + this.y * v.y + this.z * v.z; }
+      length() { return Math.hypot(this.x, this.y, this.z); }
+      normalize() { const l = this.length() || 1; this.x /= l; this.y /= l; this.z /= l; return this; }
+      distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
+      lerp(v, a) { this.x += (v.x - this.x) * a; this.y += (v.y - this.y) * a; this.z += (v.z - this.z) * a; return this; }
+      angleTo(v) { const d = this.dot(v) / ((this.length() || 1) * (v.length() || 1)); return Math.acos(Math.max(-1, Math.min(1, d))); }
+    }
+    const ARC_MAXP = Number(/const ARC_MAXP = (\d+);/.exec(G)?.[1]);
+    const starburst = () => {};
+    const raySolid = (o) => o.isMesh === true;
+    const env = { THREE: { Vector3: V3 }, BALLISTIC, SEEK, seekTurn, ARC_MAXP, starburst, raySolid,
+      shotV0, trajClass, lobMinRange, blastCoreR, altRangeF, LOS, altRangeMax,
+      _TMP_A: new V3(), _TMP_B: new V3(), _TMP_C: new V3(), _FWD_Z: new V3(0, 0, 1) };
+    const M = (n) => pickMethod(n, G, env);
+    const { id: lobId, def } = heavyOf('lob', 'SWARM');
+    // 樁:平地 y=0(地形/薄板/障礙都只有這一面),準星解由測試直接注入
+    const c = {
+      bullets: [], ents: new Map(), aiming: true, side: 'SWARM', ch: lobId, dead: false, shopOpen: false,
+      gunGroup: {}, _aaAim: false, _aaEnt: null, _altAG: 0, _sent: [],
+      wdef: { heavy: def }, hud: { feed: () => {} },
+      camera: { position: new V3(0, 2, 0), getWorldDirection: (v) => v.set(1, 0, 0) },
+      terrain: { heightAt: () => 0, tunnelAt: () => null },
+      net: { send: (m) => c._sent.push(m) },
+      _terrainHitT(ro, rd, far) { if (rd.y >= 0) return null; const t = -ro.y / rd.y; return (t >= 0 && t <= far) ? t : null; },
+      _layerHitT(ax, ay, az, bx, by, bz) { if (by >= 0 || ay < 0) return null; return Math.hypot(bx - ax, by - ay, bz - az) * (ay / (ay - by)); },
+      _rayCandidates: () => [], raycaster: { set() {}, far: 0, intersectObjects: () => [] },
+      _obstHitT: () => null, _hitR: () => 3,
+      _dropBullet() {}, _explosion() {}, _applyBlast() {}, _entByMesh: () => null,
+      _lanceVisual() {}, _sendLance: () => [], _lanceFeedback() {}, _hitFeedback() {}, _spinCyclone() {},
+      _ensureArcGuide() {},
+      _arcGuide: { arr: new Float32Array(ARC_MAXP * 3), ld: new Float32Array(ARC_MAXP), maxp: ARC_MAXP },
+      _curWeapon() { return { id: 'heavy', def }; },
+      _lobCrosshair() { return this._xh; },
+      _shotV0: M('_shotV0'), _lobSolve: M('_lobSolve'), _lobVel: M('_lobVel'), _lob45Vel: M('_lob45Vel'),
+      _arcTrace: M('_arcTrace'), _lobLadder: M('_lobLadder'), _altRangeTo: M('_altRangeTo'),
+      _effRange: M('_effRange'), _lobAim: M('_lobAim'), _updateBullets: M('_updateBullets'),
+    };
+    // 一發完整的生命週期:火控解(含夾制)→ 彈體逐幀積分 → 回報(或啞彈)
+    const fire = (aimX, aaEnt = null) => {
+      c.bullets.length = 0; c._sent.length = 0;
+      const from = new V3(0, 2, 0);
+      c._xh = { from, pt: new V3(aimX, aaEnt ? aaEnt.mesh.position.y : 0, 0), ent: aaEnt };
+      c._aaEnt = aaEnt; c._aaAim = !!aaEnt;
+      c._lobAim();
+      const fc = c._lobFc;
+      c.bullets.push({ slot: 'heavy', aoe: true, pierce: false, r: def.r || 0, core: blastCoreR(def),
+        pos: from.clone(), vel: fc.vel.clone(), max: fc.max, mesh: { position: new V3(), quaternion: { setFromUnitVectors() {} }, userData: {} },
+        origin: from.clone(), oy: 2, cyclone: null, cycAcc: 0, cycCol: 0, mv: fc.vel.length(),
+        guide: false, homing: null, arm: 0, fnf: false, fuel: chaseCapS(def), age: 0, chase: false, dud: false });
+      for (let t = 0; c.bullets.length && t < 40; t += 1 / 60) c._updateBullets(1 / 60);
+      return { fc, burst: c._sent.find((m) => m.t === 'burst') };
+    };
+    const R = def.range;
+    // ㋐ 射程內:一格未動(落點 = 瞄準點、貼地引爆)
+    for (const f of [0.3, 0.6, 0.95]) {
+      const r = fire(R * f);
+      ok(!r.fc.cut && r.fc.ok, `射程內(×${f})火控解不夾制、對準(逐位元同舊制)`);
+      ok(!!r.burst && r.burst.y <= 1.01 && Math.abs(r.burst.x - R * f) < BALLISTIC.LOB_TOL,
+        `射程內(×${f})→ 落地引爆於瞄準點(x ${r.burst?.x.toFixed(1)} / 離地 ${r.burst?.y.toFixed(1)}m)`);
+    }
+    // ㋑ 準星在射程外:夾進包絡 ⇒ 仍然**貼地引爆**(舊制在 8.7~80m 的高空引爆 = 零傷害)
+    let worstY = 0;
+    for (const f of [1.05, 1.2, 1.5, 2.0]) {
+      const r = fire(R * f);
+      ok(r.fc.cut && !r.fc.ok,
+        `準星在射程外(×${f}):瞄準點被夾進包絡,且 fc.ok 轉 false(鎖定光暈 MUST NOT 亮)`);
+      ok(!!r.burst, `準星在射程外(×${f})→ 彈體仍撞得到地面並引爆(MUST NOT 變成啞彈)`);
+      if (r.burst) worstY = Math.max(worstY, r.burst.y);
+    }
+    ok(worstY <= 1.01, `射程外的那幾發一律**貼地**引爆(最高爆點離地 ${worstY.toFixed(1)}m;舊制 8.7~80m)`);
+    // ㋒ 端對端:把客戶端回報的爆點餵進真 BattleSim —— 引爆必有傷害
+    if (fire(R * 1.2).burst) {
+      const r = fire(R * 1.2);
+      const sim = new BattleSim(fakeCfg());
+      purge(sim);
+      const h = sim.addHero('SWARM', 'p_lob', lobId);
+      h.aiming = true; h.x = 0; h.z = 0; h.y = 0;
+      sim.t = 1000;
+      const t = sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+        x: r.burst.x, z: -0, y: 0, hp: 9000, maxHp: 9000, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+      sim.heroBurst('p_lob', r.burst.x, r.burst.z, r.burst.y, r.burst.lev);
+      ok(t.hp < t.maxHp,
+        `端對端:客戶端回報的爆點 MUST 真的掉血(落點 ${r.burst.x.toFixed(1)}m / 離地 ${r.burst.y}m → 掉 ${(t.maxHp - t.hp).toFixed(0)})`);
+      // 對照組:同一發若照舊制在射程球面的**半空中**引爆,同一個目標一滴血都不會掉
+      const t2 = sim._add({ kind: 'robot', side: 'STEEL', hero: true, dead: false,
+        x: r.burst.x, z: -0, y: 0, hp: 9000, maxHp: 9000, armor: 0, sp: 0, maxSp: 0, lev: 0, buffs: {}, mods: [] });
+      sim.heroBurst('p_lob', r.burst.x, r.burst.z, def.r * BLAST.EDGE + 2, 0);
+      ok(t2.hp === t2.maxHp,
+        `對照:同一個落點改在 ${(def.r * BLAST.EDGE + 2).toFixed(1)}m 高空引爆 → 地面目標零傷害(這就是舊制的症狀)`);
+    } else {
+      ok(false, '端對端前置:射程外的那一發 MUST 回報得出爆點(拿不到 = 上面 ㋑ 已經紅了)');
+    }
+    // ㋓ 對空彈射打空:彈體續飛到撞上地面為止,而且**不畫爆炸**(出球面 = 已解除武裝)
+    {
+      const heli = { kind: 'heli', dimTop: 4, dimH: 4, dead: false, mesh: { visible: true, position: new V3(100, 45, 0) } };
+      const r = fire(100, heli);
+      ok(!r.burst, '對空彈射打空:彈頭飛出射程球面 ⇒ 啞彈(MUST NOT 在半空中畫一朵沒有傷害的爆炸)');
+    }
+  }
+
+  // ---- ⑤ 雷射導引吃同一條規則(2026-08-02 使用者定案;2026-08-15 收尾改制)----
+  // 「中途碰撞就爆炸,因為目標移動而沒碰撞的話會繼續飛」—— 舊制的下半句是「直到超出射程就
+  // 原地爆炸」,2026-08-15 使用者改成「直到碰撞後爆炸」:出球面只解除武裝(見 ④-b)。
+  // 導引失效(導引點出球面)這一條**沒有變**:MUST 只是「不再修正航向」,MUST NOT 讓彈體提早消失。
   {
     const ub = methodSrc('_updateBullets', G);
     const guideBlock = /} else if \(armed && b\.guide[\s\S]*?\n      } else \{/.exec(ub)?.[0] || '';
@@ -1431,7 +1563,7 @@ sec('Ⅺ 榴彈:準星是唯一目標來源 + 對地 45° 拋投 + 射程量直�
     ok(/gp\.distanceTo\(b\.origin\) > b\.max/.test(guideBlock),
       '雷射導引的失效判據 = 導引點出了同一顆球(MUST NOT 另量航跡長)');
     ok(/b\.guide = false;/.test(guideBlock) && !/splice|_dropBullet|done = true/.test(guideBlock),
-      '導引失效只關掉導引(彈體照飛到球面才爆 —— MUST NOT 在這裡把彈體收掉)');
+      '導引失效只關掉導引(彈體照飛下去,碰撞才是引爆 —— MUST NOT 在這裡把彈體收掉)');
     ok(/b\.vel\.y -= BALLISTIC\.G \* dt;/.test(guideBlock),
       '導引失效後改吃重力直飛(與 A7「失鎖後直線飛行」同一條)');
     {
