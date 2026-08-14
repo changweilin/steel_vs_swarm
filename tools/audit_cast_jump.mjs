@@ -8,10 +8,12 @@
 // ⑤ 靜止後包圍盒高度回歸基線 ±20%(aerial 免驗)
 import { chromium } from 'file:///C:/Users/user/Documents/app/mapping_elf/node_modules/playwright/index.mjs';
 
+// 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
+// 在那裡驗到的是別份程式碼而且不會報錯。
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
-await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
+await page.goto((process.env.SVS_URL || 'http://localhost:8620'), { waitUntil: 'networkidle' });
 
 const report = await page.evaluate(async () => {
   const THREE = await import('three');

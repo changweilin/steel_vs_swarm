@@ -248,16 +248,19 @@ export default {
     const rackAt = (parent, x, y, z, hot) => {
       const rk = new THREE.Group();
       rk.position.set(x, y, z);
-      rk.rotation.x = -0.35;                                // 管口(−z 面)朝後上仰(art 發射角)
+      rk.rotation.x = -0.35;                                // 管口(+z 面)朝**前**上仰
+      // ⚠ 2026-08-14:管口原本開在 −z(朝機尾)—— art 的發射角是往後上,但那讓重武器的
+      //   曳光起點在機體後方、朝反方向飛(audit_muzzle ① dot(+z) = −0.94)。管口整組翻到 +z,
+      //   上仰角不變 ⇒ 讀起來仍是 MLRS 的仰射姿,只是朝著敵人那一側。
       parent.add(rk);
       tboxF(rk, { w0: 0.7, d0: 1.15, w1: 0.64, d1: 1.05, h: 0.5 }, 0, 0.25, 0, PAL.lite, { metalness: 0.5 });
-      bxF(rk, 0.66, 0.46, 0.06, 0, 0.25, -0.58, COAL, { metalness: 0.7 });
+      bxF(rk, 0.66, 0.46, 0.06, 0, 0.25, 0.58, COAL, { metalness: 0.7 });
       for (let i = 0; i < 6; i++) {
-        const cell = cylF(rk, 0.095, 0.095, 0.14, 10, (i % 3 - 1) * 0.21, 0.14 + Math.floor(i / 3) * 0.23, -0.62, INK, { metalness: 0.8 });
+        const cell = cylF(rk, 0.095, 0.095, 0.14, 10, (i % 3 - 1) * 0.21, 0.14 + Math.floor(i / 3) * 0.23, 0.62, INK, { metalness: 0.8 });
         cell.rotation.x = Math.PI / 2;
       }
       for (const dz of [-1, 1]) bxF(rk, 0.56, 0.14, 0.16, 0, -0.02, dz * 0.42, IRON, { metalness: 0.75 });
-      const mz = cylF(rk, 0.105, 0.105, 0.05, 10, 0, 0.37, -0.66, accent, { emissive: accent, emissiveIntensity: hot ? 1.4 : 0.7 });
+      const mz = cylF(rk, 0.105, 0.105, 0.05, 10, 0, 0.37, 0.66, accent, { emissive: accent, emissiveIntensity: hot ? 1.4 : 0.7 });
       mz.rotation.x = Math.PI / 2;
       return { rk, mz };
     };
@@ -302,7 +305,7 @@ export default {
       aimPose: null,
       wpn: {
         light: { nodes: [pod, ...bs, lMuz], ref: F.chest, muz: lMuz, fwd: 'z' },
-        heavy: { nodes: [rk1.rk, rk2.rk], ref: rk1.rk, muz: rk1.mz, fwd: '-z' },
+        heavy: { nodes: [rk1.rk, rk2.rk], ref: rk1.rk, muz: rk1.mz, fwd: 'z' },
       },
     };
   },

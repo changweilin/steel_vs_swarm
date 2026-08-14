@@ -113,19 +113,26 @@ export class CharPreview {
     this.height = heroTargetH(kind, id);
     this.holder.add(group);
 
-    // 變形者:抓 rig(kind==='morph' 才有 pose);兩型態剪影差很大,取景要涵蓋較大者
-    const rig = group.userData.rig;
-    this.morphRig = rig?.kind === 'morph' ? rig : null;
+    // 變形者:2026-08-14 新版建模是**兩棵樹**(地面型 + 飛行型),切換與收摺演出住
+    // locomotion.js 的 `morphSwap`,把手掛在 `userData.morph`。
+    // ⚠ 舊制的判準是 `rig.kind === 'morph'` + `rig.pose(m)` —— 那兩樣在新制都不存在了,
+    //   照抄會讓 `morphRig` 恆為 null:變形鈕靜靜失效、取景也只框得住地面型那一棵。
+    this.morphRig = group.userData.morph || null;
     this.morphM = 0;
     this.morphTarget = 0;
 
-    // 取景一律用包圍球:無人機「寬 >> 高」,只按身高擺鏡頭會讓旋翼滿出畫面
-    if (this.morphRig) this.morphRig.pose(0);
-    let box = this._measure();
+    // 取景一律用包圍球:無人機「寬 >> 高」,只按身高擺鏡頭會讓旋翼滿出畫面。
+    // 變形者兩型態剪影差很大 ⇒ 兩棵樹都要量(飛行型平常是隱藏的,量之前先讓它可見)
+    let box;
     if (this.morphRig) {
-      this.morphRig.pose(1);
+      const M = this.morphRig, gv = M.gg.visible, av = M.ag.visible;
+      M.gg.visible = true; M.ag.visible = false;
+      box = this._measure();
+      M.gg.visible = false; M.ag.visible = true;
       box = box.union(this._measure());
-      this.morphRig.pose(0);   // 回到地面型待命
+      M.gg.visible = gv; M.ag.visible = av;   // 回到地面型待命
+    } else {
+      box = this._measure();
     }
     this.size = box.getSize(new THREE.Vector3());
     this.targetY = box.getCenter(new THREE.Vector3()).y;
@@ -652,7 +659,7 @@ export class CharPreview {
     stepCombatFx(this._ent, now, dt);
     stepLocomotion(this._ent, dt, now, 0, -this.speed * dt, 0);
     if (this.morphRig) {
-      this.morphM = this._ent.loco?.morph ?? 0;
+      this.morphM = this.morphRig.m ?? 0;   // morphSwap 每幀寫回這一格(不再是 loco.morph)
       // 飛行型離地懸停(不與招式浮空衝突:招式時 holder.y 由 _stepAnim 主導)
       if (!this.anim) {
         this.holder.position.y = this.morphM * this.fitR * (0.22 + Math.sin(now * 2.4) * 0.04);

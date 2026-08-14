@@ -19,7 +19,7 @@
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ROOT } from '../audit_src.mjs';
-import { rosterEntries } from './roster.js';
+import { rosterEntries } from '../../public/js/forge/roster.js';
 // 帳本的形狀與判決語意只有一份(refstore.mjs);查詢詞的推導也只有一份(fetch_protorefs
 // 的 `queryFor`)—— 看板要顯示「這一層現在是用什麼關鍵詞找的」,MUST 到那裡取,
 // MUST NOT 自己再翻一次代號表(翻出來的與採集端下一輪真的用的會是兩個東西)。

@@ -3,7 +3,7 @@
 // 2D 定案圖:public/assets/cyberpunk_art/mechs/s12_static.png(/ _moving / _heavy)
 //
 // ── 2026-08-13 使用者定案:「**放棄新版建模,採用舊版建模直接補強細節**」──────────────
-// 「舊版」= 遊戲本體 public/js/models.js buildFixedWing() 的 `W === 'canard'` 分支
+// 「舊版」= 退役的 tools/humanoid_forge/legacy/legacy_models.js buildFixedWing() 的 `W === 'canard'` 分支
 // (:922–:974)加上它前面的共用機身區塊(:787–:806)。使用者判定舊版比原本這一檔的
 // 「大楔盒 + 兩片薄翼 + 一面大圓盤」讀起來好 —— 病因是**細節密度**:舊版那一支上有
 // 二十幾個機能零件(進氣道/摺疊鉸線/電戰吊艙/頰板/LERX/刀天線/方向舵/花瓣裙),

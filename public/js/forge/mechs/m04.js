@@ -229,7 +229,7 @@ export default {
     const { accent, PAL, K, dark } = c;
     const t = F.tilt;
     // 羽毛飛彈 ×4(細長;2026-08-13 使用者要的位置 = **肩上**貼身短掛軌,不用粗掛梁 —— 匿蹤)
-    const muzzes = [];
+    const muzzes = [], misN = [];   // misN = 羽毛飛彈那一組節點(rig.wpn.heavy 的 nodes)
     for (let i = 0; i < MISSILES; i++) {
       const sx = i < MISSILES / 2 ? -1 : 1;
       const off = 0.30 + (i % 2) * 0.17;
@@ -245,6 +245,7 @@ export default {
         { emissive: accent, emissiveIntensity: 1.3 });
       mz.rotation.x = Math.PI / 2;
       muzzes.push(mz);
+      misN.push(m, mz);
     }
     // 頦下雙管(輕武器;2D 圖上鉤喙底下並排兩根長管)
     const pods = [-1, 1].map((sx) =>
@@ -255,7 +256,9 @@ export default {
       lightGlowM: pods.map((p) => p.muz), heavyGlowM: muzzes,
       weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.05 },
       wpn: { light: { nodes: pods.map((p) => p.g), ref: lp.g, muz: lp.muz, fwd: 'z' },
-        heavy: { nodes: pods.map((p) => p.g), ref: lp.g, muz: muzzes[3], fwd: 'z' } },
+        // ⚠ 重武器是**羽毛飛彈**不是頦下雙管:ref 掛在下巴那具莢的話,肩上的彈體反而落在
+        //   ref 的後方(audit_muzzle ④ 投影 −0.39)。散件武器的 ref MUST 取共同軀幹節點(tilt)。
+        heavy: { nodes: misN, ref: t, muz: muzzes[3], fwd: 'z' } },
     };
   },
 };

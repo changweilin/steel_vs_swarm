@@ -253,12 +253,22 @@ console.log('\nⅣ 描邊寬度');
   ok(Math.abs(screenNdc(0.1, 795, 5, PROJ['一般 fov 68°']) - 0.1 * PROJ['一般 fov 68°'] / 5) < 1e-12,
     '近距離世界寬勝出 ⇒ 逐位元同舊制');
   ok(/shell\.bind\(o\.skeleton, o\.bindMatrix\)/.test(O), 'SkinnedMesh 的 bind 分支仍在(描邊跟著動畫走)');
-  ok(/o\.userData\.outlineGeo \|\| o\.geometry/.test(O), '硬邊幾何的平滑法線副本分支仍在(否則外殼會裂縫)');
+  // 2026-08-14:副本的取法多了兩道 —— ①MUST 檢查是不是真的 BufferGeometry、②拿不到就退到
+  //   `geometry.userData`(`Object3D.copy` 用 JSON 複製 userData ⇒ `mesh.clone()` 之後那一格
+  //   會變成長得像幾何的普通物件,`new THREE.Mesh(它)` 在 three 的建構子裡當場 TypeError)。
+  ok(/o\.userData\.outlineGeo/.test(O) && /o\.geometry\.userData\?\.outlineGeo/.test(O)
+    && /isBufferGeometry/.test(O), '硬邊幾何的平滑法線副本分支仍在(否則外殼會裂縫)');
   // 呼叫端寬度不得被順手改掉(單位沒變,改了就是憑感覺調)
   const ws = [...code(readSrc('public', 'js', 'models.js')).matchAll(/outlinify\([^,)]+, ([\d.]+)\)/g)].map((m) => m[1]);
   ok(ws.every((w) => w === '0.1'), `models.js 的固定寬呼叫端維持 0.1(實測 ${ws.join(',')})`);
-  ok(/const outlineW = \(target\) => Math\.min\(0\.45, Math\.max\(0\.05, target \* 0\.016\)\);/
-    .test(code(readSrc('public', 'js', 'models.js'))), 'outlineW 推導式不變');
+  // 2026-08-14 新版建模整合:`outlineW` 與其它幾何積木一起收進 `geo3d.js`(全專案唯一縫;
+  // 機體鍛造台原本抄了一份 `outlineWF`)。推導式本身一格未動 —— 只是換了家。
+  const G3 = code(readSrc('public', 'js', 'geo3d.js'));
+  ok(/export const outlineW = \(target\) => Math\.min\(0\.45, Math\.max\(0\.05, target \* 0\.016\)\);/.test(G3),
+    'outlineW 推導式不變');
+  ok(!/const outlineW\s*=/.test(code(readSrc('public', 'js', 'models.js')))
+    && !/const outlineWF\s*=\s*\(target\)/.test(code(readSrc('public', 'js', 'forge', 'geo.js'))),
+    'outlineW 只有一份實作(models.js / forge/geo.js 都不得再自己寫一個)');
 }
 
 console.log('\nⅤ 後製管線的接線(細節在 audit_gpu_lifecycle ⑦)');

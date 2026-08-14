@@ -1140,8 +1140,16 @@ export function outlinify(root, width = 0.08) {
       shell.bind(o.skeleton, o.bindMatrix);   // 共用骨骼:描邊跟著動畫走
     } else {
       // 鑿刻岩等 per-face 硬邊法線幾何:外殼沿面法線外推會裂縫,
-      // 改用建構時附帶的平滑法線副本(userData.outlineGeo)
-      shell = new THREE.Mesh(o.userData.outlineGeo || o.geometry, outlineMaterial(w, invS));
+      // 改用建構時附帶的平滑法線副本(userData.outlineGeo)。
+      // ⚠ 2026-08-14:副本要**檢查是不是真的幾何**,而且拿不到就退到 `geometry.userData` ——
+      //   `Object3D.copy` 是拿 `JSON.parse(JSON.stringify(userData))` 複製的,
+      //   `mesh.clone()` 之後那一格會變成一個**長得像幾何的普通物件**(FPV 座艙複製第三人稱
+      //   武裝子樹就會踩到):`new THREE.Mesh(它)` 在 three 的建構子裡當場 TypeError,
+      //   而整個座艙因此建不出來。幾何本身是共用的 ⇒ `geometry.userData` 那一份仍然是真品。
+      const ug = o.userData.outlineGeo, gg = o.geometry.userData?.outlineGeo;
+      shell = new THREE.Mesh(
+        (ug?.isBufferGeometry && ug) || (gg?.isBufferGeometry && gg) || o.geometry,
+        outlineMaterial(w, invS));
     }
     shell.userData.isOutline = true;
     shell.frustumCulled = false;

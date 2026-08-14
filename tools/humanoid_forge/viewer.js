@@ -23,8 +23,12 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { stepLocomotion, stepCombatFx } from '/public/js/locomotion.js';
 import { updateCelLight, disposeTree } from '/public/js/toon.js';
-import { SPECS, forgeHumanoidMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from './forge.js';
-import { CATS, catOf, rosterByCat, splitKey, FORM_LABEL } from './roster.js';
+import { SPECS, forgeMech, conversionDoc, resolveProp, mergeSpec, HUMANOID } from '../../public/js/forge/forge.js';
+import { CATS, catOf, rosterByCat, splitKey, FORM_LABEL } from '../../public/js/forge/roster.js';
+import { dollFinish } from './dollfinish.js';
+// 舊版建模對照(2026-08-14 退役,只留在本台):七支舊 hero 建構器整組住 legacy/,
+// 遊戲一行都不 import 它 —— 這裡是它唯一的服役地點。
+import { buildLegacyUnit, legacyKindOf } from './legacy/legacy_models.js';
 import { makeDollEditor } from './dolledit.js';
 import {
   fetchArt, fetchRefs, dropRefsCache, artStripHTML, refStripHTML, bindRefStrip,
@@ -97,6 +101,9 @@ let draftDoll = null;               // 紙娃娃草稿(尚未存檔的那一份;
 let reframeNext = false;            // 切武器頁後的第一幀要重取景(姿勢落定才量得準)
 let editor = null;
 let firing = false, nextShot = 0;
+// 舊版對照模式(2026-08-14):開著時台上是**退役的那一版**,新版的紙娃娃編輯與
+// 武器子集檢視一律停用 —— 舊建模沒有 doll 索引,也沒有 rig.wpn 的同源登記。
+let legacy = false;
 let heavyAt = -1;
 let simT = 0;
 const clock = new THREE.Clock();
@@ -117,11 +124,22 @@ function buildUnit() {
     scene.remove(unit.group);
     disposeTree(unit.group);   // A25:換機體釋放 GPU 資源
   }
-  const merged = mergeSpec(spec, OVR[spec.id]);
-  if (draftDoll) merged.doll = draftDoll;
-  unit = forgeHumanoidMech(merged);
+  if (legacy) {
+    // 舊版對照:一台機體只有一份舊建模(舊制的變形者是單樹雙姿,沒有「型態」這個維度)
+    // ⇒ 變形者兩格都拿同一台;取景高沿用本台的建模基準高,兩版並排比例才可比。
+    const lu = buildLegacyUnit(spec.ch, { height: spec.height });
+    const joints = new THREE.Group();
+    joints.visible = false;
+    unit = lu ? { group: lu.group, rig: lu.rig, joints, spin: lu.spin || [] }
+      : { group: new THREE.Group(), rig: null, joints, spin: [] };
+    unit.group.add(joints);
+  } else {
+    const merged = mergeSpec(spec, OVR[spec.id]);
+    if (draftDoll) merged.doll = draftDoll;
+    unit = forgeMech(merged, { finish: dollFinish });
+  }
   scene.add(unit.group);
-  unit.joints.visible = $('btnJoints').classList.contains('on');
+  unit.joints.visible = !legacy && $('btnJoints').classList.contains('on');
   ent = { id: spec.id, mesh: unit.group, heroY: 0 };   // loco 狀態綁 mesh,重鍛即重建
 }
 
@@ -338,9 +356,14 @@ function renderPanel() {
       return `<tr class="${ovr ? 'ovr' : ''}"><td>${k}</td><td>${p[k]}</td><td>${HUMANOID[k].vrm}</td></tr>`;
     }).join('');
   const rig = unit.rig;
-  // rig 契約檢查依鷹架分流:quad 鏡射 models.js buildBeastMech、air 鏡射 buildDrone 家族、
-  // 其餘同 buildRobotMech
-  const chan = (air ? [
+  // 舊版對照模式:rig 契約檢查驗的是**新版鷹架**的契約,拿去驗退役的舊建構器一定對不上
+  // (舊 morph 是單樹 rig.pose、舊 biped 沒有 legChainL/R)—— 那不是「舊版壞了」,是兩份
+  // 契約本來就不同 ⇒ 這一格改印「這台舊版走的是哪一支建構器」。
+  const chan = (legacy ? [
+    [`舊版建構器:${legacyKindOf(spec.ch) || '(無)'}`, !!rig],
+    [`rig.kind:${rig?.kind || '—'}(舊制變形者 = 單樹 rig.pose)`, !!rig?.kind],
+    ['已退役,只在本台對照 —— 遊戲已全面換成新版建模', true],
+  ] : air ? [
     ['tilt(壓坡樞軸)+ tiltY0/bob/top', !!(rig.tilt && rig.tiltY0 != null && rig.top)],
     ['升力系統(旋翼 / 撲翼 / 噴焰)', !!(unit.spin?.length || rig.wings?.length || rig.jets?.length)],
     ['level(定翼巡航不低頭)', rig.level ? true : !rig.level],
@@ -473,7 +496,15 @@ bindToggle('btnSpin', (on) => { controls.autoRotate = on; });
 // 紙娃娃編輯模式的開關 = 右欄的「標記」分頁(setTab),MUST NOT 再有第二顆全域鈕:
 // 兩顆開關管同一個模式,只要有一條路徑忘了同步,面板就會停在「看起來沒在編輯、
 // 但點機體會選到零件」的狀態。
-bindToggle('btnJoints', (on) => { if (unit) unit.joints.visible = on; });
+bindToggle('btnJoints', (on) => { if (unit && !legacy) unit.joints.visible = on; });
+// 舊版對照:新舊兩版在同一個取景、同一條 locomotion 下輪流上台
+bindToggle('btnLegacy', (on) => {
+  legacy = on;
+  if (on) view = 'mech';
+  buildUnit();
+  applyView();
+  renderPanel();
+});
 $('btnSpin').classList.add('on');
 controls.autoRotate = true;
 for (const [id, v] of [['vMech', 'mech'], ['vWpnL', 'light'], ['vWpnH', 'heavy']])

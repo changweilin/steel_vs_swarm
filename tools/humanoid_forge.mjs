@@ -16,7 +16,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, sep } from 'node:path';
 import { ROOT } from './audit_src.mjs';
-import { rosterByCat } from './humanoid_forge/roster.js';
+import { rosterByCat } from '../public/js/forge/roster.js';
 import { handleForgeApi } from './humanoid_forge/specstore.mjs';
 import { handleBoardApi } from './humanoid_forge/boardapi.mjs';
 

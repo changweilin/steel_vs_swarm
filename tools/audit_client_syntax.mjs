@@ -29,7 +29,7 @@
 //   node tools/audit_client_syntax.mjs --break-glsl   反向驗證:往 vfx.js `SHIELD_VERT` 的第一行
 //                                                     GLSL 註解注入一個反引號 ⇒ 該支 MUST 紅
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, readSrc } from './audit_src.mjs';
@@ -54,14 +54,23 @@ const injectBacktick = (src) => {
 };
 
 // ============ Ⅰ 名冊:由目錄推導,MUST NOT 手寫 ============
-console.log('Ⅰ 名冊(由 public/js 目錄推導)');
-const FILES = readdirSync(join(ROOT, 'public', 'js')).filter((f) => f.endsWith('.js')).sort();
+console.log('Ⅰ 名冊(由 public/js 目錄推導;含子目錄)');
+// 2026-08-14 新版機體建模整合:`public/js/forge/`(鍛造鷹架 + 40 支逐機零件檔)是
+// **子目錄**裡的客戶端模組 —— 只掃頂層的話那 42 支全部落在名冊外,而它們正是這一族
+// 「沒有任何 Node 端消費者、改壞了離線防線一格都不會紅」的檔案。
+const listJs = (rel) => readdirSync(join(ROOT, ...rel), { withFileTypes: true })
+  .flatMap((d) => (d.isDirectory() ? listJs([...rel, d.name])
+    : d.name.endsWith('.js') ? [[...rel.slice(2), d.name].join('/')] : []));
+const FILES = listJs(['public', 'js']).sort();
 {
   ok(FILES.length > 0, `列到 ${FILES.length} 支客戶端模組`);
   // 目錄搬家 / glob 寫錯會讓名冊變成空陣列,而「零支全部通過」在畫面上與全綠一模一樣。
   // 這三支是已知把 GLSL 塞進樣板字串的檔案 —— 它們不在名冊裡就是名冊本身壞了。
   for (const f of ['vfx.js', 'toon.js', 'environment.js'])
     ok(FILES.includes(f), `帶 GLSL 樣板字串的 ${f} 在名冊內`);
+  // 子目錄真的走到了(遞迴寫壞 = 那 42 支靜默消失,而總數看起來還是「很多支」)
+  ok(FILES.includes('forge/forge.js') && FILES.includes('forge/mechs/t01.js'),
+    '子目錄(forge/ 與 forge/mechs/)在名冊內');
 }
 
 // ============ Ⅱ 逐支 `node --check` ============
@@ -69,9 +78,9 @@ console.log('\nⅡ 逐支解析(node --check;副檔名換成 .mjs 才走 ES modu
 {
   const dir = mkdtempSync(join(tmpdir(), 'svs-syntax-'));
   for (const f of FILES) {
-    let src = readSrc('public', 'js', f);
+    let src = readSrc('public', 'js', ...f.split('/'));
     if (BREAK_GLSL && f === 'vfx.js') src = injectBacktick(src);
-    const tmp = join(dir, f.replace(/\.js$/, '.mjs'));
+    const tmp = join(dir, f.replace(/\.js$/, '.mjs').replace(/\//g, '__'));
     writeFileSync(tmp, src);
     let err = '';
     try { execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' }); }

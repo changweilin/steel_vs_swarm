@@ -1,4 +1,4 @@
-// ============ 多面體零件語彙(dev-only;人形鍛造台共用幾何庫)============
+// ============ 多面體零件語彙(機體建模共用幾何庫)============
 // 2026-08-12 使用者指示:「所有機體不要只使用簡單的立方體,參考各機體的 2D 圖像,針對
 // 身體/四肢/頭部/翅膀/羽毛/尾巴/觸手等不同生物部位,設計各自的多面體或多邊形來組合,
 // 特別是羽毛/尾巴/觸手需採用多零件組合;武器也一樣的邏輯」。
@@ -10,73 +10,22 @@
 //   ① 硬邊多面體(非索引、逐面法線)MUST 附 userData.outlineGeo 焊接平滑副本 ——
 //      toon.js outlinify 的反轉外殼沿法線外推,per-face 法線會把描邊撐裂(toon.js:926)。
 //   ② 零 Math.random(§2.3):羽扇/節鏈的片間差異一律決定性遞變(索引函數)。
-//   ③ 材質一律走 matF → toonMat(A14);本檔只 import three 與 /public/js/toon.js。
+//   ③ 材質一律走 matF → toonMat(A14);本檔只 import three 與 ../geo3d.js。
 import * as THREE from 'three';
-import { toonMat } from '/public/js/toon.js';
+// ---- 基本積木:唯一縫住 `../geo3d.js`(2026-08-14 新版建模整合)----------------
+// 這一段本來是 models.js 內部函式的**鏡射副本**(forge.js 檔頭列的第一筆欠帳)。
+// 新建模進遊戲之後那份副本就是服役中的第二份實作 ⇒ 收成一份。
+// 這裡只做**別名 re-export**:40 支逐機檔的 `matF/bxF/cylF/…` 一行不改。
+import {
+  mat as matF, dim as dimF, outlineW as outlineWF, segLimb as segLimbF,
+  bx as bxF, cyl as cylF, sph as sphF, cone as coneF, torus as torusF, jetFlame as jetF,
+} from '../geo3d.js';
 
-// ---- 材質與常用色(models.js 內部積木的鏡射;正式整合前的已知欠帳,見 forge.js 檔頭)----
-export function matF(color, opts = {}) {
-  const { metalness, roughness, ...rest } = opts;
-  return toonMat(color, { ...rest, celMetal: (metalness ?? 0) >= 0.5 });
-}
-export const dimF = (c, f) => new THREE.Color(c).multiplyScalar(f);
+export { matF, dimF, outlineWF, segLimbF, bxF, cylF, sphF, coneF, torusF, jetF };
+
+// ---- 本語彙自己的常用色 ----
 export const IRON = 0x23262a, GUNMETAL = 0x1a1d20, COAL = 0x14171a, INK = 0x0d0f11;
 export const BONE = 0xd8d4c8, BRASS = 0xe8b33a;
-export const outlineWF = (target) => Math.min(0.45, Math.max(0.05, target * 0.016));
-
-// ---- 基本件(小零件仍可用;大件請優先用下方多面體語彙)----
-export function bxF(parent, w, h, d, x, y, z, color, opts) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matF(color, opts));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
-}
-export function cylF(parent, rt, rb, h, seg, x, y, z, color, opts) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), matF(color, opts));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
-}
-export function sphF(parent, r, x, y, z, color, opts) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 9), matF(color, opts));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
-}
-export function coneF(parent, r, h, seg, x, y, z, color, opts) {
-  const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, seg), matF(color, opts));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
-}
-export function torusF(parent, R, r, x, y, z, color, opts, arc = Math.PI * 2) {
-  const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 6, 12, arc), matF(color, opts));
-  m.position.set(x, y, z);
-  parent.add(m);
-  return m;
-}
-
-/** 分節肢:鏡射 models.js segLimb(:5076)。符號慣例同源 —— 肢體幾何朝 −y,
- *  +x 旋轉 = 末端後移 ⇒ 膝後折為正、肘前折為負、踝取反號。 */
-export function segLimbF(parent, pos, segs, chain) {
-  const root = new THREE.Group();
-  root.position.set(pos[0], pos[1], pos[2]);
-  parent.add(root);
-  let cur = root;
-  segs.forEach((s, i) => {
-    if (i > 0) {
-      const j = new THREE.Group();
-      const pv = s.piv;
-      j.position.set(pv ? pv[0] : 0, pv ? pv[1] : -segs[i - 1].len, pv ? pv[2] : 0);
-      j.rotation.x = s.base || 0;
-      cur.add(j);
-      chain.push({ g: j, base: s.base || 0, k: s.k || 0, d: s.d || 0 });
-      cur = j;
-    }
-    s.draw(cur);
-  });
-  return root;
-}
 
 // ---- 關節機構語彙(逐機互異的「字母」;自 forge.js 移入)---------------------
 /** t01/t11/t06:外露液壓缸(單端錨、斜置、不跨樞軸)+ 缸頭關節環;core 給亮桿芯 */
@@ -425,29 +374,9 @@ export function gunPodF(parent, spec, x, y, z, color, opts) {
   return { g, muz };
 }
 
-/**
- * 噴射尾焰 —— 逐字鏡射 models.js jetFlame(:175)的**回傳契約** `{ g, m1, m2 }`,
- * locomotion.js stepAerial 直接吃(推力 ∝ 速度:焰長/亮度/抖動)。
- * 錐尖朝局部 −y;呼叫端轉 rotation.x = π/2 讓噴流指向機尾(−z)。
- */
-export function jetF(parent, r, len, x, y, z, accent) {
-  const g = new THREE.Group();
-  g.position.set(x, y, z);
-  parent.add(g);
-  const mk = (rr, ll, c, op, ei) => {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(rr, ll, 8),
-      matF(c, { transparent: true, opacity: op, emissive: c, emissiveIntensity: ei }));
-    cone.rotation.x = Math.PI;
-    cone.position.y = -ll / 2;
-    cone.userData.noOutline = true;
-    g.add(cone);
-    return cone;
-  };
-  const outer = mk(r, len, accent, 0.5, 2.2);
-  const inner = mk(r * 0.5, len * 0.62, 0xfff1cf, 0.85, 2.8);
-  g.visible = false;                   // 熄火起步(由 locomotion 點燃)
-  return { g, m1: outer.material, m2: inner.material };
-}
+// 噴射尾焰 `jetF` = `geo3d.jetFlame` 的別名(本檔頂部 re-export):
+// 回傳契約 `{ g, m1, m2 }`,locomotion.js stepAerial 直接吃(推力 ∝ 速度:焰長/亮度/抖動)。
+// 錐尖朝局部 −y;呼叫端轉 rotation.x = π/2 讓噴流指向機尾(−z)。
 
 /**
  * 纜束(外露肌腱/管線,多零件)—— p0 → p1 之間 k 條細管微散開 + 下垂;

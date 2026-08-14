@@ -23,7 +23,7 @@
 import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { rosterEntries } from './humanoid_forge/roster.js';
+import { rosterEntries } from '../public/js/forge/roster.js';
 import { CHARACTERS } from '../public/js/data.js';
 import { searchOpenverse, searchCommons, searchGoogle, sniffImage, licenceOk, UA } from './ai3d/fetch_photos.mjs';
 // 構圖篩選(全身 + 背景乾淨):門檻與量測只有一份,見 screen_protorefs.mjs 檔頭

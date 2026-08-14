@@ -1,4 +1,4 @@
-// ============ 人形特徵 → 機器人零件鍛造(dev-only 原型;不進遊戲)============
+// ============ 機體鍛造(特徵 → 多面體零件樹;遊戲本體與機體台同吃這一份)============
 // 研究來源:AniCompanion(three-vrm)的 VRM 人形角色技術 —— 「任何模型即插即用、動作可
 // 重定向」建立在**所有角色共用同一組標準化人形特徵**(VRM 1.0 必要骨)之上。本原型把同一
 // 思路移植到機體制:HUMANOID 特徵表(拓撲固定、比例逐機可調)+ 逐機「特徵 → 零件」轉換。
@@ -16,41 +16,46 @@
 // 切換管理頁面,飛機/無人機這類有現實機體原型的歸在同一類。」⇒ 名冊的單位從「機體」改成
 // **(機體, 型態)**(變形者的地面型與飛行型是兩個原型、兩張定案圖、兩個管理頁),
 // 分類**推導**自 roster.js(zero 手寫清單),鍛造鷹架因此有三支:
-//   forgeHumanoidMech(biped)/ forgeQuadMech(quad)/ forgeAirMech(air)
-// 航空鷹架的 rig 契約鏡射 models.js buildDrone / buildFixedWing / buildAvianDrone,
+//   forgeMech() 依 D.kind 分流 biped / quad / air(變形者另有 forgeMorphUnit,見下)
+// 航空鷹架的 rig 契約鏡射 legacy_models.js buildDrone / buildFixedWing / buildAvianDrone,
 // 由真品 locomotion.js `stepAerial` 驅動(壓坡/浮沉/撲翼/噴焰/甩尾)。
 //
-// 名冊 = 遊戲真名冊的人形子集(8 台)+ 仿生機甲子集(8 台;2026-08-12 使用者:
-// 「以機體台標注的最愛(★)圖像為 2D 定案圖,設計仿生機型生成 3D 建模」)
-// + 航空子集(20 格 = 12 台無人機/飛機 + 8 個變形者飛行型):
+// 名冊 = 遊戲真名冊 32 台 × 型態 = 40 格(人形 8 / 仿生 12 / 航空 20):
 //   機甲 4:t01 bastion / t02 seraph / t10 aegis / t12 colossus
 //   變形者人形地面型 4(data.js MORPH_HUMANOID):t06 monkey / t11 atlas / m01 vampire / m05 wolf
-//   仿生四足 4(D.kind 'quad';rig 鏡射 models.js buildBeastMech):
+//   仿生四足 4(D.kind 'quad';rig 鏡射 legacy_models.js buildBeastMech):
 //     s06 centaur 半人馬 / s07 cthulhu 頭足類 / t04 hound 獵犬 / m06 stego 劍龍
-//   仿生雙足 4(既有 biped 鷹架 + 獸型旗標,rig 鏡射 models.js buildBipedBeast):
+//   仿生雙足 4(既有 biped 鷹架 + 獸型旗標,rig 鏡射 legacy_models.js buildBipedBeast):
 //     s09 roo 袋鼠 / t03 gorilla 大猩猩 / t05 ostrich 鴕鳥 / m02 trex 暴龍
 // 每台的關節「機構語彙」刻意互異(這正是獨特細節的骨幹):
 //   t01 外露液壓缸+缸頭環 / t02 雙件式肌腱缸 / t10 全包覆+彈匣筒 / t12 疊板+節端軸環 /
 //   t06 裸缸+亮桿芯 / t11 工業液壓+鉚釘 / m01 烤漆蓋板細縫 / m05 圓盤螺栓+外露腱桿。
 //
-// 單一真相縫:出廠規格 = 本檔 MECH_SPECS;使用者調整 = tools/humanoid_forge/specs.json
+// 單一真相縫:出廠規格 = 本檔 MECH_SPECS;機體台的使用者調整 = tools/humanoid_forge/specs.json
 // **覆寫層**(只存差異;機體台 /api/forge 寫、兩座檢視台讀),合併只有 mergeSpec() 一份。
 //
-// 產物仍是本專案 rig 契約的具名 Group 零件樹(kind 'biped'),**刻意不用 SkinnedMesh**
+// 產物是本專案 rig 契約的具名 Group 零件樹,**刻意不用 SkinnedMesh**
 // (docs/ai3d_runbook.md §0 定案)—— 真品 locomotion.js 一行不改直接驅動;
 // 掌行(t06 knuckle)/ 趾行(m05 legBase+關節 base)/ 尾配重(tailSegs)全走既有 rig 旗標。
 //
-// ⚠ 正式整合前的已知欠帳(原型階段刻意容忍,入 public/js 前 MUST 收掉):
-//   - geo.js 的 matF/bxF/cylF/segLimbF/outlineWF 鏡射 models.js 未匯出內部函式
-//     (models.js:5076/:122/:128/:112/:119)—— 正式整合應改 export 共用,MUST NOT 留兩份。
-//   - MOVE_SIG/CAST_SIG 的值抄自 models.js:7544/:7587(未匯出)—— 同上。
-//   - 槍口焰(attachMuzzleFlames)未掛;開火演出以 lightGlow / heavy.glow 閃光代替。
+// ---- 2026-08-14 正式整合(新版建模全面替換舊版)----------------------------------
+// 本檔自 `tools/humanoid_forge/` 搬進 `public/js/forge/`,成為**遊戲本體唯一的英雄機體
+// 建構器**(`models.js makeUnit` 的 hero 分支);機體台從此與遊戲吃同一份零件樹。
+// 整合時收掉的三筆原型期欠帳:
+//   ① geo.js 的 matF/bxF/cylF/segLimbF/outlineWF 鏡射 models.js 內部函式 ⇒ 收進
+//      `public/js/geo3d.js`,兩邊同吃一份(geo.js 只留別名 re-export)。
+//   ② MOVE_SIG/CAST_SIG 抄自 models.js ⇒ 逐機檔的那兩格是**建模台預覽用的預設值**,
+//      戰場一律由 `makeUnit` 以 models.js 的表覆寫(唯一真相仍在 models.js)。
+//   ③ 槍口焰(attachMuzzleFlames)由 `makeUnit` 統一掛(rig.muzzles 已登記)。
+//
+// **紙娃娃覆寫層是機體台自己的東西**:收尾經選用的 `opts.finish` 注入(機體台傳
+// dollapply 的套用器,遊戲不傳)—— 遊戲出貨包因此不帶編輯器那四支模組,而
+// 「兩座看板同形」的保證仍是同一支收尾。
 
 import * as THREE from 'three';
-import { outlinify } from '/public/js/toon.js';
-import { heroPalette, paintUnit } from '/public/js/paint.js';
+import { outlinify } from '../toon.js';
+import { heroPalette, paintUnit } from '../paint.js';
 import { segLimbF, outlineWF } from './geo.js';
-import { applyDoll, outlineAdds } from './dollapply.js';
 import { MECH_DETAIL } from './mechs/index.js';
 import { rosterEntries } from './roster.js';
 
@@ -114,7 +119,7 @@ export const MECH_SPECS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map(
     // 塗裝三格(主色/陣營/色版階)MUST 到原處取 —— 機體檔 MUST NOT 宣告 `hue`(roster.paintOf)
     label: d.label, hue: e.paint.hue, side: e.paint.side, tier: e.paint.tier, paintVis: e.paint.vis,
     kind: d.kind || 'biped',
-    height: d.height ?? 6.0,           // 展示台統一取景高;正式整合走 heroTargetH
+    height: d.height ?? 6.0,           // 建模基準高(機體台取景高);戰場另由 makeUnit 的 fitToHeight 縮到 heroTargetH
     prop: d.prop || {}, gait: d.gait || {}, air: d.air || null,
     knobs: { barrelF: 1, accentF: 1 },
     moveSig: d.moveSig, castSig: d.castSig,
@@ -162,15 +167,15 @@ function finishRig(g, rig, W, K, H, D, ctx, F, spec) {
 }
 
 /**
- * 收尾:套上使用者的**紙娃娃覆寫層**(拖曳調整的骨架角度/長度/位置、零件變換/形狀/邊緣/
- * 配色、黏貼件、塗鴉/圖騰/烙印)。三支鷹架的最後一行都經這裡 ⇒ 兩座看板同形,
- * 且編輯器拿到的索引(unit.doll)與檢視台看到的是**同一份**。
- * 覆寫層缺席 = 只建索引不改任何值(逐位元同出廠)。
+ * 收尾:把單位交給呼叫端注入的**紙娃娃覆寫層**(機體台的拖曳調整:骨架角度/長度/位置、
+ * 零件變換/形狀/邊緣/配色、黏貼件、塗鴉/圖騰/烙印)。三支鷹架的最後一行都經這裡
+ * ⇒ 兩座看板同形,且編輯器拿到的索引(unit.doll)與檢視台看到的是**同一份**。
+ *
+ * `opts.finish` 缺席(= 遊戲本體)⇒ 逐位元同出廠規格,而編輯器那四支模組
+ * (doll/shapes/mark/dollapply)不進出貨包 —— 它們是機體台的工具,不是機體的一部分。
  */
-function finishUnit(unit, spec, H) {
-  const ix = applyDoll(unit, spec.doll);
-  outlineAdds(ix, outlineWF(H));       // 黏貼件是 outlinify 之後才掛的,補描它那一棵
-  return unit;
+function finishUnit(unit, spec, H, opts) {
+  return opts?.finish ? (opts.finish(unit, spec, outlineWF(H)) || unit) : unit;
 }
 
 /**
@@ -180,11 +185,11 @@ function finishUnit(unit, spec, H) {
  * 獸型雙足(roo/gorilla/ostrich/trex)沿用本鷹架,獸型旗標(hop/bound/knuckle/grounded/
  * tuckArms/tinyArms/leanF/tailUp/tailSegs)由 D.extra 直接掛回 rig(t06 先例)。
  */
-export function forgeHumanoidMech(spec) {
+export function forgeMech(spec, opts = {}) {
   const D = MECH_DETAIL[spec.id];
   if (!D) throw new Error(`未知機型:${spec.id}`);
-  if (D.kind === 'quad') return forgeQuadMech(spec, D);
-  if (D.kind === 'air') return forgeAirMech(spec, D);
+  if (D.kind === 'quad') return forgeQuadMech(spec, D, opts);
+  if (D.kind === 'air') return forgeAirMech(spec, D, opts);
   const P = resolveProp(spec);
   const H = spec.height;
   const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
@@ -291,11 +296,11 @@ export function forgeHumanoidMech(spec) {
     s: 1,
   };
   finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
-  return finishUnit({ group: g, rig, joints }, spec, H);
+  return finishUnit({ group: g, rig, joints }, spec, H, opts);
 }
 
 /**
- * 鍛造一台四足獸型機體(D.kind === 'quad')—— rig 契約鏡射 models.js buildBeastMech(:2585),
+ * 鍛造一台四足獸型機體(D.kind === 'quad')—— rig 契約鏡射 legacy_models.js buildBeastMech,
  * 真品 locomotion.js stepQuad 一行不改直接驅動。逐機幾何仍全住 mechs/<id>.js:
  *   D.frame = { hipY, chest:[x,y,z], neck:[x,y,z], head:[x,y,z], legX, fz, hz,
  *               tailY, tailZ, tail2Z }(公尺;chest 掛 spine、neck 掛 chest、head 掛 neck)
@@ -309,7 +314,7 @@ export function forgeHumanoidMech(spec) {
  *   D.tail(c, tail, tail2) → tailSegs?           尾(回傳多節鏈則整條進 whipTail;省略 = [tail, tail2])
  *   D.mount(c, F) / D.extra(c, F, rig)           武裝/加掛(契約同人形;克蘇魯 rig.tents 在 extra 掛)
  */
-function forgeQuadMech(spec, D) {
+function forgeQuadMech(spec, D, opts = {}) {
   const FR = D.frame, GA = D.gait;
   const H = spec.height;
   const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
@@ -399,12 +404,12 @@ function forgeQuadMech(spec, D) {
     s: 1,
   };
   finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
-  return finishUnit({ group: g, rig, joints }, spec, H);
+  return finishUnit({ group: g, rig, joints }, spec, H, opts);
 }
 
 /**
- * 鍛造一台航空機體(D.kind === 'air')—— rig 契約鏡射 models.js buildDrone(:372)/
- * buildFixedWing(:749)/buildAvianDrone(:1161),真品 locomotion.js `stepAerial` 一行不改驅動。
+ * 鍛造一台航空機體(D.kind === 'air')—— rig 契約鏡射 legacy_models.js buildDrone/
+ * buildFixedWing/buildAvianDrone,真品 locomotion.js `stepAerial` 一行不改驅動。
  * 2026-08-12 使用者第四輪:「飛機/無人機這類有現實機體原型的歸在同一類」—— 12 台純無人機
  * 與 8 個變形者飛行型共用本鷹架與同一個管理頁。
  *
@@ -426,7 +431,7 @@ function forgeQuadMech(spec, D) {
  * 戰場走 game.js 的 spinners 吃 `g.userData.spin`,展示台由 viewer 推進同一份名冊 ——
  * 兩端同一份清單,MUST NOT 在展示台另抓一次場景裡的槳葉。
  */
-function forgeAirMech(spec, D) {
+function forgeAirMech(spec, D, opts = {}) {
   const A = D.air || {};
   const H = spec.height;
   const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
@@ -472,5 +477,42 @@ function forgeAirMech(spec, D) {
   // 自轉名冊(戰場 game.js spinners / 展示台 viewer 同吃這一份)
   g.userData.spin = (L.spin || []).slice();
   finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
-  return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H);
+  return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H, opts);
+}
+
+/**
+ * 鍛造一台**變形者**(地面型 + 飛行型兩棵樹)—— 2026-08-14 新版建模整合。
+ *
+ * 舊制 `legacy_models.js buildMorphMech` 是**一棵樹**:同一批零件掛在 `rig.pose(m)` 的分段姿勢
+ * 插值上,`locomotion.stepMorph` 整支吃那個契約。新版建模的兩個型態是**兩個原型、兩張
+ * 2D 定案圖、兩支逐機檔**(`s03.js` / `s03_flight.js`),彼此沒有可以互相插值的對應零件
+ * —— 硬要塞回單樹契約只能二選一,而那正是使用者這一輪要換掉的東西。
+ *
+ * 兩棵樹並存的三條紀律:
+ *   ① **兩態同尺度**:飛行檔的 `height` 一律 === 地面檔的(mechs/*_flight.js 直接引用,
+ *      不是各寫一個數字)⇒ 兩棵樹在同一個公尺框裡,`fitToHeight` 量地面型那一棵就夠。
+ *   ② **rig 不合併,用換的**:`mesh.userData.rig` 每幀由 `locomotion.stepLocomotion` 開頭的
+ *      型態切換改指到當下那一棵(地面 'biped'/'quad'、飛行 'aerial')⇒ 既有四支步態驅動器、
+ *      `stepCombatFx`、`stepCastPose`、`stepJumpPose` **一行不改**就吃得到正確的骨架。
+ *      合併成一個代理 rig 的話,每一支消費端都要多一條「現在算哪一邊」的分支。
+ *   ③ **變形演出住 locomotion**(`morphSwap`):收摺 → 換樹 → 展開,是逐幀的事,
+ *      建構期只負責把兩棵樹與切換所需的把手交出去。
+ *
+ * @returns { group, rig(地面), rigAir, fit(fitToHeight MUST 量這一棵), joints, spin }
+ */
+export function forgeMorphUnit(specGround, specAir, opts = {}) {
+  const G = forgeMech(specGround, opts);
+  const A = forgeMech(specAir, opts);
+  const g = new THREE.Group();
+  g.add(G.group);
+  g.add(A.group);
+  A.group.visible = false;             // 出廠 = 地面型(伺服器的 heroY 起始也在地面)
+  // 變形把手:locomotion 開頭的 `morphSwap` 認這一格(缺席 = 這台不是變形者)
+  g.userData.morph = { ground: G.rig, air: A.rig, gg: G.group, ag: A.group, m: 0, air0: false, k: 0 };
+  g.userData.rig = G.rig;
+  // 自轉名冊兩態合併(隱藏那一棵的槳葉照轉也看不見;分兩份 = 換型態要重掛一次 spinners)
+  g.userData.spin = [...(G.group.userData.spin || []), ...(A.group.userData.spin || [])];
+  const joints = new THREE.Group();
+  joints.visible = false;
+  return { group: g, rig: G.rig, rigAir: A.rig, fit: G.group, joints, spin: g.userData.spin };
 }

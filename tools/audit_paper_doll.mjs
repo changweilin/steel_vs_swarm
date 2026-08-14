@@ -56,7 +56,10 @@ const shapesSrc = readSrc('tools', 'humanoid_forge', 'shapes.js');
 const markSrc = readSrc('tools', 'humanoid_forge', 'mark.js');
 const applySrc = readSrc('tools', 'humanoid_forge', 'dollapply.js');
 const editSrc = readSrc('tools', 'humanoid_forge', 'dolledit.js');
-const forgeSrc = readSrc('tools', 'humanoid_forge', 'forge.js');
+// 2026-08-14 新版建模整合:鍛造鷹架搬進 public/js/forge/(遊戲本體的建構器),
+// 編輯器那一層(doll/shapes/mark/dollapply)刻意留在 tools/,收尾改以 dollfinish.js 注入。
+const forgeSrc = readSrc('public', 'js', 'forge', 'forge.js');
+const dfinSrc = readSrc('tools', 'humanoid_forge', 'dollfinish.js');
 const storeSrc = readSrc('tools', 'humanoid_forge', 'specstore.mjs');
 const reviewSrc = readSrc('tools', 'codex_review', 'review.js');
 
@@ -171,7 +174,7 @@ console.log('■ Ⅲ 決定性(§2.3:圖樣/佈局 MUST NOT 用 Math.random)');
   t('貼花種子:換零件/換序就換值', D.markSeed('1.2.3', 1) !== a && D.markSeed('9.9', 0) !== a);
   t('doll.js 零 import(離線稽核吃得到真品)', !/^\s*import\s/m.test(dollSrcRaw));
   t('shapes/mark/dollapply 的幾何積木取自 geo.js/toon.js,MUST NOT 自建第二套硬邊化',
-    /from '\.\/geo\.js'/.test(shapesSrc) && !/function\s+facet\s*\(/.test(shapesSrc));
+    /from '\.\.\/\.\.\/public\/js\/forge\/geo\.js'/.test(shapesSrc) && !/function\s+facet\s*\(/.test(shapesSrc));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -237,11 +240,17 @@ console.log('■ Ⅴ 套用縫(dollapply / forge 收尾:一份實作、順序、
 
   // forge.js:三支鷹架同一個收尾(兩座看板同形的唯一保證)
   let fg = code(forgeSrc);
-  if (brk('seam')) fg = fg.replace('return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H);',
+  if (brk('seam')) fg = fg.replace('return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H, opts);',
     'return { group: g, rig, joints, spin: g.userData.spin };');
   const rets = (fg.match(/return finishUnit\(/g) || []).length;
   t('三支鷹架(biped/quad/air)全部經 finishUnit 收尾', rets === 3, `${rets} 支`);
-  t('收尾 = 套用紙娃娃覆寫 + 補描黏貼件', /applyDoll\(unit, spec\.doll\)/.test(fg) && /outlineAdds\(ix/.test(fg));
+  // 收尾的**內容**搬到 dollfinish.js(看板注入),鷹架只留那個鉤:兩件事都要在
+  t('鷹架把收尾開成選用鉤(遊戲不傳 = 逐位元同出廠)', /opts\?\.finish/.test(fg));
+  t('收尾 = 套用紙娃娃覆寫 + 補描黏貼件',
+    /applyDoll\(unit, spec\.doll\)/.test(code(dfinSrc)) && /outlineAdds\(ix/.test(code(dfinSrc)));
+  t('兩座看板都傳同一支收尾(同形的唯一保證)',
+    /finish: dollFinish/.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js')))
+    && /finish: FORGE\.dollFinish/.test(code(reviewSrc)));
   t('mergeSpec 帶得動 doll 欄(覆寫層 → 鍛造)', /doll: ovr\?\.doll \?\? base\.doll \?\? null/.test(fg));
   t('applyDoll 全專案只有一個實作', (code(applySrc).match(/export function applyDoll/g) || []).length === 1);
 }
@@ -440,7 +449,7 @@ console.log('■ Ⅸ 機體 ⇄ 角色(機體台抬頭的駕駛員關係:每一�
 // (`label`)當機體名 —— 那份註記換陣營/改 `machine` 時不會跟著動,而畫面上只表現成
 // 「名冊鈕與抬頭寫著兩個不一樣的機體名」,沒有任何錯誤訊息。
 {
-  const { rosterEntries } = await import('./humanoid_forge/roster.js');
+  const { rosterEntries } = await import('../public/js/forge/roster.js');
   const { CHARACTERS } = await import('../public/js/data.js');
   const { mechaCodex, charCodex } = await import('../public/js/codex.js');
   const { LORE } = await import('../public/js/lore.js');
@@ -465,7 +474,7 @@ console.log('■ Ⅸ 機體 ⇄ 角色(機體台抬頭的駕駛員關係:每一�
       return other && JSON.stringify(other.pilot) === JSON.stringify(e.pilot);
     }));
 
-  let rosterSrc = readSrc('tools', 'humanoid_forge', 'roster.js');
+  let rosterSrc = readSrc('public', 'js', 'forge', 'roster.js');
   let viewSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
   if (brk('pilot')) {
     // 壞版 = 退回「看板自己拼一份」:抬頭改印建模註記、名冊格不再帶駕駛員
@@ -493,7 +502,7 @@ console.log('■ Ⅸ 機體 ⇄ 角色(機體台抬頭的駕駛員關係:每一�
     /from '\/public\/js\/portraits\.js'/.test(viewSrc)
     && !/assets\/avatars/.test(code(viewSrc)));
   t('spec 那一層有把駕駛員帶下去(MECH_SPECS 的 pilot 欄)',
-    /pilot: e\.pilot/.test(code(readSrc('tools', 'humanoid_forge', 'forge.js'))));
+    /pilot: e\.pilot/.test(code(forgeSrc)));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

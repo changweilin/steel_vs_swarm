@@ -264,7 +264,9 @@ export default {
       weap: { light: 'R', heavy: 'N' },                                        // 重武器 = 眉心砲(機載)
       hvy: { chest: 0.04, gun: 0.04 },
       aimPose: { rShoulderX: -0.8, rElbowX: -0.35 },                           // 單手托一把,左臂自由
-      wpn: { light: { nodes: [gr], ref: gr, muz: lMuz, fwd: 'y' }, heavy: { nodes: [c.browCannon], ref: c.browCannon, muz: c.browCannon, fwd: 'z' } },
+      // ⚠ 眉心砲是 `cylF` 再 `rotation.x = π/2` ⇒ 砲管軸 = 它自己的**局部 +y**(不是 +z):
+      //   宣告成 'z' 的話「槍尾→槍口」會指向世界 −y(朝地面),而畫面上砲口還是亮在額頭上。
+      wpn: { light: { nodes: [gr], ref: gr, muz: lMuz, fwd: 'y' }, heavy: { nodes: [c.browCannon], ref: c.browCannon, muz: c.browCannon, fwd: 'y' } },
     };
   },
 };
