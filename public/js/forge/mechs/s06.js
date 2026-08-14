@@ -245,7 +245,11 @@ export default {
     head: [0, 0.3, 0],                  // rider 分支不用(head 由 D.rider 回傳)
     tailY: 0.05, tailZ: -1.62, tail2Z: 0.7,
   },
-  gait: { gait: 'trot', gallopType: 'transverse', stride: 2.8, top: 7, bob: 0.09, pitchAmp: 0.08 },
+  // limb:馬 = **蹄行** —— 腕(膝)鎖得比犬更死(lock 0.55:馬的前肢是被動穩定的支柱),
+  // 而遠端球節(fetlock)行程反而最大(reach 1.15,承重時下沉、蹬離時彈回)。
+  // 這一組正是「同樣四足、換一種站姿就換一種讀法」的對照組(對照 t04 的犬)。
+  gait: { gait: 'trot', gallopType: 'transverse', stride: 2.8, top: 7, bob: 0.09, pitchAmp: 0.08,
+    limb: { fore: 'unguligrade', hind: 'unguligrade' } },
   moveSig: { poise: 0.97, idleF: 0.58, idleA: 0.35, launch: 0.48, spool: 0.55, brake: 0.55, settle: 0.70 },
   castSig: { omni: 'stomp', dir: 'jab' },
   doc: [

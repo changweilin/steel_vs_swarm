@@ -86,7 +86,11 @@ export default {
     chest: [0, 0.1, 0.55], neck: [0, 0.26, 0.63], head: [0, 0.20, 0.72],
     tailY: 0.12, tailZ: -1.55, tail2Z: 0.66,
   },
-  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.6, top: 7, bob: 0.1, pitchAmp: 0.1 },
+  // limb:犬 = 趾行,前後都承重 ⇒ 兩條鏈**各自**吃自己的曲線(gaitcurve.js):
+  //   前 肱→橈尺→掌:肘小幅、腕支撐相鎖死(這一台的橈尺骨本來就是「近乎垂直的承重柱」)
+  //   後 股→脛→蹠:膝雙峰、飛節與膝同相 —— 骨架照量到的「兩道折的深 Z」在動起來才讀得出來
+  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.6, top: 7, bob: 0.1, pitchAmp: 0.1,
+    limb: { fore: 'digitigrade', hind: 'digitigrade' } },
   moveSig: { poise: 0.68, idleF: 1.65, idleA: 0.58, launch: 0.92, spool: 0.10, brake: 0.98, settle: 0.45 },
   castSig: { omni: 'roar', dir: 'jab' },
   doc: [

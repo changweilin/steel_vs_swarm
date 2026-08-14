@@ -62,7 +62,11 @@ export default {
     chest: [0, 0.14, 0.60], neck: [0, 0.42, 0.80], head: [0, 0.06, 0.52],
     tailY: 0.06, tailZ: -1.06, tail2Z: 0.9,
   },
-  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.4, top: 10, bob: 0.09, pitchAmp: 0.1 },
+  // limb:**前爪不承重**(抱在胸前的三指抓握爪)⇒ foreRole 'grasp':恆定深屈的預備式 +
+  // 與步頻同調的微幅呼吸,不跟著跑步甩大臂(舊制最刺眼的一條 —— 牠的手根本沒碰到地)。
+  // 後肢是獵足趾行(股 : 脛 : 蹠 : 趾 = 1 : 1.07 : 0.50 : 0.31,踝反折 87°)。
+  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.4, top: 10, bob: 0.09, pitchAmp: 0.1,
+    limb: { foreRole: 'grasp', hind: 'digitigrade', reachF: 1.05 } },
   moveSig: { poise: 0.6, idleF: 1.4, idleA: 0.6, launch: 0.95, spool: 0.1, brake: 0.8, settle: 0.4 },
   castSig: { omni: 'roar', dir: 'kick' },
   doc: [

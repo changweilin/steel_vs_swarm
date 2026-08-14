@@ -178,7 +178,10 @@ export default {
     // ⇒ 尾鰭掛在 spine −3.05、尾柄旋成體收到 −3.15。hipY/legX/fz/hz 是凍結值,未動。
     tailY: 0.18, tailZ: -2.10, tail2Z: 0.95,
   },
-  gait: { gait: 'walk', stride: 3.4, top: 5, bob: 0.05, rollSway: 0.06, legAmp: 0.8 },
+  // limb:象腿 = **柱狀**(前腿幾乎筆直 2.9°、後腿只留 9.2° 屈曲 —— 幾何已經這樣長了,
+  // 步態曲線 MUST 跟著:遠端行程 0.3~0.42 倍 + lock 0.70,腿在支撐相就是一根柱子)。
+  gait: { gait: 'walk', stride: 3.4, top: 5, bob: 0.05, rollSway: 0.06, legAmp: 0.8,
+    limb: { fore: 'columnar', hind: 'columnar', bounceF: 0.8 } },
   moveSig: { poise: 0.2, idleF: 0.4, idleA: 1.0, launch: 0.05, spool: 0.95, brake: 0.06, settle: 2.0 },
   castSig: { omni: 'roar', dir: 'swing' },
   doc: [

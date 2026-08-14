@@ -100,7 +100,9 @@ import {
 export default {
   label: '鎖喉(m05 變形者・地面型)',
   prop: { hips: 0.49, legSplay: 0.09, thigh: 0.45, shin: 0.53, shoulderY: 0.76, shoulderX: 0.175, upperArm: 0.17, foreArm: 0.165, head: 0.84, girth: 1.05 },
-  gait: { strideF: 1.35, bob: 0.11, sway: 0.08, top: 9, armBase: 0.1, legBase: -0.2 },
+  // limb:趾行(legBase 股前傾已經是它的幾何);人形上肢不承重 ⇒ 前肢維持人形擺臂路徑
+  gait: { strideF: 1.35, bob: 0.11, sway: 0.08, top: 9, armBase: 0.1, legBase: -0.2,
+    limb: { hind: 'digitigrade' } },
   pose: { knee: { base: 0.42, k: 0.62, d: 0.15 }, ankle: { base: -0.26, k: -0.3, d: 0.55 } },   // 趾行深屈
   moveSig: { poise: 0.82, idleF: 0.85, idleA: 0.42, launch: 0.86, spool: 0.22, brake: 0.32, settle: 1.2 },
   castSig: { omni: 'roar', dir: 'swing' },

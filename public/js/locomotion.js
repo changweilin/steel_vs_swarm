@@ -9,6 +9,12 @@
 // 純客戶端視覺:不動伺服器權威狀態;rig 由 models.js 各建模函式提供。
 
 import { MORPH } from './data.js';
+import { cycleU, dutyOf, hipDrive, limbProfile, limbFlex } from './gaitcurve.js';
+
+// 解剖學步態曲線的總開關(`?gait=0` = 退回 2026-08-14 的通用屈曲式,做 A/B 前後對照;
+// 同 `?sag=0` / `?curve=0` 的慣例)。關掉 ⇒ 每一條路徑逐位元同舊制。
+const GAIT_ANAT = typeof location === 'undefined'
+  || new URLSearchParams(location.search).get('gait') !== '0';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const damp = (c, t, k, dt) => c + (t - c) * Math.min(1, k * dt);
@@ -91,7 +97,20 @@ export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
  * 每節自己的相位延遲 d 讓力由近端傳向遠端。
  * 符號見 models.js segLimb:膝 k 為正(後折)、肘為負(前折)、踝取反號(擺動抬腳背)。
  */
-function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0) {
+function flexChain(chain, ph, a, idle = 0, t = 0, load = 0.45, hold = 0, A = null) {
+  // 解剖學曲線(gaitcurve.js):A = { P, duty } ⇒ 前肢與後肢吃**不同拓樸**的曲線。
+  // 前肢腕 = 支撐相鎖死的承重柱、擺動相前段甩折;後肢跗 = 與膝同相的連續彈簧。
+  // 舊制那一式(下方)逐節只差一個相位延遲 ⇒ 前後肢遠端長得一模一樣,那正是「不像真動物」。
+  if (A && GAIT_ANAT) {
+    for (let i = 0; i < chain.length; i++) {
+      const j = chain[i];
+      // 逐節相位延遲仍吃 j.d(動力鏈由近端傳向遠端):曲線給「形狀」,d 給「什麼時候」
+      const f = limbFlex(A.P, i, cycleU(ph - j.d), A.duty, a);
+      j.g.rotation.x = j.base + j.k * (f + hold
+        + 0.06 * idle * Math.sin(t * 1.6 - j.d * 1.5));   // 靜止液壓微顫(與舊制同一項)
+    }
+    return;
+  }
   for (let i = 0; i < chain.length; i++) {
     const j = chain[i];
     const sw = Math.max(0, -Math.cos(ph - j.d));   // 擺動相:收腿
@@ -422,8 +441,18 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   // 靜止待機:雙腿以極慢的反相重心交換微擺(左右換腳站),不是完全定格;
   // idleK 依性格縮放(狙擊台近凍結、哨兵/擊劍手躁動放大),iF 調節拍
   const stand = idle * sg.idleK * Math.sin(now * 0.9 * sg.iF + L.ph) * 0.03;
-  rig.legL.rotation.x = legB + Math.sin(phL) * legA + stand;
-  rig.legR.rotation.x = legB + Math.sin(phR) * legA - stand;
+  // 佔空比隨奔跑度連續縮短(走 0.62 → 跑 0.30):**雙足的騰空相就是 duty < 0.5 這件事**。
+  // 髖同四足走等速後掠的鋸齒(腳不滑地);跳奔(bnd)另有自己的併蹬節奏,不動它的相位。
+  // 站姿型:**推導不寫名冊** —— 獸型雙足(掌行/收翼/退化短前臂/無騰空相長腿/跳躍/水平體軸)
+  // 一律趾行,其餘 = 人形機甲 = 蹠行(整片腳掌貼地 ⇒ 踝的行程只有趾行的 0.4 倍)。
+  // 判據全部取自既有旗標,加一台獸型雙足不必回頭改這裡(同 A33 ⑤ 的紀律)。
+  const LP = rig.limbP || (rig.limbP = limbProfile(rig.limb || (
+    (rig.knuckle || rig.tuckArms || rig.tinyArms || rig.grounded || rig.hop || (rig.leanF ?? 1) < 1)
+      ? {} : { fore: 'plantigrade', hind: 'plantigrade' })));
+  const duty = dutyOf('walk', runF);
+  const hip = GAIT_ANAT ? (p) => hipDrive(cycleU(p), duty) : (p) => Math.sin(p);
+  rig.legL.rotation.x = legB + hip(phL) * legA + stand;
+  rig.legR.rotation.x = legB + hip(phR) * legA - stand;
   // 手臂與腿反相(follow-through);跳奔時雙臂轉為同相前撐(前肢落在後腿併蹬的半拍後 =
   // 四足跳奔的節奏);持械手平時擺幅收斂穩住槍口,跳奔時它就是前腳,也得撐地
   const oAL = Math.PI, oAR = Math.PI * bnd;
@@ -451,8 +480,9 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (rig.legChainL) {
     // 腿:擺動收腿 + 支撐彈簧(flexChain 內建);奔跑時整體再放大
     const la = a * (1 + 0.25 * runF);
-    flexChain(rig.legChainL, phL, la, idle, now);
-    flexChain(rig.legChainR, phR, la, idle, now + 1.9);
+    const AH = { P: LP.hind, duty };
+    flexChain(rig.legChainL, phL, la, idle, now, 0.45, 0, AH);
+    flexChain(rig.legChainR, phR, la, idle, now + 1.9, 0.45, 0, AH);
     if (rig.tuckArms) {
       // 收起的前肢:肘/腕鎖在深屈蓄勢角(hold ∝ 速度),只留待機微顫 —— 不是凍結
       flexChain(rig.armChainL, L.ph, a * 0.1, idle, now + 0.7, 0.1, 0.35 * a);
@@ -462,9 +492,11 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
       flexChain(rig.armChainL, L.ph, a * 0.15, idle, now + 0.7, 0.15, 0.15 * a);
       flexChain(rig.armChainR, L.ph + 0.4, a * 0.15, idle, now + 2.6, 0.15, 0.15 * a);
     } else if (rig.knuckle) {
-      // 指節行走的前肢是承重腿:支撐相吃載荷彈簧(load 同腿),不做人形的恆屈泵動
-      flexChain(rig.armChainL, L.ph + oAL, a * 1.05, idle, now + 0.7, 0.4, 0.12 * runF);
-      flexChain(rig.armChainR, L.ph + oAR, a * 1.05, idle, now + 2.6, 0.4, 0.12 * runF);
+      // 指節行走的前肢**就是前腳** ⇒ 吃 fore profile(肘小幅 + 腕支撐相鎖死),
+      // 與後腿的 hind profile 分家 —— 猩猩的手腕在撐地那半週期是硬柱,不是彈簧
+      const AF = { P: LP.fore, duty };
+      flexChain(rig.armChainL, L.ph + oAL, a * 1.05, idle, now + 0.7, 0.4, 0.12 * runF, AF);
+      flexChain(rig.armChainR, L.ph + oAR, a * 1.05, idle, now + 2.6, 0.4, 0.12 * runF, AF);
     } else {
       // 臂:奔跑的手肘是「恆屈 + 前後泵動」,不是甩直的鐘擺(hold 隨奔跑度增加);
       // 持械側 hold 收斂(端槍的手肘本來就鎖著托槍)
@@ -511,9 +543,14 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     + Math.sin(L.ph) * (rig.bob || 0.06) * 2.2 * a * bnd
     + idle * sg.breathK * Math.sin(now * 1.7 * sg.iF + L.ph) * 0.012   // 靜止呼吸微沉浮(性格化:狼/豹極淺、重裝深沉)
     - L.srg * 0.03 - L.brk * 0.025;   // 爆發起步下蹲驅離 / 急停壓低重心插地
-  hips.position.x = sw * (rig.sway || 0.05) * a * (1 - bnd);
-  hips.rotation.z = -sw * 0.07 * a * (1 - bnd);
-  hips.rotation.y = -sw * 0.1 * a * (1 - bnd);    // 骨盆對轉(自然扭腰)
+  // 移動中開火(奔跑射擊):上身收成**穩定射擊台** —— 骨盆側移/滾轉/對轉一起收斂,
+  // 讓下半身照常跑、上半身別把槍口甩來甩去。braceF 只吃「開火保持窗」(rig._aim),
+  // MUST NOT 用 aimF(它含 idle ⇒ 站著不動時恆為 1,那條路徑上 a≈0 本來就沒有擺動要收)。
+  // 這是真人射手在移動中射擊的做法:步幅照舊、軀幹當雲台,而不是整個人停下來。
+  const braceF = clamp(rig._aim || 0, 0, 1);
+  hips.position.x = sw * (rig.sway || 0.05) * a * (1 - bnd) * (1 - 0.6 * braceF);
+  hips.rotation.z = -sw * 0.07 * a * (1 - bnd) * (1 - 0.7 * braceF);
+  hips.rotation.y = -sw * 0.1 * a * (1 - bnd) * (1 - 0.8 * braceF);    // 骨盆對轉(自然扭腰)
   // 前傾:速度越快越前壓;加減速再疊預備/回穩傾角;跳奔再多壓一段(衝刺的撲身)。
   // leanF 依體軸而定(人形 1.0;水平體軸的獸型 0.3~0.5 —— 牠們用抬尾配平,不是把頭壓向地面)
   L.lean = damp(L.lean, (0.22 * a + bnd * 0.14 + clamp(L.accel * 0.015, -0.1, 0.15)) * (rig.leanF ?? 1),
@@ -539,7 +576,7 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
     hips.rotation.x + (chest ? chest.rotation.x : 0),
     hips.rotation.y + (chest ? chest.rotation.y : 0),
     hips.rotation.z + (chest ? chest.rotation.z : 0),
-  ], idle, now, 0.85, sg.idleK);   // scanK = idleK:哨兵頻掃視、狙擊台近凍結
+  ], idle, now, 0.85 + 0.12 * braceF, sg.idleK);   // 開火時頭再鎖緊一段(視線 = 準星);scanK = idleK
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 無頭 rig 的簡易單位(如步兵)跳過凝視
   if (rig.tailSegs) {
@@ -676,8 +713,13 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
   L.flr = damp(L.flr ?? 0, accDn(L) * fs.flare, 6, dt);
   rig.tilt.rotation.z = L.roll;
   rig.tilt.rotation.x = L.pitch - L.flr * 0.14;
+  // 交戰姿態(飛行射擊):開火保持窗內 = 對目標的**攻擊航路** —— 機鼻壓向目標、懸停修正收斂
+  // (射擊平台要穩)、活翼機種**停拍收翼**(猛禽撲擊時是滑翔不是拍翅,拍著翅膀開火是舊制最假的一段)。
+  // 定翼機沒有翅膀可收,只吃機鼻與抖動那兩項。
+  const atk = clamp(rig._aim || 0, 0, 1);
+  rig.tilt.rotation.x += atk * 0.09;
   // 懸停站位抖動(hover:蜂/競速高頻定點修正、長航偵察/共軸運補死穩);浮沉幅 ∝ hoverA(活翼大、機械旋翼/定翼≈0)
-  const hovK = clamp(1 - spd / 3, 0, 1) * fs.hover;
+  const hovK = clamp(1 - spd / 3, 0, 1) * fs.hover * (1 - 0.65 * atk);
   rig.tilt.rotation.x += Math.sin(now * 7 * fs.hoverF) * 0.014 * hovK;
   rig.tilt.rotation.z += Math.sin(now * 6.1 * fs.hoverF + 1.1) * 0.016 * hovK;
   rig.tilt.position.y = (rig.tiltY0 || 0) + Math.sin(now * 2.2 * fs.hoverF + L.ph) * (rig.bob || 0.08) * fs.hoverA;
@@ -707,8 +749,10 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       // 昆蟲震翅:頻率遠高於鳥類(懸停時也全速振,不靠前進速度產生升力),
       // 行程平面近水平 —— 上下拍幅小,主運動是「前後掃掠 + 每半衝程翼面翻轉」的 8 字軌跡;
       // 後翅相位落後前翅(蜂類前後翅耦合但非同相)。
+      // 昆蟲**不能停拍**(牠的升力全靠震翅,停了就掉下去)⇒ 交戰只收掃掠幅度改成定點懸停,
+      // 拍翅頻率一格不動 —— 與下面鳥類撲翼的「停拍滑翔」刻意是兩種寫法
       L.flap = (L.flap || 0) + dt * (30 + k * 16);
-      const amp = 0.3 + k * 0.12 + L.flr * 0.3;   // flare:進場杯翼倒拍(蜂)
+      const amp = (0.3 + k * 0.12 + L.flr * 0.3) * (1 - 0.25 * atk);
       for (const { w, outer, sgn, pair } of rig.wings) {
         const ph = L.flap - (pair ? 0.5 : 0);
         w.rotation.z = sgn * Math.sin(ph) * amp;            // 拍(小幅)
@@ -718,11 +762,13 @@ function stepAerial(L, rig, dt, now, vFwd, vLat, yawRate) {
       }
     } else {
       // 鳥類撲翼:頻率/振幅隨速度提升(懸停慢拍、巡航快拍);外翼相位延遲 = 鞭式 follow-through
-      L.flap = (L.flap || 0) + dt * (3.2 + k * 9);
-      const amp = 0.24 + k * 0.34 + L.flr * 0.5;   // flare:拉起收翼杯狀煞停(鷹/翼龍/龍)
+      // 交戰 = **停拍滑翔撲擊**:拍翅頻率與振幅一起收(atk → 1 時 amp 只剩 15%),
+      // 外翼多收一段 = 半收翼的俯衝輪廓。猛禽撲擊時翅膀是張開定住的,不是還在拍。
+      L.flap = (L.flap || 0) + dt * (3.2 + k * 9) * (1 - 0.8 * atk);
+      const amp = (0.24 + k * 0.34 + L.flr * 0.5) * (1 - 0.85 * atk);
       for (const { w, outer, sgn } of rig.wings) {
-        w.rotation.z = sgn * Math.sin(L.flap + L.ph) * amp;
-        outer.rotation.z = sgn * Math.sin(L.flap + L.ph - 0.7) * amp * 1.5;
+        w.rotation.z = sgn * (Math.sin(L.flap + L.ph) * amp - 0.10 * atk);
+        outer.rotation.z = sgn * (Math.sin(L.flap + L.ph - 0.7) * amp * 1.5 - 0.18 * atk);
       }
     }
   }
@@ -792,10 +838,21 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   const idK = idle * sg.breathK, iF = sg.iF;   // 靜止腿部液壓微顫的深淺(idleA:重役獸深、狙擊台淺)
   // 髖/肩(第 0 節)待機微顫:即使該節沒有 chain(如觸手腿的肩基座),完全靜止時仍要有液壓微顫,
   // 不能只靠子節點(如 softLeg 的 j1-j4)動、根節本身凍結
-  rig.legFL.rotation.x = Math.sin(phFL) * legA + idK * Math.sin(now * 1.6 * iF) * 0.025;
-  rig.legFR.rotation.x = Math.sin(phFR) * legA + idK * Math.sin(now * 1.6 * iF + 1.5) * 0.025;
-  rig.legHL.rotation.x = Math.sin(phHL) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 3.0) * 0.025;
-  rig.legHR.rotation.x = Math.sin(phHR) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 4.5) * 0.025;
+  // 肩/髖驅動:支撐相 **等速後掠**(腳釘在地上、身體等速前進 ⇒ 相對角速度是定值)、
+  // 擺動相快速盪回。舊制的純正弦支撐相兩端慢中間快 ⇒ 腳掌相對地面前後蹭 = 滑步的一半。
+  // 佔空比 duty 由步態推導(慢步 0.62 / 小跑 0.45 / 襲步 0.30),換襲步時連續縮短 ——
+  // 騰空相是「佔空比掉到 0.5 以下」的結果,不是另外畫的一段動畫。
+  const LP = rig.limbP || (rig.limbP = limbProfile(rig.limb));
+  const duty = dutyOf(G === 'trot' && gallop > 0 ? 'trot' : G, gallop);
+  const hip = GAIT_ANAT ? (p) => hipDrive(cycleU(p), duty) : (p) => Math.sin(p);
+  // **不承重的前肢連肩都不該甩**(s03 抱在胸前的抓握爪):肩擺幅收到 18%,只留與步頻同調的
+  // 微幅呼吸。分節鏈那一半由 grasp 曲線負責,但有些機體的前肢根本沒有 chFL(整條爪是靜態件)
+  // ⇒ 只改鏈是改不到的,肩這一行才是它唯一的動力來源。
+  const foreF = GAIT_ANAT && LP.fore.role === 'grasp' ? 0.18 : 1;
+  rig.legFL.rotation.x = hip(phFL) * legA * foreF + idK * Math.sin(now * 1.6 * iF) * 0.025;
+  rig.legFR.rotation.x = hip(phFR) * legA * foreF + idK * Math.sin(now * 1.6 * iF + 1.5) * 0.025;
+  rig.legHL.rotation.x = hip(phHL) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 3.0) * 0.025;
+  rig.legHR.rotation.x = hip(phHR) * legA * 0.9 + idK * Math.sin(now * 1.6 * iF + 4.5) * 0.025;
   if (rig.chFL) {
     if (rig.soft) {
       // 章魚觸手腿:支撐相是推進的行進波,擺動相整條抬起收成搜索/蓄勢的 S 形(softLeg);
@@ -810,11 +867,16 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     } else {
       // 膝/跗/蹄的分節屈曲:擺動收腿 + 支撐彈簧壓縮(flexChain 雙相),
       // 奔馳時屈曲再放大 —— 大腿小腿/前臂後臂各自運動,不鎖成一根
+      // ⚠ 前肢與後肢餵**不同的 profile** —— 這一行就是使用者點名的那件事:
+      //   前肢 肱骨 → 橈尺骨 → 掌骨:肘小幅、腕支撐相鎖死擺動相甩折(開關型遠端);
+      //   後肢 股骨 → 脛骨 → 蹠骨:膝雙峰(支撐吃重 + 擺動收腿)、跗節與膝同相(彈簧型遠端)。
+      //   兩條鏈的時序拓樸不同,不是同一條曲線換係數。
       const ca = a * (1 + 0.3 * gallop);
-      flexChain(rig.chFL, phFL, ca, idle, now);
-      flexChain(rig.chFR, phFR, ca, idle, now + 1.4);
-      flexChain(rig.chHL, phHL, ca, idle, now + 2.8);
-      flexChain(rig.chHR, phHR, ca, idle, now + 4.2);
+      const AF = { P: LP.fore, duty }, AH = { P: LP.hind, duty };
+      flexChain(rig.chFL, phFL, ca, idle, now, 0.45, 0, AF);
+      flexChain(rig.chFR, phFR, ca, idle, now + 1.4, 0.45, 0, AF);
+      flexChain(rig.chHL, phHL, ca, idle, now + 2.8, 0.45, 0, AH);
+      flexChain(rig.chHR, phHR, ca, idle, now + 4.2, 0.45, 0, AH);
     }
   }
   // 中足對(六足機體的第三組;`tripod` 步態的另一半)—— 與對側前後足同組擺動 ⇒ 恆三足觸地。
@@ -823,12 +885,20 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
   if (rig.midLegs) {
     const mp = [Math.PI, 0];                     // [左, 右] —— 與 tripod 的前後足互補
     const midIdle = idle * sg.breathK;
+    // 中足與前後足吃**同一份 profile**(六足機體一律 arthropod):昆蟲的股-脛關節在支撐相
+    // 主動伸展把身體撐推出去、擺動相只是小幅提回,與獸腿的「收腿過障」相反。
+    // 兩個 0.45 / 0.42 是把 limbFlex 的值域折回舊制那兩個峰值(0.35a / 0.22a)的換算,不是新旋鈕。
     rig.midLegs.forEach((ml, i) => {
       const ph = L.ph + mp[i];
-      ml.rotation.x = Math.sin(ph) * legA * 0.9 + midIdle * Math.sin(now * 1.6 * iF - i * 1.8) * 0.025;
-      if (rig.midKnees) rig.midKnees[i].rotation.x = Math.max(0, -Math.cos(ph)) * 0.35 * a
+      const uM = cycleU(ph);
+      ml.rotation.x = hip(ph) * legA * 0.9 + midIdle * Math.sin(now * 1.6 * iF - i * 1.8) * 0.025;
+      if (rig.midKnees) rig.midKnees[i].rotation.x = (GAIT_ANAT
+        ? limbFlex(LP.hind, 0, uM, duty, a) * 0.45
+        : Math.max(0, -Math.cos(ph)) * 0.35 * a)
         + midIdle * Math.sin(now * 1.6 * iF - i * 1.8 + 0.6) * 0.02;
-      if (rig.midTarsi) rig.midTarsi[i].rotation.x = Math.max(0, -Math.cos(ph)) * 0.22 * a
+      if (rig.midTarsi) rig.midTarsi[i].rotation.x = (GAIT_ANAT
+        ? limbFlex(LP.hind, 1, uM, duty, a) * 0.42
+        : Math.max(0, -Math.cos(ph)) * 0.22 * a)
         + midIdle * Math.sin(now * 1.6 * iF - i * 1.8 + 1.2) * 0.15;
     });
   }
@@ -1430,8 +1500,12 @@ function stepJumpPose(L, rig, ent, dt) {
   const rawVy = (y - (L.rawY ?? y)) / Math.max(dt, 1e-4);
   if (rawF > 0.3) L.aloft = true;
   else if (L.aloft && rawF < 0.12) {
-    L.landK = clamp(0.45 + Math.max(0, -rawVy) * 0.05, 0, 1);   // 幅度 ∝ 觸地瞬間原始下墜速度
+    // 幅度 ∝ 觸地瞬間原始下墜速度,再 ×「這一跳跳了多高」—— 蓄力跳的落地 MUST 蹲得比小跳深,
+    // 否則從 20m 掉下來與從 1m 跳下來看起來一樣(dt 夾制讓 rawVy 本身量不出這個差距)
+    const pk = clamp(((L.peakY || 0) - 1.4) / 3.4, 0, 1);
+    L.landK = clamp((0.45 + Math.max(0, -rawVy) * 0.05) * (1 + 0.75 * pk), 0, 1.6);
     L.aloft = false;
+    L.peakY = 0;
   }
   L.rawY = y;
   L.landK = damp(L.landK ?? 0, 0, 5.5, dt);
@@ -1440,6 +1514,16 @@ function stepJumpPose(L, rig, ent, dt) {
   const rise = clamp(vy * 0.18, -1, 1);
   const up = Math.max(0, rise) * airF;                   // 蹬伸相
   const fall = Math.max(0, -rise) * airF;                // 下墜相(前收 brace)
+  // ── 大跳躍(蓄力跳 CJUMP:滿蓄 24 m/s 初速 + 0.45 低重力)vs 小跳 ────────────────
+  // 舊制 airF 在 1.1m 就飽和 ⇒ **兩者的動作逐幀完全相同**,而蓄力跳飛得比小跳高一個量級,
+  // 使用者說的「大跳躍不符合真實動作」就是這一條。改以**本次騰空的最高點**分級:
+  //   bigF 0 = 小跳(蹬伸 → 落地),1 = 大跳(蹬伸 → **頂點收腿滯空** → 展開對地 → 深蹲吸收)。
+  // 峰值鎖存在騰空期間累積、觸地那一刻結算成 landK 的深度係數 —— 跳得越高,落地蹲得越深。
+  if (rawF > 0.3) L.peakY = Math.max(L.peakY || 0, y);
+  const bigF = clamp(((L.peakY || 0) - 1.4) / 3.4, 0, 1);
+  // 頂點滯空度:騰空中且垂直速度趨零 ⇒ 1。舊制在頂點 up/fall 同時 ≈0 ⇒ 姿勢回到中立,
+  // 讀起來是「站在空中」;真實的頂點是**收腿抱團**(小跳輕收、大跳深收)。
+  const floatF = airF * clamp(1 - Math.abs(rise) * 2.2, 0, 1) * (0.35 + 0.65 * bigF);
   const R = (g, ax, v) => { if (g) g.rotation[ax] += v; };
 
   if (rig.kind === 'quad') {
@@ -1450,20 +1534,22 @@ function stepJumpPose(L, rig, ent, dt) {
     R(rig.legHR, 'x', 0.45 * up - 0.25 * fall);
     R(rig.spine, 'x', -0.09 * up + 0.06 * fall + 0.1 * landK);
     if (rig.spine) rig.spine.position.y -= 0.2 * landK;
-    if (rig.chFL) {                                       // 分節:下墜收爪、落地載荷屈曲
+    if (rig.chFL) {                                       // 分節:頂點收肢、下墜收爪、落地載荷屈曲
       for (const ch of [rig.chFL, rig.chFR, rig.chHL, rig.chHR]) {
-        if (ch?.[0]) ch[0].g.rotation.x += ch[0].k * (0.5 * fall + 0.55 * landK);
+        if (ch?.[0]) ch[0].g.rotation.x += ch[0].k * (0.5 * fall + 0.55 * landK + 0.6 * floatF);
       }
     }
     if (rig.tailSegs) rig.tailSegs.forEach((t, i) => { t.rotation.x += (0.1 * up - 0.06 * fall) * (1 + i * 0.2); });
   } else {
-    // 雙足 / morph 地面型:蹬伸腿後直 → 下墜雙腿前收屈膝、雙臂揚起平衡 → 落地深蹲緩衝
-    const tuck = 0.35 * up - (0.5 * fall);
+    // 雙足 / morph 地面型:蹬伸腿後直 → **頂點收腿抱團(floatF)** → 下墜雙腿前收屈膝、
+    // 雙臂揚起平衡 → 落地深蹲緩衝。收腿是大跳與小跳的分水嶺:小跳幾乎沒有滯空可收,
+    // 大跳(蓄力跳 + 低重力)有將近一秒的滯空,腿不收就是「站著飛過去」。
+    const tuck = 0.35 * up - (0.5 * fall) - 0.55 * floatF;
     R(rig.legL, 'x', tuck * 1.1);
     R(rig.legR, 'x', tuck * 0.85);
     if (rig.legChainL?.[0]) {
-      rig.legChainL[0].g.rotation.x += 0.55 * fall + 0.35 * up + 0.75 * landK;
-      rig.legChainR[0].g.rotation.x += 0.6 * fall + 0.3 * up + 0.7 * landK;
+      rig.legChainL[0].g.rotation.x += 0.55 * fall + 0.35 * up + 0.75 * landK + 0.85 * floatF;
+      rig.legChainR[0].g.rotation.x += 0.6 * fall + 0.3 * up + 0.7 * landK + 0.8 * floatF;
       // 踝:蹬伸繃腳背、落地回折吸震(踝取反號慣例)
       if (rig.legChainL[1]) rig.legChainL[1].g.rotation.x -= 0.3 * up + 0.25 * landK;
       if (rig.legChainR[1]) rig.legChainR[1].g.rotation.x -= 0.28 * up + 0.25 * landK;
@@ -1473,8 +1559,8 @@ function stepJumpPose(L, rig, ent, dt) {
     R(rig.ankleL, 'x', -(0.25 * up + 0.2 * landK));
     R(rig.ankleR, 'x', -(0.23 * up + 0.2 * landK));
     if (!rig.tinyArms && !rig.tuckArms) {                 // 雙臂:下墜揚起找平衡(持械手收斂)
-      R(rig.armL, 'x', -(0.45 * fall + 0.15 * up));
-      R(rig.armR, 'x', -(0.45 * fall + 0.15 * up) * (rig.gunArm ? 0.35 : 1));
+      R(rig.armL, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF));
+      R(rig.armR, 'x', -(0.45 * fall + 0.15 * up + 0.35 * floatF) * (rig.gunArm ? 0.35 : 1));
     }
     R(rig.hips, 'x', 0.1 * up - 0.08 * fall + 0.1 * landK);
     R(rig.chest, 'x', 0.08 * fall + 0.14 * landK);

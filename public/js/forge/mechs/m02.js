@@ -213,7 +213,9 @@ const LEG_BASE = -0.34;       // = gait.legBase(股前傾;髖盤的落點在這�
 export default {
   label: '壓艙石(m02 機甲・暴龍)', height: 6.0,
   prop: PROP,
-  gait: { strideF: 1.25, bob: 0.12, sway: 0.08, top: 7, legBase: LEG_BASE, armBase: 0 },   // legBase 股前傾(趾行)
+  // limb:暴龍 = 趾行三趾足;退化短前臂不承重 ⇒ grasp(恆屈在胸前,不進步態)
+  gait: { strideF: 1.25, bob: 0.12, sway: 0.08, top: 7, legBase: LEG_BASE, armBase: 0,   // legBase 股前傾(趾行)
+    limb: { foreRole: 'grasp', hind: 'digitigrade' } },
   pose: {
     knee: { base: 0.72, k: 0.62, d: 0.15 }, ankle: { base: -0.36, k: -0.34, d: 0.55 },  // 膝深屈+踝補償(足底放平)
     elbow: { base: -0.55, k: -0.3, d: 0.3 }, wrist: { base: -0.15, k: 0.12, d: 0.5 },   // 短前臂深屈在胸前(暴龍招牌)
