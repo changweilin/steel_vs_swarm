@@ -190,16 +190,30 @@ import {
 
 // 本機專用色:齒列亮灰 / 口腔暗紅 / 爪鋼 / 活塞亮桿
 const TEETH = 0xcfd4d9, MAWRED = 0x6e1a1a, CLAWSTEEL = 0xb9c0c8, PISTON = 0xd8dde2;
+const EYERED = 0xff2a18;      // 眼的紅(**不吃 accent**:那是塗裝色相,換色時眼睛不該跟著變)
 
 // 頸軸(胸腔框):自 (0, 0.60, 1.02) 至 (0, 0.80, 1.98);長 0.98、傾角 1.3654 rad。
 // 頸樞軸 neckAt = (0, 0.38, 0.90) ⇒ 頸幾何(neckG)與上頸套筒(掛 hh)共用這一個角度,
 // 少了共用就是「頸柱與套筒各指一個方向」,而靜態三視圖看起來只是「接縫怪怪的」。
 const NECK_ROT = 1.3654;
 
+// ── 2026-08-14 使用者:「後腳的骨盆關節調整到再往身體兩側、跟前腳肩關節同高」+
+//    追加定案:「**只動 thigh() 裡的髖盤落點,軀幹一格不動**」──────────────────────
+// forge 的樞軸(髖 hips×H = 3.0 / 肩 shoulderY×H = 3.42)一格未動 ⇒ prop / pose / gait /
+// 骨盆 / 軀幹 / 腿長 / 接地全部逐位元同舊制。改的只有**看得見的那個髖關節**:
+// ★ 圖裡「髖」讀的是臀肌罩外側那一枚大圓盤,不是 forge 的樞軸點。
+//   ① 盤心抬到**肩樞軸的世界高度**(差值 DY 由 PROP 推導,MUST NOT 手寫 0.42);
+//   ② 盤心外撇到臀肌罩的新外緣;
+//   ③ 臀肌罩(髖的殼)同步往上、往外各長一圈把盤接住 —— 只搬盤不長罩 = 一枚浮在腰側的環。
+// ⚠ 盤畫在**已經前傾 legBase 的股節框**裡 ⇒ 目標是世界偏移,MUST 先轉回股節框
+//   (下方 Rx(−legBase) 的反解);直接把世界值寫進 local 會讓盤沿體軸滑掉 0.15。
+const PROP = { hips: 0.5, legSplay: 0.1, thigh: 0.52, shin: 0.5, shoulderY: 0.57, shoulderX: 0.1, upperArm: 0.1, foreArm: 0.09, head: 0.65, girth: 1.1 };
+const LEG_BASE = -0.34;       // = gait.legBase(股前傾;髖盤的落點在這個旋轉之後量)
+
 export default {
   label: '壓艙石(m02 機甲・暴龍)', hue: 0x9aa3ad, height: 6.0,
-  prop: { hips: 0.5, legSplay: 0.1, thigh: 0.52, shin: 0.5, shoulderY: 0.57, shoulderX: 0.1, upperArm: 0.1, foreArm: 0.09, head: 0.65, girth: 1.1 },
-  gait: { strideF: 1.25, bob: 0.12, sway: 0.08, top: 7, legBase: -0.34, armBase: 0 },   // legBase 股前傾(趾行)
+  prop: PROP,
+  gait: { strideF: 1.25, bob: 0.12, sway: 0.08, top: 7, legBase: LEG_BASE, armBase: 0 },   // legBase 股前傾(趾行)
   pose: {
     knee: { base: 0.72, k: 0.62, d: 0.15 }, ankle: { base: -0.36, k: -0.34, d: 0.55 },  // 膝深屈+踝補償(足底放平)
     elbow: { base: -0.55, k: -0.3, d: 0.3 }, wrist: { base: -0.15, k: 0.12, d: 0.5 },   // 短前臂深屈在胸前(暴龍招牌)
@@ -215,13 +229,30 @@ export default {
     ['軀幹(橫向脊線・後端加長)', 'tboxF 肋腔桶(v8 h 1.66)+tboxF 收分喉艙(v8 h 0.52,sz 0.18 前端面下推 ⇒ 頸自前緣長出)沿同一體軸串成 **2.18** 長的水平艙體(z −0.60~1.59)⇒ 顱:軀幹 1:1.24(骨架照 1:1.55)、髖樞軸落在艙體後段+latheF 外凸肋甲環 ×4(逐段中心線)+prismF 胸甲 ×2+頸根領環+腹龍骨+cablesF 腹管+側百葉'],
     ['背甲(水平脊背蓋板)', 'prismF 側剖蓋板放平(肩後覆至尾根 = 脊背線,髖最高向肩微下斜)+頂板+INK 百葉 ×4+側鉸座 ×2+後支柱+後排氣 ×2'],
     ['退化短前臂 ×2(骨架照比例)', '球肩埋在喉艙最前端 z 1.26(骨架照:肩臼在肋廓前端、頸根下)+肩甲+繞 x 轉 −1.38 的短肱骨殼(v8 只 **0.25**)+短橈骨(**0.17**)⇒ (肱+橈)÷股 = **0.428**(骨架照 0.43)+hydCyl 活塞 ×2+latheF 肘盤/腕帽+**兩指**鉤爪(指節 ×2+finF 弧爪)—— v8 只收兩節骨殼,爪/活塞/盤件一件未縮'],
-    ['強健後腿 ×2(身體後端・趾行)', '巨股楔殼**只畫 0.98 而非 1.56 的樞軸段長**(髖粗膝細+沿體軸後剪 0.52)⇒ 股:脛:蹠 = **1 : 1.00 : 0.53**(骨架照 1 : 0.95 : 0.50)、肩→髖 = 1.53 × 股+prismF 臀肌罩(v8 加大一圈,蓋住股骨頂與髖樞軸之間空出的 0.58)+prismF 膝前甲板+latheF 髖盤/膝盤+hydCyl 腱活塞 ×2'],
+    ['強健後腿 ×2(身體後端・趾行)', '巨股楔殼**只畫 0.98 而非 1.56 的樞軸段長**(髖粗膝細+沿體軸後剪 0.52)⇒ 股:脛:蹠 = **1 : 1.00 : 0.53**(骨架照 1 : 0.95 : 0.50)、肩→髖 = 1.53 × 股+prismF 臀肌罩(v8 加大一圈蓋住股骨頂與髖樞軸之間空出的 0.58;2026-08-14 再往上 0.36、往外 0.24 把抬到肩高的髖盤接住)+prismF 膝前甲板+latheF **髖盤(盤心 = 肩樞軸的世界高、貼罩子新外緣;兩軸皆推導)**/膝盤+hydCyl 腱活塞 ×2'],
     ['小腿 = 脛骨 + 跗關節 + 蹠骨', '脛骨楔殼(膝粗跗細,**佔段長 65.5% = 骨架照的 脛:蹠 = 0.95:0.50**,末端後剪 0.24)+latheF 跗關節盤(deep)+橫軸+**明顯較細的蹠骨幹**(斷面約脛骨膝端一半、色階 dark 與跗盤分開一階,前剪 0.24 回到踝樞軸)+脛前甲+腱活塞+踝環 —— 三節腿鏈不加樞軸,折線由剪切表達'],
     ['足 ×2(只剩趾)', '蹠端墊(收成只蓋趾根)+踝前斜甲+三趾(tboxF 指節+finF 弧爪)+後距爪 —— 爪一趾一件;v7 全組抬 0.15 讓趾尖落在 y ≈ 0'],
     ['重尾(chainF 十一節配重)', '十一節收分節鏈(全長 5.50 ≈ 頭頸軀幹合計;尾根抬到脊線高 y 0.55、下垂壓到 −1.1° ⇒ 尾尖與顱殼同高度帶)+節環+背脊板 ×7(索引遞減)+coneF 尾梢錐'],
   ],
   head(c, h) {
     const { PAL, accent } = c;
+    // ── 2026-08-14 使用者:「暴龍**頭部放大 50%**」──────────────────────────────────
+    // 樞軸鏈是 forge 凍結的 ⇒ 只能放大**幾何**。而放大 MUST **繞著接頸處**做:
+    //   直接對頭節點 setScalar(1.5) 是繞節點原點縮放,而顱殼中心距節點 2.5 ⇒ 整顆頭往前
+    //   飛 1.25、往下 0.26,頸當場裂開一個看得見的洞(而每一條既有斷言都正常)。
+    // ⇒ 用「錨點 sc + 反位移 g」兩層:子件座標 p 的像 = ANCH + F·(p − ANCH) ⇒ 錨點恰為不動點。
+    //   ANCH 取上頸套筒的位置(= 顱殼後緣與頸芯柱交會處)。
+    // 顎與砲束在 mount() 才建 ⇒ 它們 MUST 掛同一個 g(c.headG),否則頭放大了而顎沒有。
+    const HEAD_F = 1.5, ANCH = [0, -0.49, 2.10];
+    const sc = new THREE.Group();
+    sc.position.set(...ANCH);
+    sc.scale.setScalar(HEAD_F);
+    h.add(sc);
+    const g = new THREE.Group();
+    g.position.set(-ANCH[0], -ANCH[1], -ANCH[2]);
+    sc.add(g);
+    c.headG = g;                       // mount() 的顎/砲同框(檔頭:兩處 F.head.add 改吃它)
+    h = g;                             // 以下逐行沿用舊座標 —— 放大是外面那一層的事
     // 靜態中介 Group:頭幾何整組前移下修(檔頭 ⓪㋑ —— 頭**節點**的執行期胸腔位置恆為
     // (0, neckAt[1] + 0.90, 0.04) = (0, 1.28, 0.04),樞軸不動,只推幾何)。
     // v5:z 1.50 → 2.20(顱殼 z 1.98~3.74,自軀幹前緣 1.44 前伸出 0.54 的淨空 = 頸的位置;
@@ -261,11 +292,24 @@ export default {
         [0.06, -0.13], [0.44, -0.18], [0.68, -0.02], [0.61, 0.15], [0.22, 0.22], [0.00, 0.09],
       ], 0.10, sx * 0.435, 0, 0, PAL.mid, { metalness: 0.6 });
       cheek.rotation.y = -Math.PI / 2;
-      // 怒眉稜(內端下壓的斜楔 = ★ 圖的兇相)+ 眼(眉下暗窩發光)
+      // 怒眉稜(內端下壓的斜楔 = ★ 圖的兇相)
       const brow = tboxF(hh, { w0: 0.22, d0: 0.22, w1: 0.16, d1: 0.14, h: 0.10, sz: 0.02 }, sx * 0.28, 0.35, 0.46, PAL.deep, { metalness: 0.6 });
       brow.rotation.z = -sx * 0.28;
       brow.rotation.x = -0.08;
-      bxF(hh, 0.055, 0.08, 0.13, sx * 0.385, 0.15, 0.42, accent, { emissive: accent, emissiveIntensity: 1.5 });
+      // ── 眼(2026-08-14 使用者:「**眼睛畫出來,紅光閃爍**」)──
+      // 舊制只有一片 0.055 厚的 accent 薄板嵌在頰甲上 —— 那是條**縫**不是眼:accent 是機體
+      // 色相(這台是灰藍),而且沒有窩、沒有球、沒有瞳,側視特寫只看得到一道亮邊。
+      // 三件一組:暗眼窩(旋成環,盤面法線朝側)+ 紅光眼球 + 亮瞳;紅色 MUST 是**自己的常數**,
+      // MUST NOT 沿用 accent(換塗裝色的時候眼睛會跟著變成藍的)。
+      const ex = sx * 0.40, ey = 0.16, ez = 0.45;
+      latheF(hh, [[0.03, -0.05], [0.13, -0.04], [0.16, 0.015], [0.10, 0.055]], 10, ex, ey, ez, PAL.deep, { metalness: 0.8 })
+        .rotation.z = -sx * Math.PI / 2;                                   // 眼窩:開口朝體側
+      const eye = sphF(hh, 0.105, ex + sx * 0.035, ey, ez, EYERED, { emissive: EYERED, emissiveIntensity: 1.8 });
+      eye.scale.set(0.62, 1.0, 1.15);                                      // 壓成側向的橢球 = 貼在頰面上
+      const pup = sphF(hh, 0.048, ex + sx * 0.075, ey, ez + 0.015, 0xffe2d2, { emissive: EYERED, emissiveIntensity: 2.6 });
+      // 閃爍名冊(locomotion `rig.blink`;左右**反相**⇒ 不是兩顆一起呼吸)
+      (c.eyes || (c.eyes = [])).push({ mesh: eye, f: 3.6, ph: sx > 0 ? 0 : Math.PI },
+        { mesh: pup, f: 3.6, ph: sx > 0 ? 0 : Math.PI, lo: 0.3 });
       // 鼻孔排氣(吻頂小孔 = 引擎排氣的生物機械雙關)
       cylF(hh, 0.03, 0.03, 0.05, 6, sx * 0.12, 0.24, 1.34, INK, { metalness: 0.7 }).rotation.x = 0.4;
       // 鉤形前獠牙(sz 剪切:根前傾、尖端下勾 —— ★ 圖吻端鉤喙)
@@ -444,20 +488,31 @@ export default {
     // 不然髖後開一道縫;後緣 MUST 收在骨盆塊的 z 帶內。
     // v8:股殼頂端下收 0.58 之後,罩子 MUST **同時往前、往上、往下各長一圈**把新空出的
     //   y[−0.58, 0] × z[−0.89, −0.03] 整塊蓋住 —— 沒長的話髖前會開一個看得見的缺口。
+    // 2026-08-14:罩子**往上長 0.36、往外長 0.24**(檔頭 ③)—— 髖盤搬到肩高之後,不長的話
+    //   那枚盤浮在罩子上方的空氣裡。上緣四點各抬(頂點抬到局部 y 0.66 = 世界 y 3.42,恰是
+    //   肩樞軸那條線),深度 0.70 → 0.94 但**整組只往外推**(位置 x = sx·0.12 ⇒ 內緣 −0.35
+    //   逐位元不動、外緣 0.35 → 0.59),內側仍埋在骨盆塊之下。
     const haunch = prismF(l, [
       [-0.55, -0.14], [-0.42, -0.46], [-0.05, -0.60], [0.40, -0.44],
-      [0.54, 0.02], [0.36, 0.38], [-0.15, 0.48], [-0.48, 0.30],
-    ], 0.70, 0, -0.20, -0.46, PAL.mid, { metalness: 0.6 });
+      [0.54, 0.18], [0.36, 0.74], [-0.15, 0.86], [-0.48, 0.66],
+    ], 0.94, c.sx * 0.12, -0.20, -0.46, PAL.mid, { metalness: 0.6 });
     haunch.rotation.y = -Math.PI / 2;
     // 膝前甲板(prismF 圓角六角;落點吃股殼在該高度的**剪切後**前表面)
     // v8:股殼縮短 ⇒ 甲板改錨在**膝端**(y −1.02;殼中心線 z −0.23、半深 0.37 ⇒ 前表面 0.14)。
     const plate = prismF(l, [[-0.23, -0.63], [0.23, -0.63], [0.34, -0.11], [0.21, 0.32], [-0.21, 0.32], [-0.34, -0.11]],
       0.12, 0, -1.02, 0.16, PAL.lite, { metalness: 0.55 });
     plate.rotation.x = 0.06;
-    // 髖側大圓盤關節(latheF;★ 圖髖部醒目圓盤,盤面圖騰歸 paint)+ 軸帽 —— 貼在臀肌罩的外側面
-    const hd = latheF(l, [[0.06, -0.06], [0.29, -0.05], [0.34, 0], [0.29, 0.05], [0.06, 0.06]], 12, c.sx * 0.40, -0.14, -0.44, PAL.mid, { metalness: 0.7 });
+    // 髖側大圓盤關節(latheF;★ 圖髖部醒目圓盤,盤面圖騰歸 paint)+ 軸帽 —— 貼在臀肌罩的外側面。
+    // ── 落點兩軸都是**推導**的(檔頭 ①②)──
+    //   高度:目標 = 肩樞軸的世界高 ⇒ 世界偏移 DY = (shoulderY − hips) × H;
+    //   而這裡是**已前傾 legBase 的股節框** ⇒ world = Rx(legBase)·local,反解 local = Rx(−legBase)·world。
+    //   z 沿用舊盤的世界 z(HDZ)⇒ 盤只是沿體軸抬上去,不順手前後滑掉。
+    const DY = (PROP.shoulderY - PROP.hips) * c.H, HDZ = -0.368;
+    const ca = Math.cos(LEG_BASE), sa = Math.sin(LEG_BASE);
+    const hdY = DY * ca + HDZ * sa, hdZ = -DY * sa + HDZ * ca;      // ⇒ (0.519, −0.207)
+    const hd = latheF(l, [[0.06, -0.06], [0.29, -0.05], [0.34, 0], [0.29, 0.05], [0.06, 0.06]], 12, c.sx * 0.62, hdY, hdZ, PAL.mid, { metalness: 0.7 });
     hd.rotation.z = Math.PI / 2;
-    const hub = cylF(l, 0.09, 0.09, 0.06, 10, c.sx * 0.45, -0.14, -0.44, PAL.deep, { metalness: 0.8 });
+    const hub = cylF(l, 0.09, 0.09, 0.06, 10, c.sx * 0.67, hdY, hdZ, PAL.deep, { metalness: 0.8 });
     hub.rotation.z = Math.PI / 2;
     // 後側腱活塞(hydCyl 亮桿芯;落點吃殼在 y −0.92 的**背**表面 −0.66)+ 膝前護楔
     // v8:長度收到 0.68,兩端才都收在縮短後的股殼(y −1.56 ~ −0.58)之內。
@@ -590,7 +645,7 @@ export default {
     const jawG = new THREE.Group();
     jawG.position.set(0, -0.70, 2.63);                          // 吃 head hh 偏移(−0.52/+2.50)+ (−0.18/+0.13)
     jawG.rotation.x = 0.36;
-    F.head.add(jawG);
+    (c.headG || F.head).add(jawG);       // 頭放大 50% 的那一層(head() 建的 c.headG)
     const axle = cylF(jawG, 0.06, 0.06, 0.64, 8, 0, 0.02, 0, IRON, { metalness: 0.85 });
     axle.rotation.z = Math.PI / 2;
     for (const sx of [-1, 1]) {
@@ -611,7 +666,7 @@ export default {
     // ── 口腔四管旋管砲束(輕/重同膛:lMuz 管束小環、hMuz 充能大環;藏在顎裡,張口才見)──
     const tg = new THREE.Group();
     tg.position.set(0, -0.86, 2.83);                            // 吃 head hh 偏移(−0.52/+2.50)+ (−0.34/+0.33)
-    F.head.add(tg);
+    (c.headG || F.head).add(tg);         // 同上:顎/砲束 MUST 與顱殼同框
     const breech = tboxF(tg, { w0: 0.28, d0: 0.26, w1: 0.24, d1: 0.22, h: 0.32 }, 0, 0, 0.02, GUNMETAL, { metalness: 0.8 });
     breech.rotation.x = Math.PI / 2;
     cylF(tg, 0.08, 0.08, 0.80, 8, 0, 0, 0.46, COAL, { metalness: 0.85 }).rotation.x = Math.PI / 2;
@@ -692,6 +747,7 @@ export default {
     // 尾梢錐(coneF 朝後;★ 圖尾端收尖微翹)
     const tipCone = coneF(tip, 0.09, 0.42, 6, 0, 0, -0.46, PAL.deep, { metalness: 0.6 });
     tipCone.rotation.x = -Math.PI / 2;
+    rig.blink = c.eyes || [];   // 紅眼閃爍(locomotion 的 rig.blink 通道;base 由它第一幀就地取)
     rig.tailSegs = segs;
     rig.tailUp = 0.3;
     rig.tinyArms = 1;      // 退化短前臂:不套一般雙足擺臂公式(locomotion)

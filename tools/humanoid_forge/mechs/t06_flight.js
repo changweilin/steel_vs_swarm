@@ -23,6 +23,17 @@ import { bipedDims, groundCtx, upright } from './_morph.js';
 const PITCH = 0.52;           // 直立前傾角(≈30°;使用者定案的飛行姿態)
 const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
 
+// 2026-08-14 使用者:「噴射背包的**尾焰長一點**,**方向朝後下**,**凝結雲剛好落在腳邊**。」
+const FLAME_R = 0.18, FLAME_L = 3.2;   // 尾焰(舊值 0.16 / 1.8 —— 焰只到腰,讀不出推力)
+const FLAME_Y = 0.18;                  // 焰根離噴口的距離(jetF 自 g 的 +y 起算)
+// 噴流朝向:jg 的局部 +y = 噴流方向,而 jg 掛在**反傾錨**上 ⇒ 這一組角就是世界角。
+// Rx(a)·(0,1,0) = (0, cos a, sin a):要「後下」就 MUST 讓 y 分量為負 ⇒ a < −π/2。
+// 舊值 −1.50 的 cos 是 **+0.07 = 微微朝上**(那是「朝後略上」,與使用者這一輪相反)。
+const JET_X = -2.05;                   // ⇒ (0, −0.46, −0.89):朝世界後方、下傾 ≈27.5°
+// (16° 在側視上只斜一點點,讀不出「朝後下」;27.5° 讓焰尾指向腳邊那朵雲的方向)
+const JET_Z = -0.30;                   // 外撇(左右各半,逐邊 ×sx;逐位元同舊值)
+const CLOUD_R = 0.34;                  // 凝結雲球團基準半徑(團長 ≈ 3.4 × R)
+
 /**
  * 觔斗雲:尾焰末端的凝結雲。**一朵雲 = 一顆球一件**(生物/自然多重元件的同一條紀律),
  * 位置與大小逐顆由索引推導(§2.3 零亂數)。沿 pod 的 +y(= 噴流方向)往後長。
@@ -49,8 +60,8 @@ export default {
   doc: [
     ['直立前傾軀幹', '地面型胸腔/骨盆(t06.chest/pelvis)整組前傾 30° —— 使用者定案的飛行姿態'],
     ['頭部', '地面型猴首(t06.head:金箍/紫金冠/火眼金睛)+ 反傾中介 Group 平視航向'],
-    ['噴射背包 ×2', '地面型噴口與噴焰翎(t06 的 jetPods 錨)+ jetF 動畫尾焰(推力 ∝ 速度)'],
-    ['觔斗雲 ×2', '焰尾凝結雲:半透明球團(一顆一件、黃金角散布、零亂數)'],
+    ['噴射背包 ×2', '地面型噴口與噴焰翎(t06 的 jetPods 錨)+ jetF 動畫尾焰(長 3.2、朝世界後下方 27.5°;推力 ∝ 速度)'],
+    ['觔斗雲 ×2', '焰尾凝結雲:半透明球團(一顆一件、黃金角散布、零亂數);落點由**同側腳的世界座標**換算進噴流框推導(不是沿焰軸量的),恰聚在腳邊'],
     ['長臂 ×2', '掌行長臂(t06.armUp/armFore/mount 的掌行前腳)後掠收攏'],
     ['雙腿', '同一組腿件併攏後伸(t06.thigh/shin/foot;足底噴口朝後)'],
     ['多節長尾 + 熔核砲', 'chainF 十節尾(t06.extra 同一條)繞上背、尾端熔核砲朝前瞄準'],
@@ -114,6 +125,7 @@ export default {
       foot.rotation.x = -0.5;                   // 腳背繃直(飛行姿態)
       shin.add(foot);
       t06.foot(cx, foot, { clear: dim.clear, footL: dim.footL });
+      (c._feet || (c._feet = {}))[sx] = foot;   // lift() 的凝結雲落點基準(「剛好落在腳邊」;逐邊各取自己那一隻)
     }
 
     // ---- 武裝:同一根如意金箍棒,改背在後背、棒身朝航向 ----
@@ -141,17 +153,31 @@ export default {
   lift(c) {
     const { accent } = c;
     const jets = [];
+    const fv = new THREE.Vector3();
     for (const p of c.jetPods || []) {
       // 錨點吃地面型的噴口座標,但**朝向另算**:噴焰翎是站姿的上揚裝飾,飛行的噴流要朝
       // 世界後下方。反傾 Group 先把座標系轉回世界對齊,朝向才不會跟著軀幹前傾一起被轉走。
       const pod = upright(c._chest, PITCH, p.x, p.y, p.z);
       const jg = new THREE.Group();
-      jg.rotation.set(-1.5, 0, -0.30 * p.sx);    // 噴流朝世界 −z(略下、略外撇)
+      jg.rotation.set(JET_X, 0, JET_Z * p.sx);   // 噴流朝世界後下方(檔頭 JET_X)
       pod.add(jg);
-      const fl = jetF(jg, 0.16, 1.8, 0, 0.18, 0, accent);
+      const fl = jetF(jg, FLAME_R, FLAME_L, 0, FLAME_Y, 0, accent);
       fl.g.rotation.x = Math.PI;                 // jetF 錐尖朝 −y ⇒ 翻正朝 +y = 噴流方向
       jets.push(fl);
-      condCloud(jg, 1.45, 0.34, 7);              // 觔斗雲:焰尾之外的凝結雲團
+      // 觔斗雲:「**剛好落在腳邊**」—— 落點是**推導出來的**,MUST NOT 手寫一個距離。
+      // 噴口高度吃 chest 的 dims、腳的落點吃腿鏈的三個角,兩邊任一動了手寫值就靜默失準
+      // (而畫面上只表現成「雲飄在膝蓋旁邊」或「雲掉到腳下面」)。
+      // ⚠ 雲**不是**沿噴流軸量出來的一段:尾焰朝後下、雲在腳邊,是兩件各自成立的事
+      //   (使用者這一輪講的正是這兩句)。把雲掛在焰尾的話它只會落在「軸上離腳最近的那一點」,
+      //   而那一點在腰的後方 —— 那不是他踩著的那朵雲。
+      // ⇒ 直接把腳的世界座標換算進 jg 的局部框當雲團中心,再沿噴流方向讓開半團的量,
+      //   雲就恰好聚在腳的後緣(遮住腳 = 看不到他踩在上面)。
+      jg.updateWorldMatrix(true, false);
+      (c._feet[p.sx] || c._feet[1]).getWorldPosition(fv);
+      const cg = new THREE.Group();
+      cg.position.copy(jg.worldToLocal(fv));
+      jg.add(cg);
+      condCloud(cg, -CLOUD_R * 1.2, CLOUD_R, 7);
     }
     return { jets };
   },
