@@ -4422,10 +4422,16 @@ export class BattleClient {
       if (ev.pid === this.youId && ev.v > 0) this.hud.feed?.(`💀 陣亡罰金 -$${ev.v}`);
     } else if (ev.e === 'siege') {
       // 攻堅階段被推平(劇情戰役;階段由伺服器定案,客戶端 MUST NOT 自己數塔)。
-      // **只有敵方那一階倒下才演出** —— 自己的塔被拔掉播一段勝利者的對白等於幫對手慶祝。
+      // 2026-08-14 起**對白不掛在這裡**:使用者的順序是「區域 BOSS 被擊敗 → 對話 → 才拆得掉
+      // 建築」⇒ 觸發點搬到 `siegeTalk`(伺服器的 `_bossFell`),這裡只剩戰況播報。
+      this.hud.feed?.(ev.side === this.side
+        ? `🛡 我方${SIEGE.NAMES[ev.stage] || ''}全數失守`
+        : `⚔ 敵方${SIEGE.NAMES[ev.stage] || ''}已推平`);
+    } else if (ev.e === 'siegeTalk') {
+      // 區域 BOSS 被擊敗(該階最後一名)⇒ 播該階對白,同時伺服器開始倒數解鎖那一階的建築。
+      // **只有敵方那一階才演出** —— 自己這邊的 BOSS 倒下播一段勝利者的對白等於幫對手慶祝。
       // 演出本身住 main.js(它才知道現在打的是哪一章、哪一個陣營),這裡只上拋。
       if (ev.side !== this.side) this.onSiege?.(ev.stage, ev.side);
-      else this.hud.feed?.(`🛡 我方${SIEGE.NAMES[ev.stage] || ''}全數失守`);
     } else if (ev.e === 'plasma') {
       // 他人施放電漿扇形(自己那份已在 _tryFire 本地畫過)
       if (ev.pid !== this.youId) {

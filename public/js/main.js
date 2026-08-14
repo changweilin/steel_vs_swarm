@@ -2216,7 +2216,8 @@ function enterGame() {
     terrain: app.terrain,
     audio: app.audio,
     hud,
-    // 攻堅階段被推平 → 播該章該階的雙方對白(內容 storytalk.js、演出 dialogue.js)。
+    // 區域 BOSS 被擊敗 → 播該章該階的雙方對白(內容 storytalk.js、演出 dialogue.js;觸發事件
+    // 自 2026-08-14 起是 `siegeTalk` 而非「整階被推平」—— 對白播完那一階的建築才解鎖)。
     // **主堡那一階不在這裡播**:主堡一倒就 gameOver,對白會被結算畫面當場蓋掉 ⇒ 改由 hud.over 播。
     onSiege: (stage) => {
       if (!app.story || stage >= SIEGE.BASE) return;

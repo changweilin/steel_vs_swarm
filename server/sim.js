@@ -13,7 +13,7 @@ import {
   ULT_CARRIER, ultDelivered, ultParts, ultPartN, SELF_ULT, selfUltBoost,
   ULT_SUPPORT, supportN, supportHp, supportLegS, abilTempo, abilOrigin,
   dmgFalloff, blastFalloff, offAxisFalloff, fanArcHalf, fanConeHalf, battleRect, llToXZ, solveTowerSites, shieldSplit,
-  SIEGE, siegeSiteStages, siegeOpenStage, mapArg, siteCPs,
+  SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, allyBotDmgF, mapArg, siteCPs,
   BOSS, bossSegOf, bossSegCapF, bossSlotPlan, bossSlotOff, bossZoneR, bossHealF,
   aoeClass, trajClass, lanceR, LANCE, lobMinRange, flightCapS, chaseCapS, shotFlightS, shotTrailS, blastCoreR,
   EVASION, evadable, evadeCompF, heroMobility, evasionMinSpeed, LOS, IFRAME, THIRD, CIVILIAN, CIVILIANS, civSpeed, hitH, hitR,
@@ -208,6 +208,15 @@ export class BattleSim {
     this._bossSlot = { SWARM: 0, STEEL: 0 };       // 已指派的 BOSS 席次(= addHero 的到場序)
     this._siegeLeft = { SWARM: [], STEEL: [] };   // [階段] = 該方該階仍存活的建築數(_spawnStructures 填)
     this._siegeOpen = { SWARM: 0, STEEL: 0 };     // 該方目前打得動的最高階段(siegeOpenStage 推導)
+    // 區域 BOSS 關卡(見 data.js SIEGE.TALK_S):[階段] = 該階仍存活的 BOSS 小隊數 / 對白解禁時刻。
+    // 兩張表都在 addHero 點名(建構期還沒有英雄);沒有 BOSS 的階段恆 0 ⇒ 那一階不受本閘影響,
+    // 一般對戰(無 defSide ⇒ 一名 BOSS 都沒有)整套恆為中性 = 逐位元同舊制。
+    this._bossLeft = { SWARM: [], STEEL: [] };
+    this._talkUntil = { SWARM: [], STEEL: [] };
+    for (const s of ['SWARM', 'STEEL']) {
+      this._bossLeft[s] = new Array(SIEGE.STAGES.length).fill(0);
+      this._talkUntil[s] = new Array(SIEGE.STAGES.length).fill(0);
+    }
 
     // 兵線折線轉公尺;lane[laneIdx] 方向:SWARM 主堡 → STEEL 主堡
     this.lanes = config.lanes.map((line) =>
@@ -1382,6 +1391,37 @@ export class BattleSim {
   }
 
   /**
+   * 區域 BOSS 關卡的 HP 地板(2026-08-14 使用者:「敵方砲塔主堡會鎖住 HP1 直到區域 BOSS 被擊敗
+   * 且對話結束」)。回 0 = 不夾(一般對戰、沒有 BOSS 的階段、已經解禁的階段)。
+   *
+   * 與 `siegeLocked` 是**兩道不同語意的閘**,MUST NOT 合併:那一支是階段順序、完全免傷 + 排除
+   * 索敵;這一支是同一階之內的 BOSS 關卡,建築照樣被索敵、照樣掉血,只是死不了 —— 所以
+   * 消費端**只有 `_damage`** 一處(`_tgBlockedD` / `bots._acquire` MUST NOT 吃這一支,不然
+   * 小兵會集體無視一座還在對它們開火的塔)。
+   * BOSS 自己不吃(`t.sg` 在 BOSS 身上也有值,但它不是建築)—— 判據是 `!t.hero`。
+   */
+  siegeHpFloor(t) {
+    if (!this.siege || t.hero || t.sg == null) return 0;
+    const left = this._bossLeft[t.side], until = this._talkUntil[t.side];
+    if (!left) return 0;
+    const gated = (left[t.sg] || 0) > 0 || this.t < (until[t.sg] || 0);
+    return gated ? SIEGE.BLD_HP_FLOOR : 0;
+  }
+
+  /**
+   * 我方電腦玩家對 BOSS / 建築的傷害折減(2026-08-14 使用者定案;倍率唯一縫 = data.allyBotDmgF)。
+   * 只認「**攻方的 bot 英雄** → **守方的 BOSS 或建築**」這一格:真人玩家(關卡是他的)、守方
+   * 自己的輸出、小兵與第三方 NPC 一律 ×1。沒有 defSide ⇒ 恆 ×1 = 一般對戰逐位元同舊制。
+   */
+  _allyBotDmgF(t, by) {
+    if (!this.defSide || !by?.hero || by.side === this.defSide || !isBotId(by.pid)) return 1;
+    if (t.side !== this.defSide) return 1;
+    if (t.sq?.boss) return allyBotDmgF('boss');
+    if (t.kind === 'tower' || t.kind === 'base') return allyBotDmgF('building');
+    return 1;
+  }
+
+  /**
    * 建築陣亡後推進階段;整階被推平時發事件(客戶端劇情對話的觸發來源,見 public/js/storytalk.js)。
    * `stage` = **剛被推平的那一階**(不是新開放的那一階):對話的語意是「你剛剛拔掉了他們的前線砲塔」。
    * 非劇情戰役照樣記帳(成本是一個整數遞減),但不發事件也不鎖血 ⇒ 對局行為逐位元不變。
@@ -1395,6 +1435,23 @@ export class BattleSim {
     const fell = this._siegeOpen[t.side];
     this._siegeOpen[t.side] = open;
     if (this.siege) this.events.push({ e: 'siege', side: t.side, stage: fell });
+  }
+
+  /**
+   * 區域 BOSS 全滅(整隊,呼叫端 = `_kill` 的 BOSS 分支)。這一階的最後一名 BOSS 倒下時:
+   *   ① 起算對白窗(`siegeTalkS`;主堡那一階回 0 = 當場解禁,見 SIEGE.TALK_S 的 ⚠);
+   *   ② 發 `siegeTalk` 事件 —— **劇情對白的觸發點自 2026-08-14 起是這裡,不再是「整階被推平」**。
+   *      使用者的順序是「BOSS 被擊敗 → 對話 → 才拆得掉建築」,對白掛在推平上就永遠慢一步
+   *      (而且那時建築早就沒了,鎖不鎖已經沒有意義)。
+   * 逐階記帳而不是「全場剩幾個 BOSS」:三名 BOSS 各守一階,前線那位倒下時中段的還活著。
+   */
+  _bossFell(t) {
+    const left = this._bossLeft[t.side];
+    if (!left || t.sg == null) return;
+    left[t.sg] = Math.max(0, left[t.sg] - 1);
+    if (left[t.sg] > 0) return;
+    this._talkUntil[t.side][t.sg] = this.t + siegeTalkS(t.sg);
+    this.events.push({ e: 'siegeTalk', side: t.side, stage: t.sg });
   }
 
   // ---------- NPC BOSS(劇情戰役的敵方電腦玩家;見 data.js BOSS)----------
@@ -1441,23 +1498,35 @@ export class BattleSim {
     const seg = max > 0 ? bossSegOf(hp / max) : 0;
     if (seg <= sq.bossSeg) return;
     for (let k = sq.bossSeg; k < seg; k++) this._bossEnrage(sq);
+    // 進段 ⇒ **護盾補滿**(2026-08-14 使用者)。MUST 排在狂暴之後:`sp` 軌剛把 maxSp 加大,
+    // 先補後升就是補到舊上限(見 data.js BOSS 檔頭 ⑥㋒)。陣亡的機體不補(它不重生)。
+    for (const b of sq.bodies) if (!b.dead) b.sp = b.maxSp;
     sq.bossSeg = seg;
     this.events.push({ e: 'bossSeg', pid: sq.pid, side: sq.side, seg });
   }
 
   /**
-   * 狂暴化一級:**攻擊四軌**(輕/重/小招/大招)各 +1 階。防禦四軌與陣營小兵強化恆 Lv0
-   * (使用者:「防禦面與小兵永不升級」)—— 那兩者的入口只有 `buy`,而 `buy` 對 BOSS 直接拒絕。
-   * 階級推進走 `_applyUpg` 同一支(與玩家購買共用),MUST NOT 在這裡自己寫 `h.abil[x] = …`:
-   * 升階可能加大彈夾,漏掉那一段清空的話 BOSS 會拿著舊彈匣計數打到下一次裝填才發現。
+   * 狂暴化一級:**八軌各 +1 階**(2026-08-14 使用者「敵方 BOSS 防禦面也會隨著 HP 階段升級」——
+   * 舊制只推攻擊四軌)。名冊走 `ECON.UPGRADES` 全表,MUST NOT 手寫「防禦四軌」的清單:
+   * 加第九軌時手寫的那一份會靜默過期。陣營小兵強化仍恆 Lv0(入口只有 `buy`,而 `buy` 對 BOSS
+   * 直接拒絕)。階級推進走 `_applyUpg` 同一支(與玩家購買共用),MUST NOT 在這裡自己寫
+   * `h.abil[x] = …`:升階可能加大彈夾,漏掉那一段清空的話 BOSS 會拿著舊彈匣計數打到下一次裝填。
+   *
+   * **裝甲上限(`hp` 軌)MUST 等比放大當下 HP**(見 data.js BOSS 檔頭 ⑥㋑):`_applyUpg` 的 hp 軌
+   * 是「上限與當下血量同時 +Δ」= 把新增的那一截補滿,直接違反「補血不得回到上一階」;而只放大
+   * 上限的話 `Σhp/Σmaxhp` 當場掉下去 ⇒ `_bossSync` 連鎖狂暴到頂。等比放大兩個坑都躲得掉:
+   * 段位比例逐位元不變,拿到的是純粹的 EHP。
    */
   _bossEnrage(sq) {
     const h = this.heroes.get(sq.pid) || sq.bodies[0];
     if (!h) return;
     for (const [item, up] of Object.entries(ECON.UPGRADES)) {
-      if (!up.abil || (h.upg[item] || 0) >= up.max) continue;
+      if ((h.upg[item] || 0) >= up.max) continue;
+      const bodies = this._bodies(h);
+      const frac = item === 'hp' ? bodies.map((b) => (b.maxHp > 0 ? b.hp / b.maxHp : 0)) : null;
       h.upg[item] = (h.upg[item] || 0) + 1;
       this._applyUpg(h, item, up);
+      if (frac) bodies.forEach((b, i) => { b.hp = Math.min(b.maxHp, Math.round(b.maxHp * frac[i])); });
     }
   }
 
@@ -1549,6 +1618,8 @@ export class BattleSim {
       // MUST 自己補記一筆,否則它守的那一階在鎖血眼裡是空的 —— 前線 BOSS 還活著中段就解鎖了。
       const left = this._siegeLeft[side];
       if (left) { left[sq.bossStage] = (left[sq.bossStage] || 0) + 1; this._siegeOpen[side] = siegeOpenStage(left); }
+      // 區域 BOSS 關卡的點名(見 siegeHpFloor):同一階可能不只一名(5 名 BOSS = 前中後 1:2:2)
+      this._bossLeft[side][sq.bossStage] = (this._bossLeft[side][sq.bossStage] || 0) + 1;
     }
     const n = kind === 'drone' ? SQUAD.N : 1;
     for (let i = 0; i < n; i++) {
@@ -3815,6 +3886,12 @@ export class BattleSim {
   _damage(t, dmg, by, pen = 0, floorHp = 0, wd = null) {
     if (this.over || t.hp <= 0 || t.inv) return;   // inv = 不可摧毀障礙(塌陷/坍方/火場/淹水)
     if (this.siegeLocked(t)) return;               // 攻堅順序未到:前一階沒清完的建築完全免傷(劇情戰役)
+    // 區域 BOSS 關卡(劇情戰役):BOSS 還沒被擊敗 / 對白還沒播完 ⇒ 這座建築**打得掉血但死不了**。
+    // 併進既有的 `floorHp` 通道(沼澤那條)而不是另寫一段:那條路徑的語意逐字就是「扣得動、
+    // 夾在地板、不呼叫 _kill」—— 自己寫一份的話「不呼叫 _kill」很容易漏,而漏掉的症狀是塔照樣
+    // 被拆掉、階段照樣推進,鎖血等於沒有發生。
+    floorHp = Math.max(floorHp, this.siegeHpFloor(t));
+    dmg *= this._allyBotDmgF(t, by);               // 我方電腦玩家對 BOSS ×10% / 對建築 ×25%
     if (t.gar) return;                             // 駐守碉堡中的第三方步槍兵:碉堡保護,免傷
     if (t.hero && (t.invUntil || 0) > this.t) return;   // 無敵幀(蓄力跳/變形中段):完全免傷
     // 攻堅需兵線配合:附近沒有己方小兵時,打主堡傷害折減
@@ -4122,6 +4199,7 @@ export class BattleSim {
         t.deadTick = this._tickN;
         if (this._aliveN(t) === 0) {
           this._siegeFell(t);
+          this._bossFell(t);   // 區域 BOSS 關卡:這一階最後一名倒下 ⇒ 起算對白窗、發 siegeTalk
           this.events.push({ e: 'bossDown', pid: t.pid, side: t.side, ch: t.ch, sg: t.sg });
         }
         if (this.heroes.get(t.pid) === t) this._promote(t.sq);
@@ -4910,8 +4988,20 @@ export class BattleSim {
       // 逐側各用各的深度,在非對稱地圖上會變成「守方三十幾隻兵已經上路、攻方一隻都沒有」。
       // 對稱戰場兩側同值 ⇒ min 取到同一個數 = 逐位元同舊制。
       const limit = Math.min(depth('SWARM'), depth('STEEL'));
-      for (let k = 1; GAME.WAVE_SPAWN_OFF_M + k * gap <= limit; k++) {
-        for (const side of ['SWARM', 'STEEL']) this._spawnLaneWave(li, side, -k, GAME.WAVE_SPAWN_OFF_M + k * gap);
+      // 劇情戰役(2026-08-14 使用者:「開場敵方兵線 NPC 要補到前線砲塔」)—— 守方(BOSS 方)
+      // 改吃**自己那一側的深度** = 它自己那座前線砲塔的沿線位置,攻方仍吃兩側較小者。這是刻意
+      // 破例:那一場本來就不對稱(守方已經佈好防線、攻方剛推進到接觸線),上面那條「兩側取
+      // 較小者」防的是對稱地圖上的不公平。沒有 defSide ⇒ 兩側都回 limit = 逐位元同舊制。
+      const lim = {
+        SWARM: this.defSide === 'SWARM' ? depth('SWARM') : limit,
+        STEEL: this.defSide === 'STEEL' ? depth('STEEL') : limit,
+      };
+      // 迴圈仍以 k 為外圈、兩陣營為內圈:兩側同值時 `_spawnLaneWave` 的呼叫序逐位元同舊制
+      // (那一支每隻兵抽兩枚 `Math.random()` 抖動 —— 換個順序整批落點就跟著換)。
+      const far = Math.max(lim.SWARM, lim.STEEL);
+      for (let k = 1; GAME.WAVE_SPAWN_OFF_M + k * gap <= far; k++) {
+        const lead = GAME.WAVE_SPAWN_OFF_M + k * gap;
+        for (const side of ['SWARM', 'STEEL']) if (lead <= lim[side]) this._spawnLaneWave(li, side, -k, lead);
       }
     }
   }

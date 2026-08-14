@@ -25,6 +25,10 @@
 //   node tools/audit_story_map.mjs --break-enrage    擊破一段不升攻擊面
 //   node tools/audit_story_map.mjs --break-respawn   BOSS 照一般規則重生
 //   node tools/audit_story_map.mjs --break-team      地圖大小跟著人數走(= 迷你地圖那條路)
+//   node tools/audit_story_map.mjs --break-prefill   開場預置退回「兩側取較小者」(守方補不到前線塔)
+//   node tools/audit_story_map.mjs --break-sp        進段不補滿護盾
+//   node tools/audit_story_map.mjs --break-hpscale   裝甲上限升級補滿那一截(= 段位被推回上一階)
+//   node tools/audit_story_map.mjs --break-allybot   我方電腦玩家的傷害折減拿掉
 // 跑法:`node tools/audit_story_map.mjs`
 // 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { readSrc, grabMethod } from './audit_src.mjs';
@@ -32,6 +36,7 @@ import {
   STORY_MAP, MINI, FULL_STAGES, TEAM, SIEGE, UNITS, GAME, ECON, OTHER_SIDE, CHARACTERS,
   mapPlan, mapArg, mapScaleF, miniScaleF, laneChainOf, laneChainF, laneCountFor, towerStages,
   solveTowerSites, siteCPs, siegeSiteStages, towerLayoutAudit, edgeBufferM, llToXZ,
+  waveSpacingM, siegeTalkS, allyBotDmgF, isBotId,
   BOSS, bossSegN, bossSegCapF, bossSegOf, bossGlow, bossZoneR, bossSlotPlan, bossSlotOff, bossHealF,
 } from '../public/js/data.js';
 import { VENUES, venueConfig } from '../public/js/venues.js';
@@ -42,7 +47,17 @@ const BRK = {
   stage: ARG.has('--break-stage'), hpmul: ARG.has('--break-hpmul'), full: ARG.has('--break-full'),
   cap: ARG.has('--break-cap'), enrage: ARG.has('--break-enrage'), respawn: ARG.has('--break-respawn'),
   team: ARG.has('--break-team'),
+  prefill: ARG.has('--break-prefill'), sp: ARG.has('--break-sp'),
+  hpscale: ARG.has('--break-hpscale'), allybot: ARG.has('--break-allybot'),
 };
+// 壞版:開場預置退回「兩側一律取較小者」。做法 = 在 `_prefillLanes` 執行期間把 defSide 藏起來
+// (那正是舊制的行為),不必抄一份舊實作 —— 抄的那一份會自己過期。
+if (BRK.prefill) {
+  const real = BattleSim.prototype._prefillLanes;
+  BattleSim.prototype._prefillLanes = function () {
+    const def = this.defSide; this.defSide = null; real.call(this); this.defSide = def;
+  };
+}
 // 壞版:段權重多一段而總倍率留在原地(= 手寫 10 的下場)
 if (BRK.hpmul) BOSS.SEG_W = [1, 2, 3, 4, 5];
 // 壞版:敵方只剩一階塔(照抄迷你地圖的階數 ⇒ 沒有中段砲塔可打,而地圖大小自己會跟著縮)
@@ -299,24 +314,49 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
     !sim.siegeLocked(sim.heroes.get(pids[0]))
     && sim.siegeLocked(sim.heroes.get(pids[1])) && sim.siegeLocked(sim.heroes.get(pids[2])));
 
-  // 分段 → 狂暴化(攻擊四軌各 +1;防禦四軌恆 0)
+  // 分段 → 狂暴化(2026-08-14 起**八軌全升** + 進段補滿護盾;陣營小兵強化仍恆 Lv0)
   const p0 = pids[0], sq0 = sim.squads.get(p0), h0 = sim.heroes.get(p0);
   if (BRK.enrage) sim._bossEnrage = () => {};
+  // 壞版:進段不補護盾(升完把護盾按原值放回去)
+  if (BRK.sp) {
+    const real = sim._bossSync.bind(sim);
+    sim._bossSync = (sq) => { const sp = sq.bodies.map((b) => b.sp); real(sq); sq.bodies.forEach((b, i) => { b.sp = sp[i]; }); };
+  }
+  // 壞版:裝甲上限升級「上限與當下血量同時 +Δ」(= `_applyUpg` 原樣,補滿新增的那一截)
+  if (BRK.hpscale) {
+    const real = sim._bossEnrage.bind(sim);
+    sim._bossEnrage = (sq) => {
+      const b0 = sq.bodies.map((b) => ({ hp: b.hp, max: b.maxHp }));
+      real(sq);
+      sq.bodies.forEach((b, i) => { b.hp = b0[i].hp + (b.maxHp - b0[i].max); });
+    };
+  }
   const COMBAT = Object.entries(ECON.UPGRADES).filter(([, u]) => u.abil).map(([k]) => k);
   const DEFENCE = Object.keys(ECON.UPGRADES).filter((k) => !COMBAT.includes(k));
-  let enrageOk = true;
+  let enrageOk = true, defOk = true, spOk = true, ratioOk = true;
   for (let k = 1; k < bossSegN(); k++) {
-    for (const b of sq0.bodies) b.hp = b.maxHp * (bossSegCapF(k) - 1e-4);
+    const want = bossSegCapF(k) - 1e-4;                       // 進段當下的 HP 比例
+    for (const b of sq0.bodies) { b.hp = b.maxHp * want; b.sp = 0; }
     sim._bossSync(sq0);
     if (sq0.bossSeg !== k) enrageOk = false;
     if (!COMBAT.every((it) => (h0.upg[it] || 0) === Math.min(ECON.UPGRADES[it].max, k))) enrageOk = false;
+    if (!DEFENCE.every((it) => (h0.upg[it] || 0) === Math.min(ECON.UPGRADES[it].max, k))) defOk = false;
+    if (!sq0.bodies.every((b) => b.sp === b.maxSp)) spOk = false;
+    // 裝甲上限升級 MUST 等比放大當下 HP ⇒ 段位比例逐位元(容 round)不變
+    if (!sq0.bodies.every((b) => near(b.hp / b.maxHp, want, 2e-3))) ratioOk = false;
   }
   t(`每擊破一段,攻擊四軌(${COMBAT.join('/')})各升一級 ⇒ ${bossSegN() - 1} 次剛好升滿`, enrageOk,
     `seg=${sq0.bossSeg} upg=${JSON.stringify(h0.upg)}`);
   t('招式階級跟著推進(走 `_applyUpg` 同一支,與玩家購買共用)',
     COMBAT.every((it) => h0.abil[ECON.UPGRADES[it].abil] === 1 + (h0.upg[it] || 0)));
-  t('防禦四軌與陣營小兵強化恆 Lv0(使用者:防禦面與小兵永不升級)',
-    DEFENCE.every((it) => (h0.upg[it] || 0) === 0) && sim.creepUpg[DEF].every((l) => l === 0));
+  t(`防禦四軌(${DEFENCE.join('/')})也跟著升(2026-08-14 使用者:防禦面也隨 HP 階段升級)`,
+    defOk, JSON.stringify(h0.upg));
+  t('陣營小兵強化仍恆 Lv0(入口只有 buy,而 buy 對 BOSS 直接拒絕)',
+    sim.creepUpg[DEF].every((l) => l === 0));
+  t('進段補滿護盾(MUST 排在狂暴之後 —— sp 軌剛把 maxSp 加大)',
+    spOk && sq0.bodies.some((b) => b.maxSp > 0), sq0.bodies.map((b) => `${b.sp}/${b.maxSp}`).join(' '));
+  t('裝甲上限升級 MUST 等比放大當下 HP(補滿那一截 = 段位被推回上一階;只放大上限 = 連鎖狂暴到頂)',
+    ratioOk, sq0.bodies.map((b) => (b.hp / b.maxHp).toFixed(4)).join(' '));
   t('BOSS 買不到任何東西(權威閘門在 sim.buy)',
     typeof sim.buy(p0, 'hp') === 'string' && typeof sim.buy(p0, 'lw') === 'string'
     && typeof sim.buy(p0, 'creep', 0) === 'string' && sim.buy(1, 'hp') === null);
@@ -341,9 +381,23 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
   t('一般英雄的恢復逐位元同舊制(補到滿、不減半、無段天花板)',
     sim._healBody(ally, ally.maxHp, 'base') > 0 && ally.hp === ally.maxHp);
 
+  // ---- 區域 BOSS 關卡:BOSS 沒解決 ⇒ 建築打得掉血但死不了(2026-08-14 使用者)----
+  const fTower = towers.find((e) => e.side === DEF && e.sg === 0);
+  const fHp0 = fTower.hp;
+  sim._damage(fTower, 1e9, null, 999);
+  t('區域 BOSS 還活著:前線砲塔**打得掉血但夾在 HP1**(不是免傷 —— 那是 siegeLocked 的語意)',
+    fTower.hp === SIEGE.BLD_HP_FLOOR && fHp0 > SIEGE.BLD_HP_FLOOR && !sim.siegeLocked(fTower),
+    `${fTower.hp}/${fHp0}`);
+  t('鎖 HP 的建築照樣列入索敵(只有 siegeLocked 那一道才排除;兩道閘語意不同,MUST NOT 合併)',
+    sim._tgBlockedD({ x: fTower.x, z: fTower.z, side: ATK }, { range: 1e6 }, null, fTower, 0) !== true);
+  t('BOSS 自己不吃 HP 地板(判據是 `!t.hero`)', sim.siegeHpFloor(sim.heroes.get(p0)) === 0);
+
   // 不重生 + 整隊全滅推進階段
   const leftBefore = sim._siegeLeft[DEF][0];
+  const tKill = sim.t;
   for (const b of sq0.bodies) { b.hp = 0; sim._kill(b, ally); }
+  const talkEv = sim.events.filter((e) => e.e === 'siegeTalk');
+  const talkUntil = sim._talkUntil[DEF][0];
   if (BRK.respawn) for (const b of sq0.bodies) b.respawnAt = sim.t;
   t('BOSS 陣亡後不重生(重生倒數推到永遠到不了的時刻)',
     sq0.bodies.every((b) => b.respawnAt === Infinity));
@@ -355,6 +409,18 @@ console.log('\n■ Ⅴ 行為直測(跑真品 BattleSim:塔、BOSS、鎖血、�
     sim._reviveBody(sq0.bodies[0], 0.5);
     return sq0.bodies[0].dead;
   })());
+
+  // ---- 區域 BOSS 倒下 → 對白窗 → 建築解鎖 ----
+  t('這一階最後一名 BOSS 倒下 ⇒ 發一次 `siegeTalk`(對白的觸發點,不再是「整階被推平」)',
+    talkEv.length === 1 && talkEv[0].stage === 0 && talkEv[0].side === DEF, JSON.stringify(talkEv));
+  t(`對白窗 = 擊敗當下 + siegeTalkS(前線 ${siegeTalkS(0)}s、主堡 ${siegeTalkS(SIEGE.BASE)}s)`,
+    near(talkUntil, tKill + siegeTalkS(0), 1e-9) && siegeTalkS(SIEGE.BASE) === 0,
+    `${talkUntil} vs ${tKill + siegeTalkS(0)}`);
+  t('對白播完之前:建築仍夾在 HP1(BOSS 死了不等於馬上拆得掉)',
+    sim.siegeHpFloor(fTower) === SIEGE.BLD_HP_FLOOR && (sim._damage(fTower, 1e9, null, 999), fTower.hp === SIEGE.BLD_HP_FLOOR));
+  sim.t = talkUntil + 1e-6;
+  t('對白結束 ⇒ 地板撤掉,同一發就打掉了',
+    sim.siegeHpFloor(fTower) === 0 && (sim._damage(fTower, 1e9, null, 999), fTower.hp === 0));
 
   // ---- 一般對戰逐位元不變 ----
   const cfgF = venueConfig(v, TEAM);
@@ -414,6 +480,66 @@ console.log('\n■ Ⅵ 電腦玩家:活動範圍夾在位置寫入的唯一縫�
     const gameSrc = readSrc('public', 'js', 'game.js');
     return /ent\.bossSeg = e\.bs;/.test(gameSrc) && /bossGlow\(ent\.bossSeg\)/.test(gameSrc)
       && !/HP_MUL|bossSegOf|bossHealF/.test(strip(gameSrc));
+  })());
+}
+
+// ---------------------------------------------------------------------------
+console.log('\n■ Ⅶ 開場預置兵線 + 我方電腦玩家的傷害折減(2026-08-14 使用者)');
+// ---------------------------------------------------------------------------
+{
+  const v = VENUES.find((x) => !venueConfig(x, 1).synthetic) || VENUES[0];
+  const DEF = 'SWARM', ATK = OTHER_SIDE[DEF], TEAM = 3;
+  const cfg = venueConfig(v, TEAM, DEF);
+  cfg.env = { season: 'summer', time: 'day', weather: 'clear' };
+  cfg.siege = true; cfg.teamSize = TEAM;
+  const sim = new BattleSim(cfg);
+
+  // ---- 開場預置:守方補到自己那座前線砲塔 ----
+  const pre = (side) => [...sim.ents.values()].filter((e) => e.side === side && e.wv < 0);
+  const lead = (side) => Math.max(0, ...pre(side).map((e) => e.prog));
+  const cum = sim._laneCum(0), total = cum[cum.length - 1];
+  const frontM = total * sim.towerSites[0].at(-1).frac;
+  const gap = waveSpacingM();
+  t('守方(BOSS 方)開場預置 MUST 補到自己那座前線砲塔(缺口 < 一個波次間距)',
+    lead(DEF) <= frontM + 1e-6 && lead(DEF) + gap > frontM,
+    `最遠 ${lead(DEF).toFixed(0)}m / 前線塔 ${frontM.toFixed(0)}m / 間距 ${gap.toFixed(0)}m`);
+  t('攻方仍吃「兩側取較小者」⇒ 守方的隊伍比攻方深(非對稱地圖的刻意破例)',
+    lead(DEF) > lead(ATK) && pre(DEF).length > pre(ATK).length,
+    `${lead(DEF).toFixed(0)}m ${pre(DEF).length} 隻 vs ${lead(ATK).toFixed(0)}m ${pre(ATK).length} 隻`);
+
+  // ---- 我方電腦玩家的傷害折減 ----
+  sim.addHero(ATK, 1, 't06');       // 真人玩家(關卡是他的)
+  sim.addHero(ATK, 'b9', 't05');    // 我方電腦玩家
+  sim.addHero(DEF, 'b1', 's03');    // BOSS(到場序 0 ⇒ 前線據點)
+  const you = sim.heroes.get(1), botAlly = sim.heroes.get('b9'), boss = sim.heroes.get('b1');
+  // 前線那一階(sg 0)—— 中段塔還被 siegeLocked 完全免傷,量不到倍率
+  const tw = [...sim.ents.values()].find((e) => e.kind === 'tower' && e.side === DEF && e.sg === 0);
+  t('「我方電腦玩家」的判據是 bot id(真人不吃折減)', isBotId('b9') && !isBotId(1));
+  if (BRK.allybot) sim._allyBotDmgF = () => 1;
+  const hitBoss = (by) => {
+    for (const b of boss.sq.bodies) { b.sp = 0; b.hp = b.maxHp; }
+    const h0 = boss.hp; sim._damage(boss, 500, by, 0); return h0 - boss.hp;
+  };
+  const hitBld = (by) => { tw.hp = tw.maxHp; const h0 = tw.hp; sim._damage(tw, 500, by, 0); return h0 - tw.hp; };
+  t(`我方電腦玩家對 BOSS 的傷害 = 真人的 ${allyBotDmgF('boss') * 100}%`,
+    near(hitBoss(botAlly) / hitBoss(you), allyBotDmgF('boss'), 1e-6),
+    `${hitBoss(botAlly).toFixed(2)} vs ${hitBoss(you).toFixed(2)}`);
+  t(`我方電腦玩家對建築的傷害 = 真人的 ${allyBotDmgF('building') * 100}%`,
+    near(hitBld(botAlly) / hitBld(you), allyBotDmgF('building'), 1e-6),
+    `${hitBld(botAlly).toFixed(2)} vs ${hitBld(you).toFixed(2)}`);
+  t('折減只落在「攻方 bot 英雄 → 守方 BOSS / 建築」這一格(真人 / 守方輸出 / 小兵一律 ×1)',
+    sim._allyBotDmgF(boss, you) === 1
+    && sim._allyBotDmgF(boss, botAlly) === allyBotDmgF('boss')
+    && sim._allyBotDmgF(tw, botAlly) === allyBotDmgF('building')
+    && sim._allyBotDmgF(you, boss) === 1
+    && sim._allyBotDmgF(pre(DEF)[0], botAlly) === 1);
+  t('一般對戰恆 ×1(沒有 defSide ⇒ 這一支的第一道閘就回 1)', (() => {
+    const cfgF = venueConfig(v, TEAM);
+    cfgF.env = cfg.env; cfgF.teamSize = TEAM;
+    const sf = new BattleSim(cfgF);
+    sf.addHero('SWARM', 'b1', 't06');
+    const twF = [...sf.ents.values()].find((e) => e.kind === 'tower' && e.side === 'STEEL');
+    return sf._allyBotDmgF(twF, sf.heroes.get('b1')) === 1;
   })());
 }
 
