@@ -20,7 +20,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, readSrc } from '../audit_src.mjs';
 // 平整垂直牆面板的**唯一**分群規則(零 import 的純模組;遊戲端 biomes.js 吃同一支)
-import { wallPanels } from '../../public/js/wallpanel.js';
+import { wallPanels, planeGroups } from '../../public/js/wallpanel.js';
 
 /** beacons.js 的純區塊邊界(THREE 以上那一段)—— 兩個消費端同吃,MUST NOT 各寫一份字串 */
 export const PURE_HEAD = 'export const BEACON = {';
@@ -370,6 +370,42 @@ export function wallFlatness(F, deg, wallNy) {
   };
 }
 
+/**
+ * **幾何收斂度**(2026-08-14 使用者「最後收斂成多面柱體 / 錐台 / 角錐 / 圓柱 / 圓台 /
+ * 圓錐等幾何多面體構成」的量測端;`normalize_parts.py` 的 ㋗ 是刀,這裡是尺)。
+ *
+ * 「像不像一個由平面圍成的立體」只有兩個數字答得出來,而且**兩個都要**:
+ *   `onPlane` = 真的貼在某一片**夠大**的平面上的面積佔比。只看它會被一種壞情況騙過去 ——
+ *               整顆被抹成一顆球也可以有很高的佔比(每一片都「貼在自己那一群上」),
+ *               所以要配下面那個。
+ *   `scales`  = 分群數 ÷ 三角形數(「一層碎鱗」的密度)。純多面體的每一個面收成一群 ⇒
+ *               這個比值趨近 0;逐面各自成群 ⇒ 趨近 1。前三輪出貨的五顆是 0.077~0.229,
+ *               那不是多面體,是碎鱗。
+ * `planes95` 只是給人看的:蓋掉九成五面積要幾片平面(= 這顆讀起來是幾面體)。
+ *
+ * ⚠ 曲面體(圓柱 / 圓台 / 圓錐)在這把尺上**本來就**分群數高而 `onPlane` 高 —— 那是對的,
+ *   它們的側面每一片都是一個真的平面。這把尺量的是「碎不碎」不是「有幾個面」,所以
+ *   `scales` 的門檻 MUST 由現役節點量出來,MUST NOT 拿「面越少越好」當標準。
+ * @returns {{groups:number, big:number, scales:number, onPlane:number, planes95:number}}
+ */
+export function solidConverge(node, { deg, off, flatDeg, minF }) {
+  const { G, fn, fa, totA, nT } = planeGroups(node.pos, node.idx, {
+    DEG: deg, OFF_F: off / (spanOf(node) || 1), FLAT_DEG: flatDeg, MIN_F: minF, WALL_NY: 1,
+  });
+  const T = Math.max(totA, 1e-9);
+  const cosF = Math.cos(flatDeg * Math.PI / 180);
+  const big = G.filter((g) => g.area / T >= minF).sort((a, b) => b.area - a.area);
+  let onA = 0;
+  for (const g of big) {
+    for (const t of g.f) {
+      if (fn[t * 3] * g.n[0] + fn[t * 3 + 1] * g.n[1] + fn[t * 3 + 2] * g.n[2] >= cosF) onA += fa[t];
+    }
+  }
+  let acc = 0, planes95 = 0;
+  for (const g of big) { acc += g.area; planes95++; if (acc / T >= 0.95) break; }
+  return { groups: G.length, big: big.length, scales: G.length / Math.max(nT, 1), onPlane: onA / T, planes95 };
+}
+
 /** 逐節點量外廓:水平徑向最遠點 + 縱向兩端(入庫閘與對照台同一把尺) */
 export function nodeExtent(node) {
   let rMax = 0, yMin = Infinity, yMax = -Infinity;
@@ -494,12 +530,18 @@ export function nodeProfile(node, { bands = 16, maxSlabs = 4, flat = null } = {}
  *   `corr`      牆面(近垂直)頂點的 corr(高度, v) —— MUST > 0,否則立面是**上下顛倒**的
  *               (基座暗帶印在屋簷)。這件事沒有任何錯誤訊息,只有貼圖排面看得出來。
  *   `upMaxV`    朝上面的 v 上界 —— MUST ≤ roof
- *   `tiltMinV`/`tiltMaxV` 傾斜面的 v 範圍 —— MUST 收在 [roof, roof + plain]
+ *   `tiltMinV`/`tiltMaxV` 傾斜面的 v 範圍(**診斷用的極值**)
+ *   `tiltOutA`  越界的傾斜面**面積佔比** —— 驗收看這一欄,不是上面那兩個極值。
+ *               貪心分群是**順序相依**的(匯出端走 Blender 的面序、量測端走 GLB 的三角形序)
+ *               ⇒ 落在門檻邊上的**個位數面**本來就會兩邊不同調;拿極值當閘門 = 一片
+ *               0.1% 面積的面就紅字,而那不是這道閘要擋的東西(它要擋的是「一整片斜屋頂
+ *               被印上窗」)。2026-08-14 實測 masslow_b 越界的就是**一片** 0.10% 的面。
+ *               `band` 不給 ⇒ 這一欄恆 0(逐位元同上一輪)。
  *   `wallMinV`  近垂直面的 v 下界 —— MUST ≥ roof + plain(牆不准踩進前兩帶)
  *   `parity`    朝上面積佔比 = 三帶 texel 密度相同時的 `roof_band`(推導式)
  *   `plainParity` 傾斜面積佔比 = 同一條推導出來的 `plain_band`
  */
-export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null) {
+export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null, band = null) {
   const { pos, idx, uv } = node;
   if (!uv) return null;
   // 平整判定走焊接後的面表(GLB 是逐面拆開的 ⇒ 不焊就分不出「相鄰」);以三角形序對回原索引
@@ -514,7 +556,7 @@ export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null) {
     // 而畫面上一個像素都沒有變。兩支量測 MUST 吃**同一份**面表,否則分歧的是量法不是節點。
     live = new Set(F.map((f) => f.i));
   }
-  let upA = 0, tiltA = 0, sideA = 0, upMaxV = 0, wallMinV = 1, tiltMinV = 1, tiltMaxV = 0;
+  let upA = 0, tiltA = 0, sideA = 0, upMaxV = 0, wallMinV = 1, tiltMinV = 1, tiltMaxV = 0, tiltOutA = 0;
   const ys = [], vs = [];
   for (let i = 0; i < idx.length; i += 3) {
     const A = idx[i], B = idx[i + 1], C = idx[i + 2];
@@ -538,6 +580,7 @@ export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null) {
       tiltA += area;
       tiltMinV = Math.min(tiltMinV, ...vv);
       tiltMaxV = Math.max(tiltMaxV, ...vv);
+      if (band && (Math.min(...vv) < band[0] - 1e-3 || Math.max(...vv) > band[1] + 1e-3)) tiltOutA += area;
     }
   }
   let corr = 0;
@@ -549,7 +592,7 @@ export function uvBandStats(node, minz = 0.30, wallNy = 0.15, flat = null) {
   }
   const T = Math.max(upA + tiltA + sideA, 1e-9);
   return {
-    corr, upMaxV, wallMinV, tiltMinV, tiltMaxV, upA, tiltA, sideA,
+    corr, upMaxV, wallMinV, tiltMinV, tiltMaxV, upA, tiltA, sideA, tiltOutA: tiltOutA / T,
     parity: upA / T, plainParity: tiltA / T,
   };
 }
