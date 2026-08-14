@@ -19,11 +19,20 @@ compatibility: dev-only (tools/humanoid_forge/, never in public/js); vanilla ES 
 
 ## 0. Core premise
 
-1. **The 2D image is the design authority.** Every part decision starts by Reading the mecha's
-   images in `public/assets/cyberpunk_art/mechs/` (`{id}_{form?}_{pose}.{png,jpg}`; for morphs the
-   `ground_*` set is the modeling target, `flight_*` is color/detail reference). Signature parts you
-   can only discover by looking: serrated axe edges, feather rows inside binder pods, 10+ tail
-   segments where the code had 5, a spare tire on a cargo rack. Never model from the text brief alone.
+1. **Two references, two jobs — never swap them.** Body proportions and skeletal structure follow
+   the curated real-world reference photos on the 機體台 board (`/api/protorefs`; real skeleton/
+   whole-animal/whole-airframe photos, curated per-mecha — that curation *is* "機體台選檔照片",
+   not a fresh web search you do yourself; mechanics in §6). Feature detail — armor panelling,
+   mechanism language, weapon form, glows, signature parts — follows the mecha's 2D concept art in
+   `public/assets/cyberpunk_art/mechs/` (`/api/protoimgs`; `{id}_{form?}_{pose}.{png,jpg}`; for
+   morphs the `ground_*` set is the modeling target, `flight_*` is color/detail reference). Read
+   both before writing code; never model from the text brief alone. Signature parts you can only
+   discover by looking: serrated axe edges, feather rows inside binder pods, 10+ tail segments
+   where the code had 5, a spare tire on a cargo rack. Never substitute one source for the other's
+   job — the concept art gets anatomy wrong or omits it entirely (no metatarsals, no
+   three-segment bird wing, no crescent tusk, no whale-hull continuity: modeling proportions
+   straight from it produces limbs that read as stilts), and the proto-ref photos carry no paint
+   scheme or signature parts to copy.
 2. **A body part is an assembly, not a box.** Main shells (head/chest/pelvis/limb shells/pauldrons/
    feet) must be faceted polyhedra — tapered frusta, extruded polygon profiles, lathed solids.
    Plain `bxF` boxes are allowed only for small detail (rivets, trim strips, buttons).
@@ -136,11 +145,31 @@ excluded); **zero `Math.random()`** — variation across fan/chain elements is i
 
 ## 6. Reference images on the boards
 
-- Standalone board: `GET /api/protoimgs?id=` on `humanoid_forge.mjs` — the roster **is the
-  directory listing** (ground form sorted first). Clients never assemble filenames; a client-side
-  filename pattern is a second source table that rots silently.
+Two endpoints, two authorities (§0.1) — never conflate them:
+
+- **`GET /api/protorefs?key=`** — the **body/skeleton** authority. Real-world skeleton/
+  whole-animal/whole-airframe photos, grouped by proto layer (bionic/ground/air — same layers as
+  `codex.js PROTO_LAYERS`). Backed by `tools/proto_refs/manifest.json`; populated by
+  `node tools/fetch_protorefs.mjs` (CC0/PD only, hard-gated through `tools/ai3d/fetch_photos.mjs`'s
+  licence check) and then **curated on the board itself** — reject (✕ 不符: deletes the file +
+  blacklists the id so the next fetch run won't bring it back), annotate (what's right/wrong about
+  a kept photo), retune (override the search query for the next fetch run), or upload your own
+  (📁 選檔 / paste / drag-drop, licence stamped `user`). This curated set — **"機體台選檔
+  照片"** — is what you model body proportions from; it replaces ad-hoc searching for skeleton
+  photos yourself. If a layer is empty or wrong, retune/reject/upload on the board and re-run the
+  fetch script rather than sourcing a photo out-of-band. Measure a base bone (femur or trunk
+  length) in pixels and express every other bone as a multiple of it; write the ratio table into
+  the mech file header. A specimen shot with a scale bar beats several without. Watch for
+  projection foreshortening in 3/4-mounted photos — "collinear in 2D" does not imply one scale
+  factor; cross-check with independent landmarks.
+- **`GET /api/protoimgs?id=`** — the **feature** authority: the mecha's 2D concept art (the
+  roster **is the directory listing**, ground form sorted first). Clients never assemble
+  filenames; a client-side filename pattern is a second source table that rots silently.
 - Codex board forge block: reuse the server manifest's `shots` rows (`has`, `form`, `star`),
   filter `form !== 'flight'`, star (appearance authority) first.
+- **Features must not be sacrificed to skeleton accuracy.** Rebuilding limb bones from proto-ref
+  photos must not delete a signature part the concept art and `mecha.js gen.parts` both call
+  out — restore it if a bone-accuracy pass drops it.
 
 ## 7. Traps that pass every gate
 
