@@ -7,6 +7,9 @@
 // 短兵線做不到 ≤80% 時 solveTowerSites 取重疊最小的合法位 ⇒ 殘餘 > 80% 會被列為「殘餘」(靠放大地圖/REAL_SCALE 消除)。
 // exit 1 僅在物理疊塔(真缺陷)。用法:node tools/audit_map_rules.mjs
 import { VENUE_LANES } from '../public/js/venueLanes.js';
+// 每個鍵是哪一種尺度 / 要驗哪些地圖型態:唯一縫在 venues.js(在這裡自己判字串前綴 =
+// 第二份實作,而症狀是「拿完整戰場的五階塔鏈去驗迷你那條短兵線」⇒ 整排假紅字)。
+import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
 import { UNITS, GAME, MAPGEO, towerLayoutAudit } from '../public/js/data.js';
 
 const R = UNITS.tower.range, SEP = R * GAME.TOWER_SEP_F, OFF = GAME.TOWER_SIDE_OFF;
@@ -21,15 +24,22 @@ let stackFails = 0, residualPairs = 0, venuesResidual = 0;
 const rows = [];
 
 for (const [venue, byL] of Object.entries(VENUE_LANES)) {
-  for (const [L, entry] of Object.entries(byL)) {
+  for (const { key, mapA } of VENUE_LANE_KEYS) {
+    const entry = byL[key];
     if (!entry?.lanes || !entry.bases) continue;
     const A = entry.bases[0], B = entry.bases[1];
     const c = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
     const lanes = entry.lanes.map((line) => line.map(([lat, lng]) => llToM(lat, lng, c)));
-    const a = towerLayoutAudit(lanes);
+    // 縮小尺度的那一條要同時撐得起迷你與劇情兩側 ⇒ 逐型態各驗一次、取最差的那一份報告
+    // (完整戰場恆為單一型態 ⇒ 逐位元同舊制)。
+    let a = null;
+    for (const m of venueLaneModes(mapA)) {
+      const r = towerLayoutAudit(lanes, m);
+      if (!a || r.stackBad > a.stackBad || r.residual > a.residual) a = r;
+    }
     if (a.stackBad) stackFails++;
     residualPairs += a.residual; if (a.residual) venuesResidual++;
-    rows.push({ venue, L, ...a });
+    rows.push({ venue, L: key, ...a });
   }
 }
 
@@ -39,7 +49,7 @@ console.log('─'.repeat(82));
 for (const r of rows) {
   const flag = r.stackBad ? '❌疊塔' : r.residual ? '⚠️殘餘' : '✅';
   console.log(
-    `${r.venue.padEnd(12)}${r.L}  ${`${Math.round(r.oppFront)}%`.padStart(6)}  ${`${Math.round(r.worstRB)}%`.padStart(5)}` +
+    `${r.venue.padEnd(12)}${String(r.L).padEnd(3)}${`${Math.round(r.oppFront)}%`.padStart(6)}  ${`${Math.round(r.worstRB)}%`.padStart(5)}` +
     `  ${`${Math.round(r.worstRF)}%`.padStart(5)}  ${`${Math.round(r.worstAdj)}%`.padStart(5)}  ${`${Math.round(r.minStack)}m`.padStart(7)}   ${String(r.residual).padStart(4)}  ${flag}`);
 }
 console.log('─'.repeat(82));

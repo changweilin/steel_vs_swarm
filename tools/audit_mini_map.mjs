@@ -9,8 +9,11 @@
 //   ② **縮小比手寫** —— 寫死 0.6 之後改 `MINI.STAGES`(或完整版加第三階塔),地圖大小留在原地。
 //   ③ **完整戰場被波及** —— 省略參數 MUST 逐位元同舊制。`mapScaleF(undefined)` 只要不是**恆等
 //      的 1**(例如寫成 `mini ? 0.6 : 1.0000001`),全場地圖尺寸就整組漂移,而 bal / e2e 都不碰它。
-//   ④ **剪短把兵線帶離真實道路** —— 「等比縮小座標」看起來也對(距離一樣、規則照樣過),
+//   ④ **縮圖把兵線帶離真實道路** —— 「等比縮小座標」看起來也對(距離一樣、規則照樣過),
 //      但那條線從此不在任何一條路上。故本支內建**對照組**:等比縮小版 MUST 被同一個判準擋下來。
+//      2026-08-14 起縮小尺度**有自己的一組烘焙路線**(鍵 `m1`,見 venues.js venueLaneKey):
+//      那是路網上另外挑過、並拿迷你 + 劇情兩側的砲塔規則一起驗過的一條路,不是完整版的中段
+//      ⇒ 這一批驗「逐點取自烘焙表」,剪短那條降級路徑仍照舊驗「還落在完整版線上」。
 //   ⑤ **驗錯塔** —— `towerLayoutAudit` 漏傳 mini 會拿「不存在的後塔」去驗,把本來合法的地圖
 //      擋在門外(症狀:選了場地卻開不了房,而錯誤訊息講的是砲塔重疊)。
 //   ⑥ **深度分家** —— 裙鋪多遠只有 terrain 知道;消費端各自再呼叫一次 `edgeBufferM()` 而漏傳
@@ -29,7 +32,8 @@ import {
   edgeBufferM, curveHorizonM, WORLD_EDGE, MAPGEO,
   solveTowerSites, towerLayoutAudit, laneSeparationAudit, siegeSiteStages,
 } from '../public/js/data.js';
-import { VENUES, venueConfig, trimLaneTo } from '../public/js/venues.js';
+import { VENUES, venueConfig, trimLaneTo, venueLaneKey } from '../public/js/venues.js';
+import { VENUE_LANES } from '../public/js/venueLanes.js';
 import { validateBattleConfig } from '../server/rooms.js';
 import { BattleSim } from '../server/sim.js';
 
@@ -190,15 +194,31 @@ console.log('\nⅣ 地圖 / 據點距離 / 邊緣緩衝');
     && /buffer: terrain\.bufferM/.test(bioSrc) && /const B = terrain\.bufferM/.test(groundSrc));
 }
 
-// ============ Ⅴ 剪短:兵線仍是同一條真實道路 ============
-console.log('\nⅤ 縮圖手法 = 兩端對稱剪短(⇒ 每一段仍是真實道路),不是等比縮小座標');
+// ============ Ⅴ 縮小尺度的兵線:每一段仍是真實道路 ============
+console.log('\nⅤ 縮圖手法 = ①這個尺度自己的烘焙路線,②烤不到才兩端對稱剪短 —— 一律不是等比縮小座標');
 {
   const TOL = 0.05;   // 5cm:剪短只做線性內插 ⇒ 浮點尾差以外沒有理由偏離
-  let worstOff = 0, worstErr = 0, worstGrow = 0, baked = 0;
+  // ① 自己那個尺度的烘焙路線(`venueLaneKey(L, mapA)` ⇒ 'm1'):它是路網上**另外挑過**的
+  //    一條路徑,每個頂點仍是 OSM 道路節點,但沒有理由落在完整版那條線上。這一批的
+  //    保證是「兵線逐點來自烘焙表」,而不是「落在完整版線上」。
+  let ownN = 0, ownBad = [];
   for (const v of VENUES) {
+    const own = VENUE_LANES[v.id]?.[venueLaneKey(1, true)];
+    if (!own) continue;
+    ownN++;
+    const cfg = venueConfig(v, 1, true);
+    if (JSON.stringify(cfg.lanes) !== JSON.stringify(own.lanes)
+      || JSON.stringify(cfg.bases.SWARM) !== JSON.stringify(own.bases[0])
+      || JSON.stringify(cfg.bases.STEEL) !== JSON.stringify(own.bases[1])) ownBad.push(v.id);
+  }
+  t(`有專屬烘焙路線的場地逐點取自烘焙表、一格未動(${ownN} 個場地)`, ownBad.length === 0, ownBad.slice(0, 4).join(' '));
+  // ② 沒有專屬路線的場地才走剪短 —— 這一批 MUST 仍逐點落在完整版那條線上。
+  let worstOff = 0, worstErr = 0, worstGrow = 0, trimmed = 0;
+  for (const v of VENUES) {
+    if (VENUE_LANES[v.id]?.[venueLaneKey(1, true)]) continue;
     const full = venueConfig(v, 1), mini = venueConfig(v, 1, true);
     if (full.synthetic) continue;   // 合成弧本來就吃 realD,沒有「剪短」這回事
-    baked++;
+    trimmed++;
     worstOff = Math.max(worstOff, maxOffPolyline(mini.lanes[0], full.lanes[0]));
     worstErr = Math.max(worstErr, Math.abs(distM(mini.bases.SWARM, mini.bases.STEEL) - realDistFor(1, true)));
     worstGrow = Math.max(worstGrow, mini.lanes[0].length - full.lanes[0].length);
@@ -206,9 +226,9 @@ console.log('\nⅤ 縮圖手法 = 兩端對稱剪短(⇒ 每一段仍是真實�
     if (JSON.stringify(mini.bases.SWARM) !== JSON.stringify(mini.lanes[0][0])
       || JSON.stringify(mini.bases.STEEL) !== JSON.stringify(mini.lanes[0].at(-1))) worstOff = Infinity;
   }
-  t(`剪短後每個頂點都還在原兵線上(${baked} 個烘焙場地,最大偏離 ${worstOff.toExponential(1)}m ≤ ${TOL}m)`,
+  t(`剪短後每個頂點都還在原兵線上(${trimmed} 個降級場地,最大偏離 ${worstOff.toExponential(1)}m ≤ ${TOL}m)`,
     worstOff <= TOL);
-  t(`兩堡距離命中迷你目標(最大誤差 ${worstErr.toExponential(1)}m)`, worstErr <= TOL);
+  t(`剪短的兩堡距離命中迷你目標(最大誤差 ${worstErr.toExponential(1)}m)`, worstErr <= TOL);
   t('剪短不會讓兵線長出新頂點(端點以外只保留原頂點)', worstGrow <= 0);
   // 內建對照組:「等比縮小座標」距離一樣正確、規則照樣過,但整條線離開了它自己的道路。
   // 這一組 MUST 被同一個判準擋下來 —— 不然上面那條「還在原兵線上」是恆真的。
