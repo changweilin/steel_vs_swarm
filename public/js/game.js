@@ -235,6 +235,25 @@ const _TMP_B = new THREE.Vector3();
 const _TMP_C = new THREE.Vector3();
 const _FWD_Z = new THREE.Vector3(0, 0, 1);     // 彈體幾何朝向(+z);對準航向的固定基準軸
 
+/**
+ * 射線只認**實體網格**(**唯一縫**;兩個消費端:準星解析 `_resolveAim` 與彈道 `_updateBullets`)。
+ *
+ * 兩處都是 `intersectObjects(cand, true)` —— **遞迴**進整棵 `ent.mesh`,而掛在機體底下的
+ * 不只有機體:範圍光暈(`_updateRangeGlows`)與鎖定光暈(`vfx.lockGlow`)是 `ent.mesh` 的
+ * **子 Sprite**,而 three 的 `Sprite.raycast` 會測那片面向相機的四邊形。光暈直徑 =
+ * 「機體高 / 寬取大 ×1.15」⇒ 直升機那顆實測 **11.7m**(機體 `hitR` 只有 3m):
+ *   ・準星:離機身 6m 就判定「命中該機」,對空彈射模式接著把瞄準點搬到機體幾何中心
+ *     ⇒ 榴彈落點環偏離準星 **9.4°**(濾掉光暈後剩 3m / 4.6° = 真的打到旋翼盤)。
+ *     而且會自鎖 —— 光暈亮著是因為該單位在這一發的傷害足跡內,它黏住準星又讓它留在足跡內。
+ *   ・彈道:砲彈掠過亮著光暈的單位時會在**離機體 6m 的空中**引爆。
+ * 兩個症狀都沒有錯誤訊息,而且只在單位亮燈時出現(= 交戰中)。
+ *
+ * 判據取「是不是 Mesh」而不是「是不是 Sprite」:本專案的可命中量體一律是 Mesh / SkinnedMesh /
+ * InstancedMesh,Sprite / Line / Points 從來只是表現層疊加件(原則 4)——
+ * 用排除法才不會在下次有人往 `ent.mesh` 底下掛新的招牌時靜默復發。
+ */
+const raySolid = (o) => o.isMesh === true;
+
 // ---- 敵方標示:走進視野的敵人頭上掛「對方陣營主視覺」的下指箭頭(spotted marker)----
 // 主視覺 = 陣營識別色 + 徽記幾何(STEEL 鋼鐵三角 / SWARM 蜂群倒三角,同 logo 語彙)。
 // 迷霧是伺服器過濾的:快照裡出現 = 已進入視野,所以「有 mesh 就該有標示」。
@@ -6379,6 +6398,7 @@ export class BattleClient {
     const dStop = Math.min(dBlock ?? Infinity, dTerr ?? Infinity);
     for (const h of hits) {
       if (h.distance > dStop) break;
+      if (!raySolid(h.object)) continue;   // 光暈/招牌等表現層子件不參與準星解析(唯一縫 `raySolid`)
       let o = h.object;
       while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
       if (o && o.userData.missileId != null) return { point: h.point, ent: null, missileId: o.userData.missileId };
@@ -6966,6 +6986,7 @@ export class BattleClient {
           this.raycaster.far = far;
           for (const h of this.raycaster.intersectObjects(cand, true)) {
             if (h.distance >= hitDist) break;       // 地形更近 → 單位不算
+            if (!raySolid(h.object)) continue;      // 光暈/招牌不擋彈(唯一縫 `raySolid`)
             let o = h.object;
             while (o && !o.userData.kind && o.userData.missileId == null && o.parent) o = o.parent;
             // 貫穿彈(aoeClass 'line'):單位不擋彈道,只有地形/障礙才終止 —— 圓柱內的目標
