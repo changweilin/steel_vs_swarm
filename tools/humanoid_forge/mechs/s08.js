@@ -16,7 +16,7 @@ import {
 const MED = 0x39d98a;         // 醫療綠(固定識別色,不隨主色走)
 
 export default {
-  label: '燭台(s08 醫療運補機)', hue: 0xe8f0f4, kind: 'air', height: 3.2,
+  label: '燭台(s08 醫療運補機)', kind: 'air', height: 3.2,
   air: { tiltY: 1.35, bob: 0.03, top: 20, span: 2.6 },
   moveSig: { hover: 0.05, hoverF: 0.5, hoverA: 0.06, surge: 0.10, flare: 0.25, bank: 0.10 },
   castSig: { omni: 'spin', dir: 'lunge' },

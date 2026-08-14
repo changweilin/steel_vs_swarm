@@ -74,7 +74,7 @@ const TENT_S = [0.68, 0.68, 0.56, 0.28, -0.08, -0.32];   // 累積峰 2.20 → �
 const LEG_LEN = [0.74, 0.65, 0.59, 0.51, 0.42];
 
 export default {
-  label: '證明完畢(s07 機甲・頭足類)', hue: 0x7fd8ff, kind: 'quad', height: 4.8,
+  label: '證明完畢(s07 機甲・頭足類)', kind: 'quad', height: 4.8,
   frame: {
     hipY: 2.1, legX: 0.95, fz: 0.8, hz: -1.1,
     chest: [0, 0.15, 0.4], neck: [0, 0.35, 0.5], head: [0, 0.25, 0.3],

@@ -31,7 +31,7 @@ const bzT = (p0, c1, p1, t) => p0.map((v, k) => 2 * (1 - t) * (c1[k] - v) + 2 * 
 const NK0 = [0, 0.50, 0.10], NKC = [0, 1.72, 0.30], NK1 = [0, 2.66, -0.58];
 
 export default {
-  label: '仿生鶴(t05 機甲・鴕鳥)', hue: 0xf2f2f2, height: 6.0,
+  label: '仿生鶴(t05 機甲・鴕鳥)', height: 6.0,
   prop: { hips: 0.52, legSplay: 0.045, thigh: 0.225, shin: 0.67, shoulderY: 0.62, shoulderX: 0.09, upperArm: 0.05, foreArm: 0.1, head: 0.96, girth: 0.8 },
   gait: { strideF: 1.5, bob: 0.1, sway: 0.06, top: 7, legBase: -0.16, armBase: 0.35 },
   pose: { knee: { base: 0.26, k: 0.72, d: 0.15 }, ankle: { base: -0.28, k: -0.44, d: 0.55 }, elbow: { base: -1.1, k: -0.1, d: 0.3 } },

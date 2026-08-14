@@ -131,6 +131,36 @@ export function pilotOf(id) {
   };
 }
 
+/**
+ * 這一格的**塗裝取值**(主色 / 陣營 / 色版階)—— 機體台與遊戲本體 MUST 讀出同一組。
+ *
+ * 2026-08-14 使用者:「遊戲中角色與機體的配對曾更動,機體台先修正到正確的配對關係」。
+ * 病灶:主色原本手寫在 `mechs/<key>.js` 的 `hue:` 那一格,而主色是**角色**的屬性
+ * (`CHARACTERS[id].visual.hue`)—— 換角色/改色時機體台留在舊值,實測 12 台漂掉
+ * (t02 機體台粉紅 vs 遊戲淡藍最誇張)。同一族的另外兩格也是手寫的:陣營一律寫死
+ * 'STEEL'(蜂群 12 台全部拿到鋼鐵色版),色版階一律寫死 'light'(遊戲只有人形機甲與
+ * 獸型雙足是 light)。三格全部改成從**原處**取,機體檔從此不准再宣告主色。
+ *
+ * 色版階的判準鏡射 models.js 的 `heroPalette(vis, side, tier)` 呼叫點:
+ *   buildRobotMech(:5115) light / buildBipedBeast(:2649) light
+ *   buildBeastMech(:1840) dark / buildDrone(:376) / buildFixedWing(:754)
+ *   buildAvianDrone(:1166) / buildMorphMech(:3447) 一律 dark
+ * ⇒ light ⟺ 機種是 robot 且不是四足獸型(`visual.form === 'beast'`)。
+ *
+ * 2026-08-14 使用者追加:「徽記/塗鴉/紋路等特徵也要渲染,例如零式的雙翼上下都要印紅日」。
+ * ⇒ 連 `vis`(整份 `CHARACTERS[id].visual`)一起交出去,鷹架收尾時轉呼遊戲本體的
+ * `paint.paintUnit(root, vis, side, tone)` —— 花紋/國旗/徽記/貼花**只有那一份實作**,
+ * 機體台 MUST NOT 自己畫一套(逐機硬編的貼花會在改 `visual.paint` 時靜默過期)。
+ * `vis` MUST 是整份而不是挑幾欄:`split` 走 `paintAxisSplit(root, inv, vis)` 讀的是
+ * 機種/原型欄位(人馬上下 / 狼人左右 / 獵鷹前後),挑欄位交出去就會挑錯軸。
+ */
+export function paintOf(id) {
+  const c = CHARACTERS[id] || {};
+  const vis = c.visual || {};
+  const light = charKind(id) === 'robot' && vis.form !== 'beast';
+  return { hue: vis.hue ?? 0xffffff, side: c.side || 'STEEL', tier: light ? 'light' : 'dark', vis };
+}
+
 /** 全名冊(逐格 = 一個管理頁項目);順序 = CHARACTERS 宣告序 × 型態序 */
 export function rosterEntries() {
   const out = [];
@@ -144,7 +174,7 @@ export function rosterEntries() {
         label: c.machine || id,
         formLabel: form ? FORM_LABEL[form] : '',
         code: MECHA[id]?.code || '',
-        side: c.side, hue: c.visual?.hue ?? 0xffffff,
+        side: c.side, hue: c.visual?.hue ?? 0xffffff, paint: paintOf(id),
         pilot: pilotOf(id),
         protos: protoRefsOf(id, form),
       });

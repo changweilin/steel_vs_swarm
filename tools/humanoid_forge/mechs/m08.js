@@ -103,7 +103,7 @@ const HA = [-0.30, 0.55, -0.95], HL = [0.8165, 0.7675, 0.4980];   // 後肢:股�
 const PAW_Y = 0.136;                   // 掌墊/爪的最低點離末端樞軸的距離(落差預算的第四項)
 
 export default {
-  label: '空號(m08 變形者・夜豹)', hue: 0x8f7fd0, kind: 'quad', height: 4.6,
+  label: '空號(m08 變形者・夜豹)', kind: 'quad', height: 4.6,
   frame: {
     hipY: 1.86, legX: 0.60, fz: 1.10, hz: -1.05,
     chest: [0, 0.08, 0.62], neck: [0, 0.20, 0.74], head: [0, 0.04, 0.46],

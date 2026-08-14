@@ -20,7 +20,7 @@ const FR = s10.frame;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '靜電・飛行型(s10 飛鯨浮空艦)', hue: s10.hue, kind: 'air', height: s10.height,
+  label: '靜電・飛行型(s10 飛鯨浮空艦)', kind: 'air', height: s10.height,
   air: { tiltY: 3.0, bob: 0.11, top: 12, span: 3.6 },
   moveSig: { hover: 0.15, hoverF: 0.5, hoverA: 0.25, surge: 0.05, flare: 0.05, bank: 0.05 },
   castSig: { omni: 'roar', dir: 'swing' },

@@ -51,7 +51,7 @@ const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架�
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝);舊制的 0x8a95da 是另一台機的顏色
-  label: '老兵・飛行型(t11 傾轉旋翼母艦)', hue: t11.hue, kind: 'air', height: HG,
+  label: '老兵・飛行型(t11 傾轉旋翼母艦)', kind: 'air', height: HG,
   air: { tiltY: 3.1, bob: 0.04, top: 22, span: 9.0 },   // 翼展含伸出的槳葉(舊 6.5 是側伸 + 收在盾內的年代)
   moveSig: { hover: 0.30, hoverF: 0.7, hoverA: 0.10, surge: 0.55, flare: 0.20, bank: 0.60 },
   castSig: { omni: 'stomp', dir: 'jab' },

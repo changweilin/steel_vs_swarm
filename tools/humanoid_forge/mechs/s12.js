@@ -57,7 +57,7 @@ function mirrorX(o, sx) {
 }
 
 export default {
-  label: '星圖(s12 鴨翼長航偵察機)', hue: 0x9db0d8, kind: 'air', height: 3.6,
+  label: '星圖(s12 鴨翼長航偵察機)', kind: 'air', height: 3.6,
   air: { tiltY: 1.3, bob: 0.03, top: 32, level: true, span: 3.4 },
   moveSig: { hover: 0.50, hoverF: 1.6, hoverA: 0.05, surge: 0.80, flare: 0, bank: 0.92 },
   castSig: { omni: 'spin', dir: 'lunge' },

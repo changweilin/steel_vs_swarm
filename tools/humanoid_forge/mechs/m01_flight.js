@@ -23,7 +23,7 @@ const GW = 2.0;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '渡鴉・飛行型(m01 三角滑翔翼)', hue: m01.hue, kind: 'air', height: HG,
+  label: '渡鴉・飛行型(m01 三角滑翔翼)', kind: 'air', height: HG,
   air: { tiltY: 3.0, bob: 0.05, top: 30, level: true, span: 10.4 },   // span ∝ 翼:GW ×2 ⇒ 5.2 → 10.4
   moveSig: { hover: 0.20, hoverF: 0.8, hoverA: 0.10, surge: 0.85, flare: 0.55, bank: 0.78 },
   castSig: { omni: 'spin', dir: 'swing' },

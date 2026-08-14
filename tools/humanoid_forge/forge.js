@@ -48,7 +48,7 @@
 
 import * as THREE from 'three';
 import { outlinify } from '/public/js/toon.js';
-import { heroPalette } from '/public/js/paint.js';
+import { heroPalette, paintUnit } from '/public/js/paint.js';
 import { segLimbF, outlineWF } from './geo.js';
 import { applyDoll, outlineAdds } from './dollapply.js';
 import { MECH_DETAIL } from './mechs/index.js';
@@ -111,7 +111,8 @@ export const MECH_SPECS = rosterEntries().filter((e) => MECH_DETAIL[e.key]).map(
   const d = MECH_DETAIL[e.key];
   return {
     id: e.key, ch: e.id, form: e.form, cat: e.cat, pilot: e.pilot,
-    label: d.label, hue: d.hue,
+    // 塗裝三格(主色/陣營/色版階)MUST 到原處取 —— 機體檔 MUST NOT 宣告 `hue`(roster.paintOf)
+    label: d.label, hue: e.paint.hue, side: e.paint.side, tier: e.paint.tier, paintVis: e.paint.vis,
     kind: d.kind || 'biped',
     height: d.height ?? 6.0,           // 展示台統一取景高;正式整合走 heroTargetH
     prop: d.prop || {}, gait: d.gait || {}, air: d.air || null,
@@ -136,7 +137,7 @@ const jointDotF = (joints) => (x, y, z) => {
   m.position.set(x, y, z);
   joints.add(m);
 };
-function finishRig(g, rig, W, K, H, D, ctx, F) {
+function finishRig(g, rig, W, K, H, D, ctx, F, spec) {
   if (D.extra) D.extra(ctx, F, Object.assign(rig, { heavy: { glow: [], pivot: [] } }));
   // 發光強度旋鈕:整棵樹的 emissiveIntensity ×accentF(在記錄 glow base 之前套用)
   if (K.accentF !== 1) g.traverse((o) => {
@@ -147,6 +148,16 @@ function finishRig(g, rig, W, K, H, D, ctx, F) {
   rig.heavy = rig.heavy && rig.heavy.glow.length
     ? { glow: [...rig.heavy.glow, ...hg], pivot: W.heavyPivot || [] }
     : { glow: hg, pivot: W.heavyPivot || [] };
+  // 徽記 / 國旗 / 迷彩 / 貼花 —— 2026-08-14 使用者:「徽記/塗鴉/紋路等特徵也要渲染,
+  // 例如零式的雙翼上下都要印紅日」。轉呼遊戲本體的 `paintUnit`(唯一實作),
+  // 三條紀律照抄它的契約:①MUST 排在 `outlinify` **之前**(描邊殼是之後才掛的,
+  // 提早上漆才不會把外殼也染上去);②`tone` MUST 與取色版時同一個值(spec.tier);
+  // ③MUST 在 `applyDoll`(使用者彩繪覆寫層)之前 —— 覆寫層的語意是「蓋在出廠塗裝上」。
+  // ④`hue` MUST 取 spec 的(= 覆寫層生效後的那一個),MUST NOT 直接餵 paintVis ——
+  //   機體台的主色滑桿改了色,貼花卻還照出廠色版畫 = 徽記與裝甲對不上。
+  if (spec?.paintVis) {
+    paintUnit(g, { ...spec.paintVis, hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
+  }
   outlinify(g, outlineWF(H));
 }
 
@@ -176,7 +187,7 @@ export function forgeHumanoidMech(spec) {
   if (D.kind === 'air') return forgeAirMech(spec, D);
   const P = resolveProp(spec);
   const H = spec.height;
-  const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
+  const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
   const accent = new THREE.Color(spec.hue);
   const G = P.girth;
   const K = { barrelF: spec.knobs?.barrelF ?? 1, accentF: spec.knobs?.accentF ?? 1 };
@@ -279,7 +290,7 @@ export function forgeHumanoidMech(spec) {
     moveSig: spec.moveSig, castSig: spec.castSig,
     s: 1,
   };
-  finishRig(g, rig, W, K, H, D, baseCtx, F);
+  finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
   return finishUnit({ group: g, rig, joints }, spec, H);
 }
 
@@ -301,7 +312,7 @@ export function forgeHumanoidMech(spec) {
 function forgeQuadMech(spec, D) {
   const FR = D.frame, GA = D.gait;
   const H = spec.height;
-  const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
+  const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
   const accent = new THREE.Color(spec.hue);
   const K = { barrelF: spec.knobs?.barrelF ?? 1, accentF: spec.knobs?.accentF ?? 1 };
 
@@ -387,7 +398,7 @@ function forgeQuadMech(spec, D) {
     moveSig: spec.moveSig, castSig: spec.castSig,
     s: 1,
   };
-  finishRig(g, rig, W, K, H, D, baseCtx, F);
+  finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
   return finishUnit({ group: g, rig, joints }, spec, H);
 }
 
@@ -418,7 +429,7 @@ function forgeQuadMech(spec, D) {
 function forgeAirMech(spec, D) {
   const A = D.air || {};
   const H = spec.height;
-  const PAL = heroPalette({ hue: spec.hue }, 'STEEL', 'light');
+  const PAL = heroPalette({ hue: spec.hue }, spec.side || 'STEEL', spec.tier || 'light');
   const accent = new THREE.Color(spec.hue);
   const K = { barrelF: spec.knobs?.barrelF ?? 1, accentF: spec.knobs?.accentF ?? 1 };
 
@@ -460,6 +471,6 @@ function forgeAirMech(spec, D) {
   };
   // 自轉名冊(戰場 game.js spinners / 展示台 viewer 同吃這一份)
   g.userData.spin = (L.spin || []).slice();
-  finishRig(g, rig, W, K, H, D, baseCtx, F);
+  finishRig(g, rig, W, K, H, D, baseCtx, F, spec);
   return finishUnit({ group: g, rig, joints, spin: g.userData.spin }, spec, H);
 }

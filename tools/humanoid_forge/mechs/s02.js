@@ -11,7 +11,7 @@ import {
 } from '../geo.js';
 
 export default {
-  label: '鐵匠鋪(s02 重載運翼機)', hue: 0xc98d3d, kind: 'air', height: 3.8,
+  label: '鐵匠鋪(s02 重載運翼機)', kind: 'air', height: 3.8,
   air: { tiltY: 1.3, bob: 0.04, top: 18, span: 4.2 },
   moveSig: { hover: 0.35, hoverF: 0.6, hoverA: 0.12, surge: 0.25, flare: 0.40, bank: 0.30 },
   castSig: { omni: 'spin', dir: 'lunge' },

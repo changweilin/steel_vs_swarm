@@ -5,6 +5,11 @@
 // 幾何語彙一律取自 ../geo.js(多面體字母表);MUST NOT 在本檔自建 BufferGeometry。
 // 造型主語彙:斜切楔台(tboxF)胸甲/肢殼 + 稜線金滾邊(細 bxF 貼稜)+ prismF 尖翼領/肩甲/裙板;
 // 摺收旋翼 = 長刃羽「多零件」組(finF 一片一件:背後左右各 3 下 1 上;小腿 fanF 3 短刃)。
+// ---- 2026-08-14 這一輪(使用者:「參考舊版設計重新渲染外觀,只改外觀不增減零件」)----
+// 舊版 = models.js buildMorphMech() 的 `G === 'vampire'` 那一支;它的主裝甲吃 `armor = PAL.main`
+// (:3448),而本檔七片主殼(頭殼/切面楔胸/腹甲/大腿/小腿/上臂/前臂)全壓在 `mid` 上 ——
+// 比遊戲暗一階,暗紅高光烤漆讀成一團黑。⇒ 七片抬到 `main`,細件維持 `mid` 保住對比。
+// 零件一件未增減。
 import * as THREE from 'three';
 import {
   dimF, bxF, cylF, torusF, tboxF, prismF, latheF, finF, fanF, cablesF,
@@ -15,7 +20,7 @@ const GOLD = 0xc9a05a;                                   // 金滾邊(2D 每片�
 const mir = (pts, sx) => (sx >= 0 ? pts : pts.map(([x, y]) => [-x, y]));  // 左右鏡射(ExtrudeGeometry 自校繞向)
 
 export default {
-  label: '渡鴉(m01 變形者・地面型)', hue: 0xd94f4f,
+  label: '渡鴉(m01 變形者・地面型)',
   prop: { hips: 0.54, legSplay: 0.06, thigh: 0.48, shin: 0.46, shoulderY: 0.82, shoulderX: 0.145, upperArm: 0.155, foreArm: 0.15, head: 0.9, girth: 0.9 },
   gait: { strideF: 1.3, bob: 0.05, sway: 0.05, top: 8, armBase: 0.05 },
   moveSig: { poise: 0.85, idleF: 0.9, idleA: 0.4, launch: 0.9, spool: 0.1, brake: 0.7, settle: 0.4 },
@@ -36,7 +41,7 @@ export default {
     const shell = prismF(h, [
       [0.16, -0.16], [0.24, 0.02], [0.20, 0.16], [0.02, 0.30],
       [-0.20, 0.22], [-0.24, -0.05], [-0.10, -0.14],
-    ], 0.32 * G, 0, 0.05, 0.01, PAL.mid, { metalness: 0.75 });
+    ], 0.32 * G, 0, 0.05, 0.01, PAL.main, { metalness: 0.75 });
     shell.rotation.y = -Math.PI / 2;                     // 側輪廓 +x → 世界 +z(面前)
     bxF(h, 0.27 * G, 0.075, 0.05, 0, 0.10, 0.225, INK, { metalness: 0.4 });  // 面罩 visor 暗帶(2D 黑色橫縫)
     bxF(h, 0.23 * G, 0.024, 0.02, 0, 0.10, 0.258, accent, { emissive: accent, emissiveIntensity: 1.5 });  // 感測細縫(發光)
@@ -58,8 +63,8 @@ export default {
     const { PAL, accent, G } = c;
     const top = d.shoulderY, bot = d.waistY, mid = (top + bot) / 2;
     tboxF(ch, { w0: 0.55, w1: 0.66, d0: 0.36, d1: 0.44, h: 0.60 }, 0, 0.45, 0, INK, { metalness: 0.5 });  // 暗色內襯腰核(2D 窄腰黑底層)
-    tboxF(ch, { w0: 0.95, w1: 1.50, d0: 0.50, d1: 0.64, h: 1.05, sz: 0.03 }, 0, mid + 0.13, 0, PAL.mid, { metalness: 0.75 });  // 切面楔胸(上寬下收、頂面微前傾)
-    tboxF(ch, { w0: 0.62, w1: 0.92, d0: 0.38, d1: 0.50, h: 0.50 }, 0, 0.80, 0.01, PAL.mid, { metalness: 0.75 });  // 腹甲(紅色切面段)
+    tboxF(ch, { w0: 0.95, w1: 1.50, d0: 0.50, d1: 0.64, h: 1.05, sz: 0.03 }, 0, mid + 0.13, 0, PAL.main, { metalness: 0.75 });  // 切面楔胸(上寬下收、頂面微前傾)
+    tboxF(ch, { w0: 0.62, w1: 0.92, d0: 0.38, d1: 0.50, h: 0.50 }, 0, 0.80, 0.01, PAL.main, { metalness: 0.75 });  // 腹甲(紅色切面段)
     for (const sx of [-1, 1]) {                          // 金滾邊:胸前兩道斜稜線
       const tr = bxF(ch, 0.035, 0.82, 0.022, sx * 0.54, mid + 0.16, 0.30, GOLD, { metalness: 0.9 });
       tr.rotation.z = sx * 0.245; tr.rotation.x = 0.05;
@@ -138,7 +143,7 @@ export default {
   },
   thigh(c, l, d) {
     const { PAL, G } = c;
-    tboxF(l, { w0: 0.24 * G, w1: 0.34 * G, d0: 0.26 * G, d1: 0.36 * G, h: d.len * 1.02 }, 0, -d.len * 0.5, 0.01, PAL.mid, { metalness: 0.75 });  // 收分楔台大腿殼
+    tboxF(l, { w0: 0.24 * G, w1: 0.34 * G, d0: 0.26 * G, d1: 0.36 * G, h: d.len * 1.02 }, 0, -d.len * 0.5, 0.01, PAL.main, { metalness: 0.75 });  // 收分楔台大腿殼
     for (const sx of [-1, 1]) {
       const tr = bxF(l, 0.022, d.len * 0.78, 0.022, sx * 0.13 * G, -d.len * 0.5, 0.145, GOLD, { metalness: 0.9 });
       tr.rotation.z = -sx * 0.045; tr.rotation.x = 0.03; // 前稜金滾邊(跟著收分斜)
@@ -149,7 +154,7 @@ export default {
     const { PAL, G, sx } = c;
     const disc = latheF(l, [[0.02, 0], [0.095, 0.008], [0.105, 0.028], [0.06, 0.052], [0.02, 0.058]], 12, sx * 0.15 * G, -0.02, 0, PAL.deep, { metalness: 0.8 });
     disc.rotation.z = -sx * Math.PI / 2;                 // 膝圓盤蓋(旋成體,軸朝外)
-    tboxF(l, { w0: 0.18 * G, w1: 0.30 * G, d0: 0.20 * G, d1: 0.32 * G, h: d.len }, 0, -d.len * 0.5, 0.01, PAL.mid, { metalness: 0.75 });  // 收分楔台小腿殼
+    tboxF(l, { w0: 0.18 * G, w1: 0.30 * G, d0: 0.20 * G, d1: 0.32 * G, h: d.len }, 0, -d.len * 0.5, 0.01, PAL.main, { metalness: 0.75 });  // 收分楔台小腿殼
     for (const st of [-1, 1]) {
       const tr = bxF(l, 0.02, d.len * 0.7, 0.02, st * 0.11 * G, -d.len * 0.45, 0.135, GOLD, { metalness: 0.9 });
       tr.rotation.z = -st * 0.05; tr.rotation.x = 0.03;  // 前稜金滾邊
@@ -179,12 +184,12 @@ export default {
     tr.rotation.z = sx * 0.35;                           // 肩甲上稜金滾邊(貼上稜斜率)
     bxF(a, 0.16, 0.03, 0.05, sx * 0.10, 0.19, 0.15, accent, { emissive: accent, emissiveIntensity: 0.6 });  // 肩章飾條
     cylF(a, 0.04, 0.04, 0.03, 8, sx * 0.12 * G, 0.05, -0.12, COAL, { metalness: 0.7 });  // 肩排氣口
-    tboxF(a, { w0: 0.17 * G, w1: 0.23 * G, d0: 0.19 * G, d1: 0.25 * G, h: d.len }, 0, -d.len * 0.5, 0, PAL.mid, { metalness: 0.75 });  // 收分楔台上臂殼
+    tboxF(a, { w0: 0.17 * G, w1: 0.23 * G, d0: 0.19 * G, d1: 0.25 * G, h: d.len }, 0, -d.len * 0.5, 0, PAL.main, { metalness: 0.75 });  // 收分楔台上臂殼
     cylF(a, 0.095 * G, 0.095 * G, 0.045, 10, 0, -d.len * 0.98, 0, COAL, { metalness: 0.7 });  // 烤漆蓋板細縫(肘環)
   },
   armFore(c, a, d) {
     const { PAL, G } = c;
-    tboxF(a, { w0: 0.15 * G, w1: 0.19 * G, d0: 0.17 * G, d1: 0.21 * G, h: d.len * 0.9 }, 0, -d.len * 0.45, 0.01, PAL.mid, { metalness: 0.75 });  // 收分楔台前臂殼
+    tboxF(a, { w0: 0.15 * G, w1: 0.19 * G, d0: 0.17 * G, d1: 0.21 * G, h: d.len * 0.9 }, 0, -d.len * 0.45, 0.01, PAL.main, { metalness: 0.75 });  // 收分楔台前臂殼
     latheF(a, [[0.145, 0], [0.15, 0.02], [0.10, 0.15], [0.09, 0.17]], 8, 0, -d.len, 0.01, PAL.main, { metalness: 0.8 });  // 反折禮服袖口(八角喇叭口)
     torusF(a, 0.10, 0.012, 0, -d.len + 0.165, 0.01, GOLD, { metalness: 0.9 }).rotation.x = Math.PI / 2;  // 袖口金滾邊環
   },

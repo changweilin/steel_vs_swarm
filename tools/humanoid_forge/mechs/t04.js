@@ -77,7 +77,7 @@ import {
 const OLIVE = 0x57614b, RED = 0xff2f2f, ORANGE = 0xd8862a;
 
 export default {
-  label: '灰犬(t04 機甲・獵犬)', hue: 0x8a97a5, kind: 'quad', height: 4.6,
+  label: '灰犬(t04 機甲・獵犬)', kind: 'quad', height: 4.6,
   // frame:hipY / legX / fz / hz 是四掌接地的錨(凍結);chest/neck/head/tail* 這一輪有動,
   //   量測與理由住下方「2026-08-14 第三輪」檔頭。headArm = chest.z+neck.z+head.z 恆 1.90
   //   ⇒ locomotion 的凝視補償(headArc)一格未動。

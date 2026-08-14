@@ -80,10 +80,13 @@ export function segLimbF(parent, pos, segs, chain) {
 
 // ---- 關節機構語彙(逐機互異的「字母」;自 forge.js 移入)---------------------
 /** t01/t11/t06:外露液壓缸(單端錨、斜置、不跨樞軸)+ 缸頭關節環;core 給亮桿芯 */
-export function hydCyl(p, r, len, x, y, z, tiltX, core = null) {
-  const c = cylF(p, r, r, len, 6, x, y, z, IRON, { metalness: 0.85 });
+// `barrel`/`head` 選用色(省略 = 逐位元同舊行為):t01 這一輪要求關節處統一白色,
+// 而缸體/缸頭環的顏色本來寫死在這裡 —— 呼叫端拿不到缸頭環那顆 mesh(只回缸體),
+// 要在外面改色就得再找一次,那是第二份「哪一顆是缸頭環」的知識。
+export function hydCyl(p, r, len, x, y, z, tiltX, core = null, barrel = IRON, head = 0x3a4048) {
+  const c = cylF(p, r, r, len, 6, x, y, z, barrel, { metalness: 0.85 });
   c.rotation.x = tiltX;
-  cylF(p, r * 1.5, r * 1.5, r * 1.2, 8, x, y + len * 0.55, z, 0x3a4048, { metalness: 0.8 });
+  cylF(p, r * 1.5, r * 1.5, r * 1.2, 8, x, y + len * 0.55, z, head, { metalness: 0.8 });
   if (core) {
     const k = cylF(p, r * 0.55, r * 0.55, len * 0.5, 6, x, y - len * 0.45, z, core, { metalness: 0.9 });
     k.rotation.x = tiltX;

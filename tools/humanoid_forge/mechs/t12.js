@@ -60,7 +60,7 @@ function mastF(p, [x, y, z, L, lz, lx, tip], PAL) {
 }
 
 export default {
-  label: '巨兵(t12 訊號掃描機)', hue: 0xb8ffb0,
+  label: '巨兵(t12 訊號掃描機)',
   prop: { hips: 0.44, legSplay: 0.1, thigh: 0.41, shin: 0.37, shoulderY: 0.82, shoulderX: 0.22, upperArm: 0.16, foreArm: 0.19, head: 0.95, girth: 1.25 },
   gait: { strideF: 1.55, bob: 0.13, sway: 0.1, top: 8, armBase: 0.08 },
   moveSig: { poise: 0.2, idleF: 0.7, idleA: 0.85, launch: 0.15, spool: 0.4, brake: 0.3, settle: 1.4 },

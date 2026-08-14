@@ -170,7 +170,7 @@ const rAt = (z) => {
 };
 
 export default {
-  label: '靜電(s10 變形者・機械巨象)', hue: 0xd7b8ff, kind: 'quad', height: 5.6,
+  label: '靜電(s10 變形者・機械巨象)', kind: 'quad', height: 5.6,
   frame: {
     hipY: 2.66, legX: 1.02, fz: 1.30, hz: -1.20,
     chest: [0, 0.10, 1.05], neck: [0, -0.06, 0.88], head: [0, -0.18, 0.52],

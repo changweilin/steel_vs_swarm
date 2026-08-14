@@ -237,7 +237,7 @@ function handCradle(wr, PAL) {
 }
 
 export default {
-  label: '輓歌・凱隆式(s06 機甲・半人馬)', hue: 0xb9c7ff, kind: 'quad', height: 5.2,
+  label: '輓歌・凱隆式(s06 機甲・半人馬)', kind: 'quad', height: 5.2,
   frame: {
     hipY: 2.2, legX: 0.6, fz: 1.0, hz: -1.2,
     chest: [0, 0.1, 0.55],

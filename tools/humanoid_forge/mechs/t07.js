@@ -92,7 +92,7 @@ const INNER_R = [[-0.04, 0], [0.63, 0], [0.63, 0.46], [0.47, 0.64], [0.24, 0.60]
 const INNER_RV = [[0.61, 0.44], [0.45, 0.63], [0.22, 0.58]];
 
 export default {
-  label: '屏息(t07 翼龍狙擊機)', hue: 0x3faaca, kind: 'air', height: 3.4,
+  label: '屏息(t07 翼龍狙擊機)', kind: 'air', height: 3.4,
   air: { tiltY: 1.35, bob: 0.05, top: 26, span: 4.2 },
   moveSig: { hover: 0.12, hoverF: 0.7, hoverA: 0.35, surge: 0.40, flare: 0.82, bank: 0.50 },
   castSig: { omni: 'flare', dir: 'lunge' },

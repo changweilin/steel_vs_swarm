@@ -17,7 +17,7 @@ const FR = s03.frame;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '羽陣・飛行型(s03 始祖式展羽)', hue: s03.hue, kind: 'air', height: s03.height,
+  label: '羽陣・飛行型(s03 始祖式展羽)', kind: 'air', height: s03.height,
   air: { tiltY: 2.4, bob: 0.07, top: 27, span: 5.0 },
   moveSig: { hover: 0.22, hoverF: 0.75, hoverA: 0.65, surge: 0.38, flare: 0.75, bank: 0.52 },
   castSig: { omni: 'roar', dir: 'kick' },

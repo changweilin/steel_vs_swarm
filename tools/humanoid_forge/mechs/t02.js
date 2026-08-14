@@ -15,7 +15,7 @@ import {
 const FLESH = 0x8a5a44;
 
 export default {
-  label: '加拉泰亞-7(t02 神經同步機)', hue: 0xff9ec4,
+  label: '加拉泰亞-7(t02 神經同步機)',
   prop: { hips: 0.56, legSplay: 0.055, thigh: 0.5, shin: 0.47, shoulderY: 0.86, shoulderX: 0.21, upperArm: 0.175, foreArm: 0.16, head: 0.94, girth: 0.82 },
   gait: { strideF: 1.5, bob: 0.1, sway: 0.07, top: 8, armBase: 0.05 },
   moveSig: { poise: 0.08, idleF: 2.45, idleA: 0.95, launch: 0.93, spool: 0.05, brake: 0.95, settle: 0.38 },

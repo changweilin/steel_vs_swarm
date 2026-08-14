@@ -48,7 +48,7 @@ const poly = (w, h, n = 8) => Array.from({ length: n }, (_, i) => {
 const thin = (m) => { m.userData.noOutline = true; return m; };
 
 export default {
-  label: '續命(m03 雙尾桁運補機)', hue: 0x59c1a5, kind: 'air', height: 3.5,
+  label: '續命(m03 雙尾桁運補機)', kind: 'air', height: 3.5,
   air: { tiltY: 1.3, bob: 0.03, top: 28, level: true, span: 3.6 },
   moveSig: { hover: 0.30, hoverF: 1.0, hoverA: 0.12, surge: 0.35, flare: 0, bank: 0.55 },
   castSig: { omni: 'spin', dir: 'lunge' },
