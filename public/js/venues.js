@@ -236,6 +236,43 @@ function bakedLanesSeparated(entry) {
 }
 
 /**
+ * 烘焙兵線表的鍵(`venueLanes.js` 與 `tools/bake_venue_lanes.mjs` 的**唯一縫**)。
+ *
+ * 完整戰場的鍵就是兵線數(`1` / `2` / `3`);縮小尺度的地圖(迷你 / 劇情戰役)另有一組
+ * `m1` / `m2` / `m3` —— **同一條真實道路在兩種尺度下不是同一條線**:兩堡目標距離差
+ * `mapScaleF()`(現值 3/5),路網上「走得通、又剛好這麼長、又排得出合規砲塔」的路徑
+ * 完全不同。舊制是拿完整版的 L1 兩端對稱剪短(`trimLaneTo`),那條線的每一段仍是真實
+ * 道路,但它從來沒有被任何規則驗過:剪掉的是頭尾,留下的中段是**別人挑出來的路線的中間**
+ * ——「這一段撐不撐得起兩階砲塔」「有沒有 180° 迴轉」「主軸偏航累積多少」在剪短之後
+ * 一條都沒有重新成立。這一組鍵就是把那些規則在**縮小尺度上重跑一次**的產物。
+ *
+ * 迷你與劇情戰役共用同一組鍵是**推導不是巧合**:兩者的塔鏈需求都是 3(迷你 1+1+1、
+ * 劇情 0+2+1)⇒ `mapScaleF` 逐位元相同 ⇒ 兩堡目標距離相同。差別只在塔位怎麼分配,
+ * 而烘焙時三種型態(迷你 / 劇情兩側)的砲塔規則是**一起**驗的(見 bake 的 KEY_MODES)。
+ * 型態省略 ⇒ 回 L ⇒ 逐位元同舊制。
+ */
+export const venueLaneKey = (L, mapA) => (mapPlan(mapA).mode === 'full' ? L : 'm' + L);
+/**
+ * 表裡有哪些鍵(順序 = 烘焙與寫檔順序)。產生端(bake)、消費端(venueConfig)與稽核
+ * (audit_map_rules / audit_mini_map)同吃這一份 —— 手寫第二份清單的症狀是「烤了卻沒人讀」
+ * 或「拿完整戰場的塔位去驗迷你的兵線」,兩種都不會有錯誤訊息。
+ * 縮小尺度恆為單兵線(劇情戰役由 `STORY_MAP.LANES` 定、迷你由 `MINI.TEAM_MAX` ⇒ `lanesFor` 恆 1)。
+ */
+export const VENUE_LANE_KEYS = [
+  { key: venueLaneKey(1, false), L: 1, mapA: false },
+  { key: venueLaneKey(2, false), L: 2, mapA: false },
+  { key: venueLaneKey(3, false), L: 3, mapA: false },
+  { key: venueLaneKey(1, true), L: 1, mapA: true },
+];
+/**
+ * 這個鍵的兵線要服務哪些地圖型態 —— **砲塔規則一次驗全部**。
+ * 縮小尺度的那一條同時要撐得起迷你地圖(兩側各一階塔)與劇情戰役(守方兩階、攻方零階),
+ * 而劇情的守方可能是任一邊(章節陣營 + `rollSideSwap` 各擲一次)⇒ 三種型態全驗過才算合規。
+ * 少驗一種的症狀是「換個章節就疊塔」,而烘焙報告與既有稽核照樣全綠。
+ */
+export const venueLaneModes = (mapA) => (mapA ? [true, 'SWARM', 'STEEL'] : [false]);
+
+/**
  * 兵線兩端**對稱剪短**到指定的兩端直線距離(真實公尺)—— 迷你地圖的縮圖手法(唯一縫)。
  *
  * 為什麼是「剪短」而不是「把座標朝中心等比縮小」:烘焙兵線的每一段都是真實道路,剪短之後
@@ -356,8 +393,9 @@ export function synthLane(a, b, side) {
  * 幾何:真實邊長 0.3+0.1L km,兩堡距離 = 邊長 × 0.85 × √2。
  *
  * 第三參數 = 地圖型態(見 data.js `mapPlan`;迷你 = true、劇情戰役 = 防守方 side):
- * 尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格一起縮。烘焙兵線**不必重烤**:同一條
- * 真實道路路線兩端對稱剪短到新的目標距離(`trimLaneTo`),剩下的每一段仍是真實道路。
+ * 尺度整組乘 `mapScaleF` ⇒ 邊長 / 兩堡距離 / 重合網格一起縮。縮小尺度的地圖**有自己的
+ * 一組烘焙兵線**(鍵見 `venueLaneKey`):同一張圖在 288m 與 481m 兩種兩堡距離下,路網上
+ * 走得通又合規的路徑不是同一條。烤不到的場地才退回「完整版路線兩端對稱剪短」(`trimLaneTo`)。
  * 合成弧那條路天生吃 realD,零改動。
  * 劇情戰役另外**恆為單兵線**(`laneCountFor`)—— 3v3 / 5v5 一樣只取 L1 那條烘焙路線,
  * MUST NOT 拿 lanesFor(teamSize) 去查表(查到的是兩三條線,而兵線數是 STORY_MAP.LANES 定的)。
@@ -369,17 +407,22 @@ export function venueConfig(venue, teamSize, mapA = false) {
   const realD = D * MAPGEO.REAL_SCALE;          // 真實地理距離(縮小 → 地形/道路更密)
   const sizeM = D / (MAPGEO.BASE_DIST_FRAC * Math.SQRT2);   // 遊戲世界邊長
 
-  const bakedRaw = VENUE_LANES[venue.id]?.[L];
+  // 三階降級(寧缺勿錯,原則 6):①這個尺度自己的烘焙路線 → ②完整版路線剪短 → ③合成弧。
+  // ② 只在 ① 缺席時才走 —— 它是 2026-08-13~14 的過渡路徑,留著是因為新烤一張圖需要外網,
+  // 而「沒烤到的場地整張不能玩」比「路線沒被規則重驗過」更糟。
+  const ownRaw = VENUE_LANES[venue.id]?.[venueLaneKey(L, mapA)];
+  const bakedRaw = (ownRaw && bakedLanesSeparated(ownRaw)) ? ownRaw : VENUE_LANES[venue.id]?.[L];
   const baked = bakedRaw && bakedLanesSeparated(bakedRaw) ? bakedRaw : null;
   let A, B, lanes, maxOverlap, synthetic;
   if (baked) {
     lanes = baked.lanes.map((l) => l.map((p) => [...p]));
-    if (plan.mode !== 'full') {
-      // 縮小尺度的地圖(迷你 / 劇情戰役)恆為單兵線 ⇒ 剪短那一條,兩端就是兩座主堡。
+    if (plan.mode !== 'full' && baked !== ownRaw) {
+      // ②:縮小尺度但只有完整版路線可用 ⇒ 兩端對稱剪短,兩端就是兩座主堡。
       // 多兵線時剪短會把共享端點拆成 L 組不同的主堡座標,故**只在單兵線時做**,其餘退回原樣。
       if (lanes.length === 1) lanes = [trimLaneTo(lanes[0], realD)];
       [A, B] = [[...lanes[0][0]], [...lanes[0][lanes[0].length - 1]]];
     } else {
+      // ①(或完整戰場):烘焙時的兩堡就是這條路線的兩端,一格都不必動。
       [A, B] = baked.bases.map((p) => [...p]);
     }
     maxOverlap = baked.maxOverlap;

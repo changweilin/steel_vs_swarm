@@ -1,6 +1,10 @@
 // ============ 預設場地兵線離線預算 ============
 // 用法:node tools/bake_venue_lanes.mjs   (ONLY=taipei101,seoul 可只跑指定場地)
 // 產出 public/js/venueLanes.js。改 ANCHORS 或 MAPGEO 的尺寸/重合率常數後 MUST 重跑。
+// 逐場地烤四份:完整戰場 L1/L2/L3 + **縮小尺度的單兵線 m1**(迷你地圖與劇情戰役共用 ——
+// 兩者 mapScaleF 相同,見 venues.js venueLaneKey)。m1 的砲塔規則一次驗三種型態
+// (迷你 / 劇情守方在 SWARM / 劇情守方在 STEEL),因為守方是哪一邊逐章不同、還會被
+// rollSideSwap 再擲一次。改 MINI.STAGES / STORY_MAP.DEF_STAGES 後 MUST 重跑。
 // Overpass 真實道路路網 → 建圖 → 每條兵線 = 一條「邊不相交」的最短路徑(全程踩在現實道路上)
 // → 用 overlapCellM(L) 驗重合率 ≤ MAX_OVERLAP、繞路 ≤ 2.2×、兩堡距離 ≥ 對角線 80%。
 // 方位角挑選另偏好砲塔規則:#5 洞內砲塔 ≥20% 射程涵蓋洞口外(towerTunnelAudit)優先於
@@ -10,6 +14,9 @@ import { MAPGEO, realDistFor, targetDistFor, overlapCellM, laneTacticsXZ, tactic
   from '../public/js/data.js';
 // 既有兵線:ONLY= 局部重烤時,沒烤到的場地要原樣寫回(見下方 keep)
 import { VENUE_LANES } from '../public/js/venueLanes.js';
+// 表的鍵只有 venues.js 一份(消費端與產生端同吃 —— 在這裡照抄一個字串前綴,
+// 改鍵時必漏改其中一邊,而症狀是「烤了卻沒人讀得到」,沒有任何錯誤訊息)。
+import { VENUE_LANE_KEYS, venueLaneModes } from '../public/js/venues.js';
 // 結構隧道資格閘(**執行 biomes.js 原文**的那一份,§2.1「離線工具的結構剖面」單一縫)。
 // 2026-08-04:舊制 buildGraph 直接看 `w.tags.tunnel` = 第二份實作,比引擎鬆 ——
 // `indoor=yes` 的 service 通道(車站地下街 / 停車場坡道)在引擎裡一律攤平成一般小路
@@ -442,9 +449,11 @@ const BEARING_SECTORS = {
   // 南北向),夾錯就是把唯一走得通的方位排除掉(parkave 的前例)。交給 PREFER_TUNNEL 挑。
 };
 const inSector = (br, [a, b]) => ((br - a + 360) % 360) <= ((b - a + 360) % 360);
+/** 詞典序比較(錨點挑選用):第一個不同的欄位決勝,全同 = 不換(同分取先列者) */
+const lexGT = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] > b[i]; return false; };
 
-function tryBearing(g, aIdx, bearing, L, offFrac) {
-  const realD = realDistFor(L);
+function tryBearing(g, aIdx, bearing, L, offFrac, mapA = false) {
+  const realD = realDistFor(L, mapA);
   const { X, Z, n } = g;
   const ax = X[aIdx], az = Z[aIdx];
   const bx0 = ax + Math.sin(bearing * d2r) * realD, bz0 = az + Math.cos(bearing * d2r) * realD;
@@ -515,7 +524,7 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   if (L > 1) for (const s of [1, -1]) { const f = take(sideW(s, offFrac)); if (!f) return { fail: why }; lanes.push(f); }
   lanes.sort((p, q) => q.lat - p.lat);                        // [上, 中, 下]
 
-  const cell = overlapCellM(L);
+  const cell = overlapCellM(L, mapA);
   let mo = 0;
   for (let i = 0; i < lanes.length; i++)
     for (let j = i + 1; j < lanes.length; j++) mo = Math.max(mo, overlapXZ(lanes[i].xz, lanes[j].xz, cell));
@@ -541,10 +550,16 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   const A = [g.LA[aIdx], g.LN[aIdx]], B = [g.LA[bIdx], g.LN[bIdx]];
   const cc = { lat: (A[0] + B[0]) / 2, lng: (A[1] + B[1]) / 2 };
   const lanesGame = lanes.map((l) => l.idx.map((i) => llToGame(g.LA[i], g.LN[i], cc)));
-  const ta = towerLayoutAudit(lanesGame);
   // 砲塔洞口規則(規則 #5):兵線穿隧道時,埋在洞內的砲塔 MUST 有 ≥TOWER_TUNNEL_OUT_F 射程涵蓋洞口外。
   // 隧道段取圖資 tunnel way 全長(上界;執行期只有地形蓋得住的段落才成洞)⇒ 選線期寧可保守。
-  const tt = towerTunnelAudit(lanesGame, lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc)));
+  const spans = lanes.map((l, li) => tunSpansOf(g, l.full, lanesGame[li], cc));
+  // 兩條規則逐型態各驗一次再加總(見 venues.js venueLaneModes):完整戰場恆為單一型態 ⇒ 逐位元同舊制。
+  let resid = 0, tunBad = 0;
+  for (const m of venueLaneModes(mapA)) {
+    const ta = towerLayoutAudit(lanesGame, m);
+    resid += ta.residual + (ta.stackBad ? 1000 : 0);   // 疊塔視為重罰(絕不選)
+    tunBad += towerTunnelAudit(lanesGame, spans, m).bad.length;
+  }
   // 兵線實際踩在橋樑邊上的長度(遊戲公尺):PREFER_BRIDGE 場地用它當首要偏好 ——
   // 「純陸域高架橋」的測試場地要的就是兵線真的走在橋面上,一般的戰術評分不會特意去挑高架。
   let brgLen = 0, tunLen = 0;
@@ -559,8 +574,8 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
   return {
     bearing, aIdx, bIdx, lanes, brgLen, tunLen,
     maxOverlap: mo, sinuosity: sinu, turnsPerKm: tpk,
-    resid: ta.residual + (ta.stackBad ? 1000 : 0),   // 疊塔視為重罰(絕不選)
-    tunBad: tt.bad.length,                           // 規則 #5 違規塔數(0 = 合規)
+    resid,      // 規則 #4 殘餘(逐型態加總)
+    tunBad,     // 規則 #5 違規塔數(逐型態加總;0 = 合規)
     score: tacticalScore(sinu, tpk, mo),
   };
 }
@@ -568,6 +583,8 @@ function tryBearing(g, aIdx, bearing, L, offFrac) {
 // ---- 主流程 ----
 const out = {}, report = [];
 const maxRealD = realDistFor(3);
+// 表的鍵(順序即寫檔順序;唯一縫在 venues.js):完整戰場 1~3 條兵線 + 縮小尺度的單兵線。
+const KEYS = VENUE_LANE_KEYS.map((k) => k.key);
 for (const [id, anchors] of Object.entries(ANCHORS)) {
   let picked = null;
   for (const anchor of anchors) {
@@ -584,7 +601,9 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
     if (aIdx < 0) { log('  錨點 120m 內無道路節點 → skip'); continue; }
 
     const byL = {};
-    for (const L of [1, 2, 3]) {
+    // 逐「尺度 × 兵線數」各烤一份:完整戰場 L1~L3,縮小尺度(迷你 / 劇情戰役,兩者
+    // mapScaleF 相同)只有單兵線 —— 兩種型態都恆為 1 條線(laneCountFor / MINI.TEAM_MAX)。
+    for (const { key, L, mapA } of VENUE_LANE_KEYS) {
       let best = null;
       const why = {};
       let bestOv = 9;
@@ -593,7 +612,7 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
       for (let i = 0; i < 72; i++) {
         if (sectors && !sectors.some((s) => inSector(i * 5, s))) continue;
         for (const off of OFFSET_FRACS) {
-          const r = tryBearing(g, aIdx, i * 5, L, off);
+          const r = tryBearing(g, aIdx, i * 5, L, off, mapA);
           if (r?.fail) { why[r.fail] = (why[r.fail] || 0) + 1; if (r.ov != null) bestOv = Math.min(bestOv, r.ov); continue; }
           // 詞典序:先「規則 #5 洞內砲塔違規少」(塔埋在山體裡只能沿洞內走廊對射 = 功能性缺陷,
           // 比 #4 的重疊殘餘嚴重)、再「規則 #4 殘餘少」、同分才取戰術評分高。
@@ -616,28 +635,35 @@ for (const [id, anchors] of Object.entries(ANCHORS)) {
         }
       }
       if (!best) {
-        // 逐 L 獨立:這個 L 湊不出真實道路兵線 → venueConfig 對它退回 synthLane
-        log(`  L=${L} ✗ 無可行方位角 reasons=${JSON.stringify(why)}${bestOv < 9 ? ` bestOv=${bestOv.toFixed(3)}` : ''}`);
+        // 逐鍵獨立:這個尺度湊不出真實道路兵線 → venueConfig 對它降級(完整版路線剪短 / synthLane)
+        log(`  ${key} ✗ 無可行方位角 reasons=${JSON.stringify(why)}${bestOv < 9 ? ` bestOv=${bestOv.toFixed(3)}` : ''}`);
         continue;
       }
-      byL[L] = { g, ...best };
-      log(`  L=${L} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}` +
+      byL[key] = { g, ...best };
+      log(`  ${key} ✓ br=${best.bearing}° ov=${best.maxOverlap.toFixed(3)} sinu=${best.sinuosity.toFixed(2)} resid=${best.resid}` +
         (best.tunBad ? ` ⚠️洞內塔違規=${best.tunBad}` : ''));
     }
     const hits = Object.keys(byL).length;
     if (!hits) continue;
-    // 取錨點:先「規則 #4/#5 合規的 L 數」最多,再「真實道路可用 L 數」最多;同分取先列者。
-    const conf = Object.values(byL).filter((b) => b.resid === 0 && b.tunBad === 0).length;
-    if (!picked || conf > picked.conf || (conf === picked.conf && hits > Object.keys(picked.byL).length)) {
-      picked = { anchor, byL, ways: ways.length, g, conf };
-    }
-    if (hits === 3 && conf === 3) break;   // 完美(全 L 真實道路且全合規)才提前收手
+    // 取錨點:先「規則 #4/#5 合規的鍵數」最多,再「真實道路可用鍵數」最多;同分取先列者。
+    // **完整戰場的鍵排在縮小尺度之前**(2026-08-14 加入 m1 時追加):比較序寫成
+    // [完整合規數, 完整可用數, 全部合規數, 全部可用數]。多錨點的場地(tamsui / madrid /
+    // roppongi …)本來就是靠這個計數挑錨,把新鍵併進同一個計數 = 「另一個錨點的**迷你**
+    // 路線比較好」就足以換掉那張圖已經定案的 L1~L3(連同 `scen` 場景實測標記整份過期)。
+    // 分層之後新增鍵只能當同分時的決勝,既有尺度的選擇一格不動。
+    const cnt = (ks) => {
+      const es = ks.map((k) => byL[k]).filter(Boolean);
+      return [es.filter((b) => b.resid === 0 && b.tunBad === 0).length, es.length];
+    };
+    const rank = [...cnt(KEYS.filter((k) => typeof k === 'number')), ...cnt(KEYS)];
+    if (!picked || lexGT(rank, picked.rank)) picked = { anchor, byL, ways: ways.length, g, conf: rank[2], rank };
+    if (hits === KEYS.length && rank[2] === KEYS.length) break;   // 完美(全鍵真實道路且全合規)才提前收手
   }
-  if (!picked) { report.push(`${id}: ❌ 全 L 皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
+  if (!picked) { report.push(`${id}: ❌ 全尺度皆無真實道路解 → 一律 synthLane`); log(`${id}: ❌`); continue; }
   out[id] = picked;
-  const mark = (L) => (picked.byL[L] ? `L${L} ov=${picked.byL[L].maxOverlap.toFixed(2)}` : `L${L} synth`);
-  const full = Object.keys(picked.byL).length === 3;
-  report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${[1, 2, 3].map(mark).join(' | ')}`);
+  const mark = (K) => (picked.byL[K] ? `${K} ov=${picked.byL[K].maxOverlap.toFixed(2)}` : `${K} synth`);
+  const full = Object.keys(picked.byL).length === KEYS.length;
+  report.push(`${id}: ${full ? '✅' : '◐'} A=[${picked.anchor.map((v) => v.toFixed(5))}] ${KEYS.map(mark).join(' | ')}`);
   log(`${id}: ${full ? '✅' : '◐'}`);
 }
 
@@ -652,6 +678,10 @@ let js = `// ============ 預設場地兵線(離線預算,勿手改)============
 // 任兩線重合率 ≤ ${MAPGEO.MAX_OVERLAP}(判定網格 overlapCellM(L))、單線繞路 ≤ 2.2×直線距離、
 // 任兩線互不接觸/交叉(排除主堡扇出段,中段最近距離 ≥ ${MAPGEO.LANE_MIN_SEP_M} 遊戲公尺,含立體交叉亦禁)。
 // bases[0] = SWARM(錨點側)、bases[1] = STEEL;lanes 依側向排序 [上, 中, 下]。
+// 鍵(見 venues.js \`venueLaneKey\`):1/2/3 = 完整戰場的兵線數;
+// m1 = 縮小尺度(迷你地圖 / 劇情戰役,兩堡距離 ×${(realDistFor(1, true) / realDistFor(1)).toFixed(1)})的單兵線 ——
+// 那是**另外挑過的一條路線**,不是完整版剪短的中段:同一張圖在兩種距離下,
+// 路網上走得通又排得出合規砲塔的路徑不同,且 m1 的砲塔規則是拿迷你 + 劇情兩側一起驗的。
 export const VENUE_LANES = {\n`;
 // ONLY= 只烤指定場地時,**其餘場地的既有兵線 MUST 原樣保留** —— 這支一律重寫整份
 // venueLanes.js,少了這段就會把沒烤到的場地整批清空(2026-07-28 實測:ONLY=parkave
@@ -659,10 +689,10 @@ export const VENUE_LANES = {\n`;
 const keep = ONLY.length ? Object.entries(VENUE_LANES).filter(([id]) => !(id in ANCHORS)) : [];
 for (const [id, byL] of keep) {
   js += `  ${id}: {\n`;
-  for (const L of [1, 2, 3]) {
-    const e = byL[L];
+  for (const K of KEYS) {
+    const e = byL[K];
     if (!e) continue;
-    js += `    ${L}: { bearing: ${e.bearing}, maxOverlap: ${e.maxOverlap},\n`;
+    js += `    ${K}: { bearing: ${e.bearing}, maxOverlap: ${e.maxOverlap},\n`;
     js += `      bases: [[${e.bases[0][0]},${e.bases[0][1]}],[${e.bases[1][0]},${e.bases[1][1]}]],\n`;
     js += `      lanes: [\n        ${e.lanes.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
   }
@@ -670,13 +700,13 @@ for (const [id, byL] of keep) {
 }
 for (const [id, v] of Object.entries(out)) {
   js += `  ${id}: {\n`;
-  for (const L of [1, 2, 3]) {
-    const b = v.byL[L];
-    if (!b) continue;                     // 該 L 無真實道路解 → venues.js 對它退回 synthLane
+  for (const K of KEYS) {
+    const b = v.byL[K];
+    if (!b) continue;                     // 該鍵無真實道路解 → venues.js 對它降級(見 venueConfig)
     const g = v.g;
     const A = [g.LA[b.aIdx], g.LN[b.aIdx]], B = [g.LA[b.bIdx], g.LN[b.bIdx]];
     const lanesLL = b.lanes.map((l) => l.idx.map((i) => [r6(g.LA[i]), r6(g.LN[i])]));
-    js += `    ${L}: { bearing: ${b.bearing}, maxOverlap: ${+b.maxOverlap.toFixed(3)},\n`;
+    js += `    ${K}: { bearing: ${b.bearing}, maxOverlap: ${+b.maxOverlap.toFixed(3)},\n`;
     js += `      bases: [[${r6(A[0])},${r6(A[1])}],[${r6(B[0])},${r6(B[1])}]],\n`;
     js += `      lanes: [\n        ${lanesLL.map((l) => `[${l.map((p) => `[${p[0]},${p[1]}]`).join(',')}]`).join(',\n        ')}\n      ] },\n`;
   }
