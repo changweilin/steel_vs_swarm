@@ -30,6 +30,12 @@
 // HW 註(翼面半寬,世界座標):z∈[0.5, 1.45] → 0.28·(1.45−z)/0.95;
 //                            z∈[−1.0, 0.5] → 0.28 + 1.04·(0.5−z)/1.5;
 //                            z∈[−1.22, −1.0] → 1.32。
+// ---- 2026-08-14 這一輪(使用者:「參考舊版設計重新渲染外觀,只改外觀不增減零件」)----
+// 舊版 = models.js buildFixedWing() 的三角飛翼分支(:1048~)。它的讀法是**亮翼面 + 深端板**
+// (翼面 `lite` / 端板小翼 `dark`),而本檔整疊折面壓在 `mid` 上、翼面比機身還暗。
+// ⇒ 折面整疊往上抬一階、翼端垂尾改吃 `dark`。零件一件未增減。
+// ⚠ 本檔的機型(Shahed 式子母投放母機)與舊版的 Tu-141 式偵察機**不是同一種飛機** ——
+//   要對齊到舊版的佈局清單就會動到零件組裝,這一輪刻意不做。
 import * as THREE from 'three';
 import {
   bxF, cylF, sphF, torusF, prismF, latheF, tboxF, gunPodF, jetF,
@@ -44,7 +50,7 @@ const LE_A = Math.atan2(LE_UX, LE_UZ);              // ≈ 2.5354 rad(Ry 對齊�
 const CH_X = 0.72, CH_Z = -0.22;                    // 前緣稜線的中點(略為內縮)
 
 export default {
-  label: '悲歌(t09 巡飛彈母機)', hue: 0xc9a628, kind: 'air', height: 3.4,
+  label: '悲歌(t09 巡飛彈母機)', kind: 'air', height: 3.4,
   air: { tiltY: 1.3, bob: 0.03, top: 36, level: true, span: 2.9 },
   moveSig: { hover: 0.20, hoverF: 1.1, hoverA: 0.10, surge: 0.90, flare: 0, bank: 0.32 },
   castSig: { omni: 'spin', dir: 'lunge' },
@@ -64,7 +70,11 @@ export default {
     // ⚠ Rx(+π/2):(x, y, z) → (x, −z, y) ⇒ 多邊形的 +y 尖端落在世界 +z(機首)。
     //   寫成 −π/2 會送到 (x, z, −y) = 尖端朝機尾,而畫面上只表現成「翼端垂尾懸空」。
     const DELTA = [[0, 1.45], [0.28, 0.5], [1.32, -1.0], [1.32, -1.22], [-1.32, -1.22], [-1.32, -1.0], [-0.28, 0.5]];
-    const wing = prismF(t, DELTA, 0.14, 0, 0, 0, PAL.mid, { metalness: 0.5 });
+    // 舊版對照(models.js:1051 三角飛翼):翼面吃 `lite`、翼端端板吃 `dark` —— 亮翼面配深端板
+    // 才是這台機從正上方看下去的讀法。板上原本整疊折面壓在 `mid` 上,翼面比機身還暗。
+    // ⇒ 整疊往上抬一階(翼面 mid→main、外翼階板 main→lite、折面 deep→mid、前段階板 dark→mid),
+    //   稜線維持 lite 當最亮的一條 —— 只抬翼面不抬階板的話折面當場糊掉(技能 §3 配色)。
+    const wing = prismF(t, DELTA, 0.14, 0, 0, 0, PAL.main, { metalness: 0.5 });
     wing.rotation.x = Math.PI / 2;
 
     // ---- 折面:前緣稜線 + 內側折面稜線 + 外翼階板(沿前緣方向對齊,長軸 = tbox 的 d)----
@@ -74,12 +84,12 @@ export default {
         sx * CH_X, 0.10, CH_Z, PAL.lite, { metalness: 0.6 });
       chine.rotation.y = sx * LE_A;
       const fold = tboxF(t, { w0: 0.12, d0: 1.00, w1: 0.04, d1: 0.94, h: 0.05 },
-        sx * 0.42, 0.09, -0.42, PAL.deep, { metalness: 0.55 });
+        sx * 0.42, 0.09, -0.42, PAL.mid, { metalness: 0.55 });
       fold.rotation.y = sx * LE_A;
       tboxF(t, { w0: 0.92, d0: 0.52, w1: 0.80, d1: 0.34, h: 0.045, sz: 0.06 },
-        sx * 0.85, 0.085, -0.92, PAL.main, { metalness: 0.5 });        // 外翼階板
+        sx * 0.85, 0.085, -0.92, PAL.lite, { metalness: 0.5 });        // 外翼階板
       const fwd = tboxF(t, { w0: 0.30, d0: 0.70, w1: 0.22, d1: 0.56, h: 0.04, sz: 0.03 },
-        sx * 0.34, 0.082, 0.12, PAL.dark, { metalness: 0.5 });         // 前段折面階板
+        sx * 0.34, 0.082, 0.12, PAL.mid, { metalness: 0.5 });         // 前段折面階板
       fwd.rotation.y = sx * LE_A;
     }
     // 後緣唇板 MUST 鋪滿翼展(2.64):短一截的話正後方會露出一道台階,讀成「翼尖是另外接上去的」
@@ -128,7 +138,7 @@ export default {
       wg.rotation.z = -sx * 0.38;
       t.add(wg);
       const vf = prismF(wg, [[-0.34, 0], [0.18, 0], [0.26, 0.52], [-0.06, 0.54]], 0.045,
-        0, 0, 0, PAL.main, { metalness: 0.55 });
+        0, 0, 0, PAL.dark, { metalness: 0.55 });
       vf.rotation.y = Math.PI / 2;                                     // 前後緣一起往 −z 後掠
       const lf = prismF(wg, [[-0.22, 0], [0.12, 0], [0.16, -0.28], [-0.04, -0.29]], 0.04,
         0, -0.10, 0, PAL.dark, { metalness: 0.55 });

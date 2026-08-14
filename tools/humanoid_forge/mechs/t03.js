@@ -68,7 +68,7 @@ function bulge(p, r, x, y, z, color, opts, s) {
 }
 
 export default {
-  label: '爐膛(t03 機甲・大猩猩)', hue: 0xe08a4a, height: 6.0,
+  label: '爐膛(t03 機甲・大猩猩)', height: 6.0,
   prop: { hips: 0.40, legSplay: 0.11, thigh: 0.42, shin: 0.40, shoulderY: 0.78, shoulderX: 0.21, upperArm: 0.3, foreArm: 0.32, head: 0.84, girth: 1.15 },
   gait: { strideF: 1.1, bob: 0.12, sway: 0.1, top: 7, legBase: -0.08, armBase: 0.14 },
   knuckle: true,                                                 // 掌行:前肢是前腳(rig.knuckle)

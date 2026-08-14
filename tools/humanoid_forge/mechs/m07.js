@@ -20,7 +20,7 @@ import {
 const TAN = 0xb08a5c;         // 2D 圖的關節/足部土黃機構色
 
 export default {
-  label: '落閘(m07 變形者・陣地態)', hue: 0x5fa8d3, kind: 'quad', height: 5.0,
+  label: '落閘(m07 變形者・陣地態)', kind: 'quad', height: 5.0,
   frame: {
     hipY: 2.05, legX: 1.0, fz: 1.0, hz: -1.0,
     // 2026-08-14 使用者:「昆蟲是**頭胸腹三節,沒有脖子**」⇒ 頸樞軸退成「頭與胸之間那一點點

@@ -255,7 +255,7 @@ function beeLeg(t, c, i, sx) {
 }
 
 export default {
-  label: '第聶伯總譜(s01 虎頭蜂型撲翼機)', hue: 0xffd857, kind: 'air', height: 3.4,
+  label: '第聶伯總譜(s01 虎頭蜂型撲翼機)', kind: 'air', height: 3.4,
   // insect:昆蟲高頻震翅(8 字軌跡)—— 2026-08-13 使用者「完全靠翅膀飛行」的落點
   air: { tiltY: 1.3, bob: 0.07, top: 24, span: 3.6, insect: true },
   moveSig: { hover: 0.60, hoverF: 2.4, hoverA: 0.45, surge: 0.40, flare: 0.55, bank: 0.35 },

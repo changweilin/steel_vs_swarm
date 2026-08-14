@@ -20,7 +20,7 @@ const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架�
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '鎖喉・飛行型(m05 飛鼠滑翔)', hue: m05.hue, kind: 'air', height: HG,
+  label: '鎖喉・飛行型(m05 飛鼠滑翔)', kind: 'air', height: HG,
   air: { tiltY: 3.0, bob: 0.05, top: 30, span: 6.0 },
   moveSig: { hover: 0.22, hoverF: 0.8, hoverA: 0.12, surge: 0.80, flare: 0.70, bank: 0.75 },
   castSig: { omni: 'roar', dir: 'swing' },

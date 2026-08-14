@@ -17,7 +17,7 @@ const FR = m08.frame;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '空號・飛行型(m08 夜豹展翼)', hue: m08.hue, kind: 'air', height: m08.height,
+  label: '空號・飛行型(m08 夜豹展翼)', kind: 'air', height: m08.height,
   air: { tiltY: 2.5, bob: 0.06, top: 24, span: 5.4 },
   moveSig: { hover: 0.10, hoverF: 0.5, hoverA: 0.90, surge: 0.25, flare: 0.92, bank: 0.42 },
   castSig: { omni: 'flare', dir: 'lunge' },

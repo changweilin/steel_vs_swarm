@@ -15,7 +15,7 @@ import {
 const CARBON = 0x1b1e22;
 
 export default {
-  label: '超頻(s05 競速 FPV)', hue: 0xff7a30, kind: 'air', height: 2.2,
+  label: '超頻(s05 競速 FPV)', kind: 'air', height: 2.2,
   air: { tiltY: 1.2, bob: 0.05, top: 40, span: 2.0 },
   moveSig: { hover: 0.90, hoverF: 3.0, hoverA: 0.12, surge: 1.00, flare: 0.50, bank: 1.00 },
   castSig: { omni: 'spin', dir: 'lunge' },

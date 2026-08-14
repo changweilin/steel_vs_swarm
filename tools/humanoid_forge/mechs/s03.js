@@ -49,7 +49,7 @@ import {
 } from '../geo.js';
 
 export default {
-  label: '羽陣(s03 變形者・迅猛龍)', hue: 0x9ef2e6, kind: 'quad', height: 4.4,
+  label: '羽陣(s03 變形者・迅猛龍)', kind: 'quad', height: 4.4,
   // ⚠ hipY / legX / fz / hz 是**凍結**的四足接地錨(MUST NOT 動);chest/neck/head/tail* 可調。
   // 2026-08-14 第三輪 D1:頸與頭的縱深依骨架照拉長 —— 以髖高當尺(1px = 0.006403m):
   //   頸(肩臼→枕髁)照片 179.8px = **1.151m**;舊值 0.910m ⇒ neck z 0.62→0.80、head z 0.42→0.52

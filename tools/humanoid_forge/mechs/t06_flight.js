@@ -53,7 +53,7 @@ function condCloud(parent, y0, r, n) {
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
-  label: '輕功・飛行型(t06 觔斗雲)', hue: t06.hue, kind: 'air', height: HG,
+  label: '輕功・飛行型(t06 觔斗雲)', kind: 'air', height: HG,
   air: { tiltY: 3.3, bob: 0.05, top: 30, span: 2.4 },
   moveSig: { hover: 0.30, hoverF: 0.7, hoverA: 0.15, surge: 0.70, flare: 0.85, bank: 0.62 },
   castSig: { omni: 'dance', dir: 'swing' },

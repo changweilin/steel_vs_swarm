@@ -183,7 +183,7 @@ function wingFinger(parent, sx, len, PAL) {
 }
 
 export default {
-  label: '詠嘆調(t08 電戰無人機)', hue: 0xffb8dd, kind: 'air', height: 4.2,
+  label: '詠嘆調(t08 電戰無人機)', kind: 'air', height: 4.2,
   air: { tiltY: 1.5, bob: 0.09, top: 24, span: 5.0 },
   moveSig: { hover: 0.35, hoverF: 0.6, hoverA: 1.10, surge: 0.35, flare: 0.70, bank: 0.45 },
   castSig: { omni: 'flare', dir: 'lunge' },

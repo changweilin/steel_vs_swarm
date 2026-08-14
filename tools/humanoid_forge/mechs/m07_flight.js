@@ -17,7 +17,7 @@ const FR = m07.frame;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝;舊制 0x5fa353 是綠的,2D 圖是藍的)
-  label: '落閘・飛行型(m07 犀金龜)', hue: m07.hue, kind: 'air', height: m07.height,
+  label: '落閘・飛行型(m07 犀金龜)', kind: 'air', height: m07.height,
   air: { tiltY: 2.6, bob: 0.1, top: 18, insect: true, span: 6.0 },
   moveSig: { hover: 0.42, hoverF: 0.7, hoverA: 1.35, surge: 0.15, flare: 0.60, bank: 0.20 },
   castSig: { omni: 'stomp', dir: 'jab' },

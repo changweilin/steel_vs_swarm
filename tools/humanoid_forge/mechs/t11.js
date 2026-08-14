@@ -11,7 +11,7 @@ import {
 } from '../geo.js';
 
 export default {
-  label: '老兵(t11 變形者・地面型)', hue: 0x8a9a5a,
+  label: '老兵(t11 變形者・地面型)',
   prop: { hips: 0.5, legSplay: 0.115, thigh: 0.46, shin: 0.42, shoulderY: 0.78, shoulderX: 0.2, upperArm: 0.175, foreArm: 0.16, head: 0.9, girth: 1.15 },
   gait: { strideF: 1.35, bob: 0.13, sway: 0.1, top: 7, armBase: 0.1 },
   moveSig: { poise: 0.42, idleF: 0.68, idleA: 1.4, launch: 0.08, spool: 0.8, brake: 0.18, settle: 1.7 },

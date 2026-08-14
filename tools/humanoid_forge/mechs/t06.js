@@ -16,7 +16,7 @@ import {
 const SKIN = 0xd8b68a, DGOLD = 0xa8802a, TENDON = 0xffd76a;
 
 export default {
-  label: '齊天式(t06 變形者・地面型)', hue: 0xffb84d,
+  label: '齊天式(t06 變形者・地面型)',
   prop: { hips: 0.42, legSplay: 0.1, thigh: 0.44, shin: 0.42, shoulderY: 0.78, shoulderX: 0.18, upperArm: 0.3, foreArm: 0.31, head: 0.83, girth: 0.85 },
   gait: { strideF: 1.15, bob: 0.14, sway: 0.09, top: 8.5, armBase: 0.15, legBase: -0.1 },
   knuckle: true,                                                                 // 掌行:前肢是前腳(rig.knuckle)

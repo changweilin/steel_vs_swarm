@@ -13,8 +13,26 @@ import {
   hydCyl, sinew, seg2, IRON, GUNMETAL, COAL, INK, BONE, BRASS,
 } from '../geo.js';
 
+
+// ---- 2026-08-14 使用者:「t01 關節處統一白色,其他不變」----------------------------
+// 關節處 = 本機的機構語彙那一族(forge.js 檔頭:t01 = 外露液壓缸 + 缸頭環):
+//   髖球 / 大腿主液壓缸 / 膝樞盤 / 膝後雙活塞桿 / 肘關節環 / 前臂液壓缸。
+// 其餘一律不動(裝甲殼、頭、骨盆、手指、武器都還在原本的色階上)。
+// ⚠ 兩件事缺一不可:①換色 ②掛 `userData.noPaint` —— t01 的塗裝是 `natflag`
+//   (paint.js 逐件實色重染),不豁免的話這些白件當場被染成國旗色,
+//   而「統一白色」只在沒有塗裝的機體上看起來是對的。
+const JOINT_W = 0xf2f4f7;
+const jw = (m) => { m.userData.noPaint = true; return m; };
+/** 白關節液壓缸:轉呼 geo.hydCyl 並把**缸體與缸頭環**兩顆一起改色 + 豁免塗裝。
+ *  缸頭環是 hydCyl 內部緊接著缸體 add 的那一顆(core 省略 ⇒ 它就是最後一個子節點),
+ *  回傳值仍只有缸體 ⇒ 這裡取 children 末項,MUST NOT 在外面另寫一份缸頭環幾何。 */
+const hydW = (pp, r, len, x, y, z, tiltX) => {
+  const c = hydCyl(pp, r, len, x, y, z, tiltX, null, JOINT_W, JOINT_W);
+  jw(c); jw(pp.children[pp.children.length - 1]);
+  return c;
+};
 export default {
-  label: '莫洛茲(t01 重機甲)', hue: 0xd6e4ef,
+  label: '莫洛茲(t01 重機甲)',
   prop: { hips: 0.47, legSplay: 0.13, thigh: 0.45, shin: 0.42, shoulderY: 0.76, shoulderX: 0.24, upperArm: 0.147, foreArm: 0.2, head: 0.83, girth: 1.35 },
   gait: { strideF: 1.45, bob: 0.16, sway: 0.11, top: 7, armBase: 0.12 },
   moveSig: { poise: 0.86, idleF: 0.42, idleA: 1.9, launch: 0.1, spool: 0.95, brake: 0.1, settle: 2.2 },
@@ -136,7 +154,7 @@ export default {
   },
   thigh(c, l, d) {
     const { PAL, G, sx } = c;
-    const ball = cylF(l, 0.2 * G, 0.2 * G, 0.3, 8, 0, 0.02, 0, PAL.deep, { metalness: 0.7 });
+    const ball = jw(cylF(l, 0.2 * G, 0.2 * G, 0.3, 8, 0, 0.02, 0, JOINT_W, { metalness: 0.7 }));
     ball.rotation.z = Math.PI / 2;                                               // 髖球
     // 主殼:上寬下收楔台
     tboxF(l, { w0: 0.48 * G, d0: 0.52 * G, w1: 0.56 * G, d1: 0.6 * G, h: d.len * 1.02 }, 0, -d.len * 0.5, 0.02, PAL.main, { metalness: 0.6 });
@@ -145,7 +163,7 @@ export default {
       [-0.16 * G, 0.34], [0.16 * G, 0.34], [0.21 * G, 0.1],
       [0.13 * G, -0.3], [-0.13 * G, -0.3], [-0.21 * G, 0.1],
     ], 0.14, 0, -d.len * 0.42, 0.3 * G, PAL.mid, { metalness: 0.62 });
-    hydCyl(l, 0.055, d.len * 0.62, sx * 0.16 * G, -d.len * 0.48, 0.33 * G, 0.14);  // 大腿主液壓缸
+    hydW(l, 0.055, d.len * 0.62, sx * 0.16 * G, -d.len * 0.48, 0.33 * G, 0.14);  // 大腿主液壓缸
     tboxF(l, { w0: 0.18, d0: 0.14, w1: 0.22, d1: 0.17, h: 0.36 }, sx * 0.33 * G, -d.len * 0.5, -0.15 * G, PAL.mid, { metalness: 0.6 });  // 側推進莢
   },
   shin(c, l, d) {
@@ -155,10 +173,10 @@ export default {
       [-0.26 * G, 0.06], [-0.18 * G, 0.2], [0, 0.27], [0.18 * G, 0.2], [0.26 * G, 0.06],
       [0.3 * G, -0.14], [0.14 * G, -0.24], [-0.14 * G, -0.24], [-0.3 * G, -0.14],
     ], 0.26, 0, -0.04, 0.24 * G, PAL.mid, { metalness: 0.62 });
-    const hub = cylF(l, 0.1, 0.1, 0.07, 10, sx * 0.3 * G, -0.03, 0.24 * G, PAL.deep, { metalness: 0.75 });
+    const hub = jw(cylF(l, 0.1, 0.1, 0.07, 10, sx * 0.3 * G, -0.03, 0.24 * G, JOINT_W, { metalness: 0.75 }));
     hub.rotation.z = Math.PI / 2;                                                // 膝樞盤(2D 的膝側圓螺栓)
     for (const ox of [-0.13, 0.13])                                              // 膝後雙活塞桿
-      cylF(l, 0.04, 0.04, d.len * 0.55, 6, ox, -d.len * 0.3, -0.3 * G, IRON, { metalness: 0.85 }).rotation.x = -0.18;
+      jw(cylF(l, 0.04, 0.04, d.len * 0.55, 6, ox, -d.len * 0.3, -0.3 * G, JOINT_W, { metalness: 0.85 })).rotation.x = -0.18;
     // 主脛殼:上寬下收楔台 + 踝部外擴楔台
     tboxF(l, { w0: 0.4 * G, d0: 0.44 * G, w1: 0.52 * G, d1: 0.56 * G, h: d.len }, 0, -d.len * 0.5, -0.02, PAL.main, { metalness: 0.6 });
     tboxF(l, { w0: 0.48 * G, d0: 0.5 * G, w1: 0.36 * G, d1: 0.4 * G, h: 0.34 }, 0, -d.len * 0.86, 0, PAL.main, { metalness: 0.6 });
@@ -196,7 +214,7 @@ export default {
   armFore(c, a, d) {
     const { PAL, G, sx } = c;
     // 肘關節環(旋成體,軸向 = 肘鉸鏈 x)
-    const el = latheF(a, [[0.16, 0], [0.2, 0.04], [0.2, 0.12], [0.16, 0.16]], 10, 0, 0.02, 0, PAL.deep, { metalness: 0.75 });
+    const el = jw(latheF(a, [[0.16, 0], [0.2, 0.04], [0.2, 0.12], [0.16, 0.16]], 10, 0, 0.02, 0, JOINT_W, { metalness: 0.75 }));
     el.rotation.z = Math.PI / 2;
     // 巨手甲主殼:向腕端外擴的楔台(粗於上臂)
     tboxF(a, { w0: 0.46 * G, d0: 0.5 * G, w1: 0.34 * G, d1: 0.38 * G, h: d.len }, 0, -d.len * 0.5, 0.02, PAL.main, { metalness: 0.6 });
@@ -205,7 +223,7 @@ export default {
     tboxF(a, { w0: 0.13, d0: 0.34 * G, w1: 0.1, d1: 0.3 * G, h: 0.38 }, sx * 0.3 * G, -d.len * 0.68, 0.02, PAL.mid, { metalness: 0.62 });
     // 腕口外擴楔台
     tboxF(a, { w0: 0.5 * G, d0: 0.54 * G, w1: 0.42 * G, d1: 0.46 * G, h: 0.26 }, 0, -d.len * 0.9, 0.02, PAL.main, { metalness: 0.6 });
-    hydCyl(a, 0.04, d.len * 0.5, -sx * 0.13 * G, -d.len * 0.35, 0.28 * G, -0.3); // 前臂液壓缸
+    hydW(a, 0.04, d.len * 0.5, -sx * 0.13 * G, -d.len * 0.35, 0.28 * G, -0.3); // 前臂液壓缸
   },
   mount(c, F) {
     const { PAL, accent, G, K } = c;

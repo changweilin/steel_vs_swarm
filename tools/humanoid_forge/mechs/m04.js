@@ -74,7 +74,7 @@ function featherRow(parent, sx, n, o, colOf, opts) {
 }
 
 export default {
-  label: '無名(m04 鷹式偵獵機)', hue: 0xd23f34, kind: 'air', height: 3.2,
+  label: '無名(m04 鷹式偵獵機)', kind: 'air', height: 3.2,
   air: { tiltY: 1.35, bob: 0.06, top: 32, span: 4.0 },
   moveSig: { hover: 0.55, hoverF: 1.6, hoverA: 0.60, surge: 0.92, flare: 0.90, bank: 0.85 },
   castSig: { omni: 'flare', dir: 'lunge' },

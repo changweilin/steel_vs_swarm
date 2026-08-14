@@ -21,7 +21,7 @@ const STEEL = 0x7d838b;
 const PLATE = [[-0.5, 0], [0.5, 0], [0.7, 0.35], [0.45, 1.0], [-0.25, 0.45]];
 
 export default {
-  label: '傾盆(m06 機甲・劍龍)', hue: 0xf0c24a, kind: 'quad', height: 5.0,
+  label: '傾盆(m06 機甲・劍龍)', kind: 'quad', height: 5.0,
   frame: {
     hipY: 1.9, legX: 0.95, fz: 1.2, hz: -1.6,
     chest: [0, 0.1, 0.6], neck: [0, -0.05, 1.25], head: [0, -0.2, 0.7],

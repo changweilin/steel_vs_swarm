@@ -23,7 +23,7 @@ const TSTEEL = 0x8f8c86, SILVER = 0xcac4b6, OLIVE = 0x7a7448, OLIVED = 0x5f5a38;
 const REDT = 0xc23b2e, TEAL = 0x35c8d4, DBRASS = 0xb8892e, SPRING = 0x2b2e33, ROD = 0xd8dde2;
 
 export default {
-  label: '獵場看守人(s09 機甲・袋鼠)', hue: 0xd0602f, height: 6.0,
+  label: '獵場看守人(s09 機甲・袋鼠)', height: 6.0,
   prop: { hips: 0.48, legSplay: 0.1, thigh: 0.4, shin: 0.46, shoulderY: 0.75, shoulderX: 0.12, upperArm: 0.17, foreArm: 0.17, head: 0.85, girth: 0.95 },
   gait: { strideF: 1.6, bob: 0.15, sway: 0.07, top: 7, legBase: 0.08, armBase: 0.25 },
   pose: { knee: { base: 0.35, k: 0.7, d: 0.15 }, ankle: { base: -0.3, k: -0.42, d: 0.55 }, elbow: { base: -1.5, k: -0.2, d: 0.3 } },

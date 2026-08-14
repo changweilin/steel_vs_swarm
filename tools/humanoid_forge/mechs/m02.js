@@ -211,7 +211,7 @@ const PROP = { hips: 0.5, legSplay: 0.1, thigh: 0.52, shin: 0.5, shoulderY: 0.57
 const LEG_BASE = -0.34;       // = gait.legBase(股前傾;髖盤的落點在這個旋轉之後量)
 
 export default {
-  label: '壓艙石(m02 機甲・暴龍)', hue: 0x9aa3ad, height: 6.0,
+  label: '壓艙石(m02 機甲・暴龍)', height: 6.0,
   prop: PROP,
   gait: { strideF: 1.25, bob: 0.12, sway: 0.08, top: 7, legBase: LEG_BASE, armBase: 0 },   // legBase 股前傾(趾行)
   pose: {

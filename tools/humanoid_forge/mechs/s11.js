@@ -13,7 +13,7 @@ import {
 const JOINTS = 11;            // gen.note 明列的數字:外露軸承座剛好 11 個
 
 export default {
-  label: '錶芯(s11 精密工作機)', hue: 0xd8c9d0, kind: 'air', height: 3.4,
+  label: '錶芯(s11 精密工作機)', kind: 'air', height: 3.4,
   air: { tiltY: 1.3, bob: 0.02, top: 26, level: true, span: 4.6 },
   moveSig: { hover: 0.08, hoverF: 0.6, hoverA: 0.05, surge: 0.15, flare: 0, bank: 0.25 },
   castSig: { omni: 'spin', dir: 'lunge' },

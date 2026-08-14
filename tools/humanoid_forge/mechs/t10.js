@@ -24,7 +24,7 @@ const panelPts = (w, h, c) => [
 ];
 
 export default {
-  label: '軌跡(t10 攔截機甲)', hue: 0x7fe8c9,
+  label: '軌跡(t10 攔截機甲)',
   prop: { hips: 0.52, legSplay: 0.1, thigh: 0.48, shin: 0.46, shoulderY: 0.85, shoulderX: 0.18, upperArm: 0.14, foreArm: 0.16, head: 0.93, girth: 1.1 },
   gait: { strideF: 1.4, bob: 0.12, sway: 0.09, top: 7.5, armBase: 0.1 },
   moveSig: { poise: 0.58, idleF: 0.82, idleA: 1.05, launch: 0.2, spool: 0.58, brake: 0.52, settle: 1.05 },
