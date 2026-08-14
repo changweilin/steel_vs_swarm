@@ -20,13 +20,15 @@
 //   node tools/audit_story_talk.mjs --break-cast     對白塞一名不在該章名冊的發言者
 //   node tools/audit_story_talk.mjs --break-quota    對白多塞兩句超出配額
 //   node tools/audit_story_talk.mjs --break-book     故事書自己覆寫一條對話條樣式(第二份版面)
+//   node tools/audit_story_talk.mjs --break-floor    拿掉區域 BOSS 關卡的 HP 地板
+//   node tools/audit_story_talk.mjs --break-talk     BOSS 倒下不起算對白窗(當場解鎖)
 // 跑法:`node tools/audit_story_talk.mjs`
 // 讀原文與抽方法走 `audit_src.mjs` 單一縫(含換行正規化 —— 逐行剝註解在 CRLF 工作區會靜默失效)。
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readSrc, grabMethod, ROOT } from './audit_src.mjs';
 import { briefHTML } from '../public/js/storyui.js';
-import { SIEGE, siegeSiteStages, siegeOpenStage, CHARACTERS, MAPGEO } from '../public/js/data.js';
+import { SIEGE, siegeSiteStages, siegeOpenStage, siegeTalkS, CHARACTERS, MAPGEO } from '../public/js/data.js';
 import { BattleSim } from '../server/sim.js';
 import { STORY, chapterSide } from '../public/js/story.js';
 import { STORY_TALK, talkOf, stageKey } from '../public/js/storytalk.js';
@@ -36,6 +38,7 @@ const BRK = {
   stage: ARG.has('--break-stage'), gate: ARG.has('--break-gate'),
   cast: ARG.has('--break-cast'), quota: ARG.has('--break-quota'),
   book: ARG.has('--break-book'),
+  floor: ARG.has('--break-floor'), talk: ARG.has('--break-talk'),
 };
 
 const simSrc = readSrc('server', 'sim.js');
@@ -114,6 +117,27 @@ console.log('\n■ Ⅱ 伺服器結算(sim.js:鎖血唯一縫 + 三個消費端 
     /stage:\s*fell/.test(fell) && /const fell = this\._siegeOpen\[t\.side\]/.test(fell));
   t('非劇情戰役不發 siege 事件(對局行為逐位元不變)', /if \(this\.siege\)\s*this\.events\.push/.test(fell));
   t('`siege` 事件全 sim 只有這一個發送點', count(simCode, "e: 'siege'") === 1);
+
+  // ---- 區域 BOSS 關卡(2026-08-14 使用者:「敵方砲塔主堡會鎖住 HP1 直到區域 BOSS 被擊敗且
+  // 對話結束」)。這是鎖血之外的**第二道閘**,兩者的結算語意刻意不同 —— 合併就會把其中一邊
+  // 的症狀帶到另一邊(把地板當免傷 = 塔照樣被拆;把免傷當地板 = 打不動的塔留在索敵名單裡)。
+  const floorSrc = BRK.floor ? '' : grabMethod(simSrc, 'siegeHpFloor');
+  t('HP 地板回 `SIEGE.BLD_HP_FLOOR`,且 BOSS 自己不吃(判據 `!t.hero`)',
+    /SIEGE\.BLD_HP_FLOOR : 0;/.test(floorSrc) && /t\.hero/.test(floorSrc));
+  t('地板的消費端**只有 `_damage`**(索敵那兩支 MUST NOT 吃 —— 打得到卻死不了的塔仍要被打)',
+    count(simCode, 'siegeHpFloor(') === 2
+    && /floorHp = Math\.max\(floorHp, this\.siegeHpFloor\(t\)\);/.test(dmg)
+    && !/siegeHpFloor/.test(tg) && !/siegeHpFloor/.test(botCode),
+    `${count(simCode, 'siegeHpFloor(')} 處`);
+  t('地板併進既有的 `floorHp` 通道(那條路徑本來就是「扣得動、夾地板、不呼叫 _kill」)',
+    /if \(floorHp\) \{/.test(dmg) && dmg.indexOf('siegeHpFloor') < dmg.indexOf('if (floorHp) {'));
+  const bfell = BRK.talk ? '' : grabMethod(simSrc, '_bossFell');
+  t('對白窗由 `siegeTalkS` 起算(主堡那一階回 0 = 當場解禁,它的對白在結算畫面播)',
+    /this\._talkUntil\[t\.side\]\[t\.sg\] = this\.t \+ siegeTalkS\(t\.sg\);/.test(bfell)
+    && siegeTalkS(SIEGE.BASE) === 0 && siegeTalkS(0) === SIEGE.TALK_S && SIEGE.TALK_S > 0);
+  t('`siegeTalk` 全 sim 只有這一個發送點,且只在 `_kill` 的 BOSS 分支推進',
+    count(simCode, "e: 'siegeTalk'") === 1 && count(simCode, '_bossFell(') === 2
+    && /this\._bossFell\(t\);/.test(grabMethod(simSrc, '_kill')));
 
   const spawn = grabMethod(simSrc, '_spawnStructures');
   t('塔位階段走 `siegeSiteStages`(MUST NOT 用 st 的陣列索引)',
@@ -216,10 +240,16 @@ console.log('\n■ Ⅵ 客戶端接線(game.js 事件 / dialogue.js 演出 / mai
 {
   const gameSrc = strip(readSrc('public', 'js', 'game.js'));
   const mainSrc = strip(readSrc('public', 'js', 'main.js'));
-  t('game.js 收 `siege` 事件並上拋(客戶端 MUST NOT 自己判階段)',
-    /ev\.e === 'siege'/.test(gameSrc) && /onSiege/.test(gameSrc));
-  t('只有**敵方**建築被推平才演出(推掉自己的塔不演戲)',
+  t('game.js 收 `siegeTalk` 事件並上拋(客戶端 MUST NOT 自己判階段)',
+    /ev\.e === 'siegeTalk'/.test(gameSrc) && /onSiege/.test(gameSrc));
+  t('只有**敵方**那一階的區域 BOSS 倒下才演出(自己這邊的 BOSS 倒下不演戲)',
     /if \(ev\.side !== this\.side\) this\.onSiege\?\./.test(gameSrc));
+  // 2026-08-14:對白的觸發點自「整階被推平」搬到「區域 BOSS 被擊敗」—— 使用者的順序是
+  // 「BOSS 死 → 對話 → 才拆得掉建築」。掛回推平事件的話對白永遠慢一步(而且那時建築已經沒了,
+  // 鎖不鎖已經沒有意義),兩邊都掛則同一場對白播兩次。
+  t('`onSiege` 只掛在 `siegeTalk`,MUST NOT 也掛在「整階被推平」的 `siege` 上(否則播兩次)',
+    !((gameSrc.split("ev.e === 'siege')")[1] || '').split('} else if')[0] || '').includes('onSiege')
+    && count(gameSrc, 'this.onSiege?.(') === 1);
   t('對話演出層只有 dialogue.js 一份(MUST NOT 併進 cutin.js)',
     !/STORY_TALK/.test(strip(readSrc('public', 'js', 'cutin.js'))));
   // 旗標只有一格:main.js 帶 `defSide`(= venueConfig 的第三參數),`cfg.siege` 由 rooms 推導 ——
