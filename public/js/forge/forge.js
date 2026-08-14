@@ -498,7 +498,11 @@ function forgeAirMech(spec, D, opts = {}) {
  *   ③ **變形演出住 locomotion**(`morphSwap`):收摺 → 換樹 → 展開,是逐幀的事,
  *      建構期只負責把兩棵樹與切換所需的把手交出去。
  *
- * @returns { group, rig(地面), rigAir, fit(fitToHeight MUST 量這一棵), joints, spin }
+ * `ground`/`air` 交出**兩棵子單位本身**(不只是 rig):機體台的紙娃娃索引 `unit.doll` 是
+ * 逐棵各一份(`dollFinish` 掛在各自的 `forgeMech` 收尾上),而名冊的單位是 (機體, 型態)
+ * ⇒ 看板要拿得到「選中那一格那一棵」的索引與樞軸點。遊戲端不讀這兩格。
+ *
+ * @returns { group, rig(地面), rigAir, fit(fitToHeight MUST 量這一棵), joints, spin, ground, air }
  */
 export function forgeMorphUnit(specGround, specAir, opts = {}) {
   const G = forgeMech(specGround, opts);
@@ -514,5 +518,6 @@ export function forgeMorphUnit(specGround, specAir, opts = {}) {
   g.userData.spin = [...(G.group.userData.spin || []), ...(A.group.userData.spin || [])];
   const joints = new THREE.Group();
   joints.visible = false;
-  return { group: g, rig: G.rig, rigAir: A.rig, fit: G.group, joints, spin: g.userData.spin };
+  return { group: g, rig: G.rig, rigAir: A.rig, fit: G.group, joints, spin: g.userData.spin,
+    ground: G, air: A };
 }

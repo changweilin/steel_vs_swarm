@@ -28,6 +28,10 @@
 //   node tools/audit_paper_doll.mjs --break-pilot   # 抬頭退回建模註記/名冊不帶駕駛員 ⇒ Ⅸ 紅
 //   node tools/audit_paper_doll.mjs --break-layout  # 武器檢視的第二份入口長回來 ⇒ Ⅹ 紅
 //   node tools/audit_paper_doll.mjs --break-marktab # 標記時把資訊欄蓋掉 ⇒ Ⅹ 紅
+//   node tools/audit_paper_doll.mjs --break-stageseam # 版本分支長回展示台 ⇒ ⅩⅣ 紅
+//   node tools/audit_paper_doll.mjs --break-pair    # 變形者只建一棵樹 ⇒ ⅩⅣ 紅
+//   node tools/audit_paper_doll.mjs --break-morph   # 型態不推回報高度 ⇒ ⅩⅣ 紅
+//   node tools/audit_paper_doll.mjs --break-rebuild # 換型態順手重鍛 ⇒ ⅩⅣ 紅
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -248,8 +252,10 @@ console.log('■ Ⅴ 套用縫(dollapply / forge 收尾:一份實作、順序、
   t('鷹架把收尾開成選用鉤(遊戲不傳 = 逐位元同出廠)', /opts\?\.finish/.test(fg));
   t('收尾 = 套用紙娃娃覆寫 + 補描黏貼件',
     /applyDoll\(unit, spec\.doll\)/.test(code(dfinSrc)) && /outlineAdds\(ix/.test(code(dfinSrc)));
+  // 2026-08-14 統一展示台:機體台這一端的「怎麼建」整組搬進 versions.js 的版本表
+  // (viewer.js 從此不認得任何一個版本)⇒ 收尾的注入點跟著搬,規則一格未變。
   t('兩座看板都傳同一支收尾(同形的唯一保證)',
-    /finish: dollFinish/.test(code(readSrc('tools', 'humanoid_forge', 'viewer.js')))
+    /finish: dollFinish/.test(code(readSrc('tools', 'humanoid_forge', 'versions.js')))
     && /finish: FORGE\.dollFinish/.test(code(reviewSrc)));
   t('mergeSpec 帶得動 doll 欄(覆寫層 → 鍛造)', /doll: ovr\?\.doll \?\? base\.doll \?\? null/.test(fg));
   t('applyDoll 全專案只有一個實作', (code(applySrc).match(/export function applyDoll/g) || []).length === 1);
@@ -720,6 +726,83 @@ console.log('■ Ⅻ 來源與構圖(Google 官方 API / 全身照 + 背景乾�
     && !S.verdict({ ...good, coverage: 0.95 }).ok
     && !S.verdict({ ...good, edge_touch: 0.3 }).ok
     && S.verdict({ ...good, bg_clean: S.SCREEN.BG_MIN }).ok);   // 門檻是「≥」不是「>」
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('■ ⅩⅣ 展示台版本註冊表 + 變形過程(2026-08-14:一套展示台,每一版都上同一座)');
+// ═══════════════════════════════════════════════════════════════════════════
+// 使用者:「機體台的新版展示台 UI 要跟舊版一樣,可以看變形過程,以後擴充不同版本時
+// 都用同一套展示台」。這一段守三件會靜默壞掉的事:
+//   ① **版本分支長回 viewer**:舊制是一顆布林 `legacy` + 五處 `if (legacy)`(建 unit /
+//      樞軸 / 武器頁 / rig 契約欄 / 鈕面)。第三個版本進來時漏補任何一處都不報錯,
+//      只表現成「切到某個版本時某個功能悄悄用了別版的規則」。
+//   ② **變形沒有東西可以變**:新版建模的變形者是兩棵樹,只建選中那一格的話台上根本沒有
+//      另一個型態 —— 而畫面上只是「按了型態鈕沒反應」,每一條既有斷言照樣全綠。
+//   ③ **換型態順手重鍛**:重鍛把 locomotion 的型態狀態一起丟掉 ⇒ 收摺/換樹/展開整段不見,
+//      看到的是瞬切。使用者這一輪要的正是那個「過程」。
+{
+  let viewSrc = readSrc('tools', 'humanoid_forge', 'viewer.js');
+  let verSrc = readSrc('tools', 'humanoid_forge', 'versions.js');
+  const htmlSrc = readSrc('tools', 'humanoid_forge', 'index.html');
+  const fgSrc = readSrc('public', 'js', 'forge', 'forge.js');
+  const bustSrc = (name, src, from, to) => {
+    if (!src.includes(from)) { console.log(`  ✗ --break-${name} 沒有咬到目標原文(樣式過期)`); process.exit(1); }
+    return src.replace(from, to);
+  };
+  // 壞版 ①:展示台自己認得某一個版本(版本分支長回來)
+  if (brk('stageseam')) viewSrc = bustSrc('stageseam', viewSrc,
+    'unit = ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });',
+    'unit = legacy ? buildLegacyUnit(spec.ch) : ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });');
+  // 壞版 ②:變形者只建選中那一棵
+  if (brk('pair')) verSrc = bustSrc('pair', verSrc,
+    'const u = forgeMorphUnit(mergeFor(G, spec, ctx), mergeFor(A, spec, ctx), { finish: dollFinish });',
+    'const u = forgeMech(mergeFor(spec, spec, ctx), { finish: dollFinish });');
+  // 壞版 ③:型態不推回報高度(鈕還在、台上不動)
+  if (brk('morph')) viewSrc = bustSrc('morph', viewSrc,
+    'ent.heroY = formT * MORPH.GROUND_Y * 2;', 'ent.heroY = 0;');
+  // 壞版 ④:換型態照樣重鍛(變形過程被砍成瞬切)
+  if (brk('rebuild')) viewSrc = bustSrc('rebuild', viewSrc,
+    'if (keep) retargetDoll(); else buildUnit();', 'buildUnit();');
+  const vc = code(viewSrc), rc = code(verSrc);
+
+  t('版本只有一張表(versions.js),展示台不認得任何一個版本的名字',
+    /export const STAGE_VERSIONS/.test(rc)
+    && !/legacy/i.test(vc) && !/legacy_models/.test(viewSrc));
+  t('建構只有版本表一份(viewer MUST NOT 直接呼叫任何建構器)',
+    /ver\.build\(spec/.test(vc)
+    && !/forgeMech\(|forgeMorphUnit\(|buildLegacyUnit\(/.test(vc));
+  t('版本鈕由表推導(index.html 只放空容器,MUST NOT 寫死某一版的鈕)',
+    /for \(const v of STAGE_VERSIONS\)/.test(vc)
+    && /id="verSeg"/.test(htmlSrc) && !/btnLegacy/.test(htmlSrc));
+  t('能力旗標宣告在表上、鈕面吃它(MUST NOT 由 viewer 嗅探 unit 的副作用推回來)',
+    /caps: \{ edit:/.test(rc)
+    && /ver\.caps\.wpn/.test(vc) && /ver\.caps\.joints/.test(vc) && /ver\.caps\.edit/.test(vc));
+  t('rig 契約欄由版本自己印(新版的契約拿去驗舊版一定對不上)',
+    /rigLines\(unit, spec\)/.test(vc) && /rigLines:/.test(rc));
+  t('樞軸點是**逐棵一組**(變形者兩棵樹;收成單一 Group 只點得亮一棵)',
+    /joints: \[u\.ground\.joints, u\.air\.joints\]/.test(rc)
+    && /for \(const j of unit\?\.joints \|\| \[\]\)/.test(vc));
+
+  t('變形者一律建兩棵樹(只建一棵 = 按了型態鈕沒有東西可以變過去)',
+    /forgeMorphUnit\(mergeFor\(G/.test(rc));
+  t('鍛造縫交得出兩棵子單位(看板要拿那一棵的紙娃娃索引與樞軸)',
+    /ground: G, air: A/.test(code(fgSrc)));
+  t('變形過程只有一條驅動:型態推 ent.heroY 過門檻,插值讓真品 locomotion 做',
+    /ent\.heroY = formT \* MORPH\.GROUND_Y/.test(vc)
+    && /from '\/public\/js\/data\.js'/.test(viewSrc));
+  t('型態進度只**讀** locomotion 那一份(自己再阻尼一次 = 第二條變形曲線)',
+    /unit\?\.morph\?\.m \?\? ent\.loco\?\.morph/.test(vc)
+    && !/damp\(/.test(vc));
+  t('型態 = 選另一格(名冊的單位本來就是 (機體, 型態)),鍵只有 entryKey 一份',
+    /function setForm/.test(vc) && /siblingSpec\(spec\)/.test(vc)
+    && /entryKey\(spec\.ch/.test(rc) && !/`\$\{spec\.ch\}@/.test(rc));
+  t('同一台變形者換型態 MUST NOT 重鍛(重鍛 = 變形過程被砍成瞬切)',
+    /unitKeyOf\(s\) === unitKey/.test(vc)
+    && /s\.form \? s\.ch : s\.id/.test(vc)
+    && /if \(keep\) retargetDoll\(\); else buildUnit\(\);/.test(vc));
+  t('型態鈕的標籤由 FORM_LABEL 推導(MUST NOT 在 HTML 手寫地面型/飛行型)',
+    /Object\.entries\(FORM_LABEL\)/.test(vc)
+    && !/地面型|飛行型/.test(htmlSrc) && /id="formSeg"/.test(htmlSrc));
 }
 
 console.log(`\n${fail ? '❌' : '✅'} 紙娃娃系統稽核:${pass}/${pass + fail} 通過`);
