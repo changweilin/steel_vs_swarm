@@ -109,7 +109,10 @@ export default {
     chest: [0, 0.08, 0.62], neck: [0, 0.20, 0.74], head: [0, 0.04, 0.46],
     tailY: 0.10, tailZ: -1.34, tail2Z: 0.7,
   },
-  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.5, top: 9, bob: 0.08, pitchAmp: 0.08 },
+  // limb:貓科趾行 —— 前肢腕與後肢飛節「只離地 15.5% / 16.9% 肩高」的深 Z 就是趾行的定義;
+  // reachF 1.08 = 豹的關節行程比犬再大一點(收腿更深、蹬離更透)。
+  gait: { gait: 'trot', gallopType: 'rotary', stride: 2.5, top: 9, bob: 0.08, pitchAmp: 0.08,
+    limb: { fore: 'digitigrade', hind: 'digitigrade', reachF: 1.08 } },
   moveSig: { poise: 0.86, idleF: 0.7, idleA: 0.35, launch: 0.9, spool: 0.12, brake: 0.9, settle: 0.38 },
   castSig: { omni: 'flare', dir: 'lunge' },
   doc: [

@@ -32,7 +32,10 @@ export default {
   // 2026-08-14 使用者:「**三對腳要昆蟲爬行動作**」⇒ 三角步態(locomotion stepQuad 的
   // 'tripod' 分支 + rig.midLegs):同側前後足同相、中足反相,恆三足觸地。
   // 舊值 'walk' 是哺乳類的側步序列(同側後腳先動、前腳跟進),而且中足**完全不動**。
-  gait: { gait: 'tripod', stride: 2.3, top: 6, bob: 0.06, rollSway: 0.05, legAmp: 0.9 },
+  // limb:六足 = **節肢**曲線(股-脛在支撐相主動伸展把身體撐推出去,擺動相只小幅提回;
+  // 跗節是一串順從性貼地小節)—— 與獸腿的「擺動收腿過障」相反,三對足同吃一份。
+  gait: { gait: 'tripod', stride: 2.3, top: 6, bob: 0.06, rollSway: 0.05, legAmp: 0.9,
+    limb: { foreRole: 'arthropod', hindRole: 'arthropod' } },
   moveSig: { poise: 0.30, idleF: 0.55, idleA: 0.9, launch: 0.10, spool: 0.9, brake: 0.12, settle: 1.9 },
   castSig: { omni: 'stomp', dir: 'jab' },
   doc: [

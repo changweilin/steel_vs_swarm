@@ -284,6 +284,7 @@ export function forgeMech(spec, opts = {}) {
     hipsY0: hipY, headY0: headYl,
     stride, bob: spec.gait.bob, sway: spec.gait.sway, top: spec.gait.top,
     legBase: spec.gait.legBase || 0, armBase: spec.gait.armBase,
+    limb: spec.gait.limb || null,   // 站姿型(人形預設蹠行,見 gaitcurve.js;獸型雙足逐機覆寫)
     gunArm: W.gunR ? 1 : 0,
     knuckle: D.knuckle ? 1 : 0,
     aimPose: W.aimPose,
@@ -400,6 +401,9 @@ function forgeQuadMech(spec, D, opts = {}) {
     hipsY0: FR.hipY, stride: GA.stride, top: GA.top ?? 10,
     gait: GA.gait, gallopType: GA.gallopType, bob: GA.bob ?? 0.09, rollSway: GA.rollSway,
     pitchAmp: GA.pitchAmp, legAmp: GA.legAmp, soft: GA.soft, gallop: GA.gallop,
+    // 解剖學步態差異化(gaitcurve.js limbProfile):前/後肢各自的站姿型與行程。
+    // 省略 ⇒ 前後皆趾行(獸型的多數)⇒ 這一台不必寫也有正確的前後肢拓樸分家。
+    limb: GA.limb || null,
     moveSig: spec.moveSig, castSig: spec.castSig,
     s: 1,
   };

@@ -33,7 +33,10 @@ const NK0 = [0, 0.50, 0.10], NKC = [0, 1.72, 0.30], NK1 = [0, 2.66, -0.58];
 export default {
   label: '仿生鶴(t05 機甲・鴕鳥)', height: 6.0,
   prop: { hips: 0.52, legSplay: 0.045, thigh: 0.225, shin: 0.67, shoulderY: 0.62, shoulderX: 0.09, upperArm: 0.05, foreArm: 0.1, head: 0.96, girth: 0.8 },
-  gait: { strideF: 1.5, bob: 0.1, sway: 0.06, top: 7, legBase: -0.16, armBase: 0.35 },
+  // limb:鴕鳥 = 趾行長腿,遠端(蹠骨/趾)行程最大(reachF 1.15)—— 沒有騰空相的跑,
+  // 上下起伏被那一段長蹠骨的屈伸吃掉(rig.grounded 那條的幾何來源)。前肢收翼不承重 = grasp。
+  gait: { strideF: 1.5, bob: 0.1, sway: 0.06, top: 7, legBase: -0.16, armBase: 0.35,
+    limb: { foreRole: 'grasp', hind: 'digitigrade', reachF: 1.15 } },
   pose: { knee: { base: 0.26, k: 0.72, d: 0.15 }, ankle: { base: -0.28, k: -0.44, d: 0.55 }, elbow: { base: -1.1, k: -0.1, d: 0.3 } },
   neckAt: [0, 0, 0.62],                                          // 長頸樞軸(y=0:見上方 NK0 註)
   moveSig: { poise: 0.50, idleF: 1.42, idleA: 0.60, launch: 0.16, spool: 0.18, brake: 0.22, settle: 1.55 },

@@ -27,7 +27,10 @@ export default {
     chest: [0, 0.1, 0.6], neck: [0, -0.05, 1.25], head: [0, -0.2, 0.7],
     tailY: 0.15, tailZ: -2.0, tail2Z: 1.6,
   },
-  gait: { gait: 'walk', stride: 2.3, top: 8, bob: 0.05, rollSway: 0.11, pitchAmp: 0.03 },
+  // limb:重載四足 = 四肢皆**柱狀**(象型):骨軸近乎鉛直、遠端行程只有趾行的 0.3~0.4 倍,
+  // 支撐相把腕/跗鎖成承重柱(lock 0.70)—— 這種體重的腿沒有「彈簧壓縮」那一段。
+  gait: { gait: 'walk', stride: 2.3, top: 8, bob: 0.05, rollSway: 0.11, pitchAmp: 0.03,
+    limb: { fore: 'columnar', hind: 'columnar' } },
   moveSig: { poise: 0.48, idleF: 0.48, idleA: 1.85, launch: 0.10, spool: 0.88, brake: 0.10, settle: 2.10 },
   castSig: { omni: 'tailwhip', dir: 'tailwhip' },
   doc: [

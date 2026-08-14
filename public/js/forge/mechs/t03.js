@@ -70,7 +70,10 @@ function bulge(p, r, x, y, z, color, opts, s) {
 export default {
   label: '爐膛(t03 機甲・大猩猩)', height: 6.0,
   prop: { hips: 0.40, legSplay: 0.11, thigh: 0.42, shin: 0.40, shoulderY: 0.78, shoulderX: 0.21, upperArm: 0.3, foreArm: 0.32, head: 0.84, girth: 1.15 },
-  gait: { strideF: 1.1, bob: 0.12, sway: 0.1, top: 7, legBase: -0.08, armBase: 0.14 },
+  // limb:掌行猩猩 —— 前肢是**承重的前腳**(趾行曲線:腕在撐地那半週期是硬柱),
+  // 後足卻是**蹠行**(整片腳掌貼地,踝行程只有前肢腕的 0.55 倍)⇒ 全機唯一前後站姿不同的一台。
+  gait: { strideF: 1.1, bob: 0.12, sway: 0.1, top: 7, legBase: -0.08, armBase: 0.14,
+    limb: { fore: 'digitigrade', hind: 'plantigrade' } },
   knuckle: true,                                                 // 掌行:前肢是前腳(rig.knuckle)
   moveSig: { poise: 0.25, idleF: 0.78, idleA: 1.50, launch: 0.60, spool: 0.52, brake: 0.52, settle: 0.60 },
   castSig: { omni: 'beat', dir: 'swing' },
