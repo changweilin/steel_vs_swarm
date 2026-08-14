@@ -21,10 +21,10 @@
 // 與其它 forge 檔的絕對寫法逐字相同(⇒ 同一個模組實例,不踩 A28 的「data.js 變兩份」),
 // 而 Node 端(fetch_protorefs.mjs)只有相對路徑載得動 —— 兩端同吃一份分類的前提就是這個。
 
-import { CHARACTERS, charKind, MORPH_HUMANOID } from '../../public/js/data.js';
-import { protoLayers, PROTO_LAYERS, mechaCodex, charCodex } from '../../public/js/codex.js';
-import { MECHA } from '../../public/js/mecha.js';
-import { LORE } from '../../public/js/lore.js';
+import { CHARACTERS, charKind, MORPH_HUMANOID } from '../data.js';
+import { protoLayers, PROTO_LAYERS, mechaCodex, charCodex } from '../codex.js';
+import { MECHA } from '../mecha.js';
+import { LORE } from '../lore.js';
 
 /** 三類管理頁。scaffold = 鍛造鷹架(forge.js 依此分流);proto = 這一類的原型層鍵。 */
 export const CATS = [
@@ -142,9 +142,9 @@ export function pilotOf(id) {
  * 獸型雙足是 light)。三格全部改成從**原處**取,機體檔從此不准再宣告主色。
  *
  * 色版階的判準鏡射 models.js 的 `heroPalette(vis, side, tier)` 呼叫點:
- *   buildRobotMech(:5115) light / buildBipedBeast(:2649) light
- *   buildBeastMech(:1840) dark / buildDrone(:376) / buildFixedWing(:754)
- *   buildAvianDrone(:1166) / buildMorphMech(:3447) 一律 dark
+ *   buildRobotMech light / buildBipedBeast light
+ *   buildBeastMech dark / buildDrone / buildFixedWing
+ *   buildAvianDrone / buildMorphMech 一律 dark
  * ⇒ light ⟺ 機種是 robot 且不是四足獸型(`visual.form === 'beast'`)。
  *
  * 2026-08-14 使用者追加:「徽記/塗鴉/紋路等特徵也要渲染,例如零式的雙翼上下都要印紅日」。

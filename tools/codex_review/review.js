@@ -22,7 +22,7 @@ const threeReady = import('/public/js/charPreview.js')
 // 只讓鍛造那一格顯示原因,覆核台其餘功能照常(原則 6)。
 let FORGE = null;   // { forge, loco, toon, THREE, doll, orbit }
 const forgeReady = Promise.all([
-  import('/tools/humanoid_forge/forge.js'),
+  import('/public/js/forge/forge.js'),
   import('/public/js/locomotion.js'),
   import('/public/js/toon.js'),
   import('three'),
@@ -32,8 +32,11 @@ const forgeReady = Promise.all([
   import('three/addons/controls/OrbitControls.js'),
   // 武器獨立檢視:與展示台 :8631 同一支(使用者「機體美術台沒看到武器模組跳轉頁面」)
   import('/tools/humanoid_forge/wpnview.js'),
-]).then(([forge, loco, toon, THREE, doll, orbit, wpn]) => {
-  FORGE = { forge, loco, toon, THREE, doll, orbit, wpn };
+  // 紙娃娃收尾(2026-08-14 整合後鷹架住 public/js/forge/,編輯器層仍留 tools/ ——
+  // 兩座看板都傳這一支收尾,遊戲不傳)
+  import('/tools/humanoid_forge/dollfinish.js'),
+]).then(([forge, loco, toon, THREE, doll, orbit, wpn, dfin]) => {
+  FORGE = { forge, loco, toon, THREE, doll, orbit, wpn, dollFinish: dfin.dollFinish };
   return true;
 }).catch((e) => { console.warn('人形鍛造停用:', e?.message || e); return false; });
 import {
@@ -370,7 +373,7 @@ function forgeJumpHTML() {
 function forgeBuild() {
   const { forge, toon } = FORGE;
   if (fapp.unit) { fapp.scene.remove(fapp.unit.group); toon.disposeTree(fapp.unit.group); }
-  fapp.unit = forge.forgeHumanoidMech(fapp.draft);
+  fapp.unit = forge.forgeMech(fapp.draft, { finish: FORGE.dollFinish });
   fapp.scene.add(fapp.unit.group);
   fapp.ent = { id: fapp.id, mesh: fapp.unit.group, heroY: 0 };
   applyForgeView(fapp.framedKey !== fapp.key);   // 可見性每次重鍛都要重套;取景只在換機體那次

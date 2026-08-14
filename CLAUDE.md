@@ -46,6 +46,8 @@
 | `server/sim.js` | `BattleSim` 權威模擬核心(single source of truth) |
 | `server/bots.js` | `BotBrain` 電腦玩家狀態機(推線/交戰/撤退) |
 | `public/js/data.js` | 全遊戲平衡數值唯一真相;**伺服器直接 import 這支客戶端檔** |
+| `public/js/geo3d.js` | 程序生成幾何積木唯一縫(`models.js` / `forge/geo.js` / 機體台舊版對照三邊同吃) |
+| `public/js/forge/**` | **英雄機體建模**:鷹架 + 多面體零件語彙 + 逐機檔 40 格 + 名冊(2026-08-14 起遊戲與機體台同吃一份) |
 | `public/js/*.js` | 渲染/FPV/輸入/HUD(檔案地圖見 `public/js/.claude.md`) |
 | `tools/` | 離線工具:平衡驗證、兵線烘烤、稽核腳本、單機版打包、LOGO/資產管線 |
 | `.github/workflows/` | 回歸驗證 CI + 單機特化版部署 GitHub Pages |
@@ -192,6 +194,7 @@
 | 國旗(旗面型錄 + 國籍歸屬) | `flags.js`(`FLAG_DESIGNS`/`FLAG_RATIO`/`NAT_ISO`/`natIso()`/`isoOfFlagEmoji()`/`sideIsoRoster()`/`FLAG_MIX`/`flagSeed()`/`pickFlagIso()`/`drawFlag()`);落點 `biomes.js` 的 `makeNationPicker()`/`flagTex()`/`flag()`/`placeBaseFlags()`;地圖國來源 `venues.js` 的 `venue.country` → battleConfig | 比例 **地圖 30 : 駐軍 60 : 敵對 10**(2026-08-13 使用者定案),駐軍國**依戰場半邊**取(離落點最近那座主堡的陣營)。①`flags.js` **零 THREE、零 DOM、只 import `rng.js`**;畫的動作由呼叫端交 2D context 進來 ⇒ 「這一國畫不畫得出來」離線驗得到。②**陣營名冊 MUST 推導**(`CHARACTERS[].side` × `LORE[].nat`),手寫的那一份會在換陣營之後靜默過期。③**零共享 `rnd()` 消耗**(座標雜湊自帶種子);既有呼叫端的 `rnd()` MUST **照抽**(掛國旗就少抽一枚 = 後面每一株植被的佈局整條推移)。④地圖國缺席(自訂地圖)⇒ 那 30% 併進**駐軍**,MUST NOT 落到 else 分支變成四成敵旗。⑤旗面 MUST 有橫向分段(一段的盒子只有兩排頂點 ⇒ 只能被整片剪過去,那不是飄揚),波由旗桿往旗尾跑 = `CEL_SWAY_H` 沿旗面推遲相位。⑥主堡旗陣**逐國一個 InstancedMesh**(合併 ⇒ 擺動權重吃合併後的 x = 整批繞旗陣中心擺)、**純表現層不登記碰撞**、半徑 MUST 把 `areaFree` 的格子探針算進去(`BASE_CLEAR_R + CELL × 2`)。⑦認不得的 ISO **不畫**(戰場上的白旗讀起來是投降旗)。稽核 `audit_soft_stroke` Ⅸ |
 | 零件級細節抖動 | `xform.js partId()`/`partJitter()`;消費端 `vegPartXform`/`hazards.jitterParts`/`biomes.jitterMegalith` | `jr` 水平半徑**只增不減**;`spin` **只給軸心件**(`px = pz = 0`);MUST NOT 抖 `y`/`px`/`pz`/縱向尺寸;`dj = 0` 恆中性。**演出半徑 MUST 收在權威碰撞柱內** ⇒ 兩個新消費端一律**抖完實測**水平外廓,頂出就把那一件退回原樣。**建物刻意不吃**(碰撞盒就是它自己的足跡)。地標的 `dj` MUST 由**落點**推,MUST NOT 再抽 `rnd()`。稽核 `audit_visual_prefs` Ⅳ + `audit_object_joints` |
 | 表現層資源生命週期 | 物件池 `_takeProjectile`/`_dropBullet`、`_freeEffect` → `toon.disposeTree`、`markShared()` | 見 A25。稽核 `audit_gpu_lifecycle` |
+| 英雄機體建模 | 積木 `geo3d.js`(全專案唯一縫)+ 語彙 `forge/geo.js` + 鷹架 `forge/forge.js`(`forgeMech()`/`forgeMorphUnit()`)+ 逐機檔 `forge/mechs/<key>.js` + 名冊 `forge/roster.js`;入口 = `models.makeUnit()` 的 `forgeHero()` 分支 | 2026-08-14 使用者定案「新版機體 3D 建模全面替換掉舊版……只保留舊建模在機體台」。①**英雄不吃 GLB 也不吃 `FALLBACK`**(那兩條留著 = forge 查無規格時靜默退回舊建模);②**變形者是兩棵樹**(地面型 + 飛行型),切換/收摺住 `locomotion.morphSwap`,`mesh.userData.rig` 每幀改指到當下那一棵 ⇒ 四支步態驅動器與 `stepCombatFx`/`stepCastPose`/`stepJumpPose` 一行不改;`fitToHeight` MUST 只量地面型那一棵(兩態同尺度由 `mechs/*_flight.js` 引用地面檔的 `height` 保證);③`MOVE_SIG`/`CAST_SIG` 唯一真相仍在 `models.js`(逐機檔那兩格只是機體台預覽值,`makeUnit` **兩份 rig 都要覆寫**);④幾何積木 MUST NOT 再有第二份實作(`forge/geo.js` 只做別名 re-export);⑤紙娃娃編輯層留在 `tools/`,經 `opts.finish` 注入。舊建構器住 `tools/humanoid_forge/legacy/`(凍結;只在機體台「舊版」分頁上台)。稽核 `audit_muzzle`/`audit_cockpit`/`audit_cast_jump`(㋓)+ `audit_paper_doll`/`audit_codex` |
 | 共用視覺入口 | `spawnCastFx()`/`stepCombatFx()`/`terrain.surfaceAt()` | 戰場與展示台共用,MUST NOT 各寫一套 |
 
 #### G. 世界內容(地物 / 文字 / 地貌)
@@ -617,6 +620,7 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 | 選單版型 / 任何鈕面文字 | `audit_ui_layout`(鈕面無括號補述、桌機並排直式維持並排、`.cd-art` 解除 sticky、疊層 ✕ 規則) |
 | 陀螺儀(`Gyro`/`gyroSrc`/`LOOK.GYRO_*`/`TOUCH.gyro` 預設值) | `audit_gyro`(兩感測路徑、俯仰同號、自動切換、**宣告的預設值為關**)+ `audit_ctrl_mode` Ⅶ(預設值的 CI 版斷言 —— audit_gyro 要 playwright,沒裝就整支跳過)+ **MUST 用 https/localhost 真機測**(非 secure context 靜默無感測事件) |
 | FPV 座艙取景(`COCKPIT`/`ndcH()`/`_buildCockpit`) | `audit_cockpit`(視野帶淨空、裝置 < 武器、消失點對準星;頂緣逐頂點投影量測) |
+| 英雄機體建模(`geo3d.js` / `forge/**` / `makeUnit` 的 hero 分支 / `locomotion.morphSwap` / `charPreview` 的變形把手) | **㋓ 三支真瀏覽器稽核**(`SVS_URL=http://localhost:<本工作區的埠>` —— 8620 上常跑著**另一個 checkout**,在那裡驗到的是別份程式碼而且不會報錯):`audit_muzzle`(32 英雄槍口朝向/位置/後座)、`audit_cockpit`(FPV 取景四規則)、`audit_cast_jump`;+ `audit_paper_doll`(收尾鉤 + 兩座看板同形)+ `audit_codex` + `audit_cel_pipeline`(`outlineW` 換家、只准一份)+ `audit_client_syntax`(**名冊 MUST 遞迴子目錄**,否則 `forge/` 那 42 支全落在名冊外)+ `npm run audit:net`/`audit_solo_boot`(新增客戶端模組)+ **`npm test` / `npm run bal` MUST 逐項不動**(`data.js`/`sim.js`/伺服器一行未改)+ ㋕ 真機開一場戰鬥(建模那一半沒有任何離線稽核驗得到)|
 | 骨架 / 關節 / 步態 / 武裝掛點 | 全角色 rig 稽核 + `audit_cast_jump` + `audit_muzzle`(32 英雄 + NPC 四陣營) |
 | 三種遊戲機制 / 單機打包 | `audit_net_modes` + `audit_solo_boot` + `npm test` 單機段與 WS 全段 + `audit_ui_layout` |
 | 路網中繼(`osmrelay.js` / `biomes.js` 的定案表與兩支 fetcher / `main.js` 的 `osmGate`·`onOsmRelay` / `rooms.js` 的 `t:'osm'`) | `audit_osm_relay` ±`--break-monotone`/`--break-clone`/`--break-wait`/`--break-cache`/`--break-label` + `npm run audit:net`/`audit_solo_boot`(新增客戶端模組 + rooms.js 多一條 import)+ `npm test`(**MUST 先重啟伺服器**;WS 段有中繼來回的行為直測)+ `audit_client_syntax`(㋖)+ biomes 那一批(siteplan/beacons/open_tunnel/underpass/road_joint/world_text/object_joints;圖資輸入的來源變了,幾何 MUST 逐項不動)+ **`npm run bal` 與 `npm test` 的模擬段 MUST 逐項不動**(平衡與 sim 一行未改)+ 改任一上限或動到 Overpass 查詢額度 MUST 重跑 **`tools/measure_osm_relay.mjs`**(㋓;實測 5v5 密市區 1.05MB = maxPayload 餘裕 1.9× / MAX_BYTES 餘裕 1.6×,不厚)+ **兩台同房實測(㋕:一台開房、一台入房,比對橋隧與建物;中繼壞掉的症狀是「你說的那座橋我這邊沒有」)** |
@@ -643,6 +647,8 @@ node tools/bot_learn.mjs             # 電腦玩家策略學習迴圈(--eval / -
 
 | 退場 | 日期 | 取而代之 |
 |---|---|---|
+| **舊版英雄建模七支** `buildRobotMech`/`buildBeastMech`/`buildBipedBeast`/`buildDrone`/`buildFixedWing`/`buildAvianDrone`/`buildMorphMech`(連同 `charPod`/`makePoser`/`clamp01`/`AVIAN`/`BEAST`/`BIPED`/`FIXED`)、`MODEL_MANIFEST` 的三列 hero、`FALLBACK` 的三列 hero | 2026-08-14 | `public/js/forge/` 的逐機零件檔 + 三支鷹架(`makeUnit` 的 `forgeHero()`)。七支整組搬到 `tools/humanoid_forge/legacy/legacy_models.js` **凍結**,只在機體台的「舊版」分頁上台 ⇒ 出貨包不再帶舊建模(`build:solo` 只複製 `public/**`)。MUST NOT 從 `public/js` 底下 import 它 |
+| **單樹變形者**(`rig.kind === 'morph'` + `rig.pose(m)` + `rig.tailPose`/`tailAimComp`)在**遊戲本體**的用途 | 2026-08-14 | 兩棵樹 + `locomotion.morphSwap`;`stepMorph` 本身**留著**(機體台的舊版對照仍走它),但 MUST NOT 拿它當新功能的落點。尾砲瞄準改走 `rig.tailAim` + `whipTail` 的 aim 分支 |
 | 「爆炸傷害納入閃避 = 它整組變弱」| 2026-08-12 | 使用者定案「**維持 DPS 提高傷害,閃避率不動**」:`evadeCompF(p)` 把被閃掉的期望輸出還給沒被閃掉的那幾發 ⇒ `npm run bal` 逐項回到改制前。MUST NOT 改回「調低爆風的閃避率」那條路(使用者明說閃避率不動)|
 | 「有爆風 `r` ⇒ 不可閃」(NPC 分支)與「招式不吃閃避」(`ALTITUDE` 註)| 2026-08-11 | `evadable()` 單一縫:輕武器直射 + 一切爆炸傷害全吃閃避,逐目標各自擲。使用者定案「所有攻擊招式也加入閃避機制」 —— 高度差與爆擊仍不吃(**AoE 不爆**是另一條定案,MUST NOT 一起改掉)|
 | **bal ③「10 分鐘升滿」不變式**(八軌總價 ≈ 賞金收入 ±10%) | 2026-08-11 | 使用者定案「移除此標準」。八軌改雙閘後升滿時間不再只由錢決定,這個比值量不到原本要量的東西;數字仍印出來當參考,**不判定、不計入 fail**。**編號不重排**(④~⑦ 保留原號) |

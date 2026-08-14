@@ -374,19 +374,27 @@ sec('Ⅵ 型態姿態(變形者飛行 / 地面):單一縫 + 真的說了「在�
     /mechaCodex|protoOf/.test(promptCode) && !/loreOf\(/.test(promptCode));
 
   // 用不到的外觀欄位 MUST NOT 送進生圖(換機種留下的殘值 = 憑空多一條設計要求)。
-  // 適用性 MUST 對得上 models.js 的**實際消費點**:frame/body 只有 buildDrone 讀、
-  // wing 只有 buildFixedWing 讀 —— 這一條靠原文反查,models.js 一改就紅字。
-  const modelsCode = strip(readSrc('public', 'js', 'models.js'));
+  // 適用性 MUST 對得上**實際消費點**的原文反查 —— 一改就紅字。
+  // ⚠ 2026-08-14 新版建模全面替換舊版之後,消費點**換了家**:第三人稱機體改由
+  //   `public/js/forge/mechs/<key>.js` 逐機手寫(那些檔一欄都不讀),`frame`/`body`/`wing`
+  //   現在只剩 **FPV 座艙**那三支分支在讀(game.js `_cockRotor` / `_cockFixed` / `_cockAvian`)。
+  //   反查目標因此指向 game.js;繼續指著已經沒有那些函式的 models.js 的話,`consumedIn`
+  //   恆回 false ⇒ 「只讀 wing」那一條永遠紅字,而規則本身其實還成立。
+  const cockCode = strip(readSrc('public', 'js', 'game.js'));
   const consumedIn = (fn, key) => {
-    const at = modelsCode.indexOf(`function ${fn}(`);
-    const end = modelsCode.indexOf('\nfunction ', at + 1);
-    return new RegExp(`vis\\??\\.${key}\\b`).test(modelsCode.slice(at, end < 0 ? undefined : end));
+    const at = cockCode.indexOf(`${fn}(g, mk, accent, vis) {`);
+    if (at < 0) return false;
+    const end = cockCode.indexOf('\n  _', at + 1);
+    return new RegExp(`vis\\??\\.${key}\\b`).test(cockCode.slice(at, end < 0 ? undefined : end));
   };
-  t('擬態翼無人機不讀 frame/body(models.js 原文反查)',
-    !consumedIn('buildAvianDrone', 'frame') && !consumedIn('buildAvianDrone', 'body'));
-  t('定翼無人機不讀 frame/body、只讀 wing(models.js 原文反查)',
-    !consumedIn('buildFixedWing', 'frame') && !consumedIn('buildFixedWing', 'body')
-    && consumedIn('buildFixedWing', 'wing'));
+  t('擬態翼無人機不讀 frame/body(座艙原文反查)',
+    !consumedIn('_cockAvian', 'frame') && !consumedIn('_cockAvian', 'body'));
+  t('定翼無人機不讀 frame/body、只讀 wing(座艙原文反查)',
+    !consumedIn('_cockFixed', 'frame') && !consumedIn('_cockFixed', 'body')
+    && consumedIn('_cockFixed', 'wing'));
+  // 反查目標指錯家的話上面兩條會「因為找不到函式而通過」—— 這一條是它的哨兵
+  t('多旋翼座艙確實讀 frame/body(反查目標沒指錯家)',
+    consumedIn('_cockRotor', 'frame') && consumedIn('_cockRotor', 'body'));
   const AVIAN = Object.keys(CHARACTERS).filter((id) => CHARACTERS[id].visual?.form === 'avian');
   t(`擬態翼機體的生圖詞不含旋翼/機身殼(${AVIAN.length} 台)`, AVIAN.length > 0 && AVIAN.every((id) => {
     const v = CHARACTERS[id].visual;

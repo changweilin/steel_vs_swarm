@@ -17,10 +17,12 @@ const PARTS = process.argv.includes('--parts');
 const onlyArg = process.argv.find((a) => a.startsWith('--only='));
 const ONLY = onlyArg ? onlyArg.slice(7).split(',') : null;
 
+// 埠可由 SVS_URL 覆寫:8620 上常常跑著**另一個 checkout**(工作區之間共用那個埠),
+// 在那裡驗到的是別份程式碼而且不會報錯。
 const browser = await chromium.launch();
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGEERROR:', e.message));
-await page.goto('http://localhost:8620', { waitUntil: 'networkidle' });
+await page.goto((process.env.SVS_URL || 'http://localhost:8620'), { waitUntil: 'networkidle' });
 
 const rep = await page.evaluate(async ({ PARTS, ONLY }) => {
   const THREE = await import('three');

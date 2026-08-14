@@ -257,6 +257,16 @@ export default {
     hMuz.rotation.x = Math.PI / 2;                                               // 砲口充能環
     rig.tailSegs = segs;
     rig.tailUp = 0.12;
+    // 尾梢那一具熔核砲 = 重武器 ⇒ 交戰時整條尾蠍式前捲、砲口轉向正前
+    //(locomotion whipTail 的 aim 分支;舊制走 stepMorph 的 rig.tailPose,那條路已隨單樹變形者退役)。
+    // ⚠ 累積角 **MUST 推導**:砲身自己已經轉了 π/2(上面的 `gunT.rotation.x`)⇒ 尾鏈只要再補
+    //   π/2 就把砲口帶到機首。抄飛行型那一組(累積 ≈3.3 rad)會多轉半圈 —— 實測 dot(+z) = −0.18,
+    //   砲口朝機尾,而畫面上尾巴確實捲起來了,看起來完全正常。
+    //   逐節遞減 AIM_D 維持弧形;rot0 由「Σ(rot0 + i·AIM_D) = π/2」反解。
+    if (!c.tailCurl) {
+      const AIM_D = -0.024, n = segs.length;
+      rig.tailAim = { rot0: (Math.PI / 2 - AIM_D * (n * (n - 1) / 2)) / n, rotD: AIM_D };
+    }
     rig.muzzles.heavy = { n: hMuz, r: 0.13 * G };
     rig.heavy.glow.push({ mesh: hMuz, base: 1.6 });
     rig.wpn.heavy = { nodes: [gunT], ref: gunT, muz: hMuz, fwd: '-z' };

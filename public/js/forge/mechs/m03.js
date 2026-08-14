@@ -315,14 +315,17 @@ export default {
       cl.rotation.z = sx * 0.35;
     }
     const lMuz = sphF(arm, 0.05, 0, -1.14, 0.24, accent, { emissive: accent, emissiveIntensity: 1.3 });
-    // 重武器:艙腹前射莢 + 彈艙
-    const hp = gunPodF(t, { len: 0.92 * K.barrelF, r: 0.14, accent }, 0, -0.40, 0.56, dark, { metalness: 0.75 });
+    // 武裝:艙腹前射雙莢(左輕右重;同 legacy_models.js buildFixedWing 的雙莢慣例)
+    // ⚠ 2026-08-14:輕武器原本掛在**可拋修理臂**上,槍口朝正下方(audit_muzzle ① dot = −0.30)——
+    //   那支臂是搶修工具不是槍。輕武器改回機腹前射莢,修理臂退回純擺件。
+    const lp = gunPodF(t, { len: 0.66 * K.barrelF, r: 0.095, accent }, -0.23, -0.38, 0.52, dark, { metalness: 0.75 });
+    const hp = gunPodF(t, { len: 0.92 * K.barrelF, r: 0.14, accent }, 0.2, -0.40, 0.56, dark, { metalness: 0.75 });
     tboxF(t, { w0: 0.30, d0: 0.20, w1: 0.26, d1: 0.16, h: 0.26 }, 0, -0.34, 0.22, PAL.deep, { metalness: 0.6 });
     return {
-      muzzles: { light: { n: lMuz, r: 0.05 }, heavy: { n: hp.muz, r: 0.09 } },
-      lightGlowM: [lMuz], heavyGlowM: [hp.muz],
+      muzzles: { light: { n: lp.muz, r: 0.06 }, heavy: { n: hp.muz, r: 0.09 } },
+      lightGlowM: [lp.muz], heavyGlowM: [hp.muz],
       weap: { light: 'N', heavy: 'N' }, hvy: { chest: 0.04 },
-      wpn: { light: { nodes: [arm], ref: arm, muz: lMuz, fwd: '-y' },
+      wpn: { light: { nodes: [lp.g], ref: lp.g, muz: lp.muz, fwd: 'z' },
         heavy: { nodes: [hp.g], ref: hp.g, muz: hp.muz, fwd: 'z' } },
     };
   },

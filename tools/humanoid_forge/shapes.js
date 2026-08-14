@@ -15,7 +15,7 @@
 // 位移一律夾在該頂點鄰邊均長的一半內 —— 反向拉普拉斯沒有天生上界,不夾就會把零件炸成星爆
 // (而「使用者自己拖成這樣」與「數值爆掉」在畫面上長得一模一樣)。
 import * as THREE from 'three';
-import { facet, weldSmooth, quadsGeo } from './geo.js';
+import { facet, weldSmooth, quadsGeo } from '../../public/js/forge/geo.js';
 import { SHAPE_KEYS } from './doll.js';
 
 /** 由「逐段剖面」組帶狀多面體(薄刃/楔形共用;每段 = 逆時針四角) */

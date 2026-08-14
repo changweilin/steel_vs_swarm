@@ -35,6 +35,8 @@ function phaseOf(id) {
 export function stepLocomotion(ent, dt, now, px, pz, pyaw) {
   if (dt < 0.004) return;   // hitstop / 極小步:骨架凍結
   const mesh = ent.mesh;
+  // 變形者:先決定「現在是哪一棵樹」再取 rig(兩棵樹並存,見 morphSwap)
+  if (mesh.userData.morph) morphSwap(ent, mesh, dt);
   const rig = mesh.userData.rig;
   const walk = mesh.userData.walk;
   if (!rig && !walk) return;
@@ -296,14 +298,21 @@ function syncLegsToHips(L, rig, hips) {
  * 多節尾配重(mobility_plan Task 2.2):急轉時整條尾甩向轉向反側(角動量守恆的視覺化),
  * 尾梢逐節延遲 = 鞭;行進間再疊一道與步頻同調的擺動。基礎姿勢住幾何,這裡直接寫 rotation。
  */
-function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0) {
+function whipTail(segs, L, dt, a, idle, now, yawRate, base = 0, aim = null) {
   L.tail = damp(L.tail ?? 0, clamp(-yawRate * 0.3, -0.55, 0.55), 3.5, dt);
+  // 尾砲瞄準前捲(t06 悟空:尾梢那一具熔核砲就是重武器)—— 重武器交戰時整條尾蠍式過頂,
+  // 砲口轉向正前。`aim = { p, rot0, rotD }`:p = 交戰保持窗(rig._aimH,0~1),
+  // rot0/rotD = 前捲姿的逐節累積角(與飛行型 `tailCurl` 同一組值 ⇒ 兩種瞄準姿同一條弧)。
+  // ⚠ MUST 疊在這裡:whipTail **絕對指派** rotation.x/y,在外面加角度下一幀就被抹掉
+  //   (舊制是 stepMorph 的 rig.tailPose,那條路隨單樹變形者一起退役了)。
+  const ap = aim ? clamp(aim.p || 0, 0, 1) : 0;
   segs.forEach((t, i) => {
     const d = i * 0.6;                       // 逐節相位延遲(由根往梢傳的波)
     const lag = 1 + i * 0.35;                // 尾梢甩幅大於尾根
-    t.rotation.y = L.tail * lag + Math.sin(L.ph - d) * 0.1 * a;
+    t.rotation.y = L.tail * lag * (1 - ap) + Math.sin(L.ph - d) * 0.1 * a;
     t.rotation.x = (i === 0 ? base : 0)
-      + Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03;
+      + (ap ? ap * (aim.rot0 + i * aim.rotD) : 0)
+      + (Math.sin(L.ph * 2 - d) * 0.07 * a + idle * Math.sin(now * 1.1 - d) * 0.03) * (1 - ap);
   });
 }
 
@@ -352,6 +361,43 @@ function tentGuard(chain, now, k, ph, a) {
  *  短腿機種(rig.bound,猩猩)高速漸變為「後腿併蹬、雙臂前撐」的跳奔 —— 步頻不再上飆,
  *  改拉大騰空與跨距(短腿硬刷步頻 = 整具機體高頻顫抖,這正是要消滅的);
  *  袋鼠(rig.hop)整套改走 stepHop 跳躍步態。 */
+// ── 變形者型態切換(2026-08-14 新版建模:地面型與飛行型是**兩棵樹**)────────────────
+// 舊制是一棵樹 + `rig.pose(m)` 分段姿勢插值(stepMorph);新版建模的兩態各自對照自己的
+// 2D 定案圖、各自一支逐機檔,沒有可以互相插值的對應零件 ⇒ 改成「收摺 → 換樹 → 展開」。
+//
+// 四條紀律:
+//   ① **門檻與時間常數逐字沿用 stepMorph**(MORPH.GROUND_Y / damp 2.6)—— 那條門檻與
+//      伺服器的地面型判定同一條規則,小跳頂點不得觸發變形(舊門檻 1.2 會播半套再收回)。
+//   ② **換樹只在越過 0.5 那一瞬間做一次**(`air0` 邊緣):每幀重指 `userData.rig` 也對,
+//      但可見性與 rig 分兩處寫就會有一幀說著兩種話。
+//   ③ **收摺量取 |m−0.5|**:兩端(m=0/1)恆為 0 ⇒ 站著與巡航時**逐位元**是出廠姿態,
+//      演出只發生在過渡的那半秒;換樹那一刻兩棵樹都收到最緊,接得上。
+//   ④ 演出只動**過渡中那一棵的根節點**(scale / rotation.y / position.y)——
+//      零件級的姿勢全歸各自的步態驅動器管,這裡一格都不碰。
+const FOLD = { HALF: 0.32, S: 0.42, SPIN: 2.2, LIFT: 0.35 };
+
+function morphSwap(ent, mesh, dt) {
+  const M = mesh.userData.morph;
+  const want = (ent.heroY || 0) > MORPH.GROUND_Y ? 1 : 0;
+  M.m = damp(M.m ?? want, want, 2.6, dt);
+  const air = M.m >= 0.5;
+  if (air !== M.air0) {
+    M.air0 = air;
+    M.ag.visible = air;
+    M.gg.visible = !air;
+    mesh.userData.rig = air ? M.air : M.ground;
+  }
+  // 收摺:|m−0.5| 越小收得越緊(過渡中段縮到 1−S、繞縱軸轉 SPIN、抬起 LIFT)
+  const k = M.k = clamp(1 - Math.abs(M.m - 0.5) / FOLD.HALF, 0, 1);
+  const act = air ? M.ag : M.gg;
+  const idle = air ? M.gg : M.ag;
+  act.scale.setScalar(1 - FOLD.S * k);
+  act.rotation.y = FOLD.SPIN * k * (air ? 1 : -1);
+  act.position.y = FOLD.LIFT * k;
+  // 沒在台上的那一棵一律歸零:下次換過去時不會帶著上一輪的殘餘變換
+  if (idle.scale.x !== 1) { idle.scale.setScalar(1); idle.rotation.y = 0; idle.position.y = 0; }
+}
+
 function stepBiped(L, rig, dt, now, speed, yawRate) {
   if (rig.hop) return stepHop(L, rig, dt, now, speed, yawRate);
   const strideW = (rig.stride || 0.9) * (rig.s || 1);   // 一步的世界長度
@@ -497,7 +543,9 @@ function stepBiped(L, rig, dt, now, speed, yawRate) {
   L.gaze = damp(L.gaze ?? 0, clamp(yawRate * 0.28, -0.45, 0.45), 3, dt);
   if (rig.head) rig.head.rotation.y += L.gaze;   // 無頭 rig 的簡易單位(如步兵)跳過凝視
   if (rig.tailSegs) {
-    whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate);
+    // rig.tailAim 在冊 = 這條尾巴的梢端是重武器(t06):交戰時前捲瞄準,其餘照常甩尾
+    whipTail(rig.tailSegs, L, dt, a, idle, now, yawRate, 0,
+      rig.tailAim ? { p: rig._aimH || 0, ...rig.tailAim } : null);
     // 抬尾配平:速度越快尾根抬得越高(暴龍/鴕鳥/袋鼠的重尾就是前傾的反向配重)
     rig.tailSegs[0].rotation.x += (rig.tailUp || 0) * a;
   }
@@ -897,9 +945,16 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
 }
 
 /**
+ * ⚠ **退役路徑**(2026-08-14):這一支只驅動**單樹 + `rig.pose(m)`** 的舊版變形者。
+ * 新版建模的變形者是**兩棵樹**(見上方 `morphSwap`),`rig.kind` 是 'biped'/'quad'/'aerial'
+ * ⇒ 遊戲本體再也走不到這裡。留著它的唯一理由是**機體台的舊版對照**
+ * (`tools/humanoid_forge/legacy/legacy_models.js` 仍鍛得出 kind 'morph' 的舊機體,
+ * 而看板用的是真品 `stepLocomotion`)—— 兩條路因此在本檔並存。
+ * MUST NOT 拿這一支當新功能的落點;要改變形演出一律改 `morphSwap`。
+ *
  * 變形者(transformer_plan):型態由伺服器回報高度推導(heroY > 門檻 = 飛行型),
  * 阻尼漸變出 0(地面)→1(飛行)的型態參數 m —
- * rig.pose(m)(models.js)以各部件自己的分段時窗 smoothstep 到位
+ * rig.pose(m)(舊版 legacy_models.js)以各部件自己的分段時窗 smoothstep 到位
  * (翼先展 → 腿後收 → 機首鎖上的 Macross 式序列);這裡在姿勢之上疊加動態:
  * 地面步態(人型雙足 / 獸型前肢著地小跑)、飛行壓坡巡航、鳥/龍拍翼、
  * 推進器發光 ∝ m、關節排氣口熱散逸 ∝ 變形活動度(Task 3.1)。

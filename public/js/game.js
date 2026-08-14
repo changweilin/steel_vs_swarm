@@ -187,7 +187,10 @@ export const COCKPIT = {
   // 頂緣天花板:HUD 上緣 → 準星 的 2/3 處(= HUD_TOP_NDC/3 ≈ −0.187)。件的頂緣不得高過此線 ⇒
   // 準星周圍上方 1/3 恆淨空、所有座艙元素壓在畫面下段。武器與結構共用同一條線(**MUST NOT** 分家)。
   TOP_NDC: HUD_TOP_NDC / 3,
-  WPN_BOX_MAX: 0.042,   // 單件武裝的 NDC 包圍盒佔畫面比例上限(輕/重各一件 ⇒ 合計 ≈ WPN_AREA_MAX)
+  // 2026-08-14 新版建模:同一個包圍盒**填得更滿**(舊版武器是幾根管子,新版是幾十顆零件)⇒
+  // 同樣的盒上限換算出的實際遮擋變大(實測 s04 11.5%→12.1%、m05 11.6%→12.0%,均越過 WPN_AREA_MAX)。
+  // 盒上限因此下修一級把實際遮擋壓回預算內;WPN_AREA_MAX 那條**使用者可見的**規則一格未動。
+  WPN_BOX_MAX: 0.039,   // 單件武裝的 NDC 包圍盒佔畫面比例上限(輕/重各一件 ⇒ 合計 ≈ WPN_AREA_MAX)
   DEV_AREA_MAX: 0.035,  // 與武器/招式無關的裝置每件面積上限 —— **< WPN_BOX_MAX**(裝置恆比武器小)
   VP_Z: 25,             // 消失點距離(公尺):視軸上的匯聚點,螢幕上就是準星
   VP_TOL_DEG: 12,       // 武器軸線與「武器 → 消失點」的容許夾角
@@ -1081,9 +1084,13 @@ export class BattleClient {
       this._gunG = new THREE.Group();
       this._gunA = new THREE.Group();
       this.gunGroup.add(this._gunG, this._gunA);
+      // 2026-08-14 新版建模:變形者的兩個型態是**兩棵樹兩份 rig**(models.forgeMorphUnit)——
+      // 飛行武裝 MUST 取飛行那一份(`rigAir`),取地面型的會把手持槍複製到機翼硬點上。
+      const rigA = unit3p.userData.rigAir || rig3p;
+      const wpnA = rigA.wpn || wpn;
       for (const slots of jobs) {
         Object.assign(this._muzzles.G, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunG, anchors.ground, false));
-        Object.assign(this._muzzles.A, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpn, rig3p, this._gunA, anchors.air, true));
+        Object.assign(this._muzzles.A, this._mountCockpitWeapon(mk, accent, PAL, vis, slots, wpnA, rigA, this._gunA, anchors.air, true));
       }
       this._gunA.visible = false;
     } else {
@@ -2094,6 +2101,22 @@ export class BattleClient {
     const muzNodes = {};
     let cloned = null;
     if (set?.nodes?.length && set.ref) cloned = this._cloneWpnSet(set);
+    // ⚠ 2026-08-14(新版建模):複製過來的子樹**量不出砲管軸線**時 MUST 退回 podWeapon。
+    //   軸線 = 「量體中心 → 最遠槍口」;槍口離中心太近(t06 尾梢熔核砲、t10 雙肩 VLS 都是
+    //   短而胖的量體)⇒ 那條向量短到方向本身是雜訊,規則 ④ 的不動點迭代因此收不到準星上
+    //   (實測殘留 43.8° / 36.4°,門檻 12°)。畫面上只表現成「座艙裡那把槍指著斜上方」。
+    //   podWeapon 依 def.type 重建的是同一套外觀語彙的**長砲管**,軸線量得出來 —— 這是既有的
+    //   缺登記退路,不是新開的分支(原則 6:降級不例外)。
+    if (cloned) {
+      const bb0 = new THREE.Box3().setFromObject(cloned.grp);
+      const sz0 = bb0.getSize(new THREE.Vector3()), c0 = bb0.getCenter(new THREE.Vector3());
+      let lever = 0;
+      for (const sl of slots) {
+        const mz = wpn[sl]?.muz && cloned.pairs.get(wpn[sl].muz);
+        if (mz) lever = Math.max(lever, mz.getWorldPosition(new THREE.Vector3()).sub(c0).length());
+      }
+      if (lever < 0.22 * Math.max(sz0.x, sz0.y, sz0.z)) cloned = null;
+    }
     if (cloned) {
       const rot = WPN_FWD_ROT[set.fwd || 'z'] || WPN_FWD_ROT.z;
       const inner = new THREE.Group();
@@ -2118,8 +2141,12 @@ export class BattleClient {
     //   故每步只套 DAMP 比例的修正(阻尼迭代),收斂後殘留 <1°。
     wrap.updateMatrixWorld(true);
     const vpDir = new THREE.Vector3(-ax, -ay, -COCKPIT.VP_Z - az).normalize();
-    const DAMP = 0.6;
-    for (let it = 0; it < 16; it++) {
+    // ⚠ 2026-08-14(新版建模):迭代 MUST **記住迄今最好的那一次**並在震盪時**自動收阻尼**。
+    //   舊制是固定 16 步 × DAMP 0.6,對細長 L 形量體剛好收斂;新版建模的量體更極端
+    //   (t06 尾梢熔核砲離量體中心很遠、t10 六管加特林配雙肩 VLS)⇒ 同一組參數會在
+    //   兩個姿勢之間來回跳,而**最後一步剛好停在壞的那一邊**(實測殘留 43.8° / 36.4°,
+    //   門檻 12°)。畫面上只表現成「座艙裡那把槍指著斜上方」,沒有任何錯誤訊息。
+    const axisOf = () => {
       const ctr = new THREE.Box3().setFromObject(wrap).getCenter(new THREE.Vector3());
       let axis = null, far = 1e-2;
       for (const sl of slots) {
@@ -2127,13 +2154,21 @@ export class BattleClient {
         const v = muzNodes[sl].getWorldPosition(new THREE.Vector3()).sub(ctr);
         if (v.length() > far) { far = v.length(); axis = v; }
       }
+      return axis?.normalize() || null;
+    };
+    let damp = 0.6, best = null, bestDot = -2;
+    for (let it = 0; it < 48; it++) {
+      const axis = axisOf();
       if (!axis) break;
-      axis.normalize();
-      if (axis.dot(vpDir) > 0.99985) break;                       // 已對準(<1°)
+      const dot = axis.dot(vpDir);
+      if (dot > bestDot) { bestDot = dot; best = wrap.quaternion.clone(); }
+      else damp *= 0.6;                                           // 這一步走壞了 ⇒ 收阻尼再試
+      if (dot > 0.99985) break;                                   // 已對準(<1°)
       const q = new THREE.Quaternion().setFromUnitVectors(axis, vpDir);
-      wrap.quaternion.premultiply(new THREE.Quaternion().slerp(q, DAMP));
+      wrap.quaternion.premultiply(new THREE.Quaternion().slerp(q, damp));
       wrap.updateMatrixWorld(true);
     }
+    if (best && bestDot > -2) { wrap.quaternion.copy(best); wrap.updateMatrixWorld(true); }
     // 量測定尺 + 置位:前端朝 -z、包圍盒對齊錨點;近場保護(任何件不越過 z = -0.55,免糊滿畫面)
     const q0 = wrap.quaternion.clone();
     const bb = new THREE.Box3().setFromObject(wrap);
