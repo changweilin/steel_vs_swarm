@@ -2935,6 +2935,17 @@ export function heroAbility(ch, slot, lvl = 1) {
   };
 }
 
+/**
+ * 施法動作是**定向**還是**全向**(locomotion `stepCastPose` 的 `castFx.dir`)。
+ * 指向敵人的(strike / dash / 遠端 emp)= 定向(揮武/刺拳/踢腿),其餘 = 全向(吼叫/跺腳/旋轉)。
+ *
+ * 2026-08-14 收成單一縫:規則原本在 `game.js`(戰場)與 `charPreview.js`(圖鑑展示台)各寫一份,
+ * 機體台再抄第三份的話,三個地方對「這一招要擺什麼姿勢」遲早說出不一樣的話 —— 而它是純視覺,
+ * 不會有任何錯誤訊息。`remote` 由呼叫端量:戰場量**實際施放距離**、展示台量**宣告 range**
+ * (兩者本來就不同,是刻意的;共用的是判準不是量法)。
+ */
+export const castDirF = (fx, remote) => (fx === 'strike' || fx === 'dash' || (fx === 'emp' && !!remote) ? 1 : 0);
+
 /** 角色機體種類(不需要 side:2026-08-02 混編改制後**每名角色一律自帶 kind**)— heroWeapon 的折算依據。
  *  MUST NOT 再由 side 推機種:三陣營各自混編(蜂群 7/3/2、鋼鐵 3/7/2、傭兵 2/2/4),
  *  退路 'robot' 只是防呆,漏寫 kind 即為資料錯誤。 */

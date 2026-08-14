@@ -17,25 +17,17 @@
 //      兩份名冊都由伺服器端目錄/帳本推導,MUST NOT 在這裡拼檔名。
 //
 // 旋翼自轉:名冊只有 `unit.spin`(= 戰場 game.js spinners 吃的 `userData.spin` 那一份),
-// 本檔每幀推進同一份清單 —— MUST NOT 自己 traverse 場景找槳葉(那就是第二份名冊)。
+// 展示台每幀推進同一份清單 —— MUST NOT 自己 traverse 場景找槳葉(那就是第二份名冊)。
 //
 // 2026-08-14 使用者:「機體台的新版展示台 UI 要跟舊版一樣,可以看變形過程,以後擴充不同
-// 版本時都用同一套展示台」。本檔因此**不認得任何一個版本**:
-//   ① 建構、能力旗標、rig 契約欄整組住 `versions.js` 的版本表(加一版 = 加一列);
-//   ② **變形過程只有一條驅動**:型態鈕推 `ent.heroY` 過門檻,插值/換樹一律讓真品
-//      locomotion 做(新版 `morphSwap` / 舊版 `stepMorph` 吃同一條 `MORPH.GROUND_Y`)——
-//      展示台 MUST NOT 自己寫一份型態插值,否則台上看到的變形與戰場不是同一個。
-//   ③ **台上型態 ≡ 選中的那一格**:名冊的單位本來就是 (機體, 型態),型態鈕 = 選另一格;
-//      而同一台變形者換格 **MUST NOT 重鍛**(重鍛 = 變形動畫當場被砍成瞬切)。
+// 版本時都用同一套展示台」+「機體鍛造的建模展示**直接套用**展示台」。
+// ⇒ **場景與演出整組住 `stage.js`**(兩座看板共用的那一座),版本住 `versions.js`。
+// 本檔從此只是它的**宿主**:名冊欄 / 分頁資訊欄 / 覆核標記 / 參考圖帶 / 紙娃娃面板,
+// 一行 three、一行版本分支都沒有。
 
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { stepLocomotion, stepCombatFx } from '/public/js/locomotion.js';
-import { updateCelLight, disposeTree } from '/public/js/toon.js';
-import { MORPH } from '/public/js/data.js';
 import { SPECS, conversionDoc, resolveProp, HUMANOID } from '../../public/js/forge/forge.js';
 import { CATS, catOf, rosterByCat, splitKey, FORM_LABEL } from '../../public/js/forge/roster.js';
-import { STAGE_VERSIONS, versionOf, siblingSpec } from './versions.js';
+import { makeStage } from './stage.js';
 import { makeDollEditor } from './dolledit.js';
 import {
   fetchArt, fetchRefs, dropRefsCache, artStripHTML, refStripHTML, bindRefStrip,
@@ -45,7 +37,6 @@ import {
 // 故消費端補前綴;MUST NOT 在這裡另寫一份 `assets/avatars/${id}.png`(換成手繪/退回生成
 // 都會靜默分家)。
 import { avatarURL } from '/public/js/portraits.js';
-import { wpnOf, showWpn, wpnFrame, applyWpnCamera, wpnSlotName } from './wpnview.js';
 
 // 使用者調整覆寫層(specs.json;/api/forge 讀寫)—— 合併只走 mergeSpec 單一縫。
 // 2026-08-12 第五輪起本台**可寫**(紙娃娃編輯器存 `doll` 那一欄);比例滑桿仍住覆核台,
@@ -63,59 +54,15 @@ async function saveOvr(id, patch) {
   return (await r.json()).mechs || {};
 }
 
-const canvas = document.getElementById('stage');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-renderer.setClearColor(0x171a21);
-
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x171a21, 60, 140);
-const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
-
-// 燈光鏡射 charPreview(賽璐璐 ramp 吃的是 toon.js 共用光向,由 updateCelLight 每幀更新)
-const SUN = new THREE.Vector3(0.4, 0.8, 0.4);
-const dir = new THREE.DirectionalLight(0xffffff, 2.1);
-dir.position.copy(SUN).multiplyScalar(50);
-scene.add(dir, new THREE.HemisphereLight(0xdff1ff, 0x2b2f38, 1.1));
-
-// 跑步機地面:格線反向捲動 = 速度的視覺參照(機體恆在原點)
-const CELL = 2;
-const grid = new THREE.GridHelper(80, 40, 0x39414f, 0x262c36);
-scene.add(grid);
-const plate = new THREE.Mesh(new THREE.CircleGeometry(40, 48),
-  new THREE.MeshBasicMaterial({ color: 0x1b1f27 }));
-plate.rotation.x = -Math.PI / 2;
-plate.position.y = -0.02;
-scene.add(plate);
-
-const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.autoRotateSpeed = 1.6;
-
 // ---- 狀態 ----
 const ROSTER = rosterByCat();
 /** 右欄分頁(標記 = 覆核意見 + 紙娃娃;它同時就是編輯模式的開關,見 setTab) */
 const PANEL_TABS = [['data', '資料'], ['ref', '參考圖'], ['rig', '結構'], ['mark', '標記']];
 let cat = CATS[0].key;              // 目前管理頁
 let tab = 'data';                   // 右欄分頁
-let view = 'mech';                  // 'mech' | 'light' | 'heavy'(武器獨立檢視)
-let unit = null;                    // { group, rig, joints, spin? }
-let ent = null;                     // 餵給 locomotion 的假實體
 let spec = SPECS[0];
-let speed = 0, speedTgt = 0, travel = 0, spdSel = 'spdIdle';
 let draftDoll = null;               // 紙娃娃草稿(尚未存檔的那一份;null = 照已存檔的走)
-let reframeNext = false;            // 切武器頁後的第一幀要重取景(姿勢落定才量得準)
 let editor = null;
-let firing = false, nextShot = 0;
-// 建模版本(名冊住 versions.js;能力旗標由那張表宣告,本檔不認得任何一個版本的名字)
-let ver = STAGE_VERSIONS[0];
-let unitKey = null;                 // 台上那台是為哪一格建的(換型態要不要重鍛的唯一判據)
-// 型態:0 = 地面型,1 = 飛行型。只是「回報高度要不要推過門檻」,插值住 locomotion。
-let formT = 0;
-let heavyAt = -1;
-let simT = 0;
-const clock = new THREE.Clock();
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
 /** 程序生成的頭像回的是 data URI(已是完整 URL),手繪的是相對 public/ 的路徑 */
@@ -126,114 +73,22 @@ const avatarSrc = (id) => {
 /** 機體名恆取 data.js 那一份(spec.label 是建模註記,見 forge.js MECH_SPECS 的欄位說明) */
 const mechName = (s) => s.pilot?.machine || s.label;
 
-/** 台上那台是為哪一格建的。變形者一台**兩格共用同一棵(或同一對)零件樹** ⇒ 鍵取機體,
- *  換型態才不會重鍛(重鍛把 locomotion 的型態狀態一起丟掉 = 變形演出當場變成瞬切)。 */
-const unitKeyOf = (s) => `${ver.key}|${s.form ? s.ch : s.id}`;
-
-/** 樞軸點:變形者兩棵樹各一組(收成單一 Group 的話只點得亮其中一棵) */
-function showJoints(on) {
-  for (const j of unit?.joints || []) j.visible = on && ver.caps.joints;
-}
-
-/** 紙娃娃索引指到**台上選中的那個型態**那一棵(換型態只換指標,不重鍛) */
-function retargetDoll() {
-  if (unit?.dolls) unit.doll = unit.dolls[spec.form] || null;
-}
-
-/** 重鍛目前這一台(換機體 / 換版本 / 紙娃娃編輯的每一次結構改動都走這裡)。
- *  怎麼建是版本表的事(versions.js);紙娃娃**草稿**優先於已存檔的那一份 ——
- *  編輯中看到的就是還沒存的樣子。 */
-function buildUnit() {
-  if (unit) {
-    scene.remove(unit.group);
-    disposeTree(unit.group);   // A25:換機體釋放 GPU 資源
-  }
-  unit = ver.build(spec, { ovrOf: (id) => OVR[id], draft: draftDoll });
-  unitKey = unitKeyOf(spec);
-  scene.add(unit.group);
-  showJoints($('btnJoints').classList.contains('on'));
-  ent = { id: spec.id, mesh: unit.group, heroY: 0 };   // loco 狀態綁 mesh,重鍛即重建
-}
+// ---- 展示台(兩座看板共用的那一座;場景/演出/版本/型態全住 stage.js)-------------
+// 本檔只給它三樣東西:覆寫層查詢、重鍛後要重畫哪一塊、以及「型態鈕按下去 = 換名冊那一格」。
+const stage = makeStage({
+  ovrOf: (id) => OVR[id],
+  onBuild: () => renderPanel(),
+});
 
 function setSpec(s) {
-  // 同一台變形者的另一個型態:零件樹已經在台上(兩棵樹都建好了)⇒ 只換「選中的是哪一格」
-  const keep = !!unit && unitKeyOf(s) === unitKey;
   spec = s;
   cat = s.cat;
   draftDoll = OVR[s.id]?.doll || null;
-  formT = s.form === 'flight' ? 1 : 0;   // 台上型態 ≡ 選中的那一格(單一真相)
-  if (keep) retargetDoll(); else buildUnit();
+  stage.setSpec(s, draftDoll);
   editor?.load(draftDoll);
-  speedTgt = 0; speed = 0;
-  for (const o of ['spdIdle', 'spdWalk', 'spdRun']) $(o).classList.toggle('on', o === 'spdIdle');
-  spdSel = 'spdIdle';
-  applyView();
   renderCatButtons();
   renderRail();
   renderPanel();
-}
-
-/** 型態鈕 = 選另一格(名冊的單位本來就是 (機體, 型態))。
- *  變形**過程**因此不是另一條路徑:換格不重鍛 ⇒ locomotion 照樣把收摺/換樹/展開演完。 */
-function setForm(f) {
-  if (!spec.form) return;
-  const s = spec.form === f ? spec : siblingSpec(spec);
-  if (s) setSpec(s);
-}
-
-// ---- 武器獨立檢視 ------------------------------------------------------------
-// 邏輯整組住 wpnview.js(2026-08-12 第五輪起覆核台 :8641 也有這一頁 ⇒ 兩個消費端);
-// 這裡只剩本台的取景高、跑步機地面與鈕面。
-function applyView(reframe = true) {
-  const H = spec.height;
-  if (reframe) reframeNext = true;   // 姿勢落定後再量一次(見 stepWorld 那一條)
-  const w = view === 'mech' ? null : wpnOf(unit, view);
-  showWpn(unit, view);                       // 顯示子集(切回機體時尊重紙娃娃的隱藏覆寫)
-  grid.visible = plate.visible = view === 'mech';
-  // 武器頁**停止移動**:武器掛在會動的肢體/樞軸上,取景框一旦定住而機體繼續走,
-  // 武器就慢慢飄出畫面(2026-08-12 實測 t01 的臂在頭兩幀就從靜姿彈到步態姿)。
-  // 這也是語意上對的 —— 武器頁看的是這把武器,不是它的步態。
-  if (w) { speedTgt = 0; speed = 0; firing = false; $('btnFire').classList.remove('on'); }
-  if (!w) {
-    if (reframe) {
-      controls.target.set(0, H * 0.52, 0);
-      camera.position.set(H * 1.6, H * 0.62, H * 2.1);
-    }
-    const fm = spec.form ? ` ・ ${FORM_LABEL[spec.form]}` : '';
-    $('stageTag').textContent = `${mechName(spec)}${fm} ・ ${spec.pilot?.name || spec.ch}`
-      + ` ・ ${spec.kind} 鷹架 ・ ${ver.label}`;
-  } else {
-    // 取景:武器世界包圍盒(空盒 = 這一格沒掛那個 slot,退回機體取景)
-    const f = wpnFrame(unit, view);
-    if (!f) { view = 'mech'; return applyView(reframe); }
-    if (reframe) applyWpnCamera(camera, controls.target, f);
-    $('stageTag').textContent = `${mechName(spec)} ・ ${wpnSlotName(view)}武器(rig.wpn.${view})`;
-  }
-  camera.near = 0.05; camera.far = 400;
-  // **MUST 當場定向**:互動時是 loop 裡的 controls.update() 在轉鏡頭,而 headless 檢視
-  // (pane 不合成 ⇒ rAF 不跑)沒有 loop —— 只搬 position 不轉向的話,__shot 拍到的是
-  // 上一個取景的朝向,武器就落在畫面角落(2026-08-12 實測)。
-  camera.lookAt(controls.target);
-  camera.updateMatrixWorld(true);
-  controls.update();
-  for (const [id, v] of [['vMech', 'mech'], ['vWpnL', 'light'], ['vWpnH', 'heavy']])
-    $(id).classList.toggle('on', view === v);
-  syncCaps();
-}
-
-/** 鈕面 = 這個版本/這一格**真的做得到**的事(能力旗標由版本表宣告,MUST NOT 在這裡嗅探)。
- *  灰掉而不是藏起來:少一顆鈕會讓人以為那個功能不存在,灰掉才讀得出「這一版沒有」。 */
-function syncCaps() {
-  for (const id of ['vWpnL', 'vWpnH']) $(id).disabled = !ver.caps.wpn;
-  $('btnJoints').disabled = !ver.caps.joints;
-  for (const f of Object.keys(FORM_LABEL)) {
-    const b = $(`fm_${f}`);
-    if (!b) continue;
-    b.disabled = !spec.form;                       // 這一台不是變形者 = 沒有型態可切
-    b.classList.toggle('on', spec.form === f);
-    b.title = spec.form ? `切到${FORM_LABEL[f]}(變形過程由 locomotion 真品演出)`
-      : '只有變形者有兩個型態';
-  }
 }
 
 // ---- UI ----------------------------------------------------------------------
@@ -399,7 +254,7 @@ function renderPanel() {
   // rig 契約檢查驗的是**那個版本自己的**契約(新版的契約拿去驗退役的舊建構器一定對不上:
   // 舊 morph 是單樹 rig.pose、舊 biped 沒有 legChainL/R —— 那不是「舊版壞了」,是兩份契約
   // 本來就不同)⇒ 印哪幾條由版本表回答,本檔只負責畫。
-  const chan = ver.rigLines(unit, spec)
+  const chan = stage.ver.rigLines(stage.unit, spec)
     .map(([n, ok]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}</li>`).join('');
 
   // 四個分頁的內容。**武器檢視的入口只在舞台工具列**:改版前這裡還有一組文字跳轉
@@ -440,8 +295,8 @@ function renderTabs() {
     b.className = 'segb' + (k === tab ? ' on' : '');
     b.innerHTML = k === 'mark' && mk ? `${label} ${mk.icon}` : label;
     // 標記分頁 = 編輯模式 ⇒ 沒有紙娃娃索引的版本(舊版對照)灰掉它
-    b.disabled = k === 'mark' && !ver.caps.edit;
-    b.title = b.disabled ? `${ver.label}沒有紙娃娃索引(只能看,不能標記)` : '';
+    b.disabled = k === 'mark' && !stage.ver.caps.edit;
+    b.title = b.disabled ? `${stage.ver.label}沒有紙娃娃索引(只能看,不能標記)` : '';
     b.onclick = () => setTab(k);
     box.appendChild(b);
   }
@@ -450,10 +305,10 @@ function renderTabs() {
 /** 分頁切換。**標記分頁 = 編輯模式**:紙娃娃編輯器不再是另一顆全域開關 —— 改版前它一開
  *  就把整個資訊欄蓋掉,而你正在對照的 2D 定案圖當場消失。 */
 function setTab(k) {
-  tab = k === 'mark' && !ver.caps.edit ? 'data' : k;
+  tab = k === 'mark' && !stage.ver.caps.edit ? 'data' : k;
   const on = tab === 'mark';
   // 一邊自轉一邊拖 gizmo,拖到的是「拖的那一瞬間鏡頭在的地方」⇒ 進標記模式先停自轉
-  if (on && controls.autoRotate) { controls.autoRotate = false; $('btnSpin').classList.remove('on'); }
+  stage.setEdit(on);
   editor.setOn(on);
   $('dollPanel').hidden = !on;
   renderPanel();
@@ -484,142 +339,34 @@ function bindMarkTab() {
   $('mkSave').onclick = () => saveMark(markOf(spec.id)?.status || null, $('mkNote').value.trim());
 }
 
-function bindToggle(id, fn) {
-  const b = $(id);
-  b.onclick = () => { b.classList.toggle('on'); fn(b.classList.contains('on')); };
-}
-
-// 速度三態:目標速度緩動,加減速演出(launch/spool/brake)才看得到
-for (const [id, f] of [['spdIdle', 0], ['spdWalk', 0.32], ['spdRun', 1.0]]) {
-  $(id).onclick = () => {
-    speedTgt = f * (spec.kind === 'air' ? (spec.air?.top ?? 30) : (spec.gait?.top ?? 8));
-    spdSel = id;
-    for (const o of ['spdIdle', 'spdWalk', 'spdRun']) $(o).classList.toggle('on', o === id);
-  };
-}
-$('spdIdle').classList.add('on');
-
-bindToggle('btnFire', (on) => { firing = on; });
-$('btnHeavy').onclick = () => {
-  if (heavyAt > 0) return;
-  ent.heavyFx = { phase: 'charge', t0: simT };
-  heavyAt = simT + 1.05;
-};
-$('btnCastO').onclick = () => { ent.castFx = { t0: simT, slot: 'ult', dir: 0 }; };
-$('btnCastD').onclick = () => { ent.castFx = { t0: simT, slot: 'skill', dir: 1 }; };
-bindToggle('btnSpin', (on) => { controls.autoRotate = on; });
-// 紙娃娃編輯模式的開關 = 右欄的「標記」分頁(setTab),MUST NOT 再有第二顆全域鈕:
-// 兩顆開關管同一個模式,只要有一條路徑忘了同步,面板就會停在「看起來沒在編輯、
-// 但點機體會選到零件」的狀態。
-bindToggle('btnJoints', (on) => showJoints(on));
-$('btnSpin').classList.add('on');
-controls.autoRotate = true;
-for (const [id, v] of [['vMech', 'mech'], ['vWpnL', 'light'], ['vWpnH', 'heavy']])
-  $(id).onclick = () => { view = v; applyView(); renderPanel(); };
-
-// ---- 版本鈕 / 型態鈕(兩組都由名冊推導,index.html 只放空容器)--------------------
-// 加一個建模版本 = 在 versions.js 加一列;這裡與 HTML 一行都不用改。
-function renderVerButtons() {
-  const box = $('verSeg');
-  box.innerHTML = '';
-  for (const v of STAGE_VERSIONS) {
-    const b = document.createElement('button');
-    b.className = 'segb' + (v.key === ver.key ? ' on' : '');
-    b.textContent = v.label;
-    b.title = v.tip;
-    b.onclick = () => setVersion(v.key);
-    box.appendChild(b);
-  }
-}
-
-/** 換版本:同一個取景、同一條 locomotion、同一組演出鈕,只換「這台是哪一版建的」 */
-function setVersion(key) {
-  ver = versionOf(key);
-  if (!ver.caps.wpn) view = 'mech';
-  if (!ver.caps.edit && tab === 'mark') setTab('data');
-  buildUnit();
-  applyView();
-  renderVerButtons();
-  renderPanel();
-}
-
-function renderFormButtons() {
-  const box = $('formSeg');
-  box.innerHTML = '';
-  for (const [f, label] of Object.entries(FORM_LABEL)) {
-    const b = document.createElement('button');
-    b.className = 'segb';
-    b.id = `fm_${f}`;
-    b.textContent = label;
-    b.onclick = () => setForm(f);
-    box.appendChild(b);
-  }
-}
-renderVerButtons();
-renderFormButtons();
-
-function resize() {
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (canvas.width !== w || canvas.height !== h) {
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-}
-
-/** 世界推進一步(rAF 與 headless 檢視共用 —— pane 不合成時 rAF 不跑,由 __forge.step 手動步進) */
-function stepWorld(dt) {
-  simT += dt;
-  speed += (speedTgt - speed) * Math.min(1, 2.2 * dt);
-  if (speed < 0.02 && speedTgt === 0) speed = 0;
-  travel += speed * dt;
-  grid.position.z = -(travel % CELL);
-
-  if (ent) {
-    if (firing && simT >= nextShot) {
-      ent.fireFx = { t0: simT, slot: 'light' };
-      nextShot = simT + 0.18;
+// ---- 掛上展示台 ---------------------------------------------------------------
+// 工具列(檢視 / 型態 / 速度 / 演出 / 視角 / 版本,全是圖示鈕)由 stage.js 依名冊產生 ——
+// **兩座看板同一份鈕面**,index.html 只放兩個空容器。
+// `onPick` 只攔型態與版本這兩種「看板也要跟著動」的切換:
+//   ・型態 = 換名冊那一格(台上型態 ≡ 選中的那一格;換格不重鍛 ⇒ 變形過程照樣演完);
+//   ・版本 = 換完要重畫右欄(結構欄印的是**那個版本自己的** rig 契約)。
+stage.mount($('stageHost'), $('stageBar'), {
+  tag: $('stageTag'),
+  onPick: (kind, key) => {
+    if (kind === 'form') {
+      const s = stage.formSpec(key);
+      if (s) setSpec(s);
+      return true;
     }
-    if (heavyAt > 0 && simT >= heavyAt) {
-      ent.fireFx = { t0: simT, slot: 'heavy' };
-      ent.heavyFx = { phase: 'fire', t0: simT };
-      heavyAt = -1;
+    if (kind === 'ver') {
+      stage.setVersion(key);
+      if (!stage.ver.caps.edit && tab === 'mark') setTab('data');
+      renderPanel();
+      return true;
     }
-    // 變形過程:型態只推「回報高度」過門檻,收摺/換樹/展開(新版 morphSwap)與分段姿勢
-    // 插值(舊版 stepMorph)一律由**真品 locomotion** 演 —— 台上看到的變形因此與戰場同一個。
-    // 門檻推導自 `MORPH.GROUND_Y`(伺服器地面型判定同一條規則),×2 是阻尼過衝的餘裕。
-    ent.heroY = formT * MORPH.GROUND_Y * 2;
-    // MUST 在 stepLocomotion 之前:本幀步態才吃得到射姿/後座/蓄力驅動場(charPreview:650)
-    stepCombatFx(ent, simT, dt);
-    stepLocomotion(ent, dt, simT, 0, -speed * dt, 0);
-    // 飛行型離地懸停:型態進度只**讀** locomotion 算好的那一份(新版 morphSwap 每幀寫回
-    // `userData.morph.m`、舊版寫 `ent.loco.morph`)—— 自己再阻尼一次就是第二條變形曲線。
-    const m = unit?.morph?.m ?? ent.loco?.morph ?? 0;
-    if (unit) unit.group.position.y = m * spec.height * (0.22 + Math.sin(simT * 2.4) * 0.04);
-    // 切到武器頁的**第一幀**:手臂從鍛造靜姿彈到步態/據槍姿(t01 的臂位移超過 1.5m),
-    // 而取景是在靜姿下算的 ⇒ 武器當場被甩出畫面。等姿勢落定再重取一次景。
-    if (reframeNext && view !== 'mech') { reframeNext = false; applyView(true); }
-  }
-  // 旋翼自轉:與戰場同一份名冊(userData.spin);轉速隨速度(靜止仍怠速轉)
-  if (unit?.spin?.length) {
-    const k = 6 + (speed / Math.max(1, spec.air?.top ?? 30)) * 26;
-    for (let i = 0; i < unit.spin.length; i++) unit.spin[i].rotation.y += dt * k * (i % 2 ? -1 : 1);
-  }
-}
-
-function loop() {
-  requestAnimationFrame(loop);
-  const dt = Math.min(0.05, clock.getDelta());
-  resize();
-  stepWorld(dt);
-  controls.update();
-  updateCelLight(camera);
-  renderer.render(scene, camera);
-}
+    return false;
+  },
+});
 
 // ---- headless 檢視(.claude/skills/headless-3d-inspection):pane 不合成 ⇒ rAF 不跑、
 // 截圖工具逾時 —— 一律走「手動步進 + 顯式渲染一幀 + POST /__shot 落盤」這條路 ----
 window.__shot = async (name, w = 1280, h = 800, opts = {}) => {
+  const { camera, controls, renderer, canvas } = stage;
   if (opts.yaw != null || opts.dist != null || opts.pitch != null) {
     const H = spec.height;
     const t = controls.target.clone();
@@ -634,46 +381,45 @@ window.__shot = async (name, w = 1280, h = 800, opts = {}) => {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld(true);
-  updateCelLight(camera);
-  renderer.render(scene, camera);
+  stage.render();
   const r = await fetch(`/__shot/${name}`, { method: 'POST', body: canvas.toDataURL('image/png') });
   return (await r.json()).path;
 };
-window.__scene = { scene, camera, renderer, controls, THREE };
+window.__scene = { scene: stage.scene, camera: stage.camera, renderer: stage.renderer,
+  controls: stage.controls, THREE: stage.THREE };
 window.__forge = {
   specs: () => SPECS.map((s) => s.id),
   cats: () => ROSTER.map((c) => ({ key: c.key, n: c.entries.length,
     done: c.entries.filter((e) => SPECS.some((s) => s.id === e.key)).length })),
   setSpec: (id) => setSpec(SPECS.find((s) => s.id === id) || spec),
   height: () => spec.height,       // 取景基準(__shot 的預設鏡距 = 它 ×2.6;截圖工具 --distF 用)
-  setView: (v) => { view = v; applyView(); renderPanel(); },
-  reframe: () => applyView(),      // 步進之後重新取景(headless 拍武器頁用)
-  ent: () => ent,
-  rig: () => unit?.rig,
-  setSpeed: (f) => { speedTgt = f * (spec.kind === 'air' ? (spec.air?.top ?? 30) : (spec.gait?.top ?? 8)); },
-  fire: (slot) => {
-    if (slot === 'heavy') { ent.heavyFx = { phase: 'charge', t0: simT }; heavyAt = simT + 1.05; }
-    else ent.fireFx = { t0: simT, slot: 'light' };
-  },
-  cast: (dir, slot = 'ult') => { ent.castFx = { t0: simT, slot, dir }; },
-  step: (n = 1, dt = 1 / 60) => { for (let i = 0; i < n; i++) stepWorld(dt); },
-  simT: () => simT,
-  joints: (on) => showJoints(!!on),
+  setView: (v) => { stage.setView(v); renderPanel(); },
+  reframe: () => stage.applyView(true),   // 步進之後重新取景(headless 拍武器頁用)
+  ent: () => stage.ent,
+  rig: () => stage.unit?.rig,
+  setSpeed: (sel) => stage.setSpeed(typeof sel === 'number' ? (sel ? (sel < 0.6 ? 'walk' : 'run') : 'idle') : sel),
+  // 演出:四個槽位同一支(招式的定向/全向由 castDirF 推,headless 不必自己傳 dir)
+  play: (slot) => stage.play(slot),
+  fire: (slot) => stage.play(slot === 'heavy' ? 'heavy' : 'light'),
+  cast: (_dir, slot = 'ult') => stage.play(slot),
+  step: (n = 1, dt = 1 / 60) => stage.step(n, dt),
+  simT: () => stage._t,
+  joints: (on) => stage.setJoints(!!on),
   // 版本 / 型態:headless 一律走與人一樣的那條路(換型態 = 選另一格,而且不重鍛)
-  versions: () => STAGE_VERSIONS.map((v) => v.key),
-  setVersion: (k) => setVersion(k),
-  version: () => ver.key,
-  setForm: (f) => setForm(f),
+  versions: () => stage.versions(),
+  setVersion: (k) => { stage.setVersion(k); renderPanel(); },
+  version: () => stage.ver.key,
+  setForm: (f) => { const s = stage.formSpec(f); if (s) setSpec(s); },
   form: () => spec.form || null,
   // 型態進度(0 地面 / 1 飛行):**讀** locomotion 算好的那一份,拍變形過程逐幀對照用
-  morphM: () => unit?.morph?.m ?? ent?.loco?.morph ?? 0,
+  morphM: () => stage.morphM(),
   // 紙娃娃(headless 檢視:直接餵一份覆寫文件,不必操作面板)。
   // MUST 同時餵給編輯器 —— 只改草稿的話,面板統計說 0、而下一次面板觸發的重鍛會把
   // 這份文件整份蓋掉(兩份草稿 = 兩個真相)。
-  doll: (doc) => { draftDoll = doc; buildUnit(); applyView(false); editor.load(doc); },
+  doll: (doc) => { draftDoll = doc; stage.rebuild(doc); editor.load(doc); },
   dollIndex: () => ({
-    parts: [...(unit?.doll?.parts.keys() || [])],
-    bones: [...(unit?.doll?.bones.keys() || [])],
+    parts: [...(stage.unit?.doll?.parts.keys() || [])],
+    bones: [...(stage.unit?.doll?.bones.keys() || [])],
   }),
   // headless 入口一律走**與人一樣的那條路**(setTab):編輯模式的開關只有一個
   tab: (k) => setTab(k),
@@ -682,10 +428,10 @@ window.__forge = {
 };
 
 editor = makeDollEditor({
-  scene, camera, canvas, orbit: controls,
-  unit: () => unit,
+  scene: stage.scene, camera: stage.camera, canvas: stage.canvas, orbit: stage.controls,
+  unit: () => stage.unit,
   // 結構改動(換形狀/邊緣/黏貼/貼花/配色/骨長)→ 重鍛;取景刻意不動
-  rebuild: (doc) => { draftDoll = doc; buildUnit(); applyView(false); },
+  rebuild: (doc) => { draftDoll = doc; stage.rebuild(doc); },
   save: async (doc) => { OVR = await saveOvr(spec.id, { doll: doc }); },
   stored: () => OVR[spec.id]?.doll || null,
   specKey: () => spec.id,
@@ -693,4 +439,3 @@ editor = makeDollEditor({
 editor.mount($('dollPanel'));
 
 setSpec(SPECS[0]);
-loop();

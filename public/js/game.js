@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   SIDES, UNITS, GAME, ECON, upgradePrice, upgradeScore, canUpgrade, HAZARDS, FIELD, AFFIXES,
-  CHARACTERS, heroWeapon, heroAbility, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
+  CHARACTERS, heroWeapon, heroAbility, castDirF, abilHoldSlot, heavyMpCost, BALLISTIC, vsMult, shieldSplit, dmgFalloff, offAxisFalloff, blastFalloff, MORPH, LOCK, VIEW_LOCK, viewLockStep, scopeRvmin, dofNearM, dofFarM, dofAimBlend, DECOY, DECOY_BOMB, SQUAD, RECOIL, recoilMoveF,
   heroMobility, highSupSpeedF,
   WATER, CJUMP, IFRAME, AIR, envTrigger, sideInfo, isThirdSide, THIRD, AIRDROP, CIVILIAN, CIVILIANS,
   altRangeF, altRangeMax, LOS, TERRAIN_FX, SHAKE, TARGET_CLASS, CC_FLASH, ccFlashAlpha, ccFlashDur,
@@ -4358,8 +4358,7 @@ export class BattleClient {
       // 施法動作(locomotion stepCastPose;與展示台共用,MUST NOT 另寫分叉):
       // 指向型招式(strike/dash/遠端 emp)= 定向動作(揮武/刺拳/踢腿),其餘 = 全向(吼叫/跺腳/旋轉…)
       const cpNow = casterPos ? casterPos() : null;
-      const dirCast = ev.fx === 'strike' || ev.fx === 'dash'
-        || (ev.fx === 'emp' && cpNow && Math.hypot(wx - cpNow.x, wz - cpNow.z) > 12) ? 1 : 0;
+      const dirCast = castDirF(ev.fx, cpNow && Math.hypot(wx - cpNow.x, wz - cpNow.z) > 12);
       const castT0 = performance.now() / 1000;
       for (const ent of this.ents.values()) {
         if (ent.pid !== ev.pid || ent.isSelf || !ent.hero) continue;

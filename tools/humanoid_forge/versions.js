@@ -125,14 +125,14 @@ function forgeRigLines(unit, spec) {
  */
 export const STAGE_VERSIONS = [
   {
-    key: 'forge', label: '新版',
+    key: 'forge', label: '新版', icon: 'verNew',
     tip: '2026-08-14 起遊戲本體吃的那一份(public/js/forge/ 逐機零件檔)',
     caps: { edit: true, wpn: true, joints: true }, pair: true,
     build: forgeBuild,
     rigLines: forgeRigLines,
   },
   {
-    key: 'legacy', label: '舊版',
+    key: 'legacy', label: '舊版', icon: 'verOld',
     tip: '2026-08-14 退役的舊建模(只在本台看得到;遊戲已全面換成新版)',
     caps: { edit: false, wpn: false, joints: false }, pair: false,
     build: legacyBuild,
