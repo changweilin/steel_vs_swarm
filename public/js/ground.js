@@ -4977,6 +4977,11 @@ export function buildGroundCover(group, terrain, { isBlocked, classifyAt, classi
   }
   // orphans = 找不到主人格的地形四邊形數(結構上應恆為 0:抖動 < 0.45 格 ⇒ 主人恆在 3×3 內。
   // > 0 就是認養搜尋範圍或抖動幅度有人動過,而畫面上只表現成偶爾一格禿掉露出地形)
+  // 影子的**承接面**(2026-08-14):地貌那幾層蓋住了絕大部分的地形三角形 ——
+  // 只讓 `terrain.mesh` 收影子的話,機體的影子會在有底毯的地方整片消失(而空地上有,
+  // 讀起來像「影子時有時無」)。投射一律不開:這些是貼地面,自己投不出東西,
+  // 而 3D 細節那一批本來就顯式 `castShadow = false`(instanced 的陰影 pass 是純浪費)。
+  group.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
   return { patches: placed, details: detCount, cells: landCells.length, aligned, arrays: arraysN,
            border: bStat, bufCells, orphans: orphanQuads, bandDryAt };
 }

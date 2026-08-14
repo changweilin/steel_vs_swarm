@@ -35,6 +35,7 @@ import { spawnCastFx } from './castfx.js';
 import { CutIn } from './cutin.js';
 import { isTouchUI, lowPower, TouchControls } from './mobile.js';
 import { onCtrlChange } from './ctrlmode.js';
+import { visualPref } from './visualPrefs.js';
 import { CLIMB, CLIMB_LABEL } from './climb.js';
 // audio 由 app 層(main.js)建立並經 opts.audio 傳入(BGM 需跨戰局存活);此處僅消費。
 
@@ -527,8 +528,18 @@ export class BattleClient {
     // 副視窗共用相機(僚機 / 餌機視角;每幀重設位置後重複使用)
     this.pipCam = new THREE.PerspectiveCamera(PIP.FOV, 1 / PIP.ASPECT, 0.5, span * 2);
 
-    // 季節/日夜/天氣(開房時定案,全房一致)
-    this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env);
+    // 季節/日夜/天氣(開房時定案,全房一致)+ 日夜循環的太陽/月亮投影。
+    // 陰影圖的開關住這裡(renderer 是本檔的)、範圍與解析度住 data.js SHADOW ——
+    // environment.js 只負責「把那盞燈擺對地方」。`?shadow=0` 與其他 pass 同一組開關,
+    // 定場鏡頭組要拍前後對照時用得到。
+    const lowGpu = lowPower() || isTouchUI();
+    const shadowOn = visualPref('shadow') === 'on' && !off('shadow');
+    this.renderer.shadowMap.enabled = shadowOn;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = shadowOn;
+    this.envFx = applyEnvironment(this.scene, this.terrain, this.cfg.env,
+      { shadow: shadowOn, lowPower: lowGpu });
+    this._simT = 0;      // 伺服器權威經過秒數(快照 `time`);日夜時鐘的唯一來源
 
     this.scene.add(this.terrain.group);
 
@@ -1123,6 +1134,12 @@ export class BattleClient {
     // 取景夾制 MUST 在 outlinify **之後**:描邊殼掛在各 mesh 底下會外擴頂緣 ≈0.012m,
     // 夾制的包圍盒要含殼才量得準(否則頂緣夾在 −0.187 但描邊把它頂回 −0.14)。件平移/縮放時描邊子件同動。
     this._frameCockpitStruct(g);
+    // FPV 座艙 MUST NOT 投影(2026-08-14):它掛在**相機底下**,武裝是從第三人稱機體
+    // `makeUnit` 複製過來的子樹 ⇒ 那一份的 `castShadow` 也跟著複製過來,而它離鏡頭一公尺、
+    // 離地兩公尺,在陰影圖裡就是一大塊糊在正前方地面上的黑影(2026-08-14 實測 taroko dusk:
+    // 近景整片暗掉,而畫面上讀起來像「這一版的地面變髒了」)。座艙是視角模型不是世界物件。
+    // 收影子照留:它站在世界的光裡,被建物擋到本來就該暗下來。
+    g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
     this.cockpit = g;
     this.camera.add(g);
   }
@@ -3210,6 +3227,13 @@ export class BattleClient {
   onSnap(m) { this._snapQueue = m; }
 
   _applySnap(m) {
+    // 日夜時鐘對錶(權威 = 伺服器經過秒數):平常只把本地那份**拉向**快照值,
+    // 差太多(斷線重連 / 分頁背景化很久)才直接貼上。硬貼每一格的話,快照的整數量化
+    // 會讓太陽每 1/8 秒抖一下(48× 速率下那是可見的)。
+    if (typeof m.time === 'number') {
+      const d = m.time - this._simT;
+      this._simT = Math.abs(d) > 3 ? m.time : this._simT + d * 0.25;
+    }
     // 陣營小兵強化等級(伺服器權威;每側每兵線一個整數)—— MUST 在 ents 迴圈之前落地,
     // 商店重繪簽章要讀得到本快照的值。
     if (m.cu) this.creepUpg = m.cu;
@@ -8976,7 +9000,14 @@ export class BattleClient {
     // 全場風的時鐘(植被/旗幟的頂點擺動 + 雲的漂移同吃)。MUST 排在 `envFx.update` 之前:
     // 雲那半讀的是 `celWindTime()`,晚一步就跟地面上的草差一幀。
     stepCelWind(dt);
-    this.envFx?.update(dt, this.camera);
+    // 日夜循環:鐘點 = f(開場時段, **伺服器權威的經過秒數**)。快照 8Hz 且秒數取整 ⇒ 兩幀之間
+    // 自己補 dt(48× 的速率下,1 秒的量化誤差 = 太陽轉 0.8°,補不補都看不出來;不補的話
+    // 天色會以 8Hz 一格一格跳)。MUST NOT 改成純本地時鐘 —— 那會讓兩台客戶端的天色分家。
+    this._simT += dt;
+    this.envFx?.update(dt, this.camera, this._simT);
+    // 空氣透視的兩個顏色跟著天色走 ⇒ **每幀重推**(它們是 environment.js 那一份的同一個實例)
+    const airNow = this.envFx?.air;
+    if (airNow) this.pipeline?.setAirFog(airNow.near, airNow.far, airNow.fogNear, airNow.fogFar);
     this.terrain.biomesUpdate?.(dt);   // 地貌動態物件(火車 / 瀑布)
     for (const m of this.mixers) m.update(dt);
     for (const g of this.spinners) {

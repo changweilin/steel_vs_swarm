@@ -54,6 +54,11 @@ const PORT = +arg('--port', 8632);
 // 這與 §5z-t 記的是同一種病:**兩支工具各缺一半** ⇒ 那一項就永遠卡著沒人跑得動。
 // 非預設值 MUST 進檔名後綴,否則日夜兩輪互相覆寫、事後分不出手上這張是哪一輪。
 const ENV = { season: arg('--season', 'summer'), time: arg('--time', 'day'), weather: arg('--weather', 'clear') };
+// `--elapsed <真實秒>`:日夜循環走到第幾秒(2026-08-14)。`--time` 從此只是**起點** ——
+// 沒有這一支的話,整條時間流逝(以及跟著太陽轉的影子)在離線工具裡一張都拍不到,
+// 而每一行讀數照樣正常(同下面 `--time night` 那一段記的病)。600 秒 = 遊戲 8 小時。
+// `--shadow=0` 與其他圖層開關同一組:拍「有影子 / 沒影子」的前後對照。
+const ELAPSED = +arg('--elapsed', '0');
 const ENV_DEF = { season: 'summer', time: 'day', weather: 'clear' };
 // 合法值 MUST 對 `data.js ENV` 驗過再送進去,而且**打錯要當場停**:`environment.js` 是
 // `TIMES[env?.time] || TIMES.day`、`biomes.js` 是 `=== 'night'` ⇒ 打成 `--time nigth`
@@ -70,7 +75,7 @@ const ENV_DEF = { season: 'summer', time: 'day', weather: 'clear' };
 }
 const LAYERS = {
   ink: flag('ink'), dof: flag('dof'), grade: flag('grade'), fxaa: flag('fxaa'),
-  post: flag('post'), lib: flag('lib'),
+  post: flag('post'), lib: flag('lib'), shadow: flag('shadow'),
   // 世界曲面(2026-08-09):它是**唯一**改 three 共用 chunk 的一層,而且只在遠景才看得出來 ⇒
   // 前後對照時最需要能單獨關掉。開關住頁面的 query(`toon.js installWorldCurve` 在模組載入時讀),
   // 所以這一層與其他幾層不同:走探針頁的網址,不是走 `Pipeline` 的 opts。
@@ -89,7 +94,8 @@ process.argv.forEach((a, i) => {
 const SUFFIX = Object.entries(LAYERS).filter(([, v]) => !v).map(([k]) => `_no-${k}`).join('')
   + Object.entries(ENV).filter(([k, v]) => v !== ENV_DEF[k]).map(([, v]) => `_${v}`).join('')
   // 旋鈕 MUST 進檔名(同 ENV):兩輪互相覆寫的話事後分不出手上這張是開著還是關著
-  + Object.entries(PREFS).map(([k, v]) => `_${k}-${v}`).join('');
+  + Object.entries(PREFS).map(([k, v]) => `_${k}-${v}`).join('')
+  + (ELAPSED ? `_t${Math.round(ELAPSED)}s` : '');
 
 const chromium = await chromiumOrNull();
 if (!chromium) skipNoPlaywright('定場鏡頭組');
@@ -158,7 +164,7 @@ await page.route(`${PROBE_URL}**`, (r) => r.fulfill({
 }));
 await page.goto(PROBE_NAV, { waitUntil: 'domcontentloaded' });
 
-const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, env }) => {
+const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, env, elapsed }) => {
   const THREE = await import('three');
   const { VENUES, venueConfig } = await import('/public/js/venues.js');
   const { buildTerrain } = await import('/public/js/terrain.js');
@@ -228,10 +234,14 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   const scene = new THREE.Scene();
   scene.add(terrain.group);
   if (bio) scene.add(bio);
-  const envFx = applyEnvironment(scene, terrain, cfg.env);
+  const envFx = applyEnvironment(scene, terrain, cfg.env, { shadow: layers.shadow });
 
   const canvas = document.getElementById('c');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !layers.post });
+  // 陰影圖的開關住 renderer(同 game.js);關著時 `castShadow` 旗標整組惰性
+  // ⇒ `--shadow=0` 拍出來的就是這批改動之前的畫面
+  renderer.shadowMap.enabled = !!layers.shadow;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(1);
   renderer.setSize(1280, 720, false);
   const camera = new THREE.PerspectiveCamera(68, 1280 / 720, 0.5,
@@ -518,7 +528,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
     camera.position.set(st.p[0], st.p[1], st.p[2]);
     camera.lookAt(st.look[0], st.look[1], st.look[2]);
     camera.updateMatrixWorld(true);
-    envFx.update(0.016, camera);
+    envFx.update(0.016, camera, elapsed);
     updateCelLight(camera);
     if (pipe) pipe.render(); else renderer.render(scene, camera);
     out.push({ name: st.name, png: canvas.toDataURL('image/png'),
@@ -526,7 +536,7 @@ const shots = await page.evaluate(async ({ venueId, teamSize, layers, replay, en
   }
   return { shots: out, tunnels: tuns.length, decks: decks.length, water: terrain.waterY != null, objN, libN, biomeErr, megaOrbit, massInst, lowInst, megaDrop, imagery: !!terrain.sampleColor,
     curveOn: worldCurveOn(), curveKnee: curveKneeM(), curveHorizon: curveHorizonM() };
-}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV });
+}, { venueId: VENUE, teamSize: TEAM, layers: LAYERS, replay: REPLAY, env: ENV, elapsed: ELAPSED });
 
 for (const s of shots.shots) {
   fs.writeFileSync(join(OUT, `${s.name}${SUFFIX}.png`), Buffer.from(s.png.split(',')[1], 'base64'));
