@@ -183,6 +183,15 @@ export function stepCombatFx(ent, now, dt) {
   // 輕武器槍口識別燈:擊發強閃後快速回穩(base 為靜置亮度)
   if (rig.lightGlow) for (const gd of rig.lightGlow)
     gd.mesh.material.emissiveIntensity = gd.base + C.lg * 3.2;
+  // 閃爍燈(`rig.blink` = [{ mesh, f, ph, lo? }]):與武器狀態**無關**的週期明滅 —— 眼、警示燈。
+  // 波形是 (0.5+0.5·sin)³ 而不是純 sin:三次方把亮的那一段壓窄成短促的一閃,純 sin 讀起來是
+  // 「慢慢呼吸」而不是「閃爍」。base 於**第一幀**就地取材(finishRig 的 accentF 已經套完),
+  // 在鍛造端先記一份的話會記到乘 accentF 之前的值。沒宣告 blink 的機體逐位元同舊制。
+  if (rig.blink) for (const b of rig.blink) {
+    if (b.base == null) b.base = b.mesh.material.emissiveIntensity;
+    const u = 0.5 + 0.5 * Math.sin(now * (b.f || 4) + (b.ph || 0));
+    b.mesh.material.emissiveIntensity = b.base * ((b.lo ?? 0.18) + (1 - (b.lo ?? 0.18)) * u * u * u);
+  }
   // 第三人稱槍口焰(makeUnit 掛在槍口錨上的焰球):輕武器隨擊發閃(lg)、
   // 重武器隨擊發保持窗(glowT=2)即刻點亮 + chg 反向釋放窗延燒 —— 跟著武器節點走,
   // 曳光才會從槍管出來(只看 chg 會晚兩三幀,擊發幀就要有焰)
@@ -697,6 +706,14 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
     // Speedwalk(大象/劍龍):加速永遠停在這個序列上 —— 步幅與體側搖擺放大,不換小跑
     phHL = L.ph; phFL = L.ph - Math.PI * 0.5;
     phHR = L.ph + Math.PI; phFR = L.ph + Math.PI * 0.5;
+  } else if (G === 'tripod') {
+    // 昆蟲三角步態(六足):(前左, 中右, 後左) 與 (前右, 中左, 後右) 兩組交替 ——
+    // 任一時刻恆三足觸地,而**同側的前後足同相**(這正是它與哺乳類對角小跑的差別:
+    // 昆蟲不是「對角配對」而是「同側配對 + 中足反相」)。中足那一組住下方 rig.midLegs,
+    // 相位表 mp = [左 = ph+π, 右 = ph] 與這裡的前後足恰好互補。
+    // ⚠ 這一支只在 rig.gait === 'tripod' 生效 ⇒ 其餘機體逐位元同舊制。
+    phFL = L.ph; phHL = L.ph;
+    phFR = L.ph + Math.PI; phHR = L.ph + Math.PI;
   } else if (G === 'crawl') {
     // 觸手輪:FL → HR → FR → HL 逐一推進(相鄰觸手相位各差 1/4 週期)
     phFL = L.ph; phHR = L.ph - Math.PI * 0.5;
@@ -751,6 +768,21 @@ function stepQuad(L, rig, dt, now, speed, yawRate) {
       flexChain(rig.chHL, phHL, ca, idle, now + 2.8);
       flexChain(rig.chHR, phHR, ca, idle, now + 4.2);
     }
+  }
+  // 中足對(六足機體的第三組;`tripod` 步態的另一半)—— 與對側前後足同組擺動 ⇒ 恆三足觸地。
+  // 名冊與 stepBeast 那一份同形(rig.midLegs / midKnees / midTarsi),讓兩支鷹架的六足機體
+  // 共用同一組節點契約;沒有 midLegs 的機體逐位元同舊制。
+  if (rig.midLegs) {
+    const mp = [Math.PI, 0];                     // [左, 右] —— 與 tripod 的前後足互補
+    const midIdle = idle * sg.breathK;
+    rig.midLegs.forEach((ml, i) => {
+      const ph = L.ph + mp[i];
+      ml.rotation.x = Math.sin(ph) * legA * 0.9 + midIdle * Math.sin(now * 1.6 * iF - i * 1.8) * 0.025;
+      if (rig.midKnees) rig.midKnees[i].rotation.x = Math.max(0, -Math.cos(ph)) * 0.35 * a
+        + midIdle * Math.sin(now * 1.6 * iF - i * 1.8 + 0.6) * 0.02;
+      if (rig.midTarsi) rig.midTarsi[i].rotation.x = Math.max(0, -Math.cos(ph)) * 0.22 * a
+        + midIdle * Math.sin(now * 1.6 * iF - i * 1.8 + 1.2) * 0.15;
+    });
   }
   // 持武觸手:未觸地的觸手不做均勻蠕動 —— 收成蓄勢 S 形、慢速搜索掃擺、梢節快顫
   // (tentGuard),靜止也在動 = 隨時要出手的東西

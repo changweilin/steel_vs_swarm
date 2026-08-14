@@ -47,7 +47,7 @@ export function bipedDims(D, height) {
  */
 export function groundCtx(c, dim) {
   c.G = dim.G;
-  c.dims = { shoulderYl: dim.shoulderYl, waistYl: dim.waistYl, shoulderX: dim.shoulderX };
+  c.dims = { shoulderYl: dim.shoulderYl, waistYl: dim.waistYl, shoulderX: dim.shoulderX, headYl: dim.headYl };
   return c;
 }
 

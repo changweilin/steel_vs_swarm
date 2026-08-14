@@ -15,19 +15,24 @@ import { bipedDims, groundCtx, upright } from './_morph.js';
 
 const PITCH = 1.16;           // 軀幹前傾(滑翔姿態:貴族式挺立被壓成滑翔者的俯衝線)
 const HG = 6.0;               // 地面型的取景高 = 兩態共用的骨架尺度基準
+// 2026-08-14 使用者:「三角滑翔翼**放大一倍**」⇒ 展開態的翼**整片等比 ×2**。
+// 放大只住這一端(飛行型),MUST NOT 改 `m01.glider` 本身 —— 那一片同時是地面態的披風,
+// 在那裡放大就是一件拖在地上 5.7m 的斗篷。等比縮放不是「另一片零件」:形狀、翼樑數、
+// 前緣滾邊、翼尖燈逐項同一份,只是展開後的尺寸(這正是「兩態同一片零件」允許的變換)。
+const GW = 2.0;
 
 export default {
   // 色相 MUST = 地面型(同一台機的同一批塗裝)
   label: '渡鴉・飛行型(m01 三角滑翔翼)', hue: m01.hue, kind: 'air', height: HG,
-  air: { tiltY: 3.0, bob: 0.05, top: 30, level: true, span: 5.2 },
+  air: { tiltY: 3.0, bob: 0.05, top: 30, level: true, span: 10.4 },   // span ∝ 翼:GW ×2 ⇒ 5.2 → 10.4
   moveSig: { hover: 0.20, hoverF: 0.8, hoverA: 0.10, surge: 0.85, flare: 0.55, bank: 0.78 },
   castSig: { omni: 'spin', dir: 'swing' },
   doc: [
     ['修長軀幹', '地面型切面楔胸 + 腹甲 + 金滾邊(m01.chest)整組前傾成滑翔線'],
     ['頭 + 高立領', '地面型頭部(m01.head)+ 反傾中介 Group —— 立領是剪影識別點,兩態同一顆'],
-    ['三角滑翔翼 ×2', 'm01.glider 展開:膜面 + 翼樑 ×3 + 前緣金滾邊 + 翼尖燈(地面態 = 披風)'],
+    ['三角滑翔翼 ×2(放大一倍)', 'm01.glider 展開後整片等比 ×2:膜面 + 翼樑 ×3 + 前緣金滾邊 + 翼尖燈(地面態 = 披風,不放大)'],
     ['雙腿後伸打直', '同一組腿件(m01.thigh/shin/foot)向後打直當配平面 + 小腿導流鰭'],
-    ['雙臂前伸', '同一組臂件沿航向前伸端武器(m01.armUp/armFore)'],
+    ['雙臂筆直前伸', '同一組臂件沿航向前伸端武器(m01.armUp/armFore);三節本地角相加 = −π/2 − PITCH ⇒ 槍口恰朝航向'],
     ['武裝', '同一具 M134 六管速射艙(右)+ 地獄火雙聯發射管(左),由手直接端著'],
   ],
 
@@ -48,25 +53,30 @@ export default {
     m01.head(c, upright(chest, PITCH - 0.30, 0, dim.headYl, 0.04));   // 微抬頭看航向
 
     // ---- 雙臂沿航向前伸(端著武器的飛行姿態)----
+    // 2026-08-14 使用者:「**手持武器筆直朝前**」⇒ 手(= 武器掛點)的世界指向 MUST 恰為 −π/2
+    // (肢體鏈沿局部 −y 長 ⇒ Rx(−π/2) 把它送到世界 +z = 航向)。
+    // ⚠ 純 x 旋轉在 hull 之下是**加法**:世界角 = PITCH + Σ 本地角。因此三節的本地角**加起來**
+    //   MUST = −π/2 − PITCH,肩抬多少肘就折回多少;寫成 −PITCH−0.16 的話世界角只有 −0.16
+    //   = 幾乎垂下。舊值 (+0.30, −0.22, +0.30) 加起來是 +0.38 ⇒ 槍口朝斜上方 22°。
+    // ⚠ 肩的 z 外撇同樣會把槍口帶開(Rz 之後 Rx 的軸已不是世界 x):**外撇一律歸零**,
+    //   兩臂的橫向間距只由肩寬 shoulderX 給 —— 那才是「筆直朝前」。
+    const ELB = 0.14;                             // 肩抬 / 肘折(等量互抵 ⇒ 手部淨角恆為 0)
     const hands = {};
     for (const sx of [-1, 1]) {
       const cx = { ...c, sx };
       const arm = new THREE.Group();
       arm.position.set(sx * dim.shoulderX, dim.shoulderYl, 0);
-      // ⚠ 純 x 旋轉在 hull 之下是**加法**:世界角 = PITCH + 本地角。要世界水平前伸(−y → +z)
-      // 得世界角 −π/2 ⇒ 本地 = −π/2 − PITCH。寫成 −PITCH−0.16 的話世界角只有 −0.16 = 幾乎垂下。
-      arm.rotation.set(-Math.PI / 2 - PITCH + 0.30, 0, sx * 0.16);
+      arm.rotation.set(-Math.PI / 2 - PITCH + ELB, 0, 0);
       chest.add(arm);
       m01.armUp(cx, arm, { len: dim.upperArmL });
       const fore = new THREE.Group();
       fore.position.y = -dim.upperArmL;
-      fore.rotation.x = -0.22;
+      fore.rotation.x = -ELB;
       arm.add(fore);
       m01.armFore(cx, fore, { len: dim.foreArmL });
       const hand = new THREE.Group();
       hand.position.y = -dim.foreArmL;
-      hand.rotation.x = 0.30;
-      fore.add(hand);
+      fore.add(hand);                             // 腕角 0:手 = 前臂 = 世界 −π/2 = 槍口朝航向
       hands[sx] = hand;
     }
 
@@ -98,6 +108,7 @@ export default {
       const anch = upright(chest, PITCH, sx * 0.24, dim.shoulderYl * 0.98, -0.44);
       const w = m01.glider(c, anch, sx, 0, 0, 0);
       w.rotation.set(-Math.PI / 2 + 0.14, 0, sx * 1.95);
+      w.scale.setScalar(GW);                       // 展開態放大一倍(GW 檔頭)
     }
 
     c._W = m01.mount(c, { chest, handL: hands[-1], handR: hands[1], hips });

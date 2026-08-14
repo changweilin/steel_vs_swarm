@@ -37,6 +37,25 @@ import {
 const RSIGHT = 0.34;          // 星象儀視軸淨空半徑(任何零件不得侵入)
 const SIGHT_Z = -0.10;        // 視軸圓心(機背中段)⇒ 淨空帶 z ∈ [−0.44, +0.24]
 
+/**
+ * 左右鏡射一件「翼根不在中線」的翼面/板件(2026-08-14 使用者:「有一邊機翼看起來比較短」)。
+ *
+ * 病灶:`scale.x = sx` **只鏡射子樹的幾何,不鏡射自己的 position** —— wingF/prismF 的翼面
+ * 在局部 +x 方向長出去,而翼根 x = ROOT 是**位置**。右翼因此跨 [ROOT, ROOT+span],
+ * 左翼卻跨 [ROOT, ROOT−span] = **離中線只有 span − ROOT**,兩邊差整整 2×ROOT
+ * (主翼 ROOT 0.26 ⇒ 左 1.19 / 右 1.71,差 30%;鴨翼 ROOT 0.18 ⇒ 左 0.40 / 右 0.76,差 47%)。
+ * 而**掛載件全部寫 `sx * 絕對 x`**(鉸線 0.91、光口 0.72、吊艙 1.52、翼尖燈 1.67)⇒ 左側
+ * 那幾件有一半浮在翼面之外。正面視角看不出來(兩邊都有翼),只有俯視/斜俯視才讀得到。
+ *
+ * ⇒ 位置與幾何 MUST 一起鏡射。凡「翼根 x ≠ 0 且以 scale.x 鏡射」的件一律走這一支,
+ *   MUST NOT 在呼叫端各自補一次 `position.x = sx * …`(補漏一件就是同一個 bug 的第二份)。
+ */
+function mirrorX(o, sx) {
+  o.scale.x = sx;
+  o.position.x *= sx;
+  return o;
+}
+
 export default {
   label: '星圖(s12 鴨翼長航偵察機)', hue: 0x9db0d8, kind: 'air', height: 3.6,
   air: { tiltY: 1.3, bob: 0.03, top: 32, level: true, span: 3.4 },
@@ -82,11 +101,11 @@ export default {
       const chine = prismF(t, [[0, -0.42], [0.20, -0.05], [0.21, 0.26], [0.03, 0.55], [0, 0.55]], 0.05,
         0.06, -0.05, 0.80, PAL.deep, { metalness: 0.7 });
       chine.rotation.x = Math.PI / 2;
-      chine.scale.x = sx;
+      mirrorX(chine, sx);
       const lerx = prismF(t, [[0, -0.55], [0.09, -0.45], [0.03, 0.50], [0, 0.52]], 0.035,
         0.26, 0.10, 0.05, PAL.lite, { metalness: 0.5 });
       lerx.rotation.x = Math.PI / 2;
-      lerx.scale.x = sx;
+      mirrorX(lerx, sx);
     }
 
     // ── ③ 發光座艙罩(2D 定案圖上最大的一塊藍;舊版只有一條 accent 識別條)──
@@ -116,7 +135,7 @@ export default {
       // 否則從側面看是同一團(r2 實拍:鴨翼被頰板/LERX 吃掉)。
       const cn = wingF(t, { span: 0.58, c0: 0.46, c1: 0.20, t: 0.07, sweep: 0.20, dihedral: 0.09 },
         0.18, 0.10, 0.84, PAL.lite, M);
-      cn.scale.x = sx;
+      mirrorX(cn, sx);                                                    // 翼根 x = 0.18 ⇒ MUST 連位置一起鏡射
       bxF(t, 0.30, 0.025, 0.05, sx * 0.48, 0.15, 0.95, PAL.deep, { metalness: 0.7 });
     }
 
@@ -185,7 +204,7 @@ export default {
     for (const sx of [-1, 1]) {
       const w = wingF(t, { span: SPAN, c0: C0, c1: C1, t: TH, sweep: SWEEP, dihedral: DIH, twist: -0.05 },
         ROOT_X, ROOT_Y, ROOT_Z, PAL.main, { metalness: 0.58 });
-      w.scale.x = sx;
+      mirrorX(w, sx);                                                     // 翼根 x = ROOT_X ⇒ 位置也要鏡射(否則左翼短 2×ROOT_X)
 
       // 筒射摺疊翼鉸線 + 鉸鏈筒(Harop 是筒射遊蕩彈,翼中段的摺疊鉸線是原型第一識別)
       const uh = wu(0.91);

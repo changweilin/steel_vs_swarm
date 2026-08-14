@@ -198,7 +198,7 @@ export function forgeHumanoidMech(spec) {
   g.add(joints);
   const jointDot = jointDotF(joints);
 
-  const baseCtx = { PAL, accent, G, H, K, dark: PAL.dark, binderPivots: [], vlsPorts: [], dims: { shoulderYl, waistYl, shoulderX } };
+  const baseCtx = { PAL, accent, G, H, K, dark: PAL.dark, binderPivots: [], vlsPorts: [], dims: { shoulderYl, waistYl, shoulderX, headYl } };
   const pose = D.pose || {};
   const knee = pose.knee || { base: 0.06, k: 0.62, d: 0.15 };
   const ankle = pose.ankle || { base: 0.02, k: -0.3, d: 0.55 };
